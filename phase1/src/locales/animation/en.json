@@ -1043,5 +1043,13 @@
  "animation.export.problem.frameFormat": "The frame format must be PNG, JPEG or WebP.",
  "animation.export.problem.frameQuality": "The frame quality must be a whole number from 1 to 100.",
  "animation.export.padding": "Sheet padding (px)",
- "animation.export.problem.padding": "Sheet padding must be a whole number from 0 to 32."
+ "animation.export.problem.padding": "Sheet padding must be a whole number from 0 to 32.",
+ "animation.export.preset.mine": "Mine: {name}",
+ "animation.export.presetSave": "Save as my preset",
+ "animation.export.presetName": "Preset name",
+ "animation.export.presetSaveGo": "Save",
+ "animation.export.presetDelete": "Delete my preset",
+ "cmd.animation.export.preset.save": "Save the export settings as my preset",
+ "cmd.animation.export.preset.apply": "Apply one of my export presets",
+ "cmd.animation.export.preset.delete": "Delete one of my export presets"
 }

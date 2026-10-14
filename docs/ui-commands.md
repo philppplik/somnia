@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-853 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+856 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -56,6 +56,9 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `animation.export.frameCopy` | Copy current frame to the clipboard | Project | animation |  |
 | `animation.export.frameSvg` | Export current frame as SVG | Project | animation |  |
 | `animation.export.gif` | Export work area as GIF | Project | animation |  |
+| `animation.export.preset.apply` | Apply one of my export presets | Project | animation |  |
+| `animation.export.preset.delete` | Delete one of my export presets | Project | animation |  |
+| `animation.export.preset.save` | Save the export settings as my preset | Project | animation |  |
 | `animation.export.queue.add` | Add export to render queue | Project | animation |  |
 | `animation.export.queue.cancel` | Stop render queue | Project | animation |  |
 | `animation.export.queue.clear` | Clear finished render queue jobs | Project | animation |  |

@@ -1043,5 +1043,13 @@
  "animation.export.problem.frameFormat": "O formato do quadro deve ser PNG, JPEG ou WebP.",
  "animation.export.problem.frameQuality": "A qualidade do quadro deve ser um inteiro de 1 a 100.",
  "animation.export.padding": "Margem da folha (px)",
- "animation.export.problem.padding": "A margem da folha deve ser um inteiro de 0 a 32."
+ "animation.export.problem.padding": "A margem da folha deve ser um inteiro de 0 a 32.",
+ "animation.export.preset.mine": "Meu: {name}",
+ "animation.export.presetSave": "Salvar como predefinição própria",
+ "animation.export.presetName": "Nome da predefinição",
+ "animation.export.presetSaveGo": "Salvar",
+ "animation.export.presetDelete": "Excluir minha predefinição",
+ "cmd.animation.export.preset.save": "Salvar as configurações de exportação como predefinição própria",
+ "cmd.animation.export.preset.apply": "Aplicar uma das minhas predefinições de exportação",
+ "cmd.animation.export.preset.delete": "Excluir uma das minhas predefinições de exportação"
 }

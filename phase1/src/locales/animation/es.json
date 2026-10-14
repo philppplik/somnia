@@ -1043,5 +1043,13 @@
  "animation.export.problem.frameFormat": "El formato del fotograma debe ser PNG, JPEG o WebP.",
  "animation.export.problem.frameQuality": "La calidad del fotograma debe ser un entero de 1 a 100.",
  "animation.export.padding": "Margen de la hoja (px)",
- "animation.export.problem.padding": "El margen de la hoja debe ser un entero de 0 a 32."
+ "animation.export.problem.padding": "El margen de la hoja debe ser un entero de 0 a 32.",
+ "animation.export.preset.mine": "Mío: {name}",
+ "animation.export.presetSave": "Guardar como ajuste propio",
+ "animation.export.presetName": "Nombre del ajuste",
+ "animation.export.presetSaveGo": "Guardar",
+ "animation.export.presetDelete": "Eliminar mi ajuste",
+ "cmd.animation.export.preset.save": "Guardar los ajustes de exportación como ajuste propio",
+ "cmd.animation.export.preset.apply": "Aplicar uno de mis ajustes de exportación",
+ "cmd.animation.export.preset.delete": "Eliminar uno de mis ajustes de exportación"
 }

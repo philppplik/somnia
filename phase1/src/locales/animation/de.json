@@ -1043,5 +1043,13 @@
  "animation.export.problem.frameFormat": "Das Bildformat muss PNG, JPEG oder WebP sein.",
  "animation.export.problem.frameQuality": "Die Bildqualität muss eine ganze Zahl von 1 bis 100 sein.",
  "animation.export.padding": "Sheet-Abstand (px)",
- "animation.export.problem.padding": "Der Sheet-Abstand muss eine ganze Zahl von 0 bis 32 sein."
+ "animation.export.problem.padding": "Der Sheet-Abstand muss eine ganze Zahl von 0 bis 32 sein.",
+ "animation.export.preset.mine": "Eigene: {name}",
+ "animation.export.presetSave": "Als eigene Vorgabe speichern",
+ "animation.export.presetName": "Name der Vorgabe",
+ "animation.export.presetSaveGo": "Speichern",
+ "animation.export.presetDelete": "Eigene Vorgabe löschen",
+ "cmd.animation.export.preset.save": "Export-Einstellungen als eigene Vorgabe speichern",
+ "cmd.animation.export.preset.apply": "Eine eigene Export-Vorgabe anwenden",
+ "cmd.animation.export.preset.delete": "Eine eigene Export-Vorgabe löschen"
 }

@@ -444,6 +444,56 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.export.preset.apply",
+      "title": "Apply one of my export presets",
+      "category": "Project",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "apply",
+        "export",
+        "my",
+        "own",
+        "preset",
+        "render",
+        "settings"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "animation.export.preset.delete",
+      "title": "Delete one of my export presets",
+      "category": "Project",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "delete",
+        "export",
+        "my",
+        "own",
+        "preset",
+        "remove"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "animation.export.preset.save",
+      "title": "Save the export settings as my preset",
+      "category": "Project",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "export",
+        "my",
+        "own",
+        "preset",
+        "render",
+        "save",
+        "settings"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.export.queue.add",
       "title": "Add export to render queue",
       "category": "Project",

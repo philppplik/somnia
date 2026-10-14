@@ -1043,5 +1043,13 @@
  "animation.export.problem.frameFormat": "Le format de l’image doit être PNG, JPEG ou WebP.",
  "animation.export.problem.frameQuality": "La qualité de l’image doit être un entier de 1 à 100.",
  "animation.export.padding": "Marge de la planche (px)",
- "animation.export.problem.padding": "La marge de la planche doit être un entier de 0 à 32."
+ "animation.export.problem.padding": "La marge de la planche doit être un entier de 0 à 32.",
+ "animation.export.preset.mine": "Perso : {name}",
+ "animation.export.presetSave": "Enregistrer comme préréglage perso",
+ "animation.export.presetName": "Nom du préréglage",
+ "animation.export.presetSaveGo": "Enregistrer",
+ "animation.export.presetDelete": "Supprimer mon préréglage",
+ "cmd.animation.export.preset.save": "Enregistrer les réglages d’export comme préréglage perso",
+ "cmd.animation.export.preset.apply": "Appliquer un de mes préréglages d’export",
+ "cmd.animation.export.preset.delete": "Supprimer un de mes préréglages d’export"
 }

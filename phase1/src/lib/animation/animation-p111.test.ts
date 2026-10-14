@@ -864,3 +864,23 @@ test('P209 export plan: sprite sheet estimate follows the sheet pixels (padding 
  assert.ok(b.estimateBytes>a.estimateBytes*0.9);assert.equal(b.estimateBytes,estimateBytes('sheet',b.sheet!.width,b.sheet!.height,1));
  assert.equal(exportPlan(c,'sequence',base).estimateBytes,estimateBytes('sequence',a.width,a.height,a.frames,a.fps.num/a.fps.den));
 });
+
+test('P210 own export presets: save, apply, replace, delete, limits and persistence',async()=>{
+ const u=await import('./exportUserPresets');const {exportPresetSpecs}=await import('./exportPresetCommands');const {setExportSettings,resetExportSettings,exportState,setExportTransparent}=await import('./exportJob');
+ const mem=new Map<string,string>();u.setPresetStore({getItem:k=>mem.get(k)??null,setItem:(k,v)=>{mem.set(k,v);}});
+ const run=(i:number,p?:unknown)=>exportPresetSpecs()[i].run(p) as unknown;
+ resetExportSettings();setExportSettings({scale:50,fps:15,colors:64,dither:true,sheetPadding:4,from:3,to:9,fileName:'keep'});setExportTransparent(true);
+ assert.equal(run(0,{name:'  Web  small '}),'web small');assert.equal(u.userExportPresets().length,1);
+ const raw=JSON.parse(mem.get('somnia.exportPresets.v1')!);assert.equal(raw[0].name,'Web small');assert.equal(raw[0].settings.from,undefined);assert.equal(raw[0].settings.fileName,undefined);
+ resetExportSettings();setExportTransparent(false);setExportSettings({from:1,to:2,fileName:'doc',quality:'high'});
+ run(1,{id:'web small'});const s=exportState().settings;assert.equal(s.scale,50);assert.equal(s.colors,64);assert.equal(s.dither,true);assert.equal(s.quality,undefined);assert.equal(s.from,1);assert.equal(s.to,2);assert.equal(s.fileName,'doc');assert.equal(exportState().transparent,true);
+ setExportSettings({scale:200});run(0,{name:'WEB small'});assert.equal(u.userExportPresets().length,1);assert.equal(u.userExportPresets()[0].settings.scale,200);
+ for(const bad of ['','   ','x'.repeat(41)])assert.throws(()=>run(0,{name:bad}),(e:any)=>e.expected===true);
+ assert.throws(()=>run(1,{id:'nope'}),(e:any)=>e.expected===true);assert.throws(()=>run(2,{id:'nope'}),(e:any)=>e.expected===true);
+ for(let i=1;i<u.MAX_USER_PRESETS;i++)run(0,{name:`p${i}`});assert.throws(()=>run(0,{name:'one more'}),(e:any)=>/Delete one first/.test(e.message));run(0,{name:'p1'});
+ u.setPresetStore({getItem:k=>mem.get(k)??null,setItem:(k,v)=>{mem.set(k,v);}});assert.equal(u.userExportPresets().length,u.MAX_USER_PRESETS);
+ run(2,{id:'p1'});assert.equal(u.userExportPresets().length,u.MAX_USER_PRESETS-1);
+ mem.set('somnia.exportPresets.v1',JSON.stringify([{name:'ok',settings:{scale:100},transparent:false},{name:'bad',settings:{scale:5},transparent:false},{name:'',settings:{scale:100},transparent:false},7,null]));u.setPresetStore({getItem:k=>mem.get(k)??null,setItem:()=>{}});
+ assert.deepEqual(u.userExportPresets().map(p=>p.id),['ok']);mem.set('somnia.exportPresets.v1','{not json');u.setPresetStore({getItem:k=>mem.get(k)??null,setItem:()=>{}});assert.equal(u.userExportPresets().length,0);
+ u.setPresetStore(null);run(0,{name:'session only'});assert.equal(u.userExportPresets().length,1);u.setPresetStore(undefined);resetExportSettings();setExportTransparent(false);
+});
