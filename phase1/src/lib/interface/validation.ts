@@ -3,7 +3,7 @@ import {validateVariantProperties} from './variantProperties';
 import type {InterfaceDocument,InterfaceNode} from './schema';
 import {validateInterfaceAssets} from './assetsCore';
 import {validateInterfaceVectors} from './vectorCore';
-import {validateInterfaceTokens} from './tokens';
+import {validateInterfaceTokens} from './tokens';import {validateExportSettings} from './exportSettingsCore';
 const obj=(v:unknown):v is Record<string,unknown>=>!!v&&typeof v==='object'&&!Array.isArray(v);
 const num=(v:unknown,min=0,max=32768)=>typeof v==='number'&&Number.isFinite(v)&&v>=min&&v<=max;
 const id=(v:unknown)=>typeof v==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(v);
@@ -15,7 +15,7 @@ export function validOverride(key:string,value:unknown):boolean{
 }
 /** P1 recognized fields fail closed; no evaluator, URL or arbitrary patch keys. */
 export function validateInterfaceFeatures(d:InterfaceDocument):void{
- validateInterfacePrototype(d);validateInterfaceTokens(d);validateInterfaceAssets(d);validateInterfaceVectors(d);
+ validateInterfacePrototype(d);validateInterfaceTokens(d);validateExportSettings(d);validateInterfaceAssets(d);validateInterfaceVectors(d);
  const nodes=new Map(d.nodes.map(n=>[n.id,n]));const components=d.components??[];
  if(!Array.isArray(components)||components.length>100)throw Error('Invalid component catalogue.');
  const componentIds=new Set<string>(),variantIds=new Set<string>(),masterIds=new Set<string>();

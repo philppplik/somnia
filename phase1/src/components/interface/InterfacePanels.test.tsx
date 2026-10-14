@@ -78,3 +78,9 @@ test('P29 variable collections and the canvas mode preview render in English and
  interfaceSession.clear();setLocale('de');try{interfaceSession.start();interfaceSession.transact(d=>{const a=addVariable(d,'color','Akzent');addVariable(d,'number','Abstand');setVariableCollection(d,a,'Marke');});
  const german=renderToStaticMarkup(<InterfaceResources run={run}/>);assert.ok(german.includes('Sammlung'));assert.ok(german.includes('Marke'));assert.ok(german.includes('Keine Sammlung'));
  const germanCanvas=renderToStaticMarkup(<InterfaceCanvas/>);assert.ok(germanCanvas.includes('Modus-Vorschau'));}finally{interfaceSession.clear();setLocale('en');}});
+
+test('P30 export settings and the asset export list render in English and German',async()=>{const {InterfaceDevMode}=await import('./InterfaceDevMode');const {addExportSetting}=await import('../../lib/interface/exportSettings');
+ interfaceSession.start();interfaceSession.transact(d=>{const f=addNode(d,d.pages[0].id,'frame');addExportSetting(d,f,{format:'png',scale:2});});interfaceSession.select(interfaceSession.get().document!.nodes[0].id);
+ let html=renderToStaticMarkup(<InterfaceDevMode/>);assert.ok(html.includes('Export settings'));assert.ok(html.includes('Add export setting'));assert.ok(html.includes('Asset export list'));assert.ok(html.includes('PNG @2x'));assert.ok(html.includes('>Export<'));
+ interfaceSession.clear();setLocale('de');try{interfaceSession.start();interfaceSession.transact(d=>{const f=addNode(d,d.pages[0].id,'frame');addExportSetting(d,f,{format:'webp',scale:1});});interfaceSession.select(interfaceSession.get().document!.nodes[0].id);
+ const german=renderToStaticMarkup(<InterfaceDevMode/>);assert.ok(german.includes('Exporteinstellungen'));assert.ok(german.includes('Exporteinstellung hinzufügen'));assert.ok(german.includes('Asset-Exportliste'));assert.ok(german.includes('WEBP @1x'));assert.ok(german.includes('>Exportieren<'));}finally{interfaceSession.clear();setLocale('en');}});
