@@ -1,3 +1,4 @@
+import {selectLocalTools} from './localToolLint';
 import {AgentError,ProviderError} from './errors';
 import type {AgentImagePart,AgentProvider,AgentProviderRequest} from './types';
 import {OllamaProvider} from './providers/ollama';
@@ -22,7 +23,10 @@ export function requireLocalCapabilities(provider:OllamaProvider,numCtx?:number)
    if(request.tools.length&&!capabilities?.includes('tools'))throw new AgentError('tool-unsupported','no-tool-support','Selected local model has no declared tool support. Choose another model or text-only chat.');
    if(images&&!capabilities?.includes('vision'))throw new ProviderError('protocol','Selected local model has no declared vision support');
   }
-  yield* provider.stream(request);
+  const tools=selectLocalTools(request.tools);
+  if(request.tools.length&&!tools.length)throw new AgentError('tool-unsupported','no-tool-support','Local tool schemas are too complex. Choose a stronger model or simpler task.');
+  const offered=new Set(tools.map(tool=>tool.name));
+  for await(const event of provider.stream({...request,tools})){if(event.type==='tool-call'&&event.name&&!offered.has(event.name))throw new AgentError('tool-unsupported','no-tool-support','Local model requested a tool that was not offered.');yield event;}
  }};
 }
 /** Decode and re-encode locally to strip metadata; never forwards original bytes. */
