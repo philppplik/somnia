@@ -10,8 +10,15 @@ import {SlidesClient} from './client';
 import {applyReviewed,undoReceipt,type DeckOwnerPort,type UndoPort,type DeckReceipt,type DeckSnapshot,type ReviewedApply} from './deckReceipt';
 import {assertPptx,type DeckSummary} from './protocol';
 import {addMediaFile,closeMedia,findMedia,getMedia,setActiveMedia,subscribeMedia,registerMediaCloseGuard} from '../media';
+import {getCollab,onSessionChange} from '../collab/session';
+import {buildMismatches} from '../collab/buildSync';
+import {shareSlidesFile,adoptSlidesFile} from '../collab/office/officeSession';
+import {openSlidesModel,slidesModelMeta,type SlidesOpKind} from '../collab/office/slidesModel';
+import {SlidesCollabBinding} from '../collab/office/slidesBinding';
+import {slidesClientPort} from '../collab/office/slidesPort';
+import {announceSlide} from '../collab/office/slidesPresence';
 export interface SlidesSession {presenting:boolean;wasmBytes:number;diagnostics:SlidesDiagnostics|null;name:string;source:string;summary:DeckSummary|null;index:number;image:string;texts:string[];thumbnails:Record<number,string>;busy:boolean;error:string;original:Uint8Array|null;working:Uint8Array|null;runs:TextRun[];slideIds:number[];layouts:LayoutInfo[];model:DeckModel|null;dirty:boolean;undo:Uint8Array[];redo:Uint8Array[]}
-interface Entry {generation:number;revision:number;state:SlidesSession;client:SlidesClient;sequence:number;disposed:boolean;presentCache:Map<string,Promise<string>>;exiting?:boolean;last?:{token:string;before:Uint8Array;after:Uint8Array}}
+interface Entry {generation:number;revision:number;state:SlidesSession;client:SlidesClient;sequence:number;disposed:boolean;presentCache:Map<string,Promise<string>>;exiting?:boolean;last?:{token:string;before:Uint8Array;after:Uint8Array};collab:SlidesCollabBinding|null}
 const bounded=(history:Uint8Array[])=>{let total=0;return history.slice(-10).reverse().filter(b=>(total+=b.byteLength)<=64*1024*1024).reverse();};
 const empty:SlidesSession={presenting:false,wasmBytes:0,diagnostics:null,name:'',source:'',summary:null,index:0,image:'',texts:[],thumbnails:{},busy:false,error:'',original:null,working:null,runs:[],slideIds:[],layouts:[],model:null,dirty:false,undo:[],redo:[]};
 let generation=0;
@@ -21,21 +28,41 @@ function patch(e:Entry,p:Partial<SlidesSession>,cause?:unknown){if(e.disposed)re
 const current=()=>{const m=getMedia();return sessions.get(m.active??'')?.state??empty;};
 export function useSlidesSession(){const media=getMedia();const name=media.items.find(m=>m.name===media.active&&m.kind==='pptx')?.name;useEffect(()=>{if(name)void ensureSlides(name);},[name]);useSyncExternalStore(f=>{listeners.add(f);return()=>listeners.delete(f);},()=>version,()=>version);return current();}
 function clearPresentCache(e:Entry){for(const image of e.presentCache.values())void image.then(URL.revokeObjectURL,()=>{});e.presentCache.clear();}
-function dispose(e:Entry){clearPresentCache(e);e.disposed=true;e.client.dispose();if(e.state.image)URL.revokeObjectURL(e.state.image);Object.values(e.state.thumbnails).forEach(URL.revokeObjectURL);}
+function dispose(e:Entry){clearPresentCache(e);e.disposed=true;if(e.collab){const c=getCollab();if(c)announceSlide(c.doc.awareness,null,0);e.collab.destroy();e.collab=null;}e.client.dispose();if(e.state.image)URL.revokeObjectURL(e.state.image);Object.values(e.state.thumbnails).forEach(URL.revokeObjectURL);}
 subscribeMedia(()=>{const media=getMedia();for(const [name,e]of sessions){if(media.items.find(m=>m.name===name)?.url!==e.state.source){dispose(e);sessions.delete(name);}}emit();});
 /** Entry identity is the source URL, not basename. Max three resident workers, current tab retained. */
 export async function ensureSlides(name:string){const m=findMedia(name);if(!m||m.kind!=='pptx')return;if(sessions.get(name)?.state.source===m.url)return;
  if(sessions.size>=3){const victim=[...sessions].find(([n,e])=>n!==getMedia().active&&!e.state.dirty);if(victim){dispose(victim[1]);sessions.delete(victim[0]);}else return;}
- const e:Entry={generation:++generation,revision:0,state:{...empty,name,source:m.url,busy:true,thumbnails:{}},client:new SlidesClient(),sequence:0,disposed:false,presentCache:new Map()};sessions.set(name,e);emit();
- try{const bytes=new Uint8Array(await(await fetch(m.url)).arrayBuffer());if(e.disposed)return;const summary=await e.client.open(bytes);if(e.disposed)return;let runs:TextRun[]=[];let slideIds:number[]=[];let model:DeckModel|null=null;let layouts:LayoutInfo[]=[];try{runs=await e.client.runs(bytes);model=await modelOf(e,bytes,summary.slides);slideIds=idsOf(model);layouts=await layoutsOf(e,bytes);}catch{/* Noncanonical text remains preview-only. */}if(e.disposed)return;const diagnostics=await e.client.diagnostics(bytes);patch(e,{summary,original:bytes,working:bytes,runs,slideIds,layouts,model,diagnostics});await renderSlide(e,0);}
+ const e:Entry={generation:++generation,revision:0,state:{...empty,name,source:m.url,busy:true,thumbnails:{}},client:new SlidesClient(),sequence:0,disposed:false,presentCache:new Map(),collab:null};sessions.set(name,e);emit();
+ try{const bytes=new Uint8Array(await(await fetch(m.url)).arrayBuffer());if(e.disposed)return;const summary=await e.client.open(bytes);if(e.disposed)return;let runs:TextRun[]=[];let slideIds:number[]=[];let model:DeckModel|null=null;let layouts:LayoutInfo[]=[];try{runs=await e.client.runs(bytes);model=await modelOf(e,bytes,summary.slides);slideIds=idsOf(model);layouts=await layoutsOf(e,bytes);}catch{/* Noncanonical text remains preview-only. */}if(e.disposed)return;const diagnostics=await e.client.diagnostics(bytes);patch(e,{summary,original:bytes,working:bytes,runs,slideIds,layouts,model,diagnostics});await attachCollab(e);if(e.disposed)return;await renderSlide(e,e.state.index);}
  catch(error){patch(e,{busy:false,error:String(error)},error);e.client.dispose();}
 }
+/** Collab (CO3): a clean open deck joins the session's shared model; a dirty one cannot rebase and stays local-only with a note. */
+async function attachCollab(e:Entry){
+ if(e.disposed||e.collab||!e.state.working||!e.state.original||e.state.busy)return;
+ const c=getCollab();if(!c)return;
+ if(buildMismatches(c.doc.awareness).length){patch(e,{error:'A participant is on a different app version. Co-editing is paused - reload the page.'});return;}
+ if(e.state.dirty){patch(e,{error:'This deck has local edits. Co-editing starts from the original file - close and reopen it to join the session.'});return;}
+ const bytes=e.state.original;
+ if(slidesModelMeta(openSlidesModel(c.doc,e.state.name))){
+  const ad=await adoptSlidesFile(c.doc,e.state.name,bytes);
+  if(e.disposed||!ad.ok)return;
+  e.collab=new SlidesCollabBinding(c.doc,e.state.name,bytes,{engine:slidesClientPort(e.client),onBytes:nb=>{if(!e.disposed)void setWorking(e,nb);}});
+  await e.collab.replay();
+ }else{
+  await shareSlidesFile(c.doc,e.state.name,bytes);
+  if(e.disposed)return;
+  e.collab=new SlidesCollabBinding(c.doc,e.state.name,bytes,{engine:slidesClientPort(e.client),onBytes:nb=>{if(!e.disposed)void setWorking(e,nb);}});
+ }
+}
+function detachCollab(e:Entry){if(!e.collab)return;const c=getCollab();if(c)announceSlide(c.doc.awareness,null,0);e.collab.destroy();e.collab=null;}
+if(typeof window!=='undefined')onSessionChange(()=>{const live=getCollab();for(const e of sessions.values()){if(!live)detachCollab(e);else void attachCollab(e);}});
 export async function openSlides(file:File){try{assertPptx(file);}catch(error){return String(error);}if(sessions.size>=3&&[...sessions.values()].every(e=>e.state.dirty))return 'Save or close an edited deck before opening another';const r=await addMediaFile(file,file.name);if('error'in r)return r.error;await ensureSlides(r.name);return '';}
 export function closeSlides(){const name=getMedia().active;if(name&&findMedia(name)?.kind==='pptx')closeMedia(name);}
 async function blankPreview(png:Uint8Array){const image=await createImageBitmap(new Blob([new Uint8Array(png)],{type:'image/png'}));try{const canvas=new OffscreenCanvas(32,32);const c=canvas.getContext('2d');if(!c)return false;c.drawImage(image,0,0,32,32);const p=c.getImageData(0,0,32,32).data;for(let i=4;i<p.length;i+=4)if(Math.abs(p[i]-p[0])+Math.abs(p[i+1]-p[1])+Math.abs(p[i+2]-p[2])>12)return false;return true;}finally{image.close();}}
 function blobUrl(png:Uint8Array){return URL.createObjectURL(new Blob([new Uint8Array(png)],{type:'image/png'}));}
 async function renderSlide(e:Entry,index:number){const summary=e.state.summary;if(!summary||index<0||index>=summary.slides||e.disposed)return;const token=++e.sequence;patch(e,{busy:true,error:''});
- try{const scale=Math.min(1.5,1280/summary.widthPt,720/summary.heightPt);const presentImage=e.state.presenting?await presentationImage(e,index):null;const png=presentImage?null:await e.client.render(index,scale);const text=await e.client.read(index);const blank=png?await blankPreview(png).catch(()=>false):false;if(blank)patch(e,{diagnostics:e.state.diagnostics?{...e.state.diagnostics,warnings:[...new Set([...e.state.diagnostics.warnings,'This slide rendered uniformly blank. Content may be unsupported; verify in the source app.'])]}:null});if(e.disposed||token!==e.sequence)return;const image=presentImage??blobUrl(png!);if(e.state.image&&!e.state.presenting)URL.revokeObjectURL(e.state.image);const thumbnails={...e.state.thumbnails};if(!thumbnails[index]){const thumb=await e.client.render(index,Math.min(180/summary.widthPt,110/summary.heightPt));if(e.disposed){URL.revokeObjectURL(image);return;}thumbnails[index]=blobUrl(thumb);}const memory=await e.client.memory();if(memory.wasmBytes>256*1024*1024){e.client.dispose();throw Error('Slides WASM memory exceeded 256 MiB observed budget');}patch(e,{index,image,texts:text.texts,thumbnails,busy:false,wasmBytes:memory.wasmBytes});if(e.state.presenting){for(const [k,v]of e.presentCache)if(!k.startsWith(`${index}:`)&&!k.startsWith(`${index+1}:`)){e.presentCache.delete(k);void v.then(URL.revokeObjectURL,()=>{});}if(index+1<summary.slides)void presentationImage(e,index+1).catch(()=>{});}}
+ try{const scale=Math.min(1.5,1280/summary.widthPt,720/summary.heightPt);const presentImage=e.state.presenting?await presentationImage(e,index):null;const png=presentImage?null:await e.client.render(index,scale);const text=await e.client.read(index);const blank=png?await blankPreview(png).catch(()=>false):false;if(blank)patch(e,{diagnostics:e.state.diagnostics?{...e.state.diagnostics,warnings:[...new Set([...e.state.diagnostics.warnings,'This slide rendered uniformly blank. Content may be unsupported; verify in the source app.'])]}:null});if(e.disposed||token!==e.sequence)return;const image=presentImage??blobUrl(png!);if(e.state.image&&!e.state.presenting)URL.revokeObjectURL(e.state.image);const thumbnails={...e.state.thumbnails};if(!thumbnails[index]){const thumb=await e.client.render(index,Math.min(180/summary.widthPt,110/summary.heightPt));if(e.disposed){URL.revokeObjectURL(image);return;}thumbnails[index]=blobUrl(thumb);}const memory=await e.client.memory();if(memory.wasmBytes>256*1024*1024){e.client.dispose();throw Error('Slides WASM memory exceeded 256 MiB observed budget');}patch(e,{index,image,texts:text.texts,thumbnails,busy:false,wasmBytes:memory.wasmBytes});if(e.collab){const c=getCollab();if(c)announceSlide(c.doc.awareness,e.state.name,index);}if(e.state.presenting){for(const [k,v]of e.presentCache)if(!k.startsWith(`${index}:`)&&!k.startsWith(`${index+1}:`)){e.presentCache.delete(k);void v.then(URL.revokeObjectURL,()=>{});}if(index+1<summary.slides)void presentationImage(e,index+1).catch(()=>{});}}
  catch(error){patch(e,{error:String(error),busy:false},error);}
 }
 export async function showSlide(index:number){const e=sessions.get(getMedia().active??'');if(e)await renderSlide(e,index);}
@@ -58,12 +85,21 @@ const before=e.state.working,ids=e.state.slideIds,from=ids.indexOf(slideId);
 if(from<0||!Number.isInteger(toIndex)||toIndex<0||toIndex>=ids.length)throw Error('Slide order changed. Reselect the slide.');
 if(from===toIndex)return;
 const viewedId=ids[e.state.index];patch(e,{busy:true,error:''});
+if(e.collab){const next=ids.slice();next.splice(toIndex,0,next.splice(from,1)[0]);const idx=Math.max(0,next.indexOf(viewedId));
+ try{await e.collab.applyLocalOp('reorder',[slideId,toIndex]);if(e.disposed)return;await renderSlide(e,idx);patch(e,{busy:false});}catch(error){patch(e,{busy:false,error:String(error)},error);throw error;}
+ return;}
 try{const bytes=await e.client.reorder(before,slideId,toIndex);if(e.disposed||e.state.working!==before)throw Error('Deck changed during reorder.');
 const next=ids.slice();next.splice(toIndex,0,next.splice(from,1)[0]);
 await setWorking(e,bytes,Math.max(0,next.indexOf(viewedId)));patch(e,{undo:bounded([...e.state.undo,before]),redo:[]});}
 catch(error){patch(e,{busy:false,error:String(error)},error);throw error;}}
-export async function editSlideText(run:TextRun,text:string){const e=sessions.get(getMedia().active??'');if(!e?.state.working||e.state.busy)return;const before=e.state.working;patch(e,{busy:true,error:''});try{const bytes=await e.client.copy(before,[{...run,old:run.text,text}]);await setWorking(e,bytes);patch(e,{undo:bounded([...e.state.undo,before]),redo:[]});}catch(error){patch(e,{busy:false,error:String(error)},error);}}
-export async function slidesHistory(direction:'undo'|'redo'){const e=sessions.get(getMedia().active??'');if(!e?.state.working||e.state.busy)return;const stack=e.state[direction],bytes=stack.at(-1);if(!bytes)return;const before=e.state.working;patch(e,{busy:true,error:''});try{await setWorking(e,bytes);patch(e,{[direction]:stack.slice(0,-1),[direction==='undo'?'redo':'undo']:bounded([...e.state[direction==='undo'?'redo':'undo'],before])});}catch(error){patch(e,{busy:false,error:String(error)},error);}}
+export async function editSlideText(run:TextRun,text:string){const e=sessions.get(getMedia().active??'');if(!e?.state.working||e.state.busy)return;const before=e.state.working;patch(e,{busy:true,error:''});
+ if(e.collab){const edit={...run,old:run.text,text};const inverse={fn:'textEdits' as const,args:[[{...run,old:text,text:run.text}]]};
+  try{await e.collab.applyLocalOp('textEdits',[[edit]],inverse);patch(e,{busy:false});}catch(error){patch(e,{busy:false,error:String(error)},error);}
+  return;}
+ try{const bytes=await e.client.copy(before,[{...run,old:run.text,text}]);await setWorking(e,bytes);patch(e,{undo:bounded([...e.state.undo,before]),redo:[]});}catch(error){patch(e,{busy:false,error:String(error)},error);}}
+export async function slidesHistory(direction:'undo'|'redo'){const e=sessions.get(getMedia().active??'');if(!e?.state.working||e.state.busy)return;
+ if(e.collab){patch(e,{busy:true,error:''});try{if(direction==='undo')await e.collab.undo();else await e.collab.redo();patch(e,{busy:false});}catch(error){patch(e,{busy:false,error:String(error)},error);}return;}
+ const stack=e.state[direction],bytes=stack.at(-1);if(!bytes)return;const before=e.state.working;patch(e,{busy:true,error:''});try{await setWorking(e,bytes);patch(e,{[direction]:stack.slice(0,-1),[direction==='undo'?'redo':'undo']:bounded([...e.state[direction==='undo'?'redo':'undo'],before])});}catch(error){patch(e,{busy:false,error:String(error)},error);}}
 export async function saveSlidesCopy(){const e=sessions.get(getMedia().active??'');const bytes=e?.state.working;if(!e||!bytes||e.state.busy)return;patch(e,{busy:true,error:''});try{const {isTauri,invoke}=await import('@tauri-apps/api/core');const suggestedName=e.state.name.replace(/^.*[\\/]/,'').replace(/\.pptx$/i,'')+'-edited.pptx';if(isTauri()){const grant=await invoke<{token:string}|null>('slides_save_pick',{suggestedName});if(!grant){patch(e,{busy:false});return;}await invoke('slides_save_write',new Uint8Array(bytes),{headers:{'x-somnia-token':grant.token}});}else{const url=URL.createObjectURL(new Blob([new Uint8Array(bytes)],{type:'application/vnd.openxmlformats-officedocument.presentationml.presentation'}));const a=document.createElement('a');a.href=url;a.download=suggestedName;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);}patch(e,{dirty:isTauri()?false:e.state.dirty,busy:false});}catch(error){patch(e,{busy:false,error:String(error)},error);}}
 
 /** Metadata-only view for the agent workspace. Never exposes source bytes or image URLs. */
@@ -76,6 +112,8 @@ export async function applyDeckSession(name:string,text:string,expected:{text:st
  patch(e,{busy:true,error:''});try{await setWorking(e,after);if(e.disposed)throw Error('Deck closed during apply.');patch(e,{undo:bounded([...e.state.undo,before]),redo:[]});return e.revision;}catch(error){patch(e,{busy:false,error:String(error)},error);throw error;}
 }
 
+/** Collab undo availability for the active deck; null when not co-editing (byte-stack undo applies). */
+export const collabHistoryState=()=>{const e=sessions.get(getMedia().active??'');return e?.collab?{canUndo:e.collab.canUndo,canRedo:e.collab.canRedo}:null;};
 /** Snapshot of the active deck session for command enablement (slides/commands.ts). Empty state when no deck is active. */
 export const getSlidesSessionState=():SlidesSession=>current();
 
@@ -109,15 +147,26 @@ async function structuralEdit(make:(e:Entry,before:Uint8Array)=>Promise<{bytes:U
   await setWorking(e,bytes,index);patch(e,{undo:bounded([...e.state.undo,before]),redo:[]});}
  catch(error){patch(e,{busy:false,error:String(error)},error);throw error;}
 }
+/** Collab route: the same op through the shared journal (bytes come back via onBytes), then follow the view. */
+async function structuralEditCollab(e:Entry,fn:SlidesOpKind,args:unknown[],index:(e:Entry)=>number){
+ patch(e,{busy:true,error:''});
+ const idx=index(e);   // pre-edit slide ids: the journal apply refreshes them via onBytes
+ try{await e.collab!.applyLocalOp(fn,args);if(e.disposed)return;await renderSlide(e,Math.min(Math.max(idx,0),(e.state.summary?.slides??1)-1));patch(e,{busy:false});}
+ catch(error){patch(e,{busy:false,error:String(error)},error);throw error;}
+}
 const idAt=(e:Entry,slideId:number)=>{const i=e.state.slideIds.indexOf(slideId);if(i<0)throw Error('Slide order changed. Reselect the slide.');return i;};
-export const duplicateSlideAt=(slideId:number)=>structuralEdit(async(e,before)=>{const i=idAt(e,slideId);return {bytes:await e.client.slideEdit(before,'duplicate',slideId),index:i+1};});
-export const deleteSlideAt=(slideId:number)=>structuralEdit(async(e,before)=>{const i=idAt(e,slideId);return {bytes:await e.client.slideEdit(before,'delete',slideId),index:Math.min(i,e.state.slideIds.length-2)};});
-/** Moves or resizes one text box as one undo step. Stays on the same slide; the box stays selected. */
-export const setShapeBoundsAt=(slideId:number,shapeId:number,expected:BoundsBox,next:BoundsBox)=>structuralEdit(async(e,before)=>{const i=idAt(e,slideId);return {bytes:await e.client.shapeBounds(before,slideId,shapeId,expected,next),index:i};});
-export const setShapesBoundsAt=(slideId:number,edits:ShapeBoundsEdit[])=>structuralEdit(async(e,before)=>({bytes:await e.client.shapesBounds(before,slideId,edits),index:idAt(e,slideId)}));
-export const arrangeShapesAt=(slideId:number,shapeIds:number[],mode:ArrangeMode)=>structuralEdit(async(e,before)=>({bytes:await e.client.arrange(before,slideId,shapeIds,mode),index:idAt(e,slideId)}));
-export const setTransitionAt=(slideId:number,transition:SlideTransition)=>structuralEdit(async(e,before)=>({bytes:await e.client.setTransition(before,slideId,transition),index:idAt(e,slideId)}));
-export const styleShapesAt=(slideId:number,shapeIds:number[],patch:ShapeStylePatch)=>structuralEdit(async(e,before)=>({bytes:await e.client.styleShapes(before,slideId,shapeIds,patch),index:idAt(e,slideId)}));
+/** One structural op: through the shared journal when co-editing, straight to the worker otherwise. */
+const route=(fn:SlidesOpKind,args:(e:Entry)=>unknown[],index:(e:Entry)=>number)=>{
+ const e=sessions.get(getMedia().active??'');
+ if(e?.collab&&e.state.working&&!e.state.busy)return structuralEditCollab(e,fn,args(e),index);
+ return structuralEdit(async(e,before)=>({bytes:await slidesClientPort(e.client).apply(fn,before,args(e)),index:index(e)}));};
+export const duplicateSlideAt=(slideId:number)=>route('slideEdit',()=>['duplicate',slideId],e=>idAt(e,slideId)+1);
+export const deleteSlideAt=(slideId:number)=>route('slideEdit',()=>['delete',slideId],e=>Math.min(idAt(e,slideId),e.state.slideIds.length-2));
+export const setShapeBoundsAt=(slideId:number,shapeId:number,expected:BoundsBox,next:BoundsBox)=>route('shapeBounds',()=>[slideId,shapeId,expected,next],e=>idAt(e,slideId));
+export const setShapesBoundsAt=(slideId:number,edits:ShapeBoundsEdit[])=>route('shapesBounds',()=>[slideId,edits],e=>idAt(e,slideId));
+export const arrangeShapesAt=(slideId:number,shapeIds:number[],mode:ArrangeMode)=>route('arrange',()=>[slideId,shapeIds,mode],e=>idAt(e,slideId));
+export const setTransitionAt=(slideId:number,transition:SlideTransition)=>route('transition',()=>[slideId,transition],e=>idAt(e,slideId));
+export const styleShapesAt=(slideId:number,shapeIds:number[],patch:ShapeStylePatch)=>route('style',()=>[slideId,shapeIds,patch],e=>idAt(e,slideId));
 export const insertTableAt=(slideId:number,rows:number,cols:number)=>structuralEdit(async(e,before)=>({bytes:await e.client.insertTable(before,slideId,rows,cols),index:idAt(e,slideId)}));
 export const setFirstNumAt=(value:number)=>structuralEdit(async(e,before)=>({bytes:await e.client.setFirstNum(before,value),index:e.state.index}));
 export const setFooterAt=(slideId:number|null,want:FooterEdit)=>structuralEdit(async(e,before)=>({bytes:await e.client.setFooter(before,slideId,want),index:slideId===null?e.state.index:idAt(e,slideId)}));
@@ -127,17 +176,20 @@ export const setBackgroundAt=(slideId:number,background:SlideBackground)=>struct
 export const editLayoutBoxAt=(layoutPart:string,shapeId:number,expected:BoundsBox,next:BoundsBox)=>structuralEdit(async(e,before)=>({bytes:await e.client.editLayoutBox(before,layoutPart,shapeId,expected,next),index:e.state.index}));
 export const editMasterBoxAt=(shapeId:number,expected:BoundsBox,next:BoundsBox)=>structuralEdit(async(e,before)=>({bytes:await e.client.editMasterBox(before,shapeId,expected,next),index:e.state.index}));
 export const editThemeAt=(edit:ThemeEdit)=>structuralEdit(async(e,before)=>({bytes:await e.client.editTheme(before,edit),index:e.state.index}));
-export const editTableAt=(slideId:number,shapeId:number,edit:TableEdit)=>structuralEdit(async(e,before)=>({bytes:await e.client.editTable(before,slideId,shapeId,edit),index:idAt(e,slideId)}));
-export const setNotesAt=(slideId:number,lines:string[])=>structuralEdit(async(e,before)=>({bytes:await e.client.setNotes(before,slideId,lines),index:idAt(e,slideId)}));
-export const groupShapesAt=(slideId:number,shapeIds:number[])=>structuralEdit(async(e,before)=>({bytes:await e.client.group(before,slideId,shapeIds),index:idAt(e,slideId)}));
-export const ungroupShapeAt=(slideId:number,shapeId:number)=>structuralEdit(async(e,before)=>({bytes:await e.client.ungroup(before,slideId,shapeId),index:idAt(e,slideId)}));
-export const formatShapeAt=(slideId:number,shapeId:number,format:RunFormat)=>structuralEdit(async(e,before)=>({bytes:await e.client.formatText(before,slideId,shapeId,format),index:idAt(e,slideId)}));
-export const addTextBoxAt=(slideId:number,label:string)=>structuralEdit(async(e,before)=>({bytes:await e.client.addBox(before,slideId,label),index:idAt(e,slideId)}));
-export const removeTextBoxAt=(slideId:number,shapeId:number)=>structuralEdit(async(e,before)=>({bytes:await e.client.removeBox(before,slideId,shapeId),index:idAt(e,slideId)}));
-export const insertPictureAt=(slideId:number,image:Uint8Array,alt:string)=>structuralEdit(async(e,before)=>({bytes:await e.client.insertPicture(before,slideId,image,alt),index:idAt(e,slideId)}));
-export const replacePictureAt=(slideId:number,shapeId:number,image:Uint8Array)=>structuralEdit(async(e,before)=>({bytes:await e.client.replacePicture(before,slideId,shapeId,image),index:idAt(e,slideId)}));
-export const removePictureAt=(slideId:number,shapeId:number)=>structuralEdit(async(e,before)=>({bytes:await e.client.removePicture(before,slideId,shapeId),index:idAt(e,slideId)}));
-export const addSlideFromLayout=(layoutPart:string,afterSlideId:number|null)=>structuralEdit(async(e,before)=>{const i=afterSlideId===null?e.state.slideIds.length-1:idAt(e,afterSlideId);return {bytes:await e.client.newSlide(before,layoutPart,afterSlideId),index:i+1};});
+export const editTableAt=(slideId:number,shapeId:number,edit:TableEdit)=>route('table',()=>[slideId,shapeId,edit],e=>idAt(e,slideId));
+export const setNotesAt=(slideId:number,lines:string[])=>route('notes',()=>[slideId,lines],e=>idAt(e,slideId));
+export const groupShapesAt=(slideId:number,shapeIds:number[])=>route('group',()=>[slideId,shapeIds],e=>idAt(e,slideId));
+export const ungroupShapeAt=(slideId:number,shapeId:number)=>route('ungroup',()=>[slideId,shapeId],e=>idAt(e,slideId));
+export const formatShapeAt=(slideId:number,shapeId:number,format:RunFormat)=>route('formatText',()=>[slideId,shapeId,format],e=>idAt(e,slideId));
+export const addTextBoxAt=(slideId:number,label:string)=>route('boxEdit',()=>['add',slideId,label],e=>idAt(e,slideId));
+export const removeTextBoxAt=(slideId:number,shapeId:number)=>route('boxEdit',()=>['remove',slideId,shapeId],e=>idAt(e,slideId));
+/** Picture payloads are inline bytes: not part of the CO3 journal. */
+const picturesBlocked=()=>{const e=sessions.get(getMedia().active??'');if(e?.collab)throw Error('Picture edits are not available while the deck is shared.');};
+export const insertPictureAt=(slideId:number,image:Uint8Array,alt:string)=>(picturesBlocked(),structuralEdit(async(e,before)=>({bytes:await e.client.insertPicture(before,slideId,image,alt),index:idAt(e,slideId)})));
+export const replacePictureAt=(slideId:number,shapeId:number,image:Uint8Array)=>(picturesBlocked(),structuralEdit(async(e,before)=>({bytes:await e.client.replacePicture(before,slideId,shapeId,image),index:idAt(e,slideId)})));
+export const removePictureAt=(slideId:number,shapeId:number)=>(picturesBlocked(),structuralEdit(async(e,before)=>({bytes:await e.client.removePicture(before,slideId,shapeId),index:idAt(e,slideId)})));
+export const addSlideFromLayout=(layoutPart:string,afterSlideId:number|null)=>route('newSlide',()=>[layoutPart,afterSlideId],e=>(afterSlideId===null?e.state.slideIds.length-1:idAt(e,afterSlideId))+1);
+
 /** Metadata lease for selected-run summary. No deck serialization or worker call. */
 export function getSlideSummaryOwner(){const e=sessions.get(getMedia().active??'');if(!e||e.disposed||e.state.busy||!e.state.working||!e.state.summary||!e.state.diagnostics?.editable)throw Error('Slide selection unavailable');return {source:e.state.source,generation:e.generation,revision:e.revision,index:e.state.index,runs:e.state.runs};}
 
