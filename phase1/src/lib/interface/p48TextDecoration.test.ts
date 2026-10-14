@@ -1,0 +1,25 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {createInterfaceSession} from './session';
+import {addNode} from './model';
+import {exportInterfaceLayerSVG,interfaceLayerCSS,inspectInterfaceCSS,buildInterfaceHandoff} from './export';
+import {interfaceHandoffSnippets} from './handoffSnippets';
+import {interfaceLayerTailwind,interfaceLayerSwiftUI} from './devMode';
+function scene(){const s=createInterfaceSession();s.start();let frame='',text='';s.transact(d=>{frame=addNode(d,d.pages[0].id,'frame');text=addNode(d,d.pages[0].id,'text',frame);d.nodes.find(n=>n.id===text)!.text='Decorated copy';});return {s,frame,text};}
+test('underline reaches svg text-decoration and every css/snippet/dev channel',()=>{const {s,frame,text}=scene();s.transact(d=>{d.nodes.find(n=>n.id===text)!.textDecoration='underline';});const doc=s.get().document!;
+ const svg=exportInterfaceLayerSVG(doc,frame).svg;assert.ok(svg.includes('text-decoration="underline"'),'svg underlines text');
+ assert.ok(interfaceLayerCSS(doc,text).css.includes('text-decoration: underline'));
+ assert.ok(inspectInterfaceCSS(doc,frame).find(r=>r.id===text)!.values['text-decoration']==='underline');
+ assert.ok(interfaceHandoffSnippets(doc,frame).css.includes('text-decoration: underline'));
+ assert.ok(interfaceLayerTailwind(doc,text).snippet.includes('underline'));
+ assert.ok(interfaceLayerSwiftUI(doc,text).snippet.includes('.underline()'));
+ const row=(buildInterfaceHandoff(doc,frame).nodes as {id:string;textDecoration?:string}[]).find(r=>r.id===text)!;assert.equal(row.textDecoration,'underline');});
+test('strikethrough maps to line-through in css and .strikethrough in swiftui',()=>{const {s,frame,text}=scene();s.transact(d=>{d.nodes.find(n=>n.id===text)!.textDecoration='line-through';});const doc=s.get().document!;
+ assert.ok(exportInterfaceLayerSVG(doc,frame).svg.includes('text-decoration="line-through"'));
+ assert.ok(interfaceLayerCSS(doc,text).css.includes('text-decoration: line-through'));
+ assert.ok(interfaceLayerTailwind(doc,text).snippet.includes('line-through'));
+ assert.ok(interfaceLayerSwiftUI(doc,text).snippet.includes('.strikethrough()'));});
+test('text decoration validates kind and enum, clears on none and undoes once',()=>{const {s,frame,text}=scene();s.transact(d=>{d.nodes.find(n=>n.id===text)!.textDecoration='underline';});
+ assert.equal(s.get().document!.nodes.find(n=>n.id===text)!.textDecoration,'underline');
+ const before=s.get();assert.throws(()=>s.transact(d=>{d.nodes.find(n=>n.id===text)!.textDecoration='overline' as never;}));assert.equal(s.get(),before);
+ const before2=s.get();assert.throws(()=>s.transact(d=>{d.nodes.find(n=>n.id===frame)!.textDecoration='underline' as never;}));assert.equal(s.get(),before2);
+ s.transact(d=>{delete d.nodes.find(n=>n.id===text)!.textDecoration;});assert.equal(s.get().document!.nodes.find(n=>n.id===text)!.textDecoration,undefined);});

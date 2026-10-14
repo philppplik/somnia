@@ -1,0 +1,3 @@
+const keys=['textDecoration','textDecoration.none','textDecoration.underline','textDecoration.strikethrough'];
+const labels={en:['Text decoration','None','Underline','Strikethrough'],de:['Textdekoration','Keine','Unterstrichen','Durchgestrichen'],es:['Decoración de texto','Ninguna','Subrayado','Tachado'],fr:['Décoration du texte','Aucune','Souligné','Barré'],'pt-BR':['Decoração de texto','Nenhuma','Sublinhado','Tachado']};
+export const INTERFACE_P48_CATALOGUES=Object.fromEntries(Object.entries(labels).map(([locale,values])=>[locale,Object.fromEntries(keys.map((key,i)=>[`interface.${key}`,values[i]]))]));
