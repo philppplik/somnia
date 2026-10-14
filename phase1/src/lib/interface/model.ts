@@ -1,4 +1,4 @@
-import type {InterfaceLayout,InterfaceSizing,InterfaceConstraints,InterfaceInstance,InterfaceComponent,InterfaceVariable,InterfaceTextStyle} from './schema';
+import type {InterfaceLayout,InterfaceSizing,InterfaceConstraints,InterfaceInstance,InterfaceComponent,InterfaceVariable,InterfaceTextStyle,InterfaceAsset,InterfacePath} from './schema';
 import {validateInterfaceFeatures} from './validation';
 /** Somnia-owned P0 scene. No external engine, file association or SDK surface. */
 export type {NodeKind,InterfaceNode,InterfacePage,InterfaceDocument} from './schema';
@@ -18,7 +18,7 @@ export function parseInterfaceDocument(text:string):InterfaceDocument{
  const ids=new Set<string>([d.id]);const pages=new Map<string,InterfacePage>();const nodes=new Map<string,InterfaceNode>();
  for(const p of d.pages){if(!object(p)||!validId(p.id)||ids.has(p.id)||!label(p.name)||!refs(p.children))throw Error('Invalid page.');ids.add(p.id);pages.set(p.id,p as unknown as InterfacePage);}
  for(const n of d.nodes){
-  if(!object(n)||!validId(n.id)||ids.has(n.id)||!pages.has(String(n.pageId))||!(n.parentId===null||validId(n.parentId))||!refs(n.children)||!['frame','group','rectangle','text'].includes(String(n.kind))||!label(n.name)||typeof n.hidden!=='boolean'||typeof n.locked!=='boolean'||typeof n.fill!=='string'||!/^#[0-9a-fA-F]{6}$/.test(n.fill))throw Error('Invalid layer.');
+  if(!object(n)||!validId(n.id)||ids.has(n.id)||!pages.has(String(n.pageId))||!(n.parentId===null||validId(n.parentId))||!refs(n.children)||!['frame','group','rectangle','text','ellipse','line','path','image'].includes(String(n.kind))||!label(n.name)||typeof n.hidden!=='boolean'||typeof n.locked!=='boolean'||typeof n.fill!=='string'||!/^#[0-9a-fA-F]{6}$/.test(n.fill))throw Error('Invalid layer.');
   for(const key of ['x','y','width','height'])if(typeof n[key]!=='number'||!Number.isFinite(n[key])||Math.abs(Number(n[key]))>32768||(['width','height'].includes(key)&&Number(n[key])<1))throw Error('Invalid geometry.');
   if(n.kind==='text'&&(typeof n.text!=='string'||n.text.length>100_000))throw Error('Invalid text.');
   if(!['frame','group'].includes(String(n.kind))&&n.children.length)throw Error('Only frames and groups can contain layers.');
@@ -40,7 +40,7 @@ export function addNode(d:InterfaceDocument,pageId:string,kind:NodeKind,parentId
  const page=d.pages.find(p=>p.id===pageId);const parent=parentId?d.nodes.find(n=>n.id===parentId):null;
  if(!page||(parentId&&(!parent||parent.pageId!==pageId||!['frame','group'].includes(parent.kind)||parent.locked)))throw Error('Invalid parent.');
  if(parentId&&insideInstance(d,parentId))throw Error('Detach the instance before adding layers.');
- const id=uid();d.nodes.push({id,pageId,parentId,children:[],kind,name:kind[0].toUpperCase()+kind.slice(1),x:24,y:24,width:kind==='frame'?390:160,height:kind==='frame'?844:80,fill:kind==='frame'?'#ffffff':kind==='text'?'#202124':'#7756e8',...(kind==='text'?{text:'Your text'}:{}),hidden:false,locked:false});
+ const id=uid();d.nodes.push({id,pageId,parentId,children:[],kind,name:kind[0].toUpperCase()+kind.slice(1),x:24,y:24,width:kind==='frame'?390:160,height:kind==='frame'?844:80,fill:kind==='frame'?'#ffffff':kind==='text'?'#202124':'#7756e8',...(kind==='text'?{text:'Your text'}:{}),...(kind==='line'?{stroke:'#202124',strokeWidth:2}:{}),...(kind==='path'?{path:{points:[{x:0,y:1},{x:1,y:0}],closed:false},stroke:'#202124',strokeWidth:2}:{}),hidden:false,locked:false});
  (parent?.children??page.children).push(id);return id;
 }
 export function deleteNode(d:InterfaceDocument,id:string):void{

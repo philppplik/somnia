@@ -10,12 +10,16 @@ export const DEFAULT_LAYOUT:InterfaceLayout={direction:'free',wrap:false,gap:12,
 export const DEFAULT_SIZING:InterfaceSizing={width:'fixed',height:'fixed',minWidth:1,minHeight:1,maxWidth:32768,maxHeight:32768,absolute:false};
 export interface InterfaceVariable {id:string;name:string;type:'color'|'number';value:string|number;alias?:string;}
 export interface InterfaceTextStyle {id:string;name:string;fontFamily:'sans-serif'|'serif'|'monospace';fontSize:number;lineHeight:number;fontWeight:400|500|600|700;}
-export type NodeKind='frame'|'group'|'rectangle'|'text';
+export interface InterfaceAsset {id:string;hash:string;mime:'image/png';width:number;height:number;data:string;sourceName:string;sourceType:'png'|'jpeg';license:'user-provided-unverified';}
+export interface PathPoint {x:number;y:number;}
+export interface InterfacePath {points:PathPoint[];closed:boolean;}
+export type NodeKind='frame'|'group'|'rectangle'|'text'|'ellipse'|'line'|'path'|'image';
 export interface InterfaceNode {
  id:string;pageId:string;parentId:string|null;children:string[];kind:NodeKind;name:string;
  x:number;y:number;width:number;height:number;fill:string;text?:string;hidden:boolean;locked:boolean;
+ path?:InterfacePath;stroke?:string;strokeWidth?:number;imageFill?:{assetId:string;fit:'cover'|'contain'};
  bindings?:{fill?:string;gap?:string};textStyleId?:string;annotation?:string;ready?:boolean;layout?:InterfaceLayout;sizing?:InterfaceSizing;constraints?:InterfaceConstraints;componentSlot?:string;instance?:InterfaceInstance;
  [key:string]:unknown;
 }
 export interface InterfacePage {id:string;name:string;children:string[];[key:string]:unknown;}
-export interface InterfaceDocument {kind:'somnia-interface';version:1;id:string;name:string;revision:number;pages:InterfacePage[];nodes:InterfaceNode[];components?:InterfaceComponent[];variables?:InterfaceVariable[];textStyles?:InterfaceTextStyle[];[key:string]:unknown;}
+export interface InterfaceDocument {kind:'somnia-interface';version:1;id:string;name:string;revision:number;pages:InterfacePage[];nodes:InterfaceNode[];components?:InterfaceComponent[];variables?:InterfaceVariable[];textStyles?:InterfaceTextStyle[];assets?:InterfaceAsset[];[key:string]:unknown;}
