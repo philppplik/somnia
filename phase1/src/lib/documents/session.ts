@@ -1,4 +1,4 @@
-import {scrollToPage} from './navigate';
+import {scrollToPage} from './scrollPage';
 import {commentAuthor} from './author';
 import {setStyleList} from './styles';
 import {stylePatchProblem,STYLE_ID_RE,tocProblem,isListKind,listOptionsProblem,type ListStyleId} from './protocol';

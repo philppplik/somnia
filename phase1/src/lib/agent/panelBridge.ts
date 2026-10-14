@@ -51,7 +51,7 @@ import {agentPrivacy,createAIProvenance,type AIProvenance} from './privacy';
 import {reviewChangeSet,type ChangeSet} from '../agentDiff';
 import {holdAgentAutosave} from './autosaveHold';
 import {applyOperations,getState,getProjectGeneration,subscribe,patchState,undoAIGroup,subscribeProjectTransactions} from '../../store/appStore';
-import type {AgentCore,AgentEvent,AgentApproval,AgentProposal,DiffLine} from './core';
+import type {AgentCore,AgentEvent,AgentApproval,AgentProposal,DiffLine} from './types';
 import type {AgentProvider,AgentProviderRequest} from './types';
 export interface AgentConfiguration {provider:AuthProvider;model:string;apiKey:string;allowActiveFile:boolean;customPrompts?:CustomPrompt[];localRuntime?:LocalRuntimePreferences}
 let config:AgentConfiguration={provider:'ollama',model:'',apiKey:'',allowActiveFile:false};

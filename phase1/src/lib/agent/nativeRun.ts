@@ -1,5 +1,5 @@
 import type {DocumentRef,EffectClass} from './documentCore';
-import type {AgentContext} from './core';
+import type {AgentContext} from './types';
 
 /** Host-owned execution boundary. Provider messages, manifests and UI metadata cannot grant it. */
 export interface NativeActionContract {

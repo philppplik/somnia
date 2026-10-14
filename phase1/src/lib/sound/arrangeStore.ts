@@ -5,6 +5,8 @@ import {ArrangementHistory,emptyArrangement,newClip,newTrack,parseArrangement,se
 import {getSoundSession,openSound} from './session';
 import {registerWorkProvider} from '../workDocs';
 import {getMedia} from '../media';
+import {t} from '../i18n';
+import {registerCloseGuard} from '../closeGuards';
 let history=new ArrangementHistory(emptyArrangement());
 let serial=0;const uid=()=>`sound-${Date.now().toString(36)}-${++serial}`;
 let worker:Worker|undefined,nextRequest=0,generation=0;
@@ -48,6 +50,7 @@ export async function exportArrangement():Promise<'saved'|'cancelled'|'downloade
 
 /** Keep the dirty-session browser guard alive when switching back to Clip editor. */
 export const arrangementIsDirty=()=>serializeArrangement(history.snapshot)!==state.savedText;
+registerCloseGuard(()=>arrangementIsDirty()&&!window.confirm(t('sound.arrange.closeConfirm')));
 if(typeof window!=='undefined')window.addEventListener('beforeunload',event=>{if(arrangementIsDirty()){event.preventDefault();event.returnValue='';}});
 
 export async function saveArrangementNative():Promise<boolean>{
