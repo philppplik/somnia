@@ -114,5 +114,6 @@
  "photos.rating.filter": "Bewertungsfilter",
  "photos.rating.filter.all": "Alle",
  "photos.p.auto.wbPicker": "Pipette",
- "photos.p.crop.swap": "Ausrichtung tauschen"
+ "photos.p.crop.swap": "Ausrichtung tauschen",
+ "photos.rad.invert": "Umkehren"
 }

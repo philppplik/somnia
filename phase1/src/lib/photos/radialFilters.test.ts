@@ -43,3 +43,18 @@ test('settings sanitize validates rads and the signature covers them',()=>{
  assert.notEqual(photoSignature({...neutralPhotoSettings,rads:[{x:0.5,y:0.5,rx:0.2,ry:0.1}]}),photoSignature(neutralPhotoSettings));
  assert.ok(radSignature([{x:0.5,y:0.5,rx:0.2,ry:0.1}]).length>2);
 });
+test('an inverted radial filter adjusts the outside and leaves the centre untouched',()=>{
+ const f=gray(100,64,64);
+ const out=applyRadialFilters(f,[{x:0.5,y:0.5,rx:0.2,ry:0.2,invert:true}],1,0);
+ assert.equal(px(out,32,32),100); // centre: coverage 0
+ assert.ok(px(out,2,2)>150,`corner should brighten by ~1 EV, got ${px(out,2,2)}`); // coverage 1
+});
+test('invert enters clamp, validation and the signature; absence stays the default',()=>{
+ const r={x:0.5,y:0.5,rx:0.2,ry:0.2};
+ assert.equal(clampRad(r).invert,undefined);
+ assert.equal(clampRad({...r,invert:true}).invert,true);
+ assert.ok(validRad({...r,invert:false}));
+ assert.ok(!validRad({...r,invert:'yes'}));
+ assert.notEqual(radSignature([r]),radSignature([{...r,invert:true}]));
+ assert.equal(radSignature([r]),radSignature([{...r,invert:false}]));
+});

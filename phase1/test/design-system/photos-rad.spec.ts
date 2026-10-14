@@ -83,3 +83,27 @@ test('radial filter mode renders in light and dark',async({page})=>{
   await page.screenshot({path:`test-results/ds-photos-rad-${theme}.png`,fullPage:true});
  }
 });
+test('inverted radial: the outside brightens, the centre stays, one undo step (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  const at=await ready(page);
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  const before=await canvasBitmap(page);
+  const invert=page.getByTestId('photos-rad-invert');
+  await expect(invert).toBeVisible();
+  if(await invert.getAttribute('aria-pressed')!=='true')await invert.click(); // panel state persists across the theme loop
+  await expect(invert).toHaveAttribute('aria-pressed','true');
+  await page.getByTestId('photos-rad-ev').fill('0.7');
+  await page.mouse.move(...at(0.35,0.3));
+  await page.mouse.down();
+  await page.mouse.move(...at(0.65,0.7),{steps:8});
+  await page.mouse.up();
+  await page.waitForTimeout(800);
+  expect(await pixel(page,120,80)).toEqual([120,120,120,255]); // centre: coverage 0
+  const[r]=await pixel(page,10,10);
+  expect(r).toBeGreaterThan(185);expect(r).toBeLessThan(205); // corner: full 2^0.7
+  await page.screenshot({path:`test-results/ds-photos-rad-invert-${theme}.png`,fullPage:true});
+  await page.getByTestId('photos-undo').click();
+  await page.waitForTimeout(800);
+  expect(await canvasBitmap(page)).toEqual(before);
+ }
+});

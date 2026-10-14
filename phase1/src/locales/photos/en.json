@@ -114,5 +114,6 @@
  "photos.rating.filter": "Rating filter",
  "photos.rating.filter.all": "All",
  "photos.p.auto.wbPicker": "Picker",
- "photos.p.crop.swap": "Swap orientation"
+ "photos.p.crop.swap": "Swap orientation",
+ "photos.rad.invert": "Invert"
 }

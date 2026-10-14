@@ -75,6 +75,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
  const [healing,setHealing]=useState(false);
  const [brushR,setBrushR]=usePanelState<number>('photos.healRadius',0.03);
  const [healMode,setHealMode]=usePanelState<boolean>('photos.healMode',false);
+ const [radInvert,setRadInvert]=usePanelState<boolean>('photos.radInvert',false);
  const [healCursor,setHealCursor]=useState<{x:number;y:number}|null>(null);
  const healStart=useRef<{x:number;y:number}|null>(null);
  const [dodging,setDodging]=useState(false);
@@ -263,7 +264,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
   }
   if(radDraft.current){ // the bounding box becomes an ellipse; one drag = one filter = one commit = one undo step
    const d=radDraft.current;radDraft.current=null;
-   const r=clampRad({x:(d.x0+d.x1)/2,y:(d.y0+d.y1)/2,rx:Math.abs(d.x1-d.x0)/2,ry:Math.abs(d.y1-d.y0)/2});
+   const r=clampRad({x:(d.x0+d.x1)/2,y:(d.y0+d.y1)/2,rx:Math.abs(d.x1-d.x0)/2,ry:Math.abs(d.y1-d.y0)/2,...(radInvert?{invert:true}:{})});
    commitPhotoSettings(item.name,now=>{const room=Math.max(0,MAX_RADS-now.rads.length);return room?{...now,rads:[...now.rads,r]}:now;});
    return;
   }
@@ -379,6 +380,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
    {radial&&<>
     <NativeInput type="range" className="accent-[var(--accent)]" min={-1} max={1} step={0.05} value={session?.now.gradEV??0} aria-label={t('photos.grad.ev')} onChange={e=>commitPhotoSettings(item.name,now=>({...now,gradEV:Number(e.currentTarget.value)}))} data-testid="photos-rad-ev"/>
     <NativeInput type="range" className="accent-[var(--accent)]" min={-100} max={100} step={5} value={session?.now.gradSat??0} aria-label={t('photos.grad.sat')} onChange={e=>commitPhotoSettings(item.name,now=>({...now,gradSat:Number(e.currentTarget.value)}))} data-testid="photos-rad-sat"/>
+    <Button size="compact" variant="outline" aria-pressed={radInvert} aria-label={t('photos.rad.invert')} title={t('photos.rad.invert')} onClick={()=>setRadInvert(!radInvert)} data-testid="photos-rad-invert">{t('photos.rad.invert')}</Button>
    </>}
    <Button size="compact" variant="outline" aria-pressed={brushing} disabled={!ready||session?.cropping} aria-label={t('photos.brush.toggle')} title={t('photos.brush.toggle')} onClick={()=>{setBrushing(b=>!b);setHealing(false);setDodging(false);setGrading(false);setRadial(false);setStraightening(false);}} data-testid="photos-brush"><Brush size={13}/>{t('photos.brush.toggle')}</Button>
    {brushing&&<>
@@ -457,8 +459,9 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
     {radial&&!session?.cropping&&session&&(session.now.rads.length>0||radDraft.current)&&<svg className="pointer-events-none absolute inset-0 size-full" data-testid="photos-rad-overlay">
      {[...session.now.rads.map((r,i)=>({r,marker:i as number|null})),...(radDraft.current?[{r:{x:(radDraft.current.x0+radDraft.current.x1)/2,y:(radDraft.current.y0+radDraft.current.y1)/2,rx:Math.abs(radDraft.current.x1-radDraft.current.x0)/2,ry:Math.abs(radDraft.current.y1-radDraft.current.y0)/2},marker:null}]:[])].map(({r,marker},k)=>{
       const stroke=marker===null?'rgba(255,255,255,0.9)':'var(--accent)';
+      const inv=('invert' in r&&r.invert)||(marker===null&&radInvert);
       return<g key={k}>
-       <ellipse cx={r.x*dispW} cy={r.y*dispH} rx={r.rx*dispW} ry={r.ry*dispH} fill="none" stroke={stroke} strokeWidth={1.5} strokeOpacity={0.9} pointerEvents="none"/>
+       <ellipse cx={r.x*dispW} cy={r.y*dispH} rx={r.rx*dispW} ry={r.ry*dispH} fill="none" stroke={stroke} strokeWidth={1.5} strokeOpacity={0.9} strokeDasharray={inv?'6 4':undefined} pointerEvents="none"/>
        <ellipse cx={r.x*dispW} cy={r.y*dispH} rx={r.rx*0.7*dispW} ry={r.ry*0.7*dispH} fill="none" stroke={stroke} strokeWidth={1} strokeOpacity={0.5} strokeDasharray="4 3" pointerEvents="none"/>
        <circle cx={r.x*dispW} cy={r.y*dispH} r={7} fill="var(--accent)" fillOpacity={marker===null?0.4:0.25} stroke="var(--accent)" strokeWidth={1} {...(marker===null?{pointerEvents:'none' as const}:markerProps(marker,'rad'))}/>
       </g>;})}

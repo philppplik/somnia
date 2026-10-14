@@ -39,21 +39,21 @@ export function validGrad(g:unknown):g is GradFilter{
 export const gradSignature=(grads:readonly GradFilter[])=>JSON.stringify(grads.map(g=>[g.x0,g.y0,g.x1,g.y1]));
 
 /** Radial (elliptical) filter: full strength inside, fading to zero across the soft edge. Center and radii in normalized coords (radii relative to width/height). */
-export interface RadFilter{x:number;y:number;rx:number;ry:number;}
+export interface RadFilter{x:number;y:number;rx:number;ry:number;invert?:boolean;}
 export const RAD_MIN_R=0.005,RAD_MAX_R=1.5,MAX_RADS=20;
 
 export function clampRad(r:RadFilter):RadFilter{
- return{x:clamp01(r.x),y:clamp01(r.y),rx:Math.min(RAD_MAX_R,Math.max(RAD_MIN_R,r.rx)),ry:Math.min(RAD_MAX_R,Math.max(RAD_MIN_R,r.ry))};
+ return{x:clamp01(r.x),y:clamp01(r.y),rx:Math.min(RAD_MAX_R,Math.max(RAD_MIN_R,r.rx)),ry:Math.min(RAD_MAX_R,Math.max(RAD_MIN_R,r.ry)),...(r.invert?{invert:true}:{})};
 }
 export function validRad(r:unknown):r is RadFilter{
  if(!r||typeof r!=='object')return false;
  const p=r as Record<string,unknown>;
  if(!(['x','y','rx','ry'] as const).every(k=>Number.isFinite(p[k])))return false;
  const v=p as unknown as RadFilter;
- return v.x>=0&&v.x<=1&&v.y>=0&&v.y<=1&&v.rx>=RAD_MIN_R&&v.rx<=RAD_MAX_R&&v.ry>=RAD_MIN_R&&v.ry<=RAD_MAX_R;
+ return v.x>=0&&v.x<=1&&v.y>=0&&v.y<=1&&v.rx>=RAD_MIN_R&&v.rx<=RAD_MAX_R&&v.ry>=RAD_MIN_R&&v.ry<=RAD_MAX_R&&(p.invert===undefined||typeof p.invert==='boolean');
 }
 /** Stable identity of the radial filters: feeds the engine reload invariant and the settings signature. */
-export const radSignature=(rads:readonly RadFilter[])=>JSON.stringify(rads.map(r=>[r.x,r.y,r.rx,r.ry]));
+export const radSignature=(rads:readonly RadFilter[])=>JSON.stringify(rads.map(r=>[r.x,r.y,r.rx,r.ry,r.invert??false]));
 
 interface Frame{bytes:ArrayBuffer;width:number;height:number;}
 /**
@@ -97,11 +97,11 @@ export function applyRadialFilters(frame:Frame,rads:readonly RadFilter[],ev:numb
  const out=new Uint8Array(frame.bytes.slice(0)); // copy: never mutate the caller's frame
  for(const r of rads){
   const cx=r.x*w,cy=r.y*h,rx=Math.max(1,r.rx*w),ry=Math.max(1,r.ry*h);
-  const x0=Math.max(0,Math.floor(cx-rx)),x1=Math.min(w-1,Math.ceil(cx+rx));
-  const y0=Math.max(0,Math.floor(cy-ry)),y1=Math.min(h-1,Math.ceil(cy+ry));
+  const x0=r.invert?0:Math.max(0,Math.floor(cx-rx)),x1=r.invert?w-1:Math.min(w-1,Math.ceil(cx+rx)); // inverted coverage reaches the whole frame
+  const y0=r.invert?0:Math.max(0,Math.floor(cy-ry)),y1=r.invert?h-1:Math.min(h-1,Math.ceil(cy+ry));
   for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
    const nx=(x-cx)/rx,ny=(y-cy)/ry;
-   const wgt=spotCoverage(Math.sqrt(nx*nx+ny*ny));
+   const wgt=r.invert?1-spotCoverage(Math.sqrt(nx*nx+ny*ny)):spotCoverage(Math.sqrt(nx*nx+ny*ny));
    if(wgt<=0)continue;
    const i=(y*w+x)*4;
    const gain=Math.pow(2,ev*wgt),mix=(sat/100)*wgt;

@@ -62,3 +62,17 @@ strength inside and fades to zero across a soft edge.
   handle deletes exactly that filter (the other stays) and ONE undo
   restores both. Light/dark screenshots; canvas bitmaps byte-identical
   to the P51 base (64695656) — the feature is inert until dragged.
+
+## Inverted radial filters (P67)
+
+`RadFilter` gains an optional `invert` flag (absent = normal, so
+existing filters and payloads are unchanged). An inverted filter
+applies the EV/saturation adjustment to everything OUTSIDE the
+ellipse: the coverage is `1 - spotCoverage(d)`, so the plateau inside
+stays untouched, the feather still softens the boundary, and the pixel
+loop spans the whole frame instead of the ellipse bounding box.
+`clampRad`, `validRad` and `radSignature` carry the flag, so undo,
+dirty tracking and the reload invariant see it. The radial tool bar
+grows an "Invert" toggle (panel-persisted `photos.radInvert`) that new
+drags commit with; inverted ellipses render with a dashed outer ring,
+and the draft preview follows the toggle.

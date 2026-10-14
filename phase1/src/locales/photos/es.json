@@ -114,5 +114,6 @@
  "photos.rating.filter": "Filtro de valoración",
  "photos.rating.filter.all": "Todas",
  "photos.p.auto.wbPicker": "Cuentagotas",
- "photos.p.crop.swap": "Invertir orientación"
+ "photos.p.crop.swap": "Invertir orientación",
+ "photos.rad.invert": "Invertir"
 }
