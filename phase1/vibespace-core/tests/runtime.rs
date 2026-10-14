@@ -475,6 +475,12 @@ async fn partial_text_rebuilds_from_persisted_offsets_and_final_replaces_it() {
  let snapshot=rt.snapshot(&id).unwrap();assert_eq!(snapshot.snapshot.messages.len(),1);assert_eq!(snapshot.snapshot.messages[0].role,"assistant");rt.stop(&id).await.unwrap();
 }
 
+// stop() acknowledges cancellation, not observer persistence. Keep terminal
+// assertions strict, but wait for the event consumer that owns durable state.
+async fn await_stopped(rt:&Arc<Runtime>,id:&str){
+ for _ in 0..100{if rt.store.get_run(id).unwrap().execution==somnia_vibespace_storage::ExecutionState::Stopped{return;}tokio::time::sleep(std::time::Duration::from_millis(10)).await;}
+ panic!("stopped state was not persisted within the test deadline");
+}
 struct PartialWaiting;
 #[async_trait]
 impl engine::ModelTransport for PartialWaiting {
@@ -485,7 +491,7 @@ impl engine::ModelTransport for PartialWaiting {
 async fn stop_keeps_persisted_partial_incomplete_never_tool_or_final(){
  let (_data,project,rt,studio)=setup();let started=rt.start(StartRun{studio_id:studio.studio_id,request_id:uuid::Uuid::new_v4().to_string(),retry_of_run_id:None},Arc::new(PartialWaiting),engine::ModelConfig::Local{endpoint:"http://127.0.0.1:11434/v1/chat/completions".into(),model:"qwen3.5:9b".into()}).await.unwrap();let id=started.snapshot.run_id;
  for _ in 0..100 {if !rt.snapshot(&id).unwrap().snapshot.messages.is_empty(){break;}tokio::time::sleep(std::time::Duration::from_millis(10)).await;}
- assert_eq!(rt.snapshot(&id).unwrap().snapshot.messages[0].role,"assistant_streaming");rt.stop(&id).await.unwrap();
+ assert_eq!(rt.snapshot(&id).unwrap().snapshot.messages[0].role,"assistant_streaming");rt.stop(&id).await.unwrap();await_stopped(&rt,&id).await;
  let snapshot=rt.snapshot(&id).unwrap();assert_eq!(snapshot.snapshot.messages[0].role,"assistant_incomplete");assert_eq!(snapshot.snapshot.messages[0].text,"Provisional only");assert_eq!(std::fs::read_to_string(project.path().join("hello.txt")).unwrap(),"before");
 }
 
@@ -504,7 +510,7 @@ impl engine::ModelTransport for PartialFailure{
 #[tokio::test]async fn feedback_successor_is_fresh_idempotent_and_preserves_model_scope_without_partial_replay(){
  let (_data,project,rt,studio)=setup();let started=rt.start(StartRun{studio_id:studio.studio_id.clone(),request_id:uuid::Uuid::new_v4().to_string(),retry_of_run_id:None},Arc::new(PartialWaiting),engine::ModelConfig::Local{endpoint:"http://127.0.0.1:11434/v1/chat/completions".into(),model:"qwen3.5:9b".into()}).await.unwrap();let id=started.snapshot.run_id;
  for _ in 0..100{if !rt.snapshot(&id).unwrap().snapshot.messages.is_empty(){break;}tokio::time::sleep(std::time::Duration::from_millis(10)).await;}
- let request=RetryFeedback{run_id:id.clone(),request_id:uuid::Uuid::new_v4().to_string(),message:"Use smaller steps".into()};assert!(rt.prepare_retry_feedback(&request).is_err());rt.stop(&id).await.unwrap();
+ let request=RetryFeedback{run_id:id.clone(),request_id:uuid::Uuid::new_v4().to_string(),message:"Use smaller steps".into()};assert!(rt.prepare_retry_feedback(&request).is_err());rt.stop(&id).await.unwrap();await_stopped(&rt,&id).await;
  let successor=rt.prepare_retry_feedback(&request).unwrap();let again=rt.prepare_retry_feedback(&request).unwrap();assert_eq!(successor.studio_id,again.studio_id);assert_ne!(successor.studio_id,studio.studio_id);assert_eq!(successor.space_id,studio.space_id);assert_eq!(successor.model,studio.model);assert!(successor.goal.contains("Use smaller steps"));assert!(!successor.goal.contains("Provisional only"));assert!(rt.prepare_retry_feedback(&RetryFeedback{message:"different".into(),..request}).is_err());assert_eq!(std::fs::read_to_string(project.path().join("hello.txt")).unwrap(),"before");
 }
 

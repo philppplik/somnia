@@ -179,7 +179,18 @@ impl Inference<Session, Effect> for Infer {
                 let _=self.out.send(RunEvent{run_id:s.request.run_id.clone(),kind:EventKind::TextDelta{turn:s.steps,offset:offset as u32,text:text.clone()}});
                 offset+=text.len();provisional.push_str(&text);
             },
-            result=&mut future=>break result.map_err(|_|anyhow::anyhow!("model"))?,
+            result=&mut future=>{
+                // The final future poll can enqueue a delta and return success/failure
+                // before select polls rx again. Persist already accepted frames first.
+                // Close prevents detached writers from extending this completed turn.
+                rx.close();
+                while let Ok(text)=rx.try_recv(){
+                    frames+=1;if frames>256||text.is_empty()||text.len()>4096||offset+text.len()>65536{anyhow::bail!("model");}
+                    let _=self.out.send(RunEvent{run_id:s.request.run_id.clone(),kind:EventKind::TextDelta{turn:s.steps,offset:offset as u32,text:text.clone()}});
+                    offset+=text.len();provisional.push_str(&text);
+                }
+                break result.map_err(|_|anyhow::anyhow!("model"))?;
+            },
         }};
         if offset>0&&(reply.message!=provisional||reply.tool.is_some()){anyhow::bail!("model");}
         if reply.message.len() > 65536
