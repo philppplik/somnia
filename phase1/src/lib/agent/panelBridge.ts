@@ -186,6 +186,9 @@ function panelProposal(set:ChangeSet):AgentProposal {
  const reviews=reviewChangeSet(set);const lines=reviews.flatMap(r=>r.ops.flatMap<DiffLine>(op=>op.t==='same'?[{kind:'ctx' as const,text:op.text}]:[...op.removed.map(text=>({kind:'del' as const,text})),...op.added.map(text=>({kind:'add' as const,text}))]));
  return {id:set.id,file:set.files.map(f=>f.path).join(', '),changeSet:set,lines,added:lines.filter(l=>l.kind==='add').length,removed:lines.filter(l=>l.kind==='del').length};
 }
+/** Pin before capture; transcript insertion cannot follow a later active document. */
+export function pinVoiceTranscriptTarget(){syncDocuments();const state=getState();const base=documents.snapshot(state.activeFile);if(base.ref.adapter!==codeAdapter.id||!/\.md$/i.test(base.ref.path))throw Error('Voice text requires Code Markdown.');return base.ref;}
+export function stageVoiceTranscript(ref:import('./documentCore').DocumentRef,text:string){syncDocuments();documents.assert(ref);if(getState().activeFile!==ref.path)throw Error('Voice target changed.');return stageLocalVisionResult(ref.path,text,'text','voice-transcript-review');}
 /** Host catalog only, no tool invocation or model disclosure. */
 export function inspectStudioToolDefinitions(path:string){
  syncDocuments();const base=documents.snapshot(path);

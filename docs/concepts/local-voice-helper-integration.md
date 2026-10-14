@@ -53,3 +53,27 @@ CI: frame parser fuzz/property tests, truncation/order/length/overflow fixtures,
 Owner-device gate: German/English known nonsensitive utterances, noise/silence (no hallucinated transcript), accurate timing, cold/warm load, peak process-tree RAM/VRAM, cancellation tail, microphone revoke/unplug/session-lock, playback/export coexistence, no background capture after restart. Report measured results and exact engine/model/hardware, not upstream speed claims. Delivery requires a usable reviewed transcript, not merely a spawned helper.
 
 Open owner decisions: exact helper packaging targets, CPU-first vs backend bundle, initial multilingual model/artifact provenance, permitted download size/storage budget, and later TTS scope. No code or dependencies added by this design.
+
+## Prepared host UI seam (2026-10-14)
+
+The host now has a microphone-consent/push-to-talk shell, bounded capture owner and
+final-transcript review insertion. Production has no STT adapter: record is disabled and
+explicitly says no approved helper/model. The fake adapter exists only inside development
+fixtures/tests, never as a production fallback. No browser speech recognition is used.
+
+Browser capture currently reports its actual MediaRecorder MIME/codec, bounds duration to
+two minutes and encoded bytes to 20 MB, and uses Web Audio only for level measurement.
+This is not the proposed whisper.cpp PCM input. Before native wiring, select an approved
+codec decoder/resampler and test duration/channel semantics; do not send encoded WebM
+as if it were 16 kHz PCM. Capture starts only on press/keyboard hold after explicit consent;
+release during an unresolved permission prompt cancels the job and closes a late stream.
+Cancel/unmount/revocation/unplug stop owned tracks and discard audio. No transcript from
+late or incomplete jobs reaches insertion. The original document is pinned before capture;
+edited final text opens a native source proposal and requires complete preview acceptance.
+
+Optional engine-model provisioning remains a separate, blocked native implementation.
+No binary download, model checksum or redistribution approval is supplied by this doc.
+MIT source notices verified earlier remain source evidence, not pinned artifact approval.
+The first real download review must show exact immutable artifact URL/revision, SHA-256,
+bytes, engine and converted-model license/provenance, disk availability or unknown, and
+network use. Fail closed until those exist; never fill this manifest with made-up hashes.
