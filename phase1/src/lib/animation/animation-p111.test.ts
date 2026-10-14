@@ -583,3 +583,15 @@ test('P181 loop setting: GIF drops the NETSCAPE loop block, APNG writes plays=1,
  const {defaultExportSettings,settingsProblems}=await import('./exportSettings');assert.equal(defaultExportSettings().loop,undefined);assert.deepEqual(settingsProblems({...defaultExportSettings(),loop:false}),[]);
  assert.equal(typeof encodeApng,'function');
 });
+
+test('P182 graph time axis: readable frame steps, bounded count, aligned to the frame grid',async()=>{
+ const {timeTicks,timeTickStep}=await import('./graphWindow');const fps={num:30,den:1};const T=(fr:number)=>f(fr);
+ assert.equal(timeTickStep(fps,T(150),6),30);                 // 5 s at 6 labels: one per second
+ assert.equal(timeTickStep(fps,T(150),12),15);                // more room: half seconds
+ assert.equal(timeTickStep(fps,T(20),8),5);                   // zoomed in: 5 frames
+ const t=timeTicks(0,T(150),fps,6);assert.deepEqual(t,[0,30,60,90,120,150].map(T));
+ const z=timeTicks(T(7),T(23),fps,8);assert.ok(z.every(x=>x%f(1)===0&&x>=T(7)&&x<=T(23)));assert.ok(z.length<=8+1);
+ assert.deepEqual(timeTicks(5,5,fps,6),[]);assert.deepEqual(timeTicks(0,100,fps,0),[]);
+ assert.ok(timeTicks(0,T(3600*30),fps,500).length<=61);
+ const ntsc={num:30000,den:1001};assert.ok(timeTicks(0,T(300),ntsc,6).length>=2);
+});

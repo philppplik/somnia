@@ -2,7 +2,7 @@ import {useEffect,useId,useLayoutEffect,useRef,useState,type KeyboardEvent as Re
 import {animationSession} from '../../lib/animation/session';
 import type {Edit} from '../../lib/animation/edit';
 import {PROP_META,TRANSFORM_KEYS,type Composition,type KeyRef,type TransformKey} from '../../lib/animation/model';
-import {fitTargets,graphWindow,windowValueRange} from '../../lib/animation/graphWindow';
+import {fitTargets,graphWindow,timeTicks,windowValueRange} from '../../lib/animation/graphWindow';
 import {channelOf,curveSamples,handleToEase,handlesOf,niceStep,valueRange,speedSamples,speedRange,EASE_PRESETS,type Handle} from '../../lib/animation/graph';
 import {clickSelect,sameKey,shiftSelection} from '../../lib/animation/selection';
 import {frameToTick,timecode} from '../../lib/animation/time';
@@ -166,8 +166,7 @@ export function GraphEditor({comp,layerId,sel,playhead}:{comp:Composition;layerI
      <polyline points={pts(samples)} fill="none" stroke="var(--accent)" strokeWidth={2} data-testid="animation-graph-curve"/>
     </g>
     <line x1={xOf(playhead)} x2={xOf(playhead)} y1={PAD.t} y2={PAD.t+ph} stroke="var(--text-primary)" strokeWidth={1} pointerEvents="none" data-testid="animation-graph-playhead"/>
-    <text x={PAD.l} y={h-3} fontSize={9} fill="var(--text-tertiary)">{timecode(t0,comp.fps)}</text>
-    <text x={PAD.l+pw} y={h-3} textAnchor="end" fontSize={9} fill="var(--text-tertiary)">{timecode(t1,comp.fps)}</text>
+    {timeTicks(t0,t1,comp.fps,Math.floor(pw/80)).map(tk=><g key={tk} pointerEvents="none" data-testid="animation-graph-timetick"><line x1={xOf(tk)} x2={xOf(tk)} y1={PAD.t} y2={PAD.t+ph} stroke="var(--border-subtle)" strokeWidth={1}/><text x={xOf(tk)} y={h-3} textAnchor={xOf(tk)>PAD.l+pw-30?"end":"middle"} fontSize={9} fill="var(--text-tertiary)">{timecode(tk,comp.fps)}</text></g>)}
     {!speed&&selHere.flatMap(r=>{const i=keys.findIndex(k=>k.t===r.t);if(i<0)return [];const k=keys[i];
      return handlesOf(keys,i,ch).map(hd=><g key={`${hd.kind}-${r.t}`}>
       <line x1={xOf(k.t)} y1={yOf(channelOf(k.v,ch))} x2={xOf(hd.t)} y2={yOf(hd.v)} stroke="var(--text-secondary)" strokeWidth={1}/>
