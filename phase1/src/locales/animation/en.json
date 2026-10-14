@@ -996,5 +996,8 @@
  "animation.rig.align.bottom": "Align bottom",
  "animation.rig.align.distributeX": "Distribute horizontally",
  "animation.rig.align.distributeY": "Distribute vertically",
- "cmd.animation.layers.align": "Align or distribute the selected layers"
+ "cmd.animation.layers.align": "Align or distribute the selected layers",
+ "animation.export.fileName": "File name",
+ "animation.export.fileNameAuto": "Document name",
+ "animation.export.problem.name": "The file name must be at most 80 characters"
 }

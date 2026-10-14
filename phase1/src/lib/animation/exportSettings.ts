@@ -24,6 +24,8 @@ export interface ExportSettings{
  dither?:boolean;
  /** GIF and APNG: false plays once, absent or true loops forever. */
  loop?:boolean;
+ /** Base name of the exported files (cleaned to letters, digits, dot, dash, underscore). Empty or absent uses the document name. */
+ fileName?:string|null;
 }
 export const defaultExportSettings=():ExportSettings=>({scale:100,fps:null,from:null,to:null});
 export interface ExportPreset{id:string;format:ExportFormat;scale:number;fps:number|null;transparent:boolean}
@@ -35,7 +37,7 @@ export const EXPORT_PRESETS:readonly ExportPreset[]=[
  {id:'frames-png',format:'sequence',scale:100,fps:null,transparent:true},
  {id:'frames-2x',format:'sequence',scale:200,fps:null,transparent:false},
 ];
-export type ExportProblem='size'|'frames'|'seconds'|'range'|'scale'|'fps'|'columns';
+export type ExportProblem='size'|'frames'|'seconds'|'range'|'scale'|'fps'|'columns'|'name';
 export interface ExportPlan{
  format:ExportFormat;width:number;height:number;frames:number;seconds:number;fps:{num:number;den:number};
  /** Frame range at the composition rate, inclusive. */
@@ -52,6 +54,7 @@ export function settingsProblems(s:ExportSettings):ExportProblem[]{
  if(s.fps!==null&&!whole(s.fps,1,FPS_MAX))p.push('fps');
  if((s.from!==null&&!whole(s.from,0,1e7))||(s.to!==null&&!whole(s.to,0,1e7))||(s.from!==null&&s.to!==null&&s.to<s.from))p.push('range');
  if(s.columns!==undefined&&s.columns!==null&&!whole(s.columns,1,256))p.push('columns');
+ if(s.fileName!==undefined&&s.fileName!==null&&(typeof s.fileName!=='string'||s.fileName.length>80))p.push('name');
  return p;
 }
 const BYTES_PER_PIXEL:Record<Exclude<ExportFormat,'webm'>,number>={sequence:0.35,gif:0.12,apng:0.3,sheet:0.3};
@@ -85,5 +88,5 @@ export function exportPlan(comp:Composition,format:ExportFormat,s:ExportSettings
  const est=estimateBytes(format,width,height,frames,rate.num/rate.den);
  return {format,width,height,frames,seconds,fps:rate,from,to,comp:derived,estimateBytes:est,overCap:est>EXPORT_LIMITS.maxBytes,problems:[...new Set(problems)]};
 }
-const MSG:Record<ExportProblem,string>={size:'The output size is above the supported limit. Lower the scale.',frames:'Too many frames for this format. Shorten the range or lower the frame rate.',seconds:`WebM records in real time and is limited to ${EXPORT_LIMITS.webmSeconds} seconds. Shorten the range.`,range:'The frame range is not valid for this composition.',scale:`Scale must be a whole number from ${SCALE_MIN} to ${SCALE_MAX} percent.`,fps:`Frame rate must be a whole number from 1 to ${FPS_MAX}.`,columns:'Sprite sheet columns must be a whole number from 1 to 256.'};
+const MSG:Record<ExportProblem,string>={size:'The output size is above the supported limit. Lower the scale.',frames:'Too many frames for this format. Shorten the range or lower the frame rate.',seconds:`WebM records in real time and is limited to ${EXPORT_LIMITS.webmSeconds} seconds. Shorten the range.`,range:'The frame range is not valid for this composition.',scale:`Scale must be a whole number from ${SCALE_MIN} to ${SCALE_MAX} percent.`,fps:`Frame rate must be a whole number from 1 to ${FPS_MAX}.`,columns:'Sprite sheet columns must be a whole number from 1 to 256.',name:'The file name must be at most 80 characters.'};
 export const problemMessage=(p:ExportProblem)=>MSG[p];

@@ -634,3 +634,15 @@ test('P185 Rig-menu commands are enabled and run on ticked layers even with noth
  s.dispatch({type:'layer.add',kind:'shape',id:'b'});
  const r=specs.find(x=>x.id==='animation.layers.flag')!.run({flag:'shy',layers:['a','b']}) as {changed:number};assert.equal(r.changed,2);
 });
+
+test('P186 custom export file name: replaces the document name in frame, sequence and GIF names, clears with null, stays sanitised',async()=>{
+ const {exportCurrentFrame,exportWorkAreaSequence,exportGif,setExportSettings,resetExportSettings,resetExport}=await import('./exportJob');const {settingsProblems,defaultExportSettings}=await import('./exportSettings');
+ const s=open();setAnimationSession(s);s.dispatch({type:'workarea.set',in:0,out:f(2)});resetExport();resetExportSettings();
+ const saved:string[]=[];const save=(_b:Blob,n:string)=>{saved.push(n);};const rasterize=async()=>new Uint8Array([1]);const pixels=async(_s:string,w:number,h:number)=>new Uint8ClampedArray(w*h*4);
+ setExportSettings({fileName:' My Title/2 '});s.setView({playhead:f(1)});
+ await exportCurrentFrame({rasterize,save});await exportWorkAreaSequence({rasterize,save});await exportGif({pixels,save});
+ assert.deepEqual(saved,['My_Title_2_00001.png','My_Title_2_frames.zip','My_Title_2.gif']);
+ setExportSettings({fileName:null});saved.length=0;await exportGif({pixels,save});assert.notEqual(saved[0],'My_Title_2.gif');
+ assert.throws(()=>setExportSettings({fileName:'x'.repeat(81)}),(e:any)=>e.code==='unsupported');assert.deepEqual(settingsProblems({...defaultExportSettings(),fileName:'ok'}),[]);
+ resetExportSettings();
+});

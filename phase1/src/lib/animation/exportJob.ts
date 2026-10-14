@@ -41,7 +41,9 @@ export async function withExportComp<T>(compId:string,fn:()=>Promise<T>):Promise
 export const exportSetupSnapshot=()=>({settings:state.settings,transparent:state.transparent});
 export function restoreExportSetup(x:{settings:ExportSettings;transparent:boolean}){if(state.status!=='running')set({settings:x.settings,transparent:x.transparent});}
 function target(format?:ExportFormat){
- const doc=animationSession().document;const comp=doc&&findComp(doc,forced);
+ const base=animationSession().document;const fileName=state.settings.fileName?.trim();
+ /** A custom export name replaces the document name in every file name this export writes. */
+ const doc=base&&fileName?{...base,name:fileName}:base;const comp=doc&&findComp(doc,forced);
  if(!doc||!comp)throw new ExportError('Open an animation first.','empty');
  setRenderComps(doc.compositions);
  if(!format){const out={width:Math.max(1,Math.round(comp.width*state.settings.scale/100)),height:Math.max(1,Math.round(comp.height*state.settings.scale/100))};

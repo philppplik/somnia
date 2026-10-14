@@ -996,5 +996,8 @@
  "animation.rig.align.bottom": "Alinhar embaixo",
  "animation.rig.align.distributeX": "Distribuir na horizontal",
  "animation.rig.align.distributeY": "Distribuir na vertical",
- "cmd.animation.layers.align": "Alinhar ou distribuir as camadas selecionadas"
+ "cmd.animation.layers.align": "Alinhar ou distribuir as camadas selecionadas",
+ "animation.export.fileName": "Nome do arquivo",
+ "animation.export.fileNameAuto": "Nome do documento",
+ "animation.export.problem.name": "O nome do arquivo pode ter no máximo 80 caracteres"
 }

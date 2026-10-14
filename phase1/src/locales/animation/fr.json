@@ -996,5 +996,8 @@
  "animation.rig.align.bottom": "Aligner en bas",
  "animation.rig.align.distributeX": "Répartir horizontalement",
  "animation.rig.align.distributeY": "Répartir verticalement",
- "cmd.animation.layers.align": "Aligner ou répartir les calques sélectionnés"
+ "cmd.animation.layers.align": "Aligner ou répartir les calques sélectionnés",
+ "animation.export.fileName": "Nom du fichier",
+ "animation.export.fileNameAuto": "Nom du document",
+ "animation.export.problem.name": "Le nom du fichier ne peut pas dépasser 80 caractères"
 }
