@@ -630,5 +630,10 @@
  "studio3d.ao.strength": "Intensité d’occlusion",
  "cmd.studio3d.shadow.set": "Régler la qualité et l’algorithme des ombres",
  "cmd.studio3d.light.helpers": "Afficher ou masquer le helper de la lumière sélectionnée",
- "cmd.studio3d.view.ao": "Activer ou désactiver l’aperçu d’occlusion ambiante (vue seulement)"
+ "cmd.studio3d.view.ao": "Activer ou désactiver l’aperçu d’occlusion ambiante (vue seulement)",
+ "studio3d.view.perf": "Indicateur de performances",
+ "cmd.studio3d.view.perf": "Afficher ou masquer l’indicateur en direct de FPS, draw calls et triangles",
+ "studio3d.model.instancing": "Candidats à l’instanciation",
+ "studio3d.warn.instancingHint": "{count} maillages partagent géométrie et matériau. L’instanciation réduirait les draw calls.",
+ "studio3d.warn.lodHint": "Grande scène statique ({count} triangles). Des niveaux de détail ou une décimation aideraient."
 }

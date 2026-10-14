@@ -1900,6 +1900,7 @@ export class Stage{
  }
  measure(animations=this.clipList.length):{stats:ModelStats;outline:OutlineEntry[];bounds:Bounds|null}{
   const stats=emptyStats();stats.animations=animations;const outline:OutlineEntry[]=[];const mats=new Set<THREE.Material>(),texs=new Set<THREE.Texture>();
+  const instanced=new Map<THREE.BufferGeometry,Set<THREE.Material>>();
   const walk=(o:THREE.Object3D,depth:number)=>{
    const mesh=o as THREE.Mesh;const kind:OutlineEntry['kind']=(o as THREE.Bone).isBone?'bone':mesh.isMesh?'mesh':(o as THREE.Light).isLight?'light':(o as THREE.Camera).isCamera?'camera':'group';
    if(kind==='bone')stats.bones++;
@@ -1913,6 +1914,7 @@ export class Stage{
     let noUv=false;const list=Array.isArray(mesh.material)?mesh.material:[mesh.material];stats.draws+=Math.max(1,list.length);
     for(const mat of list){if(!mat)continue;mats.add(mat);for(const v of Object.values(mat as unknown as Record<string,unknown>))if(v instanceof THREE.Texture){texs.add(v);if(!mesh.geometry.getAttribute('uv'))noUv=true;}}
     if(noUv)stats.textureNoUv++;
+    if(!Array.isArray(mesh.material)&&mesh.material){const seen=instanced.get(mesh.geometry);if(seen?.has(mesh.material))stats.instancingCandidates++;else if(seen)seen.add(mesh.material);else instanced.set(mesh.geometry,new Set([mesh.material]));}
    }
    for(const c of o.children)walk(c,depth+1);
   };

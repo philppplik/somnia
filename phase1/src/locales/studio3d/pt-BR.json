@@ -630,5 +630,10 @@
  "studio3d.ao.strength": "Intensidade de oclusão",
  "cmd.studio3d.shadow.set": "Definir a qualidade e o algoritmo das sombras",
  "cmd.studio3d.light.helpers": "Mostrar ou ocultar o auxiliar da luz selecionada",
- "cmd.studio3d.view.ao": "Ativar ou desativar a prévia de oclusão ambiente (somente visualização)"
+ "cmd.studio3d.view.ao": "Ativar ou desativar a prévia de oclusão ambiente (somente visualização)",
+ "studio3d.view.perf": "Indicador de desempenho",
+ "cmd.studio3d.view.perf": "Mostrar ou ocultar o indicador ao vivo de FPS, draw calls e triângulos",
+ "studio3d.model.instancing": "Candidatos a instanciação",
+ "studio3d.warn.instancingHint": "{count} malhas compartilham geometria e material. Instanciá-las reduziria os draw calls.",
+ "studio3d.warn.lodHint": "Cena estática grande ({count} triângulos). Níveis de detalhe ou dizimação ajudariam."
 }

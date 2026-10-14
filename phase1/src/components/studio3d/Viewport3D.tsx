@@ -28,7 +28,7 @@ import {getState as getAppState} from '../../store/appStore';
 import {readProjectUnit,writeProjectUnit} from '../../lib/studio3d/projectPrefs';
 import {checkPreset,presetPatch,readPresets,removePreset,savePreset,MaterialPresetError,type MaterialPreset} from '../../lib/studio3d/materialPresets';
 import type {MaterialSnapshot} from '../../lib/studio3d/stage';
-import {toggleSelection,marqueeRect,inRect,turntablePlan,frameName,exportFileName,unitScale,isUnit,isMeshFormat,mergeSnap,snapTo,measureInfo,stlUnitHint,mtlReferences,mtlTextures,externalGltfNeeds,clampRenderSize,shadowMapSize,MAX_MTL_BYTES,MAX_TEXTURE_BYTES,MAX_TEXTURE_FILES,SnapError,mergeEnv,envFormatFor,isShadowQuality,isShadowType,nudgeFor,EnvError,modelFormatFor,readModelHeader,ModelError,boundsValid,boundsCenter,boundsRadius,frameDistance,clipPlanes,pickClips,extractGltfTextures,GLTF_TEXTURE_MODES} from '../../lib/studio3d/model';
+import {toggleSelection,marqueeRect,inRect,turntablePlan,frameName,exportFileName,unitScale,isUnit,isMeshFormat,mergeSnap,snapTo,measureInfo,stlUnitHint,mtlReferences,mtlTextures,externalGltfNeeds,clampRenderSize,shadowMapSize,formatPerf,MAX_MTL_BYTES,MAX_TEXTURE_BYTES,MAX_TEXTURE_FILES,SnapError,mergeEnv,envFormatFor,isShadowQuality,isShadowType,nudgeFor,EnvError,modelFormatFor,readModelHeader,ModelError,boundsValid,boundsCenter,boundsRadius,frameDistance,clipPlanes,pickClips,extractGltfTextures,GLTF_TEXTURE_MODES} from '../../lib/studio3d/model';
 import type {Bounds} from '../../lib/studio3d/model';
 import {checkSkins,bonePickRadius,pickBone} from '../../lib/studio3d/skeleton';
 import {weightColor} from '../../lib/studio3d/skinning';
@@ -40,7 +40,7 @@ import type {Ease} from '../../lib/studio3d/ease';
 import type {KeyPath} from '../../lib/studio3d/clips';
 import type {KeyRef,KeyData} from '../../lib/studio3d/keyEdit';
 import {advance,clampTime,checkClip,checkRange,checkSpeed,startTime,rangeFits,AnimationError,type ClipInfo,type LoopRange} from '../../lib/studio3d/animation';
-import {exportBlocker,LIMITS} from '../../lib/studio3d/validate';
+import {exportBlocker,LIMITS,validateScene} from '../../lib/studio3d/validate';
 import {SLOT_CONFIG,DEFAULT_PRESET_EMISSIVE,inspectImage,isTextureSlot,MAX_TEXTURE_FILE_BYTES,MaterialError,type TextureSlot} from '../../lib/studio3d/materials';
 import {viewDirection,orthoHalfHeight,type ViewPreset} from '../../lib/studio3d/viewPresets';
 import {rememberScene,forgetAutosave} from '../../lib/studio3d/recentSession';
@@ -125,9 +125,17 @@ export default function Viewport3D(){
   let selection:THREE.Box3Helper|null=null;let bounds:Bounds|null=null;let disposed=false;let frame=0;
   /** Ambient occlusion: a composer chain (render + GTAO + output) replaces the direct render while on. Preview only - stills, turntables and exports keep the plain renderer. */
   let composer:EffectComposer|null=null;let renderPass:RenderPass|null=null;let gtaoPass:GTAOPass|null=null;
+  let perfFrames=0,perfLast=0;
+  /** Live overlay numbers, published at most once a second while the overlay is on. */
+  const samplePerf=()=>{
+   if(!getStudio3DState().perf)return;
+   perfFrames++;const now=performance.now();if(!perfLast){perfLast=now;return;}
+   const dt=now-perfLast;if(dt<1000)return;
+   patchStudio3D({perf:{fps:Math.round(perfFrames*1000/dt),calls:renderer.info.render.calls,tris:renderer.info.render.triangles}});perfFrames=0;perfLast=now;
+  };
   const renderFrame=()=>{
    const ao=getStudio3DState().ao;
-   if(!ao.on){renderer.render(scene,camera);return;}
+   if(!ao.on){renderer.render(scene,camera);samplePerf();return;}
    if(!composer){
     const w=Math.max(1,el.clientWidth),h=Math.max(1,el.clientHeight);
     composer=new EffectComposer(renderer);composer.setSize(w,h);
@@ -137,6 +145,7 @@ export default function Viewport3D(){
    }
    renderPass!.camera=camera;gtaoPass!.camera=camera;gtaoPass!.blendIntensity=ao.strength;
    composer.render();
+   samplePerf();
   };
   const invalidate=()=>{if(frame||disposed)return;frame=requestAnimationFrame(()=>{frame=0;if(!disposed)renderFrame();});};
   controls.addEventListener('change',invalidate);
@@ -655,7 +664,10 @@ export default function Viewport3D(){
     if(ticket!==opening||disposed){gltf.scene.traverse(o=>{(o as THREE.Mesh).geometry?.dispose?.();});return;}
     selectionReset();patchStudio3D({loadPhase:'build'});
     await stage.load(gltf.scene,async()=>{await clipsFrom(gltf);});
-    const im=stage.measure().stats;patchStudio3D({status:'ready',name:primary.name,error:'',format:header.format.toUpperCase(),bytes:size,blank:false,confirmReplace:null,notice,unitHint,loadPhase:null,imported:{triangles:im.triangles,materials:im.materials,animations:im.animations}});loadUnit();
+    const im=stage.measure().stats;
+    const bigScene=validateScene(im).filter(w=>w.level==='warn').length;
+    const loadNotice=bigScene?[notice,`${bigScene} performance warning${bigScene>1?'s':''} (see Checks).`].filter(Boolean).join(' '):notice;
+    patchStudio3D({status:'ready',name:primary.name,error:'',format:header.format.toUpperCase(),bytes:size,blank:false,confirmReplace:null,notice:loadNotice,unitHint,loadPhase:null,imported:{triangles:im.triangles,materials:im.materials,animations:im.animations}});loadUnit();
     frameAll();
    }catch(e){
     if(ticket!==opening)return;
@@ -1065,6 +1077,7 @@ export default function Viewport3D(){
    setShadows:patch=>{const cur=getStudio3DState().shadows;const next={quality:patch.quality&&isShadowQuality(patch.quality)?patch.quality:cur.quality,type:patch.type&&isShadowType(patch.type)?patch.type:cur.type};patchStudio3D({shadows:next});applyShadowQuality();invalidate();},
    setLightHelpers:on=>{patchStudio3D({lightHelpers:on});syncLightHelper();invalidate();},
    setAo:patch=>{const cur=getStudio3DState().ao;patchStudio3D({ao:{on:patch.on??cur.on,strength:Math.min(1,Math.max(0,patch.strength??cur.strength))}});invalidate();},
+   setPerf:on=>{patchStudio3D({perf:on?{fps:0,calls:0,tris:0}:null});invalidate();},
    setProjection:applyProjection,
    setViewFov:fov=>{const f=Math.min(120,Math.max(1,fov));if(perspCam.fov!==f){perspCam.fov=f;perspCam.updateProjectionMatrix();invalidate();}if(getStudio3DState().viewFov!==f)patchStudio3D({viewFov:f});},
    setTurntable,
@@ -1276,6 +1289,7 @@ export default function Viewport3D(){
   {s.status==='loading'&&<StudioStatus className="pointer-events-none absolute left-4 top-3 m-0 rounded-md bg-surface px-2 py-1 text-xs" data-testid="studio3d-loading">{t('studio3d.status.loading',{name:s.name})}{s.loadPhase?` · ${t('studio3d.load.phase.'+s.loadPhase)}`:''}</StudioStatus>}
   {s.status==='error'&&<StudioStatus tone="error" live="assertive" className="absolute left-4 top-3 m-0 max-w-[80%] rounded-md bg-surface px-2 py-1 text-xs">{t('studio3d.status.error')}: {s.error}</StudioStatus>}
   {s.measure&&<StudioStatus className="pointer-events-none absolute right-4 top-3 m-0 rounded-md bg-surface px-2 py-1 text-xs" data-testid="studio3d-measure">{s.measure.a&&s.measure.b?(()=>{const mi=measureInfo(s.measure!.a!,s.measure!.b!);return `${mi.distance.toFixed(3)} m · ${mi.angle.toFixed(1)}°`;})():t('studio3d.measure.pick')}</StudioStatus>}
+  {s.perf&&<StudioStatus className="pointer-events-none absolute right-4 top-12 m-0 rounded-md bg-surface px-2 py-1 text-xs" data-testid="studio3d-perf">{formatPerf(s.perf.fps,s.perf.calls,s.perf.tris)}</StudioStatus>}
   <p className="sr-only">{t('studio3d.keys.hint')}</p>
  </div>;
 }

@@ -630,5 +630,10 @@
  "studio3d.ao.strength": "Stärke der Verdeckung",
  "cmd.studio3d.shadow.set": "Schattenqualität und -algorithmus einstellen",
  "cmd.studio3d.light.helpers": "Helfer der gewählten Lichtquelle ein- oder ausblenden",
- "cmd.studio3d.view.ao": "Ambient-Occlusion-Vorschau ein- oder ausschalten (nur Ansicht)"
+ "cmd.studio3d.view.ao": "Ambient-Occlusion-Vorschau ein- oder ausschalten (nur Ansicht)",
+ "studio3d.view.perf": "Performance-Anzeige",
+ "cmd.studio3d.view.perf": "Live-Anzeige für FPS, Draw Calls und Dreiecke ein- oder ausblenden",
+ "studio3d.model.instancing": "Instancing-Kandidaten",
+ "studio3d.warn.instancingHint": "{count} Meshes teilen Geometrie und Material. Instancing würde Draw Calls sparen.",
+ "studio3d.warn.lodHint": "Grosse statische Szene ({count} Dreiecke). Detailstufen oder Dezimierung würden helfen."
 }

@@ -106,7 +106,7 @@ test('3D studio refuses a file that is not glTF with a readable error',async({pa
 /** Helpers for the scene tests below. They drive the real app through its command layer (dev build) and read the studio session. */
 type P=import('@playwright/test').Page;
 const run=(page:P,id:string,params:unknown={})=>page.evaluate(async([i,p])=>{const m=await import('/src/lib/commands.ts');return (await m.executeCommand(i as string,p)) as unknown;},[id,params] as const);
-const session=(page:P)=>page.evaluate(async()=>{const m=await import('/src/lib/studio3d/session.ts');const s=m.getStudio3DState();return {anim:s.anim,clips:s.clips,clipKeys:s.clipKeys,outline:s.outline,marked:s.marked,selected:s.selected,info:s.selectedInfo,dirty:s.dirty,notice:s.notice,status:s.status,name:s.name,bones:s.bones,weightPreview:s.weightPreview,stats:s.stats,exportClips:s.exportClips,poses:s.poses,ik:s.ik,boneLimits:s.boneLimits,views:s.views,materialPresets:s.materialPresets,env:s.env,edit:s.edit,sculpt:s.sculpt,uvChecker:s.uvChecker,snap:s.snap,pivot:s.pivot,cursor:s.cursor,measure:s.measure,viewKind:s.viewKind,viewFov:s.viewFov,turntable:s.turntable,shadows:s.shadows,lightHelpers:s.lightHelpers,ao:s.ao};});
+const session=(page:P)=>page.evaluate(async()=>{const m=await import('/src/lib/studio3d/session.ts');const s=m.getStudio3DState();return {anim:s.anim,clips:s.clips,clipKeys:s.clipKeys,outline:s.outline,marked:s.marked,selected:s.selected,info:s.selectedInfo,dirty:s.dirty,notice:s.notice,status:s.status,name:s.name,bones:s.bones,weightPreview:s.weightPreview,stats:s.stats,exportClips:s.exportClips,poses:s.poses,ik:s.ik,boneLimits:s.boneLimits,views:s.views,materialPresets:s.materialPresets,env:s.env,edit:s.edit,sculpt:s.sculpt,uvChecker:s.uvChecker,snap:s.snap,pivot:s.pivot,cursor:s.cursor,measure:s.measure,viewKind:s.viewKind,viewFov:s.viewFov,turntable:s.turntable,shadows:s.shadows,lightHelpers:s.lightHelpers,ao:s.ao,perf:s.perf};});
 const open3d=async(page:P)=>{await page.goto('/');await page.getByRole('button',{name:/3D/}).first().click();};
 const blank=async(page:P)=>{await open3d(page);await page.getByTestId('3d-create-blank').click();await expect(page.getByTestId('studio3d-viewport')).toBeVisible();};
 const insert=async(page:P,kind:string,x:number)=>{await run(page,'studio3d.insert.primitive',{kind});const s=await session(page);const id=s.selected as number;await run(page,'studio3d.object.transform',{id,position:{x,y:0,z:0}});return id;};
@@ -1369,4 +1369,16 @@ test('3D studio lights: outdoor rig, shadow quality, helper toggle and ambient o
  expect(await run(page,'studio3d.view.ao',{on:true,strength:0.6})).toBe(true);
  await expect.poll(async()=>(await session(page)).ao.on).toBe(true);
  await expect.poll(async()=>(await session(page)).ao.strength).toBe(0.6);
+});
+
+test('3D studio performance overlay toggles from the view panel',async({page})=>{
+ await blank(page);
+ await insert(page,'cube',0);
+ expect(await run(page,'studio3d.view.perf',{on:true})).toBe(true);
+ await expect.poll(async()=>(await session(page)).perf).not.toBeNull();
+ await expect(page.getByTestId('studio3d-perf')).toBeVisible();
+ await expect(page.getByTestId('studio3d-perf')).toContainText('fps');
+ expect(await run(page,'studio3d.view.perf',{on:false})).toBe(true);
+ await expect.poll(async()=>(await session(page)).perf).toBeNull();
+ await expect(page.getByTestId('studio3d-perf')).toHaveCount(0);
 });

@@ -29,3 +29,16 @@ test('geometry memory and bone budgets warn above their limits',()=>{
  assert.equal(w.values.mb,toMB(LIMITS.geometryBytes+1));
  assert.deepEqual(validateScene({...base(),geometryBytes:LIMITS.geometryBytes,bones:LIMITS.bones}),[]);
 });
+import {sceneHints,HINT_LIMITS} from './validate';
+test('instancing hint fires only above the candidate limit',()=>{
+ assert.deepEqual(sceneHints({...base(),instancingCandidates:HINT_LIMITS.instancing-1}),[]);
+ const h=sceneHints({...base(),instancingCandidates:HINT_LIMITS.instancing});
+ assert.deepEqual(h.map(w=>w.code),['instancingHint']);
+ assert.equal(h[0].level,'info');assert.equal(h[0].values.count,HINT_LIMITS.instancing);
+});
+test('lod hint fires for a large static scene, not for skinned or animated ones',()=>{
+ assert.deepEqual(sceneHints({...base(),triangles:HINT_LIMITS.lodTriangles+1}).map(w=>w.code),['lodHint']);
+ assert.deepEqual(sceneHints({...base(),triangles:HINT_LIMITS.lodTriangles+1,bones:10}),[]);
+ assert.deepEqual(sceneHints({...base(),triangles:HINT_LIMITS.lodTriangles+1,animations:2}),[]);
+ assert.deepEqual(sceneHints({...base(),triangles:HINT_LIMITS.lodTriangles}),[]);
+});

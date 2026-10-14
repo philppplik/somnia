@@ -630,5 +630,10 @@
  "studio3d.ao.strength": "Intensidad de oclusión",
  "cmd.studio3d.shadow.set": "Ajustar la calidad y el algoritmo de sombras",
  "cmd.studio3d.light.helpers": "Mostrar u ocultar el ayudante de la luz seleccionada",
- "cmd.studio3d.view.ao": "Activar o desactivar la vista previa de oclusión ambiental (solo vista)"
+ "cmd.studio3d.view.ao": "Activar o desactivar la vista previa de oclusión ambiental (solo vista)",
+ "studio3d.view.perf": "Indicador de rendimiento",
+ "cmd.studio3d.view.perf": "Mostrar u ocultar el indicador en vivo de FPS, llamadas de dibujo y triángulos",
+ "studio3d.model.instancing": "Candidatos a instanciado",
+ "studio3d.warn.instancingHint": "{count} mallas comparten geometría y material. Instanciarlas reduciría las llamadas de dibujo.",
+ "studio3d.warn.lodHint": "Escena estática grande ({count} triángulos). Niveles de detalle o diezmado ayudarían."
 }

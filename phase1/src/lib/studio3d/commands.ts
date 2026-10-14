@@ -120,6 +120,8 @@ export interface Studio3DController{
  setLightHelpers(on:boolean):void;
  /** Ambient occlusion preview (viewport only). */
  setAo(patch:{on?:boolean;strength?:number}):void;
+ /** Live FPS/draw-call/triangle overlay (render state). */
+ setPerf(on:boolean):void;
  /** Set the viewport perspective field of view in degrees (view state). */
  setViewFov(fov:number):void;
  /** Start or stop the turntable preview; returns the new state (view only, never exported). */
@@ -229,6 +231,7 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{id:number;fov?:number;zoom?:number}>('studio3d.camera.set','Change the field of view (perspective) or zoom (orthographic) of a 3D camera','Edit',p=>need().setCamera(p.id,{fov:p.fov,zoom:p.zoom}),object({id:{type:'integer',minimum:0},fov:{type:'number',minimum:1,maximum:120},zoom:{type:'number',minimum:0.01,maximum:100}},['id']),hasScene),
   add<{quality?:string;type?:string}>('studio3d.shadow.set','Set the shadow map quality (off, low, medium, high) and algorithm (VSM or PCF)','Edit',p=>need().setShadows({quality:p.quality,type:p.type}),object({quality:{enum:[...SHADOW_QUALITIES]},type:{enum:[...SHADOW_TYPES]}},[]),()=>!!controller),
   add<{on?:boolean}>('studio3d.light.helpers','Show or hide the viewport helper of the selected light','View',p=>need().setLightHelpers(p?.on??!getStudio3DState().lightHelpers),object({on:{type:'boolean'}},[]),()=>!!controller),
+  add<{on?:boolean}>('studio3d.view.perf','Show or hide the live FPS, draw-call and triangle overlay','View',p=>need().setPerf(p?.on??!getStudio3DState().perf),object({on:{type:'boolean'}},[]),()=>!!controller),
   add<{on?:boolean;strength?:number}>('studio3d.view.ao','Switch the ambient occlusion preview on or off (viewport only, never exported)','View',p=>need().setAo({on:p?.on??!getStudio3DState().ao.on,strength:p?.strength}),object({on:{type:'boolean'},strength:{type:'number',minimum:0,maximum:1}},[]),()=>!!controller),
   add<{kind?:CameraKind}>('studio3d.view.projection','Switch the 3D viewport between perspective and orthographic','View',p=>need().setProjection(p?.kind==='orthographic'?'orthographic':p?.kind==='perspective'?'perspective':getStudio3DState().viewKind==='perspective'?'orthographic':'perspective'),object({kind:{enum:['perspective','orthographic']}},[]),()=>!!controller),
   add<{fov?:number;mm?:number}>('studio3d.view.fov','Set the viewport field of view (degrees) or 35mm-equivalent focal length','View',p=>{if(p.mm!==undefined)need().setViewFov(focalToFov(p.mm));else if(p.fov!==undefined)need().setViewFov(p.fov);else throw new Error('Pass fov or mm.');},object({fov:{type:'number',minimum:1,maximum:120},mm:{type:'number',minimum:3,maximum:1400}},[]),()=>!!controller),

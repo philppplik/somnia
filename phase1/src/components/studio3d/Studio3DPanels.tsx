@@ -20,7 +20,7 @@ import {Checkbox} from '../ui/checkbox';
 import {RangeField} from '../ui/range-field';
 import {PARAM_SPECS,MATERIAL_PRESETS} from '../../lib/studio3d/primitives';
 import {ALPHA_MODES,TEXTURE_SLOTS,MAX_EMISSIVE_INTENSITY,materialSwatch,type TextureSlot} from '../../lib/studio3d/materials';
-import {validateScene,toMB} from '../../lib/studio3d/validate';
+import {validateScene,sceneHints,toMB} from '../../lib/studio3d/validate';
 import {ClipTimeline} from './ClipTimeline';
 import {SPEEDS,formatClock} from '../../lib/studio3d/animation';
 import {VIEW_PRESETS,RENDER_SIZES,fovToFocal} from '../../lib/studio3d/viewPresets';
@@ -118,7 +118,7 @@ export function ModelSection(_:InspectorSectionProps){
   <Row k={t('studio3d.model.name')} v={s.blank?t('studio3d.model.blank'):s.name||'-'}/>
   {!s.blank&&<><Row k={t('studio3d.model.format')} v={s.format||'-'}/><Row k={t('studio3d.model.size')} v={formatBytes(s.bytes)}/>
   <Row k={t('studio3d.model.triangles')} v={formatCount(s.stats.triangles)}/><Row k={t('studio3d.model.vertices')} v={formatCount(s.stats.vertices)}/>
-  <Row k={t('studio3d.model.meshes')} v={s.stats.meshes}/><Row k={t('studio3d.model.materials')} v={s.stats.materials}/><Row k={t('studio3d.model.textures')} v={s.stats.textures}/><Row k={t('studio3d.model.textureMemory')} v={s.stats.textures?`${toMB(s.stats.textureBytes)} MB`:'-'}/><Row k={t('studio3d.model.draws')} v={formatCount(s.stats.draws)}/>
+  <Row k={t('studio3d.model.meshes')} v={s.stats.meshes}/><Row k={t('studio3d.model.materials')} v={s.stats.materials}/><Row k={t('studio3d.model.textures')} v={s.stats.textures}/><Row k={t('studio3d.model.textureMemory')} v={s.stats.textures?`${toMB(s.stats.textureBytes)} MB`:'-'}/><Row k={t('studio3d.model.draws')} v={formatCount(s.stats.draws)}/>{s.stats.instancingCandidates>0&&<Row k={t('studio3d.model.instancing')} v={formatCount(s.stats.instancingCandidates)}/>}
   {s.stats.bones>0&&<Row k={t('studio3d.model.bones')} v={formatCount(s.stats.bones)}/>}<Row k={t('studio3d.model.memory')} v={`${toMB(s.stats.geometryBytes+s.stats.textureBytes)} MB`}/><Row k={t('studio3d.model.animations')} v={s.stats.animations}/><Row k={t('studio3d.model.cameras')} v={s.stats.cameras}/><Row k={t('studio3d.model.dimensions')} v={size}/></>}
  </dl>
   {s.materialList.length>0&&<div className="grid gap-1 px-3" data-testid="studio3d-material-list">
@@ -464,6 +464,7 @@ export function ViewSection(_:InspectorSectionProps){
   <label className="flex items-center gap-2 text-xs text-ink-2"><input type="checkbox" checked={s.wireframe} disabled={!ready} onChange={e=>void executeCommand('studio3d.view.wireframe',{on:e.target.checked})}/>{t('studio3d.view.wireframe')}</label>
   <Checkbox label={t('studio3d.light.helpers')} checked={s.lightHelpers} onChange={e=>void executeCommand('studio3d.light.helpers',{on:e.currentTarget.checked})}/>
   <Checkbox label={t('studio3d.ao.toggle')} checked={s.ao.on} disabled={!ready} onChange={e=>void executeCommand('studio3d.view.ao',{on:e.currentTarget.checked})}/>
+  <Checkbox label={t('studio3d.view.perf')} checked={!!s.perf} disabled={!ready} onChange={e=>void executeCommand('studio3d.view.perf',{on:e.currentTarget.checked})}/>
   {s.ao.on&&<RangeField label={t('studio3d.ao.strength')} min={0} max={1} step={0.05} value={s.ao.strength} readout={s.ao.strength.toFixed(2)} onPreview={v=>void executeCommand('studio3d.view.ao',{strength:v})} onCommit={v=>void executeCommand('studio3d.view.ao',{strength:v})} onCancel={()=>{}}/>}
   <div className="flex gap-2"><Button variant="outline" disabled={!s.canUndo} onClick={()=>void executeCommand('studio3d.undo')}>{t('studio3d.undo')}</Button><Button variant="outline" disabled={!s.canRedo} onClick={()=>void executeCommand('studio3d.redo')}>{t('studio3d.redo')}</Button></div>
   <div className="flex gap-2"><Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.view.reset')}>{t('studio3d.view.reset')}</Button>
@@ -679,7 +680,7 @@ function MeshTools(){
 
 /** Size and quality checks of the scene: counts, texture memory and things that usually cause trouble. */
 function SceneChecks(){
- const {t}=useT();const s=useStudio3D();const warnings=validateScene(s.stats);
+ const {t}=useT();const s=useStudio3D();const warnings=[...validateScene(s.stats),...sceneHints(s.stats)];
  return <section className="grid gap-1 px-3" data-testid="studio3d-checks" aria-label={t('studio3d.checks.title')}>
   <h3 className="m-0 text-xs font-medium text-ink-3">{t('studio3d.checks.title')}</h3>
   {warnings.length===0?<StudioStatus className="block m-0 text-xs text-ink-2">{t('studio3d.checks.ok')}</StudioStatus>
