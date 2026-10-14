@@ -225,9 +225,10 @@ export const MAX_HF_CHARS=500;
 export const PAGE_SIZE_IDS=['a4','letter','legal','a5'] as const;
 export type PageSizeId=typeof PAGE_SIZE_IDS[number];
 export interface PageMargins{top:number;bottom:number;left:number;right:number}
-export interface PageSetupState{size:PageSizeId|'custom';landscape:boolean;width:number;height:number;margins:PageMargins}
-export interface PageSetupPatch{size?:PageSizeId;landscape?:boolean;margins?:Partial<PageMargins>}
-export const MAX_MARGIN_PT=288;
+export interface PageColumns{count:number;space:number;separator:boolean}
+export interface PageSetupState{size:PageSizeId|'custom';landscape:boolean;width:number;height:number;margins:PageMargins;columns:PageColumns&{uneven:boolean}}
+export interface PageSetupPatch{size?:PageSizeId;landscape?:boolean;margins?:Partial<PageMargins>;columns?:Partial<PageColumns>}
+export const MAX_MARGIN_PT=288,MAX_COLUMNS=4,MAX_COLUMN_SPACE_PT=144;
 /** The first problem with a page setup change, or null when the engine will accept the shape (the text-area minimum is the engine's call). */
 export function pageSetupProblem(p:unknown):string|null{
  if(!p||typeof p!=='object'||Array.isArray(p))return 'The page setup is not valid.';
@@ -240,6 +241,17 @@ export function pageSetupProblem(p:unknown):string|null{
    if(!v||typeof v!=='object'||Array.isArray(v))return 'The margins are not valid.';
    const m=v as Record<string,unknown>;const ks=Object.keys(m);if(ks.length===0)return 'The margins are not valid.';
    for(const mk of ks){if(!['top','bottom','left','right'].includes(mk))return 'The margins are not valid.';const x=m[mk];if(typeof x!=='number'||!Number.isFinite(x)||x<0||x>MAX_MARGIN_PT)return `A margin is 0 to ${MAX_MARGIN_PT} points.`;}
+  }
+  else if(k==='columns'){
+   if(!v||typeof v!=='object'||Array.isArray(v))return 'The columns are not valid.';
+   const c=v as Record<string,unknown>;const ks=Object.keys(c);if(ks.length===0)return 'The columns are not valid.';
+   for(const ck of ks){
+    const x=c[ck];
+    if(ck==='count'){if(typeof x!=='number'||!Number.isInteger(x)||x<1||x>MAX_COLUMNS)return `Columns are 1 to ${MAX_COLUMNS}.`;}
+    else if(ck==='space'){if(typeof x!=='number'||!Number.isFinite(x)||x<0||x>MAX_COLUMN_SPACE_PT)return `The column spacing is 0 to ${MAX_COLUMN_SPACE_PT} points.`;}
+    else if(ck==='separator'){if(typeof x!=='boolean')return 'The column line is not valid.';}
+    else return 'The columns are not valid.';
+   }
   }
   else return 'The page setup is not valid.';
  }

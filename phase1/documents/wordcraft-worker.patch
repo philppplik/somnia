@@ -48,7 +48,7 @@ new file mode 100644
 index 0000000..5b80b79
 --- /dev/null
 +++ b/crates/somnia-worker/src/lib.rs
-@@ -0,0 +1,3525 @@
+@@ -0,0 +1,3599 @@
 +//! Experimental headless adapter. No DOM, egui, filesystem or UI thread access.
 +use wasm_bindgen::prelude::*;
 +use std::sync::Arc;
@@ -1592,7 +1592,8 @@ index 0000000..5b80b79
 +        let (a, b) = if s.page_w >= s.page_h { (s.page_h, s.page_w) } else { (s.page_w, s.page_h) };
 +        let size = PAGE_SIZES.iter().find(|(_, w, h)| (a - w).abs() < 1.0 && (b - h).abs() < 1.0).map_or("custom", |(n, _, _)| n);
 +        serde_json::json!({"size": size, "landscape": s.landscape, "width": s.page_w, "height": s.page_h,
-+            "margins": {"top": s.margin_top, "bottom": s.margin_bottom, "left": s.margin_left, "right": s.margin_right}})
++            "margins": {"top": s.margin_top, "bottom": s.margin_bottom, "left": s.margin_left, "right": s.margin_right},
++            "columns": {"count": s.columns.count.clamp(1, 45), "space": s.columns.space, "separator": s.columns.separator, "uneven": !s.columns.widths.is_empty()}})
 +        .to_string()
 +    }
 +    /// Sets page size, orientation and margins on every section. JSON keys (all optional): `size` ("a4", "letter", "legal", "a5"),
@@ -1610,8 +1611,32 @@ index 0000000..5b80b79
 +        let (mut w, mut h, mut land) = (cur.page_w, cur.page_h, cur.landscape);
 +        let mut m = [cur.margin_top, cur.margin_bottom, cur.margin_left, cur.margin_right];
 +        let mut new_size: Option<(f32, f32)> = None;
++        // Columns: (count 1-4, space 0-144 pt, separator line); `None` leaves the columns as they are.
++        let mut cols: Option<(u32, f32, bool)> = None;
 +        for (k, val) in obj {
 +            match k.as_str() {
++                "columns" => {
++                    let o = val.as_object().ok_or("columns must be an object")?;
++                    let mut c = (cur.columns.count.clamp(1, 45), cur.columns.space, cur.columns.separator);
++                    if o.is_empty() {
++                        return Err("columns needs a field to change".into());
++                    }
++                    for (ck, cv) in o {
++                        match ck.as_str() {
++                            "count" => c.0 = cv.as_u64().filter(|n| (1..=4).contains(n)).ok_or("columns are 1 to 4")? as u32,
++                            "space" => {
++                                let x = cv.as_f64().ok_or("the column spacing must be a number")? as f32;
++                                if !x.is_finite() || !(0.0..=144.0).contains(&x) {
++                                    return Err("the column spacing is 0 to 144 points".into());
++                                }
++                                c.1 = x;
++                            }
++                            "separator" => c.2 = cv.as_bool().ok_or("separator must be true or false")?,
++                            _ => return Err(format!("unknown columns field {ck}")),
++                        }
++                    }
++                    cols = Some(c);
++                }
 +                "size" => {
 +                    let name = val.as_str().ok_or("size must be text")?;
 +                    let (_, pw, ph) = PAGE_SIZES.iter().find(|(n, _, _)| *n == name).ok_or("unknown page size")?;
@@ -1648,6 +1673,16 @@ index 0000000..5b80b79
 +        if w - m[2] - m[3] < 72.0 || h - m[0] - m[1] < 72.0 {
 +            return Err("the margins leave less than 72 points of text area".into());
 +        }
++        if let Some((n, space, _)) = cols {
++            if n > 1 && (w - m[2] - m[3] - space * (n - 1) as f32) / (n as f32) < 36.0 {
++                return Err("the columns would be narrower than 36 points".into());
++            }
++        } else {
++            let (n, space) = (cur.columns.count.clamp(1, 45), cur.columns.space);
++            if n > 1 && (w - m[2] - m[3] - space.max(0.0) * (n - 1) as f32) / (n as f32) < 36.0 {
++                return Err("the existing columns would be narrower than 36 points".into());
++            }
++        }
 +        let set = |s: &mut wordcraft_doc::SectionProps| {
 +            s.page_w = w;
 +            s.page_h = h;
@@ -1656,6 +1691,14 @@ index 0000000..5b80b79
 +            s.margin_bottom = m[1];
 +            s.margin_left = m[2];
 +            s.margin_right = m[3];
++            if let Some((n, space, sep)) = cols {
++                if n != s.columns.count || (space - s.columns.space).abs() > f32::EPSILON {
++                    s.columns.widths.clear();
++                }
++                s.columns.count = n;
++                s.columns.space = space;
++                s.columns.separator = sep;
++            }
 +        };
 +        for blk in self.doc.body.iter_mut() {
 +            if matches!(&**blk, Block::Para(p) if p.section.is_some()) {
@@ -2696,6 +2739,37 @@ index 0000000..5b80b79
 +            assert!(s.do_set_page_setup(bad).is_err(), "{bad}");
 +        }
 +        assert_eq!(s.do_page_setup_state(), before);
++    }
++    #[test]
++    fn page_setup_columns_apply_to_every_section_and_are_bounded() {
++        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
++        let st = |s: &DocSession| -> serde_json::Value { serde_json::from_str(&s.do_page_setup_state()).unwrap() };
++        assert_eq!(st(&s)["columns"]["count"], 1);
++        s.do_set_page_setup(r#"{"columns":{"count":2,"space":24,"separator":true}}"#).unwrap();
++        let v = st(&s);
++        assert_eq!((v["columns"]["count"].clone(), v["columns"]["space"].as_f64().unwrap(), v["columns"]["separator"].clone()), (2.into(), 24.0, true.into()));
++        for (_, sec) in s.doc.sections() {
++            assert_eq!(sec.columns.count, 2);
++        }
++        assert!(s.paginate() > 0);
++        let re = DocSession::from_bytes(&wordcraft_docx::write(&s.doc).unwrap()).unwrap();
++        assert_eq!(st(&re)["columns"]["count"], 2);
++        // A partial change keeps the rest; changing the page keeps the columns.
++        s.do_set_page_setup(r#"{"columns":{"separator":false}}"#).unwrap();
++        assert_eq!((st(&s)["columns"]["count"].clone(), st(&s)["columns"]["separator"].clone()), (2.into(), false.into()));
++        s.do_set_page_setup(r#"{"landscape":true}"#).unwrap();
++        assert_eq!(st(&s)["columns"]["count"], 2);
++        let before = s.do_page_setup_state();
++        for bad in [
++            r#"{"columns":{}}"#, r#"{"columns":3}"#, r#"{"columns":{"count":0}}"#, r#"{"columns":{"count":5}}"#, r#"{"columns":{"count":1.5}}"#, r#"{"columns":{"count":"2"}}"#,
++            r#"{"columns":{"space":-1}}"#, r#"{"columns":{"space":145}}"#, r#"{"columns":{"separator":1}}"#, r#"{"columns":{"width":10}}"#,
++            r#"{"columns":{"count":4,"space":144},"margins":{"left":200,"right":200}}"#, r#"{"margins":{"left":280,"right":280},"size":"a5","landscape":false}"#,
++        ] {
++            assert!(s.do_set_page_setup(bad).is_err(), "{bad}");
++        }
++        assert_eq!(s.do_page_setup_state(), before);
++        s.do_set_page_setup(r#"{"columns":{"count":1}}"#).unwrap();
++        assert_eq!(st(&s)["columns"]["count"], 1);
 +    }
 +    #[test]
 +    fn vertical_merge_hides_the_lower_cell_and_splits_back() {

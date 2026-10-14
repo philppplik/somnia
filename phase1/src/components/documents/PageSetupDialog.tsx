@@ -1,5 +1,5 @@
 import {useEffect,useState} from 'react';
-import {MAX_MARGIN_PT,PAGE_SIZE_IDS,pageSetupProblem,type PageMargins,type PageSetupPatch,type PageSetupState,type PageSizeId} from '../../lib/documents/protocol';
+import {MAX_COLUMNS,MAX_COLUMN_SPACE_PT,MAX_MARGIN_PT,PAGE_SIZE_IDS,pageSetupProblem,type PageMargins,type PageSetupPatch,type PageSetupState,type PageSizeId} from '../../lib/documents/protocol';
 import {readPageSetup,setPageSetup} from '../../lib/documents/session';
 import {useT} from '../../lib/useT';
 import {NativeButton,NativeInput,NativeSelect} from '../ui/native-controls';
@@ -11,8 +11,10 @@ export const ptToCm=(pt:number)=>(pt/PT_PER_CM).toFixed(2);
 export function cmToPt(v:string):number|null{
  if(!/^\d{1,2}([.,]\d{1,2})?$/.test(v))return null;const pt=Math.round(Number(v.replace(',','.'))*PT_PER_CM*10)/10;return pt>=0&&pt<=MAX_MARGIN_PT?pt:null;
 }
-export interface PageSetupForm{size:PageSizeId|'custom';landscape:boolean;margins:Record<keyof PageMargins,string>}
-export const formFromState=(s:PageSetupState):PageSetupForm=>({size:s.size,landscape:s.landscape,margins:{top:ptToCm(s.margins.top),bottom:ptToCm(s.margins.bottom),left:ptToCm(s.margins.left),right:ptToCm(s.margins.right)}});
+/** Column spacing typed in centimetres as points; null when it is not a number inside 0..144 pt. */
+export const spaceToPt=(v:string):number|null=>{const pt=cmToPt(v);return pt!==null&&pt<=MAX_COLUMN_SPACE_PT?pt:null;};
+export interface PageSetupForm{size:PageSizeId|'custom';landscape:boolean;margins:Record<keyof PageMargins,string>;columns:{count:number;space:string;separator:boolean}}
+export const formFromState=(s:PageSetupState):PageSetupForm=>({size:s.size,landscape:s.landscape,margins:{top:ptToCm(s.margins.top),bottom:ptToCm(s.margins.bottom),left:ptToCm(s.margins.left),right:ptToCm(s.margins.right)},columns:{count:s.columns.count,space:ptToCm(s.columns.space),separator:s.columns.separator}});
 /** Only the settings the user changed (untouched margins keep their exact points); null when nothing changed or a margin is not valid. */
 export function buildPageSetupPatch(start:PageSetupForm,f:PageSetupForm):PageSetupPatch|null{
  const p:PageSetupPatch={};
@@ -21,6 +23,11 @@ export function buildPageSetupPatch(start:PageSetupForm,f:PageSetupForm):PageSet
  const m:Partial<PageMargins>={};
  for(const k of ['top','bottom','left','right'] as const){if(f.margins[k]===start.margins[k])continue;const pt=cmToPt(f.margins[k]);if(pt===null)return null;m[k]=pt;}
  if(Object.keys(m).length>0)p.margins=m;
+ const c:NonNullable<PageSetupPatch['columns']>={};
+ if(f.columns.count!==start.columns.count)c.count=f.columns.count;
+ if(f.columns.space!==start.columns.space){const pt=spaceToPt(f.columns.space);if(pt===null)return null;c.space=pt;}
+ if(f.columns.separator!==start.columns.separator)c.separator=f.columns.separator;
+ if(Object.keys(c).length>0)p.columns=c;
  return Object.keys(p).length>0&&pageSetupProblem(p)===null?p:null;
 }
 /** Paper size, orientation and margins (in centimetres) for the whole document, applied as one undo step. */
@@ -42,6 +49,14 @@ export function PageSetupDialog({onClose}:{onClose:()=>void}){
      <NativeSelect className="h-7 rounded-sm border border-subtle bg-surface px-1 text-xs text-ink" value={f.landscape?'landscape':'portrait'} onChange={e=>setF({...f,landscape:e.currentTarget.value==='landscape'})} data-testid="documents-page-orientation">
       <option value="portrait">{t('documents.page.portrait')}</option><option value="landscape">{t('documents.page.landscape')}</option></NativeSelect></label>
     <div className="grid grid-cols-2 gap-2">{(['top','bottom','left','right'] as const).map(margin)}</div>
+    <div className="flex items-end gap-2">
+     <label className="grid gap-1 text-xs text-ink-2">{t('documents.page.columns')}
+      <NativeSelect className="h-7 rounded-sm border border-subtle bg-surface px-1 text-xs text-ink" value={String(f.columns.count)} onChange={e=>setF({...f,columns:{...f.columns,count:Number(e.currentTarget.value)}})} data-testid="documents-page-columns">
+       {Array.from({length:MAX_COLUMNS},(_,i)=><option key={i} value={i+1}>{i+1}</option>)}</NativeSelect></label>
+     <label className="grid gap-1 text-xs text-ink-2">{t('documents.page.columnSpace')}
+      <NativeInput className={field} inputMode="decimal" disabled={f.columns.count<2} value={f.columns.space} aria-invalid={spaceToPt(f.columns.space)===null} onChange={e=>setF({...f,columns:{...f.columns,space:e.currentTarget.value}})} data-testid="documents-page-column-space"/></label>
+     <label className="flex items-center gap-1 pb-1 text-xs text-ink-2"><NativeInput type="checkbox" disabled={f.columns.count<2} checked={f.columns.separator} onChange={e=>setF({...f,columns:{...f.columns,separator:e.currentTarget.checked}})} data-testid="documents-page-column-line"/>{t('documents.page.columnLine')}</label></div>
+    {f.columns.count>1&&<p className="text-xs text-ink-3">{t('documents.page.columnsApply')}</p>}
     <p className="text-xs text-ink-3">{t('documents.page.hint')}</p>
    </>}
    <div className="flex justify-end gap-2">
