@@ -865,5 +865,8 @@
  "animation.keys.matchNext": "Igualar siguiente",
  "animation.keys.matchNext.hint": "Da a cada key seleccionada el valor de la key siguiente",
  "animation.keys.average": "Promediar",
- "animation.keys.average.hint": "Da a todas las keys seleccionadas de una propiedad su valor medio"
+ "animation.keys.average.hint": "Da a todas las keys seleccionadas de una propiedad su valor medio",
+ "animation.keys.peaks": "Picos",
+ "animation.keys.peaks.hint": "Selecciona las keys que son picos o valles",
+ "cmd.animation.keys.selectPeaks": "Seleccionar las keys que son picos o valles"
 }

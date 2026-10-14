@@ -970,6 +970,23 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.keys.selectPeaks",
+      "title": "Select the keys that are peaks or dips",
+      "category": "View",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "dips",
+        "extremes",
+        "keys",
+        "maxima",
+        "minima",
+        "peaks",
+        "select"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.keys.selectProperty",
       "title": "Select every key of the selected keys’ properties",
       "category": "View",

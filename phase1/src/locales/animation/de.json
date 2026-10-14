@@ -865,5 +865,8 @@
  "animation.keys.matchNext": "Wie nachher",
  "animation.keys.matchNext.hint": "Jedem gewählten Key den Wert des nächsten Keys geben",
  "animation.keys.average": "Mitteln",
- "animation.keys.average.hint": "Allen gewählten Keys einer Eigenschaft ihren Mittelwert geben"
+ "animation.keys.average.hint": "Allen gewählten Keys einer Eigenschaft ihren Mittelwert geben",
+ "animation.keys.peaks": "Spitzen",
+ "animation.keys.peaks.hint": "Keys auswählen, die Spitzen oder Täler sind",
+ "cmd.animation.keys.selectPeaks": "Keys auswählen, die Spitzen oder Täler sind"
 }

@@ -865,5 +865,8 @@
  "animation.keys.matchNext": "Comme après",
  "animation.keys.matchNext.hint": "Donne à chaque key sélectionnée la valeur de la key suivante",
  "animation.keys.average": "Moyenne",
- "animation.keys.average.hint": "Donne à toutes les keys sélectionnées d’une propriété leur valeur moyenne"
+ "animation.keys.average.hint": "Donne à toutes les keys sélectionnées d’une propriété leur valeur moyenne",
+ "animation.keys.peaks": "Pics",
+ "animation.keys.peaks.hint": "Sélectionne les keys qui sont des pics ou des creux",
+ "cmd.animation.keys.selectPeaks": "Sélectionner les keys qui sont des pics ou des creux"
 }

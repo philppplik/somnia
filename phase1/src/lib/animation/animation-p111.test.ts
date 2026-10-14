@@ -156,3 +156,9 @@ test('flatten average: all selected keys take the mean',()=>{
  const e=flattenEdits(c,[k(0),k(10)],'average') as {value:number[]}[];
  assert.equal(e.length,2);assert.deepEqual(e[0].value,[150,75]);assert.deepEqual(e[1].value,[150,75]);
 });
+import {peakKeys} from './keyPeaks';
+test('peaks: interior local extremes only',()=>{
+ const d=applyEdits(base(),[{type:'prop.set',layer:'a',prop:'position',t:f(5),value:[400,200]}] as never),c=findComp(d)!;
+ assert.deepEqual(peakKeys(c,['a']).map(k=>k.t),[f(5)]);
+ assert.equal(peakKeys(findComp(base())!,['a']).length,0);assert.equal(peakKeys(c,['zz']).length,0);
+});

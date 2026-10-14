@@ -865,5 +865,8 @@
  "animation.keys.matchNext": "Match next",
  "animation.keys.matchNext.hint": "Give each selected key the value of the key after it",
  "animation.keys.average": "Average",
- "animation.keys.average.hint": "Give all selected keys of a property their average value"
+ "animation.keys.average.hint": "Give all selected keys of a property their average value",
+ "animation.keys.peaks": "Peaks",
+ "animation.keys.peaks.hint": "Select the keys that are peaks or dips",
+ "cmd.animation.keys.selectPeaks": "Select the keys that are peaks or dips"
 }
