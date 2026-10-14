@@ -172,6 +172,7 @@ export const setFirstNumAt=(value:number)=>structuralEdit(async(e,before)=>({byt
 export const setFooterAt=(slideId:number|null,want:FooterEdit)=>structuralEdit(async(e,before)=>({bytes:await e.client.setFooter(before,slideId,want),index:slideId===null?e.state.index:idAt(e,slideId)}));
 export const setSlideSizeAt=(cx:number,cy:number)=>structuralEdit(async(e,before)=>({bytes:await e.client.setSlideSize(before,cx,cy),index:e.state.index}));
 export const setAllBackgroundsAt=(background:{kind:'inherit'}|{kind:'solid';color:string})=>structuralEdit(async(e,before)=>({bytes:await e.client.setAllBackgrounds(before,background),index:e.state.index}));
+export const replaceTextAt=(find:string,replacement:string,matchCase:boolean)=>structuralEdit(async(e,before)=>({bytes:await e.client.replaceText(before,find,replacement,matchCase),index:e.state.index}));
 export const setDecorativeAt=(slideId:number,shapeId:number,decorative:boolean)=>structuralEdit(async(e,before)=>({bytes:await e.client.setDecorative(before,slideId,shapeId,decorative),index:idAt(e,slideId)}));
 export const setAltAt=(slideId:number,shapeId:number,alt:string|null)=>structuralEdit(async(e,before)=>({bytes:await e.client.setAlt(before,slideId,shapeId,alt),index:idAt(e,slideId)}));
 export const editSectionAt=(edit:SectionEdit)=>structuralEdit(async(e,before)=>{const cur=e.state.slideIds[e.state.index],bytes=await e.client.editSection(before,edit);

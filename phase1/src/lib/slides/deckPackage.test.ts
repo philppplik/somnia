@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {unzipSync,zipSync,strFromU8,strToU8} from 'fflate';
-import {slidesWithoutNotes,duplicateTitles,setPictureDecorative,readPictureDecorative,untitledSlides,missingAltText,MAX_ALT_REPORT,setPictureAlt,readPictureAlt,editSections,setSlideHidden,readHiddenSlides,setFirstSlideNum,readFirstSlideNum,setSlideFooter,setAllSlideFooters,readSlideFooter,setSlideSize,readSlideSize,setAllSlideBackgrounds,backgroundSummary,setSlideBackground,readSlideBackground,editLayoutBox,readLayoutBoxes,editMasterBox,readMaster,editTheme,readTheme,insertTable,editTable,readTable,setShapeStyle,readShapeStyle,setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
+import {countTextMatches,replaceTextAll,slidesWithoutNotes,duplicateTitles,setPictureDecorative,readPictureDecorative,untitledSlides,missingAltText,MAX_ALT_REPORT,setPictureAlt,readPictureAlt,editSections,setSlideHidden,readHiddenSlides,setFirstSlideNum,readFirstSlideNum,setSlideFooter,setAllSlideFooters,readSlideFooter,setSlideSize,readSlideSize,setAllSlideBackgrounds,backgroundSummary,setSlideBackground,readSlideBackground,editLayoutBox,readLayoutBoxes,editMasterBox,readMaster,editTheme,readTheme,insertTable,editTable,readTable,setShapeStyle,readShapeStyle,setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
 import {readRuns,makeEditedCopy} from './editCopy';
 import {png,jpeg} from './imageFixtures';
 
@@ -1031,4 +1031,17 @@ test('slides without notes: untouched deck lists all, filled and blank notes, up
   const c=setSlideNotes(b,sid[1],['Say hello']);assert.equal(slidesWithoutNotes(c).total,n-1);assert.equal(slidesWithoutNotes(c).items.some(i=>i.slideId===sid[1]),false);
   const d=setSlideNotes(c,sid[0],[' ']);assert.equal(slidesWithoutNotes(d).items.some(i=>i.slideId===sid[0]),true);
   const e=setSlideNotes(d,sid[0],['A']);assert.equal(slidesWithoutNotes(e).total,n-2);
+});
+
+test('replace text: counts, case option, formatting kept, escaping, no-op, bounds, other parts untouched',()=>{
+  const b=deck(3);
+  assert.equal(countTextMatches(b,'slide',false),3);assert.equal(countTextMatches(b,'slide',true),0);assert.equal(countTextMatches(b,'Slide',true),3);assert.equal(countTextMatches(b,'nothing',false),0);
+  const c=replaceTextAll(b,'Slide','A & <B> "x"',true),m=readDeckModel(c);
+  assert.deepEqual(m.runs.filter(r=>r.text.startsWith('A &')).map(r=>r.text),['A & <B> "x" 1','A & <B> "x" 2','A & <B> "x" 3']);
+  assert.deepEqual(m.slides.map(s=>s.shapes),readDeckModel(b).slides.map(s=>s.shapes));assert.equal(m.runs.length,readDeckModel(b).runs.length);
+  assert.equal(replaceTextAll(b,'nothing','x',false),b);
+  const d=replaceTextAll(b,'slide ','$&$1',false);assert.ok(readDeckModel(d).runs.some(r=>r.text==='$&$11'));
+  const e=replaceTextAll(b,'Slide ','',true);assert.ok(readDeckModel(e).runs.some(r=>r.text==='1'));
+  assert.throws(()=>replaceTextAll(b,'','x',false),/Enter the text/);assert.throws(()=>replaceTextAll(b,'x'.repeat(201),'y',false),/limited/);assert.throws(()=>replaceTextAll(b,'a','y'.repeat(501),false),/limited/);assert.throws(()=>replaceTextAll(b,'a\n','y',false),/unsupported/);assert.throws(()=>countTextMatches(b,'',false),/Enter the text/);
+  const z=unzipSync(c),zb=unzipSync(b);for(const k of Object.keys(zb))if(!/^ppt\/slides\/slide\d+\.xml$/.test(k))assert.deepEqual(z[k],zb[k],k);
 });

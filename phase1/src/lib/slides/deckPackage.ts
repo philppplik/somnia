@@ -2052,6 +2052,47 @@ export function missingAltText(bytes:Uint8Array):{items:MissingAlt[];total:numbe
   return {items,total};
 }
 
+/** Replace text across the deck. Matches stay inside one text run, so formatting never changes; fields, notes, names and alt text are not touched. */
+export const MAX_FIND_TEXT=200,MAX_REPLACE_TEXT=500,MAX_REPLACEMENTS=2000;
+export const findTextIssue=(f:string)=>!f?'Enter the text to find':f.length>MAX_FIND_TEXT?`Text to find is limited to ${MAX_FIND_TEXT} characters`:/[\u0000-\u001f\u007f\ud800-\udfff\ufffe\uffff]/.test(f)?'Text to find contains unsupported characters':'';
+export const replaceTextIssue=(r:string)=>r.length>MAX_REPLACE_TEXT?`Replacement is limited to ${MAX_REPLACE_TEXT} characters`:/[\u0000-\u001f\u007f\ud800-\udfff\ufffe\uffff]/.test(r)?'Replacement contains unsupported characters':'';
+const textRe=(find:string,matchCase:boolean)=>new RegExp(find.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),matchCase?'g':'gi');
+function replaceInXml(xml:string,re:RegExp,repl:string|null):{xml:string;count:number}{
+  let count=0;
+  const out=xml.replace(/<a:r>[\s\S]*?<\/a:r>/g,run=>run.replace(/(<a:t(?:\s[^>]*)?>)([\s\S]*?)(<\/a:t>)/,(_m,open:string,body:string,close:string)=>{
+    const plain=dec(body);re.lastIndex=0;let n=0;
+    const next=plain.replace(re,()=>{n++;return repl??'';});
+    if(!n)return _m;count+=n;
+    if(repl===null)return _m;
+    if(next.length>20000)throw Error('A text run would become too long');
+    return open+esc(next)+close;
+  }));
+  return {xml:out,count};
+}
+export function countTextMatches(bytes:Uint8Array,find:string,matchCase:boolean):number{
+  const issue=findTextIssue(find);if(issue)throw Error(issue);
+  const model=readDeckModel(bytes),zip=openPackage(bytes),re=textRe(find,matchCase);let total=0;
+  for(const slide of model.slides){if(slide.problems.length)continue;total+=replaceInXml(text(zip,slide.part),re,null).count;if(total>MAX_REPLACEMENTS)return total;}
+  return total;
+}
+export function replaceTextAll(bytes:Uint8Array,find:string,replacement:string,matchCase:boolean):Uint8Array{
+  const issue=findTextIssue(find)||replaceTextIssue(replacement);if(issue)throw Error(issue);
+  const model=readDeckModel(bytes),zip=openPackage(bytes),re=textRe(find,matchCase),changed:Record<string,string>={};let total=0;
+  for(const slide of model.slides){
+    if(slide.problems.length)continue;
+    const r=replaceInXml(text(zip,slide.part),re,replacement);
+    total+=r.count;if(total>MAX_REPLACEMENTS)throw Error(`Replace is limited to ${MAX_REPLACEMENTS} matches at once`);
+    if(r.count)changed[slide.part]=r.xml;
+  }
+  if(!total)return bytes;
+  const out=repack(zip,changed),after=readDeckModel(out);
+  const skipped=new Set(model.slides.filter(s=>s.problems.length).map(s=>s.id));
+  if(after.slides.length!==model.slides.length||after.runs.length!==model.runs.length||JSON.stringify(after.slides.map(s=>s.shapes))!==JSON.stringify(model.slides.map(s=>s.shapes)))throw Error('Edited deck failed verification');
+  for(let i=0;i<model.runs.length;i++){const was=model.runs[i],now=after.runs[i];re.lastIndex=0;const want=skipped.has(was.slideId)?was.text:was.text.replace(re,()=>replacement);if(now.slideId!==was.slideId||now.shapeId!==was.shapeId||now.text!==want)throw Error('Edited deck failed verification');}
+  const rz=unzipSync(out);for(const key of Object.keys(zip))if(!(key in changed)&&(!rz[key]||rz[key].length!==zip[key].length||rz[key].some((v,i)=>v!==zip[key][i])))throw Error('Edited deck changed an unrelated part');
+  return out;
+}
+
 /** Slides whose title placeholder is missing or has no text. Slides with unsupported structure are skipped, not guessed. */
 export interface UntitledSlide {slideId:number;slideIndex:number;reason:'missing'|'empty'}
 function slideTitles(bytes:Uint8Array):{slideId:number;slideIndex:number;ph:boolean;title:string}[]{

@@ -6217,6 +6217,21 @@
       "hasEnabled": true
     },
     {
+      "id": "slides.replaceText",
+      "title": "Replace text in all slides",
+      "category": "Edit",
+      "source": "slides",
+      "keywords": [
+        "find and replace",
+        "rename",
+        "replace",
+        "replace all",
+        "search",
+        "text"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "slides.saveCopy",
       "title": "Save presentation copy",
       "category": "Project",

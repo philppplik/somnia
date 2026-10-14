@@ -1,3 +1,4 @@
+import {SlidesReplaceText} from './SlidesReplaceText';
 import {SlidesReadingOrder} from './SlidesReadingOrder';
 import {SlidesDeckCheck} from './SlidesDeckCheck';
 import {SlidesNotesReport} from './SlidesNotesReport';
@@ -56,6 +57,7 @@ export function SlidesOverviewPanel(){
   <label className="flex items-center gap-2 text-xs"><input className="!w-4 shrink-0" type="checkbox" checked={compact} onChange={e=>setCompact(e.target.checked)}/>{t('slides.compact')}</label>
   <button className={button} disabled={s.busy} onClick={()=>void action.run('slides.loadThumbnails')}>{t('cmd.slides.loadThumbnails')}</button>
   <SlidesDeckCheck/>
+  <details className="rounded-lg border border-subtle"><summary className="px-2 py-1.5 text-xs">{t('slides.replace.title')}</summary><SlidesReplaceText/></details>
   <details className="rounded-lg border border-subtle"><summary className="px-2 py-1.5 text-xs">{t('slides.sections.title')}</summary><SlidesSectionsEditor/></details>
   <details className="rounded-lg border border-subtle"><summary className="px-2 py-1.5 text-xs">{t('slides.altReport.title')}</summary><SlidesAltReport/></details>
   <details className="rounded-lg border border-subtle"><summary className="px-2 py-1.5 text-xs">{t('slides.titleReport.title')}</summary><SlidesTitleReport/></details>
