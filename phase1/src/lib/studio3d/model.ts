@@ -102,6 +102,19 @@ export function externalResources(json:Record<string,unknown>):string[]{
  }
  return [...out];
 }
+/** Image URIs a .gltf references outside the JSON (data: URIs excluded). Missing images fall back to an empty pixel; missing buffers stay fatal. */
+export function externalImages(json:Record<string,unknown>):string[]{
+ const out=new Set<string>();
+ const list=json.images;if(Array.isArray(list))for(const item of list){const uri=(item as {uri?:unknown})?.uri;if(typeof uri==='string'&&!uri.startsWith('data:'))out.add(uri);}
+ return [...out];
+}
+/** External resources a .gltf still needs: buffers it cannot open without (fatal) and textures that fall back to an empty pixel with a notice. `have` answers whether a referenced uri was supplied alongside the file. */
+export function externalGltfNeeds(json:Record<string,unknown>,have:(uri:string)=>boolean):{missing:string[];missingTextures:string[]}{
+ const images=new Set(externalImages(json));
+ const missing:string[]=[];const missingTextures:string[]=[];
+ for(const r of externalResources(json)){if(have(r))continue;(images.has(r)?missingTextures:missing).push(r);}
+ return{missing,missingTextures};
+}
 export interface Bounds{min:[number,number,number];max:[number,number,number]}
 export const emptyBounds=():Bounds=>({min:[Infinity,Infinity,Infinity],max:[-Infinity,-Infinity,-Infinity]});
 export const boundsValid=(b:Bounds)=>b.min.every((v,i)=>Number.isFinite(v)&&Number.isFinite(b.max[i])&&v<=b.max[i]);

@@ -605,5 +605,6 @@
  "studio3d.view.turntable": "Aperçu tournant",
  "cmd.studio3d.view.projection": "Basculer la vue 3D entre perspective et orthographique",
  "cmd.studio3d.view.fov": "Régler le champ de vision ou la focale de la vue",
- "cmd.studio3d.view.turntable": "Démarrer ou arrêter l'aperçu tournant (vue seulement)"
+ "cmd.studio3d.view.turntable": "Démarrer ou arrêter l'aperçu tournant (vue seulement)",
+ "studio3d.import.summary": "{tris} triangles, {materials} matériaux et {animations} animations importés."
 }

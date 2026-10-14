@@ -24,7 +24,7 @@ import {getState as getAppState} from '../../store/appStore';
 import {readProjectUnit,writeProjectUnit} from '../../lib/studio3d/projectPrefs';
 import {checkPreset,presetPatch,readPresets,removePreset,savePreset,MaterialPresetError,type MaterialPreset} from '../../lib/studio3d/materialPresets';
 import type {MaterialSnapshot} from '../../lib/studio3d/stage';
-import {toggleSelection,marqueeRect,inRect,turntablePlan,frameName,exportFileName,unitScale,isUnit,isMeshFormat,mergeSnap,snapTo,measureInfo,stlUnitHint,mtlReferences,mtlTextures,clampRenderSize,MAX_MTL_BYTES,MAX_TEXTURE_BYTES,MAX_TEXTURE_FILES,SnapError,mergeEnv,envFormatFor,nudgeFor,EnvError,modelFormatFor,readModelHeader,externalResources,ModelError,boundsValid,boundsCenter,boundsRadius,frameDistance,clipPlanes,pickClips,extractGltfTextures,GLTF_TEXTURE_MODES} from '../../lib/studio3d/model';
+import {toggleSelection,marqueeRect,inRect,turntablePlan,frameName,exportFileName,unitScale,isUnit,isMeshFormat,mergeSnap,snapTo,measureInfo,stlUnitHint,mtlReferences,mtlTextures,externalGltfNeeds,clampRenderSize,MAX_MTL_BYTES,MAX_TEXTURE_BYTES,MAX_TEXTURE_FILES,SnapError,mergeEnv,envFormatFor,nudgeFor,EnvError,modelFormatFor,readModelHeader,ModelError,boundsValid,boundsCenter,boundsRadius,frameDistance,clipPlanes,pickClips,extractGltfTextures,GLTF_TEXTURE_MODES} from '../../lib/studio3d/model';
 import type {Bounds} from '../../lib/studio3d/model';
 import {checkSkins,bonePickRadius,pickBone} from '../../lib/studio3d/skeleton';
 import {weightColor} from '../../lib/studio3d/skinning';
@@ -243,8 +243,9 @@ export default function Viewport3D(){
     }
     if(header.format==='gltf'||header.format==='glb'){
      checkSkins(file.name,header.json);
-     const missing=externalResources(header.json).filter(r=>!urls.has(base(decodeURIComponent(r)).toLowerCase()));
-     if(missing.length)throw new ModelError(`${file.name} refers to files that were not selected: ${missing.slice(0,4).join(', ')}${missing.length>4?', ...':''}. Select the .gltf together with its .bin and texture files.`);
+     const needs=externalGltfNeeds(header.json,r=>urls.has(base(decodeURIComponent(r)).toLowerCase()));
+     if(needs.missing.length)throw new ModelError(`${file.name} refers to files that were not selected: ${needs.missing.slice(0,4).join(', ')}${needs.missing.length>4?', ...':''}. Select the .gltf together with its .bin and texture files.`);
+     if(needs.missingTextures.length)notice=`Textures not found: ${needs.missingTextures.slice(0,4).join(', ')}${needs.missingTextures.length>4?', ...':''}. Select them together with the .gltf.`;
     }
     const loader=new GLTFLoader(manager);loader.setMeshoptDecoder(MeshoptDecoder);
     const buffer=bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength) as ArrayBuffer;
@@ -591,8 +592,8 @@ export default function Viewport3D(){
   };
   const openNow=async(files:File[])=>{
    const primary=files.find(f=>/\.som3d$/i.test(f.name))??files.find(f=>modelFormatFor(f.name));const ticket=++opening;
-   if(!primary){patchStudio3D({status:'error',error:'Choose a .glb, .gltf, .obj, .stl or .ply file.'});return;}
-   patchStudio3D({status:'loading',name:primary.name,error:'',blank:false,loadPhase:'read'});
+   if(!primary){patchStudio3D({status:'error',error:'Choose a .som3d, .glb, .gltf, .obj, .stl or .ply file.'});return;}
+   patchStudio3D({status:'loading',name:primary.name,error:'',blank:false,loadPhase:'read',imported:null});
    if(/\.som3d$/i.test(primary.name)){
     try{
      const text=await primary.text();const doc=parseDocument(text);
@@ -619,7 +620,7 @@ export default function Viewport3D(){
     if(ticket!==opening||disposed){gltf.scene.traverse(o=>{(o as THREE.Mesh).geometry?.dispose?.();});return;}
     selectionReset();patchStudio3D({loadPhase:'build'});
     await stage.load(gltf.scene,async()=>{await clipsFrom(gltf);});
-    patchStudio3D({status:'ready',name:primary.name,error:'',format:header.format.toUpperCase(),bytes:size,blank:false,confirmReplace:null,notice,unitHint,loadPhase:null});loadUnit();
+    const im=stage.measure().stats;patchStudio3D({status:'ready',name:primary.name,error:'',format:header.format.toUpperCase(),bytes:size,blank:false,confirmReplace:null,notice,unitHint,loadPhase:null,imported:{triangles:im.triangles,materials:im.materials,animations:im.animations}});loadUnit();
     frameAll();
    }catch(e){
     if(ticket!==opening)return;

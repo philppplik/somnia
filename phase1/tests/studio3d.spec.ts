@@ -1265,3 +1265,23 @@ test('3D studio camera: projection toggle, fov and focal length fields and turnt
  await expect.poll(async()=>(await session(page)).turntable).toBe(false);
  expect((await session(page)).dirty).toBe(dirty);
 });
+
+test('3D studio opens a dropped model with its sidecars and shows an import summary',async({page})=>{
+ await blank(page);
+ // Dropping a batch without a model file keeps the scene and shows a readable error naming every openable format.
+ await page.getByTestId('studio3d-viewport').dispatchEvent('drop',{dataTransfer:await page.evaluateHandle(()=>{const dt=new DataTransfer();dt.items.add(new File([new Uint8Array(8)],'notes.txt'));return dt;})});
+ await expect(page.getByRole('alert')).toContainText('Choose a .som3d');
+ // A real model drop imports and reports the summary. The scene was left intact by the failed drop above.
+ await blank(page);
+ const glb=triangleGlb();
+ await page.getByTestId('studio3d-viewport').dispatchEvent('drop',{dataTransfer:await page.evaluateHandle(b=>{const dt=new DataTransfer();dt.items.add(new File([new Uint8Array(b)],'dropped.glb'));return dt;},[...glb])});
+ await expect.poll(async()=>(await session(page)).name).toBe('dropped.glb');
+ await expect(page.getByTestId('studio3d-import-summary')).toContainText('1 triangles');
+ await expect(page.getByTestId('studio3d-import-summary')).toContainText('1 materials');
+ // Dropping over unsaved changes asks first, like the file dialog does.
+ await insert(page,'cube',0);
+ await page.getByTestId('studio3d-viewport').dispatchEvent('drop',{dataTransfer:await page.evaluateHandle(b=>{const dt=new DataTransfer();dt.items.add(new File([new Uint8Array(b)],'second.glb'));return dt;},[...glb])});
+ await expect(page.getByTestId('studio3d-replace')).toBeVisible();
+ await page.getByTestId('studio3d-replace').getByRole('button',{name:/replace/i}).first().click();
+ await expect.poll(async()=>(await session(page)).name).toBe('second.glb');
+});

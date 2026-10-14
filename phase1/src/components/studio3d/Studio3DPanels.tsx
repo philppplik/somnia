@@ -102,6 +102,7 @@ export function ModelSection(_:InspectorSectionProps){
  </dl>
   {!s.blank&&<SceneChecks/>}
   {<AnimationControls/>}
+  {s.imported&&<StudioStatus className="block m-0 px-3 text-xs text-ink-2" data-testid="studio3d-import-summary">{t('studio3d.import.summary',{tris:formatCount(s.imported.triangles),materials:formatCount(s.imported.materials),animations:formatCount(s.imported.animations)})}</StudioStatus>}
   {s.notice&&<StudioStatus className="block m-0 px-3 text-xs text-ink-2" data-testid="studio3d-notice">{s.notice}</StudioStatus>}
   {s.unitHint&&<div role="status" className="grid gap-1 px-3 pb-3 text-xs text-ink-2" data-testid="studio3d-unit-hint">{t('studio3d.unit.hint')}
    <Button variant="outline" onClick={()=>{const h=s.unitHint!;patchStudio3D({unitHint:null});void executeCommand('studio3d.object.transform',{id:h.id,scale:{x:h.factor,y:h.factor,z:h.factor}});}}>{t('studio3d.unit.convert')}</Button>

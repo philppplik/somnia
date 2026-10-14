@@ -605,5 +605,6 @@
  "studio3d.view.turntable": "Prévia giratória",
  "cmd.studio3d.view.projection": "Alternar a vista 3D entre perspectiva e ortográfica",
  "cmd.studio3d.view.fov": "Definir o campo de visão ou a distância focal da vista",
- "cmd.studio3d.view.turntable": "Iniciar ou parar a prévia giratória (somente visualização)"
+ "cmd.studio3d.view.turntable": "Iniciar ou parar a prévia giratória (somente visualização)",
+ "studio3d.import.summary": "{tris} triângulos, {materials} materiais e {animations} animações importados."
 }

@@ -46,7 +46,9 @@ export function Studio3DCanvas(){
   void withController(c=>c.openFiles([new File([model.bytes as BlobPart],model.name)]));
  },[s.pending]);
  const active=s.status!=='idle'||s.blank||!!s.pending;
- return <main className="center" aria-label={t('studio3d.title')}><div className="workspace"><section className="code-pane" aria-label={t('studio3d.title')}>
+ return <main className="center" aria-label={t('studio3d.title')}><div className="workspace"><section className="code-pane" aria-label={t('studio3d.title')}
+  onDragOver={e=>{if(e.dataTransfer.types.includes('Files')){e.preventDefault();e.dataTransfer.dropEffect='copy';}}}
+  onDrop={e=>{if(!e.dataTransfer.types.includes('Files'))return;e.preventDefault();e.stopPropagation();const files=[...(e.dataTransfer.files??[])];if(files.length)void withController(c=>c.openFiles(files));}}>
   <FileTabs/>
   <input ref={input} type="file" accept={MODEL_ACCEPT} multiple hidden data-testid="studio3d-file-input" onChange={e=>{const files=[...(e.target.files??[])];e.target.value='';if(files.length)void withController(c=>c.openFiles(files));}}/>
   <input ref={envInput} type="file" accept={ENV_ACCEPT} hidden data-testid="studio3d-env-input" onChange={e=>{const f=e.target.files?.[0];e.target.value='';if(f)void withController(async c=>{try{await c.openEnvFile(f);patchStudio3D({status:'ready',error:''});}catch(err){patchStudio3D({status:'ready',error:err instanceof Error?err.message:String(err)});}});}}/>
