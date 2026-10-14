@@ -1,3 +1,4 @@
+import {SlidesReadingOrder} from './SlidesReadingOrder';
 import {SlidesDeckCheck} from './SlidesDeckCheck';
 import {SlidesNotesReport} from './SlidesNotesReport';
 import {SlidesTitleReport} from './SlidesTitleReport';
@@ -59,6 +60,7 @@ export function SlidesOverviewPanel(){
   <details className="rounded-lg border border-subtle"><summary className="px-2 py-1.5 text-xs">{t('slides.altReport.title')}</summary><SlidesAltReport/></details>
   <details className="rounded-lg border border-subtle"><summary className="px-2 py-1.5 text-xs">{t('slides.titleReport.title')}</summary><SlidesTitleReport/></details>
   <details className="rounded-lg border border-subtle"><summary className="px-2 py-1.5 text-xs">{t('slides.notesReport.title')}</summary><SlidesNotesReport/></details>
+  <details className="rounded-lg border border-subtle"><summary className="px-2 py-1.5 text-xs">{t('slides.reading.title')}</summary><SlidesReadingOrder/></details>
   <nav aria-label={t('slides.panel.overview')} className="flex flex-col gap-2">{rows.map(row=>{
    const id=s.slideIds[row.index],last=s.summary!.slides-1;
    return <div key={id??`i${row.index}`} className="flex items-stretch gap-1" draggable={canMove} onDragStart={e=>{if(canMove){e.dataTransfer.setData('text/plain',String(row.index));e.dataTransfer.effectAllowed='move';}}} onDragOver={e=>{if(canMove)e.preventDefault();}} onDrop={e=>{if(!canMove)return;e.preventDefault();const from=Number(e.dataTransfer.getData('text/plain'));if(Number.isInteger(from)&&s.slideIds[from]!==undefined&&from!==row.index)void move(from,row.index);}}>
