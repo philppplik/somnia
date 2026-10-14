@@ -945,5 +945,7 @@
  "animation.export.spriteSheet.hint": "Todos os quadros da área de trabalho em uma grade PNG mais atlas.json",
  "cmd.animation.export.spriteSheet": "Exportar a área de trabalho como folha de sprites",
  "animation.export.kind.sheet": "Folha de sprites",
- "animation.modifiers.hold": "Manter (quadros)"
+ "animation.modifiers.hold": "Manter (quadros)",
+ "animation.rig.workarea": "Área de trabalho para camadas",
+ "cmd.animation.workarea.toLayers": "Ajustar a área de trabalho às camadas selecionadas"
 }

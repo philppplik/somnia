@@ -435,3 +435,14 @@ test('P162 wiggle hold samples noise once per hold, smooth when absent, validate
  assert.equal(validateModifiers([{type:'wiggle',seed:1,amplitude:1,frequency:1,hold:-1}]).length,1);
  assert.equal(validateModifiers([{type:'wiggle',seed:1,amplitude:1,frequency:1,hold:24000}]).length,0);
 });
+
+test('P163 work area follows the selected layers, one undo step, no-op refused',async()=>{
+ const {layerWorkAreaSpecs}=await import('./layerWorkAreaCommands');const run=layerWorkAreaSpecs()[0].run as (p?:unknown)=>unknown;
+ const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'shape',id:'b'});
+ s.dispatch({type:'layer.timing',layer:'a',inT:f(2),outT:f(6)});s.dispatch({type:'layer.timing',layer:'b',inT:f(4),outT:f(9)});
+ const before=s.document!;
+ run({layers:['a','b']});assert.deepEqual(findComp(s.document!)!.workArea,{in:f(2),out:f(9)});
+ assert.throws(()=>run({layers:['a','b']}),/already spans/);
+ run({layers:['a']});assert.deepEqual(findComp(s.document!)!.workArea,{in:f(2),out:f(6)});
+ s.undo();s.undo();assert.equal(s.document,before);setAnimationSession(null);
+});

@@ -945,5 +945,7 @@
  "animation.export.spriteSheet.hint": "Alle Frames des Arbeitsbereichs als PNG-Raster plus atlas.json",
  "cmd.animation.export.spriteSheet": "Arbeitsbereich als Sprite-Sheet exportieren",
  "animation.export.kind.sheet": "Sprite-Sheet",
- "animation.modifiers.hold": "Halten (Frames)"
+ "animation.modifiers.hold": "Halten (Frames)",
+ "animation.rig.workarea": "Arbeitsbereich auf Ebenen",
+ "cmd.animation.workarea.toLayers": "Arbeitsbereich auf die gewählten Ebenen setzen"
 }

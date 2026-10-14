@@ -26,7 +26,8 @@ export function RigPanel({comp}:{comp:Composition}){
     <NativeInput className="h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text" type="number" min={0} max={60} step={1} value={follow} aria-label={t('animation.rig.followFrames')} onChange={e=>setFollow(e.target.value)} data-testid="animation-rig-follow-frames"/></div>
    <Button size="compact" variant="outline" disabled={ids.length<1} onClick={()=>run('animation.rig.release')} data-testid="animation-rig-release">{t('animation.rig.release')}</Button>
    <Button size="compact" variant="outline" disabled={ids.length<1} onClick={()=>run('animation.layers.duplicate')} data-testid="animation-rig-duplicate">{t('animation.rig.duplicate')}</Button>
-   <Button size="compact" variant="outline" disabled={ids.length<1} onClick={()=>run('animation.layers.split')} data-testid="animation-rig-split">{t('animation.rig.split')}</Button></div>
+   <Button size="compact" variant="outline" disabled={ids.length<1} onClick={()=>run('animation.layers.split')} data-testid="animation-rig-split">{t('animation.rig.split')}</Button>
+   <Button size="compact" variant="outline" disabled={ids.length<1} onClick={()=>run('animation.workarea.toLayers')} data-testid="animation-rig-workarea">{t('animation.rig.workarea')}</Button></div>
   <div className="text-ink-3">{t('animation.rig.hint')}</div>
   <div className="grid min-w-0 gap-1 border-t border-subtle pt-2" role="group" aria-label={t('animation.timing.title')} data-testid="animation-timing">
    <NativeSelect className={fieldCls} value={mode} aria-label={t('animation.timing.title')} onChange={e=>setMode(e.target.value as TimingMode)} data-testid="animation-timing-mode">{TIMING_MODES.map(m=><option key={m} value={m}>{t(`animation.timing.mode.${m}`)}</option>)}</NativeSelect>

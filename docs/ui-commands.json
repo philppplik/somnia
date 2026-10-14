@@ -2380,6 +2380,24 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.workarea.toLayers",
+      "title": "Set the work area to the selected layers",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "bounds",
+        "export",
+        "in",
+        "layers",
+        "out",
+        "range",
+        "span",
+        "work area"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "chat.toggle",
       "title": "Toggle session chat",
       "category": "View",

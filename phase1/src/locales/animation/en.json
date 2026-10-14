@@ -945,5 +945,7 @@
  "animation.export.spriteSheet.hint": "All work-area frames in one PNG grid plus atlas.json",
  "cmd.animation.export.spriteSheet": "Export work area as sprite sheet",
  "animation.export.kind.sheet": "Sprite sheet",
- "animation.modifiers.hold": "Hold (frames)"
+ "animation.modifiers.hold": "Hold (frames)",
+ "animation.rig.workarea": "Work area to layers",
+ "cmd.animation.workarea.toLayers": "Set the work area to the selected layers"
 }

@@ -945,5 +945,7 @@
  "animation.export.spriteSheet.hint": "Todos los fotogramas del área de trabajo en una cuadrícula PNG más atlas.json",
  "cmd.animation.export.spriteSheet": "Exportar el área de trabajo como hoja de sprites",
  "animation.export.kind.sheet": "Hoja de sprites",
- "animation.modifiers.hold": "Mantener (fotogramas)"
+ "animation.modifiers.hold": "Mantener (fotogramas)",
+ "animation.rig.workarea": "Área de trabajo a capas",
+ "cmd.animation.workarea.toLayers": "Ajustar el área de trabajo a las capas seleccionadas"
 }
