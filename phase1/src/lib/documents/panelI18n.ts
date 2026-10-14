@@ -1,6 +1,14 @@
 import {CATALOGUES} from '../i18n';
 export const DOCUMENTS_PANEL_CATALOGUES:Record<string,Record<string,string>>={
   "en": {
+  "documents.selectionReview.title": "Selected text review",
+  "documents.selectionReview.boundary": "Private source preview only. No AI request, summary, edit or save. Text may contain private information.",
+  "documents.selectionReview.capture": "Review selected text",
+  "documents.selectionReview.unavailable": "Select nonempty text in one editable paragraph (up to 4096 UTF-8 bytes).",
+  "documents.selectionReview.failed": "Selection changed or unavailable. Select again and review.",
+  "documents.selectionReview.extent": "{name}, paragraph {block}, UTF-8 span [{start}, {end}), {bytes} bytes",
+  "documents.selectionReview.discard": "Discard preview",
+
     "documents.panel.outline": "Paragraphs",
     "documents.panel.find": "Find and replace",
     "documents.panel.document": "Document",
@@ -57,6 +65,14 @@ export const DOCUMENTS_PANEL_CATALOGUES:Record<string,Record<string,string>>={
     "documents.panels.error.matchChanged": "Search result changed. Search again."
   },
   "de": {
+  "documents.selectionReview.title": "Gewählten Text prüfen",
+  "documents.selectionReview.boundary": "Nur private Quellenvorschau. Keine KI-Anfrage, Zusammenfassung, Änderung oder Speicherung. Text kann private Daten enthalten.",
+  "documents.selectionReview.capture": "Gewählten Text ansehen",
+  "documents.selectionReview.unavailable": "Nichtleeren Text in einem editierbaren Absatz wählen (bis4096 UTF-8 Bytes).",
+  "documents.selectionReview.failed": "Auswahl geändert oder nicht verfügbar. Neu wählen und prüfen.",
+  "documents.selectionReview.extent": "{name}, Absatz {block}, UTF-8 Bereich [{start}, {end}), {bytes} Bytes",
+  "documents.selectionReview.discard": "Vorschau verwerfen",
+
     "documents.panel.outline": "Absätze",
     "documents.panel.find": "Suchen und ersetzen",
     "documents.panel.document": "Dokument",
@@ -113,6 +129,14 @@ export const DOCUMENTS_PANEL_CATALOGUES:Record<string,Record<string,string>>={
     "documents.panels.error.matchChanged": "Suchtreffer geändert. Erneut suchen."
   },
   "es": {
+  "documents.selectionReview.title": "Revisar texto elegido",
+  "documents.selectionReview.boundary": "Vista privada de fuente. Sin IA, resumen, edición ni guardado. Puede contener datos privados.",
+  "documents.selectionReview.capture": "Ver texto elegido",
+  "documents.selectionReview.unavailable": "Elige texto no vacío en un párrafo editable (hasta4096 bytes UTF-8).",
+  "documents.selectionReview.failed": "Selección modificada o no disponible. Elige y revisa de nuevo.",
+  "documents.selectionReview.extent": "{name}, párrafo {block}, rango UTF-8 [{start}, {end}), {bytes} bytes",
+  "documents.selectionReview.discard": "Descartar vista",
+
     "documents.panel.outline": "Párrafos",
     "documents.panel.find": "Buscar y reemplazar",
     "documents.panel.document": "Documento",
@@ -169,6 +193,14 @@ export const DOCUMENTS_PANEL_CATALOGUES:Record<string,Record<string,string>>={
     "documents.panels.error.matchChanged": "El resultado cambió. Busca de nuevo."
   },
   "fr": {
+  "documents.selectionReview.title": "Vérifier texte choisi",
+  "documents.selectionReview.boundary": "Aperçu privé de source. Pas de requête IA, résumé, modification ou sauvegarde. Peut contenir des données privées.",
+  "documents.selectionReview.capture": "Voir texte choisi",
+  "documents.selectionReview.unavailable": "Choisissez du texte non vide dans un paragraphe modifiable (jusqu’à4096 octets UTF-8).",
+  "documents.selectionReview.failed": "Sélection modifiée ou indisponible. Choisissez et vérifiez à nouveau.",
+  "documents.selectionReview.extent": "{name}, paragraphe {block}, plage UTF-8 [{start}, {end}), {bytes} octets",
+  "documents.selectionReview.discard": "Supprimer aperçu",
+
     "documents.panel.outline": "Paragraphes",
     "documents.panel.find": "Rechercher et remplacer",
     "documents.panel.document": "Document",
@@ -225,6 +257,14 @@ export const DOCUMENTS_PANEL_CATALOGUES:Record<string,Record<string,string>>={
     "documents.panels.error.matchChanged": "Le résultat a changé. Relancez la recherche."
   },
   "pt-BR": {
+  "documents.selectionReview.title": "Revisar texto escolhido",
+  "documents.selectionReview.boundary": "Prévia privada da fonte. Sem IA, resumo, edição ou salvamento. Pode conter dados privados.",
+  "documents.selectionReview.capture": "Ver texto escolhido",
+  "documents.selectionReview.unavailable": "Escolha texto não vazio em um parágrafo editável (até4096 bytes UTF-8).",
+  "documents.selectionReview.failed": "Seleção alterada ou indisponível. Escolha e revise novamente.",
+  "documents.selectionReview.extent": "{name}, parágrafo {block}, intervalo UTF-8 [{start}, {end}), {bytes} bytes",
+  "documents.selectionReview.discard": "Descartar prévia",
+
     "documents.panel.outline": "Parágrafos",
     "documents.panel.find": "Localizar e substituir",
     "documents.panel.document": "Documento",

@@ -1,4 +1,4 @@
-import {useEffect,useState} from 'react';
+import {DocumentsSelectionPreview} from './DocumentsSelectionPreview';import {useEffect,useState} from 'react';
 import type {InspectorSectionProps,PanelHostProps} from '../../lib/shell/types';
 import {findDocumentMatches,documentStatistics} from '../../lib/documents/panels';
 import {documentPanelReady,runDocumentPanelCommand} from '../../lib/documents/panelCommands';
@@ -59,7 +59,7 @@ function ParagraphProperties({index,text,editable}:{index:number;text:string;edi
  const {t}=useT(),d=useDocuments(),a=useAction();const [draft,setDraft]=useState(text),[base,setBase]=useState(text);const changed=text!==base;
  useEffect(()=>{if(draft===base){setDraft(text);setBase(text);}},[text,draft,base]);
  const c=d.caret;const selected=c?text.slice(utf8ToUtf16Offset(text,Math.min(c.anchor,c.head)),utf8ToUtf16Offset(text,Math.max(c.anchor,c.head))):'';
- return <><Message error={a.error}/><p>{t('documents.edit.paragraph',{n:index+1})}</p>
+ return <><DocumentsSelectionPreview/><Message error={a.error}/><p>{t('documents.edit.paragraph',{n:index+1})}</p>
   <dl className="doc-panel-stats"><div><dt>{t('documents.panels.characters')}</dt><dd>{Array.from(text).length}</dd></div><div><dt>{t('documents.panels.selectedCharacters')}</dt><dd>{Array.from(selected).length}</dd></div></dl>
   {editable?<><label>{t('documents.panels.paragraphText')}<Textarea rows={6} value={draft} onChange={e=>setDraft(e.target.value.replace(/[\r\n]+/g,' '))} disabled={!documentPanelReady(true)}/></label>
    {changed&&<p role="alert" className="doc-panel-note">{t('documents.panels.conflict')}</p>}
