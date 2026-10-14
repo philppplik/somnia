@@ -837,5 +837,6 @@
  "animation.keys.toPlayhead.hint": "Mueve las keys seleccionadas para que la primera quede en el cabezal",
  "cmd.animation.keys.toPlayhead": "Mover las keys seleccionadas para que la primera quede en el cabezal",
  "animation.keys.range.at": "Keys = cabezal",
- "animation.keys.range.at.hint": "Selecciona las keys exactamente en el cabezal"
+ "animation.keys.range.at.hint": "Selecciona las keys exactamente en el cabezal",
+ "animation.keys.values.smooth": "Suavizar %"
 }

@@ -80,3 +80,13 @@ test('keysAround at: only keys exactly on the time',()=>{
  assert.deepEqual(keysAround(c,['a'],f(10),'at').map(k=>k.t),[f(10)]);
  assert.equal(keysAround(c,['a'],f(5),'at').length,0);
 });
+import {valueEdits} from './keyValues';
+test('smooth: moves toward neighbour average, ends use one neighbour, validates amount',()=>{
+ const d=applyEdits(base(),[{type:'prop.set',layer:'a',prop:'position',t:f(5),value:[400,0]}] as never),c=findComp(d)!;
+ const e=valueEdits(c,[{layer:'a',prop:'position',t:f(5)}],'smooth',100) as {value:number[]}[];
+ assert.deepEqual(e[0].value,[150,75]);
+ const h=valueEdits(c,[{layer:'a',prop:'position',t:f(5)}],'smooth',50) as {value:number[]}[];
+ assert.deepEqual(h[0].value,[275,37.5]);
+ assert.throws(()=>valueEdits(c,[{layer:'a',prop:'position',t:f(5)}],'smooth',0));
+ assert.throws(()=>valueEdits(c,[{layer:'a',prop:'position',t:f(5)}],'smooth',101));
+});

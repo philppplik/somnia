@@ -837,5 +837,6 @@
  "animation.keys.toPlayhead.hint": "Move as keys selecionadas para que a primeira fique no cursor",
  "cmd.animation.keys.toPlayhead": "Mover as keys selecionadas para que a primeira fique no cursor",
  "animation.keys.range.at": "Keys = cursor",
- "animation.keys.range.at.hint": "Seleciona as keys exatamente no cursor"
+ "animation.keys.range.at.hint": "Seleciona as keys exatamente no cursor",
+ "animation.keys.values.smooth": "Suavizar %"
 }

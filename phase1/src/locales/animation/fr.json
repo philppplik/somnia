@@ -837,5 +837,6 @@
  "animation.keys.toPlayhead.hint": "Déplace les keys sélectionnées pour que la première soit sur la tête de lecture",
  "cmd.animation.keys.toPlayhead": "Déplacer les keys sélectionnées pour que la première soit sur la tête de lecture",
  "animation.keys.range.at": "Keys = tête",
- "animation.keys.range.at.hint": "Sélectionne les keys exactement sur la tête de lecture"
+ "animation.keys.range.at.hint": "Sélectionne les keys exactement sur la tête de lecture",
+ "animation.keys.values.smooth": "Lisser %"
 }

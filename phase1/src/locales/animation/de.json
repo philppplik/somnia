@@ -837,5 +837,6 @@
  "animation.keys.toPlayhead.hint": "Gewählte Keys verschieben, sodass der erste auf dem Playhead liegt",
  "cmd.animation.keys.toPlayhead": "Gewählte Keys so verschieben, dass der erste auf dem Playhead liegt",
  "animation.keys.range.at": "Keys = Playhead",
- "animation.keys.range.at.hint": "Keys genau auf dem Playhead auswählen"
+ "animation.keys.range.at.hint": "Keys genau auf dem Playhead auswählen",
+ "animation.keys.values.smooth": "Glätten %"
 }
