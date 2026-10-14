@@ -84,6 +84,9 @@ export type MaskOp=
  |{op:'point';mask:string;index:number;x:number;y:number;t?:number}
  |{op:'pen';mask:string;x:number;y:number;outX?:number;outY?:number;restart?:boolean}
  |{op:'close';mask:string}
+ |{op:'keysEdit';mask:string;prop:MaskProp;edits:readonly {t:number;to:number;v:PropValue}[]}
+ |{op:'keysEase';mask:string;prop:MaskProp;ts:readonly number[];preset:EasePreset}
+ |{op:'keysPaste';mask:string;prop:MaskProp;t:number;clip:MaskKeysClip}
  |{op:'keyEdit';mask:string;prop:MaskProp;t:number;to:number;v:PropValue}
  |{op:'keyHandle';mask:string;prop:MaskProp;t:number;kind:'in'|'out';x:number;y:number}
  |{op:'pointRemove';mask:string;index:number}
@@ -130,6 +133,7 @@ export function maskEdit(doc:AnimationDocument,layerId:string,o:MaskOp):Edit{
   case 'close':{need(o.mask);return set(list.map(m=>{if(m.id!==o.mask)return m;if(!m.path||m.path.closed||m.path.points.length<3)throw Error('A closed path needs three points.');
    if(m.shapeKeys?.length)throw Error('Remove the path animation before closing the path.');return {...m,path:{...m.path,closed:true}};}));}
   case 'keyEdit':case 'keyHandle':{need(o.mask);return set(list.map(m=>m.id===o.mask?(o.op==='keyEdit'?editMaskKey(m,o.prop,o.t,o.to,o.v,c):handleMaskKey(m,o.prop,o.t,o.kind,[o.x,o.y])):m));}
+  case 'keysEdit':case 'keysEase':case 'keysPaste':{need(o.mask);return set(list.map(m=>m.id===o.mask?(o.op==='keysEdit'?editMaskKeys(m,o.prop,o.edits,c):o.op==='keysEase'?easeMaskKeys(m,o.prop,o.ts,o.preset):pasteMaskKeys(m,o.prop,frameT(o.t,c),o.clip)):m));}
   case 'pointRemove':case 'pointInsert':{need(o.mask);return set(list.map(m=>{if(m.id!==o.mask)return m;if(!m.path||!m.path.points[o.index])throw Error('Path point no longer exists.');
    const f=o.op==='pointRemove'?(p:MaskPath)=>removePoint(p,o.index):(p:MaskPath)=>insertPoint(p,o.index);
    return {...m,path:f(m.path),...(m.shapeKeys?{shapeKeys:m.shapeKeys.map(k=>({...k,path:f(k.path)}))}:{})};}));}
@@ -185,6 +189,30 @@ export function pasteMaskKey(m:LayerMask,prop:MaskProp|'path',t:number,c:MaskKey
  const cur=m.anim?.[c.prop];if(!cur?.keys.length)throw Error('Animate the property first.');
  if(Array.isArray(c.v)!==(cur.type==='vec2'))throw Error('Value does not fit the mask property.');
  return {...m,anim:{...m.anim,[c.prop]:{...cur,keys:[...cur.keys.filter(k=>k.t!==t),{t,v:c.v,interp:c.interp,out:c.out,in:c.in}].sort((a,b)=>a.t-b.t)}}};
+}
+/** Copied keys of one property: times relative to the first key, values with their ease. */
+export interface MaskKeysClip{type:'scalar'|'vec2';keys:readonly {dt:number;v:PropValue;interp:'hold'|'linear'|'bezier';out:readonly [number,number];in:readonly [number,number]}[]}
+export function copyMaskKeys(m:LayerMask,prop:MaskProp,ts:readonly number[]):MaskKeysClip{
+ const p=keysOf(m,prop),ks=p.keys.filter(k=>ts.includes(k.t));if(!ks.length)throw Error('No keys selected.');
+ return {type:p.type as 'scalar'|'vec2',keys:ks.map(k=>({dt:k.t-ks[0].t,v:k.v,interp:k.interp,out:k.out,in:k.in}))};
+}
+/** Pastes keys with the first one at `t`. Only a property of the same value type accepts them. */
+export function pasteMaskKeys(m:LayerMask,prop:MaskProp,t:number,c:MaskKeysClip):LayerMask{
+ const p=keysOf(m,prop);if(p.type!==c.type)throw Error('The copied keys have another value type.');
+ const times=c.keys.map(k=>t+k.dt),keep=p.keys.filter(k=>!times.includes(k.t));
+ if(keep.length+c.keys.length>2000)throw Error('Too many keys.');
+ return {...m,anim:{...m.anim,[prop]:{...p,keys:[...keep,...c.keys.map(k=>({t:t+k.dt,v:k.v,interp:k.interp,out:k.out,in:k.in}))].sort((a,b)=>a.t-b.t)}}};
+}
+/** Moves and revalues several keys of one property in one edit; ease kept, collisions refused. */
+export function editMaskKeys(m:LayerMask,prop:MaskProp,edits:readonly {t:number;to:number;v:PropValue}[],comp:Composition):LayerMask{
+ const p=keysOf(m,prop),by=new Map(edits.map(e=>[e.t,e]));if(by.size!==edits.length||edits.some(e=>!p.keys.some(k=>k.t===e.t)))throw Error('Key no longer exists.');
+ const keys=p.keys.map(k=>{const e=by.get(k.t);if(!e)return k;if(Array.isArray(e.v)!==(p.type==='vec2'))throw Error('Value does not fit the mask property.');return {...k,t:frameT(e.to,comp),v:e.v};}).sort((a,b)=>a.t-b.t);
+ if(keys.some((k,i)=>i>0&&k.t===keys[i-1].t))throw Error('Another key already sits at that time.');
+ return {...m,anim:{...m.anim,[prop]:{...p,keys}}};
+}
+export function easeMaskKeys(m:LayerMask,prop:MaskProp,ts:readonly number[],preset:EasePreset):LayerMask{
+ const p=keysOf(m,prop),e=EASE_PRESETS[preset];if(!e)throw Error('Unknown ease preset.');
+ return {...m,anim:{...m.anim,[prop]:{...p,keys:p.keys.map(k=>ts.includes(k.t)?{...k,interp:e.interp,...('out' in e?{out:e.out,in:e.in}:{})}:k)}}};
 }
 /** Moves a key to another frame and/or changes its value in one edit, keeping its ease. */
 export function editMaskKey(m:LayerMask,prop:MaskProp,t:number,to:number,v:PropValue,comp:Composition):LayerMask{

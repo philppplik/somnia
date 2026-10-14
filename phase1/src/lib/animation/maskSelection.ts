@@ -1,8 +1,8 @@
 import {useSyncExternalStore} from 'react';
 import type {Layer,LayerMask} from './model';
-import type {MaskKeyClip} from './masks';
+import type {MaskKeyClip,MaskKeysClip} from './masks';
 /** Which mask of which layer the timeline lanes and canvas handles work on, the selected path point and the pen tool. View state only, never saved in the document. */
-export type MaskClip={kind:'mask';mask:LayerMask}|{kind:'key';key:MaskKeyClip}|null;
+export type MaskClip={kind:'mask';mask:LayerMask}|{kind:'key';key:MaskKeyClip}|{kind:'keys';keys:MaskKeysClip}|null;
 export interface GraphTarget{mask:string;prop:'position'|'size'|'feather'|'opacity'|'path'}
 interface Sel{layer:string|null;mask:string|null;point:number|null;pen:boolean;clip:MaskClip;graph:GraphTarget|null}
 let state:Sel={layer:null,mask:null,point:null,pen:false,clip:null,graph:null};const listeners=new Set<()=>void>();

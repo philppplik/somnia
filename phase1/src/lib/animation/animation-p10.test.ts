@@ -1,7 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {createDocument,findComp,findLayer,validateDocument,MAX_LAYER_MASKS,type AnimationDocument} from './model';
 import {applyEdit,applyEdits,EditError} from './edit';
-import {maskEdit,matteEdit,maskPath,copyMaskKey,insertPoint,handleMaskKey} from './masks';
+import {maskEdit,matteEdit,maskPath,copyMaskKey,insertPoint,handleMaskKey,copyMaskKeys} from './masks';
 import {animatedChars,animatorEdit,defaultAnimator,mixHex} from './textAnimators';
 import {frameSvg} from './exportFrames';
 import {sceneAt} from './scene';
@@ -255,4 +255,21 @@ test('P15: graph edits move and revalue a mask key in one edit and keep its ease
  assert.deepEqual([...layer(d,'photo').masks![0].anim!.opacity!.keys.find(x=>x.t===k.t)!.out],[0.5,0.2]);
  assert.throws(()=>handleMaskKey(layer(d,'photo').masks![0],'opacity',k.t,'in',[2,0]),/out of range/);
  assert.deepEqual(validateDocument(d),[]);
+});
+
+test('P16: several keys move, ease and paste as single edits; types must match',()=>{
+ let d=keyed();for(const [t,v] of [[0,100],[sec,20],[sec*2,60]] as const){if(t===0)d=applyEdit(d,maskEdit(d,'photo',{op:'animate',mask:'m',prop:'opacity',on:true,t:0}));else d=applyEdit(d,maskEdit(d,'photo',{op:'set',mask:'m',prop:'opacity',value:v,t}));}
+ const keys=()=>layer(d,'photo').masks![0].anim!.opacity!.keys;const r=d.revision;
+ d=applyEdit(d,maskEdit(d,'photo',{op:'keysEdit',mask:'m',prop:'opacity',edits:[{t:sec,to:sec+4000,v:30},{t:sec*2,to:sec*2+4000,v:70}]}));
+ assert.equal(d.revision,r+1);assert.deepEqual(keys().map(k=>k.v),[100,30,70]);assert.ok(keys()[1].t>sec);
+ assert.throws(()=>maskEdit(d,'photo',{op:'keysEdit',mask:'m',prop:'opacity',edits:[{t:keys()[1].t,to:0,v:1}]}),/Another key/);
+ assert.throws(()=>maskEdit(d,'photo',{op:'keysEdit',mask:'m',prop:'opacity',edits:[{t:keys()[1].t,to:5000,v:[1,2]}]}),/does not fit/);
+ d=applyEdit(d,maskEdit(d,'photo',{op:'keysEase',mask:'m',prop:'opacity',ts:[keys()[1].t,keys()[2].t],preset:'easeIn'}));assert.ok(keys().slice(1).every(k=>k.interp==='bezier'));assert.equal(keys()[0].interp,'linear');
+ const clip=copyMaskKeys(layer(d,'photo').masks![0],'opacity',[keys()[1].t,keys()[2].t]);assert.equal(clip.keys.length,2);assert.equal(clip.keys[0].dt,0);
+ d=applyEdit(d,maskEdit(d,'photo',{op:'add',id:'n'}));d=applyEdit(d,maskEdit(d,'photo',{op:'animate',mask:'n',prop:'feather',on:true,t:0}));
+ assert.throws(()=>applyEdit(d,maskEdit(d,'photo',{op:'keysPaste',mask:'n',prop:'feather',t:sec,clip})),EditError);
+ const one=copyMaskKeys(layer(d,'photo').masks![0],'opacity',[keys()[1].t]);
+ d=applyEdit(d,maskEdit(d,'photo',{op:'keysPaste',mask:'n',prop:'feather',t:sec,clip:one}));
+ assert.deepEqual(layer(d,'photo').masks![1].anim!.feather!.keys.map(k=>k.v),[0,30]);
+ assert.throws(()=>maskEdit(d,'photo',{op:'keysPaste',mask:'n',prop:'feather',t:0,clip:{...one,type:'vec2'}}),/another value type/);
 });

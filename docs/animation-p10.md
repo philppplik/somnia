@@ -56,3 +56,10 @@ One builder (`masks.ts`) produces the `<mask>` and filter definitions for both t
 - The graph editor lists every animated mask property (and morphing path) of the selected layer under the transform properties. Picking one shows its curve (value graph, x/y channel switch for position and size). Keys drag in time and value as one edit (`keyEdit`, ease kept), a picked key offers its ease select and draggable in/out ease handles (`keyHandle`). One drag is one undo step, Esc cancels.
 - A path morph has no value curve; it shows one ease select per path key.
 - Transform keys keep their existing graph code and tests untouched; "Transform" or any transform property returns to them. The mask graph is a separate component (`MaskGraph.tsx`) that reuses the curve/handle maths of `graph.ts`, so mask keys do not take part in the transform key selection, copy/paste or speed mode.
+
+## P16: multi-key selection, speed mode, multi-key clipboard for mask keys
+
+- Mask graph: click a key, shift/ctrl-click adds or removes, drag on empty plot box-selects (shift adds), a plain click on the plot clears the selection and moves the playhead. Dragging a selected key moves and revalues the whole selection as one edit (`keysEdit`); the ease select applies to all selected keys (`keysEase`); in/out ease handles show when exactly one key is selected.
+- Speed mode: the Value/Speed buttons (shared with the transform graph) switch the mask curve to units per second; keys are hidden in speed mode like in the transform graph.
+- Clipboard: Copy keeps the selected keys of one property with times relative to the first key and their ease; Paste puts them at the playhead on the property shown in the graph, on any mask, when the value type matches (scalar or vec2). Values must fit the target range (feather 0..64, opacity 0..100); otherwise the paste is refused and nothing changes.
+- Not covered: pasting between mask and transform properties (transform keys use a different edit path), box selection across several properties, keyboard-only multi-select.
