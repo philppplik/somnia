@@ -508,5 +508,7 @@
  "studio3d.mirror.merge": "Abstand verbinden",
  "studio3d.mirror.on": "Spiegeln",
  "studio3d.mirror.off": "Spiegelung entfernen",
- "studio3d.mirror.active": "Gespiegelt über {axis}. Wird beim Export angewendet."
+ "studio3d.mirror.active": "Gespiegelt über {axis}. Wird beim Export angewendet.",
+ "studio3d.edit.segments": "Bevel-Segmente",
+ "studio3d.mirror.bisect": "Bisect: ferne Seite abschneiden"
 }

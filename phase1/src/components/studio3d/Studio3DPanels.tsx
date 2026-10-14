@@ -140,7 +140,7 @@ export function ObjectSection(_:InspectorSectionProps){
 /** Bind a plain mesh to a bone chain, recompute weights of a skinned one, and preview a bone's influence. */
 function EditSculptFields({id}:{id:number}){
  const {t}=useT();const s=useStudio3D();const o=s.selectedInfo;
- const [extrude,setExtrude]=useState(0.5);const [inset,setInset]=useState(0.2);const [bevel,setBevel]=useState(0.1);const [slide,setSlide]=useState(0.5);const [merge,setMerge]=useState(0.01);const [mirrorAxis,setMirrorAxis]=useState<'x'|'y'|'z'>('x');
+ const [extrude,setExtrude]=useState(0.5);const [inset,setInset]=useState(0.2);const [bevel,setBevel]=useState(0.1);const [slide,setSlide]=useState(0.5);const [merge,setMerge]=useState(0.01);const [mirrorAxis,setMirrorAxis]=useState<'x'|'y'|'z'>('x');const [segments,setSegments]=useState(1);const [bisect,setBisect]=useState(false);
  const ed=s.edit;const on=ed!=null&&ed.id===id;const sc=s.sculpt;
  if(!o||o.kind!=='mesh')return null;
  const modeBtn=(m:'vertex'|'edge'|'face')=><Button key={m} variant={ed?.mode===m?'primary':'outline'} aria-pressed={ed?.mode===m} onClick={()=>void executeCommand('studio3d.edit.mode',{mode:m})}>{t('studio3d.edit.mode.'+m)}</Button>;
@@ -155,12 +155,13 @@ function EditSculptFields({id}:{id:number}){
      <NumField label={t('studio3d.edit.inset')} value={inset} min={0} max={0.95} step={0.05} onCommit={setInset}/>
      <NumField label={t('studio3d.edit.bevel')} value={bevel} min={0.01} max={2} step={0.05} onCommit={setBevel}/>
      <NumField label={t('studio3d.edit.loopSlide')} value={slide} min={-1.5} max={1.5} step={0.1} onCommit={setSlide}/>
+     <NumField label={t('studio3d.edit.segments')} value={segments} min={1} max={8} step={1} onCommit={v=>setSegments(Math.round(v))}/>
     </div>
     <div className="flex flex-wrap gap-1">
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.extrude',{offset:extrude})}>{t('studio3d.edit.extrude')}</Button>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.inset',{amount:inset})}>{t('studio3d.edit.inset')}</Button>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.bevel',{width:bevel})}>{t('studio3d.edit.bevel')}</Button>
-     <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.bevelEdge',{width:bevel})}>{t('studio3d.edit.bevelEdge')}</Button>
+     <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.bevelEdge',{width:bevel,segments})}>{t('studio3d.edit.bevelEdge')}</Button>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.loopCut')}>{t('studio3d.edit.loopCut')}</Button>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.loopSlide',{factor:slide})}>{t('studio3d.edit.loopSlide')}</Button>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.end')}>{t('studio3d.edit.end')}</Button>
@@ -186,7 +187,8 @@ function EditSculptFields({id}:{id:number}){
     <NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={mirrorAxis} aria-label={t('studio3d.mirror.axis')} onChange={e=>setMirrorAxis(e.currentTarget.value as 'x'|'y'|'z')}>
      {(['x','y','z'] as const).map(a=><option key={a} value={a}>{t('studio3d.sculpt.symmetry.'+a)}</option>)}</NativeSelect>
     <NumField label={t('studio3d.mirror.merge')} value={merge} min={0} max={1} step={0.005} onCommit={setMerge}/>
-    <Button variant="outline" onClick={()=>void executeCommand('studio3d.mesh.mirrorMod',{id,axis:mirrorAxis,merge,on:true})}>{t('studio3d.mirror.on')}</Button></>}
+    <label className="flex items-center gap-2 text-xs text-ink-2"><NativeInput type="checkbox" checked={bisect} onChange={e=>setBisect(e.currentTarget.checked)}/>{t('studio3d.mirror.bisect')}</label>
+    <Button variant="outline" onClick={()=>void executeCommand('studio3d.mesh.mirrorMod',{id,axis:mirrorAxis,merge,on:true,bisect})}>{t('studio3d.mirror.on')}</Button></>}
    {o.mirror&&<>
     <p className="m-0 text-xs text-ink-3">{t('studio3d.mirror.active',{axis:o.mirror.axis.toUpperCase()})}</p>
     <Button variant="outline" onClick={()=>void executeCommand('studio3d.mesh.mirrorMod',{id,axis:o.mirror!.axis,merge:o.mirror!.merge,on:false})}>{t('studio3d.mirror.off')}</Button></>}

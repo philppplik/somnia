@@ -508,5 +508,7 @@
  "studio3d.mirror.merge": "Distancia de unión",
  "studio3d.mirror.on": "Espejar",
  "studio3d.mirror.off": "Quitar espejo",
- "studio3d.mirror.active": "Espejado en {axis}. Se aplica al exportar."
+ "studio3d.mirror.active": "Espejado en {axis}. Se aplica al exportar.",
+ "studio3d.edit.segments": "Segmentos de bisel",
+ "studio3d.mirror.bisect": "Bisect: cortar el lado lejano"
 }

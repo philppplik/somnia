@@ -561,3 +561,30 @@ test('mask brush paints, blocks grab, and clears with undo',()=>{
  stage.undo();
  assert.ok(Array.from(o.geometry.getAttribute('somniaMask').array as Float32Array).some(v=>v>0.9),'undo restores the mask');
 });
+
+test('mirror with bisect clips and rebuilds the cube, still one undo',()=>{
+ const stage=new Stage();const o=stage.addPrimitive('cube') as THREE.Mesh;
+ stage.mirrorMod(o.id,'x',0,true,true);
+ const t=tri(stage);
+ assert.ok(t>=12&&t<=28,`bisected+mirror cube tris: ${t}`);
+ assert.equal(stage.info(o.id)!.mirror!.bisect,true);
+ stage.undo();
+ assert.equal(tri(stage),12);
+ assert.equal(stage.info(o.id)!.mirror,null);
+});
+
+test('multi-segment bevel runs through edit mode with one undo',()=>{
+ const stage=new Stage();const o=stage.addPrimitive('cube') as THREE.Mesh;
+ stage.editStart(o.id);
+ const pos=o.geometry.getAttribute('position');const idx=o.geometry.getIndex()!;
+ let edge:[number,number]|null=null;
+ for(let f=0;f<idx.count&&!edge;f+=3)for(let e=0;e<3;e++){
+  const a=idx.getX(f+e),b=idx.getX(f+(e+1)%3);
+  if(pos.getX(a)===pos.getX(b)&&pos.getZ(a)===pos.getZ(b)&&pos.getY(a)!==pos.getY(b)){edge=[a,b];break;}
+ }
+ stage.editSelect('edge',[edge!]);
+ const t0=tri(stage);
+ stage.editBevelEdge(0.1,4);
+ assert.ok(tri(stage)>=t0+8,`4-segment bevel adds a strip: ${t0} -> ${tri(stage)}`);
+ stage.undo();assert.equal(tri(stage),t0);
+});

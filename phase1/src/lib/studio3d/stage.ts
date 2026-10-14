@@ -36,7 +36,7 @@ export interface ObjectInfo{
  /** Kind and parameters when the mesh is an editable primitive. */primitive?:PrimitiveData|null;
  id:number;name:string;kind:OutlineEntry['kind'];position:Vec3;rotation:Vec3;scale:Vec3;
  /** True for a skinned mesh (bound to a skeleton). */skinned:boolean;
- /** Non-destructive mirror modifier state, if on. */mirror:{axis:'x'|'y'|'z';merge:number}|null;
+ /** Non-destructive mirror modifier state, if on. */mirror:{axis:'x'|'y'|'z';merge:number;bisect?:boolean}|null;
  material:{color:string;metalness:number;roughness:number;emissive?:string;emissiveIntensity?:number;opacity?:number;alphaMode?:AlphaMode;alphaCutoff?:number;doubleSided?:boolean;/** Name of the image in each slot, or null */textures?:Record<TextureSlot,string|null>;/** UV transform per slot, null where the slot is empty */transforms?:Record<TextureSlot,TextureTransform|null>}|null;light:LightInfo|null;
 }
 export interface LightInfo{intensity:number;color:string;/** shadow casting; absent for area lights, which cannot cast shadows */shadow?:boolean;/** spot cone, degrees */angle?:number;penumbra?:number;width?:number;height?:number}
@@ -541,31 +541,31 @@ export class Stage{
   if(edges.length!==1)throw new StageError('Select exactly one edge for a loop cut.');
   this.editOp('Loop cut',m=>loopCut(m,edges[0]));
  }
- editBevelEdge(width:number){this.editOp('Bevel edges',m=>bevelEdges(m,[...this.editSel.edges.values()],width));}
+ editBevelEdge(width:number,segments=1){this.editOp('Bevel edges',m=>bevelEdges(m,[...this.editSel.edges.values()],width,segments));}
  editLoopSlide(factor:number){this.editOp('Loop slide',m=>slideEdges(m,[...this.editSel.edges.values()],factor));}
  /** Toggles the non-destructive mirror modifier: while on, the mesh shows base + mirrored half (exports include both); the base geometry stays in userData and editing is refused. One undo step per toggle. */
- mirrorMod(id:number,axis:MirrorAxis,merge:number,on:boolean){
+ mirrorMod(id:number,axis:MirrorAxis,merge:number,on:boolean,bisect=false){
   const o=this.need(id);const m=o as THREE.Mesh;
   if(!m.isMesh)throw new StageError(`${o.name} is not a mesh.`);
   if((m as THREE.SkinnedMesh).isSkinnedMesh)throw new StageError(`${o.name} is skinned: mirror it after binding is removed.`);
-  const cur=o.userData.somniaMirror as {axis:MirrorAxis;merge:number}|undefined;
+  const cur=o.userData.somniaMirror as {axis:MirrorAxis;merge:number;bisect?:boolean}|undefined;
   if(on&&cur)throw new StageError(`${o.name} already has a mirror modifier. Turn it off first.`);
   if(!on&&!cur)throw new StageError(`${o.name} has no mirror modifier.`);
   if(on){
    const base=m.geometry;
-   let data:MeshData;try{data=mirrorCombine(this.meshDataOf(m),axis,merge);}catch(e){throw e instanceof EditError?new StageError(e.message):e;}
+   let data:MeshData;try{data=mirrorCombine(this.meshDataOf(m),axis,merge,bisect);}catch(e){throw e instanceof EditError?new StageError(e.message):e;}
    const combined=new THREE.BufferGeometry();
    combined.setAttribute('position',new THREE.Float32BufferAttribute(data.positions,3));
    combined.setIndex(data.index);combined.computeVertexNormals();
    let owned=true;
-   const apply=(g:THREE.BufferGeometry,mark:boolean)=>{m.geometry=g;if(mark){o.userData.somniaMirror={axis,merge};o.userData.somniaMirrorBase=base;}else{delete o.userData.somniaMirror;delete o.userData.somniaMirrorBase;}};
+   const apply=(g:THREE.BufferGeometry,mark:boolean)=>{m.geometry=g;if(mark){o.userData.somniaMirror={axis,merge,bisect};o.userData.somniaMirrorBase=base;}else{delete o.userData.somniaMirror;delete o.userData.somniaMirrorBase;}};
    apply(combined,true);
    this.push({label:`Mirror ${o.name}`,undo:()=>{apply(base,false);owned=false;},redo:()=>{apply(combined,true);owned=true;},release:()=>{(owned?base:combined).dispose();}});
   }else{
    const combined=m.geometry;const base=o.userData.somniaMirrorBase as THREE.BufferGeometry;
    if(!base)throw new StageError(`${o.name} has no stored base mesh.`);
    let owned=false;
-   const apply=(g:THREE.BufferGeometry,mark:boolean)=>{m.geometry=g;if(mark){o.userData.somniaMirror={axis:cur!.axis,merge:cur!.merge};o.userData.somniaMirrorBase=base;}else{delete o.userData.somniaMirror;delete o.userData.somniaMirrorBase;}};
+   const apply=(g:THREE.BufferGeometry,mark:boolean)=>{m.geometry=g;if(mark){o.userData.somniaMirror={axis:cur!.axis,merge:cur!.merge,bisect:cur!.bisect};o.userData.somniaMirrorBase=base;}else{delete o.userData.somniaMirror;delete o.userData.somniaMirrorBase;}};
    apply(base,false);
    this.push({label:`Mirror off ${o.name}`,undo:()=>{apply(combined,true);owned=true;},redo:()=>{apply(base,false);owned=false;},release:()=>{(owned?base:combined).dispose();}});
   }
@@ -1554,7 +1554,7 @@ export class Stage{
   return{id:o.id,name:o.name,kind:(o as THREE.Bone).isBone?'bone':m.isMesh?'mesh':l.isLight?'light':(o as THREE.Camera).isCamera?'camera':'group',
    position:{x:o.position.x,y:o.position.y,z:o.position.z},rotation:{x:o.rotation.x/DEG,y:o.rotation.y/DEG,z:o.rotation.z/DEG},scale:{x:o.scale.x,y:o.scale.y,z:o.scale.z},
    skinned:(m as THREE.SkinnedMesh).isSkinnedMesh===true,
-   mirror:(o.userData.somniaMirror as {axis:'x'|'y'|'z';merge:number}|undefined)??null,
+   mirror:(o.userData.somniaMirror as {axis:'x'|'y'|'z';merge:number;bisect?:boolean}|undefined)??null,
    camera:(o as THREE.PerspectiveCamera).isPerspectiveCamera?{kind:'perspective' as const,fov:(o as THREE.PerspectiveCamera).fov}:(o as THREE.OrthographicCamera).isOrthographicCamera?{kind:'orthographic' as const,zoom:(o as THREE.OrthographicCamera).zoom}:null,
    primitive:this.primitiveOf(o),material:mat?{color:'#'+mat.color.getHexString(),metalness:mat.metalness,roughness:mat.roughness,emissive:'#'+mat.emissive.getHexString(),emissiveIntensity:mat.emissiveIntensity,opacity:mat.transparent||mat.alphaTest>0?mat.opacity:1,alphaMode:alphaModeOf(mat.transparent,mat.alphaTest),alphaCutoff:mat.alphaTest>0?mat.alphaTest:0.5,doubleSided:mat.side===THREE.DoubleSide,textures:Object.fromEntries((Object.keys(SLOT_CONFIG) as TextureSlot[]).map(k=>{const t=mat[SLOT_CONFIG[k].prop] as THREE.Texture|null;return[k,t?(t.name||'image'):null];})) as Record<TextureSlot,string|null>,transforms:Object.fromEntries((Object.keys(SLOT_CONFIG) as TextureSlot[]).map(k=>{const t=mat[SLOT_CONFIG[k].prop] as THREE.Texture|null;return[k,t?readTransform(t):null];})) as Record<TextureSlot,TextureTransform|null>}:null,light:l.isLight?lightInfo(l):null};
  }

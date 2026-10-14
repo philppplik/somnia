@@ -508,5 +508,7 @@
  "studio3d.mirror.merge": "Merge distance",
  "studio3d.mirror.on": "Mirror",
  "studio3d.mirror.off": "Remove mirror",
- "studio3d.mirror.active": "Mirrored across {axis}. Applied on export."
+ "studio3d.mirror.active": "Mirrored across {axis}. Applied on export.",
+ "studio3d.edit.segments": "Bevel segments",
+ "studio3d.mirror.bisect": "Bisect: cut away the far side"
 }

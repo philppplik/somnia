@@ -166,10 +166,11 @@ export function loopCut(m:MeshData,edge:[number,number]):MeshData{
  const out={positions,index};check(out);return out;
 }
 /** Chamfers the selected edges: each edge becomes a flat face set back from both sides. Edges are matched geometrically, so unwelded primitives (per-face corners) work. Selected edges may not touch or share a face. */
-export function bevelEdges(m:MeshData,edges:[number,number][],width:number):MeshData{
+export function bevelEdges(m:MeshData,edges:[number,number][],width:number,segments=1):MeshData{
  check(m);
  if(!edges.length)throw new EditError('Select at least one edge first.');
  if(!Number.isFinite(width)||width<=0||width>1e6)throw new EditError('The bevel width must be a positive number.');
+ if(!Number.isInteger(segments)||segments<1||segments>8)throw new EditError('The bevel segments must be a whole number between 1 and 8.');
  const nv=m.positions.length/3;
  const EPS=1e-6;
  const same=(i:number,p:[number,number,number])=>Math.abs(m.positions[i*3]-p[0])<EPS&&Math.abs(m.positions[i*3+1]-p[1])<EPS&&Math.abs(m.positions[i*3+2]-p[2])<EPS;
@@ -198,23 +199,56 @@ export function bevelEdges(m:MeshData,edges:[number,number][],width:number):Mesh
  }
  const positions=[...m.positions];const index=[...m.index];
  for(const adj of plans){
-  const pulled:number[][]=[]; // per face: [newA,newB]
+  const edgeDir=norm(sub(adj[0].pb,adj[0].pa));
+  // per face: tangent pull direction (unit) and clamped width
+  const dirs:[number,number,number][]=[];const ws:number[]=[];
   for(const a of adj){
-   const edgeDir=norm(sub(a.pb,a.pa));
-   const pc=v3(m,a.c);const pair:number[]=[];
-   for(const[v,pv]of[[a.va,a.pa],[a.vb,a.pb]] as [number,[number,number,number]][]){
-    const vec=sub(pc,pv);const along=vec[0]*edgeDir[0]+vec[1]*edgeDir[1]+vec[2]*edgeDir[2];
-    const perp:[number,number,number]=[vec[0]-edgeDir[0]*along,vec[1]-edgeDir[1]*along,vec[2]-edgeDir[2]*along];
-    const l=len(perp);if(l<1e-9)throw new EditError('A face next to a selected edge is degenerate.');
-    const w=Math.min(width,l*0.49);const ni=positions.length/3;
-    positions.push(pv[0]+perp[0]/l*w,pv[1]+perp[1]/l*w,pv[2]+perp[2]/l*w);
-    pair.push(ni);
-    for(let k=0;k<3;k++)if(index[a.f*3+k]===v)index[a.f*3+k]=ni;
-   }
-   pulled.push(pair);
+   const pc=v3(m,a.c);
+   const vec=sub(pc,a.pa);const along=vec[0]*edgeDir[0]+vec[1]*edgeDir[1]+vec[2]*edgeDir[2];
+   const perp:[number,number,number]=[vec[0]-edgeDir[0]*along,vec[1]-edgeDir[1]*along,vec[2]-edgeDir[2]*along];
+   const l=len(perp);if(l<1e-9)throw new EditError('A face next to a selected edge is degenerate.');
+   dirs.push([perp[0]/l,perp[1]/l,perp[2]/l]);
+   ws.push(Math.min(width,l*0.49));
   }
-  const[[a1,b1],[a2,b2]]=[pulled[0],pulled[1]];
-  if(adj[0].forward)index.push(a1,b1,b2, a1,b2,a2);else index.push(a1,b2,b1, a1,a2,b2);
+  const w=Math.min(ws[0],ws[1]);
+  const n1=dirs[0],n2=dirs[1];
+  const cosPhi=Math.max(-1,Math.min(1,n1[0]*n2[0]+n1[1]*n2[1]+n1[2]*n2[2]));
+  const phi=Math.acos(cosPhi);
+  // arc rows between the two faces; segments=1 (or near-coplanar faces) is the straight chamfer
+  const segs=phi<1e-6?1:segments;
+  const rows:[number,number][]=[]; // per row: [vertIndexA,vertIndexB]
+  const rowPoint=(pa:[number,number,number],theta:number):[number,number,number]=>{
+   if(segs===1)return[pa[0]+n1[0]*w,pa[1]+n1[1]*w,pa[2]+n1[2]*w];
+   const r=w*Math.tan(phi/2);
+   // q1: unit vector in the n1-n2 plane perpendicular to n1, toward n2
+   const d=n2[0]-n1[0]*cosPhi;const e=n2[1]-n1[1]*cosPhi;const f=n2[2]-n1[2]*cosPhi;
+   const ql=Math.hypot(d,e,f)||1;const q1:[number,number,number]=[d/ql,e/ql,f/ql];
+   const c:[number,number,number]=[pa[0]+n1[0]*w+q1[0]*r,pa[1]+n1[1]*w+q1[1]*r,pa[2]+n1[2]*w+q1[2]*r];
+   return[c[0]-r*(Math.cos(theta)*q1[0]+Math.sin(theta)*n1[0]),c[1]-r*(Math.cos(theta)*q1[1]+Math.sin(theta)*n1[1]),c[2]-r*(Math.cos(theta)*q1[2]+Math.sin(theta)*n1[2])];
+  };
+  for(let j=0;j<=segs;j++){
+   const theta=phi*j/segs;
+   const ia=positions.length/3;const pa=rowPoint(adj[0].pa,theta);
+   positions.push(pa[0],pa[1],pa[2]);
+   const pb=rowPoint(adj[0].pb,theta);
+   positions.push(pb[0],pb[1],pb[2]);
+   rows.push([ia,ia+1]);
+  }
+  // rewrite both faces to their tangent rows (first and last row)
+  const[a1,b1]=rows[0],[a2,b2]=rows[rows.length-1];
+  for(const[k,a]of adj.entries()){
+   const[na,nb]=k===0?[a1,b1]:[a2,b2];
+   for(let kk=0;kk<3;kk++){
+    if(index[a.f*3+kk]===a.va)index[a.f*3+kk]=na;
+    if(index[a.f*3+kk]===a.vb)index[a.f*3+kk]=nb;
+   }
+  }
+  // strip between consecutive rows with face1's winding
+  const fwd=adj[0].forward;
+  for(let j=0;j<rows.length-1;j++){
+   const[ra,rb]=rows[j],[ca,cb]=rows[j+1];
+   if(fwd)index.push(ra,rb,cb, ra,cb,ca);else index.push(ra,cb,rb, ra,ca,cb);
+  }
  }
  const out={positions,index};check(out);return out;
 }
@@ -265,9 +299,47 @@ export function slideEdges(m:MeshData,edges:[number,number][],factor:number):Mes
 }
 export type MirrorAxis='x'|'y'|'z';
 /** Combines a mesh with its mirror across a local axis plane through the origin. Vertices within merge distance of the plane are welded onto it. */
-export function mirrorCombine(m:MeshData,axis:MirrorAxis,merge:number):MeshData{
+/** Cuts the mesh at an axis plane through the origin and keeps only the positive side; crossing faces are split along the plane. */
+export function bisectClip(m:MeshData,axis:MirrorAxis):MeshData{
+ check(m);
+ const ai=axis==='x'?0:axis==='y'?1:2;
+ const EPS=1e-9;
+ const side=(i:number)=>m.positions[i*3+ai]>EPS?1:m.positions[i*3+ai]<-EPS?-1:0;
+ const positions:number[]=[];const remap=new Map<number,number>();
+ const keep=(i:number)=>{let n=remap.get(i);if(n===undefined){n=positions.length/3;remap.set(i,n);positions.push(m.positions[i*3],m.positions[i*3+1],m.positions[i*3+2]);if(Math.abs(m.positions[i*3+ai])<=EPS)positions[n*3+ai]=0;}return n;};
+ const cross=new Map<string,number>();
+ const cut=(x:number,y:number)=>{
+  const k=x<y?`${x}_${y}`:`${y}_${x}`;let n=cross.get(k);
+  if(n!==undefined)return n;
+  const px=v3(m,x),py=v3(m,y);const dx=px[ai],dy=py[ai];const t=dx/(dx-dy);
+  n=positions.length/3;cross.set(k,n);
+  positions.push(px[0]+(py[0]-px[0])*t,px[1]+(py[1]-px[1])*t,px[2]+(py[2]-px[2])*t);
+  positions[n*3+ai]=0;return n;
+ };
+ const index:number[]=[];
+ for(let f=0;f<m.index.length/3;f++){
+  const t=[m.index[f*3],m.index[f*3+1],m.index[f*3+2]];
+  const s=t.map(side);
+  if(s.every(x=>x<0))continue; // fully on the clipped side
+  if(s.every(x=>x>=0)){index.push(keep(t[0]),keep(t[1]),keep(t[2]));continue;}
+  // crossing: collect the positive polygon (1 or 2 positive verts)
+  const poly:number[]=[];
+  for(let e=0;e<3;e++){
+   const a=t[e],b=t[(e+1)%3],sa=s[e],sb=s[(e+1)%3];
+   if(sa>=0)poly.push(keep(a));
+   if((sa>0&&sb<0)||(sa<0&&sb>0))poly.push(cut(a,b));
+  }
+  if(poly.length===3)index.push(poly[0],poly[1],poly[2]);
+  else if(poly.length===4)index.push(poly[0],poly[1],poly[2], poly[0],poly[2],poly[3]);
+ }
+ const out={positions,index};
+ if(!positions.length)throw new EditError('Nothing remains on the positive side of the mirror plane.');
+ check(out);return out;
+}
+export function mirrorCombine(m:MeshData,axis:MirrorAxis,merge:number,bisect=false):MeshData{
  check(m);
  if(!Number.isFinite(merge)||merge<0||merge>1e6)throw new EditError('The mirror merge distance must be zero or a positive number.');
+ if(bisect)m=bisectClip(m,axis);
  const ai=axis==='x'?0:axis==='y'?1:2;
  const nv=m.positions.length/3;
  const positions:number[]=[];const map=new Array<number>(nv);

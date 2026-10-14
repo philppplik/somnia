@@ -508,5 +508,7 @@
  "studio3d.mirror.merge": "Distância de mescla",
  "studio3d.mirror.on": "Espelhar",
  "studio3d.mirror.off": "Remover espelho",
- "studio3d.mirror.active": "Espelhado em {axis}. Aplicado na exportação."
+ "studio3d.mirror.active": "Espelhado em {axis}. Aplicado na exportação.",
+ "studio3d.edit.segments": "Segmentos de chanfro",
+ "studio3d.mirror.bisect": "Bissect: cortar o lado distante"
 }

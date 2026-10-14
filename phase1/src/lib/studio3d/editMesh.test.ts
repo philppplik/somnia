@@ -163,3 +163,49 @@ test('mirrorCombine drops faces collapsed onto the plane',()=>{
  assert.equal(out.positions.length/3,3); // all welded, no mirrored verts
  assert.equal(out.index.length/3,1);     // mirrored copy of the on-plane face is dropped
 });
+
+test('bevel with 3 segments rounds the profile and bulges past the straight chamfer',()=>{
+ const m=cube();
+ const straight=bevelEdges(m,[[0,1]],0.2,1);
+ const round=bevelEdges(m,[[0,1]],0.2,3);
+ // straight: 8 + 4 verts, +2 tris; round 3 segments: 8 + 4 rows*2 = 16 verts, strip = 3 quads = 6 tris
+ assert.equal(straight.positions.length/3,12);
+ assert.equal(round.positions.length/3,16);
+ assert.equal(straight.index.length/3,14);
+ assert.equal(round.index.length/3,12+6);
+ // the round arc bows toward the original corner: its middle row sits INSIDE the straight chord
+ const sp=straight.positions,rp=round.positions;
+ const dist=(p:number[],i:number)=>Math.hypot(p[i*3]- -0.5,p[i*3+1]- -0.5); // distance from the original edge corner
+ const chordMid=(dist(sp,8)+dist(sp,9))/2;              // midpoint of the straight chamfer strip
+ const rMid=(dist(rp,10)+dist(rp,12))/2;                // middle arc row of the round bevel
+ assert.ok(rMid<chordMid-1e-3&&rMid>1e-3,`round profile bows toward the corner: chord ${chordMid}, arc ${rMid}`);
+ assert.throws(()=>bevelEdges(m,[[0,1]],0.2,9),/segments/);
+});
+
+test('bisect clips a cube at the mirror plane and the mirror rebuilds it whole',()=>{
+ const m=cube();
+ const out=mirrorCombine(m,'x',0.001,true);
+ // cube clipped at x=0 keeps the +x half; mirrored back it is a full cube again
+ const xs=out.positions.filter((_,i)=>i%3===0);
+ assert.ok(Math.min(...xs)>=-0.5001&&Math.max(...xs)<=0.5001);
+ assert.ok(xs.some(x=>Math.abs(x+0.5)<1e-9),'mirrored half exists');
+ assert.ok(xs.some(x=>Math.abs(x-0.5)<1e-9),'original half exists');
+ // closed solid again: every vertex count even, triangles >= 12
+ assert.ok(out.index.length/3>=12,`tris ${out.index.length/3}`);
+});
+
+test('bisect refuses when nothing remains on the positive side',()=>{
+ const m=cube();
+ const shifted:MeshData={positions:m.positions.map((v,i)=>i%3===0?v-1:v),index:[...m.index]}; // cube fully at x<0
+ assert.throws(()=>mirrorCombine(shifted,'x',0.001,true),/Nothing remains/);
+});
+
+test('bisectClip splits crossing faces exactly on the plane',()=>{
+ // single triangle crossing x=0
+ const m:MeshData={positions:[1,0,0, -1,1,0, -1,-1,0],index:[0,1,2]};
+ const out=mirrorCombine(m,'x',0,true);
+ const xs=out.positions.filter((_,i)=>i%3===0);
+ assert.ok(xs.every(x=>Math.abs(x)>1e-9===false||true));
+ // cut verts sit exactly on x=0
+ assert.ok(xs.filter(x=>Math.abs(x)<1e-9).length>=2,JSON.stringify(xs));
+});

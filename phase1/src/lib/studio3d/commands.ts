@@ -92,9 +92,9 @@ export interface Studio3DController{
  editInset(amount:number):void;
  editBevel(width:number):void;
  editLoopCut():void;
- editBevelEdge(width:number):void;
+ editBevelEdge(width:number,segments?:number):void;
  editLoopSlide(factor:number):void;
- mirrorMod(id:number,axis:'x'|'y'|'z',merge:number,on:boolean):void;
+ mirrorMod(id:number,axis:'x'|'y'|'z',merge:number,on:boolean,bisect?:boolean):void;
  sculptMaskClear(id:number):void;
  sculptBrush(patch:Partial<{on:boolean;brush:'grab'|'smooth'|'inflate'|'crease'|'pinch'|'flatten'|'mask';radius:number;strength:number;falloff:'smooth'|'linear'|'constant';symmetry:'none'|'x'|'y'|'z'}>):void;
  sculptBegin(id:number):void;
@@ -203,13 +203,13 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{amount:number}>('studio3d.edit.inset','Inset the selected faces of the edited 3D mesh','Edit',p=>need().editInset(p.amount),object({amount:{type:'number',exclusiveMinimum:0,maximum:1}}),()=>getStudio3DState().edit!=null),
   add<{width:number}>('studio3d.edit.bevel','Bevel (chamfer) the selected vertices of the edited 3D mesh','Edit',p=>need().editBevel(p.width),object({width:{type:'number',exclusiveMinimum:0,maximum:1000}}),()=>getStudio3DState().edit!=null),
   add('studio3d.edit.loopCut','Cut an edge loop around the selected edge of the edited 3D mesh','Edit',()=>need().editLoopCut(),undefined,()=>getStudio3DState().edit!=null),
-  add<{width:number}>('studio3d.edit.bevelEdge','Bevel (chamfer) the selected edges of the edited 3D mesh','Edit',p=>need().editBevelEdge(p.width),object({width:{type:'number',exclusiveMinimum:0,maximum:1000}}),()=>getStudio3DState().edit!=null),
+  add<{width:number;segments?:number}>('studio3d.edit.bevelEdge','Bevel (chamfer) the selected edges of the edited 3D mesh, with optional round multi-segment profile','Edit',p=>need().editBevelEdge(p.width,p.segments??1),object({width:{type:'number',exclusiveMinimum:0,maximum:1000},segments:{type:'integer',minimum:1,maximum:8}}),()=>getStudio3DState().edit!=null),
   add<{factor:number}>('studio3d.edit.loopSlide','Slide the selected edge loop along the surface of the edited 3D mesh','Edit',p=>need().editLoopSlide(p.factor),object({factor:{type:'number',minimum:-1.5,maximum:1.5}}),()=>getStudio3DState().edit!=null),
   add<Partial<{on:boolean;brush:'grab'|'smooth'|'inflate'|'crease'|'pinch'|'flatten'|'mask';radius:number;strength:number;falloff:'smooth'|'linear'|'constant';symmetry:'none'|'x'|'y'|'z'}>>('studio3d.sculpt.brush','Configure the sculpt brush of the 3D studio','Edit',p=>need().sculptBrush(p??{}),object({on:{type:'boolean'},brush:{enum:['grab','smooth','inflate','crease','pinch','flatten','mask']},radius:{type:'number',minimum:0.001,maximum:1000},strength:{type:'number',exclusiveMinimum:0,maximum:1},falloff:{enum:['smooth','linear','constant']},symmetry:{enum:['none','x','y','z']}},[]),hasScene),
   add<{id:number}>('studio3d.sculpt.begin','Start a sculpt stroke on a 3D mesh','Edit',p=>need().sculptBegin(p.id),object({id:{type:'integer',minimum:0}}),hasScene),
   add<{id:number;x:number;y:number;z:number;dx?:number;dy?:number;dz?:number;erase?:boolean}>('studio3d.sculpt.dab','Apply one sculpt dab with the configured brush (erase removes mask paint)','Edit',p=>need().sculptDab(p.id,[p.x,p.y,p.z],p.dx!==undefined?[p.dx,p.dy??0,p.dz??0]:undefined,!!p.erase),object({id:{type:'integer',minimum:0},x:{type:'number'},y:{type:'number'},z:{type:'number'},dx:{type:'number',minimum:-1000,maximum:1000},dy:{type:'number',minimum:-1000,maximum:1000},dz:{type:'number',minimum:-1000,maximum:1000},erase:{type:'boolean'}}),hasScene),
   add<{id:number}>('studio3d.sculpt.maskClear','Clear the sculpt mask of a 3D mesh','Edit',p=>need().sculptMaskClear(p.id),object({id:{type:'integer',minimum:0}}),hasScene),
-  add<{id:number;axis:'x'|'y'|'z';merge?:number;on:boolean}>('studio3d.mesh.mirrorMod','Toggle the non-destructive mirror modifier of a 3D mesh (applied on export)','Edit',p=>need().mirrorMod(p.id,p.axis,p.merge??0,p.on),object({id:{type:'integer',minimum:0},axis:{enum:['x','y','z']},merge:{type:'number',minimum:0,maximum:1000},on:{type:'boolean'}}),hasScene),
+  add<{id:number;axis:'x'|'y'|'z';merge?:number;on:boolean;bisect?:boolean}>('studio3d.mesh.mirrorMod','Toggle the non-destructive mirror modifier of a 3D mesh (applied on export; bisect cuts away the negative side)','Edit',p=>need().mirrorMod(p.id,p.axis,p.merge??0,p.on,!!p.bisect),object({id:{type:'integer',minimum:0},axis:{enum:['x','y','z']},merge:{type:'number',minimum:0,maximum:1000},on:{type:'boolean'},bisect:{type:'boolean'}}),hasScene),
   add('studio3d.sculpt.end','Finish the current sculpt stroke (one undo step)','Edit',()=>need().sculptEnd(),undefined,hasScene),
   add<{id:number;at:PivotAt}>('studio3d.object.pivot','Move the pivot of a 3D mesh','Edit',p=>need().setPivot(p.id,p.at),object({id:{type:'integer',minimum:0},at:{enum:['center','base']}}),hasScene),
   add<{ids:number[];axis:AlignAxis;to:AlignTo}>('studio3d.object.align','Align 3D objects','Edit',p=>need().align(p.ids,p.axis,p.to),object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:2,maxItems:500},axis:{enum:['x','y','z']},to:{enum:['min','center','max']}}),hasScene),

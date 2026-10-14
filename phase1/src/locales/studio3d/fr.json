@@ -508,5 +508,7 @@
  "studio3d.mirror.merge": "Distance de fusion",
  "studio3d.mirror.on": "Miroir",
  "studio3d.mirror.off": "Retirer le miroir",
- "studio3d.mirror.active": "Mis en miroir sur {axis}. Appliqué à l’export."
+ "studio3d.mirror.active": "Mis en miroir sur {axis}. Appliqué à l’export.",
+ "studio3d.edit.segments": "Segments de biseau",
+ "studio3d.mirror.bisect": "Bissect : couper le côté éloigné"
 }

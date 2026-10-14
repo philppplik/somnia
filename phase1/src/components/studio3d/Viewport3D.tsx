@@ -147,7 +147,7 @@ export default function Viewport3D(){
    const fhead=sel==null?null:stage.fabrikChainHead(sel);const fabrik=fhead?{...stage.fabrikState(fhead.id)!,root:fhead.id}:null;
    patchStudio3D({clips:infos,clipKeys:keys,stats:m.stats,outline:m.outline,bones:stage.bones(),bounds:m.bounds,selected:info?sel:null,selectedInfo:info,poses:sel==null?[]:stage.poseList(sel),ik,fabrik,rigs:stage.bones().filter(b=>b.depth===0).map(b=>({id:b.id,name:b.name})),boneLimits:sel==null?null:stage.boneLimitsOf(sel),dirty:stage.dirty,canUndo:stage.canUndo,canRedo:stage.canRedo,undoLabel:stage.undoLabel});
    syncIk();syncFabrik();syncOnion();syncMotionPath();
-   drawSelection();applyWire(getStudio3DState().wireframe);syncSkeleton();syncWeightPreview();for(const h of syncHooks)h();invalidate();
+   drawSelection();applyWire(getStudio3DState().wireframe);syncSkeleton();syncWeightPreview();syncMaskOverlay();for(const h of syncHooks)h();invalidate();
   };
   const offStage=stage.onChange(()=>{if(!disposed)sync();});
   const frameSelection=()=>{
@@ -359,7 +359,7 @@ export default function Viewport3D(){
    const list=stage.bones();const key=list.map(b=>b.id).join(',');
    if(key!==skelKey){
     skelKey=key;
-    if(painting){painting=false;}const openSel=getStudio3DState().selected;if(openSel!=null)stage.skinPaintEnd(openSel);if(skelHelper){scene.remove(skelHelper);skelHelper.geometry.dispose();(skelHelper.material as THREE.Material).dispose();skelHelper=null;}if(weightOverlay){scene.remove(weightOverlay);weightOverlay.geometry.dispose();(weightOverlay.material as THREE.Material).dispose();weightOverlay=null;}
+    if(painting){painting=false;}const openSel=getStudio3DState().selected;if(openSel!=null)stage.skinPaintEnd(openSel);if(skelHelper){scene.remove(skelHelper);skelHelper.geometry.dispose();(skelHelper.material as THREE.Material).dispose();skelHelper=null;}if(weightOverlay){scene.remove(weightOverlay);weightOverlay.geometry.dispose();(weightOverlay.material as THREE.Material).dispose();weightOverlay=null;}if(maskOverlay){scene.remove(maskOverlay);maskOverlay.geometry.dispose();(maskOverlay.material as THREE.Material).dispose();maskOverlay=null;}
     if(list.length)skelHelper=new THREE.SkeletonHelper(stage.root);
     if(skelHelper)scene.add(skelHelper);
    }
@@ -387,6 +387,28 @@ export default function Viewport3D(){
     weightOverlay.position.copy(mesh!.position);weightOverlay.quaternion.copy(mesh!.quaternion);weightOverlay.scale.copy(mesh!.scale);weightOverlay.visible=mesh!.visible;
     scene.add(weightOverlay);
    }
+  };
+  let maskOverlay:THREE.Mesh|null=null;let maskKey='';let maskVer=-1;
+  const syncMaskOverlay=()=>{
+   const st=getStudio3DState();const mesh=st.selected==null?null:stage.find(st.selected) as THREE.Mesh|null;
+   const attr=mesh&&mesh.isMesh?mesh.geometry.getAttribute('somniaMask') as THREE.BufferAttribute|undefined:undefined;
+   const ok=!!(st.sculpt.on&&mesh&&mesh.isMesh&&attr);
+   const key=ok?`${mesh!.id}`:'';
+   const ver=ok?attr!.version:-1;
+   if(maskOverlay&&(key!==maskKey||ver!==maskVer||maskOverlay.userData.srcMask!==attr)){
+    scene.remove(maskOverlay);maskOverlay.geometry.dispose();(maskOverlay.material as THREE.Material).dispose();maskOverlay=null;
+   }
+   maskKey=key;maskVer=ver;
+   if(ok&&!maskOverlay){
+    const pos=mesh!.geometry.getAttribute('position');const colors=new Float32Array(pos.count*3);
+    for(let p=0;p<pos.count;p++){const c=weightColor(Math.min(1,Math.max(0,attr!.getX(p))));colors[p*3]=c[0];colors[p*3+1]=c[1];colors[p*3+2]=c[2];}
+    const geo=mesh!.geometry.clone();geo.setAttribute('color',new THREE.BufferAttribute(colors,3));
+    const mat=new THREE.MeshBasicMaterial({vertexColors:true,transparent:true,opacity:0.85});mat.polygonOffset=true;mat.polygonOffsetFactor=-2;
+    maskOverlay=new THREE.Mesh(geo,mat);maskOverlay.userData={srcMask:attr};
+    maskOverlay.position.copy(mesh!.position);maskOverlay.quaternion.copy(mesh!.quaternion);maskOverlay.scale.copy(mesh!.scale);maskOverlay.visible=mesh!.visible;
+    scene.add(maskOverlay);
+   }
+   if(maskOverlay&&mesh){maskOverlay.position.copy(mesh.position);maskOverlay.quaternion.copy(mesh.quaternion);maskOverlay.scale.copy(mesh.scale);}
   };
   const helpers=new Map<number,THREE.CameraHelper>();
   const syncCameraHelpers=()=>{
@@ -800,11 +822,11 @@ export default function Viewport3D(){
    editLoopCut:()=>{stage.editLoopCut();afterEditOp();},
    editBevelEdge:w=>{stage.editBevelEdge(w);afterEditOp();},
    editLoopSlide:f=>{stage.editLoopSlide(f);afterEditOp();},
-   mirrorMod:(id,axis,merge,on)=>{stage.mirrorMod(id,axis,merge,on);const sel=getStudio3DState().selected;if(sel!=null)patchStudio3D({selectedInfo:stage.info(sel)});sync();invalidate();},
+   mirrorMod:(id,axis,merge,on,bisect)=>{stage.mirrorMod(id,axis,merge,on,!!bisect);const sel=getStudio3DState().selected;if(sel!=null)patchStudio3D({selectedInfo:stage.info(sel)});sync();invalidate();},
    sculptMaskClear:id=>{stage.sculptMaskClear(id);invalidate();},
    sculptBrush:patch=>{patchStudio3D({sculpt:{...getStudio3DState().sculpt,...patch}});},
    sculptBegin:id=>stage.sculptBegin(id),
-   sculptDab:(id,center,delta,erase)=>{const b=getStudio3DState().sculpt;stage.sculptDabAt(id,center,{brush:b.brush,radius:b.radius,strength:b.strength,falloff:b.falloff,symmetry:b.symmetry,delta},!!erase);invalidate();},
+   sculptDab:(id,center,delta,erase)=>{const b=getStudio3DState().sculpt;stage.sculptDabAt(id,center,{brush:b.brush,radius:b.radius,strength:b.strength,falloff:b.falloff,symmetry:b.symmetry,delta},!!erase);if(b.brush==='mask'){syncMaskOverlay();}invalidate();},
    sculptEnd:()=>{stage.sculptEnd();sync();invalidate();},
    group:ids=>{const g=stage.group(ids);select(g.id);return g.id;},
    ungroup:id=>{const g=stage.find(id);const first=g?.children[0]?.id??null;stage.ungroup(id);if(first!=null)select(first);else sync();},
@@ -962,7 +984,7 @@ export default function Viewport3D(){
    disposed=true;opening++;stopAnim();mixer?.stopAllAction();stage.autoKeySource=null;off();offAuto();if(autoTimer)clearTimeout(autoTimer);cancelAnimationFrame(frame);ro.disconnect();controls.dispose();
    cv.removeEventListener('pointerdown',onDownCapture,true);cv.removeEventListener('pointerdown',onDown);window.removeEventListener('pointermove',onMove);window.removeEventListener('pointercancel',endMarquee);endMarquee();cv.removeEventListener('pointerup',onUp);cv.removeEventListener('keydown',onKey);
    if(getStudio3DState().status==='loading')patchStudio3D({status:stage.root.children.length?'ready':'idle',confirmReplace:null});
-   gizmo.detach();gizmo.dispose();ikGizmo.detach();ikGizmo.dispose();poleGizmo.detach();poleGizmo.dispose();fkGizmo.detach();fkGizmo.dispose();lookGizmo.detach();lookGizmo.dispose();clearGhosts();scene.remove(ghosts);if(pathLine){pathLine.geometry.dispose();(pathLine.material as THREE.Material).dispose();pathLine=null;}fkTarget.geometry.dispose();(fkTarget.material as THREE.Material).dispose();fkLook.geometry.dispose();(fkLook.material as THREE.Material).dispose();ikTarget.geometry.dispose();(ikTarget.material as THREE.Material).dispose();ikPoleM.geometry.dispose();(ikPoleM.material as THREE.Material).dispose();offStage();clearSelection();if(painting){painting=false;}const openSel=getStudio3DState().selected;if(openSel!=null)stage.skinPaintEnd(openSel);if(skelHelper){scene.remove(skelHelper);skelHelper.geometry.dispose();(skelHelper.material as THREE.Material).dispose();skelHelper=null;}if(weightOverlay){scene.remove(weightOverlay);weightOverlay.geometry.dispose();(weightOverlay.material as THREE.Material).dispose();weightOverlay=null;}for(const h of helpers.values())h.dispose();grid.geometry.dispose();(grid.material as THREE.Material).dispose();for(const t of envTargets)t.dispose();envCache.clear();pmrem.dispose();renderer.dispose();renderer.forceContextLoss();
+   gizmo.detach();gizmo.dispose();ikGizmo.detach();ikGizmo.dispose();poleGizmo.detach();poleGizmo.dispose();fkGizmo.detach();fkGizmo.dispose();lookGizmo.detach();lookGizmo.dispose();clearGhosts();scene.remove(ghosts);if(pathLine){pathLine.geometry.dispose();(pathLine.material as THREE.Material).dispose();pathLine=null;}fkTarget.geometry.dispose();(fkTarget.material as THREE.Material).dispose();fkLook.geometry.dispose();(fkLook.material as THREE.Material).dispose();ikTarget.geometry.dispose();(ikTarget.material as THREE.Material).dispose();ikPoleM.geometry.dispose();(ikPoleM.material as THREE.Material).dispose();offStage();clearSelection();if(painting){painting=false;}const openSel=getStudio3DState().selected;if(openSel!=null)stage.skinPaintEnd(openSel);if(skelHelper){scene.remove(skelHelper);skelHelper.geometry.dispose();(skelHelper.material as THREE.Material).dispose();skelHelper=null;}if(weightOverlay){scene.remove(weightOverlay);weightOverlay.geometry.dispose();(weightOverlay.material as THREE.Material).dispose();weightOverlay=null;}if(maskOverlay){scene.remove(maskOverlay);maskOverlay.geometry.dispose();(maskOverlay.material as THREE.Material).dispose();maskOverlay=null;}for(const h of helpers.values())h.dispose();grid.geometry.dispose();(grid.material as THREE.Material).dispose();for(const t of envTargets)t.dispose();envCache.clear();pmrem.dispose();renderer.dispose();renderer.forceContextLoss();
    if(cv.parentNode===el)el.removeChild(cv);
   };
  // eslint-disable-next-line react-hooks/exhaustive-deps

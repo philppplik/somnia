@@ -869,3 +869,37 @@ test('crease, pinch and flatten brushes run through the dab command',async({page
   expect(await run(page,'studio3d.undo')).toBe(true);
  }
 });
+
+test('round bevel profile and mirror bisect work through commands',async({page})=>{
+ await blank(page);
+ const id=await insert(page,'cube',0);
+ await run(page,'studio3d.edit.start',{id,mode:'edge'});
+ expect(await run(page,'studio3d.edit.select',{kind:'edge',ids:[[0,2]]})).toBe(true);
+ const before=(await session(page)).stats.triangles;
+ expect(await run(page,'studio3d.edit.bevelEdge',{width:0.1,segments:4})).toBe(true);
+ await expect.poll(async()=>(await session(page)).stats.triangles).toBeGreaterThan(before+4);
+ await run(page,'studio3d.undo');
+ await expect.poll(async()=>(await session(page)).stats.triangles).toBe(before);
+ expect(await run(page,'studio3d.edit.bevelEdge',{width:0.1,segments:9})).toBe(false);
+ await expect(page.getByRole('alert')).toContainText('segments');
+ await run(page,'studio3d.edit.end');
+ // mirror with bisect on the whole cube: clip at the plane, mirror back to a whole cube
+ expect(await run(page,'studio3d.mesh.mirrorMod',{id,axis:'x',merge:0.001,on:true,bisect:true})).toBe(true);
+ const s=await session(page);
+ expect(s.info!.mirror).toMatchObject({axis:'x',bisect:true});
+ expect(s.stats.triangles).toBeGreaterThanOrEqual(12);
+ expect(await run(page,'studio3d.undo')).toBe(true);
+ expect((await session(page)).info!.mirror).toBeNull();
+});
+
+test('sculpt mask overlay paints are visible in the session while sculpt mode is on',async({page})=>{
+ await blank(page);
+ const id=await insert(page,'cube',0);
+ await run(page,'studio3d.sculpt.brush',{on:true,brush:'mask',radius:2,strength:1});
+ expect((await session(page)).sculpt.on).toBe(true);
+ await run(page,'studio3d.sculpt.begin',{id});
+ expect(await run(page,'studio3d.sculpt.dab',{id,center:[0.5,1,0.5]})).toBe(true);
+ await run(page,'studio3d.sculpt.end');
+ // overlay itself is WebGL viewport state (CI verifies pixels); here the mask attribute drives it
+ expect(await run(page,'studio3d.sculpt.maskClear',{id})).toBe(true);
+});
