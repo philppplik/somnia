@@ -785,5 +785,15 @@
  "studio3d.hist.cleanup_one": "Clean up {name}",
  "studio3d.hist.cleanup_other": "Clean up {count} objects",
  "studio3d.mesh.cleanup": "Clean up",
- "studio3d.mesh.cleanupWeld": "Weld distance"
+ "studio3d.mesh.cleanupWeld": "Weld distance",
+ "cmd.studio3d.mesh.normals": "Rebuild the normals of 3D meshes: flip them, recalculate outward, or re-shade smooth, flat or split by angle",
+ "studio3d.hist.normals_one": "Rebuild normals of {name}",
+ "studio3d.hist.normals_other": "Rebuild normals of {count} objects",
+ "studio3d.mesh.normals": "Normals",
+ "studio3d.mesh.normalsAngle": "Split angle in degrees",
+ "studio3d.mesh.normalsOp.flip": "Flip",
+ "studio3d.mesh.normalsOp.outside": "Recalculate outside",
+ "studio3d.mesh.normalsOp.smooth": "Smooth",
+ "studio3d.mesh.normalsOp.flat": "Flat",
+ "studio3d.mesh.normalsOp.angle": "Split by angle"
 }

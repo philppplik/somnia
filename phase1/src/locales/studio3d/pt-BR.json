@@ -785,5 +785,15 @@
  "studio3d.hist.cleanup_one": "Limpar {name}",
  "studio3d.hist.cleanup_other": "Limpar {count} objetos",
  "studio3d.mesh.cleanup": "Limpar",
- "studio3d.mesh.cleanupWeld": "Distância de solda"
+ "studio3d.mesh.cleanupWeld": "Distância de solda",
+ "cmd.studio3d.mesh.normals": "Reconstruir as normais das malhas 3D: inverter, recalcular para fora ou sombrear suave, plano ou dividido por ângulo",
+ "studio3d.hist.normals_one": "Reconstruir normais de {name}",
+ "studio3d.hist.normals_other": "Reconstruir normais de {count} objetos",
+ "studio3d.mesh.normals": "Normais",
+ "studio3d.mesh.normalsAngle": "Ângulo de divisão em graus",
+ "studio3d.mesh.normalsOp.flip": "Inverter",
+ "studio3d.mesh.normalsOp.outside": "Recalcular para fora",
+ "studio3d.mesh.normalsOp.smooth": "Suave",
+ "studio3d.mesh.normalsOp.flat": "Plano",
+ "studio3d.mesh.normalsOp.angle": "Dividir por ângulo"
 }

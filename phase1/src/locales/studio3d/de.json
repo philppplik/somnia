@@ -785,5 +785,15 @@
  "studio3d.hist.cleanup_one": "{name} bereinigen",
  "studio3d.hist.cleanup_other": "{count} Objekte bereinigen",
  "studio3d.mesh.cleanup": "Bereinigen",
- "studio3d.mesh.cleanupWeld": "Schweißdistanz"
+ "studio3d.mesh.cleanupWeld": "Schweißdistanz",
+ "cmd.studio3d.mesh.normals": "Normalen von 3D-Meshes neu aufbauen: umdrehen, nach außen neu berechnen oder glatt, facettiert oder per Winkel getrennt schattieren",
+ "studio3d.hist.normals_one": "Normalen von {name} neu aufbauen",
+ "studio3d.hist.normals_other": "Normalen von {count} Objekten neu aufbauen",
+ "studio3d.mesh.normals": "Normalen",
+ "studio3d.mesh.normalsAngle": "Trennwinkel in Grad",
+ "studio3d.mesh.normalsOp.flip": "Umdrehen",
+ "studio3d.mesh.normalsOp.outside": "Nach außen neu berechnen",
+ "studio3d.mesh.normalsOp.smooth": "Glatt",
+ "studio3d.mesh.normalsOp.flat": "Facettiert",
+ "studio3d.mesh.normalsOp.angle": "Per Winkel trennen"
 }

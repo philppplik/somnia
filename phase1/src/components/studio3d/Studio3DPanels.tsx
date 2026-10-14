@@ -692,7 +692,7 @@ function RenderPng(){
 
 /** Mirror, apply scale and merge act on the ticked objects, or on the selected one. Origin to centre is the Pivot group above. */
 function MeshTools(){
- const {t}=useT();const s=useStudio3D();const [copy,setCopy]=useState(true);const [keepPct,setKeepPct]=useState(50);const [symAxis,setSymAxis]=useState<'x'|'y'|'z'>('x');const [symSide,setSymSide]=useState<'positive'|'negative'>('positive');const [subTimes,setSubTimes]=useState(2);const [weldDist,setWeldDist]=useState(0.0001);
+ const {t}=useT();const s=useStudio3D();const [copy,setCopy]=useState(true);const [keepPct,setKeepPct]=useState(50);const [symAxis,setSymAxis]=useState<'x'|'y'|'z'>('x');const [symSide,setSymSide]=useState<'positive'|'negative'>('positive');const [subTimes,setSubTimes]=useState(2);const [weldDist,setWeldDist]=useState(0.0001);const [nOp,setNOp]=useState<'flip'|'outside'|'smooth'|'flat'|'angle'>('smooth');const [nAngle,setNAngle]=useState(30);
  const set=s.marked.length?s.marked:s.selected!=null?[s.selected]:[];const ready=s.status==='ready'&&set.length>0;
  return <fieldset className="m-0 grid gap-2 border-0 p-0" data-testid="studio3d-meshtools"><legend className="text-xs text-ink-3">{t('studio3d.mesh.title')}</legend>
   <div className="flex flex-wrap items-center gap-1">{(['x','y','z'] as const).map(a=><Button key={a} variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.mesh.mirror',{axis:a,copy})}>{t('studio3d.mesh.mirror',{axis:a.toUpperCase()})}</Button>)}</div>
@@ -711,6 +711,10 @@ function MeshTools(){
    <Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.mesh.subdivide',{iterations:subTimes})}>{t('studio3d.mesh.subdivide')}</Button></div>
   <div className="flex flex-wrap items-center gap-1"><NativeInput type="number" min={0} step={0.001} value={weldDist} aria-label={t('studio3d.mesh.cleanupWeld')} className="w-20" onChange={e=>setWeldDist(Math.min(1000,Math.max(0,Number(e.currentTarget.value)||0)))}/>
    <Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.mesh.cleanup',{weld:weldDist})}>{t('studio3d.mesh.cleanup')}</Button></div>
+  <div className="flex flex-wrap items-center gap-1"><NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={nOp} aria-label={t('studio3d.mesh.normals')} onChange={e=>setNOp(e.currentTarget.value as typeof nOp)}>
+    {(['flip','outside','smooth','flat','angle'] as const).map(v=><option key={v} value={v}>{t(`studio3d.mesh.normalsOp.${v}`)}</option>)}</NativeSelect>
+   <NativeInput type="number" min={0} max={180} step={5} value={nAngle} disabled={nOp!=='angle'} aria-label={t('studio3d.mesh.normalsAngle')} className="w-20" onChange={e=>setNAngle(Math.min(180,Math.max(0,Number(e.currentTarget.value)||0)))}/>
+   <Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.mesh.normals',{op:nOp,angle:nAngle})}>{t('studio3d.mesh.normals')}</Button></div>
  </fieldset>;
 }
 

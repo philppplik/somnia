@@ -785,5 +785,15 @@
  "studio3d.hist.cleanup_one": "Nettoyer {name}",
  "studio3d.hist.cleanup_other": "Nettoyer {count} objets",
  "studio3d.mesh.cleanup": "Nettoyer",
- "studio3d.mesh.cleanupWeld": "Distance de soudure"
+ "studio3d.mesh.cleanupWeld": "Distance de soudure",
+ "cmd.studio3d.mesh.normals": "Reconstruire les normales des maillages 3D : inverser, recalculer vers l'extérieur ou ombrer lisse, plat ou divisé par angle",
+ "studio3d.hist.normals_one": "Reconstruire les normales de {name}",
+ "studio3d.hist.normals_other": "Reconstruire les normales de {count} objets",
+ "studio3d.mesh.normals": "Normales",
+ "studio3d.mesh.normalsAngle": "Angle de division en degrés",
+ "studio3d.mesh.normalsOp.flip": "Inverser",
+ "studio3d.mesh.normalsOp.outside": "Recalculer vers l'extérieur",
+ "studio3d.mesh.normalsOp.smooth": "Lisse",
+ "studio3d.mesh.normalsOp.flat": "Plat",
+ "studio3d.mesh.normalsOp.angle": "Diviser par angle"
 }

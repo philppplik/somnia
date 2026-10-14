@@ -1511,6 +1511,18 @@ test('3D studio mesh subdivide: triangles quadruple per iteration and undo resto
  await expect.poll(tris).toBe(before);
 });
 
+test('3D studio mesh normals: a welded cube gets its hard edges back by split angle and undo restores it',async({page})=>{
+ await blank(page);
+ await insert(page,'cube',0);
+ const verts=async()=>(await session(page)).stats.vertices;
+ expect(await run(page,'studio3d.mesh.cleanup',{weld:0.0001})).toBe(true);
+ await expect.poll(verts).toBe(20);
+ expect(await run(page,'studio3d.mesh.normals',{op:'angle',angle:30})).toBe(true);
+ await expect.poll(verts).toBe(24);
+ expect(await run(page,'studio3d.undo',{})).toBe(true);
+ await expect.poll(verts).toBe(20);
+});
+
 test('3D studio mesh cleanup: a merged duplicate loses its doubled faces and undo restores them',async({page})=>{
  await blank(page);
  await insert(page,'cube',0);

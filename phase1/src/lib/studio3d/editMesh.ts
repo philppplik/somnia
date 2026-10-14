@@ -1,6 +1,6 @@
 /** Mesh edit operations on plain position/index arrays - no three.js, so every op is testable in Node and the viewport stays the only three consumer. All meshes are indexed triangle lists. */
 export class EditError extends Error{name='EditError';}
-export interface MeshData{positions:number[];index:number[];/** Per-vertex sculpt mask 0..1 (1 = fully protected). Dropped by topology-changing ops. */mask?:number[];/** UVs parallel to positions (2 per vertex). Carried through by the bake ops that can preserve them (mirror/symmetrize/subdivide), dropped by the rest. */uvs?:number[];}
+export interface MeshData{positions:number[];index:number[];/** Per-vertex sculpt mask 0..1 (1 = fully protected). Dropped by topology-changing ops. */mask?:number[];/** UVs parallel to positions (2 per vertex). Carried through by the bake ops that can preserve them (mirror/symmetrize/subdivide), dropped by the rest. */uvs?:number[];/** Explicit per-vertex normals (3 per vertex). Only the normals ops read or write them; every other op drops them and the geometry rebuild recomputes smooth normals. */normals?:number[];}
 /** Hard cap for one editable mesh; operations that would pass it are refused. */
 export const MAX_EDIT_VERTICES=200_000;
 export const MAX_EDIT_TRIANGLES=400_000;
@@ -21,6 +21,7 @@ const check=(m:MeshData)=>{
  const verts=m.positions.length/3,tris=m.index.length/3;
  if(!Number.isInteger(verts)||!Number.isInteger(tris)||m.positions.some(n=>!Number.isFinite(n)))throw new EditError('The mesh data is damaged.');
  if(m.uvs&&(m.uvs.length!==verts*2||m.uvs.some(n=>!Number.isFinite(n))))throw new EditError('The mesh data is damaged.');
+ if(m.normals&&(m.normals.length!==verts*3||m.normals.some(n=>!Number.isFinite(n))))throw new EditError('The mesh data is damaged.');
  if(verts>MAX_EDIT_VERTICES||tris>MAX_EDIT_TRIANGLES)throw new EditError(`This mesh is too large to edit (${Math.round(verts).toLocaleString('en-US')} vertices).`);
 };
 const checkFaces=(m:MeshData,faces:number[])=>{
@@ -460,7 +461,14 @@ export function cleanupMesh(m:MeshData,weld:number):CleanupResult{
  }
  const vertsDropped=positions.length/3-used.length;
  positions=np;index=index.map(i=>remap.get(i)!);
- // Consistent winding inside each connected part, then flip closed parts with a negative signed volume.
+ const w=unifyWinding(positions,index);index=w.index;
+ const mesh:MeshData=nuv?{positions,index,uvs:nuv}:{positions,index};
+ check(mesh);
+ return{mesh,welded,facesDropped,vertsDropped,flipped:w.flipped};
+}
+/** Makes the winding consistent across shared edges inside each connected part, then flips closed parts with a negative signed volume (inside-out); open parts are only made consistent, never volume-flipped. Returns the new index. */
+const unifyWinding=(positions:number[],src:number[]):{index:number[];flipped:number}=>{
+ const index=[...src];
  const nf=index.length/3;
  const edgeKey=(a:number,b:number)=>a<b?`${a}_${b}`:`${b}_${a}`;
  const edgeFaces=new Map<string,number[]>();
@@ -494,10 +502,8 @@ export function cleanupMesh(m:MeshData,weld:number):CleanupResult{
   }
   nc++;
  }
- const mesh:MeshData=nuv?{positions,index,uvs:nuv}:{positions,index};
- check(mesh);
- return{mesh,welded,facesDropped,vertsDropped,flipped};
-}
+ return{index,flipped};
+};
 
 /** Subdivides the mesh smoothly with the Loop scheme, 1-3 iterations (each multiplies triangles by four, capped by the edit size limits). Drops the sculpt mask like every topology-changing op. */
 export function subdivideLoop(m:MeshData,iterations:number):MeshData{
@@ -541,4 +547,93 @@ export function mirrorCombine(m:MeshData,axis:MirrorAxis,merge:number,bisect=fal
   index.push(a,c,b); // mirrored winding
  }
  const out:MeshData=uvs?{positions,index,uvs}:{positions,index};check(out);return out;
+}
+
+/** The normals toolbox operations. */
+export type NormalsOp='flip'|'outside'|'smooth'|'flat'|'angle';
+/** Reverses the winding of every face: the mesh points the other way. Explicit normals are negated so the shading style (flat/smooth/split) survives; UVs and mask are kept. */
+export function flipMesh(m:MeshData):MeshData{
+ check(m);
+ const index:number[]=[];
+ for(let f=0;f<m.index.length;f+=3)index.push(m.index[f],m.index[f+2],m.index[f+1]);
+ const normals=m.normals?m.normals.map(n=>-n):undefined;
+ return{...m,index,...(normals?{normals}:{})};
+}
+/** Recalculates orientation: consistent winding per connected part, closed parts flipped so their signed volume is positive (normals point outward). UVs and mask survive; explicit normals are dropped (the geometry rebuild recomputes them). */
+export function outsideMesh(m:MeshData):{mesh:MeshData;flipped:number}{
+ check(m);
+ const w=unifyWinding(m.positions,m.index);
+ const mesh:MeshData={positions:[...m.positions],index:w.index,...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
+ return{mesh,flipped:w.flipped};
+}
+/** Rebuilds normals by angle: corners of the same vertex share a smoothed normal while the angle between their face normals stays within the limit; harder edges split into separate vertices with their own normals (0 splits everything = flat, 180 shares everything = smooth). UV seams survive automatically because seam twins are different vertices. Positions never move. Drops the sculpt mask. */
+export function smoothMesh(m:MeshData,angleDeg:number):MeshData{
+ check(m);
+ if(!Number.isFinite(angleDeg)||angleDeg<0||angleDeg>180)throw new EditError('The smooth angle must be a number between 0 and 180 degrees.');
+ const nt=m.index.length/3;
+ const fn:[number,number,number][]=[];
+ for(let f=0;f<nt;f++)fn.push(faceNormal(m,f));
+ // Corner angles weight the average: a cube corner touched by two triangles of the same quad
+ // face must not count that face twice (angle-weighted normals, like DCC tools).
+ const wa:number[]=new Array(nt*3);
+ for(let f=0;f<nt;f++)for(let e=0;e<3;e++){
+  const a=m.index[f*3+e]*3,b=m.index[f*3+(e+1)%3]*3,c=m.index[f*3+(e+2)%3]*3;
+  const ux=m.positions[b]-m.positions[a],uy=m.positions[b+1]-m.positions[a+1],uz=m.positions[b+2]-m.positions[a+2];
+  const vx=m.positions[c]-m.positions[a],vy=m.positions[c+1]-m.positions[a+1],vz=m.positions[c+2]-m.positions[a+2];
+  const lu=Math.hypot(ux,uy,uz)||1,lv=Math.hypot(vx,vy,vz)||1;
+  wa[f*3+e]=Math.acos(Math.min(1,Math.max(-1,(ux*vx+uy*vy+uz*vz)/(lu*lv))));
+ }
+ const parent:number[]=Array.from({length:nt*3},(_,i)=>i);
+ const find=(x:number)=>{while(parent[x]!==x){parent[x]=parent[parent[x]];x=parent[x];}return x;};
+ const union=(a:number,b:number)=>{a=find(a);b=find(b);if(a!==b)parent[a]=b;};
+ const cosLimit=Math.cos(angleDeg*Math.PI/180)-1e-9;
+ // Edges are matched by POSITION, not vertex index: UV-seam twins (same position, different
+ // UVs, split vertices) still smooth together, while their UVs stay split below. This is how
+ // DCC tools shade across UV seams. True boundary and non-manifold edges never smooth.
+ const nv=m.positions.length/3;
+ const pk:string[]=[];
+ for(let v=0;v<nv;v++)pk.push(`${Math.round(m.positions[v*3]*1e6)},${Math.round(m.positions[v*3+1]*1e6)},${Math.round(m.positions[v*3+2]*1e6)}`);
+ const edges=new Map<string,{f:number;a:number;b:number}[]>();
+ for(let f=0;f<nt;f++)for(let e=0;e<3;e++){
+  const a=m.index[f*3+e],b=m.index[f*3+(e+1)%3];
+  const ka=pk[a],kb=pk[b];const k=ka<kb?`${ka}|${kb}`:`${kb}|${ka}`;
+  const rec={f,a,b};const l=edges.get(k);if(l)l.push(rec);else edges.set(k,[rec]);
+ }
+ for(const l of edges.values()){
+  if(l.length!==2)continue; // boundary or non-manifold edge: no smoothing across it
+  const[p,q]=l;
+  const dot=fn[p.f][0]*fn[q.f][0]+fn[p.f][1]*fn[q.f][1]+fn[p.f][2]*fn[q.f][2];
+  if(dot<cosLimit)continue; // harder than the limit: split
+  for(const v of [p.a,p.b]){
+   // Match endpoints by position: q's corner at this end may be a UV-seam twin (different vertex).
+   let cs=-1,ct=-1;
+   for(let e=0;e<3;e++){if(m.index[p.f*3+e]===v)cs=e;if(pk[m.index[q.f*3+e]]===pk[v])ct=e;}
+   if(cs>=0&&ct>=0)union(p.f*3+cs,q.f*3+ct);
+  }
+ }
+ // Output vertices split by (normal group, UV): twins keep their own UVs but share the
+ // group's averaged normal, so UV seams survive smoothing.
+ const acc=new Map<number,[number,number,number]>();
+ for(let f=0;f<nt;f++)for(let e=0;e<3;e++){
+  const r=find(f*3+e),w=wa[f*3+e];let a=acc.get(r);if(!a){a=[0,0,0];acc.set(r,a);}
+  a[0]+=fn[f][0]*w;a[1]+=fn[f][1]*w;a[2]+=fn[f][2]*w;
+ }
+ for(const a of acc.values()){const l=Math.hypot(a[0],a[1],a[2])||1;a[0]/=l;a[1]/=l;a[2]/=l;}
+ const groups=new Map<string,number>();
+ const positions:number[]=[];const normals:number[]=[];const uvs:number[]|undefined=m.uvs?[]:undefined;
+ const index:number[]=[];
+ for(let f=0;f<nt;f++)for(let e=0;e<3;e++){
+  const c=f*3+e,r=find(c),v=m.index[c];
+  const uk=uvs?`|${Math.round(m.uvs![v*2]*1e6)},${Math.round(m.uvs![v*2+1]*1e6)}`:'';
+  const gk=r+uk;let id=groups.get(gk);
+  if(id===undefined){
+   id=positions.length/3;groups.set(gk,id);
+   positions.push(m.positions[v*3],m.positions[v*3+1],m.positions[v*3+2]);
+   if(uvs)uvs.push(m.uvs![v*2],m.uvs![v*2+1]);
+   const a=acc.get(r)!;normals.push(a[0],a[1],a[2]);
+  }
+  index.push(id);
+ }
+ const out:MeshData=uvs?{positions,index,uvs,normals}:{positions,index,normals};
+ check(out);return out;
 }
