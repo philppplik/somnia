@@ -71,6 +71,8 @@
     "allow-ext-worker-open",
     "allow-ext-worker-url",
     "allow-ext-close",
+    "allow-local-models-detect",
+    "allow-local-models-read",
     "allow-provider-http-start",
     "allow-provider-http-next",
     "allow-provider-http-cancel",

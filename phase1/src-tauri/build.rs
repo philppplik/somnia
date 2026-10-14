@@ -57,6 +57,8 @@ fn main() {
             "selftest_env",
             "selftest_write",
             "selftest_exit",
+            "local_models_detect",
+            "local_models_read",
             "provider_http_start",
             "provider_http_next",
             "provider_http_cancel",

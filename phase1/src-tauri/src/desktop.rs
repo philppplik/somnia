@@ -300,6 +300,16 @@ async fn github_account_disconnect(window: WebviewWindow) -> std::result::Result
     GITHUB_CANCEL.notify_waiters();
     tauri::async_runtime::spawn_blocking(|| { { let _g = AGENT_SETTINGS_LOCK.lock().map_err(|_| "Credential store is busy".to_string())?; github_store().disconnect().map_err(|e| e.to_string())?; } github_status_now() }).await.map_err(|_| "Could not access credential store")?
 }
+#[tauri::command]
+async fn local_models_detect(window: WebviewWindow) -> std::result::Result<crate::local_models::Detection, String> {
+    gate(&window).map_err(|_| "Only trusted editor may inspect local runtime")?;
+    tauri::async_runtime::spawn_blocking(crate::local_models::detect).await.map_err(|_| "Local runtime detection failed".into())
+}
+#[tauri::command]
+async fn local_models_read(window: WebviewWindow, base_url: String, operation: String, model: Option<String>) -> std::result::Result<serde_json::Value, String> {
+    gate(&window).map_err(|_| "Only trusted editor may inspect local runtime")?;
+    crate::local_models::read(&base_url, &operation, model.as_deref()).await
+}
 // Credentials are independent of preferences: saving an Ollama configuration must
 // never delete an OpenRouter key. No raw backend/credential error reaches the UI.
 struct NativeResponse { receiver: tokio::sync::Mutex<tokio::sync::mpsc::Receiver<std::result::Result<Vec<u8>, String>>>, task: tokio::task::AbortHandle, expires: std::time::Instant }
@@ -2871,6 +2881,8 @@ pub fn run() {
             selftest_env,
             selftest_write,
             selftest_exit,
+            local_models_detect,
+            local_models_read,
             provider_http_start,
             provider_http_next,
             provider_http_cancel,
