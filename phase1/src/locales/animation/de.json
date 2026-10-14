@@ -621,5 +621,9 @@
  "animation.stroke.gradient": "Verlaufskontur",
  "animation.gradient.kind": "Verlaufstyp",
  "animation.gradient.linear": "Linear",
- "animation.gradient.radial": "Radial"
+ "animation.gradient.radial": "Radial",
+ "animation.gradient.stopColor": "Farbe von Verlaufsstopp {n}",
+ "animation.gradient.stopOffset": "Position von Stopp {n} (%)",
+ "animation.gradient.addStop": "Stopp hinzufügen",
+ "animation.gradient.removeStop": "Entfernen"
 }

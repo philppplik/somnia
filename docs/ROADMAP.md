@@ -439,3 +439,7 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 ### Animation P66 (2026-10-14, integration pending)
 - Done: radial gradients for the fill and for the stroke (type select next to the colours; radial runs from the box centre and ignores the angle). Linear stays the default and its output is byte-identical. The shared builder (`gradientDefSvg`) feeds the viewer and every export. Checkbox label is now "Gradient" (was "Linear gradient") in 5 locales.
 - Open: no gradient stops beyond two colours, no keyed gradients, no conic gradient, no radius or centre control (box centre, radius 50 percent).
+
+### Animation P67 (2026-10-14, integration pending)
+- Done: multi-stop gradients for fill and stroke. Up to 6 extra stops between start (0) and end (1), each with a colour and a position in percent; "Add stop" puts a new one in the widest gap, "Remove" drops one. Works with linear and radial. One undo step per change. Viewer and all exports share the stop markup. Without extra stops the output is byte-identical.
+- Open: start and end stay at 0 and 100 percent, no stop opacity, gradients are not keyed, no conic gradient, no centre or radius control.

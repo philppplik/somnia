@@ -346,3 +346,6 @@ A pointer drag on a key that is part of a multi-key selection builds `styleKeySh
 
 ## P66 - Radial gradients
 `gradient.kind` (`linear` default, or `radial`) on `source.gradient` and `stroke.gradient`. `gradientDefSvg(id,g)` in shapes.ts builds the definition for the frame builder; the viewer uses the same shape through a small component. Radial: cx=cy=0.5, r=0.5 of the layer box, angle ignored.
+
+## P67 - Multi-stop gradients
+`gradient.stops?:{offset,color}[]` holds the stops between start and end: 0 to 6 entries, offsets strictly increasing within 0.01..0.99, hex colours (`validGradientStops` in model.ts, used for fill and stroke). `gradientDefSvg` writes start, the stops, then end. The inspector helpers (`addGradientStop`, `setGradientStop`, `removeGradientStop` in shapes.ts) keep offsets sorted and at least 1 percent apart.

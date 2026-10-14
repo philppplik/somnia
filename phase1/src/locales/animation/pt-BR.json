@@ -621,5 +621,9 @@
  "animation.stroke.gradient": "Traço com degradê",
  "animation.gradient.kind": "Tipo de degradê",
  "animation.gradient.linear": "Linear",
- "animation.gradient.radial": "Radial"
+ "animation.gradient.radial": "Radial",
+ "animation.gradient.stopColor": "Cor da parada {n} do degradê",
+ "animation.gradient.stopOffset": "Posição da parada {n} (%)",
+ "animation.gradient.addStop": "Adicionar parada",
+ "animation.gradient.removeStop": "Remover"
 }

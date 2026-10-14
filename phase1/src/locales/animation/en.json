@@ -621,5 +621,9 @@
  "animation.stroke.gradient": "Gradient stroke",
  "animation.gradient.kind": "Gradient type",
  "animation.gradient.linear": "Linear",
- "animation.gradient.radial": "Radial"
+ "animation.gradient.radial": "Radial",
+ "animation.gradient.stopColor": "Gradient stop {n} colour",
+ "animation.gradient.stopOffset": "Stop {n} position (%)",
+ "animation.gradient.addStop": "Add stop",
+ "animation.gradient.removeStop": "Remove"
 }

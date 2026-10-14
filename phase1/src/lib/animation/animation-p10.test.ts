@@ -15,7 +15,7 @@ import {booleanEdits,maskBooleanEdit,expandStrokeEdits} from './pathLayer';
 import {frameSvg} from './exportFrames';
 import {strokeAttributes,layerColorsAt} from './effects';
 import {styleKeyLanes} from './keyLanes';
-import {gradientVector} from './shapes';
+import {gradientVector,addGradientStop,setGradientStop,removeGradientStop} from './shapes';
 import {pruneStyleKeys,toggleStyleKey,keysInRect} from './keyLanes';
 import {styleKeyDeleteEdits,styleKeyShiftEdits} from './edit';
 import {colorAt,easeProgress,COLOR_EASE_HANDLES} from './colorKeys';
@@ -1600,4 +1600,26 @@ test('P66 radial gradients: fill and stroke, validation, linear output unchanged
  assert.deepEqual(validateDocument(r),[]);
  assert.throws(()=>applyEdit(d,{type:'layer.update',layer:'pa',source:{gradient:{start:'#ff0000',end:'#0000ff',angle:0,kind:'conic' as never}}}));
  assert.throws(()=>applyEdit(d,{type:'layer.stroke',layer:'pa',stroke:{color:'#00ff00',width:8,gradient:{start:'#ff0000',end:'#0000ff',angle:0,kind:'x' as never}}}));
+});
+
+test('P67 multi-stop gradients: markup, validation, stop helpers, legacy output unchanged',()=>{
+ let d=strokeDoc([{x:0.2,y:0.2},{x:0.8,y:0.2},{x:0.8,y:0.8},{x:0.2,y:0.8}],true,8);
+ const idx=comp(d).layers.findIndex(l=>l.id==='pa');
+ const g0:{start:string;end:string;angle:number;kind?:'linear'|'radial';stops?:readonly {offset:number;color:string}[]}={start:'#ff0000',end:'#0000ff',angle:0};
+ const plain=frameSvg(comp(applyEdit(d,{type:'layer.update',layer:'pa',source:{gradient:g0}})),0);
+ assert.equal(frameSvg(comp(applyEdit(d,{type:'layer.update',layer:'pa',source:{gradient:{...g0,stops:[]}}})),0),plain,'an empty stop list draws like none');
+ const g=addGradientStop(addGradientStop(g0));
+ assert.deepEqual(g.stops!.map(x=>x.offset),[0.25,0.5],'second stop goes into the widest gap, kept sorted');
+ const fill=applyEdit(d,{type:'layer.update',layer:'pa',source:{gradient:setGradientStop(g,0,{color:'#00ff00'})}});
+ const svg=frameSvg(comp(fill),0);
+ assert.ok(svg.includes(`<stop offset="0" stop-color="#ff0000"/><stop offset="0.25" stop-color="#00ff00"/><stop offset="0.5" stop-color="#ff0000"/><stop offset="1" stop-color="#0000ff"/>`),svg.slice(svg.indexOf('<linearGradient'),svg.indexOf('</linearGradient>')));
+ const st=applyEdit(fill,{type:'layer.stroke',layer:'pa',stroke:{color:'#00ff00',width:8,gradient:{...g0,kind:'radial',stops:[{offset:0.5,color:'#ffffff'}]}}});
+ assert.ok(frameSvg(comp(st),0).includes(`<radialGradient id="stroke-gradient-${idx}" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#ff0000"/><stop offset="0.5" stop-color="#ffffff"/>`));
+ assert.deepEqual(validateDocument(st),[]);
+ assert.deepEqual(setGradientStop(g,1,{offset:0.1}).stops!.map(x=>x.offset),[0.25,0.26],'offsets stay strictly between neighbours');
+ assert.deepEqual(setGradientStop(g,0,{offset:0.9}).stops!.map(x=>x.offset),[0.49,0.5]);
+ assert.equal('stops' in removeGradientStop(removeGradientStop(g,0),0),false,'removing the last stop drops the field');
+ let many=g0;for(let i=0;i<9;i++)many=addGradientStop(many);assert.equal(many.stops!.length,6,'capped at 6');
+ for(const bad of [[{offset:0.5,color:'#ffffff'},{offset:0.5,color:'#000000'}],[{offset:0.6,color:'#ffffff'},{offset:0.4,color:'#000000'}],[{offset:0,color:'#ffffff'}],[{offset:1,color:'#ffffff'}],[{offset:0.5,color:'white'}],Array.from({length:7},(_,i)=>({offset:(i+1)/10,color:'#ffffff'}))])
+  assert.throws(()=>applyEdit(d,{type:'layer.update',layer:'pa',source:{gradient:{...g0,stops:bad}}}),Error);
 });
