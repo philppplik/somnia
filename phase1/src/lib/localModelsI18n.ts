@@ -1,5 +1,13 @@
 export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
  "en": {
+  "local.polish.exportName": "Export local JSON: {store}",
+  "local.polish.deleteName": "Delete store: {store}",
+  "local.polish.clearName": "Clear saved task model: {task}",
+  "local.polish.absent": "Not saved",
+  "local.polish.on": "Enabled",
+  "local.polish.off": "Disabled",
+  "local.polish.empty": "No installed models reported by the successful inventory check.",
+
   "local.privacy.title": "What stays on this device",
   "local.privacy.boundary": "These assistant stores have no automatic sync in this feature. Exports are local downloads containing private prompts/results: keep them private. Sizes are logical UTF-8 payload bytes, not disk usage; comparison/evaluation share one bounded store. Helper bytes are actual files, export is status only, never executable/audio. Unknown means unavailable, not empty. Other app storage, backups and OS/browser sync are outside this list. Refresh other panels after deletion.",
   "local.privacy.refresh": "Inspect local stores",
@@ -437,6 +445,14 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Move earlier after local"
  },
  "de": {
+  "local.polish.exportName": "Lokales JSON exportieren: {store}",
+  "local.polish.deleteName": "Speicher löschen: {store}",
+  "local.polish.clearName": "Gespeichertes Aufgabenmodell löschen: {task}",
+  "local.polish.absent": "Nicht gespeichert",
+  "local.polish.on": "Aktiviert",
+  "local.polish.off": "Deaktiviert",
+  "local.polish.empty": "Die erfolgreiche Inventarprüfung meldet keine installierten Modelle.",
+
   "local.privacy.title": "Was auf diesem Gerät bleibt",
   "local.privacy.boundary": "Diese Assistentenspeicher werden durch diese Funktion nicht automatisch synchronisiert. Exporte sind lokale Downloads mit privaten Prompts/Ergebnissen: privat halten. Größen sind logische UTF-8-Nutzdaten, kein Plattenverbrauch; Vergleich/Evaluation teilen einen begrenzten Speicher. Helper-Größe zählt echte Dateien; Export enthält nur Status, kein Programm/Audio. Unbekannt heißt nicht verfügbar, nicht leer. Andere App-Daten, Backups und OS/Browser-Sync sind nicht enthalten. Andere Ansichten nach Löschen neu laden.",
   "local.privacy.refresh": "Lokale Speicher prüfen",
@@ -874,6 +890,14 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Nach lokal früher einordnen"
  },
  "es": {
+  "local.polish.exportName": "Exportar JSON local: {store}",
+  "local.polish.deleteName": "Borrar almacén: {store}",
+  "local.polish.clearName": "Quitar modelo de tarea: {task}",
+  "local.polish.absent": "No guardado",
+  "local.polish.on": "Activado",
+  "local.polish.off": "Desactivado",
+  "local.polish.empty": "La consulta de inventario correcta no informa modelos instalados.",
+
   "local.privacy.title": "Qué queda en este dispositivo",
   "local.privacy.boundary": "Sin sincronización automática en esta función. Exportaciones locales contienen prompts/resultados privados. Tamaños UTF-8 lógicos, no disco; comparación/evaluación comparten almacén. Helper: bytes de archivos; exportación solo estado, sin audio/binario. Desconocido no significa vacío. No incluye otros datos, copias ni sincronización OS/navegador. Actualiza otros paneles tras borrar.",
   "local.privacy.refresh": "Inspeccionar almacenes",
@@ -1311,6 +1335,14 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Mover antes tras local"
  },
  "fr": {
+  "local.polish.exportName": "Exporter le JSON local: {store}",
+  "local.polish.deleteName": "Supprimer le stockage: {store}",
+  "local.polish.clearName": "Retirer le modèle de tâche: {task}",
+  "local.polish.absent": "Non enregistré",
+  "local.polish.on": "Activé",
+  "local.polish.off": "Désactivé",
+  "local.polish.empty": "Le contrôle réussi ne signale aucun modèle installé.",
+
   "local.privacy.title": "Ce qui reste sur cet appareil",
   "local.privacy.boundary": "Pas de synchronisation automatique dans cette fonction. Exports locaux avec prompts/résultats privés. Taille UTF-8 logique, pas disque; comparaison/évaluation partagent le stockage. Helper: octets des fichiers; export du statut seul, sans audio/binaire. Inconnu ne signifie pas vide. Hors autres données, sauvegardes et sync OS/navigateur. Actualiser les autres vues après suppression.",
   "local.privacy.refresh": "Inspecter les stockages",
@@ -1748,6 +1780,14 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Avancer après local"
  },
  "pt-BR": {
+  "local.polish.exportName": "Exportar JSON local: {store}",
+  "local.polish.deleteName": "Excluir armazenamento: {store}",
+  "local.polish.clearName": "Remover modelo da tarefa: {task}",
+  "local.polish.absent": "Não salvo",
+  "local.polish.on": "Ativado",
+  "local.polish.off": "Desativado",
+  "local.polish.empty": "A consulta de inventário bem-sucedida não informa modelos instalados.",
+
   "local.privacy.title": "O que fica neste dispositivo",
   "local.privacy.boundary": "Sem sincronização automática nesta função. Exportações locais contêm prompts/resultados privados. Tamanho UTF-8 lógico, não disco; comparação/avaliação compartilham armazenamento. Helper: bytes dos arquivos; exporta só estado, sem áudio/binário. Desconhecido não é vazio. Não inclui outros dados, backups ou sync OS/navegador. Atualize outros painéis após excluir.",
   "local.privacy.refresh": "Inspecionar dados locais",
