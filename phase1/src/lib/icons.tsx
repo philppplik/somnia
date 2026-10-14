@@ -9,6 +9,7 @@ function make(name:string,html:string):VadivamIcon{
  Icon.displayName=`Vadivam(${name})`;return Icon;}
 
 export const Aperture=make("aperture","<path d=\"M14.31 8c2.655 2.878 4.47 6.26 5.74 9.94M9.69 8a33.4 33.4 0 0 1 11.48 0M7.38 12a36.5 36.5 0 0 1 5.74-9.94M9.69 16c-2.736-2.814-4.58-6.214-5.74-9.94M14.311 16A33.5 33.5 0 0 1 2.83 16m13.791-4c-1.367 3.632-3.365 6.89-5.74 9.94M22 12a10 10 0 1 1-20.001 0A10 10 0 0 1 22 12\"/>");
+export const Grid3x3=make("grid-3x3","<path d=\"M3 9h18M3 15h18M9 3v18M15 3v18\"/>");
 export const Frame=make("frame","<path d=\"M22 6H2m20 12H2M6 2v20M18 2v20\"/>");
 export const AlertTriangle=make("triangle-alert","<path d=\"M12 7.5v5.893M12 17v1m-6.682-7.39l-.37.73c-2.425 4.778-3.637 7.167-2.541 8.913C3.502 22 6.214 22 11.637 22h.726c5.424 0 8.135 0 9.23-1.747c1.096-1.745-.115-4.133-2.537-8.905l-.368-.726C15.77 4.874 14.31 2 12 2s-3.766 2.87-6.682 8.61\"/>");
 export const Blocks=make("blocks","<path d=\"M14 4.4A2.4 2.4 0 0 1 16.4 2h3.2A2.4 2.4 0 0 1 22 4.4v3.2a2.4 2.4 0 0 1-2.4 2.4h-3.2A2.4 2.4 0 0 1 14 7.6zM10 14V8a2 2 0 0 0-2-2H4.4A2.4 2.4 0 0 0 2 8.4V14m8 0H2m8 0h6a2 2 0 0 1 2 2v3.6a2.4 2.4 0 0 1-2.4 2.4H10m0-8v8m-8-8v5.6A2.4 2.4 0 0 0 4.4 22H10\"/>");

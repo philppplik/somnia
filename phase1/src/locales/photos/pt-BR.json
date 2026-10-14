@@ -22,6 +22,7 @@
  "photos.crop": "Recortar",
  "photos.crop.apply": "Aplicar recorte",
  "photos.crop.cancel": "Cancelar recorte",
+ "photos.crop.guides": "Regra dos terços",
  "photos.crop.hint": "Arraste dentro da moldura para movê-la; arraste um canto para redimensionar.",
  "photos.rotateLeft": "Girar à esquerda",
  "photos.rotateRight": "Girar à direita",

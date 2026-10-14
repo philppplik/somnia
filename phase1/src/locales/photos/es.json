@@ -22,6 +22,7 @@
  "photos.crop": "Recortar",
  "photos.crop.apply": "Aplicar recorte",
  "photos.crop.cancel": "Cancelar recorte",
+ "photos.crop.guides": "Regla de los tercios",
  "photos.crop.hint": "Arrastra dentro del marco para moverlo; arrastra una esquina para cambiar el tamaño.",
  "photos.rotateLeft": "Girar a la izquierda",
  "photos.rotateRight": "Girar a la derecha",

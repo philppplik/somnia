@@ -22,6 +22,7 @@
  "photos.crop": "Recadrer",
  "photos.crop.apply": "Appliquer le recadrage",
  "photos.crop.cancel": "Annuler le recadrage",
+ "photos.crop.guides": "Règle des tiers",
  "photos.crop.hint": "Faites glisser dans le cadre pour le déplacer, faites glisser un coin pour le redimensionner.",
  "photos.rotateLeft": "Pivoter à gauche",
  "photos.rotateRight": "Pivoter à droite",

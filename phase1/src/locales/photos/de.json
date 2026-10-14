@@ -22,6 +22,7 @@
  "photos.crop": "Zuschneiden",
  "photos.crop.apply": "Zuschnitt anwenden",
  "photos.crop.cancel": "Zuschnitt abbrechen",
+ "photos.crop.guides": "Drittelraster",
  "photos.crop.hint": "Ziehe im Rahmen, um ihn zu bewegen, ziehe an einer Ecke, um die Größe zu ändern.",
  "photos.rotateLeft": "Nach links drehen",
  "photos.rotateRight": "Nach rechts drehen",

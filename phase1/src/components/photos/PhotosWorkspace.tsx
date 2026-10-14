@@ -2,11 +2,13 @@ import {StudioStatus} from '../studios/StudioStatus';
 import {reportError} from '../../lib/log';
 import {usePublishPhotosContext} from './panels/publishContext';
 import {useCallback,useEffect,useRef,useState} from 'react';
-import {Check,Download,Eye,Frame,RotateCcw,Undo2,Redo2,X,ZoomIn,ZoomOut,Maximize2,Minimize2} from '../../lib/icons';
+import {Check,Download,Eye,Frame,Grid3x3,RotateCcw,Undo2,Redo2,X,ZoomIn,ZoomOut,Maximize2,Minimize2} from '../../lib/icons';
 import {Button} from '../ui/button';
 import {useT} from '../../lib/useT';
 import {applyPhotoCrop,cancelPhotoCrop,dirtyPhoto,exportPhotoCopy,historyPhoto,openPhoto,resetPhoto,rotatePhoto,setPhotoCropping,setPhotoCropDraft,usePhotoSession,type PhotoFrame} from '../../lib/photos/studioSession';
 import type {PhotoCrop} from '../../lib/photos/studioSettings';
+import {cropGuideLines} from '../../lib/photos/cropGuides';
+import {usePanelState} from '../../store/panelStateStore';
 import {getState,patchState,requestStudio,useAppStore} from '../../store/appStore';
 import type {MediaItem} from '../../lib/media';
 const bar='media-bar flex items-center gap-2 border-b border-subtle px-3 py-1.5 text-[12px]';
@@ -33,6 +35,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
  const [pan,setPan]=useState<[number,number]>([0,0]);
  const [compare,setCompare]=useState(false);
  const [note,setNote]=useState('');
+ const [showGuides,setShowGuides]=usePanelState<boolean>('photos.cropGuides',true);
  const drag=useRef<{pan?:{x:number;y:number;px:number;py:number};crop?:DragMode}|null>(null);
  useEffect(()=>{void openPhoto(item);},[item]);
  usePublishPhotosContext(item.name);
@@ -98,6 +101,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
  const ready=session?.status==='ready'||session?.status==='processing';
  const dirty=session?dirtyPhoto(session):false;
  const crop=session?.cropDraft;
+ const guideLines=crop?cropGuideLines(crop):null;
  return <section className="canvas-stage flex min-h-0 w-full flex-1 flex-col" aria-label={t('photos.title')} data-testid="photos-workspace">
   <div className={bar}>
    <span className="truncate font-medium text-ink" data-testid="photos-name">{item.name}</span>
@@ -109,6 +113,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
    <Button size="icon" variant="outline" aria-label={t('photos.reset')} disabled={!ready} onClick={()=>resetPhoto(item.name)} data-testid="photos-reset"><RotateCcw size={14}/></Button>
    <Button size="compact" variant="outline" aria-pressed={!!session?.cropping} disabled={!ready} onClick={()=>setPhotoCropping(item.name,!session?.cropping)} data-testid="photos-crop"><Frame size={13}/>{t('photos.crop')}</Button>
    {session?.cropping&&<>
+    <Button size="icon" variant="outline" aria-pressed={showGuides} aria-label={t('photos.crop.guides')} title={t('photos.crop.guides')} onClick={()=>setShowGuides(!showGuides)} data-testid="photos-crop-guides"><Grid3x3 size={14}/></Button>
     <Button size="compact" variant="primary" onClick={()=>applyPhotoCrop(item.name)} data-testid="photos-crop-apply"><Check size={13}/>{t('photos.crop.apply')}</Button>
     <Button size="compact" variant="outline" onClick={()=>cancelPhotoCrop(item.name)} data-testid="photos-crop-cancel"><X size={13}/>{t('photos.crop.cancel')}</Button>
    </>}
@@ -122,6 +127,10 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
      <svg className="absolute inset-0 size-full" aria-hidden="true">
       <path d={`M0 0H${dispW}V${dispH}H0Z M${crop.x0*dispW} ${crop.y0*dispH}H${crop.x1*dispW}V${crop.y1*dispH}H${crop.x0*dispW}Z`} fill="rgba(0,0,0,0.45)" fillRule="evenodd"/>
       <rect x={crop.x0*dispW} y={crop.y0*dispH} width={(crop.x1-crop.x0)*dispW} height={(crop.y1-crop.y0)*dispH} fill="none" stroke="var(--accent)" strokeWidth="1.5"/>
+      {showGuides&&guideLines&&<g data-testid="photos-crop-grid" stroke="rgba(255,255,255,0.85)" strokeWidth="1">
+       {guideLines.vertical.map(x=><line key={`v${x}`} x1={x*dispW} y1={crop.y0*dispH} x2={x*dispW} y2={crop.y1*dispH}/>)}
+       {guideLines.horizontal.map(y=><line key={`h${y}`} x1={crop.x0*dispW} y1={y*dispH} x2={crop.x1*dispW} y2={y*dispH}/>)}
+      </g>}
      </svg>
      <div className="absolute" style={{left:`${crop.x0*100}%`,top:`${crop.y0*100}%`,width:`${(crop.x1-crop.x0)*100}%`,height:`${(crop.y1-crop.y0)*100}%`,cursor:'move'}} onPointerDown={startCropDrag({kind:'move',dx:0,dy:0})} data-testid="photos-crop-frame"/>
      {(['nw','ne','sw','se'] as const).map(k=><div key={k} className="absolute size-3 rounded-[3px] border border-white bg-[var(--accent)]" style={{left:`calc(${(k==='nw'||k==='sw'?crop.x0:crop.x1)*100}% - 6px)`,top:`calc(${(k==='nw'||k==='ne'?crop.y0:crop.y1)*100}% - 6px)`,cursor:k==='nw'||k==='se'?'nwse-resize':'nesw-resize'}} onPointerDown={startCropDrag({kind:k})} data-testid={`photos-crop-${k}`}/>)}

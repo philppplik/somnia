@@ -137,6 +137,9 @@ through native control primitives, see below.
   to native primitives across 2 files: ExportDialog,
   ImageConversionDialog), ratchet budgets zero, adoption test and
   gallery proofs added (?view=export, ?view=convert).
+- P34: photos crop guides feature (rule-of-thirds grid in the crop
+  overlay with persisted toggle; no raw controls, ratchets unchanged),
+  unit tests and gallery proof added (?view=photos-crop).
 
 
 

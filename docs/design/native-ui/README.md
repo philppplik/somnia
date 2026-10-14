@@ -52,6 +52,7 @@ All file links are repository-relative, so they remain useful on a feature branc
 22. [Imgedit area DS adoption](imgedit-adoption.md)
 23. [Layers surfaces DS adoption](layers-adoption.md)
 24. [Export and conversion dialogs DS adoption](export-adoption.md)
+25. [Photos crop guides (rule of thirds)](photos-crop-guides.md)
 
 ## The system in one view
 

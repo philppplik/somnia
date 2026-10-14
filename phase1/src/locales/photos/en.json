@@ -22,6 +22,7 @@
  "photos.crop": "Crop",
  "photos.crop.apply": "Apply crop",
  "photos.crop.cancel": "Cancel crop",
+ "photos.crop.guides": "Rule of thirds",
  "photos.crop.hint": "Drag inside the frame to move it, drag a corner to resize.",
  "photos.rotateLeft": "Rotate left",
  "photos.rotateRight": "Rotate right",
