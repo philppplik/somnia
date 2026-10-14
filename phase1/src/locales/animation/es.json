@@ -783,5 +783,15 @@
  "animation.timing.mode.slip": "Deslizar claves (slip) por fotogramas",
  "animation.timing.mode.slideTo": "Deslizar capas al cabezal",
  "animation.bar.hint": "Arrastra para deslizar la capa con sus claves (todas las elegidas), Mayús desliza solo las claves, arrastra un extremo para recortar, Alt en el extremo arrastra las capas posteriores",
- "animation.bar.aria": "Tiempo de {name}: las flechas la mueven, Mayús para diez fotogramas, Alt desliza las claves"
+ "animation.bar.aria": "Tiempo de {name}: las flechas la mueven, Mayús para diez fotogramas, Alt desliza las claves",
+ "animation.keySet.title": "Fotogramas clave en varias capas",
+ "animation.keySet.select": "Elegir claves del grupo",
+ "animation.keySet.select.hint": "Elegir todas las claves de las capas marcadas",
+ "animation.keySet.paste": "Pegar en grupo",
+ "animation.keySet.paste.hint": "Pegar las claves copiadas en el cabezal en cada capa marcada (una capa copiada) o en las capas marcadas por orden (varias)",
+ "animation.keySet.place": "Pegar en su sitio",
+ "animation.keySet.place.hint": "Pegar las claves copiadas en sus tiempos originales",
+ "cmd.animation.keys.pasteToSet": "Pegar claves copiadas en varias capas",
+ "cmd.animation.keys.pasteInPlace": "Pegar claves copiadas en sus tiempos originales",
+ "cmd.animation.keys.selectSet": "Elegir todas las claves de varias capas"
 }

@@ -15,6 +15,7 @@ import {clickSelect,marqueeSelect,pruneSelection,rectsOverlap,sameKey,shiftSelec
 import {frameToTick,snapToFrame,tickToFrame,timecode} from '../../lib/animation/time';
 import {executeCommand} from '../../lib/commands';
 import {trackHeightOf,useTrackHeights,reorderIndex,setShyHidden,useShyHidden,edgeScroll,revealTick,snapTargets,snapTick,timeWindow,useTimelineSnap,setTimelineSnap} from '../../lib/animation/timelineView';
+import {useSetClip} from '../../lib/animation/keySetClip';
 import {clearLayerSet,layerSetIds,toggleLayerInSet,useLayerSet} from '../../lib/animation/layerSet';
 import {useT} from '../../lib/useT';
 import {Button} from '../ui/button';
@@ -25,7 +26,7 @@ const run=(id:string,params?:unknown)=>void executeCommand(id,params);
 interface Box{x0:number;y0:number;x1:number;y1:number}
 /** Timeline of the Animation studio: transport, work area, layer bars, key lanes with marquee selection, or the graph editor. */
 export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Composition;at:number;selected:string|null;canUndo:boolean;canRedo:boolean}){
- const {t}=useT();const state=useAnimationState();const view=state.view; const layerSet=useLayerSet();const [stagger,setStagger]=useState(2);const [staggerTiming,setStaggerTiming]=useState(true);
+ const {t}=useT();const state=useAnimationState();const view=state.view; const layerSet=useLayerSet();const setClip=useSetClip();const [stagger,setStagger]=useState(2);const [staggerTiming,setStaggerTiming]=useState(true);
  const rulerRef=useRef<HTMLDivElement>(null);const lanesRef=useRef<HTMLDivElement>(null);
  const win=timeWindow(comp,view.zoom,view.scroll);const pc=(t:number)=>`${(t-win.t0)/win.span*100}%`;const snapOn=useTimelineSnap();const shyOff=useShyHidden();useTrackHeights();const [drop,setDrop]=useState<{over:string;after:boolean}|null>(null);const inWin=(t:number)=>t>=win.t0&&t<=win.t0+win.span;
  /** Left and width in percent of a tick range, clipped to the visible window. */
@@ -287,6 +288,10 @@ const marquee=(e:PointerEvent<SVGSVGElement>)=>{
   </div>
   <div className="flex max-h-16 shrink-0 flex-wrap items-center gap-1 overflow-auto border-b border-subtle px-2 py-1" role="group" aria-label={t('animation.markers.title')}>
    <Button size="tiny" variant="ghost" onClick={()=>run('animation.marker.add',{label:timecode(at,comp.fps)})}>{t('animation.markers.add')}</Button>
+   {layerSetIds(selected).length>1&&<span className="flex items-center gap-1" role="group" aria-label={t('animation.keySet.title')} data-testid="animation-keyset">
+    <Button size="tiny" variant="ghost" title={t('animation.keySet.select.hint')} onClick={()=>run('animation.keys.selectSet',{layers:layerSetIds(selected)})} data-testid="animation-keyset-select">{t('animation.keySet.select')}</Button>
+    <Button size="tiny" variant="ghost" disabled={!setClip} title={t('animation.keySet.paste.hint')} onClick={()=>run('animation.keys.pasteToSet',{layers:layerSetIds(selected)})} data-testid="animation-keyset-paste">{t('animation.keySet.paste')}</Button>
+    <Button size="tiny" variant="ghost" disabled={!setClip} title={t('animation.keySet.place.hint')} onClick={()=>run('animation.keys.pasteInPlace')} data-testid="animation-keyset-place">{t('animation.keySet.place')}</Button></span>}
    <KeyStretch comp={comp} keys={pruneSelection(state.doc,view.selectedKeys)} styleKeys={pruneStyleKeys(comp.layers,view.styleKeys)} at={at}/>
    <Button size="tiny" variant="ghost" disabled={sel.length===0||!(comp.markers??[]).length} title={t('animation.keys.quantize.hint')} onClick={()=>run('animation.keys.quantize')} data-testid="animation-keys-quantize">{t('animation.keys.quantize')}</Button>
    <Button size="tiny" variant="ghost" disabled={!(comp.markers??[]).some(m=>m.t<at)} onClick={()=>animationSession().setView({playhead:Math.max(...(comp.markers??[]).filter(m=>m.t<at).map(m=>m.t))})}>{t('animation.markers.previous')}</Button>

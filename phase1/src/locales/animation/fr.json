@@ -783,5 +783,15 @@
  "animation.timing.mode.slip": "Faire glisser les clés (slip) d'images",
  "animation.timing.mode.slideTo": "Décaler les calques vers la tête de lecture",
  "animation.bar.hint": "Glisser pour décaler le calque avec ses clés (tous les calques choisis), Maj fait glisser les clés, tirer une extrémité pour couper, Alt sur l'extrémité décale les calques suivants",
- "animation.bar.aria": "Timing de {name} : les flèches la déplacent, Maj pour dix images, Alt fait glisser les clés"
+ "animation.bar.aria": "Timing de {name} : les flèches la déplacent, Maj pour dix images, Alt fait glisser les clés",
+ "animation.keySet.title": "Images clés sur plusieurs calques",
+ "animation.keySet.select": "Choisir les clés du groupe",
+ "animation.keySet.select.hint": "Choisir toutes les clés des calques cochés",
+ "animation.keySet.paste": "Coller dans le groupe",
+ "animation.keySet.paste.hint": "Coller les clés copiées à la tête de lecture sur chaque calque coché (un calque copié) ou sur les calques cochés dans l’ordre (plusieurs)",
+ "animation.keySet.place": "Coller sur place",
+ "animation.keySet.place.hint": "Coller les clés copiées à leurs temps d’origine",
+ "cmd.animation.keys.pasteToSet": "Coller les clés copiées sur plusieurs calques",
+ "cmd.animation.keys.pasteInPlace": "Coller les clés copiées à leurs temps d’origine",
+ "cmd.animation.keys.selectSet": "Choisir toutes les clés de plusieurs calques"
 }

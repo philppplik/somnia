@@ -737,6 +737,35 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.keys.pasteInPlace",
+      "title": "Paste copied keys at their original times",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "in place",
+        "keys",
+        "original",
+        "paste"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "animation.keys.pasteToSet",
+      "title": "Paste copied keys onto several layers",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "in place",
+        "keys",
+        "layers",
+        "paste",
+        "set"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.keys.quantize",
       "title": "Snap selected keys to the nearest marker",
       "category": "Edit",
@@ -757,6 +786,20 @@
         "animation",
         "keyframe",
         "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "animation.keys.selectSet",
+      "title": "Select all keys of several layers",
+      "category": "View",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keys",
+        "layers",
+        "select",
+        "set"
       ],
       "hasEnabled": true
     },

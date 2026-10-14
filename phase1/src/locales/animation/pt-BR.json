@@ -783,5 +783,15 @@
  "animation.timing.mode.slip": "Deslizar chaves (slip) por quadros",
  "animation.timing.mode.slideTo": "Deslocar camadas até a posição atual",
  "animation.bar.hint": "Arraste para deslocar a camada com as chaves (todas as escolhidas), Shift desliza só as chaves, arraste uma ponta para aparar, Alt na ponta empurra as camadas seguintes",
- "animation.bar.aria": "Tempo de {name}: as setas movem, Shift para dez quadros, Alt desliza as chaves"
+ "animation.bar.aria": "Tempo de {name}: as setas movem, Shift para dez quadros, Alt desliza as chaves",
+ "animation.keySet.title": "Quadros-chave em várias camadas",
+ "animation.keySet.select": "Escolher chaves do grupo",
+ "animation.keySet.select.hint": "Escolher todas as chaves das camadas marcadas",
+ "animation.keySet.paste": "Colar no grupo",
+ "animation.keySet.paste.hint": "Colar as chaves copiadas no cursor em cada camada marcada (uma camada copiada) ou nas camadas marcadas em ordem (várias)",
+ "animation.keySet.place": "Colar no lugar",
+ "animation.keySet.place.hint": "Colar as chaves copiadas nos tempos originais",
+ "cmd.animation.keys.pasteToSet": "Colar chaves copiadas em várias camadas",
+ "cmd.animation.keys.pasteInPlace": "Colar chaves copiadas nos tempos originais",
+ "cmd.animation.keys.selectSet": "Escolher todas as chaves de várias camadas"
 }

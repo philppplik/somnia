@@ -783,5 +783,15 @@
  "animation.timing.mode.slip": "Slip keys by frames",
  "animation.timing.mode.slideTo": "Slide layers to playhead",
  "animation.bar.hint": "Drag to slide the layer with its keys (all picked layers), Shift to slip the keys, drag an end to trim, Alt on the end to ripple later layers",
- "animation.bar.aria": "Timing of {name}: arrow keys move it, Shift for ten frames, Alt to slip the keys"
+ "animation.bar.aria": "Timing of {name}: arrow keys move it, Shift for ten frames, Alt to slip the keys",
+ "animation.keySet.title": "Keys on several layers",
+ "animation.keySet.select": "Select set keys",
+ "animation.keySet.select.hint": "Select every key of the picked layers",
+ "animation.keySet.paste": "Paste to set",
+ "animation.keySet.paste.hint": "Paste the copied keys at the playhead on every picked layer (one copied layer) or on the picked layers in order (several)",
+ "animation.keySet.place": "Paste in place",
+ "animation.keySet.place.hint": "Paste the copied keys at their original times",
+ "cmd.animation.keys.pasteToSet": "Paste copied keys onto several layers",
+ "cmd.animation.keys.pasteInPlace": "Paste copied keys at their original times",
+ "cmd.animation.keys.selectSet": "Select all keys of several layers"
 }

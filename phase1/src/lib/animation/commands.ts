@@ -40,6 +40,8 @@ import {onionSpecs} from './onionCommands';
 import {rigSpecs} from './rigCommands';
 import {keyStretchSpecs} from './keyStretchCommands';
 import {layerTimingSpecs} from './layerTimingCommands';
+import {keySetClipSpecs} from './keySetClipCommands';
+import {copySetKeys,getSetClip,setSetClip,pasteSetEdits,pastedSetRefs} from './keySetClip';
 import {EXPORT_PRESETS} from './exportSettings';
 /** Window event the Compositions panel listens for to open the audio file chooser. */
 export const AUDIO_IMPORT_EVENT='somnia:animation-audio-import';
@@ -57,6 +59,8 @@ const modifierSchema={type:'object',properties:{type:{enum:['wiggle','loop','lin
 
 const handleSchema={type:'array',items:{type:'number',minimum:-2,maximum:3},minItems:2,maxItems:2};
 const value={oneOf:[{type:'number'},{type:'array',items:{type:'number'},minItems:2,maxItems:2}]};
+/** Copies to the single-layer clipboard and to the set clipboard; keys from several layers only fill the set one. */
+const copySel=(keys:KeyRef[])=>{const many=new Set(keys.map(k=>k.layer)).size>1;setSetClip(guard(()=>copySetKeys(comp(),keys)));setKeyClip(many?null:guard(()=>copyKeys(doc(),keys)));};
 const guard=<T,>(fn:()=>T):T=>{try{return fn();}catch(e){if(e instanceof EditError||e instanceof ClipError)throw Object.assign(e,{expected:true});throw e;}};
 const selKeys=():KeyRef[]=>{const k=pruneSelection(animationSession().document,animationSession().getState().view.selectedKeys);return k.length?k:fail('Select keys first.');};
 const hasSel=()=>open()&&pruneSelection(animationSession().document,animationSession().getState().view.selectedKeys).length>0;
@@ -294,9 +298,10 @@ export function animationCommandSpecs():CommandSpec<unknown,unknown>[]{
   },object({json:{type:'string',minLength:2,maxLength:300000}}),open,'Edit'),
   spec('animation.keys.selectAll','Select all keys of the layer',(p:{layer?:string}={})=>{const id=layerIdOf(p);animationSession().selectKeys(allKeysOf(doc(),id));},object({layer:layerRef},[]),open,'View'),
   spec('animation.keys.delete','Delete selected keys',(p:{keys?:KeyRef[]}={})=>{const keys=p.keys??selKeys();run({type:'keys.remove',keys});animationSession().selectKeys([]);},object({keys:keyRefs},[]),hasSel),
-  spec('animation.keys.copy','Copy selected keys',()=>{setKeyClip(guard(()=>copyKeys(doc(),selKeys())));},undefined,hasSel),
-  spec('animation.keys.cut','Cut selected keys',()=>{const keys=selKeys();setKeyClip(guard(()=>copyKeys(doc(),keys)));run({type:'keys.remove',keys});animationSession().selectKeys([]);},undefined,hasSel),
+  spec('animation.keys.copy','Copy selected keys',()=>{copySel(selKeys());},undefined,hasSel),
+  spec('animation.keys.cut','Cut selected keys',()=>{const keys=selKeys();copySel(keys);run({type:'keys.remove',keys});animationSession().selectKeys([]);},undefined,hasSel),
   spec('animation.keys.paste','Paste keys at playhead',(p:{layer?:string}={})=>{
+   const set=getSetClip();if(set&&set.groups.length>1){const at=playhead();run(guard(()=>pasteSetEdits(comp(),set,at)));animationSession().selectKeys(pastedSetRefs(comp(),set,at));return;}
    const clip=getKeyClip()??fail('No copied keys. Copy keys first.');const layer=layerIdOf(p);const at=playhead();
    run({type:'keys.paste',layer,items:clip.items,t:at});animationSession().selectKeys(pastedRefs(layer,clip,at,comp().fps));},object({layer:layerRef},[]),()=>open()&&!!getKeyClip()),
   spec('animation.keys.nudge','Move selected keys',(p:{ticks:number})=>{const keys=selKeys();run({type:'keys.move',keys,delta:p.ticks});
@@ -326,7 +331,7 @@ export function animationCommandSpecs():CommandSpec<unknown,unknown>[]{
   spec('animation.export.apng','Export work area as APNG (animated PNG)',()=>exportApng().then(()=>undefined,e=>{throw e instanceof ExportError?Object.assign(e,{expected:true}):e;}),undefined,open,'Project'),
   spec('animation.export.webm','Export work area as WebM video (real time)',()=>exportWebM().then(()=>undefined,e=>{throw e instanceof ExportError?Object.assign(e,{expected:true}):e;}),undefined,open,'Project'),
   spec('animation.playhead.set','Move playhead',(p:{seconds:number})=>animationSession().setView({playhead:secondsToTicks(p.seconds)}),object({seconds:num}),open,'View'),
- ...renderQueueSpecs(),...templateRenameSpecs(),...onionSpecs(),...rigSpecs(),...keyStretchSpecs(),...layerTimingSpecs()] as CommandSpec<unknown,unknown>[];
+ ...renderQueueSpecs(),...templateRenameSpecs(),...onionSpecs(),...rigSpecs(),...keyStretchSpecs(),...layerTimingSpecs(),...keySetClipSpecs()] as CommandSpec<unknown,unknown>[];
 }
 export const ANIMATION_COMMANDS=animationCommandSpecs().map(s=>s.id);
 const DESTRUCTIVE=new Set(['animation.layer.remove','animation.keys.delete','animation.keys.cut','animation.audio.volume.keyRemove','animation.precomp.volume.keyRemove','animation.stroke.keyRemove','animation.color.keyRemove','animation.styleKeys.delete']);
