@@ -30,3 +30,14 @@ test('check respects stable, beta and alpha preferences on the same core version
   channel='alpha';const alpha=await checkForUpdate('12.2.0-beta.2',fetcher);assert.equal(alpha.status==='available'&&alpha.release.tag,'v12.3.0-alpha.1');
  }finally{if(old)Object.defineProperty(globalThis,'localStorage',old);else Reflect.deleteProperty(globalThis,'localStorage');}
 });
+
+test('release gate: ordering is independent of feed order and respects numeric identifiers',()=>{
+ const tags=['v12.2.0-alpha.99','v12.2.0-beta.2','v12.2.0-beta.9','v12.2.0-beta.10','v12.2.0'];
+ for(let shift=0;shift<tags.length;shift++){
+  const order=[...tags.slice(shift),...tags.slice(0,shift)].map(t=>rel(t));
+  assert.equal(newerRelease('12.2.0-alpha.7',order)?.tag,'v12.2.0');
+  assert.equal(newerRelease('12.2.0-beta.9',order.filter(r=>r.tag_name!=='v12.2.0'))?.tag,'v12.2.0-beta.10');
+ }
+ assert.equal(newerRelease('12.2.0',[rel('v12.2.0+rebuilt'),rel('v12.2.0-beta.100')]),null);
+ assert.equal(newerRelease('12.2.0-beta.3',[rel('v99.0.0',{draft:true}),rel('v12.2.0-beta.4')])?.tag,'v12.2.0-beta.4');
+});
