@@ -1,0 +1,26 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {createInterfaceSession} from './session';import {addNode,parseInterfaceDocument,serializeInterfaceDocument} from './model';
+import {addVariable} from './tokens';
+import {startInterfacePrototype,activatePrototype,restartPrototype,prototypeVariableState} from './prototype';
+import {setLinkCondition,setLinkElseTarget,addLinkSetter,setLinkSetterValue,removeLinkSetter,MAX_LINK_SETTERS} from './prototypeVariables';
+function scene(){const s=createInterfaceSession();s.start();let a='',b='',c='',button='',color='',count='';s.transact(d=>{a=addNode(d,d.pages[0].id,'frame');b=addNode(d,d.pages[0].id,'frame');c=addNode(d,d.pages[0].id,'frame');button=addNode(d,d.pages[0].id,'rectangle',a);d.prototypeStartFrameId=a;color=addVariable(d,'color','Theme');count=addVariable(d,'number','Count');d.nodes.find(n=>n.id===button)!.prototypeLinks=[{trigger:'click',targetFrameId:b}];});return {s,a,b,c,button,color,count};}
+test('conditional link follows the main target only when the variable matches, else target otherwise',()=>{const {s,a,b,c,button,color}=scene();s.transact(d=>{setLinkCondition(d,button,'click',color,'#7756e8');setLinkElseTarget(d,button,'click',c);});
+ let p=startInterfacePrototype(s.get().document!);p=activatePrototype(p,button,'click');assert.equal(p.frameId,b);
+ s.transact(d=>{d.variables![0].value='#202124';});p=restartPrototype(startInterfacePrototype(s.get().document!));p=activatePrototype(p,button,'click');assert.equal(p.frameId,c);
+ const round=parseInterfaceDocument(serializeInterfaceDocument(s.get().document!));assert.equal(round.nodes.find(n=>n.id===button)!.prototypeLinks![0].condition!.equals,'#202124'.length?'#7756e8':'');
+ assert.throws(()=>s.transact(d=>setLinkElseTarget(d,button,'click',button)));assert.throws(()=>s.transact(d=>setLinkCondition(d,button,'click','missing','x')));});
+test('condition without else keeps the frame and reports a notice; number setters coerce and validate',()=>{const {s,a,b,button,color,count}=scene();s.transact(d=>{setLinkCondition(d,button,'click',color,'#ffffff');addLinkSetter(d,button,'click',count);setLinkSetterValue(d,button,'click',count,'42');});
+ let p=startInterfacePrototype(s.get().document!);p=activatePrototype(p,button,'click');assert.equal(p.frameId,a);assert.ok(p.notice.includes('Condition not met'));assert.equal(p.variables[count],42);assert.equal(prototypeVariableState(p).find(v=>v.id===count)!.changed,true);
+ assert.throws(()=>s.transact(d=>setLinkSetterValue(d,button,'click',count,'abc')));assert.throws(()=>s.transact(d=>setLinkSetterValue(d,button,'click',count,'')));assert.throws(()=>s.transact(d=>setLinkCondition(d,button,'click',count,'1e999')));});
+test('setters apply before the condition is evaluated and same-frame links stay put',()=>{const {s,a,button,color,count}=scene();s.transact(d=>{setLinkCondition(d,button,'click',color,'#7756e8');addLinkSetter(d,button,'click',count);setLinkSetterValue(d,button,'click',count,'7');d.nodes.find(n=>n.id===button)!.prototypeLinks![0].targetFrameId=a;});
+ let p=startInterfacePrototype(s.get().document!);const steps=p.steps;p=activatePrototype(p,button,'click');assert.equal(p.frameId,a);assert.equal(p.variables[count],7);assert.equal(p.history.length,0);assert.equal(p.steps,steps+1);
+ p=restartPrototype(p);assert.equal(p.variables[count],16);assert.equal(prototypeVariableState(p).every(v=>!v.changed),true);});
+test('setter cap is bounded and remove cleans up; every edit is one undo',()=>{const {s,button,color,count}=scene();s.transact(d=>{addVariable(d,'number','V3');addVariable(d,'number','V4');addVariable(d,'number','V5');});
+ const ids=s.get().document!.variables!.map(v=>v.id);
+ for(let i=0;i<MAX_LINK_SETTERS;i++)s.transact(d=>addLinkSetter(d,button,'click',ids[i]));
+ assert.equal(s.get().document!.nodes.find(n=>n.id===button)!.prototypeLinks![0].setVariables!.length,MAX_LINK_SETTERS);
+ assert.throws(()=>s.transact(d=>addLinkSetter(d,button,'click',ids[4])));assert.throws(()=>s.transact(d=>addLinkSetter(d,button,'click',ids[0])));
+ s.transact(d=>removeLinkSetter(d,button,'click',ids[0]));assert.equal(s.get().document!.nodes.find(n=>n.id===button)!.prototypeLinks![0].setVariables!.length,3);
+ s.undo();assert.equal(s.get().document!.nodes.find(n=>n.id===button)!.prototypeLinks![0].setVariables!.length,MAX_LINK_SETTERS);
+ for(let i=0;i<MAX_LINK_SETTERS;i++)s.undo();assert.equal(s.get().document!.nodes.find(n=>n.id===button)!.prototypeLinks![0].setVariables,undefined);
+ s.transact(d=>{setLinkCondition(d,button,'click',color,'#7756e8');});s.undo();assert.equal(s.get().document!.nodes.find(n=>n.id===button)!.prototypeLinks![0].condition,undefined);});
