@@ -1,0 +1,36 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import {Doc} from 'yjs';
+import {Awareness,applyAwarenessUpdate,encodeAwarenessUpdate} from 'y-protocols/awareness';
+import {announceSheetSel,peerSheetSels,SEL_FIELD} from './sheetsPresence';
+const pair=()=>{const a=new Awareness(new Doc()),b=new Awareness(new Doc());return{a,b};};
+const push=(from:Awareness,to:Awareness)=>{const u=encodeAwarenessUpdate(from,[from.clientID]);applyAwarenessUpdate(to,u,'t');};
+test.after(()=>{});
+test('local selection is visible to the peer, clearing removes it',()=>{
+ const{a,b}=pair();
+ announceSheetSel(a,'budget.xlsx',0,{r0:2,c0:1,r1:2,c1:1});
+ push(a,b);
+ const got=peerSheetSels(b,'budget.xlsx');
+ assert.equal(got.length,1);
+ assert.deepEqual(got[0].sel,{r0:2,c0:1,r1:2,c1:1});
+ assert.equal(got[0].sheet,0);
+ announceSheetSel(a,null,0,null);
+ push(a,b);
+ assert.equal(peerSheetSels(b,'budget.xlsx').length,0);
+ a.destroy();b.destroy();});
+test('selections on another file and malformed state are dropped',()=>{
+ const{a,b}=pair();
+ announceSheetSel(a,'other.xlsx',0,{r0:0,c0:0,r1:0,c1:0});
+ a.setLocalStateField('user',{name:'  Ann  ',color:'not-a-hex'});
+ push(a,b);
+ assert.equal(peerSheetSels(b,'budget.xlsx').length,0);
+ a.setLocalStateField(SEL_FIELD,{file:'budget.xlsx',sheet:0,r0:-1,c0:0,r1:0,c1:0});
+ push(a,b);
+ assert.equal(peerSheetSels(b,'budget.xlsx').length,0);
+ a.setLocalStateField(SEL_FIELD,{file:'budget.xlsx',sheet:0,r0:3,c0:5,r1:1,c1:2});
+ push(a,b);
+ const norm=peerSheetSels(b,'budget.xlsx');
+ assert.equal(norm.length,1);
+ assert.deepEqual(norm[0].sel,{r0:1,c0:2,r1:3,c1:5});
+ assert.equal(norm[0].user.name,'Ann');
+ a.destroy();b.destroy();});

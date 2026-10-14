@@ -32,6 +32,7 @@ import {getCollab,onSessionChange} from '../../lib/collab/session';
 import {shareSheetsFile,adoptSheetsFile} from '../../lib/collab/office/officeSession';
 import {openSheetsModel,sheetsModelMeta,sharedSheetList,type SheetsModel} from '../../lib/collab/office/sheetsModel';
 import {SheetsCollabBinding} from '../../lib/collab/office/sheetsBinding';
+import {announceSheetSel,peerSheetSels,type PeerSheetPresence} from '../../lib/collab/office/sheetsPresence';
 import {setSheetsSelection} from '../../lib/sheets/sheetsStore';
 const HEAD_W=48,HEAD_H=24;
 type Phase={kind:'loading'}|{kind:'error';message:string}|{kind:'ready'};
@@ -62,12 +63,16 @@ function Workbook({item}:{item:MediaItem}){
  const collab=useRef<{binding:SheetsCollabBinding;model:SheetsModel}|null>(null);
  useEffect(()=>{if(phase.kind!=='ready'||!original.current||!book)return;
   let disposed=false;
+  let sync:()=>void=()=>undefined;
   const finish=(m:SheetsModel)=>{
    const eng=engine.current;if(!eng||disposed)return;
    const names=sharedSheetList(m);
    const binding=new SheetsCollabBinding(m.doc,item.name,{engine:eng,sheetIndexOf:id=>names.findIndex(x=>x.id===id)});
    for(const sh of names)binding.replay(sh.id);
-   collab.current={binding,model:m};setRev(x=>x+1);};
+   collab.current={binding,model:m};
+   sync=()=>setPeers(peerSheetSels(m.doc.awareness,item.name).filter(x=>x.sheet>=0));
+   m.doc.awareness.on('change',sync);sync();
+   setRev(x=>x+1);};
   const attach=async()=>{
    const c=getCollab();if(!c||disposed||collab.current)return;
    const bytes=original.current;if(!bytes)return;
@@ -79,8 +84,14 @@ function Workbook({item}:{item:MediaItem}){
     const m=await shareSheetsFile(c.doc,item.name,bytes,book.sheets.map(x=>x.name));
     if(!disposed)finish(m);}};
   void attach();
-  const off=onSessionChange(()=>{if(!getCollab()){collab.current?.binding.destroy();collab.current=null;}else void attach();});
-  return()=>{disposed=true;off();collab.current?.binding.destroy();collab.current=null;};},[phase,book,item.name]);
+  const off=onSessionChange(()=>{if(!getCollab()){if(collab.current){collab.current.model.doc.awareness.off('change',sync);collab.current.binding.destroy();collab.current=null;}setPeers([]);}else void attach();});
+  return()=>{disposed=true;off();if(collab.current){collab.current.model.doc.awareness.off('change',sync);collab.current.binding.destroy();collab.current=null;}setPeers([]);};},[phase,book,item.name]);
+ const [peers,setPeers]=useState<PeerSheetPresence[]>([]);
+ // Presence: publish my selection while collab is live; cleared on sheet switch/unmount by the announce(null) cleanup.
+ useEffect(()=>{const a=collab.current?.model.doc.awareness;if(!a)return;
+  const lo={row:Math.min(sel.row,(ext??sel).row),col:Math.min(sel.col,(ext??sel).col)},hi={row:Math.max(sel.row,(ext??sel).row),col:Math.max(sel.col,(ext??sel).col)};
+  announceSheetSel(a,item.name,sheet,{r0:lo.row,c0:lo.col,r1:hi.row,c1:hi.col});
+  return()=>announceSheetSel(a,null,0,null);},[sel,ext,sheet,rev,item.name]);
  /** Collab route: edit through the shared model when a session is live; returns false to fall back to the plain engine call. */
  const collabEdit=async(fn:(b:SheetsCollabBinding,sheetId:string)=>Promise<void>):Promise<boolean>=>{
   const c=collab.current;if(!c)return false;
@@ -251,6 +262,9 @@ function Workbook({item}:{item:MediaItem}){
     </div>
     <div style={{position:'sticky',left:0,zIndex:1,width:HEAD_W,height:0}}>
      {[...new Set([...Array.from({length:geo.freezeRows},(_,i)=>i),...Array.from({length:win.rows},(_,i)=>win.row+i)])].map(r=><div key={'r'+r} role="rowheader" aria-rowindex={r+1} className="border-b border-r border-subtle bg-hover text-center text-[11px] leading-6 text-ink-3" style={{position:'absolute',left:0,top:geo.rowTop(r)+(r<geo.freezeRows?view.top:0),zIndex:r<geo.freezeRows?2:undefined,width:HEAD_W,height:geo.rowHeight(r),display:geo.rowHeight(r)===0?'none':undefined}}>{r+1}</div>)}
+     {peers.filter(p=>p.sheet===sheet).map(p=>{const left=HEAD_W+geo.colLeft(p.sel.c0),top=HEAD_H+geo.rowTop(p.sel.r0),w=geo.colLeft(p.sel.c1)+geo.colWidth(p.sel.c1)-geo.colLeft(p.sel.c0),h=geo.rowTop(p.sel.r1)+geo.rowHeight(p.sel.r1)-geo.rowTop(p.sel.r0);
+      return <div key={'peer'+p.clientId} aria-hidden style={{position:'absolute',left,top,width:w,height:h,border:'2px solid '+p.user.color,pointerEvents:'none',zIndex:4}}>
+       <span className="absolute -top-5 left-0 rounded-sm px-1 text-[10px] leading-4 text-white" style={{background:p.user.color}}>{p.user.name}</span></div>;})}
     </div>
     <div aria-hidden="true" className="border-b border-r border-subtle bg-hover" style={{position:'sticky',left:0,top:0,zIndex:3,width:HEAD_W,height:HEAD_H,marginTop:-HEAD_H}}/>
     {renderCells()}
