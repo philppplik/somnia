@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {unzipSync,zipSync,strFromU8,strToU8} from 'fflate';
-import {readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
+import {groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
 import {readRuns,makeEditedCopy} from './editCopy';
 import {png,jpeg} from './imageFixtures';
 
@@ -276,7 +276,7 @@ test('setShapeBounds refuses rotated, flipped, picture, group, inherited and geo
   assert.throws(()=>setShapeBounds(flip,256,2,{...B2},{...B2,x:5}),/\(flipped\)/);
   const pic=deck(2,{picture:true});assert.equal(boundsEditIssue(readDeckModel(pic).slides[0].shapes[2]),'noBounds');
   assert.throws(()=>setShapeBounds(pic,256,9,B2,B2),/cannot be moved or resized/);
-  assert.equal(boundsEditIssue({id:1,name:'',kind:'group',runCount:0,parentId:null,bounds:null,ph:null}),'notText');
+  assert.equal(boundsEditIssue({id:1,name:'',kind:'table',runCount:0,parentId:null,bounds:null,ph:null}),'notText');assert.equal(boundsEditIssue({id:1,name:'',kind:'group',runCount:0,parentId:null,bounds:null,ph:null}),'noBounds');
   assert.equal(boundsEditIssue({id:1,name:'',kind:'text',runCount:0,parentId:5,bounds:null,ph:null}),'nested');
   assert.equal(boundsEditIssue({id:1,name:'',kind:'text',runCount:0,parentId:null,bounds:{...B2,rot:0,flipH:false,flipV:false,source:'layout'},ph:null}),'inherited');
   const noXfrm=patchPart(deck(2),'ppt/slides/slide1.xml',x=>x.replace(/<a:xfrm>[\s\S]*?<\/a:xfrm>/,''));
@@ -527,4 +527,38 @@ test('layouts expose bounded placeholder frames for previews (own or inherited f
   assert.ok(ls.every(l=>l.boxes.length<=l.placeholders.length),'never more frames than placeholders');
   const corpus=readLayouts(readFileSync(fileURLToPath(new URL('../../../slides-engine/corpus/google-slides-effects-transitions-2026-05-08.pptx',import.meta.url))));
   assert.ok(corpus.some(l=>l.boxes.length>0),'real Google Slides deck gives frames');
+});
+
+test('group and ungroup keep children, move as a unit, and fail closed',()=>{
+  let b=deck(2);const sid=readDeckModel(b).slides[0].id;
+  b=addTextBox(b,sid,'One');b=addTextBox(b,sid,'Two');
+  const m0=readDeckModel(b),boxes=m0.slides[0].shapes.filter(s=>!s.ph&&s.kind==='text'),ids=boxes.slice(-2).map(s=>s.id);
+  assert.equal(ids.length,2);
+  assert.throws(()=>groupShapes(b,sid,[ids[0]]),/between 2 and 50/);
+  assert.throws(()=>groupShapes(b,sid,[ids[0],ids[0]]),/different shapes/);
+  assert.throws(()=>groupShapes(b,sid,[ids[0],99999]),/no longer exists/);
+  const ph=m0.slides[0].shapes.find(s=>s.ph);if(ph)assert.throws(()=>groupShapes(b,sid,[ids[0],ph.id]),/Placeholders|cannot be grouped/);
+  const g=groupShapes(b,sid,ids),m1=readDeckModel(g),gs=m1.slides[0].shapes,grp=gs.find(s=>s.kind==='group')!;
+  assert.ok(grp&&grp.parentId===null);assert.deepEqual(ids.map(i=>gs.find(s=>s.id===i)!.parentId),[grp.id,grp.id]);
+  assert.deepEqual(m1.runs.map(r=>r.text),m0.runs.map(r=>r.text));
+  const bs=ids.map(i=>m0.slides[0].shapes.find(s=>s.id===i)!.bounds!);
+  assert.equal(grp.bounds!.x,Math.min(...bs.map(x=>x.x)));assert.equal(grp.bounds!.w,Math.max(...bs.map(x=>x.x+x.w))-grp.bounds!.x);
+  assert.throws(()=>groupShapes(g,sid,[ids[0],ids[1]]),/cannot be grouped \(nested\)|no longer exists/);
+  // plain ungroup restores the original shapes exactly
+  const u=ungroupShape(g,sid,grp.id),m2=readDeckModel(u);
+  assert.deepEqual(m2.slides[0].shapes.map(s=>[s.id,s.parentId,JSON.stringify(s.bounds)]),m0.slides[0].shapes.map(s=>[s.id,s.parentId,JSON.stringify(s.bounds)]));
+  assert.throws(()=>ungroupShape(u,sid,ids[0]),/not a group/);
+  // a group moves as a unit and its children keep their own coordinates
+  const gb=grp.bounds!,to={x:gb.x+127000,y:gb.y+254000,w:gb.w,h:gb.h};
+  const mv=setShapeBounds(g,sid,grp.id,{x:gb.x,y:gb.y,w:gb.w,h:gb.h},to),mvm=readDeckModel(mv).slides[0].shapes;
+  assert.equal(mvm.find(s=>s.id===grp.id)!.bounds!.x,to.x);
+  // ungrouping a moved (not resized) group applies the move to the children
+  const mu=readDeckModel(ungroupShape(mv,sid,grp.id)).slides[0].shapes;
+  assert.equal(mu.find(s=>s.id===ids[0])!.bounds!.x,bs[0].x+127000);
+  assert.equal(mu.find(s=>s.id===ids[0])!.bounds!.y,bs[0].y+254000);
+  // a resized group (children scaled by the renderer) is refused rather than changed
+  const rs=setShapeBounds(g,sid,grp.id,{x:gb.x,y:gb.y,w:gb.w,h:gb.h},{x:gb.x,y:gb.y,w:gb.w+127000,h:gb.h});
+  assert.throws(()=>ungroupShape(rs,sid,grp.id),/Resized groups/);
+  const rot=patchPart(g,'ppt/slides/slide1.xml',x=>x.replace(/<p:grpSpPr><a:xfrm>/,'<p:grpSpPr><a:xfrm rot="900000">'));
+  assert.throws(()=>ungroupShape(rot,sid,grp.id),/Rotated or flipped/);
 });

@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-446 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+448 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -343,6 +343,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `slides.duplicateSlide` | Duplicate slide | Edit | slides |  |
 | `slides.editText` | Apply slide text | Edit | slides |  |
 | `slides.formatText` | Format text box text | Edit | slides |  |
+| `slides.groupShapes` | Group selected shapes | Edit | slides |  |
 | `slides.insertImage` | Insert image | Edit | slides |  |
 | `slides.loadThumbnails` | Load slide thumbnails | View | slides |  |
 | `slides.moveSlide` | Move slide | Edit | slides |  |
@@ -370,6 +371,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `slides.toggleShapeSelection` | Add or remove shape from selection | View | slides |  |
 | `slides.transformSelection` | Move or resize selected shapes together | Edit | slides |  |
 | `slides.undo` | Undo slide text | Edit | slides |  |
+| `slides.ungroupShape` | Ungroup selected group | Edit | slides |  |
 | `sound.clip.activate` | Activate audio clip | View | sound |  |
 | `sound.export` | Export audio WAV copy | Project | sound |  |
 | `sound.export.open` | Export audio... | Project | sound |  |

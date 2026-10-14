@@ -46,6 +46,8 @@ export function SlidesTextToolbar(){
         {ALIGN_MODES.map(m=><MenuItem key={m} onClick={()=>run('slides.alignSelection',{mode:m,to:'slide'})}>{t(`slides.align.${m}`)}</MenuItem>)}
         {multi&&ALIGN_MODES.map(m=><MenuItem key={`sel-${m}`} onClick={()=>run('slides.alignSelection',{mode:m,to:'selection'})}>{t(`slides.alignSel.${m}`)}</MenuItem>)}
       </MenuContent></Menu>
+    <Button size="compact" variant="outline" disabled={!ready||(valid?.more.length??0)<1} onClick={()=>run('slides.groupShapes',{})}>{t('slides.group')}</Button>
+    <Button size="compact" variant="outline" disabled={!ready||multi||shape?.kind!=='group'} onClick={()=>run('slides.ungroupShape',{})}>{t('slides.ungroup')}</Button>
     <Menu><MenuTrigger render={<Button size="compact" variant="outline" disabled={!ready||!tr}>{t('slides.transition')}{tr?`: ${t(tr.other&&!tr.editable?'slides.transition.other':`slides.transition.${tr.transition.kind}`)}`:''}</Button>}/>
       <MenuContent>{tr&&!tr.editable?<MenuItem disabled>{t('slides.transition.other')}</MenuItem>:tr&&<>
         {TRANSITION_KINDS.map(k=><MenuItem key={k} onClick={()=>setTr({kind:k,dir:tr.transition.dir,speed:tr.transition.speed})}>{tr.transition.kind===k?'• ':''}{t(`slides.transition.${k}`)}</MenuItem>)}

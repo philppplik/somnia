@@ -467,7 +467,7 @@ export const MIN_BOX_EMU=127000,MAX_COORD_EMU=1e10;
 /** Why a shape cannot be moved or resized, or null when it can. Pure; used by UI and package code. */
 export function boundsEditIssue(s:ShapeRef):'notText'|'nested'|'noBounds'|'inherited'|'rotated'|'flipped'|null{
   if(s.parentId!==null)return 'nested';
-  if(s.kind!=='text'&&s.kind!=='picture')return 'notText';
+  if(s.kind!=='text'&&s.kind!=='picture'&&s.kind!=='group')return 'notText';
   if(!s.bounds)return 'noBounds';
   if(s.bounds.source!=='slide')return 'inherited';
   if(s.bounds.rot!==0)return 'rotated';
@@ -475,7 +475,7 @@ export function boundsEditIssue(s:ShapeRef):'notText'|'nested'|'noBounds'|'inher
   return null;
 }
 const sameBox=(a:BoundsBox,b:BoundsBox)=>a.x===b.x&&a.y===b.y&&a.w===b.w&&a.h===b.h;
-function xfrmTags(xml:string,shapeId:number,spTag='p:sp',nvTag='p:nvSpPr'):{off:RegExpMatchArray;ext:RegExpMatchArray}{
+function xfrmTags(xml:string,shapeId:number,spTag='p:sp',nvTag='p:nvSpPr',propTag='p:spPr'):{off:RegExpMatchArray;ext:RegExpMatchArray}{
   const stack:{tag:string;sp?:boolean;id?:number}[]=[];let off:RegExpMatchArray|null=null,ext:RegExpMatchArray|null=null,found=0;
   for(const m of xml.matchAll(TAG)){
     if(m[2]===undefined)continue;
@@ -485,7 +485,7 @@ function xfrmTags(xml:string,shapeId:number,spTag='p:sp',nvTag='p:nvSpPr'):{off:
     if(tag===spTag&&parent?.tag==='p:spTree'){stack.push({tag,sp:true});continue;}
     if(tag==='p:cNvPr'&&parent?.tag===nvTag&&stack.at(-2)?.sp&&Number(attr(m[3],'id'))===shapeId){stack.at(-2)!.id=shapeId;found++;}
     const sp=stack.find(s=>s.sp&&s.id===shapeId);
-    if(sp&&parent?.tag==='a:xfrm'&&stack.at(-2)?.tag==='p:spPr'&&stack.at(-3)===sp){
+    if(sp&&parent?.tag==='a:xfrm'&&stack.at(-2)?.tag===propTag&&stack.at(-3)===sp){
       if(tag==='a:off'){if(off)throw Error('Shape has more than one offset');off=m;}
       if(tag==='a:ext'){if(ext)throw Error('Shape has more than one extent');ext=m;}
     }
@@ -512,7 +512,7 @@ export function setShapeBounds(bytes:Uint8Array,slideId:number,shapeId:number,ex
   if(next.x<-next.w||next.y<-next.h||next.x>size.cx||next.y>size.cy)throw Error('Position is outside the slide');
   if(sameBox(next,expected))return bytes;
   const zip=openPackage(bytes),xml=text(zip,slide.part);
-  const {off,ext}=shape.kind==='picture'?xfrmTags(xml,shapeId,'p:pic','p:nvPicPr'):xfrmTags(xml,shapeId);
+  const {off,ext}=shape.kind==='picture'?xfrmTags(xml,shapeId,'p:pic','p:nvPicPr'):shape.kind==='group'?xfrmTags(xml,shapeId,'p:grpSp','p:nvGrpSpPr','p:grpSpPr'):xfrmTags(xml,shapeId);
   const put=(tag:string,a:string,av:number,b:string,bv:number)=>tag.replace(new RegExp(`(\\s${a}=")[^"]*(")`),`$1${av}$2`).replace(new RegExp(`(\\s${b}=")[^"]*(")`),`$1${bv}$2`);
   const o=off[0],e=ext[0],oi=off.index!,ei=ext.index!;
   const [first,second]=oi<ei?[{i:oi,old:o,neu:put(o,'x',next.x,'y',next.y)},{i:ei,old:e,neu:put(e,'cx',next.w,'cy',next.h)}]:[{i:ei,old:e,neu:put(e,'cx',next.w,'cy',next.h)},{i:oi,old:o,neu:put(o,'x',next.x,'y',next.y)}];
@@ -898,6 +898,102 @@ export function setSlideTransition(bytes:Uint8Array,slideId:number,next:SlideTra
   if(!as||as.problems.length||JSON.stringify(as.shapes)!==JSON.stringify(slide.shapes)||after.runs.length!==model.runs.length)throw Error('Edited deck failed verification');
   const got=readSlideTransition(res,slideId);
   if(got.transition.kind!==next.kind||(next.kind!=='none'&&got.transition.speed!==next.speed))throw Error('Edited deck failed verification');
+  const re=unzipSync(res);
+  for(const name of Object.keys(zip))if(name!==slide.part&&(!re[name]||re[name].length!==zip[name].length||re[name].some((v,i)=>v!==zip[name][i])))throw Error('Edited deck changed an unrelated part');
+  return res;
+}
+
+/* ---------------------------------------------------------------------------------------
+ * Group / ungroup (top-level shapes only). Grouping keeps every child coordinate: the group's
+ * child space equals its own space (chOff=off, chExt=ext). Ungrouping is only done for groups
+ * that are not scaled, rotated or flipped (a pure move is applied to the children); anything
+ * else fails closed instead of changing how the slide looks.
+ * ------------------------------------------------------------------------------------- */
+const MAX_GROUP_CHILDREN=MAX_MULTI_EDIT;
+function referencedByTiming(xml:string,id:number):boolean{
+  return new RegExp(`\\b(?:spid|id)="${id}"(?![\\d])`).test(xml.replace(/<p:cNvPr\b[^>]*>/g,''));
+}
+/** Groups two or more top-level shapes into one p:grpSp placed where the topmost selected shape was. */
+export function groupShapes(bytes:Uint8Array,slideId:number,shapeIds:readonly number[]):Uint8Array{
+  if(shapeIds.length<2||shapeIds.length>MAX_GROUP_CHILDREN||new Set(shapeIds).size!==shapeIds.length)throw Error(`Group between 2 and ${MAX_GROUP_CHILDREN} different shapes`);
+  const model=readDeckModel(bytes),slide=model.slides.find(s=>s.id===slideId);
+  if(!slide)throw Error('Slide no longer exists');if(slide.problems.length)throw Error('This slide has unsupported structure');
+  if(slide.shapes.length>=MAX_SHAPES_PER_SLIDE)throw Error(`A slide can hold at most ${MAX_SHAPES_PER_SLIDE} shapes`);
+  const zip=openPackage(bytes),xml=text(zip,slide.part),kids=topLevelShapes(xml);
+  if(new Set(kids.map(k=>k.id)).size!==kids.length)throw Error('Duplicate shape ids on this slide');
+  const chosen=kids.filter(k=>shapeIds.includes(k.id));
+  if(chosen.length!==shapeIds.length)throw Error('Shape no longer exists');
+  let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
+  for(const k of chosen){
+    const sh=slide.shapes.find(s=>s.id===k.id&&s.parentId===null)!,issue=boundsEditIssue(sh);
+    if(issue)throw Error(`A selected shape cannot be grouped (${issue})`);
+    if(sh.ph)throw Error('Placeholders cannot be grouped');
+    const b=sh.bounds!;x0=Math.min(x0,b.x);y0=Math.min(y0,b.y);x1=Math.max(x1,b.x+b.w);y1=Math.max(y1,b.y+b.h);
+  }
+  const id=nextShapeId(slide),w=x1-x0,h=y1-y0;
+  if(!(w>0&&h>0)||![x0,y0,w,h].every(Number.isSafeInteger))throw Error('Selected shapes have no usable bounds');
+  const last=chosen[chosen.length-1],inner=chosen.map(k=>xml.slice(k.start,k.end)).join('');
+  const group=`<p:grpSp><p:nvGrpSpPr><p:cNvPr id="${id}" name="Group ${id-1}"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr><a:xfrm><a:off x="${x0}" y="${y0}"/><a:ext cx="${w}" cy="${h}"/><a:chOff x="${x0}" y="${y0}"/><a:chExt cx="${w}" cy="${h}"/></a:xfrm></p:grpSpPr>${inner}</p:grpSp>`;
+  let out=xml;
+  for(const k of [...chosen].reverse())out=out.slice(0,k.start)+(k===last?group:'')+out.slice(k.end);
+  const res=repack(zip,{[slide.part]:out}),after=readDeckModel(res),as=after.slides.find(s=>s.id===slideId);
+  if(!as||as.problems.length||as.shapes.length!==slide.shapes.length+1)throw Error('Edited deck failed verification');
+  const g=as.shapes.find(s=>s.id===id);  if(!g||g.kind!=='group'||!g.bounds||g.bounds.x!==x0||g.bounds.y!==y0||g.bounds.w!==w||g.bounds.h!==h)throw Error('Edited deck failed verification');
+  for(const s of slide.shapes){const a=as.shapes.find(x=>x.id===s.id);
+    // Shapes inside a group report no slide bounds (their coordinates are in the group's child space).
+    const inside=shapeIds.includes(s.id);
+    if(!a||a.kind!==s.kind||a.runCount!==s.runCount||(!inside&&JSON.stringify(a.bounds)!==JSON.stringify(s.bounds))||(inside&&a.bounds!==null)||a.parentId!==(inside?id:s.parentId))throw Error('Edited deck failed verification');}
+  if(after.runs.length!==model.runs.length||after.runs.map(r=>r.text).join('\n')!==model.runs.map(r=>r.text).join('\n'))throw Error('Edited deck failed verification');
+  const re=unzipSync(res);
+  for(const name of Object.keys(zip))if(name!==slide.part&&(!re[name]||re[name].length!==zip[name].length||re[name].some((v,i)=>v!==zip[name][i])))throw Error('Edited deck changed an unrelated part');
+  return res;
+}
+/** Direct child shape ranges of one p:grpSp element. Unknown structure throws. */
+function groupChildren(xml:string,start:number,end:number):{id:number;start:number;end:number}[]{
+  const out:{id:number;start:number;end:number}[]=[],stack:{tag:string;start?:number;id?:number}[]=[];
+  for(const m of xml.slice(start,end).matchAll(TAG)){
+    if(m[2]===undefined)continue;const tag=m[2],at=start+m.index!;
+    if(m[1]==='/'){const top=stack.pop();if(top?.start!==undefined&&stack.length===1&&TOP_SHAPE.has(top.tag)){if(top.id===undefined)throw Error('Shape without an id');out.push({id:top.id,start:top.start,end:at+m[0].length});}continue;}
+    const parent=stack.at(-1),self=m[4]==='/';
+    if(stack.length===0){if(tag!=='p:grpSp')throw Error('Not a group');stack.push({tag});continue;}
+    if(stack.length===1&&!['p:nvGrpSpPr','p:grpSpPr','p:extLst'].includes(tag)&&!TOP_SHAPE.has(tag))throw Error('This group has structure that cannot be ungrouped');
+    if(stack.length===1&&TOP_SHAPE.has(tag)){if(self)throw Error('Empty shape element');stack.push({tag,start:at});continue;}
+    if(tag==='p:cNvPr'&&parent&&stack.length>=3&&stack.at(-2)?.start!==undefined&&parent.tag===NV_OF[stack.at(-2)!.tag])stack.at(-2)!.id=Number(attr(m[3],'id'));
+    if(!self)stack.push({tag});
+  }
+  return out;
+}
+/** Dissolves one top-level group into its children, keeping their position and order. */
+export function ungroupShape(bytes:Uint8Array,slideId:number,groupId:number):Uint8Array{
+  const model=readDeckModel(bytes),slide=model.slides.find(s=>s.id===groupId&&false)??model.slides.find(s=>s.id===slideId);
+  if(!slide)throw Error('Slide no longer exists');if(slide.problems.length)throw Error('This slide has unsupported structure');
+  const g=slide.shapes.find(s=>s.id===groupId&&s.parentId===null);
+  if(!g||g.kind!=='group')throw Error('Shape is not a group');
+  const zip=openPackage(bytes),xml=text(zip,slide.part),kid=topLevelShapes(xml).find(k=>k.id===groupId);
+  if(!kid)throw Error('Shape no longer exists');
+  if(referencedByTiming(xml,groupId))throw Error('This group is referenced by an animation or connector');
+  const gx=xml.slice(kid.start,kid.end),f=/<p:grpSpPr>\s*<a:xfrm((?:[^>"']|"[^"]*"|'[^']*')*)>\s*<a:off\s+x="(-?\d+)"\s+y="(-?\d+)"\s*\/>\s*<a:ext\s+cx="(\d+)"\s+cy="(\d+)"\s*\/>\s*<a:chOff\s+x="(-?\d+)"\s+y="(-?\d+)"\s*\/>\s*<a:chExt\s+cx="(\d+)"\s+cy="(\d+)"\s*\/>\s*<\/a:xfrm>/.exec(gx);
+  if(!f)throw Error('This group has a transform that cannot be ungrouped here');
+  if(/\s(?:rot|flipH|flipV)="(?!0")(?!false")[^"]*"/.test(f[1]))throw Error('Rotated or flipped groups cannot be ungrouped here');
+  const [ox,oy,cx,cy,hx,hy,hw,hh]=f.slice(2).map(Number);
+  if(cx!==hw||cy!==hh)throw Error('Resized groups cannot be ungrouped here without changing their look');
+  const dx=ox-hx,dy=oy-hy,kids=groupChildren(xml,kid.start,kid.end);
+  if(kids.length<1)throw Error('The group is empty');
+  const pieces=kids.map(k=>{
+    let s=xml.slice(k.start,k.end);
+    if(dx||dy){let hit=false;s=s.replace(/<a:off\s+x="(-?\d+)"\s+y="(-?\d+)"\s*\/>/,(_m,x,y)=>{hit=true;return `<a:off x="${Number(x)+dx}" y="${Number(y)+dy}"/>`;});if(!hit)throw Error('A grouped shape has no own position');}
+    return s;
+  });
+  const out=xml.slice(0,kid.start)+pieces.join('')+xml.slice(kid.end);
+  const res=repack(zip,{[slide.part]:out}),after=readDeckModel(res),as=after.slides.find(s=>s.id===slideId);
+  if(!as||as.problems.length||as.shapes.length!==slide.shapes.length-1||as.shapes.some(s=>s.id===groupId))throw Error('Edited deck failed verification');
+  const childIds=new Set(kids.map(k=>k.id));
+  const own=new Map(kids.map(k=>{const m=/<a:off\s+x="(-?\d+)"\s+y="(-?\d+)"\s*\/>\s*<a:ext\s+cx="(\d+)"\s+cy="(\d+)"/.exec(xml.slice(k.start,k.end));return [k.id,m?{x:+m[1]+dx,y:+m[2]+dy,w:+m[3],h:+m[4]}:null];}));
+  for(const s of slide.shapes){if(s.id===groupId)continue;const a=as.shapes.find(x=>x.id===s.id);
+    if(!a||a.kind!==s.kind||a.runCount!==s.runCount)throw Error('Edited deck failed verification');
+    if(childIds.has(s.id)){const e=own.get(s.id);if(a.parentId!==null||(e?!a.bounds||a.bounds.x!==e.x||a.bounds.y!==e.y||a.bounds.w!==e.w||a.bounds.h!==e.h:false))throw Error('Edited deck failed verification');}
+    else if(a.parentId!==(s.parentId===groupId?null:s.parentId)||JSON.stringify(a.bounds)!==JSON.stringify(s.bounds))throw Error('Edited deck failed verification');}
+  if(after.runs.length!==model.runs.length||after.runs.map(r=>r.text).join('\n')!==model.runs.map(r=>r.text).join('\n'))throw Error('Edited deck failed verification');
   const re=unzipSync(res);
   for(const name of Object.keys(zip))if(name!==slide.part&&(!re[name]||re[name].length!==zip[name].length||re[name].some((v,i)=>v!==zip[name][i])))throw Error('Edited deck changed an unrelated part');
   return res;

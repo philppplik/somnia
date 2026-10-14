@@ -22,6 +22,8 @@ export class SlidesClient {
  async newSlide(bytes:Uint8Array,layoutPart:string,afterSlideId:number|null){return await this.request({op:'newSlide',bytes,layoutPart,afterSlideId}) as Uint8Array;}
  async shapeBounds(bytes:Uint8Array,slideId:number,shapeId:number,expected:BoundsBox,next:BoundsBox){return await this.request({op:'shapeBounds',bytes,slideId,shapeId,expected,next}) as Uint8Array;}
  async shapesBounds(bytes:Uint8Array,slideId:number,edits:ShapeBoundsEdit[]){return await this.request({op:'shapesBounds',bytes,slideId,edits}) as Uint8Array;}
+ async group(bytes:Uint8Array,slideId:number,shapeIds:number[]){return await this.request({op:'group',bytes,slideId,shapeIds}) as Uint8Array;}
+ async ungroup(bytes:Uint8Array,slideId:number,shapeId:number){return await this.request({op:'ungroup',bytes,slideId,shapeId}) as Uint8Array;}
  async setTransition(bytes:Uint8Array,slideId:number,transition:SlideTransition){return await this.request({op:'transition',bytes,slideId,transition}) as Uint8Array;}
  async arrange(bytes:Uint8Array,slideId:number,shapeIds:number[],mode:ArrangeMode){return await this.request({op:'arrange',bytes,slideId,shapeIds,mode}) as Uint8Array;}
  async formatText(bytes:Uint8Array,slideId:number,shapeId:number,format:RunFormat){return await this.request({op:'formatText',bytes,slideId,shapeId,format}) as Uint8Array;}

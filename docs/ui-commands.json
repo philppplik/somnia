@@ -3621,6 +3621,19 @@
       "hasEnabled": true
     },
     {
+      "id": "slides.groupShapes",
+      "title": "Group selected shapes",
+      "category": "Edit",
+      "source": "slides",
+      "keywords": [
+        "combine",
+        "group",
+        "objects",
+        "shapes"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "slides.insertImage",
       "title": "Insert image",
       "category": "Edit",
@@ -3934,6 +3947,19 @@
       "title": "Undo slide text",
       "category": "Edit",
       "source": "slides",
+      "hasEnabled": true
+    },
+    {
+      "id": "slides.ungroupShape",
+      "title": "Ungroup selected group",
+      "category": "Edit",
+      "source": "slides",
+      "keywords": [
+        "group",
+        "shapes",
+        "split",
+        "ungroup"
+      ],
       "hasEnabled": true
     },
     {
