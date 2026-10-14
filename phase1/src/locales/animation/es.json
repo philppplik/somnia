@@ -687,5 +687,9 @@
  "animation.template.name.titleReveal": "Título animado",
  "animation.template.name.badgePop": "Insignia emergente",
  "animation.template.name.ctaBanner": "Banner de suscripción",
- "cmd.animation.template.add": "Añadir una plantilla inicial"
+ "cmd.animation.template.add": "Añadir una plantilla inicial",
+ "animation.template.save": "Guardar capa como plantilla",
+ "animation.template.delete": "Eliminar",
+ "cmd.animation.template.save": "Guardar la capa seleccionada como plantilla",
+ "cmd.animation.template.delete": "Eliminar una plantilla guardada"
 }

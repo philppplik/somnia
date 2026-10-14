@@ -687,5 +687,9 @@
  "animation.template.name.titleReveal": "Titel-Einblendung",
  "animation.template.name.badgePop": "Badge-Pop",
  "animation.template.name.ctaBanner": "Abo-Banner",
- "cmd.animation.template.add": "Eine Startvorlage einfügen"
+ "cmd.animation.template.add": "Eine Startvorlage einfügen",
+ "animation.template.save": "Ebene als Vorlage speichern",
+ "animation.template.delete": "Löschen",
+ "cmd.animation.template.save": "Die gewählte Ebene als Vorlage speichern",
+ "cmd.animation.template.delete": "Eine gespeicherte Vorlage löschen"
 }

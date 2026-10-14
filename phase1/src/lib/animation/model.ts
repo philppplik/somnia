@@ -78,7 +78,11 @@ export interface Shutter{angle:number;samples:number}
 export const SHUTTER_MAX_SAMPLES=16,SHUTTER_MAX_ANGLE=720;
 export const validShutter=(s:Shutter|undefined)=>s===undefined||(!!s&&typeof s==='object'&&isNum(s.angle)&&s.angle>=1&&s.angle<=SHUTTER_MAX_ANGLE&&Number.isInteger(s.samples)&&s.samples>=2&&s.samples<=SHUTTER_MAX_SAMPLES);
 export interface Composition{shutter?:Shutter;id:string;name:string;width:number;height:number;fps:Rational;duration:number;start:number;background:string;workArea:{in:number;out:number};layers:readonly Layer[];markers?:readonly Marker[]}
-export interface AnimationDocument{schema:number;engine:string;id:string;name:string;revision:number;activeComp:string;compositions:readonly Composition[];assets:readonly InterfaceAsset[];audioAssets?:readonly AudioAsset[];motions?:MotionLib;textPresets?:import('./textPresetModel').TextPresetLib;easings?:import('./easingModel').EasingLib}
+export interface AnimationDocument{schema:number;engine:string;id:string;name:string;revision:number;activeComp:string;compositions:readonly Composition[];assets:readonly InterfaceAsset[];audioAssets?:readonly AudioAsset[];motions?:MotionLib;textPresets?:import('./textPresetModel').TextPresetLib;easings?:import('./easingModel').EasingLib;layerTemplates?:LayerTemplateLib}
+/** A user-saved layer: one self-contained shape, text or solid layer with its keys, times counted from its own start (the earliest of its in point and keys is 0). */
+export interface LayerTemplate{id:string;name:string;layer:Layer}
+export interface LayerTemplateLib{version:1;items:readonly LayerTemplate[]}
+export const MAX_LAYER_TEMPLATES=20,MAX_LAYER_TEMPLATE_CHARS=40000;
 /** One copied key, with its time relative to the earliest copied key. */
 export interface ClipItem{prop:TransformKey;dt:number;key:Keyframe}
 export interface PropertyRef{layer:string;prop:TransformKey}
@@ -145,6 +149,7 @@ export function validateDocument(raw:unknown):string[]{
  for(const p of validateMotionLib(d.motions))bad(p);
  for(const p of validateTextPresetLib(d.textPresets))bad(p);
  for(const p of validateEasingLib(d.easings))bad(p);
+ for(const p of validateLayerTemplates(d as AnimationDocument))bad(p);
  if(!Array.isArray(d.compositions)||!d.compositions.length)return [...errs,'no compositions'];
  const compIds=new Set<string>();
  for(const c of d.compositions){
@@ -332,4 +337,21 @@ export function validatePrecomps(d:AnimationDocument):string[]{
   const res={depth,layers};memo.set(id,res);return res;};
  for(const c of comps.values()){const r=visit(c.id,[]);if(r&&r.depth>MAX_PRECOMP_DEPTH)out.push(`${c.id}: precomps are nested more than ${MAX_PRECOMP_DEPTH} deep`);if(r&&r.layers>MAX_PRECOMP_LAYERS)out.push(`${c.id}: precomps expand to more than ${MAX_PRECOMP_LAYERS} layers`);}
  return [...new Set(out)];
+}
+
+/** Problems in a document's saved layer templates; empty means valid. Each template is checked as a layer of the first composition, with the same rules as any layer. */
+export function validateLayerTemplates(d:AnimationDocument):string[]{
+ const lib=d.layerTemplates;if(lib===undefined)return [];
+ if(!lib||typeof lib!=='object'||lib.version!==1||!Array.isArray(lib.items))return ['layer template library has an unsupported version or shape'];
+ if(lib.items.length>MAX_LAYER_TEMPLATES)return [`more than ${MAX_LAYER_TEMPLATES} layer templates`];
+ const ids=new Set<string>(),names=new Set<string>(),comp=Array.isArray(d.compositions)?d.compositions[0]:undefined;
+ for(const t of lib.items){
+  if(!t||typeof t.id!=='string'||!t.id||t.id.length>64||typeof t.name!=='string'||!t.name.trim()||t.name.length>40||!t.layer||typeof t.layer!=='object')return ['layer template has an invalid id or name'];
+  if(ids.has(t.id)||names.has(t.name.trim()))return ['layer templates have duplicate ids or names'];ids.add(t.id);names.add(t.name.trim());
+  if(!['shape','text','solid'].includes(t.layer.kind)||t.layer.parent!==null||t.layer.matte!==undefined||t.layer.audio!==undefined)return [`layer template ${t.name}: only self-contained shape, text and solid layers are allowed`];
+  if(JSON.stringify(t.layer).length>MAX_LAYER_TEMPLATE_CHARS)return [`layer template ${t.name} is too large`];
+  if(!comp)return ['layer templates need a composition'];
+  const errs=validateDocument({...d,layerTemplates:undefined,compositions:[{...comp,layers:[t.layer]}]});if(errs.length)return [`layer template ${t.name}: ${errs[0]}`];
+ }
+ return [];
 }

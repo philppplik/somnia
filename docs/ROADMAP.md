@@ -521,6 +521,11 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Done: template gallery. "Add template" in the layer panel inserts four starter templates at the playhead in one undo step: Lower third, Title reveal, Badge pop, Subscribe banner. They are plain layers with keys (shapes, text, text reveal, opacity, scale, rotation), sized from the composition, so everything stays editable. Command `animation.template.add`.
 - Open: only four built-in templates; text is placeholder English ("Your name"), edit it after inserting; no user-saved templates and no preview thumbnails; fixed brand colours (change them in the inspector); needs at least half a second left after the playhead.
 
+### Animation P84 (2026-10-14, integration pending)
+- Done: user-saved templates. "Save layer as template" stores the selected shape, text or solid layer (keys, effects, stroke, gradient, repeater, path effects) in the project file; saved templates appear in the template picker and as thumbnails, insert at the playhead in one undo step (times shift, the end clips to the composition) and can be deleted. Up to 20, 40 characters per name, 40k characters per layer; commands `animation.template.save` / `delete` / `add {saved}`.
+- Also fixed: the P83 template row made the left panel 23 px too wide in German; the picker now stacks.
+- Open: one layer per template (no groups or parented layers, no track matte, audio, image or precomp layers); templates live in the project, not shared across projects; no rename; thumbnails show the last frame of the motion.
+
 ### Animation P69 (2026-10-14, integration pending)
 - Done: stroke alignment for closed shapes (centre, inside, outside). Inside clips a double-width stroke to the shape, outside masks the shape out of it, so the visible band keeps the set width. Select in the stroke section. Viewer and every export share the behaviour; open paths stay centred. Absent field means centred and byte-identical output.
 - Open: "Expand stroke" outlines ignore the alignment (centre only), gradient strokes use the same bounding box, no alignment keys.

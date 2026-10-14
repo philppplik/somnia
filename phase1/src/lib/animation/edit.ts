@@ -5,10 +5,11 @@ import {validateTextPresetLib} from './textPresetModel';
 import type {InterfaceAsset} from '../interface/schema';
 import {validateAnimationAssets} from './assetsValidation';
 import {MAX_AUDIO_VOLUME,type AudioAsset} from './audioCore';
-import {validPathFx,type GradientStop,GRADIENT_RANGE,REPEATER_RANGE,validRepeater,STYLE_KINDS,OFFSET_KINDS,MAX_COLOR_KEYS,type ColorKey,type ColorEase,COLOR_EASES,validShutter,type Shutter,validatePrecomps,precompTransform,prop,createComposition,type TextAnimator,type LayerMask,type LayerMatte,type ClipItem,type KeyRef,type Vec2,createLayer,findComp,findLayer,PROP_META,wouldCycle,EASE_IN,EASE_OUT,TRANSFORM_KEYS,validateDocument,type AnimationDocument,type CompSettings,type Composition,type Interp,type Keyframe,type Layer,type LayerKind,type LayerSource,type LayerEffect,validSource,validEffects,type Property,type PropValue,type TransformKey} from './model';
+import {validPathFx,validateLayerTemplates,type GradientStop,GRADIENT_RANGE,REPEATER_RANGE,validRepeater,STYLE_KINDS,OFFSET_KINDS,MAX_COLOR_KEYS,type ColorKey,type ColorEase,COLOR_EASES,validShutter,type Shutter,validatePrecomps,precompTransform,prop,createComposition,type TextAnimator,type LayerMask,type LayerMatte,type ClipItem,type KeyRef,type Vec2,createLayer,findComp,findLayer,PROP_META,wouldCycle,EASE_IN,EASE_OUT,TRANSFORM_KEYS,validateDocument,type AnimationDocument,type CompSettings,type Composition,type Interp,type Keyframe,type Layer,type LayerKind,type LayerSource,type LayerEffect,validSource,validEffects,type Property,type PropValue,type TransformKey} from './model';
 import {setGradientStop} from './shapes';
 import {parseGradientStopLane,parseGradientLane,parseGradientColorLane,type GradientKey,type RepeaterKey,type StyleLaneId} from './keyTypes';
 import {evaluate} from './interpolate';
+import {templateLayer} from './layerTemplates';
 import {REACTIVE_RANGE,MAX_REACTIVE_KEYS} from './audioReactive';
 import {colorAt} from './colorKeys';
 import {validateModifiers,linkProblems} from './modifiers';
@@ -73,6 +74,8 @@ export type Edit=
  /** Replace the document's saved motion presets (library edits compute the full list). */
  |{type:'easings.set';items:readonly import('./easingModel').EasingSet[]}
  |{type:'motions.set';items:readonly import('./motionModel').MotionSet[]}
+ |{type:'layerTemplates.set';items:readonly import('./model').LayerTemplate[]}
+ |{type:'layerTemplate.insert';template:string;layer:string;at:number}
  |{type:'textPresets.set';items:readonly import('./textPresetModel').TextPresetSet[]}
  /** Embed a prepared audio asset and add an audio layer whose clip starts at `t` (default 0). */
  |{type:'audio.import';asset:AudioAsset;t?:number;id?:string}
@@ -336,6 +339,13 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
    return setLayer(doc,{...l,effects:l.effects!.map(x=>x.id===effect.id?next:x)});}
   case 'easings.set':{const easings={version:1 as const,items:e.items};const p=validateEasingLib(easings);if(p.length)fail('invalid',p[0]);return {...doc,easings};}
   case 'motions.set':{const motions={version:1 as const,items:e.items};const p=validateMotionLib(motions);if(p.length)fail('invalid',p[0]);return {...doc,motions};}
+  case 'layerTemplates.set':{const layerTemplates={version:1 as const,items:e.items};const p=validateLayerTemplates({...doc,layerTemplates});if(p.length)fail('invalid',p[0]);return {...doc,layerTemplates:e.items.length?layerTemplates:undefined};}
+  case 'layerTemplate.insert':{
+   const c=compOf(doc),t=doc.layerTemplates?.items.find(x=>x.id===e.template);if(!t)fail('missing','That template no longer exists.');
+   if(c.layers.some(x=>x.id===e.layer))fail('invalid','Duplicate layer id.');
+   if(!Number.isInteger(e.at)||e.at<0)fail('invalid','Insert time must be a whole tick.');
+   let l:Layer;try{l=templateLayer(t!,e.layer,e.at,c.start+c.duration);}catch(x){return fail('invalid',(x as Error).message);}
+   return withLayers(doc,ls=>[l,...ls]);}
   case 'textPresets.set':{const textPresets={version:1 as const,items:e.items};const p=validateTextPresetLib(textPresets);if(p.length)fail('invalid',p[0]);return {...doc,textPresets};}
   case 'asset.import':{const next={...doc,assets:doc.assets.some(a=>a.id===e.asset.id)?doc.assets:[...doc.assets,e.asset]};validateAnimationAssets(next);const c=compOf(doc);const l=createLayer('raster',c,{name:e.asset.sourceName,source:{assetId:e.asset.id,width:e.asset.width,height:e.asset.height}});return withLayers(next,ls=>[l,...ls]);}
   case 'audio.import':{

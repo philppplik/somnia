@@ -410,3 +410,7 @@ Path effects: `round` (size = corner radius px, only handle-less corners, KAPPA 
 ## P83
 
 `templates.ts` (`templateEdits(comp,id,at,ids)`): pure builder returning `layer.add` edits with ready-made keys (bezier eases) for lowerThird (3 layers), titleReveal (2), badgePop (2), ctaBanner (2). Shapes use a centre anchor (the underline anchors at its left edge). Applied as one batch, so one undo step. Command `animation.template.add`; picker in the layer panel.
+
+## P84
+
+`document.layerTemplates={version:1,items:[{id,name,layer}]}`; `validateLayerTemplates` (model.ts) checks every item as a layer of the first composition (kind shape/text/solid, no parent, matte or audio). `layerTemplates.ts`: `buildTemplate` normalises times so the earlier of the in point and the first key is 0 (`shiftTimes` moves every integer `t` found in an array); `templateLayer` shifts them back to the insert time. Edits `layerTemplates.set` and `layerTemplate.insert` (one step); `TemplateThumb` draws `frameSvg` of the template.

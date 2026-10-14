@@ -687,5 +687,9 @@
  "animation.template.name.titleReveal": "Title reveal",
  "animation.template.name.badgePop": "Badge pop",
  "animation.template.name.ctaBanner": "Subscribe banner",
- "cmd.animation.template.add": "Add a starter template"
+ "cmd.animation.template.add": "Add a starter template",
+ "animation.template.save": "Save layer as template",
+ "animation.template.delete": "Delete",
+ "cmd.animation.template.save": "Save the selected layer as a template",
+ "cmd.animation.template.delete": "Delete a saved template"
 }

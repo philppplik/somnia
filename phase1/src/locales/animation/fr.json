@@ -687,5 +687,9 @@
  "animation.template.name.titleReveal": "Titre animé",
  "animation.template.name.badgePop": "Badge qui pop",
  "animation.template.name.ctaBanner": "Bannière d'abonnement",
- "cmd.animation.template.add": "Ajouter un modèle de départ"
+ "cmd.animation.template.add": "Ajouter un modèle de départ",
+ "animation.template.save": "Enregistrer le calque comme modèle",
+ "animation.template.delete": "Supprimer",
+ "cmd.animation.template.save": "Enregistrer le calque sélectionné comme modèle",
+ "cmd.animation.template.delete": "Supprimer un modèle enregistré"
 }

@@ -687,5 +687,9 @@
  "animation.template.name.titleReveal": "Título animado",
  "animation.template.name.badgePop": "Selo em destaque",
  "animation.template.name.ctaBanner": "Banner de inscrição",
- "cmd.animation.template.add": "Adicionar um modelo inicial"
+ "cmd.animation.template.add": "Adicionar um modelo inicial",
+ "animation.template.save": "Salvar camada como modelo",
+ "animation.template.delete": "Excluir",
+ "cmd.animation.template.save": "Salvar a camada selecionada como modelo",
+ "cmd.animation.template.delete": "Excluir um modelo salvo"
 }

@@ -1,3 +1,4 @@
+import {buildTemplate} from './layerTemplates';
 import {templateEdits,TEMPLATE_IDS,TEMPLATE_LAYERS} from './templates';
 import test from 'node:test';import assert from 'node:assert/strict';
 import {motionBlurSamples} from './scene';
@@ -1925,4 +1926,27 @@ test('P83: templates insert editable animated layers in one undo step',()=>{
  assert.throws(()=>templateEdits(findComp(createDocument())!,'nope' as never,0,[]),/Unknown/);
  const c=findComp(createDocument())!;assert.throws(()=>templateEdits(c,'badgePop',c.start+c.duration-100,['a','b']),/half a second/);
  const e=applyEdits(createDocument(),templateEdits(c,'lowerThird',0,['a','b','c']));assert.throws(()=>applyEdits(e,templateEdits(c,'lowerThird',0,['a','x','y'])),/Duplicate/);
+});
+
+test('P84: saved layer templates keep keys, shift in time, validate and undo as one step',()=>{
+ let d=createDocument();const c0=findComp(d)!;
+ d=applyEdits(d,templateEdits(c0,'lowerThird',8000*30,['n','s','p']));
+ d=applyEdit(d,{type:'layer.stroke',layer:'p',stroke:{color:'#ffffff',width:4}});
+ const tpl=buildTemplate(d,'p','Panel',' tp1');assert.equal(tpl.layer.inT,0,'normalised to its own start');
+ const keysOf=(l:{transform:{position:{keys:readonly {t:number}[]}}})=>l.transform.position.keys.map(k=>k.t);
+ assert.deepEqual(keysOf(tpl.layer as never),[0,8000*15],'keys shifted to 0');
+ const r=d.revision;const e=applyEdit(d,{type:'layerTemplates.set',items:[tpl]});assert.equal(e.revision,r+1);assert.deepEqual(validateDocument(e),[]);
+ assert.equal(buildTemplate(e,'p','Panel','tp2').name,'Panel 2','names stay unique');
+ const at=8000*60,i=applyEdit(e,{type:'layerTemplate.insert',template:' tp1',layer:'copy',at});assert.equal(i.revision,e.revision+1);assert.deepEqual(validateDocument(i),[]);
+ const copy=findComp(i)!.layers[0];assert.equal(copy.id,'copy');assert.equal(copy.inT,at);assert.deepEqual(keysOf(copy as never),[at,at+8000*15]);assert.ok(copy.stroke);
+ assert.notEqual(frameSvg(findComp(i)!,at),frameSvg(findComp(i)!,at+8000*20),'moves after insert');
+ const edge=applyEdit(e,{type:'layerTemplate.insert',template:' tp1',layer:'late',at:findComp(e)!.duration-8000*5});assert.equal(findComp(edge)!.layers[0].outT,findComp(e)!.duration,'clipped to the composition end');
+ assert.throws(()=>applyEdit(e,{type:'layerTemplate.insert',template:'nope',layer:'x',at:0}),/no longer exists/);
+ assert.throws(()=>applyEdit(e,{type:'layerTemplate.insert',template:' tp1',layer:'p',at:0}),/Duplicate/);
+ assert.throws(()=>applyEdit(e,{type:'layerTemplates.set',items:[tpl,{...tpl,id:'other'}]}),/duplicate/);
+ assert.throws(()=>applyEdit(e,{type:'layerTemplates.set',items:[{...tpl,layer:{...tpl.layer,kind:'audio'}} as never]}),/self-contained/);
+ assert.throws(()=>applyEdit(e,{type:'layerTemplates.set',items:[{...tpl,layer:{...tpl.layer,source:{...tpl.layer.source,width:-5}}}]}),/layer template/);
+ assert.throws(()=>buildTemplate(applyEdit(d,{type:'layer.update',layer:'p',name:'x'}),'zzz',undefined,'a'),/Select a layer/);
+ const back=applyEdit(e,{type:'layerTemplates.set',items:[]});assert.equal(back.layerTemplates,undefined);
+ const child=applyEdit(d,{type:'layer.parent',layer:'s',parent:'p'} as never);assert.throws(()=>buildTemplate(child,'s',undefined,'a'),/parent/);
 });

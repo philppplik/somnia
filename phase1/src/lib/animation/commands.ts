@@ -23,6 +23,7 @@ import {ClipError,copyKeys,getKeyClip,pastedRefs,setKeyClip} from './keyclip';
 import {allKeysOf,pruneSelection,shiftSelection} from './selection';
 import {EASE_PRESETS,type EasePreset} from './graph';
 import {copyCurve,pasteCurveEdit} from './graphTools';
+import {buildTemplate,layerTemplates} from './layerTemplates';
 import {templateEdits,TEMPLATE_IDS,TEMPLATE_LAYERS,type TemplateId} from './templates';
 import {reactiveKeys,REACTIVE_PROPS,MAX_SMOOTH,type ReactiveProp} from './audioReactive';
 import {detectBeats,beatMarkers,BEAT_LABEL,estimateBpm,gridTicks} from './audioBeats';
@@ -127,11 +128,22 @@ export function animationCommandSpecs():CommandSpec<unknown,unknown>[]{
    if(keys.length<2)throw Object.assign(Error('This clip is silent or outside the composition.'),{expected:true});
    run({type:'audio.reactive',layer:target.id,prop:p.prop,keys});return keys.length;
   },object({layer:layerRef,target:layerRef,prop:{enum:[...REACTIVE_PROPS]},min:{type:'number'},max:{type:'number'},smooth:{type:'number',minimum:0,maximum:MAX_SMOOTH}},['target','prop','min','max']),()=>open()&&findLayer(comp(),selected())?.kind==='audio','Edit'),
-  spec('animation.template.add','Add a starter template',(p:{template:TemplateId;at?:number})=>{
+  spec('animation.template.save','Save the selected layer as a template',(p:{layer?:string;name?:string})=>{
+   const d=doc();const t=buildTemplate(d,layerIdOf(p),p.name,newId('tpl'));
+   run({type:'layerTemplates.set',items:[...layerTemplates(d),t]});return t.name;
+  },object({layer:layerRef,name:{type:'string',minLength:1,maxLength:40}},[]),()=>open()&&!!animationSession().getState().view.selectedLayer,'Insert'),
+  spec('animation.template.delete','Delete a saved template',(p:{id:string})=>{
+   const d=doc();const items=layerTemplates(d);if(!items.some(x=>x.id===p.id))throw Object.assign(Error('That template no longer exists.'),{expected:true});
+   run({type:'layerTemplates.set',items:items.filter(x=>x.id!==p.id)});
+  },object({id:{type:'string',minLength:1,maxLength:64}}),()=>open()&&layerTemplates(animationSession().document).length>0,'Insert'),
+  spec('animation.template.add','Add a starter template',(p:{template?:TemplateId;saved?:string;at?:number})=>{
+   if(p.saved!==undefined){const at=p.at!==undefined?secondsToTicks(p.at):animationSession().getState().view.playhead,id=newId('layer');
+    run({type:'layerTemplate.insert',template:p.saved,layer:id,at:snapToFrame(at,comp().fps)});animationSession().setView({selectedLayer:id});return;}
+   if(!p.template)throw Object.assign(Error('Pick a template.'),{expected:true});
    const c=comp();const ids=Array.from({length:TEMPLATE_LAYERS[p.template]??0},()=>newId('layer'));
    run(templateEdits(c,p.template,p.at!==undefined?secondsToTicks(p.at):animationSession().getState().view.playhead,ids));
    animationSession().setView({selectedLayer:ids[0]});
-  },object({template:{enum:[...TEMPLATE_IDS]},at:{type:'number',minimum:0}},['template']),open,'Insert'),
+  },object({template:{enum:[...TEMPLATE_IDS]},saved:{type:'string',minLength:1,maxLength:64},at:{type:'number',minimum:0}},[]),open,'Insert'),
   spec('animation.audio.grid','Place beat markers on a steady BPM grid',(p:{layer?:string;bpm?:number;sensitivity?:number})=>{
    const c=comp();const l=findLayer(c,layerIdOf(p));if(!l||l.kind!=='audio'||!l.audio)throw Object.assign(Error('Select an audio layer.'),{expected:true});
    const asset=doc().audioAssets?.find(a=>a.id===l.audio!.assetId);if(!asset)throw Object.assign(Error('The audio file is missing.'),{expected:true});

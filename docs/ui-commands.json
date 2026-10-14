@@ -1272,6 +1272,30 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.template.delete",
+      "title": "Delete a saved template",
+      "category": "Insert",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "animation.template.save",
+      "title": "Save the selected layer as a template",
+      "category": "Insert",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.text.animator",
       "title": "Edit text animator",
       "category": "Edit",
