@@ -1019,5 +1019,7 @@
  "animation.export.firstNumberAuto": "Composition",
  "animation.export.problem.number": "Le numéro de la première image doit être un entier de 0 à 99999.",
  "animation.rig.trim": "Couper à la zone de travail",
- "cmd.animation.layers.trimToWorkArea": "Couper les calques sélectionnés à la zone de travail"
+ "cmd.animation.layers.trimToWorkArea": "Couper les calques sélectionnés à la zone de travail",
+ "animation.export.colors": "Couleurs du GIF",
+ "animation.export.problem.colors": "Les couleurs du GIF doivent être 16, 32, 64, 128 ou 256."
 }

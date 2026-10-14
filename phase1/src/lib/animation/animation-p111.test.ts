@@ -728,3 +728,16 @@ test('P194 graph zoom/pan window: zooms around the anchor, clamps, returns null 
  const p=panWindow(z,1e9,0,240000);assert.equal(p.t1,240000);assert.equal(p.t1-p.t0,120000);assert.equal(panWindow(z,-1e9,0,240000).t0,0);
  assert.equal(zoomWindow(full,0,0,0,240000,fps),null);
 });
+
+test('P196 GIF colors: colour table, LZW code size and file size follow the palette size; bad values refused',async()=>{
+ const {encodeGif,buildPalette}=await import('./gifEncode');const {estimateBytes,settingsProblems,defaultExportSettings}=await import('./exportSettings');
+ const w=32,h=32,px=new Uint8Array(w*h*4);for(let i=0;i<w*h;i++){px[i*4]=(i*7)&255;px[i*4+1]=(i*13)&255;px[i*4+2]=(i*29)&255;px[i*4+3]=255;}
+ const frames=[{pixels:px,delayCs:5}];const g256=encodeGif(w,h,frames),g16=encodeGif(w,h,frames,true,false,16);
+ assert.equal(g256[10],0xF7);assert.equal(g16[10],0xF3);assert.equal(buildPalette(frames,w,h,16).length,48);
+ assert.ok(g16.length<g256.length);
+ const img=(g:Uint8Array,tab:number)=>{let i=13+tab*3;while(!(g[i]===0x2C&&g[i+1]===0&&g[i+2]===0))i++;return g[i+10];};
+ assert.equal(img(g16,16),4);assert.equal(img(g256,256),8);assert.equal(g16[g16.length-1],0x3B);
+ assert.throws(()=>encodeGif(w,h,frames,true,false,100),(e:any)=>e.code==='bad-colors');
+ assert.ok(estimateBytes('gif',100,100,10,10,'medium',16)<estimateBytes('gif',100,100,10,10));assert.equal(estimateBytes('gif',100,100,10,10,'medium',256),estimateBytes('gif',100,100,10,10));
+ assert.deepEqual(settingsProblems({...defaultExportSettings(),colors:100 as never}),['colors']);
+});

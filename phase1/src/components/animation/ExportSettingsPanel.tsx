@@ -5,7 +5,7 @@ import {Button} from '../ui/button';
 import {InspectorNumberField} from '../studios/InspectorNumberField';
 import {executeCommand} from '../../lib/commands';
 import {useExportState} from '../../lib/animation/exportJob';
-import {EXPORT_FORMATS,EXPORT_PRESETS,WEBM_QUALITIES,exportPlan,type ExportFormat} from '../../lib/animation/exportSettings';
+import {EXPORT_FORMATS,EXPORT_PRESETS,GIF_COLORS,WEBM_QUALITIES,exportPlan,type ExportFormat} from '../../lib/animation/exportSettings';
 import type {Composition} from '../../lib/animation/model';
 const field='h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text';
 const SCALES=[25,50,75,100,150,200];const FPS=[12,15,24,30,60];
@@ -31,6 +31,7 @@ export function ExportSettingsPanel({comp,busy}:{comp:Composition;busy:boolean})
   <div className="flex items-center gap-2 text-ink-3"><label className="flex items-center gap-1">{t('animation.export.background')}<NativeInput type="color" className="h-8 w-16 rounded-sm border border-subtle bg-transparent" value={s.background??comp.background} onChange={e=>void set('animation.export.settings',{background:e.target.value})} data-testid="animation-export-background"/></label>{s.background&&<Button size="tiny" variant="ghost" onClick={()=>void set('animation.export.settings',{background:null})} data-testid="animation-export-background-reset">{t('animation.export.backgroundReset')}</Button>}</div>
   <label className="grid gap-1 text-ink-3">{t('animation.export.quality')}<NativeSelect className={field} value={s.quality??'medium'} onChange={e=>void set('animation.export.settings',{quality:e.target.value})} data-testid="animation-export-quality">{WEBM_QUALITIES.map(q=><option key={q} value={q}>{t(`animation.export.quality.${q}`)}</option>)}</NativeSelect></label>
   <label className="flex items-center gap-1 text-ink-3" title={t('animation.export.loop.hint')}><NativeInput type="checkbox" className="animation-checkbox" checked={s.loop!==false} onChange={e=>void set('animation.export.settings',{loop:e.target.checked})} data-testid="animation-export-loop"/>{t('animation.export.loop')}</label>
+  <label className="grid gap-1 text-ink-3">{t('animation.export.colors')}<NativeSelect className={field} value={s.colors??256} onChange={e=>void set('animation.export.settings',{colors:Number(e.target.value)})} data-testid="animation-export-colors">{GIF_COLORS.map(n=><option key={n} value={n}>{n}</option>)}</NativeSelect></label>
   <label className="flex items-center gap-1 text-ink-3" title={t('animation.export.dither.hint')}><NativeInput type="checkbox" className="animation-checkbox" checked={s.dither===true} onChange={e=>void set('animation.export.settings',{dither:e.target.checked})} data-testid="animation-export-dither"/>{t('animation.export.dither')}</label>
   <div className="flex gap-1"><Button size="tiny" variant="ghost" onClick={()=>void set('animation.export.settings',{reset:true})} data-testid="animation-export-reset">{t('animation.export.resetSettings')}</Button></div>
   <ul className="m-0 grid list-none gap-1 p-0 text-ink-2" aria-label={t('animation.export.estimate')} data-testid="animation-export-estimate">

@@ -10,6 +10,8 @@ export type ExportFormat='sequence'|'gif'|'apng'|'webm'|'sheet';
 export const EXPORT_FORMATS:readonly ExportFormat[]=['sequence','gif','apng','webm','sheet'];
 /** Same limits as exportFrames, gifEncode, apngEncode and exportVideo (a test keeps them in step). */
 export const EXPORT_LIMITS={maxFrames:1800,gifFrames:300,webmSeconds:60,maxPixels:8192*8192,maxBytes:64*1024*1024};
+export type GifColors=16|32|64|128|256;
+export const GIF_COLORS:readonly GifColors[]=[16,32,64,128,256];
 export type WebmQuality='low'|'medium'|'high';
 export const WEBM_QUALITIES:readonly WebmQuality[]=['low','medium','high'];
 const WEBM_BPP:Record<WebmQuality,number>={low:0.035,medium:0.07,high:0.14};
@@ -37,6 +39,8 @@ export interface ExportSettings{
  background?:string|null;
  /** PNG sequence: file number of the first frame, 0 to 99999. Null or absent keeps the composition frame numbers. */
  firstNumber?:number|null;
+ /** GIF only: palette size. Absent means 256. */
+ colors?:GifColors;
 }
 export const defaultExportSettings=():ExportSettings=>({scale:100,fps:null,from:null,to:null});
 export interface ExportPreset{id:string;format:ExportFormat;scale:number;fps:number|null;transparent:boolean}
@@ -48,7 +52,7 @@ export const EXPORT_PRESETS:readonly ExportPreset[]=[
  {id:'frames-png',format:'sequence',scale:100,fps:null,transparent:true},
  {id:'frames-2x',format:'sequence',scale:200,fps:null,transparent:false},
 ];
-export type ExportProblem='number'|'background'|'quality'|'size'|'frames'|'seconds'|'range'|'scale'|'fps'|'columns'|'name';
+export type ExportProblem='colors'|'number'|'background'|'quality'|'size'|'frames'|'seconds'|'range'|'scale'|'fps'|'columns'|'name';
 export interface ExportPlan{
  format:ExportFormat;width:number;height:number;frames:number;seconds:number;fps:{num:number;den:number};
  /** Frame range at the composition rate, inclusive. */
@@ -66,6 +70,7 @@ export function settingsProblems(s:ExportSettings):ExportProblem[]{
  if((s.from!==null&&!whole(s.from,0,1e7))||(s.to!==null&&!whole(s.to,0,1e7))||(s.from!==null&&s.to!==null&&s.to<s.from))p.push('range');
  if(s.columns!==undefined&&s.columns!==null&&!whole(s.columns,1,256))p.push('columns');
  if(s.fileName!==undefined&&s.fileName!==null&&(typeof s.fileName!=='string'||s.fileName.length>80))p.push('name');
+ if(s.colors!==undefined&&!GIF_COLORS.includes(s.colors))p.push('colors');
  if(s.firstNumber!==undefined&&s.firstNumber!==null&&!whole(s.firstNumber,0,99999))p.push('number');
  if(s.background!==undefined&&s.background!==null&&!/^#[0-9a-fA-F]{6}$/.test(s.background))p.push('background');
  if(s.quality!==undefined&&!WEBM_QUALITIES.includes(s.quality))p.push('quality');
@@ -73,10 +78,10 @@ export function settingsProblems(s:ExportSettings):ExportProblem[]{
 }
 const BYTES_PER_PIXEL:Record<Exclude<ExportFormat,'webm'>,number>={sequence:0.35,gif:0.12,apng:0.3,sheet:0.3};
 /** Rough size guess for the readout: a flat per-pixel factor for image formats, a bitrate for WebM. The real size depends on the artwork. */
-export function estimateBytes(format:ExportFormat,width:number,height:number,frames:number,fps:number,quality:WebmQuality='medium'):number{
+export function estimateBytes(format:ExportFormat,width:number,height:number,frames:number,fps:number,quality:WebmQuality='medium',colors:GifColors=256):number{
  const px=width*height;
  if(format==='webm')return Math.round(px*fps*WEBM_BPP[quality]/8*(frames/Math.max(1,fps)));
- return Math.round(px*frames*BYTES_PER_PIXEL[format]);
+ return Math.round(px*frames*BYTES_PER_PIXEL[format]*(format==='gif'?0.5+0.5*Math.log2(colors)/8:1));
 }
 /** Plan for one format. Never throws: invalid input is reported in `problems` and the plan falls back to safe values. */
 export function exportPlan(comp:Composition,format:ExportFormat,s:ExportSettings):ExportPlan{
@@ -99,8 +104,8 @@ export function exportPlan(comp:Composition,format:ExportFormat,s:ExportSettings
  if(frames>EXPORT_LIMITS.maxFrames||(format==='gif'&&frames>EXPORT_LIMITS.gifFrames))problems.push('frames');
  if(format==='sheet'){try{sheetPlan(frames,width,height,s.columns??undefined);}catch(x){if(x instanceof SheetError)problems.push(x.code==='too-large'?'size':'frames');else throw x;}}
  if(format==='webm'&&seconds>EXPORT_LIMITS.webmSeconds)problems.push('seconds');
- const est=estimateBytes(format,width,height,frames,rate.num/rate.den,ok('quality')?s.quality:'medium');
+ const est=estimateBytes(format,width,height,frames,rate.num/rate.den,ok('quality')?s.quality:'medium',ok('colors')?s.colors:256);
  return {format,width,height,frames,seconds,fps:rate,from,to,comp:derived,estimateBytes:est,overCap:est>EXPORT_LIMITS.maxBytes,problems:[...new Set(problems)]};
 }
-const MSG:Record<ExportProblem,string>={size:'The output size is above the supported limit. Lower the scale.',frames:'Too many frames for this format. Shorten the range or lower the frame rate.',seconds:`WebM records in real time and is limited to ${EXPORT_LIMITS.webmSeconds} seconds. Shorten the range.`,range:'The frame range is not valid for this composition.',scale:`Scale must be a whole number from ${SCALE_MIN} to ${SCALE_MAX} percent.`,fps:`Frame rate must be a whole number from 1 to ${FPS_MAX}.`,columns:'Sprite sheet columns must be a whole number from 1 to 256.',name:'The file name must be at most 80 characters.',number:'The first frame number must be a whole number from 0 to 99999.',background:'The background colour must look like #ffffff.',quality:'WebM quality must be low, medium or high.'};
+const MSG:Record<ExportProblem,string>={size:'The output size is above the supported limit. Lower the scale.',frames:'Too many frames for this format. Shorten the range or lower the frame rate.',seconds:`WebM records in real time and is limited to ${EXPORT_LIMITS.webmSeconds} seconds. Shorten the range.`,range:'The frame range is not valid for this composition.',scale:`Scale must be a whole number from ${SCALE_MIN} to ${SCALE_MAX} percent.`,fps:`Frame rate must be a whole number from 1 to ${FPS_MAX}.`,columns:'Sprite sheet columns must be a whole number from 1 to 256.',name:'The file name must be at most 80 characters.',colors:'GIF colors must be 16, 32, 64, 128 or 256.',number:'The first frame number must be a whole number from 0 to 99999.',background:'The background colour must look like #ffffff.',quality:'WebM quality must be low, medium or high.'};
 export const problemMessage=(p:ExportProblem)=>MSG[p];

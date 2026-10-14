@@ -1,10 +1,10 @@
 /** GIF89a encoder: median-cut global palette (256 colours) and LZW, no dithering, no dependencies. Frames are full-canvas RGBA composited by the caller. */
 export const GIF_MAX_FRAMES=300;
 export const GIF_MAX_BYTES=64*1024*1024;
-export class GifError extends Error{constructor(message:string,readonly code:'too-large'|'too-many'|'empty'){super(message);this.name='GifError';}}
+export class GifError extends Error{constructor(message:string,readonly code:'too-large'|'too-many'|'empty'|'bad-colors'){super(message);this.name='GifError';}}
 export interface GifFrame{pixels:Uint8Array|Uint8ClampedArray;/** RGBA, width*height*4. */delayCs:number}
 /** Sampled median-cut palette over all frames (at most `samples` pixels per frame, deterministic stride). Returns 256 RGB triplets. */
-export function buildPalette(frames:readonly GifFrame[],width:number,height:number):Uint8Array{
+export function buildPalette(frames:readonly GifFrame[],width:number,height:number,colors=256):Uint8Array{
  const MAX_SAMPLES=32768;const buckets:{r:number;g:number;b:number;count:number}[]=[];const seen=new Map<number,number>();
  const quant=(v:number)=>v&0b11111000;
  for(const f of frames){
@@ -21,7 +21,7 @@ export function buildPalette(frames:readonly GifFrame[],width:number,height:numb
   for(let i=box.lo;i<box.hi;i++){const b=buckets[i];if(b.r<mn[0])mn[0]=b.r;if(b.r>mx[0])mx[0]=b.r;if(b.g<mn[1])mn[1]=b.g;if(b.g>mx[1])mx[1]=b.g;if(b.b<mn[2])mn[2]=b.b;if(b.b>mx[2])mx[2]=b.b;}
   const spread=[mx[0]-mn[0],mx[1]-mn[1],mx[2]-mn[2]];return spread.indexOf(Math.max(...spread));
  };
- while(boxes.length<256){
+ while(boxes.length<colors){
   let pick=-1,pickSpread=-1;
   for(let i=0;i<boxes.length;i++){if(boxes[i].hi-boxes[i].lo<2)continue;const ch=channels(boxes[i]);const b=buckets[boxes[i].lo];void b;
    let mn=[255,255,255],mx=[0,0,0];for(let j=boxes[i].lo;j<boxes[i].hi;j++){const q=buckets[j];mn=[Math.min(mn[0],q.r),Math.min(mn[1],q.g),Math.min(mn[2],q.b)];mx=[Math.max(mx[0],q.r),Math.max(mx[1],q.g),Math.max(mx[2],q.b)];}
@@ -35,8 +35,8 @@ export function buildPalette(frames:readonly GifFrame[],width:number,height:numb
   if(mid<=box.lo)mid=box.lo+1;if(mid>=box.hi)mid=box.hi-1;
   boxes.splice(pick,1,{lo:box.lo,hi:mid},{lo:mid,hi:box.hi});
  }
- const palette=new Uint8Array(256*3);
- boxes.slice(0,256).forEach((box,i)=>{
+ const palette=new Uint8Array(colors*3);
+ boxes.slice(0,colors).forEach((box,i)=>{
   let r=0,g=0,b=0,n=0;for(let j=box.lo;j<box.hi;j++){const q=buckets[j];r+=q.r*q.count;g+=q.g*q.count;b+=q.b*q.count;n+=q.count;}
   palette[i*3]=Math.round(r/Math.max(1,n));palette[i*3+1]=Math.round(g/Math.max(1,n));palette[i*3+2]=Math.round(b/Math.max(1,n));
  });
@@ -100,24 +100,26 @@ export function lzwEncode(minCodeSize:number,indices:Uint8Array):Uint8Array{
  return new Uint8Array(blocks);
 }
 /** Assemble a GIF89a. Opaque: the caller composites onto the background first. Throws GifError on bound violations. */
-export function encodeGif(width:number,height:number,frames:readonly GifFrame[],loop=true,dither=false):Uint8Array{
+export function encodeGif(width:number,height:number,frames:readonly GifFrame[],loop=true,dither=false,colors=256):Uint8Array{
+ if(![2,4,8,16,32,64,128,256].includes(colors))throw new GifError('Colors must be a power of two from 2 to 256.','bad-colors');
+ const bits=Math.log2(colors),codeBits=Math.max(2,bits);
  if(!frames.length)throw new GifError('Nothing to export.','empty');
  if(frames.length>GIF_MAX_FRAMES)throw new GifError(`A GIF is limited to ${GIF_MAX_FRAMES} frames. Shorten the work area.`,'too-many');
  if(width<1||height<1||width>16384||height>16384)throw new GifError('Bad frame size.','too-large');
- const palette=buildPalette(frames,width,height);
+ const palette=buildPalette(frames,width,height,colors);
  const parts:Uint8Array[]=[];let bytes=0;
  const push=(u:Uint8Array)=>{bytes+=u.length;if(bytes>GIF_MAX_BYTES)throw new GifError('The GIF is larger than 64 MB. Shorten the work area or reduce the size.','too-large');parts.push(u);};
  const u8=(...n:number[])=>new Uint8Array(n);
  push(u8(0x47,0x49,0x46,0x38,0x39,0x61));
- push(u8(width&255,width>>8,height&255,height>>8,0b11110111,0,0));
+ push(u8(width&255,width>>8,height&255,height>>8,0x80|0x70|(bits-1),0,0));
  push(palette);
  if(loop)push(u8(0x21,0xFF,11,0x4E,0x45,0x54,0x53,0x43,0x41,0x50,0x45,0x32,0x2E,0x30,3,1,0,0,0));
  for(const f of frames){
   const delay=Math.max(2,Math.min(65535,Math.round(f.delayCs)));
   push(u8(0x21,0xF9,4,0,delay&255,delay>>8,0,0));
   push(u8(0x2C,0,0,0,0,width&255,width>>8,height&255,height>>8,0));
-  push(u8(8));
-  push(lzwEncode(8,(dither?ditherIndices(f.pixels,palette,256,width):mapIndices(f.pixels,palette,256)).indices));
+  push(u8(codeBits));
+  push(lzwEncode(codeBits,(dither?ditherIndices(f.pixels,palette,colors,width):mapIndices(f.pixels,palette,colors)).indices));
  }
  push(u8(0x3B));
  const total=new Uint8Array(bytes);let o=0;for(const p of parts){total.set(p,o);o+=p.length;}

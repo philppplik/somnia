@@ -1019,5 +1019,7 @@
  "animation.export.firstNumberAuto": "Komposition",
  "animation.export.problem.number": "Die Nummer des ersten Frames muss eine ganze Zahl von 0 bis 99999 sein.",
  "animation.rig.trim": "Auf Arbeitsbereich kürzen",
- "cmd.animation.layers.trimToWorkArea": "Gewählte Ebenen auf den Arbeitsbereich kürzen"
+ "cmd.animation.layers.trimToWorkArea": "Gewählte Ebenen auf den Arbeitsbereich kürzen",
+ "animation.export.colors": "GIF-Farben",
+ "animation.export.problem.colors": "GIF-Farben müssen 16, 32, 64, 128 oder 256 sein."
 }

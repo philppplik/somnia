@@ -1019,5 +1019,7 @@
  "animation.export.firstNumberAuto": "Composição",
  "animation.export.problem.number": "O número do primeiro quadro deve ser um inteiro de 0 a 99999.",
  "animation.rig.trim": "Cortar na área de trabalho",
- "cmd.animation.layers.trimToWorkArea": "Cortar as camadas selecionadas na área de trabalho"
+ "cmd.animation.layers.trimToWorkArea": "Cortar as camadas selecionadas na área de trabalho",
+ "animation.export.colors": "Cores do GIF",
+ "animation.export.problem.colors": "As cores do GIF devem ser 16, 32, 64, 128 ou 256."
 }
