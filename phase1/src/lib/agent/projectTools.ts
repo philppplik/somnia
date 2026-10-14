@@ -35,13 +35,18 @@ export class AgentProjectTools {
     }
     return out;
   }
+  private assertUnchangedBase(path: string, original: string | null): void {
+    const fresh = this.access.files();
+    if ((Object.hasOwn(fresh, path) ? fresh[path] : null) !== original) throw Error('Editor file changed during permission. Refresh the proposal.');
+  }
   private async stage(path: string, content: string, signal: AbortSignal): Promise<string> {
     if(!this.extra?.nativePath?.(path))validateAgentPath(path);
     const files = this.access.files();
+    const original = Object.hasOwn(files, path) ? files[path] : null;
     const approved = await this.access.authorize?.(path, 'write', signal);
     signal.throwIfAborted();
     if (!approved && (!this.access.allowed(path, 'write') || !this.access.allowed(path, 'read'))) throw Error('File access is not authorized.');
-    const original = Object.hasOwn(files, path) ? files[path] : null;
+    this.assertUnchangedBase(path, original);
     if (original !== null && (byteLength(original) > this.maxFileBytes || original.includes('\0'))) throw Error('File is binary or exceeds context limit.');
     const pending = this.staged.get(path);
     if (pending && pending.before !== original) throw Error('Editor file changed since proposal. Generate a new proposal.');
@@ -87,12 +92,12 @@ export class AgentProjectTools {
     validateAgentPath(path);
     const action = call.name === 'read_file' ? 'read' : 'write';
     if (Object.keys(args).some(k => !['path', ...(action === 'write' ? ['content'] : [])].includes(k))) throw Error('Unexpected tool arguments.');
+    const original = Object.hasOwn(files, path) ? files[path] : null;
     const approved = await this.access.authorize?.(path, action, signal);
     signal.throwIfAborted();
     // Writing an existing file also discloses its base to the proposal/review flow.
     if (!approved && (!this.access.allowed(path, action) || !this.access.allowed(path, 'read'))) throw Error('File access is not authorized.');
-    const exists = Object.hasOwn(files, path);
-    const original = exists ? files[path] : null;
+    this.assertUnchangedBase(path, original);
     if (original !== null && (byteLength(original) > this.maxFileBytes || original.includes('\0'))) throw Error('File is binary or exceeds context limit.');
     const pending = this.staged.get(path);
     if (pending && pending.before !== original) throw Error('Editor file changed since proposal. Generate a new proposal.');
