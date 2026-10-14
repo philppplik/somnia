@@ -795,6 +795,24 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.keys.growSelection",
+      "title": "Grow the key selection by one neighbour",
+      "category": "View",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "expand",
+        "extend",
+        "grow",
+        "keys",
+        "more",
+        "neighbor",
+        "neighbour",
+        "select"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.keys.influence",
       "title": "Set the ease influence of the selected keys",
       "category": "Edit",

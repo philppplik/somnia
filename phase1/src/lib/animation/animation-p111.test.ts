@@ -244,3 +244,9 @@ test('keys by interpolation: matches only that type on listed layers',()=>{
  const n=(['hold','linear','bezier'] as const).reduce((a,i)=>a+keysByInterp(c,['a'],i).length,0);
  assert.ok(n>=all);assert.equal(keysByInterp(c,['zz'],'linear').length,0);
 });
+import {growSelection} from './keyGrow';
+test('grow selection: adds neighbours once, keeps the rest',()=>{
+ const c=findComp(base())!,k=(n:number)=>({layer:'a',prop:'position' as const,t:f(n)});
+ assert.deepEqual(growSelection(c,[k(0)]).map(x=>x.t),[f(0),f(10)]);
+ assert.equal(growSelection(c,[k(0),k(10)]).length,2);assert.equal(growSelection(c,[]).length,0);
+});

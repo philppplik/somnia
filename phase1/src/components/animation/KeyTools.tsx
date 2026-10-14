@@ -34,6 +34,7 @@ export function KeyTools({selected,layers}:{selected:number;layers:readonly stri
    {id:'selHold',testid:'animation-keys-select-hold',label:t('animation.keys.selHold'),hint:t('animation.keys.selInterp.hint'),cmd:'animation.keys.selectByInterp',params:{interp:'hold',...L},min:0,layers:true},
    {id:'selLinear',testid:'animation-keys-select-linear',label:t('animation.keys.selLinear'),hint:t('animation.keys.selInterp.hint'),cmd:'animation.keys.selectByInterp',params:{interp:'linear',...L},min:0,layers:true},
    {id:'selBezier',testid:'animation-keys-select-bezier',label:t('animation.keys.selBezier'),hint:t('animation.keys.selInterp.hint'),cmd:'animation.keys.selectByInterp',params:{interp:'bezier',...L},min:0,layers:true},
+   {id:'grow',testid:'animation-keys-grow',label:t('animation.keys.grow'),hint:t('animation.keys.grow.hint'),cmd:'animation.keys.growSelection',params:{},min:1},
    {id:'peaks',testid:'animation-keys-peaks',label:t('animation.keys.peaks'),hint:t('animation.keys.peaks.hint'),cmd:'animation.keys.selectPeaks',params:L,min:0,layers:true},
    {id:'invertSel',testid:'animation-keys-invert-selection',label:t('animation.keys.invertSel'),hint:t('animation.keys.invertSel.hint'),cmd:'animation.keys.invertSelection',params:L,min:0,layers:true},
    {id:'property',testid:'animation-keys-property',label:t('animation.keys.property'),hint:t('animation.keys.property.hint'),cmd:'animation.keys.selectProperty',params:{},min:1},

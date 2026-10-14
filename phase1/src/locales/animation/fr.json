@@ -912,5 +912,8 @@
  "animation.keys.selLinear": "Keys linéaires",
  "animation.keys.selBezier": "Keys bézier",
  "animation.keys.selInterp.hint": "Sélectionne les keys avec cette interpolation",
- "cmd.animation.keys.selectByInterp": "Sélectionner les keys d’une interpolation"
+ "cmd.animation.keys.selectByInterp": "Sélectionner les keys d’une interpolation",
+ "animation.keys.grow": "Étendre la sélection",
+ "animation.keys.grow.hint": "Ajoute la key précédente et la suivante de chaque key sélectionnée",
+ "cmd.animation.keys.growSelection": "Étendre la sélection de keys d’un voisin"
 }
