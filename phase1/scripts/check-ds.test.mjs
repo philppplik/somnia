@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {countFile,compareCounts,extractHooks,hasHook,missingHooks} from './check-ds.mjs';
+import {countFile,compareCounts,extractHooks,hasHook,missingHooks,reducedBudgets,enrollmentProposal} from './check-ds.mjs';
 test('AST counts controls, inline objects and debt without comments or JSX-like strings',()=>{
  const actual=countFile(`// <button style={{}} />\nconst fake='<input />'; export const C=()=> <><button style={{color:'#aabbcc'}} className="text-[11px]"/><input/><select/><textarea/></>;`,'src/components/demo/Demo.tsx');
  assert.deepEqual(actual,{rawButton:1,rawInput:1,rawSelect:1,rawTextarea:1,hexTsx:1,hexCss:0,pixelText:1,inlineStyle:1});
@@ -37,3 +37,6 @@ test('P1 backing-element exceptions do not allow color or inline debt',()=>{
  const count=countFile('<input style={{color:"#abcdef"}} className="text-[11px]"/>','src/components/ui/native-controls.tsx');
  assert.equal(count.rawInput,0);assert.equal(count.hexTsx,1);assert.equal(count.pixelText,1);assert.equal(count.inlineStyle,1);
 });
+
+test('reduction update preserves removed area at zero and refuses fresh debt budgets',()=>{const next=reducedBudgets({current:{rawButton:2}},{current:{rawButton:3},removed:{rawInput:5}});assert.equal(next.current.rawButton,2);assert.equal(next.removed.rawInput,0);assert.equal(reducedBudgets({newArea:{rawButton:9}},{}).newArea.rawButton,0);assert.equal(compareCounts({removed:{rawInput:1}},next).length,1);});
+test('enrollment proposal distinguishes new areas from existing growth and never claims approval',()=>{const proposal=enrollmentProposal({old:{rawButton:2},fresh:{rawInput:4}},{old:{rawButton:1}});assert.equal(proposal.requiresApproval,true);assert.deepEqual(Object.keys(proposal.newAreas),['fresh']);assert.deepEqual(proposal.existingGrowth,['old.rawButton: 1 -> 2']);});

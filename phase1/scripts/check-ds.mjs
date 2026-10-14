@@ -42,7 +42,7 @@ export function countFile(text, path) {
 export function compareCounts(current, baseline) {
   return Object.entries(current).flatMap(([area,counts])=>metrics.filter(m=>counts[m]>(baseline[area]?.[m]??0)).map(m=>`${area}.${m}: ${baseline[area]?.[m]??0} -> ${counts[m]}`));
 }
-function measure(source) {
+export function measure(source) {
   const counts={};
   for(const [path,text] of source) {
     if(isTest(path)||!/(\.tsx|\.css)$/.test(path))continue;
@@ -96,19 +96,30 @@ export function missingHooks(current, previous) {
     return false;
   }).map(h=>`${h.kind}:${h.value}`);
 }
+/** Never forget an area/metric budget when files disappear. Reintroduction cannot reset debt. */
+export function reducedBudgets(current,previous){
+ const result={};for(const area of new Set([...Object.keys(previous),...Object.keys(current)])){
+  result[area]=Object.fromEntries(metrics.map(metric=>[metric,Math.min(previous[area]?.[metric]??0,current[area]?.[metric]??0)]));
+ }return result;
+}
+/** Explicit proposal only: new integrated debt is visible, never silently accepted by --update. */
+export function enrollmentProposal(current,previous){return {requiresApproval:true,note:'Proposed reviewed enrollment, not active budgets. Existing area growth is not approved. Once adopted, all areas/metrics only go down.',newAreas:Object.fromEntries(Object.entries(current).filter(([area])=>!Object.hasOwn(previous,area))),existingGrowth:compareCounts(Object.fromEntries(Object.entries(current).filter(([area])=>Object.hasOwn(previous,area))),previous)};}
 function main() {
   const source=files(resolve(root,'src')).filter(p=>/\.(?:[jt]sx?|css)$/.test(p)).map(p=>[relative(root,p).replaceAll('\\','/'),readFileSync(p,'utf8')]);
   const baselinePath=resolve(root,'scripts/ds-baseline.json');const hooksPath=resolve(root,'scripts/ds-hooks.json');
   const counts=measure(source); const hooks=inventory(source);
+  const proposal=process.argv.indexOf('--propose-enrollment');
+  if(proposal!==-1){const destination=process.argv[proposal+1];if(!destination||destination.startsWith('--'))throw Error('Proposal output path required');if(resolve(destination)===baselinePath||resolve(destination)===hooksPath)throw Error('Proposal cannot overwrite active baseline/hooks');const previous=JSON.parse(readFileSync(baselinePath,'utf8'));writeFileSync(destination,JSON.stringify(enrollmentProposal(counts,previous.counts),null,2)+'\n');console.log('Enrollment proposal written. Active budgets/hooks unchanged; integrator approval required.');return;}
+  let previousCounts={};
   const init=process.argv.includes('--init'); const update=process.argv.includes('--update');
   if(init&&(existsSync(baselinePath)||existsSync(hooksPath)))throw Error('Refusing to reinitialize an existing ratchet. Use --update; it accepts reductions only.');
   if(!init) {
-    const previous=JSON.parse(readFileSync(baselinePath,'utf8')); const priorHooks=JSON.parse(readFileSync(hooksPath,'utf8'));
+    const previous=JSON.parse(readFileSync(baselinePath,'utf8')); const priorHooks=JSON.parse(readFileSync(hooksPath,'utf8'));previousCounts=previous.counts;
     if(JSON.stringify(previous.exceptions)!==JSON.stringify(exceptions))throw Error('Exception policy changed. Review and explicitly update both script and baseline; --update cannot silently expand exemptions.');
     const failures=[...compareCounts(counts,previous.counts),...missingHooks(hooks,priorHooks).map(h=>`Public hook removed: ${h}`)];
     if(failures.length){console.error(failures.join('\n'));process.exitCode=1;return;}
   }
-  if(init||update){writeFileSync(baselinePath,JSON.stringify({schemaVersion:1,exceptions,counts},null,2)+'\n');writeFileSync(hooksPath,JSON.stringify(hooks,null,2)+'\n');}
+  if(init||update){writeFileSync(baselinePath,JSON.stringify({schemaVersion:1,exceptions,counts:init?counts:reducedBudgets(counts,previousCounts)},null,2)+'\n');writeFileSync(hooksPath,JSON.stringify(hooks,null,2)+'\n');}
   console.log(`Design-system ratchet passed: ${Object.keys(counts).length} areas, ${hooks.hooks.length} literal hooks (${hooks.hooks.filter(h=>h.owners.length).length} source-backed).`);
 }
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url))main();
