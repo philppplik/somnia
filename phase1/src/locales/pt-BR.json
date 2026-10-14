@@ -3274,5 +3274,20 @@
   "documents.export.format": "Formato",
   "documents.export.docx": "Documento do Word (.docx)",
   "documents.export.file": "Nome do arquivo",
-  "documents.export.note": "Salva um novo arquivo ao lado do original. O documento aberto nunca é alterado."
+  "documents.export.note": "Salva um novo arquivo ao lado do original. O documento aberto nunca é alterado.",
+  "shell.rail.panelsLeft": "Painéis da barra lateral",
+  "shell.rail.panelsRight": "Painéis do inspetor",
+  "shell.rail.toggleSidebar": "Alternar barra lateral",
+  "shell.rail.toggleInspector": "Alternar inspetor",
+  "shell.rail.extensionPanel": "Painel {title} (extensão)",
+  "rest.fileTabs.closeFile": "Fechar {file}",
+  "rest.fileTabs.unsavedImage": "Alterações de imagem não salvas",
+  "ext.dialog.aria": "Extensões",
+  "panels.layers.tab.layers": "Camadas",
+  "panels.layers.tab.files": "Arquivos",
+  "panels.layers.tab.search": "Pesquisa",
+  "panels.layers.tab.components": "Componentes",
+  "panels.layers.tab.css": "CSS",
+  "panels.layers.tab.versions": "Versões",
+  "imageeditor.rasterTools": "Ferramentas raster"
 }

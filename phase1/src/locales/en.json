@@ -3274,5 +3274,20 @@
   "documents.export.format": "Format",
   "documents.export.docx": "Word document (.docx)",
   "documents.export.file": "File name",
-  "documents.export.note": "Saves a new file next to the original. The opened document is never changed."
+  "documents.export.note": "Saves a new file next to the original. The opened document is never changed.",
+  "shell.rail.panelsLeft": "Sidebar panels",
+  "shell.rail.panelsRight": "Inspector panels",
+  "shell.rail.toggleSidebar": "Toggle sidebar",
+  "shell.rail.toggleInspector": "Toggle inspector",
+  "shell.rail.extensionPanel": "{title} panel (extension)",
+  "rest.fileTabs.closeFile": "Close {file}",
+  "rest.fileTabs.unsavedImage": "Unsaved image changes",
+  "ext.dialog.aria": "Extensions",
+  "panels.layers.tab.layers": "Layers",
+  "panels.layers.tab.files": "Files",
+  "panels.layers.tab.search": "Search",
+  "panels.layers.tab.components": "Components",
+  "panels.layers.tab.css": "CSS",
+  "panels.layers.tab.versions": "Versions",
+  "imageeditor.rasterTools": "Raster tools"
 }

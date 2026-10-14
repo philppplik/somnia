@@ -13,7 +13,8 @@ import {StoreScreen} from './StoreView';
 type Entry={view:PopupView;id?:string;section?:string};
 /** Own dialog for extension management. Host truth is re-read after every acknowledged mutation. */
 export function ExtensionsPopup({open,onClose,host,initial='installed'}:{open:boolean;onClose:()=>void;host:ExtensionsPopupHost;initial?:PopupView}){
- return <Dialog open={open} onOpenChange={o=>{if(!o)onClose();}}><DialogContent className="ext-popup" aria-label="Extensions"><ExtensionsPopupBody host={host} onClose={onClose} initial={initial}/></DialogContent></Dialog>;
+ const {t}=useT();
+ return <Dialog open={open} onOpenChange={o=>{if(!o)onClose();}}><DialogContent className="ext-popup" aria-label={t('ext.dialog.aria')}><ExtensionsPopupBody host={host} onClose={onClose} initial={initial}/></DialogContent></Dialog>;
 }
 
 export function ExtensionsPopupBody({host,onClose,initial='installed'}:{host:ExtensionsPopupHost;onClose:()=>void;initial?:PopupView}){

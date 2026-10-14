@@ -1,5 +1,6 @@
 import {useId,useState,type ReactNode} from 'react';
 import {useT} from '../../lib/useT';
+import {rovingNextIndex} from '../../lib/rovingKeys';
 import {badgeText,permissionTags,type GrantKey,type PopupExtension,type PopupView} from '../../lib/extensions/popupModel';
 
 /** Icon from api.iconify.design/vadivam/badge-check.svg, inlined so no network fetch is needed. */
@@ -28,7 +29,7 @@ export function ExtensionNav({view,counts,onSelect,onAdd}:{view:PopupView;counts
  const items:{id:PopupView;label:string;n:number}[]=[{id:'installed',label:t('ext.nav.installed'),n:counts.installed},{id:'browse',label:t('ext.nav.browse'),n:0},{id:'updates',label:t('ext.nav.updates'),n:counts.updates},{id:'activity',label:t('ext.nav.activity'),n:0}];
  const current=view==='detail'?'installed':view==='store-detail'?'browse':view==='add'?null:view;
  return <nav className="ext-nav" aria-label={t('ext.nav.aria')}><h2 className="ext-nav-title">{t('ext.title')}</h2>
-  <div role="tablist" aria-orientation="vertical" className="ext-nav-list">{items.map(i=>{const b=badgeText(i.n);return <button key={i.id} role="tab" id={`ext-tab-${i.id}`} aria-selected={current===i.id} aria-controls="ext-panel" tabIndex={current===i.id||(current===null&&i.id==='installed')?0:-1} className="ext-nav-item" onClick={()=>onSelect(i.id)}><span>{i.label}</span>{b?<span className="ext-count" aria-label={t('ext.count.aria',{count:i.n})}>{b}</span>:null}</button>;})}</div>
+  <div role="tablist" aria-orientation="vertical" className="ext-nav-list" onKeyDown={e=>{const cur=(document.activeElement as HTMLElement|null)?.id.replace('ext-tab-','');const i=rovingNextIndex(e.key,items.findIndex(x=>x.id===cur),items.length,'vertical');if(i===null)return;e.preventDefault();onSelect(items[i].id);document.getElementById(`ext-tab-${items[i].id}`)?.focus();}}>{items.map(i=>{const b=badgeText(i.n);return <button key={i.id} role="tab" id={`ext-tab-${i.id}`} aria-selected={current===i.id} aria-controls="ext-panel" tabIndex={current===i.id||(current===null&&i.id==='installed')?0:-1} className="ext-nav-item" onClick={()=>onSelect(i.id)}><span>{i.label}</span>{b?<span className="ext-count" aria-label={t('ext.count.aria',{count:i.n})}>{b}</span>:null}</button>;})}</div>
   <button type="button" className={`ext-add-btn${view==='add'?' is-active':''}`} onClick={onAdd}>{t('ext.add.button')}</button></nav>;
 }
 const TAG_KEYS:Record<GrantKey,string>={'project.read':'ext.tag.read','project.write':'ext.tag.write',network:'ext.tag.network',clipboard:'ext.tag.clipboard',folders:'ext.tag.folders',agent:'ext.tag.agent'};
