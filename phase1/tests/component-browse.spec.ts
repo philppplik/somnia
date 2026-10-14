@@ -1,5 +1,5 @@
 import {test,expect} from './fixtures';
-import {openMine} from './helpers';
+import {openMine,showPanel} from './helpers';
 test('components panel: blocks search/chips, save, organize, search both scopes, drag-insert with undo',async({page})=>{
  await page.goto('/');const f=page.frameLocator('iframe[title="Sandboxed design preview"]');await expect(f.locator('h1')).toBeVisible();
  await page.getByRole('button',{name:'section',exact:true}).click();await page.getByRole('button',{name:'Components panel',exact:true}).click();
@@ -28,7 +28,7 @@ test('components panel: blocks search/chips, save, organize, search both scopes,
  // search covers both scopes: tag matches only My library
  await page.getByLabel('Search components').fill('sales');await expect(page.getByTestId('browse-count')).toContainText('1 results');await expect(mine).toBeVisible();
  await page.getByLabel('Search components').fill('');
- await page.reload();await page.getByRole('button',{name:'Components panel',exact:true}).click();await expect(page.getByTestId('scope-blocks')).toHaveAttribute('aria-selected','true');
+ await page.reload();await showPanel(page,'Components');await expect(page.getByTestId('scope-blocks')).toHaveAttribute('aria-selected','true');
  await page.getByTestId('scope-mine').click();await expect(page.getByRole('group',{name:'Card Pricing card'})).toContainText('#sales');
  // drag into canvas: payload is a component id pair; undo removes the insert
  const before=await f.locator('article').count();

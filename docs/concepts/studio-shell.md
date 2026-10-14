@@ -148,7 +148,7 @@ What changes:
 
 | Studio | L (studio items) | R (studio items) | Sub-tabs |
 | --- | --- | --- | --- |
-| Code | Layers, Components, CSS, Versions | Design, Prototype | Versions: History / Changes / Variants / Compare. Design: Layout / Style / Effects / Advanced |
+| Code | Layers, Components, CSS, Versions | Design (single generic Inspector; Prototype lives in the Inspector section "Interactions", confirmed by Philipp 13.10.) | Versions: History / Changes / Variants / Compare. Design: Layout / Style / Effects / Advanced |
 | Documents | Outline, Versions | Document | Document: Page / Text / Styles |
 | Sheets | Sheets list, Versions | Cell | Cell: Format / Number / Conditional |
 | Slides | Slides | Slide | Slide: Text / Layout / Notes |
