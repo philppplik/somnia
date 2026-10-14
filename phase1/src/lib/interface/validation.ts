@@ -1,3 +1,4 @@
+import {validateInterfacePrototype} from './prototypeCore';
 import type {InterfaceDocument} from './schema';
 import {validateInterfaceAssets} from './assetsCore';
 import {validateInterfaceVectors} from './vectorCore';
@@ -13,7 +14,7 @@ export function validOverride(key:string,value:unknown):boolean{
 }
 /** P1 recognized fields fail closed; no evaluator, URL or arbitrary patch keys. */
 export function validateInterfaceFeatures(d:InterfaceDocument):void{
- validateInterfaceTokens(d);validateInterfaceAssets(d);validateInterfaceVectors(d);
+ validateInterfacePrototype(d);validateInterfaceTokens(d);validateInterfaceAssets(d);validateInterfaceVectors(d);
  const nodes=new Map(d.nodes.map(n=>[n.id,n]));const components=d.components??[];
  if(!Array.isArray(components)||components.length>100)throw Error('Invalid component catalogue.');
  const componentIds=new Set<string>(),variantIds=new Set<string>(),masterIds=new Set<string>();

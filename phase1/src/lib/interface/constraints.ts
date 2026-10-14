@@ -1,0 +1,5 @@
+import {patchInterfaceNode} from './components';
+import {computeInterfaceLayout} from './layout';
+import type {InterfaceDocument} from './model';import type {ConstraintMode} from './schema';
+/** Switching a pin policy rebases rendered geometry instead of reapplying an old parent delta. */
+export function setInterfaceConstraint(doc:InterfaceDocument,id:string,axis:'horizontal'|'vertical',mode:ConstraintMode){const n=doc.nodes.find(n=>n.id===id)!,parent=doc.nodes.find(p=>p.id===n?.parentId);if(!n||!parent||parent.layout&&parent.layout.direction!=='free'&&!n.sizing?.absolute)throw Error('Constraints require a free or absolute child.');const layout=computeInterfaceLayout(doc),b=layout.bounds.get(id)!,p=layout.bounds.get(parent.id)!;patchInterfaceNode(doc,id,{x:b.x,y:b.y,width:b.width,height:b.height,constraints:{horizontal:n.constraints?.horizontal??'start',vertical:n.constraints?.vertical??'start',parentWidth:p.width,parentHeight:p.height,[axis]:mode}});}

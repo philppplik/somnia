@@ -1,3 +1,5 @@
+import {InterfaceInteractions} from './InterfacePrototype';
+import {setInterfaceConstraint} from '../../lib/interface/constraints';
 import {Field} from './InterfaceField';
 export {Field};
 import {InterfaceSelectionControls} from './InterfaceSelection';
@@ -7,7 +9,6 @@ import {InterfaceResources,InterfaceBindings} from './InterfaceResources';
 import {InterfaceOutput} from './InterfaceOutput';
 import {patchInterfaceNode,owningInstance,createComponent,instantiateComponent,addComponentVariant,switchInstanceVariant,resetInstanceOverrides,detachInstance} from '../../lib/interface/components';
 import {DEFAULT_LAYOUT,DEFAULT_SIZING,type InterfaceLayout,type InterfaceSizing,type ConstraintMode} from '../../lib/interface/schema';
-import {computeInterfaceLayout} from '../../lib/interface/layout';
 import {useState,type ReactNode} from 'react';
 import {Button} from '../ui/button';
 import {PanelSection} from '../ui/panel';
@@ -60,6 +61,7 @@ export function InterfaceProperties(){
 
    <div className="flex flex-wrap gap-1"><Button size="compact" variant="outline" disabled={node.locked} onClick={()=>run(()=>move(-1))}>{t('interface.up')}</Button><Button size="compact" variant="outline" disabled={node.locked} onClick={()=>run(()=>move(1))}>{t('interface.down')}</Button><Button size="compact" variant="outline" disabled={node.locked} onClick={()=>run(()=>interfaceSession.transact(d=>deleteNode(d,node.id)))}>{t('interface.delete')}</Button></div>
   </>}
+  {node&&s.selectedIds.length===1&&<InterfaceInteractions node={node} run={run}/>}
   <InterfaceOutput/>
  </div>}</Guard>;
 }
@@ -79,7 +81,7 @@ function InterfaceLayoutControls({node,run,patch}:{node:InterfaceNode;run:(f:()=
   </>}
   <div className="grid grid-cols-2 gap-2">{(['width','height'] as const).map(axis=><Choice key={axis} label={`${t(`interface.${axis}`)} / ${t('interface.sizing')}`} value={sizing[axis]} options={option(['fixed','hug','fill'])} disabled={disabled} onChange={v=>setSizing({[axis]:v})}/>)}</div>
   <div className="grid grid-cols-2 gap-2">{(['minWidth','maxWidth','minHeight','maxHeight'] as const).map(key=><Field key={key} name={t(`interface.${key}`)} value={sizing[key]} type="number" disabled={disabled} onCommit={v=>run(()=>patch({sizing:{...sizing,[key]:number(v)}}))}/>)}</div>
-  {parent&&<><label className="flex items-center gap-2 text-xs"><input style={{width:14}} type="checkbox" checked={sizing.absolute} disabled={disabled} onChange={e=>setSizing({absolute:e.target.checked})}/>{t('interface.absolute')}</label>{(!parent.layout||parent.layout.direction==='free'||sizing.absolute)&&<div className="grid grid-cols-2 gap-2">{(['horizontal','vertical'] as const).map(axis=><Choice key={axis} label={t(`interface.${axis}`)} value={node.constraints?.[axis]??'start'} options={option(['start','end','center','stretch','scale'])} disabled={disabled} onChange={v=>run(()=>{const bounds=computeInterfaceLayout(s.document!).bounds.get(parent.id)!;patch({constraints:{horizontal:node.constraints?.horizontal??'start',vertical:node.constraints?.vertical??'start',parentWidth:node.constraints?.parentWidth??bounds.width,parentHeight:node.constraints?.parentHeight??bounds.height,[axis]:v as ConstraintMode}});})}/>)}</div>}</>}
+  {parent&&<><label className="flex items-center gap-2 text-xs"><input style={{width:14}} type="checkbox" checked={sizing.absolute} disabled={disabled} onChange={e=>setSizing({absolute:e.target.checked})}/>{t('interface.absolute')}</label>{(!parent.layout||parent.layout.direction==='free'||sizing.absolute)&&<div className="grid grid-cols-2 gap-2">{(['horizontal','vertical'] as const).map(axis=><Choice key={axis} label={t(`interface.${axis}`)} value={node.constraints?.[axis]??'start'} options={option(['start','end','center','stretch','scale'])} disabled={disabled} onChange={v=>run(()=>interfaceSession.transact(d=>setInterfaceConstraint(d,node.id,axis,v as ConstraintMode)))}/>)}</div>}</>}
  </div></InspectorGroup>;
 }
 function InterfaceComponentControls({node,run}:{node:InterfaceNode;run:(f:()=>void)=>void}){

@@ -14,12 +14,13 @@ export interface InterfaceAsset {id:string;hash:string;mime:'image/png';width:nu
 export interface PathPoint {x:number;y:number;}
 export interface InterfacePath {points:PathPoint[];closed:boolean;}
 export type NodeKind='frame'|'group'|'rectangle'|'text'|'ellipse'|'line'|'path'|'image';
+export interface PrototypeLink {trigger:'click'|'hover';targetFrameId:string;}
 export interface InterfaceNode {
  id:string;pageId:string;parentId:string|null;children:string[];kind:NodeKind;name:string;
  x:number;y:number;width:number;height:number;fill:string;text?:string;hidden:boolean;locked:boolean;
- path?:InterfacePath;stroke?:string;strokeWidth?:number;imageFill?:{assetId:string;fit:'cover'|'contain'};
+ prototypeLinks?:PrototypeLink[];path?:InterfacePath;stroke?:string;strokeWidth?:number;imageFill?:{assetId:string;fit:'cover'|'contain'};
  bindings?:{fill?:string;gap?:string};textStyleId?:string;annotation?:string;ready?:boolean;layout?:InterfaceLayout;sizing?:InterfaceSizing;constraints?:InterfaceConstraints;componentSlot?:string;instance?:InterfaceInstance;
  [key:string]:unknown;
 }
 export interface InterfacePage {id:string;name:string;children:string[];[key:string]:unknown;}
-export interface InterfaceDocument {kind:'somnia-interface';version:1;id:string;name:string;revision:number;pages:InterfacePage[];nodes:InterfaceNode[];components?:InterfaceComponent[];variables?:InterfaceVariable[];textStyles?:InterfaceTextStyle[];assets?:InterfaceAsset[];[key:string]:unknown;}
+export interface InterfaceDocument {kind:'somnia-interface';version:1;id:string;name:string;revision:number;pages:InterfacePage[];nodes:InterfaceNode[];components?:InterfaceComponent[];variables?:InterfaceVariable[];textStyles?:InterfaceTextStyle[];assets?:InterfaceAsset[];prototypeStartFrameId?:string;[key:string]:unknown;}

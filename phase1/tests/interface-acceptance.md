@@ -8,6 +8,7 @@
 | P2 | Local token/grid controls, SVG/PNG download, manual readiness/frozen handoff, unchanged dirty state |
 | P3 | Local SVG snapshot into frame, pen cancel versus single commit |
 | P4 | Shift multi-select, align/duplicate/undo, page naming/frame reveal, internal frame clipboard |
+| P6 | Local click/hover link authoring, parent resize/stretch, frozen preview keyboard/back/Escape and unchanged source/recovery |
 | P5 | Page-wide multi-frame freeze, 2x PNG preset, token/geometry CSS snapshot frozen across later source edit |
 
 These are executable specifications, not a claim that CI has passed. Model/unit tests separately cover component propagation/semantic slots, layout, malicious imports, export escaping/limits and transactional save behavior. Native host save/reopen and full shell production gates are separate. Pixel inspection of the isolated fixture is not application E2E.

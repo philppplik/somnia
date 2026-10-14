@@ -21,7 +21,7 @@ export function pasteSelection(doc:InterfaceDocument,clipboard:InterfaceClipboar
  const map=new Map(clipboard.nodes.map(n=>[n.id,uid()])),roots=new Set(clipboard.roots),copies=clipboard.nodes.map(n=>{const copy={...structuredClone(n),id:map.get(n.id)!,pageId,parentId:roots.has(n.id)?parentId:map.get(n.parentId!)!,children:n.children.map(id=>map.get(id)!)};if(roots.has(n.id)){const b=clipboard.bounds[n.id];copy.x=b.x+offset;copy.y=b.y+offset;delete copy.constraints;}return copy;});
  // Copying masters creates ordinary artwork; copying instances preserves their local component references.
  const sourceNodes=new Map(clipboard.nodes.map(n=>[n.id,n]));const instanceSlots=new Set<string>();const preserve=(id:string)=>{instanceSlots.add(id);sourceNodes.get(id)!.children.forEach(preserve);};clipboard.nodes.filter(n=>n.instance).forEach(n=>preserve(n.id));for(const source of clipboard.nodes)if(!instanceSlots.has(source.id))delete copies.find(n=>n.id===map.get(source.id))!.componentSlot;
- doc.nodes.push(...copies);const ids=clipboard.roots.map(id=>map.get(id)!);(parent?.children??page.children).push(...ids);return ids;
+ for(const copy of copies)if(copy.prototypeLinks)copy.prototypeLinks=copy.prototypeLinks.map(l=>({...l,targetFrameId:parentId===null&&map.has(l.targetFrameId)?map.get(l.targetFrameId)!:l.targetFrameId}));doc.nodes.push(...copies);const ids=clipboard.roots.map(id=>map.get(id)!);(parent?.children??page.children).push(...ids);return ids;
 }
 export interface SnapSettings {enabled:boolean;grid:number;guidesX:number[];guidesY:number[];}
 export const DEFAULT_SNAP:SnapSettings={enabled:false,grid:8,guidesX:[],guidesY:[]};

@@ -47,7 +47,7 @@ export function deleteNode(d:InterfaceDocument,id:string):void{
  const n=d.nodes.find(n=>n.id===id);if(!n||n.locked)return;if(n.parentId&&insideInstance(d,n.parentId))throw Error('Detach the instance before deleting its layers.');
  const removing=new Set<string>();const walk=(id:string)=>{removing.add(id);d.nodes.find(n=>n.id===id)?.children.forEach(walk);};walk(id);
  const siblings=n.parentId?d.nodes.find(p=>p.id===n.parentId)!.children:d.pages.find(p=>p.id===n.pageId)!.children;
- siblings.splice(siblings.indexOf(id),1);d.nodes=d.nodes.filter(n=>!removing.has(n.id));
+ siblings.splice(siblings.indexOf(id),1);d.nodes=d.nodes.filter(n=>!removing.has(n.id));for(const node of d.nodes)if(node.prototypeLinks)node.prototypeLinks=node.prototypeLinks.filter(l=>!removing.has(l.targetFrameId));if(d.prototypeStartFrameId&&removing.has(d.prototypeStartFrameId))delete d.prototypeStartFrameId;
 }
 /** Reparent preserves absolute position; validation makes cycles an atomic failure. */
 export function reparentNode(d:InterfaceDocument,id:string,parentId:string|null,index:number):void{
