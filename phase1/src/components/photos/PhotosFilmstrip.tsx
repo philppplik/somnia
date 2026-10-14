@@ -6,6 +6,7 @@ import {closeMedia,getMedia,setActiveMedia,useMedia} from '../../lib/media';
 import {developablePhotos} from '../../lib/photos/photoNav';
 import {rangeSelect,toggleSelect} from '../../lib/photos/selection';
 import {syncLookToPhotos} from '../../lib/photos/batchExport';
+import {findWbPreset,WB_PRESETS} from '../../lib/photos/wbPresets';
 import {applyLook,BUILT_IN_PRESETS,extractLook,isNeutralLook,parseUserPresets,type Look,type UserPreset} from '../../lib/photos/presets';
 import {commitPhotoSettings,getPhotoSession} from '../../lib/photos/studioSession';
 import {FILMSTRIP_SORTS,sortFilmstrip,type FilmstripSort} from '../../lib/photos/filmstripSort';
@@ -75,15 +76,21 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:()=>v
    {FILMSTRIP_SORTS.map(m=><option key={m} value={m}>{t(`photos.filmstrip.sort.${m}`)}</option>)}
   </NativeSelect>
   <Button variant="outline" size="compact" disabled={neutral} onClick={()=>activeSession&&setCopied(extractLook(activeSession.now))} data-testid="photos-filmstrip-copy">{t('photos.filmstrip.copy')}</Button>
-  <Button variant="outline" size="compact" disabled={!copied||!active} onClick={()=>copied&&active&&commitPhotoSettings(active,cur=>applyLook(cur,copied))} data-testid="photos-filmstrip-paste">{t('photos.filmstrip.paste')}</Button>
+  <Button variant="outline" size="compact" disabled={!copied||applying||(!active&&selected.length<2)} onClick={()=>{
+   if(!copied)return;
+   if(selected.length>1)void applyLookToSelection(copied); // paste onto every selected photo
+   else if(active)commitPhotoSettings(active,cur=>applyLook(cur,copied));
+  }} data-testid="photos-filmstrip-paste">{t('photos.filmstrip.paste')}</Button>
   {selected.length>1&&<Button variant="outline" size="compact" disabled={applying||neutral} onClick={()=>void applyToSelection()} data-testid="photos-filmstrip-apply">{t('photos.filmstrip.apply',{count:selected.length})}</Button>}
   {selected.length>1&&<NativeSelect value="" disabled={applying} aria-label={t('photos.filmstrip.applyPreset')} title={t('photos.filmstrip.applyPreset')} onChange={e=>{
    const v=e.currentTarget.value;e.currentTarget.value='';
-   const look=v.startsWith('user:')?userPresets.find(p=>p.id===v.slice(5))?.look:BUILT_IN_PRESETS.find(p=>p.id===v)?.look;
+   const wb=v.startsWith('wb:')?findWbPreset(v.slice(3)):undefined;
+   const look=wb?{temp:wb.temp,tint:wb.tint}:v.startsWith('user:')?userPresets.find(p=>p.id===v.slice(5))?.look:BUILT_IN_PRESETS.find(p=>p.id===v)?.look;
    if(look)void applyLookToSelection(look);
   }} className="h-7 shrink-0" data-testid="photos-filmstrip-apply-preset">
    <option value="" disabled>{t('photos.filmstrip.applyPreset')}</option>
    {BUILT_IN_PRESETS.map(p=><option key={p.id} value={p.id}>{t(p.labelKey)}</option>)}
+   {WB_PRESETS.map(p=><option key={p.id} value={`wb:${p.id}`}>{t(p.labelKey)}</option>)}
    {userPresets.map(p=><option key={p.id} value={`user:${p.id}`}>{p.name}</option>)}
   </NativeSelect>}
   {selected.length>1&&onSurvey&&<Button variant="outline" size="icon" aria-label={t('photos.filmstrip.survey')} title={t('photos.filmstrip.survey')} onClick={onSurvey} className="h-7 w-7 shrink-0" data-testid="photos-filmstrip-survey"><LayoutGrid size={12}/></Button>}

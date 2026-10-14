@@ -138,5 +138,11 @@
  "photos.filmstrip.removeRejectsConfirm": "Vraiment supprimer {count} ?",
  "photos.filmstrip.copy": "Copier les reglages",
  "photos.filmstrip.paste": "Coller les reglages",
- "photos.rating.filter.unrated": "Non note"
+ "photos.rating.filter.unrated": "Non note",
+ "photos.wb.tungsten": "Tungstène",
+ "photos.wb.fluorescent": "Fluorescent",
+ "photos.wb.daylight": "Lumière du jour",
+ "photos.wb.cloudy": "Nuageux",
+ "photos.wb.shade": "Ombre",
+ "photos.wb.flash": "Flash"
 }

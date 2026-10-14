@@ -198,3 +198,17 @@ Coverage: `photos-filmstrip.spec.ts` gains a light/dark leg that
 filters to unrated (a fresh rating removes the photo from the view),
 copies a warm white balance from one photo and pastes it onto the
 next, asserting the pasted value through the photo session.
+
+## Paste onto the selection, WB presets in the dropdown (P91)
+
+With several photos selected, paste no longer targets only the active
+photo: the copied look goes through `syncLookToPhotos` onto every
+selected photo, with the usual apply note; a single photo still gets
+one undo step. The filmstrip preset dropdown also lists the named
+white-balance presets (tungsten through flash) between the built-in
+looks and the user presets, applying temp/tint to the selection.
+
+Coverage: `photos-filmstrip.spec.ts` gains a light/dark leg that
+copies a warm white balance, pastes it onto a two-photo selection
+(both sessions updated, note visible) and applies the cloudy WB preset
+from the dropdown (temp/tint land on the photo).

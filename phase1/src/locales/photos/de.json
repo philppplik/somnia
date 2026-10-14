@@ -138,5 +138,11 @@
  "photos.filmstrip.removeRejectsConfirm": "Wirklich {count} entfernen?",
  "photos.filmstrip.copy": "Einstellungen kopieren",
  "photos.filmstrip.paste": "Einstellungen einfuegen",
- "photos.rating.filter.unrated": "Unbewertet"
+ "photos.rating.filter.unrated": "Unbewertet",
+ "photos.wb.tungsten": "Kunstlicht",
+ "photos.wb.fluorescent": "Leuchtstoff",
+ "photos.wb.daylight": "Tageslicht",
+ "photos.wb.cloudy": "Bewölkt",
+ "photos.wb.shade": "Schatten",
+ "photos.wb.flash": "Blitz"
 }

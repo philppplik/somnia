@@ -344,3 +344,23 @@ test('copy/paste settings and the unrated filter (light and dark)',async({page})
   await page.screenshot({path:`test-results/ds-photos-copy-paste-${theme}.png`,fullPage:true});
  }
 });
+test('paste applies to the selection and WB presets join the preset dropdown (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
+  await page.evaluate(async()=>{const m=await import('/src/lib/photos/studioSession.ts');m.commitPhotoSettings('strip-1.png',s=>({...s,temp:7800}));});
+  await page.getByTestId('photos-filmstrip-item-strip-1.png').click();
+  await page.getByTestId('photos-filmstrip-item-strip-2.png').click({modifiers:['ControlOrMeta']}); // two selected
+  await page.getByTestId('photos-filmstrip-copy').click();
+  await page.getByTestId('photos-filmstrip-paste').click(); // paste onto both selected photos
+  await expect(page.getByTestId('photos-filmstrip-apply-note')).toBeVisible();
+  const temps=await page.evaluate(async()=>{const m=await import('/src/lib/photos/studioSession.ts');return [m.getPhotoSession('strip-1.png')?.now.temp,m.getPhotoSession('strip-2.png')?.now.temp];});
+  expect(temps).toEqual([7800,7800]);
+  await page.getByTestId('photos-filmstrip-apply-preset').selectOption('wb:cloudy'); // WB preset on the selection
+  const wb=await page.evaluate(async()=>{const m=await import('/src/lib/photos/studioSession.ts');const s=m.getPhotoSession('strip-1.png')?.now;return [s?.temp,s?.tint];});
+  expect(wb).toEqual([7000,20]);
+  await page.screenshot({path:`test-results/ds-photos-paste-selection-${theme}.png`,fullPage:true});
+ }
+});
