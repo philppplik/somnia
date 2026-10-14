@@ -8,6 +8,7 @@ function make(name:string,html:string):VadivamIcon{
  const Icon=({size=24,strokeWidth=2,absoluteStrokeWidth:_a,...rest}:IconProps)=><svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" data-icon={`vadivam:${name}`} {...rest} dangerouslySetInnerHTML={{__html:html}}/>;
  Icon.displayName=`Vadivam(${name})`;return Icon;}
 
+export const Crosshair=make("crosshair","<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M12 2v4M12 18v4M2 12h4M18 12h4\"/>");
 export const Spline=make("spline","<circle cx=\"19\" cy=\"5\" r=\"2\"/><circle cx=\"5\" cy=\"19\" r=\"2\"/><path d=\"M5 17A12 12 0 0 1 17 5\"/>");
 export const Aperture=make("aperture","<path d=\"M14.31 8c2.655 2.878 4.47 6.26 5.74 9.94M9.69 8a33.4 33.4 0 0 1 11.48 0M7.38 12a36.5 36.5 0 0 1 5.74-9.94M9.69 16c-2.736-2.814-4.58-6.214-5.74-9.94M14.311 16A33.5 33.5 0 0 1 2.83 16m13.791-4c-1.367 3.632-3.365 6.89-5.74 9.94M22 12a10 10 0 1 1-20.001 0A10 10 0 0 1 22 12\"/>");
 export const Grid3x3=make("grid-3x3","<path d=\"M3 9h18M3 15h18M9 3v18M15 3v18\"/>");

@@ -110,5 +110,7 @@
  "photos.p.hsl.band.aqua": "Aqua",
  "photos.p.hsl.band.blue": "Blau",
  "photos.p.hsl.band.purple": "Lila",
- "photos.p.hsl.band.magenta": "Magenta"
+ "photos.p.hsl.band.magenta": "Magenta",
+ "photos.p.target.curves": "Zielmodus: im Bild nach oben oder unten ziehen, um einen Kurvenpunkt bei diesem Tonwert anzulegen und zu formen",
+ "photos.p.target.hsl": "Zielmodus: im Bild nach oben oder unten ziehen, um ein Farbband zu wählen und seine Sättigung zu ändern"
 }

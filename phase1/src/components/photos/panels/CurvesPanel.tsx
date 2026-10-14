@@ -6,6 +6,7 @@ import {computeHistogram,histogramPath} from '../../../lib/photos/histogram';
 import {CURVE_CHANNELS,MAX_CURVE_POINTS,curveLut,sanitizeCurvePoints,type CurveChannel,type CurvePoint} from '../../../lib/photos/curves';
 import {beginPhotoGesture,endPhotoGesture,previewPhotoSettings,commitPhotoSettings,type PhotoSession} from '../../../lib/photos/studioSession';
 import {Button} from '../../ui/button';
+import {Crosshair} from '../../../lib/icons';
 import {PanelBody,SectionHead} from './shared';
 
 /** Channel buttons reuse the histogram labels: the master curve is what the histogram calls RGB. */
@@ -91,8 +92,11 @@ function CurveBox({name,session,channel}:{name:string;session:PhotoSession;chann
 export function CurvesPanel(){
  const {t}=useT();
  const [channel,setChannel]=usePanelState<CurveChannel>('photos.curves','master');
+ const [target,setTarget]=usePanelState<boolean>('photos.curves.target',false);
+ const [,setHslTarget]=usePanelState<boolean>('photos.hsl.target',false);
  return <PanelBody testId="photos-curves-panel">{({name,session})=><>
   <SectionHead>
+   <Button size="tiny" variant="outline" aria-pressed={target} title={t('photos.p.target.curves')} aria-label={t('photos.p.target.curves')} onClick={()=>{const v=!target;setTarget(v);if(v)setHslTarget(false);}} data-testid="photos-curves-target"><Crosshair size={12}/></Button>
    {CURVE_CHANNELS.map(c=><Button key={c} size="tiny" variant="outline" aria-pressed={channel===c} onClick={()=>setChannel(c)} data-testid={`photos-curves-ch-${c}`}>{t(`photos.p.hist.ch.${CH_LABEL[c]}`)}</Button>)}
    <Button size="tiny" variant="outline" onClick={()=>commitPhotoSettings(name,s=>({...s,curves:{...s.curves,[channel]:[]}}))} data-testid="photos-curves-reset">{t('photos.p.curves.reset')}</Button>
   </SectionHead>

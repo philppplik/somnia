@@ -110,5 +110,7 @@
  "photos.p.hsl.band.aqua": "Aqua",
  "photos.p.hsl.band.blue": "Blue",
  "photos.p.hsl.band.purple": "Purple",
- "photos.p.hsl.band.magenta": "Magenta"
+ "photos.p.hsl.band.magenta": "Magenta",
+ "photos.p.target.curves": "Target: drag up or down on the photo to place and shape a curve point at that tone",
+ "photos.p.target.hsl": "Target: drag up or down on the photo to pick a color band and set its saturation"
 }

@@ -110,5 +110,7 @@
  "photos.p.hsl.band.aqua": "Cyan",
  "photos.p.hsl.band.blue": "Bleu",
  "photos.p.hsl.band.purple": "Violet",
- "photos.p.hsl.band.magenta": "Magenta"
+ "photos.p.hsl.band.magenta": "Magenta",
+ "photos.p.target.curves": "Cible : faites glisser vers le haut ou le bas sur la photo pour placer et modeler un point de courbe à cette tonalité",
+ "photos.p.target.hsl": "Cible : faites glisser vers le haut ou le bas sur la photo pour choisir une bande de couleur et régler sa saturation"
 }

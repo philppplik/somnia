@@ -68,6 +68,7 @@ All file links are repository-relative, so they remain useful on a feature branc
 38. [Photos radial filter](photos-radial-filter.md)
 39. [Photos tone curves](photos-curves.md)
 40. [Photos HSL color mixer](photos-hsl-mixer.md)
+41. [Photos targeted adjustment](photos-targeted-adjustment.md)
 
 ## The system in one view
 

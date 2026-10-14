@@ -110,5 +110,7 @@
  "photos.p.hsl.band.aqua": "Aguamarina",
  "photos.p.hsl.band.blue": "Azul",
  "photos.p.hsl.band.purple": "Púrpura",
- "photos.p.hsl.band.magenta": "Magenta"
+ "photos.p.hsl.band.magenta": "Magenta",
+ "photos.p.target.curves": "Destino: arrastra hacia arriba o abajo en la foto para colocar y modelar un punto de la curva en ese tono",
+ "photos.p.target.hsl": "Destino: arrastra hacia arriba o abajo en la foto para elegir una banda de color y ajustar su saturación"
 }

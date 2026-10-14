@@ -110,5 +110,7 @@
  "photos.p.hsl.band.aqua": "Ciano",
  "photos.p.hsl.band.blue": "Azul",
  "photos.p.hsl.band.purple": "Roxo",
- "photos.p.hsl.band.magenta": "Magenta"
+ "photos.p.hsl.band.magenta": "Magenta",
+ "photos.p.target.curves": "Alvo: arraste para cima ou para baixo na foto para posicionar e moldar um ponto da curva naquele tom",
+ "photos.p.target.hsl": "Alvo: arraste para cima ou para baixo na foto para escolher uma faixa de cor e ajustar sua saturação"
 }

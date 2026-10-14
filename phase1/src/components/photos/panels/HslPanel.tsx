@@ -4,7 +4,7 @@ import {HSL_BANDS,HSL_SWATCH,NEUTRAL_BAND,bandNeutral,type HslBand,type HslBandI
 import {beginPhotoGesture,endPhotoGesture,previewPhotoSettings,commitPhotoSettings,type PhotoSession} from '../../../lib/photos/studioSession';
 import {Button} from '../../ui/button';
 import {NativeInput} from '../../ui/native-controls';
-import {RotateCcw} from '../../../lib/icons';
+import {RotateCcw,Crosshair} from '../../../lib/icons';
 import {PanelBody,SectionHead,isBusy} from './shared';
 
 const SLIDERS:readonly {key:keyof HslBand;labelKey:string}[]=[{key:'hue',labelKey:'photos.p.hsl.hue'},{key:'sat',labelKey:'photos.p.hsl.sat'},{key:'lum',labelKey:'photos.p.hsl.lum'}];
@@ -31,11 +31,14 @@ function BandSlider({name,session,band,slider,disabled}:{name:string;session:Pho
 export function HslPanel(){
  const {t}=useT();
  const [band,setBand]=usePanelState<HslBandId>('photos.hsl','red');
+ const [target,setTarget]=usePanelState<boolean>('photos.hsl.target',false);
+ const [,setCurvesTarget]=usePanelState<boolean>('photos.curves.target',false);
  const active=HSL_BANDS.includes(band)?band:'red';
  return <PanelBody testId="photos-hsl-panel">{({name,session})=>{
   const busy=isBusy(session);const current=session.now.hsl?.[active]??NEUTRAL_BAND;
   return <fieldset disabled={busy} className="m-0 grid min-w-0 gap-3 border-0 p-0">
    <SectionHead>
+    <Button size="tiny" variant="outline" aria-pressed={target} title={t('photos.p.target.hsl')} aria-label={t('photos.p.target.hsl')} onClick={()=>{const v=!target;setTarget(v);if(v)setCurvesTarget(false);}} data-testid="photos-hsl-target"><Crosshair size={12}/></Button>
     {session.status==='processing'&&<span className="text-ink-3" role="status">{t('photos.processing')}</span>}
     <Button size="tiny" variant="outline" disabled={bandNeutral(current)} onClick={()=>commitPhotoSettings(name,s=>({...s,hsl:{...s.hsl,[active]:{...NEUTRAL_BAND}}}))} data-testid="photos-hsl-reset" aria-label={t('photos.p.hsl.resetBand',{band:t(`photos.p.hsl.band.${active}`)})}><RotateCcw size={11}/>{t('photos.p.reset')}</Button>
    </SectionHead>

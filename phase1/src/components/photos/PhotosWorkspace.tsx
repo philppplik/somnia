@@ -19,7 +19,11 @@ import {photoNav} from '../../lib/photos/photoNav';
 import {ZOOM_PRESETS,isZoomPresetActive,zoomPresetLabel} from '../../lib/photos/zoomPresets';
 import {setActiveMedia,useMedia} from '../../lib/media';
 import {PhotosFilmstrip} from './PhotosFilmstrip';
-import {commitPhotoSettings} from '../../lib/photos/studioSession';
+import {beginPhotoGesture,endPhotoGesture,previewPhotoSettings,commitPhotoSettings} from '../../lib/photos/studioSession';
+import {bandForHue,nearestCurvePoint,targetCurveDelta,targetSliderDelta} from '../../lib/photos/targeting';
+import {sanitizeCurvePoints,type CurveChannel} from '../../lib/photos/curves';
+import {NEUTRAL_BAND,rgbToHsl,type HslBandId} from '../../lib/photos/hslMixer';
+import {lumaOf} from '../../lib/photos/histogram';
 import {usePanelState} from '../../store/panelStateStore';
 import {getState,patchState,requestStudio,useAppStore} from '../../store/appStore';
 import type {MediaItem} from '../../lib/media';
@@ -31,6 +35,13 @@ function draw(canvas:HTMLCanvasElement|null,frame:PhotoFrame|null){
  if(!frame){canvas.width=1;canvas.height=1;return;}
  canvas.width=frame.width;canvas.height=frame.height;
  canvas.getContext('2d')!.putImageData(new ImageData(new Uint8ClampedArray(frame.bytes),frame.width,frame.height),0,0);
+}
+/** RGB of the rendered frame at normalized image coords, null outside. */
+function pixelAt(frame:PhotoFrame,nx:number,ny:number):[number,number,number]|null{
+ if(nx<0||nx>1||ny<0||ny>1)return null;
+ const x=Math.min(frame.width-1,Math.max(0,Math.round(nx*(frame.width-1)))),y=Math.min(frame.height-1,Math.max(0,Math.round(ny*(frame.height-1))));
+ const o=(y*frame.width+x)*4,px=new Uint8Array(frame.bytes);
+ return[px[o],px[o+1],px[o+2]];
 }
 const clampCrop=(r:PhotoCrop):PhotoCrop=>{
  const w=Math.max(MIN_CROP,r.x1-r.x0),h=Math.max(MIN_CROP,r.y1-r.y0);
@@ -63,7 +74,21 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
  const [grading,setGrading]=useState(false);
  const gradDraft=useRef<GradFilter|null>(null); // in-flight graduated filter drag
  const [radial,setRadial]=useState(false);
+ const [curvesTarget,setCurvesTarget]=usePanelState<boolean>('photos.curves.target',false);
+ const [hslTarget,setHslTarget]=usePanelState<boolean>('photos.hsl.target',false);
+ const [curveChannel]=usePanelState<CurveChannel>('photos.curves','master');
+ const [,setTargetBand]=usePanelState<string>('photos.hsl','red');
+ const targetArmed=(curvesTarget||hslTarget)&&!healing&&!dodging&&!grading&&!radial; // tool modes win over the target tool
+ const targetDrag=useRef<{startY:number;trackPx:number}|null>(null);
+ const targetIndex=useRef<number|null>(null);   // grabbed curve point (index in the sanitized array)
+ const targetBase=useRef<number|null>(null);    // its y, or the band's saturation at drag start
+ const targetBandRef=useRef<HslBandId|null>(null);
  const radDraft=useRef<{x0:number;y0:number;x1:number;y1:number}|null>(null); // in-flight radial filter drag (bounding box)
+ useEffect(()=>{ // Escape disarms the target tool from anywhere
+  if(!curvesTarget&&!hslTarget)return;
+  const onKey=(e:KeyboardEvent)=>{if(e.key==='Escape'){setCurvesTarget(false);setHslTarget(false);}};
+  window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey);
+ },[curvesTarget,hslTarget,setCurvesTarget,setHslTarget]);
  const [dabR,setDabR]=usePanelState<number>('photos.dodgeRadius',0.05);
  const dabChain=useRef<{x:number;y:number;r:number}[]|null>(null); // dabs of the in-flight dodge stroke
  const healPath=useRef<{x:number;y:number}[]|null>(null); // path points of the in-flight heal stroke
@@ -111,6 +136,25 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
   if(dodging){const p=pointerPos(e);healStart.current=p;dabChain.current=[{x:p.x,y:p.y,r:dabR}];return;} // dodge/burn paints on release
   if(grading){const p=pointerPos(e);gradDraft.current={x0:p.x,y0:p.y,x1:p.x,y1:p.y};return;} // graduated filter defines its ramp on release
   if(radial){const p=pointerPos(e);radDraft.current={x0:p.x,y0:p.y,x1:p.x,y1:p.y};return;} // radial filter defines its bounding box on release
+  if(targetArmed&&shown){ // targeted adjustment: the photo itself is the slider
+   const p=pointerPos(e);const track=imgBox.current!.getBoundingClientRect().height;
+   const px=pixelAt(shown,p.x,p.y);if(!px)return;
+   beginPhotoGesture(item.name);
+   targetDrag.current={startY:e.clientY,trackPx:track};
+   if(curvesTarget){ // grab or add the curve point at this tone, then vertical drag shapes it
+    const tone=Math.min(0.99,Math.max(0.01,lumaOf(px[0],px[1],px[2])/255));
+    const pts=sanitizeCurvePoints(session?.now.curves?.[curveChannel]??[]);
+    let i=nearestCurvePoint(pts,tone);let arr=pts;
+    if(i<0){arr=sanitizeCurvePoints([...pts,{x:tone,y:tone}]);i=arr.findIndex(q=>Math.abs(q.x-tone)<5e-4);
+     previewPhotoSettings(item.name,now=>({...now,curves:{...now.curves,[curveChannel]:arr}}));}
+    targetIndex.current=i;targetBase.current=arr[i]?.y??tone;
+   }else{ // mixer: the pixel's hue picks the band, vertical drag sets its saturation
+    const band=bandForHue(rgbToHsl(px[0],px[1],px[2])[0]);
+    setTargetBand(band);targetBandRef.current=band;
+    targetBase.current=session?.now.hsl?.[band]?.sat??0;
+   }
+   return;
+  }
   drag.current={pan:{x:pan[0],y:pan[1],px:e.clientX,py:e.clientY}};
  };
  const onStageMove=(e:React.PointerEvent)=>{
@@ -127,6 +171,23 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
      const last=healPath.current[healPath.current.length-1];
      if(Math.hypot((p.x-last.x)*fw,(p.y-last.y)*fh)/Math.min(fw,fh)>=brushR/2)healPath.current.push(p);
     }
+   }
+   return;
+  }
+  if(targetDrag.current){
+   const dy=e.clientY-targetDrag.current.startY;
+   if(curvesTarget){ // adjust the grabbed curve point's y live
+    previewPhotoSettings(item.name,now=>{
+     const pts=sanitizeCurvePoints(now.curves?.[curveChannel]??[]);
+     const i=targetIndex.current;if(i==null||i>=pts.length)return now;
+     const base=targetBase.current??pts[i].y;
+     const next=pts.slice();next[i]={x:pts[i].x,y:Math.min(1,Math.max(0,base+targetCurveDelta(dy,targetDrag.current!.trackPx)))};
+     return{...now,curves:{...now.curves,[curveChannel]:next}};});
+   }else{
+    previewPhotoSettings(item.name,now=>{
+     const b=targetBandRef.current;if(!b)return now;
+     const cur=now.hsl?.[b]??NEUTRAL_BAND;const base=targetBase.current??cur.sat;
+     return{...now,hsl:{...now.hsl,[b]:{...cur,sat:Math.min(100,Math.max(-100,Math.round(base+targetSliderDelta(dy,targetDrag.current!.trackPx))))}}};});
    }
    return;
   }
@@ -163,6 +224,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
    }
    return;
   }
+  if(targetDrag.current){targetDrag.current=null;targetIndex.current=null;targetBase.current=null;targetBandRef.current=null;endPhotoGesture(item.name);return;} // one drag = one undo step
   if(drag.current?.pan)drag.current=null;
  };
  const removeDab=(i:number)=>commitPhotoSettings(item.name,now=>({...now,dabs:now.dabs.filter((_,j)=>j!==i)})); // one commit = one undo step
@@ -246,7 +308,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
    <Button size="compact" disabled={!ready||session?.cropping} onClick={()=>void doExport('png')} data-testid="photos-export-png" title={t('photos.export.hint')}><Download size={13}/>{t('photos.export.png')}</Button>
    <Button size="compact" disabled={!ready||session?.cropping} onClick={()=>void doExport('jpeg')} data-testid="photos-export-jpeg" title={t('photos.export.hint')}><Download size={13}/>{t('photos.export.jpeg')}</Button>
   </div>
-  <div ref={stage} className="media-checker relative min-h-0 w-full flex-1 overflow-hidden" onWheel={onWheel} onPointerDown={onStageDown} onPointerMove={onStageMove} onPointerUp={onStageUp} onPointerCancel={onStageUp} onPointerLeave={()=>setHealCursor(null)} data-testid="photos-stage" style={{touchAction:'none',cursor:session?.cropping?'default':healing||dodging||grading||radial?'crosshair':'grab'}}>
+  <div ref={stage} className="media-checker relative min-h-0 w-full flex-1 overflow-hidden" onWheel={onWheel} onPointerDown={onStageDown} onPointerMove={onStageMove} onPointerUp={onStageUp} onPointerCancel={onStageUp} onPointerLeave={()=>setHealCursor(null)} data-testid="photos-stage" style={{touchAction:'none',cursor:session?.cropping?'default':healing||dodging||grading||radial||targetArmed?'crosshair':'grab'}}>
    <div ref={imgBox} className="absolute left-1/2 top-1/2" style={{width:dispW,height:dispH,transform:`translate(-50%,-50%) translate(${pan[0]}px,${pan[1]}px)`}}>
     <canvas ref={canvas} className="block size-full rounded-[2px] shadow-sm" style={{imageRendering:scale>4?'pixelated':'auto'}} data-testid="photos-canvas"/>
     {showClipping&&<canvas ref={clipCanvas} className={`pointer-events-none absolute inset-0 size-full${scale>4?' pixelated':''}`} data-testid="photos-clipping-canvas"/>}
