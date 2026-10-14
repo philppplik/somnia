@@ -5,7 +5,7 @@ import {NativeInput,NativeSelect} from '../ui/native-controls';
 import {TRANSFORM_KEYS,wouldCycle,type Composition,type KeyRef,type TransformKey} from '../../lib/animation/model';
 import {playbackAt} from '../../lib/animation/playback';
 import {AudioPreview,browserAudioContext} from '../../lib/animation/audioPreview';
-import {audioSignature,withPrecompAudio} from '../../lib/animation/audioTiming';
+import {audioSignature,withPrecompAudio,silentPrecompLayers} from '../../lib/animation/audioTiming';
 import {AudioWaveform} from './AudioWaveform';
 import {clickSelect,marqueeSelect,pruneSelection,rectsOverlap,sameKey,shiftSelection} from '../../lib/animation/selection';
 import {frameToTick,snapToFrame,tickToFrame,timecode} from '../../lib/animation/time';
@@ -306,6 +306,7 @@ export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Compo
    </div>
    {box&&<div className="pointer-events-none absolute border border-accent bg-accent-soft" style={{left:box.x0,top:box.y0,width:box.x1-box.x0,height:box.y1-box.y0}} data-testid="animation-marquee"/>}
   </div>}
+  {silentPrecompLayers(comp,state.doc?.compositions).length>0&&<p role="status" className="m-0 border-t border-subtle px-2 py-1 text-ink-3" data-testid="animation-precomp-silent">{t('animation.audio.speedSilent',{name:silentPrecompLayers(comp,state.doc?.compositions).join(', ')})}</p>}
   {audioNote&&<p role="status" className="m-0 border-t border-subtle px-2 py-1 text-ink-3" data-testid="animation-audio-note">{audioNote}</p>}
   <div className="sr-only" aria-live="polite">{timecode(at,comp.fps)}{sel.length>0?` ${t('animation.keys.selected',{count:sel.length})}`:''}</div>
  </section>;

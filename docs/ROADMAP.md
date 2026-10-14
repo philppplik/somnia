@@ -332,3 +332,10 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Done: audio layers inside a nested composition are heard in the parent, in the timeline preview and in the WebM export. Each child clip is mapped onto the parent timeline (shifted by the comp layer start and its start-time offset, cut to the comp layer span and to the child length, repeated while the comp layer loops, nested depth included, volume keys shifted with it). Hidden comp layers, and comp layers not soloed while another layer is soloed, stay silent, like the picture. Nothing changes for compositions without comp layers (same object returned). The audio signature includes nested audio, so edits to it pause playback like any audio change.
 - Open: comp layer speed other than 100 % is silent (no time stretch), with no note in the UI; no per-comp-layer volume; at most 200 mapped clips; the import hint text still says audio is not mixed into exports (stale since the WebM mix, not changed here).
 
+
+### Animation P49 (2026-10-14, integration pending)
+
+- Picked: fix the stale audio hint and explain silent comp layers (inner shadow/stroke and text-animator blur sampling not chosen).
+- Done: the audio import hint now says what is true (audio plays in the preview and is mixed into WebM exports only, not PNG, GIF or APNG), in 5 locales. A visible comp layer with speed other than 100 % whose child has audio now shows a note under the timeline and under the WebM button ("Silent in preview and WebM: name"). `silentPrecompLayers()` is the single rule; hidden comp layers and children without audio give no note.
+- Open: still no time-stretched audio for speed other than 100 %; inner shadow/stroke styles; text animator sampling in motion blur.
+

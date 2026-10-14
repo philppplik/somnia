@@ -2,7 +2,7 @@ import test from 'node:test';import assert from 'node:assert/strict';
 import {createDocument,findComp,validateDocument,type AnimationDocument} from './model';
 import {applyEdit,applyEdits} from './edit';
 import {bytesToDataUrl,channelPeaks,MAX_AUDIO_BYTES,parseWav,peakBinCount,sniffMp3,validateAudioAsset,validateAudioAssets,wavPeaks,type AudioAsset} from './audioCore';
-import {withPrecompAudio,visiblePeaks,audibleLayers,audioSignature,clipSpan,gainCurve,playbackPlan,segmentsBetween,sourceTickAt} from './audioTiming';
+import {silentPrecompLayers,withPrecompAudio,visiblePeaks,audibleLayers,audioSignature,clipSpan,gainCurve,playbackPlan,segmentsBetween,sourceTickAt} from './audioTiming';
 import {AudioPreview,AudioUnavailable,START_LEAD,type AudioContextLike,type SourceLike,type GainLike} from './audioPreview';
 import {playbackAt} from './playback';
 import {serializeAnimationSnapshot,parseAnimationSnapshot} from './persistence';
@@ -220,4 +220,15 @@ test('P48 audio of nested compositions is mapped into the parent: shift, cut, hi
  // nothing nested: same object, no work
  assert.equal(withPrecompAudio(findComp(base)!,base.compositions),findComp(base));
  assert.notEqual(audioSignature(d,par()),'');
+});
+
+test('P49 comp layers with speed other than 100 % are reported as silent only when the child has audio',()=>{
+ const base=withAudio();let d=applyEdit(base,{type:'comp.add',id:'par'});d=applyEdit(d,{type:'precomp.add',comp:base.activeComp,id:'pc'});
+ const names=()=>silentPrecompLayers(findComp(d)!,d.compositions);assert.deepEqual(names(),[]);
+ d=applyEdit(d,{type:'layer.update',layer:'pc',source:{speed:150}});assert.deepEqual(names(),[findComp(d)!.layers[0].name]);
+ assert.deepEqual(silentPrecompLayers(findComp(applyEdit(d,{type:'layer.update',layer:'pc',visible:false}))!,d.compositions),[],'hidden: nothing to explain');
+ // a child without audio gives no note
+ let e=applyEdit(createDocument(),{type:'comp.add',id:'quiet'});e=applyEdit(e,{type:'comp.add',id:'par2'});e=applyEdit(e,{type:'precomp.add',comp:'quiet',id:'q'});e=applyEdit(e,{type:'layer.update',layer:'q',source:{speed:50}});
+ assert.deepEqual(silentPrecompLayers(findComp(e)!,e.compositions),[]);
+ assert.deepEqual(silentPrecompLayers(findComp(d)!,undefined),[]);
 });

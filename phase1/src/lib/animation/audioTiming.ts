@@ -96,3 +96,11 @@ function nestedAudio(comp:Composition,comps:readonly Composition[],depth:number)
  }
  return out;
 }
+
+/** Names of visible comp layers whose nested audio is silent because their speed is not 100 %. */
+export function silentPrecompLayers(comp:Composition,comps:readonly Composition[]|undefined):string[]{
+ if(!comps)return [];const out:string[]=[];
+ const hasAudio=(c:Composition,depth:number):boolean=>depth<=MAX_PRECOMP_DEPTH&&(c.layers.some(isAudioLayer)||c.layers.some(l=>l.kind==='comp'&&(()=>{const k=comps.find(x=>x.id===l.source.compId);return !!k&&k.id!==c.id&&hasAudio(k,depth+1);})()));
+ for(const l of comp.layers){if(!precompAudioSkipped(l)||!l.visible)continue;const k=comps.find(x=>x.id===l.source.compId);if(k&&k.id!==comp.id&&hasAudio(k,1))out.push(l.name);}
+ return out;
+}

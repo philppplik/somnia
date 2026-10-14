@@ -275,3 +275,7 @@ Added:
 
 - `withPrecompAudio(comp, comps)` (audioTiming.ts) returns the comp with extra audio layers `<compLayer>:<pass>:<layer>` for the audio of nested comps, in parent ticks: shift d = compLayerStart - child.start - timeOffset (+ pass * child.duration while looping); each clip is cut to [compLayerStart, compLayerEnd) and the child length; trimIn grows by what was cut at the front. Speed other than 100 % is skipped. Depth up to MAX_PRECOMP_DEPTH, at most 200 clips.
 - Used by the timeline preview, `audioSignature` and `recordWebm`. Layers shown in the timeline are the real ones only.
+
+## P49 - Silent comp layer note
+
+- `silentPrecompLayers(comp, comps)` lists visible comp layers with `speed` other than 100 % whose child (or a deeper nested child) has audio layers. The timeline note and the WebM export note use it. The audio import hint says audio is mixed into WebM only.
