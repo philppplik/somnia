@@ -82,7 +82,8 @@ function Workbook({item}:{item:MediaItem}){
  const applyFormat=async(op:FormatOp)=>{
   if(draftRef.current!==null)await commit(draftRef.current);
   if(!formatRectOk(rectCells(range)))throw Error('Selection is too large to format.');
-  try{await engine.current!.format(sheet,range.r0,range.c0,range.r1-range.r0+1,range.c1-range.c0+1,op);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
+  const sent:FormatOp=op.kind==='decimals'?{...op,at:{row:sel.row,col:sel.col}}:op;
+  try{await engine.current!.format(sheet,range.r0,range.c0,range.r1-range.r0+1,range.c1-range.c0+1,sent);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
  const toggleFormat=(kind:ToggleKind)=>{void applyFormat(toggleOp(kind,cur?.style)).catch(()=>undefined);};
  const panelOperations=useRef<SheetsPanelController>(null!);
  panelOperations.current={ready:()=>phase.kind==='ready'&&!!engine.current&&!engine.current.isDisposed,navigate:async(sheetIndex,targetAddress)=>{const target=parseAddress(targetAddress);if(!target||!book?.sheets.some(s=>s.index===sheetIndex&&s.visibility==='Visible'))throw Error('Invalid sheet or cell.');if(draftRef.current!==null)await commit(draftRef.current);setSheet(sheetIndex);setSel(target);setExt(null);setDraft(null);},setCell:async input=>{if(new TextEncoder().encode(input).length>MAX_CELL_BYTES)throw Error('Cell input is too long.');const eng=engine.current!;await eng.set(sheet,address,input);setDraft(null);setDirty(true);setNotice('');setRev(r=>r+1);},formatCells:async op=>{await applyFormat(op);},readRange:async(input)=>{const r=parsePanelRange(input);if(!r)throw Error('Invalid range.');return (await engine.current!.range(sheet,r.r0,r.c0,r.r1-r.r0+1,r.c1-r.c0+1)).cells;}};
@@ -115,6 +116,7 @@ function Workbook({item}:{item:MediaItem}){
   else if(k==='Delete'||k==='Backspace'){e.preventDefault();void clearRange();}
   else if((e.ctrlKey||e.metaKey)&&k.toLowerCase()==='a'){e.preventDefault();setSel({row:0,col:0});setExt({row:Math.max(0,(info?.rows??1)-1),col:Math.max(0,(info?.cols??1)-1)});}
   else if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&!e.altKey&&['b','i','u'].includes(k.toLowerCase())){e.preventDefault();toggleFormat(({b:'bold',i:'italic',u:'underline'} as const)[k.toLowerCase() as 'b'|'i'|'u']);}
+  else if((e.ctrlKey||e.metaKey)&&e.shiftKey&&!e.altKey&&(k==='%'||k==='5')){e.preventDefault();void applyFormat({kind:'numFmt',preset:'percent',decimals:0}).catch(()=>undefined);}
   else if((e.ctrlKey||e.metaKey)&&k.toLowerCase()==='z'){e.preventDefault();void history(e.shiftKey?'redo':'undo');}
   else if((e.ctrlKey||e.metaKey)&&k.toLowerCase()==='y'){e.preventDefault();void history('redo');}
   else if(k.length===1&&!e.ctrlKey&&!e.metaKey&&!e.altKey){e.preventDefault();startEdit(k);}

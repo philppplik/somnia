@@ -38,3 +38,12 @@ test('format panel reflects the active cell style and offers only real font and 
  setSheetsSelection({...selection,style:{...style,font:'Papyrus'}});assert.match(html(SheetsFormatPanel),/<option value="Papyrus"/,'a font from the file stays selectable');
  setSheetsSelection(null);
 });
+
+test('number format section shows the detected preset, decimals and currency symbol, and keeps file formats as custom',()=>{
+ const style={bold:false,italic:false,strike:false,underline:false,color:null,fill:null,h:'general' as const,wrap:false,fmt:'"€"#,##0.0',font:'Calibri',size:11,borders:{l:null,r:null,t:null,b:null}};
+ setSheetsSelection({...selection,style});let markup=html(SheetsFormatPanel);
+ assert.match(markup,/<option value="currency" selected="">Currency/);assert.match(markup,/<option value="€" selected="">/);assert.match(markup,/Decimal places/);assert.match(markup,/value="1"/);assert.match(markup,/aria-label="Increase decimals"/);
+ setSheetsSelection({...selection,style:{...style,fmt:'[$-F800]dddd, mmmm dd, yyyy'}});markup=html(SheetsFormatPanel);
+ assert.match(markup,/<option value="custom" disabled="" selected="">Custom \(from file\)/);assert.doesNotMatch(markup,/Decimal places/);
+ setSheetsSelection(null);
+});

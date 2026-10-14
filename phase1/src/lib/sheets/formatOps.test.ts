@@ -21,3 +21,17 @@ test('toggle follows the active cell like a spreadsheet',()=>{
  assert.deepEqual(toggleOp('strike',style({strike:true})),{kind:'strike',on:false});
  assert.deepEqual(toggleOp('underline',undefined),{kind:'underline',on:true});});
 test('format selections are bounded',()=>{assert.ok(formatRectOk(1));assert.ok(formatRectOk(1_000_000));assert.ok(!formatRectOk(0));assert.ok(!formatRectOk(1_000_001));assert.ok(!formatRectOk(1.5));});
+import {detectNumFmt,numFmtCode} from './formatOps';
+test('number format ops accept presets only and bound decimals',()=>{
+ assert.deepEqual(parseFormatOp({kind:'numFmt',preset:'percent'}),{kind:'numFmt',preset:'percent'});
+ assert.deepEqual(parseFormatOp({kind:'numFmt',preset:'currency',decimals:0,symbol:'€'}),{kind:'numFmt',preset:'currency',decimals:0,symbol:'€'});
+ assert.deepEqual(parseFormatOp({kind:'decimals',delta:-1}),{kind:'decimals',delta:-1});
+ for(const bad of [{kind:'numFmt'},{kind:'numFmt',code:'0.00'},{kind:'numFmt',preset:'0.00'},{kind:'numFmt',preset:'number',decimals:11},{kind:'numFmt',preset:'number',decimals:-1},{kind:'numFmt',preset:'number',decimals:1.5},{kind:'numFmt',preset:'number',decimals:'2'},
+  {kind:'numFmt',preset:'date',decimals:2},{kind:'numFmt',preset:'number',symbol:'$'},{kind:'numFmt',preset:'currency',symbol:'BTC'},{kind:'numFmt',preset:'currency',symbol:'"0;'},
+  {kind:'decimals',delta:2},{kind:'decimals',delta:0},{kind:'decimals'},{kind:'decimals',delta:1,at:{row:0,col:0}}])assert.throws(()=>parseFormatOp(bad),JSON.stringify(bad));});
+test('number format codes match what the engine bridge writes and are detected back',()=>{
+ assert.equal(numFmtCode('number'),'0.00');assert.equal(numFmtCode('number',0),'0');assert.equal(numFmtCode('comma',1),'#,##0.0');assert.equal(numFmtCode('percent'),'0%');assert.equal(numFmtCode('percent',2),'0.00%');
+ assert.equal(numFmtCode('currency'),'"$"#,##0.00');assert.equal(numFmtCode('currency',0,'€'),'"€"#,##0');assert.equal(numFmtCode('scientific',1),'0.0E+00');assert.equal(numFmtCode('date'),'yyyy-mm-dd');assert.equal(numFmtCode('text'),'@');
+ for(const [p,d,s] of [['number',0,'$'],['number',3,'$'],['comma',2,'$'],['percent',0,'$'],['percent',2,'$'],['scientific',2,'$'],['currency',2,'£'],['currency',0,'CHF']] as const){const r=detectNumFmt(numFmtCode(p,d,s));assert.equal(r.preset,p);assert.equal(r.decimals,d);if(p==='currency')assert.equal(r.symbol,s);}
+ for(const p of ['general','date','time','text'] as const)assert.equal(detectNumFmt(numFmtCode(p)).preset,p);
+ for(const own of ['0.00_);[Red](0.00)','m/d/yyyy','[$-F800]dddd, mmmm dd, yyyy','"x"0.00','0.000000000000']) assert.equal(detectNumFmt(own).preset,'custom',own);});

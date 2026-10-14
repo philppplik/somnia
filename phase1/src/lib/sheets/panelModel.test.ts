@@ -34,7 +34,12 @@ test('panel commands validate payloads, reject agent execution and honor control
   await assert.rejects(dispatcher.runCommand('sheets.format',{kind:'bold'},{origin:'ui'}));
   await assert.rejects(dispatcher.runCommand('sheets.format',{kind:'fontSize',size:9999},{origin:'ui'}));
   await assert.rejects(dispatcher.runCommand('sheets.format',{kind:'fontColor',color:'red'},{origin:'ui'}));
-  assert.equal(calls.length,4,'rejected payloads never reach the controller');
+  await dispatcher.runCommand('sheets.format',{kind:'numFmt',preset:'currency',decimals:2,symbol:'€'},{origin:'ui'});
+  await dispatcher.runCommand('sheets.format',{kind:'decimals',delta:1},{origin:'ui'});
+  await assert.rejects(dispatcher.runCommand('sheets.format',{kind:'numFmt',preset:'0.00'},{origin:'ui'}));
+  await assert.rejects(dispatcher.runCommand('sheets.format',{kind:'numFmt',preset:'number',decimals:99},{origin:'ui'}));
+  await assert.rejects(dispatcher.runCommand('sheets.format',{kind:'decimals',delta:5},{origin:'ui'}));
+  assert.equal(calls.length,6,'rejected payloads never reach the controller');
   await assert.rejects(dispatcher.runCommand('sheets.setCell',{input:'=1'},{origin:'agent'}),{code:'forbidden-origin'});
   await assert.rejects(dispatcher.runCommand('sheets.navigate',{sheet:-1,address:'A1'},{origin:'ui'}),{code:'invalid-params'});
   await assert.rejects(dispatcher.runCommand('sheets.navigate',{sheet:0,address:'A0'},{origin:'ui'}));

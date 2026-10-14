@@ -43,7 +43,46 @@ fn format_command(op: &serde_json::Value) -> Result<(&'static str, serde_json::V
             Some(c) => ("home.fillColor", json!({"color": is_hex_color(c).ok_or("color must be #RRGGBB or none")?})),
             None => return Err("missing color".into()),
         },
+        "numFmt" => ("home.numberFormat", json!({"code": number_format_code(op)?})),
         _ => return Err("unsupported format operation".into()),
+    })
+}
+
+const CURRENCY_SYMBOLS: [&str; 5] = ["$", "€", "£", "¥", "CHF"];
+
+/// Generates a number-format code from a preset (never from free text), so a hostile or malformed code can't reach the engine.
+fn number_format_code(op: &serde_json::Value) -> Result<String, String> {
+    let preset = op.get("preset").and_then(|v| v.as_str()).ok_or("missing number format preset")?;
+    let wants_decimals = matches!(preset, "number" | "comma" | "percent" | "currency" | "scientific");
+    let decimals = match op.get("decimals") {
+        None => match preset {
+            "percent" => 0,
+            _ => 2,
+        },
+        Some(_) if !wants_decimals => return Err("this number format has no decimals".into()),
+        Some(v) => v.as_u64().filter(|d| *d <= 10).ok_or("decimals must be a whole number from 0 to 10")? as usize,
+    };
+    let dec = if decimals == 0 { String::new() } else { format!(".{}", "0".repeat(decimals)) };
+    if op.get("symbol").is_some() && preset != "currency" {
+        return Err("only currency has a symbol".into());
+    }
+    Ok(match preset {
+        "general" => "General".into(),
+        "number" => format!("0{dec}"),
+        "comma" => format!("#,##0{dec}"),
+        "percent" => format!("0{dec}%"),
+        "currency" => {
+            let sym = match op.get("symbol") {
+                None => "$",
+                Some(v) => v.as_str().filter(|s| CURRENCY_SYMBOLS.contains(s)).ok_or("unsupported currency symbol")?,
+            };
+            format!("\"{sym}\"#,##0{dec}")
+        }
+        "date" => "yyyy-mm-dd".into(),
+        "time" => "hh:mm:ss".into(),
+        "scientific" => format!("0{dec}E+00"),
+        "text" => "@".into(),
+        _ => return Err("unsupported number format preset".into()),
     })
 }
 
@@ -234,13 +273,43 @@ impl HeadlessWorkbook {
         }
         self.check_block(sheet, row, col, rows, cols, false)?;
         let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "format operation must be a JSON object".to_string())?;
-        let (command, params) = format_command(&op)?;
+        let (command, params) = if op.get("kind").and_then(|v| v.as_str()) == Some("decimals") {
+            self.decimals_command(sheet, row, col, rows, cols, &op)?
+        } else {
+            format_command(&op)?
+        };
         let a = CellRef::new(row, col).a1();
         let b = CellRef::new(row + rows - 1, col + cols - 1).a1();
         let mut call = params;
         call["sheet"] = json!(sheet);
         call["range"] = json!(format!("{a}:{b}"));
         self.session.run(command, call).map(|v| v.to_string())
+    }
+
+    /// Increase/decrease decimals like a spreadsheet: the active cell (`at`, inside the block) decides the
+    /// new number format, which is then applied to the whole block.
+    fn decimals_command(&self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32, op: &serde_json::Value) -> Result<(&'static str, serde_json::Value), String> {
+        let delta = match op.get("delta").and_then(|v| v.as_i64()) {
+            Some(d @ (-1 | 1)) => d as i32,
+            _ => return Err("delta must be 1 or -1".into()),
+        };
+        let at = op.get("at").ok_or("missing active cell")?;
+        let (ar, ac) = match (at.get("row").and_then(|v| v.as_u64()), at.get("col").and_then(|v| v.as_u64())) {
+            (Some(r), Some(c)) if r <= u64::from(u32::MAX) && c <= u64::from(u32::MAX) => (r as u32, c as u32),
+            _ => return Err("invalid active cell".into()),
+        };
+        if ar < row || ar >= row + rows || ac < col || ac >= col + cols {
+            return Err("active cell must be inside the block".into());
+        }
+        let doc = self.session.doc().map_err(|e| e.to_string())?;
+        let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+        let cell = CellRef::new(ar, ac);
+        let code = doc.wb.styles.get(sh.style_id(cell)).num_fmt.as_str().to_string();
+        let next = gridcraft_engine::cmd::format::adjust_decimals(&code, &sh.value(cell), delta);
+        if next.len() > 255 {
+            return Err("number format too long".into());
+        }
+        Ok(("home.numberFormat", json!({"code": next})))
     }
 
     /// Sets the host clock (local date-time as a 1900-system serial) used by NOW/TODAY and every other
@@ -532,6 +601,78 @@ mod tests {
         assert_eq!(undone, 8);
         assert_eq!(style_at(&book, 0, 1, 1)["bold"], false);
         assert_eq!(style_at(&book, 0, 1, 1)["fill"], serde_json::Value::Null);
+    }
+    fn fmt_text(b: &HeadlessWorkbook, a: &str) -> (String, String) {
+        let col = (a.as_bytes()[0] - b'A') as u32;
+        let row = a[1..].parse::<u32>().unwrap() - 1;
+        let v: serde_json::Value = serde_json::from_str(&b.view_range(0, row, col, 1, 1).unwrap()).unwrap();
+        (v["cells"][0]["style"]["fmt"].as_str().unwrap().to_string(), v["cells"][0]["text"].as_str().unwrap().to_string())
+    }
+    #[test]
+    fn number_format_presets_display_roundtrip_and_undo() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        book.set_cell(0, "H1", "1234.5").unwrap();
+        let cases = [
+            (r#"{"kind":"numFmt","preset":"number"}"#, "0.00", "1234.50"),
+            (r#"{"kind":"numFmt","preset":"number","decimals":0}"#, "0", "1235"),
+            (r#"{"kind":"numFmt","preset":"comma","decimals":1}"#, "#,##0.0", "1,234.5"),
+            (r#"{"kind":"numFmt","preset":"percent"}"#, "0%", "123450%"),
+            (r#"{"kind":"numFmt","preset":"percent","decimals":2}"#, "0.00%", "123450.00%"),
+            (r#"{"kind":"numFmt","preset":"currency"}"#, "\"$\"#,##0.00", "$1,234.50"),
+            (r#"{"kind":"numFmt","preset":"currency","symbol":"€","decimals":0}"#, "\"€\"#,##0", "€1,235"),
+            (r#"{"kind":"numFmt","preset":"scientific","decimals":1}"#, "0.0E+00", "1.2E+03"),
+            (r#"{"kind":"numFmt","preset":"text"}"#, "@", "1234.5"),
+            (r#"{"kind":"numFmt","preset":"general"}"#, "General", "1234.5"),
+        ];
+        for (op, code, shown) in cases {
+            book.format_range(0, 0, 7, 1, 1, op).unwrap();
+            assert_eq!(fmt_text(&book, "H1"), (code.to_string(), shown.to_string()), "{op}");
+        }
+        book.set_cell(0, "H2", "46302").unwrap();
+        book.format_range(0, 1, 7, 1, 1, r#"{"kind":"numFmt","preset":"date"}"#).unwrap();
+        assert_eq!(fmt_text(&book, "H2").1, "2026-10-07");
+        // XLSX roundtrip keeps the code and the displayed text.
+        let reopened = HeadlessWorkbook::new(&book.export_xlsx().unwrap()).unwrap();
+        assert_eq!(fmt_text(&reopened, "H2"), ("yyyy-mm-dd".to_string(), "2026-10-07".to_string()));
+        // One undo step per format change; the value never changes.
+        book.undo().unwrap();
+        assert_eq!(fmt_text(&book, "H2").0, "General");
+        assert_eq!(fmt_text(&book, "H1").0, "General");
+    }
+    #[test]
+    fn decimals_follow_the_active_cell_and_apply_to_the_block() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        book.set_cell(0, "H1", "1.5").unwrap();
+        book.set_cell(0, "H2", "2.25").unwrap();
+        let more = r#"{"kind":"decimals","delta":1,"at":{"row":0,"col":7}}"#;
+        book.format_range(0, 0, 7, 2, 1, more).unwrap();
+        assert_eq!(fmt_text(&book, "H1"), ("0.00".to_string(), "1.50".to_string()), "General 1.5 shows 1 decimal, +1 gives 2");
+        assert_eq!(fmt_text(&book, "H2").0, "0.00", "the whole block takes the active cell's new format");
+        book.format_range(0, 0, 7, 2, 1, r#"{"kind":"decimals","delta":-1,"at":{"row":0,"col":7}}"#).unwrap();
+        assert_eq!(fmt_text(&book, "H1").0, "0.0");
+        assert!(book.format_range(0, 0, 7, 2, 1, r#"{"kind":"decimals","delta":2,"at":{"row":0,"col":7}}"#).is_err());
+        assert!(book.format_range(0, 0, 7, 2, 1, r#"{"kind":"decimals","delta":1}"#).is_err());
+        assert!(book.format_range(0, 0, 7, 2, 1, r#"{"kind":"decimals","delta":1,"at":{"row":5,"col":7}}"#).is_err(), "active cell outside the block");
+    }
+    #[test]
+    fn number_format_presets_reject_free_text_and_bad_parameters() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        for op in [
+            r#"{"kind":"numFmt","code":"0.00"}"#,
+            r#"{"kind":"numFmt","preset":"0.00"}"#,
+            r#"{"kind":"numFmt","preset":"General;[Red]@"}"#,
+            r#"{"kind":"numFmt","preset":"number","decimals":11}"#,
+            r#"{"kind":"numFmt","preset":"number","decimals":-1}"#,
+            r#"{"kind":"numFmt","preset":"number","decimals":1.5}"#,
+            r#"{"kind":"numFmt","preset":"date","decimals":2}"#,
+            r#"{"kind":"numFmt","preset":"number","symbol":"$"}"#,
+            r#"{"kind":"numFmt","preset":"currency","symbol":"\"0;"}"#,
+            r#"{"kind":"numFmt","preset":"currency","symbol":"BTC"}"#,
+            r#"{"kind":"numFmt"}"#,
+        ] {
+            assert!(book.format_range(0, 1, 1, 1, 1, op).is_err(), "{op}");
+        }
+        assert_eq!(info_json(&book)["canUndo"], false);
     }
     #[test]
     fn explicit_off_and_clearing_colors() {

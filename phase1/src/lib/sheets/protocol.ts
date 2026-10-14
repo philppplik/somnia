@@ -16,7 +16,10 @@ export type FormatOp=
  |{kind:'fontName';name:string}
  |{kind:'fontSize';size:number}
  |{kind:'fontColor';color:string}
- |{kind:'fillColor';color:string};
+ |{kind:'fillColor';color:string}
+ |{kind:'numFmt';preset:NumFmtPreset;decimals?:number;symbol?:string}
+ |{kind:'decimals';delta:1|-1;at?:{row:number;col:number}};
+export type NumFmtPreset='general'|'number'|'comma'|'percent'|'currency'|'date'|'time'|'scientific'|'text';
 export type SheetsRequest=
  |{id:number;op:'init';wasmUrl:string}
  |{id:number;op:'open';bytes:ArrayBuffer}
