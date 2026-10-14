@@ -1,3 +1,4 @@
+import {INTERFACE_LAYOUT_CATALOGUES} from './layoutI18n';
 const en={
  'cmd.studio.interface':'Switch to Interface Studio','studio.interface':'Interface','interface.layers':'Pages and layers','interface.properties':'Properties',
  'interface.title':'Design interfaces inside Interface Studio','interface.description':'Build screens from frames, text and shapes. Your work stays local, with undo and session recovery.',
@@ -43,3 +44,5 @@ const pt:Record<Keys,string>={
  'cmd.interface.new':'Interface: Novo documento','cmd.interface.save':'Interface: Salvar snapshot','cmd.interface.undo':'Interface: Desfazer','cmd.interface.redo':'Interface: Refazer','cmd.interface.addFrame':'Interface: Adicionar quadro','cmd.interface.addRectangle':'Interface: Adicionar retângulo','cmd.interface.addText':'Interface: Adicionar texto','cmd.interface.delete':'Interface: Excluir camada',
 };
 export const INTERFACE_CATALOGUES={en,de,es,fr,'pt-BR':pt};
+
+for(const [locale,extra] of Object.entries(INTERFACE_LAYOUT_CATALOGUES))Object.assign(INTERFACE_CATALOGUES[locale as keyof typeof INTERFACE_CATALOGUES],extra);
