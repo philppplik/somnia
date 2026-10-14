@@ -8,6 +8,12 @@ export function sectionStartIndexes(sections:readonly {ids:readonly number[]}[]|
  for(const sec of sections??[]){const idx=sec.ids.map(id=>at.get(id)).filter((i):i is number=>i!==undefined);if(idx.length)out.add(Math.min(...idx));}
  return [...out].sort((a,b)=>a-b).slice(0,1000);
 }
+/** Name of the section that holds the slide at index, or null when the deck has no sections or the slide is in none. */
+export function sectionNameAt(sections:readonly {name:string;ids:readonly number[]}[]|null|undefined,slideIds:readonly number[],index:number):string|null{
+ const id=slideIds[index];if(id===undefined)return null;
+ for(const sec of sections??[])if(sec.ids.includes(id))return sec.name;
+ return null;
+}
 /** Target of a section jump: the first visible slide of the next section, or of the current section when jumping back from inside it. Stays put when there is none. */
 export function sectionJump(starts:readonly number[]|undefined,hidden:readonly boolean[]|undefined,index:number,count:number,dir:1|-1):number{
  if(!starts?.length)return index;

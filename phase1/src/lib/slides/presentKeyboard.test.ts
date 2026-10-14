@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {presentationKey,presentationScale,sectionJump,sectionStartIndexes} from './presentKeyboard';
+import {presentationKey,presentationScale,sectionJump,sectionStartIndexes,sectionNameAt} from './presentKeyboard';
 import {SLIDES_PRESENT_CATALOGUES} from './panelI18n';
 const state={index:1,count:4,digits:'',black:false};
 test('presentation keyboard clamps and supports all navigation keys',()=>{
@@ -55,4 +55,10 @@ test('section jumps: next/previous section start, skip hidden, stay put at the e
  const st={index:0,count:6,digits:'12',black:true,sections:starts};
  assert.deepEqual(presentationKey(']',st),{...st,index:2,digits:'',black:false});assert.equal(presentationKey('[',{...st,index:3})?.index,2);
  assert.equal(presentationKey(']',{...st,sections:undefined})?.index,0);
+});
+
+test('section name at a slide: first matching section, none without sections or for unknown slides',()=>{
+ const secs=[{name:'Intro',ids:[10,11]},{name:'Body',ids:[12]}],ids=[10,11,12,13];
+ assert.equal(sectionNameAt(secs,ids,0),'Intro');assert.equal(sectionNameAt(secs,ids,1),'Intro');assert.equal(sectionNameAt(secs,ids,2),'Body');
+ assert.equal(sectionNameAt(secs,ids,3),null);assert.equal(sectionNameAt(secs,ids,9),null);assert.equal(sectionNameAt(null,ids,0),null);assert.equal(sectionNameAt(undefined,ids,0),null);
 });
