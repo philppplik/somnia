@@ -21,12 +21,14 @@ export function captureLocalVectors(descriptor:LocalIndexDescriptor,entries:read
 }
 /** Revalidates detached input even if caller forged a snapshot. Fresh host capture is
  * required; this isn't a lease or proof that vectors derive from those source hashes. */
-export function retrieveLocalTopK(lifecycle:LocalIndexLifecycle,current:LocalIndexDescriptor,snapshot:FrozenLocalVectors,query:readonly number[],limit=10,sourceId?:string|readonly string[]){
- assertLocalIndexReady(lifecycle,current);
+export function retrieveLocalSemanticReport(lifecycle:LocalIndexLifecycle,current:LocalIndexDescriptor,snapshot:FrozenLocalVectors,query:readonly number[],limit=10,sourceId?:string|readonly string[],minimum=-1){
+ if(![-1,0,0.25,0.5,0.75].includes(minimum)||!Number.isSafeInteger(limit)||limit<1||limit>50)throw Error('Invalid semantic cutoff or limit');assertLocalIndexReady(lifecycle,current);
  const captured=captureLocalVectors(snapshot.descriptor,snapshot.entries);
  if(JSON.stringify(captured.descriptor)!==JSON.stringify(captureLocalIndexDescriptor(current)))throw Error('Retrieval descriptor drift');
  if(!Array.isArray(query)||query.length!==captured.descriptor.dimensions)throw Error('Query dimension mismatch');
  const focus=localSearchCandidates(captured.descriptor.sources,sourceId);
- const candidates=captured.entries.filter(e=>focus.includes(e.chunk.sourceId));const results=rankLocalChunks(query,candidates,limit).map(result=>Object.freeze({chunk:Object.freeze(result.chunk),score:result.score,trust:'untrusted' as const,confidence:'not-measured' as const,permission:false as const}));
- return Object.freeze(results);
+ const candidates=captured.entries.filter(e=>focus.includes(e.chunk.sourceId));rankLocalChunks(query,[],1);const all=candidates.map(entry=>rankLocalChunks(query,[entry],1)[0]).sort((a,b)=>b.score-a.score);const passing=all.filter(result=>result.score>=minimum);const results=passing.slice(0,limit).map(result=>Object.freeze({chunk:Object.freeze(result.chunk),score:result.score,trust:'untrusted' as const,confidence:'not-measured' as const,permission:false as const}));
+ return Object.freeze({results:Object.freeze(results),candidateChunks:candidates.length,candidateSources:new Set(candidates.map(e=>e.chunk.sourceId)).size,passingChunks:passing.length,passingSources:new Set(passing.map(e=>e.chunk.sourceId)).size,omittedChunks:passing.length-results.length,minimum});
 }
+
+export function retrieveLocalTopK(...args:Parameters<typeof retrieveLocalSemanticReport>){return retrieveLocalSemanticReport(...args).results;}

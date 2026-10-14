@@ -1,4 +1,4 @@
-import {localSearchCandidates} from './localSearchCandidates';import {captureBuiltLocalIndex} from './localBuiltIndex';import {retrieveLocalPhraseReport} from './localPhraseSearch';import {validBatchProgress,type LocalBuildProgress} from './localSearchProgress';import {localSearchQueryReview} from './localSearchQuery';import {prepareLocalIndexChunks} from './localIndexChunks';import {LOCAL_EMBED_MODEL,type LocalEmbeddingAdapter} from './localEmbedding';import {captureLocalIndexDescriptor,emptyLocalIndex,beginLocalIndex,finishLocalIndex,invalidateLocalIndex,type LocalIndexDescriptor,type LocalIndexLifecycle} from './localIndexLifecycle';import {retrieveLocalTopK,type FrozenLocalVectors} from './localRetrieval';import {chunkLocalSources,type SearchSource} from './localSearch';
+import {localSearchCandidates} from './localSearchCandidates';import {captureBuiltLocalIndex} from './localBuiltIndex';import {retrieveLocalPhraseReport} from './localPhraseSearch';import {validBatchProgress,type LocalBuildProgress} from './localSearchProgress';import {localSearchQueryReview} from './localSearchQuery';import {prepareLocalIndexChunks} from './localIndexChunks';import {LOCAL_EMBED_MODEL,type LocalEmbeddingAdapter} from './localEmbedding';import {captureLocalIndexDescriptor,emptyLocalIndex,beginLocalIndex,finishLocalIndex,invalidateLocalIndex,type LocalIndexDescriptor,type LocalIndexLifecycle} from './localIndexLifecycle';import {retrieveLocalSemanticReport,type FrozenLocalVectors} from './localRetrieval';import {chunkLocalSources,type SearchSource} from './localSearch';
 export interface LocalSearchCapture {endpoint:string;model:typeof LOCAL_EMBED_MODEL;digest:string;dimensions:number;sources:readonly SearchSource[]}
 export interface LocalSearchAdapter {endpoint:string;embed:LocalEmbeddingAdapter['embed'];embedPrepared:LocalEmbeddingAdapter['embedPrepared']}
 function capture(input:LocalSearchCapture):LocalSearchCapture{
@@ -33,14 +33,15 @@ export class LocalSearchSession {
  }
  phrase(text:string,limit=10,sourceId?:string|readonly string[]){return this.phraseReport(text,limit,sourceId).results;}
  phraseReport(text:string,limit=10,sourceId?:string|readonly string[]){this.available();this.queryAbort?.abort();this.queryGeneration++;const source=this.source,vectors=this.vectors;if(!source||!vectors||this.lifecycle.phase!=='ready')throw Error('Search index not ready');this.assertSame(source);return retrieveLocalPhraseReport(this.lifecycle,vectors.descriptor,vectors,text,limit,sourceId);}
- async query(text:string,signal:AbortSignal,limit=10,sourceId?:string|readonly string[]){
+ async queryReport(text:string,signal:AbortSignal,limit=10,sourceId?:string|readonly string[],minimum=-1){
   this.available();signal.throwIfAborted();this.queryAbort?.abort();const token=++this.queryGeneration;
-  if(!localSearchQueryReview(text).valid||!Number.isSafeInteger(limit)||limit<1||limit>50)throw Error('Invalid explicit search query');
-  const source=this.source,vectors=this.vectors;if(!source||!vectors||this.lifecycle.phase!=='ready')throw Error('Search index not ready');this.assertSame(source);const focus=localSearchCandidates(source.sources,sourceId);if(!focus.length)return Object.freeze([]);
+  if(![-1,0,0.25,0.5,0.75].includes(minimum)||!localSearchQueryReview(text).valid||!Number.isSafeInteger(limit)||limit<1||limit>50)throw Error('Invalid explicit search query');
+  const source=this.source,vectors=this.vectors;if(!source||!vectors||this.lifecycle.phase!=='ready')throw Error('Search index not ready');this.assertSame(source);const focus=localSearchCandidates(source.sources,sourceId);if(!focus.length)return retrieveLocalSemanticReport(this.lifecycle,vectors.descriptor,vectors,Array.from({length:source.dimensions},(_,i)=>i===0?1:0),limit,focus,minimum);
   const controller=new AbortController();this.queryAbort=controller;const abort=()=>controller.abort();signal.addEventListener('abort',abort,{once:true});if(signal.aborted)abort();
   try{
    const result=await this.adapter.embed([text],source.digest,source.dimensions,controller.signal);controller.signal.throwIfAborted();if(token!==this.queryGeneration||this.queryAbort!==controller)throw Error('Query replaced');this.assertSame(source);
-   if(result.length!==1)throw Error('Invalid query vector count');return retrieveLocalTopK(this.lifecycle,vectors.descriptor,vectors,result[0],limit,focus);
+   if(result.length!==1)throw Error('Invalid query vector count');return retrieveLocalSemanticReport(this.lifecycle,vectors.descriptor,vectors,result[0],limit,focus,minimum);
   }finally{signal.removeEventListener('abort',abort);if(this.queryAbort===controller)this.queryAbort=null;controller.abort();}
  }
+ async query(...args:Parameters<LocalSearchSession['queryReport']>){return (await this.queryReport(...args)).results;}
 }
