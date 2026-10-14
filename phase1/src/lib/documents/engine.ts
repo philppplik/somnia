@@ -45,6 +45,7 @@ export class DocumentsEngine{
  async formatParagraphs(first:number,last:number,patch:import('./protocol').ParaPatch):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'paraFormat',first,last,patch}))).document;}
  async paragraphState(first:number,last:number):Promise<import('./protocol').ParaState>{return(await this.call('paraState',id=>({id,kind:'paraState',first,last}))).state;}
  async setParagraphStyle(first:number,last:number,style:import('./protocol').DocStyleId):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'paraStyle',first,last,style}))).document;}
+ async continueList(first:number,last:number):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'continueList',first,last}))).document;}
  async restartList(first:number,last:number):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'restartList',first,last}))).document;}
  async setList(first:number,last:number,list:import('./protocol').ListKindId):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'setList',first,last,list}))).document;}
  async shiftListLevel(first:number,last:number,delta:number):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'listLevel',first,last,delta}))).document;}

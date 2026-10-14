@@ -106,6 +106,7 @@ export type DocumentsRequest=
  |{id:number;kind:'paraStyle';first:number;last:number;style:DocStyleId}
  |{id:number;kind:'setList';first:number;last:number;list:ListKindId}
  |{id:number;kind:'restartList';first:number;last:number}
+ |{id:number;kind:'continueList';first:number;last:number}
  |{id:number;kind:'listLevel';first:number;last:number;delta:number}
  |{id:number;kind:'tableEdit';block:number;op:TableOp}
  |{id:number;kind:'tableStyle';block:number;scope:TableStyleScope;style:TableStyle}
@@ -283,20 +284,22 @@ export function propertiesProblem(p:unknown):string|null{
 /** Number formats a list level can use. */
 export const LIST_NUM_FORMATS=['decimal','upperRoman','lowerRoman','upperLetter','lowerLetter','decimalZero','bullet'] as const;
 export type ListNumFormat=typeof LIST_NUM_FORMATS[number];
-export interface ListLevelOptions{format:ListNumFormat|'other';text:string;start:number}
+export interface ListLevelOptions{format:ListNumFormat|'other';text:string;start:number;indent:number;hanging:number}
 /** The nine levels of a list; `level` is the level of the asked paragraph. */
 export interface ListOptionsState{level:number;levels:ListLevelOptions[]}
 /** One level change: start value, number format and label text such as "%1." or "%1.%2" are each optional. */
-export interface ListOptionsPatch{level:number;start?:number;format?:ListNumFormat;text?:string}
-export const MAX_LIST_START=9999,MAX_LIST_LABEL=32;
+export interface ListOptionsPatch{level:number;start?:number;format?:ListNumFormat;text?:string;indent?:number;hanging?:number}
+export const MAX_LIST_START=9999,MAX_LIST_LABEL=32,MAX_LIST_INDENT_PT=720;
 /** The first problem with a list level change, or null when the engine will accept it. `current` is the level's present format, used when the patch leaves the format out. */
-export function listOptionsProblem(p:unknown,current?:ListNumFormat|'other'):string|null{
+export function listOptionsProblem(p:unknown,current?:ListNumFormat|'other',cur?:{indent:number;hanging:number}):string|null{
  if(!p||typeof p!=='object'||Array.isArray(p))return 'The list options are not valid.';
  const o=p as Record<string,unknown>;
- for(const k of Object.keys(o))if(k!=='level'&&k!=='start'&&k!=='format'&&k!=='text')return `Unknown list option ${k}.`;
+ for(const k of Object.keys(o))if(k!=='level'&&k!=='start'&&k!=='format'&&k!=='text'&&k!=='indent'&&k!=='hanging')return `Unknown list option ${k}.`;
  const level=o.level;if(typeof level!=='number'||!Number.isInteger(level)||level<0||level>8)return 'The level must be 1 to 9.';
  if(o.start!==undefined&&(typeof o.start!=='number'||!Number.isInteger(o.start)||o.start<0||o.start>MAX_LIST_START))return `The start value must be 0 to ${MAX_LIST_START}.`;
  if(o.format!==undefined&&!(LIST_NUM_FORMATS as readonly unknown[]).includes(o.format))return 'The number format is not offered.';
+ for(const k of ['indent','hanging'])if(o[k]!==undefined&&(typeof o[k]!=='number'||!Number.isFinite(o[k])||(o[k] as number)<0||(o[k] as number)>MAX_LIST_INDENT_PT))return `The ${k} must be 0 to ${MAX_LIST_INDENT_PT} points.`;
+ if((o.indent!==undefined||o.hanging!==undefined)&&((o.hanging as number|undefined)??cur?.hanging??0)>((o.indent as number|undefined)??cur?.indent??MAX_LIST_INDENT_PT))return 'The hanging indent cannot be larger than the indent.';
  if(Object.keys(o).length===1)return 'Nothing to change.';
  if(o.text!==undefined){
   if(typeof o.text!=='string'||Array.from(o.text).length>MAX_LIST_LABEL||/[\u0000-\u001f\u007f]/.test(o.text))return 'The label has characters that are not allowed.';

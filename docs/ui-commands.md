@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-552 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+553 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -268,6 +268,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `documents.link.set` | Link the selected text | View | documents |  |
 | `documents.list.bullet` | Toggle bulleted list | View | documents |  |
 | `documents.list.clear` | Remove list | View | documents |  |
+| `documents.list.continue` | Continue list numbering | View | documents |  |
 | `documents.list.indent` | Demote list item | View | documents |  |
 | `documents.list.numbered` | Toggle numbered list | View | documents |  |
 | `documents.list.options` | List numbering options | View | documents |  |

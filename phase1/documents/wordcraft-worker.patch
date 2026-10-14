@@ -48,7 +48,7 @@ new file mode 100644
 index 0000000..5b80b79
 --- /dev/null
 +++ b/crates/somnia-worker/src/lib.rs
-@@ -0,0 +1,3424 @@
+@@ -0,0 +1,3525 @@
 +//! Experimental headless adapter. No DOM, egui, filesystem or UI thread access.
 +use wasm_bindgen::prelude::*;
 +use std::sync::Arc;
@@ -1036,7 +1036,7 @@ index 0000000..5b80b79
 +            .enumerate()
 +            .map(|(i, l)| {
 +                let start = num.start_overrides.iter().find(|(lv, _)| *lv as usize == i).map(|(_, s)| *s).unwrap_or(l.start);
-+                serde_json::json!({"format": Self::num_format_name(l.format).unwrap_or("other"), "text": l.text, "start": start})
++                serde_json::json!({"format": Self::num_format_name(l.format).unwrap_or("other"), "text": l.text, "start": start, "indent": l.indent, "hanging": l.hanging})
 +            })
 +            .collect();
 +        Ok(serde_json::json!({"level": n.level, "levels": levels}).to_string())
@@ -1049,7 +1049,7 @@ index 0000000..5b80b79
 +        }
 +        let v: serde_json::Value = serde_json::from_str(patch_json).map_err(|e| format!("list options are not valid JSON: {e}"))?;
 +        let obj = v.as_object().ok_or("list options must be an object")?;
-+        if let Some(k) = obj.keys().find(|k| !matches!(k.as_str(), "level" | "start" | "format" | "text")) {
++        if let Some(k) = obj.keys().find(|k| !matches!(k.as_str(), "level" | "start" | "format" | "text" | "indent" | "hanging")) {
 +            return Err(format!("unknown list option {k}"));
 +        }
 +        let level = obj.get("level").and_then(|x| x.as_u64()).filter(|l| *l < 9).ok_or("level must be 0 to 8")? as usize;
@@ -1061,6 +1061,14 @@ index 0000000..5b80b79
 +            None => None,
 +            Some(x) => Some(x.as_str().and_then(Self::num_format_of).ok_or("unknown number format")?),
 +        };
++        let pt = |key: &str| -> Result<Option<f32>, String> {
++            match obj.get(key) {
++                None => Ok(None),
++                Some(x) => x.as_f64().filter(|v| v.is_finite() && (0.0..=720.0).contains(v)).map(|v| Some(v as f32)).ok_or_else(|| format!("{key} must be 0 to 720 points")),
++            }
++        };
++        let indent = pt("indent")?;
++        let hanging = pt("hanging")?;
 +        let text = match obj.get("text") {
 +            None => None,
 +            Some(x) => Some(x.as_str().ok_or("text must be text")?.to_string()),
@@ -1069,6 +1077,11 @@ index 0000000..5b80b79
 +        let n = self.doc.styles.resolve_para(&p.props).numbering.filter(|n| n.num != 0).ok_or("the paragraph is not in a list")?;
 +        let mut numbering = self.doc.numbering.clone();
 +        let cur = numbering.level(n.num, level as u8).cloned().ok_or("the list no longer exists")?;
++        let new_indent = indent.unwrap_or(cur.indent);
++        let new_hanging = hanging.unwrap_or(cur.hanging);
++        if new_hanging > new_indent {
++            return Err("the hanging indent cannot be larger than the indent".into());
++        }
 +        let new_format = format.unwrap_or(cur.format);
 +        let new_text = text.unwrap_or_else(|| cur.text.clone());
 +        if new_text.chars().count() > 32 || new_text.chars().any(|c| c.is_control()) {
@@ -1098,6 +1111,8 @@ index 0000000..5b80b79
 +        abs.id = numbering.abstracts.iter().map(|a| a.id + 1).max().unwrap_or(0);
 +        abs.levels[level].format = new_format;
 +        abs.levels[level].text = new_text;
++        abs.levels[level].indent = new_indent;
++        abs.levels[level].hanging = new_hanging;
 +        let new_id = abs.id;
 +        numbering.abstracts.push(abs);
 +        if let Some(num) = numbering.nums.iter_mut().find(|x| x.id == n.num) {
@@ -1108,6 +1123,58 @@ index 0000000..5b80b79
 +            }
 +        }
 +        self.doc.numbering = numbering;
++        self.pages = DocLayout::default();
++        Ok(())
++    }
++    /// Continues the numbering of the nearest numbered list above `first`: the paragraphs `first..=last` that are in a numbered list, and
++    /// every later top-level paragraph of the same list, move to that list. Refuses outside a numbered list, in tables, and when no other numbered list is above.
++    fn do_continue_list(&mut self, first: usize, last: usize) -> Result<(), String> {
++        use wordcraft_doc::props::NumRef;
++        if first >= CELL_BASE || last >= CELL_BASE {
++            return Err("continuing a list is not available in tables".into());
++        }
++        let paras = self.para_span(first, last)?;
++        let old = match self.doc.styles.resolve_para(&paras[0].props).numbering.filter(|n| n.num != 0) {
++            Some(n) if self.list_kind(Some(n)) == "numbered" => n.num,
++            _ => return Err("the paragraph is not in a numbered list".into()),
++        };
++        let mut target = None;
++        let mut id = first;
++        while id > 0 && first - id < 100_000 {
++            id -= 1;
++            if let Some(p) = self.para_at(id) {
++                if let Some(n) = self.doc.styles.resolve_para(&p.props).numbering.filter(|n| n.num != 0 && n.num != old) {
++                    if self.list_kind(Some(n)) == "numbered" {
++                        target = Some(n.num);
++                        break;
++                    }
++                }
++            }
++        }
++        let target = target.ok_or("there is no other numbered list above")?;
++        let mut changed: Vec<(usize, wordcraft_doc::Paragraph)> = Vec::new();
++        for (i, p) in paras.into_iter().enumerate() {
++            let mut p = p;
++            if let Some(n) = self.doc.styles.resolve_para(&p.props).numbering.filter(|n| n.num == old) {
++                p.props.numbering = Some(NumRef { num: target, level: n.level });
++                changed.push((first + i, p));
++            }
++        }
++        let mut id = last + 1;
++        let end = self.doc.body.len().min(100_000);
++        while id < end {
++            if let Some(p) = self.para_at(id) {
++                if let Some(n) = self.doc.styles.resolve_para(&p.props).numbering.filter(|n| n.num == old) {
++                    let mut p = p.clone();
++                    p.props.numbering = Some(NumRef { num: target, level: n.level });
++                    changed.push((id, p));
++                }
++            }
++            id += 1;
++        }
++        for (id, p) in changed {
++            self.put_para(id, p)?;
++        }
 +        self.pages = DocLayout::default();
 +        Ok(())
 +    }
@@ -2197,6 +2264,10 @@ index 0000000..5b80b79
 +    pub fn set_list_options(&mut self, block: usize, patch_json: &str) -> Result<(), JsValue> {
 +        self.do_set_list_options(block, patch_json).map_err(|e| JsValue::from_str(&e))
 +    }
++    /// Continues the numbering of the list above (see `do_continue_list`).
++    pub fn continue_list(&mut self, first: usize, last: usize) -> Result<(), JsValue> {
++        self.do_continue_list(first, last).map_err(|e| JsValue::from_str(&e))
++    }
 +    /// Restarts numbering at `first` (see `do_restart_list`).
 +    pub fn restart_list(&mut self, first: usize, last: usize) -> Result<(), JsValue> {
 +        self.do_restart_list(first, last).map_err(|e| JsValue::from_str(&e))
@@ -2818,6 +2889,36 @@ index 0000000..5b80b79
 +        assert!(s.do_list_options(0).is_err());
 +        assert!(s.do_set_list_options(0, r#"{"level":0,"start":2}"#).is_err());
 +        assert!(s.do_list_options(100_000).is_err());
++    }
++    #[test]
++    fn continue_numbering_and_level_indents() {
++        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
++        let num_of = |s: &DocSession, i: usize| s.para_at(i).and_then(|p| s.doc.styles.resolve_para(&p.props).numbering).map(|n| n.num);
++        s.do_set_list(0, 0, "numbered").unwrap();
++        s.do_set_list(1, 1, "bullet").unwrap();
++        s.do_set_list(2, 2, "numbered").unwrap();
++        s.do_restart_list(2, 2).unwrap();
++        let (a, c) = (num_of(&s, 0).unwrap(), num_of(&s, 2).unwrap());
++        assert_ne!(a, c);
++        s.do_continue_list(2, 2).unwrap();
++        assert_eq!(num_of(&s, 2), Some(a), "skips the bullet list between and joins the numbered list above");
++        let re = DocSession::from_bytes(&wordcraft_docx::write(&s.doc).unwrap()).unwrap();
++        assert_eq!(num_of(&re, 2), num_of(&re, 0));
++        // Refusals change nothing.
++        let before = s.doc.numbering.clone();
++        assert!(s.do_continue_list(0, 0).is_err(), "no other numbered list above");
++        assert!(s.do_continue_list(1, 1).is_err(), "a bullet list");
++        assert!(s.do_continue_list(CELL_BASE, CELL_BASE).is_err());
++        assert_eq!(s.doc.numbering, before);
++        // Per-level indent and hanging.
++        s.do_set_list_options(0, r#"{"level":0,"indent":54,"hanging":27.5}"#).unwrap();
++        let o: serde_json::Value = serde_json::from_str(&s.do_list_options(0).unwrap()).unwrap();
++        assert_eq!((o["levels"][0]["indent"].clone(), o["levels"][0]["hanging"].clone()), (54.0.into(), 27.5.into()));
++        let before = s.doc.numbering.clone();
++        for bad in [r#"{"level":0,"indent":721}"#, r#"{"level":0,"indent":-1}"#, r#"{"level":0,"hanging":"x"}"#, r#"{"level":0,"indent":10,"hanging":20}"#, r#"{"level":0,"hanging":60}"#] {
++            assert!(s.do_set_list_options(0, bad).is_err(), "{bad}");
++        }
++        assert_eq!(s.doc.numbering, before);
 +    }
 +    #[test]
 +    fn save_records_last_modified_by_on_the_copy_only() {

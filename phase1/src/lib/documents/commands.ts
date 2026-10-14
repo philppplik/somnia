@@ -2,7 +2,7 @@ import {registerCommand} from '../commandRegistry';
 import {getDocumentsState,patchDocuments,stepZoom} from './store';
 import {redoEdit,setAlign,setParagraphStyle,toggleList,clearList,shiftListLevel,stepFontSize,stepIndent,toggleFormat,undoEdit,editTable,insertTable,setHeaderFooter,insertImage,resizeImageToPercent,setImageAlt,removeImage,setColumnWidth,styleTable,setPageSetup,setFindOpen,setFindQuery,findStep,replaceAll,replaceCurrent} from './session';
 import {listOptionsProblem,type ListOptionsPatch,pageSetupProblem,LIST_STYLES,type ListStyleId} from './protocol';
-import {restartNumbering,setListStyle,setListOptions} from './session';
+import {continueNumbering,restartNumbering,setListStyle,setListOptions} from './session';
 import {validFindQuery,validReplaceText} from './find';
 import {findMedia} from '../media';
 import {tableStyleProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGE_BYTES,MIN_COL_PT,MAX_COL_PT} from './protocol';
@@ -140,6 +140,7 @@ export function registerDocumentsCommands(){
    await setListStyle(st as ListStyleId);
   },()=>ready()&&!!getDocumentsState().caret),
   add('documents.list.restart','Restart list numbering',async()=>{await restartNumbering();},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.list.continue','Continue list numbering',async()=>{await continueNumbering();},()=>ready()&&!!getDocumentsState().caret&&getDocumentsState().para?.list==='numbered'),
   add('documents.list.options','List numbering options',()=>{setInfoDialog('list');},()=>ready()&&!!getDocumentsState().caret&&(getDocumentsState().para?.list==='bullet'||getDocumentsState().para?.list==='numbered')),
   add('documents.list.options.set','Set list level options',async p=>{
    const bad=listOptionsProblem(p);if(bad)throw expected(bad);

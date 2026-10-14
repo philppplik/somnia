@@ -476,6 +476,11 @@ export const setListStyle=(style:ListStyleId)=>run(async()=>{
  await structural(eng=>eng.setList(n.s.block,n.e.block,style),n.h,n.h);setSel(n.a,n.h);
 });
 /** Restarts numbering at the first selected paragraph: it and the later items of the same numbered list count from 1 again. One undo step; refused outside a numbered list. */
+/** Continues the numbering of the nearest numbered list above: the caret's list (and its later items) count on from it. One undo step; refused in tables, in bullet lists and when no numbered list is above. */
+export const continueNumbering=()=>run(async()=>{
+ const n=await paraSpan();if(!n)return;
+ await structural(eng=>eng.continueList(n.s.block,n.e.block),n.h,n.h);setSel(n.a,n.h);
+});
 export const restartNumbering=()=>run(async()=>{
  const n=await paraSpan();if(!n)return;
  await structural(eng=>eng.restartList(n.s.block,n.e.block),n.h,n.h);setSel(n.a,n.h);
@@ -713,8 +718,8 @@ export async function readListOptions():Promise<import('./protocol').ListOptions
 /** Changes one level of the caret's list: start value, number format, label text. One undo step; the other lists that shared the definition keep theirs. */
 export const setListOptions=(patch:import('./protocol').ListOptionsPatch)=>run(async()=>{
  const n=await paraSpan();if(!n)return;
- const cur=(await engine!.listOptions(n.s.block)).levels[patch?.level]?.format;
- const bad=listOptionsProblem(patch,cur);if(bad)throw new Error(bad);
+ const cur=(await engine!.listOptions(n.s.block)).levels[patch?.level];
+ const bad=listOptionsProblem(patch,cur?.format,cur);if(bad)throw new Error(bad);
  await structural(eng=>eng.setListOptions(n.s.block,patch),n.h,n.h);setSel(n.a,n.h);
 });
 /* ---- Document properties ---- */

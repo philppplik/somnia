@@ -1,5 +1,5 @@
 import {useEffect,useState} from 'react';
-import {LIST_NUM_FORMATS,MAX_LIST_LABEL,MAX_LIST_START,listOptionsProblem,type ListNumFormat,type ListOptionsPatch,type ListOptionsState,MAX_TAB_STOPS,TAB_ALIGNS,TAB_LEADERS,tabsProblem,type TabStopSpec,MAX_DESCRIPTION_CHARS,MAX_PROPERTY_CHARS,propertiesProblem,PROPERTY_KEYS,type PropertiesPatch,type PropertiesState} from '../../lib/documents/protocol';
+import {LIST_NUM_FORMATS,MAX_LIST_LABEL,MAX_LIST_START,MAX_LIST_INDENT_PT,listOptionsProblem,type ListNumFormat,type ListOptionsPatch,type ListOptionsState,MAX_TAB_STOPS,TAB_ALIGNS,TAB_LEADERS,tabsProblem,type TabStopSpec,MAX_DESCRIPTION_CHARS,MAX_PROPERTY_CHARS,propertiesProblem,PROPERTY_KEYS,type PropertiesPatch,type PropertiesState} from '../../lib/documents/protocol';
 import {setInfoDialog,useInfoDialog} from '../../lib/documents/infoDialog';
 import {authorProblem,MAX_AUTHOR_CHARS,savedAuthor,setAuthor} from '../../lib/documents/author';
 import {readListOptions,readProperties,selectedText,setListOptions,setProperties,setTabStops} from '../../lib/documents/session';
@@ -40,23 +40,29 @@ function PropertiesDialog({onClose}:{onClose:()=>void}){
   <div className="flex justify-end gap-2"><NativeButton className={tool} onClick={onClose}>{t('documents.para.opt.cancel')}</NativeButton>
    <NativeButton className={tool} disabled={authorBad||(!patch&&!authorChanged)} onClick={()=>{if(authorChanged&&!setAuthor(author))return;onClose();if(patch)void setProperties(patch);}} data-testid="documents-props-apply">{t('documents.para.opt.apply')}</NativeButton></div></>);
 }
-/** The change for one list level, or null when nothing differs or a value is not acceptable. `start` is the typed text. */
-export function buildListPatch(level:number,orig:{format:string;text:string;start:number},form:{format:ListNumFormat;text:string;start:string}):ListOptionsPatch|null{
+/** A length typed in points ("54", "27,5"); null while empty or out of range. */
+export const parseListPt=(v:string):number|null=>{if(!/^\d{1,3}([.,]\d{1,2})?$/.test(v))return null;const n=Number(v.replace(',','.'));return n>=0&&n<=MAX_LIST_INDENT_PT?n:null;};
+interface ListForm{format:ListNumFormat;text:string;start:string;indent:string;hanging:string}
+/** The change for one list level, or null when nothing differs or a value is not acceptable. `start`, `indent` and `hanging` are the typed text. */
+export function buildListPatch(level:number,orig:{format:string;text:string;start:number;indent:number;hanging:number},form:ListForm):ListOptionsPatch|null{
  const p:ListOptionsPatch={level};
  if(form.format!==orig.format)p.format=form.format;
  if(form.text!==orig.text||p.format!==undefined)p.text=form.text;
  if(!/^\d{1,4}$/.test(form.start))return null;
  const st=Number(form.start);if(st!==orig.start)p.start=st;
- return Object.keys(p).length>1&&listOptionsProblem(p,orig.format as ListNumFormat)===null?p:null;
+ const ind=parseListPt(form.indent),han=parseListPt(form.hanging);if(ind===null||han===null)return null;
+ if(ind!==orig.indent)p.indent=ind;if(han!==orig.hanging)p.hanging=han;
+ return Object.keys(p).length>1&&listOptionsProblem(p,orig.format as ListNumFormat,orig)===null?p:null;
 }
 function ListOptionsDialog({onClose}:{onClose:()=>void}){
  const {t}=useT();const [st,setSt]=useState<ListOptionsState|null>(null);const [level,setLevel]=useState(0);
- const [form,setForm]=useState<{format:ListNumFormat;text:string;start:string}|null>(null);
+ const [form,setForm]=useState<ListForm|null>(null);
  useEffect(()=>{let live=true;void readListOptions().then(s=>{if(live&&s){setSt(s);setLevel(s.level);}}).catch(()=>undefined);return()=>{live=false;};},[]);
  const cur=st?.levels[level];
- useEffect(()=>{if(cur)setForm({format:(LIST_NUM_FORMATS as readonly string[]).includes(cur.format)?cur.format as ListNumFormat:'decimal',text:cur.text,start:String(cur.start)});},[st,level]);
+ useEffect(()=>{if(cur)setForm({format:(LIST_NUM_FORMATS as readonly string[]).includes(cur.format)?cur.format as ListNumFormat:'decimal',text:cur.text,start:String(cur.start),indent:String(cur.indent),hanging:String(cur.hanging)});},[st,level]);
  if(!st||!cur||!form)return shell('documents-listopt-title',onClose,<h2 id="documents-listopt-title" className="text-sm font-medium">{t('documents.listopt.title')}</h2>);
  const patch=buildListPatch(level,cur,form);const textBad=listOptionsProblem({level,text:form.text},form.format)!==null;const startBad=!/^\d{1,4}$/.test(form.start);
+ const ind=parseListPt(form.indent),han=parseListPt(form.hanging);const lenBad=ind===null||han===null||han>ind;
  return shell('documents-listopt-title',onClose,<>
   <h2 id="documents-listopt-title" className="text-sm font-medium">{t('documents.listopt.title')}</h2>
   <label className="grid gap-1 text-xs text-ink-2">{t('documents.listopt.level')}
@@ -66,9 +72,14 @@ function ListOptionsDialog({onClose}:{onClose:()=>void}){
   <label className="grid gap-1 text-xs text-ink-2">{t('documents.listopt.text')}
    <NativeInput className={field} maxLength={MAX_LIST_LABEL} aria-invalid={textBad} value={form.text} onChange={e=>setForm({...form,text:e.currentTarget.value})} data-testid="documents-listopt-text"/></label>
   <p className="text-xs text-ink-3">{t('documents.listopt.textHint').replaceAll('{n}',String(level+1))}</p>
-  <label className="grid gap-1 text-xs text-ink-2">{t('documents.listopt.start')}
-   <NativeInput className={field+' w-24 tabular-nums'} inputMode="numeric" maxLength={4} aria-invalid={startBad} value={form.start} onChange={e=>setForm({...form,start:e.currentTarget.value.trim()})} data-testid="documents-listopt-start"/></label>
-  {(textBad||startBad)&&<p role="alert" className="text-xs text-ink-3">{t('documents.listopt.invalid').replace('{max}',String(MAX_LIST_START))}</p>}
+  <div className="flex gap-2">
+   <label className="grid gap-1 text-xs text-ink-2">{t('documents.listopt.start')}
+    <NativeInput className={field+' w-20 tabular-nums'} inputMode="numeric" maxLength={4} aria-invalid={startBad} value={form.start} onChange={e=>setForm({...form,start:e.currentTarget.value.trim()})} data-testid="documents-listopt-start"/></label>
+   <label className="grid gap-1 text-xs text-ink-2">{t('documents.listopt.indent')}
+    <NativeInput className={field+' w-20 tabular-nums'} inputMode="decimal" maxLength={6} aria-invalid={ind===null||han===null||han>ind} value={form.indent} onChange={e=>setForm({...form,indent:e.currentTarget.value.trim()})} data-testid="documents-listopt-indent"/></label>
+   <label className="grid gap-1 text-xs text-ink-2">{t('documents.listopt.hanging')}
+    <NativeInput className={field+' w-20 tabular-nums'} inputMode="decimal" maxLength={6} aria-invalid={ind===null||han===null||han>ind} value={form.hanging} onChange={e=>setForm({...form,hanging:e.currentTarget.value.trim()})} data-testid="documents-listopt-hanging"/></label></div>
+  {(textBad||startBad||lenBad)&&<p role="alert" className="text-xs text-ink-3">{t('documents.listopt.invalid').replace('{max}',String(MAX_LIST_START))}</p>}
   <div className="flex justify-end gap-2"><NativeButton className={tool} onClick={onClose}>{t('documents.para.opt.cancel')}</NativeButton>
    <NativeButton className={tool} disabled={!patch} onClick={()=>{if(!patch)return;onClose();void setListOptions(patch);}} data-testid="documents-listopt-apply">{t('documents.para.opt.apply')}</NativeButton></div></>);
 }

@@ -2858,6 +2858,17 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.list.continue",
+      "title": "Continue list numbering",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.list.indent",
       "title": "Demote list item",
       "category": "View",
