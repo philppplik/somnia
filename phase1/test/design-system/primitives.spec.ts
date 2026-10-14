@@ -79,3 +79,13 @@ test('checkbox, switch and native radio keyboard behavior, mixed and disabled st
  await page.getByRole('button',{name:'Read only',exact:true}).click();await gamma.press('ArrowLeft');await expect(gamma).toBeChecked();
  await page.getByRole('button',{name:'Disabled',exact:true}).click();await expect(checkbox).toBeDisabled();await expect(toggle).toBeDisabled();await expect(alpha).toBeDisabled();
 });
+
+for(const mode of ['light','dark'])for(const contrast of ['standard','high'])test(`theme exchange ${mode}/${contrast}: all aliases preserve live colors and seed`,async({page})=>{
+ await page.goto('./');await page.evaluate(({mode,contrast})=>{const root=document.documentElement;root.dataset.theme=mode;root.dataset.contrast=contrast;root.style.setProperty('--accent','#ffff00');root.style.setProperty('--accent-fill','#ffff00');root.style.setProperty('--accent-ink','#101014');},{mode,contrast});
+ const proof=await page.getByTestId('exchange-proof').evaluate(element=>{const api=(window as any).themeExchangeProof,cs=getComputedStyle(element);return api.THEME_ROLES.map((role:string)=>({role,alias:cs.getPropertyValue(`--sc-${role}`).trim(),source:cs.getPropertyValue(api.ROLE_ALIASES[role]).trim()}));});
+ for(const pair of proof)expect(pair.alias,pair.role).toBe(pair.source);
+ expect(await page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--accent').trim())).toBe('#ffff00');
+ const mapped=await page.evaluate(()=>{const api=(window as any).themeExchangeProof;const r=api.parseThemeExchange(JSON.stringify({cssVars:{light:{accent:'#123456',primary:'#abcdef'},dark:{accent:'#fedcba',primary:'#654321'}}}));return api.themeExchangeVariables(r.theme,'light');});
+ expect(mapped).toEqual({'--sc-primary':'#abcdef','--sc-accent':'#123456'});
+ await page.screenshot({path:`test-results/ds-exchange-${mode}-${contrast}.png`,fullPage:true});
+});

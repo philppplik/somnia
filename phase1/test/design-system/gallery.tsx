@@ -1,3 +1,4 @@
+import {ExchangeProof} from './exchange-proof';
 import {useState} from 'react';
 import {createRoot} from 'react-dom/client';
 import {Menu as RawMenu} from '@base-ui/react/menu';
@@ -46,6 +47,6 @@ function Gallery(){
  <TooltipProvider delay={0}><Tooltip><TooltipTrigger>Tooltip trigger</TooltipTrigger><TooltipContent>Shared tooltip</TooltipContent></Tooltip></TooltipProvider>
  <StudioTooltip.Provider delay={0}><StudioTooltip.Root><StudioTooltip.Trigger>Studio facade tooltip</StudioTooltip.Trigger><StudioTooltip.Portal><StudioTooltip.Positioner className="z-50" side="bottom" sideOffset={8}><StudioTooltip.Popup data-testid="studio-tooltip" className="studio-pill-tooltip">Studio facade</StudioTooltip.Popup></StudioTooltip.Positioner></StudioTooltip.Portal></StudioTooltip.Root></StudioTooltip.Provider>
  <RawTooltip.Provider delay={0}><RawTooltip.Root><RawTooltip.Trigger>Raw tooltip</RawTooltip.Trigger><RawTooltip.Portal><RawTooltip.Positioner side="bottom" sideOffset={8}><RawTooltip.Popup data-testid="raw-tooltip" className="studio-pill-tooltip">Raw tooltip</RawTooltip.Popup></RawTooltip.Positioner></RawTooltip.Portal></RawTooltip.Root></RawTooltip.Provider>
- </section></div><pre data-testid="events" aria-label="Fixture events">{events.join('\n')}</pre></main>;
+ </section><ExchangeProof/></div><pre data-testid="events" aria-label="Fixture events">{events.join('\n')}</pre></main>;
 }
 createRoot(document.getElementById('root')!).render(<Gallery/>);
