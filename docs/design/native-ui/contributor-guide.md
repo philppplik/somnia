@@ -57,8 +57,11 @@ StudioTooltip namespace exists for old coupled JSX; new code should normally use
 
 Before migrating a consumer, capture its current CSS and behavior, compare with the wrapper, then inspect pixels
 in light/dark/high contrast, disabled/invalid/mixed, keyboard focus, reduced motion and relevant density/zoom.
-Keep existing tests and thresholds intact. `check:ds` protects the hook inventory and ratchets direct Base UI imports;
-exceptions are a reviewed boundary, not a shortcut. See [Settings plan](settings-migration-plan.md).
+Keep existing tests and thresholds intact. `check:ds` protects the hook inventory, ratchets direct Base UI imports
+and caps every file's raw `<button>`/`<input>`/`<select>`/`<textarea>` at its recorded allowance; growth fails with a
+lint-style `file:line` diagnostic. Exceptions are a reviewed boundary, not a shortcut. Follow the
+[migration guide](migration-guide.md) for per-primitive before/after patterns and the
+[audit report](final-audit.md) for the remaining bespoke ledger. See [Settings plan](settings-migration-plan.md).
 
 ## Tokens and imported themes
 

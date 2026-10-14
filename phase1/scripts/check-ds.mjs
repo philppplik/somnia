@@ -42,6 +42,58 @@ export function countFile(text, path) {
 export function compareCounts(current, baseline) {
   return Object.entries(current).flatMap(([area,counts])=>metrics.filter(m=>counts[m]>(baseline[area]?.[m]??0)).map(m=>`${area}.${m}: ${baseline[area]?.[m]??0} -> ${counts[m]}`));
 }
+export const controlMetrics=['rawButton','rawInput','rawSelect','rawTextarea'];
+const controlTags={button:'rawButton',input:'rawInput',select:'rawSelect',textarea:'rawTextarea'};
+/** Raw control occurrences with source locations. Reviewed exceptions stay exempt per metric. */
+export function controlOccurrences(text, path) {
+  if(!path.endsWith('.tsx'))return [];
+  const found=[];
+  walk(tree(text), node => {
+    if(node.type==='JSXOpeningElement'&&node.name.type==='JSXIdentifier') {
+      const metric=controlTags[node.name.name];
+      if(metric)found.push({path,line:node.loc?.start.line??0,column:(node.loc?.start.column??0)+1,tag:node.name.name,metric});
+    }
+  });
+  for(const ex of exceptions)if(path===ex.path||ex.path.endsWith('/')&&path.startsWith(ex.path)) {
+    const covered=ex.metrics==='all'?controlMetrics:ex.metrics.filter(m=>controlMetrics.includes(m));
+    for(let i=found.length-1;i>=0;i--)if(covered.includes(found[i].metric))found.splice(i,1);
+  }
+  return found;
+}
+/** Raw control debt per production file. Only files with at least one occurrence are listed. */
+export function fileControlCounts(source) {
+  const counts={};
+  for(const [path,text] of source) {
+    if(isTest(path)||!path.endsWith('.tsx'))continue;
+    const occurrences=controlOccurrences(text,path);
+    if(!occurrences.length)continue;
+    const values=Object.fromEntries(controlMetrics.map(m=>[m,0]));
+    for(const hit of occurrences)values[hit.metric]++;
+    counts[path]=values;
+  }
+  return Object.fromEntries(Object.entries(counts).sort(([a],[b])=>a.localeCompare(b)));
+}
+/** Lint-style diagnostics. A file may never exceed its recorded raw control allowance. */
+export function compareFileControls(occurrences, previous) {
+  const byFile=new Map();
+  for(const hit of occurrences){if(!byFile.has(hit.path))byFile.set(hit.path,[]);byFile.get(hit.path).push(hit);}
+  const failures=[];
+  for(const [path,hits] of [...byFile.entries()].sort(([a],[b])=>a.localeCompare(b))) {
+    const allowance=previous[path]??{};
+    for(const metric of controlMetrics) {
+      const used=hits.filter(h=>h.metric===metric);
+      const allowed=allowance[metric]??0;
+      if(used.length>allowed)for(const hit of used)failures.push(`${path}:${hit.line}:${hit.column}: raw <${hit.tag}> exceeds the file allowance (${allowed}). Migrate to the matching DS primitive: docs/design/native-ui/migration-guide.md`);
+    }
+  }
+  return failures;
+}
+/** File allowances only shrink. A migrated file stays listed at zero, so reintroduction still fails. */
+export function reducedFileBudgets(current, previous) {
+  const result={};
+  for(const path of new Set([...Object.keys(previous),...Object.keys(current)]))result[path]=Object.fromEntries(controlMetrics.map(m=>[m,Math.min(previous[path]?.[m]??0,current[path]?.[m]??0)]));
+  return Object.fromEntries(Object.entries(result).sort(([a],[b])=>a.localeCompare(b)));
+}
 export function measure(source) {
   const counts={};
   for(const [path,text] of source) {
@@ -106,20 +158,24 @@ export function reducedBudgets(current,previous){
 export function enrollmentProposal(current,previous){return {requiresApproval:true,note:'Proposed reviewed enrollment, not active budgets. Existing area growth is not approved. Once adopted, all areas/metrics only go down.',newAreas:Object.fromEntries(Object.entries(current).filter(([area])=>!Object.hasOwn(previous,area))),existingGrowth:compareCounts(Object.fromEntries(Object.entries(current).filter(([area])=>Object.hasOwn(previous,area))),previous)};}
 function main() {
   const source=files(resolve(root,'src')).filter(p=>/\.(?:[jt]sx?|css)$/.test(p)).map(p=>[relative(root,p).replaceAll('\\','/'),readFileSync(p,'utf8')]);
-  const baselinePath=resolve(root,'scripts/ds-baseline.json');const hooksPath=resolve(root,'scripts/ds-hooks.json');
+  const baselinePath=resolve(root,'scripts/ds-baseline.json');const hooksPath=resolve(root,'scripts/ds-hooks.json');const debtPath=resolve(root,'scripts/ds-control-debt.json');
   const counts=measure(source); const hooks=inventory(source);
+  const occurrences=source.filter(([p])=>!isTest(p)&&p.endsWith('.tsx')).flatMap(([p,t])=>controlOccurrences(t,p));
+  const fileCounts=fileControlCounts(source);
   const proposal=process.argv.indexOf('--propose-enrollment');
   if(proposal!==-1){const destination=process.argv[proposal+1];if(!destination||destination.startsWith('--'))throw Error('Proposal output path required');if(resolve(destination)===baselinePath||resolve(destination)===hooksPath)throw Error('Proposal cannot overwrite active baseline/hooks');const previous=JSON.parse(readFileSync(baselinePath,'utf8'));writeFileSync(destination,JSON.stringify(enrollmentProposal(counts,previous.counts),null,2)+'\n');console.log('Enrollment proposal written. Active budgets/hooks unchanged; integrator approval required.');return;}
   let previousCounts={};
   const init=process.argv.includes('--init'); const update=process.argv.includes('--update');
-  if(init&&(existsSync(baselinePath)||existsSync(hooksPath)))throw Error('Refusing to reinitialize an existing ratchet. Use --update; it accepts reductions only.');
+  if(init&&(existsSync(baselinePath)||existsSync(hooksPath)||existsSync(debtPath)))throw Error('Refusing to reinitialize an existing ratchet. Use --update; it accepts reductions only.');
+  let previousFiles={};
   if(!init) {
     const previous=JSON.parse(readFileSync(baselinePath,'utf8')); const priorHooks=JSON.parse(readFileSync(hooksPath,'utf8'));previousCounts=previous.counts;
+    const priorDebt=JSON.parse(readFileSync(debtPath,'utf8'));previousFiles=priorDebt.files;
     if(JSON.stringify(previous.exceptions)!==JSON.stringify(exceptions))throw Error('Exception policy changed. Review and explicitly update both script and baseline; --update cannot silently expand exemptions.');
-    const failures=[...compareCounts(counts,previous.counts),...missingHooks(hooks,priorHooks).map(h=>`Public hook removed: ${h}`)];
+    const failures=[...compareCounts(counts,previous.counts),...compareFileControls(occurrences,previousFiles),...missingHooks(hooks,priorHooks).map(h=>`Public hook removed: ${h}`)];
     if(failures.length){console.error(failures.join('\n'));process.exitCode=1;return;}
   }
-  if(init||update){writeFileSync(baselinePath,JSON.stringify({schemaVersion:1,exceptions,counts:init?counts:reducedBudgets(counts,previousCounts)},null,2)+'\n');writeFileSync(hooksPath,JSON.stringify(hooks,null,2)+'\n');}
-  console.log(`Design-system ratchet passed: ${Object.keys(counts).length} areas, ${hooks.hooks.length} literal hooks (${hooks.hooks.filter(h=>h.owners.length).length} source-backed).`);
+  if(init||update){writeFileSync(baselinePath,JSON.stringify({schemaVersion:1,exceptions,counts:init?counts:reducedBudgets(counts,previousCounts)},null,2)+'\n');writeFileSync(hooksPath,JSON.stringify(hooks,null,2)+'\n');writeFileSync(debtPath,JSON.stringify({schemaVersion:1,note:'Per-file raw control allowances. Recorded debt is the ceiling: allowances only decrease through --update, a migrated file stays listed at zero so reintroduction fails, and growth is rejected before any write.',files:init?fileCounts:reducedFileBudgets(fileCounts,previousFiles)},null,2)+'\n');}
+  console.log(`Design-system ratchet passed: ${Object.keys(counts).length} areas, ${Object.keys(fileCounts).length} files with raw control debt, ${hooks.hooks.length} literal hooks (${hooks.hooks.filter(h=>h.owners.length).length} source-backed).`);
 }
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url))main();

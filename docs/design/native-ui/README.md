@@ -35,6 +35,8 @@ All file links are repository-relative, so they remain useful on a feature branc
 5. [Shared Studio direction](studio-direction.md)
 6. [Contribution and verification](verification.md)
 7. [Foundation palette values](palette-reference.md) and [machine-readable reference](token-reference.json)
+8. [Migration guide: bespoke controls to DS primitives](migration-guide.md)
+9. [Design-system audit report](final-audit.md)
 
 ## The system in one view
 
