@@ -59,6 +59,6 @@ function HeroSplitButton({resolved}:{resolved:Extract<ReturnType<typeof resolveH
     <Menu.Item className="menu-item" data-command={m.id} disabled={!m.enabled} onClick={()=>void executeCommand(m.id)}><span>{m.publish&&running?t('deploy.button.running'):m.title}</span>{m.publish&&running?<Loader2 size={14} className="publish-spin" aria-hidden="true"/>:m.shortcut&&<kbd>{formatShortcut(m.shortcut)}</kbd>}</Menu.Item>
    </div>)}
   </Menu.Popup></Menu.Positioner></Menu.Portal></Menu.Root>}
-  <span className="sr-only" role="status" aria-live="polite">{running?t('deploy.button.running'):''}</span>
+  <span className="sr-only" aria-live="polite">{running?t('deploy.button.running'):''}</span>
  </div></Tooltip.Provider>;
 }

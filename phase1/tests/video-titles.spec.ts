@@ -1,3 +1,4 @@
+import {showPanel} from './helpers';
 import {test,expect} from './fixtures';
 import path from 'node:path';
 import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
@@ -6,6 +7,7 @@ const shots='test-results/video-titles';
 async function openVideo(page:any,file='clip.webm'){
  await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
  await page.getByRole('radio',{name:'Somnia Video'}).click();
+ await showPanel(page,'Sources');await showPanel(page,'Sequence');await showPanel(page,'Video');
  const chooser=page.waitForEvent('filechooser');await page.getByTestId('video-open').click();await (await chooser).setFiles(asset(file));
  await expect(page.getByTestId('video-workspace')).toBeVisible();await expect(page.getByTestId('video-clip')).toHaveCount(1);
 }
@@ -39,7 +41,7 @@ test('title card: add, edit, preview, play through, export with frames and silen
  await expect.poll(async()=>(await page.getByTestId('video-time').innerText()).split(' / ')[0],{timeout:10000}).not.toBe('0:00.0');
  await page.getByTestId('video-play').click();
  // export
- const download=page.waitForEvent('download');await page.getByTestId('video-export').click();const d=await download;
+ const download=page.waitForEvent('download');await page.getByTestId('video-export').click();await page.getByTestId('video-export-review').getByTestId('video-shell-export').click();await page.getByTestId('video-export-review').getByRole('button',{name:'Close',exact:true}).click();const d=await download;
  const bytes=readFileSync(await d.path()!);writeFileSync(`${shots}/export.webm`,bytes);
  expect(d.suggestedFilename()).toBe('clip-edited.webm');
  await expect(page.getByTestId('video-result')).toContainText('vp9');
@@ -64,8 +66,8 @@ test('title card first on the timeline, no audio elsewhere: export still renders
  await page.getByTestId('video-clip-left').click();
  await expect(page.getByTestId('video-clip').first()).toContainText('Opening');
  await page.screenshot({path:`${shots}/4-title-first.png`});
-await page.getByTestId('video-export').click();await page.waitForTimeout(6000);console.log('STATUS',await page.getByTestId('video-status').innerText(),await page.getByTestId('video-note').innerText(),await page.getByTestId('video-result').innerText());
- const download=page.waitForEvent('download',{timeout:20000});await page.getByTestId('video-export').click();const d=await download;
+await page.getByTestId('video-export').click();await page.getByTestId('video-export-review').getByTestId('video-shell-export').click();await page.getByTestId('video-export-review').getByRole('button',{name:'Close',exact:true}).click();await page.waitForTimeout(6000);console.log('STATUS',await page.getByTestId('video-status').innerText(),await page.getByTestId('video-note').innerText(),await page.getByTestId('video-result').innerText());
+ const download=page.waitForEvent('download',{timeout:20000});await page.getByTestId('video-export').click();await page.getByTestId('video-export-review').getByTestId('video-shell-export').click();await page.getByTestId('video-export-review').getByRole('button',{name:'Close',exact:true}).click();const d=await download;
  const bytes=readFileSync(await d.path()!);
  const info=await inspect(page,bytes,[0.5,4]);console.log('first-title export',JSON.stringify(info));
  [0x11,0x18,0x27].forEach((want,i)=>expect(Math.abs(info.pixels[0][i]-want)).toBeLessThanOrEqual(12));
@@ -77,10 +79,10 @@ test('title between two clips: audio of both clips survives, silence fills the c
  await openVideo(page);
  await page.getByTestId('video-add-title').click();await page.getByTestId('video-title-text').fill('Meanwhile');
  await page.getByTestId('video-title-duration').fill('1.5');
- const chooser=page.waitForEvent('filechooser');await page.getByTestId('video-add-open').click();await (await chooser).setFiles(asset('clip2.webm'));
+ const chooser=page.waitForEvent('filechooser');await page.getByTestId('video-source-open').click();await (await chooser).setFiles(asset('clip2.webm'));
  await expect(page.getByTestId('video-clip')).toHaveCount(3);
  await page.screenshot({path:`${shots}/5-title-between-clips.png`});
- const download=page.waitForEvent('download');await page.getByTestId('video-export').click();const d=await download;
+ const download=page.waitForEvent('download');await page.getByTestId('video-export').click();await page.getByTestId('video-export-review').getByTestId('video-shell-export').click();await page.getByTestId('video-export-review').getByRole('button',{name:'Close',exact:true}).click();const d=await download;
  const info=await inspect(page,readFileSync(await d.path()!),[1,2.5,3.9]);console.log('between export',JSON.stringify(info));
  expect(Math.abs(info.duration-(2.01*2+1.5))).toBeLessThan(0.4);
  expect(Math.abs((info.audioEnd as number)-info.duration)).toBeLessThan(0.4);
