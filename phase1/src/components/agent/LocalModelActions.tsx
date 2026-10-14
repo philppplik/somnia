@@ -1,3 +1,4 @@
+import {LocalPullProgress} from './LocalPullProgress';
 import {localPullFailure} from '../../lib/agent/localResilience';
 import {chooseModelDisk,modelDiskAdvice,type ModelDisk} from '../../lib/agent/localModelDisk';
 import {StudioStatus} from '../studios/StudioStatus';
@@ -34,11 +35,10 @@ export function LocalModelActions({snapshot,onChanged,manager=localModelManager,
    <ul className="local-models-list">{snapshot.models.map(model=><li key={model.id}><span>{model.id}</span><div className="local-models-badges"><Button type="button" size="compact" disabled={locked} onClick={()=>propose(model.id)} aria-label={t('local.action.updateModel',{model:model.id})}>{t('local.action.update')}</Button><Button type="button" size="compact" disabled={locked||!model.digest} onClick={()=>{setAck(false);setConfirm({kind:'delete',model:model.id,entry:model});}} aria-label={t('local.action.deleteModel',{model:model.id})}>{t('local.action.delete')}</Button></div></li>)}</ul>
   </>}
   {job&&<div role="status" className="local-models-runtime"><strong>{job.model}</strong><p>{t('local.job.'+job.phase)}</p>
-   {job.layer&&<p>{t('local.action.layer')} {job.layer.digest}: {job.layer.completed??'?'} / {job.layer.total??'?'} bytes</p>}
-   {job.layer?.total!==undefined&&job.layer.total>0&&job.layer.completed!==undefined&&<progress aria-label={t('local.action.layer')} max={job.layer.total} value={Math.min(job.layer.completed,job.layer.total)}/> }<p>{t('local.action.noOverall')}</p>
+   <LocalPullProgress job={job}/>
    {job.cancelOutcome&&<p>{t('local.cancel.'+job.cancelOutcome)}</p>}
    {job.error&&<p>{t('local.resilience.error.'+localPullFailure(job.error))}</p>}{!active&&['interrupted','failed','reconciling'].includes(job.phase)&&<><p>{t('local.recovery.resumeBoundary')}</p><Button type="button" disabled={locked} onClick={()=>propose(job.model)}>{t('local.recovery.resume')}</Button></>}
-   {active&&<Button type="button" onClick={()=>void manager.cancel()}>{t('local.action.cancel')}</Button>}
+   {active&&<Button type="button" disabled={job.phase==='cancel-requested'} onClick={()=>void manager.cancel()}>{t('local.action.cancel')}</Button>}
   </div>}
   <Dialog open={!!confirm} onOpenChange={open=>{if(!open)setConfirm(null);}}><DialogContent className="local-model-confirm"><DialogTitle>{t(confirm?.kind==='delete'?'local.action.confirmDelete':'local.action.confirmPull')}</DialogTitle><DialogDescription>{confirm?.model}</DialogDescription>
    {confirm?.kind==='pull'?<><p>{t('local.action.source')} ollama.com/library/{confirm.model.split(':')[0]}</p><p>{t('local.action.downloadNotice')}</p><p>{t('local.disk.notice')}</p><Button disabled={diskBusy||locked} onClick={()=>void inspectDisk()}>{t('local.disk.choose')}</Button><StudioStatus>{t('local.disk.'+diskAdvice.state)}{disk&&` · ${disk.freeBytes} bytes`}{diskAdvice.requiredBytes&&` / ${diskAdvice.requiredBytes} bytes`}</StudioStatus></>:<p>{t('local.action.deleteNotice')}</p>}

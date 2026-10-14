@@ -34,3 +34,7 @@
 
 .agent-settings .local-comparison-choice { display: flex; align-items: center; gap: 6px; }
 .agent-settings .local-comparison-choice input[type=checkbox] { width: auto; }
+.local-pull-progress-bar { width: 100%; appearance: none; height: 6px; border: 0; border-radius: var(--r-control); overflow: hidden; background: var(--bg-hover); color: var(--accent); }
+.local-pull-progress-bar::-webkit-progress-bar { background: var(--bg-hover); }
+.local-pull-progress-bar::-webkit-progress-value { background: var(--accent); }
+.local-pull-progress-bar::-moz-progress-bar { background: var(--accent); }

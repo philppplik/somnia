@@ -1,5 +1,11 @@
 export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
  "en": {
+  "local.pullProgress.bytes": "Current layer: {completed} / {total} bytes ({percent}%)",
+  "local.pullProgress.bar": "Current layer byte progress",
+  "local.pullProgress.unknown": "Current layer byte total is unknown. No percentage available.",
+  "local.pullProgress.noBytes": "Byte progress is not shown during verification, reconciliation or cancellation.",
+  "local.pullProgress.cancelling": "Cancellation requested. Waiting for owned transfer status; daemon work may continue.",
+
   "local.budget.title": "Local context byte budget",
   "local.budget.last": "Last prepared local request, not the current draft.",
   "local.budget.unknown": "No explicit request budget checked.",
@@ -532,6 +538,12 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Move earlier after local"
  },
  "de": {
+  "local.pullProgress.bytes": "Aktuelle Schicht: {completed} / {total} Bytes ({percent}%)",
+  "local.pullProgress.bar": "Bytefortschritt der aktuellen Schicht",
+  "local.pullProgress.unknown": "Bytegesamtzahl der aktuellen Schicht unbekannt. Kein Prozentwert verfügbar.",
+  "local.pullProgress.noBytes": "Während Prüfung, Abgleich oder Abbruch wird kein Bytefortschritt angezeigt.",
+  "local.pullProgress.cancelling": "Abbruch angefordert. Status des eigenen Transfers wird abgewartet; Daemon-Arbeit kann weiterlaufen.",
+
   "local.budget.title": "Lokales Kontext-Bytebudget",
   "local.budget.last": "Letzte vorbereitete lokale Anfrage, nicht der aktuelle Entwurf.",
   "local.budget.unknown": "Kein explizites Anfragebudget geprüft.",
@@ -1064,6 +1076,12 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Nach lokal früher einordnen"
  },
  "es": {
+  "local.pullProgress.bytes": "Capa actual: {completed} / {total} bytes ({percent}%)",
+  "local.pullProgress.bar": "Progreso en bytes de la capa actual",
+  "local.pullProgress.unknown": "Total de bytes de la capa actual desconocido. No hay porcentaje disponible.",
+  "local.pullProgress.noBytes": "No se muestra progreso en bytes durante verificación, conciliación o cancelación.",
+  "local.pullProgress.cancelling": "Cancelación solicitada. Esperando el estado de nuestra transferencia; el daemon puede continuar.",
+
   "local.budget.title": "Presupuesto local de bytes de contexto",
   "local.budget.last": "Última solicitud local preparada, no el borrador actual.",
   "local.budget.unknown": "No se ha comprobado un presupuesto explícito.",
@@ -1596,6 +1614,12 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Mover antes tras local"
  },
  "fr": {
+  "local.pullProgress.bytes": "Couche actuelle: {completed} / {total} octets ({percent}%)",
+  "local.pullProgress.bar": "Progression en octets de la couche actuelle",
+  "local.pullProgress.unknown": "Total en octets de la couche actuelle inconnu. Aucun pourcentage disponible.",
+  "local.pullProgress.noBytes": "La progression en octets est masquée pendant la vérification, la réconciliation ou l'annulation.",
+  "local.pullProgress.cancelling": "Annulation demandée. En attente de notre transfert; le daemon peut continuer.",
+
   "local.budget.title": "Budget local en octets de contexte",
   "local.budget.last": "Dernière requête locale préparée, pas le brouillon actuel.",
   "local.budget.unknown": "Aucun budget explicite de requête vérifié.",
@@ -2128,6 +2152,12 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Avancer après local"
  },
  "pt-BR": {
+  "local.pullProgress.bytes": "Camada atual: {completed} / {total} bytes ({percent}%)",
+  "local.pullProgress.bar": "Progresso em bytes da camada atual",
+  "local.pullProgress.unknown": "Total de bytes da camada atual desconhecido. Nenhuma porcentagem disponível.",
+  "local.pullProgress.noBytes": "O progresso em bytes não aparece durante verificação, reconciliação ou cancelamento.",
+  "local.pullProgress.cancelling": "Cancelamento solicitado. Aguardando o status da nossa transferência; o daemon pode continuar.",
+
   "local.budget.title": "Orçamento local de bytes de contexto",
   "local.budget.last": "Última solicitação local preparada, não o rascunho atual.",
   "local.budget.unknown": "Nenhum orçamento explícito de solicitação verificado.",
