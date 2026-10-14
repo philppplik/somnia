@@ -815,5 +815,10 @@
  "studio3d.hist.relax_other": "{count} Objekte glätten",
  "studio3d.mesh.relax": "Glätten",
  "studio3d.mesh.relaxTimes": "Glättungs-Durchläufe",
- "studio3d.mesh.relaxFactor": "Glättungsstärke"
+ "studio3d.mesh.relaxFactor": "Glättungsstärke",
+ "cmd.studio3d.mesh.fatten": "3D-Mesh entlang der Normalen auf- oder abtragen (negative Werte tragen ab)",
+ "studio3d.hist.fatten_one": "{name} auf-/abtragen",
+ "studio3d.hist.fatten_other": "{count} Objekte auf-/abtragen",
+ "studio3d.mesh.fatten": "Auf-/abtragen",
+ "studio3d.mesh.fattenAmount": "Betrag (negativ trägt ab)"
 }

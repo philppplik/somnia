@@ -815,5 +815,10 @@
  "studio3d.hist.relax_other": "Relax {count} objects",
  "studio3d.mesh.relax": "Relax",
  "studio3d.mesh.relaxTimes": "Relax iterations",
- "studio3d.mesh.relaxFactor": "Relax strength"
+ "studio3d.mesh.relaxFactor": "Relax strength",
+ "cmd.studio3d.mesh.fatten": "Shrink or fatten a 3D mesh along its normals (negative amounts shrink)",
+ "studio3d.hist.fatten_one": "Shrink/fatten {name}",
+ "studio3d.hist.fatten_other": "Shrink/fatten {count} objects",
+ "studio3d.mesh.fatten": "Shrink/fatten",
+ "studio3d.mesh.fattenAmount": "Amount (negative shrinks)"
 }

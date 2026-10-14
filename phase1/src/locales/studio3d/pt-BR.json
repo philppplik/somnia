@@ -815,5 +815,10 @@
  "studio3d.hist.relax_other": "Relaxar {count} objetos",
  "studio3d.mesh.relax": "Relaxar",
  "studio3d.mesh.relaxTimes": "Iterações de relaxamento",
- "studio3d.mesh.relaxFactor": "Intensidade de relaxamento"
+ "studio3d.mesh.relaxFactor": "Intensidade de relaxamento",
+ "cmd.studio3d.mesh.fatten": "Engorda ou afina uma malha 3D ao longo de suas normais (valores negativos afinam)",
+ "studio3d.hist.fatten_one": "Engordar/afinar {name}",
+ "studio3d.hist.fatten_other": "Engordar/afinar {count} objetos",
+ "studio3d.mesh.fatten": "Engordar/afinar",
+ "studio3d.mesh.fattenAmount": "Quantidade (negativo afina)"
 }

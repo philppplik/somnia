@@ -815,5 +815,10 @@
  "studio3d.hist.relax_other": "Lisser {count} objets",
  "studio3d.mesh.relax": "Lisser",
  "studio3d.mesh.relaxTimes": "Itérations de lissage",
- "studio3d.mesh.relaxFactor": "Intensité de lissage"
+ "studio3d.mesh.relaxFactor": "Intensité de lissage",
+ "cmd.studio3d.mesh.fatten": "Gonfle ou amincit un maillage 3D le long de ses normales (valeurs négatives : amincit)",
+ "studio3d.hist.fatten_one": "Gonfler/amincir {name}",
+ "studio3d.hist.fatten_other": "Gonfler/amincir {count} objets",
+ "studio3d.mesh.fatten": "Gonfler/amincir",
+ "studio3d.mesh.fattenAmount": "Quantité (négatif amincit)"
 }

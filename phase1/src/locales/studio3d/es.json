@@ -815,5 +815,10 @@
  "studio3d.hist.relax_other": "Relajar {count} objetos",
  "studio3d.mesh.relax": "Relajar",
  "studio3d.mesh.relaxTimes": "Iteraciones de relajación",
- "studio3d.mesh.relaxFactor": "Intensidad de relajación"
+ "studio3d.mesh.relaxFactor": "Intensidad de relajación",
+ "cmd.studio3d.mesh.fatten": "Engorda o adelgaza una malla 3D a lo largo de sus normales (valores negativos adelgazan)",
+ "studio3d.hist.fatten_one": "Engordar/adelgazar {name}",
+ "studio3d.hist.fatten_other": "Engordar/adelgazar {count} objetos",
+ "studio3d.mesh.fatten": "Engordar/adelgazar",
+ "studio3d.mesh.fattenAmount": "Cantidad (negativo adelgaza)"
 }

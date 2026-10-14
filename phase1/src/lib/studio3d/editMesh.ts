@@ -882,3 +882,42 @@ export function relaxMesh(m:MeshData,iterations:number,factor:number):MeshData{
  const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
  check(out);return out;
 }
+
+/** Pushes every vertex along its smooth surface normal (negative amounts shrink). Normals are angle-weighted and averaged across position-equal twins, so UV seams stay welded; sculpt masks scale the push down to zero. UVs and masks are carried, explicit normals are dropped (rebuilt smooth on the stage). */
+export function fattenMesh(m:MeshData,amount:number):MeshData{
+ check(m);
+ if(!Number.isFinite(amount)||amount===0||Math.abs(amount)>1e6)throw new EditError('The fatten amount must be a non-zero number.');
+ const nv=m.positions.length/3,nt=m.index.length/3;
+ const nrm:number[]=new Array(nv*3).fill(0);
+ for(let f=0;f<nt;f++){
+  const n=faceNormal(m,f);
+  for(let e=0;e<3;e++){
+   const vi=m.index[f*3+e];
+   const a=vi*3,b=m.index[f*3+(e+1)%3]*3,c=m.index[f*3+(e+2)%3]*3;
+   const ux=m.positions[b]-m.positions[a],uy=m.positions[b+1]-m.positions[a+1],uz=m.positions[b+2]-m.positions[a+2];
+   const vx=m.positions[c]-m.positions[a],vy=m.positions[c+1]-m.positions[a+1],vz=m.positions[c+2]-m.positions[a+2];
+   const lu=Math.hypot(ux,uy,uz)||1,lv=Math.hypot(vx,vy,vz)||1;
+   const w=Math.acos(Math.min(1,Math.max(-1,(ux*vx+uy*vy+uz*vz)/(lu*lv))));
+   nrm[a]+=n[0]*w;nrm[a+1]+=n[1]*w;nrm[a+2]+=n[2]*w;
+  }
+ }
+ // Average across position-equal twins, so every twin pushes along the same normal.
+ const pkN=new Map<string,number[]>();
+ for(let v=0;v<nv;v++){
+  const k=`${Math.round(m.positions[v*3]*1e6)},${Math.round(m.positions[v*3+1]*1e6)},${Math.round(m.positions[v*3+2]*1e6)}`;
+  const l=pkN.get(k);if(l)l.push(v);else pkN.set(k,[v]);
+ }
+ for(const l of pkN.values()){
+  if(l.length<2)continue;
+  let x=0,y=0,z=0;for(const v of l){x+=nrm[v*3];y+=nrm[v*3+1];z+=nrm[v*3+2];}
+  for(const v of l){nrm[v*3]=x;nrm[v*3+1]=y;nrm[v*3+2]=z;}
+ }
+ for(let v=0;v<nv;v++){const l=Math.hypot(nrm[v*3],nrm[v*3+1],nrm[v*3+2])||1;nrm[v*3]/=l;nrm[v*3+1]/=l;nrm[v*3+2]/=l;}
+ const positions=[...m.positions];
+ for(let v=0;v<nv;v++){
+  const f=amount*(1-(m.mask?m.mask[v]:0));if(f===0)continue;
+  positions[v*3]+=nrm[v*3]*f;positions[v*3+1]+=nrm[v*3+1]*f;positions[v*3+2]+=nrm[v*3+2]*f;
+ }
+ const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
+ check(out);return out;
+}

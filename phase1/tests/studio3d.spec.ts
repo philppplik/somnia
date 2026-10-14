@@ -1582,6 +1582,17 @@ test('3D studio mesh relax: a cone tip rounds off and undo restores it',async({p
  await expect.poll(peak).toBe(before);
 });
 
+test('3D studio mesh fatten: a sphere grows along its normals and undo restores it',async({page})=>{
+ await blank(page);
+ await insert(page,'sphere',0);
+ const span=async()=>{const b=(await session(page)).bounds!;return b.max[0]-b.min[0];};
+ const before=await span();
+ expect(await run(page,'studio3d.mesh.fatten',{amount:0.2})).toBe(true);
+ await expect.poll(span).toBeGreaterThan(before+0.3,'0.2 out on every side');
+ expect(await run(page,'studio3d.undo',{})).toBe(true);
+ await expect.poll(span).toBe(before);
+});
+
 test('3D studio mesh simplify: triangle count drops and undo restores it',async({page})=>{
  await blank(page);
  await insert(page,'sphere',0);

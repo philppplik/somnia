@@ -695,6 +695,7 @@ function MeshTools(){
  const {t}=useT();const s=useStudio3D();const [copy,setCopy]=useState(true);const [keepPct,setKeepPct]=useState(50);const [symAxis,setSymAxis]=useState<'x'|'y'|'z'>('x');const [symSide,setSymSide]=useState<'positive'|'negative'>('positive');const [subTimes,setSubTimes]=useState(2);const [weldDist,setWeldDist]=useState(0.0001);const [nOp,setNOp]=useState<'flip'|'outside'|'smooth'|'flat'|'angle'>('smooth');const [nAngle,setNAngle]=useState(30);
  const [soThick,setSoThick]=useState(0.1);
  const [rxTimes,setRxTimes]=useState(1);
+ const [fatAmt,setFatAmt]=useState(0.1);
  const [rxFactor,setRxFactor]=useState(0.5);
  const [soOff,setSoOff]=useState(0);
  const set=s.marked.length?s.marked:s.selected!=null?[s.selected]:[];const ready=s.status==='ready'&&set.length>0;
@@ -728,6 +729,8 @@ function MeshTools(){
     {[1,2,5,10].map(n=><option key={n} value={n}>{n}</option>)}</NativeSelect>
    <NativeInput type="number" min={0.05} max={1} step={0.05} value={rxFactor} aria-label={t('studio3d.mesh.relaxFactor')} className="w-20" onChange={e=>setRxFactor(Math.min(1,Math.max(0.05,Number(e.currentTarget.value)||0.5)))}/>
    <Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.mesh.relax',{iterations:rxTimes,factor:rxFactor})}>{t('studio3d.mesh.relax')}</Button></div>
+  <div className="flex flex-wrap items-center gap-1"><NativeInput type="number" step={0.05} value={fatAmt} aria-label={t('studio3d.mesh.fattenAmount')} className="w-20" onChange={e=>setFatAmt(Math.min(1000,Math.max(-1000,Number(e.currentTarget.value)||0)))}/>
+   <Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.mesh.fatten',{amount:fatAmt})}>{t('studio3d.mesh.fatten')}</Button></div>
  </fieldset>;
 }
 
