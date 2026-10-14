@@ -1,4 +1,4 @@
-import { log, logWarn, describeError } from '../log';
+import { log, logWarn } from '../log';
 import { createAIProvenance } from './privacy';
 import { AgentError, describeAgentError, toAgentError } from './errors';
 import type { AgentErrorCode, AgentErrorDetail } from './errors';
@@ -184,7 +184,7 @@ export class AgentSession {
             this.emit({ type: 'tool', call, status: 'completed', result, turnId });
           } catch (toolError) {
             controller.signal.throwIfAborted();
-            logWarn('agent.tool',`Tool ${call.name} failed: ${describeError(toolError, 200)}`);
+            logWarn('agent.tool','Agent tool failed; no raw model/tool content logged.');
             // Host permission/map callbacks can throw private errors; do not forward them.
             result = JSON.stringify({ error: 'Tool denied or failed. Check authorized paths, current editor state, tool arguments and size limits.' });
             this.emit({ type: 'tool', call, status: 'failed', result, turnId });
@@ -195,7 +195,7 @@ export class AgentSession {
       throw new AgentError('limit', 'steps', 'Agent step limit reached.');
     } catch (error) {
       // Provider/plugin errors can contain secrets. Only the classified, fixed-text AgentError is surfaced; the log redacts the raw error.
-      if (!controller.signal.aborted) log('error', 'agent.turn', `Agent turn failed: ${describeError(error, 200)}`);
+      if (!controller.signal.aborted) {const failure=toAgentError(error);log('error','agent.turn',`Agent turn failed: ${failure.code}/${failure.detail}`);}
       this.options.tools?.clear();
       const failure = toAgentError(error, { timedOut, aborted: controller.signal.aborted && !timedOut });
       this._status = failure.code === 'aborted' ? 'cancelled' : 'error';

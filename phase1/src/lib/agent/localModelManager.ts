@@ -8,6 +8,7 @@ export interface PullJob {model:string;phase:JobPhase;status?:string;layer?:{dig
 interface PullTransport {start(model:string,diskToken?:string):Promise<string>;next(id:string):Promise<number[]|null>;cancel(id:string):Promise<CancelOutcome>;remove(model:string,digest:string):Promise<void>;launch():Promise<{launched:boolean;instruction?:string|null}>}
 export interface Progress {status?:string;digest?:string;completed?:number;total?:number;error?:string}
 export function registryModel(name:string):string {
+ if(/[\x00-\x1f\x7f]/.test(name))throw Error('Invalid model name');
  const model=name.trim();if(!model||model.length>200||!/^[a-zA-Z0-9_.:/-]+$/.test(model)||model.includes('..')||model.includes('://')||model.split('/').length>2||model.startsWith('/')||model.endsWith('/')||(model.match(/:/g)||[]).length>1||model.includes('/')&&/[.:]/.test(model.split('/')[0])||/(^|[:\-_/])cloud$/i.test(model))throw Error('Use an exact ollama.com library model name');return model.includes(':')?model:model+':latest';
 }
 /** Incremental bounded NDJSON parser. A full layer never implies model installation. */
@@ -79,6 +80,7 @@ export class LocalModelManager {
   this.update({phase:'interrupted',cancelOutcome});
  }
  async remove(model:string,digest:string){
+  registryModel(model);if(model!==model.trim()||typeof digest!=='string'||!digest||digest.length>512||/[\x00-\x1f\x7f]/.test(digest))throw Error('Invalid model identity');
   if(this.busy||!this.allowed())throw Error('Another operation or AI request is active');
   const state=agentSettingsSnapshot();if(state.config.provider==='ollama'&&(state.config.model===model||state.config.model+':latest'===model))throw Error('This model is used by saved Agent settings. Choose and save a replacement first.');
   if(Object.values(state.config.localRuntime?.studioModels??{}).some(value=>value===model||value+':latest'===model))throw Error('This model is assigned to a studio. Save a replacement first.');

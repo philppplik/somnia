@@ -32,6 +32,7 @@ export function normalizeBaseUrl(raw: string | undefined): string {
   const v = (raw ?? '').trim() || OLLAMA_DEFAULT_URL;
   let u: URL;
   try { u = new URL(/^[a-z]+:\/\//i.test(v) ? v : 'http://' + v); } catch { throw new ProviderError('protocol', `Invalid Ollama URL: ${v}`); }
+  if(u.username||u.password||u.search||u.hash)throw new ProviderError('protocol','Ollama URL must not contain credentials, query or fragment');
   if (u.protocol !== 'http:' && u.protocol !== 'https:') throw new ProviderError('protocol', `Unsupported protocol: ${u.protocol}`);
   return u.origin + u.pathname.replace(/\/+$/, '');
 }
@@ -51,6 +52,15 @@ function withTimeout(signal: AbortSignal | undefined, ms: number): { signal: Abo
   const onAbort = () => c.abort();
   if (signal?.aborted) c.abort(); else signal?.addEventListener('abort', onAbort, { once: true });
   return { signal: c.signal, done: () => { clearTimeout(t); signal?.removeEventListener('abort', onAbort); } };
+}
+
+/** Bound metadata bodies too, not just streaming output. Never accept stale/partial JSON. */
+async function boundedJson(response:Response,signal:AbortSignal|undefined,timeout:number):Promise<unknown>{
+ if(!response.body)throw new ProviderError('protocol','Ollama metadata has no body');
+ const reader=response.body.getReader(),timer=withTimeout(signal,timeout);let size=0,text='';const decoder=new TextDecoder();
+ const abort=()=>{void reader.cancel().catch(()=>{});};timer.signal.addEventListener('abort',abort,{once:true});
+ try{timer.signal.throwIfAborted();for(;;){const part=await reader.read();timer.signal.throwIfAborted();if(part.done)break;size+=part.value.byteLength;if(size>2_000_000)throw new ProviderError('protocol','Ollama metadata exceeds limit');text+=decoder.decode(part.value,{stream:true});}text+=decoder.decode();try{return JSON.parse(text);}catch{throw new ProviderError('protocol','Invalid Ollama metadata JSON');}}
+ finally{timer.done();timer.signal.removeEventListener('abort',abort);await reader.cancel().catch(()=>{});reader.releaseLock();}
 }
 
 export class OllamaProvider implements AgentProvider {
@@ -113,7 +123,7 @@ export class OllamaProvider implements AgentProvider {
       if (r.status === 404) return no('model-not-found', `Model "${model}" is not installed`);
       if (!r.ok) return no('invalid-response', `Ollama answered ${r.status} for /api/show`);
       let j: { remote_host?: unknown; remote_model?: unknown; model_info?: unknown };
-      try { j = await r.json(); } catch { return no('invalid-response', 'Invalid JSON from /api/show'); }
+      try { j = await boundedJson(r,signal,this.timeout) as typeof j; } catch { return no('invalid-response', 'Invalid JSON from /api/show'); }
       if (!j || typeof j !== 'object') return no('invalid-response', 'Unexpected /api/show response');
       if (j.remote_host || j.remote_model) return no('remote-model', `Model "${model}" is served by a remote host`);
       if (!j.model_info || typeof j.model_info !== 'object' || Array.isArray(j.model_info) || Object.keys(j.model_info).length === 0) return no('no-local-weights', `No local model metadata for "${model}"`);
@@ -131,7 +141,7 @@ export class OllamaProvider implements AgentProvider {
     try{
       const response=await this.f(this.baseUrl+'/api/show',{method:'POST',redirect:'error',headers:{'content-type':'application/json'},body:JSON.stringify({model}),signal:timer.signal});
       if(!response.ok)return null;
-      const value=await response.json();
+      const value=await boundedJson(response,signal,this.timeout) as any;
       if(!value||value.remote_host||value.remote_model||!value.model_info||typeof value.model_info!=='object'||Array.isArray(value.model_info)||!Object.keys(value.model_info).length||!Array.isArray(value.capabilities)||!value.capabilities.every((c:unknown)=>typeof c==='string'))return null;
       return value.capabilities;
     }catch{return null;}finally{timer.done();}
@@ -140,7 +150,7 @@ export class OllamaProvider implements AgentProvider {
   async health(signal?: AbortSignal): Promise<HealthStatus> {
     try {
       const r = await this.get('/api/version', signal);
-      const j = (await r.json().catch(() => ({}))) as { version?: string };
+      const j = (await boundedJson(r,signal,this.timeout)) as { version?: string };
       return { ok: true, version: typeof j.version === 'string' ? j.version : undefined };
     } catch (e) {
       const pe = e as ProviderError;
@@ -151,8 +161,8 @@ export class OllamaProvider implements AgentProvider {
   async listModels(signal?: AbortSignal): Promise<ModelInfo[]> {
     const r = await this.get('/api/tags', signal);
     let j: { models?: Array<{ name?: string; model?: string; size?: number; details?: Record<string, unknown> }> };
-    try { j = await r.json(); } catch { throw new ProviderError('protocol', 'Ollama returned invalid JSON for /api/tags'); }
-    if (!Array.isArray(j.models)) throw new ProviderError('protocol', 'Unexpected /api/tags response');
+    try { j = await boundedJson(r,signal,this.timeout) as typeof j; } catch { throw new ProviderError('protocol', 'Ollama returned invalid JSON for /api/tags'); }
+    if (!j||typeof j!=='object'||!Array.isArray(j.models)) throw new ProviderError('protocol', 'Unexpected /api/tags response');
     return j.models
       .map((m) => {
         const id = m.model || m.name || '';
