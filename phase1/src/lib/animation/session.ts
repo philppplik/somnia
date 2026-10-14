@@ -1,6 +1,6 @@
 import {useSyncExternalStore} from 'react';
 import {applyEdit,applyEdits,type Edit} from './edit';
-import {createDocument,findComp,type AnimationDocument} from './model';
+import {createDocument,findComp,type AnimationDocument,type KeyRef} from './model';
 import {clearJournal,defaultView,readJournal,writeJournal,type KeyValueStore,type ViewState} from './recovery';
 import {snapToFrame} from './time';
 export const HISTORY_LIMIT=200;
@@ -63,9 +63,12 @@ export class AnimationSession{
  setView(patch:Partial<ViewState>){
   const comp=this.doc&&findComp(this.doc);
   const next={...this.view,...patch};
+  if(patch.selectedLayer!==undefined&&patch.selectedLayer!==this.view.selectedLayer&&patch.selectedKeys===undefined){next.selectedKeys=[];next.selectedKey=null;}
   if(comp&&patch.playhead!==undefined)next.playhead=Math.min(comp.start+comp.duration,Math.max(comp.start,snapToFrame(patch.playhead,comp.fps)));
   this.view=next;this.emit();
  }
+ /** Replaces the key selection; the primary key (last selected) mirrors into `selectedKey`. */
+ selectKeys(keys:readonly KeyRef[]){const last=keys[keys.length-1];this.setView({selectedKeys:[...keys],selectedKey:last?{prop:last.prop,t:last.t}:null});}
  setRenderSetup(open:boolean){this.renderSetup=open;this.emit();}
  /** Called on studio switch: dirty data, history and playhead stay in memory; the journal gets a fresh checkpoint. */
  suspend(){this.cancelPreview();this.checkpoint();this.emit();}

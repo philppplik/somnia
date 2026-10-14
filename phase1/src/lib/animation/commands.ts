@@ -2,9 +2,14 @@ import {registerCommandSpec} from '../commandBridge';
 import {commandRegistry} from '../commandRegistry';
 import type {CommandSchema,CommandSpec} from '../commandSpec';
 import {EditError,type Edit} from './edit';
-import {findComp,findLayer,TRANSFORM_KEYS,type LayerKind,type PropValue,type TransformKey} from './model';
+import {findComp,findLayer,TRANSFORM_KEYS,type KeyRef,type LayerKind,type PropValue,type TransformKey} from './model';
 import {animationSession} from './session';
-import {secondsToTicks} from './time';
+import {secondsToTicks,snapToFrame} from './time';
+import {ClipError,copyKeys,getKeyClip,pastedRefs,setKeyClip} from './keyclip';
+import {allKeysOf,pruneSelection,shiftSelection} from './selection';
+import {EASE_PRESETS,type EasePreset} from './graph';
+import {exportCurrentFrame,exportWorkAreaSequence} from './exportJob';
+import {ExportError} from './exportFrames';
 const fail=(m:string):never=>{throw Object.assign(new Error(m),{expected:true});};
 const open=()=>!!animationSession().document;
 const doc=()=>animationSession().document??fail('No open animation.');
@@ -16,7 +21,10 @@ const num={type:'number'};const tick={type:'integer',minimum:0};
 const layerRef={type:'string',minLength:1,maxLength:200};
 const propKey={enum:[...TRANSFORM_KEYS]};
 const value={oneOf:[{type:'number'},{type:'array',items:{type:'number'},minItems:2,maxItems:2}]};
-const guard=<T,>(fn:()=>T):T=>{try{return fn();}catch(e){if(e instanceof EditError)throw Object.assign(e,{expected:true});throw e;}};
+const guard=<T,>(fn:()=>T):T=>{try{return fn();}catch(e){if(e instanceof EditError||e instanceof ClipError)throw Object.assign(e,{expected:true});throw e;}};
+const selKeys=():KeyRef[]=>{const k=pruneSelection(animationSession().document,animationSession().getState().view.selectedKeys);return k.length?k:fail('Select keys first.');};
+const hasSel=()=>open()&&pruneSelection(animationSession().document,animationSession().getState().view.selectedKeys).length>0;
+const keyRefs={type:'array',items:object({layer:layerRef,prop:propKey,t:tick}),minItems:1,maxItems:500};
 const run=(e:Edit|readonly Edit[])=>guard(()=>animationSession().dispatch(e).revision);
 /** Typed `animation.*` command specs. All document mutations dispatch into the one session transaction/undo owner. */
 export function animationCommandSpecs():CommandSpec<unknown,unknown>[]{
@@ -50,11 +58,33 @@ export function animationCommandSpecs():CommandSpec<unknown,unknown>[]{
   spec('animation.key.remove','Remove keyframe',(p:{layer?:string;prop:TransformKey;t?:number})=>run({type:'key.remove',layer:layerIdOf(p),prop:p.prop,t:p.t??playhead()}),object({layer:layerRef,prop:propKey,t:tick},['prop'])),
   spec('animation.key.move','Move keyframe',(p:{layer?:string;prop:TransformKey;from:number;to:number;replace?:boolean})=>run({type:'key.move',layer:layerIdOf(p),prop:p.prop,from:p.from,to:p.to,replace:p.replace}),object({layer:layerRef,prop:propKey,from:tick,to:tick,replace:{type:'boolean'}},['prop','from','to'])),
   spec('animation.key.interp','Set keyframe interpolation',(p:{layer?:string;prop:TransformKey;t?:number;interp:'hold'|'linear'|'bezier'})=>run({type:'key.interp',layer:layerIdOf(p),prop:p.prop,t:p.t??playhead(),interp:p.interp}),object({layer:layerRef,prop:propKey,t:tick,interp:{enum:['hold','linear','bezier']}},['prop','interp'])),
+  spec('animation.keys.selectAll','Select all keys of the layer',(p:{layer?:string}={})=>{const id=layerIdOf(p);animationSession().selectKeys(allKeysOf(doc(),id));},object({layer:layerRef},[]),open,'View'),
+  spec('animation.keys.delete','Delete selected keys',(p:{keys?:KeyRef[]}={})=>{const keys=p.keys??selKeys();run({type:'keys.remove',keys});animationSession().selectKeys([]);},object({keys:keyRefs},[]),hasSel),
+  spec('animation.keys.copy','Copy selected keys',()=>{setKeyClip(guard(()=>copyKeys(doc(),selKeys())));},undefined,hasSel),
+  spec('animation.keys.cut','Cut selected keys',()=>{const keys=selKeys();setKeyClip(guard(()=>copyKeys(doc(),keys)));run({type:'keys.remove',keys});animationSession().selectKeys([]);},undefined,hasSel),
+  spec('animation.keys.paste','Paste keys at playhead',(p:{layer?:string}={})=>{
+   const clip=getKeyClip()??fail('No copied keys. Copy keys first.');const layer=layerIdOf(p);const at=playhead();
+   run({type:'keys.paste',layer,items:clip.items,t:at});animationSession().selectKeys(pastedRefs(layer,clip,at,comp().fps));},object({layer:layerRef},[]),()=>open()&&!!getKeyClip()),
+  spec('animation.keys.nudge','Move selected keys',(p:{ticks:number})=>{const keys=selKeys();run({type:'keys.move',keys,delta:p.ticks});
+   const fps=comp().fps;animationSession().selectKeys(shiftSelection(keys,snapToFrame(keys[0].t+p.ticks,fps)-keys[0].t));},object({ticks:{type:'integer'}}),hasSel),
+  spec('animation.keys.ease','Set ease of selected keys',(p:{preset:EasePreset})=>{const e=EASE_PRESETS[p.preset]??fail('Unknown ease preset.');run({type:'keys.interp',keys:selKeys(),interp:e.interp,...('out' in e?{out:e.out,in:e.in}:{})});},object({preset:{enum:Object.keys(EASE_PRESETS)}}),hasSel),
+  spec('animation.keys.smooth','Smooth position path through selected keys',()=>{run({type:'keys.spatial',keys:selKeys().filter(k=>k.prop==='position'),mode:'smooth'});},undefined,hasSel),
+  spec('animation.keys.straighten','Straighten position path at selected keys',()=>{run({type:'keys.spatial',keys:selKeys().filter(k=>k.prop==='position'),mode:'straight'});},undefined,hasSel),
+  spec('animation.key.spatial','Set position tangents of a key',(p:{layer?:string;t?:number;sIn?:[number,number];sOut?:[number,number]})=>run({type:'key.spatial',layer:layerIdOf(p),prop:'position',t:p.t??playhead(),...(p.sIn?{sIn:p.sIn}:{}),...(p.sOut?{sOut:p.sOut}:{})}),
+   object({layer:layerRef,t:tick,sIn:{type:'array',items:num,minItems:2,maxItems:2},sOut:{type:'array',items:num,minItems:2,maxItems:2}},[])),
+  spec('animation.workarea.set','Set work area',(p:{inT:number;outT:number})=>run({type:'workarea.set',in:p.inT,out:p.outT}),object({inT:tick,outT:tick}),open,'View'),
+  spec('animation.workarea.in','Set work area start at playhead',()=>run({type:'workarea.set',in:playhead(),out:comp().workArea.out}),undefined,open,'View'),
+  spec('animation.workarea.out','Set work area end at playhead',()=>run({type:'workarea.set',in:comp().workArea.in,out:playhead()}),undefined,open,'View'),
+  spec('animation.workarea.reset','Reset work area to the whole composition',()=>run({type:'workarea.set',in:comp().start,out:comp().start+comp().duration}),undefined,open,'View'),
+  spec('animation.playback.loop','Toggle looped playback',()=>animationSession().setView({loop:!animationSession().getState().view.loop}),undefined,open,'View'),
+  spec('animation.graph.toggle','Switch between timeline and graph editor',()=>animationSession().setView({graph:!animationSession().getState().view.graph}),undefined,open,'View'),
+  spec('animation.export.frame','Export current frame as PNG',()=>exportCurrentFrame().then(()=>undefined,e=>{throw e instanceof ExportError?Object.assign(e,{expected:true}):e;}),undefined,open,'Project'),
+  spec('animation.export.sequence','Export work area as PNG sequence (ZIP)',()=>exportWorkAreaSequence().then(()=>undefined,e=>{throw e instanceof ExportError?Object.assign(e,{expected:true}):e;}),undefined,open,'Project'),
   spec('animation.playhead.set','Move playhead',(p:{seconds:number})=>animationSession().setView({playhead:secondsToTicks(p.seconds)}),object({seconds:num}),open,'View'),
  ] as CommandSpec<unknown,unknown>[];
 }
 export const ANIMATION_COMMANDS=animationCommandSpecs().map(s=>s.id);
-const DESTRUCTIVE=new Set(['animation.layer.remove']);
+const DESTRUCTIVE=new Set(['animation.layer.remove','animation.keys.delete','animation.keys.cut']);
 export function registerAnimationCommands(){
  const offs=animationCommandSpecs().map(s=>{const off=registerCommandSpec(s);const c=commandRegistry.get(s.id);if(c){c.studio='animation';c.argsSchema=s.params;c.risk=DESTRUCTIVE.has(s.id)?'destructive':'content';}return off;});
  return()=>offs.forEach(off=>off());

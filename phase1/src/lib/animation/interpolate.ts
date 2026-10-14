@@ -23,5 +23,29 @@ export function evaluate(p:Property,t:number):PropValue{
  let lo=0,hi=k.length-1;
  while(hi-lo>1){const m=(lo+hi)>>1;if(k[m].t<=t)lo=m;else hi=m;}
  const a=k[lo],b=k[hi];
- return a.interp==='hold'?a.v:mix(a.v,b.v,segmentProgress(a,b,t));
+ if(a.interp==='hold')return a.v;
+ const u=segmentProgress(a,b,t);
+ return hasSpatial(a,b)?spatialPoint(a,b,u):mix(a.v,b.v,u);
+}
+const ZERO:Vec2=[0,0];
+/** True when the segment a to b is a spatial Bezier (a non-zero tangent on either side of a vec2 segment). */
+export const hasSpatial=(a:Keyframe,b:Keyframe)=>typeof a.v!=='number'&&!!((a.sOut&&(a.sOut[0]||a.sOut[1]))||(b.sIn&&(b.sIn[0]||b.sIn[1])));
+/** Cubic Bezier through key values `a` and `b` with tangents as offsets. `u` is the temporal progress, mapped straight onto the Bezier parameter (not arc length). */
+export function spatialPoint(a:Keyframe,b:Keyframe,u:number):Vec2{
+ const p0=a.v as Vec2,p3=b.v as Vec2,o=a.sOut??ZERO,i=b.sIn??ZERO;
+ const p1:Vec2=[p0[0]+o[0],p0[1]+o[1]],p2:Vec2=[p3[0]+i[0],p3[1]+i[1]];const m=1-u;
+ const w0=m*m*m,w1=3*m*m*u,w2=3*m*u*u,w3=u*u*u;
+ return [w0*p0[0]+w1*p1[0]+w2*p2[0]+w3*p3[0],w0*p0[1]+w1*p1[1]+w2*p2[1]+w3*p3[1]];
+}
+/** Polyline of the spatial path of a vec2 property, `steps` samples per segment (including both end points). Segments with hold interpolation jump. */
+export function samplePath(p:Property,steps=24):Vec2[]{
+ const k=p.keys;if(p.type!=='vec2'||!k.length)return [];
+ const out:Vec2[]=[k[0].v as Vec2];
+ for(let i=0;i<k.length-1;i++){
+  const a=k[i],b=k[i+1];
+  if(a.interp==='hold'){out.push(a.v as Vec2,b.v as Vec2);continue;}
+  if(!hasSpatial(a,b)){out.push(b.v as Vec2);continue;}
+  for(let s=1;s<=steps;s++)out.push(spatialPoint(a,b,s/steps));
+ }
+ return out;
 }

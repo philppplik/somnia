@@ -5,6 +5,8 @@ import {useAnimationState} from '../../lib/animation/session';
 import {findComp,findLayer,TRANSFORM_KEYS,type LayerKind,type PropValue,type TransformKey} from '../../lib/animation/model';
 import {evaluate} from '../../lib/animation/interpolate';
 import {ticksToSeconds,timecode} from '../../lib/animation/time';
+import {workAreaFrames} from '../../lib/animation/playback';
+import {cancelExport,setExportTransparent,useExportState} from '../../lib/animation/exportJob';
 import type {InspectorSectionProps,PanelHostProps} from '../../lib/shell/types';
 import {Button} from '../ui/button';
 import {fmt,PROP_LABEL,renderSummary} from './format';
@@ -74,12 +76,24 @@ export function CompositionSection(_:InspectorSectionProps){
   <p className="m-0 text-ink-3">{timecode(comp.duration,comp.fps)}</p>
  </div>;
 }
-/** Output setup only. The hero verb never exports directly. */
+/** Output setup: real PNG frame and PNG-sequence export. The hero verb only opens this panel and never exports by itself. */
 export function RenderSection(_:InspectorSectionProps){
- const {t}=useT();const s=useAnimationState();const comp=s.doc&&findComp(s.doc);if(!comp)return null;
+ const {t}=useT();const s=useAnimationState();const job=useExportState();const comp=s.doc&&findComp(s.doc);if(!comp)return null;
+ const plan=workAreaFrames(comp.workArea,comp.fps);const busy=job.status==='running';
  return <div className="grid gap-2 p-3 text-xs" data-testid="animation-render-setup">
   <p className="m-0 text-ink">{t('animation.render.summary',renderSummary(comp) as unknown as Record<string,string|number>)}</p>
+  <p className="m-0 text-ink-3" data-testid="animation-export-range">{t('animation.export.range',{frames:plan.count,from:timecode(comp.workArea.in,comp.fps),to:timecode(comp.workArea.out,comp.fps)})}</p>
+  <label className="flex items-center gap-2 text-ink-2"><input type="checkbox" style={{width:16,height:16,margin:0,flex:"none"}} checked={job.transparent} disabled={busy} onChange={e=>setExportTransparent(e.target.checked)} data-testid="animation-export-alpha"/>{t('animation.export.transparent')}</label>
+  <div className="grid gap-2">
+   <Button size="compact" variant="outline" disabled={busy} onClick={()=>run('animation.export.frame')} data-testid="animation-export-frame">{t('animation.export.frame')}</Button>
+   <Button size="compact" variant="outline" disabled={busy} onClick={()=>run('animation.export.sequence')} data-testid="animation-export-sequence">{t('animation.export.sequence')}</Button>
+  </div>
+  {busy&&<div className="grid gap-1" role="status"><progress className="h-2 w-full" max={Math.max(1,job.total)} value={job.done} data-testid="animation-export-progress"/>
+   <span className="text-ink-3">{t('animation.export.progress',{done:job.done,total:job.total})}</span>
+   {job.kind==='sequence'&&<Button size="compact" variant="outline" onClick={cancelExport} data-testid="animation-export-cancel">{t('animation.export.cancel')}</Button>}</div>}
+  {job.status==='done'&&<p role="status" className="m-0 text-ink" data-testid="animation-export-done">{t('animation.export.done',{file:job.fileName})}</p>}
+  {job.status==='error'&&<p role="alert" className="m-0 text-ink" data-testid="animation-export-error">{t('animation.export.error',{message:job.message})}</p>}
   <p className="m-0 text-ink-3">{t('animation.render.note')}</p>
-  <Button size="compact" variant="outline" onClick={()=>run('animation.render.close')}>{t('animation.render.close')}</Button>
+  <Button size="compact" variant="outline" disabled={busy} onClick={()=>run('animation.render.close')}>{t('animation.render.close')}</Button>
  </div>;
 }
