@@ -4,7 +4,7 @@ import {applyEdit,applyEdits,EditError} from './edit';
 import {maskEdit,matteEdit,maskPath,copyMaskKey,insertPoint,handleMaskKey,copyMaskKeys} from './masks';
 import {animatedChars,animatorEdit,defaultAnimator,mixHex} from './textAnimators';
 import {copyTransformKeys,pasteTransformEdits} from './keysClipboard';
-import {animatedTargets,allTargetKeys,propertyOf,moveTargetKeys,easeTargetKeys,pruneTargetKeys,toggleTargetKey,editTargetKeys,copyTargetKeys,pasteTargetKeys,deleteTargetKeys,pasteClipOnTargets,staggerLayers} from './keyTargets';
+import {animatedTargets,allTargetKeys,propertyOf,moveTargetKeys,easeTargetKeys,pruneTargetKeys,toggleTargetKey,editTargetKeys,copyTargetKeys,pasteTargetKeys,deleteTargetKeys,pasteClipOnTargets,staggerLayers,bounceClip,bounceTargetKeys} from './keyTargets';
 import {EASE_PRESETS,easePresetOf} from './graph';
 import {frameToTick} from './time';
 import {frameSvg} from './exportFrames';
@@ -348,4 +348,37 @@ test('P20: spring presets, both vec2 channels, single clip paste and layer stagg
  assert.deepEqual(layer(sd,first[1].id).transform.opacity.keys.map(k=>k.t),layer(d,first[1].id).transform.opacity.keys.map(k=>k.t+shift));
  assert.throws(()=>staggerLayers(d,['photo'],3),/at least two/);assert.throws(()=>staggerLayers(d,ids,1.5),/whole number/);
  assert.deepEqual(validateDocument(sd),[]);
+});
+
+test('P21: bounce bakes editable keys that land on the target value; stagger also moves path keys and in/out points',()=>{
+ let d=keyed();d=applyEdits(d,[{type:'prop.animate',layer:'photo',prop:'opacity',on:true,t:0},{type:'prop.set',layer:'photo',prop:'opacity',value:0,t:0},{type:'prop.set',layer:'photo',prop:'opacity',value:100,t:sec*2}]);
+ const sel=allTargetKeys(layer(d,'photo')).filter(r=>r.target.kind==='transform'&&r.target.prop==='opacity');assert.equal(sel.length,2);
+ const rev=d.revision;const b=applyEdits(d,bounceTargetKeys(d,'photo',sel,3));assert.equal(b.revision,rev+1);
+ const ks=layer(b,'photo').transform.opacity.keys;assert.equal(ks.length,2+6,'3 bounces add 6 keys');
+ assert.ok(ks.every((k,i)=>i===0||k.t>ks[i-1].t));assert.equal(ks[ks.length-1].v,100);assert.equal(ks[ks.length-1].t,sec*2);
+ assert.equal(ks[1].v,100,'first landing is on the target value');assert.ok(ks[2].v<100&&ks[2].v>0,'rebounds to a fraction');assert.ok(ks[4].v>ks[2].v,'later rebounds are smaller');
+ assert.deepEqual(validateDocument(b),[]);
+ const again=applyEdits(b,bounceTargetKeys(b,'photo',[{target:sel[0].target,t:0},{target:sel[0].target,t:ks[1].t}],1));assert.deepEqual(validateDocument(again),[]);
+ assert.throws(()=>bounceTargetKeys(d,'photo',[sel[0]],3),/two neighbouring/);
+ assert.throws(()=>bounceClip(layer(d,'photo').transform.opacity,0,sec*2,comp(d).fps,9),/Bounces must be/);
+ const tiny=applyEdits(d,[{type:'prop.set',layer:'photo',prop:'opacity',value:100,t:frameToTick(3,comp(d).fps)}]);
+ assert.throws(()=>bounceClip(layer(tiny,'photo').transform.opacity,0,frameToTick(3,comp(d).fps),comp(d).fps,3),/too short/);
+ // vec2 bounce
+ const vd=applyEdits(d,[{type:'prop.animate',layer:'photo',prop:'position',on:true,t:0},{type:'prop.set',layer:'photo',prop:'position',value:[0,0],t:0},{type:'prop.set',layer:'photo',prop:'position',value:[100,200],t:sec*2}]);
+ const vs=allTargetKeys(layer(vd,'photo')).filter(r=>r.target.kind==='transform'&&r.target.prop==='position');
+ const vb=applyEdits(vd,bounceTargetKeys(vd,'photo',vs,2));const vk=layer(vb,'photo').transform.position.keys;assert.deepEqual(vk[1].v,[100,200]);assert.equal(vk.length,2+4);
+ // mask property bounce
+ const mk=allTargetKeys(layer(d,'photo')).filter(r=>r.target.kind==='mask');
+ let md=d;md=applyEdit(md,maskEdit(md,'photo',{op:'animate',mask:'m',prop:'opacity',on:true,t:0}));md=applyEdit(md,maskEdit(md,'photo',{op:'set',mask:'m',prop:'opacity',value:40,t:sec*2}));
+ const ms=allTargetKeys(layer(md,'photo')).filter(r=>r.target.kind==='mask'&&r.target.prop==='opacity');assert.ok(mk.length>0&&ms.length===2);
+ const mb=applyEdits(md,bounceTargetKeys(md,'photo',ms,2));assert.equal(layer(mb,'photo').masks![0].anim!.opacity!.keys.length,2+4);assert.deepEqual(validateDocument(mb),[]);
+ // stagger: path keys and in/out points
+ let sd=applyEdit(d,maskEdit(d,'stencil',{op:'add',id:'pm'}));sd=applyEdit(sd,maskEdit(sd,'stencil',{op:'update',mask:'pm',patch:{shape:'path'}}));
+ sd=applyEdit(sd,maskEdit(sd,'stencil',{op:'pathAnimate',mask:'pm',on:true,t:0}));sd=applyEdit(sd,maskEdit(sd,'stencil',{op:'point',mask:'pm',index:0,x:9,y:9,t:sec}));
+ const order=comp(sd).layers.filter(l=>['photo','stencil'].includes(l.id));const second=order[1];const sh=frameToTick(4,comp(sd).fps);
+ const r4=sd.revision;const st=applyEdits(sd,staggerLayers(sd,['photo','stencil'],4));assert.equal(st.revision,r4+1);
+ const L2=layer(st,second.id),L2o=layer(sd,second.id);assert.equal(L2.inT,Math.max(0,L2o.inT+sh));assert.ok(L2.outT<=comp(st).duration);
+ if(second.id==='stencil')assert.deepEqual(L2.masks!.find(m=>m.id==='pm')!.shapeKeys!.map(k=>k.t),L2o.masks!.find(m=>m.id==='pm')!.shapeKeys!.map(k=>k.t+sh));
+ const noTiming=applyEdits(sd,staggerLayers(sd,['photo','stencil'],4,false));assert.equal(layer(noTiming,second.id).inT,L2o.inT);
+ assert.deepEqual(validateDocument(st),[]);
 });

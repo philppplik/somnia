@@ -1,8 +1,8 @@
 import type {Edit} from './edit';
-import {findComp,findLayer,PROP_META,TRANSFORM_KEYS,type AnimationDocument,type Layer,type LayerMask,type MaskProp,type Property,type TransformKey} from './model';
+import {findComp,findLayer,PROP_META,TRANSFORM_KEYS,type AnimationDocument,type Composition,type Layer,type LayerMask,type MaskProp,type Property,type TransformKey} from './model';
 import {editMaskKeys,easeMaskKeys,copyMaskKeys,pasteMaskKeys,removeMaskKey} from './masks';
 import {copyTransformKeys,pasteTransformEdits,type KeysClip} from './keysClipboard';
-import {frameToTick,snapToFrame} from './time';
+import {frameToTick,snapToFrame,tickToFrame} from './time';
 import {channelOf,EASE_PRESETS,type EasePreset} from './graph';
 /**
  * One key model for every animated property of a layer. A target says where the keys live (a transform property or a mask property);
@@ -119,20 +119,78 @@ export function deleteTargetKeys(doc:AnimationDocument,layerId:string,sel:readon
  return [...(tr.length?[{type:'keys.remove',keys:tr} as Edit]:[]),...masksEdit(layer,sel,(m,prop,ts)=>ts.reduce((o,t)=>removeMaskKey(o,prop,t),m))];
 }
 
+interface PasteItem{target:KeyTarget;t:number;clip:KeysClip}
+/** Edits that paste clips (each with its first key at its own time) on their targets: transform pastes become property edits, mask pastes fold into one `layer.masks` edit. */
+function pasteItems(layer:Layer,items:readonly PasteItem[]):Edit[]{
+ const tr=items.flatMap(i=>i.target.kind==='transform'?pasteTransformEdits(layer,i.target.prop,i.t,i.clip):[]);
+ const mk=items.filter((i):i is PasteItem&{target:Extract<KeyTarget,{kind:'mask'}>}=>i.target.kind==='mask');
+ if(mk.some(i=>!layer.masks?.some(m=>m.id===i.target.mask)))throw Error('Mask no longer exists.');
+ const masks:Edit[]=mk.length?[{type:'layer.masks',layer:layer.id,masks:(layer.masks??[]).map(m=>mk.filter(i=>i.target.mask===m.id).reduce((o,i)=>pasteMaskKeys(o,i.target.prop,i.t,i.clip),m))}]:[];
+ return [...tr,...masks];
+}
 /** Edits that paste a single-property clip with its first key at `t` on each given target (one undo step). A target of another value type refuses everything. */
 export function pasteClipOnTargets(doc:AnimationDocument,layerId:string,targets:readonly KeyTarget[],t:number,clip:KeysClip):Edit[]{
  const comp=findComp(doc),layer=comp&&findLayer(comp,layerId);if(!comp||!layer)throw Error('Select a layer.');
  if(!targets.length)throw Error('Select keys of the property to paste into.');
  const s=snapToFrame(t,comp.fps);if(s<comp.start||s>=comp.start+comp.duration)throw Error('Time is outside the composition.');
- const tr=targets.flatMap(g=>g.kind==='transform'?pasteTransformEdits(layer,g.prop,s,clip):[]);
- const mk=targets.filter((g):g is Extract<KeyTarget,{kind:'mask'}>=>g.kind==='mask');
- const masks:Edit[]=mk.length?[{type:'layer.masks',layer:layer.id,masks:(layer.masks??[]).map(m=>mk.filter(g=>g.mask===m.id).reduce((o,g)=>pasteMaskKeys(o,g.prop,s,clip),m))}]:[];
- return [...tr,...masks];
+ return pasteItems(layer,targets.map(target=>({target,t:s,clip})));
 }
-/** Offsets every key of the given layers: the first layer (in composition order) stays, each following one starts `frames` frames later than the one before. One edit list. */
-export function staggerLayers(doc:AnimationDocument,layerIds:readonly string[],frames:number):Edit[]{
+const FALL={out:[1/3,0] as const,in:[2/3,1/3] as const},RISE={out:[1/3,2/3] as const,in:[2/3,1] as const};
+const lerpV=(a:Property['value'],b:Property['value'],f:number):Property['value']=>Array.isArray(a)&&Array.isArray(b)?[a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f] as unknown as Property['value']:(a as number)+((b as number)-(a as number))*f;
+const round2=(v:Property['value']):Property['value']=>Array.isArray(v)?[Math.round(v[0]*100)/100,Math.round(v[1]*100)/100] as unknown as Property['value']:Math.round((v as number)*100)/100;
+export const MAX_BOUNCES=5;
+/**
+ * Bakes a bounce between two neighbouring keys: the value falls from the first key to the second one's value, rebounds to a fraction
+ * (`decay`) of the height and falls again, `bounces` times, landing on the second key. Heights shrink by `decay`, durations by its square root.
+ * Returns the clip of ordinary keys (the first key replaced, extra ones inserted; the second key stays untouched), so everything stays editable.
+ */
+export function bounceClip(p:Property,ta:number,tb:number,fps:Composition['fps'],bounces:number,decay=0.4):KeysClip{
+ if(!Number.isInteger(bounces)||bounces<1||bounces>MAX_BOUNCES)throw Error(`Bounces must be 1 to ${MAX_BOUNCES}.`);
+ const i=p.keys.findIndex(k=>k.t===ta),a=p.keys[i],b=p.keys[i+1];
+ if(!a||!b||b.t!==tb)throw Error('Select two neighbouring keys of one property.');
+ if(JSON.stringify(a.v)===JSON.stringify(b.v))throw Error('The two keys have the same value, so nothing falls.');
+ const w:number[]=[1];for(let k=1;k<=bounces;k++){const q=Math.sqrt(decay**k);w.push(q,q);}
+ const total=w.reduce((x,y)=>x+y,0),fa=tickToFrame(ta,fps),fb=tickToFrame(tb,fps);let acc=0;
+ const frames:number[]=[fa];const marks=w.slice(0,-1).map(x=>(acc+=x)/total);
+ for(const m of marks){const prev=frames[frames.length-1];frames.push(Math.max(prev+1,Math.round(fa+(fb-fa)*m)));}
+ if(frames[frames.length-1]>=fb)throw Error('The segment is too short for this many bounces.');
+ const vals:Property['value'][]=[a.v,b.v];for(let k=1;k<=bounces;k++){vals.push(round2(lerpV(b.v,a.v,decay**k)),b.v);}
+ // keys: A(fall) I0(rise) P1(fall) I1(rise) ... P_n(fall); the last landing is key B itself
+ const seq=[a.v,b.v];const kinds:('f'|'r')[]=['f','r'];
+ for(let k=1;k<=bounces;k++){seq.push(vals[2*k]);kinds.push('f');if(k<bounces){seq.push(b.v);kinds.push('r');}}
+ return {type:p.type as 'scalar'|'vec2',keys:frames.map((f,j)=>({dt:frameToTick(f,fps)-ta,v:seq[j],interp:'bezier' as const,...(kinds[j]==='f'?FALL:RISE)}))};
+}
+/** Bakes a bounce between every pair of neighbouring selected keys of each target, as one edit list (one undo step). */
+export function bounceTargetKeys(doc:AnimationDocument,layerId:string,sel:readonly TargetKey[],bounces:number):Edit[]{
+ const comp=findComp(doc),layer=comp&&findLayer(comp,layerId);if(!comp||!layer)throw Error('Select a layer.');
+ const items:PasteItem[]=[];
+ for(const id of new Set(sel.map(r=>targetId(r.target)))){
+  const rs=sel.filter(r=>targetId(r.target)===id).map(r=>r.t).sort((x,y)=>x-y),g=sel.find(r=>targetId(r.target)===id)!.target,p=propertyOf(layer,g);
+  if(!p)throw Error('Property no longer animated.');
+  for(let i=0;i+1<rs.length;i++){if(p.keys.findIndex(k=>k.t===rs[i])+1!==p.keys.findIndex(k=>k.t===rs[i+1]))continue;items.push({target:g,t:rs[i],clip:bounceClip(p,rs[i],rs[i+1],comp.fps,bounces)});}
+ }
+ if(!items.length)throw Error('Select two neighbouring keys of one property.');
+ return pasteItems(layer,items);
+}
+/**
+ * Offsets the given layers: the first one (in composition order) stays, each following one starts `frames` frames later than the one before.
+ * Moves transform and mask property keys, path-morph keys and (unless `timing` is false) the layer's in and out points, one edit list.
+ */
+export function staggerLayers(doc:AnimationDocument,layerIds:readonly string[],frames:number,timing=true):Edit[]{
  const comp=findComp(doc);if(!comp)throw Error('Select a layer.');
  if(!Number.isInteger(frames)||Math.abs(frames)>600)throw Error('Offset must be a whole number of frames, at most 600.');
  const ordered=comp.layers.filter(l=>layerIds.includes(l.id));if(ordered.length<2)throw Error('Select at least two layers.');
- return ordered.flatMap((l,i)=>{const delta=frameToTick(frames*i,comp.fps);return i===0||frames===0?[]:moveTargetKeys(doc,l.id,allTargetKeys(l),delta);});
+ const lo=comp.start,hi=comp.start+comp.duration;
+ return ordered.flatMap((l,i)=>{
+  const delta=frameToTick(frames*i,comp.fps);if(i===0||frames===0)return [];
+  const out:Edit[]=[];const tr=allTargetKeys(l).filter(r=>r.target.kind==='transform');
+  if(tr.length)out.push(...moveTargetKeys(doc,l.id,tr,delta));
+  if(l.masks?.some(m=>m.anim&&MASK_PROPS.some(pr=>m.anim![pr]?.keys.length)||m.shapeKeys?.length)){
+   out.push({type:'layer.masks',layer:l.id,masks:l.masks.map(m=>{
+    let n=m;for(const pr of MASK_PROPS){const pp=n.anim?.[pr];if(pp?.keys.length)n=editMaskKeys(n,pr,pp.keys.map(k=>({t:k.t,to:k.t+delta,v:k.v})),comp);}
+    if(n.shapeKeys?.length){if(n.shapeKeys.some(k=>k.t+delta<lo||k.t+delta>=hi))throw Error('Path keys would leave the composition.');n={...n,shapeKeys:n.shapeKeys.map(k=>({...k,t:k.t+delta}))};}
+    return n;})});
+  }
+  if(timing&&l.kind!=='audio'){const inT=Math.max(0,l.inT+delta),outT=Math.min(comp.duration,l.outT+delta);if(outT<=inT)throw Error('A layer would start after the composition ends.');out.push({type:'layer.timing',layer:l.id,inT,outT});}
+  return out;});
 }
