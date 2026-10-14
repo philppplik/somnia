@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {applyEdit,CELL_BASE,type TextEdit} from './edit';
 import type {DocumentsEngine} from './engine';
 import {getDocumentsState,patchDocuments} from './store';
-import {insertTable,editTable,setParagraphStyle,shiftListLevel,toggleList,setAlign,setLineSpacing,setSpaceAfter,stepIndent,setFont,setFontColor,setFontSize,stepFontSize,toggleFormat,deleteAtCaret,moveCaret,MAX_INSERT_LINES,pasteText,redoEdit,resetSessionsForTest,selectAllText,selectedText,setSessionDeps,splitAtCaret,switchDocument,typeText,undoEdit,syncGeometry} from './session';
+import {tabInCell,insertTable,editTable,setParagraphStyle,shiftListLevel,toggleList,setAlign,setLineSpacing,setSpaceAfter,stepIndent,setFont,setFontColor,setFontSize,stepFontSize,toggleFormat,deleteAtCaret,moveCaret,MAX_INSERT_LINES,pasteText,redoEdit,resetSessionsForTest,selectAllText,selectedText,setSessionDeps,splitAtCaret,switchDocument,typeText,undoEdit,syncGeometry} from './session';
 import {stepBoundary,wordBoundary} from './text';
 const docx=new Uint8Array(readFileSync(new URL('../../../test/documents/sample.docx',import.meta.url)));
 type Row={text:string;locked?:boolean;f?:Set<string>[];p?:Record<string,number|string>};
@@ -245,28 +245,40 @@ test('a table in the span refuses style and list changes',async()=>{
  await setParagraphStyle('Title');assert.ok(getDocumentsState().editError);patchDocuments({editError:''});await toggleList('numbered');assert.ok(getDocumentsState().editError);
  assert.equal(getDocumentsState().canUndo,false);assert.equal(d.rows[0].p,undefined);
 });
-/** Engine whose blocks are two top paragraphs and a 2x1 table of cell paragraphs addressed from CELL_BASE. */
+/** Engine whose blocks are two top paragraphs and a table cell list (cell 0 holds two paragraphs) addressed from CELL_BASE. */
+type FC={t:string;row:number;cell:number};
 class CellDoc extends Doc{
- cells=['alpha','beta'];edits:{block:number;text:string}[]=[];
- override async blocks():Promise<never>{return [{index:0,kind:'para' as const,editable:true,text:'top'},{index:1,kind:'table' as const,editable:false},...this.cells.map((t,i)=>({index:CELL_BASE+i,kind:'cell' as const,editable:true,text:t,table:1,row:i,cell:0,para:0}))] as never;}
- override async replace(e:TextEdit){const i=e.block-CELL_BASE;if(i<0||i>=this.cells.length)throw new Error('no cell paragraph');this.edits.push({block:e.block,text:applyEdit(this.cells[i],e)});this.cells[i]=applyEdit(this.cells[i],e);return this.doc();}
- override async merge(_b:number):Promise<never>{throw new Error('paragraphs inside table cells cannot be split or joined yet');}
- override async split(_b:number,_o:number):Promise<never>{throw new Error('paragraphs inside table cells cannot be split or joined yet');}
+ cells:FC[]=[{t:'alpha',row:0,cell:0},{t:'delta',row:0,cell:0},{t:'beta',row:0,cell:1}];
+ texts2(){return this.cells.map(c=>c.t);}
+ csnaps=new Map<number,FC[]>();
+ override async snapshot(){const id=++this.n;this.csnaps.set(id,this.cells.map(c=>({...c})));return id;}
+ override async restore(id:number){this.cells=this.csnaps.get(id)!.map(c=>({...c}));return this.doc();}
+ override async blocks():Promise<never>{return [{index:0,kind:'para' as const,editable:true,text:'top'},{index:1,kind:'table' as const,editable:false},...this.cells.map((c,i)=>({index:CELL_BASE+i,kind:'cell' as const,editable:true,text:c.t,table:1,row:c.row,cell:c.cell,para:this.cells.slice(0,i).filter(x=>x.row===c.row&&x.cell===c.cell).length}))] as never;}
+ override async replace(e:TextEdit){const i=e.block-CELL_BASE;if(i<0||i>=this.cells.length)throw new Error('no cell paragraph');this.cells[i]={...this.cells[i],t:applyEdit(this.cells[i].t,e)};return this.doc();}
+ override async merge(b:number){const i=b-CELL_BASE;const a=this.cells[i-1],c=this.cells[i];if(!a||!c||a.row!==c.row||a.cell!==c.cell)throw new Error('there is no previous paragraph in this cell');this.cells.splice(i-1,2,{...a,t:a.t+c.t});return this.doc();}
+ override async split(b:number,off:number){const i=b-CELL_BASE;const c=this.cells[i];if(!c)throw new Error('no cell paragraph');const u=new TextEncoder().encode(c.t),dec=new TextDecoder();this.cells.splice(i,1,{...c,t:dec.decode(u.slice(0,off))},{...c,t:dec.decode(u.slice(off))});return this.doc();}
 }
 async function openCells(){resetSessionsForTest();const cd=new CellDoc(['top']);setSessionDeps({createEngine:()=>cd as unknown as DocumentsEngine,loadBytes:async()=>docx});await switchDocument({key:'c.docx',url:'blob:c'});return cd;}
 test('typing and deleting inside a table cell paragraph edits that cell only',async()=>{
- const cd=await openCells();at(CELL_BASE,5);await typeText('!');assert.equal(cd.cells[0],'alpha!');assert.equal(cd.cells[1],'beta');
- await deleteAtCaret(-1);assert.equal(cd.cells[0],'alpha');assert.equal(getDocumentsState().editError,'');
+ const cd=await openCells();at(CELL_BASE,5);await typeText('!');assert.deepEqual(cd.texts2(),['alpha!','delta','beta']);
+ await deleteAtCaret(-1);assert.deepEqual(cd.texts2(),['alpha','delta','beta']);assert.equal(getDocumentsState().editError,'');
 });
-test('Backspace/Delete at a cell paragraph edge is a silent no-op; Enter shows the engine refusal',async()=>{
- const cd=await openCells();at(CELL_BASE+1,0);await deleteAtCaret(-1);assert.deepEqual(cd.cells,['alpha','beta']);assert.equal(getDocumentsState().editError,'');assert.equal(getDocumentsState().caretLocked,false);
- at(CELL_BASE,5);await deleteAtCaret(1);assert.equal(getDocumentsState().editError,'');
- await splitAtCaret();assert.match(getDocumentsState().editError,/cannot be split/);assert.deepEqual(cd.cells,['alpha','beta']);
+test('Enter splits a cell paragraph and Backspace joins it again, one undo step each',async()=>{
+ const cd=await openCells();at(CELL_BASE,2);await splitAtCaret();assert.deepEqual(cd.texts2(),['al','pha','delta','beta']);assert.deepEqual([c().block,c().head],[CELL_BASE+1,0]);
+ await deleteAtCaret(-1);assert.deepEqual(cd.texts2(),['alpha','delta','beta']);assert.deepEqual([c().block,c().head],[CELL_BASE,2]);
+ await undoEdit();assert.deepEqual(cd.texts2(),['al','pha','delta','beta']);await undoEdit();assert.deepEqual(cd.texts2(),['alpha','delta','beta']);
 });
-test('a selection across two cells is refused without changing either; Ctrl+A stays inside the cell',async()=>{
- const cd=await openCells();at(CELL_BASE+1,2,{block:CELL_BASE,off:1});await typeText('x');
- assert.match(getDocumentsState().editError,/cannot be edited as text/);assert.deepEqual(cd.cells,['alpha','beta']);
- at(CELL_BASE,2);selectAllText();assert.equal(selectedText(),'alpha');
+test('Backspace/Delete never join across cells; at the cell edge they do nothing',async()=>{
+ const cd=await openCells();const before=cd.texts2();
+ at(CELL_BASE+2,0);await deleteAtCaret(-1);at(CELL_BASE+1,5);await deleteAtCaret(1);at(CELL_BASE,0);await deleteAtCaret(-1);
+ assert.deepEqual(cd.texts2(),before);assert.equal(getDocumentsState().editError,'');assert.equal(getDocumentsState().caretLocked,false);
+ at(CELL_BASE,5);await deleteAtCaret(1);assert.deepEqual(cd.texts2(),['alphadelta','beta']);
+});
+test('a selection across cells is refused without changing either; inside one cell it deletes as one step; Ctrl+A stays in the paragraph',async()=>{
+ const cd=await openCells();at(CELL_BASE+2,2,{block:CELL_BASE,off:1});await typeText('x');
+ assert.match(getDocumentsState().editError,/cannot be edited as text/);assert.deepEqual(cd.texts2(),['alpha','delta','beta']);
+ at(CELL_BASE+1,2,{block:CELL_BASE,off:1});await typeText('x');assert.deepEqual(cd.texts2(),['axlta','beta']);
+ at(CELL_BASE,2);selectAllText();assert.equal(selectedText(),'axlta');
 });
 test('editTable needs a caret in one table cell and surfaces engine refusals without changing the document',async()=>{
  const cd=await openCells() as CellDoc&{tableCalls?:string[]};const calls:string[]=[];
@@ -274,7 +286,7 @@ test('editTable needs a caret in one table cell and surfaces engine refusals wit
  await editTable('row_below');assert.equal(calls.length,0);// no caret
  at(0,1);await editTable('row_below');assert.match(getDocumentsState().editError,/inside a table cell|table cell/);assert.equal(calls.length,0);
  at(CELL_BASE+1,2,{block:CELL_BASE,off:1});await editTable('row_below');assert.match(getDocumentsState().editError,/one table cell/);assert.equal(calls.length,0);
- at(CELL_BASE,1);await editTable('row_below');assert.deepEqual(calls,[CELL_BASE+'row_below']);assert.match(getDocumentsState().editError,/row limit/);assert.deepEqual(cd.cells,['alpha','beta']);
+ at(CELL_BASE,1);await editTable('row_below');assert.deepEqual(calls,[CELL_BASE+'row_below']);assert.match(getDocumentsState().editError,/row limit/);assert.deepEqual(cd.texts2(),['alpha','delta','beta']);
 });
 test('insertTable needs a collapsed caret and a size inside the bounds, and surfaces engine refusals unchanged',async()=>{
  const cd=await openCells();const calls:string[]=[];
@@ -283,5 +295,17 @@ test('insertTable needs a collapsed caret and a size inside the bounds, and surf
  at(0,1);for(const [r,c] of [[0,2],[21,2],[2,0],[2,11],[1.5,2]]){await insertTable(r,c);assert.match(getDocumentsState().editError,/1-20 rows/);}
  assert.equal(calls.length,0);
  at(CELL_BASE+1,2,{block:CELL_BASE,off:1});await insertTable(2,2);assert.match(getDocumentsState().editError,/one paragraph/);
- at(CELL_BASE,1);await insertTable(3,3);assert.deepEqual(calls,[CELL_BASE+':3x3']);assert.match(getDocumentsState().editError,/too many blocks/);assert.deepEqual(cd.cells,['alpha','beta']);
+ at(CELL_BASE,1);await insertTable(3,3);assert.deepEqual(calls,[CELL_BASE+':3x3']);assert.match(getDocumentsState().editError,/too many blocks/);assert.deepEqual(cd.texts2(),['alpha','delta','beta']);
+});
+test('Tab and Shift+Tab move between cells; Shift+Tab in the first cell and Tab outside a cell do nothing',async()=>{
+ await openCells();
+ at(CELL_BASE+1,3);await tabInCell(1);assert.deepEqual([c().block,c().head],[CELL_BASE+2,0]);
+ await tabInCell(-1);assert.deepEqual([c().block,c().head],[CELL_BASE,0]);
+ await tabInCell(-1);assert.deepEqual([c().block,c().head],[CELL_BASE,0]);
+ at(0,1);await tabInCell(1);assert.deepEqual([c().block,c().head],[0,1]);assert.equal(getDocumentsState().editError,'');
+});
+test('Tab in the last cell asks the engine for a new row below and reports a refusal without moving',async()=>{
+ const cd=await openCells();const calls:string[]=[];
+ (cd as unknown as {editTable:(b:number,o:string)=>Promise<unknown>}).editTable=async(b,o)=>{calls.push(b+o);throw new Error('the table has reached its row limit');};
+ at(CELL_BASE+2,1);await tabInCell(1);assert.deepEqual(calls,[CELL_BASE+2+'row_below']);assert.match(getDocumentsState().editError,/row limit/);assert.deepEqual([c().block,c().head],[CELL_BASE+2,1]);
 });

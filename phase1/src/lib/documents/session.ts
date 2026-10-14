@@ -158,10 +158,16 @@ export const MAX_SPAN_BLOCKS=2000,MAX_INSERT_CHARS=1_000_000,MAX_INSERT_LINES=50
 /** Texts of the editable paragraphs `from..to`, or null when one is a table/object, missing, or the span is above the cap. */
 function spanTexts(from:number,to:number):string[]|null{
  if(to<from||to-from+1>MAX_SPAN_BLOCKS)return null;
- // Table cells are edited one paragraph at a time: a range across cells is refused.
- if(to>from&&to>=CELL_BASE)return null;
+ // A range inside table cells must stay in one cell: it never crosses a cell border.
+ if(to>from&&to>=CELL_BASE&&!sameCellRange(from,to))return null;
  const out:string[]=[];
  for(let i=from;i<=to;i++){const t=blockText(i);if(t===null)return null;out.push(t);}return out;
+}
+/** True when every block `from..to` is a paragraph of one and the same table cell. */
+function sameCellRange(from:number,to:number):boolean{
+ const bs=getDocumentsState().blocks;const a=bs.find(x=>x.index===from);if(!a||a.kind!=='cell')return false;
+ for(let i=from+1;i<=to;i++){const b=bs.find(x=>x.index===i);if(!b||b.kind!=='cell'||b.table!==a.table||b.row!==a.row||b.cell!==a.cell)return false;}
+ return true;
 }
 const reachable=(a:number,b:number)=>spanTexts(Math.min(a,b),Math.max(a,b))!==null;
 let goalX:number|null=null;
@@ -358,7 +364,8 @@ export const splitAtCaret=()=>run(async()=>{
  const check=ownerGuard();await replaceRange(n.s,n.e,'\n',n.h);check();
 });
 async function joinAtEdge(block:number,t:string,dir:-1|1){
- if(block>=CELL_BASE)return;// cells cannot be split or joined yet
+ // Inside a table cell paragraphs join only within their own cell; at the cell edge nothing happens.
+ if(block>=CELL_BASE&&!sameCellRange(Math.min(block,block+dir),Math.max(block,block+dir)))return;
  const nb=nearbyBlock(block,dir);if(!nb){if(getDocumentsState().blocks.some(x=>x.index===block+dir))patchDocuments({caretLocked:true});return;}
  if(dir<0)await structural(e=>e.merge(block),{block,off:0},{block:block-1,off:u8(nb.text!)});
  else await structural(e=>e.merge(block+1),{block,off:u8(t)},{block,off:u8(t)});
@@ -420,7 +427,7 @@ export const stepIndent=(dir:-1|1)=>run(()=>{
 });
 
 /** Insert or delete a row or column around the caret's table cell. One undo step; the caret stays in its original cell (or the nearest one after a delete). */
-export const editTable=(op:TableOp)=>run(async()=>{
+async function doEditTable(op:TableOp){
  if(!(TABLE_OPS as readonly string[]).includes(op))throw new Error('Table operation is not offered.');
  const c=getDocumentsState().caret;if(!c)return;goalX=null;
  if(c.anchorBlock!==undefined&&c.anchorBlock!==c.block)throw new Error('Place the caret in one table cell.');
@@ -428,7 +435,8 @@ export const editTable=(op:TableOp)=>run(async()=>{
  await structural(eng=>eng.editTable(c.block,op),{block:c.block,off:c.head},async eng=>{
   const nb=blockAfterTableEdit(op,at,await eng.blocks());if(nb===null)throw new Error('The table has no editable cell left.');return{block:nb,off:0};
  });
-});
+}
+export const editTable=(op:TableOp)=>run(()=>doEditTable(op));
 
 /** Insert an empty table (and an empty paragraph after it) below the caret's paragraph, or below the table when the caret is in a cell. One undo step; the caret goes into the first cell. */
 export const insertTable=(rows:number,cols:number)=>run(async()=>{
@@ -441,4 +449,16 @@ export const insertTable=(rows:number,cols:number)=>run(async()=>{
  await structural(eng=>eng.insertTable(c.block,rows,cols),{block:c.block,off:c.head},async eng=>{
   const b=(await eng.blocks()).find(x=>x.kind==='cell'&&x.table===top+1&&x.row===0&&x.cell===0&&x.editable);if(!b)throw new Error('The new table has no editable cell.');return{block:b.index,off:0};
  });
+});
+
+/** Tab / Shift+Tab inside a table cell: the first paragraph of the next / previous cell. Tab in the last cell adds a row below and moves into it. Returns false outside a cell. */
+export const tabInCell=(dir:1|-1)=>run(async()=>{
+ const c=getDocumentsState().caret;if(!c)return;const blocks=getDocumentsState().blocks;const at=cellOf(blocks,c.block);if(!at)return;goalX=null;
+ const cells=blocks.filter(b=>b.kind==='cell'&&b.table===at.table&&b.editable&&b.text!==undefined&&(b.para??0)===0);
+ const i=cells.findIndex(b=>b.row===at.row&&b.cell===at.cell);const nb=cells[i+dir];
+ if(nb){patchDocuments({caretLocked:false,caret:{block:nb.index,anchor:0,head:0}});return;}
+ if(dir<0||i<0)return;
+ await doEditTable('row_below');
+ const after=getDocumentsState().blocks.find(b=>b.kind==='cell'&&b.table===at.table&&b.row===at.row+1&&b.cell===0&&b.editable);
+ if(after)patchDocuments({caret:{block:after.index,anchor:0,head:0}});
 });

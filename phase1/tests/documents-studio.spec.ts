@@ -382,3 +382,19 @@ test('table menu: merge a cell with its right neighbour, split it again, undo bo
  await menu.selectOption('split_cell');await page.waitForTimeout(250);// an unmerged cell refuses
  await expect(page.getByTestId('documents-edit-error')).toBeVisible();
 });
+test('table cells: Enter splits a paragraph, Backspace joins it, Tab moves to the next cell',async({page})=>{
+ await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ await openBuffers(page,[{name:'sample.docx',mimeType:DOCX,buffer:sample()}]);
+ await expect(page.getByTestId('documents-pages')).toHaveText('1 pages');
+ const pg=page.getByTestId('documents-page').first();const img=pg.locator('img');
+ await expect.poll(()=>img.evaluate((i:HTMLImageElement)=>i.complete&&i.naturalWidth)).toBeGreaterThan(300);
+ const b2=(await pg.boundingBox())!;await page.mouse.click(b2.x+b2.width*0.15,b2.y+b2.height*0.19);
+ await expect(page.getByTestId('documents-caret')).toHaveCount(1);
+ await page.keyboard.press('Enter');await page.waitForTimeout(250);
+ await expect(page.getByTestId('documents-edit-error')).toHaveCount(0);await expect(page.getByTestId('documents-caret')).toHaveCount(1);
+ await page.keyboard.press('Backspace');await page.waitForTimeout(250);
+ await expect(page.getByTestId('documents-edit-error')).toHaveCount(0);
+ await page.keyboard.press('Tab');await page.waitForTimeout(250);
+ await expect(page.getByTestId('documents-edit-error')).toHaveCount(0);await expect(page.getByTestId('documents-caret')).toHaveCount(1);
+ await page.keyboard.press('Shift+Tab');await expect(page.getByTestId('documents-caret')).toHaveCount(1);
+});

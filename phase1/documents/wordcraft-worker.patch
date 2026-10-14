@@ -46,7 +46,7 @@ new file mode 100644
 index 0000000..5b80b79
 --- /dev/null
 +++ b/crates/somnia-worker/src/lib.rs
-@@ -0,0 +1,1403 @@
+@@ -0,0 +1,1460 @@
 +//! Experimental headless adapter. No DOM, egui, filesystem or UI thread access.
 +use wasm_bindgen::prelude::*;
 +use std::sync::Arc;
@@ -246,15 +246,14 @@ index 0000000..5b80b79
 +        Ok(())
 +    }
 +    fn plain_para(&self, block: usize) -> Result<&wordcraft_doc::Paragraph, String> {
-+        if block >= CELL_BASE {
-+            return Err("paragraphs inside table cells cannot be split or joined yet".into());
++        if block < CELL_BASE && matches!(self.doc.body.get(block).map(|b| &**b), Some(Block::Table(_))) {
++            return Err(format!("block {block} is a table, not a paragraph"));
 +        }
-+        match self.doc.body.get(block).map(|b| &**b) {
++        match self.para_at(block) {
 +            None => Err(format!("no block {block}")),
-+            Some(Block::Table(_)) => Err(format!("block {block} is a table, not a paragraph")),
-+            Some(Block::Para(p)) if p.text.contains(OBJ) || !p.objects.is_empty() => Err(format!("paragraph {block} contains inline objects and cannot be edited as text")),
-+            Some(Block::Para(p)) if p.section.is_some() => Err(format!("paragraph {block} carries a section break and cannot be split or merged")),
-+            Some(Block::Para(p)) => Ok(p),
++            Some(p) if p.text.contains(OBJ) || !p.objects.is_empty() => Err(format!("paragraph {block} contains inline objects and cannot be edited as text")),
++            Some(p) if p.section.is_some() => Err(format!("paragraph {block} carries a section break and cannot be split or merged")),
++            Some(p) => Ok(p),
 +        }
 +    }
 +    /// Splits a top-level paragraph at a UTF-8 offset. The new paragraph copies the paragraph properties.
@@ -264,6 +263,20 @@ index 0000000..5b80b79
 +            return Err(format!("offset {off} is not a character boundary inside paragraph {block}"));
 +        }
 +        let tail = p.split_off(off).map_err(|e| e.to_string())?;
++        if block >= CELL_BASE {
++            let [b, r, c, k] = self.cell_paras().nth(block - CELL_BASE).ok_or_else(|| format!("no cell paragraph {block}"))?;
++            let Some(Block::Table(t)) = self.doc.body.get(b).map(|x| &**x) else { return Err("not a table".into()) };
++            let mut t2 = t.clone();
++            let cell = t2.rows.get_mut(r).and_then(|row| row.cells.get_mut(c)).ok_or("no such cell")?;
++            if cell.blocks.len() >= 1000 {
++                return Err("a table cell holds at most 1000 paragraphs".into());
++            }
++            cell.blocks[k] = Arc::new(Block::Para(p));
++            cell.blocks.insert(k + 1, Arc::new(Block::Para(tail)));
++            self.doc.body[b] = Arc::new(Block::Table(t2));
++            self.pages = DocLayout::default();
++            return Ok(());
++        }
 +        self.doc.body[block] = Arc::new(Block::Para(p));
 +        self.doc.body.insert(block + 1, Arc::new(Block::Para(tail)));
 +        self.pages = DocLayout::default();
@@ -271,6 +284,26 @@ index 0000000..5b80b79
 +    }
 +    /// Joins paragraph `block` onto the end of `block - 1`; the first paragraph keeps its properties.
 +    fn do_merge(&mut self, block: usize) -> Result<(), String> {
++        if block >= CELL_BASE {
++            let tail = self.plain_para(block)?.clone();
++            let [b, r, c, k] = self.cell_paras().nth(block - CELL_BASE).ok_or_else(|| format!("no cell paragraph {block}"))?;
++            if k == 0 {
++                return Err("there is no previous paragraph in this cell".into());
++            }
++            let mut head = self.para_by_path([b, r, c, k - 1]).ok_or("the previous block in this cell is not a paragraph")?.clone();
++            if head.text.contains(OBJ) || !head.objects.is_empty() || head.section.is_some() {
++                return Err("the previous paragraph cannot be joined".into());
++            }
++            head.append(tail);
++            let Some(Block::Table(t)) = self.doc.body.get(b).map(|x| &**x) else { return Err("not a table".into()) };
++            let mut t2 = t.clone();
++            let cell = t2.rows.get_mut(r).and_then(|row| row.cells.get_mut(c)).ok_or("no such cell")?;
++            cell.blocks[k - 1] = Arc::new(Block::Para(head));
++            cell.blocks.remove(k);
++            self.doc.body[b] = Arc::new(Block::Table(t2));
++            self.pages = DocLayout::default();
++            return Ok(());
++        }
 +        if block == 0 {
 +            return Err("there is no previous paragraph".into());
 +        }
@@ -1005,7 +1038,7 @@ index 0000000..5b80b79
 +        let now = s.text();
 +        assert!(s.do_insert(CELL_BASE + 999_999, 0, "x").is_err());
 +        assert!(s.do_replace(id, 0, 99999, "x").is_err());
-+        assert!(s.do_split(id, 0).is_err());
++        assert!(s.do_split(id, 99_999).is_err());
 +        assert!(s.do_merge(id).is_err());
 +        assert_eq!(now, s.text());
 +    }
@@ -1071,6 +1104,30 @@ index 0000000..5b80b79
 +            assert!(s.do_insert_table(b, r, c).is_err());
 +        }
 +        assert_eq!(s.doc.body.len(), len);
++    }
++    #[test]
++    fn cell_paragraphs_split_and_join_inside_their_cell() {
++        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
++        let first = s.cell_paras().next().expect("fixture has a table");
++        let n = s.cell_paras().count();
++        let text = s.text();
++        s.do_insert(CELL_BASE, 0, "ab").unwrap();
++        s.do_split(CELL_BASE, 1).unwrap();
++        assert_eq!(s.cell_paras().count(), n + 1);
++        assert_eq!(s.para_at(CELL_BASE).unwrap().text, "a");
++        assert!(s.para_at(CELL_BASE + 1).unwrap().text.starts_with('b'));
++        let saved = wordcraft_docx::write(&s.doc).unwrap();
++        assert_eq!(DocSession::from_bytes(&saved).unwrap().cell_paras().count(), n + 1);
++        s.do_merge(CELL_BASE + 1).unwrap();
++        assert_eq!(s.cell_paras().count(), n);
++        assert!(s.para_at(CELL_BASE).unwrap().text.starts_with("ab"));
++        // The first paragraph of a cell has nothing to join with inside its cell.
++        assert!(s.do_merge(CELL_BASE).is_err());
++        assert!(s.do_split(CELL_BASE, 99_999).is_err());
++        assert!(s.do_merge(CELL_BASE + 999_999).is_err());
++        assert_eq!(s.cell_paras().count(), n);
++        assert!(first[0] < s.doc.body.len());
++        assert_ne!(text, s.text());
 +    }
 +    #[test]
 +    fn replace_range_roundtrips_and_is_atomic() {

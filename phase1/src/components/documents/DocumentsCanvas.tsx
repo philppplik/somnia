@@ -7,7 +7,7 @@ import type {DocumentsEngine} from '../../lib/documents';
 import {getDocumentsState,patchDocuments,resetDocuments,stepZoom,useDocuments} from '../../lib/documents/store';
 import '../../lib/documents/guards';
 import {CELL_BASE} from '../../lib/documents/edit';
-import {clearCaret,deleteAtCaret,dragTo,editParagraph,getEngine,moveCaret,pasteText,settleDocument,switchDocument,pointerAt,redoEdit,selectAllText,setAlign,shiftListLevel,stepFontSize,stepIndent,toggleFormat,selectedText,splitAtCaret,syncGeometry,typeText,undoEdit} from '../../lib/documents/session';
+import {clearCaret,deleteAtCaret,dragTo,editParagraph,getEngine,moveCaret,pasteText,settleDocument,switchDocument,pointerAt,redoEdit,selectAllText,setAlign,shiftListLevel,tabInCell,stepFontSize,stepIndent,toggleFormat,selectedText,splitAtCaret,syncGeometry,typeText,undoEdit} from '../../lib/documents/session';
 import {saveCopy} from '../../lib/documents/saveCopy';
 import {confirmDocumentsSaveCopy,patchDocumentsExportUi,registerDocumentsExport,useDocumentsExportUi} from '../../lib/documents/exportBridge';
 import {executeCommand} from '../../lib/commands';
@@ -72,6 +72,7 @@ function CaretInput({left,top}:{left:number;top:number}){
    if(mod&&!e.shiftKey&&!e.altKey&&e.key.length===1&&'lerj'.includes(e.key.toLowerCase())){e.preventDefault();void setAlign(({l:'left',e:'center',r:'right',j:'justify'} as const)[e.key.toLowerCase() as 'l'|'e'|'r'|'j']);return;}
    if(mod&&(e.key==='['||e.key===']')){e.preventDefault();void stepIndent(e.key===']'?1:-1);return;}
    if(e.key==='Tab'&&!mod&&!e.altKey){const l=getDocumentsState().para?.list;if(l==='bullet'||l==='numbered'){e.preventDefault();void shiftListLevel(e.shiftKey?-1:1);return;}}
+   if(e.key==='Tab'&&!mod&&!e.altKey&&(getDocumentsState().caret?.block??0)>=CELL_BASE){e.preventDefault();void tabInCell(e.shiftKey?-1:1);return;}
    if(mod&&e.key.toLowerCase()==='z'){e.preventDefault();void(e.shiftKey?redoEdit():undoEdit());return;}
    if(mod&&e.key.toLowerCase()==='y'){e.preventDefault();void redoEdit();}
   }}
