@@ -326,3 +326,4 @@ This entry collects the beta.6 wave and the features already present in
 - Sound session follow-up: native-folder JSON save with collision/revision/readback checks, work-registry and native close protection, undoable track removal and direct fade handles. Real compressed-source validation remains a desktop/CI check.
 - Sound B1: ordered per-track/master insert racks, bypass and local presets; version-2 session migration and float-PCM DSP bridge. Active DSP verification requires rebuilt WASM/CI; no new dependencies.
 - Sound B2: real revision-bound stereo spectrum and sample-peak analysis; pinned meter bridge for loudness/true peak, clearly unavailable without built WASM and unverified until reference validation.
+- Sound B3: reviewed custom LUFS/true-peak targets with explicit optional limiting, remeasured preview, accept/cancel and stale-output guards. Requires actual built meter facts; unavailable measurement disables the action.

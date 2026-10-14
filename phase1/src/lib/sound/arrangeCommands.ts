@@ -2,7 +2,7 @@ import {validateRack} from './rack';
 import {t} from '../i18n';
 import {registerCommandSpec} from '../commandBridge';
 import type {CommandSpec} from '../commandSpec';
-import {editArrangement,undoArrangement,redoArrangement,getArrangementState,renderSession,exportArrangement,downloadArrangement,saveArrangementNative} from './arrangeStore';
+import {editArrangement,undoArrangement,redoArrangement,getArrangementState,renderSession,exportArrangement,downloadArrangement,saveArrangementNative,previewMaster,acceptMasterPreview,cancelMasterPreview} from './arrangeStore';
 import {findArrangeClip,splitArrangeClip,newTrack} from './arrangement';
 const schema=(properties:Record<string,unknown>,required=Object.keys(properties))=>({type:'object',properties,required,additionalProperties:false});
 const str={type:'string'},num={type:'number'},bool={type:'boolean'};
@@ -22,6 +22,7 @@ export function registerArrangeCommands(){
  add('marker.delete',p=>editArrangement(s=>{s.markers=s.markers.filter(m=>m.id!==p.id);}),schema({id:str})),
  add('loop.set',p=>editArrangement(s=>{s.loop=p.enabled?{start:p.start,end:p.end}:null;}),schema({enabled:bool,start:num,end:num})),
  add('rack.set',p=>editArrangement(s=>{const rack=validateRack(p.rack);if(p.target==='master')s.masterRack=rack;else{const track=s.tracks.find(t=>t.id===p.target);if(!track)throw Error('Rack target no longer exists');track.rack=rack;}}),schema({target:str,rack:{type:'object'}})),
+ add('master.preview',p=>previewMaster(p),schema({lufs:num,ceilingDb:num,limit:bool})),add('master.accept',acceptMasterPreview),add('master.cancel',cancelMasterPreview),
  add('undo',undoArrangement),add('redo',redoArrangement),add('render',renderSession),add('export',exportArrangement),add('save',downloadArrangement),add('saveNative',saveArrangementNative)
  ];const off=specs.map(spec=>registerCommandSpec(spec));return()=>off.forEach(f=>f());
 }

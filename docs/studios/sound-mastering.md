@@ -1,0 +1,13 @@
+# Sound mastering review (B3)
+
+The mastering panel accepts a custom integrated LUFS target (-36 to -5), a true-peak ceiling (-12 to 0 dBTP), and explicit optional limiting. There are no implied Spotify/broadcast/platform presets. The action requires a current render with actual integrated loudness and true-peak facts from the built pinned meter. Missing WASM, silence and insufficient measurement disable mastering rather than substituting peak/RMS or fixture values.
+
+Preview rerenders the unchanged session/racks in the worker, measures it, calculates one bounded gain pass (maximum 24 dB up/down), and optionally runs the existing pinned `maximizer` with neutral threshold and the chosen ceiling. Gain alone that would exceed the measured ceiling is rejected unless the user explicitly selected limiting. Limiting changes dynamics and is labelled. This is not a claim that the upstream limiter is true-peak transparent or certified.
+
+The worker measures the actual resulting PCM again. The review shows before/after LUFS and dBTP, gain, audition and whether the output reached ±0.5 LU and a +0.05 dB true-peak tolerance, with no sample over full scale. If the target was missed, acceptance is blocked: adjust and preview again. No automatic target-success claim comes from gain arithmetic. The limiter may not meet both targets in one pass; there is no undisclosed iterative processing.
+
+Accept promotes the auditioned preview WAV to the same current output used for export; cancel keeps the original render. Any session edit, source/rack change or normal rerender clears the preview. Stale revisions cannot be accepted. Mastering is an explicit output operation, not a persisted session rack edit: saving JSON stores the arrangement/racks, not this accepted output or target settings. Export the accepted WAV to retain the mastered result. Reopening or rendering normally returns to the session mix.
+
+Tests cover gain-copy neutrality, explicit limiter selection, ceiling conflicts, missing facts, actual post-measurement acceptance and target misses. These tests use injected meter/limiter doubles for decision logic. They do not prove the native meter or limiter. The browser harness verifies the unavailable-meter safety state and disabled action, not a fake successful mastering pass. Independent reference vectors, built WASM runtime, true-peak/limiter transients and native playback remain CI/desktop validation work. All visible meter results remain labelled unverified.
+
+Roadmap-Delta B3: reviewable custom-target mastering, bounded gain, explicit optional pinned limiter, actual final measurement, audition/accept/cancel and shared exported WAV. No Stage C, new dependency, recording, speech or codec change.
