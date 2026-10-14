@@ -1,4 +1,5 @@
 import {useEffect,useRef,useState,type KeyboardEvent as ReactKeyboardEvent,type PointerEvent} from 'react';
+import {KeyStretch} from './KeyStretch';
 import {styleKeyShiftEdits} from '../../lib/animation/edit';
 import {styleKeyLanes,pruneStyleKeys,keysInRect,toggleStyleKey,type StyleLaneId} from '../../lib/animation/keyLanes';
 import {Play,Pause,Undo2,Redo2,Eye,EyeOff,Lock,Unlock,ZoomIn,ZoomOut,ArrowUp,ArrowDown,ArrowUpDown,EyeOff as ShyIcon,ChevronDown,ChevronRight,ChevronsUpDown} from '../../lib/icons';
@@ -285,6 +286,7 @@ const marquee=(e:PointerEvent<SVGSVGElement>)=>{
   </div>
   <div className="flex max-h-16 shrink-0 flex-wrap items-center gap-1 overflow-auto border-b border-subtle px-2 py-1" role="group" aria-label={t('animation.markers.title')}>
    <Button size="tiny" variant="ghost" onClick={()=>run('animation.marker.add',{label:timecode(at,comp.fps)})}>{t('animation.markers.add')}</Button>
+   <KeyStretch count={sel.length}/>
    <Button size="tiny" variant="ghost" disabled={sel.length===0||!(comp.markers??[]).length} title={t('animation.keys.quantize.hint')} onClick={()=>run('animation.keys.quantize')} data-testid="animation-keys-quantize">{t('animation.keys.quantize')}</Button>
    <Button size="tiny" variant="ghost" disabled={!(comp.markers??[]).some(m=>m.t<at)} onClick={()=>animationSession().setView({playhead:Math.max(...(comp.markers??[]).filter(m=>m.t<at).map(m=>m.t))})}>{t('animation.markers.previous')}</Button>
    <Button size="tiny" variant="ghost" disabled={!(comp.markers??[]).some(m=>m.t>at)} onClick={()=>animationSession().setView({playhead:Math.min(...(comp.markers??[]).filter(m=>m.t>at).map(m=>m.t))})}>{t('animation.markers.next')}</Button>

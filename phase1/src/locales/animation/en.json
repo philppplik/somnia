@@ -758,5 +758,12 @@
  "animation.rig.hint": "Tick layers. Chain follows the tick order (1 leads). The pose stays as it is at the playhead. One undo step.",
  "cmd.animation.rig.chain": "Parent layers as a chain",
  "cmd.animation.rig.group": "Group layers under a new null",
- "cmd.animation.rig.release": "Release layers from their parents"
+ "cmd.animation.rig.release": "Release layers from their parents",
+ "animation.keys.stretch": "Stretch keys",
+ "animation.keys.stretch.percent": "Stretch percent",
+ "animation.keys.stretch.anchor": "Stretch around",
+ "animation.keys.stretch.first": "First key",
+ "animation.keys.stretch.playhead": "Playhead",
+ "animation.keys.stretch.hint": "Scale the selected keys in time. 200 doubles the gaps, 50 halves them. Keys that would leave the composition or collide stay put.",
+ "cmd.animation.keys.stretch": "Stretch the selected keys in time"
 }

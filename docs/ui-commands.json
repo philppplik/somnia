@@ -785,6 +785,20 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.keys.stretch",
+      "title": "Stretch the selected keys in time",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keys",
+        "scale",
+        "stretch",
+        "time"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.layer.add",
       "title": "Add layer",
       "category": "Insert",

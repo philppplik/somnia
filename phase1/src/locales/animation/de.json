@@ -758,5 +758,12 @@
  "animation.rig.hint": "Ebenen ankreuzen. Die Kette folgt der Reihenfolge (1 führt). Die Pose am Abspielkopf bleibt. Ein Rückgängig-Schritt.",
  "cmd.animation.rig.chain": "Ebenen als Kette verknüpfen",
  "cmd.animation.rig.group": "Ebenen unter neuer Null gruppieren",
- "cmd.animation.rig.release": "Ebenen von ihren Eltern lösen"
+ "cmd.animation.rig.release": "Ebenen von ihren Eltern lösen",
+ "animation.keys.stretch": "Keys dehnen",
+ "animation.keys.stretch.percent": "Dehnung in Prozent",
+ "animation.keys.stretch.anchor": "Dehnen um",
+ "animation.keys.stretch.first": "Erster Key",
+ "animation.keys.stretch.playhead": "Abspielkopf",
+ "animation.keys.stretch.hint": "Skaliert die gewählten Keys in der Zeit. 200 verdoppelt die Abstände, 50 halbiert sie. Keys, die aus der Komposition fallen oder kollidieren würden, bleiben stehen.",
+ "cmd.animation.keys.stretch": "Gewählte Keys in der Zeit dehnen"
 }

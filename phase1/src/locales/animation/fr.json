@@ -758,5 +758,12 @@
  "animation.rig.hint": "Cochez des calques. La chaîne suit l'ordre (1 mène). La pose à la tête de lecture reste. Une seule étape d'annulation.",
  "cmd.animation.rig.chain": "Lier des calques en chaîne",
  "cmd.animation.rig.group": "Grouper des calques sous un nouveau nul",
- "cmd.animation.rig.release": "Détacher des calques de leurs parents"
+ "cmd.animation.rig.release": "Détacher des calques de leurs parents",
+ "animation.keys.stretch": "Étirer les clés",
+ "animation.keys.stretch.percent": "Pourcentage d'étirement",
+ "animation.keys.stretch.anchor": "Étirer autour de",
+ "animation.keys.stretch.first": "Première clé",
+ "animation.keys.stretch.playhead": "Tête de lecture",
+ "animation.keys.stretch.hint": "Met à l'échelle les clés choisies dans le temps. 200 double les écarts, 50 les divise par deux. Les clés qui sortiraient de la composition ou entreraient en collision ne bougent pas.",
+ "cmd.animation.keys.stretch": "Étirer dans le temps les clés choisies"
 }

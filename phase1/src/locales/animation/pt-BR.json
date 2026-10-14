@@ -758,5 +758,12 @@
  "animation.rig.hint": "Marque camadas. A cadeia segue a ordem (1 lidera). A pose na posição atual é mantida. Um passo de desfazer.",
  "cmd.animation.rig.chain": "Vincular camadas em cadeia",
  "cmd.animation.rig.group": "Agrupar camadas sob um novo nulo",
- "cmd.animation.rig.release": "Soltar camadas dos pais"
+ "cmd.animation.rig.release": "Soltar camadas dos pais",
+ "animation.keys.stretch": "Esticar chaves",
+ "animation.keys.stretch.percent": "Percentual de estiramento",
+ "animation.keys.stretch.anchor": "Esticar em torno de",
+ "animation.keys.stretch.first": "Primeira chave",
+ "animation.keys.stretch.playhead": "Cabeça de reprodução",
+ "animation.keys.stretch.hint": "Escala as chaves escolhidas no tempo. 200 dobra os intervalos, 50 reduz pela metade. Chaves que saiam da composição ou colidam ficam onde estão.",
+ "cmd.animation.keys.stretch": "Esticar no tempo as chaves escolhidas"
 }

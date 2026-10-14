@@ -758,5 +758,12 @@
  "animation.rig.hint": "Marca capas. La cadena sigue el orden (1 lidera). La pose en el cabezal se mantiene. Un solo paso de deshacer.",
  "cmd.animation.rig.chain": "Enlazar capas en cadena",
  "cmd.animation.rig.group": "Agrupar capas bajo un nulo nuevo",
- "cmd.animation.rig.release": "Soltar capas de sus padres"
+ "cmd.animation.rig.release": "Soltar capas de sus padres",
+ "animation.keys.stretch": "Estirar claves",
+ "animation.keys.stretch.percent": "Porcentaje de estiramiento",
+ "animation.keys.stretch.anchor": "Estirar alrededor de",
+ "animation.keys.stretch.first": "Primera clave",
+ "animation.keys.stretch.playhead": "Cabezal",
+ "animation.keys.stretch.hint": "Escala las claves elegidas en el tiempo. 200 duplica los intervalos, 50 los reduce a la mitad. Las claves que salgan de la composición o colisionen no se mueven.",
+ "cmd.animation.keys.stretch": "Estirar en el tiempo las claves elegidas"
 }
