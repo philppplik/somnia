@@ -164,5 +164,11 @@
  "studio3d.selection.delete": "Eliminar selección",
  "cmd.studio3d.save": "Guardar la escena 3D",
  "cmd.studio3d.selection.delete": "Eliminar los objetos 3D seleccionados",
- "cmd.studio3d.selection.duplicate": "Duplicar los objetos 3D seleccionados"
+ "cmd.studio3d.selection.duplicate": "Duplicar los objetos 3D seleccionados",
+ "studio3d.save.embed": "Guardar con el HDR incluido",
+ "studio3d.recent.title": "Escenas recientes",
+ "studio3d.recent.autosave": "Autoguardado: {name}",
+ "studio3d.recent.clear": "Borrar escenas recientes",
+ "cmd.studio3d.recent.open": "Abrir una escena 3D reciente",
+ "cmd.studio3d.recent.clear": "Borrar escenas 3D recientes y el autoguardado"
 }

@@ -22,8 +22,10 @@ import {readProjectUnit,writeProjectUnit} from '../../lib/studio3d/projectPrefs'
 import {toggleSelection,marqueeRect,inRect,turntablePlan,frameName,exportFileName,unitScale,isUnit,isMeshFormat,mergeSnap,snapTo,stlUnitHint,mtlReferences,mtlTextures,clampRenderSize,MAX_MTL_BYTES,MAX_TEXTURE_BYTES,MAX_TEXTURE_FILES,SnapError,mergeEnv,envFormatFor,nudgeFor,EnvError,modelFormatFor,readModelHeader,externalResources,ModelError,boundsValid,boundsCenter,boundsRadius,frameDistance,clipPlanes} from '../../lib/studio3d/model';
 import type {Bounds} from '../../lib/studio3d/model';
 import {Stage,beginGroupDrag,applyGroupDrag,collectNodeExtras,applyNodeExtras,type GroupDragMember,type TransformSnapshot} from '../../lib/studio3d/stage';
-import {parseDocument,buildDocument,sceneBytes,DocumentError} from '../../lib/studio3d/document';
+import {parseDocument,buildDocument,sceneBytes,fromBase64,DocumentError} from '../../lib/studio3d/document';
 import {registerStudio3DController} from '../../lib/studio3d/commands';
+import {rememberScene,forgetAutosave} from '../../lib/studio3d/recentSession';
+import {autosaveDue} from '../../lib/studio3d/recent';
 import {patchStudio3D,resetStudio3D,getStudio3DState,useStudio3D} from '../../lib/studio3d/session';
 
 const DEFAULT_DIR=new THREE.Vector3(1,0.75,1).normalize();
@@ -263,6 +265,7 @@ export default function Viewport3D(){
      if(ticket!==opening||disposed)return;
      const nodes=[...gltf.scene.children];const applied=applyNodeExtras(gltf.scene,doc.extras);
      selectionReset();stage.loadMany(nodes);
+     if(doc.envMap){customEnv={name:doc.envMap.name,bytes:fromBase64(doc.envMap.data).slice().buffer};envCache.delete('custom');}
      let env=doc.env;let notice=applied.skipped?'Some saved light settings could not be restored.':'';
      if(env.preset==='custom'&&!(customEnv&&customEnv.name===env.customName)){notice=`The scene used the environment map ${env.customName}. Open it again with Open HDR; the studio lighting is used for now.`;env={...env,preset:'studio'};}
      patchStudio3D({status:'ready',name:primary.name,error:'',format:'SOM3D',bytes:primary.size,blank:false,confirmReplace:null,notice,unitHint:null,unit:doc.unit,env,snap:doc.snap});
@@ -362,16 +365,40 @@ export default function Viewport3D(){
    applySet(copies.map(c=>c.id),copies[copies.length-1].id);return copies.map(c=>c.id);
   };
   /** Saves the scene as a .som3d document: settings as JSON, geometry as an embedded or separate GLB. */
-  const saveDocument=async(sidecar=false)=>{
+  /** The scene as .som3d text. Autosave and recent files always embed the geometry so they open without a sidecar. */
+  const sceneText=async(sidecar:string|undefined,embedEnv:boolean,glb:Uint8Array)=>{
+   const st=getStudio3DState();
+   return buildDocument({glb,sidecar,envMap:embedEnv&&customEnv?{name:customEnv.name,bytes:new Uint8Array(customEnv.bytes)}:undefined,unit:st.unit,env:st.env,snap:st.snap,extras:collectNodeExtras(holder),
+    view:{position:camera.position.toArray() as [number,number,number],target:controls.target.toArray() as [number,number,number],fov:camera.fov}});
+  };
+  const sceneGlb=async()=>new Uint8Array(await new GLTFExporter().parseAsync([...holder.children],{binary:true,onlyVisible:false}) as ArrayBuffer);
+  /** Saves the scene as a .som3d document: settings as JSON, geometry as an embedded or separate GLB. */
+  const saveDocument=async(sidecar=false,embedEnv=false)=>{
    if(!holder.children.length)throw Object.assign(new Error('There is nothing to save. Open a model or add a shape first.'),{expected:true});
    const st=getStudio3DState();const name=stem(st.name||'scene');const glbName=`${name}.scene.glb`;
-   const glb=new Uint8Array(await new GLTFExporter().parseAsync([...holder.children],{binary:true,onlyVisible:false}) as ArrayBuffer);
-   const text=buildDocument({glb,sidecar:sidecar?glbName:undefined,unit:st.unit,env:st.env,snap:st.snap,extras:collectNodeExtras(holder),
-    view:{position:camera.position.toArray() as [number,number,number],target:controls.target.toArray() as [number,number,number],fov:camera.fov}});
+   if(embedEnv&&!(st.env.preset==='custom'&&customEnv))throw Object.assign(new Error('There is no custom environment map to embed. Open an HDR first.'),{expected:true});
+   const glb=await sceneGlb();const text=await sceneText(sidecar?glbName:undefined,embedEnv,glb);
    download(new Blob([text],{type:'application/json'}),`${name}.som3d`);
    if(sidecar)download(new Blob([glb as BlobPart],{type:'model/gltf-binary'}),glbName);
    patchStudio3D({name:`${name}.som3d`});stage.markSaved();
+   // Keep a self-contained copy in this browser for the recent list. Never blocks or fails the save.
+   void (async()=>{try{await rememberScene(`${name}.som3d`,sidecar?await sceneText(undefined,embedEnv,glb):text,false);}catch{/* no storage */}})();
   };
+  /** Autosave: a quiet period after the last change, one replaceable slot, never while a render runs. */
+  let lastChange=0,lastAuto=0,autoTimer:ReturnType<typeof setTimeout>|null=null,autoBusy=false;
+  const runAutosave=async()=>{
+   autoTimer=null;const st=getStudio3DState();
+   if(disposed||autoBusy||!holder.children.length||st.status!=='ready'||st.render)return;
+   if(!autosaveDue({dirty:stage.dirty,lastChange,lastSave:lastAuto,now:Date.now()})){if(stage.dirty&&lastChange>lastAuto)autoTimer=setTimeout(()=>void runAutosave(),1500);return;}
+   autoBusy=true;
+   try{
+    const glb=await sceneGlb();const text=await sceneText(undefined,false,glb);lastAuto=Date.now();
+    const r=await rememberScene(stem(st.name||'scene')+'.som3d',text,true);
+    if(!r.ok&&r.reason==='too-large'&&!getStudio3DState().notice)patchStudio3D({notice:'This scene is too large to autosave in the browser. Use Save.'});
+   }catch{/* autosave is best effort */}finally{autoBusy=false;}
+  };
+  const scheduleAutosave=()=>{if(!stage.dirty)return;lastChange=Date.now();if(autoTimer)clearTimeout(autoTimer);autoTimer=setTimeout(()=>void runAutosave(),4200);};
+  const offAuto=stage.onChange(scheduleAutosave);
   const projectName=()=>{try{return getAppState().projectName||'';}catch{return '';}};
   const loadUnit=()=>{try{patchStudio3D({unit:readProjectUnit(localStorage,projectName())});}catch{/* keep current */}};
   loadUnit();
@@ -461,7 +488,7 @@ export default function Viewport3D(){
   const cv=renderer.domElement;cv.addEventListener('pointerdown',onDownCapture,true);cv.addEventListener('pointerdown',onDown);window.addEventListener('pointermove',onMove);window.addEventListener('pointercancel',endMarquee);cv.addEventListener('pointerup',onUp);cv.addEventListener('keydown',onKey);
   sync();frameAll();void applyEnv();
   return()=>{
-   disposed=true;opening++;off();cancelAnimationFrame(frame);ro.disconnect();controls.dispose();
+   disposed=true;opening++;off();offAuto();if(autoTimer)clearTimeout(autoTimer);cancelAnimationFrame(frame);ro.disconnect();controls.dispose();
    cv.removeEventListener('pointerdown',onDownCapture,true);cv.removeEventListener('pointerdown',onDown);window.removeEventListener('pointermove',onMove);window.removeEventListener('pointercancel',endMarquee);endMarquee();cv.removeEventListener('pointerup',onUp);cv.removeEventListener('keydown',onKey);
    if(getStudio3DState().status==='loading')patchStudio3D({status:stage.root.children.length?'ready':'idle',confirmReplace:null});
    gizmo.detach();gizmo.dispose();offStage();clearSelection();for(const h of helpers.values())h.dispose();grid.geometry.dispose();(grid.material as THREE.Material).dispose();for(const t of envTargets)t.dispose();envCache.clear();pmrem.dispose();renderer.dispose();renderer.forceContextLoss();

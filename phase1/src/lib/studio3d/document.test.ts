@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {buildDocument,parseDocument,migrate,sceneBytes,toBase64,fromBase64,DocumentError,DOC_VERSION,type Migrations} from './document';
+import {MAX_EMBED_ENV_BYTES,buildDocument,parseDocument,migrate,sceneBytes,toBase64,fromBase64,DocumentError,DOC_VERSION,type Migrations} from './document';
 import {defaultEnv,defaultSnap} from './model';
 const glb=new Uint8Array([0x67,0x6c,0x54,0x46,2,0,0,0,12,0,0,0]);
 const base=()=>({glb,unit:'mm' as const,env:{...defaultEnv(),preset:'sky' as const,intensity:1.5,background:true},snap:{...defaultSnap(),on:true,move:0.5},view:{position:[1,2,3] as [number,number,number],target:[0,0,0] as [number,number,number],fov:45},extras:[{i:0,shadow:true},{i:3,area:{position:[1,2,3] as [number,number,number],quaternion:[0,0,0,1] as [number,number,number,number],scale:[1,1,1] as [number,number,number],color:'#ffffff',intensity:6,width:2,height:3,name:'Area light'}}]});
@@ -48,4 +48,23 @@ test('migrations run in order and a missing step is an error',()=>{
  const m:Migrations={1:d=>({...d,renamed:d.old}),2:d=>({...d,third:true})};
  const out=migrate({version:1,old:'x'},m,3);assert.equal(out.version,3);assert.equal(out.renamed,'x');assert.equal(out.third,true);
  assert.throws(()=>migrate({version:1},{},2),/old format/);assert.throws(()=>migrate({version:4},m,3),/newer version/);
+});
+
+test('a custom environment map embeds and round-trips',()=>{
+ const hdr=new Uint8Array([35,63,82,65,68,73,65,78,67,69,10,1,2,3]);
+ const d=parseDocument(buildDocument({...base(),env:{...defaultEnv(),preset:'custom',customName:'x.hdr'},envMap:{name:'C:\\maps\\Sky.HDR',bytes:hdr}}));
+ assert.ok(d.envMap);assert.equal(d.envMap.name,'Sky.HDR');assert.ok(Buffer.from(fromBase64(d.envMap.data)).equals(Buffer.from(hdr)));
+ assert.equal(d.env.preset,'custom');assert.equal(d.env.customName,'Sky.HDR');
+ assert.equal(parseDocument(buildDocument(base())).envMap,null);
+});
+test('embedding rejects a wrong type or a map over the limit',()=>{
+ assert.throws(()=>buildDocument({...base(),envMap:{name:'a.png',bytes:new Uint8Array(4)}}),DocumentError);
+ assert.throws(()=>buildDocument({...base(),envMap:{name:'a.hdr',bytes:new Uint8Array(MAX_EMBED_ENV_BYTES+1)}}),DocumentError);
+ assert.doesNotThrow(()=>buildDocument({...base(),envMap:{name:'a.exr',bytes:new Uint8Array(1024)}}));
+});
+test('reading rejects a damaged, oversized or mistyped embedded map',()=>{
+ const doc=(envMap:unknown)=>JSON.stringify({format:'somnia-3d',version:1,scene:{uri:'a.glb'},envMap});
+ for(const bad of [{name:'a.hdr',encoding:'base64',data:'!!!!'},{name:'a.png',encoding:'base64',data:'AAAA'},{name:'a.hdr',encoding:'hex',data:'AAAA'},{name:'a.hdr',encoding:'base64',data:'A'.repeat(Math.ceil(MAX_EMBED_ENV_BYTES/3)*4+4)},'x',[]])
+  assert.throws(()=>parseDocument(doc(bad)),DocumentError);
+ assert.equal(parseDocument(doc(null)).envMap,null);
 });
