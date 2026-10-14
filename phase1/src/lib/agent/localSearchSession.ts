@@ -18,15 +18,15 @@ export class LocalSearchSession {
  private discard(){this.buildAbort?.abort();this.queryAbort?.abort();this.queryGeneration++;this.lifecycle=invalidateLocalIndex(this.lifecycle);this.vectors=null;this.source=null;}
  cancel(){this.discard();}
  close(){this.discard();this.closed=true;}
- async build(signal:AbortSignal,maxChunkBytes=2048,onProgress?:(value:LocalBuildProgress)=>void):Promise<void>{
-  this.available();this.discard();signal.throwIfAborted();const initial=this.current();if(initial.endpoint!==this.adapter.endpoint)throw Error('Embedding adapter endpoint mismatch');
+ async build(signal:AbortSignal,maxChunkBytes=2048,onProgress?:(value:LocalBuildProgress)=>void,batchSize=32):Promise<void>{
+  this.available();if(![8,32].includes(batchSize))throw Error('Invalid embedding batch size');this.discard();signal.throwIfAborted();const initial=this.current();if(initial.endpoint!==this.adapter.endpoint)throw Error('Embedding adapter endpoint mismatch');
   const controller=new AbortController();this.buildAbort=controller;const abort=()=>controller.abort();signal.addEventListener('abort',abort,{once:true});if(signal.aborted)abort();
   let generation:number|undefined;
   try{
    onProgress?.({stage:'preparing',completed:0,total:0,sources:initial.sources.length});const prepared=await prepareLocalIndexChunks(initial.sources,maxChunkBytes);controller.signal.throwIfAborted();if(this.buildAbort!==controller)throw Error('Build replaced');this.assertSame(initial);
    const descriptor:LocalIndexDescriptor={endpoint:initial.endpoint,model:initial.model,digest:initial.digest,dimensions:initial.dimensions,sources:prepared.sources.map(({id,revision})=>({id,revision}))};
    this.lifecycle=beginLocalIndex(this.lifecycle,descriptor);generation=this.lifecycle.generation;
-   let completed=0;onProgress?.({stage:'embedding',completed:0,total:prepared.chunks.length,sources:initial.sources.length});const vectors=await this.adapter.embedPrepared(descriptor,prepared,controller.signal,value=>{if(controller.signal.aborted||this.buildAbort!==controller||generation!==this.lifecycle.generation)return;this.assertSame(initial);completed=validBatchProgress(value,prepared.chunks.length,completed);onProgress?.({stage:'embedding',completed,total:prepared.chunks.length,sources:initial.sources.length});});controller.signal.throwIfAborted();if(this.buildAbort!==controller||generation!==this.lifecycle.generation)throw Error('Build replaced');
+   let completed=0;onProgress?.({stage:'embedding',completed:0,total:prepared.chunks.length,sources:initial.sources.length});const vectors=await this.adapter.embedPrepared(descriptor,prepared,controller.signal,value=>{if(controller.signal.aborted||this.buildAbort!==controller||generation!==this.lifecycle.generation)return;this.assertSame(initial);completed=validBatchProgress(value,prepared.chunks.length,completed);onProgress?.({stage:'embedding',completed,total:prepared.chunks.length,sources:initial.sources.length});},batchSize);controller.signal.throwIfAborted();if(this.buildAbort!==controller||generation!==this.lifecycle.generation)throw Error('Build replaced');
    this.assertSame(initial);onProgress?.({stage:'validating',completed:prepared.chunks.length,total:prepared.chunks.length,sources:initial.sources.length});controller.signal.throwIfAborted();if(this.buildAbort!==controller)throw Error('Build replaced');this.lifecycle=finishLocalIndex(this.lifecycle,generation,descriptor);this.vectors=vectors;this.source=initial;
   }catch(error){if(this.buildAbort===controller)this.discard();throw error;}
   finally{signal.removeEventListener('abort',abort);if(this.buildAbort===controller)this.buildAbort=null;controller.abort();}
