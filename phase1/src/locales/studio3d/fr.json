@@ -839,5 +839,12 @@
  "cmd.studio3d.mesh.taper": "Effiler un maillage 3D le long d'un axe",
  "studio3d.mesh.taper": "Effiler",
  "studio3d.mesh.taperAxis": "Axe d'effilage",
- "studio3d.mesh.taperFactor": "Facteur d'effilage à l'extrémité"
+ "studio3d.mesh.taperFactor": "Facteur d'effilage à l'extrémité",
+ "studio3d.hist.spin_one": "Révolution de {name}",
+ "studio3d.hist.spin_other": "Révolution de {count} objets",
+ "cmd.studio3d.mesh.spin": "Faire tourner un maillage 3D autour d'un axe (tour)",
+ "studio3d.mesh.spin": "Révolution",
+ "studio3d.mesh.spinAxis": "Axe de révolution",
+ "studio3d.mesh.spinAngle": "Angle de révolution en degrés",
+ "studio3d.mesh.spinSteps": "Pas de révolution"
 }

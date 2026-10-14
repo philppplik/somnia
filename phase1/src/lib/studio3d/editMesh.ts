@@ -1086,3 +1086,66 @@ export function taperMesh(m:MeshData,axis:MirrorAxis,factor:number):MeshData{
  const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
  check(out);return out;
 }
+
+/** Revolves the mesh around an axis through the given center (lathe/spin). Every border edge sweeps a wall of quads across the steps; the original faces cap the start and, for partial turns, the end as well; a full 360 degree turn welds the last ring back onto the first instead of duplicating it. UVs are copied onto every ring, sculpt masks are dropped (topology changes), explicit normals are dropped (rebuilt smooth on the stage). */
+export function spinMesh(m:MeshData,axis:MirrorAxis,degrees:number,steps:number,center:[number,number,number]):MeshData{
+ check(m);
+ if(!Number.isFinite(degrees)||degrees===0||Math.abs(degrees)>360)throw new EditError('The spin angle must be a non-zero number of degrees between -360 and 360.');
+ if(!Number.isInteger(steps)||steps<1||steps>128)throw new EditError('The spin steps must be a whole number between 1 and 128.');
+ if(!Array.isArray(center)||center.length!==3||center.some(n=>!Number.isFinite(n)))throw new EditError('The spin center must be three numbers.');
+ const ai=axis==='x'?0:axis==='y'?1:2;
+ const u=(ai+1)%3,w=(ai+2)%3;
+ const nv=m.positions.length/3,nt=m.index.length/3;
+ // Directed border edges (position-keyed, used once) - these sweep the walls.
+ const pk:string[]=[];
+ for(let v=0;v<nv;v++)pk.push(`${Math.round(m.positions[v*3]*1e6)},${Math.round(m.positions[v*3+1]*1e6)},${Math.round(m.positions[v*3+2]*1e6)}`);
+ const use=new Map<string,{a:number;b:number;n:number}>();
+ for(let f=0;f<nt;f++)for(let e=0;e<3;e++){
+  const a=m.index[f*3+e],b=m.index[f*3+(e+1)%3];
+  const ka=pk[a],kb=pk[b];if(ka===kb)continue;
+  const k=ka<kb?`${ka}|${kb}`:`${kb}|${ka}`;
+  const u0=use.get(k);if(u0)u0.n++;else use.set(k,{a,b,n:1});
+ }
+ const borders=[...use.values()].filter(x=>x.n===1);
+ if(!borders.length)throw new EditError('The mesh has no open border edges to sweep.');
+ const full=Math.abs(Math.abs(degrees)-360)<1e-9;
+ const rings=full?steps:steps+1;
+ const fwd=degrees>0;
+ const positions:number[]=new Array(rings*nv*3);
+ const uvs:number[]|undefined=m.uvs?new Array(rings*nv*2):undefined;
+ for(let r=0;r<rings;r++){
+  const rot=degrees*Math.PI/180*r/steps;
+  const c=Math.cos(rot),s=Math.sin(rot);
+  for(let v=0;v<nv;v++){
+   const i=(r*nv+v)*3;
+   const du=m.positions[v*3+u]-center[u],dw=m.positions[v*3+w]-center[w];
+   positions[i+ai]=m.positions[v*3+ai];
+   positions[i+u]=center[u]+du*c-dw*s;
+   positions[i+w]=center[w]+du*s+dw*c;
+   if(uvs){uvs[(r*nv+v)*2]=m.uvs![v*2];uvs[(r*nv+v)*2+1]=m.uvs![v*2+1];}
+  }
+ }
+ const index:number[]=[];
+ // Caps (partial turns only; a full turn's cross-section faces would be interior). The cap facing against the sweep keeps the original winding, the far cap flips, so the solid points outward.
+ if(!full){
+  for(let f=0;f<nt;f++){
+   const a=m.index[f*3],b=m.index[f*3+1],c=m.index[f*3+2];
+   if(fwd)index.push(a,b,c);else index.push(a,c,b);
+  }
+  const o=(rings-1)*nv;
+  for(let f=0;f<nt;f++){
+   const a=o+m.index[f*3],b=o+m.index[f*3+1],c=o+m.index[f*3+2];
+   if(fwd)index.push(a,c,b);else index.push(a,b,c);
+  }
+ }
+ // Swept walls: each border edge a->b (as the surface uses it) quilts a strip between consecutive rings, traversed opposite the surface so the wall points outward.
+ for(const e of borders)for(let r=0;r<steps;r++){
+  const r2=(r+1)%rings;
+  if(full||r<rings-1){
+   const A=r*nv+e.a,B=r*nv+e.b,A2=r2*nv+e.a,B2=r2*nv+e.b;
+   if(fwd)index.push(B,A,A2,B,A2,B2);else index.push(A,B,B2,A,B2,A2);
+  }
+ }
+ const out:MeshData=uvs?{positions,index,uvs}:{positions,index};
+ check(out);return out;
+}

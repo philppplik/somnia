@@ -839,5 +839,12 @@
  "cmd.studio3d.mesh.taper": "Taper a 3D mesh along an axis",
  "studio3d.mesh.taper": "Taper",
  "studio3d.mesh.taperAxis": "Taper axis",
- "studio3d.mesh.taperFactor": "Taper factor at the far end"
+ "studio3d.mesh.taperFactor": "Taper factor at the far end",
+ "studio3d.hist.spin_one": "Spin {name}",
+ "studio3d.hist.spin_other": "Spin {count} objects",
+ "cmd.studio3d.mesh.spin": "Revolve a 3D mesh around an axis (lathe)",
+ "studio3d.mesh.spin": "Spin",
+ "studio3d.mesh.spinAxis": "Spin axis",
+ "studio3d.mesh.spinAngle": "Spin angle in degrees",
+ "studio3d.mesh.spinSteps": "Spin steps"
 }

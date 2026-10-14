@@ -1,4 +1,5 @@
 # Unreleased: 3D Studio P0
+- 3D Studio: spin revolves meshes around an axis (border edges sweep the walls, partial turns get caps, full turns weld the seam), with undo, from the mesh tools or `studio3d.mesh.spin`.
 - 3D Studio: taper scales meshes along an axis from 1 to a factor across their extent (mask respected), with undo, from the mesh tools or `studio3d.mesh.taper`.
 - 3D Studio: twist rotates meshes around an axis, angle spread across the mesh extent (mask respected), with undo, from the mesh tools or `studio3d.mesh.twist`.
 - 3D Studio: bisect cuts meshes with an axis plane and keeps both halves (optional cap fill, UVs carried), with undo, from the mesh tools or `studio3d.mesh.bisect`.

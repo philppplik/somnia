@@ -1627,6 +1627,17 @@ test('3D studio mesh taper: the top of a cube doubles in width and undo restores
  await expect.poll(maxX).toBe(before);
 });
 
+test('3D studio mesh spin: a plane revolves into a larger solid and undo restores it',async({page})=>{
+ await blank(page);
+ await insert(page,'plane',0);
+ const tris=async()=>(await session(page)).stats.triangles;
+ const before=await tris();
+ expect(await run(page,'studio3d.mesh.spin',{axis:'y',degrees:360,steps:12})).toBe(true);
+ await expect.poll(tris).toBeGreaterThan(before*4,'12 swept rings plus caps');
+ expect(await run(page,'studio3d.undo',{})).toBe(true);
+ await expect.poll(tris).toBe(before);
+});
+
 test('3D studio mesh simplify: triangle count drops and undo restores it',async({page})=>{
  await blank(page);
  await insert(page,'sphere',0);

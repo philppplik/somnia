@@ -703,6 +703,9 @@ function MeshTools(){
  const [twDeg,setTwDeg]=useState(90);
  const [tpAxis,setTpAxis]=useState<'x'|'y'|'z'>('z');
  const [tpFactor,setTpFactor]=useState(2);
+ const [spAxis,setSpAxis]=useState<'x'|'y'|'z'>('y');
+ const [spDeg,setSpDeg]=useState(360);
+ const [spSteps,setSpSteps]=useState(24);
  const [rxFactor,setRxFactor]=useState(0.5);
  const [soOff,setSoOff]=useState(0);
  const set=s.marked.length?s.marked:s.selected!=null?[s.selected]:[];const ready=s.status==='ready'&&set.length>0;
@@ -751,6 +754,11 @@ function MeshTools(){
     {(['x','y','z'] as const).map(a=><option key={a} value={a}>{a.toUpperCase()}</option>)}</NativeSelect>
    <NativeInput type="number" step={0.1} value={tpFactor} aria-label={t('studio3d.mesh.taperFactor')} className="w-20" onChange={e=>setTpFactor(Math.min(10,Math.max(-10,Number(e.currentTarget.value)||0)))}/>
    <Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.mesh.taper',{axis:tpAxis,factor:tpFactor})}>{t('studio3d.mesh.taper')}</Button></div>
+  <div className="flex flex-wrap items-center gap-1"><NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={spAxis} aria-label={t('studio3d.mesh.spinAxis')} onChange={e=>setSpAxis(e.currentTarget.value as 'x'|'y'|'z')}>
+    {(['x','y','z'] as const).map(a=><option key={a} value={a}>{a.toUpperCase()}</option>)}</NativeSelect>
+   <NativeInput type="number" step={30} value={spDeg} aria-label={t('studio3d.mesh.spinAngle')} className="w-20" onChange={e=>setSpDeg(Math.min(360,Math.max(-360,Number(e.currentTarget.value)||0)))}/>
+   <NativeInput type="number" min={1} max={128} step={1} value={spSteps} aria-label={t('studio3d.mesh.spinSteps')} className="w-16" onChange={e=>setSpSteps(Math.min(128,Math.max(1,Math.round(Number(e.currentTarget.value)||1))))}/>
+   <Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.mesh.spin',{axis:spAxis,degrees:spDeg,steps:spSteps})}>{t('studio3d.mesh.spin')}</Button></div>
  </fieldset>;
 }
 

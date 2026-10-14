@@ -839,5 +839,12 @@
  "cmd.studio3d.mesh.taper": "3D-Mesh entlang einer Achse verjüngen",
  "studio3d.mesh.taper": "Verjüngen",
  "studio3d.mesh.taperAxis": "Verjüngungsachse",
- "studio3d.mesh.taperFactor": "Verjüngungsfaktor am Ende"
+ "studio3d.mesh.taperFactor": "Verjüngungsfaktor am Ende",
+ "studio3d.hist.spin_one": "{name} rotieren (Spin)",
+ "studio3d.hist.spin_other": "{count} Objekte rotieren (Spin)",
+ "cmd.studio3d.mesh.spin": "3D-Mesh um eine Achse rotieren (Drehteil)",
+ "studio3d.mesh.spin": "Spin",
+ "studio3d.mesh.spinAxis": "Drehachse",
+ "studio3d.mesh.spinAngle": "Drehwinkel in Grad",
+ "studio3d.mesh.spinSteps": "Drehschritte"
 }

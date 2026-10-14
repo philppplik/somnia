@@ -839,5 +839,12 @@
  "cmd.studio3d.mesh.taper": "Afinar una malla 3D a lo largo de un eje",
  "studio3d.mesh.taper": "Afinar",
  "studio3d.mesh.taperAxis": "Eje de afilado",
- "studio3d.mesh.taperFactor": "Factor de afilado en el extremo"
+ "studio3d.mesh.taperFactor": "Factor de afilado en el extremo",
+ "studio3d.hist.spin_one": "Revolucionar {name}",
+ "studio3d.hist.spin_other": "Revolucionar {count} objetos",
+ "cmd.studio3d.mesh.spin": "Revolucionar una malla 3D alrededor de un eje (torno)",
+ "studio3d.mesh.spin": "Revolucionar",
+ "studio3d.mesh.spinAxis": "Eje de revolución",
+ "studio3d.mesh.spinAngle": "Ángulo de revolución en grados",
+ "studio3d.mesh.spinSteps": "Pasos de revolución"
 }
