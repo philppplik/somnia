@@ -3,8 +3,8 @@ import {t} from '../i18n';
 import {useSyncExternalStore} from 'react';
 import {createInterfaceDocument,parseInterfaceDocument,serializeInterfaceDocument,type InterfaceDocument} from './model';
 export const RECOVERY_KEY='somnia.interface.recovery.v1';
-export interface InterfaceState {document:InterfaceDocument|null;pageId:string|null;selection:string|null;dirty:boolean;past:InterfaceDocument[];future:InterfaceDocument[];recoveryError:string;notice:string;}
-const empty=():InterfaceState=>({document:null,pageId:null,selection:null,dirty:false,past:[],future:[],recoveryError:'',notice:''});
+export interface InterfaceState {document:InterfaceDocument|null;pageId:string|null;selection:string|null;selectedIds:string[];dirty:boolean;past:InterfaceDocument[];future:InterfaceDocument[];recoveryError:string;notice:string;}
+const empty=():InterfaceState=>({document:null,pageId:null,selection:null,selectedIds:[],dirty:false,past:[],future:[],recoveryError:'',notice:''});
 function freeze<T>(value:T):T{if(value&&typeof value==='object'){Object.values(value).forEach(freeze);Object.freeze(value);}return value;}
 export interface RecoveryStorage {getItem(key:string):string|null;setItem(key:string,value:string):void;removeItem(key:string):void;}
 /** Pure session factory makes persistence failures and rollback testable without a browser. */
@@ -16,12 +16,13 @@ export function createInterfaceSession(storage?:RecoveryStorage){
   listeners.forEach(f=>f());
  };
  const load=(document:InterfaceDocument,dirty=false)=>{const checked=freeze(parseInterfaceDocument(serializeInterfaceDocument(document)));emit({...empty(),document:checked,pageId:checked.pages[0].id,dirty});};
- const reconcile=(doc:InterfaceDocument)=>({pageId:doc.pages.some(p=>p.id===state.pageId)?state.pageId:doc.pages[0].id,selection:doc.nodes.some(n=>n.id===state.selection)?state.selection:null});
+ const reconcile=(doc:InterfaceDocument)=>({pageId:doc.pages.some(p=>p.id===state.pageId)?state.pageId:doc.pages[0].id,selectedIds:state.selectedIds.filter(id=>doc.nodes.some(n=>n.id===id&&n.pageId===state.pageId)),selection:doc.nodes.some(n=>n.id===state.selection&&n.pageId===state.pageId)?state.selection:null});
  return {
   get:()=>state,notice:(notice:string)=>emit({...state,notice},false),subscribe(fn:()=>void){listeners.add(fn);return()=>{listeners.delete(fn);};},load,
   start:()=>load(createInterfaceDocument(),true),clear:()=>emit(empty()),
-  select(id:string|null){if(id!==null&&!state.document?.nodes.some(n=>n.id===id&&n.pageId===state.pageId))return;emit({...state,selection:id},false);},
-  page(id:string){if(state.document?.pages.some(p=>p.id===id))emit({...state,pageId:id,selection:null});},
+  select(id:string|null,additive=false){if(id!==null&&!state.document?.nodes.some(n=>n.id===id&&n.pageId===state.pageId))return;const ids=id===null?[]:additive?(state.selectedIds.includes(id)?state.selectedIds.filter(x=>x!==id):[...state.selectedIds,id]):[id];emit({...state,selection:ids.at(-1)??null,selectedIds:ids},false);},
+  selectMany(ids:readonly string[]){const selectedIds=[...new Set(ids)].filter(id=>state.document?.nodes.some(n=>n.id===id&&n.pageId===state.pageId));emit({...state,selectedIds,selection:selectedIds.at(-1)??null},false);},
+  page(id:string){if(state.document?.pages.some(p=>p.id===id))emit({...state,pageId:id,selection:null,selectedIds:[]});},
   /** Draft validation runs before emit, so a thrown edit leaves document/history/recovery unchanged. */
   transact(edit:(draft:InterfaceDocument)=>void){
    const before=state.document;if(!before)return;
