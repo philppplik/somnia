@@ -1,3 +1,4 @@
+import {INTERFACE_P27_CATALOGUES} from './p27I18n';
 import {INTERFACE_P26_CATALOGUES} from './p26I18n';
 import {INTERFACE_P25_CATALOGUES} from './p25I18n';
 import {INTERFACE_P24_CATALOGUES} from './p24I18n';
@@ -100,6 +101,7 @@ for(const [locale,extra] of Object.entries(INTERFACE_P23_CATALOGUES))Object.assi
 for(const [locale,extra] of Object.entries(INTERFACE_P24_CATALOGUES))Object.assign(INTERFACE_CATALOGUES[locale as keyof typeof INTERFACE_CATALOGUES],extra);
 for(const [locale,extra] of Object.entries(INTERFACE_P25_CATALOGUES))Object.assign(INTERFACE_CATALOGUES[locale as keyof typeof INTERFACE_CATALOGUES],extra);
 for(const [locale,extra] of Object.entries(INTERFACE_P26_CATALOGUES))Object.assign(INTERFACE_CATALOGUES[locale as keyof typeof INTERFACE_CATALOGUES],extra);
+for(const [locale,extra] of Object.entries(INTERFACE_P27_CATALOGUES))Object.assign(INTERFACE_CATALOGUES[locale as keyof typeof INTERFACE_CATALOGUES],extra);
 for(const [locale,extra] of Object.entries(INTERFACE_P20_CATALOGUES))Object.assign(INTERFACE_CATALOGUES[locale as keyof typeof INTERFACE_CATALOGUES],extra);
 for(const [locale,extra] of Object.entries(INTERFACE_P19_CATALOGUES))Object.assign(INTERFACE_CATALOGUES[locale as keyof typeof INTERFACE_CATALOGUES],extra);
 for(const [locale,extra] of Object.entries(INTERFACE_P18_CATALOGUES))Object.assign(INTERFACE_CATALOGUES[locale as keyof typeof INTERFACE_CATALOGUES],extra);
