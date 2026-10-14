@@ -303,9 +303,9 @@
       "rawTextarea": 0
     },
     "src/components/ExportDialog.tsx": {
-      "rawButton": 1,
-      "rawInput": 4,
-      "rawSelect": 1,
+      "rawButton": 0,
+      "rawInput": 0,
+      "rawSelect": 0,
       "rawTextarea": 0
     },
     "src/components/ExtensionCatalog.tsx": {
@@ -411,9 +411,9 @@
       "rawTextarea": 0
     },
     "src/components/ImageConversionDialog.tsx": {
-      "rawButton": 1,
-      "rawInput": 6,
-      "rawSelect": 1,
+      "rawButton": 0,
+      "rawInput": 0,
+      "rawSelect": 0,
       "rawTextarea": 0
     },
     "src/components/imageedit/AdjustPanel.tsx": {

@@ -51,6 +51,7 @@ All file links are repository-relative, so they remain useful on a feature branc
 21. [Imageedit area DS adoption](imageedit-adoption.md)
 22. [Imgedit area DS adoption](imgedit-adoption.md)
 23. [Layers surfaces DS adoption](layers-adoption.md)
+24. [Export and conversion dialogs DS adoption](export-adoption.md)
 
 ## The system in one view
 

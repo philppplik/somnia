@@ -40,8 +40,8 @@ native-platform acceptance claim.
 | components/diagnostics | 21 | 1 | 0 | 0 | 22 |
 | components/interface | 2 | 8 | 11 | 1 | 22 |
 | components/sheets | 14 | 6 | 1 | 1 | 22 |
-| 14 further areas | 31 | 59 | 3 | 0 | 93 |
-| **Total** | **472** | **239** | **59** | **32** | **802** |
+| 14 further areas | 29 | 49 | 1 | 0 | 79 |
+| **Total** | **470** | **229** | **57** | **32** | **788** |
 
 The flat `src/components` bucket's largest single debtor was migrated in P23:
 `Settings.tsx` and the five sibling Settings files (98 controls) now render
@@ -133,6 +133,10 @@ through native control primitives, see below.
   controls to native primitives across 3 files: RasterEditor,
   LayersPanel, LayerContextMenu), ratchet budgets zero, adoption test
   and gallery proofs added (?view=layers, ?view=layers-tree).
+- P33: export and conversion dialogs migrated (14 controls
+  to native primitives across 2 files: ExportDialog,
+  ImageConversionDialog), ratchet budgets zero, adoption test and
+  gallery proofs added (?view=export, ?view=convert).
 
 
 

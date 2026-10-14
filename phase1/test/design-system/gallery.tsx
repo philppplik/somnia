@@ -12,6 +12,7 @@ import {DocumentsProof} from './documents-proof';
 import {VideoProof} from './video-proof';
 import {PhotosProof} from './photos-proof';
 import {ImgeditProof} from './imgedit-proof';
+import {ExportProof,ConvertProof} from './export-proof';
 import {StateAdoptionProof} from './state-adoption-proof';
 import {MotionDensityProof} from './motion-density-proof';
 import {FocusProof} from './focus-proof';
@@ -78,4 +79,4 @@ function Gallery(){
  </section><ExchangeProof/><ThemeImportPanel/></div><pre data-testid="events" aria-label="Fixture events">{events.join('\n')}</pre><StudioAdoptionProof/><ShellStateProof/></main>;
 }
 const view=new URLSearchParams(location.search).get('view');
-createRoot(document.getElementById('root')!).render(new URLSearchParams(location.search).has('state-adoption')?<StateAdoptionProof/>:new URLSearchParams(location.search).has('focus-audit')?<FocusProof/>:view==='index'?<GalleryIndex/>:view==='shell'?<main><ShellStateProof showRecovery/></main>:view==='studios'?<main><StudioAdoptionProof/></main>:view==='importer'?<main><ThemeImportPanel/></main>:view==='extensions'?<ExtensionsProof/>:view==='vibespace'?<VibespaceProof/>:view==='pdf'?<PdfProof/>:view==='agent'?<AgentProof/>:view==='vectorstudio'?<VectorstudioProof/>:view==='documents'?<DocumentsProof/>:view==='svgedit'?<SvgeditProof/>:view==='video'?<VideoProof/>:view==='versions'?<VersionsProof/>:view==='photos'?<PhotosProof/>:view==='imageedit'?<ImageeditProof/>:view==='imgedit'?<ImgeditProof/>:view==='layers'?<LayersProof/>:view==='layers-tree'?<LayersTreeProof/>:<Gallery/>);
+createRoot(document.getElementById('root')!).render(new URLSearchParams(location.search).has('state-adoption')?<StateAdoptionProof/>:new URLSearchParams(location.search).has('focus-audit')?<FocusProof/>:view==='index'?<GalleryIndex/>:view==='shell'?<main><ShellStateProof showRecovery/></main>:view==='studios'?<main><StudioAdoptionProof/></main>:view==='importer'?<main><ThemeImportPanel/></main>:view==='extensions'?<ExtensionsProof/>:view==='vibespace'?<VibespaceProof/>:view==='pdf'?<PdfProof/>:view==='agent'?<AgentProof/>:view==='vectorstudio'?<VectorstudioProof/>:view==='documents'?<DocumentsProof/>:view==='svgedit'?<SvgeditProof/>:view==='video'?<VideoProof/>:view==='versions'?<VersionsProof/>:view==='photos'?<PhotosProof/>:view==='imageedit'?<ImageeditProof/>:view==='imgedit'?<ImgeditProof/>:view==='layers'?<LayersProof/>:view==='layers-tree'?<LayersTreeProof/>:view==='export'?<ExportProof/>:view==='convert'?<ConvertProof/>:<Gallery/>);
