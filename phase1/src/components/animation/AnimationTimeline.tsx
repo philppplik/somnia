@@ -1,4 +1,5 @@
 import {useEffect,useRef,useState,type KeyboardEvent as ReactKeyboardEvent,type PointerEvent} from 'react';
+import {styleKeyShiftEdits} from '../../lib/animation/edit';
 import {styleKeyLanes,pruneStyleKeys,toggleStyleKey,type StyleLaneId} from '../../lib/animation/keyLanes';
 import {Play,Pause,Undo2,Redo2,Eye,EyeOff,Lock,Unlock,ZoomIn,ZoomOut,ArrowUp,ArrowDown,ArrowUpDown,EyeOff as ShyIcon,ChevronDown,ChevronRight,ChevronsUpDown} from '../../lib/icons';
 import {animationSession,useAnimationState} from '../../lib/animation/session';
@@ -106,11 +107,12 @@ const dragStyleKey=(lane:StyleLaneId,from:number)=>(e:PointerEvent<SVGElement>)=
   if(e.button!==0||!selected)return;e.stopPropagation();const el=e.currentTarget,layerId=selected;
   if(e.shiftKey){animationSession().setView({styleKeys:toggleStyleKey(styleSel,{layer:layerId,lane,t:from})});return;}
   el.setPointerCapture(e.pointerId);
-  animationSession().setView({playhead:from,styleKeys:[{layer:layerId,lane,t:from}]});let moved=false,to=from;
+  const group=styleSel.length>1&&isStyleSel(lane,from)?styleSel:[{layer:layerId,lane,t:from}];
+  animationSession().setView({playhead:from,styleKeys:group});let moved=false,to=from;
   const mv=(ev:globalThis.PointerEvent)=>{const tk=tickAtX(ev.clientX,{free:ev.altKey});if(tk===to)return;
-   try{animationSession().previewEdits([{type:'style.key.move',layer:layerId,lane,from,to:tk}]);moved=true;to=tk;}catch{/* collision: keep the last valid preview */}};
+   try{animationSession().previewEdits(styleKeyShiftEdits(layerId,group,tk-from));moved=true;to=tk;}catch{/* collision: keep the last valid preview */}};
   const done=(commit:boolean)=>{el.removeEventListener('pointermove',mv);el.removeEventListener('pointerup',up);window.removeEventListener('keydown',esc,true);
-   if(moved&&commit){animationSession().commitPreview();animationSession().setView({playhead:to,styleKeys:[{layer:layerId,lane,t:to}]});}else animationSession().cancelPreview();};
+   if(moved&&commit){animationSession().commitPreview();animationSession().setView({playhead:to,styleKeys:group.map(k=>({...k,t:k.t+to-from}))});}else animationSession().cancelPreview();};
   const up=()=>done(true);const esc=(ev:globalThis.KeyboardEvent)=>{if(ev.key==='Escape'){ev.stopPropagation();done(false);}};
   el.addEventListener('pointermove',mv);el.addEventListener('pointerup',up);window.addEventListener('keydown',esc,true);
  };

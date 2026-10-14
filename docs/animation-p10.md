@@ -334,3 +334,6 @@ Added:
 
 ## P62 - Style-lane key selection
 `ViewState.styleKeys` holds `{layer,lane,t}` picks, pruned against the document on every read. Delete reuses the single-key remove edits (a lane that loses its last key becomes static at its sampled value). Nudge emits `style.key.move` edits ordered so keys of one lane never cross; a collision with an unselected key, or leaving the composition, fails the whole step and changes nothing. Dragging a diamond selects only that key; Shift-click toggles without dragging.
+
+## P63 - Group drag in style lanes
+A pointer drag on a key that is part of a multi-key selection builds `styleKeyShiftEdits(layer,selection,to-from)` against the committed base on every move (preview), so the result never accumulates. A move that would land on an unselected key keeps the last valid preview. Commit is one undo step.

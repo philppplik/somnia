@@ -1550,3 +1550,14 @@ test('P62 style-lane selection, delete and nudge',()=>{
  assert.equal(all.compositions[0].layers.find(l=>l.id==='stencil')!.colorKeys,undefined,'deleting every key makes the colour static');
  assert.deepEqual(validateDocument(all),[]);
 });
+
+test('P63 group drag: a preview of the shifted selection equals the committed shift and is relative to the base',()=>{
+ let d=base();
+ d=applyEdit(d,{type:'color.prop',layer:'stencil',prop:'fill',op:'animate',on:true,t:0});
+ for(const t of [80000,160000,240000])d=applyEdit(d,{type:'color.prop',layer:'stencil',prop:'fill',op:'set',color:'#ffffff',t});
+ const r=(t:number)=>({lane:'fill' as const,t}),g=[r(80000),r(160000)];
+ const ts=(x:typeof d)=>x.compositions[0].layers.find(l=>l.id==='stencil')!.colorKeys!.fill!.map(k=>k.t);
+ for(const delta of [8000,16000,-24000])assert.deepEqual(ts(applyEdits(d,styleKeyShiftEdits('stencil',g,delta))),[0,80000+delta,160000+delta,240000]);
+ assert.throws(()=>applyEdits(d,styleKeyShiftEdits('stencil',g,-80000)),'a key may not land on an unselected key');
+ assert.throws(()=>applyEdits(d,styleKeyShiftEdits('stencil',g,80000)),'moving the last selected key onto an unselected key fails');
+});

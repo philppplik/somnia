@@ -423,3 +423,7 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 ### Animation P62 (2026-10-14, integration pending)
 - Done: style-lane keys (fill, stroke colour, stroke width and opacity, comp volume) can be selected (click, Shift-click toggles), nudged with Left/Right (1 frame, Shift 10) and deleted with Delete. Commands `animation.styleKeys.nudge` and `animation.styleKeys.delete`; each is one undo step. Selection is view state (not saved, not undoable), cleared on layer change.
 - Open: marquee select and dragging a whole selection with the mouse, selection across layers, effect colour keys have no lane.
+
+### Animation P63 (2026-10-14, integration pending)
+- Done: dragging a selected diamond in a style lane moves the whole selection together (relative spacing kept, one undo step, Escape cancels). Dragging an unselected key still selects and moves just that key.
+- Open: marquee select, selection across layers, effect colour keys have no lane.
