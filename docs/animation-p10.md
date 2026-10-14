@@ -293,3 +293,7 @@ Added:
 ## P52 - Comp layer volume
 
 - `source.volume` (percent 0..200, absent = 100) on comp layers. `withPrecompAudio` multiplies the value and every key of the nested clip volume by it, so the signature, preview and export follow. The product is only clamped to 200 at playback (`gainCurve`), so a nested 50 % over a clip at 300 % intermediate still comes out right.
+
+## P53 - Stroke opacity and dash pattern
+
+- `stroke.opacity` (0..100, absent = 100) becomes `stroke-opacity` only below 100. `stroke.dashLen` and `stroke.dashGap` (1..100, in percent of the path length because paths use `pathLength=100`) give `stroke-dasharray="len gap"`; an animated `dash` offset alone keeps the old 8/4. A trim below 100 still wins over dashes.

@@ -360,3 +360,10 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Done: comp layers have an "Audio volume (%)" field (0..200, default 100) and `animation.precomp.time` takes `volume`. It multiplies the volume of every nested clip, including keyed volumes and nested comps. One undo step, validated, 5 locales.
 - Open: the comp layer volume is a constant (no keyframes, no fade); stroke styles; text animator sampling in motion blur.
 
+
+### Animation P53 (2026-10-14, integration pending)
+
+- Picked: stroke styles (opacity and dash pattern). Text-animator blur sampling not chosen.
+- Done: shape strokes get an opacity (0..100 %) and a dash length and gap (1..100 % of the path length). A dash length gives a static dashed stroke; before, dashes only existed together with an animated dash offset and always as 8/4. Canvas, viewer and every export use the same attributes; strokes without the new fields produce byte-identical output. Undoable, validated, 5 locales.
+- Open: no gradient strokes, no stroke alignment (inside/outside), no miter limit, opacity and dash lengths are constants; text-animator sampling in motion blur.
+

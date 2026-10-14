@@ -1378,3 +1378,13 @@ test('P50 inner shadow and inner glow: filter chain stays inside the layer, sett
  d=applyEdit(d,{type:'layer.effects',layer:id,effects:[defaultEffect('shadow','a','#000000'),is,{...ig,enabled:false}]});
  const s2=frameSvg(findComp(d)!,0,false,d.assets,d.compositions);assert.equal(s2.includes('<feDropShadow'),true);assert.equal(s2.includes('result="is1g"'),true);assert.equal(s2.includes('result="is2g"'),false);
 });
+
+test('P53 stroke opacity and dash pattern: static dashes, legacy output unchanged, validation',()=>{
+ let d=applyEdit(base(),{type:'layer.stroke',layer:'stencil',stroke:{color:'#00ff00',width:6}});
+ const at=()=>strokeAttributes(d.compositions[0].layers.find(l=>l.id==='stencil')!,0)!,svg=()=>frameSvg(d.compositions[0],0);
+ assert.equal(at().strokeDasharray,'100 0');assert.equal(at().strokeOpacity,undefined);assert.equal(svg().includes('stroke-opacity'),false);
+ d=applyEdit(d,{type:'layer.stroke',layer:'stencil',stroke:{color:'#00ff00',width:6,dashLen:10,dashGap:5,opacity:40}});
+ assert.equal(at().strokeDasharray,'10 5');assert.equal(at().strokeOpacity,0.4);assert.ok(svg().includes('stroke-opacity="0.4"')&&svg().includes('stroke-dasharray="10 5"'));
+ for(const bad of [{opacity:101},{opacity:-1},{dashLen:0},{dashGap:101}])assert.throws(()=>applyEdit(d,{type:'layer.stroke',layer:'stencil',stroke:{color:'#00ff00',width:6,...bad}}));
+ d=applyEdit(d,{type:'layer.stroke',layer:'stencil',stroke:{color:'#00ff00',width:6,opacity:100}});assert.equal(at().strokeDasharray,'100 0');assert.equal(at().strokeOpacity,undefined);
+});

@@ -598,5 +598,8 @@
  "cmd.animation.effect.style": "Definir raio, distância e ângulo da sombra ou do brilho",
  "animation.effects.innerShadow": "Sombra interna",
  "animation.effects.innerGlow": "Brilho interno",
- "animation.precomp.volume": "Volume do áudio (%)"
+ "animation.precomp.volume": "Volume do áudio (%)",
+ "animation.stroke.opacity": "Opacidade do traço (%)",
+ "animation.stroke.dashLen": "Comprimento do traço (0 = contínuo)",
+ "animation.stroke.dashGap": "Espaço do traço"
 }

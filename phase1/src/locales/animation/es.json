@@ -598,5 +598,8 @@
  "cmd.animation.effect.style": "Ajustar radio, distancia y ángulo de sombra o resplandor",
  "animation.effects.innerShadow": "Sombra interior",
  "animation.effects.innerGlow": "Resplandor interior",
- "animation.precomp.volume": "Volumen del audio (%)"
+ "animation.precomp.volume": "Volumen del audio (%)",
+ "animation.stroke.opacity": "Opacidad del trazo (%)",
+ "animation.stroke.dashLen": "Longitud del guion (0 = continuo)",
+ "animation.stroke.dashGap": "Espacio del guion"
 }

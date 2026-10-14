@@ -47,7 +47,7 @@ export function effectColor(effect:LayerEffect,tick:number):string{
  const keys=effect.colorKeys;if(!keys?.length)return effect.color;if(tick<=keys[0].t)return keys[0].color;
  let a=keys[0];for(const b of keys.slice(1)){if(tick<b.t){const u=(tick-a.t)/(b.t-a.t),av=rgb(a.color),bv=rgb(b.color);return '#'+av.map((v,i)=>Math.round((v+(bv[i]-v)*u)*255).toString(16).padStart(2,'0')).join('');}a=b;}return a.color;
 }
-export function strokeAttributes(layer:Layer,tick:number):{stroke:string;strokeWidth:number;pathLength:number;strokeDasharray:string;strokeDashoffset:number;fill:string;strokeLinejoin?:'round'|'bevel';strokeLinecap?:'round'|'square'}|undefined{
+export function strokeAttributes(layer:Layer,tick:number):{stroke:string;strokeWidth:number;pathLength:number;strokeDasharray:string;strokeDashoffset:number;fill:string;strokeLinejoin?:'round'|'bevel';strokeLinecap?:'round'|'square';strokeOpacity?:number}|undefined{
  if(layer.kind!=='shape'||!layer.stroke)return undefined;const s=layer.stroke,trim=s.trim?Math.min(100,Math.max(0,evaluate(s.trim,tick) as number)):100,dash=s.dash?evaluate(s.dash,tick) as number:0;
- return {stroke:s.color,strokeWidth:s.width,pathLength:100,strokeDasharray:trim<100?`${trim} 100`:s.dash?'8 4':'100 0',strokeDashoffset:dash,fill:layer.source.color??'none',...(s.join==='round'||s.join==='bevel'?{strokeLinejoin:s.join}:{}),...(s.cap==='round'||s.cap==='square'?{strokeLinecap:s.cap}:{})};
+ return {stroke:s.color,strokeWidth:s.width,pathLength:100,strokeDasharray:trim<100?`${trim} 100`:s.dash||s.dashLen!==undefined||s.dashGap!==undefined?`${s.dashLen??8} ${s.dashGap??4}`:'100 0',strokeDashoffset:dash,fill:layer.source.color??'none',...(s.join==='round'||s.join==='bevel'?{strokeLinejoin:s.join}:{}),...(s.cap==='round'||s.cap==='square'?{strokeLinecap:s.cap}:{}),...(s.opacity!==undefined&&s.opacity<100?{strokeOpacity:s.opacity/100}:{})};
 }

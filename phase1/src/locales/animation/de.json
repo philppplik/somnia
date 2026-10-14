@@ -598,5 +598,8 @@
  "cmd.animation.effect.style": "Radius, Abstand und Winkel von Schatten oder Leuchten setzen",
  "animation.effects.innerShadow": "Schatten nach innen",
  "animation.effects.innerGlow": "Leuchten nach innen",
- "animation.precomp.volume": "Audiolautstärke (%)"
+ "animation.precomp.volume": "Audiolautstärke (%)",
+ "animation.stroke.opacity": "Konturdeckkraft (%)",
+ "animation.stroke.dashLen": "Strichlänge (0 = durchgezogen)",
+ "animation.stroke.dashGap": "Strichlücke"
 }
