@@ -1157,6 +1157,19 @@ test('mesh edit mode: merge by distance welds selected doubles, keeps UV seams',
  await expect(page.getByRole('alert')).toContainText('positive');
 });
 
+test('mesh edit mode: bisect cuts the mesh by a plane and keeps both halves',async({page})=>{
+ await blank(page);
+ const id=await insert(page,'cube',0);
+ expect(await run(page,'studio3d.edit.start',{id,mode:'face'})).toBe(true);
+ expect(await run(page,'studio3d.edit.bisect',{axis:'y',offset:0,fill:true})).toBe(true);
+ let s=await session(page);expect(s.stats.triangles).toBe(44);
+ expect(s.edit).toMatchObject({faces:0,verts:0,edges:0});
+ await run(page,'studio3d.undo');
+ s=await session(page);expect(s.stats.triangles).toBe(12);
+ expect(await run(page,'studio3d.edit.bisect',{axis:'y',offset:5,fill:true})).toBe(false);
+ await expect(page.getByRole('alert')).toContainText('does not cut through the mesh');
+});
+
 test('mesh edit mode: weld merges selected vertices at their centre, undo restores them',async({page})=>{
  await blank(page);
  const id=await insert(page,'cube',0);

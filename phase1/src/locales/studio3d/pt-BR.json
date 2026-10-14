@@ -966,5 +966,11 @@
  "cmd.studio3d.edit.mergeByDistance": "Soldar os vértices selecionados dentro da distância indicada",
  "studio3d.edit.mergeByDistance": "Combinar por distância",
  "studio3d.hist.editMergeByDistance": "Combinar por distância",
- "studio3d.edit.mergeDist": "Distância de combinação"
+ "studio3d.edit.mergeDist": "Distância de combinação",
+ "cmd.studio3d.edit.bisect": "Cortar a malha editada por um plano de eixo e manter as duas metades",
+ "studio3d.edit.bisect": "Bisseccionar",
+ "studio3d.hist.editBisect": "Cortar a malha em duas",
+ "studio3d.edit.bisectAxis": "Eixo de corte",
+ "studio3d.edit.bisectOff": "Deslocamento do plano",
+ "studio3d.edit.bisectFill": "Preencher o corte"
 }

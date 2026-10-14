@@ -966,5 +966,11 @@
  "cmd.studio3d.edit.mergeByDistance": "Ausgewählte Vertices innerhalb des angegebenen Abstands verschmelzen",
  "studio3d.edit.mergeByDistance": "Nach Abstand verschmelzen",
  "studio3d.hist.editMergeByDistance": "Nach Abstand verschmelzen",
- "studio3d.edit.mergeDist": "Verschmelzabstand"
+ "studio3d.edit.mergeDist": "Verschmelzabstand",
+ "cmd.studio3d.edit.bisect": "Das bearbeitete Mesh mit einer Achsenebene schneiden und beide Hälften behalten",
+ "studio3d.edit.bisect": "Halbieren",
+ "studio3d.hist.editBisect": "Mesh in zwei Teile schneiden",
+ "studio3d.edit.bisectAxis": "Schnittachse",
+ "studio3d.edit.bisectOff": "Versatz der Schnittebene",
+ "studio3d.edit.bisectFill": "Schnitt füllen"
 }

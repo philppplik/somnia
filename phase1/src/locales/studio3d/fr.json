@@ -966,5 +966,11 @@
  "cmd.studio3d.edit.mergeByDistance": "Souder les sommets sélectionnés situés dans la distance indiquée",
  "studio3d.edit.mergeByDistance": "Fusionner par distance",
  "studio3d.hist.editMergeByDistance": "Fusion par distance",
- "studio3d.edit.mergeDist": "Distance de fusion"
+ "studio3d.edit.mergeDist": "Distance de fusion",
+ "cmd.studio3d.edit.bisect": "Couper le maillage édité par un plan axial et garder les deux moitiés",
+ "studio3d.edit.bisect": "Bissecter",
+ "studio3d.hist.editBisect": "Couper le maillage en deux",
+ "studio3d.edit.bisectAxis": "Axe de coupe",
+ "studio3d.edit.bisectOff": "Décalage du plan",
+ "studio3d.edit.bisectFill": "Remplir la coupe"
 }

@@ -10,7 +10,7 @@ import type {NodeExtra} from './document';
 import {EASES,isEase,bakeTrack,type Ease} from './ease';
 import {buildExtras,type ClipMeta,type MetaTrack} from './clipMeta';
 import {groupRefs,keyIndices,copyTrackKeys,shiftTrackKeys,pasteTrackKeys,type KeyRef,type KeyData,type TrackData} from './keyEdit';
-import {extrudeFaces,insetFaces,bevelVertices,deleteElements,weldSelected,subdivideFaces,pokeFaces,duplicateFaces,fattenSelected,relaxSelected,flipFaces,dissolveFaces,fillSelected,collapseSelected,toSphereSelected,randomizeSelected,moveSelected,ripSelected,extractFaces,sharpEdges,similarFaces,rotateSelected,scaleSelected,shearSelected,flipEdges,mergeByDistanceSelected,loopCut,bevelEdges,slideEdges,mirrorCombine,symmetrizeMesh,subdivideLoop,cleanupMesh,flipMesh,outsideMesh,smoothMesh,separateMesh,solidifyMesh,fillHolesMesh,relaxMesh,fattenMesh,bisectMesh,twistMesh,taperMesh,spinMesh,bridgeMesh,remeshMesh,EditError,MAX_EDIT_VERTICES,MAX_EDIT_TRIANGLES,type MeshData,type CleanupResult,type NormalsOp} from './editMesh';
+import {extrudeFaces,insetFaces,bevelVertices,deleteElements,weldSelected,subdivideFaces,pokeFaces,duplicateFaces,fattenSelected,relaxSelected,flipFaces,dissolveFaces,fillSelected,collapseSelected,toSphereSelected,randomizeSelected,moveSelected,ripSelected,extractFaces,sharpEdges,similarFaces,rotateSelected,scaleSelected,shearSelected,flipEdges,mergeByDistanceSelected,bisectEdit,loopCut,bevelEdges,slideEdges,mirrorCombine,symmetrizeMesh,subdivideLoop,cleanupMesh,flipMesh,outsideMesh,smoothMesh,separateMesh,solidifyMesh,fillHolesMesh,relaxMesh,fattenMesh,bisectMesh,twistMesh,taperMesh,spinMesh,bridgeMesh,remeshMesh,EditError,MAX_EDIT_VERTICES,MAX_EDIT_TRIANGLES,type MeshData,type CleanupResult,type NormalsOp} from './editMesh';
 import {sculptDab,paintMask,SculptError,type SculptOpts} from './sculpt';
 import {KEY_PATHS,KEY_STRIDE,ClipError,MAX_CLIPS,MAX_KEYS_PER_TRACK,DEFAULT_CLIP_SECONDS,insertKey,removeKey as removeKeyData,findKey,isPlainTrack,trackName,parseTrackName,checkKeyTime,checkDuration,checkClipName,lastKeyTime,type KeyPath} from './clips';
 import {mergeTransform,DEFAULT_TRANSFORM,UvError,type TextureTransform} from './uv';
@@ -911,6 +911,7 @@ export class Stage{
  editShear(along:'x'|'y'|'z',by:'x'|'y'|'z',factor:number){this.editOp({key:'studio3d.hist.editShear'},m=>shearSelected(m,[...this.editSel.verts],along,by,factor));}
  editFlipEdge(){this.editOp({key:'studio3d.hist.editFlipEdge'},m=>flipEdges(m,[...this.editSel.edges.values()]));}
  editMergeByDistance(distance:number){this.editOp({key:'studio3d.hist.editMergeByDistance'},m=>mergeByDistanceSelected(m,[...this.editSel.verts],distance));}
+ editBisect(axis:'x'|'y'|'z',offset:number,fill:boolean){this.editOp({key:'studio3d.hist.editBisect'},m=>bisectEdit(m,axis,offset,fill));this.editSel={verts:new Set(),edges:new Map(),faces:new Set()};}
  /** Rips the selected edit-mode faces off the rest of the mesh by duplicating the shared vertices, one undo step. The selection stays. */
  editRip(){this.editOp({key:'studio3d.hist.editRip'},m=>ripSelected(m,[...this.editSel.faces]));}
  /** Splits the selected edit-mode faces out of the mesh into a new sibling object with the same transform and a cloned material, one undo step. The selection is cleared afterwards because face ordinals shift. */

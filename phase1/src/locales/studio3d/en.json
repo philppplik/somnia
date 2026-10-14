@@ -966,5 +966,11 @@
  "cmd.studio3d.edit.mergeByDistance": "Weld the selected vertices that lie within the given distance",
  "studio3d.edit.mergeByDistance": "Merge by distance",
  "studio3d.hist.editMergeByDistance": "Merge by distance",
- "studio3d.edit.mergeDist": "Merge distance"
+ "studio3d.edit.mergeDist": "Merge distance",
+ "cmd.studio3d.edit.bisect": "Cut the edited mesh by an axis plane and keep both halves",
+ "studio3d.edit.bisect": "Bisect",
+ "studio3d.hist.editBisect": "Cut the mesh in two",
+ "studio3d.edit.bisectAxis": "Bisect axis",
+ "studio3d.edit.bisectOff": "Cut plane offset",
+ "studio3d.edit.bisectFill": "Fill the cut"
 }

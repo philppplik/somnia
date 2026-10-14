@@ -377,6 +377,18 @@ export function weldSelected(m:MeshData,verts:number[]):MeshData{
  if(m.uvs)out.uvs=m.uvs;
  return out;
 }
+/** Cuts the mesh by an axis-aligned plane and keeps both halves in one mesh (two shells), optionally capping the cut on each side. UVs travel when both halves carry them. Drops the sculpt mask like every topology-changing op. */
+export function bisectEdit(m:MeshData,axis:'x'|'y'|'z',offset:number,fill:boolean):MeshData{
+ if(axis!=='x'&&axis!=='y'&&axis!=='z')throw new EditError('The bisect axis must be x, y or z.');
+ const r=bisectMesh(m,axis,offset,fill);
+ if(!r.neg.index.length||!r.pos.index.length)throw new EditError('The plane does not cut the mesh.');
+ const off=r.neg.positions.length/3;
+ const positions=[...r.neg.positions,...r.pos.positions];
+ const index=[...r.neg.index,...r.pos.index.map(i=>i+off)];
+ const out:MeshData={positions,index};
+ if(r.neg.uvs&&r.pos.uvs)out.uvs=[...r.neg.uvs,...r.pos.uvs];
+ check(out);return out;
+}
 /** Welds selected vertices whose positions (and UVs, when present, so UV seams survive) lie within `distance` of each other onto the first occurrence; unselected vertices are never welded. Drops collapsed and duplicate faces plus unreferenced vertices, unifies winding per connected part and flips inside-out closed parts. Drops the sculpt mask like every topology-changing op. Fails when no selected pair is within the distance. */
 export function mergeByDistanceSelected(m:MeshData,verts:number[],distance:number):MeshData{
  check(m);

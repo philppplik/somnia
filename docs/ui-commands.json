@@ -7145,6 +7145,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.edit.bisect",
+      "title": "Cut the edited mesh by an axis plane and keep both halves",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.edit.collapse",
       "title": "Collapse each connected island of the selection into one vertex",
       "category": "Edit",
