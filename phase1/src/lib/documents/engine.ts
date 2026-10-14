@@ -38,6 +38,8 @@ export class DocumentsEngine{
  async insert(block:number,utf8Offset:number,text:string):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'insert',block,utf8Offset,text}))).document;}
  async blocks():Promise<import('./edit').DocBlock[]>{return(await this.call('blocks',id=>({id,kind:'blocks'}))).blocks;}
  async replace(e:import('./edit').TextEdit):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'replace',block:e.block,hunks:e.hunks}))).document;}
+ /** Replaces only while the paragraph still reads `expected` (checked inside the worker); returns the document and the paragraph text read back. */
+ async replaceChecked(e:import('./edit').TextEdit,expected:string):Promise<{document:OpenedDocument;text:string}>{const r=await this.call('replaced',id=>({id,kind:'replaceChecked',block:e.block,expected,hunks:e.hunks}));return{document:r.document,text:r.text};}
  async split(block:number,off:number):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'split',block,off}))).document;}
  async merge(block:number):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'merge',block}))).document;}
  async format(start:import('./protocol').DocPos,end:import('./protocol').DocPos,patch:import('./protocol').FormatPatch):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'format',start,end,patch}))).document;}

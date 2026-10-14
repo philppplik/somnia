@@ -89,6 +89,7 @@ export class DocSession {
      * `hunks_json`: `[[start, end, "text"], ...]`, ascending offsets in the original paragraph.
      */
     replace_ranges(block: number, hunks_json: string): void;
+    replace_checked(block: number, expected: string, hunks_json: string): string;
     restore(id: number): void;
     save(): Uint8Array;
     export_pdf(): Uint8Array;

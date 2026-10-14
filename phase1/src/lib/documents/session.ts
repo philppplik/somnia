@@ -4,7 +4,7 @@ import {setStyleList} from './styles';
 import {stylePatchProblem,STYLE_ID_RE,tocProblem,isListKind,listOptionsProblem,type ListStyleId} from './protocol';
 import {propertiesProblem,linkProblem,commentProblem,type CommentItem,validHfText,type HeaderFooterState,checkFormatPatch,checkParaPatch,MAX_HF_CHARS,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch,type ImageOp,type PageSetupPatch,type PageSetupState,pageSetupProblem,type TableStyle,type TableStyleScope,tableStyleProblem,MIN_COL_PT,MAX_COL_PT,imageProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGES} from './protocol';
 import {captureDocumentSelection} from './selectionCapture';
-import {CELL_BASE,caretAfterEdit,diffEdit,inverseOf,UndoStack,type TextEdit,type UndoEntry} from './edit';
+import {CELL_BASE,caretAfterEdit,applyEdit,diffEdit,inverseOf,UndoStack,type TextEdit,type UndoEntry} from './edit';
 import {findMatches,nextMatchIndex,textStats,validFindQuery,validReplaceText,MAX_FIND_HIGHLIGHTS,MAX_REPLACE_BLOCKS,type FindMatch} from './find';
 import {listMarkerKind,stepBoundary,utf16ToUtf8Offset,utf8ToUtf16Offset,wordBoundary} from './text';
 import {getDocumentsState,patchDocuments,resetDocuments,INITIAL_VIEW,type Caret,type DocumentsState} from './store';
@@ -114,15 +114,18 @@ async function refresh(d:{pages:number;pageSizes:readonly {width:number;height:n
  if(getDocumentsState().find.open)void updateFind();
 }
 export async function loadBlocks(d:{pages:number;pageSizes:readonly {width:number;height:number}[];text:string}){await refresh(d);}
-async function apply(edit:TextEdit,record:'new'|'undo'|'redo',o:{merge?:boolean;caret?:number|null}={}){
+async function apply(edit:TextEdit,record:'new'|'undo'|'redo',o:{merge?:boolean;caret?:number|null;expect?:string}={}):Promise<string|undefined>{
  const e=engine,owner=gen;if(!e)return;
  const block=getDocumentsState().blocks.find(b=>b.index===edit.block);
  if(!block||!block.editable||block.text===undefined)throw new Error('This paragraph cannot be edited as text.');
  const inv=inverseOf(block.text,edit);
- const d=await e.replace(edit);if(owner!==gen||engine!==e)throw Error('Document owner changed during replacement');
+ let d:import('./protocol').OpenedDocument,readback:string|undefined;
+ if(o.expect!==undefined){const r=await e.replaceChecked(edit,o.expect);d=r.document;readback=r.text;}else d=await e.replace(edit);
+ if(owner!==gen||engine!==e)throw Error('Document owner changed during replacement');
  if(record==='new')undo.push(inv,o.merge);else if(record==='undo')undo.pushRedo(inv);else undo.pushUndo(inv);
  const at=record==='new'?o.caret:caretAfterEdit(edit);
  patchDocuments({edited:true,notice:'',editError:'',caretLocked:false,caret:at==null?null:{block:edit.block,anchor:at,head:at}});await refresh(d);
+ return readback;
 }
 const run=(fn:()=>Promise<void>)=>{
  const en=cur;pending++;
@@ -135,6 +138,33 @@ export const editParagraph=(index:number,next:string)=>run(async()=>{
  if(/[\r\n\uFFFC]/.test(next))throw new Error('Line breaks are not supported in this version. Edit one paragraph at a time.');
  const edit=diffEdit(index,block.text,next);if(!edit)return;await apply(edit,'new');
 });
+export type ReceiptFailure='stale-revision'|'stale-text'|'not-editable'|'closed'|'readback-mismatch'|'failed';
+export class EditReceiptError extends Error{constructor(readonly code:ReceiptFailure,message:string){super(message);this.name='EditReceiptError';}}
+export interface EditReceipt{block:number;/** The document revision after the edit. */rev:number;/** The paragraph text read back from the engine after the edit. */text:string;/** True once the edit is on the undo stack. */undoable:boolean}
+/**
+ * Applies one reviewed paragraph edit atomically. It refuses (changing nothing) when the document revision is not `expectedRev` or the
+ * paragraph no longer reads `expectedText`; the worker checks the text again inside the same call as the replacement. The edit is on the
+ * undo stack before this resolves, and the receipt carries the text read back from the engine, which must equal the expected result.
+ * Serialised with every other edit. Errors are EditReceiptError and are not shown as an editing error in the document.
+ */
+export function applyReviewedEdit(req:{block:number;expectedRev:number;expectedText:string;hunks:import('./edit').Hunk[]}):Promise<EditReceipt>{
+ const en=cur;pending++;
+ const p=chain.then(async():Promise<EditReceipt>=>{
+  if(!engine||cur!==en)throw new EditReceiptError('closed','The document is not open.');
+  const st=getDocumentsState();
+  if(st.rev!==req.expectedRev)throw new EditReceiptError('stale-revision','The document changed since the edit was prepared.');
+  const block=st.blocks.find(b=>b.index===req.block);
+  if(!block||!block.editable||block.text===undefined)throw new EditReceiptError('not-editable','This paragraph cannot be edited as text.');
+  if(block.text!==req.expectedText)throw new EditReceiptError('stale-text','The paragraph changed since the edit was prepared.');
+  const edit:TextEdit={block:req.block,hunks:req.hunks};const want=applyEdit(req.expectedText,edit);
+  let got:string|undefined;
+  try{got=await apply(edit,'new',{expect:req.expectedText});}
+  catch(err){const m=msg(err);throw new EditReceiptError(m.startsWith('stale:')?'stale-text':'failed',m);}
+  if(got!==want)throw new EditReceiptError('readback-mismatch','The paragraph does not read back as the edit intended; undo it.');
+  return{block:req.block,rev:getDocumentsState().rev,text:got,undoable:getDocumentsState().canUndo};
+ }).finally(()=>{pending--;});
+ chain=p.then(()=>undefined,()=>undefined);return p;
+}
 async function restoreSnap(x:UndoEntry,to:'before'|'after'){
  const check=ownerGuard(),e=engine!;const sn=x.snap!;const d=await e.restore(to==='before'?sn.before:sn.after);check();const c=to==='before'?sn.caretBefore:sn.caretAfter;
  patchDocuments({edited:true,editError:'',caretLocked:false,caret:{block:c.block,anchor:c.off,head:c.off}});await refresh(d);

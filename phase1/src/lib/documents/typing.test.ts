@@ -6,6 +6,7 @@ import type {DocumentsEngine} from './engine';
 import {getDocumentsState,patchDocuments} from './store';
 import {setHeaderFooter,readHeaderFooter,tabInCell,insertTable,editTable,setParagraphStyle,shiftListLevel,toggleList,setAlign,setLineSpacing,setSpaceAfter,stepIndent,setFont,setFontColor,setFontSize,stepFontSize,toggleFormat,deleteAtCaret,moveCaret,MAX_INSERT_LINES,pasteText,redoEdit,resetSessionsForTest,selectAllText,selectedText,setSessionDeps,splitAtCaret,switchDocument,typeText,undoEdit,syncGeometry,settleDocument,setFindOpen,setFindQuery,findStep,replaceAll,replaceCurrent,documentStats} from './session';
 import {stepBoundary,wordBoundary} from './text';
+import {applyReviewedEdit,EditReceiptError} from './session';
 const docx=new Uint8Array(readFileSync(new URL('../../../test/documents/sample.docx',import.meta.url)));
 type Row={text:string;locked?:boolean;f?:Set<string>[];p?:Record<string,number|string>};
 /** Paragraph model of the engine: replace/split/merge/snapshot/restore with the same UTF-8 offset rules. */
@@ -18,6 +19,7 @@ class Doc{
  async init(){return {} as never;}async open(){return this.doc();}
  async blocks(){return this.rows.map((r,i)=>r.locked?{index:i,kind:'table' as const,editable:false}:{index:i,kind:'para' as const,editable:true,text:r.text});}
  async replace(e:TextEdit){this.tick();const old=this.flags(e.block).slice();const h=e.hunks[0];this.rows[e.block]={...this.rows[e.block],text:applyEdit(this.rows[e.block].text,e)};this.rows[e.block].f=[...old.slice(0,h.start),...[...h.text].map(()=>new Set<string>()),...old.slice(h.end)];return this.doc();}
+ async replaceChecked(e:TextEdit,expected:string){if(this.rows[e.block]?.text!==expected)throw new Error('stale: the paragraph changed since it was read');const document=await this.replace(e);return{document,text:this.rows[e.block].text};}
  async split(b:number,off:number){this.tick();const t=this.rows[b].text;const enc=new TextEncoder(),dec=new TextDecoder();const u=enc.encode(t);this.rows.splice(b,1,{text:dec.decode(u.slice(0,off))},{text:dec.decode(u.slice(off))});return this.doc();}
  async merge(b:number){this.tick();this.rows.splice(b-1,2,{text:this.rows[b-1].text+this.rows[b].text});return this.doc();}
  /** ASCII-only character flags (b/i/u per char) so format tests can inspect results. */
@@ -365,4 +367,35 @@ test('setHeaderFooter needs a caret, validates text, sends only what changed and
  await setHeaderFooter({});assert.equal(calls.length,0);
  await setHeaderFooter({header:'Title',pageNumber:true});assert.deepEqual(calls,[{header:'Title',pageNumber:true}]);assert.equal(getDocumentsState().editError,'');assert.deepEqual([c().block,c().head],[0,1]);
  assert.deepEqual(await readHeaderFooter(),{header:{text:'H',editable:true},footer:{text:'',pageNumber:false,editable:true}});
+});
+const code=async(p:Promise<unknown>)=>{try{await p;return 'ok';}catch(e){return e instanceof EditReceiptError?e.code:'other:'+String(e);}};
+test('reviewed edit: applies atomically, is undoable before the receipt resolves, and reads back',async()=>{
+ await open(['hello world','second']);const rev=getDocumentsState().rev;
+ const r=await applyReviewedEdit({block:0,expectedRev:rev,expectedText:'hello world',hunks:[{start:0,end:5,text:'howdy'}]});
+ assert.deepEqual([r.block,r.text,r.undoable],[0,'howdy world',true]);assert.ok(r.rev>rev);assert.equal(r.rev,getDocumentsState().rev);
+ assert.deepEqual(d.texts(),['howdy world','second']);
+ await undoEdit();assert.deepEqual(d.texts(),['hello world','second']);
+});
+test('reviewed edit: stale revision, stale text, locked and missing paragraphs change nothing',async()=>{
+ await open(['abc',{text:'tbl',locked:true}]);const rev=getDocumentsState().rev;const h=[{start:0,end:0,text:'X'}];
+ assert.equal(await code(applyReviewedEdit({block:0,expectedRev:rev-1,expectedText:'abc',hunks:h})),'stale-revision');
+ assert.equal(await code(applyReviewedEdit({block:0,expectedRev:rev,expectedText:'abd',hunks:h})),'stale-text');
+ assert.equal(await code(applyReviewedEdit({block:1,expectedRev:rev,expectedText:'tbl',hunks:h})),'not-editable');
+ assert.equal(await code(applyReviewedEdit({block:7,expectedRev:rev,expectedText:'',hunks:h})),'not-editable');
+ assert.deepEqual(d.texts(),['abc','tbl']);assert.equal(getDocumentsState().rev,rev);assert.equal(getDocumentsState().editError,'');
+});
+test('reviewed edit: two edits prepared from the same revision, only the first wins (race)',async()=>{
+ await open(['abc']);const rev=getDocumentsState().rev;const h=(t:string)=>[{start:0,end:0,text:t}];
+ const [a,b]=await Promise.all([code(applyReviewedEdit({block:0,expectedRev:rev,expectedText:'abc',hunks:h('1')})),code(applyReviewedEdit({block:0,expectedRev:rev,expectedText:'abc',hunks:h('2')}))]);
+ assert.deepEqual([a,b],['ok','stale-revision']);assert.deepEqual(d.texts(),['1abc']);
+});
+test('reviewed edit: text changed under us is refused by the worker check; engine failure and bad readback are reported',async()=>{
+ await open(['abc']);let rev=getDocumentsState().rev;d.rows[0].text='abX';
+ assert.equal(await code(applyReviewedEdit({block:0,expectedRev:rev,expectedText:'abc',hunks:[{start:0,end:0,text:'Q'}]})),'stale-text');
+ assert.deepEqual(d.texts(),['abX']);
+ await open(['abc']);rev=getDocumentsState().rev;d.failAt=d.calls+1;
+ assert.equal(await code(applyReviewedEdit({block:0,expectedRev:rev,expectedText:'abc',hunks:[{start:0,end:0,text:'X'}]})),'failed');
+ assert.deepEqual(d.texts(),['abc']);d.failAt=-1;
+ const orig=d.replaceChecked.bind(d);d.replaceChecked=async(e,x)=>{const r=await orig(e,x);return{...r,text:r.text+'?'};};
+ assert.equal(await code(applyReviewedEdit({block:0,expectedRev:rev,expectedText:'abc',hunks:[{start:0,end:0,text:'X'}]})),'readback-mismatch');
 });

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync,existsSync} from 'node:fs';
 import {zipSync,strToU8} from 'fflate';
-import {DocumentsCore} from './core';
+import {DocumentsCore,type DocSessionLike} from './core';
 import {DocumentsEngine,type WorkerLike} from './engine';
 import {inspectDocx} from './inspect';
 import {utf16ToUtf8Offset,utf8ToUtf16Offset,stepBoundary} from './text';
@@ -152,4 +152,16 @@ test('randomised: diffEdit/applyEdit/inverseOf round-trip on mixed Unicode (seed
   assert.ok(e,JSON.stringify([a,b]));assert.equal(applyEdit(a,e),b,JSON.stringify([a,b]));assert.equal(applyEdit(b,inverseOf(a,e)),a,JSON.stringify([a,b]));
   for(let j=1;j<e.hunks.length;j++)assert.ok(e.hunks[j].start>=e.hunks[j-1].end);
  }
+});
+test('replaceChecked is validated before the engine and returns the worker read-back',()=>{
+ const calls:string[]=[];
+ const S=class{constructor(_b?:Uint8Array){}free(){}paginate(){return 1;}page_info(){return '{"pages":[],"cacheHits":0,"cacheMisses":0}';}text(){return '';}
+  replace_checked(b:number,e:string,j:string){calls.push(`${b}|${e}|${j}`);if(e==='stale')throw new Error('stale: the paragraph changed since it was read');return e+'!';}};
+ const k=new DocumentsCore(S as unknown as new(b:Uint8Array)=>DocSessionLike);k.handle({id:1,kind:'open',bytes:new Uint8Array(4)} as never);
+ const go=(r:object)=>{try{return k.handle({id:2,kind:'replaceChecked',...r} as never).res;}catch(e){return{ok:false as const,error:String(e)};}};
+ const h=[{start:0,end:1,text:'x'}];
+ for(const bad of [{block:-1,expected:'a',hunks:h},{block:1.5,expected:'a',hunks:h},{block:0,expected:3,hunks:h},{block:0,expected:'a',hunks:[]},{block:0,expected:'a',hunks:[{start:2,end:1,text:'x'}]},{block:0,expected:'a',hunks:[{start:0,end:1,text:3}]},{block:0,expected:'a'.repeat(1_000_001),hunks:h}])assert.equal((go(bad) as {ok:boolean}).ok,false,JSON.stringify(bad).slice(0,60));
+ assert.equal(calls.length,0);
+ const ok=go({block:0,expected:'abc',hunks:h}) as {ok:boolean;kind?:string;text?:string};assert.deepEqual([ok.ok,ok.kind,ok.text],[true,'replaced','abc!']);
+ assert.equal(calls[0],'0|abc|[[0,1,"x"]]');
 });

@@ -112,6 +112,8 @@ export type DocumentsRequest=
  |{id:number;kind:'insert';block:number;utf8Offset:number;text:string}
  |{id:number;kind:'blocks'}
  |{id:number;kind:'replace';block:number;hunks:import('./edit').Hunk[]}
+ /** Atomic: applies only while the paragraph still reads `expected`; answers with the paragraph text read back. */
+ |{id:number;kind:'replaceChecked';block:number;expected:string;hunks:import('./edit').Hunk[]}
  |{id:number;kind:'hit';page:number;x:number;y:number}
  |{id:number;kind:'caret';block:number;off:number}
  |{id:number;kind:'rects';block:number;a:number;b:number}
@@ -161,6 +163,7 @@ export type DocumentsResponse=
  |{id:number;ok:true;kind:'opened';document:OpenedDocument}
  |{id:number;ok:true;kind:'rendered';png:ArrayBuffer;renderMs:number}
  |{id:number;ok:true;kind:'edited';document:OpenedDocument}
+ |{id:number;ok:true;kind:'replaced';document:OpenedDocument;text:string}
  |{id:number;ok:true;kind:'blocks';blocks:import('./edit').DocBlock[]}
  |{id:number;ok:true;kind:'comments';comments:CommentItem[]}
  |{id:number;ok:true;kind:'headerFooter';state:HeaderFooterState}

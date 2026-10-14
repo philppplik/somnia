@@ -48,7 +48,7 @@ new file mode 100644
 index 0000000..5b80b79
 --- /dev/null
 +++ b/crates/somnia-worker/src/lib.rs
-@@ -0,0 +1,4292 @@
+@@ -0,0 +1,4326 @@
 +//! Experimental headless adapter. No DOM, egui, filesystem or UI thread access.
 +use wasm_bindgen::prelude::*;
 +use std::sync::Arc;
@@ -2710,6 +2710,17 @@ index 0000000..5b80b79
 +        self.pages = DocLayout::default();
 +        Ok(())
 +    }
++    /// Replaces ranges only when the paragraph still reads exactly `expected` (one atomic step inside the worker), then returns the
++    /// paragraph text read back after the edit. A paragraph that changed since the caller read it is refused untouched.
++    fn do_replace_checked(&mut self, block: usize, expected: &str, hunks: &[(usize, usize, String)]) -> Result<String, String> {
++        let Some(p) = self.para_at(block) else { return Err(format!("block {block} is not a paragraph")) };
++        if p.text != expected {
++            return Err("stale: the paragraph changed since it was read".into());
++        }
++        self.do_replace_many(block, hunks)?;
++        let Some(p) = self.para_at(block) else { return Err(format!("block {block} is not a paragraph")) };
++        Ok(p.text.clone())
++    }
 +    fn do_replace(&mut self, block: usize, start: usize, end: usize, text: &str) -> Result<(), String> {
 +        self.do_replace_many(block, &[(start, end, text.to_string())])
 +    }
@@ -2724,6 +2735,11 @@ index 0000000..5b80b79
 +    pub fn replace_ranges(&mut self, block: usize, hunks_json: &str) -> Result<(), JsValue> {
 +        let v: Vec<(usize, usize, String)> = serde_json::from_str(hunks_json).map_err(|e| JsValue::from_str(&format!("bad hunks: {e}")))?;
 +        self.do_replace_many(block, &v).map_err(|e| JsValue::from_str(&e))
++    }
++    /// `expected`: the paragraph text the edit was computed from. Returns the paragraph text after the edit; `stale: ...` when it differs.
++    pub fn replace_checked(&mut self, block: usize, expected: &str, hunks_json: &str) -> Result<String, JsValue> {
++        let v: Vec<(usize, usize, String)> = serde_json::from_str(hunks_json).map_err(|e| JsValue::from_str(&format!("bad hunks: {e}")))?;
++        self.do_replace_checked(block, expected, &v).map_err(|e| JsValue::from_str(&e))
 +    }
 +    pub fn replace_range(&mut self, block: usize, utf8_start: usize, utf8_end: usize, text: &str) -> Result<(), JsValue> {
 +        self.do_replace(block, utf8_start, utf8_end, text).map_err(|e| JsValue::from_str(&e))
@@ -3574,6 +3590,24 @@ index 0000000..5b80b79
 +        if s.toc_entries(9).unwrap().is_empty() {
 +            assert!(s.do_insert_toc(0, 3, "", true).is_err());
 +        }
++    }
++    #[test]
++    fn replace_checked_refuses_stale_text_untouched_and_reads_back() {
++        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
++        let before = s.para_at(0).unwrap().text.clone();
++        assert!(!before.is_empty());
++        let err = s.do_replace_checked(0, "not the text", &[(0, 0, "X".into())]).unwrap_err();
++        assert!(err.starts_with("stale:"), "{err}");
++        assert_eq!(s.para_at(0).unwrap().text, before, "a stale edit must leave the paragraph untouched");
++        let after = s.do_replace_checked(0, &before, &[(0, 0, "X".into())]).unwrap();
++        assert_eq!(after, format!("X{before}"));
++        assert_eq!(s.para_at(0).unwrap().text, after);
++        // The old text is now stale: the same call is refused, and a bad hunk leaves the text as it was.
++        assert!(s.do_replace_checked(0, &before, &[(0, 0, "Y".into())]).unwrap_err().starts_with("stale:"));
++        assert!(s.do_replace_checked(0, &after, &[(0, 0, "a\nb".into())]).is_err());
++        assert!(s.do_replace_checked(0, &after, &[(5000, 5001, "z".into())]).is_err());
++        assert!(s.do_replace_checked(99999, "", &[]).is_err());
++        assert_eq!(s.para_at(0).unwrap().text, after);
 +    }
 +    #[test]
 +    fn character_all_caps_double_strike_and_spacing_set_report_and_validate() {
