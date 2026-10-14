@@ -431,3 +431,7 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 ### Animation P64 (2026-10-14, integration pending)
 - Done: marquee select in the style lanes. Dragging on empty lane space selects every key whose centre is inside the dragged rectangle, across lanes of the selected layer, in any drag direction; Shift keeps the existing selection. Selection updates live while dragging. View state only (no undo).
 - Open: no drawn rubber-band rectangle (the selected keys are the feedback), selection across layers, effect colour keys have no lane.
+
+### Animation P65 (2026-10-14, integration pending)
+- Done: gradient strokes. A shape stroke can carry a linear gradient (start and end colour, angle, same model and controls as the fill gradient). Viewer, PNG/GIF/WebM/SVG frames and motion blur share one builder, so they all draw it. Inspector: "Gradient stroke" checkbox with two colours and an angle in the stroke section; one undo step via `layer.stroke`. Validated (hex colours, angle 0..360). Without a gradient the output is byte-identical.
+- Open: gradient is linear only (no radial), it is not keyed, "Expand stroke" outlines use the plain colour, stroke colour keys are ignored while a gradient is set, no inside/outside alignment.

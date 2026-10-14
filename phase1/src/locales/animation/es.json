@@ -617,5 +617,6 @@
  "animation.color.ease": "Suavizado del fotograma clave de color",
  "cmd.animation.color.ease": "Ajustar el suavizado del fotograma clave de color de relleno o trazo en el cabezal",
  "cmd.animation.styleKeys.delete": "Eliminar los fotogramas clave de estilo seleccionados",
- "cmd.animation.styleKeys.nudge": "Mover los fotogramas clave de estilo seleccionados por fotogramas"
+ "cmd.animation.styleKeys.nudge": "Mover los fotogramas clave de estilo seleccionados por fotogramas",
+ "animation.stroke.gradient": "Trazo con degradado"
 }

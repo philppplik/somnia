@@ -22,7 +22,7 @@ const num=(n:number)=>String(Math.round(n*1e4)/1e4);
 /** Effects group plus content of one layer in its own space, as drawn in a frame or inside a matte. */
 export function layerBody(layer:Layer,i:number,assets:readonly InterfaceAsset[],tick:number,prefix:string):string{
  const fx=effectPrimitives(layer,tick)?`url(#${prefix}effect-${i})`:'';
- const content=layerSvg(layer,assets,tick,layer.source.gradient?`url(#${prefix}gradient-${i})`:undefined);
+ const content=layerSvg(layer,assets,tick,layer.source.gradient?`url(#${prefix}gradient-${i})`:undefined,layer.stroke?.gradient?`url(#${prefix}stroke-gradient-${i})`:undefined);
  return fx?`<g filter="${fx}">${content}</g>`:content;
 }
 /**
@@ -46,13 +46,13 @@ export function precompImage(l:Layer,tick:number,assets:readonly InterfaceAsset[
  try{const svg=frameSvg(child,local,true,assets,renderComps);return {href:`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`,width:l.source.width??child.width,height:l.source.height??child.height};}
  finally{nest=keep;}
 }
-function layerSvg(layer:Layer,assets:readonly InterfaceAsset[],tick:number,fillOverride?:string):string{
+function layerSvg(layer:Layer,assets:readonly InterfaceAsset[],tick:number,fillOverride?:string,strokePaint?:string):string{
  const l=layerColorsAt(layer,tick),s=l.source;const fill=fillOverride??esc(s.color??'#000');
  if(l.kind==='comp'){const p=precompImage(l,tick,assets);return p?`<image href="${p.href}" width="${num(p.width)}" height="${num(p.height)}"/>`:'';}
  if(l.kind==='raster'){const asset=assets.find(a=>a.id===s.assetId);if(!asset)throw new ExportError('Missing image asset.','raster');return `<image href="${asset.data}" width="${num(s.width??asset.width)}" height="${num(s.height??asset.height)}"/>`;}
 
  if(l.kind==='solid')return `<rect x="0" y="0" width="${num(s.width??0)}" height="${num(s.height??0)}" fill="${fill}"/>`;
- const stroke=strokeAttributes(l,tick);const strokeSvg=stroke?` stroke="${stroke.stroke}" stroke-width="${stroke.strokeWidth}" pathLength="100" stroke-dasharray="${stroke.strokeDasharray}" stroke-dashoffset="${stroke.strokeDashoffset}"${stroke.strokeLinejoin?` stroke-linejoin="${stroke.strokeLinejoin}"`:''}${stroke.strokeLinecap?` stroke-linecap="${stroke.strokeLinecap}"`:''}${stroke.strokeMiterlimit!==undefined?` stroke-miterlimit="${num(stroke.strokeMiterlimit)}"`:''}${stroke.strokeOpacity!==undefined?` stroke-opacity="${num(stroke.strokeOpacity)}"`:''}`:'';
+ const stroke=strokeAttributes(l,tick,strokePaint);const strokeSvg=stroke?` stroke="${stroke.stroke}" stroke-width="${stroke.strokeWidth}" pathLength="100" stroke-dasharray="${stroke.strokeDasharray}" stroke-dashoffset="${stroke.strokeDashoffset}"${stroke.strokeLinejoin?` stroke-linejoin="${stroke.strokeLinejoin}"`:''}${stroke.strokeLinecap?` stroke-linecap="${stroke.strokeLinecap}"`:''}${stroke.strokeMiterlimit!==undefined?` stroke-miterlimit="${num(stroke.strokeMiterlimit)}"`:''}${stroke.strokeOpacity!==undefined?` stroke-opacity="${num(stroke.strokeOpacity)}"`:''}`:'';
  if(l.kind==='shape'&&['star','polygon'].includes(s.shape??''))return `<path d="${radialPath(s)}"${strokeSvg} fill="${fill}"/>`;
  if(l.kind==='shape'&&s.shape==='path'&&s.path)return `<path d="${layerPathD(l,tick)}"${layerFillRule(l)?' fill-rule="evenodd"':''}${strokeSvg} fill="${fill}"/>`;
  if(l.kind==='shape')return s.shape==='ellipse'
@@ -72,7 +72,7 @@ function frameSvgBody(comp:Composition,tick:number,transparent:boolean,assets:re
  validateAnimationAssets({assets,compositions:[{...comp,layers:comp.layers.filter(l=>l.kind!=='audio')}]});
  if(comp.layers.some(l=>!validSource(l.source)||!validEffects(l.effects)))throw new ExportError('Invalid layer source/effects.','raster');
  const defs=comp.layers.map((l,i)=>{const b=effectBounds(l,tick);return `<filter id="effect-${i}" filterUnits="userSpaceOnUse" x="${b.x}" y="${b.y}" width="${b.width}" height="${b.height}" color-interpolation-filters="sRGB">${effectPrimitives(l,tick)}</filter>`;}).join('');
- const gradients=comp.layers.map((l,i)=>{const g=l.source.gradient;if(!g)return '';const v=gradientVector(g.angle);return `<linearGradient id="gradient-${i}" x1="${v.x1}" y1="${v.y1}" x2="${v.x2}" y2="${v.y2}"><stop offset="0" stop-color="${g.start}"/><stop offset="1" stop-color="${g.end}"/></linearGradient>`;}).join('');
+ const gradients=comp.layers.map((l,i)=>{const g=l.source.gradient;if(!g)return '';const v=gradientVector(g.angle);return `<linearGradient id="gradient-${i}" x1="${v.x1}" y1="${v.y1}" x2="${v.x2}" y2="${v.y2}"><stop offset="0" stop-color="${g.start}"/><stop offset="1" stop-color="${g.end}"/></linearGradient>`;}).join('')+comp.layers.map((l,i)=>{const g=l.stroke?.gradient;if(!g)return '';const v=gradientVector(g.angle);return `<linearGradient id="stroke-gradient-${i}" x1="${v.x1}" y1="${v.y1}" x2="${v.x2}" y2="${v.y2}"><stop offset="0" stop-color="${g.start}"/><stop offset="1" stop-color="${g.end}"/></linearGradient>`;}).join('');
  const body=sceneAt(comp,tick).map(({layer,matrix,opacity})=>{const i=comp.layers.indexOf(layer);
   const wrap=(inner:string)=>hasMasks(layer)?`<g mask="url(#${maskId('',i)})">${inner}</g>`:inner;
   const masked=wrap(layerBody(layer,i,assets,tick,''));

@@ -617,5 +617,6 @@
  "animation.color.ease": "Accélération de l'image clé de couleur",
  "cmd.animation.color.ease": "Régler l'accélération de l'image clé de couleur de remplissage ou de contour à la tête de lecture",
  "cmd.animation.styleKeys.delete": "Supprimer les images clés de style sélectionnées",
- "cmd.animation.styleKeys.nudge": "Déplacer les images clés de style sélectionnées de quelques images"
+ "cmd.animation.styleKeys.nudge": "Déplacer les images clés de style sélectionnées de quelques images",
+ "animation.stroke.gradient": "Contour en dégradé"
 }

@@ -617,5 +617,6 @@
  "animation.color.ease": "Suavização do quadro-chave de cor",
  "cmd.animation.color.ease": "Definir a suavização do quadro-chave de cor de preenchimento ou traço no cursor",
  "cmd.animation.styleKeys.delete": "Excluir os quadros-chave de estilo selecionados",
- "cmd.animation.styleKeys.nudge": "Mover os quadros-chave de estilo selecionados por quadros"
+ "cmd.animation.styleKeys.nudge": "Mover os quadros-chave de estilo selecionados por quadros",
+ "animation.stroke.gradient": "Traço com degradê"
 }

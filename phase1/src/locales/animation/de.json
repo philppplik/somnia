@@ -617,5 +617,6 @@
  "animation.color.ease": "Easing des Farb-Keys",
  "cmd.animation.color.ease": "Easing des Füll- oder Konturfarb-Keys am Abspielkopf setzen",
  "cmd.animation.styleKeys.delete": "Ausgewählte Stil-Keyframes löschen",
- "cmd.animation.styleKeys.nudge": "Ausgewählte Stil-Keyframes um Frames verschieben"
+ "cmd.animation.styleKeys.nudge": "Ausgewählte Stil-Keyframes um Frames verschieben",
+ "animation.stroke.gradient": "Verlaufskontur"
 }

@@ -340,3 +340,6 @@ A pointer drag on a key that is part of a multi-key selection builds `styleKeySh
 
 ## P64 - Marquee select in style lanes
 `keysInRect` (pure, in keyLanes.ts) picks keys whose screen-space centre is inside the rectangle between the pointer-down and the current pointer. The timeline reads the centres of the rendered diamonds (`data-style-lane`, `data-style-key-t`), so it follows zoom and scroll. Pointer-down on a diamond still selects or drags; only empty lane space starts a marquee.
+
+## P65 - Gradient strokes
+`Layer.stroke.gradient?:{start,end,angle}` replaces the stroke colour when drawing. `strokeAttributes` takes an optional paint; the frame builder (`exportFrames.ts`) and the viewer (`AnimationCanvas.tsx`) emit a `stroke-gradient-<index>` linearGradient next to the fill gradients and pass `url(#...)` as the paint. Same bounding-box gradient vector as the fill gradient. Absent field: unchanged output.

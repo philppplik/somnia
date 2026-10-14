@@ -1569,3 +1569,17 @@ test('P64 marquee picks keys whose centre is inside the rectangle, in any drag d
  assert.deepEqual(keysInRect(c,{x:40,y:0},{x:60,y:20}).map(k=>k.t),[80000]);
  assert.deepEqual(keysInRect(c,{x:200,y:200},{x:300,y:300}),[]);
 });
+
+test('P65 gradient stroke: renders as a paint, validates, undoes, legacy output unchanged',()=>{
+ let d=strokeDoc([{x:0.2,y:0.2},{x:0.8,y:0.2},{x:0.8,y:0.8},{x:0.2,y:0.8}],true,8);
+ const plain=frameSvg(comp(d),0);assert.ok(plain.includes('stroke="#00ff00"')&&!plain.includes('stroke-gradient'));
+ const g=applyEdit(d,{type:'layer.stroke',layer:'pa',stroke:{color:'#00ff00',width:8,gradient:{start:'#ff0000',end:'#0000ff',angle:90}}});
+ const svg=frameSvg(comp(g),0);
+ const idx=comp(g).layers.findIndex(l=>l.id==='pa');
+ assert.ok(svg.includes(`stroke="url(#stroke-gradient-${idx})"`),'stroke paints with the gradient');
+ assert.ok(svg.includes(`<linearGradient id="stroke-gradient-${idx}"`)&&svg.includes('stop-color="#ff0000"')&&svg.includes('stop-color="#0000ff"'));
+ assert.deepEqual(validateDocument(g),[]);
+ for(const bad of [{start:'red',end:'#0000ff',angle:0},{start:'#ff0000',end:'#0000ff',angle:400},{start:'#ff0000',end:'#0000ff',angle:'x' as never}])
+  assert.throws(()=>applyEdit(d,{type:'layer.stroke',layer:'pa',stroke:{color:'#00ff00',width:8,gradient:bad}}));
+ const back=applyEdit(g,{type:'layer.stroke',layer:'pa',stroke:{color:'#00ff00',width:8}});assert.equal(frameSvg(comp(back),0),plain,'removing the gradient restores the old output');
+});
