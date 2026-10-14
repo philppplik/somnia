@@ -2108,6 +2108,7 @@
   "sheets.exported": "Kopie gespeichert. Die Originaldatei wurde nicht verändert.",
   "sheets.fidelity": "Änderungen werden als Kopie (.xlsx) gespeichert. Diagramme, Pivots, Makros und Funktionen, die Somnia nicht lesen kann, können in der Kopie fehlen.",
   "sheets.tooLong": "Dieser Eintrag ist für eine Zelle zu lang.",
+  "sheets.buildMismatch": "Ein Teilnehmer nutzt eine andere App-Version. Gemeinsames Bearbeiten pausiert - bitte Seite neu laden.",
   "sheets.errorHint": "Deine Originaldatei bleibt unverändert.",
   "sheets.reopen": "Neu laden",
   "sheets.inspector": "Zelle",

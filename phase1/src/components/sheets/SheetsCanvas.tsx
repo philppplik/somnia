@@ -30,6 +30,7 @@ import {registerSheetsCommands,registerSheetsCommandController} from '../../lib/
 import {openSheetsFormulasPanel} from './formulasHero';
 import {getCollab,onSessionChange} from '../../lib/collab/session';
 import {shareSheetsFile,adoptSheetsFile} from '../../lib/collab/office/officeSession';
+import {buildMismatches} from '../../lib/collab/buildSync';
 import {openSheetsModel,sheetsModelMeta,sharedSheetList,type SheetsModel} from '../../lib/collab/office/sheetsModel';
 import {SheetsCollabBinding} from '../../lib/collab/office/sheetsBinding';
 import {announceSheetSel,peerSheetSels,type PeerSheetPresence} from '../../lib/collab/office/sheetsPresence';
@@ -70,11 +71,14 @@ function Workbook({item}:{item:MediaItem}){
    const binding=new SheetsCollabBinding(m.doc,item.name,{engine:eng,sheetIndexOf:id=>names.findIndex(x=>x.id===id)});
    for(const sh of names)binding.replay(sh.id);
    collab.current={binding,model:m};
-   sync=()=>setPeers(peerSheetSels(m.doc.awareness,item.name).filter(x=>x.sheet>=0));
+   sync=()=>{
+    if(buildMismatches(m.doc.awareness).length){m.doc.awareness.off('change',sync);collab.current?.binding.destroy();collab.current=null;setPeers([]);setNotice(t('sheets.buildMismatch'));return;}   // a late joiner on another build pauses co-editing
+    setPeers(peerSheetSels(m.doc.awareness,item.name).filter(x=>x.sheet>=0));};
    m.doc.awareness.on('change',sync);sync();
    setRev(x=>x+1);};
   const attach=async()=>{
    const c=getCollab();if(!c||disposed||collab.current)return;
+   if(buildMismatches(c.doc.awareness).length){setNotice(t('sheets.buildMismatch'));return;}   // engine determinism rule (concept 7.4)
    const bytes=original.current;if(!bytes)return;
    if(sheetsModelMeta(openSheetsModel(c.doc,item.name))){
     const ad=await adoptSheetsFile(c.doc,item.name,bytes);

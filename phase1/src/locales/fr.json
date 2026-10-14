@@ -2108,6 +2108,7 @@
   "sheets.exported": "Copie enregistrée. Le fichier d'origine n'a pas été modifié.",
   "sheets.fidelity": "Les modifications sont enregistrées dans une copie (.xlsx). Les graphiques, tableaux croisés, macros et fonctions que Somnia ne sait pas lire peuvent être perdus dans la copie.",
   "sheets.tooLong": "Cette saisie est trop longue pour une cellule.",
+  "sheets.buildMismatch": "Un participant utilise une autre version de l'app. Co-édition en pause - rechargez la page.",
   "sheets.errorHint": "Votre fichier d'origine est intact.",
   "sheets.reopen": "Recharger",
   "sheets.inspector": "Cellule",

@@ -2108,6 +2108,7 @@
   "sheets.exported": "Copia guardada. El archivo original no se modificó.",
   "sheets.fidelity": "Los cambios se guardan como copia (.xlsx). Los gráficos, tablas dinámicas, macros y funciones que Somnia no puede leer pueden perderse en la copia.",
   "sheets.tooLong": "Esa entrada es demasiado larga para una celda.",
+  "sheets.buildMismatch": "Un participante usa otra versión de la app. Edición conjunta en pausa: recarga la página.",
   "sheets.errorHint": "Tu archivo original no se ha modificado.",
   "sheets.reopen": "Recargar",
   "sheets.inspector": "Celda",
