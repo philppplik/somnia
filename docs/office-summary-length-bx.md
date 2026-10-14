@@ -1,0 +1,9 @@
+# BX: requested summary length
+
+Documents and Slides local selected-text summary UI now offers Brief or Standard. Standard remains default. Brief asks for one or two short sentences with 192-token/2048-byte hard output cap; Standard asks for a short paragraph with existing 512-token/4096-byte cap. Both preserve qualifications and forbid unsupported facts. Requested length is explicitly not a model-quality or exact-length guarantee; no truncation to force fit. Invalid choice and overflow fail closed.
+
+Length is part of reviewed run scope. Changing it discards draft, clears consent and requires new approval; it cannot change during owned pending run. Accepted draft visibly records requested length alongside model/provider provenance. No auto-inference. Exact local provider guards, selected-text-only source lease, literal output, cancellation, no tools/cloud fallback, no apply/save/copy/export remain intact. Five locales use existing Field/NativeSelect design controls, no new raw-control debt or dependencies.
+
+Validation: 11 helper/prompt/selection tests, 3 new length browser tests, 2 Documents and 3 Slides regression browser tests passed. 390px Documents light and Slides dark pixels inspected: length field/notice/consent/draft provenance readable, no horizontal clipping. DS/Layers/Commands/UI-Commands pass. Layers inherited missing-transpiler/87 ignored/4 stale caveat; tsc only missing generated slides WASM module. Synthetic providers only, no real inference/download/user data; native/Rust/WASM/full desktop E2E CI-only. No budgets/deps changed, $0.
+
+Roadmap-Delta: Documents/Slides summary draft -> scope-bound requested-length control and smaller brief cap. Real daemon/native task quality/cancel gates remain open. Sheets inference still unwired until live read integration validates; Search paused pending integration/CI.

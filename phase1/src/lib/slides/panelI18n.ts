@@ -2,6 +2,12 @@ import {CATALOGUES,getLocale,subscribeLocale,translate} from '../i18n';
 import {useSyncExternalStore} from 'react';
 export const SLIDES_PANEL_CATALOGUES:Record<string,Record<string,string>>={
   "en": {
+  "slides.summary.length": "Summary length",
+  "slides.summary.brief": "Brief",
+  "slides.summary.standard": "Standard",
+  "slides.summary.lengthNotice": "Requested length, not a guarantee. Brief has a smaller output budget. Changing length discards the draft and needs fresh approval.",
+  "slides.summary.requested": "Requested length: {length}",
+
   "slides.summary.title": "Local selected-text summary",
   "slides.summary.boundary": "Optional AI draft from this reviewed selection only. No document edit/save, tools or cloud fallback. Local inference trusts the daemon.",
   "slides.summary.consent": "Send this reviewed selection to {model} locally for this summary.",
@@ -58,6 +64,12 @@ export const SLIDES_PANEL_CATALOGUES:Record<string,Record<string,string>>={
     "cmd.slides.editText": "Apply slide text"
   },
   "de": {
+  "slides.summary.length": "Summary-Länge",
+  "slides.summary.brief": "Kurz",
+  "slides.summary.standard": "Standard",
+  "slides.summary.lengthNotice": "Gewünschte Länge, keine Garantie. Kurz hat kleineres Output-Budget. Längenwechsel verwirft Draft und braucht neue Zustimmung.",
+  "slides.summary.requested": "Gewünschte Länge: {length}",
+
   "slides.summary.title": "Lokale Auswahl-Zusammenfassung",
   "slides.summary.boundary": "Optionaler KI-Draft nur aus geprüfter Auswahl. Kein Edit/Save, Tools oder Cloud-Fallback. Lokale Inference vertraut dem Daemon.",
   "slides.summary.consent": "Diese geprüfte Auswahl lokal an {model} für diese Zusammenfassung senden.",
@@ -114,6 +126,12 @@ export const SLIDES_PANEL_CATALOGUES:Record<string,Record<string,string>>={
     "cmd.slides.editText": "Folientext anwenden"
   },
   "es": {
+  "slides.summary.length": "Longitud del resumen",
+  "slides.summary.brief": "Breve",
+  "slides.summary.standard": "Estándar",
+  "slides.summary.lengthNotice": "Longitud solicitada, sin garantía. Breve tiene menor límite. Cambiar longitud descarta borrador y necesita nueva aprobación.",
+  "slides.summary.requested": "Longitud solicitada: {length}",
+
   "slides.summary.title": "Resumen local de selección",
   "slides.summary.boundary": "Borrador IA solo de selección revisada. Sin edición/guardado, herramientas ni nube. Inference local confía en daemon.",
   "slides.summary.consent": "Enviar selección revisada a {model} localmente para este resumen.",
@@ -170,6 +188,12 @@ export const SLIDES_PANEL_CATALOGUES:Record<string,Record<string,string>>={
     "cmd.slides.editText": "Aplicar texto"
   },
   "fr": {
+  "slides.summary.length": "Longueur du résumé",
+  "slides.summary.brief": "Bref",
+  "slides.summary.standard": "Standard",
+  "slides.summary.lengthNotice": "Longueur demandée, sans garantie. Bref a un budget réduit. Changer longueur supprime brouillon et demande nouvel accord.",
+  "slides.summary.requested": "Longueur demandée: {length}",
+
   "slides.summary.title": "Résumé local de sélection",
   "slides.summary.boundary": "Brouillon IA de sélection vérifiée seulement. Sans édition/sauvegarde, outils ou cloud. Inference locale fait confiance au daemon.",
   "slides.summary.consent": "Envoyer sélection vérifiée à {model} localement pour ce résumé.",
@@ -226,6 +250,12 @@ export const SLIDES_PANEL_CATALOGUES:Record<string,Record<string,string>>={
     "cmd.slides.editText": "Appliquer le texte"
   },
   "pt-BR": {
+  "slides.summary.length": "Tamanho do resumo",
+  "slides.summary.brief": "Breve",
+  "slides.summary.standard": "Padrão",
+  "slides.summary.lengthNotice": "Tamanho solicitado, sem garantia. Breve tem limite menor. Mudar tamanho descarta rascunho e precisa nova aprovação.",
+  "slides.summary.requested": "Tamanho solicitado: {length}",
+
   "slides.summary.title": "Resumo local da seleção",
   "slides.summary.boundary": "Rascunho IA só da seleção revisada. Sem edição/salvamento, ferramentas ou nuvem. Inference local confia no daemon.",
   "slides.summary.consent": "Enviar seleção revisada a {model} localmente para este resumo.",

@@ -1,6 +1,12 @@
 import {CATALOGUES} from '../i18n';
 export const DOCUMENTS_PANEL_CATALOGUES:Record<string,Record<string,string>>={
   "en": {
+  "documents.summary.length": "Summary length",
+  "documents.summary.brief": "Brief",
+  "documents.summary.standard": "Standard",
+  "documents.summary.lengthNotice": "Requested length, not a guarantee. Brief has a smaller output budget. Changing length discards the draft and needs fresh approval.",
+  "documents.summary.requested": "Requested length: {length}",
+
   "documents.summary.title": "Local selected-text summary",
   "documents.summary.boundary": "Optional AI draft from this reviewed selection only. No document edit/save, tools or cloud fallback. Local inference trusts the daemon.",
   "documents.summary.consent": "Send this reviewed selection to {model} locally for this summary.",
@@ -75,6 +81,12 @@ export const DOCUMENTS_PANEL_CATALOGUES:Record<string,Record<string,string>>={
     "documents.panels.error.matchChanged": "Search result changed. Search again."
   },
   "de": {
+  "documents.summary.length": "Summary-Länge",
+  "documents.summary.brief": "Kurz",
+  "documents.summary.standard": "Standard",
+  "documents.summary.lengthNotice": "Gewünschte Länge, keine Garantie. Kurz hat kleineres Output-Budget. Längenwechsel verwirft Draft und braucht neue Zustimmung.",
+  "documents.summary.requested": "Gewünschte Länge: {length}",
+
   "documents.summary.title": "Lokale Auswahl-Zusammenfassung",
   "documents.summary.boundary": "Optionaler KI-Draft nur aus geprüfter Auswahl. Kein Edit/Save, Tools oder Cloud-Fallback. Lokale Inference vertraut dem Daemon.",
   "documents.summary.consent": "Diese geprüfte Auswahl lokal an {model} für diese Zusammenfassung senden.",
@@ -149,6 +161,12 @@ export const DOCUMENTS_PANEL_CATALOGUES:Record<string,Record<string,string>>={
     "documents.panels.error.matchChanged": "Suchtreffer geändert. Erneut suchen."
   },
   "es": {
+  "documents.summary.length": "Longitud del resumen",
+  "documents.summary.brief": "Breve",
+  "documents.summary.standard": "Estándar",
+  "documents.summary.lengthNotice": "Longitud solicitada, sin garantía. Breve tiene menor límite. Cambiar longitud descarta borrador y necesita nueva aprobación.",
+  "documents.summary.requested": "Longitud solicitada: {length}",
+
   "documents.summary.title": "Resumen local de selección",
   "documents.summary.boundary": "Borrador IA solo de selección revisada. Sin edición/guardado, herramientas ni nube. Inference local confía en daemon.",
   "documents.summary.consent": "Enviar selección revisada a {model} localmente para este resumen.",
@@ -223,6 +241,12 @@ export const DOCUMENTS_PANEL_CATALOGUES:Record<string,Record<string,string>>={
     "documents.panels.error.matchChanged": "El resultado cambió. Busca de nuevo."
   },
   "fr": {
+  "documents.summary.length": "Longueur du résumé",
+  "documents.summary.brief": "Bref",
+  "documents.summary.standard": "Standard",
+  "documents.summary.lengthNotice": "Longueur demandée, sans garantie. Bref a un budget réduit. Changer longueur supprime brouillon et demande nouvel accord.",
+  "documents.summary.requested": "Longueur demandée: {length}",
+
   "documents.summary.title": "Résumé local de sélection",
   "documents.summary.boundary": "Brouillon IA de sélection vérifiée seulement. Sans édition/sauvegarde, outils ou cloud. Inference locale fait confiance au daemon.",
   "documents.summary.consent": "Envoyer sélection vérifiée à {model} localement pour ce résumé.",
@@ -297,6 +321,12 @@ export const DOCUMENTS_PANEL_CATALOGUES:Record<string,Record<string,string>>={
     "documents.panels.error.matchChanged": "Le résultat a changé. Relancez la recherche."
   },
   "pt-BR": {
+  "documents.summary.length": "Tamanho do resumo",
+  "documents.summary.brief": "Breve",
+  "documents.summary.standard": "Padrão",
+  "documents.summary.lengthNotice": "Tamanho solicitado, sem garantia. Breve tem limite menor. Mudar tamanho descarta rascunho e precisa nova aprovação.",
+  "documents.summary.requested": "Tamanho solicitado: {length}",
+
   "documents.summary.title": "Resumo local da seleção",
   "documents.summary.boundary": "Rascunho IA só da seleção revisada. Sem edição/salvamento, ferramentas ou nuvem. Inference local confia no daemon.",
   "documents.summary.consent": "Enviar seleção revisada a {model} localmente para este resumo.",
