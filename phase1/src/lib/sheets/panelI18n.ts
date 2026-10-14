@@ -1,5 +1,15 @@
 import {CATALOGUES} from '../i18n';
 const rows:Record<string,readonly string[]>={
+"sheets.reviewGrid.title":["Reviewed displayed-cell view", "Ansicht geprüfter Zelltexte", "Vista de celdas revisadas", "Vue des cellules vérifiées", "Vista de células revisadas"],
+"sheets.reviewGrid.coverage":["{source} · sheet {sheet} · {range} · {cells} reviewed cells · {empty} empty displayed cells", "{source} · Blatt {sheet} · {range} · {cells} geprüfte Zellen · {empty} leere Zelltexte", "{source} · hoja {sheet} · {range} · {cells} celdas revisadas · {empty} textos vacíos", "{source} · feuille {sheet} · {range} · {cells} cellules vérifiées · {empty} textes vides", "{source} · planilha {sheet} · {range} · {cells} células revisadas · {empty} textos vazios"],
+"sheets.reviewGrid.mode":["Reviewed range view", "Ansicht geprüfter Bereich", "Vista del rango revisado", "Vue de plage vérifiée", "Vista do intervalo revisado"],
+"sheets.reviewGrid.list":["Address list", "Adressliste", "Lista de direcciones", "Liste des adresses", "Lista de endereços"],
+"sheets.reviewGrid.grid":["Read-only grid", "Schreibgeschütztes Raster", "Cuadrícula de solo lectura", "Grille en lecture seule", "Grade somente leitura"],
+"sheets.reviewGrid.scroll":["Scroll reviewed cell grid", "Geprüftes Zellraster scrollen", "Desplazar cuadrícula revisada", "Faire défiler la grille vérifiée", "Rolar grade revisada"],
+"sheets.reviewGrid.row":["Row", "Zeile", "Fila", "Ligne", "Linha"],
+"sheets.reviewGrid.empty":["[empty display]", "[leerer Zelltext]", "[texto vacío]", "[texte vide]", "[texto vazio]"],
+"sheets.reviewGrid.boundary":["Literal displayed text only. Empty display is not proof of an empty cell; no formula/numeric interpretation or edits. Scroll horizontally for wide ranges.", "Nur wörtlicher Zelltext. Leerer Text beweist keine leere Zelle; keine Formel-/Zahleninterpretation oder Änderungen. Breite Bereiche horizontal scrollen.", "Solo texto mostrado literal. Vacío no prueba celda vacía; sin fórmulas/números ni edición. Desplaza rangos anchos horizontalmente.", "Texte affiché littéral uniquement. Vide ne prouve pas cellule vide; aucune interprétation de formule/nombre ou édition. Défiler horizontalement les plages larges.", "Só texto exibido literal. Vazio não prova célula vazia; sem interpretação de fórmulas/números ou edição. Role intervalos largos horizontalmente."],
+
 "sheets.rangeFind.title":["Find in reviewed range", "In geprüftem Bereich suchen", "Buscar en rango revisado", "Chercher dans plage vérifiée", "Buscar no intervalo revisado"],
 "sheets.rangeFind.query":["Text or exact cell address", "Text oder genaue Zelladresse", "Texto o dirección exacta", "Texte ou adresse exacte", "Texto ou endereço exato"],
 "sheets.rangeFind.case":["Match case", "Groß/Kleinschreibung beachten", "Distinguir mayúsculas", "Respecter casse", "Distinguir maiúsculas"],
