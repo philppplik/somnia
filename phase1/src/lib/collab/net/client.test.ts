@@ -224,3 +224,31 @@ test('key session drops plaintext sync/awareness frames (no downgrade)',async()=
  await sleep(30);
  assert.equal(sess.doc.share.has('evil.html'),false);
  await p;});
+
+test('heartbeat: ping/pong keeps a quiet session alive, a silently dead socket reconnects',async()=>{
+ const {server,factory}=memoryServer();const ends:MemoryServerEnd[]=[];server.onConnection(e=>{ends.push(e);
+  e.transport.connect({onOpen(){},onMessage:b=>{for(const o of ends)if(o!==e)o.transport.send(b);},onClose(){ends.splice(ends.indexOf(e),1);}});});
+ const invite='ws://memory/room/abcdefgh12345678';
+ const a=mkClient(invite,mkSession({'a.txt':'hi'}),{transport:factory,syncTimeoutMs:30,heartbeatMs:40,heartbeatDeadMs:150});
+ const b=mkClient(invite,mkSession(),{transport:factory,syncTimeoutMs:30,heartbeatMs:40,heartbeatDeadMs:150});
+ await Promise.all([a.connect(),b.connect()]);
+ // a SmartRelay is not needed for liveness: the two clients answer each other's pings through a blind forwarder
+ await sleep(250);
+ assert.equal(a.snapshot().state,'connected');assert.equal(b.snapshot().state,'connected');
+ // blackhole everything towards a: the socket stays "open" but no frame ever arrives again
+ const endA=ends[0];
+ (endA.transport as {send:(b:Uint8Array)=>void}).send=()=>{};   // a receives nothing more; its own pings still leave
+ await until(()=>a.snapshot().state==='reconnecting',3000);
+ assert.equal(b.snapshot().state,'connected','the peer with live inbound traffic must not flap');
+ a.leave();b.leave();
+});
+
+test('heartbeat disabled with heartbeatMs 0 stays connected without any traffic',async()=>{
+ const {server,factory}=memoryServer();server.onConnection(()=>{});
+ const invite='ws://memory/room/abcdefgh12345678';
+ const a=mkClient(invite,mkSession(),{transport:factory,syncTimeoutMs:30,heartbeatMs:0,heartbeatDeadMs:80});
+ await a.connect();
+ await sleep(200);
+ assert.equal(a.snapshot().state,'connected');
+ a.leave();
+});

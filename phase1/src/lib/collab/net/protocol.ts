@@ -23,6 +23,11 @@ export const MSG_IDENTITY=2;
 export const MSG_ENCRYPTED=3;
 /** Media blob transfer (v11/collab-files): request/chunk frames, see blobProtocol.ts. Always travels inside MSG_ENCRYPTED when the link has a key. */
 export const MSG_BLOB=4;
+/** Liveness (collab core fix 9.1): application-level ping/pong so a silently dead TCP connection is noticed.
+ *  Peers that predate these frames ignore them (unknown types are dropped), which only means no pong.
+ *  5 is MSG_CHAT_SYNC (chatProtocol.ts) - the chat layer took it first. */
+export const MSG_PING=6;
+export const MSG_PONG=7;
 /** Hard frame cap, same as the spike relay enforces. */
 export const MAX_MESSAGE_BYTES=5*1024*1024;
 /**
@@ -52,6 +57,9 @@ export function encodeUpdate(update:Uint8Array):Uint8Array{
 export function encodeAwareness(awareness:Awareness,clients:number[]):Uint8Array{
  const e=encoding.createEncoder();encoding.writeVarUint(e,MSG_AWARENESS);
  encoding.writeVarUint8Array(e,awarenessProtocol.encodeAwarenessUpdate(awareness,clients));return encoding.toUint8Array(e);}
+export function encodePing():Uint8Array{return new Uint8Array([MSG_PING]);}
+export function encodePong():Uint8Array{return new Uint8Array([MSG_PONG]);}
+
 export function encodeIdentity(payload:IdentityMessage):Uint8Array{
  const e=encoding.createEncoder();encoding.writeVarUint(e,MSG_IDENTITY);encoding.writeVarString(e,JSON.stringify(payload));return encoding.toUint8Array(e);}
 
@@ -77,5 +85,6 @@ export function handleMessage(bytes:Uint8Array,doc:Y.Doc,awareness:Awareness,ori
   syncProtocol.readSyncMessage(d,e,doc,origin);
   return encoding.length(e)>1?encoding.toUint8Array(e):null;}
  if(type===MSG_AWARENESS){awarenessProtocol.applyAwarenessUpdate(awareness,decoding.readVarUint8Array(d),origin);return null;}
+ if(type===MSG_PING||type===MSG_PONG)return null;   // liveness carries no document state; peers and test relays may see it
  throw new Error(`cannot apply frame type ${type} here`);
 }
