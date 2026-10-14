@@ -53,11 +53,20 @@ function layerSvg(layer:Layer,assets:readonly InterfaceAsset[],tick:number,fillO
 
  if(l.kind==='solid')return `<rect x="0" y="0" width="${num(s.width??0)}" height="${num(s.height??0)}" fill="${fill}"/>`;
  const stroke=strokeAttributes(l,tick,strokePaint);const strokeSvg=stroke?` stroke="${stroke.stroke}" stroke-width="${stroke.strokeWidth}" pathLength="100" stroke-dasharray="${stroke.strokeDasharray}" stroke-dashoffset="${stroke.strokeDashoffset}"${stroke.strokeLinejoin?` stroke-linejoin="${stroke.strokeLinejoin}"`:''}${stroke.strokeLinecap?` stroke-linecap="${stroke.strokeLinecap}"`:''}${stroke.strokeMiterlimit!==undefined?` stroke-miterlimit="${num(stroke.strokeMiterlimit)}"`:''}${stroke.strokeOpacity!==undefined?` stroke-opacity="${num(stroke.strokeOpacity)}"`:''}`:'';
- if(l.kind==='shape'&&['star','polygon'].includes(s.shape??''))return `<path d="${radialPath(s)}"${strokeSvg} fill="${fill}"/>`;
- if(l.kind==='shape'&&s.shape==='path'&&s.path)return `<path d="${layerPathD(l,tick)}"${layerFillRule(l)?' fill-rule="evenodd"':''}${strokeSvg} fill="${fill}"/>`;
- if(l.kind==='shape')return s.shape==='ellipse'
-  ?`<ellipse cx="${num((s.width??0)/2)}" cy="${num((s.height??0)/2)}" rx="${num((s.width??0)/2)}"${strokeSvg} ry="${num((s.height??0)/2)}" fill="${fill}"/>`
-  :`<rect x="0" y="0" width="${num(s.width??0)}" height="${num(s.height??0)}" rx="${s.shape==='roundedRect'?Math.min(s.radius??24,(s.width??0)/2,(s.height??0)/2):0}"${strokeSvg} fill="${fill}"/>`;
+ if(l.kind==='shape'){
+  const fl=` fill="${fill}"`,star=['star','polygon'].includes(s.shape??''),pathShape=s.shape==='path'&&!!s.path;
+  const el=(sv:string,f:string,clip=false):string=>star?`<path d="${radialPath(s)}"${sv}${f}/>`
+   :pathShape?`<path d="${layerPathD(l,tick)}"${layerFillRule(l)?` ${clip?'clip-rule':'fill-rule'}="evenodd"`:''}${sv}${f}/>`
+   :s.shape==='ellipse'?`<ellipse cx="${num((s.width??0)/2)}" cy="${num((s.height??0)/2)}" rx="${num((s.width??0)/2)}"${sv} ry="${num((s.height??0)/2)}"${f}/>`
+   :`<rect x="0" y="0" width="${num(s.width??0)}" height="${num(s.height??0)}" rx="${s.shape==='roundedRect'?Math.min(s.radius??24,(s.width??0)/2,(s.height??0)/2):0}"${sv}${f}/>`;
+  const align=l.stroke?.align;
+  if(stroke&&(align==='inside'||align==='outside')&&!(pathShape&&!s.path!.closed)){
+   const id=`stroke-align-${esc(l.id)}-${tick}`,wide=strokeSvg.replace(/stroke-width="[^"]*"/,`stroke-width="${num(stroke.strokeWidth*2)}"`);
+   const cut=align==='inside'?`<clipPath id="${id}">${el('',' fill="#fff"',true)}</clipPath>`:`<mask id="${id}" maskUnits="userSpaceOnUse" x="-4096" y="-4096" width="9000" height="9000"><rect x="-4096" y="-4096" width="9000" height="9000" fill="#fff"/>${el('',' fill="#000"')}</mask>`;
+   return `${el('',fl)}<defs>${cut}</defs><g ${align==='inside'?'clip-path':'mask'}="url(#${id})">${el(wide,' fill="none"')}</g>`;
+  }
+  return el(strokeSvg,fl);
+ }
  const tp=textPathD(l);
  if(tp)return `<defs><path id="${textPathId(l)}" d="${tp}"/></defs><text font-size="${num(s.size??48)}" fill="${esc(s.color??'#fff')}" font-family="${esc(textFontStack(s.font))}"><textPath href="#${textPathId(l)}" startOffset="${num(s.textPathStart??0)}%">${textBody(l,tick,num(s.size??48))}</textPath></text>`;
  return `<text x="0" y="${num(s.size??48)}" font-size="${num(s.size??48)}" fill="${esc(s.color??'#fff')}" font-family="${esc(textFontStack(s.font))}">${textBody(l,tick,num(s.size??48))}</text>`;

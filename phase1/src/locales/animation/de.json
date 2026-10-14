@@ -631,5 +631,9 @@
  "animation.gradient.stopOpacity": "Deckkraft von Stopp {n} (%)",
  "animation.gradient.cx": "Mitte X (%)",
  "animation.gradient.cy": "Mitte Y (%)",
- "animation.gradient.radius": "Radius (%)"
+ "animation.gradient.radius": "Radius (%)",
+ "animation.stroke.align": "Kontur-Ausrichtung",
+ "animation.stroke.alignCenter": "Mittig",
+ "animation.stroke.alignInside": "Innen",
+ "animation.stroke.alignOutside": "Außen"
 }

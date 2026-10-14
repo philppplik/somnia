@@ -1662,3 +1662,18 @@ test('P70 radial centre and radius: markup, defaults unchanged, clamping, valida
  for(const bad of [{cx:-0.1},{cy:1.1},{radius:0},{radius:2},{cx:Number.NaN},{radius:'x' as never}])assert.throws(()=>applyEdit(d,{type:'layer.update',layer:'pa',source:{gradient:{...g,...bad}}}),Error);
  assert.throws(()=>applyEdit(d,{type:'layer.stroke',layer:'pa',stroke:{color:'#00ff00',width:8,gradient:{...g,radius:3}}}),Error);
 });
+
+test('P69 stroke alignment: inside clips, outside masks, centre and open paths unchanged',()=>{
+ const d=strokeDoc([{x:0.2,y:0.2},{x:0.8,y:0.2},{x:0.8,y:0.8},{x:0.2,y:0.8}],true,8);
+ const plain=frameSvg(comp(d),0);
+ const set=(align?:'inside'|'outside')=>applyEdit(d,{type:'layer.stroke',layer:'pa',stroke:{color:'#00ff00',width:8,...(align?{align}:{})}});
+ assert.equal(frameSvg(comp(set()),0),plain,'absent align is the old output');
+ const ins=frameSvg(comp(set('inside')),0);
+ assert.ok(ins.includes('<clipPath id="stroke-align-pa-0">')&&ins.includes('clip-path="url(#stroke-align-pa-0)"')&&ins.includes('stroke-width="16"')&&ins.includes('fill="none"'),ins);
+ const out=frameSvg(comp(set('outside')),0);
+ assert.ok(out.includes('<mask id="stroke-align-pa-0"')&&out.includes('mask="url(#stroke-align-pa-0)"')&&out.includes('stroke-width="16"'),out);
+ assert.deepEqual(validateDocument(set('inside')),[]);
+ assert.throws(()=>applyEdit(d,{type:'layer.stroke',layer:'pa',stroke:{color:'#00ff00',width:8,align:'middle' as never}}),Error);
+ const open=applyEdit(strokeDoc([{x:0.2,y:0.2},{x:0.8,y:0.2},{x:0.8,y:0.8}],false,8),{type:'layer.stroke',layer:'pa',stroke:{color:'#00ff00',width:8,align:'inside'}});
+ assert.ok(!frameSvg(comp(open),0).includes('clipPath'),'an open path stays centred');
+});

@@ -631,5 +631,9 @@
  "animation.gradient.stopOpacity": "Opacidad de la parada {n} (%)",
  "animation.gradient.cx": "Centro X (%)",
  "animation.gradient.cy": "Centro Y (%)",
- "animation.gradient.radius": "Radio (%)"
+ "animation.gradient.radius": "Radio (%)",
+ "animation.stroke.align": "Alineación del trazo",
+ "animation.stroke.alignCenter": "Centro",
+ "animation.stroke.alignInside": "Dentro",
+ "animation.stroke.alignOutside": "Fuera"
 }

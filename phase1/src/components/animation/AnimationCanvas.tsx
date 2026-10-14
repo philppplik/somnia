@@ -1,4 +1,4 @@
-import {radialPath,gradientVector} from '../../lib/animation/shapes';
+import {radialPath,gradientVector,CUT_KEEP,CUT_HOLE} from '../../lib/animation/shapes';
 import {layerPathD,layerFillRule} from '../../lib/animation/pathLayer';
 import {effectPrimitives,effectBounds,revealedText,strokeAttributes,layerColorsAt} from '../../lib/animation/effects';
 import type {InterfaceAsset} from '../../lib/interface/schema';
@@ -68,9 +68,19 @@ function layerNode(layer:Layer,assets:readonly InterfaceAsset[],at:number,fillOv
  if(l.kind==='comp'){const p=precompImage(l,at,assets);return p?<image href={p.href} width={p.width} height={p.height}/>:<text fill="var(--text-primary)">Missing composition</text>;}
  if(l.kind==='raster'){const asset=assets.find(a=>a.id===src.assetId);return asset?<image href={asset.data} width={src.width} height={src.height}/>:<text fill="var(--text-primary)">Missing image</text>;}
  if(l.kind==='solid')return <rect x={0} y={0} width={src.width} height={src.height} fill={fill}/>;
- if(l.kind==='shape'&&['star','polygon'].includes(src.shape??''))return <path {...strokeAttributes(l,at,strokePaint)} d={radialPath(src)} fill={fill}/>;
- if(l.kind==='shape'&&src.shape==='path'&&src.path)return <path {...strokeAttributes(l,at,strokePaint)} d={layerPathD(l,at)} fillRule={layerFillRule(l)} fill={fill}/>;
- if(l.kind==='shape')return src.shape==='ellipse'?<ellipse {...strokeAttributes(l,at,strokePaint)} cx={(src.width??0)/2} cy={(src.height??0)/2} rx={(src.width??0)/2} ry={(src.height??0)/2} fill={fill}/>:<rect {...strokeAttributes(l,at,strokePaint)} rx={src.shape==='roundedRect'?Math.min(src.radius??24,(src.width??0)/2,(src.height??0)/2):0} x={0} y={0} width={src.width} height={src.height} fill={fill}/>;
+ if(l.kind==='shape'){
+  const sa=strokeAttributes(l,at,strokePaint),star=['star','polygon'].includes(src.shape??''),pathShape=src.shape==='path'&&!!src.path;
+  const el=(sv:object|undefined,f:string,clip=false)=>star?<path {...(sv??{})} d={radialPath(src)} fill={f}/>
+   :pathShape?<path {...(sv??{})} d={layerPathD(l,at)} {...(clip?{clipRule:layerFillRule(l)?'evenodd' as const:undefined}:{fillRule:layerFillRule(l)})} fill={f}/>
+   :src.shape==='ellipse'?<ellipse {...(sv??{})} cx={(src.width??0)/2} cy={(src.height??0)/2} rx={(src.width??0)/2} ry={(src.height??0)/2} fill={f}/>
+   :<rect {...(sv??{})} rx={src.shape==='roundedRect'?Math.min(src.radius??24,(src.width??0)/2,(src.height??0)/2):0} x={0} y={0} width={src.width} height={src.height} fill={f}/>;
+  const align=l.stroke?.align;
+  if(sa&&(align==='inside'||align==='outside')&&!(pathShape&&!src.path!.closed)){
+   const id=`preview-stroke-align-${l.id}-${at}`;
+   return <>{el(undefined,fill??'none')}<defs>{align==='inside'?<clipPath id={id}>{el(undefined,CUT_KEEP,true)}</clipPath>:<mask id={id} maskUnits="userSpaceOnUse" x={-4096} y={-4096} width={9000} height={9000}><rect x={-4096} y={-4096} width={9000} height={9000} fill={CUT_KEEP}/>{el(undefined,CUT_HOLE)}</mask>}</defs><g {...(align==='inside'?{clipPath:`url(#${id})`}:{mask:`url(#${id})`})}>{el({...sa,strokeWidth:sa.strokeWidth*2},'none')}</g></>;
+  }
+  return el(sa,fill??'none');
+ }
  const tp=textPathD(l);
  if(tp)return <><defs><path id={textPathId(l)} d={tp}/></defs><text fontSize={src.size} fill={fill} fontFamily="system-ui, sans-serif" className="select-none"><textPath href={`#${textPathId(l)}`} startOffset={`${src.textPathStart??0}%`}>{animatedText(l,at)}</textPath></text></>;
  return <text x={0} y={src.size??48} fontSize={src.size} fill={fill} fontFamily="system-ui, sans-serif" className="select-none">{animatedText(l,at)}</text>;

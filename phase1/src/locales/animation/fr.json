@@ -631,5 +631,9 @@
  "animation.gradient.stopOpacity": "Opacité de l'arrêt {n} (%)",
  "animation.gradient.cx": "Centre X (%)",
  "animation.gradient.cy": "Centre Y (%)",
- "animation.gradient.radius": "Rayon (%)"
+ "animation.gradient.radius": "Rayon (%)",
+ "animation.stroke.align": "Alignement du contour",
+ "animation.stroke.alignCenter": "Centré",
+ "animation.stroke.alignInside": "Intérieur",
+ "animation.stroke.alignOutside": "Extérieur"
 }

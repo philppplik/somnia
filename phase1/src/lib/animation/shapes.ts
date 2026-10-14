@@ -45,3 +45,6 @@ export function setGradientGeometry<G extends GradientLike>(g:G,key:'cx'|'cy'|'r
  const lo=key==='radius'?5:0,hi=key==='radius'?150:100,v=Math.round(Math.min(hi,Math.max(lo,percent)))/100;
  const {[key]:_o,...rest}=g as G&Record<string,unknown>;return (v===0.5?rest:{...rest,[key]:v}) as unknown as G;
 }
+
+/** Paints used to cut a stroke to the inside or outside of its shape. */
+export const CUT_KEEP='#fff',CUT_HOLE='#000';

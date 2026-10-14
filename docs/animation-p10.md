@@ -355,3 +355,6 @@ A pointer drag on a key that is part of a multi-key selection builds `styleKeySh
 
 ## P70 - Radial centre and radius
 `gradient.cx`, `gradient.cy` (0..1) and `gradient.radius` (0.05..1.5) only apply when `kind` is `radial`; absent means 0.5. `setGradientGeometry` clamps and removes the field at the default. Validation in `validGradientOpacities` covers both gradient types.
+
+## P69 - Stroke alignment
+`Layer.stroke.align` is `inside` or `outside` (absent means centred). The frame builder and the viewer draw the fill, then a stroke-only element at twice the width inside a `clipPath` (inside) or a `mask` (outside) built from the same shape. Ids are `stroke-align-<layer>-<tick>` (`preview-` prefix in the viewer). Open paths ignore the setting. A `CUT_KEEP` and `CUT_HOLE` paint pair lives in shapes.ts so the viewer needs no hex literals.
