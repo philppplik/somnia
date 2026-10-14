@@ -168,8 +168,8 @@ test('P12: box and point drags are single edits; handle maths is bounded',()=>{
 });
 test('P12: mask selection falls back to the first mask of the layer',()=>{
  const d=keyed();const l=layer(d,'photo');
- selectMask(null,null);assert.equal(activeMask(l,{layer:null,mask:null,point:null,pen:false,clip:null,graph:null,mixed:false})!.id,'m');
- assert.equal(activeMask(l,{layer:'other',mask:'zzz',point:null,pen:false,clip:null,graph:null,mixed:false})!.id,'m');assert.equal(activeMask(undefined,{layer:null,mask:null,point:null,pen:false,clip:null,graph:null,mixed:false}),undefined);
+ selectMask(null,null);assert.equal(activeMask(l,{layer:null,mask:null,point:null,pen:false,layerPen:false,clip:null,graph:null,mixed:false})!.id,'m');
+ assert.equal(activeMask(l,{layer:'other',mask:'zzz',point:null,pen:false,layerPen:false,clip:null,graph:null,mixed:false})!.id,'m');assert.equal(activeMask(undefined,{layer:null,mask:null,point:null,pen:false,layerPen:false,clip:null,graph:null,mixed:false}),undefined);
 });
 
 const penned=()=>{let d=base();d=applyEdit(d,maskEdit(d,'photo',{op:'add',id:'p'}));
@@ -600,4 +600,38 @@ test('P27: a path mask becomes a shape layer in one undo step at the same place'
 test('P27: path layer locale keys exist in all five locales',()=>{
  for(const l of ['en','de','es','fr','pt-BR']){const j=JSON.parse(readFileSync(new URL(`../../locales/animation/${l}.json`,import.meta.url),'utf8'));
   for(const k of ['animation.morph.err.sameLayer','animation.morph.err.notPathLayer','animation.morph.err.outside','animation.pathLayer.animate','animation.pathLayer.target','animation.masks.toLayer','cmd.animation.layer.path','cmd.animation.mask.toLayer'])assert.ok(j[k],`${l} ${k}`);}
+});
+
+import {penNewLayerEdit,MAX_PEN_POINTS} from './pathLayer';
+test('P28: pen strokes build a path layer, one undo step per click or drag',()=>{
+ let d=base();const c=comp(d),rev=d.revision;
+ d=applyEdit(d,penNewLayerEdit(d,c.width/2,c.height/2,'pen1'));assert.equal(d.revision,rev+1,'creating the layer is one step');
+ const l=layer(d,'pen1');assert.equal(l.source.width,c.width);assert.deepEqual(l.source.path!.points,[{x:0.5,y:0.5}]);assert.deepEqual(l.transform.position.value,[0,0]);
+ const steps=[[0.8,0.5,0.1,0],[0.8,0.9],[0.2,0.9,0,0.001]] as const;
+ for(const [x,y,ox,oy] of steps){const r=d.revision;d=applyEdit(d,pathLayerEdit(d,'pen1',{op:'pen',x,y,outX:ox,outY:oy}));assert.equal(d.revision,r+1);}
+ const pts=layer(d,'pen1').source.path!.points;assert.equal(pts.length,4);assert.equal(pts[1].outX,0.1);assert.equal(pts[1].inX,-0.1);assert.equal(pts[2].outX,undefined,'no drag, corner');assert.equal(pts[3].outX,undefined,'tiny drag is a click');
+ assert.match(layerPathD(layer(d,'pen1'),0),/C/);
+ d=applyEdit(d,pathLayerEdit(d,'pen1',{op:'pen',x:5,y:-3}));assert.deepEqual([layer(d,'pen1').source.path!.points[4].x,layer(d,'pen1').source.path!.points[4].y],[1,0],'clamped to the layer box');
+ d=applyEdit(d,pathLayerEdit(d,'pen1',{op:'close'}));assert.equal(layer(d,'pen1').source.path!.closed,true);
+ assert.throws(()=>pathLayerEdit(d,'pen1',{op:'pen',x:0.1,y:0.1}),/closed/);assert.ok(validateDocument(d));
+});
+test('P28: handle drags edit one point, mirror, animate keys, and stay bounded',()=>{
+ let d=pathDoc();const r=d.revision;
+ d=applyEdit(d,pathLayerEdit(d,'pa',{op:'handle',index:1,which:'out',x:0.2,y:0.1,mirror:true}));assert.equal(d.revision,r+1);
+ let q=layer(d,'pa').source.path!.points[1];assert.deepEqual([q.outX,q.outY,q.inX,q.inY],[0.2,0.1,-0.2,-0.1]);
+ d=applyEdit(d,pathLayerEdit(d,'pa',{op:'handle',index:1,which:'in',x:-0.05,y:0,mirror:false}));q=layer(d,'pa').source.path!.points[1];assert.deepEqual([q.outX,q.inX],[0.2,-0.05]);
+ d=applyEdit(d,pathLayerEdit(d,'pa',{op:'handle',index:0,which:'out',x:9,y:-9,mirror:false}));assert.equal(layer(d,'pa').source.path!.points[0].outX,2,'handle bounded to +-2');
+ assert.throws(()=>pathLayerEdit(d,'pa',{op:'handle',index:7,which:'out',x:0,y:0}),/no longer/);
+ d=applyEdit(d,pathLayerEdit(d,'pa',{op:'animate',on:true}));const at=Math.round(sec*2);
+ assert.throws(()=>pathLayerEdit(d,'pa',{op:'handle',index:0,which:'out',x:0,y:0}),/time is needed/);
+ d=applyEdit(d,pathLayerEdit(d,'pa',{op:'handle',index:0,which:'out',x:0.3,y:0,t:at}));assert.equal(layer(d,'pa').source.pathKeys!.length,2);
+ assert.throws(()=>pathLayerEdit(d,'pa',{op:'pen',x:0.5,y:0.5}),/animation/);assert.throws(()=>pathLayerEdit(d,'pa',{op:'close'}),/animation/);
+ assert.equal(MAX_PEN_POINTS,256);
+ let big=pathDoc();big=applyEdit(big,{type:'layer.update',layer:'pa',source:{path:{closed:false,points:Array.from({length:MAX_PEN_POINTS},(_,i)=>({x:i/MAX_PEN_POINTS,y:0.5}))}}});
+ assert.throws(()=>pathLayerEdit(big,'pa',{op:'pen',x:0.5,y:0.5}),/At most 256/);
+});
+test('P28: pen command and locale keys exist',()=>{
+ assert.ok(animationCommandSpecs().some(s=>s.id==='animation.layer.pen'));
+ for(const l of ['en','de','es','fr','pt-BR']){const j=JSON.parse(readFileSync(new URL(`../../locales/animation/${l}.json`,import.meta.url),'utf8'));
+  for(const k of ['animation.pathLayer.overlay','animation.pathLayer.tools','animation.pathLayer.pen','animation.pathLayer.penHint','animation.pathLayer.close','cmd.animation.layer.pen'])assert.ok(j[k],`${l} ${k}`);}
 });

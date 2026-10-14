@@ -1,4 +1,4 @@
-import {findComp,findLayer,validSource,MAX_MASK_POINTS,MAX_SHAPE_KEYS,newId,type AnimationDocument,type Layer,type LayerMask,type MaskPath,type MaskPoint,type MaskShapeKey,type Property,type Vec2} from './model';
+import {findComp,findLayer,validSource,MAX_MASK_POINTS,MAX_SHAPE_KEYS,newId,makeTransform,type AnimationDocument,type Layer,type LayerMask,type MaskPath,type MaskPoint,type MaskShapeKey,type Property,type Vec2} from './model';
 import {bezierPath,lerpPath,morphPath,morphProblem,MorphError,type MorphOpts} from './masks';
 import {pathData} from '../interface/vectorCore';
 import type {InterfacePath} from '../interface/schema';
@@ -15,10 +15,19 @@ export function layerPathD(l:Layer,tick:number):string{
  if(!s.pathKeys?.length&&!hasHandles(p))return pathData(s.path as unknown as InterfacePath,s.width??1,s.height??1);
  const cur=s.pathKeys?.length?lerpPath(s.pathKeys,tick):p;return bezierPath(scale(cur,w,h),0,0);
 }
+/** Points a pen stroke may add to one static path layer. */
+export const MAX_PEN_POINTS=256;
+const clampH=(n:number)=>Math.min(2,Math.max(-2,r4(n)));
+const clamp01=(n:number)=>Math.min(1,Math.max(0,r4(n)));
+/** A pen point in normalized coordinates; a drag of at least 1% pulls symmetric handles. */
+const penPoint=(o:{x:number;y:number;outX?:number;outY?:number}):MaskPoint=>({x:clamp01(o.x),y:clamp01(o.y),...(o.outX!==undefined&&o.outY!==undefined&&Math.hypot(o.outX,o.outY)>=0.01?{outX:clampH(o.outX),outY:clampH(o.outY),inX:clampH(-o.outX),inY:clampH(-o.outY)}:{})});
 export type PathLayerOp=
  |{op:'points';path:MaskPath}
  |{op:'animate';on:boolean;t?:number}
  |{op:'point';index:number;x:number;y:number;t?:number}
+ |{op:'pen';x:number;y:number;outX?:number;outY?:number}
+ |{op:'close'}
+ |{op:'handle';index:number;which:'in'|'out';x:number;y:number;mirror?:boolean;t?:number}
  |{op:'morphTo';other:string;t:number;opts?:MorphOpts};
 const P=(key:string,en:string)=>new MorphError({key:`animation.morph.err.${key}`,en});
 function target(doc:AnimationDocument,id:string){
@@ -39,7 +48,7 @@ export function pathLayerEdit(doc:AnimationDocument,layerId:string,o:PathLayerOp
    if(keys?.length)throw Error('Turn off path animation before replacing the points.');
    if(o.path.points.length>256)throw Error('At most 256 points.');return upd({path:o.path});}
   case 'animate':{
-   if(o.on){if(keys?.length)return upd({});if(s.path!.points.length>MAX_MASK_POINTS)throw Error(`Animated paths have at most ${MAX_MASK_POINTS} points.`);
+   if(o.on){if(keys?.length)return upd({});if(s.path!.points.length<2)throw Error('Add at least two points first.');if(s.path!.points.length>MAX_MASK_POINTS)throw Error(`Animated paths have at most ${MAX_MASK_POINTS} points.`);
     return upd({pathKeys:[{t:c.start,path:s.path as MaskPath}]});}
    if(!keys?.length)return upd({});const cur=lerpPath(keys,o.t??c.start);return {type:'layer.update',layer:l.id,source:{path:cur,pathKeys:undefined}};}
   case 'point':{
@@ -47,6 +56,21 @@ export function pathLayerEdit(doc:AnimationDocument,layerId:string,o:PathLayerOp
    if(!Number.isInteger(o.index)||o.index<0||o.index>=cur.points.length)throw Error('Point no longer exists.');
    const x=Math.min(1,Math.max(0,r4(o.x))),y=Math.min(1,Math.max(0,r4(o.y)));
    const next:MaskPath={closed:cur.closed,points:cur.points.map((q,i)=>i===o.index?{...q,x,y}:q)};
+   if(!keys?.length)return upd({path:next});
+   const nk:MaskShapeKey[]=[...keys.filter(k=>k.t!==t),{t:t!,path:next}].sort((a,b)=>a.t-b.t);
+   if(nk.length>MAX_SHAPE_KEYS)throw Error(`At most ${MAX_SHAPE_KEYS} path keys.`);return upd({pathKeys:nk});}
+  case 'pen':{
+   if(keys?.length)throw Error('Remove the path animation before adding points.');
+   const cur=s.path as MaskPath;if(cur.closed)throw Error('The path is closed.');if(cur.points.length>=MAX_PEN_POINTS)throw Error(`At most ${MAX_PEN_POINTS} path points.`);
+   return upd({path:{closed:false,points:[...cur.points,penPoint(o)]}});}
+  case 'close':{
+   if(keys?.length)throw Error('Remove the path animation before closing the path.');
+   const cur=s.path as MaskPath;if(cur.closed||cur.points.length<3)throw Error('A closed path needs three points.');return upd({path:{...cur,closed:true}});}
+  case 'handle':{
+   const t=keys?.length?frame(o.t):undefined,cur=keys?.length?lerpPath(keys,t!):s.path as MaskPath;
+   if(!Number.isInteger(o.index)||!cur.points[o.index])throw Error('Point no longer exists.');
+   const hx=clampH(o.x),hy=clampH(o.y),mx=r4(-hx),my=r4(-hy);
+   const next:MaskPath={closed:cur.closed,points:cur.points.map((q,i)=>i!==o.index?q:o.which==='out'?{...q,outX:hx,outY:hy,...(o.mirror?{inX:mx,inY:my}:{})}:{...q,inX:hx,inY:hy,...(o.mirror?{outX:mx,outY:my}:{})})};
    if(!keys?.length)return upd({path:next});
    const nk:MaskShapeKey[]=[...keys.filter(k=>k.t!==t),{t:t!,path:next}].sort((a,b)=>a.t-b.t);
    if(nk.length>MAX_SHAPE_KEYS)throw Error(`At most ${MAX_SHAPE_KEYS} path keys.`);return upd({pathKeys:nk});}
@@ -78,4 +102,12 @@ export function maskToLayerEdit(doc:AnimationDocument,layerId:string,maskId:stri
  const source={shape:'path' as const,color:l.source.color??'#ff7a59',width:w,height:h,path:mv(m.path),...(keys?{pathKeys:keys}:{})};
  if(!validSource(source))throw Error('This mask cannot become a layer: its handles reach too far.');
  return {type:'layer.add',kind:'shape',id,over:{name:`${l.name} path`,source,transform:{...l.transform,anchor},parent:l.parent,inT:l.inT,outT:l.outT,offset:l.offset}};
+}
+
+/** Starts a new path layer from the first pen click: a composition-sized layer at the origin so the path can use the whole frame. `x`,`y` are composition pixels, `outX`,`outY` the handle drag in pixels. One layer.add, so one undo step. */
+export function penNewLayerEdit(doc:AnimationDocument,x:number,y:number,id:string,outX?:number,outY?:number):Edit{
+ const c=findComp(doc);if(!c)throw Error('Open a composition first.');
+ const tr=makeTransform(c.width,c.height);
+ const pt=penPoint({x:x/c.width,y:y/c.height,...(outX!==undefined&&outY!==undefined?{outX:outX/c.width,outY:outY/c.height}:{})});
+ return {type:'layer.add',kind:'shape',id,over:{name:'Path',source:{shape:'path',color:'#ff7a59',width:c.width,height:c.height,path:{closed:false,points:[pt]}},transform:{...tr,position:{...tr.position,value:[0,0] as unknown as Vec2}}}};
 }

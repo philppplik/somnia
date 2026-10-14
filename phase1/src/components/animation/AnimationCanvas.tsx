@@ -21,6 +21,8 @@ import {StudioEmptyState} from '../studios/StudioEmptyState';
 import {Button} from '../ui/button';
 import {AnimationTimeline} from './AnimationTimeline';
 import {MaskOverlay} from './MaskOverlay';
+import {useMaskSelection} from '../../lib/animation/maskSelection';
+import {PathLayerOverlay} from './PathLayerOverlay';
 import {PathOverlay} from './PathOverlay';
 const run=(id:string,params?:unknown)=>void executeCommand(id,params);
 /** Canvas of the Animation studio: viewer above a timeline, or a starter when no composition is open. */
@@ -66,7 +68,7 @@ function layerNode(l:Layer,assets:readonly InterfaceAsset[],at:number,fillOverri
 }
 function Viewer({comp,at,selected,sel,assets}:{assets:readonly InterfaceAsset[];comp:Composition;at:number;selected:string|null;sel:readonly KeyRef[]}){
  const {t}=useT();const scene=useMemo(()=>sceneAt(comp,at),[comp,at]);const maskDefsHtml=useMemo(()=>maskDefs(comp,at,'preview-',(l,i)=>{try{return layerBody(l,i,assets,at,'preview-');}catch{return '';}}),[comp,at,assets]);
- const layer=comp.layers.find(l=>l.id===selected);const hasPos=!!layer&&layer.transform.position.keys.length>0;
+ const layer=comp.layers.find(l=>l.id===selected);const hasPos=!!layer&&layer.transform.position.keys.length>0;const penOn=useMaskSelection().layerPen;const canClose=!!layer&&layer.kind==='shape'&&layer.source.shape==='path'&&!!layer.source.path&&!layer.source.path.closed&&layer.source.path.points.length>=3&&!layer.source.pathKeys?.length;
  const posSel=sel.filter(k=>k.layer===selected&&k.prop==='position');
  return <div className="relative grid min-h-[160px] flex-1 place-items-center overflow-hidden bg-hover p-3" data-testid="animation-viewer">
   <svg role="img" aria-label={t('animation.viewer')} viewBox={`0 0 ${comp.width} ${comp.height}`} className="max-h-full max-w-full h-full overflow-visible">
@@ -80,7 +82,12 @@ function Viewer({comp,at,selected,sel,assets}:{assets:readonly InterfaceAsset[];
     return l.matte?<g key={l.id} mask={`url(#${matteId('preview-',i)})`}>{drawn}</g>:drawn;})}
    {layer&&hasPos&&<PathOverlay comp={comp} layer={layer} at={at} sel={sel}/>}
    {layer&&hasMasks(layer)&&<MaskOverlay comp={comp} layer={layer} at={at}/>}
+   <PathLayerOverlay comp={comp} layer={layer} at={at}/>
   </svg>
+  <div className="absolute left-2 top-2 flex gap-1" role="group" aria-label={t('animation.pathLayer.tools')}>
+   <Button size="tiny" variant="outline" aria-pressed={penOn} disabled={!!layer?.locked} onClick={()=>void executeCommand('animation.layer.pen')} title={t('animation.pathLayer.penHint')} data-testid="animation-layerpen-toggle">{t('animation.pathLayer.pen')}</Button>
+   <Button size="tiny" variant="outline" disabled={!canClose||!!layer?.locked} onClick={()=>void executeCommand('animation.layer.path',{layer:layer!.id,op:'close'})} data-testid="animation-layerpen-close">{t('animation.pathLayer.close')}</Button>
+  </div>
   {hasPos&&<div className="absolute right-2 top-2 flex gap-1" role="group" aria-label={t('animation.path.label')}>
    <Button size="tiny" variant="outline" disabled={!posSel.length||!!layer?.locked} onClick={()=>void executeCommand('animation.keys.smooth')} data-testid="animation-path-smooth">{t('animation.path.smooth')}</Button>
    <Button size="tiny" variant="outline" disabled={!posSel.length||!!layer?.locked} onClick={()=>void executeCommand('animation.keys.straighten')} data-testid="animation-path-straight">{t('animation.path.straight')}</Button>

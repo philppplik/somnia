@@ -410,5 +410,11 @@
  "animation.pathLayer.target": "Morphing vers le calque",
  "animation.masks.toLayer": "Créer un calque de tracé",
  "cmd.animation.layer.path": "Modifier un calque de forme tracée",
- "cmd.animation.mask.toLayer": "Convertir un masque tracé en calque de forme"
+ "cmd.animation.mask.toLayer": "Convertir un masque tracé en calque de forme",
+ "animation.pathLayer.overlay": "Points du calque de tracé",
+ "animation.pathLayer.tools": "Outils du calque de tracé",
+ "animation.pathLayer.pen": "Plume",
+ "animation.pathLayer.penHint": "Cliquez pour ajouter des points, glissez pour tirer les poignées, cliquez le premier point pour fermer, Échap pour terminer",
+ "animation.pathLayer.close": "Fermer le tracé",
+ "cmd.animation.layer.pen": "Activer ou désactiver la plume pour les calques de tracé"
 }

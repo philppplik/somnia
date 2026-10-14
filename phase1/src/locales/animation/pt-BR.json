@@ -410,5 +410,11 @@
  "animation.pathLayer.target": "Transformar em camada",
  "animation.masks.toLayer": "Criar camada de caminho",
  "cmd.animation.layer.path": "Editar camada de forma com caminho",
- "cmd.animation.mask.toLayer": "Converter máscara de caminho em camada de forma"
+ "cmd.animation.mask.toLayer": "Converter máscara de caminho em camada de forma",
+ "animation.pathLayer.overlay": "Pontos da camada de caminho",
+ "animation.pathLayer.tools": "Ferramentas da camada de caminho",
+ "animation.pathLayer.pen": "Caneta",
+ "animation.pathLayer.penHint": "Clique para adicionar pontos, arraste para puxar as alças, clique no primeiro ponto para fechar, Esc para terminar",
+ "animation.pathLayer.close": "Fechar caminho",
+ "cmd.animation.layer.pen": "Alternar a caneta para camadas de caminho"
 }

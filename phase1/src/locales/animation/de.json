@@ -410,5 +410,11 @@
  "animation.pathLayer.target": "Morph in Ebene",
  "animation.masks.toLayer": "Pfad-Ebene erstellen",
  "cmd.animation.layer.path": "Pfad-Formebene bearbeiten",
- "cmd.animation.mask.toLayer": "Pfadmaske in Formebene umwandeln"
+ "cmd.animation.mask.toLayer": "Pfadmaske in Formebene umwandeln",
+ "animation.pathLayer.overlay": "Punkte der Pfad-Ebene",
+ "animation.pathLayer.tools": "Pfad-Ebenen-Werkzeuge",
+ "animation.pathLayer.pen": "Stift",
+ "animation.pathLayer.penHint": "Klicken für Punkte, ziehen für Griffe, ersten Punkt klicken zum Schließen, Esc beendet",
+ "animation.pathLayer.close": "Pfad schließen",
+ "cmd.animation.layer.pen": "Stiftwerkzeug für Pfad-Ebenen umschalten"
 }

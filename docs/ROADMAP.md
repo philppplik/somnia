@@ -205,3 +205,9 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Implemented: path shape layers with optional bezier handles and morph keys (`pathKeys`), shared renderer for canvas and exports (plain polygons render as before), morph into another path layer (match points, reverse, start point, localized refusals, hover preview, one undo), "Animate path" in the layer inspector, "Make path layer" on path masks, commands `animation.layer.path` and `animation.mask.toLayer`.
 - Validation: 4 new Animation unit tests (161 total), DS ratchet unchanged, ui-commands inventory (381), check:layers, isolated Chrome check.
 - Not covered: no pen drawing of layer paths on the canvas, no handle dragging for layers, shapes limited to the layer box (0..1), morph ignores layer transform differences. Playwright E2E is CI-only.
+
+### Animation P28 (2026-10-14, integration pending)
+
+- Implemented: canvas pen for path layers (click adds a point, drag pulls handles, click the first point or the Close button closes, Esc/Enter finishes, first click on empty selection creates the layer), dragging points and bezier handles of a selected path layer (keys at the playhead when animated, Alt breaks symmetry, arrow-key nudging), command `animation.layer.pen`, one undo per click or drag, five locales.
+- Validation: 3 new Animation unit tests (164 total), DS ratchet, ui-commands inventory (382), check:layers, isolated Chrome check with real pointer events (create, drag handle, close, Esc; undo steps counted: 6).
+- Not covered: no on-canvas point insert or delete, no outline drag to move the layer, pen points stay in the layer box. Playwright E2E is CI-only.
