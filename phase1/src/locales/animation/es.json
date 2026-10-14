@@ -751,7 +751,7 @@
  "animation.onion.opacity": "Opacidad (%)",
  "animation.onion.selectedOnly": "Solo la capa seleccionada",
  "animation.onion.tint": "Teñir fotogramas anteriores y posteriores",
- "animation.rig.title": "Rig",
+ "animation.rig.title": "Rig y tiempo",
  "animation.rig.chain": "Enlazar en cadena",
  "animation.rig.group": "Agrupar bajo un nulo nuevo",
  "animation.rig.release": "Soltar padres",
@@ -767,5 +767,16 @@
  "animation.keys.stretch.hint": "Escala las claves elegidas en el tiempo. 200 duplica los intervalos, 50 los reduce a la mitad. Las claves que salgan de la composición o colisionen no se mueven.",
  "cmd.animation.keys.stretch": "Estirar en el tiempo las claves elegidas",
  "animation.keys.stretch.count": "Se moverán {moving}",
- "animation.keys.stretch.countSkipped": "Se moverán {moving}, {skipped} se quedan"
+ "animation.keys.stretch.countSkipped": "Se moverán {moving}, {skipped} se quedan",
+ "animation.timing.title": "Tiempo de capas",
+ "animation.timing.mode.in": "Punto de entrada en el cabezal",
+ "animation.timing.mode.out": "Punto de salida en el cabezal",
+ "animation.timing.mode.stagger": "Escalonar entradas",
+ "animation.timing.mode.markers": "Entradas en los marcadores",
+ "animation.timing.frames": "Fotogramas entre capas",
+ "animation.timing.apply": "Aplicar tiempo",
+ "animation.timing.count": "{changed} cambiarán",
+ "animation.timing.countSkipped": "{changed} cambiarán, {skipped} se quedan",
+ "animation.timing.hint": "Solo se mueven entrada y salida; las claves no. El orden es el de marcado. El escalonado empieza en la primera capa.",
+ "cmd.animation.timing.apply": "Fijar entrada y salida en varias capas"
 }

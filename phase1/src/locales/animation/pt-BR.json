@@ -751,7 +751,7 @@
  "animation.onion.opacity": "Opacidade (%)",
  "animation.onion.selectedOnly": "Somente a camada selecionada",
  "animation.onion.tint": "Colorir quadros anteriores e posteriores",
- "animation.rig.title": "Rig",
+ "animation.rig.title": "Rig e tempo",
  "animation.rig.chain": "Vincular em cadeia",
  "animation.rig.group": "Agrupar sob novo nulo",
  "animation.rig.release": "Soltar pais",
@@ -767,5 +767,16 @@
  "animation.keys.stretch.hint": "Escala as chaves escolhidas no tempo. 200 dobra os intervalos, 50 reduz pela metade. Chaves que saiam da composição ou colidam ficam onde estão.",
  "cmd.animation.keys.stretch": "Esticar no tempo as chaves escolhidas",
  "animation.keys.stretch.count": "{moving} serão movidas",
- "animation.keys.stretch.countSkipped": "{moving} serão movidas, {skipped} ficam"
+ "animation.keys.stretch.countSkipped": "{moving} serão movidas, {skipped} ficam",
+ "animation.timing.title": "Tempo das camadas",
+ "animation.timing.mode.in": "Entrada na posição atual",
+ "animation.timing.mode.out": "Saída na posição atual",
+ "animation.timing.mode.stagger": "Escalonar entradas",
+ "animation.timing.mode.markers": "Entradas nos marcadores",
+ "animation.timing.frames": "Quadros entre camadas",
+ "animation.timing.apply": "Aplicar tempo",
+ "animation.timing.count": "{changed} mudarão",
+ "animation.timing.countSkipped": "{changed} mudarão, {skipped} ficam",
+ "animation.timing.hint": "Só entrada e saída se movem; as chaves ficam. A ordem é a da marcação. O escalonamento começa na primeira camada.",
+ "cmd.animation.timing.apply": "Definir entrada e saída em várias camadas"
 }

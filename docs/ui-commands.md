@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-471 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+472 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -154,6 +154,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `animation.timeline.snap` | Snap timeline drags to markers, work area and playhead | Project | animation |  |
 | `animation.timeline.tracks` | Collapse, expand or resize timeline tracks | View | animation |  |
 | `animation.timeline.zoom` | Zoom the timeline | Project | animation |  |
+| `animation.timing.apply` | Set layer in and out points on several layers | Edit | animation |  |
 | `animation.workarea.in` | Set work area start at playhead | View | animation |  |
 | `animation.workarea.out` | Set work area end at playhead | View | animation |  |
 | `animation.workarea.reset` | Reset work area to the whole composition | View | animation |  |

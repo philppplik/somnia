@@ -751,7 +751,7 @@
  "animation.onion.opacity": "Opacité (%)",
  "animation.onion.selectedOnly": "Calque sélectionné seulement",
  "animation.onion.tint": "Teinter les images précédentes et suivantes",
- "animation.rig.title": "Rig",
+ "animation.rig.title": "Rig et timing",
  "animation.rig.chain": "Lier en chaîne",
  "animation.rig.group": "Grouper sous un nouveau nul",
  "animation.rig.release": "Détacher des parents",
@@ -767,5 +767,16 @@
  "animation.keys.stretch.hint": "Met à l'échelle les clés choisies dans le temps. 200 double les écarts, 50 les divise par deux. Les clés qui sortiraient de la composition ou entreraient en collision ne bougent pas.",
  "cmd.animation.keys.stretch": "Étirer dans le temps les clés choisies",
  "animation.keys.stretch.count": "{moving} vont bouger",
- "animation.keys.stretch.countSkipped": "{moving} vont bouger, {skipped} restent"
+ "animation.keys.stretch.countSkipped": "{moving} vont bouger, {skipped} restent",
+ "animation.timing.title": "Timing des calques",
+ "animation.timing.mode.in": "Point d'entrée sur la tête de lecture",
+ "animation.timing.mode.out": "Point de sortie sur la tête de lecture",
+ "animation.timing.mode.stagger": "Décaler les entrées",
+ "animation.timing.mode.markers": "Entrées sur les repères",
+ "animation.timing.frames": "Images entre les calques",
+ "animation.timing.apply": "Appliquer le timing",
+ "animation.timing.count": "{changed} vont changer",
+ "animation.timing.countSkipped": "{changed} vont changer, {skipped} restent",
+ "animation.timing.hint": "Seuls l'entrée et la sortie bougent; les clés restent. L'ordre est celui des cases cochées. Le décalage part du premier calque.",
+ "cmd.animation.timing.apply": "Régler entrée et sortie de plusieurs calques"
 }

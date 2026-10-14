@@ -1619,6 +1619,22 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.timing.apply",
+      "title": "Set layer in and out points on several layers",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "in",
+        "markers",
+        "out",
+        "stagger",
+        "timing",
+        "trim"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.workarea.in",
       "title": "Set work area start at playhead",
       "category": "View",

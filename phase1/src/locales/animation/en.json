@@ -751,7 +751,7 @@
  "animation.onion.opacity": "Opacity (%)",
  "animation.onion.selectedOnly": "Selected layer only",
  "animation.onion.tint": "Tint earlier and later frames",
- "animation.rig.title": "Rig",
+ "animation.rig.title": "Rig and timing",
  "animation.rig.chain": "Parent as chain",
  "animation.rig.group": "Group under new null",
  "animation.rig.release": "Release parents",
@@ -767,5 +767,16 @@
  "animation.keys.stretch.hint": "Scale the selected keys in time. 200 doubles the gaps, 50 halves them. Keys that would leave the composition or collide stay put.",
  "cmd.animation.keys.stretch": "Stretch the selected keys in time",
  "animation.keys.stretch.count": "{moving} will move",
- "animation.keys.stretch.countSkipped": "{moving} will move, {skipped} stay"
+ "animation.keys.stretch.countSkipped": "{moving} will move, {skipped} stay",
+ "animation.timing.title": "Layer timing",
+ "animation.timing.mode.in": "Set in point to playhead",
+ "animation.timing.mode.out": "Set out point to playhead",
+ "animation.timing.mode.stagger": "Stagger in-points",
+ "animation.timing.mode.markers": "In-points on markers",
+ "animation.timing.frames": "Frames between layers",
+ "animation.timing.apply": "Apply timing",
+ "animation.timing.count": "{changed} will change",
+ "animation.timing.countSkipped": "{changed} will change, {skipped} stay",
+ "animation.timing.hint": "Only in and out move; keyframes stay. Order is the tick order. Stagger starts at the first layer.",
+ "cmd.animation.timing.apply": "Set layer in and out points on several layers"
 }

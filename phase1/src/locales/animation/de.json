@@ -751,7 +751,7 @@
  "animation.onion.opacity": "Deckkraft (%)",
  "animation.onion.selectedOnly": "Nur gewählte Ebene",
  "animation.onion.tint": "Frühere und spätere Frames einfärben",
- "animation.rig.title": "Rig",
+ "animation.rig.title": "Rig und Timing",
  "animation.rig.chain": "Als Kette verknüpfen",
  "animation.rig.group": "Unter neuer Null gruppieren",
  "animation.rig.release": "Eltern lösen",
@@ -767,5 +767,16 @@
  "animation.keys.stretch.hint": "Skaliert die gewählten Keys in der Zeit. 200 verdoppelt die Abstände, 50 halbiert sie. Keys, die aus der Komposition fallen oder kollidieren würden, bleiben stehen.",
  "cmd.animation.keys.stretch": "Gewählte Keys in der Zeit dehnen",
  "animation.keys.stretch.count": "{moving} werden verschoben",
- "animation.keys.stretch.countSkipped": "{moving} werden verschoben, {skipped} bleiben"
+ "animation.keys.stretch.countSkipped": "{moving} werden verschoben, {skipped} bleiben",
+ "animation.timing.title": "Ebenen-Timing",
+ "animation.timing.mode.in": "In-Punkt auf Abspielkopf",
+ "animation.timing.mode.out": "Out-Punkt auf Abspielkopf",
+ "animation.timing.mode.stagger": "In-Punkte staffeln",
+ "animation.timing.mode.markers": "In-Punkte auf Marker",
+ "animation.timing.frames": "Frames zwischen Ebenen",
+ "animation.timing.apply": "Timing anwenden",
+ "animation.timing.count": "{changed} werden geändert",
+ "animation.timing.countSkipped": "{changed} werden geändert, {skipped} bleiben",
+ "animation.timing.hint": "Nur In und Out werden verschoben, Keys bleiben. Reihenfolge ist die Ankreuz-Reihenfolge. Das Staffeln beginnt bei der ersten Ebene.",
+ "cmd.animation.timing.apply": "In- und Out-Punkte mehrerer Ebenen setzen"
 }
