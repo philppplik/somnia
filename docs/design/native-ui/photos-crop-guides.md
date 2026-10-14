@@ -99,3 +99,13 @@ Coverage: `photos-crop.spec.ts` gains a light/dark leg that starts a
 16:9 draft, presses `Enter`, asserts the overlay closed, Undo enabled
 and the committed output dims equal the draft's selection dims (the
 label switches from Selection to Output).
+
+## Crop cancel key (P80)
+
+`Escape` now also cancels an active crop — folded into the existing
+Escape disarm effect, running `cancelPhotoCrop` like the cancel button:
+crop mode closes, the draft is dropped and no history entry is created.
+
+Coverage: `photos-crop.spec.ts` gains a light/dark leg that starts a
+16:9 draft, presses `Escape`, asserts the overlay closed, Undo still
+disabled (no entry) and the output size untouched.

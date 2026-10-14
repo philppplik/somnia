@@ -154,3 +154,19 @@ test('Enter commits the active crop like the apply button (light and dark)',asyn
   expect(applied).toEqual(draft); // committed dims match the draft (the label switches Selection -> Output)
  }
 });
+test('Escape cancels the active crop without a history entry (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-crop');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-transform-panel')).toBeVisible();
+  const full=(await page.getByTestId('photos-crop-size').textContent())!; // no crop yet
+  await page.getByTestId('photos-aspect-16x9').click(); // starts cropping with a fitted draft
+  await expect(page.getByTestId('photos-crop-overlay')).toBeVisible();
+  await page.screenshot({path:`test-results/ds-photos-crop-escape-${theme}.png`,fullPage:true});
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('photos-crop-overlay')).toHaveCount(0); // crop mode closed
+  await expect(page.getByTestId('photos-undo')).toBeDisabled(); // a cancel is no history entry
+  expect(await page.getByTestId('photos-crop-size').textContent()).toBe(full); // output untouched
+ }
+});

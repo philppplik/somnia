@@ -107,10 +107,10 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
  const targetBandRef=useRef<HslBandId|null>(null);
  const radDraft=useRef<{x0:number;y0:number;x1:number;y1:number}|null>(null); // in-flight radial filter drag (bounding box)
  useEffect(()=>{ // Escape disarms the target tool, the split view and the horizon drag from anywhere
-  if(!curvesTarget&&!hslTarget&&!wbPicker&&!showSplit&&!brushing&&!straightening)return;
-  const onKey=(e:KeyboardEvent)=>{if(e.key==='Escape'){setCurvesTarget(false);setHslTarget(false);setWbPicker(false);setShowSplit(false);setBrushing(false);setStraightening(false);straightDraft.current=null;}};
+  if(!curvesTarget&&!hslTarget&&!wbPicker&&!showSplit&&!brushing&&!straightening&&!session?.cropping)return;
+  const onKey=(e:KeyboardEvent)=>{if(e.key==='Escape'){setCurvesTarget(false);setHslTarget(false);setWbPicker(false);setShowSplit(false);setBrushing(false);setStraightening(false);straightDraft.current=null;if(session?.cropping)cancelPhotoCrop(item.name);}};
   window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey);
- },[curvesTarget,hslTarget,wbPicker,showSplit,brushing,straightening,setCurvesTarget,setHslTarget,setWbPicker,setShowSplit]);
+ },[curvesTarget,hslTarget,wbPicker,showSplit,brushing,straightening,session?.cropping,item.name,setCurvesTarget,setHslTarget,setWbPicker,setShowSplit]);
 
  const [dabR,setDabR]=usePanelState<number>('photos.dodgeRadius',0.05);
  const dabChain=useRef<{x:number;y:number;r:number}[]|null>(null); // dabs of the in-flight dodge stroke
