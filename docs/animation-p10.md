@@ -74,3 +74,9 @@ One builder (`masks.ts`) produces the `<mask>` and filter definitions for both t
 ## P18: key targets and the Mixed graph
 
 `lib/animation/keyTargets.ts` describes where keys live (`transform` or `mask` target), lists animated targets, and turns a mixed selection into edits. Mask edits replace the whole mask list, so `moveTargetKeys` and `easeTargetKeys` fold them into one `layer.masks` edit next to the transform edit, one undo step. The Mixed view (`MixedGraph.tsx`, opened from the property list) draws each curve on its own 0-100% scale; box-select spans properties, dragging a key moves the whole selection in time, collisions keep the last valid preview.
+
+## P22: text animator sweeps and motion library
+
+Text animators gain a `unit` (`char` or `word`) and a `stagger` op in `animatorEdit` (`wave` or `reveal`, over N seconds) that writes selector-offset keys; offsets validate to ±200. Hover or focus on Wave/Reveal previews without a history step, click is one undo. There is no line unit: text renders as one `<text>` line.
+
+`lib/animation/motionLibrary.ts` holds five built-in motions (pop, pulse, float, swing, fade out) and a localStorage library (max 50 user presets, 200 keys each, validated on load). Position, anchor and rotation are stored as offsets from the layer value, scale and opacity as absolutes. Commands: `animation.motion.apply` (selected layers, one undo), `animation.motion.save` (from selected transform keys), `animation.motion.delete`. Presets never overwrite properties that already have keys.
