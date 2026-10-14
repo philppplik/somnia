@@ -13,7 +13,7 @@ const MIN_GROUP_EMU=127000;
 export interface PanelCommandDeps {
  setTransition(slideId:number,transition:SlideTransition):Promise<void>;
  style(slideId:number,shapeIds:number[],patch:ShapeStylePatch):Promise<void>;
- table(slideId:number,shapeId:number,edit:TableEdit):Promise<void>;theme(edit:ThemeEdit):Promise<void>;masterBox(shapeId:number,expected:BoundsBox,next:BoundsBox):Promise<void>;layoutBox(layoutPart:string,shapeId:number,expected:BoundsBox,next:BoundsBox):Promise<void>;background(slideId:number,background:SlideBackground):Promise<void>;slideSize(cx:number,cy:number):Promise<void>;firstNum(value:number):Promise<void>;footer(slideId:number|null,want:{number:boolean;footer:string|null}):Promise<void>;backgroundAll(background:{kind:'inherit'}|{kind:'solid';color:string}):Promise<void>;
+ table(slideId:number,shapeId:number,edit:TableEdit):Promise<void>;theme(edit:ThemeEdit):Promise<void>;masterBox(shapeId:number,expected:BoundsBox,next:BoundsBox):Promise<void>;layoutBox(layoutPart:string,shapeId:number,expected:BoundsBox,next:BoundsBox):Promise<void>;background(slideId:number,background:SlideBackground):Promise<void>;slideSize(cx:number,cy:number):Promise<void>;firstNum(value:number):Promise<void>;footer(slideId:number|null,want:{number:boolean;footer:string|null;date?:string|null}):Promise<void>;backgroundAll(background:{kind:'inherit'}|{kind:'solid';color:string}):Promise<void>;
  insertTable(slideId:number,rows:number,cols:number):Promise<void>;
  setNotes(slideId:number,lines:string[]):Promise<void>;
  group(slideId:number,shapeIds:number[]):Promise<void>;
@@ -193,19 +193,22 @@ export function slidesPanelCommandSpecs(d:PanelCommandDeps):CommandSpec[]{
     if(!Number.isInteger(v.value)||v.value<0||v.value>MAX_FIRST_SLIDE_NUM)throw expected('Start number must be a whole number from 0 to 9999.');
     if(readFirstSlideNum(s.working)===v.value)return;
     await d.firstNum(v.value);}},
-  {id:'slides.setSlideFooter',title:'Set slide number and footer',category:'Edit',level:'ui',keywords:['footer','slide number','page number','numbering','header and footer'],enabled:available,params:{type:'object',properties:{source:identity.source,slideId:slideId,number:{type:'boolean'},footer:{anyOf:[{type:'null'},{type:'string',minLength:1,maxLength:MAX_FOOTER_TEXT}]}},required:['source','slideId','number','footer'],additionalProperties:false},
-   run:async p=>{const v=p as {source:string;slideId:number;number:boolean;footer:string|null},s=d.state();
+  {id:'slides.setSlideFooter',title:'Set slide number and footer',category:'Edit',level:'ui',keywords:['date','footer','slide number','page number','numbering','header and footer'],enabled:available,params:{type:'object',properties:{source:identity.source,slideId:slideId,number:{type:'boolean'},footer:{anyOf:[{type:'null'},{type:'string',minLength:1,maxLength:MAX_FOOTER_TEXT}]},date:{anyOf:[{type:'null'},{type:'string',minLength:1,maxLength:MAX_FOOTER_TEXT}]}},required:['source','slideId','number','footer'],additionalProperties:false},
+   run:async p=>{const v=p as {source:string;slideId:number;number:boolean;footer:string|null;date?:string|null},s=d.state();
     if(s.source!==v.source||!s.slideIds.includes(v.slideId)||!s.working)throw expected('Slide no longer exists.');
     if(v.footer!==null){const issue=footerTextIssue(v.footer);if(issue)throw expected(issue);}
+    if(v.date!==undefined&&v.date!==null){const issue=footerTextIssue(v.date);if(issue)throw expected(issue.replace('Footer','Date'));}
     const f=readSlideFooter(s.working,v.slideId);if(!f.editable)throw expected(f.problem);
     if(v.number&&!f.number&&!f.canNumber)throw expected('The slide layout has no slide number placeholder.');
     if(v.footer!==null&&f.footer===null&&!f.canFooter)throw expected('The slide layout has no footer placeholder.');
-    await d.footer(v.slideId,{number:v.number,footer:v.footer});}},
-  {id:'slides.setAllSlideFooters',title:'Set slide number and footer on all slides',category:'Edit',level:'ui',keywords:['footer','slide number','page number','all','every','numbering'],enabled:available,params:{type:'object',properties:{source:identity.source,number:{type:'boolean'},footer:{anyOf:[{type:'null'},{type:'string',minLength:1,maxLength:MAX_FOOTER_TEXT}]}},required:['source','number','footer'],additionalProperties:false},
-   run:async p=>{const v=p as {source:string;number:boolean;footer:string|null},s=d.state();
+    if(v.date!==undefined&&v.date!==null&&f.date===null&&!f.canDate)throw expected('The slide layout has no date placeholder.');
+    await d.footer(v.slideId,{number:v.number,footer:v.footer,...(v.date!==undefined?{date:v.date}:{})});}},
+  {id:'slides.setAllSlideFooters',title:'Set slide number and footer on all slides',category:'Edit',level:'ui',keywords:['date','footer','slide number','page number','all','every','numbering'],enabled:available,params:{type:'object',properties:{source:identity.source,number:{type:'boolean'},footer:{anyOf:[{type:'null'},{type:'string',minLength:1,maxLength:MAX_FOOTER_TEXT}]},date:{anyOf:[{type:'null'},{type:'string',minLength:1,maxLength:MAX_FOOTER_TEXT}]}},required:['source','number','footer'],additionalProperties:false},
+   run:async p=>{const v=p as {source:string;number:boolean;footer:string|null;date?:string|null},s=d.state();
     if(s.source!==v.source||!s.working)throw expected('Deck changed since the footer was chosen.');
     if(v.footer!==null){const issue=footerTextIssue(v.footer);if(issue)throw expected(issue);}
-    await d.footer(null,{number:v.number,footer:v.footer});}},
+    if(v.date!==undefined&&v.date!==null){const issue=footerTextIssue(v.date);if(issue)throw expected(issue.replace('Footer','Date'));}
+    await d.footer(null,{number:v.number,footer:v.footer,...(v.date!==undefined?{date:v.date}:{})});}},
   {id:'slides.editTable',title:'Edit table',category:'Edit',level:'ui',keywords:['table','cell','row','column','header','insert','delete','fill'],enabled:available,params:{type:'object',properties:{source:identity.source,slideId:slideId,shapeId:{type:'integer',minimum:0,maximum:2147483647},
     edit:{type:'object',properties:{kind:{enum:['cell','insertRow','removeRow','insertCol','removeCol','header','fill','merge','split','rowHeight','colWidth']},rowSpan:{type:'integer',minimum:1,maximum:MAX_TABLE_ROWS},colSpan:{type:'integer',minimum:1,maximum:MAX_TABLE_COLS},heightPt:{type:'number',minimum:MIN_ROW_PT,maximum:MAX_ROW_PT},widthPt:{type:'number',minimum:MIN_COL_PT,maximum:MAX_COL_PT},row:{type:'integer',minimum:0,maximum:MAX_TABLE_ROWS},col:{type:'integer',minimum:0,maximum:MAX_TABLE_COLS},at:{type:'integer',minimum:0,maximum:MAX_TABLE_ROWS},text:{type:'string',maxLength:MAX_CELL_TEXT},on:{type:'boolean'},scope:{enum:['cell','row','column','table']},color:{type:'string',pattern:'^[0-9A-F]{6}$'},none:{type:'boolean'}},required:['kind'],additionalProperties:false}},required:['source','slideId','shapeId','edit'],additionalProperties:false},run:async p=>{
    const v=p as {source:string;slideId:number;shapeId:number;edit:{kind:string;row?:number;col?:number;at?:number;text?:string;on?:boolean;scope?:'cell'|'row'|'column'|'table';color?:string;none?:boolean;rowSpan?:number;colSpan?:number;heightPt?:number;widthPt?:number}},s=d.state(),e=v.edit;

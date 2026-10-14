@@ -5756,6 +5756,7 @@
       "source": "slides",
       "keywords": [
         "all",
+        "date",
         "every",
         "footer",
         "numbering",
@@ -5827,6 +5828,7 @@
       "category": "Edit",
       "source": "slides",
       "keywords": [
+        "date",
         "footer",
         "header and footer",
         "numbering",

@@ -444,9 +444,12 @@ test('setSlideFooter and setAllSlideFooters check identity, text and layout supp
  f.state.working=new Uint8Array(readFileSync(fileURLToPath(new URL('../../../slides-engine/fixtures/independent.pptx',import.meta.url))));
  const sid=readDeckModel(f.state.working).slides[0].id;f.state.slideIds=[sid,sid+1];
  await one({source:'blob:deck1',slideId:sid,number:true,footer:'Hi'});assert.deepEqual(f.calls.at(-1),['footer',sid,{number:true,footer:'Hi'}]);
+ await one({source:'blob:deck1',slideId:sid,number:false,footer:null,date:'Today'});assert.deepEqual(f.calls.at(-1),['footer',sid,{number:false,footer:null,date:'Today'}]);
  await one({source:'blob:deck1',slideId:sid,number:false,footer:null});assert.deepEqual(f.calls.at(-1),['footer',sid,{number:false,footer:null}]);
  await all({source:'blob:deck1',number:true,footer:'Deck'});assert.deepEqual(f.calls.at(-1),['footer',null,{number:true,footer:'Deck'}]);
  const n=f.calls.length;
+ await assert.rejects(()=>one({source:'blob:deck1',slideId:sid,number:true,footer:null,date:' x '}),/padded|empty/);
+ await assert.rejects(()=>all({source:'blob:deck1',number:true,footer:null,date:''}));
  await assert.rejects(()=>one({source:'blob:other',slideId:sid,number:true,footer:null}),/no longer exists/);
  await assert.rejects(()=>one({source:'blob:deck1',slideId:99999,number:true,footer:null}),/no longer exists/);
  await assert.rejects(()=>one({source:'blob:deck1',slideId:sid,number:true,footer:' pad '}),/padded|empty/);

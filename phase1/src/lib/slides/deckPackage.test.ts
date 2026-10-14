@@ -863,7 +863,7 @@ test('slide size: bounds and fail-closed structure',()=>{
 });
 
 test('footer: add, change, remove slide number and footer on one slide only',()=>{
-  const b=deck(2),sid=ids(b),f0=readSlideFooter(b,sid[0]);assert.deepEqual(f0,{editable:true,problem:'',number:false,footer:null,canNumber:true,canFooter:true});
+  const b=deck(2),sid=ids(b),f0=readSlideFooter(b,sid[0]);assert.deepEqual(f0,{editable:true,problem:'',number:false,footer:null,date:null,canNumber:true,canFooter:true,canDate:true});
   const c=setSlideFooter(b,sid[0],{number:true,footer:'Q3 <review> & plan'});
   assert.deepEqual(readSlideFooter(c,sid[0]),{...f0,number:true,footer:'Q3 <review> & plan'});assert.equal(readSlideFooter(c,sid[1]).number,false);
   const m0=readDeckModel(b).slides[0].shapes.length,m1=readDeckModel(c).slides[0].shapes.length;assert.equal(m1,m0+2);
@@ -894,4 +894,18 @@ test('firstSlideNum: read default, set, change, restore and refuse bad input wit
   for(const bad of [-1,10000,1.5,NaN])assert.throws(()=>setFirstSlideNum(b,bad),/whole number/);
   const z=unzipSync(c);z['ppt/presentation.xml']=strToU8(strFromU8(z['ppt/presentation.xml']).replace(/firstSlideNum="7"/,'firstSlideNum="abc"'));
   const odd=zipSync(z);assert.throws(()=>readFirstSlideNum(odd),/not readable/);assert.throws(()=>setFirstSlideNum(odd,3),/not readable/);
+});
+
+test('date placeholder: add, change, remove, leave alone when omitted, refuse unsupported and bad text',()=>{
+  const b=deck(2),sid=ids(b),m0=readDeckModel(b).slides[0].shapes.length;
+  const c=setSlideFooter(b,sid[0],{number:false,footer:null,date:'14 Oct 2026 & <co>'});assert.equal(readSlideFooter(c,sid[0]).date,'14 Oct 2026 & <co>');assert.equal(readSlideFooter(c,sid[1]).date,null);assert.equal(readDeckModel(c).slides[0].shapes.length,m0+1);
+  const d=setSlideFooter(c,sid[0],{number:true,footer:'F'});assert.equal(readSlideFooter(d,sid[0]).date,'14 Oct 2026 & <co>');
+  assert.equal(setSlideFooter(d,sid[0],{number:true,footer:'F',date:'14 Oct 2026 & <co>'}),d);
+  const e=setSlideFooter(d,sid[0],{number:true,footer:'F',date:'Later'});assert.equal(readSlideFooter(e,sid[0]).date,'Later');
+  const f=setSlideFooter(e,sid[0],{number:false,footer:null,date:null});assert.deepEqual(readSlideFooter(f,sid[0]),readSlideFooter(b,sid[0]));
+  const all=setAllSlideFooters(b,{number:false,footer:null,date:'Q4'});assert.deepEqual(sid.map(i=>readSlideFooter(all,i).date),['Q4','Q4']);
+  assert.throws(()=>setSlideFooter(b,sid[0],{number:false,footer:null,date:' pad '}),/Date text|padded/);assert.throws(()=>setSlideFooter(b,sid[0],{number:false,footer:null,date:'x'.repeat(201)}));
+  const z=unzipSync(c),part=Object.keys(z).find(k=>/slides\/slide\d+\.xml$/.test(k)&&strFromU8(z[k]).includes('Date Placeholder'))!;
+  z[part]=strToU8(strFromU8(z[part]).replace(/<a:r>(\s*<a:rPr[^>]*\/>)?\s*<a:t>14 Oct[^<]*<\/a:t>\s*<\/a:r>/,'<a:fld id="{1}" type="datetime1"><a:t>1</a:t></a:fld>'));
+  const odd=zipSync(z);assert.equal(readSlideFooter(odd,sid[0]).editable,false);assert.throws(()=>setSlideFooter(odd,sid[0],{number:true,footer:null}),/unsupported/);
 });
