@@ -151,3 +151,8 @@ test('match next: copies successor value, last key has none',()=>{
  const e=matchPreviousEdits(c,[k(0),k(10)],'next') as {t:number;value:number[]}[];
  assert.equal(e.length,1);assert.equal(e[0].t,f(0));assert.deepEqual(e[0].value,[200,50]);
 });
+test('flatten average: all selected keys take the mean',()=>{
+ const c=findComp(base())!,k=(n:number)=>({layer:'a',prop:'position' as const,t:f(n)});
+ const e=flattenEdits(c,[k(0),k(10)],'average') as {value:number[]}[];
+ assert.equal(e.length,2);assert.deepEqual(e[0].value,[150,75]);assert.deepEqual(e[1].value,[150,75]);
+});

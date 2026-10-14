@@ -863,5 +863,7 @@
  "animation.keys.ramp.hint": "Coloca las keys seleccionadas de una propiedad en una recta entre la primera y la última seleccionada",
  "cmd.animation.keys.ramp": "Colocar las keys seleccionadas en una recta entre la primera y la última",
  "animation.keys.matchNext": "Igualar siguiente",
- "animation.keys.matchNext.hint": "Da a cada key seleccionada el valor de la key siguiente"
+ "animation.keys.matchNext.hint": "Da a cada key seleccionada el valor de la key siguiente",
+ "animation.keys.average": "Promediar",
+ "animation.keys.average.hint": "Da a todas las keys seleccionadas de una propiedad su valor medio"
 }
