@@ -347,5 +347,18 @@
  "animation.animators.unit.word": "Palavra",
  "animation.animators.staggerSeconds": "Segundos de escalonamento",
  "animation.animators.stagger.wave": "Onda",
- "animation.animators.stagger.reveal": "Revelar"
+ "animation.animators.stagger.reveal": "Revelar",
+ "cmd.animation.motion.apply": "Aplicar uma predefinição de movimento às camadas selecionadas",
+ "cmd.animation.motion.save": "Salvar as chaves selecionadas como predefinição de movimento",
+ "cmd.animation.motion.delete": "Excluir uma predefinição de movimento salva",
+ "animation.motion.title": "Predefinições de movimento",
+ "animation.motion.name": "Nome da predefinição",
+ "animation.motion.save": "Salvar chaves",
+ "animation.motion.delete": "Excluir predefinição",
+ "animation.motion.needKeys": "Selecione chaves para salvá-las como predefinição",
+ "animation.motion.builtin-pop": "Surgir",
+ "animation.motion.builtin-pulse": "Pulso",
+ "animation.motion.builtin-float": "Flutuar",
+ "animation.motion.builtin-swing": "Balanço",
+ "animation.motion.builtin-fadeout": "Desaparecer"
 }

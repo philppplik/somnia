@@ -347,5 +347,18 @@
  "animation.animators.unit.word": "Wort",
  "animation.animators.staggerSeconds": "Sekunden für den Versatz",
  "animation.animators.stagger.wave": "Welle",
- "animation.animators.stagger.reveal": "Einblenden"
+ "animation.animators.stagger.reveal": "Einblenden",
+ "cmd.animation.motion.apply": "Bewegungs-Preset auf gewählte Ebenen anwenden",
+ "cmd.animation.motion.save": "Gewählte Keys als Bewegungs-Preset speichern",
+ "cmd.animation.motion.delete": "Gespeichertes Bewegungs-Preset löschen",
+ "animation.motion.title": "Bewegungs-Presets",
+ "animation.motion.name": "Preset-Name",
+ "animation.motion.save": "Keys speichern",
+ "animation.motion.delete": "Preset löschen",
+ "animation.motion.needKeys": "Keys wählen, um sie als Preset zu speichern",
+ "animation.motion.builtin-pop": "Einpoppen",
+ "animation.motion.builtin-pulse": "Puls",
+ "animation.motion.builtin-float": "Schweben",
+ "animation.motion.builtin-swing": "Schwingen",
+ "animation.motion.builtin-fadeout": "Ausblenden"
 }

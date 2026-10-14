@@ -7,6 +7,7 @@ import {copyTransformKeys,pasteTransformEdits} from './keysClipboard';
 import {animatedTargets,allTargetKeys,propertyOf,moveTargetKeys,easeTargetKeys,pruneTargetKeys,toggleTargetKey,editTargetKeys,copyTargetKeys,pasteTargetKeys,deleteTargetKeys,pasteClipOnTargets,staggerLayers,bounceClip,bounceTargetKeys} from './keyTargets';
 import {EASE_PRESETS,easePresetOf} from './graph';
 import {animationCommandSpecs} from './commands';
+import {BUILTIN_MOTIONS,MAX_USER_MOTIONS,deleteMotion,findMotion,listMotions,motionEdits,motionFromKeys,resetMotionLibrary,saveMotion,validMotion} from './motionLibrary';
 import {frameToTick,TICKS_PER_SECOND as TICK_SEC} from './time';
 import {frameSvg} from './exportFrames';
 import {sceneAt} from './scene';
@@ -412,4 +413,30 @@ test('P22: word units, selector stagger sweeps and bounds',()=>{
  assert.throws(()=>animatorEdit(d,'title',{op:'stagger',animator:'a',t:0,seconds:0,mode:'wave'}),/0.1 to 30/);
  assert.throws(()=>animatorEdit(d,'title',{op:'stagger',animator:'a',t:comp(d).duration,seconds:1,mode:'wave'}),/fit the composition/);
  assert.deepEqual(validateDocument(w),[]);void chars;
+});
+
+test('P22: motion presets apply to any layer in one step, save from keys, persist bounded',()=>{
+ resetMotionLibrary();assert.equal(BUILTIN_MOTIONS.length,5);assert.ok(BUILTIN_MOTIONS.every(m=>validMotion(m)));
+ let d=base();const rev=d.revision;
+ for(const m of BUILTIN_MOTIONS){const e=motionEdits(d,'photo',m,0);const n=applyEdits(d,e);assert.equal(n.revision,rev+1,m.id);assert.deepEqual(validateDocument(n),[]);
+  assert.ok(m.tracks.every(tr=>layer(n,'photo').transform[tr.prop].keys.length===tr.keys.length));}
+ // relative tracks start from the layer value, absolute ones replace it
+ const fl=applyEdits(d,motionEdits(d,'photo',BUILTIN_MOTIONS.find(m=>m.id==='builtin-float')!,0));const pos=layer(d,'photo').transform.position.value as unknown as number[];
+ assert.deepEqual(layer(fl,'photo').transform.position.keys.map(k=>k.v),[[pos[0],pos[1]],[pos[0],pos[1]-12],[pos[0],pos[1]]]);
+ const pop=applyEdits(d,motionEdits(d,'photo',BUILTIN_MOTIONS[0],0));assert.deepEqual(layer(pop,'photo').transform.scale.keys[0].v,[0,0]);
+ // never overwrites, refuses locked layers and out-of-range
+ assert.throws(()=>motionEdits(pop,'photo',BUILTIN_MOTIONS[0],0),/already has keys/);
+ assert.throws(()=>motionEdits(d,'photo',BUILTIN_MOTIONS[0],comp(d).start+comp(d).duration),/does not fit/);
+ // save from selected keys, apply on another layer
+ const sel=allTargetKeys(layer(fl,'photo')).filter(r=>r.target.kind==='transform').map(r=>({layer:'photo',prop:(r.target as unknown as {prop:never}).prop,t:r.t}));
+ const mine=motionFromKeys(layer(fl,'photo'),sel,'  Bob  ');assert.equal(mine.name,'Bob');assert.deepEqual(mine.tracks[0].keys.map(k=>k.dt),[0,sec,sec*2].slice(0,mine.tracks[0].keys.length).map((_,i)=>layer(fl,'photo').transform.position.keys[i].t-layer(fl,'photo').transform.position.keys[0].t));
+ assert.deepEqual(mine.tracks[0].keys[1].v,[0,-12],'stored as an offset');
+ saveMotion(mine);assert.ok(listMotions().some(m=>m.name==='Bob'));assert.throws(()=>saveMotion({...mine,id:'x'}),/already exists/);
+ const onOther=applyEdits(d,motionEdits(d,'stencil',findMotion(mine.id)!,0));const sp=layer(d,'stencil').transform.position.value as unknown as number[];assert.deepEqual(layer(onOther,'stencil').transform.position.keys[1].v,[sp[0],sp[1]-12]);
+ assert.throws(()=>motionFromKeys(layer(fl,'photo'),sel,'   '),/1 to 40/);assert.throws(()=>motionFromKeys(layer(fl,'photo'),[],'x'),/Select keys/);
+ assert.equal(validMotion({...mine,tracks:[{...mine.tracks[0],keys:[{...mine.tracks[0].keys[0],v:5}]}]}),false,'vec2 values must stay pairs');
+ assert.equal(validMotion({...mine,tracks:[{...mine.tracks[0],keys:[{...mine.tracks[0].keys[0],out:[2,0]}]}]}),false);
+ deleteMotion(mine.id);assert.ok(!listMotions().some(m=>m.name==='Bob'));assert.throws(()=>deleteMotion(mine.id),/no longer exists/);
+ for(let i=0;i<MAX_USER_MOTIONS;i++)saveMotion({...mine,id:`m${i}`,name:`n${i}`});assert.throws(()=>saveMotion({...mine,id:'z',name:'zz'}),/At most/);
+ resetMotionLibrary();assert.equal(listMotions().length,5);
 });

@@ -636,6 +636,42 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.motion.apply",
+      "title": "Apply a motion preset to the selected layers",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "animation.motion.delete",
+      "title": "Delete a saved motion preset",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "animation.motion.save",
+      "title": "Save the selected keys as a motion preset",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.path.mode",
       "title": "Set position path timing",
       "category": "Edit",

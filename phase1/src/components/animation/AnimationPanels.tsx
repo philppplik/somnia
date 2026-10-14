@@ -11,6 +11,7 @@ import {prepareAudioAsset,AudioImportCancelled} from '../../lib/animation/audioI
 import {AUDIO_IMPORT_EVENT} from '../../lib/animation/commands';
 import {MasksMattes} from './MasksMattes';
 import {TextAnimators} from './TextAnimators';
+import {MotionLibrary} from './MotionLibrary';
 import {AudioInspector} from './AudioInspector';
 import {animationSession} from '../../lib/animation/session';
 import {newId} from '../../lib/animation/model';
@@ -90,6 +91,7 @@ export function PropertiesSection(_:InspectorSectionProps){
   {layer.parent&&<Button size="tiny" variant="ghost" onClick={()=>animationSession().setView({selectedLayer:layer.parent})}>{t('animation.parent.select')}</Button>}
   <fieldset className="m-0 grid gap-1 border border-subtle p-2" disabled={layer.locked}><legend>{t('animation.presets.title')}</legend><div className="flex flex-wrap gap-1">{(['fade','slide','bounce','typewriter','trim','dash'] as const).filter(p=>p==='typewriter'?layer.kind==='text':p==='trim'||p==='dash'?layer.kind==='shape':true).map(p=><Button size="tiny" variant="outline" key={p} onClick={()=>run('animation.preset.apply',{layer:layer.id,preset:p,seconds:1})}>{t(`animation.presets.${p}`)}</Button>)}</div><p className="text-ink-3">{t('animation.presets.safe')}</p></fieldset>
     <label className="grid gap-1 text-ink-3">{t('animation.path.timing')}<NativeSelect className={field} disabled={layer.locked} value={layer.transform.position.pathMode??'parameter'} onChange={e=>edit({type:'prop.pathMode',layer:layer.id,mode:e.target.value as 'parameter'|'arcLength'})}><option value="parameter">{t('animation.path.parameter')}</option><option value="arcLength">{t('animation.path.arcLength')}</option></NativeSelect></label>
+  <MotionLibrary layerId={layer.id} locked={layer.locked}/>
   {layer.kind==='text'&&<TextAnimators layer={layer} at={at}/>}
   {layer.kind!=='null'&&<MasksMattes layer={layer} comp={comp} at={at}/>}
   <fieldset className="m-0 grid gap-2 border border-subtle p-2" disabled={layer.locked}><legend className="text-ink-3">{t('animation.effects.title')}</legend>

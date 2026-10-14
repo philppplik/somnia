@@ -347,5 +347,18 @@
  "animation.animators.unit.word": "Word",
  "animation.animators.staggerSeconds": "Stagger seconds",
  "animation.animators.stagger.wave": "Wave",
- "animation.animators.stagger.reveal": "Reveal"
+ "animation.animators.stagger.reveal": "Reveal",
+ "cmd.animation.motion.apply": "Apply a motion preset to the selected layers",
+ "cmd.animation.motion.save": "Save the selected keys as a motion preset",
+ "cmd.animation.motion.delete": "Delete a saved motion preset",
+ "animation.motion.title": "Motion presets",
+ "animation.motion.name": "Preset name",
+ "animation.motion.save": "Save keys",
+ "animation.motion.delete": "Delete preset",
+ "animation.motion.needKeys": "Select keys to save them as a preset",
+ "animation.motion.builtin-pop": "Pop in",
+ "animation.motion.builtin-pulse": "Pulse",
+ "animation.motion.builtin-float": "Float",
+ "animation.motion.builtin-swing": "Swing",
+ "animation.motion.builtin-fadeout": "Fade out"
 }

@@ -347,5 +347,18 @@
  "animation.animators.unit.word": "Mot",
  "animation.animators.staggerSeconds": "Secondes de décalage",
  "animation.animators.stagger.wave": "Vague",
- "animation.animators.stagger.reveal": "Révéler"
+ "animation.animators.stagger.reveal": "Révéler",
+ "cmd.animation.motion.apply": "Appliquer un préréglage de mouvement aux calques sélectionnés",
+ "cmd.animation.motion.save": "Enregistrer les clés sélectionnées comme préréglage de mouvement",
+ "cmd.animation.motion.delete": "Supprimer un préréglage de mouvement enregistré",
+ "animation.motion.title": "Préréglages de mouvement",
+ "animation.motion.name": "Nom du préréglage",
+ "animation.motion.save": "Enregistrer les clés",
+ "animation.motion.delete": "Supprimer le préréglage",
+ "animation.motion.needKeys": "Sélectionnez des clés pour les enregistrer",
+ "animation.motion.builtin-pop": "Apparition",
+ "animation.motion.builtin-pulse": "Pulsation",
+ "animation.motion.builtin-float": "Flottement",
+ "animation.motion.builtin-swing": "Balancement",
+ "animation.motion.builtin-fadeout": "Fondu sortant"
 }
