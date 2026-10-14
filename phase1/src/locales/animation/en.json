@@ -982,5 +982,7 @@
  "cmd.animation.marker.update": "Rename or move a timing marker",
  "animation.rig.markers": "Markers at in points",
  "cmd.animation.marker.fromLayers": "Add markers at the in points of the selected layers",
- "cmd.animation.marker.clear": "Clear timing markers"
+ "cmd.animation.marker.clear": "Clear timing markers",
+ "animation.export.dither": "Dither GIF",
+ "animation.export.dither.hint": "Smoother gradients in GIF exports, a little noisier and larger. Other formats ignore it."
 }

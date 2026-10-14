@@ -58,6 +58,24 @@ export function mapIndices(pixels:Uint8Array|Uint8ClampedArray,palette:Uint8Arra
  }
  return {indices:out,used:used.size};
 }
+/** Floyd-Steinberg error diffusion onto the palette. Nearest colours are cached by the 15-bit key of the corrected colour, so the cost stays near the plain mapper. */
+export function ditherIndices(pixels:Uint8Array|Uint8ClampedArray,palette:Uint8Array,count:number,width:number):{indices:Uint8Array;used:number}{
+ const n=pixels.length/4,height=Math.floor(n/Math.max(1,width)),out=new Uint8Array(n),cache=new Map<number,number>(),used=new Set<number>();
+ let cur=new Float32Array((width+2)*3),next=new Float32Array((width+2)*3);
+ for(let y=0;y<height;y++){
+  for(let x=0;x<width;x++){
+   const o=(y*width+x)*4,e=(x+1)*3;
+   const r=Math.min(255,Math.max(0,pixels[o]+cur[e])),g=Math.min(255,Math.max(0,pixels[o+1]+cur[e+1])),b=Math.min(255,Math.max(0,pixels[o+2]+cur[e+2]));
+   const key=((r>>3)<<10)|((g>>3)<<5)|(b>>3);let idx=cache.get(key);
+   if(idx===undefined){let best=0,bestD=Infinity;for(let q=0;q<count;q++){const dr=r-palette[q*3],dg=g-palette[q*3+1],db=b-palette[q*3+2];const d=dr*dr+dg*dg+db*db;if(d<bestD){bestD=d;best=q;}}idx=best;cache.set(key,best);}
+   out[y*width+x]=idx;used.add(idx);
+   const er=r-palette[idx*3],eg=g-palette[idx*3+1],eb=b-palette[idx*3+2];
+   for(let c=0;c<3;c++){const err=c===0?er:c===1?eg:eb;cur[e+3+c]+=err*7/16;next[e-3+c]+=err*3/16;next[e+c]+=err*5/16;next[e+3+c]+=err/16;}
+  }
+  const t=cur;cur=next;next=t;next.fill(0);
+ }
+ return {indices:out,used:used.size};
+}
 /** GIF LZW with code-table reset at 4096 and 255-byte sub-blocks. */
 export function lzwEncode(minCodeSize:number,indices:Uint8Array):Uint8Array{
  const CLEAR=1<<minCodeSize,EOI=CLEAR+1;const out:number[]=[];
@@ -82,7 +100,7 @@ export function lzwEncode(minCodeSize:number,indices:Uint8Array):Uint8Array{
  return new Uint8Array(blocks);
 }
 /** Assemble a GIF89a. Opaque: the caller composites onto the background first. Throws GifError on bound violations. */
-export function encodeGif(width:number,height:number,frames:readonly GifFrame[],loop=true):Uint8Array{
+export function encodeGif(width:number,height:number,frames:readonly GifFrame[],loop=true,dither=false):Uint8Array{
  if(!frames.length)throw new GifError('Nothing to export.','empty');
  if(frames.length>GIF_MAX_FRAMES)throw new GifError(`A GIF is limited to ${GIF_MAX_FRAMES} frames. Shorten the work area.`,'too-many');
  if(width<1||height<1||width>16384||height>16384)throw new GifError('Bad frame size.','too-large');
@@ -99,7 +117,7 @@ export function encodeGif(width:number,height:number,frames:readonly GifFrame[],
   push(u8(0x21,0xF9,4,0,delay&255,delay>>8,0,0));
   push(u8(0x2C,0,0,0,0,width&255,width>>8,height&255,height>>8,0));
   push(u8(8));
-  push(lzwEncode(8,mapIndices(f.pixels,palette,256).indices));
+  push(lzwEncode(8,(dither?ditherIndices(f.pixels,palette,256,width):mapIndices(f.pixels,palette,256)).indices));
  }
  push(u8(0x3B));
  const total=new Uint8Array(bytes);let o=0;for(const p of parts){total.set(p,o);o+=p.length;}

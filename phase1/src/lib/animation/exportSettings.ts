@@ -20,6 +20,8 @@ export interface ExportSettings{
  from:number|null;to:number|null;
  /** Sprite sheet columns, 1 to 256, or null/absent for the near-square grid. */
  columns?:number|null;
+ /** GIF only: Floyd-Steinberg dithering. Off or absent keeps the plain palette mapping. */
+ dither?:boolean;
 }
 export const defaultExportSettings=():ExportSettings=>({scale:100,fps:null,from:null,to:null});
 export interface ExportPreset{id:string;format:ExportFormat;scale:number;fps:number|null;transparent:boolean}

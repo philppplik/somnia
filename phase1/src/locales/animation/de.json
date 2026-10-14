@@ -982,5 +982,7 @@
  "cmd.animation.marker.update": "Zeitmarke umbenennen oder verschieben",
  "animation.rig.markers": "Marker an Einpunkten",
  "cmd.animation.marker.fromLayers": "Marker an den Einpunkten der gewählten Ebenen setzen",
- "cmd.animation.marker.clear": "Zeitmarken löschen"
+ "cmd.animation.marker.clear": "Zeitmarken löschen",
+ "animation.export.dither": "GIF dithern",
+ "animation.export.dither.hint": "Weichere Verläufe in GIF-Exporten, etwas körniger und größer. Andere Formate ignorieren es."
 }

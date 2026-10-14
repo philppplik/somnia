@@ -982,5 +982,7 @@
  "cmd.animation.marker.update": "Renommer ou déplacer un repère de temps",
  "animation.rig.markers": "Repères aux entrées",
  "cmd.animation.marker.fromLayers": "Ajouter des repères aux points d’entrée des calques sélectionnés",
- "cmd.animation.marker.clear": "Effacer les repères de temps"
+ "cmd.animation.marker.clear": "Effacer les repères de temps",
+ "animation.export.dither": "Tramage GIF",
+ "animation.export.dither.hint": "Dégradés plus doux dans les GIF, un peu plus de bruit et de poids. Les autres formats l’ignorent."
 }

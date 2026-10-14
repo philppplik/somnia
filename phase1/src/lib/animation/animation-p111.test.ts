@@ -560,3 +560,17 @@ test('P176 clear markers: all or inside the work area, one undo step, empty is r
  run({scope:'workArea'});assert.deepEqual(ms(),['m5','m35']);s.undo();assert.equal(s.document,before);
  run();assert.deepEqual(ms(),[]);e();
 });
+
+test('P180 GIF dithering: closer average colour on a gradient, deterministic, off by default, stays inside the palette',async()=>{
+ const {ditherIndices,mapIndices,encodeGif}=await import('./gifEncode');const {defaultExportSettings,settingsProblems}=await import('./exportSettings');
+ const w=64,h=16,px=new Uint8ClampedArray(w*h*4);for(let y=0;y<h;y++)for(let x=0;x<w;x++){const o=(y*w+x)*4,v=Math.round(x/(w-1)*255);px[o]=v;px[o+1]=v;px[o+2]=v;px[o+3]=255;}
+ const pal=new Uint8Array(4*3);[0,85,170,255].forEach((v,i)=>pal.set([v,v,v],i*3));
+ const plain=mapIndices(px,pal,4).indices,dith=ditherIndices(px,pal,4,w).indices;
+ assert.equal(dith.length,w*h);assert.ok(Array.from(dith).every(i=>i<4));assert.deepEqual(Array.from(dith),Array.from(ditherIndices(px,pal,4,w).indices));
+ // Mean error per 8-pixel window: dithering keeps the local average close to the source, plain mapping banding does not.
+ const winErr=(idx:Uint8Array)=>{let e=0,n=0;for(let y=0;y<h;y++)for(let x0=0;x0+8<=w;x0+=8){let a=0,b=0;for(let x=x0;x<x0+8;x++){a+=px[(y*w+x)*4];b+=pal[idx[y*w+x]*3];}e+=Math.abs(a-b)/8;n++;}return e/n;};
+ assert.ok(winErr(dith)<winErr(plain)*0.6,`dither ${winErr(dith)} vs plain ${winErr(plain)}`);
+ const frames=[{pixels:px,delayCs:5}];const a=encodeGif(w,h,frames),b=encodeGif(w,h,frames,true,false),c=encodeGif(w,h,frames,true,true);
+ assert.deepEqual(Array.from(a),Array.from(b));assert.notDeepEqual(Array.from(a),Array.from(c));
+ assert.equal(defaultExportSettings().dither,undefined);assert.deepEqual(settingsProblems({...defaultExportSettings(),dither:true}),[]);
+});

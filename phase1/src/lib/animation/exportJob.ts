@@ -95,7 +95,7 @@ export function exportGif(d:Deps={}){
    frames.push({pixels:await pixels(frameSvg(comp,plan[i].tick,false,doc.assets),out.width,out.height),delayCs:100*comp.fps.den/comp.fps.num});
    set({done:i+1,total:plan.length});
   }
-  return {blob:new Blob([encodeGif(out.width,out.height,frames) as unknown as BlobPart],{type:'image/gif'}),fileName:`${exportSlug(doc.name)}.gif`};
+  return {blob:new Blob([encodeGif(out.width,out.height,frames,true,state.settings.dither===true) as unknown as BlobPart],{type:'image/gif'}),fileName:`${exportSlug(doc.name)}.gif`};
  },d.save??downloadBlob);
 }
 /** Animated PNG of the work area; honours the transparency setting. PNG frames bounded like the sequence export, result capped at 64 MB. */
