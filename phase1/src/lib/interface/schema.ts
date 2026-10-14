@@ -31,10 +31,12 @@ export interface InterfaceBreakpoint {id:string;name:string;width:number;height:
 export type BlendMode='multiply'|'screen'|'overlay'|'darken'|'lighten';
 export type InterfaceTextAlign='left'|'center'|'right';
 export type InterfaceTextDecoration='underline'|'line-through';
+export interface InterfaceShadow {x:number;y:number;blur:number;color:string;}
+export const DEFAULT_INTERFACE_SHADOW:InterfaceShadow={x:0,y:2,blur:4,color:'#000000'};
 export interface InterfaceNode {
  id:string;pageId:string;parentId:string|null;children:string[];kind:NodeKind;name:string;
  x:number;y:number;width:number;height:number;fill:string;text?:string;hidden:boolean;locked:boolean;
- prototypeLinks?:PrototypeLink[];path?:InterfacePath;stroke?:string;strokeWidth?:number;radius?:number;opacity?:number;rotation?:number;blendMode?:BlendMode;textAlign?:InterfaceTextAlign;textDecoration?:InterfaceTextDecoration;flipH?:boolean;flipV?:boolean;imageFill?:{assetId:string;fit:'cover'|'contain'};
+ prototypeLinks?:PrototypeLink[];path?:InterfacePath;stroke?:string;strokeWidth?:number;radius?:number;opacity?:number;rotation?:number;blendMode?:BlendMode;textAlign?:InterfaceTextAlign;textDecoration?:InterfaceTextDecoration;flipH?:boolean;flipV?:boolean;shadow?:InterfaceShadow;imageFill?:{assetId:string;fit:'cover'|'contain'};
  altText?:string;variableMode?:VariableMode;bindings?:{fill?:string;gap?:string;padding?:string};exportSettings?:InterfaceExportSetting[];textStyleId?:string;annotation?:string;ready?:boolean;layout?:InterfaceLayout;sizing?:InterfaceSizing;constraints?:InterfaceConstraints;componentSlot?:string;instance?:InterfaceInstance;breakpoints?:InterfaceBreakpoint[];span?:number;aspectRatio?:number;scroll?:boolean;sticky?:boolean;list?:'bullet'|'number';maxLines?:number;focusIndex?:number;
  [key:string]:unknown;
 }
