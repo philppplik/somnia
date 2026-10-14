@@ -855,5 +855,8 @@
  "cmd.animation.keys.matchPrevious": "Give the selected keys the value of the key before them",
  "animation.keys.flatten": "Flatten",
  "animation.keys.flatten.hint": "Give all selected keys of a property the value of its earliest selected key",
- "cmd.animation.keys.flatten": "Give the selected keys the value of the earliest selected key"
+ "cmd.animation.keys.flatten": "Give the selected keys the value of the earliest selected key",
+ "animation.keys.easeCopy": "Copy ease",
+ "animation.keys.easeCopy.hint": "Give all selected keys of a property the ease of its earliest selected key",
+ "cmd.animation.keys.easeCopy": "Give the selected keys the ease of the earliest selected key"
 }

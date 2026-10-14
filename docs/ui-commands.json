@@ -717,6 +717,23 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.keys.easeCopy",
+      "title": "Give the selected keys the ease of the earliest selected key",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "copy",
+        "ease",
+        "easing",
+        "interpolation",
+        "keys",
+        "match",
+        "same"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.keys.easeRandom",
       "title": "Give the selected keys random eases",
       "category": "Edit",

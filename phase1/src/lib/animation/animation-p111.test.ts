@@ -130,3 +130,11 @@ test('flatten: later selected keys take the earliest selected value',()=>{
  assert.equal(e.length,1);assert.equal(e[0].t,f(10));assert.deepEqual(e[0].value,[100,100]);
  assert.equal(flattenEdits(c,[k(0)]).length,0);
 });
+import {easeCopyEdits} from './keyEaseCopy';
+test('ease copy: later selected keys take the earliest key ease, matching keys skipped',()=>{
+ const d=applyEdits(base(),[{type:'keys.interp',keys:[{layer:'a',prop:'position',t:f(0)}],interp:'bezier',out:[0.3,2],in:[0.5,1]}] as never),c=findComp(d)!;
+ const k=(n:number)=>({layer:'a',prop:'position' as const,t:f(n)});
+ const e=easeCopyEdits(c,[k(0),k(10)]) as {keys:{t:number}[];out:number[]}[];
+ assert.equal(e.length,1);assert.deepEqual(e[0].keys.map(x=>x.t),[f(10)]);assert.deepEqual([...e[0].out],[0.3,2]);
+ assert.equal(easeCopyEdits(c,[k(10)]).length,0);
+});

@@ -855,5 +855,8 @@
  "cmd.animation.keys.matchPrevious": "Dar às keys selecionadas o valor da key anterior",
  "animation.keys.flatten": "Igualar",
  "animation.keys.flatten.hint": "Dá a todas as keys selecionadas de uma propriedade o valor da primeira selecionada",
- "cmd.animation.keys.flatten": "Dar às keys selecionadas o valor da primeira key selecionada"
+ "cmd.animation.keys.flatten": "Dar às keys selecionadas o valor da primeira key selecionada",
+ "animation.keys.easeCopy": "Copiar ease",
+ "animation.keys.easeCopy.hint": "Dá a todas as keys selecionadas de uma propriedade o ease da primeira selecionada",
+ "cmd.animation.keys.easeCopy": "Dar às keys selecionadas o ease da primeira key selecionada"
 }
