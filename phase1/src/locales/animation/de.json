@@ -646,5 +646,8 @@
  "animation.repeater.opacity": "Deckkraft pro Kopie %",
  "animation.repeater.hue": "Farbtonverschiebung pro Kopie",
  "animation.repeater.animate": "{name} animieren",
- "animation.repeater.animateShort": "Keyframes"
+ "animation.repeater.animateShort": "Keyframes",
+ "animation.gradient.angleLane": "Füllverlauf Winkel",
+ "animation.gradient.strokeAngleLane": "Konturverlauf Winkel",
+ "animation.gradient.angleAnimate": "Verlaufswinkel animieren"
 }

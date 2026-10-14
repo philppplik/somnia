@@ -469,6 +469,12 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Done: repeater values keyframable (x, y, rotation, scale, opacity, hue). Edit repeater.prop (set/animate/remove, one undo step), per-field Keyframes checkbox in the inspector, six timeline key lanes (select, drag-move, delete via the shared style-key paths), validation, 5 locales, test.
 - Open: copies count is not keyable; no key-add button (set a value at a new playhead time to add a key); the timeline lanes were covered by tests, not by a screenshot; no per-key ease editor for these lanes beyond the default.
 
+
+### Animation P74 (2026-10-14, integration pending)
+
+- Done: keyframes for the linear gradient angle, fill and stroke (gradient.angle edit, set/animate/remove, one undo step; Keyframes checkbox next to the angle field; two timeline lanes with select, drag-move and delete). Viewer and exports sample it through gradientAt(); no keys gives identical output. Validation, 5 locales, test.
+- Open: stops, colours, opacity and radial centre/radius are still not keyable; angle keys interpolate numerically (no shortest-path wrap); no conic gradient.
+
 ### Animation P69 (2026-10-14, integration pending)
 - Done: stroke alignment for closed shapes (centre, inside, outside). Inside clips a double-width stroke to the shape, outside masks the shape out of it, so the visible band keeps the set width. Select in the stroke section. Viewer and every export share the behaviour; open paths stay centred. Absent field means centred and byte-identical output.
 - Open: "Expand stroke" outlines ignore the alignment (centre only), gradient strokes use the same bounding box, no alignment keys.

@@ -11,6 +11,8 @@ export function styleKeyLanes(l:Layer):StyleKeyLane[]{
  add('strokeOpacity','animation.stroke.opacity',l.stroke?.opacityAnim?.keys.map(k=>k.t));
  add('fill','animation.layer.color',l.colorKeys?.fill?.map(k=>k.t));
  add('stroke','animation.stroke.color',l.colorKeys?.stroke?.map(k=>k.t));
+ add('gradFillAngle','animation.gradient.angleLane',l.source.gradient?.angleAnim?.keys.map(k=>k.t));
+ add('gradStrokeAngle','animation.gradient.strokeAngleLane',l.stroke?.gradient?.angleAnim?.keys.map(k=>k.t));
  for(const k of REPEATER_KEYS)add(`rep${k[0].toUpperCase()}${k.slice(1)}` as StyleLaneId,`animation.repeater.${k}`,l.repeater?.anim?.[k]?.keys.map(x=>x.t));
  return out;
 }

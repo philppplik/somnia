@@ -646,5 +646,8 @@
  "animation.repeater.opacity": "Opacity per copy %",
  "animation.repeater.hue": "Hue shift per copy",
  "animation.repeater.animate": "Animate {name}",
- "animation.repeater.animateShort": "Keyframes"
+ "animation.repeater.animateShort": "Keyframes",
+ "animation.gradient.angleLane": "Fill gradient angle",
+ "animation.gradient.strokeAngleLane": "Stroke gradient angle",
+ "animation.gradient.angleAnimate": "Animate gradient angle"
 }

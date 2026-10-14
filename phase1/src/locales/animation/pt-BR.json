@@ -646,5 +646,8 @@
  "animation.repeater.opacity": "Opacidade por cópia %",
  "animation.repeater.hue": "Mudança de matiz por cópia",
  "animation.repeater.animate": "Animar {name}",
- "animation.repeater.animateShort": "Quadros-chave"
+ "animation.repeater.animateShort": "Quadros-chave",
+ "animation.gradient.angleLane": "Ângulo do gradiente de preenchimento",
+ "animation.gradient.strokeAngleLane": "Ângulo do gradiente do traço",
+ "animation.gradient.angleAnimate": "Animar ângulo do gradiente"
 }

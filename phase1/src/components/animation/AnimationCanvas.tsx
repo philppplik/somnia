@@ -1,4 +1,5 @@
 import {evaluate} from '../../lib/animation/interpolate';
+import {gradientAt} from '../../lib/animation/gradientAnim';
 import {repeaterCopies,repeaterAt} from '../../lib/animation/repeater';
 import {radialPath,gradientVector,CUT_KEEP,CUT_HOLE} from '../../lib/animation/shapes';
 import {layerPathD,layerFillRule} from '../../lib/animation/pathLayer';
@@ -94,7 +95,7 @@ function Viewer({comp,at,selected,sel,assets,comps}:{assets:readonly InterfaceAs
  return <div className="relative grid min-h-[160px] flex-1 place-items-center overflow-hidden bg-hover p-3" data-testid="animation-viewer">
   <svg role="img" aria-label={t('animation.viewer')} viewBox={`0 0 ${comp.width} ${comp.height}`} className="max-h-full max-w-full h-full overflow-visible">
    <defs>{comp.layers.map((l,i)=><filter key={l.id} id={`preview-effect-${i}`} filterUnits="userSpaceOnUse" {...effectBounds(l,at)} colorInterpolationFilters="sRGB" dangerouslySetInnerHTML={{__html:effectPrimitives(l,at)}}/>)}</defs>
-   <defs>{comp.layers.map((l,i)=>l.source.gradient&&<GradientDef key={l.id} id={`preview-gradient-${i}`} g={l.source.gradient}/>)}{comp.layers.map((l,i)=>l.stroke?.gradient&&<GradientDef key={`s-${l.id}`} id={`preview-stroke-gradient-${i}`} g={l.stroke.gradient}/>)}</defs>
+   <defs>{comp.layers.map((l,i)=>l.source.gradient&&<GradientDef key={l.id} id={`preview-gradient-${i}`} g={gradientAt(l.source.gradient,at)}/>)}{comp.layers.map((l,i)=>l.stroke?.gradient&&<GradientDef key={`s-${l.id}`} id={`preview-stroke-gradient-${i}`} g={gradientAt(l.stroke.gradient,at)}/>)}</defs>
    <rect width={comp.width} height={comp.height} fill={comp.background}/>
    <defs dangerouslySetInnerHTML={{__html:maskDefsHtml}}/>
    {scene.map(({layer:l,matrix,opacity})=>{const i=comp.layers.indexOf(l);

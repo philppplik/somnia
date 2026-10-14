@@ -646,5 +646,8 @@
  "animation.repeater.opacity": "Opacidad por copia %",
  "animation.repeater.hue": "Cambio de tono por copia",
  "animation.repeater.animate": "Animar {name}",
- "animation.repeater.animateShort": "Fotogramas clave"
+ "animation.repeater.animateShort": "Fotogramas clave",
+ "animation.gradient.angleLane": "Ángulo del degradado de relleno",
+ "animation.gradient.strokeAngleLane": "Ángulo del degradado del trazo",
+ "animation.gradient.angleAnimate": "Animar ángulo del degradado"
 }

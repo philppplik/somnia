@@ -7,4 +7,4 @@ export type TransformKey=typeof TRANSFORM_KEYS[number];
 
 export const REPEATER_KEYS=['x','y','rotation','scale','opacity','hue'] as const;
 export type RepeaterKey=typeof REPEATER_KEYS[number];
-export type StyleLaneId='gain'|'strokeWidth'|'strokeOpacity'|'fill'|'stroke'|'repX'|'repY'|'repRotation'|'repScale'|'repOpacity'|'repHue';
+export type StyleLaneId='gain'|'strokeWidth'|'strokeOpacity'|'fill'|'stroke'|'repX'|'repY'|'repRotation'|'repScale'|'repOpacity'|'repHue'|'gradFillAngle'|'gradStrokeAngle';

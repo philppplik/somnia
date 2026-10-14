@@ -1720,3 +1720,28 @@ test('P73 repeater keyframes: sampling, lanes, move, delete, undo, validation',(
  assert.throws(()=>applyEdit(d,{type:'repeater.prop',layer:'pa',prop:'scale',op:'set',value:0,t:0}),Error);
  assert.throws(()=>applyEdit(d0,{type:'repeater.prop',layer:'pa',prop:'x',op:'set',value:1,t:0}),Error);
 });
+
+test('P74 gradient angle keyframes: fill and stroke sampling, lanes, move, delete, validation',()=>{
+ let d=strokeDoc([{x:0.2,y:0.2},{x:0.8,y:0.2},{x:0.8,y:0.8}],true,8);
+ d=applyEdit(d,{type:'layer.update',layer:'pa',source:{gradient:{start:'#ff0000',end:'#0000ff',angle:0}}});
+ d=applyEdit(d,{type:'layer.stroke',layer:'pa',stroke:{color:'#00ff00',width:8,gradient:{start:'#ff0000',end:'#0000ff',angle:0}}});
+ const plain=frameSvg(comp(d),0);
+ for(const target of ['fill','stroke'] as const){
+  d=applyEdit(d,{type:'gradient.angle',layer:'pa',target,op:'animate',on:true,t:0});
+  d=applyEdit(d,{type:'gradient.angle',layer:'pa',target,op:'set',value:90,t:8000*30});
+ }
+ assert.equal(frameSvg(comp(d),0),plain,'key at the static value is unchanged');
+ const mid=frameSvg(comp(d),8000*30);
+ assert.ok(mid.includes('y1="0" x2="0.5" y2="1"')&&mid.includes('id="stroke-gradient-1"'),mid);
+ assert.deepEqual(validateDocument(d),[]);
+ const lay=comp(d).layers.find(l=>l.id==='pa')!;
+ const ids=styleKeyLanes(lay).map(l=>l.id);
+ assert.ok(ids.includes('gradFillAngle')&&ids.includes('gradStrokeAngle'));
+ const moved=applyEdit(d,{type:'style.key.move',layer:'pa',lane:'gradStrokeAngle',from:8000*30,to:8000*60});
+ assert.deepEqual(styleKeyLanes(comp(moved).layers.find(l=>l.id==='pa')!).find(l=>l.id==='gradStrokeAngle')!.ticks,[0,8000*60]);
+ const gone=applyEdits(d,styleKeyDeleteEdits('pa',[{lane:'gradFillAngle',t:0},{lane:'gradFillAngle',t:8000*30}]));
+ const g=comp(gone).layers.find(l=>l.id==='pa')!.source.gradient!;
+ assert.equal(g.angleAnim,undefined);assert.equal(g.angle,90);
+ assert.throws(()=>applyEdit(d,{type:'gradient.angle',layer:'pa',target:'fill',op:'set',value:9999,t:0}),Error);
+ assert.throws(()=>applyEdit(strokeDoc([{x:0.2,y:0.2},{x:0.8,y:0.2}],false,8),{type:'gradient.angle',layer:'pa',target:'fill',op:'set',value:1,t:0}),Error);
+});

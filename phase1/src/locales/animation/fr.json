@@ -646,5 +646,8 @@
  "animation.repeater.opacity": "Opacité par copie %",
  "animation.repeater.hue": "Décalage de teinte par copie",
  "animation.repeater.animate": "Animer {name}",
- "animation.repeater.animateShort": "Images clés"
+ "animation.repeater.animateShort": "Images clés",
+ "animation.gradient.angleLane": "Angle du dégradé de remplissage",
+ "animation.gradient.strokeAngleLane": "Angle du dégradé du contour",
+ "animation.gradient.angleAnimate": "Animer l’angle du dégradé"
 }

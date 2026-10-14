@@ -370,3 +370,7 @@ Repeater `hue` (deg per copy, -360..360): copy i gets `filter=hue-rotate(hue*i d
 ## P73
 
 `repeater.anim` holds optional scalar Properties per key (x,y,rotation,scale,opacity,hue). `repeaterAt(r,tick)` samples them; the static value is the fallback. Lanes repX..repHue reuse style.key.move and styleKeyDeleteEdits.
+
+## P74
+
+`gradient.angleAnim` (scalar Property, degrees, -3600..3600) on fill and stroke gradients. `gradientAt(g,tick)` returns the gradient with the sampled angle. Lanes gradFillAngle and gradStrokeAngle reuse style.key.move and styleKeyDeleteEdits.

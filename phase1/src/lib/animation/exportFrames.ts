@@ -1,4 +1,5 @@
 import {evaluate} from './interpolate';
+import {gradientAt} from './gradientAnim';
 import {repeaterCopies,repeaterAt} from './repeater';
 import {radialPath,gradientDefSvg} from './shapes';
 import {layerPathD,layerFillRule} from './pathLayer';
@@ -86,7 +87,7 @@ function frameSvgBody(comp:Composition,tick:number,transparent:boolean,assets:re
  validateAnimationAssets({assets,compositions:[{...comp,layers:comp.layers.filter(l=>l.kind!=='audio')}]});
  if(comp.layers.some(l=>!validSource(l.source)||!validEffects(l.effects)))throw new ExportError('Invalid layer source/effects.','raster');
  const defs=comp.layers.map((l,i)=>{const b=effectBounds(l,tick);return `<filter id="effect-${i}" filterUnits="userSpaceOnUse" x="${b.x}" y="${b.y}" width="${b.width}" height="${b.height}" color-interpolation-filters="sRGB">${effectPrimitives(l,tick)}</filter>`;}).join('');
- const gradients=comp.layers.map((l,i)=>l.source.gradient?gradientDefSvg(`gradient-${i}`,l.source.gradient):'').join('')+comp.layers.map((l,i)=>l.stroke?.gradient?gradientDefSvg(`stroke-gradient-${i}`,l.stroke.gradient):'').join('');
+ const gradients=comp.layers.map((l,i)=>l.source.gradient?gradientDefSvg(`gradient-${i}`,gradientAt(l.source.gradient,tick)):'').join('')+comp.layers.map((l,i)=>l.stroke?.gradient?gradientDefSvg(`stroke-gradient-${i}`,gradientAt(l.stroke.gradient,tick)):'').join('');
  const body=sceneAt(comp,tick).map(({layer,matrix,opacity})=>{const i=comp.layers.indexOf(layer);
   const wrap=(inner:string)=>hasMasks(layer)?`<g mask="url(#${maskId('',i)})">${inner}</g>`:inner;
   const masked=wrap(layerBody(layer,i,assets,tick,''));
