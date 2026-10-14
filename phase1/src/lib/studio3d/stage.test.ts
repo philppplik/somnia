@@ -90,3 +90,43 @@ test('load replaces the scene and starts a clean history; clear disposes',()=>{
 test('listeners fire on every change and can be removed',()=>{
  const stage=new Stage();let n=0;const off=stage.onChange(()=>n++);stage.addPrimitive('cube');stage.undo();stage.redo();assert.equal(n,3);off();stage.undo();assert.equal(n,3);
 });
+test('grouped nudges inside the window merge into one undo step; undo restores the start',()=>{
+ const stage=new Stage();const o=stage.addPrimitive('cube');stage.markSaved();
+ stage.setTransform(o.id,{position:{x:1}},{group:'nudge',now:1000});
+ stage.setTransform(o.id,{position:{x:2}},{group:'nudge',now:1400});
+ stage.setTransform(o.id,{position:{x:3}},{group:'nudge',now:1900});
+ assert.equal(o.position.x,3);stage.undo();assert.equal(o.position.x,0);assert.equal(stage.dirty,false);
+ stage.redo();assert.equal(o.position.x,3);
+});
+test('grouping does not merge across the time window, another group, another object or the saved mark',()=>{
+ const stage=new Stage();const a=stage.addPrimitive('cube');const b=stage.addPrimitive('sphere');
+ stage.setTransform(a.id,{position:{x:1}},{group:'nudge',now:0});
+ stage.setTransform(a.id,{position:{x:2}},{group:'nudge',now:5000});
+ stage.undo();assert.equal(a.position.x,1);
+ stage.setTransform(a.id,{position:{x:3}},{group:'other',now:5100});stage.undo();assert.equal(a.position.x,1);
+ stage.setTransform(b.id,{position:{x:1}},{group:'nudge',now:5200});stage.setTransform(a.id,{position:{x:9}},{group:'nudge',now:5300});
+ stage.undo();assert.equal(b.position.x,1);
+ stage.setTransform(a.id,{position:{x:4}},{group:'nudge',now:6000});stage.markSaved();
+ stage.setTransform(a.id,{position:{x:5}},{group:'nudge',now:6100});
+ stage.undo();assert.equal(a.position.x,4);assert.equal(stage.dirty,false);
+});
+test('commitTransform records one undo step for a finished gizmo drag',()=>{
+ const stage=new Stage();const o=stage.addPrimitive('cube');
+ const before={p:o.position.clone(),r:o.rotation.clone(),s:o.scale.clone()};
+ o.position.set(1,2,3);o.scale.set(2,2,2);
+ stage.commitTransform(o.id,before);assert.equal(stage.canUndo,true);assert.equal(stage.dirty,true);
+ stage.undo();assert.equal(o.position.x,0);assert.equal(o.scale.x,1);
+ stage.redo();assert.equal(o.position.y,2);assert.equal(o.scale.z,2);
+ const same={p:o.position.clone(),r:o.rotation.clone(),s:o.scale.clone()};stage.commitTransform(o.id,same);
+ stage.undo();stage.undo();assert.equal(stage.canUndo,false,'an unchanged drag adds no entry (only add + one drag)');
+});
+test('cameras: add, fov validation, info and undo',()=>{
+ const stage=new Stage();const c=stage.addCamera();assert.ok(c.isPerspectiveCamera);
+ assert.equal(stage.info(c.id)?.camera?.fov,40);assert.equal(stage.info(c.id)?.kind,'camera');
+ stage.setCamera(c.id,{fov:70});assert.equal(stage.info(c.id)?.camera?.fov,70);
+ assert.throws(()=>stage.setCamera(c.id,{fov:0}),StageError);assert.throws(()=>stage.setCamera(c.id,{fov:121}),StageError);
+ stage.undo();assert.equal(stage.info(c.id)?.camera?.fov,40);
+ stage.undo();assert.equal(stage.find(c.id),undefined);
+ const p=stage.addCamera({position:{x:1,y:2,z:3},quaternion:[0,0,0,1]},55);assert.equal(p.position.z,3);assert.equal(p.fov,55);
+ assert.equal(stage.info(stage.addPrimitive('cube').id)?.camera,null);
+});

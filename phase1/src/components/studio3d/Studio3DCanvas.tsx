@@ -3,8 +3,8 @@ import {Boxes} from '../../lib/icons';
 import {StudioEmptyState} from '../studios/StudioEmptyState';
 import {FileTabs} from '../FileTabs';
 import {useT} from '../../lib/useT';
-import {MODEL_ACCEPT} from '../../lib/studio3d/model';
-import {registerStudio3DCommands,registerStudio3DOpener,studio3DController} from '../../lib/studio3d/commands';
+import {MODEL_ACCEPT,ENV_ACCEPT} from '../../lib/studio3d/model';
+import {registerStudio3DCommands,registerStudio3DOpener,registerStudio3DEnvOpener,studio3DController} from '../../lib/studio3d/commands';
 import {useStudio3D,patchStudio3D} from '../../lib/studio3d/session';
 /** three.js lives in its own chunk. Nothing 3D is loaded until this studio is shown. */
 const Viewport3D=lazy(()=>import('./Viewport3D'));
@@ -13,7 +13,9 @@ const sleep=(ms:number)=>new Promise(r=>setTimeout(r,ms));
 export function Studio3DCanvas(){
  const {t}=useT();const s=useStudio3D();const input=useRef<HTMLInputElement|null>(null);
  useEffect(()=>registerStudio3DCommands(),[]);
+ const envInput=useRef<HTMLInputElement|null>(null);
  const pick=()=>input.current?.click();
+ useEffect(()=>registerStudio3DEnvOpener(()=>envInput.current?.click()),[]);
  useEffect(()=>registerStudio3DOpener(pick),[]);
  /** The viewport mounts after the first request, so a request made from the start screen waits for its controller. */
  const withController=async(run:(c:NonNullable<ReturnType<typeof studio3DController>>)=>void|Promise<void>)=>{
@@ -31,6 +33,7 @@ export function Studio3DCanvas(){
  return <main className="center" aria-label={t('studio3d.title')}><div className="workspace"><section className="code-pane" aria-label={t('studio3d.title')}>
   <FileTabs/>
   <input ref={input} type="file" accept={MODEL_ACCEPT} multiple hidden data-testid="studio3d-file-input" onChange={e=>{const files=[...(e.target.files??[])];e.target.value='';if(files.length)void withController(c=>c.openFiles(files));}}/>
+  <input ref={envInput} type="file" accept={ENV_ACCEPT} hidden data-testid="studio3d-env-input" onChange={e=>{const f=e.target.files?.[0];e.target.value='';if(f)void withController(async c=>{try{await c.openEnvFile(f);patchStudio3D({status:'ready',error:''});}catch(err){patchStudio3D({status:'ready',error:err instanceof Error?err.message:String(err)});}});}}/>
   {s.confirmReplace&&<div role="alertdialog" aria-label={t('studio3d.replace.title')} className="m-2 flex flex-wrap items-center gap-2 rounded-md border border-subtle bg-surface p-2 text-xs text-ink" data-testid="studio3d-replace">
    <span className="mr-auto">{t('studio3d.replace.message')}</span>
    <button type="button" className="rounded-sm px-2 py-1 hover:bg-hover" onClick={()=>{const r=s.confirmReplace!;void withController(c=>r.what==='new'?c.newScene(true):c.openFiles(r.files,true));}}>{t('studio3d.replace.confirm')}</button>

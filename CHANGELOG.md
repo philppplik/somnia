@@ -1,5 +1,6 @@
 # Unreleased: 3D Studio P0
 
+- 3D Studio: transform gizmos (move, rotate, scale; W, E, R keys, Tools menu, buttons), numeric fields and Shift+arrows / Page Up / Page Down nudging, one undo step per drag or nudge burst. Camera objects (insert, from current view, field of view, look through). Environment lighting: studio, sky, neutral, none or your own .hdr/.exr, with intensity, rotation and background. Opens .obj, .stl and .ply as well (content-checked, size-limited, three examples loaders in the lazy 3D chunk).
 - New 3D Studio (id `3d`, after Photos, before Vibe Space). Opens glTF 2.0 files (.glb, or .gltf with its .bin and textures selected together, meshopt supported), orbit/zoom/pan camera, keyboard orbit, image-based lighting, grid and wireframe toggles, click or list selection, scene outline and model statistics. Hero action "Render still" saves a PNG of the view; Project > Export scene as GLB.
 - three.js 0.186.1 (MIT) is loaded only when the studio is shown (own lazy chunk). Dev dependency @types/three 0.186.0.
 - Smart Open routes .glb and .gltf (validated by content) to the 3D Studio (open kind `model3d`, handler `open.3d`).

@@ -5,14 +5,15 @@ const rail=(id:string,icon:string,label:string,order:number):RailItemDef=>({id,i
 export const STUDIO3D_LAYOUT:StudioLayout={leftOpen:true,rightOpen:true,leftWidth:260,rightWidth:300,leftPanels:['scene'],rightPanels:['inspector'],activeLeft:'scene',activeRight:'inspector'};
 export const studio3DShell:StudioShellDef={
  panels:[
-  {id:'scene',title:'Scene',titleKey:'studio3d.shell.scene',component:'studio3d.scene',side:'left',commands:['studio3d.select','studio3d.insert.primitive','studio3d.insert.light']},
+  {id:'scene',title:'Scene',titleKey:'studio3d.shell.scene',component:'studio3d.scene',side:'left',commands:['studio3d.select','studio3d.insert.primitive','studio3d.insert.light','studio3d.insert.camera','studio3d.gizmo.mode']},
   {id:'inspector',title:'3D inspector',titleKey:'studio3d.shell.inspector',component:'shell.inspector',side:'right',defaultOpen:true},
  ],
  leftRail:[rail('scene','Boxes','Scene',10)],
  rightRail:[rail('inspector','Info','3D inspector',10)],
  inspector:{titleKey:'studio3d.shell.inspector',emptyKey:'studio3d.start.title',sections:[
   {id:'model',title:'Model',titleKey:'studio3d.shell.model',component:'studio3d.inspector.model',order:10},
-  {id:'object',title:'Selected object',titleKey:'studio3d.shell.object',component:'studio3d.inspector.object',order:20,commands:['studio3d.object.transform','studio3d.object.material','studio3d.object.rename','studio3d.object.delete','studio3d.object.duplicate']},
+  {id:'object',title:'Selected object',titleKey:'studio3d.shell.object',component:'studio3d.inspector.object',order:20,commands:['studio3d.object.transform','studio3d.object.material','studio3d.object.rename','studio3d.object.delete','studio3d.object.duplicate','studio3d.object.nudge','studio3d.camera.set','studio3d.view.fromCamera']},
+  {id:'env',title:'Environment',titleKey:'studio3d.shell.env',component:'studio3d.inspector.env',order:25,commands:['studio3d.env.set','studio3d.env.open']},
   {id:'view',title:'View',titleKey:'studio3d.shell.view',component:'studio3d.inspector.view',order:30,commands:['studio3d.view.grid','studio3d.view.wireframe','studio3d.view.reset','studio3d.view.frame']},
  ]},
  menus:[
@@ -26,16 +27,19 @@ export const studio3DShell:StudioShellDef={
   {menu:'Edit',command:'studio3d.object.delete',group:'studio3d.object',order:40},
   {menu:'Insert',command:'studio3d.insert.primitive',group:'studio3d.insert',order:10},
   {menu:'Insert',command:'studio3d.insert.light',group:'studio3d.insert',order:20},
+  {menu:'Insert',command:'studio3d.insert.camera',group:'studio3d.insert',order:30},
+  {menu:'Tools',command:'studio3d.gizmo.mode',group:'studio3d.tools',order:10},
+  {menu:'View',command:'studio3d.env.open',group:'studio3d.env',order:50},
   {menu:'View',command:'studio3d.view.reset',group:'studio3d.view',order:10},
   {menu:'View',command:'studio3d.view.frame',group:'studio3d.view',order:20},
   {menu:'View',command:'studio3d.view.grid',group:'studio3d.view',order:30},
   {menu:'View',command:'studio3d.view.wireframe',group:'studio3d.view',order:40},
  ],defaultLayout:STUDIO3D_LAYOUT,
 };
-/** Order 9 keeps Vibe Space last. Smart Open routes .glb and .gltf here (open handler `open.3d`, kind `model3d`). */
+/** Order 9 keeps Vibe Space last. Smart Open routes .glb, .gltf, .obj, .stl and .ply here (open handler `open.3d`, kind `model3d`). */
 export const studio3D:StudioDef={
- id:'3d',label:'studio.3d',icon:'Boxes',order:9,formats:[{ext:'glb',priority:100},{ext:'gltf',priority:100}],
- shell:{leftRail:[],rightRail:[],header:{menus:['Project','Edit','View','Insert','Help'],views:[],heroAction:{id:'studio3d.render.still',labelKey:'studio3d.hero.render',icon:'Image'}},bottomBar:{slots:[],viewportPresets:[]},inspector:'studio3d.inspector',tools:[]},
+ id:'3d',label:'studio.3d',icon:'Boxes',order:9,formats:[{ext:'glb',priority:100},{ext:'gltf',priority:100},{ext:'obj',priority:100},{ext:'stl',priority:100},{ext:'ply',priority:100}],
+ shell:{leftRail:[],rightRail:[],header:{menus:['Project','Edit','View','Insert','Tools','Help'],views:[],heroAction:{id:'studio3d.render.still',labelKey:'studio3d.hero.render',icon:'Image'}},bottomBar:{slots:[],viewportPresets:[]},inspector:'studio3d.inspector',tools:[]},
  commands:[],shortcuts:{},menus:{view:[]},canvas:'studio3d.canvas',shellV2:studio3DShell,
  agent:{tools:[],contextProviders:[],quickActions:[]},deriveContext:context=>context,
 };

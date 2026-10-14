@@ -2,6 +2,7 @@ import {commandRegistry} from '../commandRegistry';
 import {registerCommandSpec} from '../commandBridge';
 import type {CommandSpec} from '../commandSpec';
 import {getStudio3DState,patchStudio3D} from './session';
+import type {EnvSettings,GizmoMode} from './model';
 import type {PrimitiveKind,LightKind,TransformPatch,MaterialPatch} from './stage';
 /** What the lazy viewport offers. The command layer never imports three.js. */
 export interface Studio3DController{
@@ -14,6 +15,13 @@ export interface Studio3DController{
  rename(id:number,name:string):void;
  remove(id:number):void;
  duplicate(id:number):number;
+ addCamera(fromView:boolean):number;
+ setCamera(id:number,patch:{fov:number}):void;
+ viewFromCamera(id:number):void;
+ setGizmo(mode:GizmoMode):void;
+ nudge(id:number,delta:{x?:number;y?:number;z?:number}):void;
+ setEnv(patch:Partial<EnvSettings>):void;
+ openEnvFile(file:File):Promise<void>;
  undo():boolean;
  redo():boolean;
  resetView():void;
@@ -28,6 +36,8 @@ let controller:Studio3DController|null=null;
 export function registerStudio3DController(next:Studio3DController){controller=next;return()=>{if(controller===next)controller=null;};}
 export const studio3DController=()=>controller;
 let opener:(()=>void)|null=null;
+let envOpener:(()=>void)|null=null;
+export function registerStudio3DEnvOpener(open:()=>void){envOpener=open;return()=>{if(envOpener===open)envOpener=null;};}
 /** The canvas owns the file dialog (user gesture). */
 export function registerStudio3DOpener(open:()=>void){opener=open;return()=>{if(opener===open)opener=null;};}
 const VEC={type:'object',properties:{x:{type:'number'},y:{type:'number'},z:{type:'number'}},additionalProperties:false,minProperties:1};
@@ -51,6 +61,13 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{id:number;name:string}>('studio3d.object.rename','Rename a 3D object','Edit',p=>need().rename(p.id,p.name),object({id:{type:'integer',minimum:0},name:{type:'string',minLength:1,maxLength:120}}),hasScene),
   add<{id:number}>('studio3d.object.delete','Delete a 3D object','Edit',p=>need().remove(p.id),object({id:{type:'integer',minimum:0}}),hasScene),
   add<{id:number}>('studio3d.object.duplicate','Duplicate a 3D object','Edit',p=>need().duplicate(p.id),object({id:{type:'integer',minimum:0}}),hasScene),
+  add<{fromView?:boolean}>('studio3d.insert.camera','Insert a 3D camera','Insert',p=>need().addCamera(!!p?.fromView),object({fromView:{type:'boolean'}},[]),()=>!!controller),
+  add<{id:number;fov:number}>('studio3d.camera.set','Change the field of view of a 3D camera','Edit',p=>need().setCamera(p.id,{fov:p.fov}),object({id:{type:'integer',minimum:0},fov:{type:'number',minimum:1,maximum:120}}),hasScene),
+  add<{id:number}>('studio3d.view.fromCamera','Look through a 3D camera','View',p=>need().viewFromCamera(p.id),object({id:{type:'integer',minimum:0}}),hasScene),
+  add<{mode:GizmoMode}>('studio3d.gizmo.mode','Set the 3D transform tool','Tools',p=>need().setGizmo(p.mode),object({mode:{enum:['translate','rotate','scale']}}),()=>!!controller),
+  add<{id:number;x?:number;y?:number;z?:number}>('studio3d.object.nudge','Nudge a 3D object','Edit',p=>need().nudge(p.id,p),object({id:{type:'integer',minimum:0},x:{type:'number'},y:{type:'number'},z:{type:'number'}},['id']),hasScene),
+  add<Partial<EnvSettings>>('studio3d.env.set','Change the 3D environment lighting','View',p=>need().setEnv(p??{}),object({preset:{enum:['studio','sky','neutral','none','custom']},intensity:{type:'number',minimum:0,maximum:3},rotation:{type:'number',minimum:-360,maximum:360},background:{type:'boolean'}},[]),()=>!!controller),
+  add('studio3d.env.open','Open an HDR environment map','View',()=>envOpener!(),undefined,()=>!!controller&&!!envOpener),
   add('studio3d.undo','Undo 3D change','Edit',()=>need().undo(),undefined,()=>!!controller&&getStudio3DState().canUndo),
   add('studio3d.redo','Redo 3D change','Edit',()=>need().redo(),undefined,()=>!!controller&&getStudio3DState().canRedo),
   add('studio3d.render.still','Render a PNG still of the 3D view','Project',()=>need().renderStill()),
