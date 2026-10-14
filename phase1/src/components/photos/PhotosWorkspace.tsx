@@ -84,6 +84,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
  const [healMode,setHealMode]=usePanelState<boolean>('photos.healMode',false);
  const [radInvert,setRadInvert]=usePanelState<boolean>('photos.radInvert',false);
  const [healCursor,setHealCursor]=useState<{x:number;y:number}|null>(null);
+ const [rgbPos,setRgbPos]=useState<{x:number;y:number}|null>(null); // stage hover position for the RGB readout
  const healStart=useRef<{x:number;y:number}|null>(null);
  const [dodging,setDodging]=useState(false);
  const [grading,setGrading]=useState(false);
@@ -235,6 +236,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
   drag.current={pan:{x:pan[0],y:pan[1],px:e.clientX,py:e.clientY}};
  };
  const onStageMove=(e:React.PointerEvent)=>{
+  setRgbPos(pointerPos(e)); // the readout follows every hover
   if(brushing&&brushChain.current){const p=pointerPos(e);const last=brushChain.current[brushChain.current.length-1];const fw2=session?.frame?.width??1,fh2=session?.frame?.height??1;
    if(Math.hypot((p.x-last.x)*fw2,(p.y-last.y)*fh2)/Math.min(fw2,fh2)>=brushStrokeR/2)brushChain.current.push({x:p.x,y:p.y,r:brushStrokeR});}
   if(straightening&&straightDraft.current){const p=pointerPos(e);straightDraft.current={...straightDraft.current,x1:p.x,y1:p.y};setHealCursor(p);}
@@ -427,7 +429,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
    <Button size="compact" disabled={!ready||session?.cropping} onClick={()=>void doExport('jpeg')} data-testid="photos-export-jpeg" title={t('photos.export.hint')}><Download size={13}/>{t('photos.export.jpeg')}</Button>
   </div>
   <PhotosHandoffBar file={item.name} disabled={!ready} getImage={()=>renderPhotoBytes(item.name)}/>
-  <div ref={stage} className="media-checker relative min-h-0 w-full flex-1 overflow-hidden" onWheel={onWheel} onPointerDown={onStageDown} onPointerMove={onStageMove} onPointerUp={onStageUp} onPointerCancel={onStageUp} onPointerLeave={()=>setHealCursor(null)} data-testid="photos-stage" style={{touchAction:'none',cursor:session?.cropping?'default':healing||dodging||grading||radial||brushing||straightening||targetArmed?'crosshair':'grab'}}>
+  <div ref={stage} className="media-checker relative min-h-0 w-full flex-1 overflow-hidden" onWheel={onWheel} onPointerDown={onStageDown} onPointerMove={onStageMove} onPointerUp={onStageUp} onPointerCancel={onStageUp} onPointerLeave={()=>{setHealCursor(null);setRgbPos(null);}} data-testid="photos-stage" style={{touchAction:'none',cursor:session?.cropping?'default':healing||dodging||grading||radial||brushing||straightening||targetArmed?'crosshair':'grab'}}>
    <div ref={imgBox} className="absolute left-1/2 top-1/2" style={{width:dispW,height:dispH,transform:`translate(-50%,-50%) translate(${pan[0]}px,${pan[1]}px)`}}>
     <canvas ref={canvas} className="block size-full rounded-[2px] shadow-sm" style={{imageRendering:scale>4?'pixelated':'auto'}} data-testid="photos-canvas"/>
     {showClipping&&<canvas ref={clipCanvas} className={`pointer-events-none absolute inset-0 size-full${scale>4?' pixelated':''}`} data-testid="photos-clipping-canvas"/>}
@@ -463,6 +465,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
      <div className="absolute" style={{left:`${crop.x0*100}%`,top:`${crop.y0*100}%`,width:`${(crop.x1-crop.x0)*100}%`,height:`${(crop.y1-crop.y0)*100}%`,cursor:'move'}} onPointerDown={startCropDrag({kind:'move',dx:0,dy:0})} data-testid="photos-crop-frame"/>
      {(['nw','ne','sw','se'] as const).map(k=><div key={k} className="absolute size-3 rounded-[3px] border border-white bg-[var(--accent)]" style={{left:`calc(${(k==='nw'||k==='sw'?crop.x0:crop.x1)*100}% - 6px)`,top:`calc(${(k==='nw'||k==='ne'?crop.y0:crop.y1)*100}% - 6px)`,cursor:k==='nw'||k==='se'?'nwse-resize':'nesw-resize'}} onPointerDown={startCropDrag({kind:k})} data-testid={`photos-crop-${k}`}/>)}
     </div>}
+    {rgbPos&&shown&&!session?.cropping&&(()=>{const px=pixelAt(shown,rgbPos.x,rgbPos.y);return px?<div className="pointer-events-none absolute bottom-2 right-2 rounded-[3px] bg-elevated px-1.5 py-0.5 text-ink" data-testid="photos-rgb-readout">{`R ${Math.round(px[0]/255*100)} G ${Math.round(px[1]/255*100)} B ${Math.round(px[2]/255*100)}%`}</div>:null;})()}
     {(healing||dodging||brushing)&&healCursor&&!session?.cropping&&<svg className="pointer-events-none absolute inset-0 size-full" data-testid="photos-heal-cursor">
      {healStart.current&&<line x1={healStart.current.x*dispW} y1={healStart.current.y*dispH} x2={healCursor.x*dispW} y2={healCursor.y*dispH} stroke="rgba(255,255,255,0.75)" strokeWidth={1}/>}
      {healStart.current&&<circle cx={healStart.current.x*dispW} cy={healStart.current.y*dispH} r={Math.max(2,brushR*Math.min(fw,fh)*scale)} fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth={1.5} strokeDasharray="4 3"/>}

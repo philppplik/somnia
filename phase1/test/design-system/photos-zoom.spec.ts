@@ -99,3 +99,22 @@ test('zoom toggle key: Z switches between fit and 100% (light and dark)',async({
   await expect(page.getByTestId('photos-zoom-fit')).toHaveAttribute('aria-pressed','true'); // back to fit
  }
 });
+test('RGB readout: hovering the stage shows the pixel values, leaving hides them (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-zoom');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  const stage=page.getByTestId('photos-stage');
+  const box=await stage.boundingBox();
+  await page.mouse.move(box!.x+box!.width/2,box!.y+box!.height/2);
+  const readout=page.getByTestId('photos-rgb-readout');
+  await expect(readout).toBeVisible();
+  const text=await readout.innerText();
+  expect(text).toMatch(/^R \d+ G \d+ B \d+%$/);
+  const r=Number(text.match(/^R (\d+)/)![1]);
+  expect(r).toBeGreaterThan(40);expect(r).toBeLessThan(65); // gradient center ~51%
+  await page.screenshot({path:`test-results/ds-photos-rgb-readout-${theme}.png`,fullPage:true});
+  await page.mouse.move(box!.x+box!.width/2,box!.y-20); // leave the stage
+  await expect(readout).toHaveCount(0);
+ }
+});
