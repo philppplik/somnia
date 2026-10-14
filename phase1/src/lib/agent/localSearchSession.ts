@@ -1,4 +1,4 @@
-import {validBatchProgress,type LocalBuildProgress} from './localSearchProgress';import {localSearchQueryReview} from './localSearchQuery';import {prepareLocalIndexChunks} from './localIndexChunks';import {LOCAL_EMBED_MODEL,type LocalEmbeddingAdapter} from './localEmbedding';import {captureLocalIndexDescriptor,emptyLocalIndex,beginLocalIndex,finishLocalIndex,invalidateLocalIndex,type LocalIndexDescriptor,type LocalIndexLifecycle} from './localIndexLifecycle';import {retrieveLocalTopK,type FrozenLocalVectors} from './localRetrieval';import {chunkLocalSources,type SearchSource} from './localSearch';
+import {retrieveLocalPhrase} from './localPhraseSearch';import {validBatchProgress,type LocalBuildProgress} from './localSearchProgress';import {localSearchQueryReview} from './localSearchQuery';import {prepareLocalIndexChunks} from './localIndexChunks';import {LOCAL_EMBED_MODEL,type LocalEmbeddingAdapter} from './localEmbedding';import {captureLocalIndexDescriptor,emptyLocalIndex,beginLocalIndex,finishLocalIndex,invalidateLocalIndex,type LocalIndexDescriptor,type LocalIndexLifecycle} from './localIndexLifecycle';import {retrieveLocalTopK,type FrozenLocalVectors} from './localRetrieval';import {chunkLocalSources,type SearchSource} from './localSearch';
 export interface LocalSearchCapture {endpoint:string;model:typeof LOCAL_EMBED_MODEL;digest:string;dimensions:number;sources:readonly SearchSource[]}
 export interface LocalSearchAdapter {endpoint:string;embed:LocalEmbeddingAdapter['embed'];embedPrepared:LocalEmbeddingAdapter['embedPrepared']}
 function capture(input:LocalSearchCapture):LocalSearchCapture{
@@ -31,6 +31,7 @@ export class LocalSearchSession {
   }catch(error){if(this.buildAbort===controller)this.discard();throw error;}
   finally{signal.removeEventListener('abort',abort);if(this.buildAbort===controller)this.buildAbort=null;controller.abort();}
  }
+ phrase(text:string,limit=10,sourceId?:string){this.available();this.queryAbort?.abort();this.queryGeneration++;const source=this.source,vectors=this.vectors;if(!source||!vectors||this.lifecycle.phase!=='ready')throw Error('Search index not ready');this.assertSame(source);return retrieveLocalPhrase(this.lifecycle,vectors.descriptor,vectors,text,limit,sourceId);}
  async query(text:string,signal:AbortSignal,limit=10,sourceId?:string){
   this.available();signal.throwIfAborted();this.queryAbort?.abort();const token=++this.queryGeneration;
   if(!localSearchQueryReview(text).valid||!Number.isSafeInteger(limit)||limit<1||limit>50)throw Error('Invalid explicit search query');

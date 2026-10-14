@@ -1,5 +1,11 @@
 export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
  "en": {
+  "local.search.phrase.mode": "Search mode",
+  "local.search.phrase.semantic": "Semantic similarity",
+  "local.search.phrase.literal": "Exact phrase (ignore case)",
+  "local.search.phrase.boundary": "Literal normalized phrase within each indexed chunk, in index order, not semantic rank. No query embedding. No cross-chunk matches; names/codes near boundaries may need the source opened.",
+  "local.search.phrase.matches": "{count} literal phrase matches in this chunk",
+
   "local.search.focus.label": "Search within indexed source",
   "local.search.focus.all": "All indexed sources",
   "local.search.focus.boundary": "Focus limits candidates before ranking to this already indexed source. No new source read or rebuild. Change clears results; run search explicitly.",
@@ -628,6 +634,12 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Move earlier after local"
  },
  "de": {
+  "local.search.phrase.mode": "Suchmodus",
+  "local.search.phrase.semantic": "Semantische Ähnlichkeit",
+  "local.search.phrase.literal": "Exakte Phrase (Case ignorieren)",
+  "local.search.phrase.boundary": "Literale normalisierte Phrase je Index-Chunk, Indexreihenfolge statt semantischem Ranking. Kein Query-Embedding. Keine Chunk-übergreifenden Treffer; Boundary-Namen/Codes ggf. Quelle öffnen.",
+  "local.search.phrase.matches": "{count} literale Phrasen-Treffer in diesem Chunk",
+
   "local.search.focus.label": "In indexierter Quelle suchen",
   "local.search.focus.all": "Alle indexierten Quellen",
   "local.search.focus.boundary": "Fokus begrenzt Kandidaten vor Ranking auf schon indexierte Quelle. Kein neuer Read/Rebuild. Wechsel löscht Resultate; explizit suchen.",
@@ -1256,6 +1268,12 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Nach lokal früher einordnen"
  },
  "es": {
+  "local.search.phrase.mode": "Modo de búsqueda",
+  "local.search.phrase.semantic": "Similitud semántica",
+  "local.search.phrase.literal": "Frase exacta (ignorar mayúsculas)",
+  "local.search.phrase.boundary": "Frase literal normalizada por fragmento, orden del índice, no semántico. Sin embedding de consulta. Sin coincidencias entre fragmentos; abre fuente en límites.",
+  "local.search.phrase.matches": "{count} coincidencias de frase en este fragmento",
+
   "local.search.focus.label": "Buscar en fuente indexada",
   "local.search.focus.all": "Todas las fuentes indexadas",
   "local.search.focus.boundary": "Foco limita candidatos antes del ranking a fuente ya indexada. Sin nueva lectura/reconstrucción. Cambio borra resultados; busca explícitamente.",
@@ -1884,6 +1902,12 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Mover antes tras local"
  },
  "fr": {
+  "local.search.phrase.mode": "Mode de recherche",
+  "local.search.phrase.semantic": "Similarité sémantique",
+  "local.search.phrase.literal": "Phrase exacte (ignorer casse)",
+  "local.search.phrase.boundary": "Phrase littérale normalisée par extrait, ordre de l’index, pas sémantique. Sans embedding requête. Pas de correspondance entre extraits; ouvrez source aux limites.",
+  "local.search.phrase.matches": "{count} correspondances de phrase dans cet extrait",
+
   "local.search.focus.label": "Chercher dans source indexée",
   "local.search.focus.all": "Toutes sources indexées",
   "local.search.focus.boundary": "Focus limite candidats avant classement à source déjà indexée. Sans nouvelle lecture/reconstruction. Changer efface résultats; recherche explicite.",
@@ -2512,6 +2536,12 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Avancer après local"
  },
  "pt-BR": {
+  "local.search.phrase.mode": "Modo de busca",
+  "local.search.phrase.semantic": "Similaridade semântica",
+  "local.search.phrase.literal": "Frase exata (ignorar maiúsculas)",
+  "local.search.phrase.boundary": "Frase literal normalizada por trecho, ordem do índice, não semântico. Sem embedding da consulta. Sem correspondências entre trechos; abra fonte nos limites.",
+  "local.search.phrase.matches": "{count} ocorrências de frase neste trecho",
+
   "local.search.focus.label": "Buscar em fonte indexada",
   "local.search.focus.all": "Todas fontes indexadas",
   "local.search.focus.boundary": "Foco limita candidatos antes do ranking à fonte já indexada. Sem nova leitura/reconstrução. Mudar limpa resultados; busca explícita.",
