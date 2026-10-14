@@ -45,3 +45,22 @@ test('zoom keys: + and - step the zoom like the buttons (light and dark)',async(
   await page.keyboard.press('+'); // back near the start for the next leg
  }
 });
+test('rotate keys: [ and ] turn the photo a quarter and wrap (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-zoom');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  const orientation=()=>page.evaluate(async()=>{const mod=await import('/src/lib/photos/studioSession.ts');return mod.getPhotoSession('zoom.png')!.now.orientation;});
+  await expect(page.getByTestId('photos-undo')).toBeDisabled();
+  await page.keyboard.press(']');
+  expect(await orientation()).toBe(1); // quarter turn right
+  await expect(page.getByTestId('photos-undo')).toBeEnabled(); // a real history entry
+  await page.screenshot({path:`test-results/ds-photos-rotate-keys-${theme}.png`,fullPage:true});
+  await page.keyboard.press('[');
+  expect(await orientation()).toBe(0); // back
+  await page.keyboard.press('[');
+  expect(await orientation()).toBe(3); // wraps past zero
+  await page.keyboard.press(']');
+  expect(await orientation()).toBe(0);
+ }
+});

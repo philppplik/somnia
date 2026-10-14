@@ -175,6 +175,8 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
    else if(e.key==='x'||e.key==='X')setFlag(item.name,'reject');
    else if(e.key==='u'||e.key==='U')setFlag(item.name,null);
    else if(e.key==='o'||e.key==='O')setGuideStyle(CROP_GUIDE_STYLES[(CROP_GUIDE_STYLES.indexOf(guideStyle)+1)%CROP_GUIDE_STYLES.length]);
+   else if(e.key==='[')rotatePhoto(item.name,-1);
+   else if(e.key===']')rotatePhoto(item.name,1);
    else if(e.key==='+'||e.key==='=')zoomTo(scale*1.25);
    else if(e.key==='-'||e.key==='_')zoomTo(scale/1.25);
   };

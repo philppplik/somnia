@@ -40,3 +40,16 @@ position indicator — the triage workflow for a series of shots.
   themes; the feature adds only the bar controls.
 - No new raw controls (buttons are the DS `Button`); ratchets unchanged.
   Actual app photos E2E remains CI-only.
+
+## Rotate keys (P74)
+
+`[` and `]` turn the active photo a quarter turn left/right from the
+keyboard — the same `rotatePhoto` the Transform panel buttons run, so
+every press is one undoable history entry and the orientation wraps
+through 0-3. The keys live in the workspace key handler with the usual
+guards (no modifiers, no editable targets).
+
+Coverage: `photos-zoom.spec.ts` gains a light/dark leg that presses
+`]`, reads `getPhotoSession().now.orientation` through the session
+module (1), asserts the toolbar Undo button enabled, steps back with
+`[`, wraps past zero to 3 and returns to 0.
