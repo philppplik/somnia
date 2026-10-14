@@ -427,3 +427,7 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 ### Animation P63 (2026-10-14, integration pending)
 - Done: dragging a selected diamond in a style lane moves the whole selection together (relative spacing kept, one undo step, Escape cancels). Dragging an unselected key still selects and moves just that key.
 - Open: marquee select, selection across layers, effect colour keys have no lane.
+
+### Animation P64 (2026-10-14, integration pending)
+- Done: marquee select in the style lanes. Dragging on empty lane space selects every key whose centre is inside the dragged rectangle, across lanes of the selected layer, in any drag direction; Shift keeps the existing selection. Selection updates live while dragging. View state only (no undo).
+- Open: no drawn rubber-band rectangle (the selected keys are the feedback), selection across layers, effect colour keys have no lane.

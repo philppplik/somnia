@@ -337,3 +337,6 @@ Added:
 
 ## P63 - Group drag in style lanes
 A pointer drag on a key that is part of a multi-key selection builds `styleKeyShiftEdits(layer,selection,to-from)` against the committed base on every move (preview), so the result never accumulates. A move that would land on an unselected key keeps the last valid preview. Commit is one undo step.
+
+## P64 - Marquee select in style lanes
+`keysInRect` (pure, in keyLanes.ts) picks keys whose screen-space centre is inside the rectangle between the pointer-down and the current pointer. The timeline reads the centres of the rendered diamonds (`data-style-lane`, `data-style-key-t`), so it follows zoom and scroll. Pointer-down on a diamond still selects or drags; only empty lane space starts a marquee.

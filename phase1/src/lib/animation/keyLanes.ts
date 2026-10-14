@@ -30,3 +30,9 @@ export function toggleStyleKey(picks:readonly StyleKeyRef[],p:StyleKeyRef):Style
  const same=(a:StyleKeyRef)=>a.layer===p.layer&&a.lane===p.lane&&a.t===p.t;
  return picks.some(same)?picks.filter(a=>!same(a)):[...picks,p].slice(-MAX_STYLE_SELECTION);
 }
+
+/** Keys whose centre lies inside the rectangle spanned by two points (screen coordinates). Used by the marquee. */
+export function keysInRect(cands:readonly {lane:StyleLaneId;t:number;x:number;y:number}[],a:{x:number;y:number},b:{x:number;y:number}):{lane:StyleLaneId;t:number}[]{
+ const x0=Math.min(a.x,b.x),x1=Math.max(a.x,b.x),y0=Math.min(a.y,b.y),y1=Math.max(a.y,b.y);
+ return cands.filter(c=>c.x>=x0&&c.x<=x1&&c.y>=y0&&c.y<=y1).map(({lane,t})=>({lane,t}));
+}

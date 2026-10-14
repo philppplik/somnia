@@ -15,7 +15,7 @@ import {booleanEdits,maskBooleanEdit,expandStrokeEdits} from './pathLayer';
 import {frameSvg} from './exportFrames';
 import {strokeAttributes,layerColorsAt} from './effects';
 import {styleKeyLanes} from './keyLanes';
-import {pruneStyleKeys,toggleStyleKey} from './keyLanes';
+import {pruneStyleKeys,toggleStyleKey,keysInRect} from './keyLanes';
 import {styleKeyDeleteEdits,styleKeyShiftEdits} from './edit';
 import {colorAt,easeProgress,COLOR_EASE_HANDLES} from './colorKeys';
 import {strokeOutline,simplifyRing} from './pathBoolean';
@@ -1560,4 +1560,12 @@ test('P63 group drag: a preview of the shifted selection equals the committed sh
  for(const delta of [8000,16000,-24000])assert.deepEqual(ts(applyEdits(d,styleKeyShiftEdits('stencil',g,delta))),[0,80000+delta,160000+delta,240000]);
  assert.throws(()=>applyEdits(d,styleKeyShiftEdits('stencil',g,-80000)),'a key may not land on an unselected key');
  assert.throws(()=>applyEdits(d,styleKeyShiftEdits('stencil',g,80000)),'moving the last selected key onto an unselected key fails');
+});
+
+test('P64 marquee picks keys whose centre is inside the rectangle, in any drag direction',()=>{
+ const c=[{lane:'fill' as const,t:0,x:10,y:10},{lane:'fill' as const,t:80000,x:50,y:10},{lane:'stroke' as const,t:80000,x:50,y:30},{lane:'stroke' as const,t:160000,x:90,y:30}];
+ assert.deepEqual(keysInRect(c,{x:40,y:0},{x:100,y:40}).map(k=>`${k.lane}${k.t}`),['fill80000','stroke80000','stroke160000']);
+ assert.deepEqual(keysInRect(c,{x:100,y:40},{x:40,y:0}),keysInRect(c,{x:40,y:0},{x:100,y:40}));
+ assert.deepEqual(keysInRect(c,{x:40,y:0},{x:60,y:20}).map(k=>k.t),[80000]);
+ assert.deepEqual(keysInRect(c,{x:200,y:200},{x:300,y:300}),[]);
 });

@@ -1,6 +1,6 @@
 import {useEffect,useRef,useState,type KeyboardEvent as ReactKeyboardEvent,type PointerEvent} from 'react';
 import {styleKeyShiftEdits} from '../../lib/animation/edit';
-import {styleKeyLanes,pruneStyleKeys,toggleStyleKey,type StyleLaneId} from '../../lib/animation/keyLanes';
+import {styleKeyLanes,pruneStyleKeys,keysInRect,toggleStyleKey,type StyleLaneId} from '../../lib/animation/keyLanes';
 import {Play,Pause,Undo2,Redo2,Eye,EyeOff,Lock,Unlock,ZoomIn,ZoomOut,ArrowUp,ArrowDown,ArrowUpDown,EyeOff as ShyIcon,ChevronDown,ChevronRight,ChevronsUpDown} from '../../lib/icons';
 import {animationSession,useAnimationState} from '../../lib/animation/session';
 import {NativeInput,NativeSelect} from '../ui/native-controls';
@@ -103,7 +103,17 @@ export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Compo
   const up=()=>{hold.stop();el.removeEventListener('pointermove',move);el.removeEventListener('pointerup',up);};
   el.addEventListener('pointermove',move);el.addEventListener('pointerup',up);
  };
-const dragStyleKey=(lane:StyleLaneId,from:number)=>(e:PointerEvent<SVGElement>)=>{
+const marquee=(e:PointerEvent<SVGSVGElement>)=>{
+  if(e.button!==0||!selected||e.target!==e.currentTarget)return;const layerId=selected,el=e.currentTarget,a={x:e.clientX,y:e.clientY},keep=e.shiftKey?styleSel:[];
+  el.setPointerCapture(e.pointerId);
+  const pick=(ev:globalThis.PointerEvent)=>{const cands=[...(sectionRef.current?.querySelectorAll<SVGElement>('[data-style-key-t]')??[])].map(n=>{const r=n.getBoundingClientRect();return {lane:n.dataset.styleLane as StyleLaneId,t:Number(n.dataset.styleKeyT),x:r.x+r.width/2,y:r.y+r.height/2};});
+   const hit=keysInRect(cands,a,{x:ev.clientX,y:ev.clientY}).map(k=>({layer:layerId,...k}));
+   animationSession().setView({styleKeys:[...keep,...hit.filter(h=>!keep.some(k=>k.lane===h.lane&&k.t===h.t))]});};
+  const up=(ev:globalThis.PointerEvent)=>{el.removeEventListener('pointermove',pick);el.removeEventListener('pointerup',up);pick(ev);};
+  if(!e.shiftKey)animationSession().setView({styleKeys:[]});
+  el.addEventListener('pointermove',pick);el.addEventListener('pointerup',up);
+ };
+ const dragStyleKey=(lane:StyleLaneId,from:number)=>(e:PointerEvent<SVGElement>)=>{
   if(e.button!==0||!selected)return;e.stopPropagation();const el=e.currentTarget,layerId=selected;
   if(e.shiftKey){animationSession().setView({styleKeys:toggleStyleKey(styleSel,{layer:layerId,lane,t:from})});return;}
   el.setPointerCapture(e.pointerId);
@@ -308,7 +318,7 @@ const dragStyleKey=(lane:StyleLaneId,from:number)=>(e:PointerEvent<SVGElement>)=
      <div className="relative h-5">{l.audio.volume.keys.filter(key=>inWin(key.t)).map(key=><Button key={key.t} size="tiny" variant="outline" className="absolute top-0.5 size-3 min-h-0 min-w-0 -translate-x-1/2 rotate-45 bg-accent-fill p-0" style={{left:pc(key.t)}} aria-label={t('animation.audio.volumeKey',{time:timecode(key.t,comp.fps)})} onClick={()=>animationSession().setView({playhead:key.t})} data-volume-key-t={key.t}/>)}</div></div>}
     {l.id===selected&&trackHeightOf(l.id)!=='compact'&&styleKeyLanes(l).map(lane=><div key={lane.id} className="grid grid-cols-[280px_1fr] items-center" data-testid={`animation-keyrow-style-${lane.id}`}>
      <span className="px-2 py-1 pl-6 text-ink-3">{t(lane.labelKey)}</span>
-     <svg className="h-5 w-full overflow-visible" data-lane>{lane.ticks.map((tk,ki)=>!inWin(tk)?null:<rect key={ki} x={pc(tk)} y={4} width={12} height={12} role="button" tabIndex={0} className={`origin-center -translate-x-1/2 rotate-45 cursor-pointer [transform-box:fill-box] ${tk===at?'fill-ink stroke-accent':isStyleSel(lane.id,tk)?'fill-accent-fill stroke-ink':'fill-accent-fill stroke-line'}`} strokeWidth={tk===at||isStyleSel(lane.id,tk)?2:1} aria-pressed={isStyleSel(lane.id,tk)} aria-label={t('animation.keys.styleKey',{name:t(lane.labelKey),time:timecode(tk,comp.fps)})} onPointerDown={dragStyleKey(lane.id,tk)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();animationSession().setView({playhead:tk,styleKeys:e.shiftKey?toggleStyleKey(styleSel,{layer:l.id,lane:lane.id,t:tk}):[{layer:l.id,lane:lane.id,t:tk}]});}}} data-style-key-t={tk}/>)}</svg></div>)}
+     <svg className="h-5 w-full overflow-visible" data-lane onPointerDown={marquee}>{lane.ticks.map((tk,ki)=>!inWin(tk)?null:<rect key={ki} x={pc(tk)} y={4} width={12} height={12} role="button" tabIndex={0} className={`origin-center -translate-x-1/2 rotate-45 cursor-pointer [transform-box:fill-box] ${tk===at?'fill-ink stroke-accent':isStyleSel(lane.id,tk)?'fill-accent-fill stroke-ink':'fill-accent-fill stroke-line'}`} strokeWidth={tk===at||isStyleSel(lane.id,tk)?2:1} aria-pressed={isStyleSel(lane.id,tk)} aria-label={t('animation.keys.styleKey',{name:t(lane.labelKey),time:timecode(tk,comp.fps)})} onPointerDown={dragStyleKey(lane.id,tk)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();animationSession().setView({playhead:tk,styleKeys:e.shiftKey?toggleStyleKey(styleSel,{layer:l.id,lane:lane.id,t:tk}):[{layer:l.id,lane:lane.id,t:tk}]});}}} data-style-key-t={tk} data-style-lane={lane.id}/>)}</svg></div>)}
     {l.id===selected&&trackHeightOf(l.id)!=='compact'&&animated.map(k=><div key={k} className="grid grid-cols-[280px_1fr] items-center" data-testid={`animation-keyrow-${k}`}>
      <Button size="tiny" variant="ghost" className="justify-start pl-6 text-ink-3" disabled={l.locked} aria-label={t('animation.keys.selectRow',{name:t(PROP_LABEL[k])})} onClick={()=>animationSession().selectKeys(l.transform[k].keys.map(key=>({layer:l.id,prop:k,t:key.t})))} data-testid={`animation-keyrow-label-${k}`}>{t(PROP_LABEL[k])}</Button>
      <div className="relative h-5 touch-none" data-lane onPointerDown={startMarquee}>
