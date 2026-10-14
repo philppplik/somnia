@@ -892,6 +892,23 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.keys.ramp",
+      "title": "Put the selected keys on a straight line between the first and last selected key",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "even",
+        "interpolate",
+        "keys",
+        "line",
+        "linear",
+        "ramp",
+        "straight"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.keys.repeat",
       "title": "Repeat the selected keys as cycles or ping-pong",
       "category": "Edit",

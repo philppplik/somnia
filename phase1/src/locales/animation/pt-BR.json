@@ -858,5 +858,8 @@
  "cmd.animation.keys.flatten": "Dar às keys selecionadas o valor da primeira key selecionada",
  "animation.keys.easeCopy": "Copiar ease",
  "animation.keys.easeCopy.hint": "Dá a todas as keys selecionadas de uma propriedade o ease da primeira selecionada",
- "cmd.animation.keys.easeCopy": "Dar às keys selecionadas o ease da primeira key selecionada"
+ "cmd.animation.keys.easeCopy": "Dar às keys selecionadas o ease da primeira key selecionada",
+ "animation.keys.ramp": "Rampa",
+ "animation.keys.ramp.hint": "Coloca as keys selecionadas de uma propriedade numa reta entre a primeira e a última selecionada",
+ "cmd.animation.keys.ramp": "Colocar as keys selecionadas numa reta entre a primeira e a última"
 }

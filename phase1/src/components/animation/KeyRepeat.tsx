@@ -39,5 +39,6 @@ export function KeyRepeat({count:selected,layers}:{count:number;layers:readonly 
   <Button size="tiny" variant="ghost" disabled={selected<1} title={t('animation.keys.match.hint')} onClick={()=>void executeCommand('animation.keys.matchPrevious',{})} data-testid="animation-keys-match">{t('animation.keys.match')}</Button>
   <Button size="tiny" variant="ghost" disabled={selected<2} title={t('animation.keys.flatten.hint')} onClick={()=>void executeCommand('animation.keys.flatten',{})} data-testid="animation-keys-flatten">{t('animation.keys.flatten')}</Button>
   <Button size="tiny" variant="ghost" disabled={selected<2} title={t('animation.keys.easeCopy.hint')} onClick={()=>void executeCommand('animation.keys.easeCopy',{})} data-testid="animation-keys-ease-copy">{t('animation.keys.easeCopy')}</Button>
+  <Button size="tiny" variant="ghost" disabled={selected<3} title={t('animation.keys.ramp.hint')} onClick={()=>void executeCommand('animation.keys.ramp',{})} data-testid="animation-keys-ramp">{t('animation.keys.ramp')}</Button>
  </span>;
 }

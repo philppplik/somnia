@@ -138,3 +138,11 @@ test('ease copy: later selected keys take the earliest key ease, matching keys s
  assert.equal(e.length,1);assert.deepEqual(e[0].keys.map(x=>x.t),[f(10)]);assert.deepEqual([...e[0].out],[0.3,2]);
  assert.equal(easeCopyEdits(c,[k(10)]).length,0);
 });
+import {rampEdits} from './keyRamp';
+test('ramp: interior keys land on the line by time, ends untouched',()=>{
+ const d=applyEdits(base(),[{type:'prop.set',layer:'a',prop:'position',t:f(5),value:[0,0]}] as never),c=findComp(d)!;
+ const k=(n:number)=>({layer:'a',prop:'position' as const,t:f(n)});
+ const e=rampEdits(c,[k(10),k(0),k(5)]) as {t:number;value:number[]}[];
+ assert.equal(e.length,1);assert.equal(e[0].t,f(5));assert.deepEqual(e[0].value,[150,75]);
+ assert.equal(rampEdits(c,[k(0),k(10)]).length,0);
+});
