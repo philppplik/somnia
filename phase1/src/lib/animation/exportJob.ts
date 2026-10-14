@@ -85,7 +85,7 @@ export function exportCurrentFrameSvg(d:Deps={}){
 }
 export function exportWorkAreaSequence(d:Deps={}){
  const {doc,out,ec}=target('sequence');
- return guarded('sequence',signal=>exportSequenceZip(ec,doc.name,{size:out,assets:doc.assets,rasterize:d.rasterize??canvasRasterize,transparent:state.transparent,signal,onProgress:(done,total)=>set({done,total})}),d.save??downloadBlob);
+ return guarded('sequence',signal=>exportSequenceZip(ec,doc.name,{size:out,assets:doc.assets,rasterize:d.rasterize??canvasRasterize,transparent:state.transparent,firstNumber:state.settings.firstNumber,signal,onProgress:(done,total)=>set({done,total})}),d.save??downloadBlob);
 }
 /** Animated GIF of the work area, composited onto the background (GIF has no alpha here), capped at 300 frames and 64 MB. */
 export function exportGif(d:Deps={}){

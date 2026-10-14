@@ -1014,5 +1014,8 @@
  "animation.rig.reset.scale": "Skalierung auf 100 %",
  "animation.rig.reset.opacity": "Deckkraft auf 100 %",
  "animation.rig.reset.all": "Alle drei",
- "cmd.animation.layers.reset": "Drehung, Skalierung oder Deckkraft der gewählten Ebenen zurücksetzen"
+ "cmd.animation.layers.reset": "Drehung, Skalierung oder Deckkraft der gewählten Ebenen zurücksetzen",
+ "animation.export.firstNumber": "Nummer des ersten Frames",
+ "animation.export.firstNumberAuto": "Komposition",
+ "animation.export.problem.number": "Die Nummer des ersten Frames muss eine ganze Zahl von 0 bis 99999 sein."
 }

@@ -1014,5 +1014,8 @@
  "animation.rig.reset.scale": "Échelle à 100 %",
  "animation.rig.reset.opacity": "Opacité à 100 %",
  "animation.rig.reset.all": "Les trois",
- "cmd.animation.layers.reset": "Réinitialiser la rotation, l’échelle ou l’opacité des calques sélectionnés"
+ "cmd.animation.layers.reset": "Réinitialiser la rotation, l’échelle ou l’opacité des calques sélectionnés",
+ "animation.export.firstNumber": "Numéro de la première image",
+ "animation.export.firstNumberAuto": "Composition",
+ "animation.export.problem.number": "Le numéro de la première image doit être un entier de 0 à 99999."
 }

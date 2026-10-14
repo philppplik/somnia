@@ -691,3 +691,16 @@ test('P191 layers.reset: neutral rotation/scale/opacity at the playhead, one und
  assert.throws(()=>run({mode:'nope',layers:['b']}),(e:any)=>e.expected===true);
  s.undo();assert.equal(ev('b','rotation'),45);assert.deepEqual(ev('b','scale'),[50,60]);
 });
+
+test('P192 first frame number: renumbers sequence files and manifest, validates, default unchanged',async()=>{
+ const {exportWorkAreaSequence,setExportSettings,resetExportSettings,resetExport}=await import('./exportJob');const {renumberPlan}=await import('./exportFrames');const {unzipSync,strFromU8}=await import('fflate');
+ assert.deepEqual(renumberPlan([{frame:7},{frame:8}],1001).map(p=>p.frame),[1001,1002]);assert.deepEqual(renumberPlan([{frame:7}],null).map(p=>p.frame),[7]);assert.deepEqual(renumberPlan([{frame:7}],-1).map(p=>p.frame),[7]);
+ const s=open();setAnimationSession(s);s.dispatch({type:'workarea.set',in:f(2),out:f(5)});resetExport();resetExportSettings();
+ let blob:Blob|null=null;const save=(b:Blob)=>{blob=b;};const rasterize=async()=>new Uint8Array([1]);
+ const names=async()=>{await exportWorkAreaSequence({rasterize,save});return unzipSync(new Uint8Array(await blob!.arrayBuffer()));};
+ let z=await names();assert.ok(Object.keys(z).some(n=>n.endsWith('_00002.png')));
+ setExportSettings({firstNumber:1001});z=await names();const png=Object.keys(z).filter(n=>n.endsWith('.png')).sort();
+ assert.deepEqual(png.map(n=>n.slice(-9,-4)),['01001','01002','01003']);assert.equal(JSON.parse(strFromU8(z['manifest.json'])).firstFrame,1001);
+ assert.throws(()=>setExportSettings({firstNumber:100000}),(e:any)=>e.code==='unsupported');assert.throws(()=>setExportSettings({firstNumber:1.5}),(e:any)=>e.code==='unsupported');
+ resetExportSettings();
+});

@@ -1014,5 +1014,8 @@
  "animation.rig.reset.scale": "Escala al 100 %",
  "animation.rig.reset.opacity": "Opacidad al 100 %",
  "animation.rig.reset.all": "Las tres",
- "cmd.animation.layers.reset": "Restablecer rotación, escala u opacidad de las capas seleccionadas"
+ "cmd.animation.layers.reset": "Restablecer rotación, escala u opacidad de las capas seleccionadas",
+ "animation.export.firstNumber": "Número del primer fotograma",
+ "animation.export.firstNumberAuto": "Composición",
+ "animation.export.problem.number": "El número del primer fotograma debe ser un entero de 0 a 99999."
 }

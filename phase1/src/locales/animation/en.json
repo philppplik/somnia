@@ -1014,5 +1014,8 @@
  "animation.rig.reset.scale": "Scale to 100%",
  "animation.rig.reset.opacity": "Opacity to 100%",
  "animation.rig.reset.all": "All three",
- "cmd.animation.layers.reset": "Reset rotation, scale or opacity of the selected layers"
+ "cmd.animation.layers.reset": "Reset rotation, scale or opacity of the selected layers",
+ "animation.export.firstNumber": "First frame number",
+ "animation.export.firstNumberAuto": "Composition",
+ "animation.export.problem.number": "The first frame number must be a whole number from 0 to 99999."
 }

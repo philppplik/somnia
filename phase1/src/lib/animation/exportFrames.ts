@@ -111,7 +111,7 @@ export function checkExportable(comp:Composition,frames:number){
 }
 export type Rasterize=(svg:string,width:number,height:number)=>Promise<Uint8Array>;
 export interface OutputSize{width:number;height:number}
-export interface SequenceOptions{size?:OutputSize;rasterize:Rasterize;assets?:readonly InterfaceAsset[];transparent?:boolean;signal?:AbortSignal;onProgress?:(done:number,total:number)=>void;maxBytes?:number}
+export interface SequenceOptions{size?:OutputSize;rasterize:Rasterize;assets?:readonly InterfaceAsset[];transparent?:boolean;signal?:AbortSignal;onProgress?:(done:number,total:number)=>void;maxBytes?:number;/** File number of the first frame; absent keeps the composition frame numbers. */firstNumber?:number|null}
 export interface SequenceResult{blob:Blob;fileName:string;frames:number;bytes:number}
 export function sequenceManifest(comp:Composition,plan:readonly {frame:number;tick:number}[],name:string,transparent:boolean){
  return {format:'somnia-animation-png-sequence',version:1,composition:comp.name,width:comp.width,height:comp.height,frameRate:{num:comp.fps.num,den:comp.fps.den},ticksPerSecond:240000,
@@ -119,9 +119,11 @@ export function sequenceManifest(comp:Composition,plan:readonly {frame:number;ti
   alpha:transparent?'straight alpha: background omitted, pixels outside layers are transparent':'opaque: composition background colour is part of every frame',background:comp.background,
   files:plan.map(p=>({file:frameFileName(name,p.frame),frame:p.frame,tick:p.tick}))};
 }
+/** Renumbers a plan so the first frame gets `first` (whole number 0..99999) and the rest follow. Absent or invalid keeps the plan as is. */
+export const renumberPlan=<T extends {frame:number}>(plan:readonly T[],first?:number|null):T[]=>typeof first==='number'&&Number.isInteger(first)&&first>=0&&first<=99999?plan.map((p,i)=>({...p,frame:first+i})):[...plan];
 /** Renders the work area to a ZIP of PNGs plus manifest.json. Throws ExportError and returns nothing on any failure, so no partial file exists. */
 export async function exportSequenceZip(comp:Composition,name:string,o:SequenceOptions):Promise<SequenceResult>{
- const plan=sequencePlan(comp);checkExportable(comp,plan.length);
+ const plan=renumberPlan(sequencePlan(comp),o.firstNumber);checkExportable(comp,plan.length);
  const limit=o.maxBytes??MAX_ZIP_BYTES;const parts:Uint8Array[]=[];let zipErr:Error|null=null;
  const zip=new Zip((err,chunk)=>{if(err)zipErr=err;else parts.push(chunk);});
  let bytes=0;

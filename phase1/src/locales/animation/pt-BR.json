@@ -1014,5 +1014,8 @@
  "animation.rig.reset.scale": "Escala para 100%",
  "animation.rig.reset.opacity": "Opacidade para 100%",
  "animation.rig.reset.all": "Todas as três",
- "cmd.animation.layers.reset": "Redefinir rotação, escala ou opacidade das camadas selecionadas"
+ "cmd.animation.layers.reset": "Redefinir rotação, escala ou opacidade das camadas selecionadas",
+ "animation.export.firstNumber": "Número do primeiro quadro",
+ "animation.export.firstNumberAuto": "Composição",
+ "animation.export.problem.number": "O número do primeiro quadro deve ser um inteiro de 0 a 99999."
 }
