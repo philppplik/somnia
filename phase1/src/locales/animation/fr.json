@@ -223,7 +223,7 @@
  "animation.shape.radius": "Corner radius",
  "animation.shape.sides": "Sides / points",
  "animation.shape.inner": "Inner radius ratio",
- "animation.shape.gradient": "Linear gradient",
+ "animation.shape.gradient": "Dégradé",
  "animation.shape.gradientStart": "Gradient start",
  "animation.shape.gradientEnd": "Gradient end",
  "animation.shape.gradientAngle": "Gradient angle",
@@ -618,5 +618,8 @@
  "cmd.animation.color.ease": "Régler l'accélération de l'image clé de couleur de remplissage ou de contour à la tête de lecture",
  "cmd.animation.styleKeys.delete": "Supprimer les images clés de style sélectionnées",
  "cmd.animation.styleKeys.nudge": "Déplacer les images clés de style sélectionnées de quelques images",
- "animation.stroke.gradient": "Contour en dégradé"
+ "animation.stroke.gradient": "Contour en dégradé",
+ "animation.gradient.kind": "Type de dégradé",
+ "animation.gradient.linear": "Linéaire",
+ "animation.gradient.radial": "Radial"
 }

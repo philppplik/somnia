@@ -223,7 +223,7 @@
  "animation.shape.radius": "Corner radius",
  "animation.shape.sides": "Sides / points",
  "animation.shape.inner": "Inner radius ratio",
- "animation.shape.gradient": "Linear gradient",
+ "animation.shape.gradient": "Gradient",
  "animation.shape.gradientStart": "Gradient start",
  "animation.shape.gradientEnd": "Gradient end",
  "animation.shape.gradientAngle": "Gradient angle",
@@ -618,5 +618,8 @@
  "cmd.animation.color.ease": "Set ease of the fill or stroke colour key at the playhead",
  "cmd.animation.styleKeys.delete": "Delete the selected style-lane keyframes",
  "cmd.animation.styleKeys.nudge": "Move the selected style-lane keyframes by frames",
- "animation.stroke.gradient": "Gradient stroke"
+ "animation.stroke.gradient": "Gradient stroke",
+ "animation.gradient.kind": "Gradient type",
+ "animation.gradient.linear": "Linear",
+ "animation.gradient.radial": "Radial"
 }

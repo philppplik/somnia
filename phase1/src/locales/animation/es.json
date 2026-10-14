@@ -223,7 +223,7 @@
  "animation.shape.radius": "Corner radius",
  "animation.shape.sides": "Sides / points",
  "animation.shape.inner": "Inner radius ratio",
- "animation.shape.gradient": "Linear gradient",
+ "animation.shape.gradient": "Degradado",
  "animation.shape.gradientStart": "Gradient start",
  "animation.shape.gradientEnd": "Gradient end",
  "animation.shape.gradientAngle": "Gradient angle",
@@ -618,5 +618,8 @@
  "cmd.animation.color.ease": "Ajustar el suavizado del fotograma clave de color de relleno o trazo en el cabezal",
  "cmd.animation.styleKeys.delete": "Eliminar los fotogramas clave de estilo seleccionados",
  "cmd.animation.styleKeys.nudge": "Mover los fotogramas clave de estilo seleccionados por fotogramas",
- "animation.stroke.gradient": "Trazo con degradado"
+ "animation.stroke.gradient": "Trazo con degradado",
+ "animation.gradient.kind": "Tipo de degradado",
+ "animation.gradient.linear": "Lineal",
+ "animation.gradient.radial": "Radial"
 }

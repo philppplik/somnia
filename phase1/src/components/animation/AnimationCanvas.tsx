@@ -58,6 +58,10 @@ function animatedText(l:Layer,at:number){
  return spans.slice(0,Array.from(shown).length).map((c,i)=><tspan key={i} dx={c.dx} dy={c.dy} fontSize={(l.source.size??48)*c.scale} fillOpacity={c.opacity} rotate={c.rotate||undefined} fill={c.fill}>{c.ch}</tspan>);
 }
 const canClosePath=(l?:Layer)=>!!l&&l.kind==='shape'&&l.source.shape==='path'&&!!l.source.path;
+function GradientDef({id,g}:{id:string;g:{start:string;end:string;angle:number;kind?:'linear'|'radial'}}){
+ const stops=<><stop offset="0" stopColor={g.start}/><stop offset="1" stopColor={g.end}/></>;
+ return g.kind==='radial'?<radialGradient id={id} cx={0.5} cy={0.5} r={0.5}>{stops}</radialGradient>:<linearGradient id={id} {...gradientVector(g.angle)}>{stops}</linearGradient>;
+}
 function layerNode(layer:Layer,assets:readonly InterfaceAsset[],at:number,fillOverride?:string,strokePaint?:string){
  const l=layerColorsAt(layer,at),src=l.source;const fill=fillOverride??src.color;
  if(l.kind==='comp'){const p=precompImage(l,at,assets);return p?<image href={p.href} width={p.width} height={p.height}/>:<text fill="var(--text-primary)">Missing composition</text>;}
@@ -77,7 +81,7 @@ function Viewer({comp,at,selected,sel,assets,comps}:{assets:readonly InterfaceAs
  return <div className="relative grid min-h-[160px] flex-1 place-items-center overflow-hidden bg-hover p-3" data-testid="animation-viewer">
   <svg role="img" aria-label={t('animation.viewer')} viewBox={`0 0 ${comp.width} ${comp.height}`} className="max-h-full max-w-full h-full overflow-visible">
    <defs>{comp.layers.map((l,i)=><filter key={l.id} id={`preview-effect-${i}`} filterUnits="userSpaceOnUse" {...effectBounds(l,at)} colorInterpolationFilters="sRGB" dangerouslySetInnerHTML={{__html:effectPrimitives(l,at)}}/>)}</defs>
-   <defs>{comp.layers.map((l,i)=>l.source.gradient&&<linearGradient key={l.id} id={`preview-gradient-${i}`} {...gradientVector(l.source.gradient.angle)}><stop offset="0" stopColor={l.source.gradient.start}/><stop offset="1" stopColor={l.source.gradient.end}/></linearGradient>)}{comp.layers.map((l,i)=>l.stroke?.gradient&&<linearGradient key={`s-${l.id}`} id={`preview-stroke-gradient-${i}`} {...gradientVector(l.stroke.gradient.angle)}><stop offset="0" stopColor={l.stroke.gradient.start}/><stop offset="1" stopColor={l.stroke.gradient.end}/></linearGradient>)}</defs>
+   <defs>{comp.layers.map((l,i)=>l.source.gradient&&<GradientDef key={l.id} id={`preview-gradient-${i}`} g={l.source.gradient}/>)}{comp.layers.map((l,i)=>l.stroke?.gradient&&<GradientDef key={`s-${l.id}`} id={`preview-stroke-gradient-${i}`} g={l.stroke.gradient}/>)}</defs>
    <rect width={comp.width} height={comp.height} fill={comp.background}/>
    <defs dangerouslySetInnerHTML={{__html:maskDefsHtml}}/>
    {scene.map(({layer:l,matrix,opacity})=>{const i=comp.layers.indexOf(l);

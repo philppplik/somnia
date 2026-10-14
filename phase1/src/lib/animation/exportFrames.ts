@@ -1,4 +1,4 @@
-import {radialPath,gradientVector} from './shapes';
+import {radialPath,gradientDefSvg} from './shapes';
 import {layerPathD,layerFillRule} from './pathLayer';
 import {validateAnimationAssets} from './assetsValidation';
 import {textFontStack,validEffects,validSource,MAX_PRECOMP_DEPTH} from './model';
@@ -72,7 +72,7 @@ function frameSvgBody(comp:Composition,tick:number,transparent:boolean,assets:re
  validateAnimationAssets({assets,compositions:[{...comp,layers:comp.layers.filter(l=>l.kind!=='audio')}]});
  if(comp.layers.some(l=>!validSource(l.source)||!validEffects(l.effects)))throw new ExportError('Invalid layer source/effects.','raster');
  const defs=comp.layers.map((l,i)=>{const b=effectBounds(l,tick);return `<filter id="effect-${i}" filterUnits="userSpaceOnUse" x="${b.x}" y="${b.y}" width="${b.width}" height="${b.height}" color-interpolation-filters="sRGB">${effectPrimitives(l,tick)}</filter>`;}).join('');
- const gradients=comp.layers.map((l,i)=>{const g=l.source.gradient;if(!g)return '';const v=gradientVector(g.angle);return `<linearGradient id="gradient-${i}" x1="${v.x1}" y1="${v.y1}" x2="${v.x2}" y2="${v.y2}"><stop offset="0" stop-color="${g.start}"/><stop offset="1" stop-color="${g.end}"/></linearGradient>`;}).join('')+comp.layers.map((l,i)=>{const g=l.stroke?.gradient;if(!g)return '';const v=gradientVector(g.angle);return `<linearGradient id="stroke-gradient-${i}" x1="${v.x1}" y1="${v.y1}" x2="${v.x2}" y2="${v.y2}"><stop offset="0" stop-color="${g.start}"/><stop offset="1" stop-color="${g.end}"/></linearGradient>`;}).join('');
+ const gradients=comp.layers.map((l,i)=>l.source.gradient?gradientDefSvg(`gradient-${i}`,l.source.gradient):'').join('')+comp.layers.map((l,i)=>l.stroke?.gradient?gradientDefSvg(`stroke-gradient-${i}`,l.stroke.gradient):'').join('');
  const body=sceneAt(comp,tick).map(({layer,matrix,opacity})=>{const i=comp.layers.indexOf(layer);
   const wrap=(inner:string)=>hasMasks(layer)?`<g mask="url(#${maskId('',i)})">${inner}</g>`:inner;
   const masked=wrap(layerBody(layer,i,assets,tick,''));

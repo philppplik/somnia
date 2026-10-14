@@ -343,3 +343,6 @@ A pointer drag on a key that is part of a multi-key selection builds `styleKeySh
 
 ## P65 - Gradient strokes
 `Layer.stroke.gradient?:{start,end,angle}` replaces the stroke colour when drawing. `strokeAttributes` takes an optional paint; the frame builder (`exportFrames.ts`) and the viewer (`AnimationCanvas.tsx`) emit a `stroke-gradient-<index>` linearGradient next to the fill gradients and pass `url(#...)` as the paint. Same bounding-box gradient vector as the fill gradient. Absent field: unchanged output.
+
+## P66 - Radial gradients
+`gradient.kind` (`linear` default, or `radial`) on `source.gradient` and `stroke.gradient`. `gradientDefSvg(id,g)` in shapes.ts builds the definition for the frame builder; the viewer uses the same shape through a small component. Radial: cx=cy=0.5, r=0.5 of the layer box, angle ignored.

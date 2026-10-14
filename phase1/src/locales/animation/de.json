@@ -223,7 +223,7 @@
  "animation.shape.radius": "Eckenradius",
  "animation.shape.sides": "Seiten / Spitzen",
  "animation.shape.inner": "Innerer Radiusanteil",
- "animation.shape.gradient": "Linearer Verlauf",
+ "animation.shape.gradient": "Verlauf",
  "animation.shape.gradientStart": "Verlauf Start",
  "animation.shape.gradientEnd": "Verlauf Ende",
  "animation.shape.gradientAngle": "Verlaufswinkel",
@@ -618,5 +618,8 @@
  "cmd.animation.color.ease": "Easing des Füll- oder Konturfarb-Keys am Abspielkopf setzen",
  "cmd.animation.styleKeys.delete": "Ausgewählte Stil-Keyframes löschen",
  "cmd.animation.styleKeys.nudge": "Ausgewählte Stil-Keyframes um Frames verschieben",
- "animation.stroke.gradient": "Verlaufskontur"
+ "animation.stroke.gradient": "Verlaufskontur",
+ "animation.gradient.kind": "Verlaufstyp",
+ "animation.gradient.linear": "Linear",
+ "animation.gradient.radial": "Radial"
 }

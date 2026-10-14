@@ -15,6 +15,7 @@ import {booleanEdits,maskBooleanEdit,expandStrokeEdits} from './pathLayer';
 import {frameSvg} from './exportFrames';
 import {strokeAttributes,layerColorsAt} from './effects';
 import {styleKeyLanes} from './keyLanes';
+import {gradientVector} from './shapes';
 import {pruneStyleKeys,toggleStyleKey,keysInRect} from './keyLanes';
 import {styleKeyDeleteEdits,styleKeyShiftEdits} from './edit';
 import {colorAt,easeProgress,COLOR_EASE_HANDLES} from './colorKeys';
@@ -1582,4 +1583,21 @@ test('P65 gradient stroke: renders as a paint, validates, undoes, legacy output 
  for(const bad of [{start:'red',end:'#0000ff',angle:0},{start:'#ff0000',end:'#0000ff',angle:400},{start:'#ff0000',end:'#0000ff',angle:'x' as never}])
   assert.throws(()=>applyEdit(d,{type:'layer.stroke',layer:'pa',stroke:{color:'#00ff00',width:8,gradient:bad}}));
  const back=applyEdit(g,{type:'layer.stroke',layer:'pa',stroke:{color:'#00ff00',width:8}});assert.equal(frameSvg(comp(back),0),plain,'removing the gradient restores the old output');
+});
+
+test('P66 radial gradients: fill and stroke, validation, linear output unchanged',()=>{
+ let d=strokeDoc([{x:0.2,y:0.2},{x:0.8,y:0.2},{x:0.8,y:0.8},{x:0.2,y:0.8}],true,8);
+ const idx=comp(d).layers.findIndex(l=>l.id==='pa');
+ const lin=applyEdit(d,{type:'layer.update',layer:'pa',source:{gradient:{start:'#ff0000',end:'#0000ff',angle:90}}});
+ const linSvg=frameSvg(comp(lin),0);
+ assert.ok(linSvg.includes(`<linearGradient id="gradient-${idx}" x1="${gradientVector(90).x1}" y1="${gradientVector(90).y1}" x2="${gradientVector(90).x2}" y2="${gradientVector(90).y2}"><stop offset="0" stop-color="#ff0000"/><stop offset="1" stop-color="#0000ff"/></linearGradient>`),'linear markup is the same as before');
+ const sameKind=applyEdit(d,{type:'layer.update',layer:'pa',source:{gradient:{start:'#ff0000',end:'#0000ff',angle:90,kind:'linear'}}});assert.equal(frameSvg(comp(sameKind),0),linSvg,'explicit linear equals absent');
+ let r=applyEdit(d,{type:'layer.update',layer:'pa',source:{gradient:{start:'#ff0000',end:'#0000ff',angle:90,kind:'radial'}}});
+ r=applyEdit(r,{type:'layer.stroke',layer:'pa',stroke:{color:'#00ff00',width:8,gradient:{start:'#ffff00',end:'#00ffff',angle:0,kind:'radial'}}});
+ const svg=frameSvg(comp(r),0);
+ assert.ok(svg.includes(`<radialGradient id="gradient-${idx}" cx="0.5" cy="0.5" r="0.5">`)&&svg.includes(`<radialGradient id="stroke-gradient-${idx}"`));
+ assert.ok(!svg.includes(`<linearGradient id="gradient-${idx}"`));
+ assert.deepEqual(validateDocument(r),[]);
+ assert.throws(()=>applyEdit(d,{type:'layer.update',layer:'pa',source:{gradient:{start:'#ff0000',end:'#0000ff',angle:0,kind:'conic' as never}}}));
+ assert.throws(()=>applyEdit(d,{type:'layer.stroke',layer:'pa',stroke:{color:'#00ff00',width:8,gradient:{start:'#ff0000',end:'#0000ff',angle:0,kind:'x' as never}}}));
 });

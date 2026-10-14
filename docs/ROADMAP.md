@@ -435,3 +435,7 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 ### Animation P65 (2026-10-14, integration pending)
 - Done: gradient strokes. A shape stroke can carry a linear gradient (start and end colour, angle, same model and controls as the fill gradient). Viewer, PNG/GIF/WebM/SVG frames and motion blur share one builder, so they all draw it. Inspector: "Gradient stroke" checkbox with two colours and an angle in the stroke section; one undo step via `layer.stroke`. Validated (hex colours, angle 0..360). Without a gradient the output is byte-identical.
 - Open: gradient is linear only (no radial), it is not keyed, "Expand stroke" outlines use the plain colour, stroke colour keys are ignored while a gradient is set, no inside/outside alignment.
+
+### Animation P66 (2026-10-14, integration pending)
+- Done: radial gradients for the fill and for the stroke (type select next to the colours; radial runs from the box centre and ignores the angle). Linear stays the default and its output is byte-identical. The shared builder (`gradientDefSvg`) feeds the viewer and every export. Checkbox label is now "Gradient" (was "Linear gradient") in 5 locales.
+- Open: no gradient stops beyond two colours, no keyed gradients, no conic gradient, no radius or centre control (box centre, radius 50 percent).
