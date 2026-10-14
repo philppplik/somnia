@@ -446,3 +446,16 @@ test('P163 work area follows the selected layers, one undo step, no-op refused',
  run({layers:['a']});assert.deepEqual(findComp(s.document!)!.workArea,{in:f(2),out:f(6)});
  s.undo();s.undo();assert.equal(s.document,before);setAnimationSession(null);
 });
+
+test('P164 sheet columns setting: validated, used by the plan and the export',async()=>{
+ const {settingsProblems,defaultExportSettings,exportPlan}=await import('./exportSettings');const {exportSpriteSheet,setExportSettings,resetExportSettings}=await import('./exportJob');const {unzipSync,strFromU8}=await import('fflate');
+ const d=defaultExportSettings();
+ assert.deepEqual(settingsProblems({...d,columns:0}),['columns']);assert.deepEqual(settingsProblems({...d,columns:2.5}),['columns']);assert.deepEqual(settingsProblems({...d,columns:8}),[]);assert.deepEqual(settingsProblems({...d,columns:null}),[]);
+ const s=open();setAnimationSession(s);s.dispatch({type:'workarea.set',in:0,out:f(8)} as never);const c=findComp(s.document!)!;
+ assert.ok(!exportPlan(c,'sheet',{...d,columns:4}).problems.length);
+ setExportSettings({columns:4});let saved:Blob|null=null;
+ await exportSpriteSheet(undefined,{pixels:async(_s,w,h)=>new Uint8ClampedArray(w*h*4),save:b=>{saved=b;}});
+ const z=unzipSync(new Uint8Array(await (saved as unknown as Blob).arrayBuffer()));const a=JSON.parse(strFromU8(z['atlas.json']));
+ assert.equal(a.columns,4);assert.equal(a.rows,2);
+ assert.throws(()=>setExportSettings({columns:999}),/columns/);resetExportSettings();setAnimationSession(null);
+});

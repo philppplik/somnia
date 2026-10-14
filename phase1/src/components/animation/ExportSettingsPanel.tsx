@@ -1,6 +1,6 @@
 import {useState} from 'react';
 import {useT} from '../../lib/useT';
-import {NativeSelect} from '../ui/native-controls';
+import {NativeInput,NativeSelect} from '../ui/native-controls';
 import {Button} from '../ui/button';
 import {InspectorNumberField} from '../studios/InspectorNumberField';
 import {executeCommand} from '../../lib/commands';
@@ -24,7 +24,8 @@ export function ExportSettingsPanel({comp,busy}:{comp:Composition;busy:boolean})
    <label className="grid gap-1 text-ink-3">{t('animation.export.fps')}<NativeSelect className={field} value={s.fps??''} onChange={e=>void set('animation.export.settings',{fps:e.target.value===''?null:Number(e.target.value)})} data-testid="animation-export-fps">
     <option value="">{t('animation.export.fpsComp',{fps:Math.round(comp.fps.num/comp.fps.den*100)/100})}</option>{FPS.map(n=><option key={n} value={n}>{n}</option>)}</NativeSelect></label>
    <InspectorNumberField label={t('animation.export.from')} className={field} resetKey={`${comp.id}-${base.from}`} value={base.from} min={0} step={1} onCommit={n=>void set('animation.export.settings',{from:Math.round(n),to:Math.max(Math.round(n),base.to)})}/>
-   <InspectorNumberField label={t('animation.export.to')} className={field} resetKey={`${comp.id}-${base.to}`} value={base.to} min={0} step={1} onCommit={n=>void set('animation.export.settings',{to:Math.round(n),from:Math.min(Math.round(n),base.from)})}/></div>
+   <InspectorNumberField label={t('animation.export.to')} className={field} resetKey={`${comp.id}-${base.to}`} value={base.to} min={0} step={1} onCommit={n=>void set('animation.export.settings',{to:Math.round(n),from:Math.min(Math.round(n),base.from)})}/>
+   <label className="grid gap-1 text-ink-3">{t('animation.export.columns')}<NativeInput className={field} type="number" min={1} max={256} step={1} value={s.columns??''} placeholder={t('animation.export.columnsAuto')} onChange={e=>void set('animation.export.settings',{columns:e.target.value===''?null:Number(e.target.value)})} data-testid="animation-export-columns"/></label></div>
   <div className="flex gap-1"><Button size="tiny" variant="ghost" onClick={()=>void set('animation.export.settings',{reset:true})} data-testid="animation-export-reset">{t('animation.export.resetSettings')}</Button></div>
   <ul className="m-0 grid list-none gap-1 p-0 text-ink-2" aria-label={t('animation.export.estimate')} data-testid="animation-export-estimate">
    {EXPORT_FORMATS.map((f:ExportFormat)=>{const p=exportPlan(comp,f,s);const bad=p.problems.length>0;

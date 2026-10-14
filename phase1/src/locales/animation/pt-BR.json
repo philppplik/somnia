@@ -947,5 +947,8 @@
  "animation.export.kind.sheet": "Folha de sprites",
  "animation.modifiers.hold": "Manter (quadros)",
  "animation.rig.workarea": "Área de trabalho para camadas",
- "cmd.animation.workarea.toLayers": "Ajustar a área de trabalho às camadas selecionadas"
+ "cmd.animation.workarea.toLayers": "Ajustar a área de trabalho às camadas selecionadas",
+ "animation.export.columns": "Colunas da folha",
+ "animation.export.columnsAuto": "Auto",
+ "animation.export.problem.columns": "as colunas devem ser de 1 a 256"
 }

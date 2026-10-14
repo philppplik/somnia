@@ -947,5 +947,8 @@
  "animation.export.kind.sheet": "Sprite-Sheet",
  "animation.modifiers.hold": "Halten (Frames)",
  "animation.rig.workarea": "Arbeitsbereich auf Ebenen",
- "cmd.animation.workarea.toLayers": "Arbeitsbereich auf die gewählten Ebenen setzen"
+ "cmd.animation.workarea.toLayers": "Arbeitsbereich auf die gewählten Ebenen setzen",
+ "animation.export.columns": "Sheet-Spalten",
+ "animation.export.columnsAuto": "Auto",
+ "animation.export.problem.columns": "Sheet-Spalten müssen 1 bis 256 sein"
 }

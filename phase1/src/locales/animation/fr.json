@@ -947,5 +947,8 @@
  "animation.export.kind.sheet": "Planche de sprites",
  "animation.modifiers.hold": "Maintien (images)",
  "animation.rig.workarea": "Zone de travail sur calques",
- "cmd.animation.workarea.toLayers": "Régler la zone de travail sur les calques sélectionnés"
+ "cmd.animation.workarea.toLayers": "Régler la zone de travail sur les calques sélectionnés",
+ "animation.export.columns": "Colonnes de la planche",
+ "animation.export.columnsAuto": "Auto",
+ "animation.export.problem.columns": "les colonnes doivent aller de 1 à 256"
 }

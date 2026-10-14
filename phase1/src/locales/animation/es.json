@@ -947,5 +947,8 @@
  "animation.export.kind.sheet": "Hoja de sprites",
  "animation.modifiers.hold": "Mantener (fotogramas)",
  "animation.rig.workarea": "Área de trabajo a capas",
- "cmd.animation.workarea.toLayers": "Ajustar el área de trabajo a las capas seleccionadas"
+ "cmd.animation.workarea.toLayers": "Ajustar el área de trabajo a las capas seleccionadas",
+ "animation.export.columns": "Columnas de la hoja",
+ "animation.export.columnsAuto": "Auto",
+ "animation.export.problem.columns": "las columnas deben ser de 1 a 256"
 }
