@@ -943,5 +943,6 @@
  "animation.rig.followFrames": "Atraso (quadros)",
  "animation.export.spriteSheet": "Folha de sprites (ZIP)",
  "animation.export.spriteSheet.hint": "Todos os quadros da área de trabalho em uma grade PNG mais atlas.json",
- "cmd.animation.export.spriteSheet": "Exportar a área de trabalho como folha de sprites"
+ "cmd.animation.export.spriteSheet": "Exportar a área de trabalho como folha de sprites",
+ "animation.export.kind.sheet": "Folha de sprites"
 }

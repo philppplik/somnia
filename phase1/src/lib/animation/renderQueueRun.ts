@@ -3,7 +3,7 @@ import {animationSession} from './session';
 import {findComp} from './model';
 import {newId} from './model';
 import {addJob,clearFinished,jobProblem,markJob,nextPending,removeJob,requeue,type QueueJob} from './renderQueue';
-import {exportState,exportApng,exportGif,exportWorkAreaSequence,exportWebM,cancelExport,withExportComp,exportSetupSnapshot,restoreExportSetup,setExportSettings,setExportTransparent} from './exportJob';
+import {exportState,exportApng,exportGif,exportWorkAreaSequence,exportWebM,exportSpriteSheet,cancelExport,withExportComp,exportSetupSnapshot,restoreExportSetup,setExportSettings,setExportTransparent} from './exportJob';
 import {problemMessage,type ExportFormat,type ExportProblem} from './exportSettings';
 /** Observable render queue. Jobs run one at a time through the normal exporters; a failed job is marked and the rest continue. */
 interface QueueState{jobs:readonly QueueJob[];running:boolean}
@@ -12,7 +12,7 @@ const set=(p:Partial<QueueState>)=>{state={...state,...p};listeners.forEach(l=>l
 export const queueState=()=>state;
 export const useQueueState=()=>useSyncExternalStore(l=>{listeners.add(l);return()=>{listeners.delete(l);};},queueState,queueState);
 type Deps=NonNullable<Parameters<typeof exportGif>[0]>;
-const RUN:Record<ExportFormat,(d:Deps)=>Promise<string>>={sequence:d=>exportWorkAreaSequence(d),gif:d=>exportGif(d),apng:d=>exportApng(d),webm:d=>exportWebM(d)};
+const RUN:Record<ExportFormat,(d:Deps)=>Promise<string>>={sequence:d=>exportWorkAreaSequence(d),gif:d=>exportGif(d),apng:d=>exportApng(d),webm:d=>exportWebM(d),sheet:d=>exportSpriteSheet(undefined,d)};
 /** Captures the current export setup for the active composition. Refuses setups the exporter would refuse. */
 export function addToQueue(format:ExportFormat){
  const doc=animationSession().document,comp=doc&&findComp(doc);if(!doc||!comp)throw new Error('Open an animation first.');

@@ -943,5 +943,6 @@
  "animation.rig.followFrames": "Retardo (fotogramas)",
  "animation.export.spriteSheet": "Hoja de sprites (ZIP)",
  "animation.export.spriteSheet.hint": "Todos los fotogramas del área de trabajo en una cuadrícula PNG más atlas.json",
- "cmd.animation.export.spriteSheet": "Exportar el área de trabajo como hoja de sprites"
+ "cmd.animation.export.spriteSheet": "Exportar el área de trabajo como hoja de sprites",
+ "animation.export.kind.sheet": "Hoja de sprites"
 }

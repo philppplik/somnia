@@ -411,3 +411,15 @@ test('P160 sprite sheet export zips the sheet and atlas, refuses oversize',async
  const atlas=JSON.parse(strFromU8(z['atlas.json']));assert.equal(atlas.columns,2);assert.equal(atlas.frames.length,atlas.columns*atlas.rows>=4?atlas.frames.length:-1);assert.ok(atlas.frames.length>=4);
  setAnimationSession(null);
 });
+
+test('P161 sprite sheet is a render format with its own limits',async()=>{
+ const {exportPlan,defaultExportSettings,EXPORT_FORMATS}=await import('./exportSettings');const {SHEET_MAX_FRAMES}=await import('./spriteSheet');
+ assert.ok(EXPORT_FORMATS.includes('sheet'));
+ const c=findComp(open().document!)!;
+ const short={...c,workArea:{in:0,out:8*8000}};
+ assert.deepEqual(exportPlan(short,'sheet',defaultExportSettings()).problems,[]);
+ const long={...c,workArea:{in:0,out:(SHEET_MAX_FRAMES+10)*8000},duration:(SHEET_MAX_FRAMES+10)*8000};
+ assert.ok(exportPlan(long,'sheet',defaultExportSettings()).problems.includes('frames'));
+ assert.ok(!exportPlan(long,'sequence',defaultExportSettings()).problems.includes('frames'));
+ assert.ok(exportPlan(short,'sheet',{...defaultExportSettings(),scale:400}).problems.includes('size'));
+});

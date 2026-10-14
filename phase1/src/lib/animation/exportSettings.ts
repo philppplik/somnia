@@ -1,12 +1,13 @@
 import type {Composition} from './model';
+import {sheetPlan,SheetError} from './spriteSheet';
 import {TICKS_PER_SECOND,frameToTick,tickToFrame} from './time';
 /**
  * Export settings and the pure plan derived from them: output size, frame range, frame rate, frame count, duration and a rough size
  * estimate. Settings are session state, not document data, so they have no undo step and are not saved with the file.
  * The plan carries a derived composition (new rate and range, same drawing size) that the existing export builders can use as is.
  */
-export type ExportFormat='sequence'|'gif'|'apng'|'webm';
-export const EXPORT_FORMATS:readonly ExportFormat[]=['sequence','gif','apng','webm'];
+export type ExportFormat='sequence'|'gif'|'apng'|'webm'|'sheet';
+export const EXPORT_FORMATS:readonly ExportFormat[]=['sequence','gif','apng','webm','sheet'];
 /** Same limits as exportFrames, gifEncode, apngEncode and exportVideo (a test keeps them in step). */
 export const EXPORT_LIMITS={maxFrames:1800,gifFrames:300,webmSeconds:60,maxPixels:8192*8192,maxBytes:64*1024*1024};
 export const SCALE_MIN=10,SCALE_MAX=400,FPS_MAX=60;
@@ -46,7 +47,7 @@ export function settingsProblems(s:ExportSettings):ExportProblem[]{
  if((s.from!==null&&!whole(s.from,0,1e7))||(s.to!==null&&!whole(s.to,0,1e7))||(s.from!==null&&s.to!==null&&s.to<s.from))p.push('range');
  return p;
 }
-const BYTES_PER_PIXEL:Record<Exclude<ExportFormat,'webm'>,number>={sequence:0.35,gif:0.12,apng:0.3};
+const BYTES_PER_PIXEL:Record<Exclude<ExportFormat,'webm'>,number>={sequence:0.35,gif:0.12,apng:0.3,sheet:0.3};
 /** Rough size guess for the readout: a flat per-pixel factor for image formats, a bitrate for WebM. The real size depends on the artwork. */
 export function estimateBytes(format:ExportFormat,width:number,height:number,frames:number,fps:number):number{
  const px=width*height;
@@ -72,6 +73,7 @@ export function exportPlan(comp:Composition,format:ExportFormat,s:ExportSettings
  const seconds=frames*rate.den/rate.num;
  if(comp.width*comp.height>EXPORT_LIMITS.maxPixels||width*height>EXPORT_LIMITS.maxPixels||width>16384||height>16384)problems.push('size');
  if(frames>EXPORT_LIMITS.maxFrames||(format==='gif'&&frames>EXPORT_LIMITS.gifFrames))problems.push('frames');
+ if(format==='sheet'){try{sheetPlan(frames,width,height);}catch(x){if(x instanceof SheetError)problems.push(x.code==='too-large'?'size':'frames');else throw x;}}
  if(format==='webm'&&seconds>EXPORT_LIMITS.webmSeconds)problems.push('seconds');
  const est=estimateBytes(format,width,height,frames,rate.num/rate.den);
  return {format,width,height,frames,seconds,fps:rate,from,to,comp:derived,estimateBytes:est,overCap:est>EXPORT_LIMITS.maxBytes,problems:[...new Set(problems)]};

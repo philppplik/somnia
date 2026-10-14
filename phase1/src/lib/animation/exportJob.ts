@@ -117,7 +117,7 @@ export function exportWebM(d:Deps={}){
 }
 /** Work-area frames packed into one PNG grid plus atlas.json, delivered as a ZIP. Honours the scale and transparency settings. */
 export function exportSpriteSheet(columns?:number,d:Deps={}){
- const {doc,out,ec:comp}=target('sequence');
+ const {doc,out,ec:comp}=target('sheet');
  return guarded('sequence',async signal=>{
   const plan=sequencePlan(comp);let grid;
   try{grid=sheetPlan(plan.length,out.width,out.height,columns);}catch(e){if(e instanceof SheetError)throw new ExportError(e.message,e.code==='too-many'?'too-many':e.code==='empty'?'empty':'too-large');throw e;}

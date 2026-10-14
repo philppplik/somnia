@@ -1,7 +1,7 @@
 import {zlibSync,strToU8} from 'fflate';
 import {crc32} from './apngEncode';
 /** Sprite sheet: frames packed into one PNG grid plus an atlas JSON. Pure planner, packer and PNG writer; the app supplies the pixels. */
-export const SHEET_MAX_FRAMES=256,SHEET_MAX_PIXELS=4096*4096,SHEET_MAX_SIDE=16384;
+export const SHEET_MAX_FRAMES=256,SHEET_MAX_PIXELS=32*1024*1024,SHEET_MAX_SIDE=16384;
 export class SheetError extends Error{constructor(message:string,readonly code:'too-many'|'too-large'|'empty'){super(message);this.name='SheetError';}}
 export interface SheetCell{index:number;x:number;y:number}
 export interface SheetPlan{columns:number;rows:number;width:number;height:number;cellW:number;cellH:number;cells:SheetCell[]}
