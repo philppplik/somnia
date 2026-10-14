@@ -129,3 +129,8 @@ test('P44 opacity field renders for any layer in English and German with percent
  interfaceSession.select(interfaceSession.get().document!.nodes[0].id);assert.ok(renderToStaticMarkup(<InterfaceProperties/>).includes('Opacity'),'frames show the opacity field too');
  interfaceSession.clear();setLocale('de');try{interfaceSession.start();interfaceSession.transact(d=>{addNode(d,d.pages[0].id,'frame');});interfaceSession.select(interfaceSession.get().document!.nodes[0].id);
  const german=renderToStaticMarkup(<InterfaceProperties/>);assert.ok(german.includes('Deckkraft'));}finally{interfaceSession.clear();setLocale('en');}});
+test('P45 rotation field renders for any layer in English and German',async()=>{interfaceSession.start();interfaceSession.transact(d=>{const f=addNode(d,d.pages[0].id,'frame');const r=addNode(d,d.pages[0].id,'rectangle',f);d.nodes.find(n=>n.id===r)!.rotation=45;});interfaceSession.select(interfaceSession.get().document!.nodes[1].id);
+ const html=renderToStaticMarkup(<InterfaceProperties/>);assert.ok(html.includes('Rotation'));assert.ok(html.includes('value="45"'));
+ interfaceSession.select(interfaceSession.get().document!.nodes[0].id);assert.ok(renderToStaticMarkup(<InterfaceProperties/>).includes('Rotation'),'frames show the rotation field too');
+ interfaceSession.clear();setLocale('de');try{interfaceSession.start();interfaceSession.transact(d=>{addNode(d,d.pages[0].id,'frame');});interfaceSession.select(interfaceSession.get().document!.nodes[0].id);
+ const german=renderToStaticMarkup(<InterfaceProperties/>);assert.ok(german.includes('Drehung'));}finally{interfaceSession.clear();setLocale('en');}});
