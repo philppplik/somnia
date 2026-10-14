@@ -28,3 +28,26 @@ test('local model fixture stays readable at narrow widths and dark theme',async(
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBeTruthy();
  await page.screenshot({path:'/tmp/local-models-narrow.png',fullPage:true});
 });
+test('model download and removal require review and reconcile their results',async({page})=>{
+ await page.goto('/test/local-models.html?state=actions');
+ await page.getByRole('textbox',{name:'Exact model variant'}).fill('qwen3:4b');
+ await page.getByRole('button',{name:'Download by name',exact:true}).click();
+ await expect(page.getByRole('dialog')).toContainText('License, download size and free storage are not checked');
+ await expect(page.getByRole('button',{name:'Confirm',exact:true})).toBeDisabled();
+ await page.getByRole('checkbox').check();await page.getByRole('button',{name:'Confirm',exact:true}).click();
+ await expect(page.getByRole('status')).toContainText('Complete: inventory and local verification confirmed');
+ await page.getByRole('button',{name:'Remove qwen3:4b',exact:true}).click();
+ await expect(page.getByRole('dialog')).toContainText('Shared blobs');
+ await page.waitForTimeout(250);
+ await page.screenshot({path:'/tmp/local-model-delete-review.png',fullPage:true});
+ await page.getByRole('checkbox').check();await page.getByRole('button',{name:'Confirm',exact:true}).click();
+ await expect(page.getByRole('button',{name:'Remove qwen3:4b',exact:true})).toHaveCount(0);
+});
+test('cancelled owned transfer never claims daemon cancellation certainty',async({page})=>{
+ await page.goto('/test/local-models.html?state=actions-slow');
+ await page.getByRole('textbox',{name:'Exact model variant'}).fill('qwen3:4b');await page.getByRole('button',{name:'Download by name',exact:true}).click();
+ await page.getByRole('checkbox').check();await page.getByRole('button',{name:'Confirm',exact:true}).click();
+ await page.getByRole('status').getByRole('button',{name:'Cancel',exact:true}).click();
+ await expect(page.getByRole('status')).toContainText('Daemon cancellation is unknown');
+ await page.screenshot({path:'/tmp/local-model-cancel-unknown.png',fullPage:true});
+});

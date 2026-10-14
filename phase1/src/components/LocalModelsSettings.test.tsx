@@ -6,7 +6,7 @@ import {AgentSettings,nextTabIndex} from './agent/AgentSettings';
 import {patchState} from '../store/appStore';
 test('local model view is read-only and has clear capability/inference boundary',()=>{
  const html=renderToStaticMarkup(<LocalModelsSettings active={false}/>);
- for(const text of ['Read-only','Refresh','Local models','not a hostile proxy'])assert.ok(html.includes(text),text);
+ for(const text of ['explicit runtime actions','Refresh','Local models','not a hostile proxy'])assert.ok(html.includes(text),text);
  for(const text of ['<input','<select','Start Ollama','Delete model','Download model'])assert.ok(!html.includes(text),text);
 });
 test('five AI tabs use shared primitives and Local stays inside global settings',()=>{

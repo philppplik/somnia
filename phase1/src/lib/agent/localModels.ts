@@ -1,5 +1,5 @@
 import {invoke,isTauri} from '@tauri-apps/api/core';
-import {isLoopbackHttp,normalizeBaseUrl,OLLAMA_DEFAULT_URL} from './providers/ollama';
+import {isLoopbackHttp,normalizeBaseUrl,OLLAMA_DEFAULT_URL,OllamaProvider} from './providers/ollama';
 export type Capability = 'text'|'vision'|'tools'|'embedding';
 export interface InstalledModel {id:string;digest?:string;sizeBytes?:number;parameterSize?:string;quantization?:string}
 export interface ModelEvidence {capabilities:Capability[]|null;locality:'reported-local'|'remote'|'unverified'}
@@ -43,6 +43,10 @@ export class LocalModelsRuntime {
   catch {return {state:detection===null?'unreachable':detection.installed?'stopped':'not-found',installed:detection?.installed??null,models,checkedAt,inventoryError:false};}
   try{return {state:'running',installed:detection?.installed??null,version,models:parseInventory(await this.read('tags')),checkedAt,inventoryError:false};}
   catch{return {state:'running',installed:detection?.installed??null,version,models,checkedAt,inventoryError:true};}
+ }
+ async verify(model:string):Promise<boolean>{
+  const provider=new OllamaProvider({baseUrl:this.baseUrl,fetch:async()=>new Response(JSON.stringify(await this.read('show',model)),{headers:{'content-type':'application/json'}})});
+  return (await provider.verifyLocalModel(model)).local;
  }
  async evidence(model:string):Promise<ModelEvidence>{
   if(this.metadataActive>=2)await new Promise<void>(resolve=>this.metadataWaiters.push(resolve));

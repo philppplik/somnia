@@ -1285,6 +1285,23 @@
       ]
     },
     {
+      "name": "local_models_delete",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "base_url",
+        "model",
+        "expected_digest"
+      ],
+      "args": [
+        "baseUrl",
+        "model",
+        "expectedDigest"
+      ]
+    },
+    {
       "name": "local_models_detect",
       "domain": "fs",
       "status": "native",
@@ -1292,6 +1309,47 @@
       "boundary": "B1",
       "params": [],
       "args": []
+    },
+    {
+      "name": "local_models_pull",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "base_url",
+        "model"
+      ],
+      "args": [
+        "baseUrl",
+        "model"
+      ]
+    },
+    {
+      "name": "local_models_pull_cancel",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "id"
+      ],
+      "args": [
+        "id"
+      ]
+    },
+    {
+      "name": "local_models_pull_next",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "id"
+      ],
+      "args": [
+        "id"
+      ]
     },
     {
       "name": "local_models_read",
@@ -1309,6 +1367,15 @@
         "operation",
         "model"
       ]
+    },
+    {
+      "name": "local_models_start",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [],
+      "args": []
     },
     {
       "name": "log_dir",

@@ -1,3 +1,4 @@
+import {LocalModelActions} from './LocalModelActions';
 import {useEffect,useMemo,useRef,useState} from 'react';
 import {useT} from '../../lib/useT';
 import {LocalModelsRuntime,type ModelEvidence,type RuntimeSnapshot} from '../../lib/agent/localModels';
@@ -33,6 +34,7 @@ export function LocalModelsSettings({active,runtime:provided}:{active:boolean;ru
   <p>{t('local.boundary')}</p>
   <div role="status" className="local-models-runtime"><strong>Ollama</strong> · {runtime.baseUrl}<br/>{t(snapshot?'local.state.'+snapshot.state:'local.notChecked')}{snapshot?.version&&` · ${snapshot.version}`}<br/>{snapshot&&t('local.checked',{time:new Date(snapshot.checkedAt).toLocaleTimeString(locale)})}{busy&&<p>{t('local.checking')}</p>}</div>
   {snapshot?.state==='not-found'&&<a href="https://ollama.com/download" target="_blank" rel="noreferrer">{t('local.install')}</a>}
+  {!provided&&<LocalModelActions snapshot={snapshot} onChanged={refresh}/>}
   {snapshot?.state==='running'&&<>
    <h4>{t('local.installed')}</h4>
    {snapshot.inventoryError?<p role="alert">{t('local.inventoryError')}</p>:!snapshot.models.length?<p>{t('local.empty')}</p>:<>

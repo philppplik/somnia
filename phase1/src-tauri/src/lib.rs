@@ -37,6 +37,8 @@ pub mod github_account;
 
 pub mod provider_transport;
 pub mod local_models;
+#[cfg(feature = "desktop")]
+pub mod local_model_actions;
 pub mod git;
 pub mod git_credential;
 

@@ -310,6 +310,27 @@ async fn local_models_read(window: WebviewWindow, base_url: String, operation: S
     gate(&window).map_err(|_| "Only trusted editor may inspect local runtime")?;
     crate::local_models::read(&base_url, &operation, model.as_deref()).await
 }
+#[tauri::command]
+async fn local_models_start(window: WebviewWindow) -> std::result::Result<crate::local_model_actions::StartOutcome,String> {
+ gate(&window).map_err(|_| "Only trusted editor may start Ollama")?;
+ tauri::async_runtime::spawn_blocking(crate::local_model_actions::start).await.map_err(|_| "Ollama launch failed")?
+}
+#[tauri::command]
+async fn local_models_pull(window: WebviewWindow,base_url:String,model:String)->std::result::Result<String,String>{
+ gate(&window).map_err(|_| "Only trusted editor may pull models")?;crate::local_model_actions::pull(&base_url,&model).await
+}
+#[tauri::command]
+async fn local_models_pull_next(window:WebviewWindow,id:String)->std::result::Result<Option<Vec<u8>>,String>{
+ gate(&window).map_err(|_| "Only trusted editor may read pull progress")?;crate::local_model_actions::next(&id).await
+}
+#[tauri::command]
+async fn local_models_pull_cancel(window:WebviewWindow,id:String)->std::result::Result<String,String>{
+ gate(&window).map_err(|_| "Only trusted editor may cancel pulls")?;Ok(crate::local_model_actions::cancel(&id).await)
+}
+#[tauri::command]
+async fn local_models_delete(window:WebviewWindow,base_url:String,model:String,expected_digest:String)->std::result::Result<(),String>{
+ gate(&window).map_err(|_| "Only trusted editor may delete models")?;crate::local_model_actions::delete(&base_url,&model,&expected_digest).await
+}
 // Credentials are independent of preferences: saving an Ollama configuration must
 // never delete an OpenRouter key. No raw backend/credential error reaches the UI.
 struct NativeResponse { receiver: tokio::sync::Mutex<tokio::sync::mpsc::Receiver<std::result::Result<Vec<u8>, String>>>, task: tokio::task::AbortHandle, expires: std::time::Instant }
@@ -2881,6 +2902,11 @@ pub fn run() {
             selftest_env,
             selftest_write,
             selftest_exit,
+            local_models_start,
+            local_models_pull,
+            local_models_pull_next,
+            local_models_pull_cancel,
+            local_models_delete,
             local_models_detect,
             local_models_read,
             provider_http_start,
