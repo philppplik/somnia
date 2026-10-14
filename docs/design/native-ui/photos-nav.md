@@ -68,3 +68,15 @@ Coverage: `photos-zoom.spec.ts` gains a light/dark leg that toggles
 `L`, asserts the `photos-lights-out` class, polls the bar's computed
 opacity through the fade (0.18), verifies the canvas opacity stays 1,
 and toggles back.
+
+## Home/End keys (P78)
+
+`Home` and `End` jump to the first and last developable photo in
+library order — the same set and order the arrows walk, no wrap needed
+(pressing `Home` on the first photo is a no-op). Same key-handler
+guards.
+
+Coverage: `photos-filmstrip.spec.ts` gains a light/dark leg that starts
+on the middle photo, presses `End` (name + position readout 3 / 3),
+screenshots, presses `Home` (1 / 3) and presses it again to prove the
+no-op.

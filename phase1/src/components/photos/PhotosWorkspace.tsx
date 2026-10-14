@@ -20,7 +20,7 @@ import {CROP_GUIDE_STYLES,cropGuideLines,type CropGuideStyle} from '../../lib/ph
 import {clippingOverlayImage} from '../../lib/photos/clippingOverlay';
 import {clampSplitX,splitClearRect} from '../../lib/photos/splitView';
 import {decodeSettingsPayload,encodeSettingsPayload,settingsPayloadToText,type SettingsPayload} from '../../lib/photos/settingsClipboard';
-import {photoNav} from '../../lib/photos/photoNav';
+import {developablePhotos,photoNav} from '../../lib/photos/photoNav';
 import {ZOOM_PRESETS,isZoomPresetActive,zoomPresetLabel} from '../../lib/photos/zoomPresets';
 import {setActiveMedia,useMedia} from '../../lib/media';
 import {PhotosFilmstrip} from './PhotosFilmstrip';
@@ -169,6 +169,12 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
    if(e.metaKey||e.ctrlKey||e.altKey)return;
    const el=e.target as HTMLElement|null;
    if(el&&el.closest('input,select,textarea,[contenteditable="true"]'))return;
+   if(e.key==='Home'||e.key==='End'){ // first/last developable photo in library order
+    const all=developablePhotos(media.items);
+    const target=e.key==='Home'?all[0]:all[all.length-1];
+    if(target&&target.name!==item.name){e.preventDefault();setActiveMedia(target.name);}
+    return;
+   }
    if(e.key==='ArrowLeft'&&nav.prev){e.preventDefault();setActiveMedia(nav.prev);}
    else if(e.key==='ArrowRight'&&nav.next){e.preventDefault();setActiveMedia(nav.next);}
    else if(/^[0-5]$/.test(e.key))setRating(item.name,Number(e.key));
@@ -187,7 +193,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
   const onKeyUp=(e:KeyboardEvent)=>{if(e.key==='\\')setCompare(false);};
   window.addEventListener('keydown',onKey);window.addEventListener('keyup',onKeyUp);
   return()=>{window.removeEventListener('keydown',onKey);window.removeEventListener('keyup',onKeyUp);};
- },[nav.prev,nav.next,item.name,guideStyle,setGuideStyle,lightsOut,setLightsOut,zoom,scale,zoomTo]);
+ },[nav.prev,nav.next,item.name,media.items,guideStyle,setGuideStyle,lightsOut,setLightsOut,zoom,scale,zoomTo]);
 
  const pointerPos=(e:React.PointerEvent)=>{const r=imgBox.current!.getBoundingClientRect();return{x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height};};
  const onStageDown=(e:React.PointerEvent)=>{

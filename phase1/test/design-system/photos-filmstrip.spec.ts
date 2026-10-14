@@ -139,3 +139,22 @@ test('filmstrip sort: rating reorders the strip, library restores it (light and 
   expect(await names()).toEqual(['strip-1.png','strip-2.png','strip-3.png']); // back to library order
  }
 });
+test('Home/End jump to the first and last photo (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
+  await page.getByTestId('photos-filmstrip-item-strip-2.png').click(); // start in the middle
+  await expect(page.getByTestId('photos-name')).toHaveText('strip-2.png');
+  await page.keyboard.press('End');
+  await expect(page.getByTestId('photos-name')).toHaveText('strip-3.png');
+  await expect(page.getByTestId('photos-position')).toHaveText('3 / 3');
+  await page.screenshot({path:`test-results/ds-photos-home-end-${theme}.png`,fullPage:true});
+  await page.keyboard.press('Home');
+  await expect(page.getByTestId('photos-name')).toHaveText('strip-1.png');
+  await expect(page.getByTestId('photos-position')).toHaveText('1 / 3');
+  await page.keyboard.press('Home'); // already first: stays put
+  await expect(page.getByTestId('photos-name')).toHaveText('strip-1.png');
+ }
+});
