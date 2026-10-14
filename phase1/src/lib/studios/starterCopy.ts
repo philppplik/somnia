@@ -9,6 +9,7 @@ export const studioStarterCopy={
  photos:{headline:'Make every image your own inside Photos Studio',description:'Crop, adjust and refine images with non-destructive edits. Open a photo or start a blank canvas for your next creation.',openLabel:'Open image'},
  vector:{headline:'Draw your next idea inside Vector Studio',description:'Create scalable artwork with shapes, paths and layers. Open an SVG or start a blank canvas and build your design from scratch.',openLabel:'Open SVG'},
  animation:{headline:'Bring your titles to life inside Animation Studio',description:'Build layered compositions with keyframes on a timeline. Restore your last session or start a blank composition and animate it frame by frame.',openLabel:'Restore last session'},
+ '3d':{headline:'Create amazing scenes inside 3D Studio',description:'View and inspect 3D models, orbit around them and export a GLB or a PNG still. Open a glTF or GLB model, or start a blank scene.',openLabel:'Open model'},
  design:{headline:'Create beautiful layouts inside Design Studio',description:'Arrange text and shapes on artboards. Start a blank design or open an editable project, then export your layout as SVG.',openLabel:'Open design project'}
 } as const;
 export type StarterStudioId=keyof typeof studioStarterCopy;

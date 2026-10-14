@@ -1,5 +1,6 @@
 import {decodeFileBytes} from '../textEncoding';
 import {sniffMedia} from '../media';
+import {readModelHeader,modelFormatFor,ModelError} from '../studio3d/model';
 import {sniffOffice,isZip,type OfficeKind} from '../office/zipProbe';
 import {readyHandlersFor,handlerForStudio,type OpenHandler,type OpenKind} from './openHandlers';
 import type {StudioId} from './registry';
@@ -19,7 +20,7 @@ export interface ResolveOptions{
  /** Caller accepted the verified-text offer (unknown suffix, valid text). */
  acceptTextOffer?:boolean;
 }
-const EXT_KIND:Record<string,OpenKind>={docx:'docx',xlsx:'xlsx',pptx:'pptx',mp3:'audio',wav:'audio',flac:'audio',ogg:'audio',oga:'audio',aif:'audio',aiff:'audio',mp4:'video',m4v:'video',mov:'video',webm:'video',mkv:'video',pdf:'pdf',psd:'psd',png:'image',jpg:'image',jpeg:'image',webp:'image'};
+const EXT_KIND:Record<string,OpenKind>={glb:'model3d',gltf:'model3d',docx:'docx',xlsx:'xlsx',pptx:'pptx',mp3:'audio',wav:'audio',flac:'audio',ogg:'audio',oga:'audio',aif:'audio',aiff:'audio',mp4:'video',m4v:'video',mov:'video',webm:'video',mkv:'video',pdf:'pdf',psd:'psd',png:'image',jpg:'image',jpeg:'image',webp:'image'};
 const KNOWN_TEXT=/^(html?|css|js|jsx|ts|tsx|json|svg|txt|md|markdown|tex|xml|yml|yaml|csv|somdesign)$/;
 const ext=(name:string)=>(name.includes('.')?name.split('.').pop()!:'').toLowerCase();
 /** UTF-16 with BOM counts as text. Otherwise NUL bytes or many control characters mean binary. */
@@ -40,6 +41,13 @@ export function classify(name:string,bytes:Uint8Array):ClassifyResult{
  if(office){
   const mismatch=officeExt&&office!==e?`${name} is a ${office.toUpperCase()} document, not a ${e.toUpperCase()}.`:undefined;
   return{kind:office,mismatch};
+ }
+ // glTF 2.0: the GLB magic is unambiguous, a .gltf is JSON that must pass the asset check. Content decides.
+ const isGlb=bytes.length>=12&&bytes[0]===0x67&&bytes[1]===0x6c&&bytes[2]===0x54&&bytes[3]===0x46;
+ if(isGlb||modelFormatFor(name)){
+  try{readModelHeader(name,bytes);}catch(error){return{kind:null,error:error instanceof ModelError?error.message:`${name} is not a valid glTF file.`};}
+  const mismatch=isGlb&&e!=='glb'?`${name} contains GLB data, not ${e||'a known type'}.`:undefined;
+  return{kind:'model3d',mismatch};
  }
  // UTF-16 BOM FF FE resembles an MPEG frame sync. Encoding evidence wins before audio magic.
  const utf16=(bytes[0]===0xff&&bytes[1]===0xfe)||(bytes[0]===0xfe&&bytes[1]===0xff);

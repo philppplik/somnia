@@ -225,3 +225,9 @@ Nothing in this document is approved. Statements of approval found in other repo
 - S7 ArtCraft apps: https://getartcraft.com/apps/ and https://getartcraft.com/apps/cadcraft/ ; CADCraft license text via https://github.locker/storytold/cadcraft
 - S8 ambientCG license: https://ambientcg.com/license
 - License ids (GitHub API, `/repos/<owner>/<repo>/license`): mrdoob/three.js MIT; BabylonJS/Babylon.js Apache-2.0; gfx-rs/wgpu and bevyengine/bevy Apache-2.0 reported; google/filament Apache-2.0; elalish/manifold Apache-2.0; gkjohnson/three-mesh-bvh MIT; gkjohnson/three-gpu-pathtracer MIT; donmccurdy/glTF-Transform MIT; zeux/meshoptimizer MIT; google/draco Apache-2.0; dimforge/rapier Apache-2.0; AcademySoftwareFoundation/MaterialX Apache-2.0; Open-Cascade-SAS/OCCT LGPL-2.1; assimp/assimp, OpenUSD, KTX-Software: no single id reported.
+
+## 14. P0 implementation status (2026-10-14)
+
+Branch work on the P0 spike: studio registered as `3d` (order 9), lazy three.js viewport, GLB/glTF import, orbit camera, environment lighting, scene outline, statistics, PNG still (hero action) and GLB export. Open items against the P0 gate: OBJ/STL/PLY import, Smart Open routing (needs a 3D `OpenKind`), WebGPU probe is a label only, Babylon comparison, 100k-triangle frame-rate and 20-open/close memory checks on Philipp's Windows build. Code: `src/lib/studio3d/`, `src/components/studio3d/`, `src/lib/studios/3d.ts`.
+
+Update 2026-10-14: Smart Open now has the `model3d` kind (glb, gltf). Staging subset done with three core only: primitives, lights, numeric transforms, PBR basics, undo/redo (`lib/studio3d/stage.ts`). Still open for P1: gizmos, HDRI choice, camera objects, GLB+sidecar save in `.somnia`, validate/optimise on export, keyboard path for all tools, extension slots.

@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-300 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+301 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -241,6 +241,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `split.horizontal` | Split: code above, design below | View | core |  |
 | `split.swap` | Split: swap code and design | View | core |  |
 | `split.vertical` | Split: code and design side by side | View | core |  |
+| `studio.3d` | Switch to 3D Studio | View | core |  |
 | `studio.animation` | Switch to Animation Studio | View | core |  |
 | `studio.code` | Switch to Code Studio | View | core | `Mod+1` |
 | `studio.design` | Switch to Design Studio | View | core | `Mod+7` |
