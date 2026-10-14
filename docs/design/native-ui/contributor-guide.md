@@ -65,3 +65,5 @@ exceptions are a reviewed boundary, not a shortcut. See [Settings plan](settings
 Use [token tables](contributor-tokens.md) for the active paint/geometry contract and
 [importer guide](theme-importer-guide.md) for bounded color exchange. Native material, document paint,
 canvas backgrounds and syntax palettes are separate owners, not theme-import targets.
+
+See [gallery index and studio recipes](gallery-index.md) for StudioProgress, starter/status/recents, panels and importer usage.

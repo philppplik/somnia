@@ -1,4 +1,5 @@
 import {FocusProof} from './focus-proof';
+import {GalleryIndex} from './gallery-index';
 import {ShellStateProof} from './shell-state-proof';
 import {StudioAdoptionProof} from './studio-adoption-proof';
 import {THEME_CHOICES,resolveTheme} from '../../src/lib/theme';
@@ -35,7 +36,7 @@ function Gallery(){
  const [checked,setChecked]=useState(false),[radio,setRadio]=useState('a');
  const [number,setNumber]=useState<number|null>(10),[mixed,setMixed]=useState(false),[readonly,setReadonly]=useState(false),[disabled,setDisabled]=useState(false),[range,setRange]=useState(30),[open,setOpen]=useState(true),[events,setEvents]=useState<string[]>([]);
  const log=(event:string)=>setEvents(old=>[...old,event]);
- return <main lang="en" data-fixture-ready="true"><ShellStateProof/><StudioAdoptionProof/><h1>P1 primitive contracts</h1><p>Developer fixture. Real primitives and production styles; no app engines or user data.</p>
+ return <main lang="en" data-fixture-ready="true"><h1>P1 primitive contracts</h1><p>Developer fixture. Real primitives and production styles; no app engines or user data.</p>
  <div className="controls"><button onClick={()=>setMixed(!mixed)} aria-pressed={mixed}>Mixed</button><button onClick={()=>setReadonly(!readonly)} aria-pressed={readonly}>Read only</button><button onClick={()=>setDisabled(!disabled)} aria-pressed={disabled}>Disabled</button><button onClick={()=>{setEvents([]);setNumber(10);setRange(30);}}>Reset fixture</button></div>
  <div className="gallery-grid">
  <section><h2>Native parity</h2><div className="pair"><input data-testid="raw-checkbox" type="checkbox" checked={checked} onChange={e=>setChecked(e.target.checked)} disabled={disabled}/><Checkbox data-testid="ui-checkbox" label="Checkbox choice" checked={checked} onChange={e=>setChecked(e.target.checked)} disabled={disabled} indeterminate={mixed}/></div><div className="pair"><input data-testid="raw-switch" type="checkbox" checked={checked} onChange={e=>setChecked(e.target.checked)} disabled={disabled}/><Switch data-testid="ui-switch" label="Switch choice" checked={checked} onChange={e=>setChecked(e.target.checked)} disabled={disabled}/></div><RadioGroup label="Format" name="format" value={radio} disabled={disabled} readOnly={readonly} options={[{value:"a",label:"Alpha"},{value:"b",label:"Beta",disabled:true},{value:"c",label:"Gamma"}]} onValueChange={setRadio}/><div className="pair"><input data-testid="raw-input" defaultValue="Text" disabled={disabled} readOnly={readonly}/><NativeInput data-testid="ui-input" defaultValue="Text" disabled={disabled} readOnly={readonly}/></div>
@@ -58,6 +59,7 @@ function Gallery(){
  <TooltipProvider delay={0}><Tooltip><TooltipTrigger>Tooltip trigger</TooltipTrigger><TooltipContent>Shared tooltip</TooltipContent></Tooltip></TooltipProvider>
  <StudioTooltip.Provider delay={0}><StudioTooltip.Root><StudioTooltip.Trigger>Studio facade tooltip</StudioTooltip.Trigger><StudioTooltip.Portal><StudioTooltip.Positioner className="z-50" side="bottom" sideOffset={8}><StudioTooltip.Popup data-testid="studio-tooltip" className="studio-pill-tooltip">Studio facade</StudioTooltip.Popup></StudioTooltip.Positioner></StudioTooltip.Portal></StudioTooltip.Root></StudioTooltip.Provider>
  <RawTooltip.Provider delay={0}><RawTooltip.Root><RawTooltip.Trigger>Raw tooltip</RawTooltip.Trigger><RawTooltip.Portal><RawTooltip.Positioner side="bottom" sideOffset={8}><RawTooltip.Popup data-testid="raw-tooltip" className="studio-pill-tooltip">Raw tooltip</RawTooltip.Popup></RawTooltip.Positioner></RawTooltip.Portal></RawTooltip.Root></RawTooltip.Provider>
- </section><ExchangeProof/><ThemeImportPanel/></div><pre data-testid="events" aria-label="Fixture events">{events.join('\n')}</pre></main>;
+ </section><ExchangeProof/><ThemeImportPanel/></div><pre data-testid="events" aria-label="Fixture events">{events.join('\n')}</pre><StudioAdoptionProof/><ShellStateProof/></main>;
 }
-createRoot(document.getElementById('root')!).render(new URLSearchParams(location.search).has('focus-audit')?<FocusProof/>:<Gallery/>);
+const view=new URLSearchParams(location.search).get('view');
+createRoot(document.getElementById('root')!).render(new URLSearchParams(location.search).has('focus-audit')?<FocusProof/>:view==='index'?<GalleryIndex/>:view==='shell'?<main><ShellStateProof showRecovery/></main>:view==='studios'?<main><StudioAdoptionProof/></main>:view==='importer'?<main><ThemeImportPanel/></main>:<Gallery/>);

@@ -105,3 +105,4 @@ This guide supplies the cross-cutting system. The [verification guide](verificat
 - [Theme author guide and advisory contrast warnings](theme-author-guide.md)
 
 - [Keyboard and focus checklist](a11y-checklist.md)
+- [Component gallery index and studio recipes](gallery-index.md)
