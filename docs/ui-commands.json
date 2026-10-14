@@ -1193,6 +1193,23 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.keys.shrinkSelection",
+      "title": "Shrink the key selection by one key at each end",
+      "category": "View",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "fewer",
+        "inner",
+        "keys",
+        "narrow",
+        "reduce",
+        "select",
+        "shrink"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.keys.smooth",
       "title": "Smooth position path through selected keys",
       "category": "Edit",

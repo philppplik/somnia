@@ -250,3 +250,9 @@ test('grow selection: adds neighbours once, keeps the rest',()=>{
  assert.deepEqual(growSelection(c,[k(0)]).map(x=>x.t),[f(0),f(10)]);
  assert.equal(growSelection(c,[k(0),k(10)]).length,2);assert.equal(growSelection(c,[]).length,0);
 });
+import {shrinkSelection} from './keyShrink';
+test('shrink selection: drops both ends per property',()=>{
+ const k=(n:number,prop:'position'|'scale'='position')=>({layer:'a',prop,t:f(n)});
+ assert.deepEqual(shrinkSelection([k(3),k(1),k(2),k(4)]).map(x=>x.t),[f(2),f(3)]);
+ assert.equal(shrinkSelection([k(1),k(2)]).length,0);assert.equal(shrinkSelection([k(1),k(2),k(1,'scale')]).length,0);
+});

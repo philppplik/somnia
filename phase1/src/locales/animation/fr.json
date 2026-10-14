@@ -915,5 +915,8 @@
  "cmd.animation.keys.selectByInterp": "Sélectionner les keys d’une interpolation",
  "animation.keys.grow": "Étendre la sélection",
  "animation.keys.grow.hint": "Ajoute la key précédente et la suivante de chaque key sélectionnée",
- "cmd.animation.keys.growSelection": "Étendre la sélection de keys d’un voisin"
+ "cmd.animation.keys.growSelection": "Étendre la sélection de keys d’un voisin",
+ "animation.keys.shrink": "Réduire la sélection",
+ "animation.keys.shrink.hint": "Retire la première et la dernière key sélectionnée de chaque propriété",
+ "cmd.animation.keys.shrinkSelection": "Réduire la sélection de keys d’une key à chaque bout"
 }
