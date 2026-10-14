@@ -68,3 +68,16 @@ Coverage: `splitView.test.ts` gains a horizontal-rect case (below the
 divider, edge margins clamped); `photos-split.spec.ts` gains a
 light/dark leg that toggles direction, asserts `data-direction`, grabs
 the handle where it sits, and drags it downward on the y axis.
+
+## Compare key (P76)
+
+Holding `\` peeks at the original from the keyboard — the same
+`compare` state the compare button drives with pointer presses, so the
+canvas swaps to `session.original` while the key is down and back on
+release. Key repeats are ignored; the workspace key handler gained a
+`keyup` listener for the release.
+
+Coverage: `photos-split.spec.ts` gains a light/dark leg on the
+warm/cool stub engine: commit a warm exposure, hold `\` and pixel-proof
+the cool original, release and pixel-proof the warm developed frame
+again.

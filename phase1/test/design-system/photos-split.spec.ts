@@ -73,3 +73,21 @@ test('split direction: horizontal divider erases below, drags on the y axis (lig
   await expect(page.getByTestId('photos-split-divider')).toHaveAttribute('data-direction','vertical');
  }
 });
+test('compare key: holding backslash shows the original, releasing restores the preview (light and dark)',async({page})=>{
+ const pixel=()=>page.evaluate(()=>{const c=document.querySelector('[data-testid="photos-canvas"]') as HTMLCanvasElement;return[...c.getContext('2d')!.getImageData(2,2,1,1).data].slice(0,3);});
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-split');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await page.evaluate(async()=>{const mod=await import('/src/lib/photos/studioSession.ts');mod.commitPhotoSettings('split-proof.png',(s:{exposure:number})=>({...s,exposure:1.2}));});
+  await page.waitForTimeout(700);
+  let [r,,b]=await pixel();expect(r).toBeGreaterThan(190);expect(b).toBeLessThan(120); // developed: warm
+  await page.keyboard.down('\\'); // hold: peek at the original
+  await page.waitForTimeout(300);
+  [r,,b]=await pixel();expect(b).toBeGreaterThan(r); // original: cool
+  await page.screenshot({path:`test-results/ds-photos-compare-key-${theme}.png`,fullPage:true});
+  await page.keyboard.up('\\');
+  await page.waitForTimeout(300);
+  [r,,b]=await pixel();expect(r).toBeGreaterThan(190); // back to the developed frame
+ }
+});
