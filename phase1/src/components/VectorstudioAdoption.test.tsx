@@ -27,7 +27,7 @@ test('node panel renders position inputs and node-type actions as native control
 });
 
 test('no raw form controls remain anywhere in the vectorstudio area',()=>{
- const walk=(dir)=>readdirSync(dir,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(join(dir,e.name)):[join(dir,e.name)]);
+ const walk=(dir:string):string[]=>readdirSync(dir,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(join(dir,e.name)):[join(dir,e.name)]);
  for(const f of walk(new URL('./vectorstudio/',import.meta.url).pathname).filter(f=>f.endsWith('.tsx')&&!f.includes('.test.'))) {
   assert.doesNotMatch(readFileSync(f,'utf8'),/<(button|input|select|textarea)\b/,f);
  }

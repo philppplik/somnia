@@ -32,6 +32,8 @@
         "src/components/animation/AudioWaveform.tsx",
         "src/components/animation/format.ts",
         "src/components/animation/GraphEditor.tsx",
+        "src/components/animation/MaskLanes.tsx",
+        "src/components/animation/MaskOverlay.tsx",
         "src/components/animation/MasksMattes.tsx",
         "src/components/animation/PathOverlay.tsx",
         "src/components/animation/TextAnimators.tsx",
@@ -275,6 +277,7 @@
         "src/lib/animation/graph.ts",
         "src/lib/animation/interpolate.ts",
         "src/lib/animation/keyclip.ts",
+        "src/lib/animation/maskHandles.ts",
         "src/lib/animation/masks.ts",
         "src/lib/animation/model.ts",
         "src/lib/animation/modifiers.ts",
@@ -963,6 +966,8 @@
         "src/components/animation/AnimationTimeline.tsx",
         "src/components/animation/AudioWaveform.tsx",
         "src/components/animation/GraphEditor.tsx",
+        "src/components/animation/MaskLanes.tsx",
+        "src/components/animation/MaskOverlay.tsx",
         "src/components/animation/MasksMattes.tsx",
         "src/components/animation/PathOverlay.tsx",
         "src/components/animation/TextAnimators.tsx",
@@ -1207,6 +1212,8 @@
         "src/components/AgentReview.tsx",
         "src/components/animation/AnimationTimeline.tsx",
         "src/components/animation/GraphEditor.tsx",
+        "src/components/animation/MaskLanes.tsx",
+        "src/components/animation/MasksMattes.tsx",
         "src/components/animation/PathOverlay.tsx",
         "src/components/ChatRailButton.tsx",
         "src/components/CollabPreferences.tsx",
@@ -1538,6 +1545,8 @@
         "src/components/animation/AnimationTimeline.tsx",
         "src/components/animation/AudioWaveform.tsx",
         "src/components/animation/GraphEditor.tsx",
+        "src/components/animation/MaskLanes.tsx",
+        "src/components/animation/MaskOverlay.tsx",
         "src/components/animation/PathOverlay.tsx",
         "src/components/CloseAllDialog.tsx",
         "src/components/design/DesignCanvas.tsx",
@@ -2634,6 +2643,8 @@
         "src/components/animation/AudioInspector.tsx",
         "src/components/animation/AudioWaveform.tsx",
         "src/components/animation/GraphEditor.tsx",
+        "src/components/animation/MaskLanes.tsx",
+        "src/components/animation/MaskOverlay.tsx",
         "src/components/animation/MasksMattes.tsx",
         "src/components/animation/PathOverlay.tsx",
         "src/components/animation/TextAnimators.tsx",
@@ -2896,6 +2907,7 @@
         "src/components/animation/AnimationTimeline.tsx",
         "src/components/animation/AudioInspector.tsx",
         "src/components/animation/GraphEditor.tsx",
+        "src/components/animation/MaskLanes.tsx",
         "src/components/animation/MasksMattes.tsx",
         "src/components/animation/TextAnimators.tsx",
         "src/components/Canvas.tsx",
@@ -3172,6 +3184,7 @@
         "src/components/animation/AnimationCanvas.tsx",
         "src/components/animation/AudioWaveform.tsx",
         "src/components/animation/GraphEditor.tsx",
+        "src/components/animation/MaskOverlay.tsx",
         "src/components/animation/PathOverlay.tsx",
         "src/components/design/DesignCanvas.tsx",
         "src/components/design/DesignInspectorPanel.tsx",
@@ -3730,6 +3743,8 @@
         "src/components/animation/AnimationCanvas.tsx",
         "src/components/animation/AnimationPanels.tsx",
         "src/components/animation/format.ts",
+        "src/components/animation/MaskLanes.tsx",
+        "src/components/animation/MaskOverlay.tsx",
         "src/components/animation/MasksMattes.tsx",
         "src/components/animation/PathOverlay.tsx",
         "src/components/animation/TextAnimators.tsx",
@@ -3844,6 +3859,7 @@
         "src/components/agent/LocalToolDiagnostics.tsx",
         "src/components/animation/AnimationCanvas.tsx",
         "src/components/animation/GraphEditor.tsx",
+        "src/components/animation/MaskLanes.tsx",
         "src/components/animation/PathOverlay.tsx",
         "src/components/ContextSections.tsx",
         "src/components/ConvertDialog.tsx",
@@ -4213,6 +4229,8 @@
         "src/components/animation/AnimationTimeline.tsx",
         "src/components/animation/AudioWaveform.tsx",
         "src/components/animation/GraphEditor.tsx",
+        "src/components/animation/MaskLanes.tsx",
+        "src/components/animation/MaskOverlay.tsx",
         "src/components/animation/PathOverlay.tsx",
         "src/components/Canvas.tsx",
         "src/components/CanvasContextMenu.tsx",
@@ -5005,6 +5023,8 @@
         "src/components/animation/AudioWaveform.tsx",
         "src/components/animation/format.ts",
         "src/components/animation/GraphEditor.tsx",
+        "src/components/animation/MaskLanes.tsx",
+        "src/components/animation/MaskOverlay.tsx",
         "src/components/animation/MasksMattes.tsx",
         "src/components/animation/PathOverlay.tsx",
         "src/components/animation/TextAnimators.tsx",
@@ -5367,7 +5387,9 @@
         "src/lib/animation/graph.ts",
         "src/lib/animation/interpolate.ts",
         "src/lib/animation/keyclip.ts",
+        "src/lib/animation/maskHandles.ts",
         "src/lib/animation/masks.ts",
+        "src/lib/animation/maskSelection.ts",
         "src/lib/animation/model.ts",
         "src/lib/animation/modifierModel.ts",
         "src/lib/animation/modifiers.ts",
@@ -6049,6 +6071,8 @@
         "src/components/animation/AnimationTimeline.tsx",
         "src/components/animation/AudioInspector.tsx",
         "src/components/animation/GraphEditor.tsx",
+        "src/components/animation/MaskLanes.tsx",
+        "src/components/animation/MaskOverlay.tsx",
         "src/components/animation/MasksMattes.tsx",
         "src/components/animation/PathOverlay.tsx",
         "src/components/animation/TextAnimators.tsx",
@@ -8918,6 +8942,8 @@
         "src/components/animation/AnimationTimeline.tsx",
         "src/components/animation/AudioInspector.tsx",
         "src/components/animation/GraphEditor.tsx",
+        "src/components/animation/MaskLanes.tsx",
+        "src/components/animation/MaskOverlay.tsx",
         "src/components/animation/MasksMattes.tsx",
         "src/components/animation/PathOverlay.tsx",
         "src/components/animation/TextAnimators.tsx",
@@ -9552,6 +9578,7 @@
         "src/components/animation/AnimationCanvas.tsx",
         "src/components/animation/AnimationTimeline.tsx",
         "src/components/animation/GraphEditor.tsx",
+        "src/components/animation/MaskOverlay.tsx",
         "src/components/animation/PathOverlay.tsx",
         "src/components/CollabPreferences.tsx",
         "src/components/ComponentPropsPanel.tsx",
@@ -10312,6 +10339,7 @@
         "src/components/agent/ProviderAccountConnection.tsx",
         "src/components/animation/AnimationPanels.tsx",
         "src/components/animation/AnimationTimeline.tsx",
+        "src/components/animation/MaskLanes.tsx",
         "src/components/animation/MasksMattes.tsx",
         "src/components/CommandPalette.tsx",
         "src/components/ComponentPropsPanel.tsx",
@@ -10593,6 +10621,7 @@
       ],
       "owners": [
         "src/components/animation/GraphEditor.tsx",
+        "src/components/animation/MaskOverlay.tsx",
         "src/components/animation/PathOverlay.tsx",
         "src/components/CanvasSelection.tsx",
         "src/components/imageedit/AdjustPanel.tsx",
@@ -11746,7 +11775,35 @@
     },
     {
       "kind": "testId",
+      "value": "animation-mask-overlay",
+      "readers": [
+        "tests/animation-p10.spec.ts"
+      ],
+      "owners": [
+        "src/components/animation/MaskOverlay.tsx"
+      ]
+    },
+    {
+      "kind": "testId",
       "value": "animation-mask-path-0",
+      "readers": [
+        "tests/animation-p10.spec.ts"
+      ],
+      "owners": []
+    },
+    {
+      "kind": "testId",
+      "value": "animation-mask-point",
+      "readers": [
+        "tests/animation-p10.spec.ts"
+      ],
+      "owners": [
+        "src/components/animation/MaskOverlay.tsx"
+      ]
+    },
+    {
+      "kind": "testId",
+      "value": "animation-maskrow-0-position",
       "readers": [
         "tests/animation-p10.spec.ts"
       ],
@@ -16960,6 +17017,7 @@
       ],
       "owners": [
         "src/components/animation/GraphEditor.tsx",
+        "src/components/animation/MaskOverlay.tsx",
         "src/components/animation/PathOverlay.tsx",
         "src/components/design/DesignCanvas.tsx",
         "src/components/DesignCanvas.tsx",
