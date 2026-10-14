@@ -28,7 +28,8 @@ import {registerStudio3DController} from '../../lib/studio3d/commands';
 import {parseExtras,type ClipMeta} from '../../lib/studio3d/clipMeta';
 import type {Ease} from '../../lib/studio3d/ease';
 import type {KeyPath} from '../../lib/studio3d/clips';
-import {advance,clampTime,checkClip,checkSpeed,startTime,AnimationError,type ClipInfo} from '../../lib/studio3d/animation';
+import type {KeyRef,KeyData} from '../../lib/studio3d/keyEdit';
+import {advance,clampTime,checkClip,checkRange,checkSpeed,startTime,rangeFits,AnimationError,type ClipInfo,type LoopRange} from '../../lib/studio3d/animation';
 import {exportBlocker,LIMITS} from '../../lib/studio3d/validate';
 import {inspectImage,isTextureSlot,MAX_TEXTURE_FILE_BYTES,MaterialError,type TextureSlot} from '../../lib/studio3d/materials';
 import {viewDirection,type ViewPreset} from '../../lib/studio3d/viewPresets';
@@ -134,7 +135,7 @@ export default function Viewport3D(){
    const m=stage.measure();bounds=m.bounds;
    const sel=getStudio3DState().selected;const info=sel==null?null:stage.info(sel);
    const infos=clipInfos();const an=getStudio3DState().anim;const keys=sel==null||!infos[an.clip]?[]:stage.keysOf(an.clip,sel);
-   if(an.clip>=infos.length&&an.clip>0){stopAnim();patchStudio3D({anim:{clip:0,playing:false,time:0,loop:true,speed:1}});}
+   if(an.clip>=infos.length&&an.clip>0){stopAnim();patchStudio3D({anim:{clip:0,playing:false,time:0,loop:true,speed:1,range:null}});}
    patchStudio3D({clips:infos,clipKeys:keys,stats:m.stats,outline:m.outline,bounds:m.bounds,selected:info?sel:null,selectedInfo:info,dirty:stage.dirty,canUndo:stage.canUndo,canRedo:stage.canRedo,undoLabel:stage.undoLabel});
    drawSelection();applyWire(getStudio3DState().wireframe);for(const h of syncHooks)h();invalidate();
   };
@@ -478,10 +479,10 @@ export default function Viewport3D(){
    holder.updateMatrixWorld(true);drawSelection();invalidate();
   };
   /** Back to the start of the first clip, e.g. after a new model was opened. */
-  const resetAnim=()=>{stopAnim();mixer?.stopAllAction();mixer=null;patchStudio3D({clips:clipInfos(),anim:{clip:0,playing:false,time:0,loop:true,speed:1}});};
+  const resetAnim=()=>{stopAnim();mixer?.stopAllAction();mixer=null;patchStudio3D({clips:clipInfos(),anim:{clip:0,playing:false,time:0,loop:true,speed:1,range:null}});};
   const tick=(now:number)=>{
    animRaf=0;const a=anim();const c=stage.clips[a.clip];if(!a.playing||!c)return;
-   const r=advance(a.time,(now-lastTick)/1000,c.duration,a.loop,a.speed);lastTick=now;
+   const r=advance(a.time,(now-lastTick)/1000,c.duration,a.loop,a.speed,a.range);lastTick=now;
    pose(a.clip,r.time);state_time=r.time;
    // Publish about 15 times a second so the panel does not re-render every frame.
    if(r.ended||now-lastPublish>66){lastPublish=now;patchStudio3D({anim:{...a,time:r.time,playing:!r.ended}});showPose();}
@@ -489,8 +490,10 @@ export default function Viewport3D(){
   };
   const animPlay=(clip?:number)=>{
    const infos=clipInfos();const a=anim();const idx=clip===undefined?a.clip:checkClip(clip,infos);checkClip(idx,infos);
-   const t=idx===a.clip?startTime(a.time,infos[idx].duration,a.loop):0;
-   patchStudio3D({anim:{...a,clip:idx,time:t,playing:true}});stopAnim();lastTick=performance.now();lastPublish=lastTick;pose(idx,t);animRaf=requestAnimationFrame(tick);
+   const range=idx===a.clip&&rangeFits(a.range,infos[idx].duration)?a.range:null;
+   let t=idx===a.clip?startTime(a.time,infos[idx].duration,a.loop):0;
+   if(range&&(t<range.start||t>=range.end))t=range.start;
+   patchStudio3D({anim:{...a,clip:idx,time:t,playing:true,range}});stopAnim();lastTick=performance.now();lastPublish=lastTick;pose(idx,t);animRaf=requestAnimationFrame(tick);
   };
   const animPause=()=>{stopAnim();const a=anim();patchStudio3D({anim:{...a,playing:false,time:a.playing&&state_time?state_time:a.time}});showPose();};
   const animSeek=(time:number)=>{
@@ -503,9 +506,9 @@ export default function Viewport3D(){
   /** Clip editing. A new clip becomes the current one. */
   const clipAdd=(name?:string,duration?:number)=>{const i=stage.addClip(name,duration);stopAnim();patchStudio3D({anim:{...anim(),clip:i,playing:false,time:0}});return i;};
   const clipIndex=(clip?:number)=>clip===undefined?anim().clip:clip;
-  const clipRemove=(clip?:number)=>{const i=clipIndex(clip);stopAnim();stage.removeClip(i);patchStudio3D({anim:{...anim(),clip:Math.max(0,Math.min(anim().clip,stage.clips.length-1)),playing:false,time:0}});};
+  const clipRemove=(clip?:number)=>{const i=clipIndex(clip);stopAnim();stage.removeClip(i);patchStudio3D({anim:{...anim(),clip:Math.max(0,Math.min(anim().clip,stage.clips.length-1)),playing:false,time:0,range:null}});};
   const clipRename=(name:string,clip?:number)=>stage.renameClip(clipIndex(clip),name);
-  const clipDuration=(duration:number,clip?:number)=>{stage.setClipDuration(clipIndex(clip),duration);patchStudio3D({anim:{...anim(),time:Math.min(anim().time,duration)}});};
+  const clipDuration=(duration:number,clip?:number)=>{stage.setClipDuration(clipIndex(clip),duration);const a=anim();patchStudio3D({anim:{...a,time:Math.min(a.time,duration),range:rangeFits(a.range,duration)?a.range:null}});};
   const keyTarget=(id?:number)=>{const t=id??getStudio3DState().selected;if(t==null)throw Object.assign(new Error('Select an object first.'),{expected:true});return t;};
   const keySet=(path:KeyPath,time?:number,id?:number,value?:{x?:number;y?:number;z?:number})=>{
    if(!stage.clips.length)clipAdd();
@@ -514,10 +517,25 @@ export default function Viewport3D(){
   const keyRemove=(path:KeyPath,time?:number,id?:number)=>stage.removeKey(anim().clip,keyTarget(id),path,time??anim().time);
   const keyMove=(path:KeyPath,from:number,to:number,id?:number)=>stage.moveKey(anim().clip,keyTarget(id),path,from,to);
   const keyEase=(path:KeyPath,time:number,ease:Ease,id?:number)=>stage.setKeyEase(anim().clip,keyTarget(id),path,time,ease);
+  /** The key clipboard lives with the viewport: it survives undo and clip switches, and dies with the scene. */
+  let keyClipboard:KeyData[]=[];
+  const keyCopy=(keys:KeyRef[],id?:number)=>{const data=stage.copyKeys(anim().clip,keyTarget(id),keys);keyClipboard=data;return data.length;};
+  const keyPaste=(time?:number,id?:number)=>{
+   if(!keyClipboard.length)throw Object.assign(new Error('Copy keys first.'),{expected:true});
+   return stage.pasteKeys(anim().clip,keyTarget(id),keyClipboard,time??anim().time);
+  };
+  const keyShift=(keys:KeyRef[],delta:number,id?:number)=>stage.shiftKeys(anim().clip,keyTarget(id),keys,delta);
+  const clipDuplicate=(clip?:number)=>{const i=stage.duplicateClip(clipIndex(clip));stopAnim();patchStudio3D({anim:{...anim(),clip:i,playing:false,time:0,range:null}});return i;};
+  const animRange=(range:LoopRange|null)=>{
+   const infos=clipInfos();const a=anim();checkClip(a.clip,infos);
+   if(range===null){patchStudio3D({anim:{...a,range:null}});return;}
+   const r=checkRange(range.start,range.end,infos[a.clip].duration);
+   patchStudio3D({anim:{...a,range:r}});if(a.playing)lastTick=performance.now();
+  };
   /** Auto-key records transform changes into the current clip at the playhead. Turning it on without a clip makes one. */
   const autoKey=(on:boolean)=>{if(on&&!stage.clips.length)clipAdd();patchStudio3D({autoKey:!!on});};
   stage.autoKeySource=()=>getStudio3DState().autoKey&&stage.clips.length?{clip:anim().clip,time:anim().time}:null;
-  const off=registerStudio3DController({keyMove,keyEase,autoKey,clipAdd,clipRemove,clipRename,clipDuration,keySet,keyRemove,animPlay,animPause,animSeek,animLoop,animSpeed,setTextureTransform:(id,slot,p)=>stage.setTextureTransform(id,slot,p),exportGltf,setTextureFile,mirrorSelection,applyScale:applyScaleSel,mergeSelection:mergeSel,viewPreset,setPrimitive:(id,p)=>stage.setPrimitive(id,p),
+  const off=registerStudio3DController({keyMove,keyEase,keyCopy,keyPaste,keyShift,clipDuplicate,animRange,autoKey,clipAdd,clipRemove,clipRename,clipDuration,keySet,keyRemove,animPlay,animPause,animSeek,animLoop,animSpeed,setTextureTransform:(id,slot,p)=>stage.setTextureTransform(id,slot,p),exportGltf,setTextureFile,mirrorSelection,applyScale:applyScaleSel,mergeSelection:mergeSel,viewPreset,setPrimitive:(id,p)=>stage.setPrimitive(id,p),
    save:saveDocument,deleteSelection,duplicateSelection,exportMesh,renderTurntable,cancelRender:()=>{cancelFlag=true;},setUnit,openFiles,newScene,resetView:frameAll,frameSelection,select,renderStill,exportGlb,
    addPrimitive:k=>{const o=stage.addPrimitive(k);select(o.id);return o.id;},addLight:k=>{const o=stage.addLight(k);select(o.id);return o.id;},
    setTransform:(id,p)=>stage.setTransform(id,p),setMaterial:(id,p)=>stage.setMaterial(id,p),rename:(id,n)=>stage.rename(id,n),

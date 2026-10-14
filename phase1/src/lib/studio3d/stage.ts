@@ -5,7 +5,8 @@ import {checkPbr,alphaState,alphaModeOf,MaterialError,SLOT_CONFIG,type PbrExtras
 import type {NodeExtra} from './document';
 import {EASES,isEase,bakeTrack,type Ease} from './ease';
 import {buildExtras,type ClipMeta,type MetaTrack} from './clipMeta';
-import {KEY_PATHS,KEY_STRIDE,ClipError,MAX_CLIPS,DEFAULT_CLIP_SECONDS,insertKey,removeKey as removeKeyData,findKey,isPlainTrack,trackName,parseTrackName,checkKeyTime,checkDuration,checkClipName,lastKeyTime,type KeyPath} from './clips';
+import {groupRefs,keyIndices,copyTrackKeys,shiftTrackKeys,pasteTrackKeys,type KeyRef,type KeyData,type TrackData} from './keyEdit';
+import {KEY_PATHS,KEY_STRIDE,ClipError,MAX_CLIPS,MAX_KEYS_PER_TRACK,DEFAULT_CLIP_SECONDS,insertKey,removeKey as removeKeyData,findKey,isPlainTrack,trackName,parseTrackName,checkKeyTime,checkDuration,checkClipName,lastKeyTime,type KeyPath} from './clips';
 import {mergeTransform,DEFAULT_TRANSFORM,UvError,type TextureTransform} from './uv';
 import {textureBytes} from './validate';
 import {emptyStats,type ModelStats,type OutlineEntry,type Bounds} from './model';
@@ -434,6 +435,16 @@ export class Stage{
   const at=this.clipList.length;const add=()=>{this.clipList.splice(at,0,clip);this.clipRevision++;};add();
   this.push({label:`Add clip ${clip.name}`,undo:()=>{this.clipList.splice(at,1);this.clipRevision++;},redo:add});return at;
  }
+ /** Duplicates a clip with all tracks and their easing, right after the original. One undo step. */
+ duplicateClip(i:number):number{
+  if(this.clipList.length>=MAX_CLIPS)throw new ClipError(`A scene can have at most ${MAX_CLIPS} clips.`);
+  const src=this.needClip(i);
+  const copy=new THREE.AnimationClip(this.uniqueClipName(`${src.name} copy`),src.duration,src.tracks.map(t=>t.clone()));
+  (copy.userData as {ease?:unknown}).ease=Object.fromEntries(Object.entries(this.easeOf(src)).map(([k,v])=>[k,v.slice()]));
+  const at=i+1;const add=()=>{this.clipList.splice(at,0,copy);this.clipRevision++;};add();
+  this.push({label:`Duplicate clip ${src.name}`,undo:()=>{this.clipList.splice(at,1);this.clipRevision++;},redo:add});
+  return at;
+ }
  removeClip(i:number){
   const clip=this.needClip(i);const del=()=>{this.clipList.splice(i,1);this.clipRevision++;};del();
   this.push({label:`Delete clip ${clip.name}`,undo:()=>{this.clipList.splice(i,0,clip);this.clipRevision++;},redo:del});
@@ -497,6 +508,55 @@ export class Stage{
   const gone=removeKeyData(old.times,old.values,path,k);const ins=insertKey(gone.times,gone.values,path,t,value);
   const ne=eases.slice();ne.splice(k,1);ne.splice(ins.times.indexOf(t),0,e);
   this.editClip(i,`Move ${path} key on ${node.name}`,c=>{const base=this.snapClip(c);base.ease[name]=ne;return{...base,tracks:[...base.tracks.filter(x=>x.name!==name),this.makeTrack(name,path,ins.times,ins.values,old.getInterpolation())],duration:Math.max(base.duration,t)};});
+ }
+ /** Editable data of one track, with the easing padded to one entry per key. */
+ private dataOf(clip:THREE.AnimationClip,node:THREE.Object3D,path:KeyPath):{name:string;track:THREE.KeyframeTrack;data:TrackData}{
+  const t=this.trackOf(clip,node,path);
+  if(!t)throw new ClipError(`${node.name} has no ${path} keys in this clip.`);
+  if(!isPlainTrack(t.times,t.values,path))throw new ClipError('This track uses cubic spline keys and cannot be edited key by key.');
+  const e=this.easeOf(clip)[t.name]??[];
+  return{name:t.name,track:t,data:{times:Array.from(t.times),values:Array.from(t.values),eases:Array.from(t.times,(_,k)=>e[k]??'linear')}};
+ }
+ /** Copies keys with their values and easing, sorted by path and time. Throws when any key is missing. */
+ copyKeys(i:number,id:number,refs:readonly KeyRef[]):KeyData[]{
+  const clip=this.needClip(i);const node=this.keyNode(id);const out:KeyData[]=[];
+  for(const{path,times}of groupRefs(refs)){const{data}=this.dataOf(clip,node,path);out.push(...copyTrackKeys(data,path,keyIndices(data,times)));}
+  return out;
+ }
+ /** Moves a set of keys by the same delta, possibly across paths. One undo step. */
+ shiftKeys(i:number,id:number,refs:readonly KeyRef[],dt:number):number{
+  const clip=this.needClip(i);const node=this.keyNode(id);
+  const plan=new Map<string,{path:KeyPath;interp?:THREE.InterpolationModes;data:TrackData}>();
+  for(const{path,times}of groupRefs(refs)){
+   const{name,track,data}=this.dataOf(clip,node,path);
+   plan.set(name,{path,interp:track.getInterpolation(),data:shiftTrackKeys(data,path,keyIndices(data,times),dt)});
+  }
+  this.editClip(i,`Move keys on ${node.name}`,c=>{
+   const base=this.snapClip(c);
+   for(const[name,p]of plan){base.ease[name]=p.data.eases;base.tracks=[...base.tracks.filter(x=>x.name!==name),this.makeTrack(name,p.path,p.data.times,p.data.values,p.interp)];}
+   return{...base,duration:Math.max(base.duration,...[...plan.values()].map(p=>lastKeyTime(p.data.times)))};
+  });
+  return refs.length;
+ }
+ /** Pastes copied keys so the earliest lands at `at`, replacing keys on taken times. One undo step. Returns the number of pasted keys. */
+ pasteKeys(i:number,id:number,keys:readonly KeyData[],at:number):number{
+  const clip=this.needClip(i);const node=this.keyNode(id);const t=checkKeyTime(at);
+  if(!keys.length)throw new ClipError('Copy keys first.');
+  if(keys.length>MAX_KEYS_PER_TRACK)throw new ClipError(`At most ${MAX_KEYS_PER_TRACK} keys at once.`);
+  const plan=new Map<string,{path:KeyPath;interp?:THREE.InterpolationModes;data:TrackData}>();
+  for(const path of KEY_PATHS){
+   const ks=keys.filter(k=>k.path===path);if(!ks.length)continue;
+   const cur=this.trackOf(clip,node,path);
+   if(cur&&!isPlainTrack(cur.times,cur.values,path))throw new ClipError('This track uses cubic spline keys and cannot be edited key by key.');
+   const data=pasteTrackKeys(cur?this.dataOf(clip,node,path).data:undefined,path,ks,t);
+   plan.set(trackName(node.uuid,path),{path,interp:cur?.getInterpolation(),data});
+  }
+  this.editClip(i,`Paste keys on ${node.name}`,c=>{
+   const base=this.snapClip(c);
+   for(const[name,p]of plan){base.ease[name]=p.data.eases;base.tracks=[...base.tracks.filter(x=>x.name!==name),this.makeTrack(name,p.path,p.data.times,p.data.values,p.interp)];}
+   return{...base,duration:Math.max(base.duration,...[...plan.values()].map(p=>lastKeyTime(p.data.times)))};
+  });
+  return keys.length;
  }
  /** Easing of the segment that starts at a key. */
  setKeyEase(i:number,id:number,path:KeyPath,time:number,ease:Ease){

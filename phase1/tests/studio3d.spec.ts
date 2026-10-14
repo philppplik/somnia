@@ -33,7 +33,7 @@ test('3D studio refuses a file that is not glTF with a readable error',async({pa
 /** Helpers for the scene tests below. They drive the real app through its command layer (dev build) and read the studio session. */
 type P=import('@playwright/test').Page;
 const run=(page:P,id:string,params:unknown={})=>page.evaluate(async([i,p])=>{const m=await import('/src/lib/commands.ts');return (await m.executeCommand(i as string,p)) as unknown;},[id,params] as const);
-const session=(page:P)=>page.evaluate(async()=>{const m=await import('/src/lib/studio3d/session.ts');const s=m.getStudio3DState();return {anim:s.anim,outline:s.outline,marked:s.marked,selected:s.selected,info:s.selectedInfo,dirty:s.dirty,notice:s.notice,status:s.status,name:s.name};});
+const session=(page:P)=>page.evaluate(async()=>{const m=await import('/src/lib/studio3d/session.ts');const s=m.getStudio3DState();return {anim:s.anim,clips:s.clips,clipKeys:s.clipKeys,outline:s.outline,marked:s.marked,selected:s.selected,info:s.selectedInfo,dirty:s.dirty,notice:s.notice,status:s.status,name:s.name};});
 const open3d=async(page:P)=>{await page.goto('/');await page.getByRole('button',{name:/3D/}).first().click();};
 const blank=async(page:P)=>{await open3d(page);await page.getByTestId('3d-create-blank').click();await expect(page.getByTestId('studio3d-viewport')).toBeVisible();};
 const insert=async(page:P,kind:string,x:number)=>{await run(page,'studio3d.insert.primitive',{kind});const s=await session(page);const id=s.selected as number;await run(page,'studio3d.object.transform',{id,position:{x,y:0,z:0}});return id;};
@@ -235,4 +235,44 @@ test('3D studio moves a key, sets its easing, auto-keys and keeps easing and cli
  await expect(page.getByTestId('studio3d-animation')).toContainText('Slide',{timeout:20_000});
  await expect.poll(async()=>(await session(page)).clips[0]?.duration).toBe(5);
  await expect.poll(async()=>(await session(page)).clipKeys.find(k=>k.path==='position')?.eases[0]).toBe('easeIn');
+});
+
+test('3D studio zooms the timeline, shifts and pastes key selections, duplicates a clip and loops a range',async({page})=>{
+ await blank(page);
+ const id=await insert(page,'cube',0);
+ await run(page,'studio3d.clip.add',{name:'Move',duration:6});
+ await run(page,'studio3d.key.set',{path:'position',time:0});
+ await run(page,'studio3d.key.set',{path:'position',time:1});
+ await expect(page.getByTestId('studio3d-keyrow-position').getByTestId('studio3d-key')).toHaveCount(2);
+ // Zoom and pan the timeline view: the ruler shows a finer grid, fit restores it.
+ await page.getByTestId('studio3d-timeline-zoom-in').click();await page.getByTestId('studio3d-timeline-zoom-in').click();
+ await expect(page.getByTestId('studio3d-timeline-ruler')).toContainText('0:00.50');
+ await page.getByTestId('studio3d-timeline-zoom-fit').click();
+ await expect(page.getByTestId('studio3d-timeline-ruler')).toContainText('0:06.00');
+ // Copy two keys and paste them at the playhead.
+ await run(page,'studio3d.key.copy',{keys:[{path:'position',time:0},{path:'position',time:1}]});
+ await run(page,'studio3d.key.paste',{time:3});
+ await expect(page.getByTestId('studio3d-keyrow-position')).toContainText('0:03.00');
+ await expect(page.getByTestId('studio3d-keyrow-position')).toContainText('0:04.00');
+ // Shift the pasted keys as one undo step.
+ await run(page,'studio3d.key.shift',{keys:[{path:'position',time:3},{path:'position',time:4}],delta:0.5});
+ await expect(page.getByTestId('studio3d-keyrow-position')).toContainText('0:04.50');
+ await run(page,'studio3d.undo',{});
+ await expect(page.getByTestId('studio3d-keyrow-position')).toContainText('0:03.00');
+ await expect(page.getByTestId('studio3d-keyrow-position')).toContainText('0:04.00');
+ // Duplicate the clip: same keys, new current clip, one undo step.
+ await run(page,'studio3d.clip.duplicate',{});
+ await expect.poll(async()=>(await session(page)).clips.length).toBe(2);
+ await expect.poll(async()=>(await session(page)).anim.clip).toBe(1);
+ await expect.poll(async()=>(await session(page)).clipKeys.find(k=>k.path==='position')?.times.length).toBe(4);
+ await run(page,'studio3d.undo',{});
+ await expect.poll(async()=>(await session(page)).clips.length).toBe(1);
+ // Loop range preview: playback wraps inside the range, clearing it plays the whole clip again.
+ await run(page,'studio3d.anim.range',{start:1,end:2});
+ await run(page,'studio3d.anim.seek',{time:0});
+ await run(page,'studio3d.anim.play',{});
+ await expect.poll(async()=>{const a=(await session(page)).anim;return a.playing&&a.time>=1&&a.time<=2;},{timeout:10_000}).toBe(true);
+ await run(page,'studio3d.anim.pause',{});
+ await run(page,'studio3d.anim.range',{clear:true});
+ await expect.poll(async()=>(await session(page)).anim.range).toBe(null);
 });

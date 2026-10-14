@@ -271,6 +271,7 @@ function AnimationControls(){
    {s.clips.length>1&&<NativeSelect className="min-w-0 flex-1 rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={a.clip} aria-label={t('studio3d.anim.clip')} onChange={e=>void executeCommand('studio3d.anim.play',{clip:Number(e.currentTarget.value)})}>
     {s.clips.map((c,i)=><option key={i} value={i}>{c.name}</option>)}</NativeSelect>}
    <Button variant="outline" onClick={()=>void executeCommand('studio3d.clip.add',{})}>{t('studio3d.clip.add')}</Button>
+   {clip&&<Button variant="outline" onClick={()=>void executeCommand('studio3d.clip.duplicate',{})}>{t('studio3d.clip.duplicate')}</Button>}
    {clip&&<Button variant="outline" onClick={()=>void executeCommand('studio3d.clip.remove',{})}>{t('studio3d.clip.remove')}</Button>}</div>
   {!clip&&<p className="m-0 text-xs text-ink-3">{t('studio3d.clip.none')}</p>}
   {clip&&<>

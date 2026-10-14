@@ -8,6 +8,8 @@ import {PARAM_SPECS,MATERIAL_PRESET_IDS} from './primitives';
 import {ALPHA_MODES,TEXTURE_SLOTS,MAX_EMISSIVE_INTENSITY,type TextureSlot} from './materials';
 import {EASES,type Ease} from './ease';
 import {KEY_PATHS,type KeyPath} from './clips';
+import type {KeyRef} from './keyEdit';
+import type {LoopRange} from './animation';
 import type {TextureTransform} from './uv';
 import {VIEW_PRESETS,type ViewPreset} from './viewPresets';
 import type {MirrorAxis,PrimitiveKind,LightKind,TransformPatch,MaterialPatch,LightPatch,AlignAxis,AlignTo,PivotAt} from './stage';
@@ -37,6 +39,11 @@ export interface Studio3DController{
  keyRemove(path:KeyPath,time?:number,id?:number):void;
  keyMove(path:KeyPath,from:number,to:number,id?:number):void;
  keyEase(path:KeyPath,time:number,ease:Ease,id?:number):void;
+ keyCopy(keys:KeyRef[],id?:number):number;
+ keyPaste(time?:number,id?:number):number;
+ keyShift(keys:KeyRef[],delta:number,id?:number):number;
+ clipDuplicate(clip?:number):number;
+ animRange(range:LoopRange|null):void;
  autoKey(on:boolean):void;
  animPlay(clip?:number):void;
  animPause():void;
@@ -93,6 +100,8 @@ const VEC={type:'object',properties:{x:{type:'number'},y:{type:'number'},z:{type
 /** Every primitive setting name with its widest range. The stage checks the range of the actual primitive. */
 const PRIMITIVE_PROPS:Record<string,unknown>=Object.fromEntries(Object.values(PARAM_SPECS).flat().map(p=>[p.id,{type:p.integer?'integer':'number',minimum:p.min,maximum:p.max}]));
 const hasClips=()=>hasScene()&&getStudio3DState().clips.length>0;
+const hasKeys=()=>hasScene()&&getStudio3DState().selected!=null&&getStudio3DState().clips.length>0;
+const KEYREFS={type:'array',items:{type:'object',properties:{path:{enum:['position','rotation','scale']},time:{type:'number',minimum:0,maximum:3600}},required:['path','time'],additionalProperties:false},minItems:1,maxItems:6000};
 const hasScene=()=>!!controller&&getStudio3DState().status==='ready';
 const object=(properties:Record<string,unknown>,required=Object.keys(properties))=>({type:'object',properties,required,additionalProperties:false});
 export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
@@ -149,6 +158,14 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{path:KeyPath;time?:number;id?:number}>('studio3d.key.remove','Remove a position, rotation or scale key of a 3D object in the current clip','View',p=>need().keyRemove(p.path,p.time,p.id),object({path:{enum:[...KEY_PATHS]},time:{type:'number',minimum:0,maximum:3600},id:{type:'integer',minimum:0}},['path']),hasClips),
   add<{path:KeyPath;time:number;to:number;id?:number}>('studio3d.key.move','Move a key of a 3D object to another time in the current clip','View',p=>need().keyMove(p.path,p.time,p.to,p.id),object({path:{enum:[...KEY_PATHS]},time:{type:'number',minimum:0,maximum:3600},to:{type:'number',minimum:0,maximum:3600},id:{type:'integer',minimum:0}},['path','time','to']),hasClips),
   add<{path:KeyPath;time:number;ease:Ease;id?:number}>('studio3d.key.ease','Set the easing of the segment after a key (linear, step, ease in, ease out, ease in-out)','View',p=>need().keyEase(p.path,p.time,p.ease,p.id),object({path:{enum:[...KEY_PATHS]},time:{type:'number',minimum:0,maximum:3600},ease:{enum:[...EASES]},id:{type:'integer',minimum:0}},['path','time','ease']),hasClips),
+  add<{clip?:number}>('studio3d.clip.duplicate','Duplicate a 3D animation clip with all its keys','View',p=>need().clipDuplicate(p?.clip),object({clip:{type:'integer',minimum:0}},[]),hasClips),
+  add<{keys:KeyRef[]}>('studio3d.key.copy','Copy position, rotation or scale keys of the selected 3D object in the current clip','View',p=>need().keyCopy(p.keys),object({keys:KEYREFS}),hasKeys),
+  add<{time?:number}>('studio3d.key.paste','Paste the copied keys at the playhead in the current clip','View',p=>need().keyPaste(p?.time),object({time:{type:'number',minimum:0,maximum:3600}},[]),hasKeys),
+  add<{keys:KeyRef[];delta:number}>('studio3d.key.shift','Move several keys of a 3D object in time by the same amount','View',p=>need().keyShift(p.keys,p.delta),object({keys:KEYREFS,delta:{type:'number',minimum:-3600,maximum:3600}}),hasKeys),
+  add<{start?:number;end?:number;clear?:boolean}>('studio3d.anim.range','Preview a part of the 3D animation clip as a loop','View',p=>{
+   if(p?.clear)need().animRange(null);
+   else{if(typeof p?.start!=='number'||typeof p?.end!=='number')throw Object.assign(new Error('Give a start and an end, or clear.'),{expected:true});need().animRange({start:p.start,end:p.end});}
+  },object({start:{type:'number',minimum:0,maximum:3600},end:{type:'number',minimum:0,maximum:3600},clear:{type:'boolean'}},[]),hasClips),
   add<{on?:boolean}>('studio3d.anim.autokey','Turn auto-key on or off: transform changes are recorded as keys at the current time','View',p=>need().autoKey(p?.on??!getStudio3DState().autoKey),object({on:{type:'boolean'}},[]),hasScene),
   add('studio3d.export.glb','Export the scene as GLB','Project',()=>need().exportGlb()),
   add('studio3d.export.gltf','Export the scene as glTF (JSON with embedded data)','Project',()=>need().exportGltf()),

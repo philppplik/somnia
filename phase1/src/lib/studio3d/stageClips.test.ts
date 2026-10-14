@@ -115,3 +115,45 @@ test('a file without our extras keeps its baked keys and ends at its last key',a
  const g=await new Promise<{scene:THREE.Group;animations:THREE.AnimationClip[]}>((res,rej)=>new GLTFLoader().parse(JSON.stringify(out),'',res as never,rej));
  const st2=new Stage();st2.loadMany([...g.scene.children]);st2.setClips(g.animations);assert.equal(st2.clips[0].duration,1);
 });
+test('duplicateClip copies tracks, duration and easing and is one undo step',()=>{
+ const {st,m}=setup();const c=st.addClip('Walk',3);
+ st.setKey(c,m.id,'position',0);st.setKey(c,m.id,'position',1);st.setKeyEase(c,m.id,'position',0,'easeIn');
+ const d=st.duplicateClip(c);
+ assert.equal(st.clips.length,2);assert.equal(d,1);
+ assert.equal(st.clips[d].name,'Walk copy');assert.equal(st.clips[d].duration,3);
+ assert.deepEqual(st.keysOf(d,m.id)[0].times,[0,1]);assert.deepEqual(st.keysOf(d,m.id)[0].eases,['easeIn','linear']);
+ st.setKey(d,m.id,'position',2);assert.deepEqual(st.keysOf(c,m.id)[0].times,[0,1]);
+ assert.equal(st.undo(),true);assert.equal(st.clips.length,2);
+ assert.equal(st.undo(),true);assert.equal(st.clips.length,1);
+ assert.equal(st.redo(),true);assert.equal(st.clips.length,2);assert.equal(st.clips[1].name,'Walk copy');
+});
+test('shiftKeys moves a multi-path selection as one undo step',()=>{
+ const {st,m}=setup();const c=st.addClip('Both',4);
+ st.setKey(c,m.id,'position',0);st.setKey(c,m.id,'position',1);st.setKey(c,m.id,'scale',1);
+ st.setKeyEase(c,m.id,'position',0,'step');
+ const n=st.shiftKeys(c,m.id,[{path:'position',time:1},{path:'scale',time:1}],0.5);
+ assert.equal(n,2);
+ assert.deepEqual(st.keysOf(c,m.id).find(k=>k.path==='position')!.times,[0,1.5]);
+ assert.deepEqual(st.keysOf(c,m.id).find(k=>k.path==='position')!.eases,['step','linear']);
+ assert.deepEqual(st.keysOf(c,m.id).find(k=>k.path==='scale')!.times,[1.5]);
+ assert.equal(st.undo(),true);
+ assert.deepEqual(st.keysOf(c,m.id).find(k=>k.path==='position')!.times,[0,1]);
+ assert.deepEqual(st.keysOf(c,m.id).find(k=>k.path==='scale')!.times,[1]);
+});
+test('shiftKeys refuses collisions with keys that stay',()=>{
+ const {st,m}=setup();const c=st.addClip('Hit',4);
+ st.setKey(c,m.id,'position',0);st.setKey(c,m.id,'position',1);
+ assert.throws(()=>st.shiftKeys(c,m.id,[{path:'position',time:0}],1),/land on another key/);
+ assert.deepEqual(st.keysOf(c,m.id)[0].times,[0,1]);
+});
+test('copyKeys and pasteKeys move keys with easing across times, one undo step',()=>{
+ const {st,m}=setup();const c=st.addClip('Copy',6);
+ st.setKey(c,m.id,'position',0);st.setKey(c,m.id,'position',1,{x:4});st.setKeyEase(c,m.id,'position',0,'easeOut');
+ const clip=st.copyKeys(c,m.id,[{path:'position',time:0},{path:'position',time:1}]);
+ assert.equal(clip.length,2);assert.equal(clip[1].value[0],4);assert.equal(clip[0].ease,'easeOut');
+ const n=st.pasteKeys(c,m.id,clip,3);
+ assert.equal(n,2);
+ const k=st.keysOf(c,m.id)[0];assert.deepEqual(k.times,[0,1,3,4]);assert.deepEqual(k.eases,['easeOut','linear','easeOut','linear']);
+ assert.equal(st.undo(),true);assert.deepEqual(st.keysOf(c,m.id)[0].times,[0,1]);
+ assert.throws(()=>st.pasteKeys(c,m.id,[],0),/Copy keys first/);
+});
