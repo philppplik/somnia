@@ -14,5 +14,6 @@ export function KeyRepeat({count:selected}:{count:number}){
   <NativeSelect className={`${field} w-28 shrink-0`} value={mode} aria-label={t('animation.keys.repeat.mode')} onChange={e=>setMode(e.target.value as RepeatMode)} data-testid="animation-keys-repeat-mode"><option value="cycle">{t('animation.keys.repeat.cycle')}</option><option value="pingpong">{t('animation.keys.repeat.pingpong')}</option></NativeSelect>
   <Button size="tiny" variant="ghost" disabled={selected<2||!valid} title={t('animation.keys.repeat.hint')} onClick={()=>void executeCommand('animation.keys.repeat',{count:num,mode})} data-testid="animation-keys-repeat-go">{t('animation.keys.repeat')}</Button>
    <Button size="tiny" variant="ghost" disabled={selected<2} title={t('animation.keys.reverse.hint')} onClick={()=>void executeCommand('animation.keys.reverse',{})} data-testid="animation-keys-reverse">{t('animation.keys.reverse')}</Button>
+  <Button size="tiny" variant="ghost" disabled={selected<2} title={t('animation.keys.invert.hint')} onClick={()=>void executeCommand('animation.keys.invert',{})} data-testid="animation-keys-invert">{t('animation.keys.invert')}</Button>
  </span>;
 }

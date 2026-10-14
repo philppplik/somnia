@@ -805,5 +805,8 @@
  "animation.keys.reverse.hint": "Play the selected keys backwards in place; ease curves mirror",
  "animation.keySet.reverse": "Reverse set",
  "animation.keySet.reverse.hint": "Play every key of the picked layers backwards inside each own first and last key",
- "cmd.animation.keys.reverse": "Reverse keys in time"
+ "cmd.animation.keys.reverse": "Reverse keys in time",
+ "animation.keys.invert": "Invert values",
+ "animation.keys.invert.hint": "Flip the values of the selected keys around the middle of each property range; times and easing stay",
+ "cmd.animation.keys.invert": "Invert the values of the selected keys"
 }

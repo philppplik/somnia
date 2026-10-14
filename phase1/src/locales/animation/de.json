@@ -805,5 +805,8 @@
  "animation.keys.reverse.hint": "Gewählte Keys an Ort und Stelle rückwärts abspielen; Easing-Kurven werden gespiegelt",
  "animation.keySet.reverse": "Set umkehren",
  "animation.keySet.reverse.hint": "Alle Keys der gewählten Ebenen innerhalb des jeweils eigenen ersten und letzten Keys rückwärts abspielen",
- "cmd.animation.keys.reverse": "Keys zeitlich umkehren"
+ "cmd.animation.keys.reverse": "Keys zeitlich umkehren",
+ "animation.keys.invert": "Werte invertieren",
+ "animation.keys.invert.hint": "Werte der gewählten Keys an der Mitte des Wertebereichs jeder Eigenschaft spiegeln; Zeiten und Easing bleiben",
+ "cmd.animation.keys.invert": "Werte der gewählten Keys invertieren"
 }

@@ -713,6 +713,21 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.keys.invert",
+      "title": "Invert the values of the selected keys",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "flip",
+        "invert",
+        "keys",
+        "mirror",
+        "values"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.keys.nudge",
       "title": "Move selected keys",
       "category": "Edit",

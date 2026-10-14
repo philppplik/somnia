@@ -805,5 +805,8 @@
  "animation.keys.reverse.hint": "Joue les clés choisies à l’envers sur place ; les courbes sont reflétées",
  "animation.keySet.reverse": "Inverser le groupe",
  "animation.keySet.reverse.hint": "Joue à l’envers toutes les clés des calques cochés entre leur première et dernière clé",
- "cmd.animation.keys.reverse": "Inverser les clés dans le temps"
+ "cmd.animation.keys.reverse": "Inverser les clés dans le temps",
+ "animation.keys.invert": "Inverser les valeurs",
+ "animation.keys.invert.hint": "Reflète les valeurs des clés choisies autour du milieu de la plage de chaque propriété ; temps et courbes inchangés",
+ "cmd.animation.keys.invert": "Inverser les valeurs des clés choisies"
 }

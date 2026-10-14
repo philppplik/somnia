@@ -805,5 +805,8 @@
  "animation.keys.reverse.hint": "Toca as chaves escolhidas de trás para frente no lugar; as curvas são espelhadas",
  "animation.keySet.reverse": "Inverter grupo",
  "animation.keySet.reverse.hint": "Toca de trás para frente todas as chaves das camadas marcadas entre a primeira e a última chave de cada uma",
- "cmd.animation.keys.reverse": "Inverter chaves no tempo"
+ "cmd.animation.keys.reverse": "Inverter chaves no tempo",
+ "animation.keys.invert": "Inverter valores",
+ "animation.keys.invert.hint": "Espelha os valores das chaves escolhidas em torno do meio da faixa de cada propriedade; tempos e curvas não mudam",
+ "cmd.animation.keys.invert": "Inverter os valores das chaves escolhidas"
 }
