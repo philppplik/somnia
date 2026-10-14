@@ -1,11 +1,11 @@
-import {findComp,findLayer,validSource,MAX_MASK_POINTS,MAX_SHAPE_KEYS,newId,makeTransform,type AnimationDocument,type Layer,type LayerMask,type MaskPath,type MaskPoint,type MaskShapeKey,type Property,type Vec2} from './model';
+import {findComp,findLayer,validSource,validMaskPath,MAX_MASK_POINTS,MAX_SHAPE_KEYS,newId,makeTransform,type AnimationDocument,type Layer,type LayerMask,type MaskPath,type MaskPoint,type MaskShapeKey,type Property,type Vec2} from './model';
 import {bezierPath,lerpPath,morphPath,morphProblem,MorphError,removePoint,type MorphOpts} from './masks';
 import {evaluate} from './interpolate';
 import {worldMatrix} from './scene';
 import {pathData} from '../interface/vectorCore';
 import type {InterfacePath} from '../interface/schema';
 import type {Edit} from './edit';
-import {booleanRings,flattenRing,BooleanError,MAX_RESULT_POINTS,type BoolOp,type Pt} from './pathBoolean';
+import {booleanRings,flattenRing,simplifyRing,strokeOutline,BooleanError,MAX_RESULT_POINTS,type BoolOp,type Pt} from './pathBoolean';
 /** Shape layers with a path source: normalized (0..1 of the layer box) bezier points, optional morph keys. */
 const r4=(n:number)=>Math.round(n*1e4)/1e4;
 const scale=(p:MaskPath,w:number,h:number):MaskPath=>({closed:p.closed,points:p.points.map(q=>({x:q.x*w,y:q.y*h,...(q.inX!==undefined?{inX:q.inX*w,inY:(q.inY??0)*h}:{}),...(q.outX!==undefined?{outX:q.outX*w,outY:(q.outY??0)*h}:{})}))});
@@ -245,4 +245,60 @@ export function booleanEdits(doc:AnimationDocument,layerId:string,otherId:string
  const source={path:main as never,subpaths:(rest.length?rest:undefined) as never};
  if(!validSource({...l.source,...source}))throw Error('Too many subpaths or points in one path layer.');
  return [{type:'layer.update',layer:l.id,source},{type:'layer.remove',layer:o.id}];
+}
+
+const KAPPA=0.5522847498;
+/** Closed ring of a rect, ellipse or path mask in layer pixels (curves flattened). Null when the mask is open. */
+function maskRing(m:LayerMask):Pt[]|null{
+ if(m.shape==='rect')return [[m.x,m.y],[m.x+m.width,m.y],[m.x+m.width,m.y+m.height],[m.x,m.y+m.height]];
+ if(m.shape==='ellipse'){const rx=m.width/2,ry=m.height/2,cx=m.x+rx,cy=m.y+ry,kx=rx*KAPPA,ky=ry*KAPPA;
+  return flattenRing({closed:true,points:[{x:cx,y:cy-ry,inX:-kx,inY:0,outX:kx,outY:0},{x:cx+rx,y:cy,inX:0,inY:-ky,outX:0,outY:ky},{x:cx,y:cy+ry,inX:kx,inY:0,outX:-kx,outY:0},{x:cx-rx,y:cy,inX:0,inY:ky,outX:0,outY:-ky}]},1,1);}
+ if(!m.path||!m.path.closed||m.path.points.length<3)return null;
+ return flattenRing({closed:true,points:m.path.points.map(q=>({...q,x:q.x+m.x,y:q.y+m.y}))},1,1);
+}
+/** Tolerance in pixels when a mask result has to be thinned to fit the mask point limit. */
+export const MASK_SIMPLIFY_TOLERANCE=0.5;
+/** Path boolean of two masks of one layer: mask `maskId` becomes the result (a path mask with corner points), mask `otherId` is removed. One layer.masks edit, one undo step. Masks hold one path of at most 32 points, so the result must be a single ring: results with holes or several parts are refused, and rings above 32 points are thinned with Douglas-Peucker at 0.5 px or refused. Refused for animated, inverted and open masks and for masks with different modes. */
+export function maskBooleanEdit(doc:AnimationDocument,layerId:string,maskId:string,otherId:string,op:BoolOp):Edit{
+ const c=findComp(doc),l=c&&findLayer(c,layerId);if(!c||!l)throw Error('Select a layer.');
+ if(l.locked)throw Error('Layer is locked.');
+ if(maskId===otherId)throw Error('Pick another mask.');
+ const list=l.masks??[],a=list.find(m=>m.id===maskId),b=list.find(m=>m.id===otherId);
+ if(!a||!b)throw Error('Mask no longer exists.');
+ if([a,b].some(m=>m.anim||m.shapeKeys?.length))throw Error('Turn off mask animation before combining.');
+ if(a.invert||b.invert)throw Error('Inverted masks cannot be combined.');
+ if(a.mode!==b.mode)throw Error('Both masks need the same mode.');
+ const ra=maskRing(a),rb=maskRing(b);if(!ra||!rb)throw Error('Boolean operations need closed paths.');
+ let res:Pt[][];try{res=booleanRings([ra],[rb],op);}catch(e){if(e instanceof BooleanError)throw Error(e.message);throw e;}
+ if(!res.length)throw Error('The result would be empty.');
+ if(res.length>1)throw Error('The result has several parts; a mask holds one path.');
+ let ring=res[0];if(ring.length>MAX_MASK_POINTS)ring=simplifyRing(ring,MASK_SIMPLIFY_TOLERANCE);
+ if(ring.length>MAX_MASK_POINTS)throw Error(`The result needs more than ${MAX_MASK_POINTS} points.`);
+ const path:MaskPath={closed:true,points:ring.map(p=>({x:r4(p[0]),y:r4(p[1])}))};
+ const next:LayerMask={...a,shape:'path',x:0,y:0,path};
+ if(!validMaskPath(path))throw Error('The result is out of range.');
+ return {type:'layer.masks',layer:l.id,masks:list.filter(m=>m.id!==otherId).map(m=>m.id===maskId?next:m)};
+}
+
+/** Most flattened segments of one stroked layer that expand stroke accepts. */
+export const MAX_STROKE_SEGMENTS=300;
+/** Turns the stroke of a static path layer into its own filled outline layer (stroke colour as fill), then removes the stroke from the source layer. Two edits in one dispatch, one undo step. Butt caps and miter joins (limit 4) like the renderer; curves are flattened (about 0.25 px). Masks, matte and effects are copied to the outline layer. Refused for animated paths, animated or dashed strokes (trim, dash), zero width and results beyond the path point limits. */
+export function expandStrokeEdits(doc:AnimationDocument,layerId:string,id=newId('layer')):Edit[]{
+ const {c,l}=target(doc,layerId);if(l.locked)throw Error('Layer is locked.');
+ const st=l.stroke;if(!st||st.width<=0)throw Error('The layer has no stroke to expand.');
+ if(l.source.pathKeys?.length)throw Error('Turn off path animation before expanding the stroke.');
+ if(st.trim||st.dash)throw Error('Remove stroke trim and dash before expanding.');
+ const {w,h}=box(l),lines=pathSubpaths(l.source).map(sp=>({pts:flattenRing(sp as MaskPath,w,h),closed:sp.closed}));
+ if(lines.reduce((n,ln)=>n+ln.pts.length,0)>MAX_STROKE_SEGMENTS)throw Error('The path is too detailed to expand its stroke.');
+ let rings:Pt[][];try{rings=strokeOutline(lines,st.width);}catch(e){if(e instanceof BooleanError)throw Error(e.message);throw e;}
+ if(!rings.length)throw Error('The stroke has no area.');
+ const all=rings.flat(),x0=Math.floor(Math.min(...all.map(p=>p[0]))),y0=Math.floor(Math.min(...all.map(p=>p[1]))),x1=Math.ceil(Math.max(...all.map(p=>p[0]))),y1=Math.ceil(Math.max(...all.map(p=>p[1])));
+ const W=Math.max(1,x1-x0),H=Math.max(1,y1-y0),nrm=rings.map(r=>({closed:true,points:r.map(p=>({x:r4((p[0]-x0)/W),y:r4((p[1]-y0)/H)}))}));
+ if(nrm.length>8||nrm.reduce((n,r)=>n+r.points.length,0)>MAX_RESULT_POINTS||nrm.some(r=>r.points.length>256))throw Error('Too many subpaths or points in one path layer.');
+ const [main,...rest]=nrm;
+ const source={shape:'path' as const,color:st.color,width:W,height:H,path:main as never,...(rest.length?{subpaths:rest as never}:{})};
+ if(!validSource(source))throw Error('The outline is out of range.');
+ const sh=(p:Property):Property=>({...p,value:(p.value as Vec2).map((v,i)=>v-(i?y0:x0)) as unknown as Vec2,keys:p.keys.map(k=>({...k,v:(k.v as Vec2).map((v,i)=>v-(i?y0:x0)) as unknown as Vec2}))});
+ void c;
+ return [{type:'layer.stroke',layer:l.id,stroke:null},{type:'layer.add',kind:'shape',id,over:{name:`${l.name} stroke`,source,transform:{...l.transform,anchor:sh(l.transform.anchor)},parent:l.parent,inT:l.inT,outT:l.outT,offset:l.offset,...(l.masks?{masks:l.masks}:{}),...(l.matte?{matte:l.matte}:{}),...(l.effects?{effects:l.effects}:{})}}];
 }

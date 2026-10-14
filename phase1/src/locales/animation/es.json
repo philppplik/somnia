@@ -431,5 +431,10 @@
  "animation.pathLayer.bool.intersect": "Intersecar",
  "animation.pathLayer.bool.exclude": "Excluir",
  "animation.pathLayer.boolApply": "Aplicar",
- "cmd.animation.layer.pathBoolean": "Unir, restar, intersecar o excluir dos capas de trazado"
+ "cmd.animation.layer.pathBoolean": "Unir, restar, intersecar o excluir dos capas de trazado",
+ "animation.masks.boolOther": "Combinar con máscara",
+ "animation.masks.maskN": "Máscara {n}",
+ "animation.pathLayer.expandStroke": "Expandir trazo a capa de contorno",
+ "cmd.animation.mask.boolean": "Unir, restar, intersecar o excluir dos máscaras",
+ "cmd.animation.layer.expandStroke": "Expandir el trazo de una capa de trazado a una capa de contorno"
 }

@@ -431,5 +431,10 @@
  "animation.pathLayer.bool.intersect": "Intersecter",
  "animation.pathLayer.bool.exclude": "Exclure",
  "animation.pathLayer.boolApply": "Appliquer",
- "cmd.animation.layer.pathBoolean": "Unir, soustraire, intersecter ou exclure deux calques de tracé"
+ "cmd.animation.layer.pathBoolean": "Unir, soustraire, intersecter ou exclure deux calques de tracé",
+ "animation.masks.boolOther": "Combiner avec le masque",
+ "animation.masks.maskN": "Masque {n}",
+ "animation.pathLayer.expandStroke": "Étendre le contour en calque de forme",
+ "cmd.animation.mask.boolean": "Unir, soustraire, intersecter ou exclure deux masques",
+ "cmd.animation.layer.expandStroke": "Étendre le contour d'un calque de tracé en calque de forme"
 }

@@ -431,5 +431,10 @@
  "animation.pathLayer.bool.intersect": "Schnittmenge",
  "animation.pathLayer.bool.exclude": "Ausschließen",
  "animation.pathLayer.boolApply": "Anwenden",
- "cmd.animation.layer.pathBoolean": "Zwei Pfadebenen vereinen, subtrahieren, schneiden oder ausschließen"
+ "cmd.animation.layer.pathBoolean": "Zwei Pfadebenen vereinen, subtrahieren, schneiden oder ausschließen",
+ "animation.masks.boolOther": "Mit Maske verrechnen",
+ "animation.masks.maskN": "Maske {n}",
+ "animation.pathLayer.expandStroke": "Kontur in Umrissebene umwandeln",
+ "cmd.animation.mask.boolean": "Zwei Masken vereinen, subtrahieren, schneiden oder ausschließen",
+ "cmd.animation.layer.expandStroke": "Kontur einer Pfadebene in eine Umrissebene umwandeln"
 }

@@ -431,5 +431,10 @@
  "animation.pathLayer.bool.intersect": "Intersect",
  "animation.pathLayer.bool.exclude": "Exclude",
  "animation.pathLayer.boolApply": "Apply",
- "cmd.animation.layer.pathBoolean": "Unite, subtract, intersect or exclude two path layers"
+ "cmd.animation.layer.pathBoolean": "Unite, subtract, intersect or exclude two path layers",
+ "animation.masks.boolOther": "Combine with mask",
+ "animation.masks.maskN": "Mask {n}",
+ "animation.pathLayer.expandStroke": "Expand stroke to outline layer",
+ "cmd.animation.mask.boolean": "Unite, subtract, intersect or exclude two masks",
+ "cmd.animation.layer.expandStroke": "Expand the stroke of a path layer into an outline layer"
 }

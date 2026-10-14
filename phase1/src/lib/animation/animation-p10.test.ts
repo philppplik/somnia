@@ -9,7 +9,8 @@ import {animatedTargets,allTargetKeys,propertyOf,moveTargetKeys,easeTargetKeys,p
 import {EASE_PRESETS,easePresetOf} from './graph';
 import {animationCommandSpecs} from './commands';
 import {booleanRings,flattenRing,ringArea,type BoolOp,type Pt} from './pathBoolean';
-import {booleanEdits} from './pathLayer';
+import {booleanEdits,maskBooleanEdit,expandStrokeEdits} from './pathLayer';
+import {strokeOutline,simplifyRing} from './pathBoolean';
 import {deleteEasingEdit,findEasing,saveEasingEdit,userEasings,validateEasingLib,MAX_EASINGS} from './easingLibrary';
 import {elasticTargetKeys} from './keyTargets';
 import {BUILTIN_MOTIONS,MAX_USER_MOTIONS,LEGACY_KEY,deleteMotionEdit,exportMotionsJson,findMotion,legacyMotions,listMotions,mergeMotionsEdit,motionEdits,motionFromKeys,parseMotionsJson,saveMotionEdit,userMotions,validMotion} from './motionLibrary';
@@ -788,4 +789,61 @@ test('P32: curves are flattened within tolerance and refusals hold',()=>{
 test('P32: boolean command and locale keys exist',()=>{
  assert.ok(animationCommandSpecs().some(s=>s.id==='animation.layer.pathBoolean'));
  for(const l of ['en','de','es','fr','pt-BR']){const j=JSON.parse(readFileSync(new URL(`../../locales/animation/${l}.json`,import.meta.url),'utf8'));for(const k of ['animation.pathLayer.boolOp','animation.pathLayer.bool.unite','animation.pathLayer.bool.subtract','animation.pathLayer.bool.intersect','animation.pathLayer.bool.exclude','animation.pathLayer.boolApply','cmd.animation.layer.pathBoolean'])assert.ok(j[k],`${l} ${k}`);}
+});
+
+const mk=(id:string,o:Partial<import('./model').LayerMask>):import('./model').LayerMask=>({id,shape:'rect',mode:'add',x:0,y:0,width:100,height:100,feather:0,invert:false,...o});
+const maskDoc=(a:Partial<import('./model').LayerMask>,b:Partial<import('./model').LayerMask>)=>applyEdit(base(),{type:'layer.masks',layer:'photo',masks:[mk('ma',a),mk('mb',b)]});
+const maskArea=(d:AnimationDocument)=>{const m=layer(d,'photo').masks!.find(x=>x.id==='ma')!;return Math.abs(ringArea(m.path!.points.map(p=>[p.x+m.x,p.y+m.y] as Pt)));};
+test('P33: mask booleans have the known areas, one undo, one mask left',()=>{
+ const want:Record<BoolOp,number>={unite:17500,intersect:2500,subtract:7500,exclude:15000};
+ for(const op of Object.keys(want) as BoolOp[]){const d0=maskDoc({},{x:50,y:50}),r=d0.revision;const d=applyEdit(d0,maskBooleanEdit(d0,'photo','ma','mb',op));
+  assert.equal(d.revision,r+1,'one undo step');assert.equal(layer(d,'photo').masks!.length,1);assert.equal(layer(d,'photo').masks![0].shape,'path');assert.ok(Math.abs(maskArea(d)-want[op])<1,`${op} ${maskArea(d)}`);validateDocument(d);}
+ let d0=maskDoc({shape:'ellipse'},{x:0,y:0,width:50,height:100});const d=applyEdit(d0,maskBooleanEdit(d0,'photo','ma','mb','intersect'));
+ assert.ok(layer(d,'photo').masks![0].path!.points.length<=32);assert.ok(Math.abs(maskArea(d)-Math.PI*2500/2)/(Math.PI*1250)<0.03,'half disc '+maskArea(d));
+ d0=maskDoc({shape:'ellipse'},{x:50,y:0});const u=applyEdit(d0,maskBooleanEdit(d0,'photo','ma','mb','unite')),ua=maskArea(u);assert.ok(Math.abs(ua-(10000+Math.PI*1250))/13927<0.01,'ellipse union '+ua);
+});
+test('P33: mask boolean refusals',()=>{
+ const E=(d:AnimationDocument,re:RegExp,op:BoolOp='unite')=>assert.throws(()=>maskBooleanEdit(d,'photo','ma','mb',op),re);
+ E(maskDoc({},{x:300,y:300}),/empty/,'intersect');
+ E(maskDoc({},{x:300,y:300}),/several parts/);
+ E(maskDoc({width:100,height:100},{x:25,y:25,width:50,height:50}),/several parts/,'subtract');
+ E(maskDoc({invert:true},{x:50}),/Inverted/);E(maskDoc({mode:'subtract'},{x:50}),/same mode/);
+ E(maskDoc({},{x:50,shape:'path',path:{closed:false,points:[{x:0,y:0},{x:10,y:0},{x:10,y:10}]}}),/closed/);
+ let d=maskDoc({},{x:50});d=applyEdit(d,maskEdit(d,'photo',{op:'animate',mask:'ma',prop:'position',on:true,t:0}));E(d,/animation/);
+ d=maskDoc({},{x:50});d=applyEdit(d,{type:'layer.update',layer:'photo',locked:true});E(d,/locked/);
+ assert.throws(()=>maskBooleanEdit(maskDoc({},{x:50}),'photo','ma','ma','unite'),/another/);
+ assert.throws(()=>maskBooleanEdit(maskDoc({},{x:50}),'photo','ma','zz','unite'),/no longer/);
+});
+const gArea=(d:AnimationDocument,id:string)=>{const l=layer(d,id);const W=l.source.width!,H=l.source.height!;const rs=[l.source.path!,...(l.source.subpaths??[])].map(q=>q.points.map(p=>[p.x*W,p.y*H] as Pt));
+ const inR=(r:Pt[],p:Pt)=>{let c=false;for(let i=0,j=r.length-1;i<r.length;j=i++){const a=r[i],b=r[j];if((a[1]>p[1])!==(b[1]>p[1])&&p[0]<(b[0]-a[0])*(p[1]-a[1])/(b[1]-a[1])+a[0])c=!c;}return c;};
+ return rs.reduce((n,r,i)=>n+(rs.filter((o,k)=>k!==i&&inR(o,r[0])).length%2?-1:1)*Math.abs(ringArea(r)),0);};
+const strokeDoc=(pts:{x:number;y:number;outX?:number;outY?:number;inX?:number;inY?:number}[],closed:boolean,width=10)=>{let d=pathDoc();
+ d=applyEdit(d,{type:'layer.update',layer:'pa',source:{path:{closed,points:pts}}});return applyEdit(d,{type:'layer.stroke',layer:'pa',stroke:{color:'#00ff00',width}});};
+test('P33: expand stroke makes a filled outline layer with the known area, one undo',()=>{
+ let d0=strokeDoc([{x:0.1,y:0.5},{x:0.9,y:0.5}],false);let r=d0.revision;let d=applyEdits(d0,expandStrokeEdits(d0,'pa','out'));
+ assert.equal(d.revision,r+1,'one undo step');assert.equal(layer(d,'pa').stroke,undefined);assert.equal(layer(d,'out').source.color,'#00ff00');assert.equal(layer(d,'out').source.path!.points.length,4);assert.ok(Math.abs(gArea(d,'out')-1600)<1,'line '+gArea(d,'out'));
+ d0=strokeDoc([{x:0.25,y:0.2},{x:0.75,y:0.2},{x:0.75,y:0.8},{x:0.25,y:0.8}],true);d=applyEdits(d0,expandStrokeEdits(d0,'pa','out'));
+ assert.equal(layer(d,'out').source.subpaths!.length,1,'outer and inner ring');assert.ok(Math.abs(gArea(d,'out')-3200)<2,'square ring '+gArea(d,'out'));
+ const o=layer(d0,'pa').transform.anchor.value as unknown as number[],n=layer(d,'out').transform.anchor.value as unknown as number[];assert.ok(Math.abs(o[0]-n[0]-45)<1&&Math.abs(o[1]-n[1]-15)<1,'anchor shifted so the outline keeps its place');
+ validateDocument(d);
+ const k=0.5523;d0=strokeDoc([{x:0.5,y:0.1,inX:-0.2*k,outX:0.2*k},{x:0.7,y:0.5,inY:-0.4*k,outY:0.4*k},{x:0.5,y:0.9,inX:0.2*k,outX:-0.2*k},{x:0.3,y:0.5,inY:0.4*k,outY:-0.4*k}],true);
+ d=applyEdits(d0,expandStrokeEdits(d0,'pa','out'));const ra=40;assert.ok(Math.abs(gArea(d,'out')-Math.PI*((ra+5)**2-(ra-5)**2))/(Math.PI*800)<0.03,'circle ring '+gArea(d,'out'));
+ const g=layer(d,'out');assert.ok(g.source.path!.points.length+g.source.subpaths!.reduce((n,q)=>n+q.points.length,0)<=512);
+});
+test('P33: expand stroke refusals and engine bounds',()=>{
+ const sq=[{x:0.25,y:0.2},{x:0.75,y:0.2},{x:0.75,y:0.8},{x:0.25,y:0.8}];
+ assert.throws(()=>expandStrokeEdits(pathDoc(),'pa'),/no stroke/);
+ let d=strokeDoc(sq,true,0);assert.throws(()=>expandStrokeEdits(d,'pa'),/no stroke/);
+ d=strokeDoc(sq,true);d=applyEdit(d,{type:'layer.stroke',layer:'pa',stroke:{color:'#00ff00',width:4,dash:{type:'scalar',value:0,keys:[]} as never}});assert.throws(()=>expandStrokeEdits(d,'pa'),/trim and dash/);
+ d=strokeDoc(sq,true);d=applyEdit(d,pathLayerEdit(d,'pa',{op:'animate',on:true}));assert.throws(()=>expandStrokeEdits(d,'pa'),/animation/);
+ d=strokeDoc(sq,true);d=applyEdit(d,{type:'layer.update',layer:'pa',locked:true});assert.throws(()=>expandStrokeEdits(d,'pa'),/locked/);
+ assert.throws(()=>expandStrokeEdits(applyEdit(strokeDoc(sq,true),{type:'layer.stroke',layer:'pa',stroke:{color:'#00ff00',width:4}}),'photo'),/path|stroke|shape/i);
+ const many=Array.from({length:40},(_,i)=>({x:(i%2?0.9:0.1),y:0.05+i*0.02,outX:0.4,outY:0.3,inX:-0.4,inY:-0.3}));assert.throws(()=>expandStrokeEdits(strokeDoc(many,false),'pa'),/too detailed/);
+ assert.equal(strokeOutline([{pts:[[0,0],[0,0]],closed:false}],4).length,0);
+ assert.equal(simplifyRing([[0,0],[5,0.1],[10,0],[10,10],[0,10]],0.5).length,4);
+});
+test('P33: new commands and locale keys exist, layer.stroke null removes the stroke',()=>{
+ for(const id of ['animation.mask.boolean','animation.layer.expandStroke'])assert.ok(animationCommandSpecs().some(s=>s.id===id));
+ for(const l of ['en','de','es','fr','pt-BR']){const j=JSON.parse(readFileSync(new URL(`../../locales/animation/${l}.json`,import.meta.url),'utf8'));for(const k of ['animation.masks.boolOther','animation.masks.maskN','animation.pathLayer.expandStroke','cmd.animation.mask.boolean','cmd.animation.layer.expandStroke'])assert.ok(j[k],`${l} ${k}`);}
+ let d=pathDoc();d=applyEdit(d,{type:'layer.stroke',layer:'pa',stroke:{color:'#00ff00',width:2}});assert.ok(layer(d,'pa').stroke);d=applyEdit(d,{type:'layer.stroke',layer:'pa',stroke:null});assert.equal(layer(d,'pa').stroke,undefined);
 });

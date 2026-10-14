@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-385 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+387 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -66,6 +66,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `animation.keys.straighten` | Straighten position path at selected keys | Edit | animation |  |
 | `animation.layer.add` | Add layer | Insert | animation |  |
 | `animation.layer.effects` | Set layer effects | Edit | animation |  |
+| `animation.layer.expandStroke` | Expand the stroke of a path layer into an outline layer | Insert | animation |  |
 | `animation.layer.mask` | Edit layer mask | Edit | animation |  |
 | `animation.layer.matte` | Set layer track matte | Edit | animation |  |
 | `animation.layer.parent` | Set layer parent | Edit | animation |  |
@@ -80,6 +81,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `animation.layers.stagger` | Stagger selected layers | Edit | animation |  |
 | `animation.marker.add` | Add timing marker | Edit | animation |  |
 | `animation.marker.remove` | Remove timing marker | Edit | animation |  |
+| `animation.mask.boolean` | Unite, subtract, intersect or exclude two masks | Insert | animation |  |
 | `animation.mask.toLayer` | Turn a path mask into a shape layer | Edit | animation |  |
 | `animation.modifier.add` | Add wiggle or loop modifier | Edit | animation |  |
 | `animation.modifier.remove` | Remove property modifier | Edit | animation |  |

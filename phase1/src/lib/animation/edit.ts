@@ -36,7 +36,7 @@ export type Edit=
  |{type:'keys.spatial';keys:readonly KeyRef[];mode:'smooth'|'straight'}
  |{type:'effect.colorKey';layer:string;effect:string;color:string;t:number}
  |{type:'effect.bypassKey';layer:string;effect:string;bypass:boolean;t:number}
- |{type:'layer.stroke';layer:string;stroke:NonNullable<Layer['stroke']>}
+ |{type:'layer.stroke';layer:string;stroke:NonNullable<Layer['stroke']>|null}
  |{type:'effect.amount';layer:string;effect:string;value:number;t:number}
  |{type:'effect.animate';layer:string;effect:string;on:boolean;t:number}
  |{type:'effect.key.remove';layer:string;effect:string;t:number}
@@ -128,7 +128,7 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
    return withComp(doc,{...c,...e.settings,duration,fps:e.settings.fps??c.fps,markers:c.markers?.filter(m=>m.t<duration+c.start),layers:clipped,workArea:{in:Math.min(c.workArea.in,duration-1),out:Math.min(c.workArea.out,duration)}});}
   case 'comp.select':if(!findComp(doc,e.comp))return fail('missing','Composition does not exist.');return e.comp===doc.activeComp?doc:{...doc,activeComp:e.comp};
   case 'comp.remove':{if(doc.compositions.length<2)return fail('invalid','A document needs at least one composition.');if(!findComp(doc,e.comp))return fail('missing','Composition does not exist.');const rest=doc.compositions.filter(c=>c.id!==e.comp);return {...doc,compositions:rest,activeComp:doc.activeComp===e.comp?rest[0].id:doc.activeComp};}
-  case 'layer.stroke':{const l=layerOf(doc,e.layer);return setLayer(doc,{...l,stroke:e.stroke});}
+  case 'layer.stroke':{const l=layerOf(doc,e.layer);if(e.stroke===null){const {stroke:_s,...rest}=l;return setLayer(doc,rest);}return setLayer(doc,{...l,stroke:e.stroke});}
   case 'effect.colorKey':case 'effect.bypassKey':{const l=layerOf(doc,e.layer),t=tickOf(compOf(doc),e.t),effect=l.effects?.find(x=>x.id===e.effect)??fail('missing','Effect no longer exists.');
    if(e.type==='effect.colorKey'&&(effect.kind!=='tint'||!/^#[0-9a-fA-F]{6}$/.test(e.color)))fail('invalid','Only tint accepts colour keys.');
    const next=e.type==='effect.colorKey'?{...effect,colorKeys:[...(effect.colorKeys??[]).filter(k=>k.t!==t),{t,color:e.color}].sort((a,b)=>a.t-b.t)}:{...effect,bypassKeys:[...(effect.bypassKeys??[]).filter(k=>k.t!==t),{t,bypass:e.bypass}].sort((a,b)=>a.t-b.t)};

@@ -1,3 +1,4 @@
+import {MaskBoolean} from './MaskBoolean';
 import {MaskMorph} from './MaskMorph';
 import {useT} from '../../lib/useT';
 import {Button} from '../ui/button';
@@ -49,6 +50,7 @@ export function MasksMattes({layer,comp,at}:{layer:Layer;comp:Composition;at:num
      <MaskMorph layer={layer} m={m} index={i}/>
      <Button size="tiny" variant="outline" disabled={layer.locked} onClick={()=>{executeCommand('animation.mask.toLayer',{layer:layer.id,mask:m.id}).catch(()=>undefined);}} data-testid={`animation-mask-tolayer-${i}`}>{t('animation.masks.toLayer')}</Button>
     </div>}
+    <MaskBoolean layer={layer} mask={m} index={i}/>
     <div className="grid gap-1">{(['position','size','feather','opacity'] as const).filter(p=>!(m.shape==='path'&&p==='size')).map(p=>animToggle(m,p))}</div>
     <label className="flex items-center gap-1 text-ink-3"><NativeInput type="checkbox" className="animation-checkbox" checked={m.invert} onChange={e=>mask({layer:layer.id,op:'update',mask:m.id,patch:{invert:e.target.checked}})}/>{t('animation.masks.invert')}</label>
    </div>)}

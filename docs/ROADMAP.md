@@ -235,3 +235,9 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Implemented: path booleans (unite, subtract, intersect, exclude) on compound paths, own dependency-free polygon engine (curves flattened about 0.25 px, result is corner points), one undo step, refuses animated, locked, open, same and non-path layers, bounded points (512), 5 locales, command `animation.layer.pathBoolean`, UI row in the path layer inspector.
 - Validation: 4 new Animation unit tests with known areas (179 total), DS ratchet, ui-commands inventory (385), check:layers, isolated Chrome check (exclude result, undo count).
 - Open: exact curve output (no flattening), self-crossing inputs, animated paths, boolean on masks.
+
+### Animation P33 (2026-10-14, integration pending)
+
+- Implemented: mask booleans (`animation.mask.boolean`, single-ring results up to 32 points), expand stroke to an outline layer (`animation.layer.expandStroke`, miter joins like the renderer, flattened curves), `layer.stroke` null removes a stroke, hover ghost for layer and mask booleans via preview transactions, 5 locales.
+- Validation: 5 new Animation unit tests with known areas (184 total), DS ratchet, ui-commands inventory (387), check:layers, isolated Chrome check (ghost on hover, expand stroke, undo count).
+- Open: mask results with holes or several parts, round and bevel joins, round caps, dashed strokes, animated strokes, exact curve output.

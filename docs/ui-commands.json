@@ -552,6 +552,18 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.layer.expandStroke",
+      "title": "Expand the stroke of a path layer into an outline layer",
+      "category": "Insert",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.layer.mask",
       "title": "Edit layer mask",
       "category": "Edit",
@@ -711,6 +723,18 @@
       "id": "animation.marker.remove",
       "title": "Remove timing marker",
       "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "animation.mask.boolean",
+      "title": "Unite, subtract, intersect or exclude two masks",
+      "category": "Insert",
       "source": "animation",
       "keywords": [
         "animation",
