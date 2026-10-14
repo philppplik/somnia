@@ -315,6 +315,8 @@ export const toggleVertAlign=(v:'superscript'|'subscript')=>run(async()=>{
 /** Highlight colour of the selection, or of the next typed text at a caret. `none` removes it. */
 /** Character spacing in points (-5 to 30) on the selection, or held for the next typed text. One undo step. */
 export const setCharSpacing=(pt:number)=>run(()=>applyFormat({spacing:pt}));
+/** Underline style/colour and character shading on the selection (or held for typing). One undo step. */
+export const setCharLook=(patch:Pick<import('./protocol').FormatPatch,'underline'|'underlineStyle'|'underlineColor'|'charShading'>)=>run(()=>applyFormat(patch));
 export const setHighlight=(h:import('./protocol').HighlightName)=>run(()=>applyFormat({highlight:h}));
 /** The selected text must exist: a link cannot be held for typing. */
 const needSelection=()=>{const c=getDocumentsState().caret;if(!c)return false;const n=norm(c);return cmp(n.s,n.e)!==0;};

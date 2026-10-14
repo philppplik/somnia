@@ -1,7 +1,7 @@
 import {registerCommand} from '../commandRegistry';
 import {getDocumentsState,patchDocuments,stepZoom} from './store';
 import {typeText,redoEdit,setAlign,setParagraphStyle,toggleList,clearList,shiftListLevel,stepFontSize,stepIndent,toggleFormat,undoEdit,editTable,insertTable,setHeaderFooter,insertImage,resizeImageToPercent,setImageAlt,removeImage,setColumnWidth,styleTable,setPageSetup,setFindOpen,setFindQuery,findStep,replaceAll,replaceCurrent} from './session';
-import {MIN_SPACING_PT,MAX_SPACING_PT,stylePatchProblem,STYLE_ID_RE,type StylePatch,tocProblem,type TocOptions,listOptionsProblem,type ListOptionsPatch,pageSetupProblem,LIST_STYLES,type ListStyleId} from './protocol';
+import {checkFormatPatch,MIN_SPACING_PT,MAX_SPACING_PT,stylePatchProblem,STYLE_ID_RE,type StylePatch,tocProblem,type TocOptions,listOptionsProblem,type ListOptionsPatch,pageSetupProblem,LIST_STYLES,type ListStyleId} from './protocol';
 import {deleteStyle,saveStyle,setCharStyle,insertToc,updateToc,removeToc,continueNumbering,restartNumbering,setListStyle,setListOptions} from './session';
 import {validFindQuery,validReplaceText} from './find';
 import {findMedia} from '../media';
@@ -20,7 +20,7 @@ import {insertPageBreak,setParagraphOptions,setProperties,setTabStops} from './s
 import {parsePdfPages,checkParaPatch,PARA_FLAG_KEYS,propertiesProblem,tabsProblem} from './protocol';
 import {addComment,commentSelection,deleteComment,goToComment,readComments,replyComment,resolveComment} from './session';
 import {commentProblem,HIGHLIGHTS,linkProblem,type HighlightName} from './protocol';
-import {setCharSpacing,clearFormatting,hasTextSelection,setHighlight,setLink,toggleVertAlign} from './session';
+import {setCharLook,setCharSpacing,clearFormatting,hasTextSelection,setHighlight,setLink,toggleVertAlign} from './session';
 import {documentsExportReady,patchDocumentsExportUi,requestDocumentsExportPdf,requestDocumentsSaveCopy} from './exportBridge';
 /**
  * Documents studio commands. Registered while the Documents canvas is mounted (registerDocumentsCommands),
@@ -86,6 +86,13 @@ export function registerDocumentsCommands(){
   add('documents.toggleSmallCaps','Toggle small caps',async()=>{await toggleFormat('smallCaps');},()=>ready()&&!!getDocumentsState().caret),
   add('documents.toggleSuperscript','Toggle superscript',async()=>{await toggleVertAlign('superscript');},()=>ready()&&!!getDocumentsState().caret),
   add('documents.toggleSubscript','Toggle subscript',async()=>{await toggleVertAlign('subscript');},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.charLook.open','Underline and shading',()=>{setInfoDialog('charlook');},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.charLook.set','Set underline style, underline colour or character shading',async p=>{
+   const o=(p??{}) as Record<string,unknown>;const keys=Object.keys(o);
+   if(!keys.length||keys.some(k=>k!=='underline'&&k!=='underlineStyle'&&k!=='underlineColor'&&k!=='charShading'))throw expected('Use underline, underlineStyle, underlineColor or charShading.');
+   try{checkFormatPatch(o);}catch(err){throw expected(err instanceof Error?err.message:'Invalid options.');}
+   await setCharLook(o as import('./protocol').FormatPatch);
+  },()=>ready()&&!!getDocumentsState().caret),
   add('documents.toggleAllCaps','Toggle all caps',async()=>{await toggleFormat('allCaps');},()=>ready()&&!!getDocumentsState().caret),
   add('documents.toggleDoubleStrike','Toggle double strikethrough',async()=>{await toggleFormat('doubleStrike');},()=>ready()&&!!getDocumentsState().caret),
   add('documents.charSpacing.set','Set character spacing',async p=>{

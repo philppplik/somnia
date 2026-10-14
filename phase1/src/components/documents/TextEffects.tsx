@@ -51,6 +51,7 @@ export function TextEffects({format,held,enabled}:{format:FormatState|null;held:
   <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>void insertPageBreak()} data-testid="documents-page-break">{t('documents.para.opt.insertBreak')}</NativeButton>
   <NativeButton className={tool+' border border-subtle'} disabled={!enabled||!(doc.para?.list==='bullet'||doc.para?.list==='numbered')} onClick={()=>setInfoDialog('list')} data-testid="documents-listopt-open">{t('documents.listopt.open')}</NativeButton>
   <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>setInfoDialog('styles')} data-testid="documents-styles-open">{t('documents.styles.open')}</NativeButton>
+  <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>setInfoDialog('charlook')} data-testid="documents-charlook-open">{t('documents.charlook.open')}</NativeButton>
   <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>setInfoDialog('symbol')} data-testid="documents-symbol-open">{t('documents.symbol.open')}</NativeButton>
   <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>setInfoDialog('toc')} data-testid="documents-toc-open">{t('documents.toc.open')}</NativeButton>
   <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>setInfoDialog('tabs')} data-testid="documents-tabs-open">{t('documents.tabs.open')}</NativeButton>

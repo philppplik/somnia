@@ -425,6 +425,8 @@ impl DocSession {
         let mut strike: Option<bool> = None;
         let mut small_caps: Option<bool> = None;
         let mut all_caps: Option<bool> = None;
+        let mut underline_color: Option<Option<wordcraft_doc::props::Rgb>> = None;
+        let mut char_shading: Option<Option<wordcraft_doc::props::Rgb>> = None;
         let mut double_strike: Option<bool> = None;
         let mut spacing: Option<f32> = None;
         let mut vert: Option<wordcraft_doc::props::VertAlign> = None;
@@ -478,6 +480,28 @@ impl DocSession {
                         return Err("format field size must be between 1 and 400 points".into());
                     }
                     size = Some(((n * 2.0).round() / 2.0) as f32);
+                    continue;
+                }
+                "underlineStyle" => {
+                    use wordcraft_doc::props::Underline as U;
+                    underline = Some(match val.as_str() {
+                        Some("single") => U::Single,
+                        Some("double") => U::Double,
+                        Some("thick") => U::Thick,
+                        Some("dotted") => U::Dotted,
+                        Some("dashed") => U::Dash,
+                        Some("wave") => U::Wave,
+                        _ => return Err("format field underlineStyle must be single, double, thick, dotted, dashed or wave".into()),
+                    });
+                    continue;
+                }
+                "underlineColor" => {
+                    let c = val.as_str().ok_or_else(|| "format field underlineColor must be text".to_string())?;
+                    underline_color = Some(if c == "auto" { None } else { Self::parse_para_rgb(val).map_err(|_| "format field underlineColor must be auto or RRGGBB".to_string())? });
+                    continue;
+                }
+                "charShading" => {
+                    char_shading = Some(Self::parse_para_rgb(val).map_err(|_| "format field charShading must be none or RRGGBB".to_string())?);
                     continue;
                 }
                 "spacing" => {
@@ -578,6 +602,12 @@ impl DocSession {
                 if let Some(v) = underline {
                     cp.underline = Some(v);
                 }
+                if let Some(v) = underline_color {
+                    cp.underline_color = v;
+                }
+                if let Some(v) = char_shading {
+                    cp.shading = v;
+                }
                 if let Some(v) = &font {
                     cp.font = Some(v.clone());
                 }
@@ -611,6 +641,8 @@ impl DocSession {
         let mut extra: Vec<(bool, bool, wordcraft_doc::props::VertAlign, &'static str, String)> = Vec::new();
         // all caps, double strike, character spacing.
         let mut more: Vec<(bool, bool, f32)> = Vec::new();
+        // underline style name, underline colour (hex or "auto"), character shading (hex or "none").
+        let mut under: Vec<(&'static str, String, String)> = Vec::new();
         if sb == eb && so == eo {
             let p = self.fmt_para(sb)?;
             if so > p.text.len() || !p.text.is_char_boundary(so) {
@@ -621,6 +653,7 @@ impl DocSession {
             look.push((rc.font.clone(), rc.size, rc.color));
             extra.push(Self::extra_of(&rc, p.props_at(so)));
             more.push((rc.caps, rc.double_strike, rc.spacing));
+            under.push(Self::under_of(&rc));
         } else {
             for (b, start, end) in self.span_ranges(sb, so, eb, eo)? {
                 let p = self.fmt_para(b)?;
@@ -631,6 +664,7 @@ impl DocSession {
                         look.push((rc.font.clone(), rc.size, rc.color));
                         extra.push(Self::extra_of(&rc, cp));
                         more.push((rc.caps, rc.double_strike, rc.spacing));
+            under.push(Self::under_of(&rc));
                     }
                 }
             }
@@ -665,9 +699,26 @@ impl DocSession {
         let lk = e0.filter(|x| all_same(&|y| y.4 == x.4)).map(|x| x.4.clone());
         let tri_m = |f: &dyn Fn(&(bool, bool, f32)) -> bool| if !more.is_empty() && more.iter().all(|x| f(x)) { "on" } else if more.iter().any(|x| f(x)) { "mixed" } else { "off" };
         let spacing = more.first().filter(|x| more.iter().all(|y| y.2.to_bits() == x.2.to_bits())).map(|x| x.2);
-        Ok(serde_json::json!({"allCaps": tri_m(&|x| x.0), "doubleStrike": tri_m(&|x| x.1), "spacing": spacing,
+        let u0 = under.first();
+        let u_style = u0.filter(|x| under.iter().all(|y| y.0 == x.0)).map(|x| x.0);
+        let u_color = u0.filter(|x| under.iter().all(|y| y.1 == x.1)).map(|x| x.1.clone());
+        let c_shade = u0.filter(|x| under.iter().all(|y| y.2 == x.2)).map(|x| x.2.clone());
+        Ok(serde_json::json!({"underlineStyle": u_style, "underlineColor": u_color, "charShading": c_shade, "allCaps": tri_m(&|x| x.0), "doubleStrike": tri_m(&|x| x.1), "spacing": spacing,
             "bold": tri(&seen, |x| x.0), "italic": tri(&seen, |x| x.1), "underline": tri(&seen, |x| x.2), "font": font, "size": size, "color": color,
             "strike": tri_b(&|x| x.0), "smallCaps": tri_b(&|x| x.1), "vertAlign": vert, "highlight": hl, "link": lk}).to_string())
+    }
+    fn under_of(rc: &wordcraft_doc::resolve::ResolvedChar) -> (&'static str, String, String) {
+        use wordcraft_doc::props::Underline as U;
+        let name = match rc.underline {
+            U::None => "none",
+            U::Double | U::DoubleWave => "double",
+            U::Thick => "thick",
+            U::Dotted => "dotted",
+            U::Dash | U::DotDash | U::DotDotDash => "dashed",
+            U::Wave => "wave",
+            U::Single | U::Words => "single",
+        };
+        (name, rc.underline_color.map_or_else(|| "auto".to_string(), |c| c.hex()), rc.shading.map_or_else(|| "none".to_string(), |c| c.hex()))
     }
     /// `"none"` clears; `RRGGBB` sets.
     fn parse_para_rgb(val: &serde_json::Value) -> Result<Option<wordcraft_doc::props::Rgb>, String> {
@@ -3538,6 +3589,22 @@ mod tests {
         }
         if s.toc_entries(9).unwrap().is_empty() {
             assert!(s.do_insert_toc(0, 3, "", true).is_err());
+        }
+    }
+    #[test]
+    fn underline_style_colour_and_character_shading_set_report_and_validate() {
+        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
+        let st = |s: &DocSession| -> serde_json::Value { serde_json::from_str(&s.do_format_state(0, 0, 0, 1).unwrap()).unwrap() };
+        assert_eq!((st(&s)["underlineStyle"].as_str(), st(&s)["underlineColor"].as_str(), st(&s)["charShading"].as_str()), (Some("none"), Some("auto"), Some("none")));
+        s.do_format(0, 0, 0, 1, r#"{"underlineStyle":"wave","underlineColor":"C0392B","charShading":"FFF2CC"}"#).unwrap();
+        let v = st(&s);
+        assert_eq!((v["underlineStyle"].as_str(), v["underlineColor"].as_str(), v["charShading"].as_str(), v["underline"].as_str()), (Some("wave"), Some("C0392B"), Some("FFF2CC"), Some("on")));
+        s.do_format(0, 0, 0, 1, r#"{"underline":false,"underlineColor":"auto","charShading":"none"}"#).unwrap();
+        let v = st(&s);
+        assert_eq!((v["underlineStyle"].as_str(), v["underlineColor"].as_str(), v["charShading"].as_str(), v["underline"].as_str()), (Some("none"), Some("auto"), Some("none"), Some("off")));
+        assert!(s.paginate() >= 1);
+        for bad in [r#"{"underlineStyle":"zigzag"}"#, r#"{"underlineStyle":1}"#, r#"{"underlineColor":"red"}"#, r#"{"underlineColor":5}"#, r#"{"charShading":"red"}"#, r#"{"charShading":false}"#] {
+            assert!(s.do_format(0, 0, 0, 1, bad).is_err(), "{bad}");
         }
     }
     #[test]

@@ -2607,6 +2607,28 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.charLook.open",
+      "title": "Underline and shading",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.charLook.set",
+      "title": "Set underline style, underline colour or character shading",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.charSpacing.set",
       "title": "Set character spacing",
       "category": "View",

@@ -5,7 +5,7 @@ export interface HitResult{block:number|null;off?:number;editable:boolean}
 export interface CaretBox{page:number;x:number;top:number;height:number}
 export type Tri='on'|'off'|'mixed';
 /** Effective bold/italic/underline over a selection (style and direct formatting). */
-export interface FormatState{bold:Tri;italic:Tri;underline:Tri;strike?:Tri;smallCaps?:Tri;allCaps?:Tri;doubleStrike?:Tri;/** Shared character spacing in points, or null when mixed. */spacing?:number|null;/** Shared values, or null when the selection mixes them. */vertAlign?:VertAlign|null;highlight?:HighlightName|'other'|null;/** Shared link target (empty for none), or null when mixed. */link?:string|null;/** Shared value over the selection, or null when it mixes values. */font?:string|null;size?:number|null;/** `RRGGBB`, `auto`, or null when mixed. */color?:string|null}
+export interface FormatState{bold:Tri;italic:Tri;underline:Tri;strike?:Tri;smallCaps?:Tri;allCaps?:Tri;doubleStrike?:Tri;/** Shared underline style (`none`, `single`, ...), colour (`RRGGBB` or `auto`) and character shading (`RRGGBB` or `none`); null when mixed. */underlineStyle?:UnderlineStyle|'none'|null;underlineColor?:string|null;charShading?:string|null;/** Shared character spacing in points, or null when mixed. */spacing?:number|null;/** Shared values, or null when the selection mixes them. */vertAlign?:VertAlign|null;highlight?:HighlightName|'other'|null;/** Shared link target (empty for none), or null when mixed. */link?:string|null;/** Shared value over the selection, or null when it mixes values. */font?:string|null;size?:number|null;/** `RRGGBB`, `auto`, or null when mixed. */color?:string|null}
 export type VertAlign='baseline'|'superscript'|'subscript';
 export const HIGHLIGHTS=['none','yellow','green','cyan','pink','gray'] as const;export type HighlightName=typeof HIGHLIGHTS[number];
 export const MAX_LINK_CHARS=2048;
@@ -16,11 +16,13 @@ export function linkProblem(v:unknown):string|null{
  if(Array.from(v).length>MAX_LINK_CHARS||/[\s\u0000-\u001f\u007f-\u009f]/.test(v)||!/^(https?:\/\/|mailto:)./i.test(v))return 'A link starts with http://, https:// or mailto: and has no spaces.';
  return null;
 }
-export interface FormatPatch{bold?:boolean;italic?:boolean;underline?:boolean;font?:string;size?:number;color?:string;strike?:boolean;smallCaps?:boolean;allCaps?:boolean;doubleStrike?:boolean;/** Extra space after each character in points (-5 to 30). */spacing?:number;vertAlign?:VertAlign;highlight?:HighlightName;link?:string;/** Character style id; an empty string removes it. */charStyle?:string;/** Remove direct character formatting (links stay). Only `true`. */clear?:true}
+export interface FormatPatch{bold?:boolean;italic?:boolean;underline?:boolean;font?:string;size?:number;color?:string;strike?:boolean;smallCaps?:boolean;allCaps?:boolean;doubleStrike?:boolean;underlineStyle?:UnderlineStyle;/** `RRGGBB` or `auto`. */underlineColor?:string;/** `RRGGBB` or `none`. */charShading?:string;/** Extra space after each character in points (-5 to 30). */spacing?:number;vertAlign?:VertAlign;highlight?:HighlightName;link?:string;/** Character style id; an empty string removes it. */charStyle?:string;/** Remove direct character formatting (links stay). Only `true`. */clear?:true}
 export const MIN_FONT_PT=1,MAX_FONT_PT=400,MAX_FONT_NAME=64;
 /** Selection endpoints: top-level paragraph index and UTF-8 byte offset. */
 export interface DocPos{block:number;off:number}
 export const MAX_FORMAT_BLOCKS=2000;
+export const UNDERLINE_STYLES=['single','double','thick','dotted','dashed','wave'] as const;
+export type UnderlineStyle=typeof UNDERLINE_STYLES[number];
 export const MIN_SPACING_PT=-5,MAX_SPACING_PT=30;
 const FLAG_KEYS=['bold','italic','underline','strike','smallCaps','allCaps','doubleStrike'];
 /** Validates a format patch: flags are booleans, font is short printable text, size is 1-400 pt, color is auto or RRGGBB. */
@@ -33,6 +35,9 @@ export function checkFormatPatch(patch:unknown){
   if(FLAG_KEYS.includes(k)){if(typeof v!=='boolean')throw new Error('Format change is not valid.');}
   else if(k==='font'){if(typeof v!=='string'||!v||[...v].length>MAX_FONT_NAME||/[\u0000-\u001f\u007f]/.test(v))throw new Error('Font name is not valid.');}
   else if(k==='size'){if(typeof v!=='number'||!Number.isFinite(v)||v<MIN_FONT_PT||v>MAX_FONT_PT)throw new Error(`Font size must be between ${MIN_FONT_PT} and ${MAX_FONT_PT} pt.`);}
+  else if(k==='underlineStyle'){if(!(UNDERLINE_STYLES as readonly unknown[]).includes(v))throw new Error('Underline style is not valid.');}
+  else if(k==='underlineColor'){if(typeof v!=='string'||!(v==='auto'||/^[0-9a-fA-F]{6}$/.test(v)))throw new Error('Underline colour must be automatic or six hex digits.');}
+  else if(k==='charShading'){if(typeof v!=='string'||!(v==='none'||/^[0-9a-fA-F]{6}$/.test(v)))throw new Error('Shading must be none or six hex digits.');}
   else if(k==='spacing'){if(typeof v!=='number'||!Number.isFinite(v)||v<MIN_SPACING_PT||v>MAX_SPACING_PT)throw new Error(`Character spacing must be between ${MIN_SPACING_PT} and ${MAX_SPACING_PT} pt.`);}
   else if(k==='color'){if(typeof v!=='string'||!(v==='auto'||/^[0-9a-fA-F]{6}$/.test(v)))throw new Error('Colour must be automatic or six hex digits.');}
   else if(k==='vertAlign'){if(v!=='baseline'&&v!=='superscript'&&v!=='subscript')throw new Error('Format change is not valid.');}
