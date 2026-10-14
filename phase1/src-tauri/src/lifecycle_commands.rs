@@ -184,7 +184,7 @@ fn sample() -> Result<LifecycleMemorySample> {
         libc::proc_pid_rusage(
             libc::getpid(),
             libc::RUSAGE_INFO_V2,
-            &mut info as *mut _ as *mut libc::c_void,
+            &mut info as *mut _ as *mut libc::rusage_info_t,
         )
     };
     if rc != 0 {
