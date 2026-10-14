@@ -955,5 +955,7 @@
  "animation.export.copied": "Frame copied to the clipboard.",
  "cmd.animation.export.frameCopy": "Copy current frame to the clipboard",
  "animation.modifiers.axis": "Axis",
- "animation.modifiers.axis.both": "Both axes"
+ "animation.modifiers.axis.both": "Both axes",
+ "animation.rig.reseed": "Reseed wiggles",
+ "cmd.animation.modifiers.reseed": "Reseed the wiggles of the selected layers"
 }

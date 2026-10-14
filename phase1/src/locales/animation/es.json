@@ -955,5 +955,7 @@
  "animation.export.copied": "Fotograma copiado al portapapeles.",
  "cmd.animation.export.frameCopy": "Copiar el fotograma actual al portapapeles",
  "animation.modifiers.axis": "Eje",
- "animation.modifiers.axis.both": "Ambos ejes"
+ "animation.modifiers.axis.both": "Ambos ejes",
+ "animation.rig.reseed": "Nueva semilla de wiggle",
+ "cmd.animation.modifiers.reseed": "Nueva semilla para los wiggles de las capas seleccionadas"
 }

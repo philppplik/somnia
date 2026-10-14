@@ -1783,6 +1783,23 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.modifiers.reseed",
+      "title": "Reseed the wiggles of the selected layers",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "crowd",
+        "duplicate",
+        "noise",
+        "random",
+        "reseed",
+        "seed",
+        "wiggle"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.motion.apply",
       "title": "Apply a motion preset to the selected layers",
       "category": "Edit",

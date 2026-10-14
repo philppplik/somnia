@@ -955,5 +955,7 @@
  "animation.export.copied": "Quadro copiado para a área de transferência.",
  "cmd.animation.export.frameCopy": "Copiar o quadro atual para a área de transferência",
  "animation.modifiers.axis": "Eixo",
- "animation.modifiers.axis.both": "Ambos os eixos"
+ "animation.modifiers.axis.both": "Ambos os eixos",
+ "animation.rig.reseed": "Nova semente do wiggle",
+ "cmd.animation.modifiers.reseed": "Nova semente para os wiggles das camadas selecionadas"
 }

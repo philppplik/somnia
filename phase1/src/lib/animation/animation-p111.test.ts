@@ -479,3 +479,18 @@ test('P166 wiggle axis limits the shake to one axis, validated',async()=>{
  assert.equal(validateModifiers([{type:'wiggle',seed:1,amplitude:1,frequency:1,axis:'z' as never}]).length,1);
  assert.equal(validateModifiers([{type:'wiggle',seed:1,amplitude:1,frequency:1,axis:'y'}]).length,0);
 });
+
+test('P167 reseed gives every wiggle a distinct new seed, one undo step, skips locked',async()=>{
+ const {modifierReseedSpecs}=await import('./modifierReseedCommands');const run=modifierReseedSpecs()[0].run as (p?:unknown)=>unknown;
+ const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'shape',id:'b'});
+ const w={type:'wiggle' as const,seed:1,amplitude:5,frequency:2};
+ s.dispatch({type:'modifier.add',layer:'a',prop:'position',modifier:w});s.dispatch({type:'modifier.add',layer:'b',prop:'position',modifier:w});s.dispatch({type:'modifier.add',layer:'b',prop:'rotation',modifier:w});
+ const seeds=()=>['a','b'].flatMap(id=>['position','rotation'].flatMap(k=>(findLayer(findComp(s.document!)!,id)!.transform[k as 'position'].modifiers??[]).map(m=>(m as {seed:number}).seed)));
+ const before=s.document!;assert.deepEqual(seeds(),[1,1,1]);
+ run({layers:['a','b'],seed:1000});const after=seeds();assert.equal(new Set(after).size,3);assert.ok(after.every(x=>x!==1&&x<=2147483647));
+ s.undo();assert.equal(s.document,before);
+ s.dispatch({type:'layer.update',layer:'b',locked:true});const b2=s.document!;
+ run({layers:['a','b'],seed:5});assert.equal(seeds()[2],1);assert.notEqual(seeds()[0],1);
+ s.undo();assert.equal(s.document,b2);
+ assert.throws(()=>run({layers:['b'],seed:5}),/locked/);setAnimationSession(null);
+});

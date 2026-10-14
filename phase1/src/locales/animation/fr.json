@@ -955,5 +955,7 @@
  "animation.export.copied": "Image copiée dans le presse-papiers.",
  "cmd.animation.export.frameCopy": "Copier l'image actuelle dans le presse-papiers",
  "animation.modifiers.axis": "Axe",
- "animation.modifiers.axis.both": "Les deux axes"
+ "animation.modifiers.axis.both": "Les deux axes",
+ "animation.rig.reseed": "Nouvelle graine de wiggle",
+ "cmd.animation.modifiers.reseed": "Nouvelle graine pour les wiggles des calques sélectionnés"
 }
