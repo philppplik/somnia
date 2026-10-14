@@ -608,5 +608,9 @@
  "animation.stroke.animate.width": "Animer l'épaisseur",
  "animation.stroke.animate.opacity": "Animer l'opacité",
  "cmd.animation.stroke.animate": "Activer les images clés d'épaisseur ou d'opacité du contour",
- "cmd.animation.stroke.keyRemove": "Supprimer l'image clé d'épaisseur ou d'opacité du contour"
+ "cmd.animation.stroke.keyRemove": "Supprimer l'image clé d'épaisseur ou d'opacité du contour",
+ "animation.color.animate.fill": "Animer la couleur de remplissage",
+ "animation.color.animate.stroke": "Animer la couleur du contour",
+ "cmd.animation.color.animate": "Activer les images clés de couleur de remplissage ou de contour",
+ "cmd.animation.color.keyRemove": "Supprimer l'image clé de couleur de remplissage ou de contour"
 }

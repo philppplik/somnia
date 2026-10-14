@@ -80,6 +80,8 @@ export function animationCommandSpecs():CommandSpec<unknown,unknown>[]{
    object({layer:layerRef,t:tick},[]),()=>open()&&!!findLayer(comp(),animationSession().getState().view.selectedLayer??'')?.gain?.keys.length,'Edit'),
   spec('animation.stroke.animate','Toggle stroke width or opacity keyframes',(p:{layer?:string;prop:'width'|'opacity';on:boolean})=>run({type:'stroke.prop',layer:layerIdOf(p),prop:p.prop,op:'animate',on:p.on,t:playhead()}),object({layer:layerRef,prop:{enum:['width','opacity']},on:{type:'boolean'}},['prop','on'])),
   spec('animation.stroke.keyRemove','Remove stroke width or opacity keyframe',(p:{layer?:string;prop:'width'|'opacity';t?:number})=>run({type:'stroke.prop',layer:layerIdOf(p),prop:p.prop,op:'remove',t:p.t??playhead()}),object({layer:layerRef,prop:{enum:['width','opacity']},t:tick},['prop'])),
+  spec('animation.color.animate','Toggle fill or stroke colour keyframes',(p:{layer?:string;prop:'fill'|'stroke';on:boolean})=>run({type:'color.prop',layer:layerIdOf(p),prop:p.prop,op:'animate',on:p.on,t:playhead()}),object({layer:layerRef,prop:{enum:['fill','stroke']},on:{type:'boolean'}},['prop','on'])),
+  spec('animation.color.keyRemove','Remove fill or stroke colour keyframe',(p:{layer?:string;prop:'fill'|'stroke';t?:number})=>run({type:'color.prop',layer:layerIdOf(p),prop:p.prop,op:'remove',t:p.t??playhead()}),object({layer:layerRef,prop:{enum:['fill','stroke']},t:tick},['prop'])),
   spec('animation.blur.layers','Toggle motion blur on layers',(p:{layers?:string[];enabled?:boolean})=>{const ids=p.layers??layerSetIds(animationSession().getState().view.selectedLayer);if(!ids.length)fail('Select a layer first.');
    const enabled=p.enabled??!ids.every(id=>findLayer(comp(),id)?.motionBlur);return run({type:'layer.motionBlur',layers:ids,enabled});},
    object({layers:{type:'array',items:layerRef,minItems:1,maxItems:200},enabled:{type:'boolean'}},[]),()=>open()&&layerSetIds(animationSession().getState().view.selectedLayer).length>0,'Edit'),
@@ -261,7 +263,7 @@ export function animationCommandSpecs():CommandSpec<unknown,unknown>[]{
  ] as CommandSpec<unknown,unknown>[];
 }
 export const ANIMATION_COMMANDS=animationCommandSpecs().map(s=>s.id);
-const DESTRUCTIVE=new Set(['animation.layer.remove','animation.keys.delete','animation.keys.cut','animation.audio.volume.keyRemove','animation.precomp.volume.keyRemove','animation.stroke.keyRemove']);
+const DESTRUCTIVE=new Set(['animation.layer.remove','animation.keys.delete','animation.keys.cut','animation.audio.volume.keyRemove','animation.precomp.volume.keyRemove','animation.stroke.keyRemove','animation.color.keyRemove']);
 export function registerAnimationCommands(){
  const offs=animationCommandSpecs().map(s=>{const off=registerCommandSpec(s);const c=commandRegistry.get(s.id);if(c){c.studio='animation';c.argsSchema=s.params;c.risk=DESTRUCTIVE.has(s.id)?'destructive':'content';}return off;});
  return()=>offs.forEach(off=>off());

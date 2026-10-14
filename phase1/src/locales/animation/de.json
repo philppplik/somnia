@@ -608,5 +608,9 @@
  "animation.stroke.animate.width": "Breite animieren",
  "animation.stroke.animate.opacity": "Deckkraft animieren",
  "cmd.animation.stroke.animate": "Konturbreite- oder Deckkraft-Keyframes umschalten",
- "cmd.animation.stroke.keyRemove": "Konturbreite- oder Deckkraft-Keyframe entfernen"
+ "cmd.animation.stroke.keyRemove": "Konturbreite- oder Deckkraft-Keyframe entfernen",
+ "animation.color.animate.fill": "Füllfarbe animieren",
+ "animation.color.animate.stroke": "Konturfarbe animieren",
+ "cmd.animation.color.animate": "Füll- oder Konturfarb-Keyframes umschalten",
+ "cmd.animation.color.keyRemove": "Füll- oder Konturfarb-Keyframe entfernen"
 }

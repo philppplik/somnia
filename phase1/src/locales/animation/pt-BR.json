@@ -608,5 +608,9 @@
  "animation.stroke.animate.width": "Animar espessura",
  "animation.stroke.animate.opacity": "Animar opacidade",
  "cmd.animation.stroke.animate": "Alternar quadros-chave de espessura ou opacidade do traço",
- "cmd.animation.stroke.keyRemove": "Remover quadro-chave de espessura ou opacidade do traço"
+ "cmd.animation.stroke.keyRemove": "Remover quadro-chave de espessura ou opacidade do traço",
+ "animation.color.animate.fill": "Animar cor de preenchimento",
+ "animation.color.animate.stroke": "Animar cor do traço",
+ "cmd.animation.color.animate": "Alternar quadros-chave de cor de preenchimento ou traço",
+ "cmd.animation.color.keyRemove": "Remover quadro-chave de cor de preenchimento ou traço"
 }

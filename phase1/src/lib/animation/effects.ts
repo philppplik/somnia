@@ -1,4 +1,5 @@
 import {evaluate} from './interpolate';
+import {colorAt} from './colorKeys';
 import type {Layer,LayerEffect} from './model';
 export const EFFECT_KINDS=['blur','tint','shadow','glow','innerShadow','innerGlow'] as const;
 /** Starting values for a new effect of each kind. */
@@ -46,6 +47,12 @@ export function effectBypassed(effect:LayerEffect,tick:number):boolean{let bypas
 export function effectColor(effect:LayerEffect,tick:number):string{
  const keys=effect.colorKeys;if(!keys?.length)return effect.color;if(tick<=keys[0].t)return keys[0].color;
  let a=keys[0];for(const b of keys.slice(1)){if(tick<b.t){const u=(tick-a.t)/(b.t-a.t),av=rgb(a.color),bv=rgb(b.color);return '#'+av.map((v,i)=>Math.round((v+(bv[i]-v)*u)*255).toString(16).padStart(2,'0')).join('');}a=b;}return a.color;
+}
+export {colorAt};
+/** The layer with its keyed fill and stroke colours resolved at `tick`; the same object when nothing is keyed. */
+export function layerColorsAt(l:Layer,tick:number):Layer{
+ const k=l.colorKeys;if(!k)return l;
+ return {...l,...(k.fill?.length?{source:{...l.source,color:colorAt(k.fill,l.source.color??'#000000',tick)}}:{}),...(k.stroke?.length&&l.stroke?{stroke:{...l.stroke,color:colorAt(k.stroke,l.stroke.color,tick)}}:{})};
 }
 /** Stroke width at `tick`: the keyed width when it has keys, else the static one. */
 export const strokeWidthAt=(s:NonNullable<Layer['stroke']>,tick:number):number=>s.widthAnim?.keys.length?Math.max(0,Math.min(256,evaluate(s.widthAnim,tick) as number)):s.width;

@@ -13,7 +13,7 @@ import {animationCommandSpecs} from './commands';
 import {booleanRings,flattenRing,ringArea,type BoolOp,type Pt} from './pathBoolean';
 import {booleanEdits,maskBooleanEdit,expandStrokeEdits} from './pathLayer';
 import {frameSvg} from './exportFrames';
-import {strokeAttributes} from './effects';
+import {strokeAttributes,layerColorsAt} from './effects';
 import {strokeOutline,simplifyRing} from './pathBoolean';
 import {deleteEasingEdit,findEasing,saveEasingEdit,userEasings,validateEasingLib,MAX_EASINGS} from './easingLibrary';
 import {elasticTargetKeys} from './keyTargets';
@@ -1441,4 +1441,31 @@ test('P57 keyframed stroke width and opacity: edits, rendering per tick, bounds,
  d=applyEdit(d,{type:'stroke.prop',layer:'stencil',prop:'opacity',op:'animate',on:false,t:0});assert.equal(st().opacityAnim,undefined);
  d=applyEdit(d,{type:'stroke.prop',layer:'stencil',prop:'width',op:'set',value:6,t:0});d=applyEdit(d,{type:'stroke.prop',layer:'stencil',prop:'opacity',op:'set',value:100,t:0});
  assert.equal(frameSvg(d.compositions[0],0),legacy,'back to the original output');
+});
+
+test('P58 keyed fill and stroke colours: edits, mix, rendering, validation, legacy output',()=>{
+ let d=applyEdit(base(),{type:'layer.stroke',layer:'stencil',stroke:{color:'#000000',width:6}});
+ d=applyEdit(d,{type:'layer.update',layer:'stencil',source:{color:'#000000'}});
+ const legacy=frameSvg(d.compositions[0],0),L=()=>d.compositions[0].layers.find(l=>l.id==='stencil')!;
+ d=applyEdit(d,{type:'color.prop',layer:'stencil',prop:'fill',op:'set',color:'#ff0000',t:0});assert.equal(L().source.color,'#ff0000');assert.equal(L().colorKeys,undefined);
+ d=applyEdit(d,{type:'color.prop',layer:'stencil',prop:'fill',op:'animate',on:true,t:0});
+ d=applyEdit(d,{type:'color.prop',layer:'stencil',prop:'fill',op:'set',color:'#0000ff',t:240000});
+ assert.deepEqual(L().colorKeys!.fill!.map(k=>[k.t,k.color]),[[0,'#ff0000'],[240000,'#0000ff']]);
+ assert.equal(layerColorsAt(L(),120000).source.color,'#808080'.replace('808080','800080'));
+ assert.ok(frameSvg(d.compositions[0],0).includes('fill="#ff0000"'));assert.ok(frameSvg(d.compositions[0],240000).includes('fill="#0000ff"'));
+ d=applyEdit(d,{type:'color.prop',layer:'stencil',prop:'stroke',op:'animate',on:true,t:0});d=applyEdit(d,{type:'color.prop',layer:'stencil',prop:'stroke',op:'set',color:'#00ff00',t:240000});
+ assert.ok(frameSvg(d.compositions[0],240000).includes('stroke="#00ff00"'));assert.ok(frameSvg(d.compositions[0],0).includes('stroke="#000000"'));
+ assert.deepEqual(validateDocument(d),[]);
+ assert.throws(()=>applyEdit(d,{type:'color.prop',layer:'stencil',prop:'fill',op:'set',color:'red',t:0}));
+ assert.throws(()=>applyEdit(d,{type:'color.prop',layer:'photo',prop:'stroke',op:'set',color:'#ffffff',t:0}));
+ assert.throws(()=>applyEdit(d,{type:'color.prop',layer:'stencil',prop:'fill',op:'remove',t:100000}));
+ d=applyEdit(d,{type:'color.prop',layer:'stencil',prop:'fill',op:'remove',t:240000});d=applyEdit(d,{type:'color.prop',layer:'stencil',prop:'fill',op:'remove',t:0});
+ assert.equal(L().colorKeys!.fill,undefined);assert.ok(L().colorKeys!.stroke);assert.equal(L().source.color,'#ff0000');
+ d=applyEdit(d,{type:'color.prop',layer:'stencil',prop:'stroke',op:'animate',on:false,t:0});assert.equal(L().colorKeys,undefined);
+ d=applyEdit(d,{type:'color.prop',layer:'stencil',prop:'fill',op:'set',color:'#000000',t:0});d=applyEdit(d,{type:'color.prop',layer:'stencil',prop:'stroke',op:'set',color:'#000000',t:0});
+ assert.equal(frameSvg(d.compositions[0],0),legacy);
+ // 65th key is refused
+ let e=applyEdit(d,{type:'color.prop',layer:'stencil',prop:'fill',op:'animate',on:true,t:0});
+ for(let i=1;i<64;i++)e=applyEdit(e,{type:'color.prop',layer:'stencil',prop:'fill',op:'set',color:'#112233',t:i*10000});
+ assert.throws(()=>applyEdit(e,{type:'color.prop',layer:'stencil',prop:'fill',op:'set',color:'#112233',t:64*10000}));
 });

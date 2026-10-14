@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-425 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+427 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -30,6 +30,8 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `animation.audio.volume.set` | Set audio volume (percent) | Edit | animation |  |
 | `animation.blur.comp` | Set composition motion blur (shutter) | Edit | animation |  |
 | `animation.blur.layers` | Toggle motion blur on layers | Edit | animation |  |
+| `animation.color.animate` | Toggle fill or stroke colour keyframes | Edit | animation |  |
+| `animation.color.keyRemove` | Remove fill or stroke colour keyframe | Edit | animation |  |
 | `animation.comp.add` | Add composition | Insert | animation |  |
 | `animation.comp.select` | Switch composition | View | animation |  |
 | `animation.comp.update` | Change composition settings | Edit | animation |  |

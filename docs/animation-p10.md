@@ -315,3 +315,8 @@ Added:
 
 - `stroke.widthAnim` / `stroke.opacityAnim` (scalar, at least one key) replace `stroke.width` / `stroke.opacity` when present. `strokeWidthAt` and `strokeOpacityAt` in `effects.ts` give the value at a tick and feed `strokeAttributes` and `effectBounds`.
 - `stroke.prop {prop:'width'|'opacity', op:'set'|'animate'|'remove'}`: set keys when animated and writes the static value otherwise; the last removed key (or animate off) writes the sampled value back and drops the property.
+
+## P58 - Fill and stroke colour keys
+
+- `Layer.colorKeys {fill?,stroke?}` (sorted, unique ticks, 1..64 keys of `#rrggbb`; fill on solid/shape/text, stroke on shapes with a stroke). `colorAt` (leaf `colorKeys.ts`) mixes channel-wise; `layerColorsAt(layer,tick)` returns the layer with `source.color` / `stroke.color` replaced and is applied at the top of `layerSvg` (export, viewer) and `layerNode` (canvas).
+- `color.prop {prop:'fill'|'stroke', op:'set'|'animate'|'remove'}` follows the same rules as `stroke.prop`.

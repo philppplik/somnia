@@ -5,8 +5,9 @@ import {validateTextPresetLib} from './textPresetModel';
 import type {InterfaceAsset} from '../interface/schema';
 import {validateAnimationAssets} from './assetsValidation';
 import {MAX_AUDIO_VOLUME,type AudioAsset} from './audioCore';
-import {STYLE_KINDS,OFFSET_KINDS,validShutter,type Shutter,validatePrecomps,precompTransform,prop,createComposition,type TextAnimator,type LayerMask,type LayerMatte,type ClipItem,type KeyRef,type Vec2,createLayer,findComp,findLayer,PROP_META,wouldCycle,EASE_IN,EASE_OUT,TRANSFORM_KEYS,validateDocument,type AnimationDocument,type CompSettings,type Composition,type Interp,type Keyframe,type Layer,type LayerKind,type LayerSource,type LayerEffect,validSource,validEffects,type Property,type PropValue,type TransformKey} from './model';
+import {STYLE_KINDS,OFFSET_KINDS,MAX_COLOR_KEYS,type ColorKey,validShutter,type Shutter,validatePrecomps,precompTransform,prop,createComposition,type TextAnimator,type LayerMask,type LayerMatte,type ClipItem,type KeyRef,type Vec2,createLayer,findComp,findLayer,PROP_META,wouldCycle,EASE_IN,EASE_OUT,TRANSFORM_KEYS,validateDocument,type AnimationDocument,type CompSettings,type Composition,type Interp,type Keyframe,type Layer,type LayerKind,type LayerSource,type LayerEffect,validSource,validEffects,type Property,type PropValue,type TransformKey} from './model';
 import {evaluate} from './interpolate';
+import {colorAt} from './colorKeys';
 import {validateModifiers,linkProblems} from './modifiers';
 import {snapToFrame,tickToFrame,frameToTick,validRate} from './time';
 /** Typed `animation.*` edits. Every mutation goes through applyEdit so undo, recovery and AI share one path. */
@@ -66,6 +67,7 @@ export type Edit=
  |{type:'audio.volume.set';layer:string;value:number;t:number}
  |{type:'audio.volume.animate';layer:string;on:boolean;t:number}
  |{type:'audio.volume.key.remove';layer:string;t:number}
+ |{type:'color.prop';layer:string;prop:'fill'|'stroke';op:'set'|'animate'|'remove';color?:string;on?:boolean;t:number}
  |{type:'stroke.prop';layer:string;prop:'width'|'opacity';op:'set'|'animate'|'remove';value?:number;on?:boolean;t:number}
  |{type:'layer.gain.set';layer:string;value:number;t:number}
  |{type:'layer.gain.animate';layer:string;on:boolean;t:number}
@@ -198,6 +200,23 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
    else if(e.type==='audio.volume.animate'){const sampled=evaluate(vol,t) as number;next=e.on?(vol.keys.length?vol:{...vol,keys:[makeKey(t,sampled)]}):{...vol,value:sampled,keys:[]};}
    else{if(!vol.keys.some(k=>k.t===t))fail('missing','No volume key at that time.');const keys=vol.keys.filter(k=>k.t!==t);next=keys.length?{...vol,keys}:{...vol,value:evaluate(vol,t) as number,keys:[]};}
    return setLayer(doc,{...l,audio:{...l.audio!,volume:next}});}
+  case 'color.prop':{
+   const l=layerOf(doc,e.layer),fillOk=['solid','shape','text'].includes(l.kind);
+   if(e.prop==='fill'?!fillOk:(l.kind!=='shape'||!l.stroke))fail('invalid',e.prop==='fill'?'This layer has no fill colour.':'The layer has no stroke.');
+   const t=tickOf(compOf(doc),e.t),f=e.prop==='fill',keys=l.colorKeys?.[e.prop],cur=f?(l.source.color??'#000000'):l.stroke!.color;
+   const withStatic=(x:Layer,c:string):Layer=>f?{...x,source:{...x.source,color:c}}:{...x,stroke:{...x.stroke!,color:c}};
+   const withKeys=(x:Layer,ks:readonly ColorKey[]|undefined):Layer=>{const {colorKeys:_c,...rest}=x;const next={...(x.colorKeys??{}),[e.prop]:ks};if(!ks?.length)delete (next as Record<string,unknown>)[e.prop];return Object.keys(next).length?{...rest,colorKeys:next}:rest as Layer;};
+   if(e.op==='set'){
+    if(typeof e.color!=='string'||!/^#[0-9a-fA-F]{6}$/.test(e.color))fail('invalid','Colour must be #rrggbb.');
+    const c=(e.color as string).toLowerCase();
+    if(keys?.length){const next=[...keys.filter(k=>k.t!==t),{t,color:c}].sort((a,b)=>a.t-b.t);if(next.length>MAX_COLOR_KEYS)fail('invalid',`At most ${MAX_COLOR_KEYS} colour keys.`);return setLayer(doc,withKeys(l,next));}
+    return setLayer(doc,withStatic(l,c));}
+   if(e.op==='animate'){
+    if(e.on)return keys?.length?doc:setLayer(doc,withKeys(l,[{t,color:cur}]));
+    return keys?.length?setLayer(doc,withStatic(withKeys(l,undefined),colorAt(keys,cur,t))):doc;}
+   if(!keys||!keys.some(k=>k.t===t))fail('missing','No colour key at that time.');
+   const rest=keys!.filter(k=>k.t!==t);
+   return setLayer(doc,rest.length?withKeys(l,rest):withStatic(withKeys(l,undefined),colorAt(keys,cur,t)));}
   case 'stroke.prop':{
    const l=layerOf(doc,e.layer);if(l.kind!=='shape'||!l.stroke)fail('invalid','The layer has no stroke.');const st=l.stroke as NonNullable<Layer['stroke']>;
    const t=tickOf(compOf(doc),e.t),w=e.prop==='width',max=w?256:100,anim=(w?st.widthAnim:st.opacityAnim),staticV:number=w?st.width:st.opacity??100;

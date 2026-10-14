@@ -395,3 +395,10 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Done: "Animate width" and "Animate opacity" switches in the stroke section, each with "Key at playhead", "Remove key" and a key list. With keys the keyed value (bezier eased, width 0..256, opacity 0..100 %) replaces the static one; the fields show and edit the value at the playhead. Viewer, every export and the effect bounds read the same value per tick. New edit `stroke.prop` and commands `animation.stroke.animate` and `.keyRemove`. Turning animation off or removing the last key keeps the value at the playhead as the static one (rounded to 0.01). Strokes without keys give byte-identical output. Undoable, validated, 5 locales.
 - Open: no stroke colour keyframes, no timeline lane for these keys (inspector list only), the outline from "Expand stroke" uses the static width; dash lengths and miter limit stay constants.
 
+
+### Animation P58 (2026-10-14, integration pending)
+
+- Picked: colour keyframes for the fill and the stroke colour of a layer (new feature; before only tint, shadow and glow colours could be keyed).
+- Done: solid, shape and text layers get "Animate fill colour", shape strokes get "Animate stroke colour", each with "Key at playhead", "Remove key" and a key list. Colours mix per RGB channel between keys (linear, held before the first and after the last key), at most 64 keys. The viewer, every export and masks/mattes use the colour at the tick through `layerColorsAt`. New edit `color.prop`, new commands `animation.color.animate` and `.keyRemove`. The colour pickers edit the key at the playhead while animated. Turning animation off or removing the last key keeps the colour at the playhead as the static colour. Layers without keys give byte-identical output. Undoable, validated, 5 locales.
+- Open: only linear mixing (no ease curves per key); no timeline lane; gradient colours and text-animator colours are not keyed; effect colours keep their own keys.
+

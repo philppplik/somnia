@@ -608,5 +608,9 @@
  "animation.stroke.animate.width": "Animate width",
  "animation.stroke.animate.opacity": "Animate opacity",
  "cmd.animation.stroke.animate": "Toggle stroke width or opacity keyframes",
- "cmd.animation.stroke.keyRemove": "Remove stroke width or opacity keyframe"
+ "cmd.animation.stroke.keyRemove": "Remove stroke width or opacity keyframe",
+ "animation.color.animate.fill": "Animate fill colour",
+ "animation.color.animate.stroke": "Animate stroke colour",
+ "cmd.animation.color.animate": "Toggle fill or stroke colour keyframes",
+ "cmd.animation.color.keyRemove": "Remove fill or stroke colour keyframe"
 }

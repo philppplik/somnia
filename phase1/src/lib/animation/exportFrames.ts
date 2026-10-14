@@ -2,7 +2,7 @@ import {radialPath,gradientVector} from './shapes';
 import {layerPathD,layerFillRule} from './pathLayer';
 import {validateAnimationAssets} from './assetsValidation';
 import {textFontStack,validEffects,validSource,MAX_PRECOMP_DEPTH} from './model';
-import {effectPrimitives,effectBounds,revealedText,strokeAttributes} from './effects';
+import {effectPrimitives,effectBounds,revealedText,strokeAttributes,layerColorsAt} from './effects';
 import type {InterfaceAsset} from '../interface/schema';
 import {Zip,ZipPassThrough,strToU8} from 'fflate';
 import {maskDefs,maskId,matteId,hasMasks} from './masks';
@@ -46,8 +46,8 @@ export function precompImage(l:Layer,tick:number,assets:readonly InterfaceAsset[
  try{const svg=frameSvg(child,local,true,assets,renderComps);return {href:`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`,width:l.source.width??child.width,height:l.source.height??child.height};}
  finally{nest=keep;}
 }
-function layerSvg(l:Layer,assets:readonly InterfaceAsset[],tick:number,fillOverride?:string):string{
- const s=l.source;const fill=fillOverride??esc(s.color??'#000');
+function layerSvg(layer:Layer,assets:readonly InterfaceAsset[],tick:number,fillOverride?:string):string{
+ const l=layerColorsAt(layer,tick),s=l.source;const fill=fillOverride??esc(s.color??'#000');
  if(l.kind==='comp'){const p=precompImage(l,tick,assets);return p?`<image href="${p.href}" width="${num(p.width)}" height="${num(p.height)}"/>`:'';}
  if(l.kind==='raster'){const asset=assets.find(a=>a.id===s.assetId);if(!asset)throw new ExportError('Missing image asset.','raster');return `<image href="${asset.data}" width="${num(s.width??asset.width)}" height="${num(s.height??asset.height)}"/>`;}
 

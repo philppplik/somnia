@@ -119,6 +119,30 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.color.animate",
+      "title": "Toggle fill or stroke colour keyframes",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "animation.color.keyRemove",
+      "title": "Remove fill or stroke colour keyframe",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.comp.add",
       "title": "Add composition",
       "category": "Insert",

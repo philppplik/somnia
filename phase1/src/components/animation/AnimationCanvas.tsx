@@ -1,6 +1,6 @@
 import {radialPath,gradientVector} from '../../lib/animation/shapes';
 import {layerPathD,layerFillRule} from '../../lib/animation/pathLayer';
-import {effectPrimitives,effectBounds,revealedText,strokeAttributes} from '../../lib/animation/effects';
+import {effectPrimitives,effectBounds,revealedText,strokeAttributes,layerColorsAt} from '../../lib/animation/effects';
 import type {InterfaceAsset} from '../../lib/interface/schema';
 import {StudioStatus} from '../studios/StudioStatus';
 import {useEffect,useMemo,useRef} from 'react';
@@ -58,8 +58,8 @@ function animatedText(l:Layer,at:number){
  return spans.slice(0,Array.from(shown).length).map((c,i)=><tspan key={i} dx={c.dx} dy={c.dy} fontSize={(l.source.size??48)*c.scale} fillOpacity={c.opacity} rotate={c.rotate||undefined} fill={c.fill}>{c.ch}</tspan>);
 }
 const canClosePath=(l?:Layer)=>!!l&&l.kind==='shape'&&l.source.shape==='path'&&!!l.source.path;
-function layerNode(l:Layer,assets:readonly InterfaceAsset[],at:number,fillOverride?:string){
- const src=l.source;const fill=fillOverride??src.color;
+function layerNode(layer:Layer,assets:readonly InterfaceAsset[],at:number,fillOverride?:string){
+ const l=layerColorsAt(layer,at),src=l.source;const fill=fillOverride??src.color;
  if(l.kind==='comp'){const p=precompImage(l,at,assets);return p?<image href={p.href} width={p.width} height={p.height}/>:<text fill="var(--text-primary)">Missing composition</text>;}
  if(l.kind==='raster'){const asset=assets.find(a=>a.id===src.assetId);return asset?<image href={asset.data} width={src.width} height={src.height}/>:<text fill="var(--text-primary)">Missing image</text>;}
  if(l.kind==='solid')return <rect x={0} y={0} width={src.width} height={src.height} fill={fill}/>;
