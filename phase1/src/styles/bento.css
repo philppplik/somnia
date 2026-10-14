@@ -122,3 +122,6 @@ input,select,textarea{border-radius:var(--r-sm)}
 .md-preview a:focus-visible,.md-preview :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){.md-preview .md-reveal-flash{transition:none}}
 .documents-caret{animation:doc-cb 1s steps(1) infinite}@keyframes doc-cb{50%{opacity:0}}
+/* Photos lights-out (P75): the L key dims the workspace chrome around the canvas. */
+.photos-lights-out .media-bar,.photos-lights-out .photos-filmstrip{opacity:.18;transition:opacity .15s ease}
+.photos-lights-out .media-bar:hover,.photos-lights-out .photos-filmstrip:hover{opacity:1}

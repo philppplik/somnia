@@ -53,3 +53,18 @@ Coverage: `photos-zoom.spec.ts` gains a light/dark leg that presses
 `]`, reads `getPhotoSession().now.orientation` through the session
 module (1), asserts the toolbar Undo button enabled, steps back with
 `[`, wraps past zero to 3 and returns to 0.
+
+## Lights-out (P75)
+
+The `L` key dims the workspace chrome — the media bar and the filmstrip
+fade to 18% opacity while the canvas stays fully clear, and hovering a
+dimmed strip brings it back. Persisted via `panelStateStore` under
+`photos.lightsOut`; the styles live in `src/styles/bento.css`
+(`.photos-lights-out .media-bar, .photos-lights-out .photos-filmstrip`),
+no inline styles, no new literals. Same key-handler guards as the other
+workspace keys.
+
+Coverage: `photos-zoom.spec.ts` gains a light/dark leg that toggles
+`L`, asserts the `photos-lights-out` class, polls the bar's computed
+opacity through the fade (0.18), verifies the canvas opacity stays 1,
+and toggles back.

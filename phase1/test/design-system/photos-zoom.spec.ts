@@ -64,3 +64,23 @@ test('rotate keys: [ and ] turn the photo a quarter and wrap (light and dark)',a
   expect(await orientation()).toBe(0);
  }
 });
+test('lights-out: L dims the workspace chrome, L again restores it (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-zoom');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  const ws=page.getByTestId('photos-workspace');
+  await expect(ws).toBeVisible();
+  if(await ws.getAttribute('class').then(c=>c!.includes('photos-lights-out')))await page.keyboard.press('l'); // normalize persisted state
+  const barOpacity=()=>page.locator('[data-testid="photos-workspace"] > .media-bar').evaluate(el=>getComputedStyle(el).opacity);
+  expect(await barOpacity()).toBe('1');
+  await page.keyboard.press('l');
+  await expect(ws).toHaveClass(/photos-lights-out/);
+  await expect.poll(barOpacity).toBe('0.18'); // chrome dimmed (after the fade transition)
+  const canvasOpacity=await page.getByTestId('photos-canvas').evaluate(el=>getComputedStyle(el).opacity);
+  expect(canvasOpacity).toBe('1'); // the canvas stays clear
+  await page.screenshot({path:`test-results/ds-photos-lights-out-${theme}.png`,fullPage:true});
+  await page.keyboard.press('l');
+  await expect(ws).not.toHaveClass(/photos-lights-out/);
+  await expect.poll(barOpacity).toBe('1');
+ }
+});

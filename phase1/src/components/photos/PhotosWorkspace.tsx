@@ -68,6 +68,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
  const [note,setNote]=useState('');
  const [showGuides,setShowGuides]=usePanelState<boolean>('photos.cropGuides',true);
  const [guideStyle,setGuideStyle]=usePanelState<CropGuideStyle>('photos.cropGuideStyle','thirds');
+ const [lightsOut,setLightsOut]=usePanelState<boolean>('photos.lightsOut',false);
  const [showClipping,setShowClipping]=usePanelState<boolean>('photos.clipping',false);
  const [showMaskOverlay]=usePanelState<boolean>('photos.lummask.overlay',false);
  const [showSplit,setShowSplit]=usePanelState<boolean>('photos.split',false);
@@ -175,13 +176,14 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
    else if(e.key==='x'||e.key==='X')setFlag(item.name,'reject');
    else if(e.key==='u'||e.key==='U')setFlag(item.name,null);
    else if(e.key==='o'||e.key==='O')setGuideStyle(CROP_GUIDE_STYLES[(CROP_GUIDE_STYLES.indexOf(guideStyle)+1)%CROP_GUIDE_STYLES.length]);
+   else if(e.key==='l'||e.key==='L')setLightsOut(!lightsOut);
    else if(e.key==='[')rotatePhoto(item.name,-1);
    else if(e.key===']')rotatePhoto(item.name,1);
    else if(e.key==='+'||e.key==='=')zoomTo(scale*1.25);
    else if(e.key==='-'||e.key==='_')zoomTo(scale/1.25);
   };
   window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey);
- },[nav.prev,nav.next,item.name,guideStyle,setGuideStyle,scale,zoomTo]);
+ },[nav.prev,nav.next,item.name,guideStyle,setGuideStyle,lightsOut,setLightsOut,scale,zoomTo]);
 
  const pointerPos=(e:React.PointerEvent)=>{const r=imgBox.current!.getBoundingClientRect();return{x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height};};
  const onStageDown=(e:React.PointerEvent)=>{
@@ -346,7 +348,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
  const dirty=session?dirtyPhoto(session):false;
  const crop=session?.cropDraft;
  const guideLines=crop?cropGuideLines(crop,guideStyle):null;
- return <section className="canvas-stage flex min-h-0 w-full flex-1 flex-col" aria-label={t('photos.title')} data-testid="photos-workspace">
+ return <section className={`canvas-stage flex min-h-0 w-full flex-1 flex-col${lightsOut?' photos-lights-out':''}`} aria-label={t('photos.title')} data-testid="photos-workspace">
   <div className={bar}>
    <span className="truncate font-medium text-ink" data-testid="photos-name">{item.name}</span>
    <span className="text-ink-3" data-testid="photos-info">{session?.sourceWidth?t('photos.info',{width:session.sourceWidth,height:session.sourceHeight}):''}</span>
