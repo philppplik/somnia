@@ -576,5 +576,12 @@
  "animation.precomp.pick": "Composição a aninhar",
  "animation.precomp.none": "Aninhar uma composição...",
  "animation.precomp.add": "Adicionar como camada",
- "cmd.animation.precomp.add": "Adicionar uma composição como camada"
+ "cmd.animation.precomp.add": "Adicionar uma composição como camada",
+ "animation.precomp.speed": "Velocidade (%)",
+ "animation.precomp.start": "Início na composição (s)",
+ "animation.precomp.loop": "Repetir",
+ "animation.precomp.make": "Pré-compor",
+ "animation.precomp.make.hint": "Mover as camadas selecionadas para uma nova composição e substituí-las por uma camada",
+ "cmd.animation.precomp.make": "Pré-compor camadas selecionadas",
+ "cmd.animation.precomp.time": "Definir velocidade, repetição e início da camada de composição"
 }

@@ -984,6 +984,30 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.precomp.make",
+      "title": "Precompose selected layers",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "animation.precomp.time",
+      "title": "Set comp layer speed, loop and start",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.preset.apply",
       "title": "Apply entrance preset",
       "category": "Edit",

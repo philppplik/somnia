@@ -252,3 +252,9 @@ Added:
 - `validatePrecomps`: missing target, cycles, depth over `MAX_PRECOMP_DEPTH` (3), expanded layers over `MAX_PRECOMP_LAYERS` (600). Removing a used composition is rejected.
 - Render: the child frame is built as SVG and embedded as a data-URI image; child time = child.start + (tick - in point - offset). No child audio, no child background, no time remap.
 - Older app versions reject documents with comp layers.
+
+## P45 - Precompose and time remap
+
+- `precomp.make {layers, name?, id?, compId?}`: layers move, in order, into a new composition with the parent's size, rate, duration, start, background and work area. One comp layer (in = comp start, out = comp end) takes the top-most selected slot. Refused: no layers, more than 200, audio layers, parent or matte links crossing the selection, depth and size limits.
+- Comp layer source fields: `speed` 10-1000 (percent), `timeOffset` ticks 0..86400000, `loop`. Child time = child.start + round((tick - in - offset) * speed / 100) + timeOffset; with `loop` it wraps inside the child duration, without it runs on (nothing is drawn past the child's layers). Without these fields the P44 mapping is unchanged.
+- `precomp.add` now centers the child on the parent (anchor at the child's center). P44 layers that were added earlier keep their stored transform.

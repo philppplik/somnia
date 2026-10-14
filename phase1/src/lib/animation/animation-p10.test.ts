@@ -1262,3 +1262,51 @@ test('P44 precomp layers: add, render the other composition at its own time, ref
  assert.ok(validatePrecomps(bad).length>0);
  const back=parseAnimationSnapshot(serializeAnimationSnapshot(d,defaultView()));assert.equal(findLayer(findComp(back.doc)!,'nest')!.source.compId,'inner');
 });
+
+test('P45 precompose selected layers: one edit, same picture, link guards, undoable shape',()=>{
+ let d=base();const main=d.activeComp;const ids=findComp(d)!.layers.map(l=>l.id);assert.ok(ids.length>=3);
+ const [a,b,c]=ids;const before=frameSvg(findComp(d)!,0,false,d.assets,d.compositions);
+ const n=d.compositions.length;
+ const out=applyEdit(d,{type:'precomp.make',layers:[a,c],id:'pc',compId:'pcc',name:'Group'});
+ assert.deepEqual(validateDocument(out),[]);assert.equal(out.compositions.length,n+1);
+ const parent=findComp(out,main)!,child=findComp(out,'pcc')!;
+ assert.deepEqual(child.layers.map(l=>l.id),ids.filter(x=>x===a||x===c));
+ assert.equal(parent.layers.length,ids.length-1);assert.ok(parent.layers.some(l=>l.id==='pc'&&l.kind==='comp'&&l.source.compId==='pcc'));
+ assert.equal(parent.layers.findIndex(l=>l.id==='pc'),0);
+ assert.equal(child.name,'Group');assert.equal(child.width,parent.width);assert.equal(out.activeComp,d.activeComp);
+ // original input untouched
+ assert.equal(findComp(d,main)!.layers.length,ids.length);assert.equal(frameSvg(findComp(d,main)!,0,false,d.assets,d.compositions),before);
+ // rendered: the child's content is drawn through the comp layer
+ assert.equal(frameSvg(parent,0,false,out.assets,out.compositions).includes('data:image/svg+xml'),true);
+ // errors
+ assert.throws(()=>applyEdit(d,{type:'precomp.make',layers:[]}),EditError);
+ assert.throws(()=>applyEdit(d,{type:'precomp.make',layers:['nope']}),EditError);
+ assert.throws(()=>applyEdit(d,{type:'precomp.make',layers:[a],compId:main}),EditError);
+ const linked=applyEdit(d,{type:'layer.parent',layer:a,parent:b});
+ assert.throws(()=>applyEdit(linked,{type:'precomp.make',layers:[a]}),/linked/);
+ assert.throws(()=>applyEdit(linked,{type:'precomp.make',layers:[b]}),/linked/);
+ assert.equal(validateDocument(applyEdit(linked,{type:'precomp.make',layers:[a,b]})).length,0);
+});
+
+test('P45 time remap and loop on comp layers',()=>{
+ let d=base();const main=d.activeComp;
+ d=applyEdit(d,{type:'comp.add',id:'inner',settings:{width:200,height:100,duration:240000*2}});
+ d=applyEdit(d,{type:'layer.add',kind:'solid',id:'red',over:{source:{color:'#ff0000',width:50,height:50},inT:240000,outT:240000*2}});
+ d=applyEdit(d,{type:'comp.select',comp:main});d=applyEdit(d,{type:'precomp.add',comp:'inner',id:'nest'});
+ const inner=(t:number)=>decodeURIComponent(frameSvg(findComp(d)!,t,false,[],d.compositions).split('data:image/svg+xml;charset=utf-8,')[1]?.split('"')[0]??'');
+ const red=(t:number)=>inner(t).includes('#ff0000');
+ assert.equal(red(0),false);assert.equal(red(240000),true);
+ // 200% speed: child second 1 arrives at parent 0.5 s
+ d=applyEdit(d,{type:'layer.update',layer:'nest',source:{speed:200}});assert.equal(red(120000),true);assert.equal(red(60000),false);
+ // start offset 1 s: child already at 1 s at parent 0
+ d=applyEdit(d,{type:'layer.update',layer:'nest',source:{speed:100,timeOffset:240000}});assert.equal(red(0),true);
+ // past the child end without loop: nothing from the child at 2.5 s, loop wraps back
+ d=applyEdit(d,{type:'layer.update',layer:'nest',source:{timeOffset:0}});
+ d=applyEdit(d,{type:'layer.update',layer:'nest',source:{loop:true}});
+ const lay=findLayer(findComp(d)!,'nest')!;assert.equal(lay.source.loop,true);
+ d=applyEdit(d,{type:'layer.timing',layer:'nest',inT:0,outT:240000*5});
+ assert.equal(red(240000*3),true);assert.equal(red(240000*2),false);assert.equal(red(240000*4+1),false);
+ // validation
+ for(const bad of [{speed:5},{speed:1001},{timeOffset:-1},{timeOffset:1.5},{loop:'yes' as unknown as boolean}])assert.throws(()=>applyEdit(d,{type:'layer.update',layer:'nest',source:bad}),EditError);
+ assert.deepEqual(validateDocument(d),[]);
+});

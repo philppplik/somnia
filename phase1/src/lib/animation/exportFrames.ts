@@ -32,9 +32,17 @@ export function layerBody(layer:Layer,i:number,assets:readonly InterfaceAsset[],
 let renderComps:readonly Composition[]=[];let nest=0;
 export const setRenderComps=(comps:readonly Composition[])=>{renderComps=comps;};
 /** Picture of a comp layer: the other composition at its own time, as a self-contained SVG image (no background, so it composites). Empty when it cannot be drawn. */
+/** Child time for a comp layer: speed, offset and optional loop on top of the plain mapping. Without those fields it is the plain mapping. */
+export function precompLocal(l:Layer,child:Composition,tick:number):number{
+ const s=l.source;const rel=tick-(l.inT+l.offset);
+ if(s.speed===undefined&&s.timeOffset===undefined&&!s.loop)return child.start+rel;
+ const t=Math.round(rel*(s.speed??100)/100)+(s.timeOffset??0);
+ if(!s.loop||child.duration<1)return child.start+t;
+ return child.start+(((t%child.duration)+child.duration)%child.duration);
+}
 export function precompImage(l:Layer,tick:number,assets:readonly InterfaceAsset[]):{href:string;width:number;height:number}|null{
  const child=renderComps.find(c=>c.id===l.source.compId);if(!child||nest>=MAX_PRECOMP_DEPTH+1)return null;
- const local=child.start+(tick-(l.inT+l.offset));const keep=nest;nest++;
+ const local=precompLocal(l,child,tick);const keep=nest;nest++;
  try{const svg=frameSvg(child,local,true,assets,renderComps);return {href:`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`,width:l.source.width??child.width,height:l.source.height??child.height};}
  finally{nest=keep;}
 }

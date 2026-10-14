@@ -5,7 +5,7 @@ import {validateTextPresetLib} from './textPresetModel';
 import type {InterfaceAsset} from '../interface/schema';
 import {validateAnimationAssets} from './assetsValidation';
 import {MAX_AUDIO_VOLUME,type AudioAsset} from './audioCore';
-import {validatePrecomps,prop,createComposition,type TextAnimator,type LayerMask,type LayerMatte,type ClipItem,type KeyRef,type Vec2,createLayer,findComp,findLayer,PROP_META,wouldCycle,EASE_IN,EASE_OUT,TRANSFORM_KEYS,validateDocument,type AnimationDocument,type CompSettings,type Composition,type Interp,type Keyframe,type Layer,type LayerKind,type LayerSource,type LayerEffect,validSource,validEffects,type Property,type PropValue,type TransformKey} from './model';
+import {validatePrecomps,precompTransform,prop,createComposition,type TextAnimator,type LayerMask,type LayerMatte,type ClipItem,type KeyRef,type Vec2,createLayer,findComp,findLayer,PROP_META,wouldCycle,EASE_IN,EASE_OUT,TRANSFORM_KEYS,validateDocument,type AnimationDocument,type CompSettings,type Composition,type Interp,type Keyframe,type Layer,type LayerKind,type LayerSource,type LayerEffect,validSource,validEffects,type Property,type PropValue,type TransformKey} from './model';
 import {evaluate} from './interpolate';
 import {validateModifiers,linkProblems} from './modifiers';
 import {snapToFrame,tickToFrame,frameToTick,validRate} from './time';
@@ -32,6 +32,7 @@ export type Edit=
  /** Gives keys exact new ticks in one step (each key its own target). */
  /** Adds a layer that shows another composition of the document. */
  |{type:'precomp.add';comp:string;id?:string}
+ |{type:'precomp.make';layers:readonly string[];name?:string;id?:string;compId?:string}
  |{type:'keys.retime';moves:readonly {layer:string;prop:TransformKey;from:number;to:number}[]}
  |{type:'keys.remove';keys:readonly KeyRef[]}
  |{type:'keys.paste';layer:string;items:readonly ClipItem[];t:number}
@@ -250,9 +251,26 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
     const times2=new Set(moved.map(k=>k.t));const rest=p.keys.filter(k=>!times.has(k.t));
     if(!e.replace&&rest.some(k=>times2.has(k.t)))return fail('collision','A key already exists at that time. Replace it explicitly.');
     return {...p,keys:[...rest.filter(k=>!times2.has(k.t)),...moved].sort((a,b)=>a.t-b.t)};}));}
+  case 'precomp.make':{const c=compOf(doc);const ids=[...new Set(e.layers??[])];
+   if(!ids.length||ids.length>200)return fail('invalid','Select 1 to 200 layers.');
+   const sel=ids.map(id=>layerOf(doc,id));if(sel.some(l=>l.kind==='audio'))return fail('invalid','Audio layers cannot be precomposed.');
+   if(e.name!==undefined&&(typeof e.name!=='string'||!e.name.trim()||e.name.length>200))return fail('invalid','Name must be 1 to 200 characters.');
+   const set=new Set(ids);
+   for(const l of c.layers){const inside=set.has(l.id);
+    if(inside&&((l.parent&&!set.has(l.parent))||(l.matte&&!set.has(l.matte.source))))return fail('invalid',`"${l.name}" is linked to a layer outside the selection. Select that layer too.`);
+    if(!inside&&((l.parent&&set.has(l.parent))||(l.matte&&set.has(l.matte.source))))return fail('invalid',`"${l.name}" is linked to a selected layer. Select it too.`);}
+   const base=createComposition({name:e.name?.trim()||`Precomp ${doc.compositions.length}`,width:c.width,height:c.height,fps:c.fps,duration:c.duration},e.compId);
+   if(doc.compositions.some(x=>x.id===base.id))return fail('invalid','Duplicate composition id.');
+   const inner=c.layers.filter(l=>set.has(l.id));const top=c.layers.findIndex(l=>set.has(l.id));
+   const child={...base,start:c.start,background:c.background,workArea:{...c.workArea},layers:inner};
+   const pl=createLayer('comp',c,{name:child.name,source:{compId:child.id,width:c.width,height:c.height},transform:precompTransform(c.width,c.height,c.width,c.height),inT:c.start,outT:c.start+c.duration},e.id);
+   if(c.layers.some(x=>!set.has(x.id)&&x.id===pl.id))return fail('invalid','Duplicate layer id.');
+   const rest=c.layers.filter(l=>!set.has(l.id));const at=c.layers.slice(0,top).filter(l=>!set.has(l.id)).length;
+   const next:AnimationDocument={...doc,compositions:[...doc.compositions.map(x=>x.id===c.id?{...c,layers:[...rest.slice(0,at),pl,...rest.slice(at)]}:x),child]};
+   const probs=validatePrecomps(next);if(probs.length)return fail('invalid',probs[0].replace(/^[^:]*: /,'').replace(/^./,m=>m.toUpperCase())+'.');return next;}
   case 'precomp.add':{const c=compOf(doc);const child=doc.compositions.find(x=>x.id===e.comp);if(!child)return fail('missing','That composition no longer exists.');
    if(child.id===c.id)return fail('invalid','A composition cannot contain itself.');
-   const l=createLayer('comp',c,{name:child.name,source:{compId:child.id,width:child.width,height:child.height},outT:Math.max(1,Math.min(c.duration,child.duration))},e.id);
+   const l=createLayer('comp',c,{name:child.name,source:{compId:child.id,width:child.width,height:child.height},transform:precompTransform(child.width,child.height,c.width,c.height),outT:Math.max(1,Math.min(c.duration,child.duration))},e.id);
    if(c.layers.some(x=>x.id===l.id))return fail('invalid','Duplicate layer id.');
    const next=withLayers(doc,ls=>[l,...ls]);const probs=validatePrecomps(next);if(probs.length)return fail('invalid',probs[0].replace(/^[^:]*: /,'').replace(/^./,m=>m.toUpperCase())+'.');return next;}
   case 'keys.retime':{const c=compOf(doc);if(!e.moves?.length||e.moves.length>2000)return fail('invalid','Nothing to move.');

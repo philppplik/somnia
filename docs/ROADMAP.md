@@ -305,3 +305,9 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Done: precomps. A `comp` layer nests another composition (`animation.precomp.add`, Insert panel "Add as layer"). Cycles, depth over 3 and over 600 expanded layers are rejected. Viewer, PNG/SVG/WebM export share one renderer. WebM audio mixing already existed.
 - Open: no "precompose selected layers", no time remap or loop, no child audio or child background in the nested image.
 
+
+### Animation P45 (2026-10-14, integration pending)
+
+- Done: "Precompose" (timeline toolbar, `animation.precomp.make`): the selected layers move into a new composition (same size, rate, duration, start, background) and one comp layer replaces them at the top-most position, one undo step. Comp layers get speed (10-1000 %), start time in the child and loop (`animation.precomp.time`, inspector fields). Comp layers are now centered on the parent (anchor at the child's center), so a same-size child lines up exactly.
+- Open: selections linked by parent or matte to unselected layers are refused (not auto-extended); audio layers cannot be precomposed; speed and start are static values, not keyframes; no reverse playback; the child is not drawn with its background.
+

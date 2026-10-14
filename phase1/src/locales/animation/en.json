@@ -576,5 +576,12 @@
  "animation.precomp.pick": "Composition to nest",
  "animation.precomp.none": "Nest a composition...",
  "animation.precomp.add": "Add as layer",
- "cmd.animation.precomp.add": "Add a composition as a layer"
+ "cmd.animation.precomp.add": "Add a composition as a layer",
+ "animation.precomp.speed": "Speed (%)",
+ "animation.precomp.start": "Start time in comp (s)",
+ "animation.precomp.loop": "Loop",
+ "animation.precomp.make": "Precompose",
+ "animation.precomp.make.hint": "Move the selected layers into a new composition and replace them with one layer",
+ "cmd.animation.precomp.make": "Precompose selected layers",
+ "cmd.animation.precomp.time": "Set comp layer speed, loop and start"
 }

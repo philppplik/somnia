@@ -576,5 +576,12 @@
  "animation.precomp.pick": "Composición a anidar",
  "animation.precomp.none": "Anidar una composición...",
  "animation.precomp.add": "Añadir como capa",
- "cmd.animation.precomp.add": "Añadir una composición como capa"
+ "cmd.animation.precomp.add": "Añadir una composición como capa",
+ "animation.precomp.speed": "Velocidad (%)",
+ "animation.precomp.start": "Inicio en la composición (s)",
+ "animation.precomp.loop": "Bucle",
+ "animation.precomp.make": "Precomponer",
+ "animation.precomp.make.hint": "Mover las capas seleccionadas a una composición nueva y sustituirlas por una capa",
+ "cmd.animation.precomp.make": "Precomponer las capas seleccionadas",
+ "cmd.animation.precomp.time": "Ajustar velocidad, bucle e inicio de la capa de composición"
 }

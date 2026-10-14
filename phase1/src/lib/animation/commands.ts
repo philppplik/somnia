@@ -14,7 +14,7 @@ import {animationSession} from './session';
 import {setLayerPen,getLayerPen} from './maskSelection';
 import {allTargetKeys,bounceTargetKeys,elasticTargetKeys,easeTargetKeys,staggerLayers} from './keyTargets';
 import {downloadBlob} from './exportFrames';
-import {layerSetIds} from './layerSet';
+import {clearLayerSet,layerSetIds} from './layerSet';
 import {deleteEasingEdit,findEasing,saveEasingEdit} from './easingLibrary';
 import {deleteMotionEdit,exportMotionsJson,findMotion,mergeMotionsEdit,motionEdits,motionFromKeys,parseMotionsJson,saveMotionEdit,userMotions} from './motionLibrary';
 import {secondsToTicks,snapToFrame} from './time';
@@ -67,6 +67,12 @@ export function animationCommandSpecs():CommandSpec<unknown,unknown>[]{
    object({name:{type:'string',maxLength:200},width:{type:'integer',minimum:1,maximum:16384},height:{type:'integer',minimum:1,maximum:16384},seconds:{type:'number',minimum:0.01,maximum:3600},fps:{type:'integer',minimum:1,maximum:240},background:{type:'string',pattern:'^#[0-9a-fA-F]{6}$'}},[])),
   spec('animation.comp.select','Switch composition',(p:{comp:string})=>run({type:'comp.select',comp:p.comp}),object({comp:layerRef}),open,'View'),
   spec('animation.layer.add','Add layer',(p:{kind:LayerKind})=>{run({type:'layer.add',kind:p.kind});const c=comp();animationSession().setView({selectedLayer:c.layers[0]?.id??null});},object({kind:{enum:['solid','text','shape','null']}}),open,'Insert'),
+  spec('animation.precomp.make','Precompose selected layers',(p:{layers?:string[];name?:string})=>{const ids=p.layers??layerSetIds(animationSession().getState().view.selectedLayer);if(!ids.length)fail('Select a layer first.');
+   const id=newId('layer');run({type:'precomp.make',layers:ids,name:p.name,id});clearLayerSet();animationSession().setView({selectedLayer:id,selectedKey:null});},
+   object({layers:{type:'array',items:layerRef,minItems:1,maxItems:200},name:{type:'string',minLength:1,maxLength:200}},[]),()=>open()&&layerSetIds(animationSession().getState().view.selectedLayer).length>0,'Edit'),
+  spec('animation.precomp.time','Set comp layer speed, loop and start',(p:{layer?:string;speed?:number;loop?:boolean;offset?:number})=>{const layer=p.layer??selected();const l=findLayer(comp(),layer);if(l?.kind!=='comp')fail('Select a comp layer.');
+   const source={...(p.speed!==undefined?{speed:p.speed}:{}),...(p.loop!==undefined?{loop:p.loop}:{}),...(p.offset!==undefined?{timeOffset:Math.max(0,secondsToTicks(p.offset))}:{})};if(!Object.keys(source).length)fail('Nothing to change.');return run({type:'layer.update',layer,source});},
+   object({layer:layerRef,speed:{type:'number',minimum:10,maximum:1000},loop:{type:'boolean'},offset:{type:'number',minimum:0,maximum:3600}},[]),()=>open()&&findLayer(comp(),animationSession().getState().view.selectedLayer??'')?.kind==='comp','Edit'),
   spec('animation.precomp.add','Add a composition as a layer',(p:{comp:string})=>{run({type:'precomp.add',comp:p.comp});animationSession().setView({selectedLayer:comp().layers[0]?.id??null});},object({comp:{type:'string',minLength:1,maxLength:64}},['comp']),()=>open()&&doc().compositions.length>1,'Insert'),
   spec('animation.layer.remove','Delete layer',(p:{layer?:string})=>{run({type:'layer.remove',layer:layerIdOf(p)});animationSession().setView({selectedLayer:null,selectedKey:null});},object({layer:layerRef},[])),
   spec('animation.layer.update','Edit layer',(p:{layer?:string;name?:string;visible?:boolean;solo?:boolean;locked?:boolean;shy?:boolean;text?:string;size?:number;color?:string;font?:TextFont})=>{

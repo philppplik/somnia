@@ -576,5 +576,12 @@
  "animation.precomp.pick": "Composition à imbriquer",
  "animation.precomp.none": "Imbriquer une composition...",
  "animation.precomp.add": "Ajouter comme calque",
- "cmd.animation.precomp.add": "Ajouter une composition comme calque"
+ "cmd.animation.precomp.add": "Ajouter une composition comme calque",
+ "animation.precomp.speed": "Vitesse (%)",
+ "animation.precomp.start": "Début dans la composition (s)",
+ "animation.precomp.loop": "Boucle",
+ "animation.precomp.make": "Précomposer",
+ "animation.precomp.make.hint": "Déplacer les calques sélectionnés dans une nouvelle composition et les remplacer par un calque",
+ "cmd.animation.precomp.make": "Précomposer les calques sélectionnés",
+ "cmd.animation.precomp.time": "Régler vitesse, boucle et début du calque de composition"
 }

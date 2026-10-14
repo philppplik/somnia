@@ -235,6 +235,7 @@ export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Compo
     <Button size="tiny" variant="ghost" onClick={()=>run('animation.workarea.reset')} data-testid="animation-wa-reset">{t('animation.workarea.reset')}</Button>
    </span>
    <label className="ml-2 flex items-center gap-1 text-ink-3"><NativeInput type="checkbox" className="animation-checkbox" checked={keepWorld} onChange={e=>setKeepWorld(e.target.checked)} data-testid="animation-parent-keepworld"/>{t('animation.parent.keepWorld')}</label>
+   {layerSetIds(selected).length>0&&<Button size="tiny" variant="outline" onClick={()=>run('animation.precomp.make',{})} title={t('animation.precomp.make.hint')} data-testid="animation-precomp-make">{t('animation.precomp.make')}</Button>}
    {layerSetIds(selected).length>1&&<span className="flex items-center gap-1" role="group" aria-label={t('animation.stagger.frames')} title={t('animation.stagger.hint')}>
     <NativeInput type="number" min={-600} max={600} step={1} className="h-5 w-12 rounded-sm border border-subtle bg-transparent px-1 text-xs text-ink-2" aria-label={t('animation.stagger.frames')} value={stagger} onChange={e=>setStagger(Math.max(-600,Math.min(600,Math.round(Number(e.target.value)||0))))} data-testid="animation-stagger-frames"/>
     <label className="flex items-center gap-1 text-ink-3"><NativeInput type="checkbox" className="animation-checkbox" checked={staggerTiming} onChange={e=>setStaggerTiming(e.target.checked)} data-testid="animation-stagger-timing"/>{t('animation.stagger.timing')}</label>
