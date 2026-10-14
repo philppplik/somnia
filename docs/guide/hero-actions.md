@@ -7,7 +7,7 @@ Status:
 | Part | Status |
 | --- | --- |
 | The slot and the manifest field `heroAction`, with Publish as the fallback | **Pre-release** (on `int/shell`) |
-| Per-studio actions in the table below | **In development.** Built on feature branches, not yet merged into `int/shell`. |
+| Per-studio actions in the table below | **Pre-release.** On `int/shell`; the beta.4 release notes do not list them, so check your build |
 
 The slot is a split button. The main part runs the studio's primary command. The chevron opens extra commands. `Publish...` is always the last entry, so deploy is never lost. Below 960 px width only the icon shows. Off desktop (web build) the Publish entry is disabled.
 
@@ -28,4 +28,4 @@ The slot is a split button. The main part runs the studio's primary command. The
 
 Contract and rules: [hero-action-shell-contract](../concepts/hero-action-shell-contract.md). Developer reference: [header-hero-action](../studios/header-hero-action.md).
 
-Branches: `feat/hero-code-docs-sheets`, `feat/hero-creative`, `feat/hero-sound`, `feat/hero-video`, `feat/hero-vibespace`, plus the Slides branch. Status as reported on 2026-10-13: all ten built on branches, waiting for the integration snapshot run. Check this table against the release notes before you rely on a row.
+Check this table against the release notes before you rely on a row.

@@ -16,7 +16,7 @@ Files, Slides, Slide text.
 
 ## Header action
 
-Present (F5, full screen). Built on a feature branch, not yet in `int/shell`.
+Present (F5, full screen).
 
 ## Export and save
 

@@ -10,7 +10,7 @@ Not for local editing. AI providers, GitHub access and collaboration have separa
 
 ## Which version should I install?
 
-Use the stable release for the checked stable scope and an alpha only for testing newer work. On the 13 October 2026 baseline, those are v12.0.1 and v12.2.0-alpha.7. See [Quickstart](quickstart.md) and the actual release assets.
+Use the stable release for the checked stable scope and an alpha only for testing newer work. On the 14 October 2026 baseline, those are v12.0.1 (stable) and v12.2.0-beta.4 (pre-release). See [Quickstart](quickstart.md) and the actual release assets.
 
 ## The app starts with a black window. What now?
 

@@ -16,7 +16,7 @@ Layers, Files, Search, Components, CSS, Versions.
 
 ## Header action
 
-Preview (toggle for the live preview). Pre-release on the hero branches, see [Hero actions](../hero-actions.md).
+Preview (toggle for the live preview). See [Hero actions](../hero-actions.md).
 
 ## Export and save
 

@@ -37,3 +37,9 @@ The app is translated into en, de, es, fr and pt-BR.
 Use your own key or a local model. Keys are kept in the app's Rust host, not in project files. Cloud providers receive what you send them: read [Privacy](../agent/PRIVACY.md) first. Sign-in with an account instead of a key: [Auth](../auth/README.md).
 
 The sync folder syncs project settings and profile or shortcuts, newer wins, and never API keys.
+
+## Settings transfer and performance (Pre-release, beta.4)
+
+- **Export and import setup**: a versioned export, classified by kind. Import offers Merge or Replace with a review step, makes a restore point first and can roll back. Secrets and permissions are never exported.
+- **Settings > Advanced > Performance**: studios are kept warm, suspended or evicted to save memory. Session checkpoints let a suspended studio come back where you left it. Layout is restored per studio across restarts.
+- **Updates**: on alpha and beta channels the update pill installs signed pre-release builds in the app.

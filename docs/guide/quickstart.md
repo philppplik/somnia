@@ -8,9 +8,11 @@ Download from [GitHub Releases](https://github.com/philppplik/somnia/releases). 
 
 | Platform | Package |
 | --- | --- |
-| Windows x64 | `*-x64-setup.exe` or `*.msi`. Also on the Microsoft Store: <https://apps.microsoft.com/detail/9p4ltvzb1hjp> |
+| Windows x64 | `*-x64-setup.exe` or `*-x64.msi`. Also on the Microsoft Store: <https://apps.microsoft.com/detail/9p4ltvzb1hjp> |
+| Windows ARM64 (beta.4 and later) | `*-arm64-setup.exe` or `*-arm64.msi` |
 | macOS, Apple silicon | `*.dmg`. Builds are not notarized: right-click the app, then Open. |
 | Linux amd64 | `*.AppImage` (make it executable) or `*.deb` |
+| Linux ARM64 (beta.4 and later) | `*-arm64.deb` only, no AppImage |
 
 Each release lists a `SHA256SUMS` file. Compare it with the file you downloaded. Windows installers are unsigned, so SmartScreen can warn on first run.
 
