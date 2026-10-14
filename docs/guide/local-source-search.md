@@ -76,3 +76,5 @@ Source snippets are untrusted text. They are never instructions or permission to
 Browser tests use synthetic source text, deterministic vectors and synthetic transport responses. They exercise the production embedding adapter, but do not prove actual model quality, physical execution locality, native bridge/CSP behavior, desktop layout or editor selection on a packaged build. No generated answers or persistent index are part of this workflow.
 
 See the [milestone status](../ai/LOCAL-SOURCE-SEARCH-MILESTONE.md) and [local AI acceptance checklist](../ai/LOCAL-AI-ACCEPTANCE.md).
+
+For a short introduction, read [Local search](ai-and-collaboration.md#local-search). The repository [privacy/limits checklist](../ai/LOCAL-SOURCE-SEARCH-PRIVACY-CHECKLIST.md) is pending evidence.

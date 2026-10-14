@@ -2,9 +2,17 @@
 
 These are optional workflows. A local editor session does not require an AI provider or collaboration server.
 
-## Local source search
+## Local search
 
-Status: **In development**. Search-only reviewed open text with a private memory index and source citations. No generated answers or persisted index. Read the [local source search guide](local-source-search.md) for setup, source consent, filters, citation review and the unverified desktop/model limits.
+Status: **In development**.
+
+Find source snippets in selected text files you already have open. Use semantic similarity or an exact phrase, then inspect the citation and open its source. It does not write answers or act on what it finds.
+
+The index stays in this search session's memory. Closing search or changing its sources or model discards it. Text and queries use the checked local embedding route, with no silent cloud fallback. Downloading the optional model contacts its registry and needs a separate review. Local runtime metadata does not prove physical execution or privacy by itself.
+
+Only eligible open `.txt` and `.md` files are supported, up to32 files,256KiB of text and256 chunks. Similarity is not factual confidence, and displayed snippets may omit matches. Real-device model, native and screen-reader checks are still pending.
+
+Read the [workflow guide](local-source-search.md) and [known limits](local-source-search-limits.md). Contributors should use the [privacy/limits checklist](../ai/LOCAL-SOURCE-SEARCH-PRIVACY-CHECKLIST.md) before making release claims.
 
 ## Somnia Agent
 

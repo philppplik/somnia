@@ -36,3 +36,5 @@ DS, dependency layers and command/i18n checks pass on the patch chain. The inher
 Passing synthetic tests does not close these gates. The existing [local AI acceptance checklist](LOCAL-AI-ACCEPTANCE.md) remains the acceptance home. No Stable or Pre-release label is assigned here without a published release.
 
 The [offline EN/DE retrieval evaluator](../search-offline-evaluation-dn.md) provides a literal baseline and hand-authored-vector plumbing metrics. It does not establish real embedding-model quality; no ranking/chunk tuning was justified by those synthetic numbers.
+
+The [privacy/limits checklist](LOCAL-SOURCE-SEARCH-PRIVACY-CHECKLIST.md) is an unchecked review aid. Its creation does not establish privacy or production acceptance.
