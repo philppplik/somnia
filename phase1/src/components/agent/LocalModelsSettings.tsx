@@ -1,4 +1,4 @@
-import {Field} from '../ui/field';import {NativeInput} from '../ui/native-controls';import {Notice} from '../ui/notice';import {recordReadiness,clearReadiness} from '../../lib/agent/localReadinessCache';
+import {Field} from '../ui/field';import {NativeInput,NativeSelect} from '../ui/native-controls';import {Notice} from '../ui/notice';import {recordReadiness,clearReadiness} from '../../lib/agent/localReadinessCache';
 import {agentSettingsSnapshot,subscribeAgentSettings} from '../../lib/agent/settingsRuntime';
 import {LocalModelHealth} from './LocalModelHealth';
 import {LocalModelDiskUsage} from './LocalModelDiskUsage';
@@ -35,7 +35,7 @@ export function LocalModelsSettings({active,runtime:provided,hardwareProbe}:{act
   }catch{if(request===generation.current){setSnapshot(null);setRefreshError(true);if(explicit)clearReadiness();}}finally{if(request===generation.current)setBusy(false);}
  };
  useEffect(()=>{if(active)void refresh();return()=>{generation.current++;setBusy(false);};},[active,runtime]);
- const [filter,setFilter]=useState(''),[page,setPage]=useState(0);const matches=(snapshot?.models??[]).filter(model=>model.id.toLocaleLowerCase().includes(filter.trim().toLocaleLowerCase()));
+ const [sort,setSort]=useState('name');const [filter,setFilter]=useState(''),[page,setPage]=useState(0);const matches=(snapshot?.models??[]).filter(model=>model.id.toLocaleLowerCase().includes(filter.trim().toLocaleLowerCase())).sort((a,b)=>sort==='size'?(b.sizeBytes??-1)-(a.sizeBytes??-1)||a.id.localeCompare(b.id):a.id.localeCompare(b.id));
  useEffect(()=>setPage(0),[snapshot]);
  const inspect=async(id:string)=>{if(pendingInspect.current.has(id))return;const request=generation.current,owned=pendingInspect.current;owned.add(id);setInspecting(new Set(owned));try{const value=await runtime.evidence(id);if(request===generation.current)setEvidence(old=>({...old,[id]:value}));}catch{if(request===generation.current)setEvidence(old=>({...old,[id]:'error'}));}finally{owned.delete(id);if(request===generation.current)setInspecting(new Set(owned));}};
  const size=(bytes:number|undefined)=>bytes===undefined?t('local.unknown'):new Intl.NumberFormat(locale,{style:'unit',unit:'gigabyte',maximumFractionDigits:2}).format(bytes/1e9);
@@ -48,7 +48,7 @@ export function LocalModelsSettings({active,runtime:provided,hardwareProbe}:{act
   {!provided&&<LocalModelActions snapshot={snapshot} onChanged={refresh}/>}
   {snapshot?.state==='running'&&<>
    {!snapshot.inventoryError&&<LocalModelDiskUsage models={snapshot.models}/>}
-   <h4>{t('local.installed')}</h4><Field label={t('local.filter.label')}>{control=><NativeInput {...control} maxLength={100} value={filter} onChange={e=>{setFilter(e.target.value);setPage(0);}}/>}</Field><p>{t('local.filter.count',{count:String(matches.length),total:String(snapshot.models.length)})}</p>{filter&&<Button type="button" variant="outline" onClick={()=>{setFilter('');setPage(0);}}>{t('local.filter.clear')}</Button>}<p>{t('local.manager.lastUsedNotice')}</p>
+   <h4>{t('local.installed')}</h4><Field label={t('local.filter.label')}>{control=><NativeInput {...control} maxLength={100} value={filter} onChange={e=>{setFilter(e.target.value);setPage(0);}}/>}</Field><Field label={t('local.sort.label')}>{control=><NativeSelect {...control} value={sort} onChange={e=>{setSort(e.target.value);setPage(0);}}><option value="name">{t('local.sort.name')}</option><option value="size">{t('local.sort.size')}</option></NativeSelect>}</Field><p>{t('local.sort.notice')}</p><p>{t('local.filter.count',{count:String(matches.length),total:String(snapshot.models.length)})}</p>{filter&&<Button type="button" variant="outline" onClick={()=>{setFilter('');setPage(0);}}>{t('local.filter.clear')}</Button>}<p>{t('local.manager.lastUsedNotice')}</p>
    {snapshot.inventoryError?<p>{t('local.inventoryError')}</p>:!snapshot.models.length?<p>{t('local.empty')}</p>:<>
     {!matches.length&&<Notice>{t('local.filter.empty')}</Notice>}<ul className="local-models-list">{matches.slice(page*20,page*20+20).map(model=>{
      const info=evidence[model.id],lastUsed=lastLocalModelSuccess(runtime.baseUrl,model.id);return <li key={model.id}><strong>{model.id}</strong><div>{size(model.sizeBytes)} · {model.parameterSize??t('local.unknown')} · {model.quantization??t('local.unknown')}</div>

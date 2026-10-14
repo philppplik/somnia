@@ -1,5 +1,10 @@
 export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
  "en": {
+  "local.sort.label": "Sort installed models",
+  "local.sort.name": "Exact name",
+  "local.sort.size": "Reported size, largest first",
+  "local.sort.notice": "Size is daemon-reported, not free disk space or memory fit. Unknown sizes sort last.",
+
   "local.inspectPending": "Checking model metadata…",
 
   "local.filter.label": "Filter installed exact model names",
@@ -587,6 +592,11 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Move earlier after local"
  },
  "de": {
+  "local.sort.label": "Installierte Modelle sortieren",
+  "local.sort.name": "Exakter Name",
+  "local.sort.size": "Gemeldete Größe, größte zuerst",
+  "local.sort.notice": "Größe vom Daemon gemeldet, kein freier Speicher oder Memory-Fit. Unbekannte Größen zuletzt.",
+
   "local.inspectPending": "Modellmetadaten prüfen…",
 
   "local.filter.label": "Installierte exakte Modellnamen filtern",
@@ -1174,6 +1184,11 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Nach lokal früher einordnen"
  },
  "es": {
+  "local.sort.label": "Ordenar modelos instalados",
+  "local.sort.name": "Nombre exacto",
+  "local.sort.size": "Tamaño informado, mayor primero",
+  "local.sort.notice": "Tamaño informado por daemon, no espacio libre ni ajuste de memoria. Desconocidos al final.",
+
   "local.inspectPending": "Revisando metadatos del modelo…",
 
   "local.filter.label": "Filtrar nombres exactos instalados",
@@ -1761,6 +1776,11 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Mover antes tras local"
  },
  "fr": {
+  "local.sort.label": "Trier modèles installés",
+  "local.sort.name": "Nom exact",
+  "local.sort.size": "Taille déclarée, plus grande d’abord",
+  "local.sort.notice": "Taille déclarée par daemon, pas espace libre ni mémoire adaptée. Inconnues en dernier.",
+
   "local.inspectPending": "Vérification des métadonnées du modèle…",
 
   "local.filter.label": "Filtrer noms exacts installés",
@@ -2348,6 +2368,11 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Avancer après local"
  },
  "pt-BR": {
+  "local.sort.label": "Ordenar modelos instalados",
+  "local.sort.name": "Nome exato",
+  "local.sort.size": "Tamanho informado, maior primeiro",
+  "local.sort.notice": "Tamanho informado pelo daemon, não espaço livre nem ajuste de memória. Desconhecidos por último.",
+
   "local.inspectPending": "Verificando metadados do modelo…",
 
   "local.filter.label": "Filtrar nomes exatos instalados",
