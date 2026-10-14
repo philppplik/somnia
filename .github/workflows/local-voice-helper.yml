@@ -1,0 +1,170 @@
+name: Optional local voice helper (manual review only)
+on:
+  workflow_dispatch:
+    inputs:
+      generate_inventory:
+        description: 'Build source-only unreviewed license/linkage evidence, never run/package helper'
+        type: boolean
+        default: false
+      build_review_assets:
+        description: 'Build audited optional helper and run isolated egress fixtures (downloads model). No release.'
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: voice-review-${{ github.ref }}
+  cancel-in-progress: false
+# Standard hosted runners on public repositories only. No private paid minutes, larger runners or dispatch here.
+jobs:
+  native-contract:
+    if: github.event.repository.private == false
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Manifest and workflow contracts
+        run: node --test phase1/scripts/voice/asset-manifest.test.mjs phase1/scripts/voice/ci-contract.test.mjs
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Linux native prerequisites
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+      - name: Native voice contracts and parent-crash process tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p phase1/dist-voice/evidence
+          cargo test --locked --manifest-path phase1/src-tauri/Cargo.toml --no-default-features local_voice -- --nocapture 2>&1 | tee phase1/dist-voice/evidence/native-contract.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: voice-native-contract-${{ matrix.os }}
+          path: phase1/dist-voice/evidence/
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Linux desktop commands compile
+        if: runner.os == 'Linux'
+        run: cargo check --locked --manifest-path phase1/src-tauri/Cargo.toml --features desktop
+  source-inventory:
+    if: github.event.repository.private == false && inputs.generate_inventory
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            target: linux-x86_64
+          - os: windows-2022
+            target: windows-x86_64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Use installed Visual Studio dependency analyzer
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $vs = & "${env:ProgramFiles(x86)}/Microsoft Visual Studio/Installer/vswhere.exe" -latest -property installationPath
+          Import-Module "$vs/Common7/Tools/Microsoft.VisualStudio.DevShell.dll"
+          Enter-VsDevShell -VsInstallPath $vs -SkipAutomaticLocation -DevCmdArguments '-arch=x64 -host_arch=x64'
+          node phase1/scripts/voice/inventory-source.mjs
+      - name: Generate source license and linkage evidence (unreviewed)
+        if: runner.os == 'Linux'
+        run: node phase1/scripts/voice/inventory-source.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: whisper-inventory-UNREVIEWED-${{ matrix.target }}
+          path: phase1/dist-voice/inventory/
+          if-no-files-found: error
+          retention-days: 7
+  helper:
+    if: github.event.repository.private == false && inputs.build_review_assets
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            target: linux-x86_64
+          - os: windows-2022
+            target: windows-x86_64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Build pinned audited optional asset
+        env:
+          SOMNIA_VOICE_LICENSE_AUDIT: phase1/voice-audits/${{ matrix.target }}.json
+        run: node phase1/scripts/voice/build-helper.mjs
+      - name: Compute review-only manifest from actual bytes
+        run: node phase1/scripts/voice/asset-manifest.mjs phase1/dist-voice/helper
+      - uses: actions/upload-artifact@v4
+        with:
+          name: whisper-helper-review-${{ matrix.target }}
+          path: phase1/dist-voice/helper/
+          if-no-files-found: error
+          retention-days: 7
+  linux-egress:
+    needs: helper
+    if: github.event.repository.private == false && inputs.build_review_assets
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: actions/download-artifact@v4
+        with:
+          name: whisper-helper-review-linux-x86_64
+          path: phase1/dist-voice/helper
+      - name: Provision exact speech model and synthetic PCM fixtures
+        run: node phase1/scripts/voice/provision-ci.mjs
+      - run: sudo apt-get update && sudo apt-get install -y strace util-linux
+      - name: Namespace and syscall egress checks with hostile negative control
+        run: sudo env "PATH=$PATH" bash phase1/scripts/voice/check-egress-linux.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: voice-linux-egress-evidence
+          path: phase1/dist-voice/evidence/
+          if-no-files-found: warn
+          retention-days: 7
+  windows-egress:
+    needs: helper
+    if: github.event.repository.private == false && inputs.build_review_assets
+    runs-on: windows-2022
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: actions/download-artifact@v4
+        with:
+          name: whisper-helper-review-windows-x86_64
+          path: phase1/dist-voice/helper
+      - name: Provision exact speech model and synthetic PCM fixtures
+        run: node phase1/scripts/voice/provision-ci.mjs
+      - name: Program-scoped firewall and audited egress checks with hostile negative control
+        shell: powershell
+        run: ./phase1/scripts/voice/check-egress-windows.ps1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: voice-windows-egress-evidence
+          path: phase1/dist-voice/evidence/
+          if-no-files-found: warn
+          retention-days: 7
