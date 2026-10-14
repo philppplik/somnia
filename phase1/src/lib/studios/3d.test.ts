@@ -46,7 +46,11 @@ test('three.js stays in the lazy viewport chunk',()=>{
  const hits:string[]=[];
  const walk=(d:string)=>{for(const f of readdirSync(d)){const p=join(d,f);if(statSync(p).isDirectory()){if(f!=='node_modules'&&f!=='generated')walk(p);}else if(/\.tsx?$/.test(f)&&!/\.test\./.test(f)){const t=readFileSync(p,'utf8');if(/from\s+['"]three(\/|['"])/.test(t)||/import\(['"]three/.test(t))hits.push(p.slice(src.length));}}};
  walk(src);
- assert.deepEqual(hits,['components/studio3d/Viewport3D.tsx']);
+ assert.deepEqual(hits.sort(),['components/studio3d/Viewport3D.tsx','lib/studio3d/stage.ts']);
+ const stageUsers:string[]=[];
+ const scan=(d:string)=>{for(const f of readdirSync(d)){const p=join(d,f);if(statSync(p).isDirectory()){if(f!=='node_modules'&&f!=='generated')scan(p);}else if(/\.tsx?$/.test(f)&&!/\.test\./.test(f)&&/studio3d\/stage'/.test(readFileSync(p,'utf8'))&&!/import type[^;]*studio3d\/stage'|import type[^;]*'\.\/stage'/.test(readFileSync(p,'utf8')))stageUsers.push(p.slice(src.length));}};
+ scan(src);
+ assert.deepEqual(stageUsers,['components/studio3d/Viewport3D.tsx'],'only the lazy viewport imports stage at runtime');
  const canvas=readFileSync(join(src,'components/studio3d/Studio3DCanvas.tsx'),'utf8');
  assert.match(canvas,/lazy\(\(\)=>import\('\.\/Viewport3D'\)\)/);assert.doesNotMatch(canvas,/^import .*Viewport3D/m);
 });

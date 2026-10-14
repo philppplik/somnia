@@ -31,6 +31,11 @@ export function Studio3DCanvas(){
  return <main className="center" aria-label={t('studio3d.title')}><div className="workspace"><section className="code-pane" aria-label={t('studio3d.title')}>
   <FileTabs/>
   <input ref={input} type="file" accept={MODEL_ACCEPT} multiple hidden data-testid="studio3d-file-input" onChange={e=>{const files=[...(e.target.files??[])];e.target.value='';if(files.length)void withController(c=>c.openFiles(files));}}/>
+  {s.confirmReplace&&<div role="alertdialog" aria-label={t('studio3d.replace.title')} className="m-2 flex flex-wrap items-center gap-2 rounded-md border border-subtle bg-surface p-2 text-xs text-ink" data-testid="studio3d-replace">
+   <span className="mr-auto">{t('studio3d.replace.message')}</span>
+   <button type="button" className="rounded-sm px-2 py-1 hover:bg-hover" onClick={()=>{const r=s.confirmReplace!;void withController(c=>r.what==='new'?c.newScene(true):c.openFiles(r.files,true));}}>{t('studio3d.replace.confirm')}</button>
+   <button type="button" className="rounded-sm px-2 py-1 hover:bg-hover" onClick={()=>patchStudio3D({confirmReplace:null})}>{t('studio3d.replace.cancel')}</button>
+  </div>}
   {active?<Suspense fallback={<p className="p-4 text-xs text-ink-3" role="status">{t('studio3d.status.loading',{name:''})}</p>}><Viewport3D/></Suspense>:
    <StudioEmptyState studio="3d" icon={<Boxes/>} onOpen={pick} onCreate={()=>withController(c=>c.newScene())}/>}
  </section></div></main>;

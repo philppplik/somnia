@@ -1,11 +1,14 @@
 import {useSyncExternalStore} from 'react';
 import {emptyStats,type ModelStats,type OutlineEntry,type Bounds} from './model';
+import type {ObjectInfo} from './stage';
 export type Studio3DStatus='idle'|'loading'|'ready'|'error';
 export interface Studio3DState{
  status:Studio3DStatus;name:string;error:string;stats:ModelStats;outline:readonly OutlineEntry[];bounds:Bounds|null;
- pending:{name:string;bytes:Uint8Array}|null;grid:boolean;wireframe:boolean;backend:string;selected:number|null;format:string;bytes:number;blank:boolean;
+ pending:{name:string;bytes:Uint8Array}|null;dirty:boolean;canUndo:boolean;canRedo:boolean;undoLabel:string;selectedInfo:ObjectInfo|null;
+ /** A replace request waiting for the user's answer because the scene has unsaved changes. */
+ confirmReplace:{what:'open'|'new';files:File[]}|null;grid:boolean;wireframe:boolean;backend:string;selected:number|null;format:string;bytes:number;blank:boolean;
 }
-const initial=():Studio3DState=>({status:'idle',name:'',error:'',stats:emptyStats(),outline:[],bounds:null,pending:null,grid:true,wireframe:false,backend:'',selected:null,format:'',bytes:0,blank:false});
+const initial=():Studio3DState=>({status:'idle',name:'',error:'',stats:emptyStats(),outline:[],bounds:null,pending:null,dirty:false,canUndo:false,canRedo:false,undoLabel:'',selectedInfo:null,confirmReplace:null,grid:true,wireframe:false,backend:'',selected:null,format:'',bytes:0,blank:false});
 let state=initial();const listeners=new Set<()=>void>();
 export const getStudio3DState=()=>state;
 export function patchStudio3D(patch:Partial<Studio3DState>){state={...state,...patch};listeners.forEach(l=>l());}

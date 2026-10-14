@@ -2,7 +2,9 @@
 
 - New 3D Studio (id `3d`, after Photos, before Vibe Space). Opens glTF 2.0 files (.glb, or .gltf with its .bin and textures selected together, meshopt supported), orbit/zoom/pan camera, keyboard orbit, image-based lighting, grid and wireframe toggles, click or list selection, scene outline and model statistics. Hero action "Render still" saves a PNG of the view; Project > Export scene as GLB.
 - three.js 0.186.1 (MIT) is loaded only when the studio is shown (own lazy chunk). Dev dependency @types/three 0.186.0.
-- Not in P0: Smart Open routing of .glb/.gltf, OBJ/STL/PLY, Draco, editing, path tracing, Babylon comparison and the 100k-triangle frame-rate gate (needs a real GPU run on Windows).
+- Smart Open routes .glb and .gltf (validated by content) to the 3D Studio (open kind `model3d`, handler `open.3d`).
+- Staging basics (P1 subset, three core only): insert cube, sphere, plane, cylinder, cone, torus, sun and point lights; numeric position, rotation and scale; PBR color, metalness and roughness; rename, duplicate, delete; undo and redo (one entry per edit); export marks the scene saved; replacing an unexported scene asks first; the scene survives switching studios.
+- Not in P0/P1 subset: Smart Open routing of .glb/.gltf, OBJ/STL/PLY, Draco, editing, path tracing, Babylon comparison and the 100k-triangle frame-rate gate (needs a real GPU run on Windows).
 
 # Unreleased: Studio shell regression fixes
 
