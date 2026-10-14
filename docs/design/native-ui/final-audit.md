@@ -140,6 +140,10 @@ through native control primitives, see below.
 - P34: photos crop guides feature (rule-of-thirds grid in the crop
   overlay with persisted toggle; no raw controls, ratchets unchanged),
   unit tests and gallery proof added (?view=photos-crop).
+- P35: photos clipping overlay feature (false-color shadow/highlight
+  clipping warning on the preview canvas with persisted toggle; no raw
+  controls, ratchets unchanged), unit tests and gallery proof added
+  (?view=photos-clipping).
 
 
 

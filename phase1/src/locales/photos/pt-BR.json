@@ -15,6 +15,7 @@
  "photos.error.size": "A entrada de revelação deve ter entre 1 byte e {max} MB.",
  "photos.error.notReady": "A foto ainda não está pronta.",
  "photos.info": "{width} × {height} px",
+ "photos.clipping": "Recorte",
  "photos.compare": "Segure para comparar com o original",
  "photos.undo": "Desfazer",
  "photos.redo": "Refazer",

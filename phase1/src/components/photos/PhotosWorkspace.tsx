@@ -2,12 +2,13 @@ import {StudioStatus} from '../studios/StudioStatus';
 import {reportError} from '../../lib/log';
 import {usePublishPhotosContext} from './panels/publishContext';
 import {useCallback,useEffect,useRef,useState} from 'react';
-import {Check,Download,Eye,Frame,Grid3x3,RotateCcw,Undo2,Redo2,X,ZoomIn,ZoomOut,Maximize2,Minimize2} from '../../lib/icons';
+import {AlertTriangle,Check,Download,Eye,Frame,Grid3x3,RotateCcw,Undo2,Redo2,X,ZoomIn,ZoomOut,Maximize2,Minimize2} from '../../lib/icons';
 import {Button} from '../ui/button';
 import {useT} from '../../lib/useT';
 import {applyPhotoCrop,cancelPhotoCrop,dirtyPhoto,exportPhotoCopy,historyPhoto,openPhoto,resetPhoto,rotatePhoto,setPhotoCropping,setPhotoCropDraft,usePhotoSession,type PhotoFrame} from '../../lib/photos/studioSession';
 import type {PhotoCrop} from '../../lib/photos/studioSettings';
 import {cropGuideLines} from '../../lib/photos/cropGuides';
+import {clippingOverlayImage} from '../../lib/photos/clippingOverlay';
 import {usePanelState} from '../../store/panelStateStore';
 import {getState,patchState,requestStudio,useAppStore} from '../../store/appStore';
 import type {MediaItem} from '../../lib/media';
@@ -29,13 +30,14 @@ type DragMode={kind:'move';dx:number;dy:number}|{kind:'nw'|'ne'|'sw'|'se'};
 /** The developed photo with zoom/pan, crop overlay, compare, undo and bounded copy export. */
 export function PhotosWorkspace({item}:{item:MediaItem}){
  const {t}=useT();const studio=useAppStore().activeStudio;const session=usePhotoSession(item.name);
- const stage=useRef<HTMLDivElement>(null),canvas=useRef<HTMLCanvasElement>(null),imgBox=useRef<HTMLDivElement>(null);
+ const stage=useRef<HTMLDivElement>(null),canvas=useRef<HTMLCanvasElement>(null),clipCanvas=useRef<HTMLCanvasElement>(null),imgBox=useRef<HTMLDivElement>(null);
  const [stageSize,setStageSize]=useState<[number,number]>([0,0]);
  const [zoom,setZoom]=useState<number|null>(null); // null = fit
  const [pan,setPan]=useState<[number,number]>([0,0]);
  const [compare,setCompare]=useState(false);
  const [note,setNote]=useState('');
  const [showGuides,setShowGuides]=usePanelState<boolean>('photos.cropGuides',true);
+ const [showClipping,setShowClipping]=usePanelState<boolean>('photos.clipping',false);
  const drag=useRef<{pan?:{x:number;y:number;px:number;py:number};crop?:DragMode}|null>(null);
  useEffect(()=>{void openPhoto(item);},[item]);
  usePublishPhotosContext(item.name);
@@ -46,6 +48,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
  useEffect(()=>{const el=stage.current;if(!el)return;const ro=new ResizeObserver(()=>setStageSize([el.clientWidth,el.clientHeight]));ro.observe(el);setStageSize([el.clientWidth,el.clientHeight]);return()=>ro.disconnect();},[]);
  const shown=compare&&session?.original?session.original:session?.frame??null;
  useEffect(()=>{draw(canvas.current,shown);},[shown]);
+ useEffect(()=>{if(showClipping)draw(clipCanvas.current,shown?clippingOverlayImage(shown):null);},[shown,showClipping]);
  const fw=shown?.width??1,fh=shown?.height??1;
  const fit=stageSize[0]>0&&stageSize[1]>0?Math.min(stageSize[0]/fw,stageSize[1]/fh):1;
  const scale=zoom??fit;
@@ -108,6 +111,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
    <span className="text-ink-3" data-testid="photos-info">{session?.sourceWidth?t('photos.info',{width:session.sourceWidth,height:session.sourceHeight}):''}</span>
    <span className="flex-1"/>
    <Button size="icon" variant="outline" aria-label={t('photos.compare')} title={t('photos.compare')} disabled={!session?.original} onPointerDown={()=>setCompare(true)} onPointerUp={()=>setCompare(false)} onPointerLeave={()=>setCompare(false)} data-testid="photos-compare"><Eye size={14}/></Button>
+   <Button size="icon" variant="outline" aria-pressed={showClipping} aria-label={t('photos.clipping')} title={t('photos.clipping')} disabled={!ready} onClick={()=>setShowClipping(!showClipping)} data-testid="photos-clipping"><AlertTriangle size={14}/></Button>
    <Button size="icon" variant="outline" aria-label={t('photos.undo')} disabled={!session?.past.length} onClick={()=>historyPhoto(item.name,false)} data-testid="photos-undo"><Undo2 size={14}/></Button>
    <Button size="icon" variant="outline" aria-label={t('photos.redo')} disabled={!session?.future.length} onClick={()=>historyPhoto(item.name,true)} data-testid="photos-redo"><Redo2 size={14}/></Button>
    <Button size="icon" variant="outline" aria-label={t('photos.reset')} disabled={!ready} onClick={()=>resetPhoto(item.name)} data-testid="photos-reset"><RotateCcw size={14}/></Button>
@@ -123,6 +127,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
   <div ref={stage} className="media-checker relative min-h-0 w-full flex-1 overflow-hidden" onWheel={onWheel} onPointerDown={onStageDown} onPointerMove={onStageMove} onPointerUp={onStageUp} onPointerCancel={onStageUp} data-testid="photos-stage" style={{touchAction:'none',cursor:session?.cropping?'default':'grab'}}>
    <div ref={imgBox} className="absolute left-1/2 top-1/2" style={{width:dispW,height:dispH,transform:`translate(-50%,-50%) translate(${pan[0]}px,${pan[1]}px)`}}>
     <canvas ref={canvas} className="block size-full rounded-[2px] shadow-sm" style={{imageRendering:scale>4?'pixelated':'auto'}} data-testid="photos-canvas"/>
+    {showClipping&&<canvas ref={clipCanvas} className={`pointer-events-none absolute inset-0 size-full${scale>4?' pixelated':''}`} data-testid="photos-clipping-canvas"/>}
     {session?.cropping&&crop&&<div className="absolute inset-0" style={{cursor:'default'}} onPointerMove={onCropMove} onPointerUp={onCropUp} onPointerCancel={onCropUp} data-testid="photos-crop-overlay">
      <svg className="absolute inset-0 size-full" aria-hidden="true">
       <path d={`M0 0H${dispW}V${dispH}H0Z M${crop.x0*dispW} ${crop.y0*dispH}H${crop.x1*dispW}V${crop.y1*dispH}H${crop.x0*dispW}Z`} fill="rgba(0,0,0,0.45)" fillRule="evenodd"/>

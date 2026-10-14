@@ -53,6 +53,7 @@ All file links are repository-relative, so they remain useful on a feature branc
 23. [Layers surfaces DS adoption](layers-adoption.md)
 24. [Export and conversion dialogs DS adoption](export-adoption.md)
 25. [Photos crop guides (rule of thirds)](photos-crop-guides.md)
+26. [Photos clipping overlay (false-color warning)](photos-clipping-overlay.md)
 
 ## The system in one view
 

@@ -15,6 +15,7 @@
  "photos.error.size": "L'entrée de développement doit faire entre 1 octet et {max} Mo.",
  "photos.error.notReady": "La photo n'est pas encore prête.",
  "photos.info": "{width} × {height} px",
+ "photos.clipping": "Écrêtage",
  "photos.compare": "Maintenir pour comparer avec l'original",
  "photos.undo": "Annuler",
  "photos.redo": "Rétablir",
