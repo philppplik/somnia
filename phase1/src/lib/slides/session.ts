@@ -10,9 +10,10 @@ import {SlidesClient} from './client';
 import {assertPptx,type DeckSummary} from './protocol';
 import {addMediaFile,closeMedia,findMedia,getMedia,setActiveMedia,subscribeMedia,registerMediaCloseGuard} from '../media';
 export interface SlidesSession {presenting:boolean;wasmBytes:number;diagnostics:SlidesDiagnostics|null;name:string;source:string;summary:DeckSummary|null;index:number;image:string;texts:string[];thumbnails:Record<number,string>;busy:boolean;error:string;original:Uint8Array|null;working:Uint8Array|null;runs:TextRun[];slideIds:number[];layouts:LayoutInfo[];model:DeckModel|null;dirty:boolean;undo:Uint8Array[];redo:Uint8Array[]}
-interface Entry {revision:number;state:SlidesSession;client:SlidesClient;sequence:number;disposed:boolean;presentCache:Map<string,Promise<string>>;exiting?:boolean}
+interface Entry {generation:number;revision:number;state:SlidesSession;client:SlidesClient;sequence:number;disposed:boolean;presentCache:Map<string,Promise<string>>;exiting?:boolean}
 const bounded=(history:Uint8Array[])=>{let total=0;return history.slice(-10).reverse().filter(b=>(total+=b.byteLength)<=64*1024*1024).reverse();};
 const empty:SlidesSession={presenting:false,wasmBytes:0,diagnostics:null,name:'',source:'',summary:null,index:0,image:'',texts:[],thumbnails:{},busy:false,error:'',original:null,working:null,runs:[],slideIds:[],layouts:[],model:null,dirty:false,undo:[],redo:[]};
+let generation=0;
 const sessions=new Map<string,Entry>();const listeners=new Set<()=>void>();let version=0;
 function emit(){version++;listeners.forEach(f=>f());}
 function patch(e:Entry,p:Partial<SlidesSession>,cause?:unknown){if(e.disposed)return;if(p.error)reportError('slides.engine',cause??p.error,{context:{studio:'slides',file:e.state.name}});e.state={...e.state,...p};emit();}
@@ -24,7 +25,7 @@ subscribeMedia(()=>{const media=getMedia();for(const [name,e]of sessions){if(med
 /** Entry identity is the source URL, not basename. Max three resident workers, current tab retained. */
 export async function ensureSlides(name:string){const m=findMedia(name);if(!m||m.kind!=='pptx')return;if(sessions.get(name)?.state.source===m.url)return;
  if(sessions.size>=3){const victim=[...sessions].find(([n,e])=>n!==getMedia().active&&!e.state.dirty);if(victim){dispose(victim[1]);sessions.delete(victim[0]);}else return;}
- const e:Entry={revision:0,state:{...empty,name,source:m.url,busy:true,thumbnails:{}},client:new SlidesClient(),sequence:0,disposed:false,presentCache:new Map()};sessions.set(name,e);emit();
+ const e:Entry={generation:++generation,revision:0,state:{...empty,name,source:m.url,busy:true,thumbnails:{}},client:new SlidesClient(),sequence:0,disposed:false,presentCache:new Map()};sessions.set(name,e);emit();
  try{const bytes=new Uint8Array(await(await fetch(m.url)).arrayBuffer());if(e.disposed)return;const summary=await e.client.open(bytes);if(e.disposed)return;let runs:TextRun[]=[];let slideIds:number[]=[];let model:DeckModel|null=null;let layouts:LayoutInfo[]=[];try{runs=await e.client.runs(bytes);model=await modelOf(e,bytes,summary.slides);slideIds=idsOf(model);layouts=await layoutsOf(e,bytes);}catch{/* Noncanonical text remains preview-only. */}if(e.disposed)return;const diagnostics=await e.client.diagnostics(bytes);patch(e,{summary,original:bytes,working:bytes,runs,slideIds,layouts,model,diagnostics});await renderSlide(e,0);}
  catch(error){patch(e,{busy:false,error:String(error)},error);e.client.dispose();}
 }
@@ -113,3 +114,5 @@ export const deleteSlideAt=(slideId:number)=>structuralEdit(async(e,before)=>{co
 /** Moves or resizes one text box as one undo step. Stays on the same slide; the box stays selected. */
 export const setShapeBoundsAt=(slideId:number,shapeId:number,expected:BoundsBox,next:BoundsBox)=>structuralEdit(async(e,before)=>{const i=idAt(e,slideId);return {bytes:await e.client.shapeBounds(before,slideId,shapeId,expected,next),index:i};});
 export const addSlideFromLayout=(layoutPart:string,afterSlideId:number|null)=>structuralEdit(async(e,before)=>{const i=afterSlideId===null?e.state.slideIds.length-1:idAt(e,afterSlideId);return {bytes:await e.client.newSlide(before,layoutPart,afterSlideId),index:i+1};});
+/** Metadata lease for selected-run summary. No deck serialization or worker call. */
+export function getSlideSummaryOwner(){const e=sessions.get(getMedia().active??'');if(!e||e.disposed||e.state.busy||!e.state.working||!e.state.summary||!e.state.diagnostics?.editable)throw Error('Slide selection unavailable');return {source:e.state.source,generation:e.generation,revision:e.revision,index:e.state.index,runs:e.state.runs};}

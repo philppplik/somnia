@@ -1,0 +1,2 @@
+import {officeLocalSummary} from './officeLocalSummary';import {assertSlideSummaryCurrent,type SlideSummarySelection} from '../slides/summarySelection';import type {AgentProvider} from './types';
+export function slideLocalSummary(snapshot:SlideSummarySelection,recapture:()=>SlideSummarySelection,provider:AgentProvider,model:string,signal:AbortSignal){return officeLocalSummary('slides',snapshot.text,()=>assertSlideSummaryCurrent(snapshot,recapture()),provider,model,signal);}
