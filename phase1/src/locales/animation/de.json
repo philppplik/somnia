@@ -650,5 +650,7 @@
  "animation.gradient.angleLane": "Füllverlauf Winkel",
  "animation.gradient.strokeAngleLane": "Konturverlauf Winkel",
  "animation.gradient.angleAnimate": "Verlaufswinkel animieren",
- "animation.gradient.animateProp": "{name} animieren"
+ "animation.gradient.animateProp": "{name} animieren",
+ "animation.gradient.startColorLane": "Verlauf Startfarbe",
+ "animation.gradient.endColorLane": "Verlauf Endfarbe"
 }

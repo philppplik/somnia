@@ -1772,3 +1772,25 @@ test('P75 gradient radial and opacity keyframes: sampling, lanes, bake, validati
  assert.throws(()=>applyEdit(d,{type:'gradient.prop',layer:'pa',target:'fill',prop:'radius',op:'set',value:5,t:0}),Error);
  assert.throws(()=>applyEdit(d,{type:'gradient.prop',layer:'pa',target:'fill',prop:'startOpacity',op:'set',value:101,t:0}),Error);
 });
+
+test('P76 gradient colour keyframes: mix, lanes, move, bake, validation',()=>{
+ let d=strokeDoc([{x:0.2,y:0.2},{x:0.8,y:0.2},{x:0.8,y:0.8}],true,8);
+ d=applyEdit(d,{type:'layer.update',layer:'pa',source:{gradient:{start:'#000000',end:'#0000ff',angle:0}}});
+ d=applyEdit(d,{type:'layer.stroke',layer:'pa',stroke:{color:'#00ff00',width:8,gradient:{start:'#000000',end:'#0000ff',angle:0}}});
+ const plain=frameSvg(comp(d),0),T=8000*30;
+ for(const target of ['fill','stroke'] as const){
+  d=applyEdit(d,{type:'gradient.color',layer:'pa',target,which:'start',op:'animate',on:true,t:0});
+  d=applyEdit(d,{type:'gradient.color',layer:'pa',target,which:'start',op:'set',color:'#ffffff',t:T*2});
+ }
+ assert.equal(frameSvg(comp(d),0),plain,'key at the static colour changes nothing');
+ assert.ok(frameSvg(comp(d),T).includes('stop-color="#808080"'),frameSvg(comp(d),T));
+ assert.deepEqual(validateDocument(d),[]);
+ const ids=styleKeyLanes(comp(d).layers.find(l=>l.id==='pa')!).map(l=>l.id as string);
+ assert.ok(ids.includes('gradFillStartColor')&&ids.includes('gradStrokeStartColor'),ids.join());
+ const moved=applyEdit(d,{type:'style.key.move',layer:'pa',lane:'gradFillStartColor',from:T*2,to:T*3});
+ assert.deepEqual(styleKeyLanes(comp(moved).layers.find(l=>l.id==='pa')!).find(l=>l.id==='gradFillStartColor')!.ticks,[0,T*3]);
+ const gone=applyEdits(d,styleKeyDeleteEdits('pa',[{lane:'gradStrokeStartColor',t:0},{lane:'gradStrokeStartColor',t:T*2}]));
+ const g=comp(gone).layers.find(l=>l.id==='pa')!.stroke!.gradient!;
+ assert.equal(g.colorKeys,undefined);assert.equal(g.start,'#ffffff');
+ assert.throws(()=>applyEdit(d,{type:'gradient.color',layer:'pa',target:'fill',which:'end',op:'set',color:'red',t:0}),Error);
+});

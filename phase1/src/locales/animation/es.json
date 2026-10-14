@@ -650,5 +650,7 @@
  "animation.gradient.angleLane": "Ángulo del degradado de relleno",
  "animation.gradient.strokeAngleLane": "Ángulo del degradado del trazo",
  "animation.gradient.angleAnimate": "Animar ángulo del degradado",
- "animation.gradient.animateProp": "Animar {name}"
+ "animation.gradient.animateProp": "Animar {name}",
+ "animation.gradient.startColorLane": "Color inicial del degradado",
+ "animation.gradient.endColorLane": "Color final del degradado"
 }

@@ -650,5 +650,7 @@
  "animation.gradient.angleLane": "Fill gradient angle",
  "animation.gradient.strokeAngleLane": "Stroke gradient angle",
  "animation.gradient.angleAnimate": "Animate gradient angle",
- "animation.gradient.animateProp": "Animate {name}"
+ "animation.gradient.animateProp": "Animate {name}",
+ "animation.gradient.startColorLane": "Gradient start colour",
+ "animation.gradient.endColorLane": "Gradient end colour"
 }

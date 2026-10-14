@@ -650,5 +650,7 @@
  "animation.gradient.angleLane": "Angle du dégradé de remplissage",
  "animation.gradient.strokeAngleLane": "Angle du dégradé du contour",
  "animation.gradient.angleAnimate": "Animer l’angle du dégradé",
- "animation.gradient.animateProp": "Animer {name}"
+ "animation.gradient.animateProp": "Animer {name}",
+ "animation.gradient.startColorLane": "Couleur de début du dégradé",
+ "animation.gradient.endColorLane": "Couleur de fin du dégradé"
 }

@@ -378,3 +378,7 @@ Repeater `hue` (deg per copy, -360..360): copy i gets `filter=hue-rotate(hue*i d
 ## P75
 
 `gradient.anim` {cx,cy,radius,startOpacity,endOpacity} scalar Properties. Lanes gradFill/gradStroke + Cx|Cy|Radius|StartOpacity|EndOpacity reuse style.key.move and styleKeyDeleteEdits. Baking the last key of an opacity at 100 drops the field (legacy output stays identical).
+
+## P76
+
+`gradient.colorKeys` {start?,end?} are ColorKey lists (same mix as layer colour keys). Lanes gradFill/gradStroke + StartColor|EndColor reuse style.key.move and styleKeyDeleteEdits.
