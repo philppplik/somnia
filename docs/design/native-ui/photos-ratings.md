@@ -25,3 +25,13 @@ shared media model (`MediaItem`) stays untouched.
   rates a photo, checks the badge, narrows the strip with the filter,
   reloads to prove persistence and clears by re-clicking, in light and
   dark.
+
+## Keyboard: arrows and digit ratings (P66)
+
+A workspace-level keydown handler walks the library with ArrowLeft /
+ArrowRight (same library order and no-wrap behaviour as the prev/next
+buttons) and rates the active photo with the digit keys 0-5 (0 clears,
+Lightroom-style). Keys go to editable targets first: the handler skips
+anything from an input, select, textarea or contenteditable element and
+ignores chords with Ctrl/Meta/Alt, so sliders, fields and browser
+shortcuts are untouched.

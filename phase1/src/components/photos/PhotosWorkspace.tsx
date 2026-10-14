@@ -8,6 +8,7 @@ import {NativeInput} from '../ui/native-controls';
 import {useT} from '../../lib/useT';
 import {applyPhotoCrop,cancelPhotoCrop,dirtyPhoto,exportPhotoCopy,historyPhoto,openPhoto,resetPhoto,rotatePhoto,setPhotoCropping,setPhotoCropDraft,usePhotoSession,type PhotoFrame} from '../../lib/photos/studioSession';
 import {autoSource,clampSpot} from '../../lib/photos/healSpots';
+import {setRating} from '../../lib/photos/ratings';
 import {deriveSpotWhiteBalance} from '../../lib/photos/autoTone';
 import {clampGrad,MAX_GRADS,type GradFilter,clampRad,MAX_RADS,type RadFilter} from '../../lib/photos/localAdjust';
 import {MAX_BRUSH_STROKES,MAX_BRUSH_TOTAL_DABS,brushTotalDabs,type BrushStroke} from '../../lib/photos/brushStrokes';
@@ -104,6 +105,17 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
   const onKey=(e:KeyboardEvent)=>{if(e.key==='Escape'){setCurvesTarget(false);setHslTarget(false);setWbPicker(false);setShowSplit(false);setBrushing(false);setStraightening(false);straightDraft.current=null;}};
   window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey);
  },[curvesTarget,hslTarget,wbPicker,showSplit,brushing,straightening,setCurvesTarget,setHslTarget,setWbPicker,setShowSplit]);
+ useEffect(()=>{ // arrows walk the library like the prev/next buttons, digits 0-5 rate the active photo; editable targets and modifiers keep their keys
+  const onKey=(e:KeyboardEvent)=>{
+   if(e.metaKey||e.ctrlKey||e.altKey)return;
+   const el=e.target as HTMLElement|null;
+   if(el&&el.closest('input,select,textarea,[contenteditable="true"]'))return;
+   if(e.key==='ArrowLeft'&&nav.prev){e.preventDefault();setActiveMedia(nav.prev);}
+   else if(e.key==='ArrowRight'&&nav.next){e.preventDefault();setActiveMedia(nav.next);}
+   else if(/^[0-5]$/.test(e.key))setRating(item.name,Number(e.key));
+  };
+  window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey);
+ },[nav.prev,nav.next,item.name]);
  const [dabR,setDabR]=usePanelState<number>('photos.dodgeRadius',0.05);
  const dabChain=useRef<{x:number;y:number;r:number}[]|null>(null); // dabs of the in-flight dodge stroke
  const healPath=useRef<{x:number;y:number}[]|null>(null); // path points of the in-flight heal stroke

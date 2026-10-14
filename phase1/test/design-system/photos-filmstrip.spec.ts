@@ -59,3 +59,37 @@ test('ratings render in light and dark',async({page})=>{
   await page.screenshot({path:`test-results/ds-photos-rating-${theme}.png`,fullPage:true});
  }
 });
+test('keyboard: arrows walk the library, digits rate the active photo, inputs keep their keys',async({page})=>{
+ await page.goto('/test/design-system/?view=photos-filmstrip');
+ await expect(page.getByTestId('photos-workspace')).toBeVisible();
+ await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // all three loaded: the nav neighbours exist
+ await expect(page.getByTestId('photos-name')).toHaveText('strip-1.png');
+ await page.keyboard.press('ArrowRight');
+ await expect(page.getByTestId('photos-name')).toHaveText('strip-2.png');
+ await expect(page.getByTestId('photos-filmstrip-item-strip-2.png')).toHaveAttribute('aria-pressed','true');
+ await page.keyboard.press('3');
+ await expect(page.getByTestId('photos-filmstrip-rating-badge-strip-2.png')).toHaveText('3');
+ await page.keyboard.press('0');
+ await expect(page.getByTestId('photos-filmstrip-rating-badge-strip-2.png')).toHaveCount(0);
+ await page.keyboard.press('ArrowLeft');
+ await expect(page.getByTestId('photos-name')).toHaveText('strip-1.png');
+ await page.keyboard.press('ArrowLeft'); // no previous photo: stays put
+ await expect(page.getByTestId('photos-name')).toHaveText('strip-1.png');
+ await page.getByTestId('photos-filmstrip-rating-filter').click(); // an editable control owns the keys now
+ await page.keyboard.press('ArrowRight');
+ await expect(page.getByTestId('photos-name')).toHaveText('strip-1.png'); // no navigation while the select is focused
+});
+test('keyboard navigation and digit rating render in light and dark',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // all three loaded: the nav neighbours exist
+  await page.keyboard.press('ArrowRight');
+  await expect(page.getByTestId('photos-name')).toHaveText('strip-2.png');
+  await page.keyboard.press('4');
+  await expect(page.getByTestId('photos-filmstrip-rating-badge-strip-2.png')).toHaveText('4');
+  await page.waitForTimeout(300);
+  await page.screenshot({path:`test-results/ds-photos-keyboard-${theme}.png`,fullPage:true});
+ }
+});
