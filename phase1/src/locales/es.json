@@ -2525,6 +2525,8 @@
   "documents.panels.headingsOnly": "Solo títulos",
   "documents.panels.headingLevel": "Título {n}",
   "documents.session.discard": "¿Descartar los cambios sin guardar en {name}? Guarda antes una copia para conservarlos.",
+  "documents.session.collabBuild": "Un participante usa otra versión de la app. Coedición en pausa: recarga la página.",
+  "documents.session.collabDirty": "Este documento tiene cambios locales. La coedición parte del archivo en disco: ciérralo y vuelve a abrirlo para unirte.",
   "documents.session.undoReleased": "El historial de deshacer de este archivo se liberó para ahorrar memoria. Tus cambios se conservan.",
   "documents.session.lost": "El motor de documentos se detuvo y no se pudieron recuperar los cambios sin guardar de este archivo. Se volvió a abrir el archivo original.",
   "documents.session.noEngine": "No hay ningún documento abierto.",

@@ -7,7 +7,13 @@ import {captureDocumentSelection} from './selectionCapture';
 import {CELL_BASE,caretAfterEdit,applyEdit,diffEdit,inverseOf,UndoStack,type TextEdit,type UndoEntry} from './edit';
 import {findMatches,nextMatchIndex,textStats,validFindQuery,validReplaceText,MAX_FIND_HIGHLIGHTS,MAX_REPLACE_BLOCKS,type FindMatch} from './find';
 import {listMarkerKind,stepBoundary,utf16ToUtf8Offset,utf8ToUtf16Offset,wordBoundary} from './text';
-import {getDocumentsState,patchDocuments,resetDocuments,INITIAL_VIEW,type Caret,type DocumentsState} from './store';
+import {getDocumentsState,patchDocuments,resetDocuments,subscribeDocuments,INITIAL_VIEW,type Caret,type DocumentsState} from './store';
+import {getCollab,onSessionChange} from '../collab/session';
+import {buildMismatches} from '../collab/buildSync';
+import {shareDocsFile,adoptDocsFile} from '../collab/office/officeSession';
+import {openDocsModel,docsModelMeta,type DocsOpKind} from '../collab/office/docsModel';
+import {DocsCollabBinding} from '../collab/office/docsBinding';
+import {announceCaret} from '../collab/office/docsPresence';
 import {DocumentsEngine} from './engine';
 import {blockAfterTableEdit,cellOf} from './tableOps';
 import {inspectDocx} from './inspect';
@@ -18,7 +24,7 @@ const ownerGuard=()=>{const e=engine,g=gen,en=cur;return ()=>{if(!e||engine!==e|
 const flags=()=>({canUndo:undo.canUndo,canRedo:undo.canRedo});
 /* ---- Per-file sessions: a file keeps its engine, undo history and dirty flag while the studio or tab is switched away. ---- */
 const STASH=['blocks','pages','pageSizes','words','rev','canUndo','canRedo','edited','caret','risks','engineMs','editError','notice'] as const;
-interface Entry{key:string;url:string;engine:DocumentsEngine|null;undo:UndoStack;stash:Partial<DocumentsState>;working:Uint8Array|null;dirty:boolean;used:number;undoReleased:boolean}
+interface Entry{key:string;url:string;engine:DocumentsEngine|null;undo:UndoStack;stash:Partial<DocumentsState>;working:Uint8Array|null;dirty:boolean;used:number;undoReleased:boolean;collab:DocsCollabBinding|null}
 const entries=new Map<string,Entry>();let cur:Entry|null=null;let gen=0;let tick=0;let identity:string|null=null;
 export const MAX_LIVE_SESSIONS=4;
 export interface SessionDeps{createEngine:()=>DocumentsEngine;loadBytes:(url:string)=>Promise<Uint8Array>}
@@ -43,7 +49,7 @@ function stashCurrent(){
 }
 /** Drops a file's session (the file was closed or replaced). Synchronous, so close cleanups can call it. */
 export function discardDocument(key:string){
- const e=entries.get(key);if(!e)return;entries.delete(key);e.engine?.dispose?.();e.engine=null;
+ const e=entries.get(key);if(!e)return;entries.delete(key);if(e.collab){e.collab.destroy();e.collab=null;}e.engine?.dispose?.();e.engine=null;
  if(cur===e){cur=null;engine=null;undo=new UndoStack();}
 }
 async function evictExtra(){
@@ -55,6 +61,7 @@ async function evictExtra(){
    catch{victim.used=++tick;if(liveEntries().length>MAX_LIVE_SESSIONS+4)return;continue;}
    victim.undoReleased=true;
   }
+  if(victim.collab){victim.collab.destroy();victim.collab=null;}
   victim.engine!.dispose?.();victim.engine=null;victim.undo=new UndoStack();
  }
 }
@@ -85,13 +92,15 @@ export function switchDocument(target:{key:string;url:string;retry?:boolean}|nul
    try{
     await e.init();const d=await e.open(raw.slice().buffer);
     if(my!==gen){e.dispose();return null;}
-    const fresh:Entry={key:target.key,url:target.url,engine:e,undo:new UndoStack(),stash:{},working:null,dirty:false,used:++tick,undoReleased:false};
+    const fresh:Entry={key:target.key,url:target.url,engine:e,undo:new UndoStack(),stash:{},working:null,dirty:false,used:++tick,undoReleased:false,collab:null};
     const restored=!!entry?.working;if(entry&&!live(entry))entries.delete(target.key);else if(entry)discardDocument(target.key);
     entries.set(target.key,fresh);cur=fresh;engine=e;undo=fresh.undo;identity=target.key;
     const notice=lost?'lost':restored&&entry!.undoReleased?'undoReleased':'';
     patchDocuments({...INITIAL_VIEW,status:'loading',name:target.key,error:'',risks:check.risks,engineMs:Math.round(d.openMs+d.layoutMs),edited:restored,notice,...flags()});
     await refresh(d);
     if(my!==gen)return null;
+    if(!restored)void attachDocsCollab(fresh,raw);
+    else if(getCollab())patchDocuments({notice:'collabDirty'});   // edits exist only locally; sharing starts from the file on disk
     patchDocuments({status:'ready'});await evictExtra();return e;
    }catch(err){e.dispose();throw err;}
   }catch(err){
@@ -100,11 +109,39 @@ export function switchDocument(target:{key:string;url:string;retry?:boolean}|nul
   }
  });
 }
+/** Collab (CO4): a freshly opened clean document joins the session's shared model; a dirty/restored one stays local with a notice. */
+async function attachDocsCollab(entry:Entry,raw:Uint8Array){
+ if(entry.collab||!live(entry))return;
+ const c=getCollab();if(!c)return;
+ if(buildMismatches(c.doc.awareness).length){if(cur===entry)patchDocuments({notice:'collabBuild'});return;}
+ const e=entry.engine!;
+ if(docsModelMeta(openDocsModel(c.doc,entry.key))){
+  const ad=await adoptDocsFile(c.doc,entry.key,raw);if(!ad.ok||!live(entry)||entry.collab)return;
+ }else{
+  await shareDocsFile(c.doc,entry.key,raw);if(!live(entry)||entry.collab)return;
+ }
+ const binding=new DocsCollabBinding(c.doc,entry.key,{
+  engine:{apply:(kind,params)=>e.applyJournalOp(kind,params)},
+  onApplied:(_idx,_en,result)=>{const d=(result as {document?:{pages:number;pageSizes:readonly {width:number;height:number}[];text:string}}|null)?.document;
+   if(d&&cur===entry&&engine===e)void refresh(d);},
+ });
+ e.setJournaler(req=>binding.applyLocalOp(req.kind as DocsOpKind,{...req,id:undefined} as Record<string,unknown>) as Promise<never>);
+ entry.collab=binding;
+ await binding.replay();
+ if(cur===entry)patchDocuments({edited:getDocumentsState().edited||binding.journalLength>0,rev:getDocumentsState().rev+1});
+}
+function detachDocsCollab(entry:Entry){
+ if(!entry.collab)return;
+ entry.engine?.setJournaler(null);entry.collab.destroy();entry.collab=null;
+ const c=getCollab();if(c)announceCaret(c.doc.awareness,null,0,0);
+}
+if(typeof window!=='undefined')onSessionChange(()=>{const live_=getCollab();for(const e of entries.values()){if(!live_)detachDocsCollab(e);}});
+if(typeof window!=='undefined')subscribeDocuments(()=>{const c=getCollab();const st=getDocumentsState();if(!c||!cur?.collab)return;const caret=st.caret;if(caret)announceCaret(c.doc.awareness,cur.key,caret.block,caret.head);else announceCaret(c.doc.awareness,null,0,0);});
 /** Hands over an already open engine as the current document, synchronously (tests and callers that open the engine themselves). Null closes the current document. */
 export function attachEngine(e:DocumentsEngine|null,key?:string){
  if(!e){identity=null;void switchDocument(null);return;}
  ++gen;stashCurrent();const k=key??'document';if(entries.get(k)?.engine!==e)discardDocument(k);
- const en:Entry={key:k,url:k,engine:e,undo:new UndoStack(),stash:{},working:null,dirty:false,used:++tick,undoReleased:false};
+ const en:Entry={key:k,url:k,engine:e,undo:new UndoStack(),stash:{},working:null,dirty:false,used:++tick,undoReleased:false,collab:null};
  entries.set(k,en);cur=en;engine=e;undo=en.undo;chain=Promise.resolve();goalX=null;identity=key??null;
  patchDocuments({...INITIAL_VIEW,name:k,...flags(),editError:'',edited:false,notice:''});
 }
@@ -212,7 +249,7 @@ async function restoreSnap(x:UndoEntry,to:'before'|'after'){
  const check=ownerGuard(),e=engine!;const sn=x.snap!;const d=await e.restore(to==='before'?sn.before:sn.after);check();const c=to==='before'?sn.caretBefore:sn.caretAfter;
  patchDocuments({edited:true,editError:'',caretLocked:false,caret:{block:c.block,anchor:c.off,head:c.off}});await refresh(d);
 }
-export const undoEdit=()=>run(async()=>{const check=ownerGuard(),x=undo.popUndo();if(!x)return;if(x.snap){await restoreSnap(x,'before');check();undo.pushRedoEntry(x);}else await apply(x.inverse,'undo');}).then(()=>refreshStyles());
+export const undoEdit=()=>run(async()=>{const check=ownerGuard(),x=undo.popUndo();if(!x)return;if(x.snap&&cur?.collab){patchDocuments({editError:'This structural edit cannot be undone while the document is shared.'});return;}if(x.snap){await restoreSnap(x,'before');check();undo.pushRedoEntry(x);}else await apply(x.inverse,'undo');}).then(()=>refreshStyles());
 export const redoEdit=()=>run(async()=>{const check=ownerGuard(),x=undo.popRedo();if(!x)return;if(x.snap){await restoreSnap(x,'after');check();undo.pushUndoEntry(x);}else await apply(x.inverse,'redo');});
 
 type Spot={block:number;off:number};

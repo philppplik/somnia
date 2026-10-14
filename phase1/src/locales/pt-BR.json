@@ -2525,6 +2525,8 @@
   "documents.panels.headingsOnly": "Somente títulos",
   "documents.panels.headingLevel": "Título {n}",
   "documents.session.discard": "Descartar as alterações não salvas em {name}? Salve uma cópia antes para mantê-las.",
+  "documents.session.collabBuild": "Um participante usa outra versão do app. Coedição pausada - recarregue a página.",
+  "documents.session.collabDirty": "Este documento tem edições locais. A coedição parte do arquivo em disco - feche e reabra para entrar.",
   "documents.session.undoReleased": "O histórico de desfazer deste arquivo foi liberado para economizar memória. Suas alterações foram mantidas.",
   "documents.session.lost": "O mecanismo de documentos parou e as alterações não salvas deste arquivo não puderam ser recuperadas. O arquivo original foi reaberto.",
   "documents.session.noEngine": "Nenhum documento aberto.",

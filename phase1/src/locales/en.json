@@ -2525,6 +2525,8 @@
   "documents.panels.headingsOnly": "Headings only",
   "documents.panels.headingLevel": "Heading {n}",
   "documents.session.discard": "Discard unsaved edits to {name}? Save a copy first to keep them.",
+  "documents.session.collabBuild": "A participant is on a different app version. Co-editing paused - please reload the page.",
+  "documents.session.collabDirty": "This document has local edits. Co-editing starts from the file on disk - close and reopen it to join.",
   "documents.session.undoReleased": "Undo history for this file was released to save memory. Your edits are kept.",
   "documents.session.lost": "The document engine stopped and unsaved edits to this file could not be recovered. The original file was reopened.",
   "documents.session.noEngine": "No document is open.",

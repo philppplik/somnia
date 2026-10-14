@@ -2525,6 +2525,8 @@
   "documents.panels.headingsOnly": "Titres uniquement",
   "documents.panels.headingLevel": "Titre {n}",
   "documents.session.discard": "Abandonner les modifications non enregistrées de {name} ? Enregistrez d'abord une copie pour les conserver.",
+  "documents.session.collabBuild": "Un participant utilise une autre version de l'app. Co-édition en pause - rechargez la page.",
+  "documents.session.collabDirty": "Ce document a des modifications locales. La co-édition part du fichier sur disque - fermez puis rouvrez-le pour rejoindre.",
   "documents.session.undoReleased": "L'historique d'annulation de ce fichier a été libéré pour économiser la mémoire. Vos modifications sont conservées.",
   "documents.session.lost": "Le moteur de documents s'est arrêté et les modifications non enregistrées de ce fichier n'ont pas pu être récupérées. Le fichier d'origine a été rouvert.",
   "documents.session.noEngine": "Aucun document ouvert.",

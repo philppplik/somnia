@@ -1,4 +1,5 @@
 import type {DocumentsRequest,DocumentsResponse,OpenedDocument} from './protocol';
+import {DOCS_OP_KINDS} from '../collab/office/docsModel';
 export interface WorkerLike{postMessage(message:unknown,transfer?:Transferable[]):void;terminate():void;onmessage:((e:MessageEvent<DocumentsResponse>)=>void)|null;onerror:((e:ErrorEvent)=>void)|null;onmessageerror:((e:MessageEvent)=>void)|null}
 type OkResponse=Extract<DocumentsResponse,{ok:true}>;
 type Ok<K extends OkResponse['kind']>=Extract<OkResponse,{kind:K}>;
@@ -25,7 +26,17 @@ export class DocumentsEngine{
   });
  }
  private queue<T>(run:()=>Promise<T>):Promise<T>{const next=this.chain.then(run,run);this.chain=next.catch(()=>undefined);return next;}
+ /** Collab (CO4): while set, mutating calls divert through the journaler instead of the worker (strict journal order). */
+ private journaler:((req:DocumentsRequest)=>Promise<DocumentsResponse>)|null=null;
+ setJournaler(j:((req:DocumentsRequest)=>Promise<DocumentsResponse>)|null){this.journaler=j;}
+ /** Journal tail application: send a recorded op as-is, bypassing the journaler. */
+ applyJournalOp(kind:string,params:Record<string,unknown>):Promise<DocumentsResponse>{return this.queue(()=>this.send(id=>({...params,id,kind}) as unknown as DocumentsRequest));}
  private async call<K extends OkResponse['kind']>(kind:K,build:(id:number)=>DocumentsRequest,transfer:Transferable[]=[]):Promise<Ok<K>>{
+  if(this.journaler){
+   const req=build(-1);
+   if((DOCS_OP_KINDS as readonly string[]).includes(req.kind))return this.journaler(req) as Promise<Ok<K>>;
+   if(req.kind==='insertImage')throw new Error('Image insert is not available while the document is shared.');
+  }
   const res=await this.queue(()=>this.send(build,transfer));
   if(!res.ok)throw new Error(res.error);
   if((res as OkResponse).kind!==kind)throw new Error('Unexpected response from the document engine.');
