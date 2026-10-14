@@ -1,6 +1,7 @@
 import {useSyncExternalStore} from 'react';
 import {ArrangementHistory,emptyArrangement,newClip,newTrack,parseArrangement,serializeArrangement,validateArrangement,ARRANGE_LIMITS,type Arrangement,type AudioSourceRef} from './arrangement';
 import {getSoundSession,openSound} from './session';
+import {registerWorkProvider} from '../workDocs';
 import {getMedia} from '../media';
 let history=new ArrangementHistory(emptyArrangement());
 let serial=0;const uid=()=>`sound-${Date.now().toString(36)}-${++serial}`;
@@ -45,3 +46,10 @@ export async function exportArrangement():Promise<'saved'|'cancelled'|'downloade
 /** Keep the dirty-session browser guard alive when switching back to Clip editor. */
 export const arrangementIsDirty=()=>serializeArrangement(history.snapshot)!==state.savedText;
 if(typeof window!=='undefined')window.addEventListener('beforeunload',event=>{if(arrangementIsDirty()){event.preventDefault();event.returnValue='';}});
+
+export async function saveArrangementNative():Promise<boolean>{
+ const {isTauri,invoke}=await import('@tauri-apps/api/core');if(!isTauri())throw Error('Native session save requires the desktop app; download JSON in the browser');
+ const text=serializeArrangement(history.snapshot),fileName=`${history.snapshot.name.replace(/[^a-z0-9 _-]/gi,'_')}.somnia-sound.json`;
+ const {saveSessionToFolder}=await import('./sessionSave');const outcome=await saveSessionToFolder({invoke},text,fileName);if(outcome==='saved')emit({savedText:text});return outcome==='saved'&&!arrangementIsDirty();
+}
+registerWorkProvider({studio:'sound-session',dirty:()=>arrangementIsDirty()?[history.snapshot.name]:[],save:()=>saveArrangementNative(),discard:()=>{resetArrangement();return[];},closeAll:resetArrangement,openCount:()=>history.snapshot.tracks.length||history.snapshot.sources.length?1:0});

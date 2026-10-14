@@ -214,5 +214,13 @@
   "cmd.sound.arrange.redo": "Arrange & Mix: Redo",
   "cmd.sound.arrange.render": "Arrange & Mix: Render mix",
   "cmd.sound.arrange.export": "Arrange & Mix: Export mix WAV",
-  "cmd.sound.arrange.save": "Arrange & Mix: Download session"
+  "cmd.sound.arrange.save": "Arrange & Mix: Download session",
+  "sound.arrange.saveNative": "Save session to folder…",
+  "sound.arrange.removeTrack": "Remove track",
+  "sound.arrange.removeTrackConfirm": "Remove this track and all its clips? Undo remains available.",
+  "sound.arrange.closeConfirm": "Unsaved Sound session: cancel and save the session first, or discard changes and close?",
+  "sound.arrange.command.saveNative": "Arrange & Mix: Save session to folder…",
+  "cmd.sound.arrange.saveNative": "Arrange & Mix: Save session to folder…",
+  "sound.arrange.command.track.delete": "Arrange & Mix: Remove track",
+  "cmd.sound.arrange.track.delete": "Arrange & Mix: Remove track"
 }

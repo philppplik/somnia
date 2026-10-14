@@ -214,5 +214,13 @@
   "cmd.sound.arrange.redo": "Arrangement & Mix: Wiederholen",
   "cmd.sound.arrange.render": "Arrangement & Mix: Mix rendern",
   "cmd.sound.arrange.export": "Arrangement & Mix: Mix als WAV exportieren",
-  "cmd.sound.arrange.save": "Arrangement & Mix: Session herunterladen"
+  "cmd.sound.arrange.save": "Arrangement & Mix: Session herunterladen",
+  "sound.arrange.saveNative": "Session in Ordner speichern…",
+  "sound.arrange.removeTrack": "Spur entfernen",
+  "sound.arrange.removeTrackConfirm": "Diese Spur mit allen Clips entfernen? Rückgängig bleibt verfügbar.",
+  "sound.arrange.closeConfirm": "Ungespeicherte Sound-Session: Abbrechen und zuerst speichern oder Änderungen verwerfen und schließen?",
+  "sound.arrange.command.saveNative": "Arrangement & Mix: Session in Ordner speichern…",
+  "cmd.sound.arrange.saveNative": "Arrangement & Mix: Session in Ordner speichern…",
+  "sound.arrange.command.track.delete": "Arrangement & Mix: Spur entfernen",
+  "cmd.sound.arrange.track.delete": "Arrangement & Mix: Spur entfernen"
 }

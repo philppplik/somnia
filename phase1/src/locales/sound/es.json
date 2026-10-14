@@ -214,5 +214,13 @@
   "cmd.sound.arrange.redo": "Organizar y mezclar: Rehacer",
   "cmd.sound.arrange.render": "Organizar y mezclar: Renderizar mezcla",
   "cmd.sound.arrange.export": "Organizar y mezclar: Exportar mezcla WAV",
-  "cmd.sound.arrange.save": "Organizar y mezclar: Descargar sesión"
+  "cmd.sound.arrange.save": "Organizar y mezclar: Descargar sesión",
+  "sound.arrange.saveNative": "Guardar sesión en carpeta…",
+  "sound.arrange.removeTrack": "Eliminar pista",
+  "sound.arrange.removeTrackConfirm": "¿Eliminar esta pista y todos sus clips? Se puede deshacer.",
+  "sound.arrange.closeConfirm": "Sesión de audio sin guardar: ¿cancelar para guardar primero o descartar y cerrar?",
+  "sound.arrange.command.saveNative": "Organizar y mezclar: Guardar sesión en carpeta…",
+  "cmd.sound.arrange.saveNative": "Organizar y mezclar: Guardar sesión en carpeta…",
+  "sound.arrange.command.track.delete": "Organizar y mezclar: Eliminar pista",
+  "cmd.sound.arrange.track.delete": "Organizar y mezclar: Eliminar pista"
 }

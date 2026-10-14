@@ -1,3 +1,5 @@
+import {arrangementIsDirty} from './sound/arrangeStore';
+import {t} from './i18n';
 import {rasterDirty} from '../store/rasterState';
 import {hasDirtyPdfs} from './pdfedit/session';
 import {invoke,isTauri} from '@tauri-apps/api/core';
@@ -21,7 +23,7 @@ export async function installDesktopAdapter(){
   if(!saveDraft({files:{...st.files},activeFile:st.activeFile,openFiles:[...st.openFiles]}))throw Error('The draft is too large for local recovery. Save the project to disk first.');
   await getCurrentWindow().destroy();
  }});
- await getCurrentWindow().onCloseRequested(e=>{const st=getState();const dirtyImages=Object.entries(st.rasterDoc).filter(([,d])=>rasterDirty(d));if(dirtyImages.length&&!window.confirm(`Discard unsaved image edits to ${dirtyImages.map(([name])=>name).join(', ')} and close Somnia?`)){e.preventDefault();return;}if(hasDirtyPdfs()){e.preventDefault();if(window.confirm('Discard unsaved PDF edits and close Somnia?')){if(!st.isDirty)void getCurrentWindow().destroy();else requestClose(st.storage==='disk'?'disk':'memory');}return;}if(st.isDirty){e.preventDefault();requestClose(st.storage==='disk'?'disk':'memory');}});
+ await getCurrentWindow().onCloseRequested(e=>{if(arrangementIsDirty()&&!window.confirm(t('sound.arrange.closeConfirm'))){e.preventDefault();return;}const st=getState();const dirtyImages=Object.entries(st.rasterDoc).filter(([,d])=>rasterDirty(d));if(dirtyImages.length&&!window.confirm(`Discard unsaved image edits to ${dirtyImages.map(([name])=>name).join(', ')} and close Somnia?`)){e.preventDefault();return;}if(hasDirtyPdfs()){e.preventDefault();if(window.confirm('Discard unsaved PDF edits and close Somnia?')){if(!st.isDirty)void getCurrentWindow().destroy();else requestClose(st.storage==='disk'?'disk':'memory');}return;}if(st.isDirty){e.preventDefault();requestClose(st.storage==='disk'?'disk':'memory');}});
  const offDeploy=registerDeployCommands(createTauriDeployBackend());
  const offFiles=await installFileAdapter({
   invoke:(command,args)=>invoke(command,args),

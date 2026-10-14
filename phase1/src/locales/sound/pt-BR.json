@@ -214,5 +214,13 @@
   "cmd.sound.arrange.redo": "Arranjo e mixagem: Refazer",
   "cmd.sound.arrange.render": "Arranjo e mixagem: Renderizar mixagem",
   "cmd.sound.arrange.export": "Arranjo e mixagem: Exportar mixagem WAV",
-  "cmd.sound.arrange.save": "Arranjo e mixagem: Baixar sessão"
+  "cmd.sound.arrange.save": "Arranjo e mixagem: Baixar sessão",
+  "sound.arrange.saveNative": "Salvar sessão na pasta…",
+  "sound.arrange.removeTrack": "Remover faixa",
+  "sound.arrange.removeTrackConfirm": "Remover esta faixa e todos os clipes? É possível desfazer.",
+  "sound.arrange.closeConfirm": "Sessão de áudio não salva: cancelar para salvar antes ou descartar e fechar?",
+  "sound.arrange.command.saveNative": "Arranjo e mixagem: Salvar sessão na pasta…",
+  "cmd.sound.arrange.saveNative": "Arranjo e mixagem: Salvar sessão na pasta…",
+  "sound.arrange.command.track.delete": "Arranjo e mixagem: Remover faixa",
+  "cmd.sound.arrange.track.delete": "Arranjo e mixagem: Remover faixa"
 }
