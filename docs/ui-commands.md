@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-809 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+810 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -36,6 +36,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `animation.color.keyRemove` | Remove fill or stroke colour keyframe | Edit | animation |  |
 | `animation.comp.add` | Add composition | Insert | animation |  |
 | `animation.comp.duplicate` | Duplicate composition | Edit | animation |  |
+| `animation.comp.remove` | Delete composition | Edit | animation |  |
 | `animation.comp.select` | Switch composition | View | animation |  |
 | `animation.comp.update` | Change composition settings | Edit | animation |  |
 | `animation.ease.apply` | Apply a saved easing to the selected keys | Edit | animation |  |

@@ -932,5 +932,7 @@
  "animation.rig.duplicate": "Duplicate layers",
  "cmd.animation.layers.duplicate": "Duplicate the selected layers",
  "animation.comp.duplicate": "Duplicate",
- "cmd.animation.comp.duplicate": "Duplicate composition"
+ "cmd.animation.comp.duplicate": "Duplicate composition",
+ "animation.comp.remove": "Delete",
+ "cmd.animation.comp.remove": "Delete composition"
 }

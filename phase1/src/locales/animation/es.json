@@ -932,5 +932,7 @@
  "animation.rig.duplicate": "Duplicar capas",
  "cmd.animation.layers.duplicate": "Duplicar las capas seleccionadas",
  "animation.comp.duplicate": "Duplicar",
- "cmd.animation.comp.duplicate": "Duplicar composición"
+ "cmd.animation.comp.duplicate": "Duplicar composición",
+ "animation.comp.remove": "Eliminar",
+ "cmd.animation.comp.remove": "Eliminar composición"
 }

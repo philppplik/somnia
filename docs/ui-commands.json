@@ -193,6 +193,19 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.comp.remove",
+      "title": "Delete composition",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "composition",
+        "delete",
+        "remove"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.comp.select",
       "title": "Switch composition",
       "category": "View",

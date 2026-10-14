@@ -932,5 +932,7 @@
  "animation.rig.duplicate": "Dupliquer les calques",
  "cmd.animation.layers.duplicate": "Dupliquer les calques sélectionnés",
  "animation.comp.duplicate": "Dupliquer",
- "cmd.animation.comp.duplicate": "Dupliquer la composition"
+ "cmd.animation.comp.duplicate": "Dupliquer la composition",
+ "animation.comp.remove": "Supprimer",
+ "cmd.animation.comp.remove": "Supprimer la composition"
 }

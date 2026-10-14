@@ -343,3 +343,14 @@ test('P153 composition duplicate is one undo step and a deep copy',async()=>{
  const c=findComp(d1,r.comp)!;assert.equal(c.name,`${src.name} copy`);assert.equal(c.layers.length,src.layers.length);assert.notEqual(c.layers,src.layers);
  s.undo();assert.equal(s.document!.compositions.length,n);
 });
+
+test('P154 composition delete refuses precomp use, one undo step',async()=>{
+ const {animationCommandSpecs}=await import('./commands');const run=(id:string,p?:unknown)=>animationCommandSpecs().find(c=>c.id===id)!.run(p);
+ const s=open();setAnimationSession(s);const first=s.document!.activeComp;
+ const r=run('animation.comp.duplicate') as {comp:string};
+ s.dispatch({type:'precomp.add',comp:first});
+ assert.throws(()=>run('animation.comp.remove',{comp:first}),/used as a layer/);
+ const n=s.document!.compositions.length;
+ run('animation.comp.remove',{comp:r.comp}) ;
+ assert.equal(s.document!.compositions.length,n-1);s.undo();assert.equal(s.document!.compositions.length,n);
+});

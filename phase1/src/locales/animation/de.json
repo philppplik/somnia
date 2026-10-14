@@ -932,5 +932,7 @@
  "animation.rig.duplicate": "Ebenen duplizieren",
  "cmd.animation.layers.duplicate": "Gewählte Ebenen duplizieren",
  "animation.comp.duplicate": "Duplizieren",
- "cmd.animation.comp.duplicate": "Komposition duplizieren"
+ "cmd.animation.comp.duplicate": "Komposition duplizieren",
+ "animation.comp.remove": "Löschen",
+ "cmd.animation.comp.remove": "Komposition löschen"
 }
