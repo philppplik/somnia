@@ -1,0 +1,3 @@
+export interface ReviewedCellText{address:string;text:string}
+/** Search the bounded reviewed DTO only, never raw formulas or a worker. */
+export function findReviewedRange(rows:readonly ReviewedCellText[],query:string,matchCase=false){if(rows.length>100||query.length>256)throw Error('Range search limits exceeded');let bytes=0;for(const r of rows){bytes+=new TextEncoder().encode(r.text).length;if(bytes>16384||new TextEncoder().encode(r.text).length>4096)throw Error('Range text limit exceeded');}const needle=query.trim(),q=matchCase?needle:needle.toLowerCase();return Object.freeze(rows.filter(r=>{if(!q)return true;return (matchCase?r.text:r.text.toLowerCase()).includes(q)||r.address.toLowerCase()===needle.toLowerCase();}));}
