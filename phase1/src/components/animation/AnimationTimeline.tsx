@@ -286,6 +286,7 @@ const marquee=(e:PointerEvent<SVGSVGElement>)=>{
     <div className="pointer-events-none absolute inset-y-0 rounded-sm bg-accent-soft" style={bar(wa.in,wa.out)} data-testid="animation-workarea"/>
     {(['in','out'] as const).filter(edge=>inWin(wa[edge])).map(edge=><button key={edge} type="button" className="absolute top-0 h-5 w-2 -translate-x-1/2 cursor-ew-resize rounded-sm border border-line bg-accent-fill" style={{left:pc(wa[edge])}}
      aria-label={t(edge==='in'?'animation.workarea.handleIn':'animation.workarea.handleOut')} aria-valuetext={timecode(wa[edge],comp.fps)} onPointerDown={dragWorkEdge(edge)} onKeyDown={nudgeEdge(edge)} data-testid={`animation-wa-handle-${edge}`}/>)}
+    <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible" aria-hidden="true" data-testid="animation-marker-ticks">{(comp.markers??[]).filter(m=>inWin(m.t)).map(m=><line key={m.id} x1={pc(m.t)} x2={pc(m.t)} y1="0" y2="100%" strokeWidth="2" className="stroke-warning" data-testid="animation-marker-tick"/>)}</svg>
     {inWin(at)&&<div className="pointer-events-none absolute inset-y-0 w-px bg-ink" style={{left:pc(at)}}/>}
    </div>
   </div>
