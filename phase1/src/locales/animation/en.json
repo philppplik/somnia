@@ -654,5 +654,12 @@
  "animation.gradient.startColorLane": "Gradient start colour",
  "animation.gradient.endColorLane": "Gradient end colour",
  "animation.gradient.stopOffsetLane": "Stop {n} offset",
- "animation.gradient.stopColorLane": "Stop {n} colour"
+ "animation.gradient.stopColorLane": "Stop {n} colour",
+ "animation.pathfx.title": "Path effect",
+ "animation.pathfx.enable": "Zig zag the path",
+ "animation.pathfx.kind": "Effect type",
+ "animation.pathfx.zigzag": "Zig zag",
+ "animation.pathfx.wave": "Wave",
+ "animation.pathfx.size": "Size (px)",
+ "animation.pathfx.ridges": "Ridges per segment"
 }

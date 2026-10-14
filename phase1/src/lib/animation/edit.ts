@@ -5,7 +5,7 @@ import {validateTextPresetLib} from './textPresetModel';
 import type {InterfaceAsset} from '../interface/schema';
 import {validateAnimationAssets} from './assetsValidation';
 import {MAX_AUDIO_VOLUME,type AudioAsset} from './audioCore';
-import {type GradientStop,GRADIENT_RANGE,REPEATER_RANGE,validRepeater,STYLE_KINDS,OFFSET_KINDS,MAX_COLOR_KEYS,type ColorKey,type ColorEase,COLOR_EASES,validShutter,type Shutter,validatePrecomps,precompTransform,prop,createComposition,type TextAnimator,type LayerMask,type LayerMatte,type ClipItem,type KeyRef,type Vec2,createLayer,findComp,findLayer,PROP_META,wouldCycle,EASE_IN,EASE_OUT,TRANSFORM_KEYS,validateDocument,type AnimationDocument,type CompSettings,type Composition,type Interp,type Keyframe,type Layer,type LayerKind,type LayerSource,type LayerEffect,validSource,validEffects,type Property,type PropValue,type TransformKey} from './model';
+import {validPathFx,type GradientStop,GRADIENT_RANGE,REPEATER_RANGE,validRepeater,STYLE_KINDS,OFFSET_KINDS,MAX_COLOR_KEYS,type ColorKey,type ColorEase,COLOR_EASES,validShutter,type Shutter,validatePrecomps,precompTransform,prop,createComposition,type TextAnimator,type LayerMask,type LayerMatte,type ClipItem,type KeyRef,type Vec2,createLayer,findComp,findLayer,PROP_META,wouldCycle,EASE_IN,EASE_OUT,TRANSFORM_KEYS,validateDocument,type AnimationDocument,type CompSettings,type Composition,type Interp,type Keyframe,type Layer,type LayerKind,type LayerSource,type LayerEffect,validSource,validEffects,type Property,type PropValue,type TransformKey} from './model';
 import {setGradientStop} from './shapes';
 import {parseGradientStopLane,parseGradientLane,parseGradientColorLane,type GradientKey,type RepeaterKey,type StyleLaneId} from './keyTypes';
 import {evaluate} from './interpolate';
@@ -54,6 +54,7 @@ export type Edit=
  |{type:'gradient.prop';layer:string;target:'fill'|'stroke';prop:GradientKey;op:'set'|'animate'|'remove';value?:number;on?:boolean;t:number}
  |{type:'gradient.angle';layer:string;target:'fill'|'stroke';op:'set'|'animate'|'remove';value?:number;on?:boolean;t:number}
  |{type:'repeater.prop';layer:string;prop:RepeaterKey;op:'set'|'animate'|'remove';value?:number;on?:boolean;t:number}
+ |{type:'layer.pathFx';layer:string;pathFx:NonNullable<Layer['pathFx']>|null}
  |{type:'layer.repeater';layer:string;repeater:NonNullable<Layer['repeater']>|null}
  |{type:'effect.style';layer:string;effect:string;blur?:number;distance?:number;angle?:number}
  |{type:'effect.amount';layer:string;effect:string;value:number;t:number}
@@ -272,6 +273,7 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
    const keys=anim!.keys.filter(x=>x.t!==t);
    if(keys.length)return put({},{...anim!,keys});
    return put({[k]:round(evaluate(anim!,t) as number)},undefined);}
+  case 'layer.pathFx':{const l=layerOf(doc,e.layer);if(e.pathFx===null){const {pathFx:_p,...rest}=l;return setLayer(doc,rest);}if(l.kind!=='shape'||l.source.shape!=='path')fail('invalid','Path effects need a path shape layer.');if(!validPathFx(e.pathFx))fail('invalid','Path effect: size 0 to 200 px, 1 to 20 ridges.');return setLayer(doc,{...l,pathFx:e.pathFx});}
   case 'layer.repeater':{const l=layerOf(doc,e.layer);if(e.repeater===null){const {repeater:_r,...rest}=l;return setLayer(doc,rest);}if(!validRepeater(e.repeater))fail('invalid','Repeater: 2 to 20 copies, offset up to 4096 px, rotation up to 3600 degrees, scale 1 to 400 percent, opacity 0 to 100 percent.');return setLayer(doc,{...l,repeater:e.repeater});}
   case 'layer.stroke':{const l=layerOf(doc,e.layer);if(e.stroke===null){const {stroke:_s,...rest}=l;return setLayer(doc,rest);}return setLayer(doc,{...l,stroke:e.stroke});}
   case 'effect.colorKey':case 'effect.bypassKey':{const l=layerOf(doc,e.layer),t=tickOf(compOf(doc),e.t),effect=l.effects?.find(x=>x.id===e.effect)??fail('missing','Effect no longer exists.');

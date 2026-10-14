@@ -390,3 +390,7 @@ Repeater `hue` (deg per copy, -360..360): copy i gets `filter=hue-rotate(hue*i d
 ## P78
 
 `GradientStop` gains `offsetAnim` (scalar 0.01..0.99) and `colorKeys`. `gradientAt` samples them and keeps offsets ordered. `setGradientStop` now preserves these fields. Lanes `grad{Fill|Stroke}Stop<i>{Offset|Color}` reuse style.key.move and styleKeyDeleteEdits.
+
+## P79
+
+`Layer.pathFx {kind:'zigzag'|'wave',size,ridges}` on path shape layers. `applyPathFx` (pathFx.ts) samples every segment into 2*ridges parts, keeps anchors and offsets interior samples alternately by +/-size along the normal; wave adds tangent handles. Applied in `layerPathD`.

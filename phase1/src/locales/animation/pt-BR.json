@@ -654,5 +654,12 @@
  "animation.gradient.startColorLane": "Cor inicial do gradiente",
  "animation.gradient.endColorLane": "Cor final do gradiente",
  "animation.gradient.stopOffsetLane": "Posição da parada {n}",
- "animation.gradient.stopColorLane": "Cor da parada {n}"
+ "animation.gradient.stopColorLane": "Cor da parada {n}",
+ "animation.pathfx.title": "Efeito de caminho",
+ "animation.pathfx.enable": "Zigue-zague no caminho",
+ "animation.pathfx.kind": "Tipo de efeito",
+ "animation.pathfx.zigzag": "Zigue-zague",
+ "animation.pathfx.wave": "Onda",
+ "animation.pathfx.size": "Tamanho (px)",
+ "animation.pathfx.ridges": "Cristas por segmento"
 }

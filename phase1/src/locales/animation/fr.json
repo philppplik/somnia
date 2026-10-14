@@ -654,5 +654,12 @@
  "animation.gradient.startColorLane": "Couleur de début du dégradé",
  "animation.gradient.endColorLane": "Couleur de fin du dégradé",
  "animation.gradient.stopOffsetLane": "Position de l’arrêt {n}",
- "animation.gradient.stopColorLane": "Couleur de l’arrêt {n}"
+ "animation.gradient.stopColorLane": "Couleur de l’arrêt {n}",
+ "animation.pathfx.title": "Effet de tracé",
+ "animation.pathfx.enable": "Zigzag sur le tracé",
+ "animation.pathfx.kind": "Type d’effet",
+ "animation.pathfx.zigzag": "Zigzag",
+ "animation.pathfx.wave": "Onde",
+ "animation.pathfx.size": "Taille (px)",
+ "animation.pathfx.ridges": "Crêtes par segment"
 }

@@ -654,5 +654,12 @@
  "animation.gradient.startColorLane": "Verlauf Startfarbe",
  "animation.gradient.endColorLane": "Verlauf Endfarbe",
  "animation.gradient.stopOffsetLane": "Stopp {n} Position",
- "animation.gradient.stopColorLane": "Stopp {n} Farbe"
+ "animation.gradient.stopColorLane": "Stopp {n} Farbe",
+ "animation.pathfx.title": "Pfadeffekt",
+ "animation.pathfx.enable": "Pfad zickzack",
+ "animation.pathfx.kind": "Effekttyp",
+ "animation.pathfx.zigzag": "Zickzack",
+ "animation.pathfx.wave": "Welle",
+ "animation.pathfx.size": "Größe (px)",
+ "animation.pathfx.ridges": "Zacken pro Segment"
 }

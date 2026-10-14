@@ -1845,3 +1845,20 @@ test('P78 gradient stop keyframes: colour and offset sampling, clamping, lanes, 
  assert.throws(()=>applyEdit(d,ed('fill',0,'offset','set',{value:1.5},0)),Error);
  assert.throws(()=>applyEdit(d,ed('fill',5,'color','set',{color:'#ffffff'},0)),Error);
 });
+
+test('P79 path effects: zig zag and wave markup, absent field unchanged, validation, undo',()=>{
+ const d=strokeDoc([{x:0.1,y:0.5},{x:0.9,y:0.5}],false,4);
+ const plain=frameSvg(comp(d),0);
+ const zz=applyEdit(d,{type:'layer.pathFx',layer:'pa',pathFx:{kind:'zigzag',size:10,ridges:2}});
+ const svg=frameSvg(comp(zz),0);
+ const pathD=(x:string)=>/<path d="([^"]*)"/.exec(x)![1];
+ const base=pathD(plain),fx=pathD(svg);
+ assert.notEqual(base,fx);
+ assert.equal((fx.match(/C/g)??[]).length,4,'2 ridges give 4 sub-segments per segment');
+ const wave=frameSvg(comp(applyEdit(d,{type:'layer.pathFx',layer:'pa',pathFx:{kind:'wave',size:10,ridges:2}})),0);
+ assert.notEqual(pathD(wave),fx);
+ assert.equal(frameSvg(comp(applyEdit(zz,{type:'layer.pathFx',layer:'pa',pathFx:null})),0),plain);
+ assert.equal(frameSvg(comp(applyEdit(d,{type:'layer.pathFx',layer:'pa',pathFx:{kind:'zigzag',size:0,ridges:2}})),0).includes('<path'),true);
+ assert.deepEqual(validateDocument(zz),[]);
+ for(const bad of [{kind:'x'},{size:-1},{size:201},{ridges:0},{ridges:21},{ridges:1.5}])assert.throws(()=>applyEdit(d,{type:'layer.pathFx',layer:'pa',pathFx:{kind:'zigzag',size:10,ridges:2,...bad} as never}),Error);
+});

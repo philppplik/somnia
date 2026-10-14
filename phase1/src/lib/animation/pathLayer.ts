@@ -1,6 +1,7 @@
 import {findComp,findLayer,validSource,validMaskPath,MAX_MASK_POINTS,MAX_SHAPE_KEYS,newId,makeTransform,type AnimationDocument,type Layer,type LayerMask,type MaskPath,type MaskPoint,type MaskShapeKey,type Property,type Vec2} from './model';
 import {bezierPath,lerpPath,morphPath,morphProblem,MorphError,removePoint,type MorphOpts} from './masks';
 import {evaluate} from './interpolate';
+import {applyPathFx} from './pathFx';
 import {worldMatrix} from './scene';
 import {pathData} from '../interface/vectorCore';
 import type {InterfacePath} from '../interface/schema';
@@ -19,6 +20,7 @@ export const layerFillRule=(l:Layer):'evenodd'|undefined=>l.kind==='shape'&&l.so
 /** SVG path data of a path shape layer at a composition tick. Plain polygons keep the legacy output byte for byte. */
 export function layerPathD(l:Layer,tick:number):string{
  const s=l.source,p=s.path as MaskPath,{w,h}=box(l);
+ if(l.pathFx){const cur=s.pathKeys?.length?lerpPath(s.pathKeys,tick):p,list=s.subpaths?.length?[cur,...(s.subpaths as readonly MaskPath[])]:[cur];return list.map(q=>bezierPath(applyPathFx(scale(q,w,h),l.pathFx!),0,0)).join(' ');}
  if(s.subpaths?.length)return pathSubpaths(s).map(q=>bezierPath(scale(q,w,h),0,0)).join(' ');
  if(!s.pathKeys?.length&&!hasHandles(p))return pathData(s.path as unknown as InterfacePath,s.width??1,s.height??1);
  const cur=s.pathKeys?.length?lerpPath(s.pathKeys,tick):p;return bezierPath(scale(cur,w,h),0,0);

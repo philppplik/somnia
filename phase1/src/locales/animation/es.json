@@ -654,5 +654,12 @@
  "animation.gradient.startColorLane": "Color inicial del degradado",
  "animation.gradient.endColorLane": "Color final del degradado",
  "animation.gradient.stopOffsetLane": "Posición de la parada {n}",
- "animation.gradient.stopColorLane": "Color de la parada {n}"
+ "animation.gradient.stopColorLane": "Color de la parada {n}",
+ "animation.pathfx.title": "Efecto de trazado",
+ "animation.pathfx.enable": "Zigzag en el trazado",
+ "animation.pathfx.kind": "Tipo de efecto",
+ "animation.pathfx.zigzag": "Zigzag",
+ "animation.pathfx.wave": "Onda",
+ "animation.pathfx.size": "Tamaño (px)",
+ "animation.pathfx.ridges": "Crestas por segmento"
 }
