@@ -934,5 +934,7 @@
  "animation.comp.duplicate": "Duplicar",
  "cmd.animation.comp.duplicate": "Duplicar composição",
  "animation.comp.remove": "Excluir",
- "cmd.animation.comp.remove": "Excluir composição"
+ "cmd.animation.comp.remove": "Excluir composição",
+ "animation.rig.split": "Dividir no cursor",
+ "cmd.animation.layers.split": "Dividir as camadas selecionadas no cursor"
 }

@@ -934,5 +934,7 @@
  "animation.comp.duplicate": "Dupliquer",
  "cmd.animation.comp.duplicate": "Dupliquer la composition",
  "animation.comp.remove": "Supprimer",
- "cmd.animation.comp.remove": "Supprimer la composition"
+ "cmd.animation.comp.remove": "Supprimer la composition",
+ "animation.rig.split": "Couper à la tête de lecture",
+ "cmd.animation.layers.split": "Couper les calques sélectionnés à la tête de lecture"
 }

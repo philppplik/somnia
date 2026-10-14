@@ -934,5 +934,7 @@
  "animation.comp.duplicate": "Duplicate",
  "cmd.animation.comp.duplicate": "Duplicate composition",
  "animation.comp.remove": "Delete",
- "cmd.animation.comp.remove": "Delete composition"
+ "cmd.animation.comp.remove": "Delete composition",
+ "animation.rig.split": "Split at playhead",
+ "cmd.animation.layers.split": "Split the selected layers at the playhead"
 }

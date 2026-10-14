@@ -1626,6 +1626,21 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.layers.split",
+      "title": "Split the selected layers at the playhead",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "cut",
+        "layer",
+        "playhead",
+        "razor",
+        "split"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.layers.stagger",
       "title": "Stagger selected layers",
       "category": "Edit",

@@ -354,3 +354,15 @@ test('P154 composition delete refuses precomp use, one undo step',async()=>{
  run('animation.comp.remove',{comp:r.comp}) ;
  assert.equal(s.document!.compositions.length,n-1);s.undo();assert.equal(s.document!.compositions.length,n);
 });
+
+test('P155 split layers at the playhead: later part above, one undo step, outside is refused',async()=>{
+ const {layerSplitSpecs}=await import('./layerSplitCommands');const spec=layerSplitSpecs()[0],run=spec.run as (p?:unknown)=>unknown;
+ const s=open();setAnimationSession(s);const c0=findComp(s.document!)!,l0=c0.layers[0];
+ s.setView({selectedLayer:l0.id,playhead:l0.inT});assert.throws(()=>run(),/inside a layer/);
+ const mid=Math.round((l0.inT+l0.outT)/2/8000)*8000;s.setView({selectedLayer:l0.id,playhead:mid});
+ const before=s.document!;run();
+ const c1=findComp(s.document!)!;assert.equal(c1.layers.length,c0.layers.length+1);
+ const a=c1.layers.find(l=>l.id===l0.id)!,b=c1.layers[c1.layers.findIndex(l=>l.id===l0.id)-1];
+ assert.equal(a.outT,mid);assert.equal(b.inT,mid);assert.equal(b.outT,l0.outT);assert.equal(s.getState().view.selectedLayer,b.id);
+ s.undo();assert.equal(s.document,before);setAnimationSession(null);
+});
