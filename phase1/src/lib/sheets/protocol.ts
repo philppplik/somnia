@@ -27,6 +27,7 @@ export type FormatOp=
 export type BorderPreset='none'|'all'|'outside'|'thickOutside'|'inside'|'insideHorizontal'|'insideVertical'|'top'|'bottom'|'left'|'right'|'thickBottom'|'doubleBottom'|'topBottom'|'topThickBottom'|'topDoubleBottom';
 export type BorderLineStyle='thin'|'medium'|'thick'|'dashed'|'dotted'|'double'|'hair';
 export type LineAxis='rows'|'cols';
+export type LineEditKind='insertBefore'|'insertAfter'|'delete';
 export type LineOp={kind:'size';px:number}|{kind:'autofit'|'hide'|'unhide'};
 export type NumFmtPreset='general'|'number'|'comma'|'percent'|'currency'|'date'|'time'|'scientific'|'text';
 export type SheetOp={kind:'add';name?:string}|{kind:'rename';name:string}|{kind:'duplicate'}|{kind:'delete'}|{kind:'move';to:number};
@@ -42,6 +43,7 @@ export type SheetsRequest=
  |{id:number;op:'clear';sheet:number;row:number;col:number;rows:number;cols:number}
  |{id:number;op:'format';sheet:number;row:number;col:number;rows:number;cols:number;format:FormatOp}
  |{id:number;op:'resize';sheet:number;axis:LineAxis;first:number;count:number;line:LineOp}
+ |{id:number;op:'editLines';sheet:number;axis:LineAxis;first:number;count:number;line:{kind:'insert'|'delete'}}
  |{id:number;op:'freeze';sheet:number;rows:number;cols:number}
  |{id:number;op:'sheets'}
  |{id:number;op:'editSheet';sheet:number;line:SheetOp}

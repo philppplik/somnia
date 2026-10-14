@@ -1,4 +1,4 @@
-import type {LineAxis,LineOp,SheetLayout} from './protocol';
+import type {LineAxis,LineEditKind,LineOp,SheetLayout} from './protocol';
 /** Row/column sizing and freeze panes: validation for untrusted command input. The Rust bridge re-validates every field. */
 export const MAX_COL_PX=2400,MAX_ROW_PX=545,MAX_FREEZE=20;
 export const LINE_KINDS=['size','autofit','hide','unhide'] as const;
@@ -13,6 +13,19 @@ export function parseLineCommand(input:unknown):LineCommand{
   case 'autofit':case 'hide':case 'unhide':only('axis','kind');return {axis,op:{kind:o.kind}};
   default:throw Error('Unsupported row or column operation.');}
 }
+export const EDIT_KINDS=['insertBefore','insertAfter','delete'] as const;
+/** Maps an insert/delete request onto a span: inserting after pushes the new lines past the selection. */
+export function editSpan(kind:LineEditKind,first:number,count:number,limit:number):{first:number;count:number;op:'insert'|'delete'}{
+ const at=kind==='insertAfter'?first+count:first;
+ if(!Number.isInteger(first)||!Number.isInteger(count)||first<0||count<1||at+count>limit)throw Error('That would move cells past the edge of the sheet.');
+ return {first:at,count,op:kind==='delete'?'delete':'insert'};}
+export function parseEditLines(input:unknown):{axis:LineAxis;kind:LineEditKind}{
+ if(!input||typeof input!=='object'||Array.isArray(input))throw Error('Rows and columns edit must be an object.');
+ const o=input as Record<string,unknown>;if(Object.keys(o).some(k=>k!=='axis'&&k!=='kind'))throw Error('Unknown field.');
+ if(o.axis!=='rows'&&o.axis!=='cols')throw Error('Axis must be rows or cols.');
+ if(!(EDIT_KINDS as readonly unknown[]).includes(o.kind))throw Error('Unsupported row or column edit.');
+ return {axis:o.axis,kind:o.kind as LineEditKind};}
+export const MAX_SHEET_ROWS=1_048_576,MAX_SHEET_COLS=16_384;
 export function parseFreeze(input:unknown):{rows:number;cols:number}{
  if(!input||typeof input!=='object'||Array.isArray(input))throw Error('Freeze must be an object.');
  const o=input as Record<string,unknown>;if(Object.keys(o).some(k=>k!=='rows'&&k!=='cols'))throw Error('Unknown freeze field.');

@@ -4586,6 +4586,14 @@
       "hasEnabled": true
     },
     {
+      "id": "sheets.editLines",
+      "title": "Insert or delete rows and columns",
+      "category": "Edit",
+      "source": "sheets",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
       "id": "sheets.format",
       "title": "Format selected cells",
       "category": "Edit",

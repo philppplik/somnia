@@ -177,12 +177,18 @@ export function SheetsLayoutPanel({context}:PanelHostProps){
  const freeze=(rows:number,cols:number)=>void action.run('sheets.freeze',{rows,cols});
  const sizeField=(label:string,axis:'rows'|'cols',value:number|null,max:number)=><NumberField label={label} unit="px" value={value} resetKey={`${axis}:${s.address}:${s.revision??0}`} min={0} max={max} step={1} disabled={action.busy||!layout} constraintError={t('sheets.layout.sizeInvalid')} parse={v=>{const n=Number(v.trim().replace(',','.'));return v.trim()&&Number.isFinite(n)&&n>=0&&n<=max?{ok:true,value:n}:{ok:false,error:t('sheets.layout.sizeInvalid')};}} onCommit={px=>resize(axis,'size',px)}/>;
  const btn=(key:string,onClick:()=>void,id:string,off=false)=><Button variant="outline" size="compact" disabled={action.busy||!layout||off} onClick={onClick} data-testid={id}>{t(key)}</Button>;
+ const edit=(axis:'rows'|'cols',kind:string)=>void action.run('sheets.editLines',{axis,kind});
  const frozen=layout?.freeze;
  return <Region>
   {sizeField(t('sheets.layout.colWidth'),'cols',colWidthPx(layout,col),MAX_COL_PX)}
   <div className="flex flex-wrap gap-1">{btn('sheets.layout.autofitCols',()=>resize('cols','autofit'),'sheets-layout-autofit-cols')}{btn('sheets.layout.hideCols',()=>resize('cols','hide'),'sheets-layout-hide-cols')}{btn('sheets.layout.showCols',()=>resize('cols','unhide'),'sheets-layout-show-cols')}</div>
   {sizeField(t('sheets.layout.rowHeight'),'rows',rowHeightPx(layout,row),MAX_ROW_PX)}
   <div className="flex flex-wrap gap-1">{btn('sheets.layout.autofitRows',()=>resize('rows','autofit'),'sheets-layout-autofit-rows')}{btn('sheets.layout.hideRows',()=>resize('rows','hide'),'sheets-layout-hide-rows')}{btn('sheets.layout.showRows',()=>resize('rows','unhide'),'sheets-layout-show-rows')}</div>
+  <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.layout.insertDelete')}>
+   <span>{t('sheets.layout.insertDelete')}</span>
+   <div className="flex flex-wrap gap-1">{btn('sheets.layout.insertAbove',()=>edit('rows','insertBefore'),'sheets-layout-insert-above')}{btn('sheets.layout.insertBelow',()=>edit('rows','insertAfter'),'sheets-layout-insert-below')}{btn('sheets.layout.deleteRows',()=>edit('rows','delete'),'sheets-layout-delete-rows')}</div>
+   <div className="flex flex-wrap gap-1">{btn('sheets.layout.insertLeft',()=>edit('cols','insertBefore'),'sheets-layout-insert-left')}{btn('sheets.layout.insertRight',()=>edit('cols','insertAfter'),'sheets-layout-insert-right')}{btn('sheets.layout.deleteCols',()=>edit('cols','delete'),'sheets-layout-delete-cols')}</div>
+  </div>
   <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.layout.freeze')}>
    <span>{t('sheets.layout.freeze')}</span>
    <span className="text-ink-3">{frozen?t('sheets.layout.frozen',{rows:frozen.rows,cols:frozen.cols}):t('sheets.layout.notFrozen')}</span>

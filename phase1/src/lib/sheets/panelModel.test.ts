@@ -20,7 +20,7 @@ test('formula builder allowlists functions and normalizes references',()=>{
 });
 test('panel commands validate payloads, reject agent execution and honor controller lifecycle',async()=>{
  const dispatcher=new CommandDispatcher();for(const spec of sheetsPanelCommandSpecs())dispatcher.register(spec);
- const calls:unknown[]=[];const controller:SheetsPanelController={ready:()=>true,navigate:(sheet,address)=>{calls.push([sheet,address]);},setCell:input=>{calls.push(input);},readRange:async()=>[],formatCells:op=>{calls.push(op);},resizeLines:(axis,op)=>{calls.push([axis,op]);},freezePanes:(rows,cols)=>{calls.push(['freeze',rows,cols]);},editSheet:op=>{calls.push(['sheet',op]);}};
+ const calls:unknown[]=[];const controller:SheetsPanelController={ready:()=>true,navigate:(sheet,address)=>{calls.push([sheet,address]);},setCell:input=>{calls.push(input);},readRange:async()=>[],formatCells:op=>{calls.push(op);},resizeLines:(axis,op)=>{calls.push([axis,op]);},freezePanes:(rows,cols)=>{calls.push(['freeze',rows,cols]);},editLines:(axis,kind)=>{calls.push(['edit',axis,kind]);},editSheet:op=>{calls.push(['sheet',op]);}};
  const off=registerSheetsPanelController(controller);
  try{
   await dispatcher.runCommand('sheets.navigate',{sheet:1,address:'B4'},{origin:'ui'});
@@ -36,7 +36,11 @@ test('panel commands validate payloads, reject agent execution and honor control
   await dispatcher.runCommand('sheets.resize',{axis:'cols',kind:'size',px:120.4},{origin:'ui'});
   await dispatcher.runCommand('sheets.resize',{axis:'rows',kind:'autofit'},{origin:'ui'});
   await dispatcher.runCommand('sheets.freeze',{rows:1,cols:0},{origin:'ui'});
-  assert.deepEqual(calls.slice(2),[['cols',{kind:'size',px:120}],['rows',{kind:'autofit'}],['freeze',1,0]]);calls.splice(2);
+  assert.deepEqual(calls.slice(4),[['cols',{kind:'size',px:120}],['rows',{kind:'autofit'}],['freeze',1,0]]);calls.splice(4);
+  await dispatcher.runCommand('sheets.editLines',{axis:'rows',kind:'insertAfter'},{origin:'ui'});
+  await dispatcher.runCommand('sheets.editLines',{axis:'cols',kind:'delete'},{origin:'ui'});
+  assert.deepEqual(calls.slice(4),[['edit','rows','insertAfter'],['edit','cols','delete']]);calls.splice(4);
+  for(const bad of [{axis:'cells',kind:'delete'},{axis:'rows',kind:'drop'},{axis:'rows'},{kind:'delete'},{axis:'rows',kind:'delete',count:5}])await assert.rejects(()=>dispatcher.runCommand('sheets.editLines',bad,{origin:'ui'}),JSON.stringify(bad));
   for(const bad of [{axis:'cols',kind:'size',px:-1},{axis:'cols',kind:'size',px:2401},{axis:'rows',kind:'size',px:546},{axis:'rows',kind:'size'},{axis:'cells',kind:'hide'},{axis:'rows',kind:'delete'},{axis:'rows',kind:'hide',px:3}])await assert.rejects(()=>dispatcher.runCommand('sheets.resize',bad,{origin:'ui'}),JSON.stringify(bad));
   for(const bad of [{rows:21,cols:0},{rows:-1,cols:0},{rows:1.5,cols:0},{rows:1},{rows:1,cols:0,x:1}])await assert.rejects(()=>dispatcher.runCommand('sheets.freeze',bad,{origin:'ui'}),JSON.stringify(bad));
   assert.deepEqual(calls.slice(2),[{kind:'bold',on:true},{kind:'fillColor',color:'#FFF2CC'}]);

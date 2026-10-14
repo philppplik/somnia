@@ -416,6 +416,42 @@ impl HeadlessWorkbook {
         self.session.run(command, params).map(|v| v.to_string())
     }
 
+    /// Inserts or deletes whole rows or columns as ONE history entry; formulas (on every sheet), merges,
+    /// names and line sizes shift with the engine's own reference rewriting. `axis` is "rows" or "cols";
+    /// `op_json` is `{"kind":"insert"}` (new lines appear at `first`, pushing the rest down/right) or
+    /// `{"kind":"delete"}`. Bounded, protected sheets and protected workbook structure refused.
+    pub fn edit_lines(&mut self, sheet: usize, axis: &str, first: u32, count: u32, op_json: &str) -> Result<String, String> {
+        let rows = match axis {
+            "rows" => true,
+            "cols" => false,
+            _ => return Err("axis must be rows or cols".into()),
+        };
+        let (limit, cap) = if rows { (gridcraft_engine::core::MAX_ROWS, MAX_RESIZE_ROWS) } else { (gridcraft_engine::core::MAX_COLS, MAX_RESIZE_COLS) };
+        if count == 0 || count > cap || first.checked_add(count).is_none_or(|v| v > limit) {
+            return Err(format!("invalid {axis} span (1 to {cap} lines inside the sheet)"));
+        }
+        {
+            let doc = self.session.doc().map_err(|e| e.to_string())?;
+            let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+            if sh.is_protected() {
+                return Err("The sheet is protected. Unprotect it to insert or delete rows or columns.".into());
+            }
+        }
+        let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "operation must be a JSON object".to_string())?;
+        let command = match (op.get("kind").and_then(|v| v.as_str()), rows) {
+            (Some("insert"), true) => "home.insertRows",
+            (Some("insert"), false) => "home.insertColumns",
+            (Some("delete"), true) => "home.deleteRows",
+            (Some("delete"), false) => "home.deleteColumns",
+            _ => return Err("unsupported row or column operation".into()),
+        };
+        let name = |n: u32| if rows { n.to_string() } else { CellRef::new(0, n).a1().trim_end_matches(char::is_numeric).to_string() };
+        let (a, b) = if rows { (first + 1, first + count) } else { (first, first + count - 1) };
+        let mut params = json!({"sheet": sheet});
+        params[axis] = json!(format!("{}:{}", name(a), name(b)));
+        self.session.run(command, params).map(|v| v.to_string())
+    }
+
     /// Freezes the first `rows` rows and `cols` columns (0 and 0 unfreezes), as one history entry.
     pub fn freeze_panes(&mut self, sheet: usize, rows: u32, cols: u32) -> Result<String, String> {
         if rows > MAX_FREEZE || cols > MAX_FREEZE {
@@ -871,6 +907,47 @@ mod tests {
         assert!(book.resize_lines(9, "cols", 0, 1, r#"{"kind":"hide"}"#).is_err(), "unknown sheet");
         assert!(book.freeze_panes(0, 21, 0).is_err());
         assert!(book.freeze_panes(9, 1, 0).is_err());
+    }
+    #[test]
+    fn insert_and_delete_lines_shift_references_roundtrip_and_undo() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        for (a, v) in [("H1", "1"), ("H2", "2"), ("H3", "3"), ("J1", "SUM(H1:H3)"), ("K3", "=H3*10")] {
+            book.set_cell(0, a, v).unwrap();
+        }
+        let formula = |b: &HeadlessWorkbook, row: u32, col: u32| -> String {
+            let v: serde_json::Value = serde_json::from_str(&b.range(0, row, col, 1, 1).unwrap()).unwrap();
+            v["cells"][0]["formula"].as_str().unwrap_or("").to_string()
+        };
+        book.edit_lines(0, "rows", 1, 1, r#"{"kind":"insert"}"#).unwrap();
+        assert_eq!(fmt_text(&book, "H3").1, "2", "H2 moved down");
+        assert_eq!(fmt_text(&book, "H4").1, "3");
+        assert_eq!(formula(&book, 0, 9), "SUM(H1:H4)", "range grows over the inserted row");
+        assert_eq!(formula(&book, 3, 10), "H4*10", "K3 moved to K4 and follows H3 to H4");
+        assert_eq!(fmt_text(&book, "J1").1, "6");
+        book.undo().unwrap();
+        assert_eq!(formula(&book, 0, 9), "SUM(H1:H3)", "one undo restores rows and formulas");
+        assert_eq!(fmt_text(&book, "H2").1, "2");
+        book.edit_lines(0, "cols", 5, 1, r#"{"kind":"insert"}"#).unwrap();
+        assert_eq!(formula(&book, 0, 10), "SUM(I1:I3)", "inserting a column before H moves the references");
+        book.undo().unwrap();
+        book.edit_lines(0, "rows", 2, 1, r#"{"kind":"delete"}"#).unwrap();
+        assert_eq!(formula(&book, 0, 9), "SUM(H1:H2)", "deleting a row inside the range shrinks it");
+        assert!(fmt_text(&book, "K2").1.contains("REF"), "K3 referred to the deleted row: {:?}", fmt_text(&book, "K2"));
+        let reopened = HeadlessWorkbook::new(&book.export_xlsx().unwrap()).unwrap();
+        assert_eq!(formula(&reopened, 0, 9), "SUM(H1:H2)");
+        book.undo().unwrap();
+        assert_eq!(fmt_text(&book, "H3").1, "3");
+        for (axis, first, count, op) in [
+            ("cells", 0, 1, r#"{"kind":"insert"}"#),
+            ("rows", 0, 0, r#"{"kind":"insert"}"#),
+            ("rows", 0, 100_001, r#"{"kind":"delete"}"#),
+            ("cols", 16_383, 2, r#"{"kind":"insert"}"#),
+            ("rows", 0, 1, r#"{"kind":"clear"}"#),
+            ("rows", 0, 1, r#"{}"#),
+        ] {
+            assert!(book.edit_lines(0, axis, first, count, op).is_err(), "{axis} {first} {count} {op}");
+        }
+        assert!(book.edit_lines(9, "rows", 0, 1, r#"{"kind":"insert"}"#).is_err(), "unknown sheet");
     }
     #[test]
     fn number_format_presets_display_roundtrip_and_undo() {

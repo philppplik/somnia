@@ -49,6 +49,8 @@ export class SheetsEngine{
  format(sheet:number,row:number,col:number,rows:number,cols:number,format:FormatOp){return this.result<unknown>({op:'format',sheet,row,col,rows,cols,format});}
  /** Resize, autofit, hide or unhide whole rows or columns (one undo step). */
  resize(sheet:number,axis:LineAxis,first:number,count:number,line:LineOp){return this.result<unknown>({op:'resize',sheet,axis,first,count,line});}
+ /** Insert or delete whole rows or columns with reference shifting (one undo step). */
+ editLines(sheet:number,axis:LineAxis,first:number,count:number,kind:'insert'|'delete'){return this.result<unknown>({op:'editLines',sheet,axis,first,count,line:{kind}});}
  /** Freeze the first rows/columns (0,0 unfreezes), one undo step. */
  freeze(sheet:number,rows:number,cols:number){return this.result<unknown>({op:'freeze',sheet,rows,cols});}
  /** Current sheet list (reload after sheet edits and history). */
