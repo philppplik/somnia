@@ -1,4 +1,5 @@
 import {ReplaceSceneDialog} from './ReplaceSceneDialog';
+import {StudioStatus} from '../studios/StudioStatus';
 import {lazy,Suspense,useEffect,useRef} from 'react';
 import {Boxes} from '../../lib/icons';
 import {StudioEmptyState} from '../studios/StudioEmptyState';
@@ -46,7 +47,7 @@ export function Studio3DCanvas(){
   <input ref={input} type="file" accept={MODEL_ACCEPT} multiple hidden data-testid="studio3d-file-input" onChange={e=>{const files=[...(e.target.files??[])];e.target.value='';if(files.length)void withController(c=>c.openFiles(files));}}/>
   <input ref={envInput} type="file" accept={ENV_ACCEPT} hidden data-testid="studio3d-env-input" onChange={e=>{const f=e.target.files?.[0];e.target.value='';if(f)void withController(async c=>{try{await c.openEnvFile(f);patchStudio3D({status:'ready',error:''});}catch(err){patchStudio3D({status:'ready',error:err instanceof Error?err.message:String(err)});}});}}/>
   <ReplaceSceneDialog open={!!s.confirmReplace} onCancel={()=>patchStudio3D({confirmReplace:null})} onConfirm={()=>{const r=s.confirmReplace;if(r)void withController(c=>r.what==='new'?c.newScene(true):c.openFiles(r.files,true));}}/>
-  {active?<Suspense fallback={<p className="p-4 text-xs text-ink-3" role="status">{t('studio3d.status.loading',{name:''})}</p>}><Viewport3D/></Suspense>:
+  {active?<Suspense fallback={<StudioStatus className="p-4 text-xs">{t('studio3d.status.loading',{name:''})}</StudioStatus>}><Viewport3D/></Suspense>:
    <><StudioEmptyState studio="3d" icon={<Boxes/>} onOpen={pick} onCreate={()=>withController(c=>c.newScene())}/><RecentList/></>}
  </section></div></main>;
 }

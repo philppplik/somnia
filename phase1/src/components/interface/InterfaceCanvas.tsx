@@ -1,5 +1,7 @@
 import {InterfacePrototypePlayer} from './InterfacePrototype';
 import {startInterfacePrototype,type PrototypeState} from '../../lib/interface/prototype';
+import {StudioEmptyState} from '../studios/StudioEmptyState';
+import {StudioStatus} from '../studios/StudioStatus';
 import {useInterfaceSnap,copyInterfaceSelection,pasteInterfaceSelection,duplicateInterfaceSelection} from './InterfaceSelection';
 import {snapPosition,translateSelection,deleteSelection,movableSelection,selectionRoots} from '../../lib/interface/editing';
 import {importInterfaceFile} from './InterfaceMedia';
@@ -16,7 +18,7 @@ import {registerInterfaceCommands} from '../../lib/interface/commands';
 import {studioContextStore} from '../../lib/shell/studioContext';
 import {applyInterfaceGesture,type InterfaceGesture as Drag} from '../../lib/interface/gesture';
 export function InterfaceCanvas(){
- const [preview,setPreview]=useState<PrototypeState|null>(null);const s=useInterfaceState();const snap=useInterfaceSnap();const {t}=useT();const [zoom,setZoom]=useState(.75);const [drag,setDrag]=useState<(Drag&{ids?:string[]})|null>(null);const [pen,setPen]=useState<{frameId:string;revision:number;points:{x:number;y:number}[]}|null>(null);const [error,setError]=useState('');const input=useRef<HTMLInputElement>(null);const claim=useRef<ReturnType<typeof studioContextStore.claim>|null>(null);
+ const [preview,setPreview]=useState<PrototypeState|null>(null);const s=useInterfaceState();const snap=useInterfaceSnap();const {t,locale}=useT();const [zoom,setZoom]=useState(.75);const [drag,setDrag]=useState<(Drag&{ids?:string[]})|null>(null);const [pen,setPen]=useState<{frameId:string;revision:number;points:{x:number;y:number}[]}|null>(null);const [error,setError]=useState('');const input=useRef<HTMLInputElement>(null);const claim=useRef<ReturnType<typeof studioContextStore.claim>|null>(null);
  const doc=s.document;const rendered=useMemo(()=>doc?resolveInterfaceValues(doc).document:null,[doc]);const computed=useMemo(()=>doc?computeInterfaceLayout(doc):null,[doc]);const diagnostics=useMemo(()=>doc?[...(computed?.diagnostics??[]),...componentDiagnostics(doc).map(d=>d.message)]:[],[doc,computed]);const page=doc?.pages.find(p=>p.id===s.pageId);
  useEffect(()=>{const reveal=(e:Event)=>{const id=(e as CustomEvent<string>).detail;const node=document.querySelector<HTMLElement>(`[data-testid="interface-node-${id}"]`);node?.scrollIntoView({block:'center',inline:'center'});node?.focus();};window.addEventListener('interface-reveal',reveal);return()=>window.removeEventListener('interface-reveal',reveal);},[]);
  useEffect(()=>{setPreview(null);},[s.document?.id]);
@@ -47,7 +49,7 @@ export function InterfaceCanvas(){
   if(delta[e.key]&&s.selectedIds.length){e.preventDefault();const [x,y]=delta[e.key];safe(()=>interfaceSession.transact(d=>translateSelection(d,s.selectedIds,x*(e.shiftKey?10:1),y*(e.shiftKey?10:1))));}
  }}>
   <input className="hidden" ref={input} type="file" accept="application/json,.json" aria-label={t('interface.open')} onChange={async e=>{const file=e.target.files?.[0];e.target.value='';if(!file)return;try{if(file.size>MAX_BYTES)throw Error('Interface snapshot exceeds 5 MB.');const next=parseInterfaceDocument(await file.text());if(interfaceSession.get().dirty&&!window.confirm(t('interface.replace')))return;setDrag(null);interfaceSession.load(next);setError('');}catch(error){setError(error instanceof Error?error.message:'Invalid snapshot.');}}}/>
-  {!page||!doc?<div className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center"><h1 className="text-xl font-semibold">{t('interface.title')}</h1><p className="max-w-md text-sm text-ink-2">{t('interface.description')}</p><div className="flex flex-wrap justify-center gap-2"><Button variant="primary" onClick={startInterface}>{t('interface.new')}</Button><Button variant="outline" onClick={()=>input.current?.click()}>{t('interface.open')}</Button></div></div>:<>
+  {!page||!doc?<StudioEmptyState studio="design" language={locale} icon={<span aria-hidden="true">▧</span>} testId="interface-start" copy={{headline:t('interface.title'),description:t('interface.description'),openLabel:t('interface.open')}} createLabel={t('interface.new')} onOpen={()=>input.current?.click()} onCreate={startInterface}/>:<>
    <div className="min-h-0 flex-1 overflow-auto bg-hover p-8" onPointerDown={e=>{if(e.target===e.currentTarget)interfaceSession.select(null);}}>
     <div className="relative origin-top-left" style={{width:Math.max(1600,...doc.nodes.filter(n=>n.pageId===page.id&&!n.parentId).map(n=>{const b=computed!.bounds.get(n.id)!;return b.x+b.width+64;}))*zoom,height:Math.max(1000,...doc.nodes.filter(n=>n.pageId===page.id&&!n.parentId).map(n=>{const b=computed!.bounds.get(n.id)!;return b.y+b.height+64;}))*zoom}}>
      <div className="absolute origin-top-left" style={{width:'100%',height:'100%',transform:`scale(${zoom})`}}>{snap.enabled&&<><div className="absolute inset-0 pointer-events-none" style={{backgroundImage:'radial-gradient(var(--border-default) 1px,transparent 1px)',backgroundSize:`${snap.grid}px ${snap.grid}px`}}/>{snap.guidesX.map((x,i)=><div key={`x${i}`} className="absolute top-0 h-full pointer-events-none" style={{left:x,borderLeft:'1px dashed var(--accent)'}}/>)}{snap.guidesY.map((y,i)=><div key={`y${i}`} className="absolute left-0 w-full pointer-events-none" style={{top:y,borderTop:'1px dashed var(--accent)'}}/>)}</>}{page.children.map(layer)}</div>
@@ -58,7 +60,7 @@ export function InterfaceCanvas(){
   {diagnostics.length>0&&<details className="border-t border-subtle px-3 py-2 text-xs text-ink-2"><summary>{t("interface.diagnostics")} ({diagnostics.length})</summary><ul>{diagnostics.slice(0,20).map((d,i)=><li key={i}>{d}</li>)}</ul></details>}
   {preview&&<InterfacePrototypePlayer initial={preview} onClose={()=>setPreview(null)}/>}
   <span className="sr-only" aria-live="polite" aria-atomic="true">{t('interface.multiSelection',{count:s.selectedIds.length})}</span>
-  {s.notice&&<p role="status" className="m-0 border-t border-subtle p-3 text-xs text-ink-2">{s.notice}</p>}
-  {(error||s.recoveryError)&&<p role="alert" className="m-0 border-t border-subtle p-3 text-xs text-ink">{error||s.recoveryError}</p>}
+  {s.notice&&<StudioStatus className="m-0 border-t border-subtle p-3 text-xs">{s.notice}</StudioStatus>}
+  {(error||s.recoveryError)&&<StudioStatus tone="error" live="assertive" className="m-0 border-t border-subtle p-3 text-xs">{error||s.recoveryError}</StudioStatus>}
  </section>;
 }

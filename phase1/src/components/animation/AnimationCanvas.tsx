@@ -1,5 +1,6 @@
 import {effectPrimitives,effectBounds} from '../../lib/animation/effects';
 import type {InterfaceAsset} from '../../lib/interface/schema';
+import {StudioStatus} from '../studios/StudioStatus';
 import {useEffect,useMemo,useRef} from 'react';
 import {Sparkles} from '../../lib/icons';
 import {studioContextStore} from '../../lib/shell/studioContext';
@@ -39,7 +40,7 @@ function Workspace({doc}:{doc:NonNullable<ReturnType<typeof animationSession>['d
  const {t}=useT();const s=useAnimationState();const comp=findComp(doc)!;const at=s.view.playhead;
  return <div className="flex min-h-0 flex-1 flex-col" data-testid="animation-workspace">
   <Viewer assets={doc.assets} comp={comp} at={at} selected={s.view.selectedLayer} sel={pruneSelection(s.doc,s.view.selectedKeys)}/>
-  {s.recoveryFailed&&<p role="alert" className="m-0 px-3 py-1 text-[11px] text-ink">{t('animation.recoveryFailed')}</p>}
+  {s.recoveryFailed&&<StudioStatus tone="error" live="assertive" className="m-0 px-3 py-1 text-[11px]">{t('animation.recoveryFailed')}</StudioStatus>}
   <AnimationTimeline comp={comp} at={at} selected={s.view.selectedLayer} canUndo={s.canUndo} canRedo={s.canRedo}/>
  </div>;
 }

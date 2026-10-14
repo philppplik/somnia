@@ -1,3 +1,4 @@
+import {StudioStatus} from '../studios/StudioStatus';
 import {reportError} from '../../lib/log';
 import {usePublishPhotosContext} from './panels/publishContext';
 import {useCallback,useEffect,useRef,useState} from 'react';
@@ -135,8 +136,8 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
    <Button size="compact" variant="outline" onClick={()=>{setZoom(1);setPan([0,0]);}} data-testid="photos-zoom-actual"><Minimize2 size={13}/>{t('photos.zoom.actual')}</Button>
    <span className="flex-1"/>
    {session?.cropping&&<span className="text-ink-3" data-testid="photos-crop-hint">{t('photos.crop.hint')}</span>}
-   <span className="text-ink-3" role="status" aria-live="polite" data-testid="photos-note">{note||(ready&&!session?.cropping?t('photos.note'):'')}</span>
-   <span className="text-ink-3" role="status" aria-live="polite" style={session?.status==='error'?{color:'var(--danger)'}:undefined} data-testid="photos-status">{status||(dirty?t('photos.status.dirty'):ready?t('photos.status.clean'):'')}</span>
+   <StudioStatus data-testid="photos-note">{note||(ready&&!session?.cropping?t('photos.note'):'')}</StudioStatus>
+   <StudioStatus tone={session?.status==='error'?'error':'info'} live={session?.status==='error'?'assertive':'polite'} data-testid="photos-status">{status||(dirty?t('photos.status.dirty'):ready?t('photos.status.clean'):'')}</StudioStatus>
   </div>
  </section>;
 }

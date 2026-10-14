@@ -1,3 +1,4 @@
+import {StudioStatus} from '../studios/StudioStatus';
 import {useEffect,useRef} from 'react';
 import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
@@ -506,8 +507,8 @@ export default function Viewport3D(){
  const s=useStudio3D();
  return <div className="relative flex min-h-0 flex-1 flex-col" data-testid="studio3d-viewport">
   <div ref={host} className="min-h-0 flex-1 overflow-hidden rounded-[25px]"/>
-  {s.status==='loading'&&<p role="status" className="pointer-events-none absolute left-4 top-3 m-0 rounded-md bg-surface px-2 py-1 text-xs text-ink-2">{t('studio3d.status.loading',{name:s.name})}</p>}
-  {s.status==='error'&&<p role="alert" className="absolute left-4 top-3 m-0 max-w-[80%] rounded-md bg-surface px-2 py-1 text-xs text-ink">{t('studio3d.status.error')}: {s.error}</p>}
+  {s.status==='loading'&&<StudioStatus className="pointer-events-none absolute left-4 top-3 m-0 rounded-md bg-surface px-2 py-1 text-xs">{t('studio3d.status.loading',{name:s.name})}</StudioStatus>}
+  {s.status==='error'&&<StudioStatus tone="error" live="assertive" className="absolute left-4 top-3 m-0 max-w-[80%] rounded-md bg-surface px-2 py-1 text-xs">{t('studio3d.status.error')}: {s.error}</StudioStatus>}
   <p className="sr-only">{t('studio3d.keys.hint')}</p>
  </div>;
 }

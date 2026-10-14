@@ -1,3 +1,4 @@
+import {StudioRecentList} from '../studios/StudioRecentList';
 import {useState} from 'react';
 import {patchStudio3D} from '../../lib/studio3d/session';
 import type {ObjectInfo} from '../../lib/studio3d/stage';
@@ -184,12 +185,5 @@ export function ToolsSection(_:InspectorSectionProps){
 export function RecentList({compact=false}:{compact?:boolean}){
  const {t}=useT();const s=useStudio3D();
  if(!s.recent.length)return null;
- return <section className={compact?'grid gap-1':'mx-auto grid w-full max-w-md gap-1 p-4'} aria-label={t('studio3d.recent.title')} data-testid="studio3d-recent">
-  <h3 className="m-0 text-xs font-medium text-ink-3">{t('studio3d.recent.title')}</h3>
-  <ul className="m-0 grid list-none gap-1 p-0">{s.recent.map(e=><li key={e.id}>
-   <button type="button" className="flex w-full items-center justify-between gap-2 rounded-[25px] border border-subtle bg-surface px-3 py-1.5 text-left text-xs text-ink hover:bg-hover" onClick={()=>void executeCommand('studio3d.recent.open',{id:e.id})} data-testid={e.auto?'studio3d-recent-autosave':'studio3d-recent-item'}>
-    <span className="min-w-0 truncate">{e.auto?t('studio3d.recent.autosave',{name:e.name}):e.name}</span>
-    <span className="shrink-0 text-ink-3">{new Date(e.savedAt).toLocaleString()} · {formatBytes(e.size)}</span></button></li>)}</ul>
-  <Button variant="outline" onClick={()=>void executeCommand('studio3d.recent.clear',{})}>{t('studio3d.recent.clear')}</Button>
- </section>;
+ return <StudioRecentList title={t('studio3d.recent.title')} compact={compact} testId="studio3d-recent" entries={s.recent.map(e=>({id:e.id,label:e.auto?t('studio3d.recent.autosave',{name:e.name}):e.name,metadata:`${new Date(e.savedAt).toLocaleString()} · ${formatBytes(e.size)}`,testId:e.auto?'studio3d-recent-autosave':'studio3d-recent-item'}))} onOpen={id=>void executeCommand('studio3d.recent.open',{id})} footer={<Button variant="outline" onClick={()=>void executeCommand('studio3d.recent.clear',{})}>{t('studio3d.recent.clear')}</Button>}/>;
 }
