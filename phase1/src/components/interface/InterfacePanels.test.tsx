@@ -134,3 +134,8 @@ test('P45 rotation field renders for any layer in English and German',async()=>{
  interfaceSession.select(interfaceSession.get().document!.nodes[0].id);assert.ok(renderToStaticMarkup(<InterfaceProperties/>).includes('Rotation'),'frames show the rotation field too');
  interfaceSession.clear();setLocale('de');try{interfaceSession.start();interfaceSession.transact(d=>{addNode(d,d.pages[0].id,'frame');});interfaceSession.select(interfaceSession.get().document!.nodes[0].id);
  const german=renderToStaticMarkup(<InterfaceProperties/>);assert.ok(german.includes('Drehung'));}finally{interfaceSession.clear();setLocale('en');}});
+test('P46 blend mode select renders for any layer in English and German',async()=>{interfaceSession.start();interfaceSession.transact(d=>{const f=addNode(d,d.pages[0].id,'frame');const r=addNode(d,d.pages[0].id,'rectangle',f);d.nodes.find(n=>n.id===r)!.blendMode='multiply';});interfaceSession.select(interfaceSession.get().document!.nodes[1].id);
+ const html=renderToStaticMarkup(<InterfaceProperties/>);assert.ok(html.includes('Blend mode'));assert.ok(html.includes('Multiply'));
+ interfaceSession.select(interfaceSession.get().document!.nodes[0].id);assert.ok(renderToStaticMarkup(<InterfaceProperties/>).includes('Blend mode'),'frames show the blend mode select too');
+ interfaceSession.clear();setLocale('de');try{interfaceSession.start();interfaceSession.transact(d=>{addNode(d,d.pages[0].id,'frame');});interfaceSession.select(interfaceSession.get().document!.nodes[0].id);
+ const german=renderToStaticMarkup(<InterfaceProperties/>);assert.ok(german.includes('Mischmodus'));}finally{interfaceSession.clear();setLocale('en');}});
