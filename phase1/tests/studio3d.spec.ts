@@ -1170,6 +1170,23 @@ test('mesh edit mode: bisect cuts the mesh by a plane and keeps both halves',asy
  await expect(page.getByRole('alert')).toContainText('does not cut through the mesh');
 });
 
+test('mesh edit mode: convex hull replaces the mesh with the hull of the selected vertices',async({page})=>{
+ await blank(page);
+ const id=await insert(page,'cube',0);
+ expect(await run(page,'studio3d.edit.start',{id,mode:'vertex'})).toBe(true);
+ expect(await run(page,'studio3d.edit.convexHull',{})).toBe(false);
+ await expect(page.getByRole('alert')).toContainText('Select vertices for the convex hull');
+ expect(await run(page,'studio3d.edit.mode',{mode:'face'})).toBe(true);
+ expect(await run(page,'studio3d.edit.selectAll',{op:'all'})).toBe(true);
+ expect(await run(page,'studio3d.edit.subdivide',{})).toBe(true);
+ expect(await run(page,'studio3d.edit.mode',{mode:'vertex'})).toBe(true);
+ expect(await run(page,'studio3d.edit.selectAll',{op:'all'})).toBe(true);
+ expect(await run(page,'studio3d.edit.convexHull',{})).toBe(true);
+ const s=await session(page);expect(s.stats.triangles).toBe(12);
+ expect(await run(page,'studio3d.undo',{})).toBe(true);
+ expect((await session(page)).stats.triangles).toBe(48);
+});
+
 test('mesh edit mode: vertex slide moves a selected vertex along an incident edge',async({page})=>{
  await blank(page);
  const id=await insert(page,'cube',0);

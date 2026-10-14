@@ -983,5 +983,8 @@
  "studio3d.hist.editVertSlide": "Vertex entlang Kante verschoben",
  "studio3d.edit.vertSlideEdgeA": "Kanten-Vertex A",
  "studio3d.edit.vertSlideEdgeB": "Kanten-Vertex B",
- "studio3d.edit.vertSlideFactor": "Slide-Faktor"
+ "studio3d.edit.vertSlideFactor": "Slide-Faktor",
+ "cmd.studio3d.edit.convexHull": "Ersetzt das bearbeitete 3D-Mesh durch die konvexe Hülle seiner selektierten Vertices",
+ "studio3d.edit.convexHull": "Konvexe Hülle",
+ "studio3d.hist.editConvexHull": "Konvexe Hülle"
 }

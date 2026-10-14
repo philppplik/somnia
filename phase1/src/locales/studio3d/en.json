@@ -983,5 +983,8 @@
  "studio3d.hist.editVertSlide": "Vertex slide",
  "studio3d.edit.vertSlideEdgeA": "Edge vertex A",
  "studio3d.edit.vertSlideEdgeB": "Edge vertex B",
- "studio3d.edit.vertSlideFactor": "Slide factor"
+ "studio3d.edit.vertSlideFactor": "Slide factor",
+ "cmd.studio3d.edit.convexHull": "Replace the edited 3D mesh with the convex hull of its selected vertices",
+ "studio3d.edit.convexHull": "Convex hull",
+ "studio3d.hist.editConvexHull": "Convex hull"
 }

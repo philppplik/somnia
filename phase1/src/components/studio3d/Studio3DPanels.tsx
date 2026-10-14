@@ -396,6 +396,7 @@ function EditSculptFields({id}:{id:number}){
      <NumField label={t('studio3d.edit.vertSlideEdgeB')} value={slideB} min={0} max={1000000} step={1} onCommit={setSlideB}/>
      <NumField label={t('studio3d.edit.vertSlideFactor')} value={slideF} min={-1} max={1} step={0.05} onCommit={setSlideF}/>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.vertSlide',{edge:[slideA,slideB],factor:slideF})}>{t('studio3d.edit.vertSlide')}</Button>
+     <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.convexHull',{})}>{t('studio3d.edit.convexHull')}</Button>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.bridgeFaces',{})}>{t('studio3d.edit.bridgeFaces')}</Button>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.rip',{})}>{t('studio3d.edit.rip')}</Button>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.separate',{})}>{t('studio3d.edit.separate')}</Button>

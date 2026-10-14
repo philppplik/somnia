@@ -983,5 +983,8 @@
  "studio3d.hist.editVertSlide": "Vértice deslizado ao longo da aresta",
  "studio3d.edit.vertSlideEdgeA": "Vértice A da aresta",
  "studio3d.edit.vertSlideEdgeB": "Vértice B da aresta",
- "studio3d.edit.vertSlideFactor": "Fator de deslize"
+ "studio3d.edit.vertSlideFactor": "Fator de deslize",
+ "cmd.studio3d.edit.convexHull": "Substitui a malha 3D editada pela envoltória convexa de seus vértices selecionados",
+ "studio3d.edit.convexHull": "Envoltória convexa",
+ "studio3d.hist.editConvexHull": "Envoltória convexa"
 }

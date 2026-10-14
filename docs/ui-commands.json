@@ -7220,6 +7220,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.edit.convexHull",
+      "title": "Replace the edited 3D mesh with the convex hull of its selected vertices",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.edit.delete",
       "title": "Delete selected elements",
       "category": "Edit",

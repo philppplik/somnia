@@ -983,5 +983,8 @@
  "studio3d.hist.editVertSlide": "Sommet glissé le long de l'arête",
  "studio3d.edit.vertSlideEdgeA": "Sommet A de l'arête",
  "studio3d.edit.vertSlideEdgeB": "Sommet B de l'arête",
- "studio3d.edit.vertSlideFactor": "Facteur de glissement"
+ "studio3d.edit.vertSlideFactor": "Facteur de glissement",
+ "cmd.studio3d.edit.convexHull": "Remplace le maillage 3D édité par l'enveloppe convexe de ses sommets sélectionnés",
+ "studio3d.edit.convexHull": "Enveloppe convexe",
+ "studio3d.hist.editConvexHull": "Enveloppe convexe"
 }
