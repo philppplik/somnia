@@ -22,8 +22,8 @@ export function safePdfName(typed:string,original:string):string{
  return n?n+'.pdf':pdfName(original);
 }
 /** Writes the PDF the engine lays out and downloads it. The opened document is untouched. */
-export async function savePdf(engine:DocumentsEngine,name:string,fileName?:string|null){
- const bytes=await engine.exportPdf();
+export async function savePdf(engine:DocumentsEngine,name:string,fileName?:string|null,options?:import('./protocol').PdfOptions){
+ const bytes=await engine.exportPdf(options);
  const url=URL.createObjectURL(new Blob([bytes as BlobPart],{type:'application/pdf'}));
  const a=document.createElement('a');a.href=url;a.download=fileName?safePdfName(fileName,name):pdfName(name);a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }

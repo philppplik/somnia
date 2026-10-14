@@ -19,8 +19,8 @@ export function registerDocumentsExport(next:DocumentsExportBridge):()=>void{
 export const getDocumentsExport=()=>bridge;
 
 /** Export popup and loss-warning dialog visibility. Session-only. */
-export interface DocumentsExportUi{exportOpen:boolean;confirmOpen:boolean;/** A typed copy name for the next save; null means the default name. */copyName:string|null;/** A typed PDF file name for the next PDF export; null means the default name. */pdfName:string|null;/** The format chosen in the export popup. */format:'docx'|'pdf'}
-let ui:DocumentsExportUi={exportOpen:false,confirmOpen:false,copyName:null,pdfName:null,format:'docx'};
+export interface DocumentsExportUi{exportOpen:boolean;confirmOpen:boolean;/** A typed copy name for the next save; null means the default name. */copyName:string|null;/** A typed PDF file name for the next PDF export; null means the default name. */pdfName:string|null;/** The format chosen in the export popup. */format:'docx'|'pdf';/** PDF pages as typed ("1-3, 5"); empty means all. */pdfPages:string;pdfMarkup:boolean;pdfTagged:boolean}
+let ui:DocumentsExportUi={exportOpen:false,confirmOpen:false,copyName:null,pdfName:null,format:'docx',pdfPages:'',pdfMarkup:false,pdfTagged:true};
 const listeners=new Set<()=>void>();
 export const getDocumentsExportUi=()=>ui;
 export function patchDocumentsExportUi(patch:Partial<DocumentsExportUi>){ui={...ui,...patch};listeners.forEach(fn=>fn());}

@@ -1,6 +1,7 @@
 import {useState} from 'react';
 import {useDocuments} from '../../lib/documents/store';
 import {patchDocumentsExportUi,useDocumentsExportUi} from '../../lib/documents/exportBridge';
+import {parsePdfPages} from '../../lib/documents/protocol';
 import {copyName,MAX_COPY_NAME,pdfName,safeCopyName,safePdfName} from '../../lib/documents/saveCopy';
 import {executeCommand} from '../../lib/commands';
 import {useT} from '../../lib/useT';
@@ -16,6 +17,7 @@ export function DocumentsExportDialog(){
  const {t}=useT();const doc=useDocuments();const ui=useDocumentsExportUi();const [typed,setTyped]=useState<string|null>(null);
  if(!ui.exportOpen)return null;
  const pdf=ui.format==='pdf';const def=pdf?pdfName(doc.name):copyName(doc.name);
+ const pagesBad=pdf&&parsePdfPages(ui.pdfPages,doc.pages)===null;
  const shown=typed??def;const finalName=pdf?safePdfName(shown,doc.name):safeCopyName(shown,doc.name);
  const close=()=>{setTyped(null);patchDocumentsExportUi({exportOpen:false});};
  const save=()=>{const custom=typed===null||finalName===def?null:finalName;patchDocumentsExportUi(pdf?{exportOpen:false,pdfName:custom}:{exportOpen:false,copyName:custom});setTyped(null);void executeCommand(pdf?'documents.export.pdf':'documents.saveCopy');};
@@ -30,12 +32,17 @@ export function DocumentsExportDialog(){
    </dl>
    <label className="grid gap-1 text-xs text-ink-2">{t('documents.export.file')}
     <NativeInput className="rounded-lg border border-subtle bg-transparent px-2 py-1.5 text-ink" maxLength={MAX_COPY_NAME} value={shown} onChange={e=>setTyped(e.currentTarget.value)} onKeyDown={e=>{if(e.key==='Enter'&&!doc.saving){e.preventDefault();save();}}} data-testid="documents-export-file"/></label>
+   {pdf&&<><label className="grid gap-1 text-xs text-ink-2">{t('documents.export.pages',{n:doc.pages})}
+    <NativeInput className="rounded-lg border border-subtle bg-transparent px-2 py-1.5 text-ink" maxLength={400} value={ui.pdfPages} aria-invalid={pagesBad} placeholder={t('documents.export.pagesAll')} onChange={e=>patchDocumentsExportUi({pdfPages:e.currentTarget.value})} data-testid="documents-export-pages"/></label>
+    {pagesBad&&<p role="alert" className="text-xs text-ink-3">{t('documents.export.pagesInvalid')}</p>}
+    <label className="doc-paraopt-check text-xs text-ink-2"><NativeInput type="checkbox" checked={ui.pdfMarkup} onChange={e=>patchDocumentsExportUi({pdfMarkup:e.currentTarget.checked})} data-testid="documents-export-markup"/>{t('documents.export.markup')}</label>
+    <label className="doc-paraopt-check text-xs text-ink-2"><NativeInput type="checkbox" checked={ui.pdfTagged} onChange={e=>patchDocumentsExportUi({pdfTagged:e.currentTarget.checked})} data-testid="documents-export-tagged"/>{t('documents.export.tagged')}</label></>}
    <p className="break-all text-xs text-ink-3" data-testid="documents-export-final">{t('documents.export.willSave',{name:finalName})}</p>
    <p className="text-xs text-ink-3">{t(pdf?'documents.export.pdfNote':'documents.export.note')}</p>
    {!pdf&&doc.risks.length>0&&<ul className="list-disc pl-5 text-xs text-ink-2" data-testid="documents-export-risks">{doc.risks.map(r=><li key={r}>{t('documents.risk.'+r)}</li>)}</ul>}
    <div className="flex justify-end gap-2">
     <NativeButton className={tool} autoFocus onClick={close}>{t('documents.cancel')}</NativeButton>
-    <NativeButton className={tool+' border border-subtle'} disabled={doc.saving} onClick={save} data-testid="documents-export-save">{t(pdf?'documents.export.savePdf':'documents.saveCopy')}</NativeButton>
+    <NativeButton className={tool+' border border-subtle'} disabled={doc.saving||pagesBad} onClick={save} data-testid="documents-export-save">{t(pdf?'documents.export.savePdf':'documents.saveCopy')}</NativeButton>
    </div>
   </div>
  </div>;

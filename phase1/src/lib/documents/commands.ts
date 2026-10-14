@@ -13,7 +13,7 @@ import {setShortcutsOpen} from './shortcuts';
 import {setParagraphOptionsOpen} from './paragraphOptions';
 import {setInfoDialog} from './infoDialog';
 import {insertPageBreak,setParagraphOptions,setProperties,setTabStops} from './session';
-import {checkParaPatch,PARA_FLAG_KEYS,propertiesProblem,tabsProblem} from './protocol';
+import {parsePdfPages,checkParaPatch,PARA_FLAG_KEYS,propertiesProblem,tabsProblem} from './protocol';
 import {addComment,commentSelection,deleteComment,goToComment,readComments,replyComment,resolveComment} from './session';
 import {commentProblem,HIGHLIGHTS,linkProblem,type HighlightName} from './protocol';
 import {clearFormatting,hasTextSelection,setHighlight,setLink,toggleVertAlign} from './session';
@@ -38,9 +38,11 @@ export function registerDocumentsCommands(){
    patchDocumentsExportUi({copyName:typeof n==='string'&&n.trim()?safeCopyName(n,getDocumentsState().name):null});await requestDocumentsSaveCopy();
   },()=>documentsExportReady(),'Project',()=>'hero.export.none'),
   add('documents.export.pdf','Export as PDF',async p=>{
-   const n=(p as Record<string,unknown>|undefined)?.name;
+   const r=p as Record<string,unknown>|undefined;const n=r?.name;
    if(n!==undefined&&(typeof n!=='string'||n.length>400))throw expected('Invalid "name".');
-   patchDocumentsExportUi({pdfName:typeof n==='string'&&n.trim()?safePdfName(n,getDocumentsState().name):null});await requestDocumentsExportPdf();
+   const pg=r?.pages;if(pg!==undefined&&(typeof pg!=='string'||parsePdfPages(pg,getDocumentsState().pages)===null))throw expected('Invalid "pages": use for example "1-3, 5".');
+   for(const k of ['markup','tagged'])if(r?.[k]!==undefined&&typeof r[k]!=='boolean')throw expected(`Invalid "${k}".`);
+   patchDocumentsExportUi({pdfPages:typeof pg==='string'?pg:'',pdfMarkup:r?.markup===true,pdfTagged:r?.tagged!==false,pdfName:typeof n==='string'&&n.trim()?safePdfName(n,getDocumentsState().name):null});await requestDocumentsExportPdf();
   },()=>documentsExportReady(),'Project',()=>'hero.export.none'),
   add('documents.comments.panel','Show comments',()=>{setCommentsOpen(!commentsOpen());}),
   add('documents.comments.add','Comment on selection',async p=>{

@@ -1665,7 +1665,7 @@ impl DocSession {
         self.pages = DocLayout::default();
         Ok(())
     }
-    fn do_export_pdf(&self) -> Result<Vec<u8>, String> {
+    fn do_export_pdf(&self, opts_json: &str) -> Result<Vec<u8>, String> {
         let n = self.pages.pages.len();
         if n == 0 {
             return Err("the document has no pages to export".into());
@@ -1673,7 +1673,39 @@ impl DocSession {
         if n > PDF_MAX_PAGES {
             return Err(format!("adapter PDF limit: {PDF_MAX_PAGES} pages"));
         }
-        let bytes = wordcraft_pdf::export_layout(&self.doc, &self.pages, &wordcraft_pdf::PdfOptions::default()).map_err(|e| e.to_string())?;
+        if opts_json.len() > 32_000 {
+            return Err("the PDF options are too large".into());
+        }
+        let v: serde_json::Value = serde_json::from_str(opts_json).map_err(|e| format!("PDF options are not valid JSON: {e}"))?;
+        let o = v.as_object().ok_or("PDF options must be an object")?;
+        let mut opts = wordcraft_pdf::PdfOptions::default();
+        for (k, val) in o {
+            match k.as_str() {
+                "markup" => opts.include_markup = val.as_bool().ok_or("PDF option markup must be true or false")?,
+                "tagged" => opts.tagged = val.as_bool().ok_or("PDF option tagged must be true or false")?,
+                "pages" => {
+                    let arr = val.as_array().ok_or("PDF option pages must be a list")?;
+                    if arr.is_empty() || arr.len() > PDF_MAX_PAGES {
+                        return Err(format!("PDF pages must list 1 to {PDF_MAX_PAGES} pages"));
+                    }
+                    let mut seen = std::collections::HashSet::new();
+                    let mut list = Vec::with_capacity(arr.len());
+                    for x in arr {
+                        let i = x.as_u64().ok_or("PDF pages must be whole numbers")? as usize;
+                        if i >= n {
+                            return Err(format!("page {} does not exist", i + 1));
+                        }
+                        if !seen.insert(i) {
+                            return Err(format!("page {} is listed twice", i + 1));
+                        }
+                        list.push(i);
+                    }
+                    opts.pages = Some(list);
+                }
+                _ => return Err(format!("unknown PDF option {k}")),
+            }
+        }
+        let bytes = wordcraft_pdf::export_layout(&self.doc, &self.pages, &opts).map_err(|e| e.to_string())?;
         if bytes.len() > PDF_MAX_BYTES {
             return Err("adapter PDF limit: the file would be larger than 100 MB".into());
         }
@@ -2024,7 +2056,12 @@ impl DocSession {
     /// The current layout as a PDF: selectable text with embedded font subsets, links, outline, pictures.
     /// Call after `paginate`. Refuses documents past the adapter limits instead of writing a huge file.
     pub fn export_pdf(&self) -> Result<Vec<u8>, JsValue> {
-        self.do_export_pdf().map_err(|e| JsValue::from_str(&e))
+        self.do_export_pdf("{}").map_err(|e| JsValue::from_str(&e))
+    }
+    /// Like `export_pdf` with options JSON: `{"pages":[0-based page indexes, in output order],"markup":bool,"tagged":bool}`.
+    /// Every key is optional (all pages, no markup, tagged). Unknown keys, duplicate or out-of-range pages are refused.
+    pub fn export_pdf_opts(&self, opts_json: &str) -> Result<Vec<u8>, JsValue> {
+        self.do_export_pdf(opts_json).map_err(|e| JsValue::from_str(&e))
     }
 }
 
@@ -2431,23 +2468,49 @@ mod tests {
         assert_eq!(s.doc.body.len(), len - 1);
     }
     #[test]
+    fn pdf_export_options_pages_markup_tagged_and_refusals() {
+        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
+        let pages = s.paginate();
+        let all = s.do_export_pdf(r#"{"tagged":false,"markup":true}"#).unwrap();
+        assert!(all.starts_with(b"%PDF-"));
+        let first = s.do_export_pdf(r#"{"pages":[0]}"#).unwrap();
+        assert!(first.starts_with(b"%PDF-"));
+        if pages > 1 {
+            assert!(first.len() < s.do_export_pdf("{}").unwrap().len());
+        }
+        let bad = [
+            r#"{"pages":[]}"#.to_string(),
+            format!(r#"{{"pages":[{pages}]}}"#),
+            r#"{"pages":[0,0]}"#.to_string(),
+            r#"{"pages":[-1]}"#.to_string(),
+            r#"{"pages":"1"}"#.to_string(),
+            r#"{"markup":"yes"}"#.to_string(),
+            r#"{"colour":true}"#.to_string(),
+            "[1]".to_string(),
+            "not json".to_string(),
+        ];
+        for b in &bad {
+            assert!(s.do_export_pdf(b).is_err(), "{b}");
+        }
+    }
+    #[test]
     fn pdf_export_writes_a_pdf_with_selectable_text() {
         let mut s = DocSession::from_bytes(FIXTURE).unwrap();
         // No layout yet: refused, nothing is written.
-        assert!(s.do_export_pdf().is_err());
+        assert!(s.do_export_pdf("{}").is_err());
         let pages = s.paginate();
         assert!(pages >= 1);
         s.do_set_properties(r#"{"title":"Somnia PDF test","creator":"Ada"}"#).unwrap();
-        let pdf = s.do_export_pdf().unwrap();
+        let pdf = s.do_export_pdf("{}").unwrap();
         assert!(pdf.starts_with(b"%PDF-"));
         assert!(pdf.windows(5).any(|w| w == b"%%EOF"));
         assert!(pdf.len() > 1000);
         // Deterministic enough to export twice from the same layout.
-        assert!(s.do_export_pdf().unwrap().starts_with(b"%PDF-"));
+        assert!(s.do_export_pdf("{}").unwrap().starts_with(b"%PDF-"));
         // Editing text keeps exporting.
         s.do_set_properties(r#"{"title":""}"#).unwrap();
         s.paginate();
-        assert!(s.do_export_pdf().is_ok());
+        assert!(s.do_export_pdf("{}").is_ok());
     }
     #[test]
     fn tab_stops_set_report_roundtrip_and_refuse() {

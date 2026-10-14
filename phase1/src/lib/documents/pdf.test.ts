@@ -36,3 +36,20 @@ test('PDF export waits for a ready document and a registered bridge',async()=>{
  off();resetDocuments();
  patchDocumentsExportUi({format:'pdf'});assert.equal(getDocumentsExportUi().format,'pdf');patchDocumentsExportUi({format:'docx'});
 });
+import {parsePdfPages,pdfOptionsProblem} from './protocol';
+test('PDF page ranges',()=>{
+ assert.deepEqual(parsePdfPages('',5),[]);assert.deepEqual(parsePdfPages(' 1-3, 5 ',5),[0,1,2,4]);assert.deepEqual(parsePdfPages('5,2',5),[4,1]);
+ for(const bad of ['0','6','3-1','1-3,2','a','1,,2','1-','-2','1 2','x'.repeat(500)])assert.equal(parsePdfPages(bad,5),null,bad);
+});
+test('PDF options are checked before the engine',()=>{
+ assert.equal(pdfOptionsProblem(undefined),null);assert.equal(pdfOptionsProblem({pages:[0,2],markup:true,tagged:false},3),null);
+ for(const bad of [null,[],{pages:[]},{pages:[0,0]},{pages:[-1]},{pages:[1.5]},{pages:[3]},{pages:'1'},{markup:'y'},{colour:true}])assert.notEqual(pdfOptionsProblem(bad,3),null,JSON.stringify(bad));
+ const calls:string[]=[];
+ const S=class{constructor(_b?:Uint8Array){}free(){}blocks(){return '[]';}paginate(){return 1;}page_info(){return '{"pages":[],"cacheHits":0,"cacheMisses":0}';}text(){return '';}
+  export_pdf(){calls.push('all');return enc('%PDF-1.7');}export_pdf_opts(j:string){calls.push(j);return enc('%PDF-1.7');}};
+ const k=new DocumentsCore(S as unknown as new(b:Uint8Array)=>DocSessionLike);k.handle({id:1,kind:'open',bytes:new Uint8Array(4)} as never);
+ assert.equal((k.handle({id:2,kind:'exportPdf'} as never).res as {ok:boolean}).ok,true);
+ assert.equal((k.handle({id:3,kind:'exportPdf',options:{pages:[1],markup:true}} as never).res as {ok:boolean}).ok,true);
+ assert.equal((k.handle({id:4,kind:'exportPdf',options:{pages:[1,1]}} as never).res as {ok:boolean}).ok,false);
+ assert.deepEqual(calls,['all','{"pages":[1],"markup":true}']);
+});

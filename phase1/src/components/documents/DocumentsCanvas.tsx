@@ -8,6 +8,7 @@ import {getDocumentsState,patchDocuments,resetDocuments,stepZoom,useDocuments} f
 import '../../lib/documents/guards';
 import {CELL_BASE} from '../../lib/documents/edit';
 import {clearFormatting,copyLinkAt,toggleVertAlign,setFindOpen,setParagraphStyle,clearCaret,deleteAtCaret,dragTo,editParagraph,getEngine,moveCaret,pasteText,settleDocument,switchDocument,pointerAt,redoEdit,selectAllText,setAlign,shiftListLevel,tabInCell,stepFontSize,stepIndent,toggleFormat,selectedText,splitAtCaret,syncGeometry,typeText,undoEdit} from '../../lib/documents/session';
+import {parsePdfPages,type PdfOptions} from '../../lib/documents/protocol';
 import {saveCopy,savePdf} from '../../lib/documents/saveCopy';
 import {confirmDocumentsSaveCopy,getDocumentsExportUi,patchDocumentsExportUi,registerDocumentsExport,useDocumentsExportUi} from '../../lib/documents/exportBridge';
 import {executeCommand} from '../../lib/commands';
@@ -124,7 +125,7 @@ export function DocumentsCanvas(){
  const onVisible=useCallback((i:number,v:boolean)=>setNear(prev=>{if(prev.has(i)===v)return prev;const n=new Set(prev);v?n.add(i):n.delete(i);return n;}),[]);
  const pick=async()=>{const input=document.createElement('input');input.type='file';input.accept=MEDIA_ACCEPT.split(',').filter(x=>/docx|wordprocessingml/.test(x)).join(',');input.onchange=async()=>{const f=input.files?.[0];if(f){const r=await addMediaFile(f,f.name);if('error' in r)patchDocuments({status:'error',error:r.error});}};input.click();};
  const doSave=async()=>{patchDocuments({saving:true});try{await settleDocument();const e=getEngine();if(!e)throw new Error(t('documents.session.noEngine'));await saveCopy(e,doc.name,getDocumentsExportUi().copyName);}catch(err){patchDocuments({status:'error',error:err instanceof Error?err.message:String(err)});}finally{patchDocuments({saving:false});patchDocumentsExportUi({copyName:null});}};
- const doSavePdf=async()=>{patchDocuments({saving:true});try{await settleDocument();const e=getEngine();if(!e)throw new Error(t('documents.session.noEngine'));await savePdf(e,doc.name,getDocumentsExportUi().pdfName);}catch(err){patchDocuments({editError:err instanceof Error?err.message:String(err)});}finally{patchDocuments({saving:false});patchDocumentsExportUi({pdfName:null});}};
+ const doSavePdf=async()=>{patchDocuments({saving:true});try{await settleDocument();const e=getEngine();if(!e)throw new Error(t('documents.session.noEngine'));const u=getDocumentsExportUi();const pages=parsePdfPages(u.pdfPages,doc.pages);if(pages===null)throw new Error(t('documents.export.pagesInvalid'));const opts:PdfOptions={markup:u.pdfMarkup,tagged:u.pdfTagged};if(pages.length>0)opts.pages=pages;await savePdf(e,doc.name,u.pdfName,opts);}catch(err){patchDocuments({editError:err instanceof Error?err.message:String(err)});}finally{patchDocuments({saving:false});patchDocumentsExportUi({pdfName:null});}};
  const doSavePdfRef=useRef(doSavePdf);doSavePdfRef.current=doSavePdf;
  // One save implementation for every entry point (toolbar, hero popup, Project menu, palette).
  const doSaveRef=useRef(doSave);doSaveRef.current=doSave;

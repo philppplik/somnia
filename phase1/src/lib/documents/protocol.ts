@@ -120,7 +120,7 @@ export type DocumentsRequest=
  |{id:number;kind:'setHeaderFooter';header?:string;footer?:string;pageNumber?:boolean}
  |{id:number;kind:'insertTable';block:number;rows:number;cols:number}
  |{id:number;kind:'save'}
- |{id:number;kind:'exportPdf'}
+ |{id:number;kind:'exportPdf';options?:PdfOptions}
  |{id:number;kind:'close'};
 export type DocumentsResponse=
  |{id:number;ok:true;kind:'ready';initMs:number}
@@ -268,6 +268,41 @@ export function propertiesProblem(p:unknown):string|null{
   const max=k==='description'?MAX_DESCRIPTION_CHARS:MAX_PROPERTY_CHARS;
   if(Array.from(v.trim()).length>max)return `Property ${k} is limited to ${max} characters.`;
   if((k==='description'?/[\u0000-\u0009\u000b-\u001f\u007f]/:/[\u0000-\u001f\u007f]/).test(v.trim()))return `Property ${k} has characters that are not allowed.`;
+ }
+ return null;
+}
+
+/** PDF export options: 0-based page indexes in output order (all pages when absent), tracked-change markup, tagged PDF. */
+export interface PdfOptions{pages?:number[];markup?:boolean;tagged?:boolean}
+export const MAX_PDF_PAGES=2000;
+/**
+ * Pages typed as "1-3, 5" (1-based, ascending ranges or single pages, separated by commas) as 0-based indexes.
+ * Empty text means all pages (an empty list). Null when a part is not a number or range, runs backwards, repeats a page, or is outside 1..max.
+ */
+export function parsePdfPages(text:string,max:number):number[]|null{
+ const t=text.trim();if(t==='')return[];
+ if(t.length>400)return null;
+ const out:number[]=[];const seen=new Set<number>();
+ for(const part of t.split(',')){
+  const m=/^\s*(\d{1,6})\s*(?:-\s*(\d{1,6}))?\s*$/.exec(part);if(!m)return null;
+  const a=Number(m[1]),b=m[2]===undefined?a:Number(m[2]);
+  if(a<1||b<a||b>max)return null;
+  for(let p=a;p<=b;p++){if(seen.has(p))return null;seen.add(p);out.push(p-1);if(out.length>MAX_PDF_PAGES)return null;}
+ }
+ return out;
+}
+/** The first problem with PDF options, or null. `pages` is checked against the page count when it is known. */
+export function pdfOptionsProblem(o:unknown,pageCount?:number):string|null{
+ if(o===undefined)return null;
+ if(!o||typeof o!=='object'||Array.isArray(o))return 'The PDF options are not valid.';
+ const r=o as Record<string,unknown>;
+ for(const k of Object.keys(r)){
+  if(k==='markup'||k==='tagged'){if(typeof r[k]!=='boolean')return `PDF option ${k} must be true or false.`;}
+  else if(k==='pages'){
+   const p=r[k];if(!Array.isArray(p)||p.length<1||p.length>MAX_PDF_PAGES)return 'PDF pages must list 1 to 2000 pages.';
+   const seen=new Set<number>();
+   for(const x of p){if(typeof x!=='number'||!Number.isInteger(x)||x<0||x>=MAX_PDF_PAGES*100||seen.has(x)||(pageCount!==undefined&&x>=pageCount))return 'A PDF page is not valid.';seen.add(x);}
+  }else return `Unknown PDF option ${k}.`;
  }
  return null;
 }

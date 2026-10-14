@@ -82,6 +82,7 @@ export class DocSession {
     restore(id: number): void;
     save(): Uint8Array;
     export_pdf(): Uint8Array;
+    export_pdf_opts(opts_json: string): Uint8Array;
     /**
      * Highlight rectangles inside one top-level paragraph: `[[page,x,y,w,h],...]`.
      */
