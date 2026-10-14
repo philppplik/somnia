@@ -229,3 +229,9 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Implemented: Ctrl/Cmd+A selects all points of a path layer and Esc deselects; compound path model (`source.subpaths`, validation, render with even-odd in canvas and exports, legacy documents unchanged and round-trip tested), ops addSubpath/removeSubpath, "Combine with path layer" (one undo, position-preserving) and "Remove last subpath" in the inspector, command animation.layer.pathCombine, five locales.
 - Validation: 4 new Animation unit tests (175 total), DS ratchet, ui-commands inventory (384), check:layers, isolated Chrome check (select-all, Esc, even-odd hole, undo count).
 - Not covered: no booleans (as requested); compound paths cannot be animated or morphed; on-canvas editing only for the main subpath; no split-to-layers. Playwright E2E is CI-only.
+
+### Animation P32 (2026-10-14, integration pending)
+
+- Implemented: path booleans (unite, subtract, intersect, exclude) on compound paths, own dependency-free polygon engine (curves flattened about 0.25 px, result is corner points), one undo step, refuses animated, locked, open, same and non-path layers, bounded points (512), 5 locales, command `animation.layer.pathBoolean`, UI row in the path layer inspector.
+- Validation: 4 new Animation unit tests with known areas (179 total), DS ratchet, ui-commands inventory (385), check:layers, isolated Chrome check (exclude result, undo count).
+- Open: exact curve output (no flattening), self-crossing inputs, animated paths, boolean on masks.

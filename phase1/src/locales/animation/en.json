@@ -424,5 +424,12 @@
  "animation.pathLayer.combineTarget": "Combine with path layer…",
  "animation.pathLayer.subpaths": "Subpaths: {n}",
  "animation.pathLayer.removeSubpath": "Remove last subpath",
- "cmd.animation.layer.pathCombine": "Combine two path layers into one compound path"
+ "cmd.animation.layer.pathCombine": "Combine two path layers into one compound path",
+ "animation.pathLayer.boolOp": "Boolean operation",
+ "animation.pathLayer.bool.unite": "Unite",
+ "animation.pathLayer.bool.subtract": "Subtract",
+ "animation.pathLayer.bool.intersect": "Intersect",
+ "animation.pathLayer.bool.exclude": "Exclude",
+ "animation.pathLayer.boolApply": "Apply",
+ "cmd.animation.layer.pathBoolean": "Unite, subtract, intersect or exclude two path layers"
 }

@@ -5,6 +5,7 @@ import {worldMatrix} from './scene';
 import {pathData} from '../interface/vectorCore';
 import type {InterfacePath} from '../interface/schema';
 import type {Edit} from './edit';
+import {booleanRings,flattenRing,BooleanError,MAX_RESULT_POINTS,type BoolOp,type Pt} from './pathBoolean';
 /** Shape layers with a path source: normalized (0..1 of the layer box) bezier points, optional morph keys. */
 const r4=(n:number)=>Math.round(n*1e4)/1e4;
 const scale=(p:MaskPath,w:number,h:number):MaskPath=>({closed:p.closed,points:p.points.map(q=>({x:q.x*w,y:q.y*h,...(q.inX!==undefined?{inX:q.inX*w,inY:(q.inY??0)*h}:{}),...(q.outX!==undefined?{outX:q.outX*w,outY:(q.outY??0)*h}:{})}))});
@@ -216,4 +217,32 @@ export function combinePathsEdits(doc:AnimationDocument,layerId:string,otherId:s
  const subpaths=[...(l.source.subpaths??[]),...clamped];
  if(!validSource({...l.source,subpaths:subpaths as never}))throw Error('Too many subpaths or points in one path layer.');
  return [{type:'layer.update',layer:l.id,source:{subpaths:subpaths as never}},{type:'layer.remove',layer:o.id}];
+}
+
+/** Path boolean (unite, subtract, intersect, exclude) of `layerId` with `otherId`: the target keeps its place and style, the other layer is removed. One dispatch, one undo step. Curves are flattened (about 0.25 px), so the result has corner points only. Refused for animated, locked, open, same or non-path layers, for empty results and for results outside the target box or above the point limits. */
+export function booleanEdits(doc:AnimationDocument,layerId:string,otherId:string,op:BoolOp):Edit[]{
+ const {c,l}=target(doc,layerId);if(l.locked)throw Error('Layer is locked.');
+ if(otherId===layerId)throw Error('Pick another path layer.');
+ const o=findLayer(c,otherId);if(!o||o.kind!=='shape'||o.source.shape!=='path'||!o.source.path)throw Error('Pick another path shape layer.');
+ if(o.locked)throw Error('Layer is locked.');
+ if(l.source.pathKeys?.length||o.source.pathKeys?.length)throw Error('Turn off path animation before combining.');
+ const A=pathSubpaths(l.source),B=pathSubpaths(o.source);
+ if([...A,...B].some(sp=>!sp.closed||sp.points.length<3))throw Error('Boolean operations need closed paths.');
+ const t=c.start,M=worldMatrix(c,l,t),N=worldMatrix(c,o,t),det=M[0]*M[3]-M[1]*M[2];if(Math.abs(det)<1e-9)throw Error('The layer has no area.');
+ const {w,h}=box(l),{w:w2,h:h2}=box(o);
+ const toLocal=(x:number,y:number):Pt=>{const wx=N[0]*x+N[2]*y+N[4],wy=N[1]*x+N[3]*y+N[5],dx=wx-M[4],dy=wy-M[5];return [(M[3]*dx-M[2]*dy)/det,(-M[1]*dx+M[0]*dy)/det];};
+ const ringsA=A.map(sp=>flattenRing(sp as MaskPath,w,h));
+ const ringsB=B.map(sp=>flattenRing(sp as MaskPath,w2,h2).map(p=>toLocal(p[0],p[1])));
+ let res:Pt[][];
+ try{res=booleanRings(ringsA,ringsB,op);}catch(e){if(e instanceof BooleanError)throw Error(e.message);throw e;}
+ if(!res.length)throw Error('The result would be empty.');
+ const eps=1e-3;
+ const norm01=res.map(r=>r.map(p=>({x:r4(p[0]/w),y:r4(p[1]/h)})));
+ if(norm01.some(r=>r.some(q=>q.x<-eps||q.x>1+eps||q.y<-eps||q.y>1+eps)))throw Error('The result would leave this layer box.');
+ const rings=norm01.map(r=>({closed:true,points:r.map(q=>({x:Math.min(1,Math.max(0,q.x)),y:Math.min(1,Math.max(0,q.y))}))}));
+ if(rings.reduce((n,r)=>n+r.points.length,0)>MAX_RESULT_POINTS)throw Error('Too many subpaths or points in one path layer.');
+ const [main,...rest]=rings;
+ const source={path:main as never,subpaths:(rest.length?rest:undefined) as never};
+ if(!validSource({...l.source,...source}))throw Error('Too many subpaths or points in one path layer.');
+ return [{type:'layer.update',layer:l.id,source},{type:'layer.remove',layer:o.id}];
 }

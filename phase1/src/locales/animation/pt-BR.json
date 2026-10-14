@@ -424,5 +424,12 @@
  "animation.pathLayer.combineTarget": "Combinar com camada de caminho…",
  "animation.pathLayer.subpaths": "Subcaminhos: {n}",
  "animation.pathLayer.removeSubpath": "Remover o último subcaminho",
- "cmd.animation.layer.pathCombine": "Combinar duas camadas de caminho em um caminho composto"
+ "cmd.animation.layer.pathCombine": "Combinar duas camadas de caminho em um caminho composto",
+ "animation.pathLayer.boolOp": "Operação booleana",
+ "animation.pathLayer.bool.unite": "Unir",
+ "animation.pathLayer.bool.subtract": "Subtrair",
+ "animation.pathLayer.bool.intersect": "Interseccionar",
+ "animation.pathLayer.bool.exclude": "Excluir",
+ "animation.pathLayer.boolApply": "Aplicar",
+ "cmd.animation.layer.pathBoolean": "Unir, subtrair, interseccionar ou excluir duas camadas de caminho"
 }

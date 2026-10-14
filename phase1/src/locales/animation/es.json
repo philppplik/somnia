@@ -424,5 +424,12 @@
  "animation.pathLayer.combineTarget": "Combinar con capa de trazado…",
  "animation.pathLayer.subpaths": "Subtrazados: {n}",
  "animation.pathLayer.removeSubpath": "Quitar el último subtrazado",
- "cmd.animation.layer.pathCombine": "Combinar dos capas de trazado en un trazado compuesto"
+ "cmd.animation.layer.pathCombine": "Combinar dos capas de trazado en un trazado compuesto",
+ "animation.pathLayer.boolOp": "Operación booleana",
+ "animation.pathLayer.bool.unite": "Unir",
+ "animation.pathLayer.bool.subtract": "Restar",
+ "animation.pathLayer.bool.intersect": "Intersecar",
+ "animation.pathLayer.bool.exclude": "Excluir",
+ "animation.pathLayer.boolApply": "Aplicar",
+ "cmd.animation.layer.pathBoolean": "Unir, restar, intersecar o excluir dos capas de trazado"
 }

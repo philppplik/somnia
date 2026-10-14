@@ -424,5 +424,12 @@
  "animation.pathLayer.combineTarget": "Combiner avec un calque de tracé…",
  "animation.pathLayer.subpaths": "Sous-tracés : {n}",
  "animation.pathLayer.removeSubpath": "Supprimer le dernier sous-tracé",
- "cmd.animation.layer.pathCombine": "Combiner deux calques de tracé en un tracé composé"
+ "cmd.animation.layer.pathCombine": "Combiner deux calques de tracé en un tracé composé",
+ "animation.pathLayer.boolOp": "Opération booléenne",
+ "animation.pathLayer.bool.unite": "Unir",
+ "animation.pathLayer.bool.subtract": "Soustraire",
+ "animation.pathLayer.bool.intersect": "Intersecter",
+ "animation.pathLayer.bool.exclude": "Exclure",
+ "animation.pathLayer.boolApply": "Appliquer",
+ "cmd.animation.layer.pathBoolean": "Unir, soustraire, intersecter ou exclure deux calques de tracé"
 }

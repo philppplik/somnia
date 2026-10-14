@@ -1,5 +1,5 @@
 import {maskEdit,matteEdit,type MaskOp} from './masks';
-import {pathLayerEdit,combinePathsEdits,maskToLayerEdit,type PathLayerOp} from './pathLayer';
+import {pathLayerEdit,combinePathsEdits,booleanEdits,maskToLayerEdit,type PathLayerOp} from './pathLayer';
 import {animatorEdit,type AnimatorOp} from './textAnimators';
 import {presetEdits,type MotionPreset} from './presets';
 import {newId} from './model';
@@ -160,6 +160,7 @@ export function animationCommandSpecs():CommandSpec<unknown,unknown>[]{
   spec('animation.workarea.out','Set work area end at playhead',()=>run({type:'workarea.set',in:comp().workArea.in,out:playhead()}),undefined,open,'View'),
   spec('animation.workarea.reset','Reset work area to the whole composition',()=>run({type:'workarea.set',in:comp().start,out:comp().start+comp().duration}),undefined,open,'View'),
   spec('animation.layer.pathCombine','Combine two path layers into one compound path',(p:{layer?:string;other:string})=>run(combinePathsEdits(doc(),layerIdOf(p),p.other)),object({layer:layerRef,other:layerRef},['other'])),
+  spec('animation.layer.pathBoolean','Unite, subtract, intersect or exclude two path layers',(p:{layer?:string;other:string;op:string})=>run(booleanEdits(doc(),layerIdOf(p),p.other,p.op as never)),object({layer:layerRef,other:layerRef,op:{enum:['unite','subtract','intersect','exclude']}},['other','op']),open,'Insert'),
   spec('animation.layer.pen','Toggle the pen tool for path layers',()=>{setLayerPen(!getLayerPen());},undefined,open,'Insert'),
   spec('animation.playback.loop','Toggle looped playback',()=>animationSession().setView({loop:!animationSession().getState().view.loop}),undefined,open,'View'),
   spec('animation.graph.toggle','Switch between timeline and graph editor',()=>animationSession().setView({graph:!animationSession().getState().view.graph}),undefined,open,'View'),

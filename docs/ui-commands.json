@@ -600,6 +600,18 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.layer.pathBoolean",
+      "title": "Unite, subtract, intersect or exclude two path layers",
+      "category": "Insert",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.layer.pathCombine",
       "title": "Combine two path layers into one compound path",
       "category": "Edit",

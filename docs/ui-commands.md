@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-384 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+385 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -70,6 +70,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `animation.layer.matte` | Set layer track matte | Edit | animation |  |
 | `animation.layer.parent` | Set layer parent | Edit | animation |  |
 | `animation.layer.path` | Edit a path shape layer | Edit | animation |  |
+| `animation.layer.pathBoolean` | Unite, subtract, intersect or exclude two path layers | Insert | animation |  |
 | `animation.layer.pathCombine` | Combine two path layers into one compound path | Edit | animation |  |
 | `animation.layer.pen` | Toggle the pen tool for path layers | Insert | animation |  |
 | `animation.layer.remove` | Delete layer | Edit | animation |  |

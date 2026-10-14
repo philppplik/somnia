@@ -424,5 +424,12 @@
  "animation.pathLayer.combineTarget": "Mit Pfad-Ebene kombinieren…",
  "animation.pathLayer.subpaths": "Teilpfade: {n}",
  "animation.pathLayer.removeSubpath": "Letzten Teilpfad entfernen",
- "cmd.animation.layer.pathCombine": "Zwei Pfad-Ebenen zu einem zusammengesetzten Pfad kombinieren"
+ "cmd.animation.layer.pathCombine": "Zwei Pfad-Ebenen zu einem zusammengesetzten Pfad kombinieren",
+ "animation.pathLayer.boolOp": "Boolesche Operation",
+ "animation.pathLayer.bool.unite": "Vereinen",
+ "animation.pathLayer.bool.subtract": "Subtrahieren",
+ "animation.pathLayer.bool.intersect": "Schnittmenge",
+ "animation.pathLayer.bool.exclude": "Ausschließen",
+ "animation.pathLayer.boolApply": "Anwenden",
+ "cmd.animation.layer.pathBoolean": "Zwei Pfadebenen vereinen, subtrahieren, schneiden oder ausschließen"
 }

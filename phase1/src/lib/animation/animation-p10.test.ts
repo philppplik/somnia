@@ -8,6 +8,8 @@ import {copyTransformKeys,pasteTransformEdits} from './keysClipboard';
 import {animatedTargets,allTargetKeys,propertyOf,moveTargetKeys,easeTargetKeys,pruneTargetKeys,toggleTargetKey,editTargetKeys,copyTargetKeys,pasteTargetKeys,deleteTargetKeys,pasteClipOnTargets,staggerLayers,bounceClip,bounceTargetKeys} from './keyTargets';
 import {EASE_PRESETS,easePresetOf} from './graph';
 import {animationCommandSpecs} from './commands';
+import {booleanRings,flattenRing,ringArea,type BoolOp,type Pt} from './pathBoolean';
+import {booleanEdits} from './pathLayer';
 import {deleteEasingEdit,findEasing,saveEasingEdit,userEasings,validateEasingLib,MAX_EASINGS} from './easingLibrary';
 import {elasticTargetKeys} from './keyTargets';
 import {BUILTIN_MOTIONS,MAX_USER_MOTIONS,LEGACY_KEY,deleteMotionEdit,exportMotionsJson,findMotion,legacyMotions,listMotions,mergeMotionsEdit,motionEdits,motionFromKeys,parseMotionsJson,saveMotionEdit,userMotions,validMotion} from './motionLibrary';
@@ -744,4 +746,46 @@ test('P31: combining path layers keeps shapes in place, is one undo, and refuses
 test('P31: compound path locale keys and command exist',()=>{
  assert.ok(animationCommandSpecs().some(s=>s.id==='animation.layer.pathCombine'));
  for(const l of ['en','de','es','fr','pt-BR']){const j=JSON.parse(readFileSync(new URL(`../../locales/animation/${l}.json`,import.meta.url),'utf8'));for(const k of ['animation.pathLayer.combine','animation.pathLayer.combineTarget','animation.pathLayer.subpaths','animation.pathLayer.removeSubpath','cmd.animation.layer.pathCombine'])assert.ok(j[k],`${l} ${k}`);}
+});
+
+const rect=(x0:number,y0:number,x1:number,y1:number)=>[{x:x0,y:y0},{x:x1,y:y0},{x:x1,y:y1},{x:x0,y:y1}];
+const boolDoc=(a:ReturnType<typeof rect>,b:ReturnType<typeof rect>)=>{let d=pathDoc();
+ d=applyEdit(d,{type:'layer.update',layer:'pa',source:{path:{closed:true,points:a}}});d=applyEdit(d,{type:'layer.update',layer:'pb',source:{path:{closed:true,points:b}}});return d;};
+/** Even-odd area in pixels of a layer's subpaths (nested rings subtract). */
+const eoArea=(d:AnimationDocument,id:string)=>{const l=layer(d,id);const rs=[l.source.path!,...(l.source.subpaths??[])].map(q=>q.points.map(p=>[p.x*200,p.y*100] as Pt));
+ const inR=(r:Pt[],p:Pt)=>{let c=false;for(let i=0,j=r.length-1;i<r.length;j=i++){const a=r[i],b=r[j];if((a[1]>p[1])!==(b[1]>p[1])&&p[0]<(b[0]-a[0])*(p[1]-a[1])/(b[1]-a[1])+a[0])c=!c;}return c;};
+ return rs.reduce((n,r,i)=>{const depth=rs.filter((o,k)=>k!==i&&inR(o,r[0])).length;return n+(depth%2?-1:1)*Math.abs(ringArea(r));},0);};
+test('P32: booleans of overlapping squares have the known areas',()=>{
+ const A=rect(0,0,0.5,0.5),B=rect(0.25,0.25,0.75,0.75);
+ const want:Record<BoolOp,number>={unite:8750,intersect:1250,subtract:3750,exclude:7500};
+ for(const op of Object.keys(want) as BoolOp[]){const d0=boolDoc(A,B),r=d0.revision;const d=applyEdits(d0,booleanEdits(d0,'pa','pb',op));
+  assert.equal(d.revision,r+1,'one undo step');assert.equal(findLayer(comp(d),'pb'),undefined);assert.ok(Math.abs(eoArea(d,'pa')-want[op])<1,`${op} ${eoArea(d,'pa')}`);assert.deepEqual(validateDocument(d),validateDocument(d0));}
+});
+test('P32: hole, disjoint, contained, touching and empty results',()=>{
+ let d0=boolDoc(rect(0,0,1,1),rect(0.25,0.25,0.75,0.75));let d=applyEdits(d0,booleanEdits(d0,'pa','pb','subtract'));
+ assert.equal(layer(d,'pa').source.subpaths!.length,1,'hole is a second subpath');assert.ok(Math.abs(eoArea(d,'pa')-15000)<1);
+ d0=boolDoc(rect(0,0,0.25,0.25),rect(0.5,0.5,1,1));d=applyEdits(d0,booleanEdits(d0,'pa','pb','unite'));assert.equal(layer(d,'pa').source.subpaths!.length,1);assert.ok(Math.abs(eoArea(d,'pa')-(50*25+100*50))<1);
+ assert.throws(()=>booleanEdits(d0,'pa','pb','intersect'),/empty/);
+ d0=boolDoc(rect(0,0.2,0.4,0.8),rect(0.4,0.2,0.8,0.8));d=applyEdits(d0,booleanEdits(d0,'pa','pb','unite'));assert.equal(layer(d,'pa').source.subpaths,undefined,'shared edge merges');assert.equal(layer(d,'pa').source.path!.points.length,4);assert.ok(Math.abs(eoArea(d,'pa')-160*60)<1);
+ d0=boolDoc(rect(0,0,0.5,0.5),rect(0,0,0.5,0.5));assert.throws(()=>booleanEdits(d0,'pa','pb','subtract'),/empty/);
+ d0=boolDoc(rect(0,0,0.5,0.5),rect(0.1,0.1,0.3,0.3));d=applyEdits(d0,booleanEdits(d0,'pa','pb','intersect'));assert.ok(Math.abs(eoArea(d,'pa')-40*20)<1,'contained');
+});
+test('P32: curves are flattened within tolerance and refusals hold',()=>{
+ const circ={closed:true,points:[{x:0.5,y:0,inX:-0.276,outX:0.276},{x:1,y:0.5,inY:-0.276,outY:0.276},{x:0.5,y:1,inX:0.276,outX:-0.276},{x:0,y:0.5,inY:0.276,outY:-0.276}]};
+ const ring=flattenRing(circ,100,100);assert.ok(ring.length>8&&ring.length<=4*24);
+ const hr=ring.reduce((m,p)=>Math.max(m,Math.abs(Math.hypot(p[0]-50,p[1]-50)-50)),0);assert.ok(hr<1,'on the circle');
+ assert.ok(Math.abs(Math.abs(ringArea(ring))-Math.PI*2500)/(Math.PI*2500)<0.02);
+ const r=booleanRings([ring],[[[0,0],[50,0],[50,100],[0,100]]],'intersect');assert.ok(Math.abs(Math.abs(ringArea(r[0]))-Math.PI*2500/2)/(Math.PI*1250)<0.03,'half disc');
+ const A=rect(0,0,0.5,0.5),B=rect(0.25,0.25,0.75,0.75);
+ let an=boolDoc(A,B);an=applyEdit(an,pathLayerEdit(an,'pb',{op:'animate',on:true}));assert.throws(()=>booleanEdits(an,'pa','pb','unite'),/animation/);
+ let an2=boolDoc(A,B);an2=applyEdit(an2,pathLayerEdit(an2,'pa',{op:'animate',on:true}));assert.throws(()=>booleanEdits(an2,'pa','pb','unite'),/animation/);
+ let lk=boolDoc(A,B);lk=applyEdit(lk,{type:'layer.update',layer:'pb',locked:true});assert.throws(()=>booleanEdits(lk,'pa','pb','unite'),/locked/);
+ assert.throws(()=>booleanEdits(boolDoc(A,B),'pa','pa','unite'),/another/);assert.throws(()=>booleanEdits(boolDoc(A,B),'pa','photo','unite'),/path shape/);
+ let far=boolDoc(A,B);far=applyEdit(far,{type:'prop.set',layer:'pb',prop:'position',value:[5000,0],t:0});assert.throws(()=>booleanEdits(far,'pa','pb','unite'),/leave this layer box/);
+ let open=boolDoc(A,B);open=applyEdit(open,{type:'layer.update',layer:'pb',source:{path:{closed:false,points:B}}});assert.throws(()=>booleanEdits(open,'pa','pb','unite'),/closed/);
+ const big=Array.from({length:1300},(_,i)=>[i,0] as Pt);assert.throws(()=>booleanRings([big],[big],'unite'),/too detailed/);
+});
+test('P32: boolean command and locale keys exist',()=>{
+ assert.ok(animationCommandSpecs().some(s=>s.id==='animation.layer.pathBoolean'));
+ for(const l of ['en','de','es','fr','pt-BR']){const j=JSON.parse(readFileSync(new URL(`../../locales/animation/${l}.json`,import.meta.url),'utf8'));for(const k of ['animation.pathLayer.boolOp','animation.pathLayer.bool.unite','animation.pathLayer.bool.subtract','animation.pathLayer.bool.intersect','animation.pathLayer.bool.exclude','animation.pathLayer.boolApply','cmd.animation.layer.pathBoolean'])assert.ok(j[k],`${l} ${k}`);}
 });
