@@ -11,7 +11,7 @@ import {KEY_PATHS,type KeyPath} from './clips';
 import type {KeyRef} from './keyEdit';
 import type {LoopRange} from './animation';
 import type {TextureTransform} from './uv';
-import {VIEW_PRESETS,type ViewPreset} from './viewPresets';
+import {VIEW_PRESETS,focalToFov,type ViewPreset} from './viewPresets';
 import type {MirrorAxis,PrimitiveKind,LightKind,LightRigPreset,TransformPatch,MaterialPatch,LightPatch,AlignAxis,AlignTo,PivotAt,CameraKind} from './stage';
 import type {Vec3} from './stage';
 export interface TurntableOptions{frames?:number;width?:number;height?:number;transparent?:boolean;/** 'zip' downloads one archive; 'folder' writes the PNG frames into a folder the user picks. */out?:'zip'|'folder';}
@@ -110,6 +110,12 @@ export interface Studio3DController{
  sculptEnd():void;
  addCamera(fromView:boolean,kind?:CameraKind):number;
  setCamera(id:number,patch:{fov?:number;zoom?:number}):void;
+ /** Switch the viewport between perspective and orthographic (view state). */
+ setProjection(kind:CameraKind):void;
+ /** Set the viewport perspective field of view in degrees (view state). */
+ setViewFov(fov:number):void;
+ /** Start or stop the turntable preview; returns the new state (view only, never exported). */
+ setTurntable(on:boolean):boolean;
  viewSave(name?:string):string;
  viewApply(name:string):void;
  viewRemove(name:string):void;
@@ -213,6 +219,9 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
    object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500},mode:{enum:['linear','radial']},count:{type:'integer',minimum:2,maximum:100},dx:{type:'number',minimum:-1000,maximum:1000},dy:{type:'number',minimum:-1000,maximum:1000},dz:{type:'number',minimum:-1000,maximum:1000},axis:{enum:['x','y','z']},angle:{type:'number',minimum:-360,maximum:360},cx:{type:'number',minimum:-10000,maximum:10000},cy:{type:'number',minimum:-10000,maximum:10000},cz:{type:'number',minimum:-10000,maximum:10000}},['ids','mode','count']),hasScene),
   add<{fromView?:boolean;kind?:CameraKind}>('studio3d.insert.camera','Insert a 3D camera (perspective or orthographic)','Insert',p=>need().addCamera(!!p?.fromView,p?.kind),object({fromView:{type:'boolean'},kind:{enum:['perspective','orthographic']}},[]),()=>!!controller),
   add<{id:number;fov?:number;zoom?:number}>('studio3d.camera.set','Change the field of view (perspective) or zoom (orthographic) of a 3D camera','Edit',p=>need().setCamera(p.id,{fov:p.fov,zoom:p.zoom}),object({id:{type:'integer',minimum:0},fov:{type:'number',minimum:1,maximum:120},zoom:{type:'number',minimum:0.01,maximum:100}},['id']),hasScene),
+  add<{kind?:CameraKind}>('studio3d.view.projection','Switch the 3D viewport between perspective and orthographic','View',p=>need().setProjection(p?.kind==='orthographic'?'orthographic':p?.kind==='perspective'?'perspective':getStudio3DState().viewKind==='perspective'?'orthographic':'perspective'),object({kind:{enum:['perspective','orthographic']}},[]),()=>!!controller),
+  add<{fov?:number;mm?:number}>('studio3d.view.fov','Set the viewport field of view (degrees) or 35mm-equivalent focal length','View',p=>{if(p.mm!==undefined)need().setViewFov(focalToFov(p.mm));else if(p.fov!==undefined)need().setViewFov(p.fov);else throw new Error('Pass fov or mm.');},object({fov:{type:'number',minimum:1,maximum:120},mm:{type:'number',minimum:3,maximum:1400}},[]),()=>!!controller),
+  add<{on?:boolean}>('studio3d.view.turntable','Start or stop the turntable preview of the 3D viewport (view only, never exported)','View',p=>{need().setTurntable(p?.on??!getStudio3DState().turntable);},object({on:{type:'boolean'}},[]),hasScene),
   add<{name?:string}>('studio3d.view.save','Save the current viewport as a named view','View',p=>{need().viewSave(p?.name);},object({name:{type:'string',maxLength:60}},[]),hasScene),
   add<{name:string}>('studio3d.view.apply','Look at the scene from a saved named view','View',p=>need().viewApply(p.name),object({name:{type:'string'}}),hasScene),
   add<{name:string}>('studio3d.view.remove','Delete a saved named view','View',p=>need().viewRemove(p.name),object({name:{type:'string'}}),hasScene),

@@ -596,5 +596,14 @@
  "studio3d.light.rig.threePoint": "Dreipunkt",
  "studio3d.light.rig.studio": "Studio",
  "studio3d.light.rig.sunset": "Sonnenuntergang",
- "studio3d.light.softness": "Schattenweichheit"
+ "studio3d.light.softness": "Schattenweichheit",
+ "studio3d.view.projection": "Projektion",
+ "studio3d.view.projection.perspective": "Perspektive",
+ "studio3d.view.projection.orthographic": "Orthografisch",
+ "studio3d.view.fov": "Sichtfeld (Grad)",
+ "studio3d.view.focal": "Brennweite (mm)",
+ "studio3d.view.turntable": "Drehteller-Vorschau",
+ "cmd.studio3d.view.projection": "3D-Ansicht zwischen Perspektive und Orthografie umschalten",
+ "cmd.studio3d.view.fov": "Sichtfeld oder Brennweite der Ansicht einstellen",
+ "cmd.studio3d.view.turntable": "Drehteller-Vorschau starten oder stoppen (nur Ansicht)"
 }

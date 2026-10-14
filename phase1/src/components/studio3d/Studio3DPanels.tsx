@@ -21,7 +21,7 @@ import {ALPHA_MODES,TEXTURE_SLOTS,MAX_EMISSIVE_INTENSITY,materialSwatch} from '.
 import {validateScene,toMB} from '../../lib/studio3d/validate';
 import {ClipTimeline} from './ClipTimeline';
 import {SPEEDS,formatClock} from '../../lib/studio3d/animation';
-import {VIEW_PRESETS,RENDER_SIZES} from '../../lib/studio3d/viewPresets';
+import {VIEW_PRESETS,RENDER_SIZES,fovToFocal} from '../../lib/studio3d/viewPresets';
 const PRIMS=['cube','sphere','plane','cylinder','cone','torus'] as const;
 const LIGHTS=['directional','point','spot','area','ambient'] as const;
 const Row=({k,v}:{k:string;v:string|number})=><div className="flex justify-between gap-3 text-xs"><dt className="text-ink-3">{k}</dt><dd className="m-0 truncate text-ink-2" title={String(v)}>{v}</dd></div>;
@@ -427,6 +427,15 @@ export function ViewSection(_:InspectorSectionProps){
   <div className="flex gap-2"><Button variant="outline" disabled={!s.canUndo} onClick={()=>void executeCommand('studio3d.undo')}>{t('studio3d.undo')}</Button><Button variant="outline" disabled={!s.canRedo} onClick={()=>void executeCommand('studio3d.redo')}>{t('studio3d.redo')}</Button></div>
   <div className="flex gap-2"><Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.view.reset')}>{t('studio3d.view.reset')}</Button>
    <Button variant="outline" disabled={!ready||s.selected==null} onClick={()=>void executeCommand('studio3d.view.frame')}>{t('studio3d.view.frame')}</Button></div>
+  <div className="grid gap-1" data-testid="studio3d-view-camera">
+   <label className="grid gap-1 text-xs text-ink-2">{t('studio3d.view.projection')}
+    <NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={s.viewKind} aria-label={t('studio3d.view.projection')} onChange={e=>void executeCommand('studio3d.view.projection',{kind:e.currentTarget.value as 'perspective'|'orthographic'})}>
+     <option value="perspective">{t('studio3d.view.projection.perspective')}</option><option value="orthographic">{t('studio3d.view.projection.orthographic')}</option></NativeSelect></label>
+   {s.viewKind==='perspective'&&<div className="grid grid-cols-2 gap-2">
+    <NumField resetKey="viewport-fov" label={t('studio3d.view.fov')} value={Number(s.viewFov.toFixed(1))} min={1} max={120} step={1} onCommit={v=>void executeCommand('studio3d.view.fov',{fov:v})}/>
+    <NumField resetKey="viewport-mm" label={t('studio3d.view.focal')} value={Number(fovToFocal(s.viewFov).toFixed(0))} min={3} max={1400} step={1} onCommit={v=>void executeCommand('studio3d.view.fov',{mm:v})}/></div>}
+   <Button variant="outline" disabled={!ready} aria-pressed={s.turntable} className={s.turntable?'bg-accent-soft text-accent':''} onClick={()=>void executeCommand('studio3d.view.turntable',{})}>{t('studio3d.view.turntable')}</Button>
+  </div>
   <div className="flex flex-wrap gap-1" role="group" aria-label={t('studio3d.view.presets')} data-testid="studio3d-view-presets">{VIEW_PRESETS.map(p=><Button key={p} variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.view.preset',{preset:p})}>{t('studio3d.view.preset.'+p)}</Button>)}</div>
   <div className="grid gap-1" data-testid="studio3d-views"><Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.view.save',{})}>{t('studio3d.views.save')}</Button>
    {s.views.length>0&&<ul className="m-0 grid list-none gap-1 p-0">{s.views.map(v=><li key={v.name} className="flex flex-wrap items-center gap-1 text-xs text-ink-2"><span className="min-w-0 flex-1 truncate">{v.name}</span>

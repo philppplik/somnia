@@ -28,7 +28,7 @@ import {toggleSelection,marqueeRect,inRect,turntablePlan,frameName,exportFileNam
 import type {Bounds} from '../../lib/studio3d/model';
 import {checkSkins,bonePickRadius,pickBone} from '../../lib/studio3d/skeleton';
 import {weightColor} from '../../lib/studio3d/skinning';
-import {Stage,beginGroupDrag,applyGroupDrag,collectNodeExtras,applyNodeExtras,exportClone,applyImportOptions,type GroupDragMember,type TransformSnapshot} from '../../lib/studio3d/stage';
+import {Stage,beginGroupDrag,applyGroupDrag,collectNodeExtras,applyNodeExtras,exportClone,applyImportOptions,type CameraKind,type GroupDragMember,type TransformSnapshot} from '../../lib/studio3d/stage';
 import {parseDocument,buildDocument,sceneBytes,fromBase64,DocumentError} from '../../lib/studio3d/document';
 import {registerStudio3DController,registerStudio3DTextureDrop} from '../../lib/studio3d/commands';
 import {parseExtras,type ClipMeta} from '../../lib/studio3d/clipMeta';
@@ -38,7 +38,7 @@ import type {KeyRef,KeyData} from '../../lib/studio3d/keyEdit';
 import {advance,clampTime,checkClip,checkRange,checkSpeed,startTime,rangeFits,AnimationError,type ClipInfo,type LoopRange} from '../../lib/studio3d/animation';
 import {exportBlocker,LIMITS} from '../../lib/studio3d/validate';
 import {DEFAULT_PRESET_EMISSIVE,inspectImage,isTextureSlot,MAX_TEXTURE_FILE_BYTES,MaterialError,type TextureSlot} from '../../lib/studio3d/materials';
-import {viewDirection,type ViewPreset} from '../../lib/studio3d/viewPresets';
+import {viewDirection,orthoHalfHeight,type ViewPreset} from '../../lib/studio3d/viewPresets';
 import {rememberScene,forgetAutosave} from '../../lib/studio3d/recentSession';
 import {autosaveDue} from '../../lib/studio3d/recent';
 import {patchStudio3D,resetStudio3D,getStudio3DState,useStudio3D} from '../../lib/studio3d/session';
@@ -110,22 +110,28 @@ export default function Viewport3D(){
    scene.backgroundIntensity=e.intensity;scene.backgroundRotation.set(0,THREE.MathUtils.degToRad(e.rotation),0);
    scene.background=e.bg==='env'&&tex?tex:e.bg==='color'?new THREE.Color(e.bgColor):e.bg==='gradient'?gradientBackground(e.bgColor,e.bgColor2):new THREE.Color(0xe9ebf0);invalidate();
   };
-  const camera=new THREE.PerspectiveCamera(45,1,0.01,1000);
-  const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=false;
+  /** The viewport keeps one camera per projection and swaps the active one; the pose is copied across on a switch. The perspective fov is the view state's viewFov. */
+  const perspCam=new THREE.PerspectiveCamera(45,1,0.01,1000);
+  const orthoCam=new THREE.OrthographicCamera(-1,1,1,-1,0.01,1000);
+  let camera:THREE.PerspectiveCamera|THREE.OrthographicCamera=perspCam;
+  const controls=new OrbitControls<THREE.PerspectiveCamera|THREE.OrthographicCamera>(camera,renderer.domElement);controls.enableDamping=false;
   const grid=new THREE.GridHelper(20,20,0x8a8f9c,0xc3c7d0);grid.visible=getStudio3DState().grid;scene.add(grid);
   const stage=sharedStage??(sharedStage=new Stage());const holder=stage.root;scene.add(holder);
   let selection:THREE.Box3Helper|null=null;let bounds:Bounds|null=null;let disposed=false;let frame=0;
   const invalidate=()=>{if(frame||disposed)return;frame=requestAnimationFrame(()=>{frame=0;if(!disposed)renderer.render(scene,camera);});};
   controls.addEventListener('change',invalidate);
-  const resize=()=>{const w=Math.max(1,el.clientWidth),h=Math.max(1,el.clientHeight);renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();invalidate();};
+  const resize=()=>{const w=Math.max(1,el.clientWidth),h=Math.max(1,el.clientHeight);renderer.setSize(w,h,false);const a=w/h;perspCam.aspect=a;perspCam.updateProjectionMatrix();orthoCam.left=-orthoCam.top*a;orthoCam.right=orthoCam.top*a;orthoCam.updateProjectionMatrix();invalidate();};
   const ro=new ResizeObserver(resize);ro.observe(el);resize();
   const place=(dir:THREE.Vector3,center:THREE.Vector3,radius:number)=>{
-   const d=frameDistance(radius,camera.fov,camera.aspect);const {near,far}=clipPlanes(d,radius);
-   camera.near=near;camera.far=far;camera.position.copy(center).addScaledVector(dir,d);camera.updateProjectionMatrix();
+   const d=frameDistance(radius,perspCam.fov,perspCam.aspect);const {near,far}=clipPlanes(d,radius);
+   camera.near=near;camera.far=far;camera.position.copy(center).addScaledVector(dir,d);
+   if((camera as THREE.OrthographicCamera).isOrthographicCamera){const halfH=Math.max(radius*1.25,1e-4),a=perspCam.aspect||1;orthoCam.top=halfH;orthoCam.bottom=-halfH;orthoCam.left=-halfH*a;orthoCam.right=halfH*a;orthoCam.zoom=1;}
+   camera.updateProjectionMatrix();
    controls.target.copy(center);controls.minDistance=radius*0.05;controls.maxDistance=d*20;controls.update();invalidate();
   };
   const frameAll=()=>{
-   if(camera.fov!==45){camera.fov=45;camera.updateProjectionMatrix();}
+   if(perspCam.fov!==45){perspCam.fov=45;perspCam.updateProjectionMatrix();}
+   if(getStudio3DState().viewFov!==45)patchStudio3D({viewFov:45});
    if(bounds&&boundsValid(bounds)){const c=boundsCenter(bounds);place(DEFAULT_DIR,new THREE.Vector3(...c),Math.max(boundsRadius(bounds),1e-4));}
    else place(DEFAULT_DIR,new THREE.Vector3(0,0,0),5);
   };
@@ -160,6 +166,20 @@ export default function Viewport3D(){
    patchStudio3D({clips:infos,clipKeys:keys,stats:m.stats,outline:m.outline,bones:stage.bones(),bounds:m.bounds,selected:info?sel:null,selectedInfo:info,poses:sel==null?[]:stage.poseList(sel),ik,fabrik,rigs:stage.bones().filter(b=>b.depth===0).map(b=>({id:b.id,name:b.name})),boneLimits:sel==null?null:stage.boneLimitsOf(sel),uvView:sel==null?null:stage.uvLayout(sel),dirty:stage.dirty,canUndo:stage.canUndo,canRedo:stage.canRedo,undoLabel:stage.undoLabel});
    syncIk();syncFabrik();syncOnion();syncMotionPath();
    drawSelection();applyWire(getStudio3DState().wireframe);syncSkeleton();syncWeightPreview();syncMaskOverlay();syncUvChecker();syncSeams();for(const h of syncHooks)h();invalidate();
+  };
+  /** Turntable preview: the orbit controls auto-rotate while a rAF loop renders. View only - it never touches the stage, documents or exports. */
+  let previewRaf=0;
+  const stopPreview=()=>{if(previewRaf){cancelAnimationFrame(previewRaf);previewRaf=0;}controls.autoRotate=false;if(getStudio3DState().turntable)patchStudio3D({turntable:false});};
+  const setTurntable=(on:boolean):boolean=>{
+   if(on){
+    if(previewRaf)return true;
+    controls.autoRotate=true;
+    const tick=()=>{if(disposed){previewRaf=0;return;}controls.update();renderer.render(scene,camera);previewRaf=requestAnimationFrame(tick);};
+    previewRaf=requestAnimationFrame(tick);
+    if(!getStudio3DState().turntable)patchStudio3D({turntable:true});
+   }
+   else stopPreview();
+   return on;
   };
   const offStage=stage.onChange(()=>{if(!disposed)sync();});
   const frameSelection=()=>{
@@ -264,6 +284,20 @@ export default function Viewport3D(){
   const fkTarget=ikMarker(0x4ade80),fkLook=ikMarker(0xf472b6);fkTarget.name='fabrik target';fkLook.name='fabrik look';
   const fkGizmo=new TransformControls(camera,renderer.domElement);fkGizmo.setMode('translate');
   const lookGizmo=new TransformControls(camera,renderer.domElement);lookGizmo.setMode('translate');
+  /** Swaps the active viewport camera between perspective and orthographic, keeping pose, distance and framing. View state only: nothing here is undoable or saved. */
+  const applyProjection=(kind:CameraKind)=>{
+   const next=kind==='perspective'?perspCam:orthoCam;
+   if(camera!==next){
+    const dist=Math.max(camera.position.distanceTo(controls.target),1e-3);
+    next.position.copy(camera.position);next.quaternion.copy(camera.quaternion);next.near=camera.near;next.far=camera.far;
+    if(next===orthoCam){const halfH=orthoHalfHeight(perspCam.fov,dist),a=perspCam.aspect||1;orthoCam.top=halfH;orthoCam.bottom=-halfH;orthoCam.left=-halfH*a;orthoCam.right=halfH*a;orthoCam.zoom=1;}
+    next.updateProjectionMatrix();camera=next;controls.object=next;
+    for(const g of [gizmo,ikGizmo,poleGizmo,fkGizmo,lookGizmo])g.camera=next;
+    controls.update();
+   }
+   if(getStudio3DState().viewKind!==kind)patchStudio3D({viewKind:kind});
+   invalidate();
+  };
   const fkHelpers=[fkGizmo.getHelper(),lookGizmo.getHelper()];for(const h of fkHelpers){h.visible=false;scene.add(h);}
   let fkDrag:{root:number;before:ReturnType<Stage['fabrikBegin']>;kind:'FABRIK target'|'FABRIK look target'}|null=null;
   const fkRoot=():number|null=>getStudio3DState().fabrik?.root??null;
@@ -573,7 +607,7 @@ export default function Viewport3D(){
      if(env.preset==='custom'&&!(customEnv&&customEnv.name===env.customName)){notice=`The scene used the environment map ${env.customName}. Open it again with Open HDR; the studio lighting is used for now.`;env={...env,preset:'studio'};}
      patchStudio3D({status:'ready',name:primary.name,error:'',format:'SOM3D',bytes:primary.size,blank:false,confirmReplace:null,notice,unitHint:null,loadPhase:null,unit:doc.unit,env,snap:doc.snap,views:doc.views});
      applySnap();void applyEnv();
-     if(doc.view){camera.fov=doc.view.fov;camera.position.fromArray(doc.view.position);controls.target.fromArray(doc.view.target);camera.updateProjectionMatrix();controls.update();invalidate();}else frameAll();
+     if(doc.view){perspCam.fov=doc.view.fov;perspCam.updateProjectionMatrix();camera.position.fromArray(doc.view.position);controls.target.fromArray(doc.view.target);camera.updateProjectionMatrix();controls.update();if(getStudio3DState().viewFov!==doc.view.fov)patchStudio3D({viewFov:doc.view.fov});invalidate();}else frameAll();
     }catch(e){
      if(ticket!==opening)return;
      patchStudio3D({status:'error',loadPhase:null,error:e instanceof DocumentError||e instanceof ModelError||e instanceof Error?e.message:String(e),blank:false});
@@ -593,8 +627,8 @@ export default function Viewport3D(){
    }
   };
   const selectionReset=()=>{patchStudio3D({selected:null,selectedInfo:null,marked:[],notice:'',unitHint:null});};
-  const openFiles=async(files:File[],force?:boolean)=>{guard('open',files,force,()=>openNow(files));};
-  const newScene=(force?:boolean)=>{guard('new',[],force,()=>{opening++;selectionReset();stage.clear();resetAnim();resetStudio3D({status:'ready',blank:true,name:''});sync();frameAll();});};
+  const openFiles=async(files:File[],force?:boolean)=>{guard('open',files,force,()=>{stopPreview();return openNow(files);});};
+  const newScene=(force?:boolean)=>{guard('new',[],force,()=>{opening++;stopPreview();selectionReset();stage.clear();resetAnim();resetStudio3D({status:'ready',blank:true,name:''});sync();frameAll();});};
   /** Renders one PNG at the requested size and puts the viewport back the way it was. */
   const capture=async(cam:THREE.PerspectiveCamera|THREE.OrthographicCamera,want:{width:number;height:number}|null,transparent:boolean):Promise<Blob>=>{
    const dom=renderer.domElement;const w0=dom.width,h0=dom.height;const pr=renderer.getPixelRatio();
@@ -633,6 +667,7 @@ export default function Viewport3D(){
   };
   let cancelFlag=false;
   const renderTurntable=async(opts:{frames?:number;width?:number;height?:number;transparent?:boolean;out?:'zip'|'folder'}={})=>{
+   stopPreview();
    if(getStudio3DState().render)throw Object.assign(new Error('A render is already running.'),{expected:true});
    const size=clampRenderSize(opts.width??1280,opts.height??720,maxSize());
    const plan=turntablePlan(opts.frames??36,size.width,size.height);
@@ -688,7 +723,7 @@ export default function Viewport3D(){
   const sceneText=async(sidecar:string|undefined,embedEnv:boolean,glb:Uint8Array)=>{
    const st=getStudio3DState();
    return buildDocument({glb,sidecar,envMap:embedEnv&&customEnv?{name:customEnv.name,bytes:new Uint8Array(customEnv.bytes)}:undefined,unit:st.unit,env:st.env,snap:st.snap,extras:collectNodeExtras(holder),
-    views:st.views,view:{position:camera.position.toArray() as [number,number,number],target:controls.target.toArray() as [number,number,number],fov:camera.fov}});
+    views:st.views,view:{position:camera.position.toArray() as [number,number,number],target:controls.target.toArray() as [number,number,number],fov:perspCam.fov}});
   };
   /** Images are embedded in the file; anything above the limit is scaled down, and a scene whose textures would not fit in memory is refused. */
   const exportOpts=(binary:boolean)=>{const why=exportBlocker(stage.measure().stats);if(why)throw Object.assign(new Error(why),{expected:true});return{binary,maxTextureSize:LIMITS.exportMaxTextureSize};};
@@ -927,7 +962,7 @@ export default function Viewport3D(){
    setTransform:(id,p)=>stage.setTransform(id,p),setMaterial:(id,p)=>stage.setMaterial(id,p),rename:(id,n)=>stage.rename(id,n),
    setObjectVisible:(id,on)=>{stage.setHidden(id,!on);sync();invalidate();},setObjectLocked:(id,on)=>{stage.setLocked(id,on);sync();},reparent:(ids,parent)=>{stage.reparent(ids,parent);sync();invalidate();},reorder:(ids,target,where)=>{stage.reorder(ids,target,where);sync();invalidate();},
    addCamera:(fromView,kind)=>{
-    const o=fromView?stage.addCamera({position:{x:camera.position.x,y:camera.position.y,z:camera.position.z},quaternion:camera.quaternion.toArray().slice(0,4) as [number,number,number,number]},camera.fov,kind):stage.addCamera(undefined,40,kind);
+    const o=fromView?stage.addCamera({position:{x:camera.position.x,y:camera.position.y,z:camera.position.z},quaternion:camera.quaternion.toArray().slice(0,4) as [number,number,number,number]},perspCam.fov,kind):stage.addCamera(undefined,40,kind);
     select(o.id);return o.id;},
    viewSave:name=>{
     const views=getStudio3DState().views;const n=(name??'').trim().slice(0,60)||`View ${views.length+1}`;
@@ -973,6 +1008,9 @@ export default function Viewport3D(){
     const sel=getStudio3DState().selected;if(sel!=null)patchStudio3D({selectedInfo:stage.info(sel)});
     sync();invalidate();},
    setCamera:(id,p)=>stage.setCamera(id,p),
+   setProjection:applyProjection,
+   setViewFov:fov=>{const f=Math.min(120,Math.max(1,fov));if(perspCam.fov!==f){perspCam.fov=f;perspCam.updateProjectionMatrix();invalidate();}if(getStudio3DState().viewFov!==f)patchStudio3D({viewFov:f});},
+   setTurntable,
    editStart:(id,mode)=>{stage.editStart(id);patchStudio3D({edit:{id,mode:mode??'face',verts:0,edges:0,faces:0},selected:id,marked:[],selectedInfo:stage.info(id)});invalidate();},
    editEnd:()=>{stage.editEnd();patchStudio3D({edit:null});invalidate();},
    editMode:mode=>{const ed=getStudio3DState().edit;if(ed)patchStudio3D({edit:{...ed,mode}});},
@@ -996,7 +1034,9 @@ export default function Viewport3D(){
     const c=stage.find(id) as THREE.PerspectiveCamera|THREE.OrthographicCamera|undefined;if(!c||!(c as THREE.PerspectiveCamera).isPerspectiveCamera&&!(c as THREE.OrthographicCamera).isOrthographicCamera)throw Object.assign(new Error('Select a camera first.'),{expected:true});
     c.updateMatrixWorld(true);const pos=c.getWorldPosition(new THREE.Vector3());const dir=c.getWorldDirection(new THREE.Vector3());
     const dist=bounds&&boundsValid(bounds)?Math.max(boundsRadius(bounds),1):5;
-    if((c as THREE.PerspectiveCamera).isPerspectiveCamera)camera.fov=(c as THREE.PerspectiveCamera).fov;camera.position.copy(pos);controls.target.copy(pos).addScaledVector(dir,dist);camera.near=0.05;camera.far=Math.max(500,dist*50);camera.updateProjectionMatrix();controls.update();invalidate();},
+    if((c as THREE.PerspectiveCamera).isPerspectiveCamera){applyProjection('perspective');perspCam.fov=(c as THREE.PerspectiveCamera).fov;perspCam.updateProjectionMatrix();if(getStudio3DState().viewFov!==perspCam.fov)patchStudio3D({viewFov:perspCam.fov});}
+    else{applyProjection('orthographic');const sc=c as THREE.OrthographicCamera,a=perspCam.aspect||1;const halfH=Math.max((sc.top-sc.bottom)/2/Math.max(sc.zoom,1e-3),1e-4);orthoCam.top=halfH;orthoCam.bottom=-halfH;orthoCam.left=-halfH*a;orthoCam.right=halfH*a;orthoCam.zoom=1;orthoCam.updateProjectionMatrix();}
+    camera.position.copy(pos);controls.target.copy(pos).addScaledVector(dir,dist);camera.near=0.05;camera.far=Math.max(500,dist*50);camera.updateProjectionMatrix();controls.update();invalidate();},
    setGizmo:mode=>{gizmo.setMode(mode);patchStudio3D({gizmo:mode});invalidate();},
    nudge:nudgeBy,
    setLight:(id,p)=>stage.setLight(id,p),setPivot:(id,at)=>stage.setPivot(id,at),align:(ids,a,t)=>stage.align(ids,a,t),distribute:(ids,a)=>stage.distribute(ids,a),
@@ -1165,7 +1205,7 @@ export default function Viewport3D(){
   const cv=renderer.domElement;cv.addEventListener('pointerdown',onDownCapture,true);cv.addEventListener('pointerdown',onDown);window.addEventListener('pointermove',onMove);window.addEventListener('pointercancel',endMarquee);cv.addEventListener('pointerup',onUp);cv.addEventListener('keydown',onKey);
   sync();frameAll();void applyEnv();
   return()=>{
-   disposed=true;opening++;stopAnim();offDrop();mixer?.stopAllAction();stage.autoKeySource=null;off();offAuto();if(autoTimer)clearTimeout(autoTimer);cancelAnimationFrame(frame);ro.disconnect();controls.dispose();
+   disposed=true;opening++;stopAnim();if(previewRaf)cancelAnimationFrame(previewRaf);offDrop();mixer?.stopAllAction();stage.autoKeySource=null;off();offAuto();if(autoTimer)clearTimeout(autoTimer);cancelAnimationFrame(frame);ro.disconnect();controls.dispose();
    cv.removeEventListener('pointerdown',onDownCapture,true);cv.removeEventListener('pointerdown',onDown);window.removeEventListener('pointermove',onMove);window.removeEventListener('pointercancel',endMarquee);endMarquee();cv.removeEventListener('pointerup',onUp);cv.removeEventListener('keydown',onKey);
    if(getStudio3DState().status==='loading')patchStudio3D({status:stage.root.children.length?'ready':'idle',confirmReplace:null});
    gizmo.detach();gizmo.dispose();ikGizmo.detach();ikGizmo.dispose();poleGizmo.detach();poleGizmo.dispose();fkGizmo.detach();fkGizmo.dispose();lookGizmo.detach();lookGizmo.dispose();clearGhosts();scene.remove(ghosts);if(pathLine){pathLine.geometry.dispose();(pathLine.material as THREE.Material).dispose();pathLine=null;}fkTarget.geometry.dispose();(fkTarget.material as THREE.Material).dispose();fkLook.geometry.dispose();(fkLook.material as THREE.Material).dispose();ikTarget.geometry.dispose();(ikTarget.material as THREE.Material).dispose();ikPoleM.geometry.dispose();(ikPoleM.material as THREE.Material).dispose();offStage();clearSelection();if(painting){painting=false;}const openSel=getStudio3DState().selected;if(openSel!=null)stage.skinPaintEnd(openSel);if(lightHelper){scene.remove(lightHelper);(lightHelper as HelperObj).dispose?.();lightHelper=null;}if(skelHelper){scene.remove(skelHelper);skelHelper.geometry.dispose();(skelHelper.material as THREE.Material).dispose();skelHelper=null;}if(weightOverlay){scene.remove(weightOverlay);weightOverlay.geometry.dispose();(weightOverlay.material as THREE.Material).dispose();weightOverlay=null;}if(maskOverlay){scene.remove(maskOverlay);maskOverlay.geometry.dispose();(maskOverlay.material as THREE.Material).dispose();maskOverlay=null;}for(const h of helpers.values())h.dispose();grid.geometry.dispose();(grid.material as THREE.Material).dispose();cursorGeo.dispose();cursorMat.dispose();scene.remove(cursorMark);mLineGeo.dispose();mLineMat.dispose();mDotGeo.dispose();mDotMat.dispose();scene.remove(measureGroup);for(const t of envTargets)t.dispose();envCache.clear();pmrem.dispose();renderer.dispose();renderer.forceContextLoss();

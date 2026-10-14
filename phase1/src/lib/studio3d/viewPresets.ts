@@ -14,3 +14,13 @@ export interface RenderSize{id:string;width:number;height:number}
 export const RENDER_SIZES:readonly RenderSize[]=[
  {id:'hd',width:1280,height:720},{id:'fhd',width:1920,height:1080},{id:'uhd',width:3840,height:2160},{id:'square',width:1080,height:1080},{id:'portrait',width:1080,height:1350},
 ];
+
+/** Vertical size of a 35mm full-frame sensor in millimetres; the focal length field uses it. */
+export const SENSOR_HEIGHT_MM=24;
+const clampFov=(f:number)=>Math.min(120,Math.max(1,f));
+/** 35mm-equivalent focal length in millimetres for a vertical field of view in degrees. */
+export function fovToFocal(fov:number):number{return SENSOR_HEIGHT_MM/2/Math.tan(clampFov(fov)*Math.PI/360);}
+/** Vertical field of view in degrees for a 35mm-equivalent focal length in millimetres. */
+export function focalToFov(mm:number):number{const m=Math.min(1400,Math.max(3,mm));return Math.min(120,Math.max(1,2*Math.atan(SENSOR_HEIGHT_MM/2/m)*180/Math.PI));}
+/** Half-height of an orthographic frustum that frames like a perspective camera with the given fov at the given distance from the target. */
+export function orthoHalfHeight(fov:number,distance:number):number{return Math.tan(clampFov(fov)*Math.PI/360)*Math.max(distance,1e-3);}

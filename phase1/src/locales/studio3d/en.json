@@ -596,5 +596,14 @@
  "studio3d.light.rig.threePoint": "Three-point",
  "studio3d.light.rig.studio": "Studio",
  "studio3d.light.rig.sunset": "Sunset",
- "studio3d.light.softness": "Shadow softness"
+ "studio3d.light.softness": "Shadow softness",
+ "studio3d.view.projection": "Projection",
+ "studio3d.view.projection.perspective": "Perspective",
+ "studio3d.view.projection.orthographic": "Orthographic",
+ "studio3d.view.fov": "Field of view (degrees)",
+ "studio3d.view.focal": "Focal length (mm)",
+ "studio3d.view.turntable": "Turntable preview",
+ "cmd.studio3d.view.projection": "Switch the 3D viewport between perspective and orthographic",
+ "cmd.studio3d.view.fov": "Set the viewport field of view or focal length",
+ "cmd.studio3d.view.turntable": "Start or stop the turntable preview (view only)"
 }

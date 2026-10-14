@@ -596,5 +596,14 @@
  "studio3d.light.rig.threePoint": "Tres puntos",
  "studio3d.light.rig.studio": "Estudio",
  "studio3d.light.rig.sunset": "Atardecer",
- "studio3d.light.softness": "Suavidad de sombra"
+ "studio3d.light.softness": "Suavidad de sombra",
+ "studio3d.view.projection": "Proyección",
+ "studio3d.view.projection.perspective": "Perspectiva",
+ "studio3d.view.projection.orthographic": "Ortográfica",
+ "studio3d.view.fov": "Campo de visión (grados)",
+ "studio3d.view.focal": "Distancia focal (mm)",
+ "studio3d.view.turntable": "Vista previa giratoria",
+ "cmd.studio3d.view.projection": "Cambiar la vista 3D entre perspectiva y ortográfica",
+ "cmd.studio3d.view.fov": "Ajustar el campo de visión o la distancia focal de la vista",
+ "cmd.studio3d.view.turntable": "Iniciar o detener la vista previa giratoria (solo vista)"
 }

@@ -106,7 +106,7 @@ test('3D studio refuses a file that is not glTF with a readable error',async({pa
 /** Helpers for the scene tests below. They drive the real app through its command layer (dev build) and read the studio session. */
 type P=import('@playwright/test').Page;
 const run=(page:P,id:string,params:unknown={})=>page.evaluate(async([i,p])=>{const m=await import('/src/lib/commands.ts');return (await m.executeCommand(i as string,p)) as unknown;},[id,params] as const);
-const session=(page:P)=>page.evaluate(async()=>{const m=await import('/src/lib/studio3d/session.ts');const s=m.getStudio3DState();return {anim:s.anim,clips:s.clips,clipKeys:s.clipKeys,outline:s.outline,marked:s.marked,selected:s.selected,info:s.selectedInfo,dirty:s.dirty,notice:s.notice,status:s.status,name:s.name,bones:s.bones,weightPreview:s.weightPreview,stats:s.stats,exportClips:s.exportClips,poses:s.poses,ik:s.ik,boneLimits:s.boneLimits,views:s.views,materialPresets:s.materialPresets,env:s.env,edit:s.edit,sculpt:s.sculpt,uvChecker:s.uvChecker,snap:s.snap,pivot:s.pivot,cursor:s.cursor,measure:s.measure};});
+const session=(page:P)=>page.evaluate(async()=>{const m=await import('/src/lib/studio3d/session.ts');const s=m.getStudio3DState();return {anim:s.anim,clips:s.clips,clipKeys:s.clipKeys,outline:s.outline,marked:s.marked,selected:s.selected,info:s.selectedInfo,dirty:s.dirty,notice:s.notice,status:s.status,name:s.name,bones:s.bones,weightPreview:s.weightPreview,stats:s.stats,exportClips:s.exportClips,poses:s.poses,ik:s.ik,boneLimits:s.boneLimits,views:s.views,materialPresets:s.materialPresets,env:s.env,edit:s.edit,sculpt:s.sculpt,uvChecker:s.uvChecker,snap:s.snap,pivot:s.pivot,cursor:s.cursor,measure:s.measure,viewKind:s.viewKind,viewFov:s.viewFov,turntable:s.turntable};});
 const open3d=async(page:P)=>{await page.goto('/');await page.getByRole('button',{name:/3D/}).first().click();};
 const blank=async(page:P)=>{await open3d(page);await page.getByTestId('3d-create-blank').click();await expect(page.getByTestId('studio3d-viewport')).toBeVisible();};
 const insert=async(page:P,kind:string,x:number)=>{await run(page,'studio3d.insert.primitive',{kind});const s=await session(page);const id=s.selected as number;await run(page,'studio3d.object.transform',{id,position:{x,y:0,z:0}});return id;};
@@ -1239,4 +1239,29 @@ test('3D studio lights: shadow softness and one-click studio and sunset rigs',as
  // The classic three-point rig still works from the same command.
  expect(await run(page,'studio3d.light.rig',{preset:'three-point'})).toBe(true);
  await expect.poll(async()=>(await session(page)).outline.filter(o=>o.kind==='light').length).toBe(4);
+});
+
+test('3D studio camera: projection toggle, fov and focal length fields and turntable preview',async({page})=>{
+ await blank(page);
+ await insert(page,'cube',0);
+ const cam=page.getByTestId('studio3d-view-camera');
+ // Projection switch is view state and round-trips.
+ await cam.getByLabel('Projection').selectOption('orthographic');
+ await expect.poll(async()=>(await session(page)).viewKind).toBe('orthographic');
+ await cam.getByLabel('Projection').selectOption('perspective');
+ await expect.poll(async()=>(await session(page)).viewKind).toBe('perspective');
+ // Focal length and field of view stay in sync (50mm is about 27 degrees on the 24mm sensor height).
+ await cam.getByRole('textbox',{name:'Focal length (mm)'}).fill('50');
+ await cam.getByRole('textbox',{name:'Focal length (mm)'}).press('Enter');
+ await expect.poll(async()=>(await session(page)).viewFov).toBeCloseTo(27,0);
+ await cam.getByRole('textbox',{name:'Field of view (degrees)'}).fill('45');
+ await cam.getByRole('textbox',{name:'Field of view (degrees)'}).press('Enter');
+ await expect.poll(async()=>(await session(page)).viewFov).toBe(45);
+ // Turntable preview toggles and stays a preview: it never marks the scene dirty.
+ const dirty=(await session(page)).dirty;
+ await cam.getByRole('button',{name:'Turntable preview'}).click();
+ await expect.poll(async()=>(await session(page)).turntable).toBe(true);
+ await cam.getByRole('button',{name:'Turntable preview'}).click();
+ await expect.poll(async()=>(await session(page)).turntable).toBe(false);
+ expect((await session(page)).dirty).toBe(dirty);
 });
