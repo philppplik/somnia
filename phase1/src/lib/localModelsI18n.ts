@@ -1,5 +1,10 @@
 export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
  "en": {
+  "local.filter.label": "Filter installed exact model names",
+  "local.filter.count": "Installed matches: {count} / {total}",
+  "local.filter.clear": "Clear filter",
+  "local.filter.empty": "No installed model matches. This filter does not search the registry or download models.",
+
   "local.search.sourceBudget": "Selected text: {bytes} / 262144 UTF-8 bytes; valid chunks: {chunks} / 256",
   "local.search.sourceInvalid": "Selection cannot be indexed as a whole. Review 32-source/byte/chunk limits, empty or unsupported text. No build started.",
 
@@ -580,6 +585,11 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Move earlier after local"
  },
  "de": {
+  "local.filter.label": "Installierte exakte Modellnamen filtern",
+  "local.filter.count": "Installierte Treffer: {count} / {total}",
+  "local.filter.clear": "Filter leeren",
+  "local.filter.empty": "Kein installiertes Modell passt. Dieser Filter durchsucht keine Registry und lädt nichts herunter.",
+
   "local.search.sourceBudget": "Gewählter Text: {bytes} / 262144 UTF-8 Bytes; gültige Chunks: {chunks} / 256",
   "local.search.sourceInvalid": "Auswahl kann nicht vollständig indexiert werden. 32-Quellen/Byte/Chunk-Limits, leeren oder nicht unterstützten Text prüfen. Kein Aufbau gestartet.",
 
@@ -1160,6 +1170,11 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Nach lokal früher einordnen"
  },
  "es": {
+  "local.filter.label": "Filtrar nombres exactos instalados",
+  "local.filter.count": "Coincidencias instaladas: {count} / {total}",
+  "local.filter.clear": "Borrar filtro",
+  "local.filter.empty": "Ningún modelo instalado coincide. Este filtro no busca en registro ni descarga modelos.",
+
   "local.search.sourceBudget": "Texto elegido: {bytes} / 262144 bytes UTF-8; fragmentos válidos: {chunks} / 256",
   "local.search.sourceInvalid": "No se puede indexar toda la selección. Revisa límites de 32 fuentes/bytes/fragmentos y texto vacío o no admitido. No se inició.",
 
@@ -1740,6 +1755,11 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Mover antes tras local"
  },
  "fr": {
+  "local.filter.label": "Filtrer noms exacts installés",
+  "local.filter.count": "Correspondances installées: {count} / {total}",
+  "local.filter.clear": "Effacer filtre",
+  "local.filter.empty": "Aucun modèle installé correspondant. Ce filtre ne recherche pas le registre et ne télécharge rien.",
+
   "local.search.sourceBudget": "Texte choisi: {bytes} / 262144 octets UTF-8; fragments valides: {chunks} / 256",
   "local.search.sourceInvalid": "Sélection entière non indexable. Vérifiez limites de 32 sources/octets/fragments et texte vide ou non pris en charge. Aucun début.",
 
@@ -2320,6 +2340,11 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Avancer après local"
  },
  "pt-BR": {
+  "local.filter.label": "Filtrar nomes exatos instalados",
+  "local.filter.count": "Resultados instalados: {count} / {total}",
+  "local.filter.clear": "Limpar filtro",
+  "local.filter.empty": "Nenhum modelo instalado corresponde. Este filtro não busca registro nem baixa modelos.",
+
   "local.search.sourceBudget": "Texto escolhido: {bytes} / 262144 bytes UTF-8; trechos válidos: {chunks} / 256",
   "local.search.sourceInvalid": "Não é possível indexar toda a seleção. Revise limites de 32 fontes/bytes/trechos e texto vazio ou incompatível. Nada iniciado.",
 

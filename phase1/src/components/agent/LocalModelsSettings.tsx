@@ -1,4 +1,4 @@
-import {recordReadiness,clearReadiness} from '../../lib/agent/localReadinessCache';
+import {Field} from '../ui/field';import {NativeInput} from '../ui/native-controls';import {Notice} from '../ui/notice';import {recordReadiness,clearReadiness} from '../../lib/agent/localReadinessCache';
 import {agentSettingsSnapshot,subscribeAgentSettings} from '../../lib/agent/settingsRuntime';
 import {LocalModelHealth} from './LocalModelHealth';
 import {LocalModelDiskUsage} from './LocalModelDiskUsage';
@@ -35,7 +35,7 @@ export function LocalModelsSettings({active,runtime:provided,hardwareProbe}:{act
   }catch{if(request===generation.current){setSnapshot(null);setRefreshError(true);if(explicit)clearReadiness();}}finally{if(request===generation.current)setBusy(false);}
  };
  useEffect(()=>{if(active)void refresh();return()=>{generation.current++;setBusy(false);};},[active,runtime]);
- const [page,setPage]=useState(0);
+ const [filter,setFilter]=useState(''),[page,setPage]=useState(0);const matches=(snapshot?.models??[]).filter(model=>model.id.toLocaleLowerCase().includes(filter.trim().toLocaleLowerCase()));
  useEffect(()=>setPage(0),[snapshot]);
  const inspect=async(id:string)=>{const request=generation.current;try{const value=await runtime.evidence(id);if(request===generation.current)setEvidence(old=>({...old,[id]:value}));}catch{if(request===generation.current)setEvidence(old=>({...old,[id]:'error'}));}};
  const size=(bytes:number|undefined)=>bytes===undefined?t('local.unknown'):new Intl.NumberFormat(locale,{style:'unit',unit:'gigabyte',maximumFractionDigits:2}).format(bytes/1e9);
@@ -48,16 +48,16 @@ export function LocalModelsSettings({active,runtime:provided,hardwareProbe}:{act
   {!provided&&<LocalModelActions snapshot={snapshot} onChanged={refresh}/>}
   {snapshot?.state==='running'&&<>
    {!snapshot.inventoryError&&<LocalModelDiskUsage models={snapshot.models}/>}
-   <h4>{t('local.installed')}</h4><p>{t('local.manager.lastUsedNotice')}</p>
+   <h4>{t('local.installed')}</h4><Field label={t('local.filter.label')}>{control=><NativeInput {...control} maxLength={100} value={filter} onChange={e=>{setFilter(e.target.value);setPage(0);}}/>}</Field><p>{t('local.filter.count',{count:String(matches.length),total:String(snapshot.models.length)})}</p>{filter&&<Button type="button" variant="outline" onClick={()=>{setFilter('');setPage(0);}}>{t('local.filter.clear')}</Button>}<p>{t('local.manager.lastUsedNotice')}</p>
    {snapshot.inventoryError?<p>{t('local.inventoryError')}</p>:!snapshot.models.length?<p>{t('local.empty')}</p>:<>
-    <ul className="local-models-list">{snapshot.models.slice(page*20,page*20+20).map(model=>{
+    {!matches.length&&<Notice>{t('local.filter.empty')}</Notice>}<ul className="local-models-list">{matches.slice(page*20,page*20+20).map(model=>{
      const info=evidence[model.id],lastUsed=lastLocalModelSuccess(runtime.baseUrl,model.id);return <li key={model.id}><strong>{model.id}</strong><div>{size(model.sizeBytes)} · {model.parameterSize??t('local.unknown')} · {model.quantization??t('local.unknown')}</div>
       <p>{t('local.manager.lastUsed')}: {lastUsed===null?t('local.unknown'):new Intl.DateTimeFormat(locale,{dateStyle:'medium',timeStyle:'short'}).format(lastUsed)}</p><div className="local-models-badges"><Badge>{t('local.present')}</Badge><Badge>{t('local.locality.'+(!info||info==='error'?'unverified':info.locality))}</Badge>{info&&info!=='error'&&info.capabilities?.map(cap=><Badge key={cap}>{t('local.cap.'+cap)}</Badge>)}</div>
       <p>{t(info==='error'?'local.metadataError':!info||info.capabilities===null?'local.capUnknown':'local.advertised')}</p>
       {(!info||info==='error')&&!busy&&<Button type="button" size="compact" onClick={()=>void inspect(model.id)} aria-label={t('local.inspectModel',{model:model.id})}>{t('local.inspect')}</Button>}
      </li>;
     })}</ul>
-    {snapshot.models.length>20&&<div className="local-models-header"><Button type="button" disabled={page===0} onClick={()=>setPage(p=>p-1)}>{t('local.previous')}</Button><span>{page+1} / {Math.ceil(snapshot.models.length/20)}</span><Button type="button" disabled={(page+1)*20>=snapshot.models.length} onClick={()=>setPage(p=>p+1)}>{t('local.next')}</Button></div>}
+    {matches.length>20&&<div className="local-models-header"><Button type="button" disabled={page===0} onClick={()=>setPage(p=>p-1)}>{t('local.previous')}</Button><span>{page+1} / {Math.ceil(matches.length/20)}</span><Button type="button" disabled={(page+1)*20>=matches.length} onClick={()=>setPage(p=>p+1)}>{t('local.next')}</Button></div>}
    </>}
   </>}
  </section>;
