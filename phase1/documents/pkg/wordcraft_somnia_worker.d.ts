@@ -45,6 +45,14 @@ export class DocSession {
     header_footer(): string;
     /** Sets default header/footer text and page number of every section; `undefined` keeps a part. */
     set_header_footer(header?: string | null, footer?: string | null, page_number?: boolean | null): void;
+    /** Inserts a PNG or JPEG (5 MB, 8000 px a side, 25 MP, 200 images) as its own paragraph after `block`. */
+    insert_image(block: number, bytes: Uint8Array, alt: string): void;
+    /** Display width in points (10-2000) of an image paragraph; the height keeps the aspect ratio. */
+    resize_image(block: number, width: number): void;
+    /** Sets an image paragraph to 25, 50, 75 or 100 percent of the text width. */
+    fit_image(block: number, percent: number): void;
+    set_image_alt(block: number, alt: string): void;
+    remove_image(block: number): void;
     insert(block: number, utf8_byte_offset: number, text: string): void;
     merge_with_previous(block: number): void;
     constructor(bytes: Uint8Array);

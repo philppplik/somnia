@@ -2550,6 +2550,50 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.image.alt",
+      "title": "Set picture alt text",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.image.fit",
+      "title": "Set picture width",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.image.insert",
+      "title": "Insert image",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.image.remove",
+      "title": "Remove picture",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.indent.decrease",
       "title": "Decrease indent",
       "category": "View",

@@ -47,6 +47,8 @@ export class DocumentsEngine{
  async setParagraphStyle(first:number,last:number,style:import('./protocol').DocStyleId):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'paraStyle',first,last,style}))).document;}
  async setList(first:number,last:number,list:import('./protocol').ListKindId):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'setList',first,last,list}))).document;}
  async shiftListLevel(first:number,last:number,delta:number):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'listLevel',first,last,delta}))).document;}
+ async insertImage(block:number,bytes:Uint8Array,alt:string):Promise<OpenedDocument>{const buf=bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength) as ArrayBuffer;return(await this.call('edited',id=>({id,kind:'insertImage',block,bytes:buf,alt}),[buf])).document;}
+ async imageEdit(block:number,op:import('./protocol').ImageOp):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'imageEdit',block,op}))).document;}
  async headerFooterState():Promise<import('./protocol').HeaderFooterState>{return(await this.call('headerFooter',id=>({id,kind:'headerFooterState'}))).state;}
  async setHeaderFooter(p:{header?:string;footer?:string;pageNumber?:boolean}):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'setHeaderFooter',...p}))).document;}
  async insertTable(block:number,rows:number,cols:number):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'insertTable',block,rows,cols}))).document;}

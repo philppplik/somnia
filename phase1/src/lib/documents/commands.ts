@@ -1,6 +1,8 @@
 import {registerCommand} from '../commandRegistry';
 import {getDocumentsState,patchDocuments,stepZoom} from './store';
-import {redoEdit,setAlign,setParagraphStyle,toggleList,shiftListLevel,stepFontSize,stepIndent,toggleFormat,undoEdit,editTable,insertTable,setHeaderFooter} from './session';
+import {redoEdit,setAlign,setParagraphStyle,toggleList,shiftListLevel,stepFontSize,stepIndent,toggleFormat,undoEdit,editTable,insertTable,setHeaderFooter,insertImage,resizeImageToPercent,setImageAlt,removeImage} from './session';
+import {findMedia} from '../media';
+import {IMAGE_WIDTH_PERCENTS,MAX_IMAGE_BYTES} from './protocol';
 import {CELL_BASE} from './edit';
 import {goToBlock,scrollToPage} from './navigate';
 import {documentsExportReady,patchDocumentsExportUi,requestDocumentsSaveCopy} from './exportBridge';
@@ -51,6 +53,17 @@ export function registerDocumentsCommands(){
    if(o.header===undefined&&o.footer===undefined&&o.pageNumber===undefined)throw expected('Give a header, a footer or pageNumber.');
    await setHeaderFooter({header:o.header as string|undefined,footer:o.footer as string|undefined,pageNumber:o.pageNumber as boolean|undefined});
   },()=>ready()&&!!getDocumentsState().caret),
+  add('documents.image.insert','Insert image',async p=>{
+   const n=(p as Record<string,unknown>|undefined)?.name;if(typeof n!=='string'||!n)throw expected('Missing or invalid "name".');
+   const m=findMedia(n);if(!m||m.kind!=='image')throw expected('That image is not in the media library.');
+   if(m.size>MAX_IMAGE_BYTES)throw expected('An image is limited to 5 MB.');
+   const r=await fetch(m.url);if(!r.ok)throw expected('The image could not be read.');
+   const b=await r.blob();if(b.size>MAX_IMAGE_BYTES)throw expected('An image is limited to 5 MB.');
+   await insertImage(new Uint8Array(await b.arrayBuffer()),'');
+  },()=>ready()&&(!!getDocumentsState().caret||getDocumentsState().imageBlock!==null)),
+  add('documents.image.fit','Set picture width',async p=>{const n=int(p,'percent');if(!(IMAGE_WIDTH_PERCENTS as readonly number[]).includes(n))throw expected('Choose 25, 50, 75 or 100 percent.');await resizeImageToPercent(n);},()=>ready()&&getDocumentsState().imageBlock!==null),
+  add('documents.image.alt','Set picture alt text',async p=>{const a=(p as Record<string,unknown>|undefined)?.alt;if(typeof a!=='string')throw expected('Missing or invalid "alt".');await setImageAlt(a);},()=>ready()&&getDocumentsState().imageBlock!==null),
+  add('documents.image.remove','Remove picture',async()=>{await removeImage();},()=>ready()&&getDocumentsState().imageBlock!==null),
   add('documents.table.insert','Insert table',async p=>{await insertTable(int(p,'rows'),int(p,'cols'));},()=>ready()&&!!getDocumentsState().caret),
   add('documents.table.row_above','Insert row above',async()=>{await editTable('row_above');},inCell),
   add('documents.table.row_below','Insert row below',async()=>{await editTable('row_below');},inCell),

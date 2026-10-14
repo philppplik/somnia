@@ -1,4 +1,4 @@
-import {validHfText,type HeaderFooterState,checkFormatPatch,checkParaPatch,MAX_HF_CHARS,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch} from './protocol';
+import {validHfText,type HeaderFooterState,checkFormatPatch,checkParaPatch,MAX_HF_CHARS,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch,type ImageOp,imageProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGES} from './protocol';
 import {captureDocumentSelection} from './selectionCapture';
 import {CELL_BASE,caretAfterEdit,diffEdit,inverseOf,UndoStack,type TextEdit,type UndoEntry} from './edit';
 import {stepBoundary,utf16ToUtf8Offset,utf8ToUtf16Offset,wordBoundary} from './text';
@@ -144,7 +144,7 @@ async function structural(op:(e:DocumentsEngine)=>Promise<import('./protocol').O
  let after:Spot;try{after=typeof afterSpec==='function'?await afterSpec(e):afterSpec;}catch(err){await e.restore(b).catch(()=>undefined);throw err;}
  check();
  const a=await e.snapshot();check();undo.pushSnap({before:b,after:a,caretBefore:before,caretAfter:after});
- patchDocuments({edited:true,editError:'',caretLocked:false,caret:{block:after.block,anchor:after.off,head:after.off}});await refresh(d);
+ patchDocuments({edited:true,editError:'',caretLocked:false,imageBlock:null,caret:{block:after.block,anchor:after.off,head:after.off}});await refresh(d);
 }
 /* ---- On-page caret: all offsets are UTF-8 bytes of the paragraph's current text. A selection may span paragraphs (anchorBlock differs from block). ---- */
 const enc=new TextEncoder();const u8=(s:string)=>enc.encode(s).length;
@@ -177,9 +177,9 @@ export const selectedText=()=>{
 };
 async function pointTo(page:number,x:number,y:number,extend:boolean){
  const e=engine;if(!e)return;const check=ownerGuard(),hit=await e.hit(page,x,y);check();const c=getDocumentsState().caret;
- if(!hit||hit.block===null||!hit.editable||hit.off===undefined){if(!extend)patchDocuments({caret:null,caretLocked:!!hit});return;}
+ if(!hit||hit.block===null||!hit.editable||hit.off===undefined){if(!extend){const img=hit&&hit.block!==null&&hit.block<CELL_BASE&&getDocumentsState().blocks.some(b=>b.index===hit.block&&!!b.image);patchDocuments({caret:null,caretLocked:!!hit&&!img,imageBlock:img?hit!.block:null});}return;}
  if(extend){if(!c)return;const a=norm(c).a;if(a.block!==hit.block&&!reachable(a.block,hit.block))return;setSel(a,{block:hit.block,off:hit.off});}
- else{patchDocuments({caretLocked:false,editError:''});setSel({block:hit.block,off:hit.off},{block:hit.block,off:hit.off});}
+ else{patchDocuments({caretLocked:false,editError:'',imageBlock:null});setSel({block:hit.block,off:hit.off},{block:hit.block,off:hit.off});}
 }
 /** Places the caret (or extends the selection) at a page-space point. */
 export const pointerAt=(page:number,x:number,y:number,extend=false)=>{goalX=null;return run(()=>pointTo(page,x,y,extend));};
@@ -475,3 +475,37 @@ export const setHeaderFooter=(patch:{header?:string;footer?:string;pageNumber?:b
  const spot={block:c.block,off:c.head};
  await structural(eng=>eng.setHeaderFooter(patch),spot,spot);
 });
+
+/* ---- Pictures: a PNG or JPEG lives in its own paragraph; clicking it selects it (imageBlock). ---- */
+/** First editable top-level paragraph at or after `from`, else the last one before it. */
+async function nearEditable(eng:DocumentsEngine,from:number):Promise<Spot>{
+ const bs=(await eng.blocks()).filter(b=>b.kind==='para'&&b.editable);const b=bs.find(x=>x.index>=from)??bs[bs.length-1];if(!b)throw new Error('The document has no editable paragraph.');return{block:b.index,off:0};
+}
+/** Insert a PNG or JPEG (5 MB, 8000 px a side, 25 megapixels, 200 images) as its own paragraph below the caret paragraph. One undo step; the caret moves to the paragraph after the picture. */
+export const insertImage=(bytes:Uint8Array,alt=''):Promise<void>=>run(async()=>{
+ const bad=imageProblem(bytes);if(bad)throw new Error(bad==='empty'?'The image is empty.':bad==='size'?'An image is limited to 5 MB.':bad==='type'?'Only PNG and JPEG images can be inserted.':'An image is limited to 8000 pixels a side and 25 megapixels.');
+ if(!validHfText(alt))throw new Error('The alt text is limited to 500 characters, without line breaks.');
+ const st=getDocumentsState();const c=st.caret;const at=c?c.block:st.imageBlock;
+ if(at===null||at===undefined)throw new Error('Place the caret where the picture should go.');
+ if(c&&c.anchorBlock!==undefined&&c.anchorBlock!==c.block)throw new Error('Place the caret in one paragraph.');
+ if(st.blocks.filter(b=>!!b.image).length>=MAX_IMAGES)throw new Error(`A document holds at most ${MAX_IMAGES} images.`);
+ goalX=null;const cell=cellOf(st.blocks,at);const top=cell?cell.table:at;
+ await structural(eng=>eng.insertImage(at,bytes,alt),c?{block:c.block,off:c.head}:{block:at,off:0},eng=>nearEditable(eng,top+2));
+});
+/** Selects (or with null clears) the picture paragraph `block`. */
+export const selectImage=(block:number|null)=>{if(block===null){patchDocuments({imageBlock:null});return;}if(!getDocumentsState().blocks.some(b=>b.index===block&&!!b.image))return;patchDocuments({imageBlock:block,caret:null,caretLocked:false});};
+async function editImage(op:ImageOp){
+ const block=getDocumentsState().imageBlock;if(block===null)throw new Error('Select a picture first.');
+ const b=getDocumentsState().blocks.find(x=>x.index===block);if(!b||!b.image)throw new Error('The selected picture is gone.');
+ const c=getDocumentsState().caret;const before=c?{block:c.block,off:c.head}:await nearEditable(engine!,block);
+ await structural(eng=>eng.imageEdit(block,op),before,before);
+ patchDocuments({caret:c,imageBlock:op.op==='remove'?null:block});
+}
+/** Display width of the selected picture as a percentage of the text width (25, 50, 75 or 100). */
+export const resizeImageToPercent=(percent:number)=>run(async()=>{
+ if(!(IMAGE_WIDTH_PERCENTS as readonly number[]).includes(percent))throw new Error('Choose 25, 50, 75 or 100 percent.');
+ await editImage({op:'fit',percent});
+});
+export const setImageWidth=(width:number)=>run(()=>editImage({op:'resize',width}));
+export const setImageAlt=(alt:string)=>run(()=>editImage({op:'alt',alt}));
+export const removeImage=()=>run(()=>editImage({op:'remove'}));

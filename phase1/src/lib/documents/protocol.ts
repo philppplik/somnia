@@ -65,6 +65,8 @@ export type DocumentsRequest=
  |{id:number;kind:'setList';first:number;last:number;list:ListKindId}
  |{id:number;kind:'listLevel';first:number;last:number;delta:number}
  |{id:number;kind:'tableEdit';block:number;op:TableOp}
+ |{id:number;kind:'insertImage';block:number;bytes:ArrayBuffer;alt:string}
+ |{id:number;kind:'imageEdit';block:number;op:ImageOp}
  |{id:number;kind:'headerFooterState'}
  |{id:number;kind:'setHeaderFooter';header?:string;footer?:string;pageNumber?:boolean}
  |{id:number;kind:'insertTable';block:number;rows:number;cols:number}
@@ -98,6 +100,34 @@ export const MAX_NEW_TABLE_ROWS=20,MAX_NEW_TABLE_COLS=10;
 /** Size presets offered by the Insert table menu. */
 export const TABLE_PRESETS:readonly (readonly [number,number])[]=[[2,2],[3,3],[4,3],[5,4],[6,5]];
 
+/** Limits for inserted pictures (PNG or JPEG, checked by file signature). */
+export const MAX_IMAGE_BYTES=5*1024*1024,MAX_IMAGE_SIDE=8000,MAX_IMAGE_PIXELS=25_000_000,MAX_IMAGES=200,MIN_IMAGE_PT=10,MAX_IMAGE_PT=2000;
+export const IMAGE_WIDTH_PERCENTS=[25,50,75,100] as const;
+export type ImageOp={op:'resize';width:number}|{op:'fit';percent:number}|{op:'alt';alt:string}|{op:'remove'};
+/** PNG/JPEG pixel size read from the header only; null for anything else or a damaged header. */
+export function sniffImage(b:Uint8Array):{type:'png'|'jpeg';w:number;h:number}|null{
+ const dv=new DataView(b.buffer,b.byteOffset,b.byteLength);
+ if(b.length>=24&&[0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a].every((v,i)=>b[i]===v)&&b[12]===0x49&&b[13]===0x48&&b[14]===0x44&&b[15]===0x52)return{type:'png',w:dv.getUint32(16),h:dv.getUint32(20)};
+ if(b.length>=4&&b[0]===0xff&&b[1]===0xd8){
+  let i=2;
+  while(i+4<=b.length){
+   if(b[i]!==0xff)return null;const m=b[i+1];
+   if(m===0xff){i++;continue;}
+   if(m===0xd9||m===0xda)return null;
+   if(m===0x01||(m>=0xd0&&m<=0xd7)){i+=2;continue;}
+   const len=dv.getUint16(i+2);if(len<2)return null;
+   if(m>=0xc0&&m<=0xcf&&m!==0xc4&&m!==0xc8&&m!==0xcc){if(i+9>b.length)return null;return{type:'jpeg',w:dv.getUint16(i+7),h:dv.getUint16(i+5)};}
+   i+=2+len;
+  }
+ }
+ return null;
+}
+/** The first problem with a picture, or null when it may be inserted. */
+export function imageProblem(b:Uint8Array):'empty'|'size'|'type'|'dimensions'|null{
+ if(b.length===0)return 'empty';if(b.length>MAX_IMAGE_BYTES)return 'size';
+ const s=sniffImage(b);if(!s)return 'type';
+ if(s.w<1||s.h<1||s.w>MAX_IMAGE_SIDE||s.h>MAX_IMAGE_SIDE||s.w*s.h>MAX_IMAGE_PIXELS)return 'dimensions';return null;
+}
 /** Header/footer text limit and the shape of the engine's report on the default header and footer. */
 export const MAX_HF_CHARS=500;
 export interface HeaderFooterState{header:{text:string;editable:boolean};footer:{text:string;pageNumber:boolean;editable:boolean}}

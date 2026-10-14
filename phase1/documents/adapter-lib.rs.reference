@@ -13,8 +13,70 @@ const CELL_BASE: usize = 1 << 20;
 const CELL_LIST_MAX: usize = 20_000;
 
 /// A structural snapshot: the body (blocks are shared, not copied), the header/footer stories and the last section.
-type Snap = (wordcraft_doc::Blocks, std::collections::BTreeMap<u32, wordcraft_doc::Part>, wordcraft_doc::SectionProps);
+type Snap = (wordcraft_doc::Blocks, std::collections::BTreeMap<u32, wordcraft_doc::Part>, wordcraft_doc::SectionProps, std::collections::BTreeMap<String, Arc<Vec<u8>>>);
 const HF_MAX_CHARS: usize = 500;
+const IMG_MAX_BYTES: usize = 5 * 1024 * 1024;
+const IMG_MAX_SIDE: u32 = 8000;
+const IMG_MAX_PIXELS: u64 = 25_000_000;
+const IMG_MAX_COUNT: usize = 200;
+const IMG_MIN_PT: f32 = 10.0;
+const IMG_MAX_PT: f32 = 2000.0;
+
+/// Extension and pixel size of a PNG or JPEG, read from the file signature and header only (no decoding).
+fn sniff_image(b: &[u8]) -> Result<(&'static str, u32, u32), String> {
+    const PNG: [u8; 8] = [0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A];
+    if b.len() >= 24 && b[..8] == PNG && &b[12..16] == b"IHDR" {
+        let w = u32::from_be_bytes([b[16], b[17], b[18], b[19]]);
+        let h = u32::from_be_bytes([b[20], b[21], b[22], b[23]]);
+        return Ok(("png", w, h));
+    }
+    if b.len() >= 4 && b[0] == 0xFF && b[1] == 0xD8 {
+        let mut i = 2usize;
+        while i + 4 <= b.len() {
+            if b[i] != 0xFF {
+                return Err("the JPEG header is damaged".into());
+            }
+            let m = b[i + 1];
+            if m == 0xFF {
+                i += 1;
+                continue;
+            }
+            if m == 0xD9 || m == 0xDA {
+                break;
+            }
+            if m == 0x01 || (0xD0..=0xD7).contains(&m) {
+                i += 2;
+                continue;
+            }
+            let len = u16::from_be_bytes([b[i + 2], b[i + 3]]) as usize;
+            if len < 2 {
+                return Err("the JPEG header is damaged".into());
+            }
+            if (0xC0..=0xCF).contains(&m) && m != 0xC4 && m != 0xC8 && m != 0xCC {
+                if i + 9 > b.len() {
+                    break;
+                }
+                let h = u16::from_be_bytes([b[i + 5], b[i + 6]]) as u32;
+                let w = u16::from_be_bytes([b[i + 7], b[i + 8]]) as u32;
+                return Ok(("jpg", w, h));
+            }
+            i += 2 + len;
+        }
+        return Err("the JPEG has no readable size".into());
+    }
+    Err("only PNG and JPEG images can be inserted".into())
+}
+
+/// Media key, display size (points) and alt text of a paragraph that holds exactly one image and nothing else.
+fn image_only(p: &wordcraft_doc::Paragraph) -> Option<(&str, f32, f32, &str)> {
+    if p.text.as_str() != OBJ.to_string() {
+        return None;
+    }
+    match p.objects.as_slice() {
+        [wordcraft_doc::InlineObject::Image { media, w, h, alt, .. }] => Some((media.as_str(), *w, *h, alt.as_str())),
+        _ => None,
+    }
+}
 
 #[wasm_bindgen]
 pub struct DocSession {
@@ -56,7 +118,11 @@ impl DocSession {
                     let rp = self.doc.styles.resolve_para(&p.props);
                     // Heading level 0..8 (style or direct outline level); body text (9) is not an outline entry.
                     let outline = rp.outline_level.filter(|l| *l < 9);
-                    serde_json::json!({"index": i, "kind": "para", "text": if editable { p.text.clone() } else { p.plain_text() }, "editable": editable, "outline": outline})
+                    let mut v = serde_json::json!({"index": i, "kind": "para", "text": if editable { p.text.clone() } else { p.plain_text() }, "editable": editable, "outline": outline});
+                    if let Some((_, w, h, alt)) = image_only(p) {
+                        v["image"] = serde_json::json!({"w": w, "h": h, "alt": alt});
+                    }
+                    v
                 }
                 Block::Table(_) => serde_json::json!({"index": i, "kind": "table", "editable": false}),
             })
@@ -981,6 +1047,99 @@ impl DocSession {
         self.pages = DocLayout::default();
         Ok(())
     }
+    /// Inserts a PNG or JPEG as its own paragraph after the top-level block holding `block` (a paragraph, table or cell
+    /// paragraph). The picture is scaled to fit the text width. Limits: 5 MB, 8000 px a side, 25 megapixels, 200 images.
+    fn do_insert_image(&mut self, block: usize, bytes: &[u8], alt: &str) -> Result<(), String> {
+        if bytes.is_empty() || bytes.len() > IMG_MAX_BYTES {
+            return Err("an image is limited to 5 MB".into());
+        }
+        let (ext, wpx, hpx) = sniff_image(bytes)?;
+        if wpx == 0 || hpx == 0 || wpx > IMG_MAX_SIDE || hpx > IMG_MAX_SIDE || (wpx as u64) * (hpx as u64) > IMG_MAX_PIXELS {
+            return Err("an image is limited to 8000 pixels a side and 25 megapixels".into());
+        }
+        Self::hf_validate(alt).map_err(|_| "alt text is limited to 500 characters without line breaks".to_string())?;
+        if self.doc.body.len() >= 100_000 {
+            return Err("the document has too many blocks".into());
+        }
+        let top = if block >= CELL_BASE { self.cell_paras().nth(block - CELL_BASE).ok_or_else(|| format!("no cell paragraph {block}"))?[0] } else { block };
+        if top >= self.doc.body.len() {
+            return Err(format!("no block {block}"));
+        }
+        let known = self.doc.media.values().any(|v| v.as_slice() == bytes);
+        if !known && self.doc.media.len() >= IMG_MAX_COUNT {
+            return Err("a document holds at most 200 images".into());
+        }
+        let (mut w, mut h) = (wpx as f32 * 0.75, hpx as f32 * 0.75);
+        let fit = (self.doc.last_section.text_width() / w).min(IMG_MAX_PT / h).min(1.0);
+        w = (w * fit).max(IMG_MIN_PT);
+        h = (h * fit).max(IMG_MIN_PT);
+        let mut p = wordcraft_doc::Paragraph::new();
+        let key = self.doc.add_media(bytes.to_vec(), ext);
+        let obj = wordcraft_doc::InlineObject::Image { media: key, w, h, alt: alt.to_string(), float: Default::default(), crop: [0.0; 4] };
+        if let Err(e) = p.insert_object(0, obj, &CharProps::default()) {
+            return Err(e.to_string());
+        }
+        self.doc.body.insert(top + 1, Arc::new(Block::Para(p)));
+        if top + 2 == self.doc.body.len() {
+            self.doc.body.push(wordcraft_doc::para_block(wordcraft_doc::Paragraph::new()));
+        }
+        self.pages = DocLayout::default();
+        Ok(())
+    }
+    /// Image-only top-level paragraph `block` as `(index, paragraph)`, or an error.
+    fn image_para(&self, block: usize) -> Result<&wordcraft_doc::Paragraph, String> {
+        if block >= CELL_BASE {
+            return Err("images inside table cells are not supported yet".into());
+        }
+        match self.doc.body.get(block).map(|b| &**b) {
+            Some(Block::Para(p)) if image_only(p).is_some() => Ok(p),
+            Some(_) => Err("this block is not an image".into()),
+            None => Err(format!("no block {block}")),
+        }
+    }
+    /// Sets the display width of an image paragraph in points (10-2000), keeping the aspect ratio.
+    fn do_resize_image(&mut self, block: usize, width: f32) -> Result<(), String> {
+        if !width.is_finite() || !(IMG_MIN_PT..=IMG_MAX_PT).contains(&width) {
+            return Err("an image is 10 to 2000 points wide".into());
+        }
+        let mut p = self.image_para(block)?.clone();
+        let (_, w0, h0, _) = image_only(&p).ok_or("this block is not an image")?;
+        let h = (width * h0 / w0.max(1.0)).clamp(IMG_MIN_PT, IMG_MAX_PT);
+        if let Some(wordcraft_doc::InlineObject::Image { w, h: hh, .. }) = p.objects.get_mut(0) {
+            *w = width;
+            *hh = h;
+        }
+        self.doc.body[block] = Arc::new(Block::Para(p));
+        self.pages = DocLayout::default();
+        Ok(())
+    }
+    /// Sets an image paragraph to a share (25, 50, 75 or 100 percent) of the text width, keeping the aspect ratio.
+    fn do_fit_image(&mut self, block: usize, percent: u32) -> Result<(), String> {
+        if ![25, 50, 75, 100].contains(&percent) {
+            return Err("choose 25, 50, 75 or 100 percent".into());
+        }
+        let width = (self.doc.last_section.text_width() * percent as f32 / 100.0).clamp(IMG_MIN_PT, IMG_MAX_PT);
+        self.do_resize_image(block, width)
+    }
+    fn do_set_image_alt(&mut self, block: usize, alt: &str) -> Result<(), String> {
+        Self::hf_validate(alt).map_err(|_| "alt text is limited to 500 characters without line breaks".to_string())?;
+        let mut p = self.image_para(block)?.clone();
+        if let Some(wordcraft_doc::InlineObject::Image { alt: a, .. }) = p.objects.get_mut(0) {
+            *a = alt.to_string();
+        }
+        self.doc.body[block] = Arc::new(Block::Para(p));
+        Ok(())
+    }
+    /// Removes an image paragraph (the document keeps at least one block).
+    fn do_remove_image(&mut self, block: usize) -> Result<(), String> {
+        self.image_para(block)?;
+        if self.doc.body.len() <= 1 {
+            return Err("the document needs at least one block".into());
+        }
+        self.doc.body.remove(block);
+        self.pages = DocLayout::default();
+        Ok(())
+    }
     fn do_replace(&mut self, block: usize, start: usize, end: usize, text: &str) -> Result<(), String> {
         self.do_replace_many(block, &[(start, end, text.to_string())])
     }
@@ -1089,6 +1248,23 @@ impl DocSession {
     pub fn set_header_footer(&mut self, header: Option<String>, footer: Option<String>, page_number: Option<bool>) -> Result<(), JsValue> {
         self.do_set_header_footer(header.as_deref(), footer.as_deref(), page_number).map_err(|e| JsValue::from_str(&e))
     }
+    /// Inserts a PNG or JPEG (5 MB, 8000 px a side, 25 megapixels, 200 images) as its own paragraph after the block.
+    pub fn insert_image(&mut self, block: usize, bytes: &[u8], alt: &str) -> Result<(), JsValue> {
+        self.do_insert_image(block, bytes, alt).map_err(|e| JsValue::from_str(&e))
+    }
+    /// Display width in points (10-2000) of the image paragraph `block`; the height follows the aspect ratio.
+    pub fn resize_image(&mut self, block: usize, width: f32) -> Result<(), JsValue> {
+        self.do_resize_image(block, width).map_err(|e| JsValue::from_str(&e))
+    }
+    pub fn fit_image(&mut self, block: usize, percent: u32) -> Result<(), JsValue> {
+        self.do_fit_image(block, percent).map_err(|e| JsValue::from_str(&e))
+    }
+    pub fn set_image_alt(&mut self, block: usize, alt: &str) -> Result<(), JsValue> {
+        self.do_set_image_alt(block, alt).map_err(|e| JsValue::from_str(&e))
+    }
+    pub fn remove_image(&mut self, block: usize) -> Result<(), JsValue> {
+        self.do_remove_image(block).map_err(|e| JsValue::from_str(&e))
+    }
     pub fn split_block(&mut self, block: usize, utf8_off: usize) -> Result<(), JsValue> {
         self.do_split(block, utf8_off).map_err(|e| JsValue::from_str(&e))
     }
@@ -1099,14 +1275,15 @@ impl DocSession {
     pub fn snapshot(&mut self) -> u32 {
         let id = self.next_snap;
         self.next_snap += 1;
-        self.snaps.insert(id, (self.doc.body.clone(), self.doc.parts.clone(), self.doc.last_section.clone()));
+        self.snaps.insert(id, (self.doc.body.clone(), self.doc.parts.clone(), self.doc.last_section.clone(), self.doc.media.clone()));
         id
     }
     pub fn restore(&mut self, id: u32) -> Result<(), JsValue> {
-        let (b, parts, last) = self.snaps.get(&id).ok_or_else(|| JsValue::from_str("unknown snapshot"))?.clone();
+        let (b, parts, last, media) = self.snaps.get(&id).ok_or_else(|| JsValue::from_str("unknown snapshot"))?.clone();
         self.doc.body = b;
         self.doc.parts = parts;
         self.doc.last_section = last;
+        self.doc.media = media;
         self.pages = DocLayout::default();
         Ok(())
     }
@@ -1367,6 +1544,73 @@ mod tests {
         s.restore(snap).unwrap();
         let orig: serde_json::Value = serde_json::from_str(&DocSession::from_bytes(FIXTURE).unwrap().do_header_footer_state()).unwrap();
         assert_eq!(serde_json::from_str::<serde_json::Value>(&s.do_header_footer_state()).unwrap(), orig);
+    }
+    #[test]
+    fn sniff_image_reads_png_and_jpeg_sizes_and_refuses_the_rest() {
+        let mut png = vec![0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 13, b'I', b'H', b'D', b'R'];
+        png.extend_from_slice(&640u32.to_be_bytes());
+        png.extend_from_slice(&480u32.to_be_bytes());
+        png.extend_from_slice(&[8, 6, 0, 0, 0]);
+        assert_eq!(sniff_image(&png).unwrap(), ("png", 640, 480));
+        // SOI, APP0 (len 4), SOF0 (len 11): height 300, width 200.
+        let jpg = vec![0xFF, 0xD8, 0xFF, 0xE0, 0, 4, 0, 0, 0xFF, 0xC0, 0, 11, 8, 1, 44, 0, 200, 3, 1, 0x22, 0];
+        assert_eq!(sniff_image(&jpg).unwrap(), ("jpg", 200, 300));
+        for bad in [&b""[..], b"GIF89a....", b"\x89PNG", &[0xFF, 0xD8][..], &[0xFF, 0xD8, 0x00, 0x00][..], &[0xFF, 0xD8, 0xFF, 0xE0, 0, 1][..]] {
+            assert!(sniff_image(bad).is_err());
+        }
+    }
+    #[test]
+    fn images_insert_resize_describe_and_remove_atomically() {
+        let mut png = vec![0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 13, b'I', b'H', b'D', b'R'];
+        png.extend_from_slice(&1200u32.to_be_bytes());
+        png.extend_from_slice(&600u32.to_be_bytes());
+        png.extend_from_slice(&[8, 6, 0, 0, 0]);
+        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
+        let n = s.doc.body.len();
+        s.do_insert_image(0, &png, "A chart").unwrap();
+        assert!(s.doc.body.len() >= n + 1);
+        let p = match &*s.doc.body[1] {
+            Block::Para(p) => p.clone(),
+            _ => panic!("image paragraph expected after block 0"),
+        };
+        let (_, w, h, alt) = image_only(&p).unwrap();
+        assert!(w <= s.doc.last_section.text_width() + 0.01);
+        assert!((w / h - 2.0).abs() < 0.01);
+        assert_eq!(alt, "A chart");
+        s.do_resize_image(1, 100.0).unwrap();
+        let (_, w2, h2, _) = image_only(match &*s.doc.body[1] {
+            Block::Para(p) => p,
+            _ => panic!(),
+        })
+        .unwrap();
+        assert_eq!((w2, h2), (100.0, 50.0));
+        s.do_fit_image(1, 50).unwrap();
+        let (_, w3, _, _) = image_only(match &*s.doc.body[1] {
+            Block::Para(p) => p,
+            _ => panic!(),
+        })
+        .unwrap();
+        assert!((w3 - s.doc.last_section.text_width() / 2.0).abs() < 0.01);
+        assert!(s.do_fit_image(1, 33).is_err());
+        s.do_set_image_alt(1, "New text").unwrap();
+        let v: serde_json::Value = serde_json::from_str(&s.block_list()).unwrap();
+        assert_eq!(v[1]["image"]["alt"], "New text");
+        let saved = wordcraft_docx::write(&s.doc).unwrap();
+        let re = DocSession::from_bytes(&saved).unwrap();
+        assert!(re.doc.media.values().any(|m| m.as_slice() == png.as_slice()));
+        // Refusals change nothing.
+        let len = s.doc.body.len();
+        assert!(s.do_insert_image(0, b"GIF89a....", "").is_err());
+        assert!(s.do_insert_image(0, &[], "").is_err());
+        assert!(s.do_insert_image(99_999, &png, "").is_err());
+        assert!(s.do_insert_image(0, &png, "bad\nalt").is_err());
+        assert!(s.do_resize_image(1, 5.0).is_err());
+        assert!(s.do_resize_image(1, f32::NAN).is_err());
+        assert!(s.do_resize_image(0, 100.0).is_err());
+        assert!(s.do_remove_image(0).is_err());
+        assert_eq!(s.doc.body.len(), len);
+        s.do_remove_image(1).unwrap();
+        assert_eq!(s.doc.body.len(), len - 1);
     }
     #[test]
     fn replace_range_roundtrips_and_is_atomic() {

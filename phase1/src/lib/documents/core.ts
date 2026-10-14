@@ -1,5 +1,6 @@
 import type {DocumentsRequest,DocumentsResponse,OpenedDocument} from './protocol';
-import {validHfText,checkFormatPatch,checkParaPatch,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,DOC_STYLES,MAX_DOCX_BYTES,MAX_FORMAT_BLOCKS,MAX_SCALE,MIN_SCALE} from './protocol';
+import {validHfText,checkFormatPatch,checkParaPatch,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,DOC_STYLES,MAX_DOCX_BYTES,MAX_FORMAT_BLOCKS,MAX_SCALE,MIN_SCALE,imageProblem,IMAGE_WIDTH_PERCENTS,MIN_IMAGE_PT,MAX_IMAGE_PT} from './protocol';
+const IMAGE_ERRORS={empty:'The image is empty.',size:'An image is limited to 5 MB.',type:'Only PNG and JPEG images can be inserted.',dimensions:'An image is limited to 8000 pixels a side and 25 megapixels.'} as const;
 const posOk=(p:{block:number;off:number})=>Number.isInteger(p.block)&&p.block>=0&&Number.isInteger(p.off)&&p.off>=0;
 function checkParaRange(first:number,last:number){
  if(!Number.isInteger(first)||!Number.isInteger(last)||first<0||last<first)throw new Error('Paragraph range is not valid.');
@@ -11,7 +12,7 @@ function checkSpan(start:{block:number;off:number},end:{block:number;off:number}
  if(end.block-start.block>=MAX_FORMAT_BLOCKS)throw new Error('Selection spans too many paragraphs.');
 }
 /** The slice of the wasm DocSession the host uses. Lets tests run the real engine without a Worker. */
-export interface DocSessionLike{free():void;blocks():string;replace_ranges(block:number,hunksJson:string):void;format_range(sb:number,so:number,eb:number,eo:number,patchJson:string):void;format_state(sb:number,so:number,eb:number,eo:number):string;format_paragraphs(first:number,last:number,patchJson:string):void;paragraph_state(first:number,last:number):string;set_paragraph_style(first:number,last:number,style:string):void;set_list(first:number,last:number,kind:string):void;edit_table(block:number,op:string):void;insert_table(block:number,rows:number,cols:number):void;header_footer():string;set_header_footer(header?:string|null,footer?:string|null,pageNumber?:boolean|null):void;shift_list_level(first:number,last:number,delta:number):void;insert(block:number,utf8Offset:number,text:string):void;page_info():string;paginate():number;render_png(page:number,scale:number):Uint8Array;save():Uint8Array;text():string;split_block(block:number,off:number):void;merge_with_previous(block:number):void;snapshot():number;restore(snap:number):void;hit_test(page:number,x:number,y:number):string;caret_at(block:number,off:number):string;selection_rects(block:number,a:number,b:number):string}
+export interface DocSessionLike{free():void;blocks():string;replace_ranges(block:number,hunksJson:string):void;format_range(sb:number,so:number,eb:number,eo:number,patchJson:string):void;format_state(sb:number,so:number,eb:number,eo:number):string;format_paragraphs(first:number,last:number,patchJson:string):void;paragraph_state(first:number,last:number):string;set_paragraph_style(first:number,last:number,style:string):void;set_list(first:number,last:number,kind:string):void;edit_table(block:number,op:string):void;insert_table(block:number,rows:number,cols:number):void;header_footer():string;set_header_footer(header?:string|null,footer?:string|null,pageNumber?:boolean|null):void;insert_image(block:number,bytes:Uint8Array,alt:string):void;resize_image(block:number,width:number):void;fit_image(block:number,percent:number):void;set_image_alt(block:number,alt:string):void;remove_image(block:number):void;shift_list_level(first:number,last:number,delta:number):void;insert(block:number,utf8Offset:number,text:string):void;page_info():string;paginate():number;render_png(page:number,scale:number):Uint8Array;save():Uint8Array;text():string;split_block(block:number,off:number):void;merge_with_previous(block:number):void;snapshot():number;restore(snap:number):void;hit_test(page:number,x:number,y:number):string;caret_at(block:number,off:number):string;selection_rects(block:number,a:number,b:number):string}
 export interface DocSessionCtor{new(bytes:Uint8Array):DocSessionLike}
 const ab=(u:Uint8Array):ArrayBuffer=>u.byteOffset===0&&u.byteLength===u.buffer.byteLength?u.buffer as ArrayBuffer:u.slice().buffer as ArrayBuffer;
 /** Owns one open session. Every failure leaves the previous state usable and never keeps a freed pointer. */
@@ -71,6 +72,28 @@ export class DocumentsCore{
     if(req.kind==='setList'&&req.list!=='bullet'&&req.list!=='numbered'&&req.list!=='none')throw new Error('List kind is not valid.');
     if(req.kind==='listLevel'&&(!Number.isInteger(req.delta)||req.delta<-8||req.delta>8))throw new Error('Level change is not valid.');
     const [,editMs]=this.timed(()=>req.kind==='paraStyle'?s.set_paragraph_style(req.first,req.last,req.style):req.kind==='setList'?s.set_list(req.first,req.last,req.list):s.shift_list_level(req.first,req.last,req.delta));const [pages,layoutMs]=this.timed(()=>s.paginate());
+    return{res:{id:req.id,ok:true,kind:'edited',document:this.describe(editMs,layoutMs,pages)},transfer:[]};
+   }
+   if(req.kind==='insertImage'){
+    if(!Number.isInteger(req.block)||req.block<0||req.block>=2**31)throw new Error('Block is not valid.');
+    if(!(req.bytes instanceof ArrayBuffer))throw new Error('The image is not valid.');
+    const bytes=new Uint8Array(req.bytes);const bad=imageProblem(bytes);if(bad)throw new Error(IMAGE_ERRORS[bad]);
+    if(typeof req.alt!=='string'||!validHfText(req.alt))throw new Error('The alt text is not valid.');
+    const s=this.need();const [,editMs]=this.timed(()=>s.insert_image(req.block,bytes,req.alt));const [pages,layoutMs]=this.timed(()=>s.paginate());
+    return{res:{id:req.id,ok:true,kind:'edited',document:this.describe(editMs,layoutMs,pages)},transfer:[]};
+   }
+   if(req.kind==='imageEdit'){
+    if(!Number.isInteger(req.block)||req.block<0||req.block>=2**31)throw new Error('Block is not valid.');
+    const o=req.op;if(!o||typeof o!=='object')throw new Error('The image change is not valid.');
+    const s=this.need();
+    const [,editMs]=this.timed(()=>{
+     if(o.op==='resize'){if(typeof o.width!=='number'||!Number.isFinite(o.width)||o.width<MIN_IMAGE_PT||o.width>MAX_IMAGE_PT)throw new Error('An image is 10 to 2000 points wide.');s.resize_image(req.block,o.width);}
+     else if(o.op==='fit'){if(!(IMAGE_WIDTH_PERCENTS as readonly number[]).includes(o.percent))throw new Error('Choose 25, 50, 75 or 100 percent.');s.fit_image(req.block,o.percent);}
+     else if(o.op==='alt'){if(typeof o.alt!=='string'||!validHfText(o.alt))throw new Error('The alt text is not valid.');s.set_image_alt(req.block,o.alt);}
+     else if(o.op==='remove')s.remove_image(req.block);
+     else throw new Error('The image change is not valid.');
+    });
+    const [pages,layoutMs]=this.timed(()=>s.paginate());
     return{res:{id:req.id,ok:true,kind:'edited',document:this.describe(editMs,layoutMs,pages)},transfer:[]};
    }
    if(req.kind==='headerFooterState')return{res:{id:req.id,ok:true,kind:'headerFooter',state:JSON.parse(this.need().header_footer())},transfer:[]};
