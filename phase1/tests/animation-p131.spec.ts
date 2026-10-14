@@ -1,0 +1,22 @@
+import {test,expect} from './fixtures';
+// CI-only (needs the Tauri/Vite app in a browser). Not run in the authoring sandbox.
+test('animation key tools menu: grouped items, enablement follows the key selection',async({page})=>{
+ await page.goto('/');
+ await page.evaluate(async()=>{const {requestStudio}=await import('/src/store/appStore.ts');requestStudio('animation');});
+ await page.getByTestId('animation-create-blank').click();
+ await expect(page.getByTestId('animation-workspace')).toBeVisible();
+ await page.getByTestId('animation-add-shape').click();
+ await page.getByLabel('Animate Opacity').check();
+ await page.getByTestId('animation-timeline').getByLabel('Next frame').click();
+ await page.getByLabel('Opacity',{exact:true}).fill('20');await page.getByLabel('Opacity',{exact:true}).press('Enter');
+ const keys=page.getByTestId('animation-keyrow-opacity').getByRole('button');
+ await expect(keys).toHaveCount(2);
+ await keys.nth(0).click();await keys.nth(1).click({modifiers:['Shift']});
+ await page.getByTestId('animation-keys-tools').click();
+ for(const id of ['flatten','average','match','ramp','thin','ease-copy','influence','tame','peaks','invert-selection','property','nth'])await expect(page.getByTestId(`animation-keys-${id}`)).toBeVisible();
+ await expect(page.getByTestId('animation-keys-flatten')).toBeEnabled();
+ await expect(page.getByTestId('animation-keys-ramp')).toBeDisabled();
+ await page.getByTestId('animation-keys-flatten').click();
+ await expect(page.getByTestId('animation-keys-flatten')).toBeHidden();
+ await page.getByTestId('animation-timeline').getByLabel('Undo').click();
+});
