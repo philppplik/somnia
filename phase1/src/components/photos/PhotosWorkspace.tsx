@@ -4,9 +4,10 @@ import {usePublishPhotosContext} from './panels/publishContext';
 import {useCallback,useEffect,useRef,useState} from 'react';
 import {AlertTriangle,Bandage,Brush,Contrast,ArrowLeft,ArrowRight,Check,ClipboardPaste,Columns2,Copy,Download,Eye,Frame,Grid3x3,RotateCcw,Undo2,Redo2,X,ZoomIn,ZoomOut,Maximize2,Minimize2,SquareDashed,Circle,Rows2,Ruler} from '../../lib/icons';
 import {Button} from '../ui/button';
+import {PhotosHandoffBar} from './PhotosHandoffBar';
 import {NativeInput} from '../ui/native-controls';
 import {useT} from '../../lib/useT';
-import {applyPhotoCrop,cancelPhotoCrop,dirtyPhoto,exportPhotoCopy,historyPhoto,openPhoto,resetPhoto,rotatePhoto,setPhotoCropping,setPhotoCropDraft,usePhotoSession,type PhotoFrame} from '../../lib/photos/studioSession';
+import {applyPhotoCrop,cancelPhotoCrop,dirtyPhoto,exportPhotoCopy,historyPhoto,openPhoto,resetPhoto,rotatePhoto,setPhotoCropping,setPhotoCropDraft,usePhotoSession,type PhotoFrame,renderPhotoBytes} from '../../lib/photos/studioSession';
 import {autoSource,clampSpot} from '../../lib/photos/healSpots';
 import {setRating} from '../../lib/photos/ratings';
 import {setFlag} from '../../lib/photos/flags';
@@ -404,6 +405,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
    <Button size="compact" disabled={!ready||session?.cropping} onClick={()=>void doExport('png')} data-testid="photos-export-png" title={t('photos.export.hint')}><Download size={13}/>{t('photos.export.png')}</Button>
    <Button size="compact" disabled={!ready||session?.cropping} onClick={()=>void doExport('jpeg')} data-testid="photos-export-jpeg" title={t('photos.export.hint')}><Download size={13}/>{t('photos.export.jpeg')}</Button>
   </div>
+  <PhotosHandoffBar file={item.name} disabled={!ready} getImage={()=>renderPhotoBytes(item.name)}/>
   <div ref={stage} className="media-checker relative min-h-0 w-full flex-1 overflow-hidden" onWheel={onWheel} onPointerDown={onStageDown} onPointerMove={onStageMove} onPointerUp={onStageUp} onPointerCancel={onStageUp} onPointerLeave={()=>setHealCursor(null)} data-testid="photos-stage" style={{touchAction:'none',cursor:session?.cropping?'default':healing||dodging||grading||radial||brushing||straightening||targetArmed?'crosshair':'grab'}}>
    <div ref={imgBox} className="absolute left-1/2 top-1/2" style={{width:dispW,height:dispH,transform:`translate(-50%,-50%) translate(${pan[0]}px,${pan[1]}px)`}}>
     <canvas ref={canvas} className="block size-full rounded-[2px] shadow-sm" style={{imageRendering:scale>4?'pixelated':'auto'}} data-testid="photos-canvas"/>

@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-777 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+779 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -506,6 +506,8 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `slides.moveSlideLater` | Move slide later | Edit | slides |  |
 | `slides.newSlide` | New slide from layout | Edit | slides |  |
 | `slides.nudgeShape` | Nudge selected text box | Edit | slides |  |
+| `slides.openPictureInPhotos` | Edit picture in Photos studio | Edit | slides |  |
+| `slides.openTableInSheets` | Edit table in Sheets studio | Edit | slides |  |
 | `slides.present` | Present | View | slides | `F5` |
 | `slides.present.exit` | Exit presentation | View | slides |  |
 | `slides.present.fromStart` | Present from start | View | slides | `Shift+F5` |

@@ -1,10 +1,9 @@
-import {useState} from 'react';
+import {useState,useSyncExternalStore} from 'react';
 import {Button} from '../ui/button';
 import {useT} from '../../lib/useT';
-import {getMedia,addMediaFile,setActiveMedia} from '../../lib/media';
-import {blankName} from '../../lib/studios/blankFiles';
-import {pendingReturnsFor,clearPendingReturn,setHandoffOrigin} from '../../lib/handoff/registry';
-import {diffTableCells,tableToXlsx} from '../../lib/handoff/slidesTable';
+import {pendingReturnsFor,clearPendingReturn,subscribeHandoff,handoffVersion} from '../../lib/handoff/registry';
+import {openSlidesTableInSheets} from '../../lib/handoff/open';
+import {diffTableCells} from '../../lib/handoff/slidesTable';
 import {applyTableDiff} from '../../lib/handoff/applySlidesTableReturn';
 /** CA1: quiet cross-studio row above the table editor — "Edit in Sheets studio", plus explicit apply/discard of a pending round trip. */
 export function SlidesTableHandoff({source,slideIndex,slideId,shapeId,cells,ready,isBusy,commit,editCell,onError}:{
@@ -13,16 +12,12 @@ export function SlidesTableHandoff({source,slideIndex,slideId,shapeId,cells,read
 }){
  const {t}=useT();
  const [note,setNote]=useState(''),[applying,setApplying]=useState(false),[tick,setTick]=useState(0);
+ useSyncExternalStore(subscribeHandoff,handoffVersion,handoffVersion);
  const pending=tick>=0?pendingReturnsFor(`slides:table:${slideId}:${shapeId}`).find(p=>p.origin.file===source):undefined;
  const diff=pending?diffTableCells(cells,pending.rows):null;
  const openInSheets=async()=>{
-  const taken=getMedia().items.map(i=>i.name);
-  const name=blankName(`${source.replace(/\.pptx$/i,'')} - table.xlsx`,taken);
-  const bytes=tableToXlsx(cells,'Table 1');
-  const result=await addMediaFile(new Blob([bytes],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),name);
-  if('error' in result){onError(result.error);return;}
-  setHandoffOrigin(name,{studio:'slides',kind:'table',id:`${slideId}:${shapeId}`,label:t('handoff.tableLabel',{file:source,n:slideIndex+1}),file:source});
-  setActiveMedia(name);
+  const r=await openSlidesTableInSheets({source,slideIndex,slideId,shapeId,cells});
+  if(!r.ok)onError(r.message);
  };
  const applyReturn=async()=>{
   if(!pending||!diff)return;

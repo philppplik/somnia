@@ -5604,6 +5604,32 @@
       "hasEnabled": true
     },
     {
+      "id": "slides.openPictureInPhotos",
+      "title": "Edit picture in Photos studio",
+      "category": "Edit",
+      "source": "slides",
+      "keywords": [
+        "handoff",
+        "image",
+        "photos",
+        "picture"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "slides.openTableInSheets",
+      "title": "Edit table in Sheets studio",
+      "category": "Edit",
+      "source": "slides",
+      "keywords": [
+        "handoff",
+        "sheets",
+        "spreadsheet",
+        "table"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "slides.present",
       "title": "Present",
       "category": "View",

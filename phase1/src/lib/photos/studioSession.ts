@@ -186,6 +186,14 @@ export async function exportPhotoCopyAdvanced(name:string,options:PhotoAdvancedO
  if(ok)patch(name,{saved:photoSignature(snapshot)});
  return ok?'saved':'cancelled';
 }
+/** CA2 handoff path: renders the current settings to bytes without a save dialog. */
+export async function renderPhotoBytes(name:string,format:'png'|'jpeg'='png'):Promise<Uint8Array>{
+ const s=sessions.get(name);if(!s||s.status==='error'||!sources.has(name))throw Error(t('photos.error.notReady'));
+ await ensureEngineSource(name);
+ const r=await getEngine().exportPhoto(s.now,format);
+ if(!r.bytes)throw Error('Export returned no bytes.');
+ return new Uint8Array(r.bytes);
+}
 export type PhotoSaveOutcome='saved'|'cancelled';
 export interface PhotoSaveHost {save(blob:Blob,suggestedName:string):Promise<boolean>}
 /** Exports the developed copy at the engine's bounded source resolution. The original is never overwritten. */

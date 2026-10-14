@@ -34,6 +34,7 @@ import { registerSheetsCommands } from '../src/lib/sheets/commands';
 import {registerSoundCommands} from '../src/lib/sound/commands';
 import { registerDocumentsCommands } from '../src/lib/documents/commands';
 import { registerSlidesCommands } from '../src/lib/slides/commands';
+import { registerHandoffCommands } from '../src/lib/handoff/commands';
 import { registerDesignCommands } from '../src/lib/design/commands';
 import { pdfCommandSpecs } from '../src/lib/pdfedit/commands';
 import { registerAnimationCommands } from '../src/lib/animation/commands';
@@ -110,6 +111,7 @@ export async function collect(): Promise<Entry[]> {
   await withSource('documents', () => registerDocumentsCommands());
   await withSource('documents-panels', () => registerDocumentPanelCommands());
   await withSource('slides', () => registerSlidesCommands());
+  await withSource('slides', () => registerHandoffCommands());
   await withSource('design', () => registerDesignCommands());
   await withSource('interface', () => registerInterfaceCommands());
   await withSource('photos', () => registerPhotosCommands());

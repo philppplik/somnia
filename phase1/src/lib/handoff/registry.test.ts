@@ -9,7 +9,7 @@ test('routes register, query and unregister per studio:kind',()=>{const route={t
  assert.deepEqual(handoffRoutesFor('slides','picture'),[]);
  off();assert.deepEqual(handoffRoutesFor('slides','table'),[]);});
 test('origins and pending returns are tracked per file and ref',()=>{setHandoffOrigin('Table.xlsx',ref);assert.equal(handoffOrigin('Table.xlsx'),ref);
- setPendingReturn('Table.xlsx',ref,[['a','b'],['1','2']]);
+ setPendingReturn('Table.xlsx',ref,{rows:[['a','b'],['1','2']]});
  assert.equal(pendingReturnsFor(handoffRefId(ref)).length,1);
  assert.equal(pendingReturnsFor('slides:picture:257:7').length,0);
  clearPendingReturn('Table.xlsx');assert.equal(pendingReturnsFor(handoffRefId(ref)).length,0);
@@ -35,3 +35,17 @@ test('applyTableDiff applies sequentially, waits for idle and stops on failure',
  const res=await applyTableDiff(fail,d);assert.equal(res.applied,1);assert.equal(res.failed,'refused');
  const stuck:TableEditTarget={busy:()=>true,editCell:async()=>({ok:true})};
  assert.equal((await applyTableDiff(stuck,d,120)).failed,'busy');});
+import {readFileSync} from 'node:fs';
+import {insertPicture,readPicture,readDeckModel} from '../slides/deckPackage';
+test('readPicture round-trips bytes written by insertPicture',()=>{
+ const base=new Uint8Array(readFileSync('slides-engine/fixtures/table.pptx'));
+ const sid=readDeckModel(base).slides[0].id;
+ const png=new Uint8Array(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==','base64'));
+ const withPic=insertPicture(base,sid,png,'sample');
+ const shape=readDeckModel(withPic).slides[0].shapes.find(s=>s.kind==='picture')!;
+ const out=readPicture(withPic,sid,shape.id);
+ assert.equal(out.ext,'png');assert.deepEqual([...out.data],[...png]);
+ assert.throws(()=>readPicture(base,sid,999),/Shape no longer exists/);});
+test('pending returns carry image payloads per kind',()=>{setPendingReturn('pic.png',ref,{image:new Uint8Array([1,2,3])});
+ const hit=pendingReturnsFor(handoffRefId(ref))[0];assert.deepEqual([...hit.image!],[1,2,3]);assert.equal(hit.rows,undefined);
+ clearPendingReturn('pic.png');});

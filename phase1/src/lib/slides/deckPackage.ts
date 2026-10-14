@@ -735,6 +735,12 @@ export function replacePicture(bytes:Uint8Array,slideId:number,shapeId:number,im
   });
   return setShapeBounds(out,slideId,shapeId,{x:old.x,y:old.y,w:old.w,h:old.h},box);
 }
+/** Reads the embedded bytes of one picture, for cross-studio handoff. */
+export function readPicture(bytes:Uint8Array,slideId:number,shapeId:number):{data:Uint8Array;ext:string}{
+ const p=pictureParts(bytes,slideId,shapeId);
+ const data=p.c.zip[p.oldMedia];if(!data)throw Error('Picture media is missing');
+ return {data,ext:p.oldMedia.split('.').pop()??'png'};
+}
 /** Removes one picture and any media only it used. */
 export function removePicture(bytes:Uint8Array,slideId:number,shapeId:number):Uint8Array{
   const p=pictureParts(bytes,slideId,shapeId);
