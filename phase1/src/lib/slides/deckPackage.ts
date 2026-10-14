@@ -751,3 +751,13 @@ export function readSlideNotes(bytes:Uint8Array,slideId:number):string[]{
   while(out.length&&!out[out.length-1].trim())out.pop();
   return out;
 }
+
+export const MAX_MULTI_EDIT=50;
+export interface ShapeBoundsEdit {shapeId:number;expected:BoundsBox;next:BoundsBox}
+/** Applies several bounds edits to one slide as a single result: all edits verify, or nothing is returned. */
+export function setShapesBounds(bytes:Uint8Array,slideId:number,edits:readonly ShapeBoundsEdit[]):Uint8Array{
+  if(!Array.isArray(edits)||edits.length<1||edits.length>MAX_MULTI_EDIT)throw Error(`Edit between 1 and ${MAX_MULTI_EDIT} shapes at once`);
+  if(new Set(edits.map(e=>e.shapeId)).size!==edits.length)throw Error('Each shape can be edited once per action');
+  let out=bytes;for(const e of edits)out=setShapeBounds(out,slideId,e.shapeId,e.expected,e.next);
+  return out;
+}

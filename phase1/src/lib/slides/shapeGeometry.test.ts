@@ -4,7 +4,7 @@ import {readFileSync,readdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {unzipSync,zipSync,strFromU8,strToU8} from 'fflate';
 import {readDeckModel,readSlidePart,newSlideFromLayout,readLayouts,type ShapeRef} from './deckPackage';
-import {moveBox,resizeBox,alignBox,resizeBoxAspect,hitTest,containsPoint,overlayRect,limitsOf,stepShape,selectableShapes,rotationDeg} from './shapeGeometry';
+import {alignBoxes,distributeBoxes,moveBox,resizeBox,alignBox,resizeBoxAspect,hitTest,containsPoint,overlayRect,limitsOf,stepShape,selectableShapes,rotationDeg} from './shapeGeometry';
 
 const fx=(n:string)=>new Uint8Array(readFileSync(fileURLToPath(new URL('../../../slides-engine/fixtures/'+n,import.meta.url))));
 const base=fx('independent.pptx');
@@ -124,4 +124,24 @@ test('alignBox snaps to slide edges and centre without resizing, and clamps over
   assert.equal(alignBox(b,'middle',size).y,Math.round((6858000-1000001)/2));
   const huge={x:500,y:500,w:size.cx+10,h:size.cy+10};
   assert.equal(alignBox(huge,'center',size).x,0);assert.equal(alignBox(huge,'right',size).x,0);assert.equal(alignBox(huge,'middle',size).y,0);
+});
+
+test('alignBoxes aligns to the union of the selection and never resizes',()=>{
+  const a={x:100,y:500,w:200,h:100},b={x:1000,y:100,w:400,h:300};
+  assert.deepEqual(alignBoxes([a,b],'left'),[{...a,x:100},{...b,x:100}]);
+  assert.deepEqual(alignBoxes([a,b],'right'),[{...a,x:1200},{...b,x:1000}]);
+  assert.deepEqual(alignBoxes([a,b],'center'),[{...a,x:650},{...b,x:550}]);
+  assert.deepEqual(alignBoxes([a,b],'top'),[{...a,y:100},{...b,y:100}]);
+  assert.deepEqual(alignBoxes([a,b],'bottom'),[{...a,y:500},{...b,y:300}]);
+  assert.deepEqual(alignBoxes([a,b],'middle'),[{...a,y:300},{...b,y:200}]);
+  assert.deepEqual(alignBoxes([],'left'),[]);
+});
+test('distributeBoxes equalises gaps, keeps the outer boxes and input order, and needs three',()=>{
+  const bx=(x:number,w:number)=>({x,y:0,w,h:10});
+  const out=distributeBoxes([bx(900,100),bx(0,100),bx(150,200)],'horizontal');
+  assert.deepEqual(out.map(b=>b.x),[900,0,400]);
+  assert.equal(out[2].x-100,900-(out[2].x+200));// gap 300 both sides
+  const v=distributeBoxes([{x:0,y:0,w:5,h:100},{x:0,y:50,w:5,h:100},{x:0,y:400,w:5,h:100}],'vertical');
+  assert.deepEqual(v.map(b=>b.y),[0,Math.round(0+100+(500-300)/2),400]);
+  assert.throws(()=>distributeBoxes([bx(0,1),bx(5,1)],'horizontal'),/three/);
 });

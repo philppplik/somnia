@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {unzipSync,zipSync,strFromU8,strToU8} from 'fflate';
-import {readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
+import {setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
 import {readRuns,makeEditedCopy} from './editCopy';
 import {png,jpeg} from './imageFixtures';
 
@@ -452,4 +452,17 @@ test('readSlideNotes reads only the body placeholder, decodes entities and bound
   const evil=richDeck(z=>{z['ppt/slides/_rels/slide1.xml.rels']=strToU8(strFromU8(z['ppt/slides/_rels/slide1.xml.rels']).replace('../notesSlides/notesSlide1.xml','../../../etc/passwd'));});
   assert.deepEqual(readSlideNotes(evil,256),[]);
   assert.deepEqual(readSlideNotes(richDeck(),256),[]);
+});
+test('setShapesBounds applies every edit or none, and bounds the batch',()=>{
+  const b=deck(1),m=readDeckModel(b),slide=m.slides[0];
+  const boxes=slide.shapes.filter(s=>boundsEditIssue(s)===null);
+  assert.ok(boxes.length>=1);
+  const one=boxes[0],from=one.bounds!,to={x:from.x+12700,y:from.y,w:from.w,h:from.h};
+  const out=setShapesBounds(b,slide.id,[{shapeId:one.id,expected:{x:from.x,y:from.y,w:from.w,h:from.h},next:to}]);
+  assert.equal(readDeckModel(out).slides[0].shapes.find(s=>s.id===one.id)!.bounds!.x,to.x);
+  assert.throws(()=>setShapesBounds(b,slide.id,[]),/between 1 and 50/);
+  assert.throws(()=>setShapesBounds(b,slide.id,Array.from({length:51},()=>({shapeId:one.id,expected:to,next:to}))),/between 1 and 50/);
+  assert.throws(()=>setShapesBounds(b,slide.id,[{shapeId:one.id,expected:to,next:to},{shapeId:one.id,expected:to,next:to}]),/once per action/);
+  assert.throws(()=>setShapesBounds(b,slide.id,[{shapeId:one.id,expected:{x:from.x+1,y:from.y,w:from.w,h:from.h},next:to}]),/changed since selection/);
+  assert.throws(()=>setShapesBounds(b,slide.id,[{shapeId:one.id,expected:{x:from.x,y:from.y,w:from.w,h:from.h},next:to},{shapeId:99999,expected:to,next:to}]),/no longer exists/);
 });

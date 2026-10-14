@@ -16,10 +16,10 @@ import {useValidShape} from './SlidesShapeOverlay';
 export function SlidesTextToolbar(){
   const s=useSlidesSession(),t=useSlidesPanelText(),valid=useValidShape();
   const slideId=s.slideIds[s.index],ready=!!s.working&&!s.busy&&!s.presenting&&slideId!==undefined&&!!s.model;
-  const shape=valid?.shape,box=!!shape&&shape.kind==='text'&&shape.runCount>0,f=shape?.fmt;
+  const shape=valid?.shape,multi=(valid?.more.length??0)>0,box=!multi&&!!shape&&shape.kind==='text'&&shape.runCount>0,f=shape?.fmt;
   const run=(id:string,params:unknown)=>void commandDispatcher.tryRunCommand(id,params,{origin:'ui'});
   const fmt=(patch:Record<string,unknown>)=>run('slides.formatText',{source:s.source,slideId,shapeId:shape!.id,...patch});
-  const pic=!!shape&&shape.kind==='picture',file=useRef<HTMLInputElement>(null),mode=useRef<'insert'|'replace'>('insert');
+  const pic=!multi&&!!shape&&shape.kind==='picture',file=useRef<HTMLInputElement>(null),mode=useRef<'insert'|'replace'>('insert');
   const [bad,setBad]=useState(false);
   const pick=(m:'insert'|'replace')=>{mode.current=m;setBad(false);file.current?.click();};
   const onFile=async(e:React.ChangeEvent<HTMLInputElement>)=>{
@@ -39,9 +39,14 @@ export function SlidesTextToolbar(){
       parse={d=>/^\d{1,3}$/.test(d.trim())&&Number(d)>=MIN_SIZE_PT&&Number(d)<=MAX_SIZE_PT?{ok:true,value:Number(d)}:{ok:false,error:t('slides.fmt.sizeInvalid')}} constraintError={t('slides.fmt.sizeInvalid')} onCommit={v=>fmt({sizePt:v})}/></div>
     <Menu><MenuTrigger render={<Button size="compact" variant="outline" disabled={!ready||!box}>{t('slides.fmt.color')}{colorKey(f?.color??null)?`: ${t(`slides.color.${colorKey(f!.color)}`)}`:''}</Button>}/>
       <MenuContent>{TEXT_COLORS.map(c=><MenuItem key={c.key} onClick={()=>fmt({color:c.hex})}>{t(`slides.color.${c.key}`)}</MenuItem>)}</MenuContent></Menu>
-    <Menu><MenuTrigger render={<Button size="compact" variant="outline" disabled={!ready||!shape||!!boundsEditIssue(shape)}>{t('slides.align')}</Button>}/>
-      <MenuContent>{ALIGN_MODES.map(m=><MenuItem key={m} onClick={()=>run('slides.alignShape',{source:s.source,slideId,shapeId:shape!.id,mode:m})}>{t(`slides.align.${m}`)}</MenuItem>)}</MenuContent></Menu>
-    <Button size="compact" variant="outline" disabled={!ready||!shape||(shape.kind!=='text'&&!pic)} onClick={()=>run(pic?'slides.removePicture':'slides.removeTextBox',{source:s.source,slideId,shapeId:shape!.id})}>{t(pic?'slides.removePicture':'slides.removeTextBox')}</Button>
+    <Menu><MenuTrigger render={<Button size="compact" variant="outline" disabled={!ready||!shape||[shape,...(valid?.more??[])].some(x=>!!boundsEditIssue(x))}>{t('slides.align')}</Button>}/>
+      <MenuContent>
+        {ALIGN_MODES.map(m=><MenuItem key={m} onClick={()=>run('slides.alignSelection',{mode:m,to:'slide'})}>{t(`slides.align.${m}`)}</MenuItem>)}
+        {multi&&ALIGN_MODES.map(m=><MenuItem key={`sel-${m}`} onClick={()=>run('slides.alignSelection',{mode:m,to:'selection'})}>{t(`slides.alignSel.${m}`)}</MenuItem>)}
+      </MenuContent></Menu>
+    <Menu><MenuTrigger render={<Button size="compact" variant="outline" disabled={!ready||(valid?.more.length??0)<2||[shape!,...(valid?.more??[])].some(x=>!!boundsEditIssue(x))}>{t('slides.distribute')}</Button>}/>
+      <MenuContent>{(['horizontal','vertical'] as const).map(a=><MenuItem key={a} onClick={()=>run('slides.distributeSelection',{axis:a})}>{t(`slides.distribute.${a}`)}</MenuItem>)}</MenuContent></Menu>
+    <Button size="compact" variant="outline" disabled={!ready||!shape||multi||(shape.kind!=='text'&&!pic)} onClick={()=>run(pic?'slides.removePicture':'slides.removeTextBox',{source:s.source,slideId,shapeId:shape!.id})}>{t(pic?'slides.removePicture':'slides.removeTextBox')}</Button>
     <Button size="compact" variant="outline" disabled={!ready} title={t('slides.imageHint')} onClick={()=>pick('insert')}>{t('slides.insertImage')}</Button>
     <Button size="compact" variant="outline" disabled={!ready||!pic} onClick={()=>pick('replace')}>{t('slides.replaceImage')}</Button>
     <NativeInput ref={file} type="file" accept="image/png,image/jpeg" className="hidden" tabIndex={-1} aria-label={t('slides.imageTools')} onChange={e=>void onFile(e)}/>

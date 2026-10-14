@@ -11,7 +11,7 @@ const runs=[{slide:0,run:0,text:'Hello world',part:'ppt/slides/slide1.xml'},{sli
 let picked:import('./shapeSelection').ShapeSelection|null=null;
 function fixture(){picked=null;
  const state={source:'blob:deck1',index:0,busy:false,working:new Uint8Array(40),runs:runs.map(r=>({...r})),slideIds:[256,257],layouts:[{part:'ppt/slideLayouts/slideLayout1.xml',supported:true},{part:'ppt/slideLayouts/slideLayout2.xml',supported:false}],model:{slides:[{id:256,shapes:[{id:2,name:'A',kind:'text' as const,runCount:1,parentId:null,bounds:{x:1000000,y:1000000,w:2000000,h:1000000,rot:0,flipH:false,flipV:false,source:'slide' as const},ph:null},{id:3,name:'B',kind:'text' as const,runCount:1,parentId:null,bounds:null,ph:null}]},{id:257,shapes:[]},{id:258,shapes:[{id:5,name:'P',kind:'picture' as const,runCount:0,parentId:null,bounds:{x:1000000,y:1000000,w:2000000,h:1000000,rot:0,flipH:false,flipV:false,source:'slide' as const},ph:null}]}],slideSize:{cx:9144000,cy:6858000}},summary:{slides:2}};
- const calls:unknown[]=[];const deps:PanelCommandDeps={state:()=>state,thumbnails:async()=>{calls.push('thumbnails');},show:async index=>{state.index=index;calls.push(['show',index]);},edit:async(run,text)=>{state.runs=state.runs.map(r=>r.slide===run.slide&&r.run===run.run?{...r,text}:r);calls.push(['edit',text]);},select:v=>calls.push(v),move:async(id,to)=>{const a=state.slideIds.slice();a.splice(to,0,a.splice(a.indexOf(id),1)[0]);state.slideIds=a;calls.push(['move',id,to]);},duplicate:async id=>{calls.push(['dup',id]);},remove:async id=>{calls.push(['del',id]);},add:async(l,a)=>{calls.push(['add',l,a]);},setBounds:async(id,sid,e,n)=>{calls.push(['bounds',id,sid,e,n]);},format:async(sid,id,f)=>{calls.push(['format',sid,id,f]);},addBox:async(sid,l)=>{calls.push(['addBox',sid,l]);},removeBox:async(sid,id)=>{calls.push(['removeBox',sid,id]);},insertImage:async(sid,img,alt)=>{calls.push(['insertImage',sid,img.length,alt]);},replaceImage:async(sid,id,img)=>{calls.push(['replaceImage',sid,id,img.length]);},removeImage:async(sid,id)=>{calls.push(['removeImage',sid,id]);},pick:v=>{picked=v;calls.push(['pick',v]);},picked:()=>picked};
+ const calls:unknown[]=[];const deps:PanelCommandDeps={state:()=>state,thumbnails:async()=>{calls.push('thumbnails');},show:async index=>{state.index=index;calls.push(['show',index]);},edit:async(run,text)=>{state.runs=state.runs.map(r=>r.slide===run.slide&&r.run===run.run?{...r,text}:r);calls.push(['edit',text]);},select:v=>calls.push(v),move:async(id,to)=>{const a=state.slideIds.slice();a.splice(to,0,a.splice(a.indexOf(id),1)[0]);state.slideIds=a;calls.push(['move',id,to]);},duplicate:async id=>{calls.push(['dup',id]);},remove:async id=>{calls.push(['del',id]);},add:async(l,a)=>{calls.push(['add',l,a]);},setMany:async(id,edits)=>{calls.push(['many',id,edits]);},setBounds:async(id,sid,e,n)=>{calls.push(['bounds',id,sid,e,n]);},format:async(sid,id,f)=>{calls.push(['format',sid,id,f]);},addBox:async(sid,l)=>{calls.push(['addBox',sid,l]);},removeBox:async(sid,id)=>{calls.push(['removeBox',sid,id]);},insertImage:async(sid,img,alt)=>{calls.push(['insertImage',sid,img.length,alt]);},replaceImage:async(sid,id,img)=>{calls.push(['replaceImage',sid,id,img.length]);},removeImage:async(sid,id)=>{calls.push(['removeImage',sid,id]);},pick:v=>{picked=v;calls.push(['pick',v]);},picked:()=>picked};
  const dispatcher=new CommandDispatcher();slidesPanelCommandSpecs(deps).forEach(s=>dispatcher.register(s));return {state,calls,dispatcher};
 }
 test('outline searches text and slide number and preserves empty slides',()=>{
@@ -181,4 +181,30 @@ test('alignShape validates identity, mode and kind, aligns without resizing, and
  await assert.rejects(()=>run({...ok,shapeId:3}),/noBounds/);
  await assert.rejects(()=>run({...ok,shapeId:99}),/no longer exists/);
  assert.equal(f.calls.length,n);
+});
+
+test('multi-selection: toggle, select all, align to selection, distribute, and single-shape guards',async()=>{
+ const f=fixture(),run=(id:string,p?:unknown)=>f.dispatcher.runCommand(id,p,{origin:'ui'}),base={source:'blob:deck1',slideId:256};
+ const bounds=(x:number,w:number)=>({x,y:1000000,w,h:1000000,rot:0,flipH:false,flipV:false,source:'slide' as const});
+ const shapes=f.state.model!.slides[0].shapes as unknown[] as {id:number;name:string;kind:'text';runCount:number;parentId:null;bounds:ReturnType<typeof bounds>|null;ph:null}[];
+ shapes.push({id:6,name:'C',kind:'text',runCount:1,parentId:null,bounds:bounds(5000000,1000000),ph:null},{id:7,name:'D',kind:'text',runCount:1,parentId:null,bounds:bounds(2000000,500000),ph:null});
+ await run('slides.toggleShapeSelection',{...base,shapeId:2});assert.deepEqual(picked,{source:'blob:deck1',slideId:256,shapeId:2});
+ await run('slides.toggleShapeSelection',{...base,shapeId:6});await run('slides.toggleShapeSelection',{...base,shapeId:7});
+ assert.deepEqual(picked,{source:'blob:deck1',slideId:256,shapeId:2,more:[6,7]});
+ await run('slides.toggleShapeSelection',{...base,shapeId:2});assert.deepEqual(picked,{source:'blob:deck1',slideId:256,shapeId:6,more:[7]});
+ await assert.rejects(()=>run('slides.toggleShapeSelection',{...base,shapeId:99}),/no longer exists/);
+ await assert.rejects(()=>run('slides.toggleShapeSelection',{...base,slideId:257,shapeId:2}),/Slide changed/);
+ await assert.rejects(()=>run('slides.nudgeShape',{mode:'move',dxPt:1,dyPt:0}),/single shape/);
+ await assert.rejects(()=>run('slides.distributeSelection',{axis:'horizontal'}),/at least three/);
+ await run('slides.selectAllShapes');assert.deepEqual(picked,{source:'blob:deck1',slideId:256,shapeId:2,more:[3,6,7]});
+ await assert.rejects(()=>run('slides.alignSelection',{mode:'left',to:'selection'}),/cannot be moved \(noBounds\)/);
+ picked={source:'blob:deck1',slideId:256,shapeId:2,more:[6,7]};f.calls.length=0;
+ await run('slides.alignSelection',{mode:'left',to:'selection'});
+ assert.deepEqual(f.calls,[['many',256,[{shapeId:6,expected:{x:5000000,y:1000000,w:1000000,h:1000000},next:{x:1000000,y:1000000,w:1000000,h:1000000}},{shapeId:7,expected:{x:2000000,y:1000000,w:500000,h:1000000},next:{x:1000000,y:1000000,w:500000,h:1000000}}]]]);
+ f.calls.length=0;await run('slides.distributeSelection',{axis:'horizontal'});
+ const many=f.calls[0] as [string,number,{shapeId:number;next:{x:number}}[]];assert.equal(many[0],'many');assert.deepEqual(many[2].map(e=>[e.shapeId,e.next.x]),[[7,3750000]]);
+ f.calls.length=0;picked={source:'blob:deck1',slideId:256,shapeId:2,more:[7]};
+ await run('slides.alignSelection',{mode:'top',to:'selection'});assert.equal(f.calls.length,0,'already aligned: no edit');
+ await assert.rejects(()=>run('slides.alignSelection',{mode:'left',to:'nowhere'}));
+ picked={source:'blob:deck1',slideId:256,shapeId:2};await assert.rejects(()=>run('slides.alignSelection',{mode:'left',to:'selection'}),/at least two/);
 });

@@ -93,3 +93,28 @@ export function alignBox(b:Box,mode:AlignMode,size:SlideSize):Box{
     case 'bottom':return {...b,y:fit(size.cy,b.h,'end')};
   }
 }
+/** Aligns every box to the edges or centre of the union of all boxes. Sizes never change. */
+export function alignBoxes(boxes:readonly Box[],mode:AlignMode):Box[]{
+  if(!boxes.length)return [];
+  const x0=Math.min(...boxes.map(b=>b.x)),y0=Math.min(...boxes.map(b=>b.y)),x1=Math.max(...boxes.map(b=>b.x+b.w)),y1=Math.max(...boxes.map(b=>b.y+b.h));
+  return boxes.map(b=>{switch(mode){
+    case 'left':return {...b,x:x0};
+    case 'center':return {...b,x:Math.round(x0+(x1-x0-b.w)/2)};
+    case 'right':return {...b,x:x1-b.w};
+    case 'top':return {...b,y:y0};
+    case 'middle':return {...b,y:Math.round(y0+(y1-y0-b.h)/2)};
+    case 'bottom':return {...b,y:y1-b.h};
+  }});
+}
+export type DistributeAxis='horizontal'|'vertical';
+/** Equal gaps between three or more boxes along one axis. The outermost boxes stay put. Result is in input order. */
+export function distributeBoxes(boxes:readonly Box[],axis:DistributeAxis):Box[]{
+  if(boxes.length<3)throw Error('Distribute needs at least three shapes');
+  const h=axis==='horizontal',pos=(b:Box)=>h?b.x:b.y,len=(b:Box)=>h?b.w:b.h;
+  const order=boxes.map((_b,i)=>i).sort((a,b)=>pos(boxes[a])-pos(boxes[b])||a-b);
+  const first=boxes[order[0]],last=boxes[order[order.length-1]];
+  const span=pos(last)+len(last)-pos(first),free=span-order.reduce((n,i)=>n+len(boxes[i]),0),gap=free/(order.length-1);
+  const out=boxes.map(b=>({...b}));let at=pos(first)+len(first)+gap;
+  for(const i of order.slice(1,-1)){const p=Math.round(at);if(h)out[i].x=p;else out[i].y=p;at+=len(boxes[i])+gap;}
+  return out;
+}
