@@ -192,3 +192,11 @@ test('echo: copies later or earlier, originals stay, copies outside the comp dro
  assert.throws(()=>echoEdits(c,[k(0)],0));assert.throws(()=>echoEdits(c,[k(0)],-5));
  const s=open();s.dispatch(echoEdits(s.document!.compositions[0],[k(0)],5));assert.equal(findLayer(findComp(s.document!)!,'a')!.transform.position.keys.length,3);
 });
+import {keyAllEdits} from './keyAll';
+test('key all: only animated properties without a key at the playhead, locked layers skipped',()=>{
+ const c=findComp(base())!;
+ const r=keyAllEdits(c,['a'],f(5));assert.equal(r.edits.length,1);assert.deepEqual(r.refs,[{layer:'a',prop:'position',t:f(5)}]);
+ assert.equal(keyAllEdits(c,['a'],f(10)).edits.length,0);assert.equal(keyAllEdits(c,['zz'],f(5)).edits.length,0);
+ const s=open();s.dispatch(keyAllEdits(s.document!.compositions[0],['a'],f(5)).edits);
+ assert.equal(findLayer(findComp(s.document!)!,'a')!.transform.position.keys.length,3);
+});

@@ -15,6 +15,7 @@ export function KeyTools({selected,layers}:{selected:number;layers:readonly stri
    {id:'matchNext',testid:'animation-keys-match-next',label:t('animation.keys.matchNext'),hint:t('animation.keys.matchNext.hint'),cmd:'animation.keys.matchPrevious',params:{side:'next'},min:1},
    {id:'ramp',testid:'animation-keys-ramp',label:t('animation.keys.ramp'),hint:t('animation.keys.ramp.hint'),cmd:'animation.keys.ramp',params:{},min:3},
    {id:'thin',testid:'animation-keys-thin',label:`${t('animation.keys.thin')} 1`,hint:t('animation.keys.thin.hint'),cmd:'animation.keys.thin',params:{tolerance:1},min:1},
+   {id:'keyAll',testid:'animation-keys-key-all',label:t('animation.keys.keyAll'),hint:t('animation.keys.keyAll.hint'),cmd:'animation.keys.keyAll',params:L,min:0,layers:true},
    {id:'echo5',testid:'animation-keys-echo',label:`${t('animation.keys.echo')} +5`,hint:t('animation.keys.echo.hint'),cmd:'animation.keys.echo',params:{frames:5},min:1},
    {id:'echo-5',testid:'animation-keys-echo-minus',label:`${t('animation.keys.echo')} -5`,hint:t('animation.keys.echo.hint'),cmd:'animation.keys.echo',params:{frames:-5},min:1}]},
   {key:'animation.keys.tools.ease',items:[

@@ -885,5 +885,8 @@
  "animation.keys.tools.select": "Select",
  "animation.keys.echo": "Echo",
  "animation.keys.echo.hint": "Copy the selected keys some frames later (+) or earlier (-); the originals stay",
- "cmd.animation.keys.echo": "Copy the selected keys some frames later or earlier"
+ "cmd.animation.keys.echo": "Copy the selected keys some frames later or earlier",
+ "animation.keys.keyAll": "Key all at playhead",
+ "animation.keys.keyAll.hint": "Add a key at the playhead on every animated property of the picked layers",
+ "cmd.animation.keys.keyAll": "Add a key at the playhead on every animated property of the layers"
 }

@@ -885,5 +885,8 @@
  "animation.keys.tools.select": "Auswahl",
  "animation.keys.echo": "Echo",
  "animation.keys.echo.hint": "Gewählte Keys einige Frames später (+) oder früher (-) kopieren; die Originale bleiben",
- "cmd.animation.keys.echo": "Gewählte Keys einige Frames später oder früher kopieren"
+ "cmd.animation.keys.echo": "Gewählte Keys einige Frames später oder früher kopieren",
+ "animation.keys.keyAll": "Alle am Playhead keyen",
+ "animation.keys.keyAll.hint": "Einen Key am Playhead auf jeder animierten Eigenschaft der gewählten Ebenen setzen",
+ "cmd.animation.keys.keyAll": "Key am Playhead auf jeder animierten Eigenschaft der Ebenen setzen"
 }

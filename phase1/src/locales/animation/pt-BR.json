@@ -885,5 +885,8 @@
  "animation.keys.tools.select": "Seleção",
  "animation.keys.echo": "Eco",
  "animation.keys.echo.hint": "Copia as keys selecionadas alguns quadros depois (+) ou antes (-); as originais ficam",
- "cmd.animation.keys.echo": "Copiar as keys selecionadas alguns quadros depois ou antes"
+ "cmd.animation.keys.echo": "Copiar as keys selecionadas alguns quadros depois ou antes",
+ "animation.keys.keyAll": "Key tudo no cursor",
+ "animation.keys.keyAll.hint": "Adiciona uma key no cursor em cada propriedade animada das camadas escolhidas",
+ "cmd.animation.keys.keyAll": "Adicionar uma key no cursor em cada propriedade animada das camadas"
 }

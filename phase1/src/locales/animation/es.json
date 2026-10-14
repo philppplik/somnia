@@ -885,5 +885,8 @@
  "animation.keys.tools.select": "Selección",
  "animation.keys.echo": "Eco",
  "animation.keys.echo.hint": "Copia las keys seleccionadas unos fotogramas después (+) o antes (-); los originales se quedan",
- "cmd.animation.keys.echo": "Copiar las keys seleccionadas unos fotogramas después o antes"
+ "cmd.animation.keys.echo": "Copiar las keys seleccionadas unos fotogramas después o antes",
+ "animation.keys.keyAll": "Key todo en el cabezal",
+ "animation.keys.keyAll.hint": "Añade una key en el cabezal en cada propiedad animada de las capas elegidas",
+ "cmd.animation.keys.keyAll": "Añadir una key en el cabezal en cada propiedad animada de las capas"
 }

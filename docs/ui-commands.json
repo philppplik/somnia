@@ -860,6 +860,23 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.keys.keyAll",
+      "title": "Add a key at the playhead on every animated property of the layers",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "all",
+        "animation",
+        "freeze",
+        "key",
+        "keys",
+        "playhead",
+        "pose",
+        "snapshot"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.keys.matchPrevious",
       "title": "Give the selected keys the value of the key before them",
       "category": "Edit",
