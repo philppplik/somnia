@@ -7,10 +7,11 @@ import type {LayoutInfo,DeckModel,BoundsBox,RunFormat,ShapeBoundsEdit,ArrangeMod
 import {installBeforeUnload} from '../closeFlow';
 import {useEffect,useSyncExternalStore} from 'react';
 import {SlidesClient} from './client';
+import {applyReviewed,undoReceipt,type DeckOwnerPort,type UndoPort,type DeckReceipt,type DeckSnapshot,type ReviewedApply} from './deckReceipt';
 import {assertPptx,type DeckSummary} from './protocol';
 import {addMediaFile,closeMedia,findMedia,getMedia,setActiveMedia,subscribeMedia,registerMediaCloseGuard} from '../media';
 export interface SlidesSession {presenting:boolean;wasmBytes:number;diagnostics:SlidesDiagnostics|null;name:string;source:string;summary:DeckSummary|null;index:number;image:string;texts:string[];thumbnails:Record<number,string>;busy:boolean;error:string;original:Uint8Array|null;working:Uint8Array|null;runs:TextRun[];slideIds:number[];layouts:LayoutInfo[];model:DeckModel|null;dirty:boolean;undo:Uint8Array[];redo:Uint8Array[]}
-interface Entry {generation:number;revision:number;state:SlidesSession;client:SlidesClient;sequence:number;disposed:boolean;presentCache:Map<string,Promise<string>>;exiting?:boolean}
+interface Entry {generation:number;revision:number;state:SlidesSession;client:SlidesClient;sequence:number;disposed:boolean;presentCache:Map<string,Promise<string>>;exiting?:boolean;last?:{token:string;before:Uint8Array;after:Uint8Array}}
 const bounded=(history:Uint8Array[])=>{let total=0;return history.slice(-10).reverse().filter(b=>(total+=b.byteLength)<=64*1024*1024).reverse();};
 const empty:SlidesSession={presenting:false,wasmBytes:0,diagnostics:null,name:'',source:'',summary:null,index:0,image:'',texts:[],thumbnails:{},busy:false,error:'',original:null,working:null,runs:[],slideIds:[],layouts:[],model:null,dirty:false,undo:[],redo:[]};
 let generation=0;
@@ -131,3 +132,28 @@ export const removePictureAt=(slideId:number,shapeId:number)=>structuralEdit(asy
 export const addSlideFromLayout=(layoutPart:string,afterSlideId:number|null)=>structuralEdit(async(e,before)=>{const i=afterSlideId===null?e.state.slideIds.length-1:idAt(e,afterSlideId);return {bytes:await e.client.newSlide(before,layoutPart,afterSlideId),index:i+1};});
 /** Metadata lease for selected-run summary. No deck serialization or worker call. */
 export function getSlideSummaryOwner(){const e=sessions.get(getMedia().active??'');if(!e||e.disposed||e.state.busy||!e.state.working||!e.state.summary||!e.state.diagnostics?.editable)throw Error('Slide selection unavailable');return {source:e.state.source,generation:e.generation,revision:e.revision,index:e.state.index,runs:e.state.runs};}
+
+/* Reviewed apply with an owner receipt. Staging opens the new bytes natively before any session field changes;
+   commit is one synchronous step (working bytes, revision, one undo entry). Render and listener failures come after it. */
+type Staged={summary:DeckSummary;runs:TextRun[];model:DeckModel|null;slideIds:number[];layouts:LayoutInfo[]};
+let receiptSeq=0;
+const snap=(e:Entry|undefined):DeckSnapshot|null=>{if(!e)return null;const t=e.disposed||!e.state.working||!e.state.summary?null:serializeDeck(readDeckDocument(e.state.working,e.state.summary));return {generation:e.generation,identity:e.state.source,revision:e.revision,busy:e.state.busy,disposed:e.disposed,text:t,working:e.state.working};};
+async function stageBytes(e:Entry,bytes:Uint8Array):Promise<Staged>{const summary=await e.client.open(bytes);const runs=await e.client.runs(bytes);const model=await modelOf(e,bytes,summary.slides);return {summary,runs,model,slideIds:idsOf(model),layouts:await layoutsOf(e,bytes)};}
+function commitStaged(e:Entry,st:Staged,bytes:Uint8Array,history:Partial<SlidesSession>){e.revision++;clearPresentCache(e);Object.values(e.state.thumbnails).forEach(URL.revokeObjectURL);patch(e,{working:bytes,summary:st.summary,runs:st.runs,slideIds:st.slideIds,layouts:st.layouts,model:st.model,dirty:true,thumbnails:{},...history});return e.revision;}
+const renderOwner=(e:Entry)=>async()=>{await renderSlide(e,Math.min(Math.max(e.state.index,0),(e.state.summary?.slides??1)-1));if(e.state.error)throw Error(e.state.error);};
+const portOf=(e:Entry)=>({snapshot:()=>snap(e),setBusy:(on:boolean)=>patch(e,{busy:on,...(on?{error:''}:{})}),restoreNative:async(w:Uint8Array)=>{await e.client.open(w);},render:renderOwner(e),
+ readback:()=>e.state.working&&e.state.summary?serializeDeck(readDeckDocument(e.state.working,e.state.summary)):null,fail:(m:string)=>patch(e,{error:m},m)});
+export function applyDeckReviewed(name:string,review:ReviewedApply,origin:string):Promise<DeckReceipt>{
+ const e=sessions.get(name);
+ const port:DeckOwnerPort<Staged>|null=e?{...portOf(e),edit:(s,t)=>editedDeckBytes(s.working!,e.state.summary!,parseDeck(t)),stage:b=>stageBytes(e,b),
+  commit:(st,before,after,o)=>{const token=`r${++receiptSeq}`;const undo=bounded([...e.state.undo,before]);const kept=undo.at(-1)===before;const revision=commitStaged(e,st,after,{undo,redo:[]});e.last=kept?{token,before,after}:undefined;return {revision,token,undoable:kept};}}:null;
+ if(!port)return Promise.reject(Error('Deck is not open.'));
+ return applyReviewed(port,review,origin);
+}
+export function undoDeckReceipt(name:string,receipt:DeckReceipt):Promise<DeckReceipt>{
+ const e=sessions.get(name);if(!e)return Promise.reject(Error('Deck is not open.'));
+ const port:UndoPort<Staged>={...portOf(e),stage:b=>stageBytes(e,b),
+  matches:(token,gen)=>{const l=e.last;return l&&l.token===token&&e.generation===gen&&e.state.working===l.after&&e.state.undo.at(-1)===l.before&&e.state.redo.length===0?l.before:null;},
+  commitUndo:(st,token)=>{const l=e.last!;e.last=undefined;return {revision:commitStaged(e,st,l.before,{undo:e.state.undo.slice(0,-1),redo:bounded([...e.state.redo,l.after])})};}};
+ return undoReceipt(port,receipt);
+}
