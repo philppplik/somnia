@@ -9,6 +9,7 @@ import {formatCount,boundsSize,GIZMO_MODES,ENV_PRESETS,ENV_ACCEPT,UNIT_IDS} from
 import type {PanelHostProps,InspectorSectionProps} from '../../lib/shell/types';
 import {Input} from '../ui/input';
 import {Button} from '../ui/button';
+import {InspectorNumberField} from '../studios/InspectorNumberField';
 const PRIMS=['cube','sphere','plane','cylinder','cone','torus'] as const;
 const LIGHTS=['directional','point','spot','area'] as const;
 const Row=({k,v}:{k:string;v:string|number})=><div className="flex justify-between gap-3 text-xs"><dt className="text-ink-3">{k}</dt><dd className="m-0 truncate text-ink-2" title={String(v)}>{v}</dd></div>;
@@ -57,9 +58,8 @@ const AXES=['x','y','z'] as const;
 function VecField({id,field,label,step}:{id:number;field:'position'|'rotation'|'scale';label:string;step:number}){
  const s=useStudio3D();const v=s.selectedInfo?.[field];if(!v)return null;
  return <fieldset className="m-0 grid gap-1 border-0 p-0"><legend className="text-xs text-ink-3">{label}</legend>
-  <div className="grid grid-cols-3 gap-1">{AXES.map(a=><Input key={a+':'+Number(v[a]).toFixed(4)} type="number" step={step} defaultValue={Number(v[a].toFixed(4))} aria-label={`${label} ${a.toUpperCase()}`}
-   onBlur={e=>{const n=Number(e.currentTarget.value);if(e.currentTarget.value!==''&&Number.isFinite(n)&&n!==Number(v[a].toFixed(4)))void executeCommand('studio3d.object.transform',{id,[field]:{[a]:n}});}}
-   onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();}}/>)}</div></fieldset>;
+  <div className="grid grid-cols-3 gap-1">{AXES.map(a=><InspectorNumberField key={a} resetKey={id} label={`${label} ${a.toUpperCase()}`} value={Number(v[a].toFixed(4))} step={step}
+   onCommit={n=>void executeCommand('studio3d.object.transform',{id,[field]:{[a]:n}})}/>)}</div></fieldset>;
 }
 export function ObjectSection(_:InspectorSectionProps){
  const {t}=useT();const s=useStudio3D();const o=s.selectedInfo;
@@ -69,10 +69,8 @@ export function ObjectSection(_:InspectorSectionProps){
   <VecField id={o.id} field="position" label={t('studio3d.object.position')} step={0.1}/>
   <VecField id={o.id} field="rotation" label={t('studio3d.object.rotation')} step={5}/>
   <VecField id={o.id} field="scale" label={t('studio3d.object.scale')} step={0.1}/>
-  {o.camera&&<div className="grid gap-1" data-testid="studio3d-camera"><label className="grid gap-1 text-xs text-ink-2">{t('studio3d.camera.fov')}
-    <Input key={o.id+':'+o.camera.fov} type="number" min={1} max={120} step={1} defaultValue={Number(o.camera.fov.toFixed(1))} aria-label={t('studio3d.camera.fov')}
-     onBlur={e=>{const n=Number(e.currentTarget.value);if(e.currentTarget.value!==''&&Number.isFinite(n)&&n>=1&&n<=120&&n!==Number(o.camera!.fov.toFixed(1)))void executeCommand('studio3d.camera.set',{id:o.id,fov:n});}}
-     onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();}}/></label>
+  {o.camera&&<div className="grid gap-1" data-testid="studio3d-camera"><InspectorNumberField resetKey={o.id} label={t('studio3d.camera.fov')} value={Number(o.camera.fov.toFixed(1))} min={1} max={120} step={1}
+     onCommit={fov=>void executeCommand('studio3d.camera.set',{id:o.id,fov})}/>
    <Button variant="outline" onClick={()=>void executeCommand('studio3d.view.fromCamera',{id:o.id})}>{t('studio3d.camera.look')}</Button>
    <Button variant="outline" onClick={()=>void executeCommand('studio3d.render.still',{camera:o.id})}>{t('studio3d.camera.render')}</Button>
    <Button variant="outline" onClick={()=>void executeCommand('studio3d.render.still',{camera:o.id,transparent:true})}>{t('studio3d.camera.renderTransparent')}</Button></div>}
@@ -116,22 +114,18 @@ export function EnvSection(_:InspectorSectionProps){
  </div>;
 }
 
-const NumField=({label,value,min,max,step,onCommit}:{label:string;value:number;min:number;max:number;step:number;onCommit:(n:number)=>void})=>
- <label className="grid gap-1 text-xs text-ink-2">{label}
-  <Input key={label+':'+value} type="number" min={min} max={max} step={step} defaultValue={Number(value.toFixed(3))} aria-label={label}
-   onBlur={e=>{const n=Number(e.currentTarget.value);if(e.currentTarget.value!==''&&Number.isFinite(n)&&n>=min&&n<=max&&n!==Number(value.toFixed(3)))onCommit(n);}}
-   onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();}}/></label>;
+const NumField=(props:Parameters<typeof InspectorNumberField>[0])=><InspectorNumberField {...props} format={value=>String(Number(value.toFixed(3)))}/>;
 /** Light settings. Spot lights also have a cone, area lights a size. */
 function LightFields({id,light}:{id:number;light:NonNullable<ObjectInfo['light']>}){
  const {t}=useT();const set=(p:Record<string,unknown>)=>void executeCommand('studio3d.light.set',{id,...p});
  return <fieldset className="m-0 grid gap-2 border-0 p-0" data-testid="studio3d-light"><legend className="text-xs text-ink-3">{t('studio3d.light.title')}</legend>
   {light.shadow!==undefined&&<label className="flex items-center gap-2 text-xs text-ink-2"><input type="checkbox" checked={light.shadow} onChange={e=>set({shadow:e.currentTarget.checked})}/>{t('studio3d.light.shadow')}</label>}
-  <NumField label={t('studio3d.light.intensity')} value={light.intensity} min={0} max={100000} step={1} onCommit={n=>set({intensity:n})}/>
+  <NumField resetKey={id} label={t('studio3d.light.intensity')} value={light.intensity} min={0} max={100000} step={1} onCommit={n=>set({intensity:n})}/>
   <label className="flex items-center justify-between gap-2 text-xs text-ink-2">{t('studio3d.material.color')}<input type="color" key={light.color} defaultValue={light.color} onBlur={e=>{if(e.currentTarget.value!==light.color)set({color:e.currentTarget.value});}}/></label>
-  {light.angle!==undefined&&<NumField label={t('studio3d.light.angle')} value={light.angle} min={1} max={90} step={1} onCommit={n=>set({angle:n})}/>}
-  {light.penumbra!==undefined&&<NumField label={t('studio3d.light.penumbra')} value={light.penumbra} min={0} max={1} step={0.05} onCommit={n=>set({penumbra:n})}/>}
-  {light.width!==undefined&&<NumField label={t('studio3d.light.width')} value={light.width} min={0.01} max={1000} step={0.1} onCommit={n=>set({width:n})}/>}
-  {light.height!==undefined&&<NumField label={t('studio3d.light.height')} value={light.height} min={0.01} max={1000} step={0.1} onCommit={n=>set({height:n})}/>}
+  {light.angle!==undefined&&<NumField resetKey={id} label={t('studio3d.light.angle')} value={light.angle} min={1} max={90} step={1} onCommit={n=>set({angle:n})}/>}
+  {light.penumbra!==undefined&&<NumField resetKey={id} label={t('studio3d.light.penumbra')} value={light.penumbra} min={0} max={1} step={0.05} onCommit={n=>set({penumbra:n})}/>}
+  {light.width!==undefined&&<NumField resetKey={id} label={t('studio3d.light.width')} value={light.width} min={0.01} max={1000} step={0.1} onCommit={n=>set({width:n})}/>}
+  {light.height!==undefined&&<NumField resetKey={id} label={t('studio3d.light.height')} value={light.height} min={0.01} max={1000} step={0.1} onCommit={n=>set({height:n})}/>}
  </fieldset>;
 }
 /** Snapping, pivot, align and distribute. Align and distribute work on the objects ticked in the scene list. */

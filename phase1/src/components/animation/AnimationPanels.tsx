@@ -1,4 +1,3 @@
-import {useState} from 'react';
 import {executeCommand} from '../../lib/commands';
 import {useT} from '../../lib/useT';
 import {useAnimationState} from '../../lib/animation/session';
@@ -9,6 +8,7 @@ import {workAreaFrames} from '../../lib/animation/playback';
 import {cancelExport,setExportTransparent,useExportState} from '../../lib/animation/exportJob';
 import type {InspectorSectionProps,PanelHostProps} from '../../lib/shell/types';
 import {Button} from '../ui/button';
+import {InspectorNumberField} from '../studios/InspectorNumberField';
 import {fmt,PROP_LABEL,renderSummary} from './format';
 const field='h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text';
 const run=(id:string,params?:unknown)=>void executeCommand(id,params);
@@ -28,11 +28,7 @@ export function CompositionsPanel(_:PanelHostProps){
   <div className="grid grid-cols-2 gap-2">{KINDS.map(k=><Button key={k} size="compact" variant="outline" onClick={()=>run('animation.layer.add',{kind:k})} data-testid={`animation-add-${k}`}>{t(`animation.layer.${k}`)}</Button>)}</div>
  </aside>;
 }
-function NumberField({label,value,onCommit,step=1,disabled}:{label:string;value:number;onCommit:(n:number)=>void;step?:number;disabled?:boolean}){
- const [draft,setDraft]=useState<string|null>(null);
- const commit=()=>{if(draft===null)return;const n=Number(draft);setDraft(null);if(draft.trim()!==''&&Number.isFinite(n)&&n!==value)onCommit(n);};
- return <input className={field} type="number" step={step} disabled={disabled} aria-label={label} value={draft??fmt(value)} onChange={e=>setDraft(e.target.value)} onBlur={commit} onKeyDown={e=>{if(e.key==='Enter')commit();if(e.key==='Escape')setDraft(null);}}/>;
-}
+function NumberField(props:Parameters<typeof InspectorNumberField>[0]){return <InspectorNumberField {...props} className={field} format={fmt}/>;}
 /** Right inspector: values for the selected layer. One owner per control, numeric editing for every property. */
 export function PropertiesSection(_:InspectorSectionProps){
  const {t}=useT();const s=useAnimationState();const doc=s.doc;const comp=doc&&findComp(doc);const layer=comp&&s.view.selectedLayer?findLayer(comp,s.view.selectedLayer):undefined;
@@ -52,9 +48,9 @@ export function PropertiesSection(_:InspectorSectionProps){
       {animated&&<Button size="tiny" variant="outline" disabled={layer.locked} onClick={()=>run(onKey?'animation.key.remove':'animation.key.add',{layer:layer.id,prop})}>{onKey?t('animation.key.remove'):t('animation.key.add')}</Button>}
      </span></legend>
     <div className="grid grid-cols-2 gap-2">
-     {typeof v==='number'?<NumberField label={label} value={v} disabled={layer.locked} onCommit={n=>setNum(prop,n)}/>:<>
-      <NumberField label={`${label} ${t('animation.prop.x')}`} value={v[0]} disabled={layer.locked} onCommit={n=>setNum(prop,[n,v[1]])}/>
-      <NumberField label={`${label} ${t('animation.prop.y')}`} value={v[1]} disabled={layer.locked} onCommit={n=>setNum(prop,[v[0],n])}/></>}
+     {typeof v==='number'?<NumberField resetKey={`${layer.id}:${prop}:${at}`} label={label} value={v} disabled={layer.locked} onCommit={n=>setNum(prop,n)}/>:<>
+      <NumberField resetKey={`${layer.id}:${prop}:${at}:x`} label={`${label} ${t('animation.prop.x')}`} value={v[0]} disabled={layer.locked} onCommit={n=>setNum(prop,[n,v[1]])}/>
+      <NumberField resetKey={`${layer.id}:${prop}:${at}:y`} label={`${label} ${t('animation.prop.y')}`} value={v[1]} disabled={layer.locked} onCommit={n=>setNum(prop,[v[0],n])}/></>}
     </div>
     {key&&<select className={field} aria-label={t('animation.key.interp')} value={key.interp} disabled={layer.locked} onChange={e=>run('animation.key.interp',{layer:layer.id,prop,interp:e.target.value})}>
      {(['hold','linear','bezier'] as const).map(i=><option key={i} value={i}>{t(`animation.key.${i}`)}</option>)}</select>}
@@ -67,10 +63,10 @@ export function CompositionSection(_:InspectorSectionProps){
  return <div className="grid gap-2 p-3 text-xs" data-testid="animation-composition-settings">
   <label className="grid gap-1 text-ink-3">{t('animation.comp.name')}<input className={field} defaultValue={comp.name} key={comp.id+comp.name} onBlur={e=>{const v=e.currentTarget.value.trim();if(v&&v!==comp.name)run('animation.comp.update',{name:v});}}/></label>
   <div className="grid grid-cols-2 gap-2">
-   <label className="grid gap-1 text-ink-3">{t('animation.comp.width')}<NumberField label={t('animation.comp.width')} value={comp.width} onCommit={n=>run('animation.comp.update',{width:Math.round(n)})}/></label>
-   <label className="grid gap-1 text-ink-3">{t('animation.comp.height')}<NumberField label={t('animation.comp.height')} value={comp.height} onCommit={n=>run('animation.comp.update',{height:Math.round(n)})}/></label>
-   <label className="grid gap-1 text-ink-3">{t('animation.comp.fps')}<NumberField label={t('animation.comp.fps')} value={fpsVal} disabled={comp.fps.den!==1} onCommit={n=>run('animation.comp.update',{fps:Math.round(n)})}/></label>
-   <label className="grid gap-1 text-ink-3">{t('animation.comp.duration')}<NumberField label={t('animation.comp.duration')} step={0.5} value={ticksToSeconds(comp.duration)} onCommit={n=>run('animation.comp.update',{seconds:n})}/></label>
+   <NumberField resetKey={comp.id} label={t('animation.comp.width')} value={comp.width} onCommit={n=>run('animation.comp.update',{width:Math.round(n)})}/>
+   <NumberField resetKey={comp.id} label={t('animation.comp.height')} value={comp.height} onCommit={n=>run('animation.comp.update',{height:Math.round(n)})}/>
+   <NumberField resetKey={comp.id} label={t('animation.comp.fps')} value={fpsVal} disabled={comp.fps.den!==1} onCommit={n=>run('animation.comp.update',{fps:Math.round(n)})}/>
+   <NumberField resetKey={comp.id} label={t('animation.comp.duration')} step={0.5} value={ticksToSeconds(comp.duration)} onCommit={n=>run('animation.comp.update',{seconds:n})}/>
   </div>
   <label className="grid gap-1 text-ink-3">{t('animation.comp.background')}<input type="color" className="h-8 w-16 rounded-sm border border-subtle bg-transparent" value={comp.background} onChange={e=>run('animation.comp.update',{background:e.target.value})}/></label>
   <p className="m-0 text-ink-3">{timecode(comp.duration,comp.fps)}</p>
