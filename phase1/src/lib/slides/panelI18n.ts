@@ -2,6 +2,13 @@ import {CATALOGUES,getLocale,subscribeLocale,translate} from '../i18n';
 import {useSyncExternalStore} from 'react';
 export const SLIDES_PANEL_CATALOGUES:Record<string,Record<string,string>>={
   "en": {
+  "slides.preview.title": "Review selected text run",
+  "slides.preview.boundary": "Private source preview only. No AI, rewrite, notes/layout reads or save. Selected text may be private.",
+  "slides.preview.review": "Review selected run",
+  "slides.preview.unavailable": "Explicitly select a canonical text run on this slide (nonempty, up to 4096 UTF-8 bytes).",
+  "slides.preview.extent": "Slide {slide}, run {run}, {bytes} UTF-8 bytes",
+  "slides.preview.discard": "Discard preview",
+
     "slides.panel.overview": "Slides",
     "slides.panel.outline": "Text outline",
     "slides.panel.text": "Slide text",
@@ -42,6 +49,13 @@ export const SLIDES_PANEL_CATALOGUES:Record<string,Record<string,string>>={
     "cmd.slides.editText": "Apply slide text"
   },
   "de": {
+  "slides.preview.title": "Gewählten Text-Run prüfen",
+  "slides.preview.boundary": "Nur private Quellenvorschau. Keine KI, Umschreibung, Notes/Layout-Reads oder Speicherung. Text kann privat sein.",
+  "slides.preview.review": "Gewählten Run ansehen",
+  "slides.preview.unavailable": "Explizit einen kanonischen Text-Run dieser Folie wählen (nichtleer, bis4096 UTF-8 Bytes).",
+  "slides.preview.extent": "Folie {slide}, Run {run}, {bytes} UTF-8 Bytes",
+  "slides.preview.discard": "Vorschau verwerfen",
+
     "slides.panel.overview": "Folien",
     "slides.panel.outline": "Textübersicht",
     "slides.panel.text": "Folientext",
@@ -82,6 +96,13 @@ export const SLIDES_PANEL_CATALOGUES:Record<string,Record<string,string>>={
     "cmd.slides.editText": "Folientext anwenden"
   },
   "es": {
+  "slides.preview.title": "Revisar texto seleccionado",
+  "slides.preview.boundary": "Vista privada de fuente. Sin IA, reescritura, notas/layout ni guardado. Texto puede ser privado.",
+  "slides.preview.review": "Ver texto seleccionado",
+  "slides.preview.unavailable": "Elige explícitamente un texto canónico de esta diapositiva (no vacío, hasta4096 bytes UTF-8).",
+  "slides.preview.extent": "Diapositiva {slide}, texto {run}, {bytes} bytes UTF-8",
+  "slides.preview.discard": "Descartar vista",
+
     "slides.panel.overview": "Diapositivas",
     "slides.panel.outline": "Esquema de texto",
     "slides.panel.text": "Texto de diapositiva",
@@ -122,6 +143,13 @@ export const SLIDES_PANEL_CATALOGUES:Record<string,Record<string,string>>={
     "cmd.slides.editText": "Aplicar texto"
   },
   "fr": {
+  "slides.preview.title": "Vérifier texte sélectionné",
+  "slides.preview.boundary": "Aperçu privé de source. Pas d’IA, réécriture, notes/mise en page ou sauvegarde. Texte peut être privé.",
+  "slides.preview.review": "Voir texte sélectionné",
+  "slides.preview.unavailable": "Sélectionnez explicitement un texte canonique de cette diapositive (non vide, jusqu’à4096 octets UTF-8).",
+  "slides.preview.extent": "Diapositive {slide}, texte {run}, {bytes} octets UTF-8",
+  "slides.preview.discard": "Supprimer aperçu",
+
     "slides.panel.overview": "Diapositives",
     "slides.panel.outline": "Plan du texte",
     "slides.panel.text": "Texte de diapositive",
@@ -162,6 +190,13 @@ export const SLIDES_PANEL_CATALOGUES:Record<string,Record<string,string>>={
     "cmd.slides.editText": "Appliquer le texte"
   },
   "pt-BR": {
+  "slides.preview.title": "Revisar texto selecionado",
+  "slides.preview.boundary": "Prévia privada da fonte. Sem IA, reescrita, notas/layout ou salvamento. Texto pode ser privado.",
+  "slides.preview.review": "Ver texto selecionado",
+  "slides.preview.unavailable": "Selecione explicitamente um texto canônico deste slide (não vazio, até4096 bytes UTF-8).",
+  "slides.preview.extent": "Slide {slide}, texto {run}, {bytes} bytes UTF-8",
+  "slides.preview.discard": "Descartar prévia",
+
     "slides.panel.overview": "Slides",
     "slides.panel.outline": "Estrutura do texto",
     "slides.panel.text": "Texto do slide",

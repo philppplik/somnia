@@ -1,3 +1,4 @@
+import {SlidesSelectionPreview} from './SlidesSelectionPreview';
 import {useState} from 'react';
 import {ArrowDown,ArrowUp} from 'lucide-react';
 import {IconButton} from '../ui/icon-button';
@@ -71,7 +72,7 @@ export function SlidesTextPanel({context}:InspectorSectionProps){
  // Explicit canvas selection wins; source-bound UI selection is only a fallback.
  const contextId=context.selection.type==='textRun'?context.selection.ids?.[0]:undefined;
  const active=runs.find(r=>`${r.slide}:${r.run}`===contextId)??selected??runs[0];
- return <Region><p className="text-xs text-ink-2">{t('slides.slide',{number:s.index+1})}</p>
+ return <Region><SlidesSelectionPreview scope={JSON.stringify([s.source,s.index,s.runs,s.dirty])} run={s.diagnostics?.editable?selected??null:null} busy={s.busy}/><p className="text-xs text-ink-2">{t('slides.slide',{number:s.index+1})}</p>
   <div className="flex flex-wrap gap-1"><button className={button} disabled={s.busy||!s.undo.length} onClick={()=>void action.run('slides.undo')}>{t('cmd.slides.undo')}</button><button className={button} disabled={s.busy||!s.redo.length} onClick={()=>void action.run('slides.redo')}>{t('cmd.slides.redo')}</button></div>
   {!!runs.length&&<select className={input} aria-label={t('slides.panel.text')} value={active?.run??''} disabled={s.busy} onChange={e=>{const r=runs.find(r=>r.run===Number(e.target.value));if(r)void action.run('slides.selectText',{source:s.source,slide:r.slide,run:r.run,old:r.text});}}>{runs.map(r=><option key={r.run} value={r.run}>{t('slides.run',{number:r.run+1})}: {r.text.slice(0,60)}</option>)}</select>}
   {active?<TextEditor key={`${s.source}:${active.slide}:${active.run}:${active.text}`} source={s.source} run={active} busy={s.busy}/>:<><p className="text-xs text-ink-3">{t('slides.noText')}</p>{s.texts.map((text,i)=><p key={i} className="select-text whitespace-pre-wrap break-words text-xs">{text}</p>)}</>}
