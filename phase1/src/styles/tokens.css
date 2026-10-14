@@ -31,3 +31,8 @@
  --status-warning-ink:#B54708; --status-warning-surface:#FFFAEB;
  --status-danger-ink:#B42318; --status-danger-surface:#FEF3F2;
 }
+
+/* Shared chrome motion. Existing saved animation duration remains authoritative. */
+:root{--motion-fast:100ms;--motion-standard:var(--ui-animation-ms,120ms);--motion-ease:cubic-bezier(.2,0,0,1);--ds-control-height:36px;--ds-control-pad:14px;--ds-input-pad:12px;--ds-panel-pad:12px;--ds-panel-gap:8px}
+:root[data-motion=reduce]{--motion-fast:0ms;--motion-standard:0ms}
+@media(prefers-reduced-motion:reduce){:root{--motion-fast:0ms;--motion-standard:0ms}}

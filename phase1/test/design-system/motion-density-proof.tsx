@@ -1,0 +1,8 @@
+import {useState,useRef} from 'react';
+import {Button} from '../../src/components/ui/button';
+import {Input} from '../../src/components/ui/input';
+import {PanelSection} from '../../src/components/ui/panel';
+import {Dialog,DialogContent,DialogTitle,DialogDescription} from '../../src/components/ui/dialog';
+import type {PrimitiveDensity} from '../../src/components/ui/density';
+export function MotionDensityProof(){const [open,setOpen]=useState(false);const trigger=useRef<HTMLButtonElement|null>(null);return <main><h1>Opt-in density and shared motion</h1><p>Normal keeps existing geometry. Other sizes remain caller-owned. No document scaling.</p>{(['compact','normal','comfortable'] as PrimitiveDensity[]).map(density=><DensityRow key={density} density={density}/>)}<Button ref={trigger} onClick={()=>setOpen(true)}>Motion dialog</Button><Dialog open={open} onOpenChange={setOpen}><DialogContent finalFocus={trigger}><DialogTitle>Shared motion</DialogTitle><DialogDescription>Close stays available without animation.</DialogDescription><Button onClick={()=>setOpen(false)}>Close motion dialog</Button></DialogContent></Dialog></main>;}
+function DensityRow({density}:{density:PrimitiveDensity}){const [open,setOpen]=useState(true);return <section className="p-3" data-testid={`density-${density}`}><h2>{density}</h2><Button density={density}>Density action</Button><Button density={density} size="compact">Explicit compact action</Button><Input density={density} aria-label={`${density} field`} defaultValue="Localized label and caller-owned draft"/><PanelSection density={density} id={`body-${density}`} title="Panel details" open={open} onOpenChange={setOpen}><p>Caller content with unchanged 5/7/11/16/25 radius scale.</p></PanelSection></section>;}

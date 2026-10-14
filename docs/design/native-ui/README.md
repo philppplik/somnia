@@ -108,3 +108,4 @@ This guide supplies the cross-cutting system. The [verification guide](verificat
 - [Component gallery index and studio recipes](gallery-index.md)
 
 - [New-studio state adoption audit](new-studios-state-audit.md)
+- [Shared motion and opt-in density](motion-density.md)

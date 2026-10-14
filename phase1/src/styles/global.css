@@ -376,3 +376,8 @@ body{font-size:var(--ui-font-size,13px)}
 
 /* Animation native checkbox parity: no inherited full-width input geometry. */
 .animation-checkbox{width:14px;height:14px;padding:0;margin:0;flex:none}
+
+/* Shared overlay timing; OS reduction wins even over a saved full-motion choice. */
+.dialog-popup{animation-duration:var(--motion-standard);animation-timing-function:var(--motion-ease)}
+:root[data-motion=full] .dialog-popup{animation:palette-in var(--motion-standard) var(--motion-ease)!important}
+@media(prefers-reduced-motion:reduce){:root[data-motion=full] *,:root[data-motion=full] *:before,:root[data-motion=full] *:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}

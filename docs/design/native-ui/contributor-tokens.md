@@ -84,3 +84,5 @@ muted-foreground/destructive/border/input/ring. See `APP_IMPORT_TARGETS` for exa
 Other paired colors remain isolated aliases; shared legacy foregrounds do not become independent global writers.
 High contrast bypasses all imported overrides. Custom inline action choices still win normal-mode fill/ink.
 No importer writes --accent, geometry, syntax, document/page or native material.
+
+Opt-in control geometry and shared transition tokens: [motion/density guide](motion-density.md). Existing Look density still controls shell gap only.

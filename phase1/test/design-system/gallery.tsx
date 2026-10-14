@@ -1,4 +1,5 @@
 import {StateAdoptionProof} from './state-adoption-proof';
+import {MotionDensityProof} from './motion-density-proof';
 import {FocusProof} from './focus-proof';
 import {GalleryIndex} from './gallery-index';
 import {ShellStateProof} from './shell-state-proof';
@@ -63,4 +64,4 @@ function Gallery(){
  </section><ExchangeProof/><ThemeImportPanel/></div><pre data-testid="events" aria-label="Fixture events">{events.join('\n')}</pre><StudioAdoptionProof/><ShellStateProof/></main>;
 }
 const view=new URLSearchParams(location.search).get('view');
-createRoot(document.getElementById('root')!).render(new URLSearchParams(location.search).has('state-adoption')?<StateAdoptionProof/>:new URLSearchParams(location.search).has('focus-audit')?<FocusProof/>:view==='index'?<GalleryIndex/>:view==='shell'?<main><ShellStateProof showRecovery/></main>:view==='studios'?<main><StudioAdoptionProof/></main>:view==='importer'?<main><ThemeImportPanel/></main>:<Gallery/>);
+createRoot(document.getElementById('root')!).render(new URLSearchParams(location.search).has('motion-density')?<MotionDensityProof/>:new URLSearchParams(location.search).has('state-adoption')?<StateAdoptionProof/>:new URLSearchParams(location.search).has('focus-audit')?<FocusProof/>:view==='index'?<GalleryIndex/>:view==='shell'?<main><ShellStateProof showRecovery/></main>:view==='studios'?<main><StudioAdoptionProof/></main>:view==='importer'?<main><ThemeImportPanel/></main>:<Gallery/>);

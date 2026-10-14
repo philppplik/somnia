@@ -21,3 +21,15 @@
 [data-slot=studio-progress] progress::-webkit-progress-bar{background:var(--bg-surface)}
 [data-slot=studio-progress] progress::-webkit-progress-value{background:var(--accent-fill)}
 [data-slot=studio-progress] progress::-moz-progress-bar{background:var(--accent-fill)}
+
+/* Opt-in density: no inherited application-wide geometry change. */
+[data-density=compact]{--ds-control-height:28px;--ds-control-pad:8px;--ds-input-pad:8px;--ds-panel-pad:8px;--ds-panel-gap:4px}
+[data-density=normal]{--ds-control-height:36px;--ds-control-pad:14px;--ds-input-pad:12px;--ds-panel-pad:12px;--ds-panel-gap:8px}
+[data-density=comfortable]{--ds-control-height:44px;--ds-control-pad:16px;--ds-input-pad:16px;--ds-panel-pad:16px;--ds-panel-gap:12px}
+[data-slot=button][data-density][data-size=normal]{height:var(--ds-control-height);padding-inline:var(--ds-control-pad)}
+[data-slot=icon-button][data-density][data-size=icon],[data-slot=button][data-density][data-size=icon]{height:var(--ds-control-height);width:var(--ds-control-height)}
+[data-slot=panel-body][data-density]{padding:var(--ds-panel-pad)}
+[data-slot=panel-header][data-density]{gap:var(--ds-panel-gap)}
+[data-slot=panel-section][data-density]>.ds-panel-section-trigger{padding:var(--ds-panel-gap) var(--ds-panel-pad);gap:var(--ds-panel-gap)}
+
+[data-slot=input][data-density]{height:var(--ds-control-height);padding-inline:var(--ds-input-pad)}
