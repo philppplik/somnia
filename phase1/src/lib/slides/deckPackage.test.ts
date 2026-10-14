@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {unzipSync,zipSync,strFromU8,strToU8} from 'fflate';
-import {setShapeStyle,readShapeStyle,setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
+import {editTable,readTable,setShapeStyle,readShapeStyle,setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
 import {readRuns,makeEditedCopy} from './editCopy';
 import {png,jpeg} from './imageFixtures';
 
@@ -637,4 +637,68 @@ test('shape styling: fill, opacity, gradient, outline, shadow; fails closed',()=
   const pl=setShapeStyle(pic,readDeckModel(pic).slides[0].id,[pid],{line:{kind:'solid',color:'000000',widthPt:1,dash:'solid'},shadow:true});
   assert.equal(readShapeStyle(pl,readDeckModel(pl).slides[0].id,pid).shadow,'outer');
   assert.throws(()=>setShapeStyle(pic,readDeckModel(pic).slides[0].id,[pid],{fill:{kind:'none'}}),/Pictures cannot be filled/);
+});
+
+const tcXml=(t:string,extra='')=>`<a:tc><a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:pPr algn="l"/>${t?`<a:r><a:rPr lang="en-US" b="1"/><a:t>${t}</a:t></a:r>`:'<a:endParaRPr lang="en-US"/>'}</a:p></a:txBody>${extra||'<a:tcPr/>'}</a:tc>`;
+function tableDeck(opts:{merged?:boolean;fld?:boolean}={}):{b:Uint8Array;sid:number;tid:number}{
+  const base2=deck(2),sid=readDeckModel(base2).slides[0].id;
+  const rows=[['A1','B1','C1'],['A2','B&amp;2','C2']].map((r,i)=>`<a:tr h="370840">${r.map((x,j)=>tcXml(x,i===0&&j===0?'<a:tcPr marL="91440"><a:lnL w="12700"><a:noFill/></a:lnL></a:tcPr>':'')).join('')}<a:extLst><a:ext uri="{0D108BD9-81ED-4DB2-BD59-A6C34878D82A}"/></a:extLst></a:tr>`).join('');
+  let frame=`<p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="40" name="Table 39"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr><p:xfrm><a:off x="914400" y="914400"/><a:ext cx="3000000" cy="741680"/></p:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table"><a:tbl><a:tblPr firstRow="1" bandRow="1"/><a:tblGrid><a:gridCol w="1000000"/><a:gridCol w="1000000"/><a:gridCol w="1000000"/></a:tblGrid>${rows}</a:tbl></a:graphicData></a:graphic></p:graphicFrame>`;
+  if(opts.merged)frame=frame.replace('<a:tc>','<a:tc gridSpan="2">');
+  if(opts.fld)frame=frame.replace('<a:r><a:rPr lang="en-US" b="1"/><a:t>A1</a:t></a:r>','<a:fld id="{1}" type="slidenum"><a:t>1</a:t></a:fld>');
+  const b=patchPart(base2,'ppt/slides/slide1.xml',x=>x.replace('</p:spTree>',frame+'</p:spTree>'));
+  return {b,sid,tid:40};
+}
+test('table editing: read, cell text, rows, columns, header, fill',()=>{
+  const {b,sid,tid}=tableDeck(),r=readTable(b,sid,tid);
+  assert.equal(r.editable,true);assert.deepEqual([r.rows,r.cols,r.header],[2,3,true]);assert.equal(r.cells[1][1],'B&2');
+  assert.equal(readDeckModel(b).slides[0].shapes.find(s=>s.id===tid)!.kind,'table');
+  const e=editTable(b,sid,tid,{kind:'cell',row:0,col:1,text:'New <x> & "y"\nsecond'});
+  assert.equal(readTable(e,sid,tid).cells[0][1],'New <x> & "y"\nsecond');
+  const xml=strFromU8(unzipSync(e)['ppt/slides/slide1.xml']);assert.ok(xml.includes('<a:rPr lang="en-US" b="1"/><a:t>New &lt;x&gt; &amp; "y"</a:t>'),'run format kept');assert.ok(xml.includes('<a:pPr algn="l"/>'));
+  assert.equal(editTable(e,sid,tid,{kind:'cell',row:0,col:1,text:'New <x> & "y"\nsecond'}),e,'no-op returns same bytes');
+  const empty=editTable(e,sid,tid,{kind:'cell',row:1,col:0,text:''});assert.equal(readTable(empty,sid,tid).cells[1][0],'');
+  const typed=editTable(empty,sid,tid,{kind:'cell',row:1,col:0,text:'back'});assert.ok(strFromU8(unzipSync(typed)['ppt/slides/slide1.xml']).includes('lang="en-US"'));
+  // rows
+  const ir=editTable(b,sid,tid,{kind:'insertRow',at:1});let t=readTable(ir,sid,tid);assert.equal(t.rows,3);assert.deepEqual(t.cells[1],['','','']);assert.equal(t.cells[2][0],'A2');
+  assert.equal(readDeckModel(ir).slides[0].shapes.find(s=>s.id===tid)!.bounds!.h,741680+370840);
+  const end=editTable(b,sid,tid,{kind:'insertRow',at:2});assert.equal(readTable(end,sid,tid).cells[2][0],'');
+  const rr=editTable(ir,sid,tid,{kind:'removeRow',at:1});assert.deepEqual(readTable(rr,sid,tid).cells,r.cells);assert.equal(readDeckModel(rr).slides[0].shapes.find(s=>s.id===tid)!.bounds!.h,741680);
+  // columns keep total width
+  const ic=editTable(b,sid,tid,{kind:'insertCol',at:1});t=readTable(ic,sid,tid);assert.equal(t.cols,4);assert.deepEqual(t.cells[0],['A1','','B1','C1']);
+  const widths=(x:Uint8Array)=>[...strFromU8(unzipSync(x)['ppt/slides/slide1.xml']).matchAll(/<a:gridCol w="(\d+)"/g)].map(m=>Number(m[1]));
+  assert.equal(widths(ic).reduce((a,c)=>a+c,0),3000000);assert.equal(widths(ic).length,4);
+  const rc=editTable(ic,sid,tid,{kind:'removeCol',at:1});assert.deepEqual(readTable(rc,sid,tid).cells,r.cells);assert.equal(widths(rc).reduce((a,c)=>a+c,0),3000000);
+  assert.equal(readTable(editTable(b,sid,tid,{kind:'removeCol',at:0}),sid,tid).cells[0][0],'B1');
+  // header + fill
+  const h=editTable(b,sid,tid,{kind:'header',on:false});assert.equal(readTable(h,sid,tid).header,false);assert.equal(readTable(editTable(h,sid,tid,{kind:'header',on:true}),sid,tid).header,true);
+  const f=editTable(b,sid,tid,{kind:'fill',scope:'row',row:0,col:0,fill:{kind:'solid',color:'1F5FBF'}});t=readTable(f,sid,tid);
+  assert.deepEqual(t.fills,[['1F5FBF','1F5FBF','1F5FBF'],[null,null,null]]);
+  const fx=strFromU8(unzipSync(f)['ppt/slides/slide1.xml']);assert.ok(fx.includes('<a:tcPr marL="91440"><a:lnL w="12700"><a:noFill/></a:lnL><a:solidFill><a:srgbClr val="1F5FBF"/></a:solidFill></a:tcPr>'),'fill after borders, attrs kept');
+  const col=editTable(f,sid,tid,{kind:'fill',scope:'column',row:0,col:2,fill:{kind:'none'}});assert.deepEqual(readTable(col,sid,tid).fills.map(r=>r[2]),[null,null]);
+  assert.equal(editTable(b,sid,tid,{kind:'fill',scope:'table',row:0,col:0,fill:{kind:'none'}}),b,'noFill on unfilled is a no-op');
+  // other parts untouched
+  assert.deepEqual(Object.keys(unzipSync(f)).sort(),Object.keys(unzipSync(b)).sort());
+});
+test('table editing fails closed and validates bounds',()=>{
+  const {b,sid,tid}=tableDeck();
+  for(const bad of [{merged:true},{fld:true}]){const t=tableDeck(bad);assert.equal(readTable(t.b,t.sid,t.tid).editable,false);assert.throws(()=>editTable(t.b,t.sid,t.tid,{kind:'cell',row:1,col:1,text:'x'}),/merged|unsupported/);}
+  assert.throws(()=>editTable(b,sid,tid,{kind:'cell',row:5,col:0,text:'x'}),/no longer exists/);
+  assert.throws(()=>editTable(b,sid,tid,{kind:'cell',row:0,col:0,text:'x'.repeat(2001)}),/invalid/);
+  assert.throws(()=>editTable(b,sid,tid,{kind:'cell',row:0,col:0,text:'a\u0001'}),/invalid/);
+  assert.throws(()=>editTable(b,sid,tid,{kind:'insertRow',at:3}),/position/);
+  assert.throws(()=>editTable(b,sid,tid,{kind:'insertCol',at:-1}),/position/);
+  assert.throws(()=>editTable(b,sid,tid,{kind:'removeRow',at:2}),/no longer exists/);
+  assert.throws(()=>editTable(b,sid,tid,{kind:'fill',scope:'cell',row:0,col:0,fill:{kind:'solid',color:'red'}}),/6-digit/);
+  assert.throws(()=>editTable(b,sid,tid,{kind:'fill',scope:'galaxy' as 'cell',row:0,col:0,fill:{kind:'none'}}),/scope/);
+  assert.throws(()=>editTable(b,sid,999,{kind:'header',on:false}),/no longer exists|not a table/);
+  assert.throws(()=>editTable(b,sid,tid+1000,{kind:'header',on:false}),/no longer exists|not a table/);
+  const one=editTable(editTable(b,sid,tid,{kind:'removeRow',at:0}),sid,tid,{kind:'removeCol',at:0});
+  assert.throws(()=>editTable(editTable(one,sid,tid,{kind:'removeCol',at:0}),sid,tid,{kind:'removeCol',at:0}),/at least one column/);
+  assert.throws(()=>editTable(one,sid,tid,{kind:'removeRow',at:0}),/at least one row/);
+  let big=b;for(let i=0;i<48;i++)big=editTable(big,sid,tid,{kind:'insertRow',at:0});assert.equal(readTable(big,sid,tid).rows,50);
+  assert.throws(()=>editTable(big,sid,tid,{kind:'insertRow',at:0}),/at most 50 rows/);
+  const gradient=patchPart(b,'ppt/slides/slide1.xml',x=>x.replace('<a:tcPr/>','<a:tcPr><a:gradFill/></a:tcPr>'));
+  assert.throws(()=>editTable(gradient,sid,tid,{kind:'fill',scope:'table',row:0,col:0,fill:{kind:'none'}}),/does not change/);
+  const textShape=readDeckModel(deck(2)).slides[0];assert.throws(()=>editTable(deck(2),textShape.id,textShape.shapes[0].id,{kind:'header',on:true}),/not a table/);
 });

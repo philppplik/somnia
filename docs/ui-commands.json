@@ -4865,6 +4865,23 @@
       "hasEnabled": true
     },
     {
+      "id": "slides.editTable",
+      "title": "Edit table",
+      "category": "Edit",
+      "source": "slides",
+      "keywords": [
+        "cell",
+        "column",
+        "delete",
+        "fill",
+        "header",
+        "insert",
+        "row",
+        "table"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "slides.editText",
       "title": "Apply slide text",
       "category": "Edit",

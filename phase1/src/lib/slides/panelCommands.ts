@@ -1,18 +1,19 @@
 import type {CommandSpec} from '../commandSpec';
 import {registerCommandSpec} from '../commandBridge';
 import {selectSlideText} from './panelSelection';
-import {getSlidesSessionState,loadThumbnails,editSlideText,showSlide,moveSlideTo,duplicateSlideAt,deleteSlideAt,addSlideFromLayout,setShapeBoundsAt,setShapesBoundsAt,arrangeShapesAt,setTransitionAt,styleShapesAt,setNotesAt,groupShapesAt,ungroupShapeAt,formatShapeAt,addTextBoxAt,removeTextBoxAt,insertPictureAt,replacePictureAt,removePictureAt} from './session';
+import {getSlidesSessionState,loadThumbnails,editSlideText,showSlide,moveSlideTo,duplicateSlideAt,deleteSlideAt,addSlideFromLayout,setShapeBoundsAt,setShapesBoundsAt,arrangeShapesAt,setTransitionAt,editTableAt,styleShapesAt,setNotesAt,groupShapesAt,ungroupShapeAt,formatShapeAt,addTextBoxAt,removeTextBoxAt,insertPictureAt,replacePictureAt,removePictureAt} from './session';
 import {textIssue} from './panelModel';
 import type {TextRun} from './editCopy';
 import './panelI18n';
 import {selectShape,getShapeSelection,type ShapeSelection} from './shapeSelection';
 import {stepShape,moveBox,resizeBox,resizeBoxAspect,boxOf,alignBox,alignBoxes,unionBox,transformGroup,distributeBoxes,ALIGN_MODES,type AlignMode} from './shapeGeometry';
 import {sniffImage,altFromName,decodeBase64,MAX_IMAGE_BASE64} from './imageSniff';
-import {boundsEditIssue,nextShapeId,MIN_SIZE_PT,MAX_SIZE_PT,MAX_SHAPES_PER_SLIDE,MAX_BOX_TEXT,MAX_MULTI_EDIT,MAX_NOTES_CHARS,MAX_NOTES_PARAGRAPHS,ARRANGE_MODES,TRANSITION_KINDS,TRANSITION_DIRS,TRANSITION_SPEEDS,type SlideTransition,type ShapeStylePatch,LINE_DASHES,type ArrangeMode,type ShapeBoundsEdit,type RunFormat,type ShapeRef,type BoundsBox} from './deckPackage';
+import {boundsEditIssue,nextShapeId,MIN_SIZE_PT,MAX_SIZE_PT,MAX_SHAPES_PER_SLIDE,MAX_BOX_TEXT,MAX_MULTI_EDIT,MAX_NOTES_CHARS,MAX_NOTES_PARAGRAPHS,ARRANGE_MODES,TRANSITION_KINDS,TRANSITION_DIRS,TRANSITION_SPEEDS,type SlideTransition,type ShapeStylePatch,type TableEdit,MAX_TABLE_ROWS,MAX_TABLE_COLS,MAX_CELL_TEXT,LINE_DASHES,type ArrangeMode,type ShapeBoundsEdit,type RunFormat,type ShapeRef,type BoundsBox} from './deckPackage';
 const MIN_GROUP_EMU=127000;
 export interface PanelCommandDeps {
  setTransition(slideId:number,transition:SlideTransition):Promise<void>;
  style(slideId:number,shapeIds:number[],patch:ShapeStylePatch):Promise<void>;
+ table(slideId:number,shapeId:number,edit:TableEdit):Promise<void>;
  setNotes(slideId:number,lines:string[]):Promise<void>;
  group(slideId:number,shapeIds:number[]):Promise<void>;
  ungroup(slideId:number,shapeId:number):Promise<void>;
@@ -137,6 +138,22 @@ export function slidesPanelCommandSpecs(d:PanelCommandDeps):CommandSpec[]{
    const v=p as {source:string;slideId:number;kind:SlideTransition['kind'];dir?:SlideTransition['dir'];speed?:SlideTransition['speed']},s=d.state();
    if(s.source!==v.source||!s.slideIds.includes(v.slideId)||!s.working)throw expected('Slide no longer exists.');
    await d.setTransition(v.slideId,{kind:v.kind,dir:v.dir??'l',speed:v.speed??'med'});}},
+  {id:'slides.editTable',title:'Edit table',category:'Edit',level:'ui',keywords:['table','cell','row','column','header','insert','delete','fill'],enabled:available,params:{type:'object',properties:{source:identity.source,slideId:slideId,shapeId:{type:'integer',minimum:0,maximum:2147483647},
+    edit:{type:'object',properties:{kind:{enum:['cell','insertRow','removeRow','insertCol','removeCol','header','fill']},row:{type:'integer',minimum:0,maximum:MAX_TABLE_ROWS},col:{type:'integer',minimum:0,maximum:MAX_TABLE_COLS},at:{type:'integer',minimum:0,maximum:MAX_TABLE_ROWS},text:{type:'string',maxLength:MAX_CELL_TEXT},on:{type:'boolean'},scope:{enum:['cell','row','column','table']},color:{type:'string',pattern:'^[0-9A-F]{6}$'},none:{type:'boolean'}},required:['kind'],additionalProperties:false}},required:['source','slideId','shapeId','edit'],additionalProperties:false},run:async p=>{
+   const v=p as {source:string;slideId:number;shapeId:number;edit:{kind:string;row?:number;col?:number;at?:number;text?:string;on?:boolean;scope?:'cell'|'row'|'column'|'table';color?:string;none?:boolean}},s=d.state(),e=v.edit;
+   if(s.source!==v.source||s.slideIds[s.index]!==v.slideId)throw expected('Slide changed since the table was shown.');
+   const sh=s.model?.slides.find(x=>x.id===v.slideId)?.shapes.find(x=>x.id===v.shapeId&&x.parentId===null);
+   if(!sh||sh.kind!=='table')throw expected('Table no longer exists.');
+   const need=(...k:(keyof typeof e)[])=>{for(const x of k)if(e[x]===undefined)throw expected(`Table edit is missing ${String(x)}.`);};
+   let edit:TableEdit;
+   switch(e.kind){
+    case 'cell':need('row','col','text');edit={kind:'cell',row:e.row!,col:e.col!,text:e.text!.replace(/\r\n?/g,'\n')};break;
+    case 'insertRow':case 'removeRow':case 'insertCol':case 'removeCol':need('at');edit={kind:e.kind,at:e.at!};break;
+    case 'header':need('on');edit={kind:'header',on:e.on!};break;
+    case 'fill':{need('scope','row','col');if(e.none===undefined&&!e.color)throw expected('Choose a fill color or no fill.');if(e.none&&e.color)throw expected('Choose either a fill color or no fill.');edit={kind:'fill',scope:e.scope!,row:e.row!,col:e.col!,fill:e.none?{kind:'none'}:{kind:'solid',color:e.color!}};break;}
+    default:throw expected('Unknown table edit.');
+   }
+   await d.table(v.slideId,v.shapeId,edit);}},
   {id:'slides.styleShapes',title:'Style selected shapes',category:'Edit',level:'ui',keywords:['fill','color','colour','outline','border','stroke','shadow','opacity','transparency','gradient','style'],enabled:available,params:{type:'object',properties:{
     fill:{type:'object',properties:{kind:{enum:['none','solid','gradient']},color:{type:'string',pattern:'^[0-9A-F]{6}$'},from:{type:'string',pattern:'^[0-9A-F]{6}$'},to:{type:'string',pattern:'^[0-9A-F]{6}$'},angle:{type:'integer',minimum:0,maximum:359},alpha:{type:'integer',minimum:5,maximum:100}},required:['kind'],additionalProperties:false},
     line:{type:'object',properties:{kind:{enum:['none','solid']},color:{type:'string',pattern:'^[0-9A-F]{6}$'},widthPt:{type:'number',minimum:0.25,maximum:20},dash:{enum:[...LINE_DASHES]}},required:['kind'],additionalProperties:false},
@@ -261,5 +278,5 @@ export function slidesPanelCommandSpecs(d:PanelCommandDeps):CommandSpec[]{
   }},
  ];
 }
-const deps:PanelCommandDeps={state:getSlidesSessionState,thumbnails:loadThumbnails,edit:editSlideText,show:showSlide,select:selectSlideText,move:moveSlideTo,duplicate:duplicateSlideAt,remove:deleteSlideAt,add:addSlideFromLayout,setBounds:setShapeBoundsAt,setMany:setShapesBoundsAt,arrange:arrangeShapesAt,setTransition:setTransitionAt,style:styleShapesAt,setNotes:setNotesAt,group:groupShapesAt,ungroup:ungroupShapeAt,format:formatShapeAt,addBox:addTextBoxAt,removeBox:removeTextBoxAt,insertImage:insertPictureAt,replaceImage:replacePictureAt,removeImage:removePictureAt,pick:selectShape,picked:getShapeSelection};
+const deps:PanelCommandDeps={state:getSlidesSessionState,thumbnails:loadThumbnails,edit:editSlideText,show:showSlide,select:selectSlideText,move:moveSlideTo,duplicate:duplicateSlideAt,remove:deleteSlideAt,add:addSlideFromLayout,setBounds:setShapeBoundsAt,setMany:setShapesBoundsAt,arrange:arrangeShapesAt,setTransition:setTransitionAt,table:editTableAt,style:styleShapesAt,setNotes:setNotesAt,group:groupShapesAt,ungroup:ungroupShapeAt,format:formatShapeAt,addBox:addTextBoxAt,removeBox:removeTextBoxAt,insertImage:insertPictureAt,replaceImage:replacePictureAt,removeImage:removePictureAt,pick:selectShape,picked:getShapeSelection};
 export function registerSlidesPanelCommands(){const offs=slidesPanelCommandSpecs(deps).map(s=>registerCommandSpec(s));return()=>offs.forEach(off=>off());}

@@ -1229,3 +1229,204 @@ export function setShapeStyle(bytes:Uint8Array,slideId:number,shapeIds:readonly 
   for(const name of Object.keys(zip))if(name!==slide.part&&(!re[name]||re[name].length!==zip[name].length||re[name].some((v,i)=>v!==zip[name][i])))throw Error('Edited deck changed an unrelated part');
   return res;
 }
+
+/* ---------------------------------------------------------------------------------------
+ * Table editing for existing a:tbl tables (graphicFrame): cell text, rows, columns, header
+ * flag and cell fill. Merged cells, nested content, fields and unknown structure make the
+ * table read-only; nothing is guessed.
+ * ------------------------------------------------------------------------------------- */
+export const MAX_TABLE_ROWS=50,MAX_TABLE_COLS=20,MAX_CELL_TEXT=2000;
+export type TableFill={kind:'none'}|{kind:'solid';color:string};
+export type TableEdit=
+  |{kind:'cell';row:number;col:number;text:string}
+  |{kind:'insertRow';at:number}|{kind:'removeRow';at:number}
+  |{kind:'insertCol';at:number}|{kind:'removeCol';at:number}
+  |{kind:'header';on:boolean}
+  |{kind:'fill';scope:'cell'|'row'|'column'|'table';row:number;col:number;fill:TableFill};
+export interface TableInfo {rows:number;cols:number;cells:string[][];fills:(string|null|'other')[][];header:boolean;editable:boolean;problem?:string}
+interface XKid {tag:string;xml:string;open:string;inner:string}
+function xmlKids(inner:string):XKid[]{
+  const out:XKid[]=[];let depth=0,start=-1,name='',open='',openEnd=0,last=0;
+  for(const m of inner.matchAll(TAG)){
+    if(depth===0&&inner.slice(last,m.index!).trim())throw Error('Unexpected text in table XML');
+    last=m.index!+m[0].length;
+    if(m[2]===undefined)continue;
+    if(m[1]==='/'){depth--;if(depth<0)throw Error('Malformed table XML');if(depth===0)out.push({tag:name,xml:inner.slice(start,m.index!+m[0].length),open,inner:inner.slice(openEnd,m.index!)});continue;}
+    if(m[4]==='/'){if(depth===0)out.push({tag:m[2],xml:m[0],open:m[0],inner:''});continue;}
+    if(depth===0){start=m.index!;name=m[2];open=m[0];openEnd=m.index!+m[0].length;}
+    depth++;
+  }
+  if(depth!==0)throw Error('Malformed table XML');
+  if(inner.slice(last).trim())throw Error('Unexpected text in table XML');
+  return out;
+}
+const unesc=(t:string)=>t.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/&amp;/g,'&');
+interface TCell {open:string;tx:string;txInner:string;tcPr:XKid|null;text:string}
+interface TRow {open:string;h:number;cells:TCell[];ext:string}
+interface TTable {pre:string;post:string;tblOpen:string;tblPr:string|null;gridOpen:string;grid:{xml:string;w:number}[];gridExt:string;rows:TRow[];frameStart:number;frameEnd:number}
+function parseCellText(txInner:string):string{
+  const kids=xmlKids(txInner),paras:string[]=[];
+  for(const k of kids){
+    if(k.tag==='a:bodyPr'||k.tag==='a:lstStyle')continue;
+    if(k.tag!=='a:p')throw Error('Cell has unsupported content');
+    let line='';
+    for(const r of xmlKids(k.inner)){
+      if(r.tag==='a:pPr'||r.tag==='a:endParaRPr')continue;
+      if(r.tag==='a:br'){line+='\n';continue;}
+      if(r.tag!=='a:r')throw Error('Cell has unsupported content');
+      for(const x of xmlKids(r.inner)){if(x.tag==='a:rPr')continue;if(x.tag!=='a:t')throw Error('Cell has unsupported content');line+=unesc(x.inner);}
+    }
+    paras.push(line);
+  }
+  if(!paras.length)throw Error('Cell has no text body');
+  return paras.join('\n');
+}
+function parseTable(xml:string,shapeId:number):TTable{
+  const fr=topLevelShapes(xml).find(s=>s.id===shapeId);if(!fr)throw Error('Shape no longer exists');
+  const frame=xml.slice(fr.start,fr.end);if(!frame.startsWith('<p:graphicFrame'))throw Error('Shape is not a table');
+  if((frame.match(/<a:tbl[\s>]/g)??[]).length!==1)throw Error('Shape is not a single table');
+  const a=frame.indexOf('<a:tbl'),b=frame.indexOf('</a:tbl>');if(a<0||b<a)throw Error('Shape is not a table');
+  const openEnd=frame.indexOf('>',a)+1,tblOpen=frame.slice(a,openEnd);if(tblOpen.endsWith('/>'))throw Error('Table is empty');
+  let tblPr:string|null=null,gridOpen='',gridExt='';const grid:{xml:string;w:number}[]=[],rows:TRow[]=[];
+  for(const k of xmlKids(frame.slice(openEnd,b))){
+    if(k.tag==='a:tblPr'){if(tblPr!==null||grid.length||rows.length)throw Error('Table properties are out of order');tblPr=k.xml;}
+    else if(k.tag==='a:tblGrid'){
+      if(grid.length||rows.length)throw Error('Table grid is out of order');gridOpen=k.open;
+      for(const g of xmlKids(k.inner)){if(g.tag!=='a:gridCol')throw Error('Table grid has unsupported content');const w=Number(attr(g.open,'w'));if(!Number.isInteger(w)||w<1)throw Error('Table column width is invalid');grid.push({xml:g.xml,w});}
+    }else if(k.tag==='a:tr'){
+      const h=Number(attr(k.open,'h'));if(!Number.isInteger(h)||h<0)throw Error('Table row height is invalid');
+      const cells:TCell[]=[];let ext='';
+      for(const c of xmlKids(k.inner)){
+        if(c.tag==='a:extLst'){ext=c.xml;continue;}
+        if(c.tag!=='a:tc'||ext)throw Error('Table row has unsupported content');
+        if(/\s(gridSpan|rowSpan|hMerge|vMerge)=/.test(c.open))throw Error('Tables with merged cells cannot be edited');
+        let tx:XKid|null=null,tcPr:XKid|null=null;
+        for(const x of xmlKids(c.inner)){
+          if(x.tag==='a:txBody'&&!tx&&!tcPr)tx=x;else if(x.tag==='a:tcPr'&&tx&&!tcPr)tcPr=x;else throw Error('Table cell has unsupported content');
+        }
+        if(!tx)throw Error('Table cell has no text');
+        cells.push({open:c.open,tx:tx.xml,txInner:tx.inner,tcPr,text:parseCellText(tx.inner)});
+      }
+      rows.push({open:k.open,h,cells,ext});
+    }else if(k.tag==='a:extLst'&&rows.length&&!gridExt){throw Error('Table has unsupported content');}
+    else throw Error('Table has unsupported content');
+  }
+  if(!grid.length||!rows.length)throw Error('Table is empty');
+  if(rows.length>MAX_TABLE_ROWS||grid.length>MAX_TABLE_COLS)throw Error('Table is larger than the editor supports');
+  if(rows.some(r=>r.cells.length!==grid.length))throw Error('Table rows do not match the column grid');
+  return {pre:frame.slice(0,a),post:frame.slice(b+'</a:tbl>'.length),tblOpen,tblPr,gridOpen,grid,gridExt,rows,frameStart:fr.start,frameEnd:fr.end};
+}
+function tcFill(c:TCell):string|null|'other'{
+  if(!c.tcPr)return null;
+  const f=xmlKids(c.tcPr.inner).find(k=>/^a:(noFill|solidFill|gradFill|blipFill|pattFill|grpFill)$/.test(k.tag));
+  if(!f)return null;if(f.tag==='a:noFill')return null;
+  if(f.tag==='a:solidFill'){const m=/^<a:solidFill><a:srgbClr val="([0-9A-Fa-f]{6})"\s*\/?>(?:<\/a:srgbClr>)?<\/a:solidFill>$/.exec(f.xml);return m?m[1].toUpperCase():'other';}
+  return 'other';
+}
+function serialize(t:TTable):string{
+  const grid=`${t.gridOpen}${t.grid.map(g=>g.xml).join('')}</a:tblGrid>`;
+  const rows=t.rows.map(r=>`${r.open}${r.cells.map(c=>`${c.open}${c.tx}${c.tcPr?.xml??''}</a:tc>`).join('')}${r.ext}</a:tr>`).join('');
+  return `${t.pre}${t.tblOpen}${t.tblPr??''}${grid}${rows}</a:tbl>${t.post}`;
+}
+function infoOf(t:TTable):TableInfo{
+  return {rows:t.rows.length,cols:t.grid.length,cells:t.rows.map(r=>r.cells.map(c=>c.text)),fills:t.rows.map(r=>r.cells.map(tcFill)),header:/\sfirstRow="(1|true)"/.test(t.tblPr??''),editable:true};
+}
+/** Reads an existing table. Tables the editor cannot change come back with editable false and a reason. */
+export function readTable(bytes:Uint8Array,slideId:number,shapeId:number):TableInfo{
+  const model=readDeckModel(bytes),slide=model.slides.find(s=>s.id===slideId);if(!slide)throw Error('Slide no longer exists');
+  const zip=openPackage(bytes);
+  try{return infoOf(parseTable(text(zip,slide.part),shapeId));}
+  catch(e){return {rows:0,cols:0,cells:[],fills:[],header:false,editable:false,problem:(e as Error).message};}
+}
+const TC_FILL_END=/^a:(headers|extLst)$/;
+function withFill(c:TCell,fill:TableFill):TCell{
+  const xml=fill.kind==='none'?'<a:noFill/>':`<a:solidFill><a:srgbClr val="${fill.color}"/></a:solidFill>`;
+  const open=c.tcPr&&!c.tcPr.xml.endsWith('/>')?c.tcPr.open:(c.tcPr?.open.replace(/\/>$/,'>')??'<a:tcPr>');
+  const kids=c.tcPr?xmlKids(c.tcPr.inner):[];
+  if(kids.some(k=>/^a:(gradFill|blipFill|pattFill|grpFill)$/.test(k.tag))||kids.some(k=>k.tag==='a:solidFill'&&tcFill({...c})==='other'))throw Error('This cell has a fill the editor does not change');
+  const rest=kids.filter(k=>!/^a:(noFill|solidFill)$/.test(k.tag)),at=rest.findIndex(k=>TC_FILL_END.test(k.tag)),pos=at<0?rest.length:at;
+  const list=[...rest.slice(0,pos).map(k=>k.xml),xml,...rest.slice(pos).map(k=>k.xml)];
+  return {...c,tcPr:{tag:'a:tcPr',open,inner:list.join(''),xml:`${open}${list.join('')}</a:tcPr>`}};
+}
+const emptyTx=(src:TCell)=>{const pre=/^[\s\S]*?(?=<a:p[\s>/])/.exec(src.tx)?.[0]??'<a:txBody><a:bodyPr/><a:lstStyle/>';return `${pre}<a:p/></a:txBody>`;};
+const SAME_COLOR=/^[0-9A-F]{6}$/;
+/** Applies one table edit as a single package change. Verifies by reopening and comparing the whole table. */
+export function editTable(bytes:Uint8Array,slideId:number,shapeId:number,edit:TableEdit):Uint8Array{
+  const c=context(bytes),model=readDeckModel(bytes),slide=model.slides.find(s=>s.id===slideId);
+  if(!slide)throw Error('Slide no longer exists');if(slide.problems.length)throw Error('This slide has unsupported structure');
+  const shape=slide.shapes.find(s=>s.id===shapeId&&s.parentId===null);if(!shape||shape.kind!=='table')throw Error('Shape is not a table');
+  const xml=text(c.zip,slide.part),t=parseTable(xml,shapeId),before=infoOf(t),R=t.rows.length,C=t.grid.length;
+  const inR=(n:number,max=R-1)=>Number.isInteger(n)&&n>=0&&n<=max,total=t.grid.reduce((s,g)=>s+g.w,0);
+  const setW=(g:{xml:string;w:number},w:number)=>({xml:g.xml.replace(/(\sw=")\d+(")/,`$1${w}$2`),w});
+  let dh=0,expect:TableInfo=JSON.parse(JSON.stringify(before));
+  switch(edit.kind){
+    case 'cell':{
+      if(!inR(edit.row)||!inR(edit.col,C-1))throw Error('Cell no longer exists');
+      if(typeof edit.text!=='string'||edit.text.length>MAX_CELL_TEXT||NOTES_BAD.test(edit.text))throw Error('Cell text is invalid');
+      const cell=t.rows[edit.row].cells[edit.col];if(cell.text===edit.text)return bytes;
+      const first=cell.tx.search(/<a:p[\s>/]/),endM=[...cell.tx.matchAll(/<\/a:p>|<a:p\s*\/>/g)].at(-1);
+      if(first<0||!endM)throw Error('Cell has no paragraphs');
+      const ppr=/<a:p\b[^>]*>(<a:pPr\b[^>]*\/>)/.exec(cell.tx)?.[1]??'';
+      const rpr=/<a:r>(<a:rPr\b[^>]*\/>)/.exec(cell.tx)?.[1]??(/<a:endParaRPr\b([^>]*)\/>/.exec(cell.tx)?`<a:rPr${/<a:endParaRPr\b([^>]*)\/>/.exec(cell.tx)![1]}/>`:'');
+      const paras=edit.text===''?'<a:p/>':notesParas(edit.text.split('\n'),ppr,rpr);
+      cell.tx=cell.tx.slice(0,first)+paras+cell.tx.slice(endM.index!+endM[0].length);
+      expect.cells[edit.row][edit.col]=edit.text;break;}
+    case 'insertRow':{
+      if(R>=MAX_TABLE_ROWS)throw Error(`A table can hold at most ${MAX_TABLE_ROWS} rows`);if(!inR(edit.at,R))throw Error('Row position is invalid');
+      const src=t.rows[Math.min(edit.at,R-1)];
+      const row:TRow={open:src.open,h:src.h,ext:'',cells:src.cells.map(x=>({open:x.open,tx:emptyTx(x),txInner:'',tcPr:x.tcPr,text:''}))};
+      t.rows.splice(edit.at,0,row);dh=src.h;
+      expect.rows++;expect.cells.splice(edit.at,0,Array(C).fill(''));expect.fills.splice(edit.at,0,row.cells.map(tcFill));break;}
+    case 'removeRow':{
+      if(R<=1)throw Error('A table needs at least one row');if(!inR(edit.at))throw Error('Row no longer exists');
+      dh=-t.rows[edit.at].h;t.rows.splice(edit.at,1);expect.rows--;expect.cells.splice(edit.at,1);expect.fills.splice(edit.at,1);break;}
+    case 'insertCol':{
+      if(C>=MAX_TABLE_COLS)throw Error(`A table can hold at most ${MAX_TABLE_COLS} columns`);if(!inR(edit.at,C))throw Error('Column position is invalid');
+      const nw=Math.floor(total/(C+1));if(nw<1)throw Error('Table is too narrow for another column');
+      const scaled=t.grid.map(g=>setW(g,Math.max(1,Math.floor(g.w*(total-nw)/total))));
+      const used=scaled.reduce((s,g)=>s+g.w,0),last=nw+(total-nw-used);
+      t.grid=[...scaled.slice(0,edit.at),{xml:'<a:gridCol w="1"/>',w:1},...scaled.slice(edit.at)];t.grid[edit.at]=setW(t.grid[edit.at],last);
+      for(const r of t.rows){const s=r.cells[Math.min(edit.at,C-1)];r.cells.splice(edit.at,0,{open:s.open,tx:emptyTx(s),txInner:'',tcPr:s.tcPr,text:''});}
+      expect.cols++;expect.cells.forEach(r=>r.splice(edit.at,0,''));expect.fills=t.rows.map(r=>r.cells.map(tcFill));break;}
+    case 'removeCol':{
+      if(C<=1)throw Error('A table needs at least one column');if(!inR(edit.at,C-1))throw Error('Column no longer exists');
+      const gone=t.grid[edit.at].w,rest=t.grid.filter((_,i)=>i!==edit.at),left=total-gone;
+      const scaled=rest.map(g=>setW(g,Math.max(1,Math.floor(g.w*total/left))));
+      const used=scaled.reduce((s,g)=>s+g.w,0);scaled[scaled.length-1]=setW(scaled.at(-1)!,scaled.at(-1)!.w+(total-used));
+      if(scaled.at(-1)!.w<1)throw Error('Table widths are not editable');
+      t.grid=scaled;for(const r of t.rows)r.cells.splice(edit.at,1);
+      expect.cols--;expect.cells.forEach(r=>r.splice(edit.at,1));expect.fills.forEach(r=>r.splice(edit.at,1));break;}
+    case 'header':{
+      if(typeof edit.on!=='boolean')throw Error('Header flag is invalid');if(before.header===edit.on)return bytes;
+      const open=t.tblPr?(t.tblPr.endsWith('/>')?t.tblPr.replace(/\s*\/>$/,'>'):/^<a:tblPr\b[^>]*>/.exec(t.tblPr)![0]):'<a:tblPr>';
+      const inner=t.tblPr&&!t.tblPr.endsWith('/>')?t.tblPr.slice(open.length,t.tblPr.length-'</a:tblPr>'.length):'';
+      const o2=/\sfirstRow="[^"]*"/.test(open)?open.replace(/(\sfirstRow=")[^"]*(")/,`$1${edit.on?1:0}$2`):open.replace(/^<a:tblPr/,`<a:tblPr firstRow="${edit.on?1:0}"`);
+      t.tblPr=inner?`${o2}${inner}</a:tblPr>`:`${o2.replace(/>$/,'/>')}`;expect.header=edit.on;break;}
+    case 'fill':{
+      if(!inR(edit.row)||!inR(edit.col,C-1))throw Error('Cell no longer exists');
+      const f=edit.fill;if(!f||(f.kind!=='none'&&(f.kind!=='solid'||!SAME_COLOR.test(f.color))))throw Error('Fill must be none or a 6-digit uppercase hex color');
+      if(!['cell','row','column','table'].includes(edit.scope))throw Error('Fill scope is invalid');
+      t.rows.forEach((r,ri)=>r.cells.forEach((cell,ci)=>{
+        const hit=edit.scope==='table'||(edit.scope==='row'&&ri===edit.row)||(edit.scope==='column'&&ci===edit.col)||(edit.scope==='cell'&&ri===edit.row&&ci===edit.col);
+        if(hit)r.cells[ci]=withFill(cell,f);}));
+      expect.fills=t.rows.map(r=>r.cells.map(tcFill));
+      if(JSON.stringify(expect.fills)===JSON.stringify(before.fills))return bytes;break;}
+    default:throw Error('Unknown table edit');
+  }
+  let out=serialize(t);
+  if(dh){
+    const m=/<a:ext cx="(\d+)" cy="(\d+)"\s*\/>/.exec(t.pre);if(!m)throw Error('Table frame size is not readable');
+    const cy=Number(m[2])+dh;if(cy<1)throw Error('Table height is invalid');
+    out=out.replace(m[0],`<a:ext cx="${m[1]}" cy="${cy}"/>`);
+  }
+  const next=xml.slice(0,t.frameStart)+out+xml.slice(t.frameEnd);
+  const check=(after:DeckModel)=>{
+    const a=after.slides.find(s=>s.id===slideId);if(!a||a.problems.length||a.shapes.length!==slide.shapes.length)throw Error('Edited deck failed verification');
+    for(const s of a.shapes){const o=slide.shapes.find(x=>x.id===s.id);if(!o)throw Error('Edited deck failed verification');
+      if(s.id!==shapeId&&JSON.stringify(s)!==JSON.stringify(o))throw Error('Edited deck failed verification');}
+  };
+  const res=finish(c,{[slide.part]:next},{},[],check);
+  const got=readTable(res,slideId,shapeId);
+  if(!got.editable||JSON.stringify({...got,problem:undefined})!==JSON.stringify({...expect,problem:undefined}))throw Error('Edited deck failed verification');
+  return res;
+}
