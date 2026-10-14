@@ -289,3 +289,7 @@ Added:
 
 - `withPrecompAudio` maps child tick x in pass k to `plStart + round((x - child.start - timeOffset + k*child.duration) / speed)`. Mapped copies carry `audio.rate = clipRate * speed` (internal field, never stored on real layers); `segmentsBetween` returns `rate` and `fileDuration` (timeline duration times rate), the preview sets `playbackRate` and passes the file duration to `start`. Volume keys move with the same mapping.
 - Removes `silentPrecompLayers` and the `animation.audio.speedSilent` string added in P49.
+
+## P52 - Comp layer volume
+
+- `source.volume` (percent 0..200, absent = 100) on comp layers. `withPrecompAudio` multiplies the value and every key of the nested clip volume by it, so the signature, preview and export follow. The product is only clamped to 200 at playback (`gainCurve`), so a nested 50 % over a clip at 300 % intermediate still comes out right.

@@ -353,3 +353,10 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Done: nested audio now follows the comp layer speed (10-1000 %) in the timeline preview and WebM export: the file is played at that rate through the audio node's playback rate, clips land at the right parent time, start-time offset, loop passes and volume keys scale with it, nested speeds multiply. The "silent" note from P49 and its string are removed because nothing is silent any more.
 - Open: pitch follows speed (a rate change, not a pitch-preserving stretch); stroke styles; text animator sampling in motion blur; no per-comp-layer volume.
 
+
+### Animation P52 (2026-10-14, integration pending)
+
+- Picked: per-comp-layer volume (stroke styles and text-animator blur sampling not chosen).
+- Done: comp layers have an "Audio volume (%)" field (0..200, default 100) and `animation.precomp.time` takes `volume`. It multiplies the volume of every nested clip, including keyed volumes and nested comps. One undo step, validated, 5 locales.
+- Open: the comp layer volume is a constant (no keyframes, no fade); stroke styles; text animator sampling in motion blur.
+

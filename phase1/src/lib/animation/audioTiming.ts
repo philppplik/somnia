@@ -79,7 +79,7 @@ function nestedAudio(comp:Composition,comps:readonly Composition[],depth:number)
   const child=comps.find(c=>c.id===pl.source.compId);if(!child||child.id===comp.id)continue;
   const clips=[...audibleLayers(child),...nestedAudio(child,comps,depth+1)];
   const plStart=pl.inT+pl.offset,plEnd=pl.outT+pl.offset,cStart=child.start,cEnd=child.start+child.duration,dur=Math.max(1,child.duration);
-  const speed=(pl.source.speed??100)/100,t0=pl.source.timeOffset??0;
+  const speed=(pl.source.speed??100)/100,gain=(pl.source.volume??100)/100,t0=pl.source.timeOffset??0;
   /** Parent tick of child tick `x` in pass `k`. */
   const at=(x:number,k:number)=>plStart+Math.round((x-cStart-t0+k*dur)/speed);
   for(let k=0;k<(pl.source.loop?64:1);k++){
@@ -92,7 +92,7 @@ function nestedAudio(comp:Composition,comps:readonly Composition[],depth:number)
     const rate=(cl.audio.rate??1)*speed,vol=cl.audio.volume;
     out.push({...cl,id:`${pl.id}:${k}:${cl.id}`,inT:ns,outT:ne,offset:0,solo:solo,visible:true,
      audio:{...cl.audio,trimIn:cl.audio.trimIn+Math.round((ns-ps)*rate),...(rate!==1?{rate}:{}),
-      volume:{...vol,keys:vol.keys.map(x=>({...x,t:at(x.t,k)}))}}});
+      volume:gain===1?{...vol,keys:vol.keys.map(x=>({...x,t:at(x.t,k)}))}:{...vol,value:(vol.value as number)*gain,keys:vol.keys.map(x=>({...x,t:at(x.t,k),v:(x.v as number)*gain}))}}});
    }
   }
  }

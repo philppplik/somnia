@@ -597,5 +597,6 @@
  "animation.effects.angle": "Angle",
  "cmd.animation.effect.style": "Set shadow or glow radius, distance and angle",
  "animation.effects.innerShadow": "Inner shadow",
- "animation.effects.innerGlow": "Inner glow"
+ "animation.effects.innerGlow": "Inner glow",
+ "animation.precomp.volume": "Audio volume (%)"
 }

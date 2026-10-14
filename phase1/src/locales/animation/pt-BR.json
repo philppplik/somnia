@@ -597,5 +597,6 @@
  "animation.effects.angle": "Ângulo",
  "cmd.animation.effect.style": "Definir raio, distância e ângulo da sombra ou do brilho",
  "animation.effects.innerShadow": "Sombra interna",
- "animation.effects.innerGlow": "Brilho interno"
+ "animation.effects.innerGlow": "Brilho interno",
+ "animation.precomp.volume": "Volume do áudio (%)"
 }

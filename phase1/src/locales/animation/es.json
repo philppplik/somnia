@@ -597,5 +597,6 @@
  "animation.effects.angle": "Ángulo",
  "cmd.animation.effect.style": "Ajustar radio, distancia y ángulo de sombra o resplandor",
  "animation.effects.innerShadow": "Sombra interior",
- "animation.effects.innerGlow": "Resplandor interior"
+ "animation.effects.innerGlow": "Resplandor interior",
+ "animation.precomp.volume": "Volumen del audio (%)"
 }

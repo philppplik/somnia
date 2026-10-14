@@ -230,3 +230,14 @@ test('P48 audio of nested compositions is mapped into the parent: shift, cut, hi
  assert.equal(withPrecompAudio(findComp(base)!,base.compositions),findComp(base));
  assert.notEqual(audioSignature(d,par()),'');
 });
+
+test('P52 comp layer volume scales nested audio and its keys; invalid values are rejected',()=>{
+ let b=withAudio();
+ b=applyEdit(b,{type:'audio.volume.set',layer:'aud',value:80,t:0});b=applyEdit(b,{type:'audio.volume.animate',layer:'aud',on:true,t:0});b=applyEdit(b,{type:'audio.volume.set',layer:'aud',value:160,t:sec});
+ let d=applyEdit(b,{type:'comp.add',id:'par'});d=applyEdit(d,{type:'precomp.add',comp:b.activeComp,id:'pc'});
+ const vol=()=>audibleLayers(withPrecompAudio(findComp(d)!,d.compositions))[0].audio!.volume;
+ assert.deepEqual(vol().keys.map(k=>k.v),[80,160]);
+ d=applyEdit(d,{type:'layer.update',layer:'pc',source:{volume:50}});assert.deepEqual(vol().keys.map(k=>k.v),[40,80]);
+ assert.throws(()=>applyEdit(d,{type:'layer.update',layer:'pc',source:{volume:201}}));assert.throws(()=>applyEdit(d,{type:'layer.update',layer:'pc',source:{volume:-1}}));
+ const d2=applyEdit(d,{type:'layer.update',layer:'pc',source:{volume:100}});assert.notEqual(audioSignature(d,findComp(d)),audioSignature(d2,findComp(d2)));
+});

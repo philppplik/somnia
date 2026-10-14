@@ -597,5 +597,6 @@
  "animation.effects.angle": "Angle",
  "cmd.animation.effect.style": "Régler rayon, distance et angle de l'ombre ou de la lueur",
  "animation.effects.innerShadow": "Ombre interne",
- "animation.effects.innerGlow": "Lueur interne"
+ "animation.effects.innerGlow": "Lueur interne",
+ "animation.precomp.volume": "Volume de l'audio (%)"
 }
