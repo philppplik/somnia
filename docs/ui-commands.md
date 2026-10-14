@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-428 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+430 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -122,6 +122,8 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `animation.render.open` | Render setup | Project | animation |  |
 | `animation.stroke.animate` | Toggle stroke width or opacity keyframes | Edit | animation |  |
 | `animation.stroke.keyRemove` | Remove stroke width or opacity keyframe | Edit | animation |  |
+| `animation.styleKeys.delete` | Delete the selected style-lane keyframes | Edit | animation |  |
+| `animation.styleKeys.nudge` | Move the selected style-lane keyframes by frames | Edit | animation |  |
 | `animation.text.animator` | Edit text animator | Edit | animation |  |
 | `animation.text.path` | Put text on a path, move its start or take it off | Insert | animation |  |
 | `animation.text.preset.apply` | Apply a saved text animator preset | Edit | animation |  |

@@ -3,12 +3,13 @@ import {pathLayerEdit,combinePathsEdits,booleanEdits,maskBooleanEdit,expandStrok
 import {applyTextPresetEdit,deleteTextPresetEdit,saveTextPresetEdit,userTextPresets,animatorEdit,textPathEdit,type AnimatorOp,type TextPathOp} from './textAnimators';
 import {presetEdits,type MotionPreset} from './presets';
 import {newId} from './model';
+import {pruneStyleKeys} from './keyLanes';
 import type {Modifier} from './modifiers';
 import {saveAnimationSnapshot} from './persistence';
 import {registerCommandSpec} from '../commandBridge';
 import {commandRegistry} from '../commandRegistry';
 import type {CommandSchema,CommandSpec} from '../commandSpec';
-import {EditError,type Edit} from './edit';
+import {EditError,styleKeyDeleteEdits,styleKeyShiftEdits,type Edit} from './edit';
 import {findComp,findLayer,COLOR_EASES,type ColorEase,TEXT_FONTS,TRANSFORM_KEYS,type KeyRef,type LayerKind,type LayerEffect,type PropValue,type TextFont,type TransformKey} from './model';
 import {animationSession} from './session';
 import {setLayerPen,getLayerPen} from './maskSelection';
@@ -17,7 +18,7 @@ import {downloadBlob} from './exportFrames';
 import {clearLayerSet,layerSetIds} from './layerSet';
 import {deleteEasingEdit,findEasing,saveEasingEdit} from './easingLibrary';
 import {deleteMotionEdit,exportMotionsJson,findMotion,mergeMotionsEdit,motionEdits,motionFromKeys,parseMotionsJson,saveMotionEdit,userMotions} from './motionLibrary';
-import {secondsToTicks,snapToFrame} from './time';
+import {secondsToTicks,snapToFrame,frameToTick} from './time';
 import {ClipError,copyKeys,getKeyClip,pastedRefs,setKeyClip} from './keyclip';
 import {allKeysOf,pruneSelection,shiftSelection} from './selection';
 import {EASE_PRESETS,type EasePreset} from './graph';
@@ -84,6 +85,14 @@ export function animationCommandSpecs():CommandSpec<unknown,unknown>[]{
   spec('animation.color.keyRemove','Remove fill or stroke colour keyframe',(p:{layer?:string;prop:'fill'|'stroke';t?:number})=>run({type:'color.prop',layer:layerIdOf(p),prop:p.prop,op:'remove',t:p.t??playhead()}),object({layer:layerRef,prop:{enum:['fill','stroke']},t:tick},['prop'])),
   spec('animation.color.ease','Set ease of the fill or stroke colour key at the playhead',(p:{layer?:string;prop:'fill'|'stroke';t?:number;preset:EasePreset})=>{if(!(COLOR_EASES as readonly string[]).includes(p.preset))fail('Unknown ease preset.');return run({type:'color.ease',layer:layerIdOf(p),prop:p.prop,t:p.t??playhead(),ease:p.preset as ColorEase});},
    object({layer:layerRef,prop:{enum:['fill','stroke']},t:tick,preset:{enum:[...COLOR_EASES]}},['prop','preset'])),
+  spec('animation.styleKeys.delete','Delete the selected style-lane keyframes',()=>{const v=animationSession().getState().view,picks=pruneStyleKeys(comp().layers,v.styleKeys);if(!picks.length)fail('Select style keys first.');
+   const layer=picks[0].layer;const rev=run(styleKeyDeleteEdits(layer,picks.filter(p=>p.layer===layer)));animationSession().setView({styleKeys:[]});return rev;},
+   undefined,()=>open()&&pruneStyleKeys(comp().layers,animationSession().getState().view.styleKeys).length>0,'Edit'),
+  spec('animation.styleKeys.nudge','Move the selected style-lane keyframes by frames',(p:{frames:number})=>{const v=animationSession().getState().view,c=comp(),picks=pruneStyleKeys(c.layers,v.styleKeys);if(!picks.length)fail('Select style keys first.');
+   if(!Number.isInteger(p.frames)||p.frames===0||Math.abs(p.frames)>600)fail('Frames must be a non-zero whole number up to 600.');
+   const layer=picks[0].layer,mine=picks.filter(x=>x.layer===layer),delta=p.frames*frameToTick(1,c.fps);
+   const rev=run(styleKeyShiftEdits(layer,mine,delta));animationSession().setView({styleKeys:mine.map(x=>({...x,t:x.t+delta})),playhead:mine[mine.length-1].t+delta});return rev;},
+   object({frames:{type:'integer',minimum:-600,maximum:600}},['frames']),()=>open()&&pruneStyleKeys(comp().layers,animationSession().getState().view.styleKeys).length>0,'Edit'),
   spec('animation.blur.layers','Toggle motion blur on layers',(p:{layers?:string[];enabled?:boolean})=>{const ids=p.layers??layerSetIds(animationSession().getState().view.selectedLayer);if(!ids.length)fail('Select a layer first.');
    const enabled=p.enabled??!ids.every(id=>findLayer(comp(),id)?.motionBlur);return run({type:'layer.motionBlur',layers:ids,enabled});},
    object({layers:{type:'array',items:layerRef,minItems:1,maxItems:200},enabled:{type:'boolean'}},[]),()=>open()&&layerSetIds(animationSession().getState().view.selectedLayer).length>0,'Edit'),
@@ -265,7 +274,7 @@ export function animationCommandSpecs():CommandSpec<unknown,unknown>[]{
  ] as CommandSpec<unknown,unknown>[];
 }
 export const ANIMATION_COMMANDS=animationCommandSpecs().map(s=>s.id);
-const DESTRUCTIVE=new Set(['animation.layer.remove','animation.keys.delete','animation.keys.cut','animation.audio.volume.keyRemove','animation.precomp.volume.keyRemove','animation.stroke.keyRemove','animation.color.keyRemove']);
+const DESTRUCTIVE=new Set(['animation.layer.remove','animation.keys.delete','animation.keys.cut','animation.audio.volume.keyRemove','animation.precomp.volume.keyRemove','animation.stroke.keyRemove','animation.color.keyRemove','animation.styleKeys.delete']);
 export function registerAnimationCommands(){
  const offs=animationCommandSpecs().map(s=>{const off=registerCommandSpec(s);const c=commandRegistry.get(s.id);if(c){c.studio='animation';c.argsSchema=s.params;c.risk=DESTRUCTIVE.has(s.id)?'destructive':'content';}return off;});
  return()=>offs.forEach(off=>off());

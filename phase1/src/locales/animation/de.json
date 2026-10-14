@@ -615,5 +615,7 @@
  "cmd.animation.color.keyRemove": "Füll- oder Konturfarb-Keyframe entfernen",
  "animation.keys.styleKey": "{name}-Key bei {time}",
  "animation.color.ease": "Easing des Farb-Keys",
- "cmd.animation.color.ease": "Easing des Füll- oder Konturfarb-Keys am Abspielkopf setzen"
+ "cmd.animation.color.ease": "Easing des Füll- oder Konturfarb-Keys am Abspielkopf setzen",
+ "cmd.animation.styleKeys.delete": "Ausgewählte Stil-Keyframes löschen",
+ "cmd.animation.styleKeys.nudge": "Ausgewählte Stil-Keyframes um Frames verschieben"
 }

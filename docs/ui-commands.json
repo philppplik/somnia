@@ -1224,6 +1224,30 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.styleKeys.delete",
+      "title": "Delete the selected style-lane keyframes",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "animation.styleKeys.nudge",
+      "title": "Move the selected style-lane keyframes by frames",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.text.animator",
       "title": "Edit text animator",
       "category": "Edit",

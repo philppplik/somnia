@@ -434,3 +434,15 @@ export function applyEdits(doc:AnimationDocument,edits:readonly Edit[]):Animatio
 /** Safety net used by recovery tests and import: an edit must never produce an invalid document. */
 export const isConsistent=(doc:AnimationDocument)=>validateDocument(doc).length===0;
 export {TRANSFORM_KEYS};
+
+/** Edits that delete the given style-lane keys; a lane that loses its last key becomes static at the sampled value (same as the single-key remove). */
+export function styleKeyDeleteEdits(layer:string,picks:readonly {lane:'gain'|'strokeWidth'|'strokeOpacity'|'fill'|'stroke';t:number}[]):Edit[]{
+ return picks.map((p):Edit=>p.lane==='gain'?{type:'layer.gain.key.remove',layer,t:p.t}
+  :p.lane==='strokeWidth'||p.lane==='strokeOpacity'?{type:'stroke.prop',layer,prop:p.lane==='strokeWidth'?'width':'opacity',op:'remove',t:p.t}
+  :{type:'color.prop',layer,prop:p.lane,op:'remove',t:p.t});
+}
+/** Edits that shift the given style-lane keys by `delta` ticks. Ordered so keys of one lane never pass through each other; a collision with an unselected key makes the whole step fail. */
+export function styleKeyShiftEdits(layer:string,picks:readonly {lane:'gain'|'strokeWidth'|'strokeOpacity'|'fill'|'stroke';t:number}[],delta:number):Edit[]{
+ const order=[...picks].sort((a,b)=>delta>0?b.t-a.t:a.t-b.t);
+ return order.map((p):Edit=>({type:'style.key.move',layer,lane:p.lane,from:p.t,to:p.t+delta}));
+}

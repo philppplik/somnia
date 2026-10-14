@@ -15,6 +15,8 @@ import {booleanEdits,maskBooleanEdit,expandStrokeEdits} from './pathLayer';
 import {frameSvg} from './exportFrames';
 import {strokeAttributes,layerColorsAt} from './effects';
 import {styleKeyLanes} from './keyLanes';
+import {pruneStyleKeys,toggleStyleKey} from './keyLanes';
+import {styleKeyDeleteEdits,styleKeyShiftEdits} from './edit';
 import {colorAt,easeProgress,COLOR_EASE_HANDLES} from './colorKeys';
 import {strokeOutline,simplifyRing} from './pathBoolean';
 import {deleteEasingEdit,findEasing,saveEasingEdit,userEasings,validateEasingLib,MAX_EASINGS} from './easingLibrary';
@@ -1526,4 +1528,25 @@ test('P61 colour key ease: segment shaping, hold, overshoot clamp, edits and mat
  d=applyEdit(d,{type:'color.ease',layer:'stencil',prop:'fill',t:80000,ease:'linear'});assert.equal('ease' in L().colorKeys!.fill![0],false,'linear is the default and is not stored');
  assert.deepEqual(validateDocument(d),[]);
  assert.throws(()=>applyEdit(d,{type:'color.ease',layer:'stencil',prop:'fill',t:8000,ease:'ease'}));assert.throws(()=>applyEdit(d,{type:'color.ease',layer:'stencil',prop:'fill',t:80000,ease:'bogus' as never}));
+});
+
+test('P62 style-lane selection, delete and nudge',()=>{
+ let d=base();const L=()=>d.compositions[0].layers.find(l=>l.id==='stencil')!;
+ d=applyEdit(d,{type:'color.prop',layer:'stencil',prop:'fill',op:'animate',on:true,t:0});
+ for(const t of [80000,160000,240000])d=applyEdit(d,{type:'color.prop',layer:'stencil',prop:'fill',op:'set',color:'#ffffff',t});
+ const ls=d.compositions[0].layers,r=(t:number)=>({layer:'stencil',lane:'fill' as const,t});
+ assert.equal(pruneStyleKeys(ls,[r(0),r(0),r(5),{layer:'nope',lane:'fill',t:0}]).length,1,'stale and duplicate picks drop');
+ assert.equal(toggleStyleKey([r(0)],r(80000)).length,2);assert.equal(toggleStyleKey([r(0)],r(0)).length,0);
+ const f=8000;
+ let m=applyEdits(d,styleKeyShiftEdits('stencil',[r(80000),r(160000)],f));
+ assert.deepEqual(m.compositions[0].layers.find(l=>l.id==='stencil')!.colorKeys!.fill!.map(k=>k.t),[0,88000,168000,240000]);
+ m=applyEdits(d,styleKeyShiftEdits('stencil',[r(80000),r(160000)],-f));
+ assert.deepEqual(m.compositions[0].layers.find(l=>l.id==='stencil')!.colorKeys!.fill!.map(k=>k.t),[0,72000,152000,240000]);
+ assert.throws(()=>applyEdits(d,styleKeyShiftEdits('stencil',[r(80000)],80000)),'collision with an unselected key fails the whole step');
+ assert.deepEqual(d.compositions[0].layers.find(l=>l.id==='stencil')!.colorKeys!.fill!.map(k=>k.t),[0,80000,160000,240000]);
+ const x=applyEdits(d,styleKeyDeleteEdits('stencil',[r(80000),r(160000)]));
+ assert.deepEqual(x.compositions[0].layers.find(l=>l.id==='stencil')!.colorKeys!.fill!.map(k=>k.t),[0,240000]);
+ const all=applyEdits(d,styleKeyDeleteEdits('stencil',[r(0),r(80000),r(160000),r(240000)]));
+ assert.equal(all.compositions[0].layers.find(l=>l.id==='stencil')!.colorKeys,undefined,'deleting every key makes the colour static');
+ assert.deepEqual(validateDocument(all),[]);
 });

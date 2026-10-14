@@ -65,6 +65,7 @@ export class AnimationSession{
   const comp=this.doc&&findComp(this.doc);
   const next={...this.view,...patch};
   if(patch.selectedLayer!==undefined&&patch.selectedLayer!==this.view.selectedLayer&&patch.selectedKeys===undefined){next.selectedKeys=[];next.selectedKey=null;}
+  if(patch.selectedLayer!==undefined&&patch.selectedLayer!==this.view.selectedLayer&&patch.styleKeys===undefined)next.styleKeys=[];
   if(comp&&patch.playhead!==undefined)next.playhead=Math.min(comp.start+comp.duration,Math.max(comp.start,snapToFrame(patch.playhead,comp.fps)));
   this.view=next;this.emit();
  }

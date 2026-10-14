@@ -615,5 +615,7 @@
  "cmd.animation.color.keyRemove": "Remove fill or stroke colour keyframe",
  "animation.keys.styleKey": "{name} key at {time}",
  "animation.color.ease": "Colour key ease",
- "cmd.animation.color.ease": "Set ease of the fill or stroke colour key at the playhead"
+ "cmd.animation.color.ease": "Set ease of the fill or stroke colour key at the playhead",
+ "cmd.animation.styleKeys.delete": "Delete the selected style-lane keyframes",
+ "cmd.animation.styleKeys.nudge": "Move the selected style-lane keyframes by frames"
 }

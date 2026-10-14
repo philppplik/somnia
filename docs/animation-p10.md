@@ -331,3 +331,6 @@ Added:
 
 ## P61 - Colour key easing
 `ColorKey.ease` (optional, 12 presets from `COLOR_EASES`) shapes the segment from that key to the next. Absent or `linear` is the old behaviour and is not stored, so existing documents are byte-identical. `hold` keeps the key colour until the next key. Channels are clamped to 0..1 so overshoot cannot leave the colour range. Editing a key colour or moving a key keeps its ease. Edit: `color.ease {layer,prop,t,ease}`; command `animation.color.ease`.
+
+## P62 - Style-lane key selection
+`ViewState.styleKeys` holds `{layer,lane,t}` picks, pruned against the document on every read. Delete reuses the single-key remove edits (a lane that loses its last key becomes static at its sampled value). Nudge emits `style.key.move` edits ordered so keys of one lane never cross; a collision with an unselected key, or leaving the composition, fails the whole step and changes nothing. Dragging a diamond selects only that key; Shift-click toggles without dragging.

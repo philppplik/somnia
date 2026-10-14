@@ -615,5 +615,7 @@
  "cmd.animation.color.keyRemove": "Remover quadro-chave de cor de preenchimento ou traço",
  "animation.keys.styleKey": "Quadro-chave de {name} em {time}",
  "animation.color.ease": "Suavização do quadro-chave de cor",
- "cmd.animation.color.ease": "Definir a suavização do quadro-chave de cor de preenchimento ou traço no cursor"
+ "cmd.animation.color.ease": "Definir a suavização do quadro-chave de cor de preenchimento ou traço no cursor",
+ "cmd.animation.styleKeys.delete": "Excluir os quadros-chave de estilo selecionados",
+ "cmd.animation.styleKeys.nudge": "Mover os quadros-chave de estilo selecionados por quadros"
 }

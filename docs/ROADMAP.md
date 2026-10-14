@@ -419,3 +419,7 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 \n\n### Animation P61 (2026-10-14, integration pending)
 - Done: per-key easing for fill and stroke colour keys (12 presets, same bezier handles as the graph presets; hold keeps the colour until the next key). Easing shapes the segment that starts at the key. Select in the inspector when a key sits at the playhead, command `animation.color.ease`, edit `color.ease`. One undo step.
 - Open: lane delete and multi-select, keyboard nudging, effect colour keys have no easing or lane.
+
+### Animation P62 (2026-10-14, integration pending)
+- Done: style-lane keys (fill, stroke colour, stroke width and opacity, comp volume) can be selected (click, Shift-click toggles), nudged with Left/Right (1 frame, Shift 10) and deleted with Delete. Commands `animation.styleKeys.nudge` and `animation.styleKeys.delete`; each is one undo step. Selection is view state (not saved, not undoable), cleared on layer change.
+- Open: marquee select and dragging a whole selection with the mouse, selection across layers, effect colour keys have no lane.
