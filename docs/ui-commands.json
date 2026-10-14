@@ -11,6 +11,18 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.audio.beats",
+      "title": "Find beats in the audio clip and mark them",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.audio.import",
       "title": "Import audio (WAV or MP3)",
       "category": "Insert",

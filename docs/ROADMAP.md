@@ -285,3 +285,10 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Done: held edge autoscroll for scrub, key drag, layer drag and marquee (keeps scrolling while the pointer rests near the edge; lane list scrolls vertically); fixed tick math during autoscroll (used a stale window); per-layer track heights (compact / normal / tall) plus Collapse all / Expand all; user-saved text animator presets in the document (save, apply with preview, delete).
 - Open: import/export of text presets as files, tall-track height for lanes (only the layer bar grows), autoscroll for work-area edge drag.
 
+
+### Animation P42 (2026-10-14, integration pending)
+
+- Picked (a), audio. Already existed: waveform in the timeline lane and inspector, timeline snapping to markers (P39). For (b) loop/ping-pong modifiers, wiggle and ease presets on selected keys already exist, so little was left there.
+- Done: beat finder for imported audio (`animation.audio.beats`): marks onsets as "Beat n" markers in one undo step, respecting trim and offset; sensitivity 1-10; "Clear beats" removes only markers named Beat n. Snapping then lands on the beats.
+- Open: resolution is limited to the stored peak envelope (1024 bins, so about 8 ms on a 8 s clip, 0.6 s on a 10 min clip); no tempo/BPM grid; no onset detection by frequency band.
+

@@ -558,5 +558,11 @@
  "animation.animators.preset.save": "Enregistrer comme préréglage",
  "cmd.animation.text.preset.save": "Enregistrer un animateur de texte comme préréglage",
  "cmd.animation.text.preset.apply": "Appliquer un préréglage d’animateur de texte enregistré",
- "cmd.animation.text.preset.delete": "Supprimer un préréglage d’animateur de texte enregistré"
+ "cmd.animation.text.preset.delete": "Supprimer un préréglage d’animateur de texte enregistré",
+ "animation.audio.beats.hint": "Marque les attaques fortes de la forme d’onde enregistrée par des repères. La précision dépend de la résolution de la forme d’onde ; l’aimantation utilise ces repères.",
+ "animation.audio.beats.sensitivity": "Sensibilité des temps (1-10)",
+ "animation.audio.beats.find": "Trouver les temps",
+ "animation.audio.beats.clear": "Effacer les temps",
+ "animation.audio.beats.added": "{count} repères de temps ajoutés",
+ "cmd.animation.audio.beats": "Trouver les temps du clip audio et les marquer"
 }

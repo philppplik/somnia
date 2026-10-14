@@ -1,3 +1,4 @@
+import {useState} from 'react';
 import {useT} from '../../lib/useT';
 import {executeCommand} from '../../lib/commands';
 import {animationSession} from '../../lib/animation/session';
@@ -14,7 +15,7 @@ const sec=(n:number)=>String(Math.round(n*1000)/1000);
 function N(p:{label:string;value:number;min?:number;max?:number;step?:number;resetKey:string;disabled:boolean;onCommit:(n:number)=>void}){return <InspectorNumberField {...p} className={field} format={sec}/>;}
 /** Inspector for an audio layer: file info, waveform, trim, offset and volume keyframes. Every change is a validated command. */
 export function AudioInspector({layer,comp,at}:{layer:Layer;comp:Composition;at:number}){
- const {t}=useT();const doc=animationSession().document;const a=layer.audio!;const asset=doc?.audioAssets?.find(x=>x.id===a.assetId);
+ const {t}=useT();const [sens,setSens]=useState(5);const [note,setNote]=useState('');const doc=animationSession().document;const a=layer.audio!;const asset=doc?.audioAssets?.find(x=>x.id===a.assetId);
  const vol=a.volume,animated=vol.keys.length>0,onKey=vol.keys.some(k=>k.t===at),value=evaluate(vol,at) as number;
  return <div className="grid gap-3 p-3 text-xs" data-testid="animation-properties">
   <label className="grid gap-1 text-ink-3">{t('animation.layer.name')}<NativeInput className={field} defaultValue={layer.name} key={layer.id+layer.name} onBlur={e=>{const v=e.currentTarget.value.trim();if(v&&v!==layer.name)run('animation.layer.update',{layer:layer.id,name:v});}}/></label>
@@ -30,6 +31,14 @@ export function AudioInspector({layer,comp,at}:{layer:Layer;comp:Composition;at:
     <N disabled={layer.locked} label={t('animation.audio.length')} value={ticksToSeconds(layer.outT-layer.inT)} min={0.001} step={0.01} resetKey={`${layer.id}:${layer.outT}`} onCommit={n=>run('animation.audio.update',{layer:layer.id,length:n})}/>
    </div>
    <N disabled={layer.locked} label={t('animation.audio.offset')} value={ticksToSeconds(layer.offset)} step={0.01} resetKey={`${layer.id}:${layer.offset}`} onCommit={n=>run('animation.audio.update',{layer:layer.id,offset:n})}/>
+   <div className="grid gap-1 border-t border-subtle pt-2" data-testid="animation-audio-beats">
+    <p className="m-0 text-ink-3">{t('animation.audio.beats.hint')}</p>
+    <N disabled={layer.locked} label={t('animation.audio.beats.sensitivity')} value={sens} min={1} max={10} step={1} resetKey={`sens:${sens}`} onCommit={n=>setSens(Math.min(10,Math.max(1,Math.round(n))))}/>
+    <div className="flex gap-1">
+     <Button size="tiny" variant="outline" disabled={layer.locked} onClick={async()=>{setNote('');try{const count=()=>comp.markers?.length??0;const before=count();await executeCommand('animation.audio.beats',{layer:layer.id,sensitivity:sens});const after=animationSession().document?.compositions.find(c=>c.id===comp.id)?.markers?.length??before;setNote(t('animation.audio.beats.added',{count:after-before}));}catch(e){setNote((e as Error).message);}}} data-testid="animation-audio-beats-find">{t('animation.audio.beats.find')}</Button>
+     <Button size="tiny" variant="ghost" onClick={async()=>{setNote('');try{await executeCommand('animation.audio.beats',{layer:layer.id,clear:true});}catch(e){setNote((e as Error).message);}}} data-testid="animation-audio-beats-clear">{t('animation.audio.beats.clear')}</Button></div>
+    {note&&<p role="status" className="m-0 text-ink-3">{note}</p>}
+   </div>
   </fieldset>}
   <fieldset className="m-0 grid gap-2 border border-subtle p-2" disabled={layer.locked} data-testid="animation-audio-volume">
    <legend className="text-ink-3">{t('animation.audio.volumeLane')}</legend>

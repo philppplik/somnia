@@ -1188,3 +1188,19 @@ test('P41 saved text presets round-trip through the document and stay valid',()=
  const d4=applyEdit(d2,deleteTextPresetEdit(d2,preset.id));assert.equal(userTextPresets(d4).length,0);assert.throws(()=>deleteTextPresetEdit(d4,preset.id),Error);
  const none=applyEdit(d0,animatorEdit(d0,'title',{op:'add',id:'z'}));assert.equal(saveTextPresetEdit(none,'title','z','Plain').preset.sweep,undefined);
 });
+
+test('P42 detectBeats finds evenly spaced hits, respects sensitivity and gap, and is bounded',async()=>{
+ const {detectBeats,beatMarkers,MAX_BEATS}=await import('./audioBeats');
+ const dur=8*240000,bins=1024;const peaks=Array.from({length:bins},(_,i)=>{const sec=i/bins*8;const ph=sec%0.5;return Math.round(255*(ph<0.04?0.95:0.12+0.03*Math.sin(i)));});
+ const b=detectBeats(peaks,dur,{sensitivity:5});assert.ok(b.length>=14&&b.length<=17,`got ${b.length}`);
+ b.forEach((t,i)=>assert.ok(Math.abs(t/240000-i*0.5)<0.06,`beat ${i} at ${t/240000}`));
+ assert.ok(detectBeats(peaks,dur,{sensitivity:10}).length>=b.length);
+ assert.deepEqual(detectBeats(Array(1024).fill(100),dur),[]);assert.deepEqual(detectBeats([1,2],dur),[]);assert.deepEqual(detectBeats(peaks,0),[]);
+ assert.ok(detectBeats(peaks,dur,{minGapSeconds:2}).length<=4);
+ const noisy=Array.from({length:1024},(_,i)=>i%2?250:5);assert.ok(detectBeats(noisy,dur,{sensitivity:10,minGapSeconds:0.001}).length<=MAX_BEATS);
+ // mapping: clip placed 1 s into the comp, trimmed 2 s into the file, 3 s long
+ const ids=(()=>{let n=0;return()=>`m${n++}`;})();const sec=240000;
+ const m=beatMarkers([1*sec,2*sec,3.5*sec,4.5*sec,5*sec,6*sec],{trimIn:2*sec,length:3*sec,start:1*sec},[{id:'x',t:1*sec,label:'Beat 1'}],0,10*sec,t=>t,ids);
+ assert.deepEqual(m.map(x=>x.t),[2.5*sec,3.5*sec]);assert.deepEqual(m.map(x=>x.label),['Beat 2','Beat 3']);
+ const d=applyEdit(base(),{type:'markers.set',markers:m});assert.deepEqual(validateDocument(d),[]);
+});

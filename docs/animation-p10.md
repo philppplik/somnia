@@ -233,3 +233,8 @@ Added:
 - Track heights: a chevron per layer cycles normal, tall, compact. Compact hides the selected layer's property lanes. `animation.timeline.tracks {mode:'collapse'|'expand'|'cycle'|'compact'|'normal'|'tall', layer?}`. View state, not saved, no undo.
 - Saved text presets: `Document.textPresets {version:1, items}` (max 50, validated, saved with the document). Save an animator's look and keyed sweep under a name (`animation.text.preset.save`), apply it as a new animator at the playhead (`...apply`, one undo step, hover previews), delete (`...delete`). Names cannot repeat or reuse the built-in ones.
 - Not built: file export/import of text presets.
+
+## P42 - Beat markers from audio
+
+- `animation.audio.beats {layer?, sensitivity?:1-10, clear?}`: reads the clip's stored peak envelope (no decoding), finds rises above the recent level that stand out from the clip's variation (threshold from mean and spread, local maxima, min 0.2 s apart, at most 200), maps them through trim and offset to composition ticks on whole frames and adds markers "Beat n" in one `markers.set`. Existing marker ticks are skipped; the composition's 200-marker limit holds. `clear:true` removes only markers matching `Beat n`.
+- Limits: time resolution is clip length / 1024 bins. Coarse for long clips; the envelope is peak amplitude, not frequency bands, so dense mixes give fewer clean beats.

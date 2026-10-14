@@ -16,11 +16,12 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-409 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+410 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
 | `agent.toggle` | Toggle Somnia Agent | View | core | `Mod+Alt+A` |
+| `animation.audio.beats` | Find beats in the audio clip and mark them | Edit | animation |  |
 | `animation.audio.import` | Import audio (WAV or MP3) | Insert | animation |  |
 | `animation.audio.update` | Trim and place audio clip | Edit | animation |  |
 | `animation.audio.volume.animate` | Toggle audio volume keyframes | Edit | animation |  |

@@ -558,5 +558,11 @@
  "animation.animators.preset.save": "Save as preset",
  "cmd.animation.text.preset.save": "Save a text animator as a preset",
  "cmd.animation.text.preset.apply": "Apply a saved text animator preset",
- "cmd.animation.text.preset.delete": "Delete a saved text animator preset"
+ "cmd.animation.text.preset.delete": "Delete a saved text animator preset",
+ "animation.audio.beats.hint": "Marks loud onsets from the stored waveform as timeline markers. Accuracy is limited by the waveform resolution; snapping uses these markers.",
+ "animation.audio.beats.sensitivity": "Beat sensitivity (1-10)",
+ "animation.audio.beats.find": "Find beats",
+ "animation.audio.beats.clear": "Clear beats",
+ "animation.audio.beats.added": "{count} beat markers added",
+ "cmd.animation.audio.beats": "Find beats in the audio clip and mark them"
 }

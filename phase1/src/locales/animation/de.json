@@ -558,5 +558,11 @@
  "animation.animators.preset.save": "Als Vorlage speichern",
  "cmd.animation.text.preset.save": "Textanimator als Vorlage speichern",
  "cmd.animation.text.preset.apply": "Gespeicherte Textanimator-Vorlage anwenden",
- "cmd.animation.text.preset.delete": "Gespeicherte Textanimator-Vorlage löschen"
+ "cmd.animation.text.preset.delete": "Gespeicherte Textanimator-Vorlage löschen",
+ "animation.audio.beats.hint": "Markiert laute Einsätze aus der gespeicherten Wellenform als Zeitleisten-Marker. Die Genauigkeit ist durch die Wellenform-Auflösung begrenzt; das Einrasten nutzt diese Marker.",
+ "animation.audio.beats.sensitivity": "Beat-Empfindlichkeit (1-10)",
+ "animation.audio.beats.find": "Beats finden",
+ "animation.audio.beats.clear": "Beats löschen",
+ "animation.audio.beats.added": "{count} Beat-Marker hinzugefügt",
+ "cmd.animation.audio.beats": "Beats im Audioclip finden und markieren"
 }

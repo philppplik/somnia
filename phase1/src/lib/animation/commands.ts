@@ -22,6 +22,7 @@ import {ClipError,copyKeys,getKeyClip,pastedRefs,setKeyClip} from './keyclip';
 import {allKeysOf,pruneSelection,shiftSelection} from './selection';
 import {EASE_PRESETS,type EasePreset} from './graph';
 import {copyCurve,pasteCurveEdit} from './graphTools';
+import {detectBeats,beatMarkers,BEAT_LABEL} from './audioBeats';
 import {nextTrackHeight,setAllTracks,setTrackHeight,trackHeightOf,setShyHidden,shyHidden,fitAll,fitRange,setTimelineSnap,timelineSnap as timelineSnapNow,timeWindow,zoomAround} from './timelineView';
 import {applyExportPreset,resetExportSettings,setExportSettings,exportApng,exportCurrentFrame,exportGif,exportWebM,exportWorkAreaSequence} from './exportJob';
 import {ExportError} from './exportFrames';
@@ -72,6 +73,16 @@ export function animationCommandSpecs():CommandSpec<unknown,unknown>[]{
    object({layer:layerRef,name:{type:'string',maxLength:200},visible:{type:'boolean'},solo:{type:'boolean'},locked:{type:'boolean'},shy:{type:'boolean'},text:{type:'string',maxLength:2000},size:{type:'number',minimum:1,maximum:2000},color:{type:'string',pattern:'^#[0-9a-fA-F]{6}$'},font:{enum:Object.keys(TEXT_FONTS)}},[])),
   spec('animation.audio.import','Import audio (WAV or MP3)',()=>{window.dispatchEvent(new CustomEvent(AUDIO_IMPORT_EVENT));},undefined,open,'Insert'),
   spec('animation.audio.update','Trim and place audio clip',(p:{layer?:string;trimIn?:number;length?:number;offset?:number})=>run({type:'audio.update',layer:layerIdOf(p),...(p.trimIn!==undefined?{trimIn:secondsToTicks(p.trimIn)}:{}),...(p.length!==undefined?{length:secondsToTicks(p.length)}:{}),...(p.offset!==undefined?{offset:secondsToTicks(p.offset)}:{})}),object({layer:layerRef,trimIn:{type:'number',minimum:0,maximum:600},length:{type:'number',minimum:0.001,maximum:600},offset:{type:'number',minimum:-3600,maximum:3600}},[])),
+  spec('animation.audio.beats','Find beats in the audio clip and mark them',(p:{layer?:string;sensitivity?:number;clear?:boolean})=>{
+   const c=comp();const marks=c.markers??[];
+   if(p.clear){const keep=marks.filter(m=>!BEAT_LABEL.test(m.label));if(keep.length===marks.length)throw Object.assign(Error('There are no beat markers.'),{expected:true});run({type:'markers.set',markers:keep});return 0;}
+   const l=findLayer(c,layerIdOf(p));if(!l||l.kind!=='audio'||!l.audio)throw Object.assign(Error('Select an audio layer.'),{expected:true});
+   const asset=doc().audioAssets?.find(a=>a.id===l.audio!.assetId);if(!asset)throw Object.assign(Error('The audio file is missing.'),{expected:true});
+   const beats=detectBeats(asset.peaks,asset.durationTicks,{sensitivity:p.sensitivity});
+   const made=beatMarkers(beats,{trimIn:l.audio.trimIn,length:l.outT-l.inT,start:l.inT+l.offset},marks,c.start,c.start+c.duration,t=>snapToFrame(t,c.fps),()=>newId('marker'));
+   if(!made.length)throw Object.assign(Error('No new beats found in this clip. Try a higher sensitivity.'),{expected:true});
+   run({type:'markers.set',markers:[...marks,...made]});return made.length;
+  },object({layer:layerRef,sensitivity:{type:'integer',minimum:1,maximum:10},clear:{type:'boolean'}},[]),()=>open()&&findLayer(comp(),selected())?.kind==='audio','Edit'),
   spec('animation.audio.volume.set','Set audio volume (percent)',(p:{layer?:string;value:number;t?:number})=>run({type:'audio.volume.set',layer:layerIdOf(p),value:p.value,t:p.t??playhead()}),object({layer:layerRef,value:{type:'number',minimum:0,maximum:200},t:tick},['value'])),
   spec('animation.audio.volume.animate','Toggle audio volume keyframes',(p:{layer?:string;on:boolean})=>run({type:'audio.volume.animate',layer:layerIdOf(p),on:p.on,t:playhead()}),object({layer:layerRef,on:{type:'boolean'}},['on'])),
   spec('animation.audio.volume.keyRemove','Remove audio volume keyframe',(p:{layer?:string;t?:number})=>run({type:'audio.volume.key.remove',layer:layerIdOf(p),t:p.t??playhead()}),object({layer:layerRef,t:tick},[])),

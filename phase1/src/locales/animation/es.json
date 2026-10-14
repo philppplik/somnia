@@ -558,5 +558,11 @@
  "animation.animators.preset.save": "Guardar como preajuste",
  "cmd.animation.text.preset.save": "Guardar un animador de texto como preajuste",
  "cmd.animation.text.preset.apply": "Aplicar un preajuste de animador de texto guardado",
- "cmd.animation.text.preset.delete": "Eliminar un preajuste de animador de texto guardado"
+ "cmd.animation.text.preset.delete": "Eliminar un preajuste de animador de texto guardado",
+ "animation.audio.beats.hint": "Marca los ataques fuertes de la forma de onda guardada como marcadores. La precisión depende de la resolución de la forma de onda; el ajuste usa estos marcadores.",
+ "animation.audio.beats.sensitivity": "Sensibilidad de beats (1-10)",
+ "animation.audio.beats.find": "Buscar beats",
+ "animation.audio.beats.clear": "Borrar beats",
+ "animation.audio.beats.added": "{count} marcadores de beat añadidos",
+ "cmd.animation.audio.beats": "Buscar beats en el clip de audio y marcarlos"
 }
