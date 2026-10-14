@@ -110,6 +110,11 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Implemented: the render panel exports the work area as animated GIF (own GIF89a encoder: median-cut palette, from-scratch LZW, loop, per-frame delays), APNG (browser PNG frames re-assembled with acTL/fcTL/fdAT) and WebM (real-time `canvas.captureStream` + `MediaRecorder`, VP9/VP8 with Opus; the P5b preview mix joins the recording when audio layers are audible). All three run with StudioProgress and cancel, under shared caps (GIF 300 frames, WebM 60 s real time, 64 MB per file). New commands `animation.export.gif/.apng/.webm`; no new dependencies.
 - Validation: 7 new and 115 total Animation unit tests, DS ratchet, isolated Chrome German light/dark pixels plus real GIF/APNG/WebM decode checks. Full-app/native/WASM gates remain CI-only (`tests/animation-p7.spec.ts` not run). Details and limits: `docs/animation-p7.md`.
 
+### Animation P11 (2026-10-14, integration pending)
+
+- Implemented: keyframeable masks (position, size, feather, opacity, bake on animate off), bezier path masks (2..32 points, smooth or corner, closed/open) and per-mask opacity. Same builder for viewer and all exports, undoable, validated, five locales. Details: `docs/animation-p10.md` (P11 section).
+- Validation: 2 new Animation unit tests (6 in the P10 file), i18n, DS ratchet unchanged, isolated Chrome pixel review. Full-app spec remains CI-only (`tests/animation-p10.spec.ts` extended). No new dependencies. Open: pen tool, per-point path keys, mask expansion, path mask animation of shape.
+
 ### Animation P10 (2026-10-14, integration pending)
 
 - Implemented: up to 4 layer masks (rect/ellipse, add/subtract, feather 0..64 px, invert), track mattes (alpha/luma, invert, no chains, source hidden on its own), rotation and colour for text animators. One mask builder for viewer and all exports, undoable, validated, five locales. Details and limits: `docs/animation-p10.md`.

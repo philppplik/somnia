@@ -15,4 +15,10 @@ test('P10 masks, track matte and text rotation/colour animators',async({page})=>
  await page.getByTestId('animation-add-text').click();await page.getByTestId('animation-animator-add').click();
  await page.getByTestId('animation-animator-0').getByRole('checkbox').nth(1).check();
  await expect(page.getByTestId('animation-animator-0').locator('input[type=color]')).toBeVisible();
+ // P11: path shape, animate toggle and mask opacity on a fresh layer.
+ await page.getByTestId('animation-add-solid').click();await page.getByTestId('animation-mask-add').click();
+ await page.getByTestId('animation-mask-0').locator('select').first().selectOption('path');
+ await expect(page.getByTestId('animation-mask-path-0')).toBeVisible();
+ await page.getByTestId('animation-mask-0').getByRole('checkbox',{name:/Animate position|position animieren/i}).check();
+ await expect(page.getByTestId('animation-mask-0').getByRole('checkbox',{name:/Animate position|position animieren/i})).toBeChecked();
 });

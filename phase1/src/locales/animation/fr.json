@@ -299,5 +299,15 @@
  "animation.animators.rotation": "Rotation °",
  "animation.animators.color": "Couleur",
  "cmd.animation.layer.mask": "Modifier le masque du calque",
- "cmd.animation.layer.matte": "Définir le cache de piste du calque"
+ "cmd.animation.layer.matte": "Définir le cache de piste du calque",
+ "animation.masks.path": "Tracé",
+ "animation.masks.opacity": "Opacité %",
+ "animation.masks.points": "Points du tracé (x,y …)",
+ "animation.masks.closed": "Fermé",
+ "animation.masks.smooth": "Courbes lissées",
+ "animation.masks.animate": "Animer {prop}",
+ "animation.masks.prop.position": "la position",
+ "animation.masks.prop.size": "la taille",
+ "animation.masks.prop.feather": "le contour progressif",
+ "animation.masks.prop.opacity": "l'opacité"
 }

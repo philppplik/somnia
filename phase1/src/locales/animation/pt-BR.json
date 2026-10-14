@@ -299,5 +299,15 @@
  "animation.animators.rotation": "Rotação °",
  "animation.animators.color": "Cor",
  "cmd.animation.layer.mask": "Editar máscara da camada",
- "cmd.animation.layer.matte": "Definir matte de trilha da camada"
+ "cmd.animation.layer.matte": "Definir matte de trilha da camada",
+ "animation.masks.path": "Caminho",
+ "animation.masks.opacity": "Opacidade %",
+ "animation.masks.points": "Pontos do caminho (x,y …)",
+ "animation.masks.closed": "Fechado",
+ "animation.masks.smooth": "Curvas suaves",
+ "animation.masks.animate": "Animar {prop}",
+ "animation.masks.prop.position": "posição",
+ "animation.masks.prop.size": "tamanho",
+ "animation.masks.prop.feather": "suavização",
+ "animation.masks.prop.opacity": "opacidade"
 }

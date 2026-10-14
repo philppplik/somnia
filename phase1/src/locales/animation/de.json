@@ -299,5 +299,15 @@
  "animation.animators.rotation": "Drehung °",
  "animation.animators.color": "Farbe",
  "cmd.animation.layer.mask": "Ebenenmaske bearbeiten",
- "cmd.animation.layer.matte": "Track-Matte der Ebene setzen"
+ "cmd.animation.layer.matte": "Track-Matte der Ebene setzen",
+ "animation.masks.path": "Pfad",
+ "animation.masks.opacity": "Deckkraft %",
+ "animation.masks.points": "Pfadpunkte (x,y …)",
+ "animation.masks.closed": "Geschlossen",
+ "animation.masks.smooth": "Weiche Kurven",
+ "animation.masks.animate": "{prop} animieren",
+ "animation.masks.prop.position": "Position",
+ "animation.masks.prop.size": "Größe",
+ "animation.masks.prop.feather": "Weiche Kante",
+ "animation.masks.prop.opacity": "Deckkraft"
 }

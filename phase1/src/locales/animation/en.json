@@ -299,5 +299,15 @@
  "animation.animators.rotation": "Rotation °",
  "animation.animators.color": "Colour",
  "cmd.animation.layer.mask": "Edit layer mask",
- "cmd.animation.layer.matte": "Set layer track matte"
+ "cmd.animation.layer.matte": "Set layer track matte",
+ "animation.masks.path": "Path",
+ "animation.masks.opacity": "Opacity %",
+ "animation.masks.points": "Path points (x,y …)",
+ "animation.masks.closed": "Closed",
+ "animation.masks.smooth": "Smooth curves",
+ "animation.masks.animate": "Animate {prop}",
+ "animation.masks.prop.position": "position",
+ "animation.masks.prop.size": "size",
+ "animation.masks.prop.feather": "feather",
+ "animation.masks.prop.opacity": "opacity"
 }

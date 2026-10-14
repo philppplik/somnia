@@ -67,3 +67,47 @@ test('text animators gain rotation and colour, bounded',()=>{
  assert.throws(()=>applyEdit(d,animatorEdit(d,'title',{op:'update',animator:'a',patch:{rotation:9999}})),EditError);
  assert.throws(()=>applyEdit(d,animatorEdit(d,'title',{op:'update',animator:'a',patch:{color:'red'}})),EditError);
 });
+
+import {resolveMask,bezierPath,smoothPath,setMaskValue,animateMask} from './masks';
+import {TICKS_PER_SECOND as sec} from './time';
+test('P11: keyed mask position, size, feather and opacity are evaluated per tick and render per frame',()=>{
+ let d=base();d=applyEdit(d,maskEdit(d,'photo',{op:'add',id:'m'}));
+ d=applyEdit(d,maskEdit(d,'photo',{op:'animate',mask:'m',prop:'position',on:true,t:0}));
+ d=applyEdit(d,maskEdit(d,'photo',{op:'set',mask:'m',prop:'position',value:[100,40],t:sec}));
+ d=applyEdit(d,maskEdit(d,'photo',{op:'animate',mask:'m',prop:'opacity',on:true,t:0}));
+ d=applyEdit(d,maskEdit(d,'photo',{op:'set',mask:'m',prop:'opacity',value:20,t:sec}));
+ d=applyEdit(d,maskEdit(d,'photo',{op:'animate',mask:'m',prop:'feather',on:true,t:0}));
+ d=applyEdit(d,maskEdit(d,'photo',{op:'set',mask:'m',prop:'feather',value:10,t:sec}));
+ const m=layer(d,'photo').masks![0];
+ const half=resolveMask(m,sec/2);
+ assert.ok(half.x>m.x&&half.x<100&&half.opacity!<100&&half.opacity!>20&&half.feather>0&&half.feather<10);
+ assert.deepEqual([resolveMask(m,sec).x,resolveMask(m,sec).y,resolveMask(m,sec).opacity,resolveMask(m,sec).feather],[100,40,20,10]);
+ assert.notEqual(frameSvg(comp(d),0),frameSvg(comp(d),sec));
+ assert.ok(frameSvg(comp(d),sec).includes('fill-opacity="0.2"')&&frameSvg(comp(d),sec).includes('stdDeviation="10"'));
+ assert.deepEqual(validateDocument(JSON.parse(JSON.stringify(d))),[]);
+ // static set when not animated, animate off bakes the value at t
+ const flat=applyEdit(d,maskEdit(d,'photo',{op:'animate',mask:'m',prop:'position',on:false,t:sec}));
+ assert.equal(layer(flat,'photo').masks![0].x,100);assert.equal(layer(flat,'photo').masks![0].anim?.position,undefined);
+ assert.throws(()=>maskEdit(d,'photo',{op:'set',mask:'m',prop:'opacity',value:[1,2],t:0}).type&&applyEdit(d,maskEdit(d,'photo',{op:'set',mask:'m',prop:'opacity',value:[1,2] as never,t:0})),/fit/);
+ assert.throws(()=>applyEdit(d,maskEdit(d,'photo',{op:'set',mask:'m',prop:'opacity',value:500,t:sec})),EditError);
+ assert.throws(()=>maskEdit(d,'photo',{op:'set',mask:'m',prop:'position',value:[0,0],t:comp(d).duration+1000}),/outside/);
+ assert.equal(setMaskValue(m,'opacity',50,0).anim!.opacity!.keys.length>=1,true);
+ assert.equal(animateMask({...m,anim:undefined},'size',false,0).anim,undefined);
+});
+test('P11: path masks are bounded beziers with straight corners or smooth handles',()=>{
+ let d=base();d=applyEdit(d,maskEdit(d,'photo',{op:'add',id:'p'}));
+ d=applyEdit(d,maskEdit(d,'photo',{op:'path',mask:'p',points:[{x:0,y:0},{x:100,y:0},{x:50,y:90}],closed:true,smooth:false}));
+ let m=layer(d,'photo').masks![0];assert.equal(m.shape,'path');
+ assert.equal(bezierPath(m.path!,0,0),'M0 0C0 0 100 0 100 0C100 0 50 90 50 90C50 90 0 0 0 0Z');
+ const smooth=smoothPath(m.path!.points,true,true);assert.ok(smooth.points.every(q=>q.inX!==undefined&&q.outX!==undefined));
+ d=applyEdit(d,maskEdit(d,'photo',{op:'path',mask:'p',points:m.path!.points,closed:true,smooth:true}));
+ assert.ok(frameSvg(comp(d),0).includes('C'));
+ const open=smoothPath([{x:0,y:0},{x:10,y:10}],false,true);assert.equal(open.points[0].inX,undefined);assert.equal(open.points[1].outX,undefined);
+ assert.throws(()=>maskEdit(d,'photo',{op:'path',mask:'p',points:Array.from({length:33},(_,i)=>({x:i,y:i})),closed:false,smooth:false}),/At most/);
+ assert.throws(()=>applyEdit(d,maskEdit(d,'photo',{op:'path',mask:'p',points:[{x:0,y:0}],closed:false,smooth:false})),EditError);
+ assert.throws(()=>applyEdit(d,maskEdit(d,'photo',{op:'path',mask:'p',points:[{x:0,y:0},{x:1,y:1}],closed:true,smooth:false})),EditError);
+ assert.throws(()=>applyEdit(d,maskEdit(d,'photo',{op:'path',mask:'p',points:[{x:0,y:0},{x:1e9,y:1}],closed:false,smooth:false})),EditError);
+ d=applyEdit(d,maskEdit(d,'photo',{op:'update',mask:'p',patch:{shape:'rect'}}));assert.equal(layer(d,'photo').masks![0].path,undefined);
+ d=applyEdit(d,maskEdit(d,'photo',{op:'update',mask:'p',patch:{shape:'path'}}));assert.equal(layer(d,'photo').masks![0].path!.points.length,4);
+ assert.deepEqual(validateDocument(JSON.parse(JSON.stringify(d))),[]);
+});
