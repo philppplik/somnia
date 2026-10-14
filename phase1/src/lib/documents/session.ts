@@ -7,6 +7,7 @@ import {inspectDocx} from './inspect';
 /** The one open document: engine, undo history and the refresh after each edit. UI components only call these functions. */
 let engine:DocumentsEngine|null=null;let undo=new UndoStack();let chain:Promise<unknown>=Promise.resolve();let pending=0;
 export const getEngine=()=>engine;
+const ownerGuard=()=>{const e=engine,g=gen,en=cur;return ()=>{if(!e||engine!==e||gen!==g||cur!==en||e.isDisposed)throw Error('Document owner changed');};};
 const flags=()=>({canUndo:undo.canUndo,canRedo:undo.canRedo});
 /* ---- Per-file sessions: a file keeps its engine, undo history and dirty flag while the studio or tab is switched away. ---- */
 const STASH=['blocks','pages','pageSizes','words','rev','canUndo','canRedo','edited','caret','risks','engineMs','editError','notice'] as const;
@@ -127,19 +128,19 @@ export const editParagraph=(index:number,next:string)=>run(async()=>{
  const edit=diffEdit(index,block.text,next);if(!edit)return;await apply(edit,'new');
 });
 async function restoreSnap(x:UndoEntry,to:'before'|'after'){
- const e=engine!;const sn=x.snap!;const d=await e.restore(to==='before'?sn.before:sn.after);const c=to==='before'?sn.caretBefore:sn.caretAfter;
- patchDocuments({edited:true,notice:'',editError:'',caretLocked:false,caret:{block:c.block,anchor:c.off,head:c.off}});await refresh(d);
+ const check=ownerGuard(),e=engine!;const sn=x.snap!;const d=await e.restore(to==='before'?sn.before:sn.after);check();const c=to==='before'?sn.caretBefore:sn.caretAfter;
+ patchDocuments({edited:true,editError:'',caretLocked:false,caret:{block:c.block,anchor:c.off,head:c.off}});await refresh(d);
 }
-export const undoEdit=()=>run(async()=>{const x=undo.popUndo();if(!x)return;if(x.snap){await restoreSnap(x,'before');undo.pushRedoEntry(x);}else await apply(x.inverse,'undo');});
-export const redoEdit=()=>run(async()=>{const x=undo.popRedo();if(!x)return;if(x.snap){await restoreSnap(x,'after');undo.pushUndoEntry(x);}else await apply(x.inverse,'redo');});
+export const undoEdit=()=>run(async()=>{const check=ownerGuard(),x=undo.popUndo();if(!x)return;if(x.snap){await restoreSnap(x,'before');check();undo.pushRedoEntry(x);}else await apply(x.inverse,'undo');});
+export const redoEdit=()=>run(async()=>{const check=ownerGuard(),x=undo.popRedo();if(!x)return;if(x.snap){await restoreSnap(x,'after');check();undo.pushUndoEntry(x);}else await apply(x.inverse,'redo');});
 
 type Spot={block:number;off:number};
 /** Paragraph split/join. One undo step restores the engine's pre-edit block list from a cheap snapshot; a failure part-way restores it at once. */
 async function structural(op:(e:DocumentsEngine)=>Promise<import('./protocol').OpenedDocument>,before:Spot,after:Spot){
- const e=engine;if(!e)return;const b=await e.snapshot();let d;
- try{d=await op(e);}catch(err){await e.restore(b).catch(()=>undefined);throw err;}
- const a=await e.snapshot();undo.pushSnap({before:b,after:a,caretBefore:before,caretAfter:after});
- patchDocuments({edited:true,notice:'',editError:'',caretLocked:false,caret:{block:after.block,anchor:after.off,head:after.off}});await refresh(d);
+ const e=engine;if(!e)return;const check=ownerGuard(),b=await e.snapshot();check();let d;
+ try{d=await op(e);check();}catch(err){if(engine===e)await e.restore(b).catch(()=>undefined);throw err;}
+ const a=await e.snapshot();check();undo.pushSnap({before:b,after:a,caretBefore:before,caretAfter:after});
+ patchDocuments({edited:true,editError:'',caretLocked:false,caret:{block:after.block,anchor:after.off,head:after.off}});await refresh(d);
 }
 /* ---- On-page caret: all offsets are UTF-8 bytes of the paragraph's current text. A selection may span paragraphs (anchorBlock differs from block). ---- */
 const enc=new TextEncoder();const u8=(s:string)=>enc.encode(s).length;
@@ -162,16 +163,16 @@ export const selectedText=()=>{
  return ts.map((t,k)=>t.slice(k===0?utf8ToUtf16Offset(t,s.off):0,k===ts.length-1?utf8ToUtf16Offset(t,e.off):t.length)).join('\n');
 };
 async function pointTo(page:number,x:number,y:number,extend:boolean){
- const e=engine;if(!e)return;const hit=await e.hit(page,x,y);const c=getDocumentsState().caret;
+ const e=engine;if(!e)return;const check=ownerGuard(),hit=await e.hit(page,x,y);check();const c=getDocumentsState().caret;
  if(!hit||hit.block===null||!hit.editable||hit.off===undefined){if(!extend)patchDocuments({caret:null,caretLocked:!!hit});return;}
  if(extend){if(!c)return;const a=norm(c).a;if(a.block!==hit.block&&!reachable(a.block,hit.block))return;setSel(a,{block:hit.block,off:hit.off});}
  else{patchDocuments({caretLocked:false,editError:''});setSel({block:hit.block,off:hit.off},{block:hit.block,off:hit.off});}
 }
 /** Places the caret (or extends the selection) at a page-space point. */
 export const pointerAt=(page:number,x:number,y:number,extend=false)=>{goalX=null;return run(()=>pointTo(page,x,y,extend));};
-let pend:{page:number;x:number;y:number}|null=null,busy=false;
+let pend:{page:number;x:number;y:number;owner:number}|null=null,busy=false;
 /** Drag selection: only the latest pointer position is sent, so a fast drag never floods the worker. */
-export function dragTo(page:number,x:number,y:number){pend={page,x,y};if(busy)return;busy=true;void(async()=>{while(pend){const p=pend;pend=null;await run(()=>pointTo(p.page,p.x,p.y,true));}busy=false;})();}
+export function dragTo(page:number,x:number,y:number){pend={page,x,y,owner:gen};if(busy)return;busy=true;void(async()=>{while(pend){const p=pend;pend=null;if(p.owner===gen)await run(()=>pointTo(p.page,p.x,p.y,true));}busy=false;})();}
 async function applyAtCaret(hunk:{start:number;end:number;text:string},merge=false){
  const c=getDocumentsState().caret;if(!c)return;const edit:TextEdit={block:c.block,hunks:[hunk]};await apply(edit,'new',{merge,caret:caretAfterEdit(edit)});
 }
@@ -239,8 +240,8 @@ async function probe(e:DocumentsEngine,page:number,x:number,y0:number,step:numbe
 }
 /** Keyboard caret movement. Up/Down/PageUp/PageDown cross pages using the engine's line geometry; Left/Right and word moves cross into neighbouring editable paragraphs; Shift extends across paragraphs. */
 export const moveCaret=(kind:CaretMove,extend:boolean)=>run(async()=>{
- const c=getDocumentsState().caret;const e=engine;if(!c||!e)return;const n=norm(c);const h=n.h;const t=blockText(h.block);if(t===null)return;
- const go=(block:number,off:number)=>{if(extend){if(block!==n.a.block&&!reachable(n.a.block,block))return;setSel(n.a,{block,off});}else setSel({block,off},{block,off});};
+ const c=getDocumentsState().caret;const e=engine;if(!c||!e)return;const check=ownerGuard();const n=norm(c);const h=n.h;const t=blockText(h.block);if(t===null)return;
+ const go=(block:number,off:number)=>{check();if(extend){if(block!==n.a.block&&!reachable(n.a.block,block))return;setSel(n.a,{block,off});}else setSel({block,off},{block,off});};
  if(kind==='left'||kind==='right'||kind==='wordLeft'||kind==='wordRight'){
   goalX=null;const dir=kind==='left'||kind==='wordLeft'?-1:1;const word=kind==='wordLeft'||kind==='wordRight';
   if(!extend&&cmp(n.s,n.e)!==0&&!word){const p=dir<0?n.s:n.e;go(p.block,p.off);return;}
@@ -268,7 +269,7 @@ export const moveCaret=(kind:CaretMove,extend:boolean)=>run(async()=>{
 });
 /** Refreshes caret and selection geometry from the engine. A failure drops the caret instead of drawing a guess. */
 export async function syncGeometry(){
- const e=engine,c=getDocumentsState().caret;if(!e)return;
+ const e=engine,g=gen,c=getDocumentsState().caret;if(!e)return;
  if(!c){patchDocuments({caretBox:null,selRects:[]});return;}
  try{
   const n=norm(c);const box=await e.caret(c.block,c.head);let rects:import('./protocol').Rect5[]=[];
@@ -282,14 +283,14 @@ export async function syncGeometry(){
     }
    }
   }
-  if(getDocumentsState().caret===c)patchDocuments({caretBox:box,selRects:rects});
- }catch{if(getDocumentsState().caret===c)patchDocuments({caret:null,caretBox:null,selRects:[]});}
+  if(engine===e&&gen===g&&getDocumentsState().caret===c)patchDocuments({caretBox:box,selRects:rects});
+ }catch{if(engine===e&&gen===g&&getDocumentsState().caret===c)patchDocuments({caret:null,caretBox:null,selRects:[]});}
 }
 /** Enter: replaces the selection (if any) and splits there. The new paragraph copies the paragraph properties. */
 export const splitAtCaret=()=>run(async()=>{
  const c=getDocumentsState().caret;if(!c)return;const n=norm(c);goalX=null;
  if(blockText(n.s.block)===null)return;
- await replaceRange(n.s,n.e,'\n',n.h);
+ const check=ownerGuard();await replaceRange(n.s,n.e,'\n',n.h);check();
 });
 async function joinAtEdge(block:number,t:string,dir:-1|1){
  const nb=nearbyBlock(block,dir);if(!nb){if(getDocumentsState().blocks.some(x=>x.index===block+dir))patchDocuments({caretLocked:true});return;}
