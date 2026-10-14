@@ -19,7 +19,7 @@ export interface InterfaceNode {
  id:string;pageId:string;parentId:string|null;children:string[];kind:NodeKind;name:string;
  x:number;y:number;width:number;height:number;fill:string;text?:string;hidden:boolean;locked:boolean;
  prototypeLinks?:PrototypeLink[];path?:InterfacePath;stroke?:string;strokeWidth?:number;imageFill?:{assetId:string;fit:'cover'|'contain'};
- bindings?:{fill?:string;gap?:string};textStyleId?:string;annotation?:string;ready?:boolean;layout?:InterfaceLayout;sizing?:InterfaceSizing;constraints?:InterfaceConstraints;componentSlot?:string;instance?:InterfaceInstance;
+ altText?:string;bindings?:{fill?:string;gap?:string};textStyleId?:string;annotation?:string;ready?:boolean;layout?:InterfaceLayout;sizing?:InterfaceSizing;constraints?:InterfaceConstraints;componentSlot?:string;instance?:InterfaceInstance;
  [key:string]:unknown;
 }
 export interface InterfacePage {id:string;name:string;children:string[];[key:string]:unknown;}

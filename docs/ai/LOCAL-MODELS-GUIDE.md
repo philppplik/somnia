@@ -65,9 +65,31 @@ is separate: a local daemon may remain reachable while downloads need internet.
 Download status shows the current layer's bytes, not a made-up overall percentage.
 Hiding an error only hides that evidence; Refresh rechecks and can show it again.
 
-Image-application controls, schema reasons and the status panel have German and English
-copy. Other languages use explicit English fallback for this slice. Existing shared native
+Image-application controls, schema reasons and the status panel have German, English,
+Spanish, French and Brazilian Portuguese copy. Existing shared native
 review controls retain their own translations. Integrated apply/undo tests for Markdown and
 HTML alt text are in `tests/local-vision-application.spec.ts`, discovered by the regular E2E
 CI run. They use synthetic images and mocked Ollama transport, require generated WASM
 bridges, and have not been run as full-app E2E in this workspace.
+
+## Local suggestions in Interface, Animation and 3D
+
+The Agent sidebar offers opt-in, tools-free local suggestions for these studios:
+
+- Interface: describe the selected frame's bounded structural metadata into its annotation.
+  This is not a pixel-based frame description. For image fills, the explicit image-alt action
+  re-prepares the stored PNG locally, then uses verified local vision with explicit context.
+  Alt text is a validated image-layer field, used by the canvas, SVG and handoff export.
+- Animation: suggest one name for the selected unlocked layer. Typed `layer.update` goes
+  through the existing session history. Keyframes, timing and source stay unchanged.
+- 3D: describe bounded scene metadata into a reviewable session note. This note is not a
+  saved scene property and is not added to GLB or .som3d export. No geometry or pixels sent.
+
+All suggestions pin their source object identity and target selection, require complete
+output, show before/after, and need host acceptance. Later edits stop dedicated undo rather
+than overwriting newer work. Studio recovery journals keep their usual behavior after an
+accepted Interface/Animation edit; no file export/save action is triggered. Closing a result
+removes its pending proposal, not an accepted edit. Studio history remains available.
+
+The new Local controls and reasons now have native es/fr/pt-BR copy in addition to en/de;
+there are no remaining English fallback entries for this slice.
