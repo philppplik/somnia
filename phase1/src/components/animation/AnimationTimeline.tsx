@@ -233,6 +233,7 @@ const marquee=(e:PointerEvent<SVGSVGElement>)=>{
   else if(mod&&k==='x'){e.preventDefault();if(sel.length||styleSel.length)run('animation.keys.cut');}
   else if(mod&&k==='v'){e.preventDefault();run('animation.keys.paste');}
   else if(mod&&!e.shiftKey&&!e.altKey&&k==='d'){e.preventDefault();run('animation.layers.duplicate');}
+  else if(mod&&e.shiftKey&&!e.altKey&&k==='d'){e.preventDefault();run('animation.layers.split');}
   else if(mod&&k==='a'){e.preventDefault();run('animation.keys.selectAll');}
   else if(!mod&&!e.altKey&&k==='b'){run('animation.workarea.in');}
   else if(!mod&&!e.altKey&&k==='n'){run('animation.workarea.out');}
