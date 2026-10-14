@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readModelHeader,modelFormatFor,externalResources,frameDistance,clipPlanes,boundsCenter,boundsSize,boundsRadius,boundsValid,emptyBounds,formatCount,ModelError,MAX_MODEL_BYTES} from './model';
+import {readModelHeader,modelFormatFor,externalResources,frameDistance,clipPlanes,boundsCenter,boundsSize,boundsRadius,boundsValid,emptyBounds,formatCount,ModelError,MAX_MODEL_BYTES,mergeEnv,defaultEnv,EnvError,nudgeFor,envFormatFor,isMeshFormat} from './model';
 const pad=(b:Uint8Array,fill:number)=>{const n=(b.length+3)&~3;const o=new Uint8Array(n).fill(fill);o.set(b);return o;};
 function glb(json:unknown,bin?:Uint8Array,version=2):Uint8Array{
  const j=pad(new TextEncoder().encode(JSON.stringify(json)),0x20);const b=bin?pad(bin,0):null;
@@ -12,7 +12,7 @@ function glb(json:unknown,bin?:Uint8Array,version=2):Uint8Array{
 }
 test('format follows the suffix, not other extensions',()=>{
  assert.equal(modelFormatFor('a.GLB'),'glb');assert.equal(modelFormatFor('dir/b.gltf'),'gltf');
- assert.equal(modelFormatFor('c.obj'),null);assert.equal(modelFormatFor('noext'),null);
+ assert.equal(modelFormatFor('c.obj'),'obj');assert.equal(modelFormatFor('d.STL'),'stl');assert.equal(modelFormatFor('e.ply'),'ply');assert.equal(modelFormatFor('c.fbx'),null);assert.equal(modelFormatFor('noext'),null);
 });
 test('reads a GLB with JSON and BIN chunks',()=>{
  const h=readModelHeader('m.glb',glb({asset:{version:'2.0'},scenes:[{}]},new Uint8Array([1,2,3,4,5])));
@@ -56,3 +56,42 @@ test('clip planes scale with the model and always order near before far',()=>{
  for(const r of [1e-3,1,1e3,1e6]){const d=frameDistance(r,45,1.5);const {near,far}=clipPlanes(d,r);assert.ok(near>0&&near<far,String(r));assert.ok(far>d+r);}
 });
 test('counts format compactly',()=>{assert.equal(formatCount(999),'999');assert.equal(formatCount(12345),'12.3 k');assert.equal(formatCount(250000),'250 k');assert.equal(formatCount(1_500_000),'1.5 M');});
+test('mergeEnv validates, clamps and wraps',()=>{
+ const d=defaultEnv();
+ assert.equal(mergeEnv(d,{intensity:9}).intensity,3);assert.equal(mergeEnv(d,{intensity:-1}).intensity,0);
+ assert.equal(mergeEnv(d,{rotation:190}).rotation,-170);assert.equal(mergeEnv(d,{preset:'sky',background:true}).background,true);
+ assert.throws(()=>mergeEnv(d,{preset:'moon' as never}),EnvError);assert.throws(()=>mergeEnv(d,{intensity:NaN}),EnvError);
+ assert.throws(()=>mergeEnv(d,{background:'yes' as never}),EnvError);
+ assert.throws(()=>mergeEnv(d,{preset:'custom'}),EnvError,'custom needs a loaded file');
+ assert.equal(mergeEnv(d,{preset:'custom',customName:'a.hdr'}).preset,'custom');
+ assert.deepEqual(d,defaultEnv(),'input is not mutated');
+});
+test('nudgeFor maps keys to axes and ignores others',()=>{
+ assert.deepEqual(nudgeFor('ArrowLeft',0.5),{x:-0.5});assert.deepEqual(nudgeFor('ArrowUp'),{z:-0.1});assert.deepEqual(nudgeFor('PageUp',2),{y:2});
+ assert.equal(nudgeFor('a'),null);
+});
+test('envFormatFor accepts hdr and exr only',()=>{
+ assert.equal(envFormatFor('Sky.HDR'),'hdr');assert.equal(envFormatFor('x.exr'),'exr');assert.equal(envFormatFor('x.png'),null);assert.equal(envFormatFor('hdr'),null);
+});
+const enc=(s:string)=>new TextEncoder().encode(s);
+test('OBJ, STL and PLY are recognised by content checks',()=>{
+ assert.equal(isMeshFormat('obj'),true);assert.equal(isMeshFormat('glb'),false);
+ assert.equal(readModelHeader('a.obj',enc('v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n')).format,'obj');
+ assert.throws(()=>readModelHeader('a.obj',enc('hello')),ModelError);
+ assert.throws(()=>readModelHeader('a.obj',enc('v 0 0 0\n')),ModelError);
+ assert.throws(()=>readModelHeader('a.obj',new Uint8Array([0xff,0xfe,0,1,2])),ModelError);
+ assert.equal(readModelHeader('a.stl',enc('solid x\nfacet normal 0 0 1\nouter loop\n')).format,'stl');
+ const bin=new Uint8Array(84+50);new DataView(bin.buffer).setUint32(80,1,true);
+ assert.equal(readModelHeader('a.stl',bin).format,'stl');
+ const bad=new Uint8Array(100);new DataView(bad.buffer).setUint32(80,5,true);
+ assert.throws(()=>readModelHeader('a.stl',bad),ModelError);
+ const ply=readModelHeader('a.ply',enc('ply\nformat ascii 1.0\nelement vertex 3\nproperty float x\nelement face 1\nend_header\n0 0 0\n'));
+ assert.equal(ply.format,'ply');assert.equal(ply.pointCloud,false);
+ assert.equal(readModelHeader('a.ply',enc('ply\nformat ascii 1.0\nelement vertex 3\nend_header\n')).pointCloud,true);
+ assert.throws(()=>readModelHeader('a.ply',enc('ply\nformat ascii 1.0\nelement vertex 3\n')),ModelError);
+ assert.throws(()=>readModelHeader('a.ply',enc('ply\nformat ascii 1.0\nelement vertex 99999999999\nend_header\n')),ModelError);
+ assert.throws(()=>readModelHeader('a.ply',enc('nope')),ModelError);
+});
+test('a GLB renamed to .obj is still read as GLB',()=>{
+ assert.equal(readModelHeader('x.obj',glb({asset:{version:'2.0'}})).format,'glb');
+});

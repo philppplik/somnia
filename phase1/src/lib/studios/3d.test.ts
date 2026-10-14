@@ -15,7 +15,7 @@ test('3D is registered before Vibe Space, with a real hero action and claims onl
  assert.ok(ids.indexOf('3d')>ids.indexOf('vector'));assert.equal(ids.at(-1),'vibespace');
  assert.equal(s.canvas,'studio3d.canvas');assert.equal(s.shellV2?.panels?.length,2);
  assert.equal(s.shell.header.heroAction?.id,'studio3d.render.still');
- assert.equal(acceptsFormat(s,'a.glb'),true);assert.equal(acceptsFormat(s,'a.gltf'),true);assert.equal(acceptsFormat(s,'a.obj'),false);
+ assert.equal(acceptsFormat(s,'a.glb'),true);assert.equal(acceptsFormat(s,'a.gltf'),true);assert.equal(acceptsFormat(s,'a.obj'),true);assert.equal(acceptsFormat(s,'a.stl'),true);assert.equal(acceptsFormat(s,'a.ply'),true);assert.equal(acceptsFormat(s,'a.fbx'),false);
  assert.equal(studioShortName('3d','Somnia 3D'),'3D');assert.match(studioStarterCopy['3d'].headline,/3D Studio/);
 });
 test('every studio3d command id is valid and every hero, menu and panel command exists',()=>{

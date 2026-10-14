@@ -1,12 +1,18 @@
 /** Pure helpers for the 3D studio. No three.js and no DOM, so they run under tsx --test. */
-export const MODEL_EXTENSIONS=['glb','gltf'] as const;
+export const MODEL_EXTENSIONS=['glb','gltf','obj','stl','ply'] as const;
+/** Single-file mesh formats. They carry geometry only and are read by the three examples loaders. */
+export const MESH_FORMATS=['obj','stl','ply'] as const;
+export const isMeshFormat=(f:string):f is typeof MESH_FORMATS[number]=>(MESH_FORMATS as readonly string[]).includes(f);
+/** Text meshes cost far more memory than their size suggests, so they get a lower limit. */
+export const MAX_OBJ_BYTES=96*1024*1024;
+export const MAX_MESH_ELEMENTS=20_000_000;
 export type ModelFormat=typeof MODEL_EXTENSIONS[number];
-export const MODEL_ACCEPT=MODEL_EXTENSIONS.map(e=>'.'+e).join(',')+',model/gltf-binary,model/gltf+json';
+export const MODEL_ACCEPT=MODEL_EXTENSIONS.map(e=>'.'+e).join(',')+',model/gltf-binary,model/gltf+json,model/obj,model/stl';
 /** Hard limit for one opened model. Larger files are refused with a clear message instead of freezing the WebView. */
 export const MAX_MODEL_BYTES=256*1024*1024;
 const GLB_MAGIC=0x46546c67;// "glTF" little endian
 const CHUNK_JSON=0x4e4f534a,CHUNK_BIN=0x004e4942;
-export interface ModelHeader{format:ModelFormat;version:number;json:Record<string,unknown>;binOffset:number;binLength:number}
+export interface ModelHeader{format:ModelFormat;version:number;json:Record<string,unknown>;binOffset:number;binLength:number;/** Mesh formats: true when the file has vertices but no faces. */pointCloud?:boolean}
 export class ModelError extends Error{constructor(message:string){super(message);this.name='ModelError';}}
 const extOf=(name:string)=>(name.includes('.')?name.split('.').pop()!:'').toLowerCase();
 export function modelFormatFor(name:string):ModelFormat|null{const e=extOf(name);return (MODEL_EXTENSIONS as readonly string[]).includes(e)?e as ModelFormat:null;}
@@ -18,6 +24,9 @@ export function readModelHeader(name:string,bytes:Uint8Array):ModelHeader{
  if(bytes.byteLength===0)throw new ModelError(`${name} is empty.`);
  if(bytes.byteLength>MAX_MODEL_BYTES)throw new ModelError(`${name} is larger than ${MAX_MODEL_BYTES/1048576} MB and cannot be opened.`);
  const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);
+ const isGlbMagic=bytes.byteLength>=12&&view.getUint32(0,true)===GLB_MAGIC;
+ const ext=extOf(name);
+ if(!isGlbMagic&&isMeshFormat(ext))return readMeshHeader(name,ext,bytes);
  if(bytes.byteLength>=12&&view.getUint32(0,true)===GLB_MAGIC){
   const version=view.getUint32(4,true),total=view.getUint32(8,true);
   if(version!==2)throw new ModelError(`${name} is glTF version ${version}. Only version 2 is supported.`);
@@ -42,6 +51,37 @@ export function readModelHeader(name:string,bytes:Uint8Array):ModelHeader{
  if(!json||typeof json!=='object'||Array.isArray(json))throw new ModelError(`${name} is not a glTF or GLB file.`);
  checkAsset(name,json as Record<string,unknown>);
  return{format:'gltf',version:2,json:json as Record<string,unknown>,binOffset:0,binLength:0};
+}
+/** Light, bounded checks of OBJ, STL and PLY before any loader sees the bytes. Throws ModelError. */
+function readMeshHeader(name:string,format:typeof MESH_FORMATS[number],bytes:Uint8Array):ModelHeader{
+ const head=(format:ModelFormat,extra:Partial<ModelHeader>={}):ModelHeader=>({format,version:0,json:{},binOffset:0,binLength:0,...extra});
+ if(format==='stl'){
+  if(bytes.byteLength>=84){
+   const n=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength).getUint32(80,true);
+   if(n>0&&84+n*50===bytes.byteLength){if(n>MAX_MESH_ELEMENTS)throw new ModelError(`${name} has too many triangles.`);return head('stl');}
+  }
+  const text=new TextDecoder('utf-8').decode(bytes.subarray(0,Math.min(bytes.byteLength,4096)));
+  if(/^\s*solid/i.test(text)&&/facet\s+normal/i.test(text))return head('stl');
+  throw new ModelError(`${name} is not a valid STL file.`);
+ }
+ if(format==='ply'){
+  const text=new TextDecoder('latin1').decode(bytes.subarray(0,Math.min(bytes.byteLength,65536)));
+  if(!/^ply\r?\n/.test(text))throw new ModelError(`${name} is not a PLY file.`);
+  const end=text.search(/\bend_header\r?\n/);
+  if(end<0)throw new ModelError(`${name} has no complete PLY header.`);
+  const header=text.slice(0,end);
+  if(!/^format\s+(ascii|binary_little_endian|binary_big_endian)\s+1\.0/m.test(header))throw new ModelError(`${name} has an unsupported PLY format line.`);
+  const count=(el:string)=>{const m=new RegExp('^element\\s+'+el+'\\s+(\\d+)','m').exec(header);return m?Number(m[1]):0;};
+  const verts=count('vertex'),faces=count('face');
+  if(verts<=0)throw new ModelError(`${name} has no vertices.`);
+  if(verts>MAX_MESH_ELEMENTS||faces>MAX_MESH_ELEMENTS)throw new ModelError(`${name} is too large to open (more than ${MAX_MESH_ELEMENTS/1_000_000} million elements).`);
+  return head('ply',{pointCloud:faces===0});
+ }
+ if(bytes.byteLength>MAX_OBJ_BYTES)throw new ModelError(`${name} is larger than ${MAX_OBJ_BYTES/1048576} MB. Convert large OBJ files to GLB first.`);
+ let text:string;
+ try{text=new TextDecoder('utf-8',{fatal:true}).decode(bytes);}catch{throw new ModelError(`${name} is not a text OBJ file.`);}
+ if(!/^v\s+\S+\s+\S+\s+\S+/m.test(text)||!/^f\s+\S+/m.test(text))throw new ModelError(`${name} has no vertices and faces, so it is not a usable OBJ.`);
+ return head('obj');
 }
 function checkAsset(name:string,json:Record<string,unknown>){
  const asset=json.asset as {version?:unknown}|undefined;
@@ -78,3 +118,28 @@ export interface ModelStats{meshes:number;nodes:number;triangles:number;vertices
 export const emptyStats=():ModelStats=>({meshes:0,nodes:0,triangles:0,vertices:0,materials:0,textures:0,animations:0,cameras:0,draws:0});
 export const formatCount=(n:number)=>n>=1e6?(n/1e6).toFixed(n>=1e7?0:1)+' M':n>=1e4?(n/1e3).toFixed(n>=1e5?0:1)+' k':String(n);
 export interface OutlineEntry{id:number;name:string;depth:number;kind:'group'|'mesh'|'light'|'camera'}
+
+export const ENV_PRESETS=['studio','sky','neutral','none','custom'] as const;
+export type EnvPreset=typeof ENV_PRESETS[number];
+export interface EnvSettings{preset:EnvPreset;/** 0 to 3 */intensity:number;/** degrees, -180 to 180 */rotation:number;background:boolean;/** file name of the loaded custom map */customName:string}
+export const defaultEnv=():EnvSettings=>({preset:'studio',intensity:1,rotation:0,background:false,customName:''});
+export const ENV_ACCEPT='.hdr,.exr';
+export const envFormatFor=(name:string):'hdr'|'exr'|null=>{const e=(name.includes('.')?name.split('.').pop()!:'').toLowerCase();return e==='hdr'||e==='exr'?e:null;};
+export class EnvError extends Error{constructor(message:string){super(message);this.name='EnvError';}}
+/** Validates a partial update and returns the merged settings. Numbers are clamped, anything else is rejected. */
+export function mergeEnv(current:EnvSettings,patch:Partial<EnvSettings>):EnvSettings{
+ const next={...current};
+ if(patch.preset!==undefined){if(!(ENV_PRESETS as readonly string[]).includes(patch.preset))throw new EnvError(`Unknown environment: ${String(patch.preset)}.`);next.preset=patch.preset;}
+ if(patch.intensity!==undefined){if(typeof patch.intensity!=='number'||!Number.isFinite(patch.intensity))throw new EnvError('intensity must be a finite number.');next.intensity=Math.min(3,Math.max(0,patch.intensity));}
+ if(patch.rotation!==undefined){if(typeof patch.rotation!=='number'||!Number.isFinite(patch.rotation))throw new EnvError('rotation must be a finite number.');next.rotation=((patch.rotation+180)%360+360)%360-180;}
+ if(patch.background!==undefined){if(typeof patch.background!=='boolean')throw new EnvError('background must be true or false.');next.background=patch.background;}
+ if(patch.customName!==undefined)next.customName=String(patch.customName).slice(0,200);
+ if(next.preset==='custom'&&!next.customName)throw new EnvError('Open an .hdr or .exr file first.');
+ return next;
+}
+export type GizmoMode='translate'|'rotate'|'scale';
+export const GIZMO_MODES:readonly GizmoMode[]=['translate','rotate','scale'];
+/** Keyboard nudge: shift+arrows move on the ground plane, shift+page keys move up and down. Step in scene units. */
+export function nudgeFor(key:string,step=0.1):{x?:number;y?:number;z?:number}|null{
+ switch(key){case 'ArrowLeft':return{x:-step};case 'ArrowRight':return{x:step};case 'ArrowUp':return{z:-step};case 'ArrowDown':return{z:step};case 'PageUp':return{y:step};case 'PageDown':return{y:-step};default:return null;}
+}

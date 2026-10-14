@@ -107,7 +107,7 @@ export async function openIncoming(files:IntakeFile[],opts:BatchOptions={}):Prom
  for(const o of report.outcomes){
   if(o.status==='invalid'||o.status==='unsupported'||o.status==='failed'){
    const ext=o.name.split('.').pop()?.toLowerCase()??'';
-   const kinds:Record<string,OpenKind>={png:'image',jpg:'image',jpeg:'image',webp:'image',psd:'psd',docx:'docx',xlsx:'xlsx',pptx:'pptx',mp3:'audio',wav:'audio',flac:'audio',ogg:'audio',mp4:'video',webm:'video',mov:'video',svg:'svg',glb:'model3d',gltf:'model3d'};
+   const kinds:Record<string,OpenKind>={png:'image',jpg:'image',jpeg:'image',webp:'image',psd:'psd',docx:'docx',xlsx:'xlsx',pptx:'pptx',mp3:'audio',wav:'audio',flac:'audio',ogg:'audio',mp4:'video',webm:'video',mov:'video',svg:'svg',glb:'model3d',gltf:'model3d',obj:'model3d',stl:'model3d',ply:'model3d'};
    const handlers=kinds[ext]?readyHandlersFor(kinds[ext]):[];
    const studio=o.studioId??opts.target??[...handlers].sort((a,b)=>b.priority-a.priority)[0]?.studioId??getState().activeStudio;
    reportError(studio+'.open',o.reason??report.summary,{context:{studio,file:o.name}});

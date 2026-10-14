@@ -3,7 +3,7 @@ import {executeCommand} from '../../lib/commands';
 import {useT} from '../../lib/useT';
 import {formatBytes} from '../../lib/media';
 import {useStudio3D} from '../../lib/studio3d/session';
-import {formatCount,boundsSize} from '../../lib/studio3d/model';
+import {formatCount,boundsSize,GIZMO_MODES,ENV_PRESETS,ENV_ACCEPT} from '../../lib/studio3d/model';
 import type {PanelHostProps,InspectorSectionProps} from '../../lib/shell/types';
 import {Input} from '../ui/input';
 import {Button} from '../ui/button';
@@ -19,7 +19,13 @@ export function ScenePanel(_:PanelHostProps){
   <div className="flex flex-wrap gap-1" role="group" aria-label={t('studio3d.insert.group')} data-testid="studio3d-insert">
    {PRIMS.map(k=><Button key={k} variant="outline" onClick={()=>void executeCommand('studio3d.insert.primitive',{kind:k})}>{t('studio3d.insert.'+k)}</Button>)}
    {LIGHTS.map(k=><Button key={k} variant="outline" onClick={()=>void executeCommand('studio3d.insert.light',{kind:k})}>{t('studio3d.insert.'+k)}</Button>)}
+   <Button variant="outline" onClick={()=>void executeCommand('studio3d.insert.camera',{})}>{t('studio3d.insert.camera')}</Button>
+   <Button variant="outline" onClick={()=>void executeCommand('studio3d.insert.camera',{fromView:true})}>{t('studio3d.insert.camera.view')}</Button>
   </div>
+  <div className="flex flex-wrap gap-1" role="group" aria-label={t('studio3d.gizmo.group')} data-testid="studio3d-gizmo">
+   {GIZMO_MODES.map(m=><Button key={m} variant="outline" aria-pressed={s.gizmo===m} className={s.gizmo===m?'bg-accent-soft text-accent':''} onClick={()=>void executeCommand('studio3d.gizmo.mode',{mode:m})}>{t('studio3d.gizmo.'+m)}</Button>)}
+  </div>
+  <p className="m-0 text-xs text-ink-3">{t('studio3d.nudge.hint')}</p>
   <Input value={filter} onChange={e=>setFilter(e.target.value)} placeholder={t('studio3d.scene.filter')} aria-label={t('studio3d.scene.filter')}/>
   {!s.outline.length&&<p className="text-xs text-ink-3">{t('studio3d.scene.empty')}</p>}
   <ul className="m-0 grid list-none gap-0.5 p-0" role="listbox" aria-label={t('studio3d.shell.scene')}>{rows.map(o=>
@@ -56,6 +62,11 @@ export function ObjectSection(_:InspectorSectionProps){
   <VecField id={o.id} field="position" label={t('studio3d.object.position')} step={0.1}/>
   <VecField id={o.id} field="rotation" label={t('studio3d.object.rotation')} step={5}/>
   <VecField id={o.id} field="scale" label={t('studio3d.object.scale')} step={0.1}/>
+  {o.camera&&<div className="grid gap-1" data-testid="studio3d-camera"><label className="grid gap-1 text-xs text-ink-2">{t('studio3d.camera.fov')}
+    <Input key={o.id+':'+o.camera.fov} type="number" min={1} max={120} step={1} defaultValue={Number(o.camera.fov.toFixed(1))} aria-label={t('studio3d.camera.fov')}
+     onBlur={e=>{const n=Number(e.currentTarget.value);if(e.currentTarget.value!==''&&Number.isFinite(n)&&n>=1&&n<=120&&n!==Number(o.camera!.fov.toFixed(1)))void executeCommand('studio3d.camera.set',{id:o.id,fov:n});}}
+     onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();}}/></label>
+   <Button variant="outline" onClick={()=>void executeCommand('studio3d.view.fromCamera',{id:o.id})}>{t('studio3d.camera.look')}</Button></div>}
   {o.material&&<fieldset className="m-0 grid gap-2 border-0 p-0" data-testid="studio3d-material"><legend className="text-xs text-ink-3">{t('studio3d.material.title')}</legend>
    <label className="flex items-center justify-between gap-2 text-xs text-ink-2">{t('studio3d.material.color')}<input type="color" key={o.material.color} defaultValue={o.material.color} onBlur={e=>{if(e.currentTarget.value!==o.material!.color)void executeCommand('studio3d.object.material',{id:o.id,color:e.currentTarget.value});}}/></label>
    {(['metalness','roughness'] as const).map(k=><label key={k} className="grid gap-1 text-xs text-ink-2">{t('studio3d.material.'+k)} <span className="text-ink-3">{o.material![k].toFixed(2)}</span>
@@ -74,5 +85,23 @@ export function ViewSection(_:InspectorSectionProps){
   <div className="flex gap-2"><Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.view.reset')}>{t('studio3d.view.reset')}</Button>
    <Button variant="outline" disabled={!ready||s.selected==null} onClick={()=>void executeCommand('studio3d.view.frame')}>{t('studio3d.view.frame')}</Button></div>
   {s.backend&&<Row k={t('studio3d.view.backend')} v={s.backend}/>}
+ </div>;
+}
+
+/** Environment lighting: preset, strength, rotation, background, custom HDR or EXR map. */
+export function EnvSection(_:InspectorSectionProps){
+ const {t}=useT();const s=useStudio3D();const e=s.env;
+ return <div className="grid gap-2 p-3" data-testid="studio3d-env-section">
+  <label className="grid gap-1 text-xs text-ink-2">{t('studio3d.env.preset')}
+   <select className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={e.preset} aria-label={t('studio3d.env.preset')}
+    onChange={ev=>void executeCommand('studio3d.env.set',{preset:ev.currentTarget.value})}>
+    {ENV_PRESETS.filter(p=>p!=='custom'||e.customName).map(p=><option key={p} value={p}>{p==='custom'?`${t('studio3d.env.custom')}: ${e.customName}`:t('studio3d.env.'+p)}</option>)}
+   </select></label>
+  <label className="grid gap-1 text-xs text-ink-2">{t('studio3d.env.intensity')} <span className="text-ink-3">{e.intensity.toFixed(2)}</span>
+   <input type="range" min={0} max={3} step={0.05} value={e.intensity} aria-label={t('studio3d.env.intensity')} onChange={ev=>void executeCommand('studio3d.env.set',{intensity:Number(ev.currentTarget.value)})}/></label>
+  <label className="grid gap-1 text-xs text-ink-2">{t('studio3d.env.rotation')} <span className="text-ink-3">{Math.round(e.rotation)}</span>
+   <input type="range" min={-180} max={180} step={1} value={e.rotation} aria-label={t('studio3d.env.rotation')} onChange={ev=>void executeCommand('studio3d.env.set',{rotation:Number(ev.currentTarget.value)})}/></label>
+  <label className="flex items-center gap-2 text-xs text-ink-2"><input type="checkbox" checked={e.background} disabled={e.preset==='none'} onChange={ev=>void executeCommand('studio3d.env.set',{background:ev.currentTarget.checked})}/>{t('studio3d.env.background')}</label>
+  <Button variant="outline" onClick={()=>void executeCommand('studio3d.env.open')} title={ENV_ACCEPT}>{t('studio3d.env.open')}</Button>
  </div>;
 }

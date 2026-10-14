@@ -13,9 +13,11 @@ export interface Vec3{x:number;y:number;z:number}
 export interface TransformPatch{position?:Partial<Vec3>;/** degrees */rotation?:Partial<Vec3>;scale?:Partial<Vec3>}
 export interface MaterialPatch{color?:string;metalness?:number;roughness?:number}
 export interface ObjectInfo{
+ camera:{fov:number}|null;
  id:number;name:string;kind:OutlineEntry['kind'];position:Vec3;rotation:Vec3;scale:Vec3;
  material:{color:string;metalness:number;roughness:number}|null;light:{intensity:number}|null;
 }
+export const GROUP_MS=1000;
 export class StageError extends Error{constructor(message:string){super(message);this.name='StageError';}}
 const clamp01=(n:number)=>Math.min(1,Math.max(0,n));
 const finite=(n:unknown,what:string):number=>{if(typeof n!=='number'||!Number.isFinite(n))throw new StageError(`${what} must be a finite number.`);return n;};
@@ -38,7 +40,7 @@ function disposeObject(root:THREE.Object3D){
   for(const mat of Array.isArray(m.material)?m.material:m.material?[m.material]:[]){for(const v of Object.values(mat as unknown as Record<string,unknown>))if(v instanceof THREE.Texture)v.dispose();mat.dispose();}
  });
 }
-interface Entry{label:string;undo():void;redo():void;/** Called when the entry falls off the history; frees objects only the redo side still owned. */release?():void}
+interface Entry{label:string;undo():void;redo():void;/** Edits with the same group id and object within GROUP_MS merge into one undo step (gizmo drags, key nudges). */group?:string;at?:number;merge?(redo:()=>void):void;/** Called when the entry falls off the history; frees objects only the redo side still owned. */release?():void}
 export class Stage{
  readonly root=new THREE.Group();
  private entries:Entry[]=[];private cursor=0;private saved=0;private listeners=new Set<()=>void>();private revision=0;
@@ -91,7 +93,19 @@ export class Stage{
   light.name=this.uniqueName(kind==='directional'?'Directional light':'Point light');light.position.set(3,4,2);
   this.attach(light,this.root,this.root.children.length,`Add ${light.name}`);return light;
  }
- setTransform(id:number,patch:TransformPatch){
+ addCamera(pose?:{position:Vec3;quaternion:[number,number,number,number]},fov=40):THREE.PerspectiveCamera{
+  const f=finite(fov,'fov');if(f<1||f>120)throw new StageError('fov must be between 1 and 120 degrees.');
+  const cam=new THREE.PerspectiveCamera(f,1.5,0.1,100);cam.name=this.uniqueName('Camera');
+  if(pose){cam.position.set(pose.position.x,pose.position.y,pose.position.z);cam.quaternion.set(...pose.quaternion);}else{cam.position.set(4,3,5);cam.lookAt(0,0.5,0);}
+  this.attach(cam,this.root,this.root.children.length,`Add ${cam.name}`);return cam;
+ }
+ setCamera(id:number,patch:{fov:number}){
+  const o=this.need(id) as THREE.PerspectiveCamera;if(!o.isPerspectiveCamera)throw new StageError(`${o.name} is not a camera.`);
+  const f=finite(patch.fov,'fov');if(f<1||f>120)throw new StageError('fov must be between 1 and 120 degrees.');
+  const before=o.fov;if(before===f)return;const set=(v:number)=>{o.fov=v;o.updateProjectionMatrix();};
+  set(f);this.push({label:`Camera ${o.name}`,undo:()=>set(before),redo:()=>set(f)});
+ }
+ setTransform(id:number,patch:TransformPatch,opts:{group?:string;now?:number}={}){
   const o=this.need(id);const before={p:o.position.clone(),r:o.rotation.clone(),s:o.scale.clone()};
   const next={p:o.position.clone(),r:o.rotation.clone(),s:o.scale.clone()};
   const apply=(target:THREE.Vector3|THREE.Euler,p:Partial<Vec3>|undefined,k:number,what:string,min?:number)=>{
@@ -99,9 +113,25 @@ export class Stage{
     const v=finite(p[axis],`${what}.${axis}`)*k;if(min!==undefined&&Math.abs(v)<min)throw new StageError(`${what}.${axis} must not be zero.`);(target as unknown as Record<string,number>)[axis]=v;}
   };
   apply(next.p,patch.position,1,'position');apply(next.r,patch.rotation,DEG,'rotation');apply(next.s,patch.scale,1,'scale',1e-6);
-  const set=(s:typeof before)=>{o.position.copy(s.p);o.rotation.copy(s.r);o.scale.copy(s.s);};
   if(before.p.equals(next.p)&&before.r.equals(next.r)&&before.s.equals(next.s))return;
-  set(next);this.push({label:`Transform ${o.name}`,undo:()=>set(before),redo:()=>set(next)});
+  this.applyTransform(o,before,next,opts);
+ }
+ /** Records a transform that already happened (a gizmo drag changed the object live). One undo step for the whole drag. */
+ commitTransform(id:number,before:{p:THREE.Vector3;r:THREE.Euler;s:THREE.Vector3}){
+  const o=this.need(id);const next={p:o.position.clone(),r:o.rotation.clone(),s:o.scale.clone()};
+  if(before.p.equals(next.p)&&before.r.equals(next.r)&&before.s.equals(next.s))return;
+  this.applyTransform(o,before,next,{},true);
+ }
+ private applyTransform(o:THREE.Object3D,before:{p:THREE.Vector3;r:THREE.Euler;s:THREE.Vector3},next:{p:THREE.Vector3;r:THREE.Euler;s:THREE.Vector3},opts:{group?:string;now?:number},already=false){
+  const set=(s:typeof before)=>{o.position.copy(s.p);o.rotation.copy(s.r);o.scale.copy(s.s);};
+  if(!already)set(next);
+  const now=opts.now??Date.now();const key=opts.group?`${opts.group}:${o.id}`:undefined;
+  const last=this.entries[this.cursor-1];
+  if(key&&last&&this.cursor===this.entries.length&&this.saved!==this.cursor&&last.group===key&&last.at!==undefined&&now-last.at<=GROUP_MS&&last.merge){
+   last.merge(()=>set(next));last.at=now;this.emit();return;
+  }
+  let redo=()=>set(next);
+  this.push({label:`Transform ${o.name}`,undo:()=>set(before),redo:()=>redo(),group:key,at:now,merge:r=>{redo=r;}});
  }
  setMaterial(id:number,patch:MaterialPatch){
   const o=this.need(id);const mesh=o as THREE.Mesh;
@@ -136,6 +166,7 @@ export class Stage{
   const mat=m.isMesh&&!Array.isArray(m.material)&&(m.material as THREE.MeshStandardMaterial).isMeshStandardMaterial?m.material as THREE.MeshStandardMaterial:null;
   return{id:o.id,name:o.name,kind:m.isMesh?'mesh':l.isLight?'light':(o as THREE.Camera).isCamera?'camera':'group',
    position:{x:o.position.x,y:o.position.y,z:o.position.z},rotation:{x:o.rotation.x/DEG,y:o.rotation.y/DEG,z:o.rotation.z/DEG},scale:{x:o.scale.x,y:o.scale.y,z:o.scale.z},
+   camera:(o as THREE.PerspectiveCamera).isPerspectiveCamera?{fov:(o as THREE.PerspectiveCamera).fov}:null,
    material:mat?{color:'#'+mat.color.getHexString(),metalness:mat.metalness,roughness:mat.roughness}:null,light:l.isLight?{intensity:l.intensity}:null};
  }
  measure(animations=0):{stats:ModelStats;outline:OutlineEntry[];bounds:Bounds|null}{
