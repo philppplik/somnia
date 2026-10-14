@@ -22,6 +22,7 @@ import {ClipError,copyKeys,getKeyClip,pastedRefs,setKeyClip} from './keyclip';
 import {allKeysOf,pruneSelection,shiftSelection} from './selection';
 import {EASE_PRESETS,type EasePreset} from './graph';
 import {copyCurve,pasteCurveEdit} from './graphTools';
+import {fitAll,fitRange,setTimelineSnap,timelineSnap as timelineSnapNow,timeWindow,zoomAround} from './timelineView';
 import {applyExportPreset,resetExportSettings,setExportSettings,exportApng,exportCurrentFrame,exportGif,exportWebM,exportWorkAreaSequence} from './exportJob';
 import {ExportError} from './exportFrames';
 import {EXPORT_PRESETS} from './exportSettings';
@@ -122,6 +123,12 @@ export function animationCommandSpecs():CommandSpec<unknown,unknown>[]{
   },object({swings:{type:'integer',minimum:1,maximum:5}},[]),hasSel,'Edit'),
   spec('animation.keys.cubic','Set a custom cubic-bezier ease on the selected keys',(p:{out:[number,number];in:[number,number]})=>run({type:'keys.interp',keys:selKeys(),interp:'bezier',out:p.out,in:p.in}),
    object({out:handleSchema,in:handleSchema},['out','in']),hasSel,'Edit'),
+  spec('animation.timeline.zoom','Zoom the timeline',(p:{mode:'in'|'out'|'fit'|'workarea';anchor?:number})=>{
+   const c=comp();const v=animationSession().getState().view;const w=timeWindow(c,v.zoom,v.scroll);
+   const next=p.mode==='fit'?fitAll():p.mode==='workarea'?fitRange(c,c.workArea.in,c.workArea.out):zoomAround(c,w,p.mode==='in'?2:0.5,p.anchor??v.playhead);
+   animationSession().setView(next);
+  },object({mode:{enum:['in','out','fit','workarea']},anchor:{type:'number'}},['mode']),open,'Project'),
+  spec('animation.timeline.snap','Snap timeline drags to markers, work area and playhead',(p:{on?:boolean}={})=>{setTimelineSnap(p.on??!(timelineSnapNow()));},object({on:{type:'boolean'}},[]),open,'Project'),
   spec('animation.ease.copy','Copy the easing curve of the selected key',()=>{const ref=selKeys()[selKeys().length-1];guard(()=>copyCurve(findLayer(comp(),ref.layer)?.transform[ref.prop].keys.find(x=>x.t===ref.t)));},undefined,hasSel,'Edit'),
   spec('animation.ease.paste','Paste the copied easing curve onto the selected keys',()=>run(guard(()=>pasteCurveEdit(selKeys()))),undefined,hasSel,'Edit'),
   spec('animation.ease.save','Save a named easing in the document',(p:{name:string;out?:[number,number];in?:[number,number]})=>{

@@ -268,3 +268,8 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Done: export size, frame rate and frame range controls, six presets, per-format readout (frames, duration, size, rough bytes) with cap warnings before rendering.
 - Open: animated WebP, MP4 and Lottie JSON (need new dependencies or converters, skipped); size estimates are rough.
 
+### Animation P39 (2026-10-14, integration pending)
+
+- Done: timeline zoom, scroll and fit; snapping to markers, work area and playhead; solo and move up/down in layer rows; select all keys of a property; frame-step and Home/End keys.
+- Open: drag-to-reorder layers, shy layers, per-layer track heights.
+

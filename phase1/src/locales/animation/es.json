@@ -521,5 +521,18 @@
  "animation.export.problem.range": "rango de fotogramas no válido",
  "animation.export.problem.scale": "la escala debe ser de 10 a 400 por ciento",
  "animation.export.problem.fps": "la velocidad debe ser de 1 a 60",
- "cmd.animation.export.settings": "Definir tamaño, velocidad, rango de fotogramas o preajuste de exportación"
+ "cmd.animation.export.settings": "Definir tamaño, velocidad, rango de fotogramas o preajuste de exportación",
+ "animation.timeline.zoom": "Zoom de la línea de tiempo",
+ "animation.timeline.zoomIn": "Acercar",
+ "animation.timeline.zoomOut": "Alejar",
+ "animation.timeline.fit": "Ajustar",
+ "animation.timeline.zoomWorkArea": "Área de trabajo",
+ "animation.timeline.snap": "Imán",
+ "animation.timeline.snapHint": "Ajustar a marcadores, bordes del área de trabajo y cabezal (Alt lo omite)",
+ "animation.timeline.scroll": "Desplazar línea de tiempo",
+ "animation.layer.moveUp": "Subir {name}",
+ "animation.layer.moveDown": "Bajar {name}",
+ "animation.keys.selectRow": "Seleccionar todas las claves de {name}",
+ "cmd.animation.timeline.zoom": "Zoom de la línea de tiempo",
+ "cmd.animation.timeline.snap": "Ajustar arrastres a marcadores, área de trabajo y cabezal"
 }

@@ -521,5 +521,18 @@
  "animation.export.problem.range": "invalid frame range",
  "animation.export.problem.scale": "scale must be 10 to 400 percent",
  "animation.export.problem.fps": "frame rate must be 1 to 60",
- "cmd.animation.export.settings": "Set export size, frame rate, frame range or preset"
+ "cmd.animation.export.settings": "Set export size, frame rate, frame range or preset",
+ "animation.timeline.zoom": "Timeline zoom",
+ "animation.timeline.zoomIn": "Zoom in",
+ "animation.timeline.zoomOut": "Zoom out",
+ "animation.timeline.fit": "Fit",
+ "animation.timeline.zoomWorkArea": "Work area",
+ "animation.timeline.snap": "Snap",
+ "animation.timeline.snapHint": "Snap to markers, work area edges and the playhead (hold Alt to skip)",
+ "animation.timeline.scroll": "Scroll timeline",
+ "animation.layer.moveUp": "Move {name} up",
+ "animation.layer.moveDown": "Move {name} down",
+ "animation.keys.selectRow": "Select all keys of {name}",
+ "cmd.animation.timeline.zoom": "Zoom the timeline",
+ "cmd.animation.timeline.snap": "Snap timeline drags to markers, work area and playhead"
 }

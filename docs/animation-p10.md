@@ -206,3 +206,16 @@ Added (`exportSettings.ts`, `ExportSettingsPanel.tsx`, `animation.export.setting
 - Settings are session state, not document data: no undo step, not saved with the file.
 - Not supported and skipped: animated WebP and MP4 (no encoder in the app, would need a new dependency or an unreliable MediaRecorder codec), Lottie JSON (no converter exists).
 - Limits: sizes are guesses from pixel count; a rate that does not divide the composition rate samples at exact times, so frames can fall between source frames. First and last frame are composition frames, not output frames. GIF delays round to whole centiseconds (existing).
+
+## P39 - Timeline polish
+
+Already there: visible and lock toggles, marker add/jump/delete, marquee key multi-select, key copy/cut/paste/delete shortcuts, work area, ruler scrubbing, `animation.layer.reorder` and `solo` (commands only, no timeline UI).
+Added:
+
+- Timeline zoom (1x to 64x) and horizontal scroll: zoom in/out, Fit, Work area, a scroll slider, Ctrl or Cmd with the wheel (zooms around the pointer), Shift with the wheel (scrolls), keys `+`, `-`, `0` when the timeline has focus. The view follows the playhead during playback and scrolls when a drag is held at the edge. Zoom and scroll are view state (no undo step).
+- Snap toggle: scrubbing, key drags and work-area edge drags snap to markers, work-area edges, the playhead and the composition ends within 6 px. Hold Alt to skip. Items that are dragged are never snap targets.
+- Layer rows: Solo button and Move up / Move down buttons (each one undo step through the existing edits).
+- Click a property label to select all its keys, then the existing copy/paste applies.
+- Keyboard on the focused timeline: Left/Right step a frame (Shift 10), Home/End jump to the ends.
+- Commands `animation.timeline.zoom` and `animation.timeline.snap`.
+- Not built: "shadow" layers (unclear request, no such concept in the model; "shy" layers would need a new layer field), drag-to-reorder by pointer (buttons only), per-layer track height. Layer names are shorter in the row because of the new buttons.

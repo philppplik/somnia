@@ -521,5 +521,18 @@
  "animation.export.problem.range": "ungültiger Bildbereich",
  "animation.export.problem.scale": "Skalierung muss 10 bis 400 Prozent sein",
  "animation.export.problem.fps": "Bildrate muss 1 bis 60 sein",
- "cmd.animation.export.settings": "Exportgröße, Bildrate, Bildbereich oder Voreinstellung setzen"
+ "cmd.animation.export.settings": "Exportgröße, Bildrate, Bildbereich oder Voreinstellung setzen",
+ "animation.timeline.zoom": "Zeitleisten-Zoom",
+ "animation.timeline.zoomIn": "Vergrößern",
+ "animation.timeline.zoomOut": "Verkleinern",
+ "animation.timeline.fit": "Einpassen",
+ "animation.timeline.zoomWorkArea": "Arbeitsbereich",
+ "animation.timeline.snap": "Einrasten",
+ "animation.timeline.snapHint": "An Marker, Arbeitsbereichsränder und Abspielposition einrasten (Alt hält es aus)",
+ "animation.timeline.scroll": "Zeitleiste scrollen",
+ "animation.layer.moveUp": "{name} nach oben",
+ "animation.layer.moveDown": "{name} nach unten",
+ "animation.keys.selectRow": "Alle Tasten von {name} wählen",
+ "cmd.animation.timeline.zoom": "Zeitleiste zoomen",
+ "cmd.animation.timeline.snap": "Zeitleisten-Ziehen an Marker, Arbeitsbereich und Abspielposition einrasten"
 }

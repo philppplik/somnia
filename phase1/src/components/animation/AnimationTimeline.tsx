@@ -1,5 +1,5 @@
 import {useEffect,useRef,useState,type KeyboardEvent as ReactKeyboardEvent,type PointerEvent} from 'react';
-import {Play,Pause,Undo2,Redo2,Eye,EyeOff,Lock,Unlock} from '../../lib/icons';
+import {Play,Pause,Undo2,Redo2,Eye,EyeOff,Lock,Unlock,ZoomIn,ZoomOut,ArrowUp,ArrowDown} from '../../lib/icons';
 import {animationSession,useAnimationState} from '../../lib/animation/session';
 import {NativeInput,NativeSelect} from '../ui/native-controls';
 import {TRANSFORM_KEYS,wouldCycle,type Composition,type KeyRef,type TransformKey} from '../../lib/animation/model';
@@ -10,6 +10,7 @@ import {AudioWaveform} from './AudioWaveform';
 import {clickSelect,marqueeSelect,pruneSelection,rectsOverlap,sameKey,shiftSelection} from '../../lib/animation/selection';
 import {frameToTick,snapToFrame,tickToFrame,timecode} from '../../lib/animation/time';
 import {executeCommand} from '../../lib/commands';
+import {edgeScroll,revealTick,snapTargets,snapTick,timeWindow,useTimelineSnap,setTimelineSnap} from '../../lib/animation/timelineView';
 import {clearLayerSet,layerSetIds,toggleLayerInSet,useLayerSet} from '../../lib/animation/layerSet';
 import {useT} from '../../lib/useT';
 import {Button} from '../ui/button';
@@ -17,12 +18,14 @@ import {EASE_LABEL,EASES,PROP_LABEL} from './format';
 import {MaskLanes} from './MaskLanes';
 import {GraphEditor} from './GraphEditor';
 const run=(id:string,params?:unknown)=>void executeCommand(id,params);
-const pct=(t:number,c:Composition)=>`${Math.min(100,Math.max(0,(t-c.start)/c.duration*100))}%`;
 interface Box{x0:number;y0:number;x1:number;y1:number}
 /** Timeline of the Animation studio: transport, work area, layer bars, key lanes with marquee selection, or the graph editor. */
 export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Composition;at:number;selected:string|null;canUndo:boolean;canRedo:boolean}){
  const {t}=useT();const state=useAnimationState();const view=state.view; const layerSet=useLayerSet();const [stagger,setStagger]=useState(2);const [staggerTiming,setStaggerTiming]=useState(true);
  const rulerRef=useRef<HTMLDivElement>(null);const lanesRef=useRef<HTMLDivElement>(null);
+ const win=timeWindow(comp,view.zoom,view.scroll);const pc=(t:number)=>`${(t-win.t0)/win.span*100}%`;const snapOn=useTimelineSnap();const inWin=(t:number)=>t>=win.t0&&t<=win.t0+win.span;
+ /** Left and width in percent of a tick range, clipped to the visible window. */
+ const bar=(a:number,b:number)=>{const l=Math.max(0,(a-win.t0)/win.span*100),r=Math.min(100,(b-win.t0)/win.span*100);return {left:`${l}%`,width:`${Math.max(0,r-l)}%`};};const sectionRef=useRef<HTMLElement>(null);
  const frames=Math.max(1,tickToFrame(comp.duration,comp.fps));const frame=tickToFrame(at,comp.fps);
  const [playing,setPlaying]=useState(false);const [keepWorld,setKeepWorld]=useState(false);const raf=useRef<number|null>(null);
  const live=useRef({comp,loop:view.loop});live.current={comp,loop:view.loop};
@@ -34,6 +37,19 @@ export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Compo
  /** Editing audio while it plays would leave scheduled sources stale. Pause instead of drifting out of sync. */
  useEffect(()=>{if(playing&&sigAtStart.current&&sig!==sigAtStart.current){stop();setAudioNote(t('animation.audio.paused'));}// eslint-disable-next-line react-hooks/exhaustive-deps
  },[sig]);
+/** Ctrl or Cmd with the wheel zooms around the pointer; Shift with the wheel or a sideways wheel scrolls. Needs a non-passive listener to stop page zoom. */
+ useEffect(()=>{
+  const el=sectionRef.current;if(!el)return;
+  const onWheel=(e:WheelEvent)=>{
+   const r=rulerRef.current?.getBoundingClientRect();if(!r)return;const c=live.current.comp;const v=animationSession().getState().view;const w=timeWindow(c,v.zoom,v.scroll);
+   if(e.ctrlKey||e.metaKey){e.preventDefault();const anchor=w.t0+Math.min(1,Math.max(0,(e.clientX-r.left)/Math.max(1,r.width)))*w.span;void executeCommand('animation.timeline.zoom',{mode:e.deltaY<0?'in':'out',anchor});return;}
+   const d=e.shiftKey?e.deltaY:e.deltaX;if(d&&w.zoom>1){e.preventDefault();animationSession().setView({scroll:timeWindow(c,w.zoom,w.scroll+d/Math.max(1,r.width)*w.span).scroll});}
+  };
+  el.addEventListener('wheel',onWheel,{passive:false});return()=>el.removeEventListener('wheel',onWheel);
+ },[]);
+ /** While playing in a zoomed view the window follows the playhead. */
+ useEffect(()=>{if(playing&&win.zoom>1){const sc=revealTick(comp,win,at);if(sc!==win.scroll)animationSession().setView({scroll:sc});}// eslint-disable-next-line react-hooks/exhaustive-deps
+ },[at,playing]);
  const toggle=async()=>{
   if(raf.current!==null||playing){stop();return;}
   const token=++gen.current;const startAt=at;setAudioNote('');sigAtStart.current=sig;let useAudio=false;
@@ -50,17 +66,27 @@ export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Compo
   raf.current=requestAnimationFrame(tick);
  };
  const step=(d:number)=>{stop();animationSession().setView({playhead:frameToTick(frame+d,comp.fps)});};
- const tickAtX=(x:number)=>{const r=rulerRef.current!.getBoundingClientRect();return snapToFrame(comp.start+Math.min(1,Math.max(0,(x-r.left)/Math.max(1,r.width)))*comp.duration,comp.fps);};
+ /** Tick under a pointer x. Snaps to markers, work-area edges and the playhead (Alt turns it off), then to a whole frame. */
+ const tickAtX=(x:number,o:{free?:boolean;exclude?:readonly number[]}={})=>{
+  const r=rulerRef.current!.getBoundingClientRect();const raw=win.t0+Math.min(1,Math.max(0,(x-r.left)/Math.max(1,r.width)))*win.span;
+  const near=snapOn&&!o.free?snapTick(raw,snapTargets(comp,at,o.exclude),win.span/Math.max(1,r.width)):raw;
+  return snapToFrame(Math.min(comp.start+comp.duration,Math.max(comp.start,near)),comp.fps);
+ };
+ /** While a drag is held near the left or right edge of a zoomed track, the view scrolls with it. */
+ const autoScroll=(x:number)=>{
+  const r=rulerRef.current?.getBoundingClientRect();if(!r)return;const c=live.current.comp;const v=animationSession().getState().view;const w=timeWindow(c,v.zoom,v.scroll);
+  const sc=edgeScroll(c,w,(x-r.left)/Math.max(1,r.width));if(sc!==w.scroll)animationSession().setView({scroll:sc});
+ };
  const scrub=(e:PointerEvent<HTMLElement>)=>{
-  stop();const el=e.currentTarget;el.setPointerCapture(e.pointerId);animationSession().setView({playhead:tickAtX(e.clientX)});
-  const move=(ev:globalThis.PointerEvent)=>animationSession().setView({playhead:tickAtX(ev.clientX)});
+  stop();const el=e.currentTarget;el.setPointerCapture(e.pointerId);const go=(ev:globalThis.PointerEvent|PointerEvent<HTMLElement>)=>animationSession().setView({playhead:tickAtX(ev.clientX,{free:ev.altKey,exclude:[at]})});go(e);
+  const move=(ev:globalThis.PointerEvent)=>{autoScroll(ev.clientX);go(ev);};
   const up=()=>{el.removeEventListener('pointermove',move);el.removeEventListener('pointerup',up);};
   el.addEventListener('pointermove',move);el.addEventListener('pointerup',up);
  };
  const dragWorkEdge=(edge:'in'|'out')=>(e:PointerEvent<HTMLButtonElement>)=>{
   e.stopPropagation();const target=e.currentTarget;target.setPointerCapture(e.pointerId);let moved=false;
   const move=(ev:globalThis.PointerEvent)=>{
-   const tk=tickAtX(ev.clientX);const w=comp.workArea;moved=true;
+   const tk=tickAtX(ev.clientX,{free:ev.altKey,exclude:[comp.workArea.in,comp.workArea.out]});const w=comp.workArea;moved=true;
    try{animationSession().previewEdits([{type:'workarea.set',in:edge==='in'?tk:w.in,out:edge==='out'?tk:w.out}]);}catch{/* keep last valid */}
   };
   const finish=(commit:boolean)=>{target.removeEventListener('pointermove',move);target.removeEventListener('pointerup',up);target.removeEventListener('keydown',key);
@@ -81,7 +107,7 @@ export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Compo
   if(!was)animationSession().selectKeys(group);
   const from=ref.t;let moved=false;let applied=0;
   const move=(ev:globalThis.PointerEvent)=>{
-   const delta=tickAtX(ev.clientX)-from;if(delta===0&&!moved)return;
+   const delta=tickAtX(ev.clientX,{free:ev.altKey,exclude:[...group.map(k=>k.t),at]})-from;autoScroll(ev.clientX);if(delta===0&&!moved)return;
    try{animationSession().previewEdits([{type:'keys.move',keys:group,delta}]);moved=true;applied=frameToTick(Math.round(delta*comp.fps.num/(comp.fps.den*240000)),comp.fps);}catch{/* collision or range: keep last valid preview */}
   };
   const finish=(commit:boolean)=>{
@@ -126,6 +152,15 @@ export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Compo
  const onKeyDown=(e:ReactKeyboardEvent<HTMLElement>)=>{
   if((e.target as HTMLElement).closest('input,select,textarea'))return;
   const mod=e.ctrlKey||e.metaKey;const k=e.key.toLowerCase();
+  if(e.target===e.currentTarget&&!mod&&!e.altKey){
+   const to=(tk:number)=>{stop();animationSession().setView({playhead:Math.min(comp.start+comp.duration,Math.max(comp.start,tk))});};
+   if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();to(frameToTick(frame+(e.key==='ArrowLeft'?-1:1)*(e.shiftKey?10:1),comp.fps));return;}
+   if(e.key==='Home'){e.preventDefault();to(comp.start);return;}
+   if(e.key==='End'){e.preventDefault();to(comp.start+comp.duration-frameToTick(1,comp.fps));return;}
+   if(e.key==='+'||e.key==='='){e.preventDefault();run('animation.timeline.zoom',{mode:'in'});return;}
+   if(e.key==='-'){e.preventDefault();run('animation.timeline.zoom',{mode:'out'});return;}
+   if(e.key==='0'){e.preventDefault();run('animation.timeline.zoom',{mode:'fit'});return;}
+  }
   if((e.key==='Delete'||e.key==='Backspace')&&!mod){if(sel.length){e.preventDefault();run('animation.keys.delete');}}
   else if(mod&&k==='c'){e.preventDefault();if(sel.length)run('animation.keys.copy');}
   else if(mod&&k==='x'){e.preventDefault();if(sel.length)run('animation.keys.cut');}
@@ -137,7 +172,7 @@ export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Compo
  };
  const wa=comp.workArea;const layer=comp.layers.find(l=>l.id===selected);
  const animated=layer?TRANSFORM_KEYS.filter(k=>layer.transform[k].keys.length>0):[];
- return <section tabIndex={0} onKeyDown={onKeyDown} className="flex max-h-[55%] min-h-[150px] shrink-0 flex-col border-t border-subtle text-xs outline-none focus-visible:ring-1 focus-visible:ring-accent" style={{height:view.graph?300:240}} aria-label={t('animation.timeline')} data-testid="animation-timeline">
+ return <section ref={sectionRef} tabIndex={0} onKeyDown={onKeyDown} className="flex max-h-[55%] min-h-[150px] shrink-0 flex-col border-t border-subtle text-xs outline-none focus-visible:ring-1 focus-visible:ring-accent" style={{height:view.graph?300:240}} aria-label={t('animation.timeline')} data-testid="animation-timeline">
   <div role="group" aria-label={t('animation.timeline')} className="flex flex-wrap items-center gap-1 border-b border-subtle px-2 py-1">
    <Button size="row" aria-label={t('animation.undo')} disabled={!canUndo} onClick={()=>run('animation.edit.undo')}><Undo2/></Button>
    <Button size="row" aria-label={t('animation.redo')} disabled={!canRedo} onClick={()=>run('animation.edit.redo')}><Redo2/></Button>
@@ -145,6 +180,14 @@ export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Compo
    <Button size="row" aria-label={playing?t('animation.pause'):t('animation.play')} onClick={()=>void toggle()} data-testid="animation-play">{playing?<Pause/>:<Play/>}</Button>
    <Button size="compact" aria-label={t('animation.step.forward')} onClick={()=>step(1)}>›</Button>
    <Button size="tiny" variant={view.loop?'outline':'ghost'} aria-pressed={view.loop} onClick={()=>run('animation.playback.loop')} data-testid="animation-loop">{t('animation.timeline.loop')}</Button>
+   <span className="flex items-center gap-1" role="group" aria-label={t('animation.timeline.zoom')}>
+    <Button size="row" aria-label={t('animation.timeline.zoomOut')} disabled={win.zoom<=1} onClick={()=>run('animation.timeline.zoom',{mode:'out'})} data-testid="animation-zoom-out"><ZoomOut/></Button>
+    <Button size="row" aria-label={t('animation.timeline.zoomIn')} disabled={win.zoom>=64} onClick={()=>run('animation.timeline.zoom',{mode:'in'})} data-testid="animation-zoom-in"><ZoomIn/></Button>
+    <Button size="tiny" variant="ghost" disabled={win.zoom<=1} onClick={()=>run('animation.timeline.zoom',{mode:'fit'})} data-testid="animation-zoom-fit">{t('animation.timeline.fit')}</Button>
+    <Button size="tiny" variant="ghost" onClick={()=>run('animation.timeline.zoom',{mode:'workarea'})} data-testid="animation-zoom-wa">{t('animation.timeline.zoomWorkArea')}</Button>
+    <Button size="tiny" variant={snapOn?'outline':'ghost'} aria-pressed={snapOn} title={t('animation.timeline.snapHint')} onClick={()=>run('animation.timeline.snap',{on:!snapOn})} data-testid="animation-snap">{t('animation.timeline.snap')}</Button>
+    {win.zoom>1&&<NativeInput type="range" className="w-24" min={0} max={Math.max(1,comp.duration-win.span)} step={Math.max(1,Math.round(win.span/50))} value={win.scroll} aria-label={t('animation.timeline.scroll')} onChange={e=>animationSession().setView({scroll:Number(e.target.value)})} data-testid="animation-scroll"/>}
+   </span>
    <output className="ml-1 font-mono text-ink" data-testid="animation-timecode">{timecode(at,comp.fps)}</output>
    <input type="range" className="ml-2 min-w-[80px] flex-1" min={0} max={frames} step={1} value={frame} aria-label={t('animation.timeline.scrub')} aria-valuetext={timecode(at,comp.fps)} onChange={e=>{stop();animationSession().setView({playhead:frameToTick(Number(e.target.value),comp.fps)});}}/>
    <span className="ml-2 flex items-center gap-1" role="group" aria-label={t('animation.workarea')}>
@@ -167,10 +210,10 @@ export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Compo
   <div className="grid grid-cols-[280px_1fr] items-center border-b border-subtle">
    <span className="px-2 py-1 text-ink-3" data-testid="animation-wa-label">{t('animation.workarea.range',{from:timecode(wa.in,comp.fps),to:timecode(wa.out,comp.fps)})}</span>
    <div ref={rulerRef} className="relative h-5 cursor-col-resize" onPointerDown={scrub} data-testid="animation-ruler">
-    <div className="pointer-events-none absolute inset-y-0 rounded-sm bg-accent-soft" style={{left:pct(wa.in,comp),width:`${(wa.out-wa.in)/comp.duration*100}%`}} data-testid="animation-workarea"/>
-    {(['in','out'] as const).map(edge=><button key={edge} type="button" className="absolute top-0 h-5 w-2 -translate-x-1/2 cursor-ew-resize rounded-sm border border-line bg-accent-fill" style={{left:pct(wa[edge],comp)}}
+    <div className="pointer-events-none absolute inset-y-0 rounded-sm bg-accent-soft" style={bar(wa.in,wa.out)} data-testid="animation-workarea"/>
+    {(['in','out'] as const).filter(edge=>inWin(wa[edge])).map(edge=><button key={edge} type="button" className="absolute top-0 h-5 w-2 -translate-x-1/2 cursor-ew-resize rounded-sm border border-line bg-accent-fill" style={{left:pc(wa[edge])}}
      aria-label={t(edge==='in'?'animation.workarea.handleIn':'animation.workarea.handleOut')} aria-valuetext={timecode(wa[edge],comp.fps)} onPointerDown={dragWorkEdge(edge)} onKeyDown={nudgeEdge(edge)} data-testid={`animation-wa-handle-${edge}`}/>)}
-    <div className="pointer-events-none absolute inset-y-0 w-px bg-ink" style={{left:pct(at,comp)}}/>
+    {inWin(at)&&<div className="pointer-events-none absolute inset-y-0 w-px bg-ink" style={{left:pc(at)}}/>}
    </div>
   </div>
   <div className="flex max-h-16 shrink-0 flex-wrap items-center gap-1 overflow-auto border-b border-subtle px-2 py-1" role="group" aria-label={t('animation.markers.title')}>
@@ -182,37 +225,40 @@ export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Compo
   </div>
   {view.graph?<GraphEditor comp={comp} layerId={selected} sel={sel} playhead={at}/>:
   <div className="relative min-h-0 flex-1 overflow-auto" role="list" ref={lanesRef}>
-   {comp.layers.map(l=><div key={l.id} role="listitem" className="border-b border-subtle">
+   {comp.layers.map((l,li)=><div key={l.id} role="listitem" className="border-b border-subtle">
     <div className={`grid grid-cols-[280px_1fr] items-center ${l.id===selected||layerSet.includes(l.id)?'bg-hover':''}`} data-picked={layerSet.includes(l.id)||undefined}>
      <div className="flex items-center gap-1 px-2 py-1">
       <button type="button" aria-label={t('animation.layer.visible')} aria-pressed={l.visible} className="text-ink-2" onClick={()=>run('animation.layer.update',{layer:l.id,visible:!l.visible})}>{l.visible?<Eye className="size-3"/>:<EyeOff className="size-3"/>}</button>
       <button type="button" aria-label={t('animation.layer.locked')} aria-pressed={l.locked} className="text-ink-2" onClick={()=>run('animation.layer.update',{layer:l.id,locked:!l.locked})}>{l.locked?<Lock className="size-3"/>:<Unlock className="size-3"/>}</button>
+      <Button size="tiny" variant={l.solo?'outline':'ghost'} aria-label={t('animation.layer.solo')} aria-pressed={l.solo} onClick={()=>run('animation.layer.update',{layer:l.id,solo:!l.solo})} data-testid={`animation-solo-${l.id}`}>S</Button>
+      <Button size="tiny" variant="ghost" aria-label={t('animation.layer.moveUp',{name:l.name})} disabled={li===0} onClick={()=>run('animation.layer.reorder',{layer:l.id,index:li-1})} data-testid={`animation-layer-up-${l.id}`}><ArrowUp className="size-3"/></Button>
+      <Button size="tiny" variant="ghost" aria-label={t('animation.layer.moveDown',{name:l.name})} disabled={li===comp.layers.length-1} onClick={()=>run('animation.layer.reorder',{layer:l.id,index:li+1})} data-testid={`animation-layer-down-${l.id}`}><ArrowDown className="size-3"/></Button>
       <button type="button" aria-current={l.id===selected} className="min-w-0 flex-1 truncate text-left text-ink" onClick={e=>{if((e.shiftKey||e.ctrlKey||e.metaKey)&&selected&&l.id!==selected){toggleLayerInSet(l.id);return;}clearLayerSet();animationSession().setView({selectedLayer:l.id});}}>{l.parent?'↳ ':''}{l.name}{l.kind==='null'?' · Null':''}</button>
       <NativeSelect className="h-5 w-[96px] min-w-0 shrink-0 rounded-sm border border-subtle bg-transparent px-1 text-xs text-ink-2 select-text" aria-label={t('animation.parent.timeline',{name:l.name})} disabled={l.locked} value={l.parent??''} data-testid={`animation-parent-${l.id}`} onChange={e=>run('animation.layer.parent',{layer:l.id,parent:e.target.value||null,keepWorld})}><option value="">{t('animation.parent.none')}</option>{comp.layers.filter(o=>o.id!==l.id&&!wouldCycle(comp,l.id,o.id)).map(o=><option key={o.id} value={o.id}>{o.name}</option>)}</NativeSelect>
      </div>
      <div className="relative h-5">
-      {l.kind==='audio'&&l.audio?<div className="absolute inset-0 overflow-hidden" data-testid="animation-audio-clip"><div className="absolute inset-y-0.5 overflow-hidden rounded-sm bg-accent-soft" style={{left:`${(l.inT+l.offset-comp.start)/comp.duration*100}%`,width:`${Math.max(0,(l.outT-l.inT)/comp.duration*100)}%`}}>
+      {l.kind==='audio'&&l.audio?<div className="absolute inset-0 overflow-hidden" data-testid="animation-audio-clip"><div className="absolute inset-y-0.5 overflow-hidden rounded-sm bg-accent-soft" style={{left:`${(l.inT+l.offset-win.t0)/win.span*100}%`,width:`${Math.max(0,(l.outT-l.inT)/win.span*100)}%`}}>
        {(a=>a&&<AudioWaveform asset={a} trimIn={l.audio.trimIn} length={l.outT-l.inT} label={t('animation.audio.waveform',{name:a.sourceName})}/>)(state.doc?.audioAssets?.find(x=>x.id===l.audio!.assetId))}</div></div>
-      :<div className="absolute top-1 h-3 rounded-sm bg-accent-fill opacity-70" style={{left:pct(l.inT,comp),width:`${Math.max(0,(l.outT-l.inT)/comp.duration*100)}%`}}/>}
+      :<div className="absolute top-1 h-3 rounded-sm bg-accent-fill opacity-70" style={bar(l.inT,l.outT)}/>}
      </div>
     </div>
     {l.id===selected&&l.audio&&l.audio.volume.keys.length>0&&<div className="grid grid-cols-[280px_1fr] items-center" data-testid="animation-keyrow-volume">
      <span className="px-2 py-1 pl-6 text-ink-3">{t('animation.audio.volumeLane')}</span>
-     <div className="relative h-5">{l.audio.volume.keys.map(key=><Button key={key.t} size="tiny" variant="outline" className="absolute top-0.5 size-3 min-h-0 min-w-0 -translate-x-1/2 rotate-45 bg-accent-fill p-0" style={{left:pct(key.t,comp)}} aria-label={t('animation.audio.volumeKey',{time:timecode(key.t,comp.fps)})} onClick={()=>animationSession().setView({playhead:key.t})} data-volume-key-t={key.t}/>)}</div></div>}
+     <div className="relative h-5">{l.audio.volume.keys.filter(key=>inWin(key.t)).map(key=><Button key={key.t} size="tiny" variant="outline" className="absolute top-0.5 size-3 min-h-0 min-w-0 -translate-x-1/2 rotate-45 bg-accent-fill p-0" style={{left:pc(key.t)}} aria-label={t('animation.audio.volumeKey',{time:timecode(key.t,comp.fps)})} onClick={()=>animationSession().setView({playhead:key.t})} data-volume-key-t={key.t}/>)}</div></div>}
     {l.id===selected&&animated.map(k=><div key={k} className="grid grid-cols-[280px_1fr] items-center" data-testid={`animation-keyrow-${k}`}>
-     <span className="px-2 py-1 pl-6 text-ink-3">{t(PROP_LABEL[k])}</span>
+     <Button size="tiny" variant="ghost" className="justify-start pl-6 text-ink-3" disabled={l.locked} aria-label={t('animation.keys.selectRow',{name:t(PROP_LABEL[k])})} onClick={()=>animationSession().selectKeys(l.transform[k].keys.map(key=>({layer:l.id,prop:k,t:key.t})))} data-testid={`animation-keyrow-label-${k}`}>{t(PROP_LABEL[k])}</Button>
      <div className="relative h-5 touch-none" data-lane onPointerDown={startMarquee}>
-      {l.transform[k].keys.map((key,ki)=>{const ref:KeyRef={layer:l.id,prop:k,t:key.t};const on=sel.some(x=>sameKey(x,ref));
-       return <button key={ki} type="button" className={`absolute top-0.5 size-3 -translate-x-1/2 rotate-45 border ${on?'border-ink bg-ink ring-2 ring-accent':'border-line bg-accent-fill'}`} style={{left:pct(key.t,comp)}} disabled={l.locked}
+      {l.transform[k].keys.map((key,ki)=>{if(!inWin(key.t))return null;const ref:KeyRef={layer:l.id,prop:k,t:key.t};const on=sel.some(x=>sameKey(x,ref));
+       return <button key={ki} type="button" className={`absolute top-0.5 size-3 -translate-x-1/2 rotate-45 border ${on?'border-ink bg-ink ring-2 ring-accent':'border-line bg-accent-fill'}`} style={{left:pc(key.t)}} disabled={l.locked}
         data-key-layer={l.id} data-key-prop={k} data-key-t={key.t} aria-pressed={on} data-selected={on||undefined}
         aria-label={t('animation.key.at',{time:timecode(key.t,comp.fps)})} onPointerDown={dragKey(ref)} onKeyDown={keyDown(ref)}/>;})}
      </div></div>)}
-    {l.id===selected&&l.masks?.length?<MaskLanes comp={comp} layer={l} tickAtX={tickAtX} pct={pct}/>:null}
+    {l.id===selected&&l.masks?.length?<MaskLanes comp={comp} layer={l} tickAtX={x=>tickAtX(x)} pct={t=>pc(t)}/>:null}
    </div>)}
    <div className="pointer-events-none absolute inset-y-0 left-[280px] right-0" aria-hidden="true">
-    <div className="absolute inset-y-0 bg-black/20" style={{left:0,width:pct(wa.in,comp)}}/>
-    <div className="absolute inset-y-0 bg-black/20" style={{left:pct(wa.out,comp),right:0}}/>
-    <div className="absolute inset-y-0 w-px bg-ink" style={{left:pct(at,comp)}} data-testid="animation-playhead"/>
+    <div className="absolute inset-y-0 bg-black/20" style={bar(win.t0,wa.in)}/>
+    <div className="absolute inset-y-0 bg-black/20" style={bar(wa.out,win.t0+win.span)}/>
+    {inWin(at)&&<div className="absolute inset-y-0 w-px bg-ink" style={{left:pc(at)}} data-testid="animation-playhead"/>}
    </div>
    {box&&<div className="pointer-events-none absolute border border-accent bg-accent-soft" style={{left:box.x0,top:box.y0,width:box.x1-box.x0,height:box.y1-box.y0}} data-testid="animation-marquee"/>}
   </div>}

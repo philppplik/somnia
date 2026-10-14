@@ -521,5 +521,18 @@
  "animation.export.problem.range": "plage d'images invalide",
  "animation.export.problem.scale": "l'échelle doit être de 10 à 400 pour cent",
  "animation.export.problem.fps": "la cadence doit être de 1 à 60",
- "cmd.animation.export.settings": "Définir la taille, la cadence, la plage d'images ou le préréglage d'export"
+ "cmd.animation.export.settings": "Définir la taille, la cadence, la plage d'images ou le préréglage d'export",
+ "animation.timeline.zoom": "Zoom de la timeline",
+ "animation.timeline.zoomIn": "Zoom avant",
+ "animation.timeline.zoomOut": "Zoom arrière",
+ "animation.timeline.fit": "Ajuster",
+ "animation.timeline.zoomWorkArea": "Zone de travail",
+ "animation.timeline.snap": "Magnétisme",
+ "animation.timeline.snapHint": "Aimanter aux repères, bords de la zone de travail et à la tête de lecture (Alt pour ignorer)",
+ "animation.timeline.scroll": "Faire défiler la timeline",
+ "animation.layer.moveUp": "Monter {name}",
+ "animation.layer.moveDown": "Descendre {name}",
+ "animation.keys.selectRow": "Sélectionner toutes les clés de {name}",
+ "cmd.animation.timeline.zoom": "Zoomer la timeline",
+ "cmd.animation.timeline.snap": "Aimanter les glissements aux repères, à la zone de travail et à la tête de lecture"
 }

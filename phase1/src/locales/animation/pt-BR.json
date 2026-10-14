@@ -521,5 +521,18 @@
  "animation.export.problem.range": "intervalo de quadros inválido",
  "animation.export.problem.scale": "a escala deve ser de 10 a 400 por cento",
  "animation.export.problem.fps": "a taxa deve ser de 1 a 60",
- "cmd.animation.export.settings": "Definir tamanho, taxa, intervalo de quadros ou predefinição de exportação"
+ "cmd.animation.export.settings": "Definir tamanho, taxa, intervalo de quadros ou predefinição de exportação",
+ "animation.timeline.zoom": "Zoom da linha do tempo",
+ "animation.timeline.zoomIn": "Aproximar",
+ "animation.timeline.zoomOut": "Afastar",
+ "animation.timeline.fit": "Ajustar",
+ "animation.timeline.zoomWorkArea": "Área de trabalho",
+ "animation.timeline.snap": "Ímã",
+ "animation.timeline.snapHint": "Encaixar em marcadores, bordas da área de trabalho e cabeça de reprodução (Alt ignora)",
+ "animation.timeline.scroll": "Rolar linha do tempo",
+ "animation.layer.moveUp": "Subir {name}",
+ "animation.layer.moveDown": "Descer {name}",
+ "animation.keys.selectRow": "Selecionar todas as chaves de {name}",
+ "cmd.animation.timeline.zoom": "Dar zoom na linha do tempo",
+ "cmd.animation.timeline.snap": "Encaixar arrastos em marcadores, área de trabalho e cabeça de reprodução"
 }

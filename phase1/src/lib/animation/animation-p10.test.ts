@@ -22,6 +22,7 @@ import {frameToTick,TICKS_PER_SECOND as TICK_SEC} from './time';
 import {sceneAt,worldMatrix,localMatrix,linkResolver} from './scene';
 import {evaluateMod,linkProblems,type Modifier} from './modifiers';
 import {snapEase,mirrorEase,copyCurve,pasteCurveEdit,resetGraphTools} from './graphTools';
+import {timeWindow,zoomAround,fitAll,fitRange,revealTick,edgeScroll,snapTargets,snapTick,ZOOM_MAX,setTimelineSnap,timelineSnap} from './timelineView';
 import {exportPlan,settingsProblems,defaultExportSettings,estimateBytes,EXPORT_LIMITS,EXPORT_PRESETS,EXPORT_FORMATS} from './exportSettings';
 import {exportGif,exportApng,exportWorkAreaSequence,exportCurrentFrame,setExportSettings,resetExportSettings,applyExportPreset,cancelExport,exportState,resetExport} from './exportJob';
 import {animationSession} from './session';
@@ -1090,4 +1091,47 @@ test('P38: export settings command, panel keys and locale keys exist in all loca
  const keys=['animation.export.settings','animation.export.preset','animation.export.scale','animation.export.fps','animation.export.from','animation.export.to','animation.export.readout','animation.export.estimateNote','animation.export.problem.range','animation.export.preset.web-gif','animation.export.kind.webm','cmd.animation.export.settings'];
  for(const l of ['en','de','es','fr','pt-BR']){const j=JSON.parse(readFileSync(new URL(`../../locales/animation/${l}.json`,import.meta.url),'utf8'));for(const k of keys)assert.ok(j[k],`${l} ${k}`);
   assert.match(j['animation.export.readout'],/\{frames\}/);assert.match(j['animation.export.readout'],/\{bytes\}/);}
+});
+const tlComp=(secs=10,fps=10)=>{const c=expComp(secs,fps);return c;};
+test('P39: timeline window clamps zoom and scroll and recovers from bad values',()=>{
+ const c=tlComp();const full=timeWindow(c,1,0);assert.equal(full.span,c.duration);assert.equal(full.t0,c.start);
+ const w=timeWindow(c,4,1e12);assert.equal(w.span,c.duration/4);assert.equal(w.scroll,c.duration-w.span,'scroll stays inside the composition');
+ assert.equal(timeWindow(c,1000,0).zoom,ZOOM_MAX);assert.equal(timeWindow(c,0.1,-5).zoom,1);assert.equal(timeWindow(c,NaN,'x').zoom,1);assert.equal(timeWindow(c,NaN,'x').scroll,0);
+});
+test('P39: zoom keeps the anchor under the pointer; fit and zoom-to-range',()=>{
+ const c=tlComp();const w=timeWindow(c,1,0);const anchor=c.duration/2;
+ const z=zoomAround(c,w,2,anchor);const w2=timeWindow(c,z.zoom,z.scroll);assert.equal(z.zoom,2);assert.ok(Math.abs((anchor-w2.t0)/w2.span-0.5)<1e-9,'anchor stays at the same fraction');
+ const edge=zoomAround(c,w,4,c.start);assert.equal(edge.scroll,0,'anchor at the start stays at the start');
+ assert.equal(zoomAround(c,timeWindow(c,ZOOM_MAX,0),2,0).zoom,ZOOM_MAX,'capped');assert.deepEqual(fitAll(),{zoom:1,scroll:0});
+ const r=fitRange(c,2*TICK_SEC,4*TICK_SEC);const rw=timeWindow(c,r.zoom,r.scroll);assert.ok(rw.t0<=2*TICK_SEC&&rw.t0+rw.span>=4*TICK_SEC,'range is visible');assert.ok(rw.zoom>3);
+ assert.ok(revealTick(c,timeWindow(c,4,0),8*TICK_SEC)>0,'scrolls to show a tick outside');assert.equal(revealTick(c,timeWindow(c,4,0),TICK_SEC/2),0,'unchanged when visible');
+ const w4=timeWindow(c,4,2*TICK_SEC);assert.ok(edgeScroll(c,w4,1.2)>w4.scroll&&edgeScroll(c,w4,-0.2)<w4.scroll&&edgeScroll(c,w4,0.5)===w4.scroll,'edge scroll only near the edges');assert.equal(edgeScroll(c,timeWindow(c,1,0),1.5),0,'no scrolling when fully zoomed out');
+});
+test('P39: snapping targets markers, work area edges and the playhead within a pixel threshold',()=>{
+ let c=tlComp();const s=animationSession();s.dispatch({type:'markers.set',markers:[{id:'m1',t:3*TICK_SEC,label:'m'}]});c=comp(s.document!);
+ const tg=snapTargets(c,5*TICK_SEC);assert.ok(tg.includes(3*TICK_SEC)&&tg.includes(5*TICK_SEC)&&tg.includes(c.workArea.out)&&tg.includes(c.start));
+ const tpp=TICK_SEC/100;assert.equal(snapTick(3*TICK_SEC+4*tpp,tg,tpp),3*TICK_SEC,'4 px away snaps');assert.equal(snapTick(3*TICK_SEC+20*tpp,tg,tpp),3*TICK_SEC+20*tpp,'20 px away does not');
+ assert.ok(!snapTargets(c,5*TICK_SEC,[3*TICK_SEC]).includes(3*TICK_SEC),'dragged items are excluded');
+ assert.equal(snapTick(5,[],1),5);
+});
+test('P39: zoom and snap commands change view state only, with no document revision',()=>{
+ const c=tlComp();const s=animationSession();const rev=s.document!.revision;
+ const ids=animationCommandSpecs().map(x=>x.id);assert.ok(ids.includes('animation.timeline.zoom')&&ids.includes('animation.timeline.snap'));
+ const run=(id:string,p:unknown)=>animationCommandSpecs().find(x=>x.id===id)!.run(p as never,{} as never);
+ run('animation.timeline.zoom',{mode:'in'});assert.equal(s.getState().view.zoom,2);run('animation.timeline.zoom',{mode:'in'});assert.equal(s.getState().view.zoom,4);
+ run('animation.timeline.zoom',{mode:'out'});assert.equal(s.getState().view.zoom,2);run('animation.timeline.zoom',{mode:'workarea'});assert.ok(s.getState().view.zoom>=1);
+ run('animation.timeline.zoom',{mode:'fit'});assert.equal(s.getState().view.zoom,1);assert.equal(s.getState().view.scroll,0);
+ setTimelineSnap(true);run('animation.timeline.snap',{on:false});assert.equal(timelineSnap(),false);run('animation.timeline.snap',{});assert.equal(timelineSnap(),true);
+ assert.equal(s.document!.revision,rev);assert.ok(c);
+});
+test('P39: solo and reorder are single undo steps; select-row selects every key of a property',()=>{
+ let d=base();const r=d.revision;
+ d=applyEdit(d,{type:'layer.update',layer:'photo',solo:true});assert.equal(layer(d,'photo').solo,true);assert.equal(d.revision,r+1);
+ const order0=comp(d).layers.map(l=>l.id);d=applyEdit(d,{type:'layer.reorder',layer:order0[0],index:1});const order1=comp(d).layers.map(l=>l.id);assert.deepEqual(order1.slice(0,2),[order0[1],order0[0]]);assert.equal(d.revision,r+2);
+ d=keyDoc();const keys=rotKeys(d).map(k=>({layer:'stencil',prop:'rotation' as const,t:k.t}));assert.equal(keys.length,3);
+ const s=animationSession();s.createBlank('y');s.selectKeys(keys);assert.equal(s.getState().view.selectedKeys.length,3);
+});
+test('P39: timeline locale keys exist in all five locales',()=>{
+ const keys=['animation.timeline.zoom','animation.timeline.zoomIn','animation.timeline.zoomOut','animation.timeline.fit','animation.timeline.zoomWorkArea','animation.timeline.snap','animation.timeline.snapHint','animation.timeline.scroll','animation.layer.solo','animation.layer.moveUp','animation.layer.moveDown','animation.keys.selectRow','cmd.animation.timeline.zoom','cmd.animation.timeline.snap'];
+ for(const l of ['en','de','es','fr','pt-BR']){const j=JSON.parse(readFileSync(new URL(`../../locales/animation/${l}.json`,import.meta.url),'utf8'));for(const k of keys)assert.ok(j[k],`${l} ${k}`);assert.match(j['animation.layer.moveUp'],/\{name\}/);}
 });
