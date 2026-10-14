@@ -93,3 +93,28 @@ test('keyboard navigation and digit rating render in light and dark',async({page
   await page.screenshot({path:`test-results/ds-photos-keyboard-${theme}.png`,fullPage:true});
  }
 });
+test('flags: P picks, X rejects, U unflags; the filter narrows by flag (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible();
+  await page.keyboard.press('p'); // strip-1 picked
+  await expect(page.getByTestId('photos-filmstrip-flag-strip-1.png')).toHaveAttribute('data-flag','pick');
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('x'); // strip-2 rejected
+  await expect(page.getByTestId('photos-filmstrip-flag-strip-2.png')).toHaveAttribute('data-flag','reject');
+  await page.getByTestId('photos-filmstrip-rating-filter').selectOption('pick');
+  await expect(page.getByTestId('photos-filmstrip-item-strip-1.png')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-2.png')).toHaveCount(0);
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toHaveCount(0);
+  await page.getByTestId('photos-filmstrip-rating-filter').selectOption('reject');
+  await expect(page.getByTestId('photos-filmstrip-item-strip-2.png')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-1.png')).toHaveCount(0);
+  await page.getByTestId('photos-filmstrip-rating-filter').selectOption('0');
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible();
+  await page.screenshot({path:`test-results/ds-photos-flags-${theme}.png`,fullPage:true});
+  await page.keyboard.press('u'); // strip-2 unflagged
+  await expect(page.getByTestId('photos-filmstrip-flag-strip-2.png')).toHaveCount(0);
+ }
+});

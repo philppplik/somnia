@@ -9,6 +9,7 @@ import {useT} from '../../lib/useT';
 import {applyPhotoCrop,cancelPhotoCrop,dirtyPhoto,exportPhotoCopy,historyPhoto,openPhoto,resetPhoto,rotatePhoto,setPhotoCropping,setPhotoCropDraft,usePhotoSession,type PhotoFrame} from '../../lib/photos/studioSession';
 import {autoSource,clampSpot} from '../../lib/photos/healSpots';
 import {setRating} from '../../lib/photos/ratings';
+import {setFlag} from '../../lib/photos/flags';
 import {deriveSpotWhiteBalance} from '../../lib/photos/autoTone';
 import {clampGrad,MAX_GRADS,type GradFilter,clampRad,MAX_RADS,type RadFilter} from '../../lib/photos/localAdjust';
 import {MAX_BRUSH_STROKES,MAX_BRUSH_TOTAL_DABS,brushTotalDabs,type BrushStroke} from '../../lib/photos/brushStrokes';
@@ -114,6 +115,9 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
    if(e.key==='ArrowLeft'&&nav.prev){e.preventDefault();setActiveMedia(nav.prev);}
    else if(e.key==='ArrowRight'&&nav.next){e.preventDefault();setActiveMedia(nav.next);}
    else if(/^[0-5]$/.test(e.key))setRating(item.name,Number(e.key));
+   else if(e.key==='p'||e.key==='P')setFlag(item.name,'pick');
+   else if(e.key==='x'||e.key==='X')setFlag(item.name,'reject');
+   else if(e.key==='u'||e.key==='U')setFlag(item.name,null);
   };
   window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey);
  },[nav.prev,nav.next,item.name]);

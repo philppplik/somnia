@@ -115,5 +115,7 @@
  "photos.rating.filter.all": "Todas",
  "photos.p.auto.wbPicker": "Cuentagotas",
  "photos.p.crop.swap": "Invertir orientación",
- "photos.rad.invert": "Invertir"
+ "photos.rad.invert": "Invertir",
+ "photos.flag.filter.pick": "Seleccionadas",
+ "photos.flag.filter.reject": "Rechazadas"
 }

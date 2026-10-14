@@ -115,5 +115,7 @@
  "photos.rating.filter.all": "Alle",
  "photos.p.auto.wbPicker": "Pipette",
  "photos.p.crop.swap": "Ausrichtung tauschen",
- "photos.rad.invert": "Umkehren"
+ "photos.rad.invert": "Umkehren",
+ "photos.flag.filter.pick": "Markiert",
+ "photos.flag.filter.reject": "Abgelehnt"
 }
