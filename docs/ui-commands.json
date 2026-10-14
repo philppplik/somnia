@@ -6722,6 +6722,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.edit.weld",
+      "title": "Merge selected vertices at centre",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.env.open",
       "title": "Open an HDR environment map",
       "category": "View",
