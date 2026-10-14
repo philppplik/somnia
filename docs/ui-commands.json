@@ -2891,6 +2891,28 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.list.restart",
+      "title": "Restart list numbering",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.list.style",
+      "title": "Set the list style",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.outline.goto",
       "title": "Go to document paragraph",
       "category": "View",

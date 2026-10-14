@@ -8,8 +8,8 @@ import {GoToPageDialog} from './GoToPageDialog';
 import {TextEffects} from './TextEffects';
 import {setCommentsOpen,useCommentsOpen} from '../../lib/documents/comments';
 import {DOC_COLORS} from '../../lib/documents/palette';
-import {FONT_SIZES,setAlign,setFont,setFontColor,setFontSize,setLineSpacing,setSpaceAfter,setParagraphStyle,setSpaceBefore,stepIndent,toggleFormat,toggleList,shiftListLevel,editTable,insertTable,setColumnWidth} from '../../lib/documents/session';
-import {MIN_COL_PT,MAX_COL_PT,TABLE_PRESETS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type FormatPatch,type FormatState,type ParaAlign,type ParaState} from '../../lib/documents/protocol';
+import {FONT_SIZES,setAlign,setFont,setFontColor,setFontSize,setLineSpacing,setSpaceAfter,setParagraphStyle,setSpaceBefore,stepIndent,toggleFormat,toggleList,shiftListLevel,setListStyle,restartNumbering,editTable,insertTable,setColumnWidth} from '../../lib/documents/session';
+import {LIST_STYLES,type ListStyleId,MIN_COL_PT,MAX_COL_PT,TABLE_PRESETS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type FormatPatch,type FormatState,type ParaAlign,type ParaState} from '../../lib/documents/protocol';
 import {AlignCenter,AlignJustify,AlignLeft,AlignRight,IndentDecrease,IndentIncrease,ListBullet,ListNumbered} from '../../lib/icons';
 import {t} from '../../lib/i18n';
 import {NativeButton,NativeInput,NativeSelect} from '../ui/native-controls';
@@ -56,6 +56,9 @@ export function FormatBar({format,held,para,enabled,inCell=false}:{format:Format
   <span className="flex items-center gap-0.5" role="group" aria-label={t('documents.list.label')}>
    <NativeButton className={tool+' w-7 px-0'} aria-label={t('documents.list.bullet')} title={t('documents.list.bullet')} aria-pressed={para?.list==='bullet'} disabled={!enabled} onClick={()=>void toggleList('bullet')} data-testid="documents-list-bullet"><ListBullet size={14}/></NativeButton>
    <NativeButton className={tool+' w-7 px-0'} aria-label={t('documents.list.numbered')} title={t('documents.list.numbered')} aria-pressed={para?.list==='numbered'} disabled={!enabled} onClick={()=>void toggleList('numbered')} data-testid="documents-list-numbered"><ListNumbered size={14}/></NativeButton>
+   <NativeSelect className={sel+' w-28'} aria-label={t('documents.list.styleLabel')} title={t('documents.list.styleLabel')} disabled={!enabled} value={para?.listStyle&&para.listStyle!=='none'?para.listStyle:''} onChange={e=>{const v=e.currentTarget.value;if((LIST_STYLES as readonly string[]).includes(v))void setListStyle(v as ListStyleId);}} data-testid="documents-list-style">
+    <option value="" disabled>{t('documents.list.styleLabel')}</option>{para?.listStyle==='other'&&<option value="other" disabled>{t('documents.list.style.other')}</option>}{LIST_STYLES.map(k=><option key={k} value={k}>{t('documents.list.style.'+k)}</option>)}</NativeSelect>
+   {para?.list==='numbered'&&<NativeButton className={tool} disabled={!enabled} onClick={()=>void restartNumbering()} data-testid="documents-list-restart">{t('documents.list.restart')}</NativeButton>}
    {(para?.list==='bullet'||para?.list==='numbered')&&<><NativeButton className={tool+' w-7 px-0'} aria-label={t('documents.list.promote')} title={t('documents.list.promote')} disabled={!enabled} onClick={()=>void shiftListLevel(-1)} data-testid="documents-list-promote">{'\u2190'}</NativeButton>
    <NativeButton className={tool+' w-7 px-0'} aria-label={t('documents.list.demote')} title={t('documents.list.demote')} disabled={!enabled} onClick={()=>void shiftListLevel(1)} data-testid="documents-list-demote">{'\u2192'}</NativeButton></>}
   </span>

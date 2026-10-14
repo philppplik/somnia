@@ -1,5 +1,6 @@
 import {scrollToPage} from './navigate';
 import {commentAuthor} from './author';
+import {isListKind,type ListStyleId} from './protocol';
 import {propertiesProblem,linkProblem,commentProblem,type CommentItem,validHfText,type HeaderFooterState,checkFormatPatch,checkParaPatch,MAX_HF_CHARS,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch,type ImageOp,type PageSetupPatch,type PageSetupState,pageSetupProblem,type TableStyle,type TableStyleScope,tableStyleProblem,MIN_COL_PT,MAX_COL_PT,imageProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGES} from './protocol';
 import {captureDocumentSelection} from './selectionCapture';
 import {CELL_BASE,caretAfterEdit,diffEdit,inverseOf,UndoStack,type TextEdit,type UndoEntry} from './edit';
@@ -467,6 +468,17 @@ export const toggleList=(kind:'bullet'|'numbered')=>run(async()=>{
  const n=await paraSpan();if(!n)return;
  const next:ListKindId=getDocumentsState().para?.list===kind?'none':kind;
  await structural(eng=>eng.setList(n.s.block,n.e.block,next),n.h,n.h);setSel(n.a,n.h);
+});
+/** Applies a list style (bullet, dash, square, 1., 1), A., a), i., I.A.1., 1.1.1.) to the selected paragraphs; paragraphs already in a list keep their level. One undo step. */
+export const setListStyle=(style:ListStyleId)=>run(async()=>{
+ if(!isListKind(style))throw new Error('List style is not valid.');
+ const n=await paraSpan();if(!n)return;
+ await structural(eng=>eng.setList(n.s.block,n.e.block,style),n.h,n.h);setSel(n.a,n.h);
+});
+/** Restarts numbering at the first selected paragraph: it and the later items of the same numbered list count from 1 again. One undo step; refused outside a numbered list. */
+export const restartNumbering=()=>run(async()=>{
+ const n=await paraSpan();if(!n)return;
+ await structural(eng=>eng.restartList(n.s.block,n.e.block),n.h,n.h);setSel(n.a,n.h);
 });
 /** Removes the list from the selected paragraphs (the text stays). */
 export const clearList=()=>run(async()=>{

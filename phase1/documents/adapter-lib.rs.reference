@@ -807,11 +807,35 @@ impl DocSession {
             "lineSpacing": ls,
             "style": same_str(&rows.iter().map(|r| r.style.as_str()).collect::<Vec<_>>()),
             "list": same_str(&rows.iter().map(|r| self.list_kind(r.numbering)).collect::<Vec<_>>()),
+            "listStyle": same_str(&rows.iter().map(|r| self.list_style(r.numbering)).collect::<Vec<_>>()),
             "listLevel": same(&rows, |r| match r.numbering { Some(n) if n.num != 0 => Some(n.level), _ => None }).flatten(),
         })
         .to_string())
     }
     /// `"none"`, `"bullet"` or `"numbered"` for a resolved numbering reference.
+    /// The list kinds a user can pick: bullet, dash, square, numbered (1.), numberedParen (1)), upperLetter (A.), lowerLetter (a)), lowerRoman (i.), outline (I. A. 1.), legal (1.1.1.).
+    fn list_kind_of(kind: &str) -> Option<wordcraft_doc::numbering::ListKind> {
+        use wordcraft_doc::numbering::ListKind;
+        Some(match kind {
+            "dash" => ListKind::BulletChar('\u{2013}'),
+            "square" => ListKind::BulletChar('\u{25AA}'),
+            "bullet" | "numbered" | "numberedParen" | "upperLetter" | "lowerLetter" | "lowerRoman" | "outline" | "legal" => ListKind::parse(kind)?,
+            _ => return None,
+        })
+    }
+    /// The picker name of a list's first level, `other` for a list from a file that matches none, `none` outside a list.
+    fn list_style(&self, n: Option<wordcraft_doc::props::NumRef>) -> &'static str {
+        let Some(n) = n.filter(|n| n.num != 0) else { return "none" };
+        let Some(l) = self.doc.numbering.level(n.num, 0) else { return "none" };
+        for name in ["bullet", "dash", "square", "numbered", "numberedParen", "upperLetter", "lowerLetter", "lowerRoman", "outline", "legal"] {
+            if let Some(lk) = Self::list_kind_of(name) {
+                if wordcraft_doc::numbering::levels_for(lk).first().is_some_and(|w| w.format == l.format && w.text == l.text) {
+                    return name;
+                }
+            }
+        }
+        "other"
+    }
     fn list_kind(&self, n: Option<wordcraft_doc::props::NumRef>) -> &'static str {
         match n {
             Some(n) if n.num != 0 => match self.doc.numbering.level(n.num, n.level.min(8)) {
@@ -876,22 +900,24 @@ impl DocSession {
         let mut styles = self.doc.styles.clone();
         let num = match kind {
             "none" => 0,
-            "bullet" => {
-                let found = numbering.find_kind(ListKind::Bullet);
-                found.unwrap_or_else(|| numbering.add_list(ListKind::Bullet))
-            }
-            "numbered" => {
-                let above = if first > 0 && first < CELL_BASE {
-                    self.para_at(first - 1).and_then(|p| self.doc.styles.resolve_para(&p.props).numbering)
+            _ => {
+                let lk = Self::list_kind_of(kind).ok_or_else(|| format!("unknown list style {kind}"))?;
+                if lk.is_bullet() {
+                    numbering.find_kind(lk).unwrap_or_else(|| numbering.add_list(lk))
                 } else {
-                    None
-                };
-                match above {
-                    Some(n) if n.num != 0 && self.list_kind(Some(n)) == "numbered" => n.num,
-                    _ => numbering.add_list(ListKind::Numbered),
+                    // Continue the list right above when it already has this style, else start a new one.
+                    let want = wordcraft_doc::numbering::levels_for(lk);
+                    let above = if first > 0 && first < CELL_BASE {
+                        self.para_at(first - 1).and_then(|p| self.doc.styles.resolve_para(&p.props).numbering)
+                    } else {
+                        None
+                    };
+                    match above {
+                        Some(n) if n.num != 0 && numbering.level(n.num, 0).zip(want.first()).is_some_and(|(a, b)| a.format == b.format && a.text == b.text) => n.num,
+                        _ => numbering.add_list(lk),
+                    }
                 }
             }
-            _ => return Err("list kind must be bullet, numbered or none".into()),
         };
         if num != 0 {
             Self::ensure_style(&mut styles, "ListParagraph")?;
@@ -917,6 +943,46 @@ impl DocSession {
         self.doc.styles = styles;
         for (i, p) in paras.into_iter().enumerate() {
             self.put_para(first + i, p)?;
+        }
+        self.pages = DocLayout::default();
+        Ok(())
+    }
+    /// Restarts numbering at `first`: the paragraphs `first..=last` that are in a numbered list, and every later top-level
+    /// paragraph of the same list, move to a new list instance that starts again at 1. Refuses when `first` is not in a numbered list.
+    fn do_restart_list(&mut self, first: usize, last: usize) -> Result<(), String> {
+        use wordcraft_doc::props::NumRef;
+        let paras = self.para_span(first, last)?;
+        let old = match self.doc.styles.resolve_para(&paras[0].props).numbering.filter(|n| n.num != 0) {
+            Some(n) if self.list_kind(Some(n)) == "numbered" => n.num,
+            _ => return Err("the paragraph is not in a numbered list".into()),
+        };
+        let mut numbering = self.doc.numbering.clone();
+        let fresh = numbering.restart(old).ok_or("the list no longer exists")?;
+        let mut changed: Vec<(usize, wordcraft_doc::Paragraph)> = Vec::new();
+        for (i, p) in paras.into_iter().enumerate() {
+            let mut p = p;
+            if let Some(n) = self.doc.styles.resolve_para(&p.props).numbering.filter(|n| n.num == old) {
+                p.props.numbering = Some(NumRef { num: fresh, level: n.level });
+                changed.push((first + i, p));
+            }
+        }
+        if first < CELL_BASE {
+            let mut id = last + 1;
+            let end = self.doc.body.len().min(100_000);
+            while id < end && changed.len() < 100_000 {
+                if let Some(p) = self.para_at(id) {
+                    if let Some(n) = self.doc.styles.resolve_para(&p.props).numbering.filter(|n| n.num == old) {
+                        let mut p = p.clone();
+                        p.props.numbering = Some(NumRef { num: fresh, level: n.level });
+                        changed.push((id, p));
+                    }
+                }
+                id += 1;
+            }
+        }
+        self.doc.numbering = numbering;
+        for (id, p) in changed {
+            self.put_para(id, p)?;
         }
         self.pages = DocLayout::default();
         Ok(())
@@ -1959,6 +2025,10 @@ impl DocSession {
         self.do_set_list(first_block, last_block, kind).map_err(|e| JsValue::from_str(&e))
     }
     /// Moves list paragraphs by `delta` levels (indent / outdent).
+    /// Restarts numbering at `first` (see `do_restart_list`).
+    pub fn restart_list(&mut self, first: usize, last: usize) -> Result<(), JsValue> {
+        self.do_restart_list(first, last).map_err(|e| JsValue::from_str(&e))
+    }
     pub fn shift_list_level(&mut self, first_block: usize, last_block: usize, delta: i32) -> Result<(), JsValue> {
         self.do_list_level(first_block, last_block, delta).map_err(|e| JsValue::from_str(&e))
     }
@@ -2514,6 +2584,36 @@ mod tests {
         assert_eq!(s.doc.body.len(), len);
         s.do_remove_image(1).unwrap();
         assert_eq!(s.doc.body.len(), len - 1);
+    }
+    #[test]
+    fn list_styles_and_restart_numbering() {
+        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
+        let ps = |s: &DocSession, a: usize, b: usize| -> serde_json::Value { serde_json::from_str(&s.do_para_state(a, b).unwrap()).unwrap() };
+        for (kind, name) in [("dash", "dash"), ("square", "square"), ("numberedParen", "numberedParen"), ("upperLetter", "upperLetter"), ("lowerLetter", "lowerLetter"), ("lowerRoman", "lowerRoman"), ("outline", "outline"), ("legal", "legal"), ("numbered", "numbered"), ("bullet", "bullet")] {
+            s.do_set_list(0, 1, kind).unwrap();
+            assert_eq!(ps(&s, 0, 1)["listStyle"], name, "{kind}");
+        }
+        s.do_set_list(0, 1, "numbered").unwrap();
+        assert_eq!(ps(&s, 0, 1)["list"], "numbered");
+        let before = s.doc.numbering.clone();
+        for bad in ["", "star", "x", "roman", "\u{7}", "bullet\n"] {
+            assert!(s.do_set_list(0, 1, bad).is_err(), "{bad:?}");
+        }
+        assert_eq!(s.doc.numbering, before, "refused styles change nothing");
+        // Restart at the second item: it and later items get a new list instance.
+        let n_before = s.doc.numbering.nums.len();
+        s.do_restart_list(1, 1).unwrap();
+        assert_eq!(s.doc.numbering.nums.len(), n_before + 1);
+        let a = s.para_at(0).map(|p| s.doc.styles.resolve_para(&p.props).numbering).unwrap().unwrap().num;
+        let b = s.para_at(1).map(|p| s.doc.styles.resolve_para(&p.props).numbering).unwrap().unwrap().num;
+        assert_ne!(a, b);
+        let re = DocSession::from_bytes(&wordcraft_docx::write(&s.doc).unwrap()).unwrap();
+        assert_eq!(ps(&re, 0, 1)["list"], "numbered");
+        // Restart outside a numbered list is refused.
+        s.do_set_list(0, 1, "none").unwrap();
+        assert!(s.do_restart_list(0, 0).is_err());
+        s.do_set_list(0, 0, "bullet").unwrap();
+        assert!(s.do_restart_list(0, 0).is_err());
     }
     #[test]
     fn save_records_last_modified_by_on_the_copy_only() {

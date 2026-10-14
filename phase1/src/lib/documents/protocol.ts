@@ -64,7 +64,7 @@ export function tabsProblem(v:unknown):string|null{
 export interface ParaPatch{tabs?:TabStopSpec[];align?:ParaAlign;indentLeft?:number;indentFirst?:number;spaceBefore?:number;spaceAfter?:number;lineSpacing?:number;indentRight?:number;pageBreakBefore?:boolean;keepNext?:boolean;keepLines?:boolean;widowControl?:boolean}
 export const PARA_FLAG_KEYS=['pageBreakBefore','keepNext','keepLines','widowControl'] as const;
 /** Shared effective value over the paragraphs, or null when they differ (line spacing: also null for exact/at-least heights). */
-export interface ParaState{align:ParaAlign|null;indentLeft:number|null;indentFirst:number|null;spaceBefore:number|null;spaceAfter:number|null;lineSpacing:number|null;indentRight?:number|null;/** Resolved tab stops when shared, else null. */tabs?:TabStopSpec[]|null;/** Shared flags, or null when the paragraphs differ. */pageBreakBefore?:boolean|null;keepNext?:boolean|null;keepLines?:boolean|null;widowControl?:boolean|null;/** Paragraph style id (`Normal`, `Heading2`, ...) when shared. */style?:string|null;list?:'none'|'bullet'|'numbered'|null;listLevel?:number|null}
+export interface ParaState{align:ParaAlign|null;indentLeft:number|null;indentFirst:number|null;spaceBefore:number|null;spaceAfter:number|null;lineSpacing:number|null;indentRight?:number|null;/** Resolved tab stops when shared, else null. */tabs?:TabStopSpec[]|null;/** Shared flags, or null when the paragraphs differ. */pageBreakBefore?:boolean|null;keepNext?:boolean|null;keepLines?:boolean|null;widowControl?:boolean|null;/** Paragraph style id (`Normal`, `Heading2`, ...) when shared. */style?:string|null;list?:'none'|'bullet'|'numbered'|null;/** The shared list style, `other` for a list from a file that matches none, `none` outside lists, null when mixed. */listStyle?:ListStyleId|'other'|'none'|null;listLevel?:number|null}
 const PARA_RANGES:Record<string,[number,number]>={indentLeft:[0,1440],indentRight:[0,1440],indentFirst:[-1440,1440],spaceBefore:[0,1584],spaceAfter:[0,1584],lineSpacing:[0.5,10]};
 export function checkParaPatch(patch:unknown){
  if(!patch||typeof patch!=='object'||Array.isArray(patch))throw new Error('Paragraph change is not valid.');
@@ -79,7 +79,11 @@ export function checkParaPatch(patch:unknown){
 }
 export const DOC_STYLES=['Normal','Title','Subtitle','Heading1','Heading2','Heading3','Heading4','Quote'] as const;
 export type DocStyleId=typeof DOC_STYLES[number];
-export type ListKindId='bullet'|'numbered'|'none';
+/** The list styles a user can pick (bullet, dash, square, 1., 1), A., a), i., I.A.1., 1.1.1.). */
+export const LIST_STYLES=['bullet','dash','square','numbered','numberedParen','upperLetter','lowerLetter','lowerRoman','outline','legal'] as const;
+export type ListStyleId=typeof LIST_STYLES[number];
+export type ListKindId=ListStyleId|'none';
+export const isListKind=(v:unknown):v is ListKindId=>v==='none'||(LIST_STYLES as readonly unknown[]).includes(v);
 export type Rect5=[number,number,number,number,number];
 export type DocumentsRequest=
  |{id:number;kind:'init';wasmUrl:string}
@@ -101,6 +105,7 @@ export type DocumentsRequest=
  |{id:number;kind:'paraState';first:number;last:number}
  |{id:number;kind:'paraStyle';first:number;last:number;style:DocStyleId}
  |{id:number;kind:'setList';first:number;last:number;list:ListKindId}
+ |{id:number;kind:'restartList';first:number;last:number}
  |{id:number;kind:'listLevel';first:number;last:number;delta:number}
  |{id:number;kind:'tableEdit';block:number;op:TableOp}
  |{id:number;kind:'tableStyle';block:number;scope:TableStyleScope;style:TableStyle}
