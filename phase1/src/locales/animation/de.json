@@ -436,5 +436,13 @@
  "animation.masks.maskN": "Maske {n}",
  "animation.pathLayer.expandStroke": "Kontur in Umrissebene umwandeln",
  "cmd.animation.mask.boolean": "Zwei Masken vereinen, subtrahieren, schneiden oder ausschließen",
- "cmd.animation.layer.expandStroke": "Kontur einer Pfadebene in eine Umrissebene umwandeln"
+ "cmd.animation.layer.expandStroke": "Kontur einer Pfadebene in eine Umrissebene umwandeln",
+ "animation.stroke.join": "Eckenform",
+ "animation.stroke.join.miter": "Gehrung",
+ "animation.stroke.join.round": "Rund",
+ "animation.stroke.join.bevel": "Abgeschrägt",
+ "animation.stroke.cap": "Linienende",
+ "animation.stroke.cap.butt": "Flach",
+ "animation.stroke.cap.round": "Rund",
+ "animation.stroke.cap.square": "Quadratisch"
 }

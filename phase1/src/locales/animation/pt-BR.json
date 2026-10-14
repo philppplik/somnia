@@ -436,5 +436,13 @@
  "animation.masks.maskN": "Máscara {n}",
  "animation.pathLayer.expandStroke": "Expandir traço em camada de contorno",
  "cmd.animation.mask.boolean": "Unir, subtrair, interseccionar ou excluir duas máscaras",
- "cmd.animation.layer.expandStroke": "Expandir o traço de uma camada de caminho em uma camada de contorno"
+ "cmd.animation.layer.expandStroke": "Expandir o traço de uma camada de caminho em uma camada de contorno",
+ "animation.stroke.join": "Junção de cantos",
+ "animation.stroke.join.miter": "Mitra",
+ "animation.stroke.join.round": "Arredondada",
+ "animation.stroke.join.bevel": "Chanfrada",
+ "animation.stroke.cap": "Extremidade da linha",
+ "animation.stroke.cap.butt": "Reta",
+ "animation.stroke.cap.round": "Arredondada",
+ "animation.stroke.cap.square": "Quadrada"
 }

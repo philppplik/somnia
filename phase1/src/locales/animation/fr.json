@@ -436,5 +436,13 @@
  "animation.masks.maskN": "Masque {n}",
  "animation.pathLayer.expandStroke": "Étendre le contour en calque de forme",
  "cmd.animation.mask.boolean": "Unir, soustraire, intersecter ou exclure deux masques",
- "cmd.animation.layer.expandStroke": "Étendre le contour d'un calque de tracé en calque de forme"
+ "cmd.animation.layer.expandStroke": "Étendre le contour d'un calque de tracé en calque de forme",
+ "animation.stroke.join": "Jointure des angles",
+ "animation.stroke.join.miter": "Onglet",
+ "animation.stroke.join.round": "Arrondie",
+ "animation.stroke.join.bevel": "Biseautée",
+ "animation.stroke.cap": "Terminaison",
+ "animation.stroke.cap.butt": "Plate",
+ "animation.stroke.cap.round": "Arrondie",
+ "animation.stroke.cap.square": "Carrée"
 }

@@ -436,5 +436,13 @@
  "animation.masks.maskN": "Mask {n}",
  "animation.pathLayer.expandStroke": "Expand stroke to outline layer",
  "cmd.animation.mask.boolean": "Unite, subtract, intersect or exclude two masks",
- "cmd.animation.layer.expandStroke": "Expand the stroke of a path layer into an outline layer"
+ "cmd.animation.layer.expandStroke": "Expand the stroke of a path layer into an outline layer",
+ "animation.stroke.join": "Corner join",
+ "animation.stroke.join.miter": "Miter",
+ "animation.stroke.join.round": "Round",
+ "animation.stroke.join.bevel": "Bevel",
+ "animation.stroke.cap": "Line cap",
+ "animation.stroke.cap.butt": "Butt",
+ "animation.stroke.cap.round": "Round",
+ "animation.stroke.cap.square": "Square"
 }

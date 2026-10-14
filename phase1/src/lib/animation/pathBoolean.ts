@@ -104,9 +104,11 @@ export function simplifyRing(r:readonly Pt[],tol:number):Pt[]{
  run(0,far);run(far,r.length);
  return [...keep].sort((x,y)=>x-y).map(i=>r[i]);
 }
-/** Outline of a stroked polyline set (SVG defaults: butt caps, miter joins with limit 4) as even-odd rings. Each input is a flattened polyline with its closed flag. Union of segment rectangles and join wedges. */
-export function strokeOutline(lines:readonly {pts:readonly Pt[];closed:boolean}[],width:number):Pt[][]{
- const hw=width/2,pieces:Pt[][]=[];
+/** Outline of a stroked polyline set as even-odd rings. Joins: miter (limit 4, longer falls back to bevel, like SVG), round, bevel; caps on open lines: butt, round, square. Arcs stay within 0.1 px. Each input is a flattened polyline with its closed flag. Union of segment rectangles and join wedges. */
+export function strokeOutline(lines:readonly {pts:readonly Pt[];closed:boolean}[],width:number,style:{join?:'miter'|'round'|'bevel';cap?:'butt'|'round'|'square'}={}):Pt[][]{
+ const hw=width/2,pieces:Pt[][]=[],join=style.join??'miter',cap=style.cap??'butt';
+ /** Arc points around `v` from angle a0 sweeping `sw` radians, at most about FLATTEN_TOLERANCE off the circle. */
+ const arc=(v:Pt,a0:number,sw:number):Pt[]=>{const step=2*Math.acos(Math.max(0,1-0.1/Math.max(hw,0.1))),k=Math.max(1,Math.ceil(Math.abs(sw)/Math.max(0.05,step))),o:Pt[]=[];for(let i=0;i<=k;i++){const a=a0+sw*i/k;o.push([v[0]+Math.cos(a)*hw,v[1]+Math.sin(a)*hw]);}return o;};
  for(const {pts,closed} of lines){
   const q=pts.filter((p,i)=>i===0||Math.hypot(p[0]-pts[i-1][0],p[1]-pts[i-1][1])>1e-6);
   if(closed&&q.length>1&&Math.hypot(q[0][0]-q[q.length-1][0],q[0][1]-q[q.length-1][1])<=1e-6)q.pop();
@@ -117,8 +119,16 @@ export function strokeOutline(lines:readonly {pts:readonly Pt[];closed:boolean}[
    const v=q[i],[x1,y1]=nrm((i+n-1)%n),[x2,y2]=nrm(i),turn=x1*y2-y1*x2;if(Math.abs(turn)<1e-9&&x1*x2+y1*y2>0)continue;
    const s=turn>0?-1:1,o1:Pt=[v[0]+s*x1*hw,v[1]+s*y1*hw],o2:Pt=[v[0]+s*x2*hw,v[1]+s*y2*hw];
    const cos=x1*x2+y1*y2,ratio=1/Math.sqrt(Math.max(1e-9,(1+cos)/2)); // miter length over width
-   if(ratio<=4&&Math.abs(turn)>1e-9){const bx=x1+x2,by=y1+y2,bl=Math.hypot(bx,by)||1,len=hw*ratio;pieces.push([v,o1,[v[0]+s*bx/bl*len,v[1]+s*by/bl*len],o2]);}
+   if(join==='round'){const a1=Math.atan2(o1[1]-v[1],o1[0]-v[0]);let sw=Math.atan2(o2[1]-v[1],o2[0]-v[0])-a1;while(sw>Math.PI)sw-=2*Math.PI;while(sw<-Math.PI)sw+=2*Math.PI;pieces.push([v,...arc(v,a1,sw)]);}
+   else if(join==='bevel')pieces.push([v,o1,o2]);
+   else if(ratio<=4&&Math.abs(turn)>1e-9){const bx=x1+x2,by=y1+y2,bl=Math.hypot(bx,by)||1,len=hw*ratio;pieces.push([v,o1,[v[0]+s*bx/bl*len,v[1]+s*by/bl*len],o2]);}
    else pieces.push([v,o1,o2]);
+  }
+  if(!closed&&cap!=='butt'){
+   for(const end of [0,1]){const v=end?q[n-1]:q[0],[nx,ny]=nrm(end?n-2:0),dx=ny*(end?1:-1),dy=-nx*(end?1:-1); // outward direction
+    if(cap==='square')pieces.push([[v[0]+nx*hw,v[1]+ny*hw],[v[0]+nx*hw+dx*hw,v[1]+ny*hw+dy*hw],[v[0]-nx*hw+dx*hw,v[1]-ny*hw+dy*hw],[v[0]-nx*hw,v[1]-ny*hw]]);
+    else{const a0=Math.atan2(ny,nx),dir=Math.sign(nx*dy-ny*dx)||1;pieces.push(arc(v,a0,dir*Math.PI));}
+   }
   }
  }
  if(!pieces.length)return [];

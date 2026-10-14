@@ -241,3 +241,9 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Implemented: mask booleans (`animation.mask.boolean`, single-ring results up to 32 points), expand stroke to an outline layer (`animation.layer.expandStroke`, miter joins like the renderer, flattened curves), `layer.stroke` null removes a stroke, hover ghost for layer and mask booleans via preview transactions, 5 locales.
 - Validation: 5 new Animation unit tests with known areas (184 total), DS ratchet, ui-commands inventory (387), check:layers, isolated Chrome check (ghost on hover, expand stroke, undo count).
 - Open: mask results with holes or several parts, round and bevel joins, round caps, dashed strokes, animated strokes, exact curve output.
+
+### Animation P34 (2026-10-14, integration pending)
+
+- Implemented: stroke join (miter, round, bevel) and cap (butt, round, square) in the model, canvas, every export and the inspector, defaults byte-identical to before; expand stroke honours join and cap; 5 locales.
+- Validation: 3 new Animation unit tests (187 total) with known areas (square cap 1700, round cap, bevel 3150, round join), DS ratchet, check:ui-commands, check:layers, isolated Chrome check (round join and cap visible, undo count).
+- Open: dashes in expand stroke (needs one ring per dash, 8 subpath limit), miter-aware effect bounds, per-segment join styles, miter limit setting.

@@ -282,7 +282,7 @@ export function maskBooleanEdit(doc:AnimationDocument,layerId:string,maskId:stri
 
 /** Most flattened segments of one stroked layer that expand stroke accepts. */
 export const MAX_STROKE_SEGMENTS=300;
-/** Turns the stroke of a static path layer into its own filled outline layer (stroke colour as fill), then removes the stroke from the source layer. Two edits in one dispatch, one undo step. Butt caps and miter joins (limit 4) like the renderer; curves are flattened (about 0.25 px). Masks, matte and effects are copied to the outline layer. Refused for animated paths, animated or dashed strokes (trim, dash), zero width and results beyond the path point limits. */
+/** Turns the stroke of a static path layer into its own filled outline layer (stroke colour as fill), then removes the stroke from the source layer. Two edits in one dispatch, one undo step. Joins (miter with limit 4, round, bevel) and caps (butt, round, square) follow the stroke settings like the renderer; curves are flattened (about 0.25 px). Masks, matte and effects are copied to the outline layer. Refused for animated paths and for trimmed or dashed strokes (a dashed outline needs one ring per dash, and a layer holds at most 8), zero width and results beyond the path point limits. */
 export function expandStrokeEdits(doc:AnimationDocument,layerId:string,id=newId('layer')):Edit[]{
  const {c,l}=target(doc,layerId);if(l.locked)throw Error('Layer is locked.');
  const st=l.stroke;if(!st||st.width<=0)throw Error('The layer has no stroke to expand.');
@@ -290,7 +290,7 @@ export function expandStrokeEdits(doc:AnimationDocument,layerId:string,id=newId(
  if(st.trim||st.dash)throw Error('Remove stroke trim and dash before expanding.');
  const {w,h}=box(l),lines=pathSubpaths(l.source).map(sp=>({pts:flattenRing(sp as MaskPath,w,h),closed:sp.closed}));
  if(lines.reduce((n,ln)=>n+ln.pts.length,0)>MAX_STROKE_SEGMENTS)throw Error('The path is too detailed to expand its stroke.');
- let rings:Pt[][];try{rings=strokeOutline(lines,st.width);}catch(e){if(e instanceof BooleanError)throw Error(e.message);throw e;}
+ let rings:Pt[][];try{rings=strokeOutline(lines,st.width,{join:st.join,cap:st.cap});}catch(e){if(e instanceof BooleanError)throw Error(e.message);throw e;}
  if(!rings.length)throw Error('The stroke has no area.');
  const all=rings.flat(),x0=Math.floor(Math.min(...all.map(p=>p[0]))),y0=Math.floor(Math.min(...all.map(p=>p[1]))),x1=Math.ceil(Math.max(...all.map(p=>p[0]))),y1=Math.ceil(Math.max(...all.map(p=>p[1])));
  const W=Math.max(1,x1-x0),H=Math.max(1,y1-y0),nrm=rings.map(r=>({closed:true,points:r.map(p=>({x:r4((p[0]-x0)/W),y:r4((p[1]-y0)/H)}))}));

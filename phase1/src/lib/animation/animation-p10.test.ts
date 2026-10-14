@@ -10,6 +10,8 @@ import {EASE_PRESETS,easePresetOf} from './graph';
 import {animationCommandSpecs} from './commands';
 import {booleanRings,flattenRing,ringArea,type BoolOp,type Pt} from './pathBoolean';
 import {booleanEdits,maskBooleanEdit,expandStrokeEdits} from './pathLayer';
+import {frameSvg} from './exportFrames';
+import {strokeAttributes} from './effects';
 import {strokeOutline,simplifyRing} from './pathBoolean';
 import {deleteEasingEdit,findEasing,saveEasingEdit,userEasings,validateEasingLib,MAX_EASINGS} from './easingLibrary';
 import {elasticTargetKeys} from './keyTargets';
@@ -17,7 +19,6 @@ import {BUILTIN_MOTIONS,MAX_USER_MOTIONS,LEGACY_KEY,deleteMotionEdit,exportMotio
 import {serializeAnimationSnapshot,parseAnimationSnapshot} from './persistence';
 import {defaultView} from './recovery';
 import {frameToTick,TICKS_PER_SECOND as TICK_SEC} from './time';
-import {frameSvg} from './exportFrames';
 import {sceneAt} from './scene';
 const comp=(d:AnimationDocument)=>findComp(d)!;
 const layer=(d:AnimationDocument,id:string)=>findLayer(comp(d),id)!;
@@ -846,4 +847,29 @@ test('P33: new commands and locale keys exist, layer.stroke null removes the str
  for(const id of ['animation.mask.boolean','animation.layer.expandStroke'])assert.ok(animationCommandSpecs().some(s=>s.id===id));
  for(const l of ['en','de','es','fr','pt-BR']){const j=JSON.parse(readFileSync(new URL(`../../locales/animation/${l}.json`,import.meta.url),'utf8'));for(const k of ['animation.masks.boolOther','animation.masks.maskN','animation.pathLayer.expandStroke','cmd.animation.mask.boolean','cmd.animation.layer.expandStroke'])assert.ok(j[k],`${l} ${k}`);}
  let d=pathDoc();d=applyEdit(d,{type:'layer.stroke',layer:'pa',stroke:{color:'#00ff00',width:2}});assert.ok(layer(d,'pa').stroke);d=applyEdit(d,{type:'layer.stroke',layer:'pa',stroke:null});assert.equal(layer(d,'pa').stroke,undefined);
+});
+
+test('P34: round/bevel joins and round/square caps render in canvas attributes and SVG export, legacy output unchanged',()=>{
+ let d=strokeDoc([{x:0.1,y:0.5},{x:0.9,y:0.5}],false);
+ const plain=layer(d,'pa');assert.equal(strokeAttributes(plain,0)!.strokeLinejoin,undefined);assert.equal(strokeAttributes(plain,0)!.strokeLinecap,undefined);
+ const svg0=frameSvg(comp(d),0);assert.ok(!/stroke-linejoin|stroke-linecap/.test(svg0),'legacy output has no new attributes');
+ d=applyEdit(d,{type:'layer.stroke',layer:'pa',stroke:{color:'#00ff00',width:10,join:'round',cap:'square'}});validateDocument(d);
+ const a=strokeAttributes(layer(d,'pa'),0)!;assert.equal(a.strokeLinejoin,'round');assert.equal(a.strokeLinecap,'square');
+ const svg=frameSvg(comp(d),0);assert.ok(svg.includes('stroke-linejoin="round"')&&svg.includes('stroke-linecap="square"'));
+ d=applyEdit(d,{type:'layer.stroke',layer:'pa',stroke:{color:'#00ff00',width:10,join:'bevel',cap:'round'}});assert.equal(strokeAttributes(layer(d,'pa'),0)!.strokeLinejoin,'bevel');assert.equal(strokeAttributes(layer(d,'pa'),0)!.strokeLinecap,'round');
+ assert.throws(()=>applyEdit(d,{type:'layer.stroke',layer:'pa',stroke:{color:'#00ff00',width:10,join:'zigzag' as never}}),/invalid|stroke/i);
+});
+test('P34: expand stroke follows join and cap with known areas',()=>{
+ const area=(pts:Parameters<typeof strokeDoc>[0],closed:boolean,st:{join?:'miter'|'round'|'bevel';cap?:'butt'|'round'|'square'})=>{let d=strokeDoc(pts,closed);d=applyEdit(d,{type:'layer.stroke',layer:'pa',stroke:{color:'#00ff00',width:10,...st}});d=applyEdits(d,expandStrokeEdits(d,'pa','out'));validateDocument(d);return gArea(d,'out');};
+ const line=[{x:0.1,y:0.5},{x:0.9,y:0.5}],sq=[{x:0.25,y:0.2},{x:0.75,y:0.2},{x:0.75,y:0.8},{x:0.25,y:0.8}];
+ assert.ok(Math.abs(area(line,false,{})-1600)<1);
+ assert.ok(Math.abs(area(line,false,{cap:'square'})-1700)<1,'square cap');
+ assert.ok(Math.abs(area(line,false,{cap:'round'})-(1600+Math.PI*25))<3,'round cap');
+ assert.ok(Math.abs(area(sq,true,{join:'bevel'})-3150)<2,'bevel');
+ assert.ok(Math.abs(area(sq,true,{join:'round'})-(3100+Math.PI*25))<3,'round join');
+ assert.ok(Math.abs(area(sq,true,{join:'round',cap:'square'})-(3100+Math.PI*25))<3,'caps do not touch closed paths');
+ const zig=[{x:0.1,y:0.2},{x:0.5,y:0.8},{x:0.9,y:0.2}];assert.ok(area(zig,false,{join:'round',cap:'round'})>area(zig,false,{join:'bevel'}),'round fuller than bevel');
+});
+test('P34: stroke style locale keys exist',()=>{
+ for(const l of ['en','de','es','fr','pt-BR']){const j=JSON.parse(readFileSync(new URL(`../../locales/animation/${l}.json`,import.meta.url),'utf8'));for(const k of ['animation.stroke.join','animation.stroke.join.miter','animation.stroke.join.round','animation.stroke.join.bevel','animation.stroke.cap','animation.stroke.cap.butt','animation.stroke.cap.round','animation.stroke.cap.square'])assert.ok(j[k],`${l} ${k}`);}
 });

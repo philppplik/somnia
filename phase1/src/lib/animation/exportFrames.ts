@@ -30,7 +30,7 @@ function layerSvg(l:Layer,assets:readonly InterfaceAsset[],tick:number,fillOverr
  if(l.kind==='raster'){const asset=assets.find(a=>a.id===s.assetId);if(!asset)throw new ExportError('Missing image asset.','raster');return `<image href="${asset.data}" width="${num(s.width??asset.width)}" height="${num(s.height??asset.height)}"/>`;}
 
  if(l.kind==='solid')return `<rect x="0" y="0" width="${num(s.width??0)}" height="${num(s.height??0)}" fill="${fill}"/>`;
- const stroke=strokeAttributes(l,tick);const strokeSvg=stroke?` stroke="${stroke.stroke}" stroke-width="${stroke.strokeWidth}" pathLength="100" stroke-dasharray="${stroke.strokeDasharray}" stroke-dashoffset="${stroke.strokeDashoffset}"`:'';
+ const stroke=strokeAttributes(l,tick);const strokeSvg=stroke?` stroke="${stroke.stroke}" stroke-width="${stroke.strokeWidth}" pathLength="100" stroke-dasharray="${stroke.strokeDasharray}" stroke-dashoffset="${stroke.strokeDashoffset}"${stroke.strokeLinejoin?` stroke-linejoin="${stroke.strokeLinejoin}"`:''}${stroke.strokeLinecap?` stroke-linecap="${stroke.strokeLinecap}"`:''}`:'';
  if(l.kind==='shape'&&['star','polygon'].includes(s.shape??''))return `<path d="${radialPath(s)}"${strokeSvg} fill="${fill}"/>`;
  if(l.kind==='shape'&&s.shape==='path'&&s.path)return `<path d="${layerPathD(l,tick)}"${layerFillRule(l)?' fill-rule="evenodd"':''}${strokeSvg} fill="${fill}"/>`;
  if(l.kind==='shape')return s.shape==='ellipse'

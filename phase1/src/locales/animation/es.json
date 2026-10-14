@@ -436,5 +436,13 @@
  "animation.masks.maskN": "Máscara {n}",
  "animation.pathLayer.expandStroke": "Expandir trazo a capa de contorno",
  "cmd.animation.mask.boolean": "Unir, restar, intersecar o excluir dos máscaras",
- "cmd.animation.layer.expandStroke": "Expandir el trazo de una capa de trazado a una capa de contorno"
+ "cmd.animation.layer.expandStroke": "Expandir el trazo de una capa de trazado a una capa de contorno",
+ "animation.stroke.join": "Unión de esquinas",
+ "animation.stroke.join.miter": "Inglete",
+ "animation.stroke.join.round": "Redonda",
+ "animation.stroke.join.bevel": "Biselada",
+ "animation.stroke.cap": "Extremo de línea",
+ "animation.stroke.cap.butt": "Plano",
+ "animation.stroke.cap.round": "Redondo",
+ "animation.stroke.cap.square": "Cuadrado"
 }
