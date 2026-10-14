@@ -1,4 +1,4 @@
-import {isUnit,mergeEnv,mergeSnap,defaultEnv,defaultSnap,type EnvSettings,type SnapSettings,type ExportUnit} from './model';
+import {isUnit,envFormatFor,mergeEnv,mergeSnap,defaultEnv,defaultSnap,type EnvSettings,type SnapSettings,type ExportUnit} from './model';
 /**
  * The 3D scene document (.som3d). Pure data, no three.js, so reading and writing run under tsx --test.
  * Geometry, materials, hierarchy, transforms, punctual lights and cameras live in a GLB (embedded or a sidecar file).
@@ -9,6 +9,8 @@ export const DOC_FORMAT='somnia-3d';
 export const DOC_VERSION=1;
 export const DOC_EXTENSION='som3d';
 export const MAX_DOC_NODES=100_000;
+/** Largest environment map (decoded bytes) that may be embedded in a document. Bigger maps stay a separate file. */
+export const MAX_EMBED_ENV_BYTES=16*1024*1024;
 export class DocumentError extends Error{constructor(message:string){super(message);this.name='DocumentError';}}
 export interface AreaLightSpec{position:[number,number,number];quaternion:[number,number,number,number];scale:[number,number,number];color:string;intensity:number;width:number;height:number;name:string}
 /** Data for one node, addressed by its depth-first index below the scene root. */
@@ -16,8 +18,9 @@ export interface NodeExtra{i:number;shadow?:boolean;area?:AreaLightSpec}
 export interface SavedView{position:[number,number,number];target:[number,number,number];fov:number}
 export type SceneSource={encoding:'base64';data:string}|{uri:string};
 export interface SceneDocument{
- format:typeof DOC_FORMAT;version:number;app:string;unit:ExportUnit;env:EnvSettings;snap:SnapSettings;view:SavedView|null;extras:NodeExtra[];scene:SceneSource;
+ format:typeof DOC_FORMAT;version:number;app:string;unit:ExportUnit;env:EnvSettings;snap:SnapSettings;view:SavedView|null;extras:NodeExtra[];scene:SceneSource;/** A custom HDR/EXR map stored with the scene, or null. */envMap:EmbeddedEnv|null;
 }
+export interface EmbeddedEnv{name:string;encoding:'base64';data:string}
 const B64=/^[A-Za-z0-9+/]*={0,2}$/;
 export function toBase64(bytes:Uint8Array):string{
  let out='';for(let i=0;i<bytes.length;i+=0x8000)out+=String.fromCharCode(...bytes.subarray(i,i+0x8000));return btoa(out);
@@ -88,12 +91,30 @@ export function parseDocument(text:string):SceneDocument{
   const uri=s.uri;if(!uri||/[\\/]/.test(uri)||/^[a-z][a-z0-9+.-]*:/i.test(uri)||uri.includes('..'))throw new DocumentError('The scene file reference must be a plain file name next to the document.');
   scene={uri};
  }else throw new DocumentError('The document has no scene data.');
- return{format:DOC_FORMAT,version:DOC_VERSION,app:typeof d.app==='string'?d.app.slice(0,60):'',unit,env,snap,view,extras,scene};
+ let envMap:EmbeddedEnv|null=null;
+ if(d.envMap!==undefined&&d.envMap!==null){
+  const m=d.envMap as Record<string,unknown>;
+  if(typeof m!=='object'||Array.isArray(m)||typeof m.name!=='string'||m.encoding!=='base64'||typeof m.data!=='string')throw new DocumentError('The embedded environment map is damaged.');
+  const name=m.name.replace(/^.*[\\/]/,'').slice(0,200);
+  if(!envFormatFor(name))throw new DocumentError('The embedded environment map must be an .hdr or .exr file.');
+  // base64 length gives the decoded size without allocating it
+  if(m.data.length>Math.ceil(MAX_EMBED_ENV_BYTES/3)*4)throw new DocumentError('The embedded environment map is too large.');
+  if(m.data.length%4!==0||!B64.test(m.data))throw new DocumentError('The embedded environment map is damaged.');
+  envMap={name,encoding:'base64',data:m.data};
+  if(env.preset==='custom')env={...env,customName:name};
+ }
+ return{format:DOC_FORMAT,version:DOC_VERSION,app:typeof d.app==='string'?d.app.slice(0,60):'',unit,env,snap,view,extras,scene,envMap};
 }
-export interface BuildInput{glb:Uint8Array;/** Name of a sidecar GLB. When set, the GLB is not embedded. */sidecar?:string;unit:ExportUnit;env:EnvSettings;snap:SnapSettings;view:SavedView|null;extras:NodeExtra[]}
+export interface BuildInput{glb:Uint8Array;/** Name of a sidecar GLB. When set, the GLB is not embedded. */sidecar?:string;unit:ExportUnit;env:EnvSettings;snap:SnapSettings;view:SavedView|null;extras:NodeExtra[];/** Custom environment map to embed. Dropped with an error when over MAX_EMBED_ENV_BYTES. */envMap?:{name:string;bytes:Uint8Array}}
 export function buildDocument(i:BuildInput):string{
  const scene:SceneSource=i.sidecar?{uri:i.sidecar}:{encoding:'base64',data:toBase64(i.glb)};
- const doc:SceneDocument={format:DOC_FORMAT,version:DOC_VERSION,app:'somnia',unit:i.unit,env:i.env,snap:i.snap,view:i.view,extras:i.extras,scene};
+ let envMap:EmbeddedEnv|null=null;
+ if(i.envMap){
+  if(!envFormatFor(i.envMap.name))throw new DocumentError('Only .hdr and .exr environment maps can be embedded.');
+  if(i.envMap.bytes.length>MAX_EMBED_ENV_BYTES)throw new DocumentError(`The environment map is larger than ${MAX_EMBED_ENV_BYTES/1024/1024} MB and cannot be embedded.`);
+  envMap={name:i.envMap.name.replace(/^.*[\\/]/,'').slice(0,200),encoding:'base64',data:toBase64(i.envMap.bytes)};
+ }
+ const doc:SceneDocument={format:DOC_FORMAT,version:DOC_VERSION,app:'somnia',unit:i.unit,env:i.env,snap:i.snap,view:i.view,extras:i.extras,scene,envMap};
  return JSON.stringify(doc);
 }
 /** The GLB bytes of a parsed document: embedded data, or the sidecar file the user selected with it. */

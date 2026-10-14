@@ -142,8 +142,10 @@ export function ToolsSection(_:InspectorSectionProps){
    <div className="flex gap-1">{(['center','base'] as const).map(at=><Button key={at} variant="outline" disabled={s.selectedInfo?.kind!=='mesh'} onClick={()=>void executeCommand('studio3d.object.pivot',{id:s.selected,at})}>{t('studio3d.pivot.'+at)}</Button>)}</div></fieldset>
   <fieldset className="m-0 grid gap-2 border-0 p-0" data-testid="studio3d-save"><legend className="text-xs text-ink-3">{t('studio3d.save.title')}</legend>
    <div className="flex flex-wrap gap-1"><Button variant="outline" disabled={s.status!=='ready'} onClick={()=>void executeCommand('studio3d.save',{})}>{t('studio3d.save.one')}</Button>
-    <Button variant="outline" disabled={s.status!=='ready'} onClick={()=>void executeCommand('studio3d.save',{sidecar:true})}>{t('studio3d.save.sidecar')}</Button></div>
+    <Button variant="outline" disabled={s.status!=='ready'} onClick={()=>void executeCommand('studio3d.save',{sidecar:true})}>{t('studio3d.save.sidecar')}</Button>
+    {s.env.preset==='custom'&&<Button variant="outline" disabled={s.status!=='ready'} onClick={()=>void executeCommand('studio3d.save',{embedEnv:true})}>{t('studio3d.save.embed')}</Button>}</div>
    <p className="m-0 text-xs text-ink-3">{t('studio3d.save.note')}</p>
+   <RecentList compact/>
   </fieldset>
   <fieldset className="m-0 grid gap-2 border-0 p-0" data-testid="studio3d-export"><legend className="text-xs text-ink-3">{t('studio3d.export.title')}</legend>
    <label className="grid gap-1 text-xs text-ink-2">{t('studio3d.export.unit')}
@@ -170,4 +172,18 @@ export function ToolsSection(_:InspectorSectionProps){
     <Button variant="outline" disabled={n.length<3} aria-label={t('studio3d.align.distributeAria',{axis:a.toUpperCase()})} onClick={()=>void executeCommand('studio3d.object.distribute',{ids:n,axis:a})}>{t('studio3d.align.distribute')}</Button></div>)}
   </fieldset>
  </div>;
+}
+
+/** Scenes saved or autosaved in this browser. Shown on the start screen and in the Save group. */
+export function RecentList({compact=false}:{compact?:boolean}){
+ const {t}=useT();const s=useStudio3D();
+ if(!s.recent.length)return null;
+ return <section className={compact?'grid gap-1':'mx-auto grid w-full max-w-md gap-1 p-4'} aria-label={t('studio3d.recent.title')} data-testid="studio3d-recent">
+  <h3 className="m-0 text-xs font-medium text-ink-3">{t('studio3d.recent.title')}</h3>
+  <ul className="m-0 grid list-none gap-1 p-0">{s.recent.map(e=><li key={e.id}>
+   <button type="button" className="flex w-full items-center justify-between gap-2 rounded-[25px] border border-subtle bg-surface px-3 py-1.5 text-left text-xs text-ink hover:bg-hover" onClick={()=>void executeCommand('studio3d.recent.open',{id:e.id})} data-testid={e.auto?'studio3d-recent-autosave':'studio3d-recent-item'}>
+    <span className="min-w-0 truncate">{e.auto?t('studio3d.recent.autosave',{name:e.name}):e.name}</span>
+    <span className="shrink-0 text-ink-3">{new Date(e.savedAt).toLocaleString()} · {formatBytes(e.size)}</span></button></li>)}</ul>
+  <Button variant="outline" onClick={()=>void executeCommand('studio3d.recent.clear',{})}>{t('studio3d.recent.clear')}</Button>
+ </section>;
 }

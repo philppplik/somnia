@@ -4,8 +4,11 @@ import {StudioEmptyState} from '../studios/StudioEmptyState';
 import {FileTabs} from '../FileTabs';
 import {useT} from '../../lib/useT';
 import {MODEL_ACCEPT,ENV_ACCEPT} from '../../lib/studio3d/model';
-import {registerStudio3DCommands,registerStudio3DOpener,registerStudio3DEnvOpener,studio3DController} from '../../lib/studio3d/commands';
+import {registerStudio3DCommands,registerStudio3DOpener,registerStudio3DEnvOpener,registerStudio3DRecentOpener,studio3DController} from '../../lib/studio3d/commands';
 import {useStudio3D,patchStudio3D} from '../../lib/studio3d/session';
+import {registerStudio3DSaveShortcut} from './saveShortcut';
+import {refreshRecent,recentAsFile} from '../../lib/studio3d/recentSession';
+import {RecentList} from './Studio3DPanels';
 /** three.js lives in its own chunk. Nothing 3D is loaded until this studio is shown. */
 const Viewport3D=lazy(()=>import('./Viewport3D'));
 const sleep=(ms:number)=>new Promise(r=>setTimeout(r,ms));
@@ -17,6 +20,8 @@ export function Studio3DCanvas(){
  const pick=()=>input.current?.click();
  useEffect(()=>registerStudio3DEnvOpener(()=>envInput.current?.click()),[]);
  useEffect(()=>registerStudio3DOpener(pick),[]);
+ useEffect(()=>registerStudio3DSaveShortcut(),[]);
+ useEffect(()=>{void refreshRecent();},[]);
  /** The viewport mounts after the first request, so a request made from the start screen waits for its controller. */
  const withController=async(run:(c:NonNullable<ReturnType<typeof studio3DController>>)=>void|Promise<void>)=>{
   patchStudio3D({status:'loading',error:''});
@@ -24,6 +29,11 @@ export function Studio3DCanvas(){
   const c=studio3DController();if(!c){patchStudio3D({status:'error',error:'The 3D viewport could not start.'});return;}
   await run(c);
  };
+ useEffect(()=>registerStudio3DRecentOpener(async id=>{
+  const file=await recentAsFile(id);
+  if(!file){patchStudio3D({error:'That scene is no longer stored in this browser.'});void refreshRecent();return;}
+  await withController(c=>c.openFiles([file]));
+ }),[]);
  useEffect(()=>{
   const model=s.pending;if(!model)return;
   patchStudio3D({pending:null});
@@ -40,6 +50,6 @@ export function Studio3DCanvas(){
    <button type="button" className="rounded-sm px-2 py-1 hover:bg-hover" onClick={()=>patchStudio3D({confirmReplace:null})}>{t('studio3d.replace.cancel')}</button>
   </div>}
   {active?<Suspense fallback={<p className="p-4 text-xs text-ink-3" role="status">{t('studio3d.status.loading',{name:''})}</p>}><Viewport3D/></Suspense>:
-   <StudioEmptyState studio="3d" icon={<Boxes/>} onOpen={pick} onCreate={()=>withController(c=>c.newScene())}/>}
+   <><StudioEmptyState studio="3d" icon={<Boxes/>} onOpen={pick} onCreate={()=>withController(c=>c.newScene())}/><RecentList/></>}
  </section></div></main>;
 }

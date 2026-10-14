@@ -37,7 +37,7 @@ A `.som3d` file is JSON:
 | Shadow flags, area lights | `extras`, by depth-first node index | glTF has no shadow flag and no area light. The GLB holds an empty node at the area light's place. |
 | Unit for STL/OBJ export | `unit` | glTF is always metres |
 | Environment preset, intensity, rotation, background | `env` | Not part of glTF |
-| Custom HDR/EXR | Name only (`customName`) | Maps are large. On open the studio lighting is used and the user is told which file to open again. |
+| Custom HDR/EXR | Name only (`customName`) by default. With "Save with HDR inside" (`embedEnv`), `envMap {name,encoding:"base64",data}` | Maps are large. Embedding is optional and limited to 16 MB decoded (`MAX_EMBED_ENV_BYTES`); the file must be .hdr or .exr. Without an embedded map, opening uses the studio lighting and tells the user which file to open again. |
 | Snapping, saved view | `snap`, `view` | Tool state worth keeping |
 
 Node index: pre-order walk of the scene's top-level nodes, counting every node. The writer exports the top-level nodes directly (no wrapper), so indices match after load and the scene does not gain a level per save.
@@ -55,7 +55,8 @@ Every field is checked: finite numbers, enum values, ranges (fov 1 to 120, light
 
 ## Known limits (v1)
 
-- Custom HDR maps are not embedded.
+- Custom HDR maps are embedded only on request and only up to 16 MB; a bigger map stays a separate file.
+- Recent scenes and autosave live in this browser (IndexedDB), not in the document: at most 6 saved scenes plus one autosave slot, 48 MB per scene, 160 MB in total. Stored copies always embed the geometry.
 - Animations and skins are whatever the GLB exporter writes.
 - Cameras other than perspective, and per-light shadow tuning beyond on/off, are not stored.
 - Objects hidden in the scene are saved (exporter option `onlyVisible:false`).

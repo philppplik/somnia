@@ -1,6 +1,7 @@
 import {commandRegistry} from '../commandRegistry';
 import {registerCommandSpec} from '../commandBridge';
 import type {CommandSpec} from '../commandSpec';
+import {clearRecentScenes} from './recentSession';
 import {getStudio3DState,patchStudio3D} from './session';
 import type {EnvSettings,GizmoMode,SnapSettings,ExportUnit,ExportFormat} from './model';
 import type {PrimitiveKind,LightKind,TransformPatch,MaterialPatch,LightPatch,AlignAxis,AlignTo,PivotAt} from './stage';
@@ -38,7 +39,7 @@ export interface Studio3DController{
  setSnap(patch:Partial<SnapSettings>):void;
  renderStill(opts?:RenderOptions):Promise<void>;
  exportGlb():Promise<void>;
- save(sidecar?:boolean):Promise<void>;
+ save(sidecar?:boolean,embedEnv?:boolean):Promise<void>;
  deleteSelection(ids?:number[]):void;
  duplicateSelection(ids?:number[]):number[];
  exportMesh(format:Exclude<ExportFormat,'glb'>):Promise<void>;
@@ -51,6 +52,9 @@ export function registerStudio3DController(next:Studio3DController){controller=n
 export const studio3DController=()=>controller;
 let opener:(()=>void)|null=null;
 let envOpener:(()=>void)|null=null;
+let recentOpener:((id:string)=>Promise<void>)|null=null;
+/** The canvas owns opening a stored scene, so a request from the start screen waits for the viewport. */
+export function registerStudio3DRecentOpener(open:(id:string)=>Promise<void>){recentOpener=open;return()=>{if(recentOpener===open)recentOpener=null;};}
 export function registerStudio3DEnvOpener(open:()=>void){envOpener=open;return()=>{if(envOpener===open)envOpener=null;};}
 /** The canvas owns the file dialog (user gesture). */
 export function registerStudio3DOpener(open:()=>void){opener=open;return()=>{if(opener===open)opener=null;};}
@@ -91,12 +95,14 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<Partial<SnapSettings>>('studio3d.snap.set','Change 3D transform snapping','Tools',p=>need().setSnap(p&&Object.keys(p).length?p:{on:!getStudio3DState().snap.on}),object({on:{type:'boolean'},move:{type:'number',minimum:0.001,maximum:100},rotate:{type:'number',minimum:1,maximum:180},scale:{type:'number',minimum:0.001,maximum:10}},[]),()=>!!controller),
   add<RenderOptions>('studio3d.render.still','Render a PNG still of the 3D view or a 3D camera','Project',p=>need().renderStill(p??{}),object({camera:{type:'integer',minimum:0},width:{type:'integer',minimum:1,maximum:16384},height:{type:'integer',minimum:1,maximum:16384},transparent:{type:'boolean'}},[])),
   add('studio3d.export.glb','Export the scene as GLB','Project',()=>need().exportGlb()),
-  add<{sidecar?:boolean}>('studio3d.save','Save the 3D scene','Project',p=>need().save(!!p?.sidecar),object({sidecar:{type:'boolean'}},[]),hasScene),
+  add<{sidecar?:boolean;embedEnv?:boolean}>('studio3d.save','Save the 3D scene','Project',p=>need().save(!!p?.sidecar,!!p?.embedEnv),object({sidecar:{type:'boolean'},embedEnv:{type:'boolean'}},[]),hasScene),
   add<{ids?:number[]}>('studio3d.selection.delete','Delete the selected 3D objects','Edit',p=>need().deleteSelection(p?.ids),object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500}},[]),hasScene),
   add<{ids?:number[]}>('studio3d.selection.duplicate','Duplicate the selected 3D objects','Edit',p=>need().duplicateSelection(p?.ids),object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500}},[]),hasScene),
   add<{format:'stl'|'obj'}>('studio3d.export.mesh','Export the scene as STL or OBJ','Project',p=>need().exportMesh(p.format),object({format:{enum:['stl','obj']}}),hasScene),
   add<{unit:ExportUnit}>('studio3d.unit.set','Set the unit used for STL and OBJ export','Project',p=>need().setUnit(p.unit),object({unit:{enum:['m','cm','mm','in']}}),()=>!!controller),
   add<TurntableOptions>('studio3d.render.turntable','Render a turntable as a ZIP of PNG frames','Project',p=>need().renderTurntable(p??{}),object({frames:{type:'integer',minimum:2,maximum:360},width:{type:'integer',minimum:1,maximum:8192},height:{type:'integer',minimum:1,maximum:8192},transparent:{type:'boolean'}},[]),hasScene),
+  add<{id:string}>('studio3d.recent.open','Open a recent 3D scene','Project',p=>recentOpener!(p.id),object({id:{type:'string',minLength:1,maxLength:200}}),()=>!!recentOpener&&getStudio3DState().recent.length>0),
+  add('studio3d.recent.clear','Clear recent 3D scenes and autosave','Project',()=>clearRecentScenes(),undefined,()=>getStudio3DState().recent.length>0),
   add('studio3d.render.cancel','Cancel the running 3D render','Project',()=>need().cancelRender(),undefined,()=>!!controller&&getStudio3DState().render!=null),
  ] as CommandSpec<unknown,unknown>[];
 }
@@ -107,3 +113,4 @@ export function registerStudio3DCommands(){
  if(mounts++===0){const offs=studio3DCommandSpecs().map(s=>{const off=registerCommandSpec(s);const m=commandRegistry.get(s.id)!;m.argsSchema=s.params;m.risk='none';return off;});dispose=()=>offs.forEach(f=>f());}
  let live=true;return()=>{if(!live)return;live=false;if(--mounts===0){dispose?.();dispose=null;patchStudio3D({});}};
 }
+
