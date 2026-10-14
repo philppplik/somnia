@@ -2,6 +2,46 @@
   "schemaVersion": 1,
   "exceptions": [
     {
+      "path": "src/components/ui/native-controls.tsx",
+      "metrics": [
+        "rawButton",
+        "rawInput",
+        "rawSelect",
+        "rawTextarea"
+      ],
+      "reason": "Native backing elements of P1 primitives. Consumer areas remain fully ratcheted; hex, typography and inline debt are still counted."
+    },
+    {
+      "path": "src/components/ui/number-field.tsx",
+      "metrics": [
+        "rawButton",
+        "rawInput",
+        "rawSelect",
+        "rawTextarea"
+      ],
+      "reason": "Native backing elements of P1 primitives. Consumer areas remain fully ratcheted; hex, typography and inline debt are still counted."
+    },
+    {
+      "path": "src/components/ui/range-field.tsx",
+      "metrics": [
+        "rawButton",
+        "rawInput",
+        "rawSelect",
+        "rawTextarea"
+      ],
+      "reason": "Native backing elements of P1 primitives. Consumer areas remain fully ratcheted; hex, typography and inline debt are still counted."
+    },
+    {
+      "path": "src/components/ui/panel.tsx",
+      "metrics": [
+        "rawButton",
+        "rawInput",
+        "rawSelect",
+        "rawTextarea"
+      ],
+      "reason": "Native backing elements of P1 primitives. Consumer areas remain fully ratcheted; hex, typography and inline debt are still counted."
+    },
+    {
       "path": "src/lib/frameworks/templates/",
       "metrics": "all",
       "reason": "Generated user projects are authored content, not application chrome."

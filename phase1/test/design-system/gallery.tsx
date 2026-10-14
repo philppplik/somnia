@@ -1,0 +1,46 @@
+import {useState} from 'react';
+import {createRoot} from 'react-dom/client';
+import {Menu as RawMenu} from '@base-ui/react/menu';
+import {Tooltip as RawTooltip} from '@base-ui/react/tooltip';
+import {Popover as RawPopover} from '@base-ui/react/popover';
+import {Field} from '../../src/components/ui/field';
+import {NativeInput,NativeSelect,Textarea} from '../../src/components/ui/native-controls';
+import {NumberField} from '../../src/components/ui/number-field';
+import {RangeField} from '../../src/components/ui/range-field';
+import {PanelBody,PanelHeader,PanelSection,PropertyList} from '../../src/components/ui/panel';
+import {Notice} from '../../src/components/ui/notice';
+import {Menu,MenuTrigger,MenuContent,MenuItem} from '../../src/components/ui/menu';
+import {TooltipProvider,Tooltip,TooltipTrigger,TooltipContent} from '../../src/components/ui/tooltip';
+import {Popover,PopoverTrigger,PopoverContent,PopoverTitle,PopoverClose} from '../../src/components/ui/popover';
+import '../../src/styles/global.css';
+import '../../src/styles/bento.css';
+import '../../src/components/studios/studio-pill.css';
+import './gallery.css';
+function Gallery(){
+ const [number,setNumber]=useState<number|null>(10),[mixed,setMixed]=useState(false),[readonly,setReadonly]=useState(false),[disabled,setDisabled]=useState(false),[range,setRange]=useState(30),[open,setOpen]=useState(true),[events,setEvents]=useState<string[]>([]);
+ const log=(event:string)=>setEvents(old=>[...old,event]);
+ return <main lang="en"><h1>P1 primitive contracts</h1><p>Developer fixture. Real primitives and production styles; no app engines or user data.</p>
+ <div className="controls"><button onClick={()=>setMixed(!mixed)} aria-pressed={mixed}>Mixed</button><button onClick={()=>setReadonly(!readonly)} aria-pressed={readonly}>Read only</button><button onClick={()=>setDisabled(!disabled)} aria-pressed={disabled}>Disabled</button><button onClick={()=>{setEvents([]);setNumber(10);setRange(30);}}>Reset fixture</button></div>
+ <div className="gallery-grid">
+ <section><h2>Native parity</h2><div className="pair"><input data-testid="raw-input" defaultValue="Text" disabled={disabled} readOnly={readonly}/><NativeInput data-testid="ui-input" defaultValue="Text" disabled={disabled} readOnly={readonly}/></div>
+ <div className="pair"><select data-testid="raw-select" disabled={disabled}><option>A</option></select><NativeSelect data-testid="ui-select" disabled={disabled}><option>A</option></NativeSelect></div>
+ <div className="pair"><textarea data-testid="raw-textarea" defaultValue="Text" disabled={disabled} readOnly={readonly}/><Textarea data-testid="ui-textarea" defaultValue="Text" disabled={disabled} readOnly={readonly}/></div>
+ <Field label="Translated field label: Breite des ausgewählten Objekts" hint="A caller-supplied hint" error="A caller-supplied error">{props=><NativeInput {...props}/>}</Field></section>
+ <section><h2>Numeric draft and gesture</h2><NumberField label="Width" value={number} mixed={mixed} mixedLabel="Mixed" unit="px" min={0} max={100} step={2} constraintError="Value must be between 0 and 100" parse={draft=>draft.trim()!==''&&Number.isFinite(Number(draft))?{ok:true,value:Number(draft)}:{ok:false,error:'Enter a number'}} disabled={disabled} readOnly={readonly} onCommit={value=>{setNumber(value);setMixed(false);log(`number:${value}`);}} onCancel={()=>log('number:cancel')} data-testid="number"/>
+ <RangeField label="Preview level" min={0} max={100} step={1} value={range} disabled={disabled} readOnly={readonly} onBegin={()=>log('range:begin')} onPreview={v=>{setRange(v);log(`range:preview:${v}`);}} onCommit={v=>log(`range:commit:${v}`)} onCancel={original=>{setRange(original);log(`range:cancel:${original}`);}} data-testid="range"/>
+ <div className="pair"><input data-testid="raw-range" type="range" min={0} max={100} value={30} readOnly/><RangeField label="Parity range" data-testid="ui-range" min={0} max={100} value={30} onPreview={()=>{}} onCommit={()=>{}} onCancel={()=>{}}/></div>
+ <div className="pair"><input data-testid="raw-number" type="text" inputMode="decimal" value="10" readOnly/><NumberField label="Parity number" value={10} parse={v=>({ok:true,value:Number(v)})} constraintError="Invalid" onCommit={()=>{}} data-testid="parity-number"/></div>
+ </section>
+ <section><h2>Panel and metadata</h2><PanelHeader><h3>Properties</h3></PanelHeader><PanelSection id="panel-body" title="Caller-owned collapse" open={open} onOpenChange={setOpen}><PropertyList rows={[{id:'size',label:'Dimensions',value:'1920 × 1080 px'},{id:'source',label:'Long source label',value:'selection-bound caller-owned value'}]}/></PanelSection>
+ <div className="pair"><div data-testid="raw-panel" className="p-3">Body</div><PanelBody data-testid="ui-panel">Body</PanelBody></div>
+ <Notice tone="success">Saved (caller-supplied text)</Notice><Notice tone="warning">Review before applying</Notice><Notice tone="danger" live="polite">Caller-supplied error; retry belongs to caller</Notice></section>
+ <section><h2>Keyboard and portals</h2>
+ <Menu><MenuTrigger>Open menu</MenuTrigger><MenuContent><MenuItem onClick={()=>log('menu:first')}>First action</MenuItem><MenuItem disabled>Disabled action</MenuItem><MenuItem onClick={()=>log('menu:last')}>Last action</MenuItem></MenuContent></Menu>
+ <RawMenu.Root><RawMenu.Trigger>Raw menu</RawMenu.Trigger><RawMenu.Portal><RawMenu.Positioner sideOffset={4}><RawMenu.Popup data-testid="raw-menu" className="menu-popup"><RawMenu.Item className="menu-item">Raw action</RawMenu.Item></RawMenu.Popup></RawMenu.Positioner></RawMenu.Portal></RawMenu.Root>
+ <Popover><PopoverTrigger>Open popover</PopoverTrigger><PopoverContent><PopoverTitle>Popover content</PopoverTitle><NativeInput aria-label="Popover value"/><PopoverClose>Close popover</PopoverClose></PopoverContent></Popover>
+ <RawPopover.Root><RawPopover.Trigger>Raw popover</RawPopover.Trigger><RawPopover.Portal><RawPopover.Positioner sideOffset={4}><RawPopover.Popup data-testid="raw-popover" className="menu-popup"><RawPopover.Title>Raw content</RawPopover.Title></RawPopover.Popup></RawPopover.Positioner></RawPopover.Portal></RawPopover.Root>
+ <TooltipProvider delay={0}><Tooltip><TooltipTrigger>Tooltip trigger</TooltipTrigger><TooltipContent>Shared tooltip</TooltipContent></Tooltip></TooltipProvider>
+ <RawTooltip.Provider delay={0}><RawTooltip.Root><RawTooltip.Trigger>Raw tooltip</RawTooltip.Trigger><RawTooltip.Portal><RawTooltip.Positioner side="bottom" sideOffset={8}><RawTooltip.Popup data-testid="raw-tooltip" className="studio-pill-tooltip">Raw tooltip</RawTooltip.Popup></RawTooltip.Positioner></RawTooltip.Portal></RawTooltip.Root></RawTooltip.Provider>
+ </section></div><pre data-testid="events" aria-label="Fixture events">{events.join('\n')}</pre></main>;
+}
+createRoot(document.getElementById('root')!).render(<Gallery/>);

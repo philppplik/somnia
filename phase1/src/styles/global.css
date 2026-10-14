@@ -13,6 +13,7 @@
 }
 
 @import './tokens.css';
+@import './primitives.css';
 @import '../themes/forest.css';
 @import '../themes/royal.css';
 @import '../themes/slate.css';

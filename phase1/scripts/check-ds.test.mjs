@@ -33,3 +33,7 @@ test('a class left only in CSS does not hide its removal from JSX',()=>{
  assert.deepEqual(missingHooks({hooks:[{kind:'class',value:'keep',owners:['src/style.css']}]},previous),['class:keep']);
  assert.deepEqual(missingHooks({hooks:[{kind:'class',value:'keep',owners:['src/new.tsx']}]},previous),[]);
 });
+test('P1 backing-element exceptions do not allow color or inline debt',()=>{
+ const count=countFile('<input style={{color:"#abcdef"}} className="text-[11px]"/>','src/components/ui/native-controls.tsx');
+ assert.equal(count.rawInput,0);assert.equal(count.hexTsx,1);assert.equal(count.pixelText,1);assert.equal(count.inlineStyle,1);
+});

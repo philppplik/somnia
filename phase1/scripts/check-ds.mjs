@@ -8,6 +8,7 @@ import {fileURLToPath} from 'node:url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 export const metrics = ['rawButton', 'rawInput', 'rawSelect', 'rawTextarea', 'hexTsx', 'hexCss', 'pixelText', 'inlineStyle'];
 export const exceptions = [
+  ...['native-controls.tsx','number-field.tsx','range-field.tsx','panel.tsx'].map(name=>({path:`src/components/ui/${name}`,metrics:['rawButton','rawInput','rawSelect','rawTextarea'],reason:'Native backing elements of P1 primitives. Consumer areas remain fully ratcheted; hex, typography and inline debt are still counted.'})),
   {path:'src/lib/frameworks/templates/', metrics:'all', reason:'Generated user projects are authored content, not application chrome.'},
   {path:'src/themes/', metrics:['hexCss'], reason:'Syntax theme palettes are independent of application appearance.'},
   {path:'src/styles/tokens.css', metrics:['hexCss'], reason:'Canonical token definitions own literal colors.'},
