@@ -50,3 +50,9 @@ One builder (`masks.ts`) produces the `<mask>` and filter definitions for both t
 - Points: with a path point selected on the canvas, "Insert point" splits the curve after it (de Casteljau, the shape does not change) and "Delete point" removes it. On a morphing path the change is applied to every key so point counts stay consistent. Closed paths keep 3 points, open paths keep 1, max 32.
 - Clipboard (in memory, not saved): "Copy"/"Paste" in the Masks panel copy a whole mask (keys and path included) to another layer under a new id, capped at 4 masks per layer. In a mask key lane, "Copy" on a picked key and "Paste" at the playhead copy a key (value and ease) within or between masks. Same property only; a path key needs the same point count and closed flag.
 - Every action is one undo step. Not covered: mask keys in the graph editor (the editor is built around transform keys), per-point lanes.
+
+## P15: mask keys in the graph editor
+
+- The graph editor lists every animated mask property (and morphing path) of the selected layer under the transform properties. Picking one shows its curve (value graph, x/y channel switch for position and size). Keys drag in time and value as one edit (`keyEdit`, ease kept), a picked key offers its ease select and draggable in/out ease handles (`keyHandle`). One drag is one undo step, Esc cancels.
+- A path morph has no value curve; it shows one ease select per path key.
+- Transform keys keep their existing graph code and tests untouched; "Transform" or any transform property returns to them. The mask graph is a separate component (`MaskGraph.tsx`) that reuses the curve/handle maths of `graph.ts`, so mask keys do not take part in the transform key selection, copy/paste or speed mode.

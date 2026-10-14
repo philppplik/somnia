@@ -323,5 +323,7 @@
  "animation.masks.copy": "Kopieren",
  "animation.masks.paste": "Einfügen",
  "animation.masks.pointInsert": "Punkt einfügen",
- "animation.masks.pointRemove": "Punkt löschen"
+ "animation.masks.pointRemove": "Punkt löschen",
+ "animation.graph.transform": "Transformation",
+ "animation.graph.pickMask": "Wähle eine Maskenkurve zum Bearbeiten."
 }

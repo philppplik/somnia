@@ -84,6 +84,8 @@ export type MaskOp=
  |{op:'point';mask:string;index:number;x:number;y:number;t?:number}
  |{op:'pen';mask:string;x:number;y:number;outX?:number;outY?:number;restart?:boolean}
  |{op:'close';mask:string}
+ |{op:'keyEdit';mask:string;prop:MaskProp;t:number;to:number;v:PropValue}
+ |{op:'keyHandle';mask:string;prop:MaskProp;t:number;kind:'in'|'out';x:number;y:number}
  |{op:'pointRemove';mask:string;index:number}
  |{op:'pointInsert';mask:string;index:number}
  |{op:'adopt';source:LayerMask}
@@ -127,6 +129,7 @@ export function maskEdit(doc:AnimationDocument,layerId:string,o:MaskOp):Edit{
    return {...m,path:{...m.path,points:[...m.path.points,pt]}};}));}
   case 'close':{need(o.mask);return set(list.map(m=>{if(m.id!==o.mask)return m;if(!m.path||m.path.closed||m.path.points.length<3)throw Error('A closed path needs three points.');
    if(m.shapeKeys?.length)throw Error('Remove the path animation before closing the path.');return {...m,path:{...m.path,closed:true}};}));}
+  case 'keyEdit':case 'keyHandle':{need(o.mask);return set(list.map(m=>m.id===o.mask?(o.op==='keyEdit'?editMaskKey(m,o.prop,o.t,o.to,o.v,c):handleMaskKey(m,o.prop,o.t,o.kind,[o.x,o.y])):m));}
   case 'pointRemove':case 'pointInsert':{need(o.mask);return set(list.map(m=>{if(m.id!==o.mask)return m;if(!m.path||!m.path.points[o.index])throw Error('Path point no longer exists.');
    const f=o.op==='pointRemove'?(p:MaskPath)=>removePoint(p,o.index):(p:MaskPath)=>insertPoint(p,o.index);
    return {...m,path:f(m.path),...(m.shapeKeys?{shapeKeys:m.shapeKeys.map(k=>({...k,path:f(k.path)}))}:{})};}));}
@@ -182,6 +185,19 @@ export function pasteMaskKey(m:LayerMask,prop:MaskProp|'path',t:number,c:MaskKey
  const cur=m.anim?.[c.prop];if(!cur?.keys.length)throw Error('Animate the property first.');
  if(Array.isArray(c.v)!==(cur.type==='vec2'))throw Error('Value does not fit the mask property.');
  return {...m,anim:{...m.anim,[c.prop]:{...cur,keys:[...cur.keys.filter(k=>k.t!==t),{t,v:c.v,interp:c.interp,out:c.out,in:c.in}].sort((a,b)=>a.t-b.t)}}};
+}
+/** Moves a key to another frame and/or changes its value in one edit, keeping its ease. */
+export function editMaskKey(m:LayerMask,prop:MaskProp,t:number,to:number,v:PropValue,comp:Composition):LayerMask{
+ const p=keysOf(m,prop),k=p.keys.find(x=>x.t===t);if(!k)throw Error('Key no longer exists.');
+ if(Array.isArray(v)!==(p.type==='vec2'))throw Error('Value does not fit the mask property.');
+ const target=frameT(to,comp);if(target!==t&&p.keys.some(x=>x.t===target))throw Error('Another key already sits at that time.');
+ return {...m,anim:{...m.anim,[prop]:{...p,keys:p.keys.map(x=>x===k?{...x,t:target,v}:x).sort((a,b)=>a.t-b.t)}}};
+}
+/** Sets one ease handle (progress space) of a key and makes its segment a bezier. */
+export function handleMaskKey(m:LayerMask,prop:MaskProp,t:number,kind:'in'|'out',h:readonly [number,number]):LayerMask{
+ const p=keysOf(m,prop);if(!p.keys.some(x=>x.t===t))throw Error('Key no longer exists.');
+ if(!(h[0]>=0&&h[0]<=1&&h[1]>=-2&&h[1]<=3))throw Error('Handle out of range.');
+ return {...m,anim:{...m.anim,[prop]:{...p,keys:p.keys.map(x=>x.t===t?{...x,interp:'bezier' as const,...(kind==='out'?{out:[round(h[0]),round(h[1])] as const}:{in:[round(h[0]),round(h[1])] as const})}:x)}}};
 }
 export function easeShapeKey(m:LayerMask,t:number,preset:EasePreset):LayerMask{
  if(!(preset in EASE_PRESETS))throw Error('Unknown ease preset.');if(!m.shapeKeys?.some(k=>k.t===t))throw Error('Key no longer exists.');

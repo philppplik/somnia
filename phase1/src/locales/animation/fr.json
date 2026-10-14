@@ -323,5 +323,7 @@
  "animation.masks.copy": "Copier",
  "animation.masks.paste": "Coller",
  "animation.masks.pointInsert": "Insérer un point",
- "animation.masks.pointRemove": "Supprimer le point"
+ "animation.masks.pointRemove": "Supprimer le point",
+ "animation.graph.transform": "Transformation",
+ "animation.graph.pickMask": "Choisissez une courbe de masque à modifier."
 }

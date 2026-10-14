@@ -7,6 +7,8 @@ import {clickSelect,sameKey,shiftSelection} from '../../lib/animation/selection'
 import {frameToTick,timecode} from '../../lib/animation/time';
 import {useT} from '../../lib/useT';
 import {Button} from '../ui/button';
+import {MaskGraph,MaskTargetButtons,maskTargets} from './MaskGraph';
+import {setGraphTarget,useMaskSelection} from '../../lib/animation/maskSelection';
 import {EASE_LABEL,EASES,fmt,PROP_LABEL} from './format';
 const PAD={l:46,r:12,t:10,b:16};
 function useSize(ref:React.RefObject<HTMLElement|null>){
@@ -27,12 +29,15 @@ const clampTo=(prop:TransformKey,n:number)=>{const m=PROP_META[prop];return Math
 export function GraphEditor({comp,layerId,sel,playhead}:{comp:Composition;layerId:string|null;sel:readonly KeyRef[];playhead:number}){
  const {t}=useT();const clip=useId();
  const layer=comp.layers.find(l=>l.id===layerId);
+ const msel=useMaskSelection();const gt=layer&&msel.graph&&maskTargets(layer).some(g=>g.mask===msel.graph!.mask&&g.prop===msel.graph!.prop)?msel.graph:null;
  const animated=layer?TRANSFORM_KEYS.filter(k=>layer.transform[k].keys.length>0):[];
  const view=animationSession().getState().view;
  const active=animated.find(k=>k===view.openProps[0])??animated[0];
  const wrap=useRef<HTMLDivElement>(null);const svgRef=useRef<SVGSVGElement>(null);const size=useSize(wrap);
  const frozen=useRef<{min:number;max:number}|null>(null);
  useEffect(()=>{frozen.current=null;},[active,layerId]);
+ if(layer&&gt)return <MaskGraph comp={comp} layer={layer} target={gt} playhead={playhead}/>;
+ if(layer&&!active&&maskTargets(layer).length)return <div className="grid min-h-0 flex-1 grid-cols-[180px_1fr]"><div className="p-1"><MaskTargetButtons layer={layer} active={null}/></div><div className="grid place-items-center p-3 text-ink-3">{t('animation.graph.pickMask')}</div></div>;
  if(!layer||!active)return <div className="grid min-h-0 flex-1 place-items-center p-3 text-ink-3" data-testid="animation-graph-empty">{t(layer?'animation.graph.empty':'animation.graph.noLayer')}</div>;
  const prop=layer.transform[active];const keys=prop.keys;
  const ch:0|1=prop.type==='vec2'&&view.graphChannel===1?1:0;
@@ -123,7 +128,8 @@ export function GraphEditor({comp,layerId,sel,playhead}:{comp:Composition;layerI
    </div>}
    {prop.type==='vec2'&&<p className="px-2 text-ink-3">{t(keys.some(k=>k.sIn||k.sOut)?'animation.graph.pathEase':'animation.graph.channelEase')}</p>}
    {speed&&<p className="px-2 text-ink-3">{t('animation.graph.unitsSecond')}</p>}
-   {animated.map(k=><button key={k} type="button" aria-pressed={k===active} className={`block w-full truncate rounded-sm px-2 py-1 text-left ${k===active?'bg-hover text-ink':'text-ink-3'}`} onClick={()=>sess.setView({openProps:[k]})} data-testid={`animation-graph-prop-${k}`}>{t(PROP_LABEL[k])}</button>)}
+   {animated.map(k=><button key={k} type="button" aria-pressed={k===active} className={`block w-full truncate rounded-sm px-2 py-1 text-left ${k===active?'bg-hover text-ink':'text-ink-3'}`} onClick={()=>{setGraphTarget(null);sess.setView({openProps:[k]});}} data-testid={`animation-graph-prop-${k}`}>{t(PROP_LABEL[k])}</button>)}
+   <MaskTargetButtons layer={layer} active={null}/>
    {prop.type==='vec2'&&<div className="mt-1 flex gap-1 px-1" role="group" aria-label={t('animation.graph.channel')}>
     {([0,1] as const).map(c=><Button key={c} size="tiny" variant={ch===c?'outline':'ghost'} aria-pressed={ch===c} onClick={()=>sess.setView({graphChannel:c})} data-testid={`animation-graph-channel-${c}`}>{t(c===0?'animation.prop.x':'animation.prop.y')}</Button>)}
    </div>}

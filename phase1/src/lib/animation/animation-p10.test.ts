@@ -1,7 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {createDocument,findComp,findLayer,validateDocument,MAX_LAYER_MASKS,type AnimationDocument} from './model';
 import {applyEdit,applyEdits,EditError} from './edit';
-import {maskEdit,matteEdit,maskPath,copyMaskKey,insertPoint} from './masks';
+import {maskEdit,matteEdit,maskPath,copyMaskKey,insertPoint,handleMaskKey} from './masks';
 import {animatedChars,animatorEdit,defaultAnimator,mixHex} from './textAnimators';
 import {frameSvg} from './exportFrames';
 import {sceneAt} from './scene';
@@ -157,8 +157,8 @@ test('P12: box and point drags are single edits; handle maths is bounded',()=>{
 });
 test('P12: mask selection falls back to the first mask of the layer',()=>{
  const d=keyed();const l=layer(d,'photo');
- selectMask(null,null);assert.equal(activeMask(l,{layer:null,mask:null,point:null,pen:false,clip:null})!.id,'m');
- assert.equal(activeMask(l,{layer:'other',mask:'zzz',point:null,pen:false,clip:null})!.id,'m');assert.equal(activeMask(undefined,{layer:null,mask:null,point:null,pen:false,clip:null}),undefined);
+ selectMask(null,null);assert.equal(activeMask(l,{layer:null,mask:null,point:null,pen:false,clip:null,graph:null})!.id,'m');
+ assert.equal(activeMask(l,{layer:'other',mask:'zzz',point:null,pen:false,clip:null,graph:null})!.id,'m');assert.equal(activeMask(undefined,{layer:null,mask:null,point:null,pen:false,clip:null,graph:null}),undefined);
 });
 
 const penned=()=>{let d=base();d=applyEdit(d,maskEdit(d,'photo',{op:'add',id:'p'}));
@@ -242,4 +242,17 @@ test('P14: masks and mask keys copy between layers; mismatches are refused',()=>
  f=applyEdit(f,maskEdit(f,'photo',{op:'keyPaste',mask:'a',prop:'opacity',t:sec*2,clip:kc}));assert.equal(layer(f,'photo').masks![0].anim!.opacity!.keys.length,3);
  let g=f;for(let i=0;i<MAX_LAYER_MASKS;i++){try{g=applyEdit(g,maskEdit(g,'stencil',{op:'adopt',source:layer(f,'photo').masks![0]}));}catch{break;}}
  assert.ok(layer(g,'stencil').masks!.length<=MAX_LAYER_MASKS);assert.throws(()=>maskEdit(g,'stencil',{op:'adopt',source:src}));
+});
+
+test('P15: graph edits move and revalue a mask key in one edit and keep its ease',()=>{
+ let d=keyed();d=applyEdit(d,maskEdit(d,'photo',{op:'animate',mask:'m',prop:'opacity',on:true,t:0}));d=applyEdit(d,maskEdit(d,'photo',{op:'set',mask:'m',prop:'opacity',value:20,t:sec}));
+ d=applyEdit(d,maskEdit(d,'photo',{op:'keyEase',mask:'m',prop:'opacity',t:sec,preset:'easeIn'}));
+ const r=d.revision;d=applyEdit(d,maskEdit(d,'photo',{op:'keyEdit',mask:'m',prop:'opacity',t:sec,to:sec+4000,v:55}));
+ const k=layer(d,'photo').masks![0].anim!.opacity!.keys.find(x=>x.v===55)!;assert.equal(d.revision,r+1);assert.ok(k.t>sec);assert.equal(k.interp,'bezier');assert.deepEqual([...k.out],[0.42,0]);
+ assert.throws(()=>maskEdit(d,'photo',{op:'keyEdit',mask:'m',prop:'opacity',t:k.t,to:k.t,v:[1,2]}),/does not fit/);
+ assert.throws(()=>maskEdit(d,'photo',{op:'keyEdit',mask:'m',prop:'opacity',t:k.t,to:0,v:5}),/Another key/);
+ d=applyEdit(d,maskEdit(d,'photo',{op:'keyHandle',mask:'m',prop:'opacity',t:k.t,kind:'out',x:0.5,y:0.2}));
+ assert.deepEqual([...layer(d,'photo').masks![0].anim!.opacity!.keys.find(x=>x.t===k.t)!.out],[0.5,0.2]);
+ assert.throws(()=>handleMaskKey(layer(d,'photo').masks![0],'opacity',k.t,'in',[2,0]),/out of range/);
+ assert.deepEqual(validateDocument(d),[]);
 });
