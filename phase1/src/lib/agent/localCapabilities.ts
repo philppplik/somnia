@@ -13,6 +13,8 @@ export function validateImages(messages:AgentProviderRequest['messages']):number
 /** Fresh locality and capability checks before every real request; metadata is declared, not task tested. */
 export function requireLocalCapabilities(provider:OllamaProvider,numCtx?:number):AgentProvider{
  return {id:provider.id,locality:'local',supportsImages:true,async *stream(request){
+  request.signal.throwIfAborted();
+  request={...structuredClone({model:request.model,messages:request.messages,tools:request.tools,maxOutputTokens:request.maxOutputTokens}),signal:request.signal};
   const images=validateImages(request.messages);
   request.signal.throwIfAborted();
   const local=await provider.verifyLocalModel(request.model,request.signal);
