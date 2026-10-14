@@ -9,7 +9,7 @@ import '../../lib/documents/guards';
 import {CELL_BASE} from '../../lib/documents/edit';
 import {setFindOpen,setParagraphStyle,clearCaret,deleteAtCaret,dragTo,editParagraph,getEngine,moveCaret,pasteText,settleDocument,switchDocument,pointerAt,redoEdit,selectAllText,setAlign,shiftListLevel,tabInCell,stepFontSize,stepIndent,toggleFormat,selectedText,splitAtCaret,syncGeometry,typeText,undoEdit} from '../../lib/documents/session';
 import {saveCopy} from '../../lib/documents/saveCopy';
-import {confirmDocumentsSaveCopy,patchDocumentsExportUi,registerDocumentsExport,useDocumentsExportUi} from '../../lib/documents/exportBridge';
+import {confirmDocumentsSaveCopy,getDocumentsExportUi,patchDocumentsExportUi,registerDocumentsExport,useDocumentsExportUi} from '../../lib/documents/exportBridge';
 import {executeCommand} from '../../lib/commands';
 import {DocumentsExportDialog} from './DocumentsExportDialog';
 import {registerDocumentPanelCommands} from '../../lib/documents/panelCommands';
@@ -113,7 +113,7 @@ export function DocumentsCanvas(){
  },[item?.url,item?.name,attempt]);
  const onVisible=useCallback((i:number,v:boolean)=>setNear(prev=>{if(prev.has(i)===v)return prev;const n=new Set(prev);v?n.add(i):n.delete(i);return n;}),[]);
  const pick=async()=>{const input=document.createElement('input');input.type='file';input.accept=MEDIA_ACCEPT.split(',').filter(x=>/docx|wordprocessingml/.test(x)).join(',');input.onchange=async()=>{const f=input.files?.[0];if(f){const r=await addMediaFile(f,f.name);if('error' in r)patchDocuments({status:'error',error:r.error});}};input.click();};
- const doSave=async()=>{patchDocuments({saving:true});try{await settleDocument();const e=getEngine();if(!e)throw new Error(t('documents.session.noEngine'));await saveCopy(e,doc.name);}catch(err){patchDocuments({status:'error',error:err instanceof Error?err.message:String(err)});}finally{patchDocuments({saving:false});}};
+ const doSave=async()=>{patchDocuments({saving:true});try{await settleDocument();const e=getEngine();if(!e)throw new Error(t('documents.session.noEngine'));await saveCopy(e,doc.name,getDocumentsExportUi().copyName);}catch(err){patchDocuments({status:'error',error:err instanceof Error?err.message:String(err)});}finally{patchDocuments({saving:false});patchDocumentsExportUi({copyName:null});}};
  // One save implementation for every entry point (toolbar, hero popup, Project menu, palette).
  const doSaveRef=useRef(doSave);doSaveRef.current=doSave;
  useEffect(()=>registerDocumentsExport({save:()=>doSaveRef.current()}),[]);
@@ -140,7 +140,7 @@ export function DocumentsCanvas(){
   {exportUi.confirmOpen&&<div role="alertdialog" aria-modal="true" aria-labelledby="documents-confirm-title" className="absolute inset-0 z-20 grid place-items-center bg-black/30"><div className="grid max-w-md gap-3 rounded-[var(--r-popup,25px)] bg-surface p-5 shadow-xl">
    <h2 id="documents-confirm-title" className="text-[14px] font-medium">{t('documents.lossTitle')}</h2><p className="text-[12px] text-ink-2">{t('documents.lossBody')}</p>
    <ul className="list-disc pl-5 text-[12px] text-ink-2" data-testid="documents-loss-list">{doc.risks.map(r=><li key={r}>{t('documents.risk.'+r)}</li>)}</ul>
-   <div className="flex justify-end gap-2"><NativeButton className={tool} autoFocus onClick={()=>patchDocumentsExportUi({confirmOpen:false})}>{t('documents.cancel')}</NativeButton><NativeButton className={tool+' border border-subtle'} onClick={()=>void confirmDocumentsSaveCopy()} data-testid="documents-save-anyway">{t('documents.saveAnyway')}</NativeButton></div></div></div>}
+   <div className="flex justify-end gap-2"><NativeButton className={tool} autoFocus onClick={()=>patchDocumentsExportUi({confirmOpen:false,copyName:null})}>{t('documents.cancel')}</NativeButton><NativeButton className={tool+' border border-subtle'} onClick={()=>void confirmDocumentsSaveCopy()} data-testid="documents-save-anyway">{t('documents.saveAnyway')}</NativeButton></div></div></div>}
   <DocumentsExportDialog/>
  </section>;
 }

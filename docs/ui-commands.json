@@ -2490,6 +2490,17 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.export.copy",
+      "title": "Save a copy with a file name",
+      "category": "Project",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.export.open",
       "title": "Export document",
       "category": "Project",

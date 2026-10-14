@@ -17,8 +17,8 @@ export function registerDocumentsExport(next:DocumentsExportBridge):()=>void{
 export const getDocumentsExport=()=>bridge;
 
 /** Export popup and loss-warning dialog visibility. Session-only. */
-export interface DocumentsExportUi{exportOpen:boolean;confirmOpen:boolean}
-let ui:DocumentsExportUi={exportOpen:false,confirmOpen:false};
+export interface DocumentsExportUi{exportOpen:boolean;confirmOpen:boolean;/** A typed copy name for the next save; null means the default name. */copyName:string|null}
+let ui:DocumentsExportUi={exportOpen:false,confirmOpen:false,copyName:null};
 const listeners=new Set<()=>void>();
 export const getDocumentsExportUi=()=>ui;
 export function patchDocumentsExportUi(patch:Partial<DocumentsExportUi>){ui={...ui,...patch};listeners.forEach(fn=>fn());}

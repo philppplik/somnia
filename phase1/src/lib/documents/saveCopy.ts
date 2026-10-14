@@ -1,8 +1,21 @@
 import type {DocumentsEngine} from './engine';
 /** Saves what the engine would write as a NEW file next to the original name. The opened file is never overwritten. */
 export const copyName=(name:string)=>name.replace(/^.*[\\/]/,'').replace(/\.docx$/i,'')+' (Somnia copy).docx';
-export async function saveCopy(engine:DocumentsEngine,name:string){
+export const MAX_COPY_NAME=120;
+const baseName=(name:string)=>name.replace(/^.*[\\/]/,'');
+/**
+ * The file name for a copy: a typed name made safe (no folders, no control or reserved characters, at most 120 characters, always ending in .docx).
+ * An empty result falls back to the default, and a name equal to the original's gets " (copy)" so the original is never replaced.
+ */
+export function safeCopyName(typed:string,original:string):string{
+ let n=baseName(typed).replace(/[\u0000-\u001f\u007f-\u009f<>:"|?*\\/]/g,'').replace(/\.docx$/i,'').trim().replace(/^\.+|\.+$/g,'').trim();
+ n=Array.from(n).slice(0,MAX_COPY_NAME-5).join('').trim();
+ if(!n)return copyName(original);
+ const out=n+'.docx';
+ return out.toLowerCase()===baseName(original).toLowerCase()?n+' (copy).docx':out;
+}
+export async function saveCopy(engine:DocumentsEngine,name:string,fileName?:string|null){
  const bytes=await engine.save();
  const url=URL.createObjectURL(new Blob([bytes as BlobPart],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}));
- const a=document.createElement('a');a.href=url;a.download=copyName(name);a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+ const a=document.createElement('a');a.href=url;a.download=fileName?safeCopyName(fileName,name):copyName(name);a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }

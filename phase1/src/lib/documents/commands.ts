@@ -7,6 +7,7 @@ import {findMedia} from '../media';
 import {tableStyleProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGE_BYTES,MIN_COL_PT,MAX_COL_PT} from './protocol';
 import {CELL_BASE} from './edit';
 import {goToBlock,scrollToPage} from './navigate';
+import {safeCopyName} from './saveCopy';
 import {documentsExportReady,patchDocumentsExportUi,requestDocumentsSaveCopy} from './exportBridge';
 /**
  * Documents studio commands. Registered while the Documents canvas is mounted (registerDocumentsCommands),
@@ -22,6 +23,11 @@ export function registerDocumentsCommands(){
   // Export hero (docs/concepts/hero-action-documents.md): real DOCX copy through the shared risk-gated save path.
   add('documents.export.open','Export document',()=>{patchDocumentsExportUi({exportOpen:true});},()=>documentsExportReady(),'Project',()=>'hero.export.none'),
   add('documents.saveCopy','Save a copy of the document',()=>requestDocumentsSaveCopy(),()=>documentsExportReady(),'Project',()=>'hero.export.none'),
+  add('documents.export.copy','Save a copy with a file name',async p=>{
+   const n=(p as Record<string,unknown>|undefined)?.name;
+   if(n!==undefined&&(typeof n!=='string'||n.length>400))throw expected('Invalid "name".');
+   patchDocumentsExportUi({copyName:typeof n==='string'&&n.trim()?safeCopyName(n,getDocumentsState().name):null});await requestDocumentsSaveCopy();
+  },()=>documentsExportReady(),'Project',()=>'hero.export.none'),
   add('documents.zoomIn','Zoom in on the document',()=>stepZoom(1)),
   add('documents.zoomOut','Zoom out of the document',()=>stepZoom(-1)),
   add('documents.zoomReset','Reset document zoom to 100%',()=>patchDocuments({zoom:1})),
