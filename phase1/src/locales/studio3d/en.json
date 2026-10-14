@@ -891,5 +891,8 @@
  "studio3d.hist.editSubdivide": "Subdivide faces",
  "cmd.studio3d.edit.poke": "Split selected triangles into three at their centroid",
  "studio3d.edit.poke": "Poke",
- "studio3d.hist.editPoke": "Poke faces"
+ "studio3d.hist.editPoke": "Poke faces",
+ "cmd.studio3d.edit.duplicate": "Duplicate selected faces as a detached shell",
+ "studio3d.edit.duplicate": "Duplicate",
+ "studio3d.hist.editDuplicate": "Duplicate faces"
 }

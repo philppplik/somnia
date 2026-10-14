@@ -891,5 +891,8 @@
  "studio3d.hist.editSubdivide": "Faces unterteilen",
  "cmd.studio3d.edit.poke": "Ausgewählte Dreiecke am Schwerpunkt in drei Teile teilen",
  "studio3d.edit.poke": "Spicken",
- "studio3d.hist.editPoke": "Faces spicken"
+ "studio3d.hist.editPoke": "Faces spicken",
+ "cmd.studio3d.edit.duplicate": "Ausgewählte Faces als losgelöste Kopie duplizieren",
+ "studio3d.edit.duplicate": "Duplizieren",
+ "studio3d.hist.editDuplicate": "Faces duplizieren"
 }

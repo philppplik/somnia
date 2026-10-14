@@ -835,6 +835,20 @@ test('mesh edit mode: poke splits selected faces at their centroid, undo restore
  await expect(page.getByRole('alert')).toContainText('Select faces to poke');
 });
 
+test('mesh edit mode: duplicate copies selected faces as a detached shell, undo restores them',async({page})=>{
+ await blank(page);
+ const id=await insert(page,'cube',0);
+ expect(await run(page,'studio3d.edit.start',{id,mode:'face'})).toBe(true);
+ expect(await run(page,'studio3d.edit.select',{kind:'face',ids:[4,5]})).toBe(true);
+ expect(await run(page,'studio3d.edit.duplicate',{})).toBe(true);
+ await expect.poll(async()=>(await session(page)).stats.triangles).toBe(14);
+ let s=await session(page);expect(s.edit).toMatchObject({faces:0,verts:0,edges:0});
+ await run(page,'studio3d.undo');
+ await expect.poll(async()=>(await session(page)).stats.triangles).toBe(12);
+ expect(await run(page,'studio3d.edit.duplicate',{})).toBe(false);
+ await expect(page.getByRole('alert')).toContainText('Select faces to duplicate');
+});
+
 test('mesh edit mode: weld merges selected vertices at their centre, undo restores them',async({page})=>{
  await blank(page);
  const id=await insert(page,'cube',0);

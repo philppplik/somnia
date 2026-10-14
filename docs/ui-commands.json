@@ -6606,6 +6606,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.edit.duplicate",
+      "title": "Duplicate selected faces as a detached shell",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.edit.end",
       "title": "Finish editing",
       "category": "Edit",

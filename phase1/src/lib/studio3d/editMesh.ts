@@ -426,6 +426,28 @@ export function pokeFaces(m:MeshData,faces:number[]):MeshData{
  if(uvs)out.uvs=uvs;
  return out;
 }
+/** Duplicates the selected triangles as a detached shell inside the same mesh: every duplicated triangle gets fresh copies of its vertices, and copies share their vertices when the originals share them. UVs travel with the copies; masks and explicit normals are dropped. */
+export function duplicateFaces(m:MeshData,faces:number[]):MeshData{
+ if(!faces.length)throw new EditError('Select faces to duplicate.');
+ const tris=m.index.length/3;
+ const sel=new Set<number>();
+ for(const f of faces){if(!Number.isInteger(f)||f<0||f>=tris)throw new EditError(`Face ${f} does not exist.`);sel.add(f);}
+ const positions=[...m.positions];
+ const uvs=m.uvs?[...m.uvs]:undefined;
+ const remap=new Map<number,number>();
+ const copy=(v:number):number=>{
+  const hit=remap.get(v);if(hit!==undefined)return hit;
+  const i=positions.length/3;
+  positions.push(m.positions[v*3],m.positions[v*3+1],m.positions[v*3+2]);
+  if(uvs)uvs.push(m.uvs![v*2],m.uvs![v*2+1]);
+  remap.set(v,i);return i;
+ };
+ const index=[...m.index];
+ for(const f of sel)index.push(copy(m.index[f*3]),copy(m.index[f*3+1]),copy(m.index[f*3+2]));
+ const out:MeshData={positions,index};
+ if(uvs)out.uvs=uvs;
+ return out;
+}
 /** Deletes selected elements: faces drop their own triangles, edges and vertices drop every triangle that touches them. Positions stay put (orphan vertices are allowed), so undo restores the exact geometry. Refuses an empty selection and a delete that would leave no triangle. */
 export function deleteElements(m:MeshData,kind:'vertex'|'edge'|'face',sel:{verts?:number[];edges?:[number,number][];faces?:number[]}):MeshData{
  const tris=m.index.length/3,total=m.positions.length/3;

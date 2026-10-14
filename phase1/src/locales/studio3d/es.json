@@ -891,5 +891,8 @@
  "studio3d.hist.editSubdivide": "Subdividir caras",
  "cmd.studio3d.edit.poke": "Dividir los triángulos seleccionados en tres por su centroide",
  "studio3d.edit.poke": "Pinchar",
- "studio3d.hist.editPoke": "Pinchar caras"
+ "studio3d.hist.editPoke": "Pinchar caras",
+ "cmd.studio3d.edit.duplicate": "Duplicar las caras seleccionadas como copia separada",
+ "studio3d.edit.duplicate": "Duplicar",
+ "studio3d.hist.editDuplicate": "Duplicar caras"
 }

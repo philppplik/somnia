@@ -891,5 +891,8 @@
  "studio3d.hist.editSubdivide": "Subdiviser les faces",
  "cmd.studio3d.edit.poke": "Diviser les triangles sélectionnés en trois par leur centre",
  "studio3d.edit.poke": "Piquer",
- "studio3d.hist.editPoke": "Piquer les faces"
+ "studio3d.hist.editPoke": "Piquer les faces",
+ "cmd.studio3d.edit.duplicate": "Dupliquer les faces sélectionnées en copie détachée",
+ "studio3d.edit.duplicate": "Dupliquer",
+ "studio3d.hist.editDuplicate": "Dupliquer les faces"
 }

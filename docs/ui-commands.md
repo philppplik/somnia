@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-788 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+789 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -590,6 +590,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `studio3d.edit.bevel` | Bevel vertices | Edit | studio3d |  |
 | `studio3d.edit.bevelEdge` | Bevel edges | Edit | studio3d |  |
 | `studio3d.edit.delete` | Delete selected elements | Edit | studio3d |  |
+| `studio3d.edit.duplicate` | Duplicate selected faces as a detached shell | Edit | studio3d |  |
 | `studio3d.edit.end` | Finish editing | Edit | studio3d |  |
 | `studio3d.edit.extrude` | Extrude selection | Edit | studio3d |  |
 | `studio3d.edit.inset` | Inset faces | Edit | studio3d |  |

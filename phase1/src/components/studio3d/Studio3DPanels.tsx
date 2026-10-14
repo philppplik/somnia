@@ -346,6 +346,7 @@ function EditSculptFields({id}:{id:number}){
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.weld',{})}>{t('studio3d.edit.weld')}</Button>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.subdivide',{})}>{t('studio3d.edit.subdivide')}</Button>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.poke',{})}>{t('studio3d.edit.poke')}</Button>
+     <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.duplicate',{})}>{t('studio3d.edit.duplicate')}</Button>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.end')}>{t('studio3d.edit.end')}</Button>
     </div></>}
   </fieldset>
