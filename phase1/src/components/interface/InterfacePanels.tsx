@@ -24,7 +24,7 @@ import {InterfaceVectorControls} from './InterfaceVectorControls';
 import {InterfaceResources,InterfaceBindings} from './InterfaceResources';
 import {InterfaceOutput} from './InterfaceOutput';
 import {patchInterfaceNode,owningInstance,createComponent,instantiateComponent,addComponentVariant,switchInstanceVariant,resetInstanceOverrides,detachInstance} from '../../lib/interface/components';
-import {DEFAULT_LAYOUT,DEFAULT_SIZING,type InterfaceLayout,type InterfaceSizing,type ConstraintMode,type BlendMode} from '../../lib/interface/schema';
+import {DEFAULT_LAYOUT,DEFAULT_SIZING,type InterfaceLayout,type InterfaceSizing,type ConstraintMode,type BlendMode,type InterfaceTextAlign} from '../../lib/interface/schema';
 import {useMemo,useState,type ReactNode} from 'react';
 import {Button} from '../ui/button';
 import {PanelSection} from '../ui/panel';
@@ -73,6 +73,7 @@ export function InterfaceProperties(){
    <Field name={t('interface.rotation')} value={node.rotation??0} type="number" disabled={node.locked} onCommit={value=>run(()=>interfaceSession.transact(d=>{const n=d.nodes.find(n=>n.id===node.id)!,v=Number(value);if(v)n.rotation=v;else delete n.rotation;}))}/>
    <Choice label={t('interface.blendMode')} value={node.blendMode??''} options={[["",t('interface.blendMode.normal')],["multiply","Multiply"],["screen","Screen"],["overlay","Overlay"],["darken","Darken"],["lighten","Lighten"]]} disabled={node.locked} onChange={mode=>run(()=>interfaceSession.transact(d=>{const n=d.nodes.find(n=>n.id===node.id)!;if(mode)n.blendMode=mode as BlendMode;else delete n.blendMode;}))}/>
    {node.kind==='text'&&<Field name={t('interface.text')} value={node.text??''} disabled={node.locked} onCommit={text=>run(()=>patch({text}))}/>}
+   {node.kind==='text'&&<Choice label={t('interface.textAlign')} value={node.textAlign??''} options={[["",t('interface.textAlign.left')],["center",t('interface.textAlign.center')],["right",t('interface.textAlign.right')]]} disabled={node.locked} onChange={align=>run(()=>interfaceSession.transact(d=>{const n=d.nodes.find(n=>n.id===node.id)!;if(align)n.textAlign=align as InterfaceTextAlign;else delete n.textAlign;}))}/>}
    {node.kind==='text'&&<label className="text-xs">{t('interface.listStyle')}<NativeSelect aria-label={t('interface.listStyle')} className="mt-1 w-full bg-panel p-2" disabled={node.locked} value={node.list??''} onChange={e=>run(()=>interfaceSession.transact(d=>{const n=d.nodes.find(n=>n.id===node.id)!;if(e.target.value)n.list=e.target.value as 'bullet'|'number';else delete n.list;}))}><option value="">{t('interface.none')}</option><option value="bullet">{t('interface.list.bullet')}</option><option value="number">{t('interface.list.number')}</option></NativeSelect></label>}
    {node.kind==='text'&&<Field name={t('interface.maxLines')} value={node.maxLines??''} disabled={node.locked} onCommit={value=>run(()=>interfaceSession.transact(d=>{const n=d.nodes.find(n=>n.id===node.id)!;const v=value.trim();if(!v)delete n.maxLines;else n.maxLines=Number(v);}))}/>}
    {node.imageFill&&<Field name={t('interface.altText')} value={node.altText??''} disabled={node.locked} onCommit={altText=>run(()=>patch({altText}))}/>}

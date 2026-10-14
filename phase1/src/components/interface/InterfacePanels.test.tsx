@@ -139,3 +139,8 @@ test('P46 blend mode select renders for any layer in English and German',async()
  interfaceSession.select(interfaceSession.get().document!.nodes[0].id);assert.ok(renderToStaticMarkup(<InterfaceProperties/>).includes('Blend mode'),'frames show the blend mode select too');
  interfaceSession.clear();setLocale('de');try{interfaceSession.start();interfaceSession.transact(d=>{addNode(d,d.pages[0].id,'frame');});interfaceSession.select(interfaceSession.get().document!.nodes[0].id);
  const german=renderToStaticMarkup(<InterfaceProperties/>);assert.ok(german.includes('Mischmodus'));}finally{interfaceSession.clear();setLocale('en');}});
+test('P47 text alignment select renders for text layers in English and German',async()=>{interfaceSession.start();interfaceSession.transact(d=>{const f=addNode(d,d.pages[0].id,'frame');const t=addNode(d,d.pages[0].id,'text',f);d.nodes.find(n=>n.id===t)!.textAlign='center';});interfaceSession.select(interfaceSession.get().document!.nodes[1].id);
+ const html=renderToStaticMarkup(<InterfaceProperties/>);assert.ok(html.includes('Text alignment'));assert.ok(html.includes('Center'));
+ interfaceSession.select(interfaceSession.get().document!.nodes[0].id);assert.ok(!renderToStaticMarkup(<InterfaceProperties/>).includes('Text alignment'),'frames hide the alignment select');
+ interfaceSession.clear();setLocale('de');try{interfaceSession.start();interfaceSession.transact(d=>{const f=addNode(d,d.pages[0].id,'frame');addNode(d,d.pages[0].id,'text',f);});interfaceSession.select(interfaceSession.get().document!.nodes[1].id);
+ const german=renderToStaticMarkup(<InterfaceProperties/>);assert.ok(german.includes('Textausrichtung'));assert.ok(german.includes('Zentriert'));}finally{interfaceSession.clear();setLocale('en');}});

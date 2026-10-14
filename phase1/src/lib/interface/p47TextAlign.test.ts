@@ -1,0 +1,22 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {createInterfaceSession} from './session';
+import {addNode} from './model';
+import {exportInterfaceLayerSVG,interfaceLayerCSS,inspectInterfaceCSS,buildInterfaceHandoff} from './export';
+import {interfaceHandoffSnippets} from './handoffSnippets';
+import {interfaceLayerTailwind,interfaceLayerSwiftUI} from './devMode';
+function scene(){const s=createInterfaceSession();s.start();let frame='',text='';s.transact(d=>{frame=addNode(d,d.pages[0].id,'frame');text=addNode(d,d.pages[0].id,'text',frame);d.nodes.find(n=>n.id===text)!.text='Aligned copy';d.nodes.find(n=>n.id===text)!.width=200;});return {s,frame,text};}
+test('text alignment reaches svg text-anchor and every css/snippet/dev channel',()=>{const {s,frame,text}=scene();s.transact(d=>{d.nodes.find(n=>n.id===text)!.textAlign='center';});const doc=s.get().document!;
+ const svg=exportInterfaceLayerSVG(doc,frame).svg;assert.ok(svg.includes('text-anchor="middle"'),'svg centers text');assert.ok(svg.includes('<tspan x="100"'),'tspan x moves to half width');
+ assert.ok(interfaceLayerCSS(doc,text).css.includes('text-align: center'));
+ assert.ok(inspectInterfaceCSS(doc,frame).find(r=>r.id===text)!.values['text-align']==='center');
+ assert.ok(interfaceHandoffSnippets(doc,frame).css.includes('text-align: center'));
+ assert.ok(interfaceLayerTailwind(doc,text).snippet.includes('text-center'));
+ assert.ok(interfaceLayerSwiftUI(doc,text).snippet.includes('.multilineTextAlignment(.center)'));
+ const row=(buildInterfaceHandoff(doc,frame).nodes as {id:string;textAlign?:string}[]).find(r=>r.id===text)!;assert.equal(row.textAlign,'center');});
+test('right alignment anchors at the layer width',()=>{const {s,frame,text}=scene();s.transact(d=>{d.nodes.find(n=>n.id===text)!.textAlign='right';});
+ const svg=exportInterfaceLayerSVG(s.get().document!,frame).svg;assert.ok(svg.includes('text-anchor="end"'));assert.ok(svg.includes('<tspan x="200"'));});
+test('text alignment validates kind and enum, clears on default and undoes once',()=>{const {s,frame,text}=scene();s.transact(d=>{d.nodes.find(n=>n.id===text)!.textAlign='right';});
+ assert.equal(s.get().document!.nodes.find(n=>n.id===text)!.textAlign,'right');
+ const before=s.get();assert.throws(()=>s.transact(d=>{d.nodes.find(n=>n.id===text)!.textAlign='justify' as never;}));assert.equal(s.get(),before);
+ const before2=s.get();assert.throws(()=>s.transact(d=>{d.nodes.find(n=>n.id===frame)!.textAlign='center' as never;}));assert.equal(s.get(),before2);
+ s.transact(d=>{delete d.nodes.find(n=>n.id===text)!.textAlign;});assert.equal(s.get().document!.nodes.find(n=>n.id===text)!.textAlign,undefined);});
