@@ -24,6 +24,7 @@ export class SlidesClient {
  async shapesBounds(bytes:Uint8Array,slideId:number,edits:ShapeBoundsEdit[]){return await this.request({op:'shapesBounds',bytes,slideId,edits}) as Uint8Array;}
  async styleShapes(bytes:Uint8Array,slideId:number,shapeIds:number[],patch:ShapeStylePatch){return await this.request({op:'style',bytes,slideId,shapeIds,patch}) as Uint8Array;}
  async insertTable(bytes:Uint8Array,slideId:number,rows:number,cols:number){return await this.request({op:'insertTable',bytes,slideId,rows,cols}) as Uint8Array;}
+ async setAllBackgrounds(bytes:Uint8Array,background:{kind:'inherit'}|{kind:'solid';color:string}){return await this.request({op:'backgroundAll',bytes,background}) as Uint8Array;}
  async setBackground(bytes:Uint8Array,slideId:number,background:SlideBackground){return await this.request({op:'background',bytes,slideId,background}) as Uint8Array;}
  async editLayoutBox(bytes:Uint8Array,layoutPart:string,shapeId:number,expected:BoundsBox,next:BoundsBox){return await this.request({op:'layoutBox',bytes,layoutPart,shapeId,expected,next}) as Uint8Array;}
  async editMasterBox(bytes:Uint8Array,shapeId:number,expected:BoundsBox,next:BoundsBox){return await this.request({op:'masterBox',bytes,shapeId,expected,next}) as Uint8Array;}

@@ -5536,6 +5536,23 @@
       "hasEnabled": true
     },
     {
+      "id": "slides.setAllSlideBackgrounds",
+      "title": "Set background on all slides",
+      "category": "Edit",
+      "source": "slides",
+      "keywords": [
+        "all",
+        "background",
+        "color",
+        "colour",
+        "every",
+        "fill",
+        "master",
+        "slides"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "slides.setNotes",
       "title": "Set speaker notes",
       "category": "Edit",

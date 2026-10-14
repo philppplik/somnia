@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {unzipSync,zipSync,strFromU8,strToU8} from 'fflate';
-import {setSlideBackground,readSlideBackground,editLayoutBox,readLayoutBoxes,editMasterBox,readMaster,editTheme,readTheme,insertTable,editTable,readTable,setShapeStyle,readShapeStyle,setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
+import {setAllSlideBackgrounds,backgroundSummary,setSlideBackground,readSlideBackground,editLayoutBox,readLayoutBoxes,editMasterBox,readMaster,editTheme,readTheme,insertTable,editTable,readTable,setShapeStyle,readShapeStyle,setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
 import {readRuns,makeEditedCopy} from './editCopy';
 import {png,jpeg} from './imageFixtures';
 
@@ -827,4 +827,19 @@ test('background: bounds and unsupported backgrounds are never overwritten',()=>
   z[part]=strToU8(strFromU8(z[part]).replace(/<p:cSld\b([^>]*)>/,'<p:cSld$1><p:bg><p:bgRef idx="1001"><a:schemeClr val="bg1"/></p:bgRef></p:bg>'));
   const odd=zipSync(z);assert.deepEqual(readSlideBackground(odd,sid),{kind:'other'});
   assert.throws(()=>setSlideBackground(odd,sid,{kind:'solid',color:'112233'}),/cannot be edited/);assert.throws(()=>setSlideBackground(odd,sid,{kind:'inherit'}),/cannot be edited/);
+});
+
+test('background all: one pass over every slide, refuses decks with unsupported backgrounds',()=>{
+  const b=deck(3),sid=ids(b);
+  const one=setSlideBackground(b,sid[1],{kind:'solid',color:'AABBCC'});
+  const c=setAllSlideBackgrounds(one,{kind:'solid',color:'1F5FBF'});
+  for(const id of sid)assert.deepEqual(readSlideBackground(c,id),{kind:'solid',color:'1F5FBF'});
+  assert.deepEqual(backgroundSummary(c),{total:3,inherit:0,solid:3,other:0});
+  assert.equal(setAllSlideBackgrounds(c,{kind:'solid',color:'1F5FBF'}),c);
+  const d=setAllSlideBackgrounds(c,{kind:'inherit'});assert.deepEqual(backgroundSummary(d),{total:3,inherit:3,solid:0,other:0});assert.deepEqual(titles(d),titles(b));
+  assert.throws(()=>setAllSlideBackgrounds(b,{kind:'solid',color:'nope'}));
+  const z=unzipSync(b),part=readDeckModel(b).slides[1].part;
+  z[part]=strToU8(strFromU8(z[part]).replace(/<p:cSld\b([^>]*)>/,'<p:cSld$1><p:bg><p:bgRef idx="1001"><a:schemeClr val="bg1"/></p:bgRef></p:bg>'));
+  const odd=zipSync(z);assert.equal(backgroundSummary(odd).other,1);assert.throws(()=>setAllSlideBackgrounds(odd,{kind:'solid',color:'112233'}),/cannot be edited/);
+  assert.deepEqual(readSlideBackground(odd,sid[0]),{kind:'inherit'});
 });

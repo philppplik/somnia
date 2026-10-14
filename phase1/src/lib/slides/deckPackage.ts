@@ -1682,3 +1682,32 @@ export function setSlideBackground(bytes:Uint8Array,slideId:number,next:SlideBac
   const re=unzipSync(res);for(const k of Object.keys(zip))if(k!==slide.part&&(!re[k]||re[k].length!==zip[k].length||re[k].some((v,i)=>v!==zip[k][i])))throw Error('Edited deck changed an unrelated part');
   return res;
 }
+
+/** Counts of slide backgrounds by kind, for the all-slides action. */
+export function backgroundSummary(bytes:Uint8Array):{total:number;inherit:number;solid:number;other:number}{
+  const zip=openPackage(bytes),r={total:0,inherit:0,solid:0,other:0};
+  for(const s of readDeckModel(bytes).slides){r.total++;r[(bgOf(text(zip,s.part))?.bg??{kind:'inherit'}).kind]++;}
+  return r;
+}
+/** Applies one background to every slide in a single pass. Refuses the whole deck if any slide has a background that cannot be edited here. */
+export function setAllSlideBackgrounds(bytes:Uint8Array,next:Exclude<SlideBackground,{kind:'other'}>):Uint8Array{
+  if(next.kind!=='inherit'&&next.kind!=='solid')throw Error('Choose a solid color or the master background');
+  if(next.kind==='solid'&&!/^[0-9A-F]{6}$/.test(next.color))throw Error('Color must be six uppercase hex digits');
+  const model=readDeckModel(bytes);if(!model.slides.length)throw Error('Deck has no slides');
+  const zip=openPackage(bytes),changed:Record<string,string>={},el=next.kind==='solid'?`<p:bg><p:bgPr><a:solidFill><a:srgbClr val="${next.color}"/></a:solidFill><a:effectLst/></p:bgPr></p:bg>`:'';
+  for(const slide of model.slides){
+    if(slide.problems.length)throw Error('A slide has unsupported structure');
+    const xml=text(zip,slide.part),cur=bgOf(xml),was=cur?.bg??{kind:'inherit'} as SlideBackground;
+    if(was.kind==='other')throw Error('A slide has a background that cannot be edited here');
+    if(was.kind===next.kind&&(next.kind==='inherit'||(was.kind==='solid'&&was.color===next.color)))continue;
+    if(changed[slide.part]!==undefined)throw Error('Two slides share one part');
+    if(cur)changed[slide.part]=xml.slice(0,cur.start)+el+xml.slice(cur.end);
+    else{const cs=/<p:cSld\b[^>]*>/.exec(xml)!;const at=cs.index+cs[0].length;changed[slide.part]=xml.slice(0,at)+el+xml.slice(at);}
+  }
+  if(!Object.keys(changed).length)return bytes;
+  const res=repack(zip,changed),after=readDeckModel(res);
+  if(after.slides.length!==model.slides.length||JSON.stringify(after.slides.map(s=>s.shapes))!==JSON.stringify(model.slides.map(s=>s.shapes))||after.runs.length!==model.runs.length||after.runs.some((r,i)=>r.text!==model.runs[i].text))throw Error('Edited deck failed verification');
+  const rz=unzipSync(res);for(const s of after.slides){const g=bgOf(text(rz,s.part))?.bg??{kind:'inherit'} as SlideBackground;if(g.kind!==next.kind||(next.kind==='solid'&&g.kind==='solid'&&g.color!==next.color))throw Error('Edited deck failed verification');}
+  const re=unzipSync(res);for(const k of Object.keys(zip))if(!(k in changed)&&(!re[k]||re[k].length!==zip[k].length||re[k].some((v,i)=>v!==zip[k][i])))throw Error('Edited deck changed an unrelated part');
+  return res;
+}
