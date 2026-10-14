@@ -1,5 +1,6 @@
 import {Field} from './InterfaceField';
 export {Field};
+import {InterfaceSelectionControls} from './InterfaceSelection';
 import {InterfaceMediaControls} from './InterfaceMedia';
 import {InterfaceVectorControls} from './InterfaceVectorControls';
 import {InterfaceResources,InterfaceBindings} from './InterfaceResources';
@@ -20,11 +21,13 @@ export function InterfaceLayers(){
  const s=useInterfaceState();const {t}=useT();const doc=s.document;const page=doc?.pages.find(p=>p.id===s.pageId);
  if(!doc||!page)return <p className="p-3 text-xs text-ink-2">{t('interface.empty')}</p>;
  const row=(id:string,depth:number):ReactNode=>{const n=doc.nodes.find(n=>n.id===id)!;return <li key={id}>
-  <button className="w-full rounded px-2 py-1.5 text-left text-xs focus-visible:outline-accent" style={{paddingLeft:8+depth*14,background:s.selection===id?'var(--bg-hover)':undefined,opacity:n.hidden?0.55:1}} aria-pressed={s.selection===id} onClick={()=>interfaceSession.select(id)}>{n.name}{n.locked?' 🔒':''}</button>
+  <button className="w-full rounded px-2 py-1.5 text-left text-xs focus-visible:outline-accent" style={{paddingLeft:8+depth*14,background:s.selectedIds.includes(id)?'var(--bg-hover)':undefined,opacity:n.hidden?0.55:1}} aria-pressed={s.selectedIds.includes(id)} onClick={e=>interfaceSession.select(id,e.shiftKey||e.ctrlKey||e.metaKey)}>{n.name}{n.locked?' 🔒':''}</button>
   {n.children.length>0&&<ul className="m-0 list-none p-0">{n.children.map(child=>row(child,depth+1))}</ul>}
  </li>;};
  return <Guard>{run=><div className="flex flex-col gap-3 p-3">
   <label className="text-xs">{t('interface.page')}<select className="mt-1 w-full rounded border border-subtle bg-panel p-2" value={s.pageId??''} onChange={e=>interfaceSession.page(e.target.value)}>{doc.pages.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
+  <Field name={t('interface.pageName')} value={page.name} onCommit={name=>run(()=>interfaceSession.transact(d=>{d.pages.find(p=>p.id===page.id)!.name=name;}))}/>
+  <label className="text-xs">{t('interface.navigateFrame')}<select className="mt-1 w-full bg-panel p-2" value={doc.nodes.find(n=>n.id===s.selection&&n.kind==='frame')?.id??''} onChange={e=>{interfaceSession.select(e.target.value||null);window.dispatchEvent(new CustomEvent('interface-reveal',{detail:e.target.value}));}}><option value="">{t('interface.none')}</option>{doc.nodes.filter(n=>n.pageId===page.id&&n.kind==='frame').map(n=><option key={n.id} value={n.id}>{n.name}</option>)}</select></label>
   <Button size="compact" variant="outline" onClick={()=>run(()=>{const id=uid();interfaceSession.transact(d=>d.pages.push({id,name:`${t('interface.page')} ${d.pages.length+1}`,children:[]}));interfaceSession.page(id);})}>{t('interface.addPage')}</Button>
   <div className="flex flex-wrap gap-1">{(['frame','rectangle','text','group','ellipse','line','path'] as const).map(kind=><Button size="compact" key={kind} onClick={()=>run(()=>{const selected=doc.nodes.find(n=>n.id===s.selection);let id='';interfaceSession.transact(d=>{id=addNode(d,page.id,kind,selected&&['frame','group'].includes(selected.kind)&&!selected.locked?selected.id:null);});interfaceSession.select(id);})}>{t(`interface.${kind}`)}</Button>)}</div>
   {(doc.components??[]).length>0&&<details open className="border-t border-subtle pt-2"><summary className="mb-2 text-xs">{t('interface.component')}</summary><div className="flex flex-col gap-1">{doc.components!.flatMap(c=>c.variants.map(v=><Button key={v.id} size="compact" variant="outline" onClick={()=>run(()=>{let id='';interfaceSession.transact(d=>{id=instantiateComponent(d,c.id,v.id,page.id);});interfaceSession.select(id);})}>{c.name} / {v.name}</Button>))}</div></details>}
@@ -39,7 +42,8 @@ export function InterfaceProperties(){
  const move=(delta:number)=>{if(!node)return;const siblings=node.parentId?doc.nodes.find(n=>n.id===node.parentId)!.children:doc.pages.find(p=>p.id===node.pageId)!.children;const index=siblings.indexOf(node.id);interfaceSession.transact(d=>reparentNode(d,node.id,node.parentId,Math.max(0,Math.min(siblings.length-1,index+delta))));};
  return <Guard>{run=><div className="flex flex-col gap-3 p-3">
   <Field name={t('interface.name')} value={doc.name} onCommit={name=>run(()=>interfaceSession.transact(d=>{d.name=name;}))}/>
-  {!node?<p className="text-xs text-ink-2">{t('interface.noSelection')}</p>:<>
+  <InterfaceSelectionControls run={run}/>
+  {s.selectedIds.length>1?<p className="text-xs text-ink-2">{t('interface.multiSelection',{count:s.selectedIds.length})}</p>:!node?<p className="text-xs text-ink-2">{t('interface.noSelection')}</p>:<>
    <Field name={t('interface.name')} value={node.name} disabled={node.locked} onCommit={name=>run(()=>patch({name}))}/>
    <div className="grid grid-cols-2 gap-2">{(['x','y','width','height'] as const).map(key=><Field key={key} name={t(`interface.${key}`)} value={node[key]} type="number" disabled={node.locked} onCommit={value=>run(()=>{if(!value.trim())throw Error('A number is required.');patch({[key]:Number(value)});})}/>)}</div>
    <Field name={t('interface.fill')} value={node.fill} type="color" disabled={node.locked} onCommit={fill=>run(()=>patch({fill}))}/>

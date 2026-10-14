@@ -1,3 +1,4 @@
+import {INTERFACE_SELECTION_CATALOGUES} from './selectionI18n';
 import {INTERFACE_MEDIA_CATALOGUES} from './mediaI18n';
 import {INTERFACE_OUTPUT_CATALOGUES} from './outputI18n';
 import {INTERFACE_LAYOUT_CATALOGUES} from './layoutI18n';
@@ -52,3 +53,5 @@ for(const [locale,extra] of Object.entries(INTERFACE_LAYOUT_CATALOGUES))Object.a
 for(const [locale,extra] of Object.entries(INTERFACE_OUTPUT_CATALOGUES))Object.assign(INTERFACE_CATALOGUES[locale as keyof typeof INTERFACE_CATALOGUES],extra);
 
 for(const [locale,extra] of Object.entries(INTERFACE_MEDIA_CATALOGUES))Object.assign(INTERFACE_CATALOGUES[locale as keyof typeof INTERFACE_CATALOGUES],extra);
+
+for(const [locale,extra] of Object.entries(INTERFACE_SELECTION_CATALOGUES))Object.assign(INTERFACE_CATALOGUES[locale as keyof typeof INTERFACE_CATALOGUES],extra);

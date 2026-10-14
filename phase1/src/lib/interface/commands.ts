@@ -1,7 +1,8 @@
+import {deleteSelection} from './editing';
 import {registerCommandScope,commandRegistry} from '../commandRegistry';
 import {getStudioContext} from '../shell/studioContext';
 import {registerCommandSpec} from '../commandBridge';
-import {addNode,deleteNode} from './model';
+import {addNode} from './model';
 import {interfaceSession,startInterface} from './session';
 import {saveInterfaceSnapshot} from './persistence';
 import type {CommandCategory} from '../commandSpec';
@@ -17,7 +18,7 @@ export function registerInterfaceCommands(){
  ['new','Project',startInterface,()=>true],['save','Project',saveInterfaceSnapshot,()=>!!state().document],
  ['undo','Edit',()=>interfaceSession.undo(),()=>!!state().past.length],['redo','Edit',()=>interfaceSession.redo(),()=>!!state().future.length],
  ['addFrame','Insert',()=>insertInterfaceNode('frame'),()=>!!state().document],['addRectangle','Insert',()=>insertInterfaceNode('rectangle'),()=>!!state().document],['addText','Insert',()=>insertInterfaceNode('text'),()=>!!state().document],
- ['delete','Edit',()=>interfaceSession.transact(d=>{if(state().selection)deleteNode(d,state().selection!);}),()=>!!state().selection&&!state().document?.nodes.find(n=>n.id===state().selection)?.locked],
+ ['delete','Edit',()=>interfaceSession.transact(d=>{deleteSelection(d,state().selectedIds);}),()=>!!state().selectedIds.length&&!state().selectedIds.some(id=>state().document?.nodes.find(n=>n.id===id)?.locked)],
  ];
  const offs=specs.map(([id,category,run,enabled])=>registerCommandSpec({id:`interface.${id}`,title:`Interface: ${id}`,category,level:'ui',enabled,run}));const routes:Record<string,string>={'project.save':'interface.save','edit.undo':'interface.undo','edit.redo':'interface.redo','edit.delete':'interface.delete'};offs.push(registerCommandScope(id=>getStudioContext().studio==='interface'&&routes[id]?commandRegistry.get(routes[id]):undefined));return()=>offs.forEach(off=>off());
 }
