@@ -64,6 +64,7 @@ export type DocumentsRequest=
  |{id:number;kind:'paraStyle';first:number;last:number;style:DocStyleId}
  |{id:number;kind:'setList';first:number;last:number;list:ListKindId}
  |{id:number;kind:'listLevel';first:number;last:number;delta:number}
+ |{id:number;kind:'tableEdit';block:number;op:TableOp}
  |{id:number;kind:'save'}
  |{id:number;kind:'close'};
 export type DocumentsResponse=
@@ -83,3 +84,7 @@ export type DocumentsResponse=
  |{id:number;ok:false;error:string};
 export const MAX_DOCX_BYTES=16*1024*1024;
 export const MIN_SCALE=0.1,MAX_SCALE=2;
+
+/** Row and column operations around the caret's table cell. */
+export const TABLE_OPS=['row_above','row_below','delete_row','col_left','col_right','delete_col'] as const;
+export type TableOp=typeof TABLE_OPS[number];

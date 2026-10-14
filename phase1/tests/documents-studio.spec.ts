@@ -334,3 +334,20 @@ test('D3b: heading style and lists from the format bar change the engine render,
  await page.getByTestId('documents-undo').click();
  await expect(page.getByTestId('documents-list-bullet')).toHaveAttribute('aria-pressed','true');
 });
+test('table menu: insert and delete a row and a column from a cell caret, each undone in one step',async({page})=>{
+ await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ await openBuffers(page,[{name:'sample.docx',mimeType:DOCX,buffer:sample()}]);
+ await expect(page.getByTestId('documents-pages')).toHaveText('1 pages');
+ const pg=page.getByTestId('documents-page').first();const img=pg.locator('img');
+ await expect.poll(()=>img.evaluate((i:HTMLImageElement)=>i.complete&&i.naturalWidth)).toBeGreaterThan(300);
+ await expect(page.getByTestId('documents-table-menu')).toHaveCount(0);
+ const b2=(await pg.boundingBox())!;await page.mouse.click(b2.x+b2.width*0.15,b2.y+b2.height*0.19);
+ await expect(page.getByTestId('documents-caret')).toHaveCount(1);
+ const menu=page.getByTestId('documents-table-menu');await expect(menu).toBeVisible();
+ for(const op of ['row_below','col_right','delete_col','delete_row']){
+  await menu.selectOption(op);await page.waitForTimeout(250);
+  await expect(page.getByTestId('documents-edit-error')).toHaveCount(0);await expect(page.getByTestId('documents-caret')).toHaveCount(1);
+ }
+ for(let i=0;i<4;i++){await page.getByTestId('documents-undo').click();await page.waitForTimeout(200);}
+ await expect(page.getByTestId('documents-edit-error')).toHaveCount(0);
+});

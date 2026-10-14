@@ -1,9 +1,10 @@
-import {checkFormatPatch,checkParaPatch,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch} from './protocol';
+import {checkFormatPatch,checkParaPatch,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch} from './protocol';
 import {captureDocumentSelection} from './selectionCapture';
 import {CELL_BASE,caretAfterEdit,diffEdit,inverseOf,UndoStack,type TextEdit,type UndoEntry} from './edit';
 import {stepBoundary,utf16ToUtf8Offset,utf8ToUtf16Offset,wordBoundary} from './text';
 import {getDocumentsState,patchDocuments,resetDocuments,INITIAL_VIEW,type Caret,type DocumentsState} from './store';
 import {DocumentsEngine} from './engine';
+import {blockAfterTableEdit,cellOf} from './tableOps';
 import {inspectDocx} from './inspect';
 /** The one open document: engine, undo history and the refresh after each edit. UI components only call these functions. */
 let engine:DocumentsEngine|null=null;let undo=new UndoStack();let chain:Promise<unknown>=Promise.resolve();let pending=0;
@@ -137,9 +138,11 @@ export const redoEdit=()=>run(async()=>{const check=ownerGuard(),x=undo.popRedo(
 
 type Spot={block:number;off:number};
 /** Paragraph split/join. One undo step restores the engine's pre-edit block list from a cheap snapshot; a failure part-way restores it at once. */
-async function structural(op:(e:DocumentsEngine)=>Promise<import('./protocol').OpenedDocument>,before:Spot,after:Spot){
+async function structural(op:(e:DocumentsEngine)=>Promise<import('./protocol').OpenedDocument>,before:Spot,afterSpec:Spot|((e:DocumentsEngine)=>Promise<Spot>)){
  const e=engine;if(!e)return;const check=ownerGuard(),b=await e.snapshot();check();let d;
  try{d=await op(e);check();}catch(err){if(engine===e)await e.restore(b).catch(()=>undefined);throw err;}
+ let after:Spot;try{after=typeof afterSpec==='function'?await afterSpec(e):afterSpec;}catch(err){await e.restore(b).catch(()=>undefined);throw err;}
+ check();
  const a=await e.snapshot();check();undo.pushSnap({before:b,after:a,caretBefore:before,caretAfter:after});
  patchDocuments({edited:true,editError:'',caretLocked:false,caret:{block:after.block,anchor:after.off,head:after.off}});await refresh(d);
 }
@@ -414,4 +417,15 @@ export const stepIndent=(dir:-1|1)=>run(()=>{
  const cur=getDocumentsState().para?.indentLeft??0;
  const next=Math.min(1440,Math.max(0,cur+dir*INDENT_STEP_PT));
  return next===cur?Promise.resolve():applyPara({indentLeft:next});
+});
+
+/** Insert or delete a row or column around the caret's table cell. One undo step; the caret stays in its original cell (or the nearest one after a delete). */
+export const editTable=(op:TableOp)=>run(async()=>{
+ if(!(TABLE_OPS as readonly string[]).includes(op))throw new Error('Table operation is not offered.');
+ const c=getDocumentsState().caret;if(!c)return;goalX=null;
+ if(c.anchorBlock!==undefined&&c.anchorBlock!==c.block)throw new Error('Place the caret in one table cell.');
+ const at=cellOf(getDocumentsState().blocks,c.block);if(!at)throw new Error('Place the caret in a table cell.');
+ await structural(eng=>eng.editTable(c.block,op),{block:c.block,off:c.head},async eng=>{
+  const nb=blockAfterTableEdit(op,at,await eng.blocks());if(nb===null)throw new Error('The table has no editable cell left.');return{block:nb,off:0};
+ });
 });

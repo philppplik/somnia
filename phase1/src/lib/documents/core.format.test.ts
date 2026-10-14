@@ -47,3 +47,12 @@ test('style, list and level requests are validated before the engine',()=>{
  assert.equal(calls.length,0);go({kind:'paraStyle',style:'Heading2'});go({kind:'setList',list:'numbered'});go({kind:'listLevel',delta:-1});
  assert.deepEqual(calls,['sHeading2','lnumbered','v-1']);
 });
+
+test('table edits are validated before the engine',()=>{
+ const calls:string[]=[];
+ const S=class{constructor(_b?:Uint8Array){}free(){}blocks(){return '[]';}edit_table(b:number,op:string){calls.push(b+op);}paginate(){return {};}} as unknown as new(b:Uint8Array)=>never;
+ const k=new DocumentsCore(S);k.handle({id:1,kind:'open',bytes:new Uint8Array(4)} as never);
+ const go=(r:object)=>k.handle({id:2,kind:'tableEdit',...r} as never).res.ok;
+ for(const bad of [{block:-1,op:'row_above'},{block:1.5,op:'row_above'},{block:2**31,op:'row_above'},{block:5,op:'drop_table'},{block:5,op:'__proto__'},{block:5}])assert.equal(go(bad),false,JSON.stringify(bad));
+ assert.equal(calls.length,0);go({block:1048576,op:'delete_col'});assert.deepEqual(calls,['1048576delete_col']);
+});

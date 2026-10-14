@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {applyEdit,CELL_BASE,type TextEdit} from './edit';
 import type {DocumentsEngine} from './engine';
 import {getDocumentsState,patchDocuments} from './store';
-import {setParagraphStyle,shiftListLevel,toggleList,setAlign,setLineSpacing,setSpaceAfter,stepIndent,setFont,setFontColor,setFontSize,stepFontSize,toggleFormat,deleteAtCaret,moveCaret,MAX_INSERT_LINES,pasteText,redoEdit,resetSessionsForTest,selectAllText,selectedText,setSessionDeps,splitAtCaret,switchDocument,typeText,undoEdit,syncGeometry} from './session';
+import {editTable,setParagraphStyle,shiftListLevel,toggleList,setAlign,setLineSpacing,setSpaceAfter,stepIndent,setFont,setFontColor,setFontSize,stepFontSize,toggleFormat,deleteAtCaret,moveCaret,MAX_INSERT_LINES,pasteText,redoEdit,resetSessionsForTest,selectAllText,selectedText,setSessionDeps,splitAtCaret,switchDocument,typeText,undoEdit,syncGeometry} from './session';
 import {stepBoundary,wordBoundary} from './text';
 const docx=new Uint8Array(readFileSync(new URL('../../../test/documents/sample.docx',import.meta.url)));
 type Row={text:string;locked?:boolean;f?:Set<string>[];p?:Record<string,number|string>};
@@ -248,7 +248,7 @@ test('a table in the span refuses style and list changes',async()=>{
 /** Engine whose blocks are two top paragraphs and a 2x1 table of cell paragraphs addressed from CELL_BASE. */
 class CellDoc extends Doc{
  cells=['alpha','beta'];edits:{block:number;text:string}[]=[];
- override async blocks():Promise<never>{return [{index:0,kind:'para' as const,editable:true,text:'top'},{index:1,kind:'table' as const,editable:false},...this.cells.map((t,i)=>({index:CELL_BASE+i,kind:'cell' as const,editable:true,text:t}))] as never;}
+ override async blocks():Promise<never>{return [{index:0,kind:'para' as const,editable:true,text:'top'},{index:1,kind:'table' as const,editable:false},...this.cells.map((t,i)=>({index:CELL_BASE+i,kind:'cell' as const,editable:true,text:t,table:1,row:i,cell:0,para:0}))] as never;}
  override async replace(e:TextEdit){const i=e.block-CELL_BASE;if(i<0||i>=this.cells.length)throw new Error('no cell paragraph');this.edits.push({block:e.block,text:applyEdit(this.cells[i],e)});this.cells[i]=applyEdit(this.cells[i],e);return this.doc();}
  override async merge(_b:number):Promise<never>{throw new Error('paragraphs inside table cells cannot be split or joined yet');}
  override async split(_b:number,_o:number):Promise<never>{throw new Error('paragraphs inside table cells cannot be split or joined yet');}
@@ -267,4 +267,12 @@ test('a selection across two cells is refused without changing either; Ctrl+A st
  const cd=await openCells();at(CELL_BASE+1,2,{block:CELL_BASE,off:1});await typeText('x');
  assert.match(getDocumentsState().editError,/cannot be edited as text/);assert.deepEqual(cd.cells,['alpha','beta']);
  at(CELL_BASE,2);selectAllText();assert.equal(selectedText(),'alpha');
+});
+test('editTable needs a caret in one table cell and surfaces engine refusals without changing the document',async()=>{
+ const cd=await openCells() as CellDoc&{tableCalls?:string[]};const calls:string[]=[];
+ (cd as unknown as {editTable:(b:number,o:string)=>Promise<unknown>}).editTable=async(b,o)=>{calls.push(b+o);throw new Error('the table has reached its row limit');};
+ await editTable('row_below');assert.equal(calls.length,0);// no caret
+ at(0,1);await editTable('row_below');assert.match(getDocumentsState().editError,/inside a table cell|table cell/);assert.equal(calls.length,0);
+ at(CELL_BASE+1,2,{block:CELL_BASE,off:1});await editTable('row_below');assert.match(getDocumentsState().editError,/one table cell/);assert.equal(calls.length,0);
+ at(CELL_BASE,1);await editTable('row_below');assert.deepEqual(calls,[CELL_BASE+'row_below']);assert.match(getDocumentsState().editError,/row limit/);assert.deepEqual(cd.cells,['alpha','beta']);
 });

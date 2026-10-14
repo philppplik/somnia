@@ -1,6 +1,7 @@
 import {registerCommand} from '../commandRegistry';
 import {getDocumentsState,patchDocuments,stepZoom} from './store';
-import {redoEdit,setAlign,setParagraphStyle,toggleList,shiftListLevel,stepFontSize,stepIndent,toggleFormat,undoEdit} from './session';
+import {redoEdit,setAlign,setParagraphStyle,toggleList,shiftListLevel,stepFontSize,stepIndent,toggleFormat,undoEdit,editTable} from './session';
+import {CELL_BASE} from './edit';
 import {goToBlock,scrollToPage} from './navigate';
 import {documentsExportReady,patchDocumentsExportUi,requestDocumentsSaveCopy} from './exportBridge';
 /**
@@ -8,6 +9,7 @@ import {documentsExportReady,patchDocumentsExportUi,requestDocumentsSaveCopy} fr
  * the same pattern as Sheets. Payload commands take `{page}` (0-based) or `{block}` (paragraph index).
  */
 const ready=()=>getDocumentsState().status==='ready';
+const inCell=()=>{const c=getDocumentsState().caret;return ready()&&!!c&&c.block>=CELL_BASE;};
 const expected=(m:string)=>Object.assign(new Error(m),{expected:true});
 const int=(v:unknown,k:string)=>{const n=(v as Record<string,unknown>|undefined)?.[k];if(typeof n!=='number'||!Number.isInteger(n)||n<0)throw expected(`Missing or invalid "${k}".`);return n;};
 export function registerDocumentsCommands(){
@@ -43,6 +45,12 @@ export function registerDocumentsCommands(){
   add('documents.list.outdent','Promote list item',async()=>{await shiftListLevel(-1);},()=>ready()&&!!getDocumentsState().caret),
   add('documents.pages.goto','Go to page',p=>{const n=int(p,'page');if(n>=getDocumentsState().pages)throw expected('That page does not exist.');if(!scrollToPage(n))throw expected('The page is not on screen yet.');}),
   add('documents.outline.goto','Go to paragraph',async p=>{if(!await goToBlock(int(p,'block')))throw expected('That block has no text position.');}),
+  add('documents.table.row_above','Insert row above',async()=>{await editTable('row_above');},inCell),
+  add('documents.table.row_below','Insert row below',async()=>{await editTable('row_below');},inCell),
+  add('documents.table.delete_row','Delete row',async()=>{await editTable('delete_row');},inCell),
+  add('documents.table.col_left','Insert column left',async()=>{await editTable('col_left');},inCell),
+  add('documents.table.col_right','Insert column right',async()=>{await editTable('col_right');},inCell),
+  add('documents.table.delete_col','Delete column',async()=>{await editTable('delete_col');},inCell),
  ];
  return()=>offs.forEach(f=>f());
 }
