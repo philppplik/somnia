@@ -1,3 +1,4 @@
+import {templateEdits,TEMPLATE_IDS,TEMPLATE_LAYERS} from './templates';
 import test from 'node:test';import assert from 'node:assert/strict';
 import {motionBlurSamples} from './scene';
 import {defaultEffect,effectBounds} from './effects';
@@ -1908,4 +1909,20 @@ test('P81: text on a path start is keyable, lanes, move, delete bakes, validatio
  assert.equal(layer(x,'tx').source.textPathStartAnim,undefined);assert.equal(layer(x,'tx').source.textPathStart,10);validateDocument(x);
  const c=applyEdit(d,textPathEdit(d,'tx',{op:'clear'}));assert.equal(layer(c,'tx').source.textPathStartAnim,undefined);validateDocument(c);
  const bad=structuredClone(d);(bad.compositions[0].layers.find(l=>l.id==='tx')!.source as unknown as {textPathStartAnim:{keys:{v:number}[]}}).textPathStartAnim.keys[0].v=201;assert.ok(validateDocument(bad).length>0);
+});
+
+test('P83: templates insert editable animated layers in one undo step',()=>{
+ for(const id of TEMPLATE_IDS){
+  const d0=createDocument(),c0=findComp(d0)!;const ids=Array.from({length:TEMPLATE_LAYERS[id]},(_,i)=>`t${i}`);
+  const edits=templateEdits(c0,id,8000*30,ids);assert.equal(edits.length,ids.length);
+  const r=d0.revision;const d=applyEdits(d0,edits);assert.equal(d.revision,r+1,id+' is one step');assert.deepEqual(validateDocument(d),[],id);
+  const c=findComp(d)!;assert.equal(c.layers.length,c0.layers.length+ids.length);assert.equal(c.layers[0].id,'t0','top layer first');
+  assert.ok(c.layers.slice(0,ids.length).every(l=>l.inT===8000*30),'starts at the playhead');
+  assert.ok(c.layers.slice(0,ids.length).some(l=>Object.values(l.transform).some(p=>p.keys.length>0)||(l.textReveal?.keys.length??0)>0),'has motion');
+  assert.notEqual(frameSvg(c,8000*30),frameSvg(c,8000*30+8000*40),id+' moves');
+ }
+ assert.throws(()=>templateEdits(findComp(createDocument())!,'lowerThird',0,['a']),/ids/);
+ assert.throws(()=>templateEdits(findComp(createDocument())!,'nope' as never,0,[]),/Unknown/);
+ const c=findComp(createDocument())!;assert.throws(()=>templateEdits(c,'badgePop',c.start+c.duration-100,['a','b']),/half a second/);
+ const e=applyEdits(createDocument(),templateEdits(c,'lowerThird',0,['a','b','c']));assert.throws(()=>applyEdits(e,templateEdits(c,'lowerThird',0,['a','x','y'])),/Duplicate/);
 });

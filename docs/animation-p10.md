@@ -406,3 +406,7 @@ Path effects: `round` (size = corner radius px, only handle-less corners, KAPPA 
 ## P82
 
 `audioReactive.ts` (`reactiveKeys`): samples the peak envelope of an audio clip at its timeline span, normalised to the clip's loudest point, smoothed with a fast attack and a slower release, mapped to min..max. Edit `audio.reactive` writes linear keys (2..600) onto `transform.scale|opacity|rotation` of a non-audio, unlocked layer, replacing that property's keys. Command `animation.audio.reactive`; UI in the audio inspector.
+
+## P83
+
+`templates.ts` (`templateEdits(comp,id,at,ids)`): pure builder returning `layer.add` edits with ready-made keys (bezier eases) for lowerThird (3 layers), titleReveal (2), badgePop (2), ctaBanner (2). Shapes use a centre anchor (the underline anchors at its left edge). Applied as one batch, so one undo step. Command `animation.template.add`; picker in the layer panel.

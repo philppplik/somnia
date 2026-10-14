@@ -680,5 +680,12 @@
  "animation.audio.reactive.prop.scale": "Skalierung (%)",
  "animation.audio.reactive.prop.opacity": "Deckkraft (%)",
  "animation.audio.reactive.prop.rotation": "Drehung (Grad)",
- "cmd.animation.audio.reactive": "Eine Ebene der Lautstärke des Audioclips folgen lassen"
+ "cmd.animation.audio.reactive": "Eine Ebene der Lautstärke des Audioclips folgen lassen",
+ "animation.template.pick": "Startvorlage",
+ "animation.template.add": "Vorlage einfügen",
+ "animation.template.name.lowerThird": "Bauchbinde",
+ "animation.template.name.titleReveal": "Titel-Einblendung",
+ "animation.template.name.badgePop": "Badge-Pop",
+ "animation.template.name.ctaBanner": "Abo-Banner",
+ "cmd.animation.template.add": "Eine Startvorlage einfügen"
 }

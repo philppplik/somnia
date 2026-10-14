@@ -680,5 +680,12 @@
  "animation.audio.reactive.prop.scale": "Scale (%)",
  "animation.audio.reactive.prop.opacity": "Opacity (%)",
  "animation.audio.reactive.prop.rotation": "Rotation (deg)",
- "cmd.animation.audio.reactive": "Make a layer follow the loudness of the audio clip"
+ "cmd.animation.audio.reactive": "Make a layer follow the loudness of the audio clip",
+ "animation.template.pick": "Starter template",
+ "animation.template.add": "Add template",
+ "animation.template.name.lowerThird": "Lower third",
+ "animation.template.name.titleReveal": "Title reveal",
+ "animation.template.name.badgePop": "Badge pop",
+ "animation.template.name.ctaBanner": "Subscribe banner",
+ "cmd.animation.template.add": "Add a starter template"
 }

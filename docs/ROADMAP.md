@@ -517,6 +517,10 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Done: audio-reactive layers. "Make audio reactive" in the audio inspector turns the clip's loudness into keys on another layer's scale, opacity or rotation (quiet and loud values, smoothing 0-10, a key every 2 frames, at most 600). One undo step; command `animation.audio.reactive`.
 - Open: it replaces that property's existing keys (no merge); one value for both scale axes; it is a one-time bake, not live (re-run after trimming or moving the clip); the resolution is the stored peak envelope (1024 bins), so it follows beats and swells, not frequency bands; no position or colour targets.
 
+### Animation P83 (2026-10-14, integration pending)
+- Done: template gallery. "Add template" in the layer panel inserts four starter templates at the playhead in one undo step: Lower third, Title reveal, Badge pop, Subscribe banner. They are plain layers with keys (shapes, text, text reveal, opacity, scale, rotation), sized from the composition, so everything stays editable. Command `animation.template.add`.
+- Open: only four built-in templates; text is placeholder English ("Your name"), edit it after inserting; no user-saved templates and no preview thumbnails; fixed brand colours (change them in the inspector); needs at least half a second left after the playhead.
+
 ### Animation P69 (2026-10-14, integration pending)
 - Done: stroke alignment for closed shapes (centre, inside, outside). Inside clips a double-width stroke to the shape, outside masks the shape out of it, so the visible band keeps the set width. Select in the stroke section. Viewer and every export share the behaviour; open paths stay centred. Absent field means centred and byte-identical output.
 - Open: "Expand stroke" outlines ignore the alignment (centre only), gradient strokes use the same bounding box, no alignment keys.

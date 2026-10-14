@@ -1260,6 +1260,18 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.template.add",
+      "title": "Add a starter template",
+      "category": "Insert",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.text.animator",
       "title": "Edit text animator",
       "category": "Edit",

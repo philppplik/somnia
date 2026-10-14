@@ -23,6 +23,7 @@ import {ClipError,copyKeys,getKeyClip,pastedRefs,setKeyClip} from './keyclip';
 import {allKeysOf,pruneSelection,shiftSelection} from './selection';
 import {EASE_PRESETS,type EasePreset} from './graph';
 import {copyCurve,pasteCurveEdit} from './graphTools';
+import {templateEdits,TEMPLATE_IDS,TEMPLATE_LAYERS,type TemplateId} from './templates';
 import {reactiveKeys,REACTIVE_PROPS,MAX_SMOOTH,type ReactiveProp} from './audioReactive';
 import {detectBeats,beatMarkers,BEAT_LABEL,estimateBpm,gridTicks} from './audioBeats';
 import {quantizeMoves} from './keyQuantize';
@@ -126,6 +127,11 @@ export function animationCommandSpecs():CommandSpec<unknown,unknown>[]{
    if(keys.length<2)throw Object.assign(Error('This clip is silent or outside the composition.'),{expected:true});
    run({type:'audio.reactive',layer:target.id,prop:p.prop,keys});return keys.length;
   },object({layer:layerRef,target:layerRef,prop:{enum:[...REACTIVE_PROPS]},min:{type:'number'},max:{type:'number'},smooth:{type:'number',minimum:0,maximum:MAX_SMOOTH}},['target','prop','min','max']),()=>open()&&findLayer(comp(),selected())?.kind==='audio','Edit'),
+  spec('animation.template.add','Add a starter template',(p:{template:TemplateId;at?:number})=>{
+   const c=comp();const ids=Array.from({length:TEMPLATE_LAYERS[p.template]??0},()=>newId('layer'));
+   run(templateEdits(c,p.template,p.at!==undefined?secondsToTicks(p.at):animationSession().getState().view.playhead,ids));
+   animationSession().setView({selectedLayer:ids[0]});
+  },object({template:{enum:[...TEMPLATE_IDS]},at:{type:'number',minimum:0}},['template']),open,'Insert'),
   spec('animation.audio.grid','Place beat markers on a steady BPM grid',(p:{layer?:string;bpm?:number;sensitivity?:number})=>{
    const c=comp();const l=findLayer(c,layerIdOf(p));if(!l||l.kind!=='audio'||!l.audio)throw Object.assign(Error('Select an audio layer.'),{expected:true});
    const asset=doc().audioAssets?.find(a=>a.id===l.audio!.assetId);if(!asset)throw Object.assign(Error('The audio file is missing.'),{expected:true});

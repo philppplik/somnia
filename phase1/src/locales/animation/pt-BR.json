@@ -680,5 +680,12 @@
  "animation.audio.reactive.prop.scale": "Escala (%)",
  "animation.audio.reactive.prop.opacity": "Opacidade (%)",
  "animation.audio.reactive.prop.rotation": "Rotação (graus)",
- "cmd.animation.audio.reactive": "Fazer uma camada seguir o volume do clipe de áudio"
+ "cmd.animation.audio.reactive": "Fazer uma camada seguir o volume do clipe de áudio",
+ "animation.template.pick": "Modelo inicial",
+ "animation.template.add": "Adicionar modelo",
+ "animation.template.name.lowerThird": "Terço inferior",
+ "animation.template.name.titleReveal": "Título animado",
+ "animation.template.name.badgePop": "Selo em destaque",
+ "animation.template.name.ctaBanner": "Banner de inscrição",
+ "cmd.animation.template.add": "Adicionar um modelo inicial"
 }
