@@ -1666,6 +1666,29 @@ impl DocSession {
         Ok(())
     }
     fn do_export_pdf(&self, opts_json: &str) -> Result<Vec<u8>, String> {
+        self.do_export_pdf_at(opts_json, "")
+    }
+    /// A copy of the document whose properties carry the stamp of a save at `date` (ISO 8601 from the host, the worker
+    /// has no clock): modified = date, created = date when the file had none, revision + 1. Empty `date` = no stamp.
+    /// The open document is never changed.
+    fn stamped(&self, date: &str) -> Result<Option<wordcraft_doc::Document>, String> {
+        if date.is_empty() {
+            return Ok(None);
+        }
+        let b = date.as_bytes();
+        let shape = date.len() >= 10 && date.len() <= 40 && b[4] == b'-' && b[7] == b'-' && b[..4].iter().chain(&b[5..7]).chain(&b[8..10]).all(|c| c.is_ascii_digit()) && date.chars().all(|c| c.is_ascii_digit() || "-:.TZ+".contains(c));
+        if !shape {
+            return Err("the save date is not valid".into());
+        }
+        let mut d = self.doc.clone();
+        d.core.modified = date.to_string();
+        if d.core.created.trim().is_empty() {
+            d.core.created = date.to_string();
+        }
+        d.core.revision = d.core.revision.saturating_add(1);
+        Ok(Some(d))
+    }
+    fn do_export_pdf_at(&self, opts_json: &str, date: &str) -> Result<Vec<u8>, String> {
         let n = self.pages.pages.len();
         if n == 0 {
             return Err("the document has no pages to export".into());
@@ -1705,7 +1728,8 @@ impl DocSession {
                 _ => return Err(format!("unknown PDF option {k}")),
             }
         }
-        let bytes = wordcraft_pdf::export_layout(&self.doc, &self.pages, &opts).map_err(|e| e.to_string())?;
+        let stamped = self.stamped(date)?;
+        let bytes = wordcraft_pdf::export_layout(stamped.as_ref().unwrap_or(&self.doc), &self.pages, &opts).map_err(|e| e.to_string())?;
         if bytes.len() > PDF_MAX_BYTES {
             return Err("adapter PDF limit: the file would be larger than 100 MB".into());
         }
@@ -2052,6 +2076,15 @@ impl DocSession {
     }
     pub fn save(&self) -> Result<Vec<u8>, JsValue> {
         wordcraft_docx::write(&self.doc).map_err(|e| JsValue::from_str(&e.to_string()))
+    }
+    /// Like `save`, stamping the properties with the save time (see `stamped`).
+    pub fn save_at(&self, date: &str) -> Result<Vec<u8>, JsValue> {
+        let stamped = self.stamped(date).map_err(|e| JsValue::from_str(&e))?;
+        wordcraft_docx::write(stamped.as_ref().unwrap_or(&self.doc)).map_err(|e| JsValue::from_str(&e.to_string()))
+    }
+    /// Like `export_pdf_opts`, with the save time as the PDF creation date and properties stamp.
+    pub fn export_pdf_at(&self, opts_json: &str, date: &str) -> Result<Vec<u8>, JsValue> {
+        self.do_export_pdf_at(opts_json, date).map_err(|e| JsValue::from_str(&e))
     }
     /// The current layout as a PDF: selectable text with embedded font subsets, links, outline, pictures.
     /// Call after `paginate`. Refuses documents past the adapter limits instead of writing a huge file.
@@ -2466,6 +2499,32 @@ mod tests {
         assert_eq!(s.doc.body.len(), len);
         s.do_remove_image(1).unwrap();
         assert_eq!(s.doc.body.len(), len - 1);
+    }
+    #[test]
+    fn save_stamps_a_clone_with_modified_created_and_revision() {
+        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
+        s.do_set_properties(r#"{"title":"Stamp"}"#).unwrap();
+        let before = s.doc.core.clone();
+        let saved = s.save_at("2026-10-14T18:00:00.000Z").unwrap();
+        assert_eq!(s.doc.core, before, "the open document is untouched");
+        let re = DocSession::from_bytes(&saved).unwrap();
+        assert_eq!(re.doc.core.modified, "2026-10-14T18:00:00.000Z");
+        assert_eq!(re.doc.core.revision, before.revision + 1);
+        if before.created.is_empty() {
+            assert_eq!(re.doc.core.created, "2026-10-14T18:00:00.000Z");
+        } else {
+            assert_eq!(re.doc.core.created, before.created);
+        }
+        assert_eq!(re.doc.core.title, "Stamp");
+        // Without a date nothing is stamped.
+        let plain = DocSession::from_bytes(&s.save_at("").unwrap()).unwrap();
+        assert_eq!(plain.doc.core.revision, before.revision);
+        for bad in ["yesterday", "2026-10-14 18:00", "2026/10/14", "2026-10-14T18:00:00Z\n", &"2026-10-14".repeat(5)] {
+            assert!(s.save_at(bad).is_err(), "{bad}");
+        }
+        s.paginate();
+        assert!(s.do_export_pdf_at("{}", "2026-10-14T18:00:00Z").unwrap().starts_with(b"%PDF-"));
+        assert!(s.do_export_pdf_at("{}", "nope").is_err());
     }
     #[test]
     fn pdf_export_options_pages_markup_tagged_and_refusals() {

@@ -119,8 +119,8 @@ export type DocumentsRequest=
  |{id:number;kind:'headerFooterState'}
  |{id:number;kind:'setHeaderFooter';header?:string;footer?:string;pageNumber?:boolean}
  |{id:number;kind:'insertTable';block:number;rows:number;cols:number}
- |{id:number;kind:'save'}
- |{id:number;kind:'exportPdf';options?:PdfOptions}
+ |{id:number;kind:'save';date?:string}
+ |{id:number;kind:'exportPdf';options?:PdfOptions;date?:string}
  |{id:number;kind:'close'};
 export type DocumentsResponse=
  |{id:number;ok:true;kind:'ready';initMs:number}
@@ -306,3 +306,6 @@ export function pdfOptionsProblem(o:unknown,pageCount?:number):string|null{
  }
  return null;
 }
+
+/** The save time the host stamps into a saved file's properties: UTC ISO 8601 such as 2026-10-14T18:00:00.000Z. */
+export const SAVE_DATE=/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,6})?Z$/;
