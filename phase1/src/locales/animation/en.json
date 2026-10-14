@@ -894,5 +894,8 @@
  "cmd.animation.keys.trimToWorkArea": "Remove the keys outside the work area",
  "animation.keys.workArea": "Work area to keys",
  "animation.keys.workArea.hint": "Set the work area from the first to the last selected key",
- "cmd.animation.keys.workAreaToKeys": "Set the work area to the selected keys"
+ "cmd.animation.keys.workAreaToKeys": "Set the work area to the selected keys",
+ "animation.keys.inArea": "Keys in work area",
+ "animation.keys.inArea.hint": "Select every key inside the work area",
+ "cmd.animation.keys.selectInWorkArea": "Select the keys in the work area"
 }

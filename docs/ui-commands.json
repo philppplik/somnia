@@ -1020,6 +1020,23 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.keys.selectInWorkArea",
+      "title": "Select the keys in the work area",
+      "category": "View",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "in",
+        "inside",
+        "keys",
+        "out",
+        "range",
+        "select",
+        "work area"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.keys.selectNth",
       "title": "Select every n-th selected key",
       "category": "View",

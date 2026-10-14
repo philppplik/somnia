@@ -213,3 +213,10 @@ test('work area for keys: first to last, one frame minimum, clamped, null when e
  assert.deepEqual(workAreaForKeys(c,[k(10),k(3)]),{in:f(3),out:f(10)});
  assert.deepEqual(workAreaForKeys(c,[k(4)]),{in:f(4),out:f(5)});assert.equal(workAreaForKeys(c,[]),null);
 });
+import {keysInWorkArea} from './keyInWorkArea';
+test('keys in work area: inclusive bounds, only listed layers',()=>{
+ const c0=findComp(base())!,c={...c0,workArea:{in:f(0),out:f(10)}};
+ assert.equal(keysInWorkArea(c,['a']).length,keysInWorkArea(c0,['a']).filter(k=>k.t<=f(10)).length);
+ assert.equal(keysInWorkArea(c,['zz']).length,0);
+ assert.equal(keysInWorkArea({...c,workArea:{in:f(1),out:f(2)}},['a']).length,0);
+});
