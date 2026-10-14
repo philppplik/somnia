@@ -101,16 +101,16 @@ export function attachEngine(e:DocumentsEngine|null,key?:string){
  patchDocuments({...INITIAL_VIEW,name:k,...flags(),editError:'',edited:false,notice:''});
 }
 async function refresh(d:{pages:number;pageSizes:readonly {width:number;height:number}[];text:string}){
- const blocks=await engine!.blocks();
+ const owner=gen,e=engine!;const blocks=await e.blocks();if(owner!==gen||e!==engine)throw Error('Document owner changed during refresh');
  patchDocuments({blocks,pages:d.pages,pageSizes:d.pageSizes,words:d.text.split(/\s+/).filter(Boolean).length,rev:getDocumentsState().rev+1,...flags()});
 }
 export async function loadBlocks(d:{pages:number;pageSizes:readonly {width:number;height:number}[];text:string}){await refresh(d);}
 async function apply(edit:TextEdit,record:'new'|'undo'|'redo',o:{merge?:boolean;caret?:number|null}={}){
- const e=engine;if(!e)return;
+ const e=engine,owner=gen;if(!e)return;
  const block=getDocumentsState().blocks.find(b=>b.index===edit.block);
  if(!block||!block.editable||block.text===undefined)throw new Error('This paragraph cannot be edited as text.');
  const inv=inverseOf(block.text,edit);
- const d=await e.replace(edit);
+ const d=await e.replace(edit);if(owner!==gen||engine!==e)throw Error('Document owner changed during replacement');
  if(record==='new')undo.push(inv,o.merge);else if(record==='undo')undo.pushRedo(inv);else undo.pushUndo(inv);
  const at=record==='new'?o.caret:caretAfterEdit(edit);
  patchDocuments({edited:true,notice:'',editError:'',caretLocked:false,caret:at==null?null:{block:edit.block,anchor:at,head:at}});await refresh(d);
@@ -298,5 +298,7 @@ async function joinAtEdge(block:number,t:string,dir:-1|1){
 }
 
 /** No identity supplied at attachment means capture stays unavailable. */
-export const captureCurrentDocumentSelection=()=>captureDocumentSelection(getDocumentsState(),engine&&identity?{generation:gen,identity}:null);
+export const captureCurrentDocumentSelection=()=>{if(pending||getDocumentsState().editError||engine?.isDisposed)throw Error('Document work unsettled or failed');return captureDocumentSelection(getDocumentsState(),engine&&identity?{generation:gen,identity}:null);};
+/** Await only current queue, then refuse owner/new-work drift. Not an accept lease. */
+export async function settleDocumentSelection(){const owner=gen,queue=chain;await queue;if(owner!==gen||queue!==chain)throw Error('Document work changed while settling');return captureCurrentDocumentSelection();}
 export function detachEngineIfCurrent(e:DocumentsEngine){if(engine===e)attachEngine(null);}
