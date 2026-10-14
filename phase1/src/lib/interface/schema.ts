@@ -26,7 +26,7 @@ export type PrototypeTransitionKind='instant'|'dissolve'|'slide'|'push'|'smart-a
 export type PrototypeEasing='linear'|'ease'|'ease-in'|'ease-out'|'ease-in-out';
 export type PrototypeDirection='left'|'right'|'up'|'down';
 export interface PrototypeTransition {kind:PrototypeTransitionKind;durationMs:number;easing?:PrototypeEasing;direction?:PrototypeDirection;}
-export interface PrototypeLink {action?:'navigate'|'overlay';trigger:'click'|'hover'|'afterDelay';targetFrameId:string;delayMs?:number;transition?:PrototypeTransition;position?:'center'|'left'|'right'|'top'|'bottom';condition?:{variableId:string;equals:string};elseTargetFrameId?:string;setVariables?:{variableId:string;value:string}[];}
+export interface PrototypeLink {action?:'navigate'|'overlay'|'back';trigger:'click'|'hover'|'afterDelay'|'press';targetFrameId:string;delayMs?:number;transition?:PrototypeTransition;position?:'center'|'left'|'right'|'top'|'bottom';condition?:{variableId:string;equals:string};elseTargetFrameId?:string;setVariables?:{variableId:string;value:string}[];}
 export interface InterfaceBreakpoint {id:string;name:string;width:number;height:number;}
 export interface InterfaceNode {
  id:string;pageId:string;parentId:string|null;children:string[];kind:NodeKind;name:string;
