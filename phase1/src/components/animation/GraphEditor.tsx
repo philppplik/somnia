@@ -59,7 +59,7 @@ export function GraphEditor({comp,layerId,sel,playhead}:{comp:Composition;layerI
  const ch:0|1=prop.type==='vec2'&&view.graphChannel===1?1:0;
  const w=size.w,h=size.h;const fitKeys=fitTargets(keys,sel.filter(k=>k.layer===layer.id&&k.prop===active));const win=frozenWin.current??zoom??graphWindow(comp.start,comp.duration,comp.fps,fitKeys,gtools.fit);const {t0,t1}=win;
  const speed=view.graphMode==='speed';
- const range=frozen.current??(speed?speedRange(prop,ch,t0,t1):gtools.fit?windowValueRange(prop,ch,t0,t1):valueRange(keys,ch));
+ const range=frozen.current??(speed?speedRange(prop,ch,t0,t1):gtools.fit||zoom&&!frozenWin.current?windowValueRange(prop,ch,t0,t1):valueRange(keys,ch));
  const pw=Math.max(10,w-PAD.l-PAD.r),ph=Math.max(10,h-PAD.t-PAD.b);
  geo.current={t0,t1,pw,start:comp.start,end:comp.start+comp.duration,fps:comp.fps};
  const xOf=(tk:number)=>PAD.l+(tk-t0)/(t1-t0)*pw;
@@ -167,7 +167,7 @@ export function GraphEditor({comp,layerId,sel,playhead}:{comp:Composition;layerI
   <div ref={wrap} className="relative min-h-0 overflow-hidden">
    <svg ref={svgRef} width={w} height={h} role="group" aria-label={t('animation.graph.label',{name:t(PROP_LABEL[active])})} className="block touch-none select-none" data-testid="animation-graph-svg">
     <defs><clipPath id={clip}><rect x={PAD.l} y={PAD.t} width={pw} height={ph}/></clipPath></defs>
-    <rect x={PAD.l} y={PAD.t} width={pw} height={ph} fill="var(--bg-panel)" onPointerDown={scrubDown} data-testid="animation-graph-plot"/>
+    <rect x={PAD.l} y={PAD.t} width={pw} height={ph} fill="var(--bg-panel)" onPointerDown={scrubDown} onDoubleClick={()=>setZoom(null)} data-testid="animation-graph-plot"/>
     {grid.map(v=><g key={v}><line x1={PAD.l} x2={PAD.l+pw} y1={yOf(v)} y2={yOf(v)} stroke="var(--border-subtle)" strokeWidth={1}/><text x={PAD.l-6} y={yOf(v)+3} textAnchor="end" fontSize={9} fill="var(--text-tertiary)">{fmt(v)}</text></g>)}
     <rect x={PAD.l} y={PAD.t} width={Math.max(0,xOf(comp.workArea.in)-PAD.l)} height={ph} fill="rgba(0,0,0,.18)" pointerEvents="none"/>
     <rect x={xOf(comp.workArea.out)} y={PAD.t} width={Math.max(0,PAD.l+pw-xOf(comp.workArea.out))} height={ph} fill="rgba(0,0,0,.18)" pointerEvents="none"/>
