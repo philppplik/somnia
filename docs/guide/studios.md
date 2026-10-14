@@ -16,6 +16,9 @@ Status of each studio is **Stable** or **Pre-release** as shown in the release n
 | [Vector](studios/vector.md) | Paths, shapes, layers, pen tool | [Vector studio](../studios/vector-studio.md), [Vector tools](../studios/vector-tools.md) |
 | [Photos](studios/photos.md) | Non-destructive raster editing | [Photos panels](../PHOTOS-STUDIO-PANELS.md), [Photos rail](../PHOTOS-STUDIO-RAIL.md) |
 | [Vibe Space](studios/vibe-space.md) | Autonomous agents with review and a board | [Vibe Space concept](../concepts/vibespace.md), [Vibe Space UI](../vibespace/ui.md), [Policy](../vibespace/policy.md) |
+| [3D](studios/3d.md) | Models, scenes, materials, rigs, glTF (**In development**, `int/beta5`) | [3D concept](../concepts/3d-studio.md), [.som3d format](../concepts/3d-studio-document.md) |
+| [Animation](studios/animation.md) | Motion graphics, keyframes, masks, GIF/APNG/WebM export (**In development**, `int/beta5`) | [Animation concept](../concepts/animation-studio.md) |
+| [Interface](studios/interface.md) | Screens, components, prototypes, handoff (**In development**, `int/beta5`) | [Interface concept](../concepts/interface-design-studio.md) |
 
 ## Concepts shared by all studios
 

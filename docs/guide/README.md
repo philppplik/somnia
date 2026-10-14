@@ -26,6 +26,7 @@ A passing test, a merged branch or a mock-server run does not move a feature to 
 | `somnia run`, background runs, exit codes | [Command line](cli.md) |
 | Add commands, panels and themes | [Extensions](extensions.md) |
 | Where options live | [Settings](settings.md) |
+| Run AI on your own machine | [Local AI](local-ai.md) |
 | Something broke | [Troubleshooting](troubleshooting.md) |
 | Quick answers | [FAQ](faq.md) |
 | What exists in the editor | [Features](features.md) |

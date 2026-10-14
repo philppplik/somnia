@@ -23,6 +23,7 @@ The sidebar groups sections as follows (from `phase1/src/components/Settings.tsx
 | --- | --- | --- |
 | Change theme, glass, opacity, corner radius | Appearance | [Glass](../GLASS.md), [Window background](../WINDOW-BACKGROUND.md) |
 | Rebind or reset shortcuts | Shortcuts | [Settings deep links](../SETTINGS-DEEP-LINKS.md) |
+| Run models locally with Ollama | AI > Local | [Local AI](local-ai.md) |
 | Connect an AI provider or MCP tools | AI | [Agent](../agent/README.md), [OpenRouter and Ollama](../agent/using-openrouter-and-ollama.md), [Privacy](../agent/PRIVACY.md), [MCP client](../agent/MCP-CLIENT.md) |
 | Manage extensions | Extensions | [Extensions](extensions.md) |
 | Node runtime for framework projects | Frameworks | [Frameworks](frameworks.md) |
