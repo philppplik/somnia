@@ -13,15 +13,15 @@ export function audibleLayers(comp:Composition):Layer[]{
 export const clipSpan=(l:Layer)=>({start:l.inT+l.offset,end:l.outT+l.offset});
 /** File position (ticks) heard at composition tick `t`, or null outside the clip. */
 export function sourceTickAt(l:Layer,t:number):number|null{
- const {start,end}=clipSpan(l);return l.audio&&t>=start&&t<end?l.audio.trimIn+(t-start):null;
+ const {start,end}=clipSpan(l);return l.audio&&t>=start&&t<end?l.audio.trimIn+(l.audio.rate===undefined?t-start:Math.round((t-start)*l.audio.rate)):null;
 }
-export interface Segment{layer:string;assetId:string;/** Seconds after the pass start at which the clip begins. */when:number;/** Seconds into the file. */offset:number;duration:number;/** Composition ticks of the segment. */from:number;to:number}
+export interface Segment{layer:string;assetId:string;/** Seconds after the pass start at which the clip begins. */when:number;/** Seconds into the file. */offset:number;/** Seconds on the composition timeline. */duration:number;/** Playback rate of the file (1 = normal). */rate:number;/** Seconds of file data the segment consumes (duration times rate). */fileDuration:number;/** Composition ticks of the segment. */from:number;to:number}
 /** Clip segments audible while the playhead moves over composition ticks [from,to). */
 export function segmentsBetween(comp:Composition,from:number,to:number,layers:readonly Layer[]=audibleLayers(comp)):Segment[]{
  const out:Segment[]=[];
  for(const l of layers){
   const {start,end}=clipSpan(l);const a=Math.max(from,start),b=Math.min(to,end);if(b<=a||!l.audio)continue;
-  out.push({layer:l.id,assetId:l.audio.assetId,when:(a-from)/TICKS_PER_SECOND,offset:(l.audio.trimIn+(a-start))/TICKS_PER_SECOND,duration:(b-a)/TICKS_PER_SECOND,from:a,to:b});
+  const rate=l.audio.rate??1;out.push({layer:l.id,assetId:l.audio.assetId,when:(a-from)/TICKS_PER_SECOND,offset:(l.audio.trimIn+(rate===1?a-start:(a-start)*rate))/TICKS_PER_SECOND,duration:(b-a)/TICKS_PER_SECOND,rate,fileDuration:(b-a)*rate/TICKS_PER_SECOND,from:a,to:b});
  }
  return out;
 }
@@ -49,7 +49,7 @@ export function gainCurve(l:Layer,from:number,to:number):{constant:number}|{curv
 /** Signature of everything that changes what is heard. A change while playing pauses playback instead of drifting out of sync. */
 export function audioSignature(doc:AnimationDocument|null,comp0:Composition|undefined):string{
  if(!doc||!comp0)return '';const comp=withPrecompAudio(comp0,doc.compositions);const ls=comp.layers.filter(isAudioLayer);if(!ls.length)return '';
- return JSON.stringify([comp.layers.some(l=>l.solo),ls.map(l=>[l.id,l.visible,l.solo,l.inT,l.outT,l.offset,l.audio!.assetId,l.audio!.trimIn,l.audio!.volume])]);
+ return JSON.stringify([comp.layers.some(l=>l.solo),ls.map(l=>[l.id,l.visible,l.solo,l.inT,l.outT,l.offset,l.audio!.assetId,l.audio!.trimIn,l.audio!.volume,l.audio!.rate??1])]);
 }
 /** Waveform columns (0..1) for file range [from,from+length) ticks, at most `columns` (hard cap 400) so the drawing stays bounded whatever the zoom. */
 export function visiblePeaks(peaks:readonly number[],durationTicks:number,from:number,length:number,columns:number):number[]{
@@ -64,10 +64,8 @@ export function visiblePeaks(peaks:readonly number[],durationTicks:number,from:n
 }
 
 export const MAX_PRECOMP_AUDIO_LAYERS=200;
-/** Comp layers whose audio cannot be heard because their speed is not 100 %. */
-export const precompAudioSkipped=(pl:Layer)=>pl.kind==='comp'&&pl.source.speed!==undefined&&pl.source.speed!==100;
 /**
- * Audio of nested compositions mapped into `comp` time: each child clip becomes a copy on the parent timeline, shifted by the comp layer's start and start-time offset, cut to the comp layer's span and to the child's length, repeated while the comp layer loops. Comp layers that are hidden (or not soloed during a solo) stay silent; speed other than 100 % is skipped. Returns `comp` itself when there is nothing to add.
+ * Audio of nested compositions mapped into `comp` time: each child clip becomes a copy on the parent timeline, moved by the comp layer's start and start-time offset, scaled by its speed (the file plays faster or slower, so pitch follows speed), cut to the comp layer's span and to the child's length, and repeated while the comp layer loops. Comp layers that are hidden (or not soloed during a solo) stay silent. Returns `comp` itself when there is nothing to add.
  */
 export function withPrecompAudio(comp:Composition,comps:readonly Composition[]|undefined):Composition{
  if(!comps||!comp.layers.some(l=>l.kind==='comp'))return comp;
@@ -77,30 +75,26 @@ function nestedAudio(comp:Composition,comps:readonly Composition[],depth:number)
  if(depth>MAX_PRECOMP_DEPTH)return [];
  const solo=comp.layers.some(l=>l.solo),out:Layer[]=[];
  for(const pl of comp.layers){
-  if(pl.kind!=='comp'||!pl.visible||(solo&&!pl.solo)||precompAudioSkipped(pl))continue;
+  if(pl.kind!=='comp'||!pl.visible||(solo&&!pl.solo))continue;
   const child=comps.find(c=>c.id===pl.source.compId);if(!child||child.id===comp.id)continue;
   const clips=[...audibleLayers(child),...nestedAudio(child,comps,depth+1)];
   const plStart=pl.inT+pl.offset,plEnd=pl.outT+pl.offset,cStart=child.start,cEnd=child.start+child.duration,dur=Math.max(1,child.duration);
-  const base=plStart-cStart-(pl.source.timeOffset??0);
+  const speed=(pl.source.speed??100)/100,t0=pl.source.timeOffset??0;
+  /** Parent tick of child tick `x` in pass `k`. */
+  const at=(x:number,k:number)=>plStart+Math.round((x-cStart-t0+k*dur)/speed);
   for(let k=0;k<(pl.source.loop?64:1);k++){
-   const d=base+k*dur;if(d+cStart>=plEnd)break;
+   if(at(cStart,k)>=plEnd)break;
    for(const cl of clips){
-    const s=cl.inT+cl.offset,e=Math.min(cl.outT+cl.offset,cEnd);
-    const ns=Math.max(s+d,plStart),ne=Math.min(e+d,plEnd);if(ne<=ns||!cl.audio)continue;
+    if(!cl.audio)continue;
+    const s=cl.inT+cl.offset,e=Math.min(cl.outT+cl.offset,cEnd);if(e<=s)continue;
+    const ps=at(s,k),pe=at(e,k),ns=Math.max(ps,plStart),ne=Math.min(pe,plEnd);if(ne<=ns)continue;
     if(out.length>=MAX_PRECOMP_AUDIO_LAYERS)return out;
-    const vol=cl.audio.volume;
+    const rate=(cl.audio.rate??1)*speed,vol=cl.audio.volume;
     out.push({...cl,id:`${pl.id}:${k}:${cl.id}`,inT:ns,outT:ne,offset:0,solo:solo,visible:true,
-     audio:{...cl.audio,trimIn:cl.audio.trimIn+(ns-(s+d)),volume:d?{...vol,keys:vol.keys.map(x=>({...x,t:x.t+d}))}:vol}});
+     audio:{...cl.audio,trimIn:cl.audio.trimIn+Math.round((ns-ps)*rate),...(rate!==1?{rate}:{}),
+      volume:{...vol,keys:vol.keys.map(x=>({...x,t:at(x.t,k)}))}}});
    }
   }
  }
- return out;
-}
-
-/** Names of visible comp layers whose nested audio is silent because their speed is not 100 %. */
-export function silentPrecompLayers(comp:Composition,comps:readonly Composition[]|undefined):string[]{
- if(!comps)return [];const out:string[]=[];
- const hasAudio=(c:Composition,depth:number):boolean=>depth<=MAX_PRECOMP_DEPTH&&(c.layers.some(isAudioLayer)||c.layers.some(l=>l.kind==='comp'&&(()=>{const k=comps.find(x=>x.id===l.source.compId);return !!k&&k.id!==c.id&&hasAudio(k,depth+1);})()));
- for(const l of comp.layers){if(!precompAudioSkipped(l)||!l.visible)continue;const k=comps.find(x=>x.id===l.source.compId);if(k&&k.id!==comp.id&&hasAudio(k,1))out.push(l.name);}
  return out;
 }

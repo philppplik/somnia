@@ -257,7 +257,6 @@
  "animation.audio.unavailable": "Audiowiedergabe ist nicht verfügbar. Wiedergabe ohne Ton.",
  "animation.audio.paused": "Audio geändert. Wiedergabe pausiert, damit alles synchron bleibt.",
  "animation.audio.note": "Nur Vorschau. Audio ist nicht Teil des PNG-Sequenz-Exports.",
- "animation.audio.speedSilent": "Stumm in Vorschau und WebM: {name} (bei Tempo ungleich 100 % gibt es kein Audio).",
  "animation.audio.hint": "Ebene ausblenden, um sie stumm zu schalten.",
  "animation.animators.title": "Text-Animatoren",
  "animation.animators.item": "Animator {n}",

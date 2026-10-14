@@ -257,7 +257,6 @@
  "animation.audio.unavailable": "Audio playback is not available. Playing without sound.",
  "animation.audio.paused": "Audio changed. Playback paused to stay in sync.",
  "animation.audio.note": "Preview only. Audio is not part of the PNG sequence export.",
- "animation.audio.speedSilent": "Silent in preview and WebM: {name} (speed other than 100 % has no audio).",
  "animation.audio.hint": "Hide the layer to mute it.",
  "animation.animators.title": "Text animators",
  "animation.animators.item": "Animator {n}",

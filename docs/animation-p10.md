@@ -284,3 +284,8 @@ Added:
 
 - `LayerEffect.kind` adds `innerShadow` and `innerGlow` with the P47 fields (`amount`, `color`, `blur`; `distance` and `angle` for innerShadow only). Defaults: inner shadow 8 px radius, 8 px distance, 45 degrees, 0.6 black; inner glow radius 10.
 - Filter chain per effect (unique result names `is<stack position>`): copy the input, invert its alpha, blur, offset, flood, keep the flood where the inverted blur is, clip to the input alpha, merge over the input. No growth of the filter bounds.
+
+## P51 - Speed for nested audio
+
+- `withPrecompAudio` maps child tick x in pass k to `plStart + round((x - child.start - timeOffset + k*child.duration) / speed)`. Mapped copies carry `audio.rate = clipRate * speed` (internal field, never stored on real layers); `segmentsBetween` returns `rate` and `fileDuration` (timeline duration times rate), the preview sets `playbackRate` and passes the file duration to `start`. Volume keys move with the same mapping.
+- Removes `silentPrecompLayers` and the `animation.audio.speedSilent` string added in P49.

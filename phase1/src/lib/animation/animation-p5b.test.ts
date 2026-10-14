@@ -2,7 +2,7 @@ import test from 'node:test';import assert from 'node:assert/strict';
 import {createDocument,findComp,validateDocument,type AnimationDocument} from './model';
 import {applyEdit,applyEdits} from './edit';
 import {bytesToDataUrl,channelPeaks,MAX_AUDIO_BYTES,parseWav,peakBinCount,sniffMp3,validateAudioAsset,validateAudioAssets,wavPeaks,type AudioAsset} from './audioCore';
-import {silentPrecompLayers,withPrecompAudio,visiblePeaks,audibleLayers,audioSignature,clipSpan,gainCurve,playbackPlan,segmentsBetween,sourceTickAt} from './audioTiming';
+import {withPrecompAudio,visiblePeaks,audibleLayers,audioSignature,clipSpan,gainCurve,playbackPlan,segmentsBetween,sourceTickAt} from './audioTiming';
 import {AudioPreview,AudioUnavailable,START_LEAD,type AudioContextLike,type SourceLike,type GainLike} from './audioPreview';
 import {playbackAt} from './playback';
 import {serializeAnimationSnapshot,parseAnimationSnapshot} from './persistence';
@@ -208,11 +208,20 @@ test('P48 audio of nested compositions is mapped into the parent: shift, cut, hi
  d=applyEdit(d,{type:'layer.update',layer:'pc',source:{timeOffset:0}});
  // segments reach the scheduler as parent-time clips
  const seg=segmentsBetween(mix(),0,len);assert.equal(seg.length,1);assert.equal(seg[0].when,0);
- // hidden, soloed elsewhere, speed
+ // hidden, soloed elsewhere
  assert.equal(audibleLayers(withPrecompAudio(findComp(applyEdit(d,{type:'layer.update',layer:'pc',visible:false}))!,d.compositions)).length,0);
  const s=applyEdits(d,[{type:'layer.add',kind:'solid',id:'s'},{type:'layer.update',layer:'s',solo:true}]);assert.equal(audibleLayers(withPrecompAudio(findComp(s)!,s.compositions)).length,0);
  const so=applyEdit(s,{type:'layer.update',layer:'pc',solo:true});assert.equal(audibleLayers(withPrecompAudio(findComp(so)!,so.compositions)).length,1,'soloed comp layer keeps its sound');
- d=applyEdit(d,{type:'layer.update',layer:'pc',source:{speed:200}});assert.equal(audibleLayers(mix()).length,0);
+ // speed 200 %: the file plays twice as fast, so the 2 s clip lasts half as long and its front cut counts double
+ d=applyEdit(d,{type:'layer.update',layer:'pc',source:{speed:200}});
+ assert.deepEqual(spans(),[['pc:0:aud',0,len/2,0]]);assert.equal(audibleLayers(mix())[0].audio!.rate,2);
+ const fast=segmentsBetween(mix(),0,len/2)[0];assert.deepEqual([fast.rate,fast.duration,fast.fileDuration],[2,len/2/sec,len/sec]);
+ d=applyEdit(d,{type:'layer.update',layer:'pc',source:{timeOffset:sec/2}});
+ assert.deepEqual(spans(),[['pc:0:aud',0,len/2-sec/4,sec/2]],'offset in child time is halved on the parent timeline');
+ d=applyEdit(d,{type:'layer.update',layer:'pc',source:{speed:50,timeOffset:0}});
+ const slow=audibleLayers(mix())[0];assert.deepEqual([clipSpan(slow).start,clipSpan(slow).end,slow.audio!.rate],[0,Math.min(len*2,par().layers[0].outT),0.5]);
+ assert.equal(sourceTickAt(slow,sec),sec/2,'half rate: 1 s of timeline is 0.5 s of file');
+ d=applyEdit(d,{type:'layer.update',layer:'pc',source:{speed:100}});
  // loop: the child clip repeats while the comp layer lasts
  d=applyEdit(d,{type:'layer.update',layer:'pc',source:{speed:100,loop:true}});
  d=applyEdit(d,{type:'comp.update',comp:base.activeComp,settings:{duration:sec}});d=applyEdit(d,{type:'layer.timing',layer:'pc',inT:0,outT:Math.min(par().duration,sec*3)});
@@ -220,15 +229,4 @@ test('P48 audio of nested compositions is mapped into the parent: shift, cut, hi
  // nothing nested: same object, no work
  assert.equal(withPrecompAudio(findComp(base)!,base.compositions),findComp(base));
  assert.notEqual(audioSignature(d,par()),'');
-});
-
-test('P49 comp layers with speed other than 100 % are reported as silent only when the child has audio',()=>{
- const base=withAudio();let d=applyEdit(base,{type:'comp.add',id:'par'});d=applyEdit(d,{type:'precomp.add',comp:base.activeComp,id:'pc'});
- const names=()=>silentPrecompLayers(findComp(d)!,d.compositions);assert.deepEqual(names(),[]);
- d=applyEdit(d,{type:'layer.update',layer:'pc',source:{speed:150}});assert.deepEqual(names(),[findComp(d)!.layers[0].name]);
- assert.deepEqual(silentPrecompLayers(findComp(applyEdit(d,{type:'layer.update',layer:'pc',visible:false}))!,d.compositions),[],'hidden: nothing to explain');
- // a child without audio gives no note
- let e=applyEdit(createDocument(),{type:'comp.add',id:'quiet'});e=applyEdit(e,{type:'comp.add',id:'par2'});e=applyEdit(e,{type:'precomp.add',comp:'quiet',id:'q'});e=applyEdit(e,{type:'layer.update',layer:'q',source:{speed:50}});
- assert.deepEqual(silentPrecompLayers(findComp(e)!,e.compositions),[]);
- assert.deepEqual(silentPrecompLayers(findComp(d)!,undefined),[]);
 });

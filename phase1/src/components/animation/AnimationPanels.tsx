@@ -1,6 +1,5 @@
 import {StudioStatus} from '../studios/StudioStatus';
 import {PathLayerMorph} from './PathLayerMorph';
-import {silentPrecompLayers} from '../../lib/animation/audioTiming';
 import {effectColor,effectBypassed,defaultEffect,styleDefaults,EFFECT_KINDS} from '../../lib/animation/effects';
 import {NativeInput,NativeSelect} from '../ui/native-controls';
 import {STYLE_KINDS,OFFSET_KINDS,DEFAULT_LAYER_COLOR,TEXT_FONTS,STROKE_JOINS,STROKE_CAPS,type StrokeJoin,type StrokeCap} from '../../lib/animation/model';
@@ -192,7 +191,6 @@ export function RenderSection(_:InspectorSectionProps){
    <Button size="compact" variant="outline" disabled={busy} onClick={()=>run('animation.export.gif')} data-testid="animation-export-gif">{t('animation.export.gif')}</Button>
    <Button size="compact" variant="outline" disabled={busy} onClick={()=>run('animation.export.apng')} data-testid="animation-export-apng">{t('animation.export.apng')}</Button>
    <Button size="compact" variant="outline" disabled={busy} onClick={()=>run('animation.export.webm')} data-testid="animation-export-webm">{t('animation.export.webm')}</Button>
-   {silentPrecompLayers(comp,s.doc?.compositions).length>0&&<p role="status" className="m-0 text-ink-3" data-testid="animation-webm-silent">{t('animation.audio.speedSilent',{name:silentPrecompLayers(comp,s.doc?.compositions).join(', ')})}</p>}
   </div>
   <p className="m-0 text-ink-3">{t('animation.export.videoNote')}</p>
   {busy&&<StudioProgress label={t('animation.export.progress',{done:job.done,total:job.total})} value={job.done} max={job.total} progressTestId="animation-export-progress" cancelLabel={t('animation.export.cancel')} onCancel={job.kind&&job.kind!=='frame'?cancelExport:undefined} cancelTestId="animation-export-cancel"/>}

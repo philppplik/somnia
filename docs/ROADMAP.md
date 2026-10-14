@@ -346,3 +346,10 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Done: two more effect kinds, `innerShadow` (radius, distance, angle, colour, strength) and `innerGlow` (radius, colour, strength). They are drawn inside the layer only (inverted alpha, blurred, offset, clipped to the layer alpha), so the filter region does not grow. Same stack rules as P47: order, bypass key, animated strength, colour keys, 8-effect cap, undoable `effect.style`. Viewer and all exports share the SVG filter. Buttons "Inner shadow +" and "Inner glow +", 5 locales.
 - Open: radius/distance/angle are static; no choke or spread; no inner/outer stroke styles; the colour-key button label still says "tint"; text animator sampling in motion blur; time-stretched audio.
 
+
+### Animation P51 (2026-10-14, integration pending)
+
+- Picked: time-stretched audio for comp layers with speed other than 100 % (stroke styles and text-animator blur sampling not chosen).
+- Done: nested audio now follows the comp layer speed (10-1000 %) in the timeline preview and WebM export: the file is played at that rate through the audio node's playback rate, clips land at the right parent time, start-time offset, loop passes and volume keys scale with it, nested speeds multiply. The "silent" note from P49 and its string are removed because nothing is silent any more.
+- Open: pitch follows speed (a rate change, not a pitch-preserving stretch); stroke styles; text animator sampling in motion blur; no per-comp-layer volume.
+

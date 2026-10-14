@@ -257,7 +257,6 @@
  "animation.audio.unavailable": "A reprodução de áudio não está disponível. Reproduzindo sem som.",
  "animation.audio.paused": "O áudio mudou. Reprodução pausada para manter a sincronia.",
  "animation.audio.note": "Apenas pré-visualização. O áudio não faz parte da exportação de sequência PNG.",
- "animation.audio.speedSilent": "Sem som na pré-visualização e no WebM: {name} (velocidade diferente de 100 % não tem áudio).",
  "animation.audio.hint": "Oculte a camada para silenciá-la.",
  "animation.animators.title": "Animadores de texto",
  "animation.animators.item": "Animador {n}",

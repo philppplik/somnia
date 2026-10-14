@@ -5,7 +5,7 @@ import {audibleLayers,gainCurve,playbackPlan,segmentsBetween} from './audioTimin
 export interface BufferLike{duration:number}
 export interface ParamLike{value:number;setValueAtTime(v:number,t:number):unknown;setValueCurveAtTime(c:Float32Array,t:number,d:number):unknown}
 export interface NodeLike{connect(n:unknown):unknown;disconnect():unknown}
-export interface SourceLike extends NodeLike{buffer:BufferLike|null;start(when:number,offset:number,duration:number):void;stop(when?:number):void}
+export interface SourceLike extends NodeLike{buffer:BufferLike|null;playbackRate?:ParamLike;start(when:number,offset:number,duration:number):void;stop(when?:number):void}
 export interface GainLike extends NodeLike{gain:ParamLike}
 export interface AudioContextLike{currentTime:number;state:string;destination:unknown;outputLatency?:number;baseLatency?:number;resume():Promise<void>;close?():Promise<void>;decodeAudioData(b:ArrayBuffer):Promise<BufferLike>;createBufferSource():SourceLike;createGain():GainLike;createMediaStreamDestination?():NodeLike&{stream:MediaStream}}
 /** Seconds between "now" and the first audio sample, so the sources can be scheduled before the clock passes them. */
@@ -60,7 +60,8 @@ export class AudioPreview{
     const src=ctx.createBufferSource(),gain=ctx.createGain();src.buffer=buf;src.connect(gain);gain.connect(this.dest??ctx.destination);
     const when=this.t0+pass.startSec+seg.when,g=gainCurve(layer,seg.from,seg.to);
     if('constant' in g)gain.gain.value=g.constant;else{gain.gain.value=g.curve[0];gain.gain.setValueAtTime(g.curve[0],when);gain.gain.setValueCurveAtTime(g.curve,when,seg.duration);}
-    src.start(when,seg.offset,Math.min(seg.duration,Math.max(0,buf.duration-seg.offset)));
+    if(seg.rate!==1&&src.playbackRate)src.playbackRate.value=seg.rate;
+    src.start(when,seg.offset,Math.min(seg.fileDuration,Math.max(0,buf.duration-seg.offset)));
     this.nodes.push({src,gain,end:when+seg.duration});
    }
   }
