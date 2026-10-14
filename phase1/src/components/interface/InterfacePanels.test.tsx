@@ -172,3 +172,7 @@ test('P52 gradient controls render for a shape in English and German',async()=>{
  const german=renderToStaticMarkup(<InterfaceProperties/>);assert.ok(german.includes('Verlauf'));assert.ok(!german.includes('Verlaufswinkel'),'gradient fields stay hidden until the gradient exists');
  interfaceSession.transact(d=>{d.nodes.find(n=>n.id===interfaceSession.get().selectedIds[0])!.gradient={angle:90,stops:[{offset:0,color:'#7756e8'},{offset:1,color:'#38bdf8'}]};});
  const on=renderToStaticMarkup(<InterfaceProperties/>);assert.ok(on.includes('Verlaufswinkel'));assert.ok(on.includes('Startfarbe'));assert.ok(on.includes('Endfarbe'));}finally{interfaceSession.clear();setLocale('en');}});
+test('P54 group and ungroup buttons render in English and German',async()=>{interfaceSession.start();interfaceSession.transact(d=>{const f=addNode(d,d.pages[0].id,'frame');addNode(d,d.pages[0].id,'rectangle',f);});interfaceSession.select(interfaceSession.get().document!.nodes[1].id);
+ const html=renderToStaticMarkup(<InterfaceProperties/>);assert.ok(html.includes('Group</button>'));assert.ok(html.includes('Ungroup'));
+ interfaceSession.clear();setLocale('de');try{interfaceSession.start();interfaceSession.transact(d=>{const f=addNode(d,d.pages[0].id,'frame');addNode(d,d.pages[0].id,'rectangle',f);});interfaceSession.select(interfaceSession.get().document!.nodes[1].id);
+ const german=renderToStaticMarkup(<InterfaceProperties/>);assert.ok(german.includes('Gruppieren'));assert.ok(german.includes('Gruppierung aufheben'));}finally{interfaceSession.clear();setLocale('en');}});

@@ -10,6 +10,8 @@ export const INTERFACE_SHORTCUT_ENTRIES:readonly InterfaceShortcutEntry[]=[
  {combo:'Mod+C',labelKey:'interface.sc.copy'},
  {combo:'Mod+V',labelKey:'interface.sc.paste'},
  {combo:'Mod+D',labelKey:'interface.sc.duplicate'},
+ {combo:'Mod+G',labelKey:'interface.sc.group'},
+ {combo:'Mod+Shift+G',labelKey:'interface.sc.ungroup'},
  {combo:'Del',labelKey:'interface.sc.delete'},
  {combo:'Enter/Space',labelKey:'interface.sc.select'},
  {combo:'Esc',labelKey:'interface.sc.cancel'},

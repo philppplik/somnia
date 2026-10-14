@@ -5,7 +5,7 @@ import {startInterfacePrototype,type PrototypeState} from '../../lib/interface/p
 import {StudioEmptyState} from '../studios/StudioEmptyState';
 import {StudioStatus} from '../studios/StudioStatus';
 import {useInterfaceSnap,copyInterfaceSelection,pasteInterfaceSelection,duplicateInterfaceSelection} from './InterfaceSelection';
-import {snapPosition,translateSelection,deleteSelection,movableSelection,selectionRoots,smartGuideSettings,rulerTicks} from '../../lib/interface/editing';
+import {snapPosition,translateSelection,deleteSelection,movableSelection,selectionRoots,smartGuideSettings,rulerTicks,groupInterfaceSelection,ungroupInterfaceSelection} from '../../lib/interface/editing';
 import {InterfaceMeasurementsOverlay,measurementsOverlay} from './InterfaceDevMode';
 import {importInterfaceFile} from './InterfaceMedia';
 import {pathData} from '../../lib/interface/vector';
@@ -52,6 +52,7 @@ export function InterfaceCanvas(){
   if(e.key==='?'){e.preventDefault();setShortcutsOpen(true);return;}
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();setDrag(null);if(e.shiftKey)interfaceSession.redo();else interfaceSession.undo();return;}
   if(e.key==='Enter'||e.key===' '){const node=el.closest('[data-testid^="interface-node-"]');if(node){e.preventDefault();interfaceSession.select(node.getAttribute('data-testid')!.slice('interface-node-'.length),e.shiftKey);}}
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='g'){e.preventDefault();safe(()=>{let ids:string[]=[];interfaceSession.transact(d=>{ids=e.shiftKey?ungroupInterfaceSelection(d,s.selectedIds):[groupInterfaceSelection(d,s.selectedIds)];});if(ids.length)interfaceSession.selectMany(ids);});return;}
   if((e.ctrlKey||e.metaKey)&&['a','c','v','d'].includes(e.key.toLowerCase())){e.preventDefault();safe(()=>{const key=e.key.toLowerCase();if(key==='a')interfaceSession.selectMany(doc?.nodes.filter(n=>n.pageId===s.pageId&&!n.hidden).map(n=>n.id)??[]);if(key==='c')copyInterfaceSelection();if(key==='v')pasteInterfaceSelection();if(key==='d')duplicateInterfaceSelection();});return;}
   if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();safe(()=>interfaceSession.transact(d=>deleteSelection(d,s.selectedIds)));return;}
   const delta:Record<string,[number,number]>={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]};

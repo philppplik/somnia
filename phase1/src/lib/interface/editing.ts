@@ -12,6 +12,38 @@ export function movableSelection(doc:InterfaceDocument,ids:readonly string[]):In
 export function translateSelection(doc:InterfaceDocument,ids:readonly string[],dx:number,dy:number){const nodes=movableSelection(doc,ids);const layout=computeInterfaceLayout(doc);for(const n of nodes){const b=layout.bounds.get(n.id)!;patchInterfaceNode(doc,n.id,{x:b.x+dx,y:b.y+dy,constraints:undefined});}}
 export function alignSelection(doc:InterfaceDocument,ids:readonly string[],mode:AlignMode){const nodes=movableSelection(doc,ids);if(nodes.length<2)throw Error('Select at least two layers.');const layout=computeInterfaceLayout(doc),bounds=nodes.map(n=>layout.bounds.get(n.id)!);const left=Math.min(...bounds.map(b=>b.x)),right=Math.max(...bounds.map(b=>b.x+b.width)),top=Math.min(...bounds.map(b=>b.y)),bottom=Math.max(...bounds.map(b=>b.y+b.height));for(const n of nodes){const b=layout.bounds.get(n.id)!;const x=mode==='left'?left:mode==='right'?right-b.width:mode==='centerX'?(left+right-b.width)/2:b.x,y=mode==='top'?top:mode==='bottom'?bottom-b.height:mode==='centerY'?(top+bottom-b.height)/2:b.y;patchInterfaceNode(doc,n.id,{x,y,constraints:undefined});}}
 export function distributeSelection(doc:InterfaceDocument,ids:readonly string[],axis:'x'|'y'){const nodes=movableSelection(doc,ids);if(nodes.length<3)throw Error('Select at least three layers.');const layout=computeInterfaceLayout(doc),size=axis==='x'?'width':'height';nodes.sort((a,b)=>layout.bounds.get(a.id)![axis]-layout.bounds.get(b.id)![axis]);const first=layout.bounds.get(nodes[0].id)!,last=layout.bounds.get(nodes.at(-1)!.id)!;const occupied=nodes.reduce((sum,n)=>sum+layout.bounds.get(n.id)![size],0),gap=(last[axis]+last[size]-first[axis]-occupied)/(nodes.length-1);let pos=first[axis];for(const n of nodes){patchInterfaceNode(doc,n.id,{[axis]:pos,constraints:undefined});pos+=layout.bounds.get(n.id)![size]+gap;}}
+/** Wraps the selected siblings in a new group node; children keep their sibling order and become relative to the group origin. */
+export function groupInterfaceSelection(doc:InterfaceDocument,ids:readonly string[]):string{
+ const nodes=movableSelection(doc,ids),first=nodes[0],parentId=first.parentId,pageId=first.pageId;
+ const computed=computeInterfaceLayout(doc);
+ const minX=Math.min(...nodes.map(n=>computed.bounds.get(n.id)!.x)),minY=Math.min(...nodes.map(n=>computed.bounds.get(n.id)!.y));
+ const maxX=Math.max(...nodes.map(n=>computed.bounds.get(n.id)!.x+computed.bounds.get(n.id)!.width)),maxY=Math.max(...nodes.map(n=>computed.bounds.get(n.id)!.y+computed.bounds.get(n.id)!.height));
+ const parentNode=parentId?doc.nodes.find(n=>n.id===parentId)!:null;
+ const siblings=parentNode?parentNode.children:doc.pages.find(p=>p.id===pageId)!.children;
+ const selected=new Set(nodes.map(n=>n.id)),index=siblings.findIndex(id=>selected.has(id));
+ const id=uid();
+ const group:InterfaceNode={id,pageId,parentId,children:siblings.filter(c=>selected.has(c)),kind:'group',name:'Group',x:minX,y:minY,width:Math.max(1,Math.round(maxX-minX)),height:Math.max(1,Math.round(maxY-minY)),fill:'#000000',hidden:false,locked:false};
+ doc.nodes.push(group);
+ const next=siblings.filter(c=>!selected.has(c));next.splice(index<0?next.length:index,0,id);
+ if(parentNode)parentNode.children=next;else doc.pages.find(p=>p.id===pageId)!.children=next;
+ for(const n of nodes){const b=computed.bounds.get(n.id)!;n.parentId=id;patchInterfaceNode(doc,n.id,{x:b.x-minX,y:b.y-minY,constraints:undefined});}
+ const moved=new Set(nodes.map(n=>n.id));
+ if(doc.prototypeStartFrameId&&moved.has(doc.prototypeStartFrameId))delete doc.prototypeStartFrameId;
+ for(const node of doc.nodes)if(node.prototypeLinks)node.prototypeLinks=node.prototypeLinks.filter(l=>{if(moved.has(l.targetFrameId))return false;if(l.elseTargetFrameId&&moved.has(l.elseTargetFrameId))delete l.elseTargetFrameId;return true;});
+ return id;
+}
+/** Dissolves each selected group in place; children regain absolute positions at the group's former slot. */
+export function ungroupInterfaceSelection(doc:InterfaceDocument,ids:readonly string[]):string[]{
+ const freed:string[]=[];
+ for(const id of ids){const n=doc.nodes.find(n=>n.id===id);if(!n)continue;if(n.kind!=='group')throw Error('Select a group to ungroup.');if(n.locked)throw Error('Group is locked.');if(n.parentId&&insideInstance(doc,n.parentId))throw Error('Instance structure cannot be ungrouped.');
+  const parentNode=n.parentId?doc.nodes.find(p=>p.id===n.parentId)!:null;
+  const siblings=parentNode?parentNode.children:doc.pages.find(p=>p.id===n.pageId)!.children;
+  const index=siblings.indexOf(id),kids=[...n.children];
+  siblings.splice(index,1,...kids);
+  for(const c of kids){const child=doc.nodes.find(x=>x.id===c)!;child.parentId=n.parentId;patchInterfaceNode(doc,c,{x:child.x+n.x,y:child.y+n.y});}
+  doc.nodes.splice(doc.nodes.indexOf(n),1);freed.push(...kids);}
+ return freed;
+}
 export function deleteSelection(doc:InterfaceDocument,ids:readonly string[]){const nodes=selectionRoots(doc,ids);if(nodes.some(n=>n.locked||n.parentId&&insideInstance(doc,n.parentId)))throw Error('Selection contains protected layers.');for(const n of nodes)deleteNode(doc,n.id);}
 /** In-memory owner-scoped clipboard, never reads/writes the OS clipboard or imports arbitrary content. */
 export interface InterfaceClipboard {documentId:string;roots:string[];nodes:InterfaceNode[];bounds:Record<string,LayoutBounds>;}

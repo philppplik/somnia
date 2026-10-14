@@ -11,6 +11,7 @@ import {resizeInterfaceFrame,diffInterfaceReflow,setInterfaceSizingLimit} from '
 import {computeInterfaceLayout} from '../../lib/interface/layout';
 import {interfaceLayerCSS} from '../../lib/interface/export';
 import {auditInterfaceDocument,interfaceFocusOrder,moveInterfaceFocus} from '../../lib/interface/a11y';
+import {groupInterfaceSelection,ungroupInterfaceSelection} from '../../lib/interface/editing';
 import {addInterfaceComment,removeInterfaceComment,setInterfaceCommentResolved,interfaceComments} from '../../lib/interface/comments';
 import {addInterfaceBreakpoint,removeInterfaceBreakpoint,applyInterfaceBreakpoint,auditInterfaceResponsive} from '../../lib/interface/breakpoints';
 import {INTERFACE_FRAME_PRESETS} from '../../lib/interface/pages';
@@ -98,7 +99,7 @@ export function InterfaceProperties(){
    <InterfaceMediaControls/>
    <InterfaceVectorControls nodeId={node.id} run={run}/>
 
-   <div className="flex flex-wrap gap-1"><Button size="compact" variant="outline" disabled={node.locked} onClick={()=>run(()=>move(-1))}>{t('interface.up')}</Button><Button size="compact" variant="outline" disabled={node.locked} onClick={()=>run(()=>move(1))}>{t('interface.down')}</Button><Button size="compact" variant="outline" disabled={node.locked} onClick={()=>run(()=>interfaceSession.transact(d=>deleteNode(d,node.id)))}>{t('interface.delete')}</Button><InterfaceCopyCss node={node} run={run}/></div>
+   <div className="flex flex-wrap gap-1"><Button size="compact" variant="outline" disabled={node.locked} onClick={()=>run(()=>move(-1))}>{t('interface.up')}</Button><Button size="compact" variant="outline" disabled={node.locked} onClick={()=>run(()=>move(1))}>{t('interface.down')}</Button><Button size="compact" variant="outline" disabled={node.locked} onClick={()=>run(()=>interfaceSession.transact(d=>deleteNode(d,node.id)))}>{t('interface.delete')}</Button><InterfaceCopyCss node={node} run={run}/><Button size="compact" variant="outline" disabled={node.locked} onClick={()=>run(()=>{let id='';interfaceSession.transact(d=>{id=groupInterfaceSelection(d,interfaceSession.get().selectedIds);});interfaceSession.select(id);})}>{t('interface.groupSelection')}</Button><Button size="compact" variant="outline" disabled={node.locked||node.kind!=='group'} onClick={()=>run(()=>{let ids:string[]=[];interfaceSession.transact(d=>{ids=ungroupInterfaceSelection(d,interfaceSession.get().selectedIds);});if(ids.length)interfaceSession.selectMany(ids);})}>{t('interface.ungroupSelection')}</Button></div>
   </>}
   {node&&s.selectedIds.length===1&&<InterfaceInteractions node={node} run={run}/>}
   <InterfaceA11yReview/>
