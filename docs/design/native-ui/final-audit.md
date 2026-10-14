@@ -216,6 +216,13 @@ through native control primitives, see below.
   release offset; one commit per stroke; click auto-source unchanged),
   gallery specs extended; canvas bitmaps pixel-identical to the P47
   base (f4531ee6).
+- P49: preset sync across the library (apply any built-in or user
+  preset to every developable photo: failure-isolated batch runner,
+  one settings commit/undo step per photo, look replace semantics,
+  geometry untouched; progress + summary live region in the presets
+  panel, sync buttons only with 2+ photos), unit tests and gallery
+  proof added (?view=photos-presets; canvas bitmaps pixel-identical
+  to the P48 base c9110a49).
 
 
 

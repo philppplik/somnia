@@ -1,6 +1,7 @@
 import {editedName} from '../imageEditorHost';
 import {webFsSupported} from '../webFsPort';
-import {getPhotoSession,openPhoto,type PhotoSaveHost} from './studioSession';
+import {commitPhotoSettings,getPhotoSession,openPhoto,type PhotoSaveHost} from './studioSession';
+import {applyLook,type Look} from './presets';
 import type {MediaItem} from '../media';
 
 export interface BatchOutcome{saved:string[];skipped:string[];failed:{name:string;message:string}[];}
@@ -41,6 +42,17 @@ export function directoryPhotoHost(dir:FileSystemDirectoryHandle,rename?:Readonl
   const final=rename?.get(suggestedName)??suggestedName;
   const h=await dir.getFileHandle(final,{create:true});const w=await h.createWritable();await w.write(blob);await w.close();return true;
  }};
+}
+
+/** Applies a named look to every photo in the library (preset sync): one settings commit per photo, geometry and source edits untouched; a failed photo never aborts the run. */
+export async function syncLookToPhotos(items:readonly MediaItem[],look:Look,onProgress?:(p:BatchProgress)=>void):Promise<BatchOutcome>{
+ return runPhotoBatch(items.map(i=>i.name),async name=>{
+  const item=items.find(i=>i.name===name);if(!item)throw Error('Photo left the library.');
+  await ensurePhotoReady(item);
+  if(!getPhotoSession(name))throw Error('Photo is not open.');
+  commitPhotoSettings(name,now=>applyLook(now,look));
+  return 'saved';
+ },onProgress);
 }
 
 /** Opens a photo when needed and waits until its session is ready to render and export. */
