@@ -829,5 +829,8 @@
  "animation.keys.nth": "Every nth",
  "animation.keys.nth.step": "Step",
  "animation.keys.nth.hint": "Keep every nth selected key (per property, in time order)",
- "cmd.animation.keys.selectNth": "Select every n-th selected key"
+ "cmd.animation.keys.selectNth": "Select every n-th selected key",
+ "animation.keys.distribute": "Distribute",
+ "animation.keys.distribute.hint": "Space the selected keys of each property evenly between its first and last key",
+ "cmd.animation.keys.distribute": "Space the selected keys evenly in time"
 }

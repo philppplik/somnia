@@ -59,3 +59,12 @@ test('nth keys: per property in time order, offset, validation',()=>{
  assert.deepEqual(nthKeys(sel,2,1).map(x=>x.layer+x.t).sort(),['a10','a30','b6']);
  assert.throws(()=>nthKeys(sel,1));assert.throws(()=>nthKeys(sel,3,3));
 });
+import {distributeMoves} from './keyDistribute';
+test('distribute: even spacing, ends stay, skips collisions, needs three keys',()=>{
+ const d=applyEdits(base(),[{type:'prop.set',layer:'a',prop:'position',t:f(2),value:[1,1]},{type:'prop.set',layer:'a',prop:'position',t:f(3),value:[2,2]},{type:'prop.set',layer:'a',prop:'position',t:f(20),value:[3,3]}] as never);
+ const c=findComp(d)!,k=(n:number)=>({layer:'a',prop:'position' as const,t:f(n)});
+ const r=distributeMoves(c,[k(0),k(2),k(3),k(20)]);
+ assert.deepEqual(r.moves.map(m=>Math.round(m.to/f(1))),[7,13]);
+ assert.equal(distributeMoves(c,[k(0),k(20)]).moves.length,0);
+ assert.equal(distributeMoves(c,[k(0),k(10),k(20)]).moves.length,0);
+});

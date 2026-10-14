@@ -829,5 +829,8 @@
  "animation.keys.nth": "Jeden n-ten",
  "animation.keys.nth.step": "Schritt",
  "animation.keys.nth.hint": "Jeden n-ten gewählten Key behalten (je Eigenschaft, nach Zeit)",
- "cmd.animation.keys.selectNth": "Jeden n-ten gewählten Key auswählen"
+ "cmd.animation.keys.selectNth": "Jeden n-ten gewählten Key auswählen",
+ "animation.keys.distribute": "Verteilen",
+ "animation.keys.distribute.hint": "Gewählte Keys je Eigenschaft gleichmäßig zwischen erstem und letztem Key verteilen",
+ "cmd.animation.keys.distribute": "Gewählte Keys zeitlich gleichmäßig verteilen"
 }

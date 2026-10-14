@@ -829,5 +829,8 @@
  "animation.keys.nth": "Un sur n",
  "animation.keys.nth.step": "Pas",
  "animation.keys.nth.hint": "Garde une key sélectionnée sur n (par propriété, dans l’ordre du temps)",
- "cmd.animation.keys.selectNth": "Sélectionner une key sur n parmi la sélection"
+ "cmd.animation.keys.selectNth": "Sélectionner une key sur n parmi la sélection",
+ "animation.keys.distribute": "Répartir",
+ "animation.keys.distribute.hint": "Répartit les keys sélectionnées de chaque propriété entre la première et la dernière",
+ "cmd.animation.keys.distribute": "Répartir uniformément les keys sélectionnées dans le temps"
 }

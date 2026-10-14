@@ -42,6 +42,7 @@ import {keyStretchSpecs} from './keyStretchCommands';
 import {layerTimingSpecs} from './layerTimingCommands';
 import {keyValuesSpecs} from './keyValuesCommands';
 import {keyNthSpecs} from './keyNthCommands';
+import {keyDistributeSpecs} from './keyDistributeCommands';
 import {keyEaseRandomSpecs} from './keyEaseRandomCommands';
 import {keyRangeSpecs} from './keyRangeCommands';
 import {keyInvertSpecs} from './keyInvertCommands';
@@ -335,7 +336,7 @@ export function animationCommandSpecs():CommandSpec<unknown,unknown>[]{
   spec('animation.export.apng','Export work area as APNG (animated PNG)',()=>exportApng().then(()=>undefined,e=>{throw e instanceof ExportError?Object.assign(e,{expected:true}):e;}),undefined,open,'Project'),
   spec('animation.export.webm','Export work area as WebM video (real time)',()=>exportWebM().then(()=>undefined,e=>{throw e instanceof ExportError?Object.assign(e,{expected:true}):e;}),undefined,open,'Project'),
   spec('animation.playhead.set','Move playhead',(p:{seconds:number})=>animationSession().setView({playhead:secondsToTicks(p.seconds)}),object({seconds:num}),open,'View'),
- ...renderQueueSpecs(),...templateRenameSpecs(),...onionSpecs(),...rigSpecs(),...keyStretchSpecs(),...layerTimingSpecs(),...keySetClipSpecs(),...keyRepeatSpecs(),...keyReverseSpecs(),...keyInvertSpecs(),...keyRangeSpecs(),...keyValuesSpecs(),...keyEaseRandomSpecs(),...keyNthSpecs()] as CommandSpec<unknown,unknown>[];
+ ...renderQueueSpecs(),...templateRenameSpecs(),...onionSpecs(),...rigSpecs(),...keyStretchSpecs(),...layerTimingSpecs(),...keySetClipSpecs(),...keyRepeatSpecs(),...keyReverseSpecs(),...keyInvertSpecs(),...keyRangeSpecs(),...keyValuesSpecs(),...keyEaseRandomSpecs(),...keyNthSpecs(),...keyDistributeSpecs()] as CommandSpec<unknown,unknown>[];
 }
 export const ANIMATION_COMMANDS=animationCommandSpecs().map(s=>s.id);
 const DESTRUCTIVE=new Set(['animation.layer.remove','animation.keys.delete','animation.keys.cut','animation.audio.volume.keyRemove','animation.precomp.volume.keyRemove','animation.stroke.keyRemove','animation.color.keyRemove','animation.styleKeys.delete']);

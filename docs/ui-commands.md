@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-756 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+757 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -76,6 +76,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `animation.keys.cubic` | Set a custom cubic-bezier ease on the selected keys | Edit | animation |  |
 | `animation.keys.cut` | Cut selected keys | Edit | animation |  |
 | `animation.keys.delete` | Delete selected keys | Edit | animation |  |
+| `animation.keys.distribute` | Space the selected keys evenly in time | Edit | animation |  |
 | `animation.keys.ease` | Set ease of selected keys | Edit | animation |  |
 | `animation.keys.easeAll` | Ease all selected keys | Edit | animation | `Mod+Alt+E` |
 | `animation.keys.easeRandom` | Give the selected keys random eases | Edit | animation |  |

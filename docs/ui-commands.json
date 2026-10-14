@@ -676,6 +676,22 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.keys.distribute",
+      "title": "Space the selected keys evenly in time",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "distribute",
+        "even",
+        "keys",
+        "space",
+        "spacing",
+        "time"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.keys.ease",
       "title": "Set ease of selected keys",
       "category": "Edit",

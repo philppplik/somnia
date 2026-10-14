@@ -829,5 +829,8 @@
  "animation.keys.nth": "Cada n",
  "animation.keys.nth.step": "Paso",
  "animation.keys.nth.hint": "Conserva cada n-ésima key seleccionada (por propiedad, en orden de tiempo)",
- "cmd.animation.keys.selectNth": "Seleccionar cada n-ésima key seleccionada"
+ "cmd.animation.keys.selectNth": "Seleccionar cada n-ésima key seleccionada",
+ "animation.keys.distribute": "Distribuir",
+ "animation.keys.distribute.hint": "Reparte las keys seleccionadas de cada propiedad entre la primera y la última",
+ "cmd.animation.keys.distribute": "Repartir las keys seleccionadas de forma uniforme en el tiempo"
 }
