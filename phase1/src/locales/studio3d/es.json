@@ -939,5 +939,11 @@
  "studio3d.edit.separate": "Separar a objeto",
  "studio3d.hist.editSeparate": "Separar selección a objeto",
  "cmd.studio3d.edit.selectSharp": "Seleccionar aristas cuyas caras se unen con al menos el ángulo indicado",
- "studio3d.edit.selSharp": "Aristas afiladas"
+ "studio3d.edit.selSharp": "Aristas afiladas",
+ "cmd.studio3d.edit.rotate": "Rotar los vértices seleccionados alrededor de su centroide en un eje global",
+ "studio3d.hist.editRotate": "Rotar selección",
+ "studio3d.edit.rotateDeg": "Ángulo de rotación",
+ "studio3d.edit.rotateX": "Rotar X",
+ "studio3d.edit.rotateY": "Rotar Y",
+ "studio3d.edit.rotateZ": "Rotar Z"
 }

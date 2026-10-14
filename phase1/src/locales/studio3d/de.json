@@ -939,5 +939,11 @@
  "studio3d.edit.separate": "Als Objekt abspalten",
  "studio3d.hist.editSeparate": "Auswahl als Objekt abspalten",
  "cmd.studio3d.edit.selectSharp": "Kanten auswählen, deren Flächen mindestens im angegebenen Winkel aufeinandertreffen",
- "studio3d.edit.selSharp": "Scharfe Kanten"
+ "studio3d.edit.selSharp": "Scharfe Kanten",
+ "cmd.studio3d.edit.rotate": "Ausgewählte Vertices um ihren Schwerpunkt auf einer Weltachse drehen",
+ "studio3d.hist.editRotate": "Auswahl drehen",
+ "studio3d.edit.rotateDeg": "Drehwinkel",
+ "studio3d.edit.rotateX": "X drehen",
+ "studio3d.edit.rotateY": "Y drehen",
+ "studio3d.edit.rotateZ": "Z drehen"
 }

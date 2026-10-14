@@ -639,6 +639,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `studio3d.edit.randomize` | Jitter the selected vertices by a seeded random displacement | Edit | studio3d |  |
 | `studio3d.edit.relax` | Smooth selected vertices towards their neighbours | Edit | studio3d |  |
 | `studio3d.edit.rip` | Rip the selected faces off the rest of the mesh | Edit | studio3d |  |
+| `studio3d.edit.rotate` | Rotate the selected vertices around their centroid on a world axis | Edit | studio3d |  |
 | `studio3d.edit.select` | Select element | Edit | studio3d |  |
 | `studio3d.edit.selectAll` | Select all, none or inverse | Edit | studio3d |  |
 | `studio3d.edit.selectBoundary` | Select boundary edges or vertices | Edit | studio3d |  |

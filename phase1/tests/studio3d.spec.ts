@@ -1064,6 +1064,21 @@ test('mesh edit mode: select sharp edges by dihedral angle',async({page})=>{
  await expect(page.getByRole('alert')).toContainText('between 0 and 180');
 });
 
+test('mesh edit mode: rotate turns the selected vertices around their centroid',async({page})=>{
+ await blank(page);
+ const id=await insert(page,'cube',0);
+ expect(await run(page,'studio3d.edit.start',{id,mode:'vertex'})).toBe(true);
+ expect(await run(page,'studio3d.edit.rotate',{axis:'y',degrees:90})).toBe(false);
+ await expect(page.getByRole('alert')).toContainText('Select vertices to rotate');
+ expect(await run(page,'studio3d.edit.select',{kind:'vertex',ids:[8,9,10,11]})).toBe(true);
+ expect(await run(page,'studio3d.edit.rotate',{axis:'y',degrees:90})).toBe(true);
+ let s=await session(page);expect(s.stats.triangles).toBe(12);
+ await run(page,'studio3d.undo');
+ s=await session(page);expect(s.stats.triangles).toBe(12);
+ expect(await run(page,'studio3d.edit.rotate',{axis:'y',degrees:0})).toBe(false);
+ await expect(page.getByRole('alert')).toContainText('non-zero');
+});
+
 test('mesh edit mode: weld merges selected vertices at their centre, undo restores them',async({page})=>{
  await blank(page);
  const id=await insert(page,'cube',0);

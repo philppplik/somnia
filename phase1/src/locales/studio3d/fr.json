@@ -939,5 +939,11 @@
  "studio3d.edit.separate": "Séparer en objet",
  "studio3d.hist.editSeparate": "Séparer la sélection en objet",
  "cmd.studio3d.edit.selectSharp": "Sélectionner les arêtes dont les faces se rencontrent selon au moins l’angle indiqué",
- "studio3d.edit.selSharp": "Arêtes vives"
+ "studio3d.edit.selSharp": "Arêtes vives",
+ "cmd.studio3d.edit.rotate": "Pivoter les sommets sélectionnés autour de leur centroïde sur un axe global",
+ "studio3d.hist.editRotate": "Pivoter la sélection",
+ "studio3d.edit.rotateDeg": "Angle de rotation",
+ "studio3d.edit.rotateX": "Pivoter X",
+ "studio3d.edit.rotateY": "Pivoter Y",
+ "studio3d.edit.rotateZ": "Pivoter Z"
 }

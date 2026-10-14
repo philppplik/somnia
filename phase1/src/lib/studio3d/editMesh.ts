@@ -502,6 +502,40 @@ export function moveSelected(m:MeshData,verts:number[],offset:[number,number,num
  const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
  check(out);return out;
 }
+/** Rotates the selected vertices around the centroid of their distinct positions on a world axis: position-equal twins rotate together, the strongest mask at a position dams the whole seam (as a partial rotation toward the full angle). Masks are carried; UVs are carried. */
+export function rotateSelected(m:MeshData,verts:number[],axis:'x'|'y'|'z',degrees:number):MeshData{
+ check(m);
+ if(!verts.length)throw new EditError('Select vertices to rotate.');
+ if(axis!=='x'&&axis!=='y'&&axis!=='z')throw new EditError('The rotation axis must be x, y or z.');
+ if(!Number.isFinite(degrees)||degrees===0||Math.abs(degrees)>36000)throw new EditError('The rotation must be a finite, non-zero number of degrees.');
+ const nv=m.positions.length/3;
+ for(const v of verts){if(!Number.isInteger(v)||v<0||v>=nv)throw new EditError(`Vertex ${v} does not exist.`);}
+ const pk=(v:number)=>`${Math.round(m.positions[v*3]*1e6)},${Math.round(m.positions[v*3+1]*1e6)},${Math.round(m.positions[v*3+2]*1e6)}`;
+ const want=new Set(verts.map(pk));
+ let cx=0,cy=0,cz=0,n=0;const counted=new Set<string>();
+ const damp=new Map<string,number>();
+ for(let v=0;v<nv;v++){
+  const k=pk(v);if(!want.has(k))continue;
+  const mk=m.mask?m.mask[v]:0;
+  damp.set(k,Math.min(damp.get(k)??mk,mk));
+  if(!counted.has(k)){counted.add(k);cx+=m.positions[v*3];cy+=m.positions[v*3+1];cz+=m.positions[v*3+2];n++;}
+ }
+ cx/=n;cy/=n;cz/=n;
+ const rad=degrees*Math.PI/180,sin=Math.sin(rad),cos=Math.cos(rad);
+ const positions=[...m.positions];
+ for(let v=0;v<nv;v++){
+  const k=pk(v);if(!want.has(k))continue;
+  const f=1-damp.get(k)!;if(f===0)continue;
+  const x=m.positions[v*3]-cx,y=m.positions[v*3+1]-cy,z=m.positions[v*3+2]-cz;
+  let rx=x,ry=y,rz=z;
+  if(axis==='x'){ry=y*cos-z*sin;rz=y*sin+z*cos;}
+  else if(axis==='y'){rx=x*cos+z*sin;rz=-x*sin+z*cos;}
+  else{rx=x*cos-y*sin;ry=x*sin+y*cos;}
+  positions[v*3]+=(rx-x)*f;positions[v*3+1]+=(ry-y)*f;positions[v*3+2]+=(rz-z)*f;
+ }
+ const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
+ check(out);return out;
+}
 /** Jitters the selected vertices by a seeded pseudo-random displacement per distinct position: position-equal twins get the identical displacement so split sides never rip, the strongest mask at a position dams the whole seam, and the same seed always reproduces the same result. Masks are carried; UVs are carried. */
 export function randomizeSelected(m:MeshData,verts:number[],amount:number,seed:number):MeshData{
  check(m);

@@ -7358,6 +7358,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.edit.rotate",
+      "title": "Rotate the selected vertices around their centroid on a world axis",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.edit.select",
       "title": "Select element",
       "category": "Edit",

@@ -939,5 +939,11 @@
  "studio3d.edit.separate": "Separate to Object",
  "studio3d.hist.editSeparate": "Separate selection to object",
  "cmd.studio3d.edit.selectSharp": "Select edges whose faces meet at an angle of at least the given degrees",
- "studio3d.edit.selSharp": "Sharp edges"
+ "studio3d.edit.selSharp": "Sharp edges",
+ "cmd.studio3d.edit.rotate": "Rotate the selected vertices around their centroid on a world axis",
+ "studio3d.hist.editRotate": "Rotate selection",
+ "studio3d.edit.rotateDeg": "Rotation angle",
+ "studio3d.edit.rotateX": "Rotate X",
+ "studio3d.edit.rotateY": "Rotate Y",
+ "studio3d.edit.rotateZ": "Rotate Z"
 }
