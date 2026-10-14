@@ -43,6 +43,7 @@ All file links are repository-relative, so they remain useful on a feature branc
 13. [Agent area DS adoption](agent-adoption.md)
 14. [Vectorstudio area DS adoption](vectorstudio-adoption.md)
 15. [Settings area DS adoption](settings-adoption.md)
+16. [Svgedit area DS adoption](svgedit-adoption.md)
 
 ## The system in one view
 

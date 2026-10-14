@@ -14,6 +14,7 @@ import {pathToContours,contoursToPath,setKind} from '../../lib/svgedit/pathnodes
 import {attr} from '../../lib/svgedit/source';
 import type {AlignKind} from '../../lib/svgedit/geometry';
 import {AlignStartVertical,AlignCenterVertical,AlignEndVertical,AlignStartHorizontal,AlignCenterHorizontal,AlignEndHorizontal,ArrowUpToLine,ArrowDownToLine,ArrowUp,ArrowDown,ArrowLeftRight,ArrowUpDown,RotateCw,RotateCcw,Container,SquareDashed,Image as ImageIcon,PencilLine,Minus} from '../../lib/icons';
+import {NativeInput,NativeSelect} from '../ui/native-controls';
 const BoolGlyph=({op}:{op:BoolOp})=><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true"><defs><clipPath id={`bc-${op}`}><rect x="6" y="6" width="8" height="8" rx="1"/></clipPath></defs>{op==='unite'&&<path d="M2 2h8v4h4v8H6v-4H2z" fill="currentColor" fillOpacity=".25"/>}{op==='subtract'&&<><path d="M2 2h8v4H6v4H2z" fill="currentColor" fillOpacity=".25"/><path d="M6 6h8v8H6z" strokeDasharray="2 2"/></>}{op==='intersect'&&<><rect x="2" y="2" width="8" height="8" rx="1" strokeDasharray="2 2"/><rect x="6" y="6" width="8" height="8" rx="1" strokeDasharray="2 2"/><rect x="6" y="6" width="4" height="4" fill="currentColor" fillOpacity=".35"/></>}{op==='exclude'&&<><path d="M2 2h8v4H6v4H2z" fill="currentColor" fillOpacity=".25"/><path d="M10 6h4v8H6v-4h4z" fill="currentColor" fillOpacity=".25"/></>}</svg>;
 const ClipGlyph=({kind}:{kind:'clip'|'mask'|'release'|'snap'|'outline'|'png'})=><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true">
  {kind==='clip'&&<><rect x="1.5" y="1.5" width="9" height="9" rx="1" strokeDasharray="2 2"/><circle cx="9.5" cy="9.5" r="4.5" fill="currentColor" fillOpacity=".25"/></>}
@@ -50,13 +51,13 @@ export function SvgOptionsBar(){
   <Sep/>
   {btn(t('svg.snap.on'),<ClipGlyph kind="snap"/>,()=>patchUi({snap:!ui.snap}),false,ui.snap)}
   <Sep/>
-  {btn(t('svg.placeImage'),<ImageIcon size={15}/>,()=>file.current?.click())}<input ref={file} type="file" hidden accept="image/png,image/jpeg,image/webp,image/gif" data-testid="svg-place-input" onChange={e=>{const f=e.target.files?.[0];e.target.value='';if(f)void run(()=>placeImage(f));}}/>
+  {btn(t('svg.placeImage'),<ImageIcon size={15}/>,()=>file.current?.click())}<NativeInput ref={file} type="file" hidden accept="image/png,image/jpeg,image/webp,image/gif" data-testid="svg-place-input" onChange={e=>{const f=e.target.files?.[0];e.target.value='';if(f)void run(()=>placeImage(f));}}/>
   {one&&isTraceable(one)&&<>
-   <label className="flex items-center gap-1 text-[11px]">{t('svg.trace.colors')}<input data-testid="svg-trace-colors" type="number" min={2} max={32} value={tr.colors} className="!h-6 !w-12 text-[11px]" aria-label={t('svg.trace.colors')} onKeyDown={e=>e.stopPropagation()} onChange={e=>setTr({...tr,colors:Math.min(32,Math.max(2,+e.target.value||2))})}/></label>
+   <label className="flex items-center gap-1 text-[11px]">{t('svg.trace.colors')}<NativeInput data-testid="svg-trace-colors" type="number" min={2} max={32} value={tr.colors} className="!h-6 !w-12 text-[11px]" aria-label={t('svg.trace.colors')} onKeyDown={e=>e.stopPropagation()} onChange={e=>setTr({...tr,colors:Math.min(32,Math.max(2,+e.target.value||2))})}/></label>
    <Button size="compact" data-testid="svg-trace" disabled={busy} onClick={()=>void run(()=>traceImage(sel[0],tr))}>{t('svg.trace.run')}</Button></>}
   <Sep/>
-  <label className="flex items-center gap-1 text-[11px]">{t('svg.export.scale')}<select data-testid="svg-export-scale" className="!h-6 text-[11px]" value={xs} aria-label={t('svg.export.scale')} onChange={e=>setXs(+e.target.value)}>{[1,2,3,4].map(n=><option key={n} value={n}>{n}x</option>)}</select></label>
-  <label className="flex items-center gap-1 text-[11px]"><input type="checkbox" data-testid="svg-export-bg" checked={xbg} style={{width:13,height:13}} onChange={e=>setXbg(e.target.checked)}/>{t('svg.export.white')}</label>
+  <label className="flex items-center gap-1 text-[11px]">{t('svg.export.scale')}<NativeSelect data-testid="svg-export-scale" className="!h-6 text-[11px]" value={xs} aria-label={t('svg.export.scale')} onChange={e=>setXs(+e.target.value)}>{[1,2,3,4].map(n=><option key={n} value={n}>{n}x</option>)}</NativeSelect></label>
+  <label className="flex items-center gap-1 text-[11px]"><NativeInput type="checkbox" data-testid="svg-export-bg" checked={xbg} style={{width:13,height:13}} onChange={e=>setXbg(e.target.checked)}/>{t('svg.export.white')}</label>
   {btn(t('svg.export.png'),<ClipGlyph kind="png"/>,()=>void run(()=>exportPng(xs,xbg?'#ffffff':null)),!root||busy)}
   {ui.tool==='node'&&<><Sep/>
    <Button size="compact" disabled={!ui.node} onClick={()=>nodeEdit((cs,c,i)=>setKind(cs[c],i,'corner'))}>{t('svg.nodeCorner')}</Button>

@@ -831,38 +831,38 @@
       "rawTextarea": 0
     },
     "src/components/svgedit/GradientEditor.tsx": {
-      "rawButton": 2,
-      "rawInput": 4,
+      "rawButton": 0,
+      "rawInput": 0,
       "rawSelect": 0,
       "rawTextarea": 0
     },
     "src/components/svgedit/SnapPanel.tsx": {
-      "rawButton": 3,
-      "rawInput": 3,
+      "rawButton": 0,
+      "rawInput": 0,
       "rawSelect": 0,
       "rawTextarea": 0
     },
     "src/components/svgedit/SvgEditor.tsx": {
-      "rawButton": 2,
-      "rawInput": 1,
+      "rawButton": 0,
+      "rawInput": 0,
       "rawSelect": 0,
       "rawTextarea": 0
     },
     "src/components/svgedit/SvgInspector.tsx": {
-      "rawButton": 5,
-      "rawInput": 5,
+      "rawButton": 0,
+      "rawInput": 0,
       "rawSelect": 0,
-      "rawTextarea": 1
+      "rawTextarea": 0
     },
     "src/components/svgedit/SvgOptionsBar.tsx": {
       "rawButton": 0,
-      "rawInput": 3,
-      "rawSelect": 1,
+      "rawInput": 0,
+      "rawSelect": 0,
       "rawTextarea": 0
     },
     "src/components/svgedit/SvgSidebar.tsx": {
-      "rawButton": 3,
-      "rawInput": 1,
+      "rawButton": 0,
+      "rawInput": 0,
       "rawSelect": 0,
       "rawTextarea": 0
     },
