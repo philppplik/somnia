@@ -50,6 +50,11 @@ distractions.
   are the safe clone source for specks and blemishes); candidates that
   would leave the frame are skipped, and the click is a no-op when none
   fit. One click is one undo step, same as a drag stroke.
+- P48: a heal drag chains spots along the pointer path (every half
+  radius, short-side metric), all sharing the release offset: paint
+  across a scratch, let go on a clean area, and every point of the
+  stroke heals from that one direction - one commit, one undo step,
+  capped to the spot budget. Click auto-source is unchanged.
 
 ## Coverage
 
@@ -65,7 +70,10 @@ distractions.
   the clean green flips the target pixel from `rgb(210,40,40)` to
   `rgb(40,140,80)`, and one undo restores the canvas bitmap
   byte-for-byte; a second test clicks the defect without dragging and
-  asserts the auto-picked source heals it pixel-exactly. The light/dark
+  asserts the auto-picked source heals it pixel-exactly; a third drags
+  a stroke through the defect, releases on clean green, and asserts the
+  defect's mid-point is healed (the start point alone would not reach
+  it) with one undo restoring the bitmap. The light/dark
   theme test shows the active toggle, radius slider and brush cursor;
   its canvas bitmaps are pixel-identical to the P44 base (3bb96d93) run
   with the same proof and spec.

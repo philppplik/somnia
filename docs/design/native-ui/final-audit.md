@@ -210,6 +210,12 @@ through native control primitives, see below.
   radius along the path as ONE settings commit/undo step, capped to the
   dab budget; click behaviour unchanged), gallery spec extended; canvas
   bitmaps pixel-identical to the P47a base (0d1037cb).
+- P48: dodge mask overlay (painted regions and in-flight stroke chain
+  shown as accent circles in dodge mode only; pointer-transparent) plus
+  heal stroke chains (drag chains spots along the path sharing the
+  release offset; one commit per stroke; click auto-source unchanged),
+  gallery specs extended; canvas bitmaps pixel-identical to the P47
+  base (f4531ee6).
 
 
 

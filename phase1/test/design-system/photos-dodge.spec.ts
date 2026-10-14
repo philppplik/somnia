@@ -63,6 +63,33 @@ test('dodge/burn: a drag paints a dab chain as one undo step',async({page})=>{
  await page.waitForTimeout(800);
  expect(await canvasBitmap(page)).toEqual(before);
 });
+test('mask overlay shows painted dabs and the in-flight stroke',async({page})=>{
+ await page.goto('/test/design-system/?view=photos-dodge');
+ await expect(page.getByTestId('photos-workspace')).toBeVisible();
+ await page.getByTestId('photos-dodge').click();
+ await page.getByTestId('photos-dodge-amount').fill('0.7');
+ const box=await page.getByTestId('photos-canvas').boundingBox();
+ const at=(nx:number,ny:number):[number,number]=>[box!.x+nx*box!.width,box!.y+ny*box!.height];
+ await expect(page.getByTestId('photos-mask-overlay')).toHaveCount(0); // nothing painted yet
+ await page.mouse.click(...at(0.3,0.4));
+ await page.waitForTimeout(800);
+ await expect(page.locator('[data-testid="photos-mask-overlay"] circle')).toHaveCount(1);
+ await page.mouse.click(...at(0.7,0.6));
+ await page.waitForTimeout(800);
+ await expect(page.locator('[data-testid="photos-mask-overlay"] circle')).toHaveCount(2);
+ await page.mouse.move(...at(0.3,0.7));
+ await page.mouse.down();
+ await page.mouse.move(...at(0.7,0.7),{steps:10}); // in-flight chain previews
+ await expect(page.locator('[data-testid="photos-mask-overlay"] circle')).not.toHaveCount(2);
+ await page.mouse.up();
+ await page.waitForTimeout(800);
+ const after=await page.locator('[data-testid="photos-mask-overlay"] circle').count();
+ expect(after).toBeGreaterThan(3); // two clicks plus the stroke chain
+ await page.screenshot({path:'test-results/ds-photos-dodge-overlay.png',fullPage:true});
+ await page.getByTestId('photos-undo').click(); // one undo removes the stroke, keeps the clicks
+ await page.waitForTimeout(800);
+ await expect(page.locator('[data-testid="photos-mask-overlay"] circle')).toHaveCount(2);
+});
 test('dodge/burn mode renders in light and dark',async({page})=>{
  for(const theme of['light','dark']){
   await page.goto('/test/design-system/?view=photos-dodge');

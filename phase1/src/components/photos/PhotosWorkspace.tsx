@@ -61,6 +61,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
  const [dodging,setDodging]=useState(false);
  const [dabR,setDabR]=usePanelState<number>('photos.dodgeRadius',0.05);
  const dabChain=useRef<{x:number;y:number;r:number}[]|null>(null); // dabs of the in-flight dodge stroke
+ const healPath=useRef<{x:number;y:number}[]|null>(null); // path points of the in-flight heal stroke
  const drag=useRef<{pan?:{x:number;y:number;px:number;py:number};crop?:DragMode}|null>(null);
  useEffect(()=>{void openPhoto(item);},[item]);
  usePublishPhotosContext(item.name);
@@ -101,16 +102,22 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
  const onStageDown=(e:React.PointerEvent)=>{
   if(session?.cropping)return; // in crop mode only the overlay handles drag
   (e.target as HTMLElement).setPointerCapture(e.pointerId);
-  if(healing){healStart.current=pointerPos(e);return;} // heal mode never pans
+  if(healing){const p=pointerPos(e);healStart.current=p;healPath.current=[p];return;} // heal mode never pans
   if(dodging){const p=pointerPos(e);healStart.current=p;dabChain.current=[{x:p.x,y:p.y,r:dabR}];return;} // dodge/burn paints on release
   drag.current={pan:{x:pan[0],y:pan[1],px:e.clientX,py:e.clientY}};
  };
  const onStageMove=(e:React.PointerEvent)=>{
   if(healing||dodging){
    const p=pointerPos(e);setHealCursor(p);
-   if(dodging&&dabChain.current&&shown){ // extend the stroke every half radius (distance in short-side units)
-    const last=dabChain.current[dabChain.current.length-1];
-    if(Math.hypot((p.x-last.x)*fw,(p.y-last.y)*fh)/Math.min(fw,fh)>=dabR/2)dabChain.current.push({x:p.x,y:p.y,r:dabR});
+   if(shown){
+    if(dodging&&dabChain.current){ // extend the stroke every half radius (distance in short-side units)
+     const last=dabChain.current[dabChain.current.length-1];
+     if(Math.hypot((p.x-last.x)*fw,(p.y-last.y)*fh)/Math.min(fw,fh)>=dabR/2)dabChain.current.push({x:p.x,y:p.y,r:dabR});
+    }
+    if(healing&&healPath.current){ // same chaining for a heal stroke; the source offset is fixed on release
+     const last=healPath.current[healPath.current.length-1];
+     if(Math.hypot((p.x-last.x)*fw,(p.y-last.y)*fh)/Math.min(fw,fh)>=brushR/2)healPath.current.push(p);
+    }
    }
    return;
   }
@@ -118,7 +125,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
   setPan(clampPan(d.pan.x+(e.clientX-d.pan.px),d.pan.y+(e.clientY-d.pan.py),scale));
  };
  const onStageUp=(e:React.PointerEvent)=>{
-  if(healStart.current){ // heal: drag = manual source, click = auto source; dodge: a dab at the press point
+  if(healStart.current){ // heal: drag = stroke chain toward the release point, click = auto source; dodge: a stroke of dabs
    const start=healStart.current;healStart.current=null;
    const end=pointerPos(e);
    if(dodging){ // one stroke = one commit = one undo step, capped to the dab budget
@@ -126,9 +133,11 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
     commitPhotoSettings(item.name,now=>{const room=Math.max(0,200-now.dabs.length);return room?{...now,dabs:[...now.dabs,...chain.slice(0,room).map(clampDab)]}:now;});
     return;
    }
-   if(Math.hypot(end.x-start.x,end.y-start.y)>0.01)
-    commitPhotoSettings(item.name,now=>({...now,spots:[...now.spots,clampSpot({x:start.x,y:start.y,r:brushR,dx:end.x-start.x,dy:end.y-start.y})]}));
-   else if(shown){ // a plain click auto-picks the flattest nearby source disc
+   const path=healPath.current??[start];healPath.current=null;
+   if(Math.hypot(end.x-start.x,end.y-start.y)>0.01){ // paint over the defect, release on a clean area: every path point heals from that one offset
+    const dx=end.x-start.x,dy=end.y-start.y;
+    commitPhotoSettings(item.name,now=>{const room=Math.max(0,200-now.spots.length);return room?{...now,spots:[...now.spots,...path.slice(0,room).map(pt=>clampSpot({x:pt.x,y:pt.y,r:brushR,dx,dy}))]}:now;});
+   }else if(shown){ // a plain click auto-picks the flattest nearby source disc
     const sp=autoSource(shown,start.x,start.y,brushR);
     if(sp)commitPhotoSettings(item.name,now=>({...now,spots:[...now.spots,clampSpot(sp)]}));
    }
@@ -231,6 +240,10 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
      {healStart.current&&<line x1={healStart.current.x*dispW} y1={healStart.current.y*dispH} x2={healCursor.x*dispW} y2={healCursor.y*dispH} stroke="rgba(255,255,255,0.75)" strokeWidth={1}/>}
      {healStart.current&&<circle cx={healStart.current.x*dispW} cy={healStart.current.y*dispH} r={Math.max(2,brushR*Math.min(fw,fh)*scale)} fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth={1.5} strokeDasharray="4 3"/>}
      <circle cx={healCursor.x*dispW} cy={healCursor.y*dispH} r={Math.max(2,(healing?brushR:dabR)*Math.min(fw,fh)*scale)} fill="none" stroke="var(--accent)" strokeWidth={1.5}/>
+    </svg>}
+    {dodging&&!session?.cropping&&session&&(session.now.dabs.length>0||dabChain.current)&&<svg className="pointer-events-none absolute inset-0 size-full" data-testid="photos-mask-overlay">
+     {session.now.dabs.map((d,i)=><circle key={i} cx={d.x*dispW} cy={d.y*dispH} r={Math.max(2,d.r*Math.min(fw,fh)*scale)} fill="var(--accent)" fillOpacity={0.2} stroke="var(--accent)" strokeWidth={1} strokeOpacity={0.6}/>)}
+     {dabChain.current?.map((d,i)=><circle key={`c${i}`} cx={d.x*dispW} cy={d.y*dispH} r={Math.max(2,d.r*Math.min(fw,fh)*scale)} fill="var(--accent)" fillOpacity={0.3}/>)}
     </svg>}
    </div>
   </div>

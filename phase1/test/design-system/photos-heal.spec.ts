@@ -49,6 +49,26 @@ test('clone stamp: a plain click auto-picks a clean source',async({page})=>{
  await page.waitForTimeout(700);
  expect(await canvasBitmap(page)).toEqual(before);
 });
+test('clone stamp: a stroke through the defect heals every path point from the release offset',async({page})=>{
+ await page.goto('/test/design-system/?view=photos-heal');
+ await expect(page.getByTestId('photos-workspace')).toBeVisible();
+ const before=await canvasBitmap(page);
+ await page.getByTestId('photos-heal').click();
+ const box=await page.getByTestId('photos-canvas').boundingBox();
+ const at=(nx:number,ny:number):[number,number]=>[box!.x+nx*box!.width,box!.y+ny*box!.height];
+ await page.mouse.move(...at(0.2917,0.25)); // start above the defect
+ await page.mouse.down();
+ await page.mouse.move(...at(0.2917,0.375),{steps:4}); // through the defect
+ await page.mouse.move(...at(0.2917,0.625),{steps:4}); // below it
+ await page.mouse.move(...at(0.75,0.5),{steps:6}); // release on clean green: the shared offset
+ await page.mouse.up();
+ await page.waitForTimeout(800);
+ expect(await pixel(page,70,60)).toEqual([40,140,80,255]); // defect mid-point healed (start point alone would not have reached it)
+ expect(await pixel(page,70,100)).toEqual([40,140,80,255]);
+ await page.getByTestId('photos-undo').click();
+ await page.waitForTimeout(800);
+ expect(await canvasBitmap(page)).toEqual(before);
+});
 test('clone stamp mode renders in light and dark',async({page})=>{
  for(const theme of['light','dark']){
   await page.goto('/test/design-system/?view=photos-heal');

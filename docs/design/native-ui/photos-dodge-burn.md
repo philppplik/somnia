@@ -46,6 +46,10 @@ region — the classic dodge/burn workflow, plus local saturation.
   dab at the press point, and the whole stroke commits as one settings
   step (one undo click). The chain is capped to the remaining 200-dab
   budget; a plain click still paints a single dab.
+- P48: in dodge mode a mask overlay outlines every painted region
+  (accent fill at 20%, ring at 60%) and previews the in-flight stroke's
+  chain live; it is pointer-transparent, only visible in the active
+  mode, and never touches the canvas backing store.
 
 ## Coverage
 
@@ -62,7 +66,9 @@ region — the classic dodge/burn workflow, plus local saturation.
   the surround untouched and undo byte-restoring the canvas; a -100
   saturation dab greys the disc to the pixel luma; a stroke test drags
   across the canvas, asserts two points along the path are brightened
-  and that one undo click restores the bitmap byte-for-byte. The light/dark theme
+  and that one undo click restores the bitmap byte-for-byte; the
+  overlay test counts painted circles (two clicks, an in-flight stroke
+  preview, one undo back to two). The light/dark theme
   test shows the active toggle, the three sliders and the brush cursor;
   its canvas bitmaps are pixel-identical to the P45 base (c5241b18) run
   with the same proof and spec.
