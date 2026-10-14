@@ -765,5 +765,7 @@
  "animation.keys.stretch.first": "Première clé",
  "animation.keys.stretch.playhead": "Tête de lecture",
  "animation.keys.stretch.hint": "Met à l'échelle les clés choisies dans le temps. 200 double les écarts, 50 les divise par deux. Les clés qui sortiraient de la composition ou entreraient en collision ne bougent pas.",
- "cmd.animation.keys.stretch": "Étirer dans le temps les clés choisies"
+ "cmd.animation.keys.stretch": "Étirer dans le temps les clés choisies",
+ "animation.keys.stretch.count": "{moving} vont bouger",
+ "animation.keys.stretch.countSkipped": "{moving} vont bouger, {skipped} restent"
 }

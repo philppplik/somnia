@@ -765,5 +765,7 @@
  "animation.keys.stretch.first": "Erster Key",
  "animation.keys.stretch.playhead": "Abspielkopf",
  "animation.keys.stretch.hint": "Skaliert die gewählten Keys in der Zeit. 200 verdoppelt die Abstände, 50 halbiert sie. Keys, die aus der Komposition fallen oder kollidieren würden, bleiben stehen.",
- "cmd.animation.keys.stretch": "Gewählte Keys in der Zeit dehnen"
+ "cmd.animation.keys.stretch": "Gewählte Keys in der Zeit dehnen",
+ "animation.keys.stretch.count": "{moving} werden verschoben",
+ "animation.keys.stretch.countSkipped": "{moving} werden verschoben, {skipped} bleiben"
 }

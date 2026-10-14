@@ -765,5 +765,7 @@
  "animation.keys.stretch.first": "Primeira chave",
  "animation.keys.stretch.playhead": "Cabeça de reprodução",
  "animation.keys.stretch.hint": "Escala as chaves escolhidas no tempo. 200 dobra os intervalos, 50 reduz pela metade. Chaves que saiam da composição ou colidam ficam onde estão.",
- "cmd.animation.keys.stretch": "Esticar no tempo as chaves escolhidas"
+ "cmd.animation.keys.stretch": "Esticar no tempo as chaves escolhidas",
+ "animation.keys.stretch.count": "{moving} serão movidas",
+ "animation.keys.stretch.countSkipped": "{moving} serão movidas, {skipped} ficam"
 }

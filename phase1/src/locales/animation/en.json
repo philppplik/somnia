@@ -765,5 +765,7 @@
  "animation.keys.stretch.first": "First key",
  "animation.keys.stretch.playhead": "Playhead",
  "animation.keys.stretch.hint": "Scale the selected keys in time. 200 doubles the gaps, 50 halves them. Keys that would leave the composition or collide stay put.",
- "cmd.animation.keys.stretch": "Stretch the selected keys in time"
+ "cmd.animation.keys.stretch": "Stretch the selected keys in time",
+ "animation.keys.stretch.count": "{moving} will move",
+ "animation.keys.stretch.countSkipped": "{moving} will move, {skipped} stay"
 }
