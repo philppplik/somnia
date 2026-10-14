@@ -888,5 +888,8 @@
  "cmd.animation.keys.echo": "Copiar as keys selecionadas alguns quadros depois ou antes",
  "animation.keys.keyAll": "Key tudo no cursor",
  "animation.keys.keyAll.hint": "Adiciona uma key no cursor em cada propriedade animada das camadas escolhidas",
- "cmd.animation.keys.keyAll": "Adicionar uma key no cursor em cada propriedade animada das camadas"
+ "cmd.animation.keys.keyAll": "Adicionar uma key no cursor em cada propriedade animada das camadas",
+ "animation.keys.trim": "Cortar na área de trabalho",
+ "animation.keys.trim.hint": "Remove as keys das camadas escolhidas fora da área de trabalho",
+ "cmd.animation.keys.trimToWorkArea": "Remover as keys fora da área de trabalho"
 }

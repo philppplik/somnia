@@ -888,5 +888,8 @@
  "cmd.animation.keys.echo": "Copiar las keys seleccionadas unos fotogramas después o antes",
  "animation.keys.keyAll": "Key todo en el cabezal",
  "animation.keys.keyAll.hint": "Añade una key en el cabezal en cada propiedad animada de las capas elegidas",
- "cmd.animation.keys.keyAll": "Añadir una key en el cabezal en cada propiedad animada de las capas"
+ "cmd.animation.keys.keyAll": "Añadir una key en el cabezal en cada propiedad animada de las capas",
+ "animation.keys.trim": "Recortar al área de trabajo",
+ "animation.keys.trim.hint": "Elimina las keys de las capas elegidas fuera del área de trabajo",
+ "cmd.animation.keys.trimToWorkArea": "Eliminar las keys fuera del área de trabajo"
 }

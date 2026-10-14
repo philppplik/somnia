@@ -200,3 +200,10 @@ test('key all: only animated properties without a key at the playhead, locked la
  const s=open();s.dispatch(keyAllEdits(s.document!.compositions[0],['a'],f(5)).edits);
  assert.equal(findLayer(findComp(s.document!)!,'a')!.transform.position.keys.length,3);
 });
+import {trimKeys} from './keyTrim';
+test('trim: keys outside the work area go, all-outside properties and locked layers are kept',()=>{
+ const d=applyEdits(base(),[{type:'prop.set',layer:'a',prop:'position',t:f(20),value:[3,3]}] as never);
+ const c={...findComp(d)!,workArea:{in:f(5),out:f(15)}};
+ assert.deepEqual(trimKeys(c,['a']).map(k=>k.t).sort((a,b)=>a-b),[f(0),f(20)]);
+ assert.equal(trimKeys({...c,workArea:{in:f(30),out:f(40)}},['a']).length,0);assert.equal(trimKeys(c,['zz']).length,0);
+});

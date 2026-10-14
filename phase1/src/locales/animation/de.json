@@ -888,5 +888,8 @@
  "cmd.animation.keys.echo": "Gewählte Keys einige Frames später oder früher kopieren",
  "animation.keys.keyAll": "Alle am Playhead keyen",
  "animation.keys.keyAll.hint": "Einen Key am Playhead auf jeder animierten Eigenschaft der gewählten Ebenen setzen",
- "cmd.animation.keys.keyAll": "Key am Playhead auf jeder animierten Eigenschaft der Ebenen setzen"
+ "cmd.animation.keys.keyAll": "Key am Playhead auf jeder animierten Eigenschaft der Ebenen setzen",
+ "animation.keys.trim": "Auf Arbeitsbereich kürzen",
+ "animation.keys.trim.hint": "Keys der gewählten Ebenen außerhalb des Arbeitsbereichs entfernen",
+ "cmd.animation.keys.trimToWorkArea": "Keys außerhalb des Arbeitsbereichs entfernen"
 }

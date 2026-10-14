@@ -888,5 +888,8 @@
  "cmd.animation.keys.echo": "Copier les keys sélectionnées quelques images plus tard ou plus tôt",
  "animation.keys.keyAll": "Tout keyer à la tête",
  "animation.keys.keyAll.hint": "Ajoute une key à la tête de lecture sur chaque propriété animée des calques choisis",
- "cmd.animation.keys.keyAll": "Ajouter une key à la tête de lecture sur chaque propriété animée des calques"
+ "cmd.animation.keys.keyAll": "Ajouter une key à la tête de lecture sur chaque propriété animée des calques",
+ "animation.keys.trim": "Couper à la zone de travail",
+ "animation.keys.trim.hint": "Supprime les keys des calques choisis hors de la zone de travail",
+ "cmd.animation.keys.trimToWorkArea": "Supprimer les keys hors de la zone de travail"
 }

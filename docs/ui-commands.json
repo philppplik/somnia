@@ -1190,6 +1190,23 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.keys.trimToWorkArea",
+      "title": "Remove the keys outside the work area",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "clean",
+        "delete",
+        "keys",
+        "outside",
+        "remove",
+        "trim",
+        "work area"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.keys.values",
       "title": "Offset or scale the values of the selected keys",
       "category": "Edit",

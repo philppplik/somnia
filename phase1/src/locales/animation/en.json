@@ -888,5 +888,8 @@
  "cmd.animation.keys.echo": "Copy the selected keys some frames later or earlier",
  "animation.keys.keyAll": "Key all at playhead",
  "animation.keys.keyAll.hint": "Add a key at the playhead on every animated property of the picked layers",
- "cmd.animation.keys.keyAll": "Add a key at the playhead on every animated property of the layers"
+ "cmd.animation.keys.keyAll": "Add a key at the playhead on every animated property of the layers",
+ "animation.keys.trim": "Trim to work area",
+ "animation.keys.trim.hint": "Remove the keys of the picked layers that lie outside the work area",
+ "cmd.animation.keys.trimToWorkArea": "Remove the keys outside the work area"
 }
