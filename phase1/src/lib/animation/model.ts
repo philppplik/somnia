@@ -80,9 +80,10 @@ export const validShutter=(s:Shutter|undefined)=>s===undefined||(!!s&&typeof s==
 export interface Composition{shutter?:Shutter;id:string;name:string;width:number;height:number;fps:Rational;duration:number;start:number;background:string;workArea:{in:number;out:number};layers:readonly Layer[];markers?:readonly Marker[];/** Ruler guides for the viewer; never drawn in exports. */guides?:readonly import('./guides').Guide[]}
 export interface AnimationDocument{schema:number;engine:string;id:string;name:string;revision:number;activeComp:string;compositions:readonly Composition[];assets:readonly InterfaceAsset[];audioAssets?:readonly AudioAsset[];motions?:MotionLib;textPresets?:import('./textPresetModel').TextPresetLib;easings?:import('./easingModel').EasingLib;layerTemplates?:LayerTemplateLib}
 /** A user-saved layer: one self-contained shape, text or solid layer with its keys, times counted from its own start (the earliest of its in point and keys is 0). */
-export interface LayerTemplate{id:string;name:string;layer:Layer}
+/** `layer` is the first layer (id `template`); `extra` holds further layers of a multi-layer template (ids `template-2`..), whose parent links point at template ids. */
+export interface LayerTemplate{id:string;name:string;layer:Layer;extra?:readonly Layer[]}
 export interface LayerTemplateLib{version:1;items:readonly LayerTemplate[]}
-export const MAX_LAYER_TEMPLATES=20,MAX_LAYER_TEMPLATE_CHARS=40000;
+export const MAX_LAYER_TEMPLATES=20,MAX_LAYER_TEMPLATE_CHARS=40000,MAX_TEMPLATE_LAYERS=8,MAX_TEMPLATE_GROUP_CHARS=120000;
 /** One copied key, with its time relative to the earliest copied key. */
 export interface ClipItem{prop:TransformKey;dt:number;key:Keyframe}
 export interface PropertyRef{layer:string;prop:TransformKey}
@@ -350,10 +351,13 @@ export function validateLayerTemplates(d:AnimationDocument):string[]{
  for(const t of lib.items){
   if(!t||typeof t.id!=='string'||!t.id||t.id.length>64||typeof t.name!=='string'||!t.name.trim()||t.name.length>40||!t.layer||typeof t.layer!=='object')return ['layer template has an invalid id or name'];
   if(ids.has(t.id)||names.has(t.name.trim()))return ['layer templates have duplicate ids or names'];ids.add(t.id);names.add(t.name.trim());
-  if(!['shape','text','solid'].includes(t.layer.kind)||t.layer.parent!==null||t.layer.matte!==undefined||t.layer.audio!==undefined)return [`layer template ${t.name}: only self-contained shape, text and solid layers are allowed`];
-  if(JSON.stringify(t.layer).length>MAX_LAYER_TEMPLATE_CHARS)return [`layer template ${t.name} is too large`];
+  const extra=t.extra===undefined?[]:t.extra;if(!Array.isArray(extra)||extra.length+1>MAX_TEMPLATE_LAYERS)return [`layer template ${t.name}: at most ${MAX_TEMPLATE_LAYERS} layers`];
+  const all=[t.layer,...extra],tids=new Set(all.map(x=>x?.id));
+  if(tids.size!==all.length||all.some((x,i)=>!x||x.id!==(i?`template-${i+1}`:'template')))return [`layer template ${t.name}: layer ids must be template, template-2, ...`];
+  for(const x of all)if(!['shape','text','solid'].includes(x.kind)||(x.parent!==null&&!(typeof x.parent==='string'&&tids.has(x.parent)&&x.parent!==x.id))||x.matte!==undefined||x.audio!==undefined)return [`layer template ${t.name}: only self-contained shape, text and solid layers are allowed`];
+  if(JSON.stringify(t.layer).length>MAX_LAYER_TEMPLATE_CHARS&&!extra.length||JSON.stringify(all).length>MAX_TEMPLATE_GROUP_CHARS)return [`layer template ${t.name} is too large`];
   if(!comp)return ['layer templates need a composition'];
-  const errs=validateDocument({...d,layerTemplates:undefined,compositions:[{...comp,layers:[t.layer]}]});if(errs.length)return [`layer template ${t.name}: ${errs[0]}`];
+  const errs=validateDocument({...d,layerTemplates:undefined,compositions:[{...comp,layers:all}]});if(errs.length)return [`layer template ${t.name}: ${errs[0]}`];
  }
  return [];
 }

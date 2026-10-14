@@ -731,5 +731,8 @@
  "cmd.animation.export.queue.run": "Rendre toutes les tâches",
  "cmd.animation.export.queue.cancel": "Arrêter la file de rendu",
  "cmd.animation.export.queue.remove": "Retirer une tâche de rendu",
- "cmd.animation.export.queue.clear": "Retirer les tâches terminées"
+ "cmd.animation.export.queue.clear": "Retirer les tâches terminées",
+ "animation.template.rename": "Renommer",
+ "animation.template.renameLabel": "Nouveau nom du modèle",
+ "cmd.animation.template.rename": "Renommer le modèle enregistré"
 }

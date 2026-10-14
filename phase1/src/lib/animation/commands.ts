@@ -35,6 +35,7 @@ import {nextTrackHeight,setAllTracks,setTrackHeight,trackHeightOf,setShyHidden,s
 import {applyExportPreset,resetExportSettings,setExportSettings,exportApng,exportCurrentFrame,exportGif,exportWebM,exportWorkAreaSequence} from './exportJob';
 import {ExportError} from './exportFrames';
 import {renderQueueSpecs} from './renderQueueCommands';
+import {templateRenameSpecs} from './templateCommands';
 import {EXPORT_PRESETS} from './exportSettings';
 /** Window event the Compositions panel listens for to open the audio file chooser. */
 export const AUDIO_IMPORT_EVENT='somnia:animation-audio-import';
@@ -133,7 +134,7 @@ export function animationCommandSpecs():CommandSpec<unknown,unknown>[]{
    run({type:'audio.reactive',layer:target.id,prop:p.prop,keys});return keys.length;
   },object({layer:layerRef,target:layerRef,prop:{enum:[...REACTIVE_PROPS]},min:{type:'number'},max:{type:'number'},smooth:{type:'number',minimum:0,maximum:MAX_SMOOTH}},['target','prop','min','max']),()=>open()&&findLayer(comp(),selected())?.kind==='audio','Edit'),
   spec('animation.template.save','Save the selected layer as a template',(p:{layer?:string;name?:string})=>{
-   const d=doc();const t=buildTemplate(d,layerIdOf(p),p.name,newId('tpl'));
+   const d=doc();const set=p.layer?[p.layer]:layerSetIds(animationSession().getState().view.selectedLayer);const t=buildTemplate(d,set.length?set:layerIdOf(p),p.name,newId('tpl'));
    run({type:'layerTemplates.set',items:[...layerTemplates(d),t]});return t.name;
   },object({layer:layerRef,name:{type:'string',minLength:1,maxLength:40}},[]),()=>open()&&!!animationSession().getState().view.selectedLayer,'Insert'),
   spec('animation.template.delete','Delete a saved template',(p:{id:string})=>{
@@ -142,7 +143,8 @@ export function animationCommandSpecs():CommandSpec<unknown,unknown>[]{
   },object({id:{type:'string',minLength:1,maxLength:64}}),()=>open()&&layerTemplates(animationSession().document).length>0,'Insert'),
   spec('animation.template.add','Add a starter template',(p:{template?:TemplateId;saved?:string;at?:number})=>{
    if(p.saved!==undefined){const at=p.at!==undefined?secondsToTicks(p.at):animationSession().getState().view.playhead,id=newId('layer');
-    run({type:'layerTemplate.insert',template:p.saved,layer:id,at:snapToFrame(at,comp().fps)});animationSession().setView({selectedLayer:id});return;}
+    const tp=layerTemplates(doc()).find(x=>x.id===p.saved);const more=Array.from({length:Math.max(0,(tp?1+(tp.extra?.length??0):1)-1)},()=>newId('layer'));
+    run({type:'layerTemplate.insert',template:p.saved,layer:id,at:snapToFrame(at,comp().fps),...(more.length?{layers:more}:{})});animationSession().setView({selectedLayer:id});return;}
    if(!p.template)throw Object.assign(Error('Pick a template.'),{expected:true});
    const c=comp();const ids=Array.from({length:TEMPLATE_LAYERS[p.template]??0},()=>newId('layer'));
    run(templateEdits(c,p.template,p.at!==undefined?secondsToTicks(p.at):animationSession().getState().view.playhead,ids));
@@ -320,7 +322,7 @@ export function animationCommandSpecs():CommandSpec<unknown,unknown>[]{
   spec('animation.export.apng','Export work area as APNG (animated PNG)',()=>exportApng().then(()=>undefined,e=>{throw e instanceof ExportError?Object.assign(e,{expected:true}):e;}),undefined,open,'Project'),
   spec('animation.export.webm','Export work area as WebM video (real time)',()=>exportWebM().then(()=>undefined,e=>{throw e instanceof ExportError?Object.assign(e,{expected:true}):e;}),undefined,open,'Project'),
   spec('animation.playhead.set','Move playhead',(p:{seconds:number})=>animationSession().setView({playhead:secondsToTicks(p.seconds)}),object({seconds:num}),open,'View'),
- ...renderQueueSpecs()] as CommandSpec<unknown,unknown>[];
+ ...renderQueueSpecs(),...templateRenameSpecs()] as CommandSpec<unknown,unknown>[];
 }
 export const ANIMATION_COMMANDS=animationCommandSpecs().map(s=>s.id);
 const DESTRUCTIVE=new Set(['animation.layer.remove','animation.keys.delete','animation.keys.cut','animation.audio.volume.keyRemove','animation.precomp.volume.keyRemove','animation.stroke.keyRemove','animation.color.keyRemove','animation.styleKeys.delete']);

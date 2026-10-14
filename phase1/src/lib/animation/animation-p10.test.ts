@@ -2046,3 +2046,24 @@ test('P89: render queue runs jobs in order, keeps going after a failure, restore
  removeFromQueue(j[1].id);clearQueueFinished();assert.equal(queueState().jobs.length,0);
  const names=animationCommandSpecs().filter(x=>x.id.startsWith('animation.export.queue.')).map(x=>x.id).sort();assert.equal(names.length,5);
 });
+import {templateLayers,templateLayersOf} from './layerTemplates';
+test('P90: multi-layer templates keep parent links and timing; rename; old templates still work',()=>{
+ let d=applyEdits(createDocument(),[{type:'layer.add',kind:'shape',id:'child',over:{inT:10000,outT:90000,source:{shape:'rect',width:100,height:50,color:'#ff0000'}}},{type:'layer.add',kind:'solid',id:'boss',over:{inT:20000,outT:80000,source:{color:'#00ff00',width:200,height:100}}},{type:'layer.add',kind:'text',id:'other'}]);
+ d=applyEdit(d,{type:'layer.parent',layer:'child',parent:'boss'});
+ const t=buildTemplate(d,['child','boss'],'Pair','tp9');assert.equal(templateLayersOf(t).length,2);
+ assert.deepEqual(templateLayersOf(t).map(l=>l.id),['template','template-2']);
+ const ch=templateLayersOf(t).find(l=>l.parent)!;assert.ok(templateLayersOf(t).some(l=>l.id===ch.parent&&l!==ch),'parent points at another template layer');
+ assert.equal(Math.min(...templateLayersOf(t).map(l=>l.inT)),0,'normalised to the earliest layer');
+ assert.throws(()=>buildTemplate(d,['child'],undefined,'x'),/Unlink/);assert.throws(()=>buildTemplate(d,['nope'],undefined,'x'),/Select a layer/);
+ const many=Array.from({length:9},(_,i)=>`m${i}`);let e=applyEdits(createDocument(),many.map(id=>({type:'layer.add' as const,kind:'solid' as const,id,over:{source:{color:'#ffffff',width:10,height:10}}})));assert.throws(()=>buildTemplate(e,many,undefined,'x'),/At most 8/);
+ d=applyEdit(d,{type:'layerTemplates.set',items:[t]});assert.deepEqual(validateDocument(d),[]);
+ const before=findComp(d)!.layers.length;const ins=applyEdit(d,{type:'layerTemplate.insert',template:'tp9',layer:'n1',layers:['n2'],at:5000});const c=findComp(ins)!;
+ assert.equal(c.layers.length,before+2);const n1=findLayer(c,'n1')!,n2=findLayer(c,'n2')!;assert.ok([n1,n2].some(l=>l.parent&&[n1,n2].some(o=>o.id===l.parent)),'parent link remapped to new ids');
+ assert.equal(Math.min(n1.inT,n2.inT),5000);assert.deepEqual(validateDocument(ins),[]);
+ assert.throws(()=>applyEdit(d,{type:'layerTemplate.insert',template:'tp9',layer:'n1',at:0}),/One new id/);assert.throws(()=>applyEdit(d,{type:'layerTemplate.insert',template:'tp9',layer:'child',layers:['n2'],at:0}),/Duplicate/);
+ assert.equal(templateLayers({...t,extra:undefined},['z'],0,1e9).length,1);
+ assert.throws(()=>applyEdit(d,{type:'layerTemplates.set',items:[{...t,extra:[{...t.extra![0],id:'zz'}]}]} as never),/ids must be/);
+ animationSession().open(d);const ren=animationCommandSpecs().find(x=>x.id==='animation.template.rename')!;const rev=animationSession().document!.revision;
+ ren.run({id:'tp9',name:'  Duo '},{origin:'ui'} as never);assert.equal(animationSession().document!.layerTemplates!.items[0].name,'Duo');assert.equal(animationSession().document!.revision,rev+1);
+ assert.throws(()=>ren.run({id:'nope',name:'x'},{origin:'ui'} as never),/no longer exists/);
+});

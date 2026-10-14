@@ -1397,6 +1397,18 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.template.rename",
+      "title": "Rename saved template",
+      "category": "Insert",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "rename",
+        "template"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.template.save",
       "title": "Save the selected layer as a template",
       "category": "Insert",

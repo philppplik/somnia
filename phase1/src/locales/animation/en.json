@@ -731,5 +731,8 @@
  "cmd.animation.export.queue.run": "Render all queued jobs",
  "cmd.animation.export.queue.cancel": "Stop render queue",
  "cmd.animation.export.queue.remove": "Remove render queue job",
- "cmd.animation.export.queue.clear": "Clear finished render queue jobs"
+ "cmd.animation.export.queue.clear": "Clear finished render queue jobs",
+ "animation.template.rename": "Rename",
+ "animation.template.renameLabel": "New template name",
+ "cmd.animation.template.rename": "Rename saved template"
 }

@@ -1,13 +1,14 @@
 import {useMemo} from 'react';
 import {Button} from '../ui/button';
 import {frameSvg} from '../../lib/animation/exportFrames';
+import {templateLayersOf} from '../../lib/animation/layerTemplates';
 import type {Composition,LayerTemplate} from '../../lib/animation/model';
 const W=80;
 /** Small picture of a saved layer template at the end of its motion; click to select it in the picker. */
 export function TemplateThumb({item,comp,selected,onPick}:{item:LayerTemplate;comp:Composition;selected:boolean;onPick:()=>void}){
  const src=useMemo(()=>{
-  const l=item.layer,last=Math.max(l.inT,maxKeyTime(l)),tick=Math.min(Math.max(last,l.inT),Math.max(l.inT,l.outT-1));
-  const svg=frameSvg({...comp,markers:[],layers:[{...l,visible:true}]},tick);
+  const ls=templateLayersOf(item),l=item.layer,last=Math.max(...ls.map(x=>Math.max(x.inT,maxKeyTime(x)))),end=Math.max(...ls.map(x=>x.outT)),tick=Math.min(last,Math.max(l.inT,end-1));
+  const svg=frameSvg({...comp,markers:[],layers:ls.map(x=>({...x,visible:true}))},tick);
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
  },[item,comp]);
  const h=Math.round(W*comp.height/comp.width);

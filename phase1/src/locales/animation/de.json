@@ -731,5 +731,8 @@
  "cmd.animation.export.queue.run": "Alle Aufträge rendern",
  "cmd.animation.export.queue.cancel": "Warteschlange stoppen",
  "cmd.animation.export.queue.remove": "Auftrag entfernen",
- "cmd.animation.export.queue.clear": "Fertige Aufträge entfernen"
+ "cmd.animation.export.queue.clear": "Fertige Aufträge entfernen",
+ "animation.template.rename": "Umbenennen",
+ "animation.template.renameLabel": "Neuer Vorlagenname",
+ "cmd.animation.template.rename": "Gespeicherte Vorlage umbenennen"
 }

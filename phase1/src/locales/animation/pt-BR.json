@@ -731,5 +731,8 @@
  "cmd.animation.export.queue.run": "Renderizar todas as tarefas",
  "cmd.animation.export.queue.cancel": "Parar a fila",
  "cmd.animation.export.queue.remove": "Remover tarefa da fila",
- "cmd.animation.export.queue.clear": "Limpar tarefas concluídas"
+ "cmd.animation.export.queue.clear": "Limpar tarefas concluídas",
+ "animation.template.rename": "Renomear",
+ "animation.template.renameLabel": "Novo nome do modelo",
+ "cmd.animation.template.rename": "Renomear modelo salvo"
 }

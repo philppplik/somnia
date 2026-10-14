@@ -10,7 +10,7 @@ import {setGradientStop} from './shapes';
 import {parseGradientStopLane,parseGradientLane,parseGradientColorLane,type GradientKey,type RepeaterKey,type StyleLaneId} from './keyTypes';
 import {evaluate} from './interpolate';
 import {validGuides,MAX_GUIDES} from './guides';
-import {templateLayer} from './layerTemplates';
+import {templateLayers,templateLayersOf} from './layerTemplates';
 import {REACTIVE_RANGE,MAX_REACTIVE_KEYS} from './audioReactive';
 import {colorAt} from './colorKeys';
 import {validateModifiers,linkProblems} from './modifiers';
@@ -77,7 +77,7 @@ export type Edit=
  |{type:'easings.set';items:readonly import('./easingModel').EasingSet[]}
  |{type:'motions.set';items:readonly import('./motionModel').MotionSet[]}
  |{type:'layerTemplates.set';items:readonly import('./model').LayerTemplate[]}
- |{type:'layerTemplate.insert';template:string;layer:string;at:number}
+ |{type:'layerTemplate.insert';template:string;layer:string;at:number;/** Fresh ids for the further layers of a multi-layer template, in template order. */layers?:readonly string[]}
  |{type:'textPresets.set';items:readonly import('./textPresetModel').TextPresetSet[]}
  /** Embed a prepared audio asset and add an audio layer whose clip starts at `t` (default 0). */
  |{type:'audio.import';asset:AudioAsset;t?:number;id?:string}
@@ -345,10 +345,11 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
   case 'layerTemplates.set':{const layerTemplates={version:1 as const,items:e.items};const p=validateLayerTemplates({...doc,layerTemplates});if(p.length)fail('invalid',p[0]);return {...doc,layerTemplates:e.items.length?layerTemplates:undefined};}
   case 'layerTemplate.insert':{
    const c=compOf(doc),t=doc.layerTemplates?.items.find(x=>x.id===e.template);if(!t)fail('missing','That template no longer exists.');
-   if(c.layers.some(x=>x.id===e.layer))fail('invalid','Duplicate layer id.');
+   const ids=[e.layer,...(e.layers??[])];if(ids.some(x=>c.layers.some(y=>y.id===x))||new Set(ids).size!==ids.length)fail('invalid','Duplicate layer id.');
+   if(ids.length!==templateLayersOf(t!).length)fail('invalid','One new id per template layer is needed.');
    if(!Number.isInteger(e.at)||e.at<0)fail('invalid','Insert time must be a whole tick.');
-   let l:Layer;try{l=templateLayer(t!,e.layer,e.at,c.start+c.duration);}catch(x){return fail('invalid',(x as Error).message);}
-   return withLayers(doc,ls=>[l,...ls]);}
+   let l:Layer[];try{l=templateLayers(t!,ids,e.at,c.start+c.duration);}catch(x){return fail('invalid',(x as Error).message);}
+   return withLayers(doc,ls=>[...l,...ls]);}
   case 'textPresets.set':{const textPresets={version:1 as const,items:e.items};const p=validateTextPresetLib(textPresets);if(p.length)fail('invalid',p[0]);return {...doc,textPresets};}
   case 'asset.import':{const next={...doc,assets:doc.assets.some(a=>a.id===e.asset.id)?doc.assets:[...doc.assets,e.asset]};validateAnimationAssets(next);const c=compOf(doc);const l=createLayer('raster',c,{name:e.asset.sourceName,source:{assetId:e.asset.id,width:e.asset.width,height:e.asset.height}});return withLayers(next,ls=>[l,...ls]);}
   case 'audio.import':{

@@ -731,5 +731,8 @@
  "cmd.animation.export.queue.run": "Renderizar todos los trabajos",
  "cmd.animation.export.queue.cancel": "Detener la cola",
  "cmd.animation.export.queue.remove": "Quitar trabajo de la cola",
- "cmd.animation.export.queue.clear": "Quitar trabajos terminados"
+ "cmd.animation.export.queue.clear": "Quitar trabajos terminados",
+ "animation.template.rename": "Renombrar",
+ "animation.template.renameLabel": "Nuevo nombre de la plantilla",
+ "cmd.animation.template.rename": "Renombrar plantilla guardada"
 }
