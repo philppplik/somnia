@@ -14,7 +14,9 @@ for(const theme of ['light','dark']){
    for(const corner of ['top-left','top-right','bottom-left','bottom-right']){
     await expect(card).toHaveCSS(`border-${corner}-radius`,'25px');
    }
-   await expect(card).toHaveCSS('overflow','hidden');
+   await expect(card).toHaveCSS('overflow-x','hidden');
+   // The inspector card scrolls its own content (overflow-y:auto); it still clips to the radius.
+   await expect(card).toHaveCSS('overflow-y',/^(hidden|auto)$/);
   }
   const gradient=page.locator('.ag-bar');
   await expect(gradient).toHaveCSS('border-radius','0px 0px 25px 25px');

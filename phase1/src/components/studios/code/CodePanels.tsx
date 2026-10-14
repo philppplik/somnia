@@ -5,6 +5,8 @@ import {usePanelState} from '../../../store/panelStateStore';
 import type {PanelHostProps,StudioContext} from '../../../lib/shell/types';
 import {codeOutline,filterOutline,fileFacts,interactionAttributes,safeAttribute} from '../../../lib/codePanels/model';
 import {runCodePanelCommand} from '../../../store/codePanelCommands';
+import {isSvg,useMedia} from '../../../lib/media';
+import {SvgInspector} from '../../svgedit/SvgInspector';
 import {ContextSections} from '../../ContextSections';
 import {getContextNode,useUiContext} from '../../../lib/uiContextStore';
 import {ResponsivePanel} from '../../ResponsivePanel';
@@ -17,7 +19,13 @@ export function CodeOutlinePanel({context}:{context:StudioContext}){
  return <section className="flex h-full min-h-0 flex-col gap-2 p-3" aria-label={t('code.panel.outline')}><input className={input} aria-label={t('code.panel.filter')} placeholder={t('code.panel.filter')} value={query} onChange={e=>setQuery(e.target.value)}/><div className="min-h-0 flex-1 overflow-auto">{rows.map(n=><button key={n.id} title={`${s.designFile}:${n.line}:${n.col}`} aria-pressed={selected.includes(n.id)||s.selectedElementId===n.id} onClick={()=>void runCodePanelCommand('code.outline.reveal',{id:n.id})} className="flex w-full items-center gap-1 rounded-sm border-0 bg-transparent py-1.5 text-left font-mono text-[11px] text-ink hover:bg-hover aria-pressed:bg-accent-soft" style={{paddingLeft:Math.min(n.depth,8)*10+4}}><span className="min-w-0 flex-1 truncate">{n.label}</span>{n.locked&&<span title={t('code.panel.locked')}>▣</span>}<span className="text-ink-3">{n.line}</span></button>)}{!rows.length&&<p className="text-xs text-ink-3">{t('code.panel.noNodes')}</p>}</div></section>;
 }
 export function CodeResponsivePanel(_props:PanelHostProps){const s=useAppStore(),{t}=useT();return <section className="flex h-full min-h-0 flex-col gap-3 overflow-auto p-3"><label className="text-xs">{t('code.panel.width')}<input className={input} aria-label={t('code.panel.width')} type="number" min={200} max={3840} value={s.viewport} onChange={e=>{const width=Number(e.target.value);if(Number.isInteger(width)&&width>=200&&width<=3840)void runCodePanelCommand('code.preview.width',{width});}}/></label><div className="flex gap-1">{[390,820,1280].map(width=><Button key={width} size="tiny" variant="outline" aria-pressed={s.viewport===width} onClick={()=>void runCodePanelCommand('code.preview.width',{width})}>{width} px</Button>)}</div><ResponsivePanel/></section>;}
-export function CodeDesignSection({context}:{context:StudioContext}){const {t}=useT();return context.studio==='code'?<ContextSections/>:<p className="p-3 text-xs">{t('code.panel.open')}</p>;}
+export function CodeDesignSection({context}:{context:StudioContext}){
+ const {t}=useT(),s=useAppStore(),media=useMedia();
+ if(context.studio!=='code')return <p className="p-3 text-xs">{t('code.panel.open')}</p>;
+ // Match the inline SVG canvas gate; Code-only and media previews keep the normal inspector.
+ if(isSvg(s.activeFile)&&s.coreConnected&&!media.active&&s.viewMode!=='code')return <SvgInspector embedded/>;
+ return <ContextSections/>;
+}
 export function CodeInteractionsSection({context}:{context:StudioContext}){
  const s=useAppStore(),ui=useUiContext(),{t}=useT(),node=getContextNode(context.selection.ids?.[0]??ui.nodeId);
  const [name,setName]=useState('href'),[value,setValue]=useState('');

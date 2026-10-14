@@ -1,12 +1,15 @@
+import {showPanel} from './helpers';
 import {test,expect} from './fixtures';
 import path from 'node:path';
 test('video shell panels, selection, typed edits and light/dark views',async({page})=>{
  await page.goto('/');
  await page.getByRole('radio',{name:'Somnia Video',exact:true}).click();
+ await showPanel(page,'Sources');
+ await showPanel(page,'Video');
  const chooser=page.waitForEvent('filechooser');await page.getByTestId('video-open').click();await (await chooser).setFiles(path.join(import.meta.dirname,'assets','clip.webm'));
  await expect(page.getByTestId('video-sources-panel')).toBeVisible();
  await expect(page.getByTestId('video-facts')).toContainText('clip.webm');
- await page.getByRole('button',{name:'Sequence',exact:true}).click();
+ await showPanel(page,'Sequence');
  await expect(page.getByTestId('video-sequence-panel')).toBeVisible();
  await page.getByTestId('video-add-title').click();
  await expect(page.getByTestId('video-title-panel')).toBeVisible();
