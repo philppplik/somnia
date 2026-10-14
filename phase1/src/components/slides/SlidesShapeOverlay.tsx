@@ -3,7 +3,7 @@ import {useSlidesSession} from '../../lib/slides/session';
 import {useShapeSelection,type ShapeSelection} from '../../lib/slides/shapeSelection';
 import {useSlidesPanelText} from '../../lib/slides/panelI18n';
 import {commandDispatcher} from '../../lib/commandDispatcher';
-import {hitTest,limitsOf,overlayRect,moveBox,resizeBox,resizeBoxAspect,boxOf,HANDLES,EMU_PER_PT,type Box,type Handle} from '../../lib/slides/shapeGeometry';
+import {shapesInRect,hitTest,limitsOf,overlayRect,moveBox,resizeBox,resizeBoxAspect,boxOf,HANDLES,EMU_PER_PT,type Box,type Handle} from '../../lib/slides/shapeGeometry';
 import {boundsEditIssue,type ShapeRef} from '../../lib/slides/deckPackage';
 import type {PointerEvent as ReactPointerEvent} from 'react';
 
@@ -36,7 +36,8 @@ export function SlidesShapeOverlay({image}:{image:RefObject<HTMLImageElement|nul
   const [,tick]=useState(0);
   const drag=useRef<{aspect:boolean;mode:'move'|Handle;sx:number;sy:number;from:Box;cur:Box;moved:boolean}|null>(null);
   const multi=!!valid&&valid.more.length>0,editable=!!valid&&!multi&&boundsEditIssue(valid.shape)===null;
-  const extras=useRef<HTMLDivElement>(null);
+  const extras=useRef<HTMLDivElement>(null),marq=useRef<HTMLDivElement>(null);
+  const band=useRef<{sx:number;sy:number;x:number;y:number;active:boolean}|null>(null),skipClick=useRef(false);
   const slide=s.model?.slides.find(x=>x.id===s.slideIds[s.index]);
   const size=s.model?.slideSize;
   // Keep the layer glued to the <img>, which is letterboxed by object-contain.
@@ -74,10 +75,23 @@ export function SlidesShapeOverlay({image}:{image:RefObject<HTMLImageElement|nul
     if(!d.moved||same){restore();return;}
     void commandDispatcher.tryRunCommand('slides.setShapeBounds',{source:s.source,slideId:valid.selection.slideId,shapeId:valid.shape.id,expected:d.from,next:d.cur},{origin:'ui'}).then(r=>{if(!r.ok)restore();});
   };
+  const frac=(e:{clientX:number;clientY:number})=>{const r=layer.current!.getBoundingClientRect();return {x:Math.min(1,Math.max(0,(e.clientX-r.left)/r.width)),y:Math.min(1,Math.max(0,(e.clientY-r.top)/r.height))};};
+  const bandDown=(e:ReactPointerEvent<HTMLElement>)=>{if(e.button!==0||drag.current)return;const f=frac(e);band.current={sx:f.x,sy:f.y,x:e.clientX,y:e.clientY,active:false};};
+  const bandMove=(e:ReactPointerEvent<HTMLElement>)=>{
+    const b=band.current;if(!b||drag.current)return;
+    if(!b.active){if(Math.hypot(e.clientX-b.x,e.clientY-b.y)<DRAG_PX)return;b.active=true;e.currentTarget.setPointerCapture(e.pointerId);}
+    const f=frac(e);place(marq.current,{left:Math.min(b.sx,f.x)*100,top:Math.min(b.sy,f.y)*100,width:Math.abs(f.x-b.sx)*100,height:Math.abs(f.y-b.sy)*100});
+  };
+  const bandUp=(e:ReactPointerEvent<HTMLElement>)=>{
+    const b=band.current;band.current=null;if(!b?.active)return;
+    e.currentTarget.releasePointerCapture?.(e.pointerId);place(marq.current,null);skipClick.current=true;
+    const f=frac(e),ids=shapesInRect(slide.shapes,size,{x0:b.sx,y0:b.sy,x1:f.x,y1:f.y}).map(x=>x.id);
+    run('slides.selectShapes',{source:s.source,slideId:slide.id,shapeIds:ids,add:e.shiftKey});
+  };
   const at=(e:{clientX:number;clientY:number})=>{const r=layer.current!.getBoundingClientRect();return hitTest(slide.shapes,size,(e.clientX-r.left)/r.width,(e.clientY-r.top)/r.height);};
   return <div ref={layer} tabIndex={0} role="group" aria-label={t('slides.shapeOverlay')} data-slot="slides-shape-overlay" className="absolute cursor-default outline-none focus-visible:ring-2 focus-visible:ring-accent"
-    onClick={e=>{const hit=at(e);if(e.shiftKey){if(hit)run('slides.toggleShapeSelection',{source:s.source,slideId:slide.id,shapeId:hit.id});return;}run('slides.selectShape',{source:s.source,slideId:slide.id,shapeId:hit?.id??null});}}
-    onPointerMove={e=>{const hit=at(e);place(hoverBox.current,hit?.bounds&&hit.id!==valid?.shape.id?overlayRect(hit.bounds,size):null);tick(n=>n);}}
+    onPointerDown={bandDown} onPointerMove={e=>{bandMove(e);const hit=at(e);place(hoverBox.current,hit?.bounds&&hit.id!==valid?.shape.id?overlayRect(hit.bounds,size):null);tick(n=>n);}} onPointerUp={bandUp} onPointerCancel={()=>{band.current=null;place(marq.current,null);}}
+    onClick={e=>{if(skipClick.current){skipClick.current=false;return;}const hit=at(e);if(e.shiftKey){if(hit)run('slides.toggleShapeSelection',{source:s.source,slideId:slide.id,shapeId:hit.id});return;}run('slides.selectShape',{source:s.source,slideId:slide.id,shapeId:hit?.id??null});}}
     onPointerLeave={()=>place(hoverBox.current,null)}
     onKeyDown={e=>{
       const arrow={ArrowRight:[1,0],ArrowLeft:[-1,0],ArrowDown:[0,1],ArrowUp:[0,-1]}[e.key];
@@ -89,6 +103,7 @@ export function SlidesShapeOverlay({image}:{image:RefObject<HTMLImageElement|nul
       else if(e.key==='ArrowLeft'||e.key==='ArrowUp'){e.preventDefault();run('slides.selectPreviousShape');}
     }}>
     <div ref={hoverBox} hidden className="pointer-events-none absolute border border-dashed border-accent"/>
+    <div ref={marq} hidden data-slot="slides-marquee" className="pointer-events-none absolute border border-dashed border-accent bg-accent-soft"/>
     <div ref={extras} className="pointer-events-none absolute inset-0"/>
     <div ref={selBox} hidden data-slot="slides-shape-selection" title={editable?t('slides.shapeDragHint'):undefined} onClick={e=>{e.stopPropagation();if(e.shiftKey&&valid)run('slides.toggleShapeSelection',{source:s.source,slideId:valid.selection.slideId,shapeId:valid.shape.id});}} onPointerDown={e=>begin(e,'move')} onPointerMove={track} onPointerUp={finish} onPointerCancel={restore}
       className={`absolute border-2 border-accent bg-accent-soft ${editable?'cursor-move touch-none':'pointer-events-none'}`}>

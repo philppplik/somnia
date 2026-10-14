@@ -761,3 +761,60 @@ export function setShapesBounds(bytes:Uint8Array,slideId:number,edits:readonly S
   let out=bytes;for(const e of edits)out=setShapeBounds(out,slideId,e.shapeId,e.expected,e.next);
   return out;
 }
+
+/* ---------------------------------------------------------------------------------------
+ * Z-order. Stacking is document order inside p:spTree, so arranging moves whole top-level
+ * elements. Nothing inside a moved element is touched; anything unrecognised fails closed.
+ * ------------------------------------------------------------------------------------- */
+export type ArrangeMode='front'|'back'|'forward'|'backward';
+export const ARRANGE_MODES:readonly ArrangeMode[]=['front','back','forward','backward'];
+const TOP_SHAPE=new Set(['p:sp','p:pic','p:grpSp','p:graphicFrame','p:cxnSp']);
+const NV_OF:Record<string,string>={'p:sp':'p:nvSpPr','p:pic':'p:nvPicPr','p:grpSp':'p:nvGrpSpPr','p:graphicFrame':'p:nvGraphicFramePr','p:cxnSp':'p:nvCxnSpPr'};
+function topLevelShapes(xml:string):{id:number;start:number;end:number}[]{
+  const stack:{tag:string;start?:number;id?:number}[]=[],out:{id:number;start:number;end:number}[]=[];
+  for(const m of xml.matchAll(TAG)){
+    if(m[2]===undefined)continue;const tag=m[2];
+    if(m[1]==='/'){const top=stack.pop();if(top?.start!==undefined&&TOP_SHAPE.has(top.tag)&&stack.at(-1)?.tag==='p:spTree'){if(top.id===undefined)throw Error('Shape without an id');out.push({id:top.id,start:top.start,end:m.index!+m[0].length});}continue;}
+    const parent=stack.at(-1),self=m[4]==='/';
+    if(parent?.tag==='p:spTree'&&!['p:nvGrpSpPr','p:grpSpPr','p:extLst'].includes(tag)&&!TOP_SHAPE.has(tag))throw Error('This slide has structure that cannot be reordered');
+    if(parent?.tag==='p:spTree'&&TOP_SHAPE.has(tag)){if(self)throw Error('Empty shape element');stack.push({tag,start:m.index!});continue;}
+    if(tag==='p:cNvPr'&&parent&&stack.at(-2)?.start!==undefined&&parent.tag===NV_OF[stack.at(-2)!.tag])stack.at(-2)!.id=Number(attr(m[3],'id'));
+    if(!self)stack.push({tag});
+  }
+  return out;
+}
+export function arrangedOrder(ids:readonly number[],chosen:ReadonlySet<number>,mode:ArrangeMode):number[]{
+  const sel=ids.filter(i=>chosen.has(i)),rest=ids.filter(i=>!chosen.has(i));
+  if(mode==='front')return [...rest,...sel];
+  if(mode==='back')return [...sel,...rest];
+  const out=[...ids];
+  if(mode==='forward'){for(let i=out.length-2;i>=0;i--)if(chosen.has(out[i])&&!chosen.has(out[i+1]))[out[i],out[i+1]]=[out[i+1],out[i]];}
+  else{for(let i=1;i<out.length;i++)if(chosen.has(out[i])&&!chosen.has(out[i-1]))[out[i],out[i-1]]=[out[i-1],out[i]];}
+  return out;
+}
+/** Changes the stacking order of the given top-level shapes as one edit. Returns the same bytes when nothing moves. */
+export function arrangeShapes(bytes:Uint8Array,slideId:number,shapeIds:readonly number[],mode:ArrangeMode):Uint8Array{
+  if(!ARRANGE_MODES.includes(mode))throw Error('Unknown arrange mode');
+  if(!shapeIds.length||shapeIds.length>MAX_MULTI_EDIT||new Set(shapeIds).size!==shapeIds.length)throw Error(`Arrange between 1 and ${MAX_MULTI_EDIT} different shapes`);
+  const model=readDeckModel(bytes),slide=model.slides.find(s=>s.id===slideId);
+  if(!slide)throw Error('Slide no longer exists');if(slide.problems.length)throw Error('This slide has unsupported structure');
+  const zip=openPackage(bytes),xml=text(zip,slide.part),kids=topLevelShapes(xml),ids=kids.map(k=>k.id);
+  if(new Set(ids).size!==ids.length)throw Error('Duplicate shape ids on this slide');
+  for(const id of shapeIds)if(!ids.includes(id))throw Error('Shape no longer exists');
+  const order=arrangedOrder(ids,new Set(shapeIds),mode);
+  if(order.every((id,i)=>id===ids[i]))return bytes;
+  const pieces=new Map(kids.map(k=>[k.id,xml.slice(k.start,k.end)]));
+  let rebuilt=xml.slice(0,kids[0].start);
+  order.forEach((id,i)=>{rebuilt+=pieces.get(id)!+(i<kids.length-1?xml.slice(kids[i].end,kids[i+1].start):'');});
+  rebuilt+=xml.slice(kids[kids.length-1].end);
+  const out=repack(zip,{[slide.part]:rebuilt});
+  const after=readDeckModel(out),as=after.slides.find(s=>s.id===slideId);
+  const top=(sh:ShapeRef[])=>sh.filter(s=>s.parentId===null).map(s=>s.id);
+  if(!as||as.problems.length||JSON.stringify(top(as.shapes))!==JSON.stringify(order)||as.shapes.length!==slide.shapes.length)throw Error('Edited deck failed verification');
+  const byId=new Map(slide.shapes.map(s=>[s.id,s]));
+  if(as.shapes.some(s=>{const b=byId.get(s.id);return !b||s.kind!==b.kind||s.runCount!==b.runCount||JSON.stringify(s.bounds)!==JSON.stringify(b.bounds);}))throw Error('Edited deck failed verification');
+  if(after.runs.length!==model.runs.length||after.runs.map(r=>`${r.slideId}:${r.shapeId}:${r.text}`).sort().join('\n')!==model.runs.map(r=>`${r.slideId}:${r.shapeId}:${r.text}`).sort().join('\n'))throw Error('Edited deck failed verification');
+  const re=unzipSync(out);
+  for(const name of Object.keys(zip))if(name!==slide.part&&(!re[name]||re[name].length!==zip[name].length||re[name].some((v,i)=>v!==zip[name][i])))throw Error('Edited deck changed an unrelated part');
+  return out;
+}

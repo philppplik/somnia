@@ -118,3 +118,9 @@ export function distributeBoxes(boxes:readonly Box[],axis:DistributeAxis):Box[]{
   for(const i of order.slice(1,-1)){const p=Math.round(at);if(h)out[i].x=p;else out[i].y=p;at+=len(boxes[i])+gap;}
   return out;
 }
+/** Top-level shapes whose boxes lie fully inside a rectangle given in slide fractions (0..1), in z-order. */
+export function shapesInRect(shapes:readonly ShapeRef[],size:SlideSize,r:{x0:number;y0:number;x1:number;y1:number}):ShapeRef[]{
+  if(![r.x0,r.y0,r.x1,r.y1].every(Number.isFinite)||!(size.cx>0)||!(size.cy>0))return [];
+  const l=Math.min(r.x0,r.x1)*size.cx,t=Math.min(r.y0,r.y1)*size.cy,rt=Math.max(r.x0,r.x1)*size.cx,b=Math.max(r.y0,r.y1)*size.cy;
+  return selectableShapes(shapes).filter(s=>!!s.bounds&&s.bounds.x>=l&&s.bounds.y>=t&&s.bounds.x+s.bounds.w<=rt&&s.bounds.y+s.bounds.h<=b);
+}

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {unzipSync,zipSync,strFromU8,strToU8} from 'fflate';
-import {setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
+import {arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
 import {readRuns,makeEditedCopy} from './editCopy';
 import {png,jpeg} from './imageFixtures';
 
@@ -465,4 +465,31 @@ test('setShapesBounds applies every edit or none, and bounds the batch',()=>{
   assert.throws(()=>setShapesBounds(b,slide.id,[{shapeId:one.id,expected:to,next:to},{shapeId:one.id,expected:to,next:to}]),/once per action/);
   assert.throws(()=>setShapesBounds(b,slide.id,[{shapeId:one.id,expected:{x:from.x+1,y:from.y,w:from.w,h:from.h},next:to}]),/changed since selection/);
   assert.throws(()=>setShapesBounds(b,slide.id,[{shapeId:one.id,expected:{x:from.x,y:from.y,w:from.w,h:from.h},next:to},{shapeId:99999,expected:to,next:to}]),/no longer exists/);
+});
+test('arrangedOrder moves selections to the ends or one step, skipping other selected shapes',()=>{
+  const ids=[1,2,3,4,5],sel=(...n:number[])=>new Set(n);
+  assert.deepEqual(arrangedOrder(ids,sel(2,4),'front'),[1,3,5,2,4]);
+  assert.deepEqual(arrangedOrder(ids,sel(2,4),'back'),[2,4,1,3,5]);
+  assert.deepEqual(arrangedOrder(ids,sel(2,3),'forward'),[1,4,2,3,5]);
+  assert.deepEqual(arrangedOrder(ids,sel(3,4),'backward'),[1,3,4,2,5]);
+  assert.deepEqual(arrangedOrder(ids,sel(5),'forward'),ids);
+  assert.deepEqual(arrangedOrder(ids,sel(1),'backward'),ids);
+  assert.deepEqual(arrangedOrder(ids,sel(1,2,3,4,5),'front'),ids);
+});
+test('arrangeShapes reorders whole elements, keeps everything else byte-identical, and fails closed',()=>{
+  let b=deck(1,{picture:true});const sid=readDeckModel(b).slides[0].id;
+  b=addTextBox(b,sid,'One');b=addTextBox(b,sid,'Two');
+  const top=(x:Uint8Array)=>readDeckModel(x).slides[0].shapes.filter(s=>s.parentId===null).map(s=>s.id);
+  const order=top(b);assert.ok(order.length>=4);
+  const first=order[0],last=order[order.length-1];
+  const front=arrangeShapes(b,sid,[first],'front');assert.deepEqual(top(front),[...order.slice(1),first]);
+  assert.deepEqual(readDeckModel(front).runs.map(r=>r.text).sort(),readDeckModel(b).runs.map(r=>r.text).sort());
+  const back=arrangeShapes(b,sid,[last],'back');assert.deepEqual(top(back),[last,...order.slice(0,-1)]);
+  assert.equal(arrangeShapes(b,sid,[last],'front'),b,'already in front: same bytes');
+  const rest=order.slice(1);assert.deepEqual(top(arrangeShapes(front,sid,[first],'backward')),[...rest.slice(0,-1),first,rest[rest.length-1]]);
+  assert.throws(()=>arrangeShapes(b,sid,[],'front'),/between 1 and 50/);
+  assert.throws(()=>arrangeShapes(b,sid,[first,first],'front'),/different shapes/);
+  assert.throws(()=>arrangeShapes(b,sid,[99999],'front'),/no longer exists/);
+  assert.throws(()=>arrangeShapes(b,999,[first],'front'),/Slide no longer exists/);
+  assert.throws(()=>arrangeShapes(b,sid,[first],'sideways' as never),/Unknown arrange mode/);
 });

@@ -8,7 +8,7 @@ import {Button} from '../ui/button';
 import {NumberField} from '../ui/number-field';
 import {Menu,MenuTrigger,MenuContent,MenuItem} from '../ui/menu';
 import {TEXT_COLORS,colorKey} from '../../lib/slides/textFormat';
-import {MIN_SIZE_PT,MAX_SIZE_PT,boundsEditIssue} from '../../lib/slides/deckPackage';
+import {MIN_SIZE_PT,MAX_SIZE_PT,ARRANGE_MODES,boundsEditIssue} from '../../lib/slides/deckPackage';
 import {ALIGN_MODES} from '../../lib/slides/shapeGeometry';
 import {useValidShape} from './SlidesShapeOverlay';
 
@@ -44,6 +44,8 @@ export function SlidesTextToolbar(){
         {ALIGN_MODES.map(m=><MenuItem key={m} onClick={()=>run('slides.alignSelection',{mode:m,to:'slide'})}>{t(`slides.align.${m}`)}</MenuItem>)}
         {multi&&ALIGN_MODES.map(m=><MenuItem key={`sel-${m}`} onClick={()=>run('slides.alignSelection',{mode:m,to:'selection'})}>{t(`slides.alignSel.${m}`)}</MenuItem>)}
       </MenuContent></Menu>
+    <Menu><MenuTrigger render={<Button size="compact" variant="outline" disabled={!ready||!shape}>{t('slides.arrange')}</Button>}/>
+      <MenuContent>{ARRANGE_MODES.map(m=><MenuItem key={m} onClick={()=>run('slides.arrangeShapes',{mode:m})}>{t(`slides.arrange.${m}`)}</MenuItem>)}</MenuContent></Menu>
     <Menu><MenuTrigger render={<Button size="compact" variant="outline" disabled={!ready||(valid?.more.length??0)<2||[shape!,...(valid?.more??[])].some(x=>!!boundsEditIssue(x))}>{t('slides.distribute')}</Button>}/>
       <MenuContent>{(['horizontal','vertical'] as const).map(a=><MenuItem key={a} onClick={()=>run('slides.distributeSelection',{axis:a})}>{t(`slides.distribute.${a}`)}</MenuItem>)}</MenuContent></Menu>
     <Button size="compact" variant="outline" disabled={!ready||!shape||multi||(shape.kind!=='text'&&!pic)} onClick={()=>run(pic?'slides.removePicture':'slides.removeTextBox',{source:s.source,slideId,shapeId:shape!.id})}>{t(pic?'slides.removePicture':'slides.removeTextBox')}</Button>

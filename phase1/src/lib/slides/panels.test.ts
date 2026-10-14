@@ -11,7 +11,7 @@ const runs=[{slide:0,run:0,text:'Hello world',part:'ppt/slides/slide1.xml'},{sli
 let picked:import('./shapeSelection').ShapeSelection|null=null;
 function fixture(){picked=null;
  const state={source:'blob:deck1',index:0,busy:false,working:new Uint8Array(40),runs:runs.map(r=>({...r})),slideIds:[256,257],layouts:[{part:'ppt/slideLayouts/slideLayout1.xml',supported:true},{part:'ppt/slideLayouts/slideLayout2.xml',supported:false}],model:{slides:[{id:256,shapes:[{id:2,name:'A',kind:'text' as const,runCount:1,parentId:null,bounds:{x:1000000,y:1000000,w:2000000,h:1000000,rot:0,flipH:false,flipV:false,source:'slide' as const},ph:null},{id:3,name:'B',kind:'text' as const,runCount:1,parentId:null,bounds:null,ph:null}]},{id:257,shapes:[]},{id:258,shapes:[{id:5,name:'P',kind:'picture' as const,runCount:0,parentId:null,bounds:{x:1000000,y:1000000,w:2000000,h:1000000,rot:0,flipH:false,flipV:false,source:'slide' as const},ph:null}]}],slideSize:{cx:9144000,cy:6858000}},summary:{slides:2}};
- const calls:unknown[]=[];const deps:PanelCommandDeps={state:()=>state,thumbnails:async()=>{calls.push('thumbnails');},show:async index=>{state.index=index;calls.push(['show',index]);},edit:async(run,text)=>{state.runs=state.runs.map(r=>r.slide===run.slide&&r.run===run.run?{...r,text}:r);calls.push(['edit',text]);},select:v=>calls.push(v),move:async(id,to)=>{const a=state.slideIds.slice();a.splice(to,0,a.splice(a.indexOf(id),1)[0]);state.slideIds=a;calls.push(['move',id,to]);},duplicate:async id=>{calls.push(['dup',id]);},remove:async id=>{calls.push(['del',id]);},add:async(l,a)=>{calls.push(['add',l,a]);},setMany:async(id,edits)=>{calls.push(['many',id,edits]);},setBounds:async(id,sid,e,n)=>{calls.push(['bounds',id,sid,e,n]);},format:async(sid,id,f)=>{calls.push(['format',sid,id,f]);},addBox:async(sid,l)=>{calls.push(['addBox',sid,l]);},removeBox:async(sid,id)=>{calls.push(['removeBox',sid,id]);},insertImage:async(sid,img,alt)=>{calls.push(['insertImage',sid,img.length,alt]);},replaceImage:async(sid,id,img)=>{calls.push(['replaceImage',sid,id,img.length]);},removeImage:async(sid,id)=>{calls.push(['removeImage',sid,id]);},pick:v=>{picked=v;calls.push(['pick',v]);},picked:()=>picked};
+ const calls:unknown[]=[];const deps:PanelCommandDeps={state:()=>state,thumbnails:async()=>{calls.push('thumbnails');},show:async index=>{state.index=index;calls.push(['show',index]);},edit:async(run,text)=>{state.runs=state.runs.map(r=>r.slide===run.slide&&r.run===run.run?{...r,text}:r);calls.push(['edit',text]);},select:v=>calls.push(v),move:async(id,to)=>{const a=state.slideIds.slice();a.splice(to,0,a.splice(a.indexOf(id),1)[0]);state.slideIds=a;calls.push(['move',id,to]);},duplicate:async id=>{calls.push(['dup',id]);},remove:async id=>{calls.push(['del',id]);},add:async(l,a)=>{calls.push(['add',l,a]);},setMany:async(id,edits)=>{calls.push(['many',id,edits]);},arrange:async(id,ids,mode)=>{calls.push(['arrange',id,ids,mode]);},setBounds:async(id,sid,e,n)=>{calls.push(['bounds',id,sid,e,n]);},format:async(sid,id,f)=>{calls.push(['format',sid,id,f]);},addBox:async(sid,l)=>{calls.push(['addBox',sid,l]);},removeBox:async(sid,id)=>{calls.push(['removeBox',sid,id]);},insertImage:async(sid,img,alt)=>{calls.push(['insertImage',sid,img.length,alt]);},replaceImage:async(sid,id,img)=>{calls.push(['replaceImage',sid,id,img.length]);},removeImage:async(sid,id)=>{calls.push(['removeImage',sid,id]);},pick:v=>{picked=v;calls.push(['pick',v]);},picked:()=>picked};
  const dispatcher=new CommandDispatcher();slidesPanelCommandSpecs(deps).forEach(s=>dispatcher.register(s));return {state,calls,dispatcher};
 }
 test('outline searches text and slide number and preserves empty slides',()=>{
@@ -207,4 +207,21 @@ test('multi-selection: toggle, select all, align to selection, distribute, and s
  await run('slides.alignSelection',{mode:'top',to:'selection'});assert.equal(f.calls.length,0,'already aligned: no edit');
  await assert.rejects(()=>run('slides.alignSelection',{mode:'left',to:'nowhere'}));
  picked={source:'blob:deck1',slideId:256,shapeId:2};await assert.rejects(()=>run('slides.alignSelection',{mode:'left',to:'selection'}),/at least two/);
+});
+
+test('selectShapes (marquee) and arrangeShapes validate identity, ids, mode and cap before mutation',async()=>{
+ const f=fixture(),run=(id:string,p?:unknown)=>f.dispatcher.runCommand(id,p,{origin:'ui'}),base={source:'blob:deck1',slideId:256};
+ await run('slides.selectShapes',{...base,shapeIds:[2,3]});assert.deepEqual(picked,{...base,shapeId:2,more:[3]});
+ await run('slides.selectShapes',{...base,shapeIds:[2]});assert.deepEqual(picked,{...base,shapeId:2});
+ picked={...base,shapeId:2};await run('slides.selectShapes',{...base,shapeIds:[3],add:true});assert.deepEqual(picked,{...base,shapeId:2,more:[3]});
+ await run('slides.selectShapes',{...base,shapeIds:[]});assert.equal(picked,null);
+ await assert.rejects(()=>run('slides.selectShapes',{...base,shapeIds:[2,99]}),/no longer exists/);
+ await assert.rejects(()=>run('slides.selectShapes',{...base,slideId:257,shapeIds:[2]}),/Slide changed/);
+ await assert.rejects(()=>run('slides.selectShapes',{...base,shapeIds:Array.from({length:51},(_,i)=>i)}));
+ await assert.rejects(()=>run('slides.arrangeShapes',{mode:'front'}),/Select a shape first/);
+ picked={...base,shapeId:2,more:[3]};f.calls.length=0;
+ await run('slides.arrangeShapes',{mode:'front'});assert.deepEqual(f.calls,[['arrange',256,[2,3],'front']]);
+ await assert.rejects(()=>run('slides.arrangeShapes',{mode:'sideways'}));
+ picked={...base,shapeId:99};await assert.rejects(()=>run('slides.arrangeShapes',{mode:'back'}),/no longer exists/);
+ assert.equal(f.calls.length,1);
 });

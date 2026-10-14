@@ -1,18 +1,18 @@
 import type {CommandSpec} from '../commandSpec';
 import {registerCommandSpec} from '../commandBridge';
 import {selectSlideText} from './panelSelection';
-import {getSlidesSessionState,loadThumbnails,editSlideText,showSlide,moveSlideTo,duplicateSlideAt,deleteSlideAt,addSlideFromLayout,setShapeBoundsAt,setShapesBoundsAt,formatShapeAt,addTextBoxAt,removeTextBoxAt,insertPictureAt,replacePictureAt,removePictureAt} from './session';
+import {getSlidesSessionState,loadThumbnails,editSlideText,showSlide,moveSlideTo,duplicateSlideAt,deleteSlideAt,addSlideFromLayout,setShapeBoundsAt,setShapesBoundsAt,arrangeShapesAt,formatShapeAt,addTextBoxAt,removeTextBoxAt,insertPictureAt,replacePictureAt,removePictureAt} from './session';
 import {textIssue} from './panelModel';
 import type {TextRun} from './editCopy';
 import './panelI18n';
 import {selectShape,getShapeSelection,type ShapeSelection} from './shapeSelection';
 import {stepShape,moveBox,resizeBox,resizeBoxAspect,boxOf,alignBox,alignBoxes,distributeBoxes,ALIGN_MODES,type AlignMode} from './shapeGeometry';
 import {sniffImage,altFromName,decodeBase64,MAX_IMAGE_BASE64} from './imageSniff';
-import {boundsEditIssue,nextShapeId,MIN_SIZE_PT,MAX_SIZE_PT,MAX_SHAPES_PER_SLIDE,MAX_BOX_TEXT,MAX_MULTI_EDIT,type ShapeBoundsEdit,type RunFormat,type ShapeRef,type BoundsBox} from './deckPackage';
+import {boundsEditIssue,nextShapeId,MIN_SIZE_PT,MAX_SIZE_PT,MAX_SHAPES_PER_SLIDE,MAX_BOX_TEXT,MAX_MULTI_EDIT,ARRANGE_MODES,type ArrangeMode,type ShapeBoundsEdit,type RunFormat,type ShapeRef,type BoundsBox} from './deckPackage';
 export interface PanelCommandDeps {
  state():{source:string;index:number;busy:boolean;working:Uint8Array|null;runs:TextRun[];slideIds:number[];layouts:{part:string;supported:boolean}[];model:{slides:{id:number;shapes:ShapeRef[]}[];slideSize:{cx:number;cy:number}|null}|null;summary:{slides:number}|null};
  thumbnails():Promise<void>;edit(run:TextRun,text:string):Promise<void>;show(index:number):Promise<void>;
- select(value:{source:string;slide:number;run:number}):void;move(slideId:number,toIndex:number):Promise<void>;duplicate(slideId:number):Promise<void>;remove(slideId:number):Promise<void>;add(layoutPart:string,afterSlideId:number|null):Promise<void>;setBounds(slideId:number,shapeId:number,expected:BoundsBox,next:BoundsBox):Promise<void>;setMany(slideId:number,edits:ShapeBoundsEdit[]):Promise<void>;format(slideId:number,shapeId:number,f:RunFormat):Promise<void>;addBox(slideId:number,label:string):Promise<void>;removeBox(slideId:number,shapeId:number):Promise<void>;insertImage(slideId:number,image:Uint8Array,alt:string):Promise<void>;replaceImage(slideId:number,shapeId:number,image:Uint8Array):Promise<void>;removeImage(slideId:number,shapeId:number):Promise<void>;pick(value:ShapeSelection|null):void;picked():ShapeSelection|null;
+ select(value:{source:string;slide:number;run:number}):void;move(slideId:number,toIndex:number):Promise<void>;duplicate(slideId:number):Promise<void>;remove(slideId:number):Promise<void>;add(layoutPart:string,afterSlideId:number|null):Promise<void>;setBounds(slideId:number,shapeId:number,expected:BoundsBox,next:BoundsBox):Promise<void>;setMany(slideId:number,edits:ShapeBoundsEdit[]):Promise<void>;arrange(slideId:number,shapeIds:number[],mode:ArrangeMode):Promise<void>;format(slideId:number,shapeId:number,f:RunFormat):Promise<void>;addBox(slideId:number,label:string):Promise<void>;removeBox(slideId:number,shapeId:number):Promise<void>;insertImage(slideId:number,image:Uint8Array,alt:string):Promise<void>;replaceImage(slideId:number,shapeId:number,image:Uint8Array):Promise<void>;removeImage(slideId:number,shapeId:number):Promise<void>;pick(value:ShapeSelection|null):void;picked():ShapeSelection|null;
 }
 const identity={source:{type:'string',minLength:1},slide:{type:'integer',minimum:0},run:{type:'integer',minimum:0},old:{type:'string'}};
 export function slidesPanelCommandSpecs(d:PanelCommandDeps):CommandSpec[]{
@@ -104,6 +104,22 @@ export function slidesPanelCommandSpecs(d:PanelCommandDeps):CommandSpec[]{
    const v=p as {axis:'horizontal'|'vertical'},{slideId:sid,shapes}=selectedShapes();
    if(shapes.length<3)throw expected('Select at least three shapes to distribute them.');
    await applyBoxes(sid,shapes,distributeBoxes(shapes.map(x=>boxOf(x.bounds!)),v.axis));}},
+  {id:'slides.selectShapes',title:'Select shapes',category:'View',level:'ui',keywords:['shape','object','select','marquee','multiple'],enabled:()=>{const s=d.state();return available()&&!!s.model&&s.slideIds.length>0;},params:{type:'object',properties:{source:identity.source,slideId:slideId,shapeIds:{type:'array',maxItems:MAX_MULTI_EDIT,items:{type:'integer',minimum:0,maximum:2147483647}},add:{type:'boolean'}},required:['source','slideId','shapeIds'],additionalProperties:false},run:p=>{
+   const v=p as {source:string;slideId:number;shapeIds:number[];add?:boolean};const s=d.state();
+   if(s.source!==v.source||s.slideIds[s.index]!==v.slideId)throw expected('Slide changed since selection.');
+   const slide=s.model?.slides.find(x=>x.id===v.slideId);if(!slide)throw expected('Slide no longer exists.');
+   const cur=d.picked(),have=v.add&&cur&&cur.source===v.source&&cur.slideId===v.slideId?[cur.shapeId,...(cur.more??[])]:[];
+   const ids=[...new Set([...have,...v.shapeIds])];
+   for(const id of ids)if(!slide.shapes.some(x=>x.id===id&&x.parentId===null))throw expected('Shape no longer exists.');
+   if(ids.length>MAX_MULTI_EDIT)throw expected(`Select at most ${MAX_MULTI_EDIT} shapes.`);
+   d.pick(ids.length?{source:v.source,slideId:v.slideId,shapeId:ids[0],...(ids.length>1?{more:ids.slice(1)}:{})}:null);}},
+  {id:'slides.arrangeShapes',title:'Arrange selected shapes',category:'Edit',level:'ui',keywords:['arrange','order','front','back','forward','backward','z-order','layer','stack'],enabled:available,params:{type:'object',properties:{mode:{enum:[...ARRANGE_MODES]}},required:['mode'],additionalProperties:false},run:async p=>{
+   const v=p as {mode:ArrangeMode},s=d.state(),pick=d.picked();
+   if(!pick||pick.source!==s.source||s.slideIds[s.index]!==pick.slideId)throw expected('Select a shape first.');
+   const slide=s.model?.slides.find(x=>x.id===pick.slideId);if(!slide)throw expected('Slide no longer exists.');
+   const ids=[pick.shapeId,...(pick.more??[])];
+   for(const id of ids)if(!slide.shapes.some(x=>x.id===id&&x.parentId===null))throw expected('A selected shape no longer exists.');
+   await d.arrange(pick.slideId,ids,v.mode);}},
   {id:'slides.alignShape',title:'Align shape to slide',category:'Edit',level:'ui',keywords:['align','left','right','center','top','middle','bottom','shape','picture','position'],enabled:available,params:{type:'object',properties:{source:identity.source,slideId:slideId,shapeId:{type:'integer',minimum:0,maximum:2147483647},mode:{enum:[...ALIGN_MODES]}},required:['source','slideId','shapeId','mode'],additionalProperties:false},run:async p=>{
    const v=p as {source:string;slideId:number;shapeId:number;mode:AlignMode};const s=d.state();
    if(s.source!==v.source||s.slideIds[s.index]!==v.slideId)throw expected('Slide changed since selection.');
@@ -177,5 +193,5 @@ export function slidesPanelCommandSpecs(d:PanelCommandDeps):CommandSpec[]{
   }},
  ];
 }
-const deps:PanelCommandDeps={state:getSlidesSessionState,thumbnails:loadThumbnails,edit:editSlideText,show:showSlide,select:selectSlideText,move:moveSlideTo,duplicate:duplicateSlideAt,remove:deleteSlideAt,add:addSlideFromLayout,setBounds:setShapeBoundsAt,setMany:setShapesBoundsAt,format:formatShapeAt,addBox:addTextBoxAt,removeBox:removeTextBoxAt,insertImage:insertPictureAt,replaceImage:replacePictureAt,removeImage:removePictureAt,pick:selectShape,picked:getShapeSelection};
+const deps:PanelCommandDeps={state:getSlidesSessionState,thumbnails:loadThumbnails,edit:editSlideText,show:showSlide,select:selectSlideText,move:moveSlideTo,duplicate:duplicateSlideAt,remove:deleteSlideAt,add:addSlideFromLayout,setBounds:setShapeBoundsAt,setMany:setShapesBoundsAt,arrange:arrangeShapesAt,format:formatShapeAt,addBox:addTextBoxAt,removeBox:removeTextBoxAt,insertImage:insertPictureAt,replaceImage:replacePictureAt,removeImage:removePictureAt,pick:selectShape,picked:getShapeSelection};
 export function registerSlidesPanelCommands(){const offs=slidesPanelCommandSpecs(deps).map(s=>registerCommandSpec(s));return()=>offs.forEach(off=>off());}

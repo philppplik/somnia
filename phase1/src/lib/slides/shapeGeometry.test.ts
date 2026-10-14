@@ -4,7 +4,7 @@ import {readFileSync,readdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {unzipSync,zipSync,strFromU8,strToU8} from 'fflate';
 import {readDeckModel,readSlidePart,newSlideFromLayout,readLayouts,type ShapeRef} from './deckPackage';
-import {alignBoxes,distributeBoxes,moveBox,resizeBox,alignBox,resizeBoxAspect,hitTest,containsPoint,overlayRect,limitsOf,stepShape,selectableShapes,rotationDeg} from './shapeGeometry';
+import {shapesInRect,alignBoxes,distributeBoxes,moveBox,resizeBox,alignBox,resizeBoxAspect,hitTest,containsPoint,overlayRect,limitsOf,stepShape,selectableShapes,rotationDeg} from './shapeGeometry';
 
 const fx=(n:string)=>new Uint8Array(readFileSync(fileURLToPath(new URL('../../../slides-engine/fixtures/'+n,import.meta.url))));
 const base=fx('independent.pptx');
@@ -144,4 +144,14 @@ test('distributeBoxes equalises gaps, keeps the outer boxes and input order, and
   const v=distributeBoxes([{x:0,y:0,w:5,h:100},{x:0,y:50,w:5,h:100},{x:0,y:400,w:5,h:100}],'vertical');
   assert.deepEqual(v.map(b=>b.y),[0,Math.round(0+100+(500-300)/2),400]);
   assert.throws(()=>distributeBoxes([bx(0,1),bx(5,1)],'horizontal'),/three/);
+});
+
+test('shapesInRect selects fully enclosed top-level shapes in z-order, in any drag direction',()=>{
+  const size={cx:1000,cy:1000};
+  const sh=(id:number,x:number,y:number,w:number,h:number,parentId:number|null=null)=>({id,name:'s',kind:'text' as const,runCount:1,parentId,bounds:{x,y,w,h,rot:0,flipH:false,flipV:false,source:'slide' as const},ph:null});
+  const list=[sh(1,100,100,100,100),sh(2,400,400,100,100),sh(3,150,150,10,10,1),sh(4,900,900,100,100),{...sh(5,0,0,10,10),bounds:null}];
+  assert.deepEqual(shapesInRect(list,size,{x0:0,y0:0,x1:0.6,y1:0.6}).map(s=>s.id),[1,2]);
+  assert.deepEqual(shapesInRect(list,size,{x0:0.6,y0:0.6,x1:0,y1:0}).map(s=>s.id),[1,2]);
+  assert.deepEqual(shapesInRect(list,size,{x0:0,y0:0,x1:0.15,y1:0.15}).map(s=>s.id),[]);
+  assert.deepEqual(shapesInRect(list,size,{x0:NaN,y0:0,x1:1,y1:1}),[]);
 });
