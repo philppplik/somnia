@@ -126,5 +126,7 @@
  "photos.filmstrip.sort": "Ordenar",
  "photos.filmstrip.sort.library": "Biblioteca",
  "photos.filmstrip.sort.rating": "Valoración",
- "photos.filmstrip.sort.flag": "Marca"
+ "photos.filmstrip.sort.flag": "Marca",
+ "photos.filmstrip.apply": "Aplicar a {count} fotos",
+ "photos.filmstrip.applyDone": "{applied} aplicadas, {failed} fallaron"
 }

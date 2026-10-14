@@ -158,3 +158,31 @@ test('Home/End jump to the first and last photo (light and dark)',async({page})=
   await expect(page.getByTestId('photos-name')).toHaveText('strip-1.png');
  }
 });
+test('multi-select: ctrl/shift select, apply look to the selection (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible();
+  await page.getByTestId('photos-filmstrip-item-strip-1.png').click(); // plain click: single selection + active
+  await page.evaluate(async()=>{const mod=await import('/src/lib/photos/studioSession.ts');mod.commitPhotoSettings('strip-1.png',(s:{exposure:number})=>({...s,exposure:1.2}));});
+  await page.getByTestId('photos-filmstrip-item-strip-3.png').click({modifiers:['ControlOrMeta']}); // ctrl: add to the selection
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toHaveAttribute('data-selected','true');
+  await expect(page.getByTestId('photos-filmstrip-item-strip-1.png')).toHaveAttribute('data-selected','true');
+  const apply=page.getByTestId('photos-filmstrip-apply');
+  await expect(apply).toBeVisible();
+  await expect(apply).toHaveText(/2/);
+  await page.screenshot({path:`test-results/ds-photos-multiselect-${theme}.png`,fullPage:true});
+  await apply.click();
+  await expect(page.getByTestId('photos-filmstrip-apply-note')).toBeVisible();
+  const exposure=await page.evaluate(async()=>{const mod=await import('/src/lib/photos/studioSession.ts');return mod.getPhotoSession('strip-3.png')!.now.exposure;});
+  expect(exposure).toBe(1.2); // the look landed on the selected photo
+  const untouched=await page.evaluate(async()=>{const mod=await import('/src/lib/photos/studioSession.ts');return mod.getPhotoSession('strip-2.png')!.now.exposure;});
+  expect(untouched).toBe(0); // not selected: untouched
+  await page.getByTestId('photos-filmstrip-item-strip-1.png').click();
+  await page.getByTestId('photos-filmstrip-item-strip-3.png').click({modifiers:['Shift']}); // shift: range 1..3
+  await expect(apply).toHaveText(/3/);
+  await page.getByTestId('photos-filmstrip-item-strip-1.png').click(); // plain click collapses the selection
+  await expect(apply).toHaveCount(0);
+ }
+});

@@ -68,3 +68,29 @@ descending with tie stability, flag ranking, no input mutation);
 `photos-filmstrip.spec.ts` gains a light/dark leg that rates two photos
 from the keyboard, sorts by rating, asserts the DOM order both ways and
 screenshots the sorted strip.
+
+## Multi-select and batch apply (P81)
+
+The filmstrip selects multiple photos now: plain click stays
+single-select + activate, Ctrl/Cmd-click toggles one thumbnail,
+Shift-click selects the anchor..target range in strip order (the
+Lightroom convention). Selected thumbnails get an accent ring and
+`data-selected`; selection and anchor persist via `panelStateStore`
+(`photos.filmstripSelection` / `photos.filmstripAnchor`).
+
+With two or more selected, an "Apply to N photos" button appears in the
+strip: it copies the active photo's develop look (`extractLook`, no
+geometry) onto every selected photo through the existing
+`syncLookToPhotos` batch path — one settings commit per photo, a failed
+photo never aborts the run, and a note reports "applied / failed" when
+done. The button is disabled while the active photo is neutral.
+
+- `src/lib/photos/selection.ts`: pure `toggleSelect` / `rangeSelect`
+  helpers (range both directions, unknown anchor or target falls back
+  to the target alone).
+
+Coverage: `selection.test.ts` (3 tests); `photos-filmstrip.spec.ts`
+gains a light/dark leg that ctrl-selects two photos, applies a warm
+exposure from the active one, reads the target session's exposure back
+(1.2 applied, the unselected one still 0), then shift-selects the full
+range (button count 3) and collapses back with a plain click.
