@@ -13,3 +13,7 @@ Base fetched/rebased `origin/int/beta5` `1c2d5b5c`. P5 and integration's schema/
 Verification: 175 Interface-owned/studio/shell tests pass. Command inventory/locale (301) and manifest checks pass. Typecheck remains blocked only by pre-existing generated Slides module. Actual isolated source/target preview and dark German author controls inspected. Isolated keyboard click, hover, Back, Escape and unchanged recovery checks passed. Those checks are not full-app E2E. No Cargo/WASM, dependencies, global CSS/token edits, spending, network permission or push.
 
 Integration caveat: two unrelated existing tests in studios/3d.test.ts and studios/vibespace.test.ts assert Vibe Space is last, while Animation order 11 follows Vibe Space order 10. Both failures reproduce on 1c2d5b5c. Animation order 11 originated in 78805c054 and first entered beta5 via merge 87ffe903. Tests/order are untouched, no weakened assertions. Full CI/native/production gates remain required; not release-ready.
+
+## P6 design-system follow-up
+
+Separate fix based on beta5 `e8c4c226`: flow target selects use NativeSelect; preview hotspots use shared Button rendered as local SVG rectangles with SVG geometry attributes. Stage/image use shared utility classes and HTML/SVG dimensions instead of inline style objects. No budget or global CSS edits. `check:ds` now passes (38 areas), 175 focused tests pass, and isolated click/hover/back/Escape/unchanged recovery rechecked. Refreshed actual preview and dark author-control pixels inspected. Typecheck retains the existing generated Slides gap.
