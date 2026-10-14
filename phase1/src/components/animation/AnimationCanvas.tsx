@@ -13,6 +13,7 @@ import {registerAnimationCommands} from '../../lib/animation/commands';
 import {animationSession,useAnimationState} from '../../lib/animation/session';
 import {findComp,type Composition,type KeyRef,type Layer} from '../../lib/animation/model';
 import {ViewerGuides,ViewerSnapLines} from './ViewerGuides';
+import {TransformHandles} from './TransformHandles';
 import {startLayerDrag} from './layerDrag';
 import type {Line} from '../../lib/animation/guides';
 import {animatedChars,textPathD,textPathId,textPathStartAt} from '../../lib/animation/textAnimators';
@@ -117,6 +118,7 @@ function Viewer({comp,at,selected,sel,assets,comps}:{assets:readonly InterfaceAs
    <PathLayerOverlay comp={comp} layer={layer} at={at}/>
    <ViewerGuides comp={comp}/>
    <ViewerSnapLines lines={snap}/>
+   <TransformHandles comp={comp} layer={layer} at={at}/>
   </svg>
   <div className="absolute left-2 top-2 flex gap-1" role="group" aria-label={t('animation.pathLayer.tools')}>
    <Button size="tiny" variant="outline" aria-pressed={penOn} disabled={!!layer?.locked} onClick={()=>void executeCommand('animation.layer.pen')} title={t('animation.pathLayer.penHint')} data-testid="animation-layerpen-toggle">{t('animation.pathLayer.pen')}</Button>

@@ -710,5 +710,7 @@
  "cmd.animation.guides.add": "Ajouter un repère",
  "cmd.animation.guides.remove": "Supprimer un repère",
  "animation.nudge.hint": "Aperçu. Les flèches déplacent le calque sélectionné de 1 px, avec Maj de 10 px.",
- "cmd.animation.layer.nudge": "Déplacer le calque"
+ "cmd.animation.layer.nudge": "Déplacer le calque",
+ "animation.handles.scale": "Mettre le calque à l’échelle",
+ "animation.handles.rotate": "Faire pivoter le calque (Maj : pas de 15 degrés)"
 }

@@ -710,5 +710,7 @@
  "cmd.animation.guides.add": "Eine Hilfslinie hinzufügen",
  "cmd.animation.guides.remove": "Eine Hilfslinie entfernen",
  "animation.nudge.hint": "Vorschau. Pfeiltasten verschieben die gewählte Ebene um 1 px, mit Umschalt um 10 px.",
- "cmd.animation.layer.nudge": "Ebene verschieben"
+ "cmd.animation.layer.nudge": "Ebene verschieben",
+ "animation.handles.scale": "Ebene skalieren",
+ "animation.handles.rotate": "Ebene drehen (Umschalt: 15-Grad-Schritte)"
 }

@@ -1984,3 +1984,21 @@ test('P86: canvas drag snapping: targets, snapping, parent space, nudge command'
  const pd=toParentDelta(findComp(d)!,findLayer(findComp(d)!,'a')!,0,[10,4]);assert.ok(Math.abs(pd[0]-5)<1e-9&&Math.abs(pd[1]-2)<1e-9);
  const spec=animationCommandSpecs().find(x=>x.id==='animation.layer.nudge');assert.ok(spec);
 });
+import {handleSet,scaleDrag,angleOf,angleDelta,rotateTo,ROTATE_OFFSET} from './handles';
+import {worldMatrix as worldM} from './scene';
+test('P87: transform handles: geometry, scale about anchor, rotate with wrap and steps',()=>{
+ let d=applyEdits(createDocument(),[{type:'layer.add',kind:'solid',id:'a',over:{source:{color:'#ffffff',width:100,height:50}}},{type:'layer.add',kind:'null',id:'n'}]);
+ d=applyEdits(d,[{type:'prop.set',layer:'a',prop:'anchor',t:0,value:[50,25]},{type:'prop.set',layer:'a',prop:'position',t:0,value:[400,225]}]);
+ const c=findComp(d)!,l=findLayer(c,'a')!;const h=handleSet(c,l,0)!;
+ assert.deepEqual(h.corners[0],[350,200]);assert.deepEqual(h.corners[2],[450,250]);assert.deepEqual(h.anchor,[400,225]);assert.ok(Math.abs(h.rotate[1]-(200-ROTATE_OFFSET))<1e-9);
+ const m=worldM(c,l,0);
+ assert.deepEqual(scaleDrag(m,[50,25],[100,100],[450,250],[500,275],true),[200,200]);
+ assert.deepEqual(scaleDrag(m,[50,25],[100,100],[450,250],[500,250],false),[200,100]);
+ assert.deepEqual(scaleDrag(m,[50,25],[100,100],[450,250],[400,225],true),[0,0]);
+ assert.equal(scaleDrag(m,[50,25],[100,100],[400,225],[500,275],true),null);
+ assert.equal(scaleDrag(m,[50,25],[100,100],[450,250],[1e9,1e9],true)![0],10000);
+ assert.equal(angleDelta(170,-170),20);assert.equal(angleDelta(-170,170),-20);assert.equal(angleOf([0,0],[0,1]),90);
+ assert.equal(rotateTo(10,37,15),45);assert.equal(rotateTo(10,37),47);assert.equal(rotateTo(0,1e6),36000);
+ const rot=applyEdit(d,{type:'prop.set',layer:'a',prop:'rotation',t:0,value:90});const h2=handleSet(findComp(rot)!,findLayer(findComp(rot)!,'a')!,0)!;
+ assert.ok(Math.abs(h2.corners[0][0]-425)<1e-6&&Math.abs(h2.corners[0][1]-175)<1e-6&&h2.rotate[0]>450);
+});

@@ -710,5 +710,7 @@
  "cmd.animation.guides.add": "Add a ruler guide",
  "cmd.animation.guides.remove": "Remove a ruler guide",
  "animation.nudge.hint": "Viewer. Arrow keys nudge the selected layer by 1 px, Shift by 10 px.",
- "cmd.animation.layer.nudge": "Nudge layer"
+ "cmd.animation.layer.nudge": "Nudge layer",
+ "animation.handles.scale": "Scale layer",
+ "animation.handles.rotate": "Rotate layer (Shift: 15 degree steps)"
 }

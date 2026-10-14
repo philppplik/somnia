@@ -710,5 +710,7 @@
  "cmd.animation.guides.add": "Añadir una guía",
  "cmd.animation.guides.remove": "Quitar una guía",
  "animation.nudge.hint": "Vista. Las flechas mueven la capa seleccionada 1 px, con Mayús 10 px.",
- "cmd.animation.layer.nudge": "Mover capa"
+ "cmd.animation.layer.nudge": "Mover capa",
+ "animation.handles.scale": "Escalar capa",
+ "animation.handles.rotate": "Girar capa (Mayús: pasos de 15 grados)"
 }
