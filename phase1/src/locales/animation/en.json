@@ -360,5 +360,14 @@
  "animation.motion.builtin-pulse": "Pulse",
  "animation.motion.builtin-float": "Float",
  "animation.motion.builtin-swing": "Swing",
- "animation.motion.builtin-fadeout": "Fade out"
+ "animation.motion.builtin-fadeout": "Fade out",
+ "animation.motion.export": "Export",
+ "animation.motion.import": "Import",
+ "animation.motion.summary": "{tracks} properties, {keys} keys",
+ "animation.motion.staged": "{count} presets in this file. Hover to preview.",
+ "animation.motion.add": "Add {count}",
+ "animation.motion.cancel": "Cancel",
+ "animation.motion.tooLarge": "This file is too large to be a preset file.",
+ "cmd.animation.motion.export": "Export saved motion presets as a JSON file",
+ "cmd.animation.motion.import": "Import motion presets from a JSON file"
 }

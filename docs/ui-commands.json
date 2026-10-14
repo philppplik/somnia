@@ -660,6 +660,30 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.motion.export",
+      "title": "Export saved motion presets as a JSON file",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "animation.motion.import",
+      "title": "Import motion presets from a JSON file",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.motion.save",
       "title": "Save the selected keys as a motion preset",
       "category": "Edit",

@@ -11,8 +11,9 @@ import {EditError,type Edit} from './edit';
 import {findComp,findLayer,TEXT_FONTS,TRANSFORM_KEYS,type KeyRef,type LayerKind,type LayerEffect,type PropValue,type TextFont,type TransformKey} from './model';
 import {animationSession} from './session';
 import {allTargetKeys,bounceTargetKeys,easeTargetKeys,staggerLayers} from './keyTargets';
+import {downloadBlob} from './exportFrames';
 import {layerSetIds} from './layerSet';
-import {deleteMotion,findMotion,motionEdits,motionFromKeys,saveMotion} from './motionLibrary';
+import {deleteMotionEdit,exportMotionsJson,findMotion,mergeMotionsEdit,motionEdits,motionFromKeys,parseMotionsJson,saveMotionEdit,userMotions} from './motionLibrary';
 import {secondsToTicks,snapToFrame} from './time';
 import {ClipError,copyKeys,getKeyClip,pastedRefs,setKeyClip} from './keyclip';
 import {allKeysOf,pruneSelection,shiftSelection} from './selection';
@@ -107,14 +108,21 @@ export function animationCommandSpecs():CommandSpec<unknown,unknown>[]{
    return run(guard(()=>staggerLayers(doc(),ids,p.frames??2,p.timing??true)));
   },object({frames:{type:'integer',minimum:-600,maximum:600},layers:{type:'array',items:layerRef,minItems:2,maxItems:200},timing:{type:'boolean'}},[]),()=>open()&&layerSetIds(animationSession().getState().view.selectedLayer).length>1,'Edit'),
   spec('animation.motion.apply','Apply a motion preset to the selected layers',(p:{preset:string;layers?:string[]})=>{
-   const set=findMotion(p.preset)??fail('Unknown motion preset.');const ids=p.layers??layerSetIds(animationSession().getState().view.selectedLayer);if(!ids.length)fail('Select a layer first.');
+   const set=findMotion(doc(),p.preset)??fail('Unknown motion preset.');const ids=p.layers??layerSetIds(animationSession().getState().view.selectedLayer);if(!ids.length)fail('Select a layer first.');
    return run(guard(()=>{try{return ids.flatMap(id=>motionEdits(doc(),id,set,playhead()));}catch(e){if(e instanceof Error&&!(e instanceof EditError))throw Object.assign(e,{expected:true});throw e;}}));
   },object({preset:{type:'string',minLength:1,maxLength:64},layers:{type:'array',items:layerRef,minItems:1,maxItems:200}},['preset']),()=>open()&&!!animationSession().getState().view.selectedLayer,'Edit'),
   spec('animation.motion.save','Save the selected keys as a motion preset',(p:{name:string})=>{
    const id=selected();const keys=selKeys();const layer=findLayer(comp(),id)!;
-   try{return saveMotion(motionFromKeys(layer,keys,p.name)).id;}catch(e){throw Object.assign(e as Error,{expected:true});}
+   try{const set=motionFromKeys(layer,keys,p.name);run(saveMotionEdit(doc(),set));return set.id;}catch(e){throw Object.assign(e as Error,{expected:true});}
   },object({name:{type:'string',minLength:1,maxLength:40}}),hasSel,'Edit'),
-  spec('animation.motion.delete','Delete a saved motion preset',(p:{preset:string})=>{try{deleteMotion(p.preset);}catch(e){throw Object.assign(e as Error,{expected:true});}},object({preset:{type:'string',minLength:1,maxLength:64}}),()=>true,'Edit'),
+  spec('animation.motion.delete','Delete a saved motion preset',(p:{preset:string})=>{try{run(deleteMotionEdit(doc(),p.preset));}catch(e){throw Object.assign(e as Error,{expected:true});}},object({preset:{type:'string',minLength:1,maxLength:64}}),open,'Edit'),
+  spec('animation.motion.export','Export saved motion presets as a JSON file',(p:{presets?:string[]}={})=>{
+   const items=userMotions(doc());const pick=p.presets?items.filter(m=>p.presets!.includes(m.id)):items;if(!pick.length)fail('No saved presets to export.');
+   const text=exportMotionsJson(pick);downloadBlob(new Blob([text],{type:'application/json'}),'somnia-motions.json');return pick.length;
+  },object({presets:{type:'array',items:{type:'string',minLength:1,maxLength:64},minItems:1,maxItems:50}},[]),()=>open()&&userMotions(animationSession().document).length>0,'Edit'),
+  spec('animation.motion.import','Import motion presets from a JSON file',(p:{json:string})=>{
+   try{const sets=parseMotionsJson(p.json);run(mergeMotionsEdit(doc(),sets));return sets.length;}catch(e){throw Object.assign(e as Error,{expected:true});}
+  },object({json:{type:'string',minLength:2,maxLength:300000}}),open,'Edit'),
   spec('animation.keys.selectAll','Select all keys of the layer',(p:{layer?:string}={})=>{const id=layerIdOf(p);animationSession().selectKeys(allKeysOf(doc(),id));},object({layer:layerRef},[]),open,'View'),
   spec('animation.keys.delete','Delete selected keys',(p:{keys?:KeyRef[]}={})=>{const keys=p.keys??selKeys();run({type:'keys.remove',keys});animationSession().selectKeys([]);},object({keys:keyRefs},[]),hasSel),
   spec('animation.keys.copy','Copy selected keys',()=>{setKeyClip(guard(()=>copyKeys(doc(),selKeys())));},undefined,hasSel),

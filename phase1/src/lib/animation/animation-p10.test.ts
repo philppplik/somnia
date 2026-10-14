@@ -7,7 +7,9 @@ import {copyTransformKeys,pasteTransformEdits} from './keysClipboard';
 import {animatedTargets,allTargetKeys,propertyOf,moveTargetKeys,easeTargetKeys,pruneTargetKeys,toggleTargetKey,editTargetKeys,copyTargetKeys,pasteTargetKeys,deleteTargetKeys,pasteClipOnTargets,staggerLayers,bounceClip,bounceTargetKeys} from './keyTargets';
 import {EASE_PRESETS,easePresetOf} from './graph';
 import {animationCommandSpecs} from './commands';
-import {BUILTIN_MOTIONS,MAX_USER_MOTIONS,deleteMotion,findMotion,listMotions,motionEdits,motionFromKeys,resetMotionLibrary,saveMotion,validMotion} from './motionLibrary';
+import {BUILTIN_MOTIONS,MAX_USER_MOTIONS,LEGACY_KEY,deleteMotionEdit,exportMotionsJson,findMotion,legacyMotions,listMotions,mergeMotionsEdit,motionEdits,motionFromKeys,parseMotionsJson,saveMotionEdit,userMotions,validMotion} from './motionLibrary';
+import {serializeAnimationSnapshot,parseAnimationSnapshot} from './persistence';
+import {defaultView} from './recovery';
 import {frameToTick,TICKS_PER_SECOND as TICK_SEC} from './time';
 import {frameSvg} from './exportFrames';
 import {sceneAt} from './scene';
@@ -416,7 +418,7 @@ test('P22: word units, selector stagger sweeps and bounds',()=>{
 });
 
 test('P22: motion presets apply to any layer in one step, save from keys, persist bounded',()=>{
- resetMotionLibrary();assert.equal(BUILTIN_MOTIONS.length,5);assert.ok(BUILTIN_MOTIONS.every(m=>validMotion(m)));
+ assert.equal(BUILTIN_MOTIONS.length,5);assert.ok(BUILTIN_MOTIONS.every(m=>validMotion(m)));
  let d=base();const rev=d.revision;
  for(const m of BUILTIN_MOTIONS){const e=motionEdits(d,'photo',m,0);const n=applyEdits(d,e);assert.equal(n.revision,rev+1,m.id);assert.deepEqual(validateDocument(n),[]);
   assert.ok(m.tracks.every(tr=>layer(n,'photo').transform[tr.prop].keys.length===tr.keys.length));}
@@ -431,12 +433,42 @@ test('P22: motion presets apply to any layer in one step, save from keys, persis
  const sel=allTargetKeys(layer(fl,'photo')).filter(r=>r.target.kind==='transform').map(r=>({layer:'photo',prop:(r.target as unknown as {prop:never}).prop,t:r.t}));
  const mine=motionFromKeys(layer(fl,'photo'),sel,'  Bob  ');assert.equal(mine.name,'Bob');assert.deepEqual(mine.tracks[0].keys.map(k=>k.dt),[0,sec,sec*2].slice(0,mine.tracks[0].keys.length).map((_,i)=>layer(fl,'photo').transform.position.keys[i].t-layer(fl,'photo').transform.position.keys[0].t));
  assert.deepEqual(mine.tracks[0].keys[1].v,[0,-12],'stored as an offset');
- saveMotion(mine);assert.ok(listMotions().some(m=>m.name==='Bob'));assert.throws(()=>saveMotion({...mine,id:'x'}),/already exists/);
- const onOther=applyEdits(d,motionEdits(d,'stencil',findMotion(mine.id)!,0));const sp=layer(d,'stencil').transform.position.value as unknown as number[];assert.deepEqual(layer(onOther,'stencil').transform.position.keys[1].v,[sp[0],sp[1]-12]);
+ const withBob=applyEdit(d,saveMotionEdit(d,mine));assert.ok(listMotions(withBob).some(m=>m.name==='Bob'));assert.equal(listMotions(d).length,5);assert.throws(()=>saveMotionEdit(withBob,{...mine,id:'x'}),/already exists/);
+ const onOther=applyEdits(d,motionEdits(d,'stencil',findMotion(withBob,mine.id)!,0));const sp=layer(d,'stencil').transform.position.value as unknown as number[];assert.deepEqual(layer(onOther,'stencil').transform.position.keys[1].v,[sp[0],sp[1]-12]);
  assert.throws(()=>motionFromKeys(layer(fl,'photo'),sel,'   '),/1 to 40/);assert.throws(()=>motionFromKeys(layer(fl,'photo'),[],'x'),/Select keys/);
  assert.equal(validMotion({...mine,tracks:[{...mine.tracks[0],keys:[{...mine.tracks[0].keys[0],v:5}]}]}),false,'vec2 values must stay pairs');
  assert.equal(validMotion({...mine,tracks:[{...mine.tracks[0],keys:[{...mine.tracks[0].keys[0],out:[2,0]}]}]}),false);
- deleteMotion(mine.id);assert.ok(!listMotions().some(m=>m.name==='Bob'));assert.throws(()=>deleteMotion(mine.id),/no longer exists/);
- for(let i=0;i<MAX_USER_MOTIONS;i++)saveMotion({...mine,id:`m${i}`,name:`n${i}`});assert.throws(()=>saveMotion({...mine,id:'z',name:'zz'}),/At most/);
- resetMotionLibrary();assert.equal(listMotions().length,5);
+ const without=applyEdit(withBob,deleteMotionEdit(withBob,mine.id));assert.ok(!listMotions(without).some(m=>m.name==='Bob'));assert.throws(()=>deleteMotionEdit(without,mine.id),/no longer exists/);
+ let full=d;for(let i=0;i<MAX_USER_MOTIONS;i++)full=applyEdit(full,saveMotionEdit(full,{...mine,id:`m${i}`,name:`n${i}`}));assert.throws(()=>saveMotionEdit(full,{...mine,id:'z',name:'zz'}),/At most/);
+assert.throws(()=>saveMotionEdit(full,{...mine,id:'z',name:'zz'}),/At most/);
+});
+
+test('P23: presets live in the document, survive snapshots, undo as one step, and exchange as bounded JSON',()=>{
+ let d=base();const fl=applyEdits(d,motionEdits(d,'photo',BUILTIN_MOTIONS.find(m=>m.id==='builtin-float')!,0));
+ const sel=allTargetKeys(layer(fl,'photo')).filter(r=>r.target.kind==='transform').map(r=>({layer:'photo',prop:(r.target as unknown as {prop:never}).prop,t:r.t}));
+ const mine=motionFromKeys(layer(fl,'photo'),sel,'Bob');
+ assert.equal(d.motions,undefined,'documents without presets stay unchanged');
+ const rev=d.revision;d=applyEdit(d,saveMotionEdit(d,mine));assert.equal(d.revision,rev+1);assert.equal(d.motions!.version,1);assert.deepEqual(validateDocument(d),[]);
+ // snapshot round trip keeps presets; a damaged library is rejected
+ const back=parseAnimationSnapshot(serializeAnimationSnapshot(d,defaultView())).doc;assert.deepEqual(userMotions(back),userMotions(d));
+ assert.ok(validateDocument({...d,motions:{version:2,items:[]}}).length);assert.ok(validateDocument({...d,motions:{version:1,items:[mine,mine]}}).length,'duplicate ids');
+ assert.ok(validateDocument({...d,motions:{version:1,items:Array.from({length:MAX_USER_MOTIONS+1},(_,i)=>({...mine,id:`i${i}`,name:`n${i}`}))}}).length);
+ assert.throws(()=>applyEdit(d,{type:'motions.set',items:[{...mine,tracks:[]}]}),EditError);
+ // export then import into a fresh document: fresh ids, unique names, one undo step
+ const text=exportMotionsJson(userMotions(d));assert.ok(!text.includes('builtin'));assert.equal(JSON.parse(text).format,'somnia-motions');
+ const parsed=parseMotionsJson(text);assert.equal(parsed.length,1);
+ const other=base();const imp=applyEdit(other,mergeMotionsEdit(other,parsed));assert.equal(imp.revision,other.revision+1);assert.equal(userMotions(imp)[0].name,'Bob');assert.notEqual(userMotions(imp)[0].id,mine.id);
+ const twice=applyEdit(imp,mergeMotionsEdit(imp,parsed));assert.deepEqual(userMotions(twice).map(m=>m.name),['Bob','Bob 2']);
+ const clash=parseMotionsJson(exportMotionsJson([{...mine,name:'Pop in'.slice(0,0)||'pulse'}]));assert.equal(userMotions(applyEdit(other,mergeMotionsEdit(other,clash)))[0].name,'pulse 2','built-in names are taken too');
+ // bad files never reach the document
+ assert.throws(()=>parseMotionsJson('nope'),/not a preset file/);assert.throws(()=>parseMotionsJson('{"format":"other"}'),/not a preset file/);
+ assert.throws(()=>parseMotionsJson(JSON.stringify({format:'somnia-motions',version:9,presets:[]})),/version/);
+ assert.throws(()=>parseMotionsJson(JSON.stringify({format:'somnia-motions',version:1,presets:[{name:'x',tracks:[{prop:'evil',rel:false,keys:[]}]}]})),/not valid/);
+ assert.throws(()=>parseMotionsJson('x'.repeat(300_001)),/too large/);
+ assert.throws(()=>mergeMotionsEdit(applyEdit(other,mergeMotionsEdit(other,Array.from({length:MAX_USER_MOTIONS},(_,i)=>({...mine,name:`q${i}`})))),parsed),/At most/);
+ // one-time migration source: valid entries only, never mutated
+ const store=new Map<string,string>();(globalThis as unknown as {localStorage:unknown}).localStorage={getItem:(k:string)=>store.get(k)??null,setItem:(k:string,v:string)=>void store.set(k,v),removeItem:(k:string)=>void store.delete(k)};
+ try{store.set(LEGACY_KEY,JSON.stringify([mine,{id:'bad',name:'',tracks:[]}]));const old=legacyMotions();assert.equal(old.length,1);assert.equal(old[0].name,'Bob');assert.ok(store.has(LEGACY_KEY));
+  assert.equal(userMotions(applyEdit(other,mergeMotionsEdit(other,old))).length,1);store.set(LEGACY_KEY,'{broken');assert.deepEqual(legacyMotions(),[]);}
+ finally{delete (globalThis as unknown as {localStorage?:unknown}).localStorage;}
 });

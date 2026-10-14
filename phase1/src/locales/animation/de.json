@@ -360,5 +360,14 @@
  "animation.motion.builtin-pulse": "Puls",
  "animation.motion.builtin-float": "Schweben",
  "animation.motion.builtin-swing": "Schwingen",
- "animation.motion.builtin-fadeout": "Ausblenden"
+ "animation.motion.builtin-fadeout": "Ausblenden",
+ "animation.motion.export": "Exportieren",
+ "animation.motion.import": "Importieren",
+ "animation.motion.summary": "{tracks} Eigenschaften, {keys} Keys",
+ "animation.motion.staged": "{count} Presets in dieser Datei. Zum Ansehen darüberfahren.",
+ "animation.motion.add": "{count} hinzufügen",
+ "animation.motion.cancel": "Abbrechen",
+ "animation.motion.tooLarge": "Diese Datei ist zu groß für eine Preset-Datei.",
+ "cmd.animation.motion.export": "Gespeicherte Bewegungs-Presets als JSON-Datei exportieren",
+ "cmd.animation.motion.import": "Bewegungs-Presets aus JSON-Datei importieren"
 }

@@ -360,5 +360,14 @@
  "animation.motion.builtin-pulse": "Pulso",
  "animation.motion.builtin-float": "Flutuar",
  "animation.motion.builtin-swing": "Balanço",
- "animation.motion.builtin-fadeout": "Desaparecer"
+ "animation.motion.builtin-fadeout": "Desaparecer",
+ "animation.motion.export": "Exportar",
+ "animation.motion.import": "Importar",
+ "animation.motion.summary": "{tracks} propriedades, {keys} chaves",
+ "animation.motion.staged": "{count} predefinições neste arquivo. Passe o mouse para visualizar.",
+ "animation.motion.add": "Adicionar {count}",
+ "animation.motion.cancel": "Cancelar",
+ "animation.motion.tooLarge": "Este arquivo é grande demais para ser um arquivo de predefinições.",
+ "cmd.animation.motion.export": "Exportar predefinições de movimento salvas como arquivo JSON",
+ "cmd.animation.motion.import": "Importar predefinições de movimento de um arquivo JSON"
 }

@@ -175,3 +175,9 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Implemented: text animator word unit, Wave/Reveal selector stagger with live preview, motion preset library (five built-ins, local user presets saved from selected keys, apply to the selected layers in one undo step), three commands, i18n in five locales.
 - Validation: 2 new Animation unit tests (153 total), DS ratchet unchanged, ui-commands inventory (372), isolated Chrome check (hover 0 history steps, apply +1).
 - Not covered: line unit (single-line text rendering), inspector offset field still ±100, presets live in localStorage not the document, Playwright specs CI-only.
+
+### Animation P23 (2026-10-14, integration pending)
+
+- Implemented: motion presets stored in the document (versioned, bounded, validated, survive snapshot save/open, one undo per save/delete/import), one-time migration from the P22 localStorage presets, JSON export and import with preview before adding, two commands, i18n in five locales.
+- Validation: 1 new Animation unit test (154 total), DS ratchet unchanged, ui-commands inventory (374), isolated Chrome check.
+- Not covered: migration runs on open and counts as an undo step; the legacy browser copy is not deleted; file picker flow is not unit tested (Playwright CI-only).

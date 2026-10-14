@@ -360,5 +360,14 @@
  "animation.motion.builtin-pulse": "Pulsation",
  "animation.motion.builtin-float": "Flottement",
  "animation.motion.builtin-swing": "Balancement",
- "animation.motion.builtin-fadeout": "Fondu sortant"
+ "animation.motion.builtin-fadeout": "Fondu sortant",
+ "animation.motion.export": "Exporter",
+ "animation.motion.import": "Importer",
+ "animation.motion.summary": "{tracks} propriétés, {keys} clés",
+ "animation.motion.staged": "{count} préréglages dans ce fichier. Survolez pour prévisualiser.",
+ "animation.motion.add": "Ajouter {count}",
+ "animation.motion.cancel": "Annuler",
+ "animation.motion.tooLarge": "Ce fichier est trop volumineux pour un fichier de préréglages.",
+ "cmd.animation.motion.export": "Exporter les préréglages de mouvement enregistrés en fichier JSON",
+ "cmd.animation.motion.import": "Importer des préréglages de mouvement depuis un fichier JSON"
 }

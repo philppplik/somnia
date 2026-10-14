@@ -80,3 +80,11 @@ One builder (`masks.ts`) produces the `<mask>` and filter definitions for both t
 Text animators gain a `unit` (`char` or `word`) and a `stagger` op in `animatorEdit` (`wave` or `reveal`, over N seconds) that writes selector-offset keys; offsets validate to ±200. Hover or focus on Wave/Reveal previews without a history step, click is one undo. There is no line unit: text renders as one `<text>` line.
 
 `lib/animation/motionLibrary.ts` holds five built-in motions (pop, pulse, float, swing, fade out) and a localStorage library (max 50 user presets, 200 keys each, validated on load). Position, anchor and rotation are stored as offsets from the layer value, scale and opacity as absolutes. Commands: `animation.motion.apply` (selected layers, one undo), `animation.motion.save` (from selected transform keys), `animation.motion.delete`. Presets never overwrite properties that already have keys.
+
+## P23: presets in the document
+
+User motion presets now live in `AnimationDocument.motions` (`{version:1,items}`, max 50 presets, 200 keys each, validated with the document, saved in `.somnia` snapshots). Save, delete and import are one `motions.set` edit each, so one undo step. `lib/animation/motionModel.ts` holds the model and validation.
+
+Export writes `somnia-motions.json` (`{format:'somnia-motions',version:1,presets}`, max 300 KB). Import parses and validates first; the UI lists the file's presets with hover preview on the selected layer and only adds them on "Add". Imported presets get fresh ids and unique names (built-in names count as taken).
+
+Migration: presets saved in localStorage by P22 are copied once into any opened document that has no library yet (one undo step; the browser copy is left untouched and is never read again once the document has a library).
