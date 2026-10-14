@@ -242,6 +242,14 @@ through native control primitives, see below.
   drag/commit/undo step each, cap 20), unit tests and gallery proof
   added (?view=photos-rad; canvas bitmaps pixel-identical to the P51
   base 64695656).
+- P53: tone curves panel (master/R/G/B point curves, monotone cubic
+  Hermite with pinned endpoints and 256-entry LUTs, histogram backdrop,
+  click adds, drag shapes with one undo per drag, pull-below deletes,
+  applied as source preprocessing after the local filters), unit tests
+  and gallery proof added (?view=photos-curves; canvas bitmaps
+  pixel-identical to the P52 base ddc5d48a). The panels right-rail test
+  now expects the curves panel between histogram and light (extended,
+  not weakened).
 
 
 

@@ -91,5 +91,9 @@
  "photos.preset.portrait": "Portrait",
  "photos.preset.landscape": "Landscape",
  "photos.preset.lowlight": "Low light",
- "photos.preset.punch": "Punchy"
+ "photos.preset.punch": "Punchy",
+ "photos.panel.curves": "Curves",
+ "photos.p.curves.reset": "Reset curve",
+ "photos.p.curves.hint": "Click the curve to add a point, drag to shape it, pull a point below the box to delete it.",
+ "photos.p.curves.aria": "Tone curve, {count} points."
 }

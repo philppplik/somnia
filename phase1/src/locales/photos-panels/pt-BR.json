@@ -91,5 +91,9 @@
  "photos.preset.portrait": "Retrato",
  "photos.preset.landscape": "Paisagem",
  "photos.preset.lowlight": "Pouca luz",
- "photos.preset.punch": "Marcante"
+ "photos.preset.punch": "Marcante",
+ "photos.panel.curves": "Curvas",
+ "photos.p.curves.reset": "Redefinir curva",
+ "photos.p.curves.hint": "Clique na curva para adicionar um ponto, arraste para moldá-la e puxe um ponto para baixo da caixa para excluí-lo.",
+ "photos.p.curves.aria": "Curva de tons, {count} pontos."
 }

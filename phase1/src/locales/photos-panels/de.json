@@ -91,5 +91,9 @@
  "photos.preset.portrait": "Porträt",
  "photos.preset.landscape": "Landschaft",
  "photos.preset.lowlight": "Wenig Licht",
- "photos.preset.punch": "Kräftig"
+ "photos.preset.punch": "Kräftig",
+ "photos.panel.curves": "Kurven",
+ "photos.p.curves.reset": "Kurve zurücksetzen",
+ "photos.p.curves.hint": "Klicken fügt einen Punkt hinzu, Ziehen formt die Kurve, ein Punkt unter die Box gezogen wird gelöscht.",
+ "photos.p.curves.aria": "Tonwertkurve, {count} Punkte."
 }

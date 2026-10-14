@@ -91,5 +91,9 @@
  "photos.preset.portrait": "Portrait",
  "photos.preset.landscape": "Paysage",
  "photos.preset.lowlight": "Faible lumière",
- "photos.preset.punch": "Percutant"
+ "photos.preset.punch": "Percutant",
+ "photos.panel.curves": "Courbes",
+ "photos.p.curves.reset": "Réinitialiser la courbe",
+ "photos.p.curves.hint": "Cliquez sur la courbe pour ajouter un point, faites-le glisser pour la modeler, tirez un point sous la zone pour le supprimer.",
+ "photos.p.curves.aria": "Courbe de tonalité, {count} points."
 }
