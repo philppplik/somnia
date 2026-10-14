@@ -5126,6 +5126,23 @@
       "hasEnabled": true
     },
     {
+      "id": "slides.editMasterPlaceholder",
+      "title": "Move or resize master placeholder",
+      "category": "Edit",
+      "source": "slides",
+      "keywords": [
+        "body",
+        "footer",
+        "layout",
+        "master",
+        "placeholder",
+        "position",
+        "size",
+        "title"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "slides.editTable",
       "title": "Edit table",
       "category": "Edit",
@@ -6165,6 +6182,32 @@
     {
       "id": "studio3d.edit.select",
       "title": "Select element",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.edit.selectAll",
+      "title": "Select all, none or inverse",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.edit.selectGrow",
+      "title": "Grow or shrink selection",
       "category": "Edit",
       "source": "studio3d",
       "keywords": [

@@ -1,5 +1,6 @@
 import {SlidesTableEditor} from './SlidesTableEditor';
 import {SlidesThemeEditor} from './SlidesThemeEditor';
+import {SlidesMasterEditor} from './SlidesMasterEditor';
 import {SlidesNotesEditor} from './SlidesNotesEditor';
 import {SlidesTextCompare} from './SlidesTextCompare';import {SlidesTextOutline} from './SlidesTextOutline';import {getSlidesSessionState,showSlide} from '../../lib/slides/session';import {SlidesRehearsal} from './SlidesRehearsal';import {useSlidesPanelText} from '../../lib/slides/panelI18n';
 import {SlidesPresentView} from './SlidesPresentView';
@@ -29,6 +30,7 @@ export function SlidesCanvas({embedded=false}:{embedded?:boolean}={}){const s=us
  {s.summary&&<details className="max-h-96 shrink-0 overflow-auto border-t border-subtle"><summary className="px-4 py-2">{t('slides.compare.title')}</summary><SlidesTextCompare key={s.source} source={s.source} total={s.summary.slides} runs={s.runs} busy={s.busy} current={()=>{const live=getSlidesSessionState();return {source:live.source,total:live.summary?.slides??0,runs:live.runs,busy:live.busy};}}/></details>}
  {s.name&&s.model&&!s.presenting&&<SlidesTableEditor/>}
  {s.name&&s.model&&!s.presenting&&<details className="shrink-0 border-t border-subtle"><summary className="px-4 py-2">{t('slides.theme.title')}</summary><SlidesThemeEditor/></details>}
+ {s.name&&s.model&&!s.presenting&&<details className="shrink-0 border-t border-subtle"><summary className="px-4 py-2">{t('slides.master.title')}</summary><SlidesMasterEditor/></details>}
  {s.name&&s.model&&!s.presenting&&<details open className="shrink-0 border-t border-subtle"><summary className="px-4 py-2">{t('slides.notes.title')}</summary><SlidesNotesEditor/></details>}
  {s.summary&&<details className="max-h-96 shrink-0 overflow-auto border-t border-subtle"><summary className="px-4 py-2">{t('slides.outline.title')}</summary><SlidesTextOutline key={s.source} source={s.source} total={s.summary.slides} runs={s.runs} busy={s.busy} current={()=>{const live=getSlidesSessionState();return {source:live.source,total:live.summary?.slides??0,runs:live.runs,busy:live.busy};}} navigate={showSlide}/></details>}
  {s.summary&&s.summary.slides<=10000&&<details className="max-h-80 shrink-0 overflow-auto border-t border-subtle"><summary className="px-4 py-2">{t('slides.rehearsal.title')}</summary><SlidesRehearsal key={s.source} index={s.index} total={s.summary.slides} busy={s.busy}/></details>}

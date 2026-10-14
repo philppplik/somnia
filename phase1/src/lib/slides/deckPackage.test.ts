@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {unzipSync,zipSync,strFromU8,strToU8} from 'fflate';
-import {editTheme,readTheme,insertTable,editTable,readTable,setShapeStyle,readShapeStyle,setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
+import {editMasterBox,readMaster,editTheme,readTheme,insertTable,editTable,readTable,setShapeStyle,readShapeStyle,setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
 import {readRuns,makeEditedCopy} from './editCopy';
 import {png,jpeg} from './imageFixtures';
 
@@ -769,4 +769,24 @@ test('theme: bounded inputs and fail-closed structure',()=>{
   const odd=zipSync(z);assert.equal(readTheme(odd).editable,false);assert.throws(()=>editTheme(odd,{kind:'color',slot:'accent1',color:'112233'}));
   const z2=unzipSync(b);z2['ppt/slideMasters/_rels/slideMaster1.xml.rels']=strToU8(strFromU8(z2['ppt/slideMasters/_rels/slideMaster1.xml.rels']).replace(/<Relationship [^>]*relationships\/theme"[^>]*\/>/,''));
   assert.equal(readTheme(zipSync(z2)).editable,false);
+});
+
+test('master: read placeholders and move one, master part only',()=>{
+  const b=deck(2),m=readMaster(b);assert.equal(m.editable,true);const title=m.placeholders.find(p=>p.type==='title')!;assert.deepEqual(title.box,{x:457200,y:274638,w:8229600,h:1143000});
+  const next={...title.box,x:500000,w:8000000},c=editMasterBox(b,title.id,title.box,next);
+  const after=readMaster(c).placeholders;assert.deepEqual(after.find(p=>p.id===title.id)!.box,next);
+  for(const p of m.placeholders)if(p.id!==title.id)assert.deepEqual(after.find(q=>q.id===p.id)!.box,p.box);
+  assert.deepEqual(titles(c),titles(b));
+  const za=unzipSync(b),zc=unzipSync(c);for(const k of Object.keys(za))if(k!=='ppt/slideMasters/slideMaster1.xml')assert.equal(za[k].length,zc[k].length,k);
+  assert.equal(editMasterBox(c,title.id,next,next),c);
+});
+test('master: stale, bounds and fail-closed structure',()=>{
+  const b=deck(1),title=readMaster(b).placeholders.find(p=>p.type==='title')!;
+  assert.throws(()=>editMasterBox(b,title.id,{...title.box,x:1},title.box),/changed since/);
+  assert.throws(()=>editMasterBox(b,999,title.box,title.box),/no longer exists/);
+  assert.throws(()=>editMasterBox(b,title.id,title.box,{...title.box,w:100}),/out of range/);
+  assert.throws(()=>editMasterBox(b,title.id,title.box,{...title.box,x:1e9}),/outside/);
+  assert.throws(()=>editMasterBox(b,title.id,title.box,{...title.box,x:1.5}),/whole EMU/);
+  const z=unzipSync(b);z['ppt/slideMasters/slideMaster1.xml']=strToU8(strFromU8(z['ppt/slideMasters/slideMaster1.xml']).replace('<a:xfrm><a:off x="457200" y="274638"/>','<a:xfrm rot="90"><a:off x="457200" y="274638"/>'));
+  const odd=zipSync(z);assert.equal(readMaster(odd).placeholders.some(p=>p.id===title.id),false);assert.throws(()=>editMasterBox(odd,title.id,title.box,title.box),/no longer exists/);
 });

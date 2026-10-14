@@ -1571,3 +1571,45 @@ export function editTheme(bytes:Uint8Array,edit:ThemeEdit):Uint8Array{
   const got=readTheme(res);if(!got.editable||JSON.stringify({...got,problem:''})!==JSON.stringify({...expect,problem:''}))throw Error('Edited deck failed verification');
   return res;
 }
+
+/** Placeholder boxes of the single slide master. Slides and layouts that inherit a box move with it. */
+export interface MasterPlaceholder {id:number;name:string;type:string;idx:number|null;box:BoundsBox}
+export interface MasterInfo {editable:boolean;problem:string;placeholders:MasterPlaceholder[]}
+function masterPart(zip:Record<string,Uint8Array>):string{
+  const masters=readRels(zip,'ppt/presentation.xml').filter(r=>r.type===RT+'slideMaster'&&!r.external);
+  if(masters.length!==1)throw Error('The master is editable only when the deck has exactly one slide master');
+  const mp=resolve('ppt/presentation.xml',masters[0].target);if(!zip[mp])throw Error('Master part is missing');return mp;
+}
+function masterBoxes(xml:string):(MasterPlaceholder&{start:number;end:number})[]{
+  const out:(MasterPlaceholder&{start:number;end:number})[]=[];
+  for(const sh of topLevelShapes(xml)){
+    const raw=xml.slice(sh.start,sh.end);if(!raw.startsWith('<p:sp>')&&!raw.startsWith('<p:sp '))continue;
+    const ph=/<p:ph\b([^>]*?)\/?>/.exec(raw);if(!ph)continue;
+    const xf=/<a:xfrm\b([^>]*)>\s*<a:off x="(-?\d+)" y="(-?\d+)"\s*\/>\s*<a:ext cx="(\d+)" cy="(\d+)"\s*\/>\s*<\/a:xfrm>/.exec(raw);
+    if(!xf||/\s(rot|flipH|flipV)=/.test(xf[1]))continue;
+    const type=/\stype="([^"]*)"/.exec(ph[1])?.[1]??'body',idx=/\sidx="(\d+)"/.exec(ph[1]);
+    out.push({id:sh.id,name:xmlAttr(/<p:cNvPr\b[^>]*\sname="([^"]*)"/.exec(raw)?.[1]??''),type,idx:idx?Number(idx[1]):null,box:{x:+xf[2],y:+xf[3],w:+xf[4],h:+xf[5]},start:sh.start,end:sh.end});
+  }
+  return out;
+}
+export function readMaster(bytes:Uint8Array):MasterInfo{
+  try{const zip=openPackage(bytes);return {editable:true,problem:'',placeholders:masterBoxes(text(zip,masterPart(zip))).map(({start:_s,end:_e,...p})=>p)};}
+  catch(e){return {editable:false,problem:(e as Error).message,placeholders:[]};}
+}
+/** Moves or resizes one master placeholder. `expected` is the box the caller last saw; any difference writes nothing. Only the master part changes. */
+export function editMasterBox(bytes:Uint8Array,shapeId:number,expected:BoundsBox,next:BoundsBox):Uint8Array{
+  for(const v of [...Object.values(next),...Object.values(expected)])if(!Number.isInteger(v))throw Error('Bounds must be whole EMU values');
+  const c=context(bytes),size=readDeckModel(bytes).slideSize;if(!size)throw Error('Slide size is not readable');
+  const mp=masterPart(c.zip),xml=text(c.zip,mp),sh=masterBoxes(xml).find(s=>s.id===shapeId);
+  if(!sh)throw Error('Master placeholder no longer exists or cannot be edited');
+  if(!sameBox(sh.box,expected))throw Error('Placeholder changed since selection');
+  if(next.w<MIN_BOX_EMU||next.h<MIN_BOX_EMU||next.w>size.cx*2||next.h>size.cy*2)throw Error('Size is out of range');
+  if(next.x<-next.w||next.y<-next.h||next.x>size.cx||next.y>size.cy)throw Error('Position is outside the slide');
+  if(sameBox(next,expected))return bytes;
+  const raw=xml.slice(sh.start,sh.end);
+  const neu=raw.replace(/(<a:off x=")-?\d+(" y=")-?\d+(")/,`$1${next.x}$2${next.y}$3`).replace(/(<a:ext cx=")\d+(" cy=")\d+(")/,`$1${next.w}$2${next.h}$3`);
+  const res=finish(c,{[mp]:xml.slice(0,sh.start)+neu+xml.slice(sh.end)},{},[],()=>{});
+  const after=readMaster(res),was=readMaster(bytes);
+  if(!after.editable||after.placeholders.length!==was.placeholders.length||after.placeholders.some((p,i)=>{const b=was.placeholders[i];return p.id!==b.id||p.type!==b.type||(p.id===shapeId?!sameBox(p.box,next):!sameBox(p.box,b.box));}))throw Error('Edited deck failed verification');
+  return res;
+}

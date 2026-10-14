@@ -119,6 +119,7 @@ export const arrangeShapesAt=(slideId:number,shapeIds:number[],mode:ArrangeMode)
 export const setTransitionAt=(slideId:number,transition:SlideTransition)=>structuralEdit(async(e,before)=>({bytes:await e.client.setTransition(before,slideId,transition),index:idAt(e,slideId)}));
 export const styleShapesAt=(slideId:number,shapeIds:number[],patch:ShapeStylePatch)=>structuralEdit(async(e,before)=>({bytes:await e.client.styleShapes(before,slideId,shapeIds,patch),index:idAt(e,slideId)}));
 export const insertTableAt=(slideId:number,rows:number,cols:number)=>structuralEdit(async(e,before)=>({bytes:await e.client.insertTable(before,slideId,rows,cols),index:idAt(e,slideId)}));
+export const editMasterBoxAt=(shapeId:number,expected:BoundsBox,next:BoundsBox)=>structuralEdit(async(e,before)=>({bytes:await e.client.editMasterBox(before,shapeId,expected,next),index:e.state.index}));
 export const editThemeAt=(edit:ThemeEdit)=>structuralEdit(async(e,before)=>({bytes:await e.client.editTheme(before,edit),index:e.state.index}));
 export const editTableAt=(slideId:number,shapeId:number,edit:TableEdit)=>structuralEdit(async(e,before)=>({bytes:await e.client.editTable(before,slideId,shapeId,edit),index:idAt(e,slideId)}));
 export const setNotesAt=(slideId:number,lines:string[])=>structuralEdit(async(e,before)=>({bytes:await e.client.setNotes(before,slideId,lines),index:idAt(e,slideId)}));

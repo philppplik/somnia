@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-750 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+753 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -474,6 +474,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `slides.deleteSlide` | Delete slide | Edit | slides |  |
 | `slides.distributeSelection` | Distribute selected shapes evenly | Edit | slides |  |
 | `slides.duplicateSlide` | Duplicate slide | Edit | slides |  |
+| `slides.editMasterPlaceholder` | Move or resize master placeholder | Edit | slides |  |
 | `slides.editTable` | Edit table | Edit | slides |  |
 | `slides.editText` | Apply slide text | Edit | slides |  |
 | `slides.editTheme` | Edit theme | Edit | slides |  |
@@ -564,6 +565,8 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `studio3d.edit.loopSlide` | Loop slide | Edit | studio3d |  |
 | `studio3d.edit.mode` | Edit select mode | Edit | studio3d |  |
 | `studio3d.edit.select` | Select element | Edit | studio3d |  |
+| `studio3d.edit.selectAll` | Select all, none or inverse | Edit | studio3d |  |
+| `studio3d.edit.selectGrow` | Grow or shrink selection | Edit | studio3d |  |
 | `studio3d.edit.start` | Edit mesh | Edit | studio3d |  |
 | `studio3d.env.open` | Open an HDR environment map | View | studio3d |  |
 | `studio3d.env.set` | Change the 3D environment lighting | View | studio3d |  |
