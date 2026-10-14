@@ -19,7 +19,7 @@ export class PullParser {
   const lines=this.buffer.split('\n');this.buffer=final?'':lines.pop()!;return lines.filter(line=>line.trim()).map(line=>{
    let data:Progress;try{data=JSON.parse(line);}catch{throw Error('Malformed pull progress');}
    if(!data||typeof data!=='object'||Array.isArray(data)||data.status!==undefined&&typeof data.status!=='string'||data.error!==undefined&&typeof data.error!=='string'||data.digest!==undefined&&typeof data.digest!=='string')throw Error('Malformed pull progress');
-   for(const n of [data.total,data.completed])if(n!==undefined&&(!Number.isSafeInteger(n)||n<0))throw Error('Invalid layer byte count');return data;
+   for(const n of [data.total,data.completed])if(n!==undefined&&(!Number.isSafeInteger(n)||n<0))throw Error('Invalid layer byte count');if(data.completed!==undefined&&data.total!==undefined&&data.completed>data.total)throw Error('Layer progress exceeds total');return data;
   });
  }
 }

@@ -13,7 +13,7 @@ export function normalizeLocalRuntime(value:unknown):LocalRuntimePreferences|und
  let studioModels:Record<string,string>|undefined;
  if(p.studioModels!==undefined){
   if(!p.studioModels||typeof p.studioModels!=='object'||Array.isArray(p.studioModels)||Object.keys(p.studioModels).length>100)throw Error('Invalid studio model choices');
-  studioModels=Object.fromEntries(Object.entries(p.studioModels).map(([id,model])=>{if(!/^[a-zA-Z0-9._-]{1,80}$/.test(id)||typeof model!=='string'||!model.trim()||model.length>512||/[\r\n\0]/.test(model))throw Error('Invalid studio model choice');return [id,model];}));
+  studioModels=Object.fromEntries(Object.entries(p.studioModels).map(([id,model])=>{if(!/^[a-zA-Z0-9._-]{1,80}$/.test(id)||typeof model!=='string'||!model.trim()||model!==model.trim()||model.length>512||/[\r\n\0]/.test(model)||/(^|[:\-_/])cloud$/i.test(model))throw Error('Invalid studio model choice');return [id,model];}));
  }
  let modelContexts:Record<string,number>|undefined;
  if(p.modelContexts!==undefined){if(!p.modelContexts||typeof p.modelContexts!=='object'||Array.isArray(p.modelContexts)||Object.keys(p.modelContexts).length>100)throw Error('Invalid model contexts');modelContexts=Object.fromEntries(Object.entries(p.modelContexts).map(([model,n])=>{if(!model||model.length>512||/[\r\n\0]/.test(model)||typeof n!=='number'||!Number.isInteger(n)||n<1||n>1048576)throw Error('Invalid model context');return [model,n];}));}
