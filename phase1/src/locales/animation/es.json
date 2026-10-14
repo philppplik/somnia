@@ -907,5 +907,10 @@
  "animation.keys.selAt.hint": "Selecciona todas las keys exactamente en el cabezal",
  "animation.keys.ends": "Primera y última key",
  "animation.keys.ends.hint": "Selecciona la primera y la última key de cada propiedad",
- "cmd.animation.keys.selectEnds": "Seleccionar la primera y la última key de cada propiedad"
+ "cmd.animation.keys.selectEnds": "Seleccionar la primera y la última key de cada propiedad",
+ "animation.keys.selHold": "Keys hold",
+ "animation.keys.selLinear": "Keys lineales",
+ "animation.keys.selBezier": "Keys bezier",
+ "animation.keys.selInterp.hint": "Selecciona las keys con esta interpolación",
+ "cmd.animation.keys.selectByInterp": "Seleccionar las keys con una interpolación"
 }

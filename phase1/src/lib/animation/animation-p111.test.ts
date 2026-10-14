@@ -238,3 +238,9 @@ test('end keys: first and last per property, listed layers only',()=>{
  assert.deepEqual(endKeys(c,['a']).map(x=>x.t),[f(0),f(10)]);
  assert.equal(endKeys(c,['zz']).length,0);
 });
+import {keysByInterp} from './keyByInterp';
+test('keys by interpolation: matches only that type on listed layers',()=>{
+ const c=findComp(base())!,all=endKeys(c,['a']).length;
+ const n=(['hold','linear','bezier'] as const).reduce((a,i)=>a+keysByInterp(c,['a'],i).length,0);
+ assert.ok(n>=all);assert.equal(keysByInterp(c,['zz'],'linear').length,0);
+});

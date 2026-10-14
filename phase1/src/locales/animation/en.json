@@ -907,5 +907,10 @@
  "animation.keys.selAt.hint": "Select every key exactly at the playhead",
  "animation.keys.ends": "First and last keys",
  "animation.keys.ends.hint": "Select the first and last key of each property",
- "cmd.animation.keys.selectEnds": "Select the first and last key of each property"
+ "cmd.animation.keys.selectEnds": "Select the first and last key of each property",
+ "animation.keys.selHold": "Hold keys",
+ "animation.keys.selLinear": "Linear keys",
+ "animation.keys.selBezier": "Bezier keys",
+ "animation.keys.selInterp.hint": "Select the keys with this interpolation",
+ "cmd.animation.keys.selectByInterp": "Select the keys with one interpolation"
 }

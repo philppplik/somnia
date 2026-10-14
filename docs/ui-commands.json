@@ -1040,6 +1040,25 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.keys.selectByInterp",
+      "title": "Select the keys with one interpolation",
+      "category": "View",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "bezier",
+        "ease",
+        "hold",
+        "interpolation",
+        "keys",
+        "linear",
+        "select",
+        "smooth",
+        "type"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.keys.selectEnds",
       "title": "Select the first and last key of each property",
       "category": "View",
