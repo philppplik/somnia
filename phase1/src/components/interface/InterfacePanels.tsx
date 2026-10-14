@@ -5,6 +5,7 @@ import {StudioStatus} from '../studios/StudioStatus';
 import {InterfaceInteractions} from './InterfacePrototype';
 import {setInterfaceConstraint,setInterfaceAbsolute} from '../../lib/interface/constraints';
 import {resizeInterfaceFrame} from '../../lib/interface/responsive';
+import {interfaceLayerCSS} from '../../lib/interface/export';
 import {INTERFACE_FRAME_PRESETS} from '../../lib/interface/pages';
 import {getInterfacePresetPreview,setInterfacePresetPreview,useInterfacePresetPreview} from './presetPreview';
 import {InterfaceVariantProperties} from './InterfaceVariantProperties';
@@ -72,7 +73,7 @@ export function InterfaceProperties(){
    <InterfaceMediaControls/>
    <InterfaceVectorControls nodeId={node.id} run={run}/>
 
-   <div className="flex flex-wrap gap-1"><Button size="compact" variant="outline" disabled={node.locked} onClick={()=>run(()=>move(-1))}>{t('interface.up')}</Button><Button size="compact" variant="outline" disabled={node.locked} onClick={()=>run(()=>move(1))}>{t('interface.down')}</Button><Button size="compact" variant="outline" disabled={node.locked} onClick={()=>run(()=>interfaceSession.transact(d=>deleteNode(d,node.id)))}>{t('interface.delete')}</Button></div>
+   <div className="flex flex-wrap gap-1"><Button size="compact" variant="outline" disabled={node.locked} onClick={()=>run(()=>move(-1))}>{t('interface.up')}</Button><Button size="compact" variant="outline" disabled={node.locked} onClick={()=>run(()=>move(1))}>{t('interface.down')}</Button><Button size="compact" variant="outline" disabled={node.locked} onClick={()=>run(()=>interfaceSession.transact(d=>deleteNode(d,node.id)))}>{t('interface.delete')}</Button><InterfaceCopyCss node={node} run={run}/></div>
   </>}
   {node&&s.selectedIds.length===1&&<InterfaceInteractions node={node} run={run}/>}
   <InterfaceOutput/>
@@ -96,6 +97,10 @@ function InterfaceLayoutControls({node,run,patch}:{node:InterfaceNode;run:(f:()=
   <div className="grid grid-cols-2 gap-2">{(['minWidth','maxWidth','minHeight','maxHeight'] as const).map(key=><Field key={key} name={t(`interface.${key}`)} value={sizing[key]} type="number" disabled={disabled} onCommit={v=>run(()=>patch({sizing:{...sizing,[key]:number(v)}}))}/>)}</div>
   {parent&&<><label className="flex items-center gap-2 text-xs"><input style={{width:14}} type="checkbox" checked={sizing.absolute} disabled={disabled} onChange={e=>run(()=>interfaceSession.transact(d=>setInterfaceAbsolute(d,node.id,e.target.checked)))}/>{t('interface.absolute')}</label>{(!parent.layout||parent.layout.direction==='free'||sizing.absolute)&&<div className="grid grid-cols-2 gap-2">{(['horizontal','vertical'] as const).map(axis=><Choice key={axis} label={t(`interface.${axis}`)} value={node.constraints?.[axis]??'start'} options={option(['start','end','center','stretch','scale'])} disabled={disabled} onChange={v=>run(()=>interfaceSession.transact(d=>setInterfaceConstraint(d,node.id,axis,v as ConstraintMode)))}/>)}</div>}</>}
  </div></InspectorGroup>;
+}
+function InterfaceCopyCss({node,run}:{node:InterfaceNode;run:(f:()=>void)=>void}){
+ const {t}=useT();const s=useInterfaceState();const [copied,setCopied]=useState(false);
+ return <Button size="compact" variant="outline" disabled={node.locked||copied} onClick={()=>{let css='';run(()=>{css=interfaceLayerCSS(s.document!,node.id).css;});if(!css)return;if(!navigator.clipboard?.writeText){run(()=>{throw Error('Clipboard is unavailable in this context.');});return;}void navigator.clipboard.writeText(css).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);},()=>run(()=>{throw Error('Copying CSS failed.');}));}}>{t(copied?'interface.cssCopied':'interface.copyCss')}</Button>;
 }
 function InterfaceResponsiveControls({node,run}:{node:InterfaceNode;run:(f:()=>void)=>void}){
  const {t}=useT();const active=useInterfacePresetPreview();const [preset,setPreset]=useState<keyof typeof INTERFACE_FRAME_PRESETS>('phone');
