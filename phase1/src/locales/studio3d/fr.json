@@ -35,7 +35,7 @@
  "studio3d.status.loading": "Ouverture de {name}",
  "studio3d.status.error": "Impossible d'ouvrir le modèle",
  "studio3d.canvas.label": "Vue 3D. Faites glisser pour orbiter, utilisez la molette pour zoomer, faites glisser avec le clic droit pour déplacer.",
- "studio3d.keys.hint": "Les flèches font orbiter, plus et moins zooment, Origine réinitialise la vue.",
+ "studio3d.keys.hint": "Les flèches font orbiter, plus et moins zooment, Origine réinitialise la vue. S active l'accrochage, M l'outil de mesure.",
  "cmd.studio3d.model.open": "Ouvrir un modèle 3D",
  "cmd.studio3d.scene.new": "Créer une scène 3D vide",
  "cmd.studio3d.view.reset": "Réinitialiser la vue 3D",
@@ -578,5 +578,16 @@
  "studio3d.load.phase.read": "Lecture du fichier",
  "studio3d.load.phase.parse": "Analyse de la géométrie",
  "studio3d.load.phase.build": "Construction de la scène",
- "cmd.studio3d.import.options": "Définir les options d’import de maillages"
+ "cmd.studio3d.import.options": "Définir les options d’import de maillages",
+ "studio3d.snap.mode.midpoint": "Milieu d'arête",
+ "studio3d.pivot.mode": "Pivot de transformation",
+ "studio3d.pivot.mode.center": "Centre de la sélection",
+ "studio3d.pivot.mode.origin": "Origine du monde",
+ "studio3d.pivot.mode.cursor": "Curseur 3D",
+ "studio3d.cursor.title": "Curseur 3D",
+ "studio3d.measure.on": "Outil de mesure",
+ "studio3d.measure.pick": "Cliquez sur deux points dans la vue",
+ "cmd.studio3d.pivot.set": "Définir le pivot de transformation 3D",
+ "cmd.studio3d.cursor.set": "Déplacer le curseur 3D",
+ "cmd.studio3d.measure.set": "Activer l'outil de mesure 3D"
 }

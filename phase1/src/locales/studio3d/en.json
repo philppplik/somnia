@@ -35,7 +35,7 @@
  "studio3d.status.loading": "Opening {name}",
  "studio3d.status.error": "Could not open the model",
  "studio3d.canvas.label": "3D viewport. Drag to orbit, scroll to zoom, right-drag to pan.",
- "studio3d.keys.hint": "Arrow keys orbit, plus and minus zoom, Home resets the view.",
+ "studio3d.keys.hint": "Arrow keys orbit, plus and minus zoom, Home resets the view. S toggles snapping, M toggles the measure tool.",
  "cmd.studio3d.model.open": "Open 3D model",
  "cmd.studio3d.scene.new": "Create blank 3D scene",
  "cmd.studio3d.view.reset": "Reset 3D view",
@@ -578,5 +578,16 @@
  "studio3d.load.phase.read": "Reading file",
  "studio3d.load.phase.parse": "Parsing geometry",
  "studio3d.load.phase.build": "Building scene",
- "cmd.studio3d.import.options": "Set mesh import options"
+ "cmd.studio3d.import.options": "Set mesh import options",
+ "studio3d.snap.mode.midpoint": "Edge midpoint",
+ "studio3d.pivot.mode": "Transform pivot",
+ "studio3d.pivot.mode.center": "Selection centre",
+ "studio3d.pivot.mode.origin": "World origin",
+ "studio3d.pivot.mode.cursor": "3D cursor",
+ "studio3d.cursor.title": "3D cursor",
+ "studio3d.measure.on": "Measure tool",
+ "studio3d.measure.pick": "Click two points in the viewport",
+ "cmd.studio3d.pivot.set": "Set the 3D transform pivot",
+ "cmd.studio3d.cursor.set": "Move the 3D cursor",
+ "cmd.studio3d.measure.set": "Toggle the 3D measure tool"
 }

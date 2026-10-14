@@ -106,7 +106,7 @@ test('3D studio refuses a file that is not glTF with a readable error',async({pa
 /** Helpers for the scene tests below. They drive the real app through its command layer (dev build) and read the studio session. */
 type P=import('@playwright/test').Page;
 const run=(page:P,id:string,params:unknown={})=>page.evaluate(async([i,p])=>{const m=await import('/src/lib/commands.ts');return (await m.executeCommand(i as string,p)) as unknown;},[id,params] as const);
-const session=(page:P)=>page.evaluate(async()=>{const m=await import('/src/lib/studio3d/session.ts');const s=m.getStudio3DState();return {anim:s.anim,clips:s.clips,clipKeys:s.clipKeys,outline:s.outline,marked:s.marked,selected:s.selected,info:s.selectedInfo,dirty:s.dirty,notice:s.notice,status:s.status,name:s.name,bones:s.bones,weightPreview:s.weightPreview,stats:s.stats,exportClips:s.exportClips,poses:s.poses,ik:s.ik,boneLimits:s.boneLimits,views:s.views,materialPresets:s.materialPresets,env:s.env,edit:s.edit,sculpt:s.sculpt,uvChecker:s.uvChecker};});
+const session=(page:P)=>page.evaluate(async()=>{const m=await import('/src/lib/studio3d/session.ts');const s=m.getStudio3DState();return {anim:s.anim,clips:s.clips,clipKeys:s.clipKeys,outline:s.outline,marked:s.marked,selected:s.selected,info:s.selectedInfo,dirty:s.dirty,notice:s.notice,status:s.status,name:s.name,bones:s.bones,weightPreview:s.weightPreview,stats:s.stats,exportClips:s.exportClips,poses:s.poses,ik:s.ik,boneLimits:s.boneLimits,views:s.views,materialPresets:s.materialPresets,env:s.env,edit:s.edit,sculpt:s.sculpt,uvChecker:s.uvChecker,snap:s.snap,pivot:s.pivot,cursor:s.cursor,measure:s.measure};});
 const open3d=async(page:P)=>{await page.goto('/');await page.getByRole('button',{name:/3D/}).first().click();};
 const blank=async(page:P)=>{await open3d(page);await page.getByTestId('3d-create-blank').click();await expect(page.getByTestId('studio3d-viewport')).toBeVisible();};
 const insert=async(page:P,kind:string,x:number)=>{await run(page,'studio3d.insert.primitive',{kind});const s=await session(page);const id=s.selected as number;await run(page,'studio3d.object.transform',{id,position:{x,y:0,z:0}});return id;};
@@ -1124,4 +1124,43 @@ test('3D studio import/export polish: selection-only export, import units and ax
  // Undoing the import restores the previously open file.
  expect(await run(page,'studio3d.undo')).toBe(true);
  await expect.poll(async()=>(await session(page)).outline.filter(o=>o.kind==='mesh').map(o=>o.name)).toEqual(['Cube']);
+});
+
+test('3D studio precision tools: snap modes and hotkey, measure picks, transform pivot, relative entry',async({page})=>{
+ await blank(page);
+ const cube=await insert(page,'cube',0);
+ // S toggles snapping; the panel reflects it and offers the midpoint mode.
+ const snapBox=page.getByRole('checkbox',{name:'Snap to steps'});
+ await expect(snapBox).not.toBeChecked();
+ await page.getByTestId('studio3d-viewport').click({position:{x:40,y:40}});
+ await page.keyboard.press('s');
+ await expect(snapBox).toBeChecked();
+ expect((await session(page)).snap.on).toBe(true);
+ expect(await run(page,'studio3d.snap.set',{mode:'midpoint'})).toBe(true);
+ await expect(page.getByLabel('Snap to')).toHaveValue('midpoint');
+ // Relative numeric entry: +2 adds to the current X, *3 scales it.
+ await run(page,'studio3d.select',{id:cube});
+ const posX=page.getByRole('textbox',{name:'Position X'});
+ await posX.fill('+2');await posX.press('Enter');
+ await expect.poll(async()=>(await positionOf(page,cube)).x).toBe(2);
+ await posX.fill('*3');await posX.press('Enter');
+ await expect.poll(async()=>(await positionOf(page,cube)).x).toBe(6);
+ // Transform pivot: origin and cursor are accepted, the cursor fields appear for cursor mode.
+ expect(await run(page,'studio3d.pivot.set',{mode:'origin'})).toBe(true);
+ expect((await session(page)).pivot).toBe('origin');
+ expect(await run(page,'studio3d.cursor.set',{x:1,y:0,z:2})).toBe(true);
+ expect(await run(page,'studio3d.pivot.set',{mode:'cursor'})).toBe(true);
+ await expect(page.getByTestId('studio3d-cursor')).toBeVisible();
+ expect((await session(page)).cursor).toEqual({x:1,y:0,z:2});
+ // Measure tool: two viewport clicks give a distance readout; M and Escape leave the tool.
+ expect(await run(page,'studio3d.measure.set',{on:true})).toBe(true);
+ const vp=page.getByTestId('studio3d-viewport');
+ await vp.click({position:{x:200,y:220}});
+ await vp.click({position:{x:420,y:160}});
+ await expect(page.getByTestId('studio3d-measure')).toContainText(/[0-9]+\.[0-9]{3} m · /);
+ expect((await session(page)).measure?.a).toBeTruthy();
+ expect((await session(page)).measure?.b).toBeTruthy();
+ await page.keyboard.press('m');
+ await expect(page.getByTestId('studio3d-measure')).toHaveCount(0);
+ expect((await session(page)).measure).toBe(null);
 });

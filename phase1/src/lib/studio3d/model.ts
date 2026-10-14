@@ -157,8 +157,8 @@ export function nudgeFor(key:string,step=0.1):{x?:number;y?:number;z?:number}|nu
 
 /** Snapping for the transform gizmo. Steps are in scene units, degrees, and scale factor. */
 export interface NamedView{name:string;position:[number,number,number];quaternion:[number,number,number,number];target:[number,number,number];}
-export type SnapMode='grid'|'vertex'|'surface';
-export interface SnapSettings{on:boolean;move:number;rotate:number;scale:number;/** Translate drags snap to grid increments, to the nearest vertex, or onto the surface of other meshes. */mode:SnapMode}
+export type SnapMode='grid'|'vertex'|'surface'|'midpoint';
+export interface SnapSettings{on:boolean;move:number;rotate:number;scale:number;/** Translate drags snap to grid increments, to the nearest vertex or edge midpoint, or onto the surface of other meshes. */mode:SnapMode}
 export const defaultSnap=():SnapSettings=>({on:false,move:0.25,rotate:15,scale:0.1,mode:'grid'});
 export class SnapError extends Error{constructor(message:string){super(message);this.name='SnapError';}}
 export function mergeSnap(current:SnapSettings,patch:Partial<SnapSettings>):SnapSettings{
@@ -167,11 +167,44 @@ export function mergeSnap(current:SnapSettings,patch:Partial<SnapSettings>):Snap
  const num=(k:'move'|'rotate'|'scale',min:number,max:number)=>{const v=patch[k];if(v===undefined)return;
   if(typeof v!=='number'||!Number.isFinite(v)||v<min||v>max)throw new SnapError(`${k} must be a number between ${min} and ${max}.`);next[k]=v;};
  num('move',0.001,100);num('rotate',1,180);num('scale',0.001,10);
- if(patch.mode!==undefined){if(patch.mode!=='grid'&&patch.mode!=='vertex'&&patch.mode!=='surface')throw new SnapError("mode must be 'grid', 'vertex' or 'surface'.");next.mode=patch.mode;}
+ if(patch.mode!==undefined){if(patch.mode!=='grid'&&patch.mode!=='vertex'&&patch.mode!=='surface'&&patch.mode!=='midpoint')throw new SnapError("mode must be 'grid', 'vertex', 'surface' or 'midpoint'.");next.mode=patch.mode;}
  return next;
 }
 /** Rounds to the nearest multiple of step. Used by keyboard nudges and numeric snapping. */
 export const snapTo=(value:number,step:number)=>step>0?Math.round(value/step)*step:value;
+
+/** Transform pivot for gizmo rotate/scale: the selection centre, the world origin, or the 3D cursor. Session-only, never written to documents. */
+export type PivotMode='center'|'origin'|'cursor';
+
+/**
+ * Parses one numeric transform field draft. A plain number (including negatives) is absolute;
+ * a leading + adds to the current value ('+-2' subtracts), a leading * or / scales it.
+ * Returns null for anything that is not a finite result (also on division by zero).
+ */
+export function transformExpr(draft:string,current:number):number|null{
+ const t=draft.trim();
+ if(!t)return null;
+ const op=t[0];
+ if(op==='+'||op==='*'||op==='/'){
+  const rest=t.slice(1).trim();
+  if(rest==='')return null;
+  const n=Number(rest);
+  if(!Number.isFinite(n))return null;
+  const v=op==='+'?current+n:op==='*'?current*n:n===0?NaN:current/n;
+  return Number.isFinite(v)?v:null;
+ }
+ const n=Number(t);
+ return Number.isFinite(n)?n:null;
+}
+
+/** Distance and elevation angle (degrees above the horizontal plane) of a measured segment. */
+export function measureInfo(a:Vec3Like,b:Vec3Like):{distance:number;angle:number}{
+ const dx=b.x-a.x,dy=b.y-a.y,dz=b.z-a.z;
+ const distance=Math.hypot(dx,dy,dz);
+ const flat=Math.hypot(dx,dz);
+ return {distance,angle:distance>0?Math.atan2(dy,flat)*180/Math.PI:0};
+}
+export interface Vec3Like{x:number;y:number;z:number}
 /** STL files carry no unit. Slicers and CAD use millimetres, scenes here use metres: a part larger than 10 units is most likely millimetres. */
 export function stlUnitHint(size:readonly [number,number,number]):{unit:'mm';factor:number}|null{
  const m=Math.max(size[0],size[1],size[2]);

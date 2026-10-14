@@ -3,7 +3,7 @@ import {registerCommandSpec} from '../commandBridge';
 import type {CommandSpec} from '../commandSpec';
 import {clearRecentScenes} from './recentSession';
 import {getStudio3DState,patchStudio3D} from './session';
-import {isUnit,type EnvSettings,type GizmoMode,type SnapSettings,type ExportUnit,type ExportFormat} from './model';
+import {isUnit,type EnvSettings,type GizmoMode,type SnapSettings,type ExportUnit,type ExportFormat,type PivotMode} from './model';
 import {PARAM_SPECS,MATERIAL_PRESET_IDS} from './primitives';
 import {ALPHA_MODES,TEXTURE_SLOTS,MAX_EMISSIVE_INTENSITY,type TextureSlot} from './materials';
 import {EASES,type Ease} from './ease';
@@ -139,6 +139,9 @@ export interface Studio3DController{
  align(ids:number[],axis:AlignAxis,to:AlignTo):void;
  distribute(ids:number[],axis:AlignAxis):void;
  setSnap(patch:Partial<SnapSettings>):void;
+ setPivotMode(mode:PivotMode):void;
+ setCursor(p:Vec3):void;
+ setMeasure(on:boolean):void;
  renderStill(opts?:RenderOptions):Promise<void>;
  exportGlb(opts?:{clips?:string[]|null}):Promise<void>;
  save(sidecar?:boolean,embedEnv?:boolean):Promise<void>;
@@ -247,7 +250,10 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{id:number;at:PivotAt}>('studio3d.object.pivot','Move the pivot of a 3D mesh','Edit',p=>need().setPivot(p.id,p.at),object({id:{type:'integer',minimum:0},at:{enum:['center','base']}}),hasScene),
   add<{ids:number[];axis:AlignAxis;to:AlignTo}>('studio3d.object.align','Align 3D objects','Edit',p=>need().align(p.ids,p.axis,p.to),object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:2,maxItems:500},axis:{enum:['x','y','z']},to:{enum:['min','center','max']}}),hasScene),
   add<{ids:number[];axis:AlignAxis}>('studio3d.object.distribute','Distribute 3D objects evenly','Edit',p=>need().distribute(p.ids,p.axis),object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:3,maxItems:500},axis:{enum:['x','y','z']}}),hasScene),
-  add<Partial<SnapSettings>>('studio3d.snap.set','Change 3D transform snapping','Tools',p=>need().setSnap(p&&Object.keys(p).length?p:{on:!getStudio3DState().snap.on}),object({on:{type:'boolean'},move:{type:'number',minimum:0.001,maximum:100},rotate:{type:'number',minimum:1,maximum:180},scale:{type:'number',minimum:0.001,maximum:10},mode:{enum:['grid','vertex','surface']}},[]),()=>!!controller),
+  add<Partial<SnapSettings>>('studio3d.snap.set','Change 3D transform snapping','Tools',p=>need().setSnap(p&&Object.keys(p).length?p:{on:!getStudio3DState().snap.on}),object({on:{type:'boolean'},move:{type:'number',minimum:0.001,maximum:100},rotate:{type:'number',minimum:1,maximum:180},scale:{type:'number',minimum:0.001,maximum:10},mode:{enum:['grid','vertex','surface','midpoint']}},[]),()=>!!controller),
+  add<{mode:PivotMode}>('studio3d.pivot.set','Set the 3D transform pivot','Tools',p=>need().setPivotMode(p.mode),object({mode:{enum:['center','origin','cursor']}},['mode']),()=>!!controller),
+  add<{x:number;y:number;z:number}>('studio3d.cursor.set','Move the 3D cursor','Tools',p=>{for(const k of['x','y','z']as const)if(!Number.isFinite(p[k]))throw new Error('Cursor coordinates must be finite numbers.');need().setCursor({x:p.x,y:p.y,z:p.z});},object({x:{type:'number'},y:{type:'number'},z:{type:'number'}},['x','y','z']),()=>!!controller),
+  add<{on?:boolean}>('studio3d.measure.set','Toggle the 3D measure tool','Tools',p=>need().setMeasure(p?.on??!getStudio3DState().measure),object({on:{type:'boolean'}},[]),()=>!!controller),
   add<RenderOptions>('studio3d.render.still','Render a PNG still of the 3D view or a 3D camera','Project',p=>need().renderStill(p??{}),object({camera:{type:'integer',minimum:0},width:{type:'integer',minimum:1,maximum:16384},height:{type:'integer',minimum:1,maximum:16384},transparent:{type:'boolean'}},[])),
   add<{slot:TextureSlot}>('studio3d.texture.open','Choose an image for a texture slot of the selected 3D object','Edit',p=>textureOpener!(p.slot),object({slot:{enum:[...TEXTURE_SLOTS]}}),()=>hasScene()&&!!textureOpener&&getStudio3DState().selectedInfo?.material!=null),
   add<{id?:number;slot:TextureSlot}>('studio3d.texture.clear','Remove the image from a texture slot','Edit',p=>need().setTextureFile(p.id??getStudio3DState().selected??-1,p.slot,null),object({id:{type:'integer',minimum:0},slot:{enum:[...TEXTURE_SLOTS]}},['slot']),hasScene),

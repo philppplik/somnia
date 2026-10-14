@@ -35,7 +35,7 @@
  "studio3d.status.loading": "{name} wird geöffnet",
  "studio3d.status.error": "Das Modell konnte nicht geöffnet werden",
  "studio3d.canvas.label": "3D-Ansicht. Ziehen zum Orbit, Scrollen zum Zoomen, Rechtsklick-Ziehen zum Verschieben.",
- "studio3d.keys.hint": "Pfeiltasten drehen die Ansicht, Plus und Minus zoomen, Pos1 setzt die Ansicht zurück.",
+ "studio3d.keys.hint": "Pfeiltasten drehen die Ansicht, Plus und Minus zoomen, Pos1 setzt die Ansicht zurück. S schaltet das Einrasten um, M das Messwerkzeug.",
  "cmd.studio3d.model.open": "3D-Modell öffnen",
  "cmd.studio3d.scene.new": "Leere 3D-Szene erstellen",
  "cmd.studio3d.view.reset": "3D-Ansicht zurücksetzen",
@@ -578,5 +578,16 @@
  "studio3d.load.phase.read": "Datei wird gelesen",
  "studio3d.load.phase.parse": "Geometrie wird gelesen",
  "studio3d.load.phase.build": "Szene wird aufgebaut",
- "cmd.studio3d.import.options": "Mesh-Importoptionen festlegen"
+ "cmd.studio3d.import.options": "Mesh-Importoptionen festlegen",
+ "studio3d.snap.mode.midpoint": "Kantenmitte",
+ "studio3d.pivot.mode": "Transformationspivot",
+ "studio3d.pivot.mode.center": "Auswahlmitte",
+ "studio3d.pivot.mode.origin": "Weltursprung",
+ "studio3d.pivot.mode.cursor": "3D-Cursor",
+ "studio3d.cursor.title": "3D-Cursor",
+ "studio3d.measure.on": "Messwerkzeug",
+ "studio3d.measure.pick": "Zwei Punkte im Viewport klicken",
+ "cmd.studio3d.pivot.set": "3D-Transformationspivot setzen",
+ "cmd.studio3d.cursor.set": "3D-Cursor verschieben",
+ "cmd.studio3d.measure.set": "3D-Messwerkzeug umschalten"
 }

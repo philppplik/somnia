@@ -23,7 +23,7 @@ import {getState as getAppState} from '../../store/appStore';
 import {readProjectUnit,writeProjectUnit} from '../../lib/studio3d/projectPrefs';
 import {checkPreset,presetPatch,readPresets,removePreset,savePreset,MaterialPresetError,type MaterialPreset} from '../../lib/studio3d/materialPresets';
 import type {MaterialSnapshot} from '../../lib/studio3d/stage';
-import {toggleSelection,marqueeRect,inRect,turntablePlan,frameName,exportFileName,unitScale,isUnit,isMeshFormat,mergeSnap,snapTo,stlUnitHint,mtlReferences,mtlTextures,clampRenderSize,MAX_MTL_BYTES,MAX_TEXTURE_BYTES,MAX_TEXTURE_FILES,SnapError,mergeEnv,envFormatFor,nudgeFor,EnvError,modelFormatFor,readModelHeader,externalResources,ModelError,boundsValid,boundsCenter,boundsRadius,frameDistance,clipPlanes,pickClips,extractGltfTextures,GLTF_TEXTURE_MODES} from '../../lib/studio3d/model';
+import {toggleSelection,marqueeRect,inRect,turntablePlan,frameName,exportFileName,unitScale,isUnit,isMeshFormat,mergeSnap,snapTo,measureInfo,stlUnitHint,mtlReferences,mtlTextures,clampRenderSize,MAX_MTL_BYTES,MAX_TEXTURE_BYTES,MAX_TEXTURE_FILES,SnapError,mergeEnv,envFormatFor,nudgeFor,EnvError,modelFormatFor,readModelHeader,externalResources,ModelError,boundsValid,boundsCenter,boundsRadius,frameDistance,clipPlanes,pickClips,extractGltfTextures,GLTF_TEXTURE_MODES} from '../../lib/studio3d/model';
 import type {Bounds} from '../../lib/studio3d/model';
 import {checkSkins,bonePickRadius,pickBone} from '../../lib/studio3d/skeleton';
 import {weightColor} from '../../lib/studio3d/skinning';
@@ -354,11 +354,16 @@ export default function Viewport3D(){
    if(id!=null)patchStudio3D({selectedInfo:stage.info(id)});drawSelection();});
   /** The objects an edit acts on: the multi-selection, or the single selected object. */
   const currentSet=():number[]=>{const st=getStudio3DState();const m=st.marked.filter(x=>stage.find(x));return m.length?m:st.selected!=null&&stage.find(st.selected)?[st.selected]:[];};
+  // The transform pivot: the selection centre (default), the world origin, or the 3D cursor.
+  const pivotPoint=(box?:THREE.Box3):THREE.Vector3=>{const st=getStudio3DState();
+   if(st.pivot==='origin')return new THREE.Vector3();
+   if(st.pivot==='cursor')return new THREE.Vector3(st.cursor.x,st.cursor.y,st.cursor.z);
+   return box&&!box.isEmpty()?box.getCenter(new THREE.Vector3()):new THREE.Vector3();};
   const syncGizmo=()=>{
    const ids=currentSet();
    if(ids.length>1){
     const box=new THREE.Box3();for(const id of ids)box.expandByObject(stage.find(id)!);
-    groupPivot.position.copy(box.isEmpty()?new THREE.Vector3():box.getCenter(new THREE.Vector3()));groupPivot.quaternion.identity();groupPivot.scale.set(1,1,1);
+    groupPivot.position.copy(pivotPoint(box));groupPivot.quaternion.identity();groupPivot.scale.set(1,1,1);
     if(!groupPivot.parent)scene.add(groupPivot);groupPivot.updateMatrixWorld(true);gizmo.attach(groupPivot);return;
    }
    const id=getStudio3DState().selected;const o=id==null?null:stage.find(id);
@@ -366,8 +371,32 @@ export default function Viewport3D(){
    if(o&&(o as THREE.Bone).isBone&&gizmo.mode!=='rotate'){gizmo.detach();return;}
    // A bone an IK chain drives is posed through the target gizmo, not directly.
    if(o&&(o as THREE.Bone).isBone&&(stage.ikDriven(o.id)||stage.fabrikDriven(o.id))){gizmo.detach();return;}
+   // A non-centre pivot rotates and scales a single object about the origin or the cursor, so it rides the group pivot too.
+   if(o&&getStudio3DState().pivot!=='center'){
+    groupPivot.position.copy(pivotPoint());groupPivot.quaternion.identity();groupPivot.scale.set(1,1,1);
+    if(!groupPivot.parent)scene.add(groupPivot);groupPivot.updateMatrixWorld(true);gizmo.attach(groupPivot);return;
+   }
    if(o)gizmo.attach(o);else gizmo.detach();
   };
+  /** 3D cursor marker: an axes cross in the outer scene, shown while the cursor is the transform pivot. Never exported. */
+  const cursorGeo=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-0.15,0,0),new THREE.Vector3(0.15,0,0),new THREE.Vector3(0,-0.15,0),new THREE.Vector3(0,0.15,0),new THREE.Vector3(0,0,-0.15),new THREE.Vector3(0,0,0.15)]);
+  const cursorMat=new THREE.LineBasicMaterial({color:0xffaa33});
+  const cursorMark=new THREE.LineSegments(cursorGeo,cursorMat);cursorMark.name='3d cursor';scene.add(cursorMark);
+  const syncCursorMark=()=>{const st=getStudio3DState();cursorMark.visible=st.pivot==='cursor';cursorMark.position.set(st.cursor.x,st.cursor.y,st.cursor.z);};
+  syncCursorMark();
+  /** Measure overlay: endpoint dots and a segment line in the outer scene. Ephemeral, never exported and never saved. */
+  const measureGroup=new THREE.Group();measureGroup.name='measure';scene.add(measureGroup);
+  const mLineGeo=new THREE.BufferGeometry();const mLineMat=new THREE.LineBasicMaterial({color:0x44ccff});
+  const mLine=new THREE.Line(mLineGeo,mLineMat);mLine.visible=false;measureGroup.add(mLine);
+  const mDotGeo=new THREE.SphereGeometry(0.03,12,8);const mDotMat=new THREE.MeshBasicMaterial({color:0x44ccff});
+  const mDotA=new THREE.Mesh(mDotGeo,mDotMat);const mDotB=new THREE.Mesh(mDotGeo,mDotMat);mDotA.visible=false;mDotB.visible=false;measureGroup.add(mDotA,mDotB);
+  const syncMeasure=()=>{const m=getStudio3DState().measure;
+   mDotA.visible=!!m?.a;if(m?.a)mDotA.position.set(m.a.x,m.a.y,m.a.z);
+   mDotB.visible=!!m?.b;if(m?.b)mDotB.position.set(m.b.x,m.b.y,m.b.z);
+   mLine.visible=!!(m?.a&&m?.b);
+   if(m?.a&&m?.b)mLineGeo.setFromPoints([new THREE.Vector3(m.a.x,m.a.y,m.a.z),new THREE.Vector3(m.b.x,m.b.y,m.b.z)]);
+  };
+  syncMeasure();
   /** Skeleton overlay: rebuilt when the set of bones changes, shown when the session toggle is on. Kept out of the stage root so it never exports or alters bounds. */
   let skelHelper:THREE.SkeletonHelper|null=null;let skelKey='';
   const syncSkeleton=()=>{
@@ -954,6 +983,9 @@ export default function Viewport3D(){
    nudge:nudgeBy,
    setLight:(id,p)=>stage.setLight(id,p),setPivot:(id,at)=>stage.setPivot(id,at),align:(ids,a,t)=>stage.align(ids,a,t),distribute:(ids,a)=>stage.distribute(ids,a),
    setSnap:patch=>{patchStudio3D({snap:mergeSnap(getStudio3DState().snap,patch)});applySnap();},
+   setPivotMode:mode=>{patchStudio3D({pivot:mode});syncCursorMark();syncGizmo();invalidate();},
+   setCursor:p=>{patchStudio3D({cursor:p});syncCursorMark();if(getStudio3DState().pivot==='cursor')syncGizmo();invalidate();},
+   setMeasure:on=>{patchStudio3D({measure:on?{a:null,b:null}:null});syncMeasure();invalidate();},
    setEnv:patch=>{patchStudio3D({env:mergeEnv(getStudio3DState().env,patch)});void applyEnv();},
    openEnvFile:async file=>{
     if(!envFormatFor(file.name))throw new EnvError('Choose an .hdr or .exr file.');
@@ -1002,6 +1034,16 @@ export default function Viewport3D(){
   };
   const onDown=(e:PointerEvent)=>{
    const st=getStudio3DState();
+   // Measure tool: clicks pick world points (mesh hits first, ground plane as fallback) instead of selecting.
+   if(st.measure&&gizmo.axis===null){
+    const rect=renderer.domElement.getBoundingClientRect();
+    ray.setFromCamera(new THREE.Vector2(((e.clientX-rect.left)/rect.width)*2-1,-(((e.clientY-rect.top)/rect.height)*2-1)),camera);
+    const hit=ray.intersectObject(holder,true).find(h=>(h.object as THREE.Mesh).isMesh);
+    let p=hit?hit.point.clone():null;
+    if(!p){const tmp=new THREE.Vector3();if(ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),0),tmp))p=tmp;}
+    if(p){const pt={x:p.x,y:p.y,z:p.z};const m=st.measure;patchStudio3D({measure:!m.a||m.b?{a:pt,b:null}:{a:m.a,b:pt}});syncMeasure();invalidate();}
+    down=null;return;
+   }
    if(st.sculpt.on){
     const hit=sculptRay(e);
     if(hit)try{
@@ -1087,6 +1129,9 @@ export default function Viewport3D(){
     if(e.key==='e'||e.key==='E'){gizmo.setMode('rotate');patchStudio3D({gizmo:'rotate'});invalidate();e.preventDefault();return;}
     if(e.key==='r'||e.key==='R'){gizmo.setMode('scale');patchStudio3D({gizmo:'scale'});invalidate();e.preventDefault();return;}
     if(e.key==='f'||e.key==='F'){frameSelection();e.preventDefault();return;}
+    if(e.key==='s'||e.key==='S'){const sn=getStudio3DState().snap;patchStudio3D({snap:mergeSnap(sn,{on:!sn.on})});applySnap();e.preventDefault();return;}
+    if(e.key==='m'||e.key==='M'){const on=!getStudio3DState().measure;patchStudio3D({measure:on?{a:null,b:null}:null});syncMeasure();invalidate();e.preventDefault();return;}
+    if(e.key==='Escape'&&getStudio3DState().measure){patchStudio3D({measure:null});syncMeasure();invalidate();e.preventDefault();return;}
     if((e.key==='Delete'||e.key==='Backspace')&&currentSet().length){deleteSelection();e.preventDefault();return;}
     const stepNow=getStudio3DState().snap.on?getStudio3DState().snap.move:0.1;const n=e.shiftKey&&sel!=null?nudgeFor(e.key,stepNow):null;
     if(n&&sel!=null){nudgeBy(sel,n);e.preventDefault();return;}
@@ -1105,7 +1150,7 @@ export default function Viewport3D(){
    disposed=true;opening++;stopAnim();offDrop();mixer?.stopAllAction();stage.autoKeySource=null;off();offAuto();if(autoTimer)clearTimeout(autoTimer);cancelAnimationFrame(frame);ro.disconnect();controls.dispose();
    cv.removeEventListener('pointerdown',onDownCapture,true);cv.removeEventListener('pointerdown',onDown);window.removeEventListener('pointermove',onMove);window.removeEventListener('pointercancel',endMarquee);endMarquee();cv.removeEventListener('pointerup',onUp);cv.removeEventListener('keydown',onKey);
    if(getStudio3DState().status==='loading')patchStudio3D({status:stage.root.children.length?'ready':'idle',confirmReplace:null});
-   gizmo.detach();gizmo.dispose();ikGizmo.detach();ikGizmo.dispose();poleGizmo.detach();poleGizmo.dispose();fkGizmo.detach();fkGizmo.dispose();lookGizmo.detach();lookGizmo.dispose();clearGhosts();scene.remove(ghosts);if(pathLine){pathLine.geometry.dispose();(pathLine.material as THREE.Material).dispose();pathLine=null;}fkTarget.geometry.dispose();(fkTarget.material as THREE.Material).dispose();fkLook.geometry.dispose();(fkLook.material as THREE.Material).dispose();ikTarget.geometry.dispose();(ikTarget.material as THREE.Material).dispose();ikPoleM.geometry.dispose();(ikPoleM.material as THREE.Material).dispose();offStage();clearSelection();if(painting){painting=false;}const openSel=getStudio3DState().selected;if(openSel!=null)stage.skinPaintEnd(openSel);if(skelHelper){scene.remove(skelHelper);skelHelper.geometry.dispose();(skelHelper.material as THREE.Material).dispose();skelHelper=null;}if(weightOverlay){scene.remove(weightOverlay);weightOverlay.geometry.dispose();(weightOverlay.material as THREE.Material).dispose();weightOverlay=null;}if(maskOverlay){scene.remove(maskOverlay);maskOverlay.geometry.dispose();(maskOverlay.material as THREE.Material).dispose();maskOverlay=null;}for(const h of helpers.values())h.dispose();grid.geometry.dispose();(grid.material as THREE.Material).dispose();for(const t of envTargets)t.dispose();envCache.clear();pmrem.dispose();renderer.dispose();renderer.forceContextLoss();
+   gizmo.detach();gizmo.dispose();ikGizmo.detach();ikGizmo.dispose();poleGizmo.detach();poleGizmo.dispose();fkGizmo.detach();fkGizmo.dispose();lookGizmo.detach();lookGizmo.dispose();clearGhosts();scene.remove(ghosts);if(pathLine){pathLine.geometry.dispose();(pathLine.material as THREE.Material).dispose();pathLine=null;}fkTarget.geometry.dispose();(fkTarget.material as THREE.Material).dispose();fkLook.geometry.dispose();(fkLook.material as THREE.Material).dispose();ikTarget.geometry.dispose();(ikTarget.material as THREE.Material).dispose();ikPoleM.geometry.dispose();(ikPoleM.material as THREE.Material).dispose();offStage();clearSelection();if(painting){painting=false;}const openSel=getStudio3DState().selected;if(openSel!=null)stage.skinPaintEnd(openSel);if(skelHelper){scene.remove(skelHelper);skelHelper.geometry.dispose();(skelHelper.material as THREE.Material).dispose();skelHelper=null;}if(weightOverlay){scene.remove(weightOverlay);weightOverlay.geometry.dispose();(weightOverlay.material as THREE.Material).dispose();weightOverlay=null;}if(maskOverlay){scene.remove(maskOverlay);maskOverlay.geometry.dispose();(maskOverlay.material as THREE.Material).dispose();maskOverlay=null;}for(const h of helpers.values())h.dispose();grid.geometry.dispose();(grid.material as THREE.Material).dispose();cursorGeo.dispose();cursorMat.dispose();scene.remove(cursorMark);mLineGeo.dispose();mLineMat.dispose();mDotGeo.dispose();mDotMat.dispose();scene.remove(measureGroup);for(const t of envTargets)t.dispose();envCache.clear();pmrem.dispose();renderer.dispose();renderer.forceContextLoss();
    if(cv.parentNode===el)el.removeChild(cv);
   };
  // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1115,6 +1160,7 @@ export default function Viewport3D(){
   <div ref={host} className="min-h-0 flex-1 overflow-hidden rounded-[25px]"/>
   {s.status==='loading'&&<StudioStatus className="pointer-events-none absolute left-4 top-3 m-0 rounded-md bg-surface px-2 py-1 text-xs" data-testid="studio3d-loading">{t('studio3d.status.loading',{name:s.name})}{s.loadPhase?` · ${t('studio3d.load.phase.'+s.loadPhase)}`:''}</StudioStatus>}
   {s.status==='error'&&<StudioStatus tone="error" live="assertive" className="absolute left-4 top-3 m-0 max-w-[80%] rounded-md bg-surface px-2 py-1 text-xs">{t('studio3d.status.error')}: {s.error}</StudioStatus>}
+  {s.measure&&<StudioStatus className="pointer-events-none absolute right-4 top-3 m-0 rounded-md bg-surface px-2 py-1 text-xs" data-testid="studio3d-measure">{s.measure.a&&s.measure.b?(()=>{const mi=measureInfo(s.measure!.a!,s.measure!.b!);return `${mi.distance.toFixed(3)} m · ${mi.angle.toFixed(1)}°`;})():t('studio3d.measure.pick')}</StudioStatus>}
   <p className="sr-only">{t('studio3d.keys.hint')}</p>
  </div>;
 }

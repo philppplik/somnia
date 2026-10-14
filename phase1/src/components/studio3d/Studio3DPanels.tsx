@@ -9,7 +9,7 @@ import {dropTextureFile} from '../../lib/studio3d/commands';
 import {useT} from '../../lib/useT';
 import {formatBytes} from '../../lib/media';
 import {useStudio3D} from '../../lib/studio3d/session';
-import {formatCount,boundsSize,GIZMO_MODES,ENV_PRESETS,ENV_ACCEPT,UNIT_IDS,BG_MODES,toggleSelection,type BgMode} from '../../lib/studio3d/model';
+import {formatCount,boundsSize,GIZMO_MODES,ENV_PRESETS,ENV_ACCEPT,UNIT_IDS,BG_MODES,toggleSelection,transformExpr,type BgMode} from '../../lib/studio3d/model';
 import {Eye,EyeOff,Lock,LockOpen} from 'lucide-react';
 import type {PanelHostProps,InspectorSectionProps} from '../../lib/shell/types';
 import {Input} from '../ui/input';
@@ -101,10 +101,12 @@ export function ModelSection(_:InspectorSectionProps){
 const AXES=['x','y','z'] as const;
 /** Numeric transform fields. Committed on blur or Enter, one undo entry per edit. */
 function VecField({id,field,label,step}:{id:number;field:'position'|'rotation'|'scale';label:string;step:number}){
- const s=useStudio3D();const v=s.selectedInfo?.[field];if(!v)return null;
+ const {t}=useT();const s=useStudio3D();const v=s.selectedInfo?.[field];if(!v)return null;
  return <fieldset className="m-0 grid gap-1 border-0 p-0"><legend className="text-xs text-ink-3">{label}</legend>
-  <div className="grid grid-cols-3 gap-1">{AXES.map(a=><InspectorNumberField key={a} resetKey={id} label={`${label} ${a.toUpperCase()}`} value={Number(v[a].toFixed(4))} step={step}
-   onCommit={n=>void executeCommand('studio3d.object.transform',{id,[field]:{[a]:n}})}/>)}</div></fieldset>;
+  <div className="grid grid-cols-3 gap-1">{AXES.map(a=>{const lab=`${label} ${a.toUpperCase()}`;
+   return <InspectorNumberField key={a} resetKey={id} label={lab} value={Number(v[a].toFixed(4))} step={step}
+   parse={draft=>{const n=transformExpr(draft,v[a]);return n===null?{ok:false,error:t('schemaForm.invalid',{name:lab})}:{ok:true,value:n};}}
+   onCommit={n=>void executeCommand('studio3d.object.transform',{id,[field]:{[a]:n}})}/>;})}</div></fieldset>;
 }
 /** User-saved local material presets: apply, remove, and save the mesh's current material under a name. */
 function MaterialUserPresets({id}:{id:number}){
@@ -495,9 +497,15 @@ export function ToolsSection(_:InspectorSectionProps){
    <NumField label={t('studio3d.snap.scale')} value={sn.scale} min={0.001} max={10} step={0.05} onCommit={v=>void executeCommand('studio3d.snap.set',{scale:v})}/></div>
   <label className="grid gap-1 text-xs text-ink-2">{t('studio3d.snap.mode')}
    <NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={sn.mode} aria-label={t('studio3d.snap.mode')} onChange={e=>void executeCommand('studio3d.snap.set',{mode:e.currentTarget.value})}>
-    {(['grid','vertex','surface'] as const).map(m=><option key={m} value={m}>{t('studio3d.snap.mode.'+m)}</option>)}</NativeSelect></label>
+    {(['grid','vertex','surface','midpoint'] as const).map(m=><option key={m} value={m}>{t('studio3d.snap.mode.'+m)}</option>)}</NativeSelect></label>
   <fieldset className="m-0 grid gap-1 border-0 p-0"><legend className="text-xs text-ink-3">{t('studio3d.pivot.title')}</legend>
    <div className="flex gap-1">{(['center','base'] as const).map(at=><Button key={at} variant="outline" disabled={s.selectedInfo?.kind!=='mesh'} onClick={()=>void executeCommand('studio3d.object.pivot',{id:s.selected,at})}>{t('studio3d.pivot.'+at)}</Button>)}</div></fieldset>
+  <label className="grid gap-1 text-xs text-ink-2">{t('studio3d.pivot.mode')}
+   <NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={s.pivot} aria-label={t('studio3d.pivot.mode')} onChange={e=>void executeCommand('studio3d.pivot.set',{mode:e.currentTarget.value})}>
+    {(['center','origin','cursor'] as const).map(m=><option key={m} value={m}>{t('studio3d.pivot.mode.'+m)}</option>)}</NativeSelect></label>
+  {s.pivot==='cursor'&&<div className="grid grid-cols-3 gap-1" data-testid="studio3d-cursor">{AXES.map(a=><NumField key={a} label={`${t('studio3d.cursor.title')} ${a.toUpperCase()}`} value={s.cursor[a]} step={0.1}
+   onCommit={n=>void executeCommand('studio3d.cursor.set',{...s.cursor,[a]:n})}/>)}</div>}
+  <label className="flex items-center gap-2 text-xs text-ink-2"><NativeInput type="checkbox" checked={s.measure!==null} aria-label={t('studio3d.measure.on')} onChange={e=>void executeCommand('studio3d.measure.set',{on:e.currentTarget.checked})}/>{t('studio3d.measure.on')}</label>
   <fieldset className="m-0 grid gap-2 border-0 p-0" data-testid="studio3d-save"><legend className="text-xs text-ink-3">{t('studio3d.save.title')}</legend>
    <div className="flex flex-wrap gap-1"><Button variant="outline" disabled={s.status!=='ready'} onClick={()=>void executeCommand('studio3d.save',{})}>{t('studio3d.save.one')}</Button>
     <Button variant="outline" disabled={s.status!=='ready'} onClick={()=>void executeCommand('studio3d.save',{sidecar:true})}>{t('studio3d.save.sidecar')}</Button>

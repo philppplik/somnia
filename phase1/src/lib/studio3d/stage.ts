@@ -512,7 +512,7 @@ export class Stage{
   return items.map(i=>i.o);
  }
  /** Nearest snap target for a world-space point: another mesh's vertex, or a point on another mesh's surface, within radius. */
- snapPoint(p:Vec3,mode:'vertex'|'surface',exclude:number[],radius:number):Vec3|null{
+ snapPoint(p:Vec3,mode:'vertex'|'surface'|'midpoint',exclude:number[],radius:number):Vec3|null{
   const skip=new Set<number>();
   for(const id of exclude){const o=this.find(id);if(o)o.traverse(c=>skip.add(c.id));}
   this.root.updateMatrixWorld(true);
@@ -521,12 +521,26 @@ export class Stage{
   const meshes:THREE.Mesh[]=[];
   this.root.traverse(o=>{const m=o as THREE.Mesh;if(m.isMesh&&!skip.has(m.id))meshes.push(m);});
   let best:THREE.Vector3|null=null;let bd=r;
-  if(mode==='vertex'){
+  if(mode==='vertex'||mode==='midpoint'){
    const w=new THREE.Vector3();
    for(const m of meshes){
-    const pos=(m.geometry as THREE.BufferGeometry).getAttribute('position');
+    const geo=m.geometry as THREE.BufferGeometry;
+    const pos=geo.getAttribute('position');
     if(!pos||pos.count>100000)continue;
-    for(let i=0;i<pos.count;i++){w.fromBufferAttribute(pos as THREE.BufferAttribute,i);m.localToWorld(w);const d=w.distanceTo(v);if(d<bd){bd=d;best=w.clone();}}
+    if(mode==='vertex'){
+     for(let i=0;i<pos.count;i++){w.fromBufferAttribute(pos as THREE.BufferAttribute,i);m.localToWorld(w);const d=w.distanceTo(v);if(d<bd){bd=d;best=w.clone();}}
+    }else{
+     const idx=geo.getIndex();
+     const tris=idx?idx.count/3:pos.count/3;
+     const a=new THREE.Vector3(),b=new THREE.Vector3(),c=new THREE.Vector3();
+     const at=(k:number)=>idx?idx.getX(k):k;
+     for(let t=0;t<tris;t++){
+      a.fromBufferAttribute(pos as THREE.BufferAttribute,at(t*3));b.fromBufferAttribute(pos as THREE.BufferAttribute,at(t*3+1));c.fromBufferAttribute(pos as THREE.BufferAttribute,at(t*3+2));
+      for(const[u,w2]of[[a,b],[b,c],[c,a]]as const){
+       w.copy(u).add(w2).multiplyScalar(0.5);m.localToWorld(w);const d=w.distanceTo(v);if(d<bd){bd=d;best=w.clone();}
+      }
+     }
+    }
    }
   }else{
    const ray=new THREE.Raycaster();const dirs=[[0,1,0],[0,-1,0],[1,0,0],[-1,0,0],[0,0,1],[0,0,-1]];

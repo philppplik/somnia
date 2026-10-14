@@ -35,7 +35,7 @@
  "studio3d.status.loading": "Abrindo {name}",
  "studio3d.status.error": "Não foi possível abrir o modelo",
  "studio3d.canvas.label": "Vista 3D. Arraste para orbitar, use a roda para aproximar e arraste com o botão direito para mover.",
- "studio3d.keys.hint": "As setas orbitam, mais e menos aproximam ou afastam, Home redefine a vista.",
+ "studio3d.keys.hint": "As setas orbitam, mais e menos aproximam ou afastam, Home redefine a vista. S alterna o encaixe, M a ferramenta de medição.",
  "cmd.studio3d.model.open": "Abrir modelo 3D",
  "cmd.studio3d.scene.new": "Criar cena 3D em branco",
  "cmd.studio3d.view.reset": "Redefinir vista 3D",
@@ -578,5 +578,16 @@
  "studio3d.load.phase.read": "Lendo o arquivo",
  "studio3d.load.phase.parse": "Analisando a geometria",
  "studio3d.load.phase.build": "Montando a cena",
- "cmd.studio3d.import.options": "Definir opções de importação de malhas"
+ "cmd.studio3d.import.options": "Definir opções de importação de malhas",
+ "studio3d.snap.mode.midpoint": "Ponto médio da aresta",
+ "studio3d.pivot.mode": "Pivô de transformação",
+ "studio3d.pivot.mode.center": "Centro da seleção",
+ "studio3d.pivot.mode.origin": "Origem do mundo",
+ "studio3d.pivot.mode.cursor": "Cursor 3D",
+ "studio3d.cursor.title": "Cursor 3D",
+ "studio3d.measure.on": "Ferramenta de medição",
+ "studio3d.measure.pick": "Clique em dois pontos na viewport",
+ "cmd.studio3d.pivot.set": "Definir o pivô de transformação 3D",
+ "cmd.studio3d.cursor.set": "Mover o cursor 3D",
+ "cmd.studio3d.measure.set": "Alternar a ferramenta de medição 3D"
 }
