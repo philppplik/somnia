@@ -680,3 +680,40 @@ test('uv seams survive an edit op that keeps their edges',()=>{
  assert.equal(stage.seamsOf(o).length,2,'undo keeps the seam too');
  stage.editEnd();
 });
+
+test('uv unwrap: angle method and pack toggle change the layout, both stay in 0..1',()=>{
+ const stage=new Stage();const o=stage.addPrimitive('cube') as THREE.Mesh;
+ stage.uvUnwrap(o.id,{method:'angle'});
+ const uv=o.geometry.getAttribute('uv')!;
+ for(let i=0;i<uv.count;i++){assert.ok(uv.getX(i)>=0&&uv.getX(i)<=1&&uv.getY(i)>=0&&uv.getY(i)<=1,'packed angle unwrap stays in 0..1');}
+ const packed=Array.from(uv.array as Float32Array);
+ stage.uvUnwrap(o.id,{method:'angle',pack:false});
+ const grid=Array.from(o.geometry.getAttribute('uv')!.array as Float32Array);
+ assert.notDeepEqual(grid,packed,'pack toggle changes the layout');
+ for(let i=0;i<grid.length;i++)assert.ok(grid[i]>=0&&grid[i]<=1);
+ stage.uvUnwrap(o.id,{method:'box',pack:true,padding:0.1});
+ const wide=Array.from(o.geometry.getAttribute('uv')!.array as Float32Array);
+ assert.notDeepEqual(wide,packed,'padding changes the packing');
+ stage.undo();stage.undo();stage.undo();
+ assert.ok(stage.canRedo);
+});
+
+test('uv unwrap with angle method splits the seamed top face into its own island',()=>{
+ const stage=new Stage();const o=stage.addPrimitive('cube') as THREE.Mesh;
+ stage.editStart(o.id);
+ const pos=o.geometry.getAttribute('position'),idx=o.geometry.getIndex()!;
+ const edges:[number,number][]=[];
+ for(let f=0;f<idx.count;f+=3)for(let e=0;e<3;e++){
+  const a=idx.getX(f+e),b=idx.getX(f+(e+1)%3);
+  if(pos.getY(a)!==0.5||pos.getY(b)!==0.5)continue;
+  const mx=(pos.getX(a)+pos.getX(b))/2,mz=(pos.getZ(a)+pos.getZ(b))/2;
+  if(Math.abs(mx)===0.5||Math.abs(mz)===0.5)edges.push([Math.min(a,b),Math.max(a,b)]);
+ }
+ stage.editSelect('edge',edges);
+ stage.uvSeamMark(true);
+ stage.editEnd();
+ stage.uvUnwrap(o.id,{method:'angle'});
+ assert.equal(stage.info(o.id)!.uv!.islands,2);
+ const layout=stage.uvLayout(o.id)!;
+ assert.ok(layout.uv.every(([u,v])=>u>=0&&u<=1&&v>=0&&v<=1));
+});

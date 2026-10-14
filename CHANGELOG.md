@@ -1,4 +1,5 @@
 # Unreleased: 3D Studio P0
+- 3D Studio: UV step 2. Amber seam lines show in edit mode, angle-based unfolding joins the box unwrap (BFS layout with exact triangle angles), and islands pack non-overlapping with padding by default (grid layout as fallback toggle).
 - 3D Studio: UV tools basics: seam marking on edges (coincident copies included), seam-aware box unwrap and planar projection with attribute-safe vertex splits, checker-texture preview, and a read-only UV island view.
 - 3D Studio: modeling polish. Edge bevel gains a round multi-segment profile (1-8 segments), the mirror modifier can bisect-clip the far side before mirroring, and sculpt masks now show as a weighted color overlay in the viewport while sculpt mode is on.
 - 3D Studio: modeling gaps closed. Edge bevel (true chamfer, works on unwelded primitives), loop slide along the surface, sculpt brushes crease/pinch/flatten, sculpt masking (paint, Ctrl-erase, clear, masks block brushes), and a non-destructive mirror modifier that exports the mirrored mesh. One undo per operation or stroke; size caps unchanged.

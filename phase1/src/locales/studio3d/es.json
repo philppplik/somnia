@@ -526,5 +526,10 @@
  "studio3d.uvtools.preview": "Vista de damero",
  "studio3d.uvtools.islands": "Islas UV",
  "studio3d.uvtools.tooLarge": "La vista UV se omite en mallas con más de 4000 triángulos.",
- "studio3d.uvtools.noUv": "Aún no hay UV: despliega o proyecta para crearlas."
+ "studio3d.uvtools.noUv": "Aún no hay UV: despliega o proyecta para crearlas.",
+ "studio3d.uvtools.method": "Método de despliegue",
+ "studio3d.uvtools.method.box": "Caja",
+ "studio3d.uvtools.method.angle": "Por ángulos",
+ "studio3d.uvtools.pack": "Empaquetar islas",
+ "studio3d.uvtools.padding": "Relleno de islas"
 }

@@ -526,5 +526,10 @@
  "studio3d.uvtools.preview": "Checker preview",
  "studio3d.uvtools.islands": "UV islands",
  "studio3d.uvtools.tooLarge": "The UV view is skipped for meshes with more than 4000 triangles.",
- "studio3d.uvtools.noUv": "No UVs yet: unwrap or project to create them."
+ "studio3d.uvtools.noUv": "No UVs yet: unwrap or project to create them.",
+ "studio3d.uvtools.method": "Unwrap method",
+ "studio3d.uvtools.method.box": "Box",
+ "studio3d.uvtools.method.angle": "Angle-based",
+ "studio3d.uvtools.pack": "Pack islands",
+ "studio3d.uvtools.padding": "Island padding"
 }

@@ -147,7 +147,7 @@ export default function Viewport3D(){
    const fhead=sel==null?null:stage.fabrikChainHead(sel);const fabrik=fhead?{...stage.fabrikState(fhead.id)!,root:fhead.id}:null;
    patchStudio3D({clips:infos,clipKeys:keys,stats:m.stats,outline:m.outline,bones:stage.bones(),bounds:m.bounds,selected:info?sel:null,selectedInfo:info,poses:sel==null?[]:stage.poseList(sel),ik,fabrik,rigs:stage.bones().filter(b=>b.depth===0).map(b=>({id:b.id,name:b.name})),boneLimits:sel==null?null:stage.boneLimitsOf(sel),uvView:sel==null?null:stage.uvLayout(sel),dirty:stage.dirty,canUndo:stage.canUndo,canRedo:stage.canRedo,undoLabel:stage.undoLabel});
    syncIk();syncFabrik();syncOnion();syncMotionPath();
-   drawSelection();applyWire(getStudio3DState().wireframe);syncSkeleton();syncWeightPreview();syncMaskOverlay();syncUvChecker();for(const h of syncHooks)h();invalidate();
+   drawSelection();applyWire(getStudio3DState().wireframe);syncSkeleton();syncWeightPreview();syncMaskOverlay();syncUvChecker();syncSeams();for(const h of syncHooks)h();invalidate();
   };
   const offStage=stage.onChange(()=>{if(!disposed)sync();});
   const frameSelection=()=>{
@@ -430,6 +430,31 @@ export default function Viewport3D(){
     if(!checkerTex)checkerTex=makeChecker();
     target.userData.somniaUvPrevMap=target.map;target.map=checkerTex;target.needsUpdate=true;checkerDone.add(target);
    }
+  };
+  // UV seam display: amber lines along the marked seam edges of the mesh in edit mode.
+  let seamLines:THREE.LineSegments|null=null;let seamKey='';
+  const syncSeams=()=>{
+   const ed=getStudio3DState().edit;
+   const mesh=ed==null?null:stage.find(ed.id) as THREE.Mesh|null;
+   const seams=mesh&&mesh.isMesh?stage.seamsOf(mesh):[];
+   const ok=!!(mesh&&seams.length);
+   const key=ok?`${mesh!.id}:${mesh!.geometry.uuid}:${seams.map(e=>e.join('-')).join('|')}`:'';
+   if(seamLines&&key!==seamKey){scene.remove(seamLines);seamLines.geometry.dispose();(seamLines.material as THREE.Material).dispose();seamLines=null;}
+   seamKey=key;
+   if(ok&&!seamLines){
+    const pos=mesh!.geometry.getAttribute('position');
+    const pts=new Float32Array(seams.length*6);
+    for(let i=0;i<seams.length;i++){
+     const[a,b]=seams[i];
+     pts[i*6]=pos.getX(a);pts[i*6+1]=pos.getY(a);pts[i*6+2]=pos.getZ(a);
+     pts[i*6+3]=pos.getX(b);pts[i*6+4]=pos.getY(b);pts[i*6+5]=pos.getZ(b);
+    }
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(pts,3));
+    seamLines=new THREE.LineSegments(g,new THREE.LineBasicMaterial({color:0xffb020,depthTest:false,transparent:true,opacity:0.95}));
+    seamLines.renderOrder=999;
+    scene.add(seamLines);
+   }
+   if(seamLines&&mesh){seamLines.position.copy(mesh.position);seamLines.quaternion.copy(mesh.quaternion);seamLines.scale.copy(mesh.scale);seamLines.visible=mesh.visible;}
   };
   const helpers=new Map<number,THREE.CameraHelper>();
   const syncCameraHelpers=()=>{
@@ -872,7 +897,7 @@ export default function Viewport3D(){
    setWireframe:on=>{applyWire(on);patchStudio3D({wireframe:on});invalidate();},
    setUvChecker:on=>{patchStudio3D({uvChecker:on});syncUvChecker();invalidate();},
    uvSeamMark:mark=>{stage.uvSeamMark(mark);afterEditOp();},
-   uvUnwrap:id=>{stage.uvUnwrap(id);const sel=getStudio3DState().selected;if(sel!=null)patchStudio3D({selectedInfo:stage.info(sel)});sync();invalidate();},
+   uvUnwrap:(id,opts)=>{stage.uvUnwrap(id,opts);const sel=getStudio3DState().selected;if(sel!=null)patchStudio3D({selectedInfo:stage.info(sel)});sync();invalidate();},
    uvPlanar:(id,axis)=>{stage.uvPlanar(id,axis);const sel=getStudio3DState().selected;if(sel!=null)patchStudio3D({selectedInfo:stage.info(sel)});sync();invalidate();},
   });
   // Pick by click (no drag) and keyboard orbit/zoom.

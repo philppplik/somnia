@@ -526,5 +526,10 @@
  "studio3d.uvtools.preview": "Prévia xadrez",
  "studio3d.uvtools.islands": "Ilhas de UV",
  "studio3d.uvtools.tooLarge": "A vista de UV é omitida em malhas com mais de 4000 triângulos.",
- "studio3d.uvtools.noUv": "Ainda sem UVs: desdobre ou projete para criá-los."
+ "studio3d.uvtools.noUv": "Ainda sem UVs: desdobre ou projete para criá-los.",
+ "studio3d.uvtools.method": "Método de desdobramento",
+ "studio3d.uvtools.method.box": "Caixa",
+ "studio3d.uvtools.method.angle": "Por ângulos",
+ "studio3d.uvtools.pack": "Empacotar ilhas",
+ "studio3d.uvtools.padding": "Margem das ilhas"
 }

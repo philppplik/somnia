@@ -142,6 +142,7 @@ export function ObjectSection(_:InspectorSectionProps){
 function UvFields({id}:{id:number}){
  const {t}=useT();const s=useStudio3D();const o=s.selectedInfo;
  const [axis,setAxis]=useState<'x'|'y'|'z'>('z');
+ const [method,setMethod]=useState<'box'|'angle'>('box');const [pack,setPack]=useState(true);const [padding,setPadding]=useState(0.02);
  const layout=s.uvView;
  const sig=`${id}:${layout?layout.islands.length:0}:${o?.uv?.seams??0}:${layout?layout.uv[0]:''}:${layout?layout.uv[layout.uv.length-1]:''}`;
  const polys=useMemo(()=>{
@@ -162,7 +163,13 @@ function UvFields({id}:{id:number}){
   </div>}
   {on&&ed.mode!=='edge'&&<p className="m-0 text-xs text-ink-3">{t('studio3d.uvtools.edgeHint')}</p>}
   {!on&&<>
-   <Button variant="outline" onClick={()=>void executeCommand('studio3d.uv.unwrap',{id})}>{t('studio3d.uvtools.unwrap')}</Button>
+   <div className="flex flex-wrap items-center gap-1">
+    <NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={method} aria-label={t('studio3d.uvtools.method')} onChange={e=>setMethod(e.currentTarget.value as 'box'|'angle')}>
+     {(['box','angle'] as const).map(mm=><option key={mm} value={mm}>{t('studio3d.uvtools.method.'+mm)}</option>)}</NativeSelect>
+    <Button variant="outline" onClick={()=>void executeCommand('studio3d.uv.unwrap',{id,method,pack,padding})}>{t('studio3d.uvtools.unwrap')}</Button>
+   </div>
+   <label className="flex items-center gap-2 text-xs text-ink-2"><NativeInput type="checkbox" checked={pack} onChange={e=>setPack(e.currentTarget.checked)}/>{t('studio3d.uvtools.pack')}</label>
+   {pack&&<NumField label={t('studio3d.uvtools.padding')} value={padding} min={0} max={0.2} step={0.005} onCommit={setPadding}/>}
    <div className="flex gap-1">
     <NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={axis} aria-label={t('studio3d.uvtools.axis')} onChange={e=>setAxis(e.currentTarget.value as 'x'|'y'|'z')}>
      {(['x','y','z'] as const).map(a=><option key={a} value={a}>{t('studio3d.sculpt.symmetry.'+a)}</option>)}</NativeSelect>

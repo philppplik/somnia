@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {uvIslands,unwrapBox,planarProject,seamsAround,remapSeams} from './uvUnwrap';
+import {uvIslands,unwrapBox,planarProject,seamsAround,remapSeams,unfoldAngles,packUv,gridUv} from './uvUnwrap';
 import {UvError} from './uv';
 import type {MeshData} from './editMesh';
 
@@ -90,4 +90,81 @@ test('remapSeams keeps seams across a vertex split and drops edges that vanished
  // edges that no longer exist geometrically drop out
  const moved:MeshData={positions:m.positions.map((x,i)=>i%3===1?x+2:x),index:m.index};
  assert.equal(remapSeams(m,seams,moved).length,0);
+});
+
+// unwelded box: 24 corners, 6 quads, every face owns its vertices (like three's BoxGeometry)
+function boxUnwelded():MeshData{
+ const positions:number[]=[];const index:number[]=[];
+ const quad=(a:[number,number,number],b:[number,number,number],c:[number,number,number],d:[number,number,number])=>{
+  const base=positions.length/3;positions.push(...a,...b,...c,...d);index.push(base,base+1,base+2,base,base+2,base+3);
+ };
+ quad([.5,.5,.5],[.5,.5,-.5],[.5,-.5,-.5],[.5,-.5,.5]); // +x
+ quad([-.5,.5,-.5],[-.5,.5,.5],[-.5,-.5,.5],[-.5,-.5,-.5]); // -x
+ quad([-.5,.5,-.5],[.5,.5,-.5],[.5,.5,.5],[-.5,.5,.5]); // +y
+ quad([-.5,-.5,.5],[.5,-.5,.5],[.5,-.5,-.5],[-.5,-.5,-.5]); // -y
+ quad([-.5,.5,.5],[.5,.5,.5],[.5,-.5,.5],[-.5,-.5,.5]); // +z
+ quad([.5,.5,-.5],[-.5,.5,-.5],[-.5,-.5,-.5],[.5,-.5,-.5]); // -z
+ return{positions,index};
+}
+const topSeamsBox=(m:MeshData):[number,number][]=>{
+ // the +y face is triangles 4,5 (verts 8..11): its four border edges, all coincident copies (as uvSeamMark stores them)
+ return seamsAround(m,[[8,9],[9,10],[10,11],[11,8]]);
+};
+const uvEdgeLen=(r:{uv:[number,number][];uvIndex:number[]},k1:number,k2:number)=>{
+ const[a,b]=[r.uv[r.uvIndex[k1]],r.uv[r.uvIndex[k2]]];
+ return Math.hypot(a[0]-b[0],a[1]-b[1]);
+};
+
+test('unfoldAngles keeps the exact 3D angles inside an island',()=>{
+ const m=boxUnwelded();
+ const r=unfoldAngles(m,topSeamsBox(m));
+ assert.equal(Math.max(...r.islands)+1,2);
+ assert.equal(r.uvIndex.length,m.index.length);
+ assert.ok(r.uvIndex.every(i=>i>=0));
+ assert.ok(r.uv.every(([u,v])=>Number.isFinite(u)&&Number.isFinite(v)));
+ // the top island (triangles 4,5) is laid out angle-exact: uv edge lengths match 3D up to one uniform layout scale
+ const len3=(a:number,b:number)=>Math.hypot(m.positions[a*3]-m.positions[b*3],m.positions[a*3+1]-m.positions[b*3+1],m.positions[a*3+2]-m.positions[b*3+2]);
+ const ratios:number[]=[];
+ for(const f of[4,5])for(let e=0;e<3;e++){
+  const a=m.index[f*3+e],b=m.index[f*3+(e+1)%3];
+  ratios.push(uvEdgeLen(r,f*3+e,f*3+(e+1)%3)/len3(a,b));
+ }
+ for(const q of ratios)assert.ok(Math.abs(q-ratios[0])<1e-9,`ratio ${q} vs ${ratios[0]}`);
+ assert.ok(ratios[0]>0);
+});
+
+test('unfoldAngles unfolds a whole unwelded box into one connected island',()=>{
+ const m=boxUnwelded();
+ const r=unfoldAngles(m,[]);
+ assert.equal(Math.max(...r.islands)+1,1);
+ assert.equal(r.uv.length,24,'every unwelded corner keeps its own slot');
+ assert.ok(r.uv.every(([u,v])=>Number.isFinite(u)&&Number.isFinite(v)));
+ // along the BFS tree the unfolding is angle-exact; the layout is finite and non-degenerate
+ const us=r.uv.map(([u])=>u),vs=r.uv.map(([,v])=>v);
+ assert.ok(Math.max(...us)-Math.min(...us)>0.5&&Math.max(...vs)-Math.min(...vs)>0.5,'the cross layout spans real area');
+});
+
+test('packUv lays islands out non-overlapping with padding inside 0..1',()=>{
+ const m=boxUnwelded();
+ const raw=unwrapBox(m,topSeamsBox(m));
+ const r=packUv(raw,0.05);
+ assert.ok(r.uv.every(([u,v])=>u>=0&&u<=1&&v>=0&&v<=1),JSON.stringify(r.uv));
+ // per-island bounding boxes are disjoint with a positive gap
+ const boxes=[0,1].map(ii=>{
+  const slots=new Set<number>();for(let f=0;f<r.islands.length;f++)if(r.islands[f]===ii)for(let e=0;e<3;e++)slots.add(r.uvIndex[f*3+e]);
+  let mnu=Infinity,mnv=Infinity,mxu=-Infinity,mxv=-Infinity;
+  for(const i of slots){const[u,v]=r.uv[i];mnu=Math.min(mnu,u);mnv=Math.min(mnv,v);mxu=Math.max(mxu,u);mxv=Math.max(mxv,v);}
+  return{mnu,mnv,mxu,mxv};
+ });
+ const[a,b]=boxes;
+ const gapX=Math.max(a.mnu-b.mxu,b.mnu-a.mxu),gapY=Math.max(a.mnv-b.mxv,b.mnv-a.mxv);
+ assert.ok(gapX>0||gapY>0,`islands overlap: ${JSON.stringify(boxes)}`);
+});
+
+test('pack layout differs from the grid layout and stays in 0..1',()=>{
+ const m=boxUnwelded();
+ const grid=gridUv(unwrapBox(m,topSeamsBox(m)));
+ const packed=unwrapBox(m,topSeamsBox(m),{pack:true,padding:0.02});
+ assert.notDeepEqual(packed.uv,grid.uv);
+ assert.ok(packed.uv.every(([u,v])=>u>=0&&u<=1&&v>=0&&v<=1));
 });

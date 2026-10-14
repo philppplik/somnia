@@ -1,4 +1,4 @@
-/** UV unwrap tools on plain mesh data - no three.js, a leaf module: seam-aware box unwrap, planar projection, island detection. Texture UV transforms live in uv.ts. */
+/** UV unwrap tools on plain mesh data - no three.js, a leaf module: seam-aware box unwrap, angle-based unfolding, planar projection, island detection and packing. Texture UV transforms live in uv.ts. */
 import type {MeshData} from './editMesh';
 import {UvError} from './uv';
 export type Uv=[number,number];
@@ -62,35 +62,150 @@ const project=(m:MeshData,faces:number[],islandIdx:number):Map<string,Uv>=>{
  return vertUv;
 };
 export interface UvResult{uv:Uv[];/** Per face-corner index (index.length entries) into uv. */uvIndex:number[];islands:number[];vertCount:number;}
-/** Seam-aware box unwrap: every island gets the planar projection of its dominant axis, scaled into its own cell of a square 0..1 grid. */
-export function unwrapBox(m:MeshData,seams:[number,number][]):UvResult{
+/** Layout choice for the unwrap methods: a square grid of cells (stable, wasteful) or shelf packing with padding (tight, non-overlapping). */
+export interface UvLayoutOpts{pack?:boolean;/** Gap between packed islands, in source uv units before normalization (0..0.5). */padding?:number;}
+const layout=(r:UvResult,opts?:UvLayoutOpts):UvResult=>opts?.pack?packUv(r,opts.padding??0.02):gridUv(r);
+/** uv slots grouped per island. */
+const islandSlots=(r:UvResult):number[][]=>{
+ const n=Math.max(...r.islands)+1;
+ const seen:Set<number>[]=Array.from({length:n},()=>new Set());
+ for(let f=0;f<r.islands.length;f++)for(let e=0;e<3;e++)seen[r.islands[f]].add(r.uvIndex[f*3+e]);
+ return seen.map(x=>[...x]);
+};
+/** Lays islands out in a square grid of 0..1 cells, each island normalized into its own cell with a small margin. */
+export function gridUv(r:UvResult):UvResult{
+ const n=Math.max(...r.islands)+1;
+ const cols=Math.ceil(Math.sqrt(n));
+ const uv=r.uv.map(([u,v]):Uv=>[u,v]);
+ islandSlots(r).forEach((slots,ii)=>{
+  let mnu=Infinity,mnv=Infinity,mxu=-Infinity,mxv=-Infinity;
+  for(const i of slots){const[u,v]=r.uv[i];mnu=Math.min(mnu,u);mnv=Math.min(mnv,v);mxu=Math.max(mxu,u);mxv=Math.max(mxv,v);}
+  const su=(mxu-mnu)||1,sv=(mxv-mnv)||1;const s=0.9/Math.max(su,sv);
+  const col=ii%cols,row=Math.floor(ii/cols);
+  for(const sl of slots){const[u,v]=r.uv[sl];uv[sl]=[col/cols+0.05/cols+(u-mnu)*s/cols,row/cols+0.05/cols+(v-mnv)*s/cols];}
+ });
+ return{...r,uv};
+}
+/** Packs islands non-overlapping with padding: bounding-box shelf packing, scaled into the 0..1 square with a half-padding margin. */
+export function packUv(r:UvResult,padding=0.02):UvResult{
+ const pad=Math.min(Math.max(padding,0),0.5);
+ const boxes=islandSlots(r).map(sl=>{
+  let mnu=Infinity,mnv=Infinity,mxu=-Infinity,mxv=-Infinity;
+  for(const i of sl){const[u,v]=r.uv[i];mnu=Math.min(mnu,u);mnv=Math.min(mnv,v);mxu=Math.max(mxu,u);mxv=Math.max(mxv,v);}
+  return{sl,mnu,mnv,w:Math.max(mxu-mnu,1e-9),h:Math.max(mxv-mnv,1e-9)};
+ });
+ boxes.sort((a,b)=>b.h-a.h);
+ const area=boxes.reduce((t,b)=>t+(b.w+pad)*(b.h+pad),0);
+ const limit=Math.max(Math.sqrt(area),1e-9);
+ const placed:{b:typeof boxes[number];x:number;y:number}[]=[];
+ let x=0,y=0,rowH=0;
+ for(const b of boxes){
+  if(x>0&&x+b.w>limit){x=0;y+=rowH+pad;rowH=0;}
+  placed.push({b,x,y});x+=b.w+pad;rowH=Math.max(rowH,b.h);
+ }
+ let maxW=0;for(const p of placed)maxW=Math.max(maxW,p.x+p.b.w);
+ const maxH=y+rowH;
+ const s=Math.min(1/maxW,1/maxH);
+ const ox=(1-maxW*s)/2,oy=(1-maxH*s)/2;
+ const uv=r.uv.map(([u,v]):Uv=>[u,v]);
+ for(const p of placed)for(const i of p.b.sl){const[u,v]=r.uv[i];uv[i]=[ox+(p.x+u-p.b.mnu)*s,oy+(p.y+v-p.b.mnv)*s];}
+ return{...r,uv};
+}
+/** Seam-aware box unwrap: every island gets the planar projection of its dominant axis, laid out per the chosen layout. */
+export function unwrapBox(m:MeshData,seams:[number,number][],opts?:UvLayoutOpts):UvResult{
  check(m);
  const islands=uvIslands(m,seams);
  const islandCount=Math.max(...islands)+1;
  const byIsland:number[][]=Array.from({length:islandCount},()=>[]);
  for(let f=0;f<islands.length;f++)byIsland[islands[f]].push(f);
  const uv:Uv[]=[];const uvIndex=new Array<number>(m.index.length).fill(-1);
- const cols=Math.ceil(Math.sqrt(islandCount));
  byIsland.forEach((faces,ii)=>{
   const vertUv=project(m,faces,ii);
-  // normalize the island into [0.05..0.95] of its grid cell
-  let mnu=Infinity,mnv=Infinity,mxu=-Infinity,mxv=-Infinity;
-  for(const[u,v]of vertUv.values()){mnu=Math.min(mnu,u);mnv=Math.min(mnv,v);mxu=Math.max(mxu,u);mxv=Math.max(mxv,v);}
-  const su=(mxu-mnu)||1,sv=(mxv-mnv)||1;const s=0.9/Math.max(su,sv);
-  const col=ii%cols,row=Math.floor(ii/cols);
   const local=new Map<string,number>();
   for(const f of faces)for(let e=0;e<3;e++){
    const v=m.index[f*3+e];const kk=`${v}_${ii}`;
    let slot=local.get(kk);
-   if(slot===undefined){
-    const[u,vv]=vertUv.get(kk)!;
-    slot=uv.length;uv.push([col/cols+0.05/cols+(u-mnu)*s/cols,row/cols+0.05/cols+(vv-mnv)*s/cols]);
-    local.set(kk,slot);
-   }
+   if(slot===undefined){slot=uv.length;uv.push(vertUv.get(kk)!);local.set(kk,slot);}
    uvIndex[f*3+e]=slot;
   }
  });
- return{uv,uvIndex,islands,vertCount:m.positions.length/3};
+ return layout({uv,uvIndex,islands,vertCount:m.positions.length/3},opts);
+}
+const dist=(a:[number,number,number],b:[number,number,number])=>Math.hypot(a[0]-b[0],a[1]-b[1],a[2]-b[2]);
+/** 2D position of a triangle's third vertex from the placed edge P-Q and the 3D side lengths; side picks the half-plane opposite the reference point. */
+const third=(P:Uv,Q:Uv,lpr:number,lqr:number,side:Uv|null):Uv=>{
+ const dx=Q[0]-P[0],dy=Q[1]-P[1];const c=Math.hypot(dx,dy)||1e-12;
+ const ux=dx/c,uy=dy/c;
+ const x=(lpr*lpr-lqr*lqr+c*c)/(2*c);
+ const h=Math.sqrt(Math.max(0,lpr*lpr-x*x));
+ let sgn=1;
+ if(side){const cross=ux*(side[1]-P[1])-uy*(side[0]-P[0]);sgn=cross>0?-1:1;}
+ return[P[0]+x*ux-sgn*h*uy,P[1]+x*uy+sgn*h*ux];
+};
+/** Angle-based unfolding: every island is laid flat along a BFS spanning tree of its faces, each triangle placed with its exact 3D angles; seams cut the layout. Coincident unwelded vertices keep their own slots but land on the same layout point. */
+export function unfoldAngles(m:MeshData,seams:[number,number][],opts?:UvLayoutOpts):UvResult{
+ check(m);
+ const islands=uvIslands(m,seams);
+ const islandCount=Math.max(...islands)+1;
+ const seam=new Set(seams.map(e=>ekey(e[0],e[1])));
+ const nf=m.index.length/3;
+ const edgeFaces=new Map<string,number[]>();
+ const gkey=(a:number,b:number)=>{const pa=geoKey(v3(m,a)),pb=geoKey(v3(m,b));return pa<pb?`${pa}|${pb}`:`${pb}|${pa}`;};
+ for(let f=0;f<nf;f++)for(let e=0;e<3;e++){
+  const gk=gkey(m.index[f*3+e],m.index[f*3+(e+1)%3]);
+  const arr=edgeFaces.get(gk);if(arr)arr.push(f);else edgeFaces.set(gk,[f]);
+ }
+ const uv:Uv[]=[];const uvIndex=new Array<number>(m.index.length).fill(-1);
+ for(let ii=0;ii<islandCount;ii++){
+  const faces:number[]=[];for(let f=0;f<nf;f++)if(islands[f]===ii)faces.push(f);
+  if(!faces.length)continue;
+  const slotOf=new Map<number,number>();
+  const slot=(v:number,p?:Uv):number=>{
+   let sl=slotOf.get(v);
+   if(sl===undefined){sl=uv.length;uv.push(p??[0,0]);slotOf.set(v,sl);}
+   else if(p)uv[sl]=p;
+   return sl;
+  };
+  // root triangle with exact 3D angles
+  const f0=faces[0];
+  const[a0,b0,c0]=[m.index[f0*3],m.index[f0*3+1],m.index[f0*3+2]];
+  const A=v3(m,a0),B=v3(m,b0),C=v3(m,c0);
+  slot(a0,[0,0]);slot(b0,[dist(A,B),0]);slot(c0,third([0,0],[dist(A,B),0],dist(A,C),dist(B,C),null));
+  const visited=new Set<number>([f0]);
+  const queue=[f0];
+  while(queue.length){
+   const f=queue.shift()!;
+   for(let e=0;e<3;e++){
+    const va=m.index[f*3+e],vb=m.index[f*3+(e+1)%3];
+    if(seam.has(ekey(va,vb)))continue;
+    for(const g of edgeFaces.get(gkey(va,vb))??[]){
+     if(g===f||visited.has(g)||islands[g]!==ii)continue;
+     visited.add(g);queue.push(g);
+     // the shared edge's endpoint copies inside g, matched geometrically (unwelded meshes)
+     const corners=[m.index[g*3],m.index[g*3+1],m.index[g*3+2]];
+     const pa=v3(m,va),pb=v3(m,vb);
+     const match=(v:number,q:[number,number,number])=>{const p=v3(m,v);return Math.abs(p[0]-q[0])<1e-6&&Math.abs(p[1]-q[1])<1e-6&&Math.abs(p[2]-q[2])<1e-6;};
+     const ga=corners.find(v=>match(v,pa)),gb=corners.find(v=>match(v,pb)),gr=corners.find(v=>!match(v,pa)&&!match(v,pb));
+     if(ga===undefined||gb===undefined||gr===undefined)continue;
+     const P=uv[slot(va)],Q=uv[slot(vb)];
+     if(!slotOf.has(ga))slot(ga,P);
+     if(!slotOf.has(gb))slot(gb,Q);
+     if(slotOf.has(gr))continue;
+     // place against the copies' actual positions (they may differ from f's slots when paths diverge)
+     const P2=uv[slotOf.get(ga)!],Q2=uv[slotOf.get(gb)!];
+     const t=[m.index[f*3],m.index[f*3+1],m.index[f*3+2]].find(v=>v!==va&&v!==vb);
+     const side=t!==undefined&&slotOf.has(t)?uv[slotOf.get(t)!]:null;
+     slot(gr,third(P2,Q2,dist(pa,v3(m,gr)),dist(pb,v3(m,gr)),side));
+    }
+   }
+  }
+  for(const f of faces)for(let e=0;e<3;e++){
+   const v=m.index[f*3+e];const k=f*3+e;
+   uvIndex[k]=slot(v);
+  }
+ }
+ if(uvIndex.some(i=>i<0))throw new UvError('The mesh data is damaged.');
+ return layout({uv,uvIndex,islands,vertCount:m.positions.length/3},opts);
 }
 /** Planar projection of the whole mesh along one axis, normalized to 0..1. */
 export function planarProject(m:MeshData,axis:'x'|'y'|'z'):UvResult{

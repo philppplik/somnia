@@ -932,3 +932,18 @@ test('uv seams, unwrap, planar and checker preview work through commands',async(
  await expect.poll(async()=>(await session(page)).stats.vertices).toBe(before);
  expect((await session(page)).info!.uv!.seams).toBe(2);
 });
+
+test('uv unwrap packs islands by default and angle unfolding works through commands',async({page})=>{
+ await blank(page);
+ const id=await insert(page,'cube',0);
+ // seam display lines are WebGL viewport state (CI verifies pixels); here the commands drive them
+ expect(await run(page,'studio3d.uv.unwrap',{id,method:'angle'})).toBe(true);
+ let s=await session(page);
+ expect(s.info!.uv).toMatchObject({hasUv:true,islands:1});
+ expect(await run(page,'studio3d.uv.unwrap',{id,method:'box',pack:false})).toBe(true);
+ expect((await session(page)).info!.uv!.hasUv).toBe(true);
+ expect(await run(page,'studio3d.uv.unwrap',{id,method:'angle',pack:true,padding:0.1})).toBe(true);
+ expect(await run(page,'studio3d.uv.unwrap',{id,padding:0.5})).toBe(false);
+ await expect(page.getByRole('alert')).toBeVisible();
+ expect(await run(page,'studio3d.undo')).toBe(true);
+});

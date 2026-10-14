@@ -10,7 +10,7 @@ import {extrudeFaces,insetFaces,bevelVertices,loopCut,bevelEdges,slideEdges,mirr
 import {sculptDab,paintMask,SculptError,type SculptOpts} from './sculpt';
 import {KEY_PATHS,KEY_STRIDE,ClipError,MAX_CLIPS,MAX_KEYS_PER_TRACK,DEFAULT_CLIP_SECONDS,insertKey,removeKey as removeKeyData,findKey,isPlainTrack,trackName,parseTrackName,checkKeyTime,checkDuration,checkClipName,lastKeyTime,type KeyPath} from './clips';
 import {mergeTransform,DEFAULT_TRANSFORM,UvError,type TextureTransform} from './uv';
-import {uvIslands,unwrapBox,planarProject,seamsAround,remapSeams,type UvResult} from './uvUnwrap';
+import {uvIslands,unwrapBox,unfoldAngles,planarProject,seamsAround,remapSeams,type UvResult,type UvLayoutOpts} from './uvUnwrap';
 import {textureBytes} from './validate';
 import {smoothWeights,rigidWeights,paintWeights,SkinError,type BoneSegment,type SkinWeights,type BrushSettings} from './skinning';
 import {checkPoseName,mirrorPose,blendPoses,PoseError,MAX_POSES} from './poses';import type {Pose,PoseBone} from './poses';
@@ -615,10 +615,13 @@ export class Stage{
   set(g,undefined,afterSeams);
   this.push({label,undo:()=>{set(before,beforeData,beforeSeams);owned=false;},redo:()=>{set(g,undefined,afterSeams);owned=true;},release:()=>{(owned?before:g).dispose();}});
  }
- /** Seam-aware box unwrap: every island is projected along its dominant axis into its own 0..1 cell. One undo step. */
- uvUnwrap(id:number){
+ /** Unwrap: box projection per island or angle-based unfolding, packed with padding by default (grid layout when pack is off). One undo step. */
+ uvUnwrap(id:number,opts?:{method?:'box'|'angle'}&UvLayoutOpts){
   const m=this.uvTarget(id);
-  let r:UvResult;try{r=unwrapBox(this.meshDataOf(m),this.seamsOf(m));}catch(e){throw e instanceof UvError?new StageError(e.message):e;}
+  const data=this.meshDataOf(m);const seams=this.seamsOf(m);
+  const lo:UvLayoutOpts={pack:opts?.pack??true,padding:opts?.padding??0.02};
+  let r:UvResult;
+  try{r=(opts?.method??'box')==='angle'?unfoldAngles(data,seams,lo):unwrapBox(data,seams,lo);}catch(e){throw e instanceof UvError?new StageError(e.message):e;}
   this.applyUv(m,r,'Unwrap UVs');
  }
  /** Planar UV projection of the whole mesh along one axis, normalized to 0..1. One undo step. */

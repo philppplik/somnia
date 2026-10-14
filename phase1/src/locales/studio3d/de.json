@@ -526,5 +526,10 @@
  "studio3d.uvtools.preview": "Karovorschau",
  "studio3d.uvtools.islands": "UV-Inseln",
  "studio3d.uvtools.tooLarge": "Die UV-Ansicht wird bei Netzen mit mehr als 4000 Dreiecken übersprungen.",
- "studio3d.uvtools.noUv": "Noch keine UVs: zum Erstellen abwickeln oder projizieren."
+ "studio3d.uvtools.noUv": "Noch keine UVs: zum Erstellen abwickeln oder projizieren.",
+ "studio3d.uvtools.method": "Abwickelmethode",
+ "studio3d.uvtools.method.box": "Box",
+ "studio3d.uvtools.method.angle": "Winkelbasiert",
+ "studio3d.uvtools.pack": "Inseln packen",
+ "studio3d.uvtools.padding": "Inselabstand"
 }

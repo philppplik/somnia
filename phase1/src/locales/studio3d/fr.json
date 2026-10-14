@@ -526,5 +526,10 @@
  "studio3d.uvtools.preview": "Aperçu damier",
  "studio3d.uvtools.islands": "Îlots UV",
  "studio3d.uvtools.tooLarge": "La vue UV est ignorée pour les maillages de plus de 4000 triangles.",
- "studio3d.uvtools.noUv": "Pas encore d'UV : dépliez ou projetez pour les créer."
+ "studio3d.uvtools.noUv": "Pas encore d'UV : dépliez ou projetez pour les créer.",
+ "studio3d.uvtools.method": "Méthode de dépliage",
+ "studio3d.uvtools.method.box": "Boîte",
+ "studio3d.uvtools.method.angle": "Par angles",
+ "studio3d.uvtools.pack": "Empaqueter les îlots",
+ "studio3d.uvtools.padding": "Marge des îlots"
 }
