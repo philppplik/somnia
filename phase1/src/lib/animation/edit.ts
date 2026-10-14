@@ -5,7 +5,7 @@ import {validateTextPresetLib} from './textPresetModel';
 import type {InterfaceAsset} from '../interface/schema';
 import {validateAnimationAssets} from './assetsValidation';
 import {MAX_AUDIO_VOLUME,type AudioAsset} from './audioCore';
-import {validShutter,type Shutter,validatePrecomps,precompTransform,prop,createComposition,type TextAnimator,type LayerMask,type LayerMatte,type ClipItem,type KeyRef,type Vec2,createLayer,findComp,findLayer,PROP_META,wouldCycle,EASE_IN,EASE_OUT,TRANSFORM_KEYS,validateDocument,type AnimationDocument,type CompSettings,type Composition,type Interp,type Keyframe,type Layer,type LayerKind,type LayerSource,type LayerEffect,validSource,validEffects,type Property,type PropValue,type TransformKey} from './model';
+import {STYLE_KINDS,OFFSET_KINDS,validShutter,type Shutter,validatePrecomps,precompTransform,prop,createComposition,type TextAnimator,type LayerMask,type LayerMatte,type ClipItem,type KeyRef,type Vec2,createLayer,findComp,findLayer,PROP_META,wouldCycle,EASE_IN,EASE_OUT,TRANSFORM_KEYS,validateDocument,type AnimationDocument,type CompSettings,type Composition,type Interp,type Keyframe,type Layer,type LayerKind,type LayerSource,type LayerEffect,validSource,validEffects,type Property,type PropValue,type TransformKey} from './model';
 import {evaluate} from './interpolate';
 import {validateModifiers,linkProblems} from './modifiers';
 import {snapToFrame,tickToFrame,frameToTick,validRate} from './time';
@@ -156,8 +156,8 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
   case 'layer.matte':{const l=layerOf(doc,e.layer);return setLayer(doc,{...l,matte:e.matte??undefined});}
   case 'layer.reveal':{const l=layerOf(doc,e.layer);if(l.kind!=='text')fail('invalid','Typewriter requires a text layer.');return setLayer(doc,{...l,textReveal:e.property});}
   case 'effect.style':{const l=layerOf(doc,e.layer),effect=l.effects?.find(x=>x.id===e.effect)??fail('missing','Effect no longer exists.');
-   if(effect.kind!=='shadow'&&effect.kind!=='glow')return fail('invalid','Only shadow and glow have these settings.');
-   if(e.distance!==undefined&&effect.kind!=='shadow')return fail('invalid','Only a shadow has a distance.');if(e.angle!==undefined&&effect.kind!=='shadow')return fail('invalid','Only a shadow has an angle.');
+   if(!(STYLE_KINDS as readonly string[]).includes(effect.kind))return fail('invalid','Only shadow and glow styles have these settings.');
+   if(e.distance!==undefined&&!(OFFSET_KINDS as readonly string[]).includes(effect.kind))return fail('invalid','Only a shadow has a distance.');if(e.angle!==undefined&&!(OFFSET_KINDS as readonly string[]).includes(effect.kind))return fail('invalid','Only a shadow has an angle.');
    if(e.blur===undefined&&e.distance===undefined&&e.angle===undefined)return fail('invalid','Nothing to change.');
    const next={...effect,...(e.blur!==undefined?{blur:e.blur}:{}),...(e.distance!==undefined?{distance:e.distance}:{}),...(e.angle!==undefined?{angle:e.angle}:{})};
    if(!validEffects([next]))return fail('invalid','Blur must be 0 to 64, distance 0 to 500, angle -360 to 360.');

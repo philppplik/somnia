@@ -596,5 +596,7 @@
  "animation.effects.radius": "Radius",
  "animation.effects.distance": "Abstand",
  "animation.effects.angle": "Winkel",
- "cmd.animation.effect.style": "Radius, Abstand und Winkel von Schatten oder Leuchten setzen"
+ "cmd.animation.effect.style": "Radius, Abstand und Winkel von Schatten oder Leuchten setzen",
+ "animation.effects.innerShadow": "Schatten nach innen",
+ "animation.effects.innerGlow": "Leuchten nach innen"
 }

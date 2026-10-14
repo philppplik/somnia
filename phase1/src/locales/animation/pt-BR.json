@@ -596,5 +596,7 @@
  "animation.effects.radius": "Raio",
  "animation.effects.distance": "Distância",
  "animation.effects.angle": "Ângulo",
- "cmd.animation.effect.style": "Definir raio, distância e ângulo da sombra ou do brilho"
+ "cmd.animation.effect.style": "Definir raio, distância e ângulo da sombra ou do brilho",
+ "animation.effects.innerShadow": "Sombra interna",
+ "animation.effects.innerGlow": "Brilho interno"
 }

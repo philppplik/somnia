@@ -279,3 +279,8 @@ Added:
 ## P49 - Silent comp layer note
 
 - `silentPrecompLayers(comp, comps)` lists visible comp layers with `speed` other than 100 % whose child (or a deeper nested child) has audio layers. The timeline note and the WebM export note use it. The audio import hint says audio is mixed into WebM only.
+
+## P50 - Inner shadow and inner glow
+
+- `LayerEffect.kind` adds `innerShadow` and `innerGlow` with the P47 fields (`amount`, `color`, `blur`; `distance` and `angle` for innerShadow only). Defaults: inner shadow 8 px radius, 8 px distance, 45 degrees, 0.6 black; inner glow radius 10.
+- Filter chain per effect (unique result names `is<stack position>`): copy the input, invert its alpha, blur, offset, flood, keep the flood where the inverted blur is, clip to the input alpha, merge over the input. No growth of the filter bounds.

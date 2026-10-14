@@ -1359,3 +1359,22 @@ test('P47 layer styles: drop shadow and glow are bounded effects with their own 
  d=applyEdit(d,{type:'layer.effects',layer:id,effects:[{...sh,enabled:false},{...gl,enabled:false}]});
  assert.equal(frameSvg(findComp(d)!,0,false,d.assets,d.compositions).includes('feDropShadow'),false);
 });
+
+test('P50 inner shadow and inner glow: filter chain stays inside the layer, settings validated, no extra bounds',()=>{
+ let d=base();const id=findComp(d)!.layers[0].id;const l0=findLayer(findComp(d)!,id)!;const b0=effectBounds(l0,0);
+ const is=defaultEffect('innerShadow','fx-i','#7c5cff'),ig=defaultEffect('innerGlow','fx-j','#ffd166');
+ d=applyEdit(d,{type:'layer.effects',layer:id,effects:[is,ig]});assert.deepEqual(validateDocument(d),[]);
+ const svg=frameSvg(findComp(d)!,0,false,d.assets,d.compositions);
+ assert.equal(svg.includes('result="is0g"')&&svg.includes('result="is1g"'),true,'unique result names per stack position');
+ assert.equal(svg.includes('<feFuncA type="table" tableValues="1 0"/>'),true);
+ assert.equal(svg.includes('<feComposite in="is0f" in2="is0a" operator="in" result="is0g"/>'),true,'clipped to the layer alpha');
+ assert.equal(svg.includes('dx="5.657" dy="5.657"'),true);assert.equal(svg.includes('dx="0" dy="0"'),true);assert.equal(svg.includes('stdDeviation="10"'),true);
+ assert.deepEqual(effectBounds(findLayer(findComp(d)!,id)!,0),b0,'inner effects do not grow the filter region');
+ d=applyEdit(d,{type:'effect.style',layer:id,effect:'fx-i',distance:20,angle:180,blur:3});const e0=findLayer(findComp(d)!,id)!.effects![0];assert.deepEqual([e0.blur,e0.distance,e0.angle],[3,20,180]);
+ assert.throws(()=>applyEdit(d,{type:'effect.style',layer:id,effect:'fx-j',distance:2}),EditError);
+ assert.throws(()=>applyEdit(d,{type:'layer.effects',layer:id,effects:[{...ig,distance:2}]}),EditError);
+ assert.throws(()=>applyEdit(d,{type:'effect.style',layer:id,effect:'fx-i',blur:65}),EditError);
+ // stacks with the P47 kinds and bypass
+ d=applyEdit(d,{type:'layer.effects',layer:id,effects:[defaultEffect('shadow','a','#000000'),is,{...ig,enabled:false}]});
+ const s2=frameSvg(findComp(d)!,0,false,d.assets,d.compositions);assert.equal(s2.includes('<feDropShadow'),true);assert.equal(s2.includes('result="is1g"'),true);assert.equal(s2.includes('result="is2g"'),false);
+});

@@ -339,3 +339,10 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Done: the audio import hint now says what is true (audio plays in the preview and is mixed into WebM exports only, not PNG, GIF or APNG), in 5 locales. A visible comp layer with speed other than 100 % whose child has audio now shows a note under the timeline and under the WebM button ("Silent in preview and WebM: name"). `silentPrecompLayers()` is the single rule; hidden comp layers and children without audio give no note.
 - Open: still no time-stretched audio for speed other than 100 %; inner shadow/stroke styles; text animator sampling in motion blur.
 
+
+### Animation P50 (2026-10-14, integration pending)
+
+- Picked: inner shadow and inner glow (text-animator blur sampling and time-stretched audio not chosen).
+- Done: two more effect kinds, `innerShadow` (radius, distance, angle, colour, strength) and `innerGlow` (radius, colour, strength). They are drawn inside the layer only (inverted alpha, blurred, offset, clipped to the layer alpha), so the filter region does not grow. Same stack rules as P47: order, bypass key, animated strength, colour keys, 8-effect cap, undoable `effect.style`. Viewer and all exports share the SVG filter. Buttons "Inner shadow +" and "Inner glow +", 5 locales.
+- Open: radius/distance/angle are static; no choke or spread; no inner/outer stroke styles; the colour-key button label still says "tint"; text animator sampling in motion blur; time-stretched audio.
+

@@ -596,5 +596,7 @@
  "animation.effects.radius": "Radius",
  "animation.effects.distance": "Distance",
  "animation.effects.angle": "Angle",
- "cmd.animation.effect.style": "Set shadow or glow radius, distance and angle"
+ "cmd.animation.effect.style": "Set shadow or glow radius, distance and angle",
+ "animation.effects.innerShadow": "Inner shadow",
+ "animation.effects.innerGlow": "Inner glow"
 }

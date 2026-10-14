@@ -1,9 +1,9 @@
 import {StudioStatus} from '../studios/StudioStatus';
 import {PathLayerMorph} from './PathLayerMorph';
 import {silentPrecompLayers} from '../../lib/animation/audioTiming';
-import {effectColor,effectBypassed,defaultEffect,EFFECT_KINDS} from '../../lib/animation/effects';
+import {effectColor,effectBypassed,defaultEffect,styleDefaults,EFFECT_KINDS} from '../../lib/animation/effects';
 import {NativeInput,NativeSelect} from '../ui/native-controls';
-import {DEFAULT_LAYER_COLOR,TEXT_FONTS,STROKE_JOINS,STROKE_CAPS,type StrokeJoin,type StrokeCap} from '../../lib/animation/model';
+import {STYLE_KINDS,OFFSET_KINDS,DEFAULT_LAYER_COLOR,TEXT_FONTS,STROKE_JOINS,STROKE_CAPS,type StrokeJoin,type StrokeCap} from '../../lib/animation/model';
 import {StudioProgress} from '../studios/StudioProgress';
 import {saveAnimationSnapshot,parseAnimationSnapshot,SNAPSHOT_LIMIT} from '../../lib/animation/persistence';
 import {wouldCycle} from '../../lib/animation/model';
@@ -125,10 +125,10 @@ export function PropertiesSection(_:InspectorSectionProps){
     <NumberField label={t('animation.effects.amount')} step={effect.kind==='blur'?1:0.1} resetKey={`${layer.id}:${effect.id}:${at}`} value={effect.animation?evaluate(effect.animation,at) as number:effect.amount} onCommit={value=>edit({type:'effect.amount',layer:layer.id,effect:effect.id,value,t:at})}/>
     <label className="flex items-center gap-1 text-ink-3"><NativeInput type="checkbox" className="animation-checkbox" checked={!!effect.animation?.keys.length} onChange={e=>edit({type:'effect.animate',layer:layer.id,effect:effect.id,on:e.target.checked,t:at})}/>{t('animation.effects.animate')}</label>
     {effect.animation?.keys.length&&<div className="grid gap-1"><div className="flex gap-1"><Button size="tiny" variant="outline" onClick={()=>edit({type:'effect.amount',layer:layer.id,effect:effect.id,value:evaluate(effect.animation!,at) as number,t:at})}>{t('animation.key.add')}</Button><Button size="tiny" variant="ghost" disabled={!effect.animation.keys.some(k=>k.t===at)} onClick={()=>edit({type:'effect.key.remove',layer:layer.id,effect:effect.id,t:at})}>{t('animation.key.remove')}</Button></div><div className="flex flex-wrap gap-1">{effect.animation.keys.map(k=><Button key={k.t} size="tiny" variant="ghost" onClick={()=>animationSession().setView({playhead:k.t})}>{timecode(k.t,comp.fps)}</Button>)}</div></div>}
-    {(effect.kind==='shadow'||effect.kind==='glow')&&<div className="grid grid-cols-3 gap-1" data-testid={`animation-effect-style-${effect.id}`}>
-     <NumberField label={t('animation.effects.radius')} step={1} resetKey={`${layer.id}:${effect.id}:r${effect.blur}`} value={effect.blur??(effect.kind==='glow'?12:8)} onCommit={blur=>edit({type:'effect.style',layer:layer.id,effect:effect.id,blur})}/>
-     {effect.kind==='shadow'&&<NumberField label={t('animation.effects.distance')} step={1} resetKey={`${layer.id}:${effect.id}:d${effect.distance}`} value={effect.distance??12} onCommit={distance=>edit({type:'effect.style',layer:layer.id,effect:effect.id,distance})}/>}
-     {effect.kind==='shadow'&&<NumberField label={t('animation.effects.angle')} step={5} resetKey={`${layer.id}:${effect.id}:a${effect.angle}`} value={effect.angle??45} onCommit={angle=>edit({type:'effect.style',layer:layer.id,effect:effect.id,angle})}/>}</div>}
+    {STYLE_KINDS.some(k=>k===effect.kind)&&<div className="grid grid-cols-3 gap-1" data-testid={`animation-effect-style-${effect.id}`}>
+     <NumberField label={t('animation.effects.radius')} step={1} resetKey={`${layer.id}:${effect.id}:r${effect.blur}`} value={effect.blur??styleDefaults(effect.kind).blur} onCommit={blur=>edit({type:'effect.style',layer:layer.id,effect:effect.id,blur})}/>
+     {OFFSET_KINDS.some(k=>k===effect.kind)&&<NumberField label={t('animation.effects.distance')} step={1} resetKey={`${layer.id}:${effect.id}:d${effect.distance}`} value={effect.distance??styleDefaults(effect.kind).distance} onCommit={distance=>edit({type:'effect.style',layer:layer.id,effect:effect.id,distance})}/>}
+     {OFFSET_KINDS.some(k=>k===effect.kind)&&<NumberField label={t('animation.effects.angle')} step={5} resetKey={`${layer.id}:${effect.id}:a${effect.angle}`} value={effect.angle??45} onCommit={angle=>edit({type:'effect.style',layer:layer.id,effect:effect.id,angle})}/>}</div>}
     {effect.kind!=='blur'&&<NativeInput type="color" aria-label={t('animation.layer.color')} value={effectColor(effect,at)} onChange={e=>edit(effect.colorKeys?.length?{type:'effect.colorKey',layer:layer.id,effect:effect.id,color:e.target.value,t:at}:{type:'layer.effects',layer:layer.id,effects:layer.effects!.map(x=>x.id===effect.id?{...x,color:e.target.value}:x)})}/>}
     {effect.kind!=='blur'&&<Button size="tiny" variant="outline" onClick={()=>edit({type:'effect.colorKey',layer:layer.id,effect:effect.id,color:effectColor(effect,at),t:at})}>{t('animation.effects.colorKey')}</Button>}
     {effect.colorKeys?.length&&<div className="flex flex-wrap gap-1">{effect.colorKeys.map(k=><Button key={k.t} size="tiny" variant="ghost" onClick={()=>animationSession().setView({playhead:k.t})}>{timecode(k.t,comp.fps)} · {k.color}</Button>)}</div>}
