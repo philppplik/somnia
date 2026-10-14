@@ -68,3 +68,26 @@ test('paste block: one shared transaction, every cell in engine and model',async
  assert.equal(b.engine.cells.get('0!B3'),'1');assert.equal(b.engine.cells.get('0!C4'),'4');
  a.binding.destroy();b.binding.destroy();
 });
+
+test('per-person undo: my edits revert, the peer keeps theirs',async()=>{
+ const a=mk(),b=mk();
+ a.on('update',(u:Uint8Array)=>Y.applyUpdate(b,u));b.on('update',(u:Uint8Array)=>Y.applyUpdate(a,u));
+ const mA=seedSheetsModel(a,'f.xlsx',H);syncSharedSheets(mA,['S1'],'seed');
+ const seen:{a:string[];b:string[]}={a:[],b:[]};
+ const eng=(log:string[])=>({set:async(_s:number,addr:string,input:string)=>{log.push(addr+'='+input);}});
+ const bA=new SheetsCollabBinding(a,'f.xlsx',{engine:eng(seen.a),sheetIndexOf:()=>0});
+ const bB=new SheetsCollabBinding(b,'f.xlsx',{engine:eng(seen.b),sheetIndexOf:()=>0});
+ const id=sharedSheetList(openSheetsModel(a,'f.xlsx'))[0].id;
+ await bA.applyLocalEdit(id,0,0,'mine');
+ await bB.applyLocalEdit(id,1,0,'peer');
+ await flush();
+ bA.undo();
+ await flush();
+ assert.equal(openSheetsModel(a,'f.xlsx').cells.get(id+'!0:0'),undefined);
+ assert.equal(openSheetsModel(a,'f.xlsx').cells.get(id+'!1:0'),'peer');
+ assert.ok(seen.a.some(x=>x==='A1='));         // revert reached A's engine
+ assert.ok(seen.b.some(x=>x==='A1='));         // and replicated to B's
+ bA.redo();
+ await flush();
+ assert.equal(openSheetsModel(a,'f.xlsx').cells.get(id+'!0:0'),'mine');
+ bA.destroy();bB.destroy();});

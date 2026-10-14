@@ -1,4 +1,5 @@
 import {openSheetsModel,parseCellKey,setSharedCell,type SheetsModel} from './sheetsModel';
+import {UndoManager} from 'yjs';
 import {addressOf} from '../../sheets/format';
 /** The slice of the spreadsheet engine the binding drives. The real SheetsEngine satisfies it; tests inject a fake. */
 export interface SheetsEnginePort{set(sheet:number,address:string,input:string):Promise<unknown>;setValues?(sheet:number,row:number,col:number,values:string[][]):Promise<unknown>;clear?(sheet:number,row:number,col:number,rows:number,cols:number):Promise<unknown>}
@@ -16,6 +17,8 @@ export class SheetsCollabBinding{
  readonly origin={binding:'sheets'};   // transaction marker: anything else is remote
  private model:SheetsModel;
  private off:()=>void;
+ /** Per-person undo: tracks only this binding's transactions; its own undo transactions flow back to the engine through the remote path. */
+ readonly um:UndoManager;
  private queue:Promise<void>=Promise.resolve();   // engine ops run one at a time, in arrival order
  constructor(doc:import('yjs').Doc,path:string,private d:SheetsBindingDeps){
   this.model=openSheetsModel(doc,path);
@@ -28,6 +31,7 @@ export class SheetsCollabBinding{
    if(jobs.length)this.enqueue(jobs);};
   this.model.cells.observe(onCells);
   this.off=()=>this.model.cells.unobserve(onCells);
+  this.um=new UndoManager(this.model.cells,{trackedOrigins:new Set([this.origin]),captureTimeout:0});
  }
  private enqueue(jobs:{sheetId:string;row:number;col:number;input:string}[]){
   this.queue=this.queue.then(async()=>{
@@ -51,10 +55,15 @@ export class SheetsCollabBinding{
   if(this.d.engine.clear)await this.d.engine.clear(sheet,r0,c0,r1-r0+1,c1-c0+1);
   else for(let i=r0;i<=r1;i++)for(let j=c0;j<=c1;j++)await this.d.engine.set(sheet,addressOf(i,j),'');
   this.model.doc.transact(()=>{for(let i=r0;i<=r1;i++)for(let j=c0;j<=c1;j++)setSharedCell(this.model,sheetId,i,j,'',this.origin);},this.origin);}
+ /** Undo/redo of MY edits only (peers keep theirs); the observer re-applies the result to the engine. */
+ undo(){this.um.undo();}
+ redo(){this.um.redo();}
+ get canUndo(){return this.um.undoStack.length>0;}
+ get canRedo(){return this.um.redoStack.length>0;}
  /** Re-apply every shared cell of one sheet to the engine (after open or after a late seed). */
  replay(sheetId:string){
   const jobs:{sheetId:string;row:number;col:number;input:string}[]=[];
   this.model.cells.forEach((input,key)=>{const p=parseCellKey(key);if(p&&p.sheetId===sheetId)jobs.push({...p,input});});
   if(jobs.length)this.enqueue(jobs);}
- destroy(){this.off();}
+ destroy(){this.um.destroy();this.off();}
 }

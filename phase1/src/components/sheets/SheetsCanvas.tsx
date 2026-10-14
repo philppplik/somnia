@@ -199,7 +199,10 @@ function Workbook({item}:{item:MediaItem}){
  const applySheet=async(op:SheetOp)=>{
   if(draftRef.current!==null)await commit(draftRef.current);
   try{const r=await engine.current!.editSheet(sheet,op);await syncSheets(r.active,op.kind==='add'||op.kind==='duplicate'||op.kind==='delete');setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
- const history=async(kind:'undo'|'redo')=>{try{await (kind==='undo'?engine.current!.undo():engine.current!.redo());await syncSheets();setDirty(true);setRev(r=>r+1);}catch(e){fail(e);}};
+ const history=async(kind:'undo'|'redo')=>{try{
+  if(collab.current){if(kind==='undo')collab.current.binding.undo();else collab.current.binding.redo();}
+  else{await (kind==='undo'?engine.current!.undo():engine.current!.redo());await syncSheets();}
+  setDirty(true);setRev(r=>r+1);}catch(e){fail(e);}};
  const side=(b:{w:number;style:string;color:string}|null|undefined)=>b?`${Math.max(1,Math.min(3,Math.round(b.w)))}px ${b.style} ${b.color}`:undefined;
  const renderCells=()=>{
   const fr=geo.freezeRows,fc=geo.freezeCols;const out:React.ReactNode[]=[];const seen=new Set<string>();
@@ -233,8 +236,8 @@ function Workbook({item}:{item:MediaItem}){
   <div className="media-bar flex items-center gap-2 border-b border-subtle px-3 py-1.5 text-[12px]">
    <span className="truncate" data-testid="media-name">{item.name}</span><span className="text-ink-3">XLSX, {formatBytes(item.size)}</span>
    {dirty&&<span className="rounded-sm bg-hover px-1.5 text-ink-2" data-testid="sheets-dirty">{t('sheets.edited')}</span>}<span className="flex-1"/>
-   <Button size="icon" aria-label={t('cmd.edit.undo')} title={t('cmd.edit.undo')} disabled={!info?.canUndo} onClick={()=>void history('undo')}><Undo2/></Button>
-   <Button size="icon" aria-label={t('cmd.edit.redo')} title={t('cmd.edit.redo')} disabled={!info?.canRedo} onClick={()=>void history('redo')}><Redo2/></Button>
+   <Button size="icon" aria-label={t('cmd.edit.undo')} title={t('cmd.edit.undo')} disabled={collab.current?!collab.current.binding.canUndo:!info?.canUndo} onClick={()=>void history('undo')}><Undo2/></Button>
+   <Button size="icon" aria-label={t('cmd.edit.redo')} title={t('cmd.edit.redo')} disabled={collab.current?!collab.current.binding.canRedo:!info?.canRedo} onClick={()=>void history('redo')}><Redo2/></Button>
    <Button variant="outline" disabled={phase.kind!=='ready'} onClick={()=>void exportCopy()} data-testid="sheets-export">{t('sheets.exportCopy')}</Button>
   </div>
   {book&&book.warnings.length>0&&<ul className="px-3 py-1 text-[12px] text-ink-3" role="note" data-testid="sheets-warnings">{book.warnings.map(w=><li key={w}>{w}</li>)}</ul>}
