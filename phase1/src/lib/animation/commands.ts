@@ -10,6 +10,8 @@ import type {CommandSchema,CommandSpec} from '../commandSpec';
 import {EditError,type Edit} from './edit';
 import {findComp,findLayer,TEXT_FONTS,TRANSFORM_KEYS,type KeyRef,type LayerKind,type LayerEffect,type PropValue,type TextFont,type TransformKey} from './model';
 import {animationSession} from './session';
+import {allTargetKeys,easeTargetKeys,staggerLayers} from './keyTargets';
+import {layerSetIds} from './layerSet';
 import {secondsToTicks,snapToFrame} from './time';
 import {ClipError,copyKeys,getKeyClip,pastedRefs,setKeyClip} from './keyclip';
 import {allKeysOf,pruneSelection,shiftSelection} from './selection';
@@ -88,6 +90,17 @@ export function animationCommandSpecs():CommandSpec<unknown,unknown>[]{
   spec('animation.modifier.add','Add a wiggle or loop modifier to a property',(p:{layer?:string;prop:TransformKey;modifier:Modifier})=>run({type:'modifier.add',layer:layerIdOf(p),prop:p.prop,modifier:p.modifier}),object({layer:layerRef,prop:propKey,modifier:{enum:['wiggle','loop']}},['prop','modifier'])),
   spec('animation.modifier.remove','Remove a modifier from a property',(p:{layer?:string;prop:TransformKey;index:number})=>run({type:'modifier.remove',layer:layerIdOf(p),prop:p.prop,index:p.index}),object({layer:layerRef,prop:propKey,index:{type:'number'}},['prop','index'])),
   spec('animation.key.ease','Set ease of the key at the playhead',(p:{layer?:string;prop:TransformKey;t?:number;preset:EasePreset})=>{const e=EASE_PRESETS[p.preset]??fail('Unknown ease preset.');return run({type:'key.interp',layer:layerIdOf(p),prop:p.prop,t:p.t??playhead(),interp:e.interp,...('out' in e?{out:e.out,in:e.in}:{})});},object({layer:layerRef,prop:propKey,t:tick,preset:{enum:Object.keys(EASE_PRESETS)}},['prop','preset'])),
+  spec('animation.keys.easeAll','Ease all selected keys (all keys of the layer when none are selected)',(p:{preset?:EasePreset}={})=>{
+   const preset=p.preset??'ease';const layerId=selected();const keys=pruneSelection(doc(),animationSession().getState().view.selectedKeys);
+   const layer=findLayer(comp(),layerId)!;const refs=keys.length?keys.map(k=>({target:{kind:'transform',prop:k.prop} as const,t:k.t,layer:k.layer})):allTargetKeys(layer).map(r=>({...r,layer:layerId}));
+   if(!refs.length)fail('No keys to ease.');
+   const byLayer=[...new Set(refs.map(r=>r.layer))];
+   return run(byLayer.flatMap(id=>guard(()=>easeTargetKeys(doc(),id,refs.filter(r=>r.layer===id),preset))));
+  },object({preset:{enum:Object.keys(EASE_PRESETS)}},[]),()=>open()&&!!animationSession().getState().view.selectedLayer,'Edit'),
+  spec('animation.layers.stagger','Stagger selected layers (Shift or Ctrl click adds layers)',(p:{frames?:number;layers?:string[]}={})=>{
+   const ids=p.layers??layerSetIds(animationSession().getState().view.selectedLayer);
+   return run(guard(()=>staggerLayers(doc(),ids,p.frames??2)));
+  },object({frames:{type:'integer',minimum:-600,maximum:600},layers:{type:'array',items:layerRef,minItems:2,maxItems:200}},[]),()=>open()&&layerSetIds(animationSession().getState().view.selectedLayer).length>1,'Edit'),
   spec('animation.keys.selectAll','Select all keys of the layer',(p:{layer?:string}={})=>{const id=layerIdOf(p);animationSession().selectKeys(allKeysOf(doc(),id));},object({layer:layerRef},[]),open,'View'),
   spec('animation.keys.delete','Delete selected keys',(p:{keys?:KeyRef[]}={})=>{const keys=p.keys??selKeys();run({type:'keys.remove',keys});animationSession().selectKeys([]);},object({keys:keyRefs},[]),hasSel),
   spec('animation.keys.copy','Copy selected keys',()=>{setKeyClip(guard(()=>copyKeys(doc(),selKeys())));},undefined,hasSel),

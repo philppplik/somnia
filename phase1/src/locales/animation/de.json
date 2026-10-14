@@ -332,5 +332,10 @@
  "animation.graph.delete": "Löschen",
  "animation.ease.overshoot": "Überschwingen",
  "animation.ease.anticipate": "Ausholen",
- "animation.ease.spring": "Feder"
+ "animation.ease.spring": "Feder",
+ "cmd.animation.keys.easeAll": "Alle gewählten Keys glätten",
+ "cmd.animation.layers.stagger": "Gewählte Ebenen versetzen",
+ "animation.stagger.frames": "Bilder zwischen Ebenen",
+ "animation.stagger.apply": "Versetzen",
+ "animation.stagger.hint": "Mit Umschalt oder Strg klicken, um Ebenen hinzuzufügen."
 }

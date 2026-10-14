@@ -332,5 +332,10 @@
  "animation.graph.delete": "Supprimer",
  "animation.ease.overshoot": "Dépassement",
  "animation.ease.anticipate": "Anticipation",
- "animation.ease.spring": "Ressort"
+ "animation.ease.spring": "Ressort",
+ "cmd.animation.keys.easeAll": "Adoucir toutes les clés sélectionnées",
+ "cmd.animation.layers.stagger": "Décaler les calques sélectionnés",
+ "animation.stagger.frames": "Images entre les calques",
+ "animation.stagger.apply": "Décaler",
+ "animation.stagger.hint": "Maj ou Ctrl et clic ajoutent des calques à la sélection."
 }

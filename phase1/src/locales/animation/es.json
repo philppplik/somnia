@@ -332,5 +332,10 @@
  "animation.graph.delete": "Eliminar",
  "animation.ease.overshoot": "Rebote suave",
  "animation.ease.anticipate": "Anticipación",
- "animation.ease.spring": "Resorte"
+ "animation.ease.spring": "Resorte",
+ "cmd.animation.keys.easeAll": "Suavizar todas las claves seleccionadas",
+ "cmd.animation.layers.stagger": "Escalonar las capas seleccionadas",
+ "animation.stagger.frames": "Fotogramas entre capas",
+ "animation.stagger.apply": "Escalonar",
+ "animation.stagger.hint": "Mayús o Ctrl y clic añaden capas a la selección."
 }

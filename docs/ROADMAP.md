@@ -122,6 +122,10 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Implemented: Mixed graph now drags keys in time and value (first channel for vec2, values clamped to property limits), ease handles for a single selected key, copy/paste/delete across properties through the shared clipboard (`multi` clip kind), and keyboard-only multi-select (Enter select, Space toggle, Ctrl+A, Esc, Delete, Ctrl+C/V, arrows for time and value). One undo step per action.
 - Open: the transform and mask graph renderers are still separate components (merge not attempted); value drag in the Mixed graph edits only the first channel of vec2 properties.
 
+### Animation P20 (2026-10-14)
+- Implemented: Mixed graph drags both channels of vec2 properties (X/Y switch) and pastes a single-property clip onto the properties of the selected keys; three spring-style ease presets (`overshoot`, `anticipate`, `spring`, cubic handles beyond 0..1) with a live preview on hover or focus in the Mixed and transform graphs; layer stagger (Shift or Ctrl click adds layers, offset in frames per layer, one undo step); command `animation.keys.easeAll` (Edit menu, F9 inside the Mixed graph).
+- Open: a cubic cannot ring several times, so multi-bounce needs baked extra keys (not built); stagger moves transform and mask property keys, not path-morph keys or layer in/out points; no global shortcut allocated for the new commands; stagger/ease UI has no Playwright spec (CI-only).
+
 ### Animation P16 (2026-10-14)
 - Implemented: mask graph multi-key selection (click, shift, box), group move/revalue and ease in one edit, speed mode, copy/paste of several mask keys between masks (same value type). Transform graph unchanged. One undo per edit, five locales, DS-clean. Details: `docs/animation-p10.md` (P16 section).
 - Open: copy/paste between mask and transform properties, a shared graph core, per-point lanes, native webview check.

@@ -10,6 +10,7 @@ import {AudioWaveform} from './AudioWaveform';
 import {clickSelect,marqueeSelect,pruneSelection,rectsOverlap,sameKey,shiftSelection} from '../../lib/animation/selection';
 import {frameToTick,snapToFrame,tickToFrame,timecode} from '../../lib/animation/time';
 import {executeCommand} from '../../lib/commands';
+import {clearLayerSet,layerSetIds,toggleLayerInSet,useLayerSet} from '../../lib/animation/layerSet';
 import {useT} from '../../lib/useT';
 import {Button} from '../ui/button';
 import {EASE_LABEL,EASES,PROP_LABEL} from './format';
@@ -20,7 +21,7 @@ const pct=(t:number,c:Composition)=>`${Math.min(100,Math.max(0,(t-c.start)/c.dur
 interface Box{x0:number;y0:number;x1:number;y1:number}
 /** Timeline of the Animation studio: transport, work area, layer bars, key lanes with marquee selection, or the graph editor. */
 export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Composition;at:number;selected:string|null;canUndo:boolean;canRedo:boolean}){
- const {t}=useT();const state=useAnimationState();const view=state.view;
+ const {t}=useT();const state=useAnimationState();const view=state.view; const layerSet=useLayerSet();const [stagger,setStagger]=useState(2);
  const rulerRef=useRef<HTMLDivElement>(null);const lanesRef=useRef<HTMLDivElement>(null);
  const frames=Math.max(1,tickToFrame(comp.duration,comp.fps));const frame=tickToFrame(at,comp.fps);
  const [playing,setPlaying]=useState(false);const [keepWorld,setKeepWorld]=useState(false);const raf=useRef<number|null>(null);
@@ -152,6 +153,9 @@ export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Compo
     <Button size="tiny" variant="ghost" onClick={()=>run('animation.workarea.reset')} data-testid="animation-wa-reset">{t('animation.workarea.reset')}</Button>
    </span>
    <label className="ml-2 flex items-center gap-1 text-ink-3"><NativeInput type="checkbox" className="animation-checkbox" checked={keepWorld} onChange={e=>setKeepWorld(e.target.checked)} data-testid="animation-parent-keepworld"/>{t('animation.parent.keepWorld')}</label>
+   {layerSetIds(selected).length>1&&<span className="flex items-center gap-1" role="group" aria-label={t('animation.stagger.frames')} title={t('animation.stagger.hint')}>
+    <NativeInput type="number" min={-600} max={600} step={1} className="h-5 w-12 rounded-sm border border-subtle bg-transparent px-1 text-xs text-ink-2" aria-label={t('animation.stagger.frames')} value={stagger} onChange={e=>setStagger(Math.max(-600,Math.min(600,Math.round(Number(e.target.value)||0))))} data-testid="animation-stagger-frames"/>
+    <Button size="tiny" variant="outline" onClick={()=>run('animation.layers.stagger',{frames:stagger,layers:layerSetIds(selected)})} data-testid="animation-stagger-apply">{t('animation.stagger.apply')}</Button></span>}
    <span className="ml-auto flex items-center gap-1" role="group" aria-label={t('animation.ease.group')}>
     {sel.length>0&&EASES.map(p=><Button key={p} size="tiny" variant="ghost" onClick={()=>run('animation.keys.ease',{preset:p})} data-testid={`animation-ease-${p}`}>{t(EASE_LABEL[p])}</Button>)}
     <Button size="tiny" variant={view.graph?'outline':'ghost'} aria-pressed={view.graph} onClick={()=>run('animation.graph.toggle')} data-testid="animation-graph-toggle">{t('animation.graph')}</Button>
@@ -176,11 +180,11 @@ export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Compo
   {view.graph?<GraphEditor comp={comp} layerId={selected} sel={sel} playhead={at}/>:
   <div className="relative min-h-0 flex-1 overflow-auto" role="list" ref={lanesRef}>
    {comp.layers.map(l=><div key={l.id} role="listitem" className="border-b border-subtle">
-    <div className={`grid grid-cols-[280px_1fr] items-center ${l.id===selected?'bg-hover':''}`}>
+    <div className={`grid grid-cols-[280px_1fr] items-center ${l.id===selected||layerSet.includes(l.id)?'bg-hover':''}`} data-picked={layerSet.includes(l.id)||undefined}>
      <div className="flex items-center gap-1 px-2 py-1">
       <button type="button" aria-label={t('animation.layer.visible')} aria-pressed={l.visible} className="text-ink-2" onClick={()=>run('animation.layer.update',{layer:l.id,visible:!l.visible})}>{l.visible?<Eye className="size-3"/>:<EyeOff className="size-3"/>}</button>
       <button type="button" aria-label={t('animation.layer.locked')} aria-pressed={l.locked} className="text-ink-2" onClick={()=>run('animation.layer.update',{layer:l.id,locked:!l.locked})}>{l.locked?<Lock className="size-3"/>:<Unlock className="size-3"/>}</button>
-      <button type="button" aria-current={l.id===selected} className="min-w-0 flex-1 truncate text-left text-ink" onClick={()=>animationSession().setView({selectedLayer:l.id})}>{l.parent?'↳ ':''}{l.name}{l.kind==='null'?' · Null':''}</button>
+      <button type="button" aria-current={l.id===selected} className="min-w-0 flex-1 truncate text-left text-ink" onClick={e=>{if((e.shiftKey||e.ctrlKey||e.metaKey)&&selected&&l.id!==selected){toggleLayerInSet(l.id);return;}clearLayerSet();animationSession().setView({selectedLayer:l.id});}}>{l.parent?'↳ ':''}{l.name}{l.kind==='null'?' · Null':''}</button>
       <NativeSelect className="h-5 w-[96px] min-w-0 shrink-0 rounded-sm border border-subtle bg-transparent px-1 text-xs text-ink-2 select-text" aria-label={t('animation.parent.timeline',{name:l.name})} disabled={l.locked} value={l.parent??''} data-testid={`animation-parent-${l.id}`} onChange={e=>run('animation.layer.parent',{layer:l.id,parent:e.target.value||null,keepWorld})}><option value="">{t('animation.parent.none')}</option>{comp.layers.filter(o=>o.id!==l.id&&!wouldCycle(comp,l.id,o.id)).map(o=><option key={o.id} value={o.id}>{o.name}</option>)}</NativeSelect>
      </div>
      <div className="relative h-5">

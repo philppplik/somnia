@@ -332,5 +332,10 @@
  "animation.graph.delete": "Delete",
  "animation.ease.overshoot": "Overshoot",
  "animation.ease.anticipate": "Anticipate",
- "animation.ease.spring": "Spring"
+ "animation.ease.spring": "Spring",
+ "cmd.animation.keys.easeAll": "Ease all selected keys",
+ "cmd.animation.layers.stagger": "Stagger selected layers",
+ "animation.stagger.frames": "Frames between layers",
+ "animation.stagger.apply": "Stagger",
+ "animation.stagger.hint": "Shift or Ctrl click adds layers to the selection."
 }

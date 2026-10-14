@@ -332,5 +332,10 @@
  "animation.graph.delete": "Excluir",
  "animation.ease.overshoot": "Overshoot",
  "animation.ease.anticipate": "Antecipação",
- "animation.ease.spring": "Mola"
+ "animation.ease.spring": "Mola",
+ "cmd.animation.keys.easeAll": "Suavizar todas as chaves selecionadas",
+ "cmd.animation.layers.stagger": "Escalonar as camadas selecionadas",
+ "animation.stagger.frames": "Quadros entre camadas",
+ "animation.stagger.apply": "Escalonar",
+ "animation.stagger.hint": "Shift ou Ctrl e clique adicionam camadas à seleção."
 }
