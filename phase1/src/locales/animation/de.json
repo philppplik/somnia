@@ -329,5 +329,8 @@
  "animation.graph.mixed": "Gemischt",
  "animation.graph.mixedLabel": "Keys aller animierten Eigenschaften, jede Kurve auf ihrer eigenen Skala von 0 bis 100 Prozent",
  "animation.graph.mixedKey": "{name}-Key bei {time}",
- "animation.graph.delete": "Löschen"
+ "animation.graph.delete": "Löschen",
+ "animation.ease.overshoot": "Überschwingen",
+ "animation.ease.anticipate": "Ausholen",
+ "animation.ease.spring": "Feder"
 }

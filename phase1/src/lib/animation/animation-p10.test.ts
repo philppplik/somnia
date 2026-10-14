@@ -4,7 +4,9 @@ import {applyEdit,applyEdits,EditError} from './edit';
 import {maskEdit,matteEdit,maskPath,copyMaskKey,insertPoint,handleMaskKey,copyMaskKeys} from './masks';
 import {animatedChars,animatorEdit,defaultAnimator,mixHex} from './textAnimators';
 import {copyTransformKeys,pasteTransformEdits} from './keysClipboard';
-import {animatedTargets,allTargetKeys,propertyOf,moveTargetKeys,easeTargetKeys,pruneTargetKeys,toggleTargetKey,editTargetKeys,copyTargetKeys,pasteTargetKeys,deleteTargetKeys} from './keyTargets';
+import {animatedTargets,allTargetKeys,propertyOf,moveTargetKeys,easeTargetKeys,pruneTargetKeys,toggleTargetKey,editTargetKeys,copyTargetKeys,pasteTargetKeys,deleteTargetKeys,pasteClipOnTargets,staggerLayers} from './keyTargets';
+import {EASE_PRESETS,easePresetOf} from './graph';
+import {frameToTick} from './time';
 import {frameSvg} from './exportFrames';
 import {sceneAt} from './scene';
 const comp=(d:AnimationDocument)=>findComp(d)!;
@@ -322,4 +324,28 @@ test('P19: value edit, copy/paste and delete work across transform and mask prop
  const del=applyEdits(d,deleteTargetKeys(d,'photo',sel));assert.equal(del.revision,rev+1);
  assert.ok(propertyOf(layer(del,'photo'),sel[1].target)===undefined||!propertyOf(layer(del,'photo'),sel[1].target)!.keys.some(k=>k.t===sec));
  assert.deepEqual(validateDocument(pasted),[]);assert.deepEqual(validateDocument(del),[]);
+});
+
+test('P20: spring presets, both vec2 channels, single clip paste and layer stagger',()=>{
+ for(const n of ['overshoot','anticipate','spring'] as const){const e=EASE_PRESETS[n];assert.equal(e.interp,'bezier');assert.ok(Math.min(e.out[1],e.in[1])<0||Math.max(e.out[1],e.in[1])>1,'goes outside 0..1');}
+ let d=keyed();d=applyEdits(d,[{type:'prop.animate',layer:'photo',prop:'position',on:true,t:0},{type:'prop.set',layer:'photo',prop:'position',value:[10,20],t:0},{type:'prop.set',layer:'photo',prop:'position',value:[50,60],t:sec}]);
+ d=applyEdit(d,{type:'keys.interp',keys:[{layer:'photo',prop:'position',t:0}],interp:'bezier',out:EASE_PRESETS.spring.out,in:EASE_PRESETS.spring.in});assert.deepEqual(validateDocument(d),[]);
+ assert.equal(easePresetOf(layer(d,'photo').transform.position.keys[0]),'spring');
+ const sel=allTargetKeys(layer(d,'photo')).filter(r=>r.target.kind==='transform'&&r.target.prop==='position'&&r.t===sec);assert.equal(sel.length,1);
+ const rev=d.revision;
+ const y=applyEdits(d,editTargetKeys(d,'photo',sel,0,()=>5,1));assert.equal(y.revision,rev+1);assert.deepEqual(propertyOf(layer(y,'photo'),sel[0].target)!.keys.find(k=>k.t===sec)!.v,[50,65]);
+ const x=applyEdits(d,editTargetKeys(d,'photo',sel,0,()=>5,0));assert.deepEqual(propertyOf(layer(x,'photo'),sel[0].target)!.keys.find(k=>k.t===sec)!.v,[55,60]);
+ // single-property clip paste onto selected targets
+ d=applyEdit(d,{type:'prop.animate',layer:'photo',prop:'opacity',on:true,t:0});d=applyEdit(d,{type:'prop.set',layer:'photo',prop:'opacity',value:30,t:sec});
+ const oc=copyTransformKeys(layer(d,'photo'),'opacity',[0,sec]);const r2=d.revision;
+ const pd=applyEdits(d,pasteClipOnTargets(d,'photo',[{kind:'transform',prop:'opacity'}],sec*2,oc));assert.equal(pd.revision,r2+1);assert.ok(layer(pd,'photo').transform.opacity.keys.some(k=>k.t===sec*3));
+ assert.throws(()=>pasteClipOnTargets(d,'photo',[{kind:'transform',prop:'position'}],0,oc),/value type/);assert.throws(()=>pasteClipOnTargets(d,'photo',[],0,oc),/Select keys/);
+ // stagger
+ d=applyEdits(d,[{type:'prop.animate',layer:'stencil',prop:'opacity',on:true,t:0},{type:'prop.set',layer:'stencil',prop:'opacity',value:10,t:sec}]);
+ const r3=d.revision;const ids=['photo','stencil'];const first=comp(d).layers.filter(l=>ids.includes(l.id));
+ const sd=applyEdits(d,staggerLayers(d,ids,3));assert.equal(sd.revision,r3+1);
+ const shift=frameToTick(3,comp(d).fps);assert.deepEqual(layer(sd,first[0].id).transform.opacity.keys.map(k=>k.t),layer(d,first[0].id).transform.opacity.keys.map(k=>k.t));
+ assert.deepEqual(layer(sd,first[1].id).transform.opacity.keys.map(k=>k.t),layer(d,first[1].id).transform.opacity.keys.map(k=>k.t+shift));
+ assert.throws(()=>staggerLayers(d,['photo'],3),/at least two/);assert.throws(()=>staggerLayers(d,ids,1.5),/whole number/);
+ assert.deepEqual(validateDocument(sd),[]);
 });

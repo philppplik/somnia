@@ -329,5 +329,8 @@
  "animation.graph.mixed": "Misto",
  "animation.graph.mixedLabel": "Chaves de todas as propriedades animadas, cada curva na sua própria escala de 0 a 100 por cento",
  "animation.graph.mixedKey": "Chave de {name} em {time}",
- "animation.graph.delete": "Excluir"
+ "animation.graph.delete": "Excluir",
+ "animation.ease.overshoot": "Overshoot",
+ "animation.ease.anticipate": "Antecipação",
+ "animation.ease.spring": "Mola"
 }

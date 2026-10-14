@@ -54,6 +54,12 @@ export const EASE_PRESETS={
  ease:{interp:'bezier' as const,out:[0.33,0] as const,in:[0.67,1] as const},
  easeIn:{interp:'bezier' as const,out:[0.42,0] as const,in:[1,1] as const},
  easeOut:{interp:'bezier' as const,out:[0,0] as const,in:[0.58,1] as const},
+ /** Overshoot at the end, then settle (back ease out). */
+ overshoot:{interp:'bezier' as const,out:[0.34,1.56] as const,in:[0.64,1] as const},
+ /** Pulls back before moving (back ease in). */
+ anticipate:{interp:'bezier' as const,out:[0.36,0] as const,in:[0.66,-0.56] as const},
+ /** Strong, springy overshoot. One cubic cannot ring several times; a longer spring needs extra keys. */
+ spring:{interp:'bezier' as const,out:[0.3,2] as const,in:[0.5,1] as const},
 };
 export type EasePreset=keyof typeof EASE_PRESETS;
 const sameHandle=(a:readonly [number,number],b:readonly [number,number])=>Math.abs(a[0]-b[0])<1e-9&&Math.abs(a[1]-b[1])<1e-9;

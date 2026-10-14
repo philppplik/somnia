@@ -2,8 +2,8 @@ import type {Edit} from './edit';
 import {findComp,findLayer,PROP_META,TRANSFORM_KEYS,type AnimationDocument,type Layer,type LayerMask,type MaskProp,type Property,type TransformKey} from './model';
 import {editMaskKeys,easeMaskKeys,copyMaskKeys,pasteMaskKeys,removeMaskKey} from './masks';
 import {copyTransformKeys,pasteTransformEdits,type KeysClip} from './keysClipboard';
-import {snapToFrame} from './time';
-import {EASE_PRESETS,type EasePreset} from './graph';
+import {frameToTick,snapToFrame} from './time';
+import {channelOf,EASE_PRESETS,type EasePreset} from './graph';
 /**
  * One key model for every animated property of a layer. A target says where the keys live (a transform property or a mask property);
  * the adapter functions below read them and turn a gesture into edits, so graph editors, selection and clipboards need not know the difference.
@@ -62,12 +62,12 @@ export function easeTargetKeys(doc:AnimationDocument,layerId:string,sel:readonly
   ...masksEdit(layer,sel,(m,prop,ts)=>easeMaskKeys(m,prop,ts,preset))];
 }
 /** Position of a key on a 0..1 scale of its own property (first channel), so properties with different units share one graph. */
-export function normalizedValue(v:Property['value'],bounds:{min:number;max:number}):number{
- const n=typeof v==='number'?v:Array.isArray(v)&&typeof v[0]==='number'?v[0]:0;return bounds.max===bounds.min?0.5:(n-bounds.min)/(bounds.max-bounds.min);
+export function normalizedValue(v:Property['value'],bounds:{min:number;max:number},c:0|1=0):number{
+ const n=channelOf(v,c);return bounds.max===bounds.min?0.5:(n-bounds.min)/(bounds.max-bounds.min);
 }
 /** The value range of a property's keys (first channel), widened a little so flat curves still have height. */
-export function keyBounds(p:Property):{min:number;max:number}{
- const vs=p.keys.map(k=>Array.isArray(k.v)?k.v[0]:(k.v as number));let min=Math.min(...vs),max=Math.max(...vs);
+export function keyBounds(p:Property,c:0|1=0):{min:number;max:number}{
+ const vs=p.keys.map(k=>channelOf(k.v,c));let min=Math.min(...vs),max=Math.max(...vs);
  if(max-min<1e-9){min-=1;max+=1;}return {min,max};
 }
 
@@ -77,16 +77,15 @@ export function clampTarget(g:KeyTarget,n:number):number{
  if(g.kind==='mask'){const [lo,hi]=MASK_BOUNDS[g.prop];return Math.min(hi,Math.max(lo,n));}
  const m=PROP_META[g.prop];return Math.min(m.max??Infinity,Math.max(m.min??-Infinity,n));
 }
-const withFirst=(v:Property['value'],n:number):Property['value']=>Array.isArray(v)?[n,v[1]] as unknown as Property['value']:n;
-const firstOf=(v:Property['value'])=>typeof v==='number'?v:Array.isArray(v)&&typeof v[0]==='number'?v[0]:0;
+const withChannel=(v:Property['value'],c:0|1,n:number):Property['value']=>Array.isArray(v)?(c===0?[n,v[1]]:[v[0],n]) as unknown as Property['value']:n;
 /**
- * Moves the selected keys by `delta` ticks and adds `dv(target)` to their first channel (clamped, rounded to 0.01) in one edit list.
+ * Moves the selected keys by `delta` ticks and adds `dv(target)` to their channel `c` (scalars have one) (clamped, rounded to 0.01) in one edit list.
  * Keys keep their ease. Used by value drags and keyboard nudges of the Mixed graph.
  */
-export function editTargetKeys(doc:AnimationDocument,layerId:string,sel:readonly TargetKey[],delta:number,dv:(g:KeyTarget)=>number):Edit[]{
+export function editTargetKeys(doc:AnimationDocument,layerId:string,sel:readonly TargetKey[],delta:number,dv:(g:KeyTarget)=>number,c:0|1=0):Edit[]{
  const comp=findComp(doc),layer=comp&&findLayer(comp,layerId);if(!comp||!layer)throw Error('Select a layer.');
  if(!Number.isFinite(delta))throw Error('Delta must be a number.');
- const newV=(r:TargetKey)=>{const k=propertyOf(layer,r.target)?.keys.find(x=>x.t===r.t);if(!k)throw Error('Key no longer exists.');return withFirst(k.v,Math.round(clampTarget(r.target,firstOf(k.v)+dv(r.target))*100)/100);};
+ const newV=(r:TargetKey)=>{const k=propertyOf(layer,r.target)?.keys.find(x=>x.t===r.t);if(!k)throw Error('Key no longer exists.');return withChannel(k.v,Array.isArray(k.v)?c:0,Math.round(clampTarget(r.target,channelOf(k.v,c)+dv(r.target))*100)/100);};
  const tr=sel.filter(r=>r.target.kind==='transform');
  const moves=moveTargetKeys(doc,layerId,sel.filter(r=>r.target.kind==='transform'),delta);
  const sets:Edit[]=tr.map(r=>({type:'prop.set',layer:layerId,prop:(r.target as {prop:TransformKey}).prop,t:r.t+delta,value:newV(r)}));
@@ -118,4 +117,22 @@ export function deleteTargetKeys(doc:AnimationDocument,layerId:string,sel:readon
  const comp=findComp(doc),layer=comp&&findLayer(comp,layerId);if(!comp||!layer)throw Error('Select a layer.');
  const tr=transformRefs(sel).map(r=>({...r,layer:layerId}));
  return [...(tr.length?[{type:'keys.remove',keys:tr} as Edit]:[]),...masksEdit(layer,sel,(m,prop,ts)=>ts.reduce((o,t)=>removeMaskKey(o,prop,t),m))];
+}
+
+/** Edits that paste a single-property clip with its first key at `t` on each given target (one undo step). A target of another value type refuses everything. */
+export function pasteClipOnTargets(doc:AnimationDocument,layerId:string,targets:readonly KeyTarget[],t:number,clip:KeysClip):Edit[]{
+ const comp=findComp(doc),layer=comp&&findLayer(comp,layerId);if(!comp||!layer)throw Error('Select a layer.');
+ if(!targets.length)throw Error('Select keys of the property to paste into.');
+ const s=snapToFrame(t,comp.fps);if(s<comp.start||s>=comp.start+comp.duration)throw Error('Time is outside the composition.');
+ const tr=targets.flatMap(g=>g.kind==='transform'?pasteTransformEdits(layer,g.prop,s,clip):[]);
+ const mk=targets.filter((g):g is Extract<KeyTarget,{kind:'mask'}>=>g.kind==='mask');
+ const masks:Edit[]=mk.length?[{type:'layer.masks',layer:layer.id,masks:(layer.masks??[]).map(m=>mk.filter(g=>g.mask===m.id).reduce((o,g)=>pasteMaskKeys(o,g.prop,s,clip),m))}]:[];
+ return [...tr,...masks];
+}
+/** Offsets every key of the given layers: the first layer (in composition order) stays, each following one starts `frames` frames later than the one before. One edit list. */
+export function staggerLayers(doc:AnimationDocument,layerIds:readonly string[],frames:number):Edit[]{
+ const comp=findComp(doc);if(!comp)throw Error('Select a layer.');
+ if(!Number.isInteger(frames)||Math.abs(frames)>600)throw Error('Offset must be a whole number of frames, at most 600.');
+ const ordered=comp.layers.filter(l=>layerIds.includes(l.id));if(ordered.length<2)throw Error('Select at least two layers.');
+ return ordered.flatMap((l,i)=>{const delta=frameToTick(frames*i,comp.fps);return i===0||frames===0?[]:moveTargetKeys(doc,l.id,allTargetKeys(l),delta);});
 }
