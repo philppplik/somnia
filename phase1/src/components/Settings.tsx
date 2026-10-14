@@ -1,3 +1,4 @@
+import {ThemeImportPanel} from './ThemeImportPanel';
 import { FrameworkSettings } from "./FrameworkSettings";
 import {DEFAULT_PREVIEW_SCRIPTS} from '../lib/previewScripts';
 import {Button} from './ui/button';
@@ -1478,6 +1479,7 @@ export function Settings() {
             </select>
           </label>
           <p>{t("set.ap.contrast.note")}</p>
+          <ThemeImportPanel/>
           <fieldset className="my-3 border-0 p-0" aria-label={t("set.ap.look.aria")}>
             <label>
               {t("set.ap.accent")}

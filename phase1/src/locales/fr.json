@@ -3271,5 +3271,22 @@
   "documents.export.format": "Format",
   "documents.export.docx": "Document Word (.docx)",
   "documents.export.file": "Nom du fichier",
-  "documents.export.note": "Enregistre un nouveau fichier à côté de l’original. Le document ouvert n’est jamais modifié."
+  "documents.export.note": "Enregistre un nouveau fichier à côté de l’original. Le document ouvert n’est jamais modifié.",
+  "themeImport.title": "Importer un thème",
+  "themeImport.note": "Collez ou chargez les couleurs shadcn/tweakcn. Vérifiez avant application. Les rayons, polices et accent enregistré restent inchangés.",
+  "themeImport.format": "Format",
+  "themeImport.source": "Données du thème",
+  "themeImport.load": "Charger JSON ou CSS",
+  "themeImport.fileError": "Fichier illisible ou supérieur à 64 Kio.",
+  "themeImport.invalid": "Données invalides ou non prises en charge. Utilisez les couleurs claires et sombres ou seulement :root/.dark.",
+  "themeImport.light": "Aperçu clair",
+  "themeImport.dark": "Aperçu sombre",
+  "themeImport.unsupported": "Champs non pris en charge, non appliqués :",
+  "themeImport.none": "Aucun",
+  "themeImport.apply": "Appliquer le thème",
+  "themeImport.undo": "Annuler le thème",
+  "themeImport.reset": "Réinitialiser le thème importé",
+  "themeImport.active": "Thème importé actif : {name}",
+  "themeImport.default": "Le thème par défaut est actif.",
+  "themeImport.sessionOnly": "Appliqué pour cette session seulement. Stockage indisponible."
 }
