@@ -104,7 +104,18 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.vision.describe": "Describe selected image",
   "local.routing.title": "Studio model overrides (local tools)",
   "local.routing.boundary": "Draft until Save. Choices affect Ollama only, never switch a cloud provider. Refresh lists verified local weights with declared tools, not task-tested quality. Each request rechecks locality and capabilities. Unknown references stay visible; no silent fallback.",
-  "local.routing.inherit": "Inherit Agent model"
+  "local.routing.inherit": "Inherit Agent model",
+  "local.probe.title": "Opt-in local quality probes",
+  "local.probe.boundary": "Explicit tests for {model}. Uses local inference, synthetic tools/images only, no project data or real tool execution. Tool test: nine small requests; vision: three generated images. A pass is a probe result, never a quality guarantee. Cache is session-only and bound to model digest, daemon, context and probe version.",
+  "local.probe.identity": "Refresh inventory: exact digest and daemon version required",
+  "local.probe.noCache": "No current cached probe",
+  "local.probe.changed": "Model/runtime changed during test; result discarded",
+  "local.probe.tools": "Run tool probe",
+  "local.probe.vision": "Run vision probe",
+  "local.probe.cachedTools": "Read cached tool probe",
+  "local.probe.cachedVision": "Read cached vision probe",
+  "local.probe.pass": "Probe passed, not guaranteed",
+  "local.probe.fail": "Probe failed"
  },
  "de": {
   "local.tab": "Lokal",
@@ -211,7 +222,18 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.vision.describe": "Gewähltes Bild beschreiben",
   "local.routing.title": "Studio-Modellzuordnung (lokale Werkzeuge)",
   "local.routing.boundary": "Entwurf bis Save. Auswahl gilt nur für Ollama, wechselt nie Cloud-Provider. Aktualisieren zeigt lokal geprüfte Gewichte mit gemeldeten Werkzeugen, nicht getesteter Qualität. Jede Anfrage prüft Lokalität und Fähigkeiten erneut. Unbekannte Referenzen bleiben sichtbar; kein stiller Fallback.",
-  "local.routing.inherit": "Agent-Modell erben"
+  "local.routing.inherit": "Agent-Modell erben",
+  "local.probe.title": "Optionale lokale Qualitätsproben",
+  "local.probe.boundary": "Explizite Tests für {model}. Lokale Inferenz mit synthetischen Werkzeugen/Bildern, keine Projektdaten oder echte Werkzeugausführung. Werkzeugtest: neun kleine Anfragen, Bildtest: drei generierte Bilder. Bestehen ist keine Qualitätsgarantie. Cache nur für diese Sitzung, an Digest, Daemon, Kontext und Probeversion gebunden.",
+  "local.probe.identity": "Modellliste aktualisieren: exakter Digest und Daemon-Version nötig",
+  "local.probe.noCache": "Keine aktuelle Probe im Cache",
+  "local.probe.changed": "Modell/Laufzeit während Test geändert; Ergebnis verworfen",
+  "local.probe.tools": "Werkzeugprobe starten",
+  "local.probe.vision": "Bildprobe starten",
+  "local.probe.cachedTools": "Werkzeugprobe aus Cache lesen",
+  "local.probe.cachedVision": "Bildprobe aus Cache lesen",
+  "local.probe.pass": "Probe bestanden, keine Garantie",
+  "local.probe.fail": "Probe fehlgeschlagen"
  },
  "es": {
   "local.tab": "Local",
@@ -318,7 +340,18 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.vision.describe": "Describir imagen",
   "local.routing.title": "Modelos por estudio (herramientas locales)",
   "local.routing.boundary": "Borrador hasta guardar. Solo Ollama, no cambia proveedor cloud. La lista verifica pesos locales y herramientas declaradas, no calidad. Cada solicitud vuelve a verificar. Referencias desconocidas visibles; sin fallback silencioso.",
-  "local.routing.inherit": "Heredar modelo Agent"
+  "local.routing.inherit": "Heredar modelo Agent",
+  "local.probe.title": "Pruebas locales opcionales",
+  "local.probe.boundary": "Pruebas para {model}. Inferencia local con herramientas/imágenes sintéticas; sin proyecto ni herramientas reales. Nueve solicitudes de herramientas o tres imágenes. Aprobar no garantiza calidad. Caché de sesión por digest, daemon, contexto y versión.",
+  "local.probe.identity": "Actualiza lista: requiere digest y versión",
+  "local.probe.noCache": "Sin prueba vigente en caché",
+  "local.probe.changed": "Modelo/runtime cambió; resultado descartado",
+  "local.probe.tools": "Probar herramientas",
+  "local.probe.vision": "Probar visión",
+  "local.probe.cachedTools": "Leer prueba de herramientas",
+  "local.probe.cachedVision": "Leer prueba de visión",
+  "local.probe.pass": "Prueba aprobada, sin garantía",
+  "local.probe.fail": "Prueba fallida"
  },
  "fr": {
   "local.tab": "Local",
@@ -425,7 +458,18 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.vision.describe": "Décrire l’image",
   "local.routing.title": "Modèles par studio (outils locaux)",
   "local.routing.boundary": "Brouillon jusqu’à enregistrer. Ollama uniquement, sans changer le cloud. Liste de poids locaux vérifiés avec outils déclarés, pas qualité testée. Chaque requête revérifie. Références inconnues visibles ; aucun repli silencieux.",
-  "local.routing.inherit": "Hériter du modèle Agent"
+  "local.routing.inherit": "Hériter du modèle Agent",
+  "local.probe.title": "Tests locaux facultatifs",
+  "local.probe.boundary": "Tests pour {model}. Inférence locale avec outils/images synthétiques ; aucun projet ni outil réel. Neuf requêtes outils ou trois images. Réussite sans garantie de qualité. Cache de session par digest, daemon, contexte et version.",
+  "local.probe.identity": "Actualisez : digest et version requis",
+  "local.probe.noCache": "Aucun test actuel en cache",
+  "local.probe.changed": "Modèle/runtime modifié ; résultat rejeté",
+  "local.probe.tools": "Tester les outils",
+  "local.probe.vision": "Tester la vision",
+  "local.probe.cachedTools": "Lire test outils en cache",
+  "local.probe.cachedVision": "Lire test vision en cache",
+  "local.probe.pass": "Test réussi, sans garantie",
+  "local.probe.fail": "Échec du test"
  },
  "pt-BR": {
   "local.tab": "Local",
@@ -532,6 +576,17 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.vision.describe": "Descrever imagem",
   "local.routing.title": "Modelos por estúdio (ferramentas locais)",
   "local.routing.boundary": "Rascunho até salvar. Só Ollama, sem trocar provedor cloud. Lista de pesos locais verificados com ferramentas declaradas, não qualidade testada. Cada solicitação verifica novamente. Referências desconhecidas visíveis; sem fallback silencioso.",
-  "local.routing.inherit": "Herdar modelo Agent"
+  "local.routing.inherit": "Herdar modelo Agent",
+  "local.probe.title": "Testes locais opcionais",
+  "local.probe.boundary": "Testes para {model}. Inferência local com ferramentas/imagens sintéticas; sem projeto ou ferramentas reais. Nove solicitações ou três imagens. Aprovação não garante qualidade. Cache da sessão por digest, daemon, contexto e versão.",
+  "local.probe.identity": "Atualize: digest e versão necessários",
+  "local.probe.noCache": "Nenhum teste atual no cache",
+  "local.probe.changed": "Modelo/runtime mudou; resultado descartado",
+  "local.probe.tools": "Testar ferramentas",
+  "local.probe.vision": "Testar visão",
+  "local.probe.cachedTools": "Ler teste de ferramentas",
+  "local.probe.cachedVision": "Ler teste de visão",
+  "local.probe.pass": "Teste aprovado, sem garantia",
+  "local.probe.fail": "Teste falhou"
  }
 };

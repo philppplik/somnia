@@ -79,3 +79,10 @@ test('vision file disclosure is explicit and disabled until opt-in',async({page}
  await expect(page.getByText('No tools, canvas capture, cloud fallback, image history or auto-apply.',{exact:false})).toBeVisible();
  await page.screenshot({path:'/tmp/local-vision-opt-in.png',fullPage:true});
 });
+test('quality probes are opt-in synthetic tests with no quality guarantee',async({page})=>{
+ await page.goto('/test/local-models.html?state=probes');await page.getByText('Opt-in local quality probes',{exact:true}).click();
+ await expect(page.getByText('A pass is a probe result, never a quality guarantee.',{exact:false})).toBeVisible();
+ await expect(page.getByRole('button',{name:'Run tool probe',exact:true})).toBeVisible();
+ await expect(page.getByRole('img')).toHaveCount(3);
+ await page.screenshot({path:'/tmp/local-quality-probes.png',fullPage:true});
+});
