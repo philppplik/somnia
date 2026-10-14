@@ -1,6 +1,6 @@
 import {presentationScale} from './presentKeyboard';
 import {reportError} from '../log';
-import {readDeckDocument,serializeDeck,parseDeck,editedDeckBytes} from './deckDocument';
+import {readDeckDocument,serializeDeck,parseDeck,editedDeckBytes,singleRunEditBytes} from './deckDocument';
 import type {SlidesDiagnostics} from './diagnostics';
 import type {TextRun} from './editCopy';
 import type {LayoutInfo,DeckModel,BoundsBox,RunFormat,ShapeBoundsEdit,ArrangeMode,SlideTransition,ShapeStylePatch,TableEdit,ThemeEdit,SlideBackground} from './deckPackage';
@@ -151,7 +151,7 @@ const portOf=(e:Entry)=>({snapshot:()=>snap(e),setBusy:(on:boolean)=>patch(e,{bu
  readback:()=>e.state.working&&e.state.summary?serializeDeck(readDeckDocument(e.state.working,e.state.summary)):null,fail:(m:string)=>patch(e,{error:m},m)});
 export function applyDeckReviewed(name:string,review:ReviewedApply,origin:string):Promise<DeckReceipt>{
  const e=sessions.get(name);
- const port:DeckOwnerPort<Staged>|null=e?{...portOf(e),edit:(s,t)=>editedDeckBytes(s.working!,e.state.summary!,parseDeck(t)),stage:b=>stageBytes(e,b),
+ const port:DeckOwnerPort<Staged>|null=e?{...portOf(e),edit:(s,t)=>singleRunEditBytes(s.working!,e.state.summary!,parseDeck(t)),stage:b=>stageBytes(e,b),
   commit:(st,before,after,o)=>{const token=`r${++receiptSeq}`;const undo=bounded([...e.state.undo,before]);const kept=undo.at(-1)===before;const revision=commitStaged(e,st,after,{undo,redo:[]});e.last=kept?{token,before,after}:undefined;return {revision,token,undoable:kept};}}:null;
  if(!port)return Promise.reject(Error('Deck is not open.'));
  return applyReviewed(port,review,origin);

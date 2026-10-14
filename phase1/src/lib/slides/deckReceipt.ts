@@ -32,18 +32,20 @@ export interface DeckOwnerPort<S> {
   fail(message:string):void;
 }
 export class ReceiptError extends Error {constructor(readonly code:'stale'|'busy'|'closed',message:string){super(message);}}
-export interface ReviewedApply {text:string;revision:number;identity:string;generation:number}
+/** `expectedText` is the deck the reviewer saw (stale check); `afterText` is the reviewed result (edit and readback). */
+export interface ReviewedApply {expectedText:string;afterText:string;revision:number;identity:string;generation:number}
 const blank=(s:DeckSnapshot,origin:string):DeckReceipt=>({status:'precommit',origin,identity:s.identity,generation:s.generation,beforeRevision:s.revision,afterRevision:null,historyDelta:0,undoable:false,readback:null,readbackMatches:null,notifyError:null,error:null,token:null});
 export function checkReviewed(s:DeckSnapshot|null,r:ReviewedApply):DeckSnapshot{
   if(!s||s.disposed)throw new ReceiptError('closed','Deck is not open.');
   if(s.busy)throw new ReceiptError('busy','Deck is busy.');
-  if(s.generation!==r.generation||s.identity!==r.identity||s.revision!==r.revision||s.text!==r.text||!s.working)throw new ReceiptError('stale','Deck changed since review.');
+  if(s.generation!==r.generation||s.identity!==r.identity||s.revision!==r.revision||s.text!==r.expectedText||!s.working)throw new ReceiptError('stale','Deck changed since review.');
   return s;
 }
 export async function applyReviewed<S>(port:DeckOwnerPort<S>,review:ReviewedApply,origin:string):Promise<DeckReceipt>{
   const s=checkReviewed(port.snapshot(),review),before=s.working!,r=blank(s,origin);
+  if(review.afterText===review.expectedText)return {...r,status:'noop',readback:s.text,readbackMatches:true};
   let after:Uint8Array;
-  try{after=port.edit(s,review.text);}catch(e){return {...r,error:String(e)};}
+  try{after=port.edit(s,review.afterText);}catch(e){return {...r,error:String(e)};}
   if(after.length===before.length&&after.every((v,i)=>v===before[i]))return {...r,status:'noop',readback:s.text,readbackMatches:true};
   port.setBusy(true);
   let staged:S;
@@ -70,7 +72,7 @@ export async function applyReviewed<S>(port:DeckOwnerPort<S>,review:ReviewedAppl
   try{readback=port.readback();}catch{readback=null;}
   try{await port.render();}catch(e){notifyError=notifyError??String(e);}
   port.setBusy(false);
-  return {...r,status:'applied',afterRevision:committed.revision,historyDelta:committed.undoable?1:0,undoable:committed.undoable,readback,readbackMatches:readback===null?null:readback===review.text,notifyError,token:committed.token||null};
+  return {...r,status:'applied',afterRevision:committed.revision,historyDelta:committed.undoable?1:0,undoable:committed.undoable,readback,readbackMatches:readback===null?null:readback===review.afterText,notifyError,token:committed.token||null};
 }
 export interface UndoPort<S> {
   snapshot():DeckSnapshot|null;

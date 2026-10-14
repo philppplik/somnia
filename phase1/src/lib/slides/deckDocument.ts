@@ -46,3 +46,10 @@ export function deckTextEdits(before:DeckDocument,after:DeckDocument,bytes:Uint8
  const runs=readRuns(bytes);return runs.filter(r=>before.slides[r.slide].texts[r.run].text!==after.slides[r.slide].texts[r.run].text).map(r=>({...r,old:r.text,text:after.slides[r.slide].texts[r.run].text}));
 }
 export function editedDeckBytes(bytes:Uint8Array,summary:DeckSummary,after:DeckDocument){const edits=deckTextEdits(readDeckDocument(bytes,summary),after,bytes);if(!edits.length)throw Error('Proposal makes no change.');return makeEditedCopy(bytes,edits);}
+
+/** Reviewed-apply edit: exactly one text run may differ from the current deck; anything else is refused before any write. */
+export function singleRunEditBytes(bytes:Uint8Array,summary:DeckSummary,after:DeckDocument){
+ const edits=deckTextEdits(readDeckDocument(bytes,summary),after,bytes);
+ if(edits.length!==1)throw Error(edits.length?'A reviewed edit must change exactly one text run.':'Proposal makes no change.');
+ return editedDeckBytes(bytes,summary,after);
+}
