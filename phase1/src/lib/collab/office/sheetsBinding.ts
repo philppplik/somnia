@@ -1,7 +1,7 @@
 import {openSheetsModel,parseCellKey,setSharedCell,type SheetsModel} from './sheetsModel';
 import {addressOf} from '../../sheets/format';
 /** The slice of the spreadsheet engine the binding drives. The real SheetsEngine satisfies it; tests inject a fake. */
-export interface SheetsEnginePort{set(sheet:number,address:string,input:string):Promise<unknown>}
+export interface SheetsEnginePort{set(sheet:number,address:string,input:string):Promise<unknown>;setValues?(sheet:number,row:number,col:number,values:string[][]):Promise<unknown>;clear?(sheet:number,row:number,col:number,rows:number,cols:number):Promise<unknown>}
 export interface SheetsBindingDeps{
  engine:SheetsEnginePort;
  /** shared sheet id -> live engine index; null while the tab list is not seeded yet. */
@@ -39,6 +39,18 @@ export class SheetsCollabBinding{
   const sheet=this.d.sheetIndexOf(sheetId);if(sheet===null)throw new Error('unknown sheet');
   await this.d.engine.set(sheet,addressOf(row,col),input);
   setSharedCell(this.model,sheetId,row,col,input,this.origin);}
+ /** Local paste block: one engine write, one shared transaction. */
+ async applyLocalBlock(sheetId:string,row:number,col:number,values:string[][]):Promise<void>{
+  const sheet=this.d.sheetIndexOf(sheetId);if(sheet===null)throw new Error('unknown sheet');
+  if(this.d.engine.setValues)await this.d.engine.setValues(sheet,row,col,values);
+  else for(let i=0;i<values.length;i++)for(let j=0;j<values[i].length;j++)await this.d.engine.set(sheet,addressOf(row+i,col+j),values[i][j]);
+  this.model.doc.transact(()=>{for(let i=0;i<values.length;i++)for(let j=0;j<values[i].length;j++)setSharedCell(this.model,sheetId,row+i,col+j,values[i][j],this.origin);},this.origin);}
+ /** Local clear of a rect: engine clear (formats stay), shared deletions in one transaction. */
+ async applyLocalClear(sheetId:string,r0:number,c0:number,r1:number,c1:number):Promise<void>{
+  const sheet=this.d.sheetIndexOf(sheetId);if(sheet===null)throw new Error('unknown sheet');
+  if(this.d.engine.clear)await this.d.engine.clear(sheet,r0,c0,r1-r0+1,c1-c0+1);
+  else for(let i=r0;i<=r1;i++)for(let j=c0;j<=c1;j++)await this.d.engine.set(sheet,addressOf(i,j),'');
+  this.model.doc.transact(()=>{for(let i=r0;i<=r1;i++)for(let j=c0;j<=c1;j++)setSharedCell(this.model,sheetId,i,j,'',this.origin);},this.origin);}
  /** Re-apply every shared cell of one sheet to the engine (after open or after a late seed). */
  replay(sheetId:string){
   const jobs:{sheetId:string;row:number;col:number;input:string}[]=[];

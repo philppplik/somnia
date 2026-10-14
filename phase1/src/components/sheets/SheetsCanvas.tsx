@@ -28,6 +28,10 @@ import {acquireSheetsSession,getSheetsSession,releaseSheetsSession,saveSheetsCop
 import {registerDocSaver} from '../../lib/workDocs';
 import {registerSheetsCommands,registerSheetsCommandController} from '../../lib/sheets/commands';
 import {openSheetsFormulasPanel} from './formulasHero';
+import {getCollab,onSessionChange} from '../../lib/collab/session';
+import {shareSheetsFile,adoptSheetsFile} from '../../lib/collab/office/officeSession';
+import {openSheetsModel,sheetsModelMeta,sharedSheetList,type SheetsModel} from '../../lib/collab/office/sheetsModel';
+import {SheetsCollabBinding} from '../../lib/collab/office/sheetsBinding';
 import {setSheetsSelection} from '../../lib/sheets/sheetsStore';
 const HEAD_W=48,HEAD_H=24;
 type Phase={kind:'loading'}|{kind:'error';message:string}|{kind:'ready'};
@@ -54,6 +58,34 @@ function Workbook({item}:{item:MediaItem}){
   sess.ready.then(opened=>{if(!live)return;original.current=sess.original;setBook(sess.book??opened);setPhase({kind:'ready'});}).catch(e=>{if(!live)return;reportError('sheets.open',e,{context:{studio:'sheets',file:item.name}});setPhase({kind:'error',message:e instanceof Error?e.message:String(e)});});
   return()=>{live=false;offRead();engine.current=null;session.current=null;setSheetsSelection(null);};},[item.url,item.name]);
  // Sheet info (used range, history flags) after open, sheet switch and every edit.
+ // Collab: while a session shares this workbook, edits route through the shared model (concept 3.2).
+ const collab=useRef<{binding:SheetsCollabBinding;model:SheetsModel}|null>(null);
+ useEffect(()=>{if(phase.kind!=='ready'||!original.current||!book)return;
+  let disposed=false;
+  const finish=(m:SheetsModel)=>{
+   const eng=engine.current;if(!eng||disposed)return;
+   const names=sharedSheetList(m);
+   const binding=new SheetsCollabBinding(m.doc,item.name,{engine:eng,sheetIndexOf:id=>names.findIndex(x=>x.id===id)});
+   for(const sh of names)binding.replay(sh.id);
+   collab.current={binding,model:m};setRev(x=>x+1);};
+  const attach=async()=>{
+   const c=getCollab();if(!c||disposed||collab.current)return;
+   const bytes=original.current;if(!bytes)return;
+   if(sheetsModelMeta(openSheetsModel(c.doc,item.name))){
+    const ad=await adoptSheetsFile(c.doc,item.name,bytes);
+    if(!ad.ok||disposed)return;
+    finish(ad.model);
+   }else{
+    const m=await shareSheetsFile(c.doc,item.name,bytes,book.sheets.map(x=>x.name));
+    if(!disposed)finish(m);}};
+  void attach();
+  const off=onSessionChange(()=>{if(!getCollab()){collab.current?.binding.destroy();collab.current=null;}else void attach();});
+  return()=>{disposed=true;off();collab.current?.binding.destroy();collab.current=null;};},[phase,book,item.name]);
+ /** Collab route: edit through the shared model when a session is live; returns false to fall back to the plain engine call. */
+ const collabEdit=async(fn:(b:SheetsCollabBinding,sheetId:string)=>Promise<void>):Promise<boolean>=>{
+  const c=collab.current;if(!c)return false;
+  const id=sharedSheetList(c.model)[sheet]?.id;if(!id)return false;
+  await fn(c.binding,id);return true;};
  useEffect(()=>{if(phase.kind!=='ready')return;let live=true;engine.current?.info(sheet).then(i=>{if(live)setInfo(i);}).catch(fail);return()=>{live=false;};},[phase,sheet,rev,fail]);
  useEffect(()=>{if(phase.kind!=='ready')return;let live=true;engine.current?.layout(sheet).then(l=>{if(live)setLayout(l);}).catch(fail);return()=>{live=false;};},[phase,sheet,fail,rev]);
  const totalRows=Math.min(MAX_ROWS,Math.max(100,(info?.rows??0)+50,sel.row+50)),totalCols=Math.min(MAX_COLS,Math.max(26,(info?.cols??0)+6,sel.col+6));
@@ -71,7 +103,7 @@ function Workbook({item}:{item:MediaItem}){
  const commit=async(input:string)=>{
   setDraft(null);if(new TextEncoder().encode(input).length>MAX_CELL_BYTES){setNotice(t('sheets.tooLong'));return;}
   const before=editText(cur?.value,cur?.formula);if(input===before)return;
-  try{await engine.current!.set(sheet,address,input);setDirty(true);setNotice('');setRev(r=>r+1);}catch(e){fail(e);}};
+  try{if(!await collabEdit((b,id)=>b.applyLocalEdit(id,sel.row,sel.col,input)))await engine.current!.set(sheet,address,input);setDirty(true);setNotice('');setRev(r=>r+1);}catch(e){fail(e);}};
  const move=(dr:number,dc:number,extend=false)=>{const s=extend?(ext??sel):sel;let row=s.row,col=s.col;const step=(v:number,d:number,max:number,size:(i:number)=>number)=>{let n=v;for(let k=0;k<max&&d!==0;k++){const t=n+d;if(t<0||t>=max)break;n=t;if(size(t)>0)break;}return n;};
    row=step(row,dr,totalRows,r=>geo.rowHeight(r));col=step(col,dc,totalCols,c=>geo.colWidth(c));
    const next={row,col};const el=scroller.current;if(el){const top=geo.rowTop(row),left=geo.colLeft(col),h=geo.rowHeight(row),w=geo.colWidth(col);if(top<el.scrollTop)el.scrollTop=top;else if(top+h>el.scrollTop+el.clientHeight-HEAD_H)el.scrollTop=top+h-el.clientHeight+HEAD_H;if(left<el.scrollLeft)el.scrollLeft=left;else if(left+w>el.scrollLeft+el.clientWidth-HEAD_W)el.scrollLeft=left+w-el.clientWidth+HEAD_W;}if(extend)setExt(next);else{setSel(next);setExt(null);}};
@@ -105,7 +137,7 @@ function Workbook({item}:{item:MediaItem}){
   try{await engine.current!.freeze(sheet,rows,cols);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
  const toggleFormat=(kind:ToggleKind)=>{void applyFormat(toggleOp(kind,cur?.style)).catch(()=>undefined);};
  const panelOperations=useRef<SheetsPanelController>(null!);
- panelOperations.current={ready:()=>phase.kind==='ready'&&!!engine.current&&!engine.current.isDisposed,navigate:async(sheetIndex,targetAddress)=>{const target=parseAddress(targetAddress);if(!target||!book?.sheets.some(s=>s.index===sheetIndex&&s.visibility==='Visible'))throw Error('Invalid sheet or cell.');if(draftRef.current!==null)await commit(draftRef.current);setSheet(sheetIndex);setSel(target);setExt(null);setDraft(null);},setCell:async input=>{if(new TextEncoder().encode(input).length>MAX_CELL_BYTES)throw Error('Cell input is too long.');const eng=engine.current!;await eng.set(sheet,address,input);setDraft(null);setDirty(true);setNotice('');setRev(r=>r+1);},formatCells:async op=>{await applyFormat(op);},resizeLines:async(axis,op)=>{await applyLines(axis,op);},editLines:async(axis,kind)=>{await applyEdit(axis,kind);},freezePanes:async(rows,cols)=>{await applyFreeze(rows,cols);},editSheet:async op=>{await applySheet(op);},sortRange:async op=>{await applySort(op);},filterRows:async op=>{await applyFilter(op);},readRange:async(input)=>{const r=parsePanelRange(input);if(!r)throw Error('Invalid range.');return (await engine.current!.range(sheet,r.r0,r.c0,r.r1-r.r0+1,r.c1-r.c0+1)).cells;}};
+ panelOperations.current={ready:()=>phase.kind==='ready'&&!!engine.current&&!engine.current.isDisposed,navigate:async(sheetIndex,targetAddress)=>{const target=parseAddress(targetAddress);if(!target||!book?.sheets.some(s=>s.index===sheetIndex&&s.visibility==='Visible'))throw Error('Invalid sheet or cell.');if(draftRef.current!==null)await commit(draftRef.current);setSheet(sheetIndex);setSel(target);setExt(null);setDraft(null);},setCell:async input=>{if(new TextEncoder().encode(input).length>MAX_CELL_BYTES)throw Error('Cell input is too long.');if(!await collabEdit((b,id)=>b.applyLocalEdit(id,sel.row,sel.col,input)))await engine.current!.set(sheet,address,input);setDraft(null);setDirty(true);setNotice('');setRev(r=>r+1);},formatCells:async op=>{await applyFormat(op);},resizeLines:async(axis,op)=>{await applyLines(axis,op);},editLines:async(axis,kind)=>{await applyEdit(axis,kind);},freezePanes:async(rows,cols)=>{await applyFreeze(rows,cols);},editSheet:async op=>{await applySheet(op);},sortRange:async op=>{await applySort(op);},filterRows:async op=>{await applyFilter(op);},readRange:async(input)=>{const r=parsePanelRange(input);if(!r)throw Error('Invalid range.');return (await engine.current!.range(sheet,r.r0,r.c0,r.r1-r.r0+1,r.c1-r.c0+1)).cells;}};
  useEffect(()=>registerSheetsPanelController({ready:()=>panelOperations.current.ready(),navigate:(...args)=>panelOperations.current.navigate(...args),setCell:input=>panelOperations.current.setCell(input),readRange:input=>panelOperations.current.readRange(input),formatCells:op=>panelOperations.current.formatCells(op),resizeLines:(axis,op)=>panelOperations.current.resizeLines(axis,op),editLines:(axis,kind)=>panelOperations.current.editLines(axis,kind),freezePanes:(rows,cols)=>panelOperations.current.freezePanes(rows,cols),editSheet:op=>panelOperations.current.editSheet(op),sortRange:op=>panelOperations.current.sortRange(op),filterRows:op=>panelOperations.current.filterRows(op)}),[]);
  useEffect(()=>{if(phase.kind!=='ready')return;const el=scroller.current;if(!el)return;const top=geo.rowTop(sel.row),left=geo.colLeft(sel.col);if(top<el.scrollTop||top+geo.rowHeight(sel.row)>el.scrollTop+el.clientHeight-HEAD_H)el.scrollTop=Math.max(0,top);if(left<el.scrollLeft||left+geo.colWidth(sel.col)>el.scrollLeft+el.clientWidth-HEAD_W)el.scrollLeft=Math.max(0,left);},[sel.row,sel.col,sheet,geo,phase.kind]);
  const readRange=async()=>{if(rectCells(range)>MAX_READ_CELLS){setNotice(t('sheets.rangeTooLarge'));return null;}
@@ -113,7 +145,7 @@ function Workbook({item}:{item:MediaItem}){
   return Array.from({length:range.r1-range.r0+1},(_,i)=>Array.from({length:range.c1-range.c0+1},(_,j)=>displayValue(m.get(addressOf(range.r0+i,range.c0+j))?.value)));};
  const clearRange=async()=>{if(!multi){await commit('');return;}
   if(rectCells(range)>MAX_READ_CELLS){setNotice(t('sheets.rangeTooLarge'));return;}
-  try{await engine.current!.clear(sheet,range.r0,range.c0,range.r1-range.r0+1,range.c1-range.c0+1);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);}};
+  try{if(!await collabEdit((b,id)=>b.applyLocalClear(id,range.r0,range.c0,range.r1,range.c1)))await engine.current!.clear(sheet,range.r0,range.c0,range.r1-range.r0+1,range.c1-range.c0+1);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);}};
  const onCopy=(e:ClipboardEvent<HTMLDivElement>,cut:boolean)=>{if(draft!==null||phase.kind!=='ready')return;e.preventDefault();
   if(rectCells(range)>MAX_READ_CELLS){setNotice(t('sheets.rangeTooLarge'));return;}
   const after=(rows:string[][])=>{const text=toTsv(rows);return text;};
@@ -125,7 +157,7 @@ function Workbook({item}:{item:MediaItem}){
   const plan=planPaste({row:range.r0,col:range.c0},data,MAX_CELL_BYTES);if(!plan.ok){if(plan.reason!=='empty')setNotice(t(plan.reason==='tooLong'?'sheets.tooLong':'sheets.rangeTooLarge'));return;}
   const {rect,values}=plan;
   // One engine call = one undo step; a rejected block (bad formula, limits) changes nothing.
-  void (async()=>{try{await engine.current!.setValues(sheet,rect.r0,rect.c0,values);
+  void (async()=>{try{if(!await collabEdit((b,id)=>b.applyLocalBlock(id,rect.r0,rect.c0,values)))await engine.current!.setValues(sheet,rect.r0,rect.c0,values);
    setSel({row:rect.r0,col:rect.c0});setExt(rectCells(rect)>1?{row:rect.r1,col:rect.c1}:null);setDirty(true);setNotice('');setRev(x=>x+1);}catch(err){fail(err);}})();};
  const onGridKey=(e:KeyboardEvent)=>{
   if(draft!==null)return;

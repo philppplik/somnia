@@ -57,3 +57,14 @@ test('clearing a cell remotely deletes it in the engine',async()=>{
  assert.equal(b.engine.cells.has('0!F6'),false);
  a.binding.destroy();b.binding.destroy();
 });
+
+test('paste block: one shared transaction, every cell in engine and model',async()=>{
+ const a=setup('a'),b=join(a);sync(a.d,b.d);
+ const id=sharedSheetList(a.m)[0].id;
+ await a.binding.applyLocalBlock(id,2,1,[['1','2'],['3','4']]);
+ assert.equal(a.engine.cells.get('0!B3'),'1');assert.equal(a.engine.cells.get('0!C4'),'4');
+ assert.equal(sharedCellsFor(a.m,id).length,4);
+ sync(a.d,b.d);await flush();
+ assert.equal(b.engine.cells.get('0!B3'),'1');assert.equal(b.engine.cells.get('0!C4'),'4');
+ a.binding.destroy();b.binding.destroy();
+});
