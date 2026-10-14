@@ -123,6 +123,7 @@ export function ObjectSection(_:InspectorSectionProps){
     <p className="m-0 text-xs text-ink-3">{t('studio3d.texture.note')}</p></fieldset>
   </fieldset>}
   {s.bones.length>0&&o.kind==='mesh'&&<SkinningFields id={o.id} skinned={o.skinned}/>}
+  {s.bones.length>0&&(o.kind==='bone'||o.skinned)&&<PoseFields id={o.id}/>}
   <div className="flex gap-2"><Button variant="outline" onClick={()=>void executeCommand('studio3d.object.duplicate',{id:o.id})}>{t('studio3d.object.duplicate')}</Button>
    <Button variant="outline" onClick={()=>void executeCommand('studio3d.object.delete',{id:o.id})}>{t('studio3d.object.delete')}</Button></div>
  </div>;
@@ -156,6 +157,27 @@ function SkinningFields({id,skinned}:{id:number;skinned:boolean}){
      <NativeInput type="range" min={0.01} max={1} step={0.01} value={s.weightBrush.strength} aria-label={t('studio3d.skinning.strength')} onChange={e=>void executeCommand('studio3d.skin.brush',{strength:Number(e.currentTarget.value)})}/></label>
     <NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={s.weightBrush.falloff} aria-label={t('studio3d.skinning.falloff')} onChange={e=>void executeCommand('studio3d.skin.brush',{falloff:e.currentTarget.value})}>
      {(['smooth','linear','constant'] as const).map(f=><option key={f} value={f}>{t('studio3d.skinning.falloff.'+f)}</option>)}</NativeSelect></>}</>}
+ </fieldset>;
+}
+/** Pose library of the selected rig: save, apply, mirror, remove and blend poses. */
+function PoseFields({id}:{id:number}){
+ const {t}=useT();const s=useStudio3D();
+ const [name,setName]=useState('');const [a,setA]=useState('');const [b,setB]=useState('');const [k,setK]=useState(0.5);
+ const poseOptions=(value:string,set:(v:string)=>void,label:string)=><NativeSelect className="min-w-0 flex-1 rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={value} aria-label={label} onChange={e=>set(e.currentTarget.value)}>
+  <option value="">{t('studio3d.pose.pick')}</option>{s.poses.map(p=><option key={p.name} value={p.name}>{p.name}</option>)}</NativeSelect>;
+ return <fieldset className="m-0 grid gap-2 border-0 p-0" data-testid="studio3d-poses"><legend className="text-xs text-ink-3">{t('studio3d.pose.title')}</legend>
+  <div className="flex gap-1"><NativeInput className="min-w-0 flex-1 rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={name} maxLength={80} placeholder={t('studio3d.pose.name')} aria-label={t('studio3d.pose.name')} onChange={e=>setName(e.currentTarget.value)}/>
+   <Button variant="outline" disabled={!name.trim()} onClick={()=>{void executeCommand('studio3d.pose.save',{id,name});setName('');}}>{t('studio3d.pose.save')}</Button></div>
+  {s.poses.length===0?<p className="m-0 text-xs text-ink-3">{t('studio3d.pose.empty')}</p>:
+   <ul className="m-0 grid list-none gap-1 p-0">{s.poses.map(p=><li key={p.name} className="flex flex-wrap items-center gap-1 text-xs text-ink-2"><span className="min-w-0 flex-1 truncate">{p.name}</span>
+    <Button variant="outline" onClick={()=>void executeCommand('studio3d.pose.apply',{id,name:p.name})}>{t('studio3d.pose.apply')}</Button>
+    <Button variant="outline" onClick={()=>void executeCommand('studio3d.pose.mirror',{id,name:p.name})}>{t('studio3d.pose.mirror')}</Button>
+    <Button variant="outline" aria-label={`${t('studio3d.pose.remove')} ${p.name}`} onClick={()=>void executeCommand('studio3d.pose.remove',{id,name:p.name})}>{t('studio3d.pose.remove')}</Button></li>)}</ul>}
+  {s.poses.length>=2&&<>
+   <div className="flex gap-1">{poseOptions(a,setA,t('studio3d.pose.blendA'))}{poseOptions(b,setB,t('studio3d.pose.blendB'))}</div>
+   <label className="grid gap-1 text-xs text-ink-2">{t('studio3d.pose.mix')} <span className="text-ink-3">{k.toFixed(2)}</span>
+    <NativeInput type="range" min={0} max={1} step={0.05} value={k} aria-label={t('studio3d.pose.mix')} onChange={e=>setK(Number(e.currentTarget.value))}/></label>
+   <Button variant="outline" disabled={!a||!b||a===b} onClick={()=>void executeCommand('studio3d.pose.blend',{id,a,b,t:k})}>{t('studio3d.pose.blend')}</Button></>}
  </fieldset>;
 }
 export function ViewSection(_:InspectorSectionProps){

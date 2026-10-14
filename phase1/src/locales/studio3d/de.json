@@ -366,5 +366,22 @@
  "studio3d.model.bones": "Knochen",
  "studio3d.model.memory": "Speicher (ca.)",
  "studio3d.warn.highGeometryMemory": "Geometrie belegt etwa {mb} MB, über {limit} MB.",
- "studio3d.warn.manyBones": "{count} Knochen, über {limit}. Skinning und Wiedergabe können langsam werden."
+ "studio3d.warn.manyBones": "{count} Knochen, über {limit}. Skinning und Wiedergabe können langsam werden.",
+ "cmd.studio3d.pose.save": "Aktuelle Pose speichern",
+ "cmd.studio3d.pose.apply": "Gespeicherte Pose anwenden",
+ "cmd.studio3d.pose.remove": "Gespeicherte Pose entfernen",
+ "cmd.studio3d.pose.mirror": "Gespiegelte Pose anwenden",
+ "cmd.studio3d.pose.blend": "Zwei Posen mischen und anwenden",
+ "studio3d.pose.title": "Posen",
+ "studio3d.pose.name": "Posenname",
+ "studio3d.pose.save": "Speichern",
+ "studio3d.pose.apply": "Anwenden",
+ "studio3d.pose.mirror": "Spiegeln",
+ "studio3d.pose.remove": "Entfernen",
+ "studio3d.pose.blend": "Mischen",
+ "studio3d.pose.blendA": "Erste Pose",
+ "studio3d.pose.blendB": "Zweite Pose",
+ "studio3d.pose.mix": "Mischungsgrad",
+ "studio3d.pose.pick": "Pose wählen",
+ "studio3d.pose.empty": "Noch keine Posen gespeichert."
 }

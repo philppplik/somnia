@@ -10,6 +10,7 @@ import {KEY_PATHS,KEY_STRIDE,ClipError,MAX_CLIPS,MAX_KEYS_PER_TRACK,DEFAULT_CLIP
 import {mergeTransform,DEFAULT_TRANSFORM,UvError,type TextureTransform} from './uv';
 import {textureBytes} from './validate';
 import {smoothWeights,rigidWeights,paintWeights,SkinError,type BoneSegment,type SkinWeights,type BrushSettings} from './skinning';
+import {checkPoseName,mirrorPose,blendPoses,PoseError,MAX_POSES} from './poses';import type {Pose,PoseBone} from './poses';
 import {emptyStats,type ModelStats,type OutlineEntry,type Bounds} from './model';
 /**
  * Scene operations for the 3D studio (P1 staging). Pure three.js core, no renderer and no DOM, so the logic runs under tsx --test.
@@ -123,6 +124,7 @@ interface Entry{label:string;undo():void;redo():void;/** Edits with the same gro
 export class Stage{
  readonly root=new THREE.Group();
  private entries:Entry[]=[];private cursor=0;private saved=0;private listeners=new Set<()=>void>();private revision=0;
+ /** Pose libraries, keyed by the id of the rig's root bone. */private poseLibs=new Map<number,Pose[]>();
  constructor(){this.root.name='model';}
  onChange(l:()=>void){this.listeners.add(l);return()=>{this.listeners.delete(l);};}
  private emit(){this.revision++;this.listeners.forEach(l=>l());}
@@ -145,7 +147,7 @@ export class Stage{
   this.clear();if(model)this.root.add(model);this.emit();
  }
  clear(){
-  this.bakedCache.clear();this.clipList=[];this.clipRevision++;
+  this.bakedCache.clear();this.clipList=[];this.clipRevision++;this.poseLibs.clear();
   for(const c of [...this.root.children]){this.root.remove(c);disposeObject(c);}
   for(const e of this.entries)e.release?.();this.entries=[];this.cursor=0;this.saved=0;this.emit();
  }
@@ -471,6 +473,51 @@ export class Stage{
   walk(this.root,false,0);return out;
  }
  isBone(id:number):boolean{const o=this.find(id);return !!(o&&(o as THREE.Bone).isBone);}
+ /** Resolves a bone or skinned mesh id to the root bone of its rig. */
+ private rigOf(id:number):THREE.Bone{
+  const o=this.need(id);let b:THREE.Object3D|null=null;
+  if((o as THREE.Bone).isBone)b=o;
+  else if((o as THREE.SkinnedMesh).isSkinnedMesh)b=(o as THREE.SkinnedMesh).skeleton.bones[0]??null;
+  if(!b)throw new PoseError('Select a bone or a skinned mesh first.');
+  while(b.parent&&(b.parent as THREE.Bone).isBone)b=b.parent;
+  return b as THREE.Bone;
+ }
+ private poseLib(root:THREE.Bone):Pose[]{let l=this.poseLibs.get(root.id);if(!l){l=[];this.poseLibs.set(root.id,l);}return l;}
+ private needPose(root:THREE.Bone,name:string):Pose{const p=this.poseLib(root).find(x=>x.name===name);if(!p)throw new PoseError(`There is no pose named "${name}" on this rig.`);return p;}
+ /** Poses of the rig this object belongs to (name and bone count, for the panel). */
+ poseList(id:number):{name:string;bones:number}[]{try{return this.poseLib(this.rigOf(id)).map(p=>({name:p.name,bones:Object.keys(p.bones).length}));}catch{return [];}}
+ private captureLocals(chain:THREE.Bone[]):PoseBone[]{return chain.map(b=>({p:b.position.toArray() as [number,number,number],q:b.quaternion.toArray() as [number,number,number,number],s:b.scale.toArray() as [number,number,number]}));}
+ private restoreLocals(chain:THREE.Bone[],rows:PoseBone[]){chain.forEach((b,i)=>{const r=rows[i];if(!r)return;b.position.fromArray(r.p as number[]);b.quaternion.fromArray(r.q as number[]);b.scale.fromArray(r.s as number[]);});this.root.updateMatrixWorld(true);}
+ private applyPoseRecord(chain:THREE.Bone[],bones:Record<string,PoseBone>){for(const b of chain){const r=bones[b.name];if(!r)continue;b.position.fromArray(r.p as number[]);b.quaternion.fromArray(r.q as number[]);b.scale.fromArray(r.s as number[]);}this.root.updateMatrixWorld(true);}
+ /** Applies a pose record to the rig as one undo step. */
+ private poseSet(id:number,label:string,bones:Record<string,PoseBone>){
+  const root=this.rigOf(id);const chain=this.boneChain(root);const before=this.captureLocals(chain);
+  this.applyPoseRecord(chain,bones);
+  this.push({label,undo:()=>this.restoreLocals(chain,before),redo:()=>this.applyPoseRecord(chain,bones)});this.emit();
+ }
+ /** Saves the rig's current pose under a name. One undo step. */
+ poseSave(id:number,name:string){
+  const root=this.rigOf(id);const lib=this.poseLib(root);
+  if(lib.length>=MAX_POSES)throw new PoseError(`A rig keeps at most ${MAX_POSES} poses.`);
+  const n=checkPoseName(name,lib.map(p=>p.name));
+  const chain=this.boneChain(root);const bones:Record<string,PoseBone>={};
+  chain.forEach((b,i)=>{bones[b.name]=this.captureLocals(chain)[i];});
+  const at=lib.length;lib.push({name:n,bones});
+  this.push({label:`Save pose ${n}`,undo:()=>{lib.splice(at,1);},redo:()=>{lib.splice(at,0,{name:n,bones});}});this.emit();
+ }
+ /** Applies a saved pose. One undo step. */
+ poseApply(id:number,name:string){const root=this.rigOf(id);this.poseSet(id,`Pose ${name}`,this.needPose(root,name).bones);}
+ /** Applies the L/R mirror of a saved pose (name pairs like Arm.L/Arm.R or LeftArm/RightArm swap). One undo step. */
+ poseMirror(id:number,name:string){const root=this.rigOf(id);this.poseSet(id,`Mirror pose ${name}`,mirrorPose(this.needPose(root,name)).bones);}
+ /** Blends two saved poses (t=0 is a, t=1 is b) and applies the mix. One undo step. */
+ poseBlend(id:number,a:string,b:string,t:number){const root=this.rigOf(id);this.poseSet(id,`Blend ${a} and ${b}`,blendPoses(this.needPose(root,a),this.needPose(root,b),t).bones);}
+ /** Removes a saved pose. One undo step. */
+ poseRemove(id:number,name:string){
+  const root=this.rigOf(id);const lib=this.poseLib(root);const at=lib.findIndex(p=>p.name===name);
+  if(at<0)throw new PoseError(`There is no pose named "${name}" on this rig.`);
+  const[gone]=lib.splice(at,1);
+  this.push({label:`Remove pose ${name}`,undo:()=>{lib.splice(at,0,gone);},redo:()=>{lib.splice(at,1);}});this.emit();
+ }
  /** Only rotation keys can be authored on bones. Tracks that a file already carries (translation, scale) still play and export, but are not key-editable here. */
  private keyPathFor(node:THREE.Object3D,path:KeyPath){
   if((node as THREE.Bone).isBone&&path!=='rotation')throw new ClipError('Bones take rotation keys only.');
@@ -790,7 +837,7 @@ export class Stage{
   this.root.updateMatrixWorld(true);
   return before;
  }
- private poseApply(rows:{bone:THREE.Bone;p:THREE.Vector3;q:THREE.Quaternion;s:THREE.Vector3}[]){for(const r of rows){r.bone.position.copy(r.p);r.bone.quaternion.copy(r.q);r.bone.scale.copy(r.s);}this.root.updateMatrixWorld(true);}
+ private poseApplyRows(rows:{bone:THREE.Bone;p:THREE.Vector3;q:THREE.Quaternion;s:THREE.Vector3}[]){for(const r of rows){r.bone.position.copy(r.p);r.bone.quaternion.copy(r.q);r.bone.scale.copy(r.s);}this.root.updateMatrixWorld(true);}
  /** Recomputes the weights of an already skinned mesh against its current skeleton: smooth falloff, or rigid as the reset-to-nearest-joint bind. Posed joints are reset to the bind pose first, inside the same undo step. Returns true when a pose was reset. One undo step. */
  skinRebind(id:number,mode:'smooth'|'rigid'):boolean{
   const o=this.need(id);const mesh=o as THREE.SkinnedMesh;
@@ -804,7 +851,7 @@ export class Stage{
   const afterI=new THREE.Uint16BufferAttribute(w.indices,4),afterW=new THREE.Float32BufferAttribute(w.weights,4);
   let owned=true;const apply=(i:THREE.BufferAttribute,wt:THREE.BufferAttribute)=>{geo.setAttribute('skinIndex',i);geo.setAttribute('skinWeight',wt);};
   apply(afterI,afterW);
-  this.push({label:`Weights of ${o.name}`,undo:()=>{apply(beforeI,beforeW);if(poseBefore)this.poseApply(poseBefore);owned=false;},redo:()=>{apply(afterI,afterW);if(poseAfter)this.poseApply(poseAfter);owned=true;},release:()=>{(owned?beforeI:afterI).dispose?.();(owned?beforeW:afterW).dispose?.();}});
+  this.push({label:`Weights of ${o.name}`,undo:()=>{apply(beforeI,beforeW);if(poseBefore)this.poseApplyRows(poseBefore);owned=false;},redo:()=>{apply(afterI,afterW);if(poseAfter)this.poseApplyRows(poseAfter);owned=true;},release:()=>{(owned?beforeI:afterI).dispose?.();(owned?beforeW:afterW).dispose?.();}});
   this.emit();return poseBefore!==null;
  }
  /** Weight painting: one stroke is one undo step. skinPaintStart snapshots the attributes, skinPaint dabs, skinPaintEnd closes the stroke. */

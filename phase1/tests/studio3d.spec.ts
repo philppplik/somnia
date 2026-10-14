@@ -49,7 +49,7 @@ test('3D studio refuses a file that is not glTF with a readable error',async({pa
 /** Helpers for the scene tests below. They drive the real app through its command layer (dev build) and read the studio session. */
 type P=import('@playwright/test').Page;
 const run=(page:P,id:string,params:unknown={})=>page.evaluate(async([i,p])=>{const m=await import('/src/lib/commands.ts');return (await m.executeCommand(i as string,p)) as unknown;},[id,params] as const);
-const session=(page:P)=>page.evaluate(async()=>{const m=await import('/src/lib/studio3d/session.ts');const s=m.getStudio3DState();return {anim:s.anim,clips:s.clips,clipKeys:s.clipKeys,outline:s.outline,marked:s.marked,selected:s.selected,info:s.selectedInfo,dirty:s.dirty,notice:s.notice,status:s.status,name:s.name,bones:s.bones,weightPreview:s.weightPreview,stats:s.stats,exportClips:s.exportClips};});
+const session=(page:P)=>page.evaluate(async()=>{const m=await import('/src/lib/studio3d/session.ts');const s=m.getStudio3DState();return {anim:s.anim,clips:s.clips,clipKeys:s.clipKeys,outline:s.outline,marked:s.marked,selected:s.selected,info:s.selectedInfo,dirty:s.dirty,notice:s.notice,status:s.status,name:s.name,bones:s.bones,weightPreview:s.weightPreview,stats:s.stats,exportClips:s.exportClips,poses:s.poses};});
 const open3d=async(page:P)=>{await page.goto('/');await page.getByRole('button',{name:/3D/}).first().click();};
 const blank=async(page:P)=>{await open3d(page);await page.getByTestId('3d-create-blank').click();await expect(page.getByTestId('studio3d-viewport')).toBeVisible();};
 const insert=async(page:P,kind:string,x:number)=>{await run(page,'studio3d.insert.primitive',{kind});const s=await session(page);const id=s.selected as number;await run(page,'studio3d.object.transform',{id,position:{x,y:0,z:0}});return id;};
@@ -433,4 +433,33 @@ test('3D studio opens an OBJ, picks export clips and exports glTF textures as a 
  // An unknown clip name refuses with a notice instead of throwing.
  await run(page,'studio3d.export.gltf',{clips:['Nope']});
  await expect(page.getByRole('alert')).toBeVisible();
+});
+
+test('3D studio saves, blends and undoes poses on a rig',async({page})=>{
+ const glb=await skinnedGlb();
+ await open3d(page);
+ await page.getByTestId('studio3d-file-input').setInputFiles({name:'rig.glb',mimeType:'model/gltf-binary',buffer:glb});
+ await expect(page.getByTestId('studio3d-viewport')).toBeVisible({timeout:20_000});
+ await expect(page.getByTestId('studio3d-skeleton')).toBeVisible();
+ // A selected bone shows the pose library of its rig.
+ await page.getByLabel('Bone').selectOption({index:1});
+ await expect.poll(async()=>(await session(page)).info?.kind).toBe('bone');
+ const bone=(await session(page)).selected as number;
+ const poses=page.getByTestId('studio3d-poses');
+ await expect(poses).toBeVisible();
+ await expect(poses).toContainText('No poses saved yet.');
+ // Save two poses through the panel.
+ await poses.getByLabel('Pose name').fill('Rest');await poses.getByRole('button',{name:'Save'}).click();
+ await poses.getByLabel('Pose name').fill('Bent');await poses.getByRole('button',{name:'Save'}).click();
+ await expect.poll(async()=>(await session(page)).poses.map(p=>p.name)).toEqual(['Rest','Bent']);
+ // Apply and blend run through the command surface; mirror works on any saved pose.
+ expect(await run(page,'studio3d.pose.apply',{id:bone,name:'Rest'})).not.toBe(false);
+ expect(await run(page,'studio3d.pose.blend',{id:bone,a:'Rest',b:'Bent',t:0.5})).not.toBe(false);
+ expect(await run(page,'studio3d.pose.mirror',{id:bone,name:'Bent'})).not.toBe(false);
+ // A pose name that does not exist refuses with a notice instead of throwing.
+ await run(page,'studio3d.pose.apply',{id:bone,name:'Nope'});
+ await expect(page.getByRole('alert')).toBeVisible();
+ // Undoing empties the library again (mirror, blend, apply and both saves are one step each).
+ for(let i=0;i<8&&(await session(page)).poses.length>0;i++)await run(page,'studio3d.undo');
+ await expect.poll(async()=>(await session(page)).poses.length).toBe(0);
 });

@@ -366,5 +366,22 @@
  "studio3d.model.bones": "Bones",
  "studio3d.model.memory": "Memory (est.)",
  "studio3d.warn.highGeometryMemory": "Geometry uses about {mb} MB, above {limit} MB.",
- "studio3d.warn.manyBones": "{count} bones, above {limit}. Skinning and playback may be slow."
+ "studio3d.warn.manyBones": "{count} bones, above {limit}. Skinning and playback may be slow.",
+ "cmd.studio3d.pose.save": "Save the current pose",
+ "cmd.studio3d.pose.apply": "Apply a saved pose",
+ "cmd.studio3d.pose.remove": "Remove a saved pose",
+ "cmd.studio3d.pose.mirror": "Apply the mirrored pose",
+ "cmd.studio3d.pose.blend": "Blend two poses and apply the mix",
+ "studio3d.pose.title": "Poses",
+ "studio3d.pose.name": "Pose name",
+ "studio3d.pose.save": "Save",
+ "studio3d.pose.apply": "Apply",
+ "studio3d.pose.mirror": "Mirror",
+ "studio3d.pose.remove": "Remove",
+ "studio3d.pose.blend": "Blend",
+ "studio3d.pose.blendA": "First pose",
+ "studio3d.pose.blendB": "Second pose",
+ "studio3d.pose.mix": "Blend amount",
+ "studio3d.pose.pick": "Pick a pose",
+ "studio3d.pose.empty": "No poses saved yet."
 }

@@ -140,7 +140,7 @@ export default function Viewport3D(){
    const sel=getStudio3DState().selected;const info=sel==null?null:stage.info(sel);
    const infos=clipInfos();const an=getStudio3DState().anim;const keys=sel==null||!infos[an.clip]?[]:stage.keysOf(an.clip,sel);
    if(an.clip>=infos.length&&an.clip>0){stopAnim();patchStudio3D({anim:{clip:0,playing:false,time:0,loop:true,speed:1,range:null}});}
-   patchStudio3D({clips:infos,clipKeys:keys,stats:m.stats,outline:m.outline,bones:stage.bones(),bounds:m.bounds,selected:info?sel:null,selectedInfo:info,dirty:stage.dirty,canUndo:stage.canUndo,canRedo:stage.canRedo,undoLabel:stage.undoLabel});
+   patchStudio3D({clips:infos,clipKeys:keys,stats:m.stats,outline:m.outline,bones:stage.bones(),bounds:m.bounds,selected:info?sel:null,selectedInfo:info,poses:sel==null?[]:stage.poseList(sel),dirty:stage.dirty,canUndo:stage.canUndo,canRedo:stage.canRedo,undoLabel:stage.undoLabel});
    drawSelection();applyWire(getStudio3DState().wireframe);syncSkeleton();syncWeightPreview();for(const h of syncHooks)h();invalidate();
   };
   const offStage=stage.onChange(()=>{if(!disposed)sync();});
@@ -604,6 +604,13 @@ export default function Viewport3D(){
    }
    patchStudio3D({weightBrush:next});syncWeightPreview();invalidate();
   };
+  const poseTarget=():number=>{const sel=getStudio3DState().selected;if(sel==null)throw Object.assign(new Error('Select a bone or a skinned mesh first.'),{expected:true});return sel;};
+  const poseId=(id?:number)=>id??poseTarget();
+  const poseSave=(name:string,id?:number)=>{stage.poseSave(poseId(id),name);};
+  const poseApply=(name:string,id?:number)=>{stage.poseApply(poseId(id),name);};
+  const poseRemove=(name:string,id?:number)=>{stage.poseRemove(poseId(id),name);};
+  const poseMirror=(name:string,id?:number)=>{stage.poseMirror(poseId(id),name);};
+  const poseBlend=(a:string,b:string,t:number,id?:number)=>{stage.poseBlend(poseId(id),a,b,t);};
   const dab=(mesh:THREE.SkinnedMesh,local:THREE.Vector3,opts?:{bone?:number;mode?:'add'|'subtract'|'smooth';radius?:number;strength?:number;falloff?:'smooth'|'linear'|'constant'}):number=>{
    const st=getStudio3DState();const bone=opts?.bone??st.weightPreview;
    if(bone==null)throw Object.assign(new Error('Pick a bone for the weight preview first.'),{expected:true});
@@ -625,7 +632,7 @@ export default function Viewport3D(){
   /** Auto-key records transform changes into the current clip at the playhead. Turning it on without a clip makes one. */
   const autoKey=(on:boolean)=>{if(on&&!stage.clips.length)clipAdd();patchStudio3D({autoKey:!!on});};
   stage.autoKeySource=()=>getStudio3DState().autoKey&&stage.clips.length?{clip:anim().clip,time:anim().time}:null;
-  const off=registerStudio3DController({keyMove,keyEase,keyCopy,keyShift,clipDuplicate,animRange,selectBone,setSkeleton,skinBind,skinRebind,setWeightPreview,setWeightBrush,paintDab,keyPaste,autoKey,clipAdd,clipRemove,clipRename,clipDuration,keySet,keyRemove,animPlay,animPause,animSeek,animLoop,animSpeed,setTextureTransform:(id,slot,p)=>stage.setTextureTransform(id,slot,p),exportGltf,setTextureFile,mirrorSelection,applyScale:applyScaleSel,mergeSelection:mergeSel,viewPreset,setPrimitive:(id,p)=>stage.setPrimitive(id,p),
+  const off=registerStudio3DController({keyMove,keyEase,keyCopy,keyShift,clipDuplicate,animRange,selectBone,setSkeleton,skinBind,skinRebind,setWeightPreview,setWeightBrush,paintDab,poseSave,poseApply,poseRemove,poseMirror,poseBlend,keyPaste,autoKey,clipAdd,clipRemove,clipRename,clipDuration,keySet,keyRemove,animPlay,animPause,animSeek,animLoop,animSpeed,setTextureTransform:(id,slot,p)=>stage.setTextureTransform(id,slot,p),exportGltf,setTextureFile,mirrorSelection,applyScale:applyScaleSel,mergeSelection:mergeSel,viewPreset,setPrimitive:(id,p)=>stage.setPrimitive(id,p),
    save:saveDocument,deleteSelection,duplicateSelection,exportMesh,setExportOptions,renderTurntable,cancelRender:()=>{cancelFlag=true;},setUnit,openFiles,newScene,resetView:frameAll,frameSelection,select,renderStill,exportGlb,
    addPrimitive:k=>{const o=stage.addPrimitive(k);select(o.id);return o.id;},addLight:k=>{const o=stage.addLight(k);select(o.id);return o.id;},
    setTransform:(id,p)=>stage.setTransform(id,p),setMaterial:(id,p)=>stage.setMaterial(id,p),rename:(id,n)=>stage.rename(id,n),

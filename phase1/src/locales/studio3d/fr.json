@@ -366,5 +366,22 @@
  "studio3d.model.bones": "Os",
  "studio3d.model.memory": "Mémoire (est.)",
  "studio3d.warn.highGeometryMemory": "La géométrie utilise environ {mb} Mo, au-dessus de {limit} Mo.",
- "studio3d.warn.manyBones": "{count} os, au-dessus de {limit}. Le skinning et la lecture peuvent ralentir."
+ "studio3d.warn.manyBones": "{count} os, au-dessus de {limit}. Le skinning et la lecture peuvent ralentir.",
+ "cmd.studio3d.pose.save": "Enregistrer la pose actuelle",
+ "cmd.studio3d.pose.apply": "Appliquer une pose enregistrée",
+ "cmd.studio3d.pose.remove": "Supprimer une pose enregistrée",
+ "cmd.studio3d.pose.mirror": "Appliquer la pose en miroir",
+ "cmd.studio3d.pose.blend": "Mélanger deux poses et appliquer",
+ "studio3d.pose.title": "Poses",
+ "studio3d.pose.name": "Nom de la pose",
+ "studio3d.pose.save": "Enregistrer",
+ "studio3d.pose.apply": "Appliquer",
+ "studio3d.pose.mirror": "Miroir",
+ "studio3d.pose.remove": "Supprimer",
+ "studio3d.pose.blend": "Mélanger",
+ "studio3d.pose.blendA": "Première pose",
+ "studio3d.pose.blendB": "Deuxième pose",
+ "studio3d.pose.mix": "Dosage du mélange",
+ "studio3d.pose.pick": "Choisir une pose",
+ "studio3d.pose.empty": "Aucune pose enregistrée."
 }

@@ -366,5 +366,22 @@
  "studio3d.model.bones": "Huesos",
  "studio3d.model.memory": "Memoria (aprox.)",
  "studio3d.warn.highGeometryMemory": "La geometría usa unos {mb} MB, más de {limit} MB.",
- "studio3d.warn.manyBones": "{count} huesos, más de {limit}. El skinning y la reproducción pueden ir lentos."
+ "studio3d.warn.manyBones": "{count} huesos, más de {limit}. El skinning y la reproducción pueden ir lentos.",
+ "cmd.studio3d.pose.save": "Guardar la pose actual",
+ "cmd.studio3d.pose.apply": "Aplicar una pose guardada",
+ "cmd.studio3d.pose.remove": "Eliminar una pose guardada",
+ "cmd.studio3d.pose.mirror": "Aplicar la pose espejada",
+ "cmd.studio3d.pose.blend": "Mezclar dos poses y aplicar",
+ "studio3d.pose.title": "Poses",
+ "studio3d.pose.name": "Nombre de la pose",
+ "studio3d.pose.save": "Guardar",
+ "studio3d.pose.apply": "Aplicar",
+ "studio3d.pose.mirror": "Espejar",
+ "studio3d.pose.remove": "Eliminar",
+ "studio3d.pose.blend": "Mezclar",
+ "studio3d.pose.blendA": "Primera pose",
+ "studio3d.pose.blendB": "Segunda pose",
+ "studio3d.pose.mix": "Cantidad de mezcla",
+ "studio3d.pose.pick": "Elige una pose",
+ "studio3d.pose.empty": "Aún no hay poses guardadas."
 }
