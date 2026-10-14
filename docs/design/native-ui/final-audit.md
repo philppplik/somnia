@@ -144,6 +144,10 @@ through native control primitives, see below.
   clipping warning on the preview canvas with persisted toggle; no raw
   controls, ratchets unchanged), unit tests and gallery proof added
   (?view=photos-clipping).
+- P36: photos before/after split view feature (original overlays the
+  preview, erased right of a draggable SVG divider; no raw controls, no
+  new inline styles, ratchets unchanged), unit tests and gallery proof
+  added (?view=photos-split).
 
 
 

@@ -16,6 +16,7 @@
  "photos.error.notReady": "La photo n'est pas encore prête.",
  "photos.info": "{width} × {height} px",
  "photos.clipping": "Écrêtage",
+ "photos.split": "Avant/Après",
  "photos.compare": "Maintenir pour comparer avec l'original",
  "photos.undo": "Annuler",
  "photos.redo": "Rétablir",

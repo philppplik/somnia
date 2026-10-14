@@ -54,6 +54,7 @@ All file links are repository-relative, so they remain useful on a feature branc
 24. [Export and conversion dialogs DS adoption](export-adoption.md)
 25. [Photos crop guides (rule of thirds)](photos-crop-guides.md)
 26. [Photos clipping overlay (false-color warning)](photos-clipping-overlay.md)
+27. [Photos before/after split view](photos-split-view.md)
 
 ## The system in one view
 

@@ -2,13 +2,14 @@ import {StudioStatus} from '../studios/StudioStatus';
 import {reportError} from '../../lib/log';
 import {usePublishPhotosContext} from './panels/publishContext';
 import {useCallback,useEffect,useRef,useState} from 'react';
-import {AlertTriangle,Check,Download,Eye,Frame,Grid3x3,RotateCcw,Undo2,Redo2,X,ZoomIn,ZoomOut,Maximize2,Minimize2} from '../../lib/icons';
+import {AlertTriangle,Check,Columns2,Download,Eye,Frame,Grid3x3,RotateCcw,Undo2,Redo2,X,ZoomIn,ZoomOut,Maximize2,Minimize2} from '../../lib/icons';
 import {Button} from '../ui/button';
 import {useT} from '../../lib/useT';
 import {applyPhotoCrop,cancelPhotoCrop,dirtyPhoto,exportPhotoCopy,historyPhoto,openPhoto,resetPhoto,rotatePhoto,setPhotoCropping,setPhotoCropDraft,usePhotoSession,type PhotoFrame} from '../../lib/photos/studioSession';
 import type {PhotoCrop} from '../../lib/photos/studioSettings';
 import {cropGuideLines} from '../../lib/photos/cropGuides';
 import {clippingOverlayImage} from '../../lib/photos/clippingOverlay';
+import {clampSplitX,splitClearRect} from '../../lib/photos/splitView';
 import {usePanelState} from '../../store/panelStateStore';
 import {getState,patchState,requestStudio,useAppStore} from '../../store/appStore';
 import type {MediaItem} from '../../lib/media';
@@ -30,7 +31,7 @@ type DragMode={kind:'move';dx:number;dy:number}|{kind:'nw'|'ne'|'sw'|'se'};
 /** The developed photo with zoom/pan, crop overlay, compare, undo and bounded copy export. */
 export function PhotosWorkspace({item}:{item:MediaItem}){
  const {t}=useT();const studio=useAppStore().activeStudio;const session=usePhotoSession(item.name);
- const stage=useRef<HTMLDivElement>(null),canvas=useRef<HTMLCanvasElement>(null),clipCanvas=useRef<HTMLCanvasElement>(null),imgBox=useRef<HTMLDivElement>(null);
+ const stage=useRef<HTMLDivElement>(null),canvas=useRef<HTMLCanvasElement>(null),clipCanvas=useRef<HTMLCanvasElement>(null),splitCanvas=useRef<HTMLCanvasElement>(null),imgBox=useRef<HTMLDivElement>(null);
  const [stageSize,setStageSize]=useState<[number,number]>([0,0]);
  const [zoom,setZoom]=useState<number|null>(null); // null = fit
  const [pan,setPan]=useState<[number,number]>([0,0]);
@@ -38,6 +39,9 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
  const [note,setNote]=useState('');
  const [showGuides,setShowGuides]=usePanelState<boolean>('photos.cropGuides',true);
  const [showClipping,setShowClipping]=usePanelState<boolean>('photos.clipping',false);
+ const [showSplit,setShowSplit]=usePanelState<boolean>('photos.split',false);
+ const [splitX,setSplitX]=useState(0.5);
+ const splitDrag=useRef(false);
  const drag=useRef<{pan?:{x:number;y:number;px:number;py:number};crop?:DragMode}|null>(null);
  useEffect(()=>{void openPhoto(item);},[item]);
  usePublishPhotosContext(item.name);
@@ -49,6 +53,12 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
  const shown=compare&&session?.original?session.original:session?.frame??null;
  useEffect(()=>{draw(canvas.current,shown);},[shown]);
  useEffect(()=>{if(showClipping)draw(clipCanvas.current,shown?clippingOverlayImage(shown):null);},[shown,showClipping]);
+ const original=session?.original;
+ useEffect(()=>{
+  if(!showSplit)return;
+  const c=splitCanvas.current;draw(c,original??null);
+  if(c&&original){const r=splitClearRect(original.width,original.height,splitX);c.getContext('2d')!.clearRect(r.x,r.y,r.width,r.height);}
+ },[original,showSplit,splitX]);
  const fw=shown?.width??1,fh=shown?.height??1;
  const fit=stageSize[0]>0&&stageSize[1]>0?Math.min(stageSize[0]/fw,stageSize[1]/fh):1;
  const scale=zoom??fit;
@@ -112,6 +122,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
    <span className="flex-1"/>
    <Button size="icon" variant="outline" aria-label={t('photos.compare')} title={t('photos.compare')} disabled={!session?.original} onPointerDown={()=>setCompare(true)} onPointerUp={()=>setCompare(false)} onPointerLeave={()=>setCompare(false)} data-testid="photos-compare"><Eye size={14}/></Button>
    <Button size="icon" variant="outline" aria-pressed={showClipping} aria-label={t('photos.clipping')} title={t('photos.clipping')} disabled={!ready} onClick={()=>setShowClipping(!showClipping)} data-testid="photos-clipping"><AlertTriangle size={14}/></Button>
+   <Button size="icon" variant="outline" aria-pressed={showSplit} aria-label={t('photos.split')} title={t('photos.split')} disabled={!session?.original} onClick={()=>setShowSplit(!showSplit)} data-testid="photos-split"><Columns2 size={14}/></Button>
    <Button size="icon" variant="outline" aria-label={t('photos.undo')} disabled={!session?.past.length} onClick={()=>historyPhoto(item.name,false)} data-testid="photos-undo"><Undo2 size={14}/></Button>
    <Button size="icon" variant="outline" aria-label={t('photos.redo')} disabled={!session?.future.length} onClick={()=>historyPhoto(item.name,true)} data-testid="photos-redo"><Redo2 size={14}/></Button>
    <Button size="icon" variant="outline" aria-label={t('photos.reset')} disabled={!ready} onClick={()=>resetPhoto(item.name)} data-testid="photos-reset"><RotateCcw size={14}/></Button>
@@ -128,6 +139,15 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
    <div ref={imgBox} className="absolute left-1/2 top-1/2" style={{width:dispW,height:dispH,transform:`translate(-50%,-50%) translate(${pan[0]}px,${pan[1]}px)`}}>
     <canvas ref={canvas} className="block size-full rounded-[2px] shadow-sm" style={{imageRendering:scale>4?'pixelated':'auto'}} data-testid="photos-canvas"/>
     {showClipping&&<canvas ref={clipCanvas} className={`pointer-events-none absolute inset-0 size-full${scale>4?' pixelated':''}`} data-testid="photos-clipping-canvas"/>}
+    {showSplit&&original&&<canvas ref={splitCanvas} className={`pointer-events-none absolute inset-0 size-full${scale>4?' pixelated':''}`} data-testid="photos-split-canvas"/>}
+    {showSplit&&original&&<svg className="absolute inset-0 size-full" data-testid="photos-split-divider">
+     <line x1={splitX*dispW} y1={0} x2={splitX*dispW} y2={dispH} stroke="rgba(255,255,255,0.9)" strokeWidth={2} pointerEvents="none"/>
+     <line x1={splitX*dispW} y1={0} x2={splitX*dispW} y2={dispH} stroke="transparent" strokeWidth={14} className="cursor-col-resize" data-testid="photos-split-handle"
+      onPointerDown={e=>{e.stopPropagation();(e.target as Element).setPointerCapture(e.pointerId);splitDrag.current=true;}}
+      onPointerMove={e=>{if(splitDrag.current)setSplitX(clampSplitX(pointerPos(e).x));}}
+      onPointerUp={()=>{splitDrag.current=false;}}
+      onPointerCancel={()=>{splitDrag.current=false;}}/>
+    </svg>}
     {session?.cropping&&crop&&<div className="absolute inset-0" style={{cursor:'default'}} onPointerMove={onCropMove} onPointerUp={onCropUp} onPointerCancel={onCropUp} data-testid="photos-crop-overlay">
      <svg className="absolute inset-0 size-full" aria-hidden="true">
       <path d={`M0 0H${dispW}V${dispH}H0Z M${crop.x0*dispW} ${crop.y0*dispH}H${crop.x1*dispW}V${crop.y1*dispH}H${crop.x0*dispW}Z`} fill="rgba(0,0,0,0.45)" fillRule="evenodd"/>

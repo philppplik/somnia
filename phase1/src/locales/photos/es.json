@@ -16,6 +16,7 @@
  "photos.error.notReady": "La foto aún no está lista.",
  "photos.info": "{width} × {height} px",
  "photos.clipping": "Recorte",
+ "photos.split": "Antes/Después",
  "photos.compare": "Mantén pulsado para comparar con el original",
  "photos.undo": "Deshacer",
  "photos.redo": "Rehacer",
