@@ -7,6 +7,7 @@ import {copyTransformKeys,pasteTransformEdits} from './keysClipboard';
 import {animatedTargets,allTargetKeys,propertyOf,moveTargetKeys,easeTargetKeys,pruneTargetKeys,toggleTargetKey,editTargetKeys,copyTargetKeys,pasteTargetKeys,deleteTargetKeys,pasteClipOnTargets,staggerLayers,bounceClip,bounceTargetKeys} from './keyTargets';
 import {EASE_PRESETS,easePresetOf} from './graph';
 import {frameToTick} from './time';
+import {animationCommandSpecs} from './commands';
 import {frameSvg} from './exportFrames';
 import {sceneAt} from './scene';
 const comp=(d:AnimationDocument)=>findComp(d)!;
@@ -356,7 +357,7 @@ test('P21: bounce bakes editable keys that land on the target value; stagger als
  const rev=d.revision;const b=applyEdits(d,bounceTargetKeys(d,'photo',sel,3));assert.equal(b.revision,rev+1);
  const ks=layer(b,'photo').transform.opacity.keys;assert.equal(ks.length,2+6,'3 bounces add 6 keys');
  assert.ok(ks.every((k,i)=>i===0||k.t>ks[i-1].t));assert.equal(ks[ks.length-1].v,100);assert.equal(ks[ks.length-1].t,sec*2);
- assert.equal(ks[1].v,100,'first landing is on the target value');assert.ok(ks[2].v<100&&ks[2].v>0,'rebounds to a fraction');assert.ok(ks[4].v>ks[2].v,'later rebounds are smaller');
+ assert.equal(ks[1].v,100,'first landing is on the target value');assert.ok((ks[2].v as number)<100&&(ks[2].v as number)>0,'rebounds to a fraction');assert.ok((ks[4].v as number)>(ks[2].v as number),'later rebounds are smaller');
  assert.deepEqual(validateDocument(b),[]);
  const again=applyEdits(b,bounceTargetKeys(b,'photo',[{target:sel[0].target,t:0},{target:sel[0].target,t:ks[1].t}],1));assert.deepEqual(validateDocument(again),[]);
  assert.throws(()=>bounceTargetKeys(d,'photo',[sel[0]],3),/two neighbouring/);
@@ -381,4 +382,10 @@ test('P21: bounce bakes editable keys that land on the target value; stagger als
  if(second.id==='stencil')assert.deepEqual(L2.masks!.find(m=>m.id==='pm')!.shapeKeys!.map(k=>k.t),L2o.masks!.find(m=>m.id==='pm')!.shapeKeys!.map(k=>k.t+sh));
  const noTiming=applyEdits(sd,staggerLayers(sd,['photo','stencil'],4,false));assert.equal(layer(noTiming,second.id).inT,L2o.inT);
  assert.deepEqual(validateDocument(st),[]);
+});
+
+test('P21: animation commands carry a global shortcut for ease-all and a bounce command',()=>{
+ const specs=animationCommandSpecs();const ease=specs.find(c=>c.id==='animation.keys.easeAll');assert.equal(ease?.shortcut,'Mod+Alt+E');
+ assert.ok(specs.some(c=>c.id==='animation.keys.bounce')&&specs.some(c=>c.id==='animation.layers.stagger'));
+ const shortcuts=specs.map(c=>c.shortcut).filter(Boolean);assert.equal(new Set(shortcuts).size,shortcuts.length);
 });

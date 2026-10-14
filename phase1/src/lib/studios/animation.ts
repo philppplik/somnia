@@ -31,6 +31,7 @@ export const animationShell:StudioShellDef={
   {menu:'Edit',command:'animation.keys.delete',group:'animation-keys',order:40},
   {menu:'Edit',command:'animation.keys.selectAll',group:'animation-keys',order:50},
   {menu:'Edit',command:'animation.keys.easeAll',group:'animation-keys',order:60},
+  {menu:'Edit',command:'animation.keys.bounce',group:'animation-keys',order:65},
   {menu:'Edit',command:'animation.layers.stagger',group:'animation-keys',order:70},
   {menu:'View',command:'animation.graph.toggle',group:'animation',order:10},
   {menu:'View',command:'animation.playback.loop',group:'animation',order:20},

@@ -10,7 +10,7 @@ import type {CommandSchema,CommandSpec} from '../commandSpec';
 import {EditError,type Edit} from './edit';
 import {findComp,findLayer,TEXT_FONTS,TRANSFORM_KEYS,type KeyRef,type LayerKind,type LayerEffect,type PropValue,type TextFont,type TransformKey} from './model';
 import {animationSession} from './session';
-import {allTargetKeys,easeTargetKeys,staggerLayers} from './keyTargets';
+import {allTargetKeys,bounceTargetKeys,easeTargetKeys,staggerLayers} from './keyTargets';
 import {layerSetIds} from './layerSet';
 import {secondsToTicks,snapToFrame} from './time';
 import {ClipError,copyKeys,getKeyClip,pastedRefs,setKeyClip} from './keyclip';
@@ -39,7 +39,7 @@ const run=(e:Edit|readonly Edit[])=>guard(()=>animationSession().dispatch(e).rev
 /** Typed `animation.*` command specs. All document mutations dispatch into the one session transaction/undo owner. */
 export function animationCommandSpecs():CommandSpec<unknown,unknown>[]{
  type Cat=CommandSpec['category'];
- const spec=<P,>(id:string,title:string,fn:(p:P)=>unknown,params?:CommandSchema,enabled:()=>boolean=open,category:Cat='Edit'):CommandSpec<P,unknown>=>({id,title,category,level:'ui',params,enabled,keywords:['animation','timeline','keyframe'],run:fn});
+ const spec=<P,>(id:string,title:string,fn:(p:P)=>unknown,params?:CommandSchema,enabled:()=>boolean=open,category:Cat='Edit',shortcut?:string):CommandSpec<P,unknown>=>({id,title,category,level:'ui',params,enabled,keywords:['animation','timeline','keyframe'],run:fn,...(shortcut?{shortcut}:{})});
  const layerIdOf=(p:{layer?:string})=>p.layer??selected();
  return [
   spec('animation.project.new','New animation',()=>{animationSession().createBlank();},undefined,()=>true,'Project'),
@@ -96,11 +96,15 @@ export function animationCommandSpecs():CommandSpec<unknown,unknown>[]{
    if(!refs.length)fail('No keys to ease.');
    const byLayer=[...new Set(refs.map(r=>r.layer))];
    return run(byLayer.flatMap(id=>guard(()=>easeTargetKeys(doc(),id,refs.filter(r=>r.layer===id),preset))));
-  },object({preset:{enum:Object.keys(EASE_PRESETS)}},[]),()=>open()&&!!animationSession().getState().view.selectedLayer,'Edit'),
-  spec('animation.layers.stagger','Stagger selected layers (Shift or Ctrl click adds layers)',(p:{frames?:number;layers?:string[]}={})=>{
+  },object({preset:{enum:Object.keys(EASE_PRESETS)}},[]),()=>open()&&!!animationSession().getState().view.selectedLayer,'Edit','Mod+Alt+E'),
+  spec('animation.keys.bounce','Bake a bounce between the selected neighbouring keys',(p:{bounces?:number}={})=>{
+   const layerId=selected();const keys=selKeys().filter(k=>k.layer===layerId);
+   return run(guard(()=>{try{return bounceTargetKeys(doc(),layerId,keys.map(k=>({target:{kind:'transform' as const,prop:k.prop},t:k.t})),p.bounces??3);}catch(e){if(e instanceof Error&&!(e instanceof EditError))throw Object.assign(e,{expected:true});throw e;}}));
+  },object({bounces:{type:'integer',minimum:1,maximum:5}},[]),hasSel,'Edit'),
+  spec('animation.layers.stagger','Stagger selected layers (Shift or Ctrl click adds layers)',(p:{frames?:number;layers?:string[];timing?:boolean}={})=>{
    const ids=p.layers??layerSetIds(animationSession().getState().view.selectedLayer);
-   return run(guard(()=>staggerLayers(doc(),ids,p.frames??2)));
-  },object({frames:{type:'integer',minimum:-600,maximum:600},layers:{type:'array',items:layerRef,minItems:2,maxItems:200}},[]),()=>open()&&layerSetIds(animationSession().getState().view.selectedLayer).length>1,'Edit'),
+   return run(guard(()=>staggerLayers(doc(),ids,p.frames??2,p.timing??true)));
+  },object({frames:{type:'integer',minimum:-600,maximum:600},layers:{type:'array',items:layerRef,minItems:2,maxItems:200},timing:{type:'boolean'}},[]),()=>open()&&layerSetIds(animationSession().getState().view.selectedLayer).length>1,'Edit'),
   spec('animation.keys.selectAll','Select all keys of the layer',(p:{layer?:string}={})=>{const id=layerIdOf(p);animationSession().selectKeys(allKeysOf(doc(),id));},object({layer:layerRef},[]),open,'View'),
   spec('animation.keys.delete','Delete selected keys',(p:{keys?:KeyRef[]}={})=>{const keys=p.keys??selKeys();run({type:'keys.remove',keys});animationSession().selectKeys([]);},object({keys:keyRefs},[]),hasSel),
   spec('animation.keys.copy','Copy selected keys',()=>{setKeyClip(guard(()=>copyKeys(doc(),selKeys())));},undefined,hasSel),

@@ -126,6 +126,10 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Implemented: Mixed graph drags both channels of vec2 properties (X/Y switch) and pastes a single-property clip onto the properties of the selected keys; three spring-style ease presets (`overshoot`, `anticipate`, `spring`, cubic handles beyond 0..1) with a live preview on hover or focus in the Mixed and transform graphs; layer stagger (Shift or Ctrl click adds layers, offset in frames per layer, one undo step); command `animation.keys.easeAll` (Edit menu, F9 inside the Mixed graph).
 - Open: a cubic cannot ring several times, so multi-bounce needs baked extra keys (not built); stagger moves transform and mask property keys, not path-morph keys or layer in/out points; no global shortcut allocated for the new commands; stagger/ease UI has no Playwright spec (CI-only).
 
+### Animation P21 (2026-10-14)
+- Implemented: baked multi-bounce (`bounceClip`/`bounceTargetKeys`, 1 to 5 bounces, heights shrink by 0.4, landing on the second key, ordinary editable keys, transform and mask properties, scalar and vec2) with hover preview in the Mixed graph, a timeline button and `animation.keys.bounce`; stagger also moves path-morph keys and layer in/out points (checkbox, `timing` param); animation commands are now part of the ui-commands inventory (369 commands) and `animation.keys.easeAll` has the global shortcut Mod+Alt+E.
+- Open: bounce decay is fixed at 0.4 (not exposed); bounce needs two neighbouring selected keys per property and refuses segments shorter than 2n+1 frames; stagger leaves audio layers and text animators alone; no Playwright spec (CI-only).
+
 ### Animation P16 (2026-10-14)
 - Implemented: mask graph multi-key selection (click, shift, box), group move/revalue and ease in one edit, speed mode, copy/paste of several mask keys between masks (same value type). Transform graph unchanged. One undo per edit, five locales, DS-clean. Details: `docs/animation-p10.md` (P16 section).
 - Open: copy/paste between mask and transform properties, a shared graph core, per-point lanes, native webview check.

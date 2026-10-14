@@ -16,11 +16,79 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-301 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+369 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
 | `agent.toggle` | Toggle Somnia Agent | View | core | `Mod+Alt+A` |
+| `animation.audio.import` | Import audio (WAV or MP3) | Insert | animation |  |
+| `animation.audio.update` | Trim and place audio clip | Edit | animation |  |
+| `animation.audio.volume.animate` | Toggle audio volume keyframes | Edit | animation |  |
+| `animation.audio.volume.keyRemove` | Remove audio volume keyframe | Edit | animation |  |
+| `animation.audio.volume.set` | Set audio volume (percent) | Edit | animation |  |
+| `animation.comp.add` | Add composition | Insert | animation |  |
+| `animation.comp.select` | Switch composition | View | animation |  |
+| `animation.comp.update` | Change composition settings | Edit | animation |  |
+| `animation.edit.redo` | Redo animation edit | Edit | animation |  |
+| `animation.edit.undo` | Undo animation edit | Edit | animation |  |
+| `animation.effect.amount` | Set animated effect strength | Edit | animation |  |
+| `animation.effect.animate` | Toggle effect animation | Edit | animation |  |
+| `animation.effect.bypassKey` | Set effect bypass key | Edit | animation |  |
+| `animation.effect.colorKey` | Set tint colour key | Edit | animation |  |
+| `animation.export.apng` | Export work area as APNG (animated PNG) | Project | animation |  |
+| `animation.export.frame` | Export current frame as PNG | Project | animation |  |
+| `animation.export.gif` | Export work area as GIF | Project | animation |  |
+| `animation.export.sequence` | Export work area as PNG sequence (ZIP) | Project | animation |  |
+| `animation.export.webm` | Export work area as WebM video (real time) | Project | animation |  |
+| `animation.graph.toggle` | Switch between timeline and graph editor | View | animation |  |
+| `animation.key.add` | Add keyframe at playhead | Edit | animation |  |
+| `animation.key.channelEase` | Set X or Y ease | Edit | animation |  |
+| `animation.key.ease` | Set ease of the key at the playhead | Edit | animation |  |
+| `animation.key.interp` | Set keyframe interpolation | Edit | animation |  |
+| `animation.key.move` | Move keyframe | Edit | animation |  |
+| `animation.key.remove` | Remove keyframe | Edit | animation |  |
+| `animation.key.spatial` | Set position tangents of a key | Edit | animation |  |
+| `animation.keys.bounce` | Bake a bounce between selected keys | Edit | animation |  |
+| `animation.keys.copy` | Copy selected keys | Edit | animation |  |
+| `animation.keys.cut` | Cut selected keys | Edit | animation |  |
+| `animation.keys.delete` | Delete selected keys | Edit | animation |  |
+| `animation.keys.ease` | Set ease of selected keys | Edit | animation |  |
+| `animation.keys.easeAll` | Ease all selected keys | Edit | animation | `Mod+Alt+E` |
+| `animation.keys.nudge` | Move selected keys | Edit | animation |  |
+| `animation.keys.paste` | Paste keys at playhead | Edit | animation |  |
+| `animation.keys.selectAll` | Select all keys of the layer | View | animation |  |
+| `animation.keys.smooth` | Smooth position path through selected keys | Edit | animation |  |
+| `animation.keys.straighten` | Straighten position path at selected keys | Edit | animation |  |
+| `animation.layer.add` | Add layer | Insert | animation |  |
+| `animation.layer.effects` | Set layer effects | Edit | animation |  |
+| `animation.layer.mask` | Edit layer mask | Edit | animation |  |
+| `animation.layer.matte` | Set layer track matte | Edit | animation |  |
+| `animation.layer.parent` | Set layer parent | Edit | animation |  |
+| `animation.layer.remove` | Delete layer | Edit | animation |  |
+| `animation.layer.reorder` | Reorder layer | Edit | animation |  |
+| `animation.layer.timing` | Set layer in and out | Edit | animation |  |
+| `animation.layer.update` | Edit layer | Edit | animation |  |
+| `animation.layers.stagger` | Stagger selected layers | Edit | animation |  |
+| `animation.marker.add` | Add timing marker | Edit | animation |  |
+| `animation.marker.remove` | Remove timing marker | Edit | animation |  |
+| `animation.modifier.add` | Add wiggle or loop modifier | Edit | animation |  |
+| `animation.modifier.remove` | Remove property modifier | Edit | animation |  |
+| `animation.path.mode` | Set position path timing | Edit | animation |  |
+| `animation.playback.loop` | Toggle looped playback | View | animation |  |
+| `animation.playhead.set` | Move playhead | View | animation |  |
+| `animation.preset.apply` | Apply entrance preset | Edit | animation |  |
+| `animation.project.new` | New animation | Project | animation |  |
+| `animation.project.recover` | Restore last animation session | Project | animation |  |
+| `animation.project.saveLocal` | Save local animation snapshot | Project | animation |  |
+| `animation.prop.animate` | Toggle property animation | Edit | animation |  |
+| `animation.prop.set` | Set property value | Edit | animation |  |
+| `animation.render.close` | Close render setup | Project | animation |  |
+| `animation.render.open` | Render setup | Project | animation |  |
+| `animation.text.animator` | Edit text animator | Edit | animation |  |
+| `animation.workarea.in` | Set work area start at playhead | View | animation |  |
+| `animation.workarea.out` | Set work area end at playhead | View | animation |  |
+| `animation.workarea.reset` | Reset work area to the whole composition | View | animation |  |
+| `animation.workarea.set` | Set work area | View | animation |  |
 | `chat.toggle` | Toggle session chat | View | core | `Mod+Alt+C` |
 | `code.attribute.set` | Set element attribute | Edit | core |  |
 | `code.outline.reveal` | Reveal element in source | View | core |  |

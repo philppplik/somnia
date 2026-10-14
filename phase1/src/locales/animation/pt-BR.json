@@ -337,5 +337,9 @@
  "cmd.animation.layers.stagger": "Escalonar as camadas selecionadas",
  "animation.stagger.frames": "Quadros entre camadas",
  "animation.stagger.apply": "Escalonar",
- "animation.stagger.hint": "Shift ou Ctrl e clique adicionam camadas à seleção."
+ "animation.stagger.hint": "Shift ou Ctrl e clique adicionam camadas à seleção.",
+ "cmd.animation.keys.bounce": "Gerar um quique entre as chaves selecionadas",
+ "animation.bounce.apply": "Quique",
+ "animation.bounce.count": "Quiques",
+ "animation.stagger.timing": "Mover pontos de entrada e saída"
 }

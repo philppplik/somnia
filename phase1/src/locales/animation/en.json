@@ -337,5 +337,9 @@
  "cmd.animation.layers.stagger": "Stagger selected layers",
  "animation.stagger.frames": "Frames between layers",
  "animation.stagger.apply": "Stagger",
- "animation.stagger.hint": "Shift or Ctrl click adds layers to the selection."
+ "animation.stagger.hint": "Shift or Ctrl click adds layers to the selection.",
+ "cmd.animation.keys.bounce": "Bake a bounce between selected keys",
+ "animation.bounce.apply": "Bounce",
+ "animation.bounce.count": "Bounces",
+ "animation.stagger.timing": "Move in/out points"
 }

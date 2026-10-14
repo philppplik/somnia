@@ -337,5 +337,9 @@
  "cmd.animation.layers.stagger": "Décaler les calques sélectionnés",
  "animation.stagger.frames": "Images entre les calques",
  "animation.stagger.apply": "Décaler",
- "animation.stagger.hint": "Maj ou Ctrl et clic ajoutent des calques à la sélection."
+ "animation.stagger.hint": "Maj ou Ctrl et clic ajoutent des calques à la sélection.",
+ "cmd.animation.keys.bounce": "Générer un rebond entre les clés sélectionnées",
+ "animation.bounce.apply": "Rebond",
+ "animation.bounce.count": "Rebonds",
+ "animation.stagger.timing": "Déplacer les points d’entrée et de sortie"
 }

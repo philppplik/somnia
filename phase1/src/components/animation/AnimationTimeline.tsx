@@ -21,7 +21,7 @@ const pct=(t:number,c:Composition)=>`${Math.min(100,Math.max(0,(t-c.start)/c.dur
 interface Box{x0:number;y0:number;x1:number;y1:number}
 /** Timeline of the Animation studio: transport, work area, layer bars, key lanes with marquee selection, or the graph editor. */
 export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Composition;at:number;selected:string|null;canUndo:boolean;canRedo:boolean}){
- const {t}=useT();const state=useAnimationState();const view=state.view; const layerSet=useLayerSet();const [stagger,setStagger]=useState(2);
+ const {t}=useT();const state=useAnimationState();const view=state.view; const layerSet=useLayerSet();const [stagger,setStagger]=useState(2);const [staggerTiming,setStaggerTiming]=useState(true);
  const rulerRef=useRef<HTMLDivElement>(null);const lanesRef=useRef<HTMLDivElement>(null);
  const frames=Math.max(1,tickToFrame(comp.duration,comp.fps));const frame=tickToFrame(at,comp.fps);
  const [playing,setPlaying]=useState(false);const [keepWorld,setKeepWorld]=useState(false);const raf=useRef<number|null>(null);
@@ -155,8 +155,10 @@ export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Compo
    <label className="ml-2 flex items-center gap-1 text-ink-3"><NativeInput type="checkbox" className="animation-checkbox" checked={keepWorld} onChange={e=>setKeepWorld(e.target.checked)} data-testid="animation-parent-keepworld"/>{t('animation.parent.keepWorld')}</label>
    {layerSetIds(selected).length>1&&<span className="flex items-center gap-1" role="group" aria-label={t('animation.stagger.frames')} title={t('animation.stagger.hint')}>
     <NativeInput type="number" min={-600} max={600} step={1} className="h-5 w-12 rounded-sm border border-subtle bg-transparent px-1 text-xs text-ink-2" aria-label={t('animation.stagger.frames')} value={stagger} onChange={e=>setStagger(Math.max(-600,Math.min(600,Math.round(Number(e.target.value)||0))))} data-testid="animation-stagger-frames"/>
-    <Button size="tiny" variant="outline" onClick={()=>run('animation.layers.stagger',{frames:stagger,layers:layerSetIds(selected)})} data-testid="animation-stagger-apply">{t('animation.stagger.apply')}</Button></span>}
+    <label className="flex items-center gap-1 text-ink-3"><NativeInput type="checkbox" className="animation-checkbox" checked={staggerTiming} onChange={e=>setStaggerTiming(e.target.checked)} data-testid="animation-stagger-timing"/>{t('animation.stagger.timing')}</label>
+    <Button size="tiny" variant="outline" onClick={()=>run('animation.layers.stagger',{frames:stagger,layers:layerSetIds(selected),timing:staggerTiming})} data-testid="animation-stagger-apply">{t('animation.stagger.apply')}</Button></span>}
    <span className="ml-auto flex items-center gap-1" role="group" aria-label={t('animation.ease.group')}>
+    {sel.length>0&&<Button size="tiny" variant="ghost" onClick={()=>run('animation.keys.bounce')} data-testid="animation-bounce">{t('animation.bounce.apply')}</Button>}
     {sel.length>0&&EASES.map(p=><Button key={p} size="tiny" variant="ghost" onClick={()=>run('animation.keys.ease',{preset:p})} data-testid={`animation-ease-${p}`}>{t(EASE_LABEL[p])}</Button>)}
     <Button size="tiny" variant={view.graph?'outline':'ghost'} aria-pressed={view.graph} onClick={()=>run('animation.graph.toggle')} data-testid="animation-graph-toggle">{t('animation.graph')}</Button>
    </span>

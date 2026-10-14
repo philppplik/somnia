@@ -3,12 +3,13 @@ import {animationSession} from '../../lib/animation/session';
 import {curveSamples,handlesOf,handleToEase} from '../../lib/animation/graph';
 import {maskEdit} from '../../lib/animation/masks';
 import type {Edit} from '../../lib/animation/edit';
-import {allTargetKeys,animatedTargets,copyTargetKeys,deleteTargetKeys,easeTargetKeys,editTargetKeys,pasteTargetKeys,pasteClipOnTargets,keyBounds,moveTargetKeys,normalizedValue,propertyOf,pruneTargetKeys,sameTargetKey,targetId,toggleTargetKey,type KeyTarget,type TargetKey} from '../../lib/animation/keyTargets';
+import {allTargetKeys,animatedTargets,copyTargetKeys,deleteTargetKeys,bounceTargetKeys,easeTargetKeys,editTargetKeys,pasteTargetKeys,pasteClipOnTargets,keyBounds,moveTargetKeys,normalizedValue,propertyOf,pruneTargetKeys,sameTargetKey,targetId,toggleTargetKey,type KeyTarget,type TargetKey} from '../../lib/animation/keyTargets';
 import {frameToTick,timecode} from '../../lib/animation/time';
 import type {Composition,Layer,Property} from '../../lib/animation/model';
 import {setGraphMixed,setMaskClip,useMaskSelection} from '../../lib/animation/maskSelection';
 import {useT} from '../../lib/useT';
 import {Button} from '../ui/button';
+import {NativeSelect} from '../ui/native-controls';
 import {EASE_LABEL,EASES,PROP_LABEL} from './format';
 const PAD={l:12,r:12,t:10,b:16};
 /**
@@ -17,7 +18,7 @@ const PAD={l:12,r:12,t:10,b:16};
  */
 export function MixedGraph({comp,layer,playhead}:{comp:Composition;layer:Layer;playhead:number}){
  const {t}=useT();const sess=animationSession();const wrap=useRef<HTMLDivElement>(null);const svgRef=useRef<SVGSVGElement>(null);
- const msel=useMaskSelection();const [ch,setCh]=useState<0|1>(0);const frozen=useRef<Map<string,{min:number;max:number}>|null>(null);const [size,setSize]=useState({w:600,h:180});const [sel,setSelRaw]=useState<TargetKey[]>([]);const [box,setBox]=useState<{x0:number;y0:number;x1:number;y1:number}|null>(null);
+ const msel=useMaskSelection();const [ch,setCh]=useState<0|1>(0);const [bounces,setBounces]=useState(3);const frozen=useRef<Map<string,{min:number;max:number}>|null>(null);const [size,setSize]=useState({w:600,h:180});const [sel,setSelRaw]=useState<TargetKey[]>([]);const [box,setBox]=useState<{x0:number;y0:number;x1:number;y1:number}|null>(null);
  useLayoutEffect(()=>{const el=wrap.current;if(!el)return;const read=()=>{const r=el.getBoundingClientRect();if(r.width>0&&r.height>0)setSize({w:Math.round(r.width),h:Math.round(r.height)});};read();if(typeof ResizeObserver==='undefined')return;const ro=new ResizeObserver(read);ro.observe(el);return()=>ro.disconnect();},[]);
  const targets=animatedTargets(layer);const live=pruneTargetKeys(layer,sel);
  const name=(g:KeyTarget)=>g.kind==='transform'?t(PROP_LABEL[g.prop]):t('animation.masks.lane',{n:(layer.masks??[]).findIndex(m=>m.id===g.mask)+1,prop:t(`animation.masks.prop.${g.prop}`)});
@@ -92,13 +93,17 @@ export function MixedGraph({comp,layer,playhead}:{comp:Composition;layer:Layer;p
  /** Hovering or focusing a preset previews it on the real curves; leaving restores. Nothing is committed. */
  const peek=(preset:(typeof EASES)[number])=>{try{sess.previewEdits(easeTargetKeys(sess.document!,layer.id,live,preset));}catch{/* stale or locked */}};
  const unpeek=()=>sess.cancelPreview();
+ const bounce=()=>run(()=>bounceTargetKeys(sess.document!,layer.id,live,bounces));
+ const peekBounce=()=>{try{sess.previewEdits(bounceTargetKeys(sess.document!,layer.id,live,bounces));}catch{/* needs two neighbouring keys */}};
  return <div className="grid min-h-0 flex-1 grid-cols-[180px_1fr]" data-testid="animation-graph-mixed">
   <div className="min-h-0 overflow-auto border-r border-subtle p-1" role="group" aria-label={t('animation.graph.props')}>
    <Button size="tiny" variant="ghost" onClick={()=>setGraphMixed(false)} data-testid="animation-graph-mixed-back">{t('animation.graph.transform')}</Button>
    {lanes.some(l=>l.p.type==='vec2')&&<div className="my-1 flex gap-1 px-1" role="group" aria-label={t('animation.graph.channel')}>
     {([0,1] as const).map(c=><Button key={c} size="tiny" variant={ch===c?'outline':'ghost'} aria-pressed={ch===c} onClick={()=>setCh(c)} data-testid={`animation-graph-mixed-channel-${c}`}>{t(c===0?'animation.prop.x':'animation.prop.y')}</Button>)}</div>}
    {live.length>0&&<div className="my-1 flex flex-wrap gap-1" role="group" aria-label={t('animation.ease.group')}>
-    {EASES.map(p=><Button key={p} size="tiny" variant="ghost" disabled={layer.locked} onClick={()=>ease(p)} onPointerEnter={()=>peek(p)} onPointerLeave={unpeek} onFocus={()=>peek(p)} onBlur={unpeek} data-testid={`animation-graph-mixed-ease-${p}`}>{t(EASE_LABEL[p])}</Button>)}</div>}
+    {EASES.map(p=><Button key={p} size="tiny" variant="ghost" disabled={layer.locked} onClick={()=>ease(p)} onPointerEnter={()=>peek(p)} onPointerLeave={unpeek} onFocus={()=>peek(p)} onBlur={unpeek} data-testid={`animation-graph-mixed-ease-${p}`}>{t(EASE_LABEL[p])}</Button>)}
+    <NativeSelect className="h-5 w-[44px] rounded-sm border border-subtle bg-transparent px-1 text-xs text-ink-2" aria-label={t('animation.bounce.count')} value={bounces} onChange={e=>setBounces(Number(e.target.value))} data-testid="animation-graph-mixed-bounces">{[1,2,3,4,5].map(n=><option key={n} value={n}>{n}</option>)}</NativeSelect>
+    <Button size="tiny" variant="ghost" disabled={layer.locked} onClick={bounce} onPointerEnter={peekBounce} onPointerLeave={unpeek} onFocus={peekBounce} onBlur={unpeek} data-testid="animation-graph-mixed-bounce">{t('animation.bounce.apply')}</Button></div>}
    <div className="my-1 flex gap-1 px-1">
     <Button size="tiny" disabled={!live.length} onClick={copy} data-testid="animation-graph-mixed-copy">{t('animation.masks.copy')}</Button>
     <Button size="tiny" disabled={!canPaste||layer.locked} onClick={paste} data-testid="animation-graph-mixed-paste">{t('animation.masks.paste')}</Button>

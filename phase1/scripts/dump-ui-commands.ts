@@ -34,6 +34,7 @@ import { registerDocumentsCommands } from '../src/lib/documents/commands';
 import { registerSlidesCommands } from '../src/lib/slides/commands';
 import { registerDesignCommands } from '../src/lib/design/commands';
 import { pdfCommandSpecs } from '../src/lib/pdfedit/commands';
+import { registerAnimationCommands } from '../src/lib/animation/commands';
 import { registerCommandSpec } from '../src/lib/commandBridge';
 import { registerPhotosCommands } from '../src/lib/photos/panelCommands';
 import { registerRasterCommands, type RasterCommandActions } from '../src/lib/photos/rasterCommands';
@@ -111,6 +112,7 @@ export async function collect(): Promise<Entry[]> {
   await withSource('interface', () => registerInterfaceCommands());
   await withSource('photos', () => registerPhotosCommands());
   await withSource('pdfedit', () => { for (const spec of pdfCommandSpecs(pdfStub)) registerCommandSpec(spec); });
+  await withSource('animation', () => registerAnimationCommands());
   await withSource('deploy', () => registerDeployCommands(createTauriDeployBackend()));
   const raster = new CommandDispatcher();
   registerRasterCommands(() => rasterStub, k => t(k), raster);

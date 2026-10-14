@@ -337,5 +337,9 @@
  "cmd.animation.layers.stagger": "Escalonar las capas seleccionadas",
  "animation.stagger.frames": "Fotogramas entre capas",
  "animation.stagger.apply": "Escalonar",
- "animation.stagger.hint": "Mayús o Ctrl y clic añaden capas a la selección."
+ "animation.stagger.hint": "Mayús o Ctrl y clic añaden capas a la selección.",
+ "cmd.animation.keys.bounce": "Generar un rebote entre las claves seleccionadas",
+ "animation.bounce.apply": "Rebote",
+ "animation.bounce.count": "Rebotes",
+ "animation.stagger.timing": "Mover puntos de entrada y salida"
 }
