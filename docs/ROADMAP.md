@@ -447,3 +447,7 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 ### Animation P68 (2026-10-14, integration pending)
 - Done: opacity for gradient colours. Start, end and every extra stop have an opacity in percent (0 to 100), so a fill or stroke can fade to transparent. Inspector: "Start opacity", "End opacity" and one opacity field per stop. 100 percent is not stored, so old documents and the default output stay byte-identical. Viewer and every export write `stop-opacity`.
 - Open: opacity is not keyed, not shown as a swatch preview, no conic gradient, no centre or radius control.
+
+### Animation P70 (2026-10-14, integration pending)
+- Done: radial gradients have a centre (X, Y in percent of the box) and a radius (5 to 150 percent), for fill and stroke. Fields appear in the inspector when the type is Radial. 50 percent is the default and is not stored, so old documents stay byte-identical. Viewer and exports share the markup.
+- Open: no focal point, not keyed, no on-canvas handles, no conic gradient.

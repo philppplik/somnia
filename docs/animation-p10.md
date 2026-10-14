@@ -352,3 +352,6 @@ A pointer drag on a key that is part of a multi-key selection builds `styleKeySh
 
 ## P68 - Gradient opacity
 `gradient.startOpacity`, `gradient.endOpacity` and `stops[].opacity` (percent 0..100, absent means 100). `gradientDefSvg` adds `stop-opacity` only below 100. `setGradientEndOpacity` and `setGradientStop` clamp and drop the field at 100. Validation (`validGradientOpacities`, `validGradientStops`) rejects out-of-range or non-finite values for fill and stroke gradients.
+
+## P70 - Radial centre and radius
+`gradient.cx`, `gradient.cy` (0..1) and `gradient.radius` (0.05..1.5) only apply when `kind` is `radial`; absent means 0.5. `setGradientGeometry` clamps and removes the field at the default. Validation in `validGradientOpacities` covers both gradient types.

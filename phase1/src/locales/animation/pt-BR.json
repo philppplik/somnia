@@ -628,5 +628,8 @@
  "animation.gradient.removeStop": "Remover",
  "animation.gradient.startOpacity": "Opacidade inicial (%)",
  "animation.gradient.endOpacity": "Opacidade final (%)",
- "animation.gradient.stopOpacity": "Opacidade da parada {n} (%)"
+ "animation.gradient.stopOpacity": "Opacidade da parada {n} (%)",
+ "animation.gradient.cx": "Centro X (%)",
+ "animation.gradient.cy": "Centro Y (%)",
+ "animation.gradient.radius": "Raio (%)"
 }

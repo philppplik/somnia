@@ -7,14 +7,14 @@ export function radialPath(source:LayerSource):string{
 export function gradientVector(angle:number){const a=angle*Math.PI/180,x=Math.cos(a)/2,y=Math.sin(a)/2;return {x1:0.5-x,y1:0.5-y,x2:0.5+x,y2:0.5+y};}
 
 /** SVG definition of a layer gradient (linear along the angle, or radial from the box centre). */
-export function gradientDefSvg(id:string,g:{start:string;end:string;angle:number;kind?:'linear'|'radial';startOpacity?:number;endOpacity?:number;stops?:readonly {offset:number;color:string;opacity?:number}[]}):string{
+export function gradientDefSvg(id:string,g:{start:string;end:string;angle:number;kind?:'linear'|'radial';startOpacity?:number;endOpacity?:number;/** Radial only: centre (0..1 of the box, default 0.5) and radius (0.05..1.5, default 0.5). */cx?:number;cy?:number;radius?:number;stops?:readonly {offset:number;color:string;opacity?:number}[]}):string{
  const stop=(offset:number|string,color:string,o?:number)=>`<stop offset="${offset}" stop-color="${color}"${o!==undefined&&o<100?` stop-opacity="${Math.round(o)/100}"`:''}/>`;
  const stops=stop(0,g.start,g.startOpacity)+(g.stops??[]).map(x=>stop(x.offset,x.color,x.opacity)).join('')+stop(1,g.end,g.endOpacity);
- if(g.kind==='radial')return `<radialGradient id="${id}" cx="0.5" cy="0.5" r="0.5">${stops}</radialGradient>`;
+ if(g.kind==='radial')return `<radialGradient id="${id}" cx="${g.cx??0.5}" cy="${g.cy??0.5}" r="${g.radius??0.5}">${stops}</radialGradient>`;
  const v=gradientVector(g.angle);return `<linearGradient id="${id}" x1="${v.x1}" y1="${v.y1}" x2="${v.x2}" y2="${v.y2}">${stops}</linearGradient>`;
 }
 
-type GradientLike={start:string;end:string;startOpacity?:number;endOpacity?:number;stops?:readonly {offset:number;color:string;opacity?:number}[]};
+type GradientLike={start:string;end:string;cx?:number;cy?:number;radius?:number;startOpacity?:number;endOpacity?:number;stops?:readonly {offset:number;color:string;opacity?:number}[]};
 /** Adds a stop in the middle of the widest gap, coloured like the stop on its left. Returns the gradient unchanged at the limit. */
 export function addGradientStop<G extends GradientLike>(g:G,max=6):G{
  const st=g.stops??[];if(st.length>=max)return g;
@@ -38,4 +38,10 @@ export function removeGradientStop<G extends GradientLike>(g:G,i:number):G{
 export function setGradientEndOpacity<G extends GradientLike>(g:G,which:'start'|'end',v:number):G{
  const key=which==='start'?'startOpacity':'endOpacity';const {[key]:_o,...rest}=g as G&Record<string,unknown>;const o=Math.min(100,Math.max(0,Math.round(v)));
  return (o<100?{...rest,[key]:o}:rest) as unknown as G;
+}
+
+/** Sets the radial centre or radius from a percent value; the default (50) removes the field so old output stays unchanged. */
+export function setGradientGeometry<G extends GradientLike>(g:G,key:'cx'|'cy'|'radius',percent:number):G{
+ const lo=key==='radius'?5:0,hi=key==='radius'?150:100,v=Math.round(Math.min(hi,Math.max(lo,percent)))/100;
+ const {[key]:_o,...rest}=g as G&Record<string,unknown>;return (v===0.5?rest:{...rest,[key]:v}) as unknown as G;
 }

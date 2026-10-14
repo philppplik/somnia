@@ -628,5 +628,8 @@
  "animation.gradient.removeStop": "Entfernen",
  "animation.gradient.startOpacity": "Deckkraft Start (%)",
  "animation.gradient.endOpacity": "Deckkraft Ende (%)",
- "animation.gradient.stopOpacity": "Deckkraft von Stopp {n} (%)"
+ "animation.gradient.stopOpacity": "Deckkraft von Stopp {n} (%)",
+ "animation.gradient.cx": "Mitte X (%)",
+ "animation.gradient.cy": "Mitte Y (%)",
+ "animation.gradient.radius": "Radius (%)"
 }

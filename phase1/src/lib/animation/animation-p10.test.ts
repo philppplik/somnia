@@ -15,7 +15,7 @@ import {booleanEdits,maskBooleanEdit,expandStrokeEdits} from './pathLayer';
 import {frameSvg} from './exportFrames';
 import {strokeAttributes,layerColorsAt} from './effects';
 import {styleKeyLanes} from './keyLanes';
-import {gradientVector,addGradientStop,setGradientStop,removeGradientStop,setGradientEndOpacity,gradientDefSvg} from './shapes';
+import {gradientVector,addGradientStop,setGradientStop,removeGradientStop,setGradientEndOpacity,gradientDefSvg,setGradientGeometry} from './shapes';
 import {pruneStyleKeys,toggleStyleKey,keysInRect} from './keyLanes';
 import {styleKeyDeleteEdits,styleKeyShiftEdits} from './edit';
 import {colorAt,easeProgress,COLOR_EASE_HANDLES} from './colorKeys';
@@ -1643,4 +1643,22 @@ test('P68 gradient stop opacity: markup, clamping, 100 is not stored, validation
  for(const bad of [{startOpacity:101},{endOpacity:-1},{startOpacity:'x' as never},{stops:[{offset:0.5,color:'#00ff00',opacity:120}]},{stops:[{offset:0.5,color:'#00ff00',opacity:Number.NaN}]}])
   assert.throws(()=>applyEdit(d,{type:'layer.update',layer:'pa',source:{gradient:{...g,...bad}}}),Error);
  assert.throws(()=>applyEdit(d,{type:'layer.stroke',layer:'pa',stroke:{color:'#00ff00',width:8,gradient:{...g,endOpacity:200}}}),Error);
+});
+
+test('P70 radial centre and radius: markup, defaults unchanged, clamping, validation',()=>{
+ type G={start:string;end:string;angle:number;kind?:'linear'|'radial';cx?:number;cy?:number;radius?:number};
+ const g:G={start:'#ff0000',end:'#0000ff',angle:0,kind:'radial'};
+ const base0=gradientDefSvg('x',g);assert.ok(base0.includes('cx="0.5" cy="0.5" r="0.5"'));
+ const m=setGradientGeometry(setGradientGeometry(setGradientGeometry(g,'cx',20),'cy',80),'radius',120);
+ assert.deepEqual([m.cx,m.cy,m.radius],[0.2,0.8,1.2]);
+ assert.ok(gradientDefSvg('x',m).includes('cx="0.2" cy="0.8" r="1.2"'));
+ assert.equal(gradientDefSvg('x',setGradientGeometry(m,'cx',50)).includes('cx="0.5"'),true);
+ assert.equal('cx' in setGradientGeometry(m,'cx',50),false,'50 removes the field');
+ assert.equal(setGradientGeometry(g,'radius',1).radius,0.05,'radius is clamped to 5 percent');
+ assert.equal(setGradientGeometry(g,'cx',900).cx,1);
+ const d=strokeDoc([{x:0.2,y:0.2},{x:0.8,y:0.2},{x:0.8,y:0.8},{x:0.2,y:0.8}],true,8);
+ const ok=applyEdit(d,{type:'layer.update',layer:'pa',source:{gradient:{...g,cx:0.2,radius:1.2}}});
+ assert.deepEqual(validateDocument(ok),[]);assert.ok(frameSvg(comp(ok),0).includes('<radialGradient'));
+ for(const bad of [{cx:-0.1},{cy:1.1},{radius:0},{radius:2},{cx:Number.NaN},{radius:'x' as never}])assert.throws(()=>applyEdit(d,{type:'layer.update',layer:'pa',source:{gradient:{...g,...bad}}}),Error);
+ assert.throws(()=>applyEdit(d,{type:'layer.stroke',layer:'pa',stroke:{color:'#00ff00',width:8,gradient:{...g,radius:3}}}),Error);
 });
