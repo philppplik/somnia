@@ -1,6 +1,13 @@
 //! Experimental headless adapter. No DOM, egui, filesystem or UI thread access.
 use wasm_bindgen::prelude::*;
 use std::sync::Arc;
+
+/// Error carrier across the wasm boundary. Native test builds have no JS strings: `JsValue::from_str`
+/// panics off wasm32, so native tests get an opaque marker instead. The `do_*` internals keep the message.
+#[cfg(target_arch = "wasm32")]
+fn js_err(msg: &str) -> JsValue { JsValue::from_str(msg) }
+#[cfg(not(target_arch = "wasm32"))]
+fn js_err(_msg: &str) -> JsValue { JsValue::NULL }
 use wordcraft_doc::para::OBJ;
 use wordcraft_doc::{Block, CharProps, Document, Pos, StoryRef};
 use wordcraft_layout::{DocLayout, LayoutCache, LayoutOptions};
@@ -2816,16 +2823,16 @@ impl DocSession {
     }
     /// `hunks_json`: `[[start, end, "text"], ...]`, ascending offsets in the original paragraph.
     pub fn replace_ranges(&mut self, block: usize, hunks_json: &str) -> Result<(), JsValue> {
-        let v: Vec<(usize, usize, String)> = serde_json::from_str(hunks_json).map_err(|e| JsValue::from_str(&format!("bad hunks: {e}")))?;
-        self.do_replace_many(block, &v).map_err(|e| JsValue::from_str(&e))
+        let v: Vec<(usize, usize, String)> = serde_json::from_str(hunks_json).map_err(|e| js_err(&format!("bad hunks: {e}")))?;
+        self.do_replace_many(block, &v).map_err(|e| js_err(&e))
     }
     /// `expected`: the paragraph text the edit was computed from. Returns the paragraph text after the edit; `stale: ...` when it differs.
     pub fn replace_checked(&mut self, block: usize, expected: &str, hunks_json: &str) -> Result<String, JsValue> {
-        let v: Vec<(usize, usize, String)> = serde_json::from_str(hunks_json).map_err(|e| JsValue::from_str(&format!("bad hunks: {e}")))?;
-        self.do_replace_checked(block, expected, &v).map_err(|e| JsValue::from_str(&e))
+        let v: Vec<(usize, usize, String)> = serde_json::from_str(hunks_json).map_err(|e| js_err(&format!("bad hunks: {e}")))?;
+        self.do_replace_checked(block, expected, &v).map_err(|e| js_err(&e))
     }
     pub fn replace_range(&mut self, block: usize, utf8_start: usize, utf8_end: usize, text: &str) -> Result<(), JsValue> {
-        self.do_replace(block, utf8_start, utf8_end, text).map_err(|e| JsValue::from_str(&e))
+        self.do_replace(block, utf8_start, utf8_end, text).map_err(|e| js_err(&e))
     }
     /// Page-space hit test (page units, same space as `page_info`). JSON: `null` when nothing is hit,
     /// `{"block":i,"off":utf8,"editable":bool}` for a top-level paragraph, `{"block":null,"editable":false}`
@@ -2873,37 +2880,37 @@ impl DocSession {
     /// Sets bold / italic / underline on a selection `(start_block, start_off)..(end_block, end_off)`
     /// (UTF-8 byte offsets). `patch_json`: any subset of `{"bold":true,"italic":false,"underline":true,"font":"Source Serif 4","size":14,"color":"C0392B"|"auto"}`.
     pub fn format_range(&mut self, start_block: usize, start_off: usize, end_block: usize, end_off: usize, patch_json: &str) -> Result<(), JsValue> {
-        self.do_format(start_block, start_off, end_block, end_off, patch_json).map_err(|e| JsValue::from_str(&e))
+        self.do_format(start_block, start_off, end_block, end_off, patch_json).map_err(|e| js_err(&e))
     }
     /// `{"bold":"on|off|mixed","italic":...,"underline":...}` over a selection (same coordinates as `format_range`).
     pub fn format_state(&self, start_block: usize, start_off: usize, end_block: usize, end_off: usize) -> Result<String, JsValue> {
-        self.do_format_state(start_block, start_off, end_block, end_off).map_err(|e| JsValue::from_str(&e))
+        self.do_format_state(start_block, start_off, end_block, end_off).map_err(|e| js_err(&e))
     }
     /// Paragraph alignment, indents and spacing for the whole paragraphs `first_block..=last_block`.
     /// `patch_json`: any subset of `{"align":"center","indentLeft":36,"indentFirst":-18,"spaceBefore":0,"spaceAfter":8,"lineSpacing":1.5}` (points; multiple for line spacing).
     pub fn format_paragraphs(&mut self, first_block: usize, last_block: usize, patch_json: &str) -> Result<(), JsValue> {
-        self.do_para_format(first_block, last_block, patch_json).map_err(|e| JsValue::from_str(&e))
+        self.do_para_format(first_block, last_block, patch_json).map_err(|e| js_err(&e))
     }
     /// JSON of the shared (or null when mixed) effective paragraph formatting over `first_block..=last_block`.
     pub fn paragraph_state(&self, first_block: usize, last_block: usize) -> Result<String, JsValue> {
-        self.do_para_state(first_block, last_block).map_err(|e| JsValue::from_str(&e))
+        self.do_para_state(first_block, last_block).map_err(|e| js_err(&e))
     }
     /// Applies one of Normal, Title, Subtitle, Heading1-4 or Quote to the paragraphs `first_block..=last_block`.
     pub fn set_paragraph_style(&mut self, first_block: usize, last_block: usize, style_id: &str) -> Result<(), JsValue> {
-        self.do_set_style(first_block, last_block, style_id).map_err(|e| JsValue::from_str(&e))
+        self.do_set_style(first_block, last_block, style_id).map_err(|e| js_err(&e))
     }
     /// `kind`: `bullet`, `numbered` or `none`.
     pub fn set_list(&mut self, first_block: usize, last_block: usize, kind: &str) -> Result<(), JsValue> {
-        self.do_set_list(first_block, last_block, kind).map_err(|e| JsValue::from_str(&e))
+        self.do_set_list(first_block, last_block, kind).map_err(|e| js_err(&e))
     }
     /// Moves list paragraphs by `delta` levels (indent / outdent).
     /// The nine levels of the list at paragraph `block` (see `do_list_options`).
     pub fn list_options(&self, block: usize) -> Result<String, JsValue> {
-        self.do_list_options(block).map_err(|e| JsValue::from_str(&e))
+        self.do_list_options(block).map_err(|e| js_err(&e))
     }
     /// Changes one level's start value, number format or label text (see `do_set_list_options`).
     pub fn set_list_options(&mut self, block: usize, patch_json: &str) -> Result<(), JsValue> {
-        self.do_set_list_options(block, patch_json).map_err(|e| JsValue::from_str(&e))
+        self.do_set_list_options(block, patch_json).map_err(|e| js_err(&e))
     }
     /// The paragraph and character styles with their editable properties (see `do_styles_list`).
     pub fn styles_list(&self) -> String {
@@ -2911,43 +2918,43 @@ impl DocSession {
     }
     /// Creates or changes a style and returns its id (see `do_upsert_style`).
     pub fn upsert_style(&mut self, json: &str) -> Result<String, JsValue> {
-        self.do_upsert_style(json).map_err(|e| JsValue::from_str(&e))
+        self.do_upsert_style(json).map_err(|e| js_err(&e))
     }
     /// Deletes a custom style (see `do_delete_style`).
     pub fn delete_style(&mut self, id: &str) -> Result<(), JsValue> {
-        self.do_delete_style(id).map_err(|e| JsValue::from_str(&e))
+        self.do_delete_style(id).map_err(|e| js_err(&e))
     }
     /// Inserts a table of contents from the headings (see `do_insert_toc`).
     pub fn insert_toc(&mut self, block: usize, levels: u32, title: &str, pages: bool) -> Result<(), JsValue> {
-        self.do_insert_toc(block, levels.min(255) as u8, title, pages).map_err(|e| JsValue::from_str(&e))
+        self.do_insert_toc(block, levels.min(255) as u8, title, pages).map_err(|e| js_err(&e))
     }
     /// Rebuilds the table of contents from the current headings (see `do_update_toc`).
     pub fn update_toc(&mut self, block: usize) -> Result<(), JsValue> {
-        self.do_update_toc(block).map_err(|e| JsValue::from_str(&e))
+        self.do_update_toc(block).map_err(|e| js_err(&e))
     }
     /// Removes the table of contents (see `do_remove_toc`).
     pub fn remove_toc(&mut self, block: usize) -> Result<(), JsValue> {
-        self.do_remove_toc(block).map_err(|e| JsValue::from_str(&e))
+        self.do_remove_toc(block).map_err(|e| js_err(&e))
     }
     /// Continues the numbering of the list above (see `do_continue_list`).
     pub fn continue_list(&mut self, first: usize, last: usize) -> Result<(), JsValue> {
-        self.do_continue_list(first, last).map_err(|e| JsValue::from_str(&e))
+        self.do_continue_list(first, last).map_err(|e| js_err(&e))
     }
     /// Restarts numbering at `first` (see `do_restart_list`).
     pub fn restart_list(&mut self, first: usize, last: usize) -> Result<(), JsValue> {
-        self.do_restart_list(first, last).map_err(|e| JsValue::from_str(&e))
+        self.do_restart_list(first, last).map_err(|e| js_err(&e))
     }
     pub fn shift_list_level(&mut self, first_block: usize, last_block: usize, delta: i32) -> Result<(), JsValue> {
-        self.do_list_level(first_block, last_block, delta).map_err(|e| JsValue::from_str(&e))
+        self.do_list_level(first_block, last_block, delta).map_err(|e| js_err(&e))
     }
     /// Inserts or deletes a table row or column around the cell paragraph `block`. `op`: `row_above`, `row_below`,
     /// `delete_row`, `col_left`, `col_right`, `delete_col`.
     pub fn edit_table(&mut self, block: usize, op: &str) -> Result<(), JsValue> {
-        self.do_table_edit(block, op).map_err(|e| JsValue::from_str(&e))
+        self.do_table_edit(block, op).map_err(|e| js_err(&e))
     }
     /// Inserts an empty table (`rows` 1-20, `cols` 1-10) after the top-level block holding `block`.
     pub fn insert_table(&mut self, block: usize, rows: usize, cols: usize) -> Result<(), JsValue> {
-        self.do_insert_table(block, rows, cols).map_err(|e| JsValue::from_str(&e))
+        self.do_insert_table(block, rows, cols).map_err(|e| js_err(&e))
     }
     /// JSON `{header:{text,editable},footer:{text,pageNumber,editable}}` for the default header and footer.
     pub fn header_footer(&self) -> String {
@@ -2957,71 +2964,71 @@ impl DocSession {
     /// `header` / `footer`: `left`, `center` or `right` for the existing story.
     /// Footer page number as "x" (false) or "x / y" (true).
     pub fn set_footer_page_total(&mut self, total: bool) -> Result<(), JsValue> {
-        self.do_set_page_total(total).map_err(|e| JsValue::from_str(&e))
+        self.do_set_page_total(total).map_err(|e| js_err(&e))
     }
     pub fn set_header_footer_align(&mut self, header: Option<String>, footer: Option<String>) -> Result<(), JsValue> {
-        self.do_set_hf_align(header.as_deref(), footer.as_deref()).map_err(|e| JsValue::from_str(&e))
+        self.do_set_hf_align(header.as_deref(), footer.as_deref()).map_err(|e| js_err(&e))
     }
     pub fn set_header_footer(&mut self, header: Option<String>, footer: Option<String>, page_number: Option<bool>) -> Result<(), JsValue> {
-        self.do_set_header_footer(header.as_deref(), footer.as_deref(), page_number).map_err(|e| JsValue::from_str(&e))
+        self.do_set_header_footer(header.as_deref(), footer.as_deref(), page_number).map_err(|e| js_err(&e))
     }
     /// Inserts a PNG or JPEG (5 MB, 8000 px a side, 25 megapixels, 200 images) as its own paragraph after the block.
     pub fn insert_image(&mut self, block: usize, bytes: &[u8], alt: &str) -> Result<(), JsValue> {
-        self.do_insert_image(block, bytes, alt).map_err(|e| JsValue::from_str(&e))
+        self.do_insert_image(block, bytes, alt).map_err(|e| js_err(&e))
     }
     /// Display width in points (10-2000) of the image paragraph `block`; the height follows the aspect ratio.
     pub fn resize_image(&mut self, block: usize, width: f32) -> Result<(), JsValue> {
-        self.do_resize_image(block, width).map_err(|e| JsValue::from_str(&e))
+        self.do_resize_image(block, width).map_err(|e| js_err(&e))
     }
     pub fn fit_image(&mut self, block: usize, percent: u32) -> Result<(), JsValue> {
-        self.do_fit_image(block, percent).map_err(|e| JsValue::from_str(&e))
+        self.do_fit_image(block, percent).map_err(|e| js_err(&e))
     }
     pub fn set_col_width(&mut self, block: usize, width: f32) -> Result<(), JsValue> {
-        self.do_set_col_width(block, width).map_err(|e| JsValue::from_str(&e))
+        self.do_set_col_width(block, width).map_err(|e| js_err(&e))
     }
     pub fn style_table(&mut self, block: usize, scope: &str, style_json: &str) -> Result<(), JsValue> {
-        self.do_style_table(block, scope, style_json).map_err(|e| JsValue::from_str(&e))
+        self.do_style_table(block, scope, style_json).map_err(|e| js_err(&e))
     }
     /// Page size, orientation and margins as JSON (see `set_page_setup`).
     pub fn page_setup(&self) -> String {
         self.do_page_setup_state()
     }
     pub fn set_page_setup(&mut self, setup_json: &str) -> Result<(), JsValue> {
-        self.do_set_page_setup(setup_json).map_err(|e| JsValue::from_str(&e))
+        self.do_set_page_setup(setup_json).map_err(|e| js_err(&e))
     }
     pub fn set_image_alt(&mut self, block: usize, alt: &str) -> Result<(), JsValue> {
-        self.do_set_image_alt(block, alt).map_err(|e| JsValue::from_str(&e))
+        self.do_set_image_alt(block, alt).map_err(|e| js_err(&e))
     }
     pub fn remove_image(&mut self, block: usize) -> Result<(), JsValue> {
-        self.do_remove_image(block).map_err(|e| JsValue::from_str(&e))
+        self.do_remove_image(block).map_err(|e| js_err(&e))
     }
     pub fn properties(&self) -> String {
         self.do_properties()
     }
     pub fn set_properties(&mut self, patch_json: &str) -> Result<(), JsValue> {
-        self.do_set_properties(patch_json).map_err(|e| JsValue::from_str(&e))
+        self.do_set_properties(patch_json).map_err(|e| js_err(&e))
     }
     pub fn comments(&self) -> String {
         self.do_comments()
     }
     /// Adds a comment on `start..end` of one paragraph. `date` is ISO 8601 from the host (the worker has no clock).
     pub fn add_comment(&mut self, block: usize, start: usize, end: usize, text: &str, author: &str, date: &str) -> Result<(), JsValue> {
-        self.do_add_comment(block, start, end, text, author, date).map_err(|e| JsValue::from_str(&e))
+        self.do_add_comment(block, start, end, text, author, date).map_err(|e| js_err(&e))
     }
     pub fn reply_comment(&mut self, parent: u32, text: &str, author: &str, date: &str) -> Result<(), JsValue> {
-        self.do_reply_comment(parent, text, author, date).map_err(|e| JsValue::from_str(&e))
+        self.do_reply_comment(parent, text, author, date).map_err(|e| js_err(&e))
     }
     pub fn resolve_comment(&mut self, id: u32, resolved: bool) -> Result<(), JsValue> {
-        self.do_resolve_comment(id, resolved).map_err(|e| JsValue::from_str(&e))
+        self.do_resolve_comment(id, resolved).map_err(|e| js_err(&e))
     }
     pub fn delete_comment(&mut self, id: u32) -> Result<(), JsValue> {
-        self.do_delete_comment(id).map_err(|e| JsValue::from_str(&e))
+        self.do_delete_comment(id).map_err(|e| js_err(&e))
     }
     pub fn split_block(&mut self, block: usize, utf8_off: usize) -> Result<(), JsValue> {
-        self.do_split(block, utf8_off).map_err(|e| JsValue::from_str(&e))
+        self.do_split(block, utf8_off).map_err(|e| js_err(&e))
     }
     pub fn merge_with_previous(&mut self, block: usize) -> Result<(), JsValue> {
-        self.do_merge(block).map_err(|e| JsValue::from_str(&e))
+        self.do_merge(block).map_err(|e| js_err(&e))
     }
     /// Cheap structural snapshot of the body, headers/footers and last section (shared, not deep copied). Used for undo.
     pub fn snapshot(&mut self) -> u32 {
@@ -3031,7 +3038,7 @@ impl DocSession {
         id
     }
     pub fn restore(&mut self, id: u32) -> Result<(), JsValue> {
-        let (b, parts, last, media, comments, core, styles, numbering) = self.snaps.get(&id).ok_or_else(|| JsValue::from_str("unknown snapshot"))?.clone();
+        let (b, parts, last, media, comments, core, styles, numbering) = self.snaps.get(&id).ok_or_else(|| js_err("unknown snapshot"))?.clone();
         self.doc.body = b;
         self.doc.parts = parts;
         self.doc.last_section = last;
@@ -3045,13 +3052,13 @@ impl DocSession {
     }
     #[wasm_bindgen(constructor)]
     pub fn new(bytes: &[u8]) -> Result<DocSession, JsValue> {
-        Self::from_bytes(bytes).map_err(|e| JsValue::from_str(&e))
+        Self::from_bytes(bytes).map_err(|e| js_err(&e))
     }
     pub fn text(&self) -> String {
         self.doc.plain_text(StoryRef::Body)
     }
     pub fn insert(&mut self, block: usize, utf8_byte_offset: usize, text: &str) -> Result<(), JsValue> {
-        self.do_insert(block, utf8_byte_offset, text).map_err(|e| JsValue::from_str(&e))
+        self.do_insert(block, utf8_byte_offset, text).map_err(|e| js_err(&e))
     }
     pub fn paginate(&mut self) -> usize {
         self.pages = wordcraft_layout::layout(&self.doc, &mut self.cache, &LayoutOptions::default());
@@ -3064,40 +3071,40 @@ impl DocSession {
     }
     pub fn render_png(&self, page: usize, scale: f32) -> Result<Vec<u8>, JsValue> {
         if !scale.is_finite() || !(0.1..=2.0).contains(&scale) {
-            return Err(JsValue::from_str("scale must be 0.1..2.0"));
+            return Err(js_err("scale must be 0.1..2.0"));
         }
-        let p = self.pages.pages.get(page).ok_or_else(|| JsValue::from_str("paginate first; invalid page"))?;
+        let p = self.pages.pages.get(page).ok_or_else(|| js_err("paginate first; invalid page"))?;
         if p.w * scale > 2400.0 || p.h * scale > 2400.0 {
-            return Err(JsValue::from_str("adapter raster limit: 2400 px per side"));
+            return Err(js_err("adapter raster limit: 2400 px per side"));
         }
         Ok(wordcraft_render::render_page(&self.doc, p, scale, &Default::default()).to_png())
     }
     pub fn save(&self) -> Result<Vec<u8>, JsValue> {
-        wordcraft_docx::write(&self.doc).map_err(|e| JsValue::from_str(&e.to_string()))
+        wordcraft_docx::write(&self.doc).map_err(|e| js_err(&e.to_string()))
     }
     /// Like `save`, stamping the properties with the save time (see `stamped`).
     pub fn save_at(&self, date: &str) -> Result<Vec<u8>, JsValue> {
-        let stamped = self.stamped(date).map_err(|e| JsValue::from_str(&e))?;
-        wordcraft_docx::write(stamped.as_ref().unwrap_or(&self.doc)).map_err(|e| JsValue::from_str(&e.to_string()))
+        let stamped = self.stamped(date).map_err(|e| js_err(&e))?;
+        wordcraft_docx::write(stamped.as_ref().unwrap_or(&self.doc)).map_err(|e| js_err(&e.to_string()))
     }
     /// Like `save_at`, also recording `author` as the last person to modify the file.
     pub fn save_at_by(&self, date: &str, author: &str) -> Result<Vec<u8>, JsValue> {
-        let stamped = self.stamped_by(date, author).map_err(|e| JsValue::from_str(&e))?;
-        wordcraft_docx::write(stamped.as_ref().unwrap_or(&self.doc)).map_err(|e| JsValue::from_str(&e.to_string()))
+        let stamped = self.stamped_by(date, author).map_err(|e| js_err(&e))?;
+        wordcraft_docx::write(stamped.as_ref().unwrap_or(&self.doc)).map_err(|e| js_err(&e.to_string()))
     }
     /// Like `export_pdf_opts`, with the save time as the PDF creation date and properties stamp.
     pub fn export_pdf_at(&self, opts_json: &str, date: &str) -> Result<Vec<u8>, JsValue> {
-        self.do_export_pdf_at(opts_json, date).map_err(|e| JsValue::from_str(&e))
+        self.do_export_pdf_at(opts_json, date).map_err(|e| js_err(&e))
     }
     /// The current layout as a PDF: selectable text with embedded font subsets, links, outline, pictures.
     /// Call after `paginate`. Refuses documents past the adapter limits instead of writing a huge file.
     pub fn export_pdf(&self) -> Result<Vec<u8>, JsValue> {
-        self.do_export_pdf("{}").map_err(|e| JsValue::from_str(&e))
+        self.do_export_pdf("{}").map_err(|e| js_err(&e))
     }
     /// Like `export_pdf` with options JSON: `{"pages":[0-based page indexes, in output order],"markup":bool,"tagged":bool}`.
     /// Every key is optional (all pages, no markup, tagged). Unknown keys, duplicate or out-of-range pages are refused.
     pub fn export_pdf_opts(&self, opts_json: &str) -> Result<Vec<u8>, JsValue> {
-        self.do_export_pdf(opts_json).map_err(|e| JsValue::from_str(&e))
+        self.do_export_pdf(opts_json).map_err(|e| js_err(&e))
     }
 }
 
