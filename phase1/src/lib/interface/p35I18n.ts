@@ -1,0 +1,3 @@
+const keys=['deviceFrame','deviceFrame.none','deviceFrame.phone','deviceFrame.tablet','deviceFrame.desktop'];
+const labels={en:['Device','No device frame','Phone','Tablet','Desktop'],de:['Gerät','Kein Geräterahmen','Smartphone','Tablet','Desktop'],es:['Dispositivo','Sin marco de dispositivo','Teléfono','Tableta','Escritorio'],fr:['Appareil','Sans cadre d’appareil','Téléphone','Tablette','Bureau'],'pt-BR':['Dispositivo','Sem moldura de dispositivo','Telefone','Tablet','Desktop']};
+export const INTERFACE_P35_CATALOGUES=Object.fromEntries(Object.entries(labels).map(([locale,values])=>[locale,Object.fromEntries(keys.map((key,i)=>[`interface.${key}`,values[i]]))]));
