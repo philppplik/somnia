@@ -1863,3 +1863,27 @@ export function setFirstSlideNum(bytes:Uint8Array,value:number):Uint8Array{
   const rz=unzipSync(out);for(const key of Object.keys(zip))if(key!=='ppt/presentation.xml'&&(!rz[key]||rz[key].length!==zip[key].length||rz[key].some((v,i)=>v!==zip[key][i])))throw Error('Edited deck changed an unrelated part');
   return out;
 }
+
+/** Slides hidden from the slide show (p:sld show="0"), one flag per slide in deck order. */
+const sldTag=(xml:string)=>{const m=/<p:sld\b[^>]*>/.exec(xml);return m&&(xml.match(/<p:sld\b/g)??[]).length===1?m:null;};
+function hiddenOf(xml:string):boolean{
+  const tag=sldTag(xml);if(!tag)throw Error('Slide has no single root element');
+  const a=/\sshow="([^"]*)"/.exec(tag[0]);if(!a||a[1]==='1'||a[1]==='true')return false;
+  if(a[1]==='0'||a[1]==='false')return true;throw Error('Slide visibility is not readable');
+}
+export function readHiddenSlides(bytes:Uint8Array):boolean[]{
+  const zip=openPackage(bytes);return readDeckModel(bytes).slides.map(s=>hiddenOf(text(zip,s.part)));
+}
+export function setSlideHidden(bytes:Uint8Array,slideId:number,hidden:boolean):Uint8Array{
+  if(typeof hidden!=='boolean')throw Error('Hidden must be true or false');
+  const model=readDeckModel(bytes),slide=model.slides.find(s=>s.id===slideId);if(!slide)throw Error('Slide no longer exists');
+  if(slide.problems.length)throw Error('This slide has unsupported structure');
+  const zip=openPackage(bytes),xml=text(zip,slide.part);if(hiddenOf(xml)===hidden)return bytes;
+  const tag=sldTag(xml)![0],next=hidden?(/\sshow="/.test(tag)?tag.replace(/(\sshow=")[^"]*(")/,'$10$2'):tag.replace(/\s*(\/?)>$/,' show="0"$1>')):tag.replace(/\sshow="[^"]*"/,'');
+  const out=repack(zip,{[slide.part]:xml.replace(tag,next)}),after=readDeckModel(out);
+  if(after.slides.length!==model.slides.length||after.runs.length!==model.runs.length||JSON.stringify(after.slides.map(s=>s.shapes))!==JSON.stringify(model.slides.map(s=>s.shapes)))throw Error('Edited deck failed verification');
+  const flags=readHiddenSlides(out),was=readHiddenSlides(bytes),at=model.slides.indexOf(slide);
+  if(flags.some((f,i)=>f!==(i===at?hidden:was[i])))throw Error('Edited deck failed verification');
+  const rz=unzipSync(out);for(const key of Object.keys(zip))if(key!==slide.part&&(!rz[key]||rz[key].length!==zip[key].length||rz[key].some((v,i)=>v!==zip[key][i])))throw Error('Edited deck changed an unrelated part');
+  return out;
+}

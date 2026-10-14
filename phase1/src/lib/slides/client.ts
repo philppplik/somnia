@@ -28,6 +28,7 @@ export class SlidesClient {
  async setFooter(bytes:Uint8Array,slideId:number|null,want:FooterEdit){return await this.request({op:'footer',bytes,slideId,want}) as Uint8Array;}
  async setSlideSize(bytes:Uint8Array,cx:number,cy:number){return await this.request({op:'slideSize',bytes,cx,cy}) as Uint8Array;}
  async setAllBackgrounds(bytes:Uint8Array,background:{kind:'inherit'}|{kind:'solid';color:string}){return await this.request({op:'backgroundAll',bytes,background}) as Uint8Array;}
+ async setHidden(bytes:Uint8Array,slideId:number,hidden:boolean){return await this.request({op:'hide',bytes,slideId,hidden}) as Uint8Array;}
  async setBackground(bytes:Uint8Array,slideId:number,background:SlideBackground){return await this.request({op:'background',bytes,slideId,background}) as Uint8Array;}
  async editLayoutBox(bytes:Uint8Array,layoutPart:string,shapeId:number,expected:BoundsBox,next:BoundsBox){return await this.request({op:'layoutBox',bytes,layoutPart,shapeId,expected,next}) as Uint8Array;}
  async editMasterBox(bytes:Uint8Array,shapeId:number,expected:BoundsBox,next:BoundsBox){return await this.request({op:'masterBox',bytes,shapeId,expected,next}) as Uint8Array;}

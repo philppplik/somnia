@@ -34,3 +34,12 @@ test('all five locales contain every presentation key and placeholders',()=>{
   assert.match(strings['slides.present.counter'],/\{number\}/);assert.match(strings['slides.present.counter'],/\{count\}/);
  }
 });
+
+test('hidden slides are skipped by stepping and Home/End, but explicit jumps can land on them',()=>{
+ const hidden=[true,false,true,false,true],state={index:1,count:5,digits:'',black:false,hidden};
+ assert.equal(presentationKey('ArrowRight',state)?.index,3);assert.equal(presentationKey('ArrowRight',{...state,index:3})?.index,3);
+ assert.equal(presentationKey('ArrowLeft',{...state,index:3})?.index,1);assert.equal(presentationKey('ArrowLeft',state)?.index,1);
+ assert.equal(presentationKey('Home',{...state,index:3})?.index,1);assert.equal(presentationKey('End',state)?.index,3);
+ assert.equal(presentationKey('Enter',{...state,digits:'3'})?.index,2);
+ assert.equal(presentationKey('ArrowRight',{...state,hidden:undefined})?.index,2);
+});

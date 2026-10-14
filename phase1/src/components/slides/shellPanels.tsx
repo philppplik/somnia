@@ -4,7 +4,8 @@ import {SlidesTextSearch} from './SlidesTextSearch';
 import {getSlidesSessionState} from '../../lib/slides/session';
 import {captureCurrentSlideSummary} from '../../lib/slides/currentSummarySelection';
 import {SlidesSelectionPreview} from './SlidesSelectionPreview';
-import {useState} from 'react';
+import {useMemo,useState} from 'react';
+import {readHiddenSlides} from '../../lib/slides/deckPackage';
 import {ArrowDown,ArrowUp} from 'lucide-react';
 import {IconButton} from '../ui/icon-button';
 import {Button} from '../ui/button';
@@ -28,10 +29,11 @@ function Region({children}:{children:React.ReactNode}){return <section className
 export function SlidesOverviewPanel(){
  const s=useSlidesSession(),t=useSlidesPanelText(),action=useAction();
  const [status,setStatus]=useState('');const [query,setQuery]=usePanelState('slides.overview.filter','');const [compact,setCompact]=usePanelState('slides.overview.compact',false);
+ const flags=useMemo(()=>{try{return s.working?readHiddenSlides(s.working):[];}catch{return [];}},[s.working]);
  if(!s.summary)return <Empty/>;
  const rows=slideOutline(s.runs,s.summary.slides,query);
  const canMove=!query.trim()&&s.slideIds.length>1&&s.slideIds.length===s.summary.slides;
- const currentId=s.slideIds[s.index];
+ const currentId=s.slideIds[s.index],curHidden=!!flags[s.index];
  const structure=async(id:string,params:unknown,done:string)=>{setStatus('');const result=await commandDispatcher.tryRunCommand(id,params,{origin:'ui'});if(!result.ok)action.setError(result.error.message);else setStatus(done);};
  const move=async(from:number,to:number)=>{setStatus('');const id=s.slideIds[from];const result=await commandDispatcher.tryRunCommand('slides.moveSlide',{source:s.source,slideId:id,toIndex:to},{origin:'ui'});if(!result.ok)action.setError(result.error.message);else setStatus(t('slides.moved',{number:from+1,position:to+1}));};
  return <Region><p className="truncate text-xs text-ink-2" title={s.name}>{s.name}</p>
@@ -39,6 +41,7 @@ export function SlidesOverviewPanel(){
   <div className="flex flex-wrap gap-1" role="group" aria-label={t('slides.panel.overview')}>
    <SlidesLayoutGallery/>
    <Button size="compact" variant="outline" disabled={s.busy||currentId===undefined} onClick={()=>void structure('slides.duplicateSlide',{source:s.source,slideId:currentId},t('slides.duplicated',{number:s.index+1}))}>{t('slides.duplicate')}</Button>
+   <Button size="compact" variant="outline" aria-pressed={curHidden} disabled={s.busy||currentId===undefined||flags[s.index]===undefined} onClick={()=>void structure('slides.setSlideHidden',{source:s.source,slideId:currentId,hidden:!curHidden},'')}>{t(curHidden?'slides.unhide':'slides.hide')}</Button>
    <Button size="compact" variant="outline" disabled={s.busy||currentId===undefined||s.slideIds.length<2} onClick={()=>void structure('slides.deleteSlide',{source:s.source,slideId:currentId},t('slides.deleted',{number:s.index+1}))}>{t('slides.delete')}</Button>
   </div>
   <input className={input} aria-label={t('slides.search')} placeholder={t('slides.search')} value={query} onChange={e=>setQuery(e.target.value)}/>
@@ -48,7 +51,7 @@ export function SlidesOverviewPanel(){
    const id=s.slideIds[row.index],last=s.summary!.slides-1;
    return <div key={id??`i${row.index}`} className="flex items-stretch gap-1" draggable={canMove} onDragStart={e=>{if(canMove){e.dataTransfer.setData('text/plain',String(row.index));e.dataTransfer.effectAllowed='move';}}} onDragOver={e=>{if(canMove)e.preventDefault();}} onDrop={e=>{if(!canMove)return;e.preventDefault();const from=Number(e.dataTransfer.getData('text/plain'));if(Number.isInteger(from)&&s.slideIds[from]!==undefined&&from!==row.index)void move(from,row.index);}}>
    <button className={`${button} min-w-0 flex-1 text-left ${row.index===s.index?'border-accent bg-accent-soft':''}`} aria-current={row.index===s.index?'page':undefined} disabled={s.busy} onClick={()=>void action.run('slides.showSlide',{index:row.index})} onKeyDown={e=>{if(canMove&&e.altKey&&(e.key==='ArrowUp'||e.key==='ArrowDown')){e.preventDefault();const to=row.index+(e.key==='ArrowUp'?-1:1);if(to>=0&&to<=last)void move(row.index,to);}}}>
-    {!compact&&s.thumbnails[row.index]&&<img src={s.thumbnails[row.index]} alt="" loading="lazy" className="mb-2 aspect-video w-full object-contain"/>}<span className="block text-xs font-medium">{t('slides.slide',{number:row.index+1})}</span><span className="block truncate text-xs text-ink-2">{row.title}</span>
+    {!compact&&s.thumbnails[row.index]&&<img src={s.thumbnails[row.index]} alt="" loading="lazy" className="mb-2 aspect-video w-full object-contain"/>}<span className="block text-xs font-medium">{t('slides.slide',{number:row.index+1})}</span><span className="block truncate text-xs text-ink-2">{row.title}</span>{flags[row.index]&&<span className="block text-xs text-ink-3">{t('slides.hidden')}</span>}
    </button>
    {canMove&&<div className="flex shrink-0 flex-col justify-center gap-1"><IconButton size="row" variant="outline" aria-label={`${t('slides.moveEarlier')} (${t('slides.slide',{number:row.index+1})})`} disabled={s.busy||row.index===0} onClick={()=>void move(row.index,row.index-1)}><ArrowUp aria-hidden/></IconButton><IconButton size="row" variant="outline" aria-label={`${t('slides.moveLater')} (${t('slides.slide',{number:row.index+1})})`} disabled={s.busy||row.index===last} onClick={()=>void move(row.index,row.index+1)}><ArrowDown aria-hidden/></IconButton></div>}
    </div>;})}</nav>{!rows.length&&<p className="text-xs text-ink-3">{t('slides.noMatches')}</p>}<p role="status" aria-live="polite" className="text-xs text-ink-2">{status}</p>{!canMove&&query.trim()&&s.slideIds.length>1&&<p className="text-xs text-ink-3">{t('slides.reorderFiltered')}</p>}{!s.slideIds.length&&<p className="text-xs text-ink-3">{t('slides.reorderUnavailable')}</p>}<Notice error={action.error}/></Region>;

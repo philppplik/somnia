@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {unzipSync,zipSync,strFromU8,strToU8} from 'fflate';
-import {setFirstSlideNum,readFirstSlideNum,setSlideFooter,setAllSlideFooters,readSlideFooter,setSlideSize,readSlideSize,setAllSlideBackgrounds,backgroundSummary,setSlideBackground,readSlideBackground,editLayoutBox,readLayoutBoxes,editMasterBox,readMaster,editTheme,readTheme,insertTable,editTable,readTable,setShapeStyle,readShapeStyle,setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
+import {setSlideHidden,readHiddenSlides,setFirstSlideNum,readFirstSlideNum,setSlideFooter,setAllSlideFooters,readSlideFooter,setSlideSize,readSlideSize,setAllSlideBackgrounds,backgroundSummary,setSlideBackground,readSlideBackground,editLayoutBox,readLayoutBoxes,editMasterBox,readMaster,editTheme,readTheme,insertTable,editTable,readTable,setShapeStyle,readShapeStyle,setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
 import {readRuns,makeEditedCopy} from './editCopy';
 import {png,jpeg} from './imageFixtures';
 
@@ -908,4 +908,15 @@ test('date placeholder: add, change, remove, leave alone when omitted, refuse un
   const z=unzipSync(c),part=Object.keys(z).find(k=>/slides\/slide\d+\.xml$/.test(k)&&strFromU8(z[k]).includes('Date Placeholder'))!;
   z[part]=strToU8(strFromU8(z[part]).replace(/<a:r>(\s*<a:rPr[^>]*\/>)?\s*<a:t>14 Oct[^<]*<\/a:t>\s*<\/a:r>/,'<a:fld id="{1}" type="datetime1"><a:t>1</a:t></a:fld>'));
   const odd=zipSync(z);assert.equal(readSlideFooter(odd,sid[0]).editable,false);assert.throws(()=>setSlideFooter(odd,sid[0],{number:true,footer:null}),/unsupported/);
+});
+
+test('hide slide: set, restore, no-op, other slides and parts untouched, malformed refused',()=>{
+  const b=deck(2),sid=ids(b);assert.deepEqual(readHiddenSlides(b),[false,false]);
+  const c=setSlideHidden(b,sid[1],true);assert.deepEqual(readHiddenSlides(c),[false,true]);assert.equal(setSlideHidden(c,sid[1],true),c);assert.deepEqual(readDeckModel(c).slides.map(s=>s.id),sid);
+  const d=setSlideHidden(c,sid[0],true);assert.deepEqual(readHiddenSlides(d),[true,true]);
+  const e=setSlideHidden(d,sid[1],false);assert.deepEqual(readHiddenSlides(e),[true,false]);
+  assert.deepEqual(readHiddenSlides(setSlideHidden(e,sid[0],false)),[false,false]);assert.equal(setSlideHidden(b,sid[0],false),b);
+  assert.throws(()=>setSlideHidden(b,99999,true),/no longer exists/);assert.throws(()=>setSlideHidden(b,sid[0],'x' as unknown as boolean));
+  const z=unzipSync(c),part=Object.keys(z).find(k=>/slides\/slide\d+\.xml$/.test(k)&&/\sshow="0"/.test(strFromU8(z[k])))!;
+  z[part]=strToU8(strFromU8(z[part]).replace('show="0"','show="maybe"'));const odd=zipSync(z);assert.throws(()=>readHiddenSlides(odd),/not readable/);assert.throws(()=>setSlideHidden(odd,sid[0],true),/not readable/);
 });

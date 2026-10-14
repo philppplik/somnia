@@ -6128,6 +6128,21 @@
       "hasEnabled": true
     },
     {
+      "id": "slides.setSlideHidden",
+      "title": "Hide or show slide in slide show",
+      "category": "Edit",
+      "source": "slides",
+      "keywords": [
+        "hidden",
+        "hide slide",
+        "present",
+        "show slide",
+        "skip",
+        "slide show"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "slides.setSlideSize",
       "title": "Set slide size",
       "category": "Edit",
