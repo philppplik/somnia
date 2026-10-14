@@ -19,3 +19,7 @@ test('one nested object is ok, deep nesting is complex',()=>{
  assert.equal(lintToolForLocal(tool({type:'object',properties:{config:{type:'object',properties:{name:{type:'string'}}}}})).tier,'ok');
  assert.equal(lintToolForLocal(tool({type:'object',properties:{a:{type:'object',properties:{b:{type:'object',properties:{c:{type:'string'}}}}}}})).tier,'complex');
 });
+test('diagnostics explain complexity and eligible tools omitted by budget',async()=>{
+ const {localToolDiagnostics}=await import('./localToolLint');const tools=Array.from({length:9},(_,i)=>tool({type:'object'},'t'+i));tools.unshift(tool({$ref:'x'},'ref'));
+ const rows=localToolDiagnostics(tools);assert.deepEqual(rows[0].reasons,['$ref']);assert.equal(rows[1].offered,true);assert.deepEqual(rows[9].reasons,['tool-limit-eight']);assert.equal(rows[9].offered,false);
+});

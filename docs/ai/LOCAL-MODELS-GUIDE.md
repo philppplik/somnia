@@ -39,3 +39,19 @@ Local STT/TTS is not implemented. Browser speech APIs are not offered as a fake 
 ## Verification still needed
 
 Native Windows/macOS/Linux start/probes and packaged-webview daemon access need device tests. Quality/performance claims require actual opt-in fixture results with exact model digest, runtime and hardware. Existing mock/rendered tests are not live model evidence.
+
+## Apply an image description to a studio
+
+The Agent sidebar and Local settings share the opt-in image description control. Only a
+complete, uncancelled description exposes application controls. Model/settings changes reset it.
+Choose the destination yourself: Code Markdown text (appended as an inert fenced text block),
+or the selected unlocked HTML `img` element's `alt` attribute. A picked input image is not
+assumed to be the same image as the selected HTML element. Review the exact source diff,
+then accept or reject. Acceptance uses the existing native revision-pinned transaction;
+undo refuses to overwrite newer edits. Changes stay in editor memory, with autosave held.
+Other studios/destinations are refused, not converted or silently redirected. This does not
+save a photo caption or image metadata, and does not edit a DOCX or slide.
+
+Local tool schema compatibility can inspect the active source catalog without inference or
+tool execution. Each omitted tool names the schema reason, or the eight-tool budget limit.
+The catalog is advice, not permission: studio scope and grants may further narrow a request.

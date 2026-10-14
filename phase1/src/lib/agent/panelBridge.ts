@@ -1,3 +1,4 @@
+import {visionApplication,type VisionDestination} from './localVisionApplication';
 import {requireLocalCapabilities} from './localCapabilities';
 import {withAgentStudioContext,resolveAgentToolSet} from './studioContextAdapter';
 import type {AgentStudioContext} from './studioContextAdapter';
@@ -185,6 +186,28 @@ function panelProposal(set:ChangeSet):AgentProposal {
  const reviews=reviewChangeSet(set);const lines=reviews.flatMap(r=>r.ops.flatMap<DiffLine>(op=>op.t==='same'?[{kind:'ctx' as const,text:op.text}]:[...op.removed.map(text=>({kind:'del' as const,text})),...op.added.map(text=>({kind:'add' as const,text}))]));
  return {id:set.id,file:set.files.map(f=>f.path).join(', '),changeSet:set,lines,added:lines.filter(l=>l.kind==='add').length,removed:lines.filter(l=>l.kind==='del').length};
 }
+/** Host catalog only, no tool invocation or model disclosure. */
+export function inspectStudioToolDefinitions(path:string){
+ syncDocuments();const base=documents.snapshot(path);
+ policy.grant({effect:'inspect',documentIds:[base.ref.documentId]});
+ const context=buildContext(documents,policy,path,null);
+ return createTools('schema-inspect',context,getState().nodes).definitions();
+}
+/** User-click preparation only. Pins native identity/revision, uses existing reviewed transaction + undo. */
+export function stageLocalVisionResult(path:string,text:string,destination:VisionDestination,model:string):AgentProposal {
+ if(session?.status==='running'||proposals.size)throw Error('Stop generation and finish pending review before staging an image description.');
+ if(getState().activeStudio!=='code'&&getState().activeStudio!=='design')throw Error('Open the target in Code or Design studio first.');
+ if(path!==getState().activeFile)throw Error('Active source changed.');
+ epoch=getProjectGeneration();
+ syncDocuments();const base=documents.snapshot(path),state=getState();
+ const after=visionApplication(base,text,destination,state.nodes,state.selectedElementId);
+ policy.grant({effect:'inspect',documentIds:[base.ref.documentId]});
+ const native=transactions.propose(`vision-${++visionSerial}`,base.ref,after);
+ const set:ChangeSet={id:`vision-${getProjectGeneration()}-${visionSerial}`,complete:true,provenance:createAIProvenance('ollama',model),files:[{path,kind:'edit',baseText:base.text,proposedText:after}]};
+ proposals.set(set.id,set);nativeIds.set(set.id,native.id);return {...panelProposal(set),native};
+}
+let visionSerial=0;
+
 // --- Somnia as MCP server (docs/MCP-SERVER.md): the active document becomes one read/propose tool source. ---
 let mcpProposalList:AgentProposal[]=[];
 const mcpProposalMap=new Map<string,AgentProposal>();

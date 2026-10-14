@@ -86,3 +86,12 @@ test('quality probes are opt-in synthetic tests with no quality guarantee',async
  await expect(page.getByRole('img')).toHaveCount(3);
  await page.screenshot({path:'/tmp/local-quality-probes.png',fullPage:true});
 });
+test('local vision description previews, accepts and undoes a studio source edit',async({page})=>{
+ await page.goto('/test/local-models.html?state=apply');
+ await page.getByRole('button',{name:'Preview as text',exact:true}).click();
+ await expect(page.getByRole('region',{name:'Review native AI proposal'})).toContainText('A red square on a white background.');
+ await page.screenshot({path:'/tmp/local-vision-apply-review.png',fullPage:true});
+ await page.getByRole('button',{name:'Accept preview',exact:true}).click();await expect(page.getByRole('status')).toContainText('Applied to editor, not saved.');
+ await page.getByRole('button',{name:'Undo image description',exact:true}).click();await expect(page.getByRole('status')).toContainText('Image description undone.');
+ await page.getByText('Local tool schema compatibility',{exact:true}).click();await expect(page.getByText('Schema references are not supported',{exact:true})).toBeVisible();await page.screenshot({path:'/tmp/local-tool-schema-reasons.png',fullPage:true});
+});
