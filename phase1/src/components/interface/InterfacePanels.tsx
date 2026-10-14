@@ -6,6 +6,7 @@ import {InterfaceInteractions} from './InterfacePrototype';
 import {setInterfaceConstraint,setInterfaceAbsolute} from '../../lib/interface/constraints';
 import {resizeInterfaceFrame} from '../../lib/interface/responsive';
 import {interfaceLayerCSS} from '../../lib/interface/export';
+import {auditInterfaceDocument} from '../../lib/interface/a11y';
 import {INTERFACE_FRAME_PRESETS} from '../../lib/interface/pages';
 import {getInterfacePresetPreview,setInterfacePresetPreview,useInterfacePresetPreview} from './presetPreview';
 import {InterfaceVariantProperties} from './InterfaceVariantProperties';
@@ -18,7 +19,7 @@ import {InterfaceResources,InterfaceBindings} from './InterfaceResources';
 import {InterfaceOutput} from './InterfaceOutput';
 import {patchInterfaceNode,owningInstance,createComponent,instantiateComponent,addComponentVariant,switchInstanceVariant,resetInstanceOverrides,detachInstance} from '../../lib/interface/components';
 import {DEFAULT_LAYOUT,DEFAULT_SIZING,type InterfaceLayout,type InterfaceSizing,type ConstraintMode} from '../../lib/interface/schema';
-import {useState,type ReactNode} from 'react';
+import {useMemo,useState,type ReactNode} from 'react';
 import {Button} from '../ui/button';
 import {PanelSection} from '../ui/panel';
 import {useId} from 'react';
@@ -62,6 +63,7 @@ export function InterfaceProperties(){
    <div className="grid grid-cols-2 gap-2">{(['x','y','width','height'] as const).map(key=><Field key={key} name={t(`interface.${key}`)} value={node[key]} type="number" disabled={node.locked} onCommit={value=>run(()=>{if(!value.trim())throw Error('A number is required.');patch({[key]:Number(value)});})}/>)}</div>
    <Field name={t('interface.fill')} value={node.fill} type="color" disabled={node.locked} onCommit={fill=>run(()=>patch({fill}))}/>
    {node.kind==='text'&&<Field name={t('interface.text')} value={node.text??''} disabled={node.locked} onCommit={text=>run(()=>patch({text}))}/>}
+   {node.imageFill&&<Field name={t('interface.altText')} value={node.altText??''} disabled={node.locked} onCommit={altText=>run(()=>patch({altText}))}/>}
    <label className="text-xs">{t('interface.parent')}<select className="mt-1 w-full rounded border border-subtle bg-panel p-2" value={node.parentId??''} disabled={node.locked} onChange={e=>run(()=>{const parent=e.target.value||null;const count=parent?doc.nodes.find(n=>n.id===parent)!.children.length:doc.pages.find(p=>p.id===node.pageId)!.children.length;interfaceSession.transact(d=>reparentNode(d,node.id,parent,count-(parent===node.parentId?1:0)));})}><option value="">{t('interface.root')}</option>{doc.nodes.filter(n=>n.pageId===node.pageId&&n.id!==node.id&&['frame','group'].includes(n.kind)&&!n.locked).map(n=><option key={n.id} value={n.id}>{n.name}</option>)}</select></label>
    {(['hidden','locked'] as const).map(key=><label key={key} className="flex items-center gap-2 text-xs"><input style={{width:14,flexShrink:0}} type="checkbox" checked={node[key]} disabled={key==='hidden'&&node.locked} onChange={e=>run(()=>patch({[key]:e.target.checked}))}/>{t(`interface.${key}`)}</label>)}
    {node.kind==='frame'&&<Choice label={t('interface.variableMode')} value={node.variableMode??''} options={[["",t('interface.inheritMode')],["light",t('interface.mode.light')],["dark",t('interface.mode.dark')]]} disabled={node.locked} onChange={mode=>run(()=>patch({variableMode:mode?mode as 'light'|'dark':undefined}))}/>}
@@ -76,6 +78,7 @@ export function InterfaceProperties(){
    <div className="flex flex-wrap gap-1"><Button size="compact" variant="outline" disabled={node.locked} onClick={()=>run(()=>move(-1))}>{t('interface.up')}</Button><Button size="compact" variant="outline" disabled={node.locked} onClick={()=>run(()=>move(1))}>{t('interface.down')}</Button><Button size="compact" variant="outline" disabled={node.locked} onClick={()=>run(()=>interfaceSession.transact(d=>deleteNode(d,node.id)))}>{t('interface.delete')}</Button><InterfaceCopyCss node={node} run={run}/></div>
   </>}
   {node&&s.selectedIds.length===1&&<InterfaceInteractions node={node} run={run}/>}
+  <InterfaceA11yReview/>
   <InterfaceOutput/>
  </div>}</Guard>;
 }
@@ -97,6 +100,11 @@ function InterfaceLayoutControls({node,run,patch}:{node:InterfaceNode;run:(f:()=
   <div className="grid grid-cols-2 gap-2">{(['minWidth','maxWidth','minHeight','maxHeight'] as const).map(key=><Field key={key} name={t(`interface.${key}`)} value={sizing[key]} type="number" disabled={disabled} onCommit={v=>run(()=>patch({sizing:{...sizing,[key]:number(v)}}))}/>)}</div>
   {parent&&<><label className="flex items-center gap-2 text-xs"><input style={{width:14}} type="checkbox" checked={sizing.absolute} disabled={disabled} onChange={e=>run(()=>interfaceSession.transact(d=>setInterfaceAbsolute(d,node.id,e.target.checked)))}/>{t('interface.absolute')}</label>{(!parent.layout||parent.layout.direction==='free'||sizing.absolute)&&<div className="grid grid-cols-2 gap-2">{(['horizontal','vertical'] as const).map(axis=><Choice key={axis} label={t(`interface.${axis}`)} value={node.constraints?.[axis]??'start'} options={option(['start','end','center','stretch','scale'])} disabled={disabled} onChange={v=>run(()=>interfaceSession.transact(d=>setInterfaceConstraint(d,node.id,axis,v as ConstraintMode)))}/>)}</div>}</>}
  </div></InspectorGroup>;
+}
+function InterfaceA11yReview(){
+ const s=useInterfaceState(),{t}=useT();const audit=useMemo(()=>s.document?auditInterfaceDocument(s.document):null,[s.document]);
+ if(!audit)return null;
+ return <InspectorGroup title={t('interface.a11y')}>{audit.findings.length?<ul className="flex flex-col gap-2 text-xs">{audit.findings.map(f=><li key={f.id}><p>{t(`interface.a11y.${f.kind}`,f.params)}</p>{f.suggestions?.length?<p className="text-ink-2">{t('interface.a11y.suggest')}: {f.suggestions.map(sg=>`${sg.name} (${sg.value}, ${sg.ratio}:1)`).join(' · ')}</p>:null}</li>)}</ul>:<p className="text-xs text-ink-2">{t('interface.a11y.ok')}</p>}</InspectorGroup>;
 }
 function InterfaceCopyCss({node,run}:{node:InterfaceNode;run:(f:()=>void)=>void}){
  const {t}=useT();const s=useInterfaceState();const [copied,setCopied]=useState(false);

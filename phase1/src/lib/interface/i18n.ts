@@ -1,3 +1,4 @@
+import {INTERFACE_P16_CATALOGUES} from './p16I18n';
 import {INTERFACE_P15_CATALOGUES} from './p15I18n';
 import {INTERFACE_P14_CATALOGUES} from './p14I18n';
 import {INTERFACE_P13_CATALOGUES} from './p13I18n';
@@ -81,3 +82,4 @@ for(const [locale,extra] of Object.entries(INTERFACE_P12_CATALOGUES))Object.assi
 for(const [locale,extra] of Object.entries(INTERFACE_P13_CATALOGUES))Object.assign(INTERFACE_CATALOGUES[locale as keyof typeof INTERFACE_CATALOGUES],extra);
 for(const [locale,extra] of Object.entries(INTERFACE_P14_CATALOGUES))Object.assign(INTERFACE_CATALOGUES[locale as keyof typeof INTERFACE_CATALOGUES],extra);
 for(const [locale,extra] of Object.entries(INTERFACE_P15_CATALOGUES))Object.assign(INTERFACE_CATALOGUES[locale as keyof typeof INTERFACE_CATALOGUES],extra);
+for(const [locale,extra] of Object.entries(INTERFACE_P16_CATALOGUES))Object.assign(INTERFACE_CATALOGUES[locale as keyof typeof INTERFACE_CATALOGUES],extra);
