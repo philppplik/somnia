@@ -42,7 +42,7 @@ pub fn request(model:&str,messages:&[ModelMessage])->Result<Value,Failure>{let b
 }
 #[cfg(test)]mod more_tests{use super::*;
  #[test]fn duplicate_done_and_length_fail(){let mut d=Decoder::default();assert!(d.push(b"{\"message\":{\"content\":\"ok\"},\"done\":true}\n{\"done\":true}\n").is_err());let mut d=Decoder::default();d.push(b"{\"message\":{\"content\":\"partial\"},\"done\":true,\"done_reason\":\"length\"}\n").unwrap();assert!(d.finish().is_err());}
- #[test]fn context_and_no_tools(){let m=vec![ModelMessage::text("user","x".repeat(24000))];assert!(request("m",&m).is_err());let body=request("m",&[ModelMessage::text("user","hello")]).unwrap();assert_eq!(body["stream"],true);assert!(body.get("tools").is_none());assert_eq!(body["options"]["num_ctx"],32768);}
+ #[test]fn context_and_no_tools(){let m=vec![ModelMessage::text("user","x".repeat(24000))];assert!(request("m",&m).is_err());let body=request("m",&[ModelMessage::text("user","hello".to_string())]).unwrap();assert_eq!(body["stream"],true);assert!(body.get("tools").is_none());assert_eq!(body["options"]["num_ctx"],32768);}
 }
 
 #[cfg(test)]mod unknown_usage_tests{use super::*;#[test]fn missing_stream_counters_are_unknown(){let mut d=Decoder::default();d.push(b"{\"message\":{\"content\":\"ok\"},\"done\":true}\n").unwrap();assert!(d.finish().unwrap().usage.tokens_unknown);}}
