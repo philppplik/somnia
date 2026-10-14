@@ -1,3 +1,5 @@
+import {LocalSearchPanelHost} from './LocalSearchPanel';
+import {AgentPanelSettings} from './AgentPanelSettings';
 import {LocalAIHelp} from './LocalAIHelp';
 import {LocalPrivacySettings} from './LocalPrivacySettings';
 import {LocalEvaluationHarness} from './LocalEvaluationHarness';
@@ -59,13 +61,13 @@ export function AgentSettings({searchQuery='',legacyPrivacy=false}:{searchQuery?
   <TabsList activateOnFocus aria-label={t('set.section.ai')}>
    {tabs.map(id=><TabsTrigger id={'ai-tab-'+id} value={id} aria-controls={'ai-content-'+id} key={id}>{labels[id]}</TabsTrigger>)}
   </TabsList>
-  <TabsContent keepMounted value="local" id="ai-content-local" aria-labelledby="ai-tab-local"><LocalModelsSettings active={visible('local')}/><AlternateRuntimeDiscovery/><NativeVoiceSettings/><LocalModelComparison/><LocalEvaluationHarness/><LocalPrivacySettings/><LocalToolDiagnostics/><OfflineModeSettings value={cfg.localRuntime} disabled={locked} onChange={localRuntime=>{setCfg({...cfg,localRuntime});setSaved(false);}}/><LocalTaskRouting value={cfg.localRuntime} disabled={locked} onChange={localRuntime=>{setCfg({...cfg,localRuntime});setSaved(false);}}/><LocalStudioModels value={cfg.localRuntime} disabled={locked} onChange={localRuntime=>{setCfg({...cfg,localRuntime});setSaved(false);}}/>{settings.config.provider==='ollama'&&<LocalQualityProbes model={settings.config.model} options={settings.config.localRuntime}/>}
+  <TabsContent keepMounted value="local" id="ai-content-local" aria-labelledby="ai-tab-local"><LocalModelsSettings active={visible('local')}/>{visible('local')&&<details className="local-runtime-discovery"><summary>{t('local.search.title')}</summary><LocalSearchPanelHost/></details>}<AlternateRuntimeDiscovery/><NativeVoiceSettings/><LocalModelComparison/><LocalEvaluationHarness/><LocalPrivacySettings/><LocalToolDiagnostics/><OfflineModeSettings value={cfg.localRuntime} disabled={locked} onChange={localRuntime=>{setCfg({...cfg,localRuntime});setSaved(false);}}/><LocalTaskRouting value={cfg.localRuntime} disabled={locked} onChange={localRuntime=>{setCfg({...cfg,localRuntime});setSaved(false);}}/><LocalStudioModels value={cfg.localRuntime} disabled={locked} onChange={localRuntime=>{setCfg({...cfg,localRuntime});setSaved(false);}}/>{settings.config.provider==='ollama'&&<LocalQualityProbes model={settings.config.model} options={settings.config.localRuntime}/>}
 {settings.config.provider==='ollama'&&<LocalVisionTest model={settings.config.model} options={settings.config.localRuntime}/>}<ProviderRoutingSettings value={cfg.localRuntime} model={cfg.model} disabled={locked} onChange={localRuntime=>{setCfg({...cfg,localRuntime});setSaved(false);}}/><LocalRuntimeAdvanced model={cfg.model} value={cfg.localRuntime} disabled={locked} onChange={localRuntime=>{setCfg({...cfg,localRuntime});setSaved(false);}}/><Button type="button" disabled={locked||authBusy||invalid} onClick={()=>void saveConfiguration()}>{saving?'Saving...':t('agent.settings.save')}</Button>{saved&&<p role="status">Configuration saved.</p>}</TabsContent>
   {settings.running&&<p role="status">Stop the current generation before changing AI configuration.</p>}
   {settings.pendingReview&&<p role="status">Accept or discard pending proposals before changing AI configuration.</p>}
   <p hidden={tab!=='providers'&&tab!=='instructions'}>Saving starts a new AI session. Your visible chat history stays. API key actions apply immediately; cloud consent is separate.</p>
   <TabsContent keepMounted value="tools" id="ai-content-tools" aria-labelledby="ai-tab-tools"><McpSettings/></TabsContent>
-  <TabsContent keepMounted value="privacy" id="ai-content-privacy" aria-labelledby="ai-tab-privacy"><AgentPrivacySettings/></TabsContent>
+  <TabsContent keepMounted value="privacy" id="ai-content-privacy" aria-labelledby="ai-tab-privacy"><AgentPrivacySettings/><AgentPanelSettings/></TabsContent>
   <form hidden={tab!=='providers'&&tab!=='instructions'} aria-label="Agent configuration" onChange={()=>setSaved(false)} onSubmit={e=>{e.preventDefault();void saveConfiguration();}}>
    <fieldset disabled={locked}>
     <TabsContent keepMounted value="providers" id="ai-content-providers" aria-labelledby="ai-tab-providers">

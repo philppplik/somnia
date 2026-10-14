@@ -3754,5 +3754,11 @@
   "agent.native.phase.undone": "Deshecho en memoria",
   "agent.native.phase.done": "Turno terminado",
   "agent.native.phase.failed": "Turno fallido",
-  "agent.native.phase.stopped": "Detenido"
+  "agent.native.phase.stopped": "Detenido",
+  "agent.panel.contextSettings": "Ajustes de contexto del chat",
+  "agent.panel.noDocument": "Sin documento",
+  "agent.panel.inspect": "Permitir inspeccionar el documento activo y la selección. Los cambios requieren revisión.",
+  "agent.panel.disclose": "Divulgar el documento y selección de la próxima ejecución a {provider}.",
+  "agent.panel.oneUse": "La autorización se usa una vez y caduca al cambiar el contexto o configuración. También requiere consentimiento para la nube.",
+  "agent.panel.tip": "Elige modelo y contexto en Ajustes y describe tu tarea. Los cambios requieren revisión."
 }

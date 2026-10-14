@@ -1,0 +1,2 @@
+import React from 'react';import {createRoot} from 'react-dom/client';import {AgentSettings} from '../src/components/agent/AgentSettings';import {patchState} from '../src/store/appStore';import '../src/styles/global.css';
+if(!import.meta.env.DEV)throw Error('Development only');document.documentElement.dataset.theme=location.search.includes('dark')?'dark':'light';globalThis.fetch=async()=>{throw Error('No real model or network');};patchState({settingsAITab:'privacy'});createRoot(document.getElementById('root')!).render(<main className="max-w-xl p-6"><AgentSettings/></main>);

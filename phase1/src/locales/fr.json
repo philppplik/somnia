@@ -3754,5 +3754,11 @@
   "agent.native.phase.undone": "Annulé en mémoire",
   "agent.native.phase.done": "Tour terminé",
   "agent.native.phase.failed": "Tour en échec",
-  "agent.native.phase.stopped": "Arrêté"
+  "agent.native.phase.stopped": "Arrêté",
+  "agent.panel.contextSettings": "Réglages du contexte du chat",
+  "agent.panel.noDocument": "Aucun document",
+  "agent.panel.inspect": "Autoriser la lecture du document actif et de la sélection. Les modifications restent soumises à vérification.",
+  "agent.panel.disclose": "Transmettre le document et la sélection du prochain tour à {provider}.",
+  "agent.panel.oneUse": "Autorisation unique, invalidée par un changement de cible, contexte ou configuration. Le consentement cloud reste nécessaire.",
+  "agent.panel.tip": "Choisissez modèle et contexte dans Réglages, puis décrivez votre tâche. Les modifications restent à vérifier."
 }

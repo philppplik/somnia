@@ -3754,5 +3754,11 @@
   "agent.native.phase.undone": "Undone in memory",
   "agent.native.phase.done": "Turn ended",
   "agent.native.phase.failed": "Turn failed",
-  "agent.native.phase.stopped": "Stopped"
+  "agent.native.phase.stopped": "Stopped",
+  "agent.panel.contextSettings": "Chat context settings",
+  "agent.panel.noDocument": "No document",
+  "agent.panel.inspect": "Allow inspecting the active document and selection. Edits still need preview acceptance.",
+  "agent.panel.disclose": "Disclose the next run's current document and selection to {provider}.",
+  "agent.panel.oneUse": "Disclosure is one use and invalidated by target, context or configuration changes. Cloud consent is also required.",
+  "agent.panel.tip": "Choose a model and chat context in Settings, then describe your task. Changes still need review."
 }

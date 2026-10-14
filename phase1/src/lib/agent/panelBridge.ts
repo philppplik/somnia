@@ -149,6 +149,8 @@ const transactions=new TransactionManager(documents,policy,{
  canAccept:()=>getCollabEngine().snapshot().role!=='guest',
 });
 function syncDocuments(){const {files,bindings}=studioWorkspace();documents.sync(files,undefined,bindings);}
+/** Host metadata for one-use Settings disclosure binding. Never returns contents. */
+export function activeAgentDocumentRef(path:string){syncDocuments();try{return documents.snapshot(path).ref;}catch{return null;}}
 function createTools(project:string,context:ContextPackage,nodes:ReturnType<typeof getState>['nodes'],studio?:AgentStudioContext){
  const scoped=()=>{policy.assert({effect:'inspect',documentIds:[context.document.documentId]});syncDocuments();return documents.assert(context.document);};
  // Older typed adapters stage through a synchronous host callback. Flush into the same session proposal store.
