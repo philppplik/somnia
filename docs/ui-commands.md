@@ -555,10 +555,10 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `slides.selectText` | Select slide text | View | slides |  |
 | `slides.setAllSlideBackgrounds` | Set background on all slides | Edit | slides |  |
 | `slides.setAllSlideFooters` | Set slide number and footer on all slides | Edit | slides |  |
-| `slides.setAltText` | Set picture alt text | Edit | slides |  |
+| `slides.setAltText` | Set alt text | Edit | slides |  |
 | `slides.setFirstSlideNumber` | Set first slide number | Edit | slides |  |
 | `slides.setNotes` | Set speaker notes | Edit | slides |  |
-| `slides.setPictureDecorative` | Mark picture as decorative | Edit | slides |  |
+| `slides.setPictureDecorative` | Mark as decorative | Edit | slides |  |
 | `slides.setShapeBounds` | Move or resize text box | Edit | slides |  |
 | `slides.setSlideBackground` | Set slide background | Edit | slides |  |
 | `slides.setSlideFooter` | Set slide number and footer | Edit | slides |  |

@@ -471,7 +471,7 @@ test('setAltText checks identity, text and picture before mutation',async()=>{
  const {readDeckModel,setPictureAlt}=await import('./deckPackage'),{readFileSync}=await import('node:fs'),{fileURLToPath}=await import('node:url');
  const src=new Uint8Array(readFileSync(fileURLToPath(new URL('../../../slides-engine/fixtures/independent.pptx',import.meta.url))));
  const m=readDeckModel(src),sid=m.slides[0].id,text=m.slides[0].shapes.find(x=>x.kind==='text')!.id;f.state.working=src;f.state.slideIds=m.slides.map(x=>x.id);
- await assert.rejects(()=>run({source:'blob:deck1',slideId:sid,shapeId:text,alt:'x'}),/Only pictures/);
+ await assert.rejects(()=>run({source:'blob:deck1',slideId:sid,shapeId:99999,alt:'x'}),/no longer exists/);
  await assert.rejects(()=>run({source:'blob:other',slideId:sid,shapeId:text,alt:'x'}),/no longer exists/);
  await assert.rejects(()=>run({source:'blob:deck1',slideId:99999,shapeId:text,alt:'x'}),/no longer exists/);
  await assert.rejects(()=>run({source:'blob:deck1',slideId:sid,shapeId:text,alt:' x '}),/padded|empty/);
@@ -520,7 +520,7 @@ test('setPictureDecorative checks identity, slide and picture before mutation',a
  const {readDeckModel}=await import('./deckPackage'),{readFileSync}=await import('node:fs'),{fileURLToPath}=await import('node:url');
  const src=new Uint8Array(readFileSync(fileURLToPath(new URL('../../../slides-engine/fixtures/independent.pptx',import.meta.url))));
  const m=readDeckModel(src),sid=m.slides[0].id,text=m.slides[0].shapes.find(x=>x.kind==='text')!.id;f.state.working=src;f.state.slideIds=m.slides.map(x=>x.id);
- await assert.rejects(()=>run({source:'blob:deck1',slideId:sid,shapeId:text,decorative:true}),/Only pictures/);
+ await assert.rejects(()=>run({source:'blob:deck1',slideId:sid,shapeId:99999,decorative:true}),/no longer exists/);
  await assert.rejects(()=>run({source:'blob:other',slideId:sid,shapeId:text,decorative:true}),/no longer exists/);
  await assert.rejects(()=>run({source:'blob:deck1',slideId:99999,shapeId:text,decorative:true}),/no longer exists/);
  await assert.rejects(()=>run({source:'blob:deck1',slideId:sid,shapeId:text,decorative:'yes'}));

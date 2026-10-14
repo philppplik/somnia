@@ -959,7 +959,7 @@ test('picture alt text: add, change, clear, no-op, escaping; only pictures; othe
   const d=setPictureAlt(c,sid,pic,'Changed');assert.equal(readPictureAlt(d,sid,pic),'Changed');
   const e=setPictureAlt(d,sid,pic,null);assert.equal(readPictureAlt(e,sid,pic),null);assert.equal(setPictureAlt(b,sid,pic,null),b);
   const shapes=readDeckModel(b).slides[0].shapes;const text=shapes.find(s=>s.kind==='text')!.id;
-  assert.throws(()=>setPictureAlt(b,sid,text,'x'),/Only pictures/);assert.throws(()=>setPictureAlt(b,sid,9999,'x'),/no longer exists/);assert.throws(()=>setPictureAlt(b,99999,pic,'x'),/no longer exists/);
+  assert.equal(readPictureAlt(setPictureAlt(b,sid,text,'Title box'),sid,text),'Title box');assert.throws(()=>setPictureAlt(b,sid,9999,'x'),/no longer exists/);assert.throws(()=>setPictureAlt(b,99999,pic,'x'),/no longer exists/);
   for(const bad of ['',' pad ','x'.repeat(501),'a\nb'])assert.throws(()=>setPictureAlt(b,sid,pic,bad));
   assert.deepEqual(titles(c),titles(b));
 });
@@ -993,7 +993,7 @@ test('decorative picture: mark clears alt, excluded from missing report, toggles
   const d=setPictureDecorative(c,sid,pic,false);assert.equal(readPictureDecorative(d,sid,pic),false);assert.equal(missingAltText(d).items.some(i=>i.shapeId===pic),true);
   assert.equal(setPictureAlt(d,sid,pic,'Again') instanceof Uint8Array,true);
   const text=readDeckModel(b).slides[0].shapes.find(s=>s.kind==='text')!.id;
-  assert.throws(()=>setPictureDecorative(b,sid,text,true),/Only pictures/);assert.throws(()=>setPictureDecorative(b,99999,pic,true),/no longer exists/);assert.throws(()=>setPictureDecorative(b,sid,99999,true),/no longer exists/);
+  assert.equal(readPictureDecorative(setPictureDecorative(b,sid,text,true),sid,text),true);assert.throws(()=>setPictureDecorative(b,99999,pic,true),/no longer exists/);assert.throws(()=>setPictureDecorative(b,sid,99999,true),/no longer exists/);
 });
 
 test('duplicate titles: groups equal titles case/space-insensitively, ignores empty and untitled, bounded',()=>{
@@ -1006,4 +1006,12 @@ test('duplicate titles: groups equal titles case/space-insensitively, ignores em
   const z3=unzipSync(zipSync(z2));for(const i of [0,1])z3[m.slides[i].part]=strToU8(strFromU8(z3[m.slides[i].part]).replace(/<a:t>[^<]*<\/a:t>/,'<a:t> </a:t>'));
   assert.equal(duplicateTitles(zipSync(z3)).total,0);
   assert.equal(duplicateTitles(b).total,0);
+});
+
+test('alt text on shapes and groups: text box, group, nested shape refused, other parts untouched',()=>{
+  const b=deck(2),m=readDeckModel(b),sid=m.slides[0].id,tx=m.slides[0].shapes.filter(s=>s.kind==='text'||s.kind==='other');
+  const g=groupShapes(b,sid,[tx[0].id,tx[1].id]),gm=readDeckModel(g).slides[0].shapes,grp=gm.find(s=>s.kind==='group')!,child=gm.find(s=>s.parentId!==null)!;
+  const a=setPictureAlt(g,sid,grp.id,'Team diagram');assert.equal(readPictureAlt(a,sid,grp.id),'Team diagram');assert.deepEqual(readDeckModel(a).slides[0].shapes,gm);
+  assert.throws(()=>readPictureAlt(a,sid,child.id),/top-level/);assert.throws(()=>setPictureDecorative(a,sid,child.id,true),/top-level/);
+  const d=setPictureDecorative(a,sid,grp.id,true);assert.equal(readPictureDecorative(d,sid,grp.id),true);assert.equal(readPictureAlt(d,sid,grp.id),null);
 });

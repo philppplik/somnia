@@ -1952,16 +1952,20 @@ export function editSections(bytes:Uint8Array,edit:SectionEdit):Uint8Array{
   return res;
 }
 
-/** Alternative text (cNvPr descr) of a top-level picture, for screen readers and exports. */
+/** Alternative text (cNvPr descr) of a top-level shape, picture, group, table or connector, for screen readers and exports. */
 export const MAX_ALT_TEXT=500;
 export const altTextIssue=(t:string)=>!t||t!==t.trim()?'Alt text cannot be empty or padded':t.length>MAX_ALT_TEXT?`Alt text is limited to ${MAX_ALT_TEXT} characters`:/[\u0000-\u001f\u007f\ud800-\udfff\ufffe\uffff]/.test(t)?'Alt text contains unsupported characters':'';
 function altParts(bytes:Uint8Array,slideId:number,shapeId:number){
   const model=readDeckModel(bytes),slide=model.slides.find(s=>s.id===slideId);
   if(!slide)throw Error('Slide no longer exists');if(slide.problems.length)throw Error('This slide has unsupported structure');
   const shape=slide.shapes.find(s=>s.id===shapeId);if(!shape)throw Error('Shape no longer exists');
-  if(shape.parentId!==null||shape.kind!=='picture')throw Error('Only pictures have alt text here');
-  const zip=openPackage(bytes),xml=text(zip,slide.part),range=spRange(xml,shapeId,'p:pic','p:nvPicPr'),pic=xml.slice(range.start,range.end);
-  const tag=/<p:cNvPr\b[^>]*>/.exec(pic);if(!tag||tag.index>pic.indexOf('</p:nvPicPr>'))throw Error('Picture has no readable properties');
+  if(shape.parentId!==null)throw Error('Only top-level shapes have alt text here');
+  const zip=openPackage(bytes),xml=text(zip,slide.part);
+  let range:{start:number;end:number}|null=null,nv='p:nvSpPr';
+  for(const [el,n] of [['p:sp','p:nvSpPr'],['p:pic','p:nvPicPr'],['p:grpSp','p:nvGrpSpPr'],['p:graphicFrame','p:nvGraphicFramePr'],['p:cxnSp','p:nvCxnSpPr']] as const){try{range=spRange(xml,shapeId,el,n);nv=n;break;}catch{/* try the next element kind */}}
+  if(!range)throw Error('Shape has no readable properties');
+  const pic=xml.slice(range.start,range.end);
+  const tag=/<p:cNvPr\b[^>]*>/.exec(pic);if(!tag||tag.index>pic.indexOf(`</${nv}>`))throw Error('Shape has no readable properties');
   const at=range.start+tag.index;return {model,slide,zip,xml,tag:tag[0],at};
 }
 export function readPictureAlt(bytes:Uint8Array,slideId:number,shapeId:number):string|null{

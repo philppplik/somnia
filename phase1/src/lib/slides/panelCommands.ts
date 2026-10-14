@@ -187,14 +187,14 @@ export function slidesPanelCommandSpecs(d:PanelCommandDeps):CommandSpec[]{
    run:async p=>{const v=p as {source:string;cx:number;cy:number},s=d.state();
     if(s.source!==v.source||!s.working)throw expected('Deck changed since the size was chosen.');
     await d.slideSize(v.cx,v.cy);}},
-  {id:'slides.setAltText',title:'Set picture alt text',category:'Edit',level:'ui',keywords:['alt text','alternative text','accessibility','picture','image','description','screen reader'],enabled:available,params:{type:'object',properties:{source:identity.source,slideId:slideId,shapeId:{type:'integer',minimum:0,maximum:2147483647},alt:{anyOf:[{type:'null'},{type:'string',minLength:1,maxLength:MAX_ALT_TEXT}]}},required:['source','slideId','shapeId','alt'],additionalProperties:false},
+  {id:'slides.setAltText',title:'Set alt text',category:'Edit',level:'ui',keywords:['alt text','alternative text','accessibility','picture','image','description','screen reader'],enabled:available,params:{type:'object',properties:{source:identity.source,slideId:slideId,shapeId:{type:'integer',minimum:0,maximum:2147483647},alt:{anyOf:[{type:'null'},{type:'string',minLength:1,maxLength:MAX_ALT_TEXT}]}},required:['source','slideId','shapeId','alt'],additionalProperties:false},
    run:async p=>{const v=p as {source:string;slideId:number;shapeId:number;alt:string|null},s=d.state();
     if(s.source!==v.source||!s.slideIds.includes(v.slideId)||!s.working)throw expected('Slide no longer exists.');
     if(v.alt!==null){const issue=altTextIssue(v.alt);if(issue)throw expected(issue);}
     let now:string|null;try{now=readPictureAlt(s.working,v.slideId,v.shapeId);}catch(e){throw expected(e instanceof Error?e.message:'Picture no longer exists.');}
     if(now===v.alt||(now===''&&v.alt===null))return;
     await d.alt(v.slideId,v.shapeId,v.alt);}},
-  {id:'slides.setPictureDecorative',title:'Mark picture as decorative',category:'Edit',level:'ui',keywords:['decorative','alt text','accessibility','picture','image','screen reader','skip'],enabled:available,params:{type:'object',properties:{source:identity.source,slideId:slideId,shapeId:{type:'integer',minimum:0,maximum:2147483647},decorative:{type:'boolean'}},required:['source','slideId','shapeId','decorative'],additionalProperties:false},
+  {id:'slides.setPictureDecorative',title:'Mark as decorative',category:'Edit',level:'ui',keywords:['decorative','alt text','accessibility','picture','image','screen reader','skip'],enabled:available,params:{type:'object',properties:{source:identity.source,slideId:slideId,shapeId:{type:'integer',minimum:0,maximum:2147483647},decorative:{type:'boolean'}},required:['source','slideId','shapeId','decorative'],additionalProperties:false},
    run:async p=>{const v=p as {source:string;slideId:number;shapeId:number;decorative:boolean},s=d.state();
     if(s.source!==v.source||!s.slideIds.includes(v.slideId)||!s.working)throw expected('Slide no longer exists.');
     let now:boolean;try{now=readPictureDecorative(s.working,v.slideId,v.shapeId);}catch(e){throw expected(e instanceof Error?e.message:'Picture no longer exists.');}

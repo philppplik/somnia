@@ -6329,7 +6329,7 @@
     },
     {
       "id": "slides.setAltText",
-      "title": "Set picture alt text",
+      "title": "Set alt text",
       "category": "Edit",
       "source": "slides",
       "keywords": [
@@ -6372,7 +6372,7 @@
     },
     {
       "id": "slides.setPictureDecorative",
-      "title": "Mark picture as decorative",
+      "title": "Mark as decorative",
       "category": "Edit",
       "source": "slides",
       "keywords": [

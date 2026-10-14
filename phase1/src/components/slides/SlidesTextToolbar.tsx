@@ -87,7 +87,7 @@ export function SlidesTextToolbar(){
     <Button size="compact" variant="outline" disabled={!ready||!shape||multi||(shape.kind!=='text'&&!pic)} onClick={()=>run(pic?'slides.removePicture':'slides.removeTextBox',{source:s.source,slideId,shapeId:shape!.id})}>{t(pic?'slides.removePicture':'slides.removeTextBox')}</Button>
     <Button size="compact" variant="outline" disabled={!ready} title={t('slides.imageHint')} onClick={()=>pick('insert')}>{t('slides.insertImage')}</Button>
     <Button size="compact" variant="outline" disabled={!ready||!pic} onClick={()=>pick('replace')}>{t('slides.replaceImage')}</Button>
-    {pic&&shape&&slideId!==undefined&&<SlidesAltTextField slideId={slideId} shapeId={shape.id} disabled={!ready}/>}
+    {!multi&&shape&&shape.parentId===null&&slideId!==undefined&&<SlidesAltTextField slideId={slideId} shapeId={shape.id} disabled={!ready}/>}
     <NativeInput ref={file} type="file" accept="image/png,image/jpeg" className="hidden" tabIndex={-1} aria-label={t('slides.imageTools')} onChange={e=>void onFile(e)}/>
     {bad&&<span role="alert" className="text-xs text-danger">{t('slides.imageRejected')}</span>}
   </div>;
