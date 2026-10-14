@@ -423,3 +423,15 @@ test('P161 sprite sheet is a render format with its own limits',async()=>{
  assert.ok(!exportPlan(long,'sequence',defaultExportSettings()).problems.includes('frames'));
  assert.ok(exportPlan(short,'sheet',{...defaultExportSettings(),scale:400}).problems.includes('size'));
 });
+
+test('P162 wiggle hold samples noise once per hold, smooth when absent, validated',async()=>{
+ const {evaluateMod,validateModifiers}=await import('./modifiers');
+ const mk=(hold?:number)=>({type:'number',keys:[],value:0,modifiers:[{type:'wiggle',seed:3,amplitude:50,frequency:7,...(hold?{hold}:{})}]} as never);
+ const h=mk(24000);
+ assert.equal(evaluateMod(h,24000),evaluateMod(h,47999));assert.equal(evaluateMod(h,0),evaluateMod(h,23999));
+ assert.notEqual(evaluateMod(h,24000),evaluateMod(h,48000));
+ assert.notEqual(evaluateMod(mk(),24000),evaluateMod(mk(),30000));
+ assert.equal(evaluateMod(mk(),12345),evaluateMod(mk(0),12345));
+ assert.equal(validateModifiers([{type:'wiggle',seed:1,amplitude:1,frequency:1,hold:-1}]).length,1);
+ assert.equal(validateModifiers([{type:'wiggle',seed:1,amplitude:1,frequency:1,hold:24000}]).length,0);
+});

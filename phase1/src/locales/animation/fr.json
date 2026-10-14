@@ -944,5 +944,6 @@
  "animation.export.spriteSheet": "Planche de sprites (ZIP)",
  "animation.export.spriteSheet.hint": "Toutes les images de la zone de travail dans une grille PNG avec atlas.json",
  "cmd.animation.export.spriteSheet": "Exporter la zone de travail en planche de sprites",
- "animation.export.kind.sheet": "Planche de sprites"
+ "animation.export.kind.sheet": "Planche de sprites",
+ "animation.modifiers.hold": "Maintien (images)"
 }

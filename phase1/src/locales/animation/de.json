@@ -944,5 +944,6 @@
  "animation.export.spriteSheet": "Sprite-Sheet (ZIP)",
  "animation.export.spriteSheet.hint": "Alle Frames des Arbeitsbereichs als PNG-Raster plus atlas.json",
  "cmd.animation.export.spriteSheet": "Arbeitsbereich als Sprite-Sheet exportieren",
- "animation.export.kind.sheet": "Sprite-Sheet"
+ "animation.export.kind.sheet": "Sprite-Sheet",
+ "animation.modifiers.hold": "Halten (Frames)"
 }

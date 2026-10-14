@@ -944,5 +944,6 @@
  "animation.export.spriteSheet": "Sprite sheet (ZIP)",
  "animation.export.spriteSheet.hint": "All work-area frames in one PNG grid plus atlas.json",
  "cmd.animation.export.spriteSheet": "Export work area as sprite sheet",
- "animation.export.kind.sheet": "Sprite sheet"
+ "animation.export.kind.sheet": "Sprite sheet",
+ "animation.modifiers.hold": "Hold (frames)"
 }

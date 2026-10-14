@@ -31,9 +31,10 @@ export function evaluateMod(p:Property,t:number,links?:LinkResolver):PropValue{
   else if(Array.isArray(src)&&Array.isArray(v))v=[src[0]*lk.multiplier+lk.offset,src[1]*lk.multiplier+lk.offset];}
  const w=(p.modifiers??[]).filter((x):x is Extract<Modifier,{type:'wiggle'}>=>x.type==='wiggle');
  if(!w.length)return v;
- if(typeof v==='number')return w.reduce((acc,m)=>acc+m.amplitude*noise(t/TICKS_PER_SECOND*m.frequency,m.seed),v);
+ const tn=(m:{hold?:number})=>(m.hold?Math.floor(t/m.hold)*m.hold:t)/TICKS_PER_SECOND;
+ if(typeof v==='number')return w.reduce((acc,m)=>acc+m.amplitude*noise(tn(m)*m.frequency,m.seed),v);
  const out:[number,number]=[v[0],v[1]];
- for(const m of w){out[0]+=m.amplitude*noise(t/TICKS_PER_SECOND*m.frequency,m.seed);out[1]+=m.amplitude*noise(t/TICKS_PER_SECOND*m.frequency,m.seed+100003);}
+ for(const m of w){out[0]+=m.amplitude*noise(tn(m)*m.frequency,m.seed);out[1]+=m.amplitude*noise(tn(m)*m.frequency,m.seed+100003);}
  return out;
 }
 const sub=(a:PropValue,b:PropValue):PropValue=>typeof a==='number'&&typeof b==='number'?a-b:[(a as Vec2)[0]-(b as Vec2)[0],(a as Vec2)[1]-(b as Vec2)[1]];

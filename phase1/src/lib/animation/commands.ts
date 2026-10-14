@@ -92,7 +92,7 @@ const object=(properties:Record<string,unknown>,required=Object.keys(properties)
 const num={type:'number'};const tick={type:'integer',minimum:0};
 const layerRef={type:'string',minLength:1,maxLength:200};
 const propKey={enum:[...TRANSFORM_KEYS]};
-const modifierSchema={type:'object',properties:{type:{enum:['wiggle','loop','link']},seed:{type:'integer',minimum:0,maximum:2147483647},amplitude:{type:'number',minimum:0,maximum:10000},frequency:{type:'number',exclusiveMinimum:0,maximum:100},mode:{enum:['cycle','pingpong','offset']},layer:layerRef,prop:propKey,multiplier:{type:'number',minimum:-1000,maximum:1000},offset:{type:'number',minimum:-100000,maximum:100000},delay:{type:'integer',minimum:-2400000,maximum:2400000}},required:['type'],additionalProperties:false};
+const modifierSchema={type:'object',properties:{type:{enum:['wiggle','loop','link']},seed:{type:'integer',minimum:0,maximum:2147483647},amplitude:{type:'number',minimum:0,maximum:10000},frequency:{type:'number',exclusiveMinimum:0,maximum:100},hold:{type:'integer',minimum:0,maximum:240000},mode:{enum:['cycle','pingpong','offset']},layer:layerRef,prop:propKey,multiplier:{type:'number',minimum:-1000,maximum:1000},offset:{type:'number',minimum:-100000,maximum:100000},delay:{type:'integer',minimum:-2400000,maximum:2400000}},required:['type'],additionalProperties:false};
 
 const handleSchema={type:'array',items:{type:'number',minimum:-2,maximum:3},minItems:2,maxItems:2};
 const value={oneOf:[{type:'number'},{type:'array',items:{type:'number'},minItems:2,maxItems:2}]};

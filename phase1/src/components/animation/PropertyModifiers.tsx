@@ -21,10 +21,11 @@ export function PropertyModifiers({layer,comp}:{layer:Layer;comp:Composition}){
   <NativeSelect className={field} value={prop} aria-label={t('animation.modifiers.property')} onChange={e=>{setProp(e.target.value as TransformKey);setErr(null);}} data-testid="animation-modifiers-prop">{TRANSFORM_KEYS.map(k=><option key={k} value={k}>{t(PROP_LABEL[k])}</option>)}</NativeSelect>
   {list.map((m,i)=><div key={i} className="grid gap-1 border-b border-subtle pb-2" data-testid={`animation-modifier-${i}`}>
    <div className="flex items-center justify-between text-ink-3"><span>{t(`animation.modifiers.${m.type}`)}</span><Button size="tiny" variant="ghost" aria-label={t('animation.modifiers.remove')} onClick={()=>void run('animation.modifier.remove',{index:i})}>×</Button></div>
-   {m.type==='wiggle'&&<div className="grid grid-cols-3 gap-2">
+   {m.type==='wiggle'&&<div className="grid grid-cols-2 gap-2">
     {num(t('animation.modifiers.amplitude'),m.amplitude,0,10000,1,v=>void set(i,{...m,amplitude:v}))}
     {num(t('animation.modifiers.frequency'),m.frequency,0.01,100,0.1,v=>void set(i,{...m,frequency:v}))}
-    {num(t('animation.modifiers.seed'),m.seed,0,2147483647,1,v=>void set(i,{...m,seed:Math.round(v)}))}</div>}
+    {num(t('animation.modifiers.seed'),m.seed,0,2147483647,1,v=>void set(i,{...m,seed:Math.round(v)}))}
+    {num(t('animation.modifiers.hold'),tickToFrame(m.hold??0,comp.fps),0,30,1,v=>void set(i,{...m,hold:frameToTick(Math.round(v),comp.fps)}))}</div>}
    {m.type==='loop'&&<NativeSelect className={field} value={m.mode} aria-label={t('animation.modifiers.loopMode')} onChange={e=>void set(i,{...m,mode:e.target.value as 'cycle'|'pingpong'|'offset'})}>{(['cycle','pingpong','offset'] as const).map(k=><option key={k} value={k}>{t(`animation.modifiers.loop.${k}`)}</option>)}</NativeSelect>}
    {m.type==='link'&&<div className="grid gap-1">
     <div className="flex gap-1"><NativeSelect className={field} value={m.layer} aria-label={t('animation.modifiers.linkLayer')} onChange={e=>void set(i,{...m,layer:e.target.value})}>{!others.some(o=>o.id===m.layer)&&<option value={m.layer}>{t('animation.modifiers.missing')}</option>}{others.map(o=><option key={o.id} value={o.id}>{o.name}</option>)}</NativeSelect>
