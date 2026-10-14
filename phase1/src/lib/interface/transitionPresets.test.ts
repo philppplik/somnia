@@ -1,0 +1,17 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {applyLinkTransitionPreset,TRANSITION_PRESETS} from './transitionPresets';
+import {createInterfaceDocument,addNode,serializeInterfaceDocument,parseInterfaceDocument} from './model';
+const doc=()=>{const d=createInterfaceDocument();addNode(d,d.pages[0].id,'frame');const b=addNode(d,d.pages[0].id,'frame');const a=d.nodes[0];a.prototypeLinks=[{trigger:'click',targetFrameId:b}];return{d,a,b}};
+test('transition presets apply full transition tuples',()=>{const{d,a}=doc();
+ applyLinkTransitionPreset(d,a.id,'click','dissolve');assert.deepEqual(a.prototypeLinks[0].transition,{kind:'dissolve',durationMs:200,easing:'ease'});
+ applyLinkTransitionPreset(d,a.id,'click','slide');assert.deepEqual(a.prototypeLinks[0].transition,{kind:'slide',durationMs:300,easing:'ease-out',direction:'left'});
+ applyLinkTransitionPreset(d,a.id,'click','instant');assert.equal(a.prototypeLinks[0].transition,undefined);});
+test('instant clears an existing transition',()=>{const{d,a}=doc();a.prototypeLinks[0].transition={kind:'smart-animate',durationMs:900,easing:'linear'};
+ applyLinkTransitionPreset(d,a.id,'click','instant');assert.equal(a.prototypeLinks[0].transition,undefined);assert.equal(a.prototypeLinks[0].targetFrameId,d.nodes[1].id);});
+test('preset application survives persistence roundtrip',()=>{const{d,a}=doc();applyLinkTransitionPreset(d,a.id,'click','dissolve');
+ const copy=parseInterfaceDocument(serializeInterfaceDocument(d));
+ assert.deepEqual(copy.nodes[0].prototypeLinks[0].transition,TRANSITION_PRESETS.dissolve);});
+test('presets reject unknown layers and missing links',()=>{const{d,a}=doc();
+ assert.throws(()=>applyLinkTransitionPreset(d,'nope','click','slide'));
+ assert.throws(()=>applyLinkTransitionPreset(d,a.id,'hover','slide'),/interaction/);
+ a.locked=true;assert.throws(()=>applyLinkTransitionPreset(d,a.id,'click','slide'),/unlocked/);});
