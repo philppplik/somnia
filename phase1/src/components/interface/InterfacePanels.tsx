@@ -1,3 +1,4 @@
+import {Checkbox} from '../ui/checkbox';
 import {InterfacePages} from './InterfacePages';
 import {interfaceTreeOrder,interfaceTreeTarget} from '../../lib/interface/accessibility';
 import {InterfaceLibrary} from './InterfaceLibrary';
@@ -5,6 +6,7 @@ import {StudioStatus} from '../studios/StudioStatus';
 import {InterfaceInteractions} from './InterfacePrototype';
 import {setInterfaceConstraint,setInterfaceAbsolute} from '../../lib/interface/constraints';
 import {resizeInterfaceFrame} from '../../lib/interface/responsive';
+import {computeInterfaceLayout} from '../../lib/interface/layout';
 import {interfaceLayerCSS} from '../../lib/interface/export';
 import {auditInterfaceDocument} from '../../lib/interface/a11y';
 import {addInterfaceBreakpoint,removeInterfaceBreakpoint,applyInterfaceBreakpoint,auditInterfaceResponsive} from '../../lib/interface/breakpoints';
@@ -92,13 +94,19 @@ function InterfaceLayoutControls({node,run,patch}:{node:InterfaceNode;run:(f:()=
  const setLayout=(change:Partial<InterfaceLayout>)=>run(()=>patch({layout:{...layout,...change}}));const setSizing=(change:Partial<InterfaceSizing>)=>run(()=>patch({sizing:{...sizing,...change}}));
  const number=(value:string)=>{if(!value.trim())throw Error('A number is required.');return Number(value);};
  const parent=s.document!.nodes.find(n=>n.id===node.parentId);const isContainer=['frame','group'].includes(node.kind);
+ const computed=useMemo(()=>s.document?computeInterfaceLayout(s.document).bounds.get(node.id):undefined,[s.document,node.id]);
  return <InspectorGroup title={t('interface.layout')}><div className="flex flex-col gap-3">
+  {computed&&<p className="text-xs text-ink-2">{t('interface.computedSize')} {Math.round(computed.width)} × {Math.round(computed.height)}</p>}
   {isContainer&&<><Choice label={t('interface.direction')} value={layout.direction} options={option(['free','row','column','grid'])} disabled={disabled} onChange={v=>setLayout({direction:v as InterfaceLayout['direction']})}/>
    {layout.direction==='grid'&&<Field name={t('interface.columns')} value={layout.columns??2} type="number" disabled={disabled} onCommit={v=>run(()=>patch({layout:{...layout,columns:number(v)}}))}/>}
+   {layout.direction==='grid'&&<Choice label={t('interface.rows')} value={layout.rows?String(layout.rows):''} options={[['',t('interface.auto')] as [string,string],...Array.from({length:12},(_,i)=>[String(i+1),String(i+1)] as [string,string])]} disabled={disabled} onChange={v=>setLayout({rows:v?Number(v):undefined})}/>}
    {layout.direction!=='free'&&<><label className="flex items-center gap-2 text-xs"><input style={{width:14}} type="checkbox" checked={layout.wrap} disabled={disabled} onChange={e=>setLayout({wrap:e.target.checked})}/>{t('interface.wrap')}</label><Field name={t('interface.gap')} value={layout.gap} type="number" disabled={disabled} onCommit={v=>run(()=>patch({layout:{...layout,gap:number(v)}}))}/><Choice label={t('interface.align')} value={layout.align} options={option(['start','center','end','stretch'])} disabled={disabled} onChange={v=>setLayout({align:v as InterfaceLayout['align']})}/>{layout.direction!=='grid'&&<Choice label={t('interface.justify')} value={layout.justify??'start'} options={[['start',t('interface.start')],['center',t('interface.center')],['end',t('interface.end')],['space-between',t('interface.spaceBetween')]]} disabled={disabled} onChange={v=>setLayout({justify:v as InterfaceLayout['justify']})}/>}{(layout.wrap||layout.direction==='grid')&&<Field name={t('interface.crossGap')} value={layout.crossGap??layout.gap} type="number" disabled={disabled} onCommit={v=>run(()=>patch({layout:{...layout,crossGap:number(v)}}))}/>}<div className="grid grid-cols-2 gap-2">{['top','right','bottom','left'].map((edge,index)=><Field key={edge} name={t(`interface.padding.${edge}`)} value={layout.padding[index]} type="number" disabled={disabled} onCommit={v=>run(()=>{const padding=[...layout.padding] as InterfaceLayout['padding'];padding[index]=number(v);patch({layout:{...layout,padding}});})}/>)}</div></>}
   </>}
   <div className="grid grid-cols-2 gap-2">{(['width','height'] as const).map(axis=><Choice key={axis} label={`${t(`interface.${axis}`)} / ${t('interface.sizing')}`} value={sizing[axis]} options={option(['fixed','hug','fill'])} disabled={disabled} onChange={v=>setSizing({[axis]:v})}/>)}</div>
   <div className="grid grid-cols-2 gap-2">{(['minWidth','maxWidth','minHeight','maxHeight'] as const).map(key=><Field key={key} name={t(`interface.${key}`)} value={sizing[key]} type="number" disabled={disabled} onCommit={v=>run(()=>patch({sizing:{...sizing,[key]:number(v)}}))}/>)}</div>
+  {parent&&(parent.layout??DEFAULT_LAYOUT).direction==='grid'&&<Field name={t('interface.span')} value={node.span??1} type="number" disabled={disabled} onCommit={v=>run(()=>patch({span:Math.round(number(v))}))}/>}
+  <Checkbox label={t('interface.aspectLock')} checked={node.aspectRatio!==undefined} disabled={disabled} onChange={e=>run(()=>interfaceSession.transact(d=>{const target=d.nodes.find(n=>n.id===node.id)!;if(e.target.checked)target.aspectRatio=Math.round(target.width/Math.max(1,target.height)*1000)/1000;else delete target.aspectRatio;}))}/>
+  {node.aspectRatio!==undefined&&<p className="text-xs text-ink-2">{t('interface.aspectRatio')} {node.aspectRatio.toFixed(2)}</p>}
   {parent&&<><label className="flex items-center gap-2 text-xs"><input style={{width:14}} type="checkbox" checked={sizing.absolute} disabled={disabled} onChange={e=>run(()=>interfaceSession.transact(d=>setInterfaceAbsolute(d,node.id,e.target.checked)))}/>{t('interface.absolute')}</label>{(!parent.layout||parent.layout.direction==='free'||sizing.absolute)&&<div className="grid grid-cols-2 gap-2">{(['horizontal','vertical'] as const).map(axis=><Choice key={axis} label={t(`interface.${axis}`)} value={node.constraints?.[axis]??'start'} options={option(['start','end','center','stretch','scale'])} disabled={disabled} onChange={v=>run(()=>interfaceSession.transact(d=>setInterfaceConstraint(d,node.id,axis,v as ConstraintMode)))}/>)}</div>}</>}
  </div></InspectorGroup>;
 }

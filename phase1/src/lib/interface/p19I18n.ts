@@ -1,0 +1,3 @@
+const keys=['rows','auto','span','aspectLock','aspectRatio','computedSize'];
+const labels={en:['Rows','Auto','Column span','Lock aspect ratio','Aspect ratio','Computed size'],de:['Zeilen','Auto','Spalten-Spanne','Seitenverhältnis sperren','Seitenverhältnis','Berechnete Größe'],es:['Filas','Auto','Extensión de columnas','Bloquear proporción','Proporción','Tamaño calculado'],fr:['Lignes','Auto','Étendue (colonnes)','Verrouiller les proportions','Proportions','Taille calculée'],'pt-BR':['Linhas','Auto','Extensão de colunas','Bloquear proporção','Proporção','Tamanho calculado']};
+export const INTERFACE_P19_CATALOGUES=Object.fromEntries(Object.entries(labels).map(([locale,v])=>[locale,Object.fromEntries(keys.map((k,i)=>[`interface.${k}`,v[i]]))]));
