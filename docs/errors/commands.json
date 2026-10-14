@@ -1498,6 +1498,24 @@
       "args": []
     },
     {
+      "name": "local_voice_storage_remove",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [],
+      "args": []
+    },
+    {
+      "name": "local_voice_storage_status",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [],
+      "args": []
+    },
+    {
       "name": "local_voice_transcribe",
       "domain": "fs",
       "status": "native",

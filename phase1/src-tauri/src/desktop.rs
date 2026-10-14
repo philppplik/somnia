@@ -301,6 +301,10 @@ async fn github_account_disconnect(window: WebviewWindow) -> std::result::Result
     tauri::async_runtime::spawn_blocking(|| { { let _g = AGENT_SETTINGS_LOCK.lock().map_err(|_| "Credential store is busy".to_string())?; github_store().disconnect().map_err(|e| e.to_string())?; } github_status_now() }).await.map_err(|_| "Could not access credential store")?
 }
 #[tauri::command]
+async fn local_voice_storage_status(window:WebviewWindow,app:tauri::AppHandle)->std::result::Result<crate::local_voice::HelperStorage,String>{gate(&window).map_err(|_|"Trusted editor required")?;let data=app.path().app_data_dir().map_err(|_|"Voice storage unavailable")?;tauri::async_runtime::spawn_blocking(move||crate::local_voice::helper_storage_status(&data)).await.map_err(|_|"Helper storage failed")?}
+#[tauri::command]
+async fn local_voice_storage_remove(window:WebviewWindow,app:tauri::AppHandle)->std::result::Result<(),String>{gate(&window).map_err(|_|"Trusted editor required")?;let data=app.path().app_data_dir().map_err(|_|"Voice storage unavailable")?;tauri::async_runtime::spawn_blocking(move||crate::local_voice::helper_storage_remove(&data)).await.map_err(|_|"Helper removal failed")?}
+#[tauri::command]
 async fn local_voice_status(window:WebviewWindow,app:tauri::AppHandle)->std::result::Result<crate::local_voice::VoiceStatus,String>{gate(&window).map_err(|_|"Trusted editor required")?;crate::local_voice::require_preview()?;let data=app.path().app_data_dir().map_err(|_|"Voice storage unavailable")?;let resource=app.path().resource_dir().map_err(|_|"Voice resources unavailable")?;tauri::async_runtime::spawn_blocking(move||crate::local_voice::status(&data,&resource)).await.map_err(|_|"Voice status failed".into())}
 #[tauri::command]
 async fn local_voice_helper_install(window:WebviewWindow,app:tauri::AppHandle,acknowledged:bool,sha256:String)->std::result::Result<String,String>{gate(&window).map_err(|_|"Trusted editor required")?;crate::local_voice::install_helper(app.path().app_data_dir().map_err(|_|"Voice storage unavailable")?,acknowledged,sha256)}
@@ -2943,6 +2947,8 @@ pub fn run() {
             selftest_write,
             selftest_exit,
             local_voice_status,
+            local_voice_storage_status,
+            local_voice_storage_remove,
             local_voice_helper_install,
             local_voice_helper_remove,
             local_voice_download,
