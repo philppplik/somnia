@@ -855,3 +855,12 @@ test('P208 export plan: sheet size and grid in the readout, padding included, ab
  assert.equal(exportPlan(c,'gif',base).sheet,undefined);assert.equal(exportPlan(c,'sheet',{...base,scale:400,columns:1}).sheet,undefined);
  assert.equal(exportPlan(c,'sheet',{...base,sheetPadding:99}).sheet!.width,a.sheet!.width);
 });
+
+test('P209 export plan: sprite sheet estimate follows the sheet pixels (padding and empty cells count)',async()=>{
+ const {exportPlan,defaultExportSettings,estimateBytes}=await import('./exportSettings');
+ const s=open();const c=findComp(s.document!)!;const base={...defaultExportSettings(),scale:25};
+ const a=exportPlan(c,'sheet',base),b=exportPlan(c,'sheet',{...base,sheetPadding:16,columns:7});
+ assert.equal(a.estimateBytes,estimateBytes('sheet',a.sheet!.width,a.sheet!.height,1));
+ assert.ok(b.estimateBytes>a.estimateBytes*0.9);assert.equal(b.estimateBytes,estimateBytes('sheet',b.sheet!.width,b.sheet!.height,1));
+ assert.equal(exportPlan(c,'sequence',base).estimateBytes,estimateBytes('sequence',a.width,a.height,a.frames,a.fps.num/a.fps.den));
+});
