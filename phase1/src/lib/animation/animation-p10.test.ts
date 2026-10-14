@@ -1,3 +1,4 @@
+import {animationSession} from './session';
 import {normalizeOverlays,safeRects,overlayLines,gridStep,MAX_GUIDES,defaultOverlays} from './guides';
 import {defaultView} from './recovery';
 import {buildTemplate} from './layerTemplates';
@@ -35,7 +36,6 @@ import {snapEase,mirrorEase,copyCurve,pasteCurveEdit,resetGraphTools} from './gr
 import {timeWindow,zoomAround,fitAll,fitRange,revealTick,edgeScroll,snapTargets,snapTick,ZOOM_MAX,setTimelineSnap,timelineSnap} from './timelineView';
 import {exportPlan,settingsProblems,defaultExportSettings,estimateBytes,EXPORT_LIMITS,EXPORT_PRESETS,EXPORT_FORMATS} from './exportSettings';
 import {exportGif,exportApng,exportWorkAreaSequence,exportCurrentFrame,setExportSettings,resetExportSettings,applyExportPreset,cancelExport,exportState,resetExport} from './exportJob';
-import {animationSession} from './session';
 import {MAX_FRAMES,MAX_PIXELS} from './exportFrames';
 import {GIF_MAX_FRAMES} from './gifEncode';
 import {WEBM_MAX_SECONDS,WEBM_MAX_BYTES} from './exportVideo';
@@ -2021,4 +2021,28 @@ test('P88: handles for text and image layers, opposite-corner pinning',()=>{
  e=applyEdits(e,[{type:'prop.set',layer:'a',prop:'scale',t:0,value:[250,250]},{type:'prop.set',layer:'a',prop:'position',t:0,value:np}]);
  const after=handleSet(findComp(e)!,findLayer(findComp(e)!,'a')!,0)!.corners[0];
  assert.ok(Math.abs(before[0]-after[0])<0.02&&Math.abs(before[1]-after[1])<0.02,JSON.stringify([before,after]));
+});
+import {addJob,removeJob,clearFinished,nextPending,markJob,requeue,queueSummary,MAX_QUEUE,jobProblem} from './renderQueue';
+import {addToQueue,runQueue,queueState,resetQueue,removeFromQueue,clearQueueFinished} from './renderQueueRun';
+test('P89: render queue: pure list rules',()=>{
+ const job=(id:string)=>({id,comp:'c',compName:'C',format:'gif' as const,settings:{scale:100,fps:null,from:null,to:null},transparent:false});
+ let q=addJob([],job('a'));q=addJob(q,job('b'));assert.equal(q[0].status,'pending');assert.throws(()=>addJob(q,job('a')),/Duplicate/);
+ let full:ReturnType<typeof addJob>=[];for(let i=0;i<MAX_QUEUE;i++)full=addJob(full,job('j'+i));assert.throws(()=>addJob(full,job('x')),/at most/);
+ assert.equal(nextPending(q)!.id,'a');q=markJob(q,'a',{status:'running'});assert.throws(()=>removeJob(q,'a'),/running/);assert.equal(nextPending(q)!.id,'b');
+ q=markJob(q,'a',{status:'done',fileName:'a.gif'});q=markJob(q,'b',{status:'error',message:'boom'});assert.deepEqual(queueSummary(q),{total:2,pending:0,done:1,failed:1});
+ assert.equal(requeue(q)[1].status,'pending');assert.equal(requeue(q)[0].status,'done');assert.deepEqual(clearFinished(q),[]);assert.throws(()=>removeJob(q,'zz'),/No such/);
+ const c=findComp(createDocument())!;assert.equal(jobProblem(c,'gif',{scale:100,fps:null,from:null,to:null}),null);assert.equal(jobProblem(c,'gif',{scale:100,fps:null,from:0,to:99999}),'range');
+});
+test('P89: render queue runs jobs in order, keeps going after a failure, restores the setup',async()=>{
+ let d=createDocument();d=applyEdit(d,{type:'comp.add',id:'second'} as never);d=applyEdit(d,{type:'comp.select',comp:d.compositions[0].id});
+ animationSession().open(d);resetQueue();const active=animationSession().document!.activeComp;
+ setExportSettings({scale:50});addToQueue('sequence');setExportSettings({scale:25});addToQueue('webm');setExportSettings({scale:75});addToQueue('sequence');
+ assert.equal(queueState().jobs.length,3);assert.deepEqual(queueState().jobs.map(j=>j.settings.scale),[50,25,75]);
+ setExportSettings({scale:100});const saved:string[]=[];const sizes:string[]=[];
+ await runQueue({rasterize:async(_svg,w,h)=>{sizes.push(`${w}x${h}`);return new Uint8Array([1,2,3]);},save:(_b,name)=>{saved.push(name);}});
+ const j=queueState().jobs;assert.deepEqual(j.map(x=>x.status),['done','error','done']);assert.equal(saved.length,2);assert.ok(j[1].message.length>0);
+ assert.ok(sizes.some(s=>s.startsWith('960x'))&&sizes.some(s=>s.startsWith('1440x')),sizes.slice(0,3).join());
+ assert.equal(exportState().settings.scale,100);assert.equal(animationSession().document!.activeComp,active);assert.equal(queueState().running,false);
+ removeFromQueue(j[1].id);clearQueueFinished();assert.equal(queueState().jobs.length,0);
+ const names=animationCommandSpecs().filter(x=>x.id.startsWith('animation.export.queue.')).map(x=>x.id).sort();assert.equal(names.length,5);
 });

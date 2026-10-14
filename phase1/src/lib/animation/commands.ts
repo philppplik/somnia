@@ -34,6 +34,7 @@ import {quantizeMoves} from './keyQuantize';
 import {nextTrackHeight,setAllTracks,setTrackHeight,trackHeightOf,setShyHidden,shyHidden,fitAll,fitRange,setTimelineSnap,timelineSnap as timelineSnapNow,timeWindow,zoomAround} from './timelineView';
 import {applyExportPreset,resetExportSettings,setExportSettings,exportApng,exportCurrentFrame,exportGif,exportWebM,exportWorkAreaSequence} from './exportJob';
 import {ExportError} from './exportFrames';
+import {renderQueueSpecs} from './renderQueueCommands';
 import {EXPORT_PRESETS} from './exportSettings';
 /** Window event the Compositions panel listens for to open the audio file chooser. */
 export const AUDIO_IMPORT_EVENT='somnia:animation-audio-import';
@@ -319,7 +320,7 @@ export function animationCommandSpecs():CommandSpec<unknown,unknown>[]{
   spec('animation.export.apng','Export work area as APNG (animated PNG)',()=>exportApng().then(()=>undefined,e=>{throw e instanceof ExportError?Object.assign(e,{expected:true}):e;}),undefined,open,'Project'),
   spec('animation.export.webm','Export work area as WebM video (real time)',()=>exportWebM().then(()=>undefined,e=>{throw e instanceof ExportError?Object.assign(e,{expected:true}):e;}),undefined,open,'Project'),
   spec('animation.playhead.set','Move playhead',(p:{seconds:number})=>animationSession().setView({playhead:secondsToTicks(p.seconds)}),object({seconds:num}),open,'View'),
- ] as CommandSpec<unknown,unknown>[];
+ ...renderQueueSpecs()] as CommandSpec<unknown,unknown>[];
 }
 export const ANIMATION_COMMANDS=animationCommandSpecs().map(s=>s.id);
 const DESTRUCTIVE=new Set(['animation.layer.remove','animation.keys.delete','animation.keys.cut','animation.audio.volume.keyRemove','animation.precomp.volume.keyRemove','animation.stroke.keyRemove','animation.color.keyRemove','animation.styleKeys.delete']);

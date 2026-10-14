@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-458 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+463 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -52,6 +52,11 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `animation.export.apng` | Export work area as APNG (animated PNG) | Project | animation |  |
 | `animation.export.frame` | Export current frame as PNG | Project | animation |  |
 | `animation.export.gif` | Export work area as GIF | Project | animation |  |
+| `animation.export.queue.add` | Add export to render queue | Project | animation |  |
+| `animation.export.queue.cancel` | Stop render queue | Project | animation |  |
+| `animation.export.queue.clear` | Clear finished render queue jobs | Project | animation |  |
+| `animation.export.queue.remove` | Remove render queue job | Project | animation |  |
+| `animation.export.queue.run` | Render all queued jobs | Project | animation |  |
 | `animation.export.sequence` | Export work area as PNG sequence (ZIP) | Project | animation |  |
 | `animation.export.settings` | Set export size, frame rate, frame range or preset | Project | animation |  |
 | `animation.export.webm` | Export work area as WebM video (real time) | Project | animation |  |

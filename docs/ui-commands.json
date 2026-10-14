@@ -383,6 +383,71 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.export.queue.add",
+      "title": "Add export to render queue",
+      "category": "Project",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "export",
+        "queue",
+        "render"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "animation.export.queue.cancel",
+      "title": "Stop render queue",
+      "category": "Project",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "export",
+        "queue",
+        "render"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "animation.export.queue.clear",
+      "title": "Clear finished render queue jobs",
+      "category": "Project",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "export",
+        "queue",
+        "render"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "animation.export.queue.remove",
+      "title": "Remove render queue job",
+      "category": "Project",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "export",
+        "queue",
+        "render"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "animation.export.queue.run",
+      "title": "Render all queued jobs",
+      "category": "Project",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "export",
+        "queue",
+        "render"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.export.sequence",
       "title": "Export work area as PNG sequence (ZIP)",
       "category": "Project",
