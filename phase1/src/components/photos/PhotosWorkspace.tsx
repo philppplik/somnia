@@ -12,6 +12,7 @@ import {clippingOverlayImage} from '../../lib/photos/clippingOverlay';
 import {clampSplitX,splitClearRect} from '../../lib/photos/splitView';
 import {decodeSettingsPayload,encodeSettingsPayload,settingsPayloadToText,type SettingsPayload} from '../../lib/photos/settingsClipboard';
 import {photoNav} from '../../lib/photos/photoNav';
+import {ZOOM_PRESETS,isZoomPresetActive,zoomPresetLabel} from '../../lib/photos/zoomPresets';
 import {setActiveMedia,useMedia} from '../../lib/media';
 import {commitPhotoSettings} from '../../lib/photos/studioSession';
 import {usePanelState} from '../../store/panelStateStore';
@@ -185,6 +186,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
    <Button size="icon" variant="outline" aria-label={t('photos.zoom.out')} onClick={()=>zoomTo(scale/1.25)} data-testid="photos-zoom-out"><ZoomOut size={13}/></Button>
    <span className="w-12 text-center tabular-nums" data-testid="photos-zoom-level">{Math.round(scale*100)}%</span>
    <Button size="icon" variant="outline" aria-label={t('photos.zoom.in')} onClick={()=>zoomTo(scale*1.25)} data-testid="photos-zoom-in"><ZoomIn size={13}/></Button>
+   {ZOOM_PRESETS.map(p=><Button key={p} size="compact" variant="outline" aria-pressed={isZoomPresetActive(zoom,p)} aria-label={t('photos.zoom.preset',{pct:Math.round(p*100)})} onClick={()=>zoomTo(p)} data-testid={`photos-zoom-preset-${Math.round(p*100)}`}>{zoomPresetLabel(p)}</Button>)}
    <Button size="compact" variant="outline" aria-pressed={zoom===null} onClick={()=>{setZoom(null);setPan([0,0]);}} data-testid="photos-zoom-fit"><Maximize2 size={13}/>{t('photos.zoom.fit')}</Button>
    <Button size="compact" variant="outline" onClick={()=>{setZoom(1);setPan([0,0]);}} data-testid="photos-zoom-actual"><Minimize2 size={13}/>{t('photos.zoom.actual')}</Button>
    <span className="flex-1"/>

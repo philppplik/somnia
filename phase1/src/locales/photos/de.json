@@ -69,6 +69,7 @@
  "photos.zoom.out": "Verkleinern",
  "photos.zoom.fit": "Einpassen",
  "photos.zoom.actual": "Originalgröße",
+ "photos.zoom.preset": "Auf {pct} % zoomen",
  "photos.note": "Einstellungen bleiben in dieser Sitzung. Ein Kopien-Export ist auf 2048 px, 8-Bit-sRGB begrenzt, Metadaten werden entfernt. Das Original wird nie überschrieben.",
  "photos.panel": "Entwicklungseinstellungen",
  "photos.hero.export":"Exportieren",

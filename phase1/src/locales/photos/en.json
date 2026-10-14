@@ -69,6 +69,7 @@
  "photos.zoom.out": "Zoom out",
  "photos.zoom.fit": "Fit to window",
  "photos.zoom.actual": "Actual size",
+ "photos.zoom.preset": "Zoom to {pct}%",
  "photos.note": "Settings stay in this session. A copy export is capped at 2048 px, 8-bit sRGB, with metadata removed. The original is never overwritten.",
  "photos.panel": "Develop settings",
  "photos.hero.export":"Export",

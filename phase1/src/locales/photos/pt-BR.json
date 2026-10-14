@@ -69,6 +69,7 @@
  "photos.zoom.out": "Reduzir",
  "photos.zoom.fit": "Ajustar à janela",
  "photos.zoom.actual": "Tamanho real",
+ "photos.zoom.preset": "Zoom para {pct}%",
  "photos.note": "As configurações ficam nesta sessão. A exportação de uma cópia é limitada a 2048 px, sRGB de 8 bits, sem metadados. O original nunca é substituído.",
  "photos.panel": "Configurações de revelação",
  "photos.hero.export":"Exportar",

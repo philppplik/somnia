@@ -157,6 +157,11 @@ through native control primitives, see below.
   developable-only filter matching PhotosCanvas; no raw controls,
   ratchets unchanged), unit tests and gallery proof added
   (?view=photos-nav).
+- P39: photos zoom presets feature (50/100/200/400% one-click stops in
+  the workspace zoom bar with pressed-state tracking, routed through the
+  existing clamped zoomTo helper; fit and actual-size untouched; no raw
+  controls, ratchets unchanged), unit tests and gallery proof added
+  (?view=photos-zoom).
 
 
 
