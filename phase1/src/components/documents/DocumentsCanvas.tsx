@@ -6,7 +6,7 @@ import {addMediaFile,findMedia,formatBytes,MEDIA_ACCEPT,useMedia} from '../../li
 import type {DocumentsEngine} from '../../lib/documents';
 import {patchDocuments,resetDocuments,stepZoom,useDocuments} from '../../lib/documents/store';
 import '../../lib/documents/guards';
-import {clearCaret,deleteAtCaret,dragTo,editParagraph,getEngine,moveCaret,pasteText,settleDocument,switchDocument,pointerAt,redoEdit,selectAllText,toggleFormat,selectedText,splitAtCaret,syncGeometry,typeText,undoEdit} from '../../lib/documents/session';
+import {clearCaret,deleteAtCaret,dragTo,editParagraph,getEngine,moveCaret,pasteText,settleDocument,switchDocument,pointerAt,redoEdit,selectAllText,stepFontSize,toggleFormat,selectedText,splitAtCaret,syncGeometry,typeText,undoEdit} from '../../lib/documents/session';
 import {saveCopy} from '../../lib/documents/saveCopy';
 import {confirmDocumentsSaveCopy,patchDocumentsExportUi,registerDocumentsExport,useDocumentsExportUi} from '../../lib/documents/exportBridge';
 import {executeCommand} from '../../lib/commands';
@@ -16,6 +16,7 @@ import {registerDocumentsCommands} from '../../lib/documents/commands';
 import {studioContextStore} from '../../lib/shell/studioContext';
 import {useT} from '../../lib/useT';
 import {getState,patchState} from '../../store/appStore';
+import {FormatBar} from './FormatBar';
 import {NativeButton,Textarea} from '../ui/native-controls';
 const bar='media-bar flex items-center gap-2 border-b border-subtle px-3 py-1.5 text-[12px]';
 const tool='grid h-7 cursor-pointer grid-flow-col items-center gap-1 rounded-sm border-0 bg-transparent px-2 text-[12px] text-ink-2 hover:bg-hover disabled:cursor-default disabled:opacity-50';
@@ -66,6 +67,7 @@ function CaretInput({left,top}:{left:number;top:number}){
    if(e.key==='Enter'){e.preventDefault();void splitAtCaret();return;}
    if(mod&&e.key.toLowerCase()==='a'){e.preventDefault();selectAllText();return;}
    if(mod&&!e.shiftKey&&!e.altKey&&'biu'.includes(e.key.toLowerCase())&&e.key.length===1){e.preventDefault();void toggleFormat(({b:'bold',i:'italic',u:'underline'} as const)[e.key.toLowerCase() as 'b'|'i'|'u']);return;}
+   if(mod&&e.shiftKey&&(e.key==='>'||e.key==='<'||e.key==='.'||e.key===',')){e.preventDefault();void stepFontSize(e.key==='>'||e.key==='.'?1:-1);return;}
    if(mod&&e.key.toLowerCase()==='z'){e.preventDefault();void(e.shiftKey?redoEdit():undoEdit());return;}
    if(mod&&e.key.toLowerCase()==='y'){e.preventDefault();void redoEdit();}
   }}
@@ -113,11 +115,11 @@ export function DocumentsCanvas(){
    {doc.status==='ready'&&<span className="text-ink-3" data-testid="documents-pages">{t('documents.pages',{n:doc.pages})}</span>}<span className="flex-1"/>
    <NativeButton className={tool} aria-label={t('documents.undo')} title={t('documents.undo')} disabled={!doc.canUndo} onClick={()=>void undoEdit()} data-testid="documents-undo"><Undo2 size={13}/></NativeButton>
    <NativeButton className={tool} aria-label={t('documents.redo')} title={t('documents.redo')} disabled={!doc.canRedo} onClick={()=>void redoEdit()} data-testid="documents-redo"><Redo2 size={13}/></NativeButton>
-   {(['bold','italic','underline'] as const).map(p=>{const on=doc.pendingFormat?(doc.pendingFormat.patch[p]??doc.format?.[p]==='on'):doc.format?.[p]==='on';return <NativeButton key={p} className={tool+(on?' bg-hover text-ink':'')+' w-6 text-xs '+(p==='bold'?'font-bold':p==='italic'?'italic':'underline')} aria-label={t('documents.format.'+p)} title={t('documents.format.'+p)} aria-pressed={on} disabled={doc.status!=='ready'||!doc.caret} onClick={()=>void toggleFormat(p)} data-testid={'documents-format-'+p}>{p==='bold'?'B':p==='italic'?'I':'U'}</NativeButton>;})}
    <NativeButton className={tool} aria-label={t('documents.zoomOut')} title={t('documents.zoomOut')} disabled={doc.status!=='ready'} onClick={()=>stepZoom(-1)}><Minus size={13}/></NativeButton>
    <span className="w-10 text-center tabular-nums" data-testid="documents-zoom">{Math.round(doc.zoom*100)}%</span>
    <NativeButton className={tool} aria-label={t('documents.zoomIn')} title={t('documents.zoomIn')} disabled={doc.status!=='ready'} onClick={()=>stepZoom(1)}><Plus size={13}/></NativeButton>
    <NativeButton className={tool} disabled={doc.status!=='ready'||doc.saving} onClick={()=>void executeCommand('documents.saveCopy')} data-testid="documents-save-copy">{t('documents.saveCopy')}</NativeButton></div>
+  {doc.status==='ready'&&<FormatBar format={doc.format} held={doc.pendingFormat&&doc.caret&&doc.pendingFormat.block===doc.caret.block&&doc.pendingFormat.off===doc.caret.head&&doc.caret.anchor===doc.caret.head&&doc.caret.anchorBlock===undefined?doc.pendingFormat.patch:null} enabled={!!doc.caret}/>}
   {doc.status==='loading'&&<div role="status" className="grid flex-1 place-items-center text-[12px] text-ink-3">{t('documents.loading')}</div>}
   {doc.status==='error'&&<div role="alert" className="grid flex-1 place-items-center"><div className="grid max-w-md justify-items-center gap-2 text-center"><p className="text-[13px] text-ink" data-testid="documents-error">{doc.error}</p><NativeButton className={tool+' border border-subtle'} onClick={()=>setAttempt(a=>a+1)}>{t('documents.retry')}</NativeButton></div></div>}
   {doc.notice&&<p role="status" className="border-b border-subtle px-3 py-1 text-xs text-ink-3" data-testid="documents-session-notice">{t('documents.session.'+doc.notice)}</p>}

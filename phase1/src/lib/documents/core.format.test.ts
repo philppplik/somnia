@@ -19,3 +19,10 @@ test('formatState validates its span too',()=>{
  const {k}=core();rp(k);assert.equal(k.handle({id:2,kind:'formatState',start:{block:2,off:0},end:{block:1,off:0}} as never).res.ok,false);
  const ok=k.handle({id:3,kind:'formatState',start:{block:0,off:0},end:{block:1,off:0}} as never).res;assert.equal(ok.ok,true);
 });
+
+test('font, size and colour patches are validated before the engine',()=>{
+ const {k,calls}=core();rp(k);const send=(patch:unknown)=>k.handle({id:2,kind:'format',start:{block:0,off:0},end:{block:0,off:1},patch} as never).res.ok;
+ for(const bad of [{size:0},{size:401},{size:'12'},{size:Number.NaN},{font:''},{font:'x'.repeat(65)},{font:'a\u0000'},{font:3},{color:'red'},{color:'#C0392B'},{color:'12345'},{color:7}])assert.equal(send(bad),false,JSON.stringify(bad));
+ assert.equal(calls.length,0);
+ send({font:'Inter',size:12.5,color:'auto'});send({color:'c0392b'});assert.equal(calls.length,2);
+});

@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {applyEdit,type TextEdit} from './edit';
 import type {DocumentsEngine} from './engine';
 import {getDocumentsState,patchDocuments} from './store';
-import {toggleFormat,deleteAtCaret,moveCaret,MAX_INSERT_LINES,pasteText,redoEdit,resetSessionsForTest,selectAllText,selectedText,setSessionDeps,splitAtCaret,switchDocument,typeText,undoEdit,syncGeometry} from './session';
+import {setFont,setFontColor,setFontSize,stepFontSize,toggleFormat,deleteAtCaret,moveCaret,MAX_INSERT_LINES,pasteText,redoEdit,resetSessionsForTest,selectAllText,selectedText,setSessionDeps,splitAtCaret,switchDocument,typeText,undoEdit,syncGeometry} from './session';
 import {stepBoundary,wordBoundary} from './text';
 const docx=new Uint8Array(readFileSync(new URL('../../../test/documents/sample.docx',import.meta.url)));
 type Row={text:string;locked?:boolean;f?:Set<string>[]};
@@ -25,11 +25,13 @@ class Doc{
  async format(s:{block:number;off:number},e:{block:number;off:number},patch:Record<string,boolean>){
   this.tick();const keys=Object.keys(patch);if(!keys.length)throw new Error('bad');
   for(let b=s.block;b<=e.block;b++){if(this.rows[b].locked)throw new Error('table in span');}
-  for(let b=s.block;b<=e.block;b++){const f=this.flags(b);const lo=b===s.block?s.off:0,hi=b===e.block?e.off:f.length;for(let k=lo;k<hi;k++)for(const p of keys)patch[p]?f[k].add(p):f[k].delete(p);}
+  for(let b=s.block;b<=e.block;b++){const f=this.flags(b);const lo=b===s.block?s.off:0,hi=b===e.block?e.off:f.length;for(let k=lo;k<hi;k++)for(const p of keys){const v=patch[p] as unknown;if(typeof v==='boolean'){v?f[k].add(p):f[k].delete(p);}else{for(const x of [...f[k]])if(x.startsWith(p+'='))f[k].delete(x);f[k].add(p+'='+v);}}}
   return this.doc();}
  async formatState(s:{block:number;off:number},e:{block:number;off:number}){
   const out:Record<string,string>={};for(const p of ['bold','italic','underline']){let on=0,off=0;for(let b=s.block;b<=e.block;b++){const f=this.flags(b);const lo=b===s.block?s.off:0,hi=b===e.block?e.off:f.length;for(let k=lo;k<hi;k++)f[k].has(p)?on++:off++;}out[p]=on&&off?'mixed':on?'on':'off';}
-  return out as never;}
+  const val=(p:string)=>{const seen=new Set<string>();for(let b=s.block;b<=e.block;b++){const f=this.flags(b);const lo=b===s.block?s.off:0,hi=b===e.block?e.off:f.length;for(let k=lo;k<hi;k++){seen.add([...f[k]].find(x=>x.startsWith(p+'='))?.slice(p.length+1)??'');}}return seen.size===1&&[...seen][0]!==''?[...seen][0]:null;};
+  const z:Record<string,unknown>={...out,font:val('font'),size:val('size')===null?null:Number(val('size')),color:val('color')};
+  return z as never;}
  async snapshot(){const id=++this.n;this.snaps.set(id,this.rows.map(r=>({...r,f:r.f?.map(x=>new Set(x))})));return id;}
  async restore(id:number){this.rows=this.snaps.get(id)!.map(r=>({...r,f:r.f?.map(x=>new Set(x))}));return this.doc();}
  async hit(p:number,x:number,y:number){return this.hits(p,x,y);}async caret(){return null;}async rects(b:number,a:number,z:number){return[[0,b,a,z,1]] as never;}
@@ -169,4 +171,28 @@ test('a collapsed caret holds the choice for the next typed text only, in one un
 test('moving the caret drops the held format',async()=>{
  await open(['abcd']);at(0,1);await toggleFormat('italic');at(0,3);await syncGeometry();assert.equal(getDocumentsState().pendingFormat,null);
  await typeText('Z');assert.equal(has(0,3,'italic'),false);
+});
+
+test('font, size and colour apply as one undo step across paragraphs and report a shared or mixed value',async()=>{
+ await open(['abc','def']);at(1,2,{block:0,off:1});
+ await toggleFormat('bold');await setFont('Source Serif 4');await setFontSize(18);await setFontColor('C0392B');
+ await syncGeometry();const f=getDocumentsState().format!;
+ assert.equal(f.font,'Source Serif 4');assert.equal(f.size,18);assert.equal(f.color,'C0392B');
+ at(1,2,{block:0,off:0});await syncGeometry();assert.equal(getDocumentsState().format?.size,null);
+ at(1,2,{block:0,off:1});await undoEdit();at(1,2,{block:0,off:1});await syncGeometry();assert.equal(getDocumentsState().format?.color,null);assert.equal(getDocumentsState().format?.size,18);
+});
+test('invalid font, size or colour never reaches the engine and leaves the document untouched',async()=>{
+ await open(['abc']);at(0,2,{block:0,off:0});const calls=d.calls;
+ for(const run of [()=>setFontSize(0),()=>setFontSize(401),()=>setFontSize(Number.NaN),()=>setFont(''),()=>setFont('x'.repeat(65)),()=>setFont('a\nb'),()=>setFontColor('red'),()=>setFontColor('#C0392B')]){await run();assert.ok(getDocumentsState().editError);patchDocuments({editError:''});}
+ assert.equal(d.calls,calls);assert.equal(getDocumentsState().canUndo,false);
+});
+test('size chosen at a collapsed caret applies to the next typed text only; Ctrl+> steps the ladder',async()=>{
+ await open(['ab']);at(0,1);await setFontSize(24);await typeText('X');assert.ok(d.flags(0)[1].has('size=24')&&!d.flags(0)[0].has('size=24')&&!d.flags(0)[2].has('size=24'));
+ await undoEdit();assert.equal(d.texts()[0],'ab');
+ await open(['abc']);at(0,3,{block:0,off:0});await syncGeometry();await setFontSize(12);await syncGeometry();await stepFontSize(1);await syncGeometry();assert.equal(getDocumentsState().format?.size,14);
+ await stepFontSize(-1);await syncGeometry();await stepFontSize(-1);await syncGeometry();assert.equal(getDocumentsState().format?.size,11);
+});
+test('a table in the span refuses a size change',async()=>{
+ await open(['ab',{text:'',locked:true},'cd']);patchDocuments({caret:{block:2,head:1,anchor:0,anchorBlock:0}});
+ await setFontSize(20);assert.ok(getDocumentsState().editError);assert.equal(getDocumentsState().canUndo,false);
 });

@@ -46,7 +46,7 @@ new file mode 100644
 index 0000000..5b80b79
 --- /dev/null
 +++ b/crates/somnia-worker/src/lib.rs
-@@ -0,0 +1,700 @@
+@@ -0,0 +1,782 @@
 +//! Experimental headless adapter. No DOM, egui, filesystem or UI thread access.
 +use wasm_bindgen::prelude::*;
 +use std::sync::Arc;
@@ -239,7 +239,41 @@ index 0000000..5b80b79
 +        let mut bold: Option<bool> = None;
 +        let mut italic: Option<bool> = None;
 +        let mut underline: Option<wordcraft_doc::props::Underline> = None;
++        let mut font: Option<String> = None;
++        let mut size: Option<f32> = None;
++        let mut color: Option<wordcraft_doc::props::TextColor> = None;
 +        for (k, val) in obj {
++            match k.as_str() {
++                "font" => {
++                    let f = val.as_str().ok_or_else(|| "format field font must be text".to_string())?;
++                    if f.is_empty() || f.chars().count() > 64 || f.chars().any(|c| c.is_control()) {
++                        return Err("format field font must be 1-64 printable characters".into());
++                    }
++                    font = Some(f.to_string());
++                    continue;
++                }
++                "size" => {
++                    let n = val.as_f64().ok_or_else(|| "format field size must be a number".to_string())?;
++                    if !n.is_finite() || !(1.0..=400.0).contains(&n) {
++                        return Err("format field size must be between 1 and 400 points".into());
++                    }
++                    size = Some(((n * 2.0).round() / 2.0) as f32);
++                    continue;
++                }
++                "color" => {
++                    let c = val.as_str().ok_or_else(|| "format field color must be text".to_string())?;
++                    color = Some(if c == "auto" {
++                        wordcraft_doc::props::TextColor::Auto
++                    } else if c.len() == 6 && c.bytes().all(|b| b.is_ascii_hexdigit()) {
++                        let n = u32::from_str_radix(c, 16).map_err(|e| e.to_string())?;
++                        wordcraft_doc::props::TextColor::Rgb(wordcraft_doc::props::Rgb((n >> 16) as u8, (n >> 8) as u8, n as u8))
++                    } else {
++                        return Err("format field color must be auto or RRGGBB".into());
++                    });
++                    continue;
++                }
++                _ => {}
++            }
 +            let flag = val.as_bool().ok_or_else(|| format!("format field {k} must be true or false"))?;
 +            match k.as_str() {
 +                "bold" => bold = Some(flag),
@@ -267,6 +301,15 @@ index 0000000..5b80b79
 +                if let Some(v) = underline {
 +                    cp.underline = Some(v);
 +                }
++                if let Some(v) = &font {
++                    cp.font = Some(v.clone());
++                }
++                if let Some(v) = size {
++                    cp.size = Some(v);
++                }
++                if let Some(v) = color {
++                    cp.color = Some(v);
++                }
 +            })
 +            .map_err(|e| e.to_string())?;
 +            done.push((b, p));
@@ -281,6 +324,7 @@ index 0000000..5b80b79
 +    /// `"mixed"`. A collapsed selection reports what typing at that point would get.
 +    fn do_format_state(&self, sb: usize, so: usize, eb: usize, eo: usize) -> Result<String, String> {
 +        let mut seen: Vec<(bool, bool, bool)> = Vec::new();
++        let mut look: Vec<(String, f32, wordcraft_doc::props::TextColor)> = Vec::new();
 +        if sb == eb && so == eo {
 +            let p = self.fmt_para(sb)?;
 +            if so > p.text.len() || !p.text.is_char_boundary(so) {
@@ -288,6 +332,7 @@ index 0000000..5b80b79
 +            }
 +            let rc = self.doc.styles.resolve_char(p.props.style.as_deref(), p.props_at(so));
 +            seen.push((rc.bold, rc.italic, rc.underline != wordcraft_doc::props::Underline::None));
++            look.push((rc.font.clone(), rc.size, rc.color));
 +        } else {
 +            for (b, start, end) in self.span_ranges(sb, so, eb, eo)? {
 +                let p = self.fmt_para(b)?;
@@ -295,6 +340,7 @@ index 0000000..5b80b79
 +                    if r.start < end && r.end > start {
 +                        let rc = self.doc.styles.resolve_char(p.props.style.as_deref(), cp);
 +                        seen.push((rc.bold, rc.italic, rc.underline != wordcraft_doc::props::Underline::None));
++                        look.push((rc.font.clone(), rc.size, rc.color));
 +                    }
 +                }
 +            }
@@ -308,7 +354,16 @@ index 0000000..5b80b79
 +                "off"
 +            }
 +        }
-+        Ok(serde_json::json!({"bold": tri(&seen, |x| x.0), "italic": tri(&seen, |x| x.1), "underline": tri(&seen, |x| x.2)}).to_string())
++        // font / size / color: the shared value, or null when the selection mixes values (or is empty).
++        let same = |f: &dyn Fn(&(String, f32, wordcraft_doc::props::TextColor)) -> bool| !look.is_empty() && look.iter().all(|x| f(x));
++        let first = look.first();
++        let font = first.filter(|x| same(&|y| y.0 == x.0)).map(|x| x.0.clone());
++        let size = first.filter(|x| same(&|y| y.1 == x.1)).map(|x| x.1);
++        let color = first.filter(|x| same(&|y| y.2 == x.2)).map(|x| match x.2 {
++            wordcraft_doc::props::TextColor::Auto => "auto".to_string(),
++            wordcraft_doc::props::TextColor::Rgb(c) => c.hex(),
++        });
++        Ok(serde_json::json!({"bold": tri(&seen, |x| x.0), "italic": tri(&seen, |x| x.1), "underline": tri(&seen, |x| x.2), "font": font, "size": size, "color": color}).to_string())
 +    }
 +    fn do_replace(&mut self, block: usize, start: usize, end: usize, text: &str) -> Result<(), String> {
 +        self.do_replace_many(block, &[(start, end, text.to_string())])
@@ -360,7 +415,7 @@ index 0000000..5b80b79
 +        serde_json::Value::Array(r).to_string()
 +    }
 +    /// Sets bold / italic / underline on a selection `(start_block, start_off)..(end_block, end_off)`
-+    /// (UTF-8 byte offsets). `patch_json`: `{"bold":true,"italic":false,"underline":true}`, any subset.
++    /// (UTF-8 byte offsets). `patch_json`: any subset of `{"bold":true,"italic":false,"underline":true,"font":"Source Serif 4","size":14,"color":"C0392B"|"auto"}`.
 +    pub fn format_range(&mut self, start_block: usize, start_off: usize, end_block: usize, end_off: usize, patch_json: &str) -> Result<(), JsValue> {
 +        self.do_format(start_block, start_off, end_block, end_off, patch_json).map_err(|e| JsValue::from_str(&e))
 +    }
@@ -508,6 +563,33 @@ index 0000000..5b80b79
 +        assert!(s.do_format(0, 0, 0, 2, r#"{"colour":true}"#).is_err());
 +        assert!(s.do_format(0, 0, 0, 2, "not json").is_err());
 +        assert!(s.do_format_state(999, 0, 999, 0).is_err());
++        assert_eq!(wordcraft_docx::write(&s.doc).unwrap(), before);
++    }
++    #[test]
++    fn format_range_sets_font_size_color_roundtrips_and_validates() {
++        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
++        let n = match &*s.doc.body[0] { Block::Para(p) => p.text.len(), _ => panic!() };
++        assert!(n > 2);
++        s.do_format(0, 0, 0, 2, r#"{"font":"Source Serif 4","size":18.26,"color":"c0392b"}"#).unwrap();
++        let st = state(&s, 0, 0, 0, 2);
++        assert_eq!(st["font"], "Source Serif 4");
++        assert_eq!(st["size"], 18.5);
++        assert_eq!(st["color"], "C0392B");
++        let mixed = state(&s, 0, 0, 0, n);
++        assert!(mixed["size"].is_null() && mixed["color"].is_null() && mixed["font"].is_null());
++        s.do_format(0, 0, 0, 2, r#"{"color":"auto"}"#).unwrap();
++        assert_eq!(state(&s, 0, 0, 0, 2)["color"], "auto");
++        s.do_format(0, 0, 0, 2, r#"{"color":"C0392B"}"#).unwrap();
++        let saved = wordcraft_docx::write(&s.doc).unwrap();
++        let again = DocSession::from_bytes(&saved).unwrap();
++        let st = state(&again, 0, 0, 0, 2);
++        assert_eq!((st["font"].as_str(), st["size"].as_f64(), st["color"].as_str()), (Some("Source Serif 4"), Some(18.5), Some("C0392B")));
++        let before = wordcraft_docx::write(&s.doc).unwrap();
++        for bad in [r#"{"size":0}"#, r#"{"size":401}"#, r#"{"size":"12"}"#, r#"{"font":""}"#, r#"{"font":5}"#, r#"{"color":"red"}"#, r##"{"color":"#C0392B"}"##, r#"{"color":"12345g"}"#] {
++            assert!(s.do_format(0, 0, 0, 2, bad).is_err(), "{bad}");
++        }
++        let long = format!(r#"{{"font":"{}"}}"#, "x".repeat(65));
++        assert!(s.do_format(0, 0, 0, 2, &long).is_err());
 +        assert_eq!(wordcraft_docx::write(&s.doc).unwrap(), before);
 +    }
 +    #[test]

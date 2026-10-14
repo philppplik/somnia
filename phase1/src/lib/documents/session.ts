@@ -1,3 +1,4 @@
+import {checkFormatPatch} from './protocol';
 import {captureDocumentSelection} from './selectionCapture';
 import {caretAfterEdit,diffEdit,inverseOf,UndoStack,type TextEdit,type UndoEntry} from './edit';
 import {stepBoundary,utf16ToUtf8Offset,utf8ToUtf16Offset,wordBoundary} from './text';
@@ -221,17 +222,40 @@ export type FormatProp=typeof FORMAT_PROPS[number];
  */
 export const toggleFormat=(prop:FormatProp)=>run(async()=>{
  if(!FORMAT_PROPS.includes(prop))throw new Error('Unknown format.');
+ const st=getDocumentsState();const pf=heldFormat();
+ const now=pf?.[prop]??(st.format?.[prop]==='on');
+ await applyFormat({[prop]:!now});
+});
+/** The held (pending) format at the current caret, or null. */
+function heldFormat():import('./protocol').FormatPatch|null{
+ const {caret:c,pendingFormat:p}=getDocumentsState();if(!c||!p)return null;const n=norm(c);
+ return cmp(n.s,n.e)===0&&p.block===n.s.block&&p.off===n.s.off?p.patch:null;
+}
+/**
+ * Applies a format patch to the selection as ONE undo step, or (collapsed caret) holds it for the next typed text.
+ * Table/object spans and oversize spans are refused; an engine failure restores the paragraphs.
+ */
+async function applyFormat(patch:import('./protocol').FormatPatch){
+ checkFormatPatch(patch);
  const st=getDocumentsState(),c=st.caret;if(!c)return;const n=norm(c);goalX=null;
- const cur=st.format?.[prop]==='on';
  if(cmp(n.s,n.e)===0){
   if(blockText(n.s.block)===null)return;
-  const pf=st.pendingFormat&&st.pendingFormat.block===n.s.block&&st.pendingFormat.off===n.s.off?st.pendingFormat.patch:{};
-  const now=pf[prop]??cur;patchDocuments({pendingFormat:{block:n.s.block,off:n.s.off,patch:{...pf,[prop]:!now}}});return;
+  patchDocuments({pendingFormat:{block:n.s.block,off:n.s.off,patch:{...(heldFormat()??{}),...patch}}});return;
  }
  const ts=spanTexts(n.s.block,n.e.block);if(!ts)throw new Error(n.e.block-n.s.block+1>MAX_SPAN_BLOCKS?`Selection is too large for one edit (limit ${MAX_SPAN_BLOCKS} paragraphs).`:'This selection includes a part that cannot be edited as text.');
- const on=st.format?.[prop]==='on';
- await structural(eng=>eng.format(n.s,n.e,{[prop]:!on}),n.h,n.h);
+ await structural(eng=>eng.format(n.s,n.e,patch),n.h,n.h);
  setSel(n.a,n.h);
+}
+/** Font family, size (points) and colour (`RRGGBB` or `auto`) of the selection, or of the next typed text at a caret. */
+export const setFont=(font:string)=>run(()=>applyFormat({font}));
+export const setFontSize=(size:number)=>run(()=>applyFormat({size}));
+export const setFontColor=(color:string)=>run(()=>applyFormat({color}));
+/** Grows or shrinks the size by one step of the usual size ladder (stays within 1-400 pt; a mixed selection starts from 11 pt). */
+export const FONT_SIZES=[8,9,10,11,12,14,16,18,20,24,28,32,36,48,72] as const;
+export const stepFontSize=(dir:-1|1)=>run(async()=>{
+ const cur=heldFormat()?.size??getDocumentsState().format?.size??11;
+ const next=dir>0?FONT_SIZES.find(s=>s>cur):[...FONT_SIZES].reverse().find(s=>s<cur);
+ if(next===undefined)return;await applyFormat({size:next});
 });
 /** Pastes plain text; every newline starts a new paragraph (copying the paragraph properties). The selection is replaced in the same undo step. */
 export const pasteText=(text:string)=>run(async()=>{

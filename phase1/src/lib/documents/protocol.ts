@@ -5,11 +5,25 @@ export interface HitResult{block:number|null;off?:number;editable:boolean}
 export interface CaretBox{page:number;x:number;top:number;height:number}
 export type Tri='on'|'off'|'mixed';
 /** Effective bold/italic/underline over a selection (style and direct formatting). */
-export interface FormatState{bold:Tri;italic:Tri;underline:Tri}
-export interface FormatPatch{bold?:boolean;italic?:boolean;underline?:boolean}
+export interface FormatState{bold:Tri;italic:Tri;underline:Tri;/** Shared value over the selection, or null when it mixes values. */font?:string|null;size?:number|null;/** `RRGGBB`, `auto`, or null when mixed. */color?:string|null}
+export interface FormatPatch{bold?:boolean;italic?:boolean;underline?:boolean;font?:string;size?:number;color?:string}
+export const MIN_FONT_PT=1,MAX_FONT_PT=400,MAX_FONT_NAME=64;
 /** Selection endpoints: top-level paragraph index and UTF-8 byte offset. */
 export interface DocPos{block:number;off:number}
 export const MAX_FORMAT_BLOCKS=2000;
+const FLAG_KEYS=['bold','italic','underline'];
+/** Validates a format patch: flags are booleans, font is short printable text, size is 1-400 pt, color is auto or RRGGBB. */
+export function checkFormatPatch(patch:unknown){
+ if(!patch||typeof patch!=='object'||Array.isArray(patch))throw new Error('Format change is not valid.');
+ const o=patch as Record<string,unknown>;const keys=Object.keys(o);if(!keys.length)throw new Error('Format change is not valid.');
+ for(const k of keys){const v=o[k];
+  if(FLAG_KEYS.includes(k)){if(typeof v!=='boolean')throw new Error('Format change is not valid.');}
+  else if(k==='font'){if(typeof v!=='string'||!v||[...v].length>MAX_FONT_NAME||/[\u0000-\u001f\u007f]/.test(v))throw new Error('Font name is not valid.');}
+  else if(k==='size'){if(typeof v!=='number'||!Number.isFinite(v)||v<MIN_FONT_PT||v>MAX_FONT_PT)throw new Error(`Font size must be between ${MIN_FONT_PT} and ${MAX_FONT_PT} pt.`);}
+  else if(k==='color'){if(typeof v!=='string'||!(v==='auto'||/^[0-9a-fA-F]{6}$/.test(v)))throw new Error('Colour must be automatic or six hex digits.');}
+  else throw new Error('Format change is not valid.');
+ }
+}
 export type Rect5=[number,number,number,number,number];
 export type DocumentsRequest=
  |{id:number;kind:'init';wasmUrl:string}

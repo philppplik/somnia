@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-475 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+477 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -232,6 +232,8 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `documents.commitParagraph` | Apply paragraph text | Edit | documents-panels |  |
 | `documents.export.open` | Export document | Project | documents |  |
 | `documents.focusParagraph` | Focus paragraph | View | documents-panels |  |
+| `documents.fontSize.decrease` | Decrease font size | View | documents |  |
+| `documents.fontSize.increase` | Increase font size | View | documents |  |
 | `documents.goToPage` | Go to document page | View | documents-panels |  |
 | `documents.outline.goto` | Go to document paragraph | View | documents |  |
 | `documents.pages.goto` | Go to document page | View | documents |  |

@@ -2465,6 +2465,28 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.fontSize.decrease",
+      "title": "Decrease font size",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.fontSize.increase",
+      "title": "Increase font size",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.goToPage",
       "title": "Go to document page",
       "category": "View",

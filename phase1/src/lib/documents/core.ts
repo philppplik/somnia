@@ -1,6 +1,5 @@
 import type {DocumentsRequest,DocumentsResponse,OpenedDocument} from './protocol';
-import {MAX_DOCX_BYTES,MAX_FORMAT_BLOCKS,MAX_SCALE,MIN_SCALE} from './protocol';
-const FORMAT_KEYS=['bold','italic','underline'];
+import {checkFormatPatch,MAX_DOCX_BYTES,MAX_FORMAT_BLOCKS,MAX_SCALE,MIN_SCALE} from './protocol';
 const posOk=(p:{block:number;off:number})=>Number.isInteger(p.block)&&p.block>=0&&Number.isInteger(p.off)&&p.off>=0;
 function checkSpan(start:{block:number;off:number},end:{block:number;off:number}){
  if(!posOk(start)||!posOk(end))throw new Error('Selection is not valid.');
@@ -52,7 +51,7 @@ export class DocumentsCore{
    }
    if(req.kind==='format'){
     checkSpan(req.start,req.end);
-    const keys=Object.keys(req.patch);if(!keys.length||keys.some(k=>!FORMAT_KEYS.includes(k)||typeof (req.patch as Record<string,unknown>)[k]!=='boolean'))throw new Error('Format change is not valid.');
+    checkFormatPatch(req.patch);
     const s=this.need();const [,editMs]=this.timed(()=>s.format_range(req.start.block,req.start.off,req.end.block,req.end.off,JSON.stringify(req.patch)));const [pages,layoutMs]=this.timed(()=>s.paginate());
     return{res:{id:req.id,ok:true,kind:'edited',document:this.describe(editMs,layoutMs,pages)},transfer:[]};
    }

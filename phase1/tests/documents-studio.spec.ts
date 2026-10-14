@@ -256,3 +256,28 @@ test('D2a: Ctrl+B bolds a selection in the engine render, pressed state follows,
  await page.keyboard.press('Control+b');await page.keyboard.press('Control+z');
  await expect(page.getByTestId('documents-format-bold')).toHaveAttribute('aria-pressed','false');
 });
+
+test('D2b: font, size and colour from the format bar change the engine render and are one undo step each',async({page})=>{
+ await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ await openBuffers(page,[{name:'sample.docx',mimeType:DOCX,buffer:sample()}]);
+ await expect(page.getByTestId('documents-pages')).toHaveText('1 pages');
+ const pg=page.getByTestId('documents-page').first();const img=pg.locator('img');
+ await expect.poll(()=>img.evaluate((i:HTMLImageElement)=>i.complete&&i.naturalWidth)).toBeGreaterThan(300);
+ await expect(page.getByTestId('documents-format-size')).toBeDisabled();
+ const box=(await pg.boundingBox())!;
+ await page.mouse.click(box.x+box.width*0.125,box.y+box.height*0.127);
+ await expect(page.getByTestId('documents-caret')).toBeVisible();
+ for(let i=0;i<4;i++)await page.keyboard.press('Shift+ArrowRight');
+ const before=await img.screenshot();
+ await page.getByTestId('documents-format-size').selectOption('24');
+ await expect.poll(async()=>!(await img.screenshot()).equals(before)).toBe(true);
+ await expect(page.getByTestId('documents-format-size')).toHaveValue('24');
+ await page.getByTestId('documents-format-font').selectOption('JetBrains Mono');
+ await expect(page.getByTestId('documents-format-font')).toHaveValue('JetBrains Mono');
+ await page.getByTestId('documents-color-C0392B').click();
+ await expect(page.getByTestId('documents-color-C0392B')).toHaveAttribute('aria-pressed','true');
+ await page.getByTestId('documents-page').first().screenshot({path:shot('format-font-size-color')});
+ await page.getByTestId('documents-undo').click();
+ await expect(page.getByTestId('documents-color-C0392B')).toHaveAttribute('aria-pressed','false');
+ await expect(page.getByTestId('documents-format-font')).toHaveValue('JetBrains Mono');
+});
