@@ -28,6 +28,12 @@ test('migrated vibespace controls keep behavior: run open, stop, steer toggle an
  await expect(back).toHaveCSS('background-color','rgba(0, 0, 0, 0)');
  await expect(back).toHaveCSS('border-top-width','0px');
  await expect(back).toHaveCSS('text-decoration-line','underline');
+ // Hunk filename keeps one-line layout: checkboxes must not take 100% width under the global input rule.
+ const fileRow=proof.getByRole('checkbox',{name:'Include index.html'});
+ const rowBox=await fileRow.boundingBox(),codeBox=(await fileRow.evaluate(el=>{const c=el.parentElement.querySelector('code');const r=c.getBoundingClientRect();return {width:r.width,height:r.height};}));
+ expect(rowBox!.width).toBeLessThan(30);
+ expect(codeBox.width).toBeGreaterThan(200);
+ expect(codeBox.height).toBeLessThan(30);
  // Pending locks stop and steer again.
  await page.getByRole('button',{name:'Pending'}).click();
  await expect(proof.getByRole('button',{name:'Stop'}).first()).toBeDisabled();
