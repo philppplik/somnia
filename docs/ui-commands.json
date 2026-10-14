@@ -3868,6 +3868,19 @@
       "hasEnabled": true
     },
     {
+      "id": "slides.setNotes",
+      "title": "Set speaker notes",
+      "category": "Edit",
+      "source": "slides",
+      "keywords": [
+        "notes",
+        "presenter",
+        "speaker",
+        "talking points"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "slides.setShapeBounds",
       "title": "Move or resize text box",
       "category": "Edit",

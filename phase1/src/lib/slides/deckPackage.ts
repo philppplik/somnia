@@ -998,3 +998,65 @@ export function ungroupShape(bytes:Uint8Array,slideId:number,groupId:number):Uin
   for(const name of Object.keys(zip))if(name!==slide.part&&(!re[name]||re[name].length!==zip[name].length||re[name].some((v,i)=>v!==zip[name][i])))throw Error('Edited deck changed an unrelated part');
   return res;
 }
+
+/* ---------------------------------------------------------------------------------------
+ * Speaker notes (write). Only the body placeholder of the notes page is changed. Existing
+ * text is replaced by plain paragraphs that keep the first paragraph/run formatting; rich
+ * formatting inside the notes is not preserved. A notes page is created only when the deck
+ * already has a notes master with a body placeholder.
+ * ------------------------------------------------------------------------------------- */
+const NOTES_BAD=/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/;
+function notesParas(lines:readonly string[],ppr:string,rpr:string):string{
+  return lines.map(line=>{
+    const parts=line.split('\n').map(t=>t?`<a:r>${rpr}<a:t>${esc(t)}</a:t></a:r>`:'');
+    return `<a:p>${ppr}${parts.join('<a:br/>')}</a:p>`;
+  }).join('');
+}
+export function setSlideNotes(bytes:Uint8Array,slideId:number,input:readonly string[]):Uint8Array{
+  if(!Array.isArray(input)||input.length>MAX_NOTES_PARAGRAPHS)throw Error(`Notes can have at most ${MAX_NOTES_PARAGRAPHS} paragraphs`);
+  const lines=input.map(l=>{if(typeof l!=='string')throw Error('Notes must be text');return l.replace(/\r\n?/g,'\n');});
+  while(lines.length&&!lines[lines.length-1].trim())lines.pop();
+  if(lines.join('\n').length>MAX_NOTES_CHARS)throw Error(`Notes can have at most ${MAX_NOTES_CHARS} characters`);
+  if(lines.some(l=>NOTES_BAD.test(l)))throw Error('Notes contain unsupported characters');
+  const c=context(bytes),model=readDeckModel(bytes),slide=model.slides.find(s=>s.id===slideId);
+  if(!slide)throw Error('Slide no longer exists');if(slide.problems.length)throw Error('This slide has unsupported structure');
+  if(readSlideNotes(bytes,slideId).join('\n')===lines.join('\n'))return bytes;
+  const rel=readRels(c.zip,slide.part).filter(r=>!r.external&&r.type===RT+'notesSlide');
+  if(rel.length>1)throw Error('This slide has more than one notes page');
+  const verify=(out:Uint8Array)=>{
+    if(readSlideNotes(out,slideId).join('\n')!==lines.join('\n'))throw Error('Edited deck failed verification');
+  };
+  const check=(after:DeckModel)=>{
+    const a=after.slides.find(s=>s.id===slideId);
+    if(!a||a.problems.length||JSON.stringify(a.shapes)!==JSON.stringify(slide.shapes)||after.runs.length!==model.runs.length)throw Error('Edited deck failed verification');
+  };
+  if(rel.length===1){
+    const part=resolve(slide.part,rel[0].target);
+    if(!/^ppt\/notesSlides\/notesSlide\d+\.xml$/.test(part)||!c.zip[part]||!hasOverride(c.types,part,CT_NOTES))throw Error('Notes page is not canonical');
+    const back=readRels(c.zip,part).filter(r=>r.type===RT+'slide');
+    if(back.length>1||(back.length===1&&resolve(part,back[0].target)!==slide.part))throw Error('Notes page does not belong to this slide alone');
+    for(const o of model.slides)if(o.id!==slideId&&readRels(c.zip,o.part).some(r=>!r.external&&r.type===RT+'notesSlide'&&(()=>{try{return resolve(o.part,r.target)===part;}catch{return false;}})()))throw Error('Notes page does not belong to this slide alone');
+    const xml=text(c.zip,part),sps=[...xml.matchAll(/<p:sp\b[\s\S]*?<\/p:sp>/g)].filter(m=>/<p:ph\b[^>]*\stype="body"/.test(m[0]));
+    if(sps.length!==1)throw Error('Notes page has no single body placeholder');
+    const sp=sps[0][0],first=sp.search(/<a:p[\s>/]/),endM=[...sp.matchAll(/<\/a:p>|<a:p\s*\/>/g)].at(-1);
+    if(first<0||!endM)throw Error('Notes body has no paragraphs');
+    const region=sp.slice(first,endM.index!+endM[0].length);
+    if(region.replace(/<a:p\b[\s\S]*?<\/a:p>|<a:p\s*\/>/g,'').trim())throw Error('Notes body has structure that cannot be edited');
+    const ppr=/<a:p\b[^>]*>(<a:pPr\b[^>]*\/>)/.exec(region)?.[1]??'',rpr=/<a:r>(<a:rPr\b[^>]*\/>)/.exec(region)?.[1]??'';
+    const nsp=sp.slice(0,first)+(lines.length?notesParas(lines,ppr,rpr):'<a:p/>')+sp.slice(endM.index!+endM[0].length);
+    const start=sps[0].index!,out=xml.slice(0,start)+nsp+xml.slice(start+sp.length);
+    const res=finish(c,{[part]:out},{},[],check);verify(res);return res;
+  }
+  if(!lines.length)return bytes;
+  const nm=readRels(c.zip,'ppt/presentation.xml').find(r=>!r.external&&r.type===RT+'notesMaster');
+  if(!nm)throw Error('This deck has no notes master, so notes pages cannot be added');
+  const master=resolve('ppt/presentation.xml',nm.target);
+  if(!c.zip[master]||!/<p:ph\b[^>]*\stype="body"/.test(text(c.zip,master)))throw Error('The notes master has no body placeholder');
+  const np=nextFree(c.zip,'ppt/notesSlides','notesSlide','xml');if(lower(c.zip).has(np.toLowerCase()))throw Error('Part name collision');
+  const notes=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<p:notes xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id="2" name="Slide Image Placeholder 1"/><p:cNvSpPr><a:spLocks noGrp="1" noRot="1" noChangeAspect="1"/></p:cNvSpPr><p:nvPr><p:ph type="sldImg"/></p:nvPr></p:nvSpPr><p:spPr/></p:sp><p:sp><p:nvSpPr><p:cNvPr id="3" name="Notes Placeholder 2"/><p:cNvSpPr><a:spLocks noGrp="1"/></p:cNvSpPr><p:nvPr><p:ph type="body" idx="1"/></p:nvPr></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:lstStyle/>${notesParas(lines,'','')}</p:txBody></p:sp></p:spTree></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:notes>`;
+  const nrels=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="${RT}notesMaster" Target="${relative(np,master)}"/><Relationship Id="rId2" Type="${RT}slide" Target="${relative(np,slide.part)}"/></Relationships>`;
+  const srels=text(c.zip,relsName(slide.part));if(!srels.includes('</Relationships>'))throw Error('Slide relationships are not canonical');
+  const rid=relId(srels,text(c.zip,slide.part)),nextRels=srels.replace('</Relationships>',`<Relationship Id="${rid}" Type="${RT}notesSlide" Target="${relative(slide.part,np)}"/></Relationships>`);
+  const res=finish(c,{[relsName(slide.part)]:nextRels,'[Content_Types].xml':addOverride(c.types,np,CT_NOTES)},{[np]:strToU8(notes),[relsName(np)]:strToU8(nrels)},[],check);
+  verify(res);return res;
+}

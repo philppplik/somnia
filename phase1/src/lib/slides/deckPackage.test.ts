@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {unzipSync,zipSync,strFromU8,strToU8} from 'fflate';
-import {groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
+import {setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
 import {readRuns,makeEditedCopy} from './editCopy';
 import {png,jpeg} from './imageFixtures';
 
@@ -561,4 +561,33 @@ test('group and ungroup keep children, move as a unit, and fail closed',()=>{
   assert.throws(()=>ungroupShape(rs,sid,grp.id),/Resized groups/);
   const rot=patchPart(g,'ppt/slides/slide1.xml',x=>x.replace(/<p:grpSpPr><a:xfrm>/,'<p:grpSpPr><a:xfrm rot="900000">'));
   assert.throws(()=>ungroupShape(rot,sid,grp.id),/Rotated or flipped/);
+});
+
+test('setSlideNotes edits an existing notes body, creates a page when a notes master exists, and fails closed',()=>{
+  const corpus=new Uint8Array(readFileSync(fileURLToPath(new URL('../../../slides-engine/corpus/google-slides-effects-transitions-2026-05-08.pptx',import.meta.url))));
+  const sid=readDeckModel(corpus).slides[0].id,m0=readDeckModel(corpus);
+  assert.deepEqual(readSlideNotes(corpus,sid),[]);
+  assert.equal(setSlideNotes(corpus,sid,[]),corpus,'nothing to clear: same bytes');
+  const a=setSlideNotes(corpus,sid,['First <point> & more','','Second line\nwith break']);
+  assert.deepEqual(readSlideNotes(a,sid),['First <point> & more','','Second line\nwith break']);
+  assert.deepEqual(readDeckModel(a).slides.map(s=>s.shapes.length),m0.slides.map(s=>s.shapes.length));
+  assert.equal(readDeckModel(a).runs.length,m0.runs.length);
+  assert.equal(setSlideNotes(a,sid,['First <point> & more','','Second line\nwith break']),a,'unchanged: same bytes');
+  const b=setSlideNotes(a,sid,['Only this']);assert.deepEqual(readSlideNotes(b,sid),['Only this']);
+  assert.deepEqual(readSlideNotes(setSlideNotes(b,sid,[]),sid),[]);
+  assert.deepEqual(readSlideNotes(a,m0.slides[1].id),[],'other slides untouched');
+  // a slide without a notes page gets one (the deck has a notes master)
+  const noPage=patchPart(corpus,'ppt/slides/_rels/slide1.xml.rels',x=>x.replace(/<Relationship [^>]*notesSlide"[^>]*\/>/,''));
+  assert.deepEqual(readSlideNotes(noPage,sid),[]);
+  const c=setSlideNotes(noPage,sid,['Created notes']);assert.deepEqual(readSlideNotes(c,sid),['Created notes']);
+  const z=unzipSync(c);assert.ok(Object.keys(z).some(k=>/^ppt\/notesSlides\/notesSlide\d+\.xml$/.test(k)&&strFromU8(z[k]).includes('Created notes')));
+  assert.equal(setSlideNotes(noPage,sid,[]),noPage,'no page and nothing to write: same bytes');
+  // no notes master: refuse
+  assert.throws(()=>setSlideNotes(deck(2),readDeckModel(deck(2)).slides[0].id,['x']),/no notes master/);
+  // bounds and malformed input
+  assert.throws(()=>setSlideNotes(corpus,sid,Array.from({length:201},()=>'x')),/at most 200/);
+  assert.throws(()=>setSlideNotes(corpus,sid,['x'.repeat(20001)]),/at most 20000/);
+  assert.throws(()=>setSlideNotes(corpus,sid,['bad\u0000char']),/unsupported characters/);
+  assert.throws(()=>setSlideNotes(corpus,sid,[5 as never]),/must be text/);
+  assert.throws(()=>setSlideNotes(corpus,999,['x']),/no longer exists/);
 });
