@@ -612,5 +612,6 @@
  "animation.color.animate.fill": "Animar color de relleno",
  "animation.color.animate.stroke": "Animar color del trazo",
  "cmd.animation.color.animate": "Alternar fotogramas clave de color de relleno o trazo",
- "cmd.animation.color.keyRemove": "Quitar fotograma clave de color de relleno o trazo"
+ "cmd.animation.color.keyRemove": "Quitar fotograma clave de color de relleno o trazo",
+ "animation.keys.styleKey": "Fotograma clave de {name} en {time}"
 }

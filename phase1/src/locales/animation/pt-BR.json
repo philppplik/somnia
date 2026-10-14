@@ -612,5 +612,6 @@
  "animation.color.animate.fill": "Animar cor de preenchimento",
  "animation.color.animate.stroke": "Animar cor do traço",
  "cmd.animation.color.animate": "Alternar quadros-chave de cor de preenchimento ou traço",
- "cmd.animation.color.keyRemove": "Remover quadro-chave de cor de preenchimento ou traço"
+ "cmd.animation.color.keyRemove": "Remover quadro-chave de cor de preenchimento ou traço",
+ "animation.keys.styleKey": "Quadro-chave de {name} em {time}"
 }

@@ -612,5 +612,6 @@
  "animation.color.animate.fill": "Animate fill colour",
  "animation.color.animate.stroke": "Animate stroke colour",
  "cmd.animation.color.animate": "Toggle fill or stroke colour keyframes",
- "cmd.animation.color.keyRemove": "Remove fill or stroke colour keyframe"
+ "cmd.animation.color.keyRemove": "Remove fill or stroke colour keyframe",
+ "animation.keys.styleKey": "{name} key at {time}"
 }

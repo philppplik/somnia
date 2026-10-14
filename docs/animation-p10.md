@@ -320,3 +320,7 @@ Added:
 
 - `Layer.colorKeys {fill?,stroke?}` (sorted, unique ticks, 1..64 keys of `#rrggbb`; fill on solid/shape/text, stroke on shapes with a stroke). `colorAt` (leaf `colorKeys.ts`) mixes channel-wise; `layerColorsAt(layer,tick)` returns the layer with `source.color` / `stroke.color` replaced and is applied at the top of `layerSvg` (export, viewer) and `layerNode` (canvas).
 - `color.prop {prop:'fill'|'stroke', op:'set'|'animate'|'remove'}` follows the same rules as `stroke.prop`.
+
+## P59 - Style key lanes
+
+- `styleKeyLanes(layer)` (leaf `keyLanes.ts`, types only) lists lanes for `gain`, `stroke.widthAnim`, `stroke.opacityAnim`, `colorKeys.fill` and `colorKeys.stroke`. `AnimationTimeline` renders them for the selected layer next to the transform key rows; keys seek the playhead and carry an aria-label with name and time.

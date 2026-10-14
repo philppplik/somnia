@@ -14,6 +14,7 @@ import {booleanRings,flattenRing,ringArea,type BoolOp,type Pt} from './pathBoole
 import {booleanEdits,maskBooleanEdit,expandStrokeEdits} from './pathLayer';
 import {frameSvg} from './exportFrames';
 import {strokeAttributes,layerColorsAt} from './effects';
+import {styleKeyLanes} from './keyLanes';
 import {strokeOutline,simplifyRing} from './pathBoolean';
 import {deleteEasingEdit,findEasing,saveEasingEdit,userEasings,validateEasingLib,MAX_EASINGS} from './easingLibrary';
 import {elasticTargetKeys} from './keyTargets';
@@ -1468,4 +1469,17 @@ test('P58 keyed fill and stroke colours: edits, mix, rendering, validation, lega
  let e=applyEdit(d,{type:'color.prop',layer:'stencil',prop:'fill',op:'animate',on:true,t:0});
  for(let i=1;i<64;i++)e=applyEdit(e,{type:'color.prop',layer:'stencil',prop:'fill',op:'set',color:'#112233',t:i*10000});
  assert.throws(()=>applyEdit(e,{type:'color.prop',layer:'stencil',prop:'fill',op:'set',color:'#112233',t:64*10000}));
+});
+
+test('P59 style key lanes list the keyed style properties of a layer',()=>{
+ let d=applyEdit(base(),{type:'layer.stroke',layer:'stencil',stroke:{color:'#000000',width:6}});
+ const L=()=>d.compositions[0].layers.find(l=>l.id==='stencil')!;
+ assert.deepEqual(styleKeyLanes(L()),[]);
+ d=applyEdit(d,{type:'stroke.prop',layer:'stencil',prop:'width',op:'animate',on:true,t:0});d=applyEdit(d,{type:'stroke.prop',layer:'stencil',prop:'width',op:'set',value:20,t:240000});
+ d=applyEdit(d,{type:'color.prop',layer:'stencil',prop:'fill',op:'animate',on:true,t:120000});
+ d=applyEdit(d,{type:'color.prop',layer:'stencil',prop:'stroke',op:'animate',on:true,t:0});
+ assert.deepEqual(styleKeyLanes(L()).map(x=>[x.id,[...x.ticks]]),[['strokeWidth',[0,240000]],['fill',[120000]],['stroke',[0]]]);
+ const b0=base();d=applyEdit(b0,{type:'comp.add',id:'par'});d=applyEdit(d,{type:'precomp.add',comp:b0.activeComp,id:'pc'});
+ d=applyEdit(d,{type:'layer.gain.animate',layer:'pc',on:true,t:0});
+ assert.deepEqual(styleKeyLanes(d.compositions.find(c=>c.id==='par')!.layers.find(l=>l.id==='pc')!).map(x=>x.id),['gain']);
 });

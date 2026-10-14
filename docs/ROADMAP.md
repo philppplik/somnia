@@ -402,3 +402,10 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Done: solid, shape and text layers get "Animate fill colour", shape strokes get "Animate stroke colour", each with "Key at playhead", "Remove key" and a key list. Colours mix per RGB channel between keys (linear, held before the first and after the last key), at most 64 keys. The viewer, every export and masks/mattes use the colour at the tick through `layerColorsAt`. New edit `color.prop`, new commands `animation.color.animate` and `.keyRemove`. The colour pickers edit the key at the playhead while animated. Turning animation off or removing the last key keeps the colour at the playhead as the static colour. Layers without keys give byte-identical output. Undoable, validated, 5 locales.
 - Open: only linear mixing (no ease curves per key); no timeline lane; gradient colours and text-animator colours are not keyed; effect colours keep their own keys.
 
+
+### Animation P59 (2026-10-14, integration pending)
+
+- Picked: timeline key lane for the keyed style properties (not per-key easing).
+- Done: the selected layer shows one lane per keyed style property under its track: comp layer volume, stroke width, stroke opacity, fill colour and stroke colour (P56, P57, P58). Each key is a diamond at its time; the one at the playhead is filled; a click moves the playhead there. Lanes appear only when keys exist and the track height is not compact. Pure helper `styleKeyLanes` (leaf `keyLanes.ts`). Labels reuse the inspector strings, one new string for the key aria-label in 5 locales. No document change.
+- Open: the lanes are read-only (no drag, no selection with the marquee, no copy); per-key easing for colour keys; effect colour keys have no lane.
+

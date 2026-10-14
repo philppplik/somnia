@@ -612,5 +612,6 @@
  "animation.color.animate.fill": "Füllfarbe animieren",
  "animation.color.animate.stroke": "Konturfarbe animieren",
  "cmd.animation.color.animate": "Füll- oder Konturfarb-Keyframes umschalten",
- "cmd.animation.color.keyRemove": "Füll- oder Konturfarb-Keyframe entfernen"
+ "cmd.animation.color.keyRemove": "Füll- oder Konturfarb-Keyframe entfernen",
+ "animation.keys.styleKey": "{name}-Key bei {time}"
 }
