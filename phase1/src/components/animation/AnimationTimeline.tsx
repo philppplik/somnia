@@ -228,8 +228,8 @@ const marquee=(e:PointerEvent<SVGSVGElement>)=>{
   }
   if(styleSel.length&&!mod&&!e.altKey&&(e.target as HTMLElement).closest('[data-lane]')&&(e.key==='ArrowLeft'||e.key==='ArrowRight')){e.preventDefault();run('animation.styleKeys.nudge',{frames:(e.key==='ArrowLeft'?-1:1)*(e.shiftKey?10:1)});return;}
   if((e.key==='Delete'||e.key==='Backspace')&&!mod){if(styleSel.length&&!sel.length){e.preventDefault();run('animation.styleKeys.delete');}else if(sel.length){e.preventDefault();run('animation.keys.delete');}}
-  else if(mod&&k==='c'){e.preventDefault();if(sel.length)run('animation.keys.copy');}
-  else if(mod&&k==='x'){e.preventDefault();if(sel.length)run('animation.keys.cut');}
+  else if(mod&&k==='c'){e.preventDefault();if(sel.length||styleSel.length)run('animation.keys.copy');}
+  else if(mod&&k==='x'){e.preventDefault();if(sel.length||styleSel.length)run('animation.keys.cut');}
   else if(mod&&k==='v'){e.preventDefault();run('animation.keys.paste');}
   else if(mod&&k==='a'){e.preventDefault();run('animation.keys.selectAll');}
   else if(!mod&&!e.altKey&&k==='b'){run('animation.workarea.in');}

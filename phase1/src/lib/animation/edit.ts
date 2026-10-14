@@ -90,6 +90,8 @@ export type Edit=
  |{type:'audio.volume.key.remove';layer:string;t:number}
  |{type:'color.ease';layer:string;prop:'fill'|'stroke';t:number;ease:ColorEase|null}
  |{type:'style.key.move';layer:string;lane:StyleLaneId;from:number;to:number}
+ /** Pastes copied style keys (`items` keep their relative time `dt`) into a lane that already has keys on the layer. */
+ |{type:'style.keys.paste';layer:string;lane:StyleLaneId;t:number;items:readonly {dt:number;key:object}[]}
  |{type:'color.prop';layer:string;prop:'fill'|'stroke';op:'set'|'animate'|'remove';color?:string;on?:boolean;t:number}
  |{type:'stroke.prop';layer:string;prop:'width'|'opacity';op:'set'|'animate'|'remove';value?:number;on?:boolean;t:number}
  |{type:'layer.gain.set';layer:string;value:number;t:number}
@@ -162,6 +164,34 @@ function foldGroups(doc:AnimationDocument,refs:readonly KeyRef[],fn:(d:Animation
  let cur=doc;for(const g of groups.values())cur=fn(cur,g.layer,g.prop,g.times);return cur;
 }
 /** Pure reducer. Returns a new document with revision+1, or throws EditError and leaves the input untouched. */
+/** Applies `shift` to the key array of one style lane (fill, stroke, gradients, repeater, volume and more). Fails when the layer has no such lane. */
+type LaneShift=<K extends {t:number}>(keys:readonly K[]|undefined)=>K[];
+const MAX_STYLE_PASTE=200;
+function applyLane(doc:AnimationDocument,layer:string,lane:StyleLaneId,shift:LaneShift,allowLocked=false):AnimationDocument{
+   const l=layerOf(doc,layer,allowLocked);
+   if(lane==='gain'){if(l.kind!=='comp'||!l.gain)fail('missing','No volume keys.');return setLayer(doc,{...l,gain:{...l.gain!,keys:shift(l.gain!.keys)}});}
+   if(lane==='strokeWidth'||lane==='strokeOpacity'){const f=lane==='strokeWidth'?'widthAnim':'opacityAnim',a=l.stroke?.[f];if(!l.stroke||!a)fail('missing','No stroke keys.');return setLayer(doc,{...l,stroke:{...l.stroke!,[f]:{...a!,keys:shift(a!.keys)}}});}
+   if(lane==='textPathStart'){const a=l.source.textPathStartAnim;if(!a)fail('missing','No text path keys.');return setLayer(doc,{...l,source:{...l.source,textPathStartAnim:{...a!,keys:shift(a!.keys)}}});}
+   if(lane==='pathFxSize'){const a=l.pathFx?.sizeAnim;if(!l.pathFx||!a)fail('missing','No path effect keys.');return setLayer(doc,{...l,pathFx:{...l.pathFx!,sizeAnim:{...a!,keys:shift(a!.keys)}}});}
+   const gs=parseGradientStopLane(lane);
+   if(gs){const fill=gs.target==='fill',g=fill?l.source.gradient:l.stroke?.gradient,st=g?.stops?.[gs.index];if(!g||!st||(gs.prop==='offset'?!st.offsetAnim:!st.colorKeys))fail('missing','No gradient stop keys.');
+    const ns:GradientStop=gs.prop==='offset'?{...st!,offsetAnim:{...st!.offsetAnim!,keys:shift(st!.offsetAnim!.keys)}}:{...st!,colorKeys:shift(st!.colorKeys!)};
+    const ng={...g!,stops:g!.stops!.map((x,i)=>i===gs.index?ns:x)};return setLayer(doc,fill?{...l,source:{...l.source,gradient:ng}}:{...l,stroke:{...l.stroke!,gradient:ng}});}
+   const gc=parseGradientColorLane(lane);
+   if(gc){const fill=gc.target==='fill',g=fill?l.source.gradient:l.stroke?.gradient,a=g?.colorKeys?.[gc.key];if(!g||!a)fail('missing','No gradient colour keys.');const ng={...g!,colorKeys:{...g!.colorKeys,[gc.key]:shift(a!)}};return setLayer(doc,fill?{...l,source:{...l.source,gradient:ng}}:{...l,stroke:{...l.stroke!,gradient:ng}});}
+   const gl=parseGradientLane(lane);
+   if(gl){const fill=gl.target==='fill',g=fill?l.source.gradient:l.stroke?.gradient,a=g?.anim?.[gl.key];if(!g||!a)fail('missing','No gradient keys.');const ng={...g!,anim:{...g!.anim,[gl.key]:{...a!,keys:shift(a!.keys)}}};return setLayer(doc,fill?{...l,source:{...l.source,gradient:ng}}:{...l,stroke:{...l.stroke!,gradient:ng}});}
+   if(lane==='gradFillAngle'||lane==='gradStrokeAngle'){const fill=lane==='gradFillAngle',g=fill?l.source.gradient:l.stroke?.gradient,a=g?.angleAnim;if(!g||!a)fail('missing','No gradient angle keys.');const ng={...g!,angleAnim:{...a!,keys:shift(a!.keys)}};return setLayer(doc,fill?{...l,source:{...l.source,gradient:ng}}:{...l,stroke:{...l.stroke!,gradient:ng}});}
+   if(lane.startsWith('rep')){const k=(lane[3].toLowerCase()+lane.slice(4)) as RepeaterKey,a=l.repeater?.anim?.[k];if(!l.repeater||!a)fail('missing','No repeater keys.');return setLayer(doc,{...l,repeater:{...l.repeater!,anim:{...l.repeater!.anim,[k]:{...a!,keys:shift(a!.keys)}}}});}
+   const ck=l.colorKeys?.[lane as 'fill'|'stroke'];if(!ck)fail('missing','No colour keys.');return setLayer(doc,{...l,colorKeys:{...l.colorKeys,[lane]:shift(ck)}});
+}
+
+/** The keys of one style lane, for copying. Empty when the layer has no such lane. */
+export function styleLaneKeys(doc:AnimationDocument,layer:string,lane:StyleLaneId):readonly object[]{
+ let out:readonly object[]=[];
+ try{applyLane(doc,layer,lane,keys=>{out=keys??[];return [...(keys??[])];},true);}catch(e){if(!(e instanceof EditError))throw e;}
+ return out;
+}
 export function applyEdit(doc:AnimationDocument,e:Edit):AnimationDocument{
  const out=pruneAudio(reduce(doc,e));if(out===doc)return doc;const errors=validateDocument(out);if(errors.length)fail('invalid',errors.join('; '));return {...out,revision:doc.revision+1};
 }
@@ -390,26 +420,21 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
    const next=keys!.map(k=>{if(k.t!==t)return k;const {ease:_o,...rest}=k;return e.ease===null||e.ease==='linear'?rest:{...rest,ease:e.ease as ColorEase};});
    return setLayer(doc,{...l,colorKeys:{...l.colorKeys,[e.prop]:next}});}
   case 'style.key.move':{
-   const l=layerOf(doc,e.layer),to=tickOf(compOf(doc),e.to);
-   const shift=<K extends {t:number}>(keys:readonly K[]|undefined):K[]=>{
+   const to=tickOf(compOf(doc),e.to);
+   const move:LaneShift=keys=>{
     if(!keys?.some(k=>k.t===e.from))fail('missing','No key at that time.');
     if(to!==e.from&&keys!.some(k=>k.t===to))fail('invalid','There is already a key at that time.');
     return keys!.map(k=>k.t===e.from?{...k,t:to}:k).sort((a,b)=>a.t-b.t);};
-   if(e.lane==='gain'){if(l.kind!=='comp'||!l.gain)fail('missing','No volume keys.');return setLayer(doc,{...l,gain:{...l.gain!,keys:shift(l.gain!.keys)}});}
-   if(e.lane==='strokeWidth'||e.lane==='strokeOpacity'){const f=e.lane==='strokeWidth'?'widthAnim':'opacityAnim',a=l.stroke?.[f];if(!l.stroke||!a)fail('missing','No stroke keys.');return setLayer(doc,{...l,stroke:{...l.stroke!,[f]:{...a!,keys:shift(a!.keys)}}});}
-   if(e.lane==='textPathStart'){const a=l.source.textPathStartAnim;if(!a)fail('missing','No text path keys.');return setLayer(doc,{...l,source:{...l.source,textPathStartAnim:{...a!,keys:shift(a!.keys)}}});}
-   if(e.lane==='pathFxSize'){const a=l.pathFx?.sizeAnim;if(!l.pathFx||!a)fail('missing','No path effect keys.');return setLayer(doc,{...l,pathFx:{...l.pathFx!,sizeAnim:{...a!,keys:shift(a!.keys)}}});}
-   const gs=parseGradientStopLane(e.lane);
-   if(gs){const fill=gs.target==='fill',g=fill?l.source.gradient:l.stroke?.gradient,st=g?.stops?.[gs.index];if(!g||!st||(gs.prop==='offset'?!st.offsetAnim:!st.colorKeys))fail('missing','No gradient stop keys.');
-    const ns:GradientStop=gs.prop==='offset'?{...st!,offsetAnim:{...st!.offsetAnim!,keys:shift(st!.offsetAnim!.keys)}}:{...st!,colorKeys:shift(st!.colorKeys!)};
-    const ng={...g!,stops:g!.stops!.map((x,i)=>i===gs.index?ns:x)};return setLayer(doc,fill?{...l,source:{...l.source,gradient:ng}}:{...l,stroke:{...l.stroke!,gradient:ng}});}
-   const gc=parseGradientColorLane(e.lane);
-   if(gc){const fill=gc.target==='fill',g=fill?l.source.gradient:l.stroke?.gradient,a=g?.colorKeys?.[gc.key];if(!g||!a)fail('missing','No gradient colour keys.');const ng={...g!,colorKeys:{...g!.colorKeys,[gc.key]:shift(a!)}};return setLayer(doc,fill?{...l,source:{...l.source,gradient:ng}}:{...l,stroke:{...l.stroke!,gradient:ng}});}
-   const gl=parseGradientLane(e.lane);
-   if(gl){const fill=gl.target==='fill',g=fill?l.source.gradient:l.stroke?.gradient,a=g?.anim?.[gl.key];if(!g||!a)fail('missing','No gradient keys.');const ng={...g!,anim:{...g!.anim,[gl.key]:{...a!,keys:shift(a!.keys)}}};return setLayer(doc,fill?{...l,source:{...l.source,gradient:ng}}:{...l,stroke:{...l.stroke!,gradient:ng}});}
-   if(e.lane==='gradFillAngle'||e.lane==='gradStrokeAngle'){const fill=e.lane==='gradFillAngle',g=fill?l.source.gradient:l.stroke?.gradient,a=g?.angleAnim;if(!g||!a)fail('missing','No gradient angle keys.');const ng={...g!,angleAnim:{...a!,keys:shift(a!.keys)}};return setLayer(doc,fill?{...l,source:{...l.source,gradient:ng}}:{...l,stroke:{...l.stroke!,gradient:ng}});}
-   if(e.lane.startsWith('rep')){const k=(e.lane[3].toLowerCase()+e.lane.slice(4)) as RepeaterKey,a=l.repeater?.anim?.[k];if(!l.repeater||!a)fail('missing','No repeater keys.');return setLayer(doc,{...l,repeater:{...l.repeater!,anim:{...l.repeater!.anim,[k]:{...a!,keys:shift(a!.keys)}}}});}
-   const ck=l.colorKeys?.[e.lane as 'fill'|'stroke'];if(!ck)fail('missing','No colour keys.');return setLayer(doc,{...l,colorKeys:{...l.colorKeys,[e.lane]:shift(ck)}});}
+   return applyLane(doc,e.layer,e.lane,move);}
+  case 'style.keys.paste':{
+   const c=compOf(doc);if(!e.items.length||e.items.length>MAX_STYLE_PASTE)fail('invalid','Nothing to paste.');
+   const base=tickOf(c,e.t),times=e.items.map(i=>snapToFrame(base+i.dt,c.fps));
+   if(times.some(t=>t<c.start||t>c.start+c.duration))fail('invalid','Pasted keys would end outside the composition.');
+   const put:LaneShift=keys=>{
+    if(!keys?.length)fail('missing','The target layer has no keys in that lane.');
+    const incoming=e.items.map((i,n)=>({...(i.key as object),t:times[n]})) as unknown as typeof keys;
+    return [...keys!.filter(k=>!times.includes(k.t)),...incoming!].sort((a,b)=>a.t-b.t);};
+   return applyLane(doc,e.layer,e.lane,put);}
   case 'color.prop':{
    const l=layerOf(doc,e.layer),fillOk=['solid','shape','text'].includes(l.kind);
    if(e.prop==='fill'?!fillOk:(l.kind!=='shape'||!l.stroke))fail('invalid',e.prop==='fill'?'This layer has no fill colour.':'The layer has no stroke.');

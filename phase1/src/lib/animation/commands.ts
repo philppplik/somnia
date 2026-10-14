@@ -40,8 +40,7 @@ import {onionSpecs} from './onionCommands';
 import {rigSpecs} from './rigCommands';
 import {keyStretchSpecs} from './keyStretchCommands';
 import {layerTimingSpecs} from './layerTimingCommands';
-import {keySetClipSpecs} from './keySetClipCommands';
-import {copySetKeys,getSetClip,setSetClip,pasteSetEdits,pastedSetRefs} from './keySetClip';
+import {keySetClipSpecs,copySelection,cutSelection,pasteSelection,needsSetPaste,hasKeySelection} from './keySetClipCommands';
 import {EXPORT_PRESETS} from './exportSettings';
 /** Window event the Compositions panel listens for to open the audio file chooser. */
 export const AUDIO_IMPORT_EVENT='somnia:animation-audio-import';
@@ -59,8 +58,6 @@ const modifierSchema={type:'object',properties:{type:{enum:['wiggle','loop','lin
 
 const handleSchema={type:'array',items:{type:'number',minimum:-2,maximum:3},minItems:2,maxItems:2};
 const value={oneOf:[{type:'number'},{type:'array',items:{type:'number'},minItems:2,maxItems:2}]};
-/** Copies to the single-layer clipboard and to the set clipboard; keys from several layers only fill the set one. */
-const copySel=(keys:KeyRef[])=>{const many=new Set(keys.map(k=>k.layer)).size>1;setSetClip(guard(()=>copySetKeys(comp(),keys)));setKeyClip(many?null:guard(()=>copyKeys(doc(),keys)));};
 const guard=<T,>(fn:()=>T):T=>{try{return fn();}catch(e){if(e instanceof EditError||e instanceof ClipError)throw Object.assign(e,{expected:true});throw e;}};
 const selKeys=():KeyRef[]=>{const k=pruneSelection(animationSession().document,animationSession().getState().view.selectedKeys);return k.length?k:fail('Select keys first.');};
 const hasSel=()=>open()&&pruneSelection(animationSession().document,animationSession().getState().view.selectedKeys).length>0;
@@ -298,12 +295,12 @@ export function animationCommandSpecs():CommandSpec<unknown,unknown>[]{
   },object({json:{type:'string',minLength:2,maxLength:300000}}),open,'Edit'),
   spec('animation.keys.selectAll','Select all keys of the layer',(p:{layer?:string}={})=>{const id=layerIdOf(p);animationSession().selectKeys(allKeysOf(doc(),id));},object({layer:layerRef},[]),open,'View'),
   spec('animation.keys.delete','Delete selected keys',(p:{keys?:KeyRef[]}={})=>{const keys=p.keys??selKeys();run({type:'keys.remove',keys});animationSession().selectKeys([]);},object({keys:keyRefs},[]),hasSel),
-  spec('animation.keys.copy','Copy selected keys',()=>{copySel(selKeys());},undefined,hasSel),
-  spec('animation.keys.cut','Cut selected keys',()=>{const keys=selKeys();copySel(keys);run({type:'keys.remove',keys});animationSession().selectKeys([]);},undefined,hasSel),
+  spec('animation.keys.copy','Copy selected keys',()=>{copySelection();},undefined,()=>open()&&hasKeySelection()),
+  spec('animation.keys.cut','Cut selected keys',()=>{cutSelection();},undefined,()=>open()&&hasKeySelection()),
   spec('animation.keys.paste','Paste keys at playhead',(p:{layer?:string}={})=>{
-   const set=getSetClip();if(set&&set.groups.length>1){const at=playhead();run(guard(()=>pasteSetEdits(comp(),set,at)));animationSession().selectKeys(pastedSetRefs(comp(),set,at));return;}
+   if(needsSetPaste()){pasteSelection(p.layer);return;}
    const clip=getKeyClip()??fail('No copied keys. Copy keys first.');const layer=layerIdOf(p);const at=playhead();
-   run({type:'keys.paste',layer,items:clip.items,t:at});animationSession().selectKeys(pastedRefs(layer,clip,at,comp().fps));},object({layer:layerRef},[]),()=>open()&&!!getKeyClip()),
+   run({type:'keys.paste',layer,items:clip.items,t:at});animationSession().selectKeys(pastedRefs(layer,clip,at,comp().fps));},object({layer:layerRef},[]),()=>open()&&(!!getKeyClip()||needsSetPaste())),
   spec('animation.keys.nudge','Move selected keys',(p:{ticks:number})=>{const keys=selKeys();run({type:'keys.move',keys,delta:p.ticks});
    const fps=comp().fps;animationSession().selectKeys(shiftSelection(keys,snapToFrame(keys[0].t+p.ticks,fps)-keys[0].t));},object({ticks:{type:'integer'}}),hasSel),
   spec('animation.keys.ease','Set ease of selected keys',(p:{preset:EasePreset})=>{const e=EASE_PRESETS[p.preset]??fail('Unknown ease preset.');run({type:'keys.interp',keys:selKeys(),interp:e.interp,...('out' in e?{out:e.out,in:e.in}:{})});},object({preset:{enum:Object.keys(EASE_PRESETS)}}),hasSel),
