@@ -250,8 +250,10 @@ export const PAGE_SIZE_IDS=['a4','letter','legal','a5'] as const;
 export type PageSizeId=typeof PAGE_SIZE_IDS[number];
 export interface PageMargins{top:number;bottom:number;left:number;right:number}
 export interface PageColumns{count:number;space:number;separator:boolean}
-export interface PageSetupState{size:PageSizeId|'custom';landscape:boolean;width:number;height:number;margins:PageMargins;columns:PageColumns&{uneven:boolean}}
-export interface PageSetupPatch{size?:PageSizeId;landscape?:boolean;margins?:Partial<PageMargins>;columns?:Partial<PageColumns>}
+export interface PageSetupState{size:PageSizeId|'custom';landscape:boolean;width:number;height:number;margins:PageMargins;columns:PageColumns&{uneven:boolean};/** Line numbering, or null when off. */lineNumbers?:LineNumberState|null}
+export const LINE_RESTARTS=['page','section','continuous'] as const;
+export interface LineNumberState{countBy:number;restart:typeof LINE_RESTARTS[number]}
+export interface PageSetupPatch{size?:PageSizeId;landscape?:boolean;margins?:Partial<PageMargins>;columns?:Partial<PageColumns>;/** null turns line numbers off. */lineNumbers?:null|Partial<LineNumberState>}
 export const MAX_MARGIN_PT=288,MAX_COLUMNS=4,MAX_COLUMN_SPACE_PT=144;
 /** The first problem with a page setup change, or null when the engine will accept the shape (the text-area minimum is the engine's call). */
 export function pageSetupProblem(p:unknown):string|null{
@@ -275,6 +277,17 @@ export function pageSetupProblem(p:unknown):string|null{
     else if(ck==='space'){if(typeof x!=='number'||!Number.isFinite(x)||x<0||x>MAX_COLUMN_SPACE_PT)return `The column spacing is 0 to ${MAX_COLUMN_SPACE_PT} points.`;}
     else if(ck==='separator'){if(typeof x!=='boolean')return 'The column line is not valid.';}
     else return 'The columns are not valid.';
+   }
+  }
+  else if(k==='lineNumbers'){
+   if(v===null)continue;
+   if(!v||typeof v!=='object'||Array.isArray(v))return 'The line numbers are not valid.';
+   const l=v as Record<string,unknown>;if(Object.keys(l).length===0)return 'The line numbers are not valid.';
+   for(const lk of Object.keys(l)){
+    const x=l[lk];
+    if(lk==='countBy'){if(typeof x!=='number'||!Number.isInteger(x)||x<1||x>100)return 'Line numbers count by 1 to 100.';}
+    else if(lk==='restart'){if(!(LINE_RESTARTS as readonly unknown[]).includes(x))return 'The line number restart is not valid.';}
+    else return 'The line numbers are not valid.';
    }
   }
   else return 'The page setup is not valid.';

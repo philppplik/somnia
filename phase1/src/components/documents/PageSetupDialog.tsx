@@ -1,5 +1,5 @@
 import {useEffect,useState} from 'react';
-import {MAX_COLUMNS,MAX_COLUMN_SPACE_PT,MAX_MARGIN_PT,PAGE_SIZE_IDS,pageSetupProblem,type PageMargins,type PageSetupPatch,type PageSetupState,type PageSizeId} from '../../lib/documents/protocol';
+import {LINE_RESTARTS,MAX_COLUMNS,MAX_COLUMN_SPACE_PT,MAX_MARGIN_PT,PAGE_SIZE_IDS,pageSetupProblem,type PageMargins,type PageSetupPatch,type PageSetupState,type PageSizeId} from '../../lib/documents/protocol';
 import {readPageSetup,setPageSetup} from '../../lib/documents/session';
 import {useT} from '../../lib/useT';
 import {NativeButton,NativeInput,NativeSelect} from '../ui/native-controls';
@@ -13,8 +13,8 @@ export function cmToPt(v:string):number|null{
 }
 /** Column spacing typed in centimetres as points; null when it is not a number inside 0..144 pt. */
 export const spaceToPt=(v:string):number|null=>{const pt=cmToPt(v);return pt!==null&&pt<=MAX_COLUMN_SPACE_PT?pt:null;};
-export interface PageSetupForm{size:PageSizeId|'custom';landscape:boolean;margins:Record<keyof PageMargins,string>;columns:{count:number;space:string;separator:boolean}}
-export const formFromState=(s:PageSetupState):PageSetupForm=>({size:s.size,landscape:s.landscape,margins:{top:ptToCm(s.margins.top),bottom:ptToCm(s.margins.bottom),left:ptToCm(s.margins.left),right:ptToCm(s.margins.right)},columns:{count:s.columns.count,space:ptToCm(s.columns.space),separator:s.columns.separator}});
+export interface PageSetupForm{size:PageSizeId|'custom';landscape:boolean;margins:Record<keyof PageMargins,string>;columns:{count:number;space:string;separator:boolean};lines:{on:boolean;countBy:string;restart:typeof LINE_RESTARTS[number]}}
+export const formFromState=(s:PageSetupState):PageSetupForm=>({size:s.size,landscape:s.landscape,margins:{top:ptToCm(s.margins.top),bottom:ptToCm(s.margins.bottom),left:ptToCm(s.margins.left),right:ptToCm(s.margins.right)},columns:{count:s.columns.count,space:ptToCm(s.columns.space),separator:s.columns.separator},lines:{on:!!s.lineNumbers,countBy:String(s.lineNumbers?.countBy??1),restart:s.lineNumbers?.restart??'page'}});
 /** Only the settings the user changed (untouched margins keep their exact points); null when nothing changed or a margin is not valid. */
 export function buildPageSetupPatch(start:PageSetupForm,f:PageSetupForm):PageSetupPatch|null{
  const p:PageSetupPatch={};
@@ -28,6 +28,12 @@ export function buildPageSetupPatch(start:PageSetupForm,f:PageSetupForm):PageSet
  if(f.columns.space!==start.columns.space){const pt=spaceToPt(f.columns.space);if(pt===null)return null;c.space=pt;}
  if(f.columns.separator!==start.columns.separator)c.separator=f.columns.separator;
  if(Object.keys(c).length>0)p.columns=c;
+ const ln=f.lines,l0=start.lines;
+ if(!ln.on){if(l0.on)p.lineNumbers=null;}
+ else if(!l0.on||ln.countBy!==l0.countBy||ln.restart!==l0.restart){
+  if(!/^\d{1,3}$/.test(ln.countBy))return null;
+  p.lineNumbers={countBy:Number(ln.countBy),restart:ln.restart};
+ }
  return Object.keys(p).length>0&&pageSetupProblem(p)===null?p:null;
 }
 /** Paper size, orientation and margins (in centimetres) for the whole document, applied as one undo step. */
@@ -57,6 +63,13 @@ export function PageSetupDialog({onClose}:{onClose:()=>void}){
       <NativeInput className={field} inputMode="decimal" disabled={f.columns.count<2} value={f.columns.space} aria-invalid={spaceToPt(f.columns.space)===null} onChange={e=>setF({...f,columns:{...f.columns,space:e.currentTarget.value}})} data-testid="documents-page-column-space"/></label>
      <label className="flex items-center gap-1 pb-1 text-xs text-ink-2"><NativeInput type="checkbox" disabled={f.columns.count<2} checked={f.columns.separator} onChange={e=>setF({...f,columns:{...f.columns,separator:e.currentTarget.checked}})} data-testid="documents-page-column-line"/>{t('documents.page.columnLine')}</label></div>
     {f.columns.count>1&&<p className="text-xs text-ink-3">{t('documents.page.columnsApply')}</p>}
+    <div className="flex items-end gap-2">
+     <label className="flex items-center gap-1 pb-1 text-xs text-ink-2"><NativeInput type="checkbox" checked={f.lines.on} onChange={e=>setF({...f,lines:{...f.lines,on:e.currentTarget.checked}})} data-testid="documents-page-lines"/>{t('documents.page.lines')}</label>
+     <label className="grid gap-1 text-xs text-ink-2">{t('documents.page.linesBy')}
+      <NativeInput className={field} inputMode="numeric" disabled={!f.lines.on} value={f.lines.countBy} aria-invalid={f.lines.on&&!/^\d{1,3}$/.test(f.lines.countBy)} onChange={e=>setF({...f,lines:{...f.lines,countBy:e.currentTarget.value}})} data-testid="documents-page-lines-by"/></label>
+     <label className="grid gap-1 text-xs text-ink-2">{t('documents.page.linesRestart')}
+      <NativeSelect className="h-7 rounded-sm border border-subtle bg-surface px-1 text-xs text-ink" disabled={!f.lines.on} value={f.lines.restart} onChange={e=>{const v=e.currentTarget.value;if((LINE_RESTARTS as readonly string[]).includes(v))setF({...f,lines:{...f.lines,restart:v as typeof LINE_RESTARTS[number]}});}} data-testid="documents-page-lines-restart">
+       {LINE_RESTARTS.map(r=><option key={r} value={r}>{t('documents.page.linesRestart.'+r)}</option>)}</NativeSelect></label></div>
     <p className="text-xs text-ink-3">{t('documents.page.hint')}</p>
    </>}
    <div className="flex justify-end gap-2">

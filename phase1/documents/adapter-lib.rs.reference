@@ -1976,7 +1976,8 @@ impl DocSession {
         let size = PAGE_SIZES.iter().find(|(_, w, h)| (a - w).abs() < 1.0 && (b - h).abs() < 1.0).map_or("custom", |(n, _, _)| n);
         serde_json::json!({"size": size, "landscape": s.landscape, "width": s.page_w, "height": s.page_h,
             "margins": {"top": s.margin_top, "bottom": s.margin_bottom, "left": s.margin_left, "right": s.margin_right},
-            "columns": {"count": s.columns.count.clamp(1, 45), "space": s.columns.space, "separator": s.columns.separator, "uneven": !s.columns.widths.is_empty()}})
+            "columns": {"count": s.columns.count.clamp(1, 45), "space": s.columns.space, "separator": s.columns.separator, "uneven": !s.columns.widths.is_empty()},
+            "lineNumbers": s.line_numbers.as_ref().map(|l| serde_json::json!({"countBy": l.count_by, "restart": match l.restart { wordcraft_doc::section::LineNumberRestart::Page => "page", wordcraft_doc::section::LineNumberRestart::Section => "section", wordcraft_doc::section::LineNumberRestart::Continuous => "continuous" }}))})
         .to_string()
     }
     /// Sets page size, orientation and margins on every section. JSON keys (all optional): `size` ("a4", "letter", "legal", "a5"),
@@ -1996,8 +1997,34 @@ impl DocSession {
         let mut new_size: Option<(f32, f32)> = None;
         // Columns: (count 1-4, space 0-144 pt, separator line); `None` leaves the columns as they are.
         let mut cols: Option<(u32, f32, bool)> = None;
+        // Line numbers: `null` removes them; an object turns them on (count_by 1-100, restart page/section/continuous).
+        let mut line_numbers: Option<Option<wordcraft_doc::section::LineNumbering>> = None;
         for (k, val) in obj {
             match k.as_str() {
+                "lineNumbers" => {
+                    use wordcraft_doc::section::{LineNumbering, LineNumberRestart};
+                    if val.is_null() {
+                        line_numbers = Some(None);
+                        continue;
+                    }
+                    let o = val.as_object().ok_or("lineNumbers must be null or an object")?;
+                    let mut l = cur.line_numbers.clone().unwrap_or_else(LineNumbering::default);
+                    for (lk, lv) in o {
+                        match lk.as_str() {
+                            "countBy" => l.count_by = lv.as_u64().filter(|n| (1..=100).contains(n)).ok_or("line numbers count by 1 to 100")? as u32,
+                            "restart" => {
+                                l.restart = match lv.as_str() {
+                                    Some("page") => LineNumberRestart::Page,
+                                    Some("section") => LineNumberRestart::Section,
+                                    Some("continuous") => LineNumberRestart::Continuous,
+                                    _ => return Err("line numbers restart on page, section or continuous".into()),
+                                }
+                            }
+                            _ => return Err(format!("unknown lineNumbers field {lk}")),
+                        }
+                    }
+                    line_numbers = Some(Some(l));
+                }
                 "columns" => {
                     let o = val.as_object().ok_or("columns must be an object")?;
                     let mut c = (cur.columns.count.clamp(1, 45), cur.columns.space, cur.columns.separator);
@@ -2081,6 +2108,9 @@ impl DocSession {
                 s.columns.count = n;
                 s.columns.space = space;
                 s.columns.separator = sep;
+            }
+            if let Some(l) = &line_numbers {
+                s.line_numbers = l.clone();
             }
         };
         for blk in self.doc.body.iter_mut() {
@@ -3457,6 +3487,22 @@ mod tests {
         }
         if s.toc_entries(9).unwrap().is_empty() {
             assert!(s.do_insert_toc(0, 3, "", true).is_err());
+        }
+    }
+    #[test]
+    fn page_setup_line_numbers_set_change_and_clear() {
+        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
+        let st = |s: &DocSession| -> serde_json::Value { serde_json::from_str(&s.do_page_setup_state()).unwrap() };
+        assert!(st(&s)["lineNumbers"].is_null());
+        s.do_set_page_setup(r#"{"lineNumbers":{"countBy":5,"restart":"continuous"}}"#).unwrap();
+        assert_eq!((st(&s)["lineNumbers"]["countBy"].as_u64(), st(&s)["lineNumbers"]["restart"].as_str()), (Some(5), Some("continuous")));
+        s.do_set_page_setup(r#"{"lineNumbers":{"restart":"section"}}"#).unwrap();
+        assert_eq!((st(&s)["lineNumbers"]["countBy"].as_u64(), st(&s)["lineNumbers"]["restart"].as_str()), (Some(5), Some("section")));
+        assert!(s.paginate() >= 1);
+        s.do_set_page_setup(r#"{"lineNumbers":null}"#).unwrap();
+        assert!(st(&s)["lineNumbers"].is_null());
+        for bad in [r#"{"lineNumbers":3}"#, r#"{"lineNumbers":{"countBy":0}}"#, r#"{"lineNumbers":{"countBy":101}}"#, r#"{"lineNumbers":{"restart":"x"}}"#, r#"{"lineNumbers":{"z":1}}"#] {
+            assert!(s.do_set_page_setup(bad).is_err(), "{bad}");
         }
     }
     #[test]

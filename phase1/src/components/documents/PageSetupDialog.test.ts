@@ -33,3 +33,13 @@ test('page setup checker refuses malformed changes',()=>{
  for(const bad of [{columns:{}},{columns:3},{columns:[]},{columns:{count:0}},{columns:{count:5}},{columns:{count:1.5}},{columns:{count:'2'}},{columns:{space:-1}},{columns:{space:145}},{columns:{space:Number.NaN}},{columns:{separator:1}},{columns:{width:5}}])assert.notEqual(pageSetupProblem(bad),null,JSON.stringify(bad));
  for(const ok of [{columns:{count:4,space:144,separator:true}},{columns:{count:1}},{columns:{separator:false}},{size:'a4'},{landscape:false},{margins:{top:0}},{margins:{top:288,left:10}},{size:'legal',landscape:true,margins:{bottom:1}}])assert.equal(pageSetupProblem(ok),null,JSON.stringify(ok));
 });
+test('line numbers: toggled, changed and cleared through the patch; bad counts refused',()=>{
+ const s=formFromState(state);assert.equal(s.lines.on,false);
+ assert.deepEqual(buildPageSetupPatch(s,{...s,lines:{on:true,countBy:'5',restart:'continuous'}}),{lineNumbers:{countBy:5,restart:'continuous'}});
+ const on=formFromState({...state,lineNumbers:{countBy:2,restart:'section'}});assert.equal(buildPageSetupPatch(on,on),null);
+ assert.deepEqual(buildPageSetupPatch(on,{...on,lines:{...on.lines,on:false}}),{lineNumbers:null});
+ assert.equal(buildPageSetupPatch(s,{...s,lines:{on:true,countBy:'0x',restart:'page'}}),null);
+ assert.equal(buildPageSetupPatch(s,{...s,lines:{on:true,countBy:'101',restart:'page'}}),null);
+ for(const ok of [{lineNumbers:null},{lineNumbers:{countBy:100}},{lineNumbers:{restart:'page'}}])assert.equal(pageSetupProblem(ok),null);
+ for(const bad of [{lineNumbers:{}},{lineNumbers:3},{lineNumbers:{countBy:0}},{lineNumbers:{countBy:1.5}},{lineNumbers:{restart:'x'}},{lineNumbers:{z:1}}])assert.notEqual(pageSetupProblem(bad),null,JSON.stringify(bad));
+});
