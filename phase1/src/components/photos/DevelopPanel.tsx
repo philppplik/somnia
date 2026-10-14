@@ -7,6 +7,7 @@ import {neutralDevelop,photosEngines,type DevelopSettings} from '../../lib/photo
 import {defaultImageHost,editedName} from '../../lib/imageEditorHost';
 import {getMedia,registerMediaCloseCleanup,registerMediaCloseGuard} from '../../lib/media';
 import {ensureDevelopSession,allDevelopSessions,getDevelopSession,forgetDevelopSession,dirtyDevelop,developSignature as signature,subscribeDevelop,configureDevelopSession,setDevelopReady,updateDevelopSettings,historyDevelop,markDevelopSaved} from '../../lib/photos/session';
+import {NativeInput} from '../ui/native-controls';
 registerMediaCloseGuard(name=>{const url=getMedia().items.find(i=>i.name===name)?.url;const s=url?getDevelopSession(url):null;if(!s)return true;return!dirtyDevelop(s)||window.confirm('Discard session-only Develop edits? Export a copy to keep the developed image.');});
 registerMediaCloseCleanup(name=>{const url=getMedia().items.find(i=>i.name===name)?.url;if(url)forgetDevelopSession(url);});
 if(typeof window!=='undefined')window.addEventListener('beforeunload',e=>{if(allDevelopSessions().some(dirtyDevelop)){e.preventDefault();e.returnValue='';}});
@@ -38,7 +39,7 @@ export function DevelopPanel(){
  <p>Session-only settings. Copy export is capped at 2048 px, 8-bit sRGB, with metadata removed. Originals are never overwritten.</p>
  {!enabled?<Button disabled={!url||c.busy||!!c.layerQuery||!!c.selection} onClick={()=>setEnabled(true)}>Enable experimental Develop</Button>:<>
  <div className="flex flex-col gap-2"><span>Original development</span><canvas ref={before} aria-label="Before development" style={{width:'100%',height:'auto',borderRadius:10}}/><span>Developed preview</span><canvas ref={after} aria-label="After development" style={{width:'100%',height:'auto',borderRadius:10}}/></div>
- {(['exposure','contrast','saturation'] as const).map(key=><label key={key} className="flex flex-col gap-1">{key[0].toUpperCase()+key.slice(1)} {now[key]}<input aria-label={`Develop ${key}`} type="range" min={key==='exposure'?-3:-100} max={key==='exposure'?3:100} step={key==='exposure'?0.1:1} value={now[key]} disabled={!ready} onChange={e=>change({...now,[key]:Number(e.currentTarget.value)})}/></label>)}
+ {(['exposure','contrast','saturation'] as const).map(key=><label key={key} className="flex flex-col gap-1">{key[0].toUpperCase()+key.slice(1)} {now[key]}<NativeInput aria-label={`Develop ${key}`} type="range" min={key==='exposure'?-3:-100} max={key==='exposure'?3:100} step={key==='exposure'?0.1:1} value={now[key]} disabled={!ready} onChange={e=>change({...now,[key]:Number(e.currentTarget.value)})}/></label>)}
  <div className="flex flex-wrap gap-1"><Button size="compact" disabled={!state.past.length} onClick={()=>history(false)}>Undo Develop</Button><Button size="compact" disabled={!state.future.length} onClick={()=>history(true)}>Redo Develop</Button><Button size="compact" onClick={()=>change({...neutralDevelop})}>Reset Develop</Button></div>
  <div className="flex flex-wrap gap-1"><Button size="compact" disabled={!ready||busy} onClick={()=>void save('png')}>Export Develop PNG copy</Button><Button size="compact" disabled={!ready||busy} onClick={()=>void save('jpeg')}>Export Develop JPEG copy</Button></div>
  <span role="status">{!ready?'Loading engine...':busy?'Developing...':signature(now)!==state.saved?'Session edits, not exported':'No unexported changes'} {size}</span>

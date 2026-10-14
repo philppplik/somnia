@@ -4,6 +4,7 @@ import {historyEntries,type SettingChange} from '../../../lib/photos/historyLog'
 import {PHOTO_CONTROLS} from '../../../lib/photos/studioSettings';
 import {Button} from '../../ui/button';
 import {PanelBody,SectionHead,runPhotos} from './shared';
+import {NativeButton} from '../../ui/native-controls';
 const labelKey=(key:string)=>PHOTO_CONTROLS.find(c=>c.key===key)?.label??`photos.p.key.${key}`;
 const fmt=(v:unknown)=>typeof v==='number'?String(Math.round(v*100)/100):typeof v==='boolean'?(v?'on':'off'):v===null?'-':'';
 /** One line per undo step: what changed, in words. Click a row to jump there; the undone steps stay redoable. */
@@ -28,10 +29,10 @@ export function HistoryPanel(){
    </SectionHead>
    <ol className="m-0 grid list-none gap-0.5 p-0" data-testid="photos-history-list" aria-label={t('photos.panel.history')}>
     {[...entries].reverse().map(e=><li key={e.index}>
-     <button type="button" aria-current={e.current?'step':undefined} onClick={()=>void runPhotos('photos.history.jump',{index:e.index})} data-testid={`photos-history-${e.index}`}
+     <NativeButton type="button" aria-current={e.current?'step':undefined} onClick={()=>void runPhotos('photos.history.jump',{index:e.index})} data-testid={`photos-history-${e.index}`}
       className={`w-full rounded-sm px-2 py-1 text-left text-[11px] hover:bg-hover ${e.current?'bg-hover text-ink':e.status==='undone'?'text-ink-3':'text-ink-2'}`}>
       <span className="tabular-nums text-ink-3">{e.index}. </span>{e.index===0?t('photos.p.history.opened'):changeSummary(e.changes,t)}
-     </button>
+     </NativeButton>
     </li>)}
    </ol>
    <p className="m-0 text-[11px] text-ink-3">{t('photos.p.history.note')}</p>

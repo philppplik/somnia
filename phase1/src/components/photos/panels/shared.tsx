@@ -8,6 +8,7 @@ import {neutralPhotoSettings,type PhotoControl} from '../../../lib/photos/studio
 import {registerPhotosCommands} from '../../../lib/photos/panelCommands';
 import {registerRailIcons} from '../../../lib/shell/railIcons';
 import {AudioWaveform,Layers,Download} from '../../../lib/icons';
+import {NativeInput} from '../../ui/native-controls';
 /** Rail icons for the panels shellRail.ts does not cover (first registration wins, History/Info/Develop* come from shellRail). */
 registerRailIcons({Histogram:AudioWaveform,Presets:Layers,Download});
 
@@ -55,7 +56,7 @@ export function SettingSlider({name,session,control,disabled}:{name:string;sessi
    <span className={changed?'text-ink':''} onDoubleClick={()=>void runPhotos('photos.setAdjustment',{key:control.key,value:neutral})} title={t('photos.p.dblReset')}>{label}{changed&&<span aria-hidden="true" className="ml-1 text-[var(--accent)]">•</span>}</span>
    <span className="shrink-0 tabular-nums text-ink-3" data-testid={`photos-value-${control.key}`}>{control.format?control.format(value):value}</span>
   </span>
-  <input type="range" className="w-full accent-[var(--accent)]" min={control.min} max={control.max} step={control.step} value={value} disabled={disabled}
+  <NativeInput type="range" className="w-full accent-[var(--accent)]" min={control.min} max={control.max} step={control.step} value={value} disabled={disabled}
    aria-label={label} aria-valuetext={control.format?control.format(value):signed(value)} data-testid={`photos-slider-${control.key}`}
    onPointerDown={()=>beginPhotoGesture(name)} onChange={e=>{beginPhotoGesture(name);previewPhotoSettings(name,s=>({...s,[control.key]:Number(e.target.value)}));}} onPointerUp={end} onBlur={end} onKeyUp={end}/>
  </label>;

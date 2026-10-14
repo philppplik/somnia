@@ -5,6 +5,7 @@ import {usePanelState} from '../../../store/panelStateStore';
 import {BUILT_IN_PRESETS,MAX_PRESET_NAME,MAX_USER_PRESETS,addUserPreset,isNeutralLook,parseUserPresets,removeUserPreset,type UserPreset} from '../../../lib/photos/presets';
 import {Button} from '../../ui/button';
 import {PanelBody,SectionHead,isBusy,runPhotos} from './shared';
+import {NativeInput} from '../../ui/native-controls';
 let counter=0;
 const newId=()=>`u${Date.now().toString(36)}${(counter++).toString(36)}`;
 /** Built-in looks plus the user's own, saved from the current settings. Geometry is never part of a look. */
@@ -29,7 +30,7 @@ export function PresetsPanel(){
     </li>)}
    </ul>
    <form className="flex items-center gap-1" onSubmit={e=>{e.preventDefault();if(canSave){setRaw(addUserPreset(user,name,session.now,newId));setName('');}}}>
-    <input value={name} onChange={e=>setName(e.target.value)} maxLength={MAX_PRESET_NAME} placeholder={t('photos.p.presets.namePlaceholder')} aria-label={t('photos.p.presets.name')}
+    <NativeInput value={name} onChange={e=>setName(e.target.value)} maxLength={MAX_PRESET_NAME} placeholder={t('photos.p.presets.namePlaceholder')} aria-label={t('photos.p.presets.name')}
      className="h-7 min-w-0 flex-1 rounded-sm border border-line bg-elevated px-2 text-[11px] text-ink" data-testid="photos-preset-name"/>
     <Button type="submit" size="compact" variant="outline" disabled={!canSave} data-testid="photos-preset-save"><Plus size={13}/>{t('photos.p.presets.save')}</Button>
    </form>
