@@ -2,7 +2,7 @@ import {StudioStatus} from '../studios/StudioStatus';
 import {reportError} from '../../lib/log';
 import {usePublishPhotosContext} from './panels/publishContext';
 import {useCallback,useEffect,useRef,useState} from 'react';
-import {AlertTriangle,Check,ClipboardPaste,Columns2,Copy,Download,Eye,Frame,Grid3x3,RotateCcw,Undo2,Redo2,X,ZoomIn,ZoomOut,Maximize2,Minimize2} from '../../lib/icons';
+import {AlertTriangle,ArrowLeft,ArrowRight,Check,ClipboardPaste,Columns2,Copy,Download,Eye,Frame,Grid3x3,RotateCcw,Undo2,Redo2,X,ZoomIn,ZoomOut,Maximize2,Minimize2} from '../../lib/icons';
 import {Button} from '../ui/button';
 import {useT} from '../../lib/useT';
 import {applyPhotoCrop,cancelPhotoCrop,dirtyPhoto,exportPhotoCopy,historyPhoto,openPhoto,resetPhoto,rotatePhoto,setPhotoCropping,setPhotoCropDraft,usePhotoSession,type PhotoFrame} from '../../lib/photos/studioSession';
@@ -11,6 +11,8 @@ import {cropGuideLines} from '../../lib/photos/cropGuides';
 import {clippingOverlayImage} from '../../lib/photos/clippingOverlay';
 import {clampSplitX,splitClearRect} from '../../lib/photos/splitView';
 import {decodeSettingsPayload,encodeSettingsPayload,settingsPayloadToText,type SettingsPayload} from '../../lib/photos/settingsClipboard';
+import {photoNav} from '../../lib/photos/photoNav';
+import {setActiveMedia,useMedia} from '../../lib/media';
 import {commitPhotoSettings} from '../../lib/photos/studioSession';
 import {usePanelState} from '../../store/panelStateStore';
 import {getState,patchState,requestStudio,useAppStore} from '../../store/appStore';
@@ -33,6 +35,7 @@ type DragMode={kind:'move';dx:number;dy:number}|{kind:'nw'|'ne'|'sw'|'se'};
 /** The developed photo with zoom/pan, crop overlay, compare, undo and bounded copy export. */
 export function PhotosWorkspace({item}:{item:MediaItem}){
  const {t}=useT();const studio=useAppStore().activeStudio;const session=usePhotoSession(item.name);
+ const media=useMedia();const nav=photoNav(media.items,item.name);
  const stage=useRef<HTMLDivElement>(null),canvas=useRef<HTMLCanvasElement>(null),clipCanvas=useRef<HTMLCanvasElement>(null),splitCanvas=useRef<HTMLCanvasElement>(null),imgBox=useRef<HTMLDivElement>(null);
  const [stageSize,setStageSize]=useState<[number,number]>([0,0]);
  const [zoom,setZoom]=useState<number|null>(null); // null = fit
@@ -123,6 +126,11 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
   <div className={bar}>
    <span className="truncate font-medium text-ink" data-testid="photos-name">{item.name}</span>
    <span className="text-ink-3" data-testid="photos-info">{session?.sourceWidth?t('photos.info',{width:session.sourceWidth,height:session.sourceHeight}):''}</span>
+   {nav.total>1&&<span className="flex items-center gap-1" data-testid="photos-nav">
+    <Button size="icon" variant="outline" aria-label={t('photos.nav.prev')} title={t('photos.nav.prev')} disabled={!nav.prev} onClick={()=>nav.prev&&setActiveMedia(nav.prev)} data-testid="photos-prev"><ArrowLeft size={14}/></Button>
+    <span className="min-w-8 text-center tabular-nums text-ink-3" data-testid="photos-position">{nav.position} / {nav.total}</span>
+    <Button size="icon" variant="outline" aria-label={t('photos.nav.next')} title={t('photos.nav.next')} disabled={!nav.next} onClick={()=>nav.next&&setActiveMedia(nav.next)} data-testid="photos-next"><ArrowRight size={14}/></Button>
+   </span>}
    <span className="flex-1"/>
    <Button size="icon" variant="outline" aria-label={t('photos.compare')} title={t('photos.compare')} disabled={!session?.original} onPointerDown={()=>setCompare(true)} onPointerUp={()=>setCompare(false)} onPointerLeave={()=>setCompare(false)} data-testid="photos-compare"><Eye size={14}/></Button>
    <Button size="icon" variant="outline" aria-pressed={showClipping} aria-label={t('photos.clipping')} title={t('photos.clipping')} disabled={!ready} onClick={()=>setShowClipping(!showClipping)} data-testid="photos-clipping"><AlertTriangle size={14}/></Button>

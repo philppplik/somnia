@@ -56,6 +56,7 @@ All file links are repository-relative, so they remain useful on a feature branc
 26. [Photos clipping overlay (false-color warning)](photos-clipping-overlay.md)
 27. [Photos before/after split view](photos-split-view.md)
 28. [Photos settings sync (copy/paste)](photos-settings-sync.md)
+29. [Photos prev/next navigation](photos-nav.md)
 
 ## The system in one view
 

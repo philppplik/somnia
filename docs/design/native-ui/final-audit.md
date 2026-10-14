@@ -152,6 +152,11 @@ through native control primitives, see below.
   between photos via a validated payload in panel state plus best-effort
   system clipboard; no raw controls, ratchets unchanged), unit tests and
   gallery proof added (?view=photos-sync).
+- P38: photos prev/next navigation feature (library-order photo switching
+  from the workspace bar with position indicator, clamped ends,
+  developable-only filter matching PhotosCanvas; no raw controls,
+  ratchets unchanged), unit tests and gallery proof added
+  (?view=photos-nav).
 
 
 
