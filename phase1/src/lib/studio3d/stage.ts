@@ -10,7 +10,7 @@ import type {NodeExtra} from './document';
 import {EASES,isEase,bakeTrack,type Ease} from './ease';
 import {buildExtras,type ClipMeta,type MetaTrack} from './clipMeta';
 import {groupRefs,keyIndices,copyTrackKeys,shiftTrackKeys,pasteTrackKeys,type KeyRef,type KeyData,type TrackData} from './keyEdit';
-import {extrudeFaces,insetFaces,bevelVertices,deleteElements,weldSelected,subdivideFaces,pokeFaces,duplicateFaces,fattenSelected,relaxSelected,flipFaces,dissolveFaces,fillSelected,collapseSelected,loopCut,bevelEdges,slideEdges,mirrorCombine,symmetrizeMesh,subdivideLoop,cleanupMesh,flipMesh,outsideMesh,smoothMesh,separateMesh,solidifyMesh,fillHolesMesh,relaxMesh,fattenMesh,bisectMesh,twistMesh,taperMesh,spinMesh,bridgeMesh,remeshMesh,EditError,MAX_EDIT_VERTICES,MAX_EDIT_TRIANGLES,type MeshData,type CleanupResult,type NormalsOp} from './editMesh';
+import {extrudeFaces,insetFaces,bevelVertices,deleteElements,weldSelected,subdivideFaces,pokeFaces,duplicateFaces,fattenSelected,relaxSelected,flipFaces,dissolveFaces,fillSelected,collapseSelected,toSphereSelected,loopCut,bevelEdges,slideEdges,mirrorCombine,symmetrizeMesh,subdivideLoop,cleanupMesh,flipMesh,outsideMesh,smoothMesh,separateMesh,solidifyMesh,fillHolesMesh,relaxMesh,fattenMesh,bisectMesh,twistMesh,taperMesh,spinMesh,bridgeMesh,remeshMesh,EditError,MAX_EDIT_VERTICES,MAX_EDIT_TRIANGLES,type MeshData,type CleanupResult,type NormalsOp} from './editMesh';
 import {sculptDab,paintMask,SculptError,type SculptOpts} from './sculpt';
 import {KEY_PATHS,KEY_STRIDE,ClipError,MAX_CLIPS,MAX_KEYS_PER_TRACK,DEFAULT_CLIP_SECONDS,insertKey,removeKey as removeKeyData,findKey,isPlainTrack,trackName,parseTrackName,checkKeyTime,checkDuration,checkClipName,lastKeyTime,type KeyPath} from './clips';
 import {mergeTransform,DEFAULT_TRANSFORM,UvError,type TextureTransform} from './uv';
@@ -885,6 +885,8 @@ export class Stage{
  }
  /** Fills the selected closed edge loop with a centroid triangle fan, one undo step. The selection stays. */
  editFill(){this.editOp({key:'studio3d.hist.editFill'},m=>fillSelected(m,[...this.editSel.edges.values()]));}
+ /** Pulls the selected edit-mode vertices onto a sphere around their centroid (factor 1 snaps fully), one undo step. The selection stays. */
+ editToSphere(factor:number){this.editOp({key:'studio3d.hist.editToSphere'},m=>toSphereSelected(m,[...this.editSel.verts],factor));}
  /** Collapses each connected island of the selection into one vertex at its centroid, one undo step. The selection is cleared afterwards because face ordinals shift. */
  editCollapse(){
   this.editOp({key:'studio3d.hist.editCollapse'},m=>collapseSelected(m,{verts:[...this.editSel.verts],edges:[...this.editSel.edges.values()],faces:[...this.editSel.faces]}));

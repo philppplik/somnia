@@ -918,5 +918,8 @@
  "studio3d.hist.editFill": "Kantenschleife füllen",
  "cmd.studio3d.edit.collapse": "Jede zusammenhängende Insel der Auswahl zu einem Vertex kollabieren",
  "studio3d.edit.collapse": "Kollabieren",
- "studio3d.hist.editCollapse": "Auswahl kollabieren"
+ "studio3d.hist.editCollapse": "Auswahl kollabieren",
+ "cmd.studio3d.edit.toSphere": "Ausgewählte Vertizes auf eine Kugel ziehen",
+ "studio3d.edit.toSphere": "Zur Kugel",
+ "studio3d.hist.editToSphere": "Auswahl auf Kugel ziehen"
 }

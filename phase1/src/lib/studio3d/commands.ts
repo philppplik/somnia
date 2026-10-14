@@ -133,6 +133,7 @@ export interface Studio3DController{
  editDissolve():void;
  editFill():void;
  editCollapse():void;
+ editToSphere(factor:number):void;
  editExtrude(offset:number):void;
  editInset(amount:number):void;
  editBevel(width:number):void;
@@ -317,6 +318,7 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add('studio3d.edit.dissolve','Merge the selected triangles of the edited 3D mesh into one face, dropping interior edges and vertices','Edit',()=>need().editDissolve(),undefined,()=>getStudio3DState().edit!=null),
   add('studio3d.edit.fill','Fill the selected closed edge loop of the edited 3D mesh with a centroid triangle fan','Edit',()=>need().editFill(),undefined,()=>getStudio3DState().edit!=null),
   add('studio3d.edit.collapse','Collapse each connected island of the selection of the edited 3D mesh into one vertex at its centroid','Edit',()=>need().editCollapse(),undefined,()=>getStudio3DState().edit!=null),
+  add<{factor?:number}>('studio3d.edit.toSphere','Pull the selected vertices of the edited 3D mesh onto a sphere around their centroid','Edit',p=>need().editToSphere(p?.factor??1),object({factor:{type:'number',minimum:-100,maximum:100}},[]),()=>getStudio3DState().edit!=null),
   add<{offset:number}>('studio3d.edit.extrude','Extrude the selected faces of the edited 3D mesh','Edit',p=>need().editExtrude(p.offset),object({offset:{type:'number',minimum:-1000,maximum:1000}}),()=>getStudio3DState().edit!=null),
   add<{amount:number}>('studio3d.edit.inset','Inset the selected faces of the edited 3D mesh','Edit',p=>need().editInset(p.amount),object({amount:{type:'number',exclusiveMinimum:0,maximum:1}}),()=>getStudio3DState().edit!=null),
   add<{width:number}>('studio3d.edit.bevel','Bevel (chamfer) the selected vertices of the edited 3D mesh','Edit',p=>need().editBevel(p.width),object({width:{type:'number',exclusiveMinimum:0,maximum:1000}}),()=>getStudio3DState().edit!=null),

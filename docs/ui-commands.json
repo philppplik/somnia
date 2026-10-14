@@ -7221,6 +7221,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.edit.toSphere",
+      "title": "Pull the selected vertices onto a sphere",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.edit.weld",
       "title": "Merge selected vertices at centre",
       "category": "Edit",

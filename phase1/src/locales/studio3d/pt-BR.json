@@ -918,5 +918,8 @@
  "studio3d.hist.editFill": "Preencher loop de arestas",
  "cmd.studio3d.edit.collapse": "Colapsar cada ilha conectada da seleção em um vértice",
  "studio3d.edit.collapse": "Colapsar",
- "studio3d.hist.editCollapse": "Colapsar seleção"
+ "studio3d.hist.editCollapse": "Colapsar seleção",
+ "cmd.studio3d.edit.toSphere": "Puxar os vértices selecionados para uma esfera",
+ "studio3d.edit.toSphere": "Para esfera",
+ "studio3d.hist.editToSphere": "Puxar seleção para uma esfera"
 }

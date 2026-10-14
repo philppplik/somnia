@@ -918,5 +918,8 @@
  "studio3d.hist.editFill": "Fill edge loop",
  "cmd.studio3d.edit.collapse": "Collapse each connected island of the selection into one vertex",
  "studio3d.edit.collapse": "Collapse",
- "studio3d.hist.editCollapse": "Collapse selection"
+ "studio3d.hist.editCollapse": "Collapse selection",
+ "cmd.studio3d.edit.toSphere": "Pull the selected vertices onto a sphere",
+ "studio3d.edit.toSphere": "To Sphere",
+ "studio3d.hist.editToSphere": "Pull selection onto a sphere"
 }

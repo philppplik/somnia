@@ -972,6 +972,21 @@ test('mesh edit mode: collapse merges each selected island at its centroid',asyn
  await expect(page.getByRole('alert')).toContainText('Select something to collapse');
 });
 
+test('mesh edit mode: to sphere rounds a grown vertex selection, undo restores it',async({page})=>{
+ await blank(page);
+ const id=await insert(page,'cube',0);
+ expect(await run(page,'studio3d.edit.start',{id,mode:'vertex'})).toBe(true);
+ expect(await run(page,'studio3d.edit.select',{kind:'vertex',ids:[8]})).toBe(true);
+ expect(await run(page,'studio3d.edit.selectGrow',{steps:1,kind:'vertex'})).toBe(true);
+ let s=await session(page);expect(s.edit).toMatchObject({verts:3});
+ expect(await run(page,'studio3d.edit.toSphere',{factor:1})).toBe(true);
+ s=await session(page);expect(s.edit).toMatchObject({verts:3});
+ expect(await run(page,'studio3d.undo',{})).toBe(true);
+ expect(await run(page,'studio3d.edit.selectAll',{op:'none'})).toBe(true);
+ expect(await run(page,'studio3d.edit.toSphere',{factor:1})).toBe(false);
+ await expect(page.getByRole('alert')).toContainText('Select vertices to pull onto a sphere');
+});
+
 test('mesh edit mode: weld merges selected vertices at their centre, undo restores them',async({page})=>{
  await blank(page);
  const id=await insert(page,'cube',0);

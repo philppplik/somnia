@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-818 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+819 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -632,6 +632,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `studio3d.edit.selectLinked` | Select everything linked to the selection | Edit | studio3d |  |
 | `studio3d.edit.start` | Edit mesh | Edit | studio3d |  |
 | `studio3d.edit.subdivide` | Split selected triangles into four by edge midpoints | Edit | studio3d |  |
+| `studio3d.edit.toSphere` | Pull the selected vertices onto a sphere | Edit | studio3d |  |
 | `studio3d.edit.weld` | Merge selected vertices at centre | Edit | studio3d |  |
 | `studio3d.env.open` | Open an HDR environment map | View | studio3d |  |
 | `studio3d.env.set` | Change the 3D environment lighting | View | studio3d |  |

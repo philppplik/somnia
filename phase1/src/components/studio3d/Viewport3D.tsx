@@ -1216,6 +1216,7 @@ export default function Viewport3D(){
    editDissolve:()=>{stage.editDissolve();patchEdit();invalidate();},
    editFill:()=>{stage.editFill();patchEdit();invalidate();},
    editCollapse:()=>{stage.editCollapse();patchEdit();invalidate();},
+   editToSphere:(factor)=>{stage.editToSphere(factor);patchEdit();invalidate();},
    editExtrude:o=>{stage.editExtrude(o);afterEditOp();},
    editInset:a=>{stage.editInset(a);afterEditOp();},
    editBevel:w=>{stage.editBevel(w);afterEditOp();},

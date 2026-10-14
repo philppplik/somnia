@@ -377,6 +377,45 @@ export function weldSelected(m:MeshData,verts:number[]):MeshData{
  if(m.uvs)out.uvs=m.uvs;
  return out;
 }
+/** Pulls the selected vertices onto a sphere: the sphere centre is the centroid of the distinct selected positions, its radius their mean distance, and each vertex moves along its own ray by the factor. Position-equal twins move together so split sides never rip; masks damp the pull and are carried; UVs are carried. */
+export function toSphereSelected(m:MeshData,verts:number[],factor:number):MeshData{
+ check(m);
+ if(!verts.length)throw new EditError('Select vertices to pull onto a sphere.');
+ if(!Number.isFinite(factor)||factor===0||Math.abs(factor)>1e6)throw new EditError('The to-sphere factor must be a non-zero number.');
+ const nv=m.positions.length/3;
+ for(const v of verts){if(!Number.isInteger(v)||v<0||v>=nv)throw new EditError(`Vertex ${v} does not exist.`);}
+ const pk=(v:number)=>`${Math.round(m.positions[v*3]*1e6)},${Math.round(m.positions[v*3+1]*1e6)},${Math.round(m.positions[v*3+2]*1e6)}`;
+ const keys=[...new Set(verts.map(pk))];
+ if(keys.length<2)throw new EditError('The selection needs at least two distinct positions.');
+ let cx=0,cy=0,cz=0;
+ for(const k of keys){const [x,y,z]=k.split(',').map(Number);cx+=x;cy+=y;cz+=z;}
+ cx/=keys.length*1e6;cy/=keys.length*1e6;cz/=keys.length*1e6;
+ const dir=new Map<string,[number,number,number]>();
+ let radius=0;
+ for(const k of keys){
+  const [x,y,z]=k.split(',').map(Number);
+  const dx=x/1e6-cx,dy=y/1e6-cy,dz=z/1e6-cz;
+  const d=Math.hypot(dx,dy,dz);
+  radius+=d;
+  dir.set(k,d>0?[dx/d,dy/d,dz/d]:[0,0,0]);
+ }
+ radius/=keys.length;
+ if(radius===0)throw new EditError('The selection needs at least two distinct positions.');
+ const want=new Set(keys);
+ const positions=[...m.positions];
+ for(let v=0;v<nv;v++){
+  const k=pk(v);
+  if(!want.has(k))continue;
+  const d=dir.get(k)!;if(d[0]===0&&d[1]===0&&d[2]===0)continue;
+  const f=factor*(1-(m.mask?m.mask[v]:0));if(f===0)continue;
+  const dx=m.positions[v*3]-cx,dy=m.positions[v*3+1]-cy,dz=m.positions[v*3+2]-cz;
+  const dist=Math.hypot(dx,dy,dz);
+  const move=(radius-dist)*f;
+  positions[v*3]+=d[0]*move;positions[v*3+1]+=d[1]*move;positions[v*3+2]+=d[2]*move;
+ }
+ const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
+ check(out);return out;
+}
 /** Collapses each connected island of the selection into a single vertex at its centroid: weldSelected merges everything into one point, this keeps separate islands separate. Islands are linked through selected edges, faces and shared vertices; degenerate triangles are dropped. UVs stay with the kept vertices; masks and explicit normals are dropped. */
 export function collapseSelected(m:MeshData,sel:{verts:number[];edges:[number,number][];faces:number[]}):MeshData{
  const total=m.positions.length/3,tris=m.index.length/3;

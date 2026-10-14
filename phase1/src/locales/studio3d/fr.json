@@ -918,5 +918,8 @@
  "studio3d.hist.editFill": "Remplir la boucle d'arêtes",
  "cmd.studio3d.edit.collapse": "Réduire chaque îlot connecté de la sélection en un sommet",
  "studio3d.edit.collapse": "Réduire",
- "studio3d.hist.editCollapse": "Réduire la sélection"
+ "studio3d.hist.editCollapse": "Réduire la sélection",
+ "cmd.studio3d.edit.toSphere": "Tirer les sommets sélectionnés sur une sphère",
+ "studio3d.edit.toSphere": "Vers la sphère",
+ "studio3d.hist.editToSphere": "Tirer la sélection sur une sphère"
 }

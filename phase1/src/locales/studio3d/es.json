@@ -918,5 +918,8 @@
  "studio3d.hist.editFill": "Rellenar bucle de aristas",
  "cmd.studio3d.edit.collapse": "Colapsar cada isla conectada de la selección en un vértice",
  "studio3d.edit.collapse": "Colapsar",
- "studio3d.hist.editCollapse": "Colapsar selección"
+ "studio3d.hist.editCollapse": "Colapsar selección",
+ "cmd.studio3d.edit.toSphere": "Llevar los vértices seleccionados a una esfera",
+ "studio3d.edit.toSphere": "A esfera",
+ "studio3d.hist.editToSphere": "Llevar la selección a una esfera"
 }
