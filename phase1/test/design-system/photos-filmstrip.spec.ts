@@ -442,3 +442,22 @@ test('library grid: its filter and sort controls drive the grid live (light and 
   await page.evaluate(async()=>{const m=await import('/src/lib/photos/labels.ts');m.setLabel('strip-2.png',null);});
  }
 });
+test('library grid: cells toggle the filmstrip selection (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
+  await page.getByTestId('photos-filmstrip-select').selectOption('none'); // selection persists via localStorage
+  await page.getByTestId('photos-filmstrip-survey').click();
+  await expect(page.getByTestId('photos-survey-item-strip-3.png')).toBeVisible();
+  await page.getByTestId('photos-survey-select-strip-1.png').click();
+  await page.getByTestId('photos-survey-select-strip-3.png').click();
+  await expect(page.getByTestId('photos-survey-select-strip-1.png')).toHaveAttribute('aria-pressed','true');
+  await expect(page.getByTestId('photos-survey-selcount')).toBeVisible();
+  await page.screenshot({path:`test-results/ds-photos-grid-select-${theme}.png`,fullPage:true});
+  await page.getByTestId('photos-survey-close').click();
+  await expect(page.getByTestId('photos-filmstrip-apply')).toHaveText('Apply to 2 photos'); // the grid selection drives batch apply
+  await page.getByTestId('photos-filmstrip-select').selectOption('none');
+ }
+});

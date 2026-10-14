@@ -154,5 +154,7 @@
  "photos.label.yellow": "Amarelo",
  "photos.label.green": "Verde",
  "photos.label.blue": "Azul",
- "photos.label.none": "Sem rotulo"
+ "photos.label.none": "Sem rotulo",
+ "photos.survey.selected": "{count} selecionadas",
+ "photos.survey.toggle": "Selecionar {name}"
 }

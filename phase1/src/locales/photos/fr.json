@@ -154,5 +154,7 @@
  "photos.label.yellow": "Jaune",
  "photos.label.green": "Vert",
  "photos.label.blue": "Bleu",
- "photos.label.none": "Aucun libelle"
+ "photos.label.none": "Aucun libelle",
+ "photos.survey.selected": "{count} selectionnees",
+ "photos.survey.toggle": "Selectionner {name}"
 }

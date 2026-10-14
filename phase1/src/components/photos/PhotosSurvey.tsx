@@ -1,5 +1,5 @@
 import {useEffect,useRef} from 'react';
-import {X} from '../../lib/icons';
+import {Check,X} from '../../lib/icons';
 import {useT} from '../../lib/useT';
 import type {MediaItem} from '../../lib/media';
 import {ensurePhotoReady} from '../../lib/photos/batchExport';
@@ -8,6 +8,7 @@ import {setFlag,useFlags} from '../../lib/photos/flags';
 import {PHOTO_LABELS,useLabels} from '../../lib/photos/labels';
 import {FILMSTRIP_SORTS,type FilmstripSort} from '../../lib/photos/filmstripSort';
 import {usePanelState} from '../../store/panelStateStore';
+import {toggleSelect} from '../../lib/photos/selection';
 import {useVisiblePhotos} from './useVisiblePhotos';
 import {NativeSelect} from '../ui/native-controls';
 import {RatingStars} from './RatingStars';
@@ -24,6 +25,7 @@ export function PhotosSurvey({names,items,live=false,onPick,onClose}:{names:stri
  const [,setFilter]=usePanelState<number|string>('photos.ratingFilter',0);
  const [,setSort]=usePanelState<FilmstripSort>('photos.filmstripSort','library');
  const shown=live?vis.photos.map(p=>p.name):names; // live: the grid follows the filter and sort
+ const [sel,setSel]=usePanelState<string[]>('photos.filmstripSelection',[]);
  useEffect(()=>{
   let live=true;
   void(async()=>{
@@ -44,6 +46,7 @@ export function PhotosSurvey({names,items,live=false,onPick,onClose}:{names:stri
  return <div className="absolute inset-0 z-20 flex flex-col gap-2 overflow-auto bg-elevated p-4" data-testid="photos-survey">
   <div className="flex items-center justify-between">
    <span className="font-medium text-ink" data-testid="photos-survey-count">{t('photos.survey.title',{count:shown.length})}</span>
+   {sel.length>0&&<span className="text-ink-3" data-testid="photos-survey-selcount">{t('photos.survey.selected',{count:sel.length})}</span>}
    {live&&<span className="flex items-center gap-1.5">
     <NativeSelect value={vis.filter} aria-label={t('photos.rating.filter')} title={t('photos.rating.filter')} onChange={e=>setFilter(e.currentTarget.value)} className="h-7" data-testid="photos-survey-filter">
      <option value="0">{t('photos.rating.filter.all')}</option>
@@ -61,9 +64,14 @@ export function PhotosSurvey({names,items,live=false,onPick,onClose}:{names:stri
   </div>
   <div className="grid flex-1 auto-rows-min grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3">
    {shown.map(n=><div key={n} className="flex flex-col gap-1 rounded-[4px] border border-subtle p-1.5" data-testid={`photos-survey-item-${n}`}>
-    <Button variant="ghost" size="compact" className="h-auto w-full p-0" aria-label={n} onClick={()=>onPick(n)} data-testid={`photos-survey-pick-${n}`}>
-     <canvas ref={c=>{if(c)canvases.current.set(n,c);else canvases.current.delete(n);}} width={320} height={200} className="h-auto w-full rounded-[2px] bg-[var(--bg-base)]" data-testid={`photos-survey-canvas-${n}`}/>
-    </Button>
+    <div className="relative">
+     <Button variant="ghost" size="compact" className="h-auto w-full p-0" aria-label={n} onClick={()=>onPick(n)} data-testid={`photos-survey-pick-${n}`}>
+      <canvas ref={c=>{if(c)canvases.current.set(n,c);else canvases.current.delete(n);}} width={320} height={200} className="h-auto w-full rounded-[2px] bg-[var(--bg-base)]" data-testid={`photos-survey-canvas-${n}`}/>
+     </Button>
+     <Button variant="outline" size="icon" aria-pressed={sel.includes(n)} aria-label={t('photos.survey.toggle',{name:n})} title={t('photos.survey.toggle',{name:n})} onClick={()=>setSel(toggleSelect(sel,n))} className="absolute top-1 left-1 h-6 w-6" data-testid={`photos-survey-select-${n}`}>
+      <Check size={12} className={sel.includes(n)?'text-[var(--accent)]':'text-ink-3'}/>
+     </Button>
+    </div>
     <div className="flex items-center justify-between gap-1">
      <span className="flex min-w-0 items-center gap-1 truncate text-ink-3">{labels[n]&&<span className={`photos-label-dot photos-label-${labels[n]} shrink-0`} data-testid={`photos-survey-label-${n}`} data-label={labels[n]}/>}{n}</span>
      <RatingStars name={n} prefix={`photos-survey-${n}`}/>

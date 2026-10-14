@@ -154,5 +154,7 @@
  "photos.label.yellow": "Yellow",
  "photos.label.green": "Green",
  "photos.label.blue": "Blue",
- "photos.label.none": "No label"
+ "photos.label.none": "No label",
+ "photos.survey.selected": "{count} selected",
+ "photos.survey.toggle": "Select {name}"
 }

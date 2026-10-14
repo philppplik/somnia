@@ -263,3 +263,14 @@ Coverage: `photos-filmstrip.spec.ts` gains a light/dark leg that
 opens the grid, filters to red-labeled photos (the other cells
 disappear), picks one and finds the filmstrip filter set to the same
 value.
+
+## Selection from the grid (P96)
+
+Each grid cell has a corner toggle that adds or removes the photo
+from the filmstrip selection (`toggleSelect`, pressed state shown);
+the header counts the selected photos. Closing the grid keeps the
+selection, so batch paste/apply/survey work straight from browsing.
+
+Coverage: `photos-filmstrip.spec.ts` gains a light/dark leg that
+toggles two photos in the grid (pressed, count visible) and finds the
+filmstrip's apply button offering the two-photo batch after closing.
