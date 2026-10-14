@@ -1,7 +1,7 @@
 import {StudioStatus} from '../studios/StudioStatus';
 import {StudioRecentList} from '../studios/StudioRecentList';
 import {StudioProgress} from '../studios/StudioProgress';
-import {useState} from 'react';
+import {useRef,useState} from 'react';
 import {patchStudio3D} from '../../lib/studio3d/session';
 import type {ObjectInfo} from '../../lib/studio3d/stage';
 import {executeCommand} from '../../lib/commands';
@@ -124,6 +124,8 @@ export function ObjectSection(_:InspectorSectionProps){
   </fieldset>}
   {s.bones.length>0&&o.kind==='mesh'&&<SkinningFields id={o.id} skinned={o.skinned}/>}
   {s.bones.length>0&&(o.kind==='bone'||o.skinned)&&<PoseFields id={o.id}/>}
+  {o.kind==='bone'&&<IkFields id={o.id}/>}
+  {o.kind==='bone'&&<LimitFields id={o.id}/>}
   <div className="flex gap-2"><Button variant="outline" onClick={()=>void executeCommand('studio3d.object.duplicate',{id:o.id})}>{t('studio3d.object.duplicate')}</Button>
    <Button variant="outline" onClick={()=>void executeCommand('studio3d.object.delete',{id:o.id})}>{t('studio3d.object.delete')}</Button></div>
  </div>;
@@ -157,6 +159,39 @@ function SkinningFields({id,skinned}:{id:number;skinned:boolean}){
      <NativeInput type="range" min={0.01} max={1} step={0.01} value={s.weightBrush.strength} aria-label={t('studio3d.skinning.strength')} onChange={e=>void executeCommand('studio3d.skin.brush',{strength:Number(e.currentTarget.value)})}/></label>
     <NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={s.weightBrush.falloff} aria-label={t('studio3d.skinning.falloff')} onChange={e=>void executeCommand('studio3d.skin.brush',{falloff:e.currentTarget.value})}>
      {(['smooth','linear','constant'] as const).map(f=><option key={f} value={f}>{t('studio3d.skinning.falloff.'+f)}</option>)}</NativeSelect></>}</>}
+ </fieldset>;
+}
+/** FK/IK switch for the chain the selected bone belongs to; the target and pole gizmos live in the viewport. */
+function IkFields({id}:{id:number}){
+ const {t}=useT();const s=useStudio3D();
+ if(!s.ik)return null;
+ return <fieldset className="m-0 grid gap-2 border-0 p-0" data-testid="studio3d-ik"><legend className="text-xs text-ink-3">{t('studio3d.ik.title')}</legend>
+  <label className="flex items-center gap-2 text-xs text-ink-2"><NativeInput type="checkbox" checked={s.ik.on} onChange={e=>void executeCommand('studio3d.ik.toggle',{id,on:e.currentTarget.checked})}/>{t('studio3d.ik.on')}</label>
+  {s.ik.on&&<p className="m-0 text-xs text-ink-3">{t('studio3d.ik.hint')}</p>}
+ </fieldset>;
+}
+/** Joint limits of the selected bone in degrees; an empty field leaves the axis open. */
+function LimitFields({id}:{id:number}){
+ const {t}=useT();const s=useStudio3D();
+ const lim=s.boneLimits;
+ const refs=useRef<Partial<Record<string,HTMLInputElement|null>>>({});
+ const num=(v:number)=>Number.isNaN(v)?'':String(Math.round(v*10)/10);
+ const commit=()=>{
+  const grab=(side:'min'|'max'):(number|null)[]=>[0,1,2].map(i=>{
+   const raw=refs.current[`${side}-${i}`]?.value.trim()??'';
+   return raw===''?null:Number(raw);
+  });
+  const min=grab('min'),max=grab('max');
+  if(min.some(v=>v!=null&&!Number.isFinite(v))||max.some(v=>v!=null&&!Number.isFinite(v)))return;
+  void executeCommand('studio3d.bone.limits',{id,min,max});
+ };
+ // The key resets the drafts when the limits change from outside (undo, another bone).
+ const limKey=`${id}-${lim?JSON.stringify(lim):'none'}`;
+ return <fieldset className="m-0 grid gap-2 border-0 p-0" data-testid="studio3d-limits"><legend className="text-xs text-ink-3">{t('studio3d.limits.title')}</legend>
+  {(['min','max'] as const).map(side=><div key={side} className="flex items-center gap-1"><span className="w-8 text-xs text-ink-3">{t('studio3d.limits.'+side)}</span>
+   {[0,1,2].map(i=><NativeInput key={`${limKey}-${side}-${i}`} ref={el=>{refs.current[`${side}-${i}`]=el;}} type="number" step={1} className="min-w-0 flex-1 rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" data-testid={`studio3d-limit-${side}-${i}`} defaultValue={num(lim?.[side][i]??Number.NaN)} aria-label={`${t('studio3d.limits.'+side)} ${'XYZ'[i]}`} onBlur={commit}/>)}
+  </div>)}
+  {lim&&<Button variant="outline" onClick={()=>void executeCommand('studio3d.bone.limits',{id,min:null,max:null})}>{t('studio3d.limits.clear')}</Button>}
  </fieldset>;
 }
 /** Pose library of the selected rig: save, apply, mirror, remove and blend poses. */

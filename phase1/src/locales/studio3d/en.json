@@ -383,5 +383,16 @@
  "studio3d.pose.blendB": "Second pose",
  "studio3d.pose.mix": "Blend amount",
  "studio3d.pose.pick": "Pick a pose",
- "studio3d.pose.empty": "No poses saved yet."
+ "studio3d.pose.empty": "No poses saved yet.",
+ "cmd.studio3d.ik.toggle": "Switch a chain between FK and IK",
+ "cmd.studio3d.ik.target": "Move the IK target",
+ "cmd.studio3d.ik.pole": "Move the IK pole target",
+ "cmd.studio3d.bone.limits": "Set joint limits of a bone",
+ "studio3d.ik.title": "IK",
+ "studio3d.ik.on": "IK drives this chain",
+ "studio3d.ik.hint": "Drag the target (cyan) and pole (amber) markers in the viewport.",
+ "studio3d.limits.title": "Joint limits (degrees)",
+ "studio3d.limits.min": "Min",
+ "studio3d.limits.max": "Max",
+ "studio3d.limits.clear": "Clear limits"
 }

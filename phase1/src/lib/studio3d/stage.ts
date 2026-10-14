@@ -11,6 +11,7 @@ import {mergeTransform,DEFAULT_TRANSFORM,UvError,type TextureTransform} from './
 import {textureBytes} from './validate';
 import {smoothWeights,rigidWeights,paintWeights,SkinError,type BoneSegment,type SkinWeights,type BrushSettings} from './skinning';
 import {checkPoseName,mirrorPose,blendPoses,PoseError,MAX_POSES} from './poses';import type {Pose,PoseBone} from './poses';
+import {solveTwoBone,clampEuler,checkLimits,hasLimits,IkError,MAX_IK_CHAINS} from './ik';import type {AxisLimits} from './ik';
 import {emptyStats,type ModelStats,type OutlineEntry,type Bounds} from './model';
 /**
  * Scene operations for the 3D studio (P1 staging). Pure three.js core, no renderer and no DOM, so the logic runs under tsx --test.
@@ -125,6 +126,8 @@ export class Stage{
  readonly root=new THREE.Group();
  private entries:Entry[]=[];private cursor=0;private saved=0;private listeners=new Set<()=>void>();private revision=0;
  /** Pose libraries, keyed by the id of the rig's root bone. */private poseLibs=new Map<number,Pose[]>();
+ /** IK chains keyed by the chain's root bone id. */private ikChains=new Map<number,{on:boolean;target:THREE.Vector3;pole:THREE.Vector3}>();
+ /** Joint limits keyed by bone uuid (uuid survives reloads; Object3D.id does not). */private boneLimits=new Map<string,AxisLimits>();
  constructor(){this.root.name='model';}
  onChange(l:()=>void){this.listeners.add(l);return()=>{this.listeners.delete(l);};}
  private emit(){this.revision++;this.listeners.forEach(l=>l());}
@@ -147,7 +150,7 @@ export class Stage{
   this.clear();if(model)this.root.add(model);this.emit();
  }
  clear(){
-  this.bakedCache.clear();this.clipList=[];this.clipRevision++;this.poseLibs.clear();
+  this.bakedCache.clear();this.clipList=[];this.clipRevision++;this.poseLibs.clear();this.ikChains.clear();this.boneLimits.clear();
   for(const c of [...this.root.children]){this.root.remove(c);disposeObject(c);}
   for(const e of this.entries)e.release?.();this.entries=[];this.cursor=0;this.saved=0;this.emit();
  }
@@ -205,7 +208,8 @@ export class Stage{
  }
  /** Records a transform that already happened (a gizmo drag changed the object live). One undo step for the whole drag. */
  commitTransform(id:number,before:{p:THREE.Vector3;r:THREE.Euler;s:THREE.Vector3}){
-  const o=this.need(id);const next={p:o.position.clone(),r:o.rotation.clone(),s:o.scale.clone()};
+  const o=this.need(id);if((o as THREE.Bone).isBone)this.clampBone(o);
+  const next={p:o.position.clone(),r:o.rotation.clone(),s:o.scale.clone()};
   if(before.p.equals(next.p)&&before.r.equals(next.r)&&before.s.equals(next.s))return;
   this.applyTransform(o,before,next,{},true);
  }
@@ -517,6 +521,121 @@ export class Stage{
   if(at<0)throw new PoseError(`There is no pose named "${name}" on this rig.`);
   const[gone]=lib.splice(at,1);
   this.push({label:`Remove pose ${name}`,undo:()=>{lib.splice(at,0,gone);},redo:()=>{lib.splice(at,1);}});this.emit();
+ }
+ /** The three-bone chain starting at root: root, its first bone child, that child's first bone child. */
+ private ikChain(rootId:number):{root:THREE.Bone;mid:THREE.Bone;end:THREE.Bone}{
+  const o=this.need(rootId) as THREE.Bone;
+  if(!o.isBone)throw new IkError('Select a bone to drive an IK chain.');
+  const mid=o.children.find(c=>(c as THREE.Bone).isBone) as THREE.Bone|undefined;
+  const end=mid?.children.find(c=>(c as THREE.Bone).isBone) as THREE.Bone|undefined;
+  if(!mid||!end)throw new IkError(`The bone ${o.name||rootId} does not head a two-bone chain (bone > bone > bone).`);
+  return{root:o,mid,end};
+ }
+ /** True when an active IK chain drives this bone (chain root or mid): FK edits step back. */
+ ikDriven(boneId:number):boolean{
+  const head=this.ikChainHead(boneId);if(!head)return false;
+  const c=this.ikOf(head.id);if(!c||!c.on)return false;
+  const{root,mid}=this.ikChain(head.id);return boneId===root.id||boneId===mid.id;
+ }
+ /** Nearest chain head for any bone in the chain: the bone itself, its parent or its grandparent. */
+ ikChainHead(boneId:number):THREE.Bone|null{
+  const o=this.find(boneId) as THREE.Bone|null;if(!o||!o.isBone)return null;
+  for(let b:THREE.Object3D|null=o;b;b=b.parent){
+   if(!(b as THREE.Bone).isBone)return null;
+   try{this.ikChain(b.id);return b as THREE.Bone;}catch{/* not a head here */}
+  }
+  return null;
+ }
+ private ikOf(rootId:number){return this.ikChains.get(rootId)??null;}
+ /** IK state of the chain rooted here, or null when the bone does not head a chain. */
+ ikState(rootId:number):{on:boolean;target:[number,number,number];pole:[number,number,number]}|null{
+  try{this.ikChain(rootId);}catch{return null;}
+  const c=this.ikOf(rootId);
+  if(!c)return{on:false,target:[0,0,0],pole:[0,0,0]};
+  return{on:c.on,target:c.target.toArray() as [number,number,number],pole:c.pole.toArray() as [number,number,number]};
+ }
+ /** FK -> IK snaps the target to the current end effector and the pole behind the current bend, so the pose does not move. IK -> FK keeps the solved pose as the new FK pose. One undo step. */
+ ikToggle(rootId:number,on:boolean){
+  const{root,mid,end}=this.ikChain(rootId);
+  const before=this.ikOf(rootId);
+  if(on&&this.ikChains.size>=MAX_IK_CHAINS&&(!before||!before.on))throw new IkError(`At most ${MAX_IK_CHAINS} IK chains.`);
+  this.root.updateMatrixWorld(true);
+  let next:{on:boolean;target:THREE.Vector3;pole:THREE.Vector3}|null=null;
+  if(on){
+   const r=root.getWorldPosition(new THREE.Vector3()),m=mid.getWorldPosition(new THREE.Vector3()),e=end.getWorldPosition(new THREE.Vector3());
+   const dir=e.clone().sub(r).normalize();let side=m.clone().sub(r).sub(dir.clone().multiplyScalar(m.clone().sub(r).dot(dir)));
+   if(side.lengthSq()<1e-12)side=new THREE.Vector3(0,0,1).sub(dir.clone().multiplyScalar(dir.z));
+   side.normalize();
+   const pole=m.clone().add(side.multiplyScalar(r.distanceTo(m)+m.distanceTo(e)));
+   next={on:true,target:e.clone(),pole};
+  }
+  if(next)this.ikChains.set(root.id,next);else this.ikChains.delete(root.id);
+  this.push({label:on?`IK on ${root.name}`:`FK for ${root.name}`,
+   undo:()=>{if(before)this.ikChains.set(root.id,{...before,target:before.target.clone(),pole:before.pole.clone()});else this.ikChains.delete(root.id);},
+   redo:()=>{if(next)this.ikChains.set(root.id,{...next,target:next.target.clone(),pole:next.pole.clone()});else this.ikChains.delete(root.id);}});
+  this.emit();
+ }
+ /** Solves the chain onto its current target and applies the rotations (with joint limits). No undo: the caller owns the step. */
+ private ikSolve(root:THREE.Bone,mid:THREE.Bone,end:THREE.Bone,c:{target:THREE.Vector3;pole:THREE.Vector3}){
+  this.root.updateMatrixWorld(true);
+  const r=root.getWorldPosition(new THREE.Vector3()),m=mid.getWorldPosition(new THREE.Vector3()),e=end.getWorldPosition(new THREE.Vector3());
+  const s=solveTwoBone([r.x,r.y,r.z],r.distanceTo(m),m.distanceTo(e),[c.target.x,c.target.y,c.target.z],[c.pole.x,c.pole.y,c.pole.z]);
+  // Aim the root so the mid lands on the solved direction.
+  const old1=m.clone().sub(r).normalize();const q1=new THREE.Quaternion().setFromUnitVectors(old1,new THREE.Vector3(...s.dirMid));
+  const pw1=new THREE.Quaternion();(root.parent as THREE.Object3D).getWorldQuaternion(pw1);
+  root.quaternion.copy(pw1.clone().invert().multiply(q1).multiply(root.getWorldQuaternion(new THREE.Quaternion())));
+  this.root.updateMatrixWorld(true);
+  // Aim the mid so the end lands on the solved end point.
+  const m2=mid.getWorldPosition(new THREE.Vector3()),e2=end.getWorldPosition(new THREE.Vector3());
+  const old2=e2.clone().sub(m2).normalize();const want2=new THREE.Vector3(s.end[0]-m2.x,s.end[1]-m2.y,s.end[2]-m2.z).normalize();
+  const q2=new THREE.Quaternion().setFromUnitVectors(old2,want2);
+  const pw2=new THREE.Quaternion();(mid.parent as THREE.Object3D).getWorldQuaternion(pw2);
+  mid.quaternion.copy(pw2.clone().invert().multiply(q2).multiply(mid.getWorldQuaternion(new THREE.Quaternion())));
+  this.root.updateMatrixWorld(true);
+  for(const b of[root,mid])this.clampBone(b);
+ }
+ /** Clamps a bone's local Euler rotation into its limits, if any. Returns true when it changed. */
+ private clampBone(b:THREE.Bone):boolean{
+  const l=this.boneLimits.get(b.uuid);if(!hasLimits(l))return false;
+  const c=clampEuler([b.rotation.x,b.rotation.y,b.rotation.z],l!);
+  if(c[0]===b.rotation.x&&c[1]===b.rotation.y&&c[2]===b.rotation.z)return false;
+  b.rotation.set(c[0],c[1],c[2]);this.root.updateMatrixWorld(true);return true;
+ }
+ /** Snapshot of a chain's pose plus IK state; the drag commit turns it into one undo entry. */
+ ikBegin(rootId:number){const{root}=this.ikChain(rootId);const chain=this.boneChain(root);const c=this.ikOf(rootId);return{chain,rows:this.captureLocals(chain),ik:c?{target:c.target.clone(),pole:c.pole.clone()}:null};}
+ /** Live target/pole moves during a drag: solve without an undo entry. */
+ ikDragTarget(rootId:number,p:readonly[number,number,number]){const{root,mid,end}=this.ikChain(rootId);const c=this.ikOf(rootId);if(!c||!c.on)throw new IkError('IK is off for this chain.');c.target.set(p[0],p[1],p[2]);this.ikSolve(root,mid,end,c);this.emit();}
+ ikDragPole(rootId:number,p:readonly[number,number,number]){const{root,mid,end}=this.ikChain(rootId);const c=this.ikOf(rootId);if(!c||!c.on)throw new IkError('IK is off for this chain.');c.pole.set(p[0],p[1],p[2]);this.ikSolve(root,mid,end,c);this.emit();}
+ /** Closes a drag or a command move as one undo step. */
+ ikCommit(rootId:number,before:{chain:THREE.Bone[];rows:{p:readonly[number,number,number];q:readonly[number,number,number,number];s:readonly[number,number,number]}[];ik:{target:THREE.Vector3;pole:THREE.Vector3}|null},label:string){
+  const{root,mid,end}=this.ikChain(rootId);const after=this.ikBegin(rootId);
+  this.push({label,
+   undo:()=>{this.restoreLocals(before.chain,before.rows);const c=this.ikOf(rootId);if(c&&before.ik){c.target.copy(before.ik.target);c.pole.copy(before.ik.pole);}},
+   redo:()=>{this.restoreLocals(after.chain,after.rows);const c=this.ikOf(rootId);if(c&&after.ik){c.target.copy(after.ik.target);c.pole.copy(after.ik.pole);}}});
+  void mid;void end;this.emit();
+ }
+ /** Command path: move the target (and solve) as one undo step. */
+ ikSetTarget(rootId:number,p:readonly[number,number,number]){const before=this.ikBegin(rootId);this.ikDragTarget(rootId,p);this.ikCommit(rootId,before,'IK target');}
+ ikSetPole(rootId:number,p:readonly[number,number,number]){const before=this.ikBegin(rootId);this.ikDragPole(rootId,p);this.ikCommit(rootId,before,'IK pole');}
+ /** Joint limits of a bone in degrees, or null when unlimited. */
+ boneLimitsOf(id:number):{min:[number,number,number];max:[number,number,number]}|null{
+  const o=this.find(id) as THREE.Bone|null;if(!o||!o.isBone)return null;
+  const l=this.boneLimits.get(o.uuid);if(!hasLimits(l))return null;
+  const d=(v:readonly[number,number,number])=>v.map(x=>Number.isNaN(x)?x:THREE.MathUtils.radToDeg(x)) as [number,number,number];
+  return{min:d(l!.min),max:d(l!.max)};
+ }
+ /** Sets or clears joint limits (degrees; NaN keeps an axis open). One undo step. */
+ setBoneLimits(id:number,min:readonly[number,number,number]|null,max:readonly[number,number,number]|null){
+  const o=this.need(id) as THREE.Bone;if(!o.isBone)throw new IkError('Joint limits live on bones.');
+  const rad=(v:readonly[number,number,number])=>v.map(x=>Number.isNaN(x)?x:THREE.MathUtils.degToRad(x)) as [number,number,number];
+  const next=checkLimits(rad(min??[Number.NaN,Number.NaN,Number.NaN]),rad(max??[Number.NaN,Number.NaN,Number.NaN]));
+  const before=this.boneLimits.get(o.uuid)??null;
+  if(hasLimits(next))this.boneLimits.set(o.uuid,next);else this.boneLimits.delete(o.uuid);
+  const rowsB=this.captureLocals([o]);this.clampBone(o);const rowsA=this.captureLocals([o]);
+  this.push({label:`Limits of ${o.name}`,
+   undo:()=>{if(before)this.boneLimits.set(o.uuid,before);else this.boneLimits.delete(o.uuid);this.restoreLocals([o],rowsB);},
+   redo:()=>{if(hasLimits(next))this.boneLimits.set(o.uuid,next);else this.boneLimits.delete(o.uuid);this.restoreLocals([o],rowsA);}});
+  this.emit();
  }
  /** Only rotation keys can be authored on bones. Tracks that a file already carries (translation, scale) still play and export, but are not key-editable here. */
  private keyPathFor(node:THREE.Object3D,path:KeyPath){

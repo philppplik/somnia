@@ -383,5 +383,16 @@
  "studio3d.pose.blendB": "Segunda pose",
  "studio3d.pose.mix": "Quantidade da mistura",
  "studio3d.pose.pick": "Escolha uma pose",
- "studio3d.pose.empty": "Nenhuma pose salva ainda."
+ "studio3d.pose.empty": "Nenhuma pose salva ainda.",
+ "cmd.studio3d.ik.toggle": "Alternar a cadeia entre FK e IK",
+ "cmd.studio3d.ik.target": "Mover o alvo IK",
+ "cmd.studio3d.ik.pole": "Mover o polo IK",
+ "cmd.studio3d.bone.limits": "Definir limites articulares de um osso",
+ "studio3d.ik.title": "IK",
+ "studio3d.ik.on": "IK controla esta cadeia",
+ "studio3d.ik.hint": "Arraste o alvo (ciano) e o polo (âmbar) no viewport.",
+ "studio3d.limits.title": "Limites articulares (graus)",
+ "studio3d.limits.min": "Mín",
+ "studio3d.limits.max": "Máx",
+ "studio3d.limits.clear": "Limpar limites"
 }

@@ -140,7 +140,9 @@ export default function Viewport3D(){
    const sel=getStudio3DState().selected;const info=sel==null?null:stage.info(sel);
    const infos=clipInfos();const an=getStudio3DState().anim;const keys=sel==null||!infos[an.clip]?[]:stage.keysOf(an.clip,sel);
    if(an.clip>=infos.length&&an.clip>0){stopAnim();patchStudio3D({anim:{clip:0,playing:false,time:0,loop:true,speed:1,range:null}});}
-   patchStudio3D({clips:infos,clipKeys:keys,stats:m.stats,outline:m.outline,bones:stage.bones(),bounds:m.bounds,selected:info?sel:null,selectedInfo:info,poses:sel==null?[]:stage.poseList(sel),dirty:stage.dirty,canUndo:stage.canUndo,canRedo:stage.canRedo,undoLabel:stage.undoLabel});
+   const head=sel==null?null:stage.ikChainHead(sel);const ik=head?{...stage.ikState(head.id)!,root:head.id}:null;
+   patchStudio3D({clips:infos,clipKeys:keys,stats:m.stats,outline:m.outline,bones:stage.bones(),bounds:m.bounds,selected:info?sel:null,selectedInfo:info,poses:sel==null?[]:stage.poseList(sel),ik,boneLimits:sel==null?null:stage.boneLimitsOf(sel),dirty:stage.dirty,canUndo:stage.canUndo,canRedo:stage.canRedo,undoLabel:stage.undoLabel});
+   syncIk();
    drawSelection();applyWire(getStudio3DState().wireframe);syncSkeleton();syncWeightPreview();for(const h of syncHooks)h();invalidate();
   };
   const offStage=stage.onChange(()=>{if(!disposed)sync();});
@@ -215,6 +217,29 @@ export default function Viewport3D(){
   let dragBefore:{id:number;p:THREE.Vector3;r:THREE.Euler;s:THREE.Vector3}|null=null;let justDragged=false;
   gizmo.setMode(getStudio3DState().gizmo);
   gizmo.addEventListener('change',invalidate);
+  // IK: a target and a pole marker, each with its own translate gizmo; visible while a chain has IK on.
+  const ikMarker=(color:number)=>{const m=new THREE.Mesh(new THREE.SphereGeometry(0.045,16,12),new THREE.MeshBasicMaterial({color,depthTest:false,transparent:true,opacity:0.9}));m.renderOrder=20;m.name='ik marker';return m;};
+  const ikTarget=ikMarker(0x22d3ee),ikPoleM=ikMarker(0xf59e0b);
+  const ikGizmo=new TransformControls(camera,renderer.domElement);ikGizmo.setMode('translate');
+  const poleGizmo=new TransformControls(camera,renderer.domElement);poleGizmo.setMode('translate');
+  const ikHelpers=[ikGizmo.getHelper(),poleGizmo.getHelper()];for(const h of ikHelpers){h.visible=false;scene.add(h);}
+  let ikDrag:{root:number;before:ReturnType<Stage['ikBegin']>;kind:'IK target'|'IK pole'}|null=null;
+  const ikRoot=():number|null=>getStudio3DState().ik?.root??null;
+  const ikDragStart=(kind:'IK target'|'IK pole')=>{const r=ikRoot();if(r==null)return;ikDrag={root:r,before:stage.ikBegin(r),kind};controls.enabled=false;gizmo.enabled=false;};
+  const ikDragEnd=()=>{const d=ikDrag;ikDrag=null;controls.enabled=true;gizmo.enabled=true;if(d)stage.ikCommit(d.root,d.before,d.kind);};
+  ikGizmo.addEventListener('dragging-changed',e=>{if(!!(e as unknown as {value:boolean}).value)ikDragStart('IK target');else ikDragEnd();});
+  poleGizmo.addEventListener('dragging-changed',e=>{if(!!(e as unknown as {value:boolean}).value)ikDragStart('IK pole');else ikDragEnd();});
+  ikGizmo.addEventListener('change',()=>{if(ikDrag?.kind==='IK target'){const r=ikDrag.root;stage.ikDragTarget(r,[ikTarget.position.x,ikTarget.position.y,ikTarget.position.z]);}invalidate();});
+  poleGizmo.addEventListener('change',()=>{if(ikDrag?.kind==='IK pole'){const r=ikDrag.root;stage.ikDragPole(r,[ikPoleM.position.x,ikPoleM.position.y,ikPoleM.position.z]);}invalidate();});
+  /** Shows or hides the IK markers from the session state; their positions follow the chain state. */
+  const syncIk=()=>{
+   const ik=getStudio3DState().ik;const on=!!ik?.on;
+   for(const h of ikHelpers)h.visible=on;
+   if(on&&ik){
+    if(!ikTarget.parent){scene.add(ikTarget);scene.add(ikPoleM);ikGizmo.attach(ikTarget);poleGizmo.attach(ikPoleM);}
+    if(!ikDrag){ikTarget.position.fromArray(ik.target);ikPoleM.position.fromArray(ik.pole);}
+   }else if(ikTarget.parent){scene.remove(ikTarget);scene.remove(ikPoleM);ikGizmo.detach();poleGizmo.detach();}
+  };
   // A group pivot carries the multi-selection: its movement is applied to every member (see applyGroupDrag).
   const groupPivot=new THREE.Object3D();groupPivot.name='group pivot';
   let group:{members:GroupDragMember[];p0:THREE.Matrix4;before:TransformSnapshot[]}|null=null;
@@ -244,6 +269,8 @@ export default function Viewport3D(){
    const id=getStudio3DState().selected;const o=id==null?null:stage.find(id);
    // Bones rotate only: moving or scaling a joint would break the bind pose, so the gizmo steps back in those modes.
    if(o&&(o as THREE.Bone).isBone&&gizmo.mode!=='rotate'){gizmo.detach();return;}
+   // A bone an IK chain drives is posed through the target gizmo, not directly.
+   if(o&&(o as THREE.Bone).isBone&&stage.ikDriven(o.id)){gizmo.detach();return;}
    if(o)gizmo.attach(o);else gizmo.detach();
   };
   /** Skeleton overlay: rebuilt when the set of bones changes, shown when the session toggle is on. Kept out of the stage root so it never exports or alters bounds. */
@@ -605,6 +632,10 @@ export default function Viewport3D(){
    patchStudio3D({weightBrush:next});syncWeightPreview();invalidate();
   };
   const poseTarget=():number=>{const sel=getStudio3DState().selected;if(sel==null)throw Object.assign(new Error('Select a bone or a skinned mesh first.'),{expected:true});return sel;};
+  const ikToggle=(on:boolean,id?:number)=>{stage.ikToggle(id??poseTarget(),on);};
+  const ikSetTarget=(p:readonly[number,number,number],id?:number)=>{stage.ikSetTarget(id??poseTarget(),p);};
+  const ikSetPole=(p:readonly[number,number,number],id?:number)=>{stage.ikSetPole(id??poseTarget(),p);};
+  const setBoneLimits=(min:(number|null)[]|null,max:(number|null)[]|null,id?:number)=>{const rad=(a:(number|null)[]|null)=>(a??[null,null,null]).map(x=>x==null?Number.NaN:x) as [number,number,number];stage.setBoneLimits(id??poseTarget(),min?rad(min):null,max?rad(max):null);};
   const poseId=(id?:number)=>id??poseTarget();
   const poseSave=(name:string,id?:number)=>{stage.poseSave(poseId(id),name);};
   const poseApply=(name:string,id?:number)=>{stage.poseApply(poseId(id),name);};
@@ -632,7 +663,7 @@ export default function Viewport3D(){
   /** Auto-key records transform changes into the current clip at the playhead. Turning it on without a clip makes one. */
   const autoKey=(on:boolean)=>{if(on&&!stage.clips.length)clipAdd();patchStudio3D({autoKey:!!on});};
   stage.autoKeySource=()=>getStudio3DState().autoKey&&stage.clips.length?{clip:anim().clip,time:anim().time}:null;
-  const off=registerStudio3DController({keyMove,keyEase,keyCopy,keyShift,clipDuplicate,animRange,selectBone,setSkeleton,skinBind,skinRebind,setWeightPreview,setWeightBrush,paintDab,poseSave,poseApply,poseRemove,poseMirror,poseBlend,keyPaste,autoKey,clipAdd,clipRemove,clipRename,clipDuration,keySet,keyRemove,animPlay,animPause,animSeek,animLoop,animSpeed,setTextureTransform:(id,slot,p)=>stage.setTextureTransform(id,slot,p),exportGltf,setTextureFile,mirrorSelection,applyScale:applyScaleSel,mergeSelection:mergeSel,viewPreset,setPrimitive:(id,p)=>stage.setPrimitive(id,p),
+  const off=registerStudio3DController({keyMove,keyEase,keyCopy,keyShift,clipDuplicate,animRange,selectBone,setSkeleton,skinBind,skinRebind,setWeightPreview,setWeightBrush,paintDab,poseSave,poseApply,poseRemove,poseMirror,poseBlend,ikToggle,ikSetTarget,ikSetPole,setBoneLimits,keyPaste,autoKey,clipAdd,clipRemove,clipRename,clipDuration,keySet,keyRemove,animPlay,animPause,animSeek,animLoop,animSpeed,setTextureTransform:(id,slot,p)=>stage.setTextureTransform(id,slot,p),exportGltf,setTextureFile,mirrorSelection,applyScale:applyScaleSel,mergeSelection:mergeSel,viewPreset,setPrimitive:(id,p)=>stage.setPrimitive(id,p),
    save:saveDocument,deleteSelection,duplicateSelection,exportMesh,setExportOptions,renderTurntable,cancelRender:()=>{cancelFlag=true;},setUnit,openFiles,newScene,resetView:frameAll,frameSelection,select,renderStill,exportGlb,
    addPrimitive:k=>{const o=stage.addPrimitive(k);select(o.id);return o.id;},addLight:k=>{const o=stage.addLight(k);select(o.id);return o.id;},
    setTransform:(id,p)=>stage.setTransform(id,p),setMaterial:(id,p)=>stage.setMaterial(id,p),rename:(id,n)=>stage.rename(id,n),
@@ -742,7 +773,7 @@ export default function Viewport3D(){
    disposed=true;opening++;stopAnim();mixer?.stopAllAction();stage.autoKeySource=null;off();offAuto();if(autoTimer)clearTimeout(autoTimer);cancelAnimationFrame(frame);ro.disconnect();controls.dispose();
    cv.removeEventListener('pointerdown',onDownCapture,true);cv.removeEventListener('pointerdown',onDown);window.removeEventListener('pointermove',onMove);window.removeEventListener('pointercancel',endMarquee);endMarquee();cv.removeEventListener('pointerup',onUp);cv.removeEventListener('keydown',onKey);
    if(getStudio3DState().status==='loading')patchStudio3D({status:stage.root.children.length?'ready':'idle',confirmReplace:null});
-   gizmo.detach();gizmo.dispose();offStage();clearSelection();if(painting){painting=false;}const openSel=getStudio3DState().selected;if(openSel!=null)stage.skinPaintEnd(openSel);if(skelHelper){scene.remove(skelHelper);skelHelper.geometry.dispose();(skelHelper.material as THREE.Material).dispose();skelHelper=null;}if(weightOverlay){scene.remove(weightOverlay);weightOverlay.geometry.dispose();(weightOverlay.material as THREE.Material).dispose();weightOverlay=null;}for(const h of helpers.values())h.dispose();grid.geometry.dispose();(grid.material as THREE.Material).dispose();for(const t of envTargets)t.dispose();envCache.clear();pmrem.dispose();renderer.dispose();renderer.forceContextLoss();
+   gizmo.detach();gizmo.dispose();ikGizmo.detach();ikGizmo.dispose();poleGizmo.detach();poleGizmo.dispose();ikTarget.geometry.dispose();(ikTarget.material as THREE.Material).dispose();ikPoleM.geometry.dispose();(ikPoleM.material as THREE.Material).dispose();offStage();clearSelection();if(painting){painting=false;}const openSel=getStudio3DState().selected;if(openSel!=null)stage.skinPaintEnd(openSel);if(skelHelper){scene.remove(skelHelper);skelHelper.geometry.dispose();(skelHelper.material as THREE.Material).dispose();skelHelper=null;}if(weightOverlay){scene.remove(weightOverlay);weightOverlay.geometry.dispose();(weightOverlay.material as THREE.Material).dispose();weightOverlay=null;}for(const h of helpers.values())h.dispose();grid.geometry.dispose();(grid.material as THREE.Material).dispose();for(const t of envTargets)t.dispose();envCache.clear();pmrem.dispose();renderer.dispose();renderer.forceContextLoss();
    if(cv.parentNode===el)el.removeChild(cv);
   };
  // eslint-disable-next-line react-hooks/exhaustive-deps

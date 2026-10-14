@@ -56,6 +56,10 @@ export interface Studio3DController{
  poseRemove(name:string,id?:number):void;
  poseMirror(name:string,id?:number):void;
  poseBlend(a:string,b:string,t:number,id?:number):void;
+ ikToggle(on:boolean,id?:number):void;
+ ikSetTarget(p:readonly[number,number,number],id?:number):void;
+ ikSetPole(p:readonly[number,number,number],id?:number):void;
+ setBoneLimits(min:(number|null)[]|null,max:(number|null)[]|null,id?:number):void;
  paintDab(x:number,y:number,z:number,opts?:{bone?:number;mode?:'add'|'subtract'|'smooth';radius?:number;strength?:number;falloff?:'smooth'|'linear'|'constant'}):number;
  autoKey(on:boolean):void;
  animPlay(clip?:number):void;
@@ -193,6 +197,10 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{id?:number;name:string}>('studio3d.pose.remove','Remove a saved pose from the selected rig','Edit',p=>need().poseRemove(p.name,p.id),object({id:{type:'integer',minimum:0},name:{type:'string',minLength:1,maxLength:80}},['name']),hasSkinnedMesh),
   add<{id?:number;name:string}>('studio3d.pose.mirror','Apply the left/right mirror of a saved pose (paired by bone name)','Edit',p=>need().poseMirror(p.name,p.id),object({id:{type:'integer',minimum:0},name:{type:'string',minLength:1,maxLength:80}},['name']),hasSkinnedMesh),
   add<{id?:number;a:string;b:string;t:number}>('studio3d.pose.blend','Blend two saved poses (t=0 is the first, t=1 the second) and apply the mix','Edit',p=>need().poseBlend(p.a,p.b,p.t,p.id),object({id:{type:'integer',minimum:0},a:{type:'string',minLength:1,maxLength:80},b:{type:'string',minLength:1,maxLength:80},t:{type:'number',minimum:0,maximum:1}},['a','b','t']),hasSkinnedMesh),
+  add<{id?:number;on:boolean}>('studio3d.ik.toggle','Switch a two-bone chain between FK and IK; switching to IK snaps the target to the end effector','Edit',p=>need().ikToggle(p.on,p.id),object({id:{type:'integer',minimum:0},on:{type:'boolean'}},['on']),hasSkinnedMesh),
+  add<{id?:number;x:number;y:number;z:number}>('studio3d.ik.target','Move the IK target of a chain (world space) and solve','Edit',p=>need().ikSetTarget([p.x,p.y,p.z],p.id),object({id:{type:'integer',minimum:0},x:{type:'number'},y:{type:'number'},z:{type:'number'}},['x','y','z']),hasSkinnedMesh),
+  add<{id?:number;x:number;y:number;z:number}>('studio3d.ik.pole','Move the IK pole target of a chain (world space) and re-solve','Edit',p=>need().ikSetPole([p.x,p.y,p.z],p.id),object({id:{type:'integer',minimum:0},x:{type:'number'},y:{type:'number'},z:{type:'number'}},['x','y','z']),hasSkinnedMesh),
+  add<{id?:number;min?:(number|null)[]|null;max?:(number|null)[]|null}>('studio3d.bone.limits','Set or clear joint limits of a bone in degrees (null keeps an axis open)','Edit',p=>need().setBoneLimits(p.min??null,p.max??null,p.id),object({id:{type:'integer',minimum:0},min:{anyOf:[{type:'null'},{type:'array',items:{anyOf:[{type:'number',minimum:-720,maximum:720},{type:'null'}]},minItems:3,maxItems:3}]},max:{anyOf:[{type:'null'},{type:'array',items:{anyOf:[{type:'number',minimum:-720,maximum:720},{type:'null'}]},minItems:3,maxItems:3}]}},[]),hasSkinnedMesh),
   add<{bone:number|null}>('studio3d.skin.preview','Preview a bone\'s influence as vertex colours on the selected skinned 3D mesh','View',p=>need().setWeightPreview(p.bone),object({bone:{anyOf:[{type:'null'},{type:'integer',minimum:0}]}},['bone']),hasSkinnedMesh),
   add<{on?:boolean}>('studio3d.anim.autokey','Turn auto-key on or off: transform changes are recorded as keys at the current time','View',p=>need().autoKey(p?.on??!getStudio3DState().autoKey),object({on:{type:'boolean'}},[]),hasScene),
   add<{clips?:string[]|null}>('studio3d.export.glb','Export the scene as GLB','Project',p=>need().exportGlb(p??{}),object({clips:{anyOf:[{type:'null'},{type:'array',items:{type:'string',minLength:1,maxLength:200},minItems:0,maxItems:64}]}},[])),

@@ -383,5 +383,16 @@
  "studio3d.pose.blendB": "Zweite Pose",
  "studio3d.pose.mix": "Mischungsgrad",
  "studio3d.pose.pick": "Pose wählen",
- "studio3d.pose.empty": "Noch keine Posen gespeichert."
+ "studio3d.pose.empty": "Noch keine Posen gespeichert.",
+ "cmd.studio3d.ik.toggle": "Kette zwischen FK und IK umschalten",
+ "cmd.studio3d.ik.target": "IK-Ziel bewegen",
+ "cmd.studio3d.ik.pole": "IK-Polziel bewegen",
+ "cmd.studio3d.bone.limits": "Gelenkgrenzen eines Knochens setzen",
+ "studio3d.ik.title": "IK",
+ "studio3d.ik.on": "IK steuert diese Kette",
+ "studio3d.ik.hint": "Ziel (cyan) und Pol (amber) im Viewport ziehen.",
+ "studio3d.limits.title": "Gelenkgrenzen (Grad)",
+ "studio3d.limits.min": "Min",
+ "studio3d.limits.max": "Max",
+ "studio3d.limits.clear": "Grenzen aufheben"
 }

@@ -383,5 +383,16 @@
  "studio3d.pose.blendB": "Deuxième pose",
  "studio3d.pose.mix": "Dosage du mélange",
  "studio3d.pose.pick": "Choisir une pose",
- "studio3d.pose.empty": "Aucune pose enregistrée."
+ "studio3d.pose.empty": "Aucune pose enregistrée.",
+ "cmd.studio3d.ik.toggle": "Basculer la chaîne entre FK et IK",
+ "cmd.studio3d.ik.target": "Déplacer la cible IK",
+ "cmd.studio3d.ik.pole": "Déplacer le pôle IK",
+ "cmd.studio3d.bone.limits": "Définir les limites articulaires d'un os",
+ "studio3d.ik.title": "IK",
+ "studio3d.ik.on": "IK pilote cette chaîne",
+ "studio3d.ik.hint": "Faites glisser la cible (cyan) et le pôle (ambre) dans le viewport.",
+ "studio3d.limits.title": "Limites articulaires (degrés)",
+ "studio3d.limits.min": "Min",
+ "studio3d.limits.max": "Max",
+ "studio3d.limits.clear": "Effacer les limites"
 }

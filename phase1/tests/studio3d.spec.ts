@@ -16,6 +16,23 @@ async function skinnedGlb():Promise<Buffer>{
  const out=await new GLTFExporter().parseAsync(scene,{binary:true}) as ArrayBuffer;
  return Buffer.from(out);
 }
+/** A three-bone skinned box (Hip > Knee > Ankle) for IK tests. */
+async function skinnedGlb3():Promise<Buffer>{
+ const THREE=await import('three');const {GLTFExporter}=await import('three/examples/jsm/exporters/GLTFExporter.js');
+ class FR{result:string|ArrayBuffer|null=null;onloadend:(()=>void)|null=null;onerror:(()=>void)|null=null;
+  readAsArrayBuffer(b:Blob){void b.arrayBuffer().then(r=>{this.result=r;this.onloadend?.();},()=>this.onerror?.());}
+  readAsDataURL(b:Blob){void b.arrayBuffer().then(r=>{this.result=`data:application/octet-stream;base64,${Buffer.from(r as ArrayBuffer).toString('base64')}`;this.onloadend?.();},()=>this.onerror?.());}}
+ (globalThis as unknown as {FileReader:unknown}).FileReader??=FR;(globalThis as unknown as {ProgressEvent:unknown}).ProgressEvent??=Event;
+ const geo=new THREE.BoxGeometry(1,3,1);const count=geo.getAttribute('position').count;
+ const si=new Uint16Array(count*4),sw=new Float32Array(count*4);for(let i=0;i<count;i++){si[i*4]=i%3;sw[i*4]=1;}
+ geo.setAttribute('skinIndex',new THREE.Uint16BufferAttribute(si,4));geo.setAttribute('skinWeight',new THREE.Float32BufferAttribute(sw,4));
+ const hip=new THREE.Bone();hip.name='Hip';const knee=new THREE.Bone();knee.name='Knee';knee.position.y=1;hip.add(knee);
+ const ankle=new THREE.Bone();ankle.name='Ankle';ankle.position.y=1;knee.add(ankle);
+ const mesh=new THREE.SkinnedMesh(geo,new THREE.MeshStandardMaterial({color:0x8899aa}));mesh.name='Body';mesh.add(hip);mesh.bind(new THREE.Skeleton([hip,knee,ankle]));
+ const scene=new THREE.Scene();scene.add(mesh);
+ const out=await new GLTFExporter().parseAsync(scene,{binary:true}) as ArrayBuffer;
+ return Buffer.from(out);
+}
 /** CI-only: needs a browser with WebGL (headless Chromium uses SwiftShader). Not run in the authoring sandbox. */
 function triangleGlb():Buffer{
  const pos=Buffer.from(new Float32Array([0,0,0,1,0,0,0,1,0]).buffer),idx=Buffer.from(new Uint16Array([0,1,2,0]).buffer);
@@ -49,7 +66,7 @@ test('3D studio refuses a file that is not glTF with a readable error',async({pa
 /** Helpers for the scene tests below. They drive the real app through its command layer (dev build) and read the studio session. */
 type P=import('@playwright/test').Page;
 const run=(page:P,id:string,params:unknown={})=>page.evaluate(async([i,p])=>{const m=await import('/src/lib/commands.ts');return (await m.executeCommand(i as string,p)) as unknown;},[id,params] as const);
-const session=(page:P)=>page.evaluate(async()=>{const m=await import('/src/lib/studio3d/session.ts');const s=m.getStudio3DState();return {anim:s.anim,clips:s.clips,clipKeys:s.clipKeys,outline:s.outline,marked:s.marked,selected:s.selected,info:s.selectedInfo,dirty:s.dirty,notice:s.notice,status:s.status,name:s.name,bones:s.bones,weightPreview:s.weightPreview,stats:s.stats,exportClips:s.exportClips,poses:s.poses};});
+const session=(page:P)=>page.evaluate(async()=>{const m=await import('/src/lib/studio3d/session.ts');const s=m.getStudio3DState();return {anim:s.anim,clips:s.clips,clipKeys:s.clipKeys,outline:s.outline,marked:s.marked,selected:s.selected,info:s.selectedInfo,dirty:s.dirty,notice:s.notice,status:s.status,name:s.name,bones:s.bones,weightPreview:s.weightPreview,stats:s.stats,exportClips:s.exportClips,poses:s.poses,ik:s.ik,boneLimits:s.boneLimits};});
 const open3d=async(page:P)=>{await page.goto('/');await page.getByRole('button',{name:/3D/}).first().click();};
 const blank=async(page:P)=>{await open3d(page);await page.getByTestId('3d-create-blank').click();await expect(page.getByTestId('studio3d-viewport')).toBeVisible();};
 const insert=async(page:P,kind:string,x:number)=>{await run(page,'studio3d.insert.primitive',{kind});const s=await session(page);const id=s.selected as number;await run(page,'studio3d.object.transform',{id,position:{x,y:0,z:0}});return id;};
@@ -462,4 +479,35 @@ test('3D studio saves, blends and undoes poses on a rig',async({page})=>{
  // Undoing empties the library again (mirror, blend, apply and both saves are one step each).
  for(let i=0;i<8&&(await session(page)).poses.length>0;i++)await run(page,'studio3d.undo');
  await expect.poll(async()=>(await session(page)).poses.length).toBe(0);
+});
+
+test('3D studio drives a chain with IK, moves the target and sets joint limits',async({page})=>{
+ const glb=await skinnedGlb3();
+ await open3d(page);
+ await page.getByTestId('studio3d-file-input').setInputFiles({name:'rig3.glb',mimeType:'model/gltf-binary',buffer:glb});
+ await expect(page.getByTestId('studio3d-viewport')).toBeVisible({timeout:20_000});
+ await expect(page.getByTestId('studio3d-skeleton')).toBeVisible();
+ // The chain root shows the IK switch; toggling on snaps the target to the end effector without moving the pose.
+ await page.getByLabel('Bone').selectOption({index:1});
+ await expect.poll(async()=>(await session(page)).info?.kind).toBe('bone');
+ const bone=(await session(page)).selected as number;
+ await expect(page.getByTestId('studio3d-ik')).toBeVisible();
+ await page.getByLabel('IK drives this chain').check();
+ await expect.poll(async()=>(await session(page)).ik?.on).toBe(true);
+ const snapped=(await session(page)).ik!.target;
+ expect(snapped[1]).toBeGreaterThan(1.9);
+ // Moving the target is one undo step.
+ await run(page,'studio3d.ik.target',{x:0.8,y:1.2,z:0});
+ await expect.poll(async()=>(await session(page)).ik?.target[0]).toBeCloseTo(0.8,3);
+ await run(page,'studio3d.undo');
+ await expect.poll(async()=>(await session(page)).ik?.target[0]).toBeCloseTo(snapped[0],3);
+ // Joint limits land in the panel state and clear again.
+ await run(page,'studio3d.bone.limits',{id:bone,min:[-30,null,null],max:[30,null,null]});
+ await expect.poll(async()=>(await session(page)).boneLimits?.min[0]).toBe(-30);
+ await page.getByRole('button',{name:'Clear limits'}).click();
+ await expect.poll(async()=>(await session(page)).boneLimits).toBe(null);
+ // With IK off again, target moves refuse with a notice instead of throwing.
+ await page.getByLabel('IK drives this chain').uncheck();
+ await run(page,'studio3d.ik.target',{x:0,y:1,z:0});
+ await expect(page.getByRole('alert')).toBeVisible();
 });

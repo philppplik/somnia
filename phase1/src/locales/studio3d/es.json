@@ -383,5 +383,16 @@
  "studio3d.pose.blendB": "Segunda pose",
  "studio3d.pose.mix": "Cantidad de mezcla",
  "studio3d.pose.pick": "Elige una pose",
- "studio3d.pose.empty": "Aún no hay poses guardadas."
+ "studio3d.pose.empty": "Aún no hay poses guardadas.",
+ "cmd.studio3d.ik.toggle": "Alternar la cadena entre FK e IK",
+ "cmd.studio3d.ik.target": "Mover el objetivo IK",
+ "cmd.studio3d.ik.pole": "Mover el polo IK",
+ "cmd.studio3d.bone.limits": "Definir límites articulares de un hueso",
+ "studio3d.ik.title": "IK",
+ "studio3d.ik.on": "IK controla esta cadena",
+ "studio3d.ik.hint": "Arrastra el objetivo (cian) y el polo (ámbar) en el visor.",
+ "studio3d.limits.title": "Límites articulares (grados)",
+ "studio3d.limits.min": "Mín",
+ "studio3d.limits.max": "Máx",
+ "studio3d.limits.clear": "Quitar límites"
 }
