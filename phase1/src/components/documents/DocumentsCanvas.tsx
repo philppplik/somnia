@@ -21,6 +21,7 @@ import {FormatBar} from './FormatBar';
 import {FindBar,StatusBar} from './FindBar';
 import {CommentsPanel} from './CommentsPanel';
 import {ShortcutsDialog} from './ShortcutsDialog';
+import {ParagraphDialog} from './ParagraphDialog';
 import {setShortcutsOpen} from '../../lib/documents/shortcuts';
 import {NativeButton,Textarea} from '../ui/native-controls';
 const bar='media-bar flex items-center gap-2 border-b border-subtle px-3 py-1.5 text-[12px]';
@@ -140,6 +141,7 @@ export function DocumentsCanvas(){
   {doc.status==='ready'&&<FindBar/>}
   {doc.status==='ready'&&<CommentsPanel/>}
   <ShortcutsDialog/>
+  <ParagraphDialog/>
   {doc.status==='loading'&&<div role="status" className="grid flex-1 place-items-center text-[12px] text-ink-3">{t('documents.loading')}</div>}
   {doc.status==='error'&&<div role="alert" className="grid flex-1 place-items-center"><div className="grid max-w-md justify-items-center gap-2 text-center"><p className="text-[13px] text-ink" data-testid="documents-error">{doc.error}</p><NativeButton className={tool+' border border-subtle'} onClick={()=>setAttempt(a=>a+1)}>{t('documents.retry')}</NativeButton></div></div>}
   {doc.notice&&<p role="status" className="border-b border-subtle px-3 py-1 text-xs text-ink-3" data-testid="documents-session-notice">{t('documents.session.'+doc.notice)}</p>}

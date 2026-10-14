@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-535 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+538 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -259,6 +259,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `documents.image.remove` | Remove picture | View | documents |  |
 | `documents.indent.decrease` | Decrease indent | View | documents |  |
 | `documents.indent.increase` | Increase indent | View | documents |  |
+| `documents.insertPageBreak` | Insert page break | View | documents |  |
 | `documents.link.remove` | Remove the link from the selected text | View | documents |  |
 | `documents.link.set` | Link the selected text | View | documents |  |
 | `documents.list.bullet` | Toggle bulleted list | View | documents |  |
@@ -271,6 +272,8 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `documents.pageSetup.set` | Set page setup | View | documents |  |
 | `documents.panelRedo` | Redo document edit | Edit | documents-panels |  |
 | `documents.panelUndo` | Undo document edit | Edit | documents-panels |  |
+| `documents.paragraph.options` | Paragraph options | View | documents |  |
+| `documents.paragraph.set` | Set paragraph flow options | View | documents |  |
 | `documents.redo` | Redo document text edit | View | documents |  |
 | `documents.replaceMatch` | Replace search result | Edit | documents-panels |  |
 | `documents.saveCopy` | Save a copy of the document | Project | documents |  |

@@ -431,6 +431,17 @@ async function applyPara(patch:ParaPatch){
  setSel(n.a,n.h);
 }
 export const setAlign=(align:import('./protocol').ParaAlign)=>run(()=>applyPara({align}));
+/** Right indent and the flow options (page break before, keep with next, keep lines together, widow control) of every paragraph the selection touches. One undo step. */
+export const setParagraphOptions=(patch:ParaPatch)=>run(()=>applyPara(patch));
+/** Starts a new page at the caret: splits the paragraph there and makes the new one begin a page. One undo step. */
+export const insertPageBreak=()=>run(async()=>{
+ const c=getDocumentsState().caret;if(!c)throw new Error('Place the caret where the new page should start.');
+ const n=norm(c);if(cmp(n.s,n.e)!==0)throw new Error('Place the caret where the new page should start.');
+ if(n.s.block>=CELL_BASE)throw new Error('A page break cannot go inside a table.');
+ if(blockText(n.s.block)===null)throw new Error('This paragraph cannot be edited as text.');
+ const b=n.s.block,off=n.s.off;
+ await structural(async eng=>{await eng.split(b,off);return eng.formatParagraphs(b+1,b+1,{pageBreakBefore:true});},{block:b,off},{block:b+1,off:0});
+});
 export const setLineSpacing=(lineSpacing:number)=>run(()=>applyPara({lineSpacing}));
 export const setSpaceBefore=(spaceBefore:number)=>run(()=>applyPara({spaceBefore}));
 export const setSpaceAfter=(spaceAfter:number)=>run(()=>applyPara({spaceAfter}));

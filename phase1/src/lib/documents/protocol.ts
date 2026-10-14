@@ -40,15 +40,17 @@ export function checkFormatPatch(patch:unknown){
 }
 export type ParaAlign='left'|'center'|'right'|'justify';
 /** Whole-paragraph formatting in points; line spacing is a multiple of single. */
-export interface ParaPatch{align?:ParaAlign;indentLeft?:number;indentFirst?:number;spaceBefore?:number;spaceAfter?:number;lineSpacing?:number}
+export interface ParaPatch{align?:ParaAlign;indentLeft?:number;indentFirst?:number;spaceBefore?:number;spaceAfter?:number;lineSpacing?:number;indentRight?:number;pageBreakBefore?:boolean;keepNext?:boolean;keepLines?:boolean;widowControl?:boolean}
+export const PARA_FLAG_KEYS=['pageBreakBefore','keepNext','keepLines','widowControl'] as const;
 /** Shared effective value over the paragraphs, or null when they differ (line spacing: also null for exact/at-least heights). */
-export interface ParaState{align:ParaAlign|null;indentLeft:number|null;indentFirst:number|null;spaceBefore:number|null;spaceAfter:number|null;lineSpacing:number|null;/** Paragraph style id (`Normal`, `Heading2`, ...) when shared. */style?:string|null;list?:'none'|'bullet'|'numbered'|null;listLevel?:number|null}
-const PARA_RANGES:Record<string,[number,number]>={indentLeft:[0,1440],indentFirst:[-1440,1440],spaceBefore:[0,1584],spaceAfter:[0,1584],lineSpacing:[0.5,10]};
+export interface ParaState{align:ParaAlign|null;indentLeft:number|null;indentFirst:number|null;spaceBefore:number|null;spaceAfter:number|null;lineSpacing:number|null;indentRight?:number|null;/** Shared flags, or null when the paragraphs differ. */pageBreakBefore?:boolean|null;keepNext?:boolean|null;keepLines?:boolean|null;widowControl?:boolean|null;/** Paragraph style id (`Normal`, `Heading2`, ...) when shared. */style?:string|null;list?:'none'|'bullet'|'numbered'|null;listLevel?:number|null}
+const PARA_RANGES:Record<string,[number,number]>={indentLeft:[0,1440],indentRight:[0,1440],indentFirst:[-1440,1440],spaceBefore:[0,1584],spaceAfter:[0,1584],lineSpacing:[0.5,10]};
 export function checkParaPatch(patch:unknown){
  if(!patch||typeof patch!=='object'||Array.isArray(patch))throw new Error('Paragraph change is not valid.');
  const o=patch as Record<string,unknown>;const keys=Object.keys(o);if(!keys.length)throw new Error('Paragraph change is not valid.');
  for(const k of keys){const v=o[k];
   if(k==='align'){if(v!=='left'&&v!=='center'&&v!=='right'&&v!=='justify')throw new Error('Alignment is not valid.');}
+  else if((PARA_FLAG_KEYS as readonly string[]).includes(k)){if(typeof v!=='boolean')throw new Error('Paragraph change is not valid.');}
   else if(PARA_RANGES[k]){const [lo,hi]=PARA_RANGES[k];if(typeof v!=='number'||!Number.isFinite(v)||v<lo||v>hi)throw new Error(`${k} must be between ${lo} and ${hi}.`);}
   else throw new Error('Paragraph change is not valid.');
  }

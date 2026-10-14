@@ -20,3 +20,5 @@
 .doc-panel h3 {font-size:12px;font-weight:600;margin:0;}
 .doc-panel-error {border-left:2px solid var(--accent);padding-left:8px;overflow-wrap:anywhere;}
 .doc-panel-filename {margin:0;overflow-wrap:anywhere;font-weight:500;}
+.doc-paraopt-check {display:flex !important;align-items:center;gap:8px;}
+.doc-paraopt-check input[type=checkbox] {width:16px !important;height:16px;flex:none;margin:0;accent-color:var(--accent);}

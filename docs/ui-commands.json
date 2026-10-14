@@ -2759,6 +2759,17 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.insertPageBreak",
+      "title": "Insert page break",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.link.remove",
       "title": "Remove the link from the selected text",
       "category": "View",
@@ -2882,6 +2893,28 @@
       "category": "Edit",
       "source": "documents-panels",
       "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.paragraph.options",
+      "title": "Paragraph options",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.paragraph.set",
+      "title": "Set paragraph flow options",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
       "hasEnabled": true
     },
     {

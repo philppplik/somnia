@@ -1,7 +1,8 @@
 import {useState} from 'react';
-import {clearFormatting,hasTextSelection,setHighlight,setLink,toggleFormat,toggleVertAlign} from '../../lib/documents/session';
+import {insertPageBreak,clearFormatting,hasTextSelection,setHighlight,setLink,toggleFormat,toggleVertAlign} from '../../lib/documents/session';
 import {HIGHLIGHTS,MAX_LINK_CHARS,linkProblem,type FormatPatch,type FormatState,type HighlightName} from '../../lib/documents/protocol';
 import {setShortcutsOpen} from '../../lib/documents/shortcuts';
+import {setParagraphOptionsOpen} from '../../lib/documents/paragraphOptions';
 import {useT} from '../../lib/useT';
 import {NativeButton,NativeInput,NativeSelect} from '../ui/native-controls';
 const tool='grid h-7 cursor-pointer grid-flow-col items-center gap-1 rounded-sm border-0 bg-transparent px-2 text-xs text-ink-2 hover:bg-hover aria-pressed:bg-hover aria-pressed:text-ink disabled:cursor-default disabled:opacity-50';
@@ -37,6 +38,8 @@ export function TextEffects({format,held,enabled}:{format:FormatState|null;held:
    {HIGHLIGHTS.map(h=><option key={h} value={h}>{t(h==='none'?'documents.format.hl.none':'documents.format.hl.'+h)}</option>)}</NativeSelect>
   <NativeButton className={tool+' border border-subtle'} aria-pressed={!!format?.link} title={t('documents.format.link')+' (Ctrl+K)'} disabled={!enabled||!picked} onClick={()=>setLinkOpen(true)} data-testid="documents-format-link">{t('documents.format.link')}</NativeButton>
   <NativeButton className={tool+' border border-subtle'} title={t('documents.format.clear')+' (Ctrl+Space)'} disabled={!enabled||!picked} onClick={()=>void clearFormatting()} data-testid="documents-format-clear">{t('documents.format.clear')}</NativeButton>
+  <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>setParagraphOptionsOpen(true)} data-testid="documents-paraopt-open">{t('documents.para.opt.open')}</NativeButton>
+  <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>void insertPageBreak()} data-testid="documents-page-break">{t('documents.para.opt.insertBreak')}</NativeButton>
   <NativeButton className={tool+' border border-subtle'} onClick={()=>setShortcutsOpen(true)} title={t('documents.shortcuts.title')+' (Ctrl+/)'} data-testid="documents-shortcuts-open">{t('documents.shortcuts.open')}</NativeButton>
   {linkOpen&&<LinkDialog current={format?.link??''} onClose={()=>setLinkOpen(false)}/>}
  </>;

@@ -10,6 +10,9 @@ import {goToBlock,scrollToPage} from './navigate';
 import {safeCopyName} from './saveCopy';
 import {commentsOpen,setCommentsOpen} from './comments';
 import {setShortcutsOpen} from './shortcuts';
+import {setParagraphOptionsOpen} from './paragraphOptions';
+import {insertPageBreak,setParagraphOptions} from './session';
+import {checkParaPatch,PARA_FLAG_KEYS} from './protocol';
 import {addComment,commentSelection,deleteComment,resolveComment} from './session';
 import {commentProblem,HIGHLIGHTS,linkProblem,type HighlightName} from './protocol';
 import {clearFormatting,hasTextSelection,setHighlight,setLink,toggleVertAlign} from './session';
@@ -70,6 +73,14 @@ export function registerDocumentsCommands(){
   },()=>ready()&&hasTextSelection()),
   add('documents.link.remove','Remove the link from the selected text',async()=>{await setLink('');},()=>ready()&&hasTextSelection()),
   add('documents.clearFormatting','Clear text formatting',async()=>{await clearFormatting();},()=>ready()&&hasTextSelection()),
+  add('documents.paragraph.options','Paragraph options',()=>{setParagraphOptionsOpen(true);},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.paragraph.set','Set paragraph flow options',async p=>{
+   const o=(p as Record<string,unknown>|undefined)??{};const keys=Object.keys(o);
+   if(!keys.length||keys.some(k=>k!=='indentRight'&&!(PARA_FLAG_KEYS as readonly string[]).includes(k)))throw expected('Use indentRight, pageBreakBefore, keepNext, keepLines or widowControl.');
+   try{checkParaPatch(o);}catch(err){throw expected(err instanceof Error?err.message:'Invalid options.');}
+   await setParagraphOptions(o as import('./protocol').ParaPatch);
+  },()=>ready()&&!!getDocumentsState().caret),
+  add('documents.insertPageBreak','Insert page break',async()=>{await insertPageBreak();},()=>ready()&&!!getDocumentsState().caret),
   add('documents.shortcuts.show','Keyboard shortcuts',()=>{setShortcutsOpen(true);}),
   add('documents.fontSize.increase','Increase font size',async()=>{await stepFontSize(1);},()=>ready()&&!!getDocumentsState().caret),
   add('documents.fontSize.decrease','Decrease font size',async()=>{await stepFontSize(-1);},()=>ready()&&!!getDocumentsState().caret),

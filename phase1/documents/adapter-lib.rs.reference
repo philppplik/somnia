@@ -640,6 +640,8 @@ impl DocSession {
             }
             Ok(((n * 20.0).round() / 20.0) as f32)
         };
+        let mut flags: Vec<(&str, bool)> = Vec::new();
+        let mut ir: Option<f32> = None;
         let mut align: Option<Align> = None;
         let (mut il, mut ifirst, mut sb, mut sa, mut ls): (Option<f32>, Option<f32>, Option<f32>, Option<f32>, Option<f32>) = (None, None, None, None, None);
         for (k, val) in obj {
@@ -654,6 +656,10 @@ impl DocSession {
                     })
                 }
                 "indentLeft" => il = Some(num(k, val, 0.0, 1440.0)?),
+                "indentRight" => ir = Some(num(k, val, 0.0, 1440.0)?),
+                "pageBreakBefore" | "keepNext" | "keepLines" | "widowControl" => {
+                    flags.push((k.as_str(), val.as_bool().ok_or_else(|| format!("paragraph field {k} must be true or false"))?));
+                }
                 "indentFirst" => ifirst = Some(num(k, val, -1440.0, 1440.0)?),
                 "spaceBefore" => sb = Some(num(k, val, 0.0, 1584.0)?),
                 "spaceAfter" => sa = Some(num(k, val, 0.0, 1584.0)?),
@@ -678,6 +684,17 @@ impl DocSession {
             }
             if let Some(x) = ifirst {
                 p.props.indent_first = Some(x);
+            }
+            if let Some(x) = ir {
+                p.props.indent_right = Some(x);
+            }
+            for (k, v) in &flags {
+                match *k {
+                    "pageBreakBefore" => p.props.page_break_before = Some(*v),
+                    "keepNext" => p.props.keep_next = Some(*v),
+                    "keepLines" => p.props.keep_lines = Some(*v),
+                    _ => p.props.widow_control = Some(*v),
+                }
             }
             if let Some(x) = sb {
                 p.props.space_before = Some(x);
@@ -734,6 +751,11 @@ impl DocSession {
             "align": align,
             "indentLeft": same(&rows, |r| r.indent_left.to_bits()).map(f32::from_bits),
             "indentFirst": same(&rows, |r| r.indent_first.to_bits()).map(f32::from_bits),
+            "indentRight": same(&rows, |r| r.indent_right.to_bits()).map(f32::from_bits),
+            "pageBreakBefore": same(&rows, |r| r.page_break_before),
+            "keepNext": same(&rows, |r| r.keep_next),
+            "keepLines": same(&rows, |r| r.keep_lines),
+            "widowControl": same(&rows, |r| r.widow_control),
             "spaceBefore": same(&rows, |r| r.space_before.to_bits()).map(f32::from_bits),
             "spaceAfter": same(&rows, |r| r.space_after.to_bits()).map(f32::from_bits),
             "lineSpacing": ls,
@@ -2248,6 +2270,27 @@ mod tests {
         assert_eq!(s.doc.body.len(), len - 1);
     }
     #[test]
+    fn paragraph_flow_options() {
+        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
+        s.do_para_format(0, 0, r#"{"pageBreakBefore":true,"keepNext":true,"keepLines":true,"widowControl":false,"indentRight":18}"#).unwrap();
+        let v: serde_json::Value = serde_json::from_str(&s.do_para_state(0, 0).unwrap()).unwrap();
+        assert_eq!((v["pageBreakBefore"].as_bool(), v["keepNext"].as_bool(), v["keepLines"].as_bool(), v["widowControl"].as_bool()), (Some(true), Some(true), Some(true), Some(false)));
+        assert_eq!(v["indentRight"], 18.0);
+        let saved = wordcraft_docx::write(&s.doc).unwrap();
+        let re = DocSession::from_bytes(&saved).unwrap();
+        let r: serde_json::Value = serde_json::from_str(&re.do_para_state(0, 0).unwrap()).unwrap();
+        assert_eq!((r["pageBreakBefore"].as_bool(), r["keepNext"].as_bool(), r["widowControl"].as_bool()), (Some(true), Some(true), Some(false)));
+        // Two paragraphs that differ report no shared value.
+        let m: serde_json::Value = serde_json::from_str(&s.do_para_state(0, 1).unwrap()).unwrap();
+        assert!(m["pageBreakBefore"].is_null());
+        // Refusals change nothing.
+        let before = s.do_para_state(0, 0).unwrap();
+        for bad in [r#"{"keepNext":"yes"}"#, r#"{"indentRight":-1}"#, r#"{"indentRight":1441}"#, r#"{"pageBreakBefore":1}"#, r#"{"keepLinez":true}"#] {
+            assert!(s.do_para_format(0, 0, bad).is_err(), "{bad}");
+        }
+        assert_eq!(s.do_para_state(0, 0).unwrap(), before);
+    }
+    #[test]
     fn text_effects_links_and_clear() {
         let mut s = DocSession::from_bytes(FIXTURE).unwrap();
         s.do_format(0, 0, 0, 3, r#"{"strike":true,"smallCaps":true,"vertAlign":"superscript","highlight":"yellow","link":"https://example.com/a?b=1"}"#).unwrap();
@@ -2276,7 +2319,7 @@ mod tests {
         assert_eq!(c["highlight"], "none");
         assert_eq!(c["link"], "");
         // Refusals change nothing.
-        let before = s.doc.body.clone();
+        let before = s.do_para_state(0, 0).unwrap();
         for bad in [
             r#"{"link":"javascript:alert(1)"}"#,
             r#"{"link":"http://"}"#,
@@ -2292,7 +2335,7 @@ mod tests {
         }
         let long = format!(r#"{{"link":"https://{}"}}"#, "a".repeat(LINK_MAX_CHARS));
         assert!(s.do_format(0, 0, 0, 3, &long).is_err());
-        assert!(s.doc.body == before);
+        assert_eq!(s.do_para_state(0, 0).unwrap(), before);
     }
     #[test]
     fn comments_add_resolve_delete_and_roundtrip() {
