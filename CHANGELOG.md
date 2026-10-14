@@ -6,6 +6,12 @@
 
 - Settings > Modified > Import & export setup: versioned, classified setup file with category selection, Merge/Replace review, restore point with rollback and undo; secrets, servers, permissions and the preview-script switch are never exported. Docs: docs/SETTINGS-TRANSFER.md.
 
+# Unreleased: Provider reasoning replay
+
+- Somnia Agent uses stateless Responses for xAI and Meta, with encrypted reasoning and complete output-item replay across tool loops and later turns.
+- DeepSeek reasoning_content is kept separately from UI text and replayed unchanged in tool-enabled requests. Replay is private and scoped to the same provider and model.
+- Remote catalogs are validated, deduplicated and sorted without static model IDs. Native Vibe Space reasoning parity and live API tests remain outstanding.
+
 # Unreleased: Studio shell regression fixes
 
 - Code Studio restores the inline SVG inspector inside the shared Design section, including paint, fill/stroke gradients, guides, grid and clip/mask controls.
@@ -57,6 +63,16 @@
 - Compare full release versions, including alpha/beta numbers, so beta.2 detects beta.3 and beta.3 detects beta.10 without offering equal versions or downgrades.
 - Changing the channel or automatic-check setting refreshes the pill immediately. Prerelease tags stay out of stable even if a release has the wrong GitHub flag.
 - Signed update manifests use the real artifact filenames, reject missing or ambiguous artifacts, and accept prerelease versions in the updater test harness.
+## Unreleased - Vibe Space model picker
+
+- Refresh configured models when opening a task form or saving the AI provider/model, without resetting the goal or substituting a removed selection.
+- Vibe Space now includes the saved Claude model and uses the existing Anthropic adapter; Ollama, OpenAI and OpenRouter use their matching native adapters. API keys stay in the OS credential store.
+## Unreleased - AI providers: Grok, Meta, DeepSeek
+
+- Somnia Agent can use Grok (xAI), the Meta Model API and DeepSeek as separate providers, each with its own API key and its own model list. Select them under Settings > AI and add keys under Account > Connections. They also appear in the Vibe Space Create-task model chooser.
+- They reuse the OpenAI-compatible adapter with fixed official endpoints. Keys stay in the OS credential store; the native transport only allows the exact official URLs.
+- Cloud consent covers the new providers and links their policies. Sources and limits: docs/agent/additional-providers.md.
+- New string `conn.compatNote` in all five languages.
 
 ## Unreleased - Header hero action slot
 

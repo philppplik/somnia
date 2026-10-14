@@ -1936,6 +1936,7 @@
   "conn.replacement": "Introduce una clave nueva",
   "conn.enterKey": "Introduce tu clave API",
   "conn.keyNote": "La clave se prueba y luego se guarda en el almacén de credenciales de tu sistema; no se vuelve a mostrar. La prueba solo envía la clave al proveedor, sin prompts ni archivos del proyecto.",
+  "conn.compatNote": "Clave de API y lista de modelos propias para {name}. Cuando permites la IA en la nube, los prompts van directamente a {name}, no a través de OpenRouter.",
   "conn.testSave": "Probar y guardar clave",
   "conn.testReplace": "Probar y reemplazar clave",
   "conn.testSaved": "Probar clave guardada",

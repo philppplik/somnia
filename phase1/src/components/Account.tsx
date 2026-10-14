@@ -409,6 +409,9 @@ export function Account() {
                     <h3 className="connection-group">{t("conn.ai")}</h3>
                     <ProviderKeyConnection provider="claude" />
                     <ProviderKeyConnection provider="openrouter" />
+                    <ProviderKeyConnection provider="xai" />
+                    <ProviderKeyConnection provider="meta" />
+                    <ProviderKeyConnection provider="deepseek" />
                     <OllamaConnection />
                     <h3 className="connection-group">{t("conn.tools")}</h3>
                     <McpConnections onNavigate={() => setOpen(false)} />

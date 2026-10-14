@@ -19,6 +19,9 @@ pub enum ProviderKind {
     OpenAi,
     OpenRouter,
     Anthropic,
+    Xai,
+    Meta,
+    DeepSeek,
 }
 impl ProviderKind {
     pub fn is_local(self) -> bool {
@@ -31,6 +34,9 @@ impl ProviderKind {
             Self::OpenAi => "https://api.openai.com/v1/chat/completions",
             Self::OpenRouter => "https://openrouter.ai/api/v1/chat/completions",
             Self::Anthropic => "https://api.anthropic.com/v1/messages",
+            Self::Xai => "https://api.x.ai/v1/chat/completions",
+            Self::Meta => "https://api.meta.ai/v1/chat/completions",
+            Self::DeepSeek => "https://api.deepseek.com/chat/completions",
         }
     }
     pub fn id(self) -> &'static str {
@@ -40,6 +46,9 @@ impl ProviderKind {
             Self::OpenAi => "openai",
             Self::OpenRouter => "openrouter",
             Self::Anthropic => "anthropic",
+            Self::Xai => "xai",
+            Self::Meta => "meta",
+            Self::DeepSeek => "deepseek",
         }
     }
 }
