@@ -773,10 +773,13 @@
  "animation.timing.mode.out": "Saída na posição atual",
  "animation.timing.mode.stagger": "Escalonar entradas",
  "animation.timing.mode.markers": "Entradas nos marcadores",
- "animation.timing.frames": "Quadros entre camadas",
+ "animation.timing.frames": "Quadros entre camadas ou deslocamento (negativo = antes)",
  "animation.timing.apply": "Aplicar tempo",
  "animation.timing.count": "{changed} mudarão",
  "animation.timing.countSkipped": "{changed} mudarão, {skipped} ficam",
- "animation.timing.hint": "Só entrada e saída se movem; as chaves ficam. A ordem é a da marcação. O escalonamento começa na primeira camada.",
- "cmd.animation.timing.apply": "Definir entrada e saída em várias camadas"
+ "animation.timing.hint": "Escalonar, entrada, saída e marcadores só movem entrada e saída. Deslocar leva as chaves junto; slip move as chaves sob a mesma entrada e saída. A ordem é a da marcação.",
+ "cmd.animation.timing.apply": "Definir entrada e saída em várias camadas",
+ "animation.timing.mode.slide": "Deslocar camadas por quadros",
+ "animation.timing.mode.slip": "Deslizar chaves (slip) por quadros",
+ "animation.timing.mode.slideTo": "Deslocar camadas até a posição atual"
 }

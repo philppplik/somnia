@@ -773,10 +773,13 @@
  "animation.timing.mode.out": "Punto de salida en el cabezal",
  "animation.timing.mode.stagger": "Escalonar entradas",
  "animation.timing.mode.markers": "Entradas en los marcadores",
- "animation.timing.frames": "Fotogramas entre capas",
+ "animation.timing.frames": "Fotogramas entre capas o desplazamiento (negativo = antes)",
  "animation.timing.apply": "Aplicar tiempo",
  "animation.timing.count": "{changed} cambiarán",
  "animation.timing.countSkipped": "{changed} cambiarán, {skipped} se quedan",
- "animation.timing.hint": "Solo se mueven entrada y salida; las claves no. El orden es el de marcado. El escalonado empieza en la primera capa.",
- "cmd.animation.timing.apply": "Fijar entrada y salida en varias capas"
+ "animation.timing.hint": "Escalonar, entrada, salida y marcadores solo mueven entrada y salida. Deslizar mueve la capa con sus claves; slip mueve las claves bajo la misma entrada y salida. El orden es el de marcado.",
+ "cmd.animation.timing.apply": "Fijar entrada y salida en varias capas",
+ "animation.timing.mode.slide": "Deslizar capas por fotogramas",
+ "animation.timing.mode.slip": "Deslizar claves (slip) por fotogramas",
+ "animation.timing.mode.slideTo": "Deslizar capas al cabezal"
 }

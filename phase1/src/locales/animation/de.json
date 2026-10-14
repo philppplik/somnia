@@ -773,10 +773,13 @@
  "animation.timing.mode.out": "Out-Punkt auf Abspielkopf",
  "animation.timing.mode.stagger": "In-Punkte staffeln",
  "animation.timing.mode.markers": "In-Punkte auf Marker",
- "animation.timing.frames": "Frames zwischen Ebenen",
+ "animation.timing.frames": "Frames zwischen Ebenen oder Verschiebung (negativ = früher)",
  "animation.timing.apply": "Timing anwenden",
  "animation.timing.count": "{changed} werden geändert",
  "animation.timing.countSkipped": "{changed} werden geändert, {skipped} bleiben",
- "animation.timing.hint": "Nur In und Out werden verschoben, Keys bleiben. Reihenfolge ist die Ankreuz-Reihenfolge. Das Staffeln beginnt bei der ersten Ebene.",
- "cmd.animation.timing.apply": "In- und Out-Punkte mehrerer Ebenen setzen"
+ "animation.timing.hint": "Staffeln, In, Out und Marker bewegen nur In und Out. Verschieben nimmt die Keys mit, Slip bewegt die Keys unter gleichem In und Out. Reihenfolge ist die Ankreuz-Reihenfolge.",
+ "cmd.animation.timing.apply": "In- und Out-Punkte mehrerer Ebenen setzen",
+ "animation.timing.mode.slide": "Ebenen um Frames verschieben",
+ "animation.timing.mode.slip": "Keys um Frames gleiten lassen (Slip)",
+ "animation.timing.mode.slideTo": "Ebenen zum Abspielkopf verschieben"
 }

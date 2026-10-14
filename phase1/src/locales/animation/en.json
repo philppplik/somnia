@@ -773,10 +773,13 @@
  "animation.timing.mode.out": "Set out point to playhead",
  "animation.timing.mode.stagger": "Stagger in-points",
  "animation.timing.mode.markers": "In-points on markers",
- "animation.timing.frames": "Frames between layers",
+ "animation.timing.frames": "Frames between layers or shift (negative = earlier)",
  "animation.timing.apply": "Apply timing",
  "animation.timing.count": "{changed} will change",
  "animation.timing.countSkipped": "{changed} will change, {skipped} stay",
- "animation.timing.hint": "Only in and out move; keyframes stay. Order is the tick order. Stagger starts at the first layer.",
- "cmd.animation.timing.apply": "Set layer in and out points on several layers"
+ "animation.timing.hint": "Stagger, in, out and markers only move in and out. Slide moves the layer with its keys, slip moves the keys under the same in and out. Order is the tick order.",
+ "cmd.animation.timing.apply": "Set layer in and out points on several layers",
+ "animation.timing.mode.slide": "Slide layers by frames",
+ "animation.timing.mode.slip": "Slip keys by frames",
+ "animation.timing.mode.slideTo": "Slide layers to playhead"
 }

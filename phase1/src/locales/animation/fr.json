@@ -773,10 +773,13 @@
  "animation.timing.mode.out": "Point de sortie sur la tête de lecture",
  "animation.timing.mode.stagger": "Décaler les entrées",
  "animation.timing.mode.markers": "Entrées sur les repères",
- "animation.timing.frames": "Images entre les calques",
+ "animation.timing.frames": "Images entre calques ou décalage (négatif = plus tôt)",
  "animation.timing.apply": "Appliquer le timing",
  "animation.timing.count": "{changed} vont changer",
  "animation.timing.countSkipped": "{changed} vont changer, {skipped} restent",
- "animation.timing.hint": "Seuls l'entrée et la sortie bougent; les clés restent. L'ordre est celui des cases cochées. Le décalage part du premier calque.",
- "cmd.animation.timing.apply": "Régler entrée et sortie de plusieurs calques"
+ "animation.timing.hint": "Décalage d'entrées, entrée, sortie et repères ne bougent que l'entrée et la sortie. Décaler emmène les clés; slip déplace les clés sous la même entrée et sortie. L'ordre est celui des cases cochées.",
+ "cmd.animation.timing.apply": "Régler entrée et sortie de plusieurs calques",
+ "animation.timing.mode.slide": "Décaler les calques d'images",
+ "animation.timing.mode.slip": "Faire glisser les clés (slip) d'images",
+ "animation.timing.mode.slideTo": "Décaler les calques vers la tête de lecture"
 }

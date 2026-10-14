@@ -1,4 +1,5 @@
 import {worldMatrix,invertMatrix,multiplyMatrix,decomposeMatrix} from './scene';
+import {layerKeyTimes,shiftLayerKeys} from './layerShift';
 import {validateEasingLib} from './easingModel';
 import {validateMotionLib} from './motionModel';
 import {validateTextPresetLib} from './textPresetModel';
@@ -25,6 +26,7 @@ export type Edit=
  |{type:'layer.remove';layer:string}
  |{type:'layer.update';layer:string;name?:string;visible?:boolean;solo?:boolean;locked?:boolean;shy?:boolean;source?:Partial<LayerSource>}
  |{type:'layer.timing';layer:string;inT:number;outT:number}
+ |{type:'layer.shift';layer:string;delta:number;mode:'slide'|'slip'}
  |{type:'layer.parent';layer:string;parent:string|null;keepWorld?:boolean;t?:number}
  |{type:'layer.reorder';layer:string;index:number}
  |{type:'prop.set';layer:string;prop:TransformKey;value:PropValue;t:number}
@@ -469,6 +471,16 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
    return setLayer(doc,{...l,name:e.name?.trim()??l.name,visible:e.visible??l.visible,solo:e.solo??l.solo,locked:e.locked??l.locked,...(e.shy!==undefined?{shy:e.shy}:{}),source:{...l.source,...e.source}});}
   case 'layer.timing':{const c=compOf(doc);const l=layerOf(doc,e.layer);if(l.kind==='audio')fail('invalid','Use audio trim and offset for audio layers.');
    if(!Number.isInteger(e.inT)||!Number.isInteger(e.outT)||e.outT<=e.inT||e.inT<0||e.outT>c.duration)fail('invalid','Layer timing must be inside the composition with out after in.');return setLayer(doc,{...l,inT:e.inT,outT:e.outT});}
+  case 'layer.shift':{const c=compOf(doc);const l=layerOf(doc,e.layer);
+   if(l.kind==='audio')fail('invalid','Use audio trim and offset for audio layers.');
+   if(!Number.isInteger(e.delta)||e.delta===0||Math.abs(e.delta)>c.duration)fail('invalid','Shift must be a non-zero whole number of ticks inside the composition length.');
+   if(e.mode!=='slide'&&e.mode!=='slip')fail('invalid','Unknown shift mode.');
+   const lo=c.start,hi=c.start+c.duration;
+   if(layerKeyTimes(l).some(t=>t+e.delta<lo||t+e.delta>hi))fail('invalid','Keys would leave the composition.');
+   const moved=shiftLayerKeys(l,e.delta);
+   if(e.mode==='slip')return setLayer(doc,moved);
+   const inT=l.inT+e.delta,outT=l.outT+e.delta;if(inT<0||outT>c.duration)fail('invalid','The layer would leave the composition.');
+   return setLayer(doc,{...moved,inT,outT});}
   case 'layer.parent':{const c=compOf(doc);const l=layerOf(doc,e.layer);
    if(e.parent!==null&&!findLayer(c,e.parent))fail('missing','Parent layer does not exist.');
    if(e.parent!==null&&wouldCycle(c,l.id,e.parent))fail('cycle','That parent would create a cycle.');

@@ -7,7 +7,7 @@ import {timingPlan,TIMING_MODES,MAX_TIMING_LAYERS,MAX_STAGGER_FRAMES,type Timing
 const expected=(m:string):never=>{throw Object.assign(new Error(m),{expected:true});};
 export const layerTimingSpecs=():CommandSpec<unknown,unknown>[]=>[{
  id:'animation.timing.apply',title:'Set layer in and out points on several layers',category:'Edit',level:'ui',keywords:['animation','timing','trim','stagger','markers','in','out'],
- params:{type:'object',properties:{layers:{type:'array',items:{type:'string',minLength:1,maxLength:64},minItems:1,maxItems:MAX_TIMING_LAYERS},mode:{enum:[...TIMING_MODES]},frames:{type:'integer',minimum:0,maximum:MAX_STAGGER_FRAMES}},required:['layers','mode'],additionalProperties:false},
+ params:{type:'object',properties:{layers:{type:'array',items:{type:'string',minLength:1,maxLength:64},minItems:1,maxItems:MAX_TIMING_LAYERS},mode:{enum:[...TIMING_MODES]},frames:{type:'integer',minimum:-MAX_STAGGER_FRAMES,maximum:MAX_STAGGER_FRAMES}},required:['layers','mode'],additionalProperties:false},
  enabled:()=>!!animationSession().document,
  run:((p:{layers:string[];mode:TimingMode;frames?:number})=>{
   const s=animationSession(),d=s.document,c=d?findComp(d):undefined;if(!c)return expected('No composition is open.');
