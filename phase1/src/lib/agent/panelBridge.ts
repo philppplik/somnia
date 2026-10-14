@@ -1,4 +1,4 @@
-import {assertLocalNativeRun,nativeRunLedger} from './nativeRun';
+import {assertLocalNativeRun,nativeRunLedger,type NativeActionReceipt} from './nativeRun';
 import {verifiedLocalProvider} from './verifiedLocalProvider';
 import {publishLocalContextBudget} from './localContextBudgetStore';
 import {defaultLocalContext,normalizeLocalContext,trimLocalContext} from './localAssistant';
@@ -21,7 +21,7 @@ import {subscribePhotoDevelop} from './photoDevelopWorkspace';
 import {studioWorkspace} from './studioWorkspace';
 import {createStudioReadOnlyRegistry} from './studioReadOnly';
 import {photoDevelopAdapter,createPhotoDevelopRegistry} from './photoStudio';
-import {getPhotoDevelop,applyPhotoDevelop,undoPhotoDevelop} from './photoDevelopWorkspace';
+import {getPhotoDevelop,acceptPhotoDevelopAction,undoPhotoDevelop} from './photoDevelopWorkspace';
 import {soundAdapter,createSoundStudioRegistry,parseSound} from './soundStudio';
 import {getSound,applySound,undoSound} from './soundWorkspace';
 import {deckAdapter,createDeckStudioRegistry} from './deckStudio';
@@ -121,12 +121,17 @@ const documents=new DocumentRegistry([codeAdapter,photoAdapter,photoDevelopAdapt
 const policy=new PolicyGateway();
 const photoPreviews=new Map<string,PhotoPreview>();
 const nativeIds=new Map<string,string>();
+const actionReceipts=new Map<string,NativeActionReceipt>();
 const transactions=new TransactionManager(documents,policy,{
  hold:async path=>{if(documents.snapshot(path).ref.studioKind==='code')await holdAgentAutosave([path]);syncDocuments();},
  apply:async(path,text,origin)=>{
   const adapter=documents.snapshot(path).ref.adapter;
   if(adapter===photoAdapter.id){const preview=photoPreviews.get(text);if(!preview)throw Error('No validated Photo preview.');applyPhoto(path,text,origin,preview);}
-  else if(adapter===photoDevelopAdapter.id)applyPhotoDevelop(path,text,origin);
+  else if(adapter===photoDevelopAdapter.id){
+   const reviewed=[...nativeIds.values()].map(id=>transactions.get(id)).find(p=>p.origin===origin);if(!reviewed)throw Error('No reviewed Photos action.');
+   const receipt=acceptPhotoDevelopAction({id:reviewed.id,target:reviewed.base,effect:'edit',reviewId:reviewed.id,history:'one-native-entry'},reviewed.id,text,origin,()=>documents.snapshot(path));
+   actionReceipts.set(origin,receipt);if(receipt.outcome!=='applied')throw Error('Photo action not verified applied. Inspect before retrying.');
+  }
   else if(adapter===soundAdapter.id){const e=getSound(path);if(!e?.session.original)throw Error('Audio is no longer open.');parseSound(text,e.session.plugins,e.session.original.report.input.duration_s);applySound(path,text,origin);}
   else if(adapter===deckAdapter.id)await applyDeck(path,text,origin);
   else if(adapter===codeAdapter.id)applyOperations([{type:'replaceSource',file:path,text}],'ai',origin);
@@ -333,7 +338,7 @@ export const realCore:AgentCore={
    const p=transactions.get(nativeId);
    if(decisions&&reviewChangeSet(set).some(r=>r.hunks.some(h=>decisions[h.key]!=='accept')))throw Error('Native proposals require accepting the complete preview.');
    policy.grant({effect:'edit',documentIds:[p.base.documentId],proposalId:nativeId});
-   syncDocuments();try{await transactions.accept(nativeId,p.after);}catch(e){nativeRunLedger.record(p.runId,{phase:'failed',target:p.base,proposalId:id,history:'unverified',readback:'unverified'});throw e;}nativeRunLedger.record(p.runId,{phase:'applied',target:documents.snapshot(p.base.path).ref,proposalId:id,history:'unverified',readback:'verified'});proposals.delete(id);session?.discardProposals();
+   syncDocuments();try{await transactions.accept(nativeId,p.after);}catch(e){nativeRunLedger.record(p.runId,{phase:'failed',target:p.base,proposalId:id,history:'unverified',readback:'unverified'});throw e;}nativeRunLedger.record(p.runId,{phase:'applied',target:documents.snapshot(p.base.path).ref,proposalId:id,history:actionReceipts.get(p.origin)?.undoEntries??'unverified',readback:'verified'});proposals.delete(id);session?.discardProposals();
    patchState({notice:'AI changes applied to editor, not saved.'});return;
   }
   throw Error('Legacy proposals are not supported in native studio mode.');
@@ -341,7 +346,7 @@ export const realCore:AgentCore={
  },
  async rejectProposal(id){dropMcpProposal(id);const set=proposals.get(id);if(set)for(const f of set.files)photoPreviews.delete(f.proposedText);const n=nativeIds.get(id);if(n)transactions.reject(n);proposals.delete(id);session?.discardProposals();},
  async revertProposal(id){dropMcpProposal(id);const n=nativeIds.get(id);if(!n)throw Error('No native AI transaction.');await transactions.undo(n);const receipt=transactions.get(n);nativeRunLedger.record(receipt.runId,{phase:'undone',target:documents.snapshot(receipt.base.path).ref,proposalId:id,history:'unverified',readback:documents.snapshot(receipt.base.path).text===receipt.before?'verified':'unverified'});photoPreviews.delete(transactions.get(n).after);patchState({notice:'AI transaction undone, not saved.'});},
- clear(){nativeRunLedger.clear();photoPreviews.clear();activeController?.abort();activeController=null;runGeneration++;sessionSerial++;session?.cancel();session=null;proposals.clear();permissions.clear();policy.revoke();send=null;}
+ clear(){actionReceipts.clear();nativeRunLedger.clear();photoPreviews.clear();activeController?.abort();activeController=null;runGeneration++;sessionSerial++;session?.cancel();session=null;proposals.clear();permissions.clear();policy.revoke();send=null;}
 };
 subscribeProjectTransactions(tx=>{for(const op of tx.operations??[])if(op.type==='renameFile'){try{documents.rename(op.file,op.to);}catch{/* document not registered yet */}}});
 subscribe(()=>{if(epoch!==getProjectGeneration()){realCore.clear?.();documents.clear();transactions.clear();nativeIds.clear();epoch=getProjectGeneration();}syncDocuments();});
