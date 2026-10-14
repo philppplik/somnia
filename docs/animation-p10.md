@@ -374,3 +374,7 @@ Repeater `hue` (deg per copy, -360..360): copy i gets `filter=hue-rotate(hue*i d
 ## P74
 
 `gradient.angleAnim` (scalar Property, degrees, -3600..3600) on fill and stroke gradients. `gradientAt(g,tick)` returns the gradient with the sampled angle. Lanes gradFillAngle and gradStrokeAngle reuse style.key.move and styleKeyDeleteEdits.
+
+## P75
+
+`gradient.anim` {cx,cy,radius,startOpacity,endOpacity} scalar Properties. Lanes gradFill/gradStroke + Cx|Cy|Radius|StartOpacity|EndOpacity reuse style.key.move and styleKeyDeleteEdits. Baking the last key of an opacity at 100 drops the field (legacy output stays identical).

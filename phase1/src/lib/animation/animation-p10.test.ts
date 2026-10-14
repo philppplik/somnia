@@ -1745,3 +1745,30 @@ test('P74 gradient angle keyframes: fill and stroke sampling, lanes, move, delet
  assert.throws(()=>applyEdit(d,{type:'gradient.angle',layer:'pa',target:'fill',op:'set',value:9999,t:0}),Error);
  assert.throws(()=>applyEdit(strokeDoc([{x:0.2,y:0.2},{x:0.8,y:0.2}],false,8),{type:'gradient.angle',layer:'pa',target:'fill',op:'set',value:1,t:0}),Error);
 });
+
+test('P75 gradient radial and opacity keyframes: sampling, lanes, bake, validation',()=>{
+ let d=strokeDoc([{x:0.2,y:0.2},{x:0.8,y:0.2},{x:0.8,y:0.8}],true,8);
+ d=applyEdit(d,{type:'layer.update',layer:'pa',source:{gradient:{start:'#ff0000',end:'#0000ff',angle:0,kind:'radial'}}});
+ d=applyEdit(d,{type:'layer.stroke',layer:'pa',stroke:{color:'#00ff00',width:8,gradient:{start:'#ff0000',end:'#0000ff',angle:0,kind:'radial'}}});
+ const plain=frameSvg(comp(d),0);
+ const T=8000*30;
+ for(const target of ['fill','stroke'] as const){
+  d=applyEdit(d,{type:'gradient.prop',layer:'pa',target,prop:'radius',op:'animate',on:true,t:0});
+  d=applyEdit(d,{type:'gradient.prop',layer:'pa',target,prop:'radius',op:'set',value:1,t:T});
+ }
+ d=applyEdit(d,{type:'gradient.prop',layer:'pa',target:'fill',prop:'endOpacity',op:'animate',on:true,t:0});
+ d=applyEdit(d,{type:'gradient.prop',layer:'pa',target:'fill',prop:'endOpacity',op:'set',value:20,t:T});
+ assert.equal(frameSvg(comp(d),0),plain,'keys at the static values change nothing');
+ const mid=frameSvg(comp(d),T);
+ assert.ok(mid.includes('r="1"')&&mid.includes('stop-opacity="0.2"'),mid);
+ assert.deepEqual(validateDocument(d),[]);
+ const ids=styleKeyLanes(comp(d).layers.find(l=>l.id==='pa')!).map(l=>l.id);
+ assert.ok(['gradFillRadius','gradStrokeRadius','gradFillEndOpacity'].every(x=>(ids as string[]).includes(x)),ids.join());
+ const moved=applyEdit(d,{type:'style.key.move',layer:'pa',lane:'gradStrokeRadius',from:T,to:T*2});
+ assert.deepEqual(styleKeyLanes(comp(moved).layers.find(l=>l.id==='pa')!).find(l=>l.id==='gradStrokeRadius')!.ticks,[0,T*2]);
+ const gone=applyEdits(d,styleKeyDeleteEdits('pa',[{lane:'gradFillEndOpacity',t:0},{lane:'gradFillEndOpacity',t:T}]));
+ const g=comp(gone).layers.find(l=>l.id==='pa')!.source.gradient!;
+ assert.equal(g.endOpacity,20);assert.ok(g.anim?.radius);assert.equal(g.anim?.endOpacity,undefined);
+ assert.throws(()=>applyEdit(d,{type:'gradient.prop',layer:'pa',target:'fill',prop:'radius',op:'set',value:5,t:0}),Error);
+ assert.throws(()=>applyEdit(d,{type:'gradient.prop',layer:'pa',target:'fill',prop:'startOpacity',op:'set',value:101,t:0}),Error);
+});

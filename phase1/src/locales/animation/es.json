@@ -649,5 +649,6 @@
  "animation.repeater.animateShort": "Fotogramas clave",
  "animation.gradient.angleLane": "Ángulo del degradado de relleno",
  "animation.gradient.strokeAngleLane": "Ángulo del degradado del trazo",
- "animation.gradient.angleAnimate": "Animar ángulo del degradado"
+ "animation.gradient.angleAnimate": "Animar ángulo del degradado",
+ "animation.gradient.animateProp": "Animar {name}"
 }

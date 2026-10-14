@@ -1,7 +1,13 @@
 import {evaluate} from './interpolate';
+import {GRADIENT_KEYS} from './keyTypes';
 import type {Property} from './model';
-/** The gradient with its keyed angle sampled at `tick`; the result carries no `angleAnim`. */
-export function gradientAt<G extends {angle:number;angleAnim?:Property}>(g:G,tick:number):Omit<G,'angleAnim'>{
- if(!g.angleAnim?.keys.length)return g;
- const {angleAnim,...rest}=g;return {...rest,angle:evaluate(angleAnim,tick) as number};
+import type {GradientKey} from './keyTypes';
+type Anim={angle:number;angleAnim?:Property;anim?:{[K in GradientKey]?:Property}};
+/** The gradient with every keyed value sampled at `tick`; the result carries no key data. */
+export function gradientAt<G extends Anim>(g:G,tick:number):Omit<G,'angleAnim'|'anim'>{
+ if(!g.angleAnim?.keys.length&&!g.anim)return g;
+ const {angleAnim,anim,...rest}=g,out:Record<string,unknown>={...rest};
+ if(angleAnim?.keys.length)out.angle=evaluate(angleAnim,tick) as number;
+ if(anim)for(const k of GRADIENT_KEYS){const p=anim[k];if(p?.keys.length)out[k]=evaluate(p,tick) as number;}
+ return out as Omit<G,'angleAnim'|'anim'>;
 }

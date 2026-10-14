@@ -649,5 +649,6 @@
  "animation.repeater.animateShort": "Keyframes",
  "animation.gradient.angleLane": "Füllverlauf Winkel",
  "animation.gradient.strokeAngleLane": "Konturverlauf Winkel",
- "animation.gradient.angleAnimate": "Verlaufswinkel animieren"
+ "animation.gradient.angleAnimate": "Verlaufswinkel animieren",
+ "animation.gradient.animateProp": "{name} animieren"
 }

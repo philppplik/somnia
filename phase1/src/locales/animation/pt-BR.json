@@ -649,5 +649,6 @@
  "animation.repeater.animateShort": "Quadros-chave",
  "animation.gradient.angleLane": "Ângulo do gradiente de preenchimento",
  "animation.gradient.strokeAngleLane": "Ângulo do gradiente do traço",
- "animation.gradient.angleAnimate": "Animar ângulo do gradiente"
+ "animation.gradient.angleAnimate": "Animar ângulo do gradiente",
+ "animation.gradient.animateProp": "Animar {name}"
 }

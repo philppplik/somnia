@@ -649,5 +649,6 @@
  "animation.repeater.animateShort": "Keyframes",
  "animation.gradient.angleLane": "Fill gradient angle",
  "animation.gradient.strokeAngleLane": "Stroke gradient angle",
- "animation.gradient.angleAnimate": "Animate gradient angle"
+ "animation.gradient.angleAnimate": "Animate gradient angle",
+ "animation.gradient.animateProp": "Animate {name}"
 }
