@@ -1,5 +1,7 @@
 # Local models in Settings > AI
 
+For the current A-V user guide, including optional default-off voice, offline mode and local-store privacy, read [Local AI in Somnia](LOCAL-AI-IN-SOMNIA.md). This older implementation guide preserves phase-era verification notes; its earlier voice status is historical. Release acceptance remains [pending evidence](LOCAL-AI-ACCEPTANCE.md).
+
 ## What each label means
 
 Installed means an exact tag is present in the daemon inventory. Local weights reported means the daemon's metadata looks local, not that Somnia can detect a dishonest proxy. Advertised Text/Tools/Vision is model metadata, not tested task quality. Loaded/VRAM comes from the last `/api/ps` response and is not free capacity or exclusive ownership. Fit is a visible heuristic, not a speed or allocation guarantee. Unknown stays unknown.
