@@ -589,5 +589,6 @@
  "studio3d.measure.pick": "Haz clic en dos puntos de la vista",
  "cmd.studio3d.pivot.set": "Definir el pivote de transformación 3D",
  "cmd.studio3d.cursor.set": "Mover el cursor 3D",
- "cmd.studio3d.measure.set": "Activar la herramienta de medición 3D"
+ "cmd.studio3d.measure.set": "Activar la herramienta de medición 3D",
+ "cmd.studio3d.object.reorder": "Mover objetos 3D junto a un hermano en el esquema"
 }

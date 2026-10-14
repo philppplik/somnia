@@ -589,5 +589,6 @@
  "studio3d.measure.pick": "Zwei Punkte im Viewport klicken",
  "cmd.studio3d.pivot.set": "3D-Transformationspivot setzen",
  "cmd.studio3d.cursor.set": "3D-Cursor verschieben",
- "cmd.studio3d.measure.set": "3D-Messwerkzeug umschalten"
+ "cmd.studio3d.measure.set": "3D-Messwerkzeug umschalten",
+ "cmd.studio3d.object.reorder": "3D-Objekte im Gliederungsbaum neben ein Geschwister verschieben"
 }

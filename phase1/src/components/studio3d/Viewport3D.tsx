@@ -907,7 +907,7 @@ export default function Viewport3D(){
    save:saveDocument,deleteSelection,duplicateSelection,exportMesh,setExportOptions,renderTurntable,cancelRender:()=>{cancelFlag=true;},setUnit,openFiles,newScene,resetView:frameAll,frameSelection,select,renderStill,exportGlb,
    addPrimitive:k=>{const o=stage.addPrimitive(k);select(o.id);return o.id;},addLight:k=>{const o=stage.addLight(k);select(o.id);return o.id;},addLightRig:()=>{const l=stage.addLightRig();select(l[0].id);return l.map(x=>x.id);},
    setTransform:(id,p)=>stage.setTransform(id,p),setMaterial:(id,p)=>stage.setMaterial(id,p),rename:(id,n)=>stage.rename(id,n),
-   setObjectVisible:(id,on)=>{stage.setHidden(id,!on);sync();invalidate();},setObjectLocked:(id,on)=>{stage.setLocked(id,on);sync();},reparent:(ids,parent)=>{stage.reparent(ids,parent);sync();invalidate();},
+   setObjectVisible:(id,on)=>{stage.setHidden(id,!on);sync();invalidate();},setObjectLocked:(id,on)=>{stage.setLocked(id,on);sync();},reparent:(ids,parent)=>{stage.reparent(ids,parent);sync();invalidate();},reorder:(ids,target,where)=>{stage.reorder(ids,target,where);sync();invalidate();},
    addCamera:(fromView,kind)=>{
     const o=fromView?stage.addCamera({position:{x:camera.position.x,y:camera.position.y,z:camera.position.z},quaternion:camera.quaternion.toArray().slice(0,4) as [number,number,number,number]},camera.fov,kind):stage.addCamera(undefined,40,kind);
     select(o.id);return o.id;},

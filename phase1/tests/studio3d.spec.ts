@@ -1164,3 +1164,33 @@ test('3D studio precision tools: snap modes and hotkey, measure picks, transform
  await expect(page.getByTestId('studio3d-measure')).toHaveCount(0);
  expect((await session(page)).measure).toBe(null);
 });
+
+test('3D studio outliner: drag reorder next to siblings with one undo',async({page})=>{
+ await blank(page);
+ const a=await insert(page,'cube',-2);const b=await insert(page,'sphere',0);const c=await insert(page,'cone',2);
+ const order=async()=>(await session(page)).outline.filter(o=>o.depth===0).map(o=>o.name);
+ expect(await order()).toEqual(['Cube','Sphere','Cone']);
+ // Move the cone in front of the cube; the outline order updates and one undo restores it.
+ expect(await run(page,'studio3d.object.reorder',{ids:[c],target:a,where:'before'})).toBe(true);
+ expect(await order()).toEqual(['Cone','Cube','Sphere']);
+ await run(page,'studio3d.undo');
+ expect(await order()).toEqual(['Cube','Sphere','Cone']);
+ await run(page,'studio3d.redo');
+ expect(await order()).toEqual(['Cone','Cube','Sphere']);
+ // Move the sphere after the cone.
+ expect(await run(page,'studio3d.object.reorder',{ids:[b],target:c,where:'after'})).toBe(true);
+ expect(await order()).toEqual(['Cone','Sphere','Cube']);
+ // Reorder into a group child slot: the cube before the cone's sibling inside a group.
+ expect(await run(page,'studio3d.group',{ids:[c,b]})).toBe(true);
+ expect(await run(page,'studio3d.object.reorder',{ids:[a],target:c,where:'after'})).toBe(true);
+ const s1=await session(page);
+ const grp=s1.outline.find(o=>o.kind==='group')!;
+ expect(s1.outline.filter(o=>o.depth===1).map(o=>o.name)).toEqual(['Cone','Cube','Sphere']);
+ await run(page,'studio3d.undo');
+ const s2=await session(page);
+ expect(s2.outline.filter(o=>o.depth===1).map(o=>o.name)).toEqual(['Cone','Sphere']);
+ expect(s2.outline.find(o=>o.id===a)?.depth).toBe(0);
+ // Dropping a row onto itself is a no-op.
+ expect(await run(page,'studio3d.object.reorder',{ids:[a],target:a,where:'before'})).toBe(true);
+ expect((await session(page)).outline.filter(o=>o.depth===1).map(o=>o.name)).toEqual(['Cone','Sphere']);
+});

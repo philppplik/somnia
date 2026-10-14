@@ -80,3 +80,49 @@ test('collectNodeExtras/applyNodeExtras carry hidden and locked flags, alone and
  assert.equal(flagAt(clone,li).userData.somniaLocked,true);
  assert.equal((flagAt(clone,li) as THREE.DirectionalLight).castShadow,true);
 });
+
+test('reorder moves a node before or after a sibling in one undo step',()=>{
+ const st=new Stage();
+ const a=st.addPrimitive('cube');const b=st.addPrimitive('sphere');const c=st.addPrimitive('cone');
+ const names=()=>st.root.children.map(o=>o.name);
+ assert.deepEqual(names(),['Cube','Sphere','Cone']);
+ st.reorder([c.id],a.id,'before');
+ assert.deepEqual(names(),['Cone','Cube','Sphere']);
+ st.undo();
+ assert.deepEqual(names(),['Cube','Sphere','Cone']);
+ st.redo();
+ assert.deepEqual(names(),['Cone','Cube','Sphere']);
+ st.reorder([a.id],c.id,'after');
+ assert.deepEqual(names(),['Cone','Cube','Sphere']); // already after
+ st.reorder([b.id],a.id,'before');
+ assert.deepEqual(names(),['Cone','Sphere','Cube']);
+});
+test('reorder across parents keeps the world transform and restores both in one undo',()=>{
+ const st=new Stage();
+ const g=st.group([st.addPrimitive('cube').id,st.addPrimitive('cone').id]);
+ const solo=st.addPrimitive('sphere');solo.position.set(3,1,0);
+ st.root.updateMatrixWorld(true);
+ const before=solo.getWorldPosition(new THREE.Vector3()).clone();
+ st.reorder([solo.id],g.id,'after');
+ assert.equal(st.find(solo.id)!.parent,st.root); // the group is a root child: after it means root level
+ const after=st.find(solo.id)!.getWorldPosition(new THREE.Vector3());
+ assert.ok(after.distanceTo(before)<1e-9,'world transform kept');
+ st.undo();
+ assert.ok(st.find(solo.id)!.getWorldPosition(new THREE.Vector3()).distanceTo(before)<1e-9);
+});
+test('reorder into a group child slot and drop-on-self no-op',()=>{
+ const st=new Stage();
+ const kid=st.addPrimitive('cube');
+ const g=st.group([kid.id,st.addPrimitive('cone').id]);
+ const loose=st.addPrimitive('sphere');
+ st.reorder([loose.id],kid.id,'before');
+ assert.equal(st.find(loose.id)!.parent,g);
+ assert.deepEqual(g.children.map(o=>o.name),['Sphere','Cube','Cone']);
+ st.undo();
+ assert.equal(st.find(loose.id)!.parent,st.root);
+ // Dropping a row onto itself changes nothing and pushes no undo entry.
+ const undoBefore=st.canUndo;
+ st.reorder([loose.id],loose.id,'before');
+ assert.equal(st.find(loose.id)!.parent,st.root);
+ assert.equal(st.canUndo,undoBefore);
+});

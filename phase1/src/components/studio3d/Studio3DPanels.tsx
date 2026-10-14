@@ -31,6 +31,8 @@ const NODE_MIME='application/x-somnia3d-node';
 const parseNodeDrag=(raw:string):number[]|null=>{if(!raw)return null;try{const v=JSON.parse(raw) as unknown;return Array.isArray(v)&&v.length&&v.every(x=>Number.isInteger(x)&&x>=0)?v as number[]:null;}catch{return null;}};
 export function ScenePanel(_:PanelHostProps){
  const {t}=useT();const s=useStudio3D();const [filter,setFilter]=useState('');const [renaming,setRenaming]=useState<number|null>(null);
+ // Drop target while dragging outline rows: groups accept drops into the middle, every row reorders at its top/bottom edge.
+ const [dropAt,setDropAt]=useState<{id:number;where:'before'|'after'|'into'}|null>(null);
  const currentSet=s.marked.length?[...s.marked]:s.selected!=null?[s.selected]:[];
  const rows=s.outline.filter(o=>o.name.toLowerCase().includes(filter.toLowerCase()));
  return <div className="grid gap-2 p-3" data-testid="studio3d-scene-panel">
@@ -54,11 +56,19 @@ export function ScenePanel(_:PanelHostProps){
   {!s.outline.length&&<StudioStatus live="off" className="block text-xs text-ink-3">{t('studio3d.scene.empty')}</StudioStatus>}
   <ul className="m-0 grid list-none gap-0.5 p-0" role="listbox" aria-label={t('studio3d.shell.scene')}
    onDragOver={e=>{if(e.dataTransfer.types.includes(NODE_MIME)){e.preventDefault();e.dataTransfer.dropEffect='move';}}}
-   onDrop={e=>{const ids=parseNodeDrag(e.dataTransfer.getData(NODE_MIME));if(!ids)return;e.preventDefault();void executeCommand('studio3d.object.reparent',{ids,parent:null});}}>{rows.map(o=>
+   onDrop={e=>{const ids=parseNodeDrag(e.dataTransfer.getData(NODE_MIME));setDropAt(null);if(!ids)return;e.preventDefault();void executeCommand('studio3d.object.reparent',{ids,parent:null});}}>{rows.map(o=>
    <li key={o.id} role="option" aria-selected={s.selected===o.id} className="flex items-center gap-1" draggable={renaming!==o.id}
     onDragStart={e=>{const ids=s.marked.includes(o.id)&&s.marked.length>1?[...s.marked]:[o.id];e.dataTransfer.setData(NODE_MIME,JSON.stringify(ids));e.dataTransfer.effectAllowed='move';}}
-    onDragOver={e=>{if(e.dataTransfer.types.includes(NODE_MIME)){e.preventDefault();e.dataTransfer.dropEffect='move';e.stopPropagation();}}}
-    onDrop={e=>{const ids=parseNodeDrag(e.dataTransfer.getData(NODE_MIME));if(!ids)return;e.preventDefault();e.stopPropagation();void executeCommand('studio3d.object.reparent',{ids,parent:o.id});}}>
+    onDragEnd={()=>setDropAt(null)}
+    onDragOver={e=>{if(!e.dataTransfer.types.includes(NODE_MIME))return;e.preventDefault();e.dataTransfer.dropEffect='move';e.stopPropagation();
+     const r=e.currentTarget.getBoundingClientRect();const ratio=(e.clientY-r.top)/Math.max(r.height,1);
+     const where=o.kind==='group'?ratio<0.25?'before':ratio>0.75?'after':'into':ratio<0.5?'before':'after';
+     if(dropAt?.id!==o.id||dropAt.where!==where)setDropAt({id:o.id,where});}}
+    onDragLeave={()=>{if(dropAt?.id===o.id)setDropAt(null);}}
+    onDrop={e=>{const ids=parseNodeDrag(e.dataTransfer.getData(NODE_MIME));const at=dropAt?.id===o.id?dropAt.where:o.kind==='group'?'into':'after';setDropAt(null);
+     if(!ids||ids.includes(o.id))return;e.preventDefault();e.stopPropagation();
+     if(at==='into')void executeCommand('studio3d.object.reparent',{ids,parent:o.id});
+     else void executeCommand('studio3d.object.reorder',{ids,target:o.id,where:at});}}>
     <input type="checkbox" checked={s.marked.includes(o.id)} aria-label={t('studio3d.mark.object',{name:o.name})} onChange={e=>patchStudio3D({marked:e.currentTarget.checked?[...s.marked,o.id]:s.marked.filter(x=>x!==o.id)})}/>
     <Button variant="outline" className="px-1" aria-pressed={!o.hidden} aria-label={t(o.hidden?'studio3d.outline.show':'studio3d.outline.hide',{name:o.name})} onClick={()=>void executeCommand('studio3d.object.visible',{id:o.id,on:o.hidden})}>{o.hidden?<EyeOff size={13} aria-hidden/>:<Eye size={13} aria-hidden/>}</Button>
     <Button variant="outline" className="px-1" aria-pressed={o.locked} aria-label={t(o.locked?'studio3d.outline.unlock':'studio3d.outline.lock',{name:o.name})} onClick={()=>void executeCommand('studio3d.object.locked',{id:o.id,on:!o.locked})}>{o.locked?<Lock size={13} aria-hidden/>:<LockOpen size={13} aria-hidden/>}</Button>
@@ -66,7 +76,7 @@ export function ScenePanel(_:PanelHostProps){
      <Input autoFocus defaultValue={o.name} aria-label={t('studio3d.outline.rename',{name:o.name})} className="min-w-0 flex-1"
       onBlur={e=>{const n=e.currentTarget.value.trim();setRenaming(null);if(n&&n!==o.name)void executeCommand('studio3d.object.rename',{id:o.id,name:n});}}
       onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();if(e.key==='Escape'){e.currentTarget.value=o.name;e.currentTarget.blur();}}}/>:
-     <button type="button" style={{paddingLeft:8+o.depth*12}} data-testid={'studio3d-outline-row-'+o.id} className={'min-w-0 flex-1 truncate rounded-sm py-1 pr-2 text-left text-xs hover:bg-hover '+(s.selected===o.id?'bg-accent-soft text-accent':'text-ink-2')+(o.hidden?' opacity-50':'')}
+     <button type="button" style={{paddingLeft:8+o.depth*12}} data-testid={'studio3d-outline-row-'+o.id} className={'min-w-0 flex-1 truncate rounded-sm py-1 pr-2 text-left text-xs hover:bg-hover '+(s.selected===o.id?'bg-accent-soft text-accent':'text-ink-2')+(o.hidden?' opacity-50':'')+(dropAt?.id===o.id?dropAt.where==='before'?' border-t-2 border-accent':dropAt.where==='after'?' border-b-2 border-accent':' bg-accent-soft':'')}
       onClick={e=>{
        if(e.shiftKey&&s.selected!=null&&s.selected!==o.id){
         const order=s.outline.map(x=>x.id);const a=order.indexOf(s.selected),b=order.indexOf(o.id);

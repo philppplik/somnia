@@ -82,6 +82,7 @@ export interface Studio3DController{
  setObjectVisible(id:number,on:boolean):void;
  setObjectLocked(id:number,on:boolean):void;
  reparent(ids:number[],parent:number|null):void;
+ reorder(ids:number[],target:number,where:'before'|'after'):void;
  remove(id:number):void;
  duplicate(id:number):number;
  group(ids:number[]):number;
@@ -204,6 +205,7 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{id?:number;on?:boolean}>('studio3d.object.visible','Show or hide a 3D object in the scene','Edit',p=>{const id=p.id??getStudio3DState().selected;if(id==null)throw new Error('Select an object first.');const cur=getStudio3DState().outline.find(o=>o.id===id);need().setObjectVisible(id,p.on??(cur?cur.hidden:false));},object({id:{type:'integer',minimum:0},on:{type:'boolean'}},[]),hasScene),
   add<{id?:number;on?:boolean}>('studio3d.object.locked','Lock or unlock a 3D object against viewport selection','Edit',p=>{const id=p.id??getStudio3DState().selected;if(id==null)throw new Error('Select an object first.');const cur=getStudio3DState().outline.find(o=>o.id===id);need().setObjectLocked(id,p.on??(cur?!cur.locked:false));},object({id:{type:'integer',minimum:0},on:{type:'boolean'}},[]),hasScene),
   add<{ids:number[];parent:number|null}>('studio3d.object.reparent','Move 3D objects under a new parent, keeping their world transforms','Edit',p=>need().reparent(p.ids,p.parent),object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500},parent:{anyOf:[{type:'null'},{type:'integer',minimum:0}]}},['ids','parent']),hasScene),
+  add<{ids:number[];target:number;where:'before'|'after'}>('studio3d.object.reorder','Move 3D objects next to a sibling in the outline','Edit',p=>need().reorder(p.ids,p.target,p.where),object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500},target:{type:'integer',minimum:0},where:{enum:['before','after']}},['ids','target','where']),hasScene),
   add<{ids:number[]}>('studio3d.group','Group 3D objects under a new parent','Edit',p=>{need().group(p.ids);},object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:2,maxItems:500}}),hasScene),
   add<{id:number}>('studio3d.ungroup','Dissolve a 3D group, keeping its children','Edit',p=>need().ungroup(p.id),object({id:{type:'integer',minimum:0}}),hasScene),
   add<{ids:number[];mode:'linear'|'radial';count:number;dx?:number;dy?:number;dz?:number;axis?:'x'|'y'|'z';angle?:number;cx?:number;cy?:number;cz?:number}>('studio3d.object.array','Duplicate 3D objects as a linear or radial array','Edit',

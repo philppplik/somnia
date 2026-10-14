@@ -5,7 +5,7 @@ const rail=(id:string,icon:string,label:string,order:number):RailItemDef=>({id,i
 export const STUDIO3D_LAYOUT:StudioLayout={leftOpen:true,rightOpen:true,leftWidth:260,rightWidth:300,leftPanels:['scene'],rightPanels:['inspector'],activeLeft:'scene',activeRight:'inspector'};
 export const studio3DShell:StudioShellDef={
  panels:[
-  {id:'scene',title:'Scene',titleKey:'studio3d.shell.scene',component:'studio3d.scene',side:'left',commands:['studio3d.select','studio3d.insert.primitive','studio3d.insert.light','studio3d.light.rig','studio3d.insert.camera','studio3d.gizmo.mode','studio3d.group','studio3d.ungroup','studio3d.object.reparent','studio3d.object.visible','studio3d.object.locked','studio3d.object.array']},
+  {id:'scene',title:'Scene',titleKey:'studio3d.shell.scene',component:'studio3d.scene',side:'left',commands:['studio3d.select','studio3d.insert.primitive','studio3d.insert.light','studio3d.light.rig','studio3d.insert.camera','studio3d.gizmo.mode','studio3d.group','studio3d.ungroup','studio3d.object.reparent','studio3d.object.reorder','studio3d.object.visible','studio3d.object.locked','studio3d.object.array']},
   {id:'inspector',title:'3D inspector',titleKey:'studio3d.shell.inspector',component:'shell.inspector',side:'right',defaultOpen:true},
  ],
  leftRail:[rail('scene','Boxes','Scene',10)],

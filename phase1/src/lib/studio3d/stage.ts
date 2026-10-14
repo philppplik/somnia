@@ -1675,7 +1675,7 @@ export class Stage{
   o.userData.somniaLocked=locked;this.push({label:`${locked?'Lock':'Unlock'} ${o.name}`,undo:()=>{o.userData.somniaLocked=!locked;},redo:()=>{o.userData.somniaLocked=locked;}});
  }
  /** Moves objects under a new parent (null = scene root), keeping their world transforms. One undo step for all. */
- reparent(ids:number[],parentId:number|null){
+ reparent(ids:number[],parentId:number|null,index?:number){
   const objs=this.topLevel(this.needMany(ids,1));
   const parent=parentId==null?this.root:this.need(parentId);
   if((parent as THREE.Bone).isBone)throw new StageError('Objects cannot be moved under a bone.');
@@ -1684,9 +1684,29 @@ export class Stage{
    for(let p=parent.parent;p;p=p.parent)if(p===o)throw new StageError(`${o.name} cannot be moved into its own child.`);
   }
   const before=objs.map(o=>({o,from:o.parent!,at:o.parent!.children.indexOf(o)}));
-  const move=()=>{for(const o of objs)parent.attach(o);};
+  const move=()=>{
+   for(const o of objs)parent.attach(o);
+   // An explicit slot pulls the moved children out of the end and inserts them in order.
+   if(index!==undefined){
+    const ch=parent.children;let slot=Math.max(0,Math.min(index,ch.length-objs.length));
+    for(const o of objs){ch.splice(ch.indexOf(o),1);ch.splice(slot++,0,o);}
+   }
+  };
   const back=()=>{for(const b of before){b.from.attach(b.o);const ch=b.from.children;ch.splice(ch.indexOf(b.o),1);ch.splice(Math.min(b.at,ch.length),0,b.o);}};
   move();this.push({label:`Move ${objs.length===1?objs[0].name:`${objs.length} objects`} to ${parent===this.root?'the scene root':parent.name||'a new parent'}`,undo:back,redo:move});
+ }
+ /** Moves objects next to a sibling in the outline: same parent as the target, one slot before or after it. World transforms are kept. */
+ reorder(ids:number[],targetId:number,where:'before'|'after'){
+  const objs=this.topLevel(this.needMany(ids,1));
+  const target=this.need(targetId);
+  if(objs.some(o=>o===target||o===this.root))return; // dropping a row onto itself is a no-op
+  const parent=target.parent;
+  if(!parent)throw new StageError('The scene root cannot be reordered.');
+  const dragged=new Set(objs.map(o=>o.id));
+  let slot=parent.children.filter(c=>!dragged.has(c.id)).indexOf(target);
+  if(slot<0)return;
+  if(where==='after')slot+=1;
+  this.reparent(ids,parent===this.root?null:parent.id,slot);
  }
  rename(id:number,name:string){
   const o=this.need(id);const n=name.trim();if(!n)throw new StageError('A name cannot be empty.');if(n===o.name)return;
