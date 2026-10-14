@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {transformExpr,measureInfo,formatMeasure,mergeSnap,defaultSnap,SnapError} from './model';
+import {transformExpr,measureInfo,formatMeasure,snapMeasurePoint,mergeSnap,defaultSnap,SnapError} from './model';
 import {Stage} from './stage';
 import {resetStudio3D,getStudio3DState} from './session';
 
@@ -44,6 +44,19 @@ test('formatMeasure scales to the scene unit and lists the deltas',()=>{
  assert.equal(formatMeasure(up,'m'),'0.500 m · 90.0° · Δ 0.000 / 0.500 / 0.000 m');
  const neg=measureInfo({x:1,y:0,z:0},{x:0,y:0,z:0});
  assert.equal(formatMeasure(neg,'m'),'1.000 m · 0.0° · Δ -1.000 / 0.000 / 0.000 m');
+});
+test('snapMeasurePoint rounds to the grid, takes scene candidates and respects off',()=>{
+ const p={x:0.31,y:0.02,z:-0.44};
+ const sn={...defaultSnap(),on:true,move:0.25};
+ assert.deepEqual(snapMeasurePoint(p,sn),{x:0.25,y:0,z:-0.5});
+ assert.deepEqual(snapMeasurePoint(p,{...sn,on:false}),p);
+ // Vertex, surface and midpoint modes ask the scene lookup and fall back to the raw point.
+ const near={x:1,y:1,z:1};
+ assert.deepEqual(snapMeasurePoint(p,{...sn,mode:'vertex'},()=>near),near);
+ assert.deepEqual(snapMeasurePoint(p,{...sn,mode:'midpoint'},()=>null),p);
+ assert.deepEqual(snapMeasurePoint(p,{...sn,mode:'surface'},()=>near),near);
+ // Grid mode never consults the scene lookup.
+ assert.deepEqual(snapMeasurePoint(p,sn,()=>near),{x:0.25,y:0,z:-0.5});
 });
 test('mergeSnap accepts the midpoint mode and rejects unknown modes',()=>{
  assert.equal(mergeSnap(defaultSnap(),{mode:'midpoint'}).mode,'midpoint');

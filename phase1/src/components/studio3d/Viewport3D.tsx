@@ -29,7 +29,7 @@ import {readProjectUnit,writeProjectUnit} from '../../lib/studio3d/projectPrefs'
 import {checkPreset,presetPatch,readPresets,removePreset,savePreset,MaterialPresetError,type MaterialPreset} from '../../lib/studio3d/materialPresets';
 import type {MaterialSnapshot} from '../../lib/studio3d/stage';
 import {ASSET_MIME,parseAssetDrag} from '../../lib/studio3d/assetDrag';
-import {toggleSelection,marqueeRect,inRect,turntablePlan,frameName,exportFileName,unitScale,isUnit,isMeshFormat,mergeSnap,snapTo,measureInfo,formatMeasure,stlUnitHint,mtlReferences,mtlTextures,externalGltfNeeds,clampRenderSize,shadowMapSize,formatPerf,webmMime,MAX_MTL_BYTES,MAX_TEXTURE_BYTES,MAX_TEXTURE_FILES,SnapError,mergeEnv,envFormatFor,isShadowQuality,isShadowType,nudgeFor,EnvError,modelFormatFor,readModelHeader,ModelError,boundsValid,boundsCenter,boundsRadius,frameDistance,clipPlanes,pickClips,extractGltfTextures,GLTF_TEXTURE_MODES} from '../../lib/studio3d/model';
+import {toggleSelection,marqueeRect,inRect,turntablePlan,frameName,exportFileName,unitScale,isUnit,isMeshFormat,mergeSnap,snapTo,snapMeasurePoint,measureInfo,formatMeasure,stlUnitHint,mtlReferences,mtlTextures,externalGltfNeeds,clampRenderSize,shadowMapSize,formatPerf,webmMime,MAX_MTL_BYTES,MAX_TEXTURE_BYTES,MAX_TEXTURE_FILES,SnapError,mergeEnv,envFormatFor,isShadowQuality,isShadowType,nudgeFor,EnvError,modelFormatFor,readModelHeader,ModelError,boundsValid,boundsCenter,boundsRadius,frameDistance,clipPlanes,pickClips,extractGltfTextures,GLTF_TEXTURE_MODES} from '../../lib/studio3d/model';
 import type {Bounds} from '../../lib/studio3d/model';
 import {checkSkins,bonePickRadius,pickBone} from '../../lib/studio3d/skeleton';
 import {weightColor} from '../../lib/studio3d/skinning';
@@ -1286,16 +1286,23 @@ export default function Viewport3D(){
    ray.setFromCamera(new THREE.Vector2(((e.clientX-rect.left)/rect.width)*2-1,-(((e.clientY-rect.top)/rect.height)*2-1)),camera);
    return ray.intersectObject(holder,true).find(h=>(h.object as THREE.Mesh).isMesh&&!(h.object as THREE.SkinnedMesh).isSkinnedMesh&&chainOk(h.object))??null;
   };
+  /** One measure pick: mesh hit or ground plane, then the snap settings (grid rounds, vertex/surface/midpoint use the stage lookup). */
+  const pickMeasurePoint=(e:{clientX:number;clientY:number}):{x:number;y:number;z:number}|null=>{
+   const rect=renderer.domElement.getBoundingClientRect();
+   ray.setFromCamera(new THREE.Vector2(((e.clientX-rect.left)/rect.width)*2-1,-(((e.clientY-rect.top)/rect.height)*2-1)),camera);
+   const hit=ray.intersectObject(holder,true).find(h=>(h.object as THREE.Mesh).isMesh);
+   let p=hit?hit.point.clone():null;
+   if(!p){const tmp=new THREE.Vector3();if(ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),0),tmp))p=tmp;}
+   if(!p)return null;
+   const sn=getStudio3DState().snap;
+   return snapMeasurePoint({x:p.x,y:p.y,z:p.z},sn,mode=>stage.snapPoint({x:p.x,y:p.y,z:p.z},mode,[],Math.max(sn.move,0.05)));
+  };
   const onDown=(e:PointerEvent)=>{
    const st=getStudio3DState();
    // Measure tool: clicks pick world points (mesh hits first, ground plane as fallback) instead of selecting.
    if(st.measure&&gizmo.axis===null){
-    const rect=renderer.domElement.getBoundingClientRect();
-    ray.setFromCamera(new THREE.Vector2(((e.clientX-rect.left)/rect.width)*2-1,-(((e.clientY-rect.top)/rect.height)*2-1)),camera);
-    const hit=ray.intersectObject(holder,true).find(h=>(h.object as THREE.Mesh).isMesh);
-    let p=hit?hit.point.clone():null;
-    if(!p){const tmp=new THREE.Vector3();if(ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),0),tmp))p=tmp;}
-    if(p){const pt={x:p.x,y:p.y,z:p.z};const m=st.measure;patchStudio3D({measure:!m.a||m.b?{a:pt,b:null}:{a:m.a,b:pt}});syncMeasure();invalidate();}
+    const p=pickMeasurePoint(e);
+    if(p){const m=st.measure;patchStudio3D({measure:!m.a||m.b?{a:p,b:null}:{a:m.a,b:p}});syncMeasure();invalidate();}
     down=null;return;
    }
    if(st.sculpt.on){
@@ -1328,12 +1335,8 @@ export default function Viewport3D(){
    }
    const ms=getStudio3DState().measure;
    if(ms?.a&&!ms.b){
-    const rect=renderer.domElement.getBoundingClientRect();
-    ray.setFromCamera(new THREE.Vector2(((e.clientX-rect.left)/rect.width)*2-1,-(((e.clientY-rect.top)/rect.height)*2-1)),camera);
-    const hit=ray.intersectObject(holder,true).find(h=>(h.object as THREE.Mesh).isMesh);
-    let p=hit?hit.point.clone():null;
-    if(!p){const tmp=new THREE.Vector3();if(ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),0),tmp))p=tmp;}
-    if(p){mLineGeo.setFromPoints([new THREE.Vector3(ms.a.x,ms.a.y,ms.a.z),p]);mLine.visible=true;mDotB.position.copy(p);mDotB.visible=true;invalidate();}
+    const p=pickMeasurePoint(e);
+    if(p){mLineGeo.setFromPoints([new THREE.Vector3(ms.a.x,ms.a.y,ms.a.z),new THREE.Vector3(p.x,p.y,p.z)]);mLine.visible=true;mDotB.position.set(p.x,p.y,p.z);mDotB.visible=true;invalidate();}
    }
    if(!shiftDrag||!down||Math.hypot(e.clientX-down.x,e.clientY-down.y)<=4)return;
    if(!marquee){marquee=document.createElement('div');marquee.style.cssText='position:fixed;pointer-events:none;border:1px dashed var(--focus-ring);background:var(--accent-soft);z-index:50';marquee.setAttribute('aria-hidden','true');document.body.appendChild(marquee);}

@@ -1166,6 +1166,13 @@ test('3D studio precision tools: snap modes and hotkey, measure picks, transform
  expect(await run(page,'studio3d.unit.set',{unit:'m'})).toBe(true);
  expect((await session(page)).measure?.a).toBeTruthy();
  expect((await session(page)).measure?.b).toBeTruthy();
+ // Snapping applies to measure picks: grid mode rounds the picked point to the move step.
+ expect(await run(page,'studio3d.snap.set',{on:true,mode:'grid',move:0.5})).toBe(true);
+ await vp.click({position:{x:310,y:205}});
+ const snapped=(await session(page)).measure?.a;
+ expect(snapped).toBeTruthy();
+ for(const v of [snapped!.x,snapped!.y,snapped!.z])expect(Math.abs(v/0.5-Math.round(v/0.5))).toBeLessThan(1e-9);
+ expect(await run(page,'studio3d.snap.set',{on:false})).toBe(true);
  await page.keyboard.press('m');
  await expect(page.getByTestId('studio3d-measure')).toHaveCount(0);
  expect((await session(page)).measure).toBe(null);

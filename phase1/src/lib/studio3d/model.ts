@@ -239,6 +239,12 @@ export function measureInfo(a:Vec3Like,b:Vec3Like):{distance:number;angle:number
  const flat=Math.hypot(dx,dz);
  return {distance,angle:distance>0?Math.atan2(dy,flat)*180/Math.PI:0,delta:{x:dx,y:dy,z:dz}};
 }
+/** Applies the snap settings to a picked point: grid rounds to the move step, vertex/surface/midpoint take the nearest candidate from the scene lookup, and anything unreachable leaves the point alone. */
+export function snapMeasurePoint(p:Vec3Like,snap:Pick<SnapSettings,'on'|'mode'|'move'>,nearest?:(mode:'vertex'|'surface'|'midpoint')=>Vec3Like|null):Vec3Like{
+ if(!snap.on)return p;
+ if(snap.mode==='grid')return {x:snapTo(p.x,snap.move),y:snapTo(p.y,snap.move),z:snapTo(p.z,snap.move)};
+ return nearest?.(snap.mode)??p;
+}
 /** One-line measure readout in a scene unit: distance and elevation angle plus the signed per-axis deltas. */
 export function formatMeasure(info:{distance:number;angle:number;delta:Vec3Like},unit:ExportUnit):string{
  const k=unitScale(unit);const f=(v:number)=>{const x=v*k;return (Object.is(x,-0)?0:x).toFixed(3);};
