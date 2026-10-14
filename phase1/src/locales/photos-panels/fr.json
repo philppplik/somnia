@@ -92,6 +92,7 @@
  "cmd.photos.redo": "Photos : rétablir l’étape de développement",
  "cmd.photos.history.jump": "Photos : aller à une étape de l’historique",
  "cmd.photos.export": "Photos : exporter une copie développée",
+ "cmd.photos.export.advanced": "Photos: Export avancé (taille, qualité, profil, métadonnées)",
  "photos.preset.neutral": "Neutre",
  "photos.preset.vivid": "Éclatant",
  "photos.preset.matte": "Mat",

@@ -3,6 +3,8 @@ import {useSyncExternalStore} from 'react';
 import {PhotosEngine,type PhotosResponse} from './engine';
 import {getMedia,registerMediaCloseCleanup,registerMediaCloseGuard,subscribeMedia} from '../media';
 import {defaultImageHost,editedName} from '../imageEditorHost';
+import {renderAdvancedPhotoExport} from './advancedExport';
+import type {PhotoAdvancedOptions} from './photosExportSchema';
 import {t} from '../i18n';
 import {isNeutralPhoto,neutralPhotoSettings,photoSignature,sanitizePhotoSettings,PHOTO_INPUT,type PhotoCrop,type PhotoSettings} from './studioSettings';
 import {applySpots,spotSignature,type HealSpot} from './healSpots';
@@ -166,6 +168,23 @@ export function cancelPhotoCrop(name:string){const s=sessions.get(name);if(s?.cr
 export function closePhoto(name:string){
  clearTimeout(timers.get(name));timers.delete(name);runs.delete(name);gestures.delete(name);sources.delete(name);
  if(sessions.delete(name))emit();
+}
+/** AE1 preview path: renders the advanced option pipeline without saving. */
+export async function renderPhotoExportPreview(name:string,options:PhotoAdvancedOptions){
+ const s=sessions.get(name);if(!s||s.status==='error'||!sources.has(name))throw Error(t('photos.error.notReady'));
+ await ensureEngineSource(name);
+ return renderAdvancedPhotoExport(getEngine(),s.now,options);
+}
+/** AE1 save path: renders with the advanced options and writes the file under the chosen name. The original is never overwritten. */
+export async function exportPhotoCopyAdvanced(name:string,options:PhotoAdvancedOptions,injectedHost?:PhotoSaveHost):Promise<PhotoSaveOutcome>{
+ const s=sessions.get(name);if(!s||s.status==='error'||!sources.has(name))throw Error(t('photos.error.notReady'));
+ const snapshot=s.now;
+ const r=await renderPhotoExportPreview(name,options);
+ const ext=options.format==='png'?'png':options.format==='webp'?'webp':'jpg';
+ const host=injectedHost??await defaultImageHost();
+ const ok=await host.save(r.blob,`${options.name.replace(/\.[^.\\/]+$/,'').trim()||'image'}.${ext}`);
+ if(ok)patch(name,{saved:photoSignature(snapshot)});
+ return ok?'saved':'cancelled';
 }
 export type PhotoSaveOutcome='saved'|'cancelled';
 export interface PhotoSaveHost {save(blob:Blob,suggestedName:string):Promise<boolean>}

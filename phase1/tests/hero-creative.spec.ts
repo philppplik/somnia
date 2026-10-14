@@ -35,7 +35,7 @@ for(const theme of ['light','dark'])test(`export heroes: ${theme}`,async({page})
  await page.getByTestId('photos-workspace').waitFor();await page.waitForFunction(()=>!document.querySelector('[data-testid="hero-action-main"]').disabled);
  await page.getByTestId('hero-action-main').click();await page.getByTestId('photos-export-popover').waitFor();
  await page.screenshot({path:`test-results/hero-photos-${theme}.png`});
- await page.getByTestId('photos-export-format').selectOption('jpeg');d=page.waitForEvent('download');await page.getByTestId('photos-export-popover').getByRole('button',{name:'Export copy',exact:true}).click();download=await d;console.log('PHOTOS JPEG PATH (engine double)',download.suggestedFilename());
+ await page.getByTestId('photos-export-format').selectOption('jpeg');d=page.waitForEvent('download');await page.getByTestId('photos-export-popover').getByRole('button',{name:'Export',exact:true}).click();download=await d;console.log('PHOTOS JPEG PATH (engine double)',download.suggestedFilename());
  await page.keyboard.press('Escape');await page.keyboard.press('Control+Shift+E');await page.getByTestId('photos-export-popover').waitFor();assert.equal(await page.getByTestId('photos-export-format').inputValue(),'jpeg');await page.keyboard.press('Escape');
  await command('photos.crop.start',{});assert.equal(await page.getByTestId('hero-action-main').isDisabled(),true);await command('photos.crop.cancel',{});
  await page.setViewportSize({width:900,height:900});await page.getByTestId('hero-action-main').click();await page.getByTestId('photos-export-popover').waitFor();await page.screenshot({path:`test-results/hero-photos-narrow-${theme}.png`});

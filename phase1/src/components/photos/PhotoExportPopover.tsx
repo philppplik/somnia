@@ -1,32 +1,48 @@
-import {StudioProgress} from '../studios/StudioProgress';
-import {useEffect} from 'react';
-import {Popover} from '@base-ui/react/popover';
-import {useT} from '../../lib/useT';
-import {setPhotoExportState} from '../../lib/photos/exportState';
-import {isNeutralPhoto} from '../../lib/photos/studioSettings';
-import {photoExportEnabled} from '../../lib/photos/panelCommands';
+import {useEffect,useMemo,useRef,useState} from 'react';
+import {setPhotoExportState,usePhotoExportState} from '../../lib/photos/exportState';
+import {aspectComplement} from '../../lib/export/dimensions';
+import {exportPhotoCopyAdvanced,renderPhotoExportPreview} from '../../lib/photos/studioSession';
+import {photoExportSchema,photoOptionsToValues,valuesToPhotoOptions,PHOTO_EXPORT_DEFAULTS} from '../../lib/photos/photosExportSchema';
+import type {ExportValues,ExportValue} from '../../lib/export/schema';
+import {AdvancedExportDialog,type ExportPreview} from '../export/AdvancedExportDialog';
 import {useActivePhoto} from './panels/shared';
-import {usePhotoExport} from './panels/usePhotoExport';
-import {Button} from '../ui/button';
-import {NativeSelect} from '../ui/native-controls';
-/** Studio-owned host. Header remains data-only, and does not import photo controls. */
+/** Studio-owned host: the header command opens the shared Advanced Export dialog for Photos (AE1). */
 export function PhotoExportPopover(){
- const {t}=useT(),{session,name}=useActivePhoto(),e=usePhotoExport();
- useEffect(()=>()=>setPhotoExportState({open:false}),[]);
+ const {session,name}=useActivePhoto();const e=usePhotoExportState();
+ const source=useMemo(()=>({width:session?.sourceWidth??2048,height:session?.sourceHeight??2048}),[session?.sourceWidth,session?.sourceHeight]);
+ const schema=useMemo(()=>photoExportSchema(source),[source]);
+ const base=()=>name.replace(/\.[^.\\/]+$/,'');
+ const [values,setValues]=useState<ExportValues>(()=>({...photoOptionsToValues(PHOTO_EXPORT_DEFAULTS),name:base()}));
+ const [preview,setPreview]=useState<ExportPreview|null>(null);const [rendering,setRendering]=useState(false);
+ const [errorKey,setErrorKey]=useState<string|null>(null);const [errorDetail,setErrorDetail]=useState('');
+ const url=useRef<string|null>(null);const seq=useRef(0);
+ useEffect(()=>()=>{setPhotoExportState({open:false});if(url.current)URL.revokeObjectURL(url.current);},[]);
  useEffect(()=>{setPhotoExportState({open:false});},[name]);
- return <Popover.Root open={e.open&&!!session} onOpenChange={open=>setPhotoExportState({open})}>
-  <Popover.Portal><Popover.Positioner anchor={()=>document.querySelector('[data-hero-id="photos.export.open"]')} sideOffset={8} align="end" className="z-50">
-   <Popover.Popup className="menu-popup grid w-[300px] max-w-[calc(100vw-24px)] gap-3 !rounded-[25px] !p-4 text-xs" data-testid="photos-export-popover">
-    <Popover.Title className="m-0 text-sm font-semibold">{t('photos.hero.export')}</Popover.Title>
-    <form className="grid gap-3" onSubmit={ev=>{ev.preventDefault();if(photoExportEnabled())void e.run(e.format);}}>
-     <label className="grid gap-1">{t('photos.hero.format')}<NativeSelect autoFocus value={e.format} disabled={e.working} onChange={ev=>e.setFormat(ev.target.value as 'png'|'jpeg')} className="rounded-lg border border-line bg-panel p-2" data-testid="photos-export-format"><option value="png">PNG</option><option value="jpeg">JPEG</option></NativeSelect></label>
-     <p className="m-0 text-ink-3">{t('photos.hero.original')}</p>
-     {session&&isNeutralPhoto(session.now)&&<p className="m-0 text-ink-3">{t('photos.hero.unchanged')}</p>}
-     <Button type="submit" variant="primary" disabled={!photoExportEnabled()}>{t('photos.hero.copy')}</Button>
-     {e.working&&<StudioProgress label={t('photos.processing')}/>}
-     <p role="status" aria-live="polite" className="m-0 text-ink-2">{e.note}</p>
-    </form>
-   </Popover.Popup>
-  </Popover.Positioner></Popover.Portal>
- </Popover.Root>;
+ useEffect(()=>{if(e.open)setValues(v=>({...v,name:v.name||base()}));},[e.open]);
+ const change=(id:string,value:ExportValue)=>setValues(v=>{
+  const next={...v,[id]:value};
+  if(v.lockAspect&&v.mode==='exact'&&(id==='width'||id==='height')&&typeof value==='number'&&value>=1)next[id==='width'?'height':'width']=aspectComplement(source,id,value);
+  return next;
+ });
+ const apply=(preset:ExportValues)=>setValues(v=>({...v,...preset,name:v.name}));
+ useEffect(()=>{
+  if(!e.open||!session)return;
+  if(schema.validate(values)!==null){setPreview(null);setRendering(false);return;}
+  const id=++seq.current;const timer=setTimeout(()=>{setRendering(true);setErrorKey(null);
+   renderPhotoExportPreview(name,valuesToPhotoOptions(values)).then(r=>{
+    if(seq.current!==id)return;
+    if(url.current)URL.revokeObjectURL(url.current);
+    url.current=URL.createObjectURL(r.blob);
+    setPreview({url:url.current,bytes:r.bytes,width:r.width,height:r.height,note:r.note});setRendering(false);
+   }).catch(err=>{if(seq.current!==id)return;setRendering(false);setErrorKey('export.error.render');setErrorDetail(err instanceof Error?err.message:String(err));});
+  },450);
+  return()=>clearTimeout(timer);
+ },[values,e.open,session,name,schema]);
+ const run=async()=>{
+  if(e.working)return;setErrorKey(null);setPhotoExportState({working:true});
+  try{const outcome=await exportPhotoCopyAdvanced(name,valuesToPhotoOptions(values));if(outcome==='saved')setPhotoExportState({open:false});}
+  catch(err){setErrorKey('export.error.render');setErrorDetail(err instanceof Error?err.message:String(err));}
+  finally{setPhotoExportState({working:false});}
+ };
+ return <AdvancedExportDialog open={e.open&&!!session} onClose={()=>setPhotoExportState({open:false})} schema={schema} values={values} onChange={change} onApply={apply} preview={preview} rendering={rendering} busy={e.working} errorKey={errorKey} errorDetail={errorDetail} onExport={()=>void run()} contentTestId="photos-export-popover" fieldTestIds={{format:'photos-export-format'}}/>;
 }

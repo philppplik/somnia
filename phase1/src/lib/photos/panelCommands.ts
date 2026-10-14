@@ -9,6 +9,8 @@ import {registerCommandSpec} from '../commandBridge';
 import type {CommandSpec} from '../commandSpec';
 import {getMedia} from '../media';
 import {applyPhotoCrop,cancelPhotoCrop,commitPhotoSettings,dirtyPhoto,exportPhotoCopy,flipPhoto,getPhotoSession,historyPhoto,resetPhoto,rotatePhoto,setPhotoCropDraft,setPhotoCropping,type PhotoSession} from './studioSession';
+import {exportPhotoCopyAdvanced} from './studioSession';
+import {PHOTO_EXPORT_DEFAULTS,photoOptionsToValues,valuesToPhotoOptions,type PhotoAdvancedOptions} from './photosExportSchema';
 import {isNeutralPhoto,neutralPhotoSettings,PHOTO_CONTROLS,type PhotoSettings} from './studioSettings';
 import {applyLook,BUILT_IN_PRESETS,LOOK_KEYS,type Look} from './presets';
 import {decodeSettingsPayload} from './settingsClipboard';
@@ -105,6 +107,10 @@ export function photosCommandSpecs():CommandSpec<never,unknown>[]{
   {id:'photos.export',title:'Photos: Export a developed copy',category:'Project',level:'ui',keywords:['photos','export','save','png','jpeg'],
    params:{type:'object',properties:{format:{type:'string',enum:['png','jpeg']}},required:['format'],additionalProperties:false},enabled:photoExportEnabled,
    run:async(p:{format:'png'|'jpeg'})=>runPhotoExport(p.format)},
+  {id:'photos.export.advanced',title:'Photos: Advanced export with size, quality, profile and metadata',category:'Project',level:'ui',keywords:['photos','export','advanced','webp','quality','metadata'],
+   params:{type:'object',additionalProperties:false,properties:{format:{type:'string',enum:['png','jpeg','webp']},name:{type:'string'},mode:{type:'string',enum:['percent','exact']},scalePercent:{type:'number'},width:{type:'number'},height:{type:'number'},lockAspect:{type:'boolean'},quality:{type:'number'},profile:{type:'string',enum:['srgb','display-p3','grayscale']},metaTitle:{type:'string'},metaAuthor:{type:'string'},metaCopyright:{type:'string'},metaDescription:{type:'string'}}},enabled:photoExportEnabled,
+   run:async(p:Partial<PhotoAdvancedOptions>)=>{const name=need();if(!photoExportEnabled())throw Error('Photo export is busy.');setPhotoExportState({working:true});
+    try{const base=name.replace(/\.[^.\\/]+$/,'');return await exportPhotoCopyAdvanced(name,valuesToPhotoOptions({...photoOptionsToValues({...PHOTO_EXPORT_DEFAULTS,name:base}),...p}));}finally{setPhotoExportState({working:false});}}},
  ];
  return specs;
 }

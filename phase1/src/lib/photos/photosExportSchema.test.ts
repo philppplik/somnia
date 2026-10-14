@@ -1,0 +1,15 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {PHOTO_EXPORT_DEFAULTS,photoExportSchema,photoOptionsToValues,valuesToPhotoOptions,photoExportMetadata} from './photosExportSchema';
+const src={width:2000,height:1000};
+test('options<->values round-trips and clamps quality',()=>{const o=valuesToPhotoOptions(photoOptionsToValues(PHOTO_EXPORT_DEFAULTS));assert.deepEqual(o,PHOTO_EXPORT_DEFAULTS);
+ assert.equal(valuesToPhotoOptions({quality:250}).quality,100);assert.equal(valuesToPhotoOptions({quality:-4}).quality,1);
+ assert.equal(valuesToPhotoOptions({format:'tiff'}).format,'png');assert.equal(valuesToPhotoOptions({profile:'cmyk'}).profile,'srgb');});
+test('schema validate requires a name and checks dimensions against the source',()=>{const schema=photoExportSchema(src);
+ assert.equal(schema.validate(photoOptionsToValues(PHOTO_EXPORT_DEFAULTS)),'export.error.name');
+ assert.equal(schema.validate({...photoOptionsToValues(PHOTO_EXPORT_DEFAULTS),name:'x'}),null);
+ assert.equal(schema.validate({...photoOptionsToValues(PHOTO_EXPORT_DEFAULTS),name:'x',mode:'exact',width:500,height:0,lockAspect:true}),null);
+ assert.equal(schema.validate({...photoOptionsToValues(PHOTO_EXPORT_DEFAULTS),name:'x',mode:'exact',width:9000,height:9000,lockAspect:false}),'export.error.dims');
+ assert.equal(schema.validate({...photoOptionsToValues(PHOTO_EXPORT_DEFAULTS),name:'x',scalePercent:900}),'export.error.dims');});
+test('quality field hides for PNG, metadata mapping is complete',()=>{const schema=photoExportSchema(src);
+ const q=schema.fields.find(f=>f.id==='quality')!;assert.equal(q.visibleWhen!({format:'png'}),false);assert.equal(q.visibleWhen!({format:'jpeg'}),true);
+ assert.deepEqual(photoExportMetadata({...PHOTO_EXPORT_DEFAULTS,metaTitle:'T',metaAuthor:'A'}),{title:'T',author:'A',copyright:'',description:''});});

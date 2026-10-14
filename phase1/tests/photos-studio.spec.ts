@@ -102,3 +102,24 @@ for(const locale of ['de','es','fr','pt-BR'])test(`Photos Studio strings: ${loca
  await expect(page.getByTestId('photos-start')).toBeVisible();
  await expect(page.getByTestId('photos-start')).not.toContainText('photos.');
 });
+test('Photos AE1 advanced export: format, quality, metadata and custom name',async({page})=>{
+ await openPhoto(page);
+ await page.locator('[data-hero-id="photos.export.open"]').click();
+ const dialog=page.getByRole('dialog',{name:'Advanced Export',exact:true});
+ await expect(dialog).toBeVisible();
+ await expect(page.getByTestId('ae-size')).toContainText('Final size',{timeout:20000});
+ await expect(dialog.getByLabel('Quality',{exact:true})).toBeHidden();
+ await expect(dialog.getByLabel('Title',{exact:true})).toBeHidden();
+ await dialog.getByText('Metadata',{exact:true}).click();
+ await dialog.getByLabel('Title',{exact:true}).fill('Sunset');
+ await dialog.getByLabel('Format',{exact:true}).selectOption('jpeg');
+ await expect(dialog.getByLabel('Quality',{exact:true})).toBeVisible();
+ await expect(page.getByTestId('ae-size')).toContainText('Final size',{timeout:20000});
+ await dialog.getByLabel('File name',{exact:true}).fill('holiday');
+ const download=page.waitForEvent('download');await dialog.getByRole('button',{name:'Export',exact:true}).click();const d=await download;
+ expect(d.suggestedFilename()).toBe('holiday.jpg');
+ const bytes=readFileSync(await d.path()!);
+ expect(bytes[0]).toBe(0xff);expect(bytes[1]).toBe(0xd8);
+ expect(bytes.toString('latin1')).toContain('Title: Sunset');
+ await expect(dialog).toBeHidden();
+});

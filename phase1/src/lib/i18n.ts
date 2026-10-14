@@ -24,6 +24,7 @@ import {VECTOR_CATALOGUES} from './vectorstudio/i18n';
 import {DESIGN_CATALOGUES} from './design/i18n';
 import {VIBESPACE_CATALOGUES} from './vibespace/i18n';
 import {STUDIO3D_CATALOGUES} from './studio3d/i18n';
+import {EXPORT_CATALOGUES} from './export/i18n';
 /**
  * Small in-house i18n layer (no dependency, no network).
  * Keys are flat strings. Plurals use `_one` / `_other` suffixes picked with Intl.PluralRules.
@@ -48,6 +49,7 @@ for (const [tag, extra] of Object.entries(VECTOR_CATALOGUES)) Object.assign(CATA
 for (const [tag, extra] of Object.entries(DESIGN_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(VIBESPACE_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(STUDIO3D_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
+for (const [tag, extra] of Object.entries(EXPORT_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(CONSENT_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(STORE_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(AGENT_BOARD_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);

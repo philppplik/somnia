@@ -92,6 +92,7 @@
  "cmd.photos.redo": "Fotos: Rehacer paso de revelado",
  "cmd.photos.history.jump": "Fotos: Ir a un paso del historial",
  "cmd.photos.export": "Fotos: Exportar una copia revelada",
+ "cmd.photos.export.advanced": "Photos: Exportación avanzada (tamaño, calidad, perfil, metadatos)",
  "photos.preset.neutral": "Neutro",
  "photos.preset.vivid": "Vívido",
  "photos.preset.matte": "Mate",

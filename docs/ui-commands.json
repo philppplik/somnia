@@ -4504,6 +4504,21 @@
       "hasEnabled": true
     },
     {
+      "id": "photos.export.advanced",
+      "title": "Photos: Advanced export (size, quality, profile, metadata)",
+      "category": "Project",
+      "source": "photos",
+      "keywords": [
+        "advanced",
+        "export",
+        "metadata",
+        "photos",
+        "quality",
+        "webp"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "photos.export.jpeg",
       "title": "Photos: Export as JPEG",
       "category": "Project",
