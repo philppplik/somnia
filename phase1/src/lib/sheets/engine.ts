@@ -6,7 +6,7 @@ export class SheetsEngine{
  private worker:Worker;private nextId=1;private disposed=false;
  private mutationListeners=new Set<()=>void>();
  subscribeSelectionRead(f:()=>void){this.mutationListeners.add(f);return()=>{this.mutationListeners.delete(f);};}
- private notifySelectionRead(){this.mutationListeners.forEach(f=>f());}
+ private notifySelectionRead(){this.mutationListeners.forEach(f=>{try{f();}catch{/* Observers cannot block worker requests or invalidate their receipt. */}});}
  private mutationEpoch=0;private mutations=0;
  get selectionReadEpoch(){return this.mutationEpoch;}
  get hasPendingMutation(){return this.mutations>0;}
@@ -23,7 +23,7 @@ export class SheetsEngine{
  private request(message:Req,transfer:Transferable[]=[]){
   return new Promise<SheetsResponse>((resolve,reject)=>{
    if(this.disposed){reject(new Error('Spreadsheet engine closed'));return;}
-   const mutating=['open','set','undo','redo','close'].includes(message.op);if(mutating){this.mutationEpoch++;this.mutations++;this.notifySelectionRead();}const finish=()=>{if(mutating){this.mutations--;this.mutationEpoch++;this.notifySelectionRead();}};const done=(r:SheetsResponse)=>{finish();resolve(r);},failed=(e:Error)=>{finish();reject(e);};
+   const mutating=['open','set','setValues','clear','format','resize','editLines','freeze','sort','editSheet','undo','redo','close'].includes(message.op);if(mutating){this.mutationEpoch++;this.mutations++;this.notifySelectionRead();}const finish=()=>{if(mutating){this.mutations--;this.mutationEpoch++;this.notifySelectionRead();}};const done=(r:SheetsResponse)=>{finish();resolve(r);},failed=(e:Error)=>{finish();reject(e);};
    const id=this.nextId++;
    const timer=setTimeout(()=>this.dispose(new Error('Spreadsheet engine timed out. Unsaved edits in this workbook were discarded.')),this.timeoutMs);
    this.pending.set(id,{resolve:done,reject:failed,timer});

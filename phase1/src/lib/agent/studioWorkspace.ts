@@ -38,7 +38,7 @@ export function studioWorkspace(){
  const cell=getSheetsSelection();
  if(cell&&findMedia(cell.file)?.kind==='xlsx'&&!Object.hasOwn(state.files,cell.file)){
   files[cell.file]=JSON.stringify({sheet:cell.sheet,sheetName:cell.sheetName,address:cell.address,kind:cell.kind,text:cell.text,formula:cell.formula});
-  bindings[cell.file]={kind:'sheets',adapter:null,identity:findMedia(cell.file)!.url};
+  bindings[cell.file]={kind:'sheets',adapter:null,identity:findMedia(cell.file)!.url,revision:cell.revision};
  }
  for(const media of getMedia().items){
   const v=media.kind==='video'?getVideoSession(media.name):null;
