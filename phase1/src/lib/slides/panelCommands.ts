@@ -6,7 +6,7 @@ import {textIssue} from './panelModel';
 import type {TextRun} from './editCopy';
 import './panelI18n';
 import {selectShape,getShapeSelection,type ShapeSelection} from './shapeSelection';
-import {stepShape,moveBox,resizeBox,resizeBoxAspect,boxOf} from './shapeGeometry';
+import {stepShape,moveBox,resizeBox,resizeBoxAspect,boxOf,alignBox,ALIGN_MODES,type AlignMode} from './shapeGeometry';
 import {sniffImage,altFromName,decodeBase64,MAX_IMAGE_BASE64} from './imageSniff';
 import {boundsEditIssue,nextShapeId,MIN_SIZE_PT,MAX_SIZE_PT,MAX_SHAPES_PER_SLIDE,MAX_BOX_TEXT,type RunFormat,type ShapeRef,type BoundsBox} from './deckPackage';
 export interface PanelCommandDeps {
@@ -66,6 +66,15 @@ export function slidesPanelCommandSpecs(d:PanelCommandDeps):CommandSpec[]{
    if(!shape)throw expected('Shape no longer exists.');
    const issue=boundsEditIssue(shape);if(issue)throw expected(`This shape cannot be moved or resized (${issue}).`);
    await d.setBounds(v.slideId,v.shapeId,v.expected,v.next);}},
+  {id:'slides.alignShape',title:'Align shape to slide',category:'Edit',level:'ui',keywords:['align','left','right','center','top','middle','bottom','shape','picture','position'],enabled:available,params:{type:'object',properties:{source:identity.source,slideId:slideId,shapeId:{type:'integer',minimum:0,maximum:2147483647},mode:{enum:[...ALIGN_MODES]}},required:['source','slideId','shapeId','mode'],additionalProperties:false},run:async p=>{
+   const v=p as {source:string;slideId:number;shapeId:number;mode:AlignMode};const s=d.state();
+   if(s.source!==v.source||s.slideIds[s.index]!==v.slideId)throw expected('Slide changed since selection.');
+   const shape=s.model?.slides.find(x=>x.id===v.slideId)?.shapes.find(x=>x.id===v.shapeId),size=s.model?.slideSize;
+   if(!shape||!size)throw expected('Shape no longer exists.');
+   const issue=boundsEditIssue(shape);if(issue)throw expected(`This shape cannot be moved (${issue}).`);
+   const from=boxOf(shape.bounds!),next=alignBox(from,v.mode,size);
+   if(next.x===from.x&&next.y===from.y)return;
+   await d.setBounds(v.slideId,v.shapeId,from,next);}},
   {id:'slides.nudgeShape',title:'Nudge selected text box',category:'Edit',level:'ui',keywords:['shape','text box','nudge','move','resize','arrow'],enabled:available,params:{type:'object',properties:{mode:{enum:['move','resize']},dxPt:{type:'integer',minimum:-100,maximum:100},dyPt:{type:'integer',minimum:-100,maximum:100}},required:['mode','dxPt','dyPt'],additionalProperties:false},run:async p=>{
    const v=p as {mode:'move'|'resize';dxPt:number;dyPt:number};const s=d.state(),pick=d.picked();
    if(!pick||pick.source!==s.source||s.slideIds[s.index]!==pick.slideId)throw expected('Select a text box first.');

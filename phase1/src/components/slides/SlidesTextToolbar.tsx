@@ -8,7 +8,8 @@ import {Button} from '../ui/button';
 import {NumberField} from '../ui/number-field';
 import {Menu,MenuTrigger,MenuContent,MenuItem} from '../ui/menu';
 import {TEXT_COLORS,colorKey} from '../../lib/slides/textFormat';
-import {MIN_SIZE_PT,MAX_SIZE_PT} from '../../lib/slides/deckPackage';
+import {MIN_SIZE_PT,MAX_SIZE_PT,boundsEditIssue} from '../../lib/slides/deckPackage';
+import {ALIGN_MODES} from '../../lib/slides/shapeGeometry';
 import {useValidShape} from './SlidesShapeOverlay';
 
 /** Text box tools: add, remove, and character formatting for every run of the selected text box. */
@@ -38,6 +39,8 @@ export function SlidesTextToolbar(){
       parse={d=>/^\d{1,3}$/.test(d.trim())&&Number(d)>=MIN_SIZE_PT&&Number(d)<=MAX_SIZE_PT?{ok:true,value:Number(d)}:{ok:false,error:t('slides.fmt.sizeInvalid')}} constraintError={t('slides.fmt.sizeInvalid')} onCommit={v=>fmt({sizePt:v})}/></div>
     <Menu><MenuTrigger render={<Button size="compact" variant="outline" disabled={!ready||!box}>{t('slides.fmt.color')}{colorKey(f?.color??null)?`: ${t(`slides.color.${colorKey(f!.color)}`)}`:''}</Button>}/>
       <MenuContent>{TEXT_COLORS.map(c=><MenuItem key={c.key} onClick={()=>fmt({color:c.hex})}>{t(`slides.color.${c.key}`)}</MenuItem>)}</MenuContent></Menu>
+    <Menu><MenuTrigger render={<Button size="compact" variant="outline" disabled={!ready||!shape||!!boundsEditIssue(shape)}>{t('slides.align')}</Button>}/>
+      <MenuContent>{ALIGN_MODES.map(m=><MenuItem key={m} onClick={()=>run('slides.alignShape',{source:s.source,slideId,shapeId:shape!.id,mode:m})}>{t(`slides.align.${m}`)}</MenuItem>)}</MenuContent></Menu>
     <Button size="compact" variant="outline" disabled={!ready||!shape||(shape.kind!=='text'&&!pic)} onClick={()=>run(pic?'slides.removePicture':'slides.removeTextBox',{source:s.source,slideId,shapeId:shape!.id})}>{t(pic?'slides.removePicture':'slides.removeTextBox')}</Button>
     <Button size="compact" variant="outline" disabled={!ready} title={t('slides.imageHint')} onClick={()=>pick('insert')}>{t('slides.insertImage')}</Button>
     <Button size="compact" variant="outline" disabled={!ready||!pic} onClick={()=>pick('replace')}>{t('slides.replaceImage')}</Button>

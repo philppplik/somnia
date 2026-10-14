@@ -168,3 +168,17 @@ test('image commands validate identity, bytes and shape kind before mutation',as
  picked={source:'blob:deck1',slideId:258,shapeId:5};await run('slides.removePicture',{...b2,shapeId:5});assert.deepEqual(f.calls.at(-2),['removeImage',258,5]);assert.equal(picked,null);
  assert.ok(f.calls.length>n);
 });
+
+test('alignShape validates identity, mode and kind, aligns without resizing, and no-ops when already aligned',async()=>{
+ const f=fixture(),run=(p:unknown)=>f.dispatcher.runCommand('slides.alignShape',p,{origin:'ui'}),size=f.state.model!.slideSize!;
+ const ok={source:'blob:deck1',slideId:256,shapeId:2,mode:'left'};
+ await run(ok);assert.deepEqual(f.calls.at(-1),['bounds',256,2,BOX,{...BOX,x:0}]);
+ await run({...ok,mode:'center'});assert.deepEqual((f.calls.at(-1) as unknown[])[4],{...BOX,x:Math.round((size.cx-BOX.w)/2)});
+ await run({...ok,mode:'bottom'});assert.deepEqual((f.calls.at(-1) as unknown[])[4],{...BOX,y:size.cy-BOX.h});
+ const n=f.calls.length;
+ await assert.rejects(()=>run({...ok,mode:'diagonal'}));
+ await assert.rejects(()=>run({...ok,source:'blob:other'}),/Slide changed/);
+ await assert.rejects(()=>run({...ok,shapeId:3}),/noBounds/);
+ await assert.rejects(()=>run({...ok,shapeId:99}),/no longer exists/);
+ assert.equal(f.calls.length,n);
+});

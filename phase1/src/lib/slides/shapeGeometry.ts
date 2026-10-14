@@ -78,3 +78,18 @@ export function resizeBoxAspect(b:Box,handle:Handle,dx:number,dy:number,size:Sli
   const w=Math.round(b.w*s),h=Math.round(b.h*s);
   return {x:handle.includes('w')?b.x+b.w-w:b.x,y:handle.includes('n')?b.y+b.h-h:b.y,w,h};
 }
+
+export type AlignMode='left'|'center'|'right'|'top'|'middle'|'bottom';
+export const ALIGN_MODES:readonly AlignMode[]=['left','center','right','top','middle','bottom'];
+/** Aligns a box to the slide edges or centre. Size never changes; boxes larger than the slide align to the near edge. */
+export function alignBox(b:Box,mode:AlignMode,size:SlideSize):Box{
+  const fit=(room:number,len:number,at:'start'|'mid'|'end')=>Math.max(0,Math.round(at==='start'?0:at==='mid'?(room-len)/2:room-len));
+  switch(mode){
+    case 'left':return {...b,x:0};
+    case 'center':return {...b,x:fit(size.cx,b.w,'mid')};
+    case 'right':return {...b,x:fit(size.cx,b.w,'end')};
+    case 'top':return {...b,y:0};
+    case 'middle':return {...b,y:fit(size.cy,b.h,'mid')};
+    case 'bottom':return {...b,y:fit(size.cy,b.h,'end')};
+  }
+}

@@ -4,7 +4,7 @@ import {readFileSync,readdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {unzipSync,zipSync,strFromU8,strToU8} from 'fflate';
 import {readDeckModel,readSlidePart,newSlideFromLayout,readLayouts,type ShapeRef} from './deckPackage';
-import {moveBox,resizeBox,resizeBoxAspect,hitTest,containsPoint,overlayRect,limitsOf,stepShape,selectableShapes,rotationDeg} from './shapeGeometry';
+import {moveBox,resizeBox,alignBox,resizeBoxAspect,hitTest,containsPoint,overlayRect,limitsOf,stepShape,selectableShapes,rotationDeg} from './shapeGeometry';
 
 const fx=(n:string)=>new Uint8Array(readFileSync(fileURLToPath(new URL('../../../slides-engine/fixtures/'+n,import.meta.url))));
 const base=fx('independent.pptx');
@@ -112,4 +112,16 @@ test('resizeBoxAspect keeps the ratio, anchors the opposite corner and stops at 
   const tiny=resizeBoxAspect(b,'se',-1e9,-1e9,size);assert.equal(Math.min(tiny.w,tiny.h),127000);assert.ok(Math.abs(tiny.w/tiny.h-2)<0.001);
   const huge=resizeBoxAspect(b,'se',1e9,1e9,size);assert.ok(huge.w<=size.cx&&huge.h<=size.cy);assert.ok(Math.abs(huge.w/huge.h-2)<0.001);
   assert.deepEqual(resizeBoxAspect(b,'e',100,0,size),resizeBox(b,'e',100,0,size));
+});
+
+test('alignBox snaps to slide edges and centre without resizing, and clamps oversize boxes',()=>{
+  const size={cx:9144000,cy:6858000},b={x:1234567,y:765432,w:2000000,h:1000001};
+  assert.deepEqual(alignBox(b,'left',size),{...b,x:0});
+  assert.deepEqual(alignBox(b,'right',size),{...b,x:7144000});
+  assert.deepEqual(alignBox(b,'center',size),{...b,x:3572000});
+  assert.deepEqual(alignBox(b,'top',size),{...b,y:0});
+  assert.deepEqual(alignBox(b,'bottom',size),{...b,y:6858000-1000001});
+  assert.equal(alignBox(b,'middle',size).y,Math.round((6858000-1000001)/2));
+  const huge={x:500,y:500,w:size.cx+10,h:size.cy+10};
+  assert.equal(alignBox(huge,'center',size).x,0);assert.equal(alignBox(huge,'right',size).x,0);assert.equal(alignBox(huge,'middle',size).y,0);
 });
