@@ -652,5 +652,7 @@
  "animation.gradient.angleAnimate": "Animar ángulo del degradado",
  "animation.gradient.animateProp": "Animar {name}",
  "animation.gradient.startColorLane": "Color inicial del degradado",
- "animation.gradient.endColorLane": "Color final del degradado"
+ "animation.gradient.endColorLane": "Color final del degradado",
+ "animation.gradient.stopOffsetLane": "Posición de la parada {n}",
+ "animation.gradient.stopColorLane": "Color de la parada {n}"
 }

@@ -7,7 +7,7 @@ export type TransformKey=typeof TRANSFORM_KEYS[number];
 
 export const REPEATER_KEYS=['x','y','rotation','scale','opacity','hue'] as const;
 export type RepeaterKey=typeof REPEATER_KEYS[number];
-export type StyleLaneId='gain'|'strokeWidth'|'strokeOpacity'|'fill'|'stroke'|'repX'|'repY'|'repRotation'|'repScale'|'repOpacity'|'repHue'|'gradFillAngle'|'gradStrokeAngle'|GradientLaneId;
+export type StyleLaneId='gain'|'strokeWidth'|'strokeOpacity'|'fill'|'stroke'|'repX'|'repY'|'repRotation'|'repScale'|'repOpacity'|'repHue'|'gradFillAngle'|'gradStrokeAngle'|GradientLaneId|GradientStopLaneId;
 export const GRADIENT_KEYS=['cx','cy','radius','startOpacity','endOpacity'] as const;
 export type GradientKey=typeof GRADIENT_KEYS[number];
 export type GradientLaneId=`grad${'Fill'|'Stroke'}${'Cx'|'Cy'|'Radius'|'StartOpacity'|'EndOpacity'|'StartColor'|'EndColor'}`;
@@ -16,3 +16,6 @@ export const parseGradientLane=(l:string):{target:'fill'|'stroke';key:GradientKe
 export type GradientColorKey='start'|'end';
 export const gradientColorLaneId=(target:'fill'|'stroke',k:GradientColorKey):GradientLaneId=>`grad${target==='fill'?'Fill':'Stroke'}${k==='start'?'Start':'End'}Color`;
 export const parseGradientColorLane=(l:string):{target:'fill'|'stroke';key:GradientColorKey}|null=>{const m=/^grad(Fill|Stroke)(Start|End)Color$/.exec(l);return m?{target:m[1]==='Fill'?'fill':'stroke',key:m[2]==='Start'?'start':'end'}:null;};
+export type GradientStopLaneId=`grad${'Fill'|'Stroke'}Stop${number}${'Offset'|'Color'}`;
+export const gradientStopLaneId=(target:'fill'|'stroke',index:number,prop:'offset'|'color'):GradientStopLaneId=>`grad${target==='fill'?'Fill':'Stroke'}Stop${index}${prop==='offset'?'Offset':'Color'}`;
+export const parseGradientStopLane=(l:string):{target:'fill'|'stroke';index:number;prop:'offset'|'color'}|null=>{const m=/^grad(Fill|Stroke)Stop(\d+)(Offset|Color)$/.exec(l);return m?{target:m[1]==='Fill'?'fill':'stroke',index:Number(m[2]),prop:m[3]==='Offset'?'offset':'color'}:null;};

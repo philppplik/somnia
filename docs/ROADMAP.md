@@ -493,6 +493,12 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Done: per-key ease for gradient start/end colour keys (gradient.color.ease edit, linear is not stored; ease select appears beside the colour when the playhead is on a key). Same ease set as layer colour keys; hold is supported. Validation was already in P76; test added.
 - Open: stop colours and stop offsets are not keyable; no ease UI for the gradient number lanes (radius, centre, opacity, angle) beyond linear; no conic gradient.
 
+
+### Animation P78 (2026-10-14, integration pending)
+
+- Done: keyable gradient stops, fill and stroke: per-stop offset keys (offsetAnim) and colour keys (colorKeys, with ease). Edit gradient.stop (offset/color x set/animate/remove/ease, one undo step; last key removed bakes the value). Keys live on the stop object, so adding or removing other stops keeps them. Keyed offsets are sampled, then kept in order (at least 0.01 apart, within 0.01..0.99). Inspector: Keyframes checkbox beside each stop colour and offset; timeline lanes per stop (up to 6 stops x 2 x fill/stroke), shown once keyed, with select, drag-move and delete. Validation, 5 locales, test.
+- Open: stop opacity is not keyable; no ease select for stop colour keys in the inspector (edit and model support it); no conic gradient.
+
 ### Animation P69 (2026-10-14, integration pending)
 - Done: stroke alignment for closed shapes (centre, inside, outside). Inside clips a double-width stroke to the shape, outside masks the shape out of it, so the visible band keeps the set width. Select in the stroke section. Viewer and every export share the behaviour; open paths stay centred. Absent field means centred and byte-identical output.
 - Open: "Expand stroke" outlines ignore the alignment (centre only), gradient strokes use the same bounding box, no alignment keys.

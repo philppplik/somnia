@@ -5,8 +5,9 @@ import {validateTextPresetLib} from './textPresetModel';
 import type {InterfaceAsset} from '../interface/schema';
 import {validateAnimationAssets} from './assetsValidation';
 import {MAX_AUDIO_VOLUME,type AudioAsset} from './audioCore';
-import {GRADIENT_RANGE,REPEATER_RANGE,validRepeater,STYLE_KINDS,OFFSET_KINDS,MAX_COLOR_KEYS,type ColorKey,type ColorEase,COLOR_EASES,validShutter,type Shutter,validatePrecomps,precompTransform,prop,createComposition,type TextAnimator,type LayerMask,type LayerMatte,type ClipItem,type KeyRef,type Vec2,createLayer,findComp,findLayer,PROP_META,wouldCycle,EASE_IN,EASE_OUT,TRANSFORM_KEYS,validateDocument,type AnimationDocument,type CompSettings,type Composition,type Interp,type Keyframe,type Layer,type LayerKind,type LayerSource,type LayerEffect,validSource,validEffects,type Property,type PropValue,type TransformKey} from './model';
-import {parseGradientLane,parseGradientColorLane,type GradientKey,type RepeaterKey,type StyleLaneId} from './keyTypes';
+import {type GradientStop,GRADIENT_RANGE,REPEATER_RANGE,validRepeater,STYLE_KINDS,OFFSET_KINDS,MAX_COLOR_KEYS,type ColorKey,type ColorEase,COLOR_EASES,validShutter,type Shutter,validatePrecomps,precompTransform,prop,createComposition,type TextAnimator,type LayerMask,type LayerMatte,type ClipItem,type KeyRef,type Vec2,createLayer,findComp,findLayer,PROP_META,wouldCycle,EASE_IN,EASE_OUT,TRANSFORM_KEYS,validateDocument,type AnimationDocument,type CompSettings,type Composition,type Interp,type Keyframe,type Layer,type LayerKind,type LayerSource,type LayerEffect,validSource,validEffects,type Property,type PropValue,type TransformKey} from './model';
+import {setGradientStop} from './shapes';
+import {parseGradientStopLane,parseGradientLane,parseGradientColorLane,type GradientKey,type RepeaterKey,type StyleLaneId} from './keyTypes';
 import {evaluate} from './interpolate';
 import {colorAt} from './colorKeys';
 import {validateModifiers,linkProblems} from './modifiers';
@@ -47,6 +48,7 @@ export type Edit=
  |{type:'effect.colorKey';layer:string;effect:string;color:string;t:number}
  |{type:'effect.bypassKey';layer:string;effect:string;bypass:boolean;t:number}
  |{type:'layer.stroke';layer:string;stroke:NonNullable<Layer['stroke']>|null}
+ |{type:'gradient.stop';layer:string;target:'fill'|'stroke';index:number;prop:'offset'|'color';op:'set'|'animate'|'remove'|'ease';value?:number;color?:string;ease?:ColorEase|null;on?:boolean;t:number}
  |{type:'gradient.color.ease';layer:string;target:'fill'|'stroke';which:'start'|'end';t:number;ease:ColorEase|null}
  |{type:'gradient.color';layer:string;target:'fill'|'stroke';which:'start'|'end';op:'set'|'animate'|'remove';color?:string;on?:boolean;t:number}
  |{type:'gradient.prop';layer:string;target:'fill'|'stroke';prop:GradientKey;op:'set'|'animate'|'remove';value?:number;on?:boolean;t:number}
@@ -160,6 +162,45 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
    return withComp(doc,{...c,...e.settings,duration,fps:e.settings.fps??c.fps,markers:c.markers?.filter(m=>m.t<duration+c.start),layers:clipped,workArea:{in:Math.min(c.workArea.in,duration-1),out:Math.min(c.workArea.out,duration)}});}
   case 'comp.select':if(!findComp(doc,e.comp))return fail('missing','Composition does not exist.');return e.comp===doc.activeComp?doc:{...doc,activeComp:e.comp};
   case 'comp.remove':{if(doc.compositions.length<2)return fail('invalid','A document needs at least one composition.');if(!findComp(doc,e.comp))return fail('missing','Composition does not exist.');const rest=doc.compositions.filter(c=>c.id!==e.comp);return {...doc,compositions:rest,activeComp:doc.activeComp===e.comp?rest[0].id:doc.activeComp};}
+  case 'gradient.stop':{
+   const l=layerOf(doc,e.layer),fill=e.target==='fill',g=fill?l.source.gradient:l.stroke?.gradient;if(!g)fail('invalid','The layer has no gradient there.');
+   const st=g!.stops?.[e.index];if(!st)fail('missing','No such gradient stop.');const stop=st!;
+   const t=tickOf(compOf(doc),e.t),round=(n:number)=>Math.round(n*1e4)/1e4;
+   const withG=(x:NonNullable<typeof g>):Layer=>fill?{...l,source:{...l.source,gradient:x}}:{...l,stroke:{...l.stroke!,gradient:x}};
+   const replace=(next:GradientStop)=>withG({...g!,stops:g!.stops!.map((x,i)=>i===e.index?next:x)} as NonNullable<typeof g>);
+   const clean=(x:GradientStop,k:'offsetAnim'|'colorKeys'):GradientStop=>{const y={...x};delete y[k];return y;};
+   if(e.prop==='offset'){
+    const anim=stop.offsetAnim;
+    if(e.op==='ease')fail('invalid','Offset keys have no colour ease.');
+    if(e.op==='set'){
+     if(typeof e.value!=='number'||!Number.isFinite(e.value)||e.value<0.01||e.value>0.99)fail('invalid','Stop offset must be 0.01 to 0.99.');
+     if(anim?.keys.length)return setLayer(doc,replace({...stop,offsetAnim:{...anim,keys:upsertKey(anim.keys,makeKey(t,e.value as number))}}));
+     return setLayer(doc,withG(setGradientStop(g!,e.index,{offset:e.value as number}) as NonNullable<typeof g>));}
+    if(e.op==='animate'){
+     if(e.on)return anim?.keys.length?doc:setLayer(doc,replace({...stop,offsetAnim:{...prop('scalar',stop.offset),keys:[makeKey(t,stop.offset)]}}));
+     if(!anim?.keys.length)return doc;
+     return setLayer(doc,withG(setGradientStop({...g!,stops:g!.stops!.map((x,i)=>i===e.index?clean(x,'offsetAnim'):x)} as NonNullable<typeof g>,e.index,{offset:round(evaluate(anim,t) as number)}) as NonNullable<typeof g>));}
+    if(!anim||!anim.keys.some(x=>x.t===t))fail('missing','No stop offset key at that time.');
+    const keys=anim!.keys.filter(x=>x.t!==t);
+    if(keys.length)return setLayer(doc,replace({...stop,offsetAnim:{...anim!,keys}}));
+    return setLayer(doc,withG(setGradientStop({...g!,stops:g!.stops!.map((x,i)=>i===e.index?clean(x,'offsetAnim'):x)} as NonNullable<typeof g>,e.index,{offset:round(evaluate(anim!,t) as number)}) as NonNullable<typeof g>));}
+   const keys=stop.colorKeys,cur=stop.color;
+   const putC=(c:string|undefined,ks:readonly ColorKey[]|undefined)=>{const base=clean(stop,'colorKeys');return setLayer(doc,replace({...base,...(c!==undefined?{color:c}:{}),...(ks?.length?{colorKeys:ks}:{})}));};
+   if(e.op==='set'){
+    if(typeof e.color!=='string'||!/^#[0-9a-fA-F]{6}$/.test(e.color))fail('invalid','Colour must be #rrggbb.');
+    const c=(e.color as string).toLowerCase();
+    if(keys?.length){const old=keys.find(k=>k.t===t),next=[...keys.filter(k=>k.t!==t),{t,color:c,...(old?.ease?{ease:old.ease}:{})}].sort((a,b)=>a.t-b.t);if(next.length>MAX_COLOR_KEYS)fail('invalid',`At most ${MAX_COLOR_KEYS} colour keys.`);return putC(undefined,next);}
+    return putC(c,undefined);}
+   if(e.op==='animate'){
+    if(e.on)return keys?.length?doc:putC(undefined,[{t,color:cur}]);
+    return keys?.length?putC(colorAt(keys,cur,t),undefined):doc;}
+   if(e.op==='ease'){
+    if(e.ease!==null&&e.ease!==undefined&&!(COLOR_EASES as readonly string[]).includes(e.ease))fail('invalid','Unknown ease.');
+    if(!keys||!keys.some(k=>k.t===t))fail('missing','No stop colour key at that time.');
+    return putC(undefined,keys!.map(k=>{if(k.t!==t)return k;const {ease:_o,...rest}=k;return e.ease==null||e.ease==='linear'?rest:{...rest,ease:e.ease as ColorEase};}));}
+   if(!keys||!keys.some(k=>k.t===t))fail('missing','No stop colour key at that time.');
+   const rest=keys!.filter(k=>k.t!==t);
+   return rest.length?putC(undefined,rest):putC(colorAt(keys,cur,t),undefined);}
   case 'gradient.color.ease':{
    const l=layerOf(doc,e.layer),fill=e.target==='fill',g=fill?l.source.gradient:l.stroke?.gradient;if(!g)fail('invalid','The layer has no gradient there.');
    const t=tickOf(compOf(doc),e.t),keys=g!.colorKeys?.[e.which];
@@ -295,6 +336,10 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
     return keys!.map(k=>k.t===e.from?{...k,t:to}:k).sort((a,b)=>a.t-b.t);};
    if(e.lane==='gain'){if(l.kind!=='comp'||!l.gain)fail('missing','No volume keys.');return setLayer(doc,{...l,gain:{...l.gain!,keys:shift(l.gain!.keys)}});}
    if(e.lane==='strokeWidth'||e.lane==='strokeOpacity'){const f=e.lane==='strokeWidth'?'widthAnim':'opacityAnim',a=l.stroke?.[f];if(!l.stroke||!a)fail('missing','No stroke keys.');return setLayer(doc,{...l,stroke:{...l.stroke!,[f]:{...a!,keys:shift(a!.keys)}}});}
+   const gs=parseGradientStopLane(e.lane);
+   if(gs){const fill=gs.target==='fill',g=fill?l.source.gradient:l.stroke?.gradient,st=g?.stops?.[gs.index];if(!g||!st||(gs.prop==='offset'?!st.offsetAnim:!st.colorKeys))fail('missing','No gradient stop keys.');
+    const ns:GradientStop=gs.prop==='offset'?{...st!,offsetAnim:{...st!.offsetAnim!,keys:shift(st!.offsetAnim!.keys)}}:{...st!,colorKeys:shift(st!.colorKeys!)};
+    const ng={...g!,stops:g!.stops!.map((x,i)=>i===gs.index?ns:x)};return setLayer(doc,fill?{...l,source:{...l.source,gradient:ng}}:{...l,stroke:{...l.stroke!,gradient:ng}});}
    const gc=parseGradientColorLane(e.lane);
    if(gc){const fill=gc.target==='fill',g=fill?l.source.gradient:l.stroke?.gradient,a=g?.colorKeys?.[gc.key];if(!g||!a)fail('missing','No gradient colour keys.');const ng={...g!,colorKeys:{...g!.colorKeys,[gc.key]:shift(a!)}};return setLayer(doc,fill?{...l,source:{...l.source,gradient:ng}}:{...l,stroke:{...l.stroke!,gradient:ng}});}
    const gl=parseGradientLane(e.lane);
@@ -524,6 +569,7 @@ export {TRANSFORM_KEYS};
 export function styleKeyDeleteEdits(layer:string,picks:readonly {lane:StyleLaneId;t:number}[]):Edit[]{
  return picks.map((p):Edit=>p.lane==='gain'?{type:'layer.gain.key.remove',layer,t:p.t}
   :p.lane==='strokeWidth'||p.lane==='strokeOpacity'?{type:'stroke.prop',layer,prop:p.lane==='strokeWidth'?'width':'opacity',op:'remove',t:p.t}
+  :parseGradientStopLane(p.lane)?{type:'gradient.stop',layer,target:parseGradientStopLane(p.lane)!.target,index:parseGradientStopLane(p.lane)!.index,prop:parseGradientStopLane(p.lane)!.prop,op:'remove',t:p.t}
   :parseGradientColorLane(p.lane)?{type:'gradient.color',layer,target:parseGradientColorLane(p.lane)!.target,which:parseGradientColorLane(p.lane)!.key,op:'remove',t:p.t}
   :parseGradientLane(p.lane)?{type:'gradient.prop',layer,target:parseGradientLane(p.lane)!.target,prop:parseGradientLane(p.lane)!.key,op:'remove',t:p.t}
   :p.lane==='gradFillAngle'||p.lane==='gradStrokeAngle'?{type:'gradient.angle',layer,target:p.lane==='gradFillAngle'?'fill':'stroke',op:'remove',t:p.t}

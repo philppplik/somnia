@@ -386,3 +386,7 @@ Repeater `hue` (deg per copy, -360..360): copy i gets `filter=hue-rotate(hue*i d
 ## P77
 
 `gradient.color.ease` sets or clears the ease of the gradient colour key at the given tick (same COLOR_EASES as `color.ease`).
+
+## P78
+
+`GradientStop` gains `offsetAnim` (scalar 0.01..0.99) and `colorKeys`. `gradientAt` samples them and keeps offsets ordered. `setGradientStop` now preserves these fields. Lanes `grad{Fill|Stroke}Stop<i>{Offset|Color}` reuse style.key.move and styleKeyDeleteEdits.

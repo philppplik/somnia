@@ -1813,3 +1813,35 @@ test('P77 gradient colour key ease: per-key ease shapes the mix, linear is not s
  assert.throws(()=>applyEdit(d,{type:'gradient.color.ease',layer:'pa',target:'fill',which:'start',t:0,ease:'bogus' as never}),Error);
  assert.throws(()=>applyEdit(d,{type:'gradient.color.ease',layer:'pa',target:'fill',which:'start',t:T,ease:'ease'}),Error);
 });
+
+test('P78 gradient stop keyframes: colour and offset sampling, clamping, lanes, move, bake, validation',()=>{
+ let d=strokeDoc([{x:0.2,y:0.2},{x:0.8,y:0.2},{x:0.8,y:0.8}],true,8);
+ d=applyEdit(d,{type:'layer.update',layer:'pa',source:{gradient:{start:'#000000',end:'#ffffff',angle:0,stops:[{offset:0.4,color:'#ff0000'},{offset:0.7,color:'#00ff00'}]}}});
+ d=applyEdit(d,{type:'layer.stroke',layer:'pa',stroke:{color:'#00ff00',width:8,gradient:{start:'#000000',end:'#ffffff',angle:0,stops:[{offset:0.5,color:'#0000ff'}]}}});
+ const plain=frameSvg(comp(d),0),T=8000*30;
+ const ed=(target:'fill'|'stroke',index:number,prop:'offset'|'color',op:'set'|'animate'|'remove'|'ease',extra:{value?:number;color?:string;on?:boolean;ease?:'hold'|null},t:number)=>({type:'gradient.stop' as const,layer:'pa',target,index,prop,op,t,...extra});
+ d=applyEdit(d,ed('fill',0,'color','animate',{on:true},0));
+ d=applyEdit(d,ed('fill',0,'color','set',{color:'#0000ff'},T*2));
+ d=applyEdit(d,ed('fill',1,'offset','animate',{on:true},0));
+ d=applyEdit(d,ed('fill',1,'offset','set',{value:0.2},T*2));
+ d=applyEdit(d,ed('stroke',0,'offset','animate',{on:true},0));
+ d=applyEdit(d,ed('stroke',0,'offset','set',{value:0.9},T*2));
+ assert.equal(frameSvg(comp(d),0),plain,'keys at the static values change nothing');
+ const mid=frameSvg(comp(d),T);
+ assert.ok(mid.includes('stop-color="#800080"'),mid);
+ assert.ok(mid.includes('offset="0.45"')&&mid.includes('offset="0.7"'),'offset 0.2 is clamped above the previous stop at 0.4+... (0.7 to 0.45 then ordered)'+mid);
+ assert.deepEqual(validateDocument(d),[]);
+ const ids=styleKeyLanes(comp(d).layers.find(l=>l.id==='pa')!).map(l=>l.id as string);
+ assert.ok(['gradFillStop0Color','gradFillStop1Offset','gradStrokeStop0Offset'].every(x=>ids.includes(x)),ids.join());
+ const moved=applyEdit(d,{type:'style.key.move',layer:'pa',lane:'gradFillStop0Color',from:T*2,to:T*3});
+ assert.deepEqual(styleKeyLanes(comp(moved).layers.find(l=>l.id==='pa')!).find(l=>l.id==='gradFillStop0Color')!.ticks,[0,T*3]);
+ const held=applyEdit(d,ed('fill',0,'color','ease',{ease:'hold'},0));
+ assert.ok(frameSvg(comp(held),T).includes('stop-color="#ff0000"'));
+ const gone=applyEdits(d,styleKeyDeleteEdits('pa',[{lane:'gradStrokeStop0Offset',t:0},{lane:'gradStrokeStop0Offset',t:T*2}]));
+ const sg=comp(gone).layers.find(l=>l.id==='pa')!.stroke!.gradient!;
+ assert.equal(sg.stops![0].offsetAnim,undefined);assert.equal(sg.stops![0].offset,0.9);
+ const st=applyEdit(d,{type:'layer.update',layer:'pa',source:{gradient:{...comp(d).layers.find(l=>l.id==='pa')!.source.gradient!,stops:comp(d).layers.find(l=>l.id==='pa')!.source.gradient!.stops!.slice(0,1)}}});
+ assert.deepEqual(validateDocument(st),[]);
+ assert.throws(()=>applyEdit(d,ed('fill',0,'offset','set',{value:1.5},0)),Error);
+ assert.throws(()=>applyEdit(d,ed('fill',5,'color','set',{color:'#ffffff'},0)),Error);
+});

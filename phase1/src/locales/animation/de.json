@@ -652,5 +652,7 @@
  "animation.gradient.angleAnimate": "Verlaufswinkel animieren",
  "animation.gradient.animateProp": "{name} animieren",
  "animation.gradient.startColorLane": "Verlauf Startfarbe",
- "animation.gradient.endColorLane": "Verlauf Endfarbe"
+ "animation.gradient.endColorLane": "Verlauf Endfarbe",
+ "animation.gradient.stopOffsetLane": "Stopp {n} Position",
+ "animation.gradient.stopColorLane": "Stopp {n} Farbe"
 }
