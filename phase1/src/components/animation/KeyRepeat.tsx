@@ -43,5 +43,6 @@ export function KeyRepeat({count:selected,layers}:{count:number;layers:readonly 
   <Button size="tiny" variant="ghost" disabled={selected<2} title={t('animation.keys.easeCopy.hint')} onClick={()=>void executeCommand('animation.keys.easeCopy',{})} data-testid="animation-keys-ease-copy">{t('animation.keys.easeCopy')}</Button>
   <Button size="tiny" variant="ghost" disabled={selected<3} title={t('animation.keys.ramp.hint')} onClick={()=>void executeCommand('animation.keys.ramp',{})} data-testid="animation-keys-ramp">{t('animation.keys.ramp')}</Button>
   <Button size="tiny" variant="ghost" disabled={!layers.length} title={t('animation.keys.peaks.hint')} onClick={()=>void executeCommand('animation.keys.selectPeaks',{layers:[...layers]})} data-testid="animation-keys-peaks">{t('animation.keys.peaks')}</Button>
+  <Button size="tiny" variant="ghost" disabled={!layers.length} title={t('animation.keys.invertSel.hint')} onClick={()=>void executeCommand('animation.keys.invertSelection',{layers:[...layers]})} data-testid="animation-keys-invert-selection">{t('animation.keys.invertSel')}</Button>
  </span>;
 }

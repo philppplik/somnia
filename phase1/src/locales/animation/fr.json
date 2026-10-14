@@ -868,5 +868,8 @@
  "animation.keys.average.hint": "Donne à toutes les keys sélectionnées d’une propriété leur valeur moyenne",
  "animation.keys.peaks": "Pics",
  "animation.keys.peaks.hint": "Sélectionne les keys qui sont des pics ou des creux",
- "cmd.animation.keys.selectPeaks": "Sélectionner les keys qui sont des pics ou des creux"
+ "cmd.animation.keys.selectPeaks": "Sélectionner les keys qui sont des pics ou des creux",
+ "animation.keys.invertSel": "Inverser la sélection",
+ "animation.keys.invertSel.hint": "Sélectionne les keys des calques choisis qui ne sont pas sélectionnées",
+ "cmd.animation.keys.invertSelection": "Inverser la sélection des keys"
 }

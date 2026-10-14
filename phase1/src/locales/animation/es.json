@@ -868,5 +868,8 @@
  "animation.keys.average.hint": "Da a todas las keys seleccionadas de una propiedad su valor medio",
  "animation.keys.peaks": "Picos",
  "animation.keys.peaks.hint": "Selecciona las keys que son picos o valles",
- "cmd.animation.keys.selectPeaks": "Seleccionar las keys que son picos o valles"
+ "cmd.animation.keys.selectPeaks": "Seleccionar las keys que son picos o valles",
+ "animation.keys.invertSel": "Invertir selección",
+ "animation.keys.invertSel.hint": "Selecciona las keys de las capas elegidas que ahora no están seleccionadas",
+ "cmd.animation.keys.invertSelection": "Invertir la selección de keys"
 }

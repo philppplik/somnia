@@ -868,5 +868,8 @@
  "animation.keys.average.hint": "Give all selected keys of a property their average value",
  "animation.keys.peaks": "Peaks",
  "animation.keys.peaks.hint": "Select the keys that are peaks or dips",
- "cmd.animation.keys.selectPeaks": "Select the keys that are peaks or dips"
+ "cmd.animation.keys.selectPeaks": "Select the keys that are peaks or dips",
+ "animation.keys.invertSel": "Invert selection",
+ "animation.keys.invertSel.hint": "Select the keys of the picked layers that are not selected now",
+ "cmd.animation.keys.invertSelection": "Invert the key selection"
 }

@@ -162,3 +162,9 @@ test('peaks: interior local extremes only',()=>{
  assert.deepEqual(peakKeys(c,['a']).map(k=>k.t),[f(5)]);
  assert.equal(peakKeys(findComp(base())!,['a']).length,0);assert.equal(peakKeys(c,['zz']).length,0);
 });
+import {invertSelection} from './keyInvertSelection';
+test('invert selection: the other keys of the picked layers',()=>{
+ const c=findComp(base())!,k=(n:number)=>({layer:'a',prop:'position' as const,t:f(n)});
+ assert.deepEqual(invertSelection(c,['a'],[k(0)]).map(x=>x.t),[f(10)]);
+ assert.equal(invertSelection(c,['a'],[k(0),k(10)]).length,0);assert.equal(invertSelection(c,['zz'],[]).length,0);
+});

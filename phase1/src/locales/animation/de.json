@@ -868,5 +868,8 @@
  "animation.keys.average.hint": "Allen gewählten Keys einer Eigenschaft ihren Mittelwert geben",
  "animation.keys.peaks": "Spitzen",
  "animation.keys.peaks.hint": "Keys auswählen, die Spitzen oder Täler sind",
- "cmd.animation.keys.selectPeaks": "Keys auswählen, die Spitzen oder Täler sind"
+ "cmd.animation.keys.selectPeaks": "Keys auswählen, die Spitzen oder Täler sind",
+ "animation.keys.invertSel": "Auswahl umkehren",
+ "animation.keys.invertSel.hint": "Die Keys der gewählten Ebenen auswählen, die jetzt nicht gewählt sind",
+ "cmd.animation.keys.invertSelection": "Key-Auswahl umkehren"
 }

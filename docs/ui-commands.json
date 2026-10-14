@@ -793,6 +793,22 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.keys.invertSelection",
+      "title": "Invert the key selection",
+      "category": "View",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "inverse",
+        "invert",
+        "keys",
+        "opposite",
+        "others",
+        "select"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.keys.jitterTime",
       "title": "Shift the selected keys by random frames",
       "category": "Edit",
