@@ -1338,6 +1338,45 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.rig.chain",
+      "title": "Parent layers as a chain",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "chain",
+        "parent",
+        "rig"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "animation.rig.group",
+      "title": "Group layers under a new null",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "group",
+        "parent",
+        "rig"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "animation.rig.release",
+      "title": "Release layers from their parents",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "parent",
+        "release",
+        "rig"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.stroke.animate",
       "title": "Toggle stroke width or opacity keyframes",
       "category": "Edit",

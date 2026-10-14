@@ -750,5 +750,13 @@
  "cmd.animation.onion.set": "Ajustar onion skin",
  "animation.onion.opacity": "Opacidade (%)",
  "animation.onion.selectedOnly": "Somente a camada selecionada",
- "animation.onion.tint": "Colorir quadros anteriores e posteriores"
+ "animation.onion.tint": "Colorir quadros anteriores e posteriores",
+ "animation.rig.title": "Rig",
+ "animation.rig.chain": "Vincular em cadeia",
+ "animation.rig.group": "Agrupar sob novo nulo",
+ "animation.rig.release": "Soltar pais",
+ "animation.rig.hint": "Marque camadas. A cadeia segue a ordem (1 lidera). A pose na posição atual é mantida. Um passo de desfazer.",
+ "cmd.animation.rig.chain": "Vincular camadas em cadeia",
+ "cmd.animation.rig.group": "Agrupar camadas sob um novo nulo",
+ "cmd.animation.rig.release": "Soltar camadas dos pais"
 }

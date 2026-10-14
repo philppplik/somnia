@@ -750,5 +750,13 @@
  "cmd.animation.onion.set": "Régler la pelure d'oignon",
  "animation.onion.opacity": "Opacité (%)",
  "animation.onion.selectedOnly": "Calque sélectionné seulement",
- "animation.onion.tint": "Teinter les images précédentes et suivantes"
+ "animation.onion.tint": "Teinter les images précédentes et suivantes",
+ "animation.rig.title": "Rig",
+ "animation.rig.chain": "Lier en chaîne",
+ "animation.rig.group": "Grouper sous un nouveau nul",
+ "animation.rig.release": "Détacher des parents",
+ "animation.rig.hint": "Cochez des calques. La chaîne suit l'ordre (1 mène). La pose à la tête de lecture reste. Une seule étape d'annulation.",
+ "cmd.animation.rig.chain": "Lier des calques en chaîne",
+ "cmd.animation.rig.group": "Grouper des calques sous un nouveau nul",
+ "cmd.animation.rig.release": "Détacher des calques de leurs parents"
 }

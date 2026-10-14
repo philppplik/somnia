@@ -750,5 +750,13 @@
  "cmd.animation.onion.set": "Onion Skin einstellen",
  "animation.onion.opacity": "Deckkraft (%)",
  "animation.onion.selectedOnly": "Nur gewählte Ebene",
- "animation.onion.tint": "Frühere und spätere Frames einfärben"
+ "animation.onion.tint": "Frühere und spätere Frames einfärben",
+ "animation.rig.title": "Rig",
+ "animation.rig.chain": "Als Kette verknüpfen",
+ "animation.rig.group": "Unter neuer Null gruppieren",
+ "animation.rig.release": "Eltern lösen",
+ "animation.rig.hint": "Ebenen ankreuzen. Die Kette folgt der Reihenfolge (1 führt). Die Pose am Abspielkopf bleibt. Ein Rückgängig-Schritt.",
+ "cmd.animation.rig.chain": "Ebenen als Kette verknüpfen",
+ "cmd.animation.rig.group": "Ebenen unter neuer Null gruppieren",
+ "cmd.animation.rig.release": "Ebenen von ihren Eltern lösen"
 }

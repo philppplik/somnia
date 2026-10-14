@@ -750,5 +750,13 @@
  "cmd.animation.onion.set": "Ajustar piel de cebolla",
  "animation.onion.opacity": "Opacidad (%)",
  "animation.onion.selectedOnly": "Solo la capa seleccionada",
- "animation.onion.tint": "Teñir fotogramas anteriores y posteriores"
+ "animation.onion.tint": "Teñir fotogramas anteriores y posteriores",
+ "animation.rig.title": "Rig",
+ "animation.rig.chain": "Enlazar en cadena",
+ "animation.rig.group": "Agrupar bajo un nulo nuevo",
+ "animation.rig.release": "Soltar padres",
+ "animation.rig.hint": "Marca capas. La cadena sigue el orden (1 lidera). La pose en el cabezal se mantiene. Un solo paso de deshacer.",
+ "cmd.animation.rig.chain": "Enlazar capas en cadena",
+ "cmd.animation.rig.group": "Agrupar capas bajo un nulo nuevo",
+ "cmd.animation.rig.release": "Soltar capas de sus padres"
 }

@@ -750,5 +750,13 @@
  "cmd.animation.onion.set": "Set onion skin",
  "animation.onion.opacity": "Opacity (%)",
  "animation.onion.selectedOnly": "Selected layer only",
- "animation.onion.tint": "Tint earlier and later frames"
+ "animation.onion.tint": "Tint earlier and later frames",
+ "animation.rig.title": "Rig",
+ "animation.rig.chain": "Parent as chain",
+ "animation.rig.group": "Group under new null",
+ "animation.rig.release": "Release parents",
+ "animation.rig.hint": "Tick layers. Chain follows the tick order (1 leads). The pose stays as it is at the playhead. One undo step.",
+ "cmd.animation.rig.chain": "Parent layers as a chain",
+ "cmd.animation.rig.group": "Group layers under a new null",
+ "cmd.animation.rig.release": "Release layers from their parents"
 }
