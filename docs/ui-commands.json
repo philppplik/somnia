@@ -4644,6 +4644,14 @@
       "hasEnabled": true
     },
     {
+      "id": "sheets.sheet",
+      "title": "Add, rename, duplicate, move or delete the current sheet",
+      "category": "Edit",
+      "source": "sheets",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
       "id": "sheets.undo",
       "title": "Undo workbook change",
       "category": "Edit",

@@ -20,7 +20,7 @@ test('formula builder allowlists functions and normalizes references',()=>{
 });
 test('panel commands validate payloads, reject agent execution and honor controller lifecycle',async()=>{
  const dispatcher=new CommandDispatcher();for(const spec of sheetsPanelCommandSpecs())dispatcher.register(spec);
- const calls:unknown[]=[];const controller:SheetsPanelController={ready:()=>true,navigate:(sheet,address)=>{calls.push([sheet,address]);},setCell:input=>{calls.push(input);},readRange:async()=>[],formatCells:op=>{calls.push(op);}};
+ const calls:unknown[]=[];const controller:SheetsPanelController={ready:()=>true,navigate:(sheet,address)=>{calls.push([sheet,address]);},setCell:input=>{calls.push(input);},readRange:async()=>[],formatCells:op=>{calls.push(op);},editSheet:op=>{calls.push(['sheet',op]);}};
  const off=registerSheetsPanelController(controller);
  try{
   await dispatcher.runCommand('sheets.navigate',{sheet:1,address:'B4'},{origin:'ui'});
@@ -28,6 +28,11 @@ test('panel commands validate payloads, reject agent execution and honor control
   assert.deepEqual(calls,[[1,'B4'],'=SUM(A1:A3)']);
   await dispatcher.runCommand('sheets.format',{kind:'bold',on:true},{origin:'ui'});
   await dispatcher.runCommand('sheets.format',{kind:'fillColor',color:'#FFF2CC'},{origin:'ui'});
+  const mark=calls.length;
+  await dispatcher.runCommand('sheets.sheet',{kind:'rename',name:'Q1'},{origin:'ui'});
+  await dispatcher.runCommand('sheets.sheet',{kind:'delete'},{origin:'ui'});
+  assert.deepEqual(calls.slice(mark),[['sheet',{kind:'rename',name:'Q1'}],['sheet',{kind:'delete'}]]);calls.splice(mark);
+  for(const bad of [{kind:'rename',name:'a/b'},{kind:'rename'},{kind:'fly'},{kind:'move',to:300}])await assert.rejects(()=>dispatcher.runCommand('sheets.sheet',bad,{origin:'ui'}),JSON.stringify(bad));
   assert.deepEqual(calls.slice(2),[{kind:'bold',on:true},{kind:'fillColor',color:'#FFF2CC'}]);
   await assert.rejects(dispatcher.runCommand('sheets.format',{kind:'bold',on:true},{origin:'agent'}),{code:'forbidden-origin'});
   await assert.rejects(dispatcher.runCommand('sheets.format',{kind:'cell.set'},{origin:'ui'}));

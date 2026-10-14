@@ -22,6 +22,7 @@ export class HeadlessWorkbook {
     /**
      * Applies one typed formatting operation from a fixed allowlist to a block as one undo step.
      */
+    edit_sheet(sheet: number, op_json: string): string;
     format_range(sheet: number, row: number, col: number, rows: number, cols: number, op_json: string): string;
     /**
      * Writes a rectangular block of inputs as one undo step; all-or-nothing.

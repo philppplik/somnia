@@ -11,6 +11,7 @@ import {commandDispatcher} from '../../lib/commandDispatcher';
 import {aggregateFormula,FORMULA_FUNCTIONS,parsePanelRange,rangeAddress,summarizeCells} from '../../lib/sheets/panelModel';
 import {rectCells} from '../../lib/sheets/clipboard';
 import {addressOf,parseAddress} from '../../lib/sheets/format';
+import {MAX_SHEETS,sheetNameProblem} from '../../lib/sheets/sheetOps';
 import type {RangeCell} from '../../lib/sheets/protocol';
 import {CURRENCY_SYMBOLS,DECIMAL_PRESETS,MAX_DECIMALS,NUM_PRESETS,detectNumFmt,DEFAULT_FILL_COLOR,DEFAULT_TEXT_COLOR,FONT_NAMES,FONT_SIZES,MAX_FONT_SIZE,MIN_FONT_SIZE,isHexColor,toggleOp,type ToggleKind} from '../../lib/sheets/formatOps';
 import {Button} from '../ui/button';
@@ -23,13 +24,29 @@ function Facts({values}:{values:readonly [string,ReactNode][]}){return <dl class
 function usePanelWorkbook(context:PanelHostProps['context']){const s=useSheetsSelection();return context.studio==='sheets'&&s&&(!context.document||context.document.id===s.file)?s:null;}
 function useAction(){const {t}=useT();const [notice,setNotice]=useState('');const [busy,setBusy]=useState(false);return {notice,busy,setNotice,run:async(id:string,params?:unknown)=>{setBusy(true);setNotice('');try{return await commandDispatcher.runCommand(id,params,{origin:'ui'});}catch{setNotice(t('sheets.panel.failed'));return null;}finally{setBusy(false);}}};}
 export function SheetsWorkbookPanel({context}:PanelHostProps){
- const {t}=useT(),s=usePanelWorkbook(context);const [filter,setFilter]=usePanelState('sheets.workbook.filter','');const [address,setAddress]=useState('A1');const action=useAction();
+ const {t}=useT(),s=usePanelWorkbook(context);const [filter,setFilter]=usePanelState('sheets.workbook.filter','');const [address,setAddress]=useState('A1');const action=useAction();const [name,setName]=useState('');
+ useEffect(()=>setName(s?.sheetName??''),[s?.file,s?.sheet,s?.sheetName]);
  if(!s)return <Region><p>{t('sheets.panel.none')}</p></Region>;
+ const sheetList=s.workbook?.sheets??[],visibleCount=sheetList.filter(x=>x.visibility==='Visible').length,nameProblem=sheetNameProblem(name);
  const sheets=s.workbook?.sheets.filter(sheet=>sheet.name.toLocaleLowerCase().includes(filter.toLocaleLowerCase()))??[];
  return <Region><p className="break-all font-semibold">{s.file}</p>
  <input className={field} aria-label={t('sheets.panel.filter')} placeholder={t('sheets.panel.filter')} value={filter} onChange={e=>setFilter(e.target.value)}/>
  <div className="flex flex-col gap-1" role="group" aria-label={t('sheets.tabs')}>{sheets.map(sheet=><button className={button+' text-left'} key={sheet.index} disabled={sheet.visibility!=='Visible'||action.busy} aria-pressed={sheet.index===s.sheet} onClick={()=>void action.run('sheets.navigate',{sheet:sheet.index,address:'A1'})}>{sheet.name}{sheet.visibility!=='Visible'&&<span className="ml-2 text-ink-3">{t('sheets.panel.hidden')}</span>}</button>)}{!sheets.length&&<p>{t('sheets.panel.noMatches')}</p>}</div>
  <form className="flex gap-1" onSubmit={e=>{e.preventDefault();void action.run('sheets.navigate',{sheet:s.sheet,address});}}><input className={field} aria-label={t('sheets.address')} value={address} onChange={e=>setAddress(e.target.value)} autoCapitalize="characters"/><button className={button} disabled={action.busy||!parseAddress(address)}>{t('sheets.panel.go')}</button></form>
+ <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.sheetOps.title')}>
+  <form className="flex flex-col gap-1" onSubmit={e=>{e.preventDefault();if(!nameProblem)void action.run('sheets.sheet',{kind:'rename',name:name.trim()});}}>
+   <label className="flex flex-col gap-1">{t('sheets.sheetOps.name')}<NativeInput className={field} value={name} maxLength={64} aria-invalid={!!nameProblem} onChange={e=>setName(e.currentTarget.value)} data-testid="sheets-sheet-name"/></label>
+   {nameProblem&&name.trim()!==s.sheetName&&<p role="alert" className="text-ink-3">{t('sheets.sheetOps.problem.'+nameProblem)}</p>}
+   <Button variant="outline" size="compact" type="submit" disabled={action.busy||!!nameProblem||name.trim()===s.sheetName} data-testid="sheets-sheet-rename">{t('sheets.sheetOps.rename')}</Button>
+  </form>
+  <div className="flex flex-wrap gap-1">
+   <Button variant="outline" size="compact" disabled={action.busy||sheetList.length>=MAX_SHEETS} onClick={()=>void action.run('sheets.sheet',{kind:'add'})} data-testid="sheets-sheet-add">{t('sheets.sheetOps.add')}</Button>
+   <Button variant="outline" size="compact" disabled={action.busy||sheetList.length>=MAX_SHEETS} onClick={()=>void action.run('sheets.sheet',{kind:'duplicate'})} data-testid="sheets-sheet-duplicate">{t('sheets.sheetOps.duplicate')}</Button>
+   <Button variant="outline" size="compact" disabled={action.busy||s.sheet<=0} onClick={()=>void action.run('sheets.sheet',{kind:'move',to:s.sheet-1})} data-testid="sheets-sheet-left">{t('sheets.sheetOps.moveLeft')}</Button>
+   <Button variant="outline" size="compact" disabled={action.busy||s.sheet>=sheetList.length-1} onClick={()=>void action.run('sheets.sheet',{kind:'move',to:s.sheet+1})} data-testid="sheets-sheet-right">{t('sheets.sheetOps.moveRight')}</Button>
+   <Button variant="outline" size="compact" disabled={action.busy||visibleCount<=1} onClick={()=>void action.run('sheets.sheet',{kind:'delete'})} data-testid="sheets-sheet-delete">{t('sheets.sheetOps.delete')}</Button>
+  </div>
+ </div>
  <Facts values={[[t('sheets.panel.rows'),s.info?.rows],[t('sheets.panel.cols'),s.info?.cols],[t('sheets.panel.merges'),s.layout?.merges.length],[t('sheets.panel.frozen'),`${s.layout?.freeze?.rows??0} / ${s.layout?.freeze?.cols??0}`]]}/>
  <div className="flex flex-wrap gap-1"><button className={button} disabled={!s.canUndo||action.busy} onClick={()=>void action.run('sheets.undo')}>{t('cmd.edit.undo')}</button><button className={button} disabled={!s.canRedo||action.busy} onClick={()=>void action.run('sheets.redo')}>{t('cmd.edit.redo')}</button><button className={button} disabled={action.busy} onClick={()=>void action.run('sheets.saveCopy')}>{t('sheets.exportCopy')}</button></div>
  {!!s.workbook?.warnings.length&&<ul className="list-inside list-disc text-ink-3">{s.workbook.warnings.map((w,i)=><li key={i}>{w}</li>)}</ul>}<p role="status">{action.notice}</p></Region>;

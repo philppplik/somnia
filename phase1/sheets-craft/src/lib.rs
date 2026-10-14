@@ -6,6 +6,7 @@ use serde_json::json;
 use wasm_bindgen::prelude::*;
 
 const MAX_INPUT: usize = 32 * 1024 * 1024;
+const MAX_SHEETS: usize = 255;
 const MAX_FORMAT_CELLS: u64 = 1_000_000;
 
 fn is_hex_color(v: &serde_json::Value) -> Option<&str> {
@@ -261,6 +262,70 @@ impl HeadlessWorkbook {
             return Err("block exceeds the sheet limits".into());
         }
         Ok(())
+    }
+
+    /// Adds, renames, duplicates, moves or deletes a sheet as ONE history entry. `sheet` is the sheet the
+    /// operation is about; `op_json` is `{"kind":"add"}` (new sheet after `sheet`, engine-chosen or given `name`),
+    /// `{"kind":"rename","name":..}`, `{"kind":"duplicate"}`, `{"kind":"move","to":index}` or `{"kind":"delete"}`.
+    /// Names are checked here (1 to 31 characters, no control characters) and again by the engine (duplicates,
+    /// forbidden characters). Protected workbook structure refused, at most 255 sheets. Returns the index of the
+    /// sheet to show afterwards as `{"active":n}`; formulas, names and charts follow renames and deletes.
+    pub fn edit_sheet(&mut self, sheet: usize, op_json: &str) -> Result<String, String> {
+        use gridcraft_engine::model::Visibility;
+        let (count, visible) = {
+            let doc = self.session.doc().map_err(|e| e.to_string())?;
+            if doc.wb.protected_structure {
+                return Err("The workbook structure is protected. Unprotect it to change sheets.".into());
+            }
+            if doc.wb.sheet(sheet).is_none() {
+                return Err("unknown sheet".into());
+            }
+            (doc.wb.sheets.len(), doc.wb.sheets.iter().filter(|s| s.visibility == Visibility::Visible).count())
+        };
+        let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "operation must be a JSON object".to_string())?;
+        let kind = op.get("kind").and_then(|v| v.as_str()).ok_or("missing operation kind")?;
+        let name = match op.get("name") {
+            None => None,
+            Some(v) => {
+                let n = v.as_str().ok_or("sheet name must be text")?.trim();
+                if n.is_empty() || n.chars().count() > 31 || n.chars().any(char::is_control) {
+                    return Err("A sheet name must be 1 to 31 characters long.".into());
+                }
+                Some(n.to_string())
+            }
+        };
+        self.session.run("sheet.activate", json!({"sheet": sheet}))?;
+        match kind {
+            "add" | "duplicate" if count >= MAX_SHEETS => return Err(format!("A workbook can have at most {MAX_SHEETS} sheets.")),
+            "add" => {
+                let mut p = json!({"before": sheet + 1});
+                if let Some(n) = name {
+                    p["name"] = json!(n);
+                }
+                self.session.run("home.insertSheet", p)?;
+            }
+            "rename" => {
+                let n = name.ok_or("missing sheet name")?;
+                self.session.run("sheet.rename", json!({"sheet": sheet, "name": n}))?;
+            }
+            "duplicate" => {
+                self.session.run("sheet.move", json!({"sheet": sheet, "to": sheet + 1, "copy": true}))?;
+            }
+            "move" => {
+                let to = op.get("to").and_then(|v| v.as_u64()).filter(|t| (*t as usize) < count).ok_or("target position is outside the workbook")?;
+                self.session.run("sheet.move", json!({"sheet": sheet, "to": to}))?;
+            }
+            "delete" => {
+                let is_visible = self.session.doc().map_err(|e| e.to_string())?.wb.sheet(sheet).is_some_and(|s| s.visibility == Visibility::Visible);
+                if visible <= 1 && is_visible {
+                    return Err("A workbook must contain at least one visible sheet.".into());
+                }
+                self.session.run("home.deleteSheet", json!({"sheet": sheet}))?;
+            }
+            _ => return Err("unsupported sheet operation".into()),
+        }
+        let active = self.session.doc().map_err(|e| e.to_string())?.wb.active_sheet;
+        Ok(json!({"active": active}).to_string())
     }
 
     /// Applies ONE typed formatting operation to a block as one history entry. `op_json` is
@@ -755,5 +820,59 @@ mod tests {
         assert!(book.set_cell(9, "A1", "x").is_err());
         assert!(book.set_cell(0, "XFE1", "x").is_err());
         assert!(book.range(0, 1, 1, 1, 1).unwrap().contains("2.0"));
+    }
+    fn sheet_names(b: &HeadlessWorkbook) -> Vec<String> {
+        let v: serde_json::Value = serde_json::from_str(&b.sheets().unwrap()).unwrap();
+        v["sheets"].as_array().unwrap().iter().map(|s| s["name"].as_str().unwrap().to_string()).collect()
+    }
+    #[test]
+    fn sheets_can_be_added_renamed_duplicated_moved_and_deleted_with_undo() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        let first = sheet_names(&book);
+        let n = first.len();
+        let r: serde_json::Value = serde_json::from_str(&book.edit_sheet(0, r#"{"kind":"add","name":"Notes"}"#).unwrap()).unwrap();
+        assert_eq!(r["active"], 1, "the new sheet follows the sheet it was added after");
+        assert_eq!(sheet_names(&book)[1], "Notes");
+        book.undo().unwrap();
+        assert_eq!(sheet_names(&book), first, "one undo removes the added sheet");
+        book.edit_sheet(0, r#"{"kind":"add"}"#).unwrap();
+        assert_eq!(sheet_names(&book).len(), n + 1, "engine picks a default name");
+        book.edit_sheet(1, r#"{"kind":"rename","name":"Ideas"}"#).unwrap();
+        assert_eq!(sheet_names(&book)[1], "Ideas");
+        let d: serde_json::Value = serde_json::from_str(&book.edit_sheet(1, r#"{"kind":"duplicate"}"#).unwrap()).unwrap();
+        assert_eq!(d["active"], 2);
+        assert_eq!(sheet_names(&book)[2], "Ideas (2)");
+        book.edit_sheet(2, r#"{"kind":"move","to":0}"#).unwrap();
+        assert_eq!(sheet_names(&book)[0], "Ideas (2)");
+        let reopened = HeadlessWorkbook::new(&book.export_xlsx().unwrap()).unwrap();
+        assert_eq!(sheet_names(&reopened), sheet_names(&book));
+        book.edit_sheet(0, r#"{"kind":"delete"}"#).unwrap();
+        assert!(!sheet_names(&book).contains(&"Ideas (2)".to_string()));
+        book.undo().unwrap();
+        assert!(sheet_names(&book).contains(&"Ideas (2)".to_string()), "one undo brings the deleted sheet back");
+        for (sheet, op) in [
+            (0, r#"{"kind":"rename","name":""}"#),
+            (0, r#"{"kind":"rename","name":"   "}"#),
+            (0, r#"{"kind":"rename","name":"0123456789012345678901234567890123"}"#),
+            (0, r#"{"kind":"rename","name":"bad:name"}"#),
+            (0, r#"{"kind":"rename","name":"a\u0001b"}"#),
+            (0, r#"{"kind":"rename"}"#),
+            (0, r#"{"kind":"move","to":99}"#),
+            (0, r#"{"kind":"fly"}"#),
+            (99, r#"{"kind":"delete"}"#),
+        ] {
+            assert!(book.edit_sheet(sheet, op).is_err(), "{op}");
+        }
+        let taken = sheet_names(&book)[1].clone();
+        assert!(book.edit_sheet(0, &format!(r#"{{"kind":"rename","name":"{}"}}"#, taken.to_lowercase())).is_err(), "names are unique, ignoring case");
+    }
+    #[test]
+    fn the_last_visible_sheet_cannot_be_deleted() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        while sheet_names(&book).len() > 1 {
+            book.edit_sheet(0, r#"{"kind":"delete"}"#).unwrap();
+        }
+        assert!(book.edit_sheet(0, r#"{"kind":"delete"}"#).is_err());
+        assert_eq!(sheet_names(&book).len(), 1);
     }
 }

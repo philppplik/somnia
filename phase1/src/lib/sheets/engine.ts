@@ -1,4 +1,4 @@
-import type {FormatOp,RangeResult,SheetInfo,SheetLayout,SheetsRequest,SheetsResponse,ViewResult,WorkbookInfo} from './protocol';
+import type {SheetOp,FormatOp,RangeResult,SheetInfo,SheetLayout,SheetsRequest,SheetsResponse,ViewResult,WorkbookInfo} from './protocol';
 import {MAX_INPUT_BYTES} from './protocol';
 type Req=SheetsRequest extends infer R?R extends {id:number}?Omit<R,'id'>:never:never;
 /** One module Worker per open workbook. A timeout or crash discards the session: callers must keep the original bytes. */
@@ -47,6 +47,10 @@ export class SheetsEngine{
  clear(sheet:number,row:number,col:number,rows:number,cols:number){return this.result<unknown>({op:'clear',sheet,row,col,rows,cols});}
  /** One typed formatting operation over a block (one undo step). */
  format(sheet:number,row:number,col:number,rows:number,cols:number,format:FormatOp){return this.result<unknown>({op:'format',sheet,row,col,rows,cols,format});}
+ /** Current sheet list (reload after sheet edits and history). */
+ sheets(){return this.result<WorkbookInfo>({op:'sheets'});}
+ /** Add, rename, duplicate, move or delete a sheet (one undo step). Resolves to the sheet to show afterwards. */
+ editSheet(sheet:number,line:SheetOp){return this.result<{active:number}>({op:'editSheet',sheet,line});}
  undo(){return this.result<unknown>({op:'undo'});}
  redo(){return this.result<unknown>({op:'redo'});}
  async save():Promise<Uint8Array>{const r=await this.request({op:'save'});if(r.ok&&r.op==='bytes')return new Uint8Array(r.bytes);throw new Error('Unexpected engine response');}

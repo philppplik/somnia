@@ -20,6 +20,7 @@ export type FormatOp=
  |{kind:'numFmt';preset:NumFmtPreset;decimals?:number;symbol?:string}
  |{kind:'decimals';delta:1|-1;at?:{row:number;col:number}};
 export type NumFmtPreset='general'|'number'|'comma'|'percent'|'currency'|'date'|'time'|'scientific'|'text';
+export type SheetOp={kind:'add';name?:string}|{kind:'rename';name:string}|{kind:'duplicate'}|{kind:'delete'}|{kind:'move';to:number};
 export type SheetsRequest=
  |{id:number;op:'init';wasmUrl:string}
  |{id:number;op:'open';bytes:ArrayBuffer}
@@ -31,6 +32,8 @@ export type SheetsRequest=
  |{id:number;op:'setValues';sheet:number;row:number;col:number;values:string[][]}
  |{id:number;op:'clear';sheet:number;row:number;col:number;rows:number;cols:number}
  |{id:number;op:'format';sheet:number;row:number;col:number;rows:number;cols:number;format:FormatOp}
+ |{id:number;op:'sheets'}
+ |{id:number;op:'editSheet';sheet:number;line:SheetOp}
  |{id:number;op:'undo'}|{id:number;op:'redo'}|{id:number;op:'save'}|{id:number;op:'close'};
 export type SheetsResponse=
  |{id:number;ok:true;op:'result';result:unknown;ms:number}
