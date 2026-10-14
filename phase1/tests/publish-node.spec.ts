@@ -1,3 +1,4 @@
+import {openPublish} from './helpers';
 import {test,expect} from './fixtures';
 import {mkdirSync} from 'node:fs';
 const SHOTS=process.env.PUBLISH_SHOTS??'';
@@ -33,7 +34,7 @@ const setTheme=(page:import('@playwright/test').Page,theme:'light'|'dark')=>page
 for(const theme of ['light','dark'] as const){
  test(`node app settings: names only, values write-only (${theme})`,async({page})=>{
   await mockNode(page);await page.goto('/');await setTheme(page,theme);
-  await page.getByTestId('publish-button').click();
+  await openPublish(page);
   const box=page.getByTestId('node-settings');
   await expect(box).toBeVisible();
   await expect(page.getByTestId('node-env-keys')).toContainText('SESSION_SECRET');

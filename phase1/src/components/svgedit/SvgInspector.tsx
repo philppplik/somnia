@@ -20,7 +20,8 @@ function Paint({label,value,onCommit,testid}:{label:string;value:string|undefine
   <input type="color" aria-label={`${label} ${t('svg.colour')}`} data-testid={`${testid}-picker`} value={hex} disabled={none} onChange={e=>onCommit(e.target.value)}/>
   <input data-testid={testid} aria-label={label} className="grow" value={txt} onChange={e=>setTxt(e.target.value)} onBlur={()=>{if(txt.trim()&&txt!==value)onCommit(txt.trim());}} onKeyDown={e=>{e.stopPropagation();if(e.key==='Enter')e.currentTarget.blur();}}/>
   <button className="svg-none" aria-pressed={none} aria-label={`${label}: ${t('svg.none')}`} onClick={()=>onCommit(none?'#000000':'none')}>∅</button></div>;}
-export function SvgInspector(){
+/** Embedded mode leaves panel chrome and scrolling to the studio shell. */
+export function SvgInspector({embedded=false}:{embedded?:boolean}={}){
  const {t}=useT();const ui=useSvgUi();useAppStore();const sc=C.scan();const root=sc.root;const sel=ui.selection;
  const el=sel.length===1&&root?elementAt(root,parsePathKey(sel[0])):null;const first=sel.length&&root?elementAt(root,parsePathKey(sel[0])):null;
  const box=sel.length?C.boxOfKeys(C.topKeys(sel)):null;
@@ -29,7 +30,8 @@ export function SvgInspector(){
  const colors=(()=>{const set=new Map<string,number>();if(root)walk(root,e=>{for(const p of['fill','stroke']){const v=C.readPaint(e,p);if(v&&v!=='none'&&/^#|^rgb/i.test(v))set.set(v.toLowerCase(),(set.get(v.toLowerCase())??0)+1);}});return[...set.keys()].slice(0,48);})();
  const tabs=[['design',t('svg.tabDesign')],['color',t('svg.tabColor')],['code',t('svg.tabCode')]] as const;
  const paintOf=(p:string)=>first?C.readPaint(first,p):undefined;
- return <aside className="panel inspector svg-inspector" aria-label={t('svg.inspector')} data-testid="svg-inspector">
+ const Root=embedded?'div':'aside';
+ return <Root className={embedded?'svg-inspector':'panel inspector svg-inspector'} aria-label={t('svg.inspector')} data-testid="svg-inspector">
   <div className="svg-tabs" role="tablist">{tabs.map(([id,label])=><button key={id} role="tab" aria-selected={tab===id} onClick={()=>patchUi({inspectorTab:id})}>{label}</button>)}</div>
   {tab==='design'&&(first&&box?<div className="svg-section">
    <h3>{el?`<${el.tag}>`:t('svg.nSelected',{n:sel.length})}</h3>
@@ -54,4 +56,4 @@ export function SvgInspector(){
    <h4>{t('svg.newShapes')}</h4><Paint label={t('svg.fill')} testid="svg-draw-fill" value={ui.draw.fill} onCommit={v=>patchUi({draw:{...ui.draw,fill:v}})}/><Paint label={t('svg.stroke')} testid="svg-draw-stroke" value={ui.draw.stroke} onCommit={v=>patchUi({draw:{...ui.draw,stroke:v}})}/>
    <Num label={t('svg.strokeWidth')} value={ui.draw.strokeWidth} onCommit={v=>patchUi({draw:{...ui.draw,strokeWidth:Math.max(0,v)}})}/></div>}
   {tab==='code'&&<div className="svg-section">{el?<><textarea className="svg-code" data-testid="svg-code" spellCheck={false} aria-label={t('svg.tabCode')} value={code} onChange={e=>setCode(e.target.value)} onKeyDown={e=>e.stopPropagation()}/><button className="svg-apply" onClick={()=>C.replaceElementSource(sel[0],code)}>{t('svg.apply')}</button></>:<p className="text-[11px] text-ink-3">{t('svg.codeHint')}</p>}</div>}
- </aside>;}
+ </Root>;}

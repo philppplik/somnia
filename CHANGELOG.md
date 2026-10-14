@@ -3,6 +3,12 @@
 - Native Windows ARM64 NSIS/MSI and Linux ARM64 deb builds join full beta/stable CI from 12.2.0-beta.4; dev/alpha runs keep the small x64 matrix.
 - Native ARM64 CLI archives, architecture checks, same-SHA release asset assembly and checksums. Public-only standard runner guards prevent private-repo runner charges. Native packaging and real-device install checks remain CI/manual gates.
 
+# Unreleased: Studio shell regression fixes
+
+- Code Studio restores the inline SVG inspector inside the shared Design section, including paint, fill/stroke gradients, guides, grid and clip/mask controls.
+- Vector page settings restore strict SVG replacement as one undoable edit. Rejected or stale imports leave the artwork and history intact.
+- Video download/cancel/unavailable notifications follow the video session, including exports started from the new review panel.
+
 # Unreleased: Vector hero export
 
 - Vector Export... opens/focuses the Export panel without writing; output format setup, capped PNG dimensions, separated import controls and five-language labels.
