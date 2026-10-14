@@ -878,5 +878,9 @@
  "cmd.animation.keys.influence": "Definir a influência do ease das keys selecionadas",
  "animation.keys.tame": "Domar ease",
  "animation.keys.tame.hint": "Remove o excesso e a antecipação do ease das keys selecionadas",
- "cmd.animation.keys.tame": "Remover excesso e antecipação do ease das keys selecionadas"
+ "cmd.animation.keys.tame": "Remover excesso e antecipação do ease das keys selecionadas",
+ "animation.keys.tools": "Ferramentas de keys",
+ "animation.keys.tools.values": "Valores",
+ "animation.keys.tools.ease": "Ease",
+ "animation.keys.tools.select": "Seleção"
 }

@@ -1,19 +1,17 @@
 import {useState} from 'react';
 import {useT} from '../../lib/useT';
 import {Button} from '../ui/button';
+import {KeyTools} from './KeyTools';
 import {NativeInput,NativeSelect} from '../ui/native-controls';
 import {executeCommand} from '../../lib/commands';
 import {MAX_REPEATS,type RepeatMode} from '../../lib/animation/keyRepeat';
 import {MAX_JITTER_FRAMES} from '../../lib/animation/keyJitterTime';
-import {MAX_THIN_TOLERANCE} from '../../lib/animation/keyThin';
-import {MIN_INFLUENCE,MAX_INFLUENCE} from '../../lib/animation/keyInfluence';
-import {MIN_NTH,MAX_NTH} from '../../lib/animation/keyNth';
 import type {ValueMode} from '../../lib/animation/keyValues';
 const field='h-6 min-w-0 rounded-sm border border-subtle bg-transparent px-1 text-xs text-ink select-text';
 /** Timeline strip control: repeat the selected keys as cycles or ping-pong. */
 export function KeyRepeat({count:selected,layers}:{count:number;layers:readonly string[]}){
  const {t}=useT();const [n,setN]=useState('2');const [mode,setMode]=useState<RepeatMode>('cycle');
- const [amt,setAmt]=useState('10');const [vm,setVm]=useState<ValueMode>('offset');const [seed,setSeed]=useState(1);const [nth,setNth]=useState('2');const [inf,setInf]=useState('33');const infN=Number(inf),infOk=inf.trim()!==''&&infN>=MIN_INFLUENCE&&infN<=MAX_INFLUENCE;const [tol,setTol]=useState('1');const tolN=Number(tol),tolOk=tol.trim()!==''&&tolN>0&&tolN<=MAX_THIN_TOLERANCE;const [jf,setJf]=useState('3');const jfN=Number(jf),jfOk=Number.isInteger(jfN)&&jfN>=1&&jfN<=MAX_JITTER_FRAMES;const nthN=Number(nth),nthOk=Number.isInteger(nthN)&&nthN>=MIN_NTH&&nthN<=MAX_NTH;const amount=Number(amt),amtOk=amt.trim()!==''&&Number.isFinite(amount);
+ const [amt,setAmt]=useState('10');const [vm,setVm]=useState<ValueMode>('offset');const [seed,setSeed]=useState(1);const [jf,setJf]=useState('3');const jfN=Number(jf),jfOk=Number.isInteger(jfN)&&jfN>=1&&jfN<=MAX_JITTER_FRAMES;const amount=Number(amt),amtOk=amt.trim()!==''&&Number.isFinite(amount);
  const num=Number(n),valid=Number.isInteger(num)&&num>=1&&num<=MAX_REPEATS;
  return <span className="flex shrink-0 items-center gap-1" role="group" aria-label={t('animation.keys.repeat')} data-testid="animation-keys-repeat">
   <NativeInput className={`${field} w-12`} type="number" min={1} max={MAX_REPEATS} step={1} value={n} aria-label={t('animation.keys.repeat.count')} onChange={e=>setN(e.target.value)} data-testid="animation-keys-repeat-count"/>
@@ -27,26 +25,11 @@ export function KeyRepeat({count:selected,layers}:{count:number;layers:readonly 
   <NativeSelect className={`${field} w-24 shrink-0`} value={vm} aria-label={t('animation.keys.values.mode')} onChange={e=>setVm(e.target.value as ValueMode)} data-testid="animation-keys-values-mode"><option value="offset">{t('animation.keys.values.offset')}</option><option value="scale">{t('animation.keys.values.scale')}</option><option value="snap">{t('animation.keys.values.snap')}</option><option value="wiggle">{t('animation.keys.values.wiggle')}</option><option value="smooth">{t('animation.keys.values.smooth')}</option></NativeSelect>
   <Button size="tiny" variant="ghost" disabled={selected<1||!amtOk} title={t('animation.keys.values.hint')} onClick={()=>{void executeCommand('animation.keys.values',{mode:vm,amount,seed});setSeed(x=>x+1);}} data-testid="animation-keys-values-go">{t('animation.keys.values')}</Button>
   <Button size="tiny" variant="ghost" disabled={selected<1} title={t('animation.keys.easeRandom.hint')} onClick={()=>{void executeCommand('animation.keys.easeRandom',{seed});setSeed(x=>x+1);}} data-testid="animation-keys-ease-random">{t('animation.keys.easeRandom')}</Button>
-  <NativeInput className={`${field} w-12`} type="number" min={MIN_NTH} max={MAX_NTH} step={1} value={nth} aria-label={t('animation.keys.nth.step')} onChange={e=>setNth(e.target.value)} data-testid="animation-keys-nth-step"/>
-  <Button size="tiny" variant="ghost" disabled={selected<2||!nthOk} title={t('animation.keys.nth.hint')} onClick={()=>void executeCommand('animation.keys.selectNth',{n:nthN})} data-testid="animation-keys-nth">{t('animation.keys.nth')}</Button>
   <Button size="tiny" variant="ghost" disabled={selected<3} title={t('animation.keys.distribute.hint')} onClick={()=>void executeCommand('animation.keys.distribute',{})} data-testid="animation-keys-distribute">{t('animation.keys.distribute')}</Button>
   <Button size="tiny" variant="ghost" disabled={selected<1} title={t('animation.keys.toPlayhead.hint')} onClick={()=>void executeCommand('animation.keys.toPlayhead',{})} data-testid="animation-keys-to-playhead">{t('animation.keys.toPlayhead')}</Button>
   <Button size="tiny" variant="ghost" disabled={!layers.length} title={t('animation.keys.range.at.hint')} onClick={()=>void executeCommand('animation.keys.selectRange',{side:'at',layers:[...layers]})} data-testid="animation-keys-at">{t('animation.keys.range.at')}</Button>
   <NativeInput className={`${field} w-12`} type="number" min={1} max={MAX_JITTER_FRAMES} step={1} value={jf} aria-label={t('animation.keys.jitter.frames')} onChange={e=>setJf(e.target.value)} data-testid="animation-keys-jitter-frames"/>
   <Button size="tiny" variant="ghost" disabled={selected<1||!jfOk} title={t('animation.keys.jitter.hint')} onClick={()=>{void executeCommand('animation.keys.jitterTime',{frames:jfN,seed});setSeed(x=>x+1);}} data-testid="animation-keys-jitter">{t('animation.keys.jitter')}</Button>
-  <Button size="tiny" variant="ghost" disabled={selected<1} title={t('animation.keys.property.hint')} onClick={()=>void executeCommand('animation.keys.selectProperty',{})} data-testid="animation-keys-property">{t('animation.keys.property')}</Button>
-  <NativeInput className={`${field} w-14`} type="number" min={0} step={0.5} value={tol} aria-label={t('animation.keys.thin.tolerance')} onChange={e=>setTol(e.target.value)} data-testid="animation-keys-thin-tolerance"/>
-  <Button size="tiny" variant="ghost" disabled={selected<1||!tolOk} title={t('animation.keys.thin.hint')} onClick={()=>void executeCommand('animation.keys.thin',{tolerance:tolN})} data-testid="animation-keys-thin">{t('animation.keys.thin')}</Button>
-  <Button size="tiny" variant="ghost" disabled={selected<1} title={t('animation.keys.match.hint')} onClick={()=>void executeCommand('animation.keys.matchPrevious',{})} data-testid="animation-keys-match">{t('animation.keys.match')}</Button>
-  <Button size="tiny" variant="ghost" disabled={selected<1} title={t('animation.keys.matchNext.hint')} onClick={()=>void executeCommand('animation.keys.matchPrevious',{side:'next'})} data-testid="animation-keys-match-next">{t('animation.keys.matchNext')}</Button>
-  <Button size="tiny" variant="ghost" disabled={selected<2} title={t('animation.keys.flatten.hint')} onClick={()=>void executeCommand('animation.keys.flatten',{})} data-testid="animation-keys-flatten">{t('animation.keys.flatten')}</Button>
-  <Button size="tiny" variant="ghost" disabled={selected<2} title={t('animation.keys.average.hint')} onClick={()=>void executeCommand('animation.keys.flatten',{to:'average'})} data-testid="animation-keys-average">{t('animation.keys.average')}</Button>
-  <Button size="tiny" variant="ghost" disabled={selected<2} title={t('animation.keys.easeCopy.hint')} onClick={()=>void executeCommand('animation.keys.easeCopy',{})} data-testid="animation-keys-ease-copy">{t('animation.keys.easeCopy')}</Button>
-  <Button size="tiny" variant="ghost" disabled={selected<3} title={t('animation.keys.ramp.hint')} onClick={()=>void executeCommand('animation.keys.ramp',{})} data-testid="animation-keys-ramp">{t('animation.keys.ramp')}</Button>
-  <Button size="tiny" variant="ghost" disabled={!layers.length} title={t('animation.keys.peaks.hint')} onClick={()=>void executeCommand('animation.keys.selectPeaks',{layers:[...layers]})} data-testid="animation-keys-peaks">{t('animation.keys.peaks')}</Button>
-  <Button size="tiny" variant="ghost" disabled={!layers.length} title={t('animation.keys.invertSel.hint')} onClick={()=>void executeCommand('animation.keys.invertSelection',{layers:[...layers]})} data-testid="animation-keys-invert-selection">{t('animation.keys.invertSel')}</Button>
-  <NativeInput className={`${field} w-14`} type="number" min={MIN_INFLUENCE} max={MAX_INFLUENCE} step={1} value={inf} aria-label={t('animation.keys.influence.percent')} onChange={e=>setInf(e.target.value)} data-testid="animation-keys-influence-percent"/>
-  <Button size="tiny" variant="ghost" disabled={selected<1||!infOk} title={t('animation.keys.influence.hint')} onClick={()=>void executeCommand('animation.keys.influence',{percent:infN})} data-testid="animation-keys-influence">{t('animation.keys.influence')}</Button>
-  <Button size="tiny" variant="ghost" disabled={selected<1} title={t('animation.keys.tame.hint')} onClick={()=>void executeCommand('animation.keys.tame',{})} data-testid="animation-keys-tame">{t('animation.keys.tame')}</Button>
+  <KeyTools selected={selected} layers={layers}/>
  </span>;
 }

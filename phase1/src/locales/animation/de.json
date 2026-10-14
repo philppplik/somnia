@@ -878,5 +878,9 @@
  "cmd.animation.keys.influence": "Ease-Einfluss der gewählten Keys setzen",
  "animation.keys.tame": "Ease zähmen",
  "animation.keys.tame.hint": "Überschwingen und Ausholen aus dem Ease der gewählten Keys entfernen",
- "cmd.animation.keys.tame": "Überschwingen und Ausholen aus dem Ease der gewählten Keys entfernen"
+ "cmd.animation.keys.tame": "Überschwingen und Ausholen aus dem Ease der gewählten Keys entfernen",
+ "animation.keys.tools": "Key-Werkzeuge",
+ "animation.keys.tools.values": "Werte",
+ "animation.keys.tools.ease": "Ease",
+ "animation.keys.tools.select": "Auswahl"
 }

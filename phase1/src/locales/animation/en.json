@@ -878,5 +878,9 @@
  "cmd.animation.keys.influence": "Set the ease influence of the selected keys",
  "animation.keys.tame": "Tame ease",
  "animation.keys.tame.hint": "Remove overshoot and anticipation from the ease of the selected keys",
- "cmd.animation.keys.tame": "Remove overshoot and anticipation from the ease of the selected keys"
+ "cmd.animation.keys.tame": "Remove overshoot and anticipation from the ease of the selected keys",
+ "animation.keys.tools": "Key tools",
+ "animation.keys.tools.values": "Values",
+ "animation.keys.tools.ease": "Ease",
+ "animation.keys.tools.select": "Select"
 }
