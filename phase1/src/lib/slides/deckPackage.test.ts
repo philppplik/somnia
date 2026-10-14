@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {unzipSync,zipSync,strFromU8,strToU8} from 'fflate';
-import {editTable,readTable,setShapeStyle,readShapeStyle,setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
+import {insertTable,editTable,readTable,setShapeStyle,readShapeStyle,setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
 import {readRuns,makeEditedCopy} from './editCopy';
 import {png,jpeg} from './imageFixtures';
 
@@ -682,7 +682,7 @@ test('table editing: read, cell text, rows, columns, header, fill',()=>{
 });
 test('table editing fails closed and validates bounds',()=>{
   const {b,sid,tid}=tableDeck();
-  for(const bad of [{merged:true},{fld:true}]){const t=tableDeck(bad);assert.equal(readTable(t.b,t.sid,t.tid).editable,false);assert.throws(()=>editTable(t.b,t.sid,t.tid,{kind:'cell',row:1,col:1,text:'x'}),/merged|unsupported/);}
+  for(const bad of [{merged:true},{fld:true}]){const t=tableDeck(bad);assert.equal(readTable(t.b,t.sid,t.tid).editable,false);assert.throws(()=>editTable(t.b,t.sid,t.tid,{kind:'cell',row:1,col:1,text:'x'}),/merge|unsupported/i);}
   assert.throws(()=>editTable(b,sid,tid,{kind:'cell',row:5,col:0,text:'x'}),/no longer exists/);
   assert.throws(()=>editTable(b,sid,tid,{kind:'cell',row:0,col:0,text:'x'.repeat(2001)}),/invalid/);
   assert.throws(()=>editTable(b,sid,tid,{kind:'cell',row:0,col:0,text:'a\u0001'}),/invalid/);
@@ -701,4 +701,53 @@ test('table editing fails closed and validates bounds',()=>{
   const gradient=patchPart(b,'ppt/slides/slide1.xml',x=>x.replace('<a:tcPr/>','<a:tcPr><a:gradFill/></a:tcPr>'));
   assert.throws(()=>editTable(gradient,sid,tid,{kind:'fill',scope:'table',row:0,col:0,fill:{kind:'none'}}),/does not change/);
   const textShape=readDeckModel(deck(2)).slides[0];assert.throws(()=>editTable(deck(2),textShape.id,textShape.shapes[0].id,{kind:'header',on:true}),/not a table/);
+});
+
+test('insertTable adds a plain bordered table that the editor can then edit',()=>{
+  const b0=deck(2),sid=readDeckModel(b0).slides[0].id,b=insertTable(b0,sid,3,4);
+  const shapes=readDeckModel(b).slides[0].shapes,t=shapes.at(-1)!;
+  assert.equal(t.kind,'table');assert.equal(shapes.length,readDeckModel(b0).slides[0].shapes.length+1);
+  const info=readTable(b,sid,t.id);assert.deepEqual([info.rows,info.cols,info.editable,info.header,info.merged.length],[3,4,true,false,0]);
+  assert.ok(info.cells.every(r=>r.every(x=>x==='')));
+  const xml=strFromU8(unzipSync(b)['ppt/slides/slide1.xml']);assert.ok(!xml.includes('tableStyleId'));assert.ok(xml.includes('<a:lnL w="12700"'));
+  assert.equal(readTable(editTable(b,sid,t.id,{kind:'cell',row:2,col:3,text:'ok'}),sid,t.id).cells[2][3],'ok');
+  const two=insertTable(b,sid,1,1);assert.equal(readDeckModel(two).slides[0].shapes.filter(s=>s.kind==='table').length,2);
+  assert.notEqual(readDeckModel(two).slides[0].shapes.at(-1)!.id,t.id);
+  for(const [r,c] of [[0,1],[51,1],[1,0],[1,21],[1.5,2],[NaN,2]])assert.throws(()=>insertTable(b0,sid,r,c),/needs 1 to 50 rows/);
+  assert.throws(()=>insertTable(b0,999,2,2),/no longer exists/);
+  assert.deepEqual(Object.keys(unzipSync(b)).sort(),Object.keys(unzipSync(b0)).sort());
+  assert.equal(readDeckModel(insertTable(b0,sid,50,20)).slides[0].shapes.at(-1)!.kind,'table');
+});
+test('table merge, split, row height and column width',()=>{
+  const {b,sid,tid}=tableDeck(),r0=readTable(b,sid,tid);
+  const m=editTable(b,sid,tid,{kind:'merge',row:0,col:0,rowSpan:2,colSpan:2});let t=readTable(m,sid,tid);
+  assert.deepEqual(t.merged,[{row:0,col:0,rowSpan:2,colSpan:2}]);assert.deepEqual(t.covered,[[false,true,false],[true,true,false]]);
+  assert.equal(t.cells[0][0],'A1\nB1\nA2\nB&2');assert.deepEqual([t.cells[0][1],t.cells[1][0],t.cells[1][1]],['','','']);assert.equal(t.cells[0][2],'C1');
+  const xml=strFromU8(unzipSync(m)['ppt/slides/slide1.xml']);assert.match(xml,/gridSpan="2" rowSpan="2"/);assert.equal((xml.match(/hMerge="1"/g)??[]).length,2);assert.equal((xml.match(/vMerge="1"/g)??[]).length,2);
+  assert.throws(()=>editTable(m,sid,tid,{kind:'cell',row:0,col:1,text:'x'}),/merged-away/);
+  assert.equal(readTable(editTable(m,sid,tid,{kind:'cell',row:0,col:0,text:'only'}),sid,tid).cells[0][0],'only');
+  assert.throws(()=>editTable(m,sid,tid,{kind:'insertRow',at:0}),/Split merged cells/);
+  assert.throws(()=>editTable(m,sid,tid,{kind:'removeCol',at:2}),/Split merged cells/);
+  assert.throws(()=>editTable(m,sid,tid,{kind:'merge',row:1,col:1,rowSpan:1,colSpan:2}),/Split merged cells/);
+  const f=editTable(m,sid,tid,{kind:'fill',scope:'table',row:0,col:0,fill:{kind:'solid',color:'C62828'}});assert.equal(readTable(f,sid,tid).fills.flat().every(x=>x==='C62828'),true);
+  const sp=editTable(m,sid,tid,{kind:'split',row:0,col:0});t=readTable(sp,sid,tid);assert.deepEqual([t.merged.length,t.covered.flat().some(Boolean)],[0,false]);assert.equal(t.cells[0][0],'A1\nB1\nA2\nB&2');
+  assert.ok(!/gridSpan|rowSpan|hMerge|vMerge/.test(strFromU8(unzipSync(sp)['ppt/slides/slide1.xml'])));
+  const row=editTable(b,sid,tid,{kind:'merge',row:1,col:0,rowSpan:1,colSpan:3});assert.deepEqual(readTable(row,sid,tid).merged,[{row:1,col:0,rowSpan:1,colSpan:3}]);
+  assert.equal(readTable(editTable(row,sid,tid,{kind:'split',row:1,col:0}),sid,tid).merged.length,0);
+  for(const bad of [{row:0,col:0,rowSpan:1,colSpan:1},{row:0,col:0,rowSpan:3,colSpan:1},{row:0,col:2,rowSpan:1,colSpan:2},{row:-1,col:0,rowSpan:1,colSpan:2},{row:0,col:0,rowSpan:0,colSpan:2}])assert.throws(()=>editTable(b,sid,tid,{kind:'merge',...bad}),/range is invalid/);
+  assert.throws(()=>editTable(b,sid,tid,{kind:'split',row:0,col:0}),/not merged/);
+  assert.throws(()=>editTable(b,sid,tid,{kind:'split',row:9,col:0}),/no longer exists/);
+  const long=patchPart(b,'ppt/slides/slide1.xml',x=>x.replace('<a:t>A1</a:t>',`<a:t>${'x'.repeat(1500)}</a:t>`).replace('<a:t>B1</a:t>',`<a:t>${'y'.repeat(1500)}</a:t>`));
+  assert.throws(()=>editTable(long,sid,tid,{kind:'merge',row:0,col:0,rowSpan:1,colSpan:2}),/too long/);
+  // inconsistent merge fails closed
+  const bad=patchPart(b,'ppt/slides/slide1.xml',x=>x.replace('<a:tc>','<a:tc hMerge="1">'));assert.equal(readTable(bad,sid,tid).editable,false);
+  // sizes
+  const rh=editTable(b,sid,tid,{kind:'rowHeight',at:1,heightPt:50});t=readTable(rh,sid,tid);assert.deepEqual(t.rowH,[370840,635000]);
+  assert.equal(readDeckModel(rh).slides[0].shapes.find(s=>s.id===tid)!.bounds!.h,741680+635000-370840);
+  assert.equal(editTable(rh,sid,tid,{kind:'rowHeight',at:1,heightPt:50}),rh);
+  const cw=editTable(b,sid,tid,{kind:'colWidth',at:2,widthPt:200});t=readTable(cw,sid,tid);assert.deepEqual(t.colW,[1000000,1000000,2540000]);
+  assert.equal(readDeckModel(cw).slides[0].shapes.find(s=>s.id===tid)!.bounds!.w,3000000+1540000);
+  for(const [at,h] of [[0,7],[0,501],[0,NaN],[5,20]])assert.throws(()=>editTable(b,sid,tid,{kind:'rowHeight',at,heightPt:h}),/Row/);
+  for(const [at,w] of [[0,19],[0,1501],[0,Infinity],[9,100]])assert.throws(()=>editTable(b,sid,tid,{kind:'colWidth',at,widthPt:w}),/Column/);
+  assert.deepEqual(Object.keys(unzipSync(m)).sort(),Object.keys(unzipSync(b)).sort());void r0;
 });

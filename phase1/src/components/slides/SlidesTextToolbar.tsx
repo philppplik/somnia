@@ -12,6 +12,8 @@ import {MIN_SIZE_PT,MAX_SIZE_PT,ARRANGE_MODES,TRANSITION_KINDS,TRANSITION_DIRS,T
 import {ALIGN_MODES} from '../../lib/slides/shapeGeometry';
 import {useValidShape} from './SlidesShapeOverlay';
 
+const TABLE_PRESETS=[[2,2],[3,3],[4,3],[5,4],[6,5]] as const;
+
 /** Text box tools: add, remove, and character formatting for every run of the selected text box. */
 export function SlidesTextToolbar(){
   const s=useSlidesSession(),t=useSlidesPanelText(),valid=useValidShape();
@@ -62,6 +64,8 @@ export function SlidesTextToolbar(){
         {lineNow&&LINE_DASHES.map(d=><MenuItem key={`d-${d}`} onClick={()=>style({line:{kind:'solid',color:lineNow.color,widthPt:lineNow.widthPt??1,dash:d}})}>{(lineNow.dash??'solid')===d?'• ':''}{t(`slides.style.dash.${d}`)}</MenuItem>)}
       </>}</MenuContent></Menu>
     <Button size="compact" variant={st?.shadow==='outer'?'primary':'outline'} aria-pressed={st?.shadow==='outer'} disabled={!styleOk||!st||!st.editable} onClick={()=>style({shadow:st?.shadow!=='outer'})}>{t('slides.style.shadow')}</Button>
+    <Menu><MenuTrigger render={<Button size="compact" variant="outline" disabled={!ready}>{t('slides.table.insert')}</Button>}/>
+      <MenuContent>{TABLE_PRESETS.map(([r,c])=><MenuItem key={`${r}x${c}`} onClick={()=>run('slides.insertTable',{source:s.source,slideId,rows:r,cols:c})}>{`${r} × ${c}`}</MenuItem>)}</MenuContent></Menu>
     <Menu><MenuTrigger render={<Button size="compact" variant="outline" disabled={!ready||!shape||[shape,...(valid?.more??[])].some(x=>!!boundsEditIssue(x))}>{t('slides.align')}</Button>}/>
       <MenuContent>
         {ALIGN_MODES.map(m=><MenuItem key={m} onClick={()=>run('slides.alignSelection',{mode:m,to:'slide'})}>{t(`slides.align.${m}`)}</MenuItem>)}

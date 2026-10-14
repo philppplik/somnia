@@ -11,7 +11,7 @@ const runs=[{slide:0,run:0,text:'Hello world',part:'ppt/slides/slide1.xml'},{sli
 let picked:import('./shapeSelection').ShapeSelection|null=null;
 function fixture(){picked=null;
  const state={source:'blob:deck1',index:0,busy:false,working:new Uint8Array(40),runs:runs.map(r=>({...r})),slideIds:[256,257],layouts:[{part:'ppt/slideLayouts/slideLayout1.xml',supported:true},{part:'ppt/slideLayouts/slideLayout2.xml',supported:false}],model:{slides:[{id:256,shapes:[{id:2,name:'A',kind:'text' as const,runCount:1,parentId:null,bounds:{x:1000000,y:1000000,w:2000000,h:1000000,rot:0,flipH:false,flipV:false,source:'slide' as const},ph:null},{id:3,name:'B',kind:'text' as const,runCount:1,parentId:null,bounds:null,ph:null}]},{id:257,shapes:[]},{id:258,shapes:[{id:5,name:'P',kind:'picture' as const,runCount:0,parentId:null,bounds:{x:1000000,y:1000000,w:2000000,h:1000000,rot:0,flipH:false,flipV:false,source:'slide' as const},ph:null}]}],slideSize:{cx:9144000,cy:6858000}},summary:{slides:2}};
- const calls:unknown[]=[];const deps:PanelCommandDeps={state:()=>state,thumbnails:async()=>{calls.push('thumbnails');},show:async index=>{state.index=index;calls.push(['show',index]);},edit:async(run,text)=>{state.runs=state.runs.map(r=>r.slide===run.slide&&r.run===run.run?{...r,text}:r);calls.push(['edit',text]);},select:v=>calls.push(v),move:async(id,to)=>{const a=state.slideIds.slice();a.splice(to,0,a.splice(a.indexOf(id),1)[0]);state.slideIds=a;calls.push(['move',id,to]);},duplicate:async id=>{calls.push(['dup',id]);},remove:async id=>{calls.push(['del',id]);},add:async(l,a)=>{calls.push(['add',l,a]);},setMany:async(id,edits)=>{calls.push(['many',id,edits]);},setTransition:async(id,tr)=>{calls.push(['transition',id,tr]);},table:async(id,sid,edit)=>{calls.push(['table',id,sid,edit]);},style:async(id,ids,patch)=>{calls.push(['style',id,ids,patch]);},setNotes:async(id,lines)=>{calls.push(['notes',id,lines]);},group:async(id,ids)=>{calls.push(['group',id,ids]);},ungroup:async(id,sid)=>{calls.push(['ungroup',id,sid]);},arrange:async(id,ids,mode)=>{calls.push(['arrange',id,ids,mode]);},setBounds:async(id,sid,e,n)=>{calls.push(['bounds',id,sid,e,n]);},format:async(sid,id,f)=>{calls.push(['format',sid,id,f]);},addBox:async(sid,l)=>{calls.push(['addBox',sid,l]);},removeBox:async(sid,id)=>{calls.push(['removeBox',sid,id]);},insertImage:async(sid,img,alt)=>{calls.push(['insertImage',sid,img.length,alt]);},replaceImage:async(sid,id,img)=>{calls.push(['replaceImage',sid,id,img.length]);},removeImage:async(sid,id)=>{calls.push(['removeImage',sid,id]);},pick:v=>{picked=v;calls.push(['pick',v]);},picked:()=>picked};
+ const calls:unknown[]=[];const deps:PanelCommandDeps={state:()=>state,thumbnails:async()=>{calls.push('thumbnails');},show:async index=>{state.index=index;calls.push(['show',index]);},edit:async(run,text)=>{state.runs=state.runs.map(r=>r.slide===run.slide&&r.run===run.run?{...r,text}:r);calls.push(['edit',text]);},select:v=>calls.push(v),move:async(id,to)=>{const a=state.slideIds.slice();a.splice(to,0,a.splice(a.indexOf(id),1)[0]);state.slideIds=a;calls.push(['move',id,to]);},duplicate:async id=>{calls.push(['dup',id]);},remove:async id=>{calls.push(['del',id]);},add:async(l,a)=>{calls.push(['add',l,a]);},setMany:async(id,edits)=>{calls.push(['many',id,edits]);},setTransition:async(id,tr)=>{calls.push(['transition',id,tr]);},insertTable:async(id,r,c)=>{calls.push(['insertTable',id,r,c]);},table:async(id,sid,edit)=>{calls.push(['table',id,sid,edit]);},style:async(id,ids,patch)=>{calls.push(['style',id,ids,patch]);},setNotes:async(id,lines)=>{calls.push(['notes',id,lines]);},group:async(id,ids)=>{calls.push(['group',id,ids]);},ungroup:async(id,sid)=>{calls.push(['ungroup',id,sid]);},arrange:async(id,ids,mode)=>{calls.push(['arrange',id,ids,mode]);},setBounds:async(id,sid,e,n)=>{calls.push(['bounds',id,sid,e,n]);},format:async(sid,id,f)=>{calls.push(['format',sid,id,f]);},addBox:async(sid,l)=>{calls.push(['addBox',sid,l]);},removeBox:async(sid,id)=>{calls.push(['removeBox',sid,id]);},insertImage:async(sid,img,alt)=>{calls.push(['insertImage',sid,img.length,alt]);},replaceImage:async(sid,id,img)=>{calls.push(['replaceImage',sid,id,img.length]);},removeImage:async(sid,id)=>{calls.push(['removeImage',sid,id]);},pick:v=>{picked=v;calls.push(['pick',v]);},picked:()=>picked};
  const dispatcher=new CommandDispatcher();slidesPanelCommandSpecs(deps).forEach(s=>dispatcher.register(s));return {state,calls,dispatcher};
 }
 test('outline searches text and slide number and preserves empty slides',()=>{
@@ -317,4 +317,28 @@ test('editTable validates identity, shape kind and edit parameters before mutati
  await assert.rejects(()=>run({...base,edit:{kind:'melt'}}));
  await assert.rejects(()=>run({...base,edit:{kind:'header',on:true,extra:1}}));
  assert.equal(f.calls.length,n,'no mutation on rejected input');
+});
+
+test('insertTable and the new editTable kinds validate before mutation',async()=>{
+ const f=fixture(),run=(id:string,p:unknown)=>f.dispatcher.runCommand(id,p,{origin:'ui'}),base={source:'blob:deck1',slideId:256};
+ await run('slides.insertTable',{...base,rows:3,cols:4});assert.deepEqual(f.calls.at(-2),['insertTable',256,3,4]);assert.deepEqual(f.calls.at(-1),['pick',{source:'blob:deck1',slideId:256,shapeId:4}]);
+ const n=f.calls.length;
+ for(const bad of [{rows:0,cols:2},{rows:2,cols:21},{rows:51,cols:2},{rows:1.5,cols:2},{rows:2}])await assert.rejects(()=>run('slides.insertTable',{...base,...bad}));
+ await assert.rejects(()=>run('slides.insertTable',{...base,slideId:257,rows:2,cols:2}),/changed/);
+ await assert.rejects(()=>run('slides.insertTable',{...base,source:'blob:x',rows:2,cols:2}),/changed/);
+ (f.state.model!.slides[0].shapes as unknown[]).push({id:9,name:'Table 8',kind:'table',runCount:0,parentId:null,bounds:null,ph:null});
+ const t={...base,shapeId:9};
+ await run('slides.editTable',{...t,edit:{kind:'merge',row:0,col:1,rowSpan:2,colSpan:2}});assert.deepEqual((f.calls.at(-1) as unknown[])[3],{kind:'merge',row:0,col:1,rowSpan:2,colSpan:2});
+ await run('slides.editTable',{...t,edit:{kind:'split',row:0,col:1}});assert.deepEqual((f.calls.at(-1) as unknown[])[3],{kind:'split',row:0,col:1});
+ await run('slides.editTable',{...t,edit:{kind:'rowHeight',at:1,heightPt:40.5}});assert.deepEqual((f.calls.at(-1) as unknown[])[3],{kind:'rowHeight',at:1,heightPt:40.5});
+ await run('slides.editTable',{...t,edit:{kind:'colWidth',at:0,widthPt:120}});assert.deepEqual((f.calls.at(-1) as unknown[])[3],{kind:'colWidth',at:0,widthPt:120});
+ const m=f.calls.length;
+ await assert.rejects(()=>run('slides.editTable',{...t,edit:{kind:'merge',row:0,col:0,rowSpan:2}}),/missing colSpan/);
+ await assert.rejects(()=>run('slides.editTable',{...t,edit:{kind:'merge',row:0,col:0,rowSpan:0,colSpan:2}}));
+ await assert.rejects(()=>run('slides.editTable',{...t,edit:{kind:'split',row:0}}),/missing col/);
+ await assert.rejects(()=>run('slides.editTable',{...t,edit:{kind:'rowHeight',at:0,heightPt:7}}));
+ await assert.rejects(()=>run('slides.editTable',{...t,edit:{kind:'rowHeight',at:0,heightPt:501}}));
+ await assert.rejects(()=>run('slides.editTable',{...t,edit:{kind:'colWidth',at:0,widthPt:19}}));
+ await assert.rejects(()=>run('slides.editTable',{...t,edit:{kind:'colWidth',at:0}}),/missing widthPt/);
+ assert.ok(n>0);assert.equal(f.calls.length,m);
 });

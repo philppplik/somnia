@@ -5165,6 +5165,21 @@
       "hasEnabled": true
     },
     {
+      "id": "slides.insertTable",
+      "title": "Insert table",
+      "category": "Edit",
+      "source": "slides",
+      "keywords": [
+        "add",
+        "columns",
+        "grid",
+        "insert",
+        "rows",
+        "table"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "slides.loadThumbnails",
       "title": "Load slide thumbnails",
       "category": "View",

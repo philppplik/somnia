@@ -2,7 +2,7 @@ import {diagnosePptx} from './diagnostics';
 import {readRuns,makeEditedCopy} from './editCopy';
 /// <reference lib="webworker" />
 import init,{SlidesEngine} from '../../../slides-engine/pkg/somnia_slides.js';
-import {editTable,setShapeStyle,setSlideNotes,groupShapes,ungroupShape,setSlideTransition,arrangeShapes,setShapesBounds,insertPicture,replacePicture,removePicture,formatShapeText,addTextBox,removeTextBox,readDeckModel,moveSlide,setShapeBounds,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
+import {insertTable,editTable,setShapeStyle,setSlideNotes,groupShapes,ungroupShape,setSlideTransition,arrangeShapes,setShapesBounds,insertPicture,replacePicture,removePicture,formatShapeText,addTextBox,removeTextBox,readDeckModel,moveSlide,setShapeBounds,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
 import type {SlidesRequest,SlidesReply} from './protocol';
 let engine:SlidesEngine|undefined;let wasmMemory:WebAssembly.Memory|undefined;
 // Serialize even asynchronous initialization. No user-defined method invocation.
@@ -23,6 +23,7 @@ self.onmessage=({data}:{data:SlidesRequest})=>{queue=queue.then(async()=>{
    case 'shapeBounds':result=setShapeBounds(data.bytes,data.slideId,data.shapeId,data.expected,data.next);break;
    case 'shapesBounds':result=setShapesBounds(data.bytes,data.slideId,data.edits);break;
    case 'arrange':result=arrangeShapes(data.bytes,data.slideId,data.shapeIds,data.mode);break;
+   case 'insertTable':result=insertTable(data.bytes,data.slideId,data.rows,data.cols);break;
    case 'table':result=editTable(data.bytes,data.slideId,data.shapeId,data.edit);break;
    case 'style':result=setShapeStyle(data.bytes,data.slideId,data.shapeIds,data.patch);break;
    case 'notes':result=setSlideNotes(data.bytes,data.slideId,data.lines);break;

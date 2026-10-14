@@ -117,6 +117,7 @@ export const setShapesBoundsAt=(slideId:number,edits:ShapeBoundsEdit[])=>structu
 export const arrangeShapesAt=(slideId:number,shapeIds:number[],mode:ArrangeMode)=>structuralEdit(async(e,before)=>({bytes:await e.client.arrange(before,slideId,shapeIds,mode),index:idAt(e,slideId)}));
 export const setTransitionAt=(slideId:number,transition:SlideTransition)=>structuralEdit(async(e,before)=>({bytes:await e.client.setTransition(before,slideId,transition),index:idAt(e,slideId)}));
 export const styleShapesAt=(slideId:number,shapeIds:number[],patch:ShapeStylePatch)=>structuralEdit(async(e,before)=>({bytes:await e.client.styleShapes(before,slideId,shapeIds,patch),index:idAt(e,slideId)}));
+export const insertTableAt=(slideId:number,rows:number,cols:number)=>structuralEdit(async(e,before)=>({bytes:await e.client.insertTable(before,slideId,rows,cols),index:idAt(e,slideId)}));
 export const editTableAt=(slideId:number,shapeId:number,edit:TableEdit)=>structuralEdit(async(e,before)=>({bytes:await e.client.editTable(before,slideId,shapeId,edit),index:idAt(e,slideId)}));
 export const setNotesAt=(slideId:number,lines:string[])=>structuralEdit(async(e,before)=>({bytes:await e.client.setNotes(before,slideId,lines),index:idAt(e,slideId)}));
 export const groupShapesAt=(slideId:number,shapeIds:number[])=>structuralEdit(async(e,before)=>({bytes:await e.client.group(before,slideId,shapeIds),index:idAt(e,slideId)}));
