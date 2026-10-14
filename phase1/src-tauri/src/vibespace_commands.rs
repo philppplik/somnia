@@ -1457,3 +1457,10 @@ sync_command!(vibespace_skills_reject_update, SkillIdRequest, db::skills::SkillS
 sync_command!(vibespace_skills_uninstall, SkillIdRequest, bool, true, |runtime, request, _window, _state| {
     runtime.store.uninstall_skill(&request.id).map_err(failed)
 });
+
+#[derive(Deserialize)]#[serde(rename_all="camelCase",deny_unknown_fields)]
+pub struct BoardBudgetRequest{pub space_id:String,pub budget:db::BoardBudget}
+#[tauri::command]pub async fn vibespace_board_budget(window:WebviewWindow,webview:Webview,state:State<'_,VibeSpaceState>,request:SpaceOnly)->Result<serde_json::Value>{
+ gate(&window,&webview)?;let runtime=state.runtime(window.app_handle())?;let budget=runtime.store.board_budget(&request.space_id).map_err(failed)?;let reported_tokens=runtime.store.board_reported_tokens(&request.space_id).ok();Ok(serde_json::json!({"budget":budget,"reportedTokens":reported_tokens}))
+}
+#[tauri::command]pub async fn vibespace_board_budget_save(window:WebviewWindow,webview:Webview,state:State<'_,VibeSpaceState>,request:BoardBudgetRequest)->Result<()>{gate(&window,&webview)?;state.runtime(window.app_handle())?.save_board_budget(&request.space_id,&request.budget).map_err(failed)}

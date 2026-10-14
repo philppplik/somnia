@@ -2443,6 +2443,32 @@
       ]
     },
     {
+      "name": "vibespace_board_budget",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_board_budget_save",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
       "name": "vibespace_capabilities",
       "domain": "fs",
       "status": "native",

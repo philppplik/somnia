@@ -32,6 +32,7 @@ impl engine::ModelTransport for Script {
                     cache_write_tokens: Some(30),
                     cost_usd: Some(0.01),
                     cost_source: Some(engine::CostSource::ProviderReported),
+                    tokens_unknown: false,
                 },
             })
         } else {
@@ -505,4 +506,25 @@ impl engine::ModelTransport for PartialFailure{
  for _ in 0..100{if !rt.snapshot(&id).unwrap().snapshot.messages.is_empty(){break;}tokio::time::sleep(std::time::Duration::from_millis(10)).await;}
  let request=RetryFeedback{run_id:id.clone(),request_id:uuid::Uuid::new_v4().to_string(),message:"Use smaller steps".into()};assert!(rt.prepare_retry_feedback(&request).is_err());rt.stop(&id).await.unwrap();
  let successor=rt.prepare_retry_feedback(&request).unwrap();let again=rt.prepare_retry_feedback(&request).unwrap();assert_eq!(successor.studio_id,again.studio_id);assert_ne!(successor.studio_id,studio.studio_id);assert_eq!(successor.space_id,studio.space_id);assert_eq!(successor.model,studio.model);assert!(successor.goal.contains("Use smaller steps"));assert!(!successor.goal.contains("Provisional only"));assert!(rt.prepare_retry_feedback(&RetryFeedback{message:"different".into(),..request}).is_err());assert_eq!(std::fs::read_to_string(project.path().join("hello.txt")).unwrap(),"before");
+}
+
+#[tokio::test]async fn capped_board_blocks_cloud_before_run_and_reported_threshold_blocks_next_local_request(){
+ let (_data,_project,rt,studio)=setup();rt.save_board_budget(&studio.space_id,&somnia_vibespace_core::storage::BoardBudget{enabled:true,reported_token_stop:100}).unwrap();
+ assert!(rt.check_board_request(&studio.space_id,true).is_err());assert!(rt.check_board_request(&studio.space_id,false).is_ok());
+ let started=rt.start(StartRun{studio_id:studio.studio_id,request_id:uuid::Uuid::new_v4().to_string(),retry_of_run_id:None},Arc::new(PartialWaiting),engine::ModelConfig::Local{endpoint:"http://127.0.0.1:11434/v1/chat/completions".into(),model:"qwen3.5:9b".into()}).await.unwrap();let id=started.snapshot.run_id;
+ rt.store.append_event(&id,"agent.usage",&serde_json::json!({"inputTokens":60,"outputTokens":40}),None).unwrap();assert!(rt.check_board_request(&studio.space_id,false).is_err());rt.stop(&id).await.unwrap();
+}
+
+#[tokio::test]async fn enabling_capped_mode_cancels_owned_board_run(){
+ let (_data,_project,rt,studio)=setup();let run=rt.start(StartRun{studio_id:studio.studio_id,request_id:uuid::Uuid::new_v4().to_string(),retry_of_run_id:None},Arc::new(PartialWaiting),engine::ModelConfig::Local{endpoint:"http://127.0.0.1:11434/v1/chat/completions".into(),model:"qwen3.5:9b".into()}).await.unwrap().snapshot.run_id;
+ rt.save_board_budget(&studio.space_id,&somnia_vibespace_core::storage::BoardBudget{enabled:true,reported_token_stop:1000}).unwrap();
+ for _ in 0..100{if rt.store.get_run(&run).unwrap().execution.is_terminal(){break;}tokio::time::sleep(std::time::Duration::from_millis(10)).await;}
+ assert!(rt.store.get_run(&run).unwrap().execution.is_terminal());
+}
+
+#[tokio::test]async fn reported_threshold_is_persisted_before_next_model_call(){
+ let (_data,_project,rt,studio)=setup();rt.save_board_budget(&studio.space_id,&somnia_vibespace_core::storage::BoardBudget{enabled:true,reported_token_stop:1}).unwrap();
+ let script=Arc::new(Script(AtomicUsize::new(0)));let run=rt.start(StartRun{studio_id:studio.studio_id,request_id:uuid::Uuid::new_v4().to_string(),retry_of_run_id:None},script.clone(),engine::ModelConfig::Local{endpoint:"http://127.0.0.1:11434/v1/chat/completions".into(),model:"qwen3.5:9b".into()}).await.unwrap().snapshot.run_id;
+ for _ in 0..100{if rt.store.get_run(&run).unwrap().execution.is_terminal(){break;}tokio::time::sleep(std::time::Duration::from_millis(10)).await;}
+ assert_eq!(script.0.load(Ordering::SeqCst),1);assert_eq!(rt.store.board_reported_tokens(&studio.space_id).unwrap(),5);assert!(rt.check_board_request(&studio.space_id,false).is_err());assert_eq!(rt.snapshot(&run).unwrap().snapshot.last_step.as_deref(),Some("board_reported_usage_stop"));
 }

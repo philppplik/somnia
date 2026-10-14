@@ -140,7 +140,7 @@ pub fn decode_response(kind: ProviderKind, value: &Value, propose: bool) -> Resu
     }
     let n = |p: &str| value.pointer(p).and_then(|v| v.as_u64()).unwrap_or(0);
     let opt = |p: &str| value.pointer(p).and_then(|v| v.as_u64());
-    Ok(ModelReply { message: text, tool, usage: Usage { input_tokens: n("/usage/input_tokens"), output_tokens: n("/usage/output_tokens"), cache_read_tokens: opt("/usage/cache_read_input_tokens"), cache_write_tokens: opt("/usage/cache_creation_input_tokens"), ..Usage::default() } })
+    Ok(ModelReply { message: text, tool, usage: Usage { tokens_unknown: opt("/usage/input_tokens").is_none() || opt("/usage/output_tokens").is_none(), input_tokens: n("/usage/input_tokens"), output_tokens: n("/usage/output_tokens"), cache_read_tokens: opt("/usage/cache_read_input_tokens"), cache_write_tokens: opt("/usage/cache_creation_input_tokens"), ..Usage::default() } })
 }
 
 /// Transport for any supported provider. Local kinds: numeric loopback http, no credential.

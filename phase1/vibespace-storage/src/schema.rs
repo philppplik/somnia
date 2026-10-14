@@ -9,7 +9,7 @@ pub struct Migration {
     pub sql: &'static str,
 }
 
-pub const SCHEMA_VERSION: i64 = 6;
+pub const SCHEMA_VERSION: i64 = 7;
 
 pub const SCHEDULING_SQL: &str = include_str!("migrations/scheduling.sql");
 
@@ -20,6 +20,7 @@ pub const MIGRATIONS: &[Migration] = &[
     Migration { version: 4, sql: "ALTER TABLE artifact_operations ADD COLUMN kind TEXT NOT NULL DEFAULT 'apply' CHECK(kind IN ('apply','restore')); UPDATE artifact_operations SET kind='restore' WHERE id LIKE 'restore-%';" },
     Migration { version: 5, sql: SCHEDULING_SQL },
     Migration { version: 6, sql: V5_MEMORY_SKILLS },
+    Migration { version: 7, sql: "CREATE TABLE board_budgets(space_id TEXT PRIMARY KEY NOT NULL REFERENCES spaces(id) ON DELETE CASCADE, enabled INTEGER NOT NULL CHECK(enabled IN (0,1)), reported_token_stop INTEGER NOT NULL CHECK(reported_token_stop>0 AND reported_token_stop<=1000000000));" },
 ];
 
 const V1: &str = r#"

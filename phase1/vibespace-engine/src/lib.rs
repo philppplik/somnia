@@ -96,6 +96,8 @@ pub struct ToolProposal {
 }
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Usage {
+    /// Missing provider input/output counts must not be presented as a reported zero.
+    pub tokens_unknown: bool,
     /// As reported by the provider. NOTE: Anthropic reports uncached input only; OpenAI-style
     /// `prompt_tokens` already includes cached tokens. Cache fields below are never added in.
     pub input_tokens: u64,

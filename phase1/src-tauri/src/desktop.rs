@@ -2899,6 +2899,8 @@ pub fn run() {
             crate::vibespace_commands::vibespace_apply_hunks,
             crate::vibespace_commands::vibespace_request_changes,
             crate::vibespace_commands::vibespace_retry_feedback,
+            crate::vibespace_commands::vibespace_board_budget,
+            crate::vibespace_commands::vibespace_board_budget_save,
 
             crate::vibespace_commands::vibespace_discard_run,
             crate::vibespace_commands::vibespace_restore_checkpoint,

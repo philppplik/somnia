@@ -51,6 +51,11 @@ fn model(m: &db::ModelRef) -> w::ModelReference {
     }
 }
 
+struct BudgetTransport{inner:Arc<dyn engine::ModelTransport>,runtime:Arc<Runtime>,space_id:String,run_id:String,cloud:bool}
+#[async_trait::async_trait]impl engine::ModelTransport for BudgetTransport{
+ async fn complete(&self,input:engine::ModelInput)->std::result::Result<engine::ModelReply,engine::Failure>{self.runtime.check_board_request(&self.space_id,self.cloud).map_err(|_|engine::Failure::Policy)?;let reply=self.inner.complete(input).await?;self.runtime.record_budget_usage(&self.run_id,&reply.usage).map_err(|_|engine::Failure::Policy)?;Ok(reply)}
+ async fn stream_text(&self,input:engine::ModelInput,deltas:tokio::sync::mpsc::Sender<String>)->std::result::Result<engine::ModelReply,engine::Failure>{self.runtime.check_board_request(&self.space_id,self.cloud).map_err(|_|engine::Failure::Policy)?;let reply=self.inner.stream_text(input,deltas).await?;self.runtime.record_budget_usage(&self.run_id,&reply.usage).map_err(|_|engine::Failure::Policy)?;Ok(reply)}
+}
 pub struct Runtime {
     pub store: Arc<db::Store>,
     vault: cp::Vault,
@@ -120,6 +125,17 @@ impl Runtime {
         });
         runtime.reconcile_applies()?;
         Ok(runtime)
+    }
+    pub fn check_board_request(&self,space_id:&str,cloud:bool)->Result<()>{let budget=self.store.board_budget(space_id)?;if budget.enabled&&(cloud||self.store.board_reported_tokens(space_id)? >= budget.reported_token_stop){return Err(CoreError("board budget blocks request: cloud disabled or reported usage threshold reached"));}Ok(())}
+    pub fn save_board_budget(&self,space_id:&str,budget:&db::BoardBudget)->Result<()>{
+        let _guard=lock(&self.command)?;self.store.save_board_budget(space_id,budget)?;
+        if budget.enabled{self.cancel_board_runs(space_id)?;}Ok(())
+    }
+    fn cancel_board_runs(&self,space_id:&str)->Result<()>{
+        for (id,cancel) in lock(&self.cancellations)?.iter(){if self.store.get_run(id)?.space_id==space_id{
+            if let Ok(run)=policy::RunId::new(id){self.broker.runs.cancel_run(&run,Duration::from_secs(2)).ok();}
+            cancel.cancel();}}
+        Ok(())
     }
     pub fn subscribe(&self) -> broadcast::Receiver<w::RunEvent> {
         self.events.subscribe()
@@ -260,6 +276,7 @@ impl Runtime {
             if !self.studio_summary(&studio)?.can_start {
                 return Err(CoreError("Studio has an active or unreviewed run"));
             }
+            self.check_board_request(&studio.space_id,!matches!(config,engine::ModelConfig::Local{..})||config.endpoint()!="http://127.0.0.1:11434/v1/chat/completions")?;
             let root = self
                 .store
                 .native_scope_anchor(&studio.space_id)?
@@ -308,7 +325,9 @@ impl Runtime {
                     &serde_json::json!({"baseline":checkpoint.to_hex(),"isolatedId":copy.id}),
                     None,
                 )?;
-                let mut backend = engine::GooseBackend::new(transport);
+                self.check_board_request(&run.space_id,!matches!(config,engine::ModelConfig::Local{..})||config.endpoint()!="http://127.0.0.1:11434/v1/chat/completions")?;
+                let guarded=Arc::new(BudgetTransport{inner:transport,runtime:self.clone(),space_id:run.space_id.clone(),run_id:run.id.clone(),cloud:!matches!(config,engine::ModelConfig::Local{..})||config.endpoint()!="http://127.0.0.1:11434/v1/chat/completions"});
+                let mut backend = engine::GooseBackend::new(guarded);
                 if self.enable_files {
                     let run_id = policy::RunId::new(&run.id)
                         .map_err(|_| CoreError("invalid policy run id"))?;
@@ -417,7 +436,15 @@ impl Runtime {
         };
         let (_, dummy) = tokio::sync::mpsc::unbounded_channel();
         let mut incoming = std::mem::replace(&mut handle.events, dummy);
-        lock(&self.cancellations)?.insert(run.id.clone(), handle.cancellation());
+        // Close the setup/save gap: policy may change while baseline preparation or
+        // backend startup is in progress. A concurrent save sees either this token
+        // or is reflected in this final admission check under the command lock.
+        {
+            let _guard=lock(&self.command)?;
+            lock(&self.cancellations)?.insert(run.id.clone(), handle.cancellation());
+            let cloud=studio.model.locality!=db::ModelLocality::Local||studio.model.provider!="ollama";
+            if self.check_board_request(&run.space_id,cloud).is_err(){handle.cancel();}
+        }
         let handle = Arc::new(tokio::sync::Mutex::new(handle));
         lock(&self.handles)?.insert(run.id.clone(), handle);
         let runtime = self.clone();
@@ -479,6 +506,21 @@ impl Runtime {
             },
         )?;
         self.publish(id)
+    }
+    fn record_budget_usage(&self,id:&str,usage:&engine::Usage)->Result<()>{
+                self.store.append_event(id,"agent.usage",&serde_json::json!({
+                    "inputTokens":if usage.tokens_unknown{None}else{Some(usage.input_tokens)},
+                    "outputTokens":if usage.tokens_unknown{None}else{Some(usage.output_tokens)},
+                    "cacheReadTokens":usage.cache_read_tokens,
+                    "cacheWriteTokens":usage.cache_write_tokens,
+                    "costUsd":usage.cost_usd,
+                    "costSource":usage.cost_source.map(|source| match source {
+                        engine::CostSource::ProviderReported => "provider_reported",
+                    }),
+                }),None)?;
+                let run=self.store.get_run(id)?;let budget=self.store.board_budget(&run.space_id)?;
+                if budget.enabled&&(usage.tokens_unknown||self.store.board_reported_tokens(&run.space_id)? >= budget.reported_token_stop){self.store.append_event(id,"budget.reported_stop",&serde_json::json!({"reason":"reported_usage_threshold"}),None)?;self.cancel_board_runs(&run.space_id)?;}
+        Ok(())
     }
     fn consume_engine_event(&self, id: &str, event: engine::EventKind) -> Result<()> {
         if self.store.get_run(id)?.execution.is_terminal() {
@@ -551,18 +593,9 @@ impl Runtime {
                     None,
                 )?;
             }
-            Usage(usage) => {
-                self.store.append_event(id,"agent.usage",&serde_json::json!({
-                    "inputTokens":usage.input_tokens,
-                    "outputTokens":usage.output_tokens,
-                    "cacheReadTokens":usage.cache_read_tokens,
-                    "cacheWriteTokens":usage.cache_write_tokens,
-                    "costUsd":usage.cost_usd,
-                    "costSource":usage.cost_source.map(|source| match source {
-                        engine::CostSource::ProviderReported => "provider_reported",
-                    }),
-                }),None)?;
-            }
+            // The admission wrapper persists usage synchronously before yielding
+            // the reply, so the next inference cannot outrun observer persistence.
+            Usage(_) => {}
             ToolProposed(proposal) => {
                 self.store.append_event(
                     id,
@@ -787,6 +820,7 @@ impl Runtime {
                     text: event.payload["text"].as_str().unwrap_or("").into(),
                     timestamp_utc: event.timestamp_utc.clone(),
                 });},
+                "budget.reported_stop" => last_step=Some("board_reported_usage_stop".into()),
                 "agent.step" => last_step = event.payload["name"].as_str().map(str::to_string),
                 "agent.usage" => {
                     usage.input_tokens = usage
@@ -954,7 +988,7 @@ impl Runtime {
                     end.saturating_sub(started).max(0) as u64
                 })
                 .unwrap_or(0),
-            usage: Some(usage),
+            usage: if events.iter().any(|e|e.kind=="agent.usage")&&!events.iter().any(|e|e.kind=="agent.usage"&&(e.payload["inputTokens"].as_u64().is_none()||e.payload["outputTokens"].as_u64().is_none())){Some(usage)}else{None},
             messages,
             pending_consents,
             checkpoints,
@@ -1267,7 +1301,7 @@ impl Runtime {
                     }
                     _ => String::new(),
                 },
-                usage: if e.kind == "agent.usage" {
+                usage: if e.kind == "agent.usage" && e.payload["inputTokens"].as_u64().is_some() && e.payload["outputTokens"].as_u64().is_some() {
                     Some(w::Usage {
                         input_tokens: e.payload["inputTokens"].as_u64().unwrap_or(0),
                         output_tokens: e.payload["outputTokens"].as_u64().unwrap_or(0),

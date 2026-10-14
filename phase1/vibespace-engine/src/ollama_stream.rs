@@ -30,7 +30,8 @@ impl Decoder {
   if !self.done||!self.buffer.iter().all(u8::is_ascii_whitespace)||self.text.trim().is_empty(){return Err(Failure::Model);}
   let v=self.final_value.ok_or(Failure::Model)?;let n=|key:&str|v.get(key).and_then(Value::as_u64).unwrap_or(0);
   if v.get("done_reason").and_then(Value::as_str)==Some("length"){return Err(Failure::Model);}
-  Ok(ModelReply{message:self.text,tool:None,usage:Usage::tokens(n("prompt_eval_count"),n("eval_count"))})
+  let mut usage=Usage::tokens(n("prompt_eval_count"),n("eval_count"));usage.tokens_unknown=["prompt_eval_count","eval_count"].iter().any(|key|v.get(key).and_then(Value::as_u64).is_none());
+  Ok(ModelReply{message:self.text,tool:None,usage})
  }
 }
 pub fn request(model:&str,messages:&[ModelMessage])->Result<Value,Failure>{let bytes=serde_json::to_vec(messages).map_err(|_|Failure::InvalidRequest)?;if bytes.len()>24000{return Err(Failure::InvalidRequest);}Ok(json!({"model":model,"messages":messages,"stream":true,"options":{"num_ctx":32768,"num_predict":2048}}))}
@@ -43,3 +44,5 @@ pub fn request(model:&str,messages:&[ModelMessage])->Result<Value,Failure>{let b
  #[test]fn duplicate_done_and_length_fail(){let mut d=Decoder::default();assert!(d.push(b"{\"message\":{\"content\":\"ok\"},\"done\":true}\n{\"done\":true}\n").is_err());let mut d=Decoder::default();d.push(b"{\"message\":{\"content\":\"partial\"},\"done\":true,\"done_reason\":\"length\"}\n").unwrap();assert!(d.finish().is_err());}
  #[test]fn context_and_no_tools(){let m=vec![ModelMessage::text("user","x".repeat(24000))];assert!(request("m",&m).is_err());let body=request("m",&[ModelMessage::text("user","hello")]).unwrap();assert_eq!(body["stream"],true);assert!(body.get("tools").is_none());assert_eq!(body["options"]["num_ctx"],32768);}
 }
+
+#[cfg(test)]mod unknown_usage_tests{use super::*;#[test]fn missing_stream_counters_are_unknown(){let mut d=Decoder::default();d.push(b"{\"message\":{\"content\":\"ok\"},\"done\":true}\n").unwrap();assert!(d.finish().unwrap().usage.tokens_unknown);}}

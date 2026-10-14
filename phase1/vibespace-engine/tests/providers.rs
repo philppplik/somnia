@@ -177,3 +177,8 @@ fn usage_cache_and_cost_come_only_from_provider_responses() {
 fn experimental_stream_is_disabled_by_default() {
  assert!(!vibespace_engine::provider::EXPERIMENTAL_OLLAMA_STREAM_ENABLED);
 }
+
+#[test]fn missing_token_counts_are_unknown_not_reported_zero(){
+ let missing=serde_json::json!({"choices":[{"message":{"content":"x"}}]});assert!(decode_response(ProviderKind::Ollama,&missing,false).unwrap().usage.tokens_unknown);
+ let zero=serde_json::json!({"choices":[{"message":{"content":"x"}}],"usage":{"prompt_tokens":0,"completion_tokens":0}});assert!(!decode_response(ProviderKind::Ollama,&zero,false).unwrap().usage.tokens_unknown);
+}

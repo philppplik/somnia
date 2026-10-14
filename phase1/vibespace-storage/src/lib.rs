@@ -46,3 +46,6 @@ pub mod limits {
     pub const DEFAULT_LIST_LIMIT: usize = 50;
     pub const MAX_LEASE_TTL_MS: i64 = 3_600_000;
 }
+
+pub mod board_budget;
+pub use board_budget::BoardBudget;

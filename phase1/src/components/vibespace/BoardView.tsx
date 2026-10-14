@@ -1,3 +1,4 @@
+import {BudgetPanel} from './BudgetPanel';
 import {RunHistoryFilters} from './RunQuality';
 import {emptyRunFilter,filterRunHistory} from '../../lib/vibespace/runQuality';
 import {useState} from 'react';
@@ -39,6 +40,7 @@ export function BoardView({space,snapshot,schedules,schedulesError=false,pending
  const goalOf=(studioId:string)=>snapshot.sessions.find(s=>s.studioId===studioId)?.goal.split('\n')[0].slice(0,80)??studioId;
  return <div className="vs-boardview" aria-label={t('vs.board.aria')}>
   <BoardSummary total={totals.concurrency.total} active={totals.concurrency.active} needsYou={totals.concurrency.needsYou} usage={usage}/>
+  {mode==='native'&&<BudgetPanel spaceId={space.spaceId}/>}
   <RunHistoryFilters runs={runs} value={filter} onChange={setFilter}/>{filtering&&!filtered.some(r=>r.spaceId===space.spaceId)&&<p role="status">{t('vs.quality.empty')}</p>}
   {schedulesError&&<p className="vs-muted" role="status">{t('vs.board.schedule.unavailable')}</p>}
   {schedules&&schedules.length>0&&<ScheduleStrip schedules={schedules} conflicts={conflicts} goalOf={goalOf}/>}

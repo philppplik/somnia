@@ -217,6 +217,7 @@ pub(crate) fn parse_openai_reply(value: &serde_json::Value, propose: bool) -> Re
         message: text,
         tool,
         usage: Usage {
+            tokens_unknown: ["/usage/prompt_tokens","/usage/completion_tokens"].iter().any(|p| value.pointer(p).and_then(|v|v.as_u64()).is_none()),
             input_tokens: value.pointer("/usage/prompt_tokens").and_then(|v| v.as_u64()).unwrap_or(0),
             output_tokens: value.pointer("/usage/completion_tokens").and_then(|v| v.as_u64()).unwrap_or(0),
             cache_read_tokens: value.pointer("/usage/prompt_tokens_details/cached_tokens").and_then(|v| v.as_u64()),
