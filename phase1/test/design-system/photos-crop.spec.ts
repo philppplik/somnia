@@ -94,3 +94,21 @@ test('aspect swap: a 16:9 draft turns portrait, applies and undoes as one step (
   expect(Number(back[1])).toBeGreaterThanOrEqual(Number(back[2])); // undo restores the landscape frame
  }
 });
+test('auto straighten: the estimated horizon commits as one undo step (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-crop&tilt=5');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-transform-panel')).toBeVisible();
+  const value=async()=>{const m=/-?[0-9.]+/.exec((await page.getByTestId('photos-value-straighten').textContent())??'');return m?Number(m[0]):NaN;};
+  expect(await value()).toBe(0);
+  await page.getByTestId('photos-straighten-auto').click();
+  await page.waitForTimeout(600);
+  const a=await value();
+  expect(Math.abs(a+5)).toBeLessThanOrEqual(1); // the +5 deg tilt takes about the -5 correction
+  await page.screenshot({path:`test-results/ds-photos-straighten-auto-${theme}.png`,fullPage:true});
+  await page.getByRole('button',{name:'Undo',exact:true}).click();
+  await page.waitForTimeout(400);
+  expect(await value()).toBe(0); // one undo restores the level setting
+ }
+});

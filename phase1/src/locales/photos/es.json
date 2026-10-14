@@ -117,5 +117,6 @@
  "photos.p.crop.swap": "Invertir orientación",
  "photos.rad.invert": "Invertir",
  "photos.flag.filter.pick": "Seleccionadas",
- "photos.flag.filter.reject": "Rechazadas"
+ "photos.flag.filter.reject": "Rechazadas",
+ "photos.p.straighten.auto": "Auto"
 }

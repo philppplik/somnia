@@ -1,4 +1,4 @@
-import {ArrowLeftRight,ArrowUpDown,Proportions,RotateCcw,RotateCw,Check,X,Frame} from '../../../lib/icons';
+import {ArrowLeftRight,ArrowUpDown,Proportions,RotateCcw,RotateCw,Check,WandSparkles,X,Frame} from '../../../lib/icons';
 import {useT} from '../../../lib/useT';
 import {CROP_ASPECTS,aspectRatio,orientedSize,outputSize,ratioLabel,type CropAspect} from '../../../lib/photos/cropAspect';
 import {PHOTO_CONTROLS} from '../../../lib/photos/studioSettings';
@@ -38,7 +38,10 @@ export function TransformPanel(){
     <p className="m-0 text-[11px] text-ink-3" data-testid="photos-crop-size">{draftPx?t('photos.p.crop.draft',{width:draftPx.w,height:draftPx.h}):t('photos.p.crop.output',{width:out.width,height:out.height,ratio:ratioLabel(out.width,out.height)})}{!draftPx&&out.estimated?` ${t('photos.p.crop.estimated')}`:''}</p>
     {session.cropping&&<p className="m-0 text-[11px] text-ink-3">{t('photos.crop.hint')}</p>}
    </div>
-   <SettingSlider name={name} session={session} control={straighten} disabled={busy}/>
+   <div className="flex items-start gap-1.5">
+    <div className="min-w-0 flex-1"><SettingSlider name={name} session={session} control={straighten} disabled={busy}/></div>
+    <Button size="tiny" variant="outline" disabled={!session.frame} onClick={()=>void runPhotos('photos.straighten.auto')} data-testid="photos-straighten-auto" aria-label={t('photos.p.straighten.auto')} title={t('photos.p.straighten.auto')}><WandSparkles size={11}/>{t('photos.p.straighten.auto')}</Button>
+   </div>
    <div className="flex flex-wrap gap-1" role="group" aria-label={t('photos.p.orient')}>
     <Button size="compact" variant="outline" onClick={()=>void runPhotos('photos.rotate',{direction:-1})} data-testid="photos-rotate-left"><RotateCcw size={13}/>{t('photos.rotateLeft')}</Button>
     <Button size="compact" variant="outline" onClick={()=>void runPhotos('photos.rotate',{direction:1})} data-testid="photos-rotate-right"><RotateCw size={13}/>{t('photos.rotateRight')}</Button>

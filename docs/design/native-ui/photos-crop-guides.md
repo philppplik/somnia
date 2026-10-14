@@ -49,3 +49,18 @@ portrait 9:16 with the same area, kept inside the frame. While
 cropping the swap turns the in-flight draft; with a committed crop it
 commits as one undo step. The button is disabled when there is no crop
 and no draft.
+
+## Auto straighten (P69)
+
+The "Auto" button next to the straighten slider estimates the horizon
+from the rendered preview frame and commits it as one undo step
+(command `photos.straighten.auto`). The estimate is classical CV, no
+AI: Sobel gradients feed a structure tensor over the frame; a single
+dominant edge orientation (eigenvalue coherence >= 0.6) within +-15
+degrees of horizontal becomes the correction. Flat frames, mixed
+orientations and vertical-only structure return null - the command
+then throws "No usable horizon found." and the setting stays
+untouched. Sign convention matches the horizon drag: a horizon sloping
+down to the right takes the negative correction. Accuracy on a
+pixel-quantized edge is about +-1 degree; the drag or slider refines
+the last degree.

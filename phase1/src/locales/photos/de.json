@@ -117,5 +117,6 @@
  "photos.p.crop.swap": "Ausrichtung tauschen",
  "photos.rad.invert": "Umkehren",
  "photos.flag.filter.pick": "Markiert",
- "photos.flag.filter.reject": "Abgelehnt"
+ "photos.flag.filter.reject": "Abgelehnt",
+ "photos.p.straighten.auto": "Auto"
 }

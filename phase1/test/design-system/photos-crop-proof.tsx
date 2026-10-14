@@ -6,7 +6,13 @@ import type {PhotoEngineLike} from '../../src/lib/photos/studioSession';
 import {PhotosWorkspace} from '../../src/components/photos/PhotosWorkspace';
 import {TransformPanel} from '../../src/components/photos/panels/TransformPanel';
 
+const TILT=(()=>{const m=/[?&]tilt=(-?[0-9.]+)/.exec(location.search);return m?Number(m[1]):0;})();
 function frame(){const w=240,h=160,b=new Uint8Array(w*h*4);
+ if(TILT!==0){ // tilted horizon for the auto-straighten proof: bright sky over dark ground
+  const t=Math.tan(TILT*Math.PI/180);
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=(y*w+x)*4;const v=y<h/2+(x-w/2)*t?200:80;b[i]=v;b[i+1]=v;b[i+2]=v;b[i+3]=255;}
+  return{bytes:b.buffer as ArrayBuffer,width:w,height:h};
+ }
  for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=(y*w+x)*4;b[i]=Math.round(40+180*(x/w));b[i+1]=Math.round(50+140*(y/h));b[i+2]=140;b[i+3]=255;}
  return{bytes:b.buffer as ArrayBuffer,width:w,height:h};}
 function fakeEngine():PhotoEngineLike{

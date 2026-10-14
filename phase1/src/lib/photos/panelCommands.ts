@@ -15,6 +15,7 @@ import {isNeutralPhoto,neutralPhotoSettings,PHOTO_CONTROLS,type PhotoSettings} f
 import {applyLook,BUILT_IN_PRESETS,LOOK_KEYS,type Look} from './presets';
 import {decodeSettingsPayload} from './settingsClipboard';
 import {aspectRatio,CROP_ASPECTS,fitAspect,isCropAspect,orientedSize,outputSize,swapAspect,type CropAspect} from './cropAspect';
+import {estimateHorizon} from './autoStraighten';
 import {describeChange,stepsTo} from './historyLog';
 import {computeHistogram,toneZones} from './histogram';
 
@@ -97,6 +98,13 @@ export function photosCommandSpecs():CommandSpec<never,unknown>[]{
     if(ratio===null)return;
     const base=getPhotoSession(name)!.cropDraft??s.now.crop??{x0:0,y0:0,x1:1,y1:1};
     setPhotoCropDraft(name,fitAspect(base,ratio,f.width,f.height));}},
+  {id:'photos.straighten.auto',title:'Photos: Auto straighten from the estimated horizon',category:'Edit',level:'ui',keywords:['photos','straighten','horizon','auto'],params:none,
+   enabled:()=>ready()&&!!getPhotoSession(activePhotoName())?.frame,
+   run:()=>{
+    const name=need();const f=session().frame;if(!f)throw Error('No rendered frame yet.');
+    const a=estimateHorizon(new Uint8Array(f.bytes.slice(0)),f.width,f.height);
+    if(a===null)throw Error('No usable horizon found.'); // the UI leaves the setting alone
+    commitPhotoSettings(name,now=>({...now,straighten:a}));}},
   {id:'photos.crop.swapAspect',title:'Photos: Swap crop aspect orientation',category:'Edit',level:'ui',keywords:['photos','crop','aspect','swap','portrait','landscape'],params:none,
    enabled:()=>ready()&&!!(getPhotoSession(activePhotoName())?.cropping||getPhotoSession(activePhotoName())?.now.crop),
    run:()=>{
