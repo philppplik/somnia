@@ -678,3 +678,16 @@ test('P190 graph playhead reading: value of the channel at the playhead, speed i
  assert.equal(typeof playheadReading(prop,0,t,0,c.duration,true),'number');
  assert.equal(playheadReading(prop,0,-5,0,c.duration,false),null);assert.equal(playheadReading(prop,0,c.duration+1,0,c.duration,false),null);
 });
+
+test('P191 layers.reset: neutral rotation/scale/opacity at the playhead, one undo step, skips locked, refuses when already neutral',async()=>{
+ const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'shape',id:'b'});s.dispatch({type:'layer.add',kind:'shape',id:'c'});
+ const {evaluate}=await import('./interpolate');const {layerResetSpecs}=await import('./layerResetCommands');const run=(p:object)=>(layerResetSpecs()[0].run as (p:unknown)=>any)(p);
+ const get=(id:string)=>findLayer(findComp(s.document!)!,id)!;const ev=(id:string,k:'rotation'|'scale'|'opacity')=>evaluate(get(id).transform[k],0);
+ s.dispatch([{type:'prop.set',layer:'b',prop:'rotation',value:45,t:0},{type:'prop.set',layer:'b',prop:'scale',value:[50,60],t:0},{type:'prop.set',layer:'b',prop:'opacity',value:30,t:0},{type:'prop.set',layer:'c',prop:'rotation',value:10,t:0}]);
+ s.dispatch({type:'layer.update',layer:'c',locked:true});s.setView({playhead:0});
+ const r=run({mode:'all',layers:['b','c']});assert.equal(r.changed,3);assert.equal(r.skippedLocked,1);
+ assert.equal(ev('b','rotation'),0);assert.deepEqual(ev('b','scale'),[100,100]);assert.equal(ev('b','opacity'),100);assert.equal(ev('c','rotation'),10);
+ assert.throws(()=>run({mode:'all',layers:['b']}),(e:any)=>e.expected===true);
+ assert.throws(()=>run({mode:'nope',layers:['b']}),(e:any)=>e.expected===true);
+ s.undo();assert.equal(ev('b','rotation'),45);assert.deepEqual(ev('b','scale'),[50,60]);
+});

@@ -1008,5 +1008,11 @@
  "animation.export.problem.quality": "La calidad WebM debe ser baja, media o alta.",
  "animation.export.background": "Fondo",
  "animation.export.backgroundReset": "Usar el color de la composición",
- "animation.export.problem.background": "El color de fondo debe tener la forma #ffffff."
+ "animation.export.problem.background": "El color de fondo debe tener la forma #ffffff.",
+ "animation.rig.group.reset": "Restablecer",
+ "animation.rig.reset.rotation": "Rotación a 0",
+ "animation.rig.reset.scale": "Escala al 100 %",
+ "animation.rig.reset.opacity": "Opacidad al 100 %",
+ "animation.rig.reset.all": "Las tres",
+ "cmd.animation.layers.reset": "Restablecer rotación, escala u opacidad de las capas seleccionadas"
 }

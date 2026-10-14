@@ -1008,5 +1008,11 @@
  "animation.export.problem.quality": "La qualité WebM doit être basse, moyenne ou haute.",
  "animation.export.background": "Arrière-plan",
  "animation.export.backgroundReset": "Utiliser la couleur de la composition",
- "animation.export.problem.background": "La couleur d’arrière-plan doit ressembler à #ffffff."
+ "animation.export.problem.background": "La couleur d’arrière-plan doit ressembler à #ffffff.",
+ "animation.rig.group.reset": "Réinitialiser",
+ "animation.rig.reset.rotation": "Rotation à 0",
+ "animation.rig.reset.scale": "Échelle à 100 %",
+ "animation.rig.reset.opacity": "Opacité à 100 %",
+ "animation.rig.reset.all": "Les trois",
+ "cmd.animation.layers.reset": "Réinitialiser la rotation, l’échelle ou l’opacité des calques sélectionnés"
 }

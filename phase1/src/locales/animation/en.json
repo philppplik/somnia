@@ -1008,5 +1008,11 @@
  "animation.export.problem.quality": "WebM quality must be low, medium or high.",
  "animation.export.background": "Background",
  "animation.export.backgroundReset": "Use composition colour",
- "animation.export.problem.background": "The background colour must look like #ffffff."
+ "animation.export.problem.background": "The background colour must look like #ffffff.",
+ "animation.rig.group.reset": "Reset",
+ "animation.rig.reset.rotation": "Rotation to 0",
+ "animation.rig.reset.scale": "Scale to 100%",
+ "animation.rig.reset.opacity": "Opacity to 100%",
+ "animation.rig.reset.all": "All three",
+ "cmd.animation.layers.reset": "Reset rotation, scale or opacity of the selected layers"
 }
