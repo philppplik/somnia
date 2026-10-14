@@ -11,7 +11,7 @@ import {secondsToTicks,snapToFrame} from './time';
 import {ClipError,copyKeys,getKeyClip,pastedRefs,setKeyClip} from './keyclip';
 import {allKeysOf,pruneSelection,shiftSelection} from './selection';
 import {EASE_PRESETS,type EasePreset} from './graph';
-import {exportCurrentFrame,exportWorkAreaSequence} from './exportJob';
+import {exportApng,exportCurrentFrame,exportGif,exportWebM,exportWorkAreaSequence} from './exportJob';
 import {ExportError} from './exportFrames';
 /** Window event the Compositions panel listens for to open the audio file chooser. */
 export const AUDIO_IMPORT_EVENT='somnia:animation-audio-import';
@@ -102,6 +102,9 @@ export function animationCommandSpecs():CommandSpec<unknown,unknown>[]{
   spec('animation.graph.toggle','Switch between timeline and graph editor',()=>animationSession().setView({graph:!animationSession().getState().view.graph}),undefined,open,'View'),
   spec('animation.export.frame','Export current frame as PNG',()=>exportCurrentFrame().then(()=>undefined,e=>{throw e instanceof ExportError?Object.assign(e,{expected:true}):e;}),undefined,open,'Project'),
   spec('animation.export.sequence','Export work area as PNG sequence (ZIP)',()=>exportWorkAreaSequence().then(()=>undefined,e=>{throw e instanceof ExportError?Object.assign(e,{expected:true}):e;}),undefined,open,'Project'),
+  spec('animation.export.gif','Export work area as GIF',()=>exportGif().then(()=>undefined,e=>{throw e instanceof ExportError?Object.assign(e,{expected:true}):e;}),undefined,open,'Project'),
+  spec('animation.export.apng','Export work area as APNG (animated PNG)',()=>exportApng().then(()=>undefined,e=>{throw e instanceof ExportError?Object.assign(e,{expected:true}):e;}),undefined,open,'Project'),
+  spec('animation.export.webm','Export work area as WebM video (real time)',()=>exportWebM().then(()=>undefined,e=>{throw e instanceof ExportError?Object.assign(e,{expected:true}):e;}),undefined,open,'Project'),
   spec('animation.playhead.set','Move playhead',(p:{seconds:number})=>animationSession().setView({playhead:secondsToTicks(p.seconds)}),object({seconds:num}),open,'View'),
  ] as CommandSpec<unknown,unknown>[];
 }

@@ -153,8 +153,12 @@ export function RenderSection(_:InspectorSectionProps){
   <div className="grid gap-2">
    <Button size="compact" variant="outline" disabled={busy} onClick={()=>run('animation.export.frame')} data-testid="animation-export-frame">{t('animation.export.frame')}</Button>
    <Button size="compact" variant="outline" disabled={busy} onClick={()=>run('animation.export.sequence')} data-testid="animation-export-sequence">{t('animation.export.sequence')}</Button>
+   <Button size="compact" variant="outline" disabled={busy} onClick={()=>run('animation.export.gif')} data-testid="animation-export-gif">{t('animation.export.gif')}</Button>
+   <Button size="compact" variant="outline" disabled={busy} onClick={()=>run('animation.export.apng')} data-testid="animation-export-apng">{t('animation.export.apng')}</Button>
+   <Button size="compact" variant="outline" disabled={busy} onClick={()=>run('animation.export.webm')} data-testid="animation-export-webm">{t('animation.export.webm')}</Button>
   </div>
-  {busy&&<StudioProgress label={t('animation.export.progress',{done:job.done,total:job.total})} value={job.done} max={job.total} progressTestId="animation-export-progress" cancelLabel={t('animation.export.cancel')} onCancel={job.kind==='sequence'?cancelExport:undefined} cancelTestId="animation-export-cancel"/>}
+  <p className="m-0 text-ink-3">{t('animation.export.videoNote')}</p>
+  {busy&&<StudioProgress label={t('animation.export.progress',{done:job.done,total:job.total})} value={job.done} max={job.total} progressTestId="animation-export-progress" cancelLabel={t('animation.export.cancel')} onCancel={job.kind&&job.kind!=='frame'?cancelExport:undefined} cancelTestId="animation-export-cancel"/>}
   {job.status==='done'&&<StudioStatus className="block m-0 text-ink" data-testid="animation-export-done">{t('animation.export.done',{file:job.fileName})}</StudioStatus>}
   {job.status==='error'&&<StudioStatus tone="error" live="assertive" className="block m-0 text-ink" data-testid="animation-export-error">{t('animation.export.error',{message:job.message})}</StudioStatus>}
   <p className="m-0 text-ink-3">{t('animation.render.note')}</p>

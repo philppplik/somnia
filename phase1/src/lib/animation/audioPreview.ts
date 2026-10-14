@@ -7,7 +7,7 @@ export interface ParamLike{value:number;setValueAtTime(v:number,t:number):unknow
 export interface NodeLike{connect(n:unknown):unknown;disconnect():unknown}
 export interface SourceLike extends NodeLike{buffer:BufferLike|null;start(when:number,offset:number,duration:number):void;stop(when?:number):void}
 export interface GainLike extends NodeLike{gain:ParamLike}
-export interface AudioContextLike{currentTime:number;state:string;destination:unknown;outputLatency?:number;baseLatency?:number;resume():Promise<void>;close?():Promise<void>;decodeAudioData(b:ArrayBuffer):Promise<BufferLike>;createBufferSource():SourceLike;createGain():GainLike}
+export interface AudioContextLike{currentTime:number;state:string;destination:unknown;outputLatency?:number;baseLatency?:number;resume():Promise<void>;close?():Promise<void>;decodeAudioData(b:ArrayBuffer):Promise<BufferLike>;createBufferSource():SourceLike;createGain():GainLike;createMediaStreamDestination?():NodeLike&{stream:MediaStream}}
 /** Seconds between "now" and the first audio sample, so the sources can be scheduled before the clock passes them. */
 export const START_LEAD=0.06;
 /** Outside this, the reported output latency is not believable and is ignored. */
@@ -18,7 +18,7 @@ export class AudioUnavailable extends Error{}
  * Sources are scheduled at absolute context times (never by timers), one work-area pass at a time with one pass of lookahead.
  */
 export class AudioPreview{
- private ctx:AudioContextLike|null=null;private t0=0;private latency=0;private nodes:{src:SourceLike;gain:GainLike;end:number}[]=[];private scheduled=0;
+ private ctx:AudioContextLike|null=null;private dest:NodeLike|null=null;private t0=0;private latency=0;private nodes:{src:SourceLike;gain:GainLike;end:number}[]=[];private scheduled=0;
  private plan:ReturnType<typeof playbackPlan>|null=null;private comp:Composition|null=null;private layers:ReturnType<typeof audibleLayers>=[];
  private buffers=new Map<string,Promise<BufferLike>>();private bufferCtx:AudioContextLike|null=null;
  constructor(private readonly make:()=>AudioContextLike|null){}
@@ -31,7 +31,7 @@ export class AudioPreview{
   return p;
  }
  /** Returns the tick playback really starts from (the same rule as `playbackAt`), or null when nothing is audible, in which case the caller keeps its own clock. */
- async start(doc:AnimationDocument,comp:Composition,startTick:number,loop:boolean):Promise<number|null>{
+ async start(doc:AnimationDocument,comp:Composition,startTick:number,loop:boolean,destination?:NodeLike):Promise<number|null>{
   this.stop();
   const layers=audibleLayers(comp);if(!layers.length)return null;
   const ctx=this.make();if(!ctx)throw new AudioUnavailable('Audio playback is not available.');
@@ -41,6 +41,7 @@ export class AudioPreview{
    const buffers=new Map<string,BufferLike>();
    for(const id of new Set(layers.map(l=>l.audio!.assetId)))buffers.set(id,await this.decode(ctx,doc,id));
    this.ctx=ctx;this.comp=comp;this.layers=layers;this.plan=playbackPlan(startTick,comp.workArea,comp.fps,loop);this.scheduled=0;
+   this.dest=destination??null;
    this.latency=Math.min(MAX_LATENCY,Math.max(0,ctx.outputLatency||ctx.baseLatency||0));
    this.t0=ctx.currentTime+START_LEAD;this.buffersNow=buffers;
    this.fill(1);
@@ -56,7 +57,7 @@ export class AudioPreview{
    const pass=plan.passes(this.scheduled);if(!pass)break;
    for(const seg of segmentsBetween(comp,pass.from,pass.to,this.layers)){
     const layer=this.layers.find(l=>l.id===seg.layer)!,buf=this.buffersNow.get(seg.assetId);if(!buf)continue;
-    const src=ctx.createBufferSource(),gain=ctx.createGain();src.buffer=buf;src.connect(gain);gain.connect(ctx.destination);
+    const src=ctx.createBufferSource(),gain=ctx.createGain();src.buffer=buf;src.connect(gain);gain.connect(this.dest??ctx.destination);
     const when=this.t0+pass.startSec+seg.when,g=gainCurve(layer,seg.from,seg.to);
     if('constant' in g)gain.gain.value=g.constant;else{gain.gain.value=g.curve[0];gain.gain.setValueAtTime(g.curve[0],when);gain.gain.setValueCurveAtTime(g.curve,when,seg.duration);}
     src.start(when,seg.offset,Math.min(seg.duration,Math.max(0,buf.duration-seg.offset)));
@@ -73,7 +74,7 @@ export class AudioPreview{
  }
  stop(){
   for(const n of this.nodes){try{n.src.stop();}catch{/* never started or already ended */}try{n.src.disconnect();n.gain.disconnect();}catch{/* detached */}}
-  this.nodes=[];this.plan=null;this.comp=null;this.layers=[];this.ctx=null;this.scheduled=0;
+  this.nodes=[];this.plan=null;this.comp=null;this.layers=[];this.ctx=null;this.dest=null;this.scheduled=0;
  }
  dispose(){this.stop();this.buffers.clear();const c=this.bufferCtx;this.bufferCtx=null;void c?.close?.();}
 }

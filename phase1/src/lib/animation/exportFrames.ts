@@ -14,7 +14,7 @@ export const MAX_FRAMES=1800;
 /** Cap on all PNG bytes held for one ZIP. The ZIP is assembled from chunks into one Blob, never one giant buffer. */
 export const MAX_ZIP_BYTES=64*1024*1024;
 export const MAX_PIXELS=8192*8192;
-export class ExportError extends Error{constructor(message:string,readonly code:'too-large'|'too-many'|'raster'|'cancelled'|'empty'){super(message);this.name='ExportError';}}
+export class ExportError extends Error{constructor(message:string,readonly code:'too-large'|'too-many'|'raster'|'cancelled'|'empty'|'unsupported'){super(message);this.name='ExportError';}}
 const esc=(s:string)=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const num=(n:number)=>String(Math.round(n*1e4)/1e4);
 function layerSvg(l:Layer,assets:readonly InterfaceAsset[],tick:number,fillOverride?:string):string{
@@ -92,6 +92,19 @@ export async function exportFramePng(comp:Composition,tick:number,name:string,ra
  catch(e){if(e instanceof ExportError)throw e;throw new ExportError(`The frame could not be rendered: ${(e as Error).message}`,'raster');}
 }
 /** Browser rasteriser: SVG as an image into a canvas, then PNG bytes. Needs DOM; covered by the CI app test, not by unit tests. */
+/** Browser pixel rasteriser for palette-based formats: SVG into a canvas, RGBA bytes out. Needs DOM. */
+export const canvasPixels:RasterizePixels=async(svg,width,height)=>{
+ const url=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml;charset=utf-8'}));
+ try{
+  const img=new Image();img.decoding='async';
+  await new Promise<void>((ok,no)=>{img.onload=()=>ok();img.onerror=()=>no(new Error('image decode failed'));img.src=url;});
+  const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;
+  const ctx=canvas.getContext('2d');if(!ctx)throw new Error('2D canvas is unavailable');
+  ctx.drawImage(img,0,0,width,height);
+  return ctx.getImageData(0,0,width,height).data;
+ }finally{URL.revokeObjectURL(url);}
+};
+export type RasterizePixels=(svg:string,width:number,height:number)=>Promise<Uint8ClampedArray>;
 export const canvasRasterize:Rasterize=async(svg,width,height)=>{
  const url=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml;charset=utf-8'}));
  try{
