@@ -48,6 +48,7 @@ All file links are repository-relative, so they remain useful on a feature branc
 18. [Video area DS adoption](video-adoption.md)
 19. [Versions area DS adoption](versions-adoption.md)
 20. [Photos area DS adoption](photos-adoption.md)
+21. [Imageedit area DS adoption](imageedit-adoption.md)
 
 ## The system in one view
 

@@ -40,8 +40,8 @@ native-platform acceptance claim.
 | components/diagnostics | 21 | 1 | 0 | 0 | 22 |
 | components/interface | 2 | 8 | 11 | 1 | 22 |
 | components/sheets | 14 | 6 | 1 | 1 | 22 |
-| 14 further areas | 43 | 69 | 9 | 0 | 121 |
-| **Total** | **484** | **249** | **65** | **32** | **830** |
+| 14 further areas | 38 | 67 | 9 | 0 | 114 |
+| **Total** | **479** | **247** | **65** | **32** | **823** |
 
 The flat `src/components` bucket's largest single debtor was migrated in P23:
 `Settings.tsx` and the five sibling Settings files (98 controls) now render
@@ -122,6 +122,11 @@ through native control primitives, see below.
 - P29: photos area migrated (6 controls to native primitives
   across 6 files), ratchet budgets zero, adoption test and gallery proof
   added (?view=photos).
+- P30: imageedit area migrated (7 controls to native
+  primitives across 3 files: adjustments, filter presets, history),
+  ratchet budgets zero, adoption test and gallery proof added
+  (?view=imageedit).
+
 
 
 

@@ -6,6 +6,7 @@ import {AgentProof} from './agent-proof';
 import {VectorstudioProof} from './vectorstudio-proof';
 import {SvgeditProof} from './svgedit-proof';
 import {VersionsProof} from './versions-proof';
+import {ImageeditProof} from './imageedit-proof';
 import {DocumentsProof} from './documents-proof';
 import {VideoProof} from './video-proof';
 import {PhotosProof} from './photos-proof';
@@ -75,4 +76,4 @@ function Gallery(){
  </section><ExchangeProof/><ThemeImportPanel/></div><pre data-testid="events" aria-label="Fixture events">{events.join('\n')}</pre><StudioAdoptionProof/><ShellStateProof/></main>;
 }
 const view=new URLSearchParams(location.search).get('view');
-createRoot(document.getElementById('root')!).render(new URLSearchParams(location.search).has('state-adoption')?<StateAdoptionProof/>:new URLSearchParams(location.search).has('focus-audit')?<FocusProof/>:view==='index'?<GalleryIndex/>:view==='shell'?<main><ShellStateProof showRecovery/></main>:view==='studios'?<main><StudioAdoptionProof/></main>:view==='importer'?<main><ThemeImportPanel/></main>:view==='extensions'?<ExtensionsProof/>:view==='vibespace'?<VibespaceProof/>:view==='pdf'?<PdfProof/>:view==='agent'?<AgentProof/>:view==='vectorstudio'?<VectorstudioProof/>:view==='documents'?<DocumentsProof/>:view==='svgedit'?<SvgeditProof/>:view==='video'?<VideoProof/>:view==='versions'?<VersionsProof/>:view==='photos'?<PhotosProof/>:<Gallery/>);
+createRoot(document.getElementById('root')!).render(new URLSearchParams(location.search).has('state-adoption')?<StateAdoptionProof/>:new URLSearchParams(location.search).has('focus-audit')?<FocusProof/>:view==='index'?<GalleryIndex/>:view==='shell'?<main><ShellStateProof showRecovery/></main>:view==='studios'?<main><StudioAdoptionProof/></main>:view==='importer'?<main><ThemeImportPanel/></main>:view==='extensions'?<ExtensionsProof/>:view==='vibespace'?<VibespaceProof/>:view==='pdf'?<PdfProof/>:view==='agent'?<AgentProof/>:view==='vectorstudio'?<VectorstudioProof/>:view==='documents'?<DocumentsProof/>:view==='svgedit'?<SvgeditProof/>:view==='video'?<VideoProof/>:view==='versions'?<VersionsProof/>:view==='photos'?<PhotosProof/>:view==='imageedit'?<ImageeditProof/>:<Gallery/>);

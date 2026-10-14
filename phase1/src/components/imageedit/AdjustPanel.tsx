@@ -5,6 +5,7 @@ import {
   normalizeAdjustParams, removePoint, type AdjustParams, type SliderKey,
 } from '../../lib/imageedit/adjust';
 
+import {NativeButton,NativeInput} from '../ui/native-controls';
 export interface AdjustPanelProps {
   params: AdjustParams;
   /** Called on every slider/curve tick with the FULL params (atomic). Drive live preview from it. */
@@ -109,7 +110,7 @@ export function AdjustPanel(props: AdjustPanelProps) {
               <span>{label}</span>
               <output>{k === 'hue' ? `${params[k]}°` : params[k].toFixed(2)}</output>
             </span>
-            <input
+            <NativeInput
               type="range" min={r.min} max={r.max} step={r.step} value={params[k]} disabled={disabled}
               aria-label={label} data-testid={`adjust-${k}`}
               onChange={(e) => set(k, Number(e.currentTarget.value))}
@@ -122,10 +123,10 @@ export function AdjustPanel(props: AdjustPanelProps) {
       })}
       <div style={{ fontSize: 12 }}>{t('imageedit.adjust.curves')}</div>
       <CurveEditor {...props} />
-      <button
+      <NativeButton
         type="button" disabled={disabled || isNeutralAdjust(params)} data-testid="adjust-reset"
         onClick={() => { const n = normalizeAdjustParams(DEFAULT_ADJUST_PARAMS); onChange(n); onCommit?.(n); }}
-      >{t('imageedit.adjust.reset')}</button>
+      >{t('imageedit.adjust.reset')}</NativeButton>
     </div>
   );
 }
