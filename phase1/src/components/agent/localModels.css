@@ -26,3 +26,5 @@
 .local-ai-health dl { display: grid; grid-template-columns: minmax(80px,auto) minmax(0,1fr); gap: 6px 12px; margin: 0; }
 .local-ai-health dd { margin: 0; overflow-wrap: anywhere; }
 .local-ai-health ul { list-style: disc; padding-left: 20px; }
+
+.local-setup-steps { list-style: decimal; padding-left: 22px; display: grid; gap: 8px; }

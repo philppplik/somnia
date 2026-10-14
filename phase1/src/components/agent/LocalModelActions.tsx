@@ -1,3 +1,4 @@
+import {LocalRecommendedPicker} from './LocalRecommendedPicker';
 import {Checkbox} from '../ui/checkbox';
 import {useState,useSyncExternalStore} from 'react';
 import {useT} from '../../lib/useT';
@@ -22,6 +23,7 @@ export function LocalModelActions({snapshot,onChanged,manager=localModelManager}
   {snapshot?.state==='stopped'&&<Button disabled={locked} type="button" onClick={()=>void act(async()=>{const result=await manager.launch();setInstruction(result.instruction??'');})}>{t('local.action.start')}</Button>}
   {instruction&&<p>{t('local.action.manual')} <code>{instruction}</code></p>}
   {snapshot?.state==='running'&&<>
+   <LocalRecommendedPicker disabled={locked} onDownload={propose}/>
    <label>{t('local.action.name')}<Input value={name} disabled={locked} onChange={e=>setName(e.target.value)} placeholder="qwen3:4b"/></label>
    <Button type="button" variant="outline" disabled={locked||!name.trim()} onClick={()=>propose(name)}>{t('local.action.pull')}</Button>
    <ul className="local-models-list">{snapshot.models.map(model=><li key={model.id}><span>{model.id}</span><div className="local-models-badges"><Button type="button" size="compact" disabled={locked} onClick={()=>propose(model.id)} aria-label={t('local.action.updateModel',{model:model.id})}>{t('local.action.update')}</Button><Button type="button" size="compact" disabled={locked||!model.digest} onClick={()=>{setAck(false);setConfirm({kind:'delete',model:model.id,entry:model});}} aria-label={t('local.action.deleteModel',{model:model.id})}>{t('local.action.delete')}</Button></div></li>)}</ul>

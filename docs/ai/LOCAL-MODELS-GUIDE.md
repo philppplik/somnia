@@ -93,3 +93,18 @@ removes its pending proposal, not an accepted edit. Studio history remains avail
 
 The new Local controls and reasons now have native es/fr/pt-BR copy in addition to en/de;
 there are no remaining English fallback entries for this slice.
+
+## Task model picker and first run
+
+The model actions area offers candidate filters for text, tools and vision. Exact tags are
+ordered by catalog size, not measured quality. Hardware hints are opt-in and use the same
+conservative RAM/VRAM estimates; storage availability and actual download totals remain
+unknown. Review Download opens the existing confirmation dialog. It does not change the
+Agent model, studio override or permissions. Installed-model update/remove keep their own
+confirmation and digest guard. Hardware fit never bypasses confirmation or capability checks.
+
+When the daemon is unreachable and standard executable detection finds nothing, the Local
+tab explains this is not proof of absence. The first-run guide links official downloads and
+Linux setup instructions, asks the person to install/start Ollama themselves and Refresh,
+then directs them to exact candidate download review. No installer, shell pipeline or
+service command is executed by the guide.

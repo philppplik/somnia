@@ -1,3 +1,4 @@
+import {LocalFirstRunGuide} from './LocalFirstRunGuide';
 import {LocalAIHealth} from './LocalAIHealth';
 import type {Hardware} from '../../lib/agent/localModelAdvice';
 import {LocalModelAdvice} from './LocalModelAdvice';
@@ -36,7 +37,7 @@ export function LocalModelsSettings({active,runtime:provided,hardwareProbe}:{act
   <div className="local-models-header"><h3>{t('local.title')}</h3><Button type="button" variant="outline" disabled={busy} onClick={()=>void refresh()}>{t(busy?'local.checking':'local.refresh')}</Button></div>
   <p>{t('local.boundary')}</p>
   <LocalAIHealth snapshot={snapshot} busy={busy} refreshError={refreshError} onRefresh={()=>void refresh()}/>
-  {snapshot?.state==='not-found'&&<a href="https://ollama.com/download" target="_blank" rel="noreferrer">{t('local.install')}</a>}
+  <LocalFirstRunGuide snapshot={snapshot} busy={busy} onRefresh={()=>void refresh()}/>
   <LocalModelAdvice hardwareProbe={hardwareProbe} active={active} runtime={runtime} snapshot={snapshot}/>
   {!provided&&<LocalModelActions snapshot={snapshot} onChanged={refresh}/>}
   {snapshot?.state==='running'&&<>
