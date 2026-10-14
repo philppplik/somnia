@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
+import {readFileSync,readdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {unzipSync,zipSync,strFromU8,strToU8} from 'fflate';
-import {readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
+import {setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
 import {readRuns,makeEditedCopy} from './editCopy';
 
 const base=new Uint8Array(readFileSync(fileURLToPath(new URL('../../../slides-engine/fixtures/independent.pptx',import.meta.url))));
@@ -235,6 +235,72 @@ test('new slide refuses unsupported layouts, stale layouts and the 200 cap',()=>
   assert.throws(()=>newSlideFromLayout(deck(200),readLayouts(deck(2)).find(l=>l.supported)!.part,256),/at most 200/);
 });
 
+const B2={x:594360,y:640080,w:7955279,h:914400};
+const patchPart=(bytes:Uint8Array,part:string,fn:(x:string)=>string)=>{const z=unzipSync(bytes);z[part]=strToU8(fn(strFromU8(z[part])));return zipSync(z);};
+test('setShapeBounds rewrites only the target off/ext and verifies on reopen',()=>{
+  const src=deck(2),next={...B2,x:700000,y:50000,w:5000000,h:400000},out=setShapeBounds(src,256,2,B2,next);
+  const m=readDeckModel(out),b=m.slides[0].shapes[0].bounds!;
+  assert.deepEqual({x:b.x,y:b.y,w:b.w,h:b.h},next);
+  assert.deepEqual(m.slides[0].shapes[1].bounds,readDeckModel(src).slides[0].shapes[1].bounds);
+  assert.deepEqual(m.slides[1].shapes.map(s=>s.bounds),readDeckModel(src).slides[1].shapes.map(s=>s.bounds));
+  assert.deepEqual(m.runs.map(r=>r.text),readDeckModel(src).runs.map(r=>r.text));
+  const a=unzipSync(src),z=unzipSync(out);
+  for(const n of Object.keys(a))if(n!=='ppt/slides/slide1.xml')assert.deepEqual(z[n],a[n],n);
+  const x=strFromU8(a['ppt/slides/slide1.xml']),y=strFromU8(z['ppt/slides/slide1.xml']);
+});
+test('setShapeBounds: move then move back restores the original model; no-op returns the same bytes',()=>{
+  const src=deck(2),there=setShapeBounds(src,257,3,{x:594360,y:2011680,w:7955279,h:914400},{x:1,y:2,w:300000,h:400000});
+  const back=setShapeBounds(there,257,3,{x:1,y:2,w:300000,h:400000},{x:594360,y:2011680,w:7955279,h:914400});
+  assert.deepEqual(readDeckModel(back).slides,readDeckModel(src).slides);
+  assert.equal(setShapeBounds(src,256,2,B2,B2),src);
+});
+test('setShapeBounds refuses stale, malformed and out-of-range input without writing',()=>{
+  const src=deck(2),go=(slide:number,shape:number,exp:typeof B2,next:Record<string,number>)=>()=>setShapeBounds(src,slide,shape,exp,next as typeof B2);
+  assert.throws(go(256,2,{...B2,x:1},{...B2,x:5}),/changed since selection/);
+  assert.throws(go(999,2,B2,B2),/Slide no longer exists/);
+  assert.throws(go(256,77,B2,B2),/Shape no longer exists/);
+  assert.throws(go(256,2,B2,{...B2,x:1.5}),/whole EMU/);
+  assert.throws(go(256,2,B2,{...B2,x:NaN}),/whole EMU/);
+  assert.throws(go(256,2,B2,{...B2,w:0}),/Size is out of range/);
+  assert.throws(go(256,2,B2,{...B2,w:126999}),/Size is out of range/);
+  assert.throws(go(256,2,B2,{...B2,w:9144000*3}),/Size is out of range/);
+  assert.throws(go(256,2,B2,{...B2,x:9144001}),/outside the slide/);
+  assert.throws(go(256,2,B2,{...B2,y:-B2.h-1}),/outside the slide/);
+});
+test('setShapeBounds refuses rotated, flipped, picture, group, inherited and geometry-less shapes',()=>{
+  const rot=patchPart(deck(2),'ppt/slides/slide1.xml',x=>x.replace('<a:xfrm>','<a:xfrm rot="900000">'));
+  assert.equal(readDeckModel(rot).slides[0].shapes[0].bounds?.rot,900000);
+  assert.throws(()=>setShapeBounds(rot,256,2,{...B2},{...B2,x:5}),/\(rotated\)/);
+  const flip=patchPart(deck(2),'ppt/slides/slide1.xml',x=>x.replace('<a:xfrm>','<a:xfrm flipH="1">'));
+  assert.throws(()=>setShapeBounds(flip,256,2,{...B2},{...B2,x:5}),/\(flipped\)/);
+  const pic=deck(2,{picture:true});assert.equal(boundsEditIssue(readDeckModel(pic).slides[0].shapes[2]),'notText');
+  assert.throws(()=>setShapeBounds(pic,256,9,B2,B2),/cannot be moved or resized/);
+  assert.equal(boundsEditIssue({id:1,name:'',kind:'group',runCount:0,parentId:null,bounds:null,ph:null}),'notText');
+  assert.equal(boundsEditIssue({id:1,name:'',kind:'text',runCount:0,parentId:5,bounds:null,ph:null}),'nested');
+  assert.equal(boundsEditIssue({id:1,name:'',kind:'text',runCount:0,parentId:null,bounds:{...B2,rot:0,flipH:false,flipV:false,source:'layout'},ph:null}),'inherited');
+  const noXfrm=patchPart(deck(2),'ppt/slides/slide1.xml',x=>x.replace(/<a:xfrm>[\s\S]*?<\/a:xfrm>/,''));
+  assert.throws(()=>setShapeBounds(noXfrm,256,2,B2,B2),/cannot be moved or resized \((noBounds|inherited)\)/);
+});
+test('setShapeBounds fails closed on malformed or locked packages',()=>{
+  const bad=patchPart(deck(2),'ppt/slides/slide1.xml',x=>x.replace('</p:spTree>',''));
+  assert.throws(()=>setShapeBounds(bad,256,2,B2,{...B2,x:5}));
+  assert.throws(()=>setShapeBounds(new Uint8Array([1,2,3]),256,2,B2,B2));
+  const signed=(()=>{const z=unzipSync(deck(2));z['_xmlsignatures/sig1.xml']=strToU8('<x/>');return zipSync(z);})();
+  assert.throws(()=>setShapeBounds(signed,256,2,B2,{...B2,x:5}),/signed/i);
+  const dupId=patchPart(deck(2),'ppt/slides/slide1.xml',x=>x.replace('id="3"','id="2"'));
+  assert.throws(()=>setShapeBounds(dupId,256,2,B2,{...B2,x:5}),/unsupported structure/);
+});
+test('setShapeBounds on real corpus decks: moves text boxes with own geometry or fails closed',()=>{
+  const dir=fileURLToPath(new URL('../../../slides-engine/corpus/',import.meta.url));let edited=0;
+  for(const f of readdirSync(dir).filter(n=>n.endsWith('.pptx'))){
+    const bytes=new Uint8Array(readFileSync(dir+f));let model;try{model=readDeckModel(bytes);}catch{continue;}
+    for(const sl of model.slides){if(sl.problems.length)continue;
+      for(const sh of sl.shapes){if(boundsEditIssue(sh))continue;const b=sh.bounds!,from={x:b.x,y:b.y,w:b.w,h:b.h};
+        let out:Uint8Array;try{out=setShapeBounds(bytes,sl.id,sh.id,from,{...from,x:from.x+12700,w:from.w+12700});}catch(e){assert.match(String(e),/not in a supported form|unsupported|cannot/,`${f}`);continue;}
+        const nb=readDeckModel(out).slides.find(s=>s.id===sl.id)!.shapes.find(s=>s.id===sh.id)!.bounds!;
+        assert.equal(nb.x,from.x+12700,f);edited++;}}}
+  assert.ok(edited>0);
+});
 test('committed Rust importer fixtures match the generator (regenerate if the model changes)',()=>{
   const d=new URL('../../../slides-engine/fixtures/',import.meta.url),f=(n:string)=>new Uint8Array(readFileSync(fileURLToPath(new URL(n,d))));
   const orig=f('independent.pptx'),m=readDeckModel(orig).slides.map(s=>s.id);

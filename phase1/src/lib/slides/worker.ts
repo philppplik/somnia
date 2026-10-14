@@ -2,7 +2,7 @@ import {diagnosePptx} from './diagnostics';
 import {readRuns,makeEditedCopy} from './editCopy';
 /// <reference lib="webworker" />
 import init,{SlidesEngine} from '../../../slides-engine/pkg/somnia_slides.js';
-import {readDeckModel,moveSlide,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
+import {readDeckModel,moveSlide,setShapeBounds,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
 import type {SlidesRequest,SlidesReply} from './protocol';
 let engine:SlidesEngine|undefined;let wasmMemory:WebAssembly.Memory|undefined;
 // Serialize even asynchronous initialization. No user-defined method invocation.
@@ -20,6 +20,7 @@ self.onmessage=({data}:{data:SlidesRequest})=>{queue=queue.then(async()=>{
    case 'model':result=readDeckModel(data.bytes);break;
    case 'reorder':result=moveSlide(data.bytes,data.slideId,data.toIndex);break;
    case 'layouts':result=readLayouts(data.bytes);break;
+   case 'shapeBounds':result=setShapeBounds(data.bytes,data.slideId,data.shapeId,data.expected,data.next);break;
    case 'slideEdit':result=data.kind==='duplicate'?duplicateSlide(data.bytes,data.slideId):deleteSlide(data.bytes,data.slideId);break;
    case 'newSlide':result=newSlideFromLayout(data.bytes,data.layoutPart,data.afterSlideId);break;
    case 'read':if(!engine)throw new Error('Worker not initialized');result=JSON.parse(engine.read_slide(data.index));break;

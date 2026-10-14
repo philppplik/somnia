@@ -8,8 +8,8 @@ import {deckMetrics,selectedRun,slideOutline,textIssue} from './panelModel';
 const runs=[{slide:0,run:0,text:'Hello world',part:'ppt/slides/slide1.xml'},{slide:1,run:0,text:'Second slide',part:'ppt/slides/slide2.xml'}];
 let picked:import('./shapeSelection').ShapeSelection|null=null;
 function fixture(){picked=null;
- const state={source:'blob:deck1',index:0,busy:false,working:new Uint8Array(40),runs:runs.map(r=>({...r})),slideIds:[256,257],layouts:[{part:'ppt/slideLayouts/slideLayout1.xml',supported:true},{part:'ppt/slideLayouts/slideLayout2.xml',supported:false}],model:{slides:[{id:256,shapes:[{id:2,name:'A',kind:'text' as const,runCount:1,parentId:null,bounds:null,ph:null},{id:3,name:'B',kind:'text' as const,runCount:1,parentId:null,bounds:null,ph:null}]},{id:257,shapes:[]}]},summary:{slides:2}};
- const calls:unknown[]=[];const deps:PanelCommandDeps={state:()=>state,thumbnails:async()=>{calls.push('thumbnails');},show:async index=>{state.index=index;calls.push(['show',index]);},edit:async(run,text)=>{state.runs=state.runs.map(r=>r.slide===run.slide&&r.run===run.run?{...r,text}:r);calls.push(['edit',text]);},select:v=>calls.push(v),move:async(id,to)=>{const a=state.slideIds.slice();a.splice(to,0,a.splice(a.indexOf(id),1)[0]);state.slideIds=a;calls.push(['move',id,to]);},duplicate:async id=>{calls.push(['dup',id]);},remove:async id=>{calls.push(['del',id]);},add:async(l,a)=>{calls.push(['add',l,a]);},pick:v=>{picked=v;calls.push(['pick',v]);},picked:()=>picked};
+ const state={source:'blob:deck1',index:0,busy:false,working:new Uint8Array(40),runs:runs.map(r=>({...r})),slideIds:[256,257],layouts:[{part:'ppt/slideLayouts/slideLayout1.xml',supported:true},{part:'ppt/slideLayouts/slideLayout2.xml',supported:false}],model:{slides:[{id:256,shapes:[{id:2,name:'A',kind:'text' as const,runCount:1,parentId:null,bounds:{x:1000000,y:1000000,w:2000000,h:1000000,rot:0,flipH:false,flipV:false,source:'slide' as const},ph:null},{id:3,name:'B',kind:'text' as const,runCount:1,parentId:null,bounds:null,ph:null}]},{id:257,shapes:[]}],slideSize:{cx:9144000,cy:6858000}},summary:{slides:2}};
+ const calls:unknown[]=[];const deps:PanelCommandDeps={state:()=>state,thumbnails:async()=>{calls.push('thumbnails');},show:async index=>{state.index=index;calls.push(['show',index]);},edit:async(run,text)=>{state.runs=state.runs.map(r=>r.slide===run.slide&&r.run===run.run?{...r,text}:r);calls.push(['edit',text]);},select:v=>calls.push(v),move:async(id,to)=>{const a=state.slideIds.slice();a.splice(to,0,a.splice(a.indexOf(id),1)[0]);state.slideIds=a;calls.push(['move',id,to]);},duplicate:async id=>{calls.push(['dup',id]);},remove:async id=>{calls.push(['del',id]);},add:async(l,a)=>{calls.push(['add',l,a]);},setBounds:async(id,sid,e,n)=>{calls.push(['bounds',id,sid,e,n]);},pick:v=>{picked=v;calls.push(['pick',v]);},picked:()=>picked};
  const dispatcher=new CommandDispatcher();slidesPanelCommandSpecs(deps).forEach(s=>dispatcher.register(s));return {state,calls,dispatcher};
 }
 test('outline searches text and slide number and preserves empty slides',()=>{
@@ -102,4 +102,30 @@ test('next/previous shape cycle in z-order, wrap, and are disabled without shape
  await f.dispatcher.runCommand('slides.selectPreviousShape',undefined,{origin:'ui'});assert.equal(picked!.shapeId,3);
  f.state.index=1;assert.equal(f.dispatcher.isEnabled('slides.selectNextShape'),false);
  f.state.index=0;f.state.busy=true;assert.equal(f.dispatcher.isEnabled('slides.selectShape'),false);
+});
+
+const BOX={x:1000000,y:1000000,w:2000000,h:1000000};
+test('setShapeBounds validates identity, schema and shape kind before mutation',async()=>{
+ const f=fixture(),run=(p:unknown)=>f.dispatcher.runCommand('slides.setShapeBounds',p,{origin:'ui'});
+ const ok={source:'blob:deck1',slideId:256,shapeId:2,expected:BOX,next:{...BOX,x:1500000}};
+ await run(ok);assert.deepEqual(f.calls.at(-1),['bounds',256,2,BOX,{...BOX,x:1500000}]);
+ const n=f.calls.length;
+ await assert.rejects(()=>run({...ok,source:'blob:other'}),/Slide changed/);
+ await assert.rejects(()=>run({...ok,slideId:257}),/Slide changed/);
+ await assert.rejects(()=>run({...ok,shapeId:3}),/cannot be moved or resized \(noBounds\)/);
+ await assert.rejects(()=>run({...ok,shapeId:99}),/no longer exists/);
+ await assert.rejects(()=>run({...ok,next:{...BOX,x:1.5}}));
+ await assert.rejects(()=>run({...ok,next:{...BOX,extra:1}}));
+ assert.equal(f.calls.length,n);
+});
+test('nudgeShape moves or resizes by whole points, clamps, and is a no-op at the limit',async()=>{
+ const f=fixture(),nudge=(p:unknown)=>f.dispatcher.runCommand('slides.nudgeShape',p,{origin:'ui'});
+ await assert.rejects(()=>nudge({mode:'move',dxPt:1,dyPt:0}),/Select a text box/);
+ picked={source:'blob:deck1',slideId:256,shapeId:2};
+ await nudge({mode:'move',dxPt:10,dyPt:-5});assert.deepEqual(f.calls.at(-1),['bounds',256,2,BOX,{...BOX,x:1127000,y:936500}]);
+ await nudge({mode:'resize',dxPt:100,dyPt:100});assert.deepEqual((f.calls.at(-1) as unknown[])[4],{...BOX,w:3270000,h:2270000});
+ await assert.rejects(()=>nudge({mode:'move',dxPt:1.5,dyPt:0}));
+ await assert.rejects(()=>nudge({mode:'move',dxPt:101,dyPt:0}));
+ picked={source:'blob:deck1',slideId:256,shapeId:3};
+ await assert.rejects(()=>nudge({mode:'move',dxPt:1,dyPt:0}),/noBounds/);
 });

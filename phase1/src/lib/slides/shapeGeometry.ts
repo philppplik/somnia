@@ -47,3 +47,24 @@ export function stepShape(shapes:readonly ShapeRef[],current:number|null,delta:1
   if(at<0)return delta===1?list[0]:list[list.length-1];
   return list[(at+delta+list.length)%list.length];
 }
+
+/* P2b: pure move/resize math in EMU. The UI converts pointer deltas with slide fractions, so zoom never matters here. */
+export type Handle='n'|'s'|'e'|'w'|'nw'|'ne'|'sw'|'se';
+export const HANDLES:readonly Handle[]=['nw','n','ne','e','se','s','sw','w'];
+export interface Box {x:number;y:number;w:number;h:number}
+const MIN=127000;
+const clamp=(v:number,lo:number,hi:number)=>Math.min(Math.max(v,lo),Math.max(lo,hi));
+/** Moves a box by (dx,dy) keeping at least a 10 pt corner on the slide. */
+export function moveBox(b:Box,dx:number,dy:number,size:SlideSize):Box{
+  return {...b,x:Math.round(clamp(b.x+dx,MIN-b.w,size.cx-MIN)),y:Math.round(clamp(b.y+dy,MIN-b.h,size.cy-MIN))};
+}
+/** Drags one handle by (dx,dy). Edges stop at a 10 pt minimum size and at the slide edge (or where they already were). */
+export function resizeBox(b:Box,handle:Handle,dx:number,dy:number,size:SlideSize):Box{
+  let l=b.x,t=b.y,r=b.x+b.w,btm=b.y+b.h;
+  if(handle.includes('w'))l=clamp(l+dx,Math.min(0,b.x),r-MIN);
+  if(handle.includes('e'))r=clamp(r+dx,l+MIN,Math.max(size.cx,b.x+b.w));
+  if(handle.includes('n'))t=clamp(t+dy,Math.min(0,b.y),btm-MIN);
+  if(handle.includes('s'))btm=clamp(btm+dy,t+MIN,Math.max(size.cy,b.y+b.h));
+  return {x:Math.round(l),y:Math.round(t),w:Math.round(r-l),h:Math.round(btm-t)};
+}
+export const boxOf=(b:{x:number;y:number;w:number;h:number}):Box=>({x:b.x,y:b.y,w:b.w,h:b.h});

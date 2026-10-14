@@ -4,7 +4,7 @@ import {readFileSync,readdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {unzipSync,zipSync,strFromU8,strToU8} from 'fflate';
 import {readDeckModel,readSlidePart,newSlideFromLayout,readLayouts,type ShapeRef} from './deckPackage';
-import {hitTest,containsPoint,overlayRect,limitsOf,stepShape,selectableShapes,rotationDeg} from './shapeGeometry';
+import {moveBox,resizeBox,hitTest,containsPoint,overlayRect,limitsOf,stepShape,selectableShapes,rotationDeg} from './shapeGeometry';
 
 const fx=(n:string)=>new Uint8Array(readFileSync(fileURLToPath(new URL('../../../slides-engine/fixtures/'+n,import.meta.url))));
 const base=fx('independent.pptx');
@@ -84,3 +84,22 @@ test('real corpus decks: every selectable shape with bounds lies on a finite sli
   assert.ok(seen>5);console.log('corpus shapes with bounds:',seen,'rotated:',rotated);
 });
 void zipSync;void unzipSync;void strFromU8;void strToU8;
+
+test('moveBox keeps a corner on the slide and rounds to whole EMU',()=>{
+  const size={cx:9144000,cy:6858000},b={x:100,y:100,w:2000000,h:1000000};
+  assert.deepEqual(moveBox(b,500.4,0,size),{...b,x:600});
+  assert.equal(moveBox(b,-1e9,0,size).x,127000-b.w);
+  assert.equal(moveBox(b,1e9,0,size).x,size.cx-127000);
+  assert.equal(moveBox(b,0,1e9,size).y,size.cy-127000);
+});
+test('resizeBox moves only the dragged edges, stops at 10 pt and at the slide edge',()=>{
+  const size={cx:9144000,cy:6858000},b={x:1000000,y:1000000,w:2000000,h:1000000};
+  assert.deepEqual(resizeBox(b,'se',500000,250000,size),{...b,w:2500000,h:1250000});
+  assert.deepEqual(resizeBox(b,'nw',500000,250000,size),{x:1500000,y:1250000,w:1500000,h:750000});
+  assert.equal(resizeBox(b,'e',-1e9,0,size).w,127000);
+  assert.equal(resizeBox(b,'w',1e9,0,size).x+resizeBox(b,'w',1e9,0,size).w,3000000);
+  assert.equal(resizeBox(b,'e',1e9,0,size).x+resizeBox(b,'e',1e9,0,size).w,size.cx);
+  assert.equal(resizeBox(b,'n',0,-1e9,size).y,0);
+  assert.deepEqual(resizeBox(b,'s',0,0,size),b);
+  const off={x:-500000,y:0,w:2000000,h:1000000};assert.equal(resizeBox(off,'w',-100000,0,size).x,-500000);
+});

@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-419 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+421 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -332,6 +332,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `slides.moveSlideEarlier` | Move slide earlier | Edit | slides |  |
 | `slides.moveSlideLater` | Move slide later | Edit | slides |  |
 | `slides.newSlide` | New slide from layout | Edit | slides |  |
+| `slides.nudgeShape` | Nudge selected text box | Edit | slides |  |
 | `slides.present` | Present | View | slides | `F5` |
 | `slides.present.exit` | Exit presentation | View | slides |  |
 | `slides.present.fromStart` | Present from start | View | slides | `Shift+F5` |
@@ -341,6 +342,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `slides.selectPreviousShape` | Select previous shape | View | slides |  |
 | `slides.selectShape` | Select shape | View | slides |  |
 | `slides.selectText` | Select slide text | View | slides |  |
+| `slides.setShapeBounds` | Move or resize text box | Edit | slides |  |
 | `slides.showSlide` | Show slide | View | slides |  |
 | `slides.undo` | Undo slide text | Edit | slides |  |
 | `sound.clip.activate` | Activate audio clip | View | sound |  |

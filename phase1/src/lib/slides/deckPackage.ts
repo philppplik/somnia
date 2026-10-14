@@ -424,3 +424,75 @@ export function newSlideFromLayout(bytes:Uint8Array,layoutPart:string,afterSlide
     if(after.slides.find(s=>s.id===id)!.problems.length)throw Error('New slide failed verification');
   });
 }
+
+/* ---------------------------------------------------------------------------------------
+ * P2b: move/resize one text box. Only the `a:off` / `a:ext` of a top-level `p:sp` that
+ * already owns an unrotated, unflipped `a:xfrm` are rewritten. Everything else is refused
+ * with a reason instead of approximated. The result is reopened and verified.
+ * ------------------------------------------------------------------------------------- */
+export interface BoundsBox {x:number;y:number;w:number;h:number}
+/** Smallest box the editor writes (10 pt), and the coordinate bound shared with the reader. */
+export const MIN_BOX_EMU=127000,MAX_COORD_EMU=1e10;
+/** Why a shape cannot be moved or resized, or null when it can. Pure; used by UI and package code. */
+export function boundsEditIssue(s:ShapeRef):'notText'|'nested'|'noBounds'|'inherited'|'rotated'|'flipped'|null{
+  if(s.parentId!==null)return 'nested';
+  if(s.kind!=='text')return 'notText';
+  if(!s.bounds)return 'noBounds';
+  if(s.bounds.source!=='slide')return 'inherited';
+  if(s.bounds.rot!==0)return 'rotated';
+  if(s.bounds.flipH||s.bounds.flipV)return 'flipped';
+  return null;
+}
+const sameBox=(a:BoundsBox,b:BoundsBox)=>a.x===b.x&&a.y===b.y&&a.w===b.w&&a.h===b.h;
+function xfrmTags(xml:string,shapeId:number):{off:RegExpMatchArray;ext:RegExpMatchArray}{
+  const stack:{tag:string;sp?:boolean;id?:number}[]=[];let off:RegExpMatchArray|null=null,ext:RegExpMatchArray|null=null,found=0;
+  for(const m of xml.matchAll(TAG)){
+    if(m[2]===undefined)continue;
+    const tag=m[2];
+    if(m[1]==='/'){stack.pop();continue;}
+    const parent=stack.at(-1),self=m[4]==='/';
+    if(tag==='p:sp'&&parent?.tag==='p:spTree'){stack.push({tag,sp:true});continue;}
+    if(tag==='p:cNvPr'&&parent?.tag==='p:nvSpPr'&&stack.at(-2)?.sp&&Number(attr(m[3],'id'))===shapeId){stack.at(-2)!.id=shapeId;found++;}
+    const sp=stack.find(s=>s.sp&&s.id===shapeId);
+    if(sp&&parent?.tag==='a:xfrm'&&stack.at(-2)?.tag==='p:spPr'&&stack.at(-3)===sp){
+      if(tag==='a:off'){if(off)throw Error('Shape has more than one offset');off=m;}
+      if(tag==='a:ext'){if(ext)throw Error('Shape has more than one extent');ext=m;}
+    }
+    if(!self)stack.push({tag});
+  }
+  if(found!==1||!off||!ext||!off[0].endsWith('/>')||!ext[0].endsWith('/>'))throw Error('Shape geometry is not in a supported form');
+  return {off,ext};
+}
+/**
+ * Sets the position and size of one text box (EMU). `expected` is the box the caller last saw:
+ * if the stored box differs, the deck changed underneath and nothing is written.
+ */
+export function setShapeBounds(bytes:Uint8Array,slideId:number,shapeId:number,expected:BoundsBox,next:BoundsBox):Uint8Array{
+  for(const v of [...Object.values(next),...Object.values(expected)])if(!Number.isInteger(v))throw Error('Bounds must be whole EMU values');
+  const model=readDeckModel(bytes),size=model.slideSize;
+  if(!size)throw Error('Slide size is not readable');
+  const slide=model.slides.find(s=>s.id===slideId);if(!slide)throw Error('Slide no longer exists');
+  if(slide.problems.length)throw Error('This slide has unsupported structure');
+  const shape=slide.shapes.find(s=>s.id===shapeId);if(!shape)throw Error('Shape no longer exists');
+  const issue=boundsEditIssue(shape);
+  if(issue)throw Error(`Shape cannot be moved or resized (${issue})`);
+  if(!sameBox(shape.bounds!,expected))throw Error('Shape changed since selection');
+  if(next.w<MIN_BOX_EMU||next.h<MIN_BOX_EMU||next.w>size.cx*2||next.h>size.cy*2)throw Error('Size is out of range');
+  if(next.x<-next.w||next.y<-next.h||next.x>size.cx||next.y>size.cy)throw Error('Position is outside the slide');
+  if(sameBox(next,expected))return bytes;
+  const zip=openPackage(bytes),xml=text(zip,slide.part);
+  const {off,ext}=xfrmTags(xml,shapeId);
+  const put=(tag:string,a:string,av:number,b:string,bv:number)=>tag.replace(new RegExp(`(\\s${a}=")[^"]*(")`),`$1${av}$2`).replace(new RegExp(`(\\s${b}=")[^"]*(")`),`$1${bv}$2`);
+  const o=off[0],e=ext[0],oi=off.index!,ei=ext.index!;
+  const [first,second]=oi<ei?[{i:oi,old:o,neu:put(o,'x',next.x,'y',next.y)},{i:ei,old:e,neu:put(e,'cx',next.w,'cy',next.h)}]:[{i:ei,old:e,neu:put(e,'cx',next.w,'cy',next.h)},{i:oi,old:o,neu:put(o,'x',next.x,'y',next.y)}];
+  const out=repack(zip,{[slide.part]:xml.slice(0,first.i)+first.neu+xml.slice(first.i+first.old.length,second.i)+second.neu+xml.slice(second.i+second.old.length)});
+  // Post-condition: reopen; target has the requested box, every other shape, run and part is unchanged.
+  const after=readDeckModel(out),as=after.slides.find(s=>s.id===slideId);
+  const moved=as?.shapes.find(s=>s.id===shapeId);
+  if(!as||!moved?.bounds||!sameBox(moved.bounds,next)||moved.bounds.rot!==0||as.problems.length)throw Error('Edited deck failed verification');
+  if(as.shapes.length!==slide.shapes.length||as.shapes.some((s,i)=>{const b=slide.shapes[i];return s.id!==b.id||s.kind!==b.kind||s.runCount!==b.runCount||(s.id!==shapeId&&JSON.stringify(s.bounds)!==JSON.stringify(b.bounds));}))throw Error('Edited deck failed verification');
+  if(after.runs.length!==model.runs.length||after.runs.some((r,i)=>r.text!==model.runs[i].text))throw Error('Edited deck failed verification');
+  const re=unzipSync(out);
+  for(const name of Object.keys(zip))if(name!==slide.part&&(!re[name]||re[name].length!==zip[name].length||re[name].some((v,i)=>v!==zip[name][i])))throw Error('Edited deck changed an unrelated part');
+  return out;
+}

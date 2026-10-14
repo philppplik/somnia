@@ -3,7 +3,7 @@ import {reportError} from '../log';
 import {readDeckDocument,serializeDeck,parseDeck,editedDeckBytes} from './deckDocument';
 import type {SlidesDiagnostics} from './diagnostics';
 import type {TextRun} from './editCopy';
-import type {LayoutInfo,DeckModel} from './deckPackage';
+import type {LayoutInfo,DeckModel,BoundsBox} from './deckPackage';
 import {installBeforeUnload} from '../closeFlow';
 import {useEffect,useSyncExternalStore} from 'react';
 import {SlidesClient} from './client';
@@ -110,4 +110,6 @@ async function structuralEdit(make:(e:Entry,before:Uint8Array)=>Promise<{bytes:U
 const idAt=(e:Entry,slideId:number)=>{const i=e.state.slideIds.indexOf(slideId);if(i<0)throw Error('Slide order changed. Reselect the slide.');return i;};
 export const duplicateSlideAt=(slideId:number)=>structuralEdit(async(e,before)=>{const i=idAt(e,slideId);return {bytes:await e.client.slideEdit(before,'duplicate',slideId),index:i+1};});
 export const deleteSlideAt=(slideId:number)=>structuralEdit(async(e,before)=>{const i=idAt(e,slideId);return {bytes:await e.client.slideEdit(before,'delete',slideId),index:Math.min(i,e.state.slideIds.length-2)};});
+/** Moves or resizes one text box as one undo step. Stays on the same slide; the box stays selected. */
+export const setShapeBoundsAt=(slideId:number,shapeId:number,expected:BoundsBox,next:BoundsBox)=>structuralEdit(async(e,before)=>{const i=idAt(e,slideId);return {bytes:await e.client.shapeBounds(before,slideId,shapeId,expected,next),index:i};});
 export const addSlideFromLayout=(layoutPart:string,afterSlideId:number|null)=>structuralEdit(async(e,before)=>{const i=afterSlideId===null?e.state.slideIds.length-1:idAt(e,afterSlideId);return {bytes:await e.client.newSlide(before,layoutPart,afterSlideId),index:i+1};});

@@ -3455,6 +3455,21 @@
       "hasEnabled": true
     },
     {
+      "id": "slides.nudgeShape",
+      "title": "Nudge selected text box",
+      "category": "Edit",
+      "source": "slides",
+      "keywords": [
+        "arrow",
+        "move",
+        "nudge",
+        "resize",
+        "shape",
+        "text box"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "slides.present",
       "title": "Present",
       "category": "View",
@@ -3533,6 +3548,21 @@
       "title": "Select slide text",
       "category": "View",
       "source": "slides",
+      "hasEnabled": true
+    },
+    {
+      "id": "slides.setShapeBounds",
+      "title": "Move or resize text box",
+      "category": "Edit",
+      "source": "slides",
+      "keywords": [
+        "move",
+        "position",
+        "resize",
+        "shape",
+        "size",
+        "text box"
+      ],
       "hasEnabled": true
     },
     {
