@@ -25,7 +25,7 @@ This is the Adobe Dimension / Substance Stager class of work plus a small slice 
 | Modelling | Full: mesh, sculpt, geometry nodes, modifiers | Dimension: staging, no real modelling. Painter/Sampler/Designer cover texturing and materials | P2: basic polygon edit, booleans, simple sculpt |
 | Materials | Node shader editor, Principled BSDF | Substance graphs (`.sbsar`), proprietary | glTF PBR metallic-roughness plus `KHR_materials_*`; node graph later |
 | Render | Cycles, EEVEE | Dimension: its own ray tracer | Viewport raster (three.js), progressive path tracer for stills |
-| Animation | Rigging, physics, sim | Limited | Out of v1. Shares timeline with the animation studio (section 9) |
+| Animation | Rigging, physics, sim | Limited | Out of v1. Reuses timing and keyframe abstractions of the animation studio, not its document or stores (section 9) |
 | Interchange | `.blend`, glTF, USD, FBX, OBJ, more | glTF, OBJ, FBX, USD, more | glTF/GLB native, OBJ, STL, PLY; USDZ export later |
 
 Adobe status note: an Adobe community post from 2021 says Dimension was not end-of-life but received no new features, with new work going into Stager [S2]. I did not find a current statement in this session; treat Dimension's present status as unverified.
@@ -124,7 +124,7 @@ Status vocabulary follows [studio-tool-roadmaps.md](studio-tool-roadmaps.md): **
 | Render | Viewport capture (P1), progressive path-traced still with denoise-free sample count, turntable, transparent PNG | three-gpu-pathtracer | Direct |
 | Optimise | Dedupe, texture resize, Draco/Meshopt, LODs, GLB validate | glTF-Transform | Direct |
 | Assets | Primitive pack, HDRIs, PBR material presets | CC0 sources only (section 6) | Direct |
-| Animation | Play imported glTF clips, scrub, simple keyframes on transform | shared timeline | P3, shared with the animation studio |
+| Animation | Play imported glTF clips, scrub, simple keyframes on transform | shared timing and keyframe abstractions | P3, reused from the animation studio |
 
 ## 6. Assets and content licensing
 
@@ -174,14 +174,14 @@ Sub-tabs follow the shell concept (for example Render: Viewport / Path trace / O
 | P0 Spike | Lazy-loaded three.js chunk, open GLB/OBJ/STL, orbit, environment lighting, inspect, export GLB. Probe WebGL2 and WebGPU on Philipp's Windows build. Compare Babylon on the same three tasks. | Open a 100k-triangle model at stable frame rate, no memory growth after 20 open/close cycles, engine decision recorded. |
 | P1 Staging | Studio registration, rails, outliner, primitives, gizmos, PBR materials, lights, camera, HDRI, undo, save as GLB + sidecar, PNG still, validate/optimise on export | Round trip: open, edit, save, reopen with no data loss; Save All and Close All work; keyboard path for all tools |
 | P2 Modelling | Half-edge mesh kernel, extrude/inset/bevel/loop cut, Manifold booleans, modifier stack, basic sculpt, UV auto-unwrap, path-traced stills | Fuzz and property tests on the mesh kernel; booleans never produce silently broken meshes |
-| P3 Depth | Material graph, texture paint, shared timeline for glTF animation, USDZ export, optional DXF extrude, Assimp import | Per feature, after the sibling timeline work lands |
+| P3 Depth | Material graph, texture paint, timeline for glTF animation (reusing the animation studio's timing abstractions), USDZ export, optional DXF extrude, Assimp import | Per feature, after the sibling timeline work lands |
 | P4 Decide | STEP via OCCT, native `wgpu` path, optional Cycles sidecar | Legal check and cost review first |
 
 Each phase ships behind the alpha/beta channel and becomes stable only after Philipp's Windows test, as for earlier studios.
 
 ## 9. Overlap with the other two new studios
 
-- **Timeline and keyframes**: the animation (After Effects class) studio needs a timeline. 3D P3 should reuse it, not build another.
+- **Timeline and keyframes**: the animation (After Effects class) studio needs a timeline. 3D P3 should reuse its timing and keyframe abstractions, not build another. The 3D studio keeps its own document and undo owner; nothing is shared at the store level (see the animation concept, section on Video and reuse).
 - **Interface design (Figma class)**: no direct overlap. Shared pieces are the Vector studio's shapes (extrude to 3D) and the design-system components.
 - **Scene graph interchange**: one small interchange model for importers/exporters across studios avoids three formats.
 
