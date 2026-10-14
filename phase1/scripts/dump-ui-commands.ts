@@ -1,3 +1,4 @@
+import {registerInterfaceCommands} from '../src/lib/interface/commands';
 import {registerDocumentPanelCommands} from '../src/lib/documents/panelCommands';
 import {registerCodePanelCommands} from '../src/lib/codePanels/commands';
 /**
@@ -107,6 +108,7 @@ export async function collect(): Promise<Entry[]> {
   await withSource('documents-panels', () => registerDocumentPanelCommands());
   await withSource('slides', () => registerSlidesCommands());
   await withSource('design', () => registerDesignCommands());
+  await withSource('interface', () => registerInterfaceCommands());
   await withSource('photos', () => registerPhotosCommands());
   await withSource('pdfedit', () => { for (const spec of pdfCommandSpecs(pdfStub)) registerCommandSpec(spec); });
   await withSource('deploy', () => registerDeployCommands(createTauriDeployBackend()));

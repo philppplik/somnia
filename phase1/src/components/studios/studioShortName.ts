@@ -1,6 +1,6 @@
 /** Compact product names stay consistent across the studio switcher and its tooltips. */
 const shortNames:Readonly<Record<string,string>>={
- vibespace:'Vibe Space',code:'Code',documents:'Docs',sheets:'Sheets',slides:'Slides',sound:'Sound',
+ interface:'Interface',vibespace:'Vibe Space',code:'Code',documents:'Docs',sheets:'Sheets',slides:'Slides',sound:'Sound',
  photos:'Photos',photo:'Photos',video:'Video',design:'Design',designer:'Design',vector:'Vector'
 };
 /** New studios remain usable even before their compact product name is added here. */

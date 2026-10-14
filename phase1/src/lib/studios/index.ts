@@ -21,3 +21,6 @@ export {designStudio} from './design';
 
 import './vibespace';
 export {vibespaceStudio} from './vibespace';
+
+import './interface';
+export {interfaceStudio} from './interface';
