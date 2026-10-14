@@ -148,6 +148,10 @@ through native control primitives, see below.
   preview, erased right of a draggable SVG divider; no raw controls, no
   new inline styles, ratchets unchanged), unit tests and gallery proof
   added (?view=photos-split).
+- P37: photos settings sync feature (copy/paste of full develop settings
+  between photos via a validated payload in panel state plus best-effort
+  system clipboard; no raw controls, ratchets unchanged), unit tests and
+  gallery proof added (?view=photos-sync).
 
 
 

@@ -2,7 +2,7 @@ import {StudioStatus} from '../studios/StudioStatus';
 import {reportError} from '../../lib/log';
 import {usePublishPhotosContext} from './panels/publishContext';
 import {useCallback,useEffect,useRef,useState} from 'react';
-import {AlertTriangle,Check,Columns2,Download,Eye,Frame,Grid3x3,RotateCcw,Undo2,Redo2,X,ZoomIn,ZoomOut,Maximize2,Minimize2} from '../../lib/icons';
+import {AlertTriangle,Check,ClipboardPaste,Columns2,Copy,Download,Eye,Frame,Grid3x3,RotateCcw,Undo2,Redo2,X,ZoomIn,ZoomOut,Maximize2,Minimize2} from '../../lib/icons';
 import {Button} from '../ui/button';
 import {useT} from '../../lib/useT';
 import {applyPhotoCrop,cancelPhotoCrop,dirtyPhoto,exportPhotoCopy,historyPhoto,openPhoto,resetPhoto,rotatePhoto,setPhotoCropping,setPhotoCropDraft,usePhotoSession,type PhotoFrame} from '../../lib/photos/studioSession';
@@ -10,6 +10,8 @@ import type {PhotoCrop} from '../../lib/photos/studioSettings';
 import {cropGuideLines} from '../../lib/photos/cropGuides';
 import {clippingOverlayImage} from '../../lib/photos/clippingOverlay';
 import {clampSplitX,splitClearRect} from '../../lib/photos/splitView';
+import {decodeSettingsPayload,encodeSettingsPayload,settingsPayloadToText,type SettingsPayload} from '../../lib/photos/settingsClipboard';
+import {commitPhotoSettings} from '../../lib/photos/studioSession';
 import {usePanelState} from '../../store/panelStateStore';
 import {getState,patchState,requestStudio,useAppStore} from '../../store/appStore';
 import type {MediaItem} from '../../lib/media';
@@ -40,6 +42,8 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
  const [showGuides,setShowGuides]=usePanelState<boolean>('photos.cropGuides',true);
  const [showClipping,setShowClipping]=usePanelState<boolean>('photos.clipping',false);
  const [showSplit,setShowSplit]=usePanelState<boolean>('photos.split',false);
+ const [settingsClip,setSettingsClip]=usePanelState<SettingsPayload|null>('photos.settingsClipboard',null);
+ const clipboardSettings=decodeSettingsPayload(settingsClip);
  const [splitX,setSplitX]=useState(0.5);
  const splitDrag=useRef(false);
  const drag=useRef<{pan?:{x:number;y:number;px:number;py:number};crop?:DragMode}|null>(null);
@@ -126,6 +130,13 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
    <Button size="icon" variant="outline" aria-label={t('photos.undo')} disabled={!session?.past.length} onClick={()=>historyPhoto(item.name,false)} data-testid="photos-undo"><Undo2 size={14}/></Button>
    <Button size="icon" variant="outline" aria-label={t('photos.redo')} disabled={!session?.future.length} onClick={()=>historyPhoto(item.name,true)} data-testid="photos-redo"><Redo2 size={14}/></Button>
    <Button size="icon" variant="outline" aria-label={t('photos.reset')} disabled={!ready} onClick={()=>resetPhoto(item.name)} data-testid="photos-reset"><RotateCcw size={14}/></Button>
+   <Button size="icon" variant="outline" aria-label={t('photos.settings.copy')} title={t('photos.settings.copy')} disabled={!ready} onClick={()=>{
+    if(!session)return;const p=encodeSettingsPayload(session.now);setSettingsClip(p);setNote(t('photos.settings.copied'));
+    try{void navigator.clipboard?.writeText(settingsPayloadToText(p));}catch{/* in-app payload is the source of truth */}
+   }} data-testid="photos-settings-copy"><Copy size={14}/></Button>
+   <Button size="icon" variant="outline" aria-label={t('photos.settings.paste')} title={t('photos.settings.paste')} disabled={!ready||!clipboardSettings} onClick={()=>{
+    if(!clipboardSettings)return;commitPhotoSettings(item.name,()=>clipboardSettings);setNote(t('photos.settings.pasted'));
+   }} data-testid="photos-settings-paste"><ClipboardPaste size={14}/></Button>
    <Button size="compact" variant="outline" aria-pressed={!!session?.cropping} disabled={!ready} onClick={()=>setPhotoCropping(item.name,!session?.cropping)} data-testid="photos-crop"><Frame size={13}/>{t('photos.crop')}</Button>
    {session?.cropping&&<>
     <Button size="icon" variant="outline" aria-pressed={showGuides} aria-label={t('photos.crop.guides')} title={t('photos.crop.guides')} onClick={()=>setShowGuides(!showGuides)} data-testid="photos-crop-guides"><Grid3x3 size={14}/></Button>

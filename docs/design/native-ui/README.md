@@ -55,6 +55,7 @@ All file links are repository-relative, so they remain useful on a feature branc
 25. [Photos crop guides (rule of thirds)](photos-crop-guides.md)
 26. [Photos clipping overlay (false-color warning)](photos-clipping-overlay.md)
 27. [Photos before/after split view](photos-split-view.md)
+28. [Photos settings sync (copy/paste)](photos-settings-sync.md)
 
 ## The system in one view
 
