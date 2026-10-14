@@ -601,5 +601,6 @@
  "animation.precomp.volume": "Volume de l'audio (%)",
  "animation.stroke.opacity": "Opacité du contour (%)",
  "animation.stroke.dashLen": "Longueur du tiret (0 = plein)",
- "animation.stroke.dashGap": "Espace du tiret"
+ "animation.stroke.dashGap": "Espace du tiret",
+ "animation.stroke.miter": "Limite de onglet"
 }

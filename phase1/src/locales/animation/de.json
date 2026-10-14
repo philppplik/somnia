@@ -601,5 +601,6 @@
  "animation.precomp.volume": "Audiolautstärke (%)",
  "animation.stroke.opacity": "Konturdeckkraft (%)",
  "animation.stroke.dashLen": "Strichlänge (0 = durchgezogen)",
- "animation.stroke.dashGap": "Strichlücke"
+ "animation.stroke.dashGap": "Strichlücke",
+ "animation.stroke.miter": "Gehrungsgrenze"
 }

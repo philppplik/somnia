@@ -601,5 +601,6 @@
  "animation.precomp.volume": "Volumen del audio (%)",
  "animation.stroke.opacity": "Opacidad del trazo (%)",
  "animation.stroke.dashLen": "Longitud del guion (0 = continuo)",
- "animation.stroke.dashGap": "Espacio del guion"
+ "animation.stroke.dashGap": "Espacio del guion",
+ "animation.stroke.miter": "Límite de inglete"
 }

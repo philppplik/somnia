@@ -301,3 +301,7 @@ Added:
 ## P54 - Text animators in motion blur
 
 - `motionBlurTicks` returns `{tick,matrix}` per shutter sample (`motionBlurSamples` maps it). `contentSampled(layer)` is true for text with an enabled animator or a keyed `textReveal`; only then the viewer and `frameSvgBody` build the layer body once per sample at that sample's tick. All other layers reuse the body built at the frame tick.
+
+## P55 - Stroke miter limit
+
+- `stroke.miter` (1..20) becomes `stroke-miterlimit` in `strokeAttributes` only for miter or absent joins; round and bevel joins ignore it. Spiky shapes (stars, sharp paths) show the effect: below the limit corners are cut to a bevel.

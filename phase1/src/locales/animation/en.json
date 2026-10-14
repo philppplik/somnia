@@ -601,5 +601,6 @@
  "animation.precomp.volume": "Audio volume (%)",
  "animation.stroke.opacity": "Stroke opacity (%)",
  "animation.stroke.dashLen": "Dash length (0 = solid)",
- "animation.stroke.dashGap": "Dash gap"
+ "animation.stroke.dashGap": "Dash gap",
+ "animation.stroke.miter": "Miter limit"
 }

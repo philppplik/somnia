@@ -374,3 +374,10 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Done: with motion blur on, text layers that have enabled animators or a keyed reveal now draw each shutter sample with the text as it looks at that sample's time (before, only the layer transform was sampled and the characters stayed at the frame time). Viewer and every export use the same samples. Layers without such text, and frames without a shutter, produce byte-identical output. No new fields, so no new commands or strings.
 - Open: effects (blur, glow, shadow) and masks are still evaluated at the frame time for each sample; a text path repeats the same path id per sample; stroke gradients and alignment; samples are capped at 16 as before.
 
+
+### Animation P55 (2026-10-14, integration pending)
+
+- Picked: stroke miter limit (small follow-up to P53).
+- Done: shape strokes with a miter join (the default) get a "Miter limit" (1..20, default 4). It is written as `stroke-miterlimit` only when set and the join is miter, so existing strokes give byte-identical output. Viewer and export share the attribute. Undoable, validated, 5 locales.
+- Open: no stroke gradient, no inside/outside alignment; opacity, dashes and miter limit stay constants.
+

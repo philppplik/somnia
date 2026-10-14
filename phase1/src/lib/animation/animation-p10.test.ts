@@ -1408,3 +1408,14 @@ test('P54 text animators are sampled per blur sample; other layers and legacy ou
  const plain=applyEdit(applyEdit(base(),{type:'layer.motionBlur',layers:['title'],enabled:true}),{type:'comp.shutter',shutter:{angle:360,samples:4}});
  assert.ok(!frameSvg(findComp(plain)!,at,false,plain.assets,plain.compositions).includes('<tspan'));
 });
+
+test('P55 stroke miter limit: only for miter joins, validated, legacy output unchanged',()=>{
+ let d=applyEdit(base(),{type:'layer.stroke',layer:'stencil',stroke:{color:'#00ff00',width:6}});
+ const get=()=>d.compositions[0].layers.find(l=>l.id==='stencil')!,svg=()=>frameSvg(d.compositions[0],0);
+ assert.equal(strokeAttributes(get(),0)!.strokeMiterlimit,undefined);assert.equal(svg().includes('miterlimit'),false);
+ d=applyEdit(d,{type:'layer.stroke',layer:'stencil',stroke:{color:'#00ff00',width:6,miter:10}});
+ assert.equal(strokeAttributes(get(),0)!.strokeMiterlimit,10);assert.ok(svg().includes('stroke-miterlimit="10"'));
+ d=applyEdit(d,{type:'layer.stroke',layer:'stencil',stroke:{color:'#00ff00',width:6,miter:10,join:'round'}});
+ assert.equal(strokeAttributes(get(),0)!.strokeMiterlimit,undefined);
+ for(const bad of [0.5,21,NaN])assert.throws(()=>applyEdit(d,{type:'layer.stroke',layer:'stencil',stroke:{color:'#00ff00',width:6,miter:bad}}));
+});
