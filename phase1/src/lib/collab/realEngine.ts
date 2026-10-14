@@ -1,6 +1,7 @@
 import {ChatModel} from './chatModel';
 import {ChatSession,setChatSession} from './chatSession';
 import {CollabDoc} from './collabDoc';
+import {stampSchema} from './schema';
 import {CollabClient,type CollabClientSnapshot} from './net/client';
 import {secureRoomLinks,managedRoomId,roomExpiry,DEFAULT_SESSION_MINUTES} from './roomSecurity';
 import {newLinkKey} from './net/crypto';
@@ -64,7 +65,7 @@ export class RealEngine implements CollabEngine{
   const doc=this.doc=new CollabDoc();
   doc.awareness.setLocalStateField('user',makeUser(name,doc.doc.clientID));
   const chatModel=new ChatModel();
-  if(role==='host')for(const [path,text] of Object.entries(this.d.project.files()))if(isCollabFile(path))doc.text(path,text);
+  if(role==='host'){stampSchema(doc.doc);for(const [path,text] of Object.entries(this.d.project.files()))if(isCollabFile(path))doc.text(path,text);}
   setSession(doc);
   this.bridge=startBridge(doc,this.d.project,{role,onFiles:()=>notifySession()});
   const client=this.client=new CollabClient(link,{session:{doc:doc.doc,awareness:doc.awareness},chatDoc:chatModel.doc,mode,transport:this.d.transport,...this.d.clientOptions});
