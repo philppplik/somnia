@@ -10,3 +10,7 @@ What Somnia's Windows installers can and cannot do (Tauri 2 bundler):
 
 ## Release checklist note
 Bump `somniaRelease` in `phase1/package.json` to the tag being released before building. The in-app update pill compares it (major.minor.patch) with the newest GitHub release.
+
+## ARM64 from beta.4
+
+Native Windows ARM64 jobs use the same branded NSIS/MSI configuration on `windows-11-arm`. Tauri NSIS bootstraps through an x86 installer, but installs the native ARM64 application. Filenames and the real-device test gate: [ARM64 release builds](../../docs/release-tools/arm64.md). Linux ARM64 ships deb only. No custom bootstrapper or Store ARM64 package is implied.

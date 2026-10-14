@@ -13,9 +13,9 @@ test('archive names follow somnia-cli-<ver>-<os>-x86_64', () => {
   assert.equal(pkg.archiveName('12.2.0', win), 'somnia-cli-12.2.0-windows-x86_64.zip');
 });
 
-test('macOS and non-x86_64 are refused', () => {
+test('macOS and unsupported architectures are refused', () => {
   assert.throws(() => pkg.target('darwin', 'arm64'));
-  assert.throws(() => pkg.target('linux', 'arm64'));
+  assert.throws(() => pkg.target('linux', 'ia32'));
   assert.throws(() => pkg.target('darwin', 'x64'));
 });
 
@@ -61,3 +61,13 @@ test('isCliArchive', () => {
   assert.equal(pkg.isCliArchive('somnia-cli-12.2.0-alpha.7-linux-x86_64.tar.gz'), true);
   assert.equal(pkg.isCliArchive('somnia-cli-1.0.0-macos-x86_64.tar.gz'), false);
 });
+
+for (const os of ['linux', 'win32']) {
+  test(`ARM64 ${os} has distinct archives and install notes`, () => {
+    const t = pkg.target(os, 'arm64');
+    const name = pkg.archiveName('12.2.0-beta.4', t);
+    assert.match(name, /-aarch64\.(tar\.gz|zip)$/);
+    assert.equal(pkg.isCliArchive(name), true);
+    assert.match(pkg.installNotes('12.2.0-beta.4', t), /aarch64/);
+  });
+}

@@ -16,6 +16,11 @@
 
 - The update pill installs signed prerelease builds in-app. Per-channel manifests (`latest-beta.json`, `latest-alpha.json` on the `updater-channels` release), full SemVer comparison against `somniaRelease`, `make-latest-json.py --channels-dir`, new Tauri commands `check_channel_update` and `install_channel_update`. Docs: phase1/notes/UPDATER.md.
 
+## Unreleased - ARM64 release pipeline
+
+- Native Windows ARM64 NSIS/MSI and Linux ARM64 deb builds join full beta/stable CI from 12.2.0-beta.4; dev/alpha runs keep the small x64 matrix.
+- Native ARM64 CLI archives, architecture checks, same-SHA release asset assembly and checksums. Public-only standard runner guards prevent private-repo runner charges. Native packaging and real-device install checks remain CI/manual gates.
+
 # Unreleased: Studio shell regression fixes
 
 - Code Studio restores the inline SVG inspector inside the shared Design section, including paint, fill/stroke gradients, guides, grid and clip/mask controls.
