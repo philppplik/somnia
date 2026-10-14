@@ -39,6 +39,8 @@ export class DocSession {
     shift_list_level(first_block: number, last_block: number, delta: number): void;
     /** `op`: row_above, row_below, delete_row, col_left, col_right, delete_col around the cell paragraph `block`. */
     edit_table(block: number, op: string): void;
+    /** Inserts an empty table (rows 1-20, cols 1-10) plus a trailing paragraph after the top-level block holding `block`. */
+    insert_table(block: number, rows: number, cols: number): void;
     insert(block: number, utf8_byte_offset: number, text: string): void;
     merge_with_previous(block: number): void;
     constructor(bytes: Uint8Array);

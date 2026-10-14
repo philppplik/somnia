@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {applyEdit,CELL_BASE,type TextEdit} from './edit';
 import type {DocumentsEngine} from './engine';
 import {getDocumentsState,patchDocuments} from './store';
-import {editTable,setParagraphStyle,shiftListLevel,toggleList,setAlign,setLineSpacing,setSpaceAfter,stepIndent,setFont,setFontColor,setFontSize,stepFontSize,toggleFormat,deleteAtCaret,moveCaret,MAX_INSERT_LINES,pasteText,redoEdit,resetSessionsForTest,selectAllText,selectedText,setSessionDeps,splitAtCaret,switchDocument,typeText,undoEdit,syncGeometry} from './session';
+import {insertTable,editTable,setParagraphStyle,shiftListLevel,toggleList,setAlign,setLineSpacing,setSpaceAfter,stepIndent,setFont,setFontColor,setFontSize,stepFontSize,toggleFormat,deleteAtCaret,moveCaret,MAX_INSERT_LINES,pasteText,redoEdit,resetSessionsForTest,selectAllText,selectedText,setSessionDeps,splitAtCaret,switchDocument,typeText,undoEdit,syncGeometry} from './session';
 import {stepBoundary,wordBoundary} from './text';
 const docx=new Uint8Array(readFileSync(new URL('../../../test/documents/sample.docx',import.meta.url)));
 type Row={text:string;locked?:boolean;f?:Set<string>[];p?:Record<string,number|string>};
@@ -275,4 +275,13 @@ test('editTable needs a caret in one table cell and surfaces engine refusals wit
  at(0,1);await editTable('row_below');assert.match(getDocumentsState().editError,/inside a table cell|table cell/);assert.equal(calls.length,0);
  at(CELL_BASE+1,2,{block:CELL_BASE,off:1});await editTable('row_below');assert.match(getDocumentsState().editError,/one table cell/);assert.equal(calls.length,0);
  at(CELL_BASE,1);await editTable('row_below');assert.deepEqual(calls,[CELL_BASE+'row_below']);assert.match(getDocumentsState().editError,/row limit/);assert.deepEqual(cd.cells,['alpha','beta']);
+});
+test('insertTable needs a collapsed caret and a size inside the bounds, and surfaces engine refusals unchanged',async()=>{
+ const cd=await openCells();const calls:string[]=[];
+ (cd as unknown as {insertTable:(b:number,r:number,c:number)=>Promise<unknown>}).insertTable=async(b,r,c)=>{calls.push(`${b}:${r}x${c}`);throw new Error('the document has too many blocks');};
+ await insertTable(2,2);assert.equal(calls.length,0);// no caret
+ at(0,1);for(const [r,c] of [[0,2],[21,2],[2,0],[2,11],[1.5,2]]){await insertTable(r,c);assert.match(getDocumentsState().editError,/1-20 rows/);}
+ assert.equal(calls.length,0);
+ at(CELL_BASE+1,2,{block:CELL_BASE,off:1});await insertTable(2,2);assert.match(getDocumentsState().editError,/one paragraph/);
+ at(CELL_BASE,1);await insertTable(3,3);assert.deepEqual(calls,[CELL_BASE+':3x3']);assert.match(getDocumentsState().editError,/too many blocks/);assert.deepEqual(cd.cells,['alpha','beta']);
 });

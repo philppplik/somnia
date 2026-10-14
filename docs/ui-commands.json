@@ -2796,6 +2796,17 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.table.insert",
+      "title": "Insert table",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.table.row_above",
       "title": "Insert row above",
       "category": "View",

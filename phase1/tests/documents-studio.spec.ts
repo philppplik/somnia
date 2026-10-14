@@ -351,3 +351,18 @@ test('table menu: insert and delete a row and a column from a cell caret, each u
  for(let i=0;i<4;i++){await page.getByTestId('documents-undo').click();await page.waitForTimeout(200);}
  await expect(page.getByTestId('documents-edit-error')).toHaveCount(0);
 });
+test('insert table: a size preset adds a table after the paragraph, the caret lands in its first cell, one undo removes it',async({page})=>{
+ await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ await openBuffers(page,[{name:'sample.docx',mimeType:DOCX,buffer:sample()}]);
+ await expect(page.getByTestId('documents-pages')).toHaveText('1 pages');
+ const pg=page.getByTestId('documents-page').first();const img=pg.locator('img');
+ await expect.poll(()=>img.evaluate((i:HTMLImageElement)=>i.complete&&i.naturalWidth)).toBeGreaterThan(300);
+ const box=(await pg.boundingBox())!;await page.mouse.click(box.x+box.width*0.125,box.y+box.height*0.127);
+ await expect(page.getByTestId('documents-caret')).toHaveCount(1);
+ await page.getByTestId('documents-table-insert').selectOption('3x3');await page.waitForTimeout(300);
+ await expect(page.getByTestId('documents-edit-error')).toHaveCount(0);
+ await expect(page.getByTestId('documents-table-menu')).toBeVisible();// the caret is in a cell now
+ await page.keyboard.type('Hi');await page.waitForTimeout(200);
+ await page.getByTestId('documents-undo').click();await page.getByTestId('documents-undo').click();await page.waitForTimeout(250);
+ await expect(page.getByTestId('documents-edit-error')).toHaveCount(0);
+});

@@ -65,6 +65,7 @@ export type DocumentsRequest=
  |{id:number;kind:'setList';first:number;last:number;list:ListKindId}
  |{id:number;kind:'listLevel';first:number;last:number;delta:number}
  |{id:number;kind:'tableEdit';block:number;op:TableOp}
+ |{id:number;kind:'insertTable';block:number;rows:number;cols:number}
  |{id:number;kind:'save'}
  |{id:number;kind:'close'};
 export type DocumentsResponse=
@@ -88,3 +89,8 @@ export const MIN_SCALE=0.1,MAX_SCALE=2;
 /** Row and column operations around the caret's table cell. */
 export const TABLE_OPS=['row_above','row_below','delete_row','col_left','col_right','delete_col'] as const;
 export type TableOp=typeof TABLE_OPS[number];
+
+/** Bounds of a new table. */
+export const MAX_NEW_TABLE_ROWS=20,MAX_NEW_TABLE_COLS=10;
+/** Size presets offered by the Insert table menu. */
+export const TABLE_PRESETS:readonly (readonly [number,number])[]=[[2,2],[3,3],[4,3],[5,4],[6,5]];

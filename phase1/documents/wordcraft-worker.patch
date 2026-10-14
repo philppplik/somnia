@@ -46,7 +46,7 @@ new file mode 100644
 index 0000000..5b80b79
 --- /dev/null
 +++ b/crates/somnia-worker/src/lib.rs
-@@ -0,0 +1,1323 @@
+@@ -0,0 +1,1368 @@
 +//! Experimental headless adapter. No DOM, egui, filesystem or UI thread access.
 +use wasm_bindgen::prelude::*;
 +use std::sync::Arc;
@@ -758,6 +758,28 @@ index 0000000..5b80b79
 +        self.pages = DocLayout::default();
 +        Ok(())
 +    }
++    /// Inserts an empty `rows` x `cols` table (1-20 by 1-10) after the top-level block holding `block` (a paragraph, a table,
++    /// or a cell paragraph, which addresses its table), followed by an empty paragraph so the text can continue after it.
++    fn do_insert_table(&mut self, block: usize, rows: usize, cols: usize) -> Result<(), String> {
++        if !(1..=20).contains(&rows) || !(1..=10).contains(&cols) {
++            return Err("a new table has 1-20 rows and 1-10 columns".into());
++        }
++        if self.doc.body.len() >= 100_000 {
++            return Err("the document has too many blocks".into());
++        }
++        let top = if block >= CELL_BASE { self.cell_paras().nth(block - CELL_BASE).ok_or_else(|| format!("no cell paragraph {block}"))?[0] } else { block };
++        if top >= self.doc.body.len() {
++            return Err(format!("no block {block}"));
++        }
++        let mut styles = self.doc.styles.clone();
++        Self::ensure_style(&mut styles, "TableGrid")?;
++        let table = wordcraft_doc::Table::new(rows, cols, self.doc.last_section.text_width());
++        self.doc.styles = styles;
++        self.doc.body.insert(top + 1, Arc::new(Block::Table(table)));
++        self.doc.body.insert(top + 2, wordcraft_doc::para_block(wordcraft_doc::Paragraph::new()));
++        self.pages = DocLayout::default();
++        Ok(())
++    }
 +    fn do_replace(&mut self, block: usize, start: usize, end: usize, text: &str) -> Result<(), String> {
 +        self.do_replace_many(block, &[(start, end, text.to_string())])
 +    }
@@ -853,6 +875,10 @@ index 0000000..5b80b79
 +    /// `delete_row`, `col_left`, `col_right`, `delete_col`.
 +    pub fn edit_table(&mut self, block: usize, op: &str) -> Result<(), JsValue> {
 +        self.do_table_edit(block, op).map_err(|e| JsValue::from_str(&e))
++    }
++    /// Inserts an empty table (`rows` 1-20, `cols` 1-10) after the top-level block holding `block`.
++    pub fn insert_table(&mut self, block: usize, rows: usize, cols: usize) -> Result<(), JsValue> {
++        self.do_insert_table(block, rows, cols).map_err(|e| JsValue::from_str(&e))
 +    }
 +    pub fn split_block(&mut self, block: usize, utf8_off: usize) -> Result<(), JsValue> {
 +        self.do_split(block, utf8_off).map_err(|e| JsValue::from_str(&e))
@@ -991,6 +1017,25 @@ index 0000000..5b80b79
 +        assert!(s.do_table_edit(CELL_BASE + 999_999, "row_below").is_err());
 +        assert!(s.do_table_edit(id, "explode").is_err());
 +        assert_eq!(now, s.text());
++    }
++    #[test]
++    fn insert_table_adds_table_and_paragraph_atomically() {
++        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
++        let n = s.doc.body.len();
++        s.do_insert_table(0, 3, 2).unwrap();
++        assert_eq!(s.doc.body.len(), n + 2);
++        match &*s.doc.body[1] {
++            Block::Table(t) => assert_eq!((t.rows.len(), t.grid.len()), (3, 2)),
++            _ => panic!("table expected after block 0"),
++        }
++        assert!(matches!(&*s.doc.body[2], Block::Para(p) if p.text.is_empty()));
++        let saved = wordcraft_docx::write(&s.doc).unwrap();
++        assert_eq!(DocSession::from_bytes(&saved).unwrap().text(), s.text());
++        let len = s.doc.body.len();
++        for (b, r, c) in [(0, 0, 1), (0, 21, 1), (0, 1, 0), (0, 1, 11), (99_999, 2, 2), (CELL_BASE + 999_999, 2, 2)] {
++            assert!(s.do_insert_table(b, r, c).is_err());
++        }
++        assert_eq!(s.doc.body.len(), len);
 +    }
 +    #[test]
 +    fn replace_range_roundtrips_and_is_atomic() {

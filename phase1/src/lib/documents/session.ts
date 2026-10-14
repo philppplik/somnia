@@ -1,4 +1,4 @@
-import {checkFormatPatch,checkParaPatch,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch} from './protocol';
+import {checkFormatPatch,checkParaPatch,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch} from './protocol';
 import {captureDocumentSelection} from './selectionCapture';
 import {CELL_BASE,caretAfterEdit,diffEdit,inverseOf,UndoStack,type TextEdit,type UndoEntry} from './edit';
 import {stepBoundary,utf16ToUtf8Offset,utf8ToUtf16Offset,wordBoundary} from './text';
@@ -427,5 +427,18 @@ export const editTable=(op:TableOp)=>run(async()=>{
  const at=cellOf(getDocumentsState().blocks,c.block);if(!at)throw new Error('Place the caret in a table cell.');
  await structural(eng=>eng.editTable(c.block,op),{block:c.block,off:c.head},async eng=>{
   const nb=blockAfterTableEdit(op,at,await eng.blocks());if(nb===null)throw new Error('The table has no editable cell left.');return{block:nb,off:0};
+ });
+});
+
+/** Insert an empty table (and an empty paragraph after it) below the caret's paragraph, or below the table when the caret is in a cell. One undo step; the caret goes into the first cell. */
+export const insertTable=(rows:number,cols:number)=>run(async()=>{
+ if(!Number.isInteger(rows)||!Number.isInteger(cols)||rows<1||rows>MAX_NEW_TABLE_ROWS||cols<1||cols>MAX_NEW_TABLE_COLS)throw new Error(`A new table has 1-${MAX_NEW_TABLE_ROWS} rows and 1-${MAX_NEW_TABLE_COLS} columns.`);
+ const c=getDocumentsState().caret;if(!c)throw new Error('Place the caret where the table should go.');goalX=null;
+ if(c.anchorBlock!==undefined&&c.anchorBlock!==c.block)throw new Error('Place the caret in one paragraph.');
+ const blocks=getDocumentsState().blocks;const cell=cellOf(blocks,c.block);
+ if(c.block>=CELL_BASE&&!cell)throw new Error('The caret is not in a paragraph the table can follow.');
+ const top=cell?cell.table:c.block;
+ await structural(eng=>eng.insertTable(c.block,rows,cols),{block:c.block,off:c.head},async eng=>{
+  const b=(await eng.blocks()).find(x=>x.kind==='cell'&&x.table===top+1&&x.row===0&&x.cell===0&&x.editable);if(!b)throw new Error('The new table has no editable cell.');return{block:b.index,off:0};
  });
 });

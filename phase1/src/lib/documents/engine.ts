@@ -47,6 +47,7 @@ export class DocumentsEngine{
  async setParagraphStyle(first:number,last:number,style:import('./protocol').DocStyleId):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'paraStyle',first,last,style}))).document;}
  async setList(first:number,last:number,list:import('./protocol').ListKindId):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'setList',first,last,list}))).document;}
  async shiftListLevel(first:number,last:number,delta:number):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'listLevel',first,last,delta}))).document;}
+ async insertTable(block:number,rows:number,cols:number):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'insertTable',block,rows,cols}))).document;}
  async editTable(block:number,op:import('./protocol').TableOp):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'tableEdit',block,op}))).document;}
  async snapshot():Promise<number>{return(await this.call('snapshot',id=>({id,kind:'snapshot'}))).snap;}
  async restore(snap:number):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'restore',snap}))).document;}
