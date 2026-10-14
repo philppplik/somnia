@@ -12,7 +12,8 @@ import {getMedia,setActiveMedia,subscribeMedia} from '../media';
 import type {VideoCapabilities,VideoProbe,VideoProgress,VideoReport} from './protocol';
 export type VideoStatus='loading'|'ready'|'error'|'exporting';
 export interface VideoResult{blob:Blob;url:string;report:VideoReport}
-export interface VideoSession{name:string;status:VideoStatus;error:string;probe:VideoProbe|null;capabilities:VideoCapabilities|null;clips:TimelineClip[];selectedClipId:string|null;format:VideoFormat;progress:VideoProgress|null;result:VideoResult|null;ext:string}
+export type VideoExportOutcome='downloaded'|'cancelled'|'unavailable';
+export interface VideoSession{exportOutcome?:VideoExportOutcome;name:string;status:VideoStatus;error:string;probe:VideoProbe|null;capabilities:VideoCapabilities|null;clips:TimelineClip[];selectedClipId:string|null;format:VideoFormat;progress:VideoProgress|null;result:VideoResult|null;ext:string}
 const sessions=new Map<string,VideoSession>();
 let filmstrip:FilmstripController|null|undefined;
 /** One filmstrip controller per app run; null where workers are unavailable (unit tests, SSR). */
@@ -132,7 +133,7 @@ export async function runVideoExport(name:string):Promise<'exported'|'cancelled'
   if(!bytes){patch(name,{status:'error',error:`Clip source "${n}" is no longer open. Re-open the file to export this timeline.`});return'unavailable';}
   clipSources[n]=bytes.slice(0);
  }
- revoke(s.result);put({...s,status:'exporting',error:'',progress:null,result:null});
+ revoke(s.result);put({...s,status:'exporting',error:'',progress:null,result:null,exportOutcome:undefined});
  try{
   const{engine:e}=getEngine();
   const r=await e.export(clipSources,s.clips,s.format,p=>{if(sessions.get(name)?.status==='exporting')patch(name,{progress:p});});
@@ -158,9 +159,12 @@ export function downloadVideo(name:string):boolean{
 }
 /** Full UI flow: encode, then download the result. */
 export async function exportVideoFile(name:string):Promise<'downloaded'|'cancelled'|'unavailable'>{
+ // Clear the previous notification even when encoding cannot start.
+ patch(name,{exportOutcome:undefined});
  const r=await runVideoExport(name);
- if(r!=='exported')return r;
- return downloadVideo(name)?'downloaded':'unavailable';
+ const outcome=r==='exported'?(downloadVideo(name)?'downloaded':'unavailable'):r;
+ patch(name,{exportOutcome:outcome});
+ return outcome;
 }
 export function cancelVideoExport(name:string){if(sessions.get(name)?.status==='exporting')engine?.cancelExport();}
 export function closeVideo(name:string){
