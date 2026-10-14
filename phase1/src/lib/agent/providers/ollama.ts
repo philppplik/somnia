@@ -1,3 +1,4 @@
+import {recordLocalModelSuccess} from '../localModelUsage';
 import {checkLocalContext} from '../localContext';
 import { AgentError, ProviderError } from '../errors';
 import { fetchProviderResponse, type RetryOptions } from '../retry';
@@ -216,6 +217,7 @@ export class OllamaProvider implements AgentProvider {
         toolIndex++;
       }
       if (j.done) {
+        if(this.locality==='local'&&!/(^|[:\-_/])cloud$/i.test(req.model.trim())&&!signal.aborted&&j.done_reason!=='length')recordLocalModelSuccess(this.baseUrl,req.model);
         // Local usage is real token counts; costUsd stays absent (contract: absent = unknown).
         if (j.prompt_eval_count !== undefined || j.eval_count !== undefined) out.push({ type: 'usage', usage: { inputTokens: j.prompt_eval_count, outputTokens: j.eval_count } });
         out.push({ type: 'finish', reason: toolIndex > 0 ? 'tool_calls' : j.done_reason === 'length' ? 'length' : 'stop' });

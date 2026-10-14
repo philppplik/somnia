@@ -43,7 +43,11 @@ export class LocalModelManager {
    const before=await this.runtime.snapshot();if(before.state!=='running'||before.inventoryError)throw Error('Refresh local runtime before retrying');
    if(this.stopped){this.update({phase:'interrupted',cancelOutcome:'unknown'});return;}
    if(!this.allowed())throw Error('AI request became active');
-   if(disk){const currentDisk=await this.diskCheck(disk.token);if(modelDiskAdvice(model,currentDisk).state==='insufficient')throw Error('Not enough disk space for estimated model and headroom');if(this.stopped)return;}
+   if(!disk)throw Error('Select the actual Ollama model folder before downloading');
+   const currentDisk=await this.diskCheck(disk.token);const advice=modelDiskAdvice(model,currentDisk);
+   if(currentDisk.token!==disk.token||currentDisk.source!=='user-selected-volume'||!Number.isSafeInteger(currentDisk.freeBytes)||currentDisk.freeBytes<0||!Number.isFinite(currentDisk.checkedAt)||Date.now()-currentDisk.checkedAt>60000||currentDisk.checkedAt>Date.now())throw Error('Refresh the selected model volume before downloading');
+   if(advice.state==='insufficient')throw Error('Not enough disk space for estimated model and headroom');
+   if(this.stopped){this.update({phase:'interrupted',cancelOutcome:'unknown'});return;}
    if(!this.allowed())throw Error('AI request became active');
    this.id=await this.transport.start(model,disk?.token);
    if(this.stopped){const cancelOutcome=await this.transport.cancel(this.id).catch(()=> 'unknown' as const);this.update({phase:'interrupted',cancelOutcome});return;}

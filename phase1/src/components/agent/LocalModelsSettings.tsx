@@ -1,3 +1,4 @@
+import {lastLocalModelSuccess} from '../../lib/agent/localModelUsage';
 import {LocalFirstRunGuide} from './LocalFirstRunGuide';
 import {LocalAIHealth} from './LocalAIHealth';
 import type {Hardware} from '../../lib/agent/localModelAdvice';
@@ -41,11 +42,11 @@ export function LocalModelsSettings({active,runtime:provided,hardwareProbe}:{act
   <LocalModelAdvice hardwareProbe={hardwareProbe} active={active} runtime={runtime} snapshot={snapshot}/>
   {!provided&&<LocalModelActions snapshot={snapshot} onChanged={refresh}/>}
   {snapshot?.state==='running'&&<>
-   <h4>{t('local.installed')}</h4>
+   <h4>{t('local.installed')}</h4><p>{t('local.manager.lastUsedNotice')}</p>
    {snapshot.inventoryError?<p>{t('local.inventoryError')}</p>:!snapshot.models.length?<p>{t('local.empty')}</p>:<>
     <ul className="local-models-list">{snapshot.models.slice(page*20,page*20+20).map(model=>{
-     const info=evidence[model.id];return <li key={model.id}><strong>{model.id}</strong><div>{size(model.sizeBytes)} · {model.parameterSize??t('local.unknown')} · {model.quantization??t('local.unknown')}</div>
-      <div className="local-models-badges"><Badge>{t('local.present')}</Badge><Badge>{t('local.locality.'+(!info||info==='error'?'unverified':info.locality))}</Badge>{info&&info!=='error'&&info.capabilities?.map(cap=><Badge key={cap}>{t('local.cap.'+cap)}</Badge>)}</div>
+     const info=evidence[model.id],lastUsed=lastLocalModelSuccess(runtime.baseUrl,model.id);return <li key={model.id}><strong>{model.id}</strong><div>{size(model.sizeBytes)} · {model.parameterSize??t('local.unknown')} · {model.quantization??t('local.unknown')}</div>
+      <p>{t('local.manager.lastUsed')}: {lastUsed===null?t('local.unknown'):new Intl.DateTimeFormat(locale,{dateStyle:'medium',timeStyle:'short'}).format(lastUsed)}</p><div className="local-models-badges"><Badge>{t('local.present')}</Badge><Badge>{t('local.locality.'+(!info||info==='error'?'unverified':info.locality))}</Badge>{info&&info!=='error'&&info.capabilities?.map(cap=><Badge key={cap}>{t('local.cap.'+cap)}</Badge>)}</div>
       <p>{t(info==='error'?'local.metadataError':!info||info.capabilities===null?'local.capUnknown':'local.advertised')}</p>
       {(!info||info==='error')&&!busy&&<Button type="button" size="compact" onClick={()=>void inspect(model.id)} aria-label={t('local.inspectModel',{model:model.id})}>{t('local.inspect')}</Button>}
      </li>;

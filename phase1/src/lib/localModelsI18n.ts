@@ -1,5 +1,10 @@
 export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
  "en": {
+  "local.manager.lastUsed": "Last successful Agent use on this device",
+  "local.manager.lastUsedNotice": "Somnia Agent completions only, stored on this device. Ollama modified_at is not last used. Other apps and native Vibe runs are not included; missing history stays unknown.",
+  "local.manager.recommended": "Device suggestion: {model}. Fits the current RAM/VRAM estimate; not a quality or speed test. Text advice only, never downloaded or selected automatically.",
+  "local.manager.noRecommendation": "No device recommendation without fresh memory evidence and estimated headroom. Nothing is downloaded or selected automatically.",
+
   "local.tab": "Local",
   "local.title": "Local models",
   "local.boundary": "Installed models and explicit runtime actions. Advertised capabilities do not enable image or audio input in Somnia. Local inference is verified separately before each request and trusts the daemon, not a hostile proxy.",
@@ -264,6 +269,11 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Move earlier after local"
  },
  "de": {
+  "local.manager.lastUsed": "Letzte erfolgreiche Agent-Nutzung auf diesem Gerät",
+  "local.manager.lastUsedNotice": "Nur Somnia-Agent-Abschlüsse, lokal gespeichert. Ollama modified_at ist keine letzte Nutzung. Andere Apps und native Vibe-Läufe sind nicht enthalten; fehlende Historie bleibt unbekannt.",
+  "local.manager.recommended": "Gerätevorschlag: {model}. Passt zur aktuellen RAM/VRAM-Schätzung; kein Qualitäts- oder Geschwindigkeitstest. Nur Text, kein automatischer Download oder Wechsel.",
+  "local.manager.noRecommendation": "Kein Gerätevorschlag ohne aktuelle Speicherwerte und geschätzte Reserve. Kein automatischer Download oder Wechsel.",
+
   "local.tab": "Lokal",
   "local.title": "Lokale Modelle",
   "local.boundary": "Installierte Modelle und explizite Laufzeitaktionen. Gemeldete Fähigkeiten aktivieren keine Bild- oder Audioeingabe in Somnia. Lokale Inferenz wird vor jeder Anfrage separat geprüft und vertraut dem Daemon, nicht einem manipulierten Proxy.",
@@ -528,6 +538,11 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Nach lokal früher einordnen"
  },
  "es": {
+  "local.manager.lastUsed": "Último uso correcto del Agent en este dispositivo",
+  "local.manager.lastUsedNotice": "Solo finalizaciones de Somnia Agent, guardadas localmente. modified_at de Ollama no es el último uso. No incluye otras apps ni ejecuciones Vibe nativas; lo desconocido sigue desconocido.",
+  "local.manager.recommended": "Sugerencia para este dispositivo: {model}. Cabe según la estimación de RAM/VRAM actual; no es una prueba de calidad o velocidad. Solo texto, sin descarga ni selección automática.",
+  "local.manager.noRecommendation": "Sin sugerencia sin datos recientes de memoria y margen estimado. No hay descarga ni selección automática.",
+
   "local.tab": "Local",
   "local.title": "Modelos locales",
   "local.boundary": "Modelos instalados y acciones explícitas. Las capacidades anunciadas no activan entradas de imagen o audio en Somnia. La inferencia local se verifica antes de cada solicitud y confía en el daemon, no en un proxy hostil.",
@@ -792,6 +807,11 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Mover antes tras local"
  },
  "fr": {
+  "local.manager.lastUsed": "Dernière utilisation réussie de l’Agent sur cet appareil",
+  "local.manager.lastUsedNotice": "Uniquement les réponses terminées de Somnia Agent, enregistrées localement. modified_at d’Ollama n’est pas la dernière utilisation. Autres apps et exécutions Vibe natives exclues; l’inconnu reste inconnu.",
+  "local.manager.recommended": "Suggestion pour cet appareil : {model}. Compatible avec l’estimation RAM/VRAM actuelle; aucun test de qualité ou de vitesse. Texte uniquement, sans téléchargement ni sélection automatique.",
+  "local.manager.noRecommendation": "Aucune suggestion sans données mémoire récentes et marge estimée. Aucun téléchargement ni sélection automatique.",
+
   "local.tab": "Local",
   "local.title": "Modèles locaux",
   "local.boundary": "Modèles installés et actions explicites. Les capacités annoncées ne permettent pas les entrées image ou audio dans Somnia. Chaque requête locale est vérifiée séparément et fait confiance au daemon, pas à un proxy hostile.",
@@ -1056,6 +1076,11 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Avancer après local"
  },
  "pt-BR": {
+  "local.manager.lastUsed": "Último uso concluído do Agent neste dispositivo",
+  "local.manager.lastUsedNotice": "Somente respostas concluídas do Somnia Agent, salvas localmente. modified_at do Ollama não é o último uso. Outros apps e execuções Vibe nativas não são incluídos; o desconhecido continua desconhecido.",
+  "local.manager.recommended": "Sugestão para este dispositivo: {model}. Cabe na estimativa atual de RAM/VRAM; não é teste de qualidade ou velocidade. Apenas texto, sem download ou seleção automática.",
+  "local.manager.noRecommendation": "Sem sugestão sem dados recentes de memória e margem estimada. Nada é baixado ou selecionado automaticamente.",
+
   "local.tab": "Local",
   "local.title": "Modelos locais",
   "local.boundary": "Modelos instalados e ações explícitas. Capacidades anunciadas não habilitam imagens ou áudio no Somnia. A inferência local é verificada antes de cada solicitação e confia no daemon, não em um proxy hostil.",

@@ -21,7 +21,7 @@ export function LocalModelActions({snapshot,onChanged,manager=localModelManager,
  const active=!!job&&['preparing','downloading','verifying','installing','reconciling','cancel-requested'].includes(job.phase)&&!job.error;
  const locked=busy||manager.isBusy()||active||!manager.canMutate();
  const act=async(action:()=>Promise<unknown>)=>{setBusy(true);setError('');try{await action();await onChanged();}catch(e){setError(e instanceof Error?e.message:t('local.action.failed'));}finally{setBusy(false);}};
- const propose=(raw:string)=>{try{const model=registryModel(raw);setAck(false);setConfirm({kind:'pull',model});setError('');}catch{setError(t('local.action.invalid'));}};
+ const propose=(raw:string)=>{try{const model=registryModel(raw);setAck(false);setDisk(null);setConfirm({kind:'pull',model});setError('');}catch{setError(t('local.action.invalid'));}};
  return <div className="local-model-actions">
   {error&&<StudioStatus tone="error" live="assertive">{error}</StudioStatus>}
   {snapshot?.state==='stopped'&&<Button disabled={locked} type="button" onClick={()=>void act(async()=>{const result=await manager.launch();setInstruction(result.instruction??'');})}>{t('local.action.start')}</Button>}
