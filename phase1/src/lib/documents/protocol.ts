@@ -105,6 +105,9 @@ export type DocumentsRequest=
  |{id:number;kind:'paraState';first:number;last:number}
  |{id:number;kind:'paraStyle';first:number;last:number;style:DocStyleId}
  |{id:number;kind:'setList';first:number;last:number;list:ListKindId}
+ |{id:number;kind:'insertToc';block:number;levels:number;title:string;pages:boolean}
+ |{id:number;kind:'updateToc';block:number}
+ |{id:number;kind:'removeToc';block:number}
  |{id:number;kind:'restartList';first:number;last:number}
  |{id:number;kind:'continueList';first:number;last:number}
  |{id:number;kind:'listLevel';first:number;last:number;delta:number}
@@ -323,6 +326,20 @@ export function listOptionsProblem(p:unknown,current?:ListNumFormat|'other',cur?
    if(!own)return `The label must contain %${level+1}.`;
   }
  }
+ return null;
+}
+
+/** A contents list: heading levels 1 to `levels`, an optional title, and page numbers. */
+export interface TocOptions{levels:number;title:string;pages:boolean}
+export const MAX_TOC_TITLE=100,MAX_TOC_LEVELS=9;
+/** The first problem with contents list options, or null when the engine will accept them. */
+export function tocProblem(o:unknown):string|null{
+ if(!o||typeof o!=='object'||Array.isArray(o))return 'The contents options are not valid.';
+ const t=o as Record<string,unknown>;
+ for(const k of Object.keys(t))if(k!=='levels'&&k!=='title'&&k!=='pages')return `Unknown contents option ${k}.`;
+ if(typeof t.levels!=='number'||!Number.isInteger(t.levels)||t.levels<1||t.levels>MAX_TOC_LEVELS)return `Use 1 to ${MAX_TOC_LEVELS} heading levels.`;
+ if(typeof t.title!=='string'||Array.from(t.title).length>MAX_TOC_TITLE||/[\u0000-\u001f\u007f-\u009f\ufffc\u2028\u2029]/u.test(t.title))return `The title is limited to ${MAX_TOC_TITLE} characters, without line breaks.`;
+ if(typeof t.pages!=='boolean')return 'The page numbers option is not valid.';
  return null;
 }
 

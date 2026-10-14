@@ -1127,6 +1127,154 @@ impl DocSession {
         self.pages = DocLayout::default();
         Ok(())
     }
+    /// True for a paragraph this editor treats as part of a table of contents: style TOC Heading or TOC 1-9, no inline objects, no section break.
+    fn is_toc_para(b: &Block) -> bool {
+        match b {
+            Block::Para(p) => {
+                let ok = p.props.style.as_deref().is_some_and(|s| s == "TOCHeading" || s.strip_prefix("TOC").and_then(|n| n.parse::<u8>().ok()).is_some_and(|n| (1..=9).contains(&n)));
+                ok && p.section.is_none() && p.objects.is_empty()
+            }
+            _ => false,
+        }
+    }
+    /// The headings (outline level, text, block index) a contents list is made from: top-level paragraphs with an outline level, not in a TOC style.
+    fn toc_entries(&self, levels: u8) -> Result<Vec<(u8, String, usize)>, String> {
+        let mut out = Vec::new();
+        for (i, b) in self.doc.body.iter().enumerate() {
+            let Block::Para(p) = &**b else { continue };
+            if p.props.style.as_deref().is_some_and(|s| s.starts_with("TOC")) {
+                continue;
+            }
+            let Some(l) = self.doc.styles.resolve_para(&p.props).outline_level.filter(|l| (*l as usize) < 9 && *l < levels) else { continue };
+            let t: String = p.plain_text().chars().filter(|c| !c.is_control() && *c != OBJ).collect();
+            let t: String = t.trim().chars().take(200).collect();
+            if t.is_empty() {
+                continue;
+            }
+            if out.len() >= 500 {
+                return Err("the document has more than 500 headings for a contents list".into());
+            }
+            out.push((l, t, i));
+        }
+        Ok(out)
+    }
+    /// The contents paragraphs: an optional title and one entry per heading, with a right tab and dot leader before the page number when `pages` is given.
+    fn toc_paras(&self, entries: &[(u8, String, usize)], pages: Option<&[usize]>, title: &str) -> Vec<wordcraft_doc::Paragraph> {
+        let sec = &self.doc.last_section;
+        let n = sec.columns.count.clamp(1, 45) as f32;
+        let width = if n > 1.0 { (sec.text_width() - sec.columns.space.max(0.0) * (n - 1.0)) / n } else { sec.text_width() };
+        let mut out = Vec::new();
+        if !title.is_empty() {
+            out.push(wordcraft_doc::Paragraph::with_text(title, CharProps::default()).styled("TOCHeading"));
+        }
+        for (i, (l, t, _)) in entries.iter().enumerate() {
+            let text = match pages {
+                Some(pg) => format!("{t}\t{}", pg.get(i).copied().unwrap_or(1)),
+                None => t.clone(),
+            };
+            let mut p = wordcraft_doc::Paragraph::with_text(&text, CharProps::default()).styled(&format!("TOC{}", l + 1));
+            if pages.is_some() {
+                p.props.tabs = Some(vec![wordcraft_doc::props::TabStop { pos: width.max(36.0), align: wordcraft_doc::props::TabAlign::Right, leader: wordcraft_doc::props::TabLeader::Dot }]);
+            }
+            out.push(p);
+        }
+        out
+    }
+    /// Replaces `remove` blocks at `at` with a fresh contents list (title, levels 1..=`levels`, page numbers or not).
+    /// Page numbers come from the layout and are computed twice, because the list itself moves the headings.
+    fn build_toc(&mut self, at: usize, remove: usize, levels: u8, title: &str, pages: bool) -> Result<(), String> {
+        if !(1..=9).contains(&levels) {
+            return Err("a contents list uses 1 to 9 heading levels".into());
+        }
+        if title.chars().count() > 100 || title.chars().any(|c| c.is_control()) {
+            return Err("the contents title is limited to 100 characters of plain text".into());
+        }
+        let first = self.toc_entries(levels)?;
+        if first.is_empty() {
+            return Err("the document has no headings to list".into());
+        }
+        if self.doc.body.len() + first.len() + 1 >= 100_000 {
+            return Err("the document has too many blocks".into());
+        }
+        let mut styles = self.doc.styles.clone();
+        if !title.is_empty() {
+            Self::ensure_style(&mut styles, "TOCHeading")?;
+        }
+        for n in 1..=levels {
+            Self::ensure_style(&mut styles, &format!("TOC{n}"))?;
+        }
+        self.doc.styles = styles;
+        for _ in 0..remove {
+            self.doc.body.remove(at);
+        }
+        for (k, p) in self.toc_paras(&first, None, title).into_iter().enumerate() {
+            self.doc.body.insert(at + k, wordcraft_doc::para_block(p));
+        }
+        if pages {
+            for _ in 0..2 {
+                self.paginate();
+                let entries = self.toc_entries(levels)?;
+                let nums: Vec<usize> = entries.iter().map(|(_, _, i)| self.pages.caret(&Pos::body(*i, 0)).map_or(1, |c| c.page + 1)).collect();
+                for (k, p) in self.toc_paras(&entries, Some(&nums), title).into_iter().enumerate() {
+                    self.doc.body[at + k] = wordcraft_doc::para_block(p);
+                }
+            }
+        }
+        self.pages = DocLayout::default();
+        Ok(())
+    }
+    /// The contents run around top-level block `at` (or the first one in the document): (start, length, title, levels, has page numbers).
+    fn find_toc(&self, at: usize) -> Result<(usize, usize, String, u8, bool), String> {
+        let body = &self.doc.body;
+        let top = if at >= CELL_BASE { self.cell_paras().nth(at - CELL_BASE).ok_or("no such paragraph")?[0] } else { at };
+        let seed = if top < body.len() && Self::is_toc_para(&body[top]) { top } else { body.iter().position(|b| Self::is_toc_para(b)).ok_or("the document has no table of contents")? };
+        let mut start = seed;
+        while start > 0 && Self::is_toc_para(&body[start - 1]) {
+            start -= 1;
+        }
+        let mut end = seed;
+        while end + 1 < body.len() && Self::is_toc_para(&body[end + 1]) {
+            end += 1;
+        }
+        let (mut title, mut levels, mut pages) = (String::new(), 0u8, false);
+        for (i, b) in body[start..=end].iter().enumerate() {
+            let Block::Para(p) = &**b else { continue };
+            match p.props.style.as_deref().and_then(|s| s.strip_prefix("TOC")).and_then(|n| n.parse::<u8>().ok()) {
+                Some(n) => {
+                    levels = levels.max(n);
+                    pages |= p.text.contains('\t');
+                }
+                None if i == 0 => title = p.plain_text().chars().take(100).collect(),
+                None => {}
+            }
+        }
+        Ok((start, end - start + 1, title, if levels == 0 { 3 } else { levels }, pages))
+    }
+    /// Inserts a contents list built from the headings before top-level block `block` (after the table when `block` is in a cell).
+    fn do_insert_toc(&mut self, block: usize, levels: u8, title: &str, pages: bool) -> Result<(), String> {
+        let top = if block >= CELL_BASE { self.cell_paras().nth(block - CELL_BASE).ok_or("no such paragraph")?[0] + 1 } else { block };
+        if top > self.doc.body.len() {
+            return Err(format!("no block {block}"));
+        }
+        self.build_toc(top, 0, levels, title.trim(), pages)
+    }
+    /// Rebuilds the contents list at `block` (or the first one) from the current headings, keeping its title, depth and page numbers setting.
+    fn do_update_toc(&mut self, block: usize) -> Result<(), String> {
+        let (start, len, title, levels, pages) = self.find_toc(block)?;
+        self.build_toc(start, len, levels, &title, pages)
+    }
+    /// Removes the contents list at `block` (or the first one).
+    fn do_remove_toc(&mut self, block: usize) -> Result<(), String> {
+        let (start, len, ..) = self.find_toc(block)?;
+        for _ in 0..len {
+            self.doc.body.remove(start);
+        }
+        if self.doc.body.is_empty() {
+            self.doc.body.push(wordcraft_doc::para_block(wordcraft_doc::Paragraph::new()));
+        }
+        self.pages = DocLayout::default();
+        Ok(())
+    }
     /// Restarts numbering at `first`: the paragraphs `first..=last` that are in a numbered list, and every later top-level
     /// paragraph of the same list, move to a new list instance that starts again at 1. Refuses when `first` is not in a numbered list.
     fn do_restart_list(&mut self, first: usize, last: usize) -> Result<(), String> {
@@ -2256,6 +2404,18 @@ impl DocSession {
     pub fn set_list_options(&mut self, block: usize, patch_json: &str) -> Result<(), JsValue> {
         self.do_set_list_options(block, patch_json).map_err(|e| JsValue::from_str(&e))
     }
+    /// Inserts a table of contents from the headings (see `do_insert_toc`).
+    pub fn insert_toc(&mut self, block: usize, levels: u32, title: &str, pages: bool) -> Result<(), JsValue> {
+        self.do_insert_toc(block, levels.min(255) as u8, title, pages).map_err(|e| JsValue::from_str(&e))
+    }
+    /// Rebuilds the table of contents from the current headings (see `do_update_toc`).
+    pub fn update_toc(&mut self, block: usize) -> Result<(), JsValue> {
+        self.do_update_toc(block).map_err(|e| JsValue::from_str(&e))
+    }
+    /// Removes the table of contents (see `do_remove_toc`).
+    pub fn remove_toc(&mut self, block: usize) -> Result<(), JsValue> {
+        self.do_remove_toc(block).map_err(|e| JsValue::from_str(&e))
+    }
     /// Continues the numbering of the list above (see `do_continue_list`).
     pub fn continue_list(&mut self, first: usize, last: usize) -> Result<(), JsValue> {
         self.do_continue_list(first, last).map_err(|e| JsValue::from_str(&e))
@@ -2942,6 +3102,62 @@ mod tests {
             assert!(s.do_set_list_options(0, bad).is_err(), "{bad}");
         }
         assert_eq!(s.doc.numbering, before);
+    }
+    #[test]
+    fn table_of_contents_inserts_updates_and_removes() {
+        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
+        let toc_texts = |s: &DocSession| -> Vec<String> {
+            s.doc.body.iter().filter_map(|b| match &**b { Block::Para(p) if DocSession::is_toc_para(b) => Some(p.text.clone()), _ => None }).collect()
+        };
+        s.do_set_style(0, 0, "Heading1").unwrap();
+        s.do_set_style(1, 1, "Heading2").unwrap();
+        let before = s.doc.body.len();
+        let n = s.toc_entries(9).unwrap().len();
+        assert!(n >= 2);
+        s.do_insert_toc(0, 3, "Contents", true).unwrap();
+        // Title plus one entry per heading of level 1-3.
+        let want = s.toc_entries(3).unwrap().len();
+        assert_eq!(s.doc.body.len(), before + 1 + want);
+        let texts = toc_texts(&s);
+        assert_eq!(texts.len(), 1 + want);
+        assert_eq!(texts[0], "Contents");
+        assert!(texts[1..].iter().all(|t| t.rsplit('\t').next().is_some_and(|n| n.parse::<usize>().is_ok_and(|n| n >= 1))), "{texts:?}");
+        // The list never includes itself, and survives a save and reload.
+        assert_eq!(s.toc_entries(9).unwrap().len(), n);
+        let re = DocSession::from_bytes(&wordcraft_docx::write(&s.doc).unwrap()).unwrap();
+        assert!(re.find_toc(0).is_ok());
+        // Update keeps title and shape; finding from inside the list gives the same run.
+        let len = s.doc.body.len();
+        s.do_update_toc(0).unwrap();
+        assert_eq!(s.doc.body.len(), len);
+        let (start, run, title, levels, pages) = s.find_toc(0).unwrap();
+        assert_eq!((start, run, title.as_str(), pages), (0, 1 + want, "Contents", true));
+        assert!((2..=3).contains(&levels));
+        assert_eq!(s.find_toc(start + 1).unwrap().0, start);
+        // Remove brings the original body back.
+        s.do_remove_toc(start + 1).unwrap();
+        assert_eq!(s.doc.body.len(), before);
+        assert!(s.find_toc(0).is_err());
+        assert!(s.do_update_toc(0).is_err() && s.do_remove_toc(0).is_err());
+        // Without page numbers there is no tab.
+        s.do_insert_toc(0, 2, "", false).unwrap();
+        assert!(toc_texts(&s).iter().all(|t| !t.contains('\t')));
+        s.do_remove_toc(0).unwrap();
+        // Refusals change nothing.
+        let body = s.doc.body.clone();
+        for (lv, title) in [(0u8, ""), (10, ""), (3, "a\nb"), (3, "x\u{7}")] {
+            assert!(s.do_insert_toc(0, lv, title, true).is_err());
+        }
+        assert!(s.do_insert_toc(0, 3, &"t".repeat(101), true).is_err());
+        assert!(s.do_insert_toc(10_000_000, 3, "", true).is_err());
+        assert_eq!(s.doc.body.len(), body.len());
+        // No headings, nothing to list.
+        for i in 0..s.doc.body.len() {
+            s.do_set_style(i, i, "Normal").ok();
+        }
+        if s.toc_entries(9).unwrap().is_empty() {
+            assert!(s.do_insert_toc(0, 3, "", true).is_err());
+        }
     }
     #[test]
     fn save_records_last_modified_by_on_the_copy_only() {

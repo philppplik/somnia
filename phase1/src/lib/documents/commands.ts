@@ -1,8 +1,8 @@
 import {registerCommand} from '../commandRegistry';
 import {getDocumentsState,patchDocuments,stepZoom} from './store';
 import {redoEdit,setAlign,setParagraphStyle,toggleList,clearList,shiftListLevel,stepFontSize,stepIndent,toggleFormat,undoEdit,editTable,insertTable,setHeaderFooter,insertImage,resizeImageToPercent,setImageAlt,removeImage,setColumnWidth,styleTable,setPageSetup,setFindOpen,setFindQuery,findStep,replaceAll,replaceCurrent} from './session';
-import {listOptionsProblem,type ListOptionsPatch,pageSetupProblem,LIST_STYLES,type ListStyleId} from './protocol';
-import {continueNumbering,restartNumbering,setListStyle,setListOptions} from './session';
+import {tocProblem,type TocOptions,listOptionsProblem,type ListOptionsPatch,pageSetupProblem,LIST_STYLES,type ListStyleId} from './protocol';
+import {insertToc,updateToc,removeToc,continueNumbering,restartNumbering,setListStyle,setListOptions} from './session';
 import {validFindQuery,validReplaceText} from './find';
 import {findMedia} from '../media';
 import {tableStyleProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGE_BYTES,MIN_COL_PT,MAX_COL_PT} from './protocol';
@@ -140,6 +140,14 @@ export function registerDocumentsCommands(){
    await setListStyle(st as ListStyleId);
   },()=>ready()&&!!getDocumentsState().caret),
   add('documents.list.restart','Restart list numbering',async()=>{await restartNumbering();},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.toc.open','Table of contents',()=>{setInfoDialog('toc');},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.toc.insert','Insert table of contents',async p=>{
+   const r=(p??{}) as Record<string,unknown>;const o={levels:r.levels??3,title:r.title??'',pages:r.pages??true};
+   const bad=tocProblem(o);if(bad)throw expected(bad);
+   await insertToc(o as TocOptions);
+  },()=>ready()&&!!getDocumentsState().caret),
+  add('documents.toc.update','Update table of contents',async()=>{await updateToc();},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.toc.remove','Remove table of contents',async()=>{await removeToc();},()=>ready()&&!!getDocumentsState().caret),
   add('documents.list.continue','Continue list numbering',async()=>{await continueNumbering();},()=>ready()&&!!getDocumentsState().caret&&getDocumentsState().para?.list==='numbered'),
   add('documents.list.options','List numbering options',()=>{setInfoDialog('list');},()=>ready()&&!!getDocumentsState().caret&&(getDocumentsState().para?.list==='bullet'||getDocumentsState().para?.list==='numbered')),
   add('documents.list.options.set','Set list level options',async p=>{

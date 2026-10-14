@@ -1,8 +1,8 @@
 import {useEffect,useState} from 'react';
-import {LIST_NUM_FORMATS,MAX_LIST_LABEL,MAX_LIST_START,MAX_LIST_INDENT_PT,listOptionsProblem,type ListNumFormat,type ListOptionsPatch,type ListOptionsState,MAX_TAB_STOPS,TAB_ALIGNS,TAB_LEADERS,tabsProblem,type TabStopSpec,MAX_DESCRIPTION_CHARS,MAX_PROPERTY_CHARS,propertiesProblem,PROPERTY_KEYS,type PropertiesPatch,type PropertiesState} from '../../lib/documents/protocol';
+import {MAX_TOC_LEVELS,MAX_TOC_TITLE,tocProblem,type TocOptions,LIST_NUM_FORMATS,MAX_LIST_LABEL,MAX_LIST_START,MAX_LIST_INDENT_PT,listOptionsProblem,type ListNumFormat,type ListOptionsPatch,type ListOptionsState,MAX_TAB_STOPS,TAB_ALIGNS,TAB_LEADERS,tabsProblem,type TabStopSpec,MAX_DESCRIPTION_CHARS,MAX_PROPERTY_CHARS,propertiesProblem,PROPERTY_KEYS,type PropertiesPatch,type PropertiesState} from '../../lib/documents/protocol';
 import {setInfoDialog,useInfoDialog} from '../../lib/documents/infoDialog';
 import {authorProblem,MAX_AUTHOR_CHARS,savedAuthor,setAuthor} from '../../lib/documents/author';
-import {readListOptions,readProperties,selectedText,setListOptions,setProperties,setTabStops} from '../../lib/documents/session';
+import {insertToc,removeToc,updateToc,readListOptions,readProperties,selectedText,setListOptions,setProperties,setTabStops} from '../../lib/documents/session';
 import {detailedStats} from '../../lib/documents/stats';
 import {useDocuments} from '../../lib/documents/store';
 import {useT} from '../../lib/useT';
@@ -20,7 +20,7 @@ export function InfoDialogs(){
  const which=useInfoDialog();const doc=useDocuments();
  if(doc.status!=='ready'||which===null)return null;
  const close=()=>setInfoDialog(null);
- return which==='properties'?<PropertiesDialog onClose={close}/>:which==='tabs'?<TabsDialog onClose={close}/>:which==='list'?<ListOptionsDialog onClose={close}/>:<WordCountDialog onClose={close}/>;
+ return which==='properties'?<PropertiesDialog onClose={close}/>:which==='tabs'?<TabsDialog onClose={close}/>:which==='list'?<ListOptionsDialog onClose={close}/>:which==='toc'?<TocDialog onClose={close}/>:<WordCountDialog onClose={close}/>;
 }
 function PropertiesDialog({onClose}:{onClose:()=>void}){
  const {t}=useT();const [orig,setOrig]=useState<PropertiesState|null>(null);const [form,setForm]=useState<PropertiesState|null>(null);
@@ -82,6 +82,26 @@ function ListOptionsDialog({onClose}:{onClose:()=>void}){
   {(textBad||startBad||lenBad)&&<p role="alert" className="text-xs text-ink-3">{t('documents.listopt.invalid').replace('{max}',String(MAX_LIST_START))}</p>}
   <div className="flex justify-end gap-2"><NativeButton className={tool} onClick={onClose}>{t('documents.para.opt.cancel')}</NativeButton>
    <NativeButton className={tool} disabled={!patch} onClick={()=>{if(!patch)return;onClose();void setListOptions(patch);}} data-testid="documents-listopt-apply">{t('documents.para.opt.apply')}</NativeButton></div></>);
+}
+/** The contents options typed in the dialog, or null while they are not acceptable. */
+export function buildTocOptions(levels:string,title:string,pages:boolean):TocOptions|null{
+ if(!/^[1-9]$/.test(levels))return null;const o={levels:Number(levels),title:title.trim(),pages};return tocProblem(o)===null?o:null;
+}
+function TocDialog({onClose}:{onClose:()=>void}){
+ const {t}=useT();const [levels,setLevels]=useState('3');const [title,setTitle]=useState(()=>t('documents.toc.defaultTitle'));const [pages,setPages]=useState(true);
+ const o=buildTocOptions(levels,title,pages);
+ return shell('documents-toc-title',onClose,<>
+  <h2 id="documents-toc-title" className="text-sm font-medium">{t('documents.toc.title')}</h2>
+  <label className="grid gap-1 text-xs text-ink-2">{t('documents.toc.levels')}
+   <NativeSelect className={field} value={levels} onChange={e=>setLevels(e.currentTarget.value)} data-testid="documents-toc-levels">{Array.from({length:MAX_TOC_LEVELS},(_,i)=><option key={i} value={i+1}>{i+1}</option>)}</NativeSelect></label>
+  <label className="grid gap-1 text-xs text-ink-2">{t('documents.toc.titleField')}
+   <NativeInput className={field} maxLength={MAX_TOC_TITLE} aria-invalid={o===null} value={title} onChange={e=>setTitle(e.currentTarget.value)} data-testid="documents-toc-titlefield"/></label>
+  <label className="flex items-center gap-2 text-xs text-ink-2"><NativeInput type="checkbox" checked={pages} onChange={e=>setPages(e.currentTarget.checked)} data-testid="documents-toc-pages"/>{t('documents.toc.pages')}</label>
+  <p className="text-xs text-ink-3">{t('documents.toc.note')}</p>
+  <div className="flex justify-between gap-2"><NativeButton className={tool} onClick={()=>{onClose();void removeToc();}} data-testid="documents-toc-remove">{t('documents.toc.remove')}</NativeButton>
+   <div className="flex gap-2"><NativeButton className={tool} onClick={onClose}>{t('documents.para.opt.cancel')}</NativeButton>
+    <NativeButton className={tool} onClick={()=>{onClose();void updateToc();}} data-testid="documents-toc-update">{t('documents.toc.update')}</NativeButton>
+    <NativeButton className={tool} disabled={!o} onClick={()=>{if(!o)return;onClose();void insertToc(o);}} data-testid="documents-toc-insert">{t('documents.toc.insert')}</NativeButton></div></div></>);
 }
 function WordCountDialog({onClose}:{onClose:()=>void}){
  const {t}=useT();const doc=useDocuments();

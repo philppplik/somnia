@@ -3357,6 +3357,50 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.toc.insert",
+      "title": "Insert table of contents",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.toc.open",
+      "title": "Table of contents",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.toc.remove",
+      "title": "Remove table of contents",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.toc.update",
+      "title": "Update table of contents",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.toggleBold",
       "title": "Toggle bold",
       "category": "View",

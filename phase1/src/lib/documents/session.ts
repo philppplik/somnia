@@ -1,6 +1,6 @@
 import {scrollToPage} from './navigate';
 import {commentAuthor} from './author';
-import {isListKind,listOptionsProblem,type ListStyleId} from './protocol';
+import {tocProblem,isListKind,listOptionsProblem,type ListStyleId} from './protocol';
 import {propertiesProblem,linkProblem,commentProblem,type CommentItem,validHfText,type HeaderFooterState,checkFormatPatch,checkParaPatch,MAX_HF_CHARS,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch,type ImageOp,type PageSetupPatch,type PageSetupState,pageSetupProblem,type TableStyle,type TableStyleScope,tableStyleProblem,MIN_COL_PT,MAX_COL_PT,imageProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGES} from './protocol';
 import {captureDocumentSelection} from './selectionCapture';
 import {CELL_BASE,caretAfterEdit,diffEdit,inverseOf,UndoStack,type TextEdit,type UndoEntry} from './edit';
@@ -476,6 +476,22 @@ export const setListStyle=(style:ListStyleId)=>run(async()=>{
  await structural(eng=>eng.setList(n.s.block,n.e.block,style),n.h,n.h);setSel(n.a,n.h);
 });
 /** Restarts numbering at the first selected paragraph: it and the later items of the same numbered list count from 1 again. One undo step; refused outside a numbered list. */
+/* ---- Table of contents (static entries built from the headings; the engine finds it again by its TOC styles) ---- */
+const tocSpot=()=>{const c=getDocumentsState().caret;const b=c?norm(c).s.block:0;return{block:b,off:c?norm(c).s.off:0};};
+/** Inserts a table of contents above the caret paragraph (below the table when the caret is in one). One undo step; refused when the document has no headings. */
+export const insertToc=(o:import('./protocol').TocOptions)=>run(async()=>{
+ const bad=tocProblem(o);if(bad)throw new Error(bad);
+ const sp=tocSpot();const at=sp.block>=CELL_BASE?0:sp.block;
+ await structural(eng=>eng.insertToc(sp.block,o),sp,eng=>nearEditable(eng,at));
+});
+/** Rebuilds the table of contents (the one at the caret, else the first) from the current headings, keeping its title, depth and page numbers. One undo step. */
+export const updateToc=()=>run(async()=>{
+ const sp=tocSpot();await structural(eng=>eng.updateToc(sp.block),sp,eng=>nearEditable(eng,sp.block>=CELL_BASE?0:sp.block));
+});
+/** Removes the table of contents (the one at the caret, else the first). One undo step. */
+export const removeToc=()=>run(async()=>{
+ const sp=tocSpot();await structural(eng=>eng.removeToc(sp.block),sp,eng=>nearEditable(eng,sp.block>=CELL_BASE?0:sp.block));
+});
 /** Continues the numbering of the nearest numbered list above: the caret's list (and its later items) count on from it. One undo step; refused in tables, in bullet lists and when no numbered list is above. */
 export const continueNumbering=()=>run(async()=>{
  const n=await paraSpan();if(!n)return;
