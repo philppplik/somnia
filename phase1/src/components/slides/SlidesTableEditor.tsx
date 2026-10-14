@@ -39,9 +39,16 @@ export function SlidesTableEditor(){
   const {info:inf}=view;
   if(!inf.editable)return <p className="px-4 py-2 text-xs text-ink-3">{t('slides.table.readonly')}</p>;
   const ready=!s.presenting,row=Math.min(at.row,inf.rows-1),col=Math.min(at.col,inf.cols-1);
+  /** Edits wait in a queue until the session is idle, so a press right after typing is run after the cell commit instead of being refused or dropped. */
+  const run=(edit:Record<string,unknown>)=>setJobs(j=>[...j.slice(-9),edit]);
+  const commit=(r:number,c:number)=>{const v=draft[r]?.[c];if(v!==undefined&&v!==inf.cells[r][c])void run({kind:'cell',row:r,col:c,text:v});};
+  /** Pressing a toolbar control keeps focus in the cell and commits it first, so the press is never lost to a re-render. */
+  const press={onMouseDown:(e:React.MouseEvent)=>{e.preventDefault();commit(row,col);}};
+  /** Pointer presses act on mousedown (after committing the cell) because the re-render of a commit can swallow the click; keyboard activation (detail 0) uses click. */
+  const act=(edit:Record<string,unknown>)=>({onMouseDown:(e:React.MouseEvent)=>{e.preventDefault();commit(row,col);void run(edit);},onClick:(e:React.MouseEvent)=>{if(e.detail===0)void run(edit);}});
   return <div className="flex flex-col gap-2 px-4 py-2" data-slot="slides-table-editor">
-    <SlidesTableHandoff source={s.source} slideIndex={s.index} slideId={slideId} shapeId={shape.id} cells={inf.cells} ready={ready} isBusy={()=>working.current||s.busy} commit={()=>commit(row,col)}
-      editCell={(r,c,text)=>commandDispatcher.tryRunCommand('slides.editTable',{source:s.source,slideId,shapeId:shape.id,edit:{kind:'cell',row:r,col:c,text}},{origin:'ui'}).then(x=>x.ok?{ok:true}:{ok:false,message:x.error.message})} onError={setError}/>
+    <SlidesTableHandoff source={s.source} slideIndex={s.index} slideId={slideId} shapeId={view.shape.id} cells={inf.cells} ready={ready} isBusy={()=>working.current||s.busy} commit={()=>commit(row,col)}
+      editCell={(r,c,text)=>commandDispatcher.tryRunCommand('slides.editTable',{source:s.source,slideId,shapeId:view.shape.id,edit:{kind:'cell',row:r,col:c,text}},{origin:'ui'}).then(x=>x.ok?{ok:true}:{ok:false,message:x.error.message})} onError={setError}/>
     <div className="flex flex-wrap items-center gap-2">
       <Button size="compact" variant="outline" disabled={!ready||inf.rows>=MAX_TABLE_ROWS||inf.merged.length>0} {...act({kind:'insertRow',at:row+1})}>{t('slides.table.insertRow')}</Button>
       <Button size="compact" variant="outline" disabled={!ready||inf.rows<=1||inf.merged.length>0} {...act({kind:'removeRow',at:row})}>{t('slides.table.removeRow')}</Button>

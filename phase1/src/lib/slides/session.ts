@@ -211,7 +211,7 @@ const portOf=(e:Entry)=>({snapshot:()=>snap(e),setBusy:(on:boolean)=>patch(e,{bu
 export function applyDeckReviewed(name:string,review:ReviewedApply,origin:string):Promise<DeckReceipt>{
  const e=sessions.get(name);
  const port:DeckOwnerPort<Staged>|null=e?{...portOf(e),edit:(s,t)=>singleRunEditBytes(s.working!,e.state.summary!,parseDeck(t)),stage:b=>stageBytes(e,b),
-  commit:(st,before,after,o)=>{const token=`r${++receiptSeq}`;const undo=bounded([...e.state.undo,before]);const kept=undo.at(-1)===before;const revision=commitStaged(e,st,after,{undo,redo:[]});e.last=kept?{token,before,after}:undefined;return {revision,token,undoable:kept};}}:null;
+  commit:(st,before,after,_o)=>{const token=`r${++receiptSeq}`;const undo=bounded([...e.state.undo,before]);const kept=undo.at(-1)===before;const revision=commitStaged(e,st,after,{undo,redo:[]});e.last=kept?{token,before,after}:undefined;return {revision,token,undoable:kept};}}:null;
  if(!port)return Promise.reject(Error('Deck is not open.'));
  return applyReviewed(port,review,origin);
 }
@@ -219,6 +219,6 @@ export function undoDeckReceipt(name:string,receipt:DeckReceipt):Promise<DeckRec
  const e=sessions.get(name);if(!e)return Promise.reject(Error('Deck is not open.'));
  const port:UndoPort<Staged>={...portOf(e),stage:b=>stageBytes(e,b),
   matches:(token,gen)=>{const l=e.last;return l&&l.token===token&&e.generation===gen&&e.state.working===l.after&&e.state.undo.at(-1)===l.before&&e.state.redo.length===0?l.before:null;},
-  commitUndo:(st,token)=>{const l=e.last!;e.last=undefined;return {revision:commitStaged(e,st,l.before,{undo:e.state.undo.slice(0,-1),redo:bounded([...e.state.redo,l.after])})};}};
+  commitUndo:(st,_token)=>{const l=e.last!;e.last=undefined;return {revision:commitStaged(e,st,l.before,{undo:e.state.undo.slice(0,-1),redo:bounded([...e.state.redo,l.after])})};}};
  return undoReceipt(port,receipt);
 }

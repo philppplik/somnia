@@ -14,7 +14,7 @@ export function SlidesTableHandoff({source,slideIndex,slideId,shapeId,cells,read
  const [note,setNote]=useState(''),[applying,setApplying]=useState(false),[tick,setTick]=useState(0);
  useSyncExternalStore(subscribeHandoff,handoffVersion,handoffVersion);
  const pending=tick>=0?pendingReturnsFor(`slides:table:${slideId}:${shapeId}`).find(p=>p.origin.file===source):undefined;
- const diff=pending?diffTableCells(cells,pending.rows):null;
+ const diff=pending?.rows?diffTableCells(cells,pending.rows):null;
  const openInSheets=async()=>{
   const r=await openSlidesTableInSheets({source,slideIndex,slideId,shapeId,cells});
   if(!r.ok)onError(r.message);
