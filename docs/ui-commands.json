@@ -1755,6 +1755,23 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.marker.clear",
+      "title": "Clear timing markers",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "all",
+        "animation",
+        "clear",
+        "cue",
+        "delete",
+        "marker",
+        "remove",
+        "work area"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.marker.fromLayers",
       "title": "Add markers at the in points of the selected layers",
       "category": "Edit",

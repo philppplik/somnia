@@ -550,3 +550,13 @@ test('P175 markers from layers: one per in point, named after the layer, no dupl
  assert.equal(ms()[1].label,findLayer(findComp(s.document!)!,'c')!.name);s.undo();assert.equal(s.document,before);
  run({layers:['a','b']});assert.throws(()=>run({layers:['a','b','c']}),(e:any)=>e.expected===true);
 });
+
+test('P176 clear markers: all or inside the work area, one undo step, empty is refused',async()=>{
+ const {markerClearSpecs}=await import('./markerClearCommands');const run=markerClearSpecs()[0].run as (p?:unknown)=>unknown;
+ const s=open();setAnimationSession(s);const c0=findComp(s.document!)!;const e=(p?:object)=>assert.throws(()=>run(p),(x:any)=>x.expected===true);
+ e();s.dispatch({type:'markers.set',markers:[5,15,25,35].map(n=>({id:'m'+n,t:c0.start+f(n),label:'m'+n}))});
+ s.dispatch({type:'workarea.set',in:c0.start+f(10),out:c0.start+f(30)});
+ const ms=()=>findComp(s.document!)!.markers!.map(m=>m.id);const before=s.document!;
+ run({scope:'workArea'});assert.deepEqual(ms(),['m5','m35']);s.undo();assert.equal(s.document,before);
+ run();assert.deepEqual(ms(),[]);e();
+});

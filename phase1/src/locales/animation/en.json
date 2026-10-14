@@ -981,5 +981,6 @@
  "animation.markers.rename.hint": "Give the marker at the playhead this name",
  "cmd.animation.marker.update": "Rename or move a timing marker",
  "animation.rig.markers": "Markers at in points",
- "cmd.animation.marker.fromLayers": "Add markers at the in points of the selected layers"
+ "cmd.animation.marker.fromLayers": "Add markers at the in points of the selected layers",
+ "cmd.animation.marker.clear": "Clear timing markers"
 }

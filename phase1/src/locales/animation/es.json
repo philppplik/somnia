@@ -981,5 +981,6 @@
  "animation.markers.rename.hint": "Dar este nombre al marcador del cabezal",
  "cmd.animation.marker.update": "Renombrar o mover un marcador de tiempo",
  "animation.rig.markers": "Marcadores en entradas",
- "cmd.animation.marker.fromLayers": "Añadir marcadores en los puntos de entrada de las capas seleccionadas"
+ "cmd.animation.marker.fromLayers": "Añadir marcadores en los puntos de entrada de las capas seleccionadas",
+ "cmd.animation.marker.clear": "Borrar marcadores de tiempo"
 }
