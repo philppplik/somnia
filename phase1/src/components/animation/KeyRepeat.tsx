@@ -28,5 +28,6 @@ export function KeyRepeat({count:selected,layers}:{count:number;layers:readonly 
   <Button size="tiny" variant="ghost" disabled={selected<2||!nthOk} title={t('animation.keys.nth.hint')} onClick={()=>void executeCommand('animation.keys.selectNth',{n:nthN})} data-testid="animation-keys-nth">{t('animation.keys.nth')}</Button>
   <Button size="tiny" variant="ghost" disabled={selected<3} title={t('animation.keys.distribute.hint')} onClick={()=>void executeCommand('animation.keys.distribute',{})} data-testid="animation-keys-distribute">{t('animation.keys.distribute')}</Button>
   <Button size="tiny" variant="ghost" disabled={selected<1} title={t('animation.keys.toPlayhead.hint')} onClick={()=>void executeCommand('animation.keys.toPlayhead',{})} data-testid="animation-keys-to-playhead">{t('animation.keys.toPlayhead')}</Button>
+  <Button size="tiny" variant="ghost" disabled={!layers.length} title={t('animation.keys.range.at.hint')} onClick={()=>void executeCommand('animation.keys.selectRange',{side:'at',layers:[...layers]})} data-testid="animation-keys-at">{t('animation.keys.range.at')}</Button>
  </span>;
 }

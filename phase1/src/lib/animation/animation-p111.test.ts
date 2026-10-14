@@ -74,3 +74,9 @@ test('to playhead: delta puts the earliest key on the playhead',()=>{
  assert.equal(toPlayheadDelta([k(4),k(9)],f(10),fps),f(6));
  assert.equal(toPlayheadDelta([k(4)],f(4),fps),0);assert.equal(toPlayheadDelta([],f(3),fps),0);
 });
+import {keysAround} from './keyRange';
+test('keysAround at: only keys exactly on the time',()=>{
+ const c=findComp(base())!;
+ assert.deepEqual(keysAround(c,['a'],f(10),'at').map(k=>k.t),[f(10)]);
+ assert.equal(keysAround(c,['a'],f(5),'at').length,0);
+});

@@ -11,6 +11,6 @@ export const keyRangeSpecs=():CommandSpec<unknown,unknown>[]=>[{
  run:((p:{side:KeyRangeSide;layers?:string[]})=>{
   const s=animationSession(),d=s.document,c=d?findComp(d):undefined;if(!c)return expected('No composition is open.');
   const v=s.getState().view,ids=p.layers??(v.selectedLayer?[v.selectedLayer]:expected('Select a layer first.'));
-  const refs=keysAround(c,ids,v.playhead,p.side);if(!refs.length)return expected(p.side==='after'?'No keys at or after the playhead.':'No keys at or before the playhead.');
+  const refs=keysAround(c,ids,v.playhead,p.side);if(!refs.length)return expected(p.side==='at'?'No keys on the playhead.':p.side==='after'?'No keys at or after the playhead.':'No keys at or before the playhead.');
   s.selectKeys(refs);return {keys:refs.length};
  }) as (p:unknown)=>unknown}];

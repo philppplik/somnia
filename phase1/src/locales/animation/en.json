@@ -835,5 +835,7 @@
  "cmd.animation.keys.distribute": "Space the selected keys evenly in time",
  "animation.keys.toPlayhead": "To playhead",
  "animation.keys.toPlayhead.hint": "Move the selected keys so the first one lands on the playhead",
- "cmd.animation.keys.toPlayhead": "Move the selected keys so the first one lands on the playhead"
+ "cmd.animation.keys.toPlayhead": "Move the selected keys so the first one lands on the playhead",
+ "animation.keys.range.at": "Keys = playhead",
+ "animation.keys.range.at.hint": "Select the keys exactly on the playhead"
 }
