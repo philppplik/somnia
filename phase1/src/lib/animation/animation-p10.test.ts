@@ -4,6 +4,7 @@ import {applyEdit,applyEdits,EditError} from './edit';
 import {maskEdit,matteEdit,maskPath,copyMaskKey,insertPoint,handleMaskKey,copyMaskKeys} from './masks';
 import {animatedChars,animatorEdit,defaultAnimator,mixHex} from './textAnimators';
 import {copyTransformKeys,pasteTransformEdits} from './keysClipboard';
+import {animatedTargets,allTargetKeys,propertyOf,moveTargetKeys,easeTargetKeys,pruneTargetKeys,toggleTargetKey} from './keyTargets';
 import {frameSvg} from './exportFrames';
 import {sceneAt} from './scene';
 const comp=(d:AnimationDocument)=>findComp(d)!;
@@ -285,4 +286,23 @@ test('P17: keys copy between transform and mask properties in one undo step; typ
  d=applyEdit(d,maskEdit(d,'photo',{op:'add',id:'z'}));d=applyEdit(d,maskEdit(d,'photo',{op:'animate',mask:'z',prop:'opacity',on:true,t:0}));
  d=applyEdit(d,maskEdit(d,'photo',{op:'keysPaste',mask:'z',prop:'opacity',t:sec*2,clip:back}));assert.ok(layer(d,'photo').masks![1].anim!.opacity!.keys.length>=back.keys.length);
  assert.deepEqual(validateDocument(d),[]);
+});
+
+test('P18: key targets list, move and ease keys of transform and mask properties together in one undo step',()=>{
+ let d=keyed();d=applyEdit(d,{type:'prop.animate',layer:'photo',prop:'opacity',on:true,t:0});d=applyEdit(d,{type:'prop.set',layer:'photo',prop:'opacity',value:30,t:sec});d=applyEdit(d,maskEdit(d,'photo',{op:'animate',mask:'m',prop:'opacity',on:true,t:0}));d=applyEdit(d,maskEdit(d,'photo',{op:'set',mask:'m',prop:'opacity',value:40,t:sec}));
+ d=applyEdit(d,maskEdit(d,'photo',{op:'animate',mask:'m',prop:'feather',on:true,t:0}));d=applyEdit(d,maskEdit(d,'photo',{op:'set',mask:'m',prop:'feather',value:8,t:sec}));
+ const l=layer(d,'photo');const ts=animatedTargets(l);
+ assert.ok(ts.some(g=>g.kind==='transform'&&g.prop==='opacity')&&ts.some(g=>g.kind==='mask'&&g.prop==='opacity')&&ts.some(g=>g.kind==='mask'&&g.prop==='feather'));
+ const all=allTargetKeys(l);assert.equal(all.length,ts.reduce((n,g)=>n+propertyOf(l,g)!.keys.length,0));
+ const pick=all.filter(r=>r.t===sec);assert.ok(pick.some(r=>r.target.kind==='mask'&&r.target.prop==='feather')&&pick.some(r=>r.target.kind==='mask'&&r.target.prop==='opacity'));
+ const delta=sec/2;const rev=d.revision;const moved=applyEdits(d,moveTargetKeys(d,'photo',pick,delta));
+ assert.equal(moved.revision,rev+1);const ml=layer(moved,'photo');
+ assert.ok(pick.every(r=>propertyOf(ml,r.target)!.keys.some(k=>k.t===r.t+delta)&&!propertyOf(ml,r.target)!.keys.some(k=>k.t===r.t)));
+ assert.deepEqual(propertyOf(ml,{kind:'mask',mask:'m',prop:'feather'})!.keys.map(k=>k.v),[propertyOf(l,{kind:'mask',mask:'m',prop:'feather'})!.keys[0].v,8]);
+ const eased=applyEdits(d,easeTargetKeys(d,'photo',pick,'easeIn'));assert.equal(eased.revision,rev+1);
+ assert.notEqual(propertyOf(layer(eased,'photo'),{kind:'mask',mask:'m',prop:'feather'})!.keys[1].interp,propertyOf(l,{kind:'mask',mask:'m',prop:'feather'})!.keys[1].interp);
+ assert.throws(()=>applyEdits(d,moveTargetKeys(d,'photo',pick,-sec)),/./);
+ assert.deepEqual(pruneTargetKeys(layer(moved,'photo'),pick),[]);
+ assert.equal(toggleTargetKey([pick[0]],pick[0],true).length,0);assert.equal(toggleTargetKey([pick[0]],pick[1],true).length,2);
+ assert.deepEqual(validateDocument(moved),[]);
 });
