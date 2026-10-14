@@ -16,7 +16,8 @@ test('agent panel only links to configuration and consent, never embeds editing 
  assert.ok(html.includes('Agent configuration'));
  assert.ok(html.includes('Cloud data consent'));
  assert.ok(!html.includes('Custom prompts'));
- assert.ok(!html.includes('<select'));
+ const selects=html.match(/<select/g)??[];assert.equal(selects.length,1,'only the run-task switcher may be embedded, editing stays in configuration');
+ assert.ok(html.includes('Current task'),'the single embedded select is the active-task run control');
  assert.ok(!html.includes('ag-consent-backdrop'));
 });
 test('Appearance removes the decorative glass gradient without removing glass controls',()=>{
