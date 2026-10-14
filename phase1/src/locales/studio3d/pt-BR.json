@@ -297,5 +297,20 @@
  "cmd.studio3d.clip.rename": "Renomear um clipe de animação 3D",
  "cmd.studio3d.clip.duration": "Definir a duração de um clipe de animação 3D em segundos",
  "cmd.studio3d.key.set": "Adicionar ou substituir uma chave de posição, rotação ou escala de um objeto 3D no clipe atual",
- "cmd.studio3d.key.remove": "Remover uma chave de posição, rotação ou escala de um objeto 3D no clipe atual"
+ "cmd.studio3d.key.remove": "Remover uma chave de posição, rotação ou escala de um objeto 3D no clipe atual",
+ "studio3d.ease.linear": "Linear",
+ "studio3d.ease.step": "Degrau (manter)",
+ "studio3d.ease.easeIn": "Início suave",
+ "studio3d.ease.easeOut": "Fim suave",
+ "studio3d.ease.easeInOut": "Início e fim suaves",
+ "studio3d.key.ease": "Suavização após esta chave",
+ "studio3d.timeline.lane": "Faixa da linha do tempo {path}",
+ "studio3d.timeline.key": "Chave de {path} em {time}",
+ "studio3d.timeline.hint": "Clique em uma faixa para mover o cursor, clique duplo para adicionar uma chave. Arraste uma chave ou use as setas (Shift para passos maiores).",
+ "studio3d.anim.autokey": "Auto-chave: gravar uma chave a cada alteração",
+ "studio3d.key.selected": "Chave de {path} em {time}",
+ "studio3d.key.deleteSelected": "Excluir chave",
+ "cmd.studio3d.key.move": "Mover uma chave de um objeto 3D para outro tempo no clipe atual",
+ "cmd.studio3d.key.ease": "Definir a suavização entre uma chave e a seguinte no clipe atual",
+ "cmd.studio3d.anim.autokey": "Ativar ou desativar a auto-chave: alterações de transformação são gravadas como chaves no cursor"
 }

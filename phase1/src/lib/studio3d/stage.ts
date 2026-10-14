@@ -3,7 +3,9 @@ import * as THREE from 'three';
 import {mergeGeometries} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import {checkPbr,alphaState,alphaModeOf,MaterialError,SLOT_CONFIG,type PbrExtras,type AlphaMode,type TextureSlot} from './materials';
 import type {NodeExtra} from './document';
-import {KEY_PATHS,ClipError,MAX_CLIPS,DEFAULT_CLIP_SECONDS,insertKey,removeKey as removeKeyData,findKey,isPlainTrack,trackName,parseTrackName,checkKeyTime,checkDuration,checkClipName,lastKeyTime,type KeyPath} from './clips';
+import {EASES,isEase,bakeTrack,type Ease} from './ease';
+import {buildExtras,type ClipMeta,type MetaTrack} from './clipMeta';
+import {KEY_PATHS,KEY_STRIDE,ClipError,MAX_CLIPS,DEFAULT_CLIP_SECONDS,insertKey,removeKey as removeKeyData,findKey,isPlainTrack,trackName,parseTrackName,checkKeyTime,checkDuration,checkClipName,lastKeyTime,type KeyPath} from './clips';
 import {mergeTransform,DEFAULT_TRANSFORM,UvError,type TextureTransform} from './uv';
 import {textureBytes} from './validate';
 import {emptyStats,type ModelStats,type OutlineEntry,type Bounds} from './model';
@@ -74,6 +76,7 @@ export function applyNodeExtras(root:THREE.Object3D,extras:readonly NodeExtra[])
  }
  return{skipped};
 }
+interface ClipState{tracks:THREE.KeyframeTrack[];duration:number;ease:Record<string,Ease[]>}
 const readTransform=(t:THREE.Texture):TextureTransform=>({offsetX:t.offset.x,offsetY:t.offset.y,scaleX:t.repeat.x,scaleY:t.repeat.y,rotation:t.rotation/DEG});
 const writeTransform=(t:THREE.Texture,v:TextureTransform)=>{t.offset.set(v.offsetX,v.offsetY);t.repeat.set(v.scaleX,v.scaleY);t.rotation=v.rotation*DEG;t.center.set(0,0);t.matrixAutoUpdate=true;t.updateMatrix();};
 export class StageError extends Error{constructor(message:string){super(message);this.name='StageError';}}
@@ -139,7 +142,7 @@ export class Stage{
   this.clear();if(model)this.root.add(model);this.emit();
  }
  clear(){
-  this.clipList=[];this.clipRevision++;
+  this.bakedCache.clear();this.clipList=[];this.clipRevision++;
   for(const c of [...this.root.children]){this.root.remove(c);disposeObject(c);}
   for(const e of this.entries)e.release?.();this.entries=[];this.cursor=0;this.saved=0;this.emit();
  }
@@ -205,12 +208,14 @@ export class Stage{
   const set=(s:typeof before)=>{o.position.copy(s.p);o.rotation.copy(s.r);o.scale.copy(s.s);};
   if(!already)set(next);
   const now=opts.now??Date.now();const key=opts.group?`${opts.group}:${o.id}`:undefined;
+  // With auto-key on, the keys written for this change belong to the same undo step.
+  const ak=this.autoKeyStates(o,before,next);if(ak){this.restoreClip(ak.clip,ak.after);}
   const last=this.entries[this.cursor-1];
   if(key&&last&&this.cursor===this.entries.length&&this.saved!==this.cursor&&last.group===key&&last.at!==undefined&&now-last.at<=GROUP_MS&&last.merge){
-   last.merge(()=>set(next));last.at=now;this.emit();return;
+   last.merge(()=>{set(next);if(ak)this.restoreClip(ak.clip,ak.after);});last.at=now;this.emit();return;
   }
-  let redo=()=>set(next);
-  this.push({label:`Transform ${o.name}`,undo:()=>set(before),redo:()=>redo(),group:key,at:now,merge:r=>{redo=r;}});
+  let redo=()=>{set(next);if(ak)this.restoreClip(ak.clip,ak.after);};
+  this.push({label:`Transform ${o.name}`,undo:()=>{set(before);if(ak)this.restoreClip(ak.clip,ak.before);},redo:()=>redo(),group:key,at:now,merge:r=>{redo=r;}});
  }
  setLight(id:number,patch:LightPatch){
   const o=this.need(id) as THREE.Light;if(!o.isLight)throw new StageError(`${o.name} is not a light.`);
@@ -382,23 +387,45 @@ export class Stage{
   this.push({label:`${slot} texture mapping of ${o.name}`,undo:()=>set(before),redo:()=>set(next)});
  }
  // ---- Animation clips: keyframe tracks of node transforms. Tracks address nodes by uuid, so any node name works. ----
+ // Easing of the authoring keys lives in clip.userData.ease (track name to one easing per key). Playing and exporting use baked copies of the tracks.
  private clipList:THREE.AnimationClip[]=[];
  /** Bumped whenever clips change, so playback knows to rebuild its mixer. */
  clipRevision=0;
+ /** Auto-key: where a transform change is recorded. Set by the viewport, null when off. */
+ autoKeySource:(()=>{clip:number;time:number}|null)|null=null;
  get clips():readonly THREE.AnimationClip[]{return this.clipList;}
- /** Replaces the clips with imported ones (no history). Track targets that name a node in the scene are rewritten to its uuid. */
- setClips(list:readonly THREE.AnimationClip[]){
-  this.clipList=list.filter(c=>c.duration>0||c.tracks.length>0).slice(0,MAX_CLIPS).map(c=>{
+ private easeOf(c:THREE.AnimationClip):Record<string,Ease[]>{return((c.userData as {ease?:Record<string,Ease[]>}).ease??={});}
+ private snapClip(c:THREE.AnimationClip):ClipState{const e=this.easeOf(c);return{tracks:c.tracks.slice(),duration:c.duration,ease:Object.fromEntries(Object.entries(e).map(([k,v])=>[k,v.slice()]))};}
+ private restoreClip(c:THREE.AnimationClip,v:ClipState){c.tracks=v.tracks;c.duration=v.duration;(c.userData as {ease?:unknown}).ease=Object.fromEntries(Object.entries(v.ease).map(([k,x])=>[k,x.slice()]));this.clipRevision++;}
+ /** Replaces the clips with imported ones (no history). Track targets that name a node in the scene are rewritten to its uuid. Metas (from the file's extras) restore the clip length and the easing of the original keys. */
+ setClips(list:readonly THREE.AnimationClip[],metas?:readonly (ClipMeta|undefined)[],resolve?:(nodeIndex:number)=>THREE.Object3D|undefined){
+  const kept:THREE.AnimationClip[]=[];
+  list.forEach((c,idx)=>{
+   if(c.duration<=0&&c.tracks.length===0)return;
    for(const t of c.tracks){const b=THREE.PropertyBinding.parseTrackName(t.name);
     if(!b.nodeName||b.objectName||b.propertyIndex!==undefined)continue;const n=THREE.PropertyBinding.findNode(this.root,b.nodeName) as THREE.Object3D|undefined;if(n&&n!==this.root)t.name=`${n.uuid}.${b.propertyName}`;}
-   if(c.duration<=0)c.resetDuration();return c;});
-  this.clipRevision++;this.emit();
+   if(c.duration<=0)c.resetDuration();
+   const m=metas?.[idx];if(m&&resolve)this.applyMeta(c,m,resolve);
+   kept.push(c);
+  });
+  this.clipList=kept.slice(0,MAX_CLIPS);this.clipRevision++;this.emit();
+ }
+ /** The baked tracks of a file hold extra samples inside eased segments. Keep only the authoring keys again and restore their easing. A track that does not match its record is left as it is. */
+ private applyMeta(c:THREE.AnimationClip,m:ClipMeta,resolve:(i:number)=>THREE.Object3D|undefined){
+  const ease=this.easeOf(c);
+  for(const mt of m.tracks){
+   const node=resolve(mt.node);if(!node)continue;const name=trackName(node.uuid,mt.path);const k=c.tracks.findIndex(t=>t.name===name);if(k<0)continue;
+   const t=c.tracks[k];if(!isPlainTrack(t.times,t.values,mt.path))continue;
+   const idx=mt.times.map(x=>findKey(t.times,x));if(idx.some(i=>i<0))continue;
+   const sz=KEY_STRIDE[mt.path];const times=idx.map(i=>t.times[i]);const values=idx.flatMap(i=>Array.from(t.values.slice(i*sz,i*sz+sz)));
+   c.tracks[k]=mt.path==='rotation'?new THREE.QuaternionKeyframeTrack(name,times,values):new THREE.VectorKeyframeTrack(name,times,values);ease[name]=mt.ease.slice();
+  }
+  if(m.duration!==undefined){const last=Math.max(0,...c.tracks.map(t=>lastKeyTime(t.times)));if(m.duration>=last)c.duration=m.duration;}
  }
  private needClip(i:number):THREE.AnimationClip{const c=Number.isInteger(i)?this.clipList[i]:undefined;if(!c)throw new ClipError(`There is no animation clip ${String(i)}.`);return c;}
- private editClip(i:number,label:string,make:(clip:THREE.AnimationClip)=>{tracks:THREE.KeyframeTrack[];duration:number}){
-  const clip=this.needClip(i);const before={tracks:clip.tracks.slice(),duration:clip.duration};const next=make(clip);
-  const set=(v:{tracks:THREE.KeyframeTrack[];duration:number})=>{clip.tracks=v.tracks;clip.duration=v.duration;this.clipRevision++;};
-  set(next);this.push({label,undo:()=>set(before),redo:()=>set(next)});
+ private editClip(i:number,label:string,make:(clip:THREE.AnimationClip)=>ClipState){
+  const clip=this.needClip(i);const before=this.snapClip(clip);const next=make(clip);
+  this.restoreClip(clip,next);this.push({label,undo:()=>this.restoreClip(clip,before),redo:()=>this.restoreClip(clip,next)});
  }
  private uniqueClipName(base:string){const names=new Set(this.clipList.map(c=>c.name));if(!names.has(base))return base;let n=2;while(names.has(`${base} ${n}`))n++;return `${base} ${n}`;}
  addClip(name?:string,duration=DEFAULT_CLIP_SECONDS):number{
@@ -419,54 +446,124 @@ export class Stage{
  setClipDuration(i:number,duration:number){
   const clip=this.needClip(i);const d=checkDuration(duration);const last=Math.max(0,...clip.tracks.map(t=>lastKeyTime(t.times)));
   if(d<last)throw new ClipError(`The clip cannot end before its last key at ${last} s.`);
-  if(d===clip.duration)return;this.editClip(i,`Length of clip ${clip.name}`,c=>({tracks:c.tracks.slice(),duration:d}));
+  if(d===clip.duration)return;this.editClip(i,`Length of clip ${clip.name}`,c=>({...this.snapClip(c),duration:d}));
  }
  private keyNode(id:number):THREE.Object3D{const o=this.need(id);if(o===this.root)throw new ClipError('The scene root cannot be animated.');return o;}
  private trackOf(clip:THREE.AnimationClip,node:THREE.Object3D,path:KeyPath){const n=trackName(node.uuid,path);return clip.tracks.find(t=>t.name===n);}
+ private makeTrack(name:string,path:KeyPath,times:number[],values:number[],interp?:THREE.InterpolationModes){return path==='rotation'?new THREE.QuaternionKeyframeTrack(name,times,values,interp):new THREE.VectorKeyframeTrack(name,times,values,interp);}
+ /** The clip state after putting a key on one path of a node. Used by setKey and by auto-key. */
+ private withKey(clip:THREE.AnimationClip,node:THREE.Object3D,path:KeyPath,t:number,v:number[]):{state:ClipState;replaced:boolean}{
+  const old=this.trackOf(clip,node,path);
+  if(old&&!isPlainTrack(old.times,old.values,path))throw new ClipError('This track uses cubic spline keys and cannot be edited key by key.');
+  const r=insertKey(old?old.times:[],old?old.values:[],path,t,v);const name=trackName(node.uuid,path);const base=this.snapClip(clip);
+  const eases=(base.ease[name]??[]).slice();while(eases.length<(old?old.times.length:0))eases.push('linear');
+  if(!r.replaced)eases.splice(r.times.indexOf(t)>=0?r.times.indexOf(t):eases.length,0,'linear');
+  base.ease[name]=eases;
+  return{state:{tracks:[...base.tracks.filter(x=>x.name!==name),this.makeTrack(name,path,r.times,r.values,old?.getInterpolation())],duration:Math.max(base.duration,t),ease:base.ease},replaced:r.replaced};
+ }
+ private valueOf(node:THREE.Object3D,path:KeyPath,value?:Partial<Vec3>):number[]{
+  if(value===undefined)return path==='position'?node.position.toArray():path==='scale'?node.scale.toArray():node.quaternion.toArray();
+  const cur=path==='position'?node.position:path==='scale'?node.scale:null;
+  const x=value.x??(cur?cur.x:0),y=value.y??(cur?cur.y:0),z=value.z??(cur?cur.z:0);
+  if(![x,y,z].every(Number.isFinite))throw new ClipError('The key value must be finite numbers.');
+  return path==='rotation'?new THREE.Quaternion().setFromEuler(new THREE.Euler(x*DEG,y*DEG,z*DEG)).toArray():[x,y,z];
+ }
  /** Adds or replaces a key on the position, rotation or scale of an object. Without a value the current transform of the object is recorded. One undo step. A key after the end extends the clip. */
  setKey(i:number,id:number,path:KeyPath,time:number,value?:Partial<Vec3>){
   if(!KEY_PATHS.includes(path))throw new ClipError('The path must be position, rotation or scale.');
   const clip=this.needClip(i);const node=this.keyNode(id);const t=checkKeyTime(time);
-  let v:number[];
-  if(value===undefined)v=path==='position'?node.position.toArray():path==='scale'?node.scale.toArray():node.quaternion.toArray();
-  else{
-   const cur=path==='position'?node.position:path==='scale'?node.scale:null;
-   const x=value.x??(cur?cur.x:0),y=value.y??(cur?cur.y:0),z=value.z??(cur?cur.z:0);
-   if(![x,y,z].every(Number.isFinite))throw new ClipError('The key value must be finite numbers.');
-   if(path==='rotation'){const e=new THREE.Euler(x*DEG,y*DEG,z*DEG);v=new THREE.Quaternion().setFromEuler(e).toArray();}else v=[x,y,z];
-  }
-  const old=this.trackOf(clip,node,path);
-  if(old&&!isPlainTrack(old.times,old.values,path))throw new ClipError('This track uses cubic spline keys and cannot be edited key by key.');
-  const r=insertKey(old?old.times:[],old?old.values:[],path,t,v);
-  this.editClip(i,`${r.replaced?'Change':'Add'} ${path} key on ${node.name}`,c=>{
-   const name=trackName(node.uuid,path);
-   const track=path==='rotation'?new THREE.QuaternionKeyframeTrack(name,r.times,r.values,old?.getInterpolation()):new THREE.VectorKeyframeTrack(name,r.times,r.values,old?.getInterpolation());
-   return{tracks:[...c.tracks.filter(x=>x.name!==name),track],duration:Math.max(c.duration,t)};
-  });
+  const r=this.withKey(clip,node,path,t,this.valueOf(node,path,value));
+  this.editClip(i,`${r.replaced?'Change':'Add'} ${path} key on ${node.name}`,()=>r.state);
  }
  removeKey(i:number,id:number,path:KeyPath,time:number){
   const clip=this.needClip(i);const node=this.keyNode(id);const t=checkKeyTime(time);const old=this.trackOf(clip,node,path);
   if(!old||!isPlainTrack(old.times,old.values,path))throw new ClipError(`${node.name} has no ${path} keys in this clip.`);
   const k=findKey(old.times,t);if(k<0)throw new ClipError('There is no key at that time.');
-  const r=removeKeyData(old.times,old.values,path,k);
+  const r=removeKeyData(old.times,old.values,path,k);const name=trackName(node.uuid,path);
   this.editClip(i,`Remove ${path} key on ${node.name}`,c=>{
-   const name=trackName(node.uuid,path);const rest=c.tracks.filter(x=>x.name!==name);
-   if(!r.times.length)return{tracks:rest,duration:c.duration};
-   return{tracks:[...rest,path==='rotation'?new THREE.QuaternionKeyframeTrack(name,r.times,r.values,old.getInterpolation()):new THREE.VectorKeyframeTrack(name,r.times,r.values,old.getInterpolation())],duration:c.duration};
+   const base=this.snapClip(c);const rest=base.tracks.filter(x=>x.name!==name);const eases=(base.ease[name]??[]).slice();eases.splice(k,1);
+   if(!r.times.length){delete base.ease[name];return{...base,tracks:rest};}
+   base.ease[name]=eases;return{...base,tracks:[...rest,this.makeTrack(name,path,r.times,r.values,old.getInterpolation())]};
   });
  }
- /** Key times of one object in one clip, per path. */
- keysOf(i:number,id:number):{path:KeyPath;times:number[];editable:boolean}[]{
+ /** Moves a key to another time (its value and easing go with it). One undo step. A key may not land on another key. */
+ moveKey(i:number,id:number,path:KeyPath,from:number,to:number){
+  const clip=this.needClip(i);const node=this.keyNode(id);const f=checkKeyTime(from),t=checkKeyTime(to);const old=this.trackOf(clip,node,path);
+  if(!old||!isPlainTrack(old.times,old.values,path))throw new ClipError(`${node.name} has no ${path} keys in this clip.`);
+  const k=findKey(old.times,f);if(k<0)throw new ClipError('There is no key at that time.');
+  if(Math.abs(f-t)<0.0005)return;if(findKey(old.times,t)>=0)throw new ClipError('There is already a key at that time.');
+  const sz=KEY_STRIDE[path];const name=trackName(node.uuid,path);const value=Array.from(old.values.slice(k*sz,k*sz+sz));
+  const eases=(this.easeOf(clip)[name]??[]).slice();while(eases.length<old.times.length)eases.push('linear');const e=eases[k];
+  const gone=removeKeyData(old.times,old.values,path,k);const ins=insertKey(gone.times,gone.values,path,t,value);
+  const ne=eases.slice();ne.splice(k,1);ne.splice(ins.times.indexOf(t),0,e);
+  this.editClip(i,`Move ${path} key on ${node.name}`,c=>{const base=this.snapClip(c);base.ease[name]=ne;return{...base,tracks:[...base.tracks.filter(x=>x.name!==name),this.makeTrack(name,path,ins.times,ins.values,old.getInterpolation())],duration:Math.max(base.duration,t)};});
+ }
+ /** Easing of the segment that starts at a key. */
+ setKeyEase(i:number,id:number,path:KeyPath,time:number,ease:Ease){
+  if(!isEase(ease))throw new ClipError(`Easing must be one of ${EASES.join(', ')}.`);
+  const clip=this.needClip(i);const node=this.keyNode(id);const t=checkKeyTime(time);const old=this.trackOf(clip,node,path);
+  if(!old||!isPlainTrack(old.times,old.values,path))throw new ClipError(`${node.name} has no ${path} keys in this clip.`);
+  const k=findKey(old.times,t);if(k<0)throw new ClipError('There is no key at that time.');
+  const name=trackName(node.uuid,path);const eases=(this.easeOf(clip)[name]??[]).slice();while(eases.length<old.times.length)eases.push('linear');
+  if(eases[k]===ease)return;eases[k]=ease;
+  this.editClip(i,`Easing of ${path} key on ${node.name}`,c=>{const base=this.snapClip(c);base.ease[name]=eases;return base;});
+ }
+ /** Key times and easing of one object in one clip, per path. */
+ keysOf(i:number,id:number):{path:KeyPath;times:number[];eases:Ease[];editable:boolean}[]{
   const clip=this.clipList[i];const node=this.find(id);if(!clip||!node||node===this.root)return[];
-  const out:{path:KeyPath;times:number[];editable:boolean}[]=[];
-  for(const path of KEY_PATHS){const t=this.trackOf(clip,node,path);if(t)out.push({path,times:Array.from(t.times),editable:isPlainTrack(t.times,t.values,path)});}
+  const out:{path:KeyPath;times:number[];eases:Ease[];editable:boolean}[]=[];
+  for(const path of KEY_PATHS){const t=this.trackOf(clip,node,path);if(t){const e=this.easeOf(clip)[t.name]??[];out.push({path,times:Array.from(t.times),eases:Array.from(t.times,(_,k)=>e[k]??'linear'),editable:isPlainTrack(t.times,t.values,path)});}}
   return out;
+ }
+ /** A clip as it plays and exports: eased segments expanded into samples. */
+ private bake(c:THREE.AnimationClip):THREE.AnimationClip{
+  const e=this.easeOf(c);const tracks=c.tracks.map(t=>{const b=parseTrackName(t.name);const ez=e[t.name];
+   if(!b||!ez||ez.every(x=>x==='linear')||!isPlainTrack(t.times,t.values,b.path))return t;
+   const r=bakeTrack(t.times,t.values,b.path,ez);return this.makeTrack(t.name,b.path,r.times,r.values,t.getInterpolation());});
+  return new THREE.AnimationClip(c.name,c.duration,tracks);
+ }
+ private bakedCache=new Map<THREE.AnimationClip,{rev:number;clip:THREE.AnimationClip}>();
+ /** The clip to hand to an AnimationMixer. Cached until the clips change. */
+ playableClip(i:number):THREE.AnimationClip|undefined{
+  const c=this.clipList[i];if(!c)return undefined;const hit=this.bakedCache.get(c);if(hit&&hit.rev===this.clipRevision)return hit.clip;
+  const clip=this.bake(c);this.bakedCache.set(c,{rev:this.clipRevision,clip});return clip;
  }
  /** What to give GLTFExporter when clips are included: a scene that lists the top-level nodes, so every clip finds its nodes and the file has no extra wrapper node. */
  exportScene():THREE.Scene{const sc=new THREE.Scene();sc.children=this.root.children;return sc;}
- /** Clips ready for export: tracks whose object no longer exists are left out. */
+ /** Clips ready for export (baked): tracks whose object no longer exists are left out. */
  exportClips():THREE.AnimationClip[]{
-  return this.clipList.map(c=>{const keep=c.tracks.filter(t=>{const b=parseTrackName(t.name);if(!b)return true;return !!THREE.PropertyBinding.findNode(this.root,b.node);});return new THREE.AnimationClip(c.name,c.duration,keep);}).filter(c=>c.tracks.length>0);
+  return this.clipList.map(c=>{const keep=c.tracks.filter(t=>{const b=parseTrackName(t.name);if(!b)return true;return !!THREE.PropertyBinding.findNode(this.root,b.node);});const src=new THREE.AnimationClip(c.name,c.duration,keep);src.userData=c.userData;return this.bake(src);}).filter(c=>c.tracks.length>0);
+ }
+ /** A GLTFExporter plugin that writes the clip length and the authoring keys with their easing into each animation's extras. Register it with exporter.register(stage.exporterPlugin()). */
+ exporterPlugin(){
+  return(writer:{json:{animations?:{name?:string;extras?:unknown;channels:{target:{node?:number;path:string}}[]}[]};nodeMap:Map<THREE.Object3D,number>})=>({
+   afterParse:()=>{
+    const anims=writer.json.animations;if(!anims)return;
+    const sources=this.clipList.filter(c=>c.tracks.some(t=>{const b=parseTrackName(t.name);return !b||!!THREE.PropertyBinding.findNode(this.root,b.node);}));let at=0;
+    for(const a of anims){
+     while(at<sources.length&&sources[at].name!==a.name)at++;const c=sources[at++];if(!c)break;
+     const ez=this.easeOf(c);const tracks:MetaTrack[]=[];
+     for(const t of c.tracks){const b=parseTrackName(t.name);if(!b)continue;const node=THREE.PropertyBinding.findNode(this.root,b.node) as THREE.Object3D|undefined;const idx=node?writer.nodeMap.get(node):undefined;
+      if(idx===undefined||!isPlainTrack(t.times,t.values,b.path))continue;const e=ez[t.name];if(!e||e.every(x=>x==='linear'))continue;
+      tracks.push({node:idx,path:b.path,times:Array.from(t.times),ease:Array.from(t.times,(_,k)=>e[k]??'linear')});}
+     a.extras={...(a.extras as object|undefined),...buildExtras({duration:c.duration,tracks})};
+    }
+   }
+  });
+ }
+ /** Records a transform change into the current clip at the auto-key time. Returns the clip state change, or null when auto-key is off or nothing changed. */
+ private autoKeyStates(o:THREE.Object3D,before:{p:THREE.Vector3;r:THREE.Euler;s:THREE.Vector3},next:{p:THREE.Vector3;r:THREE.Euler;s:THREE.Vector3}):{clip:THREE.AnimationClip;before:ClipState;after:ClipState}|null{
+  const src=this.autoKeySource?.();if(!src||o===this.root)return null;const clip=this.clipList[src.clip];if(!clip)return null;
+  let t:number;try{t=checkKeyTime(src.time);}catch{return null;}
+  const was=this.snapClip(clip);let cur=was;
+  const q=(e:THREE.Euler)=>new THREE.Quaternion().setFromEuler(e);
+  const changes:[KeyPath,number[]][]=[];
+  if(!before.p.equals(next.p))changes.push(['position',next.p.toArray()]);
+  if(!q(before.r).equals(q(next.r)))changes.push(['rotation',q(next.r).toArray()]);
+  if(!before.s.equals(next.s))changes.push(['scale',next.s.toArray()]);
+  if(!changes.length)return null;
+  try{for(const[path,v] of changes){this.restoreClip(clip,cur);cur=this.withKey(clip,o,path,t,v).state;}}catch{this.restoreClip(clip,was);return null;}
+  this.restoreClip(clip,was);return{clip,before:was,after:cur};
  }
  /** Mirrors objects across the world plane through the origin that is perpendicular to the axis. With copy, mirrored duplicates are added instead. One undo step. */
  mirror(ids:number[],axis:MirrorAxis,copy:boolean):THREE.Object3D[]{

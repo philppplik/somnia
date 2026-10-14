@@ -297,5 +297,20 @@
  "cmd.studio3d.clip.rename": "Renommer un clip d'animation 3D",
  "cmd.studio3d.clip.duration": "Définir la durée d'un clip d'animation 3D en secondes",
  "cmd.studio3d.key.set": "Ajouter ou remplacer une clé de position, rotation ou échelle d'un objet 3D dans le clip actuel",
- "cmd.studio3d.key.remove": "Supprimer une clé de position, rotation ou échelle d'un objet 3D dans le clip actuel"
+ "cmd.studio3d.key.remove": "Supprimer une clé de position, rotation ou échelle d'un objet 3D dans le clip actuel",
+ "studio3d.ease.linear": "Linéaire",
+ "studio3d.ease.step": "Palier (maintien)",
+ "studio3d.ease.easeIn": "Départ progressif",
+ "studio3d.ease.easeOut": "Arrivée progressive",
+ "studio3d.ease.easeInOut": "Départ et arrivée progressifs",
+ "studio3d.key.ease": "Adoucissement après cette clé",
+ "studio3d.timeline.lane": "Piste de la timeline {path}",
+ "studio3d.timeline.key": "Clé {path} à {time}",
+ "studio3d.timeline.hint": "Cliquez sur une piste pour déplacer la tête de lecture, double-clic pour ajouter une clé. Faites glisser une clé ou utilisez les flèches (Maj pour de plus grands pas).",
+ "studio3d.anim.autokey": "Clé auto : enregistrer une clé à chaque modification",
+ "studio3d.key.selected": "Clé {path} à {time}",
+ "studio3d.key.deleteSelected": "Supprimer la clé",
+ "cmd.studio3d.key.move": "Déplacer une clé d'un objet 3D à un autre instant du clip actuel",
+ "cmd.studio3d.key.ease": "Définir l'adoucissement entre une clé et la suivante dans le clip actuel",
+ "cmd.studio3d.anim.autokey": "Activer ou désactiver la clé auto : les transformations sont enregistrées en clés à la tête de lecture"
 }

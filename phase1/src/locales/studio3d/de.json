@@ -297,5 +297,20 @@
  "cmd.studio3d.clip.rename": "Einen 3D-Animationsclip umbenennen",
  "cmd.studio3d.clip.duration": "Länge eines 3D-Animationsclips in Sekunden setzen",
  "cmd.studio3d.key.set": "Einen Positions-, Dreh- oder Skalierungs-Key eines 3D-Objekts im aktuellen Clip setzen oder ersetzen",
- "cmd.studio3d.key.remove": "Einen Positions-, Dreh- oder Skalierungs-Key eines 3D-Objekts im aktuellen Clip entfernen"
+ "cmd.studio3d.key.remove": "Einen Positions-, Dreh- oder Skalierungs-Key eines 3D-Objekts im aktuellen Clip entfernen",
+ "studio3d.ease.linear": "Linear",
+ "studio3d.ease.step": "Stufe (halten)",
+ "studio3d.ease.easeIn": "Langsam starten",
+ "studio3d.ease.easeOut": "Langsam enden",
+ "studio3d.ease.easeInOut": "Langsam starten und enden",
+ "studio3d.key.ease": "Verlauf nach diesem Key",
+ "studio3d.timeline.lane": "Zeitleistenspur {path}",
+ "studio3d.timeline.key": "{path}-Key bei {time}",
+ "studio3d.timeline.hint": "Spur anklicken, um den Abspielkopf zu setzen, doppelklicken für einen neuen Key. Key ziehen oder mit den Pfeiltasten verschieben (Umschalt für größere Schritte).",
+ "studio3d.anim.autokey": "Auto-Key: bei jeder Änderung einen Key setzen",
+ "studio3d.key.selected": "{path}-Key bei {time}",
+ "studio3d.key.deleteSelected": "Key löschen",
+ "cmd.studio3d.key.move": "Einen Key eines 3D-Objekts im aktuellen Clip auf eine neue Zeit verschieben",
+ "cmd.studio3d.key.ease": "Verlauf zwischen einem Key und dem nächsten im aktuellen Clip festlegen",
+ "cmd.studio3d.anim.autokey": "Auto-Key ein- oder ausschalten: Transformationen werden als Keys am Abspielkopf aufgezeichnet"
 }

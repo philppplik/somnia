@@ -60,3 +60,58 @@ test('clips survive a glTF export and import, with names that contain spaces and
  const node=st2.root.children[0];const keys=st2.keysOf(0,node.id);
  assert.deepEqual(keys.map(k=>k.path),['position','rotation','scale']);assert.deepEqual(keys[0].times,[0,1]);assert.deepEqual(keys[1].times,[2]);assert.equal(st2.clips[0].name,'Hop');
 });
+test('moving a key keeps its value and easing, keeps the order, extends the clip, and is one undo step',()=>{
+ const {st,m}=setup();const c=st.addClip('A',2);
+ st.setKey(c,m.id,'position',0,{y:0});st.setKey(c,m.id,'position',1,{y:4});st.setKey(c,m.id,'position',2,{y:8});st.setKeyEase(c,m.id,'position',1,'easeOut');
+ st.moveKey(c,m.id,'position',1,1.5);let k=st.keysOf(c,m.id)[0];assert.deepEqual(k.times,[0,1.5,2]);assert.deepEqual(k.eases,['linear','easeOut','linear']);assert.equal(st.clips[c].tracks[0].values[4],4);
+ st.moveKey(c,m.id,'position',0,3);k=st.keysOf(c,m.id)[0];assert.deepEqual(k.times,[1.5,2,3]);assert.deepEqual(k.eases,['easeOut','linear','linear']);assert.equal(st.clips[c].duration,3);
+ st.undo();assert.deepEqual(st.keysOf(c,m.id)[0].times,[0,1.5,2]);assert.equal(st.clips[c].duration,2);st.undo();assert.deepEqual(st.keysOf(c,m.id)[0].times,[0,1,2]);
+ assert.throws(()=>st.moveKey(c,m.id,'position',0,1),/already a key/);assert.throws(()=>st.moveKey(c,m.id,'position',0.5,1.2),/no key/);
+ st.moveKey(c,m.id,'position',2,2);assert.equal(st.keysOf(c,m.id)[0].times.length,3);
+});
+test('easing is stored per key, validated, undoable, and survives adding and removing other keys',()=>{
+ const {st,m}=setup();const c=st.addClip('A',2);
+ st.setKey(c,m.id,'scale',0);st.setKey(c,m.id,'scale',2);st.setKeyEase(c,m.id,'scale',0,'step');
+ st.setKey(c,m.id,'scale',1);assert.deepEqual(st.keysOf(c,m.id)[0].eases,['step','linear','linear']);
+ st.removeKey(c,m.id,'scale',1);assert.deepEqual(st.keysOf(c,m.id)[0].eases,['step','linear']);st.undo();assert.deepEqual(st.keysOf(c,m.id)[0].eases,['step','linear','linear']);
+ st.setKeyEase(c,m.id,'scale',2,'easeInOut');st.undo();assert.equal(st.keysOf(c,m.id)[0].eases[2],'linear');
+ assert.throws(()=>st.setKeyEase(c,m.id,'scale',0,'bounce' as never),ClipError);assert.throws(()=>st.setKeyEase(c,m.id,'scale',1.7,'step'),/no key/);
+});
+test('playing and exporting use baked samples; the stored keys stay as authored',()=>{
+ const {st,m}=setup();const c=st.addClip('A',1);st.setKey(c,m.id,'position',0,{y:0});st.setKey(c,m.id,'position',1,{y:8});
+ assert.equal(st.playableClip(c)!.tracks[0].times.length,2);
+ st.setKeyEase(c,m.id,'position',0,'easeIn');const p=st.playableClip(c)!.tracks[0];assert.ok(p.times.length>2);assert.equal(st.clips[c].tracks[0].times.length,2);
+ const mid=p.values[(p.times.length>>1)*3+1];assert.ok(mid<4);assert.equal(st.playableClip(c),st.playableClip(c),'cached until the clips change');
+});
+test('auto-key records the change at the chosen time inside the same undo step, drags merge, nothing happens when off',()=>{
+ const {st,m}=setup();const c=st.addClip('A',2);let src:{clip:number;time:number}|null=null;st.autoKeySource=()=>src;
+ st.setTransform(m.id,{position:{x:1,y:0,z:0}});assert.equal(st.clips[c].tracks.length,0);
+ src={clip:c,time:0.5};st.setTransform(m.id,{position:{x:2,y:0,z:0}});
+ let k=st.keysOf(c,m.id);assert.deepEqual(k.map(x=>x.path),['position']);assert.deepEqual(k[0].times,[0.5]);assert.equal(st.clips[c].tracks[0].values[0],2);
+ st.setTransform(m.id,{rotation:{x:0,y:90,z:0},scale:{x:2,y:2,z:2}});assert.deepEqual(st.keysOf(c,m.id).map(x=>x.path).sort(),['position','rotation','scale']);
+ st.undo();assert.deepEqual(st.keysOf(c,m.id).map(x=>x.path),['position']);assert.equal(m.scale.x,1);
+ st.undo();assert.equal(st.keysOf(c,m.id).length,0);assert.equal(m.position.x,1);st.redo();st.redo();assert.equal(st.keysOf(c,m.id).length,3);
+ const before=m.position.clone();const b={p:before,r:m.rotation.clone(),s:m.scale.clone()};
+ st.setTransform(m.id,{position:{x:5,y:0,z:0}},{group:'drag',now:1000});st.setTransform(m.id,{position:{x:6,y:0,z:0}},{group:'drag',now:1100});
+ assert.equal(st.clips[c].tracks.find(t=>t.name.endsWith('.position'))!.values[0],6);st.undo();assert.equal(m.position.x,2);assert.equal(st.clips[c].tracks.find(t=>t.name.endsWith('.position'))!.values[0],2);void b;
+});
+test('clip length and easing survive glTF export and import through the animation extras',async()=>{
+ const {st,m}=setup();const c=st.addClip('Hop',5);
+ st.setKey(c,m.id,'position',0,{y:0});st.setKey(c,m.id,'position',1,{y:4});st.setKey(c,m.id,'position',2,{y:0});st.setKeyEase(c,m.id,'position',0,'easeOut');st.setKeyEase(c,m.id,'position',1,'step');
+ const ex=new GLTFExporter();ex.register(st.exporterPlugin() as never);
+ const out=await ex.parseAsync(st.exportScene(),{binary:false,onlyVisible:false,animations:st.exportClips()}) as {animations:{extras?:{somnia?:{duration:number}}}[]};
+ assert.equal(out.animations[0].extras!.somnia!.duration,5);
+ const g=await new Promise<{scene:THREE.Group;animations:THREE.AnimationClip[];parser:{json:{animations:{extras?:unknown}[]};getDependency(t:string,i:number):Promise<THREE.Object3D>}}>((res,rej)=>new GLTFLoader().parse(JSON.stringify(out),'',res as never,rej));
+ assert.ok(g.animations[0].tracks[0].times.length>3,'the file holds baked samples any viewer can play');
+ const {parseExtras}=await import('./clipMeta');const metas=g.parser.json.animations.map(a=>parseExtras(a.extras));
+ const nodes=new Map<number,THREE.Object3D>();for(const mt of metas[0]!.tracks)nodes.set(mt.node,await g.parser.getDependency('node',mt.node));
+ const st2=new Stage();st2.loadMany([...g.scene.children]);st2.setClips(g.animations,metas,i=>nodes.get(i));
+ const n=st2.root.children[0];const k=st2.keysOf(0,n.id)[0];
+ assert.deepEqual(k.times,[0,1,2]);assert.deepEqual(k.eases,['easeOut','step','linear']);assert.equal(st2.clips[0].duration,5);
+});
+test('a file without our extras keeps its baked keys and ends at its last key',async()=>{
+ const {st,m}=setup();const c=st.addClip('Hop',5);st.setKey(c,m.id,'position',0,{y:0});st.setKey(c,m.id,'position',1,{y:4});
+ const out=await new GLTFExporter().parseAsync(st.exportScene(),{binary:false,onlyVisible:false,animations:st.exportClips()});
+ const g=await new Promise<{scene:THREE.Group;animations:THREE.AnimationClip[]}>((res,rej)=>new GLTFLoader().parse(JSON.stringify(out),'',res as never,rej));
+ const st2=new Stage();st2.loadMany([...g.scene.children]);st2.setClips(g.animations);assert.equal(st2.clips[0].duration,1);
+});

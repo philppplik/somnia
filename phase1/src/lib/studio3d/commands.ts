@@ -6,6 +6,7 @@ import {getStudio3DState,patchStudio3D} from './session';
 import type {EnvSettings,GizmoMode,SnapSettings,ExportUnit,ExportFormat} from './model';
 import {PARAM_SPECS,MATERIAL_PRESET_IDS} from './primitives';
 import {ALPHA_MODES,TEXTURE_SLOTS,MAX_EMISSIVE_INTENSITY,type TextureSlot} from './materials';
+import {EASES,type Ease} from './ease';
 import {KEY_PATHS,type KeyPath} from './clips';
 import type {TextureTransform} from './uv';
 import {VIEW_PRESETS,type ViewPreset} from './viewPresets';
@@ -34,6 +35,9 @@ export interface Studio3DController{
  clipDuration(duration:number,clip?:number):void;
  keySet(path:KeyPath,time?:number,id?:number,value?:{x?:number;y?:number;z?:number}):void;
  keyRemove(path:KeyPath,time?:number,id?:number):void;
+ keyMove(path:KeyPath,from:number,to:number,id?:number):void;
+ keyEase(path:KeyPath,time:number,ease:Ease,id?:number):void;
+ autoKey(on:boolean):void;
  animPlay(clip?:number):void;
  animPause():void;
  animSeek(time:number):void;
@@ -143,6 +147,9 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{duration:number;clip?:number}>('studio3d.clip.duration','Set the length of a 3D animation clip in seconds','View',p=>need().clipDuration(p.duration,p.clip),object({duration:{type:'number',minimum:0.001,maximum:3600},clip:{type:'integer',minimum:0}},['duration']),hasClips),
   add<{path:KeyPath;time?:number;id?:number;x?:number;y?:number;z?:number}>('studio3d.key.set','Add or replace a position, rotation or scale key of a 3D object in the current clip','View',p=>{const{path,time,id,...v}=p;need().keySet(path,time,id,Object.keys(v).length?v:undefined);},object({path:{enum:[...KEY_PATHS]},time:{type:'number',minimum:0,maximum:3600},id:{type:'integer',minimum:0},x:{type:'number'},y:{type:'number'},z:{type:'number'}},['path']),()=>hasScene()&&(getStudio3DState().selected!=null||getStudio3DState().clips.length>0)),
   add<{path:KeyPath;time?:number;id?:number}>('studio3d.key.remove','Remove a position, rotation or scale key of a 3D object in the current clip','View',p=>need().keyRemove(p.path,p.time,p.id),object({path:{enum:[...KEY_PATHS]},time:{type:'number',minimum:0,maximum:3600},id:{type:'integer',minimum:0}},['path']),hasClips),
+  add<{path:KeyPath;time:number;to:number;id?:number}>('studio3d.key.move','Move a key of a 3D object to another time in the current clip','View',p=>need().keyMove(p.path,p.time,p.to,p.id),object({path:{enum:[...KEY_PATHS]},time:{type:'number',minimum:0,maximum:3600},to:{type:'number',minimum:0,maximum:3600},id:{type:'integer',minimum:0}},['path','time','to']),hasClips),
+  add<{path:KeyPath;time:number;ease:Ease;id?:number}>('studio3d.key.ease','Set the easing of the segment after a key (linear, step, ease in, ease out, ease in-out)','View',p=>need().keyEase(p.path,p.time,p.ease,p.id),object({path:{enum:[...KEY_PATHS]},time:{type:'number',minimum:0,maximum:3600},ease:{enum:[...EASES]},id:{type:'integer',minimum:0}},['path','time','ease']),hasClips),
+  add<{on?:boolean}>('studio3d.anim.autokey','Turn auto-key on or off: transform changes are recorded as keys at the current time','View',p=>need().autoKey(p?.on??!getStudio3DState().autoKey),object({on:{type:'boolean'}},[]),hasScene),
   add('studio3d.export.glb','Export the scene as GLB','Project',()=>need().exportGlb()),
   add('studio3d.export.gltf','Export the scene as glTF (JSON with embedded data)','Project',()=>need().exportGltf()),
   add<{sidecar?:boolean;embedEnv?:boolean}>('studio3d.save','Save the 3D scene','Project',p=>need().save(!!p?.sidecar,!!p?.embedEnv),object({sidecar:{type:'boolean'},embedEnv:{type:'boolean'}},[]),hasScene),

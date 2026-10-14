@@ -207,3 +207,32 @@ test('3D studio records keys into a clip, scrubs them and keeps the clip through
  await page.getByTestId('studio3d-file-input').setInputFiles({name:'hop.glb',mimeType:'model/gltf-binary',buffer:bytes});
  await expect(page.getByTestId('studio3d-animation')).toContainText('Hop',{timeout:20_000});
 });
+
+test('3D studio moves a key, sets its easing, auto-keys and keeps easing and clip length through GLB export and reopen',async({page})=>{
+ await blank(page);
+ const id=await insert(page,'cube',0);
+ await run(page,'studio3d.clip.add',{name:'Slide',duration:5});
+ await run(page,'studio3d.key.set',{path:'position',time:0});
+ await run(page,'studio3d.object.transform',{id,position:{x:4,y:0,z:0}});
+ await run(page,'studio3d.key.set',{path:'position',time:1});
+ await run(page,'studio3d.key.move',{path:'position',time:1,to:2});
+ await expect(page.getByTestId('studio3d-keyrow-position')).toContainText('0:02.00');
+ await expect(page.getByTestId('studio3d-keyrow-position')).not.toContainText('0:01.00');
+ await run(page,'studio3d.key.ease',{path:'position',time:0,ease:'easeIn'});
+ await run(page,'studio3d.anim.seek',{time:1});
+ await expect.poll(async()=>(await session(page)).info?.position.x).toBeLessThan(2);
+ await page.keyboard.press('Control+z');
+ await run(page,'studio3d.anim.autokey',{on:true});
+ await expect(page.getByRole('checkbox',{name:/Auto-key/})).toBeChecked();
+ await run(page,'studio3d.anim.seek',{time:3});
+ await run(page,'studio3d.object.transform',{id,position:{x:0,y:2,z:0}});
+ await expect(page.getByTestId('studio3d-keyrow-position')).toContainText('0:03.00');
+ await run(page,'studio3d.anim.autokey',{on:false});
+ const [download]=await Promise.all([page.waitForEvent('download'),page.getByTestId('studio3d-export').getByRole('button',{name:'GLB'}).click()]);
+ const bytes=readFileSync(await download.path()!);
+ expect(bytes.toString('latin1')).toContain('"somnia"');
+ await page.getByTestId('studio3d-file-input').setInputFiles({name:'slide.glb',mimeType:'model/gltf-binary',buffer:bytes});
+ await expect(page.getByTestId('studio3d-animation')).toContainText('Slide',{timeout:20_000});
+ await expect.poll(async()=>(await session(page)).clips[0]?.duration).toBe(5);
+ await expect.poll(async()=>(await session(page)).clipKeys.find(k=>k.path==='position')?.eases[0]).toBe('easeIn');
+});

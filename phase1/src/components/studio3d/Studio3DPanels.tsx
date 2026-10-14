@@ -17,7 +17,7 @@ import {InspectorNumberField} from '../studios/InspectorNumberField';
 import {PARAM_SPECS,MATERIAL_PRESETS} from '../../lib/studio3d/primitives';
 import {ALPHA_MODES,TEXTURE_SLOTS,MAX_EMISSIVE_INTENSITY} from '../../lib/studio3d/materials';
 import {validateScene,toMB} from '../../lib/studio3d/validate';
-import {KEY_PATHS} from '../../lib/studio3d/clips';
+import {ClipTimeline} from './ClipTimeline';
 import {SPEEDS,formatClock} from '../../lib/studio3d/animation';
 import {VIEW_PRESETS,RENDER_SIZES} from '../../lib/studio3d/viewPresets';
 const PRIMS=['cube','sphere','plane','cylinder','cone','torus'] as const;
@@ -285,16 +285,10 @@ function AnimationControls(){
     <label className="flex items-center gap-2 text-xs text-ink-2"><NativeInput type="checkbox" checked={a.loop} onChange={e=>void executeCommand('studio3d.anim.loop',{loop:e.currentTarget.checked})}/>{t('studio3d.anim.loop')}</label>
     <label className="flex items-center gap-2 text-xs text-ink-2">{t('studio3d.anim.speed')}<NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={a.speed} onChange={e=>void executeCommand('studio3d.anim.speed',{speed:Number(e.currentTarget.value)})}>
      {SPEEDS.map(v=><option key={v} value={v}>{v}x</option>)}</NativeSelect></label></div>
+   <label className="flex items-center gap-2 text-xs text-ink-2"><NativeInput type="checkbox" checked={s.autoKey} onChange={e=>void executeCommand('studio3d.anim.autokey',{on:e.currentTarget.checked})}/>{t('studio3d.anim.autokey')}</label>
    {sel?<div className="grid gap-1" data-testid="studio3d-keys" role="group" aria-label={t('studio3d.key.title',{name:sel!.name})}>
     <p className="m-0 text-xs text-ink-3">{t('studio3d.key.title',{name:sel!.name})}</p>
-    {KEY_PATHS.map(path=>{const k=s.clipKeys.find(x=>x.path===path);const here=!!k&&k.times.some(x=>Math.abs(x-a.time)<0.0005);
-     return <div key={path} className="flex flex-wrap items-center gap-1 text-xs text-ink-2" data-testid={'studio3d-keyrow-'+path}>
-      <span className="w-16 shrink-0">{t('studio3d.key.'+path)}</span>
-      <Button variant="outline" onClick={()=>void executeCommand('studio3d.key.set',{path})}>{here?t('studio3d.key.update'):t('studio3d.key.add')}</Button>
-      {k&&!k.editable&&<span className="text-ink-3">{t('studio3d.key.cubic')}</span>}
-      {k?.times.map(time=><span key={time} className="inline-flex items-center">
-       <Button variant="outline" aria-label={t('studio3d.key.goto',{time:formatClock(time)})} onClick={()=>void executeCommand('studio3d.anim.seek',{time})}>{formatClock(time)}</Button>
-       {k.editable&&<Button variant="outline" aria-label={t('studio3d.key.delete',{time:formatClock(time)})} onClick={()=>void executeCommand('studio3d.key.remove',{path,time})}>{'\u00d7'}</Button>}</span>)}</div>;})}
+    <ClipTimeline/>
     <p className="m-0 text-xs text-ink-3">{t('studio3d.anim.note')}</p></div>:<p className="m-0 text-xs text-ink-3">{t('studio3d.key.select')}</p>}</>}
  </fieldset>;
 }
