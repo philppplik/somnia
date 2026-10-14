@@ -49,6 +49,7 @@ input,select,textarea{border-radius:var(--r-sm)}
 .canvas-stage>.media-bar{margin-inline:0;width:100%}
 .canvas-stage>.photos-filmstrip{margin-inline:0;width:100%}
 .photos-batch-status{font-size:11px}
+[data-testid="photos-workspace"] .media-bar input[type=range]{width:80px} /* the global unlayered input{width:100%} beats tailwind utilities; scope the workspace sliders */
 .md-preview ul{list-style:disc}.md-preview ol{list-style:decimal}.md-preview ul ul{list-style:circle}
 
 /* Glass v2. Native compositor must confirm glass. Dialogs and document contents
