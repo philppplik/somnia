@@ -41,6 +41,10 @@ export class DocSession {
     edit_table(block: number, op: string): void;
     /** Inserts an empty table (rows 1-20, cols 1-10) plus a trailing paragraph after the top-level block holding `block`. */
     insert_table(block: number, rows: number, cols: number): void;
+    /** JSON `{header:{text,editable},footer:{text,pageNumber,editable}}` for the default header and footer. */
+    header_footer(): string;
+    /** Sets default header/footer text and page number of every section; `undefined` keeps a part. */
+    set_header_footer(header?: string | null, footer?: string | null, page_number?: boolean | null): void;
     insert(block: number, utf8_byte_offset: number, text: string): void;
     merge_with_previous(block: number): void;
     constructor(bytes: Uint8Array);

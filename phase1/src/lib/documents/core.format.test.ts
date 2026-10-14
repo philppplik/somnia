@@ -65,3 +65,14 @@ test('insert table requests are bounded before the engine',()=>{
  for(const bad of [{rows:0},{rows:21},{cols:0},{cols:11},{rows:1.5},{cols:Number.NaN},{block:-1},{block:2**31}])assert.equal(go(bad),false,JSON.stringify(bad));
  assert.equal(calls.length,0);go({rows:20,cols:10});assert.deepEqual(calls,['0:20x10']);
 });
+
+test('header and footer requests are validated before the engine',()=>{
+ const calls:string[]=[];
+ const S=class{constructor(_b?:Uint8Array){}free(){}blocks(){return '[]';}header_footer(){return '{"header":{"text":"","editable":true},"footer":{"text":"","pageNumber":false,"editable":true}}';}set_header_footer(h:unknown,f:unknown,p:unknown){calls.push(JSON.stringify([h,f,p]));}paginate(){return {};}} as unknown as new(b:Uint8Array)=>never;
+ const k=new DocumentsCore(S);k.handle({id:1,kind:'open',bytes:new Uint8Array(4)} as never);
+ const go=(r:object)=>k.handle({id:2,kind:'setHeaderFooter',...r} as never).res.ok;
+ for(const bad of [{},{header:'a\nb'},{header:'x'.repeat(501)},{footer:'tab\there'},{footer:'\u0007'},{header:'a\ufffcb'},{pageNumber:'yes'},{header:5},{footer:null}])assert.equal(go(bad),false,JSON.stringify(bad));
+ assert.equal(calls.length,0);go({header:'Report',pageNumber:true});go({footer:'x'.repeat(500)});
+ assert.deepEqual(calls,['["Report",null,true]',JSON.stringify([null,'x'.repeat(500),null])]);
+ const st=k.handle({id:3,kind:'headerFooterState'} as never).res as {ok:boolean;state?:{header:{editable:boolean}}};assert.equal(st.state?.header.editable,true);
+});

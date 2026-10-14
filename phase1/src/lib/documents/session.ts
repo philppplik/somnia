@@ -1,4 +1,4 @@
-import {checkFormatPatch,checkParaPatch,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch} from './protocol';
+import {validHfText,type HeaderFooterState,checkFormatPatch,checkParaPatch,MAX_HF_CHARS,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch} from './protocol';
 import {captureDocumentSelection} from './selectionCapture';
 import {CELL_BASE,caretAfterEdit,diffEdit,inverseOf,UndoStack,type TextEdit,type UndoEntry} from './edit';
 import {stepBoundary,utf16ToUtf8Offset,utf8ToUtf16Offset,wordBoundary} from './text';
@@ -461,4 +461,17 @@ export const tabInCell=(dir:1|-1)=>run(async()=>{
  await doEditTable('row_below');
  const after=getDocumentsState().blocks.find(b=>b.kind==='cell'&&b.table===at.table&&b.row===at.row+1&&b.cell===0&&b.editable);
  if(after)patchDocuments({caret:{block:after.index,anchor:0,head:0}});
+});
+
+/** The default header and footer as the engine reports them (not an edit; no undo step). */
+export async function readHeaderFooter():Promise<HeaderFooterState|null>{
+ const e=engine;if(!e||getDocumentsState().status!=='ready')return null;const check=ownerGuard();const st=await e.headerFooterState();check();return st;
+}
+/** Set the default header text, footer text and footer page number for every section. A part left undefined stays as it is. One undo step; the caret does not move. */
+export const setHeaderFooter=(patch:{header?:string;footer?:string;pageNumber?:boolean})=>run(async()=>{
+ if((patch.header!==undefined&&!validHfText(patch.header))||(patch.footer!==undefined&&!validHfText(patch.footer))||(patch.pageNumber!==undefined&&typeof patch.pageNumber!=='boolean'))throw new Error(`Header and footer text is limited to ${MAX_HF_CHARS} characters, without line breaks.`);
+ if(patch.header===undefined&&patch.footer===undefined&&patch.pageNumber===undefined)return;
+ const c=getDocumentsState().caret;if(!c)throw new Error('Place the caret in the document first.');
+ const spot={block:c.block,off:c.head};
+ await structural(eng=>eng.setHeaderFooter(patch),spot,spot);
 });

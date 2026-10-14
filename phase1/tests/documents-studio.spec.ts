@@ -434,3 +434,24 @@ test('table menu: merge with the cell below and split it again, refusals shown',
   await expect(page.getByTestId('documents-edit-error')).toHaveCount(0);
  }
 });
+test('header and footer dialog: set a header, footer and page number, reopen to see them, undo in one step',async({page})=>{
+ await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ await openBuffers(page,[{name:'sample.docx',mimeType:DOCX,buffer:sample()}]);
+ await expect(page.getByTestId('documents-pages')).toHaveText('1 pages');
+ const pg=page.getByTestId('documents-page').first();const img=pg.locator('img');
+ await expect.poll(()=>img.evaluate((i:HTMLImageElement)=>i.complete&&i.naturalWidth)).toBeGreaterThan(300);
+ const box=(await pg.boundingBox())!;await page.mouse.click(box.x+box.width*0.125,box.y+box.height*0.127);
+ await expect(page.getByTestId('documents-caret')).toHaveCount(1);
+ await page.getByTestId('documents-hf-open').click();
+ const header=page.getByTestId('documents-hf-header');await expect(header).toBeVisible();
+ if(await header.isDisabled()){await expect(page.getByTestId('documents-hf-locked')).toBeVisible();await page.keyboard.press('Escape');return;}
+ await header.fill('Quarterly report');await page.getByTestId('documents-hf-footer').fill('Draft');await page.getByTestId('documents-hf-page').check();
+ await page.getByTestId('documents-hf-apply').click();await page.waitForTimeout(400);
+ await expect(page.getByTestId('documents-edit-error')).toHaveCount(0);
+ await page.getByTestId('documents-hf-open').click();
+ await expect(page.getByTestId('documents-hf-header')).toHaveValue('Quarterly report');await expect(page.getByTestId('documents-hf-page')).toBeChecked();
+ await page.keyboard.press('Escape');
+ await page.getByTestId('documents-undo').click();await page.waitForTimeout(300);
+ await page.getByTestId('documents-hf-open').click();
+ await expect(page.getByTestId('documents-hf-header')).not.toHaveValue('Quarterly report');
+});

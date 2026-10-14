@@ -65,6 +65,8 @@ export type DocumentsRequest=
  |{id:number;kind:'setList';first:number;last:number;list:ListKindId}
  |{id:number;kind:'listLevel';first:number;last:number;delta:number}
  |{id:number;kind:'tableEdit';block:number;op:TableOp}
+ |{id:number;kind:'headerFooterState'}
+ |{id:number;kind:'setHeaderFooter';header?:string;footer?:string;pageNumber?:boolean}
  |{id:number;kind:'insertTable';block:number;rows:number;cols:number}
  |{id:number;kind:'save'}
  |{id:number;kind:'close'};
@@ -74,6 +76,7 @@ export type DocumentsResponse=
  |{id:number;ok:true;kind:'rendered';png:ArrayBuffer;renderMs:number}
  |{id:number;ok:true;kind:'edited';document:OpenedDocument}
  |{id:number;ok:true;kind:'blocks';blocks:import('./edit').DocBlock[]}
+ |{id:number;ok:true;kind:'headerFooter';state:HeaderFooterState}
  |{id:number;ok:true;kind:'hit';hit:HitResult|null}
  |{id:number;ok:true;kind:'caret';caret:CaretBox|null}
  |{id:number;ok:true;kind:'rects';rects:Rect5[]}
@@ -94,3 +97,9 @@ export type TableOp=typeof TABLE_OPS[number];
 export const MAX_NEW_TABLE_ROWS=20,MAX_NEW_TABLE_COLS=10;
 /** Size presets offered by the Insert table menu. */
 export const TABLE_PRESETS:readonly (readonly [number,number])[]=[[2,2],[3,3],[4,3],[5,4],[6,5]];
+
+/** Header/footer text limit and the shape of the engine's report on the default header and footer. */
+export const MAX_HF_CHARS=500;
+export interface HeaderFooterState{header:{text:string;editable:boolean};footer:{text:string;pageNumber:boolean;editable:boolean}}
+/** A header/footer text the engine accepts: at most 500 characters and no control characters or line breaks. */
+export const validHfText=(v:unknown):v is string=>typeof v==='string'&&Array.from(v).length<=MAX_HF_CHARS&&!/[\u0000-\u001f\u007f-\u009f\ufffc\u2028\u2029]/u.test(v);

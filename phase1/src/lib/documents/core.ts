@@ -1,5 +1,5 @@
 import type {DocumentsRequest,DocumentsResponse,OpenedDocument} from './protocol';
-import {checkFormatPatch,checkParaPatch,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,DOC_STYLES,MAX_DOCX_BYTES,MAX_FORMAT_BLOCKS,MAX_SCALE,MIN_SCALE} from './protocol';
+import {validHfText,checkFormatPatch,checkParaPatch,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,DOC_STYLES,MAX_DOCX_BYTES,MAX_FORMAT_BLOCKS,MAX_SCALE,MIN_SCALE} from './protocol';
 const posOk=(p:{block:number;off:number})=>Number.isInteger(p.block)&&p.block>=0&&Number.isInteger(p.off)&&p.off>=0;
 function checkParaRange(first:number,last:number){
  if(!Number.isInteger(first)||!Number.isInteger(last)||first<0||last<first)throw new Error('Paragraph range is not valid.');
@@ -11,7 +11,7 @@ function checkSpan(start:{block:number;off:number},end:{block:number;off:number}
  if(end.block-start.block>=MAX_FORMAT_BLOCKS)throw new Error('Selection spans too many paragraphs.');
 }
 /** The slice of the wasm DocSession the host uses. Lets tests run the real engine without a Worker. */
-export interface DocSessionLike{free():void;blocks():string;replace_ranges(block:number,hunksJson:string):void;format_range(sb:number,so:number,eb:number,eo:number,patchJson:string):void;format_state(sb:number,so:number,eb:number,eo:number):string;format_paragraphs(first:number,last:number,patchJson:string):void;paragraph_state(first:number,last:number):string;set_paragraph_style(first:number,last:number,style:string):void;set_list(first:number,last:number,kind:string):void;edit_table(block:number,op:string):void;insert_table(block:number,rows:number,cols:number):void;shift_list_level(first:number,last:number,delta:number):void;insert(block:number,utf8Offset:number,text:string):void;page_info():string;paginate():number;render_png(page:number,scale:number):Uint8Array;save():Uint8Array;text():string;split_block(block:number,off:number):void;merge_with_previous(block:number):void;snapshot():number;restore(snap:number):void;hit_test(page:number,x:number,y:number):string;caret_at(block:number,off:number):string;selection_rects(block:number,a:number,b:number):string}
+export interface DocSessionLike{free():void;blocks():string;replace_ranges(block:number,hunksJson:string):void;format_range(sb:number,so:number,eb:number,eo:number,patchJson:string):void;format_state(sb:number,so:number,eb:number,eo:number):string;format_paragraphs(first:number,last:number,patchJson:string):void;paragraph_state(first:number,last:number):string;set_paragraph_style(first:number,last:number,style:string):void;set_list(first:number,last:number,kind:string):void;edit_table(block:number,op:string):void;insert_table(block:number,rows:number,cols:number):void;header_footer():string;set_header_footer(header?:string|null,footer?:string|null,pageNumber?:boolean|null):void;shift_list_level(first:number,last:number,delta:number):void;insert(block:number,utf8Offset:number,text:string):void;page_info():string;paginate():number;render_png(page:number,scale:number):Uint8Array;save():Uint8Array;text():string;split_block(block:number,off:number):void;merge_with_previous(block:number):void;snapshot():number;restore(snap:number):void;hit_test(page:number,x:number,y:number):string;caret_at(block:number,off:number):string;selection_rects(block:number,a:number,b:number):string}
 export interface DocSessionCtor{new(bytes:Uint8Array):DocSessionLike}
 const ab=(u:Uint8Array):ArrayBuffer=>u.byteOffset===0&&u.byteLength===u.buffer.byteLength?u.buffer as ArrayBuffer:u.slice().buffer as ArrayBuffer;
 /** Owns one open session. Every failure leaves the previous state usable and never keeps a freed pointer. */
@@ -71,6 +71,15 @@ export class DocumentsCore{
     if(req.kind==='setList'&&req.list!=='bullet'&&req.list!=='numbered'&&req.list!=='none')throw new Error('List kind is not valid.');
     if(req.kind==='listLevel'&&(!Number.isInteger(req.delta)||req.delta<-8||req.delta>8))throw new Error('Level change is not valid.');
     const [,editMs]=this.timed(()=>req.kind==='paraStyle'?s.set_paragraph_style(req.first,req.last,req.style):req.kind==='setList'?s.set_list(req.first,req.last,req.list):s.shift_list_level(req.first,req.last,req.delta));const [pages,layoutMs]=this.timed(()=>s.paginate());
+    return{res:{id:req.id,ok:true,kind:'edited',document:this.describe(editMs,layoutMs,pages)},transfer:[]};
+   }
+   if(req.kind==='headerFooterState')return{res:{id:req.id,ok:true,kind:'headerFooter',state:JSON.parse(this.need().header_footer())},transfer:[]};
+   if(req.kind==='setHeaderFooter'){
+    if(req.header!==undefined&&!validHfText(req.header))throw new Error('The header text is not valid.');
+    if(req.footer!==undefined&&!validHfText(req.footer))throw new Error('The footer text is not valid.');
+    if(req.pageNumber!==undefined&&typeof req.pageNumber!=='boolean')throw new Error('The page number choice is not valid.');
+    if(req.header===undefined&&req.footer===undefined&&req.pageNumber===undefined)throw new Error('Nothing to change.');
+    const s=this.need();const [,editMs]=this.timed(()=>s.set_header_footer(req.header??null,req.footer??null,req.pageNumber??null));const [pages,layoutMs]=this.timed(()=>s.paginate());
     return{res:{id:req.id,ok:true,kind:'edited',document:this.describe(editMs,layoutMs,pages)},transfer:[]};
    }
    if(req.kind==='insertTable'){

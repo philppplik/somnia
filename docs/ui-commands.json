@@ -2539,6 +2539,17 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.headerFooter.set",
+      "title": "Set header and footer",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.indent.decrease",
       "title": "Decrease indent",
       "category": "View",

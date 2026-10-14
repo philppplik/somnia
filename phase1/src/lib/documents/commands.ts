@@ -1,6 +1,6 @@
 import {registerCommand} from '../commandRegistry';
 import {getDocumentsState,patchDocuments,stepZoom} from './store';
-import {redoEdit,setAlign,setParagraphStyle,toggleList,shiftListLevel,stepFontSize,stepIndent,toggleFormat,undoEdit,editTable,insertTable} from './session';
+import {redoEdit,setAlign,setParagraphStyle,toggleList,shiftListLevel,stepFontSize,stepIndent,toggleFormat,undoEdit,editTable,insertTable,setHeaderFooter} from './session';
 import {CELL_BASE} from './edit';
 import {goToBlock,scrollToPage} from './navigate';
 import {documentsExportReady,patchDocumentsExportUi,requestDocumentsSaveCopy} from './exportBridge';
@@ -45,6 +45,12 @@ export function registerDocumentsCommands(){
   add('documents.list.outdent','Promote list item',async()=>{await shiftListLevel(-1);},()=>ready()&&!!getDocumentsState().caret),
   add('documents.pages.goto','Go to page',p=>{const n=int(p,'page');if(n>=getDocumentsState().pages)throw expected('That page does not exist.');if(!scrollToPage(n))throw expected('The page is not on screen yet.');}),
   add('documents.outline.goto','Go to paragraph',async p=>{if(!await goToBlock(int(p,'block')))throw expected('That block has no text position.');}),
+  add('documents.headerFooter.set','Set header and footer',async p=>{
+   const o=(p??{}) as Record<string,unknown>;const bad=(k:string)=>expected(`Invalid "${k}".`);
+   if(o.header!==undefined&&typeof o.header!=='string')throw bad('header');if(o.footer!==undefined&&typeof o.footer!=='string')throw bad('footer');if(o.pageNumber!==undefined&&typeof o.pageNumber!=='boolean')throw bad('pageNumber');
+   if(o.header===undefined&&o.footer===undefined&&o.pageNumber===undefined)throw expected('Give a header, a footer or pageNumber.');
+   await setHeaderFooter({header:o.header as string|undefined,footer:o.footer as string|undefined,pageNumber:o.pageNumber as boolean|undefined});
+  },()=>ready()&&!!getDocumentsState().caret),
   add('documents.table.insert','Insert table',async p=>{await insertTable(int(p,'rows'),int(p,'cols'));},()=>ready()&&!!getDocumentsState().caret),
   add('documents.table.row_above','Insert row above',async()=>{await editTable('row_above');},inCell),
   add('documents.table.row_below','Insert row below',async()=>{await editTable('row_below');},inCell),

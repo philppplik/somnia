@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {applyEdit,CELL_BASE,type TextEdit} from './edit';
 import type {DocumentsEngine} from './engine';
 import {getDocumentsState,patchDocuments} from './store';
-import {tabInCell,insertTable,editTable,setParagraphStyle,shiftListLevel,toggleList,setAlign,setLineSpacing,setSpaceAfter,stepIndent,setFont,setFontColor,setFontSize,stepFontSize,toggleFormat,deleteAtCaret,moveCaret,MAX_INSERT_LINES,pasteText,redoEdit,resetSessionsForTest,selectAllText,selectedText,setSessionDeps,splitAtCaret,switchDocument,typeText,undoEdit,syncGeometry} from './session';
+import {setHeaderFooter,readHeaderFooter,tabInCell,insertTable,editTable,setParagraphStyle,shiftListLevel,toggleList,setAlign,setLineSpacing,setSpaceAfter,stepIndent,setFont,setFontColor,setFontSize,stepFontSize,toggleFormat,deleteAtCaret,moveCaret,MAX_INSERT_LINES,pasteText,redoEdit,resetSessionsForTest,selectAllText,selectedText,setSessionDeps,splitAtCaret,switchDocument,typeText,undoEdit,syncGeometry} from './session';
 import {stepBoundary,wordBoundary} from './text';
 const docx=new Uint8Array(readFileSync(new URL('../../../test/documents/sample.docx',import.meta.url)));
 type Row={text:string;locked?:boolean;f?:Set<string>[];p?:Record<string,number|string>};
@@ -308,4 +308,15 @@ test('Tab in the last cell asks the engine for a new row below and reports a ref
  const cd=await openCells();const calls:string[]=[];
  (cd as unknown as {editTable:(b:number,o:string)=>Promise<unknown>}).editTable=async(b,o)=>{calls.push(b+o);throw new Error('the table has reached its row limit');};
  at(CELL_BASE+2,1);await tabInCell(1);assert.deepEqual(calls,[CELL_BASE+2+'row_below']);assert.match(getDocumentsState().editError,/row limit/);assert.deepEqual([c().block,c().head],[CELL_BASE+2,1]);
+});
+test('setHeaderFooter needs a caret, validates text, sends only what changed and keeps the caret',async()=>{
+ const cd=await openCells();const calls:object[]=[];
+ (cd as unknown as {setHeaderFooter:(p:object)=>Promise<unknown>}).setHeaderFooter=async p=>{calls.push(p);return cd.doc();};
+ (cd as unknown as {headerFooterState:()=>Promise<unknown>}).headerFooterState=async()=>({header:{text:'H',editable:true},footer:{text:'',pageNumber:false,editable:true}});
+ await setHeaderFooter({header:'x'});assert.equal(calls.length,0);assert.match(getDocumentsState().editError,/caret/);// no caret
+ at(0,1);for(const bad of [{header:'a\nb'},{footer:'x'.repeat(501)},{pageNumber:'y' as unknown as boolean}]){await setHeaderFooter(bad);assert.match(getDocumentsState().editError,/limited to 500/);}
+ assert.equal(calls.length,0);
+ await setHeaderFooter({});assert.equal(calls.length,0);
+ await setHeaderFooter({header:'Title',pageNumber:true});assert.deepEqual(calls,[{header:'Title',pageNumber:true}]);assert.equal(getDocumentsState().editError,'');assert.deepEqual([c().block,c().head],[0,1]);
+ assert.deepEqual(await readHeaderFooter(),{header:{text:'H',editable:true},footer:{text:'',pageNumber:false,editable:true}});
 });
