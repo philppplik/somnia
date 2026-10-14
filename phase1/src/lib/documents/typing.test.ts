@@ -240,6 +240,27 @@ test('list button toggles: on, then off when the whole selection already has tha
  await toggleList('bullet');assert.deepEqual(d.rows.map(r=>r.p?.list),['none','none']);
  await toggleList('numbered');await syncGeometry();await toggleList('bullet');assert.deepEqual(d.rows.map(r=>r.p?.list),['bullet','bullet']);
 });
+test('Enter on an empty list item ends the list; on a filled one it still splits',async()=>{
+ await open(['abc','']);at(1,0);await toggleList('bullet');await syncGeometry();
+ await splitAtCaret();assert.deepEqual(d.texts(),['abc','']);assert.deepEqual(d.rows.map(r=>r.p?.list),[undefined,'none']);
+ await undoEdit();assert.equal(d.rows[1].p?.list,'bullet');
+ await open(['abc']);at(0,3);await toggleList('bullet');await syncGeometry();await splitAtCaret();assert.equal(d.texts().length,2);
+});
+test('Backspace at the start of a list item removes the list and keeps the text; elsewhere it deletes as before',async()=>{
+ await open(['abc']);at(0,0);await toggleList('bullet');await syncGeometry();
+ await deleteAtCaret(-1);assert.deepEqual(d.texts(),['abc']);assert.equal(d.rows[0].p?.list,'none');assert.equal(c().head,0);
+ await undoEdit();assert.equal(d.rows[0].p?.list,'bullet');
+ await open(['abc']);at(0,2);await toggleList('bullet');await syncGeometry();await deleteAtCaret(-1);assert.deepEqual(d.texts(),['ac']);assert.equal(d.rows[0].p?.list,'bullet');
+});
+test('typing a list marker and a space starts a list in one undo step; other texts are left alone',async()=>{
+ await open(['']);at(0,0);await typeText('-');await typeText(' ');
+ assert.deepEqual(d.texts(),['']);assert.equal(d.rows[0].p?.list,'bullet');assert.equal(c().head,0);
+ await undoEdit();assert.deepEqual(d.texts(),['-']);assert.equal(d.rows[0].p?.list,undefined);
+ await open(['']);at(0,0);await typeText('1.');await typeText(' ');assert.equal(d.rows[0].p?.list,'numbered');assert.deepEqual(d.texts(),['']);
+ await open(['a-']);at(0,2);await typeText(' ');assert.deepEqual(d.texts(),['a- ']);assert.equal(d.rows[0].p?.list,undefined);
+ await open(['- x']);at(0,1);await typeText(' ');assert.equal(d.rows[0].p?.list,undefined);
+ await open(['-']);at(0,1);await toggleList('numbered');await syncGeometry();await typeText(' ');assert.deepEqual(d.texts(),['- ']);
+});
 test('a table in the span refuses style and list changes',async()=>{
  await open(['ab',{text:'',locked:true},'cd']);patchDocuments({caret:{block:2,head:1,anchor:0,anchorBlock:0}});
  await setParagraphStyle('Title');assert.ok(getDocumentsState().editError);patchDocuments({editError:''});await toggleList('numbered');assert.ok(getDocumentsState().editError);

@@ -2627,6 +2627,17 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.list.clear",
+      "title": "Remove list",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.list.indent",
       "title": "Demote list item",
       "category": "View",
@@ -2785,8 +2796,41 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.style.heading4",
+      "title": "Apply Heading 4",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.style.normal",
       "title": "Apply Normal style",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.style.quote",
+      "title": "Apply Quote style",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.style.subtitle",
+      "title": "Apply Subtitle style",
       "category": "View",
       "source": "documents",
       "keywords": [

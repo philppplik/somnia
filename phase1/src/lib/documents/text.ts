@@ -35,3 +35,10 @@ export function wordBoundary(text:string,i:number,dir:-1|1):number{
  if(dir>0){if(i>=text.length)return text.length;return starts.find(s=>s>i)??text.length;}
  if(i<=0)return 0;for(let k=starts.length-1;k>=0;k--)if(starts[k]<i)return starts[k];return 0;
 }
+
+/** The list a paragraph that holds only this typed marker asks for ("- ", "* ", "1. " or "1) " followed by a space), else null. */
+export function listMarkerKind(marker:string):'bullet'|'numbered'|null{
+ if(marker==='-'||marker==='*'||marker==='\u2022')return 'bullet';
+ if(marker==='1.'||marker==='1)')return 'numbered';
+ return null;
+}

@@ -7,7 +7,7 @@ import type {DocumentsEngine} from '../../lib/documents';
 import {getDocumentsState,patchDocuments,resetDocuments,stepZoom,useDocuments} from '../../lib/documents/store';
 import '../../lib/documents/guards';
 import {CELL_BASE} from '../../lib/documents/edit';
-import {clearCaret,deleteAtCaret,dragTo,editParagraph,getEngine,moveCaret,pasteText,settleDocument,switchDocument,pointerAt,redoEdit,selectAllText,setAlign,shiftListLevel,tabInCell,stepFontSize,stepIndent,toggleFormat,selectedText,splitAtCaret,syncGeometry,typeText,undoEdit} from '../../lib/documents/session';
+import {setParagraphStyle,clearCaret,deleteAtCaret,dragTo,editParagraph,getEngine,moveCaret,pasteText,settleDocument,switchDocument,pointerAt,redoEdit,selectAllText,setAlign,shiftListLevel,tabInCell,stepFontSize,stepIndent,toggleFormat,selectedText,splitAtCaret,syncGeometry,typeText,undoEdit} from '../../lib/documents/session';
 import {saveCopy} from '../../lib/documents/saveCopy';
 import {confirmDocumentsSaveCopy,patchDocumentsExportUi,registerDocumentsExport,useDocumentsExportUi} from '../../lib/documents/exportBridge';
 import {executeCommand} from '../../lib/commands';
@@ -65,6 +65,7 @@ function CaretInput({left,top}:{left:number;top:number}){
    if(keys[e.key]&&!mod&&!e.altKey){e.preventDefault();void moveCaret(keys[e.key],e.shiftKey);return;}
    if(e.key==='Backspace'||e.key==='Delete'){e.preventDefault();void deleteAtCaret(e.key==='Backspace'?-1:1,word);return;}
    if(e.key==='Escape'){e.preventDefault();clearCaret();return;}
+   if(mod&&e.altKey&&!e.shiftKey&&/^Digit[0-4]$/.test(e.code)){e.preventDefault();void setParagraphStyle((['Normal','Heading1','Heading2','Heading3','Heading4'] as const)[Number(e.code.slice(5))]);return;}
    if(e.key==='Enter'){e.preventDefault();void splitAtCaret();return;}
    if(mod&&e.key.toLowerCase()==='a'){e.preventDefault();selectAllText();return;}
    if(mod&&!e.shiftKey&&!e.altKey&&'biu'.includes(e.key.toLowerCase())&&e.key.length===1){e.preventDefault();void toggleFormat(({b:'bold',i:'italic',u:'underline'} as const)[e.key.toLowerCase() as 'b'|'i'|'u']);return;}

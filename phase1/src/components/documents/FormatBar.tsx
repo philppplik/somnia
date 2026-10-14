@@ -4,7 +4,7 @@ import {HeaderFooterDialog} from './HeaderFooterDialog';
 import {ImageControls} from './ImageControls';
 import {TableStyleDialog} from './TableStyleDialog';
 import {DOC_COLORS} from '../../lib/documents/palette';
-import {FONT_SIZES,setAlign,setFont,setFontColor,setFontSize,setLineSpacing,setSpaceAfter,setParagraphStyle,setSpaceBefore,stepIndent,toggleFormat,toggleList,editTable,insertTable,setColumnWidth} from '../../lib/documents/session';
+import {FONT_SIZES,setAlign,setFont,setFontColor,setFontSize,setLineSpacing,setSpaceAfter,setParagraphStyle,setSpaceBefore,stepIndent,toggleFormat,toggleList,shiftListLevel,editTable,insertTable,setColumnWidth} from '../../lib/documents/session';
 import {MIN_COL_PT,MAX_COL_PT,TABLE_PRESETS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type FormatPatch,type FormatState,type ParaAlign,type ParaState} from '../../lib/documents/protocol';
 import {AlignCenter,AlignJustify,AlignLeft,AlignRight,IndentDecrease,IndentIncrease,ListBullet,ListNumbered} from '../../lib/icons';
 import {t} from '../../lib/i18n';
@@ -50,6 +50,8 @@ export function FormatBar({format,held,para,enabled,inCell=false}:{format:Format
   <span className="flex items-center gap-0.5" role="group" aria-label={t('documents.list.label')}>
    <NativeButton className={tool+' w-7 px-0'} aria-label={t('documents.list.bullet')} title={t('documents.list.bullet')} aria-pressed={para?.list==='bullet'} disabled={!enabled} onClick={()=>void toggleList('bullet')} data-testid="documents-list-bullet"><ListBullet size={14}/></NativeButton>
    <NativeButton className={tool+' w-7 px-0'} aria-label={t('documents.list.numbered')} title={t('documents.list.numbered')} aria-pressed={para?.list==='numbered'} disabled={!enabled} onClick={()=>void toggleList('numbered')} data-testid="documents-list-numbered"><ListNumbered size={14}/></NativeButton>
+   {(para?.list==='bullet'||para?.list==='numbered')&&<><NativeButton className={tool+' w-7 px-0'} aria-label={t('documents.list.promote')} title={t('documents.list.promote')} disabled={!enabled} onClick={()=>void shiftListLevel(-1)} data-testid="documents-list-promote">{'\u2190'}</NativeButton>
+   <NativeButton className={tool+' w-7 px-0'} aria-label={t('documents.list.demote')} title={t('documents.list.demote')} disabled={!enabled} onClick={()=>void shiftListLevel(1)} data-testid="documents-list-demote">{'\u2192'}</NativeButton></>}
   </span>
   <NativeSelect className={sel+' w-28'} aria-label={t('documents.table.insert')} title={t('documents.table.insert')} disabled={!enabled} value="" onChange={e=>{const v=e.currentTarget.value;e.currentTarget.value='';if(v==='custom'){setSizeOpen(true);return;}const [r,c]=v.split('x').map(Number);if(TABLE_PRESETS.some(p=>p[0]===r&&p[1]===c))void insertTable(r,c);}} data-testid="documents-table-insert">
    <option value="" disabled>{t('documents.table.insert')}</option>{TABLE_PRESETS.map(([r,c])=><option key={r+'x'+c} value={r+'x'+c}>{r+' × '+c}</option>)}<option value="custom">{t('documents.table.custom')}</option></NativeSelect>

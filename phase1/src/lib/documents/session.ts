@@ -1,7 +1,7 @@
 import {validHfText,type HeaderFooterState,checkFormatPatch,checkParaPatch,MAX_HF_CHARS,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch,type ImageOp,type TableStyle,type TableStyleScope,tableStyleProblem,MIN_COL_PT,MAX_COL_PT,imageProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGES} from './protocol';
 import {captureDocumentSelection} from './selectionCapture';
 import {CELL_BASE,caretAfterEdit,diffEdit,inverseOf,UndoStack,type TextEdit,type UndoEntry} from './edit';
-import {stepBoundary,utf16ToUtf8Offset,utf8ToUtf16Offset,wordBoundary} from './text';
+import {listMarkerKind,stepBoundary,utf16ToUtf8Offset,utf8ToUtf16Offset,wordBoundary} from './text';
 import {getDocumentsState,patchDocuments,resetDocuments,INITIAL_VIEW,type Caret,type DocumentsState} from './store';
 import {DocumentsEngine} from './engine';
 import {blockAfterTableEdit,cellOf} from './tableOps';
@@ -215,8 +215,17 @@ async function replaceRange(s:Pos,e:Pos,text:string,before:Pos){
 }
 const clean=(text:string)=>text.replace(/\r\n?/g,'\n').replace(/\uFFFC/g,'');
 /** Types text at the caret or over the selection. Line breaks become spaces (typed input); use pasteText for multi-line text. */
+const inList=()=>{const l=getDocumentsState().para?.list;return l==='bullet'||l==='numbered';};
 export const typeText=(text:string)=>run(async()=>{
  const c=getDocumentsState().caret;if(!c)return;const t=clean(text).replace(/\n+/g,' ');if(!t)return;if(t.length>MAX_INSERT_CHARS)throw new Error('The text is too large to insert at once.');const n=norm(c);goalX=null;
+ // "- ", "* " or "1. " typed into an otherwise empty plain paragraph starts a list (the marker is removed; one undo step).
+ if(t===' '&&cmp(n.s,n.e)===0&&!inList()&&getDocumentsState().pendingFormat===null){
+  const cur=blockText(n.s.block),kind=cur===null?null:listMarkerKind(cur);
+  if(kind&&n.s.off===u8(cur!)){
+   await structural(async eng=>{await eng.replace({block:n.s.block,hunks:[{start:0,end:u8(cur!),text:''}]});return eng.setList(n.s.block,n.s.block,kind);},n.s,{block:n.s.block,off:0});
+   return;
+  }
+ }
  const pf=getDocumentsState().pendingFormat;
  if(pf&&cmp(n.s,n.e)===0&&pf.block===n.s.block&&pf.off===n.s.off){
   const at=n.s.off,end=at+u8(t);
@@ -280,6 +289,8 @@ export const deleteAtCaret=(dir:-1|1,word=false)=>run(async()=>{
  const c=getDocumentsState().caret;if(!c)return;const n=norm(c);goalX=null;
  if(cmp(n.s,n.e)!==0){if(n.s.block===n.e.block)await applyAtCaret({start:n.s.off,end:n.e.off,text:''});else await replaceRange(n.s,n.e,'',n.h);return;}
  const t=blockText(c.block);if(t===null)return;
+ // Backspace at the start of a list item removes the list first and keeps the text.
+ if(dir<0&&c.head===0&&inList()){await structural(eng=>eng.setList(c.block,c.block,'none'),{block:c.block,off:0},{block:c.block,off:0});return;}
  const i=utf8ToUtf16Offset(t,c.head);const j=word?wordBoundary(t,i,dir):stepBoundary(t,i,dir);
  if(j===i){await joinAtEdge(c.block,t,dir);return;}
  const k=utf16ToUtf8Offset(t,j);await applyAtCaret(dir<0?{start:k,end:c.head,text:''}:{start:c.head,end:k,text:''});
@@ -365,6 +376,8 @@ export async function syncGeometry(){
 export const splitAtCaret=()=>run(async()=>{
  const c=getDocumentsState().caret;if(!c)return;const n=norm(c);goalX=null;
  if(blockText(n.s.block)===null)return;
+ // Enter on an empty list item ends the list instead of adding another empty item.
+ if(cmp(n.s,n.e)===0&&blockText(n.s.block)===''&&inList()){await structural(eng=>eng.setList(n.s.block,n.s.block,'none'),n.h,n.h);return;}
  const check=ownerGuard();await replaceRange(n.s,n.e,'\n',n.h);check();
 });
 async function joinAtEdge(block:number,t:string,dir:-1|1){
@@ -416,6 +429,11 @@ export const toggleList=(kind:'bullet'|'numbered')=>run(async()=>{
  const n=await paraSpan();if(!n)return;
  const next:ListKindId=getDocumentsState().para?.list===kind?'none':kind;
  await structural(eng=>eng.setList(n.s.block,n.e.block,next),n.h,n.h);setSel(n.a,n.h);
+});
+/** Removes the list from the selected paragraphs (the text stays). */
+export const clearList=()=>run(async()=>{
+ const n=await paraSpan();if(!n)return;
+ await structural(eng=>eng.setList(n.s.block,n.e.block,'none'),n.h,n.h);setSel(n.a,n.h);
 });
 /** Tab / Shift+Tab inside a list: one level deeper or shallower. Outside a list the engine refuses and nothing changes. */
 export const shiftListLevel=(delta:1|-1)=>run(async()=>{

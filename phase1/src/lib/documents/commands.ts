@@ -1,6 +1,6 @@
 import {registerCommand} from '../commandRegistry';
 import {getDocumentsState,patchDocuments,stepZoom} from './store';
-import {redoEdit,setAlign,setParagraphStyle,toggleList,shiftListLevel,stepFontSize,stepIndent,toggleFormat,undoEdit,editTable,insertTable,setHeaderFooter,insertImage,resizeImageToPercent,setImageAlt,removeImage,setColumnWidth,styleTable} from './session';
+import {redoEdit,setAlign,setParagraphStyle,toggleList,clearList,shiftListLevel,stepFontSize,stepIndent,toggleFormat,undoEdit,editTable,insertTable,setHeaderFooter,insertImage,resizeImageToPercent,setImageAlt,removeImage,setColumnWidth,styleTable} from './session';
 import {findMedia} from '../media';
 import {tableStyleProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGE_BYTES,MIN_COL_PT,MAX_COL_PT} from './protocol';
 import {CELL_BASE} from './edit';
@@ -41,6 +41,10 @@ export function registerDocumentsCommands(){
   add('documents.style.heading2','Apply Heading 2',async()=>{await setParagraphStyle('Heading2');},()=>ready()&&!!getDocumentsState().caret),
   add('documents.style.heading3','Apply Heading 3',async()=>{await setParagraphStyle('Heading3');},()=>ready()&&!!getDocumentsState().caret),
   add('documents.style.title','Apply Title style',async()=>{await setParagraphStyle('Title');},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.style.subtitle','Apply Subtitle style',async()=>{await setParagraphStyle('Subtitle');},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.style.heading4','Apply Heading 4',async()=>{await setParagraphStyle('Heading4');},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.style.quote','Apply Quote style',async()=>{await setParagraphStyle('Quote');},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.list.clear','Remove list',async()=>{await clearList();},()=>ready()&&!!getDocumentsState().caret),
   add('documents.list.bullet','Toggle bulleted list',async()=>{await toggleList('bullet');},()=>ready()&&!!getDocumentsState().caret),
   add('documents.list.numbered','Toggle numbered list',async()=>{await toggleList('numbered');},()=>ready()&&!!getDocumentsState().caret),
   add('documents.list.indent','Demote list item',async()=>{await shiftListLevel(1);},()=>ready()&&!!getDocumentsState().caret),
