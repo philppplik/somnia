@@ -282,7 +282,16 @@ test('survey: selected photos render side by side, clicking picks one (light and
   await expect.poll(()=>painted('strip-1.png')).toBe(true); // the developed frame actually painted
   await expect.poll(()=>painted('strip-3.png')).toBe(true);
   await page.screenshot({path:`test-results/ds-photos-survey-${theme}.png`,fullPage:true});
-  await page.getByTestId('photos-survey-item-strip-3.png').click();
+  await page.evaluate(async()=>{const m=await import('/src/lib/photos/ratings.ts');m.setRating('strip-3.png',0);}); // the other leg's rating persists via localStorage
+  await page.getByTestId('photos-survey-strip-3.png-rating-star-4').click(); // rate inside the survey
+  await expect(page.getByTestId('photos-filmstrip-rating-badge-strip-3.png')).toHaveText('4'); // same store as the strip
+  await page.getByTestId('photos-survey-reject-flag-strip-1.png').click();
+  await expect(page.getByTestId('photos-filmstrip-flag-strip-1.png')).toHaveAttribute('data-flag','reject');
+  await page.getByTestId('photos-survey-pick-flag-strip-1.png').click(); // pick replaces reject
+  await expect(page.getByTestId('photos-filmstrip-flag-strip-1.png')).toHaveAttribute('data-flag','pick');
+  await page.getByTestId('photos-survey-pick-flag-strip-1.png').click(); // toggles off
+  await expect(page.getByTestId('photos-survey-pick-flag-strip-1.png')).toHaveAttribute('aria-pressed','false');
+  await page.getByTestId('photos-survey-pick-strip-3.png').click();
   await expect(page.getByTestId('photos-survey')).toHaveCount(0); // pick closes the survey
   await expect(page.getByTestId('photos-name')).toHaveText('strip-3.png');
   await page.getByTestId('photos-filmstrip-survey').click();

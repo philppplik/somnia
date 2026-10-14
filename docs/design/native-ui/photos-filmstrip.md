@@ -168,3 +168,19 @@ Coverage: `photos-filmstrip.spec.ts` gains a light/dark leg that
 rejects the middle photo, arms the button (photo still there,
 confirm-state screenshot), executes (thumbnail gone, position readout
 "/ 2", button disappears with no rejects left).
+
+## Culling inside the survey (P89)
+
+Each survey cell now carries the same culling controls as the
+filmstrip: a five-star rating row and pick/reject flag buttons below
+the name, writing to the same `ratings`/`flags` stores as the
+filmstrip, so the badges on the strip update live while the survey is
+open. Picking a photo moved from the whole cell to the canvas itself
+(a ghost `Button` with a per-photo test id), keeping one click to
+activate and close.
+
+Coverage: the survey leg in `photos-filmstrip.spec.ts` now clicks the
+new pick target and additionally rates a photo inside the survey
+(filmstrip badge shows the rating) and cycles a reject flag back to
+off. Because ratings persist across the light/dark legs, the leg first
+resets the photo's rating through the `ratings` store before clicking.
