@@ -657,7 +657,7 @@ impl DocSession {
         Ok(())
     }
     /// Table structure edit relative to the cell holding paragraph `block` (a cell id). `op` is `row_above`, `row_below`,
-    /// `delete_row`, `col_left`, `col_right` or `delete_col`. The table is cloned, edited and swapped in, so a refusal
+    /// `delete_row`, `col_left`, `col_right`, `delete_col`, `merge_right` or `split_cell`. The table is cloned, edited and swapped in, so a refusal
     /// leaves the document untouched. Block ids of cell paragraphs shift afterwards; the host re-reads `blocks()`.
     fn do_table_edit(&mut self, block: usize, op: &str) -> Result<(), String> {
         use wordcraft_doc::props::VMerge;
@@ -702,6 +702,25 @@ impl DocSession {
                     return Err("columns of a table with merged cells cannot be deleted yet".into());
                 }
                 t2.delete_col(grid_start);
+            }
+            "merge_right" => {
+                let cells = &t2.rows[r].cells;
+                if c + 1 >= cells.len() {
+                    return Err("there is no cell to the right to merge with".into());
+                }
+                if cells[c].props.vmerge != VMerge::None || cells[c + 1].props.vmerge != VMerge::None {
+                    return Err("cells that are merged vertically cannot be merged yet".into());
+                }
+                t2.merge_right(r, c, c + 1);
+            }
+            "split_cell" => {
+                if t2.rows[r].cells[c].props.vmerge != VMerge::None {
+                    return Err("cells that are merged vertically cannot be split yet".into());
+                }
+                if span < 2 {
+                    return Err("only a merged cell can be split".into());
+                }
+                t2.split_cell(r, c, 2);
             }
             _ => return Err(format!("unknown table operation {op}")),
         }
@@ -967,6 +986,22 @@ mod tests {
         assert!(s.do_table_edit(0, "row_below").is_err());
         assert!(s.do_table_edit(CELL_BASE + 999_999, "row_below").is_err());
         assert!(s.do_table_edit(id, "explode").is_err());
+        // Merge the first two cells of the first row (when it has them) and split them back.
+        let cells_in_row = match &*s.doc.body[first[0]] {
+            Block::Table(t) => t.rows[0].cells.len(),
+            _ => 0,
+        };
+        if cells_in_row >= 2 && matches!(&*s.doc.body[first[0]], Block::Table(t) if t.rows[0].cells[0].span() == 1) {
+            assert!(s.do_table_edit(id, "split_cell").is_err());
+            if s.do_table_edit(id, "merge_right").is_ok() {
+                s.do_table_edit(id, "split_cell").unwrap();
+                match &*s.doc.body[first[0]] {
+                    Block::Table(t) => assert_eq!(t.rows[0].cells.len(), cells_in_row),
+                    _ => panic!(),
+                }
+            }
+        }
+        let now = s.text();
         assert_eq!(now, s.text());
     }
     #[test]

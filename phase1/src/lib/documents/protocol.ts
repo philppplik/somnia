@@ -87,7 +87,7 @@ export const MAX_DOCX_BYTES=16*1024*1024;
 export const MIN_SCALE=0.1,MAX_SCALE=2;
 
 /** Row and column operations around the caret's table cell. */
-export const TABLE_OPS=['row_above','row_below','delete_row','col_left','col_right','delete_col'] as const;
+export const TABLE_OPS=['row_above','row_below','delete_row','col_left','col_right','delete_col','merge_right','split_cell'] as const;
 export type TableOp=typeof TABLE_OPS[number];
 
 /** Bounds of a new table. */

@@ -22,3 +22,10 @@ test('after a delete the nearest remaining cell takes the caret',()=>{
  assert.equal(blockAfterTableEdit('delete_row',{table:1,row:0,cell:0},[]),null);
  assert.equal(blockAfterTableEdit('delete_row',{table:7,row:0,cell:0},grid(2,2)),null);
 });
+
+test('merge and split keep the caret in the same cell',()=>{
+ const at={table:1,row:0,cell:1};
+ assert.deepEqual(wantedCell('merge_right',at),{row:0,cell:1});assert.deepEqual(wantedCell('split_cell',at),{row:0,cell:1});
+ assert.equal(blockAfterTableEdit('merge_right',at,grid(2,2)),CELL_BASE+1);
+ assert.equal(blockAfterTableEdit('merge_right',{table:1,row:0,cell:2},grid(2,2)),CELL_BASE+1);
+});

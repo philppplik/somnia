@@ -2807,6 +2807,17 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.table.merge_right",
+      "title": "Merge with cell on the right",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.table.row_above",
       "title": "Insert row above",
       "category": "View",
@@ -2820,6 +2831,17 @@
     {
       "id": "documents.table.row_below",
       "title": "Insert row below",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.table.split_cell",
+      "title": "Split merged cell",
       "category": "View",
       "source": "documents",
       "keywords": [

@@ -366,3 +366,19 @@ test('insert table: a size preset adds a table after the paragraph, the caret la
  await page.getByTestId('documents-undo').click();await page.getByTestId('documents-undo').click();await page.waitForTimeout(250);
  await expect(page.getByTestId('documents-edit-error')).toHaveCount(0);
 });
+test('table menu: merge a cell with its right neighbour, split it again, undo both',async({page})=>{
+ await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ await openBuffers(page,[{name:'sample.docx',mimeType:DOCX,buffer:sample()}]);
+ await expect(page.getByTestId('documents-pages')).toHaveText('1 pages');
+ const pg=page.getByTestId('documents-page').first();const img=pg.locator('img');
+ await expect.poll(()=>img.evaluate((i:HTMLImageElement)=>i.complete&&i.naturalWidth)).toBeGreaterThan(300);
+ const b2=(await pg.boundingBox())!;await page.mouse.click(b2.x+b2.width*0.15,b2.y+b2.height*0.19);
+ await expect(page.getByTestId('documents-caret')).toHaveCount(1);
+ const menu=page.getByTestId('documents-table-menu');
+ await menu.selectOption('merge_right');await page.waitForTimeout(250);
+ await expect(page.getByTestId('documents-edit-error')).toHaveCount(0);await expect(page.getByTestId('documents-caret')).toHaveCount(1);
+ await menu.selectOption('split_cell');await page.waitForTimeout(250);
+ await expect(page.getByTestId('documents-edit-error')).toHaveCount(0);
+ await menu.selectOption('split_cell');await page.waitForTimeout(250);// an unmerged cell refuses
+ await expect(page.getByTestId('documents-edit-error')).toBeVisible();
+});

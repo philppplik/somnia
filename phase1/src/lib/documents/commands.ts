@@ -51,6 +51,8 @@ export function registerDocumentsCommands(){
   add('documents.table.delete_row','Delete row',async()=>{await editTable('delete_row');},inCell),
   add('documents.table.col_left','Insert column left',async()=>{await editTable('col_left');},inCell),
   add('documents.table.col_right','Insert column right',async()=>{await editTable('col_right');},inCell),
+  add('documents.table.merge_right','Merge with cell on the right',async()=>{await editTable('merge_right');},inCell),
+  add('documents.table.split_cell','Split merged cell',async()=>{await editTable('split_cell');},inCell),
   add('documents.table.delete_col','Delete column',async()=>{await editTable('delete_col');},inCell),
  ];
  return()=>offs.forEach(f=>f());
