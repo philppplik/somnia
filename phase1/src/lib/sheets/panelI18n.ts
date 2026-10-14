@@ -1,5 +1,11 @@
 import {CATALOGUES} from '../i18n';
 const rows:Record<string,readonly string[]>={
+ "sheets.preview.title":["Review cached selection", "Geladene Auswahl prüfen", "Revisar selección en caché", "Vérifier sélection en cache", "Revisar seleção em cache"],
+ "sheets.preview.boundary":["Private preview of formatted cached cell text. No formula source, new range reads, AI, edits or save.", "Private Vorschau formatierter geladener Zelltexte. Keine Formelquellen, neuen Bereichsreads, KI, Änderungen oder Speicherung.", "Vista privada de texto formateado en caché. Sin fuentes de fórmula, nuevas lecturas, IA, ediciones ni guardado.", "Aperçu privé du texte formaté en cache. Pas de sources de formules, nouvelles lectures, IA, modifications ou sauvegarde.", "Prévia privada do texto formatado em cache. Sem fontes de fórmulas, novas leituras, IA, edições ou salvamento."],
+ "sheets.preview.review":["Review displayed text", "Zelltext prüfen", "Ver texto mostrado", "Voir texte affiché", "Ver texto exibido"],
+ "sheets.preview.unavailable":["Choose up to 100 visible, unmerged cells in the loaded viewport. Hidden/missing/oversized cells block preview.", "Bis 100 sichtbare unverbundene Zellen im geladenen Viewport wählen. Versteckte/fehlende/zu große Zellen blockieren Vorschau.", "Elige hasta 100 celdas visibles sin combinar en vista cargada. Ocultas/faltantes/grandes bloquean vista.", "Choisissez jusqu’à 100 cellules visibles non fusionnées dans la vue chargée. Cachées/manquantes/grandes bloquent aperçu.", "Escolha até 100 células visíveis não mescladas na vista carregada. Ocultas/ausentes/grandes bloqueiam prévia."],
+ "sheets.preview.discard":["Discard preview", "Vorschau verwerfen", "Descartar vista", "Supprimer aperçu", "Descartar prévia"],
+
  'sheets.panel.workbook':['Workbook','Arbeitsmappe','Libro','Classeur','Pasta de trabalho'],
  'sheets.panel.analysis':['Range analysis','Bereichsanalyse','Análisis de rango','Analyse de plage','Análise de intervalo'],
  'sheets.panel.cell':['Cell inspector','Zellinspektor','Inspector de celda','Inspecteur de cellule','Inspetor de célula'],

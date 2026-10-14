@@ -1,4 +1,4 @@
-import {registerSheetsPanelController,type SheetsPanelController} from '../../lib/sheets/panelController';
+import {SheetsSelectionPreview} from './SheetsSelectionPreview';import {previewCachedSheetSelection} from '../../lib/sheets/selectionPreview';import '../../lib/sheets/panelI18n';import {registerSheetsPanelController,type SheetsPanelController} from '../../lib/sheets/panelController';
 import {parsePanelRange,rangeAddress} from '../../lib/sheets/panelModel';
 import {parseAddress,MAX_ROWS,MAX_COLS} from '../../lib/sheets/format';
 import {studioContextStore} from '../../lib/shell/studioContext';
@@ -39,7 +39,7 @@ function Workbook({item}:{item:MediaItem}){
  const [sel,setSelState]=useState(()=>getSheetsSession(item.name)?.url===item.url?getSheetsSession(item.name)!.sel:{row:0,col:0});const setSel=(v:{row:number;col:number})=>{const s=getSheetsSession(item.name);if(s)s.sel=v;setSelState(v);};const [ext,setExt]=useState<{row:number;col:number}|null>(null);const dragging=useRef(false);const [draft,setDraftState]=useState<string|null>(null);const draftRef=useRef<string|null>(null);const formulaRef=useRef<HTMLInputElement>(null);
  const setDraft=(v:string|null)=>{draftRef.current=v;setDraftState(v);};
  const startEdit=(v:string)=>{setDraft(v);requestAnimationFrame(()=>{const el=formulaRef.current;if(el){el.focus();el.setSelectionRange(v.length,v.length);}});};
- const [cells,setCells]=useState<Map<string,ViewCell>>(new Map());const [layout,setLayout]=useState<SheetLayout|null>(null);const [rev,setRev]=useState(0);const [dirty,setDirtyState]=useState(()=>sheetsIsDirty(item.name));const setDirty=(v:boolean)=>{setSheetsDirty(item.name,v);setDirtyState(v);};
+ const [cacheStamp,setCacheStamp]=useState('');const [cells,setCells]=useState<Map<string,ViewCell>>(new Map());const [layout,setLayout]=useState<SheetLayout|null>(null);const [rev,setRev]=useState(0);const [dirty,setDirtyState]=useState(()=>sheetsIsDirty(item.name));const setDirty=(v:boolean)=>{setSheetsDirty(item.name,v);setDirtyState(v);};
  const [notice,setNotice]=useState('');const [view,setView]=useState({w:800,h:400,top:0,left:0});
  const scroller=useRef<HTMLDivElement>(null);
  const fail=useCallback((e:unknown)=>{reportError('sheets.engine',e,{context:{studio:'sheets',file:item.name}});const message=e instanceof Error?e.message:String(e);if(engine.current?.isDisposed){releaseSheetsSession(item.name);setDirtyState(false);}if(engine.current?.isDisposed)setPhase({kind:'error',message});else setNotice(message);},[item.name]);
@@ -58,7 +58,7 @@ function Workbook({item}:{item:MediaItem}){
  useEffect(()=>{if(phase.kind!=='ready'||!engine.current)return;let live=true;const eng=engine.current;const fr=geo.freezeRows,fc=geo.freezeCols;
   // Main window plus the frozen strips, so frozen rows/columns stay painted while scrolling.
   const rects=[win];if(fr>0)rects.push({row:0,col:win.col,rows:fr,cols:win.cols});if(fc>0)rects.push({row:win.row,col:0,rows:win.rows,cols:fc});if(fr>0&&fc>0)rects.push({row:0,col:0,rows:fr,cols:fc});
-  Promise.all(rects.map(w=>eng.view(sheet,w.row,w.col,Math.max(1,Math.min(w.rows,100)),Math.max(1,Math.min(w.cols,60))))).then(rs=>{if(!live)return;const m=new Map<string,ViewCell>();for(const r of rs)for(const c of r.cells)m.set(c.address,c);setCells(m);}).catch(fail);return()=>{live=false;};},[phase,sheet,win,geo,rev,fail]);
+  Promise.all(rects.map(w=>eng.view(sheet,w.row,w.col,Math.max(1,Math.min(w.rows,100)),Math.max(1,Math.min(w.cols,60))))).then(rs=>{if(!live)return;const m=new Map<string,ViewCell>();for(const r of rs)for(const c of r.cells)m.set(c.address,c);setCells(m);setCacheStamp(sheet+':'+rev);}).catch(fail);return()=>{live=false;};},[phase,sheet,win,geo,rev,fail]);
  useEffect(()=>{const el=scroller.current;if(!el)return;const measure=()=>setView(v=>({...v,w:el.clientWidth,h:el.clientHeight}));measure();const ro=new ResizeObserver(measure);ro.observe(el);return()=>ro.disconnect();},[phase.kind]);
  useEffect(()=>{const up=()=>{dragging.current=false;};window.addEventListener('mouseup',up);return()=>window.removeEventListener('mouseup',up);},[]);
  const address=addressOf(sel.row,sel.col);const cur=cells.get(address);
@@ -146,7 +146,8 @@ function Workbook({item}:{item:MediaItem}){
  const restart=()=>{if(original.current)window.location.reload();};
  if(phase.kind==='error')return <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center" role="alert" data-testid="sheets-error"><p className="text-[13px] text-red-600">{phase.message}</p><p className="text-[12px] text-ink-3">{t('sheets.errorHint')}</p>{original.current&&<Button onClick={restart}>{t('sheets.reopen')}</Button>}</div>;
  const names=book?.sheets??[];
- return <section className="canvas-stage flex min-h-0 flex-1 flex-col" aria-label={t('sheets.workbook',{name:item.name})}>
+ let previewRows=null;try{if(phase.kind==='ready'&&draft===null&&layout?.sheet===sheet&&cacheStamp===sheet+':'+rev&&book?.sheets.find(s=>s.index===sheet)?.visibility==='Visible')previewRows=previewCachedSheetSelection(range,layout,cells);}catch{}
+ return <section className="canvas-stage flex min-h-0 flex-1 flex-col" aria-label={t('sheets.workbook',{name:item.name})}><details><summary>{t('sheets.preview.title')}</summary><SheetsSelectionPreview scope={JSON.stringify([item.url,sheet,rev,range,previewRows])} rows={previewRows}/></details>
   <div className="media-bar flex items-center gap-2 border-b border-subtle px-3 py-1.5 text-[12px]">
    <span className="truncate" data-testid="media-name">{item.name}</span><span className="text-ink-3">XLSX, {formatBytes(item.size)}</span>
    {dirty&&<span className="rounded-sm bg-hover px-1.5 text-ink-2" data-testid="sheets-dirty">{t('sheets.edited')}</span>}<span className="flex-1"/>
