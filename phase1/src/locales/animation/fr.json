@@ -979,5 +979,7 @@
  "animation.markers.name": "Nom du repère",
  "animation.markers.rename": "Renommer",
  "animation.markers.rename.hint": "Donner ce nom au repère sous la tête de lecture",
- "cmd.animation.marker.update": "Renommer ou déplacer un repère de temps"
+ "cmd.animation.marker.update": "Renommer ou déplacer un repère de temps",
+ "animation.rig.markers": "Repères aux entrées",
+ "cmd.animation.marker.fromLayers": "Ajouter des repères aux points d’entrée des calques sélectionnés"
 }

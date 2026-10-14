@@ -1755,6 +1755,22 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.marker.fromLayers",
+      "title": "Add markers at the in points of the selected layers",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "cue",
+        "in point",
+        "layer",
+        "marker",
+        "sync",
+        "timing"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.marker.remove",
       "title": "Remove timing marker",
       "category": "Edit",

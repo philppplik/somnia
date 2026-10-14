@@ -979,5 +979,7 @@
  "animation.markers.name": "Markername",
  "animation.markers.rename": "Umbenennen",
  "animation.markers.rename.hint": "Marke am Abspielkopf so benennen",
- "cmd.animation.marker.update": "Zeitmarke umbenennen oder verschieben"
+ "cmd.animation.marker.update": "Zeitmarke umbenennen oder verschieben",
+ "animation.rig.markers": "Marker an Einpunkten",
+ "cmd.animation.marker.fromLayers": "Marker an den Einpunkten der gewählten Ebenen setzen"
 }

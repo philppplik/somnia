@@ -979,5 +979,7 @@
  "animation.markers.name": "Nome do marcador",
  "animation.markers.rename": "Renomear",
  "animation.markers.rename.hint": "Dar este nome ao marcador na posição do cursor",
- "cmd.animation.marker.update": "Renomear ou mover um marcador de tempo"
+ "cmd.animation.marker.update": "Renomear ou mover um marcador de tempo",
+ "animation.rig.markers": "Marcadores nas entradas",
+ "cmd.animation.marker.fromLayers": "Adicionar marcadores nos pontos de entrada das camadas selecionadas"
 }

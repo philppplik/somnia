@@ -540,3 +540,13 @@ test('P174 marker update renames the marker at the playhead or by id, moves it, 
  e({id:'nope',label:'x'});e({id:'m2',label:'two'});e({id:'m2',t:c0.start+c0.duration+f(5)});e({id:'m2',label:'  '});
  s.setView({playhead:c0.start+f(3)});e({label:'x'});
 });
+
+test('P175 markers from layers: one per in point, named after the layer, no duplicates, one undo step',async()=>{
+ const {markerFromLayersSpecs}=await import('./markerFromLayersCommands');const run=markerFromLayersSpecs()[0].run as (p?:unknown)=>unknown;
+ const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'shape',id:'b'});s.dispatch({type:'layer.add',kind:'shape',id:'c'});
+ const c0=findComp(s.document!)!;s.dispatch({type:'layer.timing',layer:'b',inT:c0.start+f(10),outT:c0.start+f(40)});s.dispatch({type:'layer.timing',layer:'c',inT:c0.start+f(10),outT:c0.start+f(40)});
+ const ms=()=>findComp(s.document!)!.markers??[];const before=s.document!;
+ const r=run({layers:['a','b','c']}) as {added:number};assert.equal(r.added,2);assert.deepEqual(ms().map(m=>m.t),[c0.start,c0.start+f(10)]);
+ assert.equal(ms()[1].label,findLayer(findComp(s.document!)!,'c')!.name);s.undo();assert.equal(s.document,before);
+ run({layers:['a','b']});assert.throws(()=>run({layers:['a','b','c']}),(e:any)=>e.expected===true);
+});
