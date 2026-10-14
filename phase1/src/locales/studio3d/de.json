@@ -764,5 +764,9 @@
  "studio3d.hist.delete": "{name} löschen",
  "studio3d.hist.bind": "{name} an {bone} binden",
  "studio3d.hist.weights": "Gewichte von {name}",
- "studio3d.hist.paintWeights": "Gewichte malen"
+ "studio3d.hist.paintWeights": "Gewichte malen",
+ "cmd.studio3d.mesh.simplify": "Ein 3D-Mesh vereinfachen: Vertizes entfernen und dabei Form, UVs und Normalen bewahren",
+ "studio3d.hist.simplify": "{name} vereinfachen",
+ "studio3d.mesh.simplify": "Mesh vereinfachen",
+ "studio3d.mesh.simplifyKeep": "Zu behaltende Vertizes (%)"
 }

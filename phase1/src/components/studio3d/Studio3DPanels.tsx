@@ -692,13 +692,15 @@ function RenderPng(){
 
 /** Mirror, apply scale and merge act on the ticked objects, or on the selected one. Origin to centre is the Pivot group above. */
 function MeshTools(){
- const {t}=useT();const s=useStudio3D();const [copy,setCopy]=useState(true);
+ const {t}=useT();const s=useStudio3D();const [copy,setCopy]=useState(true);const [keepPct,setKeepPct]=useState(50);
  const set=s.marked.length?s.marked:s.selected!=null?[s.selected]:[];const ready=s.status==='ready'&&set.length>0;
  return <fieldset className="m-0 grid gap-2 border-0 p-0" data-testid="studio3d-meshtools"><legend className="text-xs text-ink-3">{t('studio3d.mesh.title')}</legend>
   <div className="flex flex-wrap items-center gap-1">{(['x','y','z'] as const).map(a=><Button key={a} variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.mesh.mirror',{axis:a,copy})}>{t('studio3d.mesh.mirror',{axis:a.toUpperCase()})}</Button>)}</div>
   <label className="flex items-center gap-2 text-xs text-ink-2"><NativeInput type="checkbox" checked={copy} onChange={e=>setCopy(e.currentTarget.checked)}/>{t('studio3d.mesh.copy')}</label>
   <div className="flex flex-wrap gap-1"><Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.mesh.applyScale',{})}>{t('studio3d.mesh.applyScale')}</Button>
    <Button variant="outline" disabled={s.status!=='ready'||set.length<2} onClick={()=>void executeCommand('studio3d.mesh.merge',{})}>{t('studio3d.mesh.merge')}</Button></div>
+  <div className="flex flex-wrap items-center gap-1"><NativeInput type="number" min={5} max={95} step={5} value={keepPct} aria-label={t('studio3d.mesh.simplifyKeep')} className="w-20" onChange={e=>setKeepPct(Math.min(95,Math.max(5,Number(e.currentTarget.value)||50)))}/>
+   <Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.mesh.simplify',{keep:keepPct/100})}>{t('studio3d.mesh.simplify')}</Button></div>
  </fieldset>;
 }
 

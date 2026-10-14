@@ -764,5 +764,9 @@
  "studio3d.hist.delete": "Supprimer {name}",
  "studio3d.hist.bind": "Lier {name} à {bone}",
  "studio3d.hist.weights": "Poids de {name}",
- "studio3d.hist.paintWeights": "Peindre les poids"
+ "studio3d.hist.paintWeights": "Peindre les poids",
+ "cmd.studio3d.mesh.simplify": "Simplifier un maillage 3D : retirer des sommets en gardant sa forme, ses UV et ses normales",
+ "studio3d.hist.simplify": "Simplifier {name}",
+ "studio3d.mesh.simplify": "Simplifier le maillage",
+ "studio3d.mesh.simplifyKeep": "Sommets à conserver (%)"
 }

@@ -36,6 +36,7 @@ export interface Studio3DController{
  mirrorSelection(axis:MirrorAxis,copy:boolean,ids?:number[]):number[];
  applyScale(ids?:number[]):void;
  mergeSelection(ids?:number[]):number;
+ simplify(id:number,keep:number):Promise<{before:number;after:number;tris:number}>;
  viewPreset(preset:ViewPreset):void;
  setTextureTransform(id:number,slot:TextureSlot,patch:Partial<TextureTransform>|'reset'):void;
  clipAdd(name?:string,duration?:number):number;
@@ -297,6 +298,7 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{axis:MirrorAxis;copy?:boolean;ids?:number[]}>('studio3d.mesh.mirror','Mirror 3D objects across a world axis','Edit',p=>need().mirrorSelection(p.axis,!!p.copy,p.ids),object({axis:{enum:['x','y','z']},copy:{type:'boolean'},ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500}},['axis']),hasScene),
   add<{ids?:number[]}>('studio3d.mesh.applyScale','Apply the scale of 3D meshes to their geometry','Edit',p=>need().applyScale(p?.ids),object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500}},[]),hasScene),
   add<{ids?:number[]}>('studio3d.mesh.merge','Merge 3D meshes into one','Edit',p=>need().mergeSelection(p?.ids),object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:2,maxItems:500}},[]),hasScene),
+  add<{id?:number;keep:number}>('studio3d.mesh.simplify','Simplify a 3D mesh: remove vertices while keeping its shape, UVs and normals','Edit',async p=>{const id=p.id??getStudio3DState().selected;if(id==null)throw new Error('Select an object first.');return need().simplify(id,p.keep);},object({id:{type:'integer',minimum:0},keep:{type:'number',exclusiveMinimum:0,exclusiveMaximum:1}},['keep']),hasScene),
   add<{preset:ViewPreset}>('studio3d.view.preset','Look at the 3D scene from the front, back, left, right, top, bottom or an isometric angle','View',p=>need().viewPreset(p.preset),object({preset:{enum:[...VIEW_PRESETS]}}),hasScene),
   add<{id?:number;slot:TextureSlot;reset?:boolean}&Partial<TextureTransform>>('studio3d.texture.transform','Move, scale or rotate the image of a texture slot (UV mapping)','Edit',p=>{const{id,slot,reset,...patch}=p;need().setTextureTransform(id??getStudio3DState().selected??-1,slot,reset?'reset':patch);},object({id:{type:'integer',minimum:0},slot:{enum:[...TEXTURE_SLOTS]},reset:{type:'boolean'},offsetX:{type:'number',minimum:-100,maximum:100},offsetY:{type:'number',minimum:-100,maximum:100},scaleX:{type:'number'},scaleY:{type:'number'},rotation:{type:'number',minimum:-360,maximum:360}},['slot']),()=>hasScene()&&getStudio3DState().selectedInfo?.material!=null),
   add<{clip?:number}>('studio3d.anim.play','Play an animation clip of the 3D model','View',p=>need().animPlay(p?.clip),object({clip:{type:'integer',minimum:0}},[]),hasClips),

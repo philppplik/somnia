@@ -764,5 +764,9 @@
  "studio3d.hist.delete": "Delete {name}",
  "studio3d.hist.bind": "Bind {name} to {bone}",
  "studio3d.hist.weights": "Weights of {name}",
- "studio3d.hist.paintWeights": "Paint weights"
+ "studio3d.hist.paintWeights": "Paint weights",
+ "cmd.studio3d.mesh.simplify": "Simplify a 3D mesh: remove vertices while keeping its shape, UVs and normals",
+ "studio3d.hist.simplify": "Simplify {name}",
+ "studio3d.mesh.simplify": "Simplify mesh",
+ "studio3d.mesh.simplifyKeep": "Vertices to keep (%)"
 }

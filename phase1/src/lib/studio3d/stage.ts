@@ -2,6 +2,7 @@ import {readPin,pinText} from './pins';
 import {PRIMITIVE_KINDS,PrimitiveError,defaultParams,patchParams,readPrimitive,resolveMaterial,MATERIAL_PRESETS,type PrimitiveKind,type PrimitiveData,type PrimitiveParams,type MaterialRequest} from './primitives';
 import * as THREE from 'three';
 import {mergeGeometries} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import {SimplifyModifier} from 'three/examples/jsm/modifiers/SimplifyModifier.js';
 import {clone as skeletonClone} from 'three/examples/jsm/utils/SkeletonUtils.js';
 import {checkPbr,alphaState,alphaModeOf,MaterialError,SLOT_CONFIG,TEXTURE_SLOTS,type PbrExtras,type AlphaMode,type TextureSlot} from './materials';
 import type {NodeExtra} from './document';
@@ -1732,6 +1733,25 @@ export class Stage{
   this.push({label:{key:'studio3d.hist.mergeMeshes',params:{count:meshes.length}},undo:()=>{this.root.remove(result);for(const i of items)this.attach0(i.o,i.parent,i.at);owned=false;},redo:()=>{for(const i of [...items].reverse())i.parent.remove(i.o);this.attach0(result,this.root,this.root.children.length);owned=true;},
    release:()=>{if(owned)for(const i of items)disposeObject(i.o);else disposeObject(result);}});
   return result;
+ }
+ /** Simplifies a mesh with the meshopt simplifier: removes roughly the given fraction of vertices while keeping shape, UVs and normals. Primitive params and UV seam marks do not survive the new topology and are cleared. One undo step. */
+ async simplify(id:number,keep:number):Promise<{before:number;after:number;tris:number}>{
+  if(this.editId!=null)throw new StageError('Leave edit mode before simplifying.');
+  const o=this.need(id);if(!(o instanceof THREE.Mesh))throw new StageError('Only meshes can be simplified.');
+  const k=finite(keep,'keep');if(k<=0||k>=1)throw new StageError('keep must be between 0 and 1 (exclusive).');
+  const before=o.geometry;const verts=before.getAttribute('position').count;
+  if(verts>250000)throw new StageError('This mesh is too large to simplify (over 250,000 vertices).');
+  const remove=verts-Math.max(4,Math.round(verts*k));
+  if(remove<1)throw new StageError('This keep ratio removes nothing on such a small mesh; lower it.');
+  const after=await new SimplifyModifier().modify(before.clone(),remove);
+  const tris=Math.floor((after.getIndex()?after.getIndex()!.count:after.getAttribute('position').count)/3);
+  if(tris<1)throw new StageError('Simplifying this far would remove the whole mesh; raise the keep ratio.');
+  const beforeData=o.userData.somniaPrimitive;const seams0=this.seamsOf(o);
+  let owned=true;
+  const set=(g:THREE.BufferGeometry,param:unknown,seams:[number,number][])=>{o.geometry=g;if(param===undefined)delete o.userData.somniaPrimitive;else o.userData.somniaPrimitive=param;this.setSeams(o,seams);};
+  set(after,undefined,[]);
+  this.push({label:{key:'studio3d.hist.simplify',params:{name:o.name}},undo:()=>{set(before,beforeData,seams0);owned=false;},redo:()=>{set(after,undefined,[]);owned=true;},release:()=>{(owned?before:after).dispose();}});
+  return {before:verts,after:after.getAttribute('position').count,tris};
  }
  /** Shows or hides an object. A hidden parent hides its whole subtree. One undo step. */
  setHidden(id:number,hidden:boolean){

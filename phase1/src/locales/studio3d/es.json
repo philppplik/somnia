@@ -764,5 +764,9 @@
  "studio3d.hist.delete": "Eliminar {name}",
  "studio3d.hist.bind": "Vincular {name} a {bone}",
  "studio3d.hist.weights": "Pesos de {name}",
- "studio3d.hist.paintWeights": "Pintar pesos"
+ "studio3d.hist.paintWeights": "Pintar pesos",
+ "cmd.studio3d.mesh.simplify": "Simplificar una malla 3D: quitar vértices manteniendo su forma, UV y normales",
+ "studio3d.hist.simplify": "Simplificar {name}",
+ "studio3d.mesh.simplify": "Simplificar malla",
+ "studio3d.mesh.simplifyKeep": "Vértices a conservar (%)"
 }
