@@ -962,5 +962,9 @@
  "studio3d.edit.shear": "Scheren",
  "cmd.studio3d.edit.flipEdge": "Ausgewählte Kanten zwischen zwei Dreiecken auf die andere Diagonale drehen",
  "studio3d.edit.flipEdge": "Kante drehen",
- "studio3d.hist.editFlipEdge": "Kanten drehen"
+ "studio3d.hist.editFlipEdge": "Kanten drehen",
+ "cmd.studio3d.edit.mergeByDistance": "Ausgewählte Vertices innerhalb des angegebenen Abstands verschmelzen",
+ "studio3d.edit.mergeByDistance": "Nach Abstand verschmelzen",
+ "studio3d.hist.editMergeByDistance": "Nach Abstand verschmelzen",
+ "studio3d.edit.mergeDist": "Verschmelzabstand"
 }

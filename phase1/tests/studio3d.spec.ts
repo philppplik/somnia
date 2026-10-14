@@ -1142,6 +1142,21 @@ test('mesh edit mode: flip edge rotates a shared edge to the other diagonal',asy
  await expect(page.getByRole('alert')).toContainText('can be flipped');
 });
 
+test('mesh edit mode: merge by distance welds selected doubles, keeps UV seams',async({page})=>{
+ await blank(page);
+ const id=await insert(page,'cube',0);
+ expect(await run(page,'studio3d.edit.start',{id,mode:'vertex'})).toBe(true);
+ expect(await run(page,'studio3d.edit.mergeByDistance',{distance:0.001})).toBe(false);
+ await expect(page.getByRole('alert')).toContainText('Select vertices to merge');
+ expect(await run(page,'studio3d.edit.selectAll',{op:'all'})).toBe(true);
+ expect(await run(page,'studio3d.edit.mergeByDistance',{distance:0.001})).toBe(true);
+ let s=await session(page);expect(s.stats.triangles).toBe(12);
+ await run(page,'studio3d.undo');
+ s=await session(page);expect(s.stats.triangles).toBe(12);
+ expect(await run(page,'studio3d.edit.mergeByDistance',{distance:0})).toBe(false);
+ await expect(page.getByRole('alert')).toContainText('positive');
+});
+
 test('mesh edit mode: weld merges selected vertices at their centre, undo restores them',async({page})=>{
  await blank(page);
  const id=await insert(page,'cube',0);

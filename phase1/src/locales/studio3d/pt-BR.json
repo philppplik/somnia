@@ -962,5 +962,9 @@
  "studio3d.edit.shear": "Cisalhar",
  "cmd.studio3d.edit.flipEdge": "Rotacionar cada aresta selecionada compartilhada por dois triângulos para a outra diagonal",
  "studio3d.edit.flipEdge": "Virar aresta",
- "studio3d.hist.editFlipEdge": "Virar arestas"
+ "studio3d.hist.editFlipEdge": "Virar arestas",
+ "cmd.studio3d.edit.mergeByDistance": "Soldar os vértices selecionados dentro da distância indicada",
+ "studio3d.edit.mergeByDistance": "Combinar por distância",
+ "studio3d.hist.editMergeByDistance": "Combinar por distância",
+ "studio3d.edit.mergeDist": "Distância de combinação"
 }

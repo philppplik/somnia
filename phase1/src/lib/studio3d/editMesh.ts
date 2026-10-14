@@ -377,6 +377,60 @@ export function weldSelected(m:MeshData,verts:number[]):MeshData{
  if(m.uvs)out.uvs=m.uvs;
  return out;
 }
+/** Welds selected vertices whose positions (and UVs, when present, so UV seams survive) lie within `distance` of each other onto the first occurrence; unselected vertices are never welded. Drops collapsed and duplicate faces plus unreferenced vertices, unifies winding per connected part and flips inside-out closed parts. Drops the sculpt mask like every topology-changing op. Fails when no selected pair is within the distance. */
+export function mergeByDistanceSelected(m:MeshData,verts:number[],distance:number):MeshData{
+ check(m);
+ if(!verts.length)throw new EditError('Select vertices to merge.');
+ if(!Number.isFinite(distance)||distance<=0||distance>1e6)throw new EditError('The merge distance must be a positive number.');
+ const nv=m.positions.length/3;
+ for(const v of verts){if(!Number.isInteger(v)||v<0||v>=nv)throw new EditError(`Vertex ${v} does not exist.`);}
+ const positions=[...m.positions];const uvs=m.uvs?[...m.uvs]:undefined;
+ const sel=new Set(verts);
+ const grid=new Map<string,number[]>();
+ const map=new Array<number>(nv);
+ for(let i=0;i<nv;i++){
+  if(!sel.has(i)){map[i]=i;continue;}
+  const x=positions[i*3],y=positions[i*3+1],z=positions[i*3+2];
+  const cx=Math.floor(x/distance),cy=Math.floor(y/distance),cz=Math.floor(z/distance);
+  let found=-1;
+  for(let dx=-1;dx<=1&&found<0;dx++)for(let dy=-1;dy<=1&&found<0;dy++)for(let dz=-1;dz<=1&&found<0;dz++){
+   const bucket=grid.get(`${cx+dx}_${cy+dy}_${cz+dz}`);
+   if(!bucket)continue;
+   for(const j of bucket){
+    const ddx=positions[j*3]-x,ddy=positions[j*3+1]-y,ddz=positions[j*3+2]-z;
+    if(ddx*ddx+ddy*ddy+ddz*ddz>distance*distance)continue;
+    if(uvs&&(Math.abs(uvs[j*2]-uvs[i*2])>1e-6||Math.abs(uvs[j*2+1]-uvs[i*2+1])>1e-6))continue;
+    found=j;break;
+   }
+  }
+  if(found<0){found=i;const k=`${cx}_${cy}_${cz}`;const b=grid.get(k);if(b)b.push(i);else grid.set(k,[i]);}
+  map[i]=found;
+ }
+ const welded=[...sel].filter(i=>map[i]!==i).length;
+ if(!welded)throw new EditError('No selected vertices are within the merge distance.');
+ let index=[...m.index].map(i=>map[i]);
+ const seen=new Set<string>();const kept:number[]=[];
+ for(let f=0;f<index.length;f+=3){
+  const a=index[f],b=index[f+1],c=index[f+2];
+  if(a===b||b===c||a===c)continue;
+  const k=[a,b,c].sort((p,q)=>p-q).join('_');
+  if(seen.has(k))continue;
+  seen.add(k);kept.push(a,b,c);
+ }
+ if(!kept.length)throw new EditError('The merge would leave no triangle.');
+ index=kept;
+ const used=[...new Set(index)].sort((a,b)=>a-b);
+ const remap=new Map<number,number>();const np:number[]=[];const nuv:number[]|undefined=uvs?[]:undefined;
+ for(const i of used){
+  remap.set(i,np.length/3);
+  np.push(positions[i*3],positions[i*3+1],positions[i*3+2]);
+  if(nuv)nuv.push(uvs![i*2],uvs![i*2+1]);
+ }
+ index=index.map(i=>remap.get(i)!);
+ const w=unifyWinding(np,index);
+ const out:MeshData=nuv?{positions:np,index:w.index,uvs:nuv}:{positions:np,index:w.index};
+ check(out);return out;
+}
 /** Rotates each selected edge shared by exactly two triangles to the other diagonal of the quad (Blender Rotate Edge). Boundary, non-manifold, folded or degenerate-result edges are skipped; if none of the selected edges can flip the op fails. Vertices are unchanged, so UVs and masks are carried. */
 export function flipEdges(m:MeshData,edges:[number,number][]):MeshData{
  if(!edges.length)throw new EditError('Select edges to flip.');

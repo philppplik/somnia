@@ -7314,6 +7314,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.edit.mergeByDistance",
+      "title": "Weld the selected vertices that lie within the given distance",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.edit.mode",
       "title": "Edit select mode",
       "category": "Edit",

@@ -962,5 +962,9 @@
  "studio3d.edit.shear": "Shear",
  "cmd.studio3d.edit.flipEdge": "Rotate each selected edge shared by two triangles to the other diagonal",
  "studio3d.edit.flipEdge": "Flip edge",
- "studio3d.hist.editFlipEdge": "Flip edges"
+ "studio3d.hist.editFlipEdge": "Flip edges",
+ "cmd.studio3d.edit.mergeByDistance": "Weld the selected vertices that lie within the given distance",
+ "studio3d.edit.mergeByDistance": "Merge by distance",
+ "studio3d.hist.editMergeByDistance": "Merge by distance",
+ "studio3d.edit.mergeDist": "Merge distance"
 }

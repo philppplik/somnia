@@ -962,5 +962,9 @@
  "studio3d.edit.shear": "Cisailler",
  "cmd.studio3d.edit.flipEdge": "Pivoter chaque arête sélectionnée partagée par deux triangles vers l’autre diagonale",
  "studio3d.edit.flipEdge": "Retourner l’arête",
- "studio3d.hist.editFlipEdge": "Retourner les arêtes"
+ "studio3d.hist.editFlipEdge": "Retourner les arêtes",
+ "cmd.studio3d.edit.mergeByDistance": "Souder les sommets sélectionnés situés dans la distance indiquée",
+ "studio3d.edit.mergeByDistance": "Fusionner par distance",
+ "studio3d.hist.editMergeByDistance": "Fusion par distance",
+ "studio3d.edit.mergeDist": "Distance de fusion"
 }

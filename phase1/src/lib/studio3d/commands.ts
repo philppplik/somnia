@@ -144,6 +144,7 @@ export interface Studio3DController{
  editSelectSimilar(degrees?:number):void;
  editShear(along:'x'|'y'|'z',by:'x'|'y'|'z',factor:number):void;
  editFlipEdge():void;
+ editMergeByDistance(distance:number):void;
  editExtrude(offset:number):void;
  editInset(amount:number):void;
  editBevel(width:number):void;
@@ -333,6 +334,7 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{x?:number;y?:number;z?:number}>('studio3d.edit.move','Move the selected vertices of the edited 3D mesh by an offset','Edit',p=>need().editMove([p?.x??0,p?.y??0,p?.z??0]),object({x:{type:'number',minimum:-1000000,maximum:1000000},y:{type:'number',minimum:-1000000,maximum:1000000},z:{type:'number',minimum:-1000000,maximum:1000000}},[]),()=>getStudio3DState().edit!=null),
   add('studio3d.edit.rip','Rip the selected faces of the edited 3D mesh off the rest by duplicating the shared vertices','Edit',()=>need().editRip(),undefined,()=>getStudio3DState().edit!=null),
   add('studio3d.edit.separate','Split the selected faces of the edited 3D mesh out into a new object','Edit',()=>need().editSeparate(),undefined,()=>getStudio3DState().edit!=null),
+  add<{distance?:number}>('studio3d.edit.mergeByDistance','Weld the selected vertices of the edited 3D mesh that lie within the given distance','Edit',p=>need().editMergeByDistance(p?.distance??0.001),object({distance:{type:'number',exclusiveMinimum:0,maximum:1000000}},[]),()=>getStudio3DState().edit!=null),
   add('studio3d.edit.flipEdge','Rotate each selected edge of the edited 3D mesh shared by two triangles to the other diagonal','Edit',()=>need().editFlipEdge(),undefined,()=>getStudio3DState().edit!=null),
   add<{along?:'x'|'y'|'z';by?:'x'|'y'|'z';factor?:number}>('studio3d.edit.shear','Shear the selected vertices of the edited 3D mesh along one axis by their position on another','Edit',p=>need().editShear(p?.along??'x',p?.by??'y',p?.factor??0.5),object({along:{enum:['x','y','z']},by:{enum:['x','y','z']},factor:{type:'number',minimum:-1000000,maximum:1000000}},[]),()=>getStudio3DState().edit!=null),
   add<{degrees?:number}>('studio3d.edit.selectSimilar','Select faces of the edited 3D mesh whose normal is within the given angle of the current selection','Edit',p=>need().editSelectSimilar(p?.degrees??15),object({degrees:{type:'number',minimum:0,maximum:180}},[]),()=>getStudio3DState().edit!=null),
