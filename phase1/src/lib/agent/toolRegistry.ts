@@ -43,14 +43,15 @@ export interface AgentToolGrants {
 }
 export class AgentToolRegistry {
   private readonly tools = new Map<string, AgentToolSpec>();
-  constructor(private readonly options: { allowExecute?: boolean } = {}) {}
+  private readonly allowExecute:boolean;
+  constructor(options: { allowExecute?: boolean } = {}) {this.allowExecute=options.allowExecute===true;}
   register(spec: AgentToolSpec): this {
     const n = spec.definition.name;
     if (!NAME.test(n)) throw Error('Invalid tool name.');
     if (this.tools.has(n)) throw Error(`Tool already registered: ${n}`);
     if (!['read', 'propose', 'execute'].includes(spec.level)) throw Error('Invalid tool level.');
-    if (spec.level === 'execute' && !this.options.allowExecute) throw Error('Execute-level tools are not enabled.');
-    this.tools.set(n, spec);
+    if (spec.level === 'execute' && !this.allowExecute) throw Error('Execute-level tools are not enabled.');
+    this.tools.set(n, {definition:structuredClone(spec.definition),level:spec.level,run:spec.run});
     return this;
   }
   /** Removes a tool. Used by the command bridge when a spec is unregistered. */
@@ -61,7 +62,7 @@ export class AgentToolRegistry {
     return (g.levels ?? ['read', 'propose']).includes(spec.level) && !g.disabled?.includes(spec.definition.name);
   }
   definitions(g: AgentToolGrants = {}): AgentToolDefinition[] {
-    return [...this.tools.values()].filter(s => this.enabled(s, g)).map(s => s.definition);
+    return [...this.tools.values()].filter(s => this.enabled(s, g)).map(s => structuredClone(s.definition));
   }
   hashes(g: AgentToolGrants = {}): Record<string, string> {
     return Object.fromEntries(this.definitions(g).map(d => [d.name, toolSchemaHash(d)]));
