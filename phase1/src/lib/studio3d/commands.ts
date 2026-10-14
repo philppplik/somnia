@@ -38,6 +38,9 @@ export interface Studio3DController{
  setSnap(patch:Partial<SnapSettings>):void;
  renderStill(opts?:RenderOptions):Promise<void>;
  exportGlb():Promise<void>;
+ save(sidecar?:boolean):Promise<void>;
+ deleteSelection(ids?:number[]):void;
+ duplicateSelection(ids?:number[]):number[];
  exportMesh(format:Exclude<ExportFormat,'glb'>):Promise<void>;
  setUnit(unit:ExportUnit):void;
  renderTurntable(opts?:TurntableOptions):Promise<void>;
@@ -88,6 +91,9 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<Partial<SnapSettings>>('studio3d.snap.set','Change 3D transform snapping','Tools',p=>need().setSnap(p&&Object.keys(p).length?p:{on:!getStudio3DState().snap.on}),object({on:{type:'boolean'},move:{type:'number',minimum:0.001,maximum:100},rotate:{type:'number',minimum:1,maximum:180},scale:{type:'number',minimum:0.001,maximum:10}},[]),()=>!!controller),
   add<RenderOptions>('studio3d.render.still','Render a PNG still of the 3D view or a 3D camera','Project',p=>need().renderStill(p??{}),object({camera:{type:'integer',minimum:0},width:{type:'integer',minimum:1,maximum:16384},height:{type:'integer',minimum:1,maximum:16384},transparent:{type:'boolean'}},[])),
   add('studio3d.export.glb','Export the scene as GLB','Project',()=>need().exportGlb()),
+  add<{sidecar?:boolean}>('studio3d.save','Save the 3D scene','Project',p=>need().save(!!p?.sidecar),object({sidecar:{type:'boolean'}},[]),hasScene),
+  add<{ids?:number[]}>('studio3d.selection.delete','Delete the selected 3D objects','Edit',p=>need().deleteSelection(p?.ids),object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500}},[]),hasScene),
+  add<{ids?:number[]}>('studio3d.selection.duplicate','Duplicate the selected 3D objects','Edit',p=>need().duplicateSelection(p?.ids),object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500}},[]),hasScene),
   add<{format:'stl'|'obj'}>('studio3d.export.mesh','Export the scene as STL or OBJ','Project',p=>need().exportMesh(p.format),object({format:{enum:['stl','obj']}}),hasScene),
   add<{unit:ExportUnit}>('studio3d.unit.set','Set the unit used for STL and OBJ export','Project',p=>need().setUnit(p.unit),object({unit:{enum:['m','cm','mm','in']}}),()=>!!controller),
   add<TurntableOptions>('studio3d.render.turntable','Render a turntable as a ZIP of PNG frames','Project',p=>need().renderTurntable(p??{}),object({frames:{type:'integer',minimum:2,maximum:360},width:{type:'integer',minimum:1,maximum:8192},height:{type:'integer',minimum:1,maximum:8192},transparent:{type:'boolean'}},[]),hasScene),

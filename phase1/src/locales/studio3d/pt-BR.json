@@ -155,5 +155,14 @@
  "cmd.studio3d.export.mesh": "Exportar a cena como STL ou OBJ",
  "cmd.studio3d.unit.set": "Definir a unidade da exportação STL e OBJ",
  "cmd.studio3d.render.turntable": "Renderizar um giro como ZIP de quadros PNG",
- "cmd.studio3d.render.cancel": "Cancelar o render 3D em andamento"
+ "cmd.studio3d.render.cancel": "Cancelar o render 3D em andamento",
+ "studio3d.save.title": "Arquivo da cena",
+ "studio3d.save.one": "Salvar cena (.som3d)",
+ "studio3d.save.sidecar": "Salvar com GLB separado",
+ "studio3d.save.note": "Salva objetos, materiais, luzes, câmeras, unidade, ambiente, encaixe e vista. Para reabrir uma cena com GLB separado, selecione os dois arquivos.",
+ "studio3d.selection.duplicate": "Duplicar seleção",
+ "studio3d.selection.delete": "Excluir seleção",
+ "cmd.studio3d.save": "Salvar a cena 3D",
+ "cmd.studio3d.selection.delete": "Excluir os objetos 3D selecionados",
+ "cmd.studio3d.selection.duplicate": "Duplicar os objetos 3D selecionados"
 }

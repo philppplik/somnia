@@ -146,6 +146,11 @@ export function ToolsSection(_:InspectorSectionProps){
    <NumField label={t('studio3d.snap.scale')} value={sn.scale} min={0.001} max={10} step={0.05} onCommit={v=>void executeCommand('studio3d.snap.set',{scale:v})}/></div>
   <fieldset className="m-0 grid gap-1 border-0 p-0"><legend className="text-xs text-ink-3">{t('studio3d.pivot.title')}</legend>
    <div className="flex gap-1">{(['center','base'] as const).map(at=><Button key={at} variant="outline" disabled={s.selectedInfo?.kind!=='mesh'} onClick={()=>void executeCommand('studio3d.object.pivot',{id:s.selected,at})}>{t('studio3d.pivot.'+at)}</Button>)}</div></fieldset>
+  <fieldset className="m-0 grid gap-2 border-0 p-0" data-testid="studio3d-save"><legend className="text-xs text-ink-3">{t('studio3d.save.title')}</legend>
+   <div className="flex flex-wrap gap-1"><Button variant="outline" disabled={s.status!=='ready'} onClick={()=>void executeCommand('studio3d.save',{})}>{t('studio3d.save.one')}</Button>
+    <Button variant="outline" disabled={s.status!=='ready'} onClick={()=>void executeCommand('studio3d.save',{sidecar:true})}>{t('studio3d.save.sidecar')}</Button></div>
+   <p className="m-0 text-xs text-ink-3">{t('studio3d.save.note')}</p>
+  </fieldset>
   <fieldset className="m-0 grid gap-2 border-0 p-0" data-testid="studio3d-export"><legend className="text-xs text-ink-3">{t('studio3d.export.title')}</legend>
    <label className="grid gap-1 text-xs text-ink-2">{t('studio3d.export.unit')}
     <select className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={s.unit} aria-label={t('studio3d.export.unit')} onChange={e=>void executeCommand('studio3d.unit.set',{unit:e.currentTarget.value})}>
@@ -164,6 +169,8 @@ export function ToolsSection(_:InspectorSectionProps){
   </fieldset>
   <fieldset className="m-0 grid gap-1 border-0 p-0" data-testid="studio3d-align"><legend className="text-xs text-ink-3">{t('studio3d.align.title',{count:n.length})}</legend>
    <p className="m-0 text-xs text-ink-3">{t('studio3d.align.hint')}</p>
+   <div className="flex flex-wrap gap-1"><Button variant="outline" disabled={n.length<2} onClick={()=>void executeCommand('studio3d.selection.duplicate',{ids:n})}>{t('studio3d.selection.duplicate')}</Button>
+    <Button variant="outline" disabled={n.length<2} onClick={()=>void executeCommand('studio3d.selection.delete',{ids:n})}>{t('studio3d.selection.delete')}</Button></div>
    {(['x','y','z'] as const).map(a=><div key={a} className="flex flex-wrap items-center gap-1" role="group" aria-label={a.toUpperCase()}><span className="w-4 text-xs text-ink-3">{a.toUpperCase()}</span>
     {(['min','center','max'] as const).map(to=><Button key={to} variant="outline" disabled={n.length<2} aria-label={t('studio3d.align.aria',{axis:a.toUpperCase(),to:t('studio3d.align.'+to)})} onClick={()=>align(a,to)}>{t('studio3d.align.'+to)}</Button>)}
     <Button variant="outline" disabled={n.length<3} aria-label={t('studio3d.align.distributeAria',{axis:a.toUpperCase()})} onClick={()=>void executeCommand('studio3d.object.distribute',{ids:n,axis:a})}>{t('studio3d.align.distribute')}</Button></div>)}

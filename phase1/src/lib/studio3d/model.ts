@@ -1,5 +1,5 @@
 /** Pure helpers for the 3D studio. No three.js and no DOM, so they run under tsx --test. */
-export const MODEL_EXTENSIONS=['glb','gltf','obj','stl','ply'] as const;
+export const MODEL_EXTENSIONS=['glb','gltf','obj','stl','ply','som3d'] as const;
 /** Single-file mesh formats. They carry geometry only and are read by the three examples loaders. */
 export const MESH_FORMATS=['obj','stl','ply'] as const;
 export const isMeshFormat=(f:string):f is typeof MESH_FORMATS[number]=>(MESH_FORMATS as readonly string[]).includes(f);
@@ -27,6 +27,11 @@ export function readModelHeader(name:string,bytes:Uint8Array):ModelHeader{
  const isGlbMagic=bytes.byteLength>=12&&view.getUint32(0,true)===GLB_MAGIC;
  const ext=extOf(name);
  if(!isGlbMagic&&isMeshFormat(ext))return readMeshHeader(name,ext,bytes);
+ if(!isGlbMagic&&ext==='som3d'){
+  const head=new TextDecoder('utf-8').decode(bytes.subarray(0,Math.min(bytes.byteLength,4096)));
+  if(!/"format"\s*:\s*"somnia-3d"/.test(head))throw new ModelError(`${name} is not a Somnia 3D scene file.`);
+  return{format:'som3d',version:1,json:{},binOffset:0,binLength:0};
+ }
  if(bytes.byteLength>=12&&view.getUint32(0,true)===GLB_MAGIC){
   const version=view.getUint32(4,true),total=view.getUint32(8,true);
   if(version!==2)throw new ModelError(`${name} is glTF version ${version}. Only version 2 is supported.`);

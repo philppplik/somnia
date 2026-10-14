@@ -20,7 +20,7 @@ export interface ResolveOptions{
  /** Caller accepted the verified-text offer (unknown suffix, valid text). */
  acceptTextOffer?:boolean;
 }
-const EXT_KIND:Record<string,OpenKind>={glb:'model3d',gltf:'model3d',obj:'model3d',stl:'model3d',ply:'model3d',docx:'docx',xlsx:'xlsx',pptx:'pptx',mp3:'audio',wav:'audio',flac:'audio',ogg:'audio',oga:'audio',aif:'audio',aiff:'audio',mp4:'video',m4v:'video',mov:'video',webm:'video',mkv:'video',pdf:'pdf',psd:'psd',png:'image',jpg:'image',jpeg:'image',webp:'image'};
+const EXT_KIND:Record<string,OpenKind>={glb:'model3d',gltf:'model3d',obj:'model3d',stl:'model3d',ply:'model3d',som3d:'model3d',docx:'docx',xlsx:'xlsx',pptx:'pptx',mp3:'audio',wav:'audio',flac:'audio',ogg:'audio',oga:'audio',aif:'audio',aiff:'audio',mp4:'video',m4v:'video',mov:'video',webm:'video',mkv:'video',pdf:'pdf',psd:'psd',png:'image',jpg:'image',jpeg:'image',webp:'image'};
 const KNOWN_TEXT=/^(html?|css|js|jsx|ts|tsx|json|svg|txt|md|markdown|tex|xml|yml|yaml|csv|somdesign)$/;
 const ext=(name:string)=>(name.includes('.')?name.split('.').pop()!:'').toLowerCase();
 /** UTF-16 with BOM counts as text. Otherwise NUL bytes or many control characters mean binary. */

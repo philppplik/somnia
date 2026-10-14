@@ -155,5 +155,14 @@
  "cmd.studio3d.export.mesh": "Export the scene as STL or OBJ",
  "cmd.studio3d.unit.set": "Set the unit used for STL and OBJ export",
  "cmd.studio3d.render.turntable": "Render a turntable as a ZIP of PNG frames",
- "cmd.studio3d.render.cancel": "Cancel the running 3D render"
+ "cmd.studio3d.render.cancel": "Cancel the running 3D render",
+ "studio3d.save.title": "Scene file",
+ "studio3d.save.one": "Save scene (.som3d)",
+ "studio3d.save.sidecar": "Save with separate GLB",
+ "studio3d.save.note": "Saves objects, materials, lights, cameras, units, environment, snapping and view. To reopen a scene with a separate GLB, select both files.",
+ "studio3d.selection.duplicate": "Duplicate selected",
+ "studio3d.selection.delete": "Delete selected",
+ "cmd.studio3d.save": "Save the 3D scene",
+ "cmd.studio3d.selection.delete": "Delete the selected 3D objects",
+ "cmd.studio3d.selection.duplicate": "Duplicate the selected 3D objects"
 }
