@@ -1,7 +1,10 @@
 import {pathData} from './vector';
 import {parseInterfaceDocument,serializeInterfaceDocument,type InterfaceDocument} from './model';
+import type {InterfaceNode,InterfaceTextStyle} from './schema';
 import {computeInterfaceLayout} from './layout';
 import {resolveInterfaceValues,resolvedTextStyle} from './tokens';
+const textRenderLines=(n:InterfaceNode)=>{let lines=(n.text??'').split('\n');if(n.maxLines!==undefined&&lines.length>n.maxLines){lines=lines.slice(0,n.maxLines);lines[lines.length-1]+='\u2026';}return lines;};
+const renderInterfaceText=(n:InterfaceNode,b:{width:number;height:number},style:InterfaceTextStyle)=>{const line=style.fontSize*style.lineHeight,gap=style.paragraphSpacing??0,indent=n.list?style.fontSize*1.5:0,stretch=style.fontStretch?` font-stretch="${style.fontStretch==='condensed'?'75%':'125%'}"`:'';return `<svg width="${b.width}" height="${b.height}" overflow="hidden"><text fill="${n.fill}" font-family="${style.fontFamily}" font-size="${style.fontSize}" font-weight="${style.fontWeight}"${stretch} dominant-baseline="text-before-edge">${textRenderLines(n).map((text,index)=>{const y=index*(line+gap),marker=n.list?`<tspan x="0" y="${y}">${n.list==='bullet'?'\u2022':`${index+1}.`}</tspan>`:'';return `${marker}<tspan x="${indent}" y="${y}">${escape(text)}</tspan>`;}).join('')}</text></svg>`;};
 const escape=(v:string)=>v.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&apos;');
 export interface FrameExport {documentId:string;revision:number;frameId:string;name:string;width:number;height:number;svg:string;warnings:string[];}
 /** Pure immutable revision export. No external resources, arbitrary SVG or executable metadata. */
@@ -15,7 +18,7 @@ export function exportInterfaceFrame(source:InterfaceDocument,frameId:string):Fr
  if(n.kind==='ellipse'&&!n.imageFill)content+=`<ellipse cx="${b.width/2}" cy="${b.height/2}" rx="${b.width/2}" ry="${b.height/2}" fill="${n.fill}" stroke="${n.stroke??'none'}" stroke-width="${n.strokeWidth??0}"/>`;
  if(n.kind==='line')content+=`<line x1="0" y1="0" x2="${b.width}" y2="${b.height}" stroke="${n.stroke??n.fill}" stroke-width="${n.strokeWidth??2}"/>`;
  if(n.kind==='path')content+=`<path d="${pathData(n.path!,b.width,b.height)}" fill="${n.path!.closed?n.fill:'none'}" stroke="${n.stroke??n.fill}" stroke-width="${n.strokeWidth??2}"/>`;
- if(n.kind==='text'){const style=resolvedTextStyle(doc,n);warnings.push('Text export uses system generic fonts and explicit lines; browser wrapping/font substitutions may differ.');const line=style.fontSize*style.lineHeight;content+=`<svg width="${b.width}" height="${b.height}" overflow="hidden"><text fill="${n.fill}" font-family="${style.fontFamily}" font-size="${style.fontSize}" font-weight="${style.fontWeight}" dominant-baseline="text-before-edge">${(n.text??'').split('\n').map((text,index)=>`<tspan x="0" y="${index*line}">${escape(text)}</tspan>`).join('')}</text></svg>`;}
+ if(n.kind==='text'){const style=resolvedTextStyle(doc,n);warnings.push('Text export uses system generic fonts and explicit lines; browser wrapping/font substitutions may differ.');content+=renderInterfaceText(n,b,style);}
  content+=n.children.map(child=>render(child)).join('');return `<g transform="translate(${root?0:b.x} ${root?0:b.y})"${n.kind==='frame'||n.imageFill?` clip-path="url(#${clip})"`:''}>${content}</g>`;};
  const body=render(frameId,true);const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${bounds.width}" height="${bounds.height}" viewBox="0 0 ${bounds.width} ${bounds.height}"><defs>${clips}</defs>${body}</svg>`;
  if(new TextEncoder().encode(svg).length>8_000_000)throw Error('SVG exceeds the 8 MB export limit.');
@@ -31,7 +34,7 @@ export function exportInterfaceLayerSVG(source:InterfaceDocument,nodeId:string):
  if(n.kind==='ellipse'&&!n.imageFill)content+=`<ellipse cx="${b.width/2}" cy="${b.height/2}" rx="${b.width/2}" ry="${b.height/2}" fill="${n.fill}" stroke="${n.stroke??'none'}" stroke-width="${n.strokeWidth??0}"/>`;
  if(n.kind==='line')content+=`<line x1="0" y1="0" x2="${b.width}" y2="${b.height}" stroke="${n.stroke??n.fill}" stroke-width="${n.strokeWidth??2}"/>`;
  if(n.kind==='path')content+=`<path d="${pathData(n.path!,b.width,b.height)}" fill="${n.path!.closed?n.fill:'none'}" stroke="${n.stroke??n.fill}" stroke-width="${n.strokeWidth??2}"/>`;
- if(n.kind==='text'){const style=resolvedTextStyle(doc,n);const line=style.fontSize*style.lineHeight;content+=`<svg width="${b.width}" height="${b.height}" overflow="hidden"><text fill="${n.fill}" font-family="${style.fontFamily}" font-size="${style.fontSize}" font-weight="${style.fontWeight}" dominant-baseline="text-before-edge">${(n.text??'').split('\n').map((text,index)=>`<tspan x="0" y="${index*line}">${escape(text)}</tspan>`).join('')}</text></svg>`;}
+ if(n.kind==='text'){const style=resolvedTextStyle(doc,n);content+=renderInterfaceText(n,b,style);}
  content+=n.children.map(child=>render(child)).join('');return `<g transform="translate(${root?0:b.x} ${root?0:b.y})"${n.kind==='frame'||n.imageFill?` clip-path="url(#${clip})"`:''}>${content}</g>`;};
  const body=render(nodeId,true),svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${bounds.width}" height="${bounds.height}" viewBox="0 0 ${bounds.width} ${bounds.height}"><defs>${clips}</defs>${body}</svg>`;
  if(new TextEncoder().encode(svg).length>8_000_000)throw Error('SVG exceeds the 8 MB export limit.');

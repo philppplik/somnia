@@ -1,4 +1,5 @@
 import {Checkbox} from '../ui/checkbox';
+import {NativeSelect} from '../ui/native-controls';
 import {InterfacePages} from './InterfacePages';
 import {interfaceTreeOrder,interfaceTreeTarget} from '../../lib/interface/accessibility';
 import {InterfaceLibrary} from './InterfaceLibrary';
@@ -67,6 +68,8 @@ export function InterfaceProperties(){
    <div className="grid grid-cols-2 gap-2">{(['x','y','width','height'] as const).map(key=><Field key={key} name={t(`interface.${key}`)} value={node[key]} type="number" disabled={node.locked} onCommit={value=>run(()=>{if(!value.trim())throw Error('A number is required.');patch({[key]:Number(value)});})}/>)}</div>
    <Field name={t('interface.fill')} value={node.fill} type="color" disabled={node.locked} onCommit={fill=>run(()=>patch({fill}))}/>
    {node.kind==='text'&&<Field name={t('interface.text')} value={node.text??''} disabled={node.locked} onCommit={text=>run(()=>patch({text}))}/>}
+   {node.kind==='text'&&<label className="text-xs">{t('interface.listStyle')}<NativeSelect aria-label={t('interface.listStyle')} className="mt-1 w-full bg-panel p-2" disabled={node.locked} value={node.list??''} onChange={e=>run(()=>interfaceSession.transact(d=>{const n=d.nodes.find(n=>n.id===node.id)!;if(e.target.value)n.list=e.target.value as 'bullet'|'number';else delete n.list;}))}><option value="">{t('interface.none')}</option><option value="bullet">{t('interface.list.bullet')}</option><option value="number">{t('interface.list.number')}</option></NativeSelect></label>}
+   {node.kind==='text'&&<Field name={t('interface.maxLines')} value={node.maxLines??''} disabled={node.locked} onCommit={value=>run(()=>interfaceSession.transact(d=>{const n=d.nodes.find(n=>n.id===node.id)!;const v=value.trim();if(!v)delete n.maxLines;else n.maxLines=Number(v);}))}/>}
    {node.imageFill&&<Field name={t('interface.altText')} value={node.altText??''} disabled={node.locked} onCommit={altText=>run(()=>patch({altText}))}/>}
    <label className="text-xs">{t('interface.parent')}<select className="mt-1 w-full rounded border border-subtle bg-panel p-2" value={node.parentId??''} disabled={node.locked} onChange={e=>run(()=>{const parent=e.target.value||null;const count=parent?doc.nodes.find(n=>n.id===parent)!.children.length:doc.pages.find(p=>p.id===node.pageId)!.children.length;interfaceSession.transact(d=>reparentNode(d,node.id,parent,count-(parent===node.parentId?1:0)));})}><option value="">{t('interface.root')}</option>{doc.nodes.filter(n=>n.pageId===node.pageId&&n.id!==node.id&&['frame','group'].includes(n.kind)&&!n.locked).map(n=><option key={n.id} value={n.id}>{n.name}</option>)}</select></label>
    {(['hidden','locked'] as const).map(key=><label key={key} className="flex items-center gap-2 text-xs"><input style={{width:14,flexShrink:0}} type="checkbox" checked={node[key]} disabled={key==='hidden'&&node.locked} onChange={e=>run(()=>patch({[key]:e.target.checked}))}/>{t(`interface.${key}`)}</label>)}
