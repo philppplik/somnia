@@ -825,5 +825,9 @@
  "animation.keys.values.wiggle": "Vibrar ±",
  "animation.keys.easeRandom": "Ease aleatorio",
  "animation.keys.easeRandom.hint": "Da a cada key seleccionada un ease predefinido aleatorio",
- "cmd.animation.keys.easeRandom": "Dar eases aleatorios a las keys seleccionadas"
+ "cmd.animation.keys.easeRandom": "Dar eases aleatorios a las keys seleccionadas",
+ "animation.keys.nth": "Cada n",
+ "animation.keys.nth.step": "Paso",
+ "animation.keys.nth.hint": "Conserva cada n-ésima key seleccionada (por propiedad, en orden de tiempo)",
+ "cmd.animation.keys.selectNth": "Seleccionar cada n-ésima key seleccionada"
 }

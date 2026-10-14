@@ -51,3 +51,11 @@ test('other keys and eases are preserved',()=>{
  const after=findLayer(findComp(s.document!)!,'a')!.transform.position.keys;
  assert.deepEqual(after[1],before[1]);assert.equal(after[0].interp,before[0].interp);assert.deepEqual(after[0].out,before[0].out);
 });
+import {nthKeys} from './keyNth';
+test('nth keys: per property in time order, offset, validation',()=>{
+ const k=(layer:string,t:number)=>({layer,prop:'position' as const,t});
+ const sel=[k('a',30),k('a',0),k('a',10),k('a',20),k('b',5),k('b',6)];
+ assert.deepEqual(nthKeys(sel,2).map(x=>x.layer+x.t).sort(),['a0','a20','b5']);
+ assert.deepEqual(nthKeys(sel,2,1).map(x=>x.layer+x.t).sort(),['a10','a30','b6']);
+ assert.throws(()=>nthKeys(sel,1));assert.throws(()=>nthKeys(sel,3,3));
+});

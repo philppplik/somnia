@@ -852,6 +852,23 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.keys.selectNth",
+      "title": "Select every n-th selected key",
+      "category": "View",
+      "source": "animation",
+      "keywords": [
+        "alternate",
+        "animation",
+        "even",
+        "every",
+        "keys",
+        "nth",
+        "odd",
+        "select"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.keys.selectRange",
       "title": "Select the keys before or after the playhead",
       "category": "View",

@@ -825,5 +825,9 @@
  "animation.keys.values.wiggle": "Wackeln ±",
  "animation.keys.easeRandom": "Zufalls-Ease",
  "animation.keys.easeRandom.hint": "Jedem gewählten Key ein zufälliges Preset-Ease geben",
- "cmd.animation.keys.easeRandom": "Gewählten Keys zufällige Eases geben"
+ "cmd.animation.keys.easeRandom": "Gewählten Keys zufällige Eases geben",
+ "animation.keys.nth": "Jeden n-ten",
+ "animation.keys.nth.step": "Schritt",
+ "animation.keys.nth.hint": "Jeden n-ten gewählten Key behalten (je Eigenschaft, nach Zeit)",
+ "cmd.animation.keys.selectNth": "Jeden n-ten gewählten Key auswählen"
 }

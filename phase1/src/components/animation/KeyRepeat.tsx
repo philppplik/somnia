@@ -4,12 +4,13 @@ import {Button} from '../ui/button';
 import {NativeInput,NativeSelect} from '../ui/native-controls';
 import {executeCommand} from '../../lib/commands';
 import {MAX_REPEATS,type RepeatMode} from '../../lib/animation/keyRepeat';
+import {MIN_NTH,MAX_NTH} from '../../lib/animation/keyNth';
 import type {ValueMode} from '../../lib/animation/keyValues';
 const field='h-6 min-w-0 rounded-sm border border-subtle bg-transparent px-1 text-xs text-ink select-text';
 /** Timeline strip control: repeat the selected keys as cycles or ping-pong. */
 export function KeyRepeat({count:selected,layers}:{count:number;layers:readonly string[]}){
  const {t}=useT();const [n,setN]=useState('2');const [mode,setMode]=useState<RepeatMode>('cycle');
- const [amt,setAmt]=useState('10');const [vm,setVm]=useState<ValueMode>('offset');const [seed,setSeed]=useState(1);const amount=Number(amt),amtOk=amt.trim()!==''&&Number.isFinite(amount);
+ const [amt,setAmt]=useState('10');const [vm,setVm]=useState<ValueMode>('offset');const [seed,setSeed]=useState(1);const [nth,setNth]=useState('2');const nthN=Number(nth),nthOk=Number.isInteger(nthN)&&nthN>=MIN_NTH&&nthN<=MAX_NTH;const amount=Number(amt),amtOk=amt.trim()!==''&&Number.isFinite(amount);
  const num=Number(n),valid=Number.isInteger(num)&&num>=1&&num<=MAX_REPEATS;
  return <span className="flex shrink-0 items-center gap-1" role="group" aria-label={t('animation.keys.repeat')} data-testid="animation-keys-repeat">
   <NativeInput className={`${field} w-12`} type="number" min={1} max={MAX_REPEATS} step={1} value={n} aria-label={t('animation.keys.repeat.count')} onChange={e=>setN(e.target.value)} data-testid="animation-keys-repeat-count"/>
@@ -23,5 +24,7 @@ export function KeyRepeat({count:selected,layers}:{count:number;layers:readonly 
   <NativeSelect className={`${field} w-24 shrink-0`} value={vm} aria-label={t('animation.keys.values.mode')} onChange={e=>setVm(e.target.value as ValueMode)} data-testid="animation-keys-values-mode"><option value="offset">{t('animation.keys.values.offset')}</option><option value="scale">{t('animation.keys.values.scale')}</option><option value="snap">{t('animation.keys.values.snap')}</option><option value="wiggle">{t('animation.keys.values.wiggle')}</option></NativeSelect>
   <Button size="tiny" variant="ghost" disabled={selected<1||!amtOk} title={t('animation.keys.values.hint')} onClick={()=>{void executeCommand('animation.keys.values',{mode:vm,amount,seed});setSeed(x=>x+1);}} data-testid="animation-keys-values-go">{t('animation.keys.values')}</Button>
   <Button size="tiny" variant="ghost" disabled={selected<1} title={t('animation.keys.easeRandom.hint')} onClick={()=>{void executeCommand('animation.keys.easeRandom',{seed});setSeed(x=>x+1);}} data-testid="animation-keys-ease-random">{t('animation.keys.easeRandom')}</Button>
+  <NativeInput className={`${field} w-12`} type="number" min={MIN_NTH} max={MAX_NTH} step={1} value={nth} aria-label={t('animation.keys.nth.step')} onChange={e=>setNth(e.target.value)} data-testid="animation-keys-nth-step"/>
+  <Button size="tiny" variant="ghost" disabled={selected<2||!nthOk} title={t('animation.keys.nth.hint')} onClick={()=>void executeCommand('animation.keys.selectNth',{n:nthN})} data-testid="animation-keys-nth">{t('animation.keys.nth')}</Button>
  </span>;
 }
