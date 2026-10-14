@@ -51,3 +51,35 @@ test('auto buttons render in light and dark (parity captures the pristine gray c
   await page.screenshot({path:`test-results/ds-photos-auto-${theme}.png`,fullPage:true});
  }
 });
+test('white balance picker: clicking the frame picks temp and tint as one undo step and disarms',async({page})=>{
+ await page.goto('/test/design-system/?view=photos-auto');
+ await expect(page.getByTestId('photos-workspace')).toBeVisible();
+ await expect(page.getByTestId('photos-color-panel')).toBeVisible();
+ expect(await value(page,'photos-value-temp')).toBe('6500 K');
+ const picker=page.getByTestId('photos-color-wb-picker');
+ await picker.click();
+ await expect(picker).toHaveAttribute('aria-pressed','true');
+ const box=await page.getByTestId('photos-canvas').boundingBox();
+ await page.mouse.click(box!.x+0.5*box!.width,box!.y+0.5*box!.height); // pick the warm gradient mid
+ await page.waitForTimeout(500);
+ await expect(picker).toHaveAttribute('aria-pressed','false'); // disarmed after the pick
+ const temp=Number(String(await value(page,'photos-value-temp')).replace(/[^0-9]/g,''));
+ expect(temp).toBeGreaterThan(6500); // warm patch -> cooler setting
+ await page.getByRole('button',{name:'Undo',exact:true}).click();
+ await page.waitForTimeout(400);
+ expect(await value(page,'photos-value-temp')).toBe('6500 K'); // one undo restores the pick
+});
+test('white balance picker renders in light and dark',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-auto');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await page.getByTestId('photos-color-wb-picker').click();
+  const box=await page.getByTestId('photos-canvas').boundingBox();
+  await page.mouse.click(box!.x+0.5*box!.width,box!.y+0.5*box!.height);
+  await page.waitForTimeout(500);
+  const temp=Number(String(await value(page,'photos-value-temp')).replace(/[^0-9]/g,''));
+  expect(temp).toBeGreaterThan(6500);
+  await page.screenshot({path:`test-results/ds-photos-wb-picker-${theme}.png`,fullPage:true});
+ }
+});

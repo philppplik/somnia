@@ -49,3 +49,16 @@ it like any hand-moved slider.
   and dark captures. (Photos registers no Ctrl+z binding - the toolbar
   Undo button is the real undo path and is what the specs drive.)
 - i18n: photos.p.auto.tone / photos.p.auto.wb in all five locales.
+
+## White balance picker (P64)
+
+The spot variant of auto WB: arm the pipette in the Color section and
+click a point that should be neutral. `deriveSpotWhiteBalance` means
+the unclipped pixels in an 8px disc around the click and feeds the
+means through the same gray-world formulas (`wbFromMeans`, now shared
+with `deriveAutoWhiteBalance`). A clipped or near-clipped patch
+returns null and leaves the settings untouched instead of guessing.
+The pick is one atomic commit (one undo step), the picker disarms
+after use and Escape disarms it like the other target tools. The
+click samples the rendered preview frame, so the pick sees exactly
+what the user saw.

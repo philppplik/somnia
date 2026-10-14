@@ -112,5 +112,6 @@
  "photos.heal.mode": "Correcteur",
  "photos.rating.label": "Note",
  "photos.rating.filter": "Filtre par note",
- "photos.rating.filter.all": "Toutes"
+ "photos.rating.filter.all": "Toutes",
+ "photos.p.auto.wbPicker": "Pipette"
 }

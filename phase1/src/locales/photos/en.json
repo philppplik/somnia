@@ -112,5 +112,6 @@
  "photos.heal.mode": "Heal",
  "photos.rating.label": "Rating",
  "photos.rating.filter": "Rating filter",
- "photos.rating.filter.all": "All"
+ "photos.rating.filter.all": "All",
+ "photos.p.auto.wbPicker": "Picker"
 }

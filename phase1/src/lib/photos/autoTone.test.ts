@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {deriveAutoTone,deriveAutoWhiteBalance} from './autoTone';
+import {deriveAutoTone,deriveAutoWhiteBalance,deriveSpotWhiteBalance} from './autoTone';
 
 const frame=(w:number,h:number,fill:(p:number)=>[number,number,number])=>{
  const b=new Uint8Array(w*h*4);
@@ -48,4 +48,25 @@ test('degenerate inputs return neutral picks and never mutate the frame',()=>{
  assert.deepEqual(deriveAutoTone(b,0,8),{exposure:0,highlights:0,shadows:0,whites:0,blacks:0});
  assert.deepEqual(deriveAutoWhiteBalance(b,8,0),{temp:6500,tint:0});
  assert.deepEqual(b,copy);
+});
+test('spot white balance reads a warm patch as a cooler temp and a green patch as magenta tint',()=>{
+ const warm=frame(8,8,()=>[200,150,110]);
+ const pick=deriveSpotWhiteBalance(warm,8,8,4,4);
+ assert.ok(pick&&pick.temp>6500,`warm patch should raise temp, got ${pick?.temp}`);
+ const green=frame(8,8,()=>[120,180,110]);
+ const gp=deriveSpotWhiteBalance(green,8,8,4,4);
+ assert.ok(gp&&gp.tint>0,`green patch should push tint toward magenta, got ${gp?.tint}`);
+});
+test('spot white balance stays neutral on a neutral patch and respects the disc radius',()=>{
+ const flat=frame(16,16,()=>[128,128,128]);
+ const pick=deriveSpotWhiteBalance(flat,16,16,8,8);
+ assert.deepEqual(pick,{temp:6500,tint:0});
+ const mixed=frame(32,32,p=>p%32>=24?[220,140,100]:[128,128,128]); // warm strip on the right
+ const mp=deriveSpotWhiteBalance(mixed,32,32,8,16,7);
+ assert.deepEqual(mp,{temp:6500,tint:0}); // the warm strip stays outside the disc
+});
+test('spot white balance returns null on clipped or tiny usable patches and bad input',()=>{
+ const clipped=frame(8,8,()=>[255,250,245]); // everything near-clipped
+ assert.equal(deriveSpotWhiteBalance(clipped,8,8,4,4),null);
+ assert.equal(deriveSpotWhiteBalance(new Uint8Array(4),1,1,0,0),null);
 });

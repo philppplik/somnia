@@ -1,9 +1,10 @@
-import {RotateCcw,WandSparkles} from '../../../lib/icons';
+import {Pipette,RotateCcw,WandSparkles} from '../../../lib/icons';
 import {useT} from '../../../lib/useT';
 import {PHOTO_CONTROLS,neutralPhotoSettings} from '../../../lib/photos/studioSettings';
 import {commitPhotoSettings} from '../../../lib/photos/studioSession';
 import {deriveAutoTone,deriveAutoWhiteBalance} from '../../../lib/photos/autoTone';
 import {Button} from '../../ui/button';
+import {usePanelState} from '../../../store/panelStateStore';
 import {PanelBody,SectionHead,SettingSlider,isBusy,runPhotos} from './shared';
 export type AdjustSection='light'|'color'|'effects'|'detail';
 /** One develop section (Light, Color, Effects, Detail) with per-section reset and exact-value fields. */
@@ -12,6 +13,7 @@ export function AdjustSectionBody({section,auto}:{section:AdjustSection;auto?:'t
  const controls=PHOTO_CONTROLS.filter(c=>c.section===section);
  return <PanelBody testId={`photos-${section}-panel`}>{({name,session})=>{
   const changed=controls.some(c=>session.now[c.key]!==neutralPhotoSettings[c.key]);
+  const [wbPicker,setWbPicker]=usePanelState<boolean>('photos.wb.picker',false);
   const frame=session.frame;
   const runAuto=()=>{ // one atomic commit: the whole pick is one undo step
    if(!frame)return;const bytes=new Uint8Array(frame.bytes.slice(0));
@@ -21,6 +23,7 @@ export function AdjustSectionBody({section,auto}:{section:AdjustSection;auto?:'t
   return <fieldset disabled={isBusy(session)} className="m-0 grid min-w-0 gap-3 border-0 p-0">
    <SectionHead>
     {auto&&<Button size="tiny" variant="outline" disabled={!frame} onClick={runAuto} data-testid={`photos-${section}-auto`} aria-label={t(`photos.p.auto.${auto}`)}><WandSparkles size={11}/>{t(`photos.p.auto.${auto}`)}</Button>}
+    {auto==='wb'&&<Button size="tiny" variant="outline" disabled={!frame} aria-pressed={wbPicker} onClick={()=>setWbPicker(!wbPicker)} data-testid="photos-color-wb-picker" aria-label={t('photos.p.auto.wbPicker')} title={t('photos.p.auto.wbPicker')}><Pipette size={11}/>{t('photos.p.auto.wbPicker')}</Button>}
     {session.status==='processing'&&<span className="text-ink-3" role="status">{t('photos.processing')}</span>}
     <Button size="tiny" variant="outline" disabled={!changed} onClick={()=>void runPhotos('photos.resetAdjustments',{section})} data-testid={`photos-${section}-reset`} aria-label={t('photos.p.resetSection',{section:t(`photos.section.${section}`)})}><RotateCcw size={11}/>{t('photos.p.reset')}</Button>
    </SectionHead>

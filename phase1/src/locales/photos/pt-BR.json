@@ -112,5 +112,6 @@
  "photos.heal.mode": "Curar",
  "photos.rating.label": "Classificação",
  "photos.rating.filter": "Filtro de classificação",
- "photos.rating.filter.all": "Todas"
+ "photos.rating.filter.all": "Todas",
+ "photos.p.auto.wbPicker": "Conta-gotas"
 }

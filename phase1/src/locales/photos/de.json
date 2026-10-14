@@ -112,5 +112,6 @@
  "photos.heal.mode": "Heilen",
  "photos.rating.label": "Bewertung",
  "photos.rating.filter": "Bewertungsfilter",
- "photos.rating.filter.all": "Alle"
+ "photos.rating.filter.all": "Alle",
+ "photos.p.auto.wbPicker": "Pipette"
 }

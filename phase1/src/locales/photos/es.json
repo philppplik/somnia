@@ -112,5 +112,6 @@
  "photos.heal.mode": "Curar",
  "photos.rating.label": "Valoración",
  "photos.rating.filter": "Filtro de valoración",
- "photos.rating.filter.all": "Todas"
+ "photos.rating.filter.all": "Todas",
+ "photos.p.auto.wbPicker": "Cuentagotas"
 }

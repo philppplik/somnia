@@ -8,6 +8,7 @@ import {NativeInput} from '../ui/native-controls';
 import {useT} from '../../lib/useT';
 import {applyPhotoCrop,cancelPhotoCrop,dirtyPhoto,exportPhotoCopy,historyPhoto,openPhoto,resetPhoto,rotatePhoto,setPhotoCropping,setPhotoCropDraft,usePhotoSession,type PhotoFrame} from '../../lib/photos/studioSession';
 import {autoSource,clampSpot} from '../../lib/photos/healSpots';
+import {deriveSpotWhiteBalance} from '../../lib/photos/autoTone';
 import {clampGrad,MAX_GRADS,type GradFilter,clampRad,MAX_RADS,type RadFilter} from '../../lib/photos/localAdjust';
 import {MAX_BRUSH_STROKES,MAX_BRUSH_TOTAL_DABS,brushTotalDabs,type BrushStroke} from '../../lib/photos/brushStrokes';
 import {clampDab} from '../../lib/photos/localAdjust';
@@ -89,19 +90,20 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
  const brushChain=useRef<{x:number;y:number;r:number}[]|null>(null); // dabs of the in-flight brush stroke
  const [curvesTarget,setCurvesTarget]=usePanelState<boolean>('photos.curves.target',false);
  const [hslTarget,setHslTarget]=usePanelState<boolean>('photos.hsl.target',false);
+ const [wbPicker,setWbPicker]=usePanelState<boolean>('photos.wb.picker',false);
  const [curveChannel]=usePanelState<CurveChannel>('photos.curves','master');
  const [,setTargetBand]=usePanelState<string>('photos.hsl','red');
- const targetArmed=(curvesTarget||hslTarget)&&!healing&&!dodging&&!grading&&!radial&&!brushing; // tool modes win over the target tool
+ const targetArmed=(curvesTarget||hslTarget||wbPicker)&&!healing&&!dodging&&!grading&&!radial&&!brushing; // tool modes win over the target tool
  const targetDrag=useRef<{startY:number;trackPx:number}|null>(null);
  const targetIndex=useRef<number|null>(null);   // grabbed curve point (index in the sanitized array)
  const targetBase=useRef<number|null>(null);    // its y, or the band's saturation at drag start
  const targetBandRef=useRef<HslBandId|null>(null);
  const radDraft=useRef<{x0:number;y0:number;x1:number;y1:number}|null>(null); // in-flight radial filter drag (bounding box)
  useEffect(()=>{ // Escape disarms the target tool, the split view and the horizon drag from anywhere
-  if(!curvesTarget&&!hslTarget&&!showSplit&&!brushing&&!straightening)return;
-  const onKey=(e:KeyboardEvent)=>{if(e.key==='Escape'){setCurvesTarget(false);setHslTarget(false);setShowSplit(false);setBrushing(false);setStraightening(false);straightDraft.current=null;}};
+  if(!curvesTarget&&!hslTarget&&!wbPicker&&!showSplit&&!brushing&&!straightening)return;
+  const onKey=(e:KeyboardEvent)=>{if(e.key==='Escape'){setCurvesTarget(false);setHslTarget(false);setWbPicker(false);setShowSplit(false);setBrushing(false);setStraightening(false);straightDraft.current=null;}};
   window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey);
- },[curvesTarget,hslTarget,showSplit,brushing,straightening,setCurvesTarget,setHslTarget,setShowSplit]);
+ },[curvesTarget,hslTarget,wbPicker,showSplit,brushing,straightening,setCurvesTarget,setHslTarget,setWbPicker,setShowSplit]);
  const [dabR,setDabR]=usePanelState<number>('photos.dodgeRadius',0.05);
  const dabChain=useRef<{x:number;y:number;r:number}[]|null>(null); // dabs of the in-flight dodge stroke
  const healPath=useRef<{x:number;y:number}[]|null>(null); // path points of the in-flight heal stroke
@@ -164,6 +166,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
   if(grading){const p=pointerPos(e);gradDraft.current={x0:p.x,y0:p.y,x1:p.x,y1:p.y};return;} // graduated filter defines its ramp on release
   if(radial){const p=pointerPos(e);radDraft.current={x0:p.x,y0:p.y,x1:p.x,y1:p.y};return;} // radial filter defines its bounding box on release
   if(straightening){const p=pointerPos(e);straightDraft.current={x0:p.x,y0:p.y,x1:p.x,y1:p.y};return;} // horizon line commits its angle on release
+  if(wbPicker)return; // the white-balance picker acts on pointer up, nothing to track on press
   if(targetArmed&&shown){ // targeted adjustment: the photo itself is the slider
    const p=pointerPos(e);const track=imgBox.current!.getBoundingClientRect().height;
    const px=pixelAt(shown,p.x,p.y);if(!px)return;
@@ -226,6 +229,15 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
   setPan(clampPan(d.pan.x+(e.clientX-d.pan.px),d.pan.y+(e.clientY-d.pan.py),scale));
  };
  const onStageUp=(e:React.PointerEvent)=>{
+  if(wbPicker){ // one click = one white-balance pick = one atomic commit = one undo step; the picker disarms after use
+   setWbPicker(false);
+   const p=pointerPos(e),f=session?.frame;
+   if(f){
+    const pick=deriveSpotWhiteBalance(new Uint8Array(f.bytes.slice(0)),f.width,f.height,Math.round(p.x*f.width),Math.round(p.y*f.height));
+    if(pick)commitPhotoSettings(item.name,now=>({...now,...pick}));
+   }
+   return;
+  }
   if(straightDraft.current){ // one horizon drag = one commit = one undo step
    const d=straightDraft.current;straightDraft.current=null;
    const angle=straightenAngle(d.x0,d.y0,d.x1,d.y1);

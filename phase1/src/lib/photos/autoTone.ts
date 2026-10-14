@@ -47,16 +47,36 @@ export function deriveAutoTone(bytes:Uint8Array,w:number,h:number):AutoTonePick{
  return{exposure,highlights,shadows,whites,blacks};
 }
 
-/** Gray world: unclipped pixels should average to neutral. Warm cast raises temp (cooler), green cast pushes tint toward magenta. */
-export function deriveAutoWhiteBalance(bytes:Uint8Array,w:number,h:number):AutoWbPick{
- if(w<=0||h<=0||bytes.length<w*h*4)return{temp:6500,tint:0};
- const s=scan(bytes,w,h);
- if(s.wbN<8)return{temp:6500,tint:0}; // too little usable data: stay neutral rather than guess
- const mr=s.rSum/s.wbN,mg=s.gSum/s.wbN,mb=s.bSum/s.wbN;
+/** Gray world from channel means: warm cast (red over blue) raises temp (cooler), green excess pushes tint toward magenta. */
+export function wbFromMeans(mr:number,mg:number,mb:number):AutoWbPick{
  if(mg<1)return{temp:6500,tint:0};
  const deviation=(mr-mb)/mg; // >0 warm (red over blue), <0 cool
  const temp=clamp(Math.round((6500+deviation*4000)/50)*50,2000,50000);
  const excess=(mg-(mr+mb)/2)/mg; // >0 green over the red/blue mean
  const tint=clamp(Math.round(excess*300),-150,150); // compensate green with magenta (positive tint)
  return{temp,tint};
+}
+
+/** Gray world: unclipped pixels should average to neutral. */
+export function deriveAutoWhiteBalance(bytes:Uint8Array,w:number,h:number):AutoWbPick{
+ if(w<=0||h<=0||bytes.length<w*h*4)return{temp:6500,tint:0};
+ const s=scan(bytes,w,h);
+ if(s.wbN<8)return{temp:6500,tint:0}; // too little usable data: stay neutral rather than guess
+ return wbFromMeans(s.rSum/s.wbN,s.gSum/s.wbN,s.bSum/s.wbN);
+}
+
+/** White balance from one picked patch: the pixel disc around (cx,cy) should be neutral. Null when the patch has too little usable data (clipped or near-clipped) - the caller leaves the settings alone. */
+export function deriveSpotWhiteBalance(bytes:Uint8Array,w:number,h:number,cx:number,cy:number,radius=8):AutoWbPick|null{
+ if(w<=0||h<=0||bytes.length<w*h*4)return null;
+ let rSum=0,gSum=0,bSum=0,n=0;
+ const x0=Math.max(0,Math.floor(cx-radius)),x1=Math.min(w-1,Math.ceil(cx+radius));
+ const y0=Math.max(0,Math.floor(cy-radius)),y1=Math.min(h-1,Math.ceil(cy+radius));
+ for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
+  if(Math.hypot(x-cx,y-cy)>radius)continue;
+  const i=(y*w+x)*4,r=bytes[i],g=bytes[i+1],b=bytes[i+2],l=LUMA(r,g,b)|0;
+  const mx=Math.max(r,g,b),mn=Math.min(r,g,b);
+  if(l>=16&&l<=240&&mx-mn<=250){rSum+=r;gSum+=g;bSum+=b;n++;} // same usability filter as the gray-world scan
+ }
+ if(n<8)return null;
+ return wbFromMeans(rSum/n,gSum/n,bSum/n);
 }
