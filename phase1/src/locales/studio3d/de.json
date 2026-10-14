@@ -155,5 +155,14 @@
  "cmd.studio3d.export.mesh": "Szene als STL oder OBJ exportieren",
  "cmd.studio3d.unit.set": "Einheit für STL- und OBJ-Export festlegen",
  "cmd.studio3d.render.turntable": "Turntable als ZIP mit PNG-Bildern rendern",
- "cmd.studio3d.render.cancel": "Laufendes 3D-Rendern abbrechen"
+ "cmd.studio3d.render.cancel": "Laufendes 3D-Rendern abbrechen",
+ "studio3d.save.title": "Szenendatei",
+ "studio3d.save.one": "Szene speichern (.som3d)",
+ "studio3d.save.sidecar": "Mit separater GLB speichern",
+ "studio3d.save.note": "Speichert Objekte, Materialien, Lichter, Kameras, Einheit, Umgebung, Einrasten und Ansicht. Eine Szene mit separater GLB öffnest du, indem du beide Dateien wählst.",
+ "studio3d.selection.duplicate": "Auswahl duplizieren",
+ "studio3d.selection.delete": "Auswahl löschen",
+ "cmd.studio3d.save": "3D-Szene speichern",
+ "cmd.studio3d.selection.delete": "Ausgewählte 3D-Objekte löschen",
+ "cmd.studio3d.selection.duplicate": "Ausgewählte 3D-Objekte duplizieren"
 }

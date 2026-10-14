@@ -191,3 +191,55 @@ test('light shadows: toggle, undo, info, and area lights refuse',()=>{
  stage.setLight(sp.id,{shadow:true,intensity:50});assert.equal(sp.castShadow,true);assert.equal(sp.intensity,50);
  assert.throws(()=>stage.setLight(a.id,{shadow:true}),StageError);assert.throws(()=>stage.setLight(d.id,{shadow:'yes' as never}),StageError);
 });
+import {beginGroupDrag,applyGroupDrag,nodesOf,collectNodeExtras,applyNodeExtras} from './stage';
+test('removeMany and duplicateMany are one undo step each and restore order',()=>{
+ const stage=new Stage();const a=stage.addPrimitive('cube');const b=stage.addPrimitive('sphere');const c=stage.addPrimitive('cone');
+ stage.removeMany([a.id,c.id]);assert.deepEqual(stage.root.children.map(o=>o.name),['Sphere']);
+ stage.undo();assert.deepEqual(stage.root.children.map(o=>o.name),['Cube','Sphere','Cone']);
+ stage.redo();assert.equal(stage.root.children.length,1);stage.undo();
+ const copies=stage.duplicateMany([a.id,b.id]);assert.equal(copies.length,2);assert.equal(stage.root.children.length,5);
+ assert.notEqual((copies[0] as THREE.Mesh).material,a.material);
+ stage.undo();assert.equal(stage.root.children.length,3);stage.redo();assert.equal(stage.root.children.length,5);
+ assert.throws(()=>stage.removeMany([a.id,a.id]),StageError);assert.throws(()=>stage.removeMany([]),StageError);assert.throws(()=>stage.removeMany([999999]),StageError);
+});
+test('a selected parent and its selected child are handled once',()=>{
+ const stage=new Stage();const g=new THREE.Group();g.name='G';const m=new THREE.Mesh(new THREE.BoxGeometry(),new THREE.MeshStandardMaterial());g.add(m);stage.load(g);
+ stage.removeMany([g.id,m.id]);assert.equal(stage.root.children.length,0);stage.undo();assert.equal(g.children.length,1);assert.equal(stage.root.children.length,1);
+});
+test('translateMany moves every object in one step',()=>{
+ const stage=new Stage();const a=stage.addPrimitive('cube');const b=stage.addPrimitive('sphere');
+ stage.translateMany([a.id,b.id],{x:2,z:-1});assert.equal(a.position.x,2);assert.equal(b.position.z,-1);
+ stage.undo();assert.equal(a.position.x,0);assert.equal(b.position.z,0);
+});
+test('group drag rotates objects about the pivot; commitMany is one step',()=>{
+ const stage=new Stage();const a=stage.addPrimitive('cube');const b=stage.addPrimitive('cube');
+ stage.setTransform(a.id,{position:{x:-1,y:0,z:0}});stage.setTransform(b.id,{position:{x:1,y:0,z:0}});
+ const before=stage.snapshot([a.id,b.id]);const members=beginGroupDrag([a,b]);
+ const p0=new THREE.Matrix4();const now=new THREE.Matrix4().makeRotationY(Math.PI/2);
+ applyGroupDrag(members,p0,now);
+ assert.ok(Math.abs(a.position.x)<1e-9&&Math.abs(a.position.z-1)<1e-9,'x=-1 rotates to z=+1');assert.ok(Math.abs(b.position.z+1)<1e-9);
+ assert.ok(Math.abs(a.rotation.y-Math.PI/2)<1e-9);
+ stage.commitMany(before);stage.undo();assert.equal(a.position.x,-1);assert.equal(b.position.x,1);assert.equal(a.rotation.y,0);
+ stage.redo();assert.ok(Math.abs(b.position.z+1)<1e-9);
+ const same=stage.snapshot([a.id]);const n=stage.undoLabel;stage.commitMany(same);assert.equal(stage.undoLabel,n,'no change, no entry');
+});
+test('group drag scale about the pivot and nested parents',()=>{
+ const stage=new Stage();const g=new THREE.Group();g.position.set(10,0,0);const m=new THREE.Mesh(new THREE.BoxGeometry(),new THREE.MeshStandardMaterial());m.position.set(1,0,0);g.add(m);stage.load(g);
+ const members=beginGroupDrag([m]);// world x = 11
+ applyGroupDrag(members,new THREE.Matrix4().makeTranslation(10,0,0),new THREE.Matrix4().makeTranslation(10,0,0).multiply(new THREE.Matrix4().makeScale(2,2,2)));
+ assert.ok(Math.abs(m.position.x-2)<1e-9,'local x doubles about the pivot');assert.ok(Math.abs(m.scale.x-2)<1e-9);
+});
+test('node extras round-trip shadows and area lights and survive stale indices',()=>{
+ const stage=new Stage();stage.addPrimitive('cube');const d=stage.addLight('directional');d.castShadow=true;const ar=stage.addLight('area') as THREE.RectAreaLight;ar.width=3;ar.name='Soft box';
+ const extras=collectNodeExtras(stage.root);assert.equal(extras.length,2);assert.equal(extras[0].shadow,true);assert.equal(extras[1].area!.width,3);
+ // what a GLB round trip gives: an empty node where the area light was, a directional light without the shadow flag
+ const fresh=new THREE.Group();fresh.add(new THREE.Mesh(new THREE.BoxGeometry(),new THREE.MeshStandardMaterial()));fresh.add(new THREE.DirectionalLight());const hole=new THREE.Object3D();hole.name='Soft box';fresh.add(hole);
+ const r=applyNodeExtras(fresh,extras);assert.equal(r.skipped,0);
+ assert.equal((fresh.children[1] as THREE.Light).castShadow,true);const rl=fresh.children[2] as THREE.RectAreaLight;assert.ok(rl.isRectAreaLight);assert.equal(rl.width,3);assert.equal(rl.name,'Soft box');
+ assert.equal(nodesOf(fresh).length,3);
+ const short=new THREE.Group();short.add(new THREE.Object3D());assert.equal(applyNodeExtras(short,extras).skipped,2);
+ const wrong=new THREE.Group();wrong.add(new THREE.Mesh());wrong.add(new THREE.Mesh());wrong.add(new THREE.Mesh());assert.equal(applyNodeExtras(wrong,extras).skipped,2,'nothing is applied to nodes of the wrong kind');
+});
+test('loadMany puts nodes at the root without a wrapper and starts clean',()=>{
+ const stage=new Stage();stage.addPrimitive('cube');stage.loadMany([new THREE.Group(),new THREE.Group()]);assert.equal(stage.root.children.length,2);assert.equal(stage.dirty,false);assert.equal(stage.canUndo,false);
+});

@@ -21,7 +21,8 @@ import {getState as getAppState} from '../../store/appStore';
 import {readProjectUnit,writeProjectUnit} from '../../lib/studio3d/projectPrefs';
 import {toggleSelection,marqueeRect,inRect,turntablePlan,frameName,exportFileName,unitScale,isUnit,isMeshFormat,mergeSnap,snapTo,stlUnitHint,mtlReferences,mtlTextures,clampRenderSize,MAX_MTL_BYTES,MAX_TEXTURE_BYTES,MAX_TEXTURE_FILES,SnapError,mergeEnv,envFormatFor,nudgeFor,EnvError,modelFormatFor,readModelHeader,externalResources,ModelError,boundsValid,boundsCenter,boundsRadius,frameDistance,clipPlanes} from '../../lib/studio3d/model';
 import type {Bounds} from '../../lib/studio3d/model';
-import {Stage} from '../../lib/studio3d/stage';
+import {Stage,beginGroupDrag,applyGroupDrag,collectNodeExtras,applyNodeExtras,type GroupDragMember,type TransformSnapshot} from '../../lib/studio3d/stage';
+import {parseDocument,buildDocument,sceneBytes,DocumentError} from '../../lib/studio3d/document';
 import {registerStudio3DController} from '../../lib/studio3d/commands';
 import {patchStudio3D,resetStudio3D,getStudio3DState,useStudio3D} from '../../lib/studio3d/session';
 
@@ -192,14 +193,34 @@ export default function Viewport3D(){
   let dragBefore:{id:number;p:THREE.Vector3;r:THREE.Euler;s:THREE.Vector3}|null=null;let justDragged=false;
   gizmo.setMode(getStudio3DState().gizmo);
   gizmo.addEventListener('change',invalidate);
+  // A group pivot carries the multi-selection: its movement is applied to every member (see applyGroupDrag).
+  const groupPivot=new THREE.Object3D();groupPivot.name='group pivot';
+  let group:{members:GroupDragMember[];p0:THREE.Matrix4;before:TransformSnapshot[]}|null=null;
   gizmo.addEventListener('dragging-changed',e=>{
    const on=!!(e as unknown as {value:boolean}).value;controls.enabled=!on;
    const o=gizmo.object;
+   if(o===groupPivot){
+    if(on){const ids=currentSet();groupPivot.updateMatrixWorld(true);group={members:beginGroupDrag(ids.map(id=>stage.find(id)!).filter(Boolean)),p0:groupPivot.matrixWorld.clone(),before:stage.snapshot(ids)};}
+    else{justDragged=true;const g=group;group=null;if(g)stage.commitMany(g.before);}
+    return;
+   }
    if(on&&o)dragBefore={id:o.id,p:o.position.clone(),r:o.rotation.clone(),s:o.scale.clone()};
    if(!on){justDragged=true;const b=dragBefore;dragBefore=null;if(b&&stage.find(b.id))stage.commitTransform(b.id,{p:b.p,r:b.r,s:b.s});}
   });
-  gizmo.addEventListener('objectChange',()=>{const id=getStudio3DState().selected;if(id!=null)patchStudio3D({selectedInfo:stage.info(id)});drawSelection();});
-  const syncGizmo=()=>{const id=getStudio3DState().selected;const o=id==null?null:stage.find(id);if(o)gizmo.attach(o);else gizmo.detach();};
+  gizmo.addEventListener('objectChange',()=>{
+   if(group){groupPivot.updateMatrixWorld(true);applyGroupDrag(group.members,group.p0,groupPivot.matrixWorld);for(const m of group.members)m.o.updateMatrixWorld(true);drawSelection();invalidate();return;}
+   const id=getStudio3DState().selected;if(id!=null)patchStudio3D({selectedInfo:stage.info(id)});drawSelection();});
+  /** The objects an edit acts on: the multi-selection, or the single selected object. */
+  const currentSet=():number[]=>{const st=getStudio3DState();const m=st.marked.filter(x=>stage.find(x));return m.length?m:st.selected!=null&&stage.find(st.selected)?[st.selected]:[];};
+  const syncGizmo=()=>{
+   const ids=currentSet();
+   if(ids.length>1){
+    const box=new THREE.Box3();for(const id of ids)box.expandByObject(stage.find(id)!);
+    groupPivot.position.copy(box.isEmpty()?new THREE.Vector3():box.getCenter(new THREE.Vector3()));groupPivot.quaternion.identity();groupPivot.scale.set(1,1,1);
+    if(!groupPivot.parent)scene.add(groupPivot);groupPivot.updateMatrixWorld(true);gizmo.attach(groupPivot);return;
+   }
+   const id=getStudio3DState().selected;const o=id==null?null:stage.find(id);if(o)gizmo.attach(o);else gizmo.detach();
+  };
   const helpers=new Map<number,THREE.CameraHelper>();
   const syncCameraHelpers=()=>{
    const live=new Set<number>();
@@ -220,6 +241,7 @@ export default function Viewport3D(){
   const applySnap=()=>{const sn=getStudio3DState().snap;gizmo.setTranslationSnap(sn.on?sn.move:null);gizmo.setRotationSnap(sn.on?THREE.MathUtils.degToRad(sn.rotate):null);gizmo.setScaleSnap(sn.on?sn.scale:null);invalidate();};
   applySnap();
   const nudgeBy=(id:number,d:{x?:number;y?:number;z?:number})=>{
+   const set=currentSet();if(set.length>1&&set.includes(id)){stage.translateMany(set,d);return;}
    const o=stage.find(id);if(!o)return;const sn=getStudio3DState().snap;
    const axis=(k:'x'|'y'|'z')=>d[k]===undefined?{}:{[k]:sn.on?snapTo(o.position[k]+d[k]!,sn.move):o.position[k]+d[k]!};
    stage.setTransform(id,{position:{...axis('x'),...axis('y'),...axis('z')}},{group:'nudge'});
@@ -230,9 +252,28 @@ export default function Viewport3D(){
    patchStudio3D({confirmReplace:null});void run();return true;
   };
   const openNow=async(files:File[])=>{
-   const primary=files.find(f=>modelFormatFor(f.name));const ticket=++opening;
+   const primary=files.find(f=>/\.som3d$/i.test(f.name))??files.find(f=>modelFormatFor(f.name));const ticket=++opening;
    if(!primary){patchStudio3D({status:'error',error:'Choose a .glb, .gltf, .obj, .stl or .ply file.'});return;}
    patchStudio3D({status:'loading',name:primary.name,error:'',blank:false});
+   if(/\.som3d$/i.test(primary.name)){
+    try{
+     const text=await primary.text();const doc=parseDocument(text);
+     const bytes=await sceneBytes(doc,files.filter(f=>f!==primary).map(f=>({name:f.name,bytes:async()=>new Uint8Array(await f.arrayBuffer())})));
+     const {gltf}=await loadParsed(new File([bytes as BlobPart],'scene.glb'),[]);
+     if(ticket!==opening||disposed)return;
+     const nodes=[...gltf.scene.children];const applied=applyNodeExtras(gltf.scene,doc.extras);
+     selectionReset();stage.loadMany(nodes);
+     let env=doc.env;let notice=applied.skipped?'Some saved light settings could not be restored.':'';
+     if(env.preset==='custom'&&!(customEnv&&customEnv.name===env.customName)){notice=`The scene used the environment map ${env.customName}. Open it again with Open HDR; the studio lighting is used for now.`;env={...env,preset:'studio'};}
+     patchStudio3D({status:'ready',name:primary.name,error:'',format:'SOM3D',bytes:primary.size,blank:false,confirmReplace:null,notice,unitHint:null,unit:doc.unit,env,snap:doc.snap});
+     applySnap();void applyEnv();
+     if(doc.view){camera.fov=doc.view.fov;camera.position.fromArray(doc.view.position);controls.target.fromArray(doc.view.target);camera.updateProjectionMatrix();controls.update();invalidate();}else frameAll();
+    }catch(e){
+     if(ticket!==opening)return;
+     patchStudio3D({status:'error',error:e instanceof DocumentError||e instanceof ModelError||e instanceof Error?e.message:String(e),blank:false});
+    }
+    return;
+   }
    try{
     const {gltf,header,size,notice,unitHint}=await loadParsed(primary,files.filter(f=>f!==primary));
     if(ticket!==opening||disposed){gltf.scene.traverse(o=>{(o as THREE.Mesh).geometry?.dispose?.();});return;}
@@ -310,6 +351,27 @@ export default function Viewport3D(){
    }finally{holder.scale.copy(prev);holder.updateMatrixWorld(true);invalidate();}
    download(blob,exportFileName(stem(getStudio3DState().name||'scene'),format,unit));
   };
+  const deleteSelection=(ids?:number[])=>{
+   const set=ids??currentSet();if(!set.length)throw Object.assign(new Error('Select something first.'),{expected:true});
+   if(set.length===1)stage.remove(set[0]);else stage.removeMany(set);
+   patchStudio3D({selected:null,marked:[],selectedInfo:null});sync();
+  };
+  const duplicateSelection=(ids?:number[])=>{
+   const set=ids??currentSet();if(!set.length)throw Object.assign(new Error('Select something first.'),{expected:true});
+   const copies=set.length===1?[stage.duplicate(set[0])]:stage.duplicateMany(set);
+   applySet(copies.map(c=>c.id),copies[copies.length-1].id);return copies.map(c=>c.id);
+  };
+  /** Saves the scene as a .som3d document: settings as JSON, geometry as an embedded or separate GLB. */
+  const saveDocument=async(sidecar=false)=>{
+   if(!holder.children.length)throw Object.assign(new Error('There is nothing to save. Open a model or add a shape first.'),{expected:true});
+   const st=getStudio3DState();const name=stem(st.name||'scene');const glbName=`${name}.scene.glb`;
+   const glb=new Uint8Array(await new GLTFExporter().parseAsync([...holder.children],{binary:true,onlyVisible:false}) as ArrayBuffer);
+   const text=buildDocument({glb,sidecar:sidecar?glbName:undefined,unit:st.unit,env:st.env,snap:st.snap,extras:collectNodeExtras(holder),
+    view:{position:camera.position.toArray() as [number,number,number],target:controls.target.toArray() as [number,number,number],fov:camera.fov}});
+   download(new Blob([text],{type:'application/json'}),`${name}.som3d`);
+   if(sidecar)download(new Blob([glb as BlobPart],{type:'model/gltf-binary'}),glbName);
+   patchStudio3D({name:`${name}.som3d`});stage.markSaved();
+  };
   const projectName=()=>{try{return getAppState().projectName||'';}catch{return '';}};
   const loadUnit=()=>{try{patchStudio3D({unit:readProjectUnit(localStorage,projectName())});}catch{/* keep current */}};
   loadUnit();
@@ -321,7 +383,7 @@ export default function Viewport3D(){
    stage.markSaved();
   };
   const off=registerStudio3DController({
-   exportMesh,renderTurntable,cancelRender:()=>{cancelFlag=true;},setUnit,openFiles,newScene,resetView:frameAll,frameSelection,select,renderStill,exportGlb,
+   save:saveDocument,deleteSelection,duplicateSelection,exportMesh,renderTurntable,cancelRender:()=>{cancelFlag=true;},setUnit,openFiles,newScene,resetView:frameAll,frameSelection,select,renderStill,exportGlb,
    addPrimitive:k=>{const o=stage.addPrimitive(k);select(o.id);return o.id;},addLight:k=>{const o=stage.addLight(k);select(o.id);return o.id;},
    setTransform:(id,p)=>stage.setTransform(id,p),setMaterial:(id,p)=>stage.setMaterial(id,p),rename:(id,n)=>stage.rename(id,n),
    addCamera:fromView=>{
@@ -384,7 +446,7 @@ export default function Viewport3D(){
     if(e.key==='w'||e.key==='W'){gizmo.setMode('translate');patchStudio3D({gizmo:'translate'});invalidate();e.preventDefault();return;}
     if(e.key==='e'||e.key==='E'){gizmo.setMode('rotate');patchStudio3D({gizmo:'rotate'});invalidate();e.preventDefault();return;}
     if(e.key==='r'||e.key==='R'){gizmo.setMode('scale');patchStudio3D({gizmo:'scale'});invalidate();e.preventDefault();return;}
-    if((e.key==='Delete'||e.key==='Backspace')&&sel!=null){stage.remove(sel);e.preventDefault();return;}
+    if((e.key==='Delete'||e.key==='Backspace')&&currentSet().length){deleteSelection();e.preventDefault();return;}
     const stepNow=getStudio3DState().snap.on?getStudio3DState().snap.move:0.1;const n=e.shiftKey&&sel!=null?nudgeFor(e.key,stepNow):null;
     if(n&&sel!=null){nudgeBy(sel,n);e.preventDefault();return;}
    }

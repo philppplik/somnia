@@ -155,5 +155,14 @@
  "cmd.studio3d.export.mesh": "Exporter la scène en STL ou OBJ",
  "cmd.studio3d.unit.set": "Choisir l'unité pour l'export STL et OBJ",
  "cmd.studio3d.render.turntable": "Rendre un plateau tournant en ZIP d'images PNG",
- "cmd.studio3d.render.cancel": "Annuler le rendu 3D en cours"
+ "cmd.studio3d.render.cancel": "Annuler le rendu 3D en cours",
+ "studio3d.save.title": "Fichier de scène",
+ "studio3d.save.one": "Enregistrer la scène (.som3d)",
+ "studio3d.save.sidecar": "Enregistrer avec un GLB séparé",
+ "studio3d.save.note": "Enregistre objets, matériaux, lumières, caméras, unité, environnement, aimantation et vue. Pour rouvrir une scène avec un GLB séparé, sélectionnez les deux fichiers.",
+ "studio3d.selection.duplicate": "Dupliquer la sélection",
+ "studio3d.selection.delete": "Supprimer la sélection",
+ "cmd.studio3d.save": "Enregistrer la scène 3D",
+ "cmd.studio3d.selection.delete": "Supprimer les objets 3D sélectionnés",
+ "cmd.studio3d.selection.duplicate": "Dupliquer les objets 3D sélectionnés"
 }

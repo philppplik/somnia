@@ -37,3 +37,11 @@ test('the coordinator opens a GLB through prepare/commit and switches to 3D once
  assert.deepEqual(calls,['prepare:model3d','prepare:model3d','commit','focus','switch:3d:3d:a.glb']);
  assert.equal(report.outcomes[0].status,'opened');assert.equal(report.outcomes[1].status,'deferred');
 });
+test('OBJ, STL, PLY and som3d files route to the 3D studio after content checks',()=>{
+ const e=(s:string)=>new TextEncoder().encode(s);
+ for(const [name,body] of [['a.obj','v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n'],['a.stl','solid x\nfacet normal 0 0 1\nendsolid'],['a.ply','ply\nformat ascii 1.0\nelement vertex 3\nend_header\n0 0 0\n'],['a.som3d','{"format":"somnia-3d","version":1}']] as const){
+  const r=resolveOpen(name,e(body));assert.equal(r.status,'ready',name);if(r.status==='ready'){assert.equal(r.kind,'model3d');assert.equal(r.studioId,'3d');}
+ }
+ const bad=resolveOpen('b.obj',e('hello'));assert.notEqual(bad.status,'ready');
+ const badDoc=resolveOpen('b.som3d',e('{"format":"x"}'));assert.notEqual(badDoc.status,'ready');
+});

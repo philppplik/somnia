@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import type {NodeExtra} from './document';
 import {emptyStats,type ModelStats,type OutlineEntry,type Bounds} from './model';
 /**
  * Scene operations for the 3D studio (P1 staging). Pure three.js core, no renderer and no DOM, so the logic runs under tsx --test.
@@ -23,6 +24,47 @@ export type AlignAxis='x'|'y'|'z';
 export type AlignTo='min'|'center'|'max';
 export type PivotAt='center'|'base';
 export const GROUP_MS=1000;
+export interface TransformSnapshot{id:number;p:THREE.Vector3;r:THREE.Euler;s:THREE.Vector3}
+export interface GroupDragMember{o:THREE.Object3D;world0:THREE.Matrix4}
+/** Captures the world matrices of the dragged objects at the start of a group drag. */
+export function beginGroupDrag(objs:THREE.Object3D[]):GroupDragMember[]{return objs.map(o=>{o.updateWorldMatrix(true,false);return{o,world0:o.matrixWorld.clone()};});}
+/** Applies the movement of a group pivot (from `pivot0` to `pivotNow`, both world matrices) to every member. Translation, rotation and scale all act about the pivot. */
+export function applyGroupDrag(members:GroupDragMember[],pivot0:THREE.Matrix4,pivotNow:THREE.Matrix4){
+ const delta=pivotNow.clone().multiply(pivot0.clone().invert());
+ for(const m of members){
+  const world=delta.clone().multiply(m.world0);
+  m.o.parent?.updateWorldMatrix(true,false);
+  const local=(m.o.parent?m.o.parent.matrixWorld.clone().invert():new THREE.Matrix4()).multiply(world);
+  local.decompose(m.o.position,m.o.quaternion,m.o.scale);m.o.updateMatrix();
+ }
+}
+/** Depth-first (pre-order) list of every node below root. The index in this list addresses a node in a saved document. */
+export function nodesOf(root:THREE.Object3D):THREE.Object3D[]{const out:THREE.Object3D[]=[];const walk=(o:THREE.Object3D)=>{for(const c of o.children){out.push(c);walk(c);}};walk(root);return out;}
+/** Data glTF cannot hold: shadow flags and area lights (glTF punctual lights have no area light). */
+export function collectNodeExtras(root:THREE.Object3D):NodeExtra[]{
+ const out:NodeExtra[]=[];
+ nodesOf(root).forEach((o,i)=>{
+  const l=o as THREE.Light;if(!l.isLight)return;const ra=o as THREE.RectAreaLight;
+  if(ra.isRectAreaLight){
+   out.push({i,area:{position:o.position.toArray() as [number,number,number],quaternion:o.quaternion.toArray().slice(0,4) as [number,number,number,number],scale:o.scale.toArray() as [number,number,number],color:'#'+ra.color.getHexString(),intensity:ra.intensity,width:ra.width,height:ra.height,name:o.name}});
+  }else if(l.castShadow)out.push({i,shadow:true});
+ });
+ return out;
+}
+/** Re-applies extras to a freshly loaded tree. Area lights replace the empty node the exporter wrote. Entries that no longer fit are skipped and counted. */
+export function applyNodeExtras(root:THREE.Object3D,extras:readonly NodeExtra[]):{skipped:number}{
+ const nodes=nodesOf(root);let skipped=0;
+ for(const e of extras){
+  const o=nodes[e.i];if(!o){skipped++;continue;}
+  if(e.area){
+   if(!o.parent||o.children.length>0||(o as THREE.Mesh).isMesh||(o as THREE.Light).isLight){skipped++;continue;}
+   const a=e.area;const light=new THREE.RectAreaLight(new THREE.Color(a.color),a.intensity,a.width,a.height);
+   light.name=a.name||o.name;light.position.fromArray(a.position);light.quaternion.fromArray(a.quaternion);light.scale.fromArray(a.scale);
+   const parent=o.parent;const at=parent.children.indexOf(o);parent.remove(o);parent.add(light);parent.children.splice(parent.children.indexOf(light),1);parent.children.splice(at,0,light);
+  }else if(e.shadow){const l=o as THREE.Light;if(l.isLight&&!(l as THREE.RectAreaLight).isRectAreaLight)l.castShadow=true;else skipped++;}
+ }
+ return{skipped};
+}
 export class StageError extends Error{constructor(message:string){super(message);this.name='StageError';}}
 const clamp01=(n:number)=>Math.min(1,Math.max(0,n));
 const finite=(n:unknown,what:string):number=>{if(typeof n!=='number'||!Number.isFinite(n))throw new StageError(`${what} must be a finite number.`);return n;};
@@ -82,6 +124,8 @@ export class Stage{
   for(const c of [...this.root.children]){this.root.remove(c);disposeObject(c);}
   for(const e of this.entries)e.release?.();this.entries=[];this.cursor=0;this.saved=0;this.emit();
  }
+ /** Replaces the content with several loaded top-level nodes (no wrapper group). History starts empty and the scene is clean. */
+ loadMany(nodes:THREE.Object3D[]){this.clear();for(const n of nodes)this.root.add(n);this.emit();}
  find(id:number):THREE.Object3D|undefined{return this.root.getObjectById(id);}
  private need(id:number):THREE.Object3D{const o=this.find(id);if(!o)throw new StageError(`No object with id ${id}.`);return o;}
  private uniqueName(base:string){
@@ -220,6 +264,42 @@ export class Stage{
   let cursor=Math.min(first.min[axis],...items.map(i=>i.b.min[axis]));const moves:{o:THREE.Object3D;delta:THREE.Vector3}[]=[];
   for(const i of items){const d=new THREE.Vector3();d[axis]=cursor-i.b.min[axis];moves.push({o:i.o,delta:d});cursor+=(i.b.max[axis]-i.b.min[axis])+gap;}
   this.moveMany(`Distribute ${axis.toUpperCase()}`,moves);
+ }
+ /** Objects of a multi-selection without any whose ancestor is also selected. */
+ private topLevel(objs:THREE.Object3D[]){const set=new Set(objs);return objs.filter(o=>{for(let p=o.parent;p;p=p.parent)if(set.has(p))return false;return true;});}
+ snapshot(ids:number[]):TransformSnapshot[]{return ids.map(id=>{const o=this.need(id);return{id,p:o.position.clone(),r:o.rotation.clone(),s:o.scale.clone()};});}
+ /** Records a group transform that already happened (a group gizmo drag). One undo step for all objects. */
+ commitMany(before:TransformSnapshot[],text='Transform selection'){
+  const list=before.map(b=>{const o=this.need(b.id);return{o,b,a:{p:o.position.clone(),r:o.rotation.clone(),s:o.scale.clone()}};})
+   .filter(x=>!(x.b.p.equals(x.a.p)&&x.b.r.equals(x.a.r)&&x.b.s.equals(x.a.s)));
+  if(!list.length)return;
+  const set=(k:'b'|'a')=>{for(const x of list){x.o.position.copy(x[k].p);x.o.rotation.copy(x[k].r);x.o.scale.copy(x[k].s);}};
+  this.push({label:text,undo:()=>set('b'),redo:()=>set('a')});
+ }
+ /** Moves several objects by the same world offset in one undo step. */
+ translateMany(ids:number[],delta:Partial<Vec3>){
+  const objs=this.topLevel(this.needMany(ids,1));const d=new THREE.Vector3(finite(delta.x??0,'x'),finite(delta.y??0,'y'),finite(delta.z??0,'z'));
+  this.moveMany(`Move ${objs.length} objects`,objs.map(o=>({o,delta:d.clone()})));
+ }
+ /** Deletes several objects in one undo step. */
+ removeMany(ids:number[]){
+  const objs=this.topLevel(this.needMany(ids,1));
+  const items=objs.map(o=>({o,parent:o.parent!,at:o.parent!.children.indexOf(o)})).sort((a,b)=>a.parent.id-b.parent.id||a.at-b.at);
+  for(const i of [...items].reverse())i.parent.remove(i.o);
+  let owned=false;
+  this.push({label:`Delete ${items.length} objects`,undo:()=>{for(const i of items)this.attach0(i.o,i.parent,i.at);owned=true;},redo:()=>{for(const i of items)i.parent.remove(i.o);owned=false;},release:()=>{if(!owned)for(const i of items)disposeObject(i.o);}});
+ }
+ /** Duplicates several objects in one undo step. Copies get their own materials and a small offset. */
+ duplicateMany(ids:number[]):THREE.Object3D[]{
+  const objs=this.topLevel(this.needMany(ids,1));const items:{o:THREE.Object3D;parent:THREE.Object3D;at:number}[]=[];
+  for(const src of objs){
+   const copy=src.clone(true);copy.traverse(c=>{const m=c as THREE.Mesh;if(m.isMesh&&!Array.isArray(m.material))m.material=(m.material as THREE.Material).clone();});
+   copy.name=this.uniqueName(src.name+' copy');copy.position.x+=0.5;
+   const parent=src.parent??this.root;items.push({o:copy,parent,at:parent.children.length});this.attach0(copy,parent,parent.children.length);
+  }
+  let owned=true;
+  this.push({label:`Duplicate ${items.length} objects`,undo:()=>{for(const i of items)i.parent.remove(i.o);owned=false;},redo:()=>{for(const i of items)this.attach0(i.o,i.parent,i.at);owned=true;},release:()=>{if(!owned)for(const i of items)disposeObject(i.o);}});
+  return items.map(i=>i.o);
  }
  setMaterial(id:number,patch:MaterialPatch){
   const o=this.need(id);const mesh=o as THREE.Mesh;

@@ -140,3 +140,8 @@ test('units scale metres and name export files',()=>{
  assert.equal(isUnit('mm'),true);assert.equal(isUnit('ft'),false);assert.equal(isUnit('toString'),false);assert.deepEqual([...UNIT_IDS].sort(),['cm','in','m','mm']);
  assert.equal(exportFileName('part','stl','mm'),'part-mm.stl');assert.equal(exportFileName('part','stl','m'),'part.stl');assert.equal(exportFileName('part','glb','mm'),'part.glb');
 });
+test('som3d files are recognised by their format marker',()=>{
+ assert.equal(modelFormatFor('a.SOM3D'),'som3d');
+ assert.equal(readModelHeader('a.som3d',enc('{"format":"somnia-3d","version":1}')).format,'som3d');
+ assert.throws(()=>readModelHeader('a.som3d',enc('{"format":"other"}')),ModelError);assert.throws(()=>readModelHeader('a.som3d',enc('x')),ModelError);
+});

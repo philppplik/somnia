@@ -155,5 +155,14 @@
  "cmd.studio3d.export.mesh": "Exportar la escena como STL u OBJ",
  "cmd.studio3d.unit.set": "Elegir la unidad para exportar STL y OBJ",
  "cmd.studio3d.render.turntable": "Renderizar una giratoria como ZIP de fotogramas PNG",
- "cmd.studio3d.render.cancel": "Cancelar el render 3D en curso"
+ "cmd.studio3d.render.cancel": "Cancelar el render 3D en curso",
+ "studio3d.save.title": "Archivo de escena",
+ "studio3d.save.one": "Guardar escena (.som3d)",
+ "studio3d.save.sidecar": "Guardar con GLB aparte",
+ "studio3d.save.note": "Guarda objetos, materiales, luces, cámaras, unidad, entorno, ajuste a pasos y vista. Para reabrir una escena con GLB aparte, selecciona ambos archivos.",
+ "studio3d.selection.duplicate": "Duplicar selección",
+ "studio3d.selection.delete": "Eliminar selección",
+ "cmd.studio3d.save": "Guardar la escena 3D",
+ "cmd.studio3d.selection.delete": "Eliminar los objetos 3D seleccionados",
+ "cmd.studio3d.selection.duplicate": "Duplicar los objetos 3D seleccionados"
 }
