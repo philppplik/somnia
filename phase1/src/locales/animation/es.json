@@ -328,5 +328,6 @@
  "animation.graph.pickMask": "Elige una curva de máscara para editar.",
  "animation.graph.mixed": "Mixto",
  "animation.graph.mixedLabel": "Claves de todas las propiedades animadas, cada curva en su propia escala de 0 a 100 por ciento",
- "animation.graph.mixedKey": "Clave de {name} en {time}"
+ "animation.graph.mixedKey": "Clave de {name} en {time}",
+ "animation.graph.delete": "Eliminar"
 }

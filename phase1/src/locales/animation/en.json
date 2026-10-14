@@ -328,5 +328,6 @@
  "animation.graph.pickMask": "Pick a mask curve to edit.",
  "animation.graph.mixed": "Mixed",
  "animation.graph.mixedLabel": "Keys of all animated properties, each curve on its own 0 to 100 percent scale",
- "animation.graph.mixedKey": "{name} key at {time}"
+ "animation.graph.mixedKey": "{name} key at {time}",
+ "animation.graph.delete": "Delete"
 }
