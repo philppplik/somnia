@@ -443,3 +443,7 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 ### Animation P67 (2026-10-14, integration pending)
 - Done: multi-stop gradients for fill and stroke. Up to 6 extra stops between start (0) and end (1), each with a colour and a position in percent; "Add stop" puts a new one in the widest gap, "Remove" drops one. Works with linear and radial. One undo step per change. Viewer and all exports share the stop markup. Without extra stops the output is byte-identical.
 - Open: start and end stay at 0 and 100 percent, no stop opacity, gradients are not keyed, no conic gradient, no centre or radius control.
+
+### Animation P68 (2026-10-14, integration pending)
+- Done: opacity for gradient colours. Start, end and every extra stop have an opacity in percent (0 to 100), so a fill or stroke can fade to transparent. Inspector: "Start opacity", "End opacity" and one opacity field per stop. 100 percent is not stored, so old documents and the default output stay byte-identical. Viewer and every export write `stop-opacity`.
+- Open: opacity is not keyed, not shown as a swatch preview, no conic gradient, no centre or radius control.

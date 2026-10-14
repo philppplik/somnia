@@ -625,5 +625,8 @@
  "animation.gradient.stopColor": "Color de la parada {n} del degradado",
  "animation.gradient.stopOffset": "Posición de la parada {n} (%)",
  "animation.gradient.addStop": "Añadir parada",
- "animation.gradient.removeStop": "Quitar"
+ "animation.gradient.removeStop": "Quitar",
+ "animation.gradient.startOpacity": "Opacidad inicial (%)",
+ "animation.gradient.endOpacity": "Opacidad final (%)",
+ "animation.gradient.stopOpacity": "Opacidad de la parada {n} (%)"
 }

@@ -625,5 +625,8 @@
  "animation.gradient.stopColor": "Gradient stop {n} colour",
  "animation.gradient.stopOffset": "Stop {n} position (%)",
  "animation.gradient.addStop": "Add stop",
- "animation.gradient.removeStop": "Remove"
+ "animation.gradient.removeStop": "Remove",
+ "animation.gradient.startOpacity": "Start opacity (%)",
+ "animation.gradient.endOpacity": "End opacity (%)",
+ "animation.gradient.stopOpacity": "Stop {n} opacity (%)"
 }

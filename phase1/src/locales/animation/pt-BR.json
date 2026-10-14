@@ -625,5 +625,8 @@
  "animation.gradient.stopColor": "Cor da parada {n} do degradê",
  "animation.gradient.stopOffset": "Posição da parada {n} (%)",
  "animation.gradient.addStop": "Adicionar parada",
- "animation.gradient.removeStop": "Remover"
+ "animation.gradient.removeStop": "Remover",
+ "animation.gradient.startOpacity": "Opacidade inicial (%)",
+ "animation.gradient.endOpacity": "Opacidade final (%)",
+ "animation.gradient.stopOpacity": "Opacidade da parada {n} (%)"
 }

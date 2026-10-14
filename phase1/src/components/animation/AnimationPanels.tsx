@@ -17,7 +17,7 @@ import {MotionLibrary} from './MotionLibrary';
 import {AudioInspector} from './AudioInspector';
 import {animationSession} from '../../lib/animation/session';
 import {newId,MAX_GRADIENT_STOPS} from '../../lib/animation/model';
-import {addGradientStop,setGradientStop,removeGradientStop} from '../../lib/animation/shapes';
+import {addGradientStop,setGradientStop,removeGradientStop,setGradientEndOpacity} from '../../lib/animation/shapes';
 import {TICKS_PER_SECOND} from '../../lib/animation/time';
 import {useEffect,useRef,useState} from 'react';
 import {executeCommand} from '../../lib/commands';
@@ -73,11 +73,12 @@ export function CompositionsPanel(_:PanelHostProps){
 }
 function NumberField(props:Parameters<typeof InspectorNumberField>[0]){return <InspectorNumberField {...props} className={field} format={fmt}/>;}
 /** Right inspector: values for the selected layer. One owner per control, numeric editing for every property. */
-type GradientValue={start:string;end:string;angle:number;kind?:'linear'|'radial';stops?:readonly {offset:number;color:string}[]};
+type GradientValue={start:string;end:string;angle:number;kind?:'linear'|'radial';/** Opacity of the start and end colour, percent 0..100 (absent means 100). */startOpacity?:number;endOpacity?:number;stops?:readonly {offset:number;color:string;opacity?:number}[]};
 function GradientStops({g,disabled,onChange}:{g:GradientValue;disabled:boolean;onChange:(g:GradientValue)=>void}){
  const {t}=useT();const st=g.stops??[];
  return <div className="grid gap-1" data-testid="animation-gradient-stops">
-  {st.map((x,i)=><div key={i} className="flex flex-wrap items-center gap-1"><NativeInput type="color" aria-label={t('animation.gradient.stopColor',{n:i+1})} disabled={disabled} value={x.color} onChange={e=>onChange(setGradientStop(g,i,{color:e.target.value}))}/><NumberField label={t('animation.gradient.stopOffset',{n:i+1})} value={Math.round(x.offset*100)} min={1} max={99} disabled={disabled} onCommit={v=>onChange(setGradientStop(g,i,{offset:v/100}))}/><Button size="tiny" variant="ghost" disabled={disabled} onClick={()=>onChange(removeGradientStop(g,i))}>{t('animation.gradient.removeStop')}</Button></div>)}
+  <div className="flex flex-wrap items-center gap-1"><NumberField label={t('animation.gradient.startOpacity')} value={g.startOpacity??100} min={0} max={100} disabled={disabled} onCommit={v=>onChange(setGradientEndOpacity(g,'start',v))}/><NumberField label={t('animation.gradient.endOpacity')} value={g.endOpacity??100} min={0} max={100} disabled={disabled} onCommit={v=>onChange(setGradientEndOpacity(g,'end',v))}/></div>
+  {st.map((x,i)=><div key={i} className="flex flex-wrap items-center gap-1"><NativeInput type="color" aria-label={t('animation.gradient.stopColor',{n:i+1})} disabled={disabled} value={x.color} onChange={e=>onChange(setGradientStop(g,i,{color:e.target.value}))}/><NumberField label={t('animation.gradient.stopOffset',{n:i+1})} value={Math.round(x.offset*100)} min={1} max={99} disabled={disabled} onCommit={v=>onChange(setGradientStop(g,i,{offset:v/100}))}/><NumberField label={t('animation.gradient.stopOpacity',{n:i+1})} value={x.opacity??100} min={0} max={100} disabled={disabled} onCommit={v=>onChange(setGradientStop(g,i,{opacity:v}))}/><Button size="tiny" variant="ghost" disabled={disabled} onClick={()=>onChange(removeGradientStop(g,i))}>{t('animation.gradient.removeStop')}</Button></div>)}
   <Button size="tiny" variant="outline" disabled={disabled||st.length>=MAX_GRADIENT_STOPS} onClick={()=>onChange(addGradientStop(g,MAX_GRADIENT_STOPS))} data-testid="animation-gradient-add-stop">{t('animation.gradient.addStop')}</Button>
  </div>;
 }

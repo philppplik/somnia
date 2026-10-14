@@ -15,7 +15,7 @@ import {booleanEdits,maskBooleanEdit,expandStrokeEdits} from './pathLayer';
 import {frameSvg} from './exportFrames';
 import {strokeAttributes,layerColorsAt} from './effects';
 import {styleKeyLanes} from './keyLanes';
-import {gradientVector,addGradientStop,setGradientStop,removeGradientStop} from './shapes';
+import {gradientVector,addGradientStop,setGradientStop,removeGradientStop,setGradientEndOpacity,gradientDefSvg} from './shapes';
 import {pruneStyleKeys,toggleStyleKey,keysInRect} from './keyLanes';
 import {styleKeyDeleteEdits,styleKeyShiftEdits} from './edit';
 import {colorAt,easeProgress,COLOR_EASE_HANDLES} from './colorKeys';
@@ -1622,4 +1622,25 @@ test('P67 multi-stop gradients: markup, validation, stop helpers, legacy output 
  let many=g0;for(let i=0;i<9;i++)many=addGradientStop(many);assert.equal(many.stops!.length,6,'capped at 6');
  for(const bad of [[{offset:0.5,color:'#ffffff'},{offset:0.5,color:'#000000'}],[{offset:0.6,color:'#ffffff'},{offset:0.4,color:'#000000'}],[{offset:0,color:'#ffffff'}],[{offset:1,color:'#ffffff'}],[{offset:0.5,color:'white'}],Array.from({length:7},(_,i)=>({offset:(i+1)/10,color:'#ffffff'}))])
   assert.throws(()=>applyEdit(d,{type:'layer.update',layer:'pa',source:{gradient:{...g0,stops:bad}}}),Error);
+});
+
+test('P68 gradient stop opacity: markup, clamping, 100 is not stored, validation',()=>{
+ type G={start:string;end:string;angle:number;startOpacity?:number;endOpacity?:number;stops?:readonly {offset:number;color:string;opacity?:number}[]};
+ const g:G={start:'#ff0000',end:'#0000ff',angle:0};
+ const plain=gradientDefSvg('x',g);
+ assert.equal(gradientDefSvg('x',{...g,startOpacity:100,endOpacity:100,stops:[]}),plain,'100 percent draws like absent');
+ const f=gradientDefSvg('x',{...g,endOpacity:0,stops:[{offset:0.5,color:'#00ff00',opacity:40}]});
+ assert.ok(f.includes('<stop offset="0" stop-color="#ff0000"/><stop offset="0.5" stop-color="#00ff00" stop-opacity="0.4"/><stop offset="1" stop-color="#0000ff" stop-opacity="0"/>'),f);
+ assert.deepEqual(setGradientEndOpacity(g,'end',30),{...g,endOpacity:30});
+ assert.deepEqual(setGradientEndOpacity({...g,endOpacity:30},'end',100),g,'100 removes the field');
+ assert.equal(setGradientEndOpacity(g,'start',-5).startOpacity,0);
+ const s1=addGradientStop({...g,endOpacity:20});assert.equal(s1.stops![0].opacity,undefined,'new stop copies the start opacity (absent)');
+ const s2=setGradientStop(s1,0,{opacity:150});assert.equal(s2.stops![0].opacity,undefined,'clamped to 100 means absent');
+ assert.equal(setGradientStop(s1,0,{opacity:-4}).stops![0].opacity,0);
+ let d=strokeDoc([{x:0.2,y:0.2},{x:0.8,y:0.2},{x:0.8,y:0.8},{x:0.2,y:0.8}],true,8);
+ const ok=applyEdit(d,{type:'layer.update',layer:'pa',source:{gradient:{...g,startOpacity:50,endOpacity:0,stops:[{offset:0.5,color:'#00ff00',opacity:20}]}}});
+ assert.deepEqual(validateDocument(ok),[]);assert.ok(frameSvg(comp(ok),0).includes('stop-opacity="0.5"'));
+ for(const bad of [{startOpacity:101},{endOpacity:-1},{startOpacity:'x' as never},{stops:[{offset:0.5,color:'#00ff00',opacity:120}]},{stops:[{offset:0.5,color:'#00ff00',opacity:Number.NaN}]}])
+  assert.throws(()=>applyEdit(d,{type:'layer.update',layer:'pa',source:{gradient:{...g,...bad}}}),Error);
+ assert.throws(()=>applyEdit(d,{type:'layer.stroke',layer:'pa',stroke:{color:'#00ff00',width:8,gradient:{...g,endOpacity:200}}}),Error);
 });

@@ -58,8 +58,9 @@ function animatedText(l:Layer,at:number){
  return spans.slice(0,Array.from(shown).length).map((c,i)=><tspan key={i} dx={c.dx} dy={c.dy} fontSize={(l.source.size??48)*c.scale} fillOpacity={c.opacity} rotate={c.rotate||undefined} fill={c.fill}>{c.ch}</tspan>);
 }
 const canClosePath=(l?:Layer)=>!!l&&l.kind==='shape'&&l.source.shape==='path'&&!!l.source.path;
-function GradientDef({id,g}:{id:string;g:{start:string;end:string;angle:number;kind?:'linear'|'radial';stops?:readonly {offset:number;color:string}[]}}){
- const stops=<><stop offset="0" stopColor={g.start}/>{(g.stops??[]).map(x=><stop key={x.offset} offset={x.offset} stopColor={x.color}/>)}<stop offset="1" stopColor={g.end}/></>;
+function GradientDef({id,g}:{id:string;g:{start:string;end:string;angle:number;kind?:'linear'|'radial';/** Opacity of the start and end colour, percent 0..100 (absent means 100). */startOpacity?:number;endOpacity?:number;stops?:readonly {offset:number;color:string;opacity?:number}[]}}){
+ const so=(o?:number)=>o!==undefined&&o<100?Math.round(o)/100:undefined;
+ const stops=<><stop offset="0" stopColor={g.start} stopOpacity={so(g.startOpacity)}/>{(g.stops??[]).map(x=><stop key={x.offset} offset={x.offset} stopColor={x.color} stopOpacity={so(x.opacity)}/>)}<stop offset="1" stopColor={g.end} stopOpacity={so(g.endOpacity)}/></>;
  return g.kind==='radial'?<radialGradient id={id} cx={0.5} cy={0.5} r={0.5}>{stops}</radialGradient>:<linearGradient id={id} {...gradientVector(g.angle)}>{stops}</linearGradient>;
 }
 function layerNode(layer:Layer,assets:readonly InterfaceAsset[],at:number,fillOverride?:string,strokePaint?:string){

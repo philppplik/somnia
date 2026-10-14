@@ -349,3 +349,6 @@ A pointer drag on a key that is part of a multi-key selection builds `styleKeySh
 
 ## P67 - Multi-stop gradients
 `gradient.stops?:{offset,color}[]` holds the stops between start and end: 0 to 6 entries, offsets strictly increasing within 0.01..0.99, hex colours (`validGradientStops` in model.ts, used for fill and stroke). `gradientDefSvg` writes start, the stops, then end. The inspector helpers (`addGradientStop`, `setGradientStop`, `removeGradientStop` in shapes.ts) keep offsets sorted and at least 1 percent apart.
+
+## P68 - Gradient opacity
+`gradient.startOpacity`, `gradient.endOpacity` and `stops[].opacity` (percent 0..100, absent means 100). `gradientDefSvg` adds `stop-opacity` only below 100. `setGradientEndOpacity` and `setGradientStop` clamp and drop the field at 100. Validation (`validGradientOpacities`, `validGradientStops`) rejects out-of-range or non-finite values for fill and stroke gradients.

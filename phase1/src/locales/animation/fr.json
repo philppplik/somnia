@@ -625,5 +625,8 @@
  "animation.gradient.stopColor": "Couleur de l'arrêt {n} du dégradé",
  "animation.gradient.stopOffset": "Position de l'arrêt {n} (%)",
  "animation.gradient.addStop": "Ajouter un arrêt",
- "animation.gradient.removeStop": "Retirer"
+ "animation.gradient.removeStop": "Retirer",
+ "animation.gradient.startOpacity": "Opacité de début (%)",
+ "animation.gradient.endOpacity": "Opacité de fin (%)",
+ "animation.gradient.stopOpacity": "Opacité de l'arrêt {n} (%)"
 }
