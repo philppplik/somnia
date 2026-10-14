@@ -635,5 +635,7 @@
  "cmd.studio3d.view.perf": "Live-Anzeige für FPS, Draw Calls und Dreiecke ein- oder ausblenden",
  "studio3d.model.instancing": "Instancing-Kandidaten",
  "studio3d.warn.instancingHint": "{count} Meshes teilen Geometrie und Material. Instancing würde Draw Calls sparen.",
- "studio3d.warn.lodHint": "Grosse statische Szene ({count} Dreiecke). Detailstufen oder Dezimierung würden helfen."
+ "studio3d.warn.lodHint": "Grosse statische Szene ({count} Dreiecke). Detailstufen oder Dezimierung würden helfen.",
+ "studio3d.turntable.outWebm": "WebM-Video",
+ "studio3d.turntable.fps": "Bilder pro Sekunde"
 }

@@ -1382,3 +1382,17 @@ test('3D studio performance overlay toggles from the view panel',async({page})=>
  await expect.poll(async()=>(await session(page)).perf).toBeNull();
  await expect(page.getByTestId('studio3d-perf')).toHaveCount(0);
 });
+
+test('3D studio turntable renders a WebM video and refuses transparency for it',async({page})=>{
+ await blank(page);
+ await insert(page,'cube',0);
+ // Transparent frames stay exclusive to the PNG outputs.
+ expect(await run(page,'studio3d.render.turntable',{out:'webm',transparent:true})).toBe(false);
+ await expect(page.getByRole('alert')).toContainText('keeps the background');
+ // A short WebM records and downloads.
+ const [download]=await Promise.all([page.waitForEvent('download'),run(page,'studio3d.render.turntable',{frames:3,fps:10,out:'webm',width:160,height:120})]);
+ expect(download.suggestedFilename()).toMatch(/-turntable\.webm$/);
+ // The PNG zip output still works after the video.
+ const [zip]=await Promise.all([page.waitForEvent('download'),run(page,'studio3d.render.turntable',{frames:2,width:120,height:90})]);
+ expect(zip.suggestedFilename()).toMatch(/-turntable\.zip$/);
+});

@@ -563,7 +563,7 @@ function ArrayTools({ids}:{ids:number[]}){
 }
 /** Snapping, pivot, align and distribute. Align and distribute work on the objects ticked in the scene list. */
 export function ToolsSection(_:InspectorSectionProps){
- const {t}=useT();const s=useStudio3D();const sn=s.snap;const n=s.marked.filter(id=>s.outline.some(o=>o.id===id));const [frames,setFrames]=useState(36);const [out,setOut]=useState<'zip'|'folder'>('zip');
+ const {t}=useT();const s=useStudio3D();const sn=s.snap;const n=s.marked.filter(id=>s.outline.some(o=>o.id===id));const [frames,setFrames]=useState(36);const [out,setOut]=useState<'zip'|'folder'|'webm'>('zip');const [fps,setFps]=useState(30);
  const align=(axis:string,to:string)=>void executeCommand('studio3d.object.align',{ids:n,axis,to});
  return <div className="grid gap-2 p-3" data-testid="studio3d-tools-section">
   <label className="flex items-center gap-2 text-xs text-ink-2"><input type="checkbox" checked={sn.on} onChange={e=>void executeCommand('studio3d.snap.set',{on:e.currentTarget.checked})}/>{t('studio3d.snap.on')}</label>
@@ -623,10 +623,11 @@ export function ToolsSection(_:InspectorSectionProps){
   <fieldset className="m-0 grid gap-2 border-0 p-0" data-testid="studio3d-turntable"><legend className="text-xs text-ink-3">{t('studio3d.turntable.title')}</legend>
    <NumField label={t('studio3d.turntable.frames')} value={frames} min={2} max={360} step={1} onCommit={setFrames}/>
    <label className="grid gap-1 text-xs text-ink-2">{t('studio3d.turntable.out')}
-    <NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={out} aria-label={t('studio3d.turntable.out')} onChange={e=>setOut(e.currentTarget.value as 'zip'|'folder')}>
-     <option value="zip">{t('studio3d.turntable.outZip')}</option><option value="folder">{t('studio3d.turntable.outFolder')}</option></NativeSelect></label>
+    <NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={out} aria-label={t('studio3d.turntable.out')} onChange={e=>setOut(e.currentTarget.value as 'zip'|'folder'|'webm')}>
+     <option value="zip">{t('studio3d.turntable.outZip')}</option><option value="folder">{t('studio3d.turntable.outFolder')}</option><option value="webm">{t('studio3d.turntable.outWebm')}</option></NativeSelect></label>
+   {out==='webm'&&<NumField label={t('studio3d.turntable.fps')} value={fps} min={1} max={60} step={1} onCommit={setFps}/>}
    {s.render?<StudioProgress label={t('studio3d.turntable.progress',{done:s.render.done,total:s.render.total})} value={s.render.done} max={s.render.total} cancelLabel={t('studio3d.turntable.cancel')} onCancel={()=>void executeCommand('studio3d.render.cancel')}/>:
-    <Button variant="outline" disabled={s.status!=='ready'} onClick={()=>void executeCommand('studio3d.render.turntable',{frames,out})}>{t('studio3d.turntable.start')}</Button>}
+    <Button variant="outline" disabled={s.status!=='ready'} onClick={()=>void executeCommand('studio3d.render.turntable',{frames,out,fps})}>{t('studio3d.turntable.start')}</Button>}
   </fieldset>
   <MeshTools/>
   <fieldset className="m-0 grid gap-1 border-0 p-0" data-testid="studio3d-align"><legend className="text-xs text-ink-3">{t('studio3d.align.title',{count:n.length})}</legend>

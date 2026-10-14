@@ -303,6 +303,10 @@ export function turntablePlan(frames:number,width:number,height:number):{frames:
  if(frames*width*height>MAX_TURNTABLE_PIXELS)throw new SnapError('This turntable is too large. Use fewer frames or a smaller size.');
  return{frames,step:(Math.PI*2)/frames};
 }
+/** WebM container choices, best first. */
+export const WEBM_MIMES=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'] as const;
+/** The first WebM mime the browser records, or the bare container as a last resort. */
+export function webmMime(supported:(mime:string)=>boolean):string{for(const m of WEBM_MIMES)if(supported(m))return m;return 'video/webm';}
 export const frameName=(i:number,total:number)=>`frame-${String(i+1).padStart(Math.max(4,String(total).length),'0')}.png`;
 
 /** glTF texture export: embedded as data URIs or written as separate files next to the .gltf. */

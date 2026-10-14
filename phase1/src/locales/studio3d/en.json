@@ -635,5 +635,7 @@
  "cmd.studio3d.view.perf": "Show or hide the live FPS, draw-call and triangle overlay",
  "studio3d.model.instancing": "Instancing candidates",
  "studio3d.warn.instancingHint": "{count} meshes share the same geometry and material. Instancing them would cut draw calls.",
- "studio3d.warn.lodHint": "A large static scene ({count} triangles). Level of detail or decimation would help."
+ "studio3d.warn.lodHint": "A large static scene ({count} triangles). Level of detail or decimation would help.",
+ "studio3d.turntable.outWebm": "WebM video",
+ "studio3d.turntable.fps": "Frames per second"
 }

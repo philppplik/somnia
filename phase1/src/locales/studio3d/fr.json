@@ -635,5 +635,7 @@
  "cmd.studio3d.view.perf": "Afficher ou masquer l’indicateur en direct de FPS, draw calls et triangles",
  "studio3d.model.instancing": "Candidats à l’instanciation",
  "studio3d.warn.instancingHint": "{count} maillages partagent géométrie et matériau. L’instanciation réduirait les draw calls.",
- "studio3d.warn.lodHint": "Grande scène statique ({count} triangles). Des niveaux de détail ou une décimation aideraient."
+ "studio3d.warn.lodHint": "Grande scène statique ({count} triangles). Des niveaux de détail ou une décimation aideraient.",
+ "studio3d.turntable.outWebm": "Vidéo WebM",
+ "studio3d.turntable.fps": "Images par seconde"
 }

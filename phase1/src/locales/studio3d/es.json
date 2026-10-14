@@ -635,5 +635,7 @@
  "cmd.studio3d.view.perf": "Mostrar u ocultar el indicador en vivo de FPS, llamadas de dibujo y triángulos",
  "studio3d.model.instancing": "Candidatos a instanciado",
  "studio3d.warn.instancingHint": "{count} mallas comparten geometría y material. Instanciarlas reduciría las llamadas de dibujo.",
- "studio3d.warn.lodHint": "Escena estática grande ({count} triángulos). Niveles de detalle o diezmado ayudarían."
+ "studio3d.warn.lodHint": "Escena estática grande ({count} triángulos). Niveles de detalle o diezmado ayudarían.",
+ "studio3d.turntable.outWebm": "Vídeo WebM",
+ "studio3d.turntable.fps": "Fotogramas por segundo"
 }

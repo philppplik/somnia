@@ -28,7 +28,7 @@ import {getState as getAppState} from '../../store/appStore';
 import {readProjectUnit,writeProjectUnit} from '../../lib/studio3d/projectPrefs';
 import {checkPreset,presetPatch,readPresets,removePreset,savePreset,MaterialPresetError,type MaterialPreset} from '../../lib/studio3d/materialPresets';
 import type {MaterialSnapshot} from '../../lib/studio3d/stage';
-import {toggleSelection,marqueeRect,inRect,turntablePlan,frameName,exportFileName,unitScale,isUnit,isMeshFormat,mergeSnap,snapTo,measureInfo,stlUnitHint,mtlReferences,mtlTextures,externalGltfNeeds,clampRenderSize,shadowMapSize,formatPerf,MAX_MTL_BYTES,MAX_TEXTURE_BYTES,MAX_TEXTURE_FILES,SnapError,mergeEnv,envFormatFor,isShadowQuality,isShadowType,nudgeFor,EnvError,modelFormatFor,readModelHeader,ModelError,boundsValid,boundsCenter,boundsRadius,frameDistance,clipPlanes,pickClips,extractGltfTextures,GLTF_TEXTURE_MODES} from '../../lib/studio3d/model';
+import {toggleSelection,marqueeRect,inRect,turntablePlan,frameName,exportFileName,unitScale,isUnit,isMeshFormat,mergeSnap,snapTo,measureInfo,stlUnitHint,mtlReferences,mtlTextures,externalGltfNeeds,clampRenderSize,shadowMapSize,formatPerf,webmMime,MAX_MTL_BYTES,MAX_TEXTURE_BYTES,MAX_TEXTURE_FILES,SnapError,mergeEnv,envFormatFor,isShadowQuality,isShadowType,nudgeFor,EnvError,modelFormatFor,readModelHeader,ModelError,boundsValid,boundsCenter,boundsRadius,frameDistance,clipPlanes,pickClips,extractGltfTextures,GLTF_TEXTURE_MODES} from '../../lib/studio3d/model';
 import type {Bounds} from '../../lib/studio3d/model';
 import {checkSkins,bonePickRadius,pickBone} from '../../lib/studio3d/skeleton';
 import {weightColor} from '../../lib/studio3d/skinning';
@@ -677,8 +677,8 @@ export default function Viewport3D(){
   const selectionReset=()=>{patchStudio3D({selected:null,selectedInfo:null,marked:[],notice:'',unitHint:null});};
   const openFiles=async(files:File[],force?:boolean)=>{guard('open',files,force,()=>{stopPreview();return openNow(files);});};
   const newScene=(force?:boolean)=>{guard('new',[],force,()=>{opening++;stopPreview();selectionReset();stage.clear();resetAnim();resetStudio3D({status:'ready',blank:true,name:''});sync();frameAll();});};
-  /** Renders one PNG at the requested size and puts the viewport back the way it was. */
-  const capture=async(cam:THREE.PerspectiveCamera|THREE.OrthographicCamera,want:{width:number;height:number}|null,transparent:boolean):Promise<Blob>=>{
+  /** Sets the renderer up for an off-screen-quality frame at the requested size, runs fn, and puts the viewport back the way it was. */
+  const withCaptureFrame:<R>(cam:THREE.PerspectiveCamera|THREE.OrthographicCamera,want:{width:number;height:number}|null,transparent:boolean,fn:()=>Promise<R>)=>Promise<R>=async(cam,want,transparent,fn)=>{
    const dom=renderer.domElement;const w0=dom.width,h0=dom.height;const pr=renderer.getPixelRatio();
    const persp=(cam as THREE.PerspectiveCamera).isPerspectiveCamera;
    const ortho0=persp?null:{left:(cam as THREE.OrthographicCamera).left,right:(cam as THREE.OrthographicCamera).right,top:(cam as THREE.OrthographicCamera).top,bottom:(cam as THREE.OrthographicCamera).bottom};
@@ -693,10 +693,7 @@ export default function Viewport3D(){
     if(persp)(cam as THREE.PerspectiveCamera).aspect=size.width/size.height;
     else{const o=cam as THREE.OrthographicCamera;const h=(o.top-o.bottom)/2,cy=(o.top+o.bottom)/2,cx=(o.left+o.right)/2,w2=h*(size.width/size.height);o.left=cx-w2;o.right=cx+w2;}
     cam.updateProjectionMatrix();
-    renderer.render(scene,cam);
-    const blob=await new Promise<Blob|null>(r=>dom.toBlob(r,'image/png'));
-    if(!blob)throw new Error('The 3D view could not be captured.');
-    return blob;
+    return await fn();
    }finally{
     for(const [o,v] of hidden)o.visible=v;
     scene.background=bg;if(transparent)renderer.setClearColor(0x000000,1);
@@ -705,6 +702,14 @@ export default function Viewport3D(){
     cam.updateProjectionMatrix();renderer.setPixelRatio(pr);renderer.setSize(w0/pr,h0/pr,false);invalidate();
    }
   };
+  const readCanvasBlob=async():Promise<Blob>=>{
+   const blob=await new Promise<Blob|null>(r=>renderer.domElement.toBlob(r,'image/png'));
+   if(!blob)throw new Error('The 3D view could not be captured.');
+   return blob;
+  };
+  /** Renders one PNG at the requested size. */
+  const capture=async(cam:THREE.PerspectiveCamera|THREE.OrthographicCamera,want:{width:number;height:number}|null,transparent:boolean):Promise<Blob>=>
+   withCaptureFrame(cam,want,transparent,async()=>{renderer.render(scene,cam);return readCanvasBlob();});
   const maxSize=()=>{const gl=renderer.getContext();return Math.min(gl.getParameter(gl.MAX_RENDERBUFFER_SIZE) as number,gl.getParameter(gl.MAX_TEXTURE_SIZE) as number,16384);};
   const renderStill=async(opts:{camera?:number;width?:number;height?:number;transparent?:boolean}={})=>{
    let cam:THREE.PerspectiveCamera|THREE.OrthographicCamera=camera;
@@ -714,32 +719,58 @@ export default function Viewport3D(){
    download(await capture(cam,want,!!opts.transparent),`${stem(getStudio3DState().name||'scene')}-${cam===camera?'still':'camera'}.png`);
   };
   let cancelFlag=false;
-  const renderTurntable=async(opts:{frames?:number;width?:number;height?:number;transparent?:boolean;out?:'zip'|'folder'}={})=>{
+  const renderTurntable=async(opts:{frames?:number;width?:number;height?:number;transparent?:boolean;out?:'zip'|'folder'|'webm';fps?:number}={})=>{
    stopPreview();
    if(getStudio3DState().render)throw Object.assign(new Error('A render is already running.'),{expected:true});
    const size=clampRenderSize(opts.width??1280,opts.height??720,maxSize());
    const plan=turntablePlan(opts.frames??36,size.width,size.height);
+   const webm=opts.out==='webm';
+   if(webm&&opts.transparent)throw Object.assign(new Error('A WebM video keeps the background. Turn transparent off or choose the ZIP output for transparent frames.'),{expected:true});
+   if(webm&&typeof MediaRecorder==='undefined')throw Object.assign(new Error('This browser cannot record WebM video. Use the ZIP output instead.'),{expected:true});
    let dir:{getFileHandle(name:string,opts:{create:boolean}):Promise<{createWritable():Promise<{write(data:Blob):Promise<void>;close():Promise<void>}>}>}|null=null;
    if(opts.out==='folder'){
     const picker=(window as unknown as {showDirectoryPicker?: (o:{mode:string})=>Promise<typeof dir>}).showDirectoryPicker;
     if(!picker)throw Object.assign(new Error('This browser cannot write to a folder. Use the zip output instead.'),{expected:true});
     dir=await picker.call(window,{mode:'readwrite'}).catch(()=>{throw Object.assign(new Error('No folder was chosen.'),{expected:true});});
    }
-   const {zipSync}=dir?{zipSync:null}:await import('fflate');
+   const {zipSync}=dir||webm?{zipSync:null}:await import('fflate');
    const pos0=camera.position.clone(),enabled0=controls.enabled;const target=controls.target.clone();const off=pos0.clone().sub(target);
    const files:Record<string,Uint8Array>={};cancelFlag=false;patchStudio3D({render:{done:0,total:plan.frames}});controls.enabled=false;
+   let recorder:MediaRecorder|null=null;let track:MediaStreamTrack|null=null;const chunks:Blob[]=[];
    try{
-    for(let i=0;i<plan.frames;i++){
-     if(cancelFlag||disposed)throw Object.assign(new Error('Render cancelled.'),{expected:true});
-     camera.position.copy(target).add(off.clone().applyAxisAngle(new THREE.Vector3(0,1,0),plan.step*i));camera.lookAt(target);camera.updateMatrixWorld(true);
-     const blob=await capture(camera,size,!!opts.transparent);
-     if(dir){const fh=await dir.getFileHandle(frameName(i,plan.frames),{create:true});const w=await fh.createWritable();await w.write(blob);await w.close();}
-     else files[frameName(i,plan.frames)]=new Uint8Array(await blob.arrayBuffer());
-     patchStudio3D({render:{done:i+1,total:plan.frames}});
-     await new Promise(r=>setTimeout(r,0));
-    }
-    if(!dir)download(new Blob([zipSync!(files,{level:0}) as BlobPart],{type:'application/zip'}),`${stem(getStudio3DState().name||'scene')}-turntable.zip`);
+    await withCaptureFrame(camera,size,!!opts.transparent,async()=>{
+     if(webm){
+      const stream=renderer.domElement.captureStream(0);
+      track=stream.getVideoTracks()[0]??null;
+      recorder=new MediaRecorder(stream,{mimeType:webmMime(m=>MediaRecorder.isTypeSupported(m))});
+      recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
+      recorder.start();
+     }
+     const frameMs=1000/Math.min(60,Math.max(1,opts.fps??30));
+     for(let i=0;i<plan.frames;i++){
+      if(cancelFlag||disposed)throw Object.assign(new Error('Render cancelled.'),{expected:true});
+      camera.position.copy(target).add(off.clone().applyAxisAngle(new THREE.Vector3(0,1,0),plan.step*i));camera.lookAt(target);camera.updateMatrixWorld(true);
+      renderer.render(scene,camera);
+      if(webm){(track as MediaStreamTrack&{requestFrame?:()=>void}|null)?.requestFrame?.();await new Promise(r=>setTimeout(r,frameMs));}
+      else{
+       const blob=await readCanvasBlob();
+       if(dir){const fh=await dir.getFileHandle(frameName(i,plan.frames),{create:true});const w=await fh.createWritable();await w.write(blob);await w.close();}
+       else files[frameName(i,plan.frames)]=new Uint8Array(await blob.arrayBuffer());
+       await new Promise(r=>setTimeout(r,0));
+      }
+      patchStudio3D({render:{done:i+1,total:plan.frames}});
+     }
+    });
+    // Assigned inside the capture callback above, so the control-flow analysis still sees null here.
+    const rec=recorder as MediaRecorder|null;
+    if(webm){
+     if(rec&&rec.state!=='inactive')await new Promise<void>(r=>{rec.addEventListener('stop',()=>r(),{once:true});rec.stop();});
+     download(new Blob(chunks,{type:'video/webm'}),`${stem(getStudio3DState().name||'scene')}-turntable.webm`);
+    }else if(!dir)download(new Blob([zipSync!(files,{level:0}) as BlobPart],{type:'application/zip'}),`${stem(getStudio3DState().name||'scene')}-turntable.zip`);
    }finally{
+    const rec=recorder as MediaRecorder|null,tr=track as MediaStreamTrack|null;
+    if(rec&&rec.state!=='inactive')rec.stop();
+    tr?.stop();
     camera.position.copy(pos0);camera.lookAt(target);controls.enabled=enabled0;patchStudio3D({render:null});invalidate();
    }
   };

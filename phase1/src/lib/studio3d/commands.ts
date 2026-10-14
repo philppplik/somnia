@@ -14,7 +14,7 @@ import type {TextureTransform} from './uv';
 import {VIEW_PRESETS,focalToFov,type ViewPreset} from './viewPresets';
 import type {MirrorAxis,PrimitiveKind,LightKind,LightRigPreset,TransformPatch,MaterialPatch,LightPatch,AlignAxis,AlignTo,PivotAt,CameraKind} from './stage';
 import type {Vec3} from './stage';
-export interface TurntableOptions{frames?:number;width?:number;height?:number;transparent?:boolean;/** 'zip' downloads one archive; 'folder' writes the PNG frames into a folder the user picks. */out?:'zip'|'folder';}
+export interface TurntableOptions{frames?:number;width?:number;height?:number;transparent?:boolean;/** 'zip' downloads one archive; 'folder' writes the PNG frames into a folder the user picks; 'webm' records one WebM video. */out?:'zip'|'folder'|'webm';/** Frames per second of the WebM video (1-60, default 30). */fps?:number;}
 export interface RenderOptions{/** id of a camera object; the viewport camera when omitted */camera?:number;width?:number;height?:number;transparent?:boolean}
 /** What the lazy viewport offers. The command layer never imports three.js. */
 export interface Studio3DController{
@@ -344,7 +344,7 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{ids?:number[]}>('studio3d.selection.duplicate','Duplicate the selected 3D objects','Edit',p=>need().duplicateSelection(p?.ids),object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500}},[]),hasScene),
   add<{format:'stl'|'obj'}>('studio3d.export.mesh','Export the scene as STL or OBJ','Project',p=>need().exportMesh(p.format),object({format:{enum:['stl','obj']}}),hasScene),
   add<{unit:ExportUnit}>('studio3d.unit.set','Set the unit used for STL and OBJ export','Project',p=>need().setUnit(p.unit),object({unit:{enum:['m','cm','mm','in']}}),()=>!!controller),
-  add<TurntableOptions>('studio3d.render.turntable','Render a turntable as a ZIP of PNG frames or a PNG sequence in a chosen folder','Project',p=>need().renderTurntable(p??{}),object({frames:{type:'integer',minimum:2,maximum:360},width:{type:'integer',minimum:1,maximum:8192},height:{type:'integer',minimum:1,maximum:8192},transparent:{type:'boolean'},out:{enum:['zip','folder']}},[]),hasScene),
+  add<TurntableOptions>('studio3d.render.turntable','Render a turntable as a ZIP of PNG frames, a PNG sequence in a chosen folder, or a WebM video','Project',p=>need().renderTurntable(p??{}),object({frames:{type:'integer',minimum:2,maximum:360},width:{type:'integer',minimum:1,maximum:8192},height:{type:'integer',minimum:1,maximum:8192},transparent:{type:'boolean'},out:{enum:['zip','folder','webm']},fps:{type:'integer',minimum:1,maximum:60}},[]),hasScene),
   add<{id:string}>('studio3d.recent.open','Open a recent 3D scene','Project',p=>recentOpener!(p.id),object({id:{type:'string',minLength:1,maxLength:200}}),()=>!!recentOpener&&getStudio3DState().recent.length>0),
   add('studio3d.recent.clear','Clear recent 3D scenes and autosave','Project',()=>clearRecentScenes(),undefined,()=>getStudio3DState().recent.length>0),
   add('studio3d.render.cancel','Cancel the running 3D render','Project',()=>need().cancelRender(),undefined,()=>!!controller&&getStudio3DState().render!=null),

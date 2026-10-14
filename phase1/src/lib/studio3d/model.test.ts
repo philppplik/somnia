@@ -178,3 +178,11 @@ test('clip selection: null is all, a subset passes, an unknown name fails with t
  assert.throws(()=>pickClips(['a','b'],['c']),/no animation clip named "c".*a, b/);
  assert.throws(()=>pickClips([],['x']),/none/);
 });
+import {webmMime,WEBM_MIMES} from './model';
+test('webmMime prefers vp9, then vp8, then the bare container',()=>{
+ assert.equal(webmMime(()=>true),'video/webm;codecs=vp9');
+ assert.equal(webmMime(m=>!m.includes('vp9')),'video/webm;codecs=vp8');
+ assert.equal(webmMime(m=>m==='video/webm'),'video/webm');
+ assert.equal(webmMime(()=>false),'video/webm');
+ assert.deepEqual([...WEBM_MIMES],['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm']);
+});
