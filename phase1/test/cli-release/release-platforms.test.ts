@@ -27,7 +27,7 @@ test('binary-header checks reject emulated x64 binaries and malformed files', ()
   for (const platform of ['linux', 'windows', 'macos']) assert.throws(() => verifyArm64(platform, Buffer.alloc(0)));
 });
 test('workflow wires explicit ARM targets, architecture-specific uploads and public guards', () => {
-  const yml = readFileSync(new URL('../../../.github/workflows/phase1-core-bootstrap.yml', import.meta.url), 'utf8');
+  const yml = readFileSync(new URL('../../../.github/workflows/phase1-core-bootstrap.yml', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
   for (const job of ['windows-arm', 'linux-arm']) {
     const block = yml.split(`  ${job}:\n`)[1].split(/\n  [a-z][\w-]*:\n/)[0];
     assert.match(block, /needs: release-plan/);
