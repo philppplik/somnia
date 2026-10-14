@@ -1,3 +1,4 @@
+import {synchronizeInstances,assignMasterSlots} from './components';
 import {t} from '../i18n';
 import {useSyncExternalStore} from 'react';
 import {createInterfaceDocument,parseInterfaceDocument,serializeInterfaceDocument,type InterfaceDocument} from './model';
@@ -25,6 +26,7 @@ export function createInterfaceSession(storage?:RecoveryStorage){
   transact(edit:(draft:InterfaceDocument)=>void){
    const before=state.document;if(!before)return;
    const draft=structuredClone(before);edit(draft);draft.revision=before.revision;
+   assignMasterSlots(draft);parseInterfaceDocument(serializeInterfaceDocument(draft));synchronizeInstances(draft);
    if(JSON.stringify(draft)===JSON.stringify(before))return;
    draft.revision=before.revision+1;const checked=parseInterfaceDocument(serializeInterfaceDocument(draft));
    emit({...state,...reconcile(checked),document:checked,dirty:true,past:[...state.past.slice(-49),before],future:[]});

@@ -16,3 +16,10 @@ test('Interface layers/properties, cancel/commit gesture, undo and reload recove
  // Invalid import must not replace the working document.
  await page.getByLabel('Open snapshot',{exact:true}).setInputFiles({name:'bad.json',mimeType:'application/json',buffer:Buffer.from('{"version":99}')});await expect(page.getByRole('alert')).toContainText('Invalid or unsupported');await expect(canvas.getByRole('button',{name:'Text',exact:true})).toBeVisible();
 });
+test('Interface auto layout and component variants are editable and undoable',async({page})=>{
+ await page.goto('/');await page.getByRole('radio',{name:'Interface',exact:true}).click();await page.getByRole('button',{name:'Create blank document',exact:true}).click();await page.getByRole('button',{name:'Frame',exact:true}).click();
+ await page.getByLabel('Direction',{exact:true}).selectOption('row');await page.getByLabel('Gap',{exact:true}).fill('20');await page.getByLabel('Gap',{exact:true}).press('Enter');
+ await page.getByRole('button',{name:'Rectangle',exact:true}).click();const rectangle=page.getByTestId('interface-canvas').getByRole('button',{name:'Rectangle',exact:true});await expect(rectangle).toBeVisible();
+ const layerList=page.getByRole('list',{name:'Pages and layers',exact:true});await layerList.getByRole('button',{name:'Frame',exact:true}).click();await page.getByRole('button',{name:'Create component',exact:true}).click();await page.getByRole('button',{name:'Add variant',exact:true}).click();await page.getByRole('button',{name:'Create instance',exact:true}).click();
+ await page.getByLabel('Variant',{exact:true}).selectOption({label:'Variant 2'});await expect(page.getByRole('button',{name:'Reset overrides',exact:true})).toBeVisible();await page.getByRole('button',{name:'Detach instance',exact:true}).click();await expect(page.getByRole('button',{name:'Create component',exact:true})).toBeVisible();
+});
