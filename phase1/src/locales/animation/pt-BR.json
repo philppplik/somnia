@@ -921,5 +921,6 @@
  "cmd.animation.keys.shrinkSelection": "Reduzir a seleção de keys em uma key por ponta",
  "animation.keys.grid": "Ajustar à grade",
  "animation.keys.grid.hint": "Move as keys selecionadas para o múltiplo mais próximo deste número de quadros",
- "cmd.animation.keys.snapToGrid": "Ajustar as keys selecionadas a cada N quadros"
+ "cmd.animation.keys.snapToGrid": "Ajustar as keys selecionadas a cada N quadros",
+ "animation.keys.tools.time": "Tempo"
 }

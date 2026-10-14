@@ -921,5 +921,6 @@
  "cmd.animation.keys.shrinkSelection": "Reducir la selección de keys en una key por extremo",
  "animation.keys.grid": "Ajustar a la cuadrícula",
  "animation.keys.grid.hint": "Mueve las keys seleccionadas al múltiplo más cercano de estos fotogramas",
- "cmd.animation.keys.snapToGrid": "Ajustar las keys seleccionadas a cada N fotogramas"
+ "cmd.animation.keys.snapToGrid": "Ajustar las keys seleccionadas a cada N fotogramas",
+ "animation.keys.tools.time": "Tiempo"
 }

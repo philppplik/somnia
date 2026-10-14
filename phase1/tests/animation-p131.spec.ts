@@ -13,7 +13,12 @@ test('animation key tools menu: grouped items, enablement follows the key select
  await expect(keys).toHaveCount(2);
  await keys.nth(0).click();await keys.nth(1).click({modifiers:['Shift']});
  await page.getByTestId('animation-keys-tools').click();
- for(const id of ['flatten','average','match','ramp','thin','ease-copy','influence','tame','peaks','invert-selection','property','nth'])await expect(page.getByTestId(`animation-keys-${id}`)).toBeVisible();
+ const groups:[string,string[]][]=[['values',['flatten','average','match','ramp','thin']],['ease',['ease-copy','influence','tame']],['select',['peaks','invert-selection','property','nth']]];
+ for(const [g,ids] of groups){
+  await page.getByTestId(`animation-keys-group-${g}`).click();
+  for(const id of ids)await expect(page.getByTestId(`animation-keys-${id}`)).toBeVisible();
+ }
+ await page.getByTestId('animation-keys-group-values').click();
  await expect(page.getByTestId('animation-keys-flatten')).toBeEnabled();
  await expect(page.getByTestId('animation-keys-ramp')).toBeDisabled();
  await page.getByTestId('animation-keys-flatten').click();

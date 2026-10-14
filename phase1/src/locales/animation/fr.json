@@ -921,5 +921,6 @@
  "cmd.animation.keys.shrinkSelection": "Réduire la sélection de keys d’une key à chaque bout",
  "animation.keys.grid": "Aligner sur la grille",
  "animation.keys.grid.hint": "Déplace les keys sélectionnées sur le multiple le plus proche de ce nombre d’images",
- "cmd.animation.keys.snapToGrid": "Aligner les keys sélectionnées sur une image sur N"
+ "cmd.animation.keys.snapToGrid": "Aligner les keys sélectionnées sur une image sur N",
+ "animation.keys.tools.time": "Temps"
 }
