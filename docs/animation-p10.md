@@ -70,3 +70,7 @@ One builder (`masks.ts`) produces the `<mask>` and filter definitions for both t
 - Paste lands at the playhead on the property being shown. It works across mask and transform properties when the value type matches (scalar to scalar, vec2 to vec2); otherwise it is refused. Values must fit the target range. A paste is one undo step (transform pastes dispatch their edits as one batch; an unanimated transform property is animated first).
 - The existing transform key clipboard (`keyclip.ts`, timeline copy/paste) is unchanged.
 - Not covered: box selection across several properties (each graph still selects within its own property), a single graph view that mixes transform and mask curves. Transform and mask graphs stay separate components over the shared clipboard model.
+
+## P18: key targets and the Mixed graph
+
+`lib/animation/keyTargets.ts` describes where keys live (`transform` or `mask` target), lists animated targets, and turns a mixed selection into edits. Mask edits replace the whole mask list, so `moveTargetKeys` and `easeTargetKeys` fold them into one `layer.masks` edit next to the transform edit, one undo step. The Mixed view (`MixedGraph.tsx`, opened from the property list) draws each curve on its own 0-100% scale; box-select spans properties, dragging a key moves the whole selection in time, collisions keep the last valid preview.

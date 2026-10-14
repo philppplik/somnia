@@ -114,6 +114,10 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Implemented: one key clipboard model (`keysClipboard.ts`) with adapters for transform and mask keys; copy/paste between transform and mask properties where value types match, from both graphs. One undo per paste. Details: `docs/animation-p10.md` (P17 section).
 - Open: box selection across properties and one mixed graph view, per-point lanes, native webview check.
 
+### Animation P18 (2026-10-14)
+- Implemented: `keyTargets.ts`, one key model for transform and mask properties (list, select, move, ease as one edit list = one undo step), and a Mixed graph view (`MixedGraph.tsx`) with box-select across properties; moves in time and ease apply to the whole mixed selection. Existing single-property graphs are unchanged.
+- Open: value drags and ease handles still live in the single-property graphs; the transform and mask graph components are not yet merged into one renderer. Playwright E2E for the mixed graph is CI-only and not written.
+
 ### Animation P16 (2026-10-14)
 - Implemented: mask graph multi-key selection (click, shift, box), group move/revalue and ease in one edit, speed mode, copy/paste of several mask keys between masks (same value type). Transform graph unchanged. One undo per edit, five locales, DS-clean. Details: `docs/animation-p10.md` (P16 section).
 - Open: copy/paste between mask and transform properties, a shared graph core, per-point lanes, native webview check.
