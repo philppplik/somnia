@@ -1677,3 +1677,15 @@ test('P69 stroke alignment: inside clips, outside masks, centre and open paths u
  const open=applyEdit(strokeDoc([{x:0.2,y:0.2},{x:0.8,y:0.2},{x:0.8,y:0.8}],false,8),{type:'layer.stroke',layer:'pa',stroke:{color:'#00ff00',width:8,align:'inside'}});
  assert.ok(!frameSvg(comp(open),0).includes('clipPath'),'an open path stays centred');
 });
+
+test('P71 repeater: copies markup, absent field is identical, validation, undo',()=>{
+ const d=strokeDoc([{x:0.2,y:0.2},{x:0.8,y:0.2},{x:0.8,y:0.8}],true,8);
+ const plain=frameSvg(comp(d),0);
+ const r=applyEdit(d,{type:'layer.repeater',layer:'pa',repeater:{copies:3,x:40,y:0,rotation:10,scale:90,opacity:50}});
+ const svg=frameSvg(comp(r),0);
+ assert.equal((svg.match(/rotate\(/g)??[]).length-(plain.match(/rotate\(/g)??[]).length,2,svg);
+ assert.ok(svg.includes('opacity="0.5"')&&svg.includes('opacity="0.25"')&&svg.includes('translate(80 0)'),svg);
+ assert.equal(frameSvg(comp(applyEdit(r,{type:'layer.repeater',layer:'pa',repeater:null})),0),plain);
+ assert.deepEqual(validateDocument(r),[]);
+ for(const bad of [{copies:1},{copies:21},{copies:2.5},{scale:0},{opacity:101},{x:Infinity}])assert.throws(()=>applyEdit(d,{type:'layer.repeater',layer:'pa',repeater:{copies:3,x:0,y:0,rotation:0,scale:100,opacity:100,...bad}}),Error);
+});

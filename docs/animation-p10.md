@@ -358,3 +358,7 @@ A pointer drag on a key that is part of a multi-key selection builds `styleKeySh
 
 ## P69 - Stroke alignment
 `Layer.stroke.align` is `inside` or `outside` (absent means centred). The frame builder and the viewer draw the fill, then a stroke-only element at twice the width inside a `clipPath` (inside) or a `mask` (outside) built from the same shape. Ids are `stroke-align-<layer>-<tick>` (`preview-` prefix in the viewer). Open paths ignore the setting. A `CUT_KEEP` and `CUT_HOLE` paint pair lives in shapes.ts so the viewer needs no hex literals.
+
+## P71
+
+Layer `repeater` {copies,x,y,rotation,scale,opacity}; edit `layer.repeater` (null removes). Copies are drawn in layer space around the anchor, last copy first, original on top. Scale and opacity are percent factors per step (default 100, stored as given).

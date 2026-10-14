@@ -635,5 +635,13 @@
  "animation.stroke.align": "Alinhamento do traço",
  "animation.stroke.alignCenter": "Centro",
  "animation.stroke.alignInside": "Dentro",
- "animation.stroke.alignOutside": "Fora"
+ "animation.stroke.alignOutside": "Fora",
+ "animation.repeater.title": "Repetidor",
+ "animation.repeater.enable": "Repetir camada",
+ "animation.repeater.copies": "Cópias",
+ "animation.repeater.x": "Deslocamento X",
+ "animation.repeater.y": "Deslocamento Y",
+ "animation.repeater.rotation": "Rotação por cópia",
+ "animation.repeater.scale": "Escala por cópia %",
+ "animation.repeater.opacity": "Opacidade por cópia %"
 }

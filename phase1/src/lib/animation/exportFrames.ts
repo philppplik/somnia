@@ -1,3 +1,5 @@
+import {evaluate} from './interpolate';
+import {repeaterCopies} from './repeater';
 import {radialPath,gradientDefSvg} from './shapes';
 import {layerPathD,layerFillRule} from './pathLayer';
 import {validateAnimationAssets} from './assetsValidation';
@@ -23,7 +25,10 @@ const num=(n:number)=>String(Math.round(n*1e4)/1e4);
 export function layerBody(layer:Layer,i:number,assets:readonly InterfaceAsset[],tick:number,prefix:string):string{
  const fx=effectPrimitives(layer,tick)?`url(#${prefix}effect-${i})`:'';
  const content=layerSvg(layer,assets,tick,layer.source.gradient?`url(#${prefix}gradient-${i})`:undefined,layer.stroke?.gradient?`url(#${prefix}stroke-gradient-${i})`:undefined);
- return fx?`<g filter="${fx}">${content}</g>`:content;
+ const body=fx?`<g filter="${fx}">${content}</g>`:content;
+ if(!layer.repeater)return body;
+ const a=evaluate(layer.transform.anchor,tick) as [number,number];
+ return repeaterCopies(layer.repeater,[a[0],a[1]]).map(c=>`<g transform="${c.transform}"${c.opacity<1?` opacity="${c.opacity}"`:''}>${body}</g>`).join('')+body;
 }
 /**
  * Compositions a comp layer may show. frameSvg sets them for the duration of one (synchronous) call and the live viewer sets them while it renders,

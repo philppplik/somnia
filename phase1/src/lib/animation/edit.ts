@@ -5,7 +5,7 @@ import {validateTextPresetLib} from './textPresetModel';
 import type {InterfaceAsset} from '../interface/schema';
 import {validateAnimationAssets} from './assetsValidation';
 import {MAX_AUDIO_VOLUME,type AudioAsset} from './audioCore';
-import {STYLE_KINDS,OFFSET_KINDS,MAX_COLOR_KEYS,type ColorKey,type ColorEase,COLOR_EASES,validShutter,type Shutter,validatePrecomps,precompTransform,prop,createComposition,type TextAnimator,type LayerMask,type LayerMatte,type ClipItem,type KeyRef,type Vec2,createLayer,findComp,findLayer,PROP_META,wouldCycle,EASE_IN,EASE_OUT,TRANSFORM_KEYS,validateDocument,type AnimationDocument,type CompSettings,type Composition,type Interp,type Keyframe,type Layer,type LayerKind,type LayerSource,type LayerEffect,validSource,validEffects,type Property,type PropValue,type TransformKey} from './model';
+import {validRepeater,STYLE_KINDS,OFFSET_KINDS,MAX_COLOR_KEYS,type ColorKey,type ColorEase,COLOR_EASES,validShutter,type Shutter,validatePrecomps,precompTransform,prop,createComposition,type TextAnimator,type LayerMask,type LayerMatte,type ClipItem,type KeyRef,type Vec2,createLayer,findComp,findLayer,PROP_META,wouldCycle,EASE_IN,EASE_OUT,TRANSFORM_KEYS,validateDocument,type AnimationDocument,type CompSettings,type Composition,type Interp,type Keyframe,type Layer,type LayerKind,type LayerSource,type LayerEffect,validSource,validEffects,type Property,type PropValue,type TransformKey} from './model';
 import {evaluate} from './interpolate';
 import {colorAt} from './colorKeys';
 import {validateModifiers,linkProblems} from './modifiers';
@@ -46,6 +46,7 @@ export type Edit=
  |{type:'effect.colorKey';layer:string;effect:string;color:string;t:number}
  |{type:'effect.bypassKey';layer:string;effect:string;bypass:boolean;t:number}
  |{type:'layer.stroke';layer:string;stroke:NonNullable<Layer['stroke']>|null}
+ |{type:'layer.repeater';layer:string;repeater:NonNullable<Layer['repeater']>|null}
  |{type:'effect.style';layer:string;effect:string;blur?:number;distance?:number;angle?:number}
  |{type:'effect.amount';layer:string;effect:string;value:number;t:number}
  |{type:'effect.animate';layer:string;effect:string;on:boolean;t:number}
@@ -153,6 +154,7 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
    return withComp(doc,{...c,...e.settings,duration,fps:e.settings.fps??c.fps,markers:c.markers?.filter(m=>m.t<duration+c.start),layers:clipped,workArea:{in:Math.min(c.workArea.in,duration-1),out:Math.min(c.workArea.out,duration)}});}
   case 'comp.select':if(!findComp(doc,e.comp))return fail('missing','Composition does not exist.');return e.comp===doc.activeComp?doc:{...doc,activeComp:e.comp};
   case 'comp.remove':{if(doc.compositions.length<2)return fail('invalid','A document needs at least one composition.');if(!findComp(doc,e.comp))return fail('missing','Composition does not exist.');const rest=doc.compositions.filter(c=>c.id!==e.comp);return {...doc,compositions:rest,activeComp:doc.activeComp===e.comp?rest[0].id:doc.activeComp};}
+  case 'layer.repeater':{const l=layerOf(doc,e.layer);if(e.repeater===null){const {repeater:_r,...rest}=l;return setLayer(doc,rest);}if(!validRepeater(e.repeater))fail('invalid','Repeater: 2 to 20 copies, offset up to 4096 px, rotation up to 3600 degrees, scale 1 to 400 percent, opacity 0 to 100 percent.');return setLayer(doc,{...l,repeater:e.repeater});}
   case 'layer.stroke':{const l=layerOf(doc,e.layer);if(e.stroke===null){const {stroke:_s,...rest}=l;return setLayer(doc,rest);}return setLayer(doc,{...l,stroke:e.stroke});}
   case 'effect.colorKey':case 'effect.bypassKey':{const l=layerOf(doc,e.layer),t=tickOf(compOf(doc),e.t),effect=l.effects?.find(x=>x.id===e.effect)??fail('missing','Effect no longer exists.');
    if(e.type==='effect.colorKey'&&(effect.kind==='blur'||!/^#[0-9a-fA-F]{6}$/.test(e.color)))fail('invalid','Blur has no colour.');

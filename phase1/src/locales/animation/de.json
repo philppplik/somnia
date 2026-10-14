@@ -635,5 +635,13 @@
  "animation.stroke.align": "Kontur-Ausrichtung",
  "animation.stroke.alignCenter": "Mittig",
  "animation.stroke.alignInside": "Innen",
- "animation.stroke.alignOutside": "Außen"
+ "animation.stroke.alignOutside": "Außen",
+ "animation.repeater.title": "Wiederholer",
+ "animation.repeater.enable": "Ebene wiederholen",
+ "animation.repeater.copies": "Kopien",
+ "animation.repeater.x": "Versatz X",
+ "animation.repeater.y": "Versatz Y",
+ "animation.repeater.rotation": "Drehung pro Kopie",
+ "animation.repeater.scale": "Skalierung pro Kopie %",
+ "animation.repeater.opacity": "Deckkraft pro Kopie %"
 }

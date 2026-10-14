@@ -635,5 +635,13 @@
  "animation.stroke.align": "Stroke alignment",
  "animation.stroke.alignCenter": "Centre",
  "animation.stroke.alignInside": "Inside",
- "animation.stroke.alignOutside": "Outside"
+ "animation.stroke.alignOutside": "Outside",
+ "animation.repeater.title": "Repeater",
+ "animation.repeater.enable": "Repeat layer",
+ "animation.repeater.copies": "Copies",
+ "animation.repeater.x": "Offset X",
+ "animation.repeater.y": "Offset Y",
+ "animation.repeater.rotation": "Rotation per copy",
+ "animation.repeater.scale": "Scale per copy %",
+ "animation.repeater.opacity": "Opacity per copy %"
 }

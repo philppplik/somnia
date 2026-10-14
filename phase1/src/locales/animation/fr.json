@@ -635,5 +635,13 @@
  "animation.stroke.align": "Alignement du contour",
  "animation.stroke.alignCenter": "Centré",
  "animation.stroke.alignInside": "Intérieur",
- "animation.stroke.alignOutside": "Extérieur"
+ "animation.stroke.alignOutside": "Extérieur",
+ "animation.repeater.title": "Répéteur",
+ "animation.repeater.enable": "Répéter le calque",
+ "animation.repeater.copies": "Copies",
+ "animation.repeater.x": "Décalage X",
+ "animation.repeater.y": "Décalage Y",
+ "animation.repeater.rotation": "Rotation par copie",
+ "animation.repeater.scale": "Échelle par copie %",
+ "animation.repeater.opacity": "Opacité par copie %"
 }
