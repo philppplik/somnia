@@ -24,11 +24,12 @@ export type NodeKind='frame'|'group'|'rectangle'|'text'|'ellipse'|'line'|'path'|
 export type PrototypeTransitionKind='instant'|'dissolve'|'smart-animate';
 export interface PrototypeTransition {kind:PrototypeTransitionKind;durationMs:number;}
 export interface PrototypeLink {action?:'navigate'|'overlay';trigger:'click'|'hover'|'afterDelay';targetFrameId:string;delayMs?:number;transition?:PrototypeTransition;}
+export interface InterfaceBreakpoint {id:string;name:string;width:number;height:number;}
 export interface InterfaceNode {
  id:string;pageId:string;parentId:string|null;children:string[];kind:NodeKind;name:string;
  x:number;y:number;width:number;height:number;fill:string;text?:string;hidden:boolean;locked:boolean;
  prototypeLinks?:PrototypeLink[];path?:InterfacePath;stroke?:string;strokeWidth?:number;imageFill?:{assetId:string;fit:'cover'|'contain'};
- altText?:string;variableMode?:VariableMode;bindings?:{fill?:string;gap?:string};textStyleId?:string;annotation?:string;ready?:boolean;layout?:InterfaceLayout;sizing?:InterfaceSizing;constraints?:InterfaceConstraints;componentSlot?:string;instance?:InterfaceInstance;
+ altText?:string;variableMode?:VariableMode;bindings?:{fill?:string;gap?:string};textStyleId?:string;annotation?:string;ready?:boolean;layout?:InterfaceLayout;sizing?:InterfaceSizing;constraints?:InterfaceConstraints;componentSlot?:string;instance?:InterfaceInstance;breakpoints?:InterfaceBreakpoint[];
  [key:string]:unknown;
 }
 export interface InterfacePage {snap?:SnapSettings;id:string;name:string;children:string[];[key:string]:unknown;}

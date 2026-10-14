@@ -7,6 +7,7 @@ import {setInterfaceConstraint,setInterfaceAbsolute} from '../../lib/interface/c
 import {resizeInterfaceFrame} from '../../lib/interface/responsive';
 import {interfaceLayerCSS} from '../../lib/interface/export';
 import {auditInterfaceDocument} from '../../lib/interface/a11y';
+import {addInterfaceBreakpoint,removeInterfaceBreakpoint,applyInterfaceBreakpoint,auditInterfaceResponsive} from '../../lib/interface/breakpoints';
 import {INTERFACE_FRAME_PRESETS} from '../../lib/interface/pages';
 import {getInterfacePresetPreview,setInterfacePresetPreview,useInterfacePresetPreview} from './presetPreview';
 import {InterfaceVariantProperties} from './InterfaceVariantProperties';
@@ -111,12 +112,31 @@ function InterfaceCopyCss({node,run}:{node:InterfaceNode;run:(f:()=>void)=>void}
  return <Button size="compact" variant="outline" disabled={node.locked||copied} onClick={()=>{let css='';run(()=>{css=interfaceLayerCSS(s.document!,node.id).css;});if(!css)return;if(!navigator.clipboard?.writeText){run(()=>{throw Error('Clipboard is unavailable in this context.');});return;}void navigator.clipboard.writeText(css).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);},()=>run(()=>{throw Error('Copying CSS failed.');}));}}>{t(copied?'interface.cssCopied':'interface.copyCss')}</Button>;
 }
 function InterfaceResponsiveControls({node,run}:{node:InterfaceNode;run:(f:()=>void)=>void}){
- const {t}=useT();const active=useInterfacePresetPreview();const [preset,setPreset]=useState<keyof typeof INTERFACE_FRAME_PRESETS>('phone');
+ const s=useInterfaceState();const {t}=useT();const active=useInterfacePresetPreview();const [preset,setPreset]=useState<keyof typeof INTERFACE_FRAME_PRESETS>('phone');
+ const [bpName,setBpName]=useState('');const [bpPreset,setBpPreset]=useState<keyof typeof INTERFACE_FRAME_PRESETS>('phone');
+ const audit=useMemo(()=>s.document&&node.kind==='frame'&&node.breakpoints?.length?auditInterfaceResponsive(s.document,node.id):null,[s.document,node]);
  if(node.kind!=='frame')return null;const isActive=active?.frameId===node.id,size=INTERFACE_FRAME_PRESETS[preset];
+ const presetOptions=(Object.keys(INTERFACE_FRAME_PRESETS) as (keyof typeof INTERFACE_FRAME_PRESETS)[]).map(key=>[key,`${t(`interface.preset.${key}`)} · ${INTERFACE_FRAME_PRESETS[key].width} × ${INTERFACE_FRAME_PRESETS[key].height}`]) as [string,string][];
  return <InspectorGroup title={t('interface.responsive')}><div className="flex flex-col gap-3">
-  <Choice label={t('interface.responsivePreset')} value={preset} options={(Object.keys(INTERFACE_FRAME_PRESETS) as (keyof typeof INTERFACE_FRAME_PRESETS)[]).map(key=>[key,`${t(`interface.preset.${key}`)} · ${INTERFACE_FRAME_PRESETS[key].width} × ${INTERFACE_FRAME_PRESETS[key].height}`])} disabled={node.locked} onChange={v=>setPreset(v as keyof typeof INTERFACE_FRAME_PRESETS)}/>
+  <Choice label={t('interface.responsivePreset')} value={preset} options={presetOptions} disabled={node.locked} onChange={v=>setPreset(v as keyof typeof INTERFACE_FRAME_PRESETS)}/>
   {isActive&&<p className="text-xs text-ink-2" role="status">{t('interface.previewingSize',{width:active.width,height:active.height})}</p>}
   <div className="flex flex-wrap gap-1"><Button size="compact" variant="outline" disabled={node.locked} onClick={()=>setInterfacePresetPreview({frameId:node.id,width:size.width,height:size.height})}>{t('interface.presetPreview')}</Button><Button size="compact" disabled={!isActive||node.locked} onClick={()=>run(()=>{const pending=getInterfacePresetPreview();if(pending?.frameId!==node.id)return;interfaceSession.transact(d=>resizeInterfaceFrame(d,node.id,{width:pending.width,height:pending.height}));setInterfacePresetPreview(null);})}>{t('interface.applySize')}</Button><Button size="compact" variant="outline" disabled={!isActive} onClick={()=>setInterfacePresetPreview(null)}>{t('interface.revertPreview')}</Button></div>
+  <div className="flex flex-col gap-2 border-t border-subtle pt-3">
+   <p className="text-xs font-medium">{t('interface.breakpoints')}</p>
+   {(node.breakpoints??[]).map(bp=><div key={bp.id} className="flex flex-wrap items-center gap-1 text-xs">
+    <span className="min-w-0 flex-1 truncate">{bp.name} · {bp.width} × {bp.height}</span>
+    <Button size="compact" variant="outline" disabled={node.locked} onClick={()=>setInterfacePresetPreview({frameId:node.id,width:bp.width,height:bp.height})}>{t('interface.breakpoint.preview')}</Button>
+    <Button size="compact" variant="outline" disabled={node.locked} onClick={()=>run(()=>{interfaceSession.transact(d=>applyInterfaceBreakpoint(d,node.id,bp.id));setInterfacePresetPreview(null);})}>{t('interface.breakpoint.apply')}</Button>
+    <Button size="compact" variant="outline" disabled={node.locked} onClick={()=>run(()=>interfaceSession.transact(d=>removeInterfaceBreakpoint(d,node.id,bp.id)))}>{t('interface.breakpoint.remove')}</Button>
+   </div>)}
+   <Field name={t('interface.breakpoint.name')} value={bpName} disabled={node.locked} onCommit={setBpName}/>
+   <Choice label={t('interface.responsivePreset')} value={bpPreset} options={presetOptions} disabled={node.locked} onChange={v=>setBpPreset(v as keyof typeof INTERFACE_FRAME_PRESETS)}/>
+   <div><Button size="compact" disabled={node.locked||!bpName.trim()} onClick={()=>run(()=>{interfaceSession.transact(d=>addInterfaceBreakpoint(d,node.id,{name:bpName,...INTERFACE_FRAME_PRESETS[bpPreset]}));setBpName('');})}>{t('interface.breakpoint.add')}</Button></div>
+  </div>
+  {audit&&<div className="flex flex-col gap-2 border-t border-subtle pt-3">
+   <p className="text-xs font-medium">{t('interface.responsiveIssues')}</p>
+   {audit.issues.length?<ul className="flex flex-col gap-2 text-xs">{audit.issues.map(issue=><li key={issue.id}>{t(`interface.issue.${issue.kind}`,issue.params)}</li>)}</ul>:<p className="text-xs text-ink-2">{t('interface.responsiveIssues.ok')}</p>}
+  </div>}
  </div></InspectorGroup>;
 }
 function InterfaceComponentControls({node,run}:{node:InterfaceNode;run:(f:()=>void)=>void}){
