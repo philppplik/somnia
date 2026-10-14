@@ -4,6 +4,7 @@ import {interfaceTreeOrder,interfaceTreeTarget} from '../../lib/interface/access
 import {InterfaceLibrary} from './InterfaceLibrary';
 import {StudioStatus} from '../studios/StudioStatus';
 import {InterfaceInteractions} from './InterfacePrototype';
+import {InterfaceDevMode} from './InterfaceDevMode';
 import {setInterfaceConstraint,setInterfaceAbsolute} from '../../lib/interface/constraints';
 import {resizeInterfaceFrame} from '../../lib/interface/responsive';
 import {computeInterfaceLayout} from '../../lib/interface/layout';
@@ -82,6 +83,7 @@ export function InterfaceProperties(){
   </>}
   {node&&s.selectedIds.length===1&&<InterfaceInteractions node={node} run={run}/>}
   <InterfaceA11yReview/>
+  <InterfaceDevMode/>
   <InterfaceOutput/>
  </div>}</Guard>;
 }
