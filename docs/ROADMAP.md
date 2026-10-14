@@ -72,3 +72,10 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 2. Windows code signing certificate (removes SmartScreen warnings; paid).
 3. Collaboration direction after the spike.
 4. Microsoft Store: Philipp creates the Partner Center account and reserves the name.
+
+
+### Animation P2 (2026-10-14, integration pending)
+
+- Implemented: signed per-channel speed graph, separate X/Y easing for straight vec2 properties, bounded cached arc-length position paths, editable text/shape source settings, ordered blur/tint effects, bounded canonical PNG/JPEG and strict basic-SVG snapshot import. Existing P1 features/tests retained.
+- Validation: 69 Animation + Interface media unit/security tests pass; real-component German light/dark pixel review and transparent PNG render inspected. Full-app E2E and native/WASM gates remain CI-only. No new dependencies.
+- Scope/limits and validation details: `docs/animation-p2.md`. Mask/matte, precomp, footage/audio, animated effects, expressions, tracking and compressed exports remain later work.

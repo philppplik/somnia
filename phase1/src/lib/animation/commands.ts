@@ -2,7 +2,7 @@ import {registerCommandSpec} from '../commandBridge';
 import {commandRegistry} from '../commandRegistry';
 import type {CommandSchema,CommandSpec} from '../commandSpec';
 import {EditError,type Edit} from './edit';
-import {findComp,findLayer,TRANSFORM_KEYS,type KeyRef,type LayerKind,type PropValue,type TransformKey} from './model';
+import {findComp,findLayer,TRANSFORM_KEYS,type KeyRef,type LayerKind,type LayerEffect,type PropValue,type TransformKey} from './model';
 import {animationSession} from './session';
 import {secondsToTicks,snapToFrame} from './time';
 import {ClipError,copyKeys,getKeyClip,pastedRefs,setKeyClip} from './keyclip';
@@ -49,6 +49,9 @@ export function animationCommandSpecs():CommandSpec<unknown,unknown>[]{
    const {layer,text,size,color,...flags}=p;const source={...(text!==undefined?{text}:{}),...(size!==undefined?{size}:{}),...(color!==undefined?{color}:{})};
    return run({type:'layer.update',layer:layer??selected(),...flags,...(Object.keys(source).length?{source}:{})});},
    object({layer:layerRef,name:{type:'string',maxLength:200},visible:{type:'boolean'},solo:{type:'boolean'},locked:{type:'boolean'},text:{type:'string',maxLength:2000},size:{type:'number',minimum:1,maximum:2000},color:{type:'string',pattern:'^#[0-9a-fA-F]{6}$'}},[])),
+  spec('animation.layer.effects','Set layer effects',(p:{layer?:string;effects:LayerEffect[]})=>run({type:'layer.effects',layer:layerIdOf(p),effects:p.effects}),object({layer:layerRef,effects:{type:'array',maxItems:8,items:object({id:layerRef,kind:{enum:['blur','tint']},enabled:{type:'boolean'},amount:{type:'number',minimum:0,maximum:64},color:{type:'string',pattern:'^#[0-9a-fA-F]{6}$'}})}},['effects'])),
+  spec('animation.path.mode','Set position path timing',(p:{layer?:string;mode:'parameter'|'arcLength'})=>run({type:'prop.pathMode',layer:layerIdOf(p),mode:p.mode}),object({layer:layerRef,mode:{enum:['parameter','arcLength']}},['mode'])),
+  spec('animation.key.channelEase','Set X or Y ease',(p:{layer?:string;prop:TransformKey;t?:number;channel:0|1;out?:[number,number];in?:[number,number]})=>run({type:'key.interp',layer:layerIdOf(p),prop:p.prop,t:p.t??playhead(),channel:p.channel,interp:'bezier',out:p.out,in:p.in}),object({layer:layerRef,prop:propKey,t:tick,channel:{enum:[0,1]},out:{type:'array',items:num,minItems:2,maxItems:2},in:{type:'array',items:num,minItems:2,maxItems:2}},['prop','channel'])),
   spec('animation.layer.timing','Set layer in and out',(p:{layer?:string;inT:number;outT:number})=>run({type:'layer.timing',layer:layerIdOf(p),inT:p.inT,outT:p.outT}),object({layer:layerRef,inT:tick,outT:tick},['inT','outT'])),
   spec('animation.layer.parent','Set layer parent',(p:{layer?:string;parent:string|null})=>run({type:'layer.parent',layer:layerIdOf(p),parent:p.parent}),{type:'object',properties:{layer:layerRef,parent:{type:['string','null']}},required:['parent'],additionalProperties:false}),
   spec('animation.layer.reorder','Reorder layer',(p:{layer?:string;index:number})=>run({type:'layer.reorder',layer:layerIdOf(p),index:p.index}),object({layer:layerRef,index:{type:'integer',minimum:0}},['index'])),

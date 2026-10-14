@@ -1,4 +1,5 @@
 import {evaluate} from './interpolate';
+import {TICKS_PER_SECOND} from './time';
 import type {Keyframe,PropValue,Property} from './model';
 /** Pure geometry of the value graph. One channel at a time (0 = scalar or X, 1 = Y), values in the property's own units. */
 export const channelOf=(v:PropValue,ch:0|1):number=>typeof v==='number'?v:v[ch];
@@ -11,16 +12,16 @@ const clamp=(n:number,lo:number,hi:number)=>Math.min(hi,Math.max(lo,n));
  */
 export function handlesOf(keys:readonly Keyframe[],i:number,ch:0|1):Handle[]{
  const k=keys[i],out:Handle[]=[];
- const next=keys[i+1],prev=keys[i-1];
- if(next&&k.interp==='bezier')out.push({kind:'out',keyT:k.t,x:k.out[0],y:k.out[1],t:k.t+k.out[0]*(next.t-k.t),v:channelOf(k.v,ch)+k.out[1]*(channelOf(next.v,ch)-channelOf(k.v,ch))});
- if(prev&&prev.interp==='bezier')out.push({kind:'in',keyT:k.t,x:k.in[0],y:k.in[1],t:prev.t+k.in[0]*(k.t-prev.t),v:channelOf(prev.v,ch)+k.in[1]*(channelOf(k.v,ch)-channelOf(prev.v,ch))});
+ const next=keys[i+1],prev=keys[i-1];const outH=k.channelOut?.[ch]??k.out,inH=k.channelIn?.[ch]??k.in;
+ if(next&&k.interp==='bezier')out.push({kind:'out',keyT:k.t,x:outH[0],y:outH[1],t:k.t+outH[0]*(next.t-k.t),v:channelOf(k.v,ch)+outH[1]*(channelOf(next.v,ch)-channelOf(k.v,ch))});
+ if(prev&&prev.interp==='bezier')out.push({kind:'in',keyT:k.t,x:inH[0],y:inH[1],t:prev.t+inH[0]*(k.t-prev.t),v:channelOf(prev.v,ch)+inH[1]*(channelOf(k.v,ch)-channelOf(prev.v,ch))});
  return out;
 }
 /** Inverse of handlesOf: the ease pair a handle dragged to (t, v) stands for. x stays in 0..1, y in -2..3. Flat segments keep their old y. */
 export function handleToEase(keys:readonly Keyframe[],i:number,kind:'in'|'out',t:number,v:number,ch:0|1):readonly [number,number]{
  const k=keys[i];
  const a=kind==='out'?k:keys[i-1],b=kind==='out'?keys[i+1]:k;
- const cur=kind==='out'?k.out:k.in;
+ const cur=kind==='out'?(k.channelOut?.[ch]??k.out):(k.channelIn?.[ch]??k.in);
  if(!a||!b||b.t<=a.t)return cur;
  const x=clamp((t-a.t)/(b.t-a.t),0,1);
  const dv=channelOf(b.v,ch)-channelOf(a.v,ch);
@@ -55,3 +56,14 @@ export const EASE_PRESETS={
  easeOut:{interp:'bezier' as const,out:[0,0] as const,in:[0.58,1] as const},
 };
 export type EasePreset=keyof typeof EASE_PRESETS;
+
+/** Channel velocity in units/second. Segment-local differences never straddle a hold jump or a key discontinuity. */
+export function speedAt(p:Property,ch:0|1,t:number):number{
+ const keys=p.keys;if(keys.length<2||t<keys[0].t||t>=keys[keys.length-1].t)return 0;
+ let i=0;while(i<keys.length-2&&t>=keys[i+1].t)i++;
+ const a=keys[i],b=keys[i+1];if(a.interp==='hold')return 0;
+ const h=Math.max(0.01,(b.t-a.t)*1e-5),left=Math.max(a.t,t-h),right=Math.min(b.t,t+h);
+ return (channelOf(evaluate(p,right),ch)-channelOf(evaluate(p,left),ch))*TICKS_PER_SECOND/(right-left);
+}
+export function speedSamples(p:Property,ch:0|1,t0:number,t1:number,n=200){const count=Math.max(2,Math.min(500,n));return Array.from({length:count+1},(_,i)=>{const t=t0+(t1-t0)*i/count;return {t,v:speedAt(p,ch,t)};});}
+export function speedRange(p:Property,ch:0|1,t0:number,t1:number){const values=speedSamples(p,ch,t0,t1).map(s=>s.v);const min=Math.min(0,...values),max=Math.max(0,...values),pad=(max-min||1)*0.12;return {min:min-pad,max:max+pad};}

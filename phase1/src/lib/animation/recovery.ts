@@ -1,9 +1,9 @@
 import {validateDocument,type AnimationDocument,type KeyRef} from './model';
 /** Private recovery journal. Stores authoritative data (never rendered frames) plus a little view state. */
 export interface KeyValueStore{getItem(k:string):string|null;setItem(k:string,v:string):void;removeItem(k:string):void}
-export interface ViewState{playhead:number;selectedLayer:string|null;selectedKey:{prop:string;t:number}|null;selectedKeys:KeyRef[];loop:boolean;graphChannel:0|1;zoom:number;scroll:number;openProps:string[];graph:boolean}
+export interface ViewState{playhead:number;selectedLayer:string|null;selectedKey:{prop:string;t:number}|null;selectedKeys:KeyRef[];loop:boolean;graphChannel:0|1;graphMode:'value'|'speed';zoom:number;scroll:number;openProps:string[];graph:boolean}
 export const RECOVERY_KEY='somnia.animation.recovery.v1';
-export const defaultView=():ViewState=>({playhead:0,selectedLayer:null,selectedKey:null,selectedKeys:[],loop:true,graphChannel:0,zoom:1,scroll:0,openProps:[],graph:false});
+export const defaultView=():ViewState=>({playhead:0,selectedLayer:null,selectedKey:null,selectedKeys:[],loop:true,graphChannel:0,graphMode:'value',zoom:1,scroll:0,openProps:[],graph:false});
 export interface Journal{v:1;savedAt:number;savedRevision:number;doc:AnimationDocument;view:ViewState}
 const mem=():KeyValueStore|null=>{try{return typeof localStorage!=='undefined'?localStorage:null;}catch{return null;}};
 export function writeJournal(j:Omit<Journal,'v'|'savedAt'>,store:KeyValueStore|null=mem(),now=Date.now()):boolean{
@@ -20,6 +20,7 @@ export function readJournal(store:KeyValueStore|null=mem()):Journal|null{
   const v={...defaultView(),...(j.view??{})};
   if(!Number.isFinite(v.playhead))v.playhead=0;
   if(!Array.isArray(v.selectedKeys))v.selectedKeys=[];
+  v.graphMode=v.graphMode==='speed'?'speed':'value';
   v.loop=v.loop!==false;v.graphChannel=v.graphChannel===1?1:0;
   return {...j,view:v};
  }catch{return null;}

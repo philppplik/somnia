@@ -25,7 +25,9 @@ export function evaluate(p:Property,t:number):PropValue{
  const a=k[lo],b=k[hi];
  if(a.interp==='hold')return a.v;
  const u=segmentProgress(a,b,t);
- return hasSpatial(a,b)?spatialPoint(a,b,u):mix(a.v,b.v,u);
+ if(hasSpatial(a,b))return spatialPoint(a,b,p.pathMode==='arcLength'?arcParameter(a,b,u):u);
+ if(p.type==='vec2'&&(a.channelOut||b.channelIn)){const av=a.v as Vec2,bv=b.v as Vec2;return [0,1].map(ch=>{const out=a.channelOut?.[ch]??a.out,inn=b.channelIn?.[ch]??b.in;const progress=a.interp==='linear'?(t-a.t)/(b.t-a.t):cubicBezier(...out,...inn,(t-a.t)/(b.t-a.t));return av[ch]+(bv[ch]-av[ch])*progress;}) as unknown as Vec2;}
+ return mix(a.v,b.v,u);
 }
 const ZERO:Vec2=[0,0];
 /** True when the segment a to b is a spatial Bezier (a non-zero tangent on either side of a vec2 segment). */
@@ -48,4 +50,16 @@ export function samplePath(p:Property,steps=24):Vec2[]{
   for(let s=1;s<=steps;s++)out.push(spatialPoint(a,b,s/steps));
  }
  return out;
+}
+
+const arcCache=new WeakMap<Keyframe,WeakMap<Keyframe,{lengths:number[];total:number}>>();
+/** Bounded 256-segment arc-length table, cached by immutable key identity. Temporal easing still controls distance. */
+export function arcParameter(a:Keyframe,b:Keyframe,progress:number):number{
+ if(progress<=0)return 0;if(progress>=1)return 1;
+ let pairs=arcCache.get(a);if(!pairs){pairs=new WeakMap();arcCache.set(a,pairs);}
+ let table=pairs.get(b);if(!table){const lengths=[0];let previous=spatialPoint(a,b,0),total=0;
+  for(let i=1;i<=256;i++){const p=spatialPoint(a,b,i/256);total+=Math.hypot(p[0]-previous[0],p[1]-previous[1]);lengths.push(total);previous=p;}table={lengths,total};pairs.set(b,table);}
+ if(table.total<1e-9)return progress;
+ const target=progress*table.total;let lo=0,hi=256;while(hi-lo>1){const mid=(lo+hi)>>1;if(table.lengths[mid]<target)lo=mid;else hi=mid;}
+ const span=table.lengths[hi]-table.lengths[lo];return (lo+(span>0?(target-table.lengths[lo])/span:0))/256;
 }

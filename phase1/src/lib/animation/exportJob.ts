@@ -28,9 +28,9 @@ async function guarded(kind:'frame'|'sequence',fn:(signal:AbortSignal)=>Promise<
 }
 export function exportCurrentFrame(d:Deps={}){
  const {doc,comp}=target();const at=animationSession().getState().view.playhead;
- return guarded('frame',()=>exportFramePng(comp,at,doc.name,d.rasterize??canvasRasterize,state.transparent),d.save??downloadBlob);
+ return guarded('frame',()=>exportFramePng(comp,at,doc.name,d.rasterize??canvasRasterize,state.transparent,doc.assets),d.save??downloadBlob);
 }
 export function exportWorkAreaSequence(d:Deps={}){
  const {doc,comp}=target();
- return guarded('sequence',signal=>exportSequenceZip(comp,doc.name,{rasterize:d.rasterize??canvasRasterize,transparent:state.transparent,signal,onProgress:(done,total)=>set({done,total})}),d.save??downloadBlob);
+ return guarded('sequence',signal=>exportSequenceZip(comp,doc.name,{assets:doc.assets,rasterize:d.rasterize??canvasRasterize,transparent:state.transparent,signal,onProgress:(done,total)=>set({done,total})}),d.save??downloadBlob);
 }
