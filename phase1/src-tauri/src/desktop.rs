@@ -303,6 +303,10 @@ async fn github_account_disconnect(window: WebviewWindow) -> std::result::Result
 #[tauri::command]
 async fn local_voice_status(window:WebviewWindow,app:tauri::AppHandle)->std::result::Result<crate::local_voice::VoiceStatus,String>{gate(&window).map_err(|_|"Trusted editor required")?;crate::local_voice::require_preview()?;let data=app.path().app_data_dir().map_err(|_|"Voice storage unavailable")?;let resource=app.path().resource_dir().map_err(|_|"Voice resources unavailable")?;tauri::async_runtime::spawn_blocking(move||crate::local_voice::status(&data,&resource)).await.map_err(|_|"Voice status failed".into())}
 #[tauri::command]
+async fn local_voice_helper_install(window:WebviewWindow,app:tauri::AppHandle,acknowledged:bool,sha256:String)->std::result::Result<String,String>{gate(&window).map_err(|_|"Trusted editor required")?;crate::local_voice::install_helper(app.path().app_data_dir().map_err(|_|"Voice storage unavailable")?,acknowledged,sha256)}
+#[tauri::command]
+async fn local_voice_helper_remove(window:WebviewWindow,app:tauri::AppHandle)->std::result::Result<(),String>{gate(&window).map_err(|_|"Trusted editor required")?;crate::local_voice::remove_helper(&app.path().app_data_dir().map_err(|_|"Voice storage unavailable")?)}
+#[tauri::command]
 async fn local_voice_download(window:WebviewWindow,app:tauri::AppHandle,acknowledged:bool)->std::result::Result<String,String>{gate(&window).map_err(|_|"Trusted editor required")?;crate::local_voice::download(app.path().app_data_dir().map_err(|_|"Voice storage unavailable")?,acknowledged)}
 #[tauri::command]
 async fn local_voice_transcribe(window:WebviewWindow,app:tauri::AppHandle,pcm:Vec<i16>,language:String)->std::result::Result<String,String>{gate(&window).map_err(|_|"Trusted editor required")?;crate::local_voice::require_preview()?;let data=app.path().app_data_dir().map_err(|_|"Voice storage unavailable")?;let resource=app.path().resource_dir().map_err(|_|"Voice resources unavailable")?;tauri::async_runtime::spawn_blocking(move||crate::local_voice::transcribe(data,resource,pcm,language)).await.map_err(|_|"Voice job failed")?}
@@ -2763,6 +2767,7 @@ pub fn run() {
             );
             tauri::async_runtime::spawn(oauth_refresh_loop());
             if let Ok(dir) = app.path().app_data_dir() {
+                if crate::local_voice::preview_enabled(){let _=crate::local_voice::initialize(&dir);}
                 crate::applog::init(dir.join("logs"));
                 // S3 native diagnostics: incident store under app data, then the lock-free panic
                 // writer (it replaces the logger-lock hook from applog::init, never chains it).
@@ -2938,6 +2943,8 @@ pub fn run() {
             selftest_write,
             selftest_exit,
             local_voice_status,
+            local_voice_helper_install,
+            local_voice_helper_remove,
             local_voice_download,
             local_voice_transcribe,
             local_voice_poll,

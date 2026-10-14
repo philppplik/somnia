@@ -2,7 +2,8 @@ import {VoiceFailure} from './voiceErrors';
 import {voiceLanguage,type VoiceLanguage} from './voicePreview';
 import {invoke,isTauri} from '@tauri-apps/api/core';
 import type {STTAdapter,VoiceClip} from './voiceInput';
-export interface VoiceStatus{helperReady:boolean;modelReady:boolean;modelBytes:number;modelSha256:string;modelRevision:string;modelUrl:string;engineRevision:string;storageChecked:boolean}
+export interface HelperAsset{schemaVersion:number;releaseReady:boolean;engineRevision:string;targetOs:string;targetArch:string;bytes:number;sha256:string;url:string;noticesUrl:string;noticesBytes:number;noticesSha256:string;license:string;dependenciesReviewed:boolean;isolationProven:boolean;orphanCleanupProven:boolean}
+export interface VoiceStatus{helperAsset?:HelperAsset|null;helperPresent?:boolean;helperReady:boolean;modelReady:boolean;modelBytes:number;modelSha256:string;modelRevision:string;modelUrl:string;engineRevision:string;storageChecked:boolean}
 export interface VoiceJob{id:string;phase:string;bytes:number;total:number;transcript?:string|null;error?:string|null}
 export type VoiceInvoke=<T>(command:string,args?:Record<string,unknown>)=>Promise<T>;
 export async function voiceStatus():Promise<VoiceStatus|null>{return isTauri()?invoke('local_voice_status'):null;}

@@ -1,5 +1,15 @@
 export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
  "en": {
+  "local.helper.title": "Optional local speech helper",
+  "local.helper.boundary": "Explicit download only. Exact size, source, checksum and license must be reviewed. Audio transcription stays local; no cloud fallback. Default-off pending release gates.",
+  "local.helper.install": "Install optional helper",
+  "local.helper.repair": "Repair helper",
+  "local.helper.remove": "Remove helper",
+  "local.helper.review": "Review optional helper download",
+  "local.helper.notices": "Reviewed license notices",
+  "local.helper.removeNotice": "Remove the installed helper only. Your speech model stays. Reinstallation needs a new explicit download confirmation.",
+  "local.helper.failed": "Helper operation failed or verification was not confirmed. Refresh readiness; no unverified helper will run.",
+
   "local.voice.failure.permission": "Microphone permission denied or blocked. Allow it in system/browser settings, then try again. Nothing was inserted or sent.",
   "local.voice.failure.device": "No usable microphone or the device disconnected. Check the input device, then try again.",
   "local.voice.failure.capture": "Microphone capture failed. Check the device and try again. Nothing was inserted or sent.",
@@ -332,6 +342,16 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Move earlier after local"
  },
  "de": {
+  "local.helper.title": "Optionaler lokaler Sprach-Helper",
+  "local.helper.boundary": "Nur ausdrücklicher Download. Genaue Größe, Quelle, Prüfsumme und Lizenz prüfen. Audiotranskription bleibt lokal; kein Cloud-Fallback. Bis zu Release-Prüfungen ausgeschaltet.",
+  "local.helper.install": "Optionalen Helper installieren",
+  "local.helper.repair": "Helper reparieren",
+  "local.helper.remove": "Helper entfernen",
+  "local.helper.review": "Optionalen Helper-Download prüfen",
+  "local.helper.notices": "Geprüfte Lizenzhinweise",
+  "local.helper.removeNotice": "Nur den installierten Helper entfernen. Das Sprachmodell bleibt. Erneute Installation braucht eine neue Download-Bestätigung.",
+  "local.helper.failed": "Helper-Vorgang fehlgeschlagen oder Prüfung nicht bestätigt. Bereitschaft neu prüfen; kein ungeprüfter Helper wird gestartet.",
+
   "local.voice.failure.permission": "Mikrofonfreigabe verweigert oder gesperrt. In System-/Browsereinstellungen erlauben und erneut versuchen. Nichts eingefügt oder gesendet.",
   "local.voice.failure.device": "Kein nutzbares Mikrofon oder Gerät getrennt. Eingabegerät prüfen und erneut versuchen.",
   "local.voice.failure.capture": "Mikrofonaufnahme fehlgeschlagen. Gerät prüfen und erneut versuchen. Nichts eingefügt oder gesendet.",
@@ -664,6 +684,16 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Nach lokal früher einordnen"
  },
  "es": {
+  "local.helper.title": "Programa de voz local opcional",
+  "local.helper.boundary": "Solo descarga explícita. Revisa tamaño, origen, hash y licencia. Transcripción local sin nube. Desactivado hasta validar la versión.",
+  "local.helper.install": "Instalar programa opcional",
+  "local.helper.repair": "Reparar programa",
+  "local.helper.remove": "Quitar programa",
+  "local.helper.review": "Revisar descarga opcional",
+  "local.helper.notices": "Avisos de licencia revisados",
+  "local.helper.removeNotice": "Quita solo el programa. El modelo de voz permanece. Reinstalar requiere nueva confirmación.",
+  "local.helper.failed": "Operación fallida o verificación no confirmada. Revisa el estado; no se ejecutará un programa sin verificar.",
+
   "local.voice.failure.permission": "Permiso de micrófono denegado o bloqueado. Revisa los ajustes del sistema/navegador. Nada insertado ni enviado.",
   "local.voice.failure.device": "Micrófono no disponible o desconectado. Revisa el dispositivo.",
   "local.voice.failure.capture": "Falló la grabación. Revisa el dispositivo. Nada insertado ni enviado.",
@@ -996,6 +1026,16 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Mover antes tras local"
  },
  "fr": {
+  "local.helper.title": "Programme vocal local facultatif",
+  "local.helper.boundary": "Téléchargement explicite uniquement. Vérifier taille, source, somme et licence. Transcription locale sans cloud. Désactivé en attente des contrôles.",
+  "local.helper.install": "Installer le programme facultatif",
+  "local.helper.repair": "Réparer le programme",
+  "local.helper.remove": "Supprimer le programme",
+  "local.helper.review": "Vérifier le téléchargement",
+  "local.helper.notices": "Mentions de licence vérifiées",
+  "local.helper.removeNotice": "Supprime uniquement le programme. Le modèle reste. Réinstaller exige une nouvelle confirmation.",
+  "local.helper.failed": "Opération ou vérification échouée. Actualiser; aucun programme non vérifié ne sera lancé.",
+
   "local.voice.failure.permission": "Permission du micro refusée ou bloquée. Vérifier les réglages système/navigateur. Rien inséré ni envoyé.",
   "local.voice.failure.device": "Micro indisponible ou déconnecté. Vérifier le périphérique.",
   "local.voice.failure.capture": "Échec de capture. Vérifier le micro. Rien inséré ni envoyé.",
@@ -1328,6 +1368,16 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Avancer après local"
  },
  "pt-BR": {
+  "local.helper.title": "Programa de voz local opcional",
+  "local.helper.boundary": "Só download explícito. Confira tamanho, origem, hash e licença. Transcrição local sem nuvem. Desativado até validar a versão.",
+  "local.helper.install": "Instalar programa opcional",
+  "local.helper.repair": "Reparar programa",
+  "local.helper.remove": "Remover programa",
+  "local.helper.review": "Revisar download opcional",
+  "local.helper.notices": "Avisos de licença revisados",
+  "local.helper.removeNotice": "Remove só o programa. O modelo de voz permanece. Reinstalar exige nova confirmação.",
+  "local.helper.failed": "Falha na operação ou verificação não confirmada. Atualize o estado; nenhum programa não verificado será iniciado.",
+
   "local.voice.failure.permission": "Permissão do microfone negada ou bloqueada. Confira os ajustes do sistema/navegador. Nada inserido ou enviado.",
   "local.voice.failure.device": "Microfone indisponível ou desconectado. Confira o dispositivo.",
   "local.voice.failure.capture": "Falha na gravação. Confira o microfone. Nada inserido ou enviado.",
