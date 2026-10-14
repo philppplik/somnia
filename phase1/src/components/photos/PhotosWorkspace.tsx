@@ -64,7 +64,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
  const [showSplit,setShowSplit]=usePanelState<boolean>('photos.split',false);
  const [settingsClip,setSettingsClip]=usePanelState<SettingsPayload|null>('photos.settingsClipboard',null);
  const clipboardSettings=decodeSettingsPayload(settingsClip);
- const [splitX,setSplitX]=useState(0.5);
+ const [splitX,setSplitX]=usePanelState<number>('photos.splitX',0.5); // divider position survives reloads, like the split toggle itself
  const splitDrag=useRef(false);
  const [healing,setHealing]=useState(false);
  const [brushR,setBrushR]=usePanelState<number>('photos.healRadius',0.03);
@@ -84,11 +84,11 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
  const targetBase=useRef<number|null>(null);    // its y, or the band's saturation at drag start
  const targetBandRef=useRef<HslBandId|null>(null);
  const radDraft=useRef<{x0:number;y0:number;x1:number;y1:number}|null>(null); // in-flight radial filter drag (bounding box)
- useEffect(()=>{ // Escape disarms the target tool from anywhere
-  if(!curvesTarget&&!hslTarget)return;
-  const onKey=(e:KeyboardEvent)=>{if(e.key==='Escape'){setCurvesTarget(false);setHslTarget(false);}};
+ useEffect(()=>{ // Escape disarms the target tool and the split view from anywhere
+  if(!curvesTarget&&!hslTarget&&!showSplit)return;
+  const onKey=(e:KeyboardEvent)=>{if(e.key==='Escape'){setCurvesTarget(false);setHslTarget(false);setShowSplit(false);}};
   window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey);
- },[curvesTarget,hslTarget,setCurvesTarget,setHslTarget]);
+ },[curvesTarget,hslTarget,showSplit,setCurvesTarget,setHslTarget,setShowSplit]);
  const [dabR,setDabR]=usePanelState<number>('photos.dodgeRadius',0.05);
  const dabChain=useRef<{x:number;y:number;r:number}[]|null>(null); // dabs of the in-flight dodge stroke
  const healPath=useRef<{x:number;y:number}[]|null>(null); // path points of the in-flight heal stroke
@@ -317,6 +317,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
      <line x1={splitX*dispW} y1={0} x2={splitX*dispW} y2={dispH} stroke="rgba(255,255,255,0.9)" strokeWidth={2} pointerEvents="none"/>
      <line x1={splitX*dispW} y1={0} x2={splitX*dispW} y2={dispH} stroke="transparent" strokeWidth={14} className="cursor-col-resize" data-testid="photos-split-handle"
       onPointerDown={e=>{e.stopPropagation();(e.target as Element).setPointerCapture(e.pointerId);splitDrag.current=true;}}
+      onDoubleClick={e=>{e.stopPropagation();setSplitX(0.5);}}
       onPointerMove={e=>{if(splitDrag.current)setSplitX(clampSplitX(pointerPos(e).x));}}
       onPointerUp={()=>{splitDrag.current=false;}}
       onPointerCancel={()=>{splitDrag.current=false;}}/>

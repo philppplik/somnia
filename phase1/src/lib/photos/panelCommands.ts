@@ -11,6 +11,7 @@ import {getMedia} from '../media';
 import {applyPhotoCrop,cancelPhotoCrop,commitPhotoSettings,dirtyPhoto,exportPhotoCopy,flipPhoto,getPhotoSession,historyPhoto,resetPhoto,rotatePhoto,setPhotoCropDraft,setPhotoCropping,type PhotoSession} from './studioSession';
 import {isNeutralPhoto,neutralPhotoSettings,PHOTO_CONTROLS,type PhotoSettings} from './studioSettings';
 import {applyLook,BUILT_IN_PRESETS,LOOK_KEYS,type Look} from './presets';
+import {decodeSettingsPayload} from './settingsClipboard';
 import {aspectRatio,CROP_ASPECTS,fitAspect,isCropAspect,orientedSize,outputSize,type CropAspect} from './cropAspect';
 import {describeChange,stepsTo} from './historyLog';
 import {computeHistogram,toneZones} from './histogram';
@@ -70,6 +71,9 @@ export function photosCommandSpecs():CommandSpec<never,unknown>[]{
     if(p.preset){const b=BUILT_IN_PRESETS.find(x=>x.id===p.preset);if(!b)throw Error(`Unknown preset: ${p.preset}`);look=b.look;}
     if(!look)throw Error('Give a preset id or a look.');
     const l=look;commitPhotoSettings(name,s=>applyLook(s,l));}},
+  {id:'photos.applyVersion',title:'Photos: Apply a saved version',category:'Edit',level:'ui',keywords:['photos','version','snapshot','history'],
+   params:{type:'object',properties:{payload:{type:'object'}},required:['payload'],additionalProperties:false},enabled:ready,
+   run:(p:{payload:unknown})=>{const s=decodeSettingsPayload(p.payload);if(!s)throw Error('Malformed version payload.');commitPhotoSettings(need(),()=>s);}},
   {id:'photos.rotate',title:'Photos: Rotate a quarter turn',category:'Edit',level:'ui',keywords:['photos','rotate'],
    params:{type:'object',properties:{direction:{type:'integer',enum:[-1,1]}},required:['direction'],additionalProperties:false},enabled:ready,
    run:(p:{direction:1|-1})=>rotatePhoto(need(),p.direction)},
