@@ -1,6 +1,7 @@
 //! Standalone goose-agent compatibility spike. No desktop wiring or built-in tools.
 mod goose;
 mod transport;
+pub mod ollama_stream;
 pub mod evals;
 pub mod inventory;
 pub mod provider;
@@ -135,6 +136,8 @@ pub enum EventKind {
     Started,
     Step { index: u32, name: String },
     Message(String),
+    /// Provisional text only. Never a tool or authority. Offset is UTF-8 bytes.
+    TextDelta { turn: u32, offset: u32, text: String },
     ToolProposed(ToolProposal),
     Usage(Usage),
     Completed,
@@ -150,6 +153,9 @@ pub struct RunEvent {
 pub trait ModelTransport: Send + Sync {
     /// Only explicitly configured model traffic. No logging of payloads or credentials.
     async fn complete(&self, input: ModelInput) -> Result<ModelReply, Failure>;
+    /// Default preserves existing final-only transports. Bounded sender supplies backpressure.
+    async fn stream_text(&self, input: ModelInput, _deltas: mpsc::Sender<String>) -> Result<ModelReply, Failure> { self.complete(input).await }
+
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Decision {

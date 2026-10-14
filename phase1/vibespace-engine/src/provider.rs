@@ -44,6 +44,7 @@ impl ProviderKind {
     }
 }
 
+pub const EXPERIMENTAL_OLLAMA_STREAM_ENABLED:bool=false;
 const PROPOSE: &str = "somnia_propose_effect";
 fn propose_schema() -> Value {
     json!({"type":"object","properties":{"name":{"type":"string"},"arguments":{"type":"object"}},"required":["name","arguments"],"additionalProperties":false})
@@ -150,6 +151,7 @@ pub struct ProviderModel {
     endpoint: Url,
     client: reqwest::Client,
     propose: bool,
+    experimental_text_stream:bool,
 }
 impl ProviderModel {
     pub fn new(kind: ProviderKind, endpoint: Option<&str>, model: &str, credential: Option<Secret>, propose: bool) -> Result<Self, Failure> {
@@ -191,14 +193,38 @@ impl ProviderModel {
             .default_headers(headers)
             .build()
             .map_err(|_| Failure::Model)?;
-        Ok(Self { kind, config, endpoint: url, client, propose })
+        Ok(Self { kind, config, endpoint: url, client, propose,experimental_text_stream:EXPERIMENTAL_OLLAMA_STREAM_ENABLED })
     }
+    /// Disabled by default and not enabled by desktop production wiring.
+    /// Text-only experimental path; tool-capable requests remain final-only.
+    pub fn with_experimental_text_stream(mut self,enabled:bool)->Self {self.experimental_text_stream=enabled;self}
     pub fn kind(&self) -> ProviderKind {
         self.kind
     }
 }
 #[async_trait]
 impl ModelTransport for ProviderModel {
+    async fn stream_text(&self,input:ModelInput,deltas:tokio::sync::mpsc::Sender<String>)->Result<ModelReply,Failure>{
+        if !self.experimental_text_stream || self.kind!=ProviderKind::Ollama || self.propose{return self.complete(input).await;}
+        if input.config.model()!=self.config.model()||input.config.endpoint()!=self.config.endpoint()||!matches!(input.config,ModelConfig::Local{..}){return Err(Failure::InvalidRequest);}
+        if self.config.model().to_ascii_lowercase().ends_with(":cloud")||self.config.model().to_ascii_lowercase().ends_with("-cloud"){return Err(Failure::Model);}
+        // Loopback alone is not proof of local weights. Verify exact alias before text traffic.
+        let mut show=self.endpoint.clone();show.set_path("/api/show");
+        let response=self.client.post(show).json(&json!({"model":self.config.model()})).send().await.map_err(|_|Failure::Model)?;
+        if !response.status().is_success(){return Err(Failure::Model);}
+        let mut response=response;let mut bytes=vec![];
+        while let Some(chunk)=response.chunk().await.map_err(|_|Failure::Model)?{if bytes.len()+chunk.len()>65536{return Err(Failure::Model);}bytes.extend_from_slice(&chunk);}
+        let metadata:Value=serde_json::from_slice(&bytes).map_err(|_|Failure::Model)?;
+        if metadata.get("remote_host").is_some()||metadata.get("remote_model").is_some()||metadata.get("model_info").and_then(Value::as_object).is_none_or(|m|m.is_empty()){return Err(Failure::Model);}
+        let body=crate::ollama_stream::request(self.config.model(),&input.messages)?;
+        let mut endpoint=self.endpoint.clone();endpoint.set_path("/api/chat");
+        let mut response=self.client.post(endpoint).json(&body).send().await.map_err(|_|Failure::Model)?;
+        if !response.status().is_success(){return Err(Failure::Model);}
+        let mut decoder=crate::ollama_stream::Decoder::default();
+        while let Some(chunk)=response.chunk().await.map_err(|_|Failure::Model)?{for text in decoder.push(&chunk)?{deltas.send(text).await.map_err(|_|Failure::Model)?;}}
+        decoder.finish()
+    }
+
     async fn complete(&self, input: ModelInput) -> Result<ModelReply, Failure> {
         if input.config.model() != self.config.model() || input.config.endpoint() != self.config.endpoint() || std::mem::discriminant(&input.config) != std::mem::discriminant(&self.config) {
             return Err(Failure::InvalidRequest);

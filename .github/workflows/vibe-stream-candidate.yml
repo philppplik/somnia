@@ -1,0 +1,19 @@
+name: Native Vibe stream candidate (default off)
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'phase1/vibespace-engine/**'
+      - 'phase1/vibespace-core/**'
+      - 'phase1/src/components/vibespace/**'
+      - '.github/workflows/vibe-stream-candidate.yml'
+permissions:
+  contents: read
+jobs:
+  native-contract:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test --locked --manifest-path phase1/vibespace-engine/Cargo.toml
+      - run: cargo test --locked --manifest-path phase1/vibespace-core/Cargo.toml

@@ -98,3 +98,6 @@ test('plain-object native rejections keep their stable id and no paths',async()=
  assert.doesNotMatch(d.getSnapshot().error??'',/Users/);
  c.disconnect();d.disconnect();
 });
+test('persisted partial transcript snapshots reconcile by sequence without replay or retarget',async()=>{
+ const fixture=fixtureRun({executionState:'running',review:null,reviewState:'none',messages:[{id:'stream-1',role:'assistant_streaming',text:'first',timestampUtc:'2026-10-11T10:00:00Z'}]});const snapshot=fixtureSnapshot();snapshot.studios[0]=fixture;const transport=createFixtureVibeSpaceTransport('test',snapshot);const controller=new VibeSpaceController(transport);await controller.connect();transport.emit(event(2,{...fixture,messages:[{...fixture.messages[0],text:'first second'}]}));transport.emit(event(2,{...fixture,messages:[{...fixture.messages[0],text:'DUPLICATE'}]}));const run=controller.getSnapshot().snapshot!.studios.find(s=>s.runId===fixture.runId)!;assert.equal(run.messages[0].text,'first second');transport.emit(event(3,{...fixture,executionState:'stopped',messages:[{...fixture.messages[0],role:'assistant_incomplete',text:'first second'}]}));assert.equal(controller.getSnapshot().snapshot!.studios[0].messages[0].role,'assistant_incomplete');controller.disconnect();
+});

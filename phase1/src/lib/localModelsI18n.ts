@@ -240,7 +240,9 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.voice.native.source": "Artifact URL",
   "local.voice.native.failed": "Local STT inspection or download failed. No transcript applied.",
   "local.stream.boundary": "Local Ollama streams incremental text. Stop keeps partial output as incomplete; no automatic pull or cloud fallback. A requested context uses a conservative UTF-8 byte safety budget with output capped at one quarter of requested context, not a measured tokenizer limit. Model downloads and context settings are reviewed in Local Models.",
-  "local.stream.models": "Review local model and context settings"
+  "local.stream.models": "Review local model and context settings",
+  "local.vibe.stream.provisional": "Provisional local text, not a completed reply or tool approval.",
+  "local.vibe.stream.incomplete": "Interrupted local text, incomplete. No automatic replay."
  },
  "de": {
   "local.tab": "Lokal",
@@ -483,7 +485,9 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.voice.native.source": "Artefakt-URL",
   "local.voice.native.failed": "Lokale STT-Prüfung oder Download fehlgeschlagen. Kein Transkript angewendet.",
   "local.stream.boundary": "Lokales Ollama streamt Text schrittweise. Stoppen behält Teilausgabe als unvollständig; kein automatischer Download oder Cloud-Fallback. Angeforderter Kontext nutzt ein vorsichtiges UTF-8-Bytebudget mit Ausgabegrenze bei einem Viertel des angeforderten Kontexts, keine gemessene Tokenizergrenze. Modell und Kontext in Lokale Modelle prüfen.",
-  "local.stream.models": "Lokales Modell und Kontext prüfen"
+  "local.stream.models": "Lokales Modell und Kontext prüfen",
+  "local.vibe.stream.provisional": "Vorläufiger lokaler Text, keine fertige Antwort oder Werkzeugfreigabe.",
+  "local.vibe.stream.incomplete": "Unterbrochener lokaler Text, unvollständig. Keine automatische Wiederholung."
  },
  "es": {
   "local.tab": "Local",
@@ -726,7 +730,9 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.voice.native.source": "URL del archivo",
   "local.voice.native.failed": "Falló inspección o descarga STT local. No se aplicó texto.",
   "local.stream.boundary": "Ollama local transmite texto incremental. Detener conserva salida parcial incompleta; sin descarga ni nube automática. El contexto solicitado usa presupuesto conservador de bytes UTF-8 con salida limitada a un cuarto del contexto solicitado, no límite medido del tokenizador. Revisar modelo y contexto en Modelos locales.",
-  "local.stream.models": "Revisar modelo y contexto locales"
+  "local.stream.models": "Revisar modelo y contexto locales",
+  "local.vibe.stream.provisional": "Texto local provisional, no respuesta final ni permiso.",
+  "local.vibe.stream.incomplete": "Texto local interrumpido, incompleto. Sin repetición automática."
  },
  "fr": {
   "local.tab": "Local",
@@ -969,7 +975,9 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.voice.native.source": "URL du fichier",
   "local.voice.native.failed": "Échec de vérification ou téléchargement STT local. Aucun texte appliqué.",
   "local.stream.boundary": "Ollama local diffuse le texte progressivement. Arrêter conserve le texte partiel incomplet ; aucun téléchargement ou cloud automatique. Le contexte demandé utilise un budget prudent en octets UTF-8 avec sortie limitée à un quart du contexte demandé, pas une limite mesurée du tokenizer. Vérifier modèle et contexte dans Modèles locaux.",
-  "local.stream.models": "Vérifier modèle et contexte locaux"
+  "local.stream.models": "Vérifier modèle et contexte locaux",
+  "local.vibe.stream.provisional": "Texte local provisoire, pas une réponse finale ou permission.",
+  "local.vibe.stream.incomplete": "Texte local interrompu, incomplet. Sans relance automatique."
  },
  "pt-BR": {
   "local.tab": "Local",
@@ -1212,6 +1220,8 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.voice.native.source": "URL do arquivo",
   "local.voice.native.failed": "Falha de inspeção ou download STT local. Nenhum texto aplicado.",
   "local.stream.boundary": "Ollama local transmite texto incremental. Parar mantém saída parcial incompleta; sem download ou nuvem automática. Contexto solicitado usa orçamento conservador de bytes UTF-8 com saída limitada a um quarto do contexto solicitado, não limite medido do tokenizador. Revise modelo e contexto em Modelos locais.",
-  "local.stream.models": "Revisar modelo e contexto locais"
+  "local.stream.models": "Revisar modelo e contexto locais",
+  "local.vibe.stream.provisional": "Texto local provisório, não resposta final ou permissão.",
+  "local.vibe.stream.incomplete": "Texto local interrompido, incompleto. Sem repetição automática."
  }
 };

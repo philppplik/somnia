@@ -539,6 +539,10 @@ impl Runtime {
                     None,
                 )?;
             }
+            TextDelta{turn,offset,text}=>{
+                if turn>128||text.is_empty()||text.len()>4096||offset as usize+text.len()>65536{return Err(CoreError("invalid stream delta"));}
+                self.store.append_event(id,"agent.text_delta",&serde_json::json!({"turn":turn,"offset":offset,"text":text}),None)?;
+            }
             Message(text) => {
                 self.store.append_event(
                     id,
@@ -753,6 +757,7 @@ impl Runtime {
         let studio = self.store.get_studio(&run.studio_id)?;
         let events = self.all_events(id)?;
         let mut messages = vec![];
+        let mut partial:Option<(u64,String,String,i64)>=None;
         let mut last_step = None;
         let mut usage = w::Usage {
             input_tokens: 0,
@@ -764,12 +769,24 @@ impl Runtime {
         };
         for event in &events {
             match event.kind.as_str() {
-                "agent.message" => messages.push(w::TranscriptMessage {
+                "agent.text_delta"=>{
+                    let turn=event.payload["turn"].as_u64().ok_or(CoreError("invalid stream turn"))?;
+                    let offset=event.payload["offset"].as_u64().ok_or(CoreError("invalid stream offset"))?;
+                    let text=event.payload["text"].as_str().ok_or(CoreError("invalid stream text"))?;
+                    if text.is_empty()||text.len()>4096{return Err(CoreError("invalid stream text"));}
+                    if partial.as_ref().is_none_or(|p|p.0!=turn){
+                        if offset!=0||partial.is_some(){return Err(CoreError("stream needs reconciliation"));}
+                        partial=Some((turn,String::new(),event.timestamp_utc.clone(),event.sequence));
+                    }
+                    let p=partial.as_mut().ok_or(CoreError("stream needs reconciliation"))?;
+                    if offset!=p.1.len() as u64||p.1.len()+text.len()>65536{return Err(CoreError("stream needs reconciliation"));}p.1.push_str(text);
+                }
+                "agent.message" => {partial=None;messages.push(w::TranscriptMessage {
                     id: format!("{}:{}", id, event.sequence),
                     role: "assistant".into(),
                     text: event.payload["text"].as_str().unwrap_or("").into(),
                     timestamp_utc: event.timestamp_utc.clone(),
-                }),
+                });},
                 "agent.step" => last_step = event.payload["name"].as_str().map(str::to_string),
                 "agent.usage" => {
                     usage.input_tokens = usage
@@ -797,6 +814,9 @@ impl Runtime {
                 }
                 _ => {}
             }
+        }
+        if let Some((_turn,text,timestamp,sequence))=partial {
+            messages.push(w::TranscriptMessage{id:format!("{}:stream:{}",id,sequence),role:if run.execution.is_terminal(){"assistant_incomplete"}else{"assistant_streaming"}.into(),text,timestamp_utc:timestamp});
         }
         if usage.cost_usd.is_some()
             && events

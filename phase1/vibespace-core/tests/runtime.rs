@@ -461,3 +461,29 @@ async fn final_hunk_selection_has_durable_checkpoint_and_new_change_request_is_i
         .iter()
         .any(|cp| cp.label == "Before apply" || cp.label.to_lowercase().contains("apply")));
 }
+
+#[tokio::test]
+async fn partial_text_rebuilds_from_persisted_offsets_and_final_replaces_it() {
+ let (_data,_project,rt,studio)=setup();
+ let reply=rt.start(StartRun{studio_id:studio.studio_id,request_id:uuid::Uuid::new_v4().to_string(),retry_of_run_id:None},Arc::new(Waiting),engine::ModelConfig::Local{endpoint:"http://127.0.0.1:11434/v1/chat/completions".into(),model:"qwen3.5:9b".into()}).await.unwrap();
+ let id=reply.snapshot.run_id;
+ rt.store.append_event(&id,"agent.text_delta",&serde_json::json!({"turn":0,"offset":0,"text":"Grüße"}),None).unwrap();
+ rt.store.append_event(&id,"agent.text_delta",&serde_json::json!({"turn":0,"offset":7,"text":" local"}),None).unwrap();
+ let snapshot=rt.snapshot(&id).unwrap();assert_eq!(snapshot.snapshot.messages[0].role,"assistant_streaming");assert_eq!(snapshot.snapshot.messages[0].text,"Grüße local");
+ rt.store.append_event(&id,"agent.message",&serde_json::json!({"text":"Grüße local"}),None).unwrap();
+ let snapshot=rt.snapshot(&id).unwrap();assert_eq!(snapshot.snapshot.messages.len(),1);assert_eq!(snapshot.snapshot.messages[0].role,"assistant");rt.stop(&id).await.unwrap();
+}
+
+struct PartialWaiting;
+#[async_trait]
+impl engine::ModelTransport for PartialWaiting {
+ async fn complete(&self,_:engine::ModelInput)->Result<engine::ModelReply,engine::Failure>{std::future::pending().await}
+ async fn stream_text(&self,_:engine::ModelInput,deltas:tokio::sync::mpsc::Sender<String>)->Result<engine::ModelReply,engine::Failure>{deltas.send("Provisional only".into()).await.map_err(|_|engine::Failure::Model)?;std::future::pending().await}
+}
+#[tokio::test]
+async fn stop_keeps_persisted_partial_incomplete_never_tool_or_final(){
+ let (_data,project,rt,studio)=setup();let started=rt.start(StartRun{studio_id:studio.studio_id,request_id:uuid::Uuid::new_v4().to_string(),retry_of_run_id:None},Arc::new(PartialWaiting),engine::ModelConfig::Local{endpoint:"http://127.0.0.1:11434/v1/chat/completions".into(),model:"qwen3.5:9b".into()}).await.unwrap();let id=started.snapshot.run_id;
+ for _ in 0..100 {if !rt.snapshot(&id).unwrap().snapshot.messages.is_empty(){break;}tokio::time::sleep(std::time::Duration::from_millis(10)).await;}
+ assert_eq!(rt.snapshot(&id).unwrap().snapshot.messages[0].role,"assistant_streaming");rt.stop(&id).await.unwrap();
+ let snapshot=rt.snapshot(&id).unwrap();assert_eq!(snapshot.snapshot.messages[0].role,"assistant_incomplete");assert_eq!(snapshot.snapshot.messages[0].text,"Provisional only");assert_eq!(std::fs::read_to_string(project.path().join("hello.txt")).unwrap(),"before");
+}

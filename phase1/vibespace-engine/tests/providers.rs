@@ -173,3 +173,7 @@ fn usage_cache_and_cost_come_only_from_provider_responses() {
     let v = json!({"choices":[{"message":{"content":"x"}}],"usage":{"prompt_tokens":1,"completion_tokens":1}});
     assert_eq!(decode_response(ProviderKind::Ollama, &v, false).unwrap().usage.cache_read_tokens, None);
 }
+#[test]
+fn experimental_stream_is_disabled_by_default() {
+ assert!(!vibespace_engine::provider::EXPERIMENTAL_OLLAMA_STREAM_ENABLED);
+}
