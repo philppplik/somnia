@@ -1,3 +1,7 @@
+import {Field} from './InterfaceField';
+export {Field};
+import {InterfaceResources,InterfaceBindings} from './InterfaceResources';
+import {InterfaceOutput} from './InterfaceOutput';
 import {patchInterfaceNode,owningInstance,createComponent,instantiateComponent,addComponentVariant,switchInstanceVariant,resetInstanceOverrides,detachInstance} from '../../lib/interface/components';
 import {DEFAULT_LAYOUT,DEFAULT_SIZING,type InterfaceLayout,type InterfaceSizing,type ConstraintMode} from '../../lib/interface/schema';
 import {computeInterfaceLayout} from '../../lib/interface/layout';
@@ -22,11 +26,9 @@ export function InterfaceLayers(){
   <Button size="compact" variant="outline" onClick={()=>run(()=>{const id=uid();interfaceSession.transact(d=>d.pages.push({id,name:`${t('interface.page')} ${d.pages.length+1}`,children:[]}));interfaceSession.page(id);})}>{t('interface.addPage')}</Button>
   <div className="flex flex-wrap gap-1">{(['frame','rectangle','text','group'] as const).map(kind=><Button size="compact" key={kind} onClick={()=>run(()=>{const selected=doc.nodes.find(n=>n.id===s.selection);let id='';interfaceSession.transact(d=>{id=addNode(d,page.id,kind,selected&&['frame','group'].includes(selected.kind)&&!selected.locked?selected.id:null);});interfaceSession.select(id);})}>{t(`interface.${kind}`)}</Button>)}</div>
   {(doc.components??[]).length>0&&<details open className="border-t border-subtle pt-2"><summary className="mb-2 text-xs">{t('interface.component')}</summary><div className="flex flex-col gap-1">{doc.components!.flatMap(c=>c.variants.map(v=><Button key={v.id} size="compact" variant="outline" onClick={()=>run(()=>{let id='';interfaceSession.transact(d=>{id=instantiateComponent(d,c.id,v.id,page.id);});interfaceSession.select(id);})}>{c.name} / {v.name}</Button>))}</div></details>}
+  <InterfaceResources run={run}/>
   <ul aria-label={t('interface.layers')} className="m-0 list-none p-0">{page.children.map(id=>row(id,0))}</ul>
  </div>}</Guard>;
-}
-export function Field({name,value,type='text',disabled,onCommit}:{name:string;value:string|number;type?:string;disabled?:boolean;onCommit:(value:string)=>void}){
- return <label className="flex min-w-0 flex-col gap-1 text-xs">{name}<input key={`${name}:${value}`} className="min-w-0 rounded border border-subtle bg-panel p-2 text-ink focus-visible:outline-accent" type={type} defaultValue={value} disabled={disabled} onBlur={e=>{if(e.currentTarget.value!==String(value)){onCommit(e.currentTarget.value);e.currentTarget.value=String(value);}}} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();if(e.key==='Escape'){e.currentTarget.value=String(value);e.currentTarget.blur();}}}/></label>;
 }
 export function InterfaceProperties(){
  const s=useInterfaceState();const {t}=useT();const doc=s.document;const node=doc?.nodes.find(n=>n.id===s.selection);
@@ -44,6 +46,8 @@ export function InterfaceProperties(){
    {(['hidden','locked'] as const).map(key=><label key={key} className="flex items-center gap-2 text-xs"><input style={{width:14,flexShrink:0}} type="checkbox" checked={node[key]} disabled={key==='hidden'&&node.locked} onChange={e=>run(()=>patch({[key]:e.target.checked}))}/>{t(`interface.${key}`)}</label>)}
    <InterfaceLayoutControls node={node} run={run} patch={patch}/>
    <InterfaceComponentControls node={node} run={run}/>
+   <InterfaceBindings nodeId={node.id} run={run}/>
+   <InterfaceOutput/>
    <div className="flex flex-wrap gap-1"><Button size="compact" variant="outline" disabled={node.locked} onClick={()=>run(()=>move(-1))}>{t('interface.up')}</Button><Button size="compact" variant="outline" disabled={node.locked} onClick={()=>run(()=>move(1))}>{t('interface.down')}</Button><Button size="compact" variant="outline" disabled={node.locked} onClick={()=>run(()=>interfaceSession.transact(d=>deleteNode(d,node.id)))}>{t('interface.delete')}</Button></div>
   </>}
  </div>}</Guard>;
@@ -57,7 +61,8 @@ function InterfaceLayoutControls({node,run,patch}:{node:InterfaceNode;run:(f:()=
  const number=(value:string)=>{if(!value.trim())throw Error('A number is required.');return Number(value);};
  const parent=s.document!.nodes.find(n=>n.id===node.parentId);const isContainer=['frame','group'].includes(node.kind);
  return <details open className="border-t border-subtle pt-3"><summary className="mb-3 cursor-pointer text-xs font-medium">{t('interface.layout')}</summary><div className="flex flex-col gap-3">
-  {isContainer&&<><Choice label={t('interface.direction')} value={layout.direction} options={option(['free','row','column'])} disabled={disabled} onChange={v=>setLayout({direction:v as InterfaceLayout['direction']})}/>
+  {isContainer&&<><Choice label={t('interface.direction')} value={layout.direction} options={option(['free','row','column','grid'])} disabled={disabled} onChange={v=>setLayout({direction:v as InterfaceLayout['direction']})}/>
+   {layout.direction==='grid'&&<Field name={t('interface.columns')} value={layout.columns??2} type="number" disabled={disabled} onCommit={v=>run(()=>patch({layout:{...layout,columns:number(v)}}))}/>}
    {layout.direction!=='free'&&<><label className="flex items-center gap-2 text-xs"><input style={{width:14}} type="checkbox" checked={layout.wrap} disabled={disabled} onChange={e=>setLayout({wrap:e.target.checked})}/>{t('interface.wrap')}</label><Field name={t('interface.gap')} value={layout.gap} type="number" disabled={disabled} onCommit={v=>run(()=>patch({layout:{...layout,gap:number(v)}}))}/><Choice label={t('interface.align')} value={layout.align} options={option(['start','center','end','stretch'])} disabled={disabled} onChange={v=>setLayout({align:v as InterfaceLayout['align']})}/><div className="grid grid-cols-2 gap-2">{['top','right','bottom','left'].map((edge,index)=><Field key={edge} name={t(`interface.padding.${edge}`)} value={layout.padding[index]} type="number" disabled={disabled} onCommit={v=>run(()=>{const padding=[...layout.padding] as InterfaceLayout['padding'];padding[index]=number(v);patch({layout:{...layout,padding}});})}/>)}</div></>}
   </>}
   <div className="grid grid-cols-2 gap-2">{(['width','height'] as const).map(axis=><Choice key={axis} label={`${t(`interface.${axis}`)} / ${t('interface.sizing')}`} value={sizing[axis]} options={option(['fixed','hug','fill'])} disabled={disabled} onChange={v=>setSizing({[axis]:v})}/>)}</div>

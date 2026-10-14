@@ -1,5 +1,5 @@
 export type AxisSizing='fixed'|'hug'|'fill';
-export interface InterfaceLayout {direction:'free'|'row'|'column';wrap:boolean;gap:number;padding:[number,number,number,number];align:'start'|'center'|'end'|'stretch';}
+export interface InterfaceLayout {direction:'free'|'row'|'column'|'grid';wrap:boolean;gap:number;padding:[number,number,number,number];align:'start'|'center'|'end'|'stretch';columns?:number;}
 export interface InterfaceSizing {width:AxisSizing;height:AxisSizing;minWidth:number;minHeight:number;maxWidth:number;maxHeight:number;absolute:boolean;}
 export type ConstraintMode='start'|'end'|'center'|'stretch'|'scale';
 export interface InterfaceConstraints {horizontal:ConstraintMode;vertical:ConstraintMode;parentWidth:number;parentHeight:number;}
@@ -8,3 +8,14 @@ export interface InterfaceInstance {componentId:string;variantId:string;override
 export interface InterfaceComponent {id:string;name:string;variants:{id:string;name:string;rootId:string}[];}
 export const DEFAULT_LAYOUT:InterfaceLayout={direction:'free',wrap:false,gap:12,padding:[16,16,16,16],align:'start'};
 export const DEFAULT_SIZING:InterfaceSizing={width:'fixed',height:'fixed',minWidth:1,minHeight:1,maxWidth:32768,maxHeight:32768,absolute:false};
+export interface InterfaceVariable {id:string;name:string;type:'color'|'number';value:string|number;alias?:string;}
+export interface InterfaceTextStyle {id:string;name:string;fontFamily:'sans-serif'|'serif'|'monospace';fontSize:number;lineHeight:number;fontWeight:400|500|600|700;}
+export type NodeKind='frame'|'group'|'rectangle'|'text';
+export interface InterfaceNode {
+ id:string;pageId:string;parentId:string|null;children:string[];kind:NodeKind;name:string;
+ x:number;y:number;width:number;height:number;fill:string;text?:string;hidden:boolean;locked:boolean;
+ bindings?:{fill?:string;gap?:string};textStyleId?:string;annotation?:string;ready?:boolean;layout?:InterfaceLayout;sizing?:InterfaceSizing;constraints?:InterfaceConstraints;componentSlot?:string;instance?:InterfaceInstance;
+ [key:string]:unknown;
+}
+export interface InterfacePage {id:string;name:string;children:string[];[key:string]:unknown;}
+export interface InterfaceDocument {kind:'somnia-interface';version:1;id:string;name:string;revision:number;pages:InterfacePage[];nodes:InterfaceNode[];components?:InterfaceComponent[];variables?:InterfaceVariable[];textStyles?:InterfaceTextStyle[];[key:string]:unknown;}

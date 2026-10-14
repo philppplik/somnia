@@ -29,7 +29,7 @@ export function owningInstance(doc:InterfaceDocument,id:string):InterfaceNode|un
 export function patchInterfaceNode(doc:InterfaceDocument,id:string,patch:Partial<InterfaceNode>):void{
  const node=doc.nodes.find(n=>n.id===id);if(!node||node.locked&&Object.keys(patch).some(k=>k!=='locked'))throw Error('Layer is locked or unavailable.');
  const instance=owningInstance(doc,id);
- if(instance){const keys=Object.keys(patch);const rootGeometry=id===instance.id&&keys.every(k=>['x','y','constraints','locked'].includes(k));
+ if(instance){const keys=Object.keys(patch);const rootGeometry=id===instance.id&&keys.every(k=>['x','y','constraints','locked','annotation','ready'].includes(k));
   if(!rootGeometry){if(!node.componentSlot||!keys.every(k=>validOverride(k,patch[k])))throw Error('Detach the instance before structural or layout edits.');
    let override=instance.instance!.overrides.find(o=>o.slot===node.componentSlot);if(!override){override={slot:node.componentSlot,values:{}};instance.instance!.overrides.push(override);}Object.assign(override.values,patch);
   }
@@ -53,7 +53,7 @@ export function synchronizeInstances(doc:InterfaceDocument):ComponentDiagnostic[
   const generated=source.map((n,index)=>{
    if(++expanded>MAX_NODES*2)throw Error('Component expansion budget exceeded.');
    const copy:InterfaceNode={...structuredClone(n),id:ids.get(n.id)!,pageId:root.pageId,parentId:index===0?root.parentId:ids.get(n.parentId!)!,children:n.children.map(id=>ids.get(id)!)};
-   if(index===0){copy.x=root.x;copy.y=root.y;copy.locked=root.locked;copy.instance=instance;copy.constraints=root.constraints;}
+   if(index===0){copy.x=root.x;copy.y=root.y;copy.locked=root.locked;copy.instance=instance;copy.constraints=root.constraints;copy.annotation=root.annotation??copy.annotation;copy.ready=root.ready??copy.ready;}
    for(const [key,value] of Object.entries(overrides.get(n.componentSlot!)??{})){if(!OVERRIDE_KEYS.includes(key as typeof OVERRIDE_KEYS[number]))throw Error('Unknown override.');copy[key]=value;}
    return copy;
   });

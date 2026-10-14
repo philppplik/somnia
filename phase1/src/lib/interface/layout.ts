@@ -1,3 +1,4 @@
+import {resolveInterfaceValues,resolvedTextStyle} from './tokens';
 import type {InterfaceDocument,InterfaceNode} from './model';
 import {DEFAULT_LAYOUT,DEFAULT_SIZING,type ConstraintMode} from './schema';
 export interface LayoutBounds {x:number;y:number;width:number;height:number;}
@@ -6,14 +7,16 @@ const clamp=(v:number,min:number,max:number)=>Math.min(max,Math.max(min,v));
 function constrained(pos:number,size:number,current:number,base:number,mode:ConstraintMode):[number,number]{const delta=current-base;return mode==='end'?[pos+delta,size]:mode==='center'?[pos+delta/2,size]:mode==='stretch'?[pos,Math.max(1,size+delta)]:mode==='scale'?[pos*current/base,Math.max(1,size*current/base)]:[pos,size];}
 /** One deterministic, bounded layout interpretation. Bounds are caches, never source content. */
 export function computeInterfaceLayout(doc:InterfaceDocument):LayoutResult{
- const nodes=new Map(doc.nodes.map(n=>[n.id,n])),bounds=new Map<string,LayoutBounds>(),diagnostics:string[]=[];
+ const resolved=resolveInterfaceValues(doc);doc=resolved.document;
+ const nodes=new Map(doc.nodes.map(n=>[n.id,n])),bounds=new Map<string,LayoutBounds>(),diagnostics:string[]=[...resolved.diagnostics];
  const intrinsic=new Map<string,[number,number]>();
  const measure=(n:InterfaceNode):[number,number]=>{
   const cached=intrinsic.get(n.id);if(cached)return cached;
   const l=n.layout??DEFAULT_LAYOUT,z=n.sizing??DEFAULT_SIZING;let w=n.width,h=n.height;
   const children=n.children.map(id=>nodes.get(id)!).filter(n=>!n.hidden&&!(n.sizing??DEFAULT_SIZING).absolute);const sizes=children.map(measure);
   if(z.width==='hug'||z.height==='hug'){
-   if(n.kind==='text'){if(z.width==='hug')w=Math.max(1,(n.text??'').split('\n').reduce((max,line)=>Math.max(max,line.length),0)*8);if(z.height==='hug')h=Math.max(20,(n.text??'').split('\n').length*20);diagnostics.push(`Text ${n.name}: Hug uses approximate metrics; font measurement is pending.`);}
+   if(n.kind==='text'){const style=resolvedTextStyle(doc,n);if(z.width==='hug')w=Math.max(1,(n.text??'').split('\n').reduce((max,line)=>Math.max(max,line.length),0)*style.fontSize*.5);if(z.height==='hug')h=Math.max(style.fontSize*style.lineHeight,(n.text??'').split('\n').length*style.fontSize*style.lineHeight);diagnostics.push(`Text ${n.name}: Hug uses approximate metrics; font measurement is pending.`);}
+   else if(l.direction==='grid'){const cols=l.columns??2,rows=Math.ceil(children.length/cols);const cellW=Math.max(1,...sizes.map(s=>s[0]));if(z.width==='hug')w=cols*cellW+Math.max(0,cols-1)*l.gap+l.padding[1]+l.padding[3];if(z.height==='hug'){let total=0;for(let i=0;i<sizes.length;i+=cols)total+=Math.max(1,...sizes.slice(i,i+cols).map(s=>s[1]));h=total+Math.max(0,rows-1)*l.gap+l.padding[0]+l.padding[2];}}
    else if(l.direction!=='free'){
     const horizontal=l.direction==='row';let main=sizes.reduce((sum,size)=>sum+size[horizontal?0:1],0)+Math.max(0,sizes.length-1)*l.gap,cross=Math.max(0,...sizes.map(size=>size[horizontal?1:0]));
     if(l.wrap&&z[horizontal?'width':'height']!=='hug'){
@@ -30,8 +33,12 @@ export function computeInterfaceLayout(doc:InterfaceDocument):LayoutResult{
   if(depth>64)throw Error('Layout depth exceeded.');bounds.set(n.id,b);const l=n.layout??DEFAULT_LAYOUT,z=n.sizing??DEFAULT_SIZING;
   const children=n.children.map(id=>nodes.get(id)!);const flowing=children.filter(c=>!c.hidden&&!(c.sizing??DEFAULT_SIZING).absolute&&l.direction!=='free');
   const horizontal=l.direction==='row',innerW=Math.max(0,b.width-l.padding[1]-l.padding[3]),innerH=Math.max(0,b.height-l.padding[0]-l.padding[2]),available=horizontal?innerW:innerH;
-  const lines:InterfaceNode[][]=[[]];let used=0;
-  for(const child of flowing){const cz=child.sizing??DEFAULT_SIZING;const size=measure(child);const main=cz[horizontal?'width':'height']==='fill'?cz[horizontal?'minWidth':'minHeight']:size[horizontal?0:1];if(l.wrap&&lines.at(-1)!.length&&used+l.gap+main>available){lines.push([]);used=0;}used+=main+(lines.at(-1)!.length?l.gap:0);lines.at(-1)!.push(child);}
+  if(l.direction==='grid'){
+   const columns=l.columns??2,cellWidth=Math.max(1,(innerW-Math.max(0,columns-1)*l.gap)/columns);let y=l.padding[0];
+   for(let start=0;start<flowing.length;start+=columns){const row=flowing.slice(start,start+columns),rowHeight=Math.max(1,...row.map(c=>measure(c)[1]));row.forEach((child,index)=>{const [w,h]=measure(child),cz=child.sizing??DEFAULT_SIZING;const width=cz.width==='fill'||l.align==='stretch'?clamp(cellWidth,cz.minWidth,cz.maxWidth):w;const height=cz.height==='fill'||l.align==='stretch'?clamp(rowHeight,cz.minHeight,cz.maxHeight):h;const align=l.align==='center'?(cellWidth-width)/2:l.align==='end'?cellWidth-width:0;place(child,{x:l.padding[3]+index*(cellWidth+l.gap)+align,y,width,height},depth+1);});y+=rowHeight+l.gap;}
+  }
+  const lines:InterfaceNode[][]=l.direction==='grid'?[]:[[]];let used=0;
+  for(const child of l.direction==='grid'?[]:flowing){const cz=child.sizing??DEFAULT_SIZING;const size=measure(child);const main=cz[horizontal?'width':'height']==='fill'?cz[horizontal?'minWidth':'minHeight']:size[horizontal?0:1];if(l.wrap&&lines.at(-1)!.length&&used+l.gap+main>available){lines.push([]);used=0;}used+=main+(lines.at(-1)!.length?l.gap:0);lines.at(-1)!.push(child);}
   let crossOffset=horizontal?l.padding[0]:l.padding[3];
   for(const line of lines){if(!line.length)continue;
    const mainMode=horizontal?'width':'height',crossMode=horizontal?'height':'width';const hugMain=z[mainMode]==='hug';
