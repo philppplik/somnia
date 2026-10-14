@@ -9,6 +9,7 @@ import {serializeAnimationSnapshot,parseAnimationSnapshot} from './persistence';
 import {defaultView} from './recovery';
 import {frameSvg} from './exportFrames';
 import {frameToTick,TICKS_PER_SECOND as sec} from './time';
+import {reactiveKeys,MAX_REACTIVE_KEYS} from './audioReactive';
 function wav(frames:number,rate=8000,ch=1,fn:(i:number)=>number=()=>0,bits:16|8|32=16,float=false):Uint8Array{
  const align=ch*bits/8,size=frames*align,b=new Uint8Array(44+size),v=new DataView(b.buffer);
  const w=(o:number,s:string)=>[...s].forEach((c,i)=>b[o+i]=c.charCodeAt(0));
@@ -258,4 +259,27 @@ test('P56 comp layer volume keyframes: edits, mapping through time and nesting, 
  // keys follow the clip through speed 200 %
  d=applyEdit(d,{type:'layer.update',layer:'pc',source:{speed:200}});d=applyEdit(d,{type:'layer.gain.animate',layer:'pc',on:true,t:0});d=applyEdit(d,{type:'layer.gain.set',layer:'pc',value:150,t:sec});
  assert.deepEqual(mixed().audio!.gains![0].keys.map(k=>k.t),[0,sec],'comp layer keys are already in the parent time');
+});
+
+test('P82: audio-reactive keys follow loudness, are one edit, bounded and validated',()=>{
+ const loud=asset(wav(16000,8000,1,i=>Math.sin(i/20)*(i<8000?0.9:0.1)),7);
+ let d=applyEdit(createDocument(),{type:'audio.import',asset:loud,id:'aud'});
+ d=applyEdit(d,{type:'layer.add',kind:'shape',id:'sq',over:{source:{shape:'rect',color:'#7c5cff',width:100,height:100}}});
+ const c=findComp(d)!,a=layer(d);
+ const keys=reactiveKeys(loud.peaks,loud.durationTicks,a,{min:100,max:200,smooth:0,from:c.start,to:c.start+c.duration,stepTicks:frameToTick(2,c.fps),snap:t=>frameToTick(Math.round(t*c.fps.num/(c.fps.den*sec)),c.fps)});
+ assert.ok(keys.length>20&&keys.length<=MAX_REACTIVE_KEYS,'keys '+keys.length);
+ assert.ok(keys[0].v>190,'loud start '+keys[0].v);assert.ok(keys[keys.length-1].v<130,'quiet end '+keys[keys.length-1].v);
+ assert.ok(keys.every((k,i)=>i===0||k.t>keys[i-1].t));assert.ok(keys.every(k=>k.v>=100&&k.v<=200));
+ const smooth=reactiveKeys(loud.peaks,loud.durationTicks,a,{min:100,max:200,smooth:10,from:c.start,to:c.start+c.duration,stepTicks:frameToTick(2,c.fps),snap:t=>frameToTick(Math.round(t*c.fps.num/(c.fps.den*sec)),c.fps)});
+ const mid=smooth.findIndex(k=>k.t>sec*2*0.5);assert.ok(smooth[mid+2].v>keys[mid+2].v,'smoothing releases slower');
+ assert.deepEqual(reactiveKeys(loud.peaks.map(()=>0),loud.durationTicks,a,{min:0,max:1,from:0,to:sec*2,stepTicks:1000,snap:t=>t}),[]);
+ const r=d.revision;const e=applyEdit(d,{type:'audio.reactive',layer:'sq',prop:'scale',keys});assert.equal(e.revision,r+1);
+ assert.deepEqual(validateDocument(e),[]);const sk=layer(e,'sq').transform.scale.keys;assert.equal(sk.length,keys.length);assert.deepEqual(sk[0].v,[keys[0].v,keys[0].v]);assert.equal(sk[0].interp,'linear');
+ const o=applyEdit(d,{type:'audio.reactive',layer:'sq',prop:'opacity',keys:keys.map(k=>({t:k.t,v:k.v-100}))});assert.deepEqual(validateDocument(o),[]);assert.equal(layer(o,'sq').transform.opacity.keys.length,keys.length);
+ assert.notEqual(frameSvg(findComp(e)!,0),frameSvg(findComp(e)!,sec*1.9));
+ assert.throws(()=>applyEdit(d,{type:'audio.reactive',layer:'aud',prop:'scale',keys}),/audio layer/);
+ assert.throws(()=>applyEdit(d,{type:'audio.reactive',layer:'sq',prop:'opacity',keys}),/range/);
+ assert.throws(()=>applyEdit(d,{type:'audio.reactive',layer:'sq',prop:'scale',keys:[keys[1],keys[0]]}),/rise in time/);
+ assert.throws(()=>applyEdit(d,{type:'audio.reactive',layer:'sq',prop:'scale',keys:keys.slice(0,1)}),/2 to/);
+ const locked=applyEdit(d,{type:'layer.update',layer:'sq',locked:true});assert.throws(()=>applyEdit(locked,{type:'audio.reactive',layer:'sq',prop:'scale',keys}),/locked/);
 });

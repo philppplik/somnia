@@ -668,5 +668,17 @@
  "animation.pathfx.size.zigzag": "Tamaño del zigzag (px)",
  "animation.pathfx.size.wave": "Tamaño de la onda (px)",
  "animation.pathfx.size.twist": "Ángulo de torsión (°)",
- "animation.textPath.startLane": "Inicio en el trazado"
+ "animation.textPath.startLane": "Inicio en el trazado",
+ "animation.audio.reactive.hint": "Hace que otra capa lata con el volumen de este clip. Reemplaza las claves de esa propiedad en un solo paso de deshacer.",
+ "animation.audio.reactive.target": "Capa a animar",
+ "animation.audio.reactive.prop": "Propiedad",
+ "animation.audio.reactive.min": "Valor en silencio",
+ "animation.audio.reactive.max": "Valor en volumen alto",
+ "animation.audio.reactive.smooth": "Suavizado (0-10)",
+ "animation.audio.reactive.bake": "Hacer reactivo al audio",
+ "animation.audio.reactive.done": "{count} claves añadidas.",
+ "animation.audio.reactive.prop.scale": "Escala (%)",
+ "animation.audio.reactive.prop.opacity": "Opacidad (%)",
+ "animation.audio.reactive.prop.rotation": "Rotación (grados)",
+ "cmd.animation.audio.reactive": "Hacer que una capa siga el volumen del clip de audio"
 }

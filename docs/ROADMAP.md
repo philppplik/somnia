@@ -513,6 +513,10 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Done: the start offset of text on a path is keyable (-100..200 %, so text can scroll in and out): Keyframes checkbox in the Text on a path panel, timeline lane "Textpfad-Start", move, delete bakes the last key, undoable; viewer and export share the sampler.
 - Open: text on a path still copies a static path (no follow of later path edits or animated paths); no per-character spacing or side (above/below) control; no path-follow for the text bounds or the edit overlay.
 
+### Animation P82 (2026-10-14, integration pending)
+- Done: audio-reactive layers. "Make audio reactive" in the audio inspector turns the clip's loudness into keys on another layer's scale, opacity or rotation (quiet and loud values, smoothing 0-10, a key every 2 frames, at most 600). One undo step; command `animation.audio.reactive`.
+- Open: it replaces that property's existing keys (no merge); one value for both scale axes; it is a one-time bake, not live (re-run after trimming or moving the clip); the resolution is the stored peak envelope (1024 bins), so it follows beats and swells, not frequency bands; no position or colour targets.
+
 ### Animation P69 (2026-10-14, integration pending)
 - Done: stroke alignment for closed shapes (centre, inside, outside). Inside clips a double-width stroke to the shape, outside masks the shape out of it, so the visible band keeps the set width. Select in the stroke section. Viewer and every export share the behaviour; open paths stay centred. Absent field means centred and byte-identical output.
 - Open: "Expand stroke" outlines ignore the alignment (centre only), gradient strokes use the same bounding box, no alignment keys.

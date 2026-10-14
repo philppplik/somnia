@@ -23,6 +23,7 @@ import {ClipError,copyKeys,getKeyClip,pastedRefs,setKeyClip} from './keyclip';
 import {allKeysOf,pruneSelection,shiftSelection} from './selection';
 import {EASE_PRESETS,type EasePreset} from './graph';
 import {copyCurve,pasteCurveEdit} from './graphTools';
+import {reactiveKeys,REACTIVE_PROPS,MAX_SMOOTH,type ReactiveProp} from './audioReactive';
 import {detectBeats,beatMarkers,BEAT_LABEL,estimateBpm,gridTicks} from './audioBeats';
 import {quantizeMoves} from './keyQuantize';
 import {nextTrackHeight,setAllTracks,setTrackHeight,trackHeightOf,setShyHidden,shyHidden,fitAll,fitRange,setTimelineSnap,timelineSnap as timelineSnapNow,timeWindow,zoomAround} from './timelineView';
@@ -117,6 +118,14 @@ export function animationCommandSpecs():CommandSpec<unknown,unknown>[]{
    if(!made.length)throw Object.assign(Error('No new beats found in this clip. Try a higher sensitivity.'),{expected:true});
    run({type:'markers.set',markers:[...marks,...made]});return made.length;
   },object({layer:layerRef,sensitivity:{type:'integer',minimum:1,maximum:10},clear:{type:'boolean'}},[]),()=>open()&&findLayer(comp(),selected())?.kind==='audio','Edit'),
+  spec('animation.audio.reactive','Make a layer follow the loudness of the audio clip',(p:{layer?:string;target:string;prop:ReactiveProp;min:number;max:number;smooth?:number})=>{
+   const c=comp();const l=findLayer(c,layerIdOf(p));if(!l||l.kind!=='audio'||!l.audio)throw Object.assign(Error('Select an audio layer.'),{expected:true});
+   const asset=doc().audioAssets?.find(a=>a.id===l.audio!.assetId);if(!asset)throw Object.assign(Error('The audio file is missing.'),{expected:true});
+   const target=findLayer(c,p.target);if(!target||target.kind==='audio')throw Object.assign(Error('Pick a layer to animate.'),{expected:true});
+   const keys=reactiveKeys(asset.peaks,asset.durationTicks,l,{min:p.min,max:p.max,smooth:p.smooth,from:c.start,to:c.start+c.duration,stepTicks:frameToTick(2,c.fps),snap:t=>snapToFrame(t,c.fps)});
+   if(keys.length<2)throw Object.assign(Error('This clip is silent or outside the composition.'),{expected:true});
+   run({type:'audio.reactive',layer:target.id,prop:p.prop,keys});return keys.length;
+  },object({layer:layerRef,target:layerRef,prop:{enum:[...REACTIVE_PROPS]},min:{type:'number'},max:{type:'number'},smooth:{type:'number',minimum:0,maximum:MAX_SMOOTH}},['target','prop','min','max']),()=>open()&&findLayer(comp(),selected())?.kind==='audio','Edit'),
   spec('animation.audio.grid','Place beat markers on a steady BPM grid',(p:{layer?:string;bpm?:number;sensitivity?:number})=>{
    const c=comp();const l=findLayer(c,layerIdOf(p));if(!l||l.kind!=='audio'||!l.audio)throw Object.assign(Error('Select an audio layer.'),{expected:true});
    const asset=doc().audioAssets?.find(a=>a.id===l.audio!.assetId);if(!asset)throw Object.assign(Error('The audio file is missing.'),{expected:true});

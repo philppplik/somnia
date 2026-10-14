@@ -402,3 +402,7 @@ Path effects: `round` (size = corner radius px, only handle-less corners, KAPPA 
 ## P81
 
 `source.textPathStartAnim` is a scalar Property (-100..200 percent, needs a text path). `textPathStartAt(layer,tick)` samples it and replaces `textPathStart` in the viewer and every export. Edit `textpath.start` (set/animate/remove, last key bakes into `textPathStart` clamped to 0..100); lane `textPathStart`. Removing the path clears the keys.
+
+## P82
+
+`audioReactive.ts` (`reactiveKeys`): samples the peak envelope of an audio clip at its timeline span, normalised to the clip's loudest point, smoothed with a fast attack and a slower release, mapped to min..max. Edit `audio.reactive` writes linear keys (2..600) onto `transform.scale|opacity|rotation` of a non-audio, unlocked layer, replacing that property's keys. Command `animation.audio.reactive`; UI in the audio inspector.

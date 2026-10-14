@@ -668,5 +668,17 @@
  "animation.pathfx.size.zigzag": "Taille du zigzag (px)",
  "animation.pathfx.size.wave": "Taille de l’onde (px)",
  "animation.pathfx.size.twist": "Angle de torsion (°)",
- "animation.textPath.startLane": "Début sur le tracé"
+ "animation.textPath.startLane": "Début sur le tracé",
+ "animation.audio.reactive.hint": "Fait pulser un autre calque avec le volume de ce clip. Remplace les clés de cette propriété en une seule étape d'annulation.",
+ "animation.audio.reactive.target": "Calque à animer",
+ "animation.audio.reactive.prop": "Propriété",
+ "animation.audio.reactive.min": "Valeur au calme",
+ "animation.audio.reactive.max": "Valeur au fort volume",
+ "animation.audio.reactive.smooth": "Lissage (0-10)",
+ "animation.audio.reactive.bake": "Rendre réactif à l'audio",
+ "animation.audio.reactive.done": "{count} clés ajoutées.",
+ "animation.audio.reactive.prop.scale": "Échelle (%)",
+ "animation.audio.reactive.prop.opacity": "Opacité (%)",
+ "animation.audio.reactive.prop.rotation": "Rotation (degrés)",
+ "cmd.animation.audio.reactive": "Faire suivre le volume du clip audio par un calque"
 }

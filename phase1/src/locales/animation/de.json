@@ -668,5 +668,17 @@
  "animation.pathfx.size.zigzag": "Zickzack-Größe (px)",
  "animation.pathfx.size.wave": "Wellen-Größe (px)",
  "animation.pathfx.size.twist": "Drehwinkel (°)",
- "animation.textPath.startLane": "Textpfad-Start"
+ "animation.textPath.startLane": "Textpfad-Start",
+ "animation.audio.reactive.hint": "Lässt eine andere Ebene im Takt der Lautstärke dieses Clips pulsieren. Ersetzt die Keys dieser Eigenschaft in einem Rückgängig-Schritt.",
+ "animation.audio.reactive.target": "Zu animierende Ebene",
+ "animation.audio.reactive.prop": "Eigenschaft",
+ "animation.audio.reactive.min": "Wert bei Stille",
+ "animation.audio.reactive.max": "Wert bei Lautstärke",
+ "animation.audio.reactive.smooth": "Glättung (0-10)",
+ "animation.audio.reactive.bake": "Audio-reaktiv machen",
+ "animation.audio.reactive.done": "{count} Keys hinzugefügt.",
+ "animation.audio.reactive.prop.scale": "Skalierung (%)",
+ "animation.audio.reactive.prop.opacity": "Deckkraft (%)",
+ "animation.audio.reactive.prop.rotation": "Drehung (Grad)",
+ "cmd.animation.audio.reactive": "Eine Ebene der Lautstärke des Audioclips folgen lassen"
 }

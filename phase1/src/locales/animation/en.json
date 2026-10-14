@@ -668,5 +668,17 @@
  "animation.pathfx.size.zigzag": "Zig zag size (px)",
  "animation.pathfx.size.wave": "Wave size (px)",
  "animation.pathfx.size.twist": "Twist angle (°)",
- "animation.textPath.startLane": "Text path start"
+ "animation.textPath.startLane": "Text path start",
+ "animation.audio.reactive.hint": "Make another layer pulse with the loudness of this clip. Replaces that property's keys in one undo step.",
+ "animation.audio.reactive.target": "Layer to animate",
+ "animation.audio.reactive.prop": "Property",
+ "animation.audio.reactive.min": "Quiet value",
+ "animation.audio.reactive.max": "Loud value",
+ "animation.audio.reactive.smooth": "Smoothing (0-10)",
+ "animation.audio.reactive.bake": "Make audio reactive",
+ "animation.audio.reactive.done": "{count} keys added.",
+ "animation.audio.reactive.prop.scale": "Scale (%)",
+ "animation.audio.reactive.prop.opacity": "Opacity (%)",
+ "animation.audio.reactive.prop.rotation": "Rotation (deg)",
+ "cmd.animation.audio.reactive": "Make a layer follow the loudness of the audio clip"
 }

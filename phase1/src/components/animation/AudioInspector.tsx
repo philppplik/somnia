@@ -7,8 +7,9 @@ import {evaluate} from '../../lib/animation/interpolate';
 import {ticksToSeconds,timecode} from '../../lib/animation/time';
 import type {Composition,Layer} from '../../lib/animation/model';
 import {Button} from '../ui/button';
-import {NativeInput} from '../ui/native-controls';
+import {NativeInput,NativeSelect} from '../ui/native-controls';
 import {InspectorNumberField} from '../studios/InspectorNumberField';
+import {REACTIVE_PROPS,type ReactiveProp} from '../../lib/animation/audioReactive';
 import {AudioWaveform} from './AudioWaveform';
 const run=(id:string,params?:unknown)=>void executeCommand(id,params);
 const field='h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text';
@@ -17,6 +18,8 @@ function N(p:{label:string;value:number;min?:number;max?:number;step?:number;res
 /** Inspector for an audio layer: file info, waveform, trim, offset and volume keyframes. Every change is a validated command. */
 export function AudioInspector({layer,comp,at}:{layer:Layer;comp:Composition;at:number}){
  const {t}=useT();const [sens,setSens]=useState(5);const [note,setNote]=useState('');const [bpmIn,setBpmIn]=useState(0);const doc=animationSession().document;const a=layer.audio!;const asset=doc?.audioAssets?.find(x=>x.id===a.assetId);
+ const [target,setTarget]=useState('');const [rprop,setRprop]=useState<ReactiveProp>('scale');const [rmin,setRmin]=useState(100);const [rmax,setRmax]=useState(130);const [rsm,setRsm]=useState(3);const [rnote,setRnote]=useState('');
+ const targets=comp.layers.filter(o=>o.kind!=='audio'&&!o.locked);const tid=targets.some(o=>o.id===target)?target:(targets[0]?.id??'');
  const tempo=useMemo(()=>asset?estimateBpm(detectBeats(asset.peaks,asset.durationTicks,{sensitivity:sens})):null,[asset,sens]);
  const vol=a.volume,animated=vol.keys.length>0,onKey=vol.keys.some(k=>k.t===at),value=evaluate(vol,at) as number;
  return <div className="grid gap-3 p-3 text-xs" data-testid="animation-properties">
@@ -33,6 +36,17 @@ export function AudioInspector({layer,comp,at}:{layer:Layer;comp:Composition;at:
     <N disabled={layer.locked} label={t('animation.audio.length')} value={ticksToSeconds(layer.outT-layer.inT)} min={0.001} step={0.01} resetKey={`${layer.id}:${layer.outT}`} onCommit={n=>run('animation.audio.update',{layer:layer.id,length:n})}/>
    </div>
    <N disabled={layer.locked} label={t('animation.audio.offset')} value={ticksToSeconds(layer.offset)} step={0.01} resetKey={`${layer.id}:${layer.offset}`} onCommit={n=>run('animation.audio.update',{layer:layer.id,offset:n})}/>
+   <div className="grid gap-1 border-t border-subtle pt-2" data-testid="animation-audio-reactive">
+    <p className="m-0 text-ink-3">{t('animation.audio.reactive.hint')}</p>
+    <NativeSelect className={field} value={tid} aria-label={t('animation.audio.reactive.target')} onChange={e=>setTarget(e.target.value)} data-testid="animation-audio-reactive-target">{targets.map(o=><option key={o.id} value={o.id}>{o.name}</option>)}</NativeSelect>
+    <NativeSelect className={field} value={rprop} aria-label={t('animation.audio.reactive.prop')} onChange={e=>{const p=e.target.value as ReactiveProp;setRprop(p);setRmin(p==='scale'?100:p==='opacity'?30:-10);setRmax(p==='scale'?130:p==='opacity'?100:10);}} data-testid="animation-audio-reactive-prop">{REACTIVE_PROPS.map(p=><option key={p} value={p}>{t(`animation.audio.reactive.prop.${p}`)}</option>)}</NativeSelect>
+    <div className="grid grid-cols-2 gap-2">
+     <N disabled={layer.locked} label={t('animation.audio.reactive.min')} value={rmin} step={1} resetKey={`rmin:${rprop}:${rmin}`} onCommit={n=>setRmin(n)}/>
+     <N disabled={layer.locked} label={t('animation.audio.reactive.max')} value={rmax} step={1} resetKey={`rmax:${rprop}:${rmax}`} onCommit={n=>setRmax(n)}/></div>
+    <N disabled={layer.locked} label={t('animation.audio.reactive.smooth')} value={rsm} min={0} max={10} step={1} resetKey={`rsm:${rsm}`} onCommit={n=>setRsm(Math.min(10,Math.max(0,Math.round(n))))}/>
+    <Button size="tiny" variant="outline" disabled={layer.locked||!tid} data-testid="animation-audio-reactive-bake" onClick={async()=>{setRnote('');try{await executeCommand('animation.audio.reactive',{layer:layer.id,target:tid,prop:rprop,min:rmin,max:rmax,smooth:rsm});const n=animationSession().document?.compositions.find(c=>c.id===comp.id)?.layers.find(o=>o.id===tid)?.transform[rprop].keys.length??0;setRnote(t('animation.audio.reactive.done',{count:String(n)}));}catch(e){setRnote((e as Error).message);}}}>{t('animation.audio.reactive.bake')}</Button>
+    {rnote&&<p role="status" className="m-0 text-ink-3">{rnote}</p>}
+   </div>
    <div className="grid gap-1 border-t border-subtle pt-2" data-testid="animation-audio-beats">
     <p className="m-0 text-ink-3">{t('animation.audio.beats.hint')}</p>
     <N disabled={layer.locked} label={t('animation.audio.beats.sensitivity')} value={sens} min={1} max={10} step={1} resetKey={`sens:${sens}`} onCommit={n=>setSens(Math.min(10,Math.max(1,Math.round(n))))}/>

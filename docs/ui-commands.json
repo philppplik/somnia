@@ -47,6 +47,18 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.audio.reactive",
+      "title": "Make a layer follow the loudness of the audio clip",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.audio.update",
       "title": "Trim and place audio clip",
       "category": "Edit",

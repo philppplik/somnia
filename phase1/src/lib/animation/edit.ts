@@ -9,6 +9,7 @@ import {validPathFx,type GradientStop,GRADIENT_RANGE,REPEATER_RANGE,validRepeate
 import {setGradientStop} from './shapes';
 import {parseGradientStopLane,parseGradientLane,parseGradientColorLane,type GradientKey,type RepeaterKey,type StyleLaneId} from './keyTypes';
 import {evaluate} from './interpolate';
+import {REACTIVE_RANGE,MAX_REACTIVE_KEYS} from './audioReactive';
 import {colorAt} from './colorKeys';
 import {validateModifiers,linkProblems} from './modifiers';
 import {snapToFrame,tickToFrame,frameToTick,validRate} from './time';
@@ -66,6 +67,7 @@ export type Edit=
  |{type:'layer.masks';layer:string;masks:readonly LayerMask[]}
  |{type:'layer.matte';layer:string;matte:LayerMatte|null}
  |{type:'layer.reveal';layer:string;property:Property}
+ |{type:'audio.reactive';layer:string;prop:'scale'|'opacity'|'rotation';keys:readonly {t:number;v:number}[]}
  |{type:'markers.set';markers:readonly import('./model').Marker[]}
  |{type:'asset.import';asset:InterfaceAsset}
  /** Replace the document's saved motion presets (library edits compute the full list). */
@@ -342,6 +344,13 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
    const l=createLayer('audio',c,{name:e.asset.sourceName,inT:0,outT:e.asset.durationTicks,offset:at,audio:{assetId:e.asset.id,trimIn:0,volume:prop('scalar',100) as Property}},e.id);
    if(c.layers.some(x=>x.id===l.id))fail('invalid','Duplicate layer id.');
    return withLayers(next,ls=>[l,...ls]);}
+  case 'audio.reactive':{
+   const l=layerOf(doc,e.layer);if(l.locked)fail('invalid','Layer is locked.');if(l.kind==='audio')fail('invalid','Pick a layer that can be animated, not an audio layer.');
+   const rg=REACTIVE_RANGE[e.prop];if(!rg)fail('invalid','Unknown property.');
+   if(!Array.isArray(e.keys)||e.keys.length<2||e.keys.length>MAX_REACTIVE_KEYS)fail('invalid',`Audio keys need 2 to ${MAX_REACTIVE_KEYS} points.`);
+   if(!e.keys.every((k,i)=>Number.isInteger(k.t)&&k.t>=0&&(i===0||k.t>e.keys[i-1].t)&&Number.isFinite(k.v)&&k.v>=rg.min&&k.v<=rg.max))fail('invalid','Audio keys must rise in time and stay in range.');
+   const p=l.transform[e.prop],keys=e.keys.map(k=>makeKey(k.t,e.prop==='scale'?[k.v,k.v]:k.v,'linear'));
+   return setLayer(doc,{...l,transform:{...l.transform,[e.prop]:{...p,keys}}});}
   case 'audio.update':{
    const l=audioLayer(doc,e.layer);const asset=doc.audioAssets?.find(a=>a.id===l.audio!.assetId)??fail('missing','Audio file is missing.');
    const trimIn=e.trimIn??l.audio!.trimIn,length=e.length??(l.outT-l.inT),offset=e.offset??l.offset;
