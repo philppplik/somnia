@@ -36,7 +36,12 @@ export const TRANSFORM_KEYS=['anchor','position','scale','rotation','opacity'] a
 export type TransformKey=typeof TRANSFORM_KEYS[number];
 export interface LayerSource{color?:string;width?:number;height?:number;text?:string;size?:number;font?:TextFont;shape?:'rect'|'ellipse'|'path'|'roundedRect'|'star'|'polygon';radius?:number;sides?:number;innerRatio?:number;gradient?:{start:string;end:string;angle:number};path?:{points:readonly {x:number;y:number}[];closed:boolean};assetId?:string}
 export interface LayerEffect{id:string;kind:'blur'|'tint';enabled:boolean;amount:number;color:string;animation?:Property;colorKeys?:readonly {t:number;color:string}[];bypassKeys?:readonly {t:number;bypass:boolean}[]}
-export interface Layer{id:string;name:string;kind:LayerKind;source:LayerSource;inT:number;outT:number;offset:number;parent:string|null;transform:Transform;visible:boolean;solo:boolean;locked:boolean;effects?:readonly LayerEffect[];audio?:AudioParams;textReveal?:Property;stroke?:{color:string;width:number;trim?:Property;dash?:Property}}
+export interface Layer{id:string;name:string;kind:LayerKind;source:LayerSource;inT:number;outT:number;offset:number;parent:string|null;transform:Transform;visible:boolean;solo:boolean;locked:boolean;effects?:readonly LayerEffect[];audio?:AudioParams;textReveal?:Property;animators?:readonly TextAnimator[];stroke?:{color:string;width:number;trim?:Property;dash?:Property}}
+/** Per-character text animator. The selector covers `start`..`end` percent of the characters, shifted by the keyed `offset` percent, with a linear `softness` ramp at both edges. Characters inside get the full `position` shift, `scale` percent and `opacity` percent; the others keep the neutral values. */
+export interface TextAnimator{id:string;enabled:boolean;start:number;end:number;softness:number;offset:Property;position:Vec2;scale:number;opacity:number}
+export const MAX_TEXT_ANIMATORS=4;
+/** Animated text stays small enough to render one span per character. */
+export const MAX_ANIMATED_CHARS=1000;
 export interface Marker{id:string;t:number;label:string}
 export interface Composition{id:string;name:string;width:number;height:number;fps:Rational;duration:number;start:number;background:string;workArea:{in:number;out:number};layers:readonly Layer[];markers?:readonly Marker[]}
 export interface AnimationDocument{schema:number;engine:string;id:string;name:string;revision:number;activeComp:string;compositions:readonly Composition[];assets:readonly InterfaceAsset[];audioAssets?:readonly AudioAsset[]}
@@ -118,6 +123,7 @@ export function validateDocument(raw:unknown):string[]{
    if(l.stroke!==undefined&&(l.kind!=='shape'||!/^#[0-9a-fA-F]{6}$/.test(l.stroke.color)||!isNum(l.stroke.width)||l.stroke.width<0||l.stroke.width>256||(l.stroke.trim!==undefined&&!validScalarProperty(l.stroke.trim,0,100))||(l.stroke.dash!==undefined&&!validScalarProperty(l.stroke.dash,-1000,1000))))bad(`${l.id}: invalid stroke`);
    if(!validAudio(l,d as AnimationDocument))bad(`${l.id}: invalid audio`);
    if(l.textReveal!==undefined&&(l.kind!=='text'||!validScalarProperty(l.textReveal,0,100)))bad(`${l.id}: invalid text reveal`);
+   if(!validAnimators(l))bad(`${l.id}: invalid text animators`);
    if(!validSource(l.source)||!validEffects(l.effects))bad(`${l.id}: invalid source/effects`);
    if(!Number.isInteger(l.inT)||!Number.isInteger(l.outT)||l.outT<=l.inT)bad(`${l.id}: bad timing`);
    for(const k of TRANSFORM_KEYS){
@@ -165,4 +171,12 @@ export function validAudio(l:Layer,doc:Pick<AnimationDocument,'audioAssets'>):bo
  const a=l.audio;if(!a||typeof a.assetId!=='string'||!Number.isInteger(a.trimIn)||a.trimIn<0||!Number.isInteger(l.offset)||Math.abs(l.offset)>MAX_OFFSET||l.inT!==0)return false;
  const asset=doc.audioAssets?.find(x=>x.id===a.assetId);if(!asset)return false;
  return a.trimIn+(l.outT-l.inT)<=asset.durationTicks&&validScalarProperty(a.volume,0,200);
+}
+
+const inRange=(v:unknown,min:number,max:number)=>isNum(v)&&v>=min&&v<=max;
+export function validAnimators(l:Layer):boolean{
+ const a=l.animators;if(a===undefined)return true;
+ if(l.kind!=='text'||!Array.isArray(a)||a.length>MAX_TEXT_ANIMATORS||new Set(a.map(x=>x?.id)).size!==a.length)return false;
+ if(a.length&&Array.from(l.source.text??'').length>MAX_ANIMATED_CHARS)return false;
+ return a.every(x=>!!x&&typeof x.id==='string'&&x.id.length>0&&x.id.length<=64&&typeof x.enabled==='boolean'&&inRange(x.start,0,100)&&inRange(x.end,0,100)&&x.start<=x.end&&inRange(x.softness,0,100)&&validScalarProperty(x.offset,-100,100)&&isVec(x.position)&&x.position.every((v:number)=>Math.abs(v)<=2000)&&inRange(x.scale,0,1000)&&inRange(x.opacity,0,100));
 }

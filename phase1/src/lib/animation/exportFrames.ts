@@ -5,6 +5,7 @@ import {textFontStack,validEffects,validSource} from './model';
 import {effectPrimitives,effectBounds,revealedText,strokeAttributes} from './effects';
 import type {InterfaceAsset} from '../interface/schema';
 import {Zip,ZipPassThrough,strToU8} from 'fflate';
+import {animatedChars} from './textAnimators';
 import {sceneAt} from './scene';
 import {workAreaFrames} from './playback';
 import {frameToTick,tickToFrame} from './time';
@@ -28,7 +29,7 @@ function layerSvg(l:Layer,assets:readonly InterfaceAsset[],tick:number,fillOverr
  if(l.kind==='shape')return s.shape==='ellipse'
   ?`<ellipse cx="${num((s.width??0)/2)}" cy="${num((s.height??0)/2)}" rx="${num((s.width??0)/2)}"${strokeSvg} ry="${num((s.height??0)/2)}" fill="${fill}"/>`
   :`<rect x="0" y="0" width="${num(s.width??0)}" height="${num(s.height??0)}" rx="${s.shape==='roundedRect'?Math.min(s.radius??24,(s.width??0)/2,(s.height??0)/2):0}"${strokeSvg} fill="${fill}"/>`;
- return `<text x="0" y="${num(s.size??48)}" font-size="${num(s.size??48)}" fill="${esc(s.color??'#fff')}" font-family="${esc(textFontStack(s.font))}">${esc(revealedText(l,tick))}</text>`;
+ return `<text x="0" y="${num(s.size??48)}" font-size="${num(s.size??48)}" fill="${esc(s.color??'#fff')}" font-family="${esc(textFontStack(s.font))}">${textBody(l,tick,num(s.size??48))}</text>`;
 }
 /** Standalone SVG of the composition at `tick`. `transparent` omits the background rectangle so PNG output keeps real alpha. */
 export function frameSvg(comp:Composition,tick:number,transparent=false,assets:readonly InterfaceAsset[]=[]):string{
@@ -120,4 +121,12 @@ export const canvasRasterize:Rasterize=async(svg,width,height)=>{
 };
 export function downloadBlob(blob:Blob,fileName:string){
  const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=fileName;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+/** Text content of a text layer: plain, or one span per character when animators apply. Shifts and fill-opacity are exact; scale resizes the glyph. */
+function textBody(l:Layer,tick:number,size:string):string{
+ const shown=revealedText(l,tick),spans=animatedChars(l,l.source.text??'',tick);
+ if(!spans)return esc(shown);
+ const count=Array.from(shown).length;
+ return spans.slice(0,count).map(c=>`<tspan dx="${num(c.dx)}" dy="${num(c.dy)}" font-size="${num(Number(size)*c.scale)}" fill-opacity="${num(c.opacity)}">${esc(c.ch)}</tspan>`).join('');
 }

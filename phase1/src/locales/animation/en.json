@@ -257,5 +257,20 @@
  "animation.audio.unavailable": "Audio playback is not available. Playing without sound.",
  "animation.audio.paused": "Audio changed. Playback paused to stay in sync.",
  "animation.audio.note": "Preview only. Audio is not part of the PNG sequence export.",
- "animation.audio.hint": "Hide the layer to mute it."
+ "animation.audio.hint": "Hide the layer to mute it.",
+ "animation.animators.title": "Text animators",
+ "animation.animators.item": "Animator {n}",
+ "animation.animators.remove": "Remove animator",
+ "animation.animators.add": "Add animator",
+ "animation.animators.start": "Range start %",
+ "animation.animators.end": "Range end %",
+ "animation.animators.softness": "Softness %",
+ "animation.animators.offset": "Range offset %",
+ "animation.animators.x": "Shift X",
+ "animation.animators.y": "Shift Y",
+ "animation.animators.scale": "Scale %",
+ "animation.animators.opacity": "Opacity %",
+ "animation.animators.animateOffset": "Animate range offset",
+ "animation.parent.timeline": "Parent of {name}",
+ "cmd.animation.text.animator": "Edit text animator"
 }

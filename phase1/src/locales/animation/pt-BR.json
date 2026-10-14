@@ -257,5 +257,20 @@
  "animation.audio.unavailable": "A reprodução de áudio não está disponível. Reproduzindo sem som.",
  "animation.audio.paused": "O áudio mudou. Reprodução pausada para manter a sincronia.",
  "animation.audio.note": "Apenas pré-visualização. O áudio não faz parte da exportação de sequência PNG.",
- "animation.audio.hint": "Oculte a camada para silenciá-la."
+ "animation.audio.hint": "Oculte a camada para silenciá-la.",
+ "animation.animators.title": "Animadores de texto",
+ "animation.animators.item": "Animador {n}",
+ "animation.animators.remove": "Remover animador",
+ "animation.animators.add": "Adicionar animador",
+ "animation.animators.start": "Início do intervalo %",
+ "animation.animators.end": "Fim do intervalo %",
+ "animation.animators.softness": "Suavidade %",
+ "animation.animators.offset": "Deslocamento do intervalo %",
+ "animation.animators.x": "Deslocar X",
+ "animation.animators.y": "Deslocar Y",
+ "animation.animators.scale": "Escala %",
+ "animation.animators.opacity": "Opacidade %",
+ "animation.animators.animateOffset": "Animar deslocamento do intervalo",
+ "animation.parent.timeline": "Camada pai de {name}",
+ "cmd.animation.text.animator": "Editar animador de texto"
 }

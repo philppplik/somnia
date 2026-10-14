@@ -9,6 +9,7 @@ import {studioContextStore} from '../../lib/shell/studioContext';
 import {registerAnimationCommands} from '../../lib/animation/commands';
 import {animationSession,useAnimationState} from '../../lib/animation/session';
 import {findComp,type Composition,type KeyRef,type Layer} from '../../lib/animation/model';
+import {animatedChars} from '../../lib/animation/textAnimators';
 import {sceneAt} from '../../lib/animation/scene';
 import {pruneSelection} from '../../lib/animation/selection';
 import {executeCommand} from '../../lib/commands';
@@ -46,6 +47,11 @@ function Workspace({doc}:{doc:NonNullable<ReturnType<typeof animationSession>['d
   <AnimationTimeline comp={comp} at={at} selected={s.view.selectedLayer} canUndo={s.canUndo} canRedo={s.canRedo}/>
  </div>;
 }
+function animatedText(l:Layer,at:number){
+ const shown=revealedText(l,at),spans=animatedChars(l,l.source.text??'',at);
+ if(!spans)return shown;
+ return spans.slice(0,Array.from(shown).length).map((c,i)=><tspan key={i} dx={c.dx} dy={c.dy} fontSize={(l.source.size??48)*c.scale} fillOpacity={c.opacity}>{c.ch}</tspan>);
+}
 function layerNode(l:Layer,assets:readonly InterfaceAsset[],at:number,fillOverride?:string){
  const src=l.source;const fill=fillOverride??src.color;
  if(l.kind==='raster'){const asset=assets.find(a=>a.id===src.assetId);return asset?<image href={asset.data} width={src.width} height={src.height}/>:<text fill="var(--text-primary)">Missing image</text>;}
@@ -53,7 +59,7 @@ function layerNode(l:Layer,assets:readonly InterfaceAsset[],at:number,fillOverri
  if(l.kind==='shape'&&['star','polygon'].includes(src.shape??''))return <path {...strokeAttributes(l,at)} d={radialPath(src)} fill={fill}/>;
  if(l.kind==='shape'&&src.shape==='path'&&src.path)return <path {...strokeAttributes(l,at)} d={pathData(src.path as import('../../lib/interface/schema').InterfacePath,src.width??1,src.height??1)} fill={fill}/>;
  if(l.kind==='shape')return src.shape==='ellipse'?<ellipse {...strokeAttributes(l,at)} cx={(src.width??0)/2} cy={(src.height??0)/2} rx={(src.width??0)/2} ry={(src.height??0)/2} fill={fill}/>:<rect {...strokeAttributes(l,at)} rx={src.shape==='roundedRect'?Math.min(src.radius??24,(src.width??0)/2,(src.height??0)/2):0} x={0} y={0} width={src.width} height={src.height} fill={fill}/>;
- return <text x={0} y={src.size??48} fontSize={src.size} fill={fill} fontFamily="system-ui, sans-serif" className="select-none">{revealedText(l,at)}</text>;
+ return <text x={0} y={src.size??48} fontSize={src.size} fill={fill} fontFamily="system-ui, sans-serif" className="select-none">{animatedText(l,at)}</text>;
 }
 function Viewer({comp,at,selected,sel,assets}:{assets:readonly InterfaceAsset[];comp:Composition;at:number;selected:string|null;sel:readonly KeyRef[]}){
  const {t}=useT();const scene=useMemo(()=>sceneAt(comp,at),[comp,at]);

@@ -9,6 +9,7 @@ import type {Edit} from '../../lib/animation/edit';
 import {prepareAnimationAsset} from '../../lib/animation/assets';
 import {prepareAudioAsset,AudioImportCancelled} from '../../lib/animation/audioImport';
 import {AUDIO_IMPORT_EVENT} from '../../lib/animation/commands';
+import {TextAnimators} from './TextAnimators';
 import {AudioInspector} from './AudioInspector';
 import {animationSession} from '../../lib/animation/session';
 import {newId} from '../../lib/animation/model';
@@ -88,6 +89,7 @@ export function PropertiesSection(_:InspectorSectionProps){
   {layer.parent&&<Button size="tiny" variant="ghost" onClick={()=>animationSession().setView({selectedLayer:layer.parent})}>{t('animation.parent.select')}</Button>}
   <fieldset className="m-0 grid gap-1 border border-subtle p-2" disabled={layer.locked}><legend>{t('animation.presets.title')}</legend><div className="flex flex-wrap gap-1">{(['fade','slide','bounce','typewriter','trim','dash'] as const).filter(p=>p==='typewriter'?layer.kind==='text':p==='trim'||p==='dash'?layer.kind==='shape':true).map(p=><Button size="tiny" variant="outline" key={p} onClick={()=>run('animation.preset.apply',{layer:layer.id,preset:p,seconds:1})}>{t(`animation.presets.${p}`)}</Button>)}</div><p className="text-ink-3">{t('animation.presets.safe')}</p></fieldset>
     <label className="grid gap-1 text-ink-3">{t('animation.path.timing')}<NativeSelect className={field} disabled={layer.locked} value={layer.transform.position.pathMode??'parameter'} onChange={e=>edit({type:'prop.pathMode',layer:layer.id,mode:e.target.value as 'parameter'|'arcLength'})}><option value="parameter">{t('animation.path.parameter')}</option><option value="arcLength">{t('animation.path.arcLength')}</option></NativeSelect></label>
+  {layer.kind==='text'&&<TextAnimators layer={layer} at={at}/>}
   <fieldset className="m-0 grid gap-2 border border-subtle p-2" disabled={layer.locked}><legend className="text-ink-3">{t('animation.effects.title')}</legend>
    {(layer.effects??[]).map((effect,i)=><div key={effect.id} className="grid gap-1 border-b border-subtle pb-2">
     <div className="flex items-center gap-1"><label className="flex flex-1 items-center gap-1"><NativeInput type="checkbox" className="animation-checkbox" checked={effect.enabled} onChange={e=>edit({type:'layer.effects',layer:layer.id,effects:layer.effects!.map(x=>x.id===effect.id?{...x,enabled:e.target.checked}:x)})}/>{t(`animation.effects.${effect.kind}`)}</label>

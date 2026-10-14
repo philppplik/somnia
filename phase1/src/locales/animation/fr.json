@@ -257,5 +257,20 @@
  "animation.audio.unavailable": "La lecture audio n'est pas disponible. Lecture sans son.",
  "animation.audio.paused": "Audio modifié. Lecture en pause pour rester synchronisé.",
  "animation.audio.note": "Aperçu uniquement. L'audio ne fait pas partie de l'export de séquence PNG.",
- "animation.audio.hint": "Masquez le calque pour le couper."
+ "animation.audio.hint": "Masquez le calque pour le couper.",
+ "animation.animators.title": "Animateurs de texte",
+ "animation.animators.item": "Animateur {n}",
+ "animation.animators.remove": "Supprimer l'animateur",
+ "animation.animators.add": "Ajouter un animateur",
+ "animation.animators.start": "Début de plage %",
+ "animation.animators.end": "Fin de plage %",
+ "animation.animators.softness": "Douceur %",
+ "animation.animators.offset": "Décalage de plage %",
+ "animation.animators.x": "Décalage X",
+ "animation.animators.y": "Décalage Y",
+ "animation.animators.scale": "Échelle %",
+ "animation.animators.opacity": "Opacité %",
+ "animation.animators.animateOffset": "Animer le décalage de plage",
+ "animation.parent.timeline": "Calque parent de {name}",
+ "cmd.animation.text.animator": "Modifier l'animateur de texte"
 }

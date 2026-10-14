@@ -257,5 +257,20 @@
  "animation.audio.unavailable": "La reproducción de audio no está disponible. Se reproduce sin sonido.",
  "animation.audio.paused": "El audio cambió. Reproducción en pausa para mantener la sincronía.",
  "animation.audio.note": "Solo vista previa. El audio no forma parte de la exportación de secuencia PNG.",
- "animation.audio.hint": "Oculta la capa para silenciarla."
+ "animation.audio.hint": "Oculta la capa para silenciarla.",
+ "animation.animators.title": "Animadores de texto",
+ "animation.animators.item": "Animador {n}",
+ "animation.animators.remove": "Quitar animador",
+ "animation.animators.add": "Añadir animador",
+ "animation.animators.start": "Inicio del rango %",
+ "animation.animators.end": "Fin del rango %",
+ "animation.animators.softness": "Suavidad %",
+ "animation.animators.offset": "Desplazamiento del rango %",
+ "animation.animators.x": "Desplazar X",
+ "animation.animators.y": "Desplazar Y",
+ "animation.animators.scale": "Escala %",
+ "animation.animators.opacity": "Opacidad %",
+ "animation.animators.animateOffset": "Animar desplazamiento del rango",
+ "animation.parent.timeline": "Capa padre de {name}",
+ "cmd.animation.text.animator": "Editar animador de texto"
 }

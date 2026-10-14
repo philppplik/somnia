@@ -110,6 +110,11 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Implemented: the render panel exports the work area as animated GIF (own GIF89a encoder: median-cut palette, from-scratch LZW, loop, per-frame delays), APNG (browser PNG frames re-assembled with acTL/fcTL/fdAT) and WebM (real-time `canvas.captureStream` + `MediaRecorder`, VP9/VP8 with Opus; the P5b preview mix joins the recording when audio layers are audible). All three run with StudioProgress and cancel, under shared caps (GIF 300 frames, WebM 60 s real time, 64 MB per file). New commands `animation.export.gif/.apng/.webm`; no new dependencies.
 - Validation: 7 new and 115 total Animation unit tests, DS ratchet, isolated Chrome German light/dark pixels plus real GIF/APNG/WebM decode checks. Full-app/native/WASM gates remain CI-only (`tests/animation-p7.spec.ts` not run). Details and limits: `docs/animation-p7.md`.
 
+### Animation P9 (2026-10-14, integration pending)
+
+- Implemented: timeline parent picker on every layer row (cycle-free list, keep-world toggle in the timeline toolbar, undoable); per-character text animators (up to 4 per text layer: selector range with softness, keyable range offset, shift, scale, opacity), deterministic, shared by viewer and all exports, validated and bounded (1000 characters while animators exist). Details and limits: `docs/animation-p9.md`.
+- Validation: 7 new Animation unit tests, i18n in five locales, DS ratchet unchanged, isolated Chrome pixel review (`test/animation-preview.html?animators=1`). `tests/animation-p9.spec.ts` is CI-only. No new dependencies.
+
 ### Animation P6 (2026-10-14, integration pending)
 
 - Implemented: text layers pick one of eight safe system font stacks (the document stores the id, rendering resolves the CSS stack, nothing is bundled or fetched), per-key ease choice in the inspector with the new `animation.key.ease` command, ease presets inside the graph editor, and keep-world parenting for animated hierarchies (exact pose at the reparent time, spatial tangents re-expressed, per-channel easing under a rotated parent refused).

@@ -257,5 +257,20 @@
  "animation.audio.unavailable": "Audiowiedergabe ist nicht verfügbar. Wiedergabe ohne Ton.",
  "animation.audio.paused": "Audio geändert. Wiedergabe pausiert, damit alles synchron bleibt.",
  "animation.audio.note": "Nur Vorschau. Audio ist nicht Teil des PNG-Sequenz-Exports.",
- "animation.audio.hint": "Ebene ausblenden, um sie stumm zu schalten."
+ "animation.audio.hint": "Ebene ausblenden, um sie stumm zu schalten.",
+ "animation.animators.title": "Text-Animatoren",
+ "animation.animators.item": "Animator {n}",
+ "animation.animators.remove": "Animator entfernen",
+ "animation.animators.add": "Animator hinzufügen",
+ "animation.animators.start": "Bereichsanfang %",
+ "animation.animators.end": "Bereichsende %",
+ "animation.animators.softness": "Weichheit %",
+ "animation.animators.offset": "Bereichsversatz %",
+ "animation.animators.x": "Versatz X",
+ "animation.animators.y": "Versatz Y",
+ "animation.animators.scale": "Skalierung %",
+ "animation.animators.opacity": "Deckkraft %",
+ "animation.animators.animateOffset": "Bereichsversatz animieren",
+ "animation.parent.timeline": "Übergeordnete Ebene von {name}",
+ "cmd.animation.text.animator": "Text-Animator bearbeiten"
 }
