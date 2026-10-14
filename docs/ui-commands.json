@@ -7488,6 +7488,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.edit.shear",
+      "title": "Shear the selected vertices along one axis by their position on another",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.edit.start",
       "title": "Edit mesh",
       "category": "Edit",

@@ -953,5 +953,11 @@
  "studio3d.edit.scaleZ": "Scale Z",
  "studio3d.edit.scale": "Scale",
  "cmd.studio3d.edit.selectSimilar": "Select faces whose normal is within the given angle of the current selection",
- "studio3d.edit.selSimilar": "Similar normals"
+ "studio3d.edit.selSimilar": "Similar normals",
+ "cmd.studio3d.edit.shear": "Shear the selected vertices along one axis by their position on another",
+ "studio3d.hist.editShear": "Shear selection",
+ "studio3d.edit.shearAlong": "Shear axis",
+ "studio3d.edit.shearBy": "Reference axis",
+ "studio3d.edit.shearAmt": "Shear factor",
+ "studio3d.edit.shear": "Shear"
 }

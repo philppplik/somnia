@@ -953,5 +953,11 @@
  "studio3d.edit.scaleZ": "Escala Z",
  "studio3d.edit.scale": "Escalar",
  "cmd.studio3d.edit.selectSimilar": "Selecionar faces cuja normal está dentro do ângulo indicado em relação à seleção",
- "studio3d.edit.selSimilar": "Normais semelhantes"
+ "studio3d.edit.selSimilar": "Normais semelhantes",
+ "cmd.studio3d.edit.shear": "Cisalhar os vértices selecionados ao longo de um eixo conforme a posição em outro",
+ "studio3d.hist.editShear": "Cisalhar seleção",
+ "studio3d.edit.shearAlong": "Eixo de cisalhamento",
+ "studio3d.edit.shearBy": "Eixo de referência",
+ "studio3d.edit.shearAmt": "Fator de cisalhamento",
+ "studio3d.edit.shear": "Cisalhar"
 }

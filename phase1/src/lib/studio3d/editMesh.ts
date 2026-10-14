@@ -529,6 +529,38 @@ export function moveSelected(m:MeshData,verts:number[],offset:[number,number,num
  const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
  check(out);return out;
 }
+/** Shears the selected vertices: offsets them along one world axis proportional to their distance from the selection centroid on a second axis. Position-equal twins shear together; the strongest mask at a position dams the whole seam (as a partial shear). Masks are carried; UVs are carried. */
+export function shearSelected(m:MeshData,verts:number[],along:'x'|'y'|'z',by:'x'|'y'|'z',factor:number):MeshData{
+ check(m);
+ if(!verts.length)throw new EditError('Select vertices to shear.');
+ if(along!=='x'&&along!=='y'&&along!=='z')throw new EditError('The shear axis must be x, y or z.');
+ if(by!=='x'&&by!=='y'&&by!=='z')throw new EditError('The shear reference axis must be x, y or z.');
+ if(along===by)throw new EditError('The shear axis must differ from the reference axis.');
+ if(!Number.isFinite(factor)||factor===0||Math.abs(factor)>1e6)throw new EditError('The shear factor must be a finite, non-zero number.');
+ const ai=along==='x'?0:along==='y'?1:2;
+ const bi=by==='x'?0:by==='y'?1:2;
+ const nv=m.positions.length/3;
+ for(const v of verts){if(!Number.isInteger(v)||v<0||v>=nv)throw new EditError(`Vertex ${v} does not exist.`);}
+ const pk=(v:number)=>`${Math.round(m.positions[v*3]*1e6)},${Math.round(m.positions[v*3+1]*1e6)},${Math.round(m.positions[v*3+2]*1e6)}`;
+ const want=new Set(verts.map(pk));
+ let c=0,n=0;const counted=new Set<string>();
+ const damp=new Map<string,number>();
+ for(let v=0;v<nv;v++){
+  const k=pk(v);if(!want.has(k))continue;
+  const mk=m.mask?m.mask[v]:0;
+  damp.set(k,Math.min(damp.get(k)??mk,mk));
+  if(!counted.has(k)){counted.add(k);c+=m.positions[v*3+bi];n++;}
+ }
+ c/=n;
+ const positions=[...m.positions];
+ for(let v=0;v<nv;v++){
+  const k=pk(v);if(!want.has(k))continue;
+  const f=1-damp.get(k)!;if(f===0)continue;
+  positions[v*3+ai]+=factor*(m.positions[v*3+bi]-c)*f;
+ }
+ const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
+ check(out);return out;
+}
 /** Scales the selected vertices toward or away from the centroid of their distinct positions with per-axis factors: position-equal twins scale together, the strongest mask at a position dams the whole seam (as a partial scale). Masks are carried; UVs are carried. */
 export function scaleSelected(m:MeshData,verts:number[],factors:[number,number,number]):MeshData{
  check(m);

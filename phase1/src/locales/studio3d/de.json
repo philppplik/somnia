@@ -953,5 +953,11 @@
  "studio3d.edit.scaleZ": "Z skalieren",
  "studio3d.edit.scale": "Skalieren",
  "cmd.studio3d.edit.selectSimilar": "Faces auswählen, deren Normale innerhalb des angegebenen Winkels zur Auswahl liegt",
- "studio3d.edit.selSimilar": "Ähnliche Normalen"
+ "studio3d.edit.selSimilar": "Ähnliche Normalen",
+ "cmd.studio3d.edit.shear": "Ausgewählte Vertices entlang einer Achse proportional zu ihrer Position auf einer anderen verschieben",
+ "studio3d.hist.editShear": "Auswahl scheren",
+ "studio3d.edit.shearAlong": "Scherachse",
+ "studio3d.edit.shearBy": "Referenzachse",
+ "studio3d.edit.shearAmt": "Scherfaktor",
+ "studio3d.edit.shear": "Scheren"
 }

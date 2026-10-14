@@ -311,7 +311,7 @@ function UvFields({id}:{id:number}){
 /** Bind a plain mesh to a bone chain, recompute weights of a skinned one, and preview a bone's influence. */
 function EditSculptFields({id}:{id:number}){
  const {t}=useT();const s=useStudio3D();const o=s.selectedInfo;
- const [extrude,setExtrude]=useState(0.5);const [inset,setInset]=useState(0.2);const [bevel,setBevel]=useState(0.1);const [slide,setSlide]=useState(0.5);const [merge,setMerge]=useState(0.01);const [mirrorAxis,setMirrorAxis]=useState<'x'|'y'|'z'>('x');const [segments,setSegments]=useState(1);const [bisect,setBisect]=useState(false);const [fattenAmt,setFattenAmt]=useState(0.1);const [relaxIt,setRelaxIt]=useState(1);const [relaxF,setRelaxF]=useState(0.5);const [sphereF,setSphereF]=useState(1);const [randAmt,setRandAmt]=useState(0.1);const [randSeed,setRandSeed]=useState(1);const [moveX,setMoveX]=useState(0);const [moveY,setMoveY]=useState(0.25);const [moveZ,setMoveZ]=useState(0);const [rotDeg,setRotDeg]=useState(90);const [scaleX,setScaleX]=useState(1);const [scaleY,setScaleY]=useState(1);const [scaleZ,setScaleZ]=useState(1);
+ const [extrude,setExtrude]=useState(0.5);const [inset,setInset]=useState(0.2);const [bevel,setBevel]=useState(0.1);const [slide,setSlide]=useState(0.5);const [merge,setMerge]=useState(0.01);const [mirrorAxis,setMirrorAxis]=useState<'x'|'y'|'z'>('x');const [segments,setSegments]=useState(1);const [bisect,setBisect]=useState(false);const [fattenAmt,setFattenAmt]=useState(0.1);const [relaxIt,setRelaxIt]=useState(1);const [relaxF,setRelaxF]=useState(0.5);const [sphereF,setSphereF]=useState(1);const [randAmt,setRandAmt]=useState(0.1);const [randSeed,setRandSeed]=useState(1);const [moveX,setMoveX]=useState(0);const [moveY,setMoveY]=useState(0.25);const [moveZ,setMoveZ]=useState(0);const [rotDeg,setRotDeg]=useState(90);const [scaleX,setScaleX]=useState(1);const [scaleY,setScaleY]=useState(1);const [scaleZ,setScaleZ]=useState(1);const [shearAlong,setShearAlong]=useState<'x'|'y'|'z'>('x');const [shearBy,setShearBy]=useState<'x'|'y'|'z'>('y');const [shearAmt,setShearAmt]=useState(0.5);
  const ed=s.edit;const on=ed!=null&&ed.id===id;const sc=s.sculpt;
  if(!o||o.kind!=='mesh')return null;
  const modeBtn=(m:'vertex'|'edge'|'face')=><Button key={m} variant={ed?.mode===m?'primary':'outline'} aria-pressed={ed?.mode===m} onClick={()=>void executeCommand('studio3d.edit.mode',{mode:m})}>{t('studio3d.edit.mode.'+m)}</Button>;
@@ -351,6 +351,7 @@ function EditSculptFields({id}:{id:number}){
      <NumField label={t('studio3d.edit.scaleX')} value={scaleX} min={-100} max={100} step={0.05} onCommit={setScaleX}/>
      <NumField label={t('studio3d.edit.scaleY')} value={scaleY} min={-100} max={100} step={0.05} onCommit={setScaleY}/>
      <NumField label={t('studio3d.edit.scaleZ')} value={scaleZ} min={-100} max={100} step={0.05} onCommit={setScaleZ}/>
+     <NumField label={t('studio3d.edit.shearAmt')} value={shearAmt} min={-10} max={10} step={0.05} onCommit={setShearAmt}/>
     </div>
     <div className="flex flex-wrap gap-1">
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.extrude',{offset:extrude})}>{t('studio3d.edit.extrude')}</Button>
@@ -377,6 +378,11 @@ function EditSculptFields({id}:{id:number}){
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.rotate',{axis:'y',degrees:rotDeg})}>{t('studio3d.edit.rotateY')}</Button>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.rotate',{axis:'z',degrees:rotDeg})}>{t('studio3d.edit.rotateZ')}</Button>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.scale',{x:scaleX,y:scaleY,z:scaleZ})}>{t('studio3d.edit.scale')}</Button>
+     <NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={shearAlong} aria-label={t('studio3d.edit.shearAlong')} onChange={e=>setShearAlong(e.currentTarget.value as 'x'|'y'|'z')}>
+      {(['x','y','z'] as const).map(a=><option key={a} value={a}>{t('studio3d.sculpt.symmetry.'+a)}</option>)}</NativeSelect>
+     <NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={shearBy} aria-label={t('studio3d.edit.shearBy')} onChange={e=>setShearBy(e.currentTarget.value as 'x'|'y'|'z')}>
+      {(['x','y','z'] as const).map(a=><option key={a} value={a}>{t('studio3d.sculpt.symmetry.'+a)}</option>)}</NativeSelect>
+     <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.shear',{along:shearAlong,by:shearBy,factor:shearAmt})}>{t('studio3d.edit.shear')}</Button>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.rip',{})}>{t('studio3d.edit.rip')}</Button>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.separate',{})}>{t('studio3d.edit.separate')}</Button>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.end')}>{t('studio3d.edit.end')}</Button>

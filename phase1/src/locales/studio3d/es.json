@@ -953,5 +953,11 @@
  "studio3d.edit.scaleZ": "Escala Z",
  "studio3d.edit.scale": "Escalar",
  "cmd.studio3d.edit.selectSimilar": "Seleccionar caras cuya normal está dentro del ángulo indicado respecto a la selección",
- "studio3d.edit.selSimilar": "Normales similares"
+ "studio3d.edit.selSimilar": "Normales similares",
+ "cmd.studio3d.edit.shear": "Inclinar los vértices seleccionados a lo largo de un eje según su posición en otro",
+ "studio3d.hist.editShear": "Inclinar selección",
+ "studio3d.edit.shearAlong": "Eje de inclinación",
+ "studio3d.edit.shearBy": "Eje de referencia",
+ "studio3d.edit.shearAmt": "Factor de inclinación",
+ "studio3d.edit.shear": "Inclinar"
 }
