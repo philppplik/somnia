@@ -922,5 +922,6 @@
  "animation.keys.grid": "Snap to grid",
  "animation.keys.grid.hint": "Move the selected keys to the nearest multiple of this many frames",
  "cmd.animation.keys.snapToGrid": "Snap the selected keys to every Nth frame",
- "animation.keys.tools.time": "Time"
+ "animation.keys.tools.time": "Time",
+ "cmd.animation.keys.selectByValue": "Select the keys with a value in a range"
 }

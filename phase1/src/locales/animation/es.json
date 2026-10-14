@@ -922,5 +922,6 @@
  "animation.keys.grid": "Ajustar a la cuadrícula",
  "animation.keys.grid.hint": "Mueve las keys seleccionadas al múltiplo más cercano de estos fotogramas",
  "cmd.animation.keys.snapToGrid": "Ajustar las keys seleccionadas a cada N fotogramas",
- "animation.keys.tools.time": "Tiempo"
+ "animation.keys.tools.time": "Tiempo",
+ "cmd.animation.keys.selectByValue": "Seleccionar las keys con un valor en un rango"
 }

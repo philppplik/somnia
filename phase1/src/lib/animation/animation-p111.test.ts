@@ -263,3 +263,10 @@ test('snap to grid: nearest multiple of N frames, bad N rejected',()=>{
  assert.equal(gridMoves(c,[k(10)],3).moves.length,1);assert.throws(()=>gridMoves(c,[k(10)],1));
  assert.equal(gridMoves(c,[k(8)],4).moves.length,0);
 });
+import {keysByValue} from './keyByValue';
+test('keys by value: scalar keys in the inclusive range, vectors skipped, bad range rejected',()=>{
+ const c=findComp(base())!;
+ assert.equal(keysByValue(c,['a'],-1e6,1e6).every(k=>k.prop!=='position'),true);
+ assert.equal(keysByValue(c,['zz'],0,100).length,0);
+ assert.throws(()=>keysByValue(c,['a'],5,1));assert.throws(()=>keysByValue(c,['a'],NaN,1));
+});

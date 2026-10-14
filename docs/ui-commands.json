@@ -1077,6 +1077,25 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.keys.selectByValue",
+      "title": "Select the keys with a value in a range",
+      "category": "View",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "between",
+        "keys",
+        "max",
+        "min",
+        "opacity",
+        "range",
+        "rotation",
+        "select",
+        "value"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.keys.selectEnds",
       "title": "Select the first and last key of each property",
       "category": "View",

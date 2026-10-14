@@ -922,5 +922,6 @@
  "animation.keys.grid": "Am Raster ausrichten",
  "animation.keys.grid.hint": "Gewählte Keys auf das nächste Vielfache dieser Bildzahl setzen",
  "cmd.animation.keys.snapToGrid": "Gewählte Keys auf jedes N-te Bild ausrichten",
- "animation.keys.tools.time": "Zeit"
+ "animation.keys.tools.time": "Zeit",
+ "cmd.animation.keys.selectByValue": "Keys mit einem Wert im Bereich auswählen"
 }
