@@ -846,5 +846,9 @@
  "studio3d.mesh.spin": "Revolucionar",
  "studio3d.mesh.spinAxis": "Eje de revolución",
  "studio3d.mesh.spinAngle": "Ángulo de revolución en grados",
- "studio3d.mesh.spinSteps": "Pasos de revolución"
+ "studio3d.mesh.spinSteps": "Pasos de revolución",
+ "studio3d.hist.bridge": "Unir {name} y {other} con un puente",
+ "cmd.studio3d.mesh.bridge": "Unir dos mallas 3D con un túnel entre sus bordes abiertos",
+ "studio3d.mesh.bridge": "Puente (elige 2)",
+ "studio3d.mesh.bridgeTwist": "Desplazamiento de torsión del puente"
 }

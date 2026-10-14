@@ -846,5 +846,9 @@
  "studio3d.mesh.spin": "Révolution",
  "studio3d.mesh.spinAxis": "Axe de révolution",
  "studio3d.mesh.spinAngle": "Angle de révolution en degrés",
- "studio3d.mesh.spinSteps": "Pas de révolution"
+ "studio3d.mesh.spinSteps": "Pas de révolution",
+ "studio3d.hist.bridge": "Pont entre {name} et {other}",
+ "cmd.studio3d.mesh.bridge": "Relier deux maillages 3D par un tunnel entre leurs bords ouverts",
+ "studio3d.mesh.bridge": "Pont (sélection 2)",
+ "studio3d.mesh.bridgeTwist": "Décalage de torsion du pont"
 }

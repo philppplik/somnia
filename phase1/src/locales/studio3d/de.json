@@ -846,5 +846,9 @@
  "studio3d.mesh.spin": "Spin",
  "studio3d.mesh.spinAxis": "Drehachse",
  "studio3d.mesh.spinAngle": "Drehwinkel in Grad",
- "studio3d.mesh.spinSteps": "Drehschritte"
+ "studio3d.mesh.spinSteps": "Drehschritte",
+ "studio3d.hist.bridge": "{name} und {other} verbrücken",
+ "cmd.studio3d.mesh.bridge": "Zwei 3D-Meshes mit einem Tunnel zwischen ihren offenen Rändern verbrücken",
+ "studio3d.mesh.bridge": "Verbrücken (2 wählen)",
+ "studio3d.mesh.bridgeTwist": "Verbrückungsversatz"
 }

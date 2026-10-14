@@ -846,5 +846,9 @@
  "studio3d.mesh.spin": "Spin",
  "studio3d.mesh.spinAxis": "Spin axis",
  "studio3d.mesh.spinAngle": "Spin angle in degrees",
- "studio3d.mesh.spinSteps": "Spin steps"
+ "studio3d.mesh.spinSteps": "Spin steps",
+ "studio3d.hist.bridge": "Bridge {name} and {other}",
+ "cmd.studio3d.mesh.bridge": "Bridge two 3D meshes with a tunnel between their open borders",
+ "studio3d.mesh.bridge": "Bridge (select 2)",
+ "studio3d.mesh.bridgeTwist": "Bridge twist offset"
 }

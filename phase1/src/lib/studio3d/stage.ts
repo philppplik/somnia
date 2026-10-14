@@ -9,7 +9,7 @@ import type {NodeExtra} from './document';
 import {EASES,isEase,bakeTrack,type Ease} from './ease';
 import {buildExtras,type ClipMeta,type MetaTrack} from './clipMeta';
 import {groupRefs,keyIndices,copyTrackKeys,shiftTrackKeys,pasteTrackKeys,type KeyRef,type KeyData,type TrackData} from './keyEdit';
-import {extrudeFaces,insetFaces,bevelVertices,loopCut,bevelEdges,slideEdges,mirrorCombine,symmetrizeMesh,subdivideLoop,cleanupMesh,flipMesh,outsideMesh,smoothMesh,separateMesh,solidifyMesh,fillHolesMesh,relaxMesh,fattenMesh,bisectMesh,twistMesh,taperMesh,spinMesh,EditError,MAX_EDIT_VERTICES,MAX_EDIT_TRIANGLES,type MeshData,type CleanupResult,type NormalsOp} from './editMesh';
+import {extrudeFaces,insetFaces,bevelVertices,loopCut,bevelEdges,slideEdges,mirrorCombine,symmetrizeMesh,subdivideLoop,cleanupMesh,flipMesh,outsideMesh,smoothMesh,separateMesh,solidifyMesh,fillHolesMesh,relaxMesh,fattenMesh,bisectMesh,twistMesh,taperMesh,spinMesh,bridgeMesh,EditError,MAX_EDIT_VERTICES,MAX_EDIT_TRIANGLES,type MeshData,type CleanupResult,type NormalsOp} from './editMesh';
 import {sculptDab,paintMask,SculptError,type SculptOpts} from './sculpt';
 import {KEY_PATHS,KEY_STRIDE,ClipError,MAX_CLIPS,MAX_KEYS_PER_TRACK,DEFAULT_CLIP_SECONDS,insertKey,removeKey as removeKeyData,findKey,isPlainTrack,trackName,parseTrackName,checkKeyTime,checkDuration,checkClipName,lastKeyTime,type KeyPath} from './clips';
 import {mergeTransform,DEFAULT_TRANSFORM,UvError,type TextureTransform} from './uv';
@@ -2078,6 +2078,43 @@ export class Stage{
   set('after');
   this.push({label:{key:'studio3d.hist.spin',params:{count:list.length,name:list[0].mesh.name}},undo:()=>{set('before');owned=false;},redo:()=>{set('after');owned=true;},release:()=>{for(const l of list)(owned?l.before.g:l.after).dispose();}});
   return list.length;
+ }
+ /** Bridges two meshes through their largest open border loops: world transforms are baked, a sewn tunnel connects the loops and the pair becomes one mesh at the scene root (keeping the first mesh's name and material). One undo step. */
+ bridge(ids:number[],twist:number):number{
+  if(this.editId!=null)throw new StageError('Leave edit mode before bridging.');
+  const objs=this.topLevel(this.needMany(ids,2));
+  if(objs.length!==2)throw new StageError('Bridge works on exactly two meshes.');
+  for(const o of objs)if(!(o as THREE.Mesh).isMesh)throw new StageError(`${o.name} is not a mesh. Bridge works on meshes.`);
+  const meshes=objs as THREE.Mesh[];
+  this.root.updateWorldMatrix(true,true);
+  const inv=this.root.matrixWorld.clone().invert();
+  const datas=meshes.map(m=>{
+   const d=this.meshDataOf(m);
+   const w=inv.clone().multiply(m.matrixWorld);
+   const e=w.elements;
+   const positions=new Array<number>(d.positions.length);
+   for(let i=0;i<d.positions.length;i+=3){
+    const x=d.positions[i],y=d.positions[i+1],z=d.positions[i+2];
+    positions[i]=e[0]*x+e[4]*y+e[8]*z+e[12];
+    positions[i+1]=e[1]*x+e[5]*y+e[9]*z+e[13];
+    positions[i+2]=e[2]*x+e[6]*y+e[10]*z+e[14];
+   }
+   const index=w.determinant()<0?(()=>{const idx=[];for(let f=0;f<d.index.length;f+=3)idx.push(d.index[f],d.index[f+2],d.index[f+1]);return idx;})():[...d.index];
+   const out:MeshData={positions,index,...(d.uvs?{uvs:[...d.uvs]}:{})};
+   return out;
+  });
+  let out:MeshData;
+  try{out=bridgeMesh(datas[0],datas[1],twist);}catch(e){throw e instanceof EditError?new StageError(e.message):e;}
+  const g=this.buildGeometry(out);
+  const items=meshes.map(o=>({o,parent:o.parent!,at:o.parent!.children.indexOf(o)})).sort((a,b)=>a.parent.id-b.parent.id||a.at-b.at);
+  for(const i of [...items].reverse())i.parent.remove(i.o);
+  const result=new THREE.Mesh(g,(meshes[0].material as THREE.Material).clone());
+  result.name=this.uniqueName(meshes[0].name);
+  this.attach0(result,this.root,this.root.children.length);
+  let owned=true;
+  this.push({label:{key:'studio3d.hist.bridge',params:{name:meshes[0].name,other:meshes[1].name}},undo:()=>{this.root.remove(result);for(const i of items)this.attach0(i.o,i.parent,i.at);owned=false;},redo:()=>{for(const i of [...items].reverse())i.parent.remove(i.o);this.attach0(result,this.root,this.root.children.length);owned=true;},
+   release:()=>{if(owned)for(const i of items)disposeObject(i.o);else disposeObject(result);}});
+  return 1;
  }
  /** Shows or hides an object. A hidden parent hides its whole subtree. One undo step. */
  setHidden(id:number,hidden:boolean){

@@ -706,6 +706,7 @@ function MeshTools(){
  const [spAxis,setSpAxis]=useState<'x'|'y'|'z'>('y');
  const [spDeg,setSpDeg]=useState(360);
  const [spSteps,setSpSteps]=useState(24);
+ const [brTwist,setBrTwist]=useState(0);
  const [rxFactor,setRxFactor]=useState(0.5);
  const [soOff,setSoOff]=useState(0);
  const set=s.marked.length?s.marked:s.selected!=null?[s.selected]:[];const ready=s.status==='ready'&&set.length>0;
@@ -759,6 +760,8 @@ function MeshTools(){
    <NativeInput type="number" step={30} value={spDeg} aria-label={t('studio3d.mesh.spinAngle')} className="w-20" onChange={e=>setSpDeg(Math.min(360,Math.max(-360,Number(e.currentTarget.value)||0)))}/>
    <NativeInput type="number" min={1} max={128} step={1} value={spSteps} aria-label={t('studio3d.mesh.spinSteps')} className="w-16" onChange={e=>setSpSteps(Math.min(128,Math.max(1,Math.round(Number(e.currentTarget.value)||1))))}/>
    <Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.mesh.spin',{axis:spAxis,degrees:spDeg,steps:spSteps})}>{t('studio3d.mesh.spin')}</Button></div>
+  <div className="flex flex-wrap items-center gap-1"><NativeInput type="number" min={-64} max={64} step={1} value={brTwist} aria-label={t('studio3d.mesh.bridgeTwist')} className="w-16" onChange={e=>setBrTwist(Math.min(64,Math.max(-64,Math.round(Number(e.currentTarget.value)||0))))}/>
+   <Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.mesh.bridge',{twist:brTwist})}>{t('studio3d.mesh.bridge')}</Button></div>
  </fieldset>;
 }
 

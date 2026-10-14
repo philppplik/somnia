@@ -1638,6 +1638,17 @@ test('3D studio mesh spin: a plane revolves into a larger solid and undo restore
  await expect.poll(tris).toBe(before);
 });
 
+test('3D studio mesh bridge: two planes become one object and undo restores both',async({page})=>{
+ await blank(page);
+ await insert(page,'plane',0);
+ await insert(page,'plane',1);
+ const ids=(await session(page)).outline.map(o=>o.id);
+ expect(await run(page,'studio3d.mesh.bridge',{ids:[ids[0],ids[1]],twist:0})).toBe(true);
+ await expect.poll(async()=>(await session(page)).outline.length).toBe(1);
+ expect(await run(page,'studio3d.undo',{})).toBe(true);
+ await expect.poll(async()=>(await session(page)).outline.length).toBe(2);
+});
+
 test('3D studio mesh simplify: triangle count drops and undo restores it',async({page})=>{
  await blank(page);
  await insert(page,'sphere',0);

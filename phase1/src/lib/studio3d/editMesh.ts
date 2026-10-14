@@ -1149,3 +1149,83 @@ export function spinMesh(m:MeshData,axis:MirrorAxis,degrees:number,steps:number,
  const out:MeshData=uvs?{positions,index,uvs}:{positions,index};
  check(out);return out;
 }
+
+/** Directed open border loops: each loop lists the vertices in the order the surface traverses its border edges. Throws on tangled (non-manifold) borders. */
+const borderLoopsDirected=(m:MeshData):number[][]=>{
+ const nv=m.positions.length/3,nt=m.index.length/3;
+ const pk:string[]=[];
+ for(let v=0;v<nv;v++)pk.push(`${Math.round(m.positions[v*3]*1e6)},${Math.round(m.positions[v*3+1]*1e6)},${Math.round(m.positions[v*3+2]*1e6)}`);
+ const use=new Map<string,{a:number;b:number;n:number}>();
+ for(let f=0;f<nt;f++)for(let e=0;e<3;e++){
+  const a=m.index[f*3+e],b=m.index[f*3+(e+1)%3];
+  const ka=pk[a],kb=pk[b];if(ka===kb)continue;
+  const k=ka<kb?`${ka}|${kb}`:`${kb}|${ka}`;
+  const u=use.get(k);if(u)u.n++;else use.set(k,{a,b,n:1});
+ }
+ const borders=[...use.values()].filter(u=>u.n===1);
+ if(!borders.length)return[];
+ const byStart=new Map<string,number[]>();
+ borders.forEach((u,i)=>{const l=byStart.get(pk[u.a]);if(l)l.push(i);else byStart.set(pk[u.a],[i]);});
+ const used=new Array<boolean>(borders.length).fill(false);
+ const loops:number[][]=[];
+ for(let i=0;i<borders.length;i++){
+  if(used[i])continue;
+  const loop:number[]=[borders[i].a];
+  let cur=i;
+  while(true){
+   used[cur]=true;loop.push(borders[cur].b);
+   const end=pk[borders[cur].b];
+   if(end===pk[borders[i].a]){loop.pop();break;} // last point repeats the start
+   const next=(byStart.get(end)||[]).find(x=>!used[x]);
+   if(next===undefined)throw new EditError('An open border is too tangled to bridge (a border vertex is not manifold).');
+   cur=next;
+  }
+  if(loop.length>=3)loops.push(loop);
+ }
+ return loops;
+};
+/** Bridges the largest open border loops of two meshes with a sewn triangle tunnel and returns one merged mesh. The loops keep their original vertices (watertight by construction); the start vertex and direction are chosen for the shortest strip, twist shifts the start by hand; winding is unified outward across the whole result. UVs survive only when both meshes carry them; sculpt masks are dropped (topology changes). Loops beyond the largest stay open. */
+export function bridgeMesh(a:MeshData,b:MeshData,twist:number):MeshData{
+ check(a);check(b);
+ if(!Number.isInteger(twist)||Math.abs(twist)>64)throw new EditError('The bridge twist must be a whole number between -64 and 64.');
+ const la=borderLoopsDirected(a),lb=borderLoopsDirected(b);
+ if(!la.length||!lb.length)throw new EditError('Both meshes need an open border loop to bridge.');
+ const A=la.reduce((p,c)=>c.length>p.length?c:p);
+ const B=lb.reduce((p,c)=>c.length>p.length?c:p);
+ const na=A.length,nb=B.length;
+ const nvA=a.positions.length/3;
+ // Align the start: B vertex nearest to A[0].
+ let j0=0,best=Infinity;
+ for(let j=0;j<nb;j++){const d=len(sub(v3(b,B[j]),v3(a,A[0])));if(d<best){best=d;j0=j;}}
+ // Direction: forward or reversed B, whichever makes the shorter first two strip edges.
+ const at=(k:number,rev:boolean)=>rev?B[((j0-k)%nb+nb)%nb]:B[(j0+k)%nb];
+ const costF=len(sub(v3(b,at(1,false)),v3(a,A[1%na])))+len(sub(v3(b,at(nb-1,false)),v3(a,A[0])));
+ const costR=len(sub(v3(b,at(1,true)),v3(a,A[1%na])))+len(sub(v3(b,at(nb-1,true)),v3(a,A[0])));
+ const rev=costR<costF;
+ const off=((twist%nb)+nb)%nb;
+ const Bk=(k:number)=>rev?B[(((j0+off)-k)%nb+nb)%nb]:B[(j0+off+k)%nb];
+ // Arc-length parameters along both loops (0..1, closed).
+ const cum=(m:MeshData,L:number[])=>{
+  const c:number[]=[0];let t=0;
+  for(let i=0;i<L.length;i++){t+=len(sub(v3(m,L[(i+1)%L.length]),v3(m,L[i])));c.push(t);}
+  return c.map(x=>x/(t||1));
+ };
+ const pa=cum(a,A);
+ const Bverts:number[]=[];for(let k=0;k<nb;k++)Bverts.push(Bk(k));
+ const pb=cum(b,Bverts);
+ // Sew: advance on whichever loop is proportionally behind, zigzag triangles.
+ const positions=[...a.positions,...b.positions];
+ const index:number[]=[];
+ for(let f=0;f<a.index.length;f+=3)index.push(a.index[f],a.index[f+1],a.index[f+2]);
+ for(let f=0;f<b.index.length;f+=3)index.push(nvA+b.index[f],nvA+b.index[f+1],nvA+b.index[f+2]);
+ const uvs:number[]|undefined=a.uvs&&b.uvs?[...a.uvs,...b.uvs]:undefined;
+ let i=0,j=0;
+ const Ai=(k:number)=>A[k%na],Bi=(k:number)=>nvA+Bverts[k%nb];
+ while(i<na||j<nb){
+  if(i<na&&(j>=nb||pa[i+1]<=pb[j+1])){index.push(Ai(i),Ai(i+1),Bi(j));i++;}
+  else{index.push(Ai(i),Bi(j),Bi(j+1));j++;}
+ }
+ const merged:MeshData=uvs?{positions,index,uvs}:{positions,index};
+ check(merged);
+ return outsideMesh(merged).mesh;
+}
