@@ -366,3 +366,32 @@ test('3D studio binds a primitive onto a bone chain, previews a weight and undoe
  await run(page,'studio3d.undo');await run(page,'studio3d.undo');
  await expect.poll(async()=>{await run(page,'studio3d.select',{id:cube});return (await session(page)).info?.skinned;}).toBe(false);
 });
+
+test('3D studio paints bone weights with the brush and undoes the stroke',async({page})=>{
+ const glb=await skinnedGlb();
+ await open3d(page);
+ await page.getByTestId('studio3d-file-input').setInputFiles({name:'rig.glb',mimeType:'model/gltf-binary',buffer:glb});
+ await expect(page.getByTestId('studio3d-viewport')).toBeVisible({timeout:20_000});
+ await expect(page.getByTestId('studio3d-skeleton')).toBeVisible();
+ // Bind a fresh cube, then paint with the brush through the command surface.
+ await run(page,'studio3d.insert.primitive',{kind:'cube'});
+ const cube=(await session(page)).selected as number;
+ await run(page,'studio3d.object.transform',{id:cube,position:{x:2,y:1,z:0}});
+ await page.getByRole('button',{name:'Smooth bind'}).click();
+ await expect.poll(async()=>(await session(page)).info?.skinned).toBe(true);
+ // Turning the brush on picks the first bone for the preview when none is set.
+ await page.getByLabel('Paint').check();
+ await expect.poll(async()=>(await session(page)).weightPreview).not.toBe(null);
+ const bone=(await session(page)).weightPreview as number;
+ // One dab at the cube center touches vertices; a posed mesh is reset to bind pose first.
+ const dabbed=await run(page,'studio3d.skin.paint',{x:0,y:0,z:0,bone,radius:2,strength:1,mode:'add'});
+ expect(dabbed).toBeGreaterThan(0);
+ // Painting without a bone refuses with a notice instead of throwing.
+ await run(page,'studio3d.skin.preview',{bone:null});
+ await run(page,'studio3d.skin.paint',{x:0,y:0,z:0});
+ await expect(page.getByRole('alert')).toBeVisible();
+ // Undo removes the whole stroke, then the bind itself.
+ await run(page,'studio3d.undo');
+ await run(page,'studio3d.undo');
+ await expect.poll(async()=>{await run(page,'studio3d.select',{id:cube});return (await session(page)).info?.skinned;}).toBe(false);
+});

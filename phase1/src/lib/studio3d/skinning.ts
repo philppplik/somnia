@@ -70,3 +70,96 @@ export function weightColor(w:number):[number,number,number]{
  const t=x*(stops.length-1),i=Math.min(stops.length-2,Math.floor(t)),f=t-i;
  return[stops[i][0]+(stops[i+1][0]-stops[i][0])*f,stops[i][1]+(stops[i+1][1]-stops[i][1])*f,stops[i][2]+(stops[i+1][2]-stops[i][2])*f];
 }
+
+/** Brush shapes for weight painting. */
+export const BRUSH_FALLOFFS=['smooth','linear','constant'] as const;
+export type BrushFalloff=typeof BRUSH_FALLOFFS[number];
+export const BRUSH_MODES=['add','subtract','smooth'] as const;
+export type BrushMode=typeof BRUSH_MODES[number];
+export interface BrushSettings{/** Reach in the mesh's local units. */radius:number;/** Per-dab amount, 0..1. */strength:number;falloff:BrushFalloff;mode:BrushMode}
+export const MIN_BRUSH_RADIUS=0.001,MAX_BRUSH_RADIUS=1000,MIN_BRUSH_STRENGTH=0.01,MAX_BRUSH_STRENGTH=1;
+export function checkBrush(b:BrushSettings):BrushSettings{
+ if(typeof b.radius!=='number'||!(b.radius>=MIN_BRUSH_RADIUS)||b.radius>MAX_BRUSH_RADIUS)throw new SkinError(`Brush radius must be between ${MIN_BRUSH_RADIUS} and ${MAX_BRUSH_RADIUS}.`);
+ if(typeof b.strength!=='number'||!(b.strength>=MIN_BRUSH_STRENGTH)||b.strength>MAX_BRUSH_STRENGTH)throw new SkinError(`Brush strength must be between ${MIN_BRUSH_STRENGTH} and ${MAX_BRUSH_STRENGTH}.`);
+ if(!(BRUSH_FALLOFFS as readonly string[]).includes(b.falloff))throw new SkinError(`Brush falloff must be one of ${BRUSH_FALLOFFS.join(', ')}.`);
+ if(!(BRUSH_MODES as readonly string[]).includes(b.mode))throw new SkinError(`Brush mode must be one of ${BRUSH_MODES.join(', ')}.`);
+ return b;
+}
+/** Brush factor at distance d: 1 at the centre, fading to 0 at the radius edge. */
+export function brushFactor(d:number,radius:number,falloff:BrushFalloff):number{
+ if(d>=radius)return 0;
+ const t=d/radius;
+ if(falloff==='constant')return 1;
+ if(falloff==='linear')return 1-t;
+ return 1-t*t*(3-2*t); // smoothstep edge
+}
+/** The slot of a bone in a vertex's influences, or -1. */
+function slotOf(indices:Uint16Array,weights:Float32Array,o:number,bone:number):number{
+ for(let k=0;k<MAX_INFLUENCES;k++)if(indices[o+k]===bone&&weights[o+k]>0)return k;
+ return -1;
+}
+/** Keeps one vertex legal after a dab: the painted bone keeps its slot, at most four joints, weights in 0..1 summing to 1. Slots are compacted deterministically (weight desc, bone index asc). */
+function normalizeVertex(indices:Uint16Array,weights:Float32Array,o:number,bone:number):void{
+ const slot=slotOf(indices,weights,o,bone);
+ if(slot>=0){
+  const w=Math.min(1,Math.max(0,weights[o+slot]));weights[o+slot]=w;
+  let sum=0;for(let k=0;k<MAX_INFLUENCES;k++)if(k!==slot)sum+=weights[o+k];
+  if(sum>0){const f=(1-w)/sum;for(let k=0;k<MAX_INFLUENCES;k++)if(k!==slot)weights[o+k]*=f;}
+  else for(let k=0;k<MAX_INFLUENCES;k++)if(k!==slot)weights[o+k]=0;
+ }else{
+  // The painted bone left the vertex: the survivors share the whole influence again.
+  let sum=0;for(let k=0;k<MAX_INFLUENCES;k++)sum+=weights[o+k];
+  if(sum>0)for(let k=0;k<MAX_INFLUENCES;k++)weights[o+k]/=sum;
+ }
+ const order=[0,1,2,3].sort((a,b)=>(weights[o+b]-weights[o+a])||(indices[o+a]-indices[o+b]));
+ const ii=Array.from(indices.slice(o,o+MAX_INFLUENCES)),ww=Array.from(weights.slice(o,o+MAX_INFLUENCES));
+ for(let k=0;k<MAX_INFLUENCES;k++){indices[o+k]=ww[order[k]]>0?ii[order[k]]:0;weights[o+k]=ww[order[k]];}
+}
+/** One brush dab at a centre point in the mesh's local space. Mutates the given attribute arrays in place and returns how many vertices the brush touched (0 when the dab missed). Deterministic. */
+export function paintWeights(positions:ArrayLike<number>,indices:Uint16Array,weights:Float32Array,bone:number,center:readonly[number,number,number],brush:BrushSettings):number{
+ checkBrush(brush);
+ const count=Math.floor(positions.length/3);
+ if(count*MAX_INFLUENCES>indices.length||count*MAX_INFLUENCES>weights.length)throw new SkinError('The skin attributes do not match the vertex count.');
+ if(!Number.isInteger(bone)||bone<0||bone>65535)throw new SkinError('That bone cannot be painted.');
+ const inRange:number[]=[],factor:number[]=[];
+ for(let v=0;v<count;v++){
+  const dx=positions[v*3]-center[0],dy=positions[v*3+1]-center[1],dz=positions[v*3+2]-center[2];
+  const f=brushFactor(Math.sqrt(dx*dx+dy*dy+dz*dz),brush.radius,brush.falloff);
+  if(f>0){inRange.push(v);factor.push(f*brush.strength);}
+ }
+ if(!inRange.length)return 0;
+ if(brush.mode==='smooth'){
+  // Blur towards the neighbourhood mean: the mean covers every bone present in the brush, so influences can spread to vertices that did not have them.
+  const mean=new Map<number,number>();
+  for(const v of inRange){const o=v*MAX_INFLUENCES;for(let k=0;k<MAX_INFLUENCES;k++)if(weights[o+k]>0)mean.set(indices[o+k],(mean.get(indices[o+k])??0)+weights[o+k]);}
+  for(const [b,t] of mean)mean.set(b,t/inRange.length);
+  for(let i=0;i<inRange.length;i++){
+   const o=inRange[i]*MAX_INFLUENCES;
+   const cur=new Map<number,number>();
+   for(let k=0;k<MAX_INFLUENCES;k++)if(weights[o+k]>0)cur.set(indices[o+k],weights[o+k]);
+   for(const b of new Set([...cur.keys(),...mean.keys()]))cur.set(b,(cur.get(b)??0)+((mean.get(b)??0)-(cur.get(b)??0))*factor[i]);
+   const top=[...cur.entries()].filter(([,w])=>w>1e-12).sort((a,b)=>(b[1]-a[1])||(a[0]-b[0])).slice(0,MAX_INFLUENCES);
+   let sum=0;for(const [,w]of top)sum+=w;
+   for(let k=0;k<MAX_INFLUENCES;k++){if(k<top.length&&sum>0){indices[o+k]=top[k][0];weights[o+k]=top[k][1]/sum;}else{indices[o+k]=0;weights[o+k]=0;}}
+  }
+  return inRange.length;
+ }
+ for(let i=0;i<inRange.length;i++){
+  const v=inRange[i],o=v*MAX_INFLUENCES;
+  if(brush.mode==='add'){
+   let slot=slotOf(indices,weights,o,bone);
+   if(slot<0){
+    for(let k=0;k<MAX_INFLUENCES;k++)if(weights[o+k]<=0){slot=k;break;}
+    if(slot<0){let weak=0;for(let k=1;k<MAX_INFLUENCES;k++)if(weights[o+k]<weights[o+weak])weak=k;if(weights[o+weak]>factor[i])continue;slot=weak;}
+    indices[o+slot]=bone;weights[o+slot]=0;
+   }
+   weights[o+slot]+=factor[i];
+  }else{ // subtract
+   const slot=slotOf(indices,weights,o,bone);
+   if(slot<0)continue;
+   weights[o+slot]=Math.max(0,weights[o+slot]-factor[i]);
+  }
+  normalizeVertex(indices,weights,o,bone);
+ }
+ return inRange.length;
+}

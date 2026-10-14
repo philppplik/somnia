@@ -49,6 +49,8 @@ export interface Studio3DController{
  skinBind(id:number,bone:number,mode:'smooth'|'rigid'):void;
  skinRebind(id:number,mode:'smooth'|'rigid'):void;
  setWeightPreview(bone:number|null):void;
+ setWeightBrush(patch:Partial<{on:boolean;mode:'add'|'subtract'|'smooth';radius:number;strength:number;falloff:'smooth'|'linear'|'constant'}>):void;
+ paintDab(x:number,y:number,z:number,opts?:{bone?:number;mode?:'add'|'subtract'|'smooth';radius?:number;strength?:number;falloff?:'smooth'|'linear'|'constant'}):number;
  autoKey(on:boolean):void;
  animPlay(clip?:number):void;
  animPause():void;
@@ -178,6 +180,8 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{id:number}>('studio3d.skeleton.select','Select a bone of a skinned 3D model','Edit',p=>need().selectBone(p.id),object({id:{type:'integer',minimum:0}}),hasBones),
   add<{id?:number;bone?:number;mode?:'smooth'|'rigid'}>('studio3d.skin.bind','Bind a 3D mesh to a bone chain with auto-weights','Edit',p=>need().skinBind(p?.id??getStudio3DState().selected!,p?.bone??getStudio3DState().bones.find(b=>b.depth===0)!.id,p?.mode??'smooth'),object({id:{type:'integer',minimum:0},bone:{type:'integer',minimum:0},mode:{enum:['smooth','rigid']}},[]),hasPlainMesh),
   add<{id?:number;mode?:'smooth'|'rigid'}>('studio3d.skin.reweight','Recompute the weights of a skinned 3D mesh (smooth falloff or rigid bind)','Edit',p=>need().skinRebind(p?.id??getStudio3DState().selected!,p?.mode??'smooth'),object({id:{type:'integer',minimum:0},mode:{enum:['smooth','rigid']}},[]),hasSkinnedMesh),
+  add<{on?:boolean;mode?:'add'|'subtract'|'smooth';radius?:number;strength?:number;falloff?:'smooth'|'linear'|'constant'}>('studio3d.skin.brush','Configure the weight paint brush of a skinned 3D mesh','View',p=>need().setWeightBrush(p??{}),object({on:{type:'boolean'},mode:{enum:['add','subtract','smooth']},radius:{type:'number',minimum:0.001,maximum:1000},strength:{type:'number',minimum:0.01,maximum:1},falloff:{enum:['smooth','linear','constant']}},[]),hasSkinnedMesh),
+  add<{x:number;y:number;z:number;bone?:number;mode?:'add'|'subtract'|'smooth';radius?:number;strength?:number;falloff?:'smooth'|'linear'|'constant'}>('studio3d.skin.paint','Paint one brush dab of bone weight onto the selected skinned 3D mesh','Edit',p=>need().paintDab(p.x,p.y,p.z,p),object({x:{type:'number'},y:{type:'number'},z:{type:'number'},bone:{type:'integer',minimum:0},mode:{enum:['add','subtract','smooth']},radius:{type:'number',minimum:0.001,maximum:1000},strength:{type:'number',minimum:0.01,maximum:1},falloff:{enum:['smooth','linear','constant']}},['x','y','z']),hasSkinnedMesh),
   add<{bone:number|null}>('studio3d.skin.preview','Preview a bone\'s influence as vertex colours on the selected skinned 3D mesh','View',p=>need().setWeightPreview(p.bone),object({bone:{anyOf:[{type:'null'},{type:'integer',minimum:0}]}},['bone']),hasSkinnedMesh),
   add<{on?:boolean}>('studio3d.anim.autokey','Turn auto-key on or off: transform changes are recorded as keys at the current time','View',p=>need().autoKey(p?.on??!getStudio3DState().autoKey),object({on:{type:'boolean'}},[]),hasScene),
   add('studio3d.export.glb','Export the scene as GLB','Project',()=>need().exportGlb()),

@@ -344,5 +344,18 @@
  "studio3d.skinning.reSmooth": "Smooth weights",
  "studio3d.skinning.reRigid": "Rigid weights",
  "studio3d.skinning.preview": "Weight preview",
- "studio3d.skinning.off": "Off"
+ "studio3d.skinning.off": "Off",
+ "cmd.studio3d.skin.brush": "Configure the weight paint brush",
+ "cmd.studio3d.skin.paint": "Paint bone weights with the brush",
+ "studio3d.skinning.paint": "Paint",
+ "studio3d.skinning.mode": "Brush mode",
+ "studio3d.skinning.mode.add": "Add",
+ "studio3d.skinning.mode.subtract": "Subtract",
+ "studio3d.skinning.mode.smooth": "Smooth",
+ "studio3d.skinning.radius": "Radius",
+ "studio3d.skinning.strength": "Strength",
+ "studio3d.skinning.falloff": "Falloff",
+ "studio3d.skinning.falloff.smooth": "Smooth",
+ "studio3d.skinning.falloff.linear": "Linear",
+ "studio3d.skinning.falloff.constant": "Constant"
 }

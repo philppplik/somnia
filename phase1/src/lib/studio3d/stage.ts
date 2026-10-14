@@ -9,7 +9,7 @@ import {groupRefs,keyIndices,copyTrackKeys,shiftTrackKeys,pasteTrackKeys,type Ke
 import {KEY_PATHS,KEY_STRIDE,ClipError,MAX_CLIPS,MAX_KEYS_PER_TRACK,DEFAULT_CLIP_SECONDS,insertKey,removeKey as removeKeyData,findKey,isPlainTrack,trackName,parseTrackName,checkKeyTime,checkDuration,checkClipName,lastKeyTime,type KeyPath} from './clips';
 import {mergeTransform,DEFAULT_TRANSFORM,UvError,type TextureTransform} from './uv';
 import {textureBytes} from './validate';
-import {smoothWeights,rigidWeights,SkinError,type BoneSegment,type SkinWeights} from './skinning';
+import {smoothWeights,rigidWeights,paintWeights,SkinError,type BoneSegment,type SkinWeights,type BrushSettings} from './skinning';
 import {emptyStats,type ModelStats,type OutlineEntry,type Bounds} from './model';
 /**
  * Scene operations for the 3D studio (P1 staging). Pure three.js core, no renderer and no DOM, so the logic runs under tsx --test.
@@ -770,18 +770,75 @@ export class Stage{
    release:()=>{if(meshLive)geo.dispose();}});
   this.emit();return skinned;
  }
- /** Recomputes the weights of an already skinned mesh against its current skeleton: smooth falloff, or rigid as the reset-to-nearest-joint bind. One undo step. */
- skinRebind(id:number,mode:'smooth'|'rigid'){
+ /** True when two matrices match within a small absolute tolerance (scaled by the matrix size). */
+ private matricesNear(a:THREE.Matrix4,b:THREE.Matrix4):boolean{
+  const e=a.elements,f=b.elements;let scale=1;for(const v of f)scale=Math.max(scale,Math.abs(v));
+  const tol=1e-4*scale;
+  for(let i=0;i<16;i++)if(Math.abs(e[i]-f[i])>tol)return false;
+  return true;
+ }
+ /** Posed joints make auto-weights land wrong, so they are snapped back to the bind pose first. Returns the pose restore data, or null when the skeleton already was in bind pose. */
+ private poseReset(skeleton:THREE.Skeleton):{bone:THREE.Bone;p:THREE.Vector3;q:THREE.Quaternion;s:THREE.Vector3}[]|null{
+  const bones=skeleton.bones,bindWorld=skeleton.boneInverses.map(m=>new THREE.Matrix4().copy(m).invert());
+  if(bones.every((b,i)=>this.matricesNear(b.matrixWorld,bindWorld[i])))return null;
+  const before=bones.map(b=>({bone:b,p:b.position.clone(),q:b.quaternion.clone(),s:b.scale.clone()}));
+  bones.forEach((b,i)=>{
+   const pi=bones.indexOf(b.parent as THREE.Bone);
+   const parentWorld=pi>=0?bindWorld[pi]:(b.parent?b.parent.matrixWorld:new THREE.Matrix4());
+   new THREE.Matrix4().copy(parentWorld).invert().multiply(bindWorld[i]).decompose(b.position,b.quaternion,b.scale);
+  });
+  this.root.updateMatrixWorld(true);
+  return before;
+ }
+ private poseApply(rows:{bone:THREE.Bone;p:THREE.Vector3;q:THREE.Quaternion;s:THREE.Vector3}[]){for(const r of rows){r.bone.position.copy(r.p);r.bone.quaternion.copy(r.q);r.bone.scale.copy(r.s);}this.root.updateMatrixWorld(true);}
+ /** Recomputes the weights of an already skinned mesh against its current skeleton: smooth falloff, or rigid as the reset-to-nearest-joint bind. Posed joints are reset to the bind pose first, inside the same undo step. Returns true when a pose was reset. One undo step. */
+ skinRebind(id:number,mode:'smooth'|'rigid'):boolean{
   const o=this.need(id);const mesh=o as THREE.SkinnedMesh;
   if(!mesh.isSkinnedMesh)throw new StageError(`${o.name} is not a skinned mesh; bind it to a bone chain first.`);
   this.root.updateMatrixWorld(true);
+  const poseBefore=this.poseReset(mesh.skeleton);
   let w:SkinWeights;try{w=this.weightsFor(mesh,mesh.skeleton.bones,mode);}catch(e){throw e instanceof SkinError?new StageError(e.message):e;}
+  const poseAfter=poseBefore?mesh.skeleton.bones.map(b=>({bone:b,p:b.position.clone(),q:b.quaternion.clone(),s:b.scale.clone()})):null;
   const geo=mesh.geometry;
   const beforeI=geo.getAttribute('skinIndex') as THREE.BufferAttribute,beforeW=geo.getAttribute('skinWeight') as THREE.BufferAttribute;
   const afterI=new THREE.Uint16BufferAttribute(w.indices,4),afterW=new THREE.Float32BufferAttribute(w.weights,4);
   let owned=true;const apply=(i:THREE.BufferAttribute,wt:THREE.BufferAttribute)=>{geo.setAttribute('skinIndex',i);geo.setAttribute('skinWeight',wt);};
   apply(afterI,afterW);
-  this.push({label:`Weights of ${o.name}`,undo:()=>{apply(beforeI,beforeW);owned=false;},redo:()=>{apply(afterI,afterW);owned=true;},release:()=>{(owned?beforeI:afterI).dispose?.();(owned?beforeW:afterW).dispose?.();}});
+  this.push({label:`Weights of ${o.name}`,undo:()=>{apply(beforeI,beforeW);if(poseBefore)this.poseApply(poseBefore);owned=false;},redo:()=>{apply(afterI,afterW);if(poseAfter)this.poseApply(poseAfter);owned=true;},release:()=>{(owned?beforeI:afterI).dispose?.();(owned?beforeW:afterW).dispose?.();}});
+  this.emit();return poseBefore!==null;
+ }
+ /** Weight painting: one stroke is one undo step. skinPaintStart snapshots the attributes, skinPaint dabs, skinPaintEnd closes the stroke. */
+ private stroke:{id:number;geo:THREE.BufferGeometry;beforeI:THREE.BufferAttribute;beforeW:THREE.BufferAttribute}|null=null;
+ /** Begins a paint stroke on a skinned mesh. Throws while another stroke is open. */
+ skinPaintStart(id:number){
+  const o=this.need(id);const mesh=o as THREE.SkinnedMesh;
+  if(!mesh.isSkinnedMesh)throw new StageError(`${o.name} is not a skinned mesh; bind it to a bone chain first.`);
+  if(this.stroke)throw new StageError('A paint stroke is already in progress.');
+  const geo=mesh.geometry;
+  this.stroke={id,geo,beforeI:geo.getAttribute('skinIndex') as THREE.BufferAttribute,beforeW:geo.getAttribute('skinWeight') as THREE.BufferAttribute};
+ }
+ /** One brush dab on the open stroke. The bone is a skeleton index... no: a bone object id. Returns the touched vertex count. */
+ skinPaint(id:number,boneId:number,center:readonly[number,number,number],brush:BrushSettings):number{
+  const st=this.stroke;if(!st||st.id!==id)throw new StageError('Start a paint stroke first.');
+  const mesh=this.need(id) as THREE.SkinnedMesh;const boneIdx=mesh.skeleton.bones.findIndex(b=>b.id===boneId);
+  if(boneIdx<0)throw new StageError('That bone is not part of the mesh skeleton.');
+  const pos=mesh.geometry.getAttribute('position');if(!pos)throw new StageError(`${mesh.name} has no vertices to paint.`);
+  // Fresh attribute objects per dab: the preview overlay notices the swap and repaints.
+  const si=(st.geo.getAttribute('skinIndex') as THREE.BufferAttribute).clone() as THREE.BufferAttribute;
+  const sw=(st.geo.getAttribute('skinWeight') as THREE.BufferAttribute).clone() as THREE.BufferAttribute;
+  let n:number;try{n=paintWeights(pos.array as ArrayLike<number>,si.array as Uint16Array,sw.array as Float32Array,boneIdx,center,brush);}catch(e){throw e instanceof SkinError?new StageError(e.message):e;}
+  if(n>0){st.geo.setAttribute('skinIndex',si);st.geo.setAttribute('skinWeight',sw);this.emit();}
+  return n;
+ }
+ /** Closes the open stroke: all its dabs become one undo step. Safe to call with no stroke open. */
+ skinPaintEnd(id:number,label='Paint weights'){
+  const st=this.stroke;if(!st||st.id!==id){this.stroke=null;return;}
+  this.stroke=null;
+  const beforeI=st.beforeI,beforeW=st.beforeW;
+  const afterI=st.geo.getAttribute('skinIndex') as THREE.BufferAttribute,afterW=st.geo.getAttribute('skinWeight') as THREE.BufferAttribute;
+  if(afterI===beforeI&&afterW===beforeW)return; // not a single dab landed
+  let owned=true;const apply=(i:THREE.BufferAttribute,w:THREE.BufferAttribute)=>{st.geo.setAttribute('skinIndex',i);st.geo.setAttribute('skinWeight',w);};
+  this.push({label,undo:()=>{apply(beforeI,beforeW);owned=false;},redo:()=>{apply(afterI,afterW);owned=true;},release:()=>{(owned?beforeI:afterI).dispose?.();(owned?beforeW:afterW).dispose?.();}});
   this.emit();
  }
  info(id:number):ObjectInfo|null{

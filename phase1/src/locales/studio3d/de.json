@@ -344,5 +344,18 @@
  "studio3d.skinning.reSmooth": "Weiche Gewichte",
  "studio3d.skinning.reRigid": "Starre Gewichte",
  "studio3d.skinning.preview": "Gewichts-Vorschau",
- "studio3d.skinning.off": "Aus"
+ "studio3d.skinning.off": "Aus",
+ "cmd.studio3d.skin.brush": "Gewichts-Pinsel konfigurieren",
+ "cmd.studio3d.skin.paint": "Knochengewichte mit dem Pinsel malen",
+ "studio3d.skinning.paint": "Malen",
+ "studio3d.skinning.mode": "Pinselmodus",
+ "studio3d.skinning.mode.add": "Addieren",
+ "studio3d.skinning.mode.subtract": "Subtrahieren",
+ "studio3d.skinning.mode.smooth": "Glätten",
+ "studio3d.skinning.radius": "Radius",
+ "studio3d.skinning.strength": "Stärke",
+ "studio3d.skinning.falloff": "Abfall",
+ "studio3d.skinning.falloff.smooth": "Weich",
+ "studio3d.skinning.falloff.linear": "Linear",
+ "studio3d.skinning.falloff.constant": "Konstant"
 }

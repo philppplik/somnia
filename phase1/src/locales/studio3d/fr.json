@@ -344,5 +344,18 @@
  "studio3d.skinning.reSmooth": "Poids doux",
  "studio3d.skinning.reRigid": "Poids rigides",
  "studio3d.skinning.preview": "Aperçu des poids",
- "studio3d.skinning.off": "Désactivé"
+ "studio3d.skinning.off": "Désactivé",
+ "cmd.studio3d.skin.brush": "Configurer le pinceau de poids",
+ "cmd.studio3d.skin.paint": "Peindre les poids des os au pinceau",
+ "studio3d.skinning.paint": "Peindre",
+ "studio3d.skinning.mode": "Mode du pinceau",
+ "studio3d.skinning.mode.add": "Ajouter",
+ "studio3d.skinning.mode.subtract": "Soustraire",
+ "studio3d.skinning.mode.smooth": "Lisser",
+ "studio3d.skinning.radius": "Rayon",
+ "studio3d.skinning.strength": "Intensité",
+ "studio3d.skinning.falloff": "Atténuation",
+ "studio3d.skinning.falloff.smooth": "Douce",
+ "studio3d.skinning.falloff.linear": "Linéaire",
+ "studio3d.skinning.falloff.constant": "Constante"
 }

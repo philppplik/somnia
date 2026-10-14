@@ -252,7 +252,7 @@ export default function Viewport3D(){
    const list=stage.bones();const key=list.map(b=>b.id).join(',');
    if(key!==skelKey){
     skelKey=key;
-    if(skelHelper){scene.remove(skelHelper);skelHelper.geometry.dispose();(skelHelper.material as THREE.Material).dispose();skelHelper=null;}if(weightOverlay){scene.remove(weightOverlay);weightOverlay.geometry.dispose();(weightOverlay.material as THREE.Material).dispose();weightOverlay=null;}
+    if(painting){painting=false;}const openSel=getStudio3DState().selected;if(openSel!=null)stage.skinPaintEnd(openSel);if(skelHelper){scene.remove(skelHelper);skelHelper.geometry.dispose();(skelHelper.material as THREE.Material).dispose();skelHelper=null;}if(weightOverlay){scene.remove(weightOverlay);weightOverlay.geometry.dispose();(weightOverlay.material as THREE.Material).dispose();weightOverlay=null;}
     if(list.length)skelHelper=new THREE.SkeletonHelper(stage.root);
     if(skelHelper)scene.add(skelHelper);
    }
@@ -575,8 +575,30 @@ export default function Viewport3D(){
   };
   const setSkeleton=(on:boolean)=>{patchStudio3D({skeleton:!!on});syncSkeleton();invalidate();};
   const skinBind=(id:number,bone:number,mode:'smooth'|'rigid')=>{const sk=stage.skinBind(id,bone,mode);patchStudio3D({selected:sk.id,marked:[],weightPreview:null});sync();};
-  const skinRebind=(id:number,mode:'smooth'|'rigid')=>{stage.skinRebind(id,mode);};
+  const skinRebind=(id:number,mode:'smooth'|'rigid')=>{const reset=stage.skinRebind(id,mode);if(reset)patchStudio3D({notice:'Posed joints were reset to the bind pose before weighting.'});};
   const setWeightPreview=(bone:number|null)=>{patchStudio3D({weightPreview:bone});syncWeightPreview();invalidate();};
+  const setWeightBrush=(patch:Partial<{on:boolean;mode:'add'|'subtract'|'smooth';radius:number;strength:number;falloff:'smooth'|'linear'|'constant'}>)=>{
+   const cur=getStudio3DState().weightBrush;const next={...cur,...patch};
+   // Turning the brush on needs a bone to paint: default the preview to the first bone of the selected mesh's skeleton.
+   if(next.on&&getStudio3DState().weightPreview==null){
+    const sel=getStudio3DState().selected;const mesh=sel==null?null:stage.find(sel) as THREE.SkinnedMesh|null;
+    const first=mesh?.isSkinnedMesh?mesh.skeleton.bones[0]:null;
+    if(first)patchStudio3D({weightPreview:first.id});
+   }
+   patchStudio3D({weightBrush:next});syncWeightPreview();invalidate();
+  };
+  const dab=(mesh:THREE.SkinnedMesh,local:THREE.Vector3,opts?:{bone?:number;mode?:'add'|'subtract'|'smooth';radius?:number;strength?:number;falloff?:'smooth'|'linear'|'constant'}):number=>{
+   const st=getStudio3DState();const bone=opts?.bone??st.weightPreview;
+   if(bone==null)throw Object.assign(new Error('Pick a bone for the weight preview first.'),{expected:true});
+   return stage.skinPaint(mesh.id,bone,[local.x,local.y,local.z],{mode:opts?.mode??st.weightBrush.mode,radius:opts?.radius??st.weightBrush.radius,strength:opts?.strength??st.weightBrush.strength,falloff:opts?.falloff??st.weightBrush.falloff});
+  };
+  const paintDab=(x:number,y:number,z:number,opts?:{bone?:number;mode?:'add'|'subtract'|'smooth';radius?:number;strength?:number;falloff?:'smooth'|'linear'|'constant'}):number=>{
+   const sel=getStudio3DState().selected;const mesh=sel==null?null:stage.find(sel) as THREE.SkinnedMesh|null;
+   if(!mesh||!mesh.isSkinnedMesh)throw Object.assign(new Error('Select a skinned mesh first.'),{expected:true});
+   stage.skinPaintStart(mesh.id);let n=0;
+   try{n=dab(mesh,new THREE.Vector3(x,y,z),opts);}finally{stage.skinPaintEnd(mesh.id);}
+   return n;
+  };
   const animRange=(range:LoopRange|null)=>{
    const infos=clipInfos();const a=anim();checkClip(a.clip,infos);
    if(range===null){patchStudio3D({anim:{...a,range:null}});return;}
@@ -586,7 +608,7 @@ export default function Viewport3D(){
   /** Auto-key records transform changes into the current clip at the playhead. Turning it on without a clip makes one. */
   const autoKey=(on:boolean)=>{if(on&&!stage.clips.length)clipAdd();patchStudio3D({autoKey:!!on});};
   stage.autoKeySource=()=>getStudio3DState().autoKey&&stage.clips.length?{clip:anim().clip,time:anim().time}:null;
-  const off=registerStudio3DController({keyMove,keyEase,keyCopy,keyShift,clipDuplicate,animRange,selectBone,setSkeleton,skinBind,skinRebind,setWeightPreview,keyPaste,autoKey,clipAdd,clipRemove,clipRename,clipDuration,keySet,keyRemove,animPlay,animPause,animSeek,animLoop,animSpeed,setTextureTransform:(id,slot,p)=>stage.setTextureTransform(id,slot,p),exportGltf,setTextureFile,mirrorSelection,applyScale:applyScaleSel,mergeSelection:mergeSel,viewPreset,setPrimitive:(id,p)=>stage.setPrimitive(id,p),
+  const off=registerStudio3DController({keyMove,keyEase,keyCopy,keyShift,clipDuplicate,animRange,selectBone,setSkeleton,skinBind,skinRebind,setWeightPreview,setWeightBrush,paintDab,keyPaste,autoKey,clipAdd,clipRemove,clipRename,clipDuration,keySet,keyRemove,animPlay,animPause,animSeek,animLoop,animSpeed,setTextureTransform:(id,slot,p)=>stage.setTextureTransform(id,slot,p),exportGltf,setTextureFile,mirrorSelection,applyScale:applyScaleSel,mergeSelection:mergeSel,viewPreset,setPrimitive:(id,p)=>stage.setPrimitive(id,p),
    save:saveDocument,deleteSelection,duplicateSelection,exportMesh,renderTurntable,cancelRender:()=>{cancelFlag=true;},setUnit,openFiles,newScene,resetView:frameAll,frameSelection,select,renderStill,exportGlb,
    addPrimitive:k=>{const o=stage.addPrimitive(k);select(o.id);return o.id;},addLight:k=>{const o=stage.addLight(k);select(o.id);return o.id;},
    setTransform:(id,p)=>stage.setTransform(id,p),setMaterial:(id,p)=>stage.setMaterial(id,p),rename:(id,n)=>stage.rename(id,n),
@@ -618,14 +640,34 @@ export default function Viewport3D(){
   let shiftDrag=false;let marquee:HTMLDivElement|null=null;
   const endMarquee=()=>{marquee?.remove();marquee=null;if(shiftDrag){shiftDrag=false;controls.enabled=true;}};
   // Capture phase, so orbit never starts when shift is held: shift+click toggles, shift+drag draws a marquee.
-  const onDownCapture=(e:PointerEvent)=>{if(e.shiftKey&&e.button===0&&gizmo.axis===null){shiftDrag=true;controls.enabled=false;}};
+  // Weight painting: with the brush on and a preview bone set, dragging on the mesh paints instead of orbiting.
+  let painting=false;
+  const paintHit=(e:PointerEvent):boolean=>{
+   const rect=renderer.domElement.getBoundingClientRect();
+   ray.setFromCamera(new THREE.Vector2(((e.clientX-rect.left)/rect.width)*2-1,-(((e.clientY-rect.top)/rect.height)*2-1)),camera);
+   const hit=weightOverlay?ray.intersectObject(weightOverlay,false)[0]??null:null;
+   if(!hit)return false;
+   const mesh=stage.find(getStudio3DState().selected!) as THREE.SkinnedMesh;
+   dab(mesh,mesh.worldToLocal(hit.point.clone()));
+   return true;
+  };
+  const onDownCapture=(e:PointerEvent)=>{
+   const st=getStudio3DState();
+   if(st.weightBrush.on&&st.weightPreview!=null&&weightOverlay&&e.button===0&&gizmo.axis===null){
+    const mesh=st.selected==null?null:stage.find(st.selected) as THREE.SkinnedMesh|null;
+    if(mesh?.isSkinnedMesh){stage.skinPaintStart(mesh.id);painting=true;controls.enabled=false;gizmo.enabled=false;paintHit(e);e.stopPropagation();return;}
+   }
+   if(e.shiftKey&&e.button===0&&gizmo.axis===null){shiftDrag=true;controls.enabled=false;}
+  };
   const onDown=(e:PointerEvent)=>{down=gizmo.axis!==null?null:{x:e.clientX,y:e.clientY};};
   const onMove=(e:PointerEvent)=>{
+   if(painting){paintHit(e);return;}
    if(!shiftDrag||!down||Math.hypot(e.clientX-down.x,e.clientY-down.y)<=4)return;
    if(!marquee){marquee=document.createElement('div');marquee.style.cssText='position:fixed;pointer-events:none;border:1px dashed var(--focus-ring);background:var(--accent-soft);z-index:50';marquee.setAttribute('aria-hidden','true');document.body.appendChild(marquee);}
    const r=marqueeRect(down,{x:e.clientX,y:e.clientY});marquee.style.left=r.x0+'px';marquee.style.top=r.y0+'px';marquee.style.width=(r.x1-r.x0)+'px';marquee.style.height=(r.y1-r.y0)+'px';
   };
   const onUp=(e:PointerEvent)=>{
+   if(painting){painting=false;controls.enabled=true;gizmo.enabled=true;const sel=getStudio3DState().selected;if(sel!=null)stage.skinPaintEnd(sel);down=null;return;}
    const wasShift=shiftDrag;endMarquee();
    if(justDragged){justDragged=false;down=null;return;}
    if(!down){return;}
@@ -676,7 +718,7 @@ export default function Viewport3D(){
    disposed=true;opening++;stopAnim();mixer?.stopAllAction();stage.autoKeySource=null;off();offAuto();if(autoTimer)clearTimeout(autoTimer);cancelAnimationFrame(frame);ro.disconnect();controls.dispose();
    cv.removeEventListener('pointerdown',onDownCapture,true);cv.removeEventListener('pointerdown',onDown);window.removeEventListener('pointermove',onMove);window.removeEventListener('pointercancel',endMarquee);endMarquee();cv.removeEventListener('pointerup',onUp);cv.removeEventListener('keydown',onKey);
    if(getStudio3DState().status==='loading')patchStudio3D({status:stage.root.children.length?'ready':'idle',confirmReplace:null});
-   gizmo.detach();gizmo.dispose();offStage();clearSelection();if(skelHelper){scene.remove(skelHelper);skelHelper.geometry.dispose();(skelHelper.material as THREE.Material).dispose();skelHelper=null;}if(weightOverlay){scene.remove(weightOverlay);weightOverlay.geometry.dispose();(weightOverlay.material as THREE.Material).dispose();weightOverlay=null;}for(const h of helpers.values())h.dispose();grid.geometry.dispose();(grid.material as THREE.Material).dispose();for(const t of envTargets)t.dispose();envCache.clear();pmrem.dispose();renderer.dispose();renderer.forceContextLoss();
+   gizmo.detach();gizmo.dispose();offStage();clearSelection();if(painting){painting=false;}const openSel=getStudio3DState().selected;if(openSel!=null)stage.skinPaintEnd(openSel);if(skelHelper){scene.remove(skelHelper);skelHelper.geometry.dispose();(skelHelper.material as THREE.Material).dispose();skelHelper=null;}if(weightOverlay){scene.remove(weightOverlay);weightOverlay.geometry.dispose();(weightOverlay.material as THREE.Material).dispose();weightOverlay=null;}for(const h of helpers.values())h.dispose();grid.geometry.dispose();(grid.material as THREE.Material).dispose();for(const t of envTargets)t.dispose();envCache.clear();pmrem.dispose();renderer.dispose();renderer.forceContextLoss();
    if(cv.parentNode===el)el.removeChild(cv);
   };
  // eslint-disable-next-line react-hooks/exhaustive-deps

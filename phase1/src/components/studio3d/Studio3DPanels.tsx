@@ -145,7 +145,17 @@ function SkinningFields({id,skinned}:{id:number;skinned:boolean}){
     <Button variant="outline" onClick={()=>void executeCommand('studio3d.skin.reweight',{id,mode:'rigid'})}>{t('studio3d.skinning.reRigid')}</Button></div>
    <NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={s.weightPreview??''} aria-label={t('studio3d.skinning.preview')} onChange={e=>void executeCommand('studio3d.skin.preview',{bone:e.currentTarget.value===''?null:Number(e.currentTarget.value)})}>
     <option value="">{t('studio3d.skinning.off')}</option>
-    {s.bones.map(b=><option key={b.id} value={b.id}>{indent(b.name,b.depth)}</option>)}</NativeSelect></>}
+    {s.bones.map(b=><option key={b.id} value={b.id}>{indent(b.name,b.depth)}</option>)}</NativeSelect>
+   <label className="flex items-center gap-2 text-xs text-ink-2"><NativeInput type="checkbox" checked={s.weightBrush.on} onChange={e=>void executeCommand('studio3d.skin.brush',{on:e.currentTarget.checked})}/>{t('studio3d.skinning.paint')}</label>
+   {s.weightBrush.on&&<>
+    <NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={s.weightBrush.mode} aria-label={t('studio3d.skinning.mode')} onChange={e=>void executeCommand('studio3d.skin.brush',{mode:e.currentTarget.value})}>
+     {(['add','subtract','smooth'] as const).map(m=><option key={m} value={m}>{t('studio3d.skinning.mode.'+m)}</option>)}</NativeSelect>
+    <label className="grid gap-1 text-xs text-ink-2">{t('studio3d.skinning.radius')} <span className="text-ink-3">{s.weightBrush.radius.toFixed(2)}</span>
+     <NativeInput type="range" min={0.01} max={2} step={0.01} value={s.weightBrush.radius} aria-label={t('studio3d.skinning.radius')} onChange={e=>void executeCommand('studio3d.skin.brush',{radius:Number(e.currentTarget.value)})}/></label>
+    <label className="grid gap-1 text-xs text-ink-2">{t('studio3d.skinning.strength')} <span className="text-ink-3">{s.weightBrush.strength.toFixed(2)}</span>
+     <NativeInput type="range" min={0.01} max={1} step={0.01} value={s.weightBrush.strength} aria-label={t('studio3d.skinning.strength')} onChange={e=>void executeCommand('studio3d.skin.brush',{strength:Number(e.currentTarget.value)})}/></label>
+    <NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={s.weightBrush.falloff} aria-label={t('studio3d.skinning.falloff')} onChange={e=>void executeCommand('studio3d.skin.brush',{falloff:e.currentTarget.value})}>
+     {(['smooth','linear','constant'] as const).map(f=><option key={f} value={f}>{t('studio3d.skinning.falloff.'+f)}</option>)}</NativeSelect></>}</>}
  </fieldset>;
 }
 export function ViewSection(_:InspectorSectionProps){

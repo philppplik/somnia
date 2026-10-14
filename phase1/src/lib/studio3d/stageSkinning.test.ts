@@ -84,3 +84,45 @@ test('a bound mesh exports as a second skin and the weights come back',async()=>
  const w=re.geometry.getAttribute('skinWeight');let sum=0;for(let k=0;k<4;k++)sum+=w.getComponent(0,k);
  assert.ok(Math.abs(sum-1)<1e-3,'weights survive the roundtrip');
 });
+const brush={radius:2,strength:0.5,falloff:'constant' as const,mode:'add' as const};
+test('a paint stroke changes weights per dab and undoes as one step',()=>{
+ const {st,mesh,hip,knee}=rig();
+ const sk=st.skinBind(mesh.id,hip.id,'rigid');
+ const before=Array.from(sk.geometry.getAttribute('skinWeight').array);
+ st.skinPaintStart(sk.id);
+ const n1=st.skinPaint(sk.id,knee.id,[0,1,0] as const,brush);assert.ok(n1>0,'the dab hit vertices');
+ const n2=st.skinPaint(sk.id,knee.id,[0,0,0] as const,brush);assert.ok(n2>0);
+ st.skinPaintEnd(sk.id);
+ const painted=Array.from(sk.geometry.getAttribute('skinWeight').array);
+ assert.notDeepEqual(painted,before);
+ for(let v=0;v<painted.length/4;v++){let sum=0;for(let k=0;k<4;k++)sum+=painted[v*4+k];assert.ok(Math.abs(sum-1)<1e-3,'still normalised');}
+ st.undo();assert.deepEqual(Array.from(sk.geometry.getAttribute('skinWeight').array),before,'both dabs revert in one undo');
+ st.redo();assert.deepEqual(Array.from(sk.geometry.getAttribute('skinWeight').array),painted);
+});
+test('a stroke with no landed dab leaves no undo step and painting needs an open stroke',()=>{
+ const {st,mesh,hip,knee}=rig();
+ const sk=st.skinBind(mesh.id,hip.id,'rigid');
+ const labelBefore=st.undoLabel;
+ assert.throws(()=>st.skinPaint(sk.id,knee.id,[0,0,0],brush),/Start a paint stroke/);
+ st.skinPaintStart(sk.id);
+ assert.equal(st.skinPaint(sk.id,knee.id,[99,99,99],brush),0);
+ st.skinPaintEnd(sk.id);
+ assert.equal(st.undoLabel,labelBefore,'no dab, no undo step');
+ st.undo();assert.ok(st.find(sk.id)==null&&!(st.find(mesh.id) as THREE.SkinnedMesh).isSkinnedMesh,'the next undo is the bind, not an empty stroke');
+ st.redo();
+ assert.throws(()=>st.skinPaint(sk.id,mesh.id,[0,0,0],brush),/Start a paint stroke first|not part of the mesh skeleton/);
+});
+test('re-weighting a posed skeleton resets it to the bind pose inside the same undo step',()=>{
+ const {st,mesh,hip,knee}=rig();
+ const sk=st.skinBind(mesh.id,hip.id,'smooth');
+ knee.rotation.z=0.7;st.root.updateMatrixWorld(true);
+ const reset=st.skinRebind(sk.id,'rigid');
+ assert.equal(reset,true);
+ assert.ok(Math.abs(knee.rotation.z)<1e-6,'the pose was snapped back to bind');
+ st.undo();
+ assert.ok(Math.abs(knee.rotation.z-0.7)<1e-6,'undo restores the pose together with the weights');
+ st.redo();
+ assert.ok(Math.abs(knee.rotation.z)<1e-6,'redo snaps to bind again');
+ // In bind pose there is nothing to reset.
+ assert.equal(st.skinRebind(sk.id,'smooth'),false);
+});
