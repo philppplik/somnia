@@ -10,6 +10,8 @@ import {FileTabs} from '../FileTabs';
 import {Button} from '../ui/button';
 import {Table2,Redo2,Undo2} from '../../lib/icons';
 import {addMediaFile,formatBytes,useMedia,type MediaItem} from '../../lib/media';
+import {readXlsx} from '../../lib/office/xlsx';
+import {SheetsHandoffBar} from './SheetsHandoffBar';
 import {useT} from '../../lib/useT';
 import {SheetsEngine} from '../../lib/sheets/engine';
 import type {SortOp,SheetOp,FormatOp,LineAxis,LineEditKind,LineOp,SheetInfo,SheetLayout,ViewCell,WorkbookInfo} from '../../lib/sheets/protocol';
@@ -191,6 +193,11 @@ function Workbook({item}:{item:MediaItem}){
   </div>
   {book&&book.warnings.length>0&&<ul className="px-3 py-1 text-[12px] text-ink-3" role="note" data-testid="sheets-warnings">{book.warnings.map(w=><li key={w}>{w}</li>)}</ul>}
   <p className="px-3 py-1 text-[12px] text-ink-3" role="note" data-testid="sheets-fidelity">{t('sheets.fidelity')}</p>
+  <SheetsHandoffBar file={item.name} disabled={phase.kind!=='ready'} onError={setNotice} getRows={async()=>{
+   const sess=session.current;if(!sess)throw new Error('Spreadsheet engine closed');
+   const {sheets}=readXlsx(await sess.engine.save());
+   return ((sheets[sheet]??sheets[0])?.rows??[]).map(r=>r.map(c=>c==null?'':String(c)));
+  }}/>
   {notice&&<p className="px-3 py-1 text-[12px] text-ink-2" role="status" data-testid="sheets-notice">{notice}</p>}
   <div className="flex w-full items-center gap-2 border-b border-subtle px-3 py-1">
    <span className="w-14 shrink-0 rounded-sm bg-hover px-2 py-0.5 text-center text-[12px]" data-testid="sheets-address" aria-label={t('sheets.address')}>{address}</span>
