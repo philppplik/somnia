@@ -61,6 +61,7 @@ All file links are repository-relative, so they remain useful on a feature branc
 31. [Photos filmstrip](photos-filmstrip.md)
 32. [Photos batch export](photos-batch-export.md)
 33. [Photos heal / clone stamp](photos-heal-clone.md)
+34. [Photos dodge/burn — local adjustment mask](photos-dodge-burn.md)
 
 ## The system in one view
 

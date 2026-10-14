@@ -2,12 +2,13 @@ import {StudioStatus} from '../studios/StudioStatus';
 import {reportError} from '../../lib/log';
 import {usePublishPhotosContext} from './panels/publishContext';
 import {useCallback,useEffect,useRef,useState} from 'react';
-import {AlertTriangle,Bandage,ArrowLeft,ArrowRight,Check,ClipboardPaste,Columns2,Copy,Download,Eye,Frame,Grid3x3,RotateCcw,Undo2,Redo2,X,ZoomIn,ZoomOut,Maximize2,Minimize2} from '../../lib/icons';
+import {AlertTriangle,Bandage,Contrast,ArrowLeft,ArrowRight,Check,ClipboardPaste,Columns2,Copy,Download,Eye,Frame,Grid3x3,RotateCcw,Undo2,Redo2,X,ZoomIn,ZoomOut,Maximize2,Minimize2} from '../../lib/icons';
 import {Button} from '../ui/button';
 import {NativeInput} from '../ui/native-controls';
 import {useT} from '../../lib/useT';
 import {applyPhotoCrop,cancelPhotoCrop,dirtyPhoto,exportPhotoCopy,historyPhoto,openPhoto,resetPhoto,rotatePhoto,setPhotoCropping,setPhotoCropDraft,usePhotoSession,type PhotoFrame} from '../../lib/photos/studioSession';
 import {autoSource,clampSpot} from '../../lib/photos/healSpots';
+import {clampDab} from '../../lib/photos/localAdjust';
 import type {PhotoCrop} from '../../lib/photos/studioSettings';
 import {cropGuideLines} from '../../lib/photos/cropGuides';
 import {clippingOverlayImage} from '../../lib/photos/clippingOverlay';
@@ -57,6 +58,8 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
  const [brushR,setBrushR]=usePanelState<number>('photos.healRadius',0.03);
  const [healCursor,setHealCursor]=useState<{x:number;y:number}|null>(null);
  const healStart=useRef<{x:number;y:number}|null>(null);
+ const [dodging,setDodging]=useState(false);
+ const [dabR,setDabR]=usePanelState<number>('photos.dodgeRadius',0.05);
  const drag=useRef<{pan?:{x:number;y:number;px:number;py:number};crop?:DragMode}|null>(null);
  useEffect(()=>{void openPhoto(item);},[item]);
  usePublishPhotosContext(item.name);
@@ -98,17 +101,19 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
   if(session?.cropping)return; // in crop mode only the overlay handles drag
   (e.target as HTMLElement).setPointerCapture(e.pointerId);
   if(healing){healStart.current=pointerPos(e);return;} // heal mode never pans
+  if(dodging){healStart.current=pointerPos(e);return;} // dodge/burn paints on release
   drag.current={pan:{x:pan[0],y:pan[1],px:e.clientX,py:e.clientY}};
  };
  const onStageMove=(e:React.PointerEvent)=>{
-  if(healing){setHealCursor(pointerPos(e));return;}
+  if(healing||dodging){setHealCursor(pointerPos(e));return;}
   const d=drag.current;if(!d?.pan)return;
   setPan(clampPan(d.pan.x+(e.clientX-d.pan.px),d.pan.y+(e.clientY-d.pan.py),scale));
  };
  const onStageUp=(e:React.PointerEvent)=>{
-  if(healStart.current){ // a drag in heal mode commits one clone-stamp stroke (one undo step)
+  if(healStart.current){ // heal: drag = manual source, click = auto source; dodge: a dab at the press point
    const start=healStart.current;healStart.current=null;
    const end=pointerPos(e);
+   if(dodging){commitPhotoSettings(item.name,now=>({...now,dabs:[...now.dabs,clampDab({x:start.x,y:start.y,r:dabR})]}));return;}
    if(Math.hypot(end.x-start.x,end.y-start.y)>0.01)
     commitPhotoSettings(item.name,now=>({...now,spots:[...now.spots,clampSpot({x:start.x,y:start.y,r:brushR,dx:end.x-start.x,dy:end.y-start.y})]}));
    else if(shown){ // a plain click auto-picks the flattest nearby source disc
@@ -174,12 +179,18 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
     <Button size="compact" variant="primary" onClick={()=>applyPhotoCrop(item.name)} data-testid="photos-crop-apply"><Check size={13}/>{t('photos.crop.apply')}</Button>
     <Button size="compact" variant="outline" onClick={()=>cancelPhotoCrop(item.name)} data-testid="photos-crop-cancel"><X size={13}/>{t('photos.crop.cancel')}</Button>
    </>}
-   <Button size="compact" variant="outline" aria-pressed={healing} disabled={!ready||session?.cropping} aria-label={t('photos.heal.toggle')} title={t('photos.heal.toggle')} onClick={()=>setHealing(h=>!h)} data-testid="photos-heal"><Bandage size={13}/>{t('photos.heal.toggle')}</Button>
+   <Button size="compact" variant="outline" aria-pressed={healing} disabled={!ready||session?.cropping} aria-label={t('photos.heal.toggle')} title={t('photos.heal.toggle')} onClick={()=>{setHealing(h=>!h);setDodging(false);}} data-testid="photos-heal"><Bandage size={13}/>{t('photos.heal.toggle')}</Button>
    {healing&&<NativeInput type="range" className="w-20 accent-[var(--accent)]" min={0.005} max={0.2} step={0.005} value={brushR} aria-label={t('photos.heal.radius')} onChange={e=>setBrushR(Number(e.currentTarget.value))} data-testid="photos-heal-radius"/>}
+   <Button size="compact" variant="outline" aria-pressed={dodging} disabled={!ready||session?.cropping} aria-label={t('photos.dodge.toggle')} title={t('photos.dodge.toggle')} onClick={()=>{setDodging(d=>!d);setHealing(false);}} data-testid="photos-dodge"><Contrast size={13}/>{t('photos.dodge.toggle')}</Button>
+   {dodging&&<>
+    <NativeInput type="range" className="w-20 accent-[var(--accent)]" min={0.005} max={0.2} step={0.005} value={dabR} aria-label={t('photos.dodge.radius')} onChange={e=>setDabR(Number(e.currentTarget.value))} data-testid="photos-dodge-radius"/>
+    <NativeInput type="range" className="w-16 accent-[var(--accent)]" min={-1} max={1} step={0.05} value={session?.now.localEV??0} aria-label={t('photos.dodge.amount')} onChange={e=>commitPhotoSettings(item.name,now=>({...now,localEV:Number(e.currentTarget.value)}))} data-testid="photos-dodge-amount"/>
+    <NativeInput type="range" className="w-16 accent-[var(--accent)]" min={-100} max={100} step={5} value={session?.now.localSat??0} aria-label={t('photos.dodge.sat')} onChange={e=>commitPhotoSettings(item.name,now=>({...now,localSat:Number(e.currentTarget.value)}))} data-testid="photos-dodge-sat"/>
+   </>}
    <Button size="compact" disabled={!ready||session?.cropping} onClick={()=>void doExport('png')} data-testid="photos-export-png" title={t('photos.export.hint')}><Download size={13}/>{t('photos.export.png')}</Button>
    <Button size="compact" disabled={!ready||session?.cropping} onClick={()=>void doExport('jpeg')} data-testid="photos-export-jpeg" title={t('photos.export.hint')}><Download size={13}/>{t('photos.export.jpeg')}</Button>
   </div>
-  <div ref={stage} className="media-checker relative min-h-0 w-full flex-1 overflow-hidden" onWheel={onWheel} onPointerDown={onStageDown} onPointerMove={onStageMove} onPointerUp={onStageUp} onPointerCancel={onStageUp} onPointerLeave={()=>setHealCursor(null)} data-testid="photos-stage" style={{touchAction:'none',cursor:session?.cropping?'default':healing?'crosshair':'grab'}}>
+  <div ref={stage} className="media-checker relative min-h-0 w-full flex-1 overflow-hidden" onWheel={onWheel} onPointerDown={onStageDown} onPointerMove={onStageMove} onPointerUp={onStageUp} onPointerCancel={onStageUp} onPointerLeave={()=>setHealCursor(null)} data-testid="photos-stage" style={{touchAction:'none',cursor:session?.cropping?'default':healing||dodging?'crosshair':'grab'}}>
    <div ref={imgBox} className="absolute left-1/2 top-1/2" style={{width:dispW,height:dispH,transform:`translate(-50%,-50%) translate(${pan[0]}px,${pan[1]}px)`}}>
     <canvas ref={canvas} className="block size-full rounded-[2px] shadow-sm" style={{imageRendering:scale>4?'pixelated':'auto'}} data-testid="photos-canvas"/>
     {showClipping&&<canvas ref={clipCanvas} className={`pointer-events-none absolute inset-0 size-full${scale>4?' pixelated':''}`} data-testid="photos-clipping-canvas"/>}
@@ -204,10 +215,10 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
      <div className="absolute" style={{left:`${crop.x0*100}%`,top:`${crop.y0*100}%`,width:`${(crop.x1-crop.x0)*100}%`,height:`${(crop.y1-crop.y0)*100}%`,cursor:'move'}} onPointerDown={startCropDrag({kind:'move',dx:0,dy:0})} data-testid="photos-crop-frame"/>
      {(['nw','ne','sw','se'] as const).map(k=><div key={k} className="absolute size-3 rounded-[3px] border border-white bg-[var(--accent)]" style={{left:`calc(${(k==='nw'||k==='sw'?crop.x0:crop.x1)*100}% - 6px)`,top:`calc(${(k==='nw'||k==='ne'?crop.y0:crop.y1)*100}% - 6px)`,cursor:k==='nw'||k==='se'?'nwse-resize':'nesw-resize'}} onPointerDown={startCropDrag({kind:k})} data-testid={`photos-crop-${k}`}/>)}
     </div>}
-    {healing&&healCursor&&!session?.cropping&&<svg className="pointer-events-none absolute inset-0 size-full" data-testid="photos-heal-cursor">
+    {(healing||dodging)&&healCursor&&!session?.cropping&&<svg className="pointer-events-none absolute inset-0 size-full" data-testid="photos-heal-cursor">
      {healStart.current&&<line x1={healStart.current.x*dispW} y1={healStart.current.y*dispH} x2={healCursor.x*dispW} y2={healCursor.y*dispH} stroke="rgba(255,255,255,0.75)" strokeWidth={1}/>}
      {healStart.current&&<circle cx={healStart.current.x*dispW} cy={healStart.current.y*dispH} r={Math.max(2,brushR*Math.min(fw,fh)*scale)} fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth={1.5} strokeDasharray="4 3"/>}
-     <circle cx={healCursor.x*dispW} cy={healCursor.y*dispH} r={Math.max(2,brushR*Math.min(fw,fh)*scale)} fill="none" stroke="var(--accent)" strokeWidth={1.5}/>
+     <circle cx={healCursor.x*dispW} cy={healCursor.y*dispH} r={Math.max(2,(healing?brushR:dabR)*Math.min(fw,fh)*scale)} fill="none" stroke="var(--accent)" strokeWidth={1.5}/>
     </svg>}
    </div>
   </div>

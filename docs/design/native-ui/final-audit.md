@@ -195,6 +195,14 @@ through native control primitives, see below.
   out-of-frame candidates skipped, no-op when none fit; one undo step,
   drag behaviour unchanged), unit tests and gallery spec extended;
   canvas bitmaps pixel-identical to the P44 base (3bb96d93).
+- P46: dodge/burn local-adjustment mask (persistent mask dabs with
+  brighten/darken +/-1 EV and +/-100 saturation, applied to the source
+  before engine load like the heal spots; dabs + strengths are
+  sanitized settings with signature coverage; contrast toggle mutually
+  exclusive with heal mode, own persisted radius, two strength sliders;
+  no raw controls, ratchets unchanged), unit tests and gallery proof
+  added (?view=photos-dodge; canvas bitmaps pixel-identical to the P45
+  base).
 
 
 
