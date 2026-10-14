@@ -41,3 +41,17 @@ actual-size controls.
   themes; the feature adds only the bar controls.
 - No new raw controls (buttons are the DS `Button`); ratchets unchanged.
   Actual app photos E2E remains CI-only.
+
+## Zoom keys (P72)
+
+The workspace zooms from the keyboard now: `+` (and `=`) steps in, `-`
+(and `_`) steps out, in the same 1.25x increments as the zoom buttons,
+leaving fit-to-window on the first press. The keys live in the existing
+workspace key handler with the same guards (no modifiers, no editable
+targets) alongside arrows, ratings, flags and the `O` guide-style cycle;
+the handler effect was moved below the `zoomTo`/`scale` declarations so
+the dependency list is TDZ-safe.
+
+Coverage: `photos-zoom.spec.ts` gains a light/dark leg that presses
+`+`, asserts the level readout rises and fit disengages, steps back out
+with `-` and screenshots the zoomed stage.

@@ -25,3 +25,23 @@ test('zoom presets render in light and dark',async({page})=>{
   await page.screenshot({path:`test-results/ds-photos-zoom-${theme}.png`,fullPage:true});
  }
 });
+test('zoom keys: + and - step the zoom like the buttons (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-zoom');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-zoom-fit')).toHaveAttribute('aria-pressed','true');
+  const level=page.getByTestId('photos-zoom-level');
+  const before=parseInt(await level.innerText(),10);
+  await page.keyboard.press('+');
+  const zoomed=parseInt(await level.innerText(),10);
+  expect(zoomed).toBeGreaterThan(before); // one 1.25x step in
+  await expect(page.getByTestId('photos-zoom-fit')).toHaveAttribute('aria-pressed','false'); // explicit zoom now
+  await page.screenshot({path:`test-results/ds-photos-zoom-keys-${theme}.png`,fullPage:true});
+  await page.keyboard.press('-');
+  await page.keyboard.press('-');
+  const out=parseInt(await level.innerText(),10);
+  expect(out).toBeLessThan(zoomed); // steps back out
+  await page.keyboard.press('+'); // back near the start for the next leg
+ }
+});

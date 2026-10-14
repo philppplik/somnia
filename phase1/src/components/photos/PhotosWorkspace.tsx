@@ -109,21 +109,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
   const onKey=(e:KeyboardEvent)=>{if(e.key==='Escape'){setCurvesTarget(false);setHslTarget(false);setWbPicker(false);setShowSplit(false);setBrushing(false);setStraightening(false);straightDraft.current=null;}};
   window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey);
  },[curvesTarget,hslTarget,wbPicker,showSplit,brushing,straightening,setCurvesTarget,setHslTarget,setWbPicker,setShowSplit]);
- useEffect(()=>{ // arrows walk the library like the prev/next buttons, digits 0-5 rate the active photo; editable targets and modifiers keep their keys
-  const onKey=(e:KeyboardEvent)=>{
-   if(e.metaKey||e.ctrlKey||e.altKey)return;
-   const el=e.target as HTMLElement|null;
-   if(el&&el.closest('input,select,textarea,[contenteditable="true"]'))return;
-   if(e.key==='ArrowLeft'&&nav.prev){e.preventDefault();setActiveMedia(nav.prev);}
-   else if(e.key==='ArrowRight'&&nav.next){e.preventDefault();setActiveMedia(nav.next);}
-   else if(/^[0-5]$/.test(e.key))setRating(item.name,Number(e.key));
-   else if(e.key==='p'||e.key==='P')setFlag(item.name,'pick');
-   else if(e.key==='x'||e.key==='X')setFlag(item.name,'reject');
-   else if(e.key==='u'||e.key==='U')setFlag(item.name,null);
-   else if(e.key==='o'||e.key==='O')setGuideStyle(CROP_GUIDE_STYLES[(CROP_GUIDE_STYLES.indexOf(guideStyle)+1)%CROP_GUIDE_STYLES.length]);
-  };
-  window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey);
- },[nav.prev,nav.next,item.name,guideStyle,setGuideStyle]);
+
  const [dabR,setDabR]=usePanelState<number>('photos.dodgeRadius',0.05);
  const dabChain=useRef<{x:number;y:number;r:number}[]|null>(null); // dabs of the in-flight dodge stroke
  const healPath=useRef<{x:number;y:number}[]|null>(null); // path points of the in-flight heal stroke
@@ -176,6 +162,24 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
   e.preventDefault();const rect=stage.current!.getBoundingClientRect();
   zoomTo((zoom??fit)*(e.deltaY<0?1.2:1/1.2),e.clientX-rect.left-rect.width/2,e.clientY-rect.top-rect.height/2);
  },[zoom,fit,zoomTo]);
+ useEffect(()=>{ // arrows walk the library like the prev/next buttons, digits 0-5 rate the active photo; editable targets and modifiers keep their keys
+  const onKey=(e:KeyboardEvent)=>{
+   if(e.metaKey||e.ctrlKey||e.altKey)return;
+   const el=e.target as HTMLElement|null;
+   if(el&&el.closest('input,select,textarea,[contenteditable="true"]'))return;
+   if(e.key==='ArrowLeft'&&nav.prev){e.preventDefault();setActiveMedia(nav.prev);}
+   else if(e.key==='ArrowRight'&&nav.next){e.preventDefault();setActiveMedia(nav.next);}
+   else if(/^[0-5]$/.test(e.key))setRating(item.name,Number(e.key));
+   else if(e.key==='p'||e.key==='P')setFlag(item.name,'pick');
+   else if(e.key==='x'||e.key==='X')setFlag(item.name,'reject');
+   else if(e.key==='u'||e.key==='U')setFlag(item.name,null);
+   else if(e.key==='o'||e.key==='O')setGuideStyle(CROP_GUIDE_STYLES[(CROP_GUIDE_STYLES.indexOf(guideStyle)+1)%CROP_GUIDE_STYLES.length]);
+   else if(e.key==='+'||e.key==='=')zoomTo(scale*1.25);
+   else if(e.key==='-'||e.key==='_')zoomTo(scale/1.25);
+  };
+  window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey);
+ },[nav.prev,nav.next,item.name,guideStyle,setGuideStyle,scale,zoomTo]);
+
  const pointerPos=(e:React.PointerEvent)=>{const r=imgBox.current!.getBoundingClientRect();return{x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height};};
  const onStageDown=(e:React.PointerEvent)=>{
   if(session?.cropping)return; // in crop mode only the overlay handles drag
