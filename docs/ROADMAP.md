@@ -187,3 +187,9 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Implemented: numeric cubic-bezier editor for key pairs with curve preview, named easings saved in the document (versioned, bounded to 50), elastic bake (1 to 5 swings, clamped to the property range), commands animation.keys.cubic / elastic and animation.ease.save / apply / delete, five locales; "1 presets" plural wording fixed.
 - Validation: 1 new Animation unit test (155 total), DS ratchet unchanged, ui-commands inventory (379), isolated Chrome check (cubic edit +1 step, save +1 step).
 - Not covered: bounce and elastic are baked keys, not curve presets (one cubic cannot ring); no new draggable handles beyond the existing graph ones; the editor sits at the bottom of the graph sidebar, so the curve preview is partly scrolled in the short graph pane.
+
+### Animation P25 (2026-10-14, integration pending)
+
+- Implemented: collapsible Easing editor whose curve stays visible in the graph sidebar; path-to-path morph key (`morphTo`) for path masks with the same point count and closed flag, hover preview, inline refusal otherwise, one undo, five locales.
+- Validation: 1 new Animation unit test (156 total), DS ratchet unchanged, ui-commands inventory (379), check:layers, isolated Chrome check (morph +keys, refusal text visible).
+- Not covered: morph works between path masks only (shape layers are rect/ellipse sources, no path source yet); no point resampling, matching or reversing; point order is by index.

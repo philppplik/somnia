@@ -386,5 +386,9 @@
  "cmd.animation.keys.cubic": "Appliquer une courbe cubic-bezier personnalisée aux clés sélectionnées",
  "cmd.animation.ease.save": "Enregistrer une accélération nommée dans le document",
  "cmd.animation.ease.apply": "Appliquer une accélération enregistrée aux clés sélectionnées",
- "cmd.animation.ease.delete": "Supprimer une accélération enregistrée"
+ "cmd.animation.ease.delete": "Supprimer une accélération enregistrée",
+ "animation.morph.choose": "Transformer en…",
+ "animation.morph.option": "Masque {n} ({count} points)",
+ "animation.morph.apply": "Transformer ici",
+ "animation.morph.target": "Transformer en masque"
 }

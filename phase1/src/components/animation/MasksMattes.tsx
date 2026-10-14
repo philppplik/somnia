@@ -1,3 +1,4 @@
+import {MaskMorph} from './MaskMorph';
 import {useT} from '../../lib/useT';
 import {Button} from '../ui/button';
 import {NativeInput,NativeSelect} from '../ui/native-controls';
@@ -45,6 +46,7 @@ export function MasksMattes({layer,comp,at}:{layer:Layer;comp:Composition;at:num
      <div className="flex gap-1"><Button size="tiny" variant="outline" disabled={sel.point===null||current?.id!==m.id} onClick={()=>{mask({layer:layer.id,op:'pointInsert',mask:m.id,index:sel.point!});}} data-testid={`animation-point-insert-${i}`}>{t('animation.masks.pointInsert')}</Button>
       <Button size="tiny" variant="outline" disabled={sel.point===null||current?.id!==m.id} onClick={()=>{mask({layer:layer.id,op:'pointRemove',mask:m.id,index:sel.point!});selectPoint(null);}} data-testid={`animation-point-remove-${i}`}>{t('animation.masks.pointRemove')}</Button></div>
      <label className="flex items-center gap-1"><NativeInput type="checkbox" className="animation-checkbox" checked={!!m.shapeKeys?.length} onChange={e=>mask({layer:layer.id,op:'pathAnimate',mask:m.id,on:e.target.checked})} data-testid={`animation-mask-pathanim-${i}`}/>{t('animation.masks.animate',{prop:t('animation.masks.prop.path')})}</label>
+     <MaskMorph layer={layer} m={m} index={i}/>
     </div>}
     <div className="grid gap-1">{(['position','size','feather','opacity'] as const).filter(p=>!(m.shape==='path'&&p==='size')).map(p=>animToggle(m,p))}</div>
     <label className="flex items-center gap-1 text-ink-3"><NativeInput type="checkbox" className="animation-checkbox" checked={m.invert} onChange={e=>mask({layer:layer.id,op:'update',mask:m.id,patch:{invert:e.target.checked}})}/>{t('animation.masks.invert')}</label>

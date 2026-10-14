@@ -386,5 +386,9 @@
  "cmd.animation.keys.cubic": "Eigenes Cubic-Bezier-Easing auf gewählte Keys setzen",
  "cmd.animation.ease.save": "Benanntes Easing im Dokument speichern",
  "cmd.animation.ease.apply": "Gespeichertes Easing auf gewählte Keys anwenden",
- "cmd.animation.ease.delete": "Gespeichertes Easing löschen"
+ "cmd.animation.ease.delete": "Gespeichertes Easing löschen",
+ "animation.morph.choose": "Morphen in…",
+ "animation.morph.option": "Maske {n} ({count} Punkte)",
+ "animation.morph.apply": "Hier morphen",
+ "animation.morph.target": "In Maske morphen"
 }

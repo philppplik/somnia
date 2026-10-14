@@ -386,5 +386,9 @@
  "cmd.animation.keys.cubic": "Aplicar un suavizado cubic-bezier propio a las claves seleccionadas",
  "cmd.animation.ease.save": "Guardar un suavizado con nombre en el documento",
  "cmd.animation.ease.apply": "Aplicar un suavizado guardado a las claves seleccionadas",
- "cmd.animation.ease.delete": "Eliminar un suavizado guardado"
+ "cmd.animation.ease.delete": "Eliminar un suavizado guardado",
+ "animation.morph.choose": "Transformar en…",
+ "animation.morph.option": "Máscara {n} ({count} puntos)",
+ "animation.morph.apply": "Transformar aquí",
+ "animation.morph.target": "Transformar en máscara"
 }

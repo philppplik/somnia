@@ -1,7 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {createDocument,findComp,findLayer,validateDocument,MAX_LAYER_MASKS,type AnimationDocument} from './model';
 import {applyEdit,applyEdits,EditError} from './edit';
-import {maskEdit,matteEdit,maskPath,copyMaskKey,insertPoint,handleMaskKey,copyMaskKeys} from './masks';
+import {morphPath,morphRefusal,maskEdit,matteEdit,maskPath,copyMaskKey,insertPoint,handleMaskKey,copyMaskKeys} from './masks';
 import {animatedChars,animatorEdit,defaultAnimator,mixHex} from './textAnimators';
 import {copyTransformKeys,pasteTransformEdits} from './keysClipboard';
 import {animatedTargets,allTargetKeys,propertyOf,moveTargetKeys,easeTargetKeys,pruneTargetKeys,toggleTargetKey,editTargetKeys,copyTargetKeys,pasteTargetKeys,deleteTargetKeys,pasteClipOnTargets,staggerLayers,bounceClip,bounceTargetKeys} from './keyTargets';
@@ -500,4 +500,30 @@ test('P24: elastic bakes overshooting keys, custom cubic eases and named easings
  assert.throws(()=>applyEdit(d,{type:'easings.set',items:[{id:'a',name:'',out:[0,0],in:[1,1]}]}),EditError);
  const gone=applyEdit(e1,deleteEasingEdit(e1,findEasing(e1,userEasings(e1)[0].id)!.id));assert.equal(userEasings(gone).length,0);assert.throws(()=>deleteEasingEdit(gone,'nope'),/no longer exists/);
  let full=d;for(let i=0;i<MAX_EASINGS;i++)full=applyEdit(full,saveEasingEdit(full,`e${i}`,[0.5,0],[0.5,1]));assert.throws(()=>saveEasingEdit(full,'more',[0.5,0],[0.5,1]),/At most/);
+});
+
+test('P25: path-to-path morph keys a mask to another path with the same point count, refuses otherwise',()=>{
+ let d=base();const tri=[{x:0,y:0},{x:100,y:0},{x:50,y:90}];
+ d=applyEdit(d,maskEdit(d,'photo',{op:'add',id:'a'}));d=applyEdit(d,maskEdit(d,'photo',{op:'add',id:'b'}));d=applyEdit(d,maskEdit(d,'photo',{op:'add',id:'c'}));
+ d=applyEdit(d,maskEdit(d,'photo',{op:'path',mask:'a',points:tri,closed:true,smooth:false}));
+ d=applyEdit(d,maskEdit(d,'photo',{op:'path',mask:'b',points:[{x:10,y:10},{x:200,y:20},{x:80,y:150}],closed:true,smooth:false}));
+ d=applyEdit(d,maskEdit(d,'photo',{op:'path',mask:'c',points:[{x:0,y:0},{x:50,y:0},{x:50,y:50},{x:0,y:50}],closed:true,smooth:false}));
+ const masks=()=>layer(d,'photo').masks!;const at=Math.round(sec*2);
+ assert.equal(morphRefusal(masks()[0],masks()[1]),null);assert.match(morphRefusal(masks()[0],masks()[2])!,/different numbers of points \(3 and 4\)/);assert.match(morphRefusal(masks()[0],masks()[0])!,/another mask/);
+ const rev=d.revision;const m=applyEdit(d,maskEdit(d,'photo',{op:'morphTo',mask:'a',other:'b',t:at}));assert.equal(m.revision,rev+1,'one undo step');
+ const a=layer(m,'photo').masks![0];assert.equal(a.shapeKeys!.length,2);assert.equal(a.shapeKeys![0].t,comp(m).start);assert.deepEqual(a.shapeKeys![0].path.points,tri,'start key holds the old shape');
+ const bm=layer(m,'photo').masks![1];assert.deepEqual(a.shapeKeys![1].path.points.map(p=>[p.x,p.y]),bm.path!.points.map(p=>[p.x+bm.x-a.x,p.y+bm.y-a.y]),'placed in the target mask space');
+ assert.deepEqual(validateDocument(m),[]);
+ const mid=resolveMask(a,Math.round(at/2)).path!.points[1];assert.ok(mid.x>100&&mid.x<200,'interpolates between the two shapes');
+ // second morph on an animated path adds a key; same time replaces it
+ const m2=applyEdit(m,maskEdit(m,'photo',{op:'morphTo',mask:'a',other:'b',t:Math.round(sec*4)}));assert.equal(layer(m2,'photo').masks![0].shapeKeys!.length,3);
+ const m3=applyEdit(m2,maskEdit(m2,'photo',{op:'morphTo',mask:'a',other:'b',t:Math.round(sec*4)}));assert.equal(layer(m3,'photo').masks![0].shapeKeys!.length,3);
+ // refusals change nothing
+ assert.throws(()=>maskEdit(d,'photo',{op:'morphTo',mask:'a',other:'c',t:at}),/different numbers of points/);
+ assert.throws(()=>maskEdit(d,'photo',{op:'morphTo',mask:'a',other:'b',t:comp(d).start}),/past the first frame/);
+ assert.throws(()=>maskEdit(d,'photo',{op:'morphTo',mask:'a',other:'zzz',t:at}),/no longer exists/);
+ assert.throws(()=>maskEdit(d,'photo',{op:'morphTo',mask:'a',other:'a',t:at}),/another mask/);
+ const closedB=applyEdit(d,maskEdit(d,'photo',{op:'path',mask:'b',points:[{x:10,y:10},{x:200,y:20},{x:80,y:150}],closed:false,smooth:false}));
+ assert.throws(()=>maskEdit(closedB,'photo',{op:'morphTo',mask:'a',other:'b',t:at}),/closed/);
+ assert.throws(()=>morphPath(masks()[0],{...masks()[1],shape:'rect',path:undefined},at,comp(d)),/path masks/);
 });

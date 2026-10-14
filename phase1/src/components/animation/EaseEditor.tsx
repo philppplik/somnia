@@ -1,4 +1,4 @@
-import {useState} from 'react';
+import {useEffect,useRef,useState} from 'react';
 import {useT} from '../../lib/useT';
 import {Button} from '../ui/button';
 import {NativeInput} from '../ui/native-controls';
@@ -8,22 +8,28 @@ import {userEasings} from '../../lib/animation/easingLibrary';
 import {EASE_Y_HIGH,EASE_Y_LOW} from '../../lib/animation/easingModel';
 import type {KeyRef,Layer} from '../../lib/animation/model';
 import {executeCommand} from '../../lib/commands';
+const compact='h-6 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-1 text-xs text-ink select-text';
+let openMemo=true;
 const field='h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text';
 const fmt=(n:number)=>String(Math.round(n*100)/100);
 type H=readonly [number,number];
 /** Cubic-bezier editor for the primary selected key: numeric handles with a curve, plus named easings saved in the document. */
 export function EaseEditor({layer,sel}:{layer:Layer;sel:readonly KeyRef[]}){
- const {t}=useT();useAnimationState();const doc=animationSession().document;const saved=userEasings(doc);const [name,setName]=useState('');const [err,setErr]=useState('');
+ const {t}=useT();useAnimationState();const [open,setOpenState]=useState(openMemo);const box=useRef<HTMLFieldSetElement>(null);
+ const setOpen=(v:boolean)=>{openMemo=v;setOpenState(v);};const doc=animationSession().document;const saved=userEasings(doc);const [name,setName]=useState('');const [err,setErr]=useState('');
  const ref=[...sel].reverse().find(k=>k.layer===layer.id);const key=ref&&layer.transform[ref.prop].keys.find(k=>k.t===ref.t);
  const bez=!!key&&key.interp==='bezier';const out:H=key?.out??[0.33,0],inn:H=key?.in??[0.67,1];
  const call=async(id:string,params?:unknown)=>{setErr('');animationSession().cancelPreview();try{await executeCommand(id,params);return true;}catch(e){setErr((e as Error).message);return false;}};
  const peek=(o:H,i:H)=>{try{animationSession().previewEdits([{type:'keys.interp',keys:[...sel],interp:'bezier',out:o,in:i}]);}catch{/* stale */}};
  const unpeek=()=>animationSession().cancelPreview();
+ /** Bring the curve into view in the short graph pane when a key gets selected. */
+ useEffect(()=>{box.current?.scrollIntoView?.({block:'start'});},[ref?.t,ref?.prop]);
  const ys=[0,1,out[1],inn[1]];const top=Math.max(...ys),bot=Math.min(...ys);const pad=0.1;
- const num=(label:string,v:number,min:number,max:number,commit:(v:number)=>{out:H;in:H})=><InspectorNumberField label={label} className={field} format={fmt} value={v} min={min} max={max} step={0.05} disabled={layer.locked||!bez} onCommit={n=>void call('animation.keys.cubic',commit(n))}/>;
+ const num=(label:string,v:number,min:number,max:number,commit:(v:number)=>{out:H;in:H})=><InspectorNumberField label={label} className={compact} format={fmt} value={v} min={min} max={max} step={0.05} disabled={layer.locked||!bez} onCommit={n=>void call('animation.keys.cubic',commit(n))}/>;
  const set=(o:H,i:H)=>({out:o,in:i});
- return <fieldset className="m-0 grid gap-2 border border-subtle p-2" disabled={layer.locked} data-testid="animation-ease-editor"><legend className="text-ink-3">{t('animation.easeEditor.title')}</legend>
-  <svg viewBox={`${-pad} ${1-top-pad} ${1+2*pad} ${top-bot+2*pad}`} className="h-24 w-full border border-subtle" role="img" aria-label={t('animation.easeEditor.curve')} data-testid="animation-ease-curve">
+ return <fieldset ref={box} className="m-0 grid scroll-mt-1 gap-1 border border-subtle p-1" disabled={layer.locked} data-testid="animation-ease-editor"><legend className="text-ink-3"><Button size="tiny" variant="ghost" aria-expanded={open} onClick={()=>setOpen(!open)} data-testid="animation-ease-toggle">{open?'▾':'▸'} {t('animation.easeEditor.title')}</Button></legend>
+  {open&&<>
+  <svg viewBox={`${-pad} ${1-top-pad} ${1+2*pad} ${top-bot+2*pad}`} className="h-16 w-full border border-subtle" role="img" aria-label={t('animation.easeEditor.curve')} data-testid="animation-ease-curve">
    <line x1="0" y1="1" x2="1" y2="0" className="stroke-current text-ink-3" strokeWidth="0.01" strokeDasharray="0.03"/>
    <line x1="0" y1="1" x2={out[0]} y2={1-out[1]} className="stroke-current text-ink-3" strokeWidth="0.01"/><line x1="1" y1="0" x2={inn[0]} y2={1-inn[1]} className="stroke-current text-ink-3" strokeWidth="0.01"/>
    <path d={`M 0 1 C ${out[0]} ${1-out[1]} ${inn[0]} ${1-inn[1]} 1 0`} className="fill-none stroke-current text-ink" strokeWidth="0.025"/>
@@ -38,6 +44,6 @@ export function EaseEditor({layer,sel}:{layer:Layer;sel:readonly KeyRef[]}){
    <Button size="tiny" variant="ghost" aria-label={t('animation.easeEditor.delete')} onClick={()=>void call('animation.ease.delete',{ease:e.id})}>×</Button></span>)}</div>}
   <div className="flex gap-1"><NativeInput className={field} value={name} maxLength={40} placeholder={t('animation.easeEditor.name')} aria-label={t('animation.easeEditor.name')} onChange={e=>setName(e.target.value)} data-testid="animation-ease-name"/>
    <Button size="tiny" variant="outline" disabled={!bez||!name.trim()} onClick={async()=>{if(await call('animation.ease.save',{name,out,in:inn}))setName('');}} data-testid="animation-ease-save">{t('animation.easeEditor.save')}</Button></div>
-  {err&&<div role="alert" className="text-danger">{err}</div>}
+  {err&&<div role="alert" className="text-danger">{err}</div>}</>}
  </fieldset>;
 }

@@ -95,6 +95,8 @@ export type MaskOp=
  |{op:'keyPaste';mask:string;prop:MaskProp|'path';t:number;clip:MaskKeyClip}
  |{op:'handle';mask:string;index:number;which:'in'|'out';x:number;y:number;mirror:boolean;t?:number}
  |{op:'pathAnimate';mask:string;on:boolean;t:number}
+ /** Adds a path key at `t` that copies another path mask's shape (same point count and closed flag only). */
+ |{op:'morphTo';mask:string;other:string;t:number}
  |{op:'add';id?:string}
  |{op:'remove';mask:string}
  |{op:'update';mask:string;patch:MaskPatch};
@@ -139,6 +141,7 @@ export function maskEdit(doc:AnimationDocument,layerId:string,o:MaskOp):Edit{
    return {...m,path:f(m.path),...(m.shapeKeys?{shapeKeys:m.shapeKeys.map(k=>({...k,path:f(k.path)}))}:{})};}));}
   case 'adopt':{if(list.length>=MAX_LAYER_MASKS)throw Error(`At most ${MAX_LAYER_MASKS} masks per layer.`);
    const {id:_i,...rest}=o.source;return set([...list,{...rest,id:newId('mask')}]);}
+  case 'morphTo':{need(o.mask);need(o.other);const t=frameT(o.t,c),src=list.find(m=>m.id===o.other)!;return set(list.map(m=>m.id===o.mask?morphPath(m,src,t,c):m));}
   case 'keyPaste':{need(o.mask);const t=frameT(o.t,c);return set(list.map(m=>m.id===o.mask?pasteMaskKey(m,o.prop,t,o.clip):m));}
   case 'pathAnimate':{need(o.mask);const t=frameT(o.t,c);return set(list.map(m=>{if(m.id!==o.mask)return m;if(m.shape!=='path'||!m.path)throw Error('Only path masks can morph.');
    if(o.on){if(m.shapeKeys?.length)return m;return {...m,shapeKeys:[{t,path:m.path}]};}
@@ -161,6 +164,25 @@ function editPath(m:LayerMask,t:number|undefined,fn:(p:MaskPath)=>MaskPath):Laye
  if(t===undefined)throw Error('A time is needed to edit an animated path.');
  const cur=lerpPath(m.shapeKeys,t),next=fn(cur),keys=[...m.shapeKeys.filter(k=>k.t!==t),{t,path:next}].sort((a,b)=>a.t-b.t);
  if(keys.length>MAX_SHAPE_KEYS)throw Error(`At most ${MAX_SHAPE_KEYS} path keys.`);return {...m,shapeKeys:keys};
+}
+/** Why `from` cannot morph into `to`, or null when it can. Point order is matched by index. */
+export function morphRefusal(from:LayerMask,to:LayerMask):string|null{
+ if(from.id===to.id)return 'Pick another mask to morph into.';
+ if(from.shape!=='path'||!from.path||to.shape!=='path'||!to.path)return 'Both masks must be path masks.';
+ if(from.path.points.length!==to.path.points.length)return `The shapes have different numbers of points (${from.path.points.length} and ${to.path.points.length}). Give both the same number of points to morph.`;
+ if(from.path.closed!==to.path.closed)return 'One shape is closed and the other is open. Make both the same.';
+ return null;
+}
+/** Keys the path of `m` at `t` to the shape of `src` (placed in m's mask space). An unanimated path first gets a key at the composition start that holds its current shape. */
+export function morphPath(m:LayerMask,src:LayerMask,t:number,c:Composition):LayerMask{
+ const why=morphRefusal(m,src);if(why)throw new Error(why);
+ let keys=m.shapeKeys?.length?[...m.shapeKeys]:[];
+ if(!keys.length){if(t<=c.start)throw new Error('Move the playhead past the first frame, or animate the path first.');keys=[{t:c.start,path:m.path!}];}
+ const a=resolveMask(m,t),b=resolveMask(src,t),dx=b.x-a.x,dy=b.y-a.y;
+ const path:MaskPath={closed:b.path!.closed,points:b.path!.points.map(q=>({...q,x:round(q.x+dx),y:round(q.y+dy)}))};
+ keys=[...keys.filter(k=>k.t!==t),{t,path}].sort((x,y)=>x.t-y.t);
+ if(keys.length>MAX_SHAPE_KEYS)throw new Error(`At most ${MAX_SHAPE_KEYS} path keys.`);
+ return {...m,shapeKeys:keys};
 }
 /** Moves one path key to a free frame. */
 export function moveShapeKey(m:LayerMask,from:number,to:number,comp:Composition):LayerMask{

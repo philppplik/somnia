@@ -94,3 +94,9 @@ Migration: presets saved in localStorage by P22 are copied once into any opened 
 The graph sidebar gets an Easing editor for the primary selected key: four numeric cubic-bezier handles (x 0..1, y -2..3) with a curve preview, one undo step per edit (`animation.keys.cubic`). Dragging the handles in the graph (P5) is unchanged. Named easings are saved in the document (`AnimationDocument.easings`, `{version:1,items}`, max 50, validated, in snapshots; `easings.set` edit) and applied to the selected keys with hover preview. Built-in names (ease, overshoot, ...) are reserved.
 
 Elastic (`animation.keys.elastic`, 1 to 5 swings) bakes ordinary keys that overshoot and settle on the second key, like the P21 bounce; overshoot is clamped to the property's own range (opacity stays within 0..100). A single cubic cannot ring, so bounce and elastic are baked keys, not curve presets.
+
+## P25: graph sidebar layout and path morph
+
+The Easing editor in the graph sidebar is collapsible (state remembered) and scrolls its header and curve into view when a key is selected, so the curve preview shows in the short graph pane; the numeric fields are compact.
+
+Path morph: `morphTo` mask op (`animation.layer.mask` with `op:'morphTo', mask, other, t`) keys a path mask at `t` to another path mask's shape, placed in the target's mask space. An unanimated path first gets a key at the composition start holding its current shape. Refused with a readable message when the point counts or closed flags differ, when both masks are the same, or when `t` is the first frame of an unanimated path. Points match by index; there is no automatic point matching, reversing or resampling. The UI row sits under "Animate path" with hover preview and an inline refusal message. One undo step.
