@@ -1,4 +1,4 @@
-import {sha256Hex} from '../agentTask/hash';
+import type {EmbeddingBatchProgress} from './localSearchProgress';import {sha256Hex} from '../agentTask/hash';
 import {INDEX_TEXT_PIPELINE} from './localIndexChunks';
 import {localOrigin,parseInventory,parseEvidence} from './localModels';import {ProviderError} from './errors';import {agentPrivacy,type AgentPrivacyGate} from './privacy';import {captureLocalIndexDescriptor,type LocalIndexDescriptor} from './localIndexLifecycle';import {captureLocalVectors} from './localRetrieval';import {prepareLocalIndexChunks} from './localIndexChunks';
 export const LOCAL_EMBED_MODEL='embeddinggemma:300m';
@@ -25,7 +25,7 @@ export class LocalEmbeddingAdapter {
   finally{clearTimeout(timer);signal.removeEventListener('abort',abort);controller.abort();}
  }
  /** AT source revisions bind before transport; AU frozen vector output only, no ready commit. */
- async embedPrepared(descriptor:LocalIndexDescriptor,prepared:Awaited<ReturnType<typeof prepareLocalIndexChunks>>,signal:AbortSignal){
+ async embedPrepared(descriptor:LocalIndexDescriptor,prepared:Awaited<ReturnType<typeof prepareLocalIndexChunks>>,signal:AbortSignal,onProgress?:(value:EmbeddingBatchProgress)=>void){
   const captured=captureLocalIndexDescriptor(descriptor);if(captured.endpoint!==this.endpoint||captured.model!==LOCAL_EMBED_MODEL||JSON.stringify(captured.sources)!==JSON.stringify(prepared.sources.map(({id,revision})=>({id,revision}))))throw new ProviderError('protocol','Embedding preparation descriptor mismatch');
   // Validate full source/chunk shape/dimensions before transmitting any batch.
   if(prepared.pipeline!==INDEX_TEXT_PIPELINE||!Number.isSafeInteger(prepared.maxChunkBytes)||prepared.maxChunkBytes<64||prepared.maxChunkBytes>4096)throw new ProviderError('protocol','Invalid embedding pipeline');
@@ -34,7 +34,7 @@ export class LocalEmbeddingAdapter {
   for(const chunk of copied.chunks)if(await sha256Hex(chunk.text)!==chunk.contentHash||new TextEncoder().encode(chunk.text).length>copied.maxChunkBytes)throw new ProviderError('protocol','Embedding chunk hash mismatch');
   for(const source of copied.sources){const chunks=copied.chunks.filter(c=>c.sourceId===source.id);if(chunks.some((c,i)=>c.index!==i)||!/^[a-f0-9]{64}$/.test(source.contentHash)||await sha256Hex(chunks.map(c=>c.text).join(''))!==source.normalizedHash||await sha256Hex(JSON.stringify([INDEX_TEXT_PIPELINE,copied.maxChunkBytes,source.contentHash,source.normalizedHash]))!==source.revision)throw new ProviderError('protocol','Embedding source hash mismatch');}
   signal.throwIfAborted();
-  const entries=[];for(let at=0;at<dummy.length;at+=32){signal.throwIfAborted();const batch=dummy.slice(at,at+32);const vectors=await this.embed(batch.map(e=>e.chunk.text),captured.digest,captured.dimensions,signal);for(let i=0;i<batch.length;i++)entries.push({chunk:batch[i].chunk,vector:vectors[i]});}
+  onProgress?.({completed:0,total:dummy.length});const entries=[];for(let at=0;at<dummy.length;at+=32){signal.throwIfAborted();const batch=dummy.slice(at,at+32);const vectors=await this.embed(batch.map(e=>e.chunk.text),captured.digest,captured.dimensions,signal);for(let i=0;i<batch.length;i++)entries.push({chunk:batch[i].chunk,vector:vectors[i]});signal.throwIfAborted();onProgress?.({completed:entries.length,total:dummy.length});}
   signal.throwIfAborted();return captureLocalVectors(captured,entries);
  }
 }

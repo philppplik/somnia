@@ -1,5 +1,12 @@
 export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
  "en": {
+  "local.search.progress.title": "Index build progress",
+  "local.search.progress.preparing": "Preparing selected text locally…",
+  "local.search.progress.embedding": "Embedding verified local batches…",
+  "local.search.progress.validating": "Validating completed memory index…",
+  "local.search.progress.count": "{completed} of {total} chunks complete · {sources} selected sources",
+  "local.search.progress.boundary": "Completed chunks are not a ready index. Cancel discards all owned vectors; no resume or automatic rebuild.",
+
   "local.search.context.title": "Citation context reader",
   "local.search.context.boundary": "Literal normalized source text, not an answer or permission. Shows cited chunk and at most one neighbor each side from the same selected open source. No model call, new source read, cloud or save.",
   "local.search.context.extent": "{source} · cited chunk {chunk} of {total}",
@@ -616,6 +623,13 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Move earlier after local"
  },
  "de": {
+  "local.search.progress.title": "Indexaufbau-Fortschritt",
+  "local.search.progress.preparing": "Gewählten Text lokal vorbereiten…",
+  "local.search.progress.embedding": "Verifizierte lokale Batches einbetten…",
+  "local.search.progress.validating": "Fertigen Speicherindex validieren…",
+  "local.search.progress.count": "{completed} von {total} Chunks fertig · {sources} gewählte Quellen",
+  "local.search.progress.boundary": "Fertige Chunks sind kein Ready-Index. Cancel verwirft alle eigenen Vektoren; kein Resume/Auto-Rebuild.",
+
   "local.search.context.title": "Citation-Kontext-Leser",
   "local.search.context.boundary": "Literaler normalisierter Quellentext, keine Antwort/Zustimmung. Cited Chunk und maximal ein Nachbar je Seite derselben gewählten offenen Quelle. Kein Modellcall/neuer Read/Cloud/Save.",
   "local.search.context.extent": "{source} · cited Chunk {chunk} von {total}",
@@ -1232,6 +1246,13 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Nach lokal früher einordnen"
  },
  "es": {
+  "local.search.progress.title": "Progreso del índice",
+  "local.search.progress.preparing": "Preparando texto elegido localmente…",
+  "local.search.progress.embedding": "Incrustando lotes locales verificados…",
+  "local.search.progress.validating": "Validando índice en memoria…",
+  "local.search.progress.count": "{completed} de {total} fragmentos completos · {sources} fuentes elegidas",
+  "local.search.progress.boundary": "Fragmentos completos no son índice listo. Cancelar descarta vectores; sin reanudar/reconstrucción automática.",
+
   "local.search.context.title": "Lector de contexto de cita",
   "local.search.context.boundary": "Texto normalizado literal, no respuesta/permiso. Fragmento citado y máximo un vecino por lado de misma fuente abierta. Sin modelo/nueva lectura/nube/guardar.",
   "local.search.context.extent": "{source} · fragmento citado {chunk} de {total}",
@@ -1848,6 +1869,13 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Mover antes tras local"
  },
  "fr": {
+  "local.search.progress.title": "Progression de l’index",
+  "local.search.progress.preparing": "Préparation locale du texte choisi…",
+  "local.search.progress.embedding": "Indexation des lots locaux vérifiés…",
+  "local.search.progress.validating": "Validation index en mémoire…",
+  "local.search.progress.count": "{completed} sur {total} extraits complets · {sources} sources choisies",
+  "local.search.progress.boundary": "Extraits complets ne sont pas index prêt. Annuler efface vecteurs; sans reprise/reconstruction automatique.",
+
   "local.search.context.title": "Lecteur du contexte de citation",
   "local.search.context.boundary": "Texte normalisé littéral, pas réponse/accord. Extrait cité et au plus un voisin par côté de même source ouverte. Sans modèle/nouvelle lecture/cloud/sauvegarde.",
   "local.search.context.extent": "{source} · extrait cité {chunk} sur {total}",
@@ -2464,6 +2492,13 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Avancer après local"
  },
  "pt-BR": {
+  "local.search.progress.title": "Progresso do índice",
+  "local.search.progress.preparing": "Preparando texto escolhido localmente…",
+  "local.search.progress.embedding": "Indexando lotes locais verificados…",
+  "local.search.progress.validating": "Validando índice em memória…",
+  "local.search.progress.count": "{completed} de {total} trechos completos · {sources} fontes escolhidas",
+  "local.search.progress.boundary": "Trechos completos não são índice pronto. Cancelar descarta vetores; sem retomar/reconstrução automática.",
+
   "local.search.context.title": "Leitor de contexto da citação",
   "local.search.context.boundary": "Texto normalizado literal, não resposta/permissão. Trecho citado e no máximo um vizinho por lado da mesma fonte aberta. Sem modelo/nova leitura/nuvem/salvar.",
   "local.search.context.extent": "{source} · trecho citado {chunk} de {total}",

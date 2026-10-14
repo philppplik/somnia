@@ -1,4 +1,4 @@
-import {localSearchQueryReview} from './localSearchQuery';import {prepareLocalIndexChunks} from './localIndexChunks';import {LOCAL_EMBED_MODEL,type LocalEmbeddingAdapter} from './localEmbedding';import {captureLocalIndexDescriptor,emptyLocalIndex,beginLocalIndex,finishLocalIndex,invalidateLocalIndex,type LocalIndexDescriptor,type LocalIndexLifecycle} from './localIndexLifecycle';import {retrieveLocalTopK,type FrozenLocalVectors} from './localRetrieval';import {chunkLocalSources,type SearchSource} from './localSearch';
+import {validBatchProgress,type LocalBuildProgress} from './localSearchProgress';import {localSearchQueryReview} from './localSearchQuery';import {prepareLocalIndexChunks} from './localIndexChunks';import {LOCAL_EMBED_MODEL,type LocalEmbeddingAdapter} from './localEmbedding';import {captureLocalIndexDescriptor,emptyLocalIndex,beginLocalIndex,finishLocalIndex,invalidateLocalIndex,type LocalIndexDescriptor,type LocalIndexLifecycle} from './localIndexLifecycle';import {retrieveLocalTopK,type FrozenLocalVectors} from './localRetrieval';import {chunkLocalSources,type SearchSource} from './localSearch';
 export interface LocalSearchCapture {endpoint:string;model:typeof LOCAL_EMBED_MODEL;digest:string;dimensions:number;sources:readonly SearchSource[]}
 export interface LocalSearchAdapter {endpoint:string;embed:LocalEmbeddingAdapter['embed'];embedPrepared:LocalEmbeddingAdapter['embedPrepared']}
 function capture(input:LocalSearchCapture):LocalSearchCapture{
@@ -18,16 +18,16 @@ export class LocalSearchSession {
  private discard(){this.buildAbort?.abort();this.queryAbort?.abort();this.queryGeneration++;this.lifecycle=invalidateLocalIndex(this.lifecycle);this.vectors=null;this.source=null;}
  cancel(){this.discard();}
  close(){this.discard();this.closed=true;}
- async build(signal:AbortSignal,maxChunkBytes=2048):Promise<void>{
+ async build(signal:AbortSignal,maxChunkBytes=2048,onProgress?:(value:LocalBuildProgress)=>void):Promise<void>{
   this.available();this.discard();signal.throwIfAborted();const initial=this.current();if(initial.endpoint!==this.adapter.endpoint)throw Error('Embedding adapter endpoint mismatch');
   const controller=new AbortController();this.buildAbort=controller;const abort=()=>controller.abort();signal.addEventListener('abort',abort,{once:true});if(signal.aborted)abort();
   let generation:number|undefined;
   try{
-   const prepared=await prepareLocalIndexChunks(initial.sources,maxChunkBytes);controller.signal.throwIfAborted();if(this.buildAbort!==controller)throw Error('Build replaced');this.assertSame(initial);
+   onProgress?.({stage:'preparing',completed:0,total:0,sources:initial.sources.length});const prepared=await prepareLocalIndexChunks(initial.sources,maxChunkBytes);controller.signal.throwIfAborted();if(this.buildAbort!==controller)throw Error('Build replaced');this.assertSame(initial);
    const descriptor:LocalIndexDescriptor={endpoint:initial.endpoint,model:initial.model,digest:initial.digest,dimensions:initial.dimensions,sources:prepared.sources.map(({id,revision})=>({id,revision}))};
    this.lifecycle=beginLocalIndex(this.lifecycle,descriptor);generation=this.lifecycle.generation;
-   const vectors=await this.adapter.embedPrepared(descriptor,prepared,controller.signal);controller.signal.throwIfAborted();if(this.buildAbort!==controller||generation!==this.lifecycle.generation)throw Error('Build replaced');
-   this.assertSame(initial);this.lifecycle=finishLocalIndex(this.lifecycle,generation,descriptor);this.vectors=vectors;this.source=initial;
+   let completed=0;onProgress?.({stage:'embedding',completed:0,total:prepared.chunks.length,sources:initial.sources.length});const vectors=await this.adapter.embedPrepared(descriptor,prepared,controller.signal,value=>{if(controller.signal.aborted||this.buildAbort!==controller||generation!==this.lifecycle.generation)return;this.assertSame(initial);completed=validBatchProgress(value,prepared.chunks.length,completed);onProgress?.({stage:'embedding',completed,total:prepared.chunks.length,sources:initial.sources.length});});controller.signal.throwIfAborted();if(this.buildAbort!==controller||generation!==this.lifecycle.generation)throw Error('Build replaced');
+   this.assertSame(initial);onProgress?.({stage:'validating',completed:prepared.chunks.length,total:prepared.chunks.length,sources:initial.sources.length});controller.signal.throwIfAborted();if(this.buildAbort!==controller)throw Error('Build replaced');this.lifecycle=finishLocalIndex(this.lifecycle,generation,descriptor);this.vectors=vectors;this.source=initial;
   }catch(error){if(this.buildAbort===controller)this.discard();throw error;}
   finally{signal.removeEventListener('abort',abort);if(this.buildAbort===controller)this.buildAbort=null;controller.abort();}
  }
