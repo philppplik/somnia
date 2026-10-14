@@ -1,4 +1,6 @@
-import {createComposition,type ClipItem,type KeyRef,type Vec2,createLayer,findComp,findLayer,PROP_META,wouldCycle,EASE_IN,EASE_OUT,TRANSFORM_KEYS,validateDocument,type AnimationDocument,type CompSettings,type Composition,type Interp,type Keyframe,type Layer,type LayerKind,type LayerSource,type Property,type PropValue,type TransformKey} from './model';
+import type {InterfaceAsset} from '../interface/schema';
+import {validateAnimationAssets} from './assetsValidation';
+import {createComposition,type ClipItem,type KeyRef,type Vec2,createLayer,findComp,findLayer,PROP_META,wouldCycle,EASE_IN,EASE_OUT,TRANSFORM_KEYS,validateDocument,type AnimationDocument,type CompSettings,type Composition,type Interp,type Keyframe,type Layer,type LayerKind,type LayerSource,type LayerEffect,validSource,validEffects,type Property,type PropValue,type TransformKey} from './model';
 import {evaluate} from './interpolate';
 import {snapToFrame,tickToFrame,frameToTick,validRate} from './time';
 /** Typed `animation.*` edits. Every mutation goes through applyEdit so undo, recovery and AI share one path. */
@@ -18,7 +20,7 @@ export type Edit=
  |{type:'key.add';layer:string;prop:TransformKey;t:number}
  |{type:'key.remove';layer:string;prop:TransformKey;t:number}
  |{type:'key.move';layer:string;prop:TransformKey;from:number;to:number;replace?:boolean}
- |{type:'key.interp';layer:string;prop:TransformKey;t:number;interp:Interp;out?:readonly [number,number];in?:readonly [number,number]}
+ |{type:'key.interp';layer:string;prop:TransformKey;t:number;interp:Interp;channel?:0|1;out?:readonly [number,number];in?:readonly [number,number]}
  /** Move many keys by the same number of ticks (snapped to whole frames) as one step. */
  |{type:'keys.move';keys:readonly KeyRef[];delta:number;replace?:boolean}
  |{type:'keys.remove';keys:readonly KeyRef[]}
@@ -27,6 +29,9 @@ export type Edit=
  /** Spatial tangents of a position key, as offsets from the key value. */
  |{type:'key.spatial';layer:string;prop:TransformKey;t:number;sIn?:Vec2;sOut?:Vec2}
  |{type:'keys.spatial';keys:readonly KeyRef[];mode:'smooth'|'straight'}
+ |{type:'asset.import';asset:InterfaceAsset}
+ |{type:'layer.effects';layer:string;effects:readonly LayerEffect[]}
+ |{type:'prop.pathMode';layer:string;mode:'parameter'|'arcLength'}
  |{type:'workarea.set';in:number;out:number};
 export class EditError extends Error{constructor(message:string,readonly code:'locked'|'missing'|'invalid'|'collision'|'cycle'){super(message);this.name='EditError';}}
 const fail=(code:EditError['code'],m:string):never=>{throw new EditError(m,code);};
@@ -77,7 +82,7 @@ function foldGroups(doc:AnimationDocument,refs:readonly KeyRef[],fn:(d:Animation
 }
 /** Pure reducer. Returns a new document with revision+1, or throws EditError and leaves the input untouched. */
 export function applyEdit(doc:AnimationDocument,e:Edit):AnimationDocument{
- const out=reduce(doc,e);return out===doc?doc:{...out,revision:doc.revision+1};
+ const out=reduce(doc,e);if(out===doc)return doc;const errors=validateDocument(out);if(errors.length)fail('invalid',errors.join('; '));return {...out,revision:doc.revision+1};
 }
 function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
  switch(e.type){
@@ -88,11 +93,15 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
    return withComp(doc,{...c,...e.settings,duration,fps:e.settings.fps??c.fps,layers:clipped,workArea:{in:Math.min(c.workArea.in,duration-1),out:Math.min(c.workArea.out,duration)}});}
   case 'comp.select':if(!findComp(doc,e.comp))return fail('missing','Composition does not exist.');return e.comp===doc.activeComp?doc:{...doc,activeComp:e.comp};
   case 'comp.remove':{if(doc.compositions.length<2)return fail('invalid','A document needs at least one composition.');if(!findComp(doc,e.comp))return fail('missing','Composition does not exist.');const rest=doc.compositions.filter(c=>c.id!==e.comp);return {...doc,compositions:rest,activeComp:doc.activeComp===e.comp?rest[0].id:doc.activeComp};}
+  case 'asset.import':{const next={...doc,assets:doc.assets.some(a=>a.id===e.asset.id)?doc.assets:[...doc.assets,e.asset]};validateAnimationAssets(next);const c=compOf(doc);const l=createLayer('raster',c,{name:e.asset.sourceName,source:{assetId:e.asset.id,width:e.asset.width,height:e.asset.height}});return withLayers(next,ls=>[l,...ls]);}
+  case 'layer.effects':{if(!validEffects(e.effects))fail('invalid','Invalid effect stack.');return setLayer(doc,{...layerOf(doc,e.layer),effects:e.effects.map(x=>({...x}))});}
+  case 'prop.pathMode':{if(!['parameter','arcLength'].includes(e.mode))fail('invalid','Invalid path mode.');return setProp(doc,e.layer,'position',p=>({...p,pathMode:e.mode}));}
   case 'layer.add':{const c=compOf(doc);const l=createLayer(e.kind,c,e.over,e.id);if(c.layers.some(x=>x.id===l.id))fail('invalid','Duplicate layer id.');if(l.parent&&!findLayer(c,l.parent))fail('missing','Parent layer does not exist.');return withLayers(doc,ls=>[l,...ls]);}
   case 'layer.remove':{const l=layerOf(doc,e.layer);return withLayers(doc,ls=>ls.filter(x=>x.id!==l.id).map(x=>x.parent===l.id?{...x,parent:null}:x));}
   case 'layer.update':{
    const l=layerOf(doc,e.layer,e.locked===false&&e.name===undefined&&e.source===undefined);
    if(e.name!==undefined&&(typeof e.name!=='string'||!e.name.trim()||e.name.length>200))fail('invalid','Layer name must be 1 to 200 characters.');
+   if(e.source&&!validSource({...l.source,...e.source}))fail('invalid','Invalid layer source.');
    if(e.source?.color!==undefined&&!/^#[0-9a-fA-F]{6}$/.test(e.source.color))fail('invalid','Colour must be #rrggbb.');
    if(e.source?.size!==undefined&&!(e.source.size>0&&e.source.size<=2000))fail('invalid','Text size must be 1 to 2000.');
    if(e.source?.text!==undefined&&e.source.text.length>2000)fail('invalid','Text is too long.');
@@ -122,7 +131,8 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
    const h=(a?:readonly [number,number])=>a&&(a.length!==2||!a.every(Number.isFinite)||a[0]<0||a[0]>1)?fail('invalid','Ease handle x must be within 0 and 1.'):a;
    const out=h(e.out),inn=h(e.in);
    return setProp(doc,e.layer,e.prop,p=>{if(!p.keys.some(k=>k.t===t))return fail('missing','No key at that time.');
-    return {...p,keys:p.keys.map(k=>k.t===t?{...k,interp:e.interp,out:out??k.out,in:inn??k.in}:k)};});}
+    if(e.channel!==undefined){if(p.type!=='vec2'||![0,1].includes(e.channel))fail('invalid','Channel ease needs X or Y.');if(p.keys.some(k=>k.sIn||k.sOut))fail('invalid','Separate channel ease requires a straight path.');}
+    return {...p,keys:p.keys.map(k=>{if(k.t!==t)return k;if(e.channel===undefined){const {channelOut:_o,channelIn:_i,...shared}=k;return {...shared,interp:e.interp,out:out??k.out,in:inn??k.in};}const outs=[...(k.channelOut??[k.out,k.out])] as [Vec2,Vec2],ins=[...(k.channelIn??[k.in,k.in])] as [Vec2,Vec2];outs[e.channel]=out??outs[e.channel];ins[e.channel]=inn??ins[e.channel];return {...k,interp:e.interp,channelOut:outs,channelIn:ins};})};});}
   case 'keys.move':{const c=compOf(doc);if(!Number.isFinite(e.delta))return fail('invalid','Delta must be a number.');
    const df=Math.round(e.delta*c.fps.num/(c.fps.den*240000));if(df===0)return doc;
    return foldGroups(doc,e.keys,(d,layer,prop,times)=>setProp(d,layer,prop,p=>{
@@ -142,7 +152,7 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
     if(!TRANSFORM_KEYS.includes(it.prop))return fail('invalid','Unknown property in clipboard.');
     const t=snapToFrame(base+it.dt,c.fps);if(t<c.start||t>c.start+c.duration)return fail('invalid','Pasted keys would end outside the composition.');
     const v=checkValue(it.prop,it.key.v);const isVec=PROP_META[it.prop].type==='vec2';
-    const k:Keyframe={t,v,interp:it.key.interp,out:it.key.out,in:it.key.in,...(isVec&&it.key.sIn?{sIn:it.key.sIn}:{}),...(isVec&&it.key.sOut?{sOut:it.key.sOut}:{})};
+    const k:Keyframe={t,v,interp:it.key.interp,out:it.key.out,in:it.key.in,...(isVec&&it.key.sIn?{sIn:it.key.sIn}:{}),...(isVec&&it.key.sOut?{sOut:it.key.sOut}:{}),...(isVec&&it.key.channelOut?{channelOut:it.key.channelOut}:{}),...(isVec&&it.key.channelIn?{channelIn:it.key.channelIn}:{})};
     if(!['hold','linear','bezier'].includes(k.interp)||!checkHandle(k.out)||!checkHandle(k.in))return fail('invalid','Clipboard key has invalid easing.');
     byProp.set(it.prop,[...(byProp.get(it.prop)??[]),k]);
    }
@@ -152,15 +162,17 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
   case 'keys.interp':{
    if(e.interp===undefined&&!e.out&&!e.in)return fail('invalid','Nothing to change.');
    if((e.out&&!checkHandle(e.out))||(e.in&&!checkHandle(e.in)))return fail('invalid','Ease handle x must be within 0 and 1.');
-   return foldGroups(doc,e.keys,(d,layer,prop,times)=>setProp(d,layer,prop,p=>({...p,keys:p.keys.map(k=>times.has(k.t)?{...k,interp:e.interp??k.interp,out:e.out??k.out,in:e.in??k.in}:k)})));}
+   return foldGroups(doc,e.keys,(d,layer,prop,times)=>setProp(d,layer,prop,p=>({...p,keys:p.keys.map(k=>{if(!times.has(k.t))return k;const {channelOut:_o,channelIn:_i,...shared}=k;return {...shared,interp:e.interp??k.interp,out:e.out??k.out,in:e.in??k.in};})})));}
   case 'key.spatial':{const c=compOf(doc);const t=tickOf(c,e.t);
    if(e.prop!=='position')return fail('invalid','Spatial tangents apply to position only.');
+   const position=layerOf(doc,e.layer).transform.position;if(position.keys.some(k=>k.channelIn||k.channelOut))fail('invalid','Relink channel easing with a shared preset before editing a spatial path.');
    const ok=(v?:Vec2)=>v===undefined||(Array.isArray(v)&&v.length===2&&v.every(n=>Number.isFinite(n)&&Math.abs(n)<=1e6));
    if(!ok(e.sIn)||!ok(e.sOut))return fail('invalid','Tangents must be two finite numbers.');
    return setProp(doc,e.layer,e.prop,p=>{if(!p.keys.some(k=>k.t===t))return fail('missing','No key at that time.');
     return {...p,keys:p.keys.map(k=>k.t===t?{...k,...(e.sIn?{sIn:e.sIn}:{}),...(e.sOut?{sOut:e.sOut}:{})}:k)};});}
   case 'keys.spatial':return foldGroups(doc,e.keys,(d,layer,prop,times)=>{
    if(prop!=='position')return fail('invalid','Spatial tangents apply to position only.');
+   if(e.mode==='smooth'&&layerOf(d,layer).transform.position.keys.some(k=>k.channelIn||k.channelOut))fail('invalid','Relink channel easing with a shared preset before smoothing a spatial path.');
    return setProp(d,layer,prop,p=>({...p,keys:p.keys.map((k,i)=>{
     if(!times.has(k.t))return k;
     const {sIn:_i,sOut:_o,...bare}=k;if(e.mode==='straight')return bare;

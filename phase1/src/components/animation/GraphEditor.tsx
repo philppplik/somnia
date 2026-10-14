@@ -2,7 +2,7 @@ import {useEffect,useId,useLayoutEffect,useRef,useState,type KeyboardEvent as Re
 import {animationSession} from '../../lib/animation/session';
 import type {Edit} from '../../lib/animation/edit';
 import {PROP_META,TRANSFORM_KEYS,type Composition,type KeyRef,type TransformKey} from '../../lib/animation/model';
-import {channelOf,curveSamples,handleToEase,handlesOf,niceStep,valueRange,type Handle} from '../../lib/animation/graph';
+import {channelOf,curveSamples,handleToEase,handlesOf,niceStep,valueRange,speedSamples,speedRange,type Handle} from '../../lib/animation/graph';
 import {clickSelect,sameKey,shiftSelection} from '../../lib/animation/selection';
 import {frameToTick,timecode} from '../../lib/animation/time';
 import {useT} from '../../lib/useT';
@@ -37,7 +37,8 @@ export function GraphEditor({comp,layerId,sel,playhead}:{comp:Composition;layerI
  const prop=layer.transform[active];const keys=prop.keys;
  const ch:0|1=prop.type==='vec2'&&view.graphChannel===1?1:0;
  const w=size.w,h=size.h;const t0=comp.start,t1=comp.start+comp.duration;
- const range=frozen.current??valueRange(keys,ch);
+ const speed=view.graphMode==='speed';
+ const range=frozen.current??(speed?speedRange(prop,ch,t0,t1):valueRange(keys,ch));
  const pw=Math.max(10,w-PAD.l-PAD.r),ph=Math.max(10,h-PAD.t-PAD.b);
  const xOf=(tk:number)=>PAD.l+(tk-t0)/(t1-t0)*pw;
  const yOf=(v:number)=>PAD.t+(1-(v-range.min)/(range.max-range.min))*ph;
@@ -46,8 +47,8 @@ export function GraphEditor({comp,layerId,sel,playhead}:{comp:Composition;layerI
  const vOf=(y:number)=>range.min+(1-(y-PAD.t)/ph)*(range.max-range.min);
  const step=niceStep(range.max-range.min,Math.max(2,Math.floor(ph/34)));
  const grid:number[]=[];for(let v=Math.ceil(range.min/step)*step;v<=range.max+1e-9;v+=step)grid.push(Math.round(v/step)*step);
- const samples=curveSamples(prop,ch,t0,t1,Math.min(300,Math.max(40,Math.floor(pw/3))));
- const other=prop.type==='vec2'?curveSamples(prop,ch===0?1:0,t0,t1,Math.min(300,Math.max(40,Math.floor(pw/3)))):null;
+ const samples=(speed?speedSamples:curveSamples)(prop,ch,t0,t1,Math.min(300,Math.max(40,Math.floor(pw/3))));
+ const other=prop.type==='vec2'?(speed?speedSamples:curveSamples)(prop,ch===0?1:0,t0,t1,Math.min(300,Math.max(40,Math.floor(pw/3)))):null;
  const pts=(s:{t:number;v:number}[])=>s.map(p=>`${xOf(p.t).toFixed(1)},${yOf(p.v).toFixed(1)}`).join(' ');
  const selHere=sel.filter(k=>k.layer===layer.id&&k.prop===active);
  const sess=animationSession();
@@ -94,14 +95,14 @@ export function GraphEditor({comp,layerId,sel,playhead}:{comp:Composition;layerI
   if(e.button!==0)return;const k=keys[i];
   startDrag(e,ev=>{
    const p=local(ev.clientX,ev.clientY);const ease=handleToEase(keys,i,hd.kind,tOf(p.x),vOf(p.y),ch);
-   try{sess.previewEdits([{type:'key.interp',layer:layer.id,prop:active,t:k.t,interp:k.interp,...(hd.kind==='out'?{out:ease}:{in:ease})}]);}catch{/* keep last valid */}
+   try{sess.previewEdits([{type:'key.interp',layer:layer.id,prop:active,t:k.t,interp:k.interp,...(prop.type==='vec2'&&!keys.some(k=>k.sIn||k.sOut)?{channel:ch}:{}),...(hd.kind==='out'?{out:ease}:{in:ease})}]);}catch{/* keep last valid */}
   },(commit,moved)=>{if(moved&&commit)sess.commitPreview();else sess.cancelPreview();});
  };
  const handleKey=(i:number,hd:Handle)=>(e:ReactKeyboardEvent<SVGElement>)=>{
   const dx=e.key==='ArrowRight'?1:e.key==='ArrowLeft'?-1:0,dy=e.key==='ArrowUp'?1:e.key==='ArrowDown'?-1:0;if(!dx&&!dy)return;
-  e.preventDefault();e.stopPropagation();const k=keys[i];const cur=hd.kind==='out'?k.out:k.in;const s=e.shiftKey?0.1:0.01;
+  e.preventDefault();e.stopPropagation();const k=keys[i];const cur=hd.kind==='out'?(k.channelOut?.[ch]??k.out):(k.channelIn?.[ch]??k.in);const s=e.shiftKey?0.1:0.01;
   const next:readonly [number,number]=[Math.min(1,Math.max(0,cur[0]+dx*s)),Math.min(3,Math.max(-2,cur[1]+dy*s))];
-  try{sess.dispatch({type:'key.interp',layer:layer.id,prop:active,t:k.t,interp:k.interp,...(hd.kind==='out'?{out:next}:{in:next})});}catch{/* locked layer */}
+  try{sess.dispatch({type:'key.interp',layer:layer.id,prop:active,t:k.t,interp:k.interp,...(prop.type==='vec2'&&!keys.some(k=>k.sIn||k.sOut)?{channel:ch}:{}),...(hd.kind==='out'?{out:next}:{in:next})});}catch{/* locked layer */}
  };
  const pointKey=(ref:KeyRef,k:Keyframe2)=>(e:ReactKeyboardEvent<SVGElement>)=>{
   const dx=e.key==='ArrowRight'?1:e.key==='ArrowLeft'?-1:0,dy=e.key==='ArrowUp'?1:e.key==='ArrowDown'?-1:0;
@@ -116,6 +117,9 @@ export function GraphEditor({comp,layerId,sel,playhead}:{comp:Composition;layerI
  };
  return <div className="grid min-h-0 flex-1 grid-cols-[180px_1fr]" data-testid="animation-graph">
   <div className="min-h-0 overflow-auto border-r border-subtle p-1" role="group" aria-label={t('animation.graph.props')}>
+   <div className="mb-2 flex gap-1">{(['value','speed'] as const).map(mode=><Button key={mode} size="tiny" variant={view.graphMode===mode?'outline':'ghost'} onClick={()=>sess.setView({graphMode:mode})} data-testid={`animation-graph-mode-${mode}`}>{t(`animation.graph.${mode}`)}</Button>)}</div>
+   {prop.type==='vec2'&&<p className="px-2 text-ink-3">{t(keys.some(k=>k.sIn||k.sOut)?'animation.graph.pathEase':'animation.graph.channelEase')}</p>}
+   {speed&&<p className="px-2 text-ink-3">{t('animation.graph.unitsSecond')}</p>}
    {animated.map(k=><button key={k} type="button" aria-pressed={k===active} className={`block w-full truncate rounded-sm px-2 py-1 text-left ${k===active?'bg-hover text-ink':'text-ink-3'}`} onClick={()=>sess.setView({openProps:[k]})} data-testid={`animation-graph-prop-${k}`}>{t(PROP_LABEL[k])}</button>)}
    {prop.type==='vec2'&&<div className="mt-1 flex gap-1 px-1" role="group" aria-label={t('animation.graph.channel')}>
     {([0,1] as const).map(c=><Button key={c} size="tiny" variant={ch===c?'outline':'ghost'} aria-pressed={ch===c} onClick={()=>sess.setView({graphChannel:c})} data-testid={`animation-graph-channel-${c}`}>{t(c===0?'animation.prop.x':'animation.prop.y')}</Button>)}
@@ -135,13 +139,13 @@ export function GraphEditor({comp,layerId,sel,playhead}:{comp:Composition;layerI
     <line x1={xOf(playhead)} x2={xOf(playhead)} y1={PAD.t} y2={PAD.t+ph} stroke="var(--text-primary)" strokeWidth={1} pointerEvents="none" data-testid="animation-graph-playhead"/>
     <text x={PAD.l} y={h-3} fontSize={9} fill="var(--text-tertiary)">{timecode(t0,comp.fps)}</text>
     <text x={PAD.l+pw} y={h-3} textAnchor="end" fontSize={9} fill="var(--text-tertiary)">{timecode(t1,comp.fps)}</text>
-    {selHere.flatMap(r=>{const i=keys.findIndex(k=>k.t===r.t);if(i<0)return [];const k=keys[i];
+    {!speed&&selHere.flatMap(r=>{const i=keys.findIndex(k=>k.t===r.t);if(i<0)return [];const k=keys[i];
      return handlesOf(keys,i,ch).map(hd=><g key={`${hd.kind}-${r.t}`}>
       <line x1={xOf(k.t)} y1={yOf(channelOf(k.v,ch))} x2={xOf(hd.t)} y2={yOf(hd.v)} stroke="var(--text-secondary)" strokeWidth={1}/>
       <circle cx={xOf(hd.t)} cy={yOf(hd.v)} r={5} fill="var(--bg-elevated)" stroke="var(--accent)" strokeWidth={2} tabIndex={layer.locked?-1:0} role="slider" aria-label={t(hd.kind==='out'?'animation.graph.handleOut':'animation.graph.handleIn',{time:timecode(k.t,comp.fps)})}
        aria-valuetext={`${fmt(hd.x)}, ${fmt(hd.y)}`} aria-valuenow={hd.x} aria-valuemin={0} aria-valuemax={1} style={{cursor:layer.locked?'default':'grab',touchAction:'none'}}
        onPointerDown={layer.locked?undefined:handleDown(i,hd)} onKeyDown={layer.locked?undefined:handleKey(i,hd)} data-testid={`animation-graph-handle-${hd.kind}`}/></g>);})}
-    {keys.map((k,i)=>{const ref:KeyRef={layer:layer.id,prop:active,t:k.t};const on=sel.some(x=>sameKey(x,ref));const cx=xOf(k.t),cy=yOf(channelOf(k.v,ch));
+    {!speed&&keys.map((k,i)=>{const ref:KeyRef={layer:layer.id,prop:active,t:k.t};const on=sel.some(x=>sameKey(x,ref));const cx=xOf(k.t),cy=yOf(channelOf(k.v,ch));
      return <g key={i} transform={`translate(${cx} ${cy})`} tabIndex={layer.locked?-1:0} role="button" aria-pressed={on} aria-label={t('animation.graph.key',{time:timecode(k.t,comp.fps),value:fmt(channelOf(k.v,ch))})}
       style={{cursor:layer.locked?'default':'grab',touchAction:'none'}} onPointerDown={layer.locked?undefined:keyDown(k,ref)} onKeyDown={layer.locked?undefined:pointKey(ref,k)} data-testid="animation-graph-key" data-selected={on||undefined} data-key-index={i}>
       <rect x={-8} y={-8} width={16} height={16} fill="transparent"/>

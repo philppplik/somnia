@@ -1,3 +1,7 @@
+import {validateAnimationAssets} from './assetsValidation';
+import {validEffects,validSource} from './model';
+import {effectPrimitives,effectBounds} from './effects';
+import type {InterfaceAsset} from '../interface/schema';
 import {Zip,ZipPassThrough,strToU8} from 'fflate';
 import {sceneAt} from './scene';
 import {workAreaFrames} from './playback';
@@ -11,8 +15,10 @@ export const MAX_PIXELS=8192*8192;
 export class ExportError extends Error{constructor(message:string,readonly code:'too-large'|'too-many'|'raster'|'cancelled'|'empty'){super(message);this.name='ExportError';}}
 const esc=(s:string)=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const num=(n:number)=>String(Math.round(n*1e4)/1e4);
-function layerSvg(l:Layer):string{
+function layerSvg(l:Layer,assets:readonly InterfaceAsset[]):string{
  const s=l.source;
+ if(l.kind==='raster'){const asset=assets.find(a=>a.id===s.assetId);if(!asset)throw new ExportError('Missing image asset.','raster');return `<image href="${asset.data}" width="${num(s.width??asset.width)}" height="${num(s.height??asset.height)}"/>`;}
+
  if(l.kind==='solid')return `<rect x="0" y="0" width="${num(s.width??0)}" height="${num(s.height??0)}" fill="${esc(s.color??'#000')}"/>`;
  if(l.kind==='shape')return s.shape==='ellipse'
   ?`<ellipse cx="${num((s.width??0)/2)}" cy="${num((s.height??0)/2)}" rx="${num((s.width??0)/2)}" ry="${num((s.height??0)/2)}" fill="${esc(s.color??'#000')}"/>`
@@ -20,9 +26,12 @@ function layerSvg(l:Layer):string{
  return `<text x="0" y="${num(s.size??48)}" font-size="${num(s.size??48)}" fill="${esc(s.color??'#fff')}" font-family="system-ui, sans-serif">${esc(s.text??'')}</text>`;
 }
 /** Standalone SVG of the composition at `tick`. `transparent` omits the background rectangle so PNG output keeps real alpha. */
-export function frameSvg(comp:Composition,tick:number,transparent=false):string{
- const body=sceneAt(comp,tick).map(({layer,matrix,opacity})=>`<g transform="matrix(${matrix.map(num).join(' ')})" opacity="${num(opacity)}">${layerSvg(layer)}</g>`).join('');
- return `<svg xmlns="http://www.w3.org/2000/svg" width="${comp.width}" height="${comp.height}" viewBox="0 0 ${comp.width} ${comp.height}">${transparent?'':`<rect width="${comp.width}" height="${comp.height}" fill="${esc(comp.background)}"/>`}${body}</svg>`;
+export function frameSvg(comp:Composition,tick:number,transparent=false,assets:readonly InterfaceAsset[]=[]):string{
+ validateAnimationAssets({assets,compositions:[comp]});
+ if(comp.layers.some(l=>!validSource(l.source)||!validEffects(l.effects)))throw new ExportError('Invalid layer source/effects.','raster');
+ const defs=comp.layers.map((l,i)=>{const b=effectBounds(l);return `<filter id="effect-${i}" filterUnits="userSpaceOnUse" x="${b.x}" y="${b.y}" width="${b.width}" height="${b.height}" color-interpolation-filters="sRGB">${effectPrimitives(l)}</filter>`;}).join('');
+ const body=sceneAt(comp,tick).map(({layer,matrix,opacity})=>`<g transform="matrix(${matrix.map(num).join(' ')})" opacity="${num(opacity)}">${effectPrimitives(layer)?`<g filter="url(#effect-${comp.layers.indexOf(layer)})">`:""}${layerSvg(layer,assets)}${effectPrimitives(layer)?"</g>":""}</g>`).join('');
+ return `<svg xmlns="http://www.w3.org/2000/svg" width="${comp.width}" height="${comp.height}" viewBox="0 0 ${comp.width} ${comp.height}"><defs>${defs}</defs>${transparent?'':`<rect width="${comp.width}" height="${comp.height}" fill="${esc(comp.background)}"/>`}${body}</svg>`;
 }
 export const exportSlug=(name:string)=>name.normalize('NFKD').replace(/[^\w.-]+/g,'_').replace(/^[_.]+|[_.]+$/g,'').slice(0,80)||'animation';
 export const frameFileName=(name:string,frameNumber:number)=>`${exportSlug(name)}_${String(frameNumber).padStart(5,'0')}.png`;
@@ -37,7 +46,7 @@ export function checkExportable(comp:Composition,frames:number){
  if(frames>MAX_FRAMES)throw new ExportError(`${frames} frames is above the limit of ${MAX_FRAMES} for one ZIP. Shorten the work area.`,'too-many');
 }
 export type Rasterize=(svg:string,width:number,height:number)=>Promise<Uint8Array>;
-export interface SequenceOptions{rasterize:Rasterize;transparent?:boolean;signal?:AbortSignal;onProgress?:(done:number,total:number)=>void;maxBytes?:number}
+export interface SequenceOptions{rasterize:Rasterize;assets?:readonly InterfaceAsset[];transparent?:boolean;signal?:AbortSignal;onProgress?:(done:number,total:number)=>void;maxBytes?:number}
 export interface SequenceResult{blob:Blob;fileName:string;frames:number;bytes:number}
 export function sequenceManifest(comp:Composition,plan:readonly {frame:number;tick:number}[],name:string,transparent:boolean){
  return {format:'somnia-animation-png-sequence',version:1,composition:comp.name,width:comp.width,height:comp.height,frameRate:{num:comp.fps.num,den:comp.fps.den},ticksPerSecond:240000,
@@ -55,7 +64,7 @@ export async function exportSequenceZip(comp:Composition,name:string,o:SequenceO
  for(let i=0;i<plan.length;i++){
   stop();
   let png:Uint8Array;
-  try{png=await o.rasterize(frameSvg(comp,plan[i].tick,!!o.transparent),comp.width,comp.height);}
+  try{png=await o.rasterize(frameSvg(comp,plan[i].tick,!!o.transparent,o.assets),comp.width,comp.height);}
   catch(e){if(e instanceof ExportError)throw e;throw new ExportError(`Frame ${plan[i].frame} could not be rendered: ${(e as Error).message}`,'raster');}
   bytes+=png.byteLength;
   if(bytes>limit)throw new ExportError(`The sequence is larger than ${Math.round(limit/1048576)} MB. Shorten the work area or reduce the size.`,'too-large');
@@ -69,9 +78,9 @@ export async function exportSequenceZip(comp:Composition,name:string,o:SequenceO
  return {blob:new Blob(parts as BlobPart[],{type:'application/zip'}),fileName:`${exportSlug(name)}_frames.zip`,frames:plan.length,bytes};
 }
 /** One PNG of the playhead frame. */
-export async function exportFramePng(comp:Composition,tick:number,name:string,rasterize:Rasterize,transparent=false){
+export async function exportFramePng(comp:Composition,tick:number,name:string,rasterize:Rasterize,transparent=false,assets:readonly InterfaceAsset[]=[]){
  checkExportable(comp,1);
- try{const png=await rasterize(frameSvg(comp,tick,transparent),comp.width,comp.height);
+ try{const png=await rasterize(frameSvg(comp,tick,transparent,assets),comp.width,comp.height);
   return {blob:new Blob([png as BlobPart],{type:'image/png'}),fileName:frameFileName(name,tickToFrame(tick,comp.fps)-tickToFrame(comp.start,comp.fps))};}
  catch(e){if(e instanceof ExportError)throw e;throw new ExportError(`The frame could not be rendered: ${(e as Error).message}`,'raster');}
 }

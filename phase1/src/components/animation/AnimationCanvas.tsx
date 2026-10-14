@@ -1,3 +1,5 @@
+import {effectPrimitives,effectBounds} from '../../lib/animation/effects';
+import type {InterfaceAsset} from '../../lib/interface/schema';
 import {useEffect,useMemo,useRef} from 'react';
 import {Sparkles} from '../../lib/icons';
 import {studioContextStore} from '../../lib/shell/studioContext';
@@ -36,26 +38,28 @@ export function AnimationCanvas(){
 function Workspace({doc}:{doc:NonNullable<ReturnType<typeof animationSession>['document']>}){
  const {t}=useT();const s=useAnimationState();const comp=findComp(doc)!;const at=s.view.playhead;
  return <div className="flex min-h-0 flex-1 flex-col" data-testid="animation-workspace">
-  <Viewer comp={comp} at={at} selected={s.view.selectedLayer} sel={pruneSelection(s.doc,s.view.selectedKeys)}/>
+  <Viewer assets={doc.assets} comp={comp} at={at} selected={s.view.selectedLayer} sel={pruneSelection(s.doc,s.view.selectedKeys)}/>
   {s.recoveryFailed&&<p role="alert" className="m-0 px-3 py-1 text-[11px] text-ink">{t('animation.recoveryFailed')}</p>}
   <AnimationTimeline comp={comp} at={at} selected={s.view.selectedLayer} canUndo={s.canUndo} canRedo={s.canRedo}/>
  </div>;
 }
-function layerNode(l:Layer){
+function layerNode(l:Layer,assets:readonly InterfaceAsset[]){
  const src=l.source;
+ if(l.kind==='raster'){const asset=assets.find(a=>a.id===src.assetId);return asset?<image href={asset.data} width={src.width} height={src.height}/>:<text fill="#ffffff">Missing image</text>;}
  if(l.kind==='solid')return <rect x={0} y={0} width={src.width} height={src.height} fill={src.color}/>;
  if(l.kind==='shape')return src.shape==='ellipse'?<ellipse cx={(src.width??0)/2} cy={(src.height??0)/2} rx={(src.width??0)/2} ry={(src.height??0)/2} fill={src.color}/>:<rect x={0} y={0} width={src.width} height={src.height} fill={src.color}/>;
  return <text x={0} y={src.size??48} fontSize={src.size} fill={src.color} fontFamily="system-ui, sans-serif" style={{userSelect:'none'}}>{src.text}</text>;
 }
-function Viewer({comp,at,selected,sel}:{comp:Composition;at:number;selected:string|null;sel:readonly KeyRef[]}){
+function Viewer({comp,at,selected,sel,assets}:{assets:readonly InterfaceAsset[];comp:Composition;at:number;selected:string|null;sel:readonly KeyRef[]}){
  const {t}=useT();const scene=useMemo(()=>sceneAt(comp,at),[comp,at]);
  const layer=comp.layers.find(l=>l.id===selected);const hasPos=!!layer&&layer.transform.position.keys.length>0;
  const posSel=sel.filter(k=>k.layer===selected&&k.prop==='position');
  return <div className="relative grid min-h-[160px] flex-1 place-items-center overflow-hidden bg-hover p-3" data-testid="animation-viewer">
   <svg role="img" aria-label={t('animation.viewer')} viewBox={`0 0 ${comp.width} ${comp.height}`} className="max-h-full max-w-full" style={{aspectRatio:`${comp.width}/${comp.height}`,height:'100%',overflow:'visible'}}>
+   <defs>{comp.layers.map((l,i)=><filter key={l.id} id={`preview-effect-${i}`} filterUnits="userSpaceOnUse" {...effectBounds(l)} colorInterpolationFilters="sRGB" dangerouslySetInnerHTML={{__html:effectPrimitives(l)}}/>)}</defs>
    <rect width={comp.width} height={comp.height} fill={comp.background}/>
    {scene.map(({layer:l,matrix,opacity})=><g key={l.id} transform={`matrix(${matrix.join(' ')})`} opacity={opacity} data-layer={l.id} data-selected={l.id===selected||undefined}
-    onPointerDown={()=>animationSession().setView({selectedLayer:l.id})}>{layerNode(l)}</g>)}
+    onPointerDown={()=>animationSession().setView({selectedLayer:l.id})}><g filter={effectPrimitives(l)?`url(#preview-effect-${comp.layers.indexOf(l)})`:undefined}>{layerNode(l,assets)}</g></g>)}
    {layer&&hasPos&&<PathOverlay comp={comp} layer={layer} at={at} sel={sel}/>}
   </svg>
   {hasPos&&<div className="absolute right-2 top-2 flex gap-1" role="group" aria-label={t('animation.path.label')}>
