@@ -192,3 +192,33 @@ export function clampRenderSize(width:number,height:number,max:number):{width:nu
  const k=Math.min(1,max/Math.max(w,h));
  w=Math.max(1,Math.floor(w*k));h=Math.max(1,Math.floor(h*k));return{width:w,height:h};
 }
+
+/** Export units. The scene is in metres; STL and OBJ carry no unit, so the chosen one only scales the numbers written. */
+export const UNITS={m:1,cm:100,mm:1000,in:39.37007874015748} as const;
+export type ExportUnit=keyof typeof UNITS;
+export const UNIT_IDS=Object.keys(UNITS) as ExportUnit[];
+export const isUnit=(u:unknown):u is ExportUnit=>typeof u==='string'&&Object.prototype.hasOwnProperty.call(UNITS,u);
+export const unitScale=(u:ExportUnit)=>UNITS[u];
+export type ExportFormat='glb'|'stl'|'obj';
+/** File name for an export. Units other than metres are part of the name so the file explains itself. */
+export const exportFileName=(stem:string,format:ExportFormat,unit:ExportUnit)=>`${stem}${format!=='glb'&&unit!=='m'?'-'+unit:''}.${format}`;
+/** Multi-select: shift-click adds or removes an object. The primary selection is the last one added. */
+export function toggleSelection(marked:readonly number[],selected:number|null,id:number):{marked:number[];selected:number|null}{
+ const set=marked.length?[...marked]:selected!=null?[selected]:[];
+ const i=set.indexOf(id);
+ if(i>=0){set.splice(i,1);return{marked:set,selected:set.length?set[set.length-1]:null};}
+ set.push(id);return{marked:set,selected:id};
+}
+export interface Rect{x0:number;y0:number;x1:number;y1:number}
+export const marqueeRect=(a:{x:number;y:number},b:{x:number;y:number}):Rect=>({x0:Math.min(a.x,b.x),y0:Math.min(a.y,b.y),x1:Math.max(a.x,b.x),y1:Math.max(a.y,b.y)});
+export const inRect=(r:Rect,p:{x:number;y:number})=>p.x>=r.x0&&p.x<=r.x1&&p.y>=r.y0&&p.y<=r.y1;
+export const MAX_TURNTABLE_FRAMES=360;
+export const MAX_TURNTABLE_PIXELS=1_200_000_000;
+/** Validates a turntable render and returns the rotation per frame in radians. */
+export function turntablePlan(frames:number,width:number,height:number):{frames:number;step:number}{
+ if(!Number.isInteger(frames)||frames<2||frames>MAX_TURNTABLE_FRAMES)throw new SnapError(`frames must be a whole number from 2 to ${MAX_TURNTABLE_FRAMES}.`);
+ if(!Number.isFinite(width)||!Number.isFinite(height)||width<1||height<1)throw new SnapError('Render size must be positive numbers.');
+ if(frames*width*height>MAX_TURNTABLE_PIXELS)throw new SnapError('This turntable is too large. Use fewer frames or a smaller size.');
+ return{frames,step:(Math.PI*2)/frames};
+}
+export const frameName=(i:number,total:number)=>`frame-${String(i+1).padStart(Math.max(4,String(total).length),'0')}.png`;

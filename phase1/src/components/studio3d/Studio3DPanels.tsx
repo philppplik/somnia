@@ -5,7 +5,7 @@ import {executeCommand} from '../../lib/commands';
 import {useT} from '../../lib/useT';
 import {formatBytes} from '../../lib/media';
 import {useStudio3D} from '../../lib/studio3d/session';
-import {formatCount,boundsSize,GIZMO_MODES,ENV_PRESETS,ENV_ACCEPT} from '../../lib/studio3d/model';
+import {formatCount,boundsSize,GIZMO_MODES,ENV_PRESETS,ENV_ACCEPT,UNIT_IDS} from '../../lib/studio3d/model';
 import type {PanelHostProps,InspectorSectionProps} from '../../lib/shell/types';
 import {Input} from '../ui/input';
 import {Button} from '../ui/button';
@@ -125,6 +125,7 @@ const NumField=({label,value,min,max,step,onCommit}:{label:string;value:number;m
 function LightFields({id,light}:{id:number;light:NonNullable<ObjectInfo['light']>}){
  const {t}=useT();const set=(p:Record<string,unknown>)=>void executeCommand('studio3d.light.set',{id,...p});
  return <fieldset className="m-0 grid gap-2 border-0 p-0" data-testid="studio3d-light"><legend className="text-xs text-ink-3">{t('studio3d.light.title')}</legend>
+  {light.shadow!==undefined&&<label className="flex items-center gap-2 text-xs text-ink-2"><input type="checkbox" checked={light.shadow} onChange={e=>set({shadow:e.currentTarget.checked})}/>{t('studio3d.light.shadow')}</label>}
   <NumField label={t('studio3d.light.intensity')} value={light.intensity} min={0} max={100000} step={1} onCommit={n=>set({intensity:n})}/>
   <label className="flex items-center justify-between gap-2 text-xs text-ink-2">{t('studio3d.material.color')}<input type="color" key={light.color} defaultValue={light.color} onBlur={e=>{if(e.currentTarget.value!==light.color)set({color:e.currentTarget.value});}}/></label>
   {light.angle!==undefined&&<NumField label={t('studio3d.light.angle')} value={light.angle} min={1} max={90} step={1} onCommit={n=>set({angle:n})}/>}
@@ -135,7 +136,7 @@ function LightFields({id,light}:{id:number;light:NonNullable<ObjectInfo['light']
 }
 /** Snapping, pivot, align and distribute. Align and distribute work on the objects ticked in the scene list. */
 export function ToolsSection(_:InspectorSectionProps){
- const {t}=useT();const s=useStudio3D();const sn=s.snap;const n=s.marked.filter(id=>s.outline.some(o=>o.id===id));
+ const {t}=useT();const s=useStudio3D();const sn=s.snap;const n=s.marked.filter(id=>s.outline.some(o=>o.id===id));const [frames,setFrames]=useState(36);
  const align=(axis:string,to:string)=>void executeCommand('studio3d.object.align',{ids:n,axis,to});
  return <div className="grid gap-2 p-3" data-testid="studio3d-tools-section">
   <label className="flex items-center gap-2 text-xs text-ink-2"><input type="checkbox" checked={sn.on} onChange={e=>void executeCommand('studio3d.snap.set',{on:e.currentTarget.checked})}/>{t('studio3d.snap.on')}</label>
@@ -145,6 +146,22 @@ export function ToolsSection(_:InspectorSectionProps){
    <NumField label={t('studio3d.snap.scale')} value={sn.scale} min={0.001} max={10} step={0.05} onCommit={v=>void executeCommand('studio3d.snap.set',{scale:v})}/></div>
   <fieldset className="m-0 grid gap-1 border-0 p-0"><legend className="text-xs text-ink-3">{t('studio3d.pivot.title')}</legend>
    <div className="flex gap-1">{(['center','base'] as const).map(at=><Button key={at} variant="outline" disabled={s.selectedInfo?.kind!=='mesh'} onClick={()=>void executeCommand('studio3d.object.pivot',{id:s.selected,at})}>{t('studio3d.pivot.'+at)}</Button>)}</div></fieldset>
+  <fieldset className="m-0 grid gap-2 border-0 p-0" data-testid="studio3d-export"><legend className="text-xs text-ink-3">{t('studio3d.export.title')}</legend>
+   <label className="grid gap-1 text-xs text-ink-2">{t('studio3d.export.unit')}
+    <select className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={s.unit} aria-label={t('studio3d.export.unit')} onChange={e=>void executeCommand('studio3d.unit.set',{unit:e.currentTarget.value})}>
+     {UNIT_IDS.map(u=><option key={u} value={u}>{t('studio3d.unit.'+u)}</option>)}</select></label>
+   <div className="flex flex-wrap gap-1">
+    <Button variant="outline" disabled={s.status!=='ready'} onClick={()=>void executeCommand('studio3d.export.glb')}>GLB</Button>
+    <Button variant="outline" disabled={s.status!=='ready'} onClick={()=>void executeCommand('studio3d.export.mesh',{format:'stl'})}>STL</Button>
+    <Button variant="outline" disabled={s.status!=='ready'} onClick={()=>void executeCommand('studio3d.export.mesh',{format:'obj'})}>OBJ</Button></div>
+   <p className="m-0 text-xs text-ink-3">{t('studio3d.export.unitNote')}</p>
+  </fieldset>
+  <fieldset className="m-0 grid gap-2 border-0 p-0" data-testid="studio3d-turntable"><legend className="text-xs text-ink-3">{t('studio3d.turntable.title')}</legend>
+   <NumField label={t('studio3d.turntable.frames')} value={frames} min={2} max={360} step={1} onCommit={setFrames}/>
+   {s.render?<><p role="status" className="m-0 text-xs text-ink-2">{t('studio3d.turntable.progress',{done:s.render.done,total:s.render.total})}</p>
+    <Button variant="outline" onClick={()=>void executeCommand('studio3d.render.cancel')}>{t('studio3d.turntable.cancel')}</Button></>:
+    <Button variant="outline" disabled={s.status!=='ready'} onClick={()=>void executeCommand('studio3d.render.turntable',{frames})}>{t('studio3d.turntable.start')}</Button>}
+  </fieldset>
   <fieldset className="m-0 grid gap-1 border-0 p-0" data-testid="studio3d-align"><legend className="text-xs text-ink-3">{t('studio3d.align.title',{count:n.length})}</legend>
    <p className="m-0 text-xs text-ink-3">{t('studio3d.align.hint')}</p>
    {(['x','y','z'] as const).map(a=><div key={a} className="flex flex-wrap items-center gap-1" role="group" aria-label={a.toUpperCase()}><span className="w-4 text-xs text-ink-3">{a.toUpperCase()}</span>

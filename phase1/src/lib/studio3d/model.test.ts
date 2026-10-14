@@ -115,3 +115,28 @@ test('clampRenderSize rounds, limits and keeps the aspect ratio',()=>{
  assert.deepEqual(clampRenderSize(8000,4000,4000),{width:4000,height:2000});
  assert.throws(()=>clampRenderSize(0,10,100),SnapError);assert.throws(()=>clampRenderSize(10,NaN,100),SnapError);
 });
+import {toggleSelection,marqueeRect,inRect,turntablePlan,frameName,exportFileName,unitScale,isUnit,UNIT_IDS} from './model';
+test('toggleSelection adds, removes and seeds from the primary selection',()=>{
+ assert.deepEqual(toggleSelection([],5,7),{marked:[5,7],selected:7});
+ assert.deepEqual(toggleSelection([5,7],7,7),{marked:[5],selected:5});
+ assert.deepEqual(toggleSelection([],null,3),{marked:[3],selected:3});
+ assert.deepEqual(toggleSelection([3],3,3),{marked:[],selected:null});
+ const m=[1,2];toggleSelection(m,2,9);assert.deepEqual(m,[1,2],'input is not mutated');
+});
+test('marquee rectangle normalises corners and tests points',()=>{
+ const r=marqueeRect({x:50,y:80},{x:10,y:20});assert.deepEqual(r,{x0:10,y0:20,x1:50,y1:80});
+ assert.equal(inRect(r,{x:10,y:80}),true);assert.equal(inRect(r,{x:9,y:30}),false);assert.equal(inRect(r,{x:30,y:81}),false);
+});
+test('turntablePlan validates frames and the pixel budget',()=>{
+ const p=turntablePlan(36,1280,720);assert.equal(p.frames,36);assert.ok(Math.abs(p.step*36-Math.PI*2)<1e-12);
+ assert.throws(()=>turntablePlan(1,10,10),SnapError);assert.throws(()=>turntablePlan(361,10,10),SnapError);assert.throws(()=>turntablePlan(2.5,10,10),SnapError);
+ assert.throws(()=>turntablePlan(360,8192,8192),SnapError);assert.throws(()=>turntablePlan(10,0,10),SnapError);
+});
+test('frame names are zero padded and sort in order',()=>{
+ assert.equal(frameName(0,36),'frame-0001.png');assert.equal(frameName(35,36),'frame-0036.png');assert.equal(frameName(0,12000),'frame-00001.png');
+});
+test('units scale metres and name export files',()=>{
+ assert.equal(unitScale('mm'),1000);assert.equal(unitScale('m'),1);assert.ok(Math.abs(unitScale('in')-39.37007874)<1e-6);
+ assert.equal(isUnit('mm'),true);assert.equal(isUnit('ft'),false);assert.equal(isUnit('toString'),false);assert.deepEqual([...UNIT_IDS].sort(),['cm','in','m','mm']);
+ assert.equal(exportFileName('part','stl','mm'),'part-mm.stl');assert.equal(exportFileName('part','stl','m'),'part.stl');assert.equal(exportFileName('part','glb','mm'),'part.glb');
+});

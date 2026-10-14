@@ -17,8 +17,8 @@ export interface ObjectInfo{
  id:number;name:string;kind:OutlineEntry['kind'];position:Vec3;rotation:Vec3;scale:Vec3;
  material:{color:string;metalness:number;roughness:number}|null;light:LightInfo|null;
 }
-export interface LightInfo{intensity:number;color:string;/** spot cone, degrees */angle?:number;penumbra?:number;width?:number;height?:number}
-export interface LightPatch{intensity?:number;color?:string;angle?:number;penumbra?:number;width?:number;height?:number}
+export interface LightInfo{intensity:number;color:string;/** shadow casting; absent for area lights, which cannot cast shadows */shadow?:boolean;/** spot cone, degrees */angle?:number;penumbra?:number;width?:number;height?:number}
+export interface LightPatch{intensity?:number;color?:string;shadow?:boolean;angle?:number;penumbra?:number;width?:number;height?:number}
 export type AlignAxis='x'|'y'|'z';
 export type AlignTo='min'|'center'|'max';
 export type PivotAt='center'|'base';
@@ -41,6 +41,7 @@ function geometryFor(kind:PrimitiveKind):THREE.BufferGeometry{
 function lightInfo(l:THREE.Light):LightInfo{
  const info:LightInfo={intensity:l.intensity,color:'#'+l.color.getHexString()};
  const sp=l as THREE.SpotLight,ra=l as THREE.RectAreaLight;
+ if(l.castShadow!==undefined&&!(l as THREE.RectAreaLight).isRectAreaLight)info.shadow=l.castShadow;
  if(sp.isSpotLight){info.angle=sp.angle/DEG;info.penumbra=sp.penumbra;}
  if(ra.isRectAreaLight){info.width=ra.width;info.height=ra.height;}
  return info;
@@ -151,15 +152,16 @@ export class Stage{
   const o=this.need(id) as THREE.Light;if(!o.isLight)throw new StageError(`${o.name} is not a light.`);
   const sp=o as THREE.SpotLight,ra=o as THREE.RectAreaLight;
   if(patch.color!==undefined&&!HEX.test(patch.color))throw new StageError('color must look like #rrggbb.');
+  if(patch.shadow!==undefined){if(typeof patch.shadow!=='boolean')throw new StageError('shadow must be true or false.');if(ra.isRectAreaLight)throw new StageError('Area lights cannot cast shadows.');}
   if(patch.angle!==undefined&&!sp.isSpotLight)throw new StageError('Only spot lights have a cone angle.');
   if(patch.penumbra!==undefined&&!sp.isSpotLight)throw new StageError('Only spot lights have a penumbra.');
   if((patch.width!==undefined||patch.height!==undefined)&&!ra.isRectAreaLight)throw new StageError('Only area lights have a width and height.');
   const num=(v:number|undefined,what:string,min:number,max:number)=>{if(v===undefined)return undefined;const n=finite(v,what);if(n<min||n>max)throw new StageError(`${what} must be between ${min} and ${max}.`);return n;};
-  const next={i:num(patch.intensity,'intensity',0,100000),c:patch.color,a:num(patch.angle,'angle',1,90),p:num(patch.penumbra,'penumbra',0,1),w:num(patch.width,'width',0.01,1000),h:num(patch.height,'height',0.01,1000)};
-  const read=()=>({i:o.intensity,c:'#'+o.color.getHexString(),a:sp.isSpotLight?sp.angle/DEG:undefined,p:sp.isSpotLight?sp.penumbra:undefined,w:ra.isRectAreaLight?ra.width:undefined,h:ra.isRectAreaLight?ra.height:undefined});
+  const next={i:num(patch.intensity,'intensity',0,100000),c:patch.color,sh:patch.shadow,a:num(patch.angle,'angle',1,90),p:num(patch.penumbra,'penumbra',0,1),w:num(patch.width,'width',0.01,1000),h:num(patch.height,'height',0.01,1000)};
+  const read=()=>({i:o.intensity,c:'#'+o.color.getHexString(),sh:o.castShadow,a:sp.isSpotLight?sp.angle/DEG:undefined,p:sp.isSpotLight?sp.penumbra:undefined,w:ra.isRectAreaLight?ra.width:undefined,h:ra.isRectAreaLight?ra.height:undefined});
   const before=read();
-  const write=(v:ReturnType<typeof read>)=>{o.intensity=v.i;o.color.set(v.c);if(sp.isSpotLight){sp.angle=v.a!*DEG;sp.penumbra=v.p!;}if(ra.isRectAreaLight){ra.width=v.w!;ra.height=v.h!;}};
-  const after={i:next.i??before.i,c:next.c??before.c,a:next.a??before.a,p:next.p??before.p,w:next.w??before.w,h:next.h??before.h};
+  const write=(v:ReturnType<typeof read>)=>{o.intensity=v.i;o.castShadow=v.sh;o.color.set(v.c);if(sp.isSpotLight){sp.angle=v.a!*DEG;sp.penumbra=v.p!;}if(ra.isRectAreaLight){ra.width=v.w!;ra.height=v.h!;}};
+  const after={i:next.i??before.i,c:next.c??before.c,sh:next.sh??before.sh,a:next.a??before.a,p:next.p??before.p,w:next.w??before.w,h:next.h??before.h};
   if(JSON.stringify(after)===JSON.stringify(before))return;
   write(after);this.push({label:`Light ${o.name}`,undo:()=>write(before),redo:()=>write(after)});
  }

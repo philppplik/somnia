@@ -7,6 +7,8 @@ import {OBJLoader} from 'three/addons/loaders/OBJLoader.js';
 import {MTLLoader} from 'three/addons/loaders/MTLLoader.js';
 import {RectAreaLightUniformsLib} from 'three/addons/lights/RectAreaLightUniformsLib.js';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {STLExporter} from 'three/addons/exporters/STLExporter.js';
+import {OBJExporter} from 'three/addons/exporters/OBJExporter.js';
 import {GLTFExporter} from 'three/addons/exporters/GLTFExporter.js';
 import {TransformControls} from 'three/addons/controls/TransformControls.js';
 import {RGBELoader} from 'three/addons/loaders/RGBELoader.js';
@@ -15,7 +17,9 @@ import {Sky} from 'three/addons/objects/Sky.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
 import {useT} from '../../lib/useT';
-import {isMeshFormat,mergeSnap,snapTo,stlUnitHint,mtlReferences,mtlTextures,clampRenderSize,MAX_MTL_BYTES,MAX_TEXTURE_BYTES,MAX_TEXTURE_FILES,SnapError,mergeEnv,envFormatFor,nudgeFor,EnvError,modelFormatFor,readModelHeader,externalResources,ModelError,boundsValid,boundsCenter,boundsRadius,frameDistance,clipPlanes} from '../../lib/studio3d/model';
+import {getState as getAppState} from '../../store/appStore';
+import {readProjectUnit,writeProjectUnit} from '../../lib/studio3d/projectPrefs';
+import {toggleSelection,marqueeRect,inRect,turntablePlan,frameName,exportFileName,unitScale,isUnit,isMeshFormat,mergeSnap,snapTo,stlUnitHint,mtlReferences,mtlTextures,clampRenderSize,MAX_MTL_BYTES,MAX_TEXTURE_BYTES,MAX_TEXTURE_FILES,SnapError,mergeEnv,envFormatFor,nudgeFor,EnvError,modelFormatFor,readModelHeader,externalResources,ModelError,boundsValid,boundsCenter,boundsRadius,frameDistance,clipPlanes} from '../../lib/studio3d/model';
 import type {Bounds} from '../../lib/studio3d/model';
 import {Stage} from '../../lib/studio3d/stage';
 import {registerStudio3DController} from '../../lib/studio3d/commands';
@@ -42,7 +46,7 @@ export default function Viewport3D(){
  useEffect(()=>{
   const el=host.current!;
   const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'high-performance'});
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;RectAreaLightUniformsLib.init();
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;RectAreaLightUniformsLib.init();renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
   renderer.domElement.style.cssText='display:block;width:100%;height:100%;outline:none;touch-action:none';
   renderer.domElement.tabIndex=0;renderer.domElement.setAttribute('role','img');renderer.domElement.setAttribute('aria-label',t('studio3d.canvas.label'));
   el.appendChild(renderer.domElement);
@@ -95,14 +99,18 @@ export default function Viewport3D(){
    if(bounds&&boundsValid(bounds)){const c=boundsCenter(bounds);place(DEFAULT_DIR,new THREE.Vector3(...c),Math.max(boundsRadius(bounds),1e-4));}
    else place(DEFAULT_DIR,new THREE.Vector3(0,0,0),5);
   };
-  const clearSelection=()=>{if(selection){scene.remove(selection);selection.dispose();selection=null;}};
+  const marks=new THREE.Group();scene.add(marks);
+  const clearMarks=()=>{for(const c of [...marks.children]){marks.remove(c);(c as THREE.Box3Helper).dispose?.();}};
+  const clearSelection=()=>{clearMarks();if(selection){scene.remove(selection);selection.dispose();selection=null;}};
   const clearModel=()=>{clearSelection();stage.clear();bounds=null;};
   const applyWire=(on:boolean)=>holder.traverse(o=>{const m=o as THREE.Mesh;if(!m.isMesh)return;for(const mat of Array.isArray(m.material)?m.material:[m.material])(mat as THREE.MeshBasicMaterial).wireframe=on;});
   const drawSelection=()=>{
    clearSelection();const id=getStudio3DState().selected;const obj=id==null?null:stage.find(id);
    if(obj){const box=new THREE.Box3().setFromObject(obj);if(!box.isEmpty()){selection=new THREE.Box3Helper(box,0x6d4aff);scene.add(selection);}}
+   for(const m of getStudio3DState().marked){if(m===id)continue;const o=stage.find(m);if(!o)continue;const b=new THREE.Box3().setFromObject(o);if(!b.isEmpty())marks.add(new THREE.Box3Helper(b,0xa28bff));}
   };
-  const select=(id:number|null)=>{patchStudio3D({selected:id!=null&&stage.find(id)?id:null});sync();};
+  const select=(id:number|null)=>{patchStudio3D({selected:id!=null&&stage.find(id)?id:null,marked:[]});sync();};
+  const applySet=(marked:number[],selected:number|null)=>{const live=marked.filter(m=>stage.find(m));patchStudio3D({marked:live,selected:selected!=null&&stage.find(selected)?selected:null});sync();};
   const syncHooks:(()=>void)[]=[];
   /** Pushes the stage into the session: outline, stats, selection info and undo state. */
   const sync=()=>{
@@ -199,6 +207,16 @@ export default function Viewport3D(){
    for(const [id,h] of helpers)if(!live.has(id)){scene.remove(h);h.dispose();helpers.delete(id);}
   };
   syncHooks.push(()=>{syncGizmo();syncCameraHelpers();});
+  const syncShadows=()=>{
+   const r=bounds&&boundsValid(bounds)?Math.max(boundsRadius(bounds),1):5;
+   holder.traverse(o=>{
+    const m=o as THREE.Mesh;if(m.isMesh){m.castShadow=true;m.receiveShadow=true;}
+    const l=o as THREE.DirectionalLight&THREE.SpotLight&THREE.PointLight;
+    if(l.isLight&&l.shadow){l.shadow.mapSize.set(2048,2048);l.shadow.bias=-0.0005;l.shadow.normalBias=0.02;
+     if((l as THREE.DirectionalLight).isDirectionalLight){const c=l.shadow.camera as THREE.OrthographicCamera;const e=r*1.6;c.left=-e;c.right=e;c.top=e;c.bottom=-e;c.near=0.1;c.far=Math.max(50,r*8);c.updateProjectionMatrix();}}
+   });
+  };
+  syncHooks.push(syncShadows);
   const applySnap=()=>{const sn=getStudio3DState().snap;gizmo.setTranslationSnap(sn.on?sn.move:null);gizmo.setRotationSnap(sn.on?THREE.MathUtils.degToRad(sn.rotate):null);gizmo.setScaleSnap(sn.on?sn.scale:null);invalidate();};
   applySnap();
   const nudgeBy=(id:number,d:{x?:number;y?:number;z?:number})=>{
@@ -220,7 +238,7 @@ export default function Viewport3D(){
     if(ticket!==opening||disposed){gltf.scene.traverse(o=>{(o as THREE.Mesh).geometry?.dispose?.();});return;}
     animationCount=gltf.animations.length;selectionReset();
     stage.load(gltf.scene);
-    patchStudio3D({status:'ready',name:primary.name,error:'',format:header.format.toUpperCase(),bytes:size,blank:false,confirmReplace:null,notice,unitHint});
+    patchStudio3D({status:'ready',name:primary.name,error:'',format:header.format.toUpperCase(),bytes:size,blank:false,confirmReplace:null,notice,unitHint});loadUnit();
     frameAll();
    }catch(e){
     if(ticket!==opening)return;
@@ -230,30 +248,72 @@ export default function Viewport3D(){
   const selectionReset=()=>{patchStudio3D({selected:null,selectedInfo:null,marked:[],notice:'',unitHint:null});};
   const openFiles=async(files:File[],force?:boolean)=>{guard('open',files,force,()=>openNow(files));};
   const newScene=(force?:boolean)=>{guard('new',[],force,()=>{opening++;animationCount=0;selectionReset();stage.clear();resetStudio3D({status:'ready',blank:true,name:''});sync();frameAll();});};
-  const renderStill=async(opts:{camera?:number;width?:number;height?:number;transparent?:boolean}={})=>{
-   let cam:THREE.PerspectiveCamera=camera;
-   if(opts.camera!==undefined){const c=stage.find(opts.camera) as THREE.PerspectiveCamera|undefined;if(!c||!c.isPerspectiveCamera)throw Object.assign(new Error('That object is not a camera.'),{expected:true});cam=c;}
-   const gl=renderer.getContext();const max=Math.min(gl.getParameter(gl.MAX_RENDERBUFFER_SIZE) as number,gl.getParameter(gl.MAX_TEXTURE_SIZE) as number,16384);
+  /** Renders one PNG at the requested size and puts the viewport back the way it was. */
+  const capture=async(cam:THREE.PerspectiveCamera,want:{width:number;height:number}|null,transparent:boolean):Promise<Blob>=>{
    const dom=renderer.domElement;const w0=dom.width,h0=dom.height;const pr=renderer.getPixelRatio();
-   const want=opts.width||opts.height?clampRenderSize(opts.width??Math.round((opts.height!)*(cam.aspect||1)),opts.height??Math.round((opts.width!)/(cam.aspect||1)),max):null;
    const aspect0=cam.aspect,bg=scene.background;
-   const hidden:[THREE.Object3D,boolean][]=[grid,gizmoHelper,...(selection?[selection]:[]),...helpers.values()].map(o=>[o,o.visible]);
+   const hidden:[THREE.Object3D,boolean][]=[grid,gizmoHelper,marks,...(selection?[selection]:[]),...helpers.values()].map(o=>[o,o.visible]);
    try{
     for(const [o] of hidden)o.visible=false;
-    if(opts.transparent){scene.background=null;renderer.setClearColor(0x000000,0);}
+    if(transparent){scene.background=null;renderer.setClearColor(0x000000,0);}
     renderer.setPixelRatio(1);
     const size=want??(cam===camera?{width:w0,height:h0}:{width:w0,height:Math.max(1,Math.round(w0/(cam.aspect||1)))});
     renderer.setSize(size.width,size.height,false);cam.aspect=size.width/size.height;cam.updateProjectionMatrix();
     renderer.render(scene,cam);
     const blob=await new Promise<Blob|null>(r=>dom.toBlob(r,'image/png'));
     if(!blob)throw new Error('The 3D view could not be captured.');
-    download(blob,`${stem(getStudio3DState().name||'scene')}-${cam===camera?'still':'camera'}.png`);
+    return blob;
    }finally{
     for(const [o,v] of hidden)o.visible=v;
-    scene.background=bg;if(opts.transparent)renderer.setClearColor(0x000000,1);
+    scene.background=bg;if(transparent)renderer.setClearColor(0x000000,1);
     cam.aspect=aspect0;cam.updateProjectionMatrix();renderer.setPixelRatio(pr);renderer.setSize(w0/pr,h0/pr,false);invalidate();
    }
   };
+  const maxSize=()=>{const gl=renderer.getContext();return Math.min(gl.getParameter(gl.MAX_RENDERBUFFER_SIZE) as number,gl.getParameter(gl.MAX_TEXTURE_SIZE) as number,16384);};
+  const renderStill=async(opts:{camera?:number;width?:number;height?:number;transparent?:boolean}={})=>{
+   let cam:THREE.PerspectiveCamera=camera;
+   if(opts.camera!==undefined){const c=stage.find(opts.camera) as THREE.PerspectiveCamera|undefined;if(!c||!c.isPerspectiveCamera)throw Object.assign(new Error('That object is not a camera.'),{expected:true});cam=c;}
+   const want=opts.width||opts.height?clampRenderSize(opts.width??Math.round((opts.height!)*(cam.aspect||1)),opts.height??Math.round((opts.width!)/(cam.aspect||1)),maxSize()):null;
+   download(await capture(cam,want,!!opts.transparent),`${stem(getStudio3DState().name||'scene')}-${cam===camera?'still':'camera'}.png`);
+  };
+  let cancelFlag=false;
+  const renderTurntable=async(opts:{frames?:number;width?:number;height?:number;transparent?:boolean}={})=>{
+   if(getStudio3DState().render)throw Object.assign(new Error('A render is already running.'),{expected:true});
+   const size=clampRenderSize(opts.width??1280,opts.height??720,maxSize());
+   const plan=turntablePlan(opts.frames??36,size.width,size.height);
+   const {zipSync}=await import('fflate');
+   const pos0=camera.position.clone(),enabled0=controls.enabled;const target=controls.target.clone();const off=pos0.clone().sub(target);
+   const files:Record<string,Uint8Array>={};cancelFlag=false;patchStudio3D({render:{done:0,total:plan.frames}});controls.enabled=false;
+   try{
+    for(let i=0;i<plan.frames;i++){
+     if(cancelFlag||disposed)throw Object.assign(new Error('Render cancelled.'),{expected:true});
+     camera.position.copy(target).add(off.clone().applyAxisAngle(new THREE.Vector3(0,1,0),plan.step*i));camera.lookAt(target);camera.updateMatrixWorld(true);
+     const blob=await capture(camera,size,!!opts.transparent);
+     files[frameName(i,plan.frames)]=new Uint8Array(await blob.arrayBuffer());
+     patchStudio3D({render:{done:i+1,total:plan.frames}});
+     await new Promise(r=>setTimeout(r,0));
+    }
+    download(new Blob([zipSync(files,{level:0}) as BlobPart],{type:'application/zip'}),`${stem(getStudio3DState().name||'scene')}-turntable.zip`);
+   }finally{
+    camera.position.copy(pos0);camera.lookAt(target);controls.enabled=enabled0;patchStudio3D({render:null});invalidate();
+   }
+  };
+  const exportMesh=async(format:'stl'|'obj')=>{
+   let meshes=0;holder.traverse(o=>{if((o as THREE.Mesh).isMesh)meshes++;});
+   if(!meshes)throw Object.assign(new Error('There is no mesh to export. Open a model or add a shape first.'),{expected:true});
+   const unit=getStudio3DState().unit;const prev=holder.scale.clone();
+   holder.scale.multiplyScalar(unitScale(unit));holder.updateMatrixWorld(true);
+   let blob:Blob;
+   try{
+    if(format==='stl')blob=new Blob([new STLExporter().parse(holder,{binary:true}) as unknown as BlobPart],{type:'model/stl'});
+    else blob=new Blob([new OBJExporter().parse(holder)],{type:'model/obj'});
+   }finally{holder.scale.copy(prev);holder.updateMatrixWorld(true);invalidate();}
+   download(blob,exportFileName(stem(getStudio3DState().name||'scene'),format,unit));
+  };
+  const projectName=()=>{try{return getAppState().projectName||'';}catch{return '';}};
+  const loadUnit=()=>{try{patchStudio3D({unit:readProjectUnit(localStorage,projectName())});}catch{/* keep current */}};
+  loadUnit();
+  const setUnit=(u:unknown)=>{if(!isUnit(u))throw Object.assign(new Error('Unit must be m, cm, mm or in.'),{expected:true});patchStudio3D({unit:u});try{writeProjectUnit(localStorage,projectName(),u);}catch{/* session only */}};
   const exportGlb=async()=>{
    if(!holder.children.length)throw Object.assign(new Error('There is nothing to export. Open a model first.'),{expected:true});
    const result=await new GLTFExporter().parseAsync(holder.children.length===1?holder.children[0]:holder,{binary:true});
@@ -261,7 +321,7 @@ export default function Viewport3D(){
    stage.markSaved();
   };
   const off=registerStudio3DController({
-   openFiles,newScene,resetView:frameAll,frameSelection,select,renderStill,exportGlb,
+   exportMesh,renderTurntable,cancelRender:()=>{cancelFlag=true;},setUnit,openFiles,newScene,resetView:frameAll,frameSelection,select,renderStill,exportGlb,
    addPrimitive:k=>{const o=stage.addPrimitive(k);select(o.id);return o.id;},addLight:k=>{const o=stage.addLight(k);select(o.id);return o.id;},
    setTransform:(id,p)=>stage.setTransform(id,p),setMaterial:(id,p)=>stage.setMaterial(id,p),rename:(id,n)=>stage.rename(id,n),
    addCamera:fromView=>{
@@ -289,13 +349,34 @@ export default function Viewport3D(){
   });
   // Pick by click (no drag) and keyboard orbit/zoom.
   let down:{x:number;y:number}|null=null;const ray=new THREE.Raycaster();
+  let shiftDrag=false;let marquee:HTMLDivElement|null=null;
+  const endMarquee=()=>{marquee?.remove();marquee=null;if(shiftDrag){shiftDrag=false;controls.enabled=true;}};
+  // Capture phase, so orbit never starts when shift is held: shift+click toggles, shift+drag draws a marquee.
+  const onDownCapture=(e:PointerEvent)=>{if(e.shiftKey&&e.button===0&&gizmo.axis===null){shiftDrag=true;controls.enabled=false;}};
   const onDown=(e:PointerEvent)=>{down=gizmo.axis!==null?null:{x:e.clientX,y:e.clientY};};
+  const onMove=(e:PointerEvent)=>{
+   if(!shiftDrag||!down||Math.hypot(e.clientX-down.x,e.clientY-down.y)<=4)return;
+   if(!marquee){marquee=document.createElement('div');marquee.style.cssText='position:fixed;pointer-events:none;border:1px dashed #6d4aff;background:rgba(109,74,255,0.12);z-index:50';marquee.setAttribute('aria-hidden','true');document.body.appendChild(marquee);}
+   const r=marqueeRect(down,{x:e.clientX,y:e.clientY});marquee.style.left=r.x0+'px';marquee.style.top=r.y0+'px';marquee.style.width=(r.x1-r.x0)+'px';marquee.style.height=(r.y1-r.y0)+'px';
+  };
   const onUp=(e:PointerEvent)=>{
+   const wasShift=shiftDrag;endMarquee();
    if(justDragged){justDragged=false;down=null;return;}
-   if(!down||Math.hypot(e.clientX-down.x,e.clientY-down.y)>4){down=null;return;}down=null;
-   const r=renderer.domElement.getBoundingClientRect();ray.setFromCamera(new THREE.Vector2(((e.clientX-r.left)/r.width)*2-1,-(((e.clientY-r.top)/r.height)*2-1)),camera);
+   if(!down){return;}
+   const start=down;down=null;const rect=renderer.domElement.getBoundingClientRect();
+   if(Math.hypot(e.clientX-start.x,e.clientY-start.y)>4){
+    if(!wasShift)return;
+    const box=marqueeRect(start,{x:e.clientX,y:e.clientY});const ids:number[]=[];
+    holder.traverse(o=>{if(!(o as THREE.Mesh).isMesh)return;const b=new THREE.Box3().setFromObject(o);if(b.isEmpty())return;
+     const p=b.getCenter(new THREE.Vector3()).project(camera);if(p.z>1)return;
+     if(inRect(box,{x:rect.left+(p.x+1)/2*rect.width,y:rect.top+(1-p.y)/2*rect.height}))ids.push(o.id);});
+    applySet(ids,ids.length?ids[ids.length-1]:null);return;
+   }
+   ray.setFromCamera(new THREE.Vector2(((e.clientX-rect.left)/rect.width)*2-1,-(((e.clientY-rect.top)/rect.height)*2-1)),camera);
    const hit=ray.intersectObject(holder,true).find(h=>(h.object as THREE.Mesh).isMesh);
-   const target=hit?.object??null;select(target?target.id:null);
+   const target=hit?.object??null;
+   if(wasShift){if(target){const st=getStudio3DState();const t=toggleSelection(st.marked,st.selected,target.id);applySet(t.marked,t.selected);}return;}
+   select(target?target.id:null);
   };
   const onKey=(e:KeyboardEvent)=>{
    const sel=getStudio3DState().selected;
@@ -315,11 +396,11 @@ export default function Viewport3D(){
    if(!used)return;e.preventDefault();
    if(e.key!=='Home'){sph.radius=Math.min(Math.max(sph.radius,controls.minDistance||1e-3),controls.maxDistance||Infinity);camera.position.copy(controls.target).add(off.setFromSpherical(sph));camera.lookAt(controls.target);controls.update();invalidate();}
   };
-  const cv=renderer.domElement;cv.addEventListener('pointerdown',onDown);cv.addEventListener('pointerup',onUp);cv.addEventListener('keydown',onKey);
+  const cv=renderer.domElement;cv.addEventListener('pointerdown',onDownCapture,true);cv.addEventListener('pointerdown',onDown);window.addEventListener('pointermove',onMove);window.addEventListener('pointercancel',endMarquee);cv.addEventListener('pointerup',onUp);cv.addEventListener('keydown',onKey);
   sync();frameAll();void applyEnv();
   return()=>{
    disposed=true;opening++;off();cancelAnimationFrame(frame);ro.disconnect();controls.dispose();
-   cv.removeEventListener('pointerdown',onDown);cv.removeEventListener('pointerup',onUp);cv.removeEventListener('keydown',onKey);
+   cv.removeEventListener('pointerdown',onDownCapture,true);cv.removeEventListener('pointerdown',onDown);window.removeEventListener('pointermove',onMove);window.removeEventListener('pointercancel',endMarquee);endMarquee();cv.removeEventListener('pointerup',onUp);cv.removeEventListener('keydown',onKey);
    if(getStudio3DState().status==='loading')patchStudio3D({status:stage.root.children.length?'ready':'idle',confirmReplace:null});
    gizmo.detach();gizmo.dispose();offStage();clearSelection();for(const h of helpers.values())h.dispose();grid.geometry.dispose();(grid.material as THREE.Material).dispose();for(const t of envTargets)t.dispose();envCache.clear();pmrem.dispose();renderer.dispose();renderer.forceContextLoss();
    if(cv.parentNode===el)el.removeChild(cv);
