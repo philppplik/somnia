@@ -13,6 +13,7 @@ export const PHOTOS_PANELS:readonly PanelDef[]=[
  panel('histogram','right','Histogram',['photos.getHistogram'],{defaultOpen:true,minHeight:230}),
  panel('curves','right','Curves',['photos.setAdjustment','photos.resetAdjustments'],{minHeight:330}),
  panel('hsl','right','Palette',['photos.setAdjustment','photos.resetAdjustments'],{minHeight:300}),
+ panel('mask','right','Eclipse',[],{minHeight:340}),
  panel('light','right','DevelopLight',['photos.setAdjustment','photos.resetAdjustments'],{defaultOpen:true,minHeight:260}),
  panel('color','right','DevelopColor',['photos.setAdjustment','photos.resetAdjustments'],{defaultOpen:true,minHeight:230}),
  panel('effects','right','DevelopEffects',['photos.setAdjustment','photos.resetAdjustments'],{minHeight:200}),
@@ -30,6 +31,7 @@ export const PHOTOS_EXTRA_RAIL:readonly RailItemDef[]=[
  {id:'histogram',icon:'Histogram',label:'Histogram',labelKey:'photos.panel.histogram',kind:'panel',panel:'histogram',order:5},
  {id:'curves',icon:'Curves',label:'Curves',labelKey:'photos.panel.curves',kind:'panel',panel:'curves',order:7},
  {id:'hsl',icon:'Palette',label:'Mixer',labelKey:'photos.panel.hsl',kind:'panel',panel:'hsl',order:8},
+ {id:'mask',icon:'Eclipse',label:'Mask',labelKey:'photos.panel.mask',kind:'panel',panel:'mask',order:9},
  {id:'presets',icon:'Presets',label:'Presets',labelKey:'photos.panel.presets',kind:'panel',panel:'presets',order:60},
  {id:'export',icon:'Download',label:'Export',labelKey:'photos.panel.export',kind:'panel',panel:'export',order:70},
 ];

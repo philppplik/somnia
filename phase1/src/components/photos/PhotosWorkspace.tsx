@@ -24,6 +24,7 @@ import {beginPhotoGesture,endPhotoGesture,previewPhotoSettings,commitPhotoSettin
 import {bandForHue,nearestCurvePoint,targetCurveDelta,targetSliderDelta} from '../../lib/photos/targeting';
 import {sanitizeCurvePoints,type CurveChannel} from '../../lib/photos/curves';
 import {NEUTRAL_BAND,rgbToHsl,type HslBandId} from '../../lib/photos/hslMixer';
+import {lumMaskWeight,lumMaskWindowNeutral,neutralLumMask} from '../../lib/photos/lumMask';
 import {lumaOf} from '../../lib/photos/histogram';
 import {usePanelState} from '../../store/panelStateStore';
 import {getState,patchState,requestStudio,useAppStore} from '../../store/appStore';
@@ -54,7 +55,7 @@ type DragMode={kind:'move';dx:number;dy:number}|{kind:'nw'|'ne'|'sw'|'se'};
 export function PhotosWorkspace({item}:{item:MediaItem}){
  const {t}=useT();const studio=useAppStore().activeStudio;const session=usePhotoSession(item.name);
  const media=useMedia();const nav=photoNav(media.items,item.name);
- const stage=useRef<HTMLDivElement>(null),canvas=useRef<HTMLCanvasElement>(null),clipCanvas=useRef<HTMLCanvasElement>(null),splitCanvas=useRef<HTMLCanvasElement>(null),imgBox=useRef<HTMLDivElement>(null);
+ const stage=useRef<HTMLDivElement>(null),canvas=useRef<HTMLCanvasElement>(null),clipCanvas=useRef<HTMLCanvasElement>(null),splitCanvas=useRef<HTMLCanvasElement>(null),maskCanvas=useRef<HTMLCanvasElement>(null),imgBox=useRef<HTMLDivElement>(null);
  const [stageSize,setStageSize]=useState<[number,number]>([0,0]);
  const [zoom,setZoom]=useState<number|null>(null); // null = fit
  const [pan,setPan]=useState<[number,number]>([0,0]);
@@ -62,6 +63,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
  const [note,setNote]=useState('');
  const [showGuides,setShowGuides]=usePanelState<boolean>('photos.cropGuides',true);
  const [showClipping,setShowClipping]=usePanelState<boolean>('photos.clipping',false);
+ const [showMaskOverlay]=usePanelState<boolean>('photos.lummask.overlay',false);
  const [showSplit,setShowSplit]=usePanelState<boolean>('photos.split',false);
  const [settingsClip,setSettingsClip]=usePanelState<SettingsPayload|null>('photos.settingsClipboard',null);
  const clipboardSettings=decodeSettingsPayload(settingsClip);
@@ -110,6 +112,19 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
  const shown=compare&&session?.original?session.original:session?.frame??null;
  useEffect(()=>{draw(canvas.current,shown);},[shown]);
  useEffect(()=>{if(showClipping)draw(clipCanvas.current,shown?clippingOverlayImage(shown):null);},[shown,showClipping]);
+ const lumMask=session?.now.lumMask??neutralLumMask();
+ useEffect(()=>{ // the mask overlay paints the weight map over the current frame, accent-tinted
+  const c=maskCanvas.current;
+  if(!showMaskOverlay||!shown||lumMaskWindowNeutral(lumMask)){draw(c,null);return;}
+  const px=new Uint8Array(shown.bytes),img=new ImageData(shown.width,shown.height);
+  for(let p=0;p<shown.width*shown.height;p++){
+   const i=p*4,r=px[i],g=px[i+1],b=px[i+2];
+   const [hh,ss]=rgbToHsl(r,g,b);
+   const w=lumMaskWeight((0.2126*r+0.7152*g+0.0722*b)/255,hh,ss,lumMask);
+   img.data[i]=99;img.data[i+1]=102;img.data[i+2]=241;img.data[i+3]=Math.round(w*110);
+  }
+  if(c){c.width=shown.width;c.height=shown.height;c.getContext('2d')!.putImageData(img,0,0);}
+ },[shown,showMaskOverlay,lumMask]);
  const original=session?.original;
  useEffect(()=>{
   if(!showSplit)return;
@@ -340,6 +355,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
    <div ref={imgBox} className="absolute left-1/2 top-1/2" style={{width:dispW,height:dispH,transform:`translate(-50%,-50%) translate(${pan[0]}px,${pan[1]}px)`}}>
     <canvas ref={canvas} className="block size-full rounded-[2px] shadow-sm" style={{imageRendering:scale>4?'pixelated':'auto'}} data-testid="photos-canvas"/>
     {showClipping&&<canvas ref={clipCanvas} className={`pointer-events-none absolute inset-0 size-full${scale>4?' pixelated':''}`} data-testid="photos-clipping-canvas"/>}
+    {showMaskOverlay&&!lumMaskWindowNeutral(lumMask)&&<canvas ref={maskCanvas} className="pointer-events-none absolute inset-0 size-full" data-testid="photos-lummask-overlay"/>}
     {showSplit&&original&&<canvas ref={splitCanvas} className={`pointer-events-none absolute inset-0 size-full${scale>4?' pixelated':''}`} data-testid="photos-split-canvas"/>}
     {showSplit&&original&&<svg className="absolute inset-0 size-full" data-testid="photos-split-divider">
      <line x1={splitX*dispW} y1={0} x2={splitX*dispW} y2={dispH} stroke="rgba(255,255,255,0.9)" strokeWidth={2} pointerEvents="none"/>

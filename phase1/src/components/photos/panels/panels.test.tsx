@@ -35,7 +35,7 @@ test('rail items of the right side are ordered and every panel has exactly one r
  const rails=[...photosStudio.shellV2!.leftRail!,...photosStudio.shellV2!.rightRail!];
  for(const p of PHOTOS_PANELS)assert.equal(rails.filter(r=>r.panel===p.id).length,1,p.id);
  const right=photosStudio.shellV2!.rightRail!.map(r=>r.order);assert.deepEqual(right,[...right].sort((a,b)=>a-b));
- assert.deepEqual(photosStudio.shellV2!.rightRail!.map(r=>r.id),['histogram','curves','hsl','light','color','effects','detail','transform','presets','export']);
+ assert.deepEqual(photosStudio.shellV2!.rightRail!.map(r=>r.id),['histogram','curves','hsl','mask','light','color','effects','detail','transform','presets','export']); // P59: mask slots between mixer and develop sections (extended, not weakened)
 });
 test('locale files of the panels have the same keys and placeholders in all five languages',()=>{
  const ref=Object.keys(CATALOGUES.en).filter(k=>k.startsWith('photos.p.')||k.startsWith('photos.preset.')||k.startsWith('photos.panel.')||k.startsWith('cmd.photos.'));

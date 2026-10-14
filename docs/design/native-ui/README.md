@@ -72,6 +72,7 @@ All file links are repository-relative, so they remain useful on a feature branc
 42. [Photos versions and split polish](photos-versions.md)
 43. [Photos adjustment brush](photos-adjustment-brush.md)
 44. [Photos lens correction](photos-lens-correction.md)
+45. [Photos luminosity mask](photos-lum-mask.md)
 
 ## The system in one view
 
