@@ -1,9 +1,11 @@
+import {useState} from 'react';
 import {useT} from '../../lib/useT';
 import {Button} from '../ui/button';
-import {NativeInput} from '../ui/native-controls';
+import {NativeInput,NativeSelect} from '../ui/native-controls';
 import {InspectorNumberField} from '../studios/InspectorNumberField';
 import {MAX_TEXT_ANIMATORS,type Layer,type TextAnimator} from '../../lib/animation/model';
-import {DEFAULT_ANIMATOR_COLOR} from '../../lib/animation/textAnimators';
+import {animationSession,useAnimationState} from '../../lib/animation/session';
+import {animatorEdit,DEFAULT_ANIMATOR_COLOR} from '../../lib/animation/textAnimators';
 import {evaluate} from '../../lib/animation/interpolate';
 import {executeCommand} from '../../lib/commands';
 const field='h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text';
@@ -11,7 +13,10 @@ const fmt=(n:number)=>String(Math.round(n*100)/100);
 const run=(params:unknown)=>void executeCommand('animation.text.animator',params);
 /** Inspector section for per-character text animators: selector range, softness, offset (keyable), shift, scale and opacity. */
 export function TextAnimators({layer,at}:{layer:Layer;at:number}){
- const {t}=useT();const list=layer.animators??[];
+ const {t}=useT();const list=layer.animators??[];const [secs,setSecs]=useState(1);useAnimationState();
+ /** Hover or focus previews the sweep on the canvas without committing; leaving restores. */
+ const peek=(a:TextAnimator,mode:'wave'|'reveal')=>{const s=animationSession();try{s.previewEdits([animatorEdit(s.document!,layer.id,{op:'stagger',animator:a.id,t:at,seconds:secs,mode})]);}catch{/* does not fit */}};
+ const unpeek=()=>animationSession().cancelPreview();
  const num=(a:TextAnimator,label:string,value:number,min:number,max:number,patch:(v:number)=>Record<string,unknown>)=>
   <InspectorNumberField label={label} className={field} format={fmt} value={value} min={min} max={max} disabled={layer.locked} onCommit={v=>run({layer:layer.id,op:'update',animator:a.id,patch:patch(v)})}/>;
  return <fieldset className="m-0 grid gap-2 border border-subtle p-2" disabled={layer.locked} data-testid="animation-text-animators"><legend className="text-ink-3">{t('animation.animators.title')}</legend>
@@ -31,6 +36,11 @@ export function TextAnimators({layer,at}:{layer:Layer;at:number}){
     <div className="grid gap-1 text-ink-3"><label className="flex items-center gap-1"><NativeInput type="checkbox" className="animation-checkbox" checked={!!a.color} onChange={e=>run({layer:layer.id,op:'update',animator:a.id,patch:{color:e.target.checked?DEFAULT_ANIMATOR_COLOR:null}})}/>{t('animation.animators.color')}</label>
      {a.color&&<NativeInput type="color" aria-label={t('animation.animators.color')} className="h-8 w-16 rounded-sm border border-subtle bg-transparent" value={a.color} onChange={e=>run({layer:layer.id,op:'update',animator:a.id,patch:{color:e.target.value}})}/>}</div>
    </div>
+   <div className="flex flex-wrap items-center gap-1 text-ink-3">
+    <NativeSelect className="h-5 rounded-sm border border-subtle bg-transparent px-1 text-xs text-ink-2" aria-label={t('animation.animators.unit')} value={a.unit??'char'} onChange={e=>run({layer:layer.id,op:'update',animator:a.id,patch:{unit:e.target.value}})} data-testid="animation-animator-unit">
+     {(['char','word'] as const).map(u=><option key={u} value={u}>{t(`animation.animators.unit.${u}`)}</option>)}</NativeSelect>
+    <NativeInput type="number" min={0.1} max={30} step={0.1} className="h-5 w-12 rounded-sm border border-subtle bg-transparent px-1 text-xs text-ink-2" aria-label={t('animation.animators.staggerSeconds')} value={secs} onChange={e=>setSecs(Math.max(0.1,Math.min(30,Number(e.target.value)||1)))} data-testid="animation-animator-seconds"/>
+    {(['wave','reveal'] as const).map(m=><Button key={m} size="tiny" variant="ghost" onClick={()=>run({layer:layer.id,op:'stagger',animator:a.id,t:at,seconds:secs,mode:m})} onPointerEnter={()=>peek(a,m)} onPointerLeave={unpeek} onFocus={()=>peek(a,m)} onBlur={unpeek} data-testid={`animation-animator-stagger-${m}`}>{t(`animation.animators.stagger.${m}`)}</Button>)}</div>
    <label className="flex items-center gap-1 text-ink-3"><NativeInput type="checkbox" className="animation-checkbox" checked={a.offset.keys.length>0} onChange={e=>run({layer:layer.id,op:'animate',animator:a.id,on:e.target.checked,t:at})}/>{t('animation.animators.animateOffset')}</label>
   </div>)}
   <Button size="tiny" variant="outline" disabled={list.length>=MAX_TEXT_ANIMATORS} onClick={()=>run({layer:layer.id,op:'add'})} data-testid="animation-animator-add">{t('animation.animators.add')}</Button>

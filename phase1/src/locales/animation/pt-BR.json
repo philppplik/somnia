@@ -341,5 +341,11 @@
  "cmd.animation.keys.bounce": "Gerar um quique entre as chaves selecionadas",
  "animation.bounce.apply": "Quique",
  "animation.bounce.count": "Quiques",
- "animation.stagger.timing": "Mover pontos de entrada e saída"
+ "animation.stagger.timing": "Mover pontos de entrada e saída",
+ "animation.animators.unit": "Unidade do seletor",
+ "animation.animators.unit.char": "Caractere",
+ "animation.animators.unit.word": "Palavra",
+ "animation.animators.staggerSeconds": "Segundos de escalonamento",
+ "animation.animators.stagger.wave": "Onda",
+ "animation.animators.stagger.reveal": "Revelar"
 }

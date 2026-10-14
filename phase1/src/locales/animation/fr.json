@@ -341,5 +341,11 @@
  "cmd.animation.keys.bounce": "Générer un rebond entre les clés sélectionnées",
  "animation.bounce.apply": "Rebond",
  "animation.bounce.count": "Rebonds",
- "animation.stagger.timing": "Déplacer les points d’entrée et de sortie"
+ "animation.stagger.timing": "Déplacer les points d’entrée et de sortie",
+ "animation.animators.unit": "Unité du sélecteur",
+ "animation.animators.unit.char": "Caractère",
+ "animation.animators.unit.word": "Mot",
+ "animation.animators.staggerSeconds": "Secondes de décalage",
+ "animation.animators.stagger.wave": "Vague",
+ "animation.animators.stagger.reveal": "Révéler"
 }

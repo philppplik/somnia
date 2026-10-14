@@ -341,5 +341,11 @@
  "cmd.animation.keys.bounce": "Generar un rebote entre las claves seleccionadas",
  "animation.bounce.apply": "Rebote",
  "animation.bounce.count": "Rebotes",
- "animation.stagger.timing": "Mover puntos de entrada y salida"
+ "animation.stagger.timing": "Mover puntos de entrada y salida",
+ "animation.animators.unit": "Unidad del selector",
+ "animation.animators.unit.char": "Carácter",
+ "animation.animators.unit.word": "Palabra",
+ "animation.animators.staggerSeconds": "Segundos de escalonado",
+ "animation.animators.stagger.wave": "Ola",
+ "animation.animators.stagger.reveal": "Revelar"
 }

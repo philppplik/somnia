@@ -341,5 +341,11 @@
  "cmd.animation.keys.bounce": "Bake a bounce between selected keys",
  "animation.bounce.apply": "Bounce",
  "animation.bounce.count": "Bounces",
- "animation.stagger.timing": "Move in/out points"
+ "animation.stagger.timing": "Move in/out points",
+ "animation.animators.unit": "Selector unit",
+ "animation.animators.unit.char": "Character",
+ "animation.animators.unit.word": "Word",
+ "animation.animators.staggerSeconds": "Stagger seconds",
+ "animation.animators.stagger.wave": "Wave",
+ "animation.animators.stagger.reveal": "Reveal"
 }

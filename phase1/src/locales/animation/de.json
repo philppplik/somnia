@@ -341,5 +341,11 @@
  "cmd.animation.keys.bounce": "Bounce zwischen gewählten Keys backen",
  "animation.bounce.apply": "Bounce",
  "animation.bounce.count": "Anzahl Bounces",
- "animation.stagger.timing": "Ein-/Ausstiegspunkte mitverschieben"
+ "animation.stagger.timing": "Ein-/Ausstiegspunkte mitverschieben",
+ "animation.animators.unit": "Auswahleinheit",
+ "animation.animators.unit.char": "Zeichen",
+ "animation.animators.unit.word": "Wort",
+ "animation.animators.staggerSeconds": "Sekunden für den Versatz",
+ "animation.animators.stagger.wave": "Welle",
+ "animation.animators.stagger.reveal": "Einblenden"
 }
