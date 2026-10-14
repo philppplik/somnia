@@ -167,6 +167,7 @@ export function GraphEditor({comp,layerId,sel,playhead}:{comp:Composition;layerI
     </g>
     <line x1={xOf(playhead)} x2={xOf(playhead)} y1={PAD.t} y2={PAD.t+ph} stroke="var(--text-primary)" strokeWidth={1} pointerEvents="none" data-testid="animation-graph-playhead"/>
     {timeTicks(t0,t1,comp.fps,Math.floor(pw/80)).map(tk=><g key={tk} pointerEvents="none" data-testid="animation-graph-timetick"><line x1={xOf(tk)} x2={xOf(tk)} y1={PAD.t} y2={PAD.t+ph} stroke="var(--border-subtle)" strokeWidth={1}/><text x={xOf(tk)} y={h-3} textAnchor={xOf(tk)>PAD.l+pw-30?"end":"middle"} fontSize={9} fill="var(--text-tertiary)">{timecode(tk,comp.fps)}</text></g>)}
+    {(comp.markers??[]).filter(m=>m.t>=t0&&m.t<=t1).map(m=><line key={m.id} x1={xOf(m.t)} x2={xOf(m.t)} y1={PAD.t} y2={PAD.t+ph} stroke="var(--warning)" strokeWidth={1.5} strokeDasharray="3 3" pointerEvents="none" data-testid="animation-graph-marker"><title>{m.label}</title></line>)}
     {!speed&&selHere.flatMap(r=>{const i=keys.findIndex(k=>k.t===r.t);if(i<0)return [];const k=keys[i];
      return handlesOf(keys,i,ch).map(hd=><g key={`${hd.kind}-${r.t}`}>
       <line x1={xOf(k.t)} y1={yOf(channelOf(k.v,ch))} x2={xOf(hd.t)} y2={yOf(hd.v)} stroke="var(--text-secondary)" strokeWidth={1}/>
