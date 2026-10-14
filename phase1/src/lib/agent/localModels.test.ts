@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {LocalModelsRuntime,localOrigin,parseEvidence,parseInventory} from './localModels';
-import {LOCAL_MODELS_CATALOGUES} from './localModelsI18n';
+import {LOCAL_MODELS_CATALOGUES} from '../localModelsI18n';
 const version={version:'0.12.1'};
 const tags={models:[{name:'model:7b',digest:'sha256:x',size:42,details:{parameter_size:'7B',quantization_level:'Q4'}}]};
 test('read-only native runtime rejects remote endpoints and unusual URL components',()=>{

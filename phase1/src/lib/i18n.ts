@@ -1,4 +1,4 @@
-import {LOCAL_MODELS_CATALOGUES} from './agent/localModelsI18n';
+import {LOCAL_MODELS_CATALOGUES} from './localModelsI18n';
 import {CODE_PANEL_CATALOGUES} from './codePanels/i18n';
 import {DIAGNOSTIC_LOCALES} from './diagnostics/locales';
 import {CONSENT_CATALOGUES} from './extensions/consentLocales';
