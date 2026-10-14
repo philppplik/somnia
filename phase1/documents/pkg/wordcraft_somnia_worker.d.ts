@@ -37,6 +37,8 @@ export class DocSession {
     set_list(first_block: number, last_block: number, kind: string): void;
     /** Moves list paragraphs by `delta` levels. */
     restart_list(first: number, last: number): void;
+    list_options(block: number): string;
+    set_list_options(block: number, patch_json: string): void;
     shift_list_level(first_block: number, last_block: number, delta: number): void;
     /** `op`: row_above, row_below, delete_row, col_left, col_right, delete_col around the cell paragraph `block`. */
     edit_table(block: number, op: string): void;

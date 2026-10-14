@@ -1,6 +1,6 @@
 import {scrollToPage} from './navigate';
 import {commentAuthor} from './author';
-import {isListKind,type ListStyleId} from './protocol';
+import {isListKind,listOptionsProblem,type ListStyleId} from './protocol';
 import {propertiesProblem,linkProblem,commentProblem,type CommentItem,validHfText,type HeaderFooterState,checkFormatPatch,checkParaPatch,MAX_HF_CHARS,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch,type ImageOp,type PageSetupPatch,type PageSetupState,pageSetupProblem,type TableStyle,type TableStyleScope,tableStyleProblem,MIN_COL_PT,MAX_COL_PT,imageProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGES} from './protocol';
 import {captureDocumentSelection} from './selectionCapture';
 import {CELL_BASE,caretAfterEdit,diffEdit,inverseOf,UndoStack,type TextEdit,type UndoEntry} from './edit';
@@ -704,6 +704,18 @@ export const addComment=(text:string)=>run(async()=>{
 const commentStep=(op:(e:DocumentsEngine)=>Promise<import('./protocol').OpenedDocument>)=>run(async()=>{
  const c=getDocumentsState().caret;const spot=c?{block:c.block,off:c.head}:await nearEditable(engine!,0);
  await structural(op,spot,spot);if(!c)patchDocuments({caret:null});
+});
+/** The nine levels of the list at the caret (not an edit); null outside a list or without a caret. */
+export async function readListOptions():Promise<import('./protocol').ListOptionsState|null>{
+ const e=engine;const c=getDocumentsState().caret;if(!e||!c||getDocumentsState().status!=='ready')return null;const check=ownerGuard();
+ try{const st=await e.listOptions(norm(c).s.block);check();return st;}catch{check();return null;}
+}
+/** Changes one level of the caret's list: start value, number format, label text. One undo step; the other lists that shared the definition keep theirs. */
+export const setListOptions=(patch:import('./protocol').ListOptionsPatch)=>run(async()=>{
+ const n=await paraSpan();if(!n)return;
+ const cur=(await engine!.listOptions(n.s.block)).levels[patch?.level]?.format;
+ const bad=listOptionsProblem(patch,cur);if(bad)throw new Error(bad);
+ await structural(eng=>eng.setListOptions(n.s.block,patch),n.h,n.h);setSel(n.a,n.h);
 });
 /* ---- Document properties ---- */
 /** The document properties as the engine reports them (not an edit). */

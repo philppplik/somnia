@@ -947,6 +947,119 @@ impl DocSession {
         self.pages = DocLayout::default();
         Ok(())
     }
+    fn num_format_name(f: wordcraft_doc::section::NumFormat) -> Option<&'static str> {
+        use wordcraft_doc::section::NumFormat as F;
+        Some(match f {
+            F::Decimal => "decimal",
+            F::UpperRoman => "upperRoman",
+            F::LowerRoman => "lowerRoman",
+            F::UpperLetter => "upperLetter",
+            F::LowerLetter => "lowerLetter",
+            F::DecimalZero => "decimalZero",
+            F::Bullet => "bullet",
+            _ => return None,
+        })
+    }
+    fn num_format_of(name: &str) -> Option<wordcraft_doc::section::NumFormat> {
+        use wordcraft_doc::section::NumFormat as F;
+        Some(match name {
+            "decimal" => F::Decimal,
+            "upperRoman" => F::UpperRoman,
+            "lowerRoman" => F::LowerRoman,
+            "upperLetter" => F::UpperLetter,
+            "lowerLetter" => F::LowerLetter,
+            "decimalZero" => F::DecimalZero,
+            "bullet" => F::Bullet,
+            _ => return None,
+        })
+    }
+    /// The list at paragraph `block`: its nine levels (format, label text, start). `Err` outside a list.
+    fn do_list_options(&self, block: usize) -> Result<String, String> {
+        let p = self.para_at(block).ok_or("no such paragraph")?;
+        let n = self.doc.styles.resolve_para(&p.props).numbering.filter(|n| n.num != 0).ok_or("the paragraph is not in a list")?;
+        let num = self.doc.numbering.num(n.num).ok_or("the list no longer exists")?;
+        let abs = self.doc.numbering.abstract_of(n.num).ok_or("the list no longer exists")?;
+        let levels: Vec<_> = abs
+            .levels
+            .iter()
+            .enumerate()
+            .map(|(i, l)| {
+                let start = num.start_overrides.iter().find(|(lv, _)| *lv as usize == i).map(|(_, s)| *s).unwrap_or(l.start);
+                serde_json::json!({"format": Self::num_format_name(l.format).unwrap_or("other"), "text": l.text, "start": start})
+            })
+            .collect();
+        Ok(serde_json::json!({"level": n.level, "levels": levels}).to_string())
+    }
+    /// Changes one level of the list at paragraph `block`: `{"level":0-8,"start":0-9999,"format":..,"text":..}` (start, format and text are optional).
+    /// The list gets its own copy of the definition, so other lists that shared it do not change. Invalid values change nothing.
+    fn do_set_list_options(&mut self, block: usize, patch_json: &str) -> Result<(), String> {
+        if patch_json.len() > 2_000 {
+            return Err("the list options are too large".into());
+        }
+        let v: serde_json::Value = serde_json::from_str(patch_json).map_err(|e| format!("list options are not valid JSON: {e}"))?;
+        let obj = v.as_object().ok_or("list options must be an object")?;
+        if let Some(k) = obj.keys().find(|k| !matches!(k.as_str(), "level" | "start" | "format" | "text")) {
+            return Err(format!("unknown list option {k}"));
+        }
+        let level = obj.get("level").and_then(|x| x.as_u64()).filter(|l| *l < 9).ok_or("level must be 0 to 8")? as usize;
+        let start = match obj.get("start") {
+            None => None,
+            Some(x) => Some(x.as_u64().filter(|s| *s <= 9999).ok_or("start must be 0 to 9999")? as u32),
+        };
+        let format = match obj.get("format") {
+            None => None,
+            Some(x) => Some(x.as_str().and_then(Self::num_format_of).ok_or("unknown number format")?),
+        };
+        let text = match obj.get("text") {
+            None => None,
+            Some(x) => Some(x.as_str().ok_or("text must be text")?.to_string()),
+        };
+        let p = self.para_at(block).ok_or("no such paragraph")?;
+        let n = self.doc.styles.resolve_para(&p.props).numbering.filter(|n| n.num != 0).ok_or("the paragraph is not in a list")?;
+        let mut numbering = self.doc.numbering.clone();
+        let cur = numbering.level(n.num, level as u8).cloned().ok_or("the list no longer exists")?;
+        let new_format = format.unwrap_or(cur.format);
+        let new_text = text.unwrap_or_else(|| cur.text.clone());
+        if new_text.chars().count() > 32 || new_text.chars().any(|c| c.is_control()) {
+            return Err("the label is limited to 32 characters of plain text".into());
+        }
+        if matches!(new_format, wordcraft_doc::section::NumFormat::Bullet) {
+            if new_text.chars().count() != 1 || new_text == "%" {
+                return Err("a bullet is a single character".into());
+            }
+        } else {
+            let mut chars = new_text.chars().peekable();
+            let mut has_own = false;
+            while let Some(c) = chars.next() {
+                if c == '%' {
+                    match chars.next().and_then(|d| d.to_digit(10)) {
+                        Some(d) if d >= 1 && d as usize <= level + 1 => has_own |= d as usize == level + 1,
+                        _ => return Err(format!("a label can only use %1 to %{}", level + 1)),
+                    }
+                }
+            }
+            if !has_own {
+                return Err(format!("the label must contain %{}", level + 1));
+            }
+        }
+        let old_abs = numbering.num(n.num).ok_or("the list no longer exists")?.abstract_id;
+        let mut abs = numbering.abstracts.iter().find(|a| a.id == old_abs).cloned().ok_or("the list no longer exists")?;
+        abs.id = numbering.abstracts.iter().map(|a| a.id + 1).max().unwrap_or(0);
+        abs.levels[level].format = new_format;
+        abs.levels[level].text = new_text;
+        let new_id = abs.id;
+        numbering.abstracts.push(abs);
+        if let Some(num) = numbering.nums.iter_mut().find(|x| x.id == n.num) {
+            num.abstract_id = new_id;
+            if let Some(st) = start {
+                num.start_overrides.retain(|(lv, _)| *lv as usize != level);
+                num.start_overrides.push((level as u8, st));
+            }
+        }
+        self.doc.numbering = numbering;
+        self.pages = DocLayout::default();
+        Ok(())
+    }
     /// Restarts numbering at `first`: the paragraphs `first..=last` that are in a numbered list, and every later top-level
     /// paragraph of the same list, move to a new list instance that starts again at 1. Refuses when `first` is not in a numbered list.
     fn do_restart_list(&mut self, first: usize, last: usize) -> Result<(), String> {
@@ -2025,6 +2138,14 @@ impl DocSession {
         self.do_set_list(first_block, last_block, kind).map_err(|e| JsValue::from_str(&e))
     }
     /// Moves list paragraphs by `delta` levels (indent / outdent).
+    /// The nine levels of the list at paragraph `block` (see `do_list_options`).
+    pub fn list_options(&self, block: usize) -> Result<String, JsValue> {
+        self.do_list_options(block).map_err(|e| JsValue::from_str(&e))
+    }
+    /// Changes one level's start value, number format or label text (see `do_set_list_options`).
+    pub fn set_list_options(&mut self, block: usize, patch_json: &str) -> Result<(), JsValue> {
+        self.do_set_list_options(block, patch_json).map_err(|e| JsValue::from_str(&e))
+    }
     /// Restarts numbering at `first` (see `do_restart_list`).
     pub fn restart_list(&mut self, first: usize, last: usize) -> Result<(), JsValue> {
         self.do_restart_list(first, last).map_err(|e| JsValue::from_str(&e))
@@ -2614,6 +2735,38 @@ mod tests {
         assert!(s.do_restart_list(0, 0).is_err());
         s.do_set_list(0, 0, "bullet").unwrap();
         assert!(s.do_restart_list(0, 0).is_err());
+    }
+    #[test]
+    fn list_options_start_format_and_text() {
+        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
+        s.do_set_list(0, 1, "numbered").unwrap();
+        let opts = |s: &DocSession| -> serde_json::Value { serde_json::from_str(&s.do_list_options(0).unwrap()).unwrap() };
+        assert_eq!(opts(&s)["levels"][0]["format"], "decimal");
+        assert_eq!(opts(&s)["levels"].as_array().unwrap().len(), 9);
+        s.do_set_list_options(0, r#"{"level":0,"start":5,"format":"upperRoman","text":"(%1)"}"#).unwrap();
+        let o = opts(&s);
+        assert_eq!((o["levels"][0]["start"].clone(), o["levels"][0]["format"].clone(), o["levels"][0]["text"].clone()), (5.into(), "upperRoman".into(), "(%1)".into()));
+        // The second item shares the list, and the options survive a save and reload.
+        let re = DocSession::from_bytes(&wordcraft_docx::write(&s.doc).unwrap()).unwrap();
+        let o = serde_json::from_str::<serde_json::Value>(&re.do_list_options(1).unwrap()).unwrap();
+        assert_eq!((o["levels"][0]["start"].clone(), o["levels"][0]["format"].clone()), (5.into(), "upperRoman".into()));
+        // A second list that started from the same kind is not affected.
+        s.do_set_list(2, 2, "none").ok();
+        let before = s.doc.numbering.clone();
+        for bad in [
+            "{}", "[]", "nope", r#"{"level":9}"#, r#"{"level":-1}"#, r#"{"level":0,"start":10000}"#, r#"{"level":0,"start":-1}"#, r#"{"level":0,"format":"roman"}"#,
+            r#"{"level":0,"text":"no number"}"#, r#"{"level":0,"text":"%2."}"#, r#"{"level":1,"text":"%3"}"#, r#"{"level":0,"text":"%"}"#, r#"{"level":0,"text":"%1\u0007"}"#,
+            r#"{"level":0,"text":"%1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}"#, r#"{"level":0,"format":"bullet","text":"ab"}"#, r#"{"level":0,"color":"red"}"#,
+        ] {
+            assert!(s.do_set_list_options(0, bad).is_err(), "{bad}");
+        }
+        assert_eq!(s.doc.numbering, before, "refused options change nothing");
+        s.do_set_list_options(0, r#"{"level":1,"text":"%1.%2"}"#).unwrap();
+        s.do_set_list_options(0, r#"{"level":0,"format":"bullet","text":"*"}"#).unwrap();
+        s.do_set_list(0, 1, "none").unwrap();
+        assert!(s.do_list_options(0).is_err());
+        assert!(s.do_set_list_options(0, r#"{"level":0,"start":2}"#).is_err());
+        assert!(s.do_list_options(100_000).is_err());
     }
     #[test]
     fn save_records_last_modified_by_on_the_copy_only() {

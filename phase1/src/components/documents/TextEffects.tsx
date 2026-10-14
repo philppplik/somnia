@@ -4,6 +4,7 @@ import {HIGHLIGHTS,MAX_LINK_CHARS,linkProblem,type FormatPatch,type FormatState,
 import {setShortcutsOpen} from '../../lib/documents/shortcuts';
 import {setInfoDialog} from '../../lib/documents/infoDialog';
 import {setParagraphOptionsOpen} from '../../lib/documents/paragraphOptions';
+import {useDocuments} from '../../lib/documents/store';
 import {useT} from '../../lib/useT';
 import {NativeButton,NativeInput,NativeSelect} from '../ui/native-controls';
 const tool='grid h-7 cursor-pointer grid-flow-col items-center gap-1 rounded-sm border-0 bg-transparent px-2 text-xs text-ink-2 hover:bg-hover aria-pressed:bg-hover aria-pressed:text-ink disabled:cursor-default disabled:opacity-50';
@@ -25,7 +26,7 @@ export function LinkDialog({current,onClose}:{current:string;onClose:()=>void}){
 }
 /** Strikethrough, small caps, superscript, subscript, highlight, link and clear-formatting controls. */
 export function TextEffects({format,held,enabled}:{format:FormatState|null;held:FormatPatch|null;enabled:boolean}){
- const {t}=useT();const [linkOpen,setLinkOpen]=useState(false);
+ const {t}=useT();const doc=useDocuments();const [linkOpen,setLinkOpen]=useState(false);
  const on=(p:'strike'|'smallCaps')=>held?.[p]??format?.[p]==='on';
  const vert=held?.vertAlign??format?.vertAlign??null;const hl=held?.highlight??format?.highlight??null;
  const picked=hasTextSelection();
@@ -41,6 +42,7 @@ export function TextEffects({format,held,enabled}:{format:FormatState|null;held:
   <NativeButton className={tool+' border border-subtle'} title={t('documents.format.clear')+' (Ctrl+Space)'} disabled={!enabled||!picked} onClick={()=>void clearFormatting()} data-testid="documents-format-clear">{t('documents.format.clear')}</NativeButton>
   <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>setParagraphOptionsOpen(true)} data-testid="documents-paraopt-open">{t('documents.para.opt.open')}</NativeButton>
   <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>void insertPageBreak()} data-testid="documents-page-break">{t('documents.para.opt.insertBreak')}</NativeButton>
+  <NativeButton className={tool+' border border-subtle'} disabled={!enabled||!(doc.para?.list==='bullet'||doc.para?.list==='numbered')} onClick={()=>setInfoDialog('list')} data-testid="documents-listopt-open">{t('documents.listopt.open')}</NativeButton>
   <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>setInfoDialog('tabs')} data-testid="documents-tabs-open">{t('documents.tabs.open')}</NativeButton>
   <NativeButton className={tool+' border border-subtle'} onClick={()=>setInfoDialog('properties')} data-testid="documents-props-open">{t('documents.props.open')}</NativeButton>
   <NativeButton className={tool+' border border-subtle'} onClick={()=>setInfoDialog('wordCount')} data-testid="documents-wc-open">{t('documents.wc.open')}</NativeButton>

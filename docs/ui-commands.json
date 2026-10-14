@@ -2880,6 +2880,28 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.list.options",
+      "title": "List numbering options",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.list.options.set",
+      "title": "Set list level options",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.list.outdent",
       "title": "Promote list item",
       "category": "View",

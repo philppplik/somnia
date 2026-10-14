@@ -1,8 +1,8 @@
 import {useEffect,useState} from 'react';
-import {MAX_TAB_STOPS,TAB_ALIGNS,TAB_LEADERS,tabsProblem,type TabStopSpec,MAX_DESCRIPTION_CHARS,MAX_PROPERTY_CHARS,propertiesProblem,PROPERTY_KEYS,type PropertiesPatch,type PropertiesState} from '../../lib/documents/protocol';
+import {LIST_NUM_FORMATS,MAX_LIST_LABEL,MAX_LIST_START,listOptionsProblem,type ListNumFormat,type ListOptionsPatch,type ListOptionsState,MAX_TAB_STOPS,TAB_ALIGNS,TAB_LEADERS,tabsProblem,type TabStopSpec,MAX_DESCRIPTION_CHARS,MAX_PROPERTY_CHARS,propertiesProblem,PROPERTY_KEYS,type PropertiesPatch,type PropertiesState} from '../../lib/documents/protocol';
 import {setInfoDialog,useInfoDialog} from '../../lib/documents/infoDialog';
 import {authorProblem,MAX_AUTHOR_CHARS,savedAuthor,setAuthor} from '../../lib/documents/author';
-import {readProperties,selectedText,setProperties,setTabStops} from '../../lib/documents/session';
+import {readListOptions,readProperties,selectedText,setListOptions,setProperties,setTabStops} from '../../lib/documents/session';
 import {detailedStats} from '../../lib/documents/stats';
 import {useDocuments} from '../../lib/documents/store';
 import {useT} from '../../lib/useT';
@@ -20,7 +20,7 @@ export function InfoDialogs(){
  const which=useInfoDialog();const doc=useDocuments();
  if(doc.status!=='ready'||which===null)return null;
  const close=()=>setInfoDialog(null);
- return which==='properties'?<PropertiesDialog onClose={close}/>:which==='tabs'?<TabsDialog onClose={close}/>:<WordCountDialog onClose={close}/>;
+ return which==='properties'?<PropertiesDialog onClose={close}/>:which==='tabs'?<TabsDialog onClose={close}/>:which==='list'?<ListOptionsDialog onClose={close}/>:<WordCountDialog onClose={close}/>;
 }
 function PropertiesDialog({onClose}:{onClose:()=>void}){
  const {t}=useT();const [orig,setOrig]=useState<PropertiesState|null>(null);const [form,setForm]=useState<PropertiesState|null>(null);
@@ -39,6 +39,38 @@ function PropertiesDialog({onClose}:{onClose:()=>void}){
   {(bad||authorBad)&&<p role="alert" className="text-xs text-ink-3">{t('documents.props.invalid')}</p>}
   <div className="flex justify-end gap-2"><NativeButton className={tool} onClick={onClose}>{t('documents.para.opt.cancel')}</NativeButton>
    <NativeButton className={tool} disabled={authorBad||(!patch&&!authorChanged)} onClick={()=>{if(authorChanged&&!setAuthor(author))return;onClose();if(patch)void setProperties(patch);}} data-testid="documents-props-apply">{t('documents.para.opt.apply')}</NativeButton></div></>);
+}
+/** The change for one list level, or null when nothing differs or a value is not acceptable. `start` is the typed text. */
+export function buildListPatch(level:number,orig:{format:string;text:string;start:number},form:{format:ListNumFormat;text:string;start:string}):ListOptionsPatch|null{
+ const p:ListOptionsPatch={level};
+ if(form.format!==orig.format)p.format=form.format;
+ if(form.text!==orig.text||p.format!==undefined)p.text=form.text;
+ if(!/^\d{1,4}$/.test(form.start))return null;
+ const st=Number(form.start);if(st!==orig.start)p.start=st;
+ return Object.keys(p).length>1&&listOptionsProblem(p,orig.format as ListNumFormat)===null?p:null;
+}
+function ListOptionsDialog({onClose}:{onClose:()=>void}){
+ const {t}=useT();const [st,setSt]=useState<ListOptionsState|null>(null);const [level,setLevel]=useState(0);
+ const [form,setForm]=useState<{format:ListNumFormat;text:string;start:string}|null>(null);
+ useEffect(()=>{let live=true;void readListOptions().then(s=>{if(live&&s){setSt(s);setLevel(s.level);}}).catch(()=>undefined);return()=>{live=false;};},[]);
+ const cur=st?.levels[level];
+ useEffect(()=>{if(cur)setForm({format:(LIST_NUM_FORMATS as readonly string[]).includes(cur.format)?cur.format as ListNumFormat:'decimal',text:cur.text,start:String(cur.start)});},[st,level]);
+ if(!st||!cur||!form)return shell('documents-listopt-title',onClose,<h2 id="documents-listopt-title" className="text-sm font-medium">{t('documents.listopt.title')}</h2>);
+ const patch=buildListPatch(level,cur,form);const textBad=listOptionsProblem({level,text:form.text},form.format)!==null;const startBad=!/^\d{1,4}$/.test(form.start);
+ return shell('documents-listopt-title',onClose,<>
+  <h2 id="documents-listopt-title" className="text-sm font-medium">{t('documents.listopt.title')}</h2>
+  <label className="grid gap-1 text-xs text-ink-2">{t('documents.listopt.level')}
+   <NativeSelect className={field} value={String(level)} onChange={e=>setLevel(Number(e.currentTarget.value))} data-testid="documents-listopt-level">{st.levels.map((_,i)=><option key={i} value={i}>{i+1}</option>)}</NativeSelect></label>
+  <label className="grid gap-1 text-xs text-ink-2">{t('documents.listopt.format')}
+   <NativeSelect className={field} value={form.format} onChange={e=>setForm({...form,format:e.currentTarget.value as ListNumFormat})} data-testid="documents-listopt-format">{LIST_NUM_FORMATS.map(f=><option key={f} value={f}>{t('documents.listopt.format.'+f)}</option>)}</NativeSelect></label>
+  <label className="grid gap-1 text-xs text-ink-2">{t('documents.listopt.text')}
+   <NativeInput className={field} maxLength={MAX_LIST_LABEL} aria-invalid={textBad} value={form.text} onChange={e=>setForm({...form,text:e.currentTarget.value})} data-testid="documents-listopt-text"/></label>
+  <p className="text-xs text-ink-3">{t('documents.listopt.textHint').replaceAll('{n}',String(level+1))}</p>
+  <label className="grid gap-1 text-xs text-ink-2">{t('documents.listopt.start')}
+   <NativeInput className={field+' w-24 tabular-nums'} inputMode="numeric" maxLength={4} aria-invalid={startBad} value={form.start} onChange={e=>setForm({...form,start:e.currentTarget.value.trim()})} data-testid="documents-listopt-start"/></label>
+  {(textBad||startBad)&&<p role="alert" className="text-xs text-ink-3">{t('documents.listopt.invalid').replace('{max}',String(MAX_LIST_START))}</p>}
+  <div className="flex justify-end gap-2"><NativeButton className={tool} onClick={onClose}>{t('documents.para.opt.cancel')}</NativeButton>
+   <NativeButton className={tool} disabled={!patch} onClick={()=>{if(!patch)return;onClose();void setListOptions(patch);}} data-testid="documents-listopt-apply">{t('documents.para.opt.apply')}</NativeButton></div></>);
 }
 function WordCountDialog({onClose}:{onClose:()=>void}){
  const {t}=useT();const doc=useDocuments();

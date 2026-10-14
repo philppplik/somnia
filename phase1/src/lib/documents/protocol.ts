@@ -112,6 +112,8 @@ export type DocumentsRequest=
  |{id:number;kind:'colWidth';block:number;width:number}
  |{id:number;kind:'insertImage';block:number;bytes:ArrayBuffer;alt:string}
  |{id:number;kind:'imageEdit';block:number;op:ImageOp}
+ |{id:number;kind:'listOptions';block:number}
+ |{id:number;kind:'setListOptions';block:number;patch:ListOptionsPatch}
  |{id:number;kind:'propertiesState'}
  |{id:number;kind:'setProperties';patch:PropertiesPatch}
  |{id:number;kind:'pageSetupState'}
@@ -136,6 +138,7 @@ export type DocumentsResponse=
  |{id:number;ok:true;kind:'comments';comments:CommentItem[]}
  |{id:number;ok:true;kind:'headerFooter';state:HeaderFooterState}
  |{id:number;ok:true;kind:'properties';state:PropertiesState}
+ |{id:number;ok:true;kind:'listOptions';state:ListOptionsState}
  |{id:number;ok:true;kind:'pageSetup';state:PageSetupState}
  |{id:number;ok:true;kind:'hit';hit:HitResult|null}
  |{id:number;ok:true;kind:'caret';caret:CaretBox|null}
@@ -273,6 +276,37 @@ export function propertiesProblem(p:unknown):string|null{
   const max=k==='description'?MAX_DESCRIPTION_CHARS:MAX_PROPERTY_CHARS;
   if(Array.from(v.trim()).length>max)return `Property ${k} is limited to ${max} characters.`;
   if((k==='description'?/[\u0000-\u0009\u000b-\u001f\u007f]/:/[\u0000-\u001f\u007f]/).test(v.trim()))return `Property ${k} has characters that are not allowed.`;
+ }
+ return null;
+}
+
+/** Number formats a list level can use. */
+export const LIST_NUM_FORMATS=['decimal','upperRoman','lowerRoman','upperLetter','lowerLetter','decimalZero','bullet'] as const;
+export type ListNumFormat=typeof LIST_NUM_FORMATS[number];
+export interface ListLevelOptions{format:ListNumFormat|'other';text:string;start:number}
+/** The nine levels of a list; `level` is the level of the asked paragraph. */
+export interface ListOptionsState{level:number;levels:ListLevelOptions[]}
+/** One level change: start value, number format and label text such as "%1." or "%1.%2" are each optional. */
+export interface ListOptionsPatch{level:number;start?:number;format?:ListNumFormat;text?:string}
+export const MAX_LIST_START=9999,MAX_LIST_LABEL=32;
+/** The first problem with a list level change, or null when the engine will accept it. `current` is the level's present format, used when the patch leaves the format out. */
+export function listOptionsProblem(p:unknown,current?:ListNumFormat|'other'):string|null{
+ if(!p||typeof p!=='object'||Array.isArray(p))return 'The list options are not valid.';
+ const o=p as Record<string,unknown>;
+ for(const k of Object.keys(o))if(k!=='level'&&k!=='start'&&k!=='format'&&k!=='text')return `Unknown list option ${k}.`;
+ const level=o.level;if(typeof level!=='number'||!Number.isInteger(level)||level<0||level>8)return 'The level must be 1 to 9.';
+ if(o.start!==undefined&&(typeof o.start!=='number'||!Number.isInteger(o.start)||o.start<0||o.start>MAX_LIST_START))return `The start value must be 0 to ${MAX_LIST_START}.`;
+ if(o.format!==undefined&&!(LIST_NUM_FORMATS as readonly unknown[]).includes(o.format))return 'The number format is not offered.';
+ if(Object.keys(o).length===1)return 'Nothing to change.';
+ if(o.text!==undefined){
+  if(typeof o.text!=='string'||Array.from(o.text).length>MAX_LIST_LABEL||/[\u0000-\u001f\u007f]/.test(o.text))return 'The label has characters that are not allowed.';
+  const fmt=(o.format??current) as string|undefined;
+  if(fmt==='bullet'){if(Array.from(o.text).length!==1||o.text==='%')return 'A bullet is a single character.';}
+  else{
+   let own=false;const t=o.text;
+   for(let i=0;i<t.length;i++){if(t[i]!=='%')continue;const c=t[i+1];if(c===undefined||!/^[0-9]$/.test(c)||Number(c)<1||Number(c)>level+1)return `A label can only use %1 to %${level+1}.`;if(Number(c)===level+1)own=true;i++;}
+   if(!own)return `The label must contain %${level+1}.`;
+  }
  }
  return null;
 }

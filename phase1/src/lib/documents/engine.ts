@@ -55,6 +55,8 @@ export class DocumentsEngine{
  async commentsState():Promise<import('./protocol').CommentItem[]>{return(await this.call('comments',id=>({id,kind:'commentsState'}))).comments;}
  async addComment(block:number,start:number,end:number,text:string,author:string,date:string):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'addComment',block,start,end,text,author,date}))).document;}
  async replyComment(parent:number,text:string,author:string,date:string):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'replyComment',parent,text,author,date}))).document;}
+ async listOptions(block:number):Promise<import('./protocol').ListOptionsState>{return(await this.call('listOptions',id=>({id,kind:'listOptions',block}))).state;}
+ async setListOptions(block:number,patch:import('./protocol').ListOptionsPatch):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'setListOptions',block,patch}))).document;}
  async propertiesState():Promise<import('./protocol').PropertiesState>{return(await this.call('properties',id=>({id,kind:'propertiesState'}))).state;}
  async setProperties(patch:import('./protocol').PropertiesPatch):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'setProperties',patch}))).document;}
  async resolveComment(commentId:number,resolved:boolean):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'resolveComment',commentId,resolved}))).document;}

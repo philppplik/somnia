@@ -76,3 +76,15 @@ test('header and footer requests are validated before the engine',()=>{
  assert.deepEqual(calls,['["Report",null,true]',JSON.stringify([null,'x'.repeat(500),null])]);
  const st=k.handle({id:3,kind:'headerFooterState'} as never).res as {ok:boolean;state?:{header:{editable:boolean}}};assert.equal(st.state?.header.editable,true);
 });
+
+test('list options are validated before the engine',()=>{
+ const calls:string[]=[];
+ const S=class{constructor(_b?:Uint8Array){}free(){}blocks(){return '[]';}list_options(_b:number){return JSON.stringify({level:0,levels:Array.from({length:9},()=>({format:'decimal',text:'%1.',start:1}))});}set_list_options(b:number,p:string){calls.push(b+':'+p);}paginate(){return {};}} as unknown as new(b:Uint8Array)=>DocSessionLike;
+ const k=new DocumentsCore(S);k.handle({id:1,kind:'open',bytes:new Uint8Array(4)} as never);
+ const go=(patch:unknown,block=0)=>k.handle({id:2,kind:'setListOptions',block,patch} as never).res.ok;
+ for(const bad of [null,[],{},{level:9},{level:-1},{level:1.5},{level:0},{level:0,start:10000},{level:0,start:-1},{level:0,start:1.5},{level:0,start:'2'},{level:0,format:'roman'},{level:0,text:'no number'},{level:0,text:'%2.'},{level:1,text:'%3'},{level:0,text:'%'},{level:0,text:'%1\u0007'},{level:0,text:'%1'.padEnd(40,'x')},{level:0,format:'bullet',text:'ab'},{level:0,color:'red'}])assert.equal(go(bad),false,JSON.stringify(bad));
+ assert.equal(go({level:0,start:5},-1),false);assert.equal(go({level:0,start:5},1.5),false);
+ assert.equal(calls.length,0);
+ go({level:0,start:5,format:'upperRoman',text:'(%1)'});go({level:1,text:'%1.%2'});go({level:0,format:'bullet',text:'*'});
+ assert.deepEqual(calls,['0:{"level":0,"start":5,"format":"upperRoman","text":"(%1)"}','0:{"level":1,"text":"%1.%2"}','0:{"level":0,"format":"bullet","text":"*"}']);
+});
