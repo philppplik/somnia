@@ -6,6 +6,8 @@ Nutze Ollama für lokale Agent-Anfragen und unterstützte lokale Vibe-Läufe. So
 
 Dieser Leitfaden beschreibt den Entwicklungsstand A-V. Für das ausgelieferte Desktop-Paket und Tests auf echten Geräten fehlen weiterhin Abnahmenachweise. Siehe [Abnahme-Checkliste](LOCAL-AI-ACCEPTANCE.md). Manche Steuerelemente sind experimentell oder in Builds mit ausgeschalteten Flags nicht verfügbar.
 
+Für den Search-only-Entwicklungsworkflow gibt es einen [englischen Nutzerleitfaden](../guide/local-source-search.md) und [Milestone-Status](LOCAL-SOURCE-SEARCH-MILESTONE.md). Geprüfter offener Text und reiner Speicherindex, keine generierten Antworten.
+
 ## Ollama einrichten
 
 1. Öffne Einstellungen > Power-Ups > KI > Lokal. In manchen Ansichten heißt der Weg kürzer Einstellungen > KI > Lokal.

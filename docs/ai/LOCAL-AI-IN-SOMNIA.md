@@ -6,6 +6,8 @@ Use Ollama for local Agent requests and supported local Vibe runs. Somnia does n
 
 This guide describes the A-V development stack. Packaged desktop behavior and real-device tests still need acceptance evidence. See [the acceptance checklist](LOCAL-AI-ACCEPTANCE.md). Some controls are experimental or unavailable in builds whose flags are off.
 
+The development search-only workflow has its own [user guide](../guide/local-source-search.md) and [milestone status](LOCAL-SOURCE-SEARCH-MILESTONE.md). It uses reviewed open text and a memory-only index, not generated answers.
+
 ## Set up Ollama
 
 1. Open Settings > Power-Ups > AI > Local. In some navigation contexts this is shortened to Settings > AI > Local.

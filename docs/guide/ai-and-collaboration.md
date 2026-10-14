@@ -2,6 +2,10 @@
 
 These are optional workflows. A local editor session does not require an AI provider or collaboration server.
 
+## Local source search
+
+Status: **In development**. Search-only reviewed open text with a private memory index and source citations. No generated answers or persisted index. Read the [local source search guide](local-source-search.md) for setup, source consent, filters, citation review and the unverified desktop/model limits.
+
 ## Somnia Agent
 
 The Agent panel proposes bounded project changes. Review the exact context and changes before accepting; saving is a separate step. AI can be wrong. Approving a provider login is not the same as approving project disclosure, proving available credits or proving a successful model roundtrip.
