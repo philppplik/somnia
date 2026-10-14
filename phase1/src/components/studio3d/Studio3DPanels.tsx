@@ -694,6 +694,8 @@ function RenderPng(){
 function MeshTools(){
  const {t}=useT();const s=useStudio3D();const [copy,setCopy]=useState(true);const [keepPct,setKeepPct]=useState(50);const [symAxis,setSymAxis]=useState<'x'|'y'|'z'>('x');const [symSide,setSymSide]=useState<'positive'|'negative'>('positive');const [subTimes,setSubTimes]=useState(2);const [weldDist,setWeldDist]=useState(0.0001);const [nOp,setNOp]=useState<'flip'|'outside'|'smooth'|'flat'|'angle'>('smooth');const [nAngle,setNAngle]=useState(30);
  const [soThick,setSoThick]=useState(0.1);
+ const [rxTimes,setRxTimes]=useState(1);
+ const [rxFactor,setRxFactor]=useState(0.5);
  const [soOff,setSoOff]=useState(0);
  const set=s.marked.length?s.marked:s.selected!=null?[s.selected]:[];const ready=s.status==='ready'&&set.length>0;
  return <fieldset className="m-0 grid gap-2 border-0 p-0" data-testid="studio3d-meshtools"><legend className="text-xs text-ink-3">{t('studio3d.mesh.title')}</legend>
@@ -722,6 +724,10 @@ function MeshTools(){
    <NativeInput type="number" min={-1} max={1} step={0.5} value={soOff} aria-label={t('studio3d.mesh.solidifyOffset')} className="w-20" onChange={e=>setSoOff(Math.min(1,Math.max(-1,Number(e.currentTarget.value)||0)))}/>
    <Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.mesh.solidify',{thickness:soThick,offset:soOff})}>{t('studio3d.mesh.solidify')}</Button></div>
   <div className="flex flex-wrap gap-1"><Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.mesh.fillHoles',{})}>{t('studio3d.mesh.fillHoles')}</Button></div>
+  <div className="flex flex-wrap items-center gap-1"><NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={rxTimes} aria-label={t('studio3d.mesh.relaxTimes')} onChange={e=>setRxTimes(Number(e.currentTarget.value))}>
+    {[1,2,5,10].map(n=><option key={n} value={n}>{n}</option>)}</NativeSelect>
+   <NativeInput type="number" min={0.05} max={1} step={0.05} value={rxFactor} aria-label={t('studio3d.mesh.relaxFactor')} className="w-20" onChange={e=>setRxFactor(Math.min(1,Math.max(0.05,Number(e.currentTarget.value)||0.5)))}/>
+   <Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.mesh.relax',{iterations:rxTimes,factor:rxFactor})}>{t('studio3d.mesh.relax')}</Button></div>
  </fieldset>;
 }
 

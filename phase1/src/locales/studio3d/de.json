@@ -809,5 +809,11 @@
  "cmd.studio3d.mesh.fillHoles": "Offene Ränder von 3D-Meshes verschließen",
  "studio3d.hist.fillHoles_one": "{count} Loch in {name} füllen",
  "studio3d.hist.fillHoles_other": "{count} Löcher füllen",
- "studio3d.mesh.fillHoles": "Löcher füllen"
+ "studio3d.mesh.fillHoles": "Löcher füllen",
+ "cmd.studio3d.mesh.relax": "3D-Mesh glätten: Vertices driften zum Nachbarschaftsmittel, Ränder bleiben liegen",
+ "studio3d.hist.relax_one": "{name} glätten",
+ "studio3d.hist.relax_other": "{count} Objekte glätten",
+ "studio3d.mesh.relax": "Glätten",
+ "studio3d.mesh.relaxTimes": "Glättungs-Durchläufe",
+ "studio3d.mesh.relaxFactor": "Glättungsstärke"
 }

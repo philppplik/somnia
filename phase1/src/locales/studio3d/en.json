@@ -809,5 +809,11 @@
  "cmd.studio3d.mesh.fillHoles": "Cap the open borders of 3D meshes",
  "studio3d.hist.fillHoles_one": "Fill {count} hole in {name}",
  "studio3d.hist.fillHoles_other": "Fill {count} holes",
- "studio3d.mesh.fillHoles": "Fill holes"
+ "studio3d.mesh.fillHoles": "Fill holes",
+ "cmd.studio3d.mesh.relax": "Smooth a 3D mesh: vertices drift toward their neighbourhood average, borders stay put",
+ "studio3d.hist.relax_one": "Relax {name}",
+ "studio3d.hist.relax_other": "Relax {count} objects",
+ "studio3d.mesh.relax": "Relax",
+ "studio3d.mesh.relaxTimes": "Relax iterations",
+ "studio3d.mesh.relaxFactor": "Relax strength"
 }

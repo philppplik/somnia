@@ -1571,6 +1571,17 @@ test('3D studio mesh fill holes: an open plane is capped and undo restores it',a
  await expect.poll(tris).toBe(2);
 });
 
+test('3D studio mesh relax: a cone tip rounds off and undo restores it',async({page})=>{
+ await blank(page);
+ await insert(page,'cone',0);
+ const peak=async()=>(await session(page)).bounds!.max[1];
+ const before=await peak();
+ expect(await run(page,'studio3d.mesh.relax',{iterations:10,factor:0.5})).toBe(true);
+ await expect.poll(peak).toBeLessThan(before);
+ expect(await run(page,'studio3d.undo',{})).toBe(true);
+ await expect.poll(peak).toBe(before);
+});
+
 test('3D studio mesh simplify: triangle count drops and undo restores it',async({page})=>{
  await blank(page);
  await insert(page,'sphere',0);

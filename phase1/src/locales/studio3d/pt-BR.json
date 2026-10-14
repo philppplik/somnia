@@ -809,5 +809,11 @@
  "cmd.studio3d.mesh.fillHoles": "Fecha as bordas abertas das malhas 3D",
  "studio3d.hist.fillHoles_one": "Preencher {count} buraco em {name}",
  "studio3d.hist.fillHoles_other": "Preencher {count} buracos",
- "studio3d.mesh.fillHoles": "Preencher buracos"
+ "studio3d.mesh.fillHoles": "Preencher buracos",
+ "cmd.studio3d.mesh.relax": "Suaviza uma malha 3D: os vértices se aproximam da média da vizinhança, as bordas ficam paradas",
+ "studio3d.hist.relax_one": "Relaxar {name}",
+ "studio3d.hist.relax_other": "Relaxar {count} objetos",
+ "studio3d.mesh.relax": "Relaxar",
+ "studio3d.mesh.relaxTimes": "Iterações de relaxamento",
+ "studio3d.mesh.relaxFactor": "Intensidade de relaxamento"
 }

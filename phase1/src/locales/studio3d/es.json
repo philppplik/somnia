@@ -809,5 +809,11 @@
  "cmd.studio3d.mesh.fillHoles": "Tapa los bordes abiertos de las mallas 3D",
  "studio3d.hist.fillHoles_one": "Rellenar {count} hueco en {name}",
  "studio3d.hist.fillHoles_other": "Rellenar {count} huecos",
- "studio3d.mesh.fillHoles": "Rellenar huecos"
+ "studio3d.mesh.fillHoles": "Rellenar huecos",
+ "cmd.studio3d.mesh.relax": "Suaviza una malla 3D: los vértices se acercan a la media de su entorno, los bordes no se mueven",
+ "studio3d.hist.relax_one": "Relajar {name}",
+ "studio3d.hist.relax_other": "Relajar {count} objetos",
+ "studio3d.mesh.relax": "Relajar",
+ "studio3d.mesh.relaxTimes": "Iteraciones de relajación",
+ "studio3d.mesh.relaxFactor": "Intensidad de relajación"
 }

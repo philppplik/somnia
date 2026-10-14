@@ -45,6 +45,7 @@ export interface Studio3DController{
  separate(ids?:number[]):number;
  solidify(thickness:number,offset:number,ids?:number[]):number;
  fillHoles(ids?:number[]):number;
+ relax(iterations:number,factor:number,ids?:number[]):number;
  viewPreset(preset:ViewPreset):void;
  setTextureTransform(id:number,slot:TextureSlot,patch:Partial<TextureTransform>|'reset'):void;
  clipAdd(name?:string,duration?:number):number;
@@ -313,6 +314,7 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{ids?:number[]}>('studio3d.mesh.separate','Split 3D meshes into one object per connected part','Edit',p=>need().separate(p?.ids),object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500}},[]),hasScene),
   add<{thickness:number;offset?:number;ids?:number[]}>('studio3d.mesh.solidify','Give a thin 3D mesh real thickness: offset shell with stitched side walls','Edit',p=>need().solidify(p.thickness,p.offset??0,p.ids),object({thickness:{type:'number',exclusiveMinimum:0,maximum:1000000},offset:{type:'number',minimum:-1,maximum:1},ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500}},['thickness']),hasScene),
   add<{ids?:number[]}>('studio3d.mesh.fillHoles','Cap the open borders of 3D meshes','Edit',p=>need().fillHoles(p?.ids),object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500}},[]),hasScene),
+  add<{iterations?:number;factor?:number;ids?:number[]}>('studio3d.mesh.relax','Smooth a 3D mesh: vertices drift toward their neighbourhood average, borders stay put','Edit',p=>need().relax(p.iterations??1,p.factor??0.5,p.ids),object({iterations:{type:'integer',minimum:1,maximum:50},factor:{type:'number',exclusiveMinimum:0,maximum:1},ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500}},[]),hasScene),
   add<{id?:number;keep:number}>('studio3d.mesh.simplify','Simplify a 3D mesh: remove vertices while keeping its shape, UVs and normals','Edit',async p=>{const id=p.id??getStudio3DState().selected;if(id==null)throw new Error('Select an object first.');return need().simplify(id,p.keep);},object({id:{type:'integer',minimum:0},keep:{type:'number',exclusiveMinimum:0,exclusiveMaximum:1}},['keep']),hasScene),
   add<{preset:ViewPreset}>('studio3d.view.preset','Look at the 3D scene from the front, back, left, right, top, bottom or an isometric angle','View',p=>need().viewPreset(p.preset),object({preset:{enum:[...VIEW_PRESETS]}}),hasScene),
   add<{id?:number;slot:TextureSlot;reset?:boolean}&Partial<TextureTransform>>('studio3d.texture.transform','Move, scale or rotate the image of a texture slot (UV mapping)','Edit',p=>{const{id,slot,reset,...patch}=p;need().setTextureTransform(id??getStudio3DState().selected??-1,slot,reset?'reset':patch);},object({id:{type:'integer',minimum:0},slot:{enum:[...TEXTURE_SLOTS]},reset:{type:'boolean'},offsetX:{type:'number',minimum:-100,maximum:100},offsetY:{type:'number',minimum:-100,maximum:100},scaleX:{type:'number'},scaleY:{type:'number'},rotation:{type:'number',minimum:-360,maximum:360}},['slot']),()=>hasScene()&&getStudio3DState().selectedInfo?.material!=null),

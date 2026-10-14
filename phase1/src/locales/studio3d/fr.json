@@ -809,5 +809,11 @@
  "cmd.studio3d.mesh.fillHoles": "Bouche les bords ouverts des maillages 3D",
  "studio3d.hist.fillHoles_one": "Boucher {count} trou de {name}",
  "studio3d.hist.fillHoles_other": "Boucher {count} trous",
- "studio3d.mesh.fillHoles": "Boucher les trous"
+ "studio3d.mesh.fillHoles": "Boucher les trous",
+ "cmd.studio3d.mesh.relax": "Lisse un maillage 3D : les sommets dérivent vers la moyenne de leur voisinage, les bords restent",
+ "studio3d.hist.relax_one": "Lisser {name}",
+ "studio3d.hist.relax_other": "Lisser {count} objets",
+ "studio3d.mesh.relax": "Lisser",
+ "studio3d.mesh.relaxTimes": "Itérations de lissage",
+ "studio3d.mesh.relaxFactor": "Intensité de lissage"
 }

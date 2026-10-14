@@ -822,3 +822,63 @@ export function fillHolesMesh(m:MeshData):{mesh:MeshData;holes:number}{
  const out:MeshData=uvs?{positions,index,uvs}:{positions,index};
  check(out);return{mesh:out,holes:loops.length};
 }
+
+/** Laplacian smoothing of the whole mesh: every vertex moves a fraction of the way to the average of its neighbours, for the given iterations. Vertices are grouped by position so UV-seam twins move as one and never rip; true border vertices stay pinned so open meshes keep their outline; sculpt masks scale the movement down to zero. UVs, explicit normals and masks are carried (normals are rebuilt smooth on the stage). */
+export function relaxMesh(m:MeshData,iterations:number,factor:number):MeshData{
+ check(m);
+ if(!Number.isInteger(iterations)||iterations<1||iterations>50)throw new EditError('The relax iterations must be a whole number between 1 and 50.');
+ if(!Number.isFinite(factor)||factor<=0||factor>1)throw new EditError('The relax factor must be between 0 (exclusive) and 1.');
+ const nv=m.positions.length/3;
+ // Group vertices by position: twins share a group and move together.
+ const gk:string[]=[];
+ const gid=new Map<string,number>();
+ const groups:number[][]=[];
+ for(let v=0;v<nv;v++){
+  const k=`${Math.round(m.positions[v*3]*1e6)},${Math.round(m.positions[v*3+1]*1e6)},${Math.round(m.positions[v*3+2]*1e6)}`;
+  gk.push(k);
+  let g=gid.get(k);
+  if(g===undefined){g=groups.length;gid.set(k,g);groups.push([]);}
+  groups[g].push(v);
+ }
+ const ng=groups.length;
+ // True borders: position-keyed edges used once.
+ const edgeUse=new Map<string,number>();
+ const edges:[number,number][]=[];
+ for(let f=0;f<m.index.length;f+=3)for(let e=0;e<3;e++){
+  const a=gid.get(gk[m.index[f+e]])!,b=gid.get(gk[m.index[f+(e+1)%3]])!;
+  if(a===b)continue;
+  const k=a<b?`${a}_${b}`:`${b}_${a}`;
+  edgeUse.set(k,(edgeUse.get(k)||0)+1);
+  edges.push([a,b]);
+ }
+ const pinned=new Set<number>();
+ for(const[k,n]of edgeUse)if(n===1){const[a,b]=k.split('_').map(Number);pinned.add(a);pinned.add(b);}
+ const nbr:Set<number>[]=[];for(let g=0;g<ng;g++)nbr.push(new Set());
+ for(const[a,b]of edges){nbr[a].add(b);nbr[b].add(a);}
+ // Group centre, mask average (1 = protected) and pin flag.
+ const cur:number[]=[];const gmask:number[]=[];
+ for(let g=0;g<ng;g++){
+  let x=0,y=0,z=0,mk=0;
+  for(const v of groups[g]){x+=m.positions[v*3];y+=m.positions[v*3+1];z+=m.positions[v*3+2];mk+=m.mask?m.mask[v]:0;}
+  const n=groups[g].length;
+  cur.push(x/n,y/n,z/n);gmask.push(mk/n);
+ }
+ for(let it=0;it<iterations;it++){
+  const next=[...cur];
+  for(let g=0;g<ng;g++){
+   if(pinned.has(g)||!nbr[g].size)continue;
+   const f=factor*(1-gmask[g]);if(f<=0)continue;
+   let x=0,y=0,z=0;
+   for(const h of nbr[g]){x+=cur[h*3];y+=cur[h*3+1];z+=cur[h*3+2];}
+   const n=nbr[g].size;
+   next[g*3]=cur[g*3]+(x/n-cur[g*3])*f;
+   next[g*3+1]=cur[g*3+1]+(y/n-cur[g*3+1])*f;
+   next[g*3+2]=cur[g*3+2]+(z/n-cur[g*3+2])*f;
+  }
+  for(let g=0;g<ng;g++){cur[g*3]=next[g*3];cur[g*3+1]=next[g*3+1];cur[g*3+2]=next[g*3+2];}
+ }
+ const positions=[...m.positions];
+ for(let g=0;g<ng;g++)for(const v of groups[g]){positions[v*3]=cur[g*3];positions[v*3+1]=cur[g*3+1];positions[v*3+2]=cur[g*3+2];}
+ const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
+ check(out);return out;
+}
