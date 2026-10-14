@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import {GLTFExporter} from 'three/examples/jsm/exporters/GLTFExporter.js';
 import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
 import {Stage} from './stage';
+import {bonePickRadius,pickBone} from './skeleton';
 import {ClipError} from './clips';
 class NodeFileReader{result:string|ArrayBuffer|null=null;onloadend:(()=>void)|null=null;onerror:(()=>void)|null=null;
  readAsArrayBuffer(b:Blob){void b.arrayBuffer().then(r=>{this.result=r;this.onloadend?.();},()=>this.onerror?.());}
@@ -72,4 +73,17 @@ test('a skinned mesh with bone rotation keys survives GLB export and reopen, wit
  const bones2=st2.bones();assert.deepEqual(bones2.map(b=>b.name),['Hip','Knee']);
  const k=st2.keysOf(0,bones2[1].id);assert.equal(k.length,1);assert.equal(k[0].path,'rotation');
  assert.deepEqual(k[0].times,[0,1]);assert.deepEqual(k[0].eases,['easeOut','linear']);assert.equal(st2.clips[0].duration,3);
+});
+test('a click ray picks the bone under the cursor, like the viewport does',()=>{
+ const {st,mesh,knee}=skinned();st.root.updateMatrixWorld(true);
+ const camera=new THREE.PerspectiveCamera(45,16/9,0.01,100);camera.position.set(3,2,5);camera.lookAt(0,0.5,0);camera.updateMatrixWorld(true);
+ const p=knee.getWorldPosition(new THREE.Vector3()).project(camera);
+ const ray=new THREE.Raycaster();ray.setFromCamera(new THREE.Vector2(p.x,p.y),camera);
+ // Same path as the viewport: joint world positions plus the model-scaled tolerance.
+ const pts=st.bones().map(b=>{const o=st.find(b.id)!;const w=o.getWorldPosition(new THREE.Vector3());return{id:b.id,at:[w.x,w.y,w.z] as const};});
+ const r=new THREE.Box3().setFromObject(mesh).getSize(new THREE.Vector3()).length()/2;
+ assert.equal(pickBone(ray.ray.origin.toArray() as [number,number,number],ray.ray.direction.toArray() as [number,number,number],pts,bonePickRadius(r)),knee.id);
+ // A ray into empty space selects nothing.
+ ray.setFromCamera(new THREE.Vector2(0.95,0.95),camera);
+ assert.equal(pickBone(ray.ray.origin.toArray() as [number,number,number],ray.ray.direction.toArray() as [number,number,number],pts,bonePickRadius(r)),null);
 });

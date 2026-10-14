@@ -22,7 +22,7 @@ import {getState as getAppState} from '../../store/appStore';
 import {readProjectUnit,writeProjectUnit} from '../../lib/studio3d/projectPrefs';
 import {toggleSelection,marqueeRect,inRect,turntablePlan,frameName,exportFileName,unitScale,isUnit,isMeshFormat,mergeSnap,snapTo,stlUnitHint,mtlReferences,mtlTextures,clampRenderSize,MAX_MTL_BYTES,MAX_TEXTURE_BYTES,MAX_TEXTURE_FILES,SnapError,mergeEnv,envFormatFor,nudgeFor,EnvError,modelFormatFor,readModelHeader,externalResources,ModelError,boundsValid,boundsCenter,boundsRadius,frameDistance,clipPlanes} from '../../lib/studio3d/model';
 import type {Bounds} from '../../lib/studio3d/model';
-import {checkSkins} from '../../lib/studio3d/skeleton';
+import {checkSkins,bonePickRadius,pickBone} from '../../lib/studio3d/skeleton';
 import {Stage,beginGroupDrag,applyGroupDrag,collectNodeExtras,applyNodeExtras,type GroupDragMember,type TransformSnapshot} from '../../lib/studio3d/stage';
 import {parseDocument,buildDocument,sceneBytes,fromBase64,DocumentError} from '../../lib/studio3d/document';
 import {registerStudio3DController} from '../../lib/studio3d/commands';
@@ -122,7 +122,9 @@ export default function Viewport3D(){
   const applyWire=(on:boolean)=>holder.traverse(o=>{const m=o as THREE.Mesh;if(!m.isMesh)return;for(const mat of Array.isArray(m.material)?m.material:[m.material])(mat as THREE.MeshBasicMaterial).wireframe=on;});
   const drawSelection=()=>{
    clearSelection();const id=getStudio3DState().selected;const obj=id==null?null:stage.find(id);
-   if(obj){const box=new THREE.Box3().setFromObject(obj);if(!box.isEmpty()){selection=new THREE.Box3Helper(box,0x6d4aff);scene.add(selection);}}
+   if(obj){const box=new THREE.Box3().setFromObject(obj);
+   if(box.isEmpty()&&(obj as THREE.Bone).isBone){const p=obj.getWorldPosition(new THREE.Vector3());const r=bounds&&boundsValid(bounds)?boundsRadius(bounds):1;const half=Math.max(0.02,r*0.03);box.setFromCenterAndSize(p,new THREE.Vector3(half*2,half*2,half*2));}
+   if(!box.isEmpty()){selection=new THREE.Box3Helper(box,0x6d4aff);scene.add(selection);}}
    for(const m of getStudio3DState().marked){if(m===id)continue;const o=stage.find(m);if(!o)continue;const b=new THREE.Box3().setFromObject(o);if(!b.isEmpty())marks.add(new THREE.Box3Helper(b,0xa28bff));}
   };
   const select=(id:number|null)=>{patchStudio3D({selected:id!=null&&stage.find(id)?id:null,marked:[]});sync();};
@@ -238,7 +240,10 @@ export default function Viewport3D(){
     groupPivot.position.copy(box.isEmpty()?new THREE.Vector3():box.getCenter(new THREE.Vector3()));groupPivot.quaternion.identity();groupPivot.scale.set(1,1,1);
     if(!groupPivot.parent)scene.add(groupPivot);groupPivot.updateMatrixWorld(true);gizmo.attach(groupPivot);return;
    }
-   const id=getStudio3DState().selected;const o=id==null?null:stage.find(id);if(o)gizmo.attach(o);else gizmo.detach();
+   const id=getStudio3DState().selected;const o=id==null?null:stage.find(id);
+   // Bones rotate only: moving or scaling a joint would break the bind pose, so the gizmo steps back in those modes.
+   if(o&&(o as THREE.Bone).isBone&&gizmo.mode!=='rotate'){gizmo.detach();return;}
+   if(o)gizmo.attach(o);else gizmo.detach();
   };
   /** Skeleton overlay: rebuilt when the set of bones changes, shown when the session toggle is on. Kept out of the stage root so it never exports or alters bounds. */
   let skelHelper:THREE.SkeletonHelper|null=null;let skelKey='';
@@ -610,7 +615,15 @@ export default function Viewport3D(){
    const hit=ray.intersectObject(holder,true).find(h=>(h.object as THREE.Mesh).isMesh);
    const target=hit?.object??null;
    if(wasShift){if(target){const st=getStudio3DState();const t=toggleSelection(st.marked,st.selected,target.id);applySet(t.marked,t.selected);}return;}
-   select(target?target.id:null);
+   if(target){select(target.id);return;}
+   // No mesh under the cursor: a visible skeleton lets clicks near a joint select that bone.
+   let bone:number|null=null;
+   if(skelHelper&&skelHelper.visible){
+    const pts=stage.bones().map(b=>{const o=stage.find(b.id);if(!o)return null;const p=o.getWorldPosition(new THREE.Vector3());return{id:b.id,at:[p.x,p.y,p.z] as const};}).filter((x):x is{id:number;at:readonly[number,number,number]}=>x!==null);
+    const r=bounds&&boundsValid(bounds)?boundsRadius(bounds):1;
+    bone=pickBone(ray.ray.origin.toArray() as [number,number,number],ray.ray.direction.toArray() as [number,number,number],pts,bonePickRadius(r));
+   }
+   select(bone);
   };
   const onKey=(e:KeyboardEvent)=>{
    const sel=getStudio3DState().selected;

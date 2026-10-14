@@ -312,6 +312,12 @@ test('3D studio shows a skeleton overlay, keys a bone rotation and exports the s
  // Position keys on a bone are refused with a readable error.
  await run(page,'studio3d.key.set',{path:'position',time:0});
  await expect(page.getByRole('alert')).toContainText('rotation keys only');
+ // Click-select: the mesh under the cursor selects, a click into empty space clears the selection.
+ const vp=page.getByTestId('studio3d-viewport');const vb=await vp.boundingBox();
+ await vp.click({position:{x:vb!.width/2,y:vb!.height/2}});
+ await expect.poll(async()=>(await session(page)).info?.name).toBe('Body');
+ await vp.click({position:{x:5,y:5}});
+ await expect.poll(async()=>(await session(page)).selected).toBe(null);
  // The overlay toggles off and on.
  await page.getByRole('checkbox',{name:/Skeleton overlay/}).uncheck();
  await page.getByRole('checkbox',{name:/Skeleton overlay/}).check();
