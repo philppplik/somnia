@@ -631,6 +631,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `studio3d.edit.fatten` | Move selected vertices along their normals | Edit | studio3d |  |
 | `studio3d.edit.fill` | Fill the selected closed edge loop with a centroid triangle fan | Edit | studio3d |  |
 | `studio3d.edit.flip` | Flip the normals of selected faces | Edit | studio3d |  |
+| `studio3d.edit.flipEdge` | Rotate each selected edge shared by two triangles to the other diagonal | Edit | studio3d |  |
 | `studio3d.edit.inset` | Inset faces | Edit | studio3d |  |
 | `studio3d.edit.loopCut` | Loop cut | Edit | studio3d |  |
 | `studio3d.edit.loopSlide` | Loop slide | Edit | studio3d |  |

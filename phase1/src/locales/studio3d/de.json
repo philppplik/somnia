@@ -959,5 +959,8 @@
  "studio3d.edit.shearAlong": "Scherachse",
  "studio3d.edit.shearBy": "Referenzachse",
  "studio3d.edit.shearAmt": "Scherfaktor",
- "studio3d.edit.shear": "Scheren"
+ "studio3d.edit.shear": "Scheren",
+ "cmd.studio3d.edit.flipEdge": "Ausgewählte Kanten zwischen zwei Dreiecken auf die andere Diagonale drehen",
+ "studio3d.edit.flipEdge": "Kante drehen",
+ "studio3d.hist.editFlipEdge": "Kanten drehen"
 }

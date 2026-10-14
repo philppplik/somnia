@@ -959,5 +959,8 @@
  "studio3d.edit.shearAlong": "Eixo de cisalhamento",
  "studio3d.edit.shearBy": "Eixo de referência",
  "studio3d.edit.shearAmt": "Fator de cisalhamento",
- "studio3d.edit.shear": "Cisalhar"
+ "studio3d.edit.shear": "Cisalhar",
+ "cmd.studio3d.edit.flipEdge": "Rotacionar cada aresta selecionada compartilhada por dois triângulos para a outra diagonal",
+ "studio3d.edit.flipEdge": "Virar aresta",
+ "studio3d.hist.editFlipEdge": "Virar arestas"
 }

@@ -1125,6 +1125,23 @@ test('mesh edit mode: shear offsets the selection along one axis by another',asy
  await expect(page.getByRole('alert')).toContainText('must differ');
 });
 
+test('mesh edit mode: flip edge rotates a shared edge to the other diagonal',async({page})=>{
+ await blank(page);
+ const id=await insert(page,'cube',0);
+ expect(await run(page,'studio3d.edit.start',{id,mode:'edge'})).toBe(true);
+ expect(await run(page,'studio3d.edit.flipEdge',{})).toBe(false);
+ await expect(page.getByRole('alert')).toContainText('Select edges to flip');
+ expect(await run(page,'studio3d.edit.select',{kind:'edge',edges:[[9,10]]})).toBe(true);
+ expect(await run(page,'studio3d.edit.flipEdge',{})).toBe(true);
+ let s=await session(page);expect(s.stats.triangles).toBe(12);
+ await run(page,'studio3d.undo');
+ s=await session(page);expect(s.stats.triangles).toBe(12);
+ expect(await run(page,'studio3d.edit.selectAll',{op:'none'})).toBe(true);
+ expect(await run(page,'studio3d.edit.select',{kind:'edge',edges:[[8,9]]})).toBe(true);
+ expect(await run(page,'studio3d.edit.flipEdge',{})).toBe(false);
+ await expect(page.getByRole('alert')).toContainText('can be flipped');
+});
+
 test('mesh edit mode: weld merges selected vertices at their centre, undo restores them',async({page})=>{
  await blank(page);
  const id=await insert(page,'cube',0);

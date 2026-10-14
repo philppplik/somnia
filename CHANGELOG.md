@@ -1,4 +1,5 @@
 # Unreleased: 3D Studio P0
+- 3D Studio: edit mode rotates selected edges shared by two triangles to the other diagonal (`studio3d.edit.flipEdge`).
 - 3D Studio: edit mode shears the selected vertices along one axis by their position on another (`studio3d.edit.shear`).
 - 3D Studio: edit mode selects faces with a similar normal to the current selection (`studio3d.edit.selectSimilar`).
 - 3D Studio: edit mode scales the selected vertices toward or away from their centroid per axis (`studio3d.edit.scale`).

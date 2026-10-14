@@ -7262,6 +7262,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.edit.flipEdge",
+      "title": "Rotate each selected edge shared by two triangles to the other diagonal",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.edit.inset",
       "title": "Inset faces",
       "category": "Edit",

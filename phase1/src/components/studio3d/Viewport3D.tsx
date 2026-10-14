@@ -1226,6 +1226,7 @@ export default function Viewport3D(){
    editScale:factors=>{stage.editScale(factors);patchEdit();invalidate();},
    editSelectSimilar:degrees=>{stage.editSelectSimilar(degrees);patchEdit();invalidate();},
    editShear:(along,by,factor)=>{stage.editShear(along,by,factor);patchEdit();invalidate();},
+   editFlipEdge:()=>{stage.editFlipEdge();patchEdit();invalidate();},
    editExtrude:o=>{stage.editExtrude(o);afterEditOp();},
    editInset:a=>{stage.editInset(a);afterEditOp();},
    editBevel:w=>{stage.editBevel(w);afterEditOp();},

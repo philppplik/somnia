@@ -377,6 +377,62 @@ export function weldSelected(m:MeshData,verts:number[]):MeshData{
  if(m.uvs)out.uvs=m.uvs;
  return out;
 }
+/** Rotates each selected edge shared by exactly two triangles to the other diagonal of the quad (Blender Rotate Edge). Boundary, non-manifold, folded or degenerate-result edges are skipped; if none of the selected edges can flip the op fails. Vertices are unchanged, so UVs and masks are carried. */
+export function flipEdges(m:MeshData,edges:[number,number][]):MeshData{
+ if(!edges.length)throw new EditError('Select edges to flip.');
+ const nv=m.positions.length/3;
+ for(const [a,b] of edges){if(!Number.isInteger(a)||!Number.isInteger(b)||a===b||a<0||b<0||a>=nv||b>=nv)throw new EditError('A selected edge does not exist.');}
+ const pos=m.positions;
+ const index=[...m.index];
+ const tris=index.length/3;
+ const nrmOf=(x:number,y:number,z:number):[number,number,number]=>{
+  const ux=pos[y*3]-pos[x*3],uy=pos[y*3+1]-pos[x*3+1],uz=pos[y*3+2]-pos[x*3+2];
+  const vx=pos[z*3]-pos[x*3],vy=pos[z*3+1]-pos[x*3+1],vz=pos[z*3+2]-pos[x*3+2];
+  return[uy*vz-uz*vy,uz*vx-ux*vz,ux*vy-uy*vx];
+ };
+ let flips=0;
+ for(const [a,b] of edges){
+  const adj:number[]=[];
+  for(let f=0;f<tris&&adj.length<3;f++){
+   const x=index[f*3],y=index[f*3+1],z=index[f*3+2];
+   if((x===a||y===a||z===a)&&(x===b||y===b||z===b))adj.push(f);
+  }
+  if(adj.length!==2)continue;
+  const [f1,f2]=adj;
+  const t1=[index[f1*3],index[f1*3+1],index[f1*3+2]];
+  const t2=[index[f2*3],index[f2*3+1],index[f2*3+2]];
+  const c=t1.find(v=>v!==a&&v!==b)!;
+  const d=t2.find(v=>v!==a&&v!==b)!;
+  if(c===d)continue;
+  // Refuse a new diagonal that already exists elsewhere (would overlap faces).
+  let clash=false;
+  for(let f=0;f<tris;f++){
+   if(f===f1||f===f2)continue;
+   const x=index[f*3],y=index[f*3+1],z=index[f*3+2];
+   if((x===c||y===c||z===c)&&(x===d||y===d||z===d)){clash=true;break;}
+  }
+  if(clash)continue;
+  const n1=nrmOf(t1[0],t1[1],t1[2]),n2=nrmOf(t2[0],t2[1],t2[2]);
+  const rx=n1[0]+n2[0],ry=n1[1]+n2[1],rz=n1[2]+n2[2];
+  if(rx*rx+ry*ry+rz*rz<1e-24)continue;
+  // Build the flipped pair and keep each new triangle facing with the old pair.
+  let a1:[number,number,number]=[c,a,d];
+  let n=nrmOf(a1[0],a1[1],a1[2]);
+  if(n[0]*rx+n[1]*ry+n[2]*rz<=0)a1=[c,d,a];
+  let a2:[number,number,number]=[d,b,c];
+  n=nrmOf(a2[0],a2[1],a2[2]);
+  if(n[0]*rx+n[1]*ry+n[2]*rz<=0)a2=[d,c,b];
+  n=nrmOf(a1[0],a1[1],a1[2]);const ar1=n[0]*n[0]+n[1]*n[1]+n[2]*n[2];
+  n=nrmOf(a2[0],a2[1],a2[2]);const ar2=n[0]*n[0]+n[1]*n[1]+n[2]*n[2];
+  if(ar1<1e-20||ar2<1e-20)continue;
+  index[f1*3]=a1[0];index[f1*3+1]=a1[1];index[f1*3+2]=a1[2];
+  index[f2*3]=a2[0];index[f2*3+1]=a2[1];index[f2*3+2]=a2[2];
+  flips++;
+ }
+ if(!flips)throw new EditError('None of the selected edges can be flipped.');
+ const out:MeshData={positions:[...pos],index,...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
+ check(out);return out;
+}
 /** Faces whose geometric normal (from positions, so duplicated shells count alike) lies within `degrees` of the average normal of the seed faces. Returns face ordinals, seeds included. */
 export function similarFaces(m:MeshData,seeds:number[],degrees:number):number[]{
  if(!seeds.length)throw new EditError('Select faces first.');

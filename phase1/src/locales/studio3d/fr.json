@@ -959,5 +959,8 @@
  "studio3d.edit.shearAlong": "Axe de cisaillement",
  "studio3d.edit.shearBy": "Axe de référence",
  "studio3d.edit.shearAmt": "Facteur de cisaillement",
- "studio3d.edit.shear": "Cisailler"
+ "studio3d.edit.shear": "Cisailler",
+ "cmd.studio3d.edit.flipEdge": "Pivoter chaque arête sélectionnée partagée par deux triangles vers l’autre diagonale",
+ "studio3d.edit.flipEdge": "Retourner l’arête",
+ "studio3d.hist.editFlipEdge": "Retourner les arêtes"
 }

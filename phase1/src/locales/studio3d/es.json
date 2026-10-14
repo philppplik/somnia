@@ -959,5 +959,8 @@
  "studio3d.edit.shearAlong": "Eje de inclinación",
  "studio3d.edit.shearBy": "Eje de referencia",
  "studio3d.edit.shearAmt": "Factor de inclinación",
- "studio3d.edit.shear": "Inclinar"
+ "studio3d.edit.shear": "Inclinar",
+ "cmd.studio3d.edit.flipEdge": "Rotar cada arista seleccionada compartida por dos triángulos a la otra diagonal",
+ "studio3d.edit.flipEdge": "Voltear arista",
+ "studio3d.hist.editFlipEdge": "Voltear aristas"
 }
