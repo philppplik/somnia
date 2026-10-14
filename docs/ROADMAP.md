@@ -110,6 +110,10 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Implemented: the render panel exports the work area as animated GIF (own GIF89a encoder: median-cut palette, from-scratch LZW, loop, per-frame delays), APNG (browser PNG frames re-assembled with acTL/fcTL/fdAT) and WebM (real-time `canvas.captureStream` + `MediaRecorder`, VP9/VP8 with Opus; the P5b preview mix joins the recording when audio layers are audible). All three run with StudioProgress and cancel, under shared caps (GIF 300 frames, WebM 60 s real time, 64 MB per file). New commands `animation.export.gif/.apng/.webm`; no new dependencies.
 - Validation: 7 new and 115 total Animation unit tests, DS ratchet, isolated Chrome German light/dark pixels plus real GIF/APNG/WebM decode checks. Full-app/native/WASM gates remain CI-only (`tests/animation-p7.spec.ts` not run). Details and limits: `docs/animation-p7.md`.
 
+### Animation P13 (2026-10-14)
+- Implemented: pen tool for path masks (click to add, drag for bezier handles, click first point to close), on-canvas bezier in/out handle dragging, path morph keys (Animate path, one timeline lane per path mask, edits write keys at the playhead). One undo per gesture, five locales, DS-clean. Details: `docs/animation-p10.md` (P13 section).
+- Open: independent per-point keys (a lane per point group), ease per path key, deleting single points, native webview check.
+
 ### Animation P12 (2026-10-14)
 - Implemented: mask key lanes on the timeline (diamonds: select, drag/move, delete, ease preset) and on-canvas mask handles (move, resize rect/ellipse, drag path points). One drag is one undo step. Five locales, DS-clean. Details: `docs/animation-p10.md` (P12 section).
 - Open: in/out bezier handle dragging, pen tool, per-point keys, mask keys in the graph editor and transform key selection, native webview check.

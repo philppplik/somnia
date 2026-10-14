@@ -46,7 +46,8 @@ export type MaskProp='position'|'size'|'feather'|'opacity';
 /** Keyframed overrides of the static mask values. A property with keys wins over the static field. */
 export interface MaskAnim{position?:Property;size?:Property;feather?:Property;opacity?:Property}
 export const MAX_MASK_POINTS=32;
-export interface LayerMask{id:string;shape:'rect'|'ellipse'|'path';mode:'add'|'subtract';x:number;y:number;width:number;height:number;feather:number;invert:boolean;/** Percent 0..100, absent means 100. */opacity?:number;/** Path masks: points are in mask space and moved by x/y; width and height are ignored. */path?:MaskPath;anim?:MaskAnim}
+export interface MaskShapeKey{t:number;path:MaskPath}
+export interface LayerMask{id:string;shape:'rect'|'ellipse'|'path';mode:'add'|'subtract';x:number;y:number;width:number;height:number;feather:number;invert:boolean;/** Percent 0..100, absent means 100. */opacity?:number;/** Path masks: points are in mask space and moved by x/y; width and height are ignored. */path?:MaskPath;/** Path morph: whole-path keys (same point count and closed flag as `path`), linear between keys. */shapeKeys?:readonly MaskShapeKey[];anim?:MaskAnim}
 /** Track matte: another layer of the composition drives this layer's visibility by its alpha or luminance. The source layer is not drawn on its own. */
 export interface LayerMatte{source:string;mode:'alpha'|'luma';invert:boolean}
 export const MAX_LAYER_MASKS=4;
@@ -200,14 +201,19 @@ export function validVecProperty(p:Property|undefined,min:number,max:number):boo
  return !!p&&p.type==='vec2'&&value(p.value)&&Array.isArray(p.keys)&&p.keys.length<=2000&&p.keys.every((k,i)=>k&&Number.isInteger(k.t)&&k.t>=0&&(i===0||k.t>p.keys[i-1].t)&&value(k.v)&&['hold','linear','bezier'].includes(k.interp)&&handle(k.out)&&handle(k.in));
 }
 export function validMaskPath(p:MaskPath|undefined):boolean{
- if(!p||!Array.isArray(p.points)||typeof p.closed!=='boolean'||p.points.length<2||p.points.length>MAX_MASK_POINTS||(p.closed&&p.points.length<3))return false;
+ if(!p||!Array.isArray(p.points)||typeof p.closed!=='boolean'||p.points.length<1||p.points.length>MAX_MASK_POINTS||(p.closed&&p.points.length<3))return false;
  return p.points.every(q=>!!q&&inRange(q.x,-16384,16384)&&inRange(q.y,-16384,16384)&&[q.inX,q.inY,q.outX,q.outY].every(h=>h===undefined||inRange(h,-16384,16384)));
+}
+export const MAX_SHAPE_KEYS=64;
+export function validShapeKeys(m:LayerMask):boolean{
+ const k=m.shapeKeys;if(k===undefined)return true;
+ return m.shape==='path'&&!!m.path&&Array.isArray(k)&&k.length>=1&&k.length<=MAX_SHAPE_KEYS&&k.every((x,i)=>!!x&&Number.isInteger(x.t)&&x.t>=0&&(i===0||x.t>k[i-1].t)&&validMaskPath(x.path)&&x.path.closed===m.path!.closed&&x.path.points.length===m.path!.points.length);
 }
 export function validMasks(l:Layer):boolean{
  const m=l.masks;if(m===undefined)return true;
  if(!Array.isArray(m)||m.length>MAX_LAYER_MASKS||(m.length&&(l.kind==='null'||l.kind==='audio'))||new Set(m.map(x=>x?.id)).size!==m.length)return false;
  return m.every(x=>!!x&&typeof x.id==='string'&&x.id.length>0&&x.id.length<=64&&['rect','ellipse','path'].includes(x.shape)&&['add','subtract'].includes(x.mode)&&inRange(x.x,-16384,16384)&&inRange(x.y,-16384,16384)&&inRange(x.width,1,16384)&&inRange(x.height,1,16384)&&inRange(x.feather,0,64)&&typeof x.invert==='boolean'
-  &&(x.opacity===undefined||inRange(x.opacity,0,100))&&(x.shape==='path'?validMaskPath(x.path):x.path===undefined)
+  &&(x.opacity===undefined||inRange(x.opacity,0,100))&&(x.shape==='path'?validMaskPath(x.path):x.path===undefined)&&validShapeKeys(x)
   &&(x.anim===undefined||(!!x.anim&&Object.keys(x.anim).every(k=>['position','size','feather','opacity'].includes(k))&&(x.anim.position===undefined||validVecProperty(x.anim.position,-16384,16384))&&(x.anim.size===undefined||validVecProperty(x.anim.size,1,16384))&&(x.anim.feather===undefined||validScalarProperty(x.anim.feather,0,64))&&(x.anim.opacity===undefined||validScalarProperty(x.anim.opacity,0,100)))));
 }
 /** A matte source is another drawable layer of the same composition without its own matte, and not itself matted by this layer's source. No chains, so no cycles. */

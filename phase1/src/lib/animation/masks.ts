@@ -1,13 +1,20 @@
 import {evaluateMod} from './modifiers';
 import {worldMatrix,type Matrix} from './scene';
-import {EASE_IN,EASE_OUT,MAX_LAYER_MASKS,MAX_MASK_POINTS,findComp,findLayer,newId,type AnimationDocument,type Composition,type Layer,type LayerMask,type LayerMatte,type MaskPath,type MaskProp,type MaskPoint,type PropValue,type Property,type Vec2} from './model';
+import {EASE_IN,EASE_OUT,MAX_LAYER_MASKS,MAX_MASK_POINTS,findComp,findLayer,newId,type AnimationDocument,type Composition,type Layer,type LayerMask,type LayerMatte,type MaskPath,type MaskShapeKey,MAX_SHAPE_KEYS,type MaskProp,type MaskPoint,type PropValue,type Property,type Vec2} from './model';
 import {evaluate} from './interpolate';
 import {snapToFrame} from './time';
 import {EASE_PRESETS,type EasePreset} from './graph';
 import type {Edit} from './edit';
 const num=(n:number)=>String(Math.round(n*1e4)/1e4);
 /** A mask with every keyed property read at one tick. */
+export function lerpPath(keys:readonly MaskShapeKey[],tick:number):MaskPath{
+ if(tick<=keys[0].t)return keys[0].path;const last=keys[keys.length-1];if(tick>=last.t)return last.path;
+ let i=0;while(keys[i+1].t<=tick)i++;const a=keys[i],b=keys[i+1],f=(tick-a.t)/(b.t-a.t),mix=(u=0,v=0)=>round(u+(v-u)*f);
+ return {closed:a.path.closed,points:a.path.points.map((q,j)=>{const r=b.path.points[j];
+  return {x:mix(q.x,r.x),y:mix(q.y,r.y),inX:mix(q.inX,r.inX),inY:mix(q.inY,r.inY),outX:mix(q.outX,r.outX),outY:mix(q.outY,r.outY)};})};
+}
 export function resolveMask(m:LayerMask,tick:number):LayerMask{
+ if(m.shapeKeys?.length&&m.path)m={...m,path:lerpPath(m.shapeKeys,tick)};
  const a=m.anim;if(!a)return m;
  const pos=a.position?.keys.length?evaluate(a.position,tick) as Vec2:[m.x,m.y],size=a.size?.keys.length?evaluate(a.size,tick) as Vec2:[m.width,m.height];
  return {...m,x:pos[0],y:pos[1],width:Math.max(1,size[0]),height:Math.max(1,size[1]),
@@ -70,11 +77,15 @@ export type MaskOp=
  |{op:'set';mask:string;prop:MaskProp;value:PropValue;t:number}
  |{op:'animate';mask:string;prop:MaskProp;on:boolean;t:number}
  |{op:'path';mask:string;points:readonly {x:number;y:number}[];closed:boolean;smooth:boolean}
- |{op:'keyMove';mask:string;prop:MaskProp;from:number;to:number}
- |{op:'keyRemove';mask:string;prop:MaskProp;t:number}
+ |{op:'keyMove';mask:string;prop:MaskProp|'path';from:number;to:number}
+ |{op:'keyRemove';mask:string;prop:MaskProp|'path';t:number}
  |{op:'keyEase';mask:string;prop:MaskProp;t:number;preset:EasePreset}
  |{op:'box';mask:string;x:number;y:number;width:number;height:number;t:number}
- |{op:'point';mask:string;index:number;x:number;y:number}
+ |{op:'point';mask:string;index:number;x:number;y:number;t?:number}
+ |{op:'pen';mask:string;x:number;y:number;outX?:number;outY?:number;restart?:boolean}
+ |{op:'close';mask:string}
+ |{op:'handle';mask:string;index:number;which:'in'|'out';x:number;y:number;mirror:boolean;t?:number}
+ |{op:'pathAnimate';mask:string;on:boolean;t:number}
  |{op:'add';id?:string}
  |{op:'remove';mask:string}
  |{op:'update';mask:string;patch:MaskPatch};
@@ -92,14 +103,29 @@ export function maskEdit(doc:AnimationDocument,layerId:string,o:MaskOp):Edit{
   case 'add':if(list.length>=MAX_LAYER_MASKS)throw Error(`At most ${MAX_LAYER_MASKS} masks per layer.`);return set([...list,defaultMask(l,c,o.id)]);
   case 'remove':need(o.mask);return set(list.filter(m=>m.id!==o.mask));
   case 'update':need(o.mask);return set(list.map(m=>{if(m.id!==o.mask)return m;const n={...m,...o.patch};
-   if(n.shape==='path'){if(!n.path)n.path=smoothPath(boxPoints(n),true,true);}else delete n.path;return n;}));
-  case 'path':{need(o.mask);if(o.points.length>MAX_MASK_POINTS)throw Error(`At most ${MAX_MASK_POINTS} path points.`);return set(list.map(m=>m.id===o.mask?{...m,shape:'path',path:smoothPath(o.points,o.closed,o.smooth)}:m));}
+   if(n.shape==='path'){if(!n.path)n.path=smoothPath(boxPoints(n),true,true);}else{delete n.path;delete n.shapeKeys;}return n;}));
+  case 'path':{need(o.mask);if(o.points.length>MAX_MASK_POINTS)throw Error(`At most ${MAX_MASK_POINTS} path points.`);if(list.some(m=>m.id===o.mask&&m.shapeKeys?.length))throw Error('Remove the path animation before replacing the points.');return set(list.map(m=>m.id===o.mask?{...m,shape:'path',path:smoothPath(o.points,o.closed,o.smooth)}:m));}
   case 'keyMove':case 'keyRemove':case 'keyEase':{need(o.mask);
-   return set(list.map(m=>m.id===o.mask?(o.op==='keyMove'?moveMaskKey(m,o.prop,o.from,o.to,c):o.op==='keyRemove'?removeMaskKey(m,o.prop,o.t):easeMaskKey(m,o.prop,o.t,o.preset)):m));}
+   return set(list.map(m=>m.id===o.mask?(o.op==='keyMove'?(o.prop==='path'?moveShapeKey(m,o.from,o.to,c):moveMaskKey(m,o.prop,o.from,o.to,c)):o.op==='keyRemove'?(o.prop==='path'?removeShapeKey(m,o.t):removeMaskKey(m,o.prop,o.t)):easeMaskKey(m,o.prop,o.t,o.preset)):m));}
   case 'box':{need(o.mask);const t=snapToFrame(o.t,c.fps);if(t<c.start||t>=c.start+c.duration)throw Error('Time is outside the composition.');
    return set(list.map(m=>m.id===o.mask?setMaskValue(setMaskValue(m,'position',[o.x,o.y],t),'size',[o.width,o.height],t):m));}
-  case 'point':{need(o.mask);return set(list.map(m=>{if(m.id!==o.mask)return m;if(!m.path||!m.path.points[o.index])throw Error('Path point no longer exists.');
-   return {...m,path:{...m.path,points:m.path.points.map((q,i)=>i===o.index?{...q,x:round(o.x),y:round(o.y)}:q)}};}));}
+  case 'point':case 'handle':{need(o.mask);const t=o.t===undefined?undefined:frameT(o.t,c);
+   return set(list.map(m=>m.id===o.mask?editPath(m,t,path=>{const q=path.points[o.index];if(!q)throw Error('Path point no longer exists.');
+    return {...path,points:path.points.map((p,i)=>{if(i!==o.index)return p;
+     if(o.op==='point')return {...p,x:round(o.x),y:round(o.y)};
+     const sx=round(o.x),sy=round(o.y),mx=round(-o.x),my=round(-o.y);
+     return o.which==='out'?{...p,outX:sx,outY:sy,...(o.mirror?{inX:mx,inY:my}:{})}:{...p,inX:sx,inY:sy,...(o.mirror?{outX:mx,outY:my}:{})};})};}):m));}
+  case 'pen':{need(o.mask);return set(list.map(m=>{if(m.id!==o.mask)return m;
+   const pt={x:round(o.x),y:round(o.y),...(o.outX!==undefined&&o.outY!==undefined&&Math.hypot(o.outX,o.outY)>=1?{outX:round(o.outX),outY:round(o.outY),inX:round(-o.outX),inY:round(-o.outY)}:{})};
+   if(o.restart||m.shape!=='path'||!m.path){const {anim:_a,shapeKeys:_s,...rest}=m;return {...rest,shape:'path' as const,path:{closed:false,points:[pt]},...(m.anim?{anim:m.anim}:{})};}
+   if(m.shapeKeys?.length)throw Error('Remove the path animation before adding points.');
+   if(m.path.closed)throw Error('The path is closed.');if(m.path.points.length>=MAX_MASK_POINTS)throw Error(`At most ${MAX_MASK_POINTS} path points.`);
+   return {...m,path:{...m.path,points:[...m.path.points,pt]}};}));}
+  case 'close':{need(o.mask);return set(list.map(m=>{if(m.id!==o.mask)return m;if(!m.path||m.path.closed||m.path.points.length<3)throw Error('A closed path needs three points.');
+   if(m.shapeKeys?.length)throw Error('Remove the path animation before closing the path.');return {...m,path:{...m.path,closed:true}};}));}
+  case 'pathAnimate':{need(o.mask);const t=frameT(o.t,c);return set(list.map(m=>{if(m.id!==o.mask)return m;if(m.shape!=='path'||!m.path)throw Error('Only path masks can morph.');
+   if(o.on){if(m.shapeKeys?.length)return m;return {...m,shapeKeys:[{t,path:m.path}]};}
+   if(!m.shapeKeys?.length)return m;const {shapeKeys:_k,...rest}=m;return {...rest,path:lerpPath(m.shapeKeys,t)};}));}
   case 'set':case 'animate':{need(o.mask);const t=snapToFrame(o.t,c.fps);if(t<c.start||t>=c.start+c.duration)throw Error('Time is outside the composition.');
    return set(list.map(m=>m.id===o.mask?(o.op==='set'?setMaskValue(m,o.prop,o.value,t):animateMask(m,o.prop,o.on,t)):m));}
  }
@@ -110,6 +136,26 @@ export function matteEdit(doc:AnimationDocument,layerId:string,source:string|nul
  return {type:'layer.matte',layer:l.id,matte:source===null?null:{source,mode,invert}};
 }
 
+const frameT=(t:number,c:Composition)=>{const s=snapToFrame(t,c.fps);if(s<c.start||s>=c.start+c.duration)throw Error('Time is outside the composition.');return s;};
+/** Applies `fn` to the path: the static path, or the path key at `t` when the mask morphs (a key is added at `t` when none exists). */
+function editPath(m:LayerMask,t:number|undefined,fn:(p:MaskPath)=>MaskPath):LayerMask{
+ if(!m.path)throw Error('Mask has no path.');
+ if(!m.shapeKeys?.length)return {...m,path:fn(m.path)};
+ if(t===undefined)throw Error('A time is needed to edit an animated path.');
+ const cur=lerpPath(m.shapeKeys,t),next=fn(cur),keys=[...m.shapeKeys.filter(k=>k.t!==t),{t,path:next}].sort((a,b)=>a.t-b.t);
+ if(keys.length>MAX_SHAPE_KEYS)throw Error(`At most ${MAX_SHAPE_KEYS} path keys.`);return {...m,shapeKeys:keys};
+}
+/** Moves one path key to a free frame. */
+export function moveShapeKey(m:LayerMask,from:number,to:number,comp:Composition):LayerMask{
+ const ks=m.shapeKeys;if(!ks?.some(k=>k.t===from))throw Error('Key no longer exists.');const target=frameT(to,comp);
+ if(target!==from&&ks.some(k=>k.t===target))throw Error('Another key already sits at that time.');
+ return {...m,shapeKeys:ks.map(k=>k.t===from?{...k,t:target}:k).sort((a,b)=>a.t-b.t)};
+}
+/** Deletes a path key. The last key makes the path static with that key's shape. */
+export function removeShapeKey(m:LayerMask,t:number):LayerMask{
+ const ks=m.shapeKeys,k=ks?.find(x=>x.t===t);if(!ks||!k)throw Error('Key no longer exists.');
+ if(ks.length>1)return {...m,shapeKeys:ks.filter(x=>x!==k)};const {shapeKeys:_k,...rest}=m;return {...rest,path:k.path};
+}
 const key=(t:number,v:PropValue)=>({t,v,interp:'linear' as const,out:EASE_OUT,in:EASE_IN});
 const base=(m:LayerMask,prop:MaskProp):PropValue=>prop==='position'?[m.x,m.y]:prop==='size'?[m.width,m.height]:prop==='feather'?m.feather:m.opacity??100;
 const isVec=(v:PropValue):v is Vec2=>Array.isArray(v);

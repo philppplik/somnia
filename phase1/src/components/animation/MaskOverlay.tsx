@@ -2,7 +2,7 @@ import {useRef,type KeyboardEvent as ReactKeyboardEvent,type PointerEvent} from 
 import {animationSession} from '../../lib/animation/session';
 import {bezierPath,maskEdit,resolveMask} from '../../lib/animation/masks';
 import {corners,maskBox,moveBox,resizeBox,type BoxHandle} from '../../lib/animation/maskHandles';
-import {activeMask,useMaskSelection} from '../../lib/animation/maskSelection';
+import {activeMask,selectPoint,useMaskSelection} from '../../lib/animation/maskSelection';
 import type {Composition,Layer,LayerMask,Vec2} from '../../lib/animation/model';
 import {worldMatrix} from '../../lib/animation/scene';
 import {useT} from '../../lib/useT';
@@ -11,13 +11,14 @@ type Op=Parameters<typeof maskEdit>[2];
 export function MaskOverlay({comp,layer,at}:{comp:Composition;layer:Layer;at:number}){
  const {t}=useT();const sel=useMaskSelection();const gRef=useRef<SVGGElement>(null);const sess=animationSession();
  const stored=activeMask(layer,sel);if(!stored||layer.kind==='null'||layer.kind==='audio')return null;
- const m=resolveMask(stored,at),locked=layer.locked;
+ const m=resolveMask(stored,at),locked=layer.locked,selected=sel.point!==null&&sel.layer===layer.id?sel.point:null;
  const scale=()=>{const c=gRef.current?.getScreenCTM();return c?1/Math.max(1e-6,Math.sqrt(Math.abs(c.a*c.d-c.b*c.c))):1;};
  const toLocal=(cx:number,cy:number):Vec2=>{const c=gRef.current!.getScreenCTM()!.inverse();const pt=new DOMPoint(cx,cy).matrixTransform(c);return [pt.x,pt.y];};
  const edit=(o:Op)=>maskEdit(sess.document!,layer.id,o);
- const drag=(e:PointerEvent<SVGElement>,ops:(dx:number,dy:number,p:Vec2)=>Op[])=>{
+ const drag=(e:PointerEvent<SVGElement>,ops:(dx:number,dy:number,p:Vec2)=>Op[],immediate=false)=>{
   if(e.button!==0||locked)return;e.stopPropagation();const el=e.currentTarget;el.setPointerCapture(e.pointerId);
   const start=toLocal(e.clientX,e.clientY);let moved=false;
+  if(immediate){try{sess.previewEdits(ops(0,0,start).map(edit));moved=true;}catch{el.releasePointerCapture(e.pointerId);return;}}
   const mv=(ev:globalThis.PointerEvent)=>{const p=toLocal(ev.clientX,ev.clientY);if(!moved&&Math.hypot(ev.clientX-e.clientX,ev.clientY-e.clientY)<3)return;
    try{sess.previewEdits(ops(p[0]-start[0],p[1]-start[1],p).map(edit));moved=true;}catch{/* range or stale: keep last valid preview */}};
   const done=(commit:boolean)=>{el.removeEventListener('pointermove',mv);el.removeEventListener('pointerup',up);window.removeEventListener('keydown',esc,true);if(moved&&commit)sess.commitPreview();else sess.cancelPreview();};
@@ -42,8 +43,18 @@ export function MaskOverlay({comp,layer,at}:{comp:Composition;layer:Layer;at:num
     onPointerDown={e=>drag(e,(dx,dy)=>[boxOp(resizeBox(box,h,dx,dy))])}
     onKeyDown={locked?undefined:nudge((dx,dy)=>sess.dispatch(edit(boxOp(resizeBox(box,h,dx,dy)))))}/>)}
   {m.shape==='path'&&m.path?.points.map((q,i)=>
-   <circle key={i} cx={m.x+q.x} cy={m.y+q.y} r={r} {...common} aria-label={t('animation.masks.point',{n:i+1})} aria-valuetext={`${Math.round(q.x)}, ${Math.round(q.y)}`} data-testid="animation-mask-point"
-    onPointerDown={e=>drag(e,(_dx,_dy,p)=>[{op:'point',mask:m.id,index:i,x:p[0]-m.x,y:p[1]-m.y}])}
-    onKeyDown={locked?undefined:nudge((dx,dy)=>sess.dispatch(edit({op:'point',mask:m.id,index:i,x:q.x+dx,y:q.y+dy})))}/>)}
+   <circle key={i} cx={m.x+q.x} cy={m.y+q.y} r={r} {...common} data-selected={selected===i} aria-label={t('animation.masks.point',{n:i+1})} aria-valuetext={`${Math.round(q.x)}, ${Math.round(q.y)}`} data-testid="animation-mask-point"
+    onPointerDown={e=>{selectPoint(i);drag(e,(_dx,_dy,p)=>[{op:'point',mask:m.id,index:i,x:p[0]-m.x,y:p[1]-m.y,t:at}]);}}
+    onKeyDown={locked?undefined:nudge((dx,dy)=>sess.dispatch(edit({op:'point',mask:m.id,index:i,x:q.x+dx,y:q.y+dy,t:at})))}/>)}
+  {sel.pen&&!locked&&<rect x={-comp.width} y={-comp.height} width={3*comp.width} height={3*comp.height} fill="transparent" className="cursor-crosshair touch-none" data-testid="animation-pen-surface"
+   onPointerDown={e=>{const p0=toLocal(e.clientX,e.clientY),first=m.shape==='path'&&m.path&&!m.path.closed&&m.path.points.length>=3?m.path.points[0]:null;
+    if(first&&Math.hypot(p0[0]-(m.x+first.x),p0[1]-(m.y+first.y))<=2*r){e.stopPropagation();try{sess.dispatch(edit({op:'close',mask:m.id}));}catch{/* stale */}return;}
+    const restart=m.shape!=='path'||!m.path||m.path.closed;
+    drag(e,(dx,dy)=>[{op:'pen',mask:m.id,x:p0[0]-m.x,y:p0[1]-m.y,outX:dx,outY:dy,restart}],true);}}/>}
+  {m.shape==='path'&&m.path&&selected!==null&&m.path.points[selected]&&(['in','out'] as const).map(w=>{const q=m.path!.points[selected],hx=(w==='in'?q.inX:q.outX)??0,hy=(w==='in'?q.inY:q.outY)??0,cx=m.x+q.x+hx,cy=m.y+q.y+hy;
+   return <g key={w}><line x1={m.x+q.x} y1={m.y+q.y} x2={cx} y2={cy} stroke="var(--accent)" strokeWidth={k} pointerEvents="none"/>
+    <circle cx={cx} cy={cy} r={r*0.8} {...common} aria-label={t(w==='in'?'animation.masks.handleIn':'animation.masks.handleOut',{n:selected+1})} data-testid={`animation-mask-bez-${w}`}
+     onPointerDown={e=>drag(e,(_dx,_dy,p)=>[{op:'handle',mask:m.id,index:selected,which:w,x:p[0]-m.x-q.x,y:p[1]-m.y-q.y,mirror:!e.altKey,t:at}])}
+     onKeyDown={locked?undefined:nudge((dx,dy)=>sess.dispatch(edit({op:'handle',mask:m.id,index:selected,which:w,x:hx+dx,y:hy+dy,mirror:true,t:at})))}/></g>;})}
  </g>;
 }

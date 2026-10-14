@@ -314,5 +314,10 @@
  "animation.masks.ease": "Ease dieses Keys",
  "animation.masks.keyAt": "Masken-Key bei {time}",
  "animation.masks.handle": "Maske skalieren, Ecke {corner}",
- "animation.masks.point": "Maskenpfad-Punkt {n}"
+ "animation.masks.point": "Maskenpfad-Punkt {n}",
+ "animation.masks.prop.path": "Pfad",
+ "animation.masks.pen": "Stift",
+ "animation.masks.penHint": "Klicken setzt einen Punkt, Ziehen formt Kurvengriffe, Klick auf den ersten Punkt schließt",
+ "animation.masks.handleIn": "Bezier-Eingangsgriff von Punkt {n}",
+ "animation.masks.handleOut": "Bezier-Ausgangsgriff von Punkt {n}"
 }

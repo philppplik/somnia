@@ -9,7 +9,8 @@ import {frameSvg} from '../src/lib/animation/exportFrames';
 import {prepareAnimationAsset} from '../src/lib/animation/assets';
 import {prepareAudioAsset} from '../src/lib/animation/audioImport';
 import {MaskOverlay} from '../src/components/animation/MaskOverlay';
-import {selectMask} from '../src/lib/animation/maskSelection';
+import {maskEdit} from '../src/lib/animation/masks';
+import {selectMask,selectPoint} from '../src/lib/animation/maskSelection';
 import {setLocale} from '../src/lib/i18n';
 import '../src/styles/global.css';
 if(!import.meta.env.DEV)throw Error('Development fixture only.');
@@ -52,7 +53,9 @@ if(params.get('masks')==='1'){
   {id:'m1',shape:'rect',mode:'subtract',x:200,y:110,width:80,height:60,feather:6,invert:false,opacity:80},
   {id:'m2',shape:'path',mode:'subtract',x:40,y:30,width:1,height:1,feather:3,invert:false,opacity:100,path:{closed:true,points:[{x:0,y:0,inX:-10,inY:-18,outX:10,outY:18},{x:80,y:10,inX:-18,inY:-10,outX:18,outY:10},{x:60,y:70,inX:18,inY:-12,outX:-18,outY:12},{x:10,y:60,inX:12,inY:18,outX:-12,outY:-18}]},
    anim:{position:{type:'vec2',value:[40,30],keys:[{t:0,v:[40,30],interp:'linear',out:[0.33,0],in:[0.67,1]},{t:480000,v:[210,95],interp:'bezier',out:[0.42,0],in:[1,1]},{t:720000,v:[300,150],interp:'linear',out:[0.33,0],in:[0.67,1]}]},opacity:{type:'scalar',value:100,keys:[{t:0,v:100,interp:'linear',out:[0.33,0],in:[0.67,1]},{t:960000,v:40,interp:'linear',out:[0.33,0],in:[0.67,1]}]}}}]});
- selectMask('photo','m2');
+ session.dispatch(maskEdit(session.document!,'photo',{op:'pathAnimate',mask:'m2',on:true,t:0}));
+ session.dispatch(maskEdit(session.document!,'photo',{op:'point',mask:'m2',index:1,x:110,y:50,t:720000}));
+ selectMask('photo','m2');selectPoint(1);
  session.setView({selectedLayer:'photo',playhead:240000,graph:false});}
 (window as any).animationFixture={session,prepareAnimationAsset,frameSvg};
 function Preview(){const state=useAnimationState(),doc=state.preview??state.doc;if(!doc)return <div className="panel"><CompositionsPanel {...{} as never}/></div>;const comp=findComp(doc)!;return <div style={{height:'100%',display:'flex',flexDirection:'column',padding:10,gap:6}}><header className="panel" style={{height:42,flexShrink:0,borderRadius:16,padding:'0 14px',justifyContent:'center'}}>✦ Somnia Animation <span style={{position:'absolute',right:24,color:'var(--text-secondary)'}}>Animation · Isolierte Pixelprüfung</span></header><div style={{display:'grid',gridTemplateColumns:'220px minmax(180px,1fr) 290px',flex:1,minHeight:0,gap:6}}><aside className="panel" style={{borderRadius:16,overflow:'auto'}}><CompositionsPanel {...{} as never}/></aside><main className="panel" style={{borderRadius:16}}><div style={{flex:1,minHeight:120,overflow:'hidden',position:'relative'}}><div style={{width:'100%',position:'absolute',inset:16}} dangerouslySetInnerHTML={{__html:frameSvg(comp,state.view.playhead,false,doc.assets).replace('<svg ','<svg style="width:100%;height:100%" ')}}/><svg viewBox={`0 0 ${comp.width} ${comp.height}`} style={{position:'absolute',inset:16,width:'calc(100% - 32px)',height:'calc(100% - 32px)'}}>{comp.layers.filter(l=>l.id===state.view.selectedLayer).map(l=><MaskOverlay key={l.id} comp={comp} layer={l} at={state.view.playhead}/>)}</svg></div><AnimationTimeline comp={comp} at={state.view.playhead} selected={state.view.selectedLayer} canUndo={state.canUndo} canRedo={state.canRedo}/></main><aside className="panel" style={{borderRadius:16,overflow:'auto'}}>{state.renderSetup?<RenderSection {...{} as never}/>:<PropertiesSection {...{} as never}/>}</aside></div></div>}

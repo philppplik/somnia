@@ -104,7 +104,7 @@ test('P11: path masks are bounded beziers with straight corners or smooth handle
  assert.ok(frameSvg(comp(d),0).includes('C'));
  const open=smoothPath([{x:0,y:0},{x:10,y:10}],false,true);assert.equal(open.points[0].inX,undefined);assert.equal(open.points[1].outX,undefined);
  assert.throws(()=>maskEdit(d,'photo',{op:'path',mask:'p',points:Array.from({length:33},(_,i)=>({x:i,y:i})),closed:false,smooth:false}),/At most/);
- assert.throws(()=>applyEdit(d,maskEdit(d,'photo',{op:'path',mask:'p',points:[{x:0,y:0}],closed:false,smooth:false})),EditError);
+ assert.throws(()=>applyEdit(d,maskEdit(d,'photo',{op:'path',mask:'p',points:[],closed:false,smooth:false})),EditError);
  assert.throws(()=>applyEdit(d,maskEdit(d,'photo',{op:'path',mask:'p',points:[{x:0,y:0},{x:1,y:1}],closed:true,smooth:false})),EditError);
  assert.throws(()=>applyEdit(d,maskEdit(d,'photo',{op:'path',mask:'p',points:[{x:0,y:0},{x:1e9,y:1}],closed:false,smooth:false})),EditError);
  d=applyEdit(d,maskEdit(d,'photo',{op:'update',mask:'p',patch:{shape:'rect'}}));assert.equal(layer(d,'photo').masks![0].path,undefined);
@@ -157,6 +157,47 @@ test('P12: box and point drags are single edits; handle maths is bounded',()=>{
 });
 test('P12: mask selection falls back to the first mask of the layer',()=>{
  const d=keyed();const l=layer(d,'photo');
- selectMask(null,null);assert.equal(activeMask(l,{layer:null,mask:null})!.id,'m');
- assert.equal(activeMask(l,{layer:'other',mask:'zzz'})!.id,'m');assert.equal(activeMask(undefined,{layer:null,mask:null}),undefined);
+ selectMask(null,null);assert.equal(activeMask(l,{layer:null,mask:null,point:null,pen:false})!.id,'m');
+ assert.equal(activeMask(l,{layer:'other',mask:'zzz',point:null,pen:false})!.id,'m');assert.equal(activeMask(undefined,{layer:null,mask:null,point:null,pen:false}),undefined);
+});
+
+const penned=()=>{let d=base();d=applyEdit(d,maskEdit(d,'photo',{op:'add',id:'p'}));
+ d=applyEdit(d,maskEdit(d,'photo',{op:'pen',mask:'p',x:0,y:0,restart:true}));
+ d=applyEdit(d,maskEdit(d,'photo',{op:'pen',mask:'p',x:100,y:0,outX:20,outY:30}));
+ return applyEdit(d,maskEdit(d,'photo',{op:'pen',mask:'p',x:100,y:80}));};
+test('P13: pen adds points with mirrored handles, closes, and stays bounded',()=>{
+ let d=penned();const m=()=>layer(d,'photo').masks![0];
+ assert.equal(m().shape,'path');assert.equal(m().path!.points.length,3);assert.deepEqual([m().path!.points[1].outX,m().path!.points[1].inX],[20,-20]);
+ assert.equal(m().path!.points[2].outX,undefined);
+ d=applyEdit(d,maskEdit(d,'photo',{op:'close',mask:'p'}));assert.equal(m().path!.closed,true);
+ assert.throws(()=>applyEdit(d,maskEdit(d,'photo',{op:'pen',mask:'p',x:5,y:5})));
+ d=applyEdit(d,maskEdit(d,'photo',{op:'pen',mask:'p',x:7,y:7,restart:true}));assert.equal(m().path!.points.length,1);assert.equal(m().path!.closed,false);
+ assert.throws(()=>applyEdit(d,maskEdit(d,'photo',{op:'close',mask:'p'})));
+ let e=penned();for(let i=0;i<40;i++){try{e=applyEdit(e,maskEdit(e,'photo',{op:'pen',mask:'p',x:i,y:i}));}catch{break;}}
+ assert.equal(layer(e,'photo').masks![0].path!.points.length,32);assert.deepEqual(validateDocument(e),[]);
+});
+test('P13: handle drag mirrors unless broken, and is one edit',()=>{
+ let d=penned();const r=d.revision;
+ d=applyEdit(d,maskEdit(d,'photo',{op:'handle',mask:'p',index:2,which:'out',x:10,y:-5,mirror:true}));
+ let q=layer(d,'photo').masks![0].path!.points[2];assert.deepEqual([q.outX,q.outY,q.inX,q.inY],[10,-5,-10,5]);assert.equal(d.revision,r+1);
+ d=applyEdit(d,maskEdit(d,'photo',{op:'handle',mask:'p',index:2,which:'in',x:3,y:3,mirror:false}));
+ q=layer(d,'photo').masks![0].path!.points[2];assert.deepEqual([q.outX,q.inX],[10,3]);
+ assert.throws(()=>applyEdit(d,maskEdit(d,'photo',{op:'handle',mask:'p',index:9,which:'in',x:0,y:0,mirror:true})));
+});
+test('P13: path morph keys interpolate, edits write keys at the playhead, last key bakes',()=>{
+ let d=applyEdit(penned(),maskEdit(penned(),'photo',{op:'close',mask:'p'}));
+ d=applyEdit(d,maskEdit(d,'photo',{op:'pathAnimate',mask:'p',on:true,t:0}));
+ d=applyEdit(d,maskEdit(d,'photo',{op:'point',mask:'p',index:2,x:300,y:200,t:sec}));
+ let m=layer(d,'photo').masks![0];assert.equal(m.shapeKeys!.length,2);assert.deepEqual(validateDocument(d),[]);
+ assert.deepEqual([m.shapeKeys![0].path.points[2].x,m.shapeKeys![1].path.points[2].x],[100,300]);
+ const mid=resolveMask(m,Math.round(sec/2)).path!.points[2];assert.ok(mid.x>100&&mid.x<300);
+ assert.equal(resolveMask(m,sec*2).path!.points[2].x,300);
+ assert.throws(()=>applyEdit(d,maskEdit(d,'photo',{op:'pen',mask:'p',x:1,y:1})));
+ assert.throws(()=>applyEdit(d,maskEdit(d,'photo',{op:'path',mask:'p',points:[{x:0,y:0},{x:1,y:1}],closed:false,smooth:false})));
+ d=applyEdit(d,maskEdit(d,'photo',{op:'keyMove',mask:'p',prop:'path',from:sec,to:sec+Math.round(sec/2)}));
+ m=layer(d,'photo').masks![0];assert.ok(m.shapeKeys![1].t>sec);
+ const svgA=frameSvg(comp(d),0,false,d.assets),svgB=frameSvg(comp(d),sec*2,false,d.assets);assert.notEqual(svgA,svgB);
+ d=applyEdit(d,maskEdit(d,'photo',{op:'keyRemove',mask:'p',prop:'path',t:m.shapeKeys![1].t}));
+ d=applyEdit(d,maskEdit(d,'photo',{op:'keyRemove',mask:'p',prop:'path',t:0}));
+ m=layer(d,'photo').masks![0];assert.equal(m.shapeKeys,undefined);assert.equal(m.path!.points.length,3);assert.deepEqual(validateDocument(d),[]);
 });

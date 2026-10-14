@@ -35,3 +35,11 @@ One builder (`masks.ts`) produces the `<mask>` and filter definitions for both t
 - Handles write at the playhead: on an animated property they add or update a key there.
 - Not covered: mask keys are not part of the transform key selection, copy/paste or graph editor. No in/out bezier handle dragging, no pen tool, no per-point keys. Ease is preset-based.
 - Tests: `animation-p10.test.ts` (ops, box math), `test/animation-preview.html?masks=1` for the pixel review, `tests/animation-p10.spec.ts` (CI-only).
+
+## P13: pen tool, bezier handles, path morph keys
+
+- Pen: the Pen button in the Masks panel arms the tool. Click adds a point, drag while clicking pulls out mirrored bezier handles, clicking the first point of an open path with 3+ points closes it. A new path starts when the mask is not a path yet or the path is closed. One gesture is one undo step.
+- Handles: click a path point to select it, then drag its in or out handle on the canvas (mirrored; hold Alt for a corner-style break). Arrow keys nudge a handle.
+- Morph: "Animate path" turns the path into whole-path keys (one lane per path mask on the timeline, diamonds move/delete like other mask keys). With keys, dragging a point or handle writes a key at the playhead. Linear between keys, held outside the first/last key. Point count and closed flag are fixed while a path is animated (pen, close and the points text field are refused until the animation is removed). Removing the last key bakes its shape.
+- Not covered: per-point independent keys (all points of a path share one lane and one key time), ease per path key, deleting single points, mask path keys in the graph editor.
+- Tests: `animation-p10.test.ts` (pen, handle, morph), `test/animation-preview.html?masks=1`, CI-only `tests/animation-p10.spec.ts`.

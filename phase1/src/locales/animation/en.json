@@ -314,5 +314,10 @@
  "animation.masks.ease": "Ease of this key",
  "animation.masks.keyAt": "Mask key at {time}",
  "animation.masks.handle": "Resize mask, {corner} corner",
- "animation.masks.point": "Mask path point {n}"
+ "animation.masks.point": "Mask path point {n}",
+ "animation.masks.prop.path": "path",
+ "animation.masks.pen": "Pen",
+ "animation.masks.penHint": "Click to add a point, drag for curve handles, click the first point to close",
+ "animation.masks.handleIn": "Bezier in handle of point {n}",
+ "animation.masks.handleOut": "Bezier out handle of point {n}"
 }

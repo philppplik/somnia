@@ -29,4 +29,11 @@ test('P10 masks, track matte and text rotation/colour animators',async({page})=>
  await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.mouse.move(box.x+40,box.y+30,{steps:5});await page.mouse.up();
  await page.keyboard.press('Control+z');
  await expect(page.getByTestId('animation-mask-point').first()).toBeVisible();
+ // P13 (CI-only): pen tool draws a path, clicking the first point closes it; Animate path adds a path lane.
+ await page.getByTestId('animation-pen-toggle').click();
+ const surface=page.getByTestId('animation-pen-surface');const sb=(await surface.boundingBox())!;
+ for(const [x,y] of [[0.4,0.4],[0.5,0.4],[0.5,0.5]]){await page.mouse.click(sb.x+sb.width*x,sb.y+sb.height*y);}
+ await page.getByTestId('animation-pen-toggle').click();
+ await page.getByTestId('animation-mask-pathanim-0').check();
+ await expect(page.getByTestId('animation-maskrow-0-path')).toBeVisible();
 });

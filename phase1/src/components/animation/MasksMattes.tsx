@@ -3,7 +3,7 @@ import {Button} from '../ui/button';
 import {NativeInput,NativeSelect} from '../ui/native-controls';
 import {InspectorNumberField} from '../studios/InspectorNumberField';
 import {MAX_LAYER_MASKS,type Composition,type Layer,type LayerMask} from '../../lib/animation/model';
-import {selectMask,useMaskSelection,activeMask} from '../../lib/animation/maskSelection';
+import {selectMask,setPen,useMaskSelection,activeMask} from '../../lib/animation/maskSelection';
 import {resolveMask} from '../../lib/animation/masks';
 import {MAX_MASK_POINTS,type MaskProp} from '../../lib/animation/model';
 import {executeCommand} from '../../lib/commands';
@@ -42,10 +42,12 @@ export function MasksMattes({layer,comp,at}:{layer:Layer;comp:Composition;at:num
      <label className="grid gap-1">{t('animation.masks.points')}<NativeInput className={field} key={pointsText(m)} defaultValue={pointsText(m)} onBlur={e=>{const points=parsePoints(e.currentTarget.value);if(pointsText(m)!==e.currentTarget.value.trim())mask({layer:layer.id,op:'path',mask:m.id,points,closed:m.path!.closed,smooth:m.path!.points.some(q=>q.inX!==undefined||q.outX!==undefined)});}}/></label>
      <div className="flex gap-3"><label className="flex items-center gap-1"><NativeInput type="checkbox" className="animation-checkbox" checked={m.path.closed} onChange={e=>mask({layer:layer.id,op:'path',mask:m.id,points:m.path!.points,closed:e.target.checked,smooth:m.path!.points.some(q=>q.inX!==undefined||q.outX!==undefined)})}/>{t('animation.masks.closed')}</label>
      <label className="flex items-center gap-1"><NativeInput type="checkbox" className="animation-checkbox" checked={m.path.points.some(q=>q.inX!==undefined||q.outX!==undefined)} onChange={e=>mask({layer:layer.id,op:'path',mask:m.id,points:m.path!.points,closed:m.path!.closed,smooth:e.target.checked})}/>{t('animation.masks.smooth')}</label></div>
+     <label className="flex items-center gap-1"><NativeInput type="checkbox" className="animation-checkbox" checked={!!m.shapeKeys?.length} onChange={e=>mask({layer:layer.id,op:'pathAnimate',mask:m.id,on:e.target.checked})} data-testid={`animation-mask-pathanim-${i}`}/>{t('animation.masks.animate',{prop:t('animation.masks.prop.path')})}</label>
     </div>}
     <div className="grid gap-1">{(['position','size','feather','opacity'] as const).filter(p=>!(m.shape==='path'&&p==='size')).map(p=>animToggle(m,p))}</div>
     <label className="flex items-center gap-1 text-ink-3"><NativeInput type="checkbox" className="animation-checkbox" checked={m.invert} onChange={e=>mask({layer:layer.id,op:'update',mask:m.id,patch:{invert:e.target.checked}})}/>{t('animation.masks.invert')}</label>
    </div>)}
+   <Button size="tiny" variant="outline" disabled={!masks.length||layer.locked} aria-pressed={sel.pen} onClick={()=>setPen(!sel.pen)} data-testid="animation-pen-toggle" title={t('animation.masks.penHint')}>{t('animation.masks.pen')}</Button>
    <Button size="tiny" variant="outline" disabled={masks.length>=MAX_LAYER_MASKS} onClick={()=>mask({layer:layer.id,op:'add'})} data-testid="animation-mask-add">{t('animation.masks.addMask')}</Button>
   </fieldset>
   <fieldset className="m-0 grid gap-2 border border-subtle p-2" disabled={layer.locked} data-testid="animation-matte"><legend className="text-ink-3">{t('animation.matte.title')}</legend>

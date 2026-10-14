@@ -314,5 +314,10 @@
  "animation.masks.ease": "Accélération de cette clé",
  "animation.masks.keyAt": "Clé de masque à {time}",
  "animation.masks.handle": "Redimensionner le masque, coin {corner}",
- "animation.masks.point": "Point {n} du tracé du masque"
+ "animation.masks.point": "Point {n} du tracé du masque",
+ "animation.masks.prop.path": "tracé",
+ "animation.masks.pen": "Plume",
+ "animation.masks.penHint": "Cliquer ajoute un point, glisser crée les poignées de courbe, cliquer le premier point ferme",
+ "animation.masks.handleIn": "Poignée d'entrée bézier du point {n}",
+ "animation.masks.handleOut": "Poignée de sortie bézier du point {n}"
 }
