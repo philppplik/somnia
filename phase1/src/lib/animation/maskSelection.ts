@@ -5,9 +5,9 @@ import type {MultiClip} from './keyTargets';
 /** Which mask of which layer the timeline lanes and canvas handles work on, the selected path point and the pen tool. View state only, never saved in the document. */
 export type MaskClip={kind:'mask';mask:LayerMask}|{kind:'key';key:MaskKeyClip}|{kind:'keys';keys:MaskKeysClip}|{kind:'multi';multi:MultiClip}|null;
 export interface GraphTarget{mask:string;prop:'position'|'size'|'feather'|'opacity'|'path'}
-interface Sel{layer:string|null;mask:string|null;point:number|null;pen:boolean;layerPen:boolean;layerPoint:{layer:string;i:number}|null;clip:MaskClip;graph:GraphTarget|null;mixed:boolean}
-let state:Sel={layer:null,mask:null,point:null,pen:false,layerPen:false,layerPoint:null,clip:null,graph:null,mixed:false};const listeners=new Set<()=>void>();
-const put=(n:Sel)=>{if(n.layer===state.layer&&n.mask===state.mask&&n.point===state.point&&n.pen===state.pen&&n.layerPen===state.layerPen&&n.layerPoint===state.layerPoint&&n.clip===state.clip&&n.graph===state.graph&&n.mixed===state.mixed)return;state=n;listeners.forEach(l=>l());};
+interface Sel{layer:string|null;mask:string|null;point:number|null;pen:boolean;layerPen:boolean;layerPoint:{layer:string;i:number}|null;layerSet:{layer:string;set:readonly number[]}|null;clip:MaskClip;graph:GraphTarget|null;mixed:boolean}
+let state:Sel={layer:null,mask:null,point:null,pen:false,layerPen:false,layerPoint:null,layerSet:null,clip:null,graph:null,mixed:false};const listeners=new Set<()=>void>();
+const put=(n:Sel)=>{if(n.layer===state.layer&&n.mask===state.mask&&n.point===state.point&&n.pen===state.pen&&n.layerPen===state.layerPen&&n.layerPoint===state.layerPoint&&n.layerSet===state.layerSet&&n.clip===state.clip&&n.graph===state.graph&&n.mixed===state.mixed)return;state=n;listeners.forEach(l=>l());};
 export const selectMask=(layer:string|null,mask:string|null)=>{if(state.layer===layer&&state.mask===mask)return;put({...state,layer,mask,point:null});};
 export const selectPoint=(point:number|null)=>put({...state,point});
 /** In-memory clipboard for masks and mask keys (view state, not saved). */
@@ -21,6 +21,8 @@ export const setPen=(pen:boolean)=>put({...state,pen,point:null});
 export const setLayerPen=(layerPen:boolean)=>put({...state,layerPen});
 /** Selected point of a path shape layer (view state). */
 export const setLayerPoint=(layerPoint:{layer:string;i:number}|null)=>put({...state,layerPoint});
+/** Selected points of a path shape layer for group move, delete and smooth (view state). */
+export const setLayerSet=(layerSet:{layer:string;set:readonly number[]}|null)=>put({...state,layerSet});
 export const getLayerPen=()=>state.layerPen;
 const subscribe=(l:()=>void)=>{listeners.add(l);return()=>{listeners.delete(l);};};
 export const useMaskSelection=()=>useSyncExternalStore(subscribe,()=>state,()=>state);

@@ -48,6 +48,22 @@ export function pathLayerMoveEdit(doc:AnimationDocument,layerId:string,dx:number
  const px=(m[3]*dx-m[2]*dy)/det,py=(-m[1]*dx+m[0]*dy)/det,cur=evaluate(l.transform.position,t) as Vec2;
  return {type:'prop.set',layer:l.id,prop:'position',value:[Math.round((cur[0]+px)*100)/100,Math.round((cur[1]+py)*100)/100],t};
 }
+const uniq=(ix:readonly number[],n:number)=>{const u=[...new Set(ix)].sort((a,b)=>a-b);if(!u.length||u.some(k=>!Number.isInteger(k)||k<0||k>=n))throw Error('Point no longer exists.');return u;};
+/** Moves the points by one shared delta (normalized). The delta is limited so every moved point stays in the layer box, which keeps the shape. */
+export function movePointsBy(p:MaskPath,indices:readonly number[],dx:number,dy:number):MaskPath{
+ const ix=uniq(indices,p.points.length),sel=ix.map(k=>p.points[k]);
+ const lo=(f:(q:MaskPoint)=>number)=>Math.min(...sel.map(f)),hi=(f:(q:MaskPoint)=>number)=>Math.max(...sel.map(f));
+ const mx=Math.min(1-hi(q=>q.x),Math.max(-lo(q=>q.x),dx)),my=Math.min(1-hi(q=>q.y),Math.max(-lo(q=>q.y),dy));
+ return {...p,points:p.points.map((q,k)=>ix.includes(k)?{...q,x:r4(q.x+mx),y:r4(q.y+my)}:q)};
+}
+/** Reshapes the segment after point `i` so the curve point at `u` follows the drag (dx, dy normalized): both control points move by d / (3u(1-u)). Straight segments become curves. */
+export function reshapeSegment(p:MaskPath,i:number,u:number,dx:number,dy:number):MaskPath{
+ const n=p.points.length,j=i+1<n?i+1:p.closed?0:-1;if(!p.points[i]||j<0)throw Error('Segment no longer exists.');
+ const a=p.points[i],b=p.points[j],t=Math.min(0.9,Math.max(0.1,u)),k=1/(3*t*(1-t));
+ const o1=[a.outX??(b.x-a.x)/3,a.outY??(b.y-a.y)/3],i1=[b.inX??(a.x-b.x)/3,b.inY??(a.y-b.y)/3];
+ const na:MaskPoint={...a,outX:clampH(o1[0]+dx*k),outY:clampH(o1[1]+dy*k)},nb:MaskPoint={...b,inX:clampH(i1[0]+dx*k),inY:clampH(i1[1]+dy*k)};
+ return {...p,points:p.points.map((q,m)=>m===i?na:m===j?nb:q)};
+}
 export type PathLayerOp=
  |{op:'points';path:MaskPath}
  |{op:'animate';on:boolean;t?:number}
@@ -57,6 +73,10 @@ export type PathLayerOp=
  |{op:'insert';index:number;u?:number}
  |{op:'remove';index:number}
  |{op:'corner';index:number;smooth:boolean}
+ |{op:'movePoints';indices:readonly number[];dx:number;dy:number;t?:number}
+ |{op:'removePoints';indices:readonly number[]}
+ |{op:'cornerPoints';indices:readonly number[];smooth:boolean}
+ |{op:'segment';index:number;u:number;dx:number;dy:number;t?:number}
  |{op:'handle';index:number;which:'in'|'out';x:number;y:number;mirror?:boolean;t?:number}
  |{op:'morphTo';other:string;t:number;opts?:MorphOpts};
 const P=(key:string,en:string)=>new MorphError({key:`animation.morph.err.${key}`,en});
@@ -102,6 +122,17 @@ export function pathLayerEdit(doc:AnimationDocument,layerId:string,o:PathLayerOp
    const f=o.op==='insert'?(p:MaskPath)=>{if(p.points.length>=cap)throw Error(`At most ${cap} path points.`);return splitAt(p,o.index,o.u??0.5);}
     :o.op==='remove'?(p:MaskPath)=>{if(keys?.length&&p.points.length<=2)throw Error('An animated path needs two points.');return removePoint(p,o.index);}
     :(p:MaskPath)=>cornerAt(p,o.index,o.smooth);
+   return upd({path:f(cur),...(keys?.length?{pathKeys:keys.map(k=>({...k,path:f(k.path)}))}:{})});}
+  case 'movePoints':case 'segment':{
+   const t=keys?.length?frame(o.t):undefined,cur=keys?.length?lerpPath(keys,t!):s.path as MaskPath;
+   const next=o.op==='movePoints'?movePointsBy(cur,o.indices,o.dx,o.dy):reshapeSegment(cur,o.index,o.u,o.dx,o.dy);
+   if(!keys?.length)return upd({path:next});
+   const nk:MaskShapeKey[]=[...keys.filter(k=>k.t!==t),{t:t!,path:next}].sort((a,b)=>a.t-b.t);
+   if(nk.length>MAX_SHAPE_KEYS)throw Error(`At most ${MAX_SHAPE_KEYS} path keys.`);return upd({pathKeys:nk});}
+  case 'removePoints':case 'cornerPoints':{
+   const cur=s.path as MaskPath,ix=uniq(o.indices,cur.points.length);
+   const f=o.op==='removePoints'?(p:MaskPath)=>{const left=p.points.length-ix.length;if(left<(keys?.length?2:p.closed?3:1))throw Error(keys?.length?'An animated path needs two points.':p.closed?'A closed path needs three points.':'A path needs a point.');return {...p,points:p.points.filter((_,k)=>!ix.includes(k))};}
+    :(p:MaskPath)=>ix.reduce((acc,k)=>cornerAt(acc,k,o.smooth),p);
    return upd({path:f(cur),...(keys?.length?{pathKeys:keys.map(k=>({...k,path:f(k.path)}))}:{})});}
   case 'handle':{
    const t=keys?.length?frame(o.t):undefined,cur=keys?.length?lerpPath(keys,t!):s.path as MaskPath;

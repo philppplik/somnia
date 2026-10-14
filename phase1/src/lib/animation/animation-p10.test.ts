@@ -168,8 +168,8 @@ test('P12: box and point drags are single edits; handle maths is bounded',()=>{
 });
 test('P12: mask selection falls back to the first mask of the layer',()=>{
  const d=keyed();const l=layer(d,'photo');
- selectMask(null,null);assert.equal(activeMask(l,{layer:null,mask:null,point:null,pen:false,layerPen:false,layerPoint:null,clip:null,graph:null,mixed:false})!.id,'m');
- assert.equal(activeMask(l,{layer:'other',mask:'zzz',point:null,pen:false,layerPen:false,layerPoint:null,clip:null,graph:null,mixed:false})!.id,'m');assert.equal(activeMask(undefined,{layer:null,mask:null,point:null,pen:false,layerPen:false,layerPoint:null,clip:null,graph:null,mixed:false}),undefined);
+ selectMask(null,null);assert.equal(activeMask(l,{layer:null,mask:null,point:null,pen:false,layerPen:false,layerPoint:null,layerSet:null,clip:null,graph:null,mixed:false})!.id,'m');
+ assert.equal(activeMask(l,{layer:'other',mask:'zzz',point:null,pen:false,layerPen:false,layerPoint:null,layerSet:null,clip:null,graph:null,mixed:false})!.id,'m');assert.equal(activeMask(undefined,{layer:null,mask:null,point:null,pen:false,layerPen:false,layerPoint:null,layerSet:null,clip:null,graph:null,mixed:false}),undefined);
 });
 
 const penned=()=>{let d=base();d=applyEdit(d,maskEdit(d,'photo',{op:'add',id:'p'}));
@@ -668,4 +668,37 @@ test('P29: dragging the outline moves the layer by one position edit, through th
 });
 test('P29: point menu locale keys exist',()=>{
  for(const l of ['en','de','es','fr','pt-BR']){const j=JSON.parse(readFileSync(new URL(`../../locales/animation/${l}.json`,import.meta.url),'utf8'));for(const k of ['animation.pathLayer.smoothPoint','animation.pathLayer.cornerPoint','animation.pathLayer.deletePoint'])assert.ok(j[k],`${l} ${k}`);}
+});
+
+import {movePointsBy,reshapeSegment} from './pathLayer';
+const squareDoc=()=>{let d=pathDoc();return applyEdit(d,{type:'layer.update',layer:'pa',source:{path:{closed:true,points:[{x:0.2,y:0.2},{x:0.8,y:0.2},{x:0.8,y:0.8},{x:0.2,y:0.8},{x:0.5,y:0.9}]}}});};
+test('P30: group move shifts the selected points together, one edit, and keeps the shape inside the box',()=>{
+ let d=squareDoc();const r=d.revision;
+ d=applyEdit(d,pathLayerEdit(d,'pa',{op:'movePoints',indices:[0,1],dx:0.1,dy:0.05}));assert.equal(d.revision,r+1);
+ let p=layer(d,'pa').source.path!.points;assert.deepEqual([p[0].x,p[0].y,p[1].x,p[1].y],[0.3,0.25,0.9,0.25]);assert.deepEqual([p[2].x,p[3].x],[0.8,0.2],'others stay');
+ const lim=movePointsBy(layer(d,'pa').source.path!,[0,1],0.5,0);assert.equal(lim.points[1].x,1,'delta limited by the box edge');assert.ok(Math.abs(lim.points[1].x-lim.points[0].x-0.6)<1e-9,'distance between moved points kept');
+ assert.throws(()=>pathLayerEdit(d,'pa',{op:'movePoints',indices:[9],dx:0,dy:0}),/no longer/);assert.throws(()=>pathLayerEdit(d,'pa',{op:'movePoints',indices:[],dx:0,dy:0}),/no longer/);
+});
+test('P30: group delete and smooth are bounded and keep animated keys in step',()=>{
+ let d=squareDoc();const r=d.revision;
+ d=applyEdit(d,pathLayerEdit(d,'pa',{op:'cornerPoints',indices:[1,2,3],smooth:true}));assert.equal(d.revision,r+1);assert.ok(layer(d,'pa').source.path!.points.slice(1,4).every(q=>q.outX!==undefined&&q.inX!==undefined));assert.equal(layer(d,'pa').source.path!.points[0].outX,undefined);
+ d=applyEdit(d,pathLayerEdit(d,'pa',{op:'cornerPoints',indices:[1,2],smooth:false}));assert.equal(layer(d,'pa').source.path!.points[1].outX,undefined);
+ d=applyEdit(d,pathLayerEdit(d,'pa',{op:'removePoints',indices:[3,4]}));assert.equal(layer(d,'pa').source.path!.points.length,3);
+ assert.throws(()=>pathLayerEdit(d,'pa',{op:'removePoints',indices:[0]}),/three points/);
+ let a=squareDoc();a=applyEdit(a,pathLayerEdit(a,'pa',{op:'animate',on:true}));a=applyEdit(a,pathLayerEdit(a,'pa',{op:'point',index:0,x:0.1,y:0.1,t:Math.round(sec*2)}));
+ a=applyEdit(a,pathLayerEdit(a,'pa',{op:'removePoints',indices:[3,4]}));assert.ok(layer(a,'pa').source.pathKeys!.every(k=>k.path.points.length===3));assert.ok(validateDocument(a));
+ a=applyEdit(a,pathLayerEdit(a,'pa',{op:'movePoints',indices:[0,1],dx:0.05,dy:0,t:Math.round(sec*3)}));assert.equal(layer(a,'pa').source.pathKeys!.length,3);
+ assert.throws(()=>pathLayerEdit(a,'pa',{op:'movePoints',indices:[0],dx:0.1,dy:0}),/time is needed/);
+});
+test('P30: segment drag reshapes the curve so the grabbed point follows the pointer',()=>{
+ const sq={closed:true,points:[{x:0.2,y:0.2},{x:0.8,y:0.2},{x:0.8,y:0.8},{x:0.2,y:0.8}]};
+ const bez=(p:typeof sq,i:number,u:number)=>{const a=p.points[i] as {x:number;y:number;outX?:number;outY?:number},b=p.points[(i+1)%p.points.length] as {x:number;y:number;inX?:number;inY?:number},v=1-u;
+  const x=v**3*a.x+3*v*v*u*(a.x+(a.outX??0))+3*v*u*u*(b.x+(b.inX??0))+u**3*b.x,y=v**3*a.y+3*v*v*u*(a.y+(a.outY??0))+3*v*u*u*(b.y+(b.inY??0))+u**3*b.y;return [x,y];};
+ const before=bez(sq,0,0.5),moved=reshapeSegment(sq,0,0.5,0,-0.1),after=bez(moved as unknown as typeof sq,0,0.5);
+ assert.ok(Math.abs(after[0]-before[0])<1e-3&&Math.abs(after[1]-(before[1]-0.1))<1e-3,'curve point at u follows the drag');
+ assert.deepEqual(moved.points[2],sq.points[2],'other points untouched');assert.ok(moved.points[0].outY!==undefined&&moved.points[1].inY!==undefined);
+ let d=squareDoc();const r=d.revision;d=applyEdit(d,pathLayerEdit(d,'pa',{op:'segment',index:0,u:0.5,dx:0,dy:-0.1}));assert.equal(d.revision,r+1);assert.match(layerPathD(layer(d,'pa'),0),/C/);
+ const huge=reshapeSegment(sq,0,0.5,5,5);assert.equal(huge.points[0].outX,2,'handles bounded');
+ assert.throws(()=>pathLayerEdit(d,'pa',{op:'segment',index:9,u:0.5,dx:0,dy:0}),/no longer/);
+ let open=pathDoc();open=applyEdit(open,{type:'layer.update',layer:'pa',source:{path:{closed:false,points:[{x:0.1,y:0.5},{x:0.9,y:0.5}]}}});assert.throws(()=>pathLayerEdit(open,'pa',{op:'segment',index:1,u:0.5,dx:0,dy:0}),/no longer/,'open path has no closing segment');
 });

@@ -217,3 +217,9 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Implemented: click on the outline inserts a point, Alt-click or Delete removes the selected point, double-click or toolbar button toggles smooth and corner, dragging the outline moves the layer (parent-aware, keyed when position is animated); animated paths keep all keys in step; one undo per action; five locales.
 - Validation: 4 new Animation unit tests (168 total), DS ratchet, ui-commands inventory (382), check:layers, isolated Chrome check with real pointer and key events (insert, smooth, delete, move; undo steps counted).
 - Not covered: no multi-point selection, no segment drag, no insert while the pen is on. Playwright E2E is CI-only.
+
+### Animation P30 (2026-10-14, integration pending)
+
+- Implemented: multi-point selection for path layers (Shift-click, Shift-marquee), group move, delete and smooth/corner, Alt-drag segment reshape, animated paths supported (group move and segment key at the playhead, delete and smooth hit every key), one undo per action. Commands: animation.layer.path ops movePoints, removePoints, cornerPoints, segment.
+- Validation: 3 new Animation unit tests (171 total), DS ratchet, ui-commands inventory (382, no new command), check:layers, isolated Chrome check with real pointer events.
+- Not covered: path booleans (skipped: existing code is SVG-source-editor only and a path layer has one subpath), no select-all shortcut, no segment drag without Alt (plain drag moves the layer), no new locale keys needed. Playwright E2E is CI-only.
