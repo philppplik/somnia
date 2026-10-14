@@ -106,7 +106,7 @@ test('3D studio refuses a file that is not glTF with a readable error',async({pa
 /** Helpers for the scene tests below. They drive the real app through its command layer (dev build) and read the studio session. */
 type P=import('@playwright/test').Page;
 const run=(page:P,id:string,params:unknown={})=>page.evaluate(async([i,p])=>{const m=await import('/src/lib/commands.ts');return (await m.executeCommand(i as string,p)) as unknown;},[id,params] as const);
-const session=(page:P)=>page.evaluate(async()=>{const m=await import('/src/lib/studio3d/session.ts');const s=m.getStudio3DState();return {anim:s.anim,clips:s.clips,clipKeys:s.clipKeys,outline:s.outline,marked:s.marked,selected:s.selected,info:s.selectedInfo,dirty:s.dirty,notice:s.notice,status:s.status,name:s.name,bones:s.bones,weightPreview:s.weightPreview,stats:s.stats,exportClips:s.exportClips,poses:s.poses,ik:s.ik,boneLimits:s.boneLimits};});
+const session=(page:P)=>page.evaluate(async()=>{const m=await import('/src/lib/studio3d/session.ts');const s=m.getStudio3DState();return {anim:s.anim,clips:s.clips,clipKeys:s.clipKeys,outline:s.outline,marked:s.marked,selected:s.selected,info:s.selectedInfo,dirty:s.dirty,notice:s.notice,status:s.status,name:s.name,bones:s.bones,weightPreview:s.weightPreview,stats:s.stats,exportClips:s.exportClips,poses:s.poses,ik:s.ik,boneLimits:s.boneLimits,views:s.views};});
 const open3d=async(page:P)=>{await page.goto('/');await page.getByRole('button',{name:/3D/}).first().click();};
 const blank=async(page:P)=>{await open3d(page);await page.getByTestId('3d-create-blank').click();await expect(page.getByTestId('studio3d-viewport')).toBeVisible();};
 const insert=async(page:P,kind:string,x:number)=>{await run(page,'studio3d.insert.primitive',{kind});const s=await session(page);const id=s.selected as number;await run(page,'studio3d.object.transform',{id,position:{x,y:0,z:0}});return id;};
@@ -652,4 +652,34 @@ test('3D studio inserts a three-point light rig as one undo step',async({page})=
  expect(names).toEqual(['Key light','Fill light','Rim light']);
  await run(page,'studio3d.undo');
  await expect.poll(async()=>(await session(page)).outline.filter(o=>o.kind==='light').length).toBe(0);
+});
+
+test('3D studio adds an orthographic camera, edits zoom and manages named views',async({page})=>{
+ await blank(page);
+ const a=await insert(page,'cube',0);
+ await run(page,'studio3d.insert.camera',{kind:'orthographic'});
+ await expect.poll(async()=>(await session(page)).outline.filter(o=>o.kind==='camera').length).toBe(1);
+ const camId=(await session(page)).outline.find(o=>o.kind==='camera')!.id;
+ expect((await session(page)).outline.find(o=>o.kind==='camera')!.name).toBe('Ortho camera');
+ await run(page,'studio3d.object.rename',{id:camId,name:'Top ortho'});
+ await run(page,'studio3d.camera.set',{id:camId,zoom:2});
+ await run(page,'studio3d.view.save',{name:'Wide'});
+ await expect.poll(async()=>(await session(page)).views.length).toBe(1);
+ await run(page,'studio3d.view.preset',{preset:'top'});
+ await run(page,'studio3d.view.save',{});
+ await expect.poll(async()=>(await session(page)).views.length).toBe(2);
+ await run(page,'studio3d.view.apply',{name:'Wide'});
+ await run(page,'studio3d.view.save',{name:'Wide'});
+ await expect(page.getByRole('alert')).toContainText(/already exists/);
+ await run(page,'studio3d.view.apply',{name:'Nope'});
+ await expect(page.getByRole('alert')).toContainText(/no saved view/);
+ await run(page,'studio3d.view.remove',{name:'Wide'});
+ await expect.poll(async()=>(await session(page)).views.length).toBe(1);
+ await run(page,'studio3d.camera.set',{id:camId,fov:50});
+ await expect(page.getByRole('alert')).toContainText(/set zoom, not fov/);
+ await run(page,'studio3d.undo');
+ await expect.poll(async()=>{const c=(await session(page)).info?.camera;return c?.kind==='orthographic'?c.zoom:-1;}).toBe(1);
+ await run(page,'studio3d.undo');
+ await run(page,'studio3d.undo');
+ await expect.poll(async()=>(await session(page)).outline.filter(o=>o.kind==='camera').length).toBe(0);
 });

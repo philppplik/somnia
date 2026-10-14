@@ -477,17 +477,24 @@ export default function Viewport3D(){
   };
   const maxSize=()=>{const gl=renderer.getContext();return Math.min(gl.getParameter(gl.MAX_RENDERBUFFER_SIZE) as number,gl.getParameter(gl.MAX_TEXTURE_SIZE) as number,16384);};
   const renderStill=async(opts:{camera?:number;width?:number;height?:number;transparent?:boolean}={})=>{
-   let cam:THREE.PerspectiveCamera=camera;
-   if(opts.camera!==undefined){const c=stage.find(opts.camera) as THREE.PerspectiveCamera|undefined;if(!c||!c.isPerspectiveCamera)throw Object.assign(new Error('That object is not a camera.'),{expected:true});cam=c;}
-   const want=opts.width||opts.height?clampRenderSize(opts.width??Math.round((opts.height!)*(cam.aspect||1)),opts.height??Math.round((opts.width!)/(cam.aspect||1)),maxSize()):null;
+   let cam:THREE.PerspectiveCamera|THREE.OrthographicCamera=camera;
+   if(opts.camera!==undefined){const c=stage.find(opts.camera) as THREE.PerspectiveCamera|THREE.OrthographicCamera|undefined;if(!c||!(c as THREE.PerspectiveCamera).isPerspectiveCamera&&!(c as THREE.OrthographicCamera).isOrthographicCamera)throw Object.assign(new Error('That object is not a camera.'),{expected:true});cam=c;}
+   const aspect=(cam as THREE.PerspectiveCamera).isPerspectiveCamera?(cam as THREE.PerspectiveCamera).aspect:((cam as THREE.OrthographicCamera).right-(cam as THREE.OrthographicCamera).left)/((cam as THREE.OrthographicCamera).top-(cam as THREE.OrthographicCamera).bottom);
+   const want=opts.width||opts.height?clampRenderSize(opts.width??Math.round((opts.height!)*(aspect||1)),opts.height??Math.round((opts.width!)/(aspect||1)),maxSize()):null;
    download(await capture(cam,want,!!opts.transparent),`${stem(getStudio3DState().name||'scene')}-${cam===camera?'still':'camera'}.png`);
   };
   let cancelFlag=false;
-  const renderTurntable=async(opts:{frames?:number;width?:number;height?:number;transparent?:boolean}={})=>{
+  const renderTurntable=async(opts:{frames?:number;width?:number;height?:number;transparent?:boolean;out?:'zip'|'folder'}={})=>{
    if(getStudio3DState().render)throw Object.assign(new Error('A render is already running.'),{expected:true});
    const size=clampRenderSize(opts.width??1280,opts.height??720,maxSize());
    const plan=turntablePlan(opts.frames??36,size.width,size.height);
-   const {zipSync}=await import('fflate');
+   let dir:{getFileHandle(name:string,opts:{create:boolean}):Promise<{createWritable():Promise<{write(data:Blob):Promise<void>;close():Promise<void>}>}>}|null=null;
+   if(opts.out==='folder'){
+    const picker=(window as unknown as {showDirectoryPicker?: (o:{mode:string})=>Promise<typeof dir>}).showDirectoryPicker;
+    if(!picker)throw Object.assign(new Error('This browser cannot write to a folder. Use the zip output instead.'),{expected:true});
+    dir=await picker.call(window,{mode:'readwrite'}).catch(()=>{throw Object.assign(new Error('No folder was chosen.'),{expected:true});});
+   }
+   const {zipSync}=dir?{zipSync:null}:await import('fflate');
    const pos0=camera.position.clone(),enabled0=controls.enabled;const target=controls.target.clone();const off=pos0.clone().sub(target);
    const files:Record<string,Uint8Array>={};cancelFlag=false;patchStudio3D({render:{done:0,total:plan.frames}});controls.enabled=false;
    try{
@@ -495,11 +502,12 @@ export default function Viewport3D(){
      if(cancelFlag||disposed)throw Object.assign(new Error('Render cancelled.'),{expected:true});
      camera.position.copy(target).add(off.clone().applyAxisAngle(new THREE.Vector3(0,1,0),plan.step*i));camera.lookAt(target);camera.updateMatrixWorld(true);
      const blob=await capture(camera,size,!!opts.transparent);
-     files[frameName(i,plan.frames)]=new Uint8Array(await blob.arrayBuffer());
+     if(dir){const fh=await dir.getFileHandle(frameName(i,plan.frames),{create:true});const w=await fh.createWritable();await w.write(blob);await w.close();}
+     else files[frameName(i,plan.frames)]=new Uint8Array(await blob.arrayBuffer());
      patchStudio3D({render:{done:i+1,total:plan.frames}});
      await new Promise(r=>setTimeout(r,0));
     }
-    download(new Blob([zipSync(files,{level:0}) as BlobPart],{type:'application/zip'}),`${stem(getStudio3DState().name||'scene')}-turntable.zip`);
+    if(!dir)download(new Blob([zipSync!(files,{level:0}) as BlobPart],{type:'application/zip'}),`${stem(getStudio3DState().name||'scene')}-turntable.zip`);
    }finally{
     camera.position.copy(pos0);camera.lookAt(target);controls.enabled=enabled0;patchStudio3D({render:null});invalidate();
    }
@@ -751,15 +759,25 @@ export default function Viewport3D(){
    save:saveDocument,deleteSelection,duplicateSelection,exportMesh,setExportOptions,renderTurntable,cancelRender:()=>{cancelFlag=true;},setUnit,openFiles,newScene,resetView:frameAll,frameSelection,select,renderStill,exportGlb,
    addPrimitive:k=>{const o=stage.addPrimitive(k);select(o.id);return o.id;},addLight:k=>{const o=stage.addLight(k);select(o.id);return o.id;},addLightRig:()=>{const l=stage.addLightRig();select(l[0].id);return l.map(x=>x.id);},
    setTransform:(id,p)=>stage.setTransform(id,p),setMaterial:(id,p)=>stage.setMaterial(id,p),rename:(id,n)=>stage.rename(id,n),
-   addCamera:fromView=>{
-    const o=fromView?stage.addCamera({position:{x:camera.position.x,y:camera.position.y,z:camera.position.z},quaternion:camera.quaternion.toArray().slice(0,4) as [number,number,number,number]},camera.fov):stage.addCamera();
+   addCamera:(fromView,kind)=>{
+    const o=fromView?stage.addCamera({position:{x:camera.position.x,y:camera.position.y,z:camera.position.z},quaternion:camera.quaternion.toArray().slice(0,4) as [number,number,number,number]},camera.fov,kind):stage.addCamera(undefined,40,kind);
     select(o.id);return o.id;},
+   viewSave:name=>{
+    const views=getStudio3DState().views;const n=(name??'').trim().slice(0,60)||`View ${views.length+1}`;
+    if(views.some(v=>v.name===n))throw Object.assign(new Error(`A view named ${n} already exists.`),{expected:true});
+    patchStudio3D({views:[...views,{name:n,position:[camera.position.x,camera.position.y,camera.position.z],quaternion:camera.quaternion.toArray() as [number,number,number,number],target:[controls.target.x,controls.target.y,controls.target.z]}]});return n;},
+   viewApply:name=>{
+    const v=getStudio3DState().views.find(x=>x.name===name);if(!v)throw Object.assign(new Error(`There is no saved view named ${name}.`),{expected:true});
+    camera.position.set(...v.position);camera.quaternion.set(...v.quaternion);controls.target.set(...v.target);camera.updateMatrixWorld(true);controls.update();invalidate();},
+   viewRemove:name=>{
+    const views=getStudio3DState().views;if(!views.some(v=>v.name===name))throw Object.assign(new Error(`There is no saved view named ${name}.`),{expected:true});
+    patchStudio3D({views:views.filter(v=>v.name!==name)});},
    setCamera:(id,p)=>stage.setCamera(id,p),
    viewFromCamera:id=>{
-    const c=stage.find(id) as THREE.PerspectiveCamera|undefined;if(!c||!c.isPerspectiveCamera)throw Object.assign(new Error('Select a camera first.'),{expected:true});
+    const c=stage.find(id) as THREE.PerspectiveCamera|THREE.OrthographicCamera|undefined;if(!c||!(c as THREE.PerspectiveCamera).isPerspectiveCamera&&!(c as THREE.OrthographicCamera).isOrthographicCamera)throw Object.assign(new Error('Select a camera first.'),{expected:true});
     c.updateMatrixWorld(true);const pos=c.getWorldPosition(new THREE.Vector3());const dir=c.getWorldDirection(new THREE.Vector3());
     const dist=bounds&&boundsValid(bounds)?Math.max(boundsRadius(bounds),1):5;
-    camera.fov=c.fov;camera.position.copy(pos);controls.target.copy(pos).addScaledVector(dir,dist);camera.near=0.05;camera.far=Math.max(500,dist*50);camera.updateProjectionMatrix();controls.update();invalidate();},
+    if((c as THREE.PerspectiveCamera).isPerspectiveCamera)camera.fov=(c as THREE.PerspectiveCamera).fov;camera.position.copy(pos);controls.target.copy(pos).addScaledVector(dir,dist);camera.near=0.05;camera.far=Math.max(500,dist*50);camera.updateProjectionMatrix();controls.update();invalidate();},
    setGizmo:mode=>{gizmo.setMode(mode);patchStudio3D({gizmo:mode});invalidate();},
    nudge:nudgeBy,
    setLight:(id,p)=>stage.setLight(id,p),setPivot:(id,at)=>stage.setPivot(id,at),align:(ids,a,t)=>stage.align(ids,a,t),distribute:(ids,a)=>stage.distribute(ids,a),

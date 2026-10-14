@@ -35,6 +35,7 @@ export function ScenePanel(_:PanelHostProps){
    <Button variant="outline" onClick={()=>void executeCommand('studio3d.light.rig',{})}>{t('studio3d.light.rig')}</Button>
    <Button variant="outline" onClick={()=>void executeCommand('studio3d.insert.camera',{})}>{t('studio3d.insert.camera')}</Button>
    <Button variant="outline" onClick={()=>void executeCommand('studio3d.insert.camera',{fromView:true})}>{t('studio3d.insert.camera.view')}</Button>
+   <Button variant="outline" onClick={()=>void executeCommand('studio3d.insert.camera',{kind:'orthographic'})}>{t('studio3d.insert.camera.ortho')}</Button>
   </div>
   <div className="flex flex-wrap gap-1" role="group" aria-label={t('studio3d.gizmo.group')} data-testid="studio3d-gizmo">
    {GIZMO_MODES.map(m=><Button key={m} variant="outline" aria-pressed={s.gizmo===m} className={s.gizmo===m?'bg-accent-soft text-accent':''} onClick={()=>void executeCommand('studio3d.gizmo.mode',{mode:m})}>{t('studio3d.gizmo.'+m)}</Button>)}
@@ -82,8 +83,11 @@ export function ObjectSection(_:InspectorSectionProps){
   <VecField id={o.id} field="position" label={t('studio3d.object.position')} step={0.1}/>
   <VecField id={o.id} field="rotation" label={t('studio3d.object.rotation')} step={5}/>
   <VecField id={o.id} field="scale" label={t('studio3d.object.scale')} step={0.1}/>
-  {o.camera&&<div className="grid gap-1" data-testid="studio3d-camera"><InspectorNumberField resetKey={o.id} label={t('studio3d.camera.fov')} value={Number(o.camera.fov.toFixed(1))} min={1} max={120} step={1}
-     onCommit={fov=>void executeCommand('studio3d.camera.set',{id:o.id,fov})}/>
+  {o.camera&&<div className="grid gap-1" data-testid="studio3d-camera">{o.camera.kind==='perspective'?
+    <InspectorNumberField resetKey={o.id} label={t('studio3d.camera.fov')} value={Number(o.camera.fov.toFixed(1))} min={1} max={120} step={1}
+     onCommit={fov=>void executeCommand('studio3d.camera.set',{id:o.id,fov})}/>:
+    <InspectorNumberField resetKey={o.id} label={t('studio3d.camera.zoom')} value={Number(o.camera.zoom.toFixed(2))} min={0.01} max={100} step={0.1}
+     onCommit={zoom=>void executeCommand('studio3d.camera.set',{id:o.id,zoom})}/>}
    <Button variant="outline" onClick={()=>void executeCommand('studio3d.view.fromCamera',{id:o.id})}>{t('studio3d.camera.look')}</Button>
    <Button variant="outline" onClick={()=>void executeCommand('studio3d.render.still',{camera:o.id})}>{t('studio3d.camera.render')}</Button>
    <Button variant="outline" onClick={()=>void executeCommand('studio3d.render.still',{camera:o.id,transparent:true})}>{t('studio3d.camera.renderTransparent')}</Button></div>}
@@ -251,6 +255,10 @@ export function ViewSection(_:InspectorSectionProps){
   <div className="flex gap-2"><Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.view.reset')}>{t('studio3d.view.reset')}</Button>
    <Button variant="outline" disabled={!ready||s.selected==null} onClick={()=>void executeCommand('studio3d.view.frame')}>{t('studio3d.view.frame')}</Button></div>
   <div className="flex flex-wrap gap-1" role="group" aria-label={t('studio3d.view.presets')} data-testid="studio3d-view-presets">{VIEW_PRESETS.map(p=><Button key={p} variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.view.preset',{preset:p})}>{t('studio3d.view.preset.'+p)}</Button>)}</div>
+  <div className="grid gap-1" data-testid="studio3d-views"><Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.view.save',{})}>{t('studio3d.views.save')}</Button>
+   {s.views.length>0&&<ul className="m-0 grid list-none gap-1 p-0">{s.views.map(v=><li key={v.name} className="flex flex-wrap items-center gap-1 text-xs text-ink-2"><span className="min-w-0 flex-1 truncate">{v.name}</span>
+    <Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.view.apply',{name:v.name})}>{t('studio3d.views.apply')}</Button>
+    <Button variant="outline" disabled={!ready} aria-label={`${t('studio3d.views.remove')} ${v.name}`} onClick={()=>void executeCommand('studio3d.view.remove',{name:v.name})}>{t('studio3d.views.remove')}</Button></li>)}</ul>}</div>
   <RenderPng/>
   {s.backend&&<Row k={t('studio3d.view.backend')} v={s.backend}/>}
  </div>;
@@ -290,7 +298,7 @@ function LightFields({id,light}:{id:number;light:NonNullable<ObjectInfo['light']
 }
 /** Snapping, pivot, align and distribute. Align and distribute work on the objects ticked in the scene list. */
 export function ToolsSection(_:InspectorSectionProps){
- const {t}=useT();const s=useStudio3D();const sn=s.snap;const n=s.marked.filter(id=>s.outline.some(o=>o.id===id));const [frames,setFrames]=useState(36);
+ const {t}=useT();const s=useStudio3D();const sn=s.snap;const n=s.marked.filter(id=>s.outline.some(o=>o.id===id));const [frames,setFrames]=useState(36);const [out,setOut]=useState<'zip'|'folder'>('zip');
  const align=(axis:string,to:string)=>void executeCommand('studio3d.object.align',{ids:n,axis,to});
  return <div className="grid gap-2 p-3" data-testid="studio3d-tools-section">
   <label className="flex items-center gap-2 text-xs text-ink-2"><input type="checkbox" checked={sn.on} onChange={e=>void executeCommand('studio3d.snap.set',{on:e.currentTarget.checked})}/>{t('studio3d.snap.on')}</label>
@@ -330,8 +338,11 @@ export function ToolsSection(_:InspectorSectionProps){
   </fieldset>
   <fieldset className="m-0 grid gap-2 border-0 p-0" data-testid="studio3d-turntable"><legend className="text-xs text-ink-3">{t('studio3d.turntable.title')}</legend>
    <NumField label={t('studio3d.turntable.frames')} value={frames} min={2} max={360} step={1} onCommit={setFrames}/>
+   <label className="grid gap-1 text-xs text-ink-2">{t('studio3d.turntable.out')}
+    <NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={out} aria-label={t('studio3d.turntable.out')} onChange={e=>setOut(e.currentTarget.value as 'zip'|'folder')}>
+     <option value="zip">{t('studio3d.turntable.outZip')}</option><option value="folder">{t('studio3d.turntable.outFolder')}</option></NativeSelect></label>
    {s.render?<StudioProgress label={t('studio3d.turntable.progress',{done:s.render.done,total:s.render.total})} value={s.render.done} max={s.render.total} cancelLabel={t('studio3d.turntable.cancel')} onCancel={()=>void executeCommand('studio3d.render.cancel')}/>:
-    <Button variant="outline" disabled={s.status!=='ready'} onClick={()=>void executeCommand('studio3d.render.turntable',{frames})}>{t('studio3d.turntable.start')}</Button>}
+    <Button variant="outline" disabled={s.status!=='ready'} onClick={()=>void executeCommand('studio3d.render.turntable',{frames,out})}>{t('studio3d.turntable.start')}</Button>}
   </fieldset>
   <MeshTools/>
   <fieldset className="m-0 grid gap-1 border-0 p-0" data-testid="studio3d-align"><legend className="text-xs text-ink-3">{t('studio3d.align.title',{count:n.length})}</legend>

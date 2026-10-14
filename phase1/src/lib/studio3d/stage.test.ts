@@ -130,6 +130,22 @@ test('cameras: add, fov validation, info and undo',()=>{
  const p=stage.addCamera({position:{x:1,y:2,z:3},quaternion:[0,0,0,1]},55);assert.equal(p.position.z,3);assert.equal(p.fov,55);
  assert.equal(stage.info(stage.addPrimitive('cube').id)?.camera,null);
 });
+test('orthographic cameras: kind, zoom, validation, info and undo',()=>{
+ const stage=new Stage();const c=stage.addCamera(undefined,40,'orthographic');
+ assert.ok(c.isOrthographicCamera);assert.equal(c.name,'Ortho camera');
+ const info=stage.info(c.id)?.camera;assert.equal(info?.kind,'orthographic');
+ if(info?.kind==='orthographic')assert.equal(info.zoom,1);
+ stage.setCamera(c.id,{zoom:2.5});
+ const after=stage.info(c.id)?.camera;if(after?.kind==='orthographic')assert.equal(after.zoom,2.5);
+ assert.throws(()=>stage.setCamera(c.id,{fov:70}),StageError,'a perspective-only patch is refused on an ortho camera');
+ assert.throws(()=>stage.setCamera(c.id,{zoom:0}),StageError);assert.throws(()=>stage.setCamera(c.id,{zoom:101}),StageError);
+ stage.undo();const back=stage.info(c.id)?.camera;if(back?.kind==='orthographic')assert.equal(back.zoom,1);
+ const p=stage.addCamera();assert.ok(p.isPerspectiveCamera);
+ assert.throws(()=>stage.setCamera(p.id,{zoom:2}),StageError,'zoom is refused on a perspective camera');
+ assert.equal(stage.info(p.id)?.camera?.kind,'perspective');
+ stage.undo();assert.equal(stage.find(p.id),undefined,'undo removes the perspective camera');
+ stage.undo();assert.equal(stage.find(c.id),undefined,'undo removes the ortho camera');
+});
 test('spot and area lights: defaults, info, edits, validation and undo',()=>{
  const stage=new Stage();const sp=stage.addLight('spot') as THREE.SpotLight;const ar=stage.addLight('area') as THREE.RectAreaLight;
  assert.ok(sp.isSpotLight);assert.ok(ar.isRectAreaLight);assert.equal(sp.name,'Spot light');assert.equal(ar.name,'Area light');

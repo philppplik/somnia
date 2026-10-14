@@ -418,5 +418,16 @@
  "studio3d.retarget.source": "Quell-Rig",
  "studio3d.retarget.apply": "Als neuen Clip anwenden",
  "cmd.studio3d.light.rig": "Dreipunkt-Lichtsetup einfügen",
- "studio3d.light.rig": "3-Punkt-Setup"
+ "studio3d.light.rig": "3-Punkt-Setup",
+ "studio3d.insert.camera.ortho": "Ortho-Kamera",
+ "studio3d.camera.zoom": "Zoom",
+ "studio3d.views.save": "Ansicht speichern",
+ "studio3d.views.apply": "Anwenden",
+ "studio3d.views.remove": "Entfernen",
+ "studio3d.turntable.out": "Ausgabe",
+ "studio3d.turntable.outZip": "ZIP-Download",
+ "studio3d.turntable.outFolder": "Ordner mit PNG-Bildern",
+ "cmd.studio3d.view.save": "Aktuellen Viewport als benannte Ansicht speichern",
+ "cmd.studio3d.view.apply": "Szene aus gespeicherter Ansicht betrachten",
+ "cmd.studio3d.view.remove": "Gespeicherte Ansicht löschen"
 }

@@ -418,5 +418,16 @@
  "studio3d.retarget.source": "Rig source",
  "studio3d.retarget.apply": "Appliquer en nouveau clip",
  "cmd.studio3d.light.rig": "Insérer un éclairage trois points",
- "studio3d.light.rig": "Éclairage 3 points"
+ "studio3d.light.rig": "Éclairage 3 points",
+ "studio3d.insert.camera.ortho": "Caméra orthographique",
+ "studio3d.camera.zoom": "Zoom",
+ "studio3d.views.save": "Enregistrer la vue",
+ "studio3d.views.apply": "Appliquer",
+ "studio3d.views.remove": "Supprimer",
+ "studio3d.turntable.out": "Sortie",
+ "studio3d.turntable.outZip": "Téléchargement ZIP",
+ "studio3d.turntable.outFolder": "Dossier d’images PNG",
+ "cmd.studio3d.view.save": "Enregistrer la vue actuelle sous un nom",
+ "cmd.studio3d.view.apply": "Regarder la scène depuis une vue enregistrée",
+ "cmd.studio3d.view.remove": "Supprimer une vue enregistrée"
 }

@@ -15,7 +15,7 @@ export const studio3DShell:StudioShellDef={
   {id:'object',title:'Selected object',titleKey:'studio3d.shell.object',component:'studio3d.inspector.object',order:20,commands:['studio3d.texture.transform','studio3d.object.transform','studio3d.object.material','studio3d.skin.bind','studio3d.skin.reweight','studio3d.skin.brush','studio3d.skin.paint','studio3d.skin.preview','studio3d.pose.save','studio3d.pose.apply','studio3d.pose.remove','studio3d.pose.mirror','studio3d.pose.blend','studio3d.ik.toggle','studio3d.ik.target','studio3d.ik.pole','studio3d.fabrik.toggle','studio3d.fabrik.target','studio3d.fabrik.lookat','studio3d.fabrik.looktarget','studio3d.bone.limits','studio3d.object.primitive','studio3d.texture.open','studio3d.texture.clear','studio3d.object.rename','studio3d.object.delete','studio3d.object.duplicate','studio3d.object.nudge','studio3d.camera.set','studio3d.view.fromCamera','studio3d.light.set','studio3d.object.pivot']},
   {id:'tools',title:'Tools',titleKey:'studio3d.shell.tools',component:'studio3d.inspector.tools',order:22,commands:['studio3d.save','studio3d.recent.open','studio3d.recent.clear','studio3d.selection.delete','studio3d.mesh.mirror','studio3d.mesh.applyScale','studio3d.mesh.merge','studio3d.selection.duplicate','studio3d.snap.set','studio3d.export.mesh','studio3d.export.options','studio3d.unit.set','studio3d.render.turntable','studio3d.render.cancel','studio3d.object.align','studio3d.object.distribute','studio3d.object.pivot']},
   {id:'env',title:'Environment',titleKey:'studio3d.shell.env',component:'studio3d.inspector.env',order:25,commands:['studio3d.env.set','studio3d.env.open']},
-  {id:'view',title:'View',titleKey:'studio3d.shell.view',component:'studio3d.inspector.view',order:30,commands:['studio3d.view.grid','studio3d.view.wireframe','studio3d.view.reset','studio3d.view.frame','studio3d.view.preset','studio3d.render.still']},
+  {id:'view',title:'View',titleKey:'studio3d.shell.view',component:'studio3d.inspector.view',order:30,commands:['studio3d.view.grid','studio3d.view.wireframe','studio3d.view.reset','studio3d.view.frame','studio3d.view.preset','studio3d.view.save','studio3d.view.apply','studio3d.view.remove','studio3d.render.still']},
  ]},
  menus:[
   {menu:'Project',command:'studio3d.model.open',group:'studio3d.file',order:10},
@@ -41,6 +41,9 @@ export const studio3DShell:StudioShellDef={
   {menu:'View',command:'studio3d.env.open',group:'studio3d.env',order:50},
   {menu:'View',command:'studio3d.view.reset',group:'studio3d.view',order:10},
   {menu:'View',command:'studio3d.view.frame',group:'studio3d.view',order:20},
+  {menu:'View',command:'studio3d.view.save',group:'studio3d.view',order:30},
+  {menu:'View',command:'studio3d.view.apply',group:'studio3d.view',order:31},
+  {menu:'View',command:'studio3d.view.remove',group:'studio3d.view',order:32},
   {menu:'View',command:'studio3d.view.preset',group:'studio3d.view',order:30},
   {menu:'View',command:'studio3d.anim.play',group:'studio3d.anim',order:40},
   {menu:'View',command:'studio3d.anim.pause',group:'studio3d.anim',order:41},

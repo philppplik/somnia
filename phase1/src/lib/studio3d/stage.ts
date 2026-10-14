@@ -28,8 +28,9 @@ export interface TransformPatch{position?:Partial<Vec3>;/** degrees */rotation?:
 export interface MaterialPatch extends MaterialRequest,PbrExtras{}
 export const MAX_MERGE_VERTICES=3_000_000;
 export type MirrorAxis='x'|'y'|'z';
+export type CameraKind='perspective'|'orthographic';
 export interface ObjectInfo{
- camera:{fov:number}|null;
+ camera:{kind:'perspective';fov:number}|{kind:'orthographic';zoom:number}|null;
  /** Kind and parameters when the mesh is an editable primitive. */primitive?:PrimitiveData|null;
  id:number;name:string;kind:OutlineEntry['kind'];position:Vec3;rotation:Vec3;scale:Vec3;
  /** True for a skinned mesh (bound to a skeleton). */skinned:boolean;
@@ -209,17 +210,28 @@ export class Stage{
    release:()=>{if(!owned)for(const l of lights)disposeObject(l);}});
   return lights;
  }
- addCamera(pose?:{position:Vec3;quaternion:[number,number,number,number]},fov=40):THREE.PerspectiveCamera{
+ addCamera(pose?:{position:Vec3;quaternion:[number,number,number,number]},fov=40,kind:CameraKind='perspective'):THREE.PerspectiveCamera|THREE.OrthographicCamera{
   const f=finite(fov,'fov');if(f<1||f>120)throw new StageError('fov must be between 1 and 120 degrees.');
-  const cam=new THREE.PerspectiveCamera(f,1.5,0.1,100);cam.name=this.uniqueName('Camera');
+  const cam:THREE.PerspectiveCamera|THREE.OrthographicCamera=kind==='orthographic'?new THREE.OrthographicCamera(-2,2,2,-2,0.1,100):new THREE.PerspectiveCamera(f,1.5,0.1,100);
+  cam.name=this.uniqueName(kind==='orthographic'?'Ortho camera':'Camera');
   if(pose){cam.position.set(pose.position.x,pose.position.y,pose.position.z);cam.quaternion.set(...pose.quaternion);}else{cam.position.set(4,3,5);cam.lookAt(0,0.5,0);}
   this.attach(cam,this.root,this.root.children.length,`Add ${cam.name}`);return cam;
  }
- setCamera(id:number,patch:{fov:number}){
-  const o=this.need(id) as THREE.PerspectiveCamera;if(!o.isPerspectiveCamera)throw new StageError(`${o.name} is not a camera.`);
-  const f=finite(patch.fov,'fov');if(f<1||f>120)throw new StageError('fov must be between 1 and 120 degrees.');
-  const before=o.fov;if(before===f)return;const set=(v:number)=>{o.fov=v;o.updateProjectionMatrix();};
-  set(f);this.push({label:`Camera ${o.name}`,undo:()=>set(before),redo:()=>set(f)});
+ setCamera(id:number,patch:{fov?:number;zoom?:number}){
+  const o=this.need(id) as THREE.PerspectiveCamera|THREE.OrthographicCamera;
+  if((o as THREE.PerspectiveCamera).isPerspectiveCamera){
+   if(patch.fov===undefined)throw new StageError(`${o.name} is a perspective camera: set fov, not zoom.`);
+   const f=finite(patch.fov,'fov');if(f<1||f>120)throw new StageError('fov must be between 1 and 120 degrees.');
+   const before=(o as THREE.PerspectiveCamera).fov;if(before===f)return;const set=(v:number)=>{(o as THREE.PerspectiveCamera).fov=v;o.updateProjectionMatrix();};
+   set(f);this.push({label:`Camera ${o.name}`,undo:()=>set(before),redo:()=>set(f)});return;
+  }
+  if((o as THREE.OrthographicCamera).isOrthographicCamera){
+   if(patch.zoom===undefined)throw new StageError(`${o.name} is an orthographic camera: set zoom, not fov.`);
+   const z=finite(patch.zoom,'zoom');if(z<0.01||z>100)throw new StageError('zoom must be between 0.01 and 100.');
+   const before=(o as THREE.OrthographicCamera).zoom;if(before===z)return;const set=(v:number)=>{(o as THREE.OrthographicCamera).zoom=v;o.updateProjectionMatrix();};
+   set(z);this.push({label:`Camera ${o.name}`,undo:()=>set(before),redo:()=>set(z)});return;
+  }
+  throw new StageError(`${o.name} is not a camera.`);
  }
  setTransform(id:number,patch:TransformPatch,opts:{group?:string;now?:number}={}){
   const o=this.need(id);const before={p:o.position.clone(),r:o.rotation.clone(),s:o.scale.clone()};
@@ -1291,7 +1303,7 @@ export class Stage{
   return{id:o.id,name:o.name,kind:(o as THREE.Bone).isBone?'bone':m.isMesh?'mesh':l.isLight?'light':(o as THREE.Camera).isCamera?'camera':'group',
    position:{x:o.position.x,y:o.position.y,z:o.position.z},rotation:{x:o.rotation.x/DEG,y:o.rotation.y/DEG,z:o.rotation.z/DEG},scale:{x:o.scale.x,y:o.scale.y,z:o.scale.z},
    skinned:(m as THREE.SkinnedMesh).isSkinnedMesh===true,
-   camera:(o as THREE.PerspectiveCamera).isPerspectiveCamera?{fov:(o as THREE.PerspectiveCamera).fov}:null,
+   camera:(o as THREE.PerspectiveCamera).isPerspectiveCamera?{kind:'perspective' as const,fov:(o as THREE.PerspectiveCamera).fov}:(o as THREE.OrthographicCamera).isOrthographicCamera?{kind:'orthographic' as const,zoom:(o as THREE.OrthographicCamera).zoom}:null,
    primitive:this.primitiveOf(o),material:mat?{color:'#'+mat.color.getHexString(),metalness:mat.metalness,roughness:mat.roughness,emissive:'#'+mat.emissive.getHexString(),emissiveIntensity:mat.emissiveIntensity,opacity:mat.transparent||mat.alphaTest>0?mat.opacity:1,alphaMode:alphaModeOf(mat.transparent,mat.alphaTest),alphaCutoff:mat.alphaTest>0?mat.alphaTest:0.5,doubleSided:mat.side===THREE.DoubleSide,textures:Object.fromEntries((Object.keys(SLOT_CONFIG) as TextureSlot[]).map(k=>{const t=mat[SLOT_CONFIG[k].prop] as THREE.Texture|null;return[k,t?(t.name||'image'):null];})) as Record<TextureSlot,string|null>,transforms:Object.fromEntries((Object.keys(SLOT_CONFIG) as TextureSlot[]).map(k=>{const t=mat[SLOT_CONFIG[k].prop] as THREE.Texture|null;return[k,t?readTransform(t):null];})) as Record<TextureSlot,TextureTransform|null>}:null,light:l.isLight?lightInfo(l):null};
  }
  measure(animations=this.clipList.length):{stats:ModelStats;outline:OutlineEntry[];bounds:Bounds|null}{

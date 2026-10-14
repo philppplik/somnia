@@ -12,8 +12,8 @@ import type {KeyRef} from './keyEdit';
 import type {LoopRange} from './animation';
 import type {TextureTransform} from './uv';
 import {VIEW_PRESETS,type ViewPreset} from './viewPresets';
-import type {MirrorAxis,PrimitiveKind,LightKind,TransformPatch,MaterialPatch,LightPatch,AlignAxis,AlignTo,PivotAt} from './stage';
-export interface TurntableOptions{frames?:number;width?:number;height?:number;transparent?:boolean}
+import type {MirrorAxis,PrimitiveKind,LightKind,TransformPatch,MaterialPatch,LightPatch,AlignAxis,AlignTo,PivotAt,CameraKind} from './stage';
+export interface TurntableOptions{frames?:number;width?:number;height?:number;transparent?:boolean/** 'zip' downloads one archive; 'folder' writes the PNG frames into a folder the user picks. */out?:'zip'|'folder';}
 export interface RenderOptions{/** id of a camera object; the viewport camera when omitted */camera?:number;width?:number;height?:number;transparent?:boolean}
 /** What the lazy viewport offers. The command layer never imports three.js. */
 export interface Studio3DController{
@@ -80,8 +80,11 @@ export interface Studio3DController{
  rename(id:number,name:string):void;
  remove(id:number):void;
  duplicate(id:number):number;
- addCamera(fromView:boolean):number;
- setCamera(id:number,patch:{fov:number}):void;
+ addCamera(fromView:boolean,kind?:CameraKind):number;
+ setCamera(id:number,patch:{fov?:number;zoom?:number}):void;
+ viewSave(name?:string):string;
+ viewApply(name:string):void;
+ viewRemove(name:string):void;
  viewFromCamera(id:number):void;
  setGizmo(mode:GizmoMode):void;
  nudge(id:number,delta:{x?:number;y?:number;z?:number}):void;
@@ -154,8 +157,11 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{id:number;name:string}>('studio3d.object.rename','Rename a 3D object','Edit',p=>need().rename(p.id,p.name),object({id:{type:'integer',minimum:0},name:{type:'string',minLength:1,maxLength:120}}),hasScene),
   add<{id:number}>('studio3d.object.delete','Delete a 3D object','Edit',p=>need().remove(p.id),object({id:{type:'integer',minimum:0}}),hasScene),
   add<{id:number}>('studio3d.object.duplicate','Duplicate a 3D object','Edit',p=>need().duplicate(p.id),object({id:{type:'integer',minimum:0}}),hasScene),
-  add<{fromView?:boolean}>('studio3d.insert.camera','Insert a 3D camera','Insert',p=>need().addCamera(!!p?.fromView),object({fromView:{type:'boolean'}},[]),()=>!!controller),
-  add<{id:number;fov:number}>('studio3d.camera.set','Change the field of view of a 3D camera','Edit',p=>need().setCamera(p.id,{fov:p.fov}),object({id:{type:'integer',minimum:0},fov:{type:'number',minimum:1,maximum:120}}),hasScene),
+  add<{fromView?:boolean;kind?:CameraKind}>('studio3d.insert.camera','Insert a 3D camera (perspective or orthographic)','Insert',p=>need().addCamera(!!p?.fromView,p?.kind),object({fromView:{type:'boolean'},kind:{enum:['perspective','orthographic']}},[]),()=>!!controller),
+  add<{id:number;fov?:number;zoom?:number}>('studio3d.camera.set','Change the field of view (perspective) or zoom (orthographic) of a 3D camera','Edit',p=>need().setCamera(p.id,{fov:p.fov,zoom:p.zoom}),object({id:{type:'integer',minimum:0},fov:{type:'number',minimum:1,maximum:120},zoom:{type:'number',minimum:0.01,maximum:100}},['id']),hasScene),
+  add<{name?:string}>('studio3d.view.save','Save the current viewport as a named view','View',p=>{need().viewSave(p?.name);},object({name:{type:'string',maxLength:60}},[]),hasScene),
+  add<{name:string}>('studio3d.view.apply','Look at the scene from a saved named view','View',p=>need().viewApply(p.name),object({name:{type:'string'}}),hasScene),
+  add<{name:string}>('studio3d.view.remove','Delete a saved named view','View',p=>need().viewRemove(p.name),object({name:{type:'string'}}),hasScene),
   add<{id:number}>('studio3d.view.fromCamera','Look through a 3D camera','View',p=>need().viewFromCamera(p.id),object({id:{type:'integer',minimum:0}}),hasScene),
   add<{mode:GizmoMode}>('studio3d.gizmo.mode','Set the 3D transform tool','Tools',p=>need().setGizmo(p.mode),object({mode:{enum:['translate','rotate','scale']}}),()=>!!controller),
   add<{id:number;x?:number;y?:number;z?:number}>('studio3d.object.nudge','Nudge a 3D object','Edit',p=>need().nudge(p.id,p),object({id:{type:'integer',minimum:0},x:{type:'number'},y:{type:'number'},z:{type:'number'}},['id']),hasScene),
@@ -231,7 +237,7 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{ids?:number[]}>('studio3d.selection.duplicate','Duplicate the selected 3D objects','Edit',p=>need().duplicateSelection(p?.ids),object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500}},[]),hasScene),
   add<{format:'stl'|'obj'}>('studio3d.export.mesh','Export the scene as STL or OBJ','Project',p=>need().exportMesh(p.format),object({format:{enum:['stl','obj']}}),hasScene),
   add<{unit:ExportUnit}>('studio3d.unit.set','Set the unit used for STL and OBJ export','Project',p=>need().setUnit(p.unit),object({unit:{enum:['m','cm','mm','in']}}),()=>!!controller),
-  add<TurntableOptions>('studio3d.render.turntable','Render a turntable as a ZIP of PNG frames','Project',p=>need().renderTurntable(p??{}),object({frames:{type:'integer',minimum:2,maximum:360},width:{type:'integer',minimum:1,maximum:8192},height:{type:'integer',minimum:1,maximum:8192},transparent:{type:'boolean'}},[]),hasScene),
+  add<TurntableOptions>('studio3d.render.turntable','Render a turntable as a ZIP of PNG frames or a PNG sequence in a chosen folder','Project',p=>need().renderTurntable(p??{}),object({frames:{type:'integer',minimum:2,maximum:360},width:{type:'integer',minimum:1,maximum:8192},height:{type:'integer',minimum:1,maximum:8192},transparent:{type:'boolean'},out:{enum:['zip','folder']}},[]),hasScene),
   add<{id:string}>('studio3d.recent.open','Open a recent 3D scene','Project',p=>recentOpener!(p.id),object({id:{type:'string',minLength:1,maxLength:200}}),()=>!!recentOpener&&getStudio3DState().recent.length>0),
   add('studio3d.recent.clear','Clear recent 3D scenes and autosave','Project',()=>clearRecentScenes(),undefined,()=>getStudio3DState().recent.length>0),
   add('studio3d.render.cancel','Cancel the running 3D render','Project',()=>need().cancelRender(),undefined,()=>!!controller&&getStudio3DState().render!=null),

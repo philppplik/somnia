@@ -418,5 +418,16 @@
  "studio3d.retarget.source": "Rig de origen",
  "studio3d.retarget.apply": "Aplicar como clip nuevo",
  "cmd.studio3d.light.rig": "Insertar un esquema de luz de tres puntos",
- "studio3d.light.rig": "Esquema de 3 puntos"
+ "studio3d.light.rig": "Esquema de 3 puntos",
+ "studio3d.insert.camera.ortho": "Cámara ortográfica",
+ "studio3d.camera.zoom": "Zoom",
+ "studio3d.views.save": "Guardar vista",
+ "studio3d.views.apply": "Aplicar",
+ "studio3d.views.remove": "Eliminar",
+ "studio3d.turntable.out": "Salida",
+ "studio3d.turntable.outZip": "Descarga ZIP",
+ "studio3d.turntable.outFolder": "Carpeta de imágenes PNG",
+ "cmd.studio3d.view.save": "Guardar el visor actual como vista con nombre",
+ "cmd.studio3d.view.apply": "Mirar la escena desde una vista guardada",
+ "cmd.studio3d.view.remove": "Borrar una vista guardada"
 }

@@ -418,5 +418,16 @@
  "studio3d.retarget.source": "Source rig",
  "studio3d.retarget.apply": "Apply as new clip",
  "cmd.studio3d.light.rig": "Insert a three-point light rig",
- "studio3d.light.rig": "3-point rig"
+ "studio3d.light.rig": "3-point rig",
+ "studio3d.insert.camera.ortho": "Ortho camera",
+ "studio3d.camera.zoom": "Zoom",
+ "studio3d.views.save": "Save view",
+ "studio3d.views.apply": "Apply",
+ "studio3d.views.remove": "Remove",
+ "studio3d.turntable.out": "Output",
+ "studio3d.turntable.outZip": "ZIP download",
+ "studio3d.turntable.outFolder": "Folder of PNG frames",
+ "cmd.studio3d.view.save": "Save the current viewport as a named view",
+ "cmd.studio3d.view.apply": "Look at the scene from a saved named view",
+ "cmd.studio3d.view.remove": "Delete a saved named view"
 }
