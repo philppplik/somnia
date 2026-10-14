@@ -668,3 +668,13 @@ test('P189 export background colour: replaces the composition colour for this ex
  assert.throws(()=>setExportSettings({background:'red'}),(e:any)=>e.code==='unsupported');assert.deepEqual(settingsProblems({...defaultExportSettings(),background:'#abcdef'}),[]);
  resetExportSettings();
 });
+
+test('P190 graph playhead reading: value of the channel at the playhead, speed in speed mode, null outside the window',async()=>{
+ const {playheadReading}=await import('./graph');const {evaluate}=await import('./interpolate');
+ const s=open();const c=findComp(s.document!);const prop=findLayer(c,'a')!.transform.position;const k=prop.keys;
+ const t=Math.round((k[0].t+k[k.length-1].t)/2);const ev=evaluate(prop,t);
+ assert.equal(playheadReading(prop,0,t,0,c.duration,false),typeof ev==='number'?ev:ev[0]);
+ assert.equal(playheadReading(prop,1,t,0,c.duration,false),(ev as readonly number[])[1]);
+ assert.equal(typeof playheadReading(prop,0,t,0,c.duration,true),'number');
+ assert.equal(playheadReading(prop,0,-5,0,c.duration,false),null);assert.equal(playheadReading(prop,0,c.duration+1,0,c.duration,false),null);
+});

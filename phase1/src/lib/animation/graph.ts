@@ -42,6 +42,11 @@ export function curveSamples(p:Property,ch:0|1,t0:number,t1:number,n:number):{t:
  for(let s=0;s<=steps;s++){const t=Math.round(t0+(t1-t0)*s/steps);out.push({t,v:channelOf(evaluate(p,t),ch)});}
  return out;
 }
+/** Value (or speed in speed mode) of one channel at the playhead, or null when the playhead is outside the visible window [t0,t1]. */
+export function playheadReading(p:Property,ch:0|1,t:number,t0:number,t1:number,speed:boolean):number|null{
+ if(!(t>=t0&&t<=t1))return null;
+ return speed?speedAt(p,ch,t):channelOf(evaluate(p,t),ch);
+}
 /** "Nice" grid step for a value axis. */
 export function niceStep(range:number,maxLines:number):number{
  const raw=range/Math.max(1,maxLines);const pow=10**Math.floor(Math.log10(raw||1));const f=raw/pow;

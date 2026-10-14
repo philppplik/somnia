@@ -3,7 +3,7 @@ import {animationSession} from '../../lib/animation/session';
 import type {Edit} from '../../lib/animation/edit';
 import {PROP_META,TRANSFORM_KEYS,type Composition,type KeyRef,type TransformKey} from '../../lib/animation/model';
 import {fitTargets,graphWindow,timeTicks,windowValueRange} from '../../lib/animation/graphWindow';
-import {channelOf,curveSamples,handleToEase,handlesOf,niceStep,valueRange,speedSamples,speedRange,EASE_PRESETS,type Handle} from '../../lib/animation/graph';
+import {channelOf,playheadReading,curveSamples,handleToEase,handlesOf,niceStep,valueRange,speedSamples,speedRange,EASE_PRESETS,type Handle} from '../../lib/animation/graph';
 import {clickSelect,sameKey,shiftSelection} from '../../lib/animation/selection';
 import {frameToTick,timecode} from '../../lib/animation/time';
 import {useT} from '../../lib/useT';
@@ -166,6 +166,8 @@ export function GraphEditor({comp,layerId,sel,playhead}:{comp:Composition;layerI
      <polyline points={pts(samples)} fill="none" stroke="var(--accent)" strokeWidth={2} data-testid="animation-graph-curve"/>
     </g>
     <line x1={xOf(playhead)} x2={xOf(playhead)} y1={PAD.t} y2={PAD.t+ph} stroke="var(--text-primary)" strokeWidth={1} pointerEvents="none" data-testid="animation-graph-playhead"/>
+    {(()=>{const rv=playheadReading(prop,ch,playhead,t0,t1,speed);if(rv===null)return null;const px=xOf(playhead),py=Math.min(PAD.t+ph,Math.max(PAD.t,yOf(rv))),left=px>PAD.l+pw-60;
+     return <g pointerEvents="none" data-testid="animation-graph-readout"><circle cx={px} cy={py} r={3.5} fill="var(--accent)" stroke="var(--text-primary)" strokeWidth={1}/><text x={left?px-7:px+7} y={Math.max(PAD.t+10,py-6)} textAnchor={left?'end':'start'} fontSize={10} fontWeight={600} fill="var(--text-primary)" data-testid="animation-graph-readout-value">{fmt(rv)}</text></g>;})()}
     {timeTicks(t0,t1,comp.fps,Math.floor(pw/80)).map(tk=><g key={tk} pointerEvents="none" data-testid="animation-graph-timetick"><line x1={xOf(tk)} x2={xOf(tk)} y1={PAD.t} y2={PAD.t+ph} stroke="var(--border-subtle)" strokeWidth={1}/><text x={xOf(tk)} y={h-3} textAnchor={xOf(tk)>PAD.l+pw-30?"end":"middle"} fontSize={9} fill="var(--text-tertiary)">{timecode(tk,comp.fps)}</text></g>)}
     {(comp.markers??[]).filter(m=>m.t>=t0&&m.t<=t1).map(m=><line key={m.id} x1={xOf(m.t)} x2={xOf(m.t)} y1={PAD.t} y2={PAD.t+ph} stroke="var(--warning)" strokeWidth={1.5} strokeDasharray="3 3" pointerEvents="none" data-testid="animation-graph-marker"><title>{m.label}</title></line>)}
     {!speed&&selHere.flatMap(r=>{const i=keys.findIndex(k=>k.t===r.t);if(i<0)return [];const k=keys[i];
