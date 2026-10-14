@@ -139,6 +139,22 @@ impl HeadlessWorkbook {
         self.session.run("edit.undo", json!({})).map(|v| v.to_string())
     }
 
+    /// Sets the host clock (local date-time as a 1900-system serial) used by NOW/TODAY and every other
+    /// volatile function, then recalculates. Without it wasm32 falls back to a fixed serial (46302.5 =
+    /// 2026-10-07 12:00), so the host must call this after open and whenever the minute changes.
+    /// Rejects non-finite and out-of-range values without touching the document. Not an undo step.
+    pub fn set_clock(&mut self, serial: f64) -> Result<String, String> {
+        if !serial.is_finite() || !(1.0..=2_958_465.999_999).contains(&serial) {
+            return Err("invalid clock serial".into());
+        }
+        let doc = self.session.doc_mut().map_err(|e| e.to_string())?;
+        doc.calc.fixed_now = Some(serial);
+        let mut wb = (*doc.wb).clone();
+        doc.calc.recalc_all(&mut wb);
+        doc.wb = std::sync::Arc::new(wb);
+        Ok(json!({"clock": serial}).to_string())
+    }
+
     pub fn export_xlsx(&self) -> Result<Vec<u8>, String> {
         let doc = self.session.doc().map_err(|e| e.to_string())?;
         gridcraft_xlsx::write_xlsx(&doc.wb).map_err(|e| e.to_string())
@@ -273,6 +289,40 @@ mod tests {
         assert_eq!(bs["font"], "Courier New");
         assert_eq!(bs["size"], 16.0);
         assert!(col(3).unwrap()["w"].as_f64().unwrap() < l["defaultColWidth"].as_f64().unwrap());
+    }
+    #[test]
+    fn host_clock_drives_now_and_today_and_survives_edits_and_undo() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        book.set_cell(0, "H1", "=NOW()").unwrap();
+        book.set_cell(0, "H2", "=TODAY()").unwrap();
+        let num = |b: &HeadlessWorkbook, a: &str| -> f64 {
+            let v: serde_json::Value = serde_json::from_str(&b.range(0, a[1..].parse::<u32>().unwrap() - 1, 7, 1, 1).unwrap()).unwrap();
+            v["cells"][0]["value"]["v"].as_f64().unwrap()
+        };
+        book.set_clock(46310.25).unwrap();
+        assert_eq!(num(&book, "H1"), 46310.25);
+        assert_eq!(num(&book, "H2"), 46310.0);
+        // An edit elsewhere recalculates volatiles with the host clock, not the fallback.
+        book.set_cell(0, "H3", "=NOW()-TODAY()").unwrap();
+        assert_eq!(num(&book, "H3"), 0.25);
+        // Clock changes are not history entries.
+        let info: serde_json::Value = serde_json::from_str(&book.sheet_info(0).unwrap()).unwrap();
+        assert_eq!(info["canUndo"], true);
+        book.undo().unwrap();
+        book.undo().unwrap();
+        book.undo().unwrap();
+        let info: serde_json::Value = serde_json::from_str(&book.sheet_info(0).unwrap()).unwrap();
+        assert_eq!(info["canUndo"], false, "set_clock added no undo step");
+    }
+    #[test]
+    fn host_clock_rejects_bad_serials_without_touching_the_document() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        book.set_cell(0, "H1", "=NOW()").unwrap();
+        book.set_clock(46310.5).unwrap();
+        for bad in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY, 0.0, -5.0, 3_000_000.0] {
+            assert!(book.set_clock(bad).is_err(), "{bad}");
+        }
+        assert!(book.range(0, 0, 7, 1, 1).unwrap().contains("46310.5"));
     }
     #[test]
     fn rejects_bad_input_and_out_of_bounds_without_losing_document() {

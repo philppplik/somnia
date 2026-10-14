@@ -1,8 +1,11 @@
 /// <reference lib="webworker" />
 import init,{HeadlessWorkbook} from '../../../sheets-craft/pkg/somnia_sheets_craft.js';
+import {clockKey,localSerial} from './clock';
 import type {SheetsRequest,SheetsResponse} from './protocol';
 const scope=self as unknown as DedicatedWorkerGlobalScope;
-let ready:Promise<unknown>|undefined;let book:HeadlessWorkbook|undefined;
+let ready:Promise<unknown>|undefined;let book:HeadlessWorkbook|undefined;let clockSent=NaN;
+/** Host clock for NOW()/TODAY(): sent after open and whenever the local minute changes, so edits never see the wasm fixed fallback. An unusable clock keeps the previous one. */
+const syncClock=(b:HeadlessWorkbook,force=false)=>{const s=localSerial();if(s===null)return;const k=clockKey(s);if(!force&&k===clockSent)return;b.set_clock(s);clockSent=k;};
 // Serial queue: one session, requests never interleave.
 let queue:Promise<void>=Promise.resolve();
 scope.onmessage=({data}:MessageEvent<SheetsRequest>)=>{queue=queue.then(async()=>{
@@ -13,14 +16,14 @@ scope.onmessage=({data}:MessageEvent<SheetsRequest>)=>{queue=queue.then(async()=
   const need=()=>{if(!book)throw new Error('No workbook is open');return book;};
   let result:unknown;
   switch(data.op){
-   case 'open':{const next=new HeadlessWorkbook(new Uint8Array(data.bytes));book?.free();book=next;result=JSON.parse(next.sheets());break;}
+   case 'open':{const next=new HeadlessWorkbook(new Uint8Array(data.bytes));syncClock(next,true);book?.free();book=next;result=JSON.parse(next.sheets());break;}
    case 'info':result=JSON.parse(need().sheet_info(data.sheet));break;
    case 'range':result=JSON.parse(need().range(data.sheet,data.row,data.col,data.rows,data.cols));break;
    case 'view':result=JSON.parse(need().view_range(data.sheet,data.row,data.col,data.rows,data.cols));break;
    case 'layout':result=JSON.parse(need().layout(data.sheet));break;
-   case 'set':result=JSON.parse(need().set_cell(data.sheet,data.address,data.input));break;
-   case 'undo':result=JSON.parse(need().undo());break;
-   case 'redo':result=JSON.parse(need().redo());break;
+   case 'set':syncClock(need());result=JSON.parse(need().set_cell(data.sheet,data.address,data.input));break;
+   case 'undo':syncClock(need());result=JSON.parse(need().undo());break;
+   case 'redo':syncClock(need());result=JSON.parse(need().redo());break;
    case 'save':{const bytes=need().export_xlsx();const buffer=bytes.buffer as ArrayBuffer;send({id:data.id,ok:true,op:'bytes',bytes:buffer,ms:performance.now()-t},[buffer]);return;}
    case 'close':book?.free();book=undefined;result={closed:true};break;
    default:throw new Error('Unsupported operation');}

@@ -20,6 +20,10 @@ export class HeadlessWorkbook {
     range(sheet: number, row: number, col: number, rows: number, cols: number): string;
     redo(): string;
     /**
+     * Sets the host clock (local date-time serial) for NOW/TODAY, then recalculates. Not an undo step.
+     */
+    set_clock(serial: number): string;
+    /**
      * Use the real command path, including dependent recalculation and undo snapshots.
      */
     set_cell(sheet: number, address: string, input: string): string;
@@ -46,6 +50,7 @@ export interface InitOutput {
     readonly headlessworkbook_new: (a: number, b: number) => [number, number, number];
     readonly headlessworkbook_range: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
     readonly headlessworkbook_redo: (a: number) => [number, number, number, number];
+    readonly headlessworkbook_set_clock: (a: number, b: number) => [number, number, number, number];
     readonly headlessworkbook_set_cell: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
     readonly headlessworkbook_sheet_info: (a: number, b: number) => [number, number, number, number];
     readonly headlessworkbook_sheets: (a: number) => [number, number, number, number];
