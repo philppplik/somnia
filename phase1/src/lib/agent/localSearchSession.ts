@@ -1,4 +1,4 @@
-import {captureBuiltLocalIndex} from './localBuiltIndex';import {retrieveLocalPhraseReport} from './localPhraseSearch';import {validBatchProgress,type LocalBuildProgress} from './localSearchProgress';import {localSearchQueryReview} from './localSearchQuery';import {prepareLocalIndexChunks} from './localIndexChunks';import {LOCAL_EMBED_MODEL,type LocalEmbeddingAdapter} from './localEmbedding';import {captureLocalIndexDescriptor,emptyLocalIndex,beginLocalIndex,finishLocalIndex,invalidateLocalIndex,type LocalIndexDescriptor,type LocalIndexLifecycle} from './localIndexLifecycle';import {retrieveLocalTopK,type FrozenLocalVectors} from './localRetrieval';import {chunkLocalSources,type SearchSource} from './localSearch';
+import {localSearchCandidates} from './localSearchCandidates';import {captureBuiltLocalIndex} from './localBuiltIndex';import {retrieveLocalPhraseReport} from './localPhraseSearch';import {validBatchProgress,type LocalBuildProgress} from './localSearchProgress';import {localSearchQueryReview} from './localSearchQuery';import {prepareLocalIndexChunks} from './localIndexChunks';import {LOCAL_EMBED_MODEL,type LocalEmbeddingAdapter} from './localEmbedding';import {captureLocalIndexDescriptor,emptyLocalIndex,beginLocalIndex,finishLocalIndex,invalidateLocalIndex,type LocalIndexDescriptor,type LocalIndexLifecycle} from './localIndexLifecycle';import {retrieveLocalTopK,type FrozenLocalVectors} from './localRetrieval';import {chunkLocalSources,type SearchSource} from './localSearch';
 export interface LocalSearchCapture {endpoint:string;model:typeof LOCAL_EMBED_MODEL;digest:string;dimensions:number;sources:readonly SearchSource[]}
 export interface LocalSearchAdapter {endpoint:string;embed:LocalEmbeddingAdapter['embed'];embedPrepared:LocalEmbeddingAdapter['embedPrepared']}
 function capture(input:LocalSearchCapture):LocalSearchCapture{
@@ -31,16 +31,16 @@ export class LocalSearchSession {
   }catch(error){if(this.buildAbort===controller)this.discard();throw error;}
   finally{signal.removeEventListener('abort',abort);if(this.buildAbort===controller)this.buildAbort=null;controller.abort();}
  }
- phrase(text:string,limit=10,sourceId?:string){return this.phraseReport(text,limit,sourceId).results;}
- phraseReport(text:string,limit=10,sourceId?:string){this.available();this.queryAbort?.abort();this.queryGeneration++;const source=this.source,vectors=this.vectors;if(!source||!vectors||this.lifecycle.phase!=='ready')throw Error('Search index not ready');this.assertSame(source);return retrieveLocalPhraseReport(this.lifecycle,vectors.descriptor,vectors,text,limit,sourceId);}
- async query(text:string,signal:AbortSignal,limit=10,sourceId?:string){
+ phrase(text:string,limit=10,sourceId?:string|readonly string[]){return this.phraseReport(text,limit,sourceId).results;}
+ phraseReport(text:string,limit=10,sourceId?:string|readonly string[]){this.available();this.queryAbort?.abort();this.queryGeneration++;const source=this.source,vectors=this.vectors;if(!source||!vectors||this.lifecycle.phase!=='ready')throw Error('Search index not ready');this.assertSame(source);return retrieveLocalPhraseReport(this.lifecycle,vectors.descriptor,vectors,text,limit,sourceId);}
+ async query(text:string,signal:AbortSignal,limit=10,sourceId?:string|readonly string[]){
   this.available();signal.throwIfAborted();this.queryAbort?.abort();const token=++this.queryGeneration;
   if(!localSearchQueryReview(text).valid||!Number.isSafeInteger(limit)||limit<1||limit>50)throw Error('Invalid explicit search query');
-  const source=this.source,vectors=this.vectors;if(!source||!vectors||this.lifecycle.phase!=='ready')throw Error('Search index not ready');this.assertSame(source);if(sourceId!==undefined&&!source.sources.some(s=>s.id===sourceId))throw Error('Source focus outside indexed scope');
+  const source=this.source,vectors=this.vectors;if(!source||!vectors||this.lifecycle.phase!=='ready')throw Error('Search index not ready');this.assertSame(source);const focus=localSearchCandidates(source.sources,sourceId);if(!focus.length)return Object.freeze([]);
   const controller=new AbortController();this.queryAbort=controller;const abort=()=>controller.abort();signal.addEventListener('abort',abort,{once:true});if(signal.aborted)abort();
   try{
    const result=await this.adapter.embed([text],source.digest,source.dimensions,controller.signal);controller.signal.throwIfAborted();if(token!==this.queryGeneration||this.queryAbort!==controller)throw Error('Query replaced');this.assertSame(source);
-   if(result.length!==1)throw Error('Invalid query vector count');return retrieveLocalTopK(this.lifecycle,vectors.descriptor,vectors,result[0],limit,sourceId);
+   if(result.length!==1)throw Error('Invalid query vector count');return retrieveLocalTopK(this.lifecycle,vectors.descriptor,vectors,result[0],limit,focus);
   }finally{signal.removeEventListener('abort',abort);if(this.queryAbort===controller)this.queryAbort=null;controller.abort();}
  }
 }
