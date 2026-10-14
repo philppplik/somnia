@@ -46,6 +46,7 @@
     "check:ds": "node scripts/check-ds.mjs",
     "ds:baseline": "node scripts/check-ds.mjs --update",
     "dev:ds": "vite --config test/design-system/vite.config.ts --open /test/design-system/",
+    "check:ds:catalog": "node scripts/check-ds-catalog.mjs",
     "test:ds:exchange": "tsx --test src/lib/themeExchange.test.ts",
     "test:ds:unit": "tsx --import ./scripts/test-css-register.mjs --test src/components/ui/*.test.tsx",
     "test:ds:parity": "playwright test --config test/design-system/playwright.config.ts",
