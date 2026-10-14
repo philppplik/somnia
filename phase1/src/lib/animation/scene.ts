@@ -27,7 +27,7 @@ export interface DrawLayer{layer:Layer;matrix:Matrix;opacity:number}
 /** Layers visible at tick `t`, bottom-most first (paint order), with world matrices. Opacity is not inherited. */
 export function sceneAt(comp:Composition,t:number):DrawLayer[]{
  const solo=comp.layers.some(l=>l.solo);
- return [...comp.layers].reverse().filter(l=>l.visible&&(!solo||l.solo)&&t>=l.inT+l.offset&&t<l.outT+l.offset&&l.kind!=='null')
+ return [...comp.layers].reverse().filter(l=>l.visible&&(!solo||l.solo)&&t>=l.inT+l.offset&&t<l.outT+l.offset&&l.kind!=='null'&&l.kind!=='audio')
   .map(l=>({layer:l,matrix:worldMatrix(comp,l,t),opacity:Math.min(1,Math.max(0,(evaluate(l.transform.opacity,t) as number)/100))}));
 }
 /** Matrix multiplication exported for explicit keep-world reparenting. */

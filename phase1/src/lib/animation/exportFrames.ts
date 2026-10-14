@@ -32,7 +32,8 @@ function layerSvg(l:Layer,assets:readonly InterfaceAsset[],tick:number,fillOverr
 }
 /** Standalone SVG of the composition at `tick`. `transparent` omits the background rectangle so PNG output keeps real alpha. */
 export function frameSvg(comp:Composition,tick:number,transparent=false,assets:readonly InterfaceAsset[]=[]):string{
- validateAnimationAssets({assets,compositions:[comp]});
+ /** Audio layers are not drawn and their files are not part of frame export, so only the pictures are checked here. */
+ validateAnimationAssets({assets,compositions:[{...comp,layers:comp.layers.filter(l=>l.kind!=='audio')}]});
  if(comp.layers.some(l=>!validSource(l.source)||!validEffects(l.effects)))throw new ExportError('Invalid layer source/effects.','raster');
  const defs=comp.layers.map((l,i)=>{const b=effectBounds(l,tick);return `<filter id="effect-${i}" filterUnits="userSpaceOnUse" x="${b.x}" y="${b.y}" width="${b.width}" height="${b.height}" color-interpolation-filters="sRGB">${effectPrimitives(l,tick)}</filter>`;}).join('');
  const gradients=comp.layers.map((l,i)=>{const g=l.source.gradient;if(!g)return '';const v=gradientVector(g.angle);return `<linearGradient id="gradient-${i}" x1="${v.x1}" y1="${v.y1}" x2="${v.x2}" y2="${v.y2}"><stop offset="0" stop-color="${g.start}"/><stop offset="1" stop-color="${g.end}"/></linearGradient>`;}).join('');

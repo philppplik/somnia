@@ -1,5 +1,6 @@
 import type {InterfaceAsset} from '../interface/schema';
 import {validateAnimationAssets} from './assetsValidation';
+import type {AudioAsset} from './audioCore';
 import {frameToTick,validRate,type Rational,TICKS_PER_SECOND} from './time';
 /** Authoritative, serialisable, versioned composition document (concept section 4). View state lives elsewhere. */
 export const SCHEMA_VERSION=1;
@@ -13,16 +14,18 @@ export type Interp='hold'|'linear'|'bezier';
 export interface Keyframe{t:number;v:PropValue;interp:Interp;out:readonly [number,number];in:readonly [number,number];sIn?:Vec2;sOut?:Vec2;channelOut?:readonly [Vec2,Vec2];channelIn?:readonly [Vec2,Vec2]}
 export interface KeyRef{layer:string;prop:TransformKey;t:number}
 export interface Property{type:PropType;value:PropValue;keys:readonly Keyframe[];/** Inert text only; never evaluated in P0. */expression?:string;pathMode?:'parameter'|'arcLength'}
-export type LayerKind='solid'|'text'|'shape'|'null'|'raster';
+export type LayerKind='solid'|'text'|'shape'|'null'|'raster'|'audio';
+/** Audio layer parameters. The clip plays file time `trimIn + (t - (inT + offset))` for comp time t inside [inT+offset, outT+offset). `volume` is a percent (0..200) keyed in composition time. */
+export interface AudioParams{assetId:string;trimIn:number;volume:Property}
 export interface Transform{anchor:Property;position:Property;scale:Property;rotation:Property;opacity:Property}
 export const TRANSFORM_KEYS=['anchor','position','scale','rotation','opacity'] as const;
 export type TransformKey=typeof TRANSFORM_KEYS[number];
 export interface LayerSource{color?:string;width?:number;height?:number;text?:string;size?:number;shape?:'rect'|'ellipse'|'path'|'roundedRect'|'star'|'polygon';radius?:number;sides?:number;innerRatio?:number;gradient?:{start:string;end:string;angle:number};path?:{points:readonly {x:number;y:number}[];closed:boolean};assetId?:string}
 export interface LayerEffect{id:string;kind:'blur'|'tint';enabled:boolean;amount:number;color:string;animation?:Property;colorKeys?:readonly {t:number;color:string}[];bypassKeys?:readonly {t:number;bypass:boolean}[]}
-export interface Layer{id:string;name:string;kind:LayerKind;source:LayerSource;inT:number;outT:number;offset:number;parent:string|null;transform:Transform;visible:boolean;solo:boolean;locked:boolean;effects?:readonly LayerEffect[];textReveal?:Property;stroke?:{color:string;width:number;trim?:Property;dash?:Property}}
+export interface Layer{id:string;name:string;kind:LayerKind;source:LayerSource;inT:number;outT:number;offset:number;parent:string|null;transform:Transform;visible:boolean;solo:boolean;locked:boolean;effects?:readonly LayerEffect[];audio?:AudioParams;textReveal?:Property;stroke?:{color:string;width:number;trim?:Property;dash?:Property}}
 export interface Marker{id:string;t:number;label:string}
 export interface Composition{id:string;name:string;width:number;height:number;fps:Rational;duration:number;start:number;background:string;workArea:{in:number;out:number};layers:readonly Layer[];markers?:readonly Marker[]}
-export interface AnimationDocument{schema:number;engine:string;id:string;name:string;revision:number;activeComp:string;compositions:readonly Composition[];assets:readonly InterfaceAsset[]}
+export interface AnimationDocument{schema:number;engine:string;id:string;name:string;revision:number;activeComp:string;compositions:readonly Composition[];assets:readonly InterfaceAsset[];audioAssets?:readonly AudioAsset[]}
 /** One copied key, with its time relative to the earliest copied key. */
 export interface ClipItem{prop:TransformKey;dt:number;key:Keyframe}
 export interface PropertyRef{layer:string;prop:TransformKey}
@@ -54,6 +57,7 @@ export function createLayer(kind:LayerKind,comp:Composition,over:Partial<Layer>=
   text:{name:'Text',source:{text:'Lower third',size:96,color:'#ffffff'}},
   shape:{name:'Shape',source:{shape:'rect',width:400,height:240,color:'#ff7a59'}},
   raster:{name:'Image',source:{}},
+  audio:{name:'Audio',source:{}},
   null:{name:'Null',source:{width:100,height:100}}};
  const n=comp.layers.filter(l=>l.kind===kind).length+1;
  return {id,name:`${base[kind].name} ${n}`,kind,source:{...base[kind].source},inT:0,outT:comp.duration,offset:0,parent:null,transform:makeTransform(comp.width,comp.height),visible:true,solo:false,locked:false,...over};
@@ -95,8 +99,9 @@ export function validateDocument(raw:unknown):string[]{
   for(const l of c.layers){
    if(!l||typeof l.id!=='string'){bad(`${c.id}: layer without id`);continue;}
    if(ids.has(l.id))bad(`${c.id}: duplicate layer ${l.id}`);ids.add(l.id);
-   if(!['solid','text','shape','null','raster'].includes(l.kind))bad(`${l.id}: unknown kind`);
+   if(!['solid','text','shape','null','raster','audio'].includes(l.kind))bad(`${l.id}: unknown kind`);
    if(l.stroke!==undefined&&(l.kind!=='shape'||!/^#[0-9a-fA-F]{6}$/.test(l.stroke.color)||!isNum(l.stroke.width)||l.stroke.width<0||l.stroke.width>256||(l.stroke.trim!==undefined&&!validScalarProperty(l.stroke.trim,0,100))||(l.stroke.dash!==undefined&&!validScalarProperty(l.stroke.dash,-1000,1000))))bad(`${l.id}: invalid stroke`);
+   if(!validAudio(l,d as AnimationDocument))bad(`${l.id}: invalid audio`);
    if(l.textReveal!==undefined&&(l.kind!=='text'||!validScalarProperty(l.textReveal,0,100)))bad(`${l.id}: invalid text reveal`);
    if(!validSource(l.source)||!validEffects(l.effects))bad(`${l.id}: invalid source/effects`);
    if(!Number.isInteger(l.inT)||!Number.isInteger(l.outT)||l.outT<=l.inT)bad(`${l.id}: bad timing`);
@@ -136,3 +141,12 @@ export function validScalarProperty(p:Property,min:number,max:number):boolean{
 }
 
 export const DEFAULT_LAYER_COLOR='#ffffff';
+
+const MAX_OFFSET=3600*TICKS_PER_SECOND;
+/** Audio layers carry `audio` and a file; every other kind must not. Trim stays inside the embedded file. */
+export function validAudio(l:Layer,doc:Pick<AnimationDocument,'audioAssets'>):boolean{
+ if(l.kind!=='audio')return l.audio===undefined;
+ const a=l.audio;if(!a||typeof a.assetId!=='string'||!Number.isInteger(a.trimIn)||a.trimIn<0||!Number.isInteger(l.offset)||Math.abs(l.offset)>MAX_OFFSET||l.inT!==0)return false;
+ const asset=doc.audioAssets?.find(x=>x.id===a.assetId);if(!asset)return false;
+ return a.trimIn+(l.outT-l.inT)<=asset.durationTicks&&validScalarProperty(a.volume,0,200);
+}

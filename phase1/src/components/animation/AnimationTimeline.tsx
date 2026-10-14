@@ -3,6 +3,9 @@ import {Play,Pause,Undo2,Redo2,Eye,EyeOff,Lock,Unlock} from '../../lib/icons';
 import {animationSession,useAnimationState} from '../../lib/animation/session';
 import {TRANSFORM_KEYS,type Composition,type KeyRef,type TransformKey} from '../../lib/animation/model';
 import {playbackAt} from '../../lib/animation/playback';
+import {AudioPreview,browserAudioContext} from '../../lib/animation/audioPreview';
+import {audioSignature} from '../../lib/animation/audioTiming';
+import {AudioWaveform} from './AudioWaveform';
 import {clickSelect,marqueeSelect,pruneSelection,rectsOverlap,sameKey,shiftSelection} from '../../lib/animation/selection';
 import {EASE_PRESETS,type EasePreset} from '../../lib/animation/graph';
 import {frameToTick,snapToFrame,tickToFrame,timecode} from '../../lib/animation/time';
@@ -24,15 +27,24 @@ export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Compo
  const [playing,setPlaying]=useState(false);const raf=useRef<number|null>(null);
  const live=useRef({comp,loop:view.loop});live.current={comp,loop:view.loop};
  const sel=pruneSelection(state.doc,view.selectedKeys).filter(k=>k.layer===selected);
- const stop=()=>{if(raf.current!==null){cancelAnimationFrame(raf.current);raf.current=null;}setPlaying(false);};
- useEffect(()=>()=>{if(raf.current!==null)cancelAnimationFrame(raf.current);},[]);
- const toggle=()=>{
-  if(raf.current!==null){stop();return;}
-  const startAt=at;const t0=performance.now();setPlaying(true);
+ const audio=useRef<AudioPreview|null>(null);if(!audio.current)audio.current=new AudioPreview(browserAudioContext);
+ const gen=useRef(0);const [audioNote,setAudioNote]=useState('');const sig=audioSignature(state.doc,comp);const sigAtStart=useRef('');
+ const stop=()=>{gen.current++;audio.current?.stop();if(raf.current!==null){cancelAnimationFrame(raf.current);raf.current=null;}setPlaying(false);};
+ useEffect(()=>()=>{gen.current++;audio.current?.dispose();if(raf.current!==null)cancelAnimationFrame(raf.current);},[]);
+ /** Editing audio while it plays would leave scheduled sources stale. Pause instead of drifting out of sync. */
+ useEffect(()=>{if(playing&&sigAtStart.current&&sig!==sigAtStart.current){stop();setAudioNote(t('animation.audio.paused'));}// eslint-disable-next-line react-hooks/exhaustive-deps
+ },[sig]);
+ const toggle=async()=>{
+  if(raf.current!==null||playing){stop();return;}
+  const token=++gen.current;const startAt=at;setAudioNote('');sigAtStart.current=sig;let useAudio=false;
+  if(state.doc){try{useAudio=(await audio.current!.start(state.doc,comp,startAt,view.loop))!==null;}catch{setAudioNote(t('animation.audio.unavailable'));}}
+  if(token!==gen.current){audio.current!.stop();return;}
+  const t0=performance.now();setPlaying(true);
   const tick=(now:number)=>{
-   const {comp:c,loop}=live.current;const r=playbackAt(startAt,now-t0,c.workArea,c.fps,loop);
+   const {comp:c,loop}=live.current;const r=playbackAt(startAt,useAudio?audio.current!.elapsedMs():now-t0,c.workArea,c.fps,loop);
+   if(useAudio)audio.current!.poll();
    animationSession().setView({playhead:r.tick});
-   if(r.ended){raf.current=null;setPlaying(false);return;}
+   if(r.ended){audio.current?.stop();raf.current=null;setPlaying(false);return;}
    raf.current=requestAnimationFrame(tick);
   };
   raf.current=requestAnimationFrame(tick);
@@ -130,7 +142,7 @@ export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Compo
    <Button size="row" aria-label={t('animation.undo')} disabled={!canUndo} onClick={()=>run('animation.edit.undo')}><Undo2/></Button>
    <Button size="row" aria-label={t('animation.redo')} disabled={!canRedo} onClick={()=>run('animation.edit.redo')}><Redo2/></Button>
    <Button size="compact" aria-label={t('animation.step.back')} onClick={()=>step(-1)}>‹</Button>
-   <Button size="row" aria-label={playing?t('animation.pause'):t('animation.play')} onClick={toggle} data-testid="animation-play">{playing?<Pause/>:<Play/>}</Button>
+   <Button size="row" aria-label={playing?t('animation.pause'):t('animation.play')} onClick={()=>void toggle()} data-testid="animation-play">{playing?<Pause/>:<Play/>}</Button>
    <Button size="compact" aria-label={t('animation.step.forward')} onClick={()=>step(1)}>›</Button>
    <Button size="tiny" variant={view.loop?'outline':'ghost'} aria-pressed={view.loop} onClick={()=>run('animation.playback.loop')} data-testid="animation-loop">{t('animation.timeline.loop')}</Button>
    <output className="ml-1 font-mono text-ink" data-testid="animation-timecode">{timecode(at,comp.fps)}</output>
@@ -171,9 +183,14 @@ export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Compo
       <button type="button" aria-current={l.id===selected} className="min-w-0 flex-1 truncate text-left text-ink" onClick={()=>animationSession().setView({selectedLayer:l.id})}>{l.parent?'↳ ':''}{l.name}{l.kind==='null'?' · Null':''}</button>
      </div>
      <div className="relative h-5">
-      <div className="absolute top-1 h-3 rounded-sm bg-accent-fill opacity-70" style={{left:pct(l.inT,comp),width:`${Math.max(0,(l.outT-l.inT)/comp.duration*100)}%`}}/>
+      {l.kind==='audio'&&l.audio?<div className="absolute inset-0 overflow-hidden" data-testid="animation-audio-clip"><div className="absolute inset-y-0.5 overflow-hidden rounded-sm bg-accent-soft" style={{left:`${(l.inT+l.offset-comp.start)/comp.duration*100}%`,width:`${Math.max(0,(l.outT-l.inT)/comp.duration*100)}%`}}>
+       {(a=>a&&<AudioWaveform asset={a} trimIn={l.audio.trimIn} length={l.outT-l.inT} label={t('animation.audio.waveform',{name:a.sourceName})}/>)(state.doc?.audioAssets?.find(x=>x.id===l.audio!.assetId))}</div></div>
+      :<div className="absolute top-1 h-3 rounded-sm bg-accent-fill opacity-70" style={{left:pct(l.inT,comp),width:`${Math.max(0,(l.outT-l.inT)/comp.duration*100)}%`}}/>}
      </div>
     </div>
+    {l.id===selected&&l.audio&&l.audio.volume.keys.length>0&&<div className="grid grid-cols-[180px_1fr] items-center" data-testid="animation-keyrow-volume">
+     <span className="px-2 py-1 pl-6 text-ink-3">{t('animation.audio.volumeLane')}</span>
+     <div className="relative h-5">{l.audio.volume.keys.map(key=><Button key={key.t} size="tiny" variant="outline" className="absolute top-0.5 size-3 min-h-0 min-w-0 -translate-x-1/2 rotate-45 bg-accent-fill p-0" style={{left:pct(key.t,comp)}} aria-label={t('animation.audio.volumeKey',{time:timecode(key.t,comp.fps)})} onClick={()=>animationSession().setView({playhead:key.t})} data-volume-key-t={key.t}/>)}</div></div>}
     {l.id===selected&&animated.map(k=><div key={k} className="grid grid-cols-[180px_1fr] items-center" data-testid={`animation-keyrow-${k}`}>
      <span className="px-2 py-1 pl-6 text-ink-3">{t(PROP_LABEL[k])}</span>
      <div className="relative h-5 touch-none" data-lane onPointerDown={startMarquee}>
@@ -190,6 +207,7 @@ export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Compo
    </div>
    {box&&<div className="pointer-events-none absolute border border-accent bg-accent-soft" style={{left:box.x0,top:box.y0,width:box.x1-box.x0,height:box.y1-box.y0}} data-testid="animation-marquee"/>}
   </div>}
+  {audioNote&&<p role="status" className="m-0 border-t border-subtle px-2 py-1 text-ink-3" data-testid="animation-audio-note">{audioNote}</p>}
   <div className="sr-only" aria-live="polite">{timecode(at,comp.fps)}{sel.length>0?` ${t('animation.keys.selected',{count:sel.length})}`:''}</div>
  </section>;
 }

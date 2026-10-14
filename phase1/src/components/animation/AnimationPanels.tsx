@@ -7,9 +7,12 @@ import {saveAnimationSnapshot,parseAnimationSnapshot,SNAPSHOT_LIMIT} from '../..
 import {wouldCycle} from '../../lib/animation/model';
 import type {Edit} from '../../lib/animation/edit';
 import {prepareAnimationAsset} from '../../lib/animation/assets';
+import {prepareAudioAsset,AudioImportCancelled} from '../../lib/animation/audioImport';
+import {AUDIO_IMPORT_EVENT} from '../../lib/animation/commands';
+import {AudioInspector} from './AudioInspector';
 import {animationSession} from '../../lib/animation/session';
 import {newId} from '../../lib/animation/model';
-import {useRef,useState} from 'react';
+import {useEffect,useRef,useState} from 'react';
 import {executeCommand} from '../../lib/commands';
 import {useT} from '../../lib/useT';
 import {useAnimationState} from '../../lib/animation/session';
@@ -27,7 +30,8 @@ const run=(id:string,params?:unknown)=>void executeCommand(id,params);
 const KINDS:LayerKind[]=['solid','text','shape','null'];
 /** Left panel: composition list and layer creation. The timeline owns the layer list, so it is not repeated here. */
 export function CompositionsPanel(_:PanelHostProps){
- const {t}=useT();const s=useAnimationState();const doc=s.doc;const input=useRef<HTMLInputElement>(null);const [importError,setImportError]=useState('');const [importing,setImporting]=useState(false);const [fileNotice,setFileNotice]=useState('');const snapshotInput=useRef<HTMLInputElement>(null);
+ const {t}=useT();const s=useAnimationState();const doc=s.doc;const input=useRef<HTMLInputElement>(null);const [importError,setImportError]=useState('');const [importing,setImporting]=useState(false);const [fileNotice,setFileNotice]=useState('');const snapshotInput=useRef<HTMLInputElement>(null);const audioInput=useRef<HTMLInputElement>(null);const audioAbort=useRef<AbortController|null>(null);const [audioJob,setAudioJob]=useState<{done:number;total:number}|null>(null);
+ useEffect(()=>{const open=()=>audioInput.current?.click();window.addEventListener(AUDIO_IMPORT_EVENT,open);return()=>{window.removeEventListener(AUDIO_IMPORT_EVENT,open);audioAbort.current?.abort();};},[]);
  const openSnapshot=<><Button size="compact" variant="outline" className="h-auto min-w-0 whitespace-normal text-left" onClick={()=>{if(s.dirty&&!window.confirm(t('animation.file.replace')))return;snapshotInput.current?.click();}}>{t('animation.file.open')}</Button><NativeInput type="file" ref={snapshotInput} accept=".somnia" className="hidden" aria-label={t('animation.file.open')} onChange={async e=>{const file=e.target.files?.[0];e.target.value='';if(!file)return;const current=animationSession().document;try{if(file.size>SNAPSHOT_LIMIT)throw Error('Snapshot exceeds 8 MB.');const snapshot=parseAnimationSnapshot(new Uint8Array(await file.arrayBuffer()));if(animationSession().document!==current)throw Error(t('animation.asset.changed'));animationSession().open(snapshot.doc,snapshot.view);setFileNotice(t('animation.file.opened'));setImportError('');}catch(err){setImportError((err as Error).message);}}}/></>;
  if(!doc)return <aside className="grid min-w-0 content-start gap-3 p-3 text-xs" data-testid="animation-compositions-panel">
   <Button size="compact" variant="outline" onClick={()=>run('animation.project.new')} data-testid="animation-new">{t('cmd.animation.project.new')}</Button>
@@ -45,6 +49,10 @@ export function CompositionsPanel(_:PanelHostProps){
   <NativeInput ref={input} type="file" accept=".png,.jpg,.jpeg,.svg" className="hidden" aria-label={t('animation.asset.import')} onChange={async e=>{const file=e.target.files?.[0];e.target.value='';if(!file)return;const session=animationSession(),document=session.document;setImportError('');setImporting(true);try{const asset=await prepareAnimationAsset(file);if(session.document?.id!==document?.id||session.document?.activeComp!==document?.activeComp)throw Error(t('animation.asset.changed'));session.dispatch({type:'asset.import',asset});session.setView({selectedLayer:findComp(session.document!)!.layers[0].id});}catch(err){setImportError((err as Error).message);}finally{setImporting(false);}}}/>
   <Button size="compact" variant="outline" disabled={importing} onClick={()=>input.current?.click()} data-testid="animation-import-asset">{t('animation.asset.import')}</Button>
   <p className="m-0 text-ink-3">{t('animation.asset.limits')}</p>
+  <NativeInput ref={audioInput} type="file" accept=".wav,.mp3,audio/wav,audio/mpeg" className="hidden" aria-label={t('animation.audio.import')} data-testid="animation-audio-input" onChange={async e=>{const file=e.target.files?.[0];e.target.value='';if(!file)return;const session=animationSession(),document=session.document;setImportError('');const ctl=new AbortController();audioAbort.current=ctl;setAudioJob({done:0,total:1});try{const asset=await prepareAudioAsset(file,setAudioJob,ctl.signal);if(session.document?.id!==document?.id||session.document?.activeComp!==document?.activeComp)throw Error(t('animation.asset.changed'));session.dispatch({type:'audio.import',asset,t:session.getState().view.playhead});session.setView({selectedLayer:findComp(session.document!)!.layers[0].id});}catch(err){setImportError(err instanceof AudioImportCancelled?t('animation.audio.cancelled'):(err as Error).message);}finally{audioAbort.current=null;setAudioJob(null);}}}/>
+  <Button size="compact" variant="outline" disabled={!!audioJob} onClick={()=>audioInput.current?.click()} data-testid="animation-import-audio">{t('animation.audio.import')}</Button>
+  {audioJob&&<StudioProgress label={t('animation.audio.progress',{done:audioJob.done,total:audioJob.total})} value={audioJob.done} max={audioJob.total} progressTestId="animation-audio-progress" cancelLabel={t('animation.audio.cancel')} onCancel={()=>audioAbort.current?.abort()} cancelTestId="animation-audio-cancel"/>}
+  <p className="m-0 text-ink-3">{t('animation.audio.limits')}</p>
   {importError&&<StudioStatus tone="error" live="assertive" className="block m-0 text-ink">{importError}</StudioStatus>}
  </aside>;
 }
@@ -53,6 +61,7 @@ function NumberField(props:Parameters<typeof InspectorNumberField>[0]){return <I
 export function PropertiesSection(_:InspectorSectionProps){
  const {t}=useT();const [keepWorld,setKeepWorld]=useState(false);const [editError,setEditError]=useState('');const edit=(e:Edit)=>{try{animationSession().dispatch(e);setEditError('');}catch(err){setEditError((err as Error).message);}};const s=useAnimationState();const doc=s.doc;const comp=doc&&findComp(doc);const layer=comp&&s.view.selectedLayer?findLayer(comp,s.view.selectedLayer):undefined;
  if(!comp||!layer)return null;const at=s.view.playhead;
+ if(layer.kind==='audio'&&layer.audio)return <AudioInspector layer={layer} comp={comp} at={at}/>;
  const setNum=(prop:TransformKey,v:PropValue)=>run('animation.prop.set',{layer:layer.id,prop,value:v});
  return <div className="grid gap-3 p-3 text-xs" data-testid="animation-properties">
   {editError&&<StudioStatus tone="error" live="assertive" className="block m-0 text-ink">{editError}</StudioStatus>}

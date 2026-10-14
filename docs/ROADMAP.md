@@ -94,3 +94,8 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 
 - Implemented: rounded rectangle/star/polygon primitives, bounded parameters, fill/stroke and two-stop linear gradient; shared preview/reference export geometry, local snapshot validation. 88 Animation + Interface media tests; inspected UI and rendered PNG.
 - Remaining P5: bounded WAV/MP3 import/audio layers, waveform, trim/offset, volume keys and synced preview. No audio mux/export claim. Details: `docs/animation-p5-shapes.md`.
+
+### Animation P5b (2026-10-14, integration pending)
+
+- Implemented: WAV/MP3 audio layers embedded in the local `.somnia` snapshot (2 MB per file, 10 minutes, 4 MB total), bounded waveform from a validated peak table, trim, offset and volume keyframes, and preview playback driven by the audio clock so picture and sound share one time base. Audio is not part of any export; no mux, no codecs, no new dependencies.
+- Validation: 19 new and 102 total Animation unit tests, DS ratchet, isolated Chrome German light/dark pixels and a real AudioContext sync measurement. Full-app/native/WASM gates remain CI-only (`tests/animation-p5b.spec.ts` not run). Details and limits: `docs/animation-p5b.md`.

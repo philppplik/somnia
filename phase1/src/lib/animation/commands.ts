@@ -13,6 +13,8 @@ import {allKeysOf,pruneSelection,shiftSelection} from './selection';
 import {EASE_PRESETS,type EasePreset} from './graph';
 import {exportCurrentFrame,exportWorkAreaSequence} from './exportJob';
 import {ExportError} from './exportFrames';
+/** Window event the Compositions panel listens for to open the audio file chooser. */
+export const AUDIO_IMPORT_EVENT='somnia:animation-audio-import';
 const fail=(m:string):never=>{throw Object.assign(new Error(m),{expected:true});};
 const open=()=>!!animationSession().document;
 const doc=()=>animationSession().document??fail('No open animation.');
@@ -52,6 +54,11 @@ export function animationCommandSpecs():CommandSpec<unknown,unknown>[]{
    const {layer,text,size,color,...flags}=p;const source={...(text!==undefined?{text}:{}),...(size!==undefined?{size}:{}),...(color!==undefined?{color}:{})};
    return run({type:'layer.update',layer:layer??selected(),...flags,...(Object.keys(source).length?{source}:{})});},
    object({layer:layerRef,name:{type:'string',maxLength:200},visible:{type:'boolean'},solo:{type:'boolean'},locked:{type:'boolean'},text:{type:'string',maxLength:2000},size:{type:'number',minimum:1,maximum:2000},color:{type:'string',pattern:'^#[0-9a-fA-F]{6}$'}},[])),
+  spec('animation.audio.import','Import audio (WAV or MP3)',()=>{window.dispatchEvent(new CustomEvent(AUDIO_IMPORT_EVENT));},undefined,open,'Insert'),
+  spec('animation.audio.update','Trim and place audio clip',(p:{layer?:string;trimIn?:number;length?:number;offset?:number})=>run({type:'audio.update',layer:layerIdOf(p),...(p.trimIn!==undefined?{trimIn:secondsToTicks(p.trimIn)}:{}),...(p.length!==undefined?{length:secondsToTicks(p.length)}:{}),...(p.offset!==undefined?{offset:secondsToTicks(p.offset)}:{})}),object({layer:layerRef,trimIn:{type:'number',minimum:0,maximum:600},length:{type:'number',minimum:0.001,maximum:600},offset:{type:'number',minimum:-3600,maximum:3600}},[])),
+  spec('animation.audio.volume.set','Set audio volume (percent)',(p:{layer?:string;value:number;t?:number})=>run({type:'audio.volume.set',layer:layerIdOf(p),value:p.value,t:p.t??playhead()}),object({layer:layerRef,value:{type:'number',minimum:0,maximum:200},t:tick},['value'])),
+  spec('animation.audio.volume.animate','Toggle audio volume keyframes',(p:{layer?:string;on:boolean})=>run({type:'audio.volume.animate',layer:layerIdOf(p),on:p.on,t:playhead()}),object({layer:layerRef,on:{type:'boolean'}},['on'])),
+  spec('animation.audio.volume.keyRemove','Remove audio volume keyframe',(p:{layer?:string;t?:number})=>run({type:'audio.volume.key.remove',layer:layerIdOf(p),t:p.t??playhead()}),object({layer:layerRef,t:tick},[])),
   spec('animation.project.saveLocal','Save local animation snapshot',()=>saveAnimationSnapshot(),undefined,open,'Project'),
   spec('animation.preset.apply','Apply entrance preset',(p:{layer?:string;preset:MotionPreset;seconds?:number})=>run(presetEdits(doc(),layerIdOf(p),p.preset,playhead(),p.seconds)),object({layer:layerRef,preset:{enum:['fade','slide','bounce','typewriter','trim','dash']},seconds:{type:'number',minimum:0.1,maximum:30}},['preset'])),
   spec('animation.marker.add','Add timing marker',(p:{label?:string}={})=>run({type:'markers.set',markers:[...(comp().markers??[]),{id:newId('marker'),t:playhead(),label:p.label??'Marker'}]}),object({label:{type:'string',maxLength:100}},[])),
@@ -98,7 +105,7 @@ export function animationCommandSpecs():CommandSpec<unknown,unknown>[]{
  ] as CommandSpec<unknown,unknown>[];
 }
 export const ANIMATION_COMMANDS=animationCommandSpecs().map(s=>s.id);
-const DESTRUCTIVE=new Set(['animation.layer.remove','animation.keys.delete','animation.keys.cut']);
+const DESTRUCTIVE=new Set(['animation.layer.remove','animation.keys.delete','animation.keys.cut','animation.audio.volume.keyRemove']);
 export function registerAnimationCommands(){
  const offs=animationCommandSpecs().map(s=>{const off=registerCommandSpec(s);const c=commandRegistry.get(s.id);if(c){c.studio='animation';c.argsSchema=s.params;c.risk=DESTRUCTIVE.has(s.id)?'destructive':'content';}return off;});
  return()=>offs.forEach(off=>off());

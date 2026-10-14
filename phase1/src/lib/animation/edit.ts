@@ -1,7 +1,8 @@
 import {worldMatrix,invertMatrix,multiplyMatrix,decomposeMatrix} from './scene';
 import type {InterfaceAsset} from '../interface/schema';
 import {validateAnimationAssets} from './assetsValidation';
-import {createComposition,type ClipItem,type KeyRef,type Vec2,createLayer,findComp,findLayer,PROP_META,wouldCycle,EASE_IN,EASE_OUT,TRANSFORM_KEYS,validateDocument,type AnimationDocument,type CompSettings,type Composition,type Interp,type Keyframe,type Layer,type LayerKind,type LayerSource,type LayerEffect,validSource,validEffects,type Property,type PropValue,type TransformKey} from './model';
+import {MAX_AUDIO_VOLUME,type AudioAsset} from './audioCore';
+import {prop,createComposition,type ClipItem,type KeyRef,type Vec2,createLayer,findComp,findLayer,PROP_META,wouldCycle,EASE_IN,EASE_OUT,TRANSFORM_KEYS,validateDocument,type AnimationDocument,type CompSettings,type Composition,type Interp,type Keyframe,type Layer,type LayerKind,type LayerSource,type LayerEffect,validSource,validEffects,type Property,type PropValue,type TransformKey} from './model';
 import {evaluate} from './interpolate';
 import {snapToFrame,tickToFrame,frameToTick,validRate} from './time';
 /** Typed `animation.*` edits. Every mutation goes through applyEdit so undo, recovery and AI share one path. */
@@ -39,6 +40,13 @@ export type Edit=
  |{type:'layer.reveal';layer:string;property:Property}
  |{type:'markers.set';markers:readonly import('./model').Marker[]}
  |{type:'asset.import';asset:InterfaceAsset}
+ /** Embed a prepared audio asset and add an audio layer whose clip starts at `t` (default 0). */
+ |{type:'audio.import';asset:AudioAsset;t?:number;id?:string}
+ /** Trim and place an audio clip. All values in ticks; `length` is the played duration. */
+ |{type:'audio.update';layer:string;trimIn?:number;length?:number;offset?:number}
+ |{type:'audio.volume.set';layer:string;value:number;t:number}
+ |{type:'audio.volume.animate';layer:string;on:boolean;t:number}
+ |{type:'audio.volume.key.remove';layer:string;t:number}
  |{type:'layer.effects';layer:string;effects:readonly LayerEffect[]}
  |{type:'prop.pathMode';layer:string;mode:'parameter'|'arcLength'}
  |{type:'workarea.set';in:number;out:number};
@@ -50,6 +58,13 @@ const withLayers=(doc:AnimationDocument,fn:(layers:readonly Layer[],comp:Composi
 function layerOf(doc:AnimationDocument,id:string,allowLocked=false):Layer{
  const l=findLayer(compOf(doc),id)??fail('missing',`Layer ${id} does not exist.`);
  if(l.locked&&!allowLocked)fail('locked',`Layer "${l.name}" is locked.`);return l;
+}
+const audioLayer=(doc:AnimationDocument,id:string)=>{const l=layerOf(doc,id);return l.kind==='audio'&&l.audio?l:fail('invalid','Select an audio layer.');};
+/** Drops embedded audio files no layer refers to, so removing a layer also shrinks the snapshot. Undo restores the earlier document. */
+function pruneAudio(doc:AnimationDocument):AnimationDocument{
+ if(!doc.audioAssets?.length)return doc;
+ const used=new Set(doc.compositions.flatMap(c=>c.layers.map(l=>l.audio?.assetId)));
+ const kept=doc.audioAssets.filter(a=>used.has(a.id));return kept.length===doc.audioAssets.length?doc:{...doc,audioAssets:kept};
 }
 const setLayer=(doc:AnimationDocument,layer:Layer)=>withLayers(doc,ls=>ls.map(l=>l.id===layer.id?layer:l));
 const num=(n:unknown,m:string)=>typeof n==='number'&&Number.isFinite(n)?n:fail('invalid',m);
@@ -91,7 +106,7 @@ function foldGroups(doc:AnimationDocument,refs:readonly KeyRef[],fn:(d:Animation
 }
 /** Pure reducer. Returns a new document with revision+1, or throws EditError and leaves the input untouched. */
 export function applyEdit(doc:AnimationDocument,e:Edit):AnimationDocument{
- const out=reduce(doc,e);if(out===doc)return doc;const errors=validateDocument(out);if(errors.length)fail('invalid',errors.join('; '));return {...out,revision:doc.revision+1};
+ const out=pruneAudio(reduce(doc,e));if(out===doc)return doc;const errors=validateDocument(out);if(errors.length)fail('invalid',errors.join('; '));return {...out,revision:doc.revision+1};
 }
 function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
  switch(e.type){
@@ -116,6 +131,28 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
    else {const p=effect.animation??fail('missing','Effect is not animated.');const keys=p.keys.filter(k=>k.t!==t);next=keys.length?{...effect,animation:{...p,keys}}:{...effect,amount:evaluate(p,t) as number,animation:undefined};}
    return setLayer(doc,{...l,effects:l.effects!.map(x=>x.id===effect.id?next:x)});}
   case 'asset.import':{const next={...doc,assets:doc.assets.some(a=>a.id===e.asset.id)?doc.assets:[...doc.assets,e.asset]};validateAnimationAssets(next);const c=compOf(doc);const l=createLayer('raster',c,{name:e.asset.sourceName,source:{assetId:e.asset.id,width:e.asset.width,height:e.asset.height}});return withLayers(next,ls=>[l,...ls]);}
+  case 'audio.import':{
+   const existing=doc.audioAssets??[];const next={...doc,audioAssets:existing.some(a=>a.id===e.asset.id)?existing:[...existing,e.asset]};validateAnimationAssets(next);
+   const c=compOf(doc);const at=e.t===undefined?0:tickOf(c,e.t);
+   const l=createLayer('audio',c,{name:e.asset.sourceName,inT:0,outT:e.asset.durationTicks,offset:at,audio:{assetId:e.asset.id,trimIn:0,volume:prop('scalar',100) as Property}},e.id);
+   if(c.layers.some(x=>x.id===l.id))fail('invalid','Duplicate layer id.');
+   return withLayers(next,ls=>[l,...ls]);}
+  case 'audio.update':{
+   const l=audioLayer(doc,e.layer);const asset=doc.audioAssets?.find(a=>a.id===l.audio!.assetId)??fail('missing','Audio file is missing.');
+   const trimIn=e.trimIn??l.audio!.trimIn,length=e.length??(l.outT-l.inT),offset=e.offset??l.offset;
+   if(![trimIn,length,offset].every(Number.isInteger))fail('invalid','Audio times must be whole ticks.');
+   if(trimIn<0||trimIn>=asset.durationTicks)fail('invalid','Trim start must lie inside the audio file.');
+   if(length<1||trimIn+length>asset.durationTicks)fail('invalid','Trim must stay inside the audio file.');
+   if(Math.abs(offset)>3600*240000)fail('invalid','Offset must be within one hour.');
+   return setLayer(doc,{...l,offset,inT:0,outT:length,audio:{...l.audio!,trimIn}});}
+  case 'audio.volume.set':case 'audio.volume.animate':case 'audio.volume.key.remove':{
+   const l=audioLayer(doc,e.layer),c=compOf(doc),t=tickOf(c,e.t),vol=l.audio!.volume;let next=vol;
+   if(e.type==='audio.volume.set'){
+    if(!Number.isFinite(e.value)||e.value<0||e.value>MAX_AUDIO_VOLUME)fail('invalid','Volume must be 0 to 200 percent.');
+    next=vol.keys.length?{...vol,keys:upsertKey(vol.keys,makeKey(t,e.value))}:{...vol,value:e.value};}
+   else if(e.type==='audio.volume.animate'){const sampled=evaluate(vol,t) as number;next=e.on?(vol.keys.length?vol:{...vol,keys:[makeKey(t,sampled)]}):{...vol,value:sampled,keys:[]};}
+   else{if(!vol.keys.some(k=>k.t===t))fail('missing','No volume key at that time.');const keys=vol.keys.filter(k=>k.t!==t);next=keys.length?{...vol,keys}:{...vol,value:evaluate(vol,t) as number,keys:[]};}
+   return setLayer(doc,{...l,audio:{...l.audio!,volume:next}});}
   case 'layer.effects':{if(!validEffects(e.effects))fail('invalid','Invalid effect stack.');return setLayer(doc,{...layerOf(doc,e.layer),effects:e.effects.map(x=>({...x}))});}
   case 'prop.pathMode':{if(!['parameter','arcLength'].includes(e.mode))fail('invalid','Invalid path mode.');return setProp(doc,e.layer,'position',p=>({...p,pathMode:e.mode}));}
   case 'layer.add':{const c=compOf(doc);const l=createLayer(e.kind,c,e.over,e.id);if(c.layers.some(x=>x.id===l.id))fail('invalid','Duplicate layer id.');if(l.parent&&!findLayer(c,l.parent))fail('missing','Parent layer does not exist.');return withLayers(doc,ls=>[l,...ls]);}
@@ -128,7 +165,7 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
    if(e.source?.size!==undefined&&!(e.source.size>0&&e.source.size<=2000))fail('invalid','Text size must be 1 to 2000.');
    if(e.source?.text!==undefined&&e.source.text.length>2000)fail('invalid','Text is too long.');
    return setLayer(doc,{...l,name:e.name?.trim()??l.name,visible:e.visible??l.visible,solo:e.solo??l.solo,locked:e.locked??l.locked,source:{...l.source,...e.source}});}
-  case 'layer.timing':{const c=compOf(doc);const l=layerOf(doc,e.layer);
+  case 'layer.timing':{const c=compOf(doc);const l=layerOf(doc,e.layer);if(l.kind==='audio')fail('invalid','Use audio trim and offset for audio layers.');
    if(!Number.isInteger(e.inT)||!Number.isInteger(e.outT)||e.outT<=e.inT||e.inT<0||e.outT>c.duration)fail('invalid','Layer timing must be inside the composition with out after in.');return setLayer(doc,{...l,inT:e.inT,outT:e.outT});}
   case 'layer.parent':{const c=compOf(doc);const l=layerOf(doc,e.layer);
    if(e.parent!==null&&!findLayer(c,e.parent))fail('missing','Parent layer does not exist.');
