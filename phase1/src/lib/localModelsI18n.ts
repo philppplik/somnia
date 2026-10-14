@@ -1,5 +1,16 @@
 export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
  "en": {
+  "local.eval.title": "Local task evaluation",
+  "local.eval.boundary": "One editable German test per task: chat, vibe, code, summarize. Explicit start only; one or two exact installed local models, sequentially. No tools, documents or cloud. Not a benchmark or automated quality score. Latency includes checks and inference, not pure model speed.",
+  "local.eval.prompt": "Editable evaluation prompt",
+  "local.eval.first": "Selected local model",
+  "local.eval.second": "Second local model (optional)",
+  "local.eval.choose": "Choose installed model",
+  "local.eval.single": "Single-model test",
+  "local.eval.start": "Run local evaluation",
+  "local.eval.failed": "Local evaluation failed. Check exact installed models and local runtime; no cloud fallback.",
+  "local.eval.storage": "Explicit Save only. Shares the bounded local comparison history (10 items, 2 MB), preserving model tags, digests, prompt and reported latency. Open never reruns. Results can be deleted or exported via comparison JSON.",
+
   "local.recovery.title": "Per-model health and recovery",
   "local.recovery.boundary": "Snapshot only: installed means present, loaded means daemon reports residency. Neither proves the next request works. No background polling or inference.",
   "local.recovery.inspect": "Inspect model health",
@@ -404,6 +415,17 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Move earlier after local"
  },
  "de": {
+  "local.eval.title": "Lokale Aufgabenevaluation",
+  "local.eval.boundary": "Ein bearbeitbarer deutscher Test je Aufgabe: Chat, Vibe, Code, Zusammenfassen. Nur ausdrücklicher Start; ein oder zwei genaue installierte lokale Modelle nacheinander. Keine Werkzeuge, Dokumente oder Cloud. Kein Benchmark oder automatischer Qualitätsscore. Latenz enthält Prüfung und Inferenz, keine reine Modellgeschwindigkeit.",
+  "local.eval.prompt": "Bearbeitbarer Evaluationsprompt",
+  "local.eval.first": "Gewähltes lokales Modell",
+  "local.eval.second": "Zweites lokales Modell (optional)",
+  "local.eval.choose": "Installiertes Modell wählen",
+  "local.eval.single": "Einzelmodelltest",
+  "local.eval.start": "Lokale Evaluation starten",
+  "local.eval.failed": "Lokale Evaluation fehlgeschlagen. Genaue Modelle und Laufzeit prüfen; kein Cloud-Fallback.",
+  "local.eval.storage": "Nur ausdrückliches Speichern. Gemeinsame begrenzte Vergleichshistorie (10 Einträge, 2 MB) mit Modellnamen, Digests, Prompt und gemeldeter Latenz. Öffnen startet nie neu. Löschbar oder per Vergleichs-JSON exportierbar.",
+
   "local.recovery.title": "Modellzustand und Wiederherstellung",
   "local.recovery.boundary": "Nur Momentaufnahme: installiert heißt vorhanden, geladen heißt gemeldete Residenz. Beides garantiert keine nächste Anfrage. Keine Hintergrundabfrage oder Inferenz.",
   "local.recovery.inspect": "Modellzustand prüfen",
@@ -808,6 +830,17 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Nach lokal früher einordnen"
  },
  "es": {
+  "local.eval.title": "Evaluación local por tarea",
+  "local.eval.boundary": "Un test alemán editable por tarea. Inicio explícito; uno o dos modelos locales instalados, secuenciales. Sin herramientas, documentos ni nube. No benchmark ni puntuación automática. Latencia incluye comprobación e inferencia.",
+  "local.eval.prompt": "Prompt editable",
+  "local.eval.first": "Modelo local elegido",
+  "local.eval.second": "Segundo modelo opcional",
+  "local.eval.choose": "Elegir modelo instalado",
+  "local.eval.single": "Un solo modelo",
+  "local.eval.start": "Evaluar localmente",
+  "local.eval.failed": "Falló la evaluación. Revisa modelos y Ollama; sin nube alternativa.",
+  "local.eval.storage": "Guardar explícitamente. Historial compartido de 10 elementos/2 MB con modelos, digests, prompt y latencia. Abrir no ejecuta. Se puede borrar o exportar en JSON.",
+
   "local.recovery.title": "Estado y recuperación por modelo",
   "local.recovery.boundary": "Solo instantánea: instalado no garantiza inferencia, cargado indica residencia reportada. Sin sondeo ni inferencia automática.",
   "local.recovery.inspect": "Revisar modelos",
@@ -1212,6 +1245,17 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Mover antes tras local"
  },
  "fr": {
+  "local.eval.title": "Évaluation locale par tâche",
+  "local.eval.boundary": "Un test allemand modifiable par tâche. Départ explicite; un ou deux modèles locaux installés, séquentiels. Aucun outil, document ou cloud. Pas un benchmark ni une note automatique. Latence inclut contrôles et inférence.",
+  "local.eval.prompt": "Prompt modifiable",
+  "local.eval.first": "Modèle local choisi",
+  "local.eval.second": "Second modèle facultatif",
+  "local.eval.choose": "Choisir un modèle installé",
+  "local.eval.single": "Un seul modèle",
+  "local.eval.start": "Évaluer localement",
+  "local.eval.failed": "Échec local. Vérifier modèles et Ollama; aucun cloud de secours.",
+  "local.eval.storage": "Enregistrement explicite. Historique partagé de 10 éléments/2 Mo avec modèles, digests, prompt et latence. Ouvrir ne relance rien. Suppression ou export JSON possible.",
+
   "local.recovery.title": "État et récupération par modèle",
   "local.recovery.boundary": "Instantané : installé ne garantit pas l’inférence; chargé signifie résidence déclarée. Aucun sondage ni inférence automatique.",
   "local.recovery.inspect": "Vérifier les modèles",
@@ -1616,6 +1660,17 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Avancer après local"
  },
  "pt-BR": {
+  "local.eval.title": "Avaliação local por tarefa",
+  "local.eval.boundary": "Um teste alemão editável por tarefa. Início explícito; um ou dois modelos locais instalados, sequenciais. Sem ferramentas, documentos ou nuvem. Não benchmark nem nota automática. Latência inclui verificações e inferência.",
+  "local.eval.prompt": "Prompt editável",
+  "local.eval.first": "Modelo local escolhido",
+  "local.eval.second": "Segundo modelo opcional",
+  "local.eval.choose": "Escolher modelo instalado",
+  "local.eval.single": "Um só modelo",
+  "local.eval.start": "Avaliar localmente",
+  "local.eval.failed": "Falha local. Confira modelos e Ollama; sem nuvem alternativa.",
+  "local.eval.storage": "Salvar explicitamente. Histórico compartilhado de 10 itens/2 MB com modelos, digests, prompt e latência. Abrir não executa. Pode excluir ou exportar JSON.",
+
   "local.recovery.title": "Estado e recuperação por modelo",
   "local.recovery.boundary": "Só instantâneo: instalado não garante inferência; carregado é residência informada. Sem sondagem ou inferência automática.",
   "local.recovery.inspect": "Verificar modelos",
