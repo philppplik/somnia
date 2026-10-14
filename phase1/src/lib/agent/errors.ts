@@ -18,7 +18,9 @@ export type AgentErrorDetail =
   | 'steps' | 'tool-calls' | 'output-tokens' | 'timeout' | 'context'
   | 'rate-limited' | 'auth' | 'credit' | 'quota' | 'model-not-found' | 'moderation' | 'server' | 'network' | 'protocol'
   | 'account-auth' | 'not-eligible' | 'usage-limit'
-  | 'no-tool-support' | 'consent' | 'user' | 'unknown';
+  | 'no-tool-support' | 'consent' | 'user' | 'unknown' | 'tool-unreconciled';
+/** A tool callback finished but its result cannot be accepted after permission/registration drift. */
+export class ToolUnreconciledError extends Error{constructor(){super('Tool permission changed during the call. Output suppressed; completed work must be reconciled before retry.');this.name='ToolUnreconciledError';}}
 export class AgentError extends Error {
   constructor(public readonly code: AgentErrorCode, public readonly detail: AgentErrorDetail, message: string, public readonly retryable = false, public readonly status?: number, public readonly retryAfterMs?: number) {
     super(message); this.name = 'AgentError';
@@ -40,6 +42,7 @@ export function classifyHttp(status: number, hint: { tools?: boolean; routing?: 
 }
 /** Turns any thrown value into an AgentError. `timedOut`/`userAborted` come from the session, not the error. */
 export function toAgentError(error: unknown, ctx: { timedOut?: boolean; aborted?: boolean } = {}): AgentError {
+  if(error instanceof ToolUnreconciledError)return new AgentError('internal','tool-unreconciled','Completed tool work needs review before retry.',false);
   if (ctx.timedOut) return new AgentError('limit', 'timeout', 'Agent turn timed out.', true);
   if (ctx.aborted) return new AgentError('aborted', 'user', 'Agent turn stopped.');
   if (error instanceof AgentError) return error;
@@ -64,6 +67,7 @@ export function toAgentError(error: unknown, ctx: { timedOut?: boolean; aborted?
 export function describeAgentError(e: AgentError): string {
   const none = 'No changes were applied.';
   switch (e.detail) {
+    case 'tool-unreconciled': return 'Tool permissions changed while work was running. Its output was withheld. A proposal or completed change may still exist. Review the current document and receipts before retrying.';
     case 'user': return `Agent turn stopped. ${none} Provider costs may still occur.`;
     case 'steps': return `The agent used all its work steps before finishing. ${none} Retry with a narrower request (fewer files or one change at a time).`;
     case 'tool-calls': return `The agent tried to make more file requests than allowed in one turn. ${none} Retry with a narrower request.`;

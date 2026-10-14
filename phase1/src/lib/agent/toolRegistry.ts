@@ -1,3 +1,4 @@
+import {ToolUnreconciledError} from './errors';
 import type { AgentToolDefinition } from './types';
 
 /**
@@ -74,7 +75,7 @@ export class AgentToolRegistry {
     const pinnedArgs=structuredClone(args);
     const out = await spec.run(pinnedArgs, ctx, signal);
     signal.throwIfAborted();
-    if(this.tools.get(name)!==spec||!this.enabled(spec,g))throw Error('Tool permission changed during the call. Output suppressed; completed work must be reconciled before retry.');
+    if(this.tools.get(name)!==spec||!this.enabled(spec,g))throw new ToolUnreconciledError();
     return out;
   }
 }
