@@ -16,7 +16,8 @@ const groups:{key:string;items:{testid:string;label:string;cmd:string;min:number
   {testid:'animation-rig-duplicate',label:'animation.rig.duplicate',cmd:'animation.layers.duplicate',min:1},
   {testid:'animation-rig-split',label:'animation.rig.split',cmd:'animation.layers.split',min:1},
   {testid:'animation-rig-workarea',label:'animation.rig.workarea',cmd:'animation.workarea.toLayers',min:1},
-  {testid:'animation-rig-reseed',label:'animation.rig.reseed',cmd:'animation.modifiers.reseed',min:1}]}];
+  {testid:'animation-rig-reseed',label:'animation.rig.reseed',cmd:'animation.modifiers.reseed',min:1},
+  {testid:'animation-rig-number',label:'animation.rig.number',cmd:'animation.layers.number',min:1}]}];
 /** Left-panel section: tick layers, then chain them, group them under a control null, or release their parents. Tick order is the chain order. */
 export function RigPanel({comp}:{comp:Composition}){
  const {t}=useT();const [ticked,setTicked]=useState<string[]>([]);

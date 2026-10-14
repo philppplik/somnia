@@ -960,5 +960,7 @@
  "cmd.animation.modifiers.reseed": "Nova semente para os wiggles das camadas selecionadas",
  "animation.rig.menu": "Ações de rig",
  "animation.rig.group.hierarchy": "Hierarquia",
- "animation.rig.group.layers": "Camadas"
+ "animation.rig.group.layers": "Camadas",
+ "animation.rig.number": "Numerar camadas",
+ "cmd.animation.layers.number": "Numerar as camadas selecionadas"
 }

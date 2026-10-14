@@ -960,5 +960,7 @@
  "cmd.animation.modifiers.reseed": "Nouvelle graine pour les wiggles des calques sélectionnés",
  "animation.rig.menu": "Actions de rig",
  "animation.rig.group.hierarchy": "Hiérarchie",
- "animation.rig.group.layers": "Calques"
+ "animation.rig.group.layers": "Calques",
+ "animation.rig.number": "Numéroter les calques",
+ "cmd.animation.layers.number": "Numéroter les calques sélectionnés"
 }

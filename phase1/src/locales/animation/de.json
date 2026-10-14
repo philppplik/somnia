@@ -960,5 +960,7 @@
  "cmd.animation.modifiers.reseed": "Wiggles der gewählten Ebenen neu würfeln",
  "animation.rig.menu": "Rig-Aktionen",
  "animation.rig.group.hierarchy": "Hierarchie",
- "animation.rig.group.layers": "Ebenen"
+ "animation.rig.group.layers": "Ebenen",
+ "animation.rig.number": "Ebenen nummerieren",
+ "cmd.animation.layers.number": "Gewählte Ebenen nummerieren"
 }

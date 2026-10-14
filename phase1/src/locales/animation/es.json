@@ -960,5 +960,7 @@
  "cmd.animation.modifiers.reseed": "Nueva semilla para los wiggles de las capas seleccionadas",
  "animation.rig.menu": "Acciones de rig",
  "animation.rig.group.hierarchy": "Jerarquía",
- "animation.rig.group.layers": "Capas"
+ "animation.rig.group.layers": "Capas",
+ "animation.rig.number": "Numerar capas",
+ "cmd.animation.layers.number": "Numerar las capas seleccionadas"
 }

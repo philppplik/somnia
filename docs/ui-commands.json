@@ -1660,6 +1660,23 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.layers.number",
+      "title": "Number the selected layers",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "copies",
+        "duplicate",
+        "layer",
+        "number",
+        "numbering",
+        "rename",
+        "sequence"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.layers.split",
       "title": "Split the selected layers at the playhead",
       "category": "Edit",

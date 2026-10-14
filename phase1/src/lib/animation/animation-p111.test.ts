@@ -494,3 +494,13 @@ test('P167 reseed gives every wiggle a distinct new seed, one undo step, skips l
  s.undo();assert.equal(s.document,b2);
  assert.throws(()=>run({layers:['b'],seed:5}),/locked/);setAnimationSession(null);
 });
+
+test('P171 number layers renames top to bottom, strips copy suffixes, one undo step, skips locked',async()=>{
+ const {layerNumberSpecs,numberBase}=await import('./layerNumberCommands');const run=layerNumberSpecs()[0].run as (p?:unknown)=>unknown;
+ assert.equal(numberBase('Star copy 2'),'Star');assert.equal(numberBase('Star 3'),'Star');
+ const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'shape',id:'b'});s.dispatch({type:'layer.add',kind:'shape',id:'c'});
+ const names=()=>findComp(s.document!)!.layers.map(l=>l.name);const ids=findComp(s.document!)!.layers.map(l=>l.id);
+ const before=s.document!;run({layers:ids,name:'Dot',start:5});assert.deepEqual(names(),ids.map((_,i)=>`Dot ${5+i}`));
+ s.undo();assert.equal(s.document,before);
+ s.dispatch({type:'layer.update',layer:'b',locked:true});run({layers:ids,name:'Dot'});assert.ok(!names().some((n,i)=>ids[i]==='b'&&n.startsWith('Dot')));
+});

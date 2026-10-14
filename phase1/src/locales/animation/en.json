@@ -960,5 +960,7 @@
  "cmd.animation.modifiers.reseed": "Reseed the wiggles of the selected layers",
  "animation.rig.menu": "Rig actions",
  "animation.rig.group.hierarchy": "Hierarchy",
- "animation.rig.group.layers": "Layers"
+ "animation.rig.group.layers": "Layers",
+ "animation.rig.number": "Number layers",
+ "cmd.animation.layers.number": "Number the selected layers"
 }
