@@ -61,7 +61,7 @@ fn emit(window: &WebviewWindow, event: &StateEvent) {
 static AGENT_SETTINGS_LOCK: Mutex<()> = Mutex::new(());
 #[derive(serde::Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-struct AgentSettingsReply { provider: String, model: String, api_key: String, #[serde(default)] custom_prompts: Vec<crate::agent_settings::CustomPrompt> }
+struct AgentSettingsReply { provider: String, model: String, api_key: String, #[serde(default)] custom_prompts: Vec<crate::agent_settings::CustomPrompt>, #[serde(default,skip_serializing_if="Option::is_none")] local_runtime: Option<crate::agent_settings::LocalRuntimePreferences> }
 fn agent_key_for(provider: &str) -> std::result::Result<keyring::Entry, String> {
     if !matches!(provider, "openrouter" | "openai" | "claude") { return Err("Unsupported credential provider".into()); }
     keyring::Entry::new("de.philipp-paulik.somnia.agent", provider)
@@ -546,7 +546,7 @@ async fn agent_settings_load(window: WebviewWindow) -> std::result::Result<Agent
         let _guard = AGENT_SETTINGS_LOCK.lock().map_err(|_| "Agent settings are busy")?;
         let p = crate::agent_settings::load(&dir.join("agent-settings.json"))?;
         let api_key = String::new(); // Keys are loaded independently through agent_key_load.
-        Ok(AgentSettingsReply { provider: p.provider, model: p.model, api_key, custom_prompts: p.custom_prompts })
+        Ok(AgentSettingsReply { provider: p.provider, model: p.model, api_key, custom_prompts: p.custom_prompts, local_runtime:p.local_runtime })
     }).await.map_err(|_| "Could not load agent settings")?
 }
 #[tauri::command]
@@ -555,7 +555,7 @@ async fn agent_settings_save(window: WebviewWindow, settings: AgentSettingsReply
     let dir = window.app_handle().path().app_config_dir().map_err(|_| "App config directory is unavailable")?;
     tauri::async_runtime::spawn_blocking(move || {
         let _guard = AGENT_SETTINGS_LOCK.lock().map_err(|_| "Agent settings are busy")?;
-        let p = crate::agent_settings::Preferences { provider: settings.provider, model: settings.model, custom_prompts: settings.custom_prompts };
+        let p = crate::agent_settings::Preferences { provider: settings.provider, model: settings.model, custom_prompts: settings.custom_prompts,local_runtime:settings.local_runtime };
         p.validate()?;
         if settings.api_key.len() > 8192 || settings.api_key.contains(['\r', '\n', '\0']) { return Err("Invalid API key".into()); }
         crate::agent_settings::save(&dir.join("agent-settings.json"), &p)

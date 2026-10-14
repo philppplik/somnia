@@ -86,7 +86,11 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.catalog.estimate": "estimated download",
   "local.catalog.imagePending": "Image input adapter not enabled",
   "local.catalog.variantCheck": "Per-variant show and task checks required",
-  "local.catalog.source": "Source and license"
+  "local.catalog.source": "Source and license",
+  "local.advanced.title": "Advanced runtime settings",
+  "local.advanced.boundary": "Draft until Save. Blank uses daemon defaults; requested context may be clamped. Keep-alive is a hint, not exclusive ownership. Zero unloads after each request. No inference or preload on edit.",
+  "local.advanced.context": "Requested context tokens (blank: daemon default)",
+  "local.advanced.keepAlive": "Keep-alive seconds (0–86400, blank: daemon default)"
  },
  "de": {
   "local.tab": "Lokal",
@@ -175,7 +179,11 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.catalog.estimate": "geschätzter Download",
   "local.catalog.imagePending": "Bildeingabe-Adapter nicht aktiviert",
   "local.catalog.variantCheck": "Show- und Aufgabenprüfung je Variante erforderlich",
-  "local.catalog.source": "Quelle und Lizenz"
+  "local.catalog.source": "Quelle und Lizenz",
+  "local.advanced.title": "Erweiterte Laufzeiteinstellungen",
+  "local.advanced.boundary": "Entwurf bis zum Speichern. Leer nutzt Daemon-Defaults; Kontext kann begrenzt werden. Keep-alive ist ein Hinweis, keine Exklusivnutzung. Null entlädt nach jeder Anfrage. Bearbeiten startet keine Inferenz.",
+  "local.advanced.context": "Angeforderte Kontext-Tokens (leer: Daemon-Default)",
+  "local.advanced.keepAlive": "Keep-alive Sekunden (0–86400, leer: Daemon-Default)"
  },
  "es": {
   "local.tab": "Local",
@@ -264,7 +272,11 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.catalog.estimate": "descarga estimada",
   "local.catalog.imagePending": "Adaptador de imagen no activado",
   "local.catalog.variantCheck": "Requiere show y prueba por variante",
-  "local.catalog.source": "Fuente y licencia"
+  "local.catalog.source": "Fuente y licencia",
+  "local.advanced.title": "Ajustes avanzados",
+  "local.advanced.boundary": "Borrador hasta guardar. Vacío usa valores del daemon; contexto puede limitarse. Keep-alive es una sugerencia. Cero descarga de memoria tras cada solicitud. Editar no ejecuta inferencia.",
+  "local.advanced.context": "Tokens de contexto (vacío: predeterminado)",
+  "local.advanced.keepAlive": "Segundos keep-alive (0–86400, vacío: predeterminado)"
  },
  "fr": {
   "local.tab": "Local",
@@ -353,7 +365,11 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.catalog.estimate": "téléchargement estimé",
   "local.catalog.imagePending": "Adaptateur image non activé",
   "local.catalog.variantCheck": "Vérifications show et tâche par variante requises",
-  "local.catalog.source": "Source et licence"
+  "local.catalog.source": "Source et licence",
+  "local.advanced.title": "Réglages avancés",
+  "local.advanced.boundary": "Brouillon jusqu’à Enregistrer. Vide utilise les valeurs du daemon ; contexte peut être limité. Keep-alive est indicatif. Zéro décharge après chaque requête. Aucune inférence en modifiant.",
+  "local.advanced.context": "Tokens de contexte (vide : valeur par défaut)",
+  "local.advanced.keepAlive": "Secondes keep-alive (0–86400, vide : défaut)"
  },
  "pt-BR": {
   "local.tab": "Local",
@@ -442,6 +458,10 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.catalog.estimate": "download estimado",
   "local.catalog.imagePending": "Adaptador de imagem não ativado",
   "local.catalog.variantCheck": "Requer show e teste por variante",
-  "local.catalog.source": "Fonte e licença"
+  "local.catalog.source": "Fonte e licença",
+  "local.advanced.title": "Configurações avançadas",
+  "local.advanced.boundary": "Rascunho até salvar. Vazio usa padrões do daemon; contexto pode ser limitado. Keep-alive é uma dica. Zero descarrega após cada solicitação. Editar não executa inferência.",
+  "local.advanced.context": "Tokens de contexto (vazio: padrão)",
+  "local.advanced.keepAlive": "Segundos keep-alive (0–86400, vazio: padrão)"
  }
 };

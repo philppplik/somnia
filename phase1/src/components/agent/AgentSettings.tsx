@@ -1,3 +1,5 @@
+import {LocalRuntimeAdvanced} from './LocalRuntimeAdvanced';
+import {normalizeLocalRuntime} from '../../lib/agent/settings';
 import {useEffect,useRef,useState,useSyncExternalStore} from 'react';
 import {patchState,useAppStore} from '../../store/appStore';
 import {useT} from '../../lib/useT';
@@ -29,7 +31,8 @@ export function AgentSettings({searchQuery='',legacyPrivacy=false}:{searchQuery?
  const locked=!settings.ready||saving||settings.running||settings.pendingReview;
  const bytes=(text:string)=>new TextEncoder().encode(text).length;
  const totalBytes=(cfg.customPrompts??[]).reduce((n,p)=>n+bytes(p.text),0);
- const invalid=totalBytes>16000||(cfg.customPrompts??[]).some(p=>bytes(p.text)>8000);
+ let runtimeInvalid=false;try{normalizeLocalRuntime(cfg.localRuntime);}catch{runtimeInvalid=true;}
+ const invalid=runtimeInvalid||totalBytes>16000||(cfg.customPrompts??[]).some(p=>bytes(p.text)>8000);
  useEffect(()=>{if(legacyPrivacy)patchState({settingsAITab:'privacy'});},[legacyPrivacy]);
  useEffect(()=>{if(!searchQuery)return;const areas={local:'Local models Ollama installed vision tools embedding '+t('local.search')+' '+labels.local,providers:'Provider Model API key authentication connection Ollama OpenRouter OpenAI Claude '+labels.providers,instructions:'Custom prompts instructions '+labels.instructions+' '+(cfg.customPrompts??[]).map(p=>p.name+' '+p.text).join(' '),privacy:'Consent Privacy Cloud Local data '+labels.privacy,tools:'MCP tools servers external Model Context Protocol '+labels.tools};const match=tabs.find(id=>settingsMatch(areas[id],searchQuery));if(match)patchState({settingsAITab:match});},[searchQuery]);
  const visible=(id:typeof tab)=>tab===id;
@@ -40,7 +43,7 @@ export function AgentSettings({searchQuery='',legacyPrivacy=false}:{searchQuery?
   <TabsList activateOnFocus aria-label={t('set.section.ai')}>
    {tabs.map(id=><TabsTrigger id={'ai-tab-'+id} value={id} aria-controls={'ai-content-'+id} key={id}>{labels[id]}</TabsTrigger>)}
   </TabsList>
-  <TabsContent keepMounted value="local" id="ai-content-local" aria-labelledby="ai-tab-local"><LocalModelsSettings active={visible('local')}/></TabsContent>
+  <TabsContent keepMounted value="local" id="ai-content-local" aria-labelledby="ai-tab-local"><LocalModelsSettings active={visible('local')}/><LocalRuntimeAdvanced value={cfg.localRuntime} disabled={locked} onChange={localRuntime=>{setCfg({...cfg,localRuntime});setSaved(false);}}/><button type="button" disabled={locked||authBusy||invalid} onClick={()=>void saveConfiguration()}>{saving?'Saving...':t('agent.settings.save')}</button>{saved&&<p role="status">Configuration saved.</p>}</TabsContent>
   {settings.running&&<p role="status">Stop the current generation before changing AI configuration.</p>}
   {settings.pendingReview&&<p role="status">Accept or discard pending proposals before changing AI configuration.</p>}
   <p hidden={tab!=='providers'&&tab!=='instructions'}>Saving starts a new AI session. Your visible chat history stays. API key actions apply immediately; cloud consent is separate.</p>

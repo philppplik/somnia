@@ -19,6 +19,8 @@ export interface OllamaOptions extends RetryOptions {
   requestTimeoutMs?: number;
   /** Context window (tokens) sent as options.num_ctx. Unset = daemon default. The daemon may still clamp or truncate; no guarantee. */
   numCtx?: number;
+  /** Seconds to retain a loaded model. 0 unloads after the request; unset uses daemon default. */
+  keepAliveSeconds?: number;
 }
 
 const isAbort = (e: unknown) => (e as { name?: string })?.name === 'AbortError';
@@ -54,6 +56,7 @@ export class OllamaProvider implements AgentProvider {
   /** Derived from the validated endpoint: 'local' only for http loopback, else 'cloud' (must pass the consent gate). */
   readonly locality: 'cloud' | 'local';
   private numCtx?: number;
+  private keepAliveSeconds?: number;
   readonly baseUrl: string;
   private f: FetchLike;
   private timeout: number;
@@ -65,6 +68,8 @@ export class OllamaProvider implements AgentProvider {
     this.locality = isLoopbackHttp(this.baseUrl) ? 'local' : 'cloud';
     if (opts.numCtx !== undefined && (!Number.isInteger(opts.numCtx) || opts.numCtx < 1)) throw new ProviderError('protocol', 'numCtx must be a positive integer');
     this.numCtx = opts.numCtx;
+    if(opts.keepAliveSeconds!==undefined&&(!Number.isInteger(opts.keepAliveSeconds)||opts.keepAliveSeconds<0||opts.keepAliveSeconds>86400))throw new ProviderError('protocol','keepAliveSeconds must be an integer between 0 and 86400');
+    this.keepAliveSeconds=opts.keepAliveSeconds;
     this.f = opts.fetch ?? ((u, i) => fetch(u, i));
     this.timeout = opts.requestTimeoutMs ?? 5000;
   }
@@ -151,6 +156,7 @@ export class OllamaProvider implements AgentProvider {
       messages: toOllamaMessages(req.messages),
       ...(req.tools.length && { tools: req.tools.map((t) => ({ type: 'function', function: { name: t.name, description: t.description, parameters: t.parameters } })) }),
       stream: true,
+      ...(this.keepAliveSeconds!==undefined?{keep_alive:this.keepAliveSeconds}:{}),
       options: { num_predict: req.maxOutputTokens, ...(this.numCtx && { num_ctx: this.numCtx }) },
     };
     let res: Response;

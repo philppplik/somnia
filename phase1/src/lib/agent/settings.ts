@@ -1,5 +1,14 @@
 import {invoke,isTauri} from '@tauri-apps/api/core';
 import type {AgentConfiguration} from './panelBridge';
+export interface LocalRuntimePreferences {version:1;numCtx?:number;keepAliveSeconds?:number}
+export function normalizeLocalRuntime(value:unknown):LocalRuntimePreferences|undefined {
+ if(value===undefined)return undefined;
+ if(!value||typeof value!=='object'||Array.isArray(value))throw Error('Invalid local runtime preferences');
+ const p=value as Record<string,unknown>;
+ if(Object.keys(p).some(k=>!['version','numCtx','keepAliveSeconds'].includes(k))||p.version!==1)throw Error('Invalid local runtime preferences');
+ for(const [key,min,max] of [['numCtx',1,1048576],['keepAliveSeconds',0,86400]] as const){const n=p[key];if(n!==undefined&&(typeof n!=='number'||!Number.isInteger(n)||n<min||n>max))throw Error('Invalid local runtime option: '+key);}
+ return {version:1,...(p.numCtx!==undefined?{numCtx:p.numCtx as number}:{}),...(p.keepAliveSeconds!==undefined?{keepAliveSeconds:p.keepAliveSeconds as number}:{})};
+}
 export interface CustomPrompt {id:string;name:string;text:string;enabled:boolean}
 const PREFS='somnia.agent.preferences.v1';
 export function normalizePrompts(value:unknown):CustomPrompt[]{
@@ -14,11 +23,12 @@ export function normalizePrompts(value:unknown):CustomPrompt[]{
 }
 export function nonSecretSettings(value:AgentConfiguration){
  if(!['ollama','openrouter','openai','claude'].includes(value.provider)||value.model.length>512||/[\r\n\0]/.test(value.model))throw Error('Invalid agent preferences.');
- return {provider:value.provider,model:value.model,customPrompts:normalizePrompts(value.customPrompts)};
+ const localRuntime=normalizeLocalRuntime(value.localRuntime);
+ return {provider:value.provider,model:value.model,customPrompts:normalizePrompts(value.customPrompts),...(localRuntime?{localRuntime}:{})};
 }
 export async function loadAgentSettings():Promise<AgentConfiguration>{
  const p=isTauri()?await invoke<Record<string,unknown>>('agent_settings_load'):JSON.parse(localStorage.getItem(PREFS)||'{}');
- return {...nonSecretSettings({provider:p.provider??'ollama',model:p.model??'',customPrompts:p.customPrompts??[]} as AgentConfiguration),apiKey:'',allowActiveFile:false};
+ return {...nonSecretSettings({provider:p.provider??'ollama',model:p.model??'',customPrompts:p.customPrompts??[],localRuntime:p.localRuntime} as AgentConfiguration),apiKey:'',allowActiveFile:false};
 }
 export async function saveAgentSettings(value:AgentConfiguration):Promise<void>{
  const p=nonSecretSettings(value);

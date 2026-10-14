@@ -24,7 +24,7 @@ import {accountAuth} from './accountAuth';
 import type {OpenAIAccountAuth} from './openAIAccount';
 import {ClaudeProvider} from './providers/claude';
 import {loadProviderKey,type AuthProvider} from './providerAuth';
-import type {CustomPrompt} from './settings';
+import type {LocalRuntimePreferences,CustomPrompt} from './settings';
 import {AgentSession} from './session';
 import {AgentProjectTools} from './projectTools';
 import {DocumentRegistry,PolicyGateway,TransactionManager,buildContext,type ContextPackage,type SelectionRef} from './documentCore';
@@ -42,7 +42,7 @@ import {holdAgentAutosave} from './autosaveHold';
 import {applyOperations,getState,getProjectGeneration,subscribe,patchState,undoAIGroup,subscribeProjectTransactions} from '../../store/appStore';
 import type {AgentCore,AgentEvent,AgentApproval,AgentProposal,DiffLine} from './core';
 import type {AgentProvider,AgentProviderEvent,AgentProviderRequest} from './types';
-export interface AgentConfiguration {provider:AuthProvider;model:string;apiKey:string;allowActiveFile:boolean;customPrompts?:CustomPrompt[]}
+export interface AgentConfiguration {provider:AuthProvider;model:string;apiKey:string;allowActiveFile:boolean;customPrompts?:CustomPrompt[];localRuntime?:LocalRuntimePreferences}
 let config:AgentConfiguration={provider:'ollama',model:'',apiKey:'',allowActiveFile:false};
 export function configureAgent(value:AgentConfiguration){realCore.clear?.();config={...value};}
 export function setAgentActiveFileAccess(allowActiveFile:boolean){config={...config,allowActiveFile};}
@@ -84,7 +84,7 @@ function openAIByMethod(options:ConstructorParameters<typeof OpenAIProvider>[0])
  }} as AgentProvider;
 }
 export function createProvider(id:AuthProvider):AgentProvider {
- if(id==='ollama')return guardedOllama(new OllamaProvider());
+ if(id==='ollama')return guardedOllama(new OllamaProvider({numCtx:config.localRuntime?.numCtx,keepAliveSeconds:config.localRuntime?.keepAliveSeconds}));
  const options={getApiKey:()=>loadProviderKey(id),...(isTauri()?{fetch:nativeProviderFetch(id)}:{})};
  if(id==='openai'){
   if(!isTauri())return new OpenAIProvider(options);

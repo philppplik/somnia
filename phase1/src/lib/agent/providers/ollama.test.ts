@@ -161,3 +161,11 @@ test('stream failure after partial output never retries or drops delivered text'
  await assert.rejects(async()=>{for await(const e of p.stream(req()))events.push(e);});
  assert.equal(calls,1);assert.deepEqual(events,[{type:'text',text:'partial'}]);
 });
+test('keep_alive seconds are optional, include zero and reject unbounded values',async()=>{
+ const bodies:any[]=[];const fetch=async(_u:string,i?:RequestInit)=>{bodies.push(JSON.parse(String(i?.body)));return nd([JSON.stringify({done:true})]);};
+ await collect(new OllamaProvider({fetch:fetch as never,keepAliveSeconds:0}).stream(req()));
+ await collect(new OllamaProvider({fetch:fetch as never,keepAliveSeconds:300}).stream(req()));
+ await collect(new OllamaProvider({fetch:fetch as never}).stream(req()));
+ assert.equal(bodies[0].keep_alive,0);assert.equal(bodies[1].keep_alive,300);assert.equal('keep_alive' in bodies[2],false);
+ for(const value of [-1,86401,0.5])assert.throws(()=>new OllamaProvider({keepAliveSeconds:value}));
+});

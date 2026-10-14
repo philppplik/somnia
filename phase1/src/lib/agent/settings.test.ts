@@ -18,3 +18,8 @@ test('enabled prompts appear on every provider round without replacing base rule
  assert.equal(calls.length,2);for(const r of calls){assert.equal(r.messages[0].content,'Base safety rules');assert.match(r.messages[1].content,/Be concise/);assert.ok(!r.messages.some(m=>m.content.includes('Not sent')));}
  assert.equal(request.messages.length,2);
 });
+test('advanced local preferences are versioned, bounded, non-secret and survive cloud provider selection',()=>{
+ const base={provider:'openrouter' as const,model:'cloud/model',apiKey:'secret',allowActiveFile:true,customPrompts:[]};
+ assert.deepEqual(nonSecretSettings({...base,localRuntime:{version:1,numCtx:16384,keepAliveSeconds:0}}),{provider:'openrouter',model:'cloud/model',customPrompts:[],localRuntime:{version:1,numCtx:16384,keepAliveSeconds:0}});
+ for(const localRuntime of [{version:2},{version:1,numCtx:0},{version:1,numCtx:1.2},{version:1,numCtx:1048577},{version:1,keepAliveSeconds:-1},{version:1,keepAliveSeconds:86401},{version:1,apiKey:'secret'}])assert.throws(()=>nonSecretSettings({...base,localRuntime:localRuntime as never}));
+});
