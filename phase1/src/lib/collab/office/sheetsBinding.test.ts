@@ -109,3 +109,32 @@ test('format journal: local op reaches the peer engine once, garbage entries are
  await flush();
  assert.equal(got.length,1);                          // nothing reached the engine
  bA.destroy();});
+
+test('sheet structure: remote tab edits reconcile the engine, deleted tabs take their cells',async()=>{
+ const a=mk(),b=mk();
+ a.on('update',(u:Uint8Array)=>Y.applyUpdate(b,u));b.on('update',(u:Uint8Array)=>Y.applyUpdate(a,u));
+ const mA=seedSheetsModel(a,'f.xlsx',H);syncSharedSheets(mA,['S1'],'seed');
+ const mkEng=(names:string[])=>{const ops:string[]=[];return{ops,eng:{
+  set:async()=>{},
+  sheets:async()=>names.slice(),
+  editSheet:async(i:number,line:{kind:string;name?:string})=>{ops.push(line.kind+(line.name?':'+line.name:''));
+   if(line.kind==='rename')names[i]=line.name!;
+   else if(line.kind==='add')names.splice(i,0,line.name??'Sheet');
+   else if(line.kind==='delete')names.splice(i,1);}}};};
+ const eA=mkEng(['S1']),eB=mkEng(['S1']);
+ const bA=new SheetsCollabBinding(a,'f.xlsx',{engine:eA.eng,sheetIndexOf:id=>sharedSheetList(openSheetsModel(a,'f.xlsx')).findIndex(x=>x.id===id)});
+ const bB=new SheetsCollabBinding(b,'f.xlsx',{engine:eB.eng,sheetIndexOf:id=>sharedSheetList(openSheetsModel(b,'f.xlsx')).findIndex(x=>x.id===id)});
+ const id=sharedSheetList(openSheetsModel(a,'f.xlsx'))[0].id;
+ await eA.eng.editSheet(1,{kind:'add',name:'Neu'});   // canvas applies the engine op first, then mirrors
+ bA.applyLocalSheetOp(1,'add','Neu');
+ await flush();
+ assert.deepEqual(eB.ops,['add:Neu']);                 // structural op reached the peer
+ syncSharedSheets(openSheetsModel(b,'f.xlsx'),['Umbenannt','Neu'],'peer-rename');
+ await flush();
+ assert.deepEqual(eA.ops,['add:Neu','rename:Umbenannt']);
+ await bA.applyLocalEdit(id,0,0,'x');
+ bA.applyLocalSheetOp(0,'delete');                    // drop the first tab (id-aware: its cells go with it)
+ await flush();
+ assert.equal(openSheetsModel(b,'f.xlsx').cells.get(id+'!0:0'),undefined);   // orphan cells gone
+ assert.ok(eB.ops.includes('delete'));
+ bA.destroy();bB.destroy();});

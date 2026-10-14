@@ -73,7 +73,31 @@ export function syncSharedSheets(m:SheetsModel,names:string[],origin:unknown):vo
    if(i<cur.length){cur[i].set('name',names[i]);}
    else{const s=new Y.Map<unknown>();s.set('id',`${Date.now().toString(36)}-${i}-${Math.floor(Math.random()*1e9).toString(36)}`);s.set('name',names[i]);m.sheets.push([s]);}
   }
-  if(cur.length>names.length)m.sheets.delete(names.length,cur.length-names.length);
+  if(cur.length>names.length){
+   const removed=cur.slice(names.length).map(x=>String(x.get('id')));
+   m.sheets.delete(names.length,cur.length-names.length);
+   const dead=new Set(removed);
+   const keys:string[]=[];
+   m.cells.forEach((_,k)=>{const p=parseCellKey(k);if(p&&dead.has(p.sheetId))keys.push(k);});
+   for(const k of keys)m.cells.delete(k);   // cells of a deleted tab go with it
+  }
+ },origin);
+}
+/** Mirror one local structural op at a known index, keeping ids (and their cell keys) attached to their sheet. */
+export function applySharedSheetOp(m:SheetsModel,index:number,kind:'add'|'rename'|'delete',name:string|undefined,origin:unknown):void{
+ m.doc.transact(()=>{
+  const cur=m.sheets.toArray();
+  if(kind==='add'){
+   const s=new Y.Map<unknown>();s.set('id',`${Date.now().toString(36)}-${index}-${Math.floor(Math.random()*1e9).toString(36)}`);s.set('name',(name??'Sheet').slice(0,255));
+   m.sheets.insert(Math.min(index,cur.length),[s]);
+  }else if(kind==='rename'&&cur[index]){cur[index].set('name',(name??'').slice(0,255));}
+  else if(kind==='delete'&&cur[index]){
+   const deadId=String(cur[index].get('id'));
+   m.sheets.delete(index,1);
+   const keys:string[]=[];
+   m.cells.forEach((_,k)=>{const p=parseCellKey(k);if(p&&p.sheetId===deadId)keys.push(k);});
+   for(const k of keys)m.cells.delete(k);
+  }
  },origin);
 }
 export function sharedSheetList(m:SheetsModel):{id:string;name:string}[]{

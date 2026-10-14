@@ -70,6 +70,7 @@ function Workbook({item}:{item:MediaItem}){
    const names=sharedSheetList(m);
    const binding=new SheetsCollabBinding(m.doc,item.name,{engine:eng,sheetIndexOf:id=>names.findIndex(x=>x.id===id)});
    for(const sh of names)binding.replay(sh.id);
+   binding.syncSheetsNow();
    collab.current={binding,model:m};
    sync=()=>{
     if(buildMismatches(m.doc.awareness).length){m.doc.awareness.off('change',sync);collab.current?.binding.destroy();collab.current=null;setPeers([]);setNotice(t('sheets.buildMismatch'));return;}   // a late joiner on another build pauses co-editing
@@ -191,7 +192,8 @@ function Workbook({item}:{item:MediaItem}){
  const syncSheets=async(prefer?:number,resetView=false)=>{
   const fresh=await engine.current!.sheets();if(session.current)session.current.book=fresh;setBook(fresh);
   const visible=fresh.sheets.filter(s=>s.visibility==='Visible');const want=prefer??sheet;const next=visible.some(s=>s.index===want)?want:(visible[0]?.index??0);
-  if(next!==sheet||resetView){setSheet(next);setSel({row:0,col:0});setExt(null);setDraft(null);scroller.current?.scrollTo(0,0);}};
+  if(next!==sheet||resetView){setSheet(next);setSel({row:0,col:0});setExt(null);setDraft(null);scroller.current?.scrollTo(0,0);}
+  return fresh;};
  const applyFilter=async(op:FilterOp)=>{
   if(draftRef.current!==null)await commit(draftRef.current);
   try{await engine.current!.filter(sheet,range.r0,range.c0,range.r1-range.r0+1,range.c1-range.c0+1,op);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
@@ -202,7 +204,10 @@ function Workbook({item}:{item:MediaItem}){
   try{await engine.current!.sort(sheet,range.r0,range.c0,rows,cols,op);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
  const applySheet=async(op:SheetOp)=>{
   if(draftRef.current!==null)await commit(draftRef.current);
-  try{const r=await engine.current!.editSheet(sheet,op);await syncSheets(r.active,op.kind==='add'||op.kind==='duplicate'||op.kind==='delete');setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
+  if(collab.current&&(op.kind==='move'||op.kind==='duplicate')){setNotice(t('sheets.collabSheetOpUnsupported'));return;}   // position-keyed shared cells would detach from their sheet
+  try{const r=await engine.current!.editSheet(sheet,op);const fresh=await syncSheets(r.active,op.kind==='add'||op.kind==='duplicate'||op.kind==='delete');
+   if(collab.current&&fresh&&op.kind!=='duplicate'){const idx=op.kind==='add'?r.active:sheet;collab.current.binding.applyLocalSheetOp(idx,op.kind,fresh.sheets[idx]?.name);}
+   setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
  const history=async(kind:'undo'|'redo')=>{try{
   if(collab.current){if(kind==='undo')collab.current.binding.undo();else collab.current.binding.redo();}
   else{await (kind==='undo'?engine.current!.undo():engine.current!.redo());await syncSheets();}

@@ -2109,6 +2109,7 @@
   "sheets.fidelity": "Edits are saved as a copy (.xlsx). Charts, pivots, macros and features Somnia cannot read may be lost in the copy.",
   "sheets.tooLong": "That entry is too long for one cell.",
   "sheets.buildMismatch": "A participant is on a different app version. Co-editing paused - please reload the page.",
+  "sheets.collabSheetOpUnsupported": "Moving and duplicating sheets is not available while the session is shared.",
   "sheets.errorHint": "Your original file is untouched.",
   "sheets.reopen": "Reload",
   "sheets.inspector": "Cell",

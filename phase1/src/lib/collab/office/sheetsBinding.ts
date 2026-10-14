@@ -1,10 +1,11 @@
-import {openSheetsModel,parseCellKey,setSharedCell,type SheetsModel} from './sheetsModel';
+import {openSheetsModel,parseCellKey,setSharedCell,sharedSheetList,applySharedSheetOp,type SheetsModel} from './sheetsModel';
+import type {SheetOp} from '../../sheets/protocol';
 import {UndoManager} from 'yjs';
 import {addressOf} from '../../sheets/format';
 import {parseFormatOp} from '../../sheets/formatOps';
 import type {FormatOp} from '../../sheets/protocol';
 /** The slice of the spreadsheet engine the binding drives. The real SheetsEngine satisfies it; tests inject a fake. */
-export interface SheetsEnginePort{set(sheet:number,address:string,input:string):Promise<unknown>;format?(sheet:number,row:number,col:number,rows:number,cols:number,op:FormatOp):Promise<unknown>;setValues?(sheet:number,row:number,col:number,values:string[][]):Promise<unknown>;clear?(sheet:number,row:number,col:number,rows:number,cols:number):Promise<unknown>}
+export interface SheetsEnginePort{set(sheet:number,address:string,input:string):Promise<unknown>;format?(sheet:number,row:number,col:number,rows:number,cols:number,op:FormatOp):Promise<unknown>;setValues?(sheet:number,row:number,col:number,values:string[][]):Promise<unknown>;clear?(sheet:number,row:number,col:number,rows:number,cols:number):Promise<unknown>;editSheet?(sheet:number,line:SheetOp):Promise<unknown>;sheets?():Promise<string[]>}
 /** One journal entry: a rect format op on a shared sheet. Bounded, sanitised before any engine call. */
 export interface SharedFormatEntry{sheetId:string;r0:number;c0:number;r1:number;c1:number;op:FormatOp}
 const FORMAT_LOG_MAX=2000,MAX_FORMAT_PER_INSERT=64;
@@ -48,9 +49,13 @@ export class SheetsCollabBinding{
    const entries:SharedFormatEntry[]=[];
    ev.changes.delta.forEach(part=>{if(part.insert)for(const raw of (part.insert as unknown[]).slice(0,MAX_FORMAT_PER_INSERT)){const e=cleanFormatEntry(raw);if(e)entries.push(e);}});
    if(entries.length)this.enqueueFormats(entries);};
+  const onSheets=(_evs:import('yjs').YEvent<unknown>[],tx:import('yjs').Transaction)=>{
+   if(tx.origin===this.origin||tx.origin==='sheets-model-seed')return;
+   this.reconcileSheets();};
   this.model.cells.observe(onCells);
   this.model.formats.observe(onFormats);
-  this.off=()=>{this.model.cells.unobserve(onCells);this.model.formats.unobserve(onFormats);};
+  this.model.sheets.observeDeep(onSheets);
+  this.off=()=>{this.model.cells.unobserve(onCells);this.model.formats.unobserve(onFormats);this.model.sheets.unobserveDeep(onSheets);};
   this.um=new UndoManager(this.model.cells,{trackedOrigins:new Set([this.origin]),captureTimeout:0});
  }
  private enqueue(jobs:{sheetId:string;row:number;col:number;input:string}[]){
@@ -90,6 +95,23 @@ export class SheetsCollabBinding{
    const over=this.model.formats.length-FORMAT_LOG_MAX;
    if(over>0)this.model.formats.delete(0,over);
   },this.origin);}
+ /** Local structural op already applied to the engine: mirror it at its index, keeping sheet ids stable. */
+ applyLocalSheetOp(index:number,kind:'add'|'rename'|'delete',name?:string):void{
+  applySharedSheetOp(this.model,index,kind,name,this.origin);}
+ /** Remote tab change: make the engine match the shared list positionally (rename / append / drop tail). */
+ syncSheetsNow(){this.reconcileSheets();}
+ private reconcileSheets(){
+  this.queue=this.queue.then(async()=>{
+   if(!this.d.engine.editSheet||!this.d.engine.sheets)return;
+   const want=sharedSheetList(this.model).map(x=>x.name);
+   const have=await this.d.engine.sheets();
+   for(let i=0;i<Math.max(want.length,have.length);i++){
+    try{
+     if(i>=have.length)await this.d.engine.editSheet(i,{kind:'add',name:want[i]});
+     else if(i>=want.length)await this.d.engine.editSheet(want.length,{kind:'delete'});
+     else if(have[i]!==want[i])await this.d.engine.editSheet(i,{kind:'rename',name:want[i]});
+    }catch{return;}}});   // a refused op stops the reconcile; the shared list stays the truth
+ }
  /** Undo/redo of MY edits only (peers keep theirs); the observer re-applies the result to the engine. */
  undo(){this.um.undo();}
  redo(){this.um.redo();}
