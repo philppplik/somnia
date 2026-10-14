@@ -2,6 +2,7 @@
 
 Somnia Agent is the native AI panel for bounded project work and reviewed file changes. It is implemented on the `somnia-agent` branch (OpenRouter and local Ollama providers, file tools, per-file approvals, hunk review, consent gate) and is still alpha: only fake providers are covered by automated tests, and no real provider run from the packaged app has been verified.
 
+- [Agent-native app concept](AGENT-NATIVE-APP-CONCEPT.md): proposed app-wide typed engine actions, scoped permissions, undo contracts, local streaming panel and studio build waves. Concept only; existing ui-origin refusal is unchanged.
 - [Architecture](ARCHITECTURE.md): modules, data flow of a turn, session, tools, consent and approvals, providers, panel, autosave hold, logging, known gaps, and the design requirements the code is held to.
 - [Concept](CONCEPT.md): product promise, panel flows, context, review, errors and acceptance criteria.
 - [Core](CORE.md): `AgentSession`, tools and provider contract as built on the core branch, with limits and sandbox rules.
