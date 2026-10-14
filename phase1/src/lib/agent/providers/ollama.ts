@@ -180,9 +180,11 @@ export class OllamaProvider implements AgentProvider {
 
   async *stream(req: AgentProviderRequest): AsyncGenerator<AgentProviderEvent> {
     const { signal } = req;
+    req={...structuredClone({model:req.model,messages:req.messages,tools:req.tools,maxOutputTokens:req.maxOutputTokens}),signal};
     if (signal.aborted) { yield { type: 'finish', reason: 'aborted' }; return; }
     const maxOutputTokens=this.numCtx===undefined?req.maxOutputTokens:Math.min(req.maxOutputTokens,Math.max(1,Math.floor(this.numCtx/4)));
     try{this.onContextBudget?.(localContextBudgetReport({...req,maxOutputTokens},this.numCtx),req.signal);}catch{/* Observer never grants/bypasses request. */}
+    if(signal.aborted){yield {type:'finish',reason:'aborted'};return;}
     checkLocalContext({...req,maxOutputTokens},this.numCtx);
     const body = {
       model: req.model,
