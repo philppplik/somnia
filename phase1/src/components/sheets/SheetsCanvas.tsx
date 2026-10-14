@@ -144,7 +144,7 @@ function Workbook({item}:{item:MediaItem}){
     fontWeight:st?.bold?700:undefined,fontStyle:st?.italic?'italic':undefined,textDecoration:[st?.underline?'underline':'',st?.strike?'line-through':''].filter(Boolean).join(' ')||undefined,
     color:isErrorValue(cell?.value)?undefined:(cell?.fmtColor??st?.color??undefined),backgroundColor:st?.fill??((frozenR||frozenC)?'var(--surface, #fff)':undefined),
     borderLeft:side(bd?.l),borderRight:side(bd?.r),backgroundImage:multi&&inRect(range,r,c)&&!selected?'linear-gradient(rgba(59,130,246,0.16),rgba(59,130,246,0.16))':undefined,borderTop:side(bd?.t),borderBottom:side(bd?.b),boxSizing:'border-box',
-    whiteSpace:st?.wrap?'pre-wrap':'nowrap',overflow:'hidden',textOverflow:st?.wrap?'clip':'ellipsis',lineHeight:st?.wrap?'16px':`${Math.max(16,box.height-1)}px`};
+    whiteSpace:st?.wrap?'pre-wrap':'nowrap',overflow:'hidden',textOverflow:st?.wrap?'clip':'ellipsis',lineHeight:st?.wrap||st?.v==='top'?'16px':`${Math.max(16,box.height-1)}px`,...(st?.indent?{[align==='right'?'paddingRight':'paddingLeft']:6+st.indent*9}:{})};
    out.push(<div key={a} role="gridcell" aria-selected={selected||(multi&&inRect(range,r,c))} aria-rowindex={r+1} aria-colindex={c+1} data-address={a} data-frozen={frozenR||frozenC?'true':undefined} data-merged={geo.mergeCovering(r,c)?'true':undefined}
     className={'border-b border-r border-subtle px-1.5 text-[12px] '+(selected?(st?.fill?'':'bg-hover ')+'outline outline-2 -outline-offset-2 outline-accent':'')+(isErrorValue(cell?.value)?' text-red-600':'')}
     style={css}

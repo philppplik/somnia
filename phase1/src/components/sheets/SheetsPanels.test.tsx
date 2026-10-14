@@ -47,3 +47,13 @@ test('number format section shows the detected preset, decimals and currency sym
  assert.match(markup,/<option value="custom" disabled="" selected="">Custom \(from file\)/);assert.doesNotMatch(markup,/Decimal places/);
  setSheetsSelection(null);
 });
+test('alignment, wrap, indent and border controls reflect the active cell',()=>{
+ const style={bold:false,italic:false,strike:false,underline:false,color:null,fill:null,h:'center' as const,v:'top' as const,wrap:true,indent:2,fmt:'General',font:'Calibri',size:11,borders:{l:null,r:null,t:null,b:null}};
+ setSheetsSelection({...selection,style});const markup=html(SheetsFormatPanel);
+ assert.match(markup,/aria-pressed="true"[^>]*data-testid="sheets-format-h-center"/);assert.match(markup,/aria-pressed="false"[^>]*data-testid="sheets-format-h-left"/);
+ assert.match(markup,/aria-pressed="true"[^>]*data-testid="sheets-format-v-top"/);assert.match(markup,/aria-pressed="true"[^>]*data-testid="sheets-format-wrap"/);
+ assert.match(markup,/data-testid="sheets-format-border-all"/);assert.match(markup,/data-testid="sheets-format-border-topDoubleBottom"/);assert.match(markup,/Line style/);
+ assert.doesNotMatch(markup,/disabled=""[^>]*data-testid="sheets-format-indent-less"/,'indent can shrink while indented');
+ setSheetsSelection({...selection,style:{...style,indent:0}});assert.match(html(SheetsFormatPanel),/disabled=""[^>]*data-testid="sheets-format-indent-less"/);
+ setSheetsSelection(null);
+});

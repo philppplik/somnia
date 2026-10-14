@@ -1,5 +1,5 @@
 //! Headless, byte-only adapter for the Somnia Sheets Studio. The worker owns one session; no UI or filesystem.
-use gridcraft_engine::model::{style::{Color, HAlign, Underline}, Style};
+use gridcraft_engine::model::{style::{Color, HAlign, Underline, VAlign}, Style};
 use gridcraft_engine::numfmt::{format_value, FormatColor, NumberFormat};
 use gridcraft_engine::{DocState, Session, core::CellRef};
 use serde_json::json;
@@ -44,7 +44,40 @@ fn format_command(op: &serde_json::Value) -> Result<(&'static str, serde_json::V
             Some(c) => ("home.fillColor", json!({"color": is_hex_color(c).ok_or("color must be #RRGGBB or none")?})),
             None => return Err("missing color".into()),
         },
-        "numFmt" => ("home.numberFormat", json!({"code": number_format_code(op)?})),
+        "hAlign" => match op.get("align").and_then(|v| v.as_str()) {
+            Some("left") => ("home.alignLeft", json!({})),
+            Some("center") => ("home.alignCenter", json!({})),
+            Some("right") => ("home.alignRight", json!({})),
+            _ => return Err("horizontal alignment must be left, center or right".into()),
+        },
+        "vAlign" => match op.get("align").and_then(|v| v.as_str()) {
+            Some("top") => ("home.alignTop", json!({})),
+            Some("middle") => ("home.alignMiddle", json!({})),
+            Some("bottom") => ("home.alignBottom", json!({})),
+            _ => return Err("vertical alignment must be top, middle or bottom".into()),
+        },
+        "wrap" => ("home.wrapText", json!({"on": on()?})),
+        "indent" => match op.get("delta").and_then(|v| v.as_i64()) {
+            Some(1) => ("home.increaseIndent", json!({})),
+            Some(-1) => ("home.decreaseIndent", json!({})),
+            _ => return Err("delta must be 1 or -1".into()),
+        },
+        "borders" => {
+            const PRESETS: &[&str] = ["none", "all", "outside", "thickOutside", "inside", "insideHorizontal", "insideVertical", "top", "bottom", "left", "right", "thickBottom", "doubleBottom", "topBottom", "topThickBottom", "topDoubleBottom"];
+            const STYLES: &[&str] = ["thin", "medium", "thick", "dashed", "dotted", "double", "hair"];
+            let preset = op.get("preset").and_then(|v| v.as_str()).filter(|p| PRESETS.contains(p)).ok_or("unsupported border preset")?;
+            let style = match op.get("style") {
+                None => "thin",
+                Some(v) => v.as_str().filter(|s| STYLES.contains(s)).ok_or("unsupported border style")?,
+            };
+            let color = match op.get("color") {
+                None => "auto",
+                Some(c) if c.as_str() == Some("auto") => "auto",
+                Some(c) => is_hex_color(c).ok_or("color must be #RRGGBB or auto")?,
+            };
+            ("home.borders", json!({"preset": preset, "style": style, "color": color}))
+        }
+        "numFmt" => ("home.numberFormat",        "numFmt" => ("home.numberFormat", json!({"code": number_format_code(op)?})),
         _ => return Err("unsupported format operation".into()),
     })
 }
@@ -436,7 +469,8 @@ fn style_json(st: &Style, theme: &gridcraft_engine::model::style::Theme) -> serd
         "underline": st.font.underline != Underline::None,
         "color": hex(&st.font.color), "fill": fill,
         "h": match st.align.h { HAlign::Left => "left", HAlign::Center | HAlign::CenterAcross => "center", HAlign::Right => "right", _ => "general" },
-        "wrap": st.align.wrap, "fmt": st.num_fmt.as_str(),
+        "wrap": st.align.wrap, "indent": st.align.indent,
+        "v": match st.align.v { VAlign::Top => "top", VAlign::Center => "middle", _ => "bottom" }, "fmt": st.num_fmt.as_str(),
         "font": st.font.name, "size": st.font.size,
         "borders": {
             "l": border_json(&st.borders.left, theme), "r": border_json(&st.borders.right, theme),
@@ -672,6 +706,48 @@ mod tests {
         let row = a[1..].parse::<u32>().unwrap() - 1;
         let v: serde_json::Value = serde_json::from_str(&b.view_range(0, row, col, 1, 1).unwrap()).unwrap();
         (v["cells"][0]["style"]["fmt"].as_str().unwrap().to_string(), v["cells"][0]["text"].as_str().unwrap().to_string())
+    }
+    fn style_of(b: &HeadlessWorkbook, a: &str) -> serde_json::Value {
+        let col = (a.as_bytes()[0] - b'A') as u32;
+        let row = a[1..].parse::<u32>().unwrap() - 1;
+        let v: serde_json::Value = serde_json::from_str(&b.view_range(0, row, col, 1, 1).unwrap()).unwrap();
+        v["cells"][0]["style"].clone()
+    }
+    #[test]
+    fn alignment_wrap_indent_and_borders_read_back_roundtrip_and_undo() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        book.set_cell(0, "H1", "x").unwrap();
+        book.set_cell(0, "I2", "y").unwrap();
+        book.format_range(0, 0, 7, 1, 1, r#"{"kind":"hAlign","align":"right"}"#).unwrap();
+        book.format_range(0, 0, 7, 1, 1, r#"{"kind":"vAlign","align":"top"}"#).unwrap();
+        book.format_range(0, 0, 7, 1, 1, r#"{"kind":"wrap","on":true}"#).unwrap();
+        book.format_range(0, 0, 7, 1, 1, r#"{"kind":"indent","delta":1}"#).unwrap();
+        let st = style_of(&book, "H1");
+        assert_eq!((st["h"].as_str(), st["v"].as_str(), st["wrap"].as_bool(), st["indent"].as_u64()), (Some("right"), Some("top"), Some(true), Some(1)));
+        // Outside border on a 2x2 block only touches the block's edges.
+        book.format_range(0, 0, 7, 2, 2, r#"{"kind":"borders","preset":"outside","style":"medium","color":"#FF0000"}"#).unwrap();
+        assert!(!style_of(&book, "H1")["borders"]["t"].is_null());
+        assert!(style_of(&book, "I2")["borders"]["b"]["color"].as_str() == Some("#FF0000"));
+        assert!(style_of(&book, "H1")["borders"]["b"].is_null(), "inner edge stays clear");
+        let reopened = HeadlessWorkbook::new(&book.export_xlsx().unwrap()).unwrap();
+        assert_eq!(style_of(&reopened, "H1")["h"], "right");
+        assert_eq!(style_of(&reopened, "H1")["wrap"], true);
+        assert!(!style_of(&reopened, "I2")["borders"]["r"].is_null());
+        book.undo().unwrap();
+        assert!(style_of(&book, "I2")["borders"]["b"].is_null(), "one undo removes the whole border action");
+        assert_eq!(style_of(&book, "H1")["indent"], 1);
+        book.format_range(0, 0, 7, 1, 1, r#"{"kind":"borders","preset":"none"}"#).unwrap();
+        for op in [
+            r#"{"kind":"hAlign","align":"justify"}"#,
+            r#"{"kind":"vAlign"}"#,
+            r#"{"kind":"wrap"}"#,
+            r#"{"kind":"indent","delta":2}"#,
+            r#"{"kind":"borders","preset":"sparkle"}"#,
+            r#"{"kind":"borders","preset":"all","style":"zigzag"}"#,
+            r#"{"kind":"borders","preset":"all","color":"red"}"#,
+        ] {
+            assert!(book.format_range(0, 0, 7, 1, 1, op).is_err(), "{op}");
+        }
     }
     #[test]
     fn number_format_presets_display_roundtrip_and_undo() {

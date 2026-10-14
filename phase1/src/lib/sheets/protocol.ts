@@ -4,7 +4,7 @@ export interface SheetMeta{index:number;name:string;visibility:string}
 export interface WorkbookInfo{sheets:SheetMeta[];warnings:string[]}
 export interface SheetInfo{sheet:number;rows:number;cols:number;canUndo:boolean;canRedo:boolean}
 export interface RangeCell{address:string;value:CellValue;formula:string|null}
-export interface CellStyle{bold:boolean;italic:boolean;strike:boolean;underline:boolean;color:string|null;fill:string|null;h:'left'|'center'|'right'|'general';wrap:boolean;fmt:string;font:string;size:number;borders:{l:BorderSide|null;r:BorderSide|null;t:BorderSide|null;b:BorderSide|null}}
+export interface CellStyle{bold:boolean;italic:boolean;strike:boolean;underline:boolean;color:string|null;fill:string|null;h:'left'|'center'|'right'|'general';wrap:boolean;indent?:number;v?:'top'|'middle'|'bottom';fmt:string;font:string;size:number;borders:{l:BorderSide|null;r:BorderSide|null;t:BorderSide|null;b:BorderSide|null}}
 export interface BorderSide{w:number;style:'solid'|'dashed'|'dotted'|'double';color:string}
 export interface ViewCell extends RangeCell{text:string;numeric:boolean;fmtColor:string|null;style:CellStyle}
 export interface ViewResult{sheet:number;row:number;col:number;rows:number;cols:number;cells:ViewCell[]}
@@ -18,7 +18,14 @@ export type FormatOp=
  |{kind:'fontColor';color:string}
  |{kind:'fillColor';color:string}
  |{kind:'numFmt';preset:NumFmtPreset;decimals?:number;symbol?:string}
- |{kind:'decimals';delta:1|-1;at?:{row:number;col:number}};
+ |{kind:'decimals';delta:1|-1;at?:{row:number;col:number}}
+ |{kind:'hAlign';align:'left'|'center'|'right'}
+ |{kind:'vAlign';align:'top'|'middle'|'bottom'}
+ |{kind:'wrap';on:boolean}
+ |{kind:'indent';delta:1|-1}
+ |{kind:'borders';preset:BorderPreset;style?:BorderLineStyle;color?:string};
+export type BorderPreset='none'|'all'|'outside'|'thickOutside'|'inside'|'insideHorizontal'|'insideVertical'|'top'|'bottom'|'left'|'right'|'thickBottom'|'doubleBottom'|'topBottom'|'topThickBottom'|'topDoubleBottom';
+export type BorderLineStyle='thin'|'medium'|'thick'|'dashed'|'dotted'|'double'|'hair';
 export type NumFmtPreset='general'|'number'|'comma'|'percent'|'currency'|'date'|'time'|'scientific'|'text';
 export type SheetOp={kind:'add';name?:string}|{kind:'rename';name:string}|{kind:'duplicate'}|{kind:'delete'}|{kind:'move';to:number};
 export type SheetsRequest=

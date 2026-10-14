@@ -1,4 +1,4 @@
-import type {CellStyle,FormatOp,NumFmtPreset} from './protocol';
+import type {BorderLineStyle,BorderPreset,CellStyle,FormatOp,NumFmtPreset} from './protocol';
 /** Formatting model for the Sheets studio: validation, toggling and the fixed choice lists. The engine bridge re-validates everything. */
 export const FORMAT_MAX_CELLS=1_000_000;
 export const FONT_NAMES=['Calibri','Arial','Verdana','Tahoma','Georgia','Times New Roman','Courier New','Consolas'] as const;
@@ -29,6 +29,10 @@ export function detectNumFmt(code:string):NumFmtInfo{
  if((m=/^0(\.0{1,10})?E\+00$/.exec(code)))return {...base,preset:'scientific',decimals:d(m[1]??'')};
  if((m=/^"(\$|€|£|¥|CHF)"#,##0(\.0{1,10})?$/.exec(code)))return {preset:'currency',decimals:d(m[2]??''),symbol:m[1]};
  return {...base,preset:'custom'};}
+export const H_ALIGNS=['left','center','right'] as const,V_ALIGNS=['top','middle','bottom'] as const;
+export const BORDER_PRESETS:readonly BorderPreset[]=['none','all','outside','thickOutside','inside','insideHorizontal','insideVertical','top','bottom','left','right','thickBottom','doubleBottom','topBottom','topThickBottom','topDoubleBottom'];
+export const BORDER_STYLES:readonly BorderLineStyle[]=['thin','medium','thick','dashed','dotted','double','hair'];
+export const DEFAULT_BORDER_COLOR='#000000';
 export const TOGGLE_KINDS=['bold','italic','underline','strike'] as const;
 export type ToggleKind=typeof TOGGLE_KINDS[number];
 /** Parses untrusted command input into a FormatOp or throws. Unknown keys and kinds are refused. */
@@ -47,6 +51,13 @@ export function parseFormatOp(input:unknown):FormatOp{
    if(o.symbol!==undefined){if(preset!=='currency'||typeof o.symbol!=='string'||!(CURRENCY_SYMBOLS as readonly string[]).includes(o.symbol))throw Error('Unsupported currency symbol.');out.symbol=o.symbol;}
    return out;}
   case 'decimals':only('kind','delta');if(o.delta!==1&&o.delta!==-1)throw Error('Delta must be 1 or -1.');return {kind:'decimals',delta:o.delta};
+  case 'hAlign':case 'vAlign':{only('kind','align');const list:readonly unknown[]=o.kind==='hAlign'?H_ALIGNS:V_ALIGNS;if(!list.includes(o.align))throw Error('Unsupported alignment.');return {kind:o.kind,align:o.align} as FormatOp;}
+  case 'wrap':only('kind','on');if(typeof o.on!=='boolean')throw Error('`on` must be true or false.');return {kind:'wrap',on:o.on};
+  case 'indent':only('kind','delta');if(o.delta!==1&&o.delta!==-1)throw Error('Delta must be 1 or -1.');return {kind:'indent',delta:o.delta};
+  case 'borders':{only('kind','preset','style','color');if(!(BORDER_PRESETS as readonly unknown[]).includes(o.preset))throw Error('Unsupported border preset.');const out:FormatOp={kind:'borders',preset:o.preset as BorderPreset};
+   if(o.style!==undefined){if(!(BORDER_STYLES as readonly unknown[]).includes(o.style))throw Error('Unsupported border style.');out.style=o.style as BorderLineStyle;}
+   if(o.color!==undefined){if(o.color!=='auto'&&!isHexColor(o.color))throw Error('Color must be #RRGGBB or auto.');out.color=o.color as string;}
+   return out;}
   default:throw Error('Unsupported format operation.');}
 }
 /** Excel-style toggle: the active cell decides whether the whole selection turns on or off. */

@@ -35,3 +35,11 @@ test('number format codes match what the engine bridge writes and are detected b
  for(const [p,d,s] of [['number',0,'$'],['number',3,'$'],['comma',2,'$'],['percent',0,'$'],['percent',2,'$'],['scientific',2,'$'],['currency',2,'£'],['currency',0,'CHF']] as const){const r=detectNumFmt(numFmtCode(p,d,s));assert.equal(r.preset,p);assert.equal(r.decimals,d);if(p==='currency')assert.equal(r.symbol,s);}
  for(const p of ['general','date','time','text'] as const)assert.equal(detectNumFmt(numFmtCode(p)).preset,p);
  for(const own of ['0.00_);[Red](0.00)','m/d/yyyy','[$-F800]dddd, mmmm dd, yyyy','"x"0.00','0.000000000000']) assert.equal(detectNumFmt(own).preset,'custom',own);});
+test('alignment, wrap, indent and border operations are parsed from a closed list',()=>{
+ assert.deepEqual(parseFormatOp({kind:'hAlign',align:'center'}),{kind:'hAlign',align:'center'});
+ assert.deepEqual(parseFormatOp({kind:'vAlign',align:'middle'}),{kind:'vAlign',align:'middle'});
+ assert.deepEqual(parseFormatOp({kind:'wrap',on:true}),{kind:'wrap',on:true});
+ assert.deepEqual(parseFormatOp({kind:'indent',delta:1}),{kind:'indent',delta:1});
+ assert.deepEqual(parseFormatOp({kind:'borders',preset:'outside',style:'thick',color:'#ff0000'}),{kind:'borders',preset:'outside',style:'thick',color:'#ff0000'});
+ assert.deepEqual(parseFormatOp({kind:'borders',preset:'none'}),{kind:'borders',preset:'none'});
+ for(const bad of [{kind:'hAlign',align:'justify'},{kind:'hAlign',align:'top'},{kind:'vAlign'},{kind:'wrap'},{kind:'wrap',on:'yes'},{kind:'indent',delta:2},{kind:'borders'},{kind:'borders',preset:'sparkle'},{kind:'borders',preset:'all',style:'zigzag'},{kind:'borders',preset:'all',color:'red'},{kind:'borders',preset:'all',extra:1}])assert.throws(()=>parseFormatOp(bad),JSON.stringify(bad));});

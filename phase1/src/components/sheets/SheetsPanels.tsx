@@ -12,8 +12,8 @@ import {aggregateFormula,FORMULA_FUNCTIONS,parsePanelRange,rangeAddress,summariz
 import {rectCells} from '../../lib/sheets/clipboard';
 import {addressOf,parseAddress} from '../../lib/sheets/format';
 import {MAX_SHEETS,sheetNameProblem} from '../../lib/sheets/sheetOps';
-import type {RangeCell} from '../../lib/sheets/protocol';
-import {CURRENCY_SYMBOLS,DECIMAL_PRESETS,MAX_DECIMALS,NUM_PRESETS,detectNumFmt,DEFAULT_FILL_COLOR,DEFAULT_TEXT_COLOR,FONT_NAMES,FONT_SIZES,MAX_FONT_SIZE,MIN_FONT_SIZE,isHexColor,toggleOp,type ToggleKind} from '../../lib/sheets/formatOps';
+import type {BorderLineStyle,RangeCell} from '../../lib/sheets/protocol';
+import {BORDER_PRESETS,BORDER_STYLES,DEFAULT_BORDER_COLOR,H_ALIGNS,V_ALIGNS,CURRENCY_SYMBOLS,DECIMAL_PRESETS,MAX_DECIMALS,NUM_PRESETS,detectNumFmt,DEFAULT_FILL_COLOR,DEFAULT_TEXT_COLOR,FONT_NAMES,FONT_SIZES,MAX_FONT_SIZE,MIN_FONT_SIZE,isHexColor,toggleOp,type ToggleKind} from '../../lib/sheets/formatOps';
 import {Button} from '../ui/button';
 import {NativeInput,NativeSelect} from '../ui/native-controls';
 import {NumberField} from '../ui/number-field';
@@ -128,6 +128,7 @@ const TOGGLES:readonly {kind:ToggleKind;glyph:string;key:string;className:string
 /** Font and fill formatting for the selected cells. Every control dispatches `sheets.format`: one operation, one undo step; nothing here edits cell values. */
 export function SheetsFormatPanel({context}:PanelHostProps){
  const {t}=useT(),s=usePanelWorkbook(context);const action=useAction();
+ const [border,setBorder]=useState<{style:BorderLineStyle;color:string}>({style:'thin',color:DEFAULT_BORDER_COLOR});
  const style=s?.style;const cellKey=s?`${s.file}:${s.sheet}:${s.address}`:'';
  // A picked color is kept only for the cell it was picked on; otherwise the pickers follow the active cell.
  const [picked,setPicked]=useState<{key:string;text?:string;fill?:string}>({key:''});const mine=picked.key===cellKey?picked:null;
@@ -149,6 +150,18 @@ export function SheetsFormatPanel({context}:PanelHostProps){
    {num.preset==='currency'&&<label className="flex flex-col gap-1">{t('sheets.format.symbol')}<NativeSelect className={field} value={num.symbol} disabled={action.busy} onChange={e=>send({kind:'numFmt',preset:'currency',decimals:num.decimals,symbol:e.currentTarget.value})}>{CURRENCY_SYMBOLS.map(c=><option key={c} value={c}>{c}</option>)}</NativeSelect></label>}
    {DECIMAL_PRESETS.includes(num.preset as never)&&<NumberField label={t('sheets.format.decimals')} value={num.decimals} resetKey={`${s.address}:${s.revision??0}`} min={0} max={MAX_DECIMALS} step={1} disabled={action.busy} constraintError={t('sheets.format.decimalsInvalid')} parse={v=>{const n=Number(v.trim());return v.trim()&&Number.isInteger(n)?{ok:true,value:n}:{ok:false,error:t('sheets.format.decimalsInvalid')};}} onCommit={decimals=>send({kind:'numFmt',preset:num.preset,decimals,...(num.preset==='currency'?{symbol:num.symbol}:{})})}/>}
    <div className="flex flex-wrap gap-1"><Button variant="outline" size="compact" disabled={action.busy||!style} aria-label={t('sheets.format.moreDecimals')} onClick={()=>send({kind:'decimals',delta:1})} data-testid="sheets-format-more-decimals">.0 +</Button><Button variant="outline" size="compact" disabled={action.busy||!style} aria-label={t('sheets.format.fewerDecimals')} onClick={()=>send({kind:'decimals',delta:-1})} data-testid="sheets-format-fewer-decimals">.0 −</Button><Button variant="outline" size="compact" disabled={action.busy||!style} aria-label={t('sheets.format.num.percent')} onClick={()=>send({kind:'numFmt',preset:'percent',decimals:0})}>%</Button></div>
+  </div>
+  <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.format.align')}>
+   <span>{t('sheets.format.align')}</span>
+   <div className="flex flex-wrap gap-1">{H_ALIGNS.map(a=><Button key={a} variant="outline" size="compact" aria-pressed={style?.h===a} disabled={action.busy||!style} onClick={()=>send({kind:'hAlign',align:a})} data-testid={'sheets-format-h-'+a}>{t('sheets.format.align'+a[0].toUpperCase()+a.slice(1))}</Button>)}</div>
+   <div className="flex flex-wrap gap-1">{V_ALIGNS.map(a=><Button key={a} variant="outline" size="compact" aria-pressed={(style?.v??'bottom')===a} disabled={action.busy||!style} onClick={()=>send({kind:'vAlign',align:a})} data-testid={'sheets-format-v-'+a}>{t('sheets.format.align'+a[0].toUpperCase()+a.slice(1))}</Button>)}</div>
+   <div className="flex flex-wrap gap-1"><Button variant="outline" size="compact" aria-pressed={!!style?.wrap} disabled={action.busy||!style} onClick={()=>send({kind:'wrap',on:!style?.wrap})} data-testid="sheets-format-wrap">{t('sheets.format.wrap')}</Button><Button variant="outline" size="compact" disabled={action.busy||!style||(style.indent??0)<=0} aria-label={t('sheets.format.indentLess')} onClick={()=>send({kind:'indent',delta:-1})} data-testid="sheets-format-indent-less">⇤</Button><Button variant="outline" size="compact" disabled={action.busy||!style||(style.indent??0)>=250} aria-label={t('sheets.format.indentMore')} onClick={()=>send({kind:'indent',delta:1})} data-testid="sheets-format-indent-more">⇥</Button></div>
+  </div>
+  <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.format.borders')}>
+   <span>{t('sheets.format.borders')}</span>
+   <label className="flex flex-col gap-1">{t('sheets.format.borderStyle')}<NativeSelect className={field} value={border.style} disabled={action.busy||!style} onChange={e=>setBorder({...border,style:e.currentTarget.value as BorderLineStyle})} data-testid="sheets-format-border-style">{BORDER_STYLES.map(b=><option key={b} value={b}>{t('sheets.format.borderStyle.'+b)}</option>)}</NativeSelect></label>
+   <div className="flex items-center gap-1"><span className="h-7 w-8 shrink-0 overflow-hidden rounded-sm border border-subtle"><NativeInput type="color" className="size-full cursor-pointer border-0 bg-transparent p-0 [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:border-0" aria-label={t('sheets.format.borderColor')} value={border.color} onChange={e=>setBorder({...border,color:e.currentTarget.value.toUpperCase()})}/></span><span>{t('sheets.format.borderColor')}</span></div>
+   <div className="flex flex-wrap gap-1">{BORDER_PRESETS.map(b=><Button key={b} variant="outline" size="compact" disabled={action.busy||!style} onClick={()=>send({kind:'borders',preset:b,...(b==='none'?{}:{style:border.style,color:border.color})})} data-testid={'sheets-format-border-'+b}>{t('sheets.format.border.'+b)}</Button>)}</div>
   </div>
   <p role="status">{action.notice}</p></Region>;
 }
