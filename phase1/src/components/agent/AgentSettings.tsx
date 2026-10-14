@@ -9,6 +9,8 @@ import type {AgentConfiguration} from '../../lib/agent/panelBridge';
 import {McpSettings} from './McpSettings';
 import {agentSettingsSnapshot,subscribeAgentSettings,initializeAgentSettings,applyAgentSettings,setAgentAuthenticationBusy,agentCredentialsChanged} from '../../lib/agent/settingsRuntime';
 /** Provider credentials still use the existing broker, never preference storage. */
+/** Roving tab index for Left/Right/Home/End over `count` tabs; wraps around. */
+export function nextTabIndex(index:number,count:number,key:string):number{return key==='Home'?0:key==='End'?count-1:(index+(key==='ArrowRight'?1:count-1))%count;}
 export function AgentSettings({searchQuery='',legacyPrivacy=false}:{searchQuery?:string;legacyPrivacy?:boolean}){
  const {t}=useT();const app=useAppStore();const tab=app.settingsAITab;
  const tabs=['providers','instructions','privacy','tools'] as const;
@@ -32,7 +34,7 @@ export function AgentSettings({searchQuery='',legacyPrivacy=false}:{searchQuery?
  return <div className="agent-settings" data-settings-search-text={'Provider Model API key authentication connection Ollama OpenRouter OpenAI Claude Custom prompts instructions Consent Privacy Cloud Local data '+(cfg.customPrompts??[]).map(p=>p.name+' '+p.text).join(' ')}>
   <p>Choose a provider and model for Somnia Agent. Changes apply when you save the configuration.</p>
   {settings.error&&<p role="alert">{settings.error}</p>}
-  <div role="tablist" aria-label={t('set.section.ai')} onKeyDown={e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();const index=tabs.indexOf(tab);const next=e.key==='Home'?0:e.key==='End'?tabs.length-1:(index+(e.key==='ArrowRight'?1:2))%3;patchState({settingsAITab:tabs[next]});document.getElementById('ai-tab-'+tabs[next])?.focus();}}>
+  <div role="tablist" aria-label={t('set.section.ai')} onKeyDown={e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();const index=tabs.indexOf(tab);const next=nextTabIndex(index,tabs.length,e.key);patchState({settingsAITab:tabs[next]});document.getElementById('ai-tab-'+tabs[next])?.focus();}}>
    {tabs.map(id=><button type="button" role="tab" id={'ai-tab-'+id} aria-controls={'ai-content-'+id} aria-selected={tab===id} tabIndex={tab===id?0:-1} key={id} onClick={()=>patchState({settingsAITab:id})}>{labels[id]}</button>)}
   </div>
   {settings.running&&<p role="status">Stop the current generation before changing AI configuration.</p>}
