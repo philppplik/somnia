@@ -6,5 +6,5 @@ export const fmt=(n:number)=>String(Math.round(n*100)/100);
 export const fmtValue=(v:PropValue)=>typeof v==='number'?fmt(v):`${fmt(v[0])}, ${fmt(v[1])}`;
 export const renderSummary=(c:Composition)=>({width:c.width,height:c.height,fps:fmt(c.fps.num/c.fps.den),frames:frameCount(c.duration,c.fps),seconds:fmt(ticksToSeconds(c.duration))});
 export const layerLabel=(l:Layer)=>l.name;
-export const EASES:EasePreset[]=['linear','ease','easeIn','easeOut','overshoot','anticipate','spring','hold'];
-export const EASE_LABEL:Record<EasePreset,string>={linear:'animation.key.linear',ease:'animation.ease.ease',easeIn:'animation.ease.in',easeOut:'animation.ease.out',overshoot:'animation.ease.overshoot',anticipate:'animation.ease.anticipate',spring:'animation.ease.spring',hold:'animation.key.hold'};
+export const EASES:EasePreset[]=['linear','ease','easeIn','easeOut','overshoot','anticipate','spring','smooth','snappy','back','expo','hold'];
+export const EASE_LABEL:Record<EasePreset,string>={linear:'animation.key.linear',ease:'animation.ease.ease',easeIn:'animation.ease.in',easeOut:'animation.ease.out',overshoot:'animation.ease.overshoot',anticipate:'animation.ease.anticipate',spring:'animation.ease.spring',smooth:'animation.ease.smooth',snappy:'animation.ease.snappy',back:'animation.ease.back',expo:'animation.ease.expo',hold:'animation.key.hold'};

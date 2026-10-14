@@ -258,3 +258,8 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Done: link modifier (bind a property to another layer's property with multiplier and offset), `modifier.set`, Modifiers inspector, command schema fix, wiggle frequency in hertz (behavior change).
 - Open: links across compositions, scalar-to-vec2 links, expression scripting (out of scope).
 
+### Animation P37 (2026-10-14, integration pending)
+
+- Done: presets smooth, snappy, back, expo; handle snapping; mirror handles; copy and paste of easing curves.
+- Open: box-select of handles, per-segment graph-pane resize.
+

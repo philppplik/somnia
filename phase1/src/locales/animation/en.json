@@ -479,5 +479,17 @@
  "animation.modifiers.addLoop": "Add loop",
  "animation.modifiers.addLink": "Link to layer",
  "cmd.animation.modifier.set": "Change a wiggle, loop or link modifier",
- "cmd.animation.modifier.link": "Link a property to another layer's property"
+ "cmd.animation.modifier.link": "Link a property to another layer's property",
+ "animation.ease.smooth": "Smooth",
+ "animation.ease.snappy": "Snappy",
+ "animation.ease.back": "Back",
+ "animation.ease.expo": "Expo",
+ "animation.graph.snap": "Snap",
+ "animation.graph.mirror": "Mirror",
+ "animation.graph.handleTools": "Handle tools",
+ "animation.easeEditor.curveClip": "Easing curve clipboard",
+ "animation.easeEditor.copy": "Copy curve",
+ "animation.easeEditor.paste": "Paste curve",
+ "cmd.animation.ease.copy": "Copy the easing curve of the selected key",
+ "cmd.animation.ease.paste": "Paste the copied easing curve onto the selected keys"
 }

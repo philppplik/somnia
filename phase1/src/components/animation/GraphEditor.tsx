@@ -13,6 +13,7 @@ import {MaskGraph,MaskTargetButtons,maskTargets} from './MaskGraph';
 import {setGraphMixed,setGraphTarget,setMaskClip,useMaskSelection} from '../../lib/animation/maskSelection';
 import {copyTransformKeys,pasteTransformEdits} from '../../lib/animation/keysClipboard';
 import {EaseEditor} from './EaseEditor';
+import {mirrorEase,setGraphMirror,setGraphSnap,snapEase,useGraphTools} from '../../lib/animation/graphTools';
 import {EASE_LABEL,EASES,fmt,PROP_LABEL} from './format';
 const PAD={l:46,r:12,t:10,b:16};
 function useSize(ref:React.RefObject<HTMLElement|null>){
@@ -31,7 +32,7 @@ const clampTo=(prop:TransformKey,n:number)=>{const m=PROP_META[prop];return Math
  * and draggable ease handles. Units are the property's own, nothing is normalised or relabelled as speed.
  */
 export function GraphEditor({comp,layerId,sel,playhead}:{comp:Composition;layerId:string|null;sel:readonly KeyRef[];playhead:number}){
- const {t}=useT();const clip=useId();
+ const {t}=useT();const clip=useId();const gtools=useGraphTools();
  const layer=comp.layers.find(l=>l.id===layerId);
  const msel=useMaskSelection();const gt=layer&&msel.graph&&maskTargets(layer).some(g=>g.mask===msel.graph!.mask&&g.prop===msel.graph!.prop)?msel.graph:null;
  const animated=layer?TRANSFORM_KEYS.filter(k=>layer.transform[k].keys.length>0):[];
@@ -101,18 +102,24 @@ export function GraphEditor({comp,layerId,sel,playhead}:{comp:Composition;layerI
    if(!additive)sess.setView({playhead:startT});
   });
  };
+ /** Interp edit for a dragged handle; with mirroring on, the opposite handle of the same key follows in one edit. */
+ const handleEdit=(i:number,kind:'in'|'out',ease:readonly [number,number]):Edit=>{
+  const k=keys[i];const opp=gtools.mirror?mirrorEase(keys,i,kind,ease,ch,kind==='out'?(k.channelIn?.[ch]??k.in):(k.channelOut?.[ch]??k.out)):null;
+  return {type:'key.interp',layer:layer.id,prop:active,t:k.t,interp:k.interp,...(prop.type==='vec2'&&!keys.some(q=>q.sIn||q.sOut)?{channel:ch}:{}),...(kind==='out'?{out:ease,...(opp?{in:opp}:{})}:{in:ease,...(opp?{out:opp}:{})})};
+ };
  const handleDown=(i:number,hd:Handle)=>(e:PointerEvent<SVGElement>)=>{
-  if(e.button!==0)return;const k=keys[i];
+  if(e.button!==0)return;
   startDrag(e,ev=>{
-   const p=local(ev.clientX,ev.clientY);const ease=handleToEase(keys,i,hd.kind,tOf(p.x),vOf(p.y),ch);
-   try{sess.previewEdits([{type:'key.interp',layer:layer.id,prop:active,t:k.t,interp:k.interp,...(prop.type==='vec2'&&!keys.some(k=>k.sIn||k.sOut)?{channel:ch}:{}),...(hd.kind==='out'?{out:ease}:{in:ease})}]);}catch{/* keep last valid */}
+   const p=local(ev.clientX,ev.clientY);let ease=handleToEase(keys,i,hd.kind,tOf(p.x),vOf(p.y),ch);
+   if(gtools.snap!==ev.altKey)ease=snapEase(ease);
+   try{sess.previewEdits([handleEdit(i,hd.kind,ease)]);}catch{/* keep last valid */}
   },(commit,moved)=>{if(moved&&commit)sess.commitPreview();else sess.cancelPreview();});
  };
  const handleKey=(i:number,hd:Handle)=>(e:ReactKeyboardEvent<SVGElement>)=>{
   const dx=e.key==='ArrowRight'?1:e.key==='ArrowLeft'?-1:0,dy=e.key==='ArrowUp'?1:e.key==='ArrowDown'?-1:0;if(!dx&&!dy)return;
   e.preventDefault();e.stopPropagation();const k=keys[i];const cur=hd.kind==='out'?(k.channelOut?.[ch]??k.out):(k.channelIn?.[ch]??k.in);const s=e.shiftKey?0.1:0.01;
   const next:readonly [number,number]=[Math.min(1,Math.max(0,cur[0]+dx*s)),Math.min(3,Math.max(-2,cur[1]+dy*s))];
-  try{sess.dispatch({type:'key.interp',layer:layer.id,prop:active,t:k.t,interp:k.interp,...(prop.type==='vec2'&&!keys.some(k=>k.sIn||k.sOut)?{channel:ch}:{}),...(hd.kind==='out'?{out:next}:{in:next})});}catch{/* locked layer */}
+  try{sess.dispatch(handleEdit(i,hd.kind,next));}catch{/* locked layer */}
  };
  const pointKey=(ref:KeyRef,k:Keyframe2)=>(e:ReactKeyboardEvent<SVGElement>)=>{
   const dx=e.key==='ArrowRight'?1:e.key==='ArrowLeft'?-1:0,dy=e.key==='ArrowUp'?1:e.key==='ArrowDown'?-1:0;
@@ -127,6 +134,9 @@ export function GraphEditor({comp,layerId,sel,playhead}:{comp:Composition;layerI
  };
  return <div className="grid min-h-0 flex-1 grid-cols-[180px_1fr]" data-testid="animation-graph">
   <div className="min-h-0 overflow-auto border-r border-subtle p-1" role="group" aria-label={t('animation.graph.props')}>
+   <div className="mb-1 flex gap-1" role="group" aria-label={t('animation.graph.handleTools')}>
+    <Button size="tiny" variant={gtools.snap?'outline':'ghost'} aria-pressed={gtools.snap} onClick={()=>setGraphSnap(!gtools.snap)} data-testid="animation-graph-snap">{t('animation.graph.snap')}</Button>
+    <Button size="tiny" variant={gtools.mirror?'outline':'ghost'} aria-pressed={gtools.mirror} onClick={()=>setGraphMirror(!gtools.mirror)} data-testid="animation-graph-mirror">{t('animation.graph.mirror')}</Button></div>
    <div className="mb-2 flex gap-1">{(['value','speed'] as const).map(mode=><Button key={mode} size="tiny" variant={view.graphMode===mode?'outline':'ghost'} onClick={()=>sess.setView({graphMode:mode})} data-testid={`animation-graph-mode-${mode}`}>{t(`animation.graph.${mode}`)}</Button>)}</div>
    {sel.length>0&&<div className="mb-2 flex flex-wrap gap-1" role="group" aria-label={t('animation.ease.group')}>
     {EASES.map(p=><Button key={p} size="tiny" variant="ghost" disabled={layer.locked} onPointerEnter={()=>{const e=EASE_PRESETS[p];try{sess.previewEdits([{type:'keys.interp',keys:[...sel],interp:e.interp,...('out'in e?{out:e.out,in:e.in}:{})}]);}catch{/* stale */}}} onPointerLeave={()=>sess.cancelPreview()} onClick={()=>{const e=EASE_PRESETS[p];try{sess.dispatch({type:'keys.interp',keys:[...sel],interp:e.interp,...('out'in e?{out:e.out,in:e.in}:{})});}catch{/* locked layer */}}} data-testid={`animation-graph-ease-${p}`}>{t(EASE_LABEL[p])}</Button>)}

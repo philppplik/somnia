@@ -21,6 +21,7 @@ import {secondsToTicks,snapToFrame} from './time';
 import {ClipError,copyKeys,getKeyClip,pastedRefs,setKeyClip} from './keyclip';
 import {allKeysOf,pruneSelection,shiftSelection} from './selection';
 import {EASE_PRESETS,type EasePreset} from './graph';
+import {copyCurve,pasteCurveEdit} from './graphTools';
 import {exportApng,exportCurrentFrame,exportGif,exportWebM,exportWorkAreaSequence} from './exportJob';
 import {ExportError} from './exportFrames';
 /** Window event the Compositions panel listens for to open the audio file chooser. */
@@ -120,6 +121,8 @@ export function animationCommandSpecs():CommandSpec<unknown,unknown>[]{
   },object({swings:{type:'integer',minimum:1,maximum:5}},[]),hasSel,'Edit'),
   spec('animation.keys.cubic','Set a custom cubic-bezier ease on the selected keys',(p:{out:[number,number];in:[number,number]})=>run({type:'keys.interp',keys:selKeys(),interp:'bezier',out:p.out,in:p.in}),
    object({out:handleSchema,in:handleSchema},['out','in']),hasSel,'Edit'),
+  spec('animation.ease.copy','Copy the easing curve of the selected key',()=>{const ref=selKeys()[selKeys().length-1];guard(()=>copyCurve(findLayer(comp(),ref.layer)?.transform[ref.prop].keys.find(x=>x.t===ref.t)));},undefined,hasSel,'Edit'),
+  spec('animation.ease.paste','Paste the copied easing curve onto the selected keys',()=>run(guard(()=>pasteCurveEdit(selKeys()))),undefined,hasSel,'Edit'),
   spec('animation.ease.save','Save a named easing in the document',(p:{name:string;out?:[number,number];in?:[number,number]})=>{
    try{let out=p.out,inn=p.in;if(!out||!inn){const ref=selKeys()[selKeys().length-1];const k=findLayer(comp(),ref.layer)!.transform[ref.prop].keys.find(x=>x.t===ref.t);if(!k||k.interp!=='bezier')fail('Select a key with a bezier ease.');out=k!.out as [number,number];inn=k!.in as [number,number];}
     return run(saveEasingEdit(doc(),p.name,out!,inn!));}catch(e){throw Object.assign(e as Error,{expected:true});}

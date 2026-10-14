@@ -21,6 +21,8 @@ import {defaultView} from './recovery';
 import {frameToTick,TICKS_PER_SECOND as TICK_SEC} from './time';
 import {sceneAt,worldMatrix,localMatrix,linkResolver} from './scene';
 import {evaluateMod,linkProblems,type Modifier} from './modifiers';
+import {snapEase,mirrorEase,copyCurve,pasteCurveEdit,resetGraphTools} from './graphTools';
+import {EASES,EASE_LABEL} from '../../components/animation/format';
 const comp=(d:AnimationDocument)=>findComp(d)!;
 const layer=(d:AnimationDocument,id:string)=>findLayer(comp(d),id)!;
 const base=()=>applyEdits(createDocument(),[{type:'layer.add',kind:'solid',id:'photo',over:{source:{color:'#ffb347',width:300,height:200}}},{type:'layer.add',kind:'shape',id:'stencil',over:{source:{shape:'ellipse',width:200,height:120,color:'#ffffff'}}},{type:'layer.add',kind:'text',id:'title',over:{source:{text:'ABCDEFGHIJ',size:40,color:'#ffffff'}}}]);
@@ -975,4 +977,48 @@ test('P36: modifier commands and locale keys exist, schema accepts object modifi
  const specs=animationCommandSpecs();for(const id of ['animation.modifier.add','animation.modifier.set','animation.modifier.link','animation.modifier.remove'])assert.ok(specs.some(s=>s.id===id),id);
  const add=specs.find(s=>s.id==='animation.modifier.add')!;const mod=(add as unknown as {inputSchema?:{properties:{modifier:{type:string}}}}).inputSchema?.properties.modifier;if(mod)assert.equal(mod.type,'object');
  for(const l of ['en','de','es','fr','pt-BR']){const j=JSON.parse(readFileSync(new URL(`../../locales/animation/${l}.json`,import.meta.url),'utf8'));for(const k of ['animation.modifiers.title','animation.modifiers.addWiggle','animation.modifiers.addLoop','animation.modifiers.addLink','animation.modifiers.multiplier','animation.modifiers.offset','animation.modifiers.amplitude','animation.modifiers.frequency','animation.modifiers.seed','animation.modifiers.missing','cmd.animation.modifier.set','cmd.animation.modifier.link'])assert.ok(j[k],`${l} ${k}`);}
+});
+const keyDoc=()=>{let d=base();const ks=[0,240000,480000];
+ d=applyEdit(d,{type:'prop.animate',layer:'stencil',prop:'rotation',on:true,t:0});
+ ks.forEach((t,i)=>{d=applyEdit(d,{type:'prop.set',layer:'stencil',prop:'rotation',value:i*100,t});});
+ return applyEdit(d,{type:'keys.interp',keys:ks.map(t=>({layer:'stencil',prop:'rotation' as const,t})),interp:'bezier',out:[0.33,0],in:[0.67,1]});};
+const rotKeys=(d:AnimationDocument)=>layer(d,'stencil').transform.rotation.keys;
+test('P37: cubic-bezier library presets smooth, snappy, back, expo are valid, recognised and labelled',()=>{
+ for(const n of ['smooth','snappy','back','expo'] as const){const e=EASE_PRESETS[n];assert.equal(e.interp,'bezier');assert.ok(e.out[0]>=0&&e.out[0]<=1&&e.in[0]>=0&&e.in[0]<=1&&e.out[1]>=-2&&e.out[1]<=3&&e.in[1]>=-2&&e.in[1]<=3);
+  assert.ok(EASES.includes(n));assert.ok(EASE_LABEL[n]);
+  const d=applyEdit(keyDoc(),{type:'keys.interp',keys:[{layer:'stencil',prop:'rotation',t:0}],interp:e.interp,out:e.out,in:e.in});assert.equal(easePresetOf(rotKeys(d)[0]),n);}
+ assert.ok(EASE_PRESETS.back.out[1]<0&&EASE_PRESETS.back.in[1]>1,'back undershoots then overshoots');
+ for(const l of ['en','de','es','fr','pt-BR']){const j=JSON.parse(readFileSync(new URL(`../../locales/animation/${l}.json`,import.meta.url),'utf8'));
+  for(const k of ['animation.ease.smooth','animation.ease.snappy','animation.ease.back','animation.ease.expo','animation.graph.snap','animation.graph.mirror','animation.easeEditor.copy','animation.easeEditor.paste','cmd.animation.ease.copy','cmd.animation.ease.paste'])assert.ok(j[k],`${l} ${k}`);}
+});
+test('P37: handle snapping rounds to a 0.05 grid and stays in range',()=>{
+ assert.deepEqual(snapEase([0.337,0.52]),[0.35,0.5]);assert.deepEqual(snapEase([1.2,-3]),[1,-2]);assert.deepEqual(snapEase([0.02,3.4]),[0,3]);
+ assert.deepEqual(snapEase([0.5,0.5],0.1),[0.5,0.5]);
+});
+test('P37: mirror handles keep the tangent smooth through the key and refuse at the ends',()=>{
+ const k=rotKeys(keyDoc());
+ const m=mirrorEase(k,1,'out',[0.5,0.2],0,[0.67,1])!;assert.ok(Math.abs(m[0]-0.5)<1e-9&&Math.abs(m[1]-0.8)<1e-9,'equal segments: in is the point reflection of out');
+ const back=mirrorEase(k,1,'in',m,0,[0.33,0])!;assert.ok(Math.abs(back[0]-0.5)<1e-9&&Math.abs(back[1]-0.2)<1e-9,'mirroring twice returns the handle');
+ assert.equal(mirrorEase(k,0,'out',[0.5,0.2],0,[0.67,1]),null,'first key has no in handle');assert.equal(mirrorEase(k,2,'in',[0.5,0.2],0,[0.33,0]),null,'last key has no out handle');
+ const wide=mirrorEase(k,1,'out',[1,3],0,[0.67,1])!;assert.ok(wide[0]>=0&&wide[0]<=1&&wide[1]>=-2&&wide[1]<=3,'clamped to the valid range');
+});
+test('P37: a mirrored handle drag is one edit that changes both handles of the key',()=>{
+ const d0=keyDoc(),r=d0.revision,k=rotKeys(d0);const m=mirrorEase(k,1,'out',[0.5,0.2],0,k[1].in)!;
+ const d=applyEdit(d0,{type:'key.interp',layer:'stencil',prop:'rotation',t:240000,interp:'bezier',out:[0.5,0.2],in:m});
+ assert.equal(d.revision,r+1);const n=rotKeys(d)[1];assert.deepEqual([...n.out],[0.5,0.2]);assert.ok(Math.abs(n.in[1]-0.8)<1e-9);
+ assert.ok(validateDocument(d).length===0);
+});
+test('P37: copy and paste an easing curve onto many keys in one edit',()=>{
+ resetGraphTools();assert.throws(()=>pasteCurveEdit([{layer:'stencil',prop:'rotation',t:0}]),/Copy an easing curve first/);
+ let d=applyEdit(keyDoc(),{type:'key.interp',layer:'stencil',prop:'rotation',t:0,interp:'bezier',out:[0.1,0.8],in:[0.3,1.2]});
+ assert.throws(()=>copyCurve(undefined),/bezier/);copyCurve(rotKeys(d)[0]);
+ const r=d.revision;const refs=[240000,480000].map(t=>({layer:'stencil',prop:'rotation' as const,t}));
+ assert.throws(()=>pasteCurveEdit([]),/Select keys/);
+ d=applyEdit(d,pasteCurveEdit(refs));assert.equal(d.revision,r+1,'one undo step');
+ for(const t of [240000,480000]){const k=rotKeys(d).find(x=>x.t===t)!;assert.deepEqual([...k.out],[0.1,0.8]);assert.deepEqual([...k.in],[0.3,1.2]);}
+ const hold=applyEdit(d,{type:'key.interp',layer:'stencil',prop:'rotation',t:0,interp:'linear'});assert.throws(()=>copyCurve(rotKeys(hold)[0]),/bezier/);
+ resetGraphTools();
+});
+test('P37: ease copy and paste commands are registered with titles in all locales',()=>{
+ const ids=animationCommandSpecs().map(s=>s.id);assert.ok(ids.includes('animation.ease.copy')&&ids.includes('animation.ease.paste'));
 });

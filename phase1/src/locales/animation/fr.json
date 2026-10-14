@@ -479,5 +479,17 @@
  "animation.modifiers.addLoop": "Ajouter une boucle",
  "animation.modifiers.addLink": "Lier à un calque",
  "cmd.animation.modifier.set": "Modifier un tremblement, une boucle ou un lien",
- "cmd.animation.modifier.link": "Lier une propriété à la propriété d'un autre calque"
+ "cmd.animation.modifier.link": "Lier une propriété à la propriété d'un autre calque",
+ "animation.ease.smooth": "Doux",
+ "animation.ease.snappy": "Vif",
+ "animation.ease.back": "Retour",
+ "animation.ease.expo": "Expo",
+ "animation.graph.snap": "Magnétisme",
+ "animation.graph.mirror": "Miroir",
+ "animation.graph.handleTools": "Outils de poignées",
+ "animation.easeEditor.curveClip": "Presse-papiers de courbes",
+ "animation.easeEditor.copy": "Copier la courbe",
+ "animation.easeEditor.paste": "Coller la courbe",
+ "cmd.animation.ease.copy": "Copier la courbe d'accélération de la clé choisie",
+ "cmd.animation.ease.paste": "Coller la courbe copiée sur les clés choisies"
 }

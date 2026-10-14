@@ -479,5 +479,17 @@
  "animation.modifiers.addLoop": "Adicionar loop",
  "animation.modifiers.addLink": "Vincular a camada",
  "cmd.animation.modifier.set": "Alterar um modificador de tremor, loop ou vínculo",
- "cmd.animation.modifier.link": "Vincular uma propriedade à propriedade de outra camada"
+ "cmd.animation.modifier.link": "Vincular uma propriedade à propriedade de outra camada",
+ "animation.ease.smooth": "Suave",
+ "animation.ease.snappy": "Ágil",
+ "animation.ease.back": "Recuo",
+ "animation.ease.expo": "Expo",
+ "animation.graph.snap": "Encaixar",
+ "animation.graph.mirror": "Espelhar",
+ "animation.graph.handleTools": "Ferramentas de alças",
+ "animation.easeEditor.curveClip": "Área de transferência de curvas",
+ "animation.easeEditor.copy": "Copiar curva",
+ "animation.easeEditor.paste": "Colar curva",
+ "cmd.animation.ease.copy": "Copiar a curva de suavização da chave escolhida",
+ "cmd.animation.ease.paste": "Colar a curva copiada nas chaves escolhidas"
 }

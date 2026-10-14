@@ -183,3 +183,14 @@ Wiggle and loop modifiers already existed (`modifierModel.ts`, `modifiers.ts`). 
 - Behavior change: wiggle frequency is now real hertz (was evaluated per tick, so it looked like white noise). Existing wiggle output changes.
 - Limit: inspector number fields show the unlinked value.
 - Preview mode `?links=1` in `test/animation-preview.tsx`.
+
+## P37 - Graph editor polish
+
+Already there: value graph and speed graph toggle, draggable bezier handles, keyboard handles, numeric ease editor, saved easings.
+Added:
+
+- Cubic-bezier presets `smooth`, `snappy`, `back`, `expo` (in the preset rows, hover preview, key.interp).
+- Handle snapping to a 0.05 grid (Snap toggle, on by default; hold Alt to invert while dragging).
+- Mirror handles toggle (off by default): dragging one handle moves the opposite handle of the same key through the key. Both handles change in one `key.interp` edit, so it is one undo step. It does nothing at the first or last key.
+- Copy and paste an easing curve (`animation.ease.copy`, `animation.ease.paste`, buttons in the Easing editor). Paste is one `keys.interp` edit on all selected keys.
+- Limits: snap, mirror and the curve clipboard are view state and are not saved. Mirroring is point reflection in time and value, so with unequal neighbour spans the two handle values differ.

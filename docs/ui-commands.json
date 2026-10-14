@@ -119,8 +119,32 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.ease.copy",
+      "title": "Copy the easing curve of the selected key",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.ease.delete",
       "title": "Delete a saved easing",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "animation.ease.paste",
+      "title": "Paste the copied easing curve onto the selected keys",
       "category": "Edit",
       "source": "animation",
       "keywords": [

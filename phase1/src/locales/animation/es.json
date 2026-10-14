@@ -479,5 +479,17 @@
  "animation.modifiers.addLoop": "Añadir bucle",
  "animation.modifiers.addLink": "Vincular a capa",
  "cmd.animation.modifier.set": "Cambiar un modificador de vibración, bucle o vínculo",
- "cmd.animation.modifier.link": "Vincular una propiedad a la propiedad de otra capa"
+ "cmd.animation.modifier.link": "Vincular una propiedad a la propiedad de otra capa",
+ "animation.ease.smooth": "Suave",
+ "animation.ease.snappy": "Ágil",
+ "animation.ease.back": "Retroceso",
+ "animation.ease.expo": "Expo",
+ "animation.graph.snap": "Ajustar",
+ "animation.graph.mirror": "Espejo",
+ "animation.graph.handleTools": "Herramientas de manejadores",
+ "animation.easeEditor.curveClip": "Portapapeles de curvas de suavizado",
+ "animation.easeEditor.copy": "Copiar curva",
+ "animation.easeEditor.paste": "Pegar curva",
+ "cmd.animation.ease.copy": "Copiar la curva de suavizado de la clave elegida",
+ "cmd.animation.ease.paste": "Pegar la curva copiada en las claves elegidas"
 }

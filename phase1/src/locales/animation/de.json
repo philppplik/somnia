@@ -479,5 +479,17 @@
  "animation.modifiers.addLoop": "Schleife hinzufügen",
  "animation.modifiers.addLink": "Mit Ebene verknüpfen",
  "cmd.animation.modifier.set": "Wackeln, Schleife oder Verknüpfung ändern",
- "cmd.animation.modifier.link": "Eine Eigenschaft mit der Eigenschaft einer anderen Ebene verknüpfen"
+ "cmd.animation.modifier.link": "Eine Eigenschaft mit der Eigenschaft einer anderen Ebene verknüpfen",
+ "animation.ease.smooth": "Sanft",
+ "animation.ease.snappy": "Spritzig",
+ "animation.ease.back": "Zurück",
+ "animation.ease.expo": "Expo",
+ "animation.graph.snap": "Einrasten",
+ "animation.graph.mirror": "Spiegeln",
+ "animation.graph.handleTools": "Griff-Werkzeuge",
+ "animation.easeEditor.curveClip": "Zwischenablage für Easing-Kurven",
+ "animation.easeEditor.copy": "Kurve kopieren",
+ "animation.easeEditor.paste": "Kurve einfügen",
+ "cmd.animation.ease.copy": "Easing-Kurve der gewählten Taste kopieren",
+ "cmd.animation.ease.paste": "Kopierte Easing-Kurve auf gewählte Tasten einfügen"
 }

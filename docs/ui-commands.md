@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-390 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+392 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -30,7 +30,9 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `animation.comp.select` | Switch composition | View | animation |  |
 | `animation.comp.update` | Change composition settings | Edit | animation |  |
 | `animation.ease.apply` | Apply a saved easing to the selected keys | Edit | animation |  |
+| `animation.ease.copy` | Copy the easing curve of the selected key | Edit | animation |  |
 | `animation.ease.delete` | Delete a saved easing | Edit | animation |  |
+| `animation.ease.paste` | Paste the copied easing curve onto the selected keys | Edit | animation |  |
 | `animation.ease.save` | Save a named easing in the document | Edit | animation |  |
 | `animation.edit.redo` | Redo animation edit | Edit | animation |  |
 | `animation.edit.undo` | Undo animation edit | Edit | animation |  |

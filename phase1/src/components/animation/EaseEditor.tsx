@@ -7,6 +7,7 @@ import {animationSession,useAnimationState} from '../../lib/animation/session';
 import {userEasings} from '../../lib/animation/easingLibrary';
 import {EASE_Y_HIGH,EASE_Y_LOW} from '../../lib/animation/easingModel';
 import type {KeyRef,Layer} from '../../lib/animation/model';
+import {useGraphTools} from '../../lib/animation/graphTools';
 import {executeCommand} from '../../lib/commands';
 const compact='h-6 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-1 text-xs text-ink select-text';
 let openMemo=true;
@@ -15,7 +16,7 @@ const fmt=(n:number)=>String(Math.round(n*100)/100);
 type H=readonly [number,number];
 /** Cubic-bezier editor for the primary selected key: numeric handles with a curve, plus named easings saved in the document. */
 export function EaseEditor({layer,sel}:{layer:Layer;sel:readonly KeyRef[]}){
- const {t}=useT();useAnimationState();const [open,setOpenState]=useState(openMemo);const box=useRef<HTMLFieldSetElement>(null);
+ const {t}=useT();useAnimationState();const gt=useGraphTools();const [open,setOpenState]=useState(openMemo);const box=useRef<HTMLFieldSetElement>(null);
  const setOpen=(v:boolean)=>{openMemo=v;setOpenState(v);};const doc=animationSession().document;const saved=userEasings(doc);const [name,setName]=useState('');const [err,setErr]=useState('');
  const ref=[...sel].reverse().find(k=>k.layer===layer.id);const key=ref&&layer.transform[ref.prop].keys.find(k=>k.t===ref.t);
  const bez=!!key&&key.interp==='bezier';const out:H=key?.out??[0.33,0],inn:H=key?.in??[0.67,1];
@@ -38,6 +39,9 @@ export function EaseEditor({layer,sel}:{layer:Layer;sel:readonly KeyRef[]}){
   <div className="grid grid-cols-2 gap-1" role="group" aria-label={t('animation.easeEditor.handles')}>
    {num(t('animation.easeEditor.x1'),out[0],0,1,n=>set([n,out[1]],inn))}{num(t('animation.easeEditor.y1'),out[1],EASE_Y_LOW,EASE_Y_HIGH,n=>set([out[0],n],inn))}
    {num(t('animation.easeEditor.x2'),inn[0],0,1,n=>set(out,[n,inn[1]]))}{num(t('animation.easeEditor.y2'),inn[1],EASE_Y_LOW,EASE_Y_HIGH,n=>set(out,[inn[0],n]))}</div>
+  <div className="flex gap-1" role="group" aria-label={t('animation.easeEditor.curveClip')}>
+   <Button size="tiny" variant="outline" disabled={!bez} onClick={()=>void call('animation.ease.copy')} data-testid="animation-ease-copy">{t('animation.easeEditor.copy')}</Button>
+   <Button size="tiny" variant="outline" disabled={!gt.curve||!sel.length} onClick={()=>void call('animation.ease.paste')} onPointerEnter={()=>gt.curve&&peek(gt.curve.out,gt.curve.in)} onPointerLeave={unpeek} data-testid="animation-ease-paste">{t('animation.easeEditor.paste')}</Button></div>
   {!bez&&<p className="text-ink-3">{t('animation.easeEditor.needBezier')}</p>}
   {saved.length>0&&<div className="flex flex-wrap gap-1">{saved.map(e=><span key={e.id} className="flex items-center">
    <Button size="tiny" variant="outline" disabled={!sel.length} onClick={()=>void call('animation.ease.apply',{ease:e.id})} onPointerEnter={()=>peek(e.out,e.in)} onPointerLeave={unpeek} onFocus={()=>peek(e.out,e.in)} onBlur={unpeek} data-testid={`animation-ease-saved-${e.name}`}>{e.name}</Button>
