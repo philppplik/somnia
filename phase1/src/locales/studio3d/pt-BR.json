@@ -937,5 +937,7 @@
  "studio3d.hist.editRip": "Rasgar seleção",
  "cmd.studio3d.edit.separate": "Separar as faces selecionadas em um novo objeto",
  "studio3d.edit.separate": "Separar para objeto",
- "studio3d.hist.editSeparate": "Separar seleção para objeto"
+ "studio3d.hist.editSeparate": "Separar seleção para objeto",
+ "cmd.studio3d.edit.selectSharp": "Selecionar arestas cujas faces se encontram com pelo menos o ângulo indicado",
+ "studio3d.edit.selSharp": "Arestas vivas"
 }

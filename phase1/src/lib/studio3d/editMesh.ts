@@ -377,6 +377,51 @@ export function weldSelected(m:MeshData,verts:number[]):MeshData{
  if(m.uvs)out.uvs=m.uvs;
  return out;
 }
+/** Unique edges whose adjacent triangles (matched by vertex positions, so duplicated shells read as one surface) meet at a dihedral angle of at least `degrees`, as index pairs (low index first). Boundary edges with a single adjacent triangle are never sharp. */
+export function sharpEdges(m:MeshData,degrees:number):[number,number][]{
+ if(!Number.isFinite(degrees)||degrees<0||degrees>180)throw new EditError('Angle must be between 0 and 180 degrees.');
+ const pos=m.positions,idx=m.index;
+ const pk=(v:number)=>`${Math.round(pos[v*3]*1e6)}_${Math.round(pos[v*3+1]*1e6)}_${Math.round(pos[v*3+2]*1e6)}`;
+ const tris=idx.length/3;
+ const nrm=new Float64Array(tris*3);
+ for(let f=0;f<tris;f++){
+  const a=idx[f*3],b=idx[f*3+1],c=idx[f*3+2];
+  const ux=pos[b*3]-pos[a*3],uy=pos[b*3+1]-pos[a*3+1],uz=pos[b*3+2]-pos[a*3+2];
+  const vx=pos[c*3]-pos[a*3],vy=pos[c*3+1]-pos[a*3+1],vz=pos[c*3+2]-pos[a*3+2];
+  let nx=uy*vz-uz*vy,ny=uz*vx-ux*vz,nz=ux*vy-uy*vx;
+  const l=Math.hypot(nx,ny,nz);
+  if(l>0){nx/=l;ny/=l;nz/=l;}
+  nrm[f*3]=nx;nrm[f*3+1]=ny;nrm[f*3+2]=nz;
+ }
+ const geo=new Map<string,number[]>();
+ for(let f=0;f<tris;f++)for(let e=0;e<3;e++){
+  const v0=idx[f*3+e],v1=idx[f*3+(e+1)%3];
+  const k0=pk(v0),k1=pk(v1);
+  const k=k0<k1?k0+'|'+k1:k1+'|'+k0;
+  const l=geo.get(k);if(l)l.push(f);else geo.set(k,[f]);
+ }
+ const cosT=Math.cos(degrees*Math.PI/180);
+ const sharpGeo=new Set<string>();
+ for(const [k,fs] of geo){
+  if(fs.length<2)continue;
+  let minDot=1;
+  for(let i=0;i<fs.length;i++)for(let j=i+1;j<fs.length;j++){
+   const d=nrm[fs[i]*3]*nrm[fs[j]*3]+nrm[fs[i]*3+1]*nrm[fs[j]*3+1]+nrm[fs[i]*3+2]*nrm[fs[j]*3+2];
+   if(d<minDot)minDot=d;
+  }
+  if(minDot<=cosT)sharpGeo.add(k);
+ }
+ const seen=new Set<string>();const out:[number,number][]=[];
+ for(let f=0;f<tris;f++)for(let e=0;e<3;e++){
+  const v0=idx[f*3+e],v1=idx[f*3+(e+1)%3];
+  const k0=pk(v0),k1=pk(v1);
+  if(!sharpGeo.has(k0<k1?k0+'|'+k1:k1+'|'+k0))continue;
+  const a=v0<v1?v0:v1,b=v0<v1?v1:v0;
+  const k=`${a}_${b}`;
+  if(!seen.has(k)){seen.add(k);out.push([a,b]);}
+ }
+ return out;
+}
 /** Extracts the selected triangles into a standalone mesh with vertices compacted in order of first use. UVs travel; masks and explicit normals are dropped. */
 export function extractFaces(m:MeshData,faces:number[]):MeshData{
  if(!faces.length)throw new EditError('Select faces to separate.');

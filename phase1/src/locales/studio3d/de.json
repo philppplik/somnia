@@ -937,5 +937,7 @@
  "studio3d.hist.editRip": "Auswahl abtrennen",
  "cmd.studio3d.edit.separate": "Ausgewählte Faces als neues Objekt abspalten",
  "studio3d.edit.separate": "Als Objekt abspalten",
- "studio3d.hist.editSeparate": "Auswahl als Objekt abspalten"
+ "studio3d.hist.editSeparate": "Auswahl als Objekt abspalten",
+ "cmd.studio3d.edit.selectSharp": "Kanten auswählen, deren Flächen mindestens im angegebenen Winkel aufeinandertreffen",
+ "studio3d.edit.selSharp": "Scharfe Kanten"
 }

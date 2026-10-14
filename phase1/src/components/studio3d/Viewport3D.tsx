@@ -1221,6 +1221,7 @@ export default function Viewport3D(){
    editMove:(offset)=>{stage.editMove(offset);patchEdit();invalidate();},
    editRip:()=>{stage.editRip();patchEdit();invalidate();},
    editSeparate:()=>{stage.editSeparate();patchEdit();invalidate();},
+   editSelectSharp:degrees=>{stage.editSelectSharp(degrees);patchEdit();invalidate();},
    editExtrude:o=>{stage.editExtrude(o);afterEditOp();},
    editInset:a=>{stage.editInset(a);afterEditOp();},
    editBevel:w=>{stage.editBevel(w);afterEditOp();},

@@ -937,5 +937,7 @@
  "studio3d.hist.editRip": "Rip selection",
  "cmd.studio3d.edit.separate": "Split the selected faces out into a new object",
  "studio3d.edit.separate": "Separate to Object",
- "studio3d.hist.editSeparate": "Separate selection to object"
+ "studio3d.hist.editSeparate": "Separate selection to object",
+ "cmd.studio3d.edit.selectSharp": "Select edges whose faces meet at an angle of at least the given degrees",
+ "studio3d.edit.selSharp": "Sharp edges"
 }

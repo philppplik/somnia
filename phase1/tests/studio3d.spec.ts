@@ -1052,6 +1052,18 @@ test('mesh edit mode: separate splits selected faces into a new object, undo res
  await expect(page.getByRole('alert')).toContainText('empty mesh');
 });
 
+test('mesh edit mode: select sharp edges by dihedral angle',async({page})=>{
+ await blank(page);
+ const id=await insert(page,'cube',0);
+ expect(await run(page,'studio3d.edit.start',{id,mode:'edge'})).toBe(true);
+ expect(await run(page,'studio3d.edit.selectSharp',{degrees:30})).toBe(true);
+ let s=await session(page);expect(s.edit.edges).toBe(24);
+ expect(await run(page,'studio3d.edit.selectSharp',{degrees:91})).toBe(true);
+ s=await session(page);expect(s.edit.edges).toBe(0);
+ expect(await run(page,'studio3d.edit.selectSharp',{degrees:-1})).toBe(false);
+ await expect(page.getByRole('alert')).toContainText('between 0 and 180');
+});
+
 test('mesh edit mode: weld merges selected vertices at their centre, undo restores them',async({page})=>{
  await blank(page);
  const id=await insert(page,'cube',0);

@@ -937,5 +937,7 @@
  "studio3d.hist.editRip": "Rasgar selección",
  "cmd.studio3d.edit.separate": "Separar las caras seleccionadas en un nuevo objeto",
  "studio3d.edit.separate": "Separar a objeto",
- "studio3d.hist.editSeparate": "Separar selección a objeto"
+ "studio3d.hist.editSeparate": "Separar selección a objeto",
+ "cmd.studio3d.edit.selectSharp": "Seleccionar aristas cuyas caras se unen con al menos el ángulo indicado",
+ "studio3d.edit.selSharp": "Aristas afiladas"
 }

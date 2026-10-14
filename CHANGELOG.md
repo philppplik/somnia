@@ -1,4 +1,5 @@
 # Unreleased: 3D Studio P0
+- 3D Studio: edit mode selects sharp edges by dihedral angle, seeing duplicated shells as one surface (`studio3d.edit.selectSharp`).
 - 3D Studio: edit mode splits the selected faces out of the mesh into a new sibling object with the same transform and material (`studio3d.edit.separate`).
 - 3D Studio: edit mode rips the selected faces off the rest of the mesh by duplicating the shared vertices, undoing accidental welds (`studio3d.edit.rip`).
 - 3D Studio: edit mode moves the selected vertices by a typed x/y/z offset, keeping position-equal twins glued (`studio3d.edit.move`).

@@ -937,5 +937,7 @@
  "studio3d.hist.editRip": "Déchirer la sélection",
  "cmd.studio3d.edit.separate": "Séparer les faces sélectionnées en un nouvel objet",
  "studio3d.edit.separate": "Séparer en objet",
- "studio3d.hist.editSeparate": "Séparer la sélection en objet"
+ "studio3d.hist.editSeparate": "Séparer la sélection en objet",
+ "cmd.studio3d.edit.selectSharp": "Sélectionner les arêtes dont les faces se rencontrent selon au moins l’angle indiqué",
+ "studio3d.edit.selSharp": "Arêtes vives"
 }
