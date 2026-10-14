@@ -820,5 +820,12 @@
  "studio3d.hist.fatten_one": "{name} auf-/abtragen",
  "studio3d.hist.fatten_other": "{count} Objekte auf-/abtragen",
  "studio3d.mesh.fatten": "Auf-/abtragen",
- "studio3d.mesh.fattenAmount": "Betrag (negativ trägt ab)"
+ "studio3d.mesh.fattenAmount": "Betrag (negativ trägt ab)",
+ "studio3d.hist.bisect_one": "{name} zerteilen",
+ "studio3d.hist.bisect_other": "{count} Objekte zerteilen",
+ "cmd.studio3d.mesh.bisect": "3D-Mesh mit einer Ebene schneiden und beide Hälften behalten",
+ "studio3d.mesh.bisect": "Zerteilen",
+ "studio3d.mesh.bisectAxis": "Schnittachse",
+ "studio3d.mesh.bisectOffset": "Schnittversatz",
+ "studio3d.mesh.bisectFill": "Schnitt füllen"
 }

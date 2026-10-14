@@ -820,5 +820,12 @@
  "studio3d.hist.fatten_one": "Engordar/afinar {name}",
  "studio3d.hist.fatten_other": "Engordar/afinar {count} objetos",
  "studio3d.mesh.fatten": "Engordar/afinar",
- "studio3d.mesh.fattenAmount": "Quantidade (negativo afina)"
+ "studio3d.mesh.fattenAmount": "Quantidade (negativo afina)",
+ "studio3d.hist.bisect_one": "Bisseccionar {name}",
+ "studio3d.hist.bisect_other": "Bisseccionar {count} objetos",
+ "cmd.studio3d.mesh.bisect": "Cortar uma malha 3D com um plano e manter as duas metades",
+ "studio3d.mesh.bisect": "Bisseccionar",
+ "studio3d.mesh.bisectAxis": "Eixo de corte",
+ "studio3d.mesh.bisectOffset": "Deslocamento de corte",
+ "studio3d.mesh.bisectFill": "Preencher corte"
 }

@@ -696,6 +696,9 @@ function MeshTools(){
  const [soThick,setSoThick]=useState(0.1);
  const [rxTimes,setRxTimes]=useState(1);
  const [fatAmt,setFatAmt]=useState(0.1);
+ const [biAxis,setBiAxis]=useState<'x'|'y'|'z'>('x');
+ const [biOff,setBiOff]=useState(0);
+ const [biFill,setBiFill]=useState(true);
  const [rxFactor,setRxFactor]=useState(0.5);
  const [soOff,setSoOff]=useState(0);
  const set=s.marked.length?s.marked:s.selected!=null?[s.selected]:[];const ready=s.status==='ready'&&set.length>0;
@@ -731,6 +734,11 @@ function MeshTools(){
    <Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.mesh.relax',{iterations:rxTimes,factor:rxFactor})}>{t('studio3d.mesh.relax')}</Button></div>
   <div className="flex flex-wrap items-center gap-1"><NativeInput type="number" step={0.05} value={fatAmt} aria-label={t('studio3d.mesh.fattenAmount')} className="w-20" onChange={e=>setFatAmt(Math.min(1000,Math.max(-1000,Number(e.currentTarget.value)||0)))}/>
    <Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.mesh.fatten',{amount:fatAmt})}>{t('studio3d.mesh.fatten')}</Button></div>
+  <div className="flex flex-wrap items-center gap-1"><NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={biAxis} aria-label={t('studio3d.mesh.bisectAxis')} onChange={e=>setBiAxis(e.currentTarget.value as 'x'|'y'|'z')}>
+    {(['x','y','z'] as const).map(a=><option key={a} value={a}>{a.toUpperCase()}</option>)}</NativeSelect>
+   <NativeInput type="number" step={0.1} value={biOff} aria-label={t('studio3d.mesh.bisectOffset')} className="w-20" onChange={e=>setBiOff(Math.min(1000,Math.max(-1000,Number(e.currentTarget.value)||0)))}/>
+   <label className="flex items-center gap-1 text-xs text-ink-2"><NativeInput type="checkbox" checked={biFill} onChange={e=>setBiFill(e.currentTarget.checked)}/>{t('studio3d.mesh.bisectFill')}</label>
+   <Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.mesh.bisect',{axis:biAxis,offset:biOff,fill:biFill})}>{t('studio3d.mesh.bisect')}</Button></div>
  </fieldset>;
 }
 

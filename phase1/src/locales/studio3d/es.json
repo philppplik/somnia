@@ -820,5 +820,12 @@
  "studio3d.hist.fatten_one": "Engordar/adelgazar {name}",
  "studio3d.hist.fatten_other": "Engordar/adelgazar {count} objetos",
  "studio3d.mesh.fatten": "Engordar/adelgazar",
- "studio3d.mesh.fattenAmount": "Cantidad (negativo adelgaza)"
+ "studio3d.mesh.fattenAmount": "Cantidad (negativo adelgaza)",
+ "studio3d.hist.bisect_one": "Bisectar {name}",
+ "studio3d.hist.bisect_other": "Bisectar {count} objetos",
+ "cmd.studio3d.mesh.bisect": "Cortar una malla 3D con un plano y conservar ambas mitades",
+ "studio3d.mesh.bisect": "Bisectar",
+ "studio3d.mesh.bisectAxis": "Eje de corte",
+ "studio3d.mesh.bisectOffset": "Desplazamiento de corte",
+ "studio3d.mesh.bisectFill": "Rellenar corte"
 }

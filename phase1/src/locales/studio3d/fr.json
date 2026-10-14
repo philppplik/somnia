@@ -820,5 +820,12 @@
  "studio3d.hist.fatten_one": "Gonfler/amincir {name}",
  "studio3d.hist.fatten_other": "Gonfler/amincir {count} objets",
  "studio3d.mesh.fatten": "Gonfler/amincir",
- "studio3d.mesh.fattenAmount": "Quantité (négatif amincit)"
+ "studio3d.mesh.fattenAmount": "Quantité (négatif amincit)",
+ "studio3d.hist.bisect_one": "Bissecter {name}",
+ "studio3d.hist.bisect_other": "Bissecter {count} objets",
+ "cmd.studio3d.mesh.bisect": "Couper un maillage 3D avec un plan et conserver les deux moitiés",
+ "studio3d.mesh.bisect": "Bissecter",
+ "studio3d.mesh.bisectAxis": "Axe de coupe",
+ "studio3d.mesh.bisectOffset": "Décalage de coupe",
+ "studio3d.mesh.bisectFill": "Remplir la coupe"
 }

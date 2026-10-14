@@ -1593,6 +1593,16 @@ test('3D studio mesh fatten: a sphere grows along its normals and undo restores 
  await expect.poll(span).toBe(before);
 });
 
+test('3D studio mesh bisect: one cube becomes two halves and undo restores it',async({page})=>{
+ await blank(page);
+ await insert(page,'cube',0);
+ expect((await session(page)).outline.length).toBe(1);
+ expect(await run(page,'studio3d.mesh.bisect',{axis:'x',offset:0,fill:true})).toBe(true);
+ await expect.poll(async()=>(await session(page)).outline.length).toBe(2);
+ expect(await run(page,'studio3d.undo',{})).toBe(true);
+ await expect.poll(async()=>(await session(page)).outline.length).toBe(1);
+});
+
 test('3D studio mesh simplify: triangle count drops and undo restores it',async({page})=>{
  await blank(page);
  await insert(page,'sphere',0);

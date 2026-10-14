@@ -820,5 +820,12 @@
  "studio3d.hist.fatten_one": "Shrink/fatten {name}",
  "studio3d.hist.fatten_other": "Shrink/fatten {count} objects",
  "studio3d.mesh.fatten": "Shrink/fatten",
- "studio3d.mesh.fattenAmount": "Amount (negative shrinks)"
+ "studio3d.mesh.fattenAmount": "Amount (negative shrinks)",
+ "studio3d.hist.bisect_one": "Bisect {name}",
+ "studio3d.hist.bisect_other": "Bisect {count} objects",
+ "cmd.studio3d.mesh.bisect": "Cut a 3D mesh with a plane and keep both halves",
+ "studio3d.mesh.bisect": "Bisect",
+ "studio3d.mesh.bisectAxis": "Cut axis",
+ "studio3d.mesh.bisectOffset": "Cut offset",
+ "studio3d.mesh.bisectFill": "Fill cut"
 }

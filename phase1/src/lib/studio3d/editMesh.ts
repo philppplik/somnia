@@ -921,3 +921,108 @@ export function fattenMesh(m:MeshData,amount:number):MeshData{
  const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
  check(out);return out;
 }
+
+/** Caps every open border loop whose vertices all sit on one plane coordinate (used by the bisect fill). Loops that fail to close are left open. Returns the number of caps added. */
+const capPlaneBorders=(m:MeshData,ai:number,at:number):number=>{
+ const nv=m.positions.length/3,nt=m.index.length/3;
+ const pk:string[]=[];
+ for(let v=0;v<nv;v++)pk.push(`${Math.round(m.positions[v*3]*1e6)},${Math.round(m.positions[v*3+1]*1e6)},${Math.round(m.positions[v*3+2]*1e6)}`);
+ const onPlane=(v:number)=>m.positions[v*3+ai]===at;
+ const use=new Map<string,{a:number;b:number;n:number}>();
+ for(let f=0;f<nt;f++)for(let e=0;e<3;e++){
+  const a=m.index[f*3+e],b=m.index[f*3+(e+1)%3];
+  if(!onPlane(a)||!onPlane(b))continue;
+  const ka=pk[a],kb=pk[b];if(ka===kb)continue;
+  const k=ka<kb?`${ka}|${kb}`:`${kb}|${ka}`;
+  const u=use.get(k);if(u)u.n++;else use.set(k,{a,b,n:1});
+ }
+ const borders=[...use.values()].filter(u=>u.n===1);
+ if(!borders.length)return 0;
+ const byStart=new Map<string,number[]>();
+ borders.forEach((u,i)=>{const l=byStart.get(pk[u.a]);if(l)l.push(i);else byStart.set(pk[u.a],[i]);});
+ const used=new Array<boolean>(borders.length).fill(false);
+ let caps=0;
+ for(let i=0;i<borders.length;i++){
+  if(used[i])continue;
+  const loop:{a:number;b:number}[]=[];
+  let cur=i,closed=false;
+  while(true){
+   used[cur]=true;loop.push(borders[cur]);
+   const end=pk[borders[cur].b];
+   if(end===pk[borders[i].a]){closed=true;break;}
+   const next=(byStart.get(end)||[]).find(x=>!used[x]);
+   if(next===undefined)break;
+   cur=next;
+  }
+  if(!closed||loop.length<3)continue; // tangled or open cut: leave the border unfilled
+  let cx=0,cy=0,cz=0,cu=0,cv=0;
+  for(const e of loop){cx+=m.positions[e.a*3];cy+=m.positions[e.a*3+1];cz+=m.positions[e.a*3+2];if(m.uvs){cu+=m.uvs[e.a*2];cv+=m.uvs[e.a*2+1];}}
+  const n=loop.length;
+  const c=m.positions.length/3;
+  m.positions.push(cx/n,cy/n,cz/n);
+  if(m.uvs)m.uvs.push(cu/n,cv/n);
+  // The surface traverses each border edge a->b, so the cap traverses it b->a.
+  for(const e of loop)m.index.push(e.b,e.a,c);
+  caps++;
+ }
+ return caps;
+};
+/** Cuts the mesh with an axis-aligned plane at the given offset and returns both halves (negative side first). Crossing faces are split along the plane; vertices exactly on the plane land in both halves. With fill on, each cut face is capped. UVs are interpolated onto the cut, sculpt masks are dropped (topology changes), explicit normals are dropped (rebuilt smooth on the stage). */
+export function bisectMesh(m:MeshData,axis:MirrorAxis,offset:number,fill:boolean):{neg:MeshData;pos:MeshData}{
+ check(m);
+ if(!Number.isFinite(offset)||Math.abs(offset)>1e9)throw new EditError('The bisect offset must be a number.');
+ const ai=axis==='x'?0:axis==='y'?1:2;
+ const nv=m.positions.length/3;
+ let mn=Infinity,mx=-Infinity;
+ for(let v=0;v<nv;v++){const d=m.positions[v*3+ai];if(d<mn)mn=d;if(d>mx)mx=d;}
+ if(offset<=mn||offset>=mx)throw new EditError('The plane does not cut through the mesh.');
+ const EPS=1e-9;
+ const sideOf=(v:number)=>{const d=m.positions[v*3+ai]-offset;return d>EPS?1:d<-EPS?-1:0;};
+ const clip=(target:1|-1):MeshData=>{
+  const positions:number[]=[];const uvs:number[]|undefined=m.uvs?[]:undefined;
+  const remap=new Map<number,number>();
+  const keep=(v:number)=>{
+   let n=remap.get(v);
+   if(n===undefined){
+    n=positions.length/3;remap.set(v,n);
+    positions.push(m.positions[v*3],m.positions[v*3+1],m.positions[v*3+2]);
+    if(uvs)uvs.push(m.uvs![v*2],m.uvs![v*2+1]);
+    if(sideOf(v)===0)positions[n*3+ai]=offset;
+   }
+   return n;
+  };
+  const cutCache=new Map<string,number>();
+  const cut=(x:number,y:number)=>{
+   const k=x<y?`${x}_${y}`:`${y}_${x}`;let n=cutCache.get(k);
+   if(n!==undefined)return n;
+   const dx=m.positions[x*3+ai]-offset,dy=m.positions[y*3+ai]-offset;
+   const t=dx/(dx-dy);
+   n=positions.length/3;cutCache.set(k,n);
+   positions.push(
+    m.positions[x*3]+(m.positions[y*3]-m.positions[x*3])*t,
+    m.positions[x*3+1]+(m.positions[y*3+1]-m.positions[x*3+1])*t,
+    m.positions[x*3+2]+(m.positions[y*3+2]-m.positions[x*3+2])*t);
+   if(uvs)uvs.push(m.uvs![x*2]+(m.uvs![y*2]-m.uvs![x*2])*t,m.uvs![x*2+1]+(m.uvs![y*2+1]-m.uvs![x*2+1])*t);
+   positions[n*3+ai]=offset;return n;
+  };
+  const index:number[]=[];
+  for(let f=0;f<m.index.length/3;f++){
+   const t=[m.index[f*3],m.index[f*3+1],m.index[f*3+2]];
+   const s=t.map(sideOf);
+   if(s.every(x=>x===-target))continue; // fully on the other side
+   if(s.every(x=>x===target||x===0)){index.push(keep(t[0]),keep(t[1]),keep(t[2]));continue;}
+   const poly:number[]=[];
+   for(let e=0;e<3;e++){
+    const a=t[e],b=t[(e+1)%3],sa=s[e],sb=s[(e+1)%3];
+    if(sa===target||sa===0)poly.push(keep(a));
+    if((sa===target&&sb===-target)||(sa===-target&&sb===target))poly.push(cut(a,b));
+   }
+   if(poly.length===3)index.push(poly[0],poly[1],poly[2]);
+   else if(poly.length===4)index.push(poly[0],poly[1],poly[2],poly[0],poly[2],poly[3]);
+  }
+  const half:MeshData=uvs?{positions,index,uvs}:{positions,index};
+  if(fill)capPlaneBorders(half,ai,offset);
+  check(half);return half;
+ };
+ return{neg:clip(-1),pos:clip(1)};
+}

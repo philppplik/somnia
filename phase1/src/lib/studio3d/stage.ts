@@ -9,7 +9,7 @@ import type {NodeExtra} from './document';
 import {EASES,isEase,bakeTrack,type Ease} from './ease';
 import {buildExtras,type ClipMeta,type MetaTrack} from './clipMeta';
 import {groupRefs,keyIndices,copyTrackKeys,shiftTrackKeys,pasteTrackKeys,type KeyRef,type KeyData,type TrackData} from './keyEdit';
-import {extrudeFaces,insetFaces,bevelVertices,loopCut,bevelEdges,slideEdges,mirrorCombine,symmetrizeMesh,subdivideLoop,cleanupMesh,flipMesh,outsideMesh,smoothMesh,separateMesh,solidifyMesh,fillHolesMesh,relaxMesh,fattenMesh,EditError,MAX_EDIT_VERTICES,MAX_EDIT_TRIANGLES,type MeshData,type CleanupResult,type NormalsOp} from './editMesh';
+import {extrudeFaces,insetFaces,bevelVertices,loopCut,bevelEdges,slideEdges,mirrorCombine,symmetrizeMesh,subdivideLoop,cleanupMesh,flipMesh,outsideMesh,smoothMesh,separateMesh,solidifyMesh,fillHolesMesh,relaxMesh,fattenMesh,bisectMesh,EditError,MAX_EDIT_VERTICES,MAX_EDIT_TRIANGLES,type MeshData,type CleanupResult,type NormalsOp} from './editMesh';
 import {sculptDab,paintMask,SculptError,type SculptOpts} from './sculpt';
 import {KEY_PATHS,KEY_STRIDE,ClipError,MAX_CLIPS,MAX_KEYS_PER_TRACK,DEFAULT_CLIP_SECONDS,insertKey,removeKey as removeKeyData,findKey,isPlainTrack,trackName,parseTrackName,checkKeyTime,checkDuration,checkClipName,lastKeyTime,type KeyPath} from './clips';
 import {mergeTransform,DEFAULT_TRANSFORM,UvError,type TextureTransform} from './uv';
@@ -1979,6 +1979,45 @@ export class Stage{
   set('after');
   this.push({label:{key:'studio3d.hist.fatten',params:{count:list.length,name:list[0].mesh.name}},undo:()=>{set('before');owned=false;},redo:()=>{set('after');owned=true;},release:()=>{for(const l of list)(owned?l.before.g:l.after).dispose();}});
   return list.length;
+ }
+ /** Cuts meshes with an axis-aligned plane at the given offset and keeps both halves: the original mesh gets the negative side, a sibling clone gets the positive side. With fill on, each cut face is capped. One undo step for the whole set. */
+ bisect(axis:MirrorAxis,offset:number,fill:boolean,ids:number[]):number{
+  if(this.editId!=null)throw new StageError('Leave edit mode before bisecting.');
+  const objs=this.topLevel(this.needMany(ids,1));
+  for(const o of objs)if(!(o as THREE.Mesh).isMesh)throw new StageError(`${o.name} is not a mesh. Bisect works on meshes.`);
+  type Work={mesh:THREE.Mesh;parent:THREE.Object3D;before:{g:THREE.BufferGeometry;d:unknown;s:[number,number][]};negG:THREE.BufferGeometry;negSeams:[number,number][];pos:THREE.Mesh;at:number};
+  const work:Work[]=[];
+  for(const o of objs as THREE.Mesh[]){
+   const data=this.meshDataOf(o);
+   let r:{neg:MeshData;pos:MeshData};
+   try{r=bisectMesh(data,axis,offset,fill);}catch(e){throw e instanceof EditError?new StageError(e.message):e;}
+   const parent=o.parent!;const at=parent.children.indexOf(o);
+   const seams0=this.seamsOf(o);
+   let negSeams:[number,number][]=[],posSeams:[number,number][]=[];
+   if(seams0.length){try{negSeams=remapSeams(data,seams0,r.neg);}catch{negSeams=[];}try{posSeams=remapSeams(data,seams0,r.pos);}catch{posSeams=[];}}
+   const negG=this.buildGeometry(r.neg);
+   const posMesh=new THREE.Mesh(this.buildGeometry(r.pos),(o.material as THREE.Material).clone());
+   posMesh.name=this.uniqueName(`${o.name}.2`);
+   posMesh.position.copy(o.position);posMesh.quaternion.copy(o.quaternion);posMesh.scale.copy(o.scale);posMesh.visible=o.visible;
+   this.setSeams(posMesh,posSeams);
+   work.push({mesh:o,parent,before:{g:o.geometry,d:o.userData.somniaPrimitive,s:seams0},negG,negSeams,pos:posMesh,at:at+1});
+  }
+  let owned=true;
+  const set=(k:'before'|'after')=>{
+   for(const w of work){
+    if(k==='after'){
+     w.mesh.geometry=w.negG;delete w.mesh.userData.somniaPrimitive;this.setSeams(w.mesh,w.negSeams);
+     this.attach0(w.pos,w.parent,w.at);
+    }else{
+     w.parent.remove(w.pos);
+     w.mesh.geometry=w.before.g;if(w.before.d!==undefined)w.mesh.userData.somniaPrimitive=w.before.d;this.setSeams(w.mesh,w.before.s);
+    }
+   }
+  };
+  set('after');
+  this.push({label:{key:'studio3d.hist.bisect',params:{count:work.length,name:work[0].mesh.name}},undo:()=>{set('before');owned=false;},redo:()=>{set('after');owned=true;},
+   release:()=>{for(const w of work){if(owned)w.before.g.dispose();else{w.negG.dispose();disposeObject(w.pos);}}}});
+  return work.length*2;
  }
  /** Shows or hides an object. A hidden parent hides its whole subtree. One undo step. */
  setHidden(id:number,hidden:boolean){
