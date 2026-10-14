@@ -131,6 +131,8 @@ export default function Viewport3D(){
   };
   const select=(id:number|null)=>{patchStudio3D({selected:id!=null&&stage.find(id)?id:null,marked:[]});sync();};
   const applySet=(marked:number[],selected:number|null)=>{const live=marked.filter(m=>stage.find(m));patchStudio3D({marked:live,selected:selected!=null&&stage.find(selected)?selected:null});sync();};
+  const patchEdit=()=>{const ed=getStudio3DState().edit;if(!ed)return;const sel=stage.editSelection();patchStudio3D({edit:{...ed,verts:sel.verts.length,edges:sel.edges.length,faces:sel.faces.length}});};
+  const afterEditOp=()=>{patchEdit();const ed=getStudio3DState().edit;if(ed!=null)patchStudio3D({selectedInfo:stage.info(ed.id)});sync();invalidate();};
   let mixer:THREE.AnimationMixer|null=null;let mixerRev=-1;let animRaf=0;let lastTick=0;let lastPublish=0;let state_time=0;
   function clipInfos():ClipInfo[]{return stage.clips.map((c,i)=>({name:c.name||`Clip ${i+1}`,duration:c.duration}));}
   function stopAnim(){if(animRaf)cancelAnimationFrame(animRaf);animRaf=0;}
@@ -788,6 +790,18 @@ export default function Viewport3D(){
     const views=getStudio3DState().views;if(!views.some(v=>v.name===name))throw Object.assign(new Error(`There is no saved view named ${name}.`),{expected:true});
     patchStudio3D({views:views.filter(v=>v.name!==name)});},
    setCamera:(id,p)=>stage.setCamera(id,p),
+   editStart:(id,mode)=>{stage.editStart(id);patchStudio3D({edit:{id,mode:mode??'face',verts:0,edges:0,faces:0},selected:id,marked:[],selectedInfo:stage.info(id)});invalidate();},
+   editEnd:()=>{stage.editEnd();patchStudio3D({edit:null});invalidate();},
+   editMode:mode=>{const ed=getStudio3DState().edit;if(ed)patchStudio3D({edit:{...ed,mode}});},
+   editSelect:(kind,ids,toggle)=>{stage.editSelect(kind,ids,toggle);patchEdit();invalidate();},
+   editExtrude:o=>{stage.editExtrude(o);afterEditOp();},
+   editInset:a=>{stage.editInset(a);afterEditOp();},
+   editBevel:w=>{stage.editBevel(w);afterEditOp();},
+   editLoopCut:()=>{stage.editLoopCut();afterEditOp();},
+   sculptBrush:patch=>{patchStudio3D({sculpt:{...getStudio3DState().sculpt,...patch}});},
+   sculptBegin:id=>stage.sculptBegin(id),
+   sculptDab:(id,center,delta)=>{const b=getStudio3DState().sculpt;stage.sculptDabAt(id,center,{brush:b.brush,radius:b.radius,strength:b.strength,falloff:b.falloff,symmetry:b.symmetry,delta});invalidate();},
+   sculptEnd:()=>{stage.sculptEnd();sync();invalidate();},
    group:ids=>{const g=stage.group(ids);select(g.id);return g.id;},
    ungroup:id=>{const g=stage.find(id);const first=g?.children[0]?.id??null;stage.ungroup(id);if(first!=null)select(first);else sync();},
    arrayDuplicate:(ids,spec)=>{const copies=stage.arrayDuplicate(ids,spec);applySet(copies.map(c=>c.id),copies.length?copies[copies.length-1].id:null);return copies.map(c=>c.id);},
@@ -817,6 +831,7 @@ export default function Viewport3D(){
   // Capture phase, so orbit never starts when shift is held: shift+click toggles, shift+drag draws a marquee.
   // Weight painting: with the brush on and a preview bone set, dragging on the mesh paints instead of orbiting.
   let painting=false;
+  let sculpting:{id:number;last:THREE.Vector3}|null=null;
   const paintHit=(e:PointerEvent):boolean=>{
    const rect=renderer.domElement.getBoundingClientRect();
    ray.setFromCamera(new THREE.Vector2(((e.clientX-rect.left)/rect.width)*2-1,-(((e.clientY-rect.top)/rect.height)*2-1)),camera);
@@ -834,15 +849,48 @@ export default function Viewport3D(){
    }
    if(e.shiftKey&&e.button===0&&gizmo.axis===null){shiftDrag=true;controls.enabled=false;}
   };
-  const onDown=(e:PointerEvent)=>{down=gizmo.axis!==null?null:{x:e.clientX,y:e.clientY};};
+  const sculptRay=(e:PointerEvent):THREE.Intersection|null=>{
+   const rect=renderer.domElement.getBoundingClientRect();
+   ray.setFromCamera(new THREE.Vector2(((e.clientX-rect.left)/rect.width)*2-1,-(((e.clientY-rect.top)/rect.height)*2-1)),camera);
+   return ray.intersectObject(holder,true).find(h=>(h.object as THREE.Mesh).isMesh&&!(h.object as THREE.SkinnedMesh).isSkinnedMesh)??null;
+  };
+  const onDown=(e:PointerEvent)=>{
+   const st=getStudio3DState();
+   if(st.sculpt.on){
+    const hit=sculptRay(e);
+    if(hit)try{
+     stage.sculptBegin(hit.object.id);
+     sculpting={id:hit.object.id,last:hit.point.clone()};
+     controls.enabled=false;gizmo.enabled=false;
+     const mesh=hit.object as THREE.Mesh;const lp=mesh.worldToLocal(hit.point.clone());
+     const b=getStudio3DState().sculpt;
+     stage.sculptDabAt(mesh.id,[lp.x,lp.y,lp.z],{brush:b.brush,radius:b.radius,strength:b.strength,falloff:b.falloff,symmetry:b.symmetry});
+     invalidate();
+    }catch{sculpting=null;}
+    down=null;return;
+   }
+   down=gizmo.axis!==null?null:{x:e.clientX,y:e.clientY};
+  };
   const onMove=(e:PointerEvent)=>{
    if(painting){paintHit(e);return;}
+   if(sculpting){
+    const hit=sculptRay(e);
+    if(hit&&hit.object.id===sculpting.id){
+     const mesh=hit.object as THREE.Mesh;const lp=mesh.worldToLocal(hit.point.clone());
+     const b=getStudio3DState().sculpt;const lastL=mesh.worldToLocal(sculpting.last.clone());
+     const d:[number,number,number]|undefined=b.brush==='grab'?[lp.x-lastL.x,lp.y-lastL.y,lp.z-lastL.z]:undefined;
+     stage.sculptDabAt(mesh.id,[lp.x,lp.y,lp.z],{brush:b.brush,radius:b.radius,strength:b.strength,falloff:b.falloff,symmetry:b.symmetry,delta:d});
+     sculpting.last.copy(hit.point);invalidate();
+    }
+    return;
+   }
    if(!shiftDrag||!down||Math.hypot(e.clientX-down.x,e.clientY-down.y)<=4)return;
    if(!marquee){marquee=document.createElement('div');marquee.style.cssText='position:fixed;pointer-events:none;border:1px dashed var(--focus-ring);background:var(--accent-soft);z-index:50';marquee.setAttribute('aria-hidden','true');document.body.appendChild(marquee);}
    const r=marqueeRect(down,{x:e.clientX,y:e.clientY});marquee.style.left=r.x0+'px';marquee.style.top=r.y0+'px';marquee.style.width=(r.x1-r.x0)+'px';marquee.style.height=(r.y1-r.y0)+'px';
   };
   const onUp=(e:PointerEvent)=>{
    if(painting){painting=false;controls.enabled=true;gizmo.enabled=true;const sel=getStudio3DState().selected;if(sel!=null)stage.skinPaintEnd(sel);down=null;return;}
+   if(sculpting){stage.sculptEnd();sculpting=null;controls.enabled=true;gizmo.enabled=true;sync();down=null;return;}
    const wasShift=shiftDrag;endMarquee();
    if(justDragged){justDragged=false;down=null;return;}
    if(!down){return;}
@@ -858,6 +906,23 @@ export default function Viewport3D(){
    ray.setFromCamera(new THREE.Vector2(((e.clientX-rect.left)/rect.width)*2-1,-(((e.clientY-rect.top)/rect.height)*2-1)),camera);
    const hit=ray.intersectObject(holder,true).find(h=>(h.object as THREE.Mesh).isMesh);
    const target=hit?.object??null;
+   const ed=getStudio3DState().edit;
+   if(ed&&hit&&target&&target.id===ed.id){
+    const mesh=target as THREE.Mesh;const lp=mesh.worldToLocal(hit.point.clone());
+    const pos=mesh.geometry.getAttribute('position');const fi=hit.faceIndex??-1;
+    if(fi>=0){
+     const idx=mesh.geometry.getIndex();const a=idx?idx.getX(fi*3):fi*3,b=idx?idx.getX(fi*3+1):fi*3+1,c=idx?idx.getX(fi*3+2):fi*3+2;
+     const at=(v:number)=>new THREE.Vector3().fromBufferAttribute(pos,v);
+     if(ed.mode==='face')stage.editSelect('face',[fi],e.shiftKey);
+     else if(ed.mode==='vertex'){const v=[[a,at(a).distanceTo(lp)],[b,at(b).distanceTo(lp)],[c,at(c).distanceTo(lp)]].sort((x,y)=>(x[1] as number)-(y[1] as number))[0][0] as number;stage.editSelect('vertex',[v],e.shiftKey);}
+     else{
+      const cand=([[a,b],[b,c],[c,a]] as [number,number][]).map(pr=>({e:pr,d:at(pr[0]).add(at(pr[1])).multiplyScalar(0.5).distanceTo(lp)})).sort((x,y)=>x.d-y.d)[0].e;
+      stage.editSelect('edge',[cand],e.shiftKey);
+     }
+     patchEdit();invalidate();
+    }
+    down=null;return;
+   }
    if(wasShift){if(target){const st=getStudio3DState();const t=toggleSelection(st.marked,st.selected,target.id);applySet(t.marked,t.selected);}return;}
    if(target){select(target.id);return;}
    // No mesh under the cursor: a visible skeleton lets clicks near a joint select that bone.

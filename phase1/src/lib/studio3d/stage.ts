@@ -6,6 +6,8 @@ import type {NodeExtra} from './document';
 import {EASES,isEase,bakeTrack,type Ease} from './ease';
 import {buildExtras,type ClipMeta,type MetaTrack} from './clipMeta';
 import {groupRefs,keyIndices,copyTrackKeys,shiftTrackKeys,pasteTrackKeys,type KeyRef,type KeyData,type TrackData} from './keyEdit';
+import {extrudeFaces,insetFaces,bevelVertices,loopCut,EditError,MAX_EDIT_VERTICES,MAX_EDIT_TRIANGLES,type MeshData} from './editMesh';
+import {sculptDab,SculptError,type SculptOpts} from './sculpt';
 import {KEY_PATHS,KEY_STRIDE,ClipError,MAX_CLIPS,MAX_KEYS_PER_TRACK,DEFAULT_CLIP_SECONDS,insertKey,removeKey as removeKeyData,findKey,isPlainTrack,trackName,parseTrackName,checkKeyTime,checkDuration,checkClipName,lastKeyTime,type KeyPath} from './clips';
 import {mergeTransform,DEFAULT_TRANSFORM,UvError,type TextureTransform} from './uv';
 import {textureBytes} from './validate';
@@ -467,6 +469,98 @@ export class Stage{
   let owned=true;
   this.push({label:`Duplicate ${items.length} objects`,undo:()=>{for(const i of items)i.parent.remove(i.o);owned=false;},redo:()=>{for(const i of items)this.attach0(i.o,i.parent,i.at);owned=true;},release:()=>{if(!owned)for(const i of items)disposeObject(i.o);}});
   return items.map(i=>i.o);
+ }
+ /** Edit mode: one mesh edited at a time, selection lives here so undo of ops stays coherent. */
+ private editId:number|null=null;
+ private editSel={verts:new Set<number>(),edges:new Map<string,[number,number]>(),faces:new Set<number>()};
+ private sculptShot:{id:number;positions:Float32Array}|null=null;
+ private editableMesh(id:number):THREE.Mesh{
+  const o=this.need(id);const m=o as THREE.Mesh;
+  if(!m.isMesh)throw new StageError(`${o.name} is not a mesh.`);
+  if((m as THREE.SkinnedMesh).isSkinnedMesh)throw new StageError(`${o.name} is skinned: mesh editing would break the skin. Unbind it first.`);
+  const verts=(m.geometry.getAttribute('position')?.count??0);
+  if(verts>MAX_EDIT_VERTICES||m.geometry.getIndex()&&m.geometry.getIndex()!.count/3>MAX_EDIT_TRIANGLES)throw new StageError(`${o.name} is too large to edit (${verts.toLocaleString('en-US')} vertices).`);
+  return m;
+ }
+ private meshDataOf(m:THREE.Mesh):MeshData{
+  const pos=m.geometry.getAttribute('position');
+  if(!pos||!pos.count)throw new StageError(`${m.name} has no vertices.`);
+  const positions=Array.from((pos.array as ArrayLike<number>)).slice(0,pos.count*3) as number[];
+  const idx=m.geometry.getIndex();
+  const index=idx?Array.from(idx.array as ArrayLike<number>) as number[]:Array.from({length:pos.count},(_,i)=>i);
+  return{positions,index};
+ }
+ private applyMeshData(m:THREE.Mesh,data:MeshData,label:string){
+  const before=m.geometry,beforeData=m.userData.somniaPrimitive;
+  const make=(d:MeshData)=>{const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(d.positions,3));g.setIndex(d.index);g.computeVertexNormals();return g;};
+  const after=make(data);
+  let owned=true;
+  const set=(g:THREE.BufferGeometry,param:unknown)=>{m.geometry=g;if(param===undefined)delete m.userData.somniaPrimitive;else m.userData.somniaPrimitive=param;};
+  set(after,undefined);
+  this.push({label,undo:()=>{set(before,beforeData);owned=false;},redo:()=>{set(after,undefined);owned=true;},release:()=>{(owned?before:after).dispose();}});
+ }
+ /** Enters mesh edit mode on a mesh. Returns the vertex and triangle counts. */
+ editStart(id:number):{vertices:number;triangles:number}{
+  const m=this.editableMesh(id);this.editId=id;this.editSel={verts:new Set(),edges:new Map(),faces:new Set()};
+  return{vertices:m.geometry.getAttribute('position').count,triangles:m.geometry.getIndex()?m.geometry.getIndex()!.count/3:m.geometry.getAttribute('position').count/3};
+ }
+ editEnd(){this.editId=null;this.editSel={verts:new Set(),edges:new Map(),faces:new Set()};}
+ private editMesh():THREE.Mesh{
+  if(this.editId==null)throw new StageError('No mesh is being edited. Choose Edit mesh first.');
+  return this.editableMesh(this.editId);
+ }
+ editSelect(kind:'vertex'|'edge'|'face',ids:(number|[number,number])[],toggle=false){
+  const m=this.editMesh();const verts=m.geometry.getAttribute('position').count,idx=m.geometry.getIndex();const tris=(idx?idx.count:verts)/3;
+  if(kind==='vertex')for(const id of ids as number[]){if(!Number.isInteger(id)||id<0||id>=verts)throw new StageError(`Vertex ${id} does not exist.`);
+   if(toggle&&this.editSel.verts.has(id))this.editSel.verts.delete(id);else this.editSel.verts.add(id);}
+  if(kind==='face')for(const id of ids as number[]){if(!Number.isInteger(id)||id<0||id>=tris)throw new StageError(`Face ${id} does not exist.`);
+   if(toggle&&this.editSel.faces.has(id))this.editSel.faces.delete(id);else this.editSel.faces.add(id);}
+  if(kind==='edge')for(const e of ids as [number,number][]){
+   if(!Array.isArray(e)||e.length!==2||!e.every(x=>Number.isInteger(x)&&x>=0&&x<verts)||e[0]===e[1])throw new StageError('A selected edge does not exist.');
+   const k=e[0]<e[1]?`${e[0]}_${e[1]}`:`${e[1]}_${e[0]}`;
+   if(toggle&&this.editSel.edges.has(k))this.editSel.edges.delete(k);else this.editSel.edges.set(k,[Math.min(e[0],e[1]),Math.max(e[0],e[1])]);}
+ }
+ editSelection():{verts:number[];edges:[number,number][];faces:number[]}{
+  return{verts:[...this.editSel.verts].sort((a,b)=>a-b),edges:[...this.editSel.edges.values()],faces:[...this.editSel.faces].sort((a,b)=>a-b)};
+ }
+ private editOp(label:string,run:(m:MeshData)=>MeshData){
+  const mesh=this.editMesh();
+  let out:MeshData;
+  try{out=run(this.meshDataOf(mesh));}catch(e){throw e instanceof EditError?new StageError(e.message):e;}
+  this.applyMeshData(mesh,out,label);
+ }
+ editExtrude(offset:number){this.editOp('Extrude faces',m=>extrudeFaces(m,[...this.editSel.faces],offset));}
+ editInset(amount:number){this.editOp('Inset faces',m=>insetFaces(m,[...this.editSel.faces],amount));}
+ editBevel(width:number){this.editOp('Bevel vertices',m=>bevelVertices(m,[...this.editSel.verts],width));}
+ editLoopCut(){
+  const edges=[...this.editSel.edges.values()];
+  if(edges.length!==1)throw new StageError('Select exactly one edge for a loop cut.');
+  this.editOp('Loop cut',m=>loopCut(m,edges[0]));
+ }
+ /** Starts a sculpt stroke: the positions snapshot becomes one undo step when the stroke ends. */
+ sculptBegin(id:number){
+  const m=this.editableMesh(id);
+  if(this.sculptShot)this.sculptEnd();
+  this.sculptShot={id,positions:new Float32Array((m.geometry.getAttribute('position').array as ArrayLike<number>) as number[])};
+ }
+ sculptDabAt(id:number,center:[number,number,number],opts:SculptOpts):number{
+  const m=this.editableMesh(id);
+  if(!this.sculptShot||this.sculptShot.id!==id)this.sculptBegin(id);
+  let out:MeshData;
+  try{out=sculptDab(this.meshDataOf(m),center,opts);}catch(e){throw e instanceof SculptError?new StageError(e.message):e;}
+  const g=m.geometry;const pos=g.getAttribute('position') as THREE.BufferAttribute;
+  (pos.array as Float32Array).set(out.positions);pos.needsUpdate=true;g.computeVertexNormals();
+  return out.positions.length/3;
+ }
+ sculptEnd(){
+  const shot=this.sculptShot;this.sculptShot=null;if(!shot)return;
+  const m=this.find(shot.id) as THREE.Mesh|undefined;if(!m||!(m as THREE.Mesh).isMesh)return;
+  const before=shot.positions;const pos=m.geometry.getAttribute('position') as THREE.BufferAttribute;
+  const after=new Float32Array(pos.array as ArrayLike<number> as number[]);
+  let changed=false;for(let i=0;i<after.length;i++)if(after[i]!==before[i]){changed=true;break;}
+  if(!changed)return;
+  const set=(arr:Float32Array)=>{(m.geometry.getAttribute('position') as THREE.BufferAttribute).set(arr);(m.geometry.getAttribute('position') as THREE.BufferAttribute).needsUpdate=true;m.geometry.computeVertexNormals();};
+  this.push({label:`Sculpt ${m.name}`,undo:()=>set(before),redo:()=>set(after)});
  }
  /** Changes the parameters of a primitive (radius, size, segments). The mesh keeps its place and material; one undo step. */
  primitiveOf(o:THREE.Object3D):PrimitiveData|null{return (o as THREE.Mesh).isMesh?readPrimitive(o.userData?.somniaPrimitive):null;}

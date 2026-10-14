@@ -106,7 +106,7 @@ test('3D studio refuses a file that is not glTF with a readable error',async({pa
 /** Helpers for the scene tests below. They drive the real app through its command layer (dev build) and read the studio session. */
 type P=import('@playwright/test').Page;
 const run=(page:P,id:string,params:unknown={})=>page.evaluate(async([i,p])=>{const m=await import('/src/lib/commands.ts');return (await m.executeCommand(i as string,p)) as unknown;},[id,params] as const);
-const session=(page:P)=>page.evaluate(async()=>{const m=await import('/src/lib/studio3d/session.ts');const s=m.getStudio3DState();return {anim:s.anim,clips:s.clips,clipKeys:s.clipKeys,outline:s.outline,marked:s.marked,selected:s.selected,info:s.selectedInfo,dirty:s.dirty,notice:s.notice,status:s.status,name:s.name,bones:s.bones,weightPreview:s.weightPreview,stats:s.stats,exportClips:s.exportClips,poses:s.poses,ik:s.ik,boneLimits:s.boneLimits,views:s.views};});
+const session=(page:P)=>page.evaluate(async()=>{const m=await import('/src/lib/studio3d/session.ts');const s=m.getStudio3DState();return {anim:s.anim,clips:s.clips,clipKeys:s.clipKeys,outline:s.outline,marked:s.marked,selected:s.selected,info:s.selectedInfo,dirty:s.dirty,notice:s.notice,status:s.status,name:s.name,bones:s.bones,weightPreview:s.weightPreview,stats:s.stats,exportClips:s.exportClips,poses:s.poses,ik:s.ik,boneLimits:s.boneLimits,views:s.views,edit:s.edit,sculpt:s.sculpt};});
 const open3d=async(page:P)=>{await page.goto('/');await page.getByRole('button',{name:/3D/}).first().click();};
 const blank=async(page:P)=>{await open3d(page);await page.getByTestId('3d-create-blank').click();await expect(page.getByTestId('studio3d-viewport')).toBeVisible();};
 const insert=async(page:P,kind:string,x:number)=>{await run(page,'studio3d.insert.primitive',{kind});const s=await session(page);const id=s.selected as number;await run(page,'studio3d.object.transform',{id,position:{x,y:0,z:0}});return id;};
@@ -755,4 +755,59 @@ test('3D studio round-trips a skinned glTF with its clip: import, export as GLB,
  await expect.poll(async()=>(await session(page)).bones.length,{timeout:20_000}).toBe(2);
  await expect.poll(async()=>((await session(page)).clips??[]).map(c=>c.name)).toEqual(['Wave']);
  await expect.poll(async()=>((await session(page)).clips??[])[0]?.duration).toBeCloseTo(1,1);
+});
+
+test('mesh edit mode: select faces, extrude, undo restores the cube',async({page})=>{
+ await blank(page);
+ const id=await insert(page,'cube',0);
+ const before=(await session(page)).stats.triangles;
+ expect(before).toBe(12);
+ expect(await run(page,'studio3d.edit.start',{id,mode:'face'})).toBe(true);
+ let s=await session(page);
+ expect(s.edit).toMatchObject({id,mode:'face',verts:0,faces:0});
+ expect(await run(page,'studio3d.edit.select',{kind:'face',ids:[4,5]})).toBe(true);
+ s=await session(page);expect(s.edit).toMatchObject({faces:2});
+ expect(await run(page,'studio3d.edit.extrude',{offset:0.5})).toBe(true);
+ await expect.poll(async()=>(await session(page)).stats.triangles).toBe(20);
+ await run(page,'studio3d.undo');
+ await expect.poll(async()=>(await session(page)).stats.triangles).toBe(12);
+ expect(await run(page,'studio3d.edit.end')).toBe(true);
+ expect((await session(page)).edit).toBeNull();
+});
+
+test('mesh edit: extrude without a selection is refused readably',async({page})=>{
+ await blank(page);
+ const id=await insert(page,'cube',0);
+ await run(page,'studio3d.edit.start',{id,mode:'face'});
+ expect(await run(page,'studio3d.edit.extrude',{offset:0.5})).toBe(false);
+ await expect(page.getByRole('alert')).toContainText('Select at least one face');
+ expect(await run(page,'studio3d.edit.loopCut')).toBe(false);
+ await expect(page.getByRole('alert')).toContainText('exactly one edge');
+});
+
+test('sculpt: one stroke moves vertices, one undo restores them',async({page})=>{
+ await blank(page);
+ const id=await insert(page,'cube',0);
+ expect(await run(page,'studio3d.sculpt.brush',{brush:'grab',radius:2,strength:1,symmetry:'none'})).toBe(true);
+ const s0=await session(page);
+ expect(s0.sculpt).toMatchObject({brush:'grab',radius:2,strength:1,symmetry:'none'});
+ expect(await run(page,'studio3d.sculpt.begin',{id})).toBe(true);
+ expect(await run(page,'studio3d.sculpt.dab',{id,center:[0.5,1,0.5],delta:[0,0.4,0]})).toBe(true);
+ expect(await run(page,'studio3d.sculpt.dab',{id,center:[0,1,0],delta:[0.2,0,0]})).toBe(true);
+ expect(await run(page,'studio3d.sculpt.end')).toBe(true);
+ await expect.poll(async()=>(await session(page)).stats.triangles).toBe(12); // sculpt keeps topology
+ expect(await run(page,'studio3d.undo')).toBe(true); // single undo for the whole stroke
+ await expect.poll(async()=>(await session(page)).stats.vertices).toBe(24);
+ // the mesh is still editable after the undo (positions restored, topology intact)
+ expect(await run(page,'studio3d.sculpt.begin',{id})).toBe(true);
+ expect(await run(page,'studio3d.sculpt.end')).toBe(true);
+});
+
+test('sculpt on a light is refused readably',async({page})=>{
+ await blank(page);
+ await run(page,'studio3d.insert.light',{kind:'directional'});
+ const s=await session(page);
+ const lightId=s.outline.find(o=>o.kind==='light')!.id;
+ expect(await run(page,'studio3d.sculpt.begin',{id:lightId})).toBe(false);
+ await expect(page.getByRole('alert')).toContainText('not a mesh');
 });

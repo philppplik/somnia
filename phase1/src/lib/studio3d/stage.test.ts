@@ -427,3 +427,76 @@ test('snapPoint finds vertices and surfaces of other meshes, never of the exclud
  const bCorner=stage.snapPoint({x:3.4,y:0.4,z:0.4},'vertex',[a.id],0.5);
  assert.ok(bCorner&&Math.abs(bCorner.x-3.5)<1e-5&&Math.abs(bCorner.y-0.5)<1e-5,'vertex snap respects the moved mesh transform');
 });
+
+test('edit mode: start, select, extrude, one undo restores geometry and primitive params',()=>{
+ const stage=new Stage();const o=stage.addPrimitive('cube') as THREE.Mesh;
+ const counts=stage.editStart(o.id);
+ assert.equal(counts.triangles,12);
+ stage.editSelect('face',[4,5]); // +y cap
+ const g=o.geometry; // original cube geometry
+ stage.editExtrude(0.5);
+ assert.equal(tri(stage),20);
+ assert.notEqual(o.geometry,g,'extrude swaps in the edited geometry');
+ stage.undo();
+ assert.equal(tri(stage),12);
+ assert.equal(o.geometry,g,'undo restores the original geometry object');
+ assert.ok(stage.primitiveOf(o),'parametric data survives undo');
+ stage.redo();assert.equal(tri(stage),20);
+ stage.editEnd();
+ assert.throws(()=>stage.editExtrude(0.5),StageError);
+});
+
+test('edit select validates ids and toggles',()=>{
+ const stage=new Stage();const o=stage.addPrimitive('cube');
+ stage.editStart(o.id);
+ stage.editSelect('vertex',[1,2]);stage.editSelect('vertex',[1],true);
+ assert.deepEqual(stage.editSelection().verts,[2]);
+ assert.throws(()=>stage.editSelect('face',[99]),StageError);
+ assert.throws(()=>stage.editSelect('edge',[[0,0]]),StageError);
+});
+
+test('loop cut needs exactly one edge selected',()=>{
+ const stage=new Stage();const o=stage.addPrimitive('cube');
+ stage.editStart(o.id);
+ assert.throws(()=>stage.editLoopCut(),/exactly one edge/);
+ // find a vertical edge of the indexed box (24 verts, y from -0.5..0.5 in local space)
+ const m=o as THREE.Mesh;const pos=m.geometry.getAttribute('position');
+ const idx=m.geometry.getIndex()!;
+ const vert=(i:number)=>[pos.getX(i),pos.getY(i),pos.getZ(i)];
+ let done=false;
+ for(let f=0;f<idx.count&&!done;f+=3)for(let e=0;e<3;e++){
+  const a=idx.getX(f+e),b=idx.getX(f+(e+1)%3);const A=vert(a),B=vert(b);
+  if(A[0]===B[0]&&A[2]===B[2]&&A[1]!==B[1]){stage.editSelect('edge',[[a,b]]);stage.editLoopCut();done=true;break;}
+ }
+ assert.ok(done,'a vertical edge exists on the cube');
+ assert.ok(tri(stage)>12);
+});
+
+test('sculpt stroke is one undo step restoring all positions',()=>{
+ const stage=new Stage();const o=stage.addPrimitive('cube') as THREE.Mesh;
+ const before=Array.from(o.geometry.getAttribute('position').array as Float32Array);
+ stage.sculptBegin(o.id);
+ stage.sculptDabAt(o.id,[0.5,1,0.5],{brush:'grab',radius:2,strength:1,falloff:'smooth',symmetry:'none',delta:[0,0.4,0]});
+ stage.sculptDabAt(o.id,[0,1,0],{brush:'inflate',radius:2,strength:0.5,falloff:'smooth',symmetry:'none'});
+ stage.sculptEnd();
+ const after=Array.from(o.geometry.getAttribute('position').array as Float32Array);
+ assert.ok(after.some((v,i)=>v!==before[i]),'dabs moved vertices');
+ stage.undo(); // single undo for the whole stroke
+ const back=Array.from(o.geometry.getAttribute('position').array as Float32Array);
+ assert.deepEqual(back,before);
+});
+
+test('edit and sculpt refuse skinned meshes and non-meshes',()=>{
+ const stage=new Stage();const l=stage.addLight('directional');
+ assert.throws(()=>stage.editStart(l.id),StageError);
+ assert.throws(()=>stage.sculptBegin(l.id),StageError);
+});
+
+test('sculpt without begin still lands as one undo',()=>{
+ const stage=new Stage();const o=stage.addPrimitive('cube') as THREE.Mesh;
+ const before=Array.from(o.geometry.getAttribute('position').array as Float32Array);
+ stage.sculptDabAt(o.id,[0.5,1,0.5],{brush:'grab',radius:2,strength:1,falloff:'constant',symmetry:'none',delta:[0.2,0,0]});
+ stage.sculptEnd();
+ stage.undo();
+ assert.deepEqual(Array.from(o.geometry.getAttribute('position').array as Float32Array),before);
+});

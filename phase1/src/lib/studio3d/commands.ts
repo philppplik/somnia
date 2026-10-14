@@ -84,6 +84,18 @@ export interface Studio3DController{
  group(ids:number[]):number;
  ungroup(id:number):void;
  arrayDuplicate(ids:number[],spec:{mode:'linear'|'radial';count:number;offset?:Vec3;axis?:'x'|'y'|'z';angle?:number;center?:Vec3}):number[];
+ editStart(id:number,mode?:'vertex'|'edge'|'face'):void;
+ editEnd():void;
+ editMode(mode:'vertex'|'edge'|'face'):void;
+ editSelect(kind:'vertex'|'edge'|'face',ids:(number|[number,number])[],toggle?:boolean):void;
+ editExtrude(offset:number):void;
+ editInset(amount:number):void;
+ editBevel(width:number):void;
+ editLoopCut():void;
+ sculptBrush(patch:Partial<{on:boolean;brush:'grab'|'smooth'|'inflate';radius:number;strength:number;falloff:'smooth'|'linear'|'constant';symmetry:'none'|'x'|'y'|'z'}>):void;
+ sculptBegin(id:number):void;
+ sculptDab(id:number,center:[number,number,number],delta?:[number,number,number]):void;
+ sculptEnd():void;
  addCamera(fromView:boolean,kind?:CameraKind):number;
  setCamera(id:number,patch:{fov?:number;zoom?:number}):void;
  viewSave(name?:string):string;
@@ -179,6 +191,18 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add('studio3d.undo','Undo 3D change','Edit',()=>need().undo(),undefined,()=>!!controller&&getStudio3DState().canUndo),
   add('studio3d.redo','Redo 3D change','Edit',()=>need().redo(),undefined,()=>!!controller&&getStudio3DState().canRedo),
   add<{id:number}&LightPatch>('studio3d.light.set','Change a 3D light','Edit',p=>need().setLight(p.id,p),object({id:{type:'integer',minimum:0},intensity:{type:'number',minimum:0,maximum:100000},color:{type:'string',pattern:'^#[0-9a-fA-F]{6}$'},shadow:{type:'boolean'},angle:{type:'number',minimum:1,maximum:90},penumbra:{type:'number',minimum:0,maximum:1},width:{type:'number',minimum:0.01,maximum:1000},height:{type:'number',minimum:0.01,maximum:1000}},['id']),hasScene),
+  add<{id:number;mode?:'vertex'|'edge'|'face'}>('studio3d.edit.start','Start editing a 3D mesh (vertex, edge or face mode)','Edit',p=>need().editStart(p.id,p?.mode),object({id:{type:'integer',minimum:0},mode:{enum:['vertex','edge','face']}},['id']),hasScene),
+  add('studio3d.edit.end','Leave mesh edit mode','Edit',()=>need().editEnd(),undefined,()=>getStudio3DState().edit!=null),
+  add<{mode:'vertex'|'edge'|'face'}>('studio3d.edit.mode','Switch the mesh edit selection mode','Edit',p=>need().editMode(p.mode),object({mode:{enum:['vertex','edge','face']}}),()=>getStudio3DState().edit!=null),
+  add<{kind:'vertex'|'edge'|'face';ids?:number[];edges?:[number,number][];toggle?:boolean}>('studio3d.edit.select','Select vertices, edges or faces of the edited 3D mesh','Edit',p=>need().editSelect(p.kind,p.kind==='edge'?(p.edges??[]):(p.ids??[]),!!p.toggle),object({kind:{enum:['vertex','edge','face']},ids:{type:'array',items:{type:'integer',minimum:0},maxItems:10000},edges:{type:'array',items:{type:'array',items:{type:'integer',minimum:0},minItems:2,maxItems:2},maxItems:10000},toggle:{type:'boolean'}},['kind']),()=>getStudio3DState().edit!=null),
+  add<{offset:number}>('studio3d.edit.extrude','Extrude the selected faces of the edited 3D mesh','Edit',p=>need().editExtrude(p.offset),object({offset:{type:'number',minimum:-1000,maximum:1000}}),()=>getStudio3DState().edit!=null),
+  add<{amount:number}>('studio3d.edit.inset','Inset the selected faces of the edited 3D mesh','Edit',p=>need().editInset(p.amount),object({amount:{type:'number',exclusiveMinimum:0,maximum:1}}),()=>getStudio3DState().edit!=null),
+  add<{width:number}>('studio3d.edit.bevel','Bevel (chamfer) the selected vertices of the edited 3D mesh','Edit',p=>need().editBevel(p.width),object({width:{type:'number',exclusiveMinimum:0,maximum:1000}}),()=>getStudio3DState().edit!=null),
+  add('studio3d.edit.loopCut','Cut an edge loop around the selected edge of the edited 3D mesh','Edit',()=>need().editLoopCut(),undefined,()=>getStudio3DState().edit!=null),
+  add<Partial<{on:boolean;brush:'grab'|'smooth'|'inflate';radius:number;strength:number;falloff:'smooth'|'linear'|'constant';symmetry:'none'|'x'|'y'|'z'}>>('studio3d.sculpt.brush','Configure the sculpt brush of the 3D studio','Edit',p=>need().sculptBrush(p??{}),object({on:{type:'boolean'},brush:{enum:['grab','smooth','inflate']},radius:{type:'number',minimum:0.001,maximum:1000},strength:{type:'number',exclusiveMinimum:0,maximum:1},falloff:{enum:['smooth','linear','constant']},symmetry:{enum:['none','x','y','z']}},[]),hasScene),
+  add<{id:number}>('studio3d.sculpt.begin','Start a sculpt stroke on a 3D mesh','Edit',p=>need().sculptBegin(p.id),object({id:{type:'integer',minimum:0}}),hasScene),
+  add<{id:number;x:number;y:number;z:number;dx?:number;dy?:number;dz?:number}>('studio3d.sculpt.dab','Apply one sculpt dab with the configured brush','Edit',p=>need().sculptDab(p.id,[p.x,p.y,p.z],p.dx!==undefined?[p.dx,p.dy??0,p.dz??0]:undefined),object({id:{type:'integer',minimum:0},x:{type:'number'},y:{type:'number'},z:{type:'number'},dx:{type:'number',minimum:-1000,maximum:1000},dy:{type:'number',minimum:-1000,maximum:1000},dz:{type:'number',minimum:-1000,maximum:1000}}),hasScene),
+  add('studio3d.sculpt.end','Finish the current sculpt stroke (one undo step)','Edit',()=>need().sculptEnd(),undefined,hasScene),
   add<{id:number;at:PivotAt}>('studio3d.object.pivot','Move the pivot of a 3D mesh','Edit',p=>need().setPivot(p.id,p.at),object({id:{type:'integer',minimum:0},at:{enum:['center','base']}}),hasScene),
   add<{ids:number[];axis:AlignAxis;to:AlignTo}>('studio3d.object.align','Align 3D objects','Edit',p=>need().align(p.ids,p.axis,p.to),object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:2,maxItems:500},axis:{enum:['x','y','z']},to:{enum:['min','center','max']}}),hasScene),
   add<{ids:number[];axis:AlignAxis}>('studio3d.object.distribute','Distribute 3D objects evenly','Edit',p=>need().distribute(p.ids,p.axis),object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:3,maxItems:500},axis:{enum:['x','y','z']}}),hasScene),

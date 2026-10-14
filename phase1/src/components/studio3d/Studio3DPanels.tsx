@@ -128,6 +128,7 @@ export function ObjectSection(_:InspectorSectionProps){
     <p className="m-0 text-xs text-ink-3">{t('studio3d.texture.note')}</p></fieldset>
   </fieldset>}
   {s.bones.length>0&&o.kind==='mesh'&&<SkinningFields id={o.id} skinned={o.skinned}/>}
+  {o.kind==='mesh'&&!o.skinned&&<EditSculptFields id={o.id}/>}
   {s.bones.length>0&&(o.kind==='bone'||o.skinned)&&<PoseFields id={o.id}/>}
   {o.kind==='bone'&&<IkFields id={o.id}/>}
   {o.kind==='bone'&&<FabrikFields/>}
@@ -137,6 +138,46 @@ export function ObjectSection(_:InspectorSectionProps){
  </div>;
 }
 /** Bind a plain mesh to a bone chain, recompute weights of a skinned one, and preview a bone's influence. */
+function EditSculptFields({id}:{id:number}){
+ const {t}=useT();const s=useStudio3D();
+ const [extrude,setExtrude]=useState(0.5);const [inset,setInset]=useState(0.2);const [bevel,setBevel]=useState(0.1);
+ const ed=s.edit;const on=ed!=null&&ed.id===id;const sc=s.sculpt;
+ const modeBtn=(m:'vertex'|'edge'|'face')=><Button key={m} variant={ed?.mode===m?'primary':'outline'} aria-pressed={ed?.mode===m} onClick={()=>void executeCommand('studio3d.edit.mode',{mode:m})}>{t('studio3d.edit.mode.'+m)}</Button>;
+ return <>
+  <fieldset className="m-0 grid gap-2 border-0 p-0" data-testid="studio3d-edit"><legend className="text-xs text-ink-3">{t('studio3d.edit.title')}</legend>
+   {!on&&<Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.start',{id,mode:'face'})}>{t('studio3d.edit.start')}</Button>}
+   {on&&<>
+    <div className="flex flex-wrap gap-1" role="group" aria-label={t('studio3d.edit.modes')}>{modeBtn('vertex')}{modeBtn('edge')}{modeBtn('face')}</div>
+    <p className="m-0 text-xs text-ink-3">{t('studio3d.edit.counts',{v:ed.verts,e:ed.edges,f:ed.faces})}</p>
+    <div className="grid grid-cols-2 gap-2">
+     <NumField label={t('studio3d.edit.extrude')} value={extrude} min={-10} max={10} step={0.1} onCommit={setExtrude}/>
+     <NumField label={t('studio3d.edit.inset')} value={inset} min={0} max={0.95} step={0.05} onCommit={setInset}/>
+     <NumField label={t('studio3d.edit.bevel')} value={bevel} min={0.01} max={2} step={0.05} onCommit={setBevel}/>
+    </div>
+    <div className="flex flex-wrap gap-1">
+     <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.extrude',{offset:extrude})}>{t('studio3d.edit.extrude')}</Button>
+     <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.inset',{amount:inset})}>{t('studio3d.edit.inset')}</Button>
+     <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.bevel',{width:bevel})}>{t('studio3d.edit.bevel')}</Button>
+     <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.loopCut')}>{t('studio3d.edit.loopCut')}</Button>
+     <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.end')}>{t('studio3d.edit.end')}</Button>
+    </div></>}
+  </fieldset>
+  <fieldset className="m-0 grid gap-2 border-0 p-0" data-testid="studio3d-sculpt"><legend className="text-xs text-ink-3">{t('studio3d.sculpt.title')}</legend>
+   <label className="flex items-center gap-2 text-xs text-ink-2"><NativeInput type="checkbox" checked={sc.on} onChange={e=>void executeCommand('studio3d.sculpt.brush',{on:e.currentTarget.checked})}/>{t('studio3d.sculpt.on')}</label>
+   {sc.on&&<>
+    <NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={sc.brush} aria-label={t('studio3d.sculpt.brush')} onChange={e=>void executeCommand('studio3d.sculpt.brush',{brush:e.currentTarget.value})}>
+     {(['grab','smooth','inflate'] as const).map(b=><option key={b} value={b}>{t('studio3d.sculpt.brush.'+b)}</option>)}</NativeSelect>
+    <div className="grid grid-cols-2 gap-2">
+     <NumField label={t('studio3d.sculpt.radius')} value={sc.radius} min={0.05} max={10} step={0.05} onCommit={v=>void executeCommand('studio3d.sculpt.brush',{radius:v})}/>
+     <NumField label={t('studio3d.sculpt.strength')} value={sc.strength} min={0.05} max={1} step={0.05} onCommit={v=>void executeCommand('studio3d.sculpt.brush',{strength:v})}/>
+    </div>
+    <NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={sc.symmetry} aria-label={t('studio3d.sculpt.symmetry')} onChange={e=>void executeCommand('studio3d.sculpt.brush',{symmetry:e.currentTarget.value})}>
+     {(['none','x','y','z'] as const).map(m=><option key={m} value={m}>{t('studio3d.sculpt.symmetry.'+m)}</option>)}</NativeSelect>
+    <p className="m-0 text-xs text-ink-3">{t('studio3d.sculpt.hint')}</p>
+   </>}
+  </fieldset></>;
+}
+
 function SkinningFields({id,skinned}:{id:number;skinned:boolean}){
  const {t}=useT();const s=useStudio3D();
  const roots=s.bones.filter(b=>b.depth===0);const [bone,setBone]=useState(roots[0]?.id??s.bones[0]?.id??0);
