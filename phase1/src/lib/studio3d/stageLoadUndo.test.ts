@@ -19,11 +19,11 @@ test('opening a file is one undo step that restores the old scene and its clips 
  // A new file "opens" over the scene, with its clip import inside the same step.
  const g=new THREE.Group();g.name='file';
  const mesh=new THREE.Mesh(new THREE.BoxGeometry(),new THREE.MeshBasicMaterial());mesh.name='NewMesh';g.add(mesh);
- st.loadUndoable([g],'Open file',()=>st.setClips([new THREE.AnimationClip('New',2,[])]));
+ st.loadUndoable([g],{key:'studio3d.hist.open',params:{name:'file'}},()=>st.setClips([new THREE.AnimationClip('New',2,[])]));
  assert.equal(st.dirty,false,'clean right after the open');
  assert.equal(st.root.children.length,1);assert.equal(st.root.children[0],g);
  assert.deepEqual(st.clips.map(c=>c.name),['New']);
- assert.equal(st.undoLabel,'Open file');
+ assert.deepEqual(st.undoLabel,{key:'studio3d.hist.open',params:{name:'file'}});
  st.undo();
  assert.equal(st.root.children.length,1);assert.equal(st.root.children[0].name,'OldCube');
  assert.deepEqual(st.clips.map(c=>c.name),['Old']);
@@ -40,7 +40,7 @@ test('the content nobody shows any more is disposed when the load entry falls of
  st.addPrimitive('cube');
  const mesh=new THREE.Mesh(new THREE.BoxGeometry(),new THREE.MeshBasicMaterial());mesh.name='NewMesh';
  let disposed=false;mesh.geometry.addEventListener('dispose',()=>{disposed=true;});
- st.loadUndoable([mesh],'Open file');
+ st.loadUndoable([mesh],{key:'studio3d.hist.open',params:{name:'file'}});
  st.undo(); // old cube live again, the loaded mesh only exists on the redo side
  st.addPrimitive('sphere'); // truncates the redo side and releases the load entry
  assert.equal(disposed,true);

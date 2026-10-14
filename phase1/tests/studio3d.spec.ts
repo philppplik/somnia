@@ -1481,6 +1481,8 @@ test('3D studio history: labels list and multi-step undo/redo',async({page})=>{
  expect(await run(page,'studio3d.redo',{count:5})).toBe(true);
  await expect.poll(async()=>(await session(page)).outline.filter(o=>o.kind==='mesh').length).toBe(2);
  expect((await session(page)).history.redo).toEqual([]);
+ // Labels render localized (en here): the newest undo step names the last insert.
+ await expect(page.getByTestId('studio3d-history-undo').getByRole('button').first()).toContainText('Add Sphere');
  // The tools panel lists the steps and a row click jumps straight to that point.
  await page.getByTestId('studio3d-history-undo').getByRole('button').nth(1).click();
  await expect.poll(async()=>(await session(page)).outline.filter(o=>o.kind==='mesh').length).toBe(0);

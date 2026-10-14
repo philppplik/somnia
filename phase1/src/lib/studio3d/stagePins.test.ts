@@ -94,3 +94,13 @@ test('historyLabels lists undo newest-first and redo next-up first',()=>{
  st.redo();
  assert.equal(st.historyLabels().redo.length,0);
 });
+test('history labels are i18n descriptors the UI can translate per locale',()=>{
+ const st=new Stage();
+ const a=st.addPrimitive('cube');
+ assert.deepEqual(st.undoLabel,{key:'studio3d.hist.add',params:{name:'Cube'}});
+ assert.equal(st.historyLabels().undo[0],st.undoLabel);
+ st.rename(a.id,'box');
+ assert.deepEqual(st.undoLabel,{key:'studio3d.hist.rename',params:{name:'Cube'}});
+ st.setTransform(a.id,{position:{x:1,y:0,z:0}});
+ assert.deepEqual(st.undoLabel,{key:'studio3d.hist.transform',params:{name:'box'}});
+});

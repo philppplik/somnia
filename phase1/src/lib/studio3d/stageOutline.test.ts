@@ -18,7 +18,7 @@ test('reparent keeps world transforms and restores the hierarchy in one undo ste
  assert.equal(st.find(b.id)!.parent,st.find(a.id));assert.equal(st.find(c.id)!.parent,st.find(a.id));
  const outline=st.measure().outline;
  assert.equal(outline.find(o=>o.id===b.id)!.depth,1);assert.equal(outline.find(o=>o.id===c.id)!.depth,1);
- assert.equal(st.undoLabel.slice(0,4),'Move');
+ assert.equal(st.undoLabel?.key.startsWith('studio3d.hist.move'),true);
  st.undo();st.root.updateMatrixWorld(true);
  assert.deepEqual(world(st.find(b.id)!),wb);
  assert.equal(st.find(b.id)!.parent,st.root);assert.equal(st.find(c.id)!.parent,st.root);

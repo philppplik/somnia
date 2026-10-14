@@ -354,14 +354,14 @@ export default function Viewport3D(){
   const ikGizmo=new TransformControls(camera,renderer.domElement);ikGizmo.setMode('translate');
   const poleGizmo=new TransformControls(camera,renderer.domElement);poleGizmo.setMode('translate');
   const ikHelpers=[ikGizmo.getHelper(),poleGizmo.getHelper()];for(const h of ikHelpers){h.visible=false;scene.add(h);}
-  let ikDrag:{root:number;before:ReturnType<Stage['ikBegin']>;kind:'IK target'|'IK pole'}|null=null;
+  let ikDrag:{root:number;before:ReturnType<Stage['ikBegin']>;kind:'studio3d.hist.ikTarget'|'studio3d.hist.ikPole'}|null=null;
   const ikRoot=():number|null=>getStudio3DState().ik?.root??null;
-  const ikDragStart=(kind:'IK target'|'IK pole')=>{const r=ikRoot();if(r==null)return;ikDrag={root:r,before:stage.ikBegin(r),kind};controls.enabled=false;gizmo.enabled=false;};
-  const ikDragEnd=()=>{const d=ikDrag;ikDrag=null;controls.enabled=true;gizmo.enabled=true;if(d)stage.ikCommit(d.root,d.before,d.kind);};
-  ikGizmo.addEventListener('dragging-changed',e=>{if(!!(e as unknown as {value:boolean}).value)ikDragStart('IK target');else ikDragEnd();});
-  poleGizmo.addEventListener('dragging-changed',e=>{if(!!(e as unknown as {value:boolean}).value)ikDragStart('IK pole');else ikDragEnd();});
-  ikGizmo.addEventListener('change',()=>{if(ikDrag?.kind==='IK target'){const r=ikDrag.root;stage.ikDragTarget(r,[ikTarget.position.x,ikTarget.position.y,ikTarget.position.z]);}invalidate();});
-  poleGizmo.addEventListener('change',()=>{if(ikDrag?.kind==='IK pole'){const r=ikDrag.root;stage.ikDragPole(r,[ikPoleM.position.x,ikPoleM.position.y,ikPoleM.position.z]);}invalidate();});
+  const ikDragStart=(kind:'studio3d.hist.ikTarget'|'studio3d.hist.ikPole')=>{const r=ikRoot();if(r==null)return;ikDrag={root:r,before:stage.ikBegin(r),kind};controls.enabled=false;gizmo.enabled=false;};
+  const ikDragEnd=()=>{const d=ikDrag;ikDrag=null;controls.enabled=true;gizmo.enabled=true;if(d)stage.ikCommit(d.root,d.before,{key:d.kind});};
+  ikGizmo.addEventListener('dragging-changed',e=>{if(!!(e as unknown as {value:boolean}).value)ikDragStart('studio3d.hist.ikTarget');else ikDragEnd();});
+  poleGizmo.addEventListener('dragging-changed',e=>{if(!!(e as unknown as {value:boolean}).value)ikDragStart('studio3d.hist.ikPole');else ikDragEnd();});
+  ikGizmo.addEventListener('change',()=>{if(ikDrag?.kind==='studio3d.hist.ikTarget'){const r=ikDrag.root;stage.ikDragTarget(r,[ikTarget.position.x,ikTarget.position.y,ikTarget.position.z]);}invalidate();});
+  poleGizmo.addEventListener('change',()=>{if(ikDrag?.kind==='studio3d.hist.ikPole'){const r=ikDrag.root;stage.ikDragPole(r,[ikPoleM.position.x,ikPoleM.position.y,ikPoleM.position.z]);}invalidate();});
   /** Shows or hides the IK markers from the session state; their positions follow the chain state. */
   const syncIk=()=>{
    const ik=getStudio3DState().ik;const on=!!ik?.on;
@@ -390,14 +390,14 @@ export default function Viewport3D(){
    invalidate();
   };
   const fkHelpers=[fkGizmo.getHelper(),lookGizmo.getHelper()];for(const h of fkHelpers){h.visible=false;scene.add(h);}
-  let fkDrag:{root:number;before:ReturnType<Stage['fabrikBegin']>;kind:'FABRIK target'|'FABRIK look target'}|null=null;
+  let fkDrag:{root:number;before:ReturnType<Stage['fabrikBegin']>;kind:'studio3d.hist.fabrikTarget'|'studio3d.hist.fabrikLook'}|null=null;
   const fkRoot=():number|null=>getStudio3DState().fabrik?.root??null;
-  const fkDragStart=(kind:'FABRIK target'|'FABRIK look target')=>{const r=fkRoot();if(r==null)return;fkDrag={root:r,before:stage.fabrikBegin(r),kind};controls.enabled=false;gizmo.enabled=false;};
-  const fkDragEnd=()=>{const d=fkDrag;fkDrag=null;controls.enabled=true;gizmo.enabled=true;if(d)stage.fabrikCommit(d.root,d.before,d.kind);};
-  fkGizmo.addEventListener('dragging-changed',e=>{if(!!(e as unknown as {value:boolean}).value)fkDragStart('FABRIK target');else fkDragEnd();});
-  lookGizmo.addEventListener('dragging-changed',e=>{if(!!(e as unknown as {value:boolean}).value)fkDragStart('FABRIK look target');else fkDragEnd();});
-  fkGizmo.addEventListener('change',()=>{if(fkDrag?.kind==='FABRIK target'){const r=fkDrag.root;stage.fabrikDragTarget(r,[fkTarget.position.x,fkTarget.position.y,fkTarget.position.z]);}invalidate();});
-  lookGizmo.addEventListener('change',()=>{if(fkDrag?.kind==='FABRIK look target'){const r=fkDrag.root;stage.fabrikDragLook(r,[fkLook.position.x,fkLook.position.y,fkLook.position.z]);}invalidate();});
+  const fkDragStart=(kind:'studio3d.hist.fabrikTarget'|'studio3d.hist.fabrikLook')=>{const r=fkRoot();if(r==null)return;fkDrag={root:r,before:stage.fabrikBegin(r),kind};controls.enabled=false;gizmo.enabled=false;};
+  const fkDragEnd=()=>{const d=fkDrag;fkDrag=null;controls.enabled=true;gizmo.enabled=true;if(d)stage.fabrikCommit(d.root,d.before,{key:d.kind});};
+  fkGizmo.addEventListener('dragging-changed',e=>{if(!!(e as unknown as {value:boolean}).value)fkDragStart('studio3d.hist.fabrikTarget');else fkDragEnd();});
+  lookGizmo.addEventListener('dragging-changed',e=>{if(!!(e as unknown as {value:boolean}).value)fkDragStart('studio3d.hist.fabrikLook');else fkDragEnd();});
+  fkGizmo.addEventListener('change',()=>{if(fkDrag?.kind==='studio3d.hist.fabrikTarget'){const r=fkDrag.root;stage.fabrikDragTarget(r,[fkTarget.position.x,fkTarget.position.y,fkTarget.position.z]);}invalidate();});
+  lookGizmo.addEventListener('change',()=>{if(fkDrag?.kind==='studio3d.hist.fabrikLook'){const r=fkDrag.root;stage.fabrikDragLook(r,[fkLook.position.x,fkLook.position.y,fkLook.position.z]);}invalidate();});
   /** Shows or hides the FABRIK markers from the session state; their positions follow the chain state. */
   const syncFabrik=()=>{
    const fk=getStudio3DState().fabrik;const on=!!fk?.on;const lookOn=on&&!!fk?.look.on;

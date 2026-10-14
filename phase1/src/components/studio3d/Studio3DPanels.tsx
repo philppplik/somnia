@@ -600,9 +600,9 @@ export function ToolsSection(_:InspectorSectionProps){
   <fieldset className="m-0 grid gap-2 border-0 p-0" data-testid="studio3d-history"><legend className="text-xs text-ink-3">{t('studio3d.history.title')}</legend>
    {s.history.undo.length===0&&s.history.redo.length===0?<p className="m-0 text-xs text-ink-3">{t('studio3d.history.empty')}</p>:<>
     {s.history.redo.length>0&&<ul className="m-0 grid max-h-32 list-none gap-1 overflow-auto p-0" aria-label={t('studio3d.history.redo')} data-testid="studio3d-history-redo">{s.history.redo.map((label,i)=><li key={i}>
-     <Button variant="outline" className="w-full justify-start truncate text-left" aria-label={`${t('studio3d.history.redoTo')} ${label}`} onClick={()=>void executeCommand('studio3d.redo',{count:i+1})}><Redo2 size={13} aria-hidden/>{label}</Button></li>)}</ul>}
+     <Button variant="outline" className="w-full justify-start truncate text-left" aria-label={`${t('studio3d.history.redoTo')} ${t(label.key,label.params)}`} onClick={()=>void executeCommand('studio3d.redo',{count:i+1})}><Redo2 size={13} aria-hidden/>{t(label.key,label.params)}</Button></li>)}</ul>}
     {s.history.undo.length>0&&<ul className="m-0 grid max-h-32 list-none gap-1 overflow-auto p-0" aria-label={t('studio3d.history.undo')} data-testid="studio3d-history-undo">{s.history.undo.map((label,i)=><li key={i}>
-     <Button variant="outline" className="w-full justify-start truncate text-left" aria-label={`${t('studio3d.history.undoTo')} ${label}`} onClick={()=>void executeCommand('studio3d.undo',{count:i+1})}><Undo2 size={13} aria-hidden/>{label}</Button></li>)}</ul>}
+     <Button variant="outline" className="w-full justify-start truncate text-left" aria-label={`${t('studio3d.history.undoTo')} ${t(label.key,label.params)}`} onClick={()=>void executeCommand('studio3d.undo',{count:i+1})}><Undo2 size={13} aria-hidden/>{t(label.key,label.params)}</Button></li>)}</ul>}
    </>}
   </fieldset>
   <fieldset className="m-0 grid gap-2 border-0 p-0" data-testid="studio3d-save"><legend className="text-xs text-ink-3">{t('studio3d.save.title')}</legend>

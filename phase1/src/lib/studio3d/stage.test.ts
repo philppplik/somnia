@@ -159,7 +159,7 @@ test('spot and area lights: defaults, info, edits, validation and undo',()=>{
  assert.throws(()=>stage.setLight(ar.id,{angle:10}),StageError);assert.throws(()=>stage.setLight(sp.id,{width:3}),StageError);
  assert.throws(()=>stage.setLight(sp.id,{angle:0}),StageError);assert.throws(()=>stage.setLight(sp.id,{color:'red'}),StageError);
  const c=stage.addPrimitive('cube');assert.throws(()=>stage.setLight(c.id,{intensity:1}),StageError);
- const n=stage.addLight('point');stage.setLight(n.id,{intensity:n.intensity});assert.equal(stage.undoLabel.startsWith('Add'),true,'no-op adds no entry');
+ const n=stage.addLight('point');stage.setLight(n.id,{intensity:n.intensity});assert.equal(stage.undoLabel?.key,'studio3d.hist.add','no-op adds no entry');
 });
 test('pivot to base moves the origin without moving the geometry and does not touch copies',()=>{
  const stage=new Stage();const a=stage.addPrimitive('cube');const b=stage.duplicate(a.id) as THREE.Mesh;

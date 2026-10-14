@@ -187,7 +187,9 @@ function disposeObject(root:THREE.Object3D){
   for(const mat of Array.isArray(m.material)?m.material:m.material?[m.material]:[]){for(const v of Object.values(mat as unknown as Record<string,unknown>))if(v instanceof THREE.Texture)v.dispose();mat.dispose();}
  });
 }
-interface Entry{label:string;undo():void;redo():void;/** Edits with the same group id and object within GROUP_MS merge into one undo step (gizmo drags, key nudges). */group?:string;at?:number;merge?(redo:()=>void):void;/** Called when the entry falls off the history; frees objects only the redo side still owned. */release?():void}
+/** Undo/redo history label as an i18n key plus interpolation params; the UI translates at display time so the history list follows the locale. */
+export interface HistoryLabel{key:string;params?:Record<string,string|number>}
+interface Entry{label:HistoryLabel;undo():void;redo():void;/** Edits with the same group id and object within GROUP_MS merge into one undo step (gizmo drags, key nudges). */group?:string;at?:number;merge?(redo:()=>void):void;/** Called when the entry falls off the history; frees objects only the redo side still owned. */release?():void}
 type TrackWithInterpolant=THREE.KeyframeTrack&{createInterpolant(result?:number[]):{evaluate(t:number):ArrayLike<number>}};
 const trackInterpolant=(tr:THREE.KeyframeTrack)=>(tr as TrackWithInterpolant).createInterpolant();
 export class Stage{
@@ -205,9 +207,9 @@ export class Stage{
  markSaved(){this.saved=this.cursor;this.emit();}
  get canUndo(){return this.cursor>0;}
  get canRedo(){return this.cursor<this.entries.length;}
- get undoLabel(){return this.canUndo?this.entries[this.cursor-1].label:'';}
+ get undoLabel():HistoryLabel|null{return this.canUndo?this.entries[this.cursor-1].label:null;}
  /** Read-only history labels for the history list: undo newest first (top row undoes one step), redo next-up first. */
- historyLabels():{undo:string[];redo:string[]}{
+ historyLabels():{undo:HistoryLabel[];redo:HistoryLabel[]}{
   return {undo:this.entries.slice(0,this.cursor).map(e=>e.label).reverse(),redo:this.entries.slice(this.cursor).map(e=>e.label)};
  }
  private push(e:Entry){
@@ -227,7 +229,7 @@ export class Stage{
   this.clipRevision++;
  }
  /** Replaces the content with a freshly loaded model as ONE undo step: undo brings the previous scene back exactly, and the content nobody shows any more is disposed when the entry falls off the history. The scene is clean right after the load. The optional hook (clip import) runs while the new scene is active and joins the same step. */
- loadUndoable(nodes:THREE.Object3D[],label:string,after?:()=>void|Promise<void>):void|Promise<void>{
+ loadUndoable(nodes:THREE.Object3D[],label:HistoryLabel,after?:()=>void|Promise<void>):void|Promise<void>{
   const before=this.sceneState();
   for(const c of [...this.root.children])this.root.remove(c);
   this.bakedCache=new Map();this.clipList=[];this.poseLibs=new Map();this.ikChains=new Map();this.fabrikChains=new Map();this.boneLimits=new Map();this.clipRevision++;
@@ -243,21 +245,21 @@ export class Stage{
   done();
  }
  /** Replaces the content with a freshly loaded model as one undo step. The scene is clean right after the load. */
- load(model:THREE.Object3D|null,after?:()=>void|Promise<void>):void|Promise<void>{return this.loadUndoable(model?[model]:[],`Open ${model?.name||'model'}`,after);}
+ load(model:THREE.Object3D|null,after?:()=>void|Promise<void>):void|Promise<void>{return this.loadUndoable(model?[model]:[],{key:'studio3d.hist.open',params:{name:model?.name||'model'}},after);}
  clear(){
   this.bakedCache.clear();this.clipList=[];this.clipRevision++;this.poseLibs.clear();this.ikChains.clear();this.fabrikChains.clear();this.boneLimits.clear();
   for(const c of [...this.root.children]){this.root.remove(c);disposeObject(c);}
   for(const e of this.entries)e.release?.();this.entries=[];this.cursor=0;this.saved=0;this.emit();
  }
  /** Replaces the content with several loaded top-level nodes (no wrapper group) as one undo step. The scene is clean right after the load. */
- loadMany(nodes:THREE.Object3D[],after?:()=>void|Promise<void>):void|Promise<void>{return this.loadUndoable(nodes,'Open scene',after);}
+ loadMany(nodes:THREE.Object3D[],after?:()=>void|Promise<void>):void|Promise<void>{return this.loadUndoable(nodes,{key:'studio3d.hist.openScene'},after);}
  find(id:number):THREE.Object3D|undefined{return this.root.getObjectById(id);}
  private need(id:number):THREE.Object3D{const o=this.find(id);if(!o)throw new StageError(`No object with id ${id}.`);return o;}
  private uniqueName(base:string){
   const names=new Set<string>();this.root.traverse(o=>names.add(o.name));
   if(!names.has(base))return base;let i=2;while(names.has(`${base} ${i}`))i++;return `${base} ${i}`;
  }
- private attach(obj:THREE.Object3D,parent:THREE.Object3D,index:number,text:string){
+ private attach(obj:THREE.Object3D,parent:THREE.Object3D,index:number,text:HistoryLabel){
   this.attach0(obj,parent,index);let owned=true;
   this.push({label:text,undo:()=>{parent.remove(obj);owned=false;},redo:()=>{this.attach0(obj,parent,index);owned=true;},release:()=>{if(!owned)disposeObject(obj);}});
  }
@@ -269,7 +271,7 @@ export class Stage{
   mesh.name=this.uniqueName(label(kind));mesh.userData.somniaPrimitive={kind,params};
   if(kind!=='plane')mesh.position.y=kind==='cube'||kind==='cylinder'||kind==='cone'?0.5:kind==='sphere'?0.5:0.68;
   if(at&&Number.isFinite(at.x)&&Number.isFinite(at.z)){mesh.position.x=at.x;mesh.position.z=at.z;}
-  this.attach(mesh,this.root,this.root.children.length,`Add ${mesh.name}`);return mesh;
+  this.attach(mesh,this.root,this.root.children.length,{key:'studio3d.hist.add',params:{name:mesh.name}});return mesh;
  }
  /** Adds an annotation pin marker. The label lives in the node's userData and travels with the scene. One undo step. */
  addPin(at?:Vec3):THREE.Mesh{
@@ -279,7 +281,7 @@ export class Stage{
   mesh.name=this.uniqueName('Pin');mesh.userData.somniaPin={text:''};
   if(at&&[at.x,at.y,at.z].every(Number.isFinite))mesh.position.set(at.x,at.y,at.z);
   else{const c=b&&boundsValid(b)?boundsCenter(b):[0,1,0] as [number,number,number];mesh.position.set(c[0],c[1]+r*0.5,c[2]);}
-  this.attach(mesh,this.root,this.root.children.length,`Add ${mesh.name}`);return mesh;
+  this.attach(mesh,this.root,this.root.children.length,{key:'studio3d.hist.add',params:{name:mesh.name}});return mesh;
  }
  /** Sets the label of an annotation pin. One undo step. */
  setPinText(id:number,text:string){
@@ -287,7 +289,7 @@ export class Stage{
   const before=readPin(o.userData);if(before===null)throw new StageError('That object is not a pin.');
   const next=pinText(text);if(next===before)return;
   const apply=(v:string)=>{o.userData.somniaPin={text:v};};
-  apply(next);this.push({label:`Edit ${o.name||'pin'}`,undo:()=>apply(before),redo:()=>apply(next)});
+  apply(next);this.push({label:{key:'studio3d.hist.editPin',params:{name:o.name||'pin'}},undo:()=>apply(before),redo:()=>apply(next)});
  }
  /** Pins with a non-empty label plus their world position, for viewport overlay labels. Hidden pins are skipped. */
  pins():{id:number;text:string;position:Vec3}[]{
@@ -305,7 +307,7 @@ export class Stage{
   if(!mat)throw new StageError('That material is no longer in the scene.');
   const next=mat as THREE.Material;if(o.material===next)return;
   const before=o.material;const apply=(m:THREE.Material)=>{o.material=m;};
-  apply(next);this.push({label:`Assign ${next.name||'material'} to ${o.name||'mesh'}`,undo:()=>apply(before),redo:()=>apply(next)});
+  apply(next);this.push({label:{key:'studio3d.hist.assignMaterial',params:{mat:next.name||'material',mesh:o.name||'mesh'}},undo:()=>apply(before),redo:()=>apply(next)});
  }
  addLight(kind:LightKind):THREE.Light{
   if(!LIGHTS.includes(kind))throw new StageError(`Unknown light: ${String(kind)}.`);
@@ -313,7 +315,7 @@ export class Stage{
    :kind==='spot'?new THREE.SpotLight(0xffffff,120,0,Math.PI/6,0.3,2):kind==='ambient'?new THREE.AmbientLight(0xffffff,0.6):new THREE.RectAreaLight(0xffffff,6,2,2);
   light.name=this.uniqueName({directional:'Directional light',point:'Point light',spot:'Spot light',area:'Area light',ambient:'Ambient light'}[kind]);light.position.set(3,4,2);
   if(kind==='area')light.lookAt(0,0,0);
-  this.attach(light,this.root,this.root.children.length,`Add ${light.name}`);return light;
+  this.attach(light,this.root,this.root.children.length,{key:'studio3d.hist.add',params:{name:light.name}});return light;
  }
  /** Adds a one-click light rig aimed at the scene bounds centre. One undo step. */
  addLightRig(preset?:'three-point'):THREE.DirectionalLight[];
@@ -325,24 +327,24 @@ export class Stage{
   const added:THREE.Object3D[]=[];const lights:THREE.Light[]=[];
   const aim=(l:THREE.DirectionalLight)=>{l.target.name=`${l.name} target`;l.target.position.set(c[0],c[1],c[2]);this.root.add(l.target);added.push(l.target);};
   const put=<L extends THREE.Light>(l:L,pos:[number,number,number]):L=>{l.position.set(...pos);this.root.add(l);added.push(l);lights.push(l);return l;};
-  let label='Add three-point light rig';
+  let label:HistoryLabel={key:'studio3d.hist.lightRigThree'};
   if(preset==='studio'){
    // Product-shot softboxes: a large key from the left, a gentler fill from the right and a small shadow-casting top light.
    const key=put(new THREE.RectAreaLight(0xffffff,4,5*r,4*r),[c[0]-2.5*r,c[1]+2*r,c[2]+2*r]);key.name=this.uniqueName('Studio key');
    const fill=put(new THREE.RectAreaLight(0xffffff,1.6,3*r,3*r),[c[0]+2.5*r,c[1]+1.2*r,c[2]+1.6*r]);fill.name=this.uniqueName('Studio fill');
    const top=put(new THREE.DirectionalLight(0xffffff,1.4),[c[0],c[1]+3.5*r,c[2]+0.5*r]);top.name=this.uniqueName('Studio top');top.castShadow=true;aim(top);
    key.lookAt(c[0],c[1],c[2]);fill.lookAt(c[0],c[1],c[2]);
-   label='Add studio light rig';
+   label={key:'studio3d.hist.lightRigStudio'};
   }else if(preset==='outdoor'){
    // Midday daylight: a bright, slightly warm high sun with shadows plus a cool sky bounce.
    const sun=put(new THREE.DirectionalLight(0xfff2dd,3),[c[0]+1.5*r,c[1]+4*r,c[2]+2*r]);sun.name=this.uniqueName('Outdoor sun');sun.castShadow=true;aim(sun);
    put(new THREE.AmbientLight(0x9db8d9,0.9),[0,0,0]).name=this.uniqueName('Outdoor sky');
-   label='Add outdoor light rig';
+   label={key:'studio3d.hist.lightRigOutdoor'};
   }else if(preset==='sunset'){
    // Low warm sun with long shadows plus a cool sky bounce.
    const sun=put(new THREE.DirectionalLight(0xffb36b,2.5),[c[0]+3*r,c[1]+0.7*r,c[2]-1.5*r]);sun.name=this.uniqueName('Sunset sun');sun.castShadow=true;aim(sun);
    put(new THREE.AmbientLight(0x5a6b8c,0.6),[0,0,0]).name=this.uniqueName('Sunset sky');
-   label='Add sunset light rig';
+   label={key:'studio3d.hist.lightRigSunset'};
   }else{
    const defs:{name:string;i:number;off:[number,number,number];shadow:boolean}[]=[
     {name:'Key light',i:3,off:[1.5,2,1.2],shadow:true},
@@ -365,7 +367,7 @@ export class Stage{
   const cam:THREE.PerspectiveCamera|THREE.OrthographicCamera=kind==='orthographic'?new THREE.OrthographicCamera(-2,2,2,-2,0.1,100):new THREE.PerspectiveCamera(f,1.5,0.1,100);
   cam.name=this.uniqueName(kind==='orthographic'?'Ortho camera':'Camera');
   if(pose){cam.position.set(pose.position.x,pose.position.y,pose.position.z);cam.quaternion.set(...pose.quaternion);}else{cam.position.set(4,3,5);cam.lookAt(0,0.5,0);}
-  this.attach(cam,this.root,this.root.children.length,`Add ${cam.name}`);return cam;
+  this.attach(cam,this.root,this.root.children.length,{key:'studio3d.hist.add',params:{name:cam.name}});return cam;
  }
  setCamera(id:number,patch:{fov?:number;zoom?:number}){
   const o=this.need(id) as THREE.PerspectiveCamera|THREE.OrthographicCamera;
@@ -373,13 +375,13 @@ export class Stage{
    if(patch.fov===undefined)throw new StageError(`${o.name} is a perspective camera: set fov, not zoom.`);
    const f=finite(patch.fov,'fov');if(f<1||f>120)throw new StageError('fov must be between 1 and 120 degrees.');
    const before=(o as THREE.PerspectiveCamera).fov;if(before===f)return;const set=(v:number)=>{(o as THREE.PerspectiveCamera).fov=v;o.updateProjectionMatrix();};
-   set(f);this.push({label:`Camera ${o.name}`,undo:()=>set(before),redo:()=>set(f)});return;
+   set(f);this.push({label:{key:'studio3d.hist.camera',params:{name:o.name}},undo:()=>set(before),redo:()=>set(f)});return;
   }
   if((o as THREE.OrthographicCamera).isOrthographicCamera){
    if(patch.zoom===undefined)throw new StageError(`${o.name} is an orthographic camera: set zoom, not fov.`);
    const z=finite(patch.zoom,'zoom');if(z<0.01||z>100)throw new StageError('zoom must be between 0.01 and 100.');
    const before=(o as THREE.OrthographicCamera).zoom;if(before===z)return;const set=(v:number)=>{(o as THREE.OrthographicCamera).zoom=v;o.updateProjectionMatrix();};
-   set(z);this.push({label:`Camera ${o.name}`,undo:()=>set(before),redo:()=>set(z)});return;
+   set(z);this.push({label:{key:'studio3d.hist.camera',params:{name:o.name}},undo:()=>set(before),redo:()=>set(z)});return;
   }
   throw new StageError(`${o.name} is not a camera.`);
  }
@@ -412,7 +414,7 @@ export class Stage{
    last.merge(()=>{set(next);if(ak)this.restoreClip(ak.clip,ak.after);});last.at=now;this.emit();return;
   }
   let redo=()=>{set(next);if(ak)this.restoreClip(ak.clip,ak.after);};
-  this.push({label:`Transform ${o.name}`,undo:()=>{set(before);if(ak)this.restoreClip(ak.clip,ak.before);},redo:()=>redo(),group:key,at:now,merge:r=>{redo=r;}});
+  this.push({label:{key:'studio3d.hist.transform',params:{name:o.name}},undo:()=>{set(before);if(ak)this.restoreClip(ak.clip,ak.before);},redo:()=>redo(),group:key,at:now,merge:r=>{redo=r;}});
  }
  setLight(id:number,patch:LightPatch){
   const o=this.need(id) as THREE.Light;if(!o.isLight)throw new StageError(`${o.name} is not a light.`);
@@ -430,7 +432,7 @@ export class Stage{
   const write=(v:ReturnType<typeof read>)=>{o.intensity=v.i;o.castShadow=v.sh;o.color.set(v.c);const sh=(o as THREE.DirectionalLight).shadow;if(sh)sh.radius=v.r;if(sp.isSpotLight){sp.angle=v.a!*DEG;sp.penumbra=v.p!;}if(ra.isRectAreaLight){ra.width=v.w!;ra.height=v.h!;}};
   const after={i:next.i??before.i,c:next.c??before.c,sh:next.sh??before.sh,r:next.r??before.r,a:next.a??before.a,p:next.p??before.p,w:next.w??before.w,h:next.h??before.h};
   if(JSON.stringify(after)===JSON.stringify(before))return;
-  write(after);this.push({label:`Light ${o.name}`,undo:()=>write(before),redo:()=>write(after)});
+  write(after);this.push({label:{key:'studio3d.hist.light',params:{name:o.name}},undo:()=>write(before),redo:()=>write(after)});
  }
  /**
   * Moves the origin of a mesh to the centre of its bounds or to the middle of its base, without moving what you see.
@@ -446,7 +448,7 @@ export class Stage{
   o.updateMatrix();const shift=c.clone().multiply(o.scale).applyQuaternion(o.quaternion);
   const p0=o.position.clone(),p1=o.position.clone().add(shift);
   const set=(g:THREE.BufferGeometry,p:THREE.Vector3)=>{o.geometry=g;o.position.copy(p);};
-  set(geo,p1);this.push({label:`Pivot of ${o.name}`,undo:()=>set(old,p0),redo:()=>set(geo,p1)});
+  set(geo,p1);this.push({label:{key:'studio3d.hist.pivot',params:{name:o.name}},undo:()=>set(old,p0),redo:()=>set(geo,p1)});
  }
  private worldBox(o:THREE.Object3D){o.updateWorldMatrix(true,true);return new THREE.Box3().setFromObject(o);}
  private needMany(ids:number[],min:number){
@@ -455,7 +457,7 @@ export class Stage{
   return ids.map(id=>{const o=this.need(id);if(o===this.root)throw new StageError('The scene root cannot be moved.');return o;});
  }
  /** One undo step for moving several objects in world space. */
- private moveMany(text:string,moves:{o:THREE.Object3D;delta:THREE.Vector3}[]){
+ private moveMany(text:HistoryLabel,moves:{o:THREE.Object3D;delta:THREE.Vector3}[]){
   const list=moves.filter(m=>m.delta.lengthSq()>1e-18).map(m=>{
    const before=m.o.position.clone();const w=m.o.getWorldPosition(new THREE.Vector3()).add(m.delta);
    const after=m.o.parent?m.o.parent.worldToLocal(w):w;return{o:m.o,before,after};});
@@ -471,7 +473,7 @@ export class Stage{
   if(boxes.some(b=>b.isEmpty()))throw new StageError('Only objects with geometry can be aligned.');
   const all=new THREE.Box3();boxes.forEach(b=>all.union(b));
   const target=to==='min'?all.min[axis]:to==='max'?all.max[axis]:(all.min[axis]+all.max[axis])/2;
-  this.moveMany(`Align ${axis.toUpperCase()}`,objs.map((o,i)=>{const b=boxes[i];const cur=to==='min'?b.min[axis]:to==='max'?b.max[axis]:(b.min[axis]+b.max[axis])/2;
+  this.moveMany({key:'studio3d.hist.align',params:{axis:axis.toUpperCase()}},objs.map((o,i)=>{const b=boxes[i];const cur=to==='min'?b.min[axis]:to==='max'?b.max[axis]:(b.min[axis]+b.max[axis])/2;
    return{o,delta:new THREE.Vector3()[`set${axis.toUpperCase()}` as 'setX'](target-cur)};}));
  }
  /** Spreads three or more objects so the gaps between their bounds are equal. The outermost two stay where they are. */
@@ -486,13 +488,13 @@ export class Stage{
   const gap=(span-sizes)/(items.length-1);
   let cursor=Math.min(first.min[axis],...items.map(i=>i.b.min[axis]));const moves:{o:THREE.Object3D;delta:THREE.Vector3}[]=[];
   for(const i of items){const d=new THREE.Vector3();d[axis]=cursor-i.b.min[axis];moves.push({o:i.o,delta:d});cursor+=(i.b.max[axis]-i.b.min[axis])+gap;}
-  this.moveMany(`Distribute ${axis.toUpperCase()}`,moves);
+  this.moveMany({key:'studio3d.hist.distribute',params:{axis:axis.toUpperCase()}},moves);
  }
  /** Objects of a multi-selection without any whose ancestor is also selected. */
  private topLevel(objs:THREE.Object3D[]){const set=new Set(objs);return objs.filter(o=>{for(let p=o.parent;p;p=p.parent)if(set.has(p))return false;return true;});}
  snapshot(ids:number[]):TransformSnapshot[]{return ids.map(id=>{const o=this.need(id);return{id,p:o.position.clone(),r:o.rotation.clone(),s:o.scale.clone()};});}
  /** Records a group transform that already happened (a group gizmo drag). One undo step for all objects. */
- commitMany(before:TransformSnapshot[],text='Transform selection'){
+ commitMany(before:TransformSnapshot[],text:HistoryLabel={key:'studio3d.hist.transformSelection'}){
   const list=before.map(b=>{const o=this.need(b.id);return{o,b,a:{p:o.position.clone(),r:o.rotation.clone(),s:o.scale.clone()}};})
    .filter(x=>!(x.b.p.equals(x.a.p)&&x.b.r.equals(x.a.r)&&x.b.s.equals(x.a.s)));
   if(!list.length)return;
@@ -502,7 +504,7 @@ export class Stage{
  /** Moves several objects by the same world offset in one undo step. */
  translateMany(ids:number[],delta:Partial<Vec3>){
   const objs=this.topLevel(this.needMany(ids,1));const d=new THREE.Vector3(finite(delta.x??0,'x'),finite(delta.y??0,'y'),finite(delta.z??0,'z'));
-  this.moveMany(`Move ${objs.length} objects`,objs.map(o=>({o,delta:d.clone()})));
+  this.moveMany({key:'studio3d.hist.moveObjects',params:{count:objs.length}},objs.map(o=>({o,delta:d.clone()})));
  }
  /** Deletes several objects in one undo step. */
  removeMany(ids:number[]){
@@ -510,7 +512,7 @@ export class Stage{
   const items=objs.map(o=>({o,parent:o.parent!,at:o.parent!.children.indexOf(o)})).sort((a,b)=>a.parent.id-b.parent.id||a.at-b.at);
   for(const i of [...items].reverse())i.parent.remove(i.o);
   let owned=false;
-  this.push({label:`Delete ${items.length} objects`,undo:()=>{for(const i of items)this.attach0(i.o,i.parent,i.at);owned=true;},redo:()=>{for(const i of items)i.parent.remove(i.o);owned=false;},release:()=>{if(!owned)for(const i of items)disposeObject(i.o);}});
+  this.push({label:{key:'studio3d.hist.deleteObjects',params:{count:items.length}},undo:()=>{for(const i of items)this.attach0(i.o,i.parent,i.at);owned=true;},redo:()=>{for(const i of items)i.parent.remove(i.o);owned=false;},release:()=>{if(!owned)for(const i of items)disposeObject(i.o);}});
  }
  /** Duplicates several objects in one undo step. Copies get their own materials and a small offset. */
  /** Wraps two or more objects sharing a parent in a new group placed at their combined centre. One undo step. */
@@ -531,7 +533,7 @@ export class Stage{
    const ch=parent.children;ch.splice(ch.indexOf(b.o),1);ch.splice(Math.min(b.at,ch.length),0,b.o);}parent.remove(g);};
   const moveIn=()=>{parent.add(g);const ch=parent.children;ch.splice(ch.indexOf(g),1);ch.splice(Math.min(gAt,ch.length),0,g);
    g.updateMatrixWorld(true);for(const b of before)g.attach(b.o);};
-  this.push({label:`Group ${objs.length} objects`,undo:moveBack,redo:moveIn});
+  this.push({label:{key:'studio3d.hist.groupObjects',params:{count:objs.length}},undo:moveBack,redo:moveIn});
   return g;
  }
  /** Dissolves a group: its children move back to the group's parent, keeping their world transforms. One undo step. */
@@ -543,7 +545,7 @@ export class Stage{
   const split=()=>{for(const k of kids)parent.attach(k);parent.remove(g);};
   const join=()=>{parent.add(g);const ch=parent.children;ch.splice(ch.indexOf(g),1);ch.splice(Math.min(at,ch.length),0,g);
    g.updateMatrixWorld(true);for(const k of kids)g.attach(k);};
-  split();this.push({label:`Ungroup ${g.name}`,undo:join,redo:split});
+  split();this.push({label:{key:'studio3d.hist.ungroup',params:{name:g.name}},undo:join,redo:split});
  }
  /** Duplicates objects as a linear or radial array. count is the total including the source; one undo step. */
  arrayDuplicate(ids:number[],spec:{mode:'linear'|'radial';count:number;offset?:Vec3;axis?:'x'|'y'|'z';angle?:number;center?:Vec3}):THREE.Object3D[]{
@@ -577,7 +579,7 @@ export class Stage{
    items.push({o:copy,parent,at:parent.children.length});this.attach0(copy,parent,parent.children.length);
   }
   let owned=true;
-  this.push({label:`Array of ${objs.length* (count-1)} copies`,undo:()=>{for(const i of items)i.parent.remove(i.o);owned=false;},redo:()=>{for(const i of items)this.attach0(i.o,i.parent,i.at);owned=true;},release:()=>{if(!owned)for(const i of items)disposeObject(i.o);}});
+  this.push({label:{key:'studio3d.hist.arrayCopies',params:{count:objs.length*(count-1)}},undo:()=>{for(const i of items)i.parent.remove(i.o);owned=false;},redo:()=>{for(const i of items)this.attach0(i.o,i.parent,i.at);owned=true;},release:()=>{if(!owned)for(const i of items)disposeObject(i.o);}});
   return items.map(i=>i.o);
  }
  /** Nearest snap target for a world-space point: another mesh's vertex, or a point on another mesh's surface, within radius. */
@@ -630,7 +632,7 @@ export class Stage{
    const parent=src.parent??this.root;items.push({o:copy,parent,at:parent.children.length});this.attach0(copy,parent,parent.children.length);
   }
   let owned=true;
-  this.push({label:`Duplicate ${items.length} objects`,undo:()=>{for(const i of items)i.parent.remove(i.o);owned=false;},redo:()=>{for(const i of items)this.attach0(i.o,i.parent,i.at);owned=true;},release:()=>{if(!owned)for(const i of items)disposeObject(i.o);}});
+  this.push({label:{key:'studio3d.hist.duplicateObjects',params:{count:items.length}},undo:()=>{for(const i of items)i.parent.remove(i.o);owned=false;},redo:()=>{for(const i of items)this.attach0(i.o,i.parent,i.at);owned=true;},release:()=>{if(!owned)for(const i of items)disposeObject(i.o);}});
   return items.map(i=>i.o);
  }
  /** Edit mode: one mesh edited at a time, selection lives here so undo of ops stays coherent. */
@@ -660,7 +662,7 @@ export class Stage{
   const mask=ma?Array.from(ma.array as ArrayLike<number>).slice(0,data.positions.length/3) as number[]:undefined;
   return{...data,...(mask?{mask}:{})};
  }
- private applyMeshData(m:THREE.Mesh,data:MeshData,label:string){
+ private applyMeshData(m:THREE.Mesh,data:MeshData,label:HistoryLabel){
   const before=m.geometry,beforeData=m.userData.somniaPrimitive;
   const make=(d:MeshData)=>{const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(d.positions,3));g.setIndex(d.index);g.computeVertexNormals();return g;};
   const after=make(data);
@@ -696,22 +698,22 @@ export class Stage{
  editSelection():{verts:number[];edges:[number,number][];faces:number[]}{
   return{verts:[...this.editSel.verts].sort((a,b)=>a-b),edges:[...this.editSel.edges.values()],faces:[...this.editSel.faces].sort((a,b)=>a-b)};
  }
- private editOp(label:string,run:(m:MeshData)=>MeshData){
+ private editOp(label:HistoryLabel,run:(m:MeshData)=>MeshData){
   const mesh=this.editMesh();
   let out:MeshData;
   try{out=run(this.meshDataOf(mesh));}catch(e){throw e instanceof EditError?new StageError(e.message):e;}
   this.applyMeshData(mesh,out,label);
  }
- editExtrude(offset:number){this.editOp('Extrude faces',m=>extrudeFaces(m,[...this.editSel.faces],offset));}
- editInset(amount:number){this.editOp('Inset faces',m=>insetFaces(m,[...this.editSel.faces],amount));}
- editBevel(width:number){this.editOp('Bevel vertices',m=>bevelVertices(m,[...this.editSel.verts],width));}
+ editExtrude(offset:number){this.editOp({key:'studio3d.hist.extrude'},m=>extrudeFaces(m,[...this.editSel.faces],offset));}
+ editInset(amount:number){this.editOp({key:'studio3d.hist.inset'},m=>insetFaces(m,[...this.editSel.faces],amount));}
+ editBevel(width:number){this.editOp({key:'studio3d.hist.bevelVerts'},m=>bevelVertices(m,[...this.editSel.verts],width));}
  editLoopCut(){
   const edges=[...this.editSel.edges.values()];
   if(edges.length!==1)throw new StageError('Select exactly one edge for a loop cut.');
-  this.editOp('Loop cut',m=>loopCut(m,edges[0]));
+  this.editOp({key:'studio3d.hist.loopCut'},m=>loopCut(m,edges[0]));
  }
- editBevelEdge(width:number,segments=1){this.editOp('Bevel edges',m=>bevelEdges(m,[...this.editSel.edges.values()],width,segments));}
- editLoopSlide(factor:number){this.editOp('Loop slide',m=>slideEdges(m,[...this.editSel.edges.values()],factor));}
+ editBevelEdge(width:number,segments=1){this.editOp({key:'studio3d.hist.bevelEdges'},m=>bevelEdges(m,[...this.editSel.edges.values()],width,segments));}
+ editLoopSlide(factor:number){this.editOp({key:'studio3d.hist.loopSlide'},m=>slideEdges(m,[...this.editSel.edges.values()],factor));}
  /** Seam edges marked on a mesh (vertex-index pairs). */
  seamsOf(o:THREE.Object3D):[number,number][]{
   return (o.userData.somniaSeams as [number,number][]|undefined)??[];
@@ -740,7 +742,7 @@ export class Stage{
    if(after.length===before.length)throw new StageError('None of the selected edges are seams.');
   }
   this.setSeams(m,after);
-  this.push({label:mark?'Mark UV seams':'Clear UV seams',undo:()=>this.setSeams(m,before),redo:()=>this.setSeams(m,after)});
+  this.push({label:{key:mark?'studio3d.hist.markSeams':'studio3d.hist.clearSeams'},undo:()=>this.setSeams(m,before),redo:()=>this.setSeams(m,after)});
  }
  private uvTarget(id:number):THREE.Mesh{
   const o=this.need(id);const m=o as THREE.Mesh;
@@ -749,7 +751,7 @@ export class Stage{
   return m;
  }
  /** Applies a UV layout: vertices split along seams (one copy per UV slot) and every attribute follows. One undo step. */
- private applyUv(m:THREE.Mesh,r:UvResult,label:string){
+ private applyUv(m:THREE.Mesh,r:UvResult,label:HistoryLabel){
   const data=this.meshDataOf(m);
   if(r.uvIndex.length!==data.index.length||r.uvIndex.some(i=>i<0||i>=r.uv.length))throw new StageError('The UV layout is damaged.');
   const slotVert=new Array<number>(r.uv.length).fill(-1);
@@ -782,13 +784,13 @@ export class Stage{
   const lo:UvLayoutOpts={pack:opts?.pack??true,padding:opts?.padding??0.02};
   let r:UvResult;
   try{r=(opts?.method??'box')==='angle'?unfoldAngles(data,seams,lo):unwrapBox(data,seams,lo);}catch(e){throw e instanceof UvError?new StageError(e.message):e;}
-  this.applyUv(m,r,'Unwrap UVs');
+  this.applyUv(m,r,{key:'studio3d.hist.unwrap'});
  }
  /** Planar UV projection of the whole mesh along one axis, normalized to 0..1. One undo step. */
  uvPlanar(id:number,axis:'x'|'y'|'z'){
   const m=this.uvTarget(id);
   let r:UvResult;try{r=planarProject(this.meshDataOf(m),axis);}catch(e){throw e instanceof UvError?new StageError(e.message):e;}
-  this.applyUv(m,r,'Planar UV projection');
+  this.applyUv(m,r,{key:'studio3d.hist.planarUv'});
  }
  /** Read-only UV layout for the island view: one uv pair per face corner (index order) and the island id per face; null when the mesh has no uvs or too many faces. */
  uvLayout(id:number):{uv:[number,number][];islands:number[]}|null{
@@ -825,7 +827,7 @@ export class Stage{
    let owned=true;
    const apply=(g:THREE.BufferGeometry,mark:boolean)=>{m.geometry=g;this.setSeams(m,mark?seams1:seams0);if(mark){o.userData.somniaMirror={axis,merge,bisect};o.userData.somniaMirrorBase=base;}else{delete o.userData.somniaMirror;delete o.userData.somniaMirrorBase;}};
    apply(combined,true);
-   this.push({label:`Mirror ${o.name}`,undo:()=>{apply(base,false);owned=false;},redo:()=>{apply(combined,true);owned=true;},release:()=>{(owned?base:combined).dispose();}});
+   this.push({label:{key:'studio3d.hist.mirror',params:{name:o.name}},undo:()=>{apply(base,false);owned=false;},redo:()=>{apply(combined,true);owned=true;},release:()=>{(owned?base:combined).dispose();}});
   }else{
    const combined=m.geometry;const base=o.userData.somniaMirrorBase as THREE.BufferGeometry;
    if(!base)throw new StageError(`${o.name} has no stored base mesh.`);
@@ -834,7 +836,7 @@ export class Stage{
    let owned=false;
    const apply=(g:THREE.BufferGeometry,mark:boolean)=>{m.geometry=g;this.setSeams(m,mark?seamsC:seamsB);if(mark){o.userData.somniaMirror={axis:cur!.axis,merge:cur!.merge,bisect:cur!.bisect};o.userData.somniaMirrorBase=base;}else{delete o.userData.somniaMirror;delete o.userData.somniaMirrorBase;}};
    apply(base,false);
-   this.push({label:`Mirror off ${o.name}`,undo:()=>{apply(combined,true);owned=true;},redo:()=>{apply(base,false);owned=false;},release:()=>{(owned?base:combined).dispose();}});
+   this.push({label:{key:'studio3d.hist.mirrorOff',params:{name:o.name}},undo:()=>{apply(combined,true);owned=true;},redo:()=>{apply(base,false);owned=false;},release:()=>{(owned?base:combined).dispose();}});
   }
  }
  /** Starts a sculpt stroke: the positions snapshot becomes one undo step when the stroke ends. */
@@ -869,7 +871,7 @@ export class Stage{
   const after=new Float32Array(before.length);
   const set=(arr:Float32Array)=>{(g.getAttribute('somniaMask') as THREE.BufferAttribute).set(arr);(g.getAttribute('somniaMask') as THREE.BufferAttribute).needsUpdate=true;};
   set(after);
-  this.push({label:`Clear mask ${m.name}`,undo:()=>set(before),redo:()=>set(after)});
+  this.push({label:{key:'studio3d.hist.clearMask',params:{name:m.name}},undo:()=>set(before),redo:()=>set(after)});
  }
  sculptEnd(){
   const shot=this.sculptShot;this.sculptShot=null;if(!shot)return;
@@ -889,7 +891,7 @@ export class Stage{
    else if(m.geometry.getAttribute('somniaMask'))m.geometry.deleteAttribute('somniaMask');
    m.geometry.computeVertexNormals();
   };
-  this.push({label:`Sculpt ${m.name}`,undo:()=>set(before,maskBefore),redo:()=>set(after,maskAfter)});
+  this.push({label:{key:'studio3d.hist.sculpt',params:{name:m.name}},undo:()=>set(before,maskBefore),redo:()=>set(after,maskAfter)});
  }
  /** Changes the parameters of a primitive (radius, size, segments). The mesh keeps its place and material; one undo step. */
  primitiveOf(o:THREE.Object3D):PrimitiveData|null{return (o as THREE.Mesh).isMesh?readPrimitive(o.userData?.somniaPrimitive):null;}
@@ -901,7 +903,7 @@ export class Stage{
   const before=mesh.geometry,beforeData=o.userData.somniaPrimitive;const after=geometryFor(cur.kind,params);const afterData={kind:cur.kind,params};
   let owned=true;const apply=(g:THREE.BufferGeometry,d:unknown)=>{mesh.geometry=g;o.userData.somniaPrimitive=d;};
   apply(after,afterData);
-  this.push({label:`Shape of ${o.name}`,undo:()=>{apply(before,beforeData);owned=false;},redo:()=>{apply(after,afterData);owned=true;},release:()=>{(owned?before:after).dispose();}});
+  this.push({label:{key:'studio3d.hist.shape',params:{name:o.name}},undo:()=>{apply(before,beforeData);owned=false;},redo:()=>{apply(after,afterData);owned=true;},release:()=>{(owned?before:after).dispose();}});
  }
  setMaterial(id:number,request:MaterialPatch){
   const o=this.need(id);const mesh=o as THREE.Mesh;let patch:{color?:string;metalness?:number;roughness?:number};
@@ -935,7 +937,7 @@ export class Stage{
   const set=(sn:typeof before)=>{mat.color.copy(sn.c);mat.metalness=sn.m;mat.roughness=sn.r;mat.emissive.copy(sn.e);mat.emissiveIntensity=sn.ei;mat.opacity=sn.op;mat.transparent=sn.tr;mat.alphaTest=sn.at;mat.depthWrite=sn.dw;mat.side=sn.side;if(wood)mat.map=sn.map;mat.needsUpdate=true;};
   let owned=true;set(next);
   if(wood&&before.map!==next.map)disposeGenerated(before.map);
-  this.push({label:`Material of ${o.name}`,
+  this.push({label:{key:'studio3d.hist.material',params:{name:o.name}},
    undo:()=>{set(before);owned=false;},
    redo:()=>{set(next);owned=true;},
    release:()=>{if(wood)disposeGenerated(owned?before.map:next.map);}});
@@ -978,7 +980,7 @@ export class Stage{
    for(const k of TEXTURE_SLOTS){(mat as unknown as Record<string,unknown>)[SLOT_CONFIG[k].prop]=sn.maps[k];const t=sn.maps[k];if(t&&sn.trs[k])writeTransform(t,sn.trs[k]!);}
    mat.needsUpdate=true;};
   let owned=true;set(next);
-  this.push({label:`Material of ${o.name} (paste)`,undo:()=>{set(before);owned=false;},redo:()=>{set(next);owned=true;},
+  this.push({label:{key:'studio3d.hist.materialPaste',params:{name:o.name}},undo:()=>{set(before);owned=false;},redo:()=>{set(next);owned=true;},
    release:()=>{const drop=owned?before:next;for(const k of TEXTURE_SLOTS){const t=drop.maps[k];if(t?.userData.somniaClone)t.dispose();}}});
  }
  /** Puts a decoded image into a texture slot, or clears the slot with null. The caller has already checked the file; this sets colour space and keeps one undo step. */
@@ -991,7 +993,7 @@ export class Stage{
   if(before===texture||(!before&&!texture))return;
   const set=(t:THREE.Texture|null)=>{(mat as unknown as Record<string,unknown>)[cfg.prop]=t;mat.needsUpdate=true;};
   let owned=true;set(texture);
-  this.push({label:`${slot} texture of ${o.name}`,undo:()=>{set(before);owned=false;},redo:()=>{set(texture);owned=true;},release:()=>{(owned?before:texture)?.dispose();}});
+  this.push({label:{key:'studio3d.hist.texture',params:{slot,name:o.name}},undo:()=>{set(before);owned=false;},redo:()=>{set(texture);owned=true;},release:()=>{(owned?before:texture)?.dispose();}});
  }
  /** Changes offset, scale or rotation of the image in one slot. One undo step. Several texture slots of one material share nothing, so each is set on its own. */
  setTextureTransform(id:number,slot:TextureSlot,patch:Partial<TextureTransform>|'reset'){
@@ -1001,7 +1003,7 @@ export class Stage{
   let next:TextureTransform;try{next=patch==='reset'?{...DEFAULT_TRANSFORM}:mergeTransform(readTransform(tex),patch);}catch(e){if(e instanceof UvError)throw new StageError(e.message);throw e;}
   const before=readTransform(tex);if(JSON.stringify(before)===JSON.stringify(next))return;
   const set=(t:TextureTransform)=>{writeTransform(tex,t);};set(next);
-  this.push({label:`${slot} texture mapping of ${o.name}`,undo:()=>set(before),redo:()=>set(next)});
+  this.push({label:{key:'studio3d.hist.textureMapping',params:{slot,name:o.name}},undo:()=>set(before),redo:()=>set(next)});
  }
  // ---- Animation clips: keyframe tracks of node transforms. Tracks address nodes by uuid, so any node name works. ----
  // Easing of the authoring keys lives in clip.userData.ease (track name to one easing per key). Playing and exporting use baked copies of the tracks.
@@ -1040,7 +1042,7 @@ export class Stage{
   if(m.duration!==undefined){const last=Math.max(0,...c.tracks.map(t=>lastKeyTime(t.times)));if(m.duration>=last)c.duration=m.duration;}
  }
  private needClip(i:number):THREE.AnimationClip{const c=Number.isInteger(i)?this.clipList[i]:undefined;if(!c)throw new ClipError(`There is no animation clip ${String(i)}.`);return c;}
- private editClip(i:number,label:string,make:(clip:THREE.AnimationClip)=>ClipState){
+ private editClip(i:number,label:HistoryLabel,make:(clip:THREE.AnimationClip)=>ClipState){
   const clip=this.needClip(i);const before=this.snapClip(clip);const next=make(clip);
   this.restoreClip(clip,next);this.push({label,undo:()=>this.restoreClip(clip,before),redo:()=>this.restoreClip(clip,next)});
  }
@@ -1049,7 +1051,7 @@ export class Stage{
   if(this.clipList.length>=MAX_CLIPS)throw new ClipError(`A scene can have at most ${MAX_CLIPS} clips.`);
   const clip=new THREE.AnimationClip(this.uniqueClipName(name===undefined?'Clip':checkClipName(name)),checkDuration(duration),[]);
   const at=this.clipList.length;const add=()=>{this.clipList.splice(at,0,clip);this.clipRevision++;};add();
-  this.push({label:`Add clip ${clip.name}`,undo:()=>{this.clipList.splice(at,1);this.clipRevision++;},redo:add});return at;
+  this.push({label:{key:'studio3d.hist.clipAdd',params:{name:clip.name}},undo:()=>{this.clipList.splice(at,1);this.clipRevision++;},redo:add});return at;
  }
  /** Duplicates a clip with all tracks and their easing, right after the original. One undo step. */
  duplicateClip(i:number):number{
@@ -1058,22 +1060,22 @@ export class Stage{
   const copy=new THREE.AnimationClip(this.uniqueClipName(`${src.name} copy`),src.duration,src.tracks.map(t=>t.clone()));
   (copy.userData as {ease?:unknown}).ease=Object.fromEntries(Object.entries(this.easeOf(src)).map(([k,v])=>[k,v.slice()]));
   const at=i+1;const add=()=>{this.clipList.splice(at,0,copy);this.clipRevision++;};add();
-  this.push({label:`Duplicate clip ${src.name}`,undo:()=>{this.clipList.splice(at,1);this.clipRevision++;},redo:add});
+  this.push({label:{key:'studio3d.hist.clipDuplicate',params:{name:src.name}},undo:()=>{this.clipList.splice(at,1);this.clipRevision++;},redo:add});
   return at;
  }
  removeClip(i:number){
   const clip=this.needClip(i);const del=()=>{this.clipList.splice(i,1);this.clipRevision++;};del();
-  this.push({label:`Delete clip ${clip.name}`,undo:()=>{this.clipList.splice(i,0,clip);this.clipRevision++;},redo:del});
+  this.push({label:{key:'studio3d.hist.clipDelete',params:{name:clip.name}},undo:()=>{this.clipList.splice(i,0,clip);this.clipRevision++;},redo:del});
  }
  renameClip(i:number,name:string){
   const clip=this.needClip(i);const next=checkClipName(name);const before=clip.name;if(next===before)return;
-  const set=(n:string)=>{clip.name=n;this.clipRevision++;};set(next);this.push({label:`Rename clip ${before}`,undo:()=>set(before),redo:()=>set(next)});
+  const set=(n:string)=>{clip.name=n;this.clipRevision++;};set(next);this.push({label:{key:'studio3d.hist.clipRename',params:{name:before}},undo:()=>set(before),redo:()=>set(next)});
  }
  /** Sets the length of a clip. It cannot end before its last key. */
  setClipDuration(i:number,duration:number){
   const clip=this.needClip(i);const d=checkDuration(duration);const last=Math.max(0,...clip.tracks.map(t=>lastKeyTime(t.times)));
   if(d<last)throw new ClipError(`The clip cannot end before its last key at ${last} s.`);
-  if(d===clip.duration)return;this.editClip(i,`Length of clip ${clip.name}`,c=>({...this.snapClip(c),duration:d}));
+  if(d===clip.duration)return;this.editClip(i,{key:'studio3d.hist.clipLength',params:{name:clip.name}},c=>({...this.snapClip(c),duration:d}));
  }
  private keyNode(id:number):THREE.Object3D{const o=this.need(id);if(o===this.root)throw new ClipError('The scene root cannot be animated.');return o;}
  /** Bones of every skin in the scene, depth-first. The depth indents the bone picker (roots at 0). */
@@ -1102,7 +1104,7 @@ export class Stage{
  private restoreLocals(chain:THREE.Bone[],rows:PoseBone[]){chain.forEach((b,i)=>{const r=rows[i];if(!r)return;b.position.fromArray([...r.p]);b.quaternion.fromArray([...r.q]);b.scale.fromArray([...r.s]);});this.root.updateMatrixWorld(true);}
  private applyPoseRecord(chain:THREE.Bone[],bones:Record<string,PoseBone>){for(const b of chain){const r=bones[b.name];if(!r)continue;b.position.fromArray([...r.p]);b.quaternion.fromArray([...r.q]);b.scale.fromArray([...r.s]);}this.root.updateMatrixWorld(true);}
  /** Applies a pose record to the rig as one undo step. */
- private poseSet(id:number,label:string,bones:Record<string,PoseBone>){
+ private poseSet(id:number,label:HistoryLabel,bones:Record<string,PoseBone>){
   const root=this.rigOf(id);const chain=this.boneChain(root);const before=this.captureLocals(chain);
   this.applyPoseRecord(chain,bones);
   this.push({label,undo:()=>this.restoreLocals(chain,before),redo:()=>this.applyPoseRecord(chain,bones)});this.emit();
@@ -1115,20 +1117,20 @@ export class Stage{
   const chain=this.boneChain(root);const bones:Record<string,PoseBone>={};
   chain.forEach((b,i)=>{bones[b.name]=this.captureLocals(chain)[i];});
   const at=lib.length;lib.push({name:n,bones});
-  this.push({label:`Save pose ${n}`,undo:()=>{lib.splice(at,1);},redo:()=>{lib.splice(at,0,{name:n,bones});}});this.emit();
+  this.push({label:{key:'studio3d.hist.poseSave',params:{name:n}},undo:()=>{lib.splice(at,1);},redo:()=>{lib.splice(at,0,{name:n,bones});}});this.emit();
  }
  /** Applies a saved pose. One undo step. */
- poseApply(id:number,name:string){const root=this.rigOf(id);this.poseSet(id,`Pose ${name}`,this.needPose(root,name).bones);}
+ poseApply(id:number,name:string){const root=this.rigOf(id);this.poseSet(id,{key:'studio3d.hist.poseApply',params:{name}},this.needPose(root,name).bones);}
  /** Applies the L/R mirror of a saved pose (name pairs like Arm.L/Arm.R or LeftArm/RightArm swap). One undo step. */
- poseMirror(id:number,name:string){const root=this.rigOf(id);this.poseSet(id,`Mirror pose ${name}`,mirrorPose(this.needPose(root,name)).bones);}
+ poseMirror(id:number,name:string){const root=this.rigOf(id);this.poseSet(id,{key:'studio3d.hist.poseMirror',params:{name}},mirrorPose(this.needPose(root,name)).bones);}
  /** Blends two saved poses (t=0 is a, t=1 is b) and applies the mix. One undo step. */
- poseBlend(id:number,a:string,b:string,t:number){const root=this.rigOf(id);this.poseSet(id,`Blend ${a} and ${b}`,blendPoses(this.needPose(root,a),this.needPose(root,b),t).bones);}
+ poseBlend(id:number,a:string,b:string,t:number){const root=this.rigOf(id);this.poseSet(id,{key:'studio3d.hist.poseBlend',params:{a,b}},blendPoses(this.needPose(root,a),this.needPose(root,b),t).bones);}
  /** Removes a saved pose. One undo step. */
  poseRemove(id:number,name:string){
   const root=this.rigOf(id);const lib=this.poseLib(root);const at=lib.findIndex(p=>p.name===name);
   if(at<0)throw new PoseError(`There is no pose named "${name}" on this rig.`);
   const[gone]=lib.splice(at,1);
-  this.push({label:`Remove pose ${name}`,undo:()=>{lib.splice(at,0,gone);},redo:()=>{lib.splice(at,1);}});this.emit();
+  this.push({label:{key:'studio3d.hist.poseRemove',params:{name}},undo:()=>{lib.splice(at,0,gone);},redo:()=>{lib.splice(at,1);}});this.emit();
  }
  /** The three-bone chain starting at root: root, its first bone child, that child's first bone child. */
  private ikChain(rootId:number):{root:THREE.Bone;mid:THREE.Bone;end:THREE.Bone}{
@@ -1178,7 +1180,7 @@ export class Stage{
    next={on:true,target:e.clone(),pole};
   }
   if(next)this.ikChains.set(root.id,next);else this.ikChains.delete(root.id);
-  this.push({label:on?`IK on ${root.name}`:`FK for ${root.name}`,
+  this.push({label:{key:on?'studio3d.hist.ikOn':'studio3d.hist.fk',params:{name:root.name}},
    undo:()=>{if(before)this.ikChains.set(root.id,{...before,target:before.target.clone(),pole:before.pole.clone()});else this.ikChains.delete(root.id);},
    redo:()=>{if(next)this.ikChains.set(root.id,{...next,target:next.target.clone(),pole:next.pole.clone()});else this.ikChains.delete(root.id);}});
   this.emit();
@@ -1215,7 +1217,7 @@ export class Stage{
  ikDragTarget(rootId:number,p:readonly[number,number,number]){const{root,mid,end}=this.ikChain(rootId);const c=this.ikOf(rootId);if(!c||!c.on)throw new IkError('IK is off for this chain.');c.target.set(p[0],p[1],p[2]);this.ikSolve(root,mid,end,c);this.emit();}
  ikDragPole(rootId:number,p:readonly[number,number,number]){const{root,mid,end}=this.ikChain(rootId);const c=this.ikOf(rootId);if(!c||!c.on)throw new IkError('IK is off for this chain.');c.pole.set(p[0],p[1],p[2]);this.ikSolve(root,mid,end,c);this.emit();}
  /** Closes a drag or a command move as one undo step. */
- ikCommit(rootId:number,before:{chain:THREE.Bone[];rows:{p:readonly[number,number,number];q:readonly[number,number,number,number];s:readonly[number,number,number]}[];ik:{target:THREE.Vector3;pole:THREE.Vector3}|null},label:string){
+ ikCommit(rootId:number,before:{chain:THREE.Bone[];rows:{p:readonly[number,number,number];q:readonly[number,number,number,number];s:readonly[number,number,number]}[];ik:{target:THREE.Vector3;pole:THREE.Vector3}|null},label:HistoryLabel){
   const{root,mid,end}=this.ikChain(rootId);const after=this.ikBegin(rootId);
   this.push({label,
    undo:()=>{this.restoreLocals(before.chain,before.rows);const c=this.ikOf(rootId);if(c&&before.ik){c.target.copy(before.ik.target);c.pole.copy(before.ik.pole);}},
@@ -1223,8 +1225,8 @@ export class Stage{
   void mid;void end;this.emit();
  }
  /** Command path: move the target (and solve) as one undo step. */
- ikSetTarget(rootId:number,p:readonly[number,number,number]){const before=this.ikBegin(rootId);this.ikDragTarget(rootId,p);this.ikCommit(rootId,before,'IK target');}
- ikSetPole(rootId:number,p:readonly[number,number,number]){const before=this.ikBegin(rootId);this.ikDragPole(rootId,p);this.ikCommit(rootId,before,'IK pole');}
+ ikSetTarget(rootId:number,p:readonly[number,number,number]){const before=this.ikBegin(rootId);this.ikDragTarget(rootId,p);this.ikCommit(rootId,before,{key:'studio3d.hist.ikTarget'});}
+ ikSetPole(rootId:number,p:readonly[number,number,number]){const before=this.ikBegin(rootId);this.ikDragPole(rootId,p);this.ikCommit(rootId,before,{key:'studio3d.hist.ikPole'});}
  /** The joint chain starting at root for FABRIK: root plus first-bone-child walks, 3..8 segments. */
  private fabrikChainOf(rootId:number):THREE.Bone[]{
   const o=this.need(rootId) as THREE.Bone;
@@ -1278,7 +1280,7 @@ export class Stage{
    next={on:true,target:e.clone(),look:{on:false,target:e.clone().add(dir.multiplyScalar(1))}};
   }
   if(next)this.fabrikChains.set(root.id,next);else this.fabrikChains.delete(root.id);
-  this.push({label:on?`FABRIK on ${root.name}`:`FK for ${root.name}`,
+  this.push({label:{key:on?'studio3d.hist.fabrikOn':'studio3d.hist.fk',params:{name:root.name}},
    undo:()=>{if(before)this.fabrikChains.set(root.id,{...before,target:before.target.clone(),look:{...before.look,target:before.look.target.clone()}});else this.fabrikChains.delete(root.id);},
    redo:()=>{if(next)this.fabrikChains.set(root.id,{...next,target:next.target.clone(),look:{...next.look,target:next.look.target.clone()}});else this.fabrikChains.delete(root.id);}});
   this.emit();
@@ -1326,7 +1328,7 @@ export class Stage{
  fabrikDragTarget(rootId:number,p:readonly[number,number,number]){const chain=this.fabrikChainOf(rootId);const c=this.fabrikOf(rootId);if(!c||!c.on)throw new IkError('FABRIK is off for this chain.');c.target.set(p[0],p[1],p[2]);this.fabrikSolveChain(chain,c);this.emit();}
  fabrikDragLook(rootId:number,p:readonly[number,number,number]){const chain=this.fabrikChainOf(rootId);const c=this.fabrikOf(rootId);if(!c||!c.on||!c.look.on)throw new IkError('Look-at is off for this chain.');c.look.target.set(p[0],p[1],p[2]);this.fabrikSolveChain(chain,c);this.emit();}
  /** Closes a drag or a command move as one undo step. */
- fabrikCommit(rootId:number,before:{chain:THREE.Bone[];rows:{p:readonly[number,number,number];q:readonly[number,number,number,number];s:readonly[number,number,number]}[];fabrik:{target:THREE.Vector3;look:{on:boolean;target:THREE.Vector3}}|null},label:string){
+ fabrikCommit(rootId:number,before:{chain:THREE.Bone[];rows:{p:readonly[number,number,number];q:readonly[number,number,number,number];s:readonly[number,number,number]}[];fabrik:{target:THREE.Vector3;look:{on:boolean;target:THREE.Vector3}}|null},label:HistoryLabel){
   const after=this.fabrikBegin(rootId);
   this.push({label,
    undo:()=>{this.restoreLocals(before.chain,before.rows);const c=this.fabrikOf(rootId);if(c&&before.fabrik){c.target.copy(before.fabrik.target);c.look.on=before.fabrik.look.on;c.look.target.copy(before.fabrik.look.target);}},
@@ -1334,9 +1336,9 @@ export class Stage{
   this.emit();
  }
  /** Command path: move the target (and solve) as one undo step. */
- fabrikSetTarget(rootId:number,p:readonly[number,number,number]){const before=this.fabrikBegin(rootId);this.fabrikDragTarget(rootId,p);this.fabrikCommit(rootId,before,'FABRIK target');}
+ fabrikSetTarget(rootId:number,p:readonly[number,number,number]){const before=this.fabrikBegin(rootId);this.fabrikDragTarget(rootId,p);this.fabrikCommit(rootId,before,{key:'studio3d.hist.fabrikTarget'});}
  /** Command path: move the look target (and solve) as one undo step. */
- fabrikSetLook(rootId:number,p:readonly[number,number,number]){const before=this.fabrikBegin(rootId);this.fabrikDragLook(rootId,p);this.fabrikCommit(rootId,before,'FABRIK look target');}
+ fabrikSetLook(rootId:number,p:readonly[number,number,number]){const before=this.fabrikBegin(rootId);this.fabrikDragLook(rootId,p);this.fabrikCommit(rootId,before,{key:'studio3d.hist.fabrikLook'});}
  /** Toggles the look-at constraint of an active chain. One undo step. */
  fabrikLookToggle(rootId:number,on:boolean){
   const chain=this.fabrikChainOf(rootId);const c=this.fabrikOf(rootId);
@@ -1352,7 +1354,7 @@ export class Stage{
   c.look.on=on;if(on)this.fabrikSolveChain(chain,c);
   const rowsA=this.captureLocals(chain);
   const after={on,target:c.look.target.clone()};
-  this.push({label:on?'Look-at on':'Look-at off',
+  this.push({label:{key:on?'studio3d.hist.lookAtOn':'studio3d.hist.lookAtOff'},
    undo:()=>{const k=this.fabrikOf(rootId);if(k){k.look.on=before.on;k.look.target.copy(before.target);}this.restoreLocals(chain,rowsB);},
    redo:()=>{const k=this.fabrikOf(rootId);if(k){k.look.on=after.on;k.look.target.copy(after.target);}this.restoreLocals(chain,rowsA);}});
   this.emit();
@@ -1372,7 +1374,7 @@ export class Stage{
   const before=this.boneLimits.get(o.uuid)??null;
   if(hasLimits(next))this.boneLimits.set(o.uuid,next);else this.boneLimits.delete(o.uuid);
   const rowsB=this.captureLocals([o]);this.clampBone(o);const rowsA=this.captureLocals([o]);
-  this.push({label:`Limits of ${o.name}`,
+  this.push({label:{key:'studio3d.hist.limits',params:{name:o.name}},
    undo:()=>{if(before)this.boneLimits.set(o.uuid,before);else this.boneLimits.delete(o.uuid);this.restoreLocals([o],rowsB);},
    redo:()=>{if(hasLimits(next))this.boneLimits.set(o.uuid,next);else this.boneLimits.delete(o.uuid);this.restoreLocals([o],rowsA);}});
   this.emit();
@@ -1405,7 +1407,7 @@ export class Stage{
   if(!KEY_PATHS.includes(path))throw new ClipError('The path must be position, rotation or scale.');
   const clip=this.needClip(i);const node=this.keyNode(id);this.keyPathFor(node,path);const t=checkKeyTime(time);
   const r=this.withKey(clip,node,path,t,this.valueOf(node,path,value));
-  this.editClip(i,`${r.replaced?'Change':'Add'} ${path} key on ${node.name}`,()=>r.state);
+  this.editClip(i,{key:r.replaced?'studio3d.hist.keyChange':'studio3d.hist.keyAdd',params:{path,name:node.name}},()=>r.state);
  }
  /** Records the current pose of bones as rotation keys at a time in a clip - a keyframe pose on the timeline. One undo step for the whole record, however many bones. Returns the number of keys written. A key after the end extends the clip. */
  recordPose(i:number,time:number,ids:number[]):number{
@@ -1416,7 +1418,7 @@ export class Stage{
   try{for(const b of bones){this.restoreClip(clip,cur);cur=this.withKey(clip,b,'rotation',t,b.quaternion.toArray()).state;}}
   catch(e){this.restoreClip(clip,was);throw e;}
   this.restoreClip(clip,cur);
-  this.push({label:`Record pose at ${Math.round(t*1000)/1000}s`,undo:()=>this.restoreClip(clip,was),redo:()=>this.restoreClip(clip,cur)});
+  this.push({label:{key:'studio3d.hist.recordPose',params:{time:Math.round(t*1000)/1000}},undo:()=>this.restoreClip(clip,was),redo:()=>this.restoreClip(clip,cur)});
   this.emit();return bones.length;
  }
  /** Evaluates every track of a clip at a time (clamped): node uuid -> local transform parts. The review tools (onion skin, motion path, retarget) read poses through this and never touch the scene. */
@@ -1480,7 +1482,7 @@ export class Stage{
    if(q)p.target.quaternion.copy(q);
   }
   this.root.updateMatrixWorld(true);const after=this.captureLocals(chain);
-  this.push({label:'Retarget preview',undo:()=>this.restoreLocals(chain,before),redo:()=>this.restoreLocals(chain,after)});
+  this.push({label:{key:'studio3d.hist.retarget'},undo:()=>this.restoreLocals(chain,before),redo:()=>this.restoreLocals(chain,after)});
   this.emit();return map.pairs.length;
  }
  /** Bakes a clip retargeted onto the target rig as a new clip with quaternion tracks on the mapped target bones. One undo step. Returns the new clip index. */
@@ -1505,7 +1507,7 @@ export class Stage{
   if(!tracks.length)throw new ClipError(`Clip ${clip.name} has no rotation keys on the mapped source bones.`);
   const made=new THREE.AnimationClip(this.uniqueClipName(name===undefined?retargetClipName(clip.name):checkClipName(name)),clip.duration,tracks);
   const at=this.clipList.length;const add=()=>{this.clipList.splice(at,0,made);this.clipRevision++;};add();
-  this.push({label:`Add clip ${made.name}`,undo:()=>{this.clipList.splice(at,1);this.clipRevision++;},redo:add});this.emit();
+  this.push({label:{key:'studio3d.hist.clipAdd',params:{name:made.name}},undo:()=>{this.clipList.splice(at,1);this.clipRevision++;},redo:add});this.emit();
   return at;
  }
  /** World positions of a bone across a clip, sampled evenly: the motion path polyline. */
@@ -1532,7 +1534,7 @@ export class Stage{
   if(!old||!isPlainTrack(old.times,old.values,path))throw new ClipError(`${node.name} has no ${path} keys in this clip.`);
   const k=findKey(old.times,t);if(k<0)throw new ClipError('There is no key at that time.');
   const r=removeKeyData(old.times,old.values,path,k);const name=trackName(node.uuid,path);
-  this.editClip(i,`Remove ${path} key on ${node.name}`,c=>{
+  this.editClip(i,{key:'studio3d.hist.keyRemove',params:{path,name:node.name}},c=>{
    const base=this.snapClip(c);const rest=base.tracks.filter(x=>x.name!==name);const eases=(base.ease[name]??[]).slice();eases.splice(k,1);
    if(!r.times.length){delete base.ease[name];return{...base,tracks:rest};}
    base.ease[name]=eases;return{...base,tracks:[...rest,this.makeTrack(name,path,r.times,r.values,old.getInterpolation())]};
@@ -1548,7 +1550,7 @@ export class Stage{
   const eases=(this.easeOf(clip)[name]??[]).slice();while(eases.length<old.times.length)eases.push('linear');const e=eases[k];
   const gone=removeKeyData(old.times,old.values,path,k);const ins=insertKey(gone.times,gone.values,path,t,value);
   const ne=eases.slice();ne.splice(k,1);ne.splice(ins.times.indexOf(t),0,e);
-  this.editClip(i,`Move ${path} key on ${node.name}`,c=>{const base=this.snapClip(c);base.ease[name]=ne;return{...base,tracks:[...base.tracks.filter(x=>x.name!==name),this.makeTrack(name,path,ins.times,ins.values,old.getInterpolation())],duration:Math.max(base.duration,t)};});
+  this.editClip(i,{key:'studio3d.hist.keyMove',params:{path,name:node.name}},c=>{const base=this.snapClip(c);base.ease[name]=ne;return{...base,tracks:[...base.tracks.filter(x=>x.name!==name),this.makeTrack(name,path,ins.times,ins.values,old.getInterpolation())],duration:Math.max(base.duration,t)};});
  }
  /** Editable data of one track, with the easing padded to one entry per key. */
  private dataOf(clip:THREE.AnimationClip,node:THREE.Object3D,path:KeyPath):{name:string;track:THREE.KeyframeTrack;data:TrackData}{
@@ -1572,7 +1574,7 @@ export class Stage{
    this.keyPathFor(node,path);const{name,track,data}=this.dataOf(clip,node,path);
    plan.set(name,{path,interp:track.getInterpolation(),data:shiftTrackKeys(data,path,keyIndices(data,times),dt)});
   }
-  this.editClip(i,`Move keys on ${node.name}`,c=>{
+  this.editClip(i,{key:'studio3d.hist.keysMove',params:{name:node.name}},c=>{
    const base=this.snapClip(c);
    for(const[name,p]of plan){base.ease[name]=p.data.eases;base.tracks=[...base.tracks.filter(x=>x.name!==name),this.makeTrack(name,p.path,p.data.times,p.data.values,p.interp)];}
    return{...base,duration:Math.max(base.duration,...[...plan.values()].map(p=>lastKeyTime(p.data.times)))};
@@ -1592,7 +1594,7 @@ export class Stage{
    const data=pasteTrackKeys(cur?this.dataOf(clip,node,path).data:undefined,path,ks,t);
    plan.set(trackName(node.uuid,path),{path,interp:cur?.getInterpolation(),data});
   }
-  this.editClip(i,`Paste keys on ${node.name}`,c=>{
+  this.editClip(i,{key:'studio3d.hist.keysPaste',params:{name:node.name}},c=>{
    const base=this.snapClip(c);
    for(const[name,p]of plan){base.ease[name]=p.data.eases;base.tracks=[...base.tracks.filter(x=>x.name!==name),this.makeTrack(name,p.path,p.data.times,p.data.values,p.interp)];}
    return{...base,duration:Math.max(base.duration,...[...plan.values()].map(p=>lastKeyTime(p.data.times)))};
@@ -1607,7 +1609,7 @@ export class Stage{
   const k=findKey(old.times,t);if(k<0)throw new ClipError('There is no key at that time.');
   const name=trackName(node.uuid,path);const eases=(this.easeOf(clip)[name]??[]).slice();while(eases.length<old.times.length)eases.push('linear');
   if(eases[k]===ease)return;eases[k]=ease;
-  this.editClip(i,`Easing of ${path} key on ${node.name}`,c=>{const base=this.snapClip(c);base.ease[name]=eases;return base;});
+  this.editClip(i,{key:'studio3d.hist.keyEasing',params:{path,name:node.name}},c=>{const base=this.snapClip(c);base.ease[name]=eases;return base;});
  }
  /** Key times and easing of one object in one clip, per path. */
  keysOf(i:number,id:number):{path:KeyPath;times:number[];eases:Ease[];editable:boolean}[]{
@@ -1678,7 +1680,7 @@ export class Stage{
   if(!copy){
    const list=objs.map(o=>{const t=place(o,o.parent!);return{o,b:{p:o.position.clone(),q:o.quaternion.clone(),s:o.scale.clone()},a:t};});
    const set=(k:'b'|'a')=>{for(const l of list){const v=l[k];l.o.position.copy(v.p);l.o.quaternion.copy(v.q);l.o.scale.copy(v.s);}};
-   set('a');this.push({label:`Mirror ${objs.length>1?objs.length+' objects':objs[0].name}`,undo:()=>set('b'),redo:()=>set('a')});return objs;
+   set('a');this.push({label:{key:'studio3d.hist.mirrorObjects',params:{count:objs.length,name:objs[0].name}},undo:()=>set('b'),redo:()=>set('a')});return objs;
   }
   const items:{o:THREE.Object3D;parent:THREE.Object3D;at:number}[]=[];
   for(const src of objs){
@@ -1687,7 +1689,7 @@ export class Stage{
    c.name=this.uniqueName(src.name+' mirror');items.push({o:c,parent,at:parent.children.length});this.attach0(c,parent,parent.children.length);
   }
   let owned=true;
-  this.push({label:`Mirror copy of ${items.length>1?items.length+' objects':objs[0].name}`,undo:()=>{for(const i of items)i.parent.remove(i.o);owned=false;},redo:()=>{for(const i of items)this.attach0(i.o,i.parent,i.at);owned=true;},release:()=>{if(!owned)for(const i of items)disposeObject(i.o);}});
+  this.push({label:{key:'studio3d.hist.mirrorCopy',params:{count:items.length,name:objs[0].name}},undo:()=>{for(const i of items)i.parent.remove(i.o);owned=false;},redo:()=>{for(const i of items)this.attach0(i.o,i.parent,i.at);owned=true;},release:()=>{if(!owned)for(const i of items)disposeObject(i.o);}});
   return items.map(i=>i.o);
  }
  /** Bakes each mesh's scale into its geometry and resets the scale to 1. The look does not change. A mesh with children is refused, because the children would change size. */
@@ -1701,7 +1703,7 @@ export class Stage{
   if(!list.length)return;
   const set=(k:'before'|'after')=>{for(const l of list){if(k==='after'){l.m.geometry=l.after;l.m.scale.set(1,1,1);delete l.m.userData.somniaPrimitive;}else{l.m.geometry=l.before.g;l.m.scale.copy(l.before.s);if(l.before.d!==undefined)l.m.userData.somniaPrimitive=l.before.d;}}};
   let owned=true;set('after');
-  this.push({label:`Apply scale of ${list.length>1?list.length+' objects':list[0].m.name}`,undo:()=>{set('before');owned=false;},redo:()=>{set('after');owned=true;},release:()=>{for(const l of list)(owned?l.before.g:l.after).dispose();}});
+  this.push({label:{key:'studio3d.hist.applyScale',params:{count:list.length,name:list[0].m.name}},undo:()=>{set('before');owned=false;},redo:()=>{set('after');owned=true;},release:()=>{for(const l of list)(owned?l.before.g:l.after).dispose();}});
  }
  /** Joins all meshes in the given objects into one mesh at the scene root. World transforms are baked in. The first mesh's material is used. One undo step. */
  merge(ids:number[]):THREE.Mesh{
@@ -1727,7 +1729,7 @@ export class Stage{
   for(const i of [...items].reverse())i.parent.remove(i.o);
   const at=this.root.children.length;this.attach0(result,this.root,at);
   let owned=true;
-  this.push({label:`Merge ${meshes.length} meshes`,undo:()=>{this.root.remove(result);for(const i of items)this.attach0(i.o,i.parent,i.at);owned=false;},redo:()=>{for(const i of [...items].reverse())i.parent.remove(i.o);this.attach0(result,this.root,this.root.children.length);owned=true;},
+  this.push({label:{key:'studio3d.hist.mergeMeshes',params:{count:meshes.length}},undo:()=>{this.root.remove(result);for(const i of items)this.attach0(i.o,i.parent,i.at);owned=false;},redo:()=>{for(const i of [...items].reverse())i.parent.remove(i.o);this.attach0(result,this.root,this.root.children.length);owned=true;},
    release:()=>{if(owned)for(const i of items)disposeObject(i.o);else disposeObject(result);}});
   return result;
  }
@@ -1735,13 +1737,13 @@ export class Stage{
  setHidden(id:number,hidden:boolean){
   const o=this.need(id);if(o===this.root)throw new StageError('The scene root cannot be hidden.');
   if(o.visible===!hidden)return;
-  o.visible=!hidden;this.push({label:`${hidden?'Hide':'Show'} ${o.name}`,undo:()=>{o.visible=hidden;},redo:()=>{o.visible=!hidden;}});
+  o.visible=!hidden;this.push({label:{key:hidden?'studio3d.hist.hide':'studio3d.hist.show',params:{name:o.name}},undo:()=>{o.visible=hidden;},redo:()=>{o.visible=!hidden;}});
  }
  /** Locks an object against viewport picking and marquee selection. One undo step. */
  setLocked(id:number,locked:boolean){
   const o=this.need(id);if(o===this.root)throw new StageError('The scene root cannot be locked.');
   if((o.userData.somniaLocked===true)===locked)return;
-  o.userData.somniaLocked=locked;this.push({label:`${locked?'Lock':'Unlock'} ${o.name}`,undo:()=>{o.userData.somniaLocked=!locked;},redo:()=>{o.userData.somniaLocked=locked;}});
+  o.userData.somniaLocked=locked;this.push({label:{key:locked?'studio3d.hist.lock':'studio3d.hist.unlock',params:{name:o.name}},undo:()=>{o.userData.somniaLocked=!locked;},redo:()=>{o.userData.somniaLocked=locked;}});
  }
  /** Moves objects under a new parent (null = scene root), keeping their world transforms. One undo step for all. */
  reparent(ids:number[],parentId:number|null,index?:number){
@@ -1762,7 +1764,7 @@ export class Stage{
    }
   };
   const back=()=>{for(const b of before){b.from.attach(b.o);const ch=b.from.children;ch.splice(ch.indexOf(b.o),1);ch.splice(Math.min(b.at,ch.length),0,b.o);}};
-  move();this.push({label:`Move ${objs.length===1?objs[0].name:`${objs.length} objects`} to ${parent===this.root?'the scene root':parent.name||'a new parent'}`,undo:back,redo:move});
+  move();this.push({label:{key:parent===this.root?'studio3d.hist.moveRoot':'studio3d.hist.move',params:{count:objs.length,name:objs[0].name,target:parent===this.root?'':parent.name||'a new parent'}},undo:back,redo:move});
  }
  /** Moves objects next to a sibling in the outline: same parent as the target, one slot before or after it. World transforms are kept. */
  reorder(ids:number[],targetId:number,where:'before'|'after'){
@@ -1779,13 +1781,13 @@ export class Stage{
  }
  rename(id:number,name:string){
   const o=this.need(id);const n=name.trim();if(!n)throw new StageError('A name cannot be empty.');if(n===o.name)return;
-  const before=o.name;o.name=n;this.push({label:`Rename ${before}`,undo:()=>{o.name=before;},redo:()=>{o.name=n;}});
+  const before=o.name;o.name=n;this.push({label:{key:'studio3d.hist.rename',params:{name:before}},undo:()=>{o.name=before;},redo:()=>{o.name=n;}});
  }
  remove(id:number){
   const o=this.need(id);const parent=o.parent;if(!parent)throw new StageError('The scene root cannot be deleted.');
   if((o as THREE.Bone).isBone)throw new StageError('Bones cannot be deleted: the skin would lose a joint.');
   const at=parent.children.indexOf(o);parent.remove(o);let owned=false;
-  this.push({label:`Delete ${o.name}`,undo:()=>{this.attach0(o,parent,at);owned=true;},redo:()=>{parent.remove(o);owned=false;},release:()=>{if(!owned)disposeObject(o);}});
+  this.push({label:{key:'studio3d.hist.delete',params:{name:o.name}},undo:()=>{this.attach0(o,parent,at);owned=true;},redo:()=>{parent.remove(o);owned=false;},release:()=>{if(!owned)disposeObject(o);}});
  }
  duplicate(id:number):THREE.Object3D{
   const o=this.need(id);if(o===this.root)throw new StageError('The scene root cannot be duplicated.');
@@ -1794,7 +1796,7 @@ export class Stage{
   // clone() shares geometry and material. Give the copy its own material so edits stay independent; geometry stays shared and is only freed with the last owner.
   copy.traverse(c=>{const m=c as THREE.Mesh;if(m.isMesh&&!Array.isArray(m.material))m.material=(m.material as THREE.Material).clone();});
   copy.name=this.uniqueName(o.name+' copy');copy.position.x+=0.5;
-  const parent=o.parent??this.root;this.attach(copy,parent,parent.children.indexOf(o)+1,`Duplicate ${o.name}`);return copy;
+  const parent=o.parent??this.root;this.attach(copy,parent,parent.children.indexOf(o)+1,{key:'studio3d.hist.duplicate',params:{name:o.name}});return copy;
  }
  /** The chain below (and including) a root bone, depth-first - the same order bones() lists them in. */
  private boneChain(root:THREE.Bone):THREE.Bone[]{const out:THREE.Bone[]=[];root.traverse(o=>{if((o as THREE.Bone).isBone)out.push(o as THREE.Bone);});return out;}
@@ -1837,7 +1839,7 @@ export class Stage{
   skinned.bind(new THREE.Skeleton(chain,chain.map(b=>b.matrixWorld.clone().invert())),mesh.matrixWorld.clone());
   const swap=(inn:THREE.Object3D,out:THREE.Object3D)=>{parent.remove(out);this.attach0(inn,parent,at);};
   swap(skinned,mesh);let meshLive=false;
-  this.push({label:`Bind ${o.name} to ${bone.name||'bones'}`,undo:()=>{swap(mesh,skinned);meshLive=true;},redo:()=>{swap(skinned,mesh);meshLive=false;},
+  this.push({label:{key:'studio3d.hist.bind',params:{name:o.name,bone:bone.name||'bones'}},undo:()=>{swap(mesh,skinned);meshLive=true;},redo:()=>{swap(skinned,mesh);meshLive=false;},
    // Only the cloned geometry is exclusively ours; the original mesh may share its geometry and material with duplicates.
    release:()=>{if(meshLive)geo.dispose();}});
   this.emit();return skinned;
@@ -1876,7 +1878,7 @@ export class Stage{
   const afterI=new THREE.Uint16BufferAttribute(w.indices,4),afterW=new THREE.Float32BufferAttribute(w.weights,4);
   let owned=true;const apply=(i:THREE.BufferAttribute,wt:THREE.BufferAttribute)=>{geo.setAttribute('skinIndex',i);geo.setAttribute('skinWeight',wt);};
   apply(afterI,afterW);
-  this.push({label:`Weights of ${o.name}`,undo:()=>{apply(beforeI,beforeW);if(poseBefore)this.poseApplyRows(poseBefore);owned=false;},redo:()=>{apply(afterI,afterW);if(poseAfter)this.poseApplyRows(poseAfter);owned=true;},release:()=>{(owned?beforeI:afterI).dispose?.();(owned?beforeW:afterW).dispose?.();}});
+  this.push({label:{key:'studio3d.hist.weights',params:{name:o.name}},undo:()=>{apply(beforeI,beforeW);if(poseBefore)this.poseApplyRows(poseBefore);owned=false;},redo:()=>{apply(afterI,afterW);if(poseAfter)this.poseApplyRows(poseAfter);owned=true;},release:()=>{(owned?beforeI:afterI).dispose?.();(owned?beforeW:afterW).dispose?.();}});
   this.emit();return poseBefore!==null;
  }
  /** Weight painting: one stroke is one undo step. skinPaintStart snapshots the attributes, skinPaint dabs, skinPaintEnd closes the stroke. */
@@ -1903,7 +1905,7 @@ export class Stage{
   return n;
  }
  /** Closes the open stroke: all its dabs become one undo step. Safe to call with no stroke open. */
- skinPaintEnd(id:number,label='Paint weights'){
+ skinPaintEnd(id:number,label:HistoryLabel={key:'studio3d.hist.paintWeights'}){
   const st=this.stroke;if(!st||st.id!==id){this.stroke=null;return;}
   this.stroke=null;
   const beforeI=st.beforeI,beforeW=st.beforeW;

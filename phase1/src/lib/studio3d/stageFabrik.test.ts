@@ -41,7 +41,7 @@ test('moving the target bends the chain, keeps every segment length and the root
  assert.ok(Math.abs(world(st,b).z)<1e-9,'bend stays in the solve plane');
  st.undo();
  assert.ok(Math.abs(world(st,tip).y-4)<1e-6,'undo restores the straight chain');
- assert.equal(st.undoLabel,'FABRIK on Root','one undo step for the move');
+ assert.deepEqual(st.undoLabel,{key:'studio3d.hist.fabrikOn',params:{name:'Root'}},'one undo step for the move');
 });
 test('an unreachable target stretches the chain straight at it',()=>{
  const{st,root,tip}=rig();
@@ -57,8 +57,8 @@ test('drags solve live and only the commit makes an undo step',()=>{
  const before=st.fabrikBegin(root.id);
  st.fabrikDragTarget(root.id,[1,3,0]);st.fabrikDragTarget(root.id,[2,2,0]);
  assert.equal(st.undoLabel,label,'live drags add no undo entries');
- st.fabrikCommit(root.id,before,'FABRIK target');
- assert.equal(st.undoLabel,'FABRIK target');
+ st.fabrikCommit(root.id,before,{key:'studio3d.hist.fabrikTarget'});
+ assert.deepEqual(st.undoLabel,{key:'studio3d.hist.fabrikTarget'});
  st.undo();assert.equal(st.undoLabel,label);
 });
 test('look-at aims the end bone at its target and toggles with one undo',()=>{

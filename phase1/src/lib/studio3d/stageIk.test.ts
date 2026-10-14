@@ -63,8 +63,8 @@ test('drags solve live and only the commit makes an undo step',()=>{
  st.ikDragTarget(root.id,[1,1,0]);
  st.ikDragTarget(root.id,[1,0.6,0]);
  assert.equal(st.undoLabel,label,'live drags add no undo entries');
- st.ikCommit(root.id,before,'IK target');
- assert.equal(st.undoLabel,'IK target');
+ st.ikCommit(root.id,before,{key:'studio3d.hist.ikTarget'});
+ assert.deepEqual(st.undoLabel,{key:'studio3d.hist.ikTarget'});
  st.undo();
  assert.equal(st.undoLabel,label);
 });

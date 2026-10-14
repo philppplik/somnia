@@ -1,4 +1,5 @@
 # Unreleased: 3D Studio P0
+- 3D Studio: history labels are localized - undo/redo steps are stored as i18n keys with params and translated at display time in all five locales, with plural forms for object counts.
 - Keyboard shortcut help: pressing ? in the viewport (or the View menu command) opens a localized overlay listing the 3D shortcuts - gizmo keys, frame, snap, measure, view slots 1-9 and Shift+1-9, orbit/zoom keys, Home and Escape - and Escape or the close button dismisses it.
 - Scene history list: the tools panel shows the undo and redo stacks with their step labels (newest/next-up first), a row click jumps straight to that point, and the undo/redo commands accept an optional count for multi-step jumps.
 - Measure picks honour the snapping settings: grid mode rounds picked points to the move step, vertex, surface and midpoint modes snap to the nearest scene candidate (the same lookup the gizmo uses), and the rubber band previews the snapped point.
