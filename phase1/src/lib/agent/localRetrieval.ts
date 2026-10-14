@@ -28,7 +28,8 @@ export function retrieveLocalSemanticReport(lifecycle:LocalIndexLifecycle,curren
  if(!Array.isArray(query)||query.length!==captured.descriptor.dimensions)throw Error('Query dimension mismatch');
  const focus=localSearchCandidates(captured.descriptor.sources,sourceId);
  const candidates=captured.entries.filter(e=>focus.includes(e.chunk.sourceId));rankLocalChunks(query,[],1);const all=candidates.map(entry=>rankLocalChunks(query,[entry],1)[0]).sort((a,b)=>b.score-a.score);const passing=all.filter(result=>result.score>=minimum);const results=passing.slice(0,limit).map(result=>Object.freeze({chunk:Object.freeze(result.chunk),score:result.score,trust:'untrusted' as const,confidence:'not-measured' as const,permission:false as const}));
- return Object.freeze({results:Object.freeze(results),candidateChunks:candidates.length,candidateSources:new Set(candidates.map(e=>e.chunk.sourceId)).size,passingChunks:passing.length,passingSources:new Set(passing.map(e=>e.chunk.sourceId)).size,omittedChunks:passing.length-results.length,minimum});
+ const sources=focus.map(id=>{const rows=all.filter(r=>r.chunk.sourceId===id),pass=rows.filter(r=>r.score>=minimum),shown=results.filter(r=>r.chunk.sourceId===id).length,best=rows[0];return Object.freeze({sourceId:id,candidateChunks:rows.length,passingChunks:pass.length,shown,omitted:pass.length-shown,best:best?Object.freeze({chunk:Object.freeze(best.chunk),score:best.score,passes:best.score>=minimum}):null});});
+ return Object.freeze({sources:Object.freeze(sources),results:Object.freeze(results),candidateChunks:candidates.length,candidateSources:new Set(candidates.map(e=>e.chunk.sourceId)).size,passingChunks:passing.length,passingSources:new Set(passing.map(e=>e.chunk.sourceId)).size,omittedChunks:passing.length-results.length,minimum});
 }
 
 export function retrieveLocalTopK(...args:Parameters<typeof retrieveLocalSemanticReport>){return retrieveLocalSemanticReport(...args).results;}
