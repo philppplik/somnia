@@ -35,6 +35,8 @@ const runs=new Map<string,number>();
 const gestures=new Map<string,PhotoSettings>();
 const listeners=new Set<()=>void>();
 let stopMediaSync:(()=>void)|undefined;
+/** Identity of the source the singleton engine currently holds (sessions share one engine; last load wins). */
+let loadedKey:string|null=null;
 const emit=()=>listeners.forEach(l=>l());
 const put=(s:PhotoSession)=>{sessions.set(s.name,s);emit();};
 const patch=(name:string,p:Partial<PhotoSession>,cause?:unknown)=>{if(p.error)reportError('photos.engine',cause??p.error,{context:{studio:'photos',file:name}});const s=sessions.get(name);if(s)put({...s,...p});};
@@ -44,9 +46,9 @@ export function subscribePhotos(fn:()=>void){listeners.add(fn);return()=>{listen
 export function usePhotoSession(name:string|null|undefined){return useSyncExternalStore(subscribePhotos,()=>getPhotoSession(name),()=>null);}
 export const dirtyPhoto=(s:PhotoSession)=>photoSignature(s.now)!==s.saved;
 /** Tests replace the engine; production uses the WASM worker. Drops all sessions. */
-export function setPhotoEngineFactory(f:()=>PhotoEngineLike){for(const n of [...sessions.keys()])closePhoto(n);engine?.dispose();engine=undefined;factory=f;}
+export function setPhotoEngineFactory(f:()=>PhotoEngineLike){for(const n of [...sessions.keys()])closePhoto(n);engine?.dispose();engine=undefined;loadedKey=null;factory=f;}
 function getEngine(){if(!engine)engine=factory();return engine;}
-const resetEngine=(error:unknown)=>{if(/disposed|timed out|worker failed/i.test(String(error))){engine?.dispose();engine=undefined;}};
+const resetEngine=(error:unknown)=>{if(/disposed|timed out|worker failed/i.test(String(error))){engine?.dispose();engine=undefined;loadedKey=null;}};
 const message=(e:unknown)=>(e instanceof Error?e.message:String(e)).replace(/^Error:\s*/,'');
 const frameOf=(r:PhotosResponse):PhotoFrame=>{if(!r.bytes||!r.width||!r.height)throw Error('The engine returned an empty render.');return{bytes:r.bytes,width:r.width,height:r.height};};
 /** Settings as rendered: while cropping the frame shows the whole image so the crop rect can be placed. */
@@ -63,7 +65,7 @@ export async function openPhoto(item:{name:string;url:string;mime:string}):Promi
   if(bytes.byteLength===0||bytes.byteLength>PHOTO_INPUT.maxBytes)throw Error(t('photos.error.size',{max:PHOTO_INPUT.maxBytes/1_000_000}));
   sources.set(item.name,bytes);
   const e=getEngine();
-  const loaded=await e.load(bytes.slice(0));
+  const loaded=await e.load(bytes.slice(0));loadedKey=item.name;
   if(!sessions.has(item.name))return;
   const original=frameOf(await e.renderPhoto(neutralPhotoSettings));
   const session=sessions.get(item.name);if(!session)return;
@@ -72,11 +74,18 @@ export async function openPhoto(item:{name:string;url:string;mime:string}):Promi
   patch(item.name,{status:'ready',error:'',sourceWidth:loaded.width??0,sourceHeight:loaded.height??0,original,frame:current});
  }catch(e){resetEngine(e);sources.delete(item.name);if(sessions.has(item.name))patch(item.name,{status:'error',error:message(e)},e);}
 }
+/** The engine is a singleton holding one loaded source: reload when this session's source is not the loaded one. */
+async function ensureEngineSource(name:string):Promise<void>{
+ if(loadedKey===name)return;
+ const bytes=sources.get(name);if(!bytes)return;
+ const e=getEngine();await e.load(bytes.slice(0));loadedKey=name;
+}
 function schedule(name:string,delay=DEBOUNCE_MS){clearTimeout(timers.get(name));timers.set(name,setTimeout(()=>{timers.delete(name);void render(name);},delay));}
 async function render(name:string){
  const s=sessions.get(name);if(!s||!sources.has(name)||s.status==='error')return;
  const run=(runs.get(name)??0)+1;runs.set(name,run);patch(name,{status:'processing',error:''});
  try{
+  await ensureEngineSource(name);
   const e=getEngine();
   const r=frameOf(await e.renderPhoto(effective(s)));
   if(runs.get(name)!==run||!sessions.has(name))return;
@@ -140,6 +149,7 @@ export interface PhotoSaveHost {save(blob:Blob,suggestedName:string):Promise<boo
 export async function exportPhotoCopy(name:string,format:'png'|'jpeg',injectedHost?:PhotoSaveHost):Promise<PhotoSaveOutcome>{
  const s=sessions.get(name);if(!s||s.status==='error'||!sources.has(name))throw Error(t('photos.error.notReady'));
  const snapshot=s.now;
+ await ensureEngineSource(name);
  const r=await getEngine().exportPhoto(snapshot,format);
  if(!r.bytes)throw Error('Export returned no bytes.');
  const host=injectedHost??await defaultImageHost();

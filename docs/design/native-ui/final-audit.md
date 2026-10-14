@@ -178,6 +178,11 @@ through native control primitives, see below.
 - P42: batch export limited to File System Access on Tauri (no per-file
   native dialog storm; short unsupported note instead), web-download
   fallback unchanged; i18n note added in all five photo locales.
+- P43: engine reload fix (the photos engine is a singleton holding one
+  loaded source; render and export now reload the session's source when
+  another photo was loaded in between — previously a re-edit or export
+  of an earlier photo could render the wrong source; covered by a
+  dedicated engineReload test file, no visual change).
 
 
 
