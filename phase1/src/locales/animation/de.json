@@ -939,5 +939,6 @@
  "cmd.animation.layers.split": "Gewählte Ebenen am Playhead teilen",
  "animation.modifiers.delay": "Verzögerung (Frames)",
  "animation.rig.follow": "Dem Anführer folgen",
- "cmd.animation.rig.follow": "Dem Anführer folgen (verzögerte Verknüpfung)"
+ "cmd.animation.rig.follow": "Dem Anführer folgen (verzögerte Verknüpfung)",
+ "animation.rig.followFrames": "Verzögerung (Frames)"
 }

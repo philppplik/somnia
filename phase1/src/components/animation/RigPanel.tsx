@@ -12,7 +12,7 @@ export function RigPanel({comp}:{comp:Composition}){
  const ids=ticked.filter(id=>comp.layers.some(l=>l.id===id));
  const toggle=(id:string)=>setTicked(ids.includes(id)?ids.filter(x=>x!==id):[...ids,id]);
  const run=(cmd:string)=>void executeCommand(cmd,{layers:ids});
- const playhead=useAnimationState().view.playhead;const [mode,setMode]=useState<TimingMode>('stagger');const [frames,setFrames]=useState('4');
+ const playhead=useAnimationState().view.playhead;const [mode,setMode]=useState<TimingMode>('stagger');const [frames,setFrames]=useState('4');const [follow,setFollow]=useState('3');const followOk=follow.trim()!==''&&Number.isInteger(Number(follow))&&Number(follow)>=0&&Number(follow)<=60;
  const fn=Number(frames),usesFrames=FRAME_MODES.includes(mode),framesOk=!usesFrames||(frames.trim()!==''&&Number.isInteger(fn)&&fn>=(SIGNED_MODES.includes(mode)?-MAX_STAGGER_FRAMES:0)&&fn<=MAX_STAGGER_FRAMES);
  const plan=ids.length&&framesOk?timingPlan(comp,ids,mode,{playhead,frames:usesFrames?fn:undefined}):null;
  const fieldCls='h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text';
@@ -22,7 +22,8 @@ export function RigPanel({comp}:{comp:Composition}){
   <div className="grid min-w-0 gap-1">
    <Button size="compact" variant="outline" disabled={ids.length<2} onClick={()=>run('animation.rig.chain')} data-testid="animation-rig-chain">{t('animation.rig.chain')}</Button>
    <Button size="compact" variant="outline" disabled={ids.length<1} onClick={()=>run('animation.rig.group')} data-testid="animation-rig-group">{t('animation.rig.group')}</Button>
-   <Button size="compact" variant="outline" disabled={ids.length<2} onClick={()=>run('animation.rig.follow')} data-testid="animation-rig-follow">{t('animation.rig.follow')}</Button>
+   <div className="grid min-w-0 grid-cols-[1fr_4rem] gap-1"><Button size="compact" variant="outline" className="h-auto min-w-0 whitespace-normal text-left" disabled={ids.length<2||!followOk} onClick={()=>void executeCommand('animation.rig.follow',{layers:ids,frames:Number(follow)})} data-testid="animation-rig-follow">{t('animation.rig.follow')}</Button>
+    <NativeInput className="h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text" type="number" min={0} max={60} step={1} value={follow} aria-label={t('animation.rig.followFrames')} onChange={e=>setFollow(e.target.value)} data-testid="animation-rig-follow-frames"/></div>
    <Button size="compact" variant="outline" disabled={ids.length<1} onClick={()=>run('animation.rig.release')} data-testid="animation-rig-release">{t('animation.rig.release')}</Button>
    <Button size="compact" variant="outline" disabled={ids.length<1} onClick={()=>run('animation.layers.duplicate')} data-testid="animation-rig-duplicate">{t('animation.rig.duplicate')}</Button>
    <Button size="compact" variant="outline" disabled={ids.length<1} onClick={()=>run('animation.layers.split')} data-testid="animation-rig-split">{t('animation.rig.split')}</Button></div>

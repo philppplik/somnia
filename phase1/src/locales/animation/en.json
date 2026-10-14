@@ -939,5 +939,6 @@
  "cmd.animation.layers.split": "Split the selected layers at the playhead",
  "animation.modifiers.delay": "Delay (frames)",
  "animation.rig.follow": "Follow the leader",
- "cmd.animation.rig.follow": "Follow the leader (linked lag)"
+ "cmd.animation.rig.follow": "Follow the leader (linked lag)",
+ "animation.rig.followFrames": "Follow delay (frames)"
 }

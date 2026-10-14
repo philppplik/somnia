@@ -939,5 +939,6 @@
  "cmd.animation.layers.split": "Couper les calques sélectionnés à la tête de lecture",
  "animation.modifiers.delay": "Retard (images)",
  "animation.rig.follow": "Suivre le meneur",
- "cmd.animation.rig.follow": "Suivre le meneur (retard lié)"
+ "cmd.animation.rig.follow": "Suivre le meneur (retard lié)",
+ "animation.rig.followFrames": "Retard (images)"
 }

@@ -939,5 +939,6 @@
  "cmd.animation.layers.split": "Dividir as camadas selecionadas no cursor",
  "animation.modifiers.delay": "Atraso (quadros)",
  "animation.rig.follow": "Seguir o líder",
- "cmd.animation.rig.follow": "Seguir o líder (atraso vinculado)"
+ "cmd.animation.rig.follow": "Seguir o líder (atraso vinculado)",
+ "animation.rig.followFrames": "Atraso (quadros)"
 }

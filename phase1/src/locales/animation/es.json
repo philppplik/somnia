@@ -939,5 +939,6 @@
  "cmd.animation.layers.split": "Dividir las capas seleccionadas en el cabezal",
  "animation.modifiers.delay": "Retardo (fotogramas)",
  "animation.rig.follow": "Seguir al líder",
- "cmd.animation.rig.follow": "Seguir al líder (retardo enlazado)"
+ "cmd.animation.rig.follow": "Seguir al líder (retardo enlazado)",
+ "animation.rig.followFrames": "Retardo (fotogramas)"
 }
