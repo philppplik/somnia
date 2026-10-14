@@ -845,5 +845,9 @@
  "cmd.animation.keys.jitterTime": "Gewählte Keys um zufällige Frames verschieben",
  "animation.keys.property": "Ganze Eigenschaft",
  "animation.keys.property.hint": "Alle Keys der Eigenschaften mit gewähltem Key auswählen",
- "cmd.animation.keys.selectProperty": "Alle Keys der Eigenschaften der gewählten Keys auswählen"
+ "cmd.animation.keys.selectProperty": "Alle Keys der Eigenschaften der gewählten Keys auswählen",
+ "animation.keys.thin": "Keys ausdünnen",
+ "animation.keys.thin.tolerance": "Toleranz",
+ "animation.keys.thin.hint": "Gewählte Keys entfernen, deren Wert innerhalb der Toleranz der Geraden zwischen den Nachbarn liegt",
+ "cmd.animation.keys.thin": "Gewählte Keys entfernen, die nah an der Geraden zwischen ihren Nachbarn liegen"
 }

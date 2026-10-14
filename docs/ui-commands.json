@@ -987,6 +987,23 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.keys.thin",
+      "title": "Remove selected keys that are close to a straight line between their neighbours",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keys",
+        "optimize",
+        "reduce",
+        "remove",
+        "simplify",
+        "thin",
+        "tolerance"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.keys.toPlayhead",
       "title": "Move the selected keys so the first one lands on the playhead",
       "category": "Edit",

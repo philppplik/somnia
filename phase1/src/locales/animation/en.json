@@ -845,5 +845,9 @@
  "cmd.animation.keys.jitterTime": "Shift the selected keys by random frames",
  "animation.keys.property": "Whole property",
  "animation.keys.property.hint": "Select every key of the properties that have a selected key",
- "cmd.animation.keys.selectProperty": "Select every key of the selected keys’ properties"
+ "cmd.animation.keys.selectProperty": "Select every key of the selected keys’ properties",
+ "animation.keys.thin": "Thin keys",
+ "animation.keys.thin.tolerance": "Tolerance",
+ "animation.keys.thin.hint": "Remove selected keys whose value is within the tolerance of the straight line between their neighbours",
+ "cmd.animation.keys.thin": "Remove selected keys that are close to a straight line between their neighbours"
 }

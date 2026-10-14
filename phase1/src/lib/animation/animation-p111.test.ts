@@ -106,3 +106,13 @@ test('whole property: all keys of each selected property only',()=>{
  assert.deepEqual(r.map(k=>k.t),[f(0),f(10)]);assert.ok(r.every(k=>k.prop==='position'));
  assert.equal(wholeProperties(c,[]).length,0);
 });
+import {thinKeys} from './keyThin';
+test('thin: removes collinear selected keys, keeps ends, outliers and unselected',()=>{
+ const d=applyEdits(base(),[{type:'prop.set',layer:'a',prop:'position',t:f(5),value:[150,75]},{type:'prop.set',layer:'a',prop:'position',t:f(3),value:[300,0]}] as never),c=findComp(d)!;
+ const k=(n:number)=>({layer:'a',prop:'position' as const,t:f(n)});
+ assert.deepEqual(thinKeys(c,[k(0),k(3),k(5),k(10)],1).map(x=>x.t),[]);
+ const d2=applyEdits(base(),[{type:'prop.set',layer:'a',prop:'position',t:f(5),value:[150,75]}] as never),c2=findComp(d2)!;
+ assert.deepEqual(thinKeys(c2,[k(0),k(5),k(10)],1).map(x=>x.t),[f(5)]);
+ assert.deepEqual(thinKeys(c2,[k(10)],1).map(x=>x.t),[]);
+ assert.throws(()=>thinKeys(c2,[k(5)],0));
+});

@@ -845,5 +845,9 @@
  "cmd.animation.keys.jitterTime": "Desplazar las keys seleccionadas por fotogramas aleatorios",
  "animation.keys.property": "Propiedad entera",
  "animation.keys.property.hint": "Selecciona todas las keys de las propiedades con una key seleccionada",
- "cmd.animation.keys.selectProperty": "Seleccionar todas las keys de las propiedades de las keys seleccionadas"
+ "cmd.animation.keys.selectProperty": "Seleccionar todas las keys de las propiedades de las keys seleccionadas",
+ "animation.keys.thin": "Reducir keys",
+ "animation.keys.thin.tolerance": "Tolerancia",
+ "animation.keys.thin.hint": "Elimina las keys seleccionadas cuyo valor está dentro de la tolerancia de la recta entre sus vecinas",
+ "cmd.animation.keys.thin": "Eliminar keys seleccionadas cercanas a la recta entre sus vecinas"
 }
