@@ -3287,6 +3287,21 @@
       "hasEnabled": true
     },
     {
+      "id": "search.localSources",
+      "title": "Local source search (reviewed open text)",
+      "category": "Tools",
+      "source": "core",
+      "keywords": [
+        "citations",
+        "embedding",
+        "local",
+        "search",
+        "semantic",
+        "sources"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "search.project",
       "title": "Search in project",
       "category": "View",

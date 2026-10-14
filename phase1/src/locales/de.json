@@ -3296,5 +3296,6 @@
   "themeImport.contrastNote": "Kontrastprüfung als Hinweis. Farben bleiben unverändert. Prüfe die Studios vor der Nutzung.",
   "themeImport.contrastLow": "{ratio}:1, unter der Prüfung von 4,5:1 für normalen Text.",
   "themeImport.contrastUnknown": "Nicht geprüft: fehlendes Farbpaar, Alpha oder nicht unterstützte Browserfarbe.",
-  "cmd.help.localAI": "Lokale KI: Hilfe und FAQ"
+  "cmd.help.localAI": "Lokale KI: Hilfe und FAQ",
+  "cmd.search.localSources": "Lokale Quellsuche (geprüfter offener Text)"
 }

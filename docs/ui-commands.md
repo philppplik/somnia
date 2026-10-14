@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-430 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+431 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -315,6 +315,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `project.openMedia` | Open image or PDF to preview | Project | core |  |
 | `project.save` | Save copy... | Project | core | `Mod+S` |
 | `project.saveAll` | Save all files | Project | core |  |
+| `search.localSources` | Local source search (reviewed open text) | Tools | core |  |
 | `search.project` | Search in project | View | core | `Mod+Shift+F` |
 | `settings.open` | Settings | Tools | core | `Mod+,` |
 | `sheets.analyzeRange` | Analyze spreadsheet range | Tools | sheets |  |

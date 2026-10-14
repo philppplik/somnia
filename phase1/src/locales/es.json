@@ -3296,5 +3296,6 @@
   "themeImport.contrastNote": "Contraste orientativo. Los colores no cambian. Revisa los estudios antes de usar el tema.",
   "themeImport.contrastLow": "{ratio}:1, por debajo de 4,5:1 para texto normal.",
   "themeImport.contrastUnknown": "Sin verificar: falta un par, alfa o color no compatible.",
-  "cmd.help.localAI": "Ayuda y FAQ de IA local"
+  "cmd.help.localAI": "Ayuda y FAQ de IA local",
+  "cmd.search.localSources": "Búsqueda local de fuentes (texto abierto revisado)"
 }

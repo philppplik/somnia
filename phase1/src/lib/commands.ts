@@ -53,6 +53,7 @@ export async function executeCommand(id:string,payload?:unknown){
 export const executeNativeMenuCommand=executeCommand;
 const ui=(id:string,title:string,shortcut:string|undefined,run:()=>void)=>registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id,title,category:['settings.open','problems.toggle','theme.toggle','palette.open'].includes(id)?'Tools':'View',shortcut,run:()=>{ /* History: UI state only; no document undo entry. */ return run(); }});
 ui('palette.open','Command palette','Mod+K',()=>patchState({paletteOpen:true}));
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'search.localSources',title:'Local source search (reviewed open text)',category:'Tools',keywords:['semantic','local','sources','embedding','citations','search'],run:()=> /* History: UI only; no inference, source read or index build. */ patchState({localSourceSearchOpen:true})});
 ui('search.project','Search in project','Mod+Shift+F',()=>patchState({leftTab:'search',sidebarOpen:true}));
 ui('css.open','CSS variables and classes',undefined,()=>patchState({leftTab:'css',sidebarOpen:true}));
 ui('sidebar.toggle','Toggle sidebar','Mod+B',()=>patchState({sidebarOpen:!getState().sidebarOpen}));
