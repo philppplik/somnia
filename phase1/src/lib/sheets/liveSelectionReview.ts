@@ -1,0 +1,14 @@
+import {previewCachedSheetSelection} from './selectionPreview';import type {Rect} from './clipboard';import {rectCells} from './clipboard';import {MAX_ROWS,MAX_COLS} from './format';import type {SheetLayout,ViewResult} from './protocol';
+export interface SheetReviewEngine{readonly isDisposed:boolean;readonly hasPendingMutation:boolean;readonly selectionReadEpoch:number;layout(sheet:number):Promise<SheetLayout>;view(sheet:number,row:number,col:number,rows:number,cols:number):Promise<ViewResult>}
+/** Cancellation discards this read's result, never terminates a shared worker. */
+function cancellable<T>(work:Promise<T>,signal:AbortSignal):Promise<T>{return new Promise((resolve,reject)=>{const abort=()=>reject(signal.reason??Error('Review cancelled'));signal.addEventListener('abort',abort,{once:true});if(signal.aborted)abort();work.then(value=>{signal.removeEventListener('abort',abort);if(!signal.aborted)resolve(value);},error=>{signal.removeEventListener('abort',abort);reject(error);});});}
+/** Bounded fresh read only. No raw formula extraction, inference or apply authority. */
+export async function reviewLiveSheetSelection(engine:SheetReviewEngine,source:string,sheet:number,range:Rect,scope:string,current:()=>{engine:SheetReviewEngine|null;scope:string},signal:AbortSignal){
+ const epoch=engine.selectionReadEpoch;const check=()=>{signal.throwIfAborted();const now=current();if(engine.isDisposed||engine.hasPendingMutation||engine.selectionReadEpoch!==epoch||now.engine!==engine||now.scope!==scope)throw Error('Workbook or selection changed');};check();
+ if(!source||!Number.isSafeInteger(sheet)||sheet<0||Object.values(range).some(n=>!Number.isSafeInteger(n)||n<0)||range.r1<range.r0||range.c1<range.c0||range.r1>=MAX_ROWS||range.c1>=MAX_COLS||rectCells(range)>100)throw Error('Selection unavailable');
+ const layout=await cancellable(engine.layout(sheet),signal);check();if(layout.sheet!==sheet)throw Error('Wrong sheet layout');
+ // Hidden/merged selections fail before requesting displayed cells.
+ if(layout.rows.some(r=>r.hidden&&r.i>=range.r0&&r.i<=range.r1)||layout.cols.some(c=>c.hidden&&c.i>=range.c0&&c.i<=range.c1)||layout.merges.some(m=>m.r0<=range.r1&&m.r1>=range.r0&&m.c0<=range.c1&&m.c1>=range.c0))throw Error('Hidden or merged selection');
+ const result=await cancellable(engine.view(sheet,range.r0,range.c0,range.r1-range.r0+1,range.c1-range.c0+1),signal);check();if(result.sheet!==sheet||result.row!==range.r0||result.col!==range.c0||result.rows!==range.r1-range.r0+1||result.cols!==range.c1-range.c0+1||result.cells.length!==rectCells(range)||new Set(result.cells.map(c=>c.address)).size!==result.cells.length)throw Error('Incomplete or wrong range');
+ const rows=previewCachedSheetSelection(range,layout,new Map(result.cells.map(c=>[c.address,c])));check();return Object.freeze({source,sheet,epoch,scope,range:Object.freeze({...range}),rows});
+}

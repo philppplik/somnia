@@ -4,6 +4,12 @@ type Req=SheetsRequest extends infer R?R extends {id:number}?Omit<R,'id'>:never:
 /** One module Worker per open workbook. A timeout or crash discards the session: callers must keep the original bytes. */
 export class SheetsEngine{
  private worker:Worker;private nextId=1;private disposed=false;
+ private mutationListeners=new Set<()=>void>();
+ subscribeSelectionRead(f:()=>void){this.mutationListeners.add(f);return()=>{this.mutationListeners.delete(f);};}
+ private notifySelectionRead(){this.mutationListeners.forEach(f=>f());}
+ private mutationEpoch=0;private mutations=0;
+ get selectionReadEpoch(){return this.mutationEpoch;}
+ get hasPendingMutation(){return this.mutations>0;}
  private pending=new Map<number,{resolve:(r:SheetsResponse)=>void;reject:(e:Error)=>void;timer:ReturnType<typeof setTimeout>}>();
  readonly timeoutMs:number;
  constructor(timeoutMs=30_000){
@@ -17,10 +23,11 @@ export class SheetsEngine{
  private request(message:Req,transfer:Transferable[]=[]){
   return new Promise<SheetsResponse>((resolve,reject)=>{
    if(this.disposed){reject(new Error('Spreadsheet engine closed'));return;}
+   const mutating=['open','set','undo','redo','close'].includes(message.op);if(mutating){this.mutationEpoch++;this.mutations++;this.notifySelectionRead();}const finish=()=>{if(mutating){this.mutations--;this.mutationEpoch++;this.notifySelectionRead();}};const done=(r:SheetsResponse)=>{finish();resolve(r);},failed=(e:Error)=>{finish();reject(e);};
    const id=this.nextId++;
    const timer=setTimeout(()=>this.dispose(new Error('Spreadsheet engine timed out. Unsaved edits in this workbook were discarded.')),this.timeoutMs);
-   this.pending.set(id,{resolve,reject,timer});
-   try{this.worker.postMessage({...message,id},transfer);}catch(e){clearTimeout(timer);this.pending.delete(id);reject(e instanceof Error?e:new Error(String(e)));}
+   this.pending.set(id,{resolve:done,reject:failed,timer});
+   try{this.worker.postMessage({...message,id},transfer);}catch(e){clearTimeout(timer);this.pending.delete(id);failed(e instanceof Error?e:new Error(String(e)));}
   });}
  private async result<T>(message:Req):Promise<T>{const r=await this.request(message);if(r.ok&&r.op==='result')return r.result as T;throw new Error('Unexpected engine response');}
  init(){return this.request({op:'init',wasmUrl:new URL('../../../sheets-craft/pkg/somnia_sheets_craft_bg.wasm',import.meta.url).href});}
@@ -44,6 +51,6 @@ export class SheetsEngine{
  redo(){return this.result<unknown>({op:'redo'});}
  async save():Promise<Uint8Array>{const r=await this.request({op:'save'});if(r.ok&&r.op==='bytes')return new Uint8Array(r.bytes);throw new Error('Unexpected engine response');}
  dispose(error=new Error('Spreadsheet engine closed')){
-  if(this.disposed)return;this.disposed=true;this.worker.terminate();
+  if(this.disposed)return;this.disposed=true;this.notifySelectionRead();this.worker.terminate();
   for(const p of this.pending.values()){clearTimeout(p.timer);p.reject(error);}this.pending.clear();}
 }

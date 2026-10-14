@@ -1,4 +1,4 @@
-import {SheetsSelectionPreview} from './SheetsSelectionPreview';import {previewCachedSheetSelection} from '../../lib/sheets/selectionPreview';import '../../lib/sheets/panelI18n';import {registerSheetsPanelController,type SheetsPanelController} from '../../lib/sheets/panelController';
+import {SheetsLiveSelectionReview} from './SheetsLiveSelectionReview';import {reviewLiveSheetSelection} from '../../lib/sheets/liveSelectionReview';import '../../lib/sheets/panelI18n';import {registerSheetsPanelController,type SheetsPanelController} from '../../lib/sheets/panelController';
 import {parsePanelRange,rangeAddress} from '../../lib/sheets/panelModel';
 import {parseAddress,MAX_ROWS,MAX_COLS} from '../../lib/sheets/format';
 import {studioContextStore} from '../../lib/shell/studioContext';
@@ -33,11 +33,11 @@ export function SheetsCanvas(){
 }
 function Workbook({item}:{item:MediaItem}){
  const {t}=useT();
- const engine=useRef<SheetsEngine|null>(null);const original=useRef<Uint8Array|null>(null);const session=useRef<ReturnType<typeof acquireSheetsSession<SheetsEngine>>|null>(null);
+ const [engineReadEpoch,setEngineReadEpoch]=useState(0);const selectionEpoch=useRef(0);const engine=useRef<SheetsEngine|null>(null);const original=useRef<Uint8Array|null>(null);const session=useRef<ReturnType<typeof acquireSheetsSession<SheetsEngine>>|null>(null);
  const [phase,setPhase]=useState<Phase>({kind:'loading'});const [book,setBook]=useState<WorkbookInfo|null>(null);
- const [sheet,setSheetState]=useState(()=>getSheetsSession(item.name)?.url===item.url?getSheetsSession(item.name)!.sheet:0);const setSheet=(n:number)=>{const s=getSheetsSession(item.name);if(s)s.sheet=n;setSheetState(n);};const [info,setInfo]=useState<SheetInfo|null>(null);
- const [sel,setSelState]=useState(()=>getSheetsSession(item.name)?.url===item.url?getSheetsSession(item.name)!.sel:{row:0,col:0});const setSel=(v:{row:number;col:number})=>{const s=getSheetsSession(item.name);if(s)s.sel=v;setSelState(v);};const [ext,setExt]=useState<{row:number;col:number}|null>(null);const dragging=useRef(false);const [draft,setDraftState]=useState<string|null>(null);const draftRef=useRef<string|null>(null);const formulaRef=useRef<HTMLInputElement>(null);
- const setDraft=(v:string|null)=>{draftRef.current=v;setDraftState(v);};
+ const [sheet,setSheetState]=useState(()=>getSheetsSession(item.name)?.url===item.url?getSheetsSession(item.name)!.sheet:0);const setSheet=(n:number)=>{selectionEpoch.current++;const s=getSheetsSession(item.name);if(s)s.sheet=n;setSheetState(n);};const [info,setInfo]=useState<SheetInfo|null>(null);
+ const [sel,setSelState]=useState(()=>getSheetsSession(item.name)?.url===item.url?getSheetsSession(item.name)!.sel:{row:0,col:0});const setSel=(v:{row:number;col:number})=>{selectionEpoch.current++;const s=getSheetsSession(item.name);if(s)s.sel=v;setSelState(v);};const [ext,rawSetExt]=useState<{row:number;col:number}|null>(null);const setExt=(v:Parameters<typeof rawSetExt>[0])=>{selectionEpoch.current++;rawSetExt(v);};const dragging=useRef(false);const [draft,setDraftState]=useState<string|null>(null);const draftRef=useRef<string|null>(null);const formulaRef=useRef<HTMLInputElement>(null);
+ const setDraft=(v:string|null)=>{selectionEpoch.current++;draftRef.current=v;setDraftState(v);};
  const startEdit=(v:string)=>{setDraft(v);requestAnimationFrame(()=>{const el=formulaRef.current;if(el){el.focus();el.setSelectionRange(v.length,v.length);}});};
  const [cacheStamp,setCacheStamp]=useState('');const [cells,setCells]=useState<Map<string,ViewCell>>(new Map());const [layout,setLayout]=useState<SheetLayout|null>(null);const [rev,setRev]=useState(0);const [dirty,setDirtyState]=useState(()=>sheetsIsDirty(item.name));const setDirty=(v:boolean)=>{setSheetsDirty(item.name,v);setDirtyState(v);};
  const [notice,setNotice]=useState('');const [view,setView]=useState({w:800,h:400,top:0,left:0});
@@ -45,9 +45,9 @@ function Workbook({item}:{item:MediaItem}){
  const fail=useCallback((e:unknown)=>{reportError('sheets.engine',e,{context:{studio:'sheets',file:item.name}});const message=e instanceof Error?e.message:String(e);if(engine.current?.isDisposed){releaseSheetsSession(item.name);setDirtyState(false);}if(engine.current?.isDisposed)setPhase({kind:'error',message});else setNotice(message);},[item.name]);
  // Open: the engine gets a copy; the original bytes stay here for recovery.
  // Open: the session registry owns the engine, so it survives studio/tab switches; the view only attaches. The original bytes stay in the session for recovery.
- useEffect(()=>{let live=true;const sess=acquireSheetsSession(item.name,item.url,{create:()=>new SheetsEngine(),load:async u=>new Uint8Array(await (await fetch(u)).arrayBuffer())});session.current=sess;engine.current=sess.engine;
+ useEffect(()=>{let live=true;const sess=acquireSheetsSession(item.name,item.url,{create:()=>new SheetsEngine(),load:async u=>new Uint8Array(await (await fetch(u)).arrayBuffer())});session.current=sess;engine.current=sess.engine;const offRead=sess.engine.subscribeSelectionRead(()=>setEngineReadEpoch(x=>x+1));
   sess.ready.then(opened=>{if(!live)return;original.current=sess.original;setBook(opened);setPhase({kind:'ready'});}).catch(e=>{if(!live)return;reportError('sheets.open',e,{context:{studio:'sheets',file:item.name}});setPhase({kind:'error',message:e instanceof Error?e.message:String(e)});});
-  return()=>{live=false;engine.current=null;session.current=null;setSheetsSelection(null);};},[item.url,item.name]);
+  return()=>{live=false;offRead();engine.current=null;session.current=null;setSheetsSelection(null);};},[item.url,item.name]);
  // Sheet info (used range, history flags) after open, sheet switch and every edit.
  useEffect(()=>{if(phase.kind!=='ready')return;let live=true;engine.current?.info(sheet).then(i=>{if(live)setInfo(i);}).catch(fail);return()=>{live=false;};},[phase,sheet,rev,fail]);
  useEffect(()=>{if(phase.kind!=='ready')return;let live=true;engine.current?.layout(sheet).then(l=>{if(live)setLayout(l);}).catch(fail);return()=>{live=false;};},[phase,sheet,fail]);
@@ -72,6 +72,8 @@ function Workbook({item}:{item:MediaItem}){
    const next={row,col};const el=scroller.current;if(el){const top=geo.rowTop(row),left=geo.colLeft(col),h=geo.rowHeight(row),w=geo.colWidth(col);if(top<el.scrollTop)el.scrollTop=top;else if(top+h>el.scrollTop+el.clientHeight-HEAD_H)el.scrollTop=top+h-el.clientHeight+HEAD_H;if(left<el.scrollLeft)el.scrollLeft=left;else if(left+w>el.scrollLeft+el.clientWidth-HEAD_W)el.scrollLeft=left+w-el.clientWidth+HEAD_W;}if(extend)setExt(next);else{setSel(next);setExt(null);}};
 
  const range=rectOf(sel,ext??sel);const multi=rectCells(range)>1;
+ const reviewScope=JSON.stringify([item.url,sheet,rev,range,selectionEpoch.current,engineReadEpoch,phase.kind,draft]);const reviewScopeRef=useRef(reviewScope);reviewScopeRef.current=reviewScope;const reviewEpoch=selectionEpoch.current;
+ const readSelection=async(signal:AbortSignal)=>{const eng=engine.current;if(!eng||draftRef.current!==null||selectionEpoch.current!==reviewEpoch)throw Error('Selection changed');return reviewLiveSheetSelection(eng,item.url,sheet,range,reviewScope,()=>({engine:engine.current,scope:selectionEpoch.current===reviewEpoch&&draftRef.current===null?reviewScopeRef.current:''}),signal);};
 
  const contextOwner=useRef<ReturnType<typeof studioContextStore.claim>|null>(null);
  useEffect(()=>{const owner=studioContextStore.claim('sheets',{id:item.name,kind:'xlsx',dirty:false,readOnly:false});contextOwner.current=owner;return()=>{owner.release();contextOwner.current=null;};},[item.name,item.url]);
@@ -146,8 +148,8 @@ function Workbook({item}:{item:MediaItem}){
  const restart=()=>{if(original.current)window.location.reload();};
  if(phase.kind==='error')return <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center" role="alert" data-testid="sheets-error"><p className="text-[13px] text-red-600">{phase.message}</p><p className="text-[12px] text-ink-3">{t('sheets.errorHint')}</p>{original.current&&<Button onClick={restart}>{t('sheets.reopen')}</Button>}</div>;
  const names=book?.sheets??[];
- let previewRows=null;try{if(phase.kind==='ready'&&draft===null&&layout?.sheet===sheet&&cacheStamp===sheet+':'+rev&&book?.sheets.find(s=>s.index===sheet)?.visibility==='Visible')previewRows=previewCachedSheetSelection(range,layout,cells);}catch{}
- return <section className="canvas-stage flex min-h-0 flex-1 flex-col" aria-label={t('sheets.workbook',{name:item.name})}><details><summary>{t('sheets.preview.title')}</summary><SheetsSelectionPreview scope={JSON.stringify([item.url,sheet,rev,range,previewRows])} rows={previewRows}/></details>
+ const reviewReady=phase.kind==='ready'&&draft===null&&!!engine.current&&!engine.current.isDisposed&&!engine.current.hasPendingMutation&&book?.sheets.find(s=>s.index===sheet)?.visibility==='Visible'&&rectCells(range)<=100;
+ return <section className="canvas-stage flex min-h-0 flex-1 flex-col" aria-label={t('sheets.workbook',{name:item.name})}><details><summary>{t('sheets.liveReview.title')}</summary><SheetsLiveSelectionReview scope={reviewScope} read={reviewReady?readSelection:null}/></details>
   <div className="media-bar flex items-center gap-2 border-b border-subtle px-3 py-1.5 text-[12px]">
    <span className="truncate" data-testid="media-name">{item.name}</span><span className="text-ink-3">XLSX, {formatBytes(item.size)}</span>
    {dirty&&<span className="rounded-sm bg-hover px-1.5 text-ink-2" data-testid="sheets-dirty">{t('sheets.edited')}</span>}<span className="flex-1"/>
