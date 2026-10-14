@@ -408,6 +408,97 @@ const loopOnce=(m:MeshData):MeshData=>{
  }
  return uvs?{positions,index,uvs}:{positions,index};
 };
+
+/** What a cleanup changed: welded vertex pairs, dropped collapsed/duplicate faces, removed unreferenced vertices, flipped inside-out components. */
+export interface CleanupResult{mesh:MeshData;welded:number;facesDropped:number;vertsDropped:number;flipped:number;}
+/** Mesh cleanup: welds vertices within the distance onto the first occurrence (positions never move; with UVs only vertices whose UVs also match weld, so UV seams survive), drops collapsed and duplicate faces plus unreferenced vertices, makes the winding consistent per connected part and flips closed parts whose signed volume is negative (inside-out). Open parts are only made consistent, never volume-flipped. Drops the sculpt mask like every topology-changing op. */
+export function cleanupMesh(m:MeshData,weld:number):CleanupResult{
+ check(m);
+ if(!Number.isFinite(weld)||weld<0||weld>1e6)throw new EditError('The weld distance must be zero or a positive number.');
+ let index=[...m.index];const uvs=m.uvs?[...m.uvs]:undefined;let positions=[...m.positions];
+ let welded=0;
+ if(weld>0){
+  const grid=new Map<string,number[]>();
+  const map=new Array<number>(positions.length/3);
+  for(let i=0;i<positions.length/3;i++){
+   const x=positions[i*3],y=positions[i*3+1],z=positions[i*3+2];
+   const cx=Math.floor(x/weld),cy=Math.floor(y/weld),cz=Math.floor(z/weld);
+   let found=-1;
+   for(let dx=-1;dx<=1&&found<0;dx++)for(let dy=-1;dy<=1&&found<0;dy++)for(let dz=-1;dz<=1&&found<0;dz++){
+    const bucket=grid.get(`${cx+dx}_${cy+dy}_${cz+dz}`);
+    if(!bucket)continue;
+    for(const j of bucket){
+     const ddx=positions[j*3]-x,ddy=positions[j*3+1]-y,ddz=positions[j*3+2]-z;
+     if(ddx*ddx+ddy*ddy+ddz*ddz>weld*weld)continue;
+     if(uvs&&(Math.abs(uvs[j*2]-uvs[i*2])>1e-6||Math.abs(uvs[j*2+1]-uvs[i*2+1])>1e-6))continue; // same spot, different texture coordinate: a UV seam, not a double
+     found=j;break;
+    }
+   }
+   if(found<0){found=i;const k=`${cx}_${cy}_${cz}`;const b=grid.get(k);if(b)b.push(i);else grid.set(k,[i]);}
+   else welded++;
+   map[i]=found;
+  }
+  index=index.map(i=>map[i]);
+ }
+ // Collapsed faces (a repeated corner) and exact duplicates (same three corners, either winding).
+ const seen=new Set<string>();const kept:number[]=[];let facesDropped=0;
+ for(let f=0;f<index.length;f+=3){
+  const a=index[f],b=index[f+1],c=index[f+2];
+  if(a===b||b===c||a===c){facesDropped++;continue;}
+  const k=[a,b,c].sort((p,q)=>p-q).join('_');
+  if(seen.has(k)){facesDropped++;continue;}
+  seen.add(k);kept.push(a,b,c);
+ }
+ index=kept;
+ // Remove vertices no face references anymore.
+ const used=[...new Set(index)].sort((a,b)=>a-b);
+ const remap=new Map<number,number>();const np:number[]=[];const nuv:number[]|undefined=uvs?[]:undefined;
+ for(const i of used){
+  remap.set(i,np.length/3);
+  np.push(positions[i*3],positions[i*3+1],positions[i*3+2]);
+  if(nuv)nuv.push(uvs![i*2],uvs![i*2+1]);
+ }
+ const vertsDropped=positions.length/3-used.length;
+ positions=np;index=index.map(i=>remap.get(i)!);
+ // Consistent winding inside each connected part, then flip closed parts with a negative signed volume.
+ const nf=index.length/3;
+ const edgeKey=(a:number,b:number)=>a<b?`${a}_${b}`:`${b}_${a}`;
+ const edgeFaces=new Map<string,number[]>();
+ for(let f=0;f<nf;f++)for(let e=0;e<3;e++){
+  const a=index[f*3+e],b=index[f*3+(e+1)%3];
+  const k=edgeKey(a,b);const l=edgeFaces.get(k);if(l)l.push(f);else edgeFaces.set(k,[f]);
+ }
+ const traverses=(f:number,u:number,v:number)=>{for(let e=0;e<3;e++)if(index[f*3+e]===u&&index[f*3+(e+1)%3]===v)return true;return false;};
+ const flip=(f:number)=>{const t=index[f*3+1];index[f*3+1]=index[f*3+2];index[f*3+2]=t;};
+ const comp=new Array<number>(nf).fill(-1);let flipped=0,nc=0;
+ for(let s=0;s<nf;s++){
+  if(comp[s]>=0)continue;
+  const queue=[s];comp[s]=nc;const faces:number[]=[];let closed=true;
+  while(queue.length){
+   const f=queue.pop()!;faces.push(f);
+   for(let e=0;e<3;e++){
+    const u=index[f*3+e],v=index[f*3+(e+1)%3];
+    const sharers=edgeFaces.get(edgeKey(u,v))!;
+    if(sharers.length!==2){closed=false;continue;} // boundary or non-manifold edge
+    const g=sharers[0]===f?sharers[1]:sharers[0];
+    if(comp[g]>=0)continue;
+    if(traverses(f,u,v)===traverses(g,u,v))flip(g); // neighbours must run the shared edge opposite ways
+    comp[g]=comp[s];queue.push(g);
+   }
+  }
+  if(closed){
+   let vol=0;
+   for(const f of faces){const a=v3({positions} as MeshData,index[f*3]),b=v3({positions} as MeshData,index[f*3+1]),c=v3({positions} as MeshData,index[f*3+2]);vol+=a[0]*(b[1]*c[2]-b[2]*c[1])+a[1]*(b[2]*c[0]-b[0]*c[2])+a[2]*(b[0]*c[1]-b[1]*c[0]);}
+   // (signed volume x6 of the part relative to the origin)
+   if(vol<0){for(const f of faces)flip(f);flipped++;}
+  }
+  nc++;
+ }
+ const mesh:MeshData=nuv?{positions,index,uvs:nuv}:{positions,index};
+ check(mesh);
+ return{mesh,welded,facesDropped,vertsDropped,flipped};
+}
+
 /** Subdivides the mesh smoothly with the Loop scheme, 1-3 iterations (each multiplies triangles by four, capped by the edit size limits). Drops the sculpt mask like every topology-changing op. */
 export function subdivideLoop(m:MeshData,iterations:number):MeshData{
  check(m);

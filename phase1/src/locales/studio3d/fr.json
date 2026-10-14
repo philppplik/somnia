@@ -780,5 +780,10 @@
  "studio3d.hist.subdivide_one": "Subdiviser {name}",
  "studio3d.hist.subdivide_other": "Subdiviser {count} objets",
  "studio3d.mesh.subdivide": "Subdiviser",
- "studio3d.mesh.subdivideTimes": "Itérations de subdivision"
+ "studio3d.mesh.subdivideTimes": "Itérations de subdivision",
+ "cmd.studio3d.mesh.cleanup": "Nettoyer les maillages 3D : souder les sommets en double, retirer les faces effondrées et en double et unifier le sens (les parties fermées pointent vers l'extérieur)",
+ "studio3d.hist.cleanup_one": "Nettoyer {name}",
+ "studio3d.hist.cleanup_other": "Nettoyer {count} objets",
+ "studio3d.mesh.cleanup": "Nettoyer",
+ "studio3d.mesh.cleanupWeld": "Distance de soudure"
 }

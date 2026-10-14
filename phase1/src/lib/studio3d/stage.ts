@@ -9,7 +9,7 @@ import type {NodeExtra} from './document';
 import {EASES,isEase,bakeTrack,type Ease} from './ease';
 import {buildExtras,type ClipMeta,type MetaTrack} from './clipMeta';
 import {groupRefs,keyIndices,copyTrackKeys,shiftTrackKeys,pasteTrackKeys,type KeyRef,type KeyData,type TrackData} from './keyEdit';
-import {extrudeFaces,insetFaces,bevelVertices,loopCut,bevelEdges,slideEdges,mirrorCombine,symmetrizeMesh,subdivideLoop,EditError,MAX_EDIT_VERTICES,MAX_EDIT_TRIANGLES,type MeshData} from './editMesh';
+import {extrudeFaces,insetFaces,bevelVertices,loopCut,bevelEdges,slideEdges,mirrorCombine,symmetrizeMesh,subdivideLoop,cleanupMesh,EditError,MAX_EDIT_VERTICES,MAX_EDIT_TRIANGLES,type MeshData,type CleanupResult} from './editMesh';
 import {sculptDab,paintMask,SculptError,type SculptOpts} from './sculpt';
 import {KEY_PATHS,KEY_STRIDE,ClipError,MAX_CLIPS,MAX_KEYS_PER_TRACK,DEFAULT_CLIP_SECONDS,insertKey,removeKey as removeKeyData,findKey,isPlainTrack,trackName,parseTrackName,checkKeyTime,checkDuration,checkClipName,lastKeyTime,type KeyPath} from './clips';
 import {mergeTransform,DEFAULT_TRANSFORM,UvError,type TextureTransform} from './uv';
@@ -1798,6 +1798,28 @@ export class Stage{
   set('after');
   this.push({label:{key:'studio3d.hist.subdivide',params:{count:list.length,name:list[0].mesh.name}},undo:()=>{set('before');owned=false;},redo:()=>{set('after');owned=true;},release:()=>{for(const l of list)(owned?l.before.g:l.after).dispose();}});
   return list.length;
+ }
+ /** Cleans meshes up: welds duplicate vertices (UV seams survive), drops collapsed and duplicate faces, removes unreferenced vertices and unifies winding (closed parts point outward). One undo step for the whole set. Returns the totals. */
+ cleanup(weld:number,ids:number[]):{welded:number;facesDropped:number;vertsDropped:number;flipped:number}{
+  if(this.editId!=null)throw new StageError('Leave edit mode before cleaning up meshes.');
+  if(!Number.isFinite(weld)||weld<0||weld>1e6)throw new StageError('The weld distance must be zero or a positive number.');
+  const objs=this.topLevel(this.needMany(ids,1));
+  for(const o of objs)if(!(o as THREE.Mesh).isMesh)throw new StageError(`${o.name} is not a mesh. Cleanup works on meshes.`);
+  const total={welded:0,facesDropped:0,vertsDropped:0,flipped:0};
+  const list=(objs as THREE.Mesh[]).map(mesh=>{
+   const data=this.meshDataOf(mesh);
+   let r:CleanupResult;try{r=cleanupMesh(data,weld);}catch(e){throw e instanceof EditError?new StageError(e.message):e;}
+   total.welded+=r.welded;total.facesDropped+=r.facesDropped;total.vertsDropped+=r.vertsDropped;total.flipped+=r.flipped;
+   const g=this.buildGeometry(r.mesh);
+   const seams0=this.seamsOf(mesh);let seams1:[number,number][]=[];
+   if(seams0.length){try{seams1=remapSeams(data,seams0,r.mesh);}catch{seams1=[];}}
+   return{mesh,before:{g:mesh.geometry,d:mesh.userData.somniaPrimitive,s:seams0},after:g,seams1};
+  });
+  const set=(k:'before'|'after')=>{for(const l of list){if(k==='after'){l.mesh.geometry=l.after;delete l.mesh.userData.somniaPrimitive;this.setSeams(l.mesh,l.seams1);}else{l.mesh.geometry=l.before.g;if(l.before.d!==undefined)l.mesh.userData.somniaPrimitive=l.before.d;this.setSeams(l.mesh,l.before.s);}}};
+  let owned=true;
+  set('after');
+  this.push({label:{key:'studio3d.hist.cleanup',params:{count:list.length,name:list[0].mesh.name}},undo:()=>{set('before');owned=false;},redo:()=>{set('after');owned=true;},release:()=>{for(const l of list)(owned?l.before.g:l.after).dispose();}});
+  return total;
  }
  /** Shows or hides an object. A hidden parent hides its whole subtree. One undo step. */
  setHidden(id:number,hidden:boolean){

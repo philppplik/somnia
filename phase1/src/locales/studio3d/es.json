@@ -780,5 +780,10 @@
  "studio3d.hist.subdivide_one": "Subdividir {name}",
  "studio3d.hist.subdivide_other": "Subdividir {count} objetos",
  "studio3d.mesh.subdivide": "Subdividir",
- "studio3d.mesh.subdivideTimes": "Iteraciones de subdivisión"
+ "studio3d.mesh.subdivideTimes": "Iteraciones de subdivisión",
+ "cmd.studio3d.mesh.cleanup": "Limpiar mallas 3D: soldar vértices duplicados, eliminar caras colapsadas y duplicadas y unificar el sentido (las partes cerradas apuntan hacia fuera)",
+ "studio3d.hist.cleanup_one": "Limpiar {name}",
+ "studio3d.hist.cleanup_other": "Limpiar {count} objetos",
+ "studio3d.mesh.cleanup": "Limpiar",
+ "studio3d.mesh.cleanupWeld": "Distancia de soldadura"
 }

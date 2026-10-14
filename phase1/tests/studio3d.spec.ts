@@ -1511,6 +1511,19 @@ test('3D studio mesh subdivide: triangles quadruple per iteration and undo resto
  await expect.poll(tris).toBe(before);
 });
 
+test('3D studio mesh cleanup: a merged duplicate loses its doubled faces and undo restores them',async({page})=>{
+ await blank(page);
+ await insert(page,'cube',0);
+ await insert(page,'cube',1);
+ const tris=async()=>(await session(page)).stats.triangles;
+ expect(await run(page,'studio3d.mesh.merge',{})).toBe(true);
+ await expect.poll(tris).toBe(24,'two coincident cubes after the merge');
+ expect(await run(page,'studio3d.mesh.cleanup',{weld:0.0001})).toBe(true);
+ await expect.poll(tris).toBe(12,'doubles welded and duplicate faces dropped');
+ expect(await run(page,'studio3d.undo',{})).toBe(true);
+ await expect.poll(tris).toBe(24);
+});
+
 test('3D studio mesh simplify: triangle count drops and undo restores it',async({page})=>{
  await blank(page);
  await insert(page,'sphere',0);

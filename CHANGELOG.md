@@ -1,4 +1,5 @@
 # Unreleased: 3D Studio P0
+- 3D Studio: mesh cleanup - one command welds duplicate vertices (UV seams survive), drops collapsed and duplicate faces, removes unreferenced vertices and unifies the winding so closed parts point outward; batch over the marked set as one undo step with per-op totals.
 - 3D Studio: mesh bakes keep UVs - mirror, symmetrize and subdivide now carry texture coordinates through the geometry rebuild (cut points interpolate, mirrored halves reuse the source UVs, subdivision smooths UVs with the position weights), so the checker preview, the UV island view and exports survive them.
 - 3D Studio: mesh subdivide - smooth Loop subdivision bakes into meshes (1-3 iterations, every triangle splits into four, boundary outlines keep their shape), batch over the marked set as one undo step; pure three-free math alongside the other mesh ops.
 - 3D Studio: symmetrize - bake a mirror symmetry into meshes (keep either side of the local X/Y/Z plane, weld the seam), batch over the marked set as one undo step; shares the clip/mirror math with the mirror modifier.

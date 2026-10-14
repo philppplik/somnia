@@ -780,5 +780,10 @@
  "studio3d.hist.subdivide_one": "{name} unterteilen",
  "studio3d.hist.subdivide_other": "{count} Objekte unterteilen",
  "studio3d.mesh.subdivide": "Unterteilen",
- "studio3d.mesh.subdivideTimes": "Unterteilungsstufen"
+ "studio3d.mesh.subdivideTimes": "Unterteilungsstufen",
+ "cmd.studio3d.mesh.cleanup": "3D-Meshes bereinigen: doppelte Vertizes verschweißen, kollabierte und doppelte Flächen entfernen und die Wicklung vereinheitlichen (geschlossene Teile zeigen nach außen)",
+ "studio3d.hist.cleanup_one": "{name} bereinigen",
+ "studio3d.hist.cleanup_other": "{count} Objekte bereinigen",
+ "studio3d.mesh.cleanup": "Bereinigen",
+ "studio3d.mesh.cleanupWeld": "Schweißdistanz"
 }

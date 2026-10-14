@@ -780,5 +780,10 @@
  "studio3d.hist.subdivide_one": "Subdivide {name}",
  "studio3d.hist.subdivide_other": "Subdivide {count} objects",
  "studio3d.mesh.subdivide": "Subdivide",
- "studio3d.mesh.subdivideTimes": "Subdivision iterations"
+ "studio3d.mesh.subdivideTimes": "Subdivision iterations",
+ "cmd.studio3d.mesh.cleanup": "Clean up 3D meshes: weld duplicate vertices, drop collapsed and duplicate faces and unify winding (closed parts point outward)",
+ "studio3d.hist.cleanup_one": "Clean up {name}",
+ "studio3d.hist.cleanup_other": "Clean up {count} objects",
+ "studio3d.mesh.cleanup": "Clean up",
+ "studio3d.mesh.cleanupWeld": "Weld distance"
 }
