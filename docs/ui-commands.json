@@ -2244,6 +2244,14 @@
       "hasEnabled": true
     },
     {
+      "id": "studio.3d",
+      "title": "Switch to 3D Studio",
+      "category": "View",
+      "source": "core",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
       "id": "studio.code",
       "title": "Switch to Code Studio",
       "category": "View",
