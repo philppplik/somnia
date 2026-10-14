@@ -1,0 +1,6 @@
+import {Button} from '../ui/button';import {StudioStatus} from '../studios/StudioStatus';import {useT} from '../../lib/useT';import {streamPresentation} from '../../lib/vibespace/streamPresentation';import type {Studio} from '../../lib/vibespace/types';
+/** Display-only provisional output. It never writes, proposes, applies, retries or replays anything. */
+export function StreamProgress({studio,canStop,onStop}:{studio:Studio;canStop:boolean;onStop:()=>void}){
+ const {t}=useT();const stream=streamPresentation(studio);if(!stream)return null;
+ return <section className="vs-card space-y-3" aria-label={t('vs.stream.title')}><h3>{t('vs.stream.title')}</h3><StudioStatus>{t('vs.stream.state.'+stream.state)}</StudioStatus><p role="status" aria-live="polite">{t('vs.stream.step')}: {stream.step??t('vs.stream.waiting')}</p><p>{t('vs.stream.tokens')}: {stream.reportedOutputTokens??t('vs.stream.pending')}</p><p>{t('vs.stream.characters')}: {stream.characters}</p><pre className="whitespace-pre-wrap break-words" data-copyable aria-busy={stream.active}>{stream.text}</pre><p className="vs-muted">{t('vs.stream.boundary')}</p>{stream.active&&<Button type="button" disabled={!canStop} onClick={onStop}>{t('vs.stream.stop')}</Button>}</section>;
+}

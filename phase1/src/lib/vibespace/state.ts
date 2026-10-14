@@ -1,3 +1,4 @@
+import {hasPartialStream} from './streamPresentation';
 import type {Studio,VibeEvent,VibeSnapshot,StudioState} from './types';
 import {parseSnapshot,parseEvent} from './validation';
 export interface VibeViewState {snapshot:VibeSnapshot|null;loading:boolean;pending:boolean;error:string|null}
@@ -35,7 +36,7 @@ export function studioControls(studio:Studio,pending:boolean){
  const active=['running','claimed','paused'].includes(studio.executionState);
  return {stop:active&&studio.capabilities.stop&&!pending,steer:active&&studio.capabilities.steer&&!pending,
  consent:active&&!!studio.pendingConsents.length&&!pending,
- review:['ready','conflict'].includes(studio.reviewState)&&!!studio.review&&!pending,
+ review:['ready','conflict'].includes(studio.reviewState)&&studio.executionState==='done'&&!hasPartialStream(studio)&&!!studio.review&&!pending,
  restore:!active&&studio.capabilities.restore&&!pending,
  retry:['failed','crashed'].includes(studio.executionState)&&!!studio.failure?.retryable&&!pending};
 }

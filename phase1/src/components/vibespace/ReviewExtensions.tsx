@@ -2,7 +2,7 @@ import {AcpPanel} from './AcpPanel';
 import {ComputerUseReview} from './ComputerUseReview';
 import {useEffect,useState,useSyncExternalStore} from 'react';
 import {getLocale,subscribeLocale,t} from '../../lib/i18n';
-import {costLabel,reviewedHunksAllowed} from '../../lib/vibespace/state';
+import {costLabel,reviewedHunksAllowed,studioControls} from '../../lib/vibespace/state';
 import type {Studio,VibeSpaceTransport,VibeIntent,ReviewDetails,HunkSelection} from '../../lib/vibespace/types';
 import {NativeButton,NativeInput,Textarea} from '../ui/native-controls';
 function useText(){useSyncExternalStore(subscribeLocale,getLocale,getLocale);return (key:string)=>t(`vibe.review.${key}`);}
@@ -18,7 +18,7 @@ export function ReviewExtensions({studio,transport,disabled,onAction}:{studio:St
  const review=studio.review;const exact=details?.revision===review?.revision;
  const hunks:HunkSelection[]=Object.entries(selected).filter(([,ids])=>ids.length).map(([path,hunkIds])=>({path,hunkIds}));
  const allowed=!!details&&reviewedHunksAllowed(studio,details,paths,hunks)&&!disabled&&transport.capabilities.includes('apply-hunks');
- const changeAllowed=!!review&&['ready','conflict'].includes(studio.reviewState)&&!disabled&&transport.capabilities.includes('request-changes');
+ const changeAllowed=studioControls(studio,false).review&&!disabled&&transport.capabilities.includes('request-changes');
  return <>
   <div className="vs-actions" role="tablist" aria-label={t('vibespace.acp.ui.dock')}>
    <NativeButton role="tab" aria-selected={tab==='review'} aria-controls="vs-review-dock" id="vs-review-tab" onClick={()=>setTab('review')}>{t('vibespace.acp.ui.reviewTab')}</NativeButton>

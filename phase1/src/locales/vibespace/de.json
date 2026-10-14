@@ -168,5 +168,17 @@
  "vs.onboard.next.lmstudio.unverified": "LM Studio erkannt, aber LM Link kann ein anderes Gerät nutzen. Verwende geprüftes Ollama für Nur-lokal.",
  "vs.onboard.state.local": "Lokale Gewichte vom Daemon gemeldet",
  "vs.onboard.next.ollama.local": "Wähle genau dieses Modell in den AI-Einstellungen, speichere und wähle es für dieses Studio.",
- "vs.onboard.next.lmstudio.local": "Verwende geprüftes Ollama für Nur-lokal; der Ausführungsort von LM Studio ist nicht belegt."
+ "vs.onboard.next.lmstudio.local": "Verwende geprüftes Ollama für Nur-lokal; der Ausführungsort von LM Studio ist nicht belegt.",
+ "vs.stream.title": "Experimentelle Live-Ausgabe",
+ "vs.stream.state.live": "Vorläufige Live-Ausgabe",
+ "vs.stream.state.stopped": "Gestoppt: Teilausgabe bleibt unvollständig",
+ "vs.stream.state.failed": "Stream fehlgeschlagen: Teilausgabe bleibt unvollständig",
+ "vs.stream.state.incomplete": "Teilausgabe ist unvollständig",
+ "vs.stream.step": "Aktueller Schritt",
+ "vs.stream.waiting": "Warte auf einen erfassten Schritt",
+ "vs.stream.tokens": "Vom Provider gemeldete Ausgabetokens",
+ "vs.stream.pending": "Provider-Nutzung noch offen",
+ "vs.stream.characters": "Empfangene Zeichen (keine Tokens)",
+ "vs.stream.boundary": "Vorläufiger Text ist nur Anzeige, keine Projektänderung. Anwenden bleibt bei Teilausgabe gesperrt. Fertige Änderungen brauchen eine eigene native Prüfung und dein Anwenden. Gestoppte/fehlgeschlagene Streams werden nicht automatisch wiederholt. Nutzung kann erst am Ende eintreffen.",
+ "vs.stream.stop": "Stream stoppen"
 }

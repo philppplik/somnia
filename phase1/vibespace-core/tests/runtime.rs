@@ -487,3 +487,15 @@ async fn stop_keeps_persisted_partial_incomplete_never_tool_or_final(){
  assert_eq!(rt.snapshot(&id).unwrap().snapshot.messages[0].role,"assistant_streaming");rt.stop(&id).await.unwrap();
  let snapshot=rt.snapshot(&id).unwrap();assert_eq!(snapshot.snapshot.messages[0].role,"assistant_incomplete");assert_eq!(snapshot.snapshot.messages[0].text,"Provisional only");assert_eq!(std::fs::read_to_string(project.path().join("hello.txt")).unwrap(),"before");
 }
+
+struct PartialFailure;
+#[async_trait]
+impl engine::ModelTransport for PartialFailure{
+ async fn complete(&self,_:engine::ModelInput)->Result<engine::ModelReply,engine::Failure>{Err(engine::Failure::Model)}
+ async fn stream_text(&self,_:engine::ModelInput,deltas:tokio::sync::mpsc::Sender<String>)->Result<engine::ModelReply,engine::Failure>{deltas.send("Unfinished output".into()).await.map_err(|_|engine::Failure::Model)?;Err(engine::Failure::Model)}
+}
+#[tokio::test]async fn failed_stream_retains_partial_without_project_write_or_apply(){
+ let (_data,project,rt,studio)=setup();let started=rt.start(StartRun{studio_id:studio.studio_id,request_id:uuid::Uuid::new_v4().to_string(),retry_of_run_id:None},Arc::new(PartialFailure),engine::ModelConfig::Local{endpoint:"http://127.0.0.1:11434/v1/chat/completions".into(),model:"qwen3.5:9b".into()}).await.unwrap();let id=started.snapshot.run_id;
+ for _ in 0..100{let s=rt.snapshot(&id).unwrap();if s.snapshot.execution_state==ExecutionState::Failed{break;}tokio::time::sleep(std::time::Duration::from_millis(10)).await;}
+ let snapshot=rt.snapshot(&id).unwrap().snapshot;assert_eq!(snapshot.execution_state,ExecutionState::Failed);assert!(snapshot.messages.iter().any(|m|m.role=="assistant_incomplete"&&m.text=="Unfinished output"));assert!(snapshot.review.is_none());assert!(!snapshot.capabilities.apply);assert!(rt.apply(&id,"none",vec!["hello.txt".into()]).is_err());assert_eq!(std::fs::read_to_string(project.path().join("hello.txt")).unwrap(),"before");
+}

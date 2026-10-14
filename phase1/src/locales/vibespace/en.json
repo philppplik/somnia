@@ -168,5 +168,17 @@
  "vs.onboard.next.lmstudio.unverified": "LM Studio is detected, but LM Link can use another device. Use verified Ollama for local-only.",
  "vs.onboard.state.local": "Local weights reported by daemon",
  "vs.onboard.next.ollama.local": "Choose this exact model in AI settings, save, then select it for this Studio.",
- "vs.onboard.next.lmstudio.local": "Use verified Ollama for local-only; LM Studio execution location is not verified."
+ "vs.onboard.next.lmstudio.local": "Use verified Ollama for local-only; LM Studio execution location is not verified.",
+ "vs.stream.title": "Experimental live output",
+ "vs.stream.state.live": "Live provisional output",
+ "vs.stream.state.stopped": "Stopped: partial output kept, incomplete",
+ "vs.stream.state.failed": "Stream failed: partial output kept, incomplete",
+ "vs.stream.state.incomplete": "Partial output is incomplete",
+ "vs.stream.step": "Current step",
+ "vs.stream.waiting": "Waiting for a recorded step",
+ "vs.stream.tokens": "Provider-reported output tokens",
+ "vs.stream.pending": "Pending provider usage",
+ "vs.stream.characters": "Received characters (not tokens)",
+ "vs.stream.boundary": "Provisional text is display-only, not a project change. Apply stays blocked while output is partial. Completed changes need a separate native review and your Apply decision. Stopped/failed streams are not replayed automatically. Usage can arrive only at the end.",
+ "vs.stream.stop": "Stop stream"
 }

@@ -168,5 +168,17 @@
  "vs.onboard.next.lmstudio.unverified": "LM Studio detectado, pero LM Link puede usar otro dispositivo. Usa Ollama verificado en modo local.",
  "vs.onboard.state.local": "Pesos locales declarados por el daemon",
  "vs.onboard.next.ollama.local": "Elige este modelo exacto en ajustes de AI, guarda y selecciónalo para este Studio.",
- "vs.onboard.next.lmstudio.local": "Usa Ollama verificado en modo local; la ubicación de LM Studio no se verifica."
+ "vs.onboard.next.lmstudio.local": "Usa Ollama verificado en modo local; la ubicación de LM Studio no se verifica.",
+ "vs.stream.title": "Salida en vivo experimental",
+ "vs.stream.state.live": "Salida provisional en vivo",
+ "vs.stream.state.stopped": "Detenido: salida parcial incompleta",
+ "vs.stream.state.failed": "Fallo: salida parcial incompleta",
+ "vs.stream.state.incomplete": "Salida parcial incompleta",
+ "vs.stream.step": "Paso actual",
+ "vs.stream.waiting": "Esperando paso registrado",
+ "vs.stream.tokens": "Tokens declarados por el proveedor",
+ "vs.stream.pending": "Uso del proveedor pendiente",
+ "vs.stream.characters": "Caracteres recibidos (no tokens)",
+ "vs.stream.boundary": "Texto provisional solo de lectura. Aplicar sigue bloqueado mientras sea parcial. Los cambios completos requieren revisión nativa y tu decisión. Sin repetición automática. Uso puede llegar al final.",
+ "vs.stream.stop": "Detener stream"
 }

@@ -1111,6 +1111,9 @@ impl Runtime {
         {
             return Err(CoreError("run is not ready for review"));
         }
+        if self.snapshot_once(id)?.snapshot.messages.iter().any(|m|m.role=="assistant_streaming"||m.role=="assistant_incomplete"){
+            return Err(CoreError("partial output is not ready for apply"));
+        }
         let projected = self.review_projection(id)?;
         if projected.revision != revision {
             return Err(CoreError("review changed; reload before applying"));
@@ -1172,6 +1175,9 @@ impl Runtime {
             )
         {
             return Err(CoreError("run is not ready for review"));
+        }
+        if self.snapshot_once(id)?.snapshot.messages.iter().any(|m|m.role=="assistant_streaming"||m.role=="assistant_incomplete"){
+            return Err(CoreError("partial output is not ready for apply"));
         }
         let projected = self.review_projection(id)?;
         if projected.revision != request.review_revision || !projected.conflicts.is_empty() {
