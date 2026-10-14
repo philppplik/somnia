@@ -169,6 +169,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
    if(e.metaKey||e.ctrlKey||e.altKey)return;
    const el=e.target as HTMLElement|null;
    if(el&&el.closest('input,select,textarea,[contenteditable="true"]'))return;
+   if(e.key==='Enter'&&session?.cropping){e.preventDefault();applyPhotoCrop(item.name);return;} // Enter commits the crop like the apply button
    if(e.key==='Home'||e.key==='End'){ // first/last developable photo in library order
     const all=developablePhotos(media.items);
     const target=e.key==='Home'?all[0]:all[all.length-1];
@@ -193,7 +194,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
   const onKeyUp=(e:KeyboardEvent)=>{if(e.key==='\\')setCompare(false);};
   window.addEventListener('keydown',onKey);window.addEventListener('keyup',onKeyUp);
   return()=>{window.removeEventListener('keydown',onKey);window.removeEventListener('keyup',onKeyUp);};
- },[nav.prev,nav.next,item.name,media.items,guideStyle,setGuideStyle,lightsOut,setLightsOut,zoom,scale,zoomTo]);
+ },[nav.prev,nav.next,item.name,media.items,session?.cropping,guideStyle,setGuideStyle,lightsOut,setLightsOut,zoom,scale,zoomTo]);
 
  const pointerPos=(e:React.PointerEvent)=>{const r=imgBox.current!.getBoundingClientRect();return{x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height};};
  const onStageDown=(e:React.PointerEvent)=>{

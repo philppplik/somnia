@@ -136,3 +136,21 @@ test('crop guide styles: O key cycles thirds, golden and center (light and dark)
   await expect(grid).toHaveAttribute('data-style','thirds'); // wraps around
  }
 });
+test('Enter commits the active crop like the apply button (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-crop');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-transform-panel')).toBeVisible();
+  await page.getByTestId('photos-aspect-16x9').click(); // starts cropping with a fitted draft
+  await expect(page.getByTestId('photos-crop-overlay')).toBeVisible();
+  const draft=(await page.getByTestId('photos-crop-size').textContent())!.match(/(\d+)\s*×\s*(\d+)/)!.slice(1);
+  await page.screenshot({path:`test-results/ds-photos-crop-enter-${theme}.png`,fullPage:true});
+  await page.keyboard.press('Enter');
+  await expect(page.getByTestId('photos-crop-overlay')).toHaveCount(0); // crop mode closed
+  await expect(page.getByTestId('photos-undo')).toBeEnabled(); // one history entry
+  await page.waitForTimeout(400);
+  const applied=(await page.getByTestId('photos-crop-size').textContent())!.match(/(\d+)\s*×\s*(\d+)/)!.slice(1);
+  expect(applied).toEqual(draft); // committed dims match the draft (the label switches Selection -> Output)
+ }
+});

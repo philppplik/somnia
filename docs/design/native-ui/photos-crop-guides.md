@@ -88,3 +88,14 @@ Lightroom convention), persisted via `panelStateStore` under
 Coverage: `cropGuides.test.ts` gains golden/center/fallback cases;
 `photos-crop.spec.ts` gains a light/dark leg that cycles with `O`,
 asserts `data-style` and line counts (4, 4, 2) and the wrap-around.
+
+## Crop commit key (P79)
+
+`Enter` commits the active crop — the same `applyPhotoCrop` as the
+apply button, one history entry, and only while crop mode is on (the
+key falls through to nothing otherwise). Same key-handler guards.
+
+Coverage: `photos-crop.spec.ts` gains a light/dark leg that starts a
+16:9 draft, presses `Enter`, asserts the overlay closed, Undo enabled
+and the committed output dims equal the draft's selection dims (the
+label switches from Selection to Output).
