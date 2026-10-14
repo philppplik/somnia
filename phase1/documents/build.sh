@@ -10,6 +10,6 @@ git -C upstream checkout --quiet --force "$PIN"
 git -C upstream clean -fdxq
 git -C upstream apply ../wordcraft-worker.patch
 (cd upstream && python3 spikes/somnia-documents/scripts/fixtures.py)
-(cd upstream && cargo +1.95.0 test --locked -p wordcraft-somnia-worker --lib)
-(cd upstream && cargo +1.95.0 build --locked --release -p wordcraft-somnia-worker --target wasm32-unknown-unknown)
+(cd upstream && cargo +1.95.0 test -p wordcraft-somnia-worker --lib)
+(cd upstream && cargo +1.95.0 build --release -p wordcraft-somnia-worker --target wasm32-unknown-unknown)
 wasm-bindgen upstream/target/wasm32-unknown-unknown/release/wordcraft_somnia_worker.wasm --target web --out-dir pkg
