@@ -838,5 +838,9 @@
  "cmd.animation.keys.toPlayhead": "Déplacer les keys sélectionnées pour que la première soit sur la tête de lecture",
  "animation.keys.range.at": "Keys = tête",
  "animation.keys.range.at.hint": "Sélectionne les keys exactement sur la tête de lecture",
- "animation.keys.values.smooth": "Lisser %"
+ "animation.keys.values.smooth": "Lisser %",
+ "animation.keys.jitter": "Varier le temps",
+ "animation.keys.jitter.frames": "Images",
+ "animation.keys.jitter.hint": "Décale chaque key sélectionnée d’un nombre d’images aléatoire jusqu’à cette valeur (nouvelle variation à chaque clic)",
+ "cmd.animation.keys.jitterTime": "Décaler les keys sélectionnées d’images aléatoires"
 }

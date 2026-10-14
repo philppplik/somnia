@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-760 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+762 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -82,6 +82,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `animation.keys.easeRandom` | Give the selected keys random eases | Edit | animation |  |
 | `animation.keys.elastic` | Bake an elastic settle between selected keys | Edit | animation |  |
 | `animation.keys.invert` | Invert the values of the selected keys | Edit | animation |  |
+| `animation.keys.jitterTime` | Shift the selected keys by random frames | Edit | animation |  |
 | `animation.keys.nudge` | Move selected keys | Edit | animation |  |
 | `animation.keys.paste` | Paste keys at playhead | Edit | animation |  |
 | `animation.keys.pasteInPlace` | Paste copied keys at their original times | Edit | animation |  |
@@ -422,6 +423,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `photos.crop.reset` | Photos: Remove crop | Edit | photos |  |
 | `photos.crop.setAspect` | Photos: Set crop aspect ratio | Edit | photos |  |
 | `photos.crop.start` | Photos: Start cropping | Edit | photos |  |
+| `photos.crop.swapAspect` | Photos: Swap crop aspect orientation | Edit | photos |  |
 | `photos.export` | Photos: Export a developed copy | Project | photos |  |
 | `photos.export.advanced` | Photos: Advanced export (size, quality, profile, metadata) | Project | photos |  |
 | `photos.export.jpeg` | Photos: Export as JPEG | Project | photos |  |

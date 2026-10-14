@@ -838,5 +838,9 @@
  "cmd.animation.keys.toPlayhead": "Mover as keys selecionadas para que a primeira fique no cursor",
  "animation.keys.range.at": "Keys = cursor",
  "animation.keys.range.at.hint": "Seleciona as keys exatamente no cursor",
- "animation.keys.values.smooth": "Suavizar %"
+ "animation.keys.values.smooth": "Suavizar %",
+ "animation.keys.jitter": "Variar tempo",
+ "animation.keys.jitter.frames": "Quadros",
+ "animation.keys.jitter.hint": "Desloca cada key selecionada por um número aleatório de quadros até este valor (nova variação a cada clique)",
+ "cmd.animation.keys.jitterTime": "Deslocar as keys selecionadas por quadros aleatórios"
 }

@@ -838,5 +838,9 @@
  "cmd.animation.keys.toPlayhead": "Move the selected keys so the first one lands on the playhead",
  "animation.keys.range.at": "Keys = playhead",
  "animation.keys.range.at.hint": "Select the keys exactly on the playhead",
- "animation.keys.values.smooth": "Smooth %"
+ "animation.keys.values.smooth": "Smooth %",
+ "animation.keys.jitter": "Jitter time",
+ "animation.keys.jitter.frames": "Frames",
+ "animation.keys.jitter.hint": "Shift each selected key by a random number of frames up to this value (new variation each click)",
+ "cmd.animation.keys.jitterTime": "Shift the selected keys by random frames"
 }

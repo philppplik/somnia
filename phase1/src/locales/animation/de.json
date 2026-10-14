@@ -838,5 +838,9 @@
  "cmd.animation.keys.toPlayhead": "Gewählte Keys so verschieben, dass der erste auf dem Playhead liegt",
  "animation.keys.range.at": "Keys = Playhead",
  "animation.keys.range.at.hint": "Keys genau auf dem Playhead auswählen",
- "animation.keys.values.smooth": "Glätten %"
+ "animation.keys.values.smooth": "Glätten %",
+ "animation.keys.jitter": "Zeit streuen",
+ "animation.keys.jitter.frames": "Frames",
+ "animation.keys.jitter.hint": "Jeden gewählten Key um zufällige Frames bis zu diesem Wert verschieben (bei jedem Klick neue Variante)",
+ "cmd.animation.keys.jitterTime": "Gewählte Keys um zufällige Frames verschieben"
 }

@@ -759,6 +759,23 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.keys.jitterTime",
+      "title": "Shift the selected keys by random frames",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "jitter",
+        "keys",
+        "offset",
+        "organic",
+        "random",
+        "stagger",
+        "timing"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.keys.nudge",
       "title": "Move selected keys",
       "category": "Edit",
@@ -4550,6 +4567,21 @@
       "keywords": [
         "crop",
         "photos"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "photos.crop.swapAspect",
+      "title": "Photos: Swap crop aspect orientation",
+      "category": "Edit",
+      "source": "photos",
+      "keywords": [
+        "aspect",
+        "crop",
+        "landscape",
+        "photos",
+        "portrait",
+        "swap"
       ],
       "hasEnabled": true
     },

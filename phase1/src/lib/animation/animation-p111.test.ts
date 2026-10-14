@@ -90,3 +90,12 @@ test('smooth: moves toward neighbour average, ends use one neighbour, validates 
  assert.throws(()=>valueEdits(c,[{layer:'a',prop:'position',t:f(5)}],'smooth',0));
  assert.throws(()=>valueEdits(c,[{layer:'a',prop:'position',t:f(5)}],'smooth',101));
 });
+import {jitterTimeMoves} from './keyJitterTime';
+test('jitter time: deterministic per seed, within bounds, whole frames, validated',()=>{
+ const d=applyEdits(base(),[{type:'prop.set',layer:'a',prop:'position',t:f(30),value:[1,1]},{type:'prop.set',layer:'a',prop:'position',t:f(60),value:[2,2]}] as never),c=findComp(d)!;
+ const refs=[10,30,60].map(n=>({layer:'a',prop:'position' as const,t:f(n)}));
+ const a=jitterTimeMoves(c,refs,4,5),b=jitterTimeMoves(c,refs,4,5);
+ assert.deepEqual(a,b);assert.ok(a.moves.length>0);
+ for(const m of a.moves){const df=Math.abs(m.to-m.from)/f(1);assert.ok(df>=1&&df<=4&&Number.isInteger(Math.round(df)));}
+ assert.throws(()=>jitterTimeMoves(c,refs,0));assert.throws(()=>jitterTimeMoves(c,refs,61));
+});

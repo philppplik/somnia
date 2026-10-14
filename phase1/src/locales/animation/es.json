@@ -838,5 +838,9 @@
  "cmd.animation.keys.toPlayhead": "Mover las keys seleccionadas para que la primera quede en el cabezal",
  "animation.keys.range.at": "Keys = cabezal",
  "animation.keys.range.at.hint": "Selecciona las keys exactamente en el cabezal",
- "animation.keys.values.smooth": "Suavizar %"
+ "animation.keys.values.smooth": "Suavizar %",
+ "animation.keys.jitter": "Variar tiempo",
+ "animation.keys.jitter.frames": "Fotogramas",
+ "animation.keys.jitter.hint": "Desplaza cada key seleccionada un número aleatorio de fotogramas hasta este valor (nueva variación en cada clic)",
+ "cmd.animation.keys.jitterTime": "Desplazar las keys seleccionadas por fotogramas aleatorios"
 }
