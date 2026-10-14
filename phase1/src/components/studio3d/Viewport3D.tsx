@@ -4,6 +4,8 @@ import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {STLLoader} from 'three/addons/loaders/STLLoader.js';
 import {PLYLoader} from 'three/addons/loaders/PLYLoader.js';
 import {OBJLoader} from 'three/addons/loaders/OBJLoader.js';
+import {MTLLoader} from 'three/addons/loaders/MTLLoader.js';
+import {RectAreaLightUniformsLib} from 'three/addons/lights/RectAreaLightUniformsLib.js';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {GLTFExporter} from 'three/addons/exporters/GLTFExporter.js';
 import {TransformControls} from 'three/addons/controls/TransformControls.js';
@@ -13,13 +15,20 @@ import {Sky} from 'three/addons/objects/Sky.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
 import {useT} from '../../lib/useT';
-import {isMeshFormat,mergeEnv,envFormatFor,nudgeFor,EnvError,modelFormatFor,readModelHeader,externalResources,ModelError,boundsValid,boundsCenter,boundsRadius,frameDistance,clipPlanes} from '../../lib/studio3d/model';
+import {isMeshFormat,mergeSnap,snapTo,stlUnitHint,mtlReferences,mtlTextures,clampRenderSize,MAX_MTL_BYTES,MAX_TEXTURE_BYTES,MAX_TEXTURE_FILES,SnapError,mergeEnv,envFormatFor,nudgeFor,EnvError,modelFormatFor,readModelHeader,externalResources,ModelError,boundsValid,boundsCenter,boundsRadius,frameDistance,clipPlanes} from '../../lib/studio3d/model';
 import type {Bounds} from '../../lib/studio3d/model';
 import {Stage} from '../../lib/studio3d/stage';
 import {registerStudio3DController} from '../../lib/studio3d/commands';
 import {patchStudio3D,resetStudio3D,getStudio3DState,useStudio3D} from '../../lib/studio3d/session';
 
 const DEFAULT_DIR=new THREE.Vector3(1,0.75,1).normalize();
+const safeDecode=(u:string)=>{try{return decodeURIComponent(u);}catch{return u;}};
+/** MTL materials are Phong. The studio edits PBR, so they become standard materials with the same maps. */
+function toStandard(m:THREE.Material):THREE.Material{
+ const p=m as THREE.MeshPhongMaterial;if(!p.isMeshPhongMaterial)return m;
+ const out=new THREE.MeshStandardMaterial({name:p.name,color:p.color,map:p.map,normalMap:p.normalMap,bumpMap:p.bumpMap,alphaMap:p.alphaMap,emissive:p.emissive,emissiveMap:p.emissiveMap,opacity:p.opacity,transparent:p.transparent,side:THREE.DoubleSide,metalness:0,roughness:0.7});
+ p.dispose();return out;
+}
 const base=(name:string)=>name.replace(/^.*[\\/]/,'');
 const download=(blob:Blob,name:string)=>{const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
 const stem=(name:string)=>base(name).replace(/\.[^.]+$/,'')||'scene';
@@ -32,8 +41,8 @@ export default function Viewport3D(){
  const {t}=useT();const host=useRef<HTMLDivElement|null>(null);
  useEffect(()=>{
   const el=host.current!;
-  const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'high-performance'});
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;
+  const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'high-performance'});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;RectAreaLightUniformsLib.init();
   renderer.domElement.style.cssText='display:block;width:100%;height:100%;outline:none;touch-action:none';
   renderer.domElement.tabIndex=0;renderer.domElement.setAttribute('role','img');renderer.domElement.setAttribute('aria-label',t('studio3d.canvas.label'));
   el.appendChild(renderer.domElement);
@@ -111,6 +120,7 @@ export default function Viewport3D(){
    place(camera.position.clone().sub(controls.target).normalize(),c,Math.max(r,1e-4));
   };
   const loadParsed=async(file:File,extras:File[])=>{
+   const tmpUrls:string[]=[];let notice='';let unitHint:{id:number;factor:number}|null=null;
    const bytes=new Uint8Array(await file.arrayBuffer());const header=readModelHeader(file.name,bytes);
    const urls=new Map<string,string>();for(const f of extras)urls.set(base(f.name).toLowerCase(),URL.createObjectURL(f));
    const manager=new THREE.LoadingManager();
@@ -130,12 +140,34 @@ export default function Viewport3D(){
      if(header.format==='stl')scene.add(fromGeometry(new STLLoader().parse(buf)));
      else if(header.format==='ply')scene.add(fromGeometry(new PLYLoader().parse(buf),!!header.pointCloud));
      else{
-      const group=new OBJLoader().parse(new TextDecoder().decode(bytes));
-      group.traverse(o=>{const m=o as THREE.Mesh;if(!m.isMesh)return;if(!m.geometry.getAttribute('normal'))m.geometry.computeVertexNormals();m.material=solid();});
+      const text=new TextDecoder().decode(bytes);const refs=mtlReferences(text);
+      const mtls=extras.filter(f=>/\.mtl$/i.test(f.name));
+      const mtlFile=mtls.find(f=>refs.some(r=>r.toLowerCase()===base(f.name).toLowerCase()))??(mtls.length===1?mtls[0]:undefined);
+      const objLoader=new OBJLoader();
+      if(mtlFile){
+       if(mtlFile.size>MAX_MTL_BYTES)throw new ModelError(`${mtlFile.name} is larger than ${MAX_MTL_BYTES/1048576} MB.`);
+       const mtlText=await mtlFile.text();const wanted=mtlTextures(mtlText);
+       const have=new Map(extras.filter(f=>/\.(png|jpe?g|webp)$/i.test(f.name)).map(f=>[base(f.name).toLowerCase(),f] as const));
+       const use=wanted.filter(w=>have.has(w.toLowerCase()));const missing=wanted.filter(w=>!have.has(w.toLowerCase()));
+       if(use.length>MAX_TEXTURE_FILES)throw new ModelError(`${mtlFile.name} names more than ${MAX_TEXTURE_FILES} texture files.`);
+       const blobs=new Map<string,string>();
+       for(const w of use){const f=have.get(w.toLowerCase())!;if(f.size>MAX_TEXTURE_BYTES)throw new ModelError(`${f.name} is larger than ${MAX_TEXTURE_BYTES/1048576} MB.`);const u=URL.createObjectURL(f);tmpUrls.push(u);blobs.set(w.toLowerCase(),u);}
+       // Only the selected files are readable. Any other reference gets an empty pixel, so nothing is fetched from the network.
+       const BLANK='data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
+       const tm=new THREE.LoadingManager();
+       tm.setURLModifier(u=>u.startsWith('data:')||u.startsWith('blob:')?u:blobs.get(base(safeDecode(u)).toLowerCase())??BLANK);
+       const mats=new MTLLoader(tm).parse(mtlText,'');mats.preload();objLoader.setMaterials(mats);
+       if(missing.length)notice=`Textures not found: ${missing.slice(0,4).join(', ')}${missing.length>4?', ...':''}. Select them together with the OBJ.`;
+      }else if(refs.length)notice=`Material file not found: ${refs[0]}. Select it together with the OBJ to get its materials.`;
+      const group=objLoader.parse(text);
+      group.traverse(o=>{const m=o as THREE.Mesh;if(!m.isMesh)return;if(!m.geometry.getAttribute('normal'))m.geometry.computeVertexNormals();
+       const list=Array.isArray(m.material)?m.material:[m.material];
+       const conv=list.map(x=>mtlFile?toStandard(x):solid());m.material=Array.isArray(m.material)?conv:conv[0];});
       if(!group.children.length)throw new ModelError(`${file.name} contains no geometry.`);
       scene.add(...group.children);
      }
-     return{gltf:{scene,animations:[]},header,size:bytes.byteLength};
+     if(header.format==='stl'){const sz=new THREE.Box3().setFromObject(scene).getSize(new THREE.Vector3());const hint=stlUnitHint([sz.x,sz.y,sz.z]);if(hint)unitHint={id:scene.id,factor:hint.factor};}
+     return{gltf:{scene,animations:[]},header,size:bytes.byteLength,notice,unitHint};
     }
     if(header.format==='gltf'){
      const missing=externalResources(header.json).filter(r=>!urls.has(base(decodeURIComponent(r)).toLowerCase()));
@@ -144,8 +176,8 @@ export default function Viewport3D(){
     const loader=new GLTFLoader(manager);loader.setMeshoptDecoder(MeshoptDecoder);
     const buffer=bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength) as ArrayBuffer;
     const gltf=await new Promise<{scene:THREE.Group;animations:unknown[]}>((resolve,reject)=>loader.parse(header.format==='glb'?buffer:new TextDecoder().decode(bytes),'',g=>resolve(g as never),e=>reject(e instanceof Error?e:new Error(String((e as {message?:string})?.message??e)))));
-    return{gltf,header,size:bytes.byteLength};
-   }finally{for(const u of urls.values())setTimeout(()=>URL.revokeObjectURL(u),30_000);}
+    return{gltf,header,size:bytes.byteLength,notice,unitHint};
+   }finally{for(const u of tmpUrls)setTimeout(()=>URL.revokeObjectURL(u),30_000);for(const u of urls.values())setTimeout(()=>URL.revokeObjectURL(u),30_000);}
   };
   // Transform gizmo: one undo step per drag.
   const gizmo=new TransformControls(camera,renderer.domElement);const gizmoHelper=gizmo.getHelper();scene.add(gizmoHelper);
@@ -167,6 +199,13 @@ export default function Viewport3D(){
    for(const [id,h] of helpers)if(!live.has(id)){scene.remove(h);h.dispose();helpers.delete(id);}
   };
   syncHooks.push(()=>{syncGizmo();syncCameraHelpers();});
+  const applySnap=()=>{const sn=getStudio3DState().snap;gizmo.setTranslationSnap(sn.on?sn.move:null);gizmo.setRotationSnap(sn.on?THREE.MathUtils.degToRad(sn.rotate):null);gizmo.setScaleSnap(sn.on?sn.scale:null);invalidate();};
+  applySnap();
+  const nudgeBy=(id:number,d:{x?:number;y?:number;z?:number})=>{
+   const o=stage.find(id);if(!o)return;const sn=getStudio3DState().snap;
+   const axis=(k:'x'|'y'|'z')=>d[k]===undefined?{}:{[k]:sn.on?snapTo(o.position[k]+d[k]!,sn.move):o.position[k]+d[k]!};
+   stage.setTransform(id,{position:{...axis('x'),...axis('y'),...axis('z')}},{group:'nudge'});
+  };
   let opening=0;
   const guard=(what:'open'|'new',files:File[],force:boolean|undefined,run:()=>void|Promise<void>)=>{
    if(!force&&stage.dirty){patchStudio3D({confirmReplace:{what,files}});return false;}
@@ -177,25 +216,43 @@ export default function Viewport3D(){
    if(!primary){patchStudio3D({status:'error',error:'Choose a .glb, .gltf, .obj, .stl or .ply file.'});return;}
    patchStudio3D({status:'loading',name:primary.name,error:'',blank:false});
    try{
-    const {gltf,header,size}=await loadParsed(primary,files.filter(f=>f!==primary));
+    const {gltf,header,size,notice,unitHint}=await loadParsed(primary,files.filter(f=>f!==primary));
     if(ticket!==opening||disposed){gltf.scene.traverse(o=>{(o as THREE.Mesh).geometry?.dispose?.();});return;}
     animationCount=gltf.animations.length;selectionReset();
     stage.load(gltf.scene);
-    patchStudio3D({status:'ready',name:primary.name,error:'',format:header.format.toUpperCase(),bytes:size,blank:false,confirmReplace:null});
+    patchStudio3D({status:'ready',name:primary.name,error:'',format:header.format.toUpperCase(),bytes:size,blank:false,confirmReplace:null,notice,unitHint});
     frameAll();
    }catch(e){
     if(ticket!==opening)return;
     patchStudio3D({status:'error',error:e instanceof Error?e.message:String(e),blank:false});
    }
   };
-  const selectionReset=()=>{patchStudio3D({selected:null,selectedInfo:null});};
+  const selectionReset=()=>{patchStudio3D({selected:null,selectedInfo:null,marked:[],notice:'',unitHint:null});};
   const openFiles=async(files:File[],force?:boolean)=>{guard('open',files,force,()=>openNow(files));};
   const newScene=(force?:boolean)=>{guard('new',[],force,()=>{opening++;animationCount=0;selectionReset();stage.clear();resetStudio3D({status:'ready',blank:true,name:''});sync();frameAll();});};
-  const renderStill=async()=>{
-   renderer.render(scene,camera);
-   const blob=await new Promise<Blob|null>(r=>renderer.domElement.toBlob(r,'image/png'));
-   if(!blob)throw new Error('The 3D view could not be captured.');
-   download(blob,`${stem(getStudio3DState().name||'scene')}-still.png`);
+  const renderStill=async(opts:{camera?:number;width?:number;height?:number;transparent?:boolean}={})=>{
+   let cam:THREE.PerspectiveCamera=camera;
+   if(opts.camera!==undefined){const c=stage.find(opts.camera) as THREE.PerspectiveCamera|undefined;if(!c||!c.isPerspectiveCamera)throw Object.assign(new Error('That object is not a camera.'),{expected:true});cam=c;}
+   const gl=renderer.getContext();const max=Math.min(gl.getParameter(gl.MAX_RENDERBUFFER_SIZE) as number,gl.getParameter(gl.MAX_TEXTURE_SIZE) as number,16384);
+   const dom=renderer.domElement;const w0=dom.width,h0=dom.height;const pr=renderer.getPixelRatio();
+   const want=opts.width||opts.height?clampRenderSize(opts.width??Math.round((opts.height!)*(cam.aspect||1)),opts.height??Math.round((opts.width!)/(cam.aspect||1)),max):null;
+   const aspect0=cam.aspect,bg=scene.background;
+   const hidden:[THREE.Object3D,boolean][]=[grid,gizmoHelper,...(selection?[selection]:[]),...helpers.values()].map(o=>[o,o.visible]);
+   try{
+    for(const [o] of hidden)o.visible=false;
+    if(opts.transparent){scene.background=null;renderer.setClearColor(0x000000,0);}
+    renderer.setPixelRatio(1);
+    const size=want??(cam===camera?{width:w0,height:h0}:{width:w0,height:Math.max(1,Math.round(w0/(cam.aspect||1)))});
+    renderer.setSize(size.width,size.height,false);cam.aspect=size.width/size.height;cam.updateProjectionMatrix();
+    renderer.render(scene,cam);
+    const blob=await new Promise<Blob|null>(r=>dom.toBlob(r,'image/png'));
+    if(!blob)throw new Error('The 3D view could not be captured.');
+    download(blob,`${stem(getStudio3DState().name||'scene')}-${cam===camera?'still':'camera'}.png`);
+   }finally{
+    for(const [o,v] of hidden)o.visible=v;
+    scene.background=bg;if(opts.transparent)renderer.setClearColor(0x000000,1);
+    cam.aspect=aspect0;cam.updateProjectionMatrix();renderer.setPixelRatio(pr);renderer.setSize(w0/pr,h0/pr,false);invalidate();
+   }
   };
   const exportGlb=async()=>{
    if(!holder.children.length)throw Object.assign(new Error('There is nothing to export. Open a model first.'),{expected:true});
@@ -217,7 +274,9 @@ export default function Viewport3D(){
     const dist=bounds&&boundsValid(bounds)?Math.max(boundsRadius(bounds),1):5;
     camera.fov=c.fov;camera.position.copy(pos);controls.target.copy(pos).addScaledVector(dir,dist);camera.near=0.05;camera.far=Math.max(500,dist*50);camera.updateProjectionMatrix();controls.update();invalidate();},
    setGizmo:mode=>{gizmo.setMode(mode);patchStudio3D({gizmo:mode});invalidate();},
-   nudge:(id,d)=>{const o=stage.find(id);if(!o)return;stage.setTransform(id,{position:{...(d.x!==undefined?{x:o.position.x+d.x}:{}),...(d.y!==undefined?{y:o.position.y+d.y}:{}),...(d.z!==undefined?{z:o.position.z+d.z}:{})}},{group:'nudge'});},
+   nudge:nudgeBy,
+   setLight:(id,p)=>stage.setLight(id,p),setPivot:(id,at)=>stage.setPivot(id,at),align:(ids,a,t)=>stage.align(ids,a,t),distribute:(ids,a)=>stage.distribute(ids,a),
+   setSnap:patch=>{patchStudio3D({snap:mergeSnap(getStudio3DState().snap,patch)});applySnap();},
    setEnv:patch=>{patchStudio3D({env:mergeEnv(getStudio3DState().env,patch)});void applyEnv();},
    openEnvFile:async file=>{
     if(!envFormatFor(file.name))throw new EnvError('Choose an .hdr or .exr file.');
@@ -245,8 +304,8 @@ export default function Viewport3D(){
     if(e.key==='e'||e.key==='E'){gizmo.setMode('rotate');patchStudio3D({gizmo:'rotate'});invalidate();e.preventDefault();return;}
     if(e.key==='r'||e.key==='R'){gizmo.setMode('scale');patchStudio3D({gizmo:'scale'});invalidate();e.preventDefault();return;}
     if((e.key==='Delete'||e.key==='Backspace')&&sel!=null){stage.remove(sel);e.preventDefault();return;}
-    const n=e.shiftKey&&sel!=null?nudgeFor(e.key):null;
-    if(n&&sel!=null){const o=stage.find(sel);if(o){stage.setTransform(sel,{position:{...(n.x!==undefined?{x:o.position.x+n.x}:{}),...(n.y!==undefined?{y:o.position.y+n.y}:{}),...(n.z!==undefined?{z:o.position.z+n.z}:{})}},{group:'nudge'});}e.preventDefault();return;}
+    const stepNow=getStudio3DState().snap.on?getStudio3DState().snap.move:0.1;const n=e.shiftKey&&sel!=null?nudgeFor(e.key,stepNow):null;
+    if(n&&sel!=null){nudgeBy(sel,n);e.preventDefault();return;}
    }
    const off=camera.position.clone().sub(controls.target);const sph=new THREE.Spherical().setFromVector3(off);const step=Math.PI/36;let used=true;
    if(e.key==='ArrowLeft')sph.theta-=step;else if(e.key==='ArrowRight')sph.theta+=step;

@@ -143,3 +143,52 @@ export const GIZMO_MODES:readonly GizmoMode[]=['translate','rotate','scale'];
 export function nudgeFor(key:string,step=0.1):{x?:number;y?:number;z?:number}|null{
  switch(key){case 'ArrowLeft':return{x:-step};case 'ArrowRight':return{x:step};case 'ArrowUp':return{z:-step};case 'ArrowDown':return{z:step};case 'PageUp':return{y:step};case 'PageDown':return{y:-step};default:return null;}
 }
+
+/** Snapping for the transform gizmo. Steps are in scene units, degrees, and scale factor. */
+export interface SnapSettings{on:boolean;move:number;rotate:number;scale:number}
+export const defaultSnap=():SnapSettings=>({on:false,move:0.25,rotate:15,scale:0.1});
+export class SnapError extends Error{constructor(message:string){super(message);this.name='SnapError';}}
+export function mergeSnap(current:SnapSettings,patch:Partial<SnapSettings>):SnapSettings{
+ const next={...current};
+ if(patch.on!==undefined){if(typeof patch.on!=='boolean')throw new SnapError('on must be true or false.');next.on=patch.on;}
+ const num=(k:'move'|'rotate'|'scale',min:number,max:number)=>{const v=patch[k];if(v===undefined)return;
+  if(typeof v!=='number'||!Number.isFinite(v)||v<min||v>max)throw new SnapError(`${k} must be a number between ${min} and ${max}.`);next[k]=v;};
+ num('move',0.001,100);num('rotate',1,180);num('scale',0.001,10);
+ return next;
+}
+/** Rounds to the nearest multiple of step. Used by keyboard nudges and numeric snapping. */
+export const snapTo=(value:number,step:number)=>step>0?Math.round(value/step)*step:value;
+/** STL files carry no unit. Slicers and CAD use millimetres, scenes here use metres: a part larger than 10 units is most likely millimetres. */
+export function stlUnitHint(size:readonly [number,number,number]):{unit:'mm';factor:number}|null{
+ const m=Math.max(size[0],size[1],size[2]);
+ return Number.isFinite(m)&&m>=10&&m<=100000?{unit:'mm',factor:0.001}:null;
+}
+export const MAX_MTL_BYTES=2*1024*1024;
+export const MAX_TEXTURE_BYTES=64*1024*1024;
+export const MAX_TEXTURE_FILES=64;
+export const TEXTURE_EXTENSIONS=['png','jpg','jpeg','webp'] as const;
+const clean=(s:string)=>s.trim().replace(/\\/g,'/').split('/').pop()!;
+/** Material libraries named by an OBJ (mtllib lines). Base names only, no paths. */
+export function mtlReferences(obj:string):string[]{
+ const out=new Set<string>();
+ for(const m of obj.matchAll(/^mtllib[ \t]+(.+)$/gm)){const n=clean(m[1]);if(n)out.add(n);}
+ return [...out];
+}
+/** Texture files named by an MTL (map_*, bump, disp, decal lines), options stripped, base names only. data: and URL schemes are never listed. */
+export function mtlTextures(mtl:string):string[]{
+ const out=new Set<string>();
+ for(const m of mtl.matchAll(/^[ \t]*(?:map_[A-Za-z]+|bump|disp|decal|refl)[ \t]+(.+)$/gm)){
+  const toks=m[1].trim().split(/[ \t]+/);let name=toks[toks.length-1];
+  // Options such as -bm 1.0 come first and the file name is last; names with spaces are rare and unsupported.
+  if(/^[a-z][a-z0-9+.-]*:/i.test(name)&&!/^[a-z]:[\\/]/i.test(name))continue;
+  name=clean(name);if(name)out.add(name);
+ }
+ return [...out];
+}
+/** Output size for a camera render: whole pixels, within the GPU limit, keeping the aspect ratio when scaling down. */
+export function clampRenderSize(width:number,height:number,max:number):{width:number;height:number}{
+ if(![width,height,max].every(n=>Number.isFinite(n))||width<1||height<1||max<1)throw new SnapError('Render size must be positive numbers.');
+ let w=Math.round(width),h=Math.round(height);
+ const k=Math.min(1,max/Math.max(w,h));
+ w=Math.max(1,Math.floor(w*k));h=Math.max(1,Math.floor(h*k));return{width:w,height:h};
+}

@@ -1,4 +1,6 @@
 import {useState} from 'react';
+import {patchStudio3D} from '../../lib/studio3d/session';
+import type {ObjectInfo} from '../../lib/studio3d/stage';
 import {executeCommand} from '../../lib/commands';
 import {useT} from '../../lib/useT';
 import {formatBytes} from '../../lib/media';
@@ -8,7 +10,7 @@ import type {PanelHostProps,InspectorSectionProps} from '../../lib/shell/types';
 import {Input} from '../ui/input';
 import {Button} from '../ui/button';
 const PRIMS=['cube','sphere','plane','cylinder','cone','torus'] as const;
-const LIGHTS=['directional','point'] as const;
+const LIGHTS=['directional','point','spot','area'] as const;
 const Row=({k,v}:{k:string;v:string|number})=><div className="flex justify-between gap-3 text-xs"><dt className="text-ink-3">{k}</dt><dd className="m-0 truncate text-ink-2" title={String(v)}>{v}</dd></div>;
 const fmt=(n:number)=>(Math.abs(n)>=100?n.toFixed(0):Math.abs(n)>=10?n.toFixed(1):n.toFixed(2));
 /** Outliner: every node of the opened model, filterable, click to select. */
@@ -29,7 +31,7 @@ export function ScenePanel(_:PanelHostProps){
   <Input value={filter} onChange={e=>setFilter(e.target.value)} placeholder={t('studio3d.scene.filter')} aria-label={t('studio3d.scene.filter')}/>
   {!s.outline.length&&<p className="text-xs text-ink-3">{t('studio3d.scene.empty')}</p>}
   <ul className="m-0 grid list-none gap-0.5 p-0" role="listbox" aria-label={t('studio3d.shell.scene')}>{rows.map(o=>
-   <li key={o.id} role="option" aria-selected={s.selected===o.id}><button type="button" style={{paddingLeft:8+o.depth*12}} className={'w-full truncate rounded-sm py-1 pr-2 text-left text-xs hover:bg-hover '+(s.selected===o.id?'bg-accent-soft text-accent':'text-ink-2')}
+   <li key={o.id} role="option" aria-selected={s.selected===o.id} className="flex items-center gap-1"><input type="checkbox" checked={s.marked.includes(o.id)} aria-label={t('studio3d.mark.object',{name:o.name})} onChange={e=>patchStudio3D({marked:e.currentTarget.checked?[...s.marked,o.id]:s.marked.filter(x=>x!==o.id)})}/><button type="button" style={{paddingLeft:8+o.depth*12}} className={'min-w-0 flex-1 truncate rounded-sm py-1 pr-2 text-left text-xs hover:bg-hover '+(s.selected===o.id?'bg-accent-soft text-accent':'text-ink-2')}
     onClick={()=>void executeCommand('studio3d.select',{id:s.selected===o.id?null:o.id})}>{o.name}<span className="ml-1 text-ink-3">{o.kind==='group'?'':o.kind}</span></button></li>)}</ul>
  </div>;
 }
@@ -37,13 +39,18 @@ export function ModelSection(_:InspectorSectionProps){
  const {t}=useT();const s=useStudio3D();
  if(s.status==='idle')return <p className="p-3 text-xs text-ink-3">{t('studio3d.start.title')}</p>;
  const size=s.bounds?boundsSize(s.bounds).map(fmt).join(' x '):'-';
- return <dl className="m-0 grid gap-1 p-3" data-testid="studio3d-model-section">
+ return <div className="grid gap-2"><dl className="m-0 grid gap-1 p-3" data-testid="studio3d-model-section">
   <Row k={t('studio3d.model.name')} v={s.blank?t('studio3d.model.blank'):s.name||'-'}/>
   {!s.blank&&<><Row k={t('studio3d.model.format')} v={s.format||'-'}/><Row k={t('studio3d.model.size')} v={formatBytes(s.bytes)}/>
   <Row k={t('studio3d.model.triangles')} v={formatCount(s.stats.triangles)}/><Row k={t('studio3d.model.vertices')} v={formatCount(s.stats.vertices)}/>
   <Row k={t('studio3d.model.meshes')} v={s.stats.meshes}/><Row k={t('studio3d.model.materials')} v={s.stats.materials}/><Row k={t('studio3d.model.textures')} v={s.stats.textures}/>
   <Row k={t('studio3d.model.animations')} v={s.stats.animations}/><Row k={t('studio3d.model.cameras')} v={s.stats.cameras}/><Row k={t('studio3d.model.dimensions')} v={size}/></>}
- </dl>;
+ </dl>
+  {s.notice&&<p role="status" className="m-0 px-3 text-xs text-ink-2" data-testid="studio3d-notice">{s.notice}</p>}
+  {s.unitHint&&<div role="status" className="grid gap-1 px-3 pb-3 text-xs text-ink-2" data-testid="studio3d-unit-hint">{t('studio3d.unit.hint')}
+   <Button variant="outline" onClick={()=>{const h=s.unitHint!;patchStudio3D({unitHint:null});void executeCommand('studio3d.object.transform',{id:h.id,scale:{x:h.factor,y:h.factor,z:h.factor}});}}>{t('studio3d.unit.convert')}</Button>
+   <Button variant="outline" onClick={()=>patchStudio3D({unitHint:null})}>{t('studio3d.unit.keep')}</Button></div>}
+ </div>;
 }
 const AXES=['x','y','z'] as const;
 /** Numeric transform fields. Committed on blur or Enter, one undo entry per edit. */
@@ -66,7 +73,10 @@ export function ObjectSection(_:InspectorSectionProps){
     <Input key={o.id+':'+o.camera.fov} type="number" min={1} max={120} step={1} defaultValue={Number(o.camera.fov.toFixed(1))} aria-label={t('studio3d.camera.fov')}
      onBlur={e=>{const n=Number(e.currentTarget.value);if(e.currentTarget.value!==''&&Number.isFinite(n)&&n>=1&&n<=120&&n!==Number(o.camera!.fov.toFixed(1)))void executeCommand('studio3d.camera.set',{id:o.id,fov:n});}}
      onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();}}/></label>
-   <Button variant="outline" onClick={()=>void executeCommand('studio3d.view.fromCamera',{id:o.id})}>{t('studio3d.camera.look')}</Button></div>}
+   <Button variant="outline" onClick={()=>void executeCommand('studio3d.view.fromCamera',{id:o.id})}>{t('studio3d.camera.look')}</Button>
+   <Button variant="outline" onClick={()=>void executeCommand('studio3d.render.still',{camera:o.id})}>{t('studio3d.camera.render')}</Button>
+   <Button variant="outline" onClick={()=>void executeCommand('studio3d.render.still',{camera:o.id,transparent:true})}>{t('studio3d.camera.renderTransparent')}</Button></div>}
+  {o.light&&<LightFields id={o.id} light={o.light}/>}
   {o.material&&<fieldset className="m-0 grid gap-2 border-0 p-0" data-testid="studio3d-material"><legend className="text-xs text-ink-3">{t('studio3d.material.title')}</legend>
    <label className="flex items-center justify-between gap-2 text-xs text-ink-2">{t('studio3d.material.color')}<input type="color" key={o.material.color} defaultValue={o.material.color} onBlur={e=>{if(e.currentTarget.value!==o.material!.color)void executeCommand('studio3d.object.material',{id:o.id,color:e.currentTarget.value});}}/></label>
    {(['metalness','roughness'] as const).map(k=><label key={k} className="grid gap-1 text-xs text-ink-2">{t('studio3d.material.'+k)} <span className="text-ink-3">{o.material![k].toFixed(2)}</span>
@@ -103,5 +113,43 @@ export function EnvSection(_:InspectorSectionProps){
    <input type="range" min={-180} max={180} step={1} value={e.rotation} aria-label={t('studio3d.env.rotation')} onChange={ev=>void executeCommand('studio3d.env.set',{rotation:Number(ev.currentTarget.value)})}/></label>
   <label className="flex items-center gap-2 text-xs text-ink-2"><input type="checkbox" checked={e.background} disabled={e.preset==='none'} onChange={ev=>void executeCommand('studio3d.env.set',{background:ev.currentTarget.checked})}/>{t('studio3d.env.background')}</label>
   <Button variant="outline" onClick={()=>void executeCommand('studio3d.env.open')} title={ENV_ACCEPT}>{t('studio3d.env.open')}</Button>
+ </div>;
+}
+
+const NumField=({label,value,min,max,step,onCommit}:{label:string;value:number;min:number;max:number;step:number;onCommit:(n:number)=>void})=>
+ <label className="grid gap-1 text-xs text-ink-2">{label}
+  <Input key={label+':'+value} type="number" min={min} max={max} step={step} defaultValue={Number(value.toFixed(3))} aria-label={label}
+   onBlur={e=>{const n=Number(e.currentTarget.value);if(e.currentTarget.value!==''&&Number.isFinite(n)&&n>=min&&n<=max&&n!==Number(value.toFixed(3)))onCommit(n);}}
+   onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();}}/></label>;
+/** Light settings. Spot lights also have a cone, area lights a size. */
+function LightFields({id,light}:{id:number;light:NonNullable<ObjectInfo['light']>}){
+ const {t}=useT();const set=(p:Record<string,unknown>)=>void executeCommand('studio3d.light.set',{id,...p});
+ return <fieldset className="m-0 grid gap-2 border-0 p-0" data-testid="studio3d-light"><legend className="text-xs text-ink-3">{t('studio3d.light.title')}</legend>
+  <NumField label={t('studio3d.light.intensity')} value={light.intensity} min={0} max={100000} step={1} onCommit={n=>set({intensity:n})}/>
+  <label className="flex items-center justify-between gap-2 text-xs text-ink-2">{t('studio3d.material.color')}<input type="color" key={light.color} defaultValue={light.color} onBlur={e=>{if(e.currentTarget.value!==light.color)set({color:e.currentTarget.value});}}/></label>
+  {light.angle!==undefined&&<NumField label={t('studio3d.light.angle')} value={light.angle} min={1} max={90} step={1} onCommit={n=>set({angle:n})}/>}
+  {light.penumbra!==undefined&&<NumField label={t('studio3d.light.penumbra')} value={light.penumbra} min={0} max={1} step={0.05} onCommit={n=>set({penumbra:n})}/>}
+  {light.width!==undefined&&<NumField label={t('studio3d.light.width')} value={light.width} min={0.01} max={1000} step={0.1} onCommit={n=>set({width:n})}/>}
+  {light.height!==undefined&&<NumField label={t('studio3d.light.height')} value={light.height} min={0.01} max={1000} step={0.1} onCommit={n=>set({height:n})}/>}
+ </fieldset>;
+}
+/** Snapping, pivot, align and distribute. Align and distribute work on the objects ticked in the scene list. */
+export function ToolsSection(_:InspectorSectionProps){
+ const {t}=useT();const s=useStudio3D();const sn=s.snap;const n=s.marked.filter(id=>s.outline.some(o=>o.id===id));
+ const align=(axis:string,to:string)=>void executeCommand('studio3d.object.align',{ids:n,axis,to});
+ return <div className="grid gap-2 p-3" data-testid="studio3d-tools-section">
+  <label className="flex items-center gap-2 text-xs text-ink-2"><input type="checkbox" checked={sn.on} onChange={e=>void executeCommand('studio3d.snap.set',{on:e.currentTarget.checked})}/>{t('studio3d.snap.on')}</label>
+  <div className="grid grid-cols-3 gap-1">
+   <NumField label={t('studio3d.snap.move')} value={sn.move} min={0.001} max={100} step={0.05} onCommit={v=>void executeCommand('studio3d.snap.set',{move:v})}/>
+   <NumField label={t('studio3d.snap.rotate')} value={sn.rotate} min={1} max={180} step={5} onCommit={v=>void executeCommand('studio3d.snap.set',{rotate:v})}/>
+   <NumField label={t('studio3d.snap.scale')} value={sn.scale} min={0.001} max={10} step={0.05} onCommit={v=>void executeCommand('studio3d.snap.set',{scale:v})}/></div>
+  <fieldset className="m-0 grid gap-1 border-0 p-0"><legend className="text-xs text-ink-3">{t('studio3d.pivot.title')}</legend>
+   <div className="flex gap-1">{(['center','base'] as const).map(at=><Button key={at} variant="outline" disabled={s.selectedInfo?.kind!=='mesh'} onClick={()=>void executeCommand('studio3d.object.pivot',{id:s.selected,at})}>{t('studio3d.pivot.'+at)}</Button>)}</div></fieldset>
+  <fieldset className="m-0 grid gap-1 border-0 p-0" data-testid="studio3d-align"><legend className="text-xs text-ink-3">{t('studio3d.align.title',{count:n.length})}</legend>
+   <p className="m-0 text-xs text-ink-3">{t('studio3d.align.hint')}</p>
+   {(['x','y','z'] as const).map(a=><div key={a} className="flex flex-wrap items-center gap-1" role="group" aria-label={a.toUpperCase()}><span className="w-4 text-xs text-ink-3">{a.toUpperCase()}</span>
+    {(['min','center','max'] as const).map(to=><Button key={to} variant="outline" disabled={n.length<2} aria-label={t('studio3d.align.aria',{axis:a.toUpperCase(),to:t('studio3d.align.'+to)})} onClick={()=>align(a,to)}>{t('studio3d.align.'+to)}</Button>)}
+    <Button variant="outline" disabled={n.length<3} aria-label={t('studio3d.align.distributeAria',{axis:a.toUpperCase()})} onClick={()=>void executeCommand('studio3d.object.distribute',{ids:n,axis:a})}>{t('studio3d.align.distribute')}</Button></div>)}
+  </fieldset>
  </div>;
 }
