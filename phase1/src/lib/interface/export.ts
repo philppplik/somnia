@@ -37,6 +37,13 @@ export function exportInterfaceLayerSVG(source:InterfaceDocument,nodeId:string):
  if(new TextEncoder().encode(svg).length>8_000_000)throw Error('SVG exceeds the 8 MB export limit.');
  return {width:bounds.width,height:bounds.height,svg};
 }
+/** Preview-only helper for scrollable frames: re-renders the frame at its full content height with sticky children hidden (they pin as separate layers). Not part of the export pipeline. */
+export function exportInterfaceScrollContent(source:InterfaceDocument,frameId:string,stickyIds:readonly string[]):FrameExport{
+ const doc=parseInterfaceDocument(serializeInterfaceDocument(source)),layout=computeInterfaceLayout(doc),map=new Map(doc.nodes.map(n=>[n.id,n])),frame=map.get(frameId);
+ if(!frame||frame.kind!=='frame')throw Error('Select a frame to export.');for(const id of stickyIds){const n=map.get(id);if(n)n.hidden=true;}
+ let bottom=layout.bounds.get(frameId)?.height??frame.height;const walk=(id:string,oy:number)=>{for(const c of map.get(id)?.children??[]){const n=map.get(c),b=layout.bounds.get(c);if(!n||!b||n.hidden)continue;bottom=Math.max(bottom,oy+b.y+b.height);walk(c,oy+b.y);}};walk(frameId,0);
+ frame.height=Math.max(frame.height,Math.ceil(bottom));return exportInterfaceFrame(doc,frameId);
+}
 export function buildInterfaceHandoff(source:InterfaceDocument,frameId:string){
  const doc=parseInterfaceDocument(serializeInterfaceDocument(source)),resolved=resolveInterfaceValues(doc),layout=computeInterfaceLayout(resolved.document),root=doc.nodes.find(n=>n.id===frameId);if(!root||root.kind!=='frame')throw Error('Select a frame for handoff.');
  const nodes=new Map(resolved.document.nodes.map(n=>[n.id,n])),rows:unknown[]=[];const walk=(id:string)=>{const n=nodes.get(id)!;rows.push({id:n.id,parentId:n.parentId,name:n.name,kind:n.kind,bounds:layout.bounds.get(id),fill:n.fill,text:n.text,textStyle:n.kind==='text'?resolvedTextStyle(doc,n):undefined,bindings:n.bindings,layout:n.layout,sizing:n.sizing,component:n.instance,altText:n.altText,annotation:n.annotation??'',ready:n.ready??false,hidden:n.hidden,variableMode:n.variableMode,path:n.path,stroke:n.stroke,strokeWidth:n.strokeWidth,imageFill:n.imageFill});n.children.forEach(walk);};walk(frameId);
