@@ -6,7 +6,7 @@ import {setActiveMedia,useMedia} from '../../lib/media';
 import {developablePhotos} from '../../lib/photos/photoNav';
 import {rangeSelect,toggleSelect} from '../../lib/photos/selection';
 import {syncLookToPhotos} from '../../lib/photos/batchExport';
-import {extractLook,isNeutralLook} from '../../lib/photos/presets';
+import {BUILT_IN_PRESETS,extractLook,isNeutralLook,parseUserPresets,type UserPreset} from '../../lib/photos/presets';
 import {getPhotoSession} from '../../lib/photos/studioSession';
 import {FILMSTRIP_SORTS,sortFilmstrip,type FilmstripSort} from '../../lib/photos/filmstripSort';
 import {MAX_RATING,useRatings} from '../../lib/photos/ratings';
@@ -27,6 +27,7 @@ export function PhotosFilmstrip({active}:{active:string}){
  const [sel,setSel]=usePanelState<string[]>('photos.filmstripSelection',[]);
  const [anchor,setAnchor]=usePanelState<string|null>('photos.filmstripAnchor',null);
  const [applyNote,setApplyNote]=useState<string|null>(null);
+ const [rawPresets]=usePanelState<unknown>('photos.presets.user',[]);
  const [applying,setApplying]=useState(false);
  const filter=String(minRating); // legacy stored numbers and 'pick'/'reject' share one select
  const all=developablePhotos(media.items);
@@ -36,12 +37,17 @@ export function PhotosFilmstrip({active}:{active:string}){
  const selected=photos.filter(p=>sel.includes(p.name));
  const activeSession=active?getPhotoSession(active):null;
  const neutral=!activeSession||isNeutralLook(activeSession.now); // nothing worth applying
- const applyToSelection=async()=>{
-  if(applying||selected.length<2||!activeSession||neutral)return;
+ const userPresets:UserPreset[]=parseUserPresets(rawPresets);
+ const applyLookToSelection=async(look:Parameters<typeof syncLookToPhotos>[1])=>{
+  if(applying||selected.length<2)return;
   setApplying(true);setApplyNote(null);
-  const out=await syncLookToPhotos(selected,extractLook(activeSession.now));
+  const out=await syncLookToPhotos(selected,look);
   setApplyNote(t('photos.filmstrip.applyDone',{applied:out.saved.length,failed:out.failed.length}));
   setApplying(false);
+ };
+ const applyToSelection=async()=>{
+  if(applying||selected.length<2||!activeSession||neutral)return;
+  await applyLookToSelection(extractLook(activeSession.now));
  };
  if(all.length<2)return null;
  return <div ref={strip} className="photos-filmstrip flex items-center gap-1.5 overflow-x-auto border-t border-subtle px-3 py-1.5" role="navigation" aria-label={t('photos.filmstrip.aria')} data-testid="photos-filmstrip">
@@ -55,6 +61,15 @@ export function PhotosFilmstrip({active}:{active:string}){
    {FILMSTRIP_SORTS.map(m=><option key={m} value={m}>{t(`photos.filmstrip.sort.${m}`)}</option>)}
   </NativeSelect>
   {selected.length>1&&<Button variant="outline" size="compact" disabled={applying||neutral} onClick={()=>void applyToSelection()} data-testid="photos-filmstrip-apply">{t('photos.filmstrip.apply',{count:selected.length})}</Button>}
+  {selected.length>1&&<NativeSelect value="" disabled={applying} aria-label={t('photos.filmstrip.applyPreset')} title={t('photos.filmstrip.applyPreset')} onChange={e=>{
+   const v=e.currentTarget.value;e.currentTarget.value='';
+   const look=v.startsWith('user:')?userPresets.find(p=>p.id===v.slice(5))?.look:BUILT_IN_PRESETS.find(p=>p.id===v)?.look;
+   if(look)void applyLookToSelection(look);
+  }} className="h-7 shrink-0" data-testid="photos-filmstrip-apply-preset">
+   <option value="" disabled>{t('photos.filmstrip.applyPreset')}</option>
+   {BUILT_IN_PRESETS.map(p=><option key={p.id} value={p.id}>{t(p.labelKey)}</option>)}
+   {userPresets.map(p=><option key={p.id} value={`user:${p.id}`}>{p.name}</option>)}
+  </NativeSelect>}
   {applyNote&&<span className="shrink-0 text-ink-3" data-testid="photos-filmstrip-apply-note">{applyNote}</span>}
   <RatingStars name={active} prefix="photos-filmstrip"/>
   {photos.map(p=><Button key={p.name} variant="outline" size="compact" aria-pressed={p.name===active} aria-label={p.name} onClick={e=>{

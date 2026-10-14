@@ -107,3 +107,18 @@ Coverage: `photos-filmstrip.spec.ts` gains a light/dark leg that
 ctrl-selects two photos, rates them 4 (badges on both, the unselected
 one unrated), rejects them with X (flag badges), then clears flags and
 ratings with U and 0.
+
+## Batch preset on the selection (P83)
+
+Next to the "apply current look" button, a preset picker appears
+whenever the selection has two or more photos: all built-in presets
+plus the user's own (read from the same `photos.presets.user` panel
+state as the Presets panel). Choosing one applies that look to every
+selected photo through the same `syncLookToPhotos` batch path, reports
+applied/failed in the note, and the picker resets to its placeholder
+for the next run.
+
+Coverage: `photos-filmstrip.spec.ts` gains a light/dark leg that
+selects two photos, applies the b/w preset, reads `saturation: -100`
+back from both sessions, verifies the unselected photo stayed neutral
+and the picker reset.

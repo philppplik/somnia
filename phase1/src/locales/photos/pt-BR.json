@@ -128,5 +128,6 @@
  "photos.filmstrip.sort.rating": "Avaliação",
  "photos.filmstrip.sort.flag": "Sinalização",
  "photos.filmstrip.apply": "Aplicar a {count} fotos",
- "photos.filmstrip.applyDone": "{applied} aplicadas, {failed} falharam"
+ "photos.filmstrip.applyDone": "{applied} aplicadas, {failed} falharam",
+ "photos.filmstrip.applyPreset": "Aplicar predefinição à seleção"
 }

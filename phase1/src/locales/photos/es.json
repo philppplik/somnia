@@ -128,5 +128,6 @@
  "photos.filmstrip.sort.rating": "Valoración",
  "photos.filmstrip.sort.flag": "Marca",
  "photos.filmstrip.apply": "Aplicar a {count} fotos",
- "photos.filmstrip.applyDone": "{applied} aplicadas, {failed} fallaron"
+ "photos.filmstrip.applyDone": "{applied} aplicadas, {failed} fallaron",
+ "photos.filmstrip.applyPreset": "Aplicar preset a la selección"
 }

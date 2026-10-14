@@ -208,3 +208,26 @@ test('batch culling: rating and flag keys hit every selected photo (light and da
   await expect(page.getByTestId('photos-filmstrip-rating-badge-strip-1.png')).toHaveCount(0);
  }
 });
+test('batch preset: applying a built-in preset hits every selected photo (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible();
+  await page.getByTestId('photos-filmstrip-item-strip-1.png').click();
+  await page.getByTestId('photos-filmstrip-item-strip-3.png').click({modifiers:['ControlOrMeta']});
+  const picker=page.getByTestId('photos-filmstrip-apply-preset');
+  await expect(picker).toBeVisible();
+  await page.screenshot({path:`test-results/ds-photos-batch-preset-${theme}.png`,fullPage:true});
+  await picker.selectOption('bw');
+  await expect(page.getByTestId('photos-filmstrip-apply-note')).toBeVisible();
+  for(const n of['strip-1.png','strip-3.png']){
+   const sat=await page.evaluate(async name=>{const mod=await import('/src/lib/photos/studioSession.ts');return mod.getPhotoSession(name)!.now.saturation;},n);
+   expect(sat).toBe(-100); // the b/w look landed
+  }
+  const other=await page.evaluate(async()=>{const mod=await import('/src/lib/photos/studioSession.ts');return mod.getPhotoSession('strip-2.png')!.now.saturation;});
+  expect(other).toBe(0); // unselected untouched
+  await expect(picker).toHaveValue(''); // the picker resets for the next run
+  await page.evaluate(async()=>{const mod=await import('/src/lib/photos/studioSession.ts');for(const n of['strip-1.png','strip-3.png'])mod.commitPhotoSettings(n,(s:{saturation:number})=>({...s,saturation:0}));}); // clean up for the next leg
+ }
+});
