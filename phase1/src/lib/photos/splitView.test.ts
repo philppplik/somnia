@@ -19,3 +19,8 @@ test('splitClearRect rounds the divider to whole pixels',()=>{
  const r=splitClearRect(7,3,0.5);
  assert.equal(r.x,4);assert.equal(r.width,3);
 });
+test('splitClearRect horizontal erases exactly below the divider',()=>{
+ assert.deepEqual(splitClearRect(300,200,1/4,'horizontal'),{x:0,y:50,width:300,height:150});
+ assert.deepEqual(splitClearRect(300,200,0,'horizontal'),{x:0,y:4,width:300,height:196});
+ assert.deepEqual(splitClearRect(300,200,1,'horizontal'),{x:0,y:196,width:300,height:4});
+});

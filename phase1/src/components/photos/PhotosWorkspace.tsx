@@ -2,7 +2,7 @@ import {StudioStatus} from '../studios/StudioStatus';
 import {reportError} from '../../lib/log';
 import {usePublishPhotosContext} from './panels/publishContext';
 import {useCallback,useEffect,useRef,useState} from 'react';
-import {AlertTriangle,Bandage,Brush,Contrast,ArrowLeft,ArrowRight,Check,ClipboardPaste,Columns2,Copy,Download,Eye,Frame,Grid3x3,RotateCcw,Undo2,Redo2,X,ZoomIn,ZoomOut,Maximize2,Minimize2,SquareDashed,Circle,Ruler} from '../../lib/icons';
+import {AlertTriangle,Bandage,Brush,Contrast,ArrowLeft,ArrowRight,Check,ClipboardPaste,Columns2,Copy,Download,Eye,Frame,Grid3x3,RotateCcw,Undo2,Redo2,X,ZoomIn,ZoomOut,Maximize2,Minimize2,SquareDashed,Circle,Rows2,Ruler} from '../../lib/icons';
 import {Button} from '../ui/button';
 import {NativeInput} from '../ui/native-controls';
 import {useT} from '../../lib/useT';
@@ -72,6 +72,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
  const [settingsClip,setSettingsClip]=usePanelState<SettingsPayload|null>('photos.settingsClipboard',null);
  const clipboardSettings=decodeSettingsPayload(settingsClip);
  const [splitX,setSplitX]=usePanelState<number>('photos.splitX',0.5); // divider position survives reloads, like the split toggle itself
+ const [splitDir,setSplitDir]=usePanelState<'vertical'|'horizontal'>('photos.splitDir','vertical');
  const splitDrag=useRef(false);
  const [healing,setHealing]=useState(false);
  const [brushR,setBrushR]=usePanelState<number>('photos.healRadius',0.03);
@@ -152,8 +153,8 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
  useEffect(()=>{
   if(!showSplit)return;
   const c=splitCanvas.current;draw(c,original??null);
-  if(c&&original){const r=splitClearRect(original.width,original.height,splitX);c.getContext('2d')!.clearRect(r.x,r.y,r.width,r.height);}
- },[original,showSplit,splitX]);
+  if(c&&original){const r=splitClearRect(original.width,original.height,splitX,splitDir);c.getContext('2d')!.clearRect(r.x,r.y,r.width,r.height);}
+ },[original,showSplit,splitX,splitDir]);
  const fw=shown?.width??1,fh=shown?.height??1;
  const fit=stageSize[0]>0&&stageSize[1]>0?Math.min(stageSize[0]/fw,stageSize[1]/fh):1;
  const scale=zoom??fit;
@@ -349,6 +350,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
    <Button size="icon" variant="outline" aria-label={t('photos.compare')} title={t('photos.compare')} disabled={!session?.original} onPointerDown={()=>setCompare(true)} onPointerUp={()=>setCompare(false)} onPointerLeave={()=>setCompare(false)} data-testid="photos-compare"><Eye size={14}/></Button>
    <Button size="icon" variant="outline" aria-pressed={showClipping} aria-label={t('photos.clipping')} title={t('photos.clipping')} disabled={!ready} onClick={()=>setShowClipping(!showClipping)} data-testid="photos-clipping"><AlertTriangle size={14}/></Button>
    <Button size="icon" variant="outline" aria-pressed={showSplit} aria-label={t('photos.split')} title={t('photos.split')} disabled={!session?.original} onClick={()=>setShowSplit(!showSplit)} data-testid="photos-split"><Columns2 size={14}/></Button>
+   {showSplit&&<Button size="icon" variant="outline" aria-pressed={splitDir==='horizontal'} aria-label={t('photos.split.dir')} title={t('photos.split.dir')} onClick={()=>setSplitDir(splitDir==='vertical'?'horizontal':'vertical')} data-testid="photos-split-dir"><Rows2 size={14}/></Button>}
    <Button size="icon" variant="outline" aria-label={t('photos.undo')} disabled={!session?.past.length} onClick={()=>historyPhoto(item.name,false)} data-testid="photos-undo"><Undo2 size={14}/></Button>
    <Button size="icon" variant="outline" aria-label={t('photos.redo')} disabled={!session?.future.length} onClick={()=>historyPhoto(item.name,true)} data-testid="photos-redo"><Redo2 size={14}/></Button>
    <Button size="icon" variant="outline" aria-label={t('photos.reset')} disabled={!ready} onClick={()=>resetPhoto(item.name)} data-testid="photos-reset"><RotateCcw size={14}/></Button>
@@ -403,14 +405,22 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
     {showMaskOverlay&&!lumMaskWindowNeutral(lumMask)&&<canvas ref={maskCanvas} className="pointer-events-none absolute inset-0 size-full" data-testid="photos-lummask-overlay"/>}
     {straightening&&straightDraft.current&&<svg className="pointer-events-none absolute inset-0 size-full" viewBox="0 0 1 1" preserveAspectRatio="none" data-testid="photos-straighten-line"><line x1={straightDraft.current.x0} y1={straightDraft.current.y0} x2={straightDraft.current.x1} y2={straightDraft.current.y1} stroke="var(--accent)" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeDasharray="6 4"/></svg>}
     {showSplit&&original&&<canvas ref={splitCanvas} className={`pointer-events-none absolute inset-0 size-full${scale>4?' pixelated':''}`} data-testid="photos-split-canvas"/>}
-    {showSplit&&original&&<svg className="absolute inset-0 size-full" data-testid="photos-split-divider">
-     <line x1={splitX*dispW} y1={0} x2={splitX*dispW} y2={dispH} stroke="rgba(255,255,255,0.9)" strokeWidth={2} pointerEvents="none"/>
-     <line x1={splitX*dispW} y1={0} x2={splitX*dispW} y2={dispH} stroke="transparent" strokeWidth={14} className="cursor-col-resize" data-testid="photos-split-handle"
+    {showSplit&&original&&<svg className="absolute inset-0 size-full" data-testid="photos-split-divider" data-direction={splitDir}>
+     {splitDir==='vertical'
+      ?<line x1={splitX*dispW} y1={0} x2={splitX*dispW} y2={dispH} stroke="rgba(255,255,255,0.9)" strokeWidth={2} pointerEvents="none"/>
+      :<line x1={0} y1={splitX*dispH} x2={dispW} y2={splitX*dispH} stroke="rgba(255,255,255,0.9)" strokeWidth={2} pointerEvents="none"/>}
+     {splitDir==='vertical'
+      ?<line x1={splitX*dispW} y1={0} x2={splitX*dispW} y2={dispH} stroke="transparent" strokeWidth={14} className="cursor-col-resize" data-testid="photos-split-handle"
       onPointerDown={e=>{e.stopPropagation();(e.target as Element).setPointerCapture(e.pointerId);splitDrag.current=true;}}
       onDoubleClick={e=>{e.stopPropagation();setSplitX(0.5);}}
-      onPointerMove={e=>{if(splitDrag.current)setSplitX(clampSplitX(pointerPos(e).x));}}
+      onPointerMove={e=>{if(splitDrag.current){const p=pointerPos(e);setSplitX(clampSplitX(splitDir==='vertical'?p.x:p.y));}}}
       onPointerUp={()=>{splitDrag.current=false;}}
       onPointerCancel={()=>{splitDrag.current=false;}}/>
+      :<line x1={0} y1={splitX*dispH} x2={dispW} y2={splitX*dispH} stroke="transparent" strokeWidth={14} className="cursor-row-resize" data-testid="photos-split-handle"
+      onPointerDown={e=>{e.stopPropagation();(e.target as Element).setPointerCapture(e.pointerId);splitDrag.current=true;}}
+      onPointerMove={e=>{if(splitDrag.current){const p=pointerPos(e);setSplitX(clampSplitX(splitDir==='vertical'?p.x:p.y));}}}
+      onPointerUp={()=>{splitDrag.current=false;}}
+      onPointerCancel={()=>{splitDrag.current=false;}}/>}
     </svg>}
     {session?.cropping&&crop&&<div className="absolute inset-0" style={{cursor:'default'}} onPointerMove={onCropMove} onPointerUp={onCropUp} onPointerCancel={onCropUp} data-testid="photos-crop-overlay">
      <svg className="absolute inset-0 size-full" aria-hidden="true">

@@ -118,5 +118,6 @@
  "photos.rad.invert": "Invert",
  "photos.flag.filter.pick": "Picked",
  "photos.flag.filter.reject": "Rejected",
- "photos.p.straighten.auto": "Auto"
+ "photos.p.straighten.auto": "Auto",
+ "photos.split.dir": "Direction"
 }

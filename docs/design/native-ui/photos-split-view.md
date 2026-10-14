@@ -45,3 +45,26 @@ divider. Hold-to-compare stays as the quick variant.
   the only visual change is the split overlay itself and the bar toggle.
 - No new raw controls (the toggle is the DS `Button`); ratchets
   unchanged. Actual app photos E2E remains CI-only.
+
+## Split direction (P70)
+
+The split view now works horizontally too: a `Rows2` toggle
+(`photos.split.dir`, default vertical) next to the split toggle flips the
+divider between a vertical line (erase right of it) and a horizontal one
+(erase below it).
+
+- `src/lib/photos/splitView.ts`: `SplitDirection` type and a
+  `splitClearRect(..., direction = 'vertical')` parameter — horizontal
+  returns the rect below the divider; the default keeps the original
+  behavior, so every existing caller and test is untouched.
+- `PhotosWorkspace`: direction persisted in `panelStateStore` under
+  `photos.splitDir`; the divider SVG exposes `data-direction`, renders a
+  horizontal line pair with `cursor-row-resize`, and the drag reads
+  `pointerPos`'s `y` instead of `x`. The erase rect is passed the
+  current direction on every repaint.
+- i18n: `photos.split.dir` in all five photo locales.
+
+Coverage: `splitView.test.ts` gains a horizontal-rect case (below the
+divider, edge margins clamped); `photos-split.spec.ts` gains a
+light/dark leg that toggles direction, asserts `data-direction`, grabs
+the handle where it sits, and drags it downward on the y axis.
