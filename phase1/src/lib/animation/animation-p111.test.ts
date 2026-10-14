@@ -718,3 +718,13 @@ test('P193 layers.trimToWorkArea: cuts in/out to the work area, never extends, s
  assert.throws(()=>run({layers:['b','c']}),(e:any)=>e.expected===true);
  s.undo();assert.deepEqual([get('b').inT,get('b').outT],[0,d]);
 });
+
+test('P194 graph zoom/pan window: zooms around the anchor, clamps, returns null at full range, pans without changing span',async()=>{
+ const {zoomWindow,panWindow}=await import('./graphWindow');const fps={num:30,den:1};const full={t0:0,t1:240000};
+ const z=zoomWindow(full,120000,2,0,240000,fps)!;assert.equal(z.t1-z.t0,120000);assert.equal(z.t0,60000);
+ const edge=zoomWindow(full,0,2,0,240000,fps)!;assert.deepEqual(edge,{t0:0,t1:120000});
+ assert.equal(zoomWindow(z,120000,0.5,0,240000,fps),null);
+ const tiny=zoomWindow(full,100,1e9,0,240000,fps)!;assert.equal(tiny.t1-tiny.t0,2*8000);assert.ok(tiny.t0>=0);
+ const p=panWindow(z,1e9,0,240000);assert.equal(p.t1,240000);assert.equal(p.t1-p.t0,120000);assert.equal(panWindow(z,-1e9,0,240000).t0,0);
+ assert.equal(zoomWindow(full,0,0,0,240000,fps),null);
+});

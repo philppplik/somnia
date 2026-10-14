@@ -2,7 +2,7 @@ import {useEffect,useId,useLayoutEffect,useRef,useState,type KeyboardEvent as Re
 import {animationSession} from '../../lib/animation/session';
 import type {Edit} from '../../lib/animation/edit';
 import {PROP_META,TRANSFORM_KEYS,type Composition,type KeyRef,type TransformKey} from '../../lib/animation/model';
-import {fitTargets,graphWindow,timeTicks,windowValueRange} from '../../lib/animation/graphWindow';
+import {ZOOM_STEP,fitTargets,graphWindow,panWindow,zoomWindow,timeTicks,windowValueRange} from '../../lib/animation/graphWindow';
 import {channelOf,playheadReading,curveSamples,handleToEase,handlesOf,niceStep,valueRange,speedSamples,speedRange,EASE_PRESETS,type Handle} from '../../lib/animation/graph';
 import {clickSelect,sameKey,shiftSelection} from '../../lib/animation/selection';
 import {frameToTick,timecode} from '../../lib/animation/time';
@@ -41,17 +41,27 @@ export function GraphEditor({comp,layerId,sel,playhead}:{comp:Composition;layerI
  const active=animated.find(k=>k===view.openProps[0])??animated[0];
  const wrap=useRef<HTMLDivElement>(null);const svgRef=useRef<SVGSVGElement>(null);const size=useSize(wrap);
  const frozen=useRef<{min:number;max:number}|null>(null);const frozenWin=useRef<{t0:number;t1:number}|null>(null);
- useEffect(()=>{frozen.current=null;frozenWin.current=null;},[active,layerId]);
+ const [zoom,setZoom]=useState<{t0:number;t1:number}|null>(null);const geo=useRef<{t0:number;t1:number;pw:number;start:number;end:number;fps:Composition['fps']}|null>(null);
+ useEffect(()=>{frozen.current=null;frozenWin.current=null;setZoom(null);},[active,layerId]);
+ useEffect(()=>{setZoom(null);},[gtools.fit]);
+ /** Ctrl/Cmd+wheel zooms the time axis around the pointer, Shift+wheel pans. A plain wheel is left alone so the page still scrolls. */
+ useEffect(()=>{const el=svgRef.current;if(!el)return;
+  const on=(e:WheelEvent)=>{const g=geo.current;if(!g||frozenWin.current||(!e.ctrlKey&&!e.metaKey&&!e.shiftKey))return;
+   e.preventDefault();const r=el.getBoundingClientRect(),win={t0:g.t0,t1:g.t1};
+   if(e.ctrlKey||e.metaKey){const anchor=g.t0+(e.clientX-r.left-PAD.l)/g.pw*(g.t1-g.t0);setZoom(zoomWindow(win,anchor,e.deltaY<0?ZOOM_STEP:1/ZOOM_STEP,g.start,g.end,g.fps));}
+   else{const d=(e.deltaX||e.deltaY)/g.pw*(g.t1-g.t0);setZoom(panWindow(win,d,g.start,g.end));}};
+  el.addEventListener('wheel',on,{passive:false});return()=>el.removeEventListener('wheel',on);},[active,layerId,layer?.id]);
  if(layer&&msel.mixed&&animatedTargets(layer).length)return <MixedGraph comp={comp} layer={layer} playhead={playhead}/>;
  if(layer&&gt)return <MaskGraph comp={comp} layer={layer} target={gt} playhead={playhead}/>;
  if(layer&&!active&&maskTargets(layer).length)return <div className="grid min-h-0 flex-1 grid-cols-[180px_1fr]"><div className="p-1"><MaskTargetButtons layer={layer} active={null}/></div><div className="grid place-items-center p-3 text-ink-3">{t('animation.graph.pickMask')}</div></div>;
  if(!layer||!active)return <div className="grid min-h-0 flex-1 place-items-center p-3 text-ink-3" data-testid="animation-graph-empty">{t(layer?'animation.graph.empty':'animation.graph.noLayer')}</div>;
  const prop=layer.transform[active];const keys=prop.keys;
  const ch:0|1=prop.type==='vec2'&&view.graphChannel===1?1:0;
- const w=size.w,h=size.h;const fitKeys=fitTargets(keys,sel.filter(k=>k.layer===layer.id&&k.prop===active));const win=frozenWin.current??graphWindow(comp.start,comp.duration,comp.fps,fitKeys,gtools.fit);const {t0,t1}=win;
+ const w=size.w,h=size.h;const fitKeys=fitTargets(keys,sel.filter(k=>k.layer===layer.id&&k.prop===active));const win=frozenWin.current??zoom??graphWindow(comp.start,comp.duration,comp.fps,fitKeys,gtools.fit);const {t0,t1}=win;
  const speed=view.graphMode==='speed';
  const range=frozen.current??(speed?speedRange(prop,ch,t0,t1):gtools.fit?windowValueRange(prop,ch,t0,t1):valueRange(keys,ch));
  const pw=Math.max(10,w-PAD.l-PAD.r),ph=Math.max(10,h-PAD.t-PAD.b);
+ geo.current={t0,t1,pw,start:comp.start,end:comp.start+comp.duration,fps:comp.fps};
  const xOf=(tk:number)=>PAD.l+(tk-t0)/(t1-t0)*pw;
  const yOf=(v:number)=>PAD.t+(1-(v-range.min)/(range.max-range.min))*ph;
  const local=(cx:number,cy:number)=>{const r=svgRef.current!.getBoundingClientRect();return {x:cx-r.left,y:cy-r.top};};

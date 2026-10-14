@@ -38,3 +38,20 @@ export function timeTicks(t0:number,t1:number,fps:Rational,maxTicks:number):numb
  const out:number[]=[];for(let k=Math.ceil(t0/stepTicks);k*stepTicks<=t1&&out.length<=60;k++)out.push(k*stepTicks);
  return out;
 }
+/** Zoom factor per wheel notch and the narrowest span, in frames, the zoom may reach. */
+export const ZOOM_STEP=1.25,ZOOM_MIN_FRAMES=2;
+/** Window after zooming by `factor` (>1 zooms in) around time `anchor`, kept inside [start,end] and at least ZOOM_MIN_FRAMES wide. Null when the result shows the whole range. */
+export function zoomWindow(win:{t0:number;t1:number},anchor:number,factor:number,start:number,end:number,fps:Rational):{t0:number;t1:number}|null{
+ if(!(factor>0)||!(end>start)||!(win.t1>win.t0))return null;
+ const full=end-start,minSpan=Math.min(full,frameToTick(ZOOM_MIN_FRAMES,fps));
+ const span=Math.min(full,Math.max(minSpan,(win.t1-win.t0)/factor));
+ if(span>=full)return null;
+ const a=Math.min(win.t1,Math.max(win.t0,anchor)),u=(a-win.t0)/(win.t1-win.t0);
+ let t0=a-u*span;t0=Math.min(end-span,Math.max(start,t0));
+ return {t0:Math.round(t0),t1:Math.round(t0+span)};
+}
+/** Window moved by `dt` ticks, clamped to [start,end] with its span unchanged. */
+export function panWindow(win:{t0:number;t1:number},dt:number,start:number,end:number):{t0:number;t1:number}{
+ const span=win.t1-win.t0;const t0=Math.min(end-span,Math.max(start,win.t0+dt));
+ return {t0:Math.round(t0),t1:Math.round(t0+span)};
+}
