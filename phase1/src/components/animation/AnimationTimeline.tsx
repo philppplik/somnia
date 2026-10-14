@@ -1,5 +1,5 @@
 import {useEffect,useRef,useState,type KeyboardEvent as ReactKeyboardEvent,type PointerEvent} from 'react';
-import {Play,Pause,Undo2,Redo2,Eye,EyeOff,Lock,Unlock,ZoomIn,ZoomOut,ArrowUp,ArrowDown} from '../../lib/icons';
+import {Play,Pause,Undo2,Redo2,Eye,EyeOff,Lock,Unlock,ZoomIn,ZoomOut,ArrowUp,ArrowDown,ArrowUpDown,EyeOff as ShyIcon} from '../../lib/icons';
 import {animationSession,useAnimationState} from '../../lib/animation/session';
 import {NativeInput,NativeSelect} from '../ui/native-controls';
 import {TRANSFORM_KEYS,wouldCycle,type Composition,type KeyRef,type TransformKey} from '../../lib/animation/model';
@@ -10,7 +10,7 @@ import {AudioWaveform} from './AudioWaveform';
 import {clickSelect,marqueeSelect,pruneSelection,rectsOverlap,sameKey,shiftSelection} from '../../lib/animation/selection';
 import {frameToTick,snapToFrame,tickToFrame,timecode} from '../../lib/animation/time';
 import {executeCommand} from '../../lib/commands';
-import {edgeScroll,revealTick,snapTargets,snapTick,timeWindow,useTimelineSnap,setTimelineSnap} from '../../lib/animation/timelineView';
+import {reorderIndex,setShyHidden,useShyHidden,edgeScroll,revealTick,snapTargets,snapTick,timeWindow,useTimelineSnap,setTimelineSnap} from '../../lib/animation/timelineView';
 import {clearLayerSet,layerSetIds,toggleLayerInSet,useLayerSet} from '../../lib/animation/layerSet';
 import {useT} from '../../lib/useT';
 import {Button} from '../ui/button';
@@ -23,7 +23,7 @@ interface Box{x0:number;y0:number;x1:number;y1:number}
 export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Composition;at:number;selected:string|null;canUndo:boolean;canRedo:boolean}){
  const {t}=useT();const state=useAnimationState();const view=state.view; const layerSet=useLayerSet();const [stagger,setStagger]=useState(2);const [staggerTiming,setStaggerTiming]=useState(true);
  const rulerRef=useRef<HTMLDivElement>(null);const lanesRef=useRef<HTMLDivElement>(null);
- const win=timeWindow(comp,view.zoom,view.scroll);const pc=(t:number)=>`${(t-win.t0)/win.span*100}%`;const snapOn=useTimelineSnap();const inWin=(t:number)=>t>=win.t0&&t<=win.t0+win.span;
+ const win=timeWindow(comp,view.zoom,view.scroll);const pc=(t:number)=>`${(t-win.t0)/win.span*100}%`;const snapOn=useTimelineSnap();const shyOff=useShyHidden();const [drop,setDrop]=useState<{over:string;after:boolean}|null>(null);const inWin=(t:number)=>t>=win.t0&&t<=win.t0+win.span;
  /** Left and width in percent of a tick range, clipped to the visible window. */
  const bar=(a:number,b:number)=>{const l=Math.max(0,(a-win.t0)/win.span*100),r=Math.min(100,(b-win.t0)/win.span*100);return {left:`${l}%`,width:`${Math.max(0,r-l)}%`};};const sectionRef=useRef<HTMLElement>(null);
  const frames=Math.max(1,tickToFrame(comp.duration,comp.fps));const frame=tickToFrame(at,comp.fps);
@@ -149,6 +149,21 @@ export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Compo
   const up=()=>{el.removeEventListener('pointermove',move);el.removeEventListener('pointerup',up);setBox(null);};
   el.addEventListener('pointermove',move);el.addEventListener('pointerup',up);
  };
+ /** Pointer drag of a layer row by its handle: a line shows where it lands, release is one reorder edit, Escape cancels. */
+ const dragLayer=(id:string)=>(e:PointerEvent<HTMLElement>)=>{
+  if(e.button!==0)return;e.stopPropagation();const el=e.currentTarget;el.setPointerCapture(e.pointerId);
+  let target:{over:string;after:boolean}|null=null;
+  const find=(ev:globalThis.PointerEvent)=>{
+   const rows=[...(lanesRef.current?.querySelectorAll<HTMLElement>('[data-layer-row]')??[])];if(!rows.length)return null;
+   let hit=rows[rows.length-1];for(const r of rows){const b=r.getBoundingClientRect();if(ev.clientY<b.bottom){hit=r;break;}}
+   const b=hit.getBoundingClientRect();return {over:hit.dataset.layerRow!,after:ev.clientY>b.top+b.height/2};
+  };
+  const move=(ev:globalThis.PointerEvent)=>{target=find(ev);setDrop(target&&reorderIndex(live.current.comp.layers.map(l=>l.id),id,target.over,target.after)!==null?target:null);};
+  const finish=(commit:boolean)=>{el.removeEventListener('pointermove',move);el.removeEventListener('pointerup',up);window.removeEventListener('keydown',esc,true);setDrop(null);
+   if(!commit||!target)return;const idx=reorderIndex(live.current.comp.layers.map(l=>l.id),id,target.over,target.after);if(idx!==null)run('animation.layer.reorder',{layer:id,index:idx});};
+  const up=()=>finish(true);const esc=(ev:KeyboardEvent)=>{if(ev.key==='Escape'){ev.stopPropagation();finish(false);}};
+  el.addEventListener('pointermove',move);el.addEventListener('pointerup',up);window.addEventListener('keydown',esc,true);
+ };
  const onKeyDown=(e:ReactKeyboardEvent<HTMLElement>)=>{
   if((e.target as HTMLElement).closest('input,select,textarea'))return;
   const mod=e.ctrlKey||e.metaKey;const k=e.key.toLowerCase();
@@ -186,6 +201,7 @@ export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Compo
     <Button size="tiny" variant="ghost" disabled={win.zoom<=1} onClick={()=>run('animation.timeline.zoom',{mode:'fit'})} data-testid="animation-zoom-fit">{t('animation.timeline.fit')}</Button>
     <Button size="tiny" variant="ghost" onClick={()=>run('animation.timeline.zoom',{mode:'workarea'})} data-testid="animation-zoom-wa">{t('animation.timeline.zoomWorkArea')}</Button>
     <Button size="tiny" variant={snapOn?'outline':'ghost'} aria-pressed={snapOn} title={t('animation.timeline.snapHint')} onClick={()=>run('animation.timeline.snap',{on:!snapOn})} data-testid="animation-snap">{t('animation.timeline.snap')}</Button>
+    <Button size="tiny" variant={shyOff?'outline':'ghost'} aria-pressed={shyOff} title={t('animation.timeline.hideShyHint')} onClick={()=>run('animation.timeline.shy',{hide:!shyOff})} data-testid="animation-hide-shy">{t('animation.timeline.hideShy')}</Button>
     {win.zoom>1&&<NativeInput type="range" className="w-24" min={0} max={Math.max(1,comp.duration-win.span)} step={Math.max(1,Math.round(win.span/50))} value={win.scroll} aria-label={t('animation.timeline.scroll')} onChange={e=>animationSession().setView({scroll:Number(e.target.value)})} data-testid="animation-scroll"/>}
    </span>
    <output className="ml-1 font-mono text-ink" data-testid="animation-timecode">{timecode(at,comp.fps)}</output>
@@ -225,11 +241,13 @@ export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Compo
   </div>
   {view.graph?<GraphEditor comp={comp} layerId={selected} sel={sel} playhead={at}/>:
   <div className="relative min-h-0 flex-1 overflow-auto" role="list" ref={lanesRef}>
-   {comp.layers.map((l,li)=><div key={l.id} role="listitem" className="border-b border-subtle">
+   {comp.layers.map((l,li)=>shyOff&&l.shy&&l.id!==selected?null:<div key={l.id} role="listitem" data-layer-row={l.id} data-drop={drop?.over===l.id?(drop.after?'after':'before'):undefined} className={`border-b border-subtle ${drop?.over===l.id?(drop.after?'border-b-2 border-b-accent':'border-t-2 border-t-accent'):''}`}>
     <div className={`grid grid-cols-[280px_1fr] items-center ${l.id===selected||layerSet.includes(l.id)?'bg-hover':''}`} data-picked={layerSet.includes(l.id)||undefined}>
      <div className="flex items-center gap-1 px-2 py-1">
       <button type="button" aria-label={t('animation.layer.visible')} aria-pressed={l.visible} className="text-ink-2" onClick={()=>run('animation.layer.update',{layer:l.id,visible:!l.visible})}>{l.visible?<Eye className="size-3"/>:<EyeOff className="size-3"/>}</button>
       <button type="button" aria-label={t('animation.layer.locked')} aria-pressed={l.locked} className="text-ink-2" onClick={()=>run('animation.layer.update',{layer:l.id,locked:!l.locked})}>{l.locked?<Lock className="size-3"/>:<Unlock className="size-3"/>}</button>
+      <Button size="tiny" variant="ghost" className="cursor-grab touch-none" aria-label={t('animation.layer.drag',{name:l.name})} onPointerDown={dragLayer(l.id)} data-testid={`animation-layer-drag-${l.id}`}><ArrowUpDown className="size-3"/></Button>
+      <Button size="tiny" variant={l.shy?'outline':'ghost'} aria-label={t('animation.layer.shy')} aria-pressed={!!l.shy} onClick={()=>run('animation.layer.update',{layer:l.id,shy:!l.shy})} data-testid={`animation-shy-${l.id}`}><ShyIcon className="size-3"/></Button>
       <Button size="tiny" variant={l.solo?'outline':'ghost'} aria-label={t('animation.layer.solo')} aria-pressed={l.solo} onClick={()=>run('animation.layer.update',{layer:l.id,solo:!l.solo})} data-testid={`animation-solo-${l.id}`}>S</Button>
       <Button size="tiny" variant="ghost" aria-label={t('animation.layer.moveUp',{name:l.name})} disabled={li===0} onClick={()=>run('animation.layer.reorder',{layer:l.id,index:li-1})} data-testid={`animation-layer-up-${l.id}`}><ArrowUp className="size-3"/></Button>
       <Button size="tiny" variant="ghost" aria-label={t('animation.layer.moveDown',{name:l.name})} disabled={li===comp.layers.length-1} onClick={()=>run('animation.layer.reorder',{layer:l.id,index:li+1})} data-testid={`animation-layer-down-${l.id}`}><ArrowDown className="size-3"/></Button>

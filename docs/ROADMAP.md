@@ -273,3 +273,9 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Done: timeline zoom, scroll and fit; snapping to markers, work area and playhead; solo and move up/down in layer rows; select all keys of a property; frame-step and Home/End keys.
 - Open: drag-to-reorder layers, shy layers, per-layer track heights.
 
+
+### Animation P40 (2026-10-14, integration pending)
+
+- Done: drag-to-reorder layers by pointer (handle, drop line, one undo step, Escape cancels); shy layers (optional `shy` flag, "Hide shy" timeline toggle, render and export unaffected); per-character text presets (Rise, Pop, Spin, Fade, Typewriter).
+- Open: per-layer track heights; touch-specific drag (pointer events only, no autoscroll while dragging); named user text presets.
+

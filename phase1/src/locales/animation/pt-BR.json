@@ -534,5 +534,16 @@
  "animation.layer.moveDown": "Descer {name}",
  "animation.keys.selectRow": "Selecionar todas as chaves de {name}",
  "cmd.animation.timeline.zoom": "Dar zoom na linha do tempo",
- "cmd.animation.timeline.snap": "Encaixar arrastos em marcadores, área de trabalho e cabeça de reprodução"
+ "cmd.animation.timeline.snap": "Encaixar arrastos em marcadores, área de trabalho e cabeça de reprodução",
+ "animation.layer.shy": "Tímida",
+ "animation.layer.drag": "Arraste para reordenar {name}",
+ "animation.timeline.hideShy": "Ocultar tímidas",
+ "animation.timeline.hideShyHint": "Ocultar camadas tímidas na linha do tempo (continuam renderizadas)",
+ "cmd.animation.timeline.shy": "Ocultar ou mostrar camadas tímidas na linha do tempo",
+ "animation.animators.presets": "Predefinições",
+ "animation.animators.preset.rise": "Subir",
+ "animation.animators.preset.pop": "Surgir",
+ "animation.animators.preset.spin": "Girar",
+ "animation.animators.preset.fade": "Esmaecer",
+ "animation.animators.preset.typewriter": "Máquina de escrever"
 }

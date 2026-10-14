@@ -534,5 +534,16 @@
  "animation.layer.moveDown": "Descendre {name}",
  "animation.keys.selectRow": "Sélectionner toutes les clés de {name}",
  "cmd.animation.timeline.zoom": "Zoomer la timeline",
- "cmd.animation.timeline.snap": "Aimanter les glissements aux repères, à la zone de travail et à la tête de lecture"
+ "cmd.animation.timeline.snap": "Aimanter les glissements aux repères, à la zone de travail et à la tête de lecture",
+ "animation.layer.shy": "Discret",
+ "animation.layer.drag": "Glisser pour réordonner {name}",
+ "animation.timeline.hideShy": "Masquer discrets",
+ "animation.timeline.hideShyHint": "Masquer les calques discrets dans la timeline (ils restent rendus)",
+ "cmd.animation.timeline.shy": "Masquer ou afficher les calques discrets dans la timeline",
+ "animation.animators.presets": "Préréglages",
+ "animation.animators.preset.rise": "Montée",
+ "animation.animators.preset.pop": "Apparition",
+ "animation.animators.preset.spin": "Rotation",
+ "animation.animators.preset.fade": "Fondu",
+ "animation.animators.preset.typewriter": "Machine à écrire"
 }

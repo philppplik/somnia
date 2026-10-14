@@ -1056,6 +1056,18 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.timeline.shy",
+      "title": "Hide or show shy layers in the timeline",
+      "category": "Project",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.timeline.snap",
       "title": "Snap timeline drags to markers, work area and playhead",
       "category": "Project",

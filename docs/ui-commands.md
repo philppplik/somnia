@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-401 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+402 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -108,6 +108,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `animation.render.open` | Render setup | Project | animation |  |
 | `animation.text.animator` | Edit text animator | Edit | animation |  |
 | `animation.text.path` | Put text on a path, move its start or take it off | Insert | animation |  |
+| `animation.timeline.shy` | Hide or show shy layers in the timeline | Project | animation |  |
 | `animation.timeline.snap` | Snap timeline drags to markers, work area and playhead | Project | animation |  |
 | `animation.timeline.zoom` | Zoom the timeline | Project | animation |  |
 | `animation.workarea.in` | Set work area start at playhead | View | animation |  |
@@ -309,14 +310,11 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `shell.rail.show` | Show hidden rail icon | View | core |  |
 | `shell.rail.unpin` | Move rail icon to overflow | View | core |  |
 | `sidebar.toggle` | Toggle sidebar | View | core | `Mod+B` |
-| `slides.deleteSlide` | Delete slide | Edit | slides |  |
-| `slides.duplicateSlide` | Duplicate slide | Edit | slides |  |
 | `slides.editText` | Apply slide text | Edit | slides |  |
 | `slides.loadThumbnails` | Load slide thumbnails | View | slides |  |
 | `slides.moveSlide` | Move slide | Edit | slides |  |
 | `slides.moveSlideEarlier` | Move slide earlier | Edit | slides |  |
 | `slides.moveSlideLater` | Move slide later | Edit | slides |  |
-| `slides.newSlide` | New slide from layout | Edit | slides |  |
 | `slides.present` | Present | View | slides | `F5` |
 | `slides.present.exit` | Exit presentation | View | slides |  |
 | `slides.present.fromStart` | Present from start | View | slides | `Shift+F5` |

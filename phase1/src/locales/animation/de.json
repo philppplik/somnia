@@ -534,5 +534,16 @@
  "animation.layer.moveDown": "{name} nach unten",
  "animation.keys.selectRow": "Alle Tasten von {name} wählen",
  "cmd.animation.timeline.zoom": "Zeitleiste zoomen",
- "cmd.animation.timeline.snap": "Zeitleisten-Ziehen an Marker, Arbeitsbereich und Abspielposition einrasten"
+ "cmd.animation.timeline.snap": "Zeitleisten-Ziehen an Marker, Arbeitsbereich und Abspielposition einrasten",
+ "animation.layer.shy": "Scheu",
+ "animation.layer.drag": "{name} zum Umordnen ziehen",
+ "animation.timeline.hideShy": "Scheue ausblenden",
+ "animation.timeline.hideShyHint": "Scheue Ebenen in der Zeitleiste ausblenden (sie werden weiter gerendert)",
+ "cmd.animation.timeline.shy": "Scheue Ebenen in der Zeitleiste aus- oder einblenden",
+ "animation.animators.presets": "Vorlagen",
+ "animation.animators.preset.rise": "Aufsteigen",
+ "animation.animators.preset.pop": "Aufpoppen",
+ "animation.animators.preset.spin": "Drehen",
+ "animation.animators.preset.fade": "Einblenden",
+ "animation.animators.preset.typewriter": "Schreibmaschine"
 }

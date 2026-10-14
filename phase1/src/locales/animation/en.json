@@ -534,5 +534,16 @@
  "animation.layer.moveDown": "Move {name} down",
  "animation.keys.selectRow": "Select all keys of {name}",
  "cmd.animation.timeline.zoom": "Zoom the timeline",
- "cmd.animation.timeline.snap": "Snap timeline drags to markers, work area and playhead"
+ "cmd.animation.timeline.snap": "Snap timeline drags to markers, work area and playhead",
+ "animation.layer.shy": "Shy",
+ "animation.layer.drag": "Drag to reorder {name}",
+ "animation.timeline.hideShy": "Hide shy",
+ "animation.timeline.hideShyHint": "Hide shy layers in the timeline (they still render)",
+ "cmd.animation.timeline.shy": "Hide or show shy layers in the timeline",
+ "animation.animators.presets": "Presets",
+ "animation.animators.preset.rise": "Rise",
+ "animation.animators.preset.pop": "Pop",
+ "animation.animators.preset.spin": "Spin",
+ "animation.animators.preset.fade": "Fade",
+ "animation.animators.preset.typewriter": "Typewriter"
 }

@@ -47,3 +47,16 @@ let snapOn=true;const ls=new Set<()=>void>();
 export const timelineSnap=()=>snapOn;
 export const setTimelineSnap=(on:boolean)=>{snapOn=on;ls.forEach(f=>f());};
 export const useTimelineSnap=()=>useSyncExternalStore(f=>{ls.add(f);return()=>{ls.delete(f);};},()=>snapOn,()=>snapOn);
+let shyOff=false;const sl=new Set<()=>void>();
+/** Hide shy layers from the timeline list (view state only; rendering and export ignore it). */
+export const shyHidden=()=>shyOff;
+export const setShyHidden=(on:boolean)=>{shyOff=on;sl.forEach(f=>f());};
+export const useShyHidden=()=>useSyncExternalStore(f=>{sl.add(f);return()=>{sl.delete(f);};},()=>shyOff,()=>shyOff);
+/**
+ * Index for `layer.reorder` when `dragged` is dropped on the row of `over`, above it or below it. `order` is the full layer order.
+ * The edit's index counts after the dragged layer is removed. Returns null when nothing would change.
+ */
+export function reorderIndex(order:readonly string[],dragged:string,over:string,after:boolean):number|null{
+ const from=order.indexOf(dragged),at=order.indexOf(over);if(from<0||at<0||dragged===over)return null;
+ const target=after?at+1:at;const idx=target>from?target-1:target;return idx===from?null:idx;
+}

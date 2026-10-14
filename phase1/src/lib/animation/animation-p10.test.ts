@@ -3,7 +3,7 @@ import {createDocument,findComp,findLayer,validateDocument,MAX_LAYER_MASKS,type 
 import {applyEdit,applyEdits,EditError} from './edit';
 import {readFileSync} from 'node:fs';
 import {morphPath,morphProblem,resamplePath,MorphError,maskEdit,matteEdit,maskPath,copyMaskKey,insertPoint,handleMaskKey,copyMaskKeys} from './masks';
-import {animatedChars,animatorEdit,defaultAnimator,mixHex,charWeight,textPathEdit,textPathD} from './textAnimators';
+import {TEXT_PRESETS,animatedChars,animatorEdit,defaultAnimator,mixHex,charWeight,textPathEdit,textPathD} from './textAnimators';
 import {copyTransformKeys,pasteTransformEdits} from './keysClipboard';
 import {animatedTargets,allTargetKeys,propertyOf,moveTargetKeys,easeTargetKeys,pruneTargetKeys,toggleTargetKey,editTargetKeys,copyTargetKeys,pasteTargetKeys,deleteTargetKeys,pasteClipOnTargets,staggerLayers,bounceClip,bounceTargetKeys} from './keyTargets';
 import {EASE_PRESETS,easePresetOf} from './graph';
@@ -1135,3 +1135,32 @@ test('P39: timeline locale keys exist in all five locales',()=>{
  const keys=['animation.timeline.zoom','animation.timeline.zoomIn','animation.timeline.zoomOut','animation.timeline.fit','animation.timeline.zoomWorkArea','animation.timeline.snap','animation.timeline.snapHint','animation.timeline.scroll','animation.layer.solo','animation.layer.moveUp','animation.layer.moveDown','animation.keys.selectRow','cmd.animation.timeline.zoom','cmd.animation.timeline.snap'];
  for(const l of ['en','de','es','fr','pt-BR']){const j=JSON.parse(readFileSync(new URL(`../../locales/animation/${l}.json`,import.meta.url),'utf8'));for(const k of keys)assert.ok(j[k],`${l} ${k}`);assert.match(j['animation.layer.moveUp'],/\{name\}/);}
 });
+
+test('P40 reorderIndex counts after removal and ignores no-op drops',async()=>{
+ const {reorderIndex}=await import('./timelineView');const o=['a','b','c','d'];
+ assert.equal(reorderIndex(o,'a','c',false),1);assert.equal(reorderIndex(o,'a','c',true),2);
+ assert.equal(reorderIndex(o,'d','b',false),1);assert.equal(reorderIndex(o,'d','b',true),2);
+ assert.equal(reorderIndex(o,'b','c',false),null);assert.equal(reorderIndex(o,'b','a',true),null);assert.equal(reorderIndex(o,'b','b',true),null);assert.equal(reorderIndex(o,'x','b',true),null);
+ const b=base(),ord=findComp(b)!.layers.map(l=>l.id),last=ord[ord.length-1],first=ord[0];
+ const d=applyEdit(b,{type:'layer.reorder',layer:first,index:reorderIndex(ord,first,last,true)!});
+ assert.deepEqual(findComp(d)!.layers.map(l=>l.id),[...ord.slice(1),first]);
+});
+test('P40 shy flag is optional, undoable data, and does not change the frame',()=>{
+ const d0=base();const d1=applyEdit(d0,{type:'layer.update',layer:'stencil',shy:true});
+ assert.equal(findLayer(findComp(d1)!,'stencil')!.shy,true);assert.equal(findLayer(findComp(d0)!,'stencil')!.shy,undefined);
+ assert.equal(frameSvg(findComp(d1)!,0),frameSvg(findComp(d0)!,0));
+ assert.equal('shy' in findLayer(findComp(applyEdit(d0,{type:'layer.update',layer:'stencil',name:'x'}))!,'stencil')!,false);
+ const back=parseAnimationSnapshot(serializeAnimationSnapshot(d1,defaultView()));
+ assert.equal(findLayer(findComp(back.doc)!,'stencil')!.shy,true);
+});
+test('P40 text presets add one valid reveal animator per call',()=>{
+ const d0=base();const c=findComp(d0)!;
+ for(const p of TEXT_PRESETS){const d=applyEdit(d0,animatorEdit(d0,'title',{op:'preset',preset:p,t:c.start,seconds:1}));
+  const a=findLayer(findComp(d)!,'title')!.animators!;assert.equal(a.length,1);assert.equal(a[0].offset.keys.length,2);assert.deepEqual(validateDocument(d),[]);}
+ const d=applyEdit(d0,animatorEdit(d0,'title',{op:'preset',preset:'pop',t:c.start,seconds:1}));
+ assert.throws(()=>animatorEdit(d0,'title',{op:'preset',preset:'pop',t:c.start,seconds:0}),Error);
+ assert.throws(()=>animatorEdit(d0,'photo',{op:'preset',preset:'pop',t:c.start,seconds:1}),Error);
+ const t0=animatedChars(findLayer(findComp(d)!,'title')!,'ABCDEFGHIJ',c.start)!,t1=animatedChars(findLayer(findComp(d)!,'title')!,'ABCDEFGHIJ',c.start+secondsToTicksP40(1))!;
+ assert.equal(t0.every(x=>x.opacity<1),true);assert.equal(t1.every(x=>x.opacity===1),true);
+});
+const secondsToTicksP40=(s:number)=>Math.round(s*240000);

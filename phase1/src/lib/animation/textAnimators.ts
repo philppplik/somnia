@@ -1,6 +1,6 @@
 import {evaluate} from './interpolate';
 import {snapToFrame,TICKS_PER_SECOND} from './time';
-import {MAX_TEXT_ANIMATORS,EASE_IN,EASE_OUT,findComp,findLayer,newId,type AnimationDocument,type Layer,type TextAnimator,type MaskPath,type MaskPoint,MAX_TEXT_PATH_POINTS,validSource} from './model';
+import {MAX_TEXT_ANIMATORS,EASE_IN,EASE_OUT,findComp,findLayer,newId,type AnimationDocument,type Layer,type TextAnimator,type Vec2,type MaskPath,type MaskPoint,MAX_TEXT_PATH_POINTS,validSource} from './model';
 import {worldMatrix} from './scene';
 import {bezierPath} from './masks';
 import type {Edit} from './edit';
@@ -52,7 +52,14 @@ export type AnimatorOp=
  |{op:'offset';animator:string;value:number;t:number}
  |{op:'animate';animator:string;on:boolean;t:number}
  /** Sweeps the selector over the text: `wave` moves it across from before the first to past the last character, `reveal` releases the characters from the left (selector starts covering the text). */
- |{op:'stagger';animator:string;t:number;seconds:number;mode:'wave'|'reveal'};
+ |{op:'stagger';animator:string;t:number;seconds:number;mode:'wave'|'reveal'}
+ /** Adds a ready-made per-character entrance that plays over `seconds` from `t`. Counts toward the animator limit. */
+ |{op:'preset';preset:TextPreset;t:number;seconds:number;unit?:'char'|'word'};
+export const TEXT_PRESETS=['rise','pop','spin','fade','typewriter'] as const;
+export type TextPreset=typeof TEXT_PRESETS[number];
+const PRESET_BASE:Record<TextPreset,Partial<TextAnimator>>={
+ rise:{position:[0,40],opacity:0,softness:30,ease:'out'},pop:{scale:0,opacity:0,softness:30,ease:'out'},spin:{rotation:180,scale:50,opacity:0,softness:30,ease:'out'},
+ fade:{opacity:0,softness:60,ease:'smooth'},typewriter:{opacity:0,softness:0}};
 /** A neutral-to-visible starter: first half of the text drops 40 px and fades, softly. */
 export const defaultAnimator=(id=newId('anim')):TextAnimator=>({id,enabled:true,start:0,end:50,softness:25,offset:{type:'scalar',value:0,keys:[]},position:[0,40],scale:100,opacity:0});
 const key=(t:number,v:number)=>({t,v,interp:'linear' as const,out:EASE_OUT,in:EASE_IN});
@@ -64,6 +71,14 @@ export function animatorEdit(doc:AnimationDocument,layerId:string,o:AnimatorOp):
  const map=(id:string,fn:(a:TextAnimator)=>TextAnimator)=>{target(id);return set(list.map(a=>a.id===id?fn(a):a));};
  switch(o.op){
   case 'add':if(list.length>=MAX_TEXT_ANIMATORS)throw Error(`At most ${MAX_TEXT_ANIMATORS} animators per text layer.`);return set([...list,defaultAnimator(o.id)]);
+  case 'preset':{
+   if(!TEXT_PRESETS.includes(o.preset))throw Error('Unknown text preset.');
+   if(list.length>=MAX_TEXT_ANIMATORS)throw Error(`At most ${MAX_TEXT_ANIMATORS} animators per text layer.`);
+   if(!Number.isFinite(o.seconds)||o.seconds<0.1||o.seconds>30)throw Error('Stagger duration must be 0.1 to 30 seconds.');
+   const t0=snapToFrame(o.t,c.fps),t1=snapToFrame(o.t+o.seconds*TICKS_PER_SECOND,c.fps);
+   if(t0<c.start||t1>c.start+c.duration||t1<=t0)throw Error('The stagger does not fit the composition.');
+   const a={...defaultAnimator(),position:[0,0] as Vec2,scale:100,opacity:100,start:0,end:100,...PRESET_BASE[o.preset],...(o.unit?{unit:o.unit}:{})} as TextAnimator;
+   const to=100+a.softness;return set([...list,{...a,offset:{...a.offset,value:0,keys:[key(t0,0),key(t1,to)]}}]);}
   case 'remove':return map(o.animator,a=>a)&&set(list.filter(a=>a.id!==o.animator));
   case 'update':return map(o.animator,a=>{const {color,...rest}=o.patch;const next={...a,...rest};if(color===null)delete next.color;else if(color!==undefined)next.color=color;return next;});
   case 'offset':return map(o.animator,a=>({...a,offset:a.offset.keys.length?{...a.offset,keys:[...a.offset.keys.filter(k=>k.t!==o.t),key(o.t,o.value)].sort((x,y)=>x.t-y.t)}:{...a.offset,value:o.value}}));

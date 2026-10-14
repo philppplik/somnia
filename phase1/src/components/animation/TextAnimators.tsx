@@ -5,7 +5,7 @@ import {NativeInput,NativeSelect} from '../ui/native-controls';
 import {InspectorNumberField} from '../studios/InspectorNumberField';
 import {MAX_TEXT_ANIMATORS,TEXT_EASES,type Layer,type TextAnimator} from '../../lib/animation/model';
 import {animationSession,useAnimationState} from '../../lib/animation/session';
-import {animatorEdit,DEFAULT_ANIMATOR_COLOR} from '../../lib/animation/textAnimators';
+import {animatorEdit,DEFAULT_ANIMATOR_COLOR,TEXT_PRESETS} from '../../lib/animation/textAnimators';
 import {evaluate} from '../../lib/animation/interpolate';
 import {executeCommand} from '../../lib/commands';
 const field='h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text';
@@ -45,6 +45,8 @@ export function TextAnimators({layer,at}:{layer:Layer;at:number}){
     {(['wave','reveal'] as const).map(m=><Button key={m} size="tiny" variant="ghost" onClick={()=>run({layer:layer.id,op:'stagger',animator:a.id,t:at,seconds:secs,mode:m})} onPointerEnter={()=>peek(a,m)} onPointerLeave={unpeek} onFocus={()=>peek(a,m)} onBlur={unpeek} data-testid={`animation-animator-stagger-${m}`}>{t(`animation.animators.stagger.${m}`)}</Button>)}</div>
    <label className="flex items-center gap-1 text-ink-3"><NativeInput type="checkbox" className="animation-checkbox" checked={a.offset.keys.length>0} onChange={e=>run({layer:layer.id,op:'animate',animator:a.id,on:e.target.checked,t:at})}/>{t('animation.animators.animateOffset')}</label>
   </div>)}
+  <div className="flex flex-wrap items-center gap-1 text-ink-3" data-testid="animation-animator-presets"><span>{t('animation.animators.presets')}</span>
+   {TEXT_PRESETS.map(p=><Button key={p} size="tiny" variant="ghost" disabled={list.length>=MAX_TEXT_ANIMATORS} onClick={()=>run({layer:layer.id,op:'preset',preset:p,t:at,seconds:secs})} data-testid={`animation-animator-preset-${p}`}>{t(`animation.animators.preset.${p}`)}</Button>)}</div>
   <Button size="tiny" variant="outline" disabled={list.length>=MAX_TEXT_ANIMATORS} onClick={()=>run({layer:layer.id,op:'add'})} data-testid="animation-animator-add">{t('animation.animators.add')}</Button>
  </fieldset>;
 }

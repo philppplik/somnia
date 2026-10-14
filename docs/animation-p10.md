@@ -219,3 +219,10 @@ Added:
 - Keyboard on the focused timeline: Left/Right step a frame (Shift 10), Home/End jump to the ends.
 - Commands `animation.timeline.zoom` and `animation.timeline.snap`.
 - Not built: "shadow" layers (unclear request, no such concept in the model; "shy" layers would need a new layer field), drag-to-reorder by pointer (buttons only), per-layer track height. Layer names are shorter in the row because of the new buttons.
+
+## P40 - Layer reorder, shy layers, text presets
+
+- Drag the handle on a layer row; a line shows the drop position (above or below the row under the pointer). Release dispatches one `layer.reorder`, so one undo step. Escape cancels. Up/down buttons stay.
+- Shy: optional `Layer.shy` (absent means false, legacy files and output unchanged). Toggle per row or in the inspector (`animation.layer.update shy`). `animation.timeline.shy` / "Hide shy" hides shy layers from the timeline list only; the selected layer stays visible. Viewer and exports ignore the flag. The toggle is view state, not saved in the document.
+- Text presets: `animation.text.animator {op:'preset',preset:'rise'|'pop'|'spin'|'fade'|'typewriter',seconds}` adds one per-character animator with a reveal sweep from the playhead. Counts toward the animator limit. Existing animator controls edit it afterwards.
+- Not built: autoscroll while dragging, user-saved text presets.

@@ -16,7 +16,7 @@ export type Edit=
  |{type:'comp.remove';comp:string}
  |{type:'layer.add';kind:LayerKind;over?:Partial<Layer>;id?:string}
  |{type:'layer.remove';layer:string}
- |{type:'layer.update';layer:string;name?:string;visible?:boolean;solo?:boolean;locked?:boolean;source?:Partial<LayerSource>}
+ |{type:'layer.update';layer:string;name?:string;visible?:boolean;solo?:boolean;locked?:boolean;shy?:boolean;source?:Partial<LayerSource>}
  |{type:'layer.timing';layer:string;inT:number;outT:number}
  |{type:'layer.parent';layer:string;parent:string|null;keepWorld?:boolean;t?:number}
  |{type:'layer.reorder';layer:string;index:number}
@@ -187,7 +187,7 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
    if(e.source?.color!==undefined&&!/^#[0-9a-fA-F]{6}$/.test(e.source.color))fail('invalid','Colour must be #rrggbb.');
    if(e.source?.size!==undefined&&!(e.source.size>0&&e.source.size<=2000))fail('invalid','Text size must be 1 to 2000.');
    if(e.source?.text!==undefined&&e.source.text.length>2000)fail('invalid','Text is too long.');
-   return setLayer(doc,{...l,name:e.name?.trim()??l.name,visible:e.visible??l.visible,solo:e.solo??l.solo,locked:e.locked??l.locked,source:{...l.source,...e.source}});}
+   return setLayer(doc,{...l,name:e.name?.trim()??l.name,visible:e.visible??l.visible,solo:e.solo??l.solo,locked:e.locked??l.locked,...(e.shy!==undefined?{shy:e.shy}:{}),source:{...l.source,...e.source}});}
   case 'layer.timing':{const c=compOf(doc);const l=layerOf(doc,e.layer);if(l.kind==='audio')fail('invalid','Use audio trim and offset for audio layers.');
    if(!Number.isInteger(e.inT)||!Number.isInteger(e.outT)||e.outT<=e.inT||e.inT<0||e.outT>c.duration)fail('invalid','Layer timing must be inside the composition with out after in.');return setLayer(doc,{...l,inT:e.inT,outT:e.outT});}
   case 'layer.parent':{const c=compOf(doc);const l=layerOf(doc,e.layer);
