@@ -1,0 +1,40 @@
+name: Optional local voice helper
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'phase1/src-tauri/src/local_voice.rs'
+      - 'phase1/src-tauri/src/desktop.rs'
+      - 'phase1/src/lib/agent/nativeVoice*'
+      - 'phase1/src/components/agent/*Voice*'
+      - 'phase1/scripts/voice/**'
+      - '.github/workflows/local-voice-helper.yml'
+permissions:
+  contents: read
+jobs:
+  native-contract:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+      - name: Pure voice contract tests
+        run: cargo test --locked --manifest-path phase1/src-tauri/Cargo.toml --no-default-features local_voice
+      - name: Desktop voice command compilation
+        run: cargo check --locked --manifest-path phase1/src-tauri/Cargo.toml --features desktop
+  helper:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: node phase1/scripts/voice/build-helper.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: whisper-helper-${{ matrix.os }}
+          path: phase1/src-tauri/resources/voice/
+          if-no-files-found: error

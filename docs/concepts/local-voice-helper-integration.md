@@ -1,6 +1,6 @@
-# Native voice helper integration: proposed build contract
+# Native voice helper integration: implementation and release gates
 
-Status: design only, not implemented, no dependency/helper/model installation approved by this document. Date: 2026-10-14. Builds on local-voice-models.md, with current local-model runtime UI as the host integration seam. The helper is a Somnia application component, not an automation service or remote endpoint.
+Status: CPU-only whisper.cpp STT implementation, native build/device validation pending. Owner approved MIT helper, optional model download, no GPL bundle on 2026-10-14. This document is not additional permission. Date: 2026-10-14. Builds on local-voice-models.md, with current local-model runtime UI as the host integration seam. The helper is a Somnia application component, not an automation service or remote endpoint.
 
 ## First slice and non-goals
 
@@ -12,13 +12,9 @@ TTS is a separate decision after a sherpa-onnx engine/model bundle review. No GP
 
 Rust owns the helper process, private scratch storage, immutable model identity, cancellation and job lease. Renderer owns only request intent and presentation. Fixed packaged executable path, never user/project-provided paths or shell command strings. No network listener, shell invocation, runtime package-manager download or inherited API keys/proxies. Helper sandbox/network-denial policy must be tested per OS before claiming offline.
 
-Proposed protocol: versioned length-prefixed JSON control frames on private stdio; separately bounded binary PCM frames on a private pipe. A single-stream implementation may use explicit length-prefixed tagged binary frames, not raw PCM embedded in JSON/base64. Maximum control frame 64 KiB, audio frame 256 KiB, total initial job audio 10 minutes. These are starting limits, not measured performance targets. Helper rejects unsupported protocol, duplicate job IDs, oversized frames, unknown fields and out-of-order audio before allocation.
+Implemented protocol: the trusted editor invokes bounded mono 16 kHz i16 PCM (at most two minutes) through native commands. Rust validates input, emits its own WAV into a private job directory and invokes the fixed packaged `whisper-cli` with fixed arguments: `-m <verified model> -f <owned WAV> -l auto -ng -np -nt -otxt -of <owned output>`. No shell or caller paths. JSON IPC allocates before Rust validation, so this is not a hostile-frame parser or streaming/backpressure implementation. Imported audio UI is not included.
 
-Handshake: hello {protocol:1, helperVersion, engineRevision, supportedFormats, capabilities}; host validates packaged manifest and executable digest before accepting. start {jobId, generation, operation:stt-file, modelId, artifactRevision, language:auto|BCP47, format:{sampleRate,channels,sampleType}, maxSamples, sourceRevision, retention:memory|private-temp}. Host maps modelId to a verified allowlisted bundle. No caller-supplied helper/model paths. sourceRevision is a consistency token, not private document content.
-
-Audio frames: {jobId, generation, sequence, sampleCount, byteLength} followed by exact bytes. Host converts explicitly to tested model input format (initial 16 kHz mono PCM) using approved preprocessing. No guessed conversion, silent stereo channel loss or timestamp shift. Initial file jobs require format validation; microphone integration follows successful file-only testing. Helper acknowledges frame consumption for bounded backpressure. End-input includes final sample count; mismatch fails closed.
-
-Events: started; progress; final-segment {segmentId, startSample, endSample, text, language}; completed {sampleCount, timings}; cancelled; failed {code,retryable}. Partial-segment is later and always provisional. No word timestamps unless exact engine output supports them. Raw private path/audio/transcript never enters diagnostic logs. Results are data, never instructions or authority. Segment/sample positions are validated against the accepted source length.
+The renderer uses Web Audio decode, equal-channel mean and linear resampling with finite/channel/sample/duration bounds. Anti-alias quality and cross-WebView MediaRecorder codec support remain device gates. Native jobs expose identity, phase, bytes, final text and sanitized errors; no partial text triggers actions. Polling rejects another identity, abort cancels the owned job even when start resolves late, and final text is cleared from native state after retrieval. Recording and transcript insertion use separate explicit review stages.
 
 ## Artifact pinning and installation
 
@@ -54,7 +50,7 @@ Owner-device gate: German/English known nonsensitive utterances, noise/silence (
 
 Open owner decisions: exact helper packaging targets, CPU-first vs backend bundle, initial multilingual model/artifact provenance, permitted download size/storage budget, and later TTS scope. No code or dependencies added by this design.
 
-## Prepared host UI seam (2026-10-14)
+## Earlier host-only seam (superseded by pinned native slice below)
 
 The host now has a microphone-consent/push-to-talk shell, bounded capture owner and
 final-transcript review insertion. Production has no STT adapter: record is disabled and
@@ -77,3 +73,19 @@ MIT source notices verified earlier remain source evidence, not pinned artifact 
 The first real download review must show exact immutable artifact URL/revision, SHA-256,
 bytes, engine and converted-model license/provenance, disk availability or unknown, and
 network use. Fail closed until those exist; never fill this manifest with made-up hashes.
+
+## Pinned native slice (2026-10-14)
+
+- Engine v1.7.6, revision `a8d002cfd879315632a579e73f0148d06959de36`: https://github.com/ggml-org/whisper.cpp/blob/a8d002cfd879315632a579e73f0148d06959de36/LICENSE
+- Converted multilingual base model revision `5359861c739e955e79d9a303bcbc70fb988958b1`, `ggml-base.bin`, 147951465 bytes, SHA-256 `60ed5bc3dd14eea856493d334349b405782ddcaf0028d4b5df4088345fba2efe`.
+- Model card/license: https://huggingface.co/ggerganov/whisper.cpp/blob/5359861c739e955e79d9a303bcbc70fb988958b1/README.md
+- API identity evidence: https://huggingface.co/api/models/ggerganov/whisper.cpp?blobs=true
+- Exact artifact: https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-base.bin
+
+`node phase1/scripts/voice/build-helper.mjs` explicitly builds the helper, with GPU, Accelerate, BLAS, OpenMP, native tuning and FFmpeg disabled. It copies the MIT notice and computes a platform-specific binary manifest. It never downloads weights. Optional `src-tauri/tauri.voice.conf.json` maps reviewed resources into the app. Normal builds ship no helper and the UI fails closed. CI builds/smokes three runner targets; that is not six-architecture support, signing or release integration. SBOM, linked libraries, signing and actual packaged-path/device checks remain release gates.
+
+Download uses HTTPS, fixed HF host suffixes, no proxy, a 15-minute request timeout and async cancellation checks while connecting/reading. Length/SHA are mandatory before rename; incomplete files are discarded on handled failures. Disk capacity is explicitly Not checked. Network cancellation and disk-write tail are not measured guarantees. Existing corrupt model needs explicit manual cleanup; download does not silently replace it.
+
+Inference clears inherited environment, uses a process group on Unix, and kills the owned process tree on cancellation/180-second timeout. Normal completion/failure/cancel removes scratch. Unix directories/files use 0700/0600; Windows inherited app-data ACL, parent path/symlink races, crash-orphan startup cleanup and OS-enforced no-network isolation are NOT verified. No secure-erasure claim. Do not release on sensitive audio until these gates pass.
+
+The prior proposed stream protocol, 10-minute bound and broad device checklist are future design, not the shipped CLI contract. Native Rust/build, actual weights and real microphone/transcription are CI/device-only in this workspace. Browser fixtures use injected synthetic state and are not evidence of transcription quality.

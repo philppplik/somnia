@@ -3,7 +3,7 @@ export interface VoiceCapture {stop():Promise<VoiceClip>;cancel():void}
 export type CaptureFactory=(signal:AbortSignal,onLevel:(level:number)=>void)=>Promise<VoiceCapture>;
 export interface STTAdapter {id:string;local:true;transcribe(clip:VoiceClip,signal:AbortSignal):Promise<{text:string;final:true}>}
 export function validateTranscript(value:{text:string;final:true}):string{if(value.final!==true||typeof value.text!=='string'||!value.text.trim()||value.text.length>12000||value.text.includes('\0'))throw Error('Invalid final transcript');return value.text;}
-/** Browser capture only, no recognition or upload. Codec is explicit; native PCM conversion is future work. */
+/** Browser capture only, no recognition or upload. Codec is explicit; the optional native adapter separately decodes/resamples. */
 export const captureMicrophone:CaptureFactory=async(signal,onLevel)=>{
  signal.throwIfAborted();if(!navigator.mediaDevices?.getUserMedia||typeof MediaRecorder==='undefined')throw Error('Microphone capture unavailable');
  const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true},video:false});

@@ -139,3 +139,5 @@
 /* M5: one host-owned studio chip; the panel and conversation are not remounted. */
 .ag-studio-chip{margin:8px 0 0 7px;font-size:10px;line-height:16px;border:1px solid var(--border-subtle);border-radius:6px;padding:0 5px;color:var(--ink-2);white-space:nowrap}
 .ag-chip:disabled{opacity:.45;cursor:not-allowed}
+
+.local-voice-artifact { overflow-wrap: anywhere; }

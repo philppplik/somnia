@@ -1402,6 +1402,67 @@
       "args": []
     },
     {
+      "name": "local_voice_cancel",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "id"
+      ],
+      "args": [
+        "id"
+      ]
+    },
+    {
+      "name": "local_voice_download",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "acknowledged"
+      ],
+      "args": [
+        "acknowledged"
+      ]
+    },
+    {
+      "name": "local_voice_poll",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "id"
+      ],
+      "args": [
+        "id"
+      ]
+    },
+    {
+      "name": "local_voice_status",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [],
+      "args": []
+    },
+    {
+      "name": "local_voice_transcribe",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "pcm"
+      ],
+      "args": [
+        "pcm"
+      ]
+    },
+    {
       "name": "log_dir",
       "domain": "app",
       "status": "native",

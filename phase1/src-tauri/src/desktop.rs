@@ -301,6 +301,16 @@ async fn github_account_disconnect(window: WebviewWindow) -> std::result::Result
     tauri::async_runtime::spawn_blocking(|| { { let _g = AGENT_SETTINGS_LOCK.lock().map_err(|_| "Credential store is busy".to_string())?; github_store().disconnect().map_err(|e| e.to_string())?; } github_status_now() }).await.map_err(|_| "Could not access credential store")?
 }
 #[tauri::command]
+async fn local_voice_status(window:WebviewWindow,app:tauri::AppHandle)->std::result::Result<crate::local_voice::VoiceStatus,String>{gate(&window).map_err(|_|"Trusted editor required")?;let data=app.path().app_data_dir().map_err(|_|"Voice storage unavailable")?;let resource=app.path().resource_dir().map_err(|_|"Voice resources unavailable")?;tauri::async_runtime::spawn_blocking(move||crate::local_voice::status(&data,&resource)).await.map_err(|_|"Voice status failed".into())}
+#[tauri::command]
+async fn local_voice_download(window:WebviewWindow,app:tauri::AppHandle,acknowledged:bool)->std::result::Result<String,String>{gate(&window).map_err(|_|"Trusted editor required")?;crate::local_voice::download(app.path().app_data_dir().map_err(|_|"Voice storage unavailable")?,acknowledged)}
+#[tauri::command]
+async fn local_voice_transcribe(window:WebviewWindow,app:tauri::AppHandle,pcm:Vec<i16>)->std::result::Result<String,String>{gate(&window).map_err(|_|"Trusted editor required")?;let data=app.path().app_data_dir().map_err(|_|"Voice storage unavailable")?;let resource=app.path().resource_dir().map_err(|_|"Voice resources unavailable")?;tauri::async_runtime::spawn_blocking(move||crate::local_voice::transcribe(data,resource,pcm)).await.map_err(|_|"Voice job failed")?}
+#[tauri::command]
+async fn local_voice_poll(window:WebviewWindow,id:String)->std::result::Result<crate::local_voice::VoiceState,String>{gate(&window).map_err(|_|"Trusted editor required")?;crate::local_voice::poll(&id)}
+#[tauri::command]
+async fn local_voice_cancel(window:WebviewWindow,id:String)->std::result::Result<(),String>{gate(&window).map_err(|_|"Trusted editor required")?;crate::local_voice::cancel(&id)}
+#[tauri::command]
 async fn local_models_detect(window: WebviewWindow) -> std::result::Result<crate::local_models::Detection, String> {
     gate(&window).map_err(|_| "Only trusted editor may inspect local runtime")?;
     tauri::async_runtime::spawn_blocking(crate::local_models::detect).await.map_err(|_| "Local runtime detection failed".into())
@@ -2834,6 +2844,7 @@ pub fn run() {
                 }
             }
             if let tauri::WindowEvent::Destroyed = event {
+                if window.label()=="main"{crate::local_voice::cancel_owned();}
                 window.state::<crate::proc_runner::ProcessRunner>().stop_all();
             }
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
@@ -2912,6 +2923,11 @@ pub fn run() {
             selftest_env,
             selftest_write,
             selftest_exit,
+            local_voice_status,
+            local_voice_download,
+            local_voice_transcribe,
+            local_voice_poll,
+            local_voice_cancel,
             local_models_discover,
             local_models_hardware,
             local_models_start,

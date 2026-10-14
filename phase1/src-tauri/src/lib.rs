@@ -37,6 +37,7 @@ pub mod github_account;
 
 pub mod provider_transport;
 pub mod local_models;
+pub mod local_voice;
 pub mod local_hardware;
 #[cfg(feature = "desktop")]
 pub mod local_model_actions;
