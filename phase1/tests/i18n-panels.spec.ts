@@ -22,13 +22,13 @@ test('panels translate live without changing selection, CSS properties, or accor
  await expect(page.locator('[data-context-section="typography"]')).not.toHaveAttribute('open');
  await locale(page,'de');
  await page.screenshot({path:'/tmp/panels-inspector-de.png',fullPage:true});
- await page.getByRole('button',{name:'Files panel',exact:true}).click();
+ await page.locator('[data-rail-item="files"]').click();
  await expect(page.getByRole('navigation',{name:'Projektdateien'})).toBeVisible();
  await page.getByRole('button',{name:'Neue Datei',exact:true}).click();
  await page.getByLabel('Dateipfad').fill('de-test.html');
  await page.getByRole('button',{name:'Erstellen',exact:true}).click();
  await expect(page.getByRole('button',{name:'de-test.html öffnen',exact:true})).toBeVisible();
- await page.getByRole('button',{name:'CSS panel',exact:true}).click();
+ await page.locator('[data-rail-item="css"]').click();
  await expect(page.getByRole('tab',{name:/^Variablen/})).toBeVisible();
  await page.getByRole('tab',{name:'Responsiv',exact:true}).click();
  await expect(page.getByLabel('Responsiver Bearbeitungsbereich')).toBeVisible();
@@ -38,7 +38,7 @@ test('panels translate live without changing selection, CSS properties, or accor
 
 test('German search plurals and replacement confirmation retain file names',async({page})=>{
  await page.goto('/');await locale(page,'de');
- await page.getByRole('button',{name:'Search panel',exact:true}).click();
+ await page.locator('[data-rail-item="search"]').click();
  await page.getByLabel('Projekt durchsuchen',{exact:true}).fill('Somnia');
  await expect(page.getByTestId('search-summary')).toContainText('1 Treffer in 1 Datei');
  await page.getByLabel('Ersetzen durch',{exact:true}).fill('Test');
@@ -52,7 +52,7 @@ test('German search plurals and replacement confirmation retain file names',asyn
 test('German component library labels, placeholders and user names',async({page})=>{
  await page.goto('/');await locale(page,'de');
  await page.getByRole('button',{name:'section',exact:true}).first().click();
- await page.getByRole('button',{name:'Components panel',exact:true}).click();
+ await page.locator('[data-rail-item="components"]').click();
  await page.getByRole('button',{name:'Auswahl speichern',exact:true}).click();
  await page.getByLabel('Komponentenname').fill('User name');
  await page.getByRole('button',{name:'Speichern',exact:true}).click();
