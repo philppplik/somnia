@@ -1,3 +1,4 @@
+import {captureDocumentSelection} from './selectionCapture';
 import {caretAfterEdit,diffEdit,inverseOf,UndoStack,type TextEdit,type UndoEntry} from './edit';
 import {stepBoundary,utf16ToUtf8Offset,utf8ToUtf16Offset,wordBoundary} from './text';
 import {getDocumentsState,patchDocuments,resetDocuments,INITIAL_VIEW,type Caret,type DocumentsState} from './store';
@@ -10,14 +11,14 @@ const flags=()=>({canUndo:undo.canUndo,canRedo:undo.canRedo});
 /* ---- Per-file sessions: a file keeps its engine, undo history and dirty flag while the studio or tab is switched away. ---- */
 const STASH=['blocks','pages','pageSizes','words','rev','canUndo','canRedo','edited','caret','risks','engineMs','editError','notice'] as const;
 interface Entry{key:string;url:string;engine:DocumentsEngine|null;undo:UndoStack;stash:Partial<DocumentsState>;working:Uint8Array|null;dirty:boolean;used:number;undoReleased:boolean}
-const entries=new Map<string,Entry>();let cur:Entry|null=null;let gen=0;let tick=0;
+const entries=new Map<string,Entry>();let cur:Entry|null=null;let gen=0;let tick=0;let identity:string|null=null;
 export const MAX_LIVE_SESSIONS=4;
 export interface SessionDeps{createEngine:()=>DocumentsEngine;loadBytes:(url:string)=>Promise<Uint8Array>}
 const defaultDeps:SessionDeps={createEngine:()=>new DocumentsEngine(),loadBytes:async url=>new Uint8Array(await(await fetch(url)).arrayBuffer())};
 let deps=defaultDeps;
 export const setSessionDeps=(d:Partial<SessionDeps>|null)=>{deps=d?{...defaultDeps,...d}:defaultDeps;};
 /** Test hook: forget every session without touching engines. */
-export function resetSessionsForTest(){for(const e of entries.values())e.engine?.dispose();entries.clear();cur=null;engine=null;undo=new UndoStack();chain=Promise.resolve();pending=0;gen=0;goalX=null;}
+export function resetSessionsForTest(){for(const e of entries.values())e.engine?.dispose?.();entries.clear();cur=null;engine=null;undo=new UndoStack();chain=Promise.resolve();pending=0;gen=0;goalX=null;}
 const live=(e:Entry)=>!!e.engine&&!e.engine.isDisposed;
 const msg=(err:unknown)=>err instanceof Error?err.message:String(err);
 /** Queue a task behind every pending edit, so a switch never overtakes an edit that was already accepted. */
@@ -34,7 +35,7 @@ function stashCurrent(){
 }
 /** Drops a file's session (the file was closed or replaced). Synchronous, so close cleanups can call it. */
 export function discardDocument(key:string){
- const e=entries.get(key);if(!e)return;entries.delete(key);e.engine?.dispose();e.engine=null;
+ const e=entries.get(key);if(!e)return;entries.delete(key);e.engine?.dispose?.();e.engine=null;
  if(cur===e){cur=null;engine=null;undo=new UndoStack();}
 }
 async function evictExtra(){
@@ -46,7 +47,7 @@ async function evictExtra(){
    catch{victim.used=++tick;if(liveEntries().length>MAX_LIVE_SESSIONS+4)return;continue;}
    victim.undoReleased=true;
   }
-  victim.engine!.dispose();victim.engine=null;victim.undo=new UndoStack();
+  victim.engine!.dispose?.();victim.engine=null;victim.undo=new UndoStack();
  }
 }
 /**
@@ -58,14 +59,14 @@ export function switchDocument(target:{key:string;url:string;retry?:boolean}|nul
  const my=++gen;
  return queue(async()=>{
   if(my!==gen)return null;
-  stashCurrent();cur=null;engine=null;undo=new UndoStack();goalX=null;
+  stashCurrent();cur=null;engine=null;undo=new UndoStack();goalX=null;identity=null;
   if(!target){resetDocuments();return null;}
   let entry=entries.get(target.key);
   if(entry&&entry.url!==target.url){discardDocument(target.key);entry=undefined;}
   patchDocuments({...INITIAL_VIEW,status:'loading',name:target.key,error:''});
   try{
    if(entry&&live(entry)&&!target.retry){
-    cur=entry;engine=entry.engine;undo=entry.undo;entry.used=++tick;
+    cur=entry;engine=entry.engine;undo=entry.undo;entry.used=++tick;identity=target.key;
     patchDocuments({...entry.stash,status:'ready',name:target.key,error:'',rev:getDocumentsState().rev+1,...flags()});return entry.engine;
    }
    let lost=false;
@@ -78,7 +79,7 @@ export function switchDocument(target:{key:string;url:string;retry?:boolean}|nul
     if(my!==gen){e.dispose();return null;}
     const fresh:Entry={key:target.key,url:target.url,engine:e,undo:new UndoStack(),stash:{},working:null,dirty:false,used:++tick,undoReleased:false};
     const restored=!!entry?.working;if(entry&&!live(entry))entries.delete(target.key);else if(entry)discardDocument(target.key);
-    entries.set(target.key,fresh);cur=fresh;engine=e;undo=fresh.undo;
+    entries.set(target.key,fresh);cur=fresh;engine=e;undo=fresh.undo;identity=target.key;
     const notice=lost?'lost':restored&&entry!.undoReleased?'undoReleased':'';
     patchDocuments({...INITIAL_VIEW,status:'loading',name:target.key,error:'',risks:check.risks,engineMs:Math.round(d.openMs+d.layoutMs),edited:restored,notice,...flags()});
     await refresh(d);
@@ -92,12 +93,12 @@ export function switchDocument(target:{key:string;url:string;retry?:boolean}|nul
  });
 }
 /** Hands over an already open engine as the current document, synchronously (tests and callers that open the engine themselves). Null closes the current document. */
-export function attachEngine(e:DocumentsEngine|null,key='document'){
- if(!e){void switchDocument(null);return;}
- ++gen;stashCurrent();if(entries.get(key)?.engine!==e)discardDocument(key);
- const en:Entry={key,url:key,engine:e,undo:new UndoStack(),stash:{},working:null,dirty:false,used:++tick,undoReleased:false};
- entries.set(key,en);cur=en;engine=e;undo=en.undo;chain=Promise.resolve();goalX=null;
- patchDocuments({...INITIAL_VIEW,name:key,...flags(),editError:'',edited:false,notice:''});
+export function attachEngine(e:DocumentsEngine|null,key?:string){
+ if(!e){identity=null;void switchDocument(null);return;}
+ ++gen;stashCurrent();const k=key??'document';if(entries.get(k)?.engine!==e)discardDocument(k);
+ const en:Entry={key:k,url:k,engine:e,undo:new UndoStack(),stash:{},working:null,dirty:false,used:++tick,undoReleased:false};
+ entries.set(k,en);cur=en;engine=e;undo=en.undo;chain=Promise.resolve();goalX=null;identity=key??null;
+ patchDocuments({...INITIAL_VIEW,name:k,...flags(),editError:'',edited:false,notice:''});
 }
 async function refresh(d:{pages:number;pageSizes:readonly {width:number;height:number}[];text:string}){
  const blocks=await engine!.blocks();
@@ -295,3 +296,7 @@ async function joinAtEdge(block:number,t:string,dir:-1|1){
  if(dir<0)await structural(e=>e.merge(block),{block,off:0},{block:block-1,off:u8(nb.text!)});
  else await structural(e=>e.merge(block+1),{block,off:u8(t)},{block,off:u8(t)});
 }
+
+/** No identity supplied at attachment means capture stays unavailable. */
+export const captureCurrentDocumentSelection=()=>captureDocumentSelection(getDocumentsState(),engine&&identity?{generation:gen,identity}:null);
+export function detachEngineIfCurrent(e:DocumentsEngine){if(engine===e)attachEngine(null);}
