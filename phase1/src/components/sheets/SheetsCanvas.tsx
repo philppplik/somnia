@@ -135,7 +135,7 @@ function Workbook({item}:{item:MediaItem}){
   if(draftRef.current!==null)await commit(draftRef.current);
   if(!formatRectOk(rectCells(range)))throw Error('Selection is too large to format.');
   const sent:FormatOp=op.kind==='decimals'?{...op,at:{row:sel.row,col:sel.col}}:op;
-  try{await engine.current!.format(sheet,range.r0,range.c0,range.r1-range.r0+1,range.c1-range.c0+1,sent);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
+  try{if(!await collabEdit((b,id)=>b.applyLocalFormat(id,range.r0,range.c0,range.r1,range.c1,sent)))await engine.current!.format(sheet,range.r0,range.c0,range.r1-range.r0+1,range.c1-range.c0+1,sent);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
  // Row/column sizing acts on whole lines spanned by the selection; the layout reloads through `rev`.
  const applyLines=async(axis:LineAxis,op:LineOp)=>{
   if(draftRef.current!==null)await commit(draftRef.current);

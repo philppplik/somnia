@@ -91,3 +91,21 @@ test('per-person undo: my edits revert, the peer keeps theirs',async()=>{
  await flush();
  assert.equal(openSheetsModel(a,'f.xlsx').cells.get(id+'!0:0'),'mine');
  bA.destroy();bB.destroy();});
+
+test('format journal: local op reaches the peer engine once, garbage entries are dropped',async()=>{
+ const a=mk(),b=mk();
+ a.on('update',(u:Uint8Array)=>Y.applyUpdate(b,u));b.on('update',(u:Uint8Array)=>Y.applyUpdate(a,u));
+ const mA=seedSheetsModel(a,'f.xlsx',H);syncSharedSheets(mA,['S1'],'seed');
+ const got:string[]=[];
+ const engB={set:async()=>{},format:async(_s:number,r:number,c:number,rs:number,cs:number,op:unknown)=>{got.push(`${r}:${c}:${rs}x${cs}:${(op as {kind:string}).kind}`);}};
+ const bA=new SheetsCollabBinding(a,'f.xlsx',{engine:{set:async()=>{},format:async()=>{}},sheetIndexOf:()=>0});
+ new SheetsCollabBinding(b,'f.xlsx',{engine:engB,sheetIndexOf:()=>0});
+ const id=sharedSheetList(openSheetsModel(a,'f.xlsx'))[0].id;
+ await bA.applyLocalFormat(id,1,2,3,4,{kind:'bold',on:true});
+ await flush();
+ assert.deepEqual(got,['1:2:3x3:bold']);            // r1/c1 are inclusive: 1..3 x 2..4
+ assert.equal(openSheetsModel(b,'f.xlsx').formats.length,1);
+ openSheetsModel(b,'f.xlsx').formats.push([{sheetId:id,r0:'x'},null,'junk']);   // remote garbage
+ await flush();
+ assert.equal(got.length,1);                          // nothing reached the engine
+ bA.destroy();});

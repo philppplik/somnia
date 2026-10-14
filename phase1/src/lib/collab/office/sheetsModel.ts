@@ -22,6 +22,8 @@ export interface SheetsModel{
  readonly sheets:Y.Array<Y.Map<unknown>>;
  readonly cells:Y.Map<string>;
  readonly styles:Y.Map<string>;
+ /** LWW journal of formatting ops (concept 3.2): peers append, everyone applies in arrival order. */
+ readonly formats:Y.Array<unknown>;
 }
 const root=(doc:Y.Doc,path:string)=>{assertSafeProjectPath(path);return doc.getMap<unknown>(`office/${path}`);};
 
@@ -35,12 +37,15 @@ export function seedSheetsModel(doc:Y.Doc,path:string,baseHash:string):SheetsMod
   if(!r.get('sheets'))r.set('sheets',new Y.Array<Y.Map<unknown>>());
   if(!r.get('cells'))r.set('cells',new Y.Map<string>());
   if(!r.get('styles'))r.set('styles',new Y.Map<string>());
+  if(!r.get('formats'))r.set('formats',new Y.Array<unknown>());
  },'sheets-model-seed');
  return openSheetsModel(doc,path);
 }
 export function openSheetsModel(doc:Y.Doc,path:string):SheetsModel{
  const r=root(doc,path);
- return{doc,meta:r.get('meta') as Y.Map<unknown>,sheets:r.get('sheets') as Y.Array<Y.Map<unknown>>,cells:r.get('cells') as Y.Map<string>,styles:r.get('styles') as Y.Map<string>};
+ if(sheetsModelMeta({doc,meta:r.get('meta') as Y.Map<unknown>}as SheetsModel)&&!r.get('formats'))
+  doc.transact(()=>{if(!r.get('formats'))r.set('formats',new Y.Array<unknown>());},'sheets-model-seed');   // models stamped before the format log existed
+ return{doc,meta:r.get('meta') as Y.Map<unknown>,sheets:r.get('sheets') as Y.Array<Y.Map<unknown>>,cells:r.get('cells') as Y.Map<string>,styles:r.get('styles') as Y.Map<string>,formats:r.get('formats') as Y.Array<unknown>};
 }
 export function sheetsModelMeta(m:SheetsModel):SheetsSharedMeta|null{
  if(!m.meta)return null;
