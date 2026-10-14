@@ -1059,5 +1059,8 @@
  "animation.export.problem.blur": "Motion blur must be off or high.",
  "animation.export.selectedOnly": "Selected layers only",
  "animation.export.selectedOnly.hint": "Exports only the layers selected when the export starts. Parents and mattes still work.",
- "animation.export.problem.selectedOnly": "Selected layers only must be on or off."
+ "animation.export.problem.selectedOnly": "Selected layers only must be on or off.",
+ "animation.export.loopSeam": "Seamless loop",
+ "animation.export.loopSeam.hint": "GIF and APNG: leaves out the last frame when it is identical to the first, so the loop does not pause there.",
+ "animation.export.problem.loopSeam": "Seamless loop must be on or off."
 }

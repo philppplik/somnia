@@ -1059,5 +1059,8 @@
  "animation.export.problem.blur": "O desfoque de movimento deve ser desligado ou alto.",
  "animation.export.selectedOnly": "Somente camadas selecionadas",
  "animation.export.selectedOnly.hint": "Exporta só as camadas selecionadas ao iniciar. Pais e mattes continuam funcionando.",
- "animation.export.problem.selectedOnly": "“Somente camadas selecionadas” deve estar ligado ou desligado."
+ "animation.export.problem.selectedOnly": "“Somente camadas selecionadas” deve estar ligado ou desligado.",
+ "animation.export.loopSeam": "Loop sem emenda",
+ "animation.export.loopSeam.hint": "GIF e APNG: omite o último quadro se for idêntico ao primeiro, para o loop não parar ali.",
+ "animation.export.problem.loopSeam": "“Loop sem emenda” deve estar ligado ou desligado."
 }

@@ -914,3 +914,17 @@ test('P212 export selected layers only: hides the others in the output, keeps pa
  assert.throws(()=>setExportSettings({selectedOnly:'yes' as never}),(e:any)=>e.code==='unsupported');assert.deepEqual(settingsProblems({...defaultExportSettings(),selectedOnly:true}),[]);
  resetExportSettings();
 });
+
+test('P213 seamless loop export: drops a last frame identical to the first in APNG and GIF, never a short clip, default unchanged',async()=>{
+ const {exportApng,exportGif,setExportSettings,resetExportSettings,resetExport}=await import('./exportJob');const {withoutLoopSeam,settingsProblems,defaultExportSettings}=await import('./exportSettings');
+ assert.deepEqual(withoutLoopSeam([1,2,1],(a,b)=>a===b),[1,2]);assert.deepEqual(withoutLoopSeam([1,2,3],(a,b)=>a===b),[1,2,3]);assert.deepEqual(withoutLoopSeam([1,1],(a,b)=>a===b),[1,1]);assert.deepEqual(withoutLoopSeam([7],(a,b)=>a===b),[7]);
+ const s=open();setAnimationSession(s);s.dispatch({type:'workarea.set',in:0,out:f(4)});resetExport();resetExportSettings();
+ const {encodePngRgba}=await import('./spriteSheet');const frames=(b:Blob)=>b.arrayBuffer().then(x=>(Buffer.from(x).toString('latin1').match(/fcTL/g)||[]).length);
+ const run=async(on:boolean)=>{resetExportSettings();setExportSettings({loopSeam:on});let n=0;const out:Blob[]=[];const rasterize=async()=>{const i=n++;return encodePngRgba(1,1,new Uint8ClampedArray([i===3?0:i*40,0,0,255]));};
+  const pix=async(_s:string,w:number,h:number)=>{const px=new Uint8ClampedArray(w*h*4);return px;};
+  await exportApng({rasterize,save:b=>{out.push(b);}});return frames(out[0]);};
+ const off=await run(false),on=await run(true);assert.equal(on,off-1);
+ const gif=async(on:boolean)=>{resetExportSettings();setExportSettings({loopSeam:on});let n=0;const out:Blob[]=[];const pixels=async(_s:string,w:number,h:number)=>{const i=n++;const px=new Uint8ClampedArray(w*h*4);px.fill(i===3?0:i*40,0,16);return px;};await exportGif({pixels,save:b=>{out.push(b);}});return out[0].size;};
+ assert.ok(await gif(true)<await gif(false));
+ assert.throws(()=>setExportSettings({loopSeam:1 as never}),(e:any)=>e.code==='unsupported');assert.deepEqual(settingsProblems({...defaultExportSettings(),loopSeam:true}),[]);resetExportSettings();
+});

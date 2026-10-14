@@ -1059,5 +1059,8 @@
  "animation.export.problem.blur": "El desenfoque de movimiento debe estar desactivado o en alto.",
  "animation.export.selectedOnly": "Solo capas seleccionadas",
  "animation.export.selectedOnly.hint": "Exporta solo las capas seleccionadas al empezar. Los padres y las mates siguen funcionando.",
- "animation.export.problem.selectedOnly": "«Solo capas seleccionadas» debe estar activado o desactivado."
+ "animation.export.problem.selectedOnly": "«Solo capas seleccionadas» debe estar activado o desactivado.",
+ "animation.export.loopSeam": "Bucle sin corte",
+ "animation.export.loopSeam.hint": "GIF y APNG: omite el último fotograma si es idéntico al primero, para que el bucle no se detenga ahí.",
+ "animation.export.problem.loopSeam": "«Bucle sin corte» debe estar activado o desactivado."
 }

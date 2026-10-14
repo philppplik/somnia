@@ -6,7 +6,7 @@ import {recordWebm} from './exportVideo';
 import {browserAudioContext} from './audioPreview';
 import {findComp,type Layer} from './model';
 import {layerSetIds} from './layerSet';
-import {defaultExportSettings,exportPlan,problemMessage,settingsProblems,EXPORT_PRESETS,EXPORT_LIMITS,DEFAULT_FRAME_QUALITY,webmBitrate,type ExportFormat,type ExportSettings} from './exportSettings';
+import {defaultExportSettings,exportPlan,problemMessage,settingsProblems,EXPORT_PRESETS,EXPORT_LIMITS,withoutLoopSeam,DEFAULT_FRAME_QUALITY,webmBitrate,type ExportFormat,type ExportSettings} from './exportSettings';
 import {animationSession} from './session';
 import {exportFrameSvg} from './exportSvg';
 import {Zip,ZipPassThrough,strToU8} from 'fflate';
@@ -111,12 +111,13 @@ export function exportGif(d:Deps={}){
  return guarded('gif',async signal=>{
   const plan=sequencePlan(comp);
   if(plan.length>GIF_MAX_FRAMES)throw new ExportError(`A GIF is limited to ${GIF_MAX_FRAMES} frames. Shorten the work area.`,'too-many');
-  const pixels=d.pixels??canvasPixels;const frames:GifFrame[]=[];
+  const pixels=d.pixels??canvasPixels;let frames:GifFrame[]=[];
   for(let i=0;i<plan.length;i++){
    if(signal.aborted)throw new ExportError('Export cancelled.','cancelled');
    frames.push({pixels:await pixels(frameSvg(comp,plan[i].tick,false,doc.assets),out.width,out.height),delayCs:100*comp.fps.den/comp.fps.num});
    set({done:i+1,total:plan.length});
   }
+  if(state.settings.loopSeam)frames=withoutLoopSeam(frames,(a,b)=>a.pixels.length===b.pixels.length&&a.pixels.every((v,i)=>v===b.pixels[i]));
   return {blob:new Blob([encodeGif(out.width,out.height,frames,state.settings.loop!==false,state.settings.dither===true,state.settings.colors??256) as unknown as BlobPart],{type:'image/gif'}),fileName:`${exportSlug(doc.name)}.gif`};
  },d.save??downloadBlob);
 }
@@ -125,12 +126,13 @@ export function exportApng(d:Deps={}){
  const {doc,out,ec:comp}=target('apng');
  return guarded('apng',async signal=>{
   const plan=sequencePlan(comp);
-  const rasterize=d.rasterize??canvasRasterize;const frames:Uint8Array[]=[];
+  const rasterize=d.rasterize??canvasRasterize;let frames:Uint8Array[]=[];
   for(let i=0;i<plan.length;i++){
    if(signal.aborted)throw new ExportError('Export cancelled.','cancelled');
    frames.push(await rasterize(frameSvg(comp,plan[i].tick,state.transparent,doc.assets),out.width,out.height));
    set({done:i+1,total:plan.length});
   }
+  if(state.settings.loopSeam)frames=withoutLoopSeam(frames,(a,b)=>a.length===b.length&&a.every((v,i)=>v===b[i]));
   return {blob:new Blob([encodeApng(frames,{delayNum:comp.fps.den,delayDen:comp.fps.num,loop:state.settings.loop!==false}) as unknown as BlobPart],{type:'image/apng'}),fileName:`${exportSlug(doc.name)}.apng`};
  },d.save??downloadBlob);
 }

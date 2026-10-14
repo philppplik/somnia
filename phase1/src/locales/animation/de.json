@@ -1059,5 +1059,8 @@
  "animation.export.problem.blur": "Bewegungsunschärfe muss aus oder hoch sein.",
  "animation.export.selectedOnly": "Nur gewählte Ebenen",
  "animation.export.selectedOnly.hint": "Exportiert nur die beim Start gewählten Ebenen. Eltern und Masken wirken weiter.",
- "animation.export.problem.selectedOnly": "„Nur gewählte Ebenen“ muss an oder aus sein."
+ "animation.export.problem.selectedOnly": "„Nur gewählte Ebenen“ muss an oder aus sein.",
+ "animation.export.loopSeam": "Nahtlose Schleife",
+ "animation.export.loopSeam.hint": "GIF und APNG: lässt das letzte Bild weg, wenn es dem ersten gleicht, damit die Schleife dort nicht stockt.",
+ "animation.export.problem.loopSeam": "„Nahtlose Schleife“ muss an oder aus sein."
 }
