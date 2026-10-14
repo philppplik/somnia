@@ -183,3 +183,11 @@ test('distribute makes the gaps equal and keeps the outer objects',()=>{
  stage.undo();assert.equal(b.position.x,1);
  assert.throws(()=>stage.distribute([a.id,b.id],'x'),StageError);
 });
+test('light shadows: toggle, undo, info, and area lights refuse',()=>{
+ const stage=new Stage();const d=stage.addLight('directional');const a=stage.addLight('area');const sp=stage.addLight('spot');
+ assert.equal(stage.info(d.id)!.light!.shadow,false);assert.equal(stage.info(a.id)!.light!.shadow,undefined);
+ stage.setLight(d.id,{shadow:true});assert.equal(d.castShadow,true);assert.equal(stage.info(d.id)!.light!.shadow,true);
+ stage.undo();assert.equal(d.castShadow,false);stage.redo();assert.equal(d.castShadow,true);
+ stage.setLight(sp.id,{shadow:true,intensity:50});assert.equal(sp.castShadow,true);assert.equal(sp.intensity,50);
+ assert.throws(()=>stage.setLight(a.id,{shadow:true}),StageError);assert.throws(()=>stage.setLight(d.id,{shadow:'yes' as never}),StageError);
+});
