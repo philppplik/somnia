@@ -17,7 +17,7 @@ import {Button} from '../ui/button';
 import {NativeInput,NativeSelect} from '../ui/native-controls';
 import {InspectorNumberField} from '../studios/InspectorNumberField';
 import {PARAM_SPECS,MATERIAL_PRESETS} from '../../lib/studio3d/primitives';
-import {ALPHA_MODES,TEXTURE_SLOTS,MAX_EMISSIVE_INTENSITY} from '../../lib/studio3d/materials';
+import {ALPHA_MODES,TEXTURE_SLOTS,MAX_EMISSIVE_INTENSITY,materialSwatch} from '../../lib/studio3d/materials';
 import {validateScene,toMB} from '../../lib/studio3d/validate';
 import {ClipTimeline} from './ClipTimeline';
 import {SPEEDS,formatClock} from '../../lib/studio3d/animation';
@@ -151,6 +151,13 @@ export function ObjectSection(_:InspectorSectionProps){
    <div className="grid grid-cols-2 gap-2">{PARAM_SPECS[o.primitive.kind].map(sp=><NumField key={sp.id} label={t('studio3d.shape.'+sp.id)} value={o.primitive!.params[sp.id]} min={sp.min} max={sp.max} step={sp.step}
     onCommit={v=>void executeCommand('studio3d.object.primitive',{id:o.id,[sp.id]:sp.integer?Math.round(v):v})}/>)}</div></fieldset>}
   {o.material&&<fieldset className="m-0 grid gap-2 border-0 p-0" data-testid="studio3d-material"><legend className="text-xs text-ink-3">{t('studio3d.material.title')}</legend>
+   <svg data-testid="studio3d-material-swatch" role="img" aria-label={t('studio3d.material.swatch')} width="32" height="32" viewBox="0 0 32 32" className="rounded-full border border-subtle">
+    {(()=>{const sw=materialSwatch(o.material!);return <>
+     <circle cx="16" cy="16" r="15" fill={sw.base}/>
+     {sw.glow&&<circle cx="16" cy="16" r="15" fill={sw.glow.color} opacity={sw.glow.opacity}/>}
+     <circle cx="11" cy="10" r={sw.highlight.r} fill={sw.highlight.color} opacity={sw.highlight.opacity}/>
+    </>;})()}
+   </svg>
    <div className="flex flex-wrap gap-1" role="group" aria-label={t('studio3d.material.presets')} data-testid="studio3d-material-presets">{MATERIAL_PRESETS.map(p=><Button key={p.id} variant="outline" onClick={()=>void executeCommand('studio3d.object.material',{id:o.id,preset:p.id})}>{t('studio3d.material.preset.'+p.id)}</Button>)}</div>
    <MaterialUserPresets id={o.id}/>
    <div className="flex gap-1" data-testid="studio3d-material-copy-paste">

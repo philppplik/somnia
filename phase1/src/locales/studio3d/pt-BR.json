@@ -590,5 +590,7 @@
  "cmd.studio3d.pivot.set": "Definir o pivô de transformação 3D",
  "cmd.studio3d.cursor.set": "Mover o cursor 3D",
  "cmd.studio3d.measure.set": "Alternar a ferramenta de medição 3D",
- "cmd.studio3d.object.reorder": "Mover objetos 3D para ao lado de um irmão no esquema"
+ "cmd.studio3d.object.reorder": "Mover objetos 3D para ao lado de um irmão no esquema",
+ "studio3d.material.preset.emissive": "Emissivo",
+ "studio3d.material.swatch": "Prévia do material"
 }

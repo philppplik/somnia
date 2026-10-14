@@ -1,6 +1,7 @@
+import {MATERIAL_PRESETS,MATERIAL_PRESET_IDS} from './primitives';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {checkPbr,alphaState,alphaModeOf,inspectImage,MaterialError,MAX_TEXTURE_DIM,MAX_TEXTURE_FILE_BYTES,SLOT_CONFIG,TEXTURE_SLOTS} from './materials';
+import {materialSwatch,checkPbr,alphaState,alphaModeOf,inspectImage,MaterialError,MAX_TEXTURE_DIM,MAX_TEXTURE_FILE_BYTES,SLOT_CONFIG,TEXTURE_SLOTS} from './materials';
 import {VIEW_PRESETS,viewDirection,RENDER_SIZES} from './viewPresets';
 const png=(w:number,h:number)=>{const b=new Uint8Array(33);b.set([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a],0);b.set([0,0,0,13,0x49,0x48,0x44,0x52],8);new DataView(b.buffer).setUint32(16,w);new DataView(b.buffer).setUint32(20,h);return b;};
 const jpeg=(w:number,h:number)=>{const b=new Uint8Array(30);b.set([0xff,0xd8,0xff,0xe0,0,4,0,0,0xff,0xc0,0,11,8],0);new DataView(b.buffer).setUint16(13,h);new DataView(b.buffer).setUint16(15,w);return b;};
@@ -44,4 +45,27 @@ test('view presets are unit vectors with distinct directions, and render sizes a
  const seen=new Set<string>();for(const p of VIEW_PRESETS){const d=viewDirection(p);assert.ok(Math.abs(Math.hypot(...d)-1)<1e-9,p);seen.add(d.map(n=>n.toFixed(3)).join());}
  assert.equal(seen.size,VIEW_PRESETS.length);assert.deepEqual(viewDirection('front'),[0,0,1]);assert.ok(viewDirection('top')[1]>0.999);assert.ok(viewDirection('bottom')[1]<-0.999);
  for(const r of RENDER_SIZES){assert.ok(r.width>0&&r.height>0&&r.width<=8192&&r.height<=8192);}
+});
+
+test('the emissive preset is parametric PBR: dark base with an emissive glow, no texture assets',()=>{
+ const p=MATERIAL_PRESETS.find(x=>x.id==='emissive');
+ assert.ok(p,'emissive preset exists');
+ assert.equal(p!.metalness,0);
+ assert.ok(p!.extras?.emissive&&p!.extras.emissive!=='#000000');
+ assert.ok((p!.extras?.emissiveIntensity??0)>0);
+ assert.ok(!('procedural' in p!)||!p!.procedural);
+ assert.ok(MATERIAL_PRESET_IDS.includes('emissive'));
+});
+test('materialSwatch reflects roughness, metalness and emissive without any render',()=>{
+ const matte=materialSwatch({color:'#b8bcc8',metalness:0,roughness:0.9});
+ const glossy=materialSwatch({color:'#b8bcc8',metalness:0,roughness:0.1});
+ assert.ok(glossy.highlight.opacity>matte.highlight.opacity,'smoother means a stronger highlight');
+ const metal=materialSwatch({color:'#c4c7cc',metalness:1,roughness:0.3});
+ assert.ok(metal.highlight.opacity>glossy.highlight.opacity,'metals get an extra kick');
+ assert.ok(metal.highlight.r<glossy.highlight.r,'metal highlight is tighter');
+ const plain=materialSwatch({color:'#14161c',metalness:0,roughness:0.5,emissive:'#000000',emissiveIntensity:0});
+ assert.equal(plain.glow,null);
+ const glow=materialSwatch({color:'#14161c',metalness:0,roughness:0.5,emissive:'#4fc3ff',emissiveIntensity:2});
+ assert.deepEqual(glow.glow,{color:'#4fc3ff',opacity:0.65});
+ assert.equal(glow.base,'#14161c');
 });

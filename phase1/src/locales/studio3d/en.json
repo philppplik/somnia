@@ -590,5 +590,7 @@
  "cmd.studio3d.pivot.set": "Set the 3D transform pivot",
  "cmd.studio3d.cursor.set": "Move the 3D cursor",
  "cmd.studio3d.measure.set": "Toggle the 3D measure tool",
- "cmd.studio3d.object.reorder": "Move 3D objects next to a sibling in the outline"
+ "cmd.studio3d.object.reorder": "Move 3D objects next to a sibling in the outline",
+ "studio3d.material.preset.emissive": "Emissive",
+ "studio3d.material.swatch": "Material preview"
 }

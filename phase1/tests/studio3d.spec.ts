@@ -1194,3 +1194,24 @@ test('3D studio outliner: drag reorder next to siblings with one undo',async({pa
  expect(await run(page,'studio3d.object.reorder',{ids:[a],target:a,where:'before'})).toBe(true);
  expect((await session(page)).outline.filter(o=>o.depth===1).map(o=>o.name)).toEqual(['Cone','Sphere']);
 });
+
+test('3D studio materials: emissive preset and inspector preview swatch',async({page})=>{
+ await blank(page);
+ const cube=await insert(page,'cube',0);
+ await run(page,'studio3d.select',{id:cube});
+ // The emissive preset applies a glowing PBR material in one undo step.
+ await page.getByTestId('studio3d-material-presets').getByRole('button',{name:'Emissive'}).click();
+ await expect.poll(async()=>(await session(page)).info?.material?.emissiveIntensity).toBe(2);
+ expect((await session(page)).info?.material?.emissive).toBe('#4fc3ff');
+ await run(page,'studio3d.undo');
+ await expect.poll(async()=>(await session(page)).info?.material?.emissiveIntensity).not.toBe(2);
+ // The swatch mirrors the current material.
+ await expect(page.getByTestId('studio3d-material-swatch')).toBeVisible();
+ // Copy/paste still round-trips materials between objects (regression guard for the row).
+ const ball=await insert(page,'sphere',2);
+ await run(page,'studio3d.select',{id:cube});
+ await page.getByTestId('studio3d-material-copy-paste').getByRole('button',{name:'Copy'}).click();
+ await run(page,'studio3d.select',{id:ball});
+ await page.getByTestId('studio3d-material-copy-paste').getByRole('button',{name:'Paste'}).click();
+ expect((await session(page)).info?.material?.color).toBe('#b8bcc8');
+});

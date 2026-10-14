@@ -68,6 +68,7 @@ export const MATERIAL_PRESETS:readonly MaterialPreset[]=[
  {id:'brushed',color:'#a9adb3',metalness:1,roughness:0.55},
  {id:'glass',color:'#dfe9f2',metalness:0,roughness:0.06,extras:{opacity:0.28,alphaMode:'blend',doubleSided:true}},
  {id:'wood',color:'#8a5a33',metalness:0,roughness:0.7,procedural:'wood'},
+ {id:'emissive',color:'#14161c',metalness:0,roughness:0.5,extras:{emissive:'#4fc3ff',emissiveIntensity:2}},
 ];
 export const MATERIAL_PRESET_IDS=MATERIAL_PRESETS.map(p=>p.id);
 export interface MaterialRequest{preset?:string;color?:string;metalness?:number;roughness?:number}

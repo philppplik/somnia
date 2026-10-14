@@ -8,6 +8,22 @@ export interface PbrExtras{emissive?:string;emissiveIntensity?:number;opacity?:n
 export class MaterialError extends Error{constructor(message:string){super(message);this.name='MaterialError';}}
 const HEX=/^#[0-9a-fA-F]{6}$/;
 export const MAX_EMISSIVE_INTENSITY=20;
+/**
+ * Layer model for the inspector material swatch, computed from the PBR values alone (no render, no assets):
+ * the base colour, a roughness-driven highlight (tinted white on dielectrics, smaller and brighter on metals)
+ * and a glow layer while emissive is on. The panel draws it as SVG, so no inline styles are needed.
+ */
+export interface MaterialSwatch{base:string;highlight:{color:string;opacity:number;r:number};glow:{color:string;opacity:number}|null}
+export function materialSwatch(m:{color:string;metalness:number;roughness:number;emissive?:string;emissiveIntensity?:number}):MaterialSwatch{
+ const rough=Math.min(1,Math.max(0,m.roughness));
+ const metal=Math.min(1,Math.max(0,m.metalness));
+ const glowOn=!!m.emissive&&(m.emissiveIntensity??0)>0&&m.emissive!.toLowerCase()!=='#000000';
+ return {
+  base:m.color,
+  highlight:{color:'#ffffff',opacity:Math.round((1-rough)*55+(metal>0.5?15:0))/100,r:metal>0.5?5:8},
+  glow:glowOn?{color:m.emissive!,opacity:Math.min(0.85,Math.round((0.35+(m.emissiveIntensity??0)*0.15)*100)/100)}:null,
+ };
+}
 /** Fallback emissive for a preset saved from a material that reports none. */
 export const DEFAULT_PRESET_EMISSIVE='#000000';
 const range=(v:unknown,min:number,max:number,what:string):number=>{
