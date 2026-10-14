@@ -22,3 +22,16 @@ test('guest adopts with identical bytes; any drift refuses honestly',async()=>{
  assert.deepEqual(bad,{ok:false,reason:'hash-mismatch'});
  assert.equal((await adoptSheetsFile(b,'other.xlsx',bytes(100))).ok===false,true);
 });
+
+test('slides share/adopt: hash verify, not-shared and mismatch',async()=>{
+ const{shareSlidesFile,adoptSlidesFile}=await import('./officeSession');
+ const a=mk(),b=mk();
+ a.on('update',(u:Uint8Array)=>Y.applyUpdate(b,u));
+ const bytes=new TextEncoder().encode('pptx-bytes');
+ const m=await shareSlidesFile(a,'deck.pptx',bytes);
+ assert.equal(m.ops.length,0);
+ assert.deepEqual(await adoptSlidesFile(b,'deck.pptx',bytes),{ok:true,model:(await adoptSlidesFile(b,'deck.pptx',bytes) as {model:unknown}).model});
+ const bad=await adoptSlidesFile(b,'deck.pptx',new TextEncoder().encode('other'));
+ assert.equal(bad.ok,false);if(!bad.ok)assert.equal(bad.reason,'hash-mismatch');
+ const missing=await adoptSlidesFile(b,'none.pptx',bytes);
+ assert.equal(missing.ok,false);if(!missing.ok)assert.equal(missing.reason,'not-shared');});
