@@ -416,5 +416,8 @@
  "animation.pathLayer.pen": "Plume",
  "animation.pathLayer.penHint": "Cliquez pour ajouter des points, glissez pour tirer les poignées, cliquez le premier point pour fermer, Échap pour terminer",
  "animation.pathLayer.close": "Fermer le tracé",
- "cmd.animation.layer.pen": "Activer ou désactiver la plume pour les calques de tracé"
+ "cmd.animation.layer.pen": "Activer ou désactiver la plume pour les calques de tracé",
+ "animation.pathLayer.smoothPoint": "Point lisse",
+ "animation.pathLayer.cornerPoint": "Point d'angle",
+ "animation.pathLayer.deletePoint": "Supprimer le point"
 }

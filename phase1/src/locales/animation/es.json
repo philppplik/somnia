@@ -416,5 +416,8 @@
  "animation.pathLayer.pen": "Pluma",
  "animation.pathLayer.penHint": "Clic para añadir puntos, arrastra para tirar de los tiradores, clic en el primer punto para cerrar, Esc para terminar",
  "animation.pathLayer.close": "Cerrar trazado",
- "cmd.animation.layer.pen": "Alternar la pluma para capas de trazado"
+ "cmd.animation.layer.pen": "Alternar la pluma para capas de trazado",
+ "animation.pathLayer.smoothPoint": "Punto suave",
+ "animation.pathLayer.cornerPoint": "Punto de esquina",
+ "animation.pathLayer.deletePoint": "Eliminar punto"
 }

@@ -416,5 +416,8 @@
  "animation.pathLayer.pen": "Pen",
  "animation.pathLayer.penHint": "Click to add points, drag to pull handles, click the first point to close, Esc to finish",
  "animation.pathLayer.close": "Close path",
- "cmd.animation.layer.pen": "Toggle the pen tool for path layers"
+ "cmd.animation.layer.pen": "Toggle the pen tool for path layers",
+ "animation.pathLayer.smoothPoint": "Smooth point",
+ "animation.pathLayer.cornerPoint": "Corner point",
+ "animation.pathLayer.deletePoint": "Delete point"
 }

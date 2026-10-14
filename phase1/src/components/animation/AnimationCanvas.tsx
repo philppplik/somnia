@@ -57,6 +57,7 @@ function animatedText(l:Layer,at:number){
  if(!spans)return shown;
  return spans.slice(0,Array.from(shown).length).map((c,i)=><tspan key={i} dx={c.dx} dy={c.dy} fontSize={(l.source.size??48)*c.scale} fillOpacity={c.opacity} rotate={c.rotate||undefined} fill={c.fill}>{c.ch}</tspan>);
 }
+const canClosePath=(l?:Layer)=>!!l&&l.kind==='shape'&&l.source.shape==='path'&&!!l.source.path;
 function layerNode(l:Layer,assets:readonly InterfaceAsset[],at:number,fillOverride?:string){
  const src=l.source;const fill=fillOverride??src.color;
  if(l.kind==='raster'){const asset=assets.find(a=>a.id===src.assetId);return asset?<image href={asset.data} width={src.width} height={src.height}/>:<text fill="var(--text-primary)">Missing image</text>;}
@@ -68,7 +69,7 @@ function layerNode(l:Layer,assets:readonly InterfaceAsset[],at:number,fillOverri
 }
 function Viewer({comp,at,selected,sel,assets}:{assets:readonly InterfaceAsset[];comp:Composition;at:number;selected:string|null;sel:readonly KeyRef[]}){
  const {t}=useT();const scene=useMemo(()=>sceneAt(comp,at),[comp,at]);const maskDefsHtml=useMemo(()=>maskDefs(comp,at,'preview-',(l,i)=>{try{return layerBody(l,i,assets,at,'preview-');}catch{return '';}}),[comp,at,assets]);
- const layer=comp.layers.find(l=>l.id===selected);const hasPos=!!layer&&layer.transform.position.keys.length>0;const penOn=useMaskSelection().layerPen;const canClose=!!layer&&layer.kind==='shape'&&layer.source.shape==='path'&&!!layer.source.path&&!layer.source.path.closed&&layer.source.path.points.length>=3&&!layer.source.pathKeys?.length;
+ const layer=comp.layers.find(l=>l.id===selected);const hasPos=!!layer&&layer.transform.position.keys.length>0;const msel=useMaskSelection(),penOn=msel.layerPen,lp=canClosePath(layer)&&msel.layerPoint?.layer===layer!.id?msel.layerPoint.i:null,lpt=lp!==null?layer!.source.path!.points[lp]:undefined;const canClose=canClosePath(layer)&&!layer!.source.path!.closed&&layer!.source.path!.points.length>=3&&!layer!.source.pathKeys?.length;
  const posSel=sel.filter(k=>k.layer===selected&&k.prop==='position');
  return <div className="relative grid min-h-[160px] flex-1 place-items-center overflow-hidden bg-hover p-3" data-testid="animation-viewer">
   <svg role="img" aria-label={t('animation.viewer')} viewBox={`0 0 ${comp.width} ${comp.height}`} className="max-h-full max-w-full h-full overflow-visible">
@@ -87,6 +88,8 @@ function Viewer({comp,at,selected,sel,assets}:{assets:readonly InterfaceAsset[];
   <div className="absolute left-2 top-2 flex gap-1" role="group" aria-label={t('animation.pathLayer.tools')}>
    <Button size="tiny" variant="outline" aria-pressed={penOn} disabled={!!layer?.locked} onClick={()=>void executeCommand('animation.layer.pen')} title={t('animation.pathLayer.penHint')} data-testid="animation-layerpen-toggle">{t('animation.pathLayer.pen')}</Button>
    <Button size="tiny" variant="outline" disabled={!canClose||!!layer?.locked} onClick={()=>void executeCommand('animation.layer.path',{layer:layer!.id,op:'close'})} data-testid="animation-layerpen-close">{t('animation.pathLayer.close')}</Button>
+   <Button size="tiny" variant="outline" disabled={!lpt||!!layer?.locked} onClick={()=>void executeCommand('animation.layer.path',{layer:layer!.id,op:'corner',index:lp!,smooth:lpt!.inX===undefined&&lpt!.outX===undefined})} data-testid="animation-pathpoint-smooth">{t(lpt&&(lpt.inX!==undefined||lpt.outX!==undefined)?'animation.pathLayer.cornerPoint':'animation.pathLayer.smoothPoint')}</Button>
+   <Button size="tiny" variant="outline" disabled={!lpt||!!layer?.locked} onClick={()=>void executeCommand('animation.layer.path',{layer:layer!.id,op:'remove',index:lp!})} data-testid="animation-pathpoint-delete">{t('animation.pathLayer.deletePoint')}</Button>
   </div>
   {hasPos&&<div className="absolute right-2 top-2 flex gap-1" role="group" aria-label={t('animation.path.label')}>
    <Button size="tiny" variant="outline" disabled={!posSel.length||!!layer?.locked} onClick={()=>void executeCommand('animation.keys.smooth')} data-testid="animation-path-smooth">{t('animation.path.smooth')}</Button>

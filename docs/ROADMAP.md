@@ -211,3 +211,9 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Implemented: canvas pen for path layers (click adds a point, drag pulls handles, click the first point or the Close button closes, Esc/Enter finishes, first click on empty selection creates the layer), dragging points and bezier handles of a selected path layer (keys at the playhead when animated, Alt breaks symmetry, arrow-key nudging), command `animation.layer.pen`, one undo per click or drag, five locales.
 - Validation: 3 new Animation unit tests (164 total), DS ratchet, ui-commands inventory (382), check:layers, isolated Chrome check with real pointer events (create, drag handle, close, Esc; undo steps counted: 6).
 - Not covered: no on-canvas point insert or delete, no outline drag to move the layer, pen points stay in the layer box. Playwright E2E is CI-only.
+
+### Animation P29 (2026-10-14, integration pending)
+
+- Implemented: click on the outline inserts a point, Alt-click or Delete removes the selected point, double-click or toolbar button toggles smooth and corner, dragging the outline moves the layer (parent-aware, keyed when position is animated); animated paths keep all keys in step; one undo per action; five locales.
+- Validation: 4 new Animation unit tests (168 total), DS ratchet, ui-commands inventory (382), check:layers, isolated Chrome check with real pointer and key events (insert, smooth, delete, move; undo steps counted).
+- Not covered: no multi-point selection, no segment drag, no insert while the pen is on. Playwright E2E is CI-only.

@@ -1,5 +1,7 @@
 import {findComp,findLayer,validSource,MAX_MASK_POINTS,MAX_SHAPE_KEYS,newId,makeTransform,type AnimationDocument,type Layer,type LayerMask,type MaskPath,type MaskPoint,type MaskShapeKey,type Property,type Vec2} from './model';
-import {bezierPath,lerpPath,morphPath,morphProblem,MorphError,type MorphOpts} from './masks';
+import {bezierPath,lerpPath,morphPath,morphProblem,MorphError,removePoint,type MorphOpts} from './masks';
+import {evaluate} from './interpolate';
+import {worldMatrix} from './scene';
 import {pathData} from '../interface/vectorCore';
 import type {InterfacePath} from '../interface/schema';
 import type {Edit} from './edit';
@@ -21,12 +23,40 @@ const clampH=(n:number)=>Math.min(2,Math.max(-2,r4(n)));
 const clamp01=(n:number)=>Math.min(1,Math.max(0,r4(n)));
 /** A pen point in normalized coordinates; a drag of at least 1% pulls symmetric handles. */
 const penPoint=(o:{x:number;y:number;outX?:number;outY?:number}):MaskPoint=>({x:clamp01(o.x),y:clamp01(o.y),...(o.outX!==undefined&&o.outY!==undefined&&Math.hypot(o.outX,o.outY)>=0.01?{outX:clampH(o.outX),outY:clampH(o.outY),inX:clampH(-o.outX),inY:clampH(-o.outY)}:{})});
+/** Splits the segment after point `i` at parameter `u` (de Casteljau); the curve keeps its shape. */
+export function splitAt(p:MaskPath,i:number,u:number):MaskPath{
+ const n=p.points.length,j=i+1<n?i+1:p.closed?0:-1;if(j<0)throw Error('The last point of an open path has no next segment.');
+ const t=Math.min(0.95,Math.max(0.05,u)),a=p.points[i],b=p.points[j],P:Vec2[]=[[a.x,a.y],[a.x+(a.outX??0),a.y+(a.outY??0)],[b.x+(b.inX??0),b.y+(b.inY??0)],[b.x,b.y]];
+ const mix=(x:Vec2,y:Vec2):Vec2=>[x[0]+(y[0]-x[0])*t,x[1]+(y[1]-x[1])*t],q0=mix(P[0],P[1]),q1=mix(P[1],P[2]),q2=mix(P[2],P[3]),r0=mix(q0,q1),r1=mix(q1,q2),m=mix(r0,r1);
+ const curved=a.outX!==undefined||b.inX!==undefined;
+ const na:MaskPoint=curved?{...a,outX:r4(q0[0]-a.x),outY:r4(q0[1]-a.y)}:a,nb:MaskPoint=curved?{...b,inX:r4(q2[0]-b.x),inY:r4(q2[1]-b.y)}:b;
+ const nm:MaskPoint=curved?{x:r4(m[0]),y:r4(m[1]),inX:r4(r0[0]-m[0]),inY:r4(r0[1]-m[1]),outX:r4(r1[0]-m[0]),outY:r4(r1[1]-m[1])}:{x:r4(a.x+(b.x-a.x)*t),y:r4(a.y+(b.y-a.y)*t)};
+ const pts=p.points.map((q,k)=>k===i?na:k===j?nb:q);pts.splice(i+1,0,nm);return {...p,points:pts};
+}
+/** Turns point `i` smooth (Catmull-Rom handles from its neighbours) or into a corner (no handles). Open path ends keep one handle. */
+export function cornerAt(p:MaskPath,i:number,smooth:boolean):MaskPath{
+ const n=p.points.length,q=p.points[i];
+ if(!smooth){const {inX:_a,inY:_b,outX:_c,outY:_d,...rest}=q;return {...p,points:p.points.map((x,k)=>k===i?rest:x)};}
+ const prev=p.points[p.closed?(i+n-1)%n:Math.max(0,i-1)],next=p.points[p.closed?(i+1)%n:Math.min(n-1,i+1)],hx=(next.x-prev.x)/6,hy=(next.y-prev.y)/6,first=!p.closed&&i===0,last=!p.closed&&i===n-1;
+ return {...p,points:p.points.map((x,k)=>k!==i?x:{x:q.x,y:q.y,...(first?{}:{inX:clampH(-hx),inY:clampH(-hy)}),...(last?{}:{outX:clampH(hx),outY:clampH(hy)})})};
+}
+/** Moves a path layer by (dx, dy) composition pixels: one position edit, keyed at `t` when the position is animated. The delta is mapped through the parent's matrix. */
+export function pathLayerMoveEdit(doc:AnimationDocument,layerId:string,dx:number,dy:number,t:number):Edit{
+ const {c,l}=target(doc,layerId);if(l.locked)throw Error('Layer is locked.');
+ const par=l.parent?findLayer(c,l.parent):undefined,m=par?worldMatrix(c,par,t):[1,0,0,1,0,0] as const,det=m[0]*m[3]-m[1]*m[2];
+ if(Math.abs(det)<1e-9)throw Error('The parent has no area.');
+ const px=(m[3]*dx-m[2]*dy)/det,py=(-m[1]*dx+m[0]*dy)/det,cur=evaluate(l.transform.position,t) as Vec2;
+ return {type:'prop.set',layer:l.id,prop:'position',value:[Math.round((cur[0]+px)*100)/100,Math.round((cur[1]+py)*100)/100],t};
+}
 export type PathLayerOp=
  |{op:'points';path:MaskPath}
  |{op:'animate';on:boolean;t?:number}
  |{op:'point';index:number;x:number;y:number;t?:number}
  |{op:'pen';x:number;y:number;outX?:number;outY?:number}
  |{op:'close'}
+ |{op:'insert';index:number;u?:number}
+ |{op:'remove';index:number}
+ |{op:'corner';index:number;smooth:boolean}
  |{op:'handle';index:number;which:'in'|'out';x:number;y:number;mirror?:boolean;t?:number}
  |{op:'morphTo';other:string;t:number;opts?:MorphOpts};
 const P=(key:string,en:string)=>new MorphError({key:`animation.morph.err.${key}`,en});
@@ -66,6 +96,13 @@ export function pathLayerEdit(doc:AnimationDocument,layerId:string,o:PathLayerOp
   case 'close':{
    if(keys?.length)throw Error('Remove the path animation before closing the path.');
    const cur=s.path as MaskPath;if(cur.closed||cur.points.length<3)throw Error('A closed path needs three points.');return upd({path:{...cur,closed:true}});}
+  case 'insert':case 'remove':case 'corner':{
+   const cap=keys?.length?MAX_MASK_POINTS:MAX_PEN_POINTS,cur=s.path as MaskPath;
+   if(!Number.isInteger(o.index)||!cur.points[o.index])throw Error('Point no longer exists.');
+   const f=o.op==='insert'?(p:MaskPath)=>{if(p.points.length>=cap)throw Error(`At most ${cap} path points.`);return splitAt(p,o.index,o.u??0.5);}
+    :o.op==='remove'?(p:MaskPath)=>{if(keys?.length&&p.points.length<=2)throw Error('An animated path needs two points.');return removePoint(p,o.index);}
+    :(p:MaskPath)=>cornerAt(p,o.index,o.smooth);
+   return upd({path:f(cur),...(keys?.length?{pathKeys:keys.map(k=>({...k,path:f(k.path)}))}:{})});}
   case 'handle':{
    const t=keys?.length?frame(o.t):undefined,cur=keys?.length?lerpPath(keys,t!):s.path as MaskPath;
    if(!Number.isInteger(o.index)||!cur.points[o.index])throw Error('Point no longer exists.');

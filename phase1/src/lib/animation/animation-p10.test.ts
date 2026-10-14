@@ -168,8 +168,8 @@ test('P12: box and point drags are single edits; handle maths is bounded',()=>{
 });
 test('P12: mask selection falls back to the first mask of the layer',()=>{
  const d=keyed();const l=layer(d,'photo');
- selectMask(null,null);assert.equal(activeMask(l,{layer:null,mask:null,point:null,pen:false,layerPen:false,clip:null,graph:null,mixed:false})!.id,'m');
- assert.equal(activeMask(l,{layer:'other',mask:'zzz',point:null,pen:false,layerPen:false,clip:null,graph:null,mixed:false})!.id,'m');assert.equal(activeMask(undefined,{layer:null,mask:null,point:null,pen:false,layerPen:false,clip:null,graph:null,mixed:false}),undefined);
+ selectMask(null,null);assert.equal(activeMask(l,{layer:null,mask:null,point:null,pen:false,layerPen:false,layerPoint:null,clip:null,graph:null,mixed:false})!.id,'m');
+ assert.equal(activeMask(l,{layer:'other',mask:'zzz',point:null,pen:false,layerPen:false,layerPoint:null,clip:null,graph:null,mixed:false})!.id,'m');assert.equal(activeMask(undefined,{layer:null,mask:null,point:null,pen:false,layerPen:false,layerPoint:null,clip:null,graph:null,mixed:false}),undefined);
 });
 
 const penned=()=>{let d=base();d=applyEdit(d,maskEdit(d,'photo',{op:'add',id:'p'}));
@@ -634,4 +634,38 @@ test('P28: pen command and locale keys exist',()=>{
  assert.ok(animationCommandSpecs().some(s=>s.id==='animation.layer.pen'));
  for(const l of ['en','de','es','fr','pt-BR']){const j=JSON.parse(readFileSync(new URL(`../../locales/animation/${l}.json`,import.meta.url),'utf8'));
   for(const k of ['animation.pathLayer.overlay','animation.pathLayer.tools','animation.pathLayer.pen','animation.pathLayer.penHint','animation.pathLayer.close','cmd.animation.layer.pen'])assert.ok(j[k],`${l} ${k}`);}
+});
+
+import {pathLayerMoveEdit,splitAt,cornerAt} from './pathLayer';
+test('P29: insert splits a segment without changing the shape, remove and corner are bounded',()=>{
+ let d=pathDoc();const r=d.revision;
+ d=applyEdit(d,pathLayerEdit(d,'pa',{op:'insert',index:0,u:0.25}));assert.equal(d.revision,r+1);
+ let pts=layer(d,'pa').source.path!.points;assert.equal(pts.length,4);assert.deepEqual([pts[1].x,pts[1].y],[0.25,0],'straight segment splits on the line');assert.equal(pts[1].outX,undefined,'corners stay corners');
+ const curved=splitAt({closed:true,points:[{x:0,y:0,outX:0.3,outY:0},{x:1,y:0,inX:-0.3,inY:0},{x:0.5,y:1}]},0,0.5);assert.equal(curved.points.length,4);assert.ok(curved.points[1].inX!==undefined&&curved.points[1].outX!==undefined);
+ d=applyEdit(d,pathLayerEdit(d,'pa',{op:'corner',index:2,smooth:true}));pts=layer(d,'pa').source.path!.points;assert.ok(pts[2].inX!==undefined&&pts[2].outX!==undefined);assert.match(layerPathD(layer(d,'pa'),0),/C/);
+ d=applyEdit(d,pathLayerEdit(d,'pa',{op:'corner',index:2,smooth:false}));assert.equal(layer(d,'pa').source.path!.points[2].outX,undefined);
+ assert.equal(cornerAt({closed:false,points:[{x:0,y:0},{x:1,y:1}]},0,true).points[0].inX,undefined,'open ends keep one handle');
+ d=applyEdit(d,pathLayerEdit(d,'pa',{op:'remove',index:1}));assert.equal(layer(d,'pa').source.path!.points.length,3);
+ assert.throws(()=>pathLayerEdit(d,'pa',{op:'remove',index:0}),/three points/,'closed path keeps three');
+ assert.throws(()=>pathLayerEdit(d,'pa',{op:'insert',index:9}),/no longer/);
+});
+test('P29: insert and remove on an animated path keep every key in step; caps hold',()=>{
+ let d=pathDoc();d=applyEdit(d,pathLayerEdit(d,'pa',{op:'animate',on:true}));d=applyEdit(d,pathLayerEdit(d,'pa',{op:'morphTo',other:'pb',t:Math.round(sec*2)}));
+ d=applyEdit(d,pathLayerEdit(d,'pa',{op:'insert',index:1}));const s=layer(d,'pa').source;assert.equal(s.path!.points.length,4);assert.ok(s.pathKeys!.every(k=>k.path.points.length===4));
+ d=applyEdit(d,pathLayerEdit(d,'pa',{op:'remove',index:2}));assert.ok(layer(d,'pa').source.pathKeys!.every(k=>k.path.points.length===3));assert.ok(validateDocument(d));
+ let big=pathDoc();big=applyEdit(big,{type:'layer.update',layer:'pa',source:{path:{closed:true,points:Array.from({length:32},(_,i)=>({x:i/40,y:0.5}))}}});
+ big=applyEdit(big,pathLayerEdit(big,'pa',{op:'animate',on:true}));assert.throws(()=>pathLayerEdit(big,'pa',{op:'insert',index:0}),/At most 32/);
+});
+test('P29: dragging the outline moves the layer by one position edit, through the parent matrix',()=>{
+ let d=pathDoc();const r=d.revision,p0=layer(d,'pa').transform.position.value as unknown as number[];
+ d=applyEdit(d,pathLayerMoveEdit(d,'pa',30,-10,0));assert.equal(d.revision,r+1);const p1=layer(d,'pa').transform.position.value as unknown as number[];assert.deepEqual([p1[0]-p0[0],p1[1]-p0[1]],[30,-10]);
+ d=applyEdit(d,{type:'layer.update',layer:'pb',source:{}});
+ d=applyEdit(d,{type:'layer.update',layer:'pa',locked:true});assert.throws(()=>pathLayerMoveEdit(d,'pa',1,1,0),/locked/);
+ d=applyEdit(d,{type:'layer.update',layer:'pa',locked:false});
+ d=applyEdit(d,{type:'layer.add',kind:'null',id:'half'});d=applyEdit(d,{type:'prop.set',layer:'half',prop:'scale',value:[50,50],t:0});d=applyEdit(d,{type:'layer.parent',layer:'pa',parent:'half'});
+ const before=layer(d,'pa').transform.position.value as unknown as number[];d=applyEdit(d,pathLayerMoveEdit(d,'pa',10,10,0));const after=layer(d,'pa').transform.position.value as unknown as number[];
+ assert.deepEqual([after[0]-before[0],after[1]-before[1]],[20,20],'half-scale parent: 10 comp px is 20 local px');
+});
+test('P29: point menu locale keys exist',()=>{
+ for(const l of ['en','de','es','fr','pt-BR']){const j=JSON.parse(readFileSync(new URL(`../../locales/animation/${l}.json`,import.meta.url),'utf8'));for(const k of ['animation.pathLayer.smoothPoint','animation.pathLayer.cornerPoint','animation.pathLayer.deletePoint'])assert.ok(j[k],`${l} ${k}`);}
 });
