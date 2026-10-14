@@ -55,3 +55,9 @@ export function panWindow(win:{t0:number;t1:number},dt:number,start:number,end:n
  const span=win.t1-win.t0;const t0=Math.min(end-span,Math.max(start,win.t0+dt));
  return {t0:Math.round(t0),t1:Math.round(t0+span)};
 }
+/** Value range after zooming by `factor` (>1 zooms in) around value `anchor`. The anchor keeps its relative position; the span stays between 0.01 and 1e9. */
+export function zoomRange(r:{min:number;max:number},anchor:number,factor:number):{min:number;max:number}|null{
+ if(!(factor>0)||!(r.max>r.min)||!Number.isFinite(anchor))return null;
+ const span=Math.min(1e9,Math.max(0.01,(r.max-r.min)/factor)),a=Math.min(r.max,Math.max(r.min,anchor)),u=(a-r.min)/(r.max-r.min);
+ const min=a-u*span;return {min,max:min+span};
+}

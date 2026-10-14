@@ -825,3 +825,12 @@ test('P205 sprite sheet padding: gutter between and around cells, atlas follows,
  assert.throws(()=>sheetPlan(2,10,8,2,33),SheetError);assert.throws(()=>sheetPlan(2,10,8,2,1.5),SheetError);
  assert.deepEqual(settingsProblems({...defaultExportSettings(),sheetPadding:40}),['padding']);assert.deepEqual(settingsProblems({...defaultExportSettings(),sheetPadding:4}),[]);
 });
+
+test('P206 graph value zoom: anchor keeps its relative position, span clamps, bad input refused',async()=>{
+ const {zoomRange}=await import('./graphWindow');const r={min:0,max:100};
+ const z=zoomRange(r,25,2)!;assert.equal(z.max-z.min,50);assert.equal(z.min,12.5);assert.equal((25-z.min)/(z.max-z.min),0.25);
+ const o=zoomRange(r,50,0.5)!;assert.equal(o.max-o.min,200);assert.equal(o.min,-50);
+ assert.ok(Math.abs(zoomRange(r,50,1e12)!.max-zoomRange(r,50,1e12)!.min-0.01)<1e-9);assert.ok(zoomRange(r,50,1e-12)!.max-zoomRange(r,50,1e-12)!.min<=1e9+1);
+ assert.equal(zoomRange(r,50,0),null);assert.equal(zoomRange({min:3,max:3},3,2),null);assert.equal(zoomRange(r,NaN,2),null);
+ assert.equal(zoomRange(r,500,2)!.max,100);
+});
