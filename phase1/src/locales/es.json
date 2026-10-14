@@ -3288,5 +3288,8 @@
   "themeImport.reset": "Restablecer tema importado",
   "themeImport.active": "Tema importado activo: {name}",
   "themeImport.default": "El tema predeterminado está activo.",
-  "themeImport.sessionOnly": "Aplicado solo para esta sesión. Almacenamiento no disponible."
+  "themeImport.sessionOnly": "Aplicado solo para esta sesión. Almacenamiento no disponible.",
+  "themeImport.contrastNote": "Contraste orientativo. Los colores no cambian. Revisa los estudios antes de usar el tema.",
+  "themeImport.contrastLow": "{ratio}:1, por debajo de 4,5:1 para texto normal.",
+  "themeImport.contrastUnknown": "Sin verificar: falta un par, alfa o color no compatible."
 }

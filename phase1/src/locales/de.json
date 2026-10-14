@@ -3288,5 +3288,8 @@
   "themeImport.reset": "Importiertes Theme zurücksetzen",
   "themeImport.active": "Aktives importiertes Theme: {name}",
   "themeImport.default": "Standard-Theme ist aktiv.",
-  "themeImport.sessionOnly": "Nur für diese Sitzung angewendet. Speicher nicht verfügbar."
+  "themeImport.sessionOnly": "Nur für diese Sitzung angewendet. Speicher nicht verfügbar.",
+  "themeImport.contrastNote": "Kontrastprüfung als Hinweis. Farben bleiben unverändert. Prüfe die Studios vor der Nutzung.",
+  "themeImport.contrastLow": "{ratio}:1, unter der Prüfung von 4,5:1 für normalen Text.",
+  "themeImport.contrastUnknown": "Nicht geprüft: fehlendes Farbpaar, Alpha oder nicht unterstützte Browserfarbe."
 }

@@ -3288,5 +3288,8 @@
   "themeImport.reset": "Reset imported theme",
   "themeImport.active": "Active imported theme: {name}",
   "themeImport.default": "Default theme roles are active.",
-  "themeImport.sessionOnly": "Applied for this session only. Storage is unavailable."
+  "themeImport.sessionOnly": "Applied for this session only. Storage is unavailable.",
+  "themeImport.contrastNote": "Contrast check is advisory. Colors are not changed. Inspect your actual studios before using this theme.",
+  "themeImport.contrastLow": "{ratio}:1, below the 4.5:1 normal-text check.",
+  "themeImport.contrastUnknown": "Not verified: missing pair, alpha or unsupported browser color."
 }

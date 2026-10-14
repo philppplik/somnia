@@ -1,3 +1,4 @@
+import {auditThemeContrast,browserThemeColor} from '../lib/themeContrast';
 import {useMemo,useRef,useState,useSyncExternalStore} from 'react';
 import {Button} from './ui/button';
 import {NativeInput,NativeSelect,Textarea} from './ui/native-controls';
@@ -18,6 +19,7 @@ export function ThemeImportPanel(){
  const [text,setText]=useState(''),[format,setFormat]=useState<'json'|'css'>('json'),[fileError,setFileError]=useState(false);const sequence=useRef(0);
  const result=useMemo(()=>text.trim()?parseThemeExchange(text,format):null,[text,format]);
  const draft=result?.ok?result.theme:null;
+ const contrast=useMemo(()=>draft&&typeof document!=='undefined'?auditThemeContrast(draft,browserThemeColor):[],[draft]);
  return <section className="theme-import-panel" data-testid="theme-import-panel" aria-label={t('themeImport.title')}>
   <h3>{t('themeImport.title')}</h3><p>{t('themeImport.note')}</p>
   <label>{t('themeImport.format')}<NativeSelect aria-label={t('themeImport.format')} value={format} onChange={e=>{sequence.current++;setFormat(e.target.value==='css'?'css':'json');}}><option value="json">JSON</option><option value="css">CSS</option></NativeSelect></label>
@@ -26,6 +28,7 @@ export function ThemeImportPanel(){
   {fileError&&<Notice tone="danger" live="assertive">{t('themeImport.fileError')}</Notice>}
   {result&&!result.ok&&<Notice tone="danger" live="polite">{t('themeImport.invalid')}</Notice>}
   {draft&&<><div className="theme-import-previews"><Preview theme={draft} mode="light" label={t('themeImport.light')}/><Preview theme={draft} mode="dark" label={t('themeImport.dark')}/></div><p>{t('themeImport.unsupported')}</p><ul data-testid="theme-import-ignored">{draft.ignored.length?draft.ignored.map((item,index)=><li key={`${item}-${index}`}><code>{item}</code></li>):<li>{t('themeImport.none')}</li>}</ul></>}
+  {draft&&contrast.length>0&&<div className="ds-notice" data-tone="warning" role="note"><span>{t('themeImport.contrastNote')}</span><ul data-testid="theme-import-contrast">{contrast.map(issue=><li key={`${issue.mode}:${issue.foreground}`}><code>{issue.mode}: {issue.foreground} / {issue.background}</code>{' '}{issue.kind==='low'?t('themeImport.contrastLow',{ratio:issue.ratio!.toFixed(2)}):t('themeImport.contrastUnknown')}</li>)}</ul></div>}
   <div className="theme-import-actions"><Button disabled={!draft||fileError} onClick={()=>{if(draft)importedThemeStore.apply(draft);}}>{t('themeImport.apply')}</Button><Button disabled={!state.canUndo} onClick={()=>importedThemeStore.undo()}>{t('themeImport.undo')}</Button><Button disabled={!state.theme} onClick={()=>importedThemeStore.reset()}>{t('themeImport.reset')}</Button></div>
   <p role="status">{state.theme?t('themeImport.active',{name:state.theme.name}):t('themeImport.default')}</p>
   {!state.persistent&&<Notice tone="warning" live="polite">{t('themeImport.sessionOnly')}</Notice>}
