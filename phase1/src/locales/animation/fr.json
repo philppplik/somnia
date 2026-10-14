@@ -1022,5 +1022,7 @@
  "cmd.animation.layers.trimToWorkArea": "Couper les calques sélectionnés à la zone de travail",
  "animation.export.colors": "Couleurs du GIF",
  "animation.export.problem.colors": "Les couleurs du GIF doivent être 16, 32, 64, 128 ou 256.",
- "animation.export.more": "Options de format"
+ "animation.export.more": "Options de format",
+ "animation.rig.center": "Centrer le point d’ancrage",
+ "cmd.animation.layers.centerAnchor": "Centrer le point d’ancrage des calques sélectionnés"
 }

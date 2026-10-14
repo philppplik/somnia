@@ -1022,5 +1022,7 @@
  "cmd.animation.layers.trimToWorkArea": "Gewählte Ebenen auf den Arbeitsbereich kürzen",
  "animation.export.colors": "GIF-Farben",
  "animation.export.problem.colors": "GIF-Farben müssen 16, 32, 64, 128 oder 256 sein.",
- "animation.export.more": "Formatoptionen"
+ "animation.export.more": "Formatoptionen",
+ "animation.rig.center": "Ankerpunkt zentrieren",
+ "cmd.animation.layers.centerAnchor": "Ankerpunkt der gewählten Ebenen zentrieren"
 }

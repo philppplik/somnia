@@ -1022,5 +1022,7 @@
  "cmd.animation.layers.trimToWorkArea": "Recortar las capas seleccionadas al área de trabajo",
  "animation.export.colors": "Colores del GIF",
  "animation.export.problem.colors": "Los colores del GIF deben ser 16, 32, 64, 128 o 256.",
- "animation.export.more": "Opciones de formato"
+ "animation.export.more": "Opciones de formato",
+ "animation.rig.center": "Centrar punto de anclaje",
+ "cmd.animation.layers.centerAnchor": "Centrar el punto de anclaje de las capas seleccionadas"
 }

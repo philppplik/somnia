@@ -741,3 +741,16 @@ test('P196 GIF colors: colour table, LZW code size and file size follow the pale
  assert.ok(estimateBytes('gif',100,100,10,10,'medium',16)<estimateBytes('gif',100,100,10,10));assert.equal(estimateBytes('gif',100,100,10,10,'medium',256),estimateBytes('gif',100,100,10,10));
  assert.deepEqual(settingsProblems({...defaultExportSettings(),colors:100 as never}),['colors']);
 });
+
+test('P198 layers.centerAnchor: anchor to the content centre, picture does not move, skips animated/locked, one undo step',async()=>{
+ const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'shape',id:'b'});s.dispatch({type:'layer.add',kind:'shape',id:'c'});
+ const {layerCenterSpecs}=await import('./layerCenterCommands');const {worldMatrix,applyMatrix}=await import('./scene');const run=(p:object)=>(layerCenterSpecs()[0].run as (p:unknown)=>any)(p);
+ const get=(id:string)=>findLayer(findComp(s.document!)!,id)!;const corner=(id:string,x:number,y:number)=>applyMatrix(worldMatrix(findComp(s.document!)!,get(id),0),[x,y]);
+ const w=get('b').source.width!,h=get('b').source.height!;assert.ok(w>0&&h>0);
+ s.dispatch([{type:'prop.set',layer:'b',prop:'rotation',value:30,t:0},{type:'prop.set',layer:'b',prop:'scale',value:[150,80],t:0}]);s.dispatch({type:'layer.update',layer:'c',locked:true});s.setView({playhead:0});
+ const before=[corner('b',0,0),corner('b',w,h)];
+ const r=run({layers:['b','c','a']});assert.equal(r.centred,1);assert.deepEqual(Array.from(get('b').transform.anchor.value as number[]),[w/2,h/2]);
+ const after=[corner('b',0,0),corner('b',w,h)];for(let i=0;i<2;i++)for(let k=0;k<2;k++)assert.ok(Math.abs(before[i][k]-after[i][k])<0.05);
+ assert.throws(()=>run({layers:['b']}),(e:any)=>e.expected===true);
+ s.undo();assert.deepEqual(Array.from(get('b').transform.anchor.value as number[]),[0,0].map((_,i)=>before.length?(get('b').transform.anchor.value as number[])[i]:0));assert.notDeepEqual(Array.from(get('b').transform.anchor.value as number[]),[w/2,h/2]);
+});

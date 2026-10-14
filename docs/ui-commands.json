@@ -1685,6 +1685,23 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.layers.centerAnchor",
+      "title": "Center the anchor point of the selected layers",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "anchor",
+        "animation",
+        "center",
+        "centre",
+        "layer",
+        "origin",
+        "pivot",
+        "rotation"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.layers.duplicate",
       "title": "Duplicate the selected layers",
       "category": "Edit",

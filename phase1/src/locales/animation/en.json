@@ -1022,5 +1022,7 @@
  "cmd.animation.layers.trimToWorkArea": "Trim the selected layers to the work area",
  "animation.export.colors": "GIF colors",
  "animation.export.problem.colors": "GIF colors must be 16, 32, 64, 128 or 256.",
- "animation.export.more": "Format options"
+ "animation.export.more": "Format options",
+ "animation.rig.center": "Center anchor",
+ "cmd.animation.layers.centerAnchor": "Center the anchor point of the selected layers"
 }
