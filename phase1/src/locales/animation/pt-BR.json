@@ -1024,5 +1024,10 @@
  "animation.export.problem.colors": "As cores do GIF devem ser 16, 32, 64, 128 ou 256.",
  "animation.export.more": "Opções de formato",
  "animation.rig.center": "Centralizar âncora",
- "cmd.animation.layers.centerAnchor": "Centralizar o ponto de âncora das camadas selecionadas"
+ "cmd.animation.layers.centerAnchor": "Centralizar o ponto de âncora das camadas selecionadas",
+ "animation.rig.group.fade": "Fade",
+ "animation.rig.fade.in": "Fade in",
+ "animation.rig.fade.out": "Fade out",
+ "animation.rig.fade.both": "Fade in e out",
+ "cmd.animation.layers.fade": "Aplicar fade in ou out nas camadas selecionadas"
 }

@@ -1024,5 +1024,10 @@
  "animation.export.problem.colors": "GIF-Farben müssen 16, 32, 64, 128 oder 256 sein.",
  "animation.export.more": "Formatoptionen",
  "animation.rig.center": "Ankerpunkt zentrieren",
- "cmd.animation.layers.centerAnchor": "Ankerpunkt der gewählten Ebenen zentrieren"
+ "cmd.animation.layers.centerAnchor": "Ankerpunkt der gewählten Ebenen zentrieren",
+ "animation.rig.group.fade": "Überblenden",
+ "animation.rig.fade.in": "Einblenden",
+ "animation.rig.fade.out": "Ausblenden",
+ "animation.rig.fade.both": "Ein- und ausblenden",
+ "cmd.animation.layers.fade": "Gewählte Ebenen ein- oder ausblenden"
 }

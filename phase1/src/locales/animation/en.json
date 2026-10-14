@@ -1024,5 +1024,10 @@
  "animation.export.problem.colors": "GIF colors must be 16, 32, 64, 128 or 256.",
  "animation.export.more": "Format options",
  "animation.rig.center": "Center anchor",
- "cmd.animation.layers.centerAnchor": "Center the anchor point of the selected layers"
+ "cmd.animation.layers.centerAnchor": "Center the anchor point of the selected layers",
+ "animation.rig.group.fade": "Fade",
+ "animation.rig.fade.in": "Fade in",
+ "animation.rig.fade.out": "Fade out",
+ "animation.rig.fade.both": "Fade in and out",
+ "cmd.animation.layers.fade": "Fade the selected layers in or out"
 }

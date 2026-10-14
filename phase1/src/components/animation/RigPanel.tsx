@@ -26,6 +26,7 @@ const groups:{key:string;items:{testid:string;label:string;cmd:string;min:number
  {key:'order',items:(['front','back','up','down','reverse'] as const).map(m=>({testid:`animation-rig-order-${m}`,label:`animation.rig.order.${m}`,cmd:'animation.layers.arrange',min:m==='reverse'?2:1,args:{mode:m}}))},
  {key:'align',items:(['left','centerX','right','top','centerY','bottom','distributeX','distributeY'] as const).map(m=>({testid:`animation-rig-align-${m}`,label:`animation.rig.align.${m}`,cmd:'animation.layers.align',min:m.startsWith('distribute')?3:2,args:{mode:m}}))},
  {key:'reset',items:(['rotation','scale','opacity','all'] as const).map(m=>({testid:`animation-rig-reset-${m}`,label:`animation.rig.reset.${m}`,cmd:'animation.layers.reset',min:1,args:{mode:m}}))},
+ {key:'fade',items:(['in','out','both'] as const).map(m=>({testid:`animation-rig-fade-${m}`,label:`animation.rig.fade.${m}`,cmd:'animation.layers.fade',min:1,args:{mode:m}}))},
  {key:'state',items:(['visible','solo','locked','shy'] as const).map(f=>({testid:`animation-rig-flag-${f}`,label:`animation.rig.flag.${f}`,cmd:'animation.layers.flag',min:1,args:{flag:f}}))}];
 /** Left-panel section: tick layers, then chain them, group them under a control null, or release their parents. Tick order is the chain order. */
 export function RigPanel({comp}:{comp:Composition}){

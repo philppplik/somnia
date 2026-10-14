@@ -1024,5 +1024,10 @@
  "animation.export.problem.colors": "Les couleurs du GIF doivent être 16, 32, 64, 128 ou 256.",
  "animation.export.more": "Options de format",
  "animation.rig.center": "Centrer le point d’ancrage",
- "cmd.animation.layers.centerAnchor": "Centrer le point d’ancrage des calques sélectionnés"
+ "cmd.animation.layers.centerAnchor": "Centrer le point d’ancrage des calques sélectionnés",
+ "animation.rig.group.fade": "Fondu",
+ "animation.rig.fade.in": "Fondu en entrée",
+ "animation.rig.fade.out": "Fondu en sortie",
+ "animation.rig.fade.both": "Fondu en entrée et en sortie",
+ "cmd.animation.layers.fade": "Faire apparaître ou disparaître les calques sélectionnés en fondu"
 }

@@ -1024,5 +1024,10 @@
  "animation.export.problem.colors": "Los colores del GIF deben ser 16, 32, 64, 128 o 256.",
  "animation.export.more": "Opciones de formato",
  "animation.rig.center": "Centrar punto de anclaje",
- "cmd.animation.layers.centerAnchor": "Centrar el punto de anclaje de las capas seleccionadas"
+ "cmd.animation.layers.centerAnchor": "Centrar el punto de anclaje de las capas seleccionadas",
+ "animation.rig.group.fade": "Fundido",
+ "animation.rig.fade.in": "Aparecer",
+ "animation.rig.fade.out": "Desvanecer",
+ "animation.rig.fade.both": "Aparecer y desvanecer",
+ "cmd.animation.layers.fade": "Aparecer o desvanecer las capas seleccionadas"
 }

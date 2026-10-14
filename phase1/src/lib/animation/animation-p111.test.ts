@@ -767,3 +767,18 @@ test('P199 centerAnchor on an animated position: all keys shift by one offset, p
  s.dispatch({type:'prop.animate',layer:'m',prop:'rotation',on:true,t:0});s.dispatch({type:'prop.set',layer:'m',prop:'rotation',value:90,t:frameToTick(20,c().fps)});
  assert.throws(()=>run({layers:['m']}),(e:any)=>e.expected===true);
 });
+
+test('P201 layers.fade: opacity keys at in/out, one undo step, skips animated/locked/short, validates',async()=>{
+ const s=open();setAnimationSession(s);for(const id of ['b','c','e'])s.dispatch({type:'layer.add',kind:'shape',id});
+ const {layerFadeSpecs}=await import('./layerFadeCommands');const {evaluate}=await import('./interpolate');const run=(p:object)=>(layerFadeSpecs()[0].run as (p:unknown)=>any)(p);
+ const c=()=>findComp(s.document!)!;const get=(id:string)=>findLayer(c(),id)!;const fr=(n:number)=>frameToTick(n,c().fps);
+ s.dispatch({type:'layer.timing',layer:'b',inT:fr(10),outT:fr(100)});s.dispatch([{type:'prop.animate',layer:'c',prop:'opacity',on:true,t:0}]);s.dispatch({type:'layer.update',layer:'e',locked:true});
+ s.dispatch({type:'prop.set',layer:'b',prop:'opacity',value:80,t:0});
+ const r=run({mode:'both',frames:12,layers:['b','c','e']});assert.equal(r.faded,1);assert.equal(r.skipped,2);
+ const o=get('b').transform.opacity;assert.equal(o.keys.length,4);
+ assert.equal(evaluate(o,fr(10)),0);assert.equal(evaluate(o,fr(22)),80);assert.equal(evaluate(o,fr(50)),80);assert.equal(evaluate(o,fr(99)),0);
+ s.undo();assert.equal(get('b').transform.opacity.keys.length,0);assert.equal(get('b').transform.opacity.value,80);
+ run({mode:'in',layers:['b']});assert.equal(get('b').transform.opacity.keys.length,2);s.undo();
+ assert.throws(()=>run({mode:'x',layers:['b']}),(e:any)=>e.expected===true);assert.throws(()=>run({mode:'in',frames:0,layers:['b']}),(e:any)=>e.expected===true);
+ s.dispatch({type:'layer.timing',layer:'b',inT:fr(10),outT:fr(15)});assert.throws(()=>run({mode:'both',layers:['b']}),(e:any)=>e.expected===true);
+});

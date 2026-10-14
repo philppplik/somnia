@@ -1717,6 +1717,23 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.layers.fade",
+      "title": "Fade the selected layers in or out",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "dissolve",
+        "fade",
+        "in",
+        "layer",
+        "opacity",
+        "out",
+        "transition"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.layers.flag",
       "title": "Switch a layer flag for the selected layers",
       "category": "Edit",
