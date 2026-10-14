@@ -1,6 +1,6 @@
 import type {ModelStats} from './model';
 /** Scene checks shown in the stats panel and used before export. Pure and node-testable. */
-export type WarnCode='highTriangles'|'highTextureMemory'|'largeTexture'|'manyDraws'|'zeroScale'|'textureNoUv'|'animationsNotSaved'|'noGeometry'|'exportTooLarge';
+export type WarnCode='highTriangles'|'highTextureMemory'|'largeTexture'|'manyDraws'|'zeroScale'|'textureNoUv'|'noGeometry'|'exportTooLarge';
 export interface Warning{code:WarnCode;level:'warn'|'info';/** Numbers for the message text. */values:Record<string,number>}
 export const LIMITS={triangles:1_000_000,textureBytes:256*1024*1024,textureSize:4096,draws:500,/** An export above this much decoded texture data is refused. */exportTextureBytes:1024*1024*1024,exportMaxTextureSize:4096};
 /** Decoded size of one RGBA texture (with a third extra for mip maps). */
@@ -15,7 +15,6 @@ export function validateScene(s:ModelStats):Warning[]{
  if(s.draws>LIMITS.draws)out.push({code:'manyDraws',level:'warn',values:{count:s.draws,limit:LIMITS.draws}});
  if(s.zeroScale>0)out.push({code:'zeroScale',level:'warn',values:{count:s.zeroScale}});
  if(s.textureNoUv>0)out.push({code:'textureNoUv',level:'warn',values:{count:s.textureNoUv}});
- if(s.animations>0)out.push({code:'animationsNotSaved',level:'info',values:{count:s.animations}});
  return out;
 }
 /** Refuses an export whose texture data would not fit comfortably in memory. Returns the message or null. */

@@ -10,8 +10,8 @@ test('each limit produces its own warning with the numbers',()=>{
  assert.equal(validateScene(s)[2].values.size,8192);
 });
 test('exactly at the limit is fine',()=>{assert.deepEqual(validateScene({...base(),triangles:LIMITS.triangles,maxTexture:LIMITS.textureSize,draws:LIMITS.draws}),[]);});
-test('animations give an info note, empty groups too',()=>{
- assert.deepEqual(validateScene({...base(),animations:2}).map(w=>[w.code,w.level]),[['animationsNotSaved','info']]);
+test('animations raise no warning, empty groups get a note',()=>{
+ assert.deepEqual(validateScene({...base(),animations:2}),[]);
  assert.deepEqual(validateScene({...emptyStats(),nodes:3}).map(w=>w.code),['noGeometry']);
 });
 test('textureBytes estimates RGBA with mips and ignores bad sizes',()=>{

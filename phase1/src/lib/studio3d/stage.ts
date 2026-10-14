@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import {mergeGeometries} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import {checkPbr,alphaState,alphaModeOf,MaterialError,SLOT_CONFIG,type PbrExtras,type AlphaMode,type TextureSlot} from './materials';
 import type {NodeExtra} from './document';
+import {KEY_PATHS,ClipError,MAX_CLIPS,DEFAULT_CLIP_SECONDS,insertKey,removeKey as removeKeyData,findKey,isPlainTrack,trackName,parseTrackName,checkKeyTime,checkDuration,checkClipName,lastKeyTime,type KeyPath} from './clips';
 import {mergeTransform,DEFAULT_TRANSFORM,UvError,type TextureTransform} from './uv';
 import {textureBytes} from './validate';
 import {emptyStats,type ModelStats,type OutlineEntry,type Bounds} from './model';
@@ -138,6 +139,7 @@ export class Stage{
   this.clear();if(model)this.root.add(model);this.emit();
  }
  clear(){
+  this.clipList=[];this.clipRevision++;
   for(const c of [...this.root.children]){this.root.remove(c);disposeObject(c);}
   for(const e of this.entries)e.release?.();this.entries=[];this.cursor=0;this.saved=0;this.emit();
  }
@@ -379,6 +381,93 @@ export class Stage{
   const set=(t:TextureTransform)=>{writeTransform(tex,t);};set(next);
   this.push({label:`${slot} texture mapping of ${o.name}`,undo:()=>set(before),redo:()=>set(next)});
  }
+ // ---- Animation clips: keyframe tracks of node transforms. Tracks address nodes by uuid, so any node name works. ----
+ private clipList:THREE.AnimationClip[]=[];
+ /** Bumped whenever clips change, so playback knows to rebuild its mixer. */
+ clipRevision=0;
+ get clips():readonly THREE.AnimationClip[]{return this.clipList;}
+ /** Replaces the clips with imported ones (no history). Track targets that name a node in the scene are rewritten to its uuid. */
+ setClips(list:readonly THREE.AnimationClip[]){
+  this.clipList=list.filter(c=>c.duration>0||c.tracks.length>0).slice(0,MAX_CLIPS).map(c=>{
+   for(const t of c.tracks){const b=THREE.PropertyBinding.parseTrackName(t.name);
+    if(!b.nodeName||b.objectName||b.propertyIndex!==undefined)continue;const n=THREE.PropertyBinding.findNode(this.root,b.nodeName) as THREE.Object3D|undefined;if(n&&n!==this.root)t.name=`${n.uuid}.${b.propertyName}`;}
+   if(c.duration<=0)c.resetDuration();return c;});
+  this.clipRevision++;this.emit();
+ }
+ private needClip(i:number):THREE.AnimationClip{const c=Number.isInteger(i)?this.clipList[i]:undefined;if(!c)throw new ClipError(`There is no animation clip ${String(i)}.`);return c;}
+ private editClip(i:number,label:string,make:(clip:THREE.AnimationClip)=>{tracks:THREE.KeyframeTrack[];duration:number}){
+  const clip=this.needClip(i);const before={tracks:clip.tracks.slice(),duration:clip.duration};const next=make(clip);
+  const set=(v:{tracks:THREE.KeyframeTrack[];duration:number})=>{clip.tracks=v.tracks;clip.duration=v.duration;this.clipRevision++;};
+  set(next);this.push({label,undo:()=>set(before),redo:()=>set(next)});
+ }
+ private uniqueClipName(base:string){const names=new Set(this.clipList.map(c=>c.name));if(!names.has(base))return base;let n=2;while(names.has(`${base} ${n}`))n++;return `${base} ${n}`;}
+ addClip(name?:string,duration=DEFAULT_CLIP_SECONDS):number{
+  if(this.clipList.length>=MAX_CLIPS)throw new ClipError(`A scene can have at most ${MAX_CLIPS} clips.`);
+  const clip=new THREE.AnimationClip(this.uniqueClipName(name===undefined?'Clip':checkClipName(name)),checkDuration(duration),[]);
+  const at=this.clipList.length;const add=()=>{this.clipList.splice(at,0,clip);this.clipRevision++;};add();
+  this.push({label:`Add clip ${clip.name}`,undo:()=>{this.clipList.splice(at,1);this.clipRevision++;},redo:add});return at;
+ }
+ removeClip(i:number){
+  const clip=this.needClip(i);const del=()=>{this.clipList.splice(i,1);this.clipRevision++;};del();
+  this.push({label:`Delete clip ${clip.name}`,undo:()=>{this.clipList.splice(i,0,clip);this.clipRevision++;},redo:del});
+ }
+ renameClip(i:number,name:string){
+  const clip=this.needClip(i);const next=checkClipName(name);const before=clip.name;if(next===before)return;
+  const set=(n:string)=>{clip.name=n;this.clipRevision++;};set(next);this.push({label:`Rename clip ${before}`,undo:()=>set(before),redo:()=>set(next)});
+ }
+ /** Sets the length of a clip. It cannot end before its last key. */
+ setClipDuration(i:number,duration:number){
+  const clip=this.needClip(i);const d=checkDuration(duration);const last=Math.max(0,...clip.tracks.map(t=>lastKeyTime(t.times)));
+  if(d<last)throw new ClipError(`The clip cannot end before its last key at ${last} s.`);
+  if(d===clip.duration)return;this.editClip(i,`Length of clip ${clip.name}`,c=>({tracks:c.tracks.slice(),duration:d}));
+ }
+ private keyNode(id:number):THREE.Object3D{const o=this.need(id);if(o===this.root)throw new ClipError('The scene root cannot be animated.');return o;}
+ private trackOf(clip:THREE.AnimationClip,node:THREE.Object3D,path:KeyPath){const n=trackName(node.uuid,path);return clip.tracks.find(t=>t.name===n);}
+ /** Adds or replaces a key on the position, rotation or scale of an object. Without a value the current transform of the object is recorded. One undo step. A key after the end extends the clip. */
+ setKey(i:number,id:number,path:KeyPath,time:number,value?:Partial<Vec3>){
+  if(!KEY_PATHS.includes(path))throw new ClipError('The path must be position, rotation or scale.');
+  const clip=this.needClip(i);const node=this.keyNode(id);const t=checkKeyTime(time);
+  let v:number[];
+  if(value===undefined)v=path==='position'?node.position.toArray():path==='scale'?node.scale.toArray():node.quaternion.toArray();
+  else{
+   const cur=path==='position'?node.position:path==='scale'?node.scale:null;
+   const x=value.x??(cur?cur.x:0),y=value.y??(cur?cur.y:0),z=value.z??(cur?cur.z:0);
+   if(![x,y,z].every(Number.isFinite))throw new ClipError('The key value must be finite numbers.');
+   if(path==='rotation'){const e=new THREE.Euler(x*DEG,y*DEG,z*DEG);v=new THREE.Quaternion().setFromEuler(e).toArray();}else v=[x,y,z];
+  }
+  const old=this.trackOf(clip,node,path);
+  if(old&&!isPlainTrack(old.times,old.values,path))throw new ClipError('This track uses cubic spline keys and cannot be edited key by key.');
+  const r=insertKey(old?old.times:[],old?old.values:[],path,t,v);
+  this.editClip(i,`${r.replaced?'Change':'Add'} ${path} key on ${node.name}`,c=>{
+   const name=trackName(node.uuid,path);
+   const track=path==='rotation'?new THREE.QuaternionKeyframeTrack(name,r.times,r.values,old?.getInterpolation()):new THREE.VectorKeyframeTrack(name,r.times,r.values,old?.getInterpolation());
+   return{tracks:[...c.tracks.filter(x=>x.name!==name),track],duration:Math.max(c.duration,t)};
+  });
+ }
+ removeKey(i:number,id:number,path:KeyPath,time:number){
+  const clip=this.needClip(i);const node=this.keyNode(id);const t=checkKeyTime(time);const old=this.trackOf(clip,node,path);
+  if(!old||!isPlainTrack(old.times,old.values,path))throw new ClipError(`${node.name} has no ${path} keys in this clip.`);
+  const k=findKey(old.times,t);if(k<0)throw new ClipError('There is no key at that time.');
+  const r=removeKeyData(old.times,old.values,path,k);
+  this.editClip(i,`Remove ${path} key on ${node.name}`,c=>{
+   const name=trackName(node.uuid,path);const rest=c.tracks.filter(x=>x.name!==name);
+   if(!r.times.length)return{tracks:rest,duration:c.duration};
+   return{tracks:[...rest,path==='rotation'?new THREE.QuaternionKeyframeTrack(name,r.times,r.values,old.getInterpolation()):new THREE.VectorKeyframeTrack(name,r.times,r.values,old.getInterpolation())],duration:c.duration};
+  });
+ }
+ /** Key times of one object in one clip, per path. */
+ keysOf(i:number,id:number):{path:KeyPath;times:number[];editable:boolean}[]{
+  const clip=this.clipList[i];const node=this.find(id);if(!clip||!node||node===this.root)return[];
+  const out:{path:KeyPath;times:number[];editable:boolean}[]=[];
+  for(const path of KEY_PATHS){const t=this.trackOf(clip,node,path);if(t)out.push({path,times:Array.from(t.times),editable:isPlainTrack(t.times,t.values,path)});}
+  return out;
+ }
+ /** What to give GLTFExporter when clips are included: a scene that lists the top-level nodes, so every clip finds its nodes and the file has no extra wrapper node. */
+ exportScene():THREE.Scene{const sc=new THREE.Scene();sc.children=this.root.children;return sc;}
+ /** Clips ready for export: tracks whose object no longer exists are left out. */
+ exportClips():THREE.AnimationClip[]{
+  return this.clipList.map(c=>{const keep=c.tracks.filter(t=>{const b=parseTrackName(t.name);if(!b)return true;return !!THREE.PropertyBinding.findNode(this.root,b.node);});return new THREE.AnimationClip(c.name,c.duration,keep);}).filter(c=>c.tracks.length>0);
+ }
  /** Mirrors objects across the world plane through the origin that is perpendicular to the axis. With copy, mirrored duplicates are added instead. One undo step. */
  mirror(ids:number[],axis:MirrorAxis,copy:boolean):THREE.Object3D[]{
   if(!['x','y','z'].includes(axis))throw new StageError('axis must be x, y or z.');
@@ -469,7 +558,7 @@ export class Stage{
    camera:(o as THREE.PerspectiveCamera).isPerspectiveCamera?{fov:(o as THREE.PerspectiveCamera).fov}:null,
    primitive:this.primitiveOf(o),material:mat?{color:'#'+mat.color.getHexString(),metalness:mat.metalness,roughness:mat.roughness,emissive:'#'+mat.emissive.getHexString(),emissiveIntensity:mat.emissiveIntensity,opacity:mat.transparent||mat.alphaTest>0?mat.opacity:1,alphaMode:alphaModeOf(mat.transparent,mat.alphaTest),alphaCutoff:mat.alphaTest>0?mat.alphaTest:0.5,doubleSided:mat.side===THREE.DoubleSide,textures:Object.fromEntries((Object.keys(SLOT_CONFIG) as TextureSlot[]).map(k=>{const t=mat[SLOT_CONFIG[k].prop] as THREE.Texture|null;return[k,t?(t.name||'image'):null];})) as Record<TextureSlot,string|null>,transforms:Object.fromEntries((Object.keys(SLOT_CONFIG) as TextureSlot[]).map(k=>{const t=mat[SLOT_CONFIG[k].prop] as THREE.Texture|null;return[k,t?readTransform(t):null];})) as Record<TextureSlot,TextureTransform|null>}:null,light:l.isLight?lightInfo(l):null};
  }
- measure(animations=0):{stats:ModelStats;outline:OutlineEntry[];bounds:Bounds|null}{
+ measure(animations=this.clipList.length):{stats:ModelStats;outline:OutlineEntry[];bounds:Bounds|null}{
   const stats=emptyStats();stats.animations=animations;const outline:OutlineEntry[]=[];const mats=new Set<THREE.Material>(),texs=new Set<THREE.Texture>();
   const walk=(o:THREE.Object3D,depth:number)=>{
    const mesh=o as THREE.Mesh;const kind:OutlineEntry['kind']=mesh.isMesh?'mesh':(o as THREE.Light).isLight?'light':(o as THREE.Camera).isCamera?'camera':'group';

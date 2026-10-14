@@ -166,7 +166,6 @@ test('3D studio plays, pauses and scrubs a glTF animation and lists scene checks
  await open3d(page);
  await page.getByTestId('studio3d-file-input').setInputFiles({name:'spin.gltf',mimeType:'model/gltf+json',buffer:animatedGltf()});
  await expect(page.getByTestId('studio3d-animation')).toBeVisible({timeout:20_000});
- await expect(page.getByTestId('studio3d-warn-animationsNotSaved')).toBeVisible();
  await run(page,'studio3d.anim.seek',{time:1});
  await expect.poll(async()=>(await session(page)).anim?.time).toBe(1);
  await run(page,'studio3d.anim.loop',{loop:false});await run(page,'studio3d.anim.play',{});
@@ -187,4 +186,24 @@ test('3D studio keeps a texture and its mapping through GLB export and a saved s
  await expect.poll(async()=>(await session(page)).outline.some(o=>o.kind==='mesh')).toBe(true);
  const mesh=(await session(page)).outline.find(o=>o.kind==='mesh')!;await run(page,'studio3d.select',{id:mesh.id});
  await expect.poll(async()=>(await session(page)).info?.material?.transforms?.color?.scaleX).toBe(2);
+});
+
+test('3D studio records keys into a clip, scrubs them and keeps the clip through GLB export and reopen',async({page})=>{
+ await blank(page);
+ const id=await insert(page,'cube',0);
+ await run(page,'studio3d.clip.add',{name:'Hop',duration:2});
+ await run(page,'studio3d.key.set',{path:'position',time:0});
+ await run(page,'studio3d.object.transform',{id,position:{x:0,y:3,z:0}});
+ await run(page,'studio3d.key.set',{path:'position',time:1});
+ await expect(page.getByTestId('studio3d-keyrow-position')).toContainText('0:01.00');
+ await run(page,'studio3d.anim.seek',{time:0.5});
+ await expect.poll(async()=>(await session(page)).info?.position.y).toBeCloseTo(1.5,1);
+ await run(page,'studio3d.key.remove',{path:'position',time:1});
+ await expect(page.getByTestId('studio3d-keyrow-position')).not.toContainText('0:01.00');
+ await run(page,'studio3d.key.set',{path:'position',time:1,y:3});
+ const [download]=await Promise.all([page.waitForEvent('download'),page.getByTestId('studio3d-export').getByRole('button',{name:'GLB'}).click()]);
+ const bytes=readFileSync(await download.path()!);
+ expect(bytes.toString('latin1')).toContain('"animations"');
+ await page.getByTestId('studio3d-file-input').setInputFiles({name:'hop.glb',mimeType:'model/gltf-binary',buffer:bytes});
+ await expect(page.getByTestId('studio3d-animation')).toContainText('Hop',{timeout:20_000});
 });
