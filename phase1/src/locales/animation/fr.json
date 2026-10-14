@@ -708,5 +708,7 @@
  "animation.guides.removeShort": "Supprimer",
  "cmd.animation.guides.overlay": "Afficher ou masquer une incrustation du visualiseur",
  "cmd.animation.guides.add": "Ajouter un repère",
- "cmd.animation.guides.remove": "Supprimer un repère"
+ "cmd.animation.guides.remove": "Supprimer un repère",
+ "animation.nudge.hint": "Aperçu. Les flèches déplacent le calque sélectionné de 1 px, avec Maj de 10 px.",
+ "cmd.animation.layer.nudge": "Déplacer le calque"
 }

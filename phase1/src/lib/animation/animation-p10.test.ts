@@ -1969,3 +1969,18 @@ test('P85: guides and safe areas: pure overlays, saved ruler guides, never expor
  const bad=structuredClone(d);(findComp(bad)as {guides:unknown}).guides=[{axis:'z',at:1}];assert.ok(validateDocument(bad).length>0);
  const ov=defaultOverlays();assert.deepEqual(defaultView().overlays,ov);
 });
+import {guideTargets,snapMove,layerSnapPoints,toParentDelta,SNAP_PX} from './snap';
+test('P86: canvas drag snapping: targets, snapping, parent space, nudge command',()=>{
+ let d=applyEdits(createDocument(),[{type:'layer.add',kind:'solid',id:'a',over:{source:{color:'#ffffff',width:100,height:50}}}]);
+ d=applyEdit(d,{type:'guides.set',guides:[{axis:'x',at:300}]});const c=findComp(d)!;
+ const t0=guideTargets(c);assert.deepEqual([...t0.xs].sort((a,b)=>a-b),[0,300,c.width]);
+ const o=guideTargets(c,{...defaultOverlays(),center:true,thirds:true,safe:true});assert.ok(o.xs.includes(c.width/2)&&o.xs.includes(c.width/3));assert.ok(o.xs.length<=400);
+ assert.ok(guideTargets(c,{...defaultOverlays(),grid:true}).xs.length<=400);
+ const l=findLayer(c,'a')!;const pts=layerSnapPoints(c,l,0);assert.equal(pts.xs.length,3);assert.equal(pts.xs[2]-pts.xs[0],100);
+ const s=snapMove(pts,[pts.xs.length?300-pts.xs[2]+3:0,0],t0,c.width,c.height);assert.equal(s.lines.length,1);assert.equal(s.lines[0].x1,300);assert.ok(Math.abs(pts.xs[2]+s.delta[0]-300)<1e-9);
+ const far=snapMove({xs:[150],ys:[150]},[0,0],t0,c.width,c.height);assert.deepEqual(far.delta,[0,0]);assert.equal(far.lines.length,0);assert.equal(SNAP_PX,8);
+ assert.deepEqual(toParentDelta(c,l,0,[5,-3]),[5,-3]);
+ d=applyEdits(d,[{type:'layer.add',kind:'null',id:'p'},{type:'layer.parent',layer:'a',parent:'p'},{type:'prop.set',layer:'p',prop:'scale',t:0,value:[200,200]}]);
+ const pd=toParentDelta(findComp(d)!,findLayer(findComp(d)!,'a')!,0,[10,4]);assert.ok(Math.abs(pd[0]-5)<1e-9&&Math.abs(pd[1]-2)<1e-9);
+ const spec=animationCommandSpecs().find(x=>x.id==='animation.layer.nudge');assert.ok(spec);
+});

@@ -708,5 +708,7 @@
  "animation.guides.removeShort": "Remove",
  "cmd.animation.guides.overlay": "Show or hide a viewer overlay",
  "cmd.animation.guides.add": "Add a ruler guide",
- "cmd.animation.guides.remove": "Remove a ruler guide"
+ "cmd.animation.guides.remove": "Remove a ruler guide",
+ "animation.nudge.hint": "Viewer. Arrow keys nudge the selected layer by 1 px, Shift by 10 px.",
+ "cmd.animation.layer.nudge": "Nudge layer"
 }

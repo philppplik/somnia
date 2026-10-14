@@ -708,5 +708,7 @@
  "animation.guides.removeShort": "Entfernen",
  "cmd.animation.guides.overlay": "Eine Viewer-Einblendung ein- oder ausschalten",
  "cmd.animation.guides.add": "Eine Hilfslinie hinzufügen",
- "cmd.animation.guides.remove": "Eine Hilfslinie entfernen"
+ "cmd.animation.guides.remove": "Eine Hilfslinie entfernen",
+ "animation.nudge.hint": "Vorschau. Pfeiltasten verschieben die gewählte Ebene um 1 px, mit Umschalt um 10 px.",
+ "cmd.animation.layer.nudge": "Ebene verschieben"
 }

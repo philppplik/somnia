@@ -13,3 +13,8 @@ export function ViewerGuides({comp}:{comp:Composition}){
   {draw(g.map(x=>x.axis==='x'?{x1:x.at,y1:0,x2:x.at,y2:comp.height}:{x1:0,y1:x.at,x2:comp.width,y2:x.at}),'text-accent','u')}
  </g>;
 }
+/** Lines shown while a dragged layer snaps to a target. Viewer only. */
+export function ViewerSnapLines({lines}:{lines:readonly Line[]}){
+ if(!lines.length)return null;
+ return <g pointerEvents="none" fill="none" data-testid="animation-snap-lines">{draw(lines,'text-accent','s')}</g>;
+}

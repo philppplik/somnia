@@ -23,6 +23,8 @@ import {ClipError,copyKeys,getKeyClip,pastedRefs,setKeyClip} from './keyclip';
 import {allKeysOf,pruneSelection,shiftSelection} from './selection';
 import {EASE_PRESETS,type EasePreset} from './graph';
 import {copyCurve,pasteCurveEdit} from './graphTools';
+import {toParentDelta} from './snap';
+import {evaluate} from './interpolate';
 import {addGuide,normalizeOverlays,OVERLAY_KEYS,type OverlayKey} from './guides';
 import {buildTemplate,layerTemplates} from './layerTemplates';
 import {templateEdits,TEMPLATE_IDS,TEMPLATE_LAYERS,type TemplateId} from './templates';
@@ -145,6 +147,11 @@ export function animationCommandSpecs():CommandSpec<unknown,unknown>[]{
    run(templateEdits(c,p.template,p.at!==undefined?secondsToTicks(p.at):animationSession().getState().view.playhead,ids));
    animationSession().setView({selectedLayer:ids[0]});
   },object({template:{enum:[...TEMPLATE_IDS]},saved:{type:'string',minLength:1,maxLength:64},at:{type:'number',minimum:0}},[]),open,'Insert'),
+  spec('animation.layer.nudge','Nudge the selected layer',(p:{dx?:number;dy?:number})=>{
+   const c=comp(),l=findLayer(c,selected())!;if(l.locked)throw Object.assign(Error('That layer is locked.'),{expected:true});
+   const at=animationSession().getState().view.playhead,cur=evaluate(l.transform.position,at) as readonly number[],d=toParentDelta(c,l,at,[p.dx??0,p.dy??0]);
+   run({type:'prop.set',layer:l.id,prop:'position',t:at,value:[Math.round((cur[0]+d[0])*100)/100,Math.round((cur[1]+d[1])*100)/100]});
+  },object({dx:{type:'number',minimum:-1000,maximum:1000},dy:{type:'number',minimum:-1000,maximum:1000}},[]),()=>{if(!open())return false;const id=animationSession().getState().view.selectedLayer,l=id?findLayer(comp(),id):undefined;return !!l&&!l.locked;},'Edit'),
   spec('animation.guides.overlay','Show or hide a viewer overlay',(p:{overlay:OverlayKey;on?:boolean})=>{
    const cur=normalizeOverlays(animationSession().getState().view.overlays);animationSession().setView({overlays:{...cur,[p.overlay]:p.on??!cur[p.overlay]}});
   },object({overlay:{enum:[...OVERLAY_KEYS]},on:{type:'boolean'}},['overlay']),open,'View'),

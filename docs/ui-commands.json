@@ -780,6 +780,18 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.layer.nudge",
+      "title": "Nudge layer",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.layer.parent",
       "title": "Set layer parent",
       "category": "Edit",

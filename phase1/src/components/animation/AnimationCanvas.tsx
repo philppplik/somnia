@@ -6,13 +6,15 @@ import {layerPathD,layerFillRule} from '../../lib/animation/pathLayer';
 import {effectPrimitives,effectBounds,revealedText,strokeAttributes,layerColorsAt} from '../../lib/animation/effects';
 import type {InterfaceAsset} from '../../lib/interface/schema';
 import {StudioStatus} from '../studios/StudioStatus';
-import {useEffect,useMemo,useRef} from 'react';
+import {useEffect,useMemo,useRef,useState,type KeyboardEvent} from 'react';
 import {Sparkles} from '../../lib/icons';
 import {studioContextStore} from '../../lib/shell/studioContext';
 import {registerAnimationCommands} from '../../lib/animation/commands';
 import {animationSession,useAnimationState} from '../../lib/animation/session';
 import {findComp,type Composition,type KeyRef,type Layer} from '../../lib/animation/model';
-import {ViewerGuides} from './ViewerGuides';
+import {ViewerGuides,ViewerSnapLines} from './ViewerGuides';
+import {startLayerDrag} from './layerDrag';
+import type {Line} from '../../lib/animation/guides';
 import {animatedChars,textPathD,textPathId,textPathStartAt} from '../../lib/animation/textAnimators';
 import {maskDefs,maskId,matteId,hasMasks} from '../../lib/animation/masks';
 import {layerBody,precompImage,setRenderComps} from '../../lib/animation/exportFrames';
@@ -28,6 +30,7 @@ import {MaskOverlay} from './MaskOverlay';
 import {useMaskSelection} from '../../lib/animation/maskSelection';
 import {PathLayerOverlay} from './PathLayerOverlay';
 import {PathOverlay} from './PathOverlay';
+const ARROWS:Record<string,readonly [number,number]>={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]};
 const run=(id:string,params?:unknown)=>void executeCommand(id,params);
 /** Canvas of the Animation studio: viewer above a timeline, or a starter when no composition is open. */
 export function AnimationCanvas(){
@@ -90,10 +93,11 @@ function layerNode(layer:Layer,assets:readonly InterfaceAsset[],at:number,fillOv
  return <text x={0} y={src.size??48} fontSize={src.size} fill={fill} fontFamily="system-ui, sans-serif" className="select-none">{animatedText(l,at)}</text>;
 }
 function Viewer({comp,at,selected,sel,assets,comps}:{assets:readonly InterfaceAsset[];comps:readonly Composition[];comp:Composition;at:number;selected:string|null;sel:readonly KeyRef[]}){
- const {t}=useT();setRenderComps(comps);const scene=useMemo(()=>sceneAt(comp,at),[comp,at]);const maskDefsHtml=useMemo(()=>maskDefs(comp,at,'preview-',(l,i)=>{try{return layerBody(l,i,assets,at,'preview-');}catch{return '';}}),[comp,at,assets]);
+ const {t}=useT();const [snap,setSnap]=useState<Line[]>([]);setRenderComps(comps);const scene=useMemo(()=>sceneAt(comp,at),[comp,at]);const maskDefsHtml=useMemo(()=>maskDefs(comp,at,'preview-',(l,i)=>{try{return layerBody(l,i,assets,at,'preview-');}catch{return '';}}),[comp,at,assets]);
  const layer=comp.layers.find(l=>l.id===selected);const hasPos=!!layer&&layer.transform.position.keys.length>0;const msel=useMaskSelection(),penOn=msel.layerPen,lp=canClosePath(layer)&&msel.layerPoint?.layer===layer!.id?msel.layerPoint.i:null,lset:readonly number[]=canClosePath(layer)&&msel.layerSet?.layer===layer!.id?msel.layerSet.set:lp!==null?[lp]:[],lpt=lp!==null?layer!.source.path!.points[lp]:undefined;const canClose=canClosePath(layer)&&!layer!.source.path!.closed&&layer!.source.path!.points.length>=3&&!layer!.source.pathKeys?.length;
+ const nudge=(e:KeyboardEvent<HTMLDivElement>)=>{const d=ARROWS[e.key];if(!d||e.target!==e.currentTarget||!layer||layer.locked||e.ctrlKey||e.metaKey||e.altKey)return;e.preventDefault();const n=e.shiftKey?10:1;run('animation.layer.nudge',{dx:d[0]*n,dy:d[1]*n});};
  const posSel=sel.filter(k=>k.layer===selected&&k.prop==='position');
- return <div className="relative grid min-h-[160px] flex-1 place-items-center overflow-hidden bg-hover p-3" data-testid="animation-viewer">
+ return <div className="relative grid min-h-[160px] flex-1 place-items-center overflow-hidden bg-hover p-3" data-testid="animation-viewer" tabIndex={0} aria-label={t('animation.nudge.hint')} onKeyDown={nudge}>
   <svg role="img" aria-label={t('animation.viewer')} viewBox={`0 0 ${comp.width} ${comp.height}`} className="max-h-full max-w-full h-full overflow-visible">
    <defs>{comp.layers.map((l,i)=><filter key={l.id} id={`preview-effect-${i}`} filterUnits="userSpaceOnUse" {...effectBounds(l,at)} colorInterpolationFilters="sRGB" dangerouslySetInnerHTML={{__html:effectPrimitives(l,at)}}/>)}</defs>
    <defs>{comp.layers.map((l,i)=>l.source.gradient&&<GradientDef key={l.id} id={`preview-gradient-${i}`} g={gradientAt(l.source.gradient,at)}/>)}{comp.layers.map((l,i)=>l.stroke?.gradient&&<GradientDef key={`s-${l.id}`} id={`preview-stroke-gradient-${i}`} g={gradientAt(l.stroke.gradient,at)}/>)}</defs>
@@ -104,14 +108,15 @@ function Viewer({comp,at,selected,sel,assets,comps}:{assets:readonly InterfaceAs
     const contentAt=(tk:number)=>{if(!l.repeater)return contentOnce(tk);const a=evaluate(l.transform.anchor,tk) as [number,number];return <>{repeaterCopies(repeaterAt(l.repeater,tk),[a[0],a[1]]).map((c,ci)=><g key={ci} transform={c.transform} opacity={c.opacity<1?c.opacity:undefined} filter={c.filter}>{contentOnce(tk)}</g>)}{contentOnce(tk)}</>;};
     const content=contentAt(at),each=contentSampled(l);
     const blur=motionBlurTicks(comp,l,at);
-    const drawn=blur.length?<g key={l.id} opacity={opacity} data-layer={l.id} data-blur={blur.length} data-selected={l.id===selected||undefined} onPointerDown={()=>animationSession().setView({selectedLayer:l.id})}>{blur.map((m,j)=><g key={j} transform={`matrix(${m.matrix.join(' ')})`} opacity={1/(j+1)}>{each?contentAt(m.tick):content}</g>)}</g>
+    const drawn=blur.length?<g key={l.id} opacity={opacity} data-layer={l.id} data-blur={blur.length} data-selected={l.id===selected||undefined} onPointerDown={e=>{animationSession().setView({selectedLayer:l.id});startLayerDrag(e,comp,l,at,setSnap);}}>{blur.map((m,j)=><g key={j} transform={`matrix(${m.matrix.join(' ')})`} opacity={1/(j+1)}>{each?contentAt(m.tick):content}</g>)}</g>
      :<g key={l.id} transform={`matrix(${matrix.join(' ')})`} opacity={opacity} data-layer={l.id} data-selected={l.id===selected||undefined}
-     onPointerDown={()=>animationSession().setView({selectedLayer:l.id})}>{content}</g>;
+     onPointerDown={e=>{animationSession().setView({selectedLayer:l.id});startLayerDrag(e,comp,l,at,setSnap);}}>{content}</g>;
     return l.matte?<g key={l.id} mask={`url(#${matteId('preview-',i)})`}>{drawn}</g>:drawn;})}
    {layer&&hasPos&&<PathOverlay comp={comp} layer={layer} at={at} sel={sel}/>}
    {layer&&hasMasks(layer)&&<MaskOverlay comp={comp} layer={layer} at={at}/>}
    <PathLayerOverlay comp={comp} layer={layer} at={at}/>
    <ViewerGuides comp={comp}/>
+   <ViewerSnapLines lines={snap}/>
   </svg>
   <div className="absolute left-2 top-2 flex gap-1" role="group" aria-label={t('animation.pathLayer.tools')}>
    <Button size="tiny" variant="outline" aria-pressed={penOn} disabled={!!layer?.locked} onClick={()=>void executeCommand('animation.layer.pen')} title={t('animation.pathLayer.penHint')} data-testid="animation-layerpen-toggle">{t('animation.pathLayer.pen')}</Button>

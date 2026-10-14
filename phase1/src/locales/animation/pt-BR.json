@@ -708,5 +708,7 @@
  "animation.guides.removeShort": "Remover",
  "cmd.animation.guides.overlay": "Mostrar ou ocultar uma sobreposição do visualizador",
  "cmd.animation.guides.add": "Adicionar uma guia",
- "cmd.animation.guides.remove": "Remover uma guia"
+ "cmd.animation.guides.remove": "Remover uma guia",
+ "animation.nudge.hint": "Visualização. As setas movem a camada selecionada 1 px, com Shift 10 px.",
+ "cmd.animation.layer.nudge": "Mover camada"
 }

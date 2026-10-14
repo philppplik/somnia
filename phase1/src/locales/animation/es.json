@@ -708,5 +708,7 @@
  "animation.guides.removeShort": "Quitar",
  "cmd.animation.guides.overlay": "Mostrar u ocultar una superposición del visor",
  "cmd.animation.guides.add": "Añadir una guía",
- "cmd.animation.guides.remove": "Quitar una guía"
+ "cmd.animation.guides.remove": "Quitar una guía",
+ "animation.nudge.hint": "Vista. Las flechas mueven la capa seleccionada 1 px, con Mayús 10 px.",
+ "cmd.animation.layer.nudge": "Mover capa"
 }
