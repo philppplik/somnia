@@ -46,7 +46,8 @@ export type MaskProp='position'|'size'|'feather'|'opacity';
 /** Keyframed overrides of the static mask values. A property with keys wins over the static field. */
 export interface MaskAnim{position?:Property;size?:Property;feather?:Property;opacity?:Property}
 export const MAX_MASK_POINTS=32;
-export interface MaskShapeKey{t:number;path:MaskPath}
+export const SHAPE_EASES=['linear','hold','ease','easeIn','easeOut'] as const;
+export interface MaskShapeKey{t:number;path:MaskPath;/** Easing of the segment that starts at this key; absent means linear. */ease?:typeof SHAPE_EASES[number]}
 export interface LayerMask{id:string;shape:'rect'|'ellipse'|'path';mode:'add'|'subtract';x:number;y:number;width:number;height:number;feather:number;invert:boolean;/** Percent 0..100, absent means 100. */opacity?:number;/** Path masks: points are in mask space and moved by x/y; width and height are ignored. */path?:MaskPath;/** Path morph: whole-path keys (same point count and closed flag as `path`), linear between keys. */shapeKeys?:readonly MaskShapeKey[];anim?:MaskAnim}
 /** Track matte: another layer of the composition drives this layer's visibility by its alpha or luminance. The source layer is not drawn on its own. */
 export interface LayerMatte{source:string;mode:'alpha'|'luma';invert:boolean}
@@ -207,7 +208,7 @@ export function validMaskPath(p:MaskPath|undefined):boolean{
 export const MAX_SHAPE_KEYS=64;
 export function validShapeKeys(m:LayerMask):boolean{
  const k=m.shapeKeys;if(k===undefined)return true;
- return m.shape==='path'&&!!m.path&&Array.isArray(k)&&k.length>=1&&k.length<=MAX_SHAPE_KEYS&&k.every((x,i)=>!!x&&Number.isInteger(x.t)&&x.t>=0&&(i===0||x.t>k[i-1].t)&&validMaskPath(x.path)&&x.path.closed===m.path!.closed&&x.path.points.length===m.path!.points.length);
+ return m.shape==='path'&&!!m.path&&Array.isArray(k)&&k.length>=1&&k.length<=MAX_SHAPE_KEYS&&k.every((x,i)=>!!x&&Number.isInteger(x.t)&&x.t>=0&&(i===0||x.t>k[i-1].t)&&(x.ease===undefined||(SHAPE_EASES as readonly string[]).includes(x.ease))&&validMaskPath(x.path)&&x.path.closed===m.path!.closed&&x.path.points.length===m.path!.points.length);
 }
 export function validMasks(l:Layer):boolean{
  const m=l.masks;if(m===undefined)return true;

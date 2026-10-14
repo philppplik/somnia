@@ -319,5 +319,9 @@
  "animation.masks.pen": "Stift",
  "animation.masks.penHint": "Klicken setzt einen Punkt, Ziehen formt Kurvengriffe, Klick auf den ersten Punkt schließt",
  "animation.masks.handleIn": "Bezier-Eingangsgriff von Punkt {n}",
- "animation.masks.handleOut": "Bezier-Ausgangsgriff von Punkt {n}"
+ "animation.masks.handleOut": "Bezier-Ausgangsgriff von Punkt {n}",
+ "animation.masks.copy": "Kopieren",
+ "animation.masks.paste": "Einfügen",
+ "animation.masks.pointInsert": "Punkt einfügen",
+ "animation.masks.pointRemove": "Punkt löschen"
 }

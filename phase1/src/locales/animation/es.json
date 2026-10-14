@@ -319,5 +319,9 @@
  "animation.masks.pen": "Pluma",
  "animation.masks.penHint": "Clic añade un punto, arrastrar crea tiradores de curva, clic en el primer punto cierra",
  "animation.masks.handleIn": "Tirador de entrada bézier del punto {n}",
- "animation.masks.handleOut": "Tirador de salida bézier del punto {n}"
+ "animation.masks.handleOut": "Tirador de salida bézier del punto {n}",
+ "animation.masks.copy": "Copiar",
+ "animation.masks.paste": "Pegar",
+ "animation.masks.pointInsert": "Insertar punto",
+ "animation.masks.pointRemove": "Eliminar punto"
 }

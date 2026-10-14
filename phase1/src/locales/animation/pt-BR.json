@@ -319,5 +319,9 @@
  "animation.masks.pen": "Caneta",
  "animation.masks.penHint": "Clique para adicionar um ponto, arraste para as alças de curva, clique no primeiro ponto para fechar",
  "animation.masks.handleIn": "Alça de entrada bézier do ponto {n}",
- "animation.masks.handleOut": "Alça de saída bézier do ponto {n}"
+ "animation.masks.handleOut": "Alça de saída bézier do ponto {n}",
+ "animation.masks.copy": "Copiar",
+ "animation.masks.paste": "Colar",
+ "animation.masks.pointInsert": "Inserir ponto",
+ "animation.masks.pointRemove": "Excluir ponto"
 }

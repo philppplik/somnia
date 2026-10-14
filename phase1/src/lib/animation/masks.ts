@@ -1,7 +1,7 @@
 import {evaluateMod} from './modifiers';
 import {worldMatrix,type Matrix} from './scene';
 import {EASE_IN,EASE_OUT,MAX_LAYER_MASKS,MAX_MASK_POINTS,findComp,findLayer,newId,type AnimationDocument,type Composition,type Layer,type LayerMask,type LayerMatte,type MaskPath,type MaskShapeKey,MAX_SHAPE_KEYS,type MaskProp,type MaskPoint,type PropValue,type Property,type Vec2} from './model';
-import {evaluate} from './interpolate';
+import {evaluate,cubicBezier} from './interpolate';
 import {snapToFrame} from './time';
 import {EASE_PRESETS,type EasePreset} from './graph';
 import type {Edit} from './edit';
@@ -9,7 +9,7 @@ const num=(n:number)=>String(Math.round(n*1e4)/1e4);
 /** A mask with every keyed property read at one tick. */
 export function lerpPath(keys:readonly MaskShapeKey[],tick:number):MaskPath{
  if(tick<=keys[0].t)return keys[0].path;const last=keys[keys.length-1];if(tick>=last.t)return last.path;
- let i=0;while(keys[i+1].t<=tick)i++;const a=keys[i],b=keys[i+1],f=(tick-a.t)/(b.t-a.t),mix=(u=0,v=0)=>round(u+(v-u)*f);
+ let i=0;while(keys[i+1].t<=tick)i++;const a=keys[i],b=keys[i+1],u=(tick-a.t)/(b.t-a.t),e=EASE_PRESETS[a.ease??'linear'],f=e.interp==='hold'?0:e.interp==='linear'?u:cubicBezier(e.out[0],e.out[1],e.in[0],e.in[1],u),mix=(u=0,v=0)=>round(u+(v-u)*f);
  return {closed:a.path.closed,points:a.path.points.map((q,j)=>{const r=b.path.points[j];
   return {x:mix(q.x,r.x),y:mix(q.y,r.y),inX:mix(q.inX,r.inX),inY:mix(q.inY,r.inY),outX:mix(q.outX,r.outX),outY:mix(q.outY,r.outY)};})};
 }
@@ -79,11 +79,15 @@ export type MaskOp=
  |{op:'path';mask:string;points:readonly {x:number;y:number}[];closed:boolean;smooth:boolean}
  |{op:'keyMove';mask:string;prop:MaskProp|'path';from:number;to:number}
  |{op:'keyRemove';mask:string;prop:MaskProp|'path';t:number}
- |{op:'keyEase';mask:string;prop:MaskProp;t:number;preset:EasePreset}
+ |{op:'keyEase';mask:string;prop:MaskProp|'path';t:number;preset:EasePreset}
  |{op:'box';mask:string;x:number;y:number;width:number;height:number;t:number}
  |{op:'point';mask:string;index:number;x:number;y:number;t?:number}
  |{op:'pen';mask:string;x:number;y:number;outX?:number;outY?:number;restart?:boolean}
  |{op:'close';mask:string}
+ |{op:'pointRemove';mask:string;index:number}
+ |{op:'pointInsert';mask:string;index:number}
+ |{op:'adopt';source:LayerMask}
+ |{op:'keyPaste';mask:string;prop:MaskProp|'path';t:number;clip:MaskKeyClip}
  |{op:'handle';mask:string;index:number;which:'in'|'out';x:number;y:number;mirror:boolean;t?:number}
  |{op:'pathAnimate';mask:string;on:boolean;t:number}
  |{op:'add';id?:string}
@@ -106,7 +110,7 @@ export function maskEdit(doc:AnimationDocument,layerId:string,o:MaskOp):Edit{
    if(n.shape==='path'){if(!n.path)n.path=smoothPath(boxPoints(n),true,true);}else{delete n.path;delete n.shapeKeys;}return n;}));
   case 'path':{need(o.mask);if(o.points.length>MAX_MASK_POINTS)throw Error(`At most ${MAX_MASK_POINTS} path points.`);if(list.some(m=>m.id===o.mask&&m.shapeKeys?.length))throw Error('Remove the path animation before replacing the points.');return set(list.map(m=>m.id===o.mask?{...m,shape:'path',path:smoothPath(o.points,o.closed,o.smooth)}:m));}
   case 'keyMove':case 'keyRemove':case 'keyEase':{need(o.mask);
-   return set(list.map(m=>m.id===o.mask?(o.op==='keyMove'?(o.prop==='path'?moveShapeKey(m,o.from,o.to,c):moveMaskKey(m,o.prop,o.from,o.to,c)):o.op==='keyRemove'?(o.prop==='path'?removeShapeKey(m,o.t):removeMaskKey(m,o.prop,o.t)):easeMaskKey(m,o.prop,o.t,o.preset)):m));}
+   return set(list.map(m=>m.id===o.mask?(o.op==='keyMove'?(o.prop==='path'?moveShapeKey(m,o.from,o.to,c):moveMaskKey(m,o.prop,o.from,o.to,c)):o.op==='keyRemove'?(o.prop==='path'?removeShapeKey(m,o.t):removeMaskKey(m,o.prop,o.t)):(o.prop==='path'?easeShapeKey(m,o.t,o.preset):easeMaskKey(m,o.prop,o.t,o.preset))):m));}
   case 'box':{need(o.mask);const t=snapToFrame(o.t,c.fps);if(t<c.start||t>=c.start+c.duration)throw Error('Time is outside the composition.');
    return set(list.map(m=>m.id===o.mask?setMaskValue(setMaskValue(m,'position',[o.x,o.y],t),'size',[o.width,o.height],t):m));}
   case 'point':case 'handle':{need(o.mask);const t=o.t===undefined?undefined:frameT(o.t,c);
@@ -123,6 +127,12 @@ export function maskEdit(doc:AnimationDocument,layerId:string,o:MaskOp):Edit{
    return {...m,path:{...m.path,points:[...m.path.points,pt]}};}));}
   case 'close':{need(o.mask);return set(list.map(m=>{if(m.id!==o.mask)return m;if(!m.path||m.path.closed||m.path.points.length<3)throw Error('A closed path needs three points.');
    if(m.shapeKeys?.length)throw Error('Remove the path animation before closing the path.');return {...m,path:{...m.path,closed:true}};}));}
+  case 'pointRemove':case 'pointInsert':{need(o.mask);return set(list.map(m=>{if(m.id!==o.mask)return m;if(!m.path||!m.path.points[o.index])throw Error('Path point no longer exists.');
+   const f=o.op==='pointRemove'?(p:MaskPath)=>removePoint(p,o.index):(p:MaskPath)=>insertPoint(p,o.index);
+   return {...m,path:f(m.path),...(m.shapeKeys?{shapeKeys:m.shapeKeys.map(k=>({...k,path:f(k.path)}))}:{})};}));}
+  case 'adopt':{if(list.length>=MAX_LAYER_MASKS)throw Error(`At most ${MAX_LAYER_MASKS} masks per layer.`);
+   const {id:_i,...rest}=o.source;return set([...list,{...rest,id:newId('mask')}]);}
+  case 'keyPaste':{need(o.mask);const t=frameT(o.t,c);return set(list.map(m=>m.id===o.mask?pasteMaskKey(m,o.prop,t,o.clip):m));}
   case 'pathAnimate':{need(o.mask);const t=frameT(o.t,c);return set(list.map(m=>{if(m.id!==o.mask)return m;if(m.shape!=='path'||!m.path)throw Error('Only path masks can morph.');
    if(o.on){if(m.shapeKeys?.length)return m;return {...m,shapeKeys:[{t,path:m.path}]};}
    if(!m.shapeKeys?.length)return m;const {shapeKeys:_k,...rest}=m;return {...rest,path:lerpPath(m.shapeKeys,t)};}));}
@@ -155,6 +165,43 @@ export function moveShapeKey(m:LayerMask,from:number,to:number,comp:Composition)
 export function removeShapeKey(m:LayerMask,t:number):LayerMask{
  const ks=m.shapeKeys,k=ks?.find(x=>x.t===t);if(!ks||!k)throw Error('Key no longer exists.');
  if(ks.length>1)return {...m,shapeKeys:ks.filter(x=>x!==k)};const {shapeKeys:_k,...rest}=m;return {...rest,path:k.path};
+}
+/** A copied mask key: a value with its ease, or a whole path with its ease. */
+export type MaskKeyClip={prop:MaskProp;v:PropValue;interp:'hold'|'linear'|'bezier';out:readonly [number,number];in:readonly [number,number]}|{prop:'path';path:MaskPath;ease?:MaskShapeKey['ease']};
+export function copyMaskKey(m:LayerMask,prop:MaskProp|'path',t:number):MaskKeyClip{
+ if(prop==='path'){const k=m.shapeKeys?.find(x=>x.t===t);if(!k)throw Error('Key no longer exists.');return {prop:'path',path:k.path,ease:k.ease};}
+ const k=keysOf(m,prop).keys.find(x=>x.t===t);if(!k)throw Error('Key no longer exists.');return {prop,v:k.v,interp:k.interp,out:k.out,in:k.in};
+}
+/** Pastes a copied key at `t`: same property only, a path key needs the same point count and closed flag. */
+export function pasteMaskKey(m:LayerMask,prop:MaskProp|'path',t:number,c:MaskKeyClip):LayerMask{
+ if(c.prop!==prop)throw Error('The copied key belongs to another property.');
+ if(c.prop==='path'){
+  if(!m.shapeKeys?.length||!m.path)throw Error('Animate the path first.');if(c.path.points.length!==m.path.points.length||c.path.closed!==m.path.closed)throw Error('The copied shape has a different number of points.');
+  const keys=[...m.shapeKeys.filter(k=>k.t!==t),{t,path:c.path,...(c.ease?{ease:c.ease}:{})}].sort((a,b)=>a.t-b.t);if(keys.length>MAX_SHAPE_KEYS)throw Error(`At most ${MAX_SHAPE_KEYS} path keys.`);return {...m,shapeKeys:keys};
+ }
+ const cur=m.anim?.[c.prop];if(!cur?.keys.length)throw Error('Animate the property first.');
+ if(Array.isArray(c.v)!==(cur.type==='vec2'))throw Error('Value does not fit the mask property.');
+ return {...m,anim:{...m.anim,[c.prop]:{...cur,keys:[...cur.keys.filter(k=>k.t!==t),{t,v:c.v,interp:c.interp,out:c.out,in:c.in}].sort((a,b)=>a.t-b.t)}}};
+}
+export function easeShapeKey(m:LayerMask,t:number,preset:EasePreset):LayerMask{
+ if(!(preset in EASE_PRESETS))throw Error('Unknown ease preset.');if(!m.shapeKeys?.some(k=>k.t===t))throw Error('Key no longer exists.');
+ return {...m,shapeKeys:m.shapeKeys.map(k=>{if(k.t!==t)return k;const {ease:_e,...rest}=k;return preset==='linear'?rest:{...rest,ease:preset as MaskShapeKey['ease']};})};
+}
+/** Removes one point; closed paths keep three, open paths keep one. */
+export function removePoint(p:MaskPath,i:number):MaskPath{
+ if(p.points.length<=(p.closed?3:1))throw Error(p.closed?'A closed path needs three points.':'A path needs a point.');
+ return {...p,points:p.points.filter((_,j)=>j!==i)};
+}
+/** Inserts a point on the curve between point `i` and the next one (de Casteljau split at the middle, shape unchanged). */
+export function insertPoint(p:MaskPath,i:number):MaskPath{
+ const n=p.points.length;if(n>=MAX_MASK_POINTS)throw Error(`At most ${MAX_MASK_POINTS} path points.`);
+ const j=i+1<n?i+1:p.closed?0:-1;if(j<0)throw Error('The last point of an open path has no next segment.');
+ const a=p.points[i],b=p.points[j],P:Vec2[]=[[a.x,a.y],[a.x+(a.outX??0),a.y+(a.outY??0)],[b.x+(b.inX??0),b.y+(b.inY??0)],[b.x,b.y]];
+ const mid=(u:Vec2,v:Vec2):Vec2=>[(u[0]+v[0])/2,(u[1]+v[1])/2],q0=mid(P[0],P[1]),q1=mid(P[1],P[2]),q2=mid(P[2],P[3]),r0=mid(q0,q1),r1=mid(q1,q2),m=mid(r0,r1);
+ const na={...a,outX:round(q0[0]-a.x),outY:round(q0[1]-a.y)},nm={x:round(m[0]),y:round(m[1]),inX:round(r0[0]-m[0]),inY:round(r0[1]-m[1]),outX:round(r1[0]-m[0]),outY:round(r1[1]-m[1])},nb={...b,inX:round(q2[0]-b.x),inY:round(q2[1]-b.y)};
+ const pts=p.points.map((q,k)=>k===i?na:k===j?nb:q);pts.splice(i+1,0,nm);
+ // wrap segment (last to first): the middle point sits at the end of the list, so i+1 is right too
+ return {...p,points:pts};
 }
 const key=(t:number,v:PropValue)=>({t,v,interp:'linear' as const,out:EASE_OUT,in:EASE_IN});
 const base=(m:LayerMask,prop:MaskProp):PropValue=>prop==='position'?[m.x,m.y]:prop==='size'?[m.width,m.height]:prop==='feather'?m.feather:m.opacity??100;

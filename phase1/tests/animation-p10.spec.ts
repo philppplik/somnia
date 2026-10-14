@@ -36,4 +36,7 @@ test('P10 masks, track matte and text rotation/colour animators',async({page})=>
  await page.getByTestId('animation-pen-toggle').click();
  await page.getByTestId('animation-mask-pathanim-0').check();
  await expect(page.getByTestId('animation-maskrow-0-path')).toBeVisible();
+ // P14 (CI-only): copy/paste a mask and insert a point on the animated path.
+ await page.getByTestId('animation-mask-copy').click();await page.getByTestId('animation-mask-paste').click();
+ await expect(page.getByTestId('animation-mask-1')).toBeVisible();
 });

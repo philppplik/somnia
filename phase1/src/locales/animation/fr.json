@@ -319,5 +319,9 @@
  "animation.masks.pen": "Plume",
  "animation.masks.penHint": "Cliquer ajoute un point, glisser crée les poignées de courbe, cliquer le premier point ferme",
  "animation.masks.handleIn": "Poignée d'entrée bézier du point {n}",
- "animation.masks.handleOut": "Poignée de sortie bézier du point {n}"
+ "animation.masks.handleOut": "Poignée de sortie bézier du point {n}",
+ "animation.masks.copy": "Copier",
+ "animation.masks.paste": "Coller",
+ "animation.masks.pointInsert": "Insérer un point",
+ "animation.masks.pointRemove": "Supprimer le point"
 }

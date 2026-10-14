@@ -1,7 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {createDocument,findComp,findLayer,validateDocument,MAX_LAYER_MASKS,type AnimationDocument} from './model';
 import {applyEdit,applyEdits,EditError} from './edit';
-import {maskEdit,matteEdit,maskPath} from './masks';
+import {maskEdit,matteEdit,maskPath,copyMaskKey,insertPoint} from './masks';
 import {animatedChars,animatorEdit,defaultAnimator,mixHex} from './textAnimators';
 import {frameSvg} from './exportFrames';
 import {sceneAt} from './scene';
@@ -157,8 +157,8 @@ test('P12: box and point drags are single edits; handle maths is bounded',()=>{
 });
 test('P12: mask selection falls back to the first mask of the layer',()=>{
  const d=keyed();const l=layer(d,'photo');
- selectMask(null,null);assert.equal(activeMask(l,{layer:null,mask:null,point:null,pen:false})!.id,'m');
- assert.equal(activeMask(l,{layer:'other',mask:'zzz',point:null,pen:false})!.id,'m');assert.equal(activeMask(undefined,{layer:null,mask:null,point:null,pen:false}),undefined);
+ selectMask(null,null);assert.equal(activeMask(l,{layer:null,mask:null,point:null,pen:false,clip:null})!.id,'m');
+ assert.equal(activeMask(l,{layer:'other',mask:'zzz',point:null,pen:false,clip:null})!.id,'m');assert.equal(activeMask(undefined,{layer:null,mask:null,point:null,pen:false,clip:null}),undefined);
 });
 
 const penned=()=>{let d=base();d=applyEdit(d,maskEdit(d,'photo',{op:'add',id:'p'}));
@@ -200,4 +200,46 @@ test('P13: path morph keys interpolate, edits write keys at the playhead, last k
  d=applyEdit(d,maskEdit(d,'photo',{op:'keyRemove',mask:'p',prop:'path',t:m.shapeKeys![1].t}));
  d=applyEdit(d,maskEdit(d,'photo',{op:'keyRemove',mask:'p',prop:'path',t:0}));
  m=layer(d,'photo').masks![0];assert.equal(m.shapeKeys,undefined);assert.equal(m.path!.points.length,3);assert.deepEqual(validateDocument(d),[]);
+});
+
+const morph=()=>{let d=applyEdit(penned(),maskEdit(penned(),'photo',{op:'close',mask:'p'}));
+ d=applyEdit(d,maskEdit(d,'photo',{op:'pathAnimate',mask:'p',on:true,t:0}));
+ return applyEdit(d,maskEdit(d,'photo',{op:'point',mask:'p',index:2,x:300,y:200,t:sec}));};
+test('P14: ease per path key changes the in-between shape and round-trips',()=>{
+ let d=morph();const mid=Math.round(sec/2);const xAt=(doc:AnimationDocument)=>resolveMask(layer(doc,'photo').masks![0],mid).path!.points[2].x;
+ const lin=xAt(d);d=applyEdit(d,maskEdit(d,'photo',{op:'keyEase',mask:'p',prop:'path',t:0,preset:'easeIn'}));
+ assert.ok(xAt(d)<lin);assert.equal(layer(d,'photo').masks![0].shapeKeys![0].ease,'easeIn');
+ d=applyEdit(d,maskEdit(d,'photo',{op:'keyEase',mask:'p',prop:'path',t:0,preset:'hold'}));assert.equal(xAt(d),100);
+ d=applyEdit(d,maskEdit(d,'photo',{op:'keyEase',mask:'p',prop:'path',t:0,preset:'linear'}));assert.equal(layer(d,'photo').masks![0].shapeKeys![0].ease,undefined);
+ assert.throws(()=>maskEdit(d,'photo',{op:'keyEase',mask:'p',prop:'path',t:12345,preset:'ease'}).type&&applyEdit(d,maskEdit(d,'photo',{op:'keyEase',mask:'p',prop:'path',t:12345,preset:'ease'})));
+ assert.deepEqual(validateDocument(d),[]);
+});
+test('P14: points are inserted and deleted on static and keyed paths, shape unchanged by insert',()=>{
+ let d=penned();const pts=()=>layer(d,'photo').masks![0].path!.points;
+ d=applyEdit(d,maskEdit(d,'photo',{op:'pointInsert',mask:'p',index:0}));assert.equal(pts().length,4);
+ assert.throws(()=>maskEdit(d,'photo',{op:'pointInsert',mask:'p',index:3}),/next segment/);
+ const straight=insertPoint({closed:false,points:[{x:0,y:0},{x:100,y:0}]},0).points;assert.deepEqual([straight[1].x,straight[1].y],[50,0]);
+ d=applyEdit(d,maskEdit(d,'photo',{op:'pointRemove',mask:'p',index:1}));assert.equal(pts().length,3);
+ d=applyEdit(d,maskEdit(d,'photo',{op:'close',mask:'p'}));
+ assert.throws(()=>applyEdit(d,maskEdit(d,'photo',{op:'pointRemove',mask:'p',index:0})),/three points/);
+ d=applyEdit(d,maskEdit(d,'photo',{op:'pointInsert',mask:'p',index:2}));assert.equal(pts().length,4);
+ let k=morph();const r=k.revision;k=applyEdit(k,maskEdit(k,'photo',{op:'pointInsert',mask:'p',index:0}));
+ const m=layer(k,'photo').masks![0];assert.equal(k.revision,r+1);assert.ok(m.shapeKeys!.every(x=>x.path.points.length===4)&&m.path!.points.length===4);assert.deepEqual(validateDocument(k),[]);
+ k=applyEdit(k,maskEdit(k,'photo',{op:'pointRemove',mask:'p',index:3}));assert.ok(layer(k,'photo').masks![0].shapeKeys!.every(x=>x.path.points.length===3));
+});
+test('P14: masks and mask keys copy between layers; mismatches are refused',()=>{
+ let d=morph();const src=layer(d,'photo').masks![0];
+ d=applyEdit(d,maskEdit(d,'stencil',{op:'adopt',source:src}));const copy=layer(d,'stencil').masks![0];
+ assert.notEqual(copy.id,'p');assert.equal(copy.shapeKeys!.length,2);assert.deepEqual(validateDocument(d),[]);
+ const clip=copyMaskKey(src,'path',sec);
+ d=applyEdit(d,maskEdit(d,'stencil',{op:'keyPaste',mask:copy.id,prop:'path',t:sec*2,clip}));assert.equal(layer(d,'stencil').masks![0].shapeKeys!.length,3);
+ assert.throws(()=>maskEdit(d,'stencil',{op:'keyPaste',mask:copy.id,prop:'position',t:0,clip}),/another property/);
+ const small=applyEdit(d,maskEdit(d,'stencil',{op:'pointInsert',mask:copy.id,index:0}));
+ assert.throws(()=>maskEdit(small,'stencil',{op:'keyPaste',mask:copy.id,prop:'path',t:sec*3,clip}),/different number/);
+ let f=applyEdit(base(),maskEdit(base(),'photo',{op:'add',id:'a'}));f=applyEdit(f,maskEdit(f,'photo',{op:'animate',mask:'a',prop:'opacity',on:true,t:0}));
+ f=applyEdit(f,maskEdit(f,'photo',{op:'set',mask:'a',prop:'opacity',value:30,t:sec}));
+ const kc=copyMaskKey(layer(f,'photo').masks![0],'opacity',sec);
+ f=applyEdit(f,maskEdit(f,'photo',{op:'keyPaste',mask:'a',prop:'opacity',t:sec*2,clip:kc}));assert.equal(layer(f,'photo').masks![0].anim!.opacity!.keys.length,3);
+ let g=f;for(let i=0;i<MAX_LAYER_MASKS;i++){try{g=applyEdit(g,maskEdit(g,'stencil',{op:'adopt',source:layer(f,'photo').masks![0]}));}catch{break;}}
+ assert.ok(layer(g,'stencil').masks!.length<=MAX_LAYER_MASKS);assert.throws(()=>maskEdit(g,'stencil',{op:'adopt',source:src}));
 });

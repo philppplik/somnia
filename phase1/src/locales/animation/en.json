@@ -319,5 +319,9 @@
  "animation.masks.pen": "Pen",
  "animation.masks.penHint": "Click to add a point, drag for curve handles, click the first point to close",
  "animation.masks.handleIn": "Bezier in handle of point {n}",
- "animation.masks.handleOut": "Bezier out handle of point {n}"
+ "animation.masks.handleOut": "Bezier out handle of point {n}",
+ "animation.masks.copy": "Copy",
+ "animation.masks.paste": "Paste",
+ "animation.masks.pointInsert": "Insert point",
+ "animation.masks.pointRemove": "Delete point"
 }
