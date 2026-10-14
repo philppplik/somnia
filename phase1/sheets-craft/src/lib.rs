@@ -80,7 +80,7 @@ fn format_command(op: &serde_json::Value) -> Result<(&'static str, serde_json::V
             };
             ("home.borders", json!({"preset": preset, "style": style, "color": color}))
         }
-        "numFmt" => ("home.numberFormat",        "numFmt" => ("home.numberFormat", json!({"code": number_format_code(op)?})),
+        "numFmt" => ("home.numberFormat", json!({"code": number_format_code(op)?})),
         _ => return Err("unsupported format operation".into()),
     })
 }
