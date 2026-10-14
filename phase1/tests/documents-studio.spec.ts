@@ -281,3 +281,27 @@ test('D2b: font, size and colour from the format bar change the engine render an
  await expect(page.getByTestId('documents-color-C0392B')).toHaveAttribute('aria-pressed','false');
  await expect(page.getByTestId('documents-format-font')).toHaveValue('JetBrains Mono');
 });
+
+test('D3a: alignment, indent and spacing change the engine render, one undo step each, and survive save and reopen',async({page})=>{
+ await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ await openBuffers(page,[{name:'sample.docx',mimeType:DOCX,buffer:sample()}]);
+ await expect(page.getByTestId('documents-pages')).toHaveText('1 pages');
+ const pg=page.getByTestId('documents-page').first();const img=pg.locator('img');
+ await expect.poll(()=>img.evaluate((i:HTMLImageElement)=>i.complete&&i.naturalWidth)).toBeGreaterThan(300);
+ await expect(page.getByTestId('documents-align-center')).toBeDisabled();
+ const box=(await pg.boundingBox())!;
+ await page.mouse.click(box.x+box.width*0.125,box.y+box.height*0.127);
+ await expect(page.getByTestId('documents-caret')).toBeVisible();
+ const before=await img.screenshot();
+ await page.getByTestId('documents-align-center').click();
+ await expect(page.getByTestId('documents-align-center')).toHaveAttribute('aria-pressed','true');
+ await expect.poll(async()=>!(await img.screenshot()).equals(before)).toBe(true);
+ await page.getByTestId('documents-indent-increase').click();
+ await page.getByTestId('documents-line-spacing').selectOption('2');
+ await expect(page.getByTestId('documents-line-spacing')).toHaveValue('2');
+ await page.keyboard.press('Control+r');
+ await expect(page.getByTestId('documents-align-right')).toHaveAttribute('aria-pressed','true');
+ await page.getByTestId('documents-page').first().screenshot({path:shot('paragraph-format')});
+ await page.getByTestId('documents-undo').click();
+ await expect(page.getByTestId('documents-align-center')).toHaveAttribute('aria-pressed','true');
+});

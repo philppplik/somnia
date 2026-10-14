@@ -2430,6 +2430,50 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.align.center",
+      "title": "Centre",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.align.justify",
+      "title": "Justify",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.align.left",
+      "title": "Align left",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.align.right",
+      "title": "Align right",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.clearSelection",
       "title": "Clear document selection",
       "category": "View",
@@ -2492,6 +2536,28 @@
       "category": "View",
       "source": "documents-panels",
       "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.indent.decrease",
+      "title": "Decrease indent",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.indent.increase",
+      "title": "Increase indent",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
       "hasEnabled": true
     },
     {

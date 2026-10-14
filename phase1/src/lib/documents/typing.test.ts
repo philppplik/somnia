@@ -4,10 +4,10 @@ import {readFileSync} from 'node:fs';
 import {applyEdit,type TextEdit} from './edit';
 import type {DocumentsEngine} from './engine';
 import {getDocumentsState,patchDocuments} from './store';
-import {setFont,setFontColor,setFontSize,stepFontSize,toggleFormat,deleteAtCaret,moveCaret,MAX_INSERT_LINES,pasteText,redoEdit,resetSessionsForTest,selectAllText,selectedText,setSessionDeps,splitAtCaret,switchDocument,typeText,undoEdit,syncGeometry} from './session';
+import {setAlign,setLineSpacing,setSpaceAfter,stepIndent,setFont,setFontColor,setFontSize,stepFontSize,toggleFormat,deleteAtCaret,moveCaret,MAX_INSERT_LINES,pasteText,redoEdit,resetSessionsForTest,selectAllText,selectedText,setSessionDeps,splitAtCaret,switchDocument,typeText,undoEdit,syncGeometry} from './session';
 import {stepBoundary,wordBoundary} from './text';
 const docx=new Uint8Array(readFileSync(new URL('../../../test/documents/sample.docx',import.meta.url)));
-type Row={text:string;locked?:boolean;f?:Set<string>[]};
+type Row={text:string;locked?:boolean;f?:Set<string>[];p?:Record<string,number|string>};
 /** Paragraph model of the engine: replace/split/merge/snapshot/restore with the same UTF-8 offset rules. */
 class Doc{
  rows:Row[];snaps=new Map<number,Row[]>();n=0;failAt=-1;calls=0;hits:(page:number,x:number,y:number)=>{block:number|null;off?:number;editable:boolean}|null=()=>null;
@@ -32,6 +32,8 @@ class Doc{
   const val=(p:string)=>{const seen=new Set<string>();for(let b=s.block;b<=e.block;b++){const f=this.flags(b);const lo=b===s.block?s.off:0,hi=b===e.block?e.off:f.length;for(let k=lo;k<hi;k++){seen.add([...f[k]].find(x=>x.startsWith(p+'='))?.slice(p.length+1)??'');}}return seen.size===1&&[...seen][0]!==''?[...seen][0]:null;};
   const z:Record<string,unknown>={...out,font:val('font'),size:val('size')===null?null:Number(val('size')),color:val('color')};
   return z as never;}
+ async formatParagraphs(a:number,b:number,patch:Record<string,number|string>){this.tick();for(let i=a;i<=b;i++)if(this.rows[i].locked)throw new Error('not a paragraph');for(let i=a;i<=b;i++)this.rows[i]={...this.rows[i],p:{...this.rows[i].p,...patch}};return this.doc();}
+ async paragraphState(a:number,b:number){const out:Record<string,unknown>={};for(const k of ['align','indentLeft','indentFirst','spaceBefore','spaceAfter','lineSpacing']){const v=new Set<unknown>();for(let i=a;i<=b;i++)v.add(this.rows[i].p?.[k]??(k==='align'?'left':k==='lineSpacing'?1:0));out[k]=v.size===1?[...v][0]:null;}return out as never;}
  async snapshot(){const id=++this.n;this.snaps.set(id,this.rows.map(r=>({...r,f:r.f?.map(x=>new Set(x))})));return id;}
  async restore(id:number){this.rows=this.snaps.get(id)!.map(r=>({...r,f:r.f?.map(x=>new Set(x))}));return this.doc();}
  async hit(p:number,x:number,y:number){return this.hits(p,x,y);}async caret(){return null;}async rects(b:number,a:number,z:number){return[[0,b,a,z,1]] as never;}
@@ -195,4 +197,28 @@ test('size chosen at a collapsed caret applies to the next typed text only; Ctrl
 test('a table in the span refuses a size change',async()=>{
  await open(['ab',{text:'',locked:true},'cd']);patchDocuments({caret:{block:2,head:1,anchor:0,anchorBlock:0}});
  await setFontSize(20);assert.ok(getDocumentsState().editError);assert.equal(getDocumentsState().canUndo,false);
+});
+
+test('alignment over several paragraphs is one undo step and the state reports shared or mixed',async()=>{
+ await open(['abc','def','ghi']);at(1,1,{block:0,off:1});await setAlign('center');
+ assert.deepEqual(d.rows.map(r=>r.p?.align),['center','center',undefined]);
+ assert.deepEqual(getDocumentsState().caret,{block:1,anchor:1,head:1,anchorBlock:0});
+ await syncGeometry();assert.equal(getDocumentsState().para?.align,'center');
+ at(2,1,{block:0,off:1});await syncGeometry();assert.equal(getDocumentsState().para?.align,null);
+ await undoEdit();assert.deepEqual(d.rows.map(r=>r.p?.align),[undefined,undefined,undefined]);
+});
+test('indent steps by 36 pt, clamps at 0, and never goes below zero',async()=>{
+ await open(['abc']);at(0,1);await syncGeometry();await stepIndent(-1);assert.equal(d.rows[0].p?.indentLeft,undefined);
+ await stepIndent(1);await syncGeometry();await stepIndent(1);assert.equal(d.rows[0].p?.indentLeft,72);
+ await syncGeometry();await stepIndent(-1);await syncGeometry();assert.equal(d.rows[0].p?.indentLeft,36);
+});
+test('invalid spacing never reaches the engine; a table in the span is refused with nothing changed',async()=>{
+ await open(['ab',{text:'',locked:true},'cd']);at(0,1);const calls=d.calls;
+ for(const run of [()=>setLineSpacing(0),()=>setLineSpacing(11),()=>setSpaceAfter(-1),()=>setSpaceAfter(Number.NaN),()=>setAlign('middle' as never)]){await run();assert.ok(getDocumentsState().editError);patchDocuments({editError:''});}
+ assert.equal(d.calls,calls);
+ patchDocuments({caret:{block:2,head:1,anchor:0,anchorBlock:0}});await setAlign('right');assert.ok(getDocumentsState().editError);assert.equal(getDocumentsState().canUndo,false);assert.equal(d.rows[0].p,undefined);
+});
+test('an engine failure while changing paragraph formatting restores and records no undo step',async()=>{
+ await open(['abc','def']);at(1,1,{block:0,off:0});d.failAt=d.calls+1;await setAlign('right');
+ assert.equal(getDocumentsState().canUndo,false);assert.ok(getDocumentsState().editError);assert.equal(d.rows[0].p?.align,undefined);
 });

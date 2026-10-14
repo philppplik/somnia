@@ -24,6 +24,13 @@ export class DocSession {
      * `{"bold":"on|off|mixed","italic":...,"underline":...}` over a selection (same coordinates as `format_range`).
      */
     format_state(start_block: number, start_off: number, end_block: number, end_off: number): string;
+    /**
+     * Alignment, indents and spacing for whole paragraphs `first_block..=last_block`. `patch_json`: any subset of
+     * `{"align":"center","indentLeft":36,"indentFirst":-18,"spaceBefore":0,"spaceAfter":8,"lineSpacing":1.5}`.
+     */
+    format_paragraphs(first_block: number, last_block: number, patch_json: string): void;
+    /** JSON of the shared (null when mixed) effective paragraph formatting over `first_block..=last_block`. */
+    paragraph_state(first_block: number, last_block: number): string;
     insert(block: number, utf8_byte_offset: number, text: string): void;
     merge_with_previous(block: number): void;
     constructor(bytes: Uint8Array);

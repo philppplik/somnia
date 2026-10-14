@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-477 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+483 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -228,6 +228,10 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `design.zoomOut` | Design: Zoom out | View | design |  |
 | `design.zoomReset` | Design: Zoom to 100% | View | design |  |
 | `design.zoomSet` | Design: Set zoom | View | design |  |
+| `documents.align.center` | Centre | View | documents |  |
+| `documents.align.justify` | Justify | View | documents |  |
+| `documents.align.left` | Align left | View | documents |  |
+| `documents.align.right` | Align right | View | documents |  |
 | `documents.clearSelection` | Clear document selection | View | documents-panels |  |
 | `documents.commitParagraph` | Apply paragraph text | Edit | documents-panels |  |
 | `documents.export.open` | Export document | Project | documents |  |
@@ -235,6 +239,8 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `documents.fontSize.decrease` | Decrease font size | View | documents |  |
 | `documents.fontSize.increase` | Increase font size | View | documents |  |
 | `documents.goToPage` | Go to document page | View | documents-panels |  |
+| `documents.indent.decrease` | Decrease indent | View | documents |  |
+| `documents.indent.increase` | Increase indent | View | documents |  |
 | `documents.outline.goto` | Go to document paragraph | View | documents |  |
 | `documents.pages.goto` | Go to document page | View | documents |  |
 | `documents.panelRedo` | Redo document edit | Edit | documents-panels |  |

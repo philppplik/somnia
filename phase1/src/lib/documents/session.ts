@@ -1,4 +1,4 @@
-import {checkFormatPatch} from './protocol';
+import {checkFormatPatch,checkParaPatch,type ParaPatch} from './protocol';
 import {captureDocumentSelection} from './selectionCapture';
 import {caretAfterEdit,diffEdit,inverseOf,UndoStack,type TextEdit,type UndoEntry} from './edit';
 import {stepBoundary,utf16ToUtf8Offset,utf8ToUtf16Offset,wordBoundary} from './text';
@@ -333,11 +333,13 @@ export async function syncGeometry(){
     }
    }
   }
+  let para:import('./protocol').ParaState|null=null;
+  try{para=await e.paragraphState(n.s.block,n.e.block);}catch{para=null;}
   let format:import('./protocol').FormatState|null=null;
   try{format=await e.formatState(n.s,n.e);}catch{format=null;}
   if(engine===e&&gen===g&&getDocumentsState().caret===c){
    const pf=getDocumentsState().pendingFormat;
-   patchDocuments({caretBox:box,selRects:rects,format,...(pf&&(cmp(n.s,n.e)!==0||pf.block!==n.s.block||pf.off!==n.s.off)?{pendingFormat:null}:{})});
+   patchDocuments({caretBox:box,selRects:rects,format,para,...(pf&&(cmp(n.s,n.e)!==0||pf.block!==n.s.block||pf.off!==n.s.off)?{pendingFormat:null}:{})});
   }
  }catch{if(engine===e&&gen===g&&getDocumentsState().caret===c)patchDocuments({caret:null,caretBox:null,selRects:[]});}
 }
@@ -358,3 +360,28 @@ export const captureCurrentDocumentSelection=()=>{if(pending||getDocumentsState(
 /** Await only current queue, then refuse owner/new-work drift. Not an accept lease. */
 export async function settleDocumentSelection(){const owner=gen,queue=chain;await queue;if(owner!==gen||queue!==chain)throw Error('Document work changed while settling');return captureCurrentDocumentSelection();}
 export function detachEngineIfCurrent(e:DocumentsEngine){if(engine===e)attachEngine(null);}
+
+/**
+ * Alignment, indents and spacing for every paragraph the selection touches, as ONE undo step.
+ * A table or any non-paragraph block in the span is refused; an engine failure restores the paragraphs.
+ */
+async function applyPara(patch:ParaPatch){
+ checkParaPatch(patch);
+ const c=getDocumentsState().caret;if(!c)return;const n=norm(c);goalX=null;
+ if(n.e.block-n.s.block+1>MAX_SPAN_BLOCKS)throw new Error(`Selection is too large for one edit (limit ${MAX_SPAN_BLOCKS} paragraphs).`);
+ const blocks=getDocumentsState().blocks;
+ for(let i=n.s.block;i<=n.e.block;i++){if(blocks.find(b=>b.index===i)?.kind!=='para')throw new Error('This selection includes a part that cannot be formatted as a paragraph.');}
+ await structural(eng=>eng.formatParagraphs(n.s.block,n.e.block,patch),n.h,n.h);
+ setSel(n.a,n.h);
+}
+export const setAlign=(align:import('./protocol').ParaAlign)=>run(()=>applyPara({align}));
+export const setLineSpacing=(lineSpacing:number)=>run(()=>applyPara({lineSpacing}));
+export const setSpaceBefore=(spaceBefore:number)=>run(()=>applyPara({spaceBefore}));
+export const setSpaceAfter=(spaceAfter:number)=>run(()=>applyPara({spaceAfter}));
+export const INDENT_STEP_PT=36;
+/** Moves the left indent by one 36 pt step (clamped to 0-1440); a mixed selection starts from 0. */
+export const stepIndent=(dir:-1|1)=>run(()=>{
+ const cur=getDocumentsState().para?.indentLeft??0;
+ const next=Math.min(1440,Math.max(0,cur+dir*INDENT_STEP_PT));
+ return next===cur?Promise.resolve():applyPara({indentLeft:next});
+});

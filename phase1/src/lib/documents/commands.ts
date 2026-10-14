@@ -1,6 +1,6 @@
 import {registerCommand} from '../commandRegistry';
 import {getDocumentsState,patchDocuments,stepZoom} from './store';
-import {redoEdit,stepFontSize,toggleFormat,undoEdit} from './session';
+import {redoEdit,setAlign,stepFontSize,stepIndent,toggleFormat,undoEdit} from './session';
 import {goToBlock,scrollToPage} from './navigate';
 import {documentsExportReady,patchDocumentsExportUi,requestDocumentsSaveCopy} from './exportBridge';
 /**
@@ -26,6 +26,12 @@ export function registerDocumentsCommands(){
   add('documents.toggleUnderline','Toggle underline',async()=>{await toggleFormat('underline');},()=>ready()&&!!getDocumentsState().caret),
   add('documents.fontSize.increase','Increase font size',async()=>{await stepFontSize(1);},()=>ready()&&!!getDocumentsState().caret),
   add('documents.fontSize.decrease','Decrease font size',async()=>{await stepFontSize(-1);},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.align.left','Align left',async()=>{await setAlign('left');},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.align.center','Align center',async()=>{await setAlign('center');},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.align.right','Align right',async()=>{await setAlign('right');},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.align.justify','Align justify',async()=>{await setAlign('justify');},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.indent.increase','Increase indent',async()=>{await stepIndent(1);},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.indent.decrease','Decrease indent',async()=>{await stepIndent(-1);},()=>ready()&&!!getDocumentsState().caret),
   add('documents.pages.goto','Go to page',p=>{const n=int(p,'page');if(n>=getDocumentsState().pages)throw expected('That page does not exist.');if(!scrollToPage(n))throw expected('The page is not on screen yet.');}),
   add('documents.outline.goto','Go to paragraph',async p=>{if(!await goToBlock(int(p,'block')))throw expected('That block has no text position.');}),
  ];

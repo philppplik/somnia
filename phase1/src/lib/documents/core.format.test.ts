@@ -26,3 +26,14 @@ test('font, size and colour patches are validated before the engine',()=>{
  assert.equal(calls.length,0);
  send({font:'Inter',size:12.5,color:'auto'});send({color:'c0392b'});assert.equal(calls.length,2);
 });
+
+test('paragraph patches and ranges are validated before the engine',()=>{
+ const calls:string[]=[];
+ const S=class{constructor(_b?:Uint8Array){}free(){}blocks(){return '[]';}format_paragraphs(_a:number,_b:number,j:string){calls.push(j);}paragraph_state(){return '{"align":"left","indentLeft":0,"indentFirst":0,"spaceBefore":0,"spaceAfter":8,"lineSpacing":1.15}';}paginate(){return {};}} as unknown as new(b:Uint8Array)=>DocSessionLike;
+ const k=new DocumentsCore(S);k.handle({id:1,kind:'open',bytes:new Uint8Array(4)} as never);
+ const send=(first:number,last:number,patch:unknown)=>k.handle({id:2,kind:'paraFormat',first,last,patch} as never).res.ok;
+ for(const bad of [{},{align:'middle'},{align:1},{indentLeft:-1},{indentLeft:1441},{spaceAfter:'3'},{lineSpacing:0.4},{lineSpacing:Number.NaN},{bold:true}])assert.equal(send(0,0,bad),false,JSON.stringify(bad));
+ assert.equal(send(2,1,{align:'left'}),false);assert.equal(send(-1,0,{align:'left'}),false);assert.equal(send(0,5000,{align:'left'}),false);
+ assert.equal(calls.length,0);send(0,1,{align:'justify',indentFirst:-18,lineSpacing:1.5});assert.equal(calls.length,1);
+ assert.equal(k.handle({id:3,kind:'paraState',first:0,last:0} as never).res.ok,true);assert.equal(k.handle({id:4,kind:'paraState',first:3,last:1} as never).res.ok,false);
+});

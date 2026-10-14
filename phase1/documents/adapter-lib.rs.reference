@@ -316,6 +316,119 @@ impl DocSession {
         });
         Ok(serde_json::json!({"bold": tri(&seen, |x| x.0), "italic": tri(&seen, |x| x.1), "underline": tri(&seen, |x| x.2), "font": font, "size": size, "color": color}).to_string())
     }
+    /// Paragraph formatting for the whole paragraphs `first..=last` (selection coordinates are not needed:
+    /// alignment, indents and spacing belong to a paragraph). Any non-paragraph block in the span, or an
+    /// invalid value, refuses the whole call. Changes are made on clones and committed together.
+    fn do_para_format(&mut self, first: usize, last: usize, patch_json: &str) -> Result<(), String> {
+        use wordcraft_doc::props::{Align, LineSpacing};
+        let v: serde_json::Value = serde_json::from_str(patch_json).map_err(|e| format!("bad paragraph patch: {e}"))?;
+        let obj = v.as_object().ok_or_else(|| "paragraph patch must be an object".to_string())?;
+        if obj.is_empty() {
+            return Ok(());
+        }
+        let num = |k: &str, val: &serde_json::Value, lo: f64, hi: f64| -> Result<f32, String> {
+            let n = val.as_f64().ok_or_else(|| format!("paragraph field {k} must be a number"))?;
+            if !n.is_finite() || n < lo || n > hi {
+                return Err(format!("paragraph field {k} must be between {lo} and {hi}"));
+            }
+            Ok(((n * 20.0).round() / 20.0) as f32)
+        };
+        let mut align: Option<Align> = None;
+        let (mut il, mut ifirst, mut sb, mut sa, mut ls): (Option<f32>, Option<f32>, Option<f32>, Option<f32>, Option<f32>) = (None, None, None, None, None);
+        for (k, val) in obj {
+            match k.as_str() {
+                "align" => {
+                    align = Some(match val.as_str() {
+                        Some("left") => Align::Left,
+                        Some("center") => Align::Center,
+                        Some("right") => Align::Right,
+                        Some("justify") => Align::Justify,
+                        _ => return Err("paragraph field align must be left, center, right or justify".into()),
+                    })
+                }
+                "indentLeft" => il = Some(num(k, val, 0.0, 1440.0)?),
+                "indentFirst" => ifirst = Some(num(k, val, -1440.0, 1440.0)?),
+                "spaceBefore" => sb = Some(num(k, val, 0.0, 1584.0)?),
+                "spaceAfter" => sa = Some(num(k, val, 0.0, 1584.0)?),
+                "lineSpacing" => ls = Some(num(k, val, 0.5, 10.0)?),
+                _ => return Err(format!("unknown paragraph field {k}")),
+            }
+        }
+        if last < first || last >= self.doc.body.len() {
+            return Err("paragraph range is out of bounds".into());
+        }
+        let mut done: Vec<(usize, wordcraft_doc::Paragraph)> = Vec::with_capacity(last - first + 1);
+        for b in first..=last {
+            let mut p = match self.doc.body.get(b).map(|x| &**x) {
+                Some(Block::Para(p)) => p.clone(),
+                _ => return Err(format!("block {b} is not a paragraph")),
+            };
+            if let Some(a) = align {
+                p.props.align = Some(a);
+            }
+            if let Some(x) = il {
+                p.props.indent_left = Some(x);
+            }
+            if let Some(x) = ifirst {
+                p.props.indent_first = Some(x);
+            }
+            if let Some(x) = sb {
+                p.props.space_before = Some(x);
+            }
+            if let Some(x) = sa {
+                p.props.space_after = Some(x);
+            }
+            if let Some(x) = ls {
+                p.props.line_spacing = Some(LineSpacing::Multiple(x));
+            }
+            done.push((b, p));
+        }
+        for (b, p) in done {
+            self.doc.body[b] = Arc::new(Block::Para(p));
+        }
+        self.pages = DocLayout::default();
+        Ok(())
+    }
+    /// Effective paragraph formatting over `first..=last`: each field is the shared value or null when mixed.
+    /// `lineSpacing` is the multiple, or null when mixed or set as an exact / at-least height.
+    fn do_para_state(&self, first: usize, last: usize) -> Result<String, String> {
+        use wordcraft_doc::props::{Align, LineSpacing};
+        if last < first || last >= self.doc.body.len() {
+            return Err("paragraph range is out of bounds".into());
+        }
+        let mut rows = Vec::new();
+        for b in first..=last {
+            match self.doc.body.get(b).map(|x| &**x) {
+                Some(Block::Para(p)) => rows.push(self.doc.styles.resolve_para(&p.props)),
+                _ => return Err(format!("block {b} is not a paragraph")),
+            }
+        }
+        fn same<T: PartialEq + Copy>(rows: &[wordcraft_doc::resolve::ResolvedPara], f: impl Fn(&wordcraft_doc::resolve::ResolvedPara) -> T) -> Option<T> {
+            let first = f(rows.first()?);
+            rows.iter().all(|r| f(r) == first).then_some(first)
+        }
+        let align = same(&rows, |r| r.align).map(|a| match a {
+            Align::Center => "center",
+            Align::Right => "right",
+            Align::Justify | Align::Distribute => "justify",
+            Align::Left => "left",
+        });
+        let ls = same(&rows, |r| match r.line_spacing {
+            LineSpacing::Multiple(m) => Some(m.to_bits()),
+            _ => None,
+        })
+        .flatten()
+        .map(f32::from_bits);
+        Ok(serde_json::json!({
+            "align": align,
+            "indentLeft": same(&rows, |r| r.indent_left.to_bits()).map(f32::from_bits),
+            "indentFirst": same(&rows, |r| r.indent_first.to_bits()).map(f32::from_bits),
+            "spaceBefore": same(&rows, |r| r.space_before.to_bits()).map(f32::from_bits),
+            "spaceAfter": same(&rows, |r| r.space_after.to_bits()).map(f32::from_bits),
+            "lineSpacing": ls,
+        })
+        .to_string())
+    }
     fn do_replace(&mut self, block: usize, start: usize, end: usize, text: &str) -> Result<(), String> {
         self.do_replace_many(block, &[(start, end, text.to_string())])
     }
@@ -373,6 +486,15 @@ impl DocSession {
     /// `{"bold":"on|off|mixed","italic":...,"underline":...}` over a selection (same coordinates as `format_range`).
     pub fn format_state(&self, start_block: usize, start_off: usize, end_block: usize, end_off: usize) -> Result<String, JsValue> {
         self.do_format_state(start_block, start_off, end_block, end_off).map_err(|e| JsValue::from_str(&e))
+    }
+    /// Paragraph alignment, indents and spacing for the whole paragraphs `first_block..=last_block`.
+    /// `patch_json`: any subset of `{"align":"center","indentLeft":36,"indentFirst":-18,"spaceBefore":0,"spaceAfter":8,"lineSpacing":1.5}` (points; multiple for line spacing).
+    pub fn format_paragraphs(&mut self, first_block: usize, last_block: usize, patch_json: &str) -> Result<(), JsValue> {
+        self.do_para_format(first_block, last_block, patch_json).map_err(|e| JsValue::from_str(&e))
+    }
+    /// JSON of the shared (or null when mixed) effective paragraph formatting over `first_block..=last_block`.
+    pub fn paragraph_state(&self, first_block: usize, last_block: usize) -> Result<String, JsValue> {
+        self.do_para_state(first_block, last_block).map_err(|e| JsValue::from_str(&e))
     }
     pub fn split_block(&mut self, block: usize, utf8_off: usize) -> Result<(), JsValue> {
         self.do_split(block, utf8_off).map_err(|e| JsValue::from_str(&e))
@@ -541,6 +663,31 @@ mod tests {
         }
         let long = format!(r#"{{"font":"{}"}}"#, "x".repeat(65));
         assert!(s.do_format(0, 0, 0, 2, &long).is_err());
+        assert_eq!(wordcraft_docx::write(&s.doc).unwrap(), before);
+    }
+    #[test]
+    fn paragraph_format_sets_state_roundtrips_and_is_atomic() {
+        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
+        let ps = |s: &DocSession, a: usize, b: usize| -> serde_json::Value { serde_json::from_str(&s.do_para_state(a, b).unwrap()).unwrap() };
+        s.do_para_format(0, 0, r#"{"align":"center","indentLeft":36,"indentFirst":-18,"spaceBefore":6,"spaceAfter":12.5,"lineSpacing":1.5}"#).unwrap();
+        let st = ps(&s, 0, 0);
+        assert_eq!((st["align"].as_str(), st["indentLeft"].as_f64(), st["indentFirst"].as_f64()), (Some("center"), Some(36.0), Some(-18.0)));
+        assert_eq!((st["spaceBefore"].as_f64(), st["spaceAfter"].as_f64(), st["lineSpacing"].as_f64()), (Some(6.0), Some(12.5), Some(1.5)));
+        let saved = wordcraft_docx::write(&s.doc).unwrap();
+        let again = DocSession::from_bytes(&saved).unwrap();
+        let st2 = ps(&again, 0, 0);
+        assert_eq!((st2["align"].as_str(), st2["indentLeft"].as_f64(), st2["spaceAfter"].as_f64(), st2["lineSpacing"].as_f64()), (Some("center"), Some(36.0), Some(12.5), Some(1.5)));
+        let before = wordcraft_docx::write(&s.doc).unwrap();
+        for bad in [r#"{"align":"middle"}"#, r#"{"align":1}"#, r#"{"indentLeft":-1}"#, r#"{"indentLeft":1441}"#, r#"{"spaceAfter":"3"}"#, r#"{"lineSpacing":0.1}"#, r#"{"lineSpacing":11}"#, r#"{"color":"red"}"#, "nope"] {
+            assert!(s.do_para_format(0, 0, bad).is_err(), "{bad}");
+        }
+        assert!(s.do_para_format(0, 999, r#"{"align":"left"}"#).is_err());
+        assert!(s.do_para_format(1, 0, r#"{"align":"left"}"#).is_err());
+        assert_eq!(wordcraft_docx::write(&s.doc).unwrap(), before);
+        let v: serde_json::Value = serde_json::from_str(&s.block_list()).unwrap();
+        let t = v.as_array().unwrap().iter().position(|b| b["kind"] == "table").unwrap();
+        assert!(s.do_para_format(0, t, r#"{"align":"right"}"#).is_err());
+        assert!(s.do_para_state(0, t).is_err());
         assert_eq!(wordcraft_docx::write(&s.doc).unwrap(), before);
     }
     #[test]

@@ -42,6 +42,8 @@ export class DocumentsEngine{
  async merge(block:number):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'merge',block}))).document;}
  async format(start:import('./protocol').DocPos,end:import('./protocol').DocPos,patch:import('./protocol').FormatPatch):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'format',start,end,patch}))).document;}
  async formatState(start:import('./protocol').DocPos,end:import('./protocol').DocPos):Promise<import('./protocol').FormatState>{return(await this.call('formatState',id=>({id,kind:'formatState',start,end}))).state;}
+ async formatParagraphs(first:number,last:number,patch:import('./protocol').ParaPatch):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'paraFormat',first,last,patch}))).document;}
+ async paragraphState(first:number,last:number):Promise<import('./protocol').ParaState>{return(await this.call('paraState',id=>({id,kind:'paraState',first,last}))).state;}
  async snapshot():Promise<number>{return(await this.call('snapshot',id=>({id,kind:'snapshot'}))).snap;}
  async restore(snap:number):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'restore',snap}))).document;}
  async hit(page:number,x:number,y:number){return(await this.call('hit',id=>({id,kind:'hit',page,x,y}))).hit;}

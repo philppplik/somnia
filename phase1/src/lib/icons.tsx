@@ -121,3 +121,9 @@ export const Download=make("download","<path d=\"M3 17.005C3 19.203 4.58 22 7.37
 
 export const Bot=make("bot",'<path d="M12 6.064h6c2.21 0 4 2.095 4 4.679v6.579C22 19.905 20.21 22 18 22H6c-2.21 0-4-2.095-4-4.678v-6.58C2 8.16 3.79 6.065 6 6.065zm0 0V2.4m3.333-.4a14.1 14.1 0 0 1-6.666 0M8 12v-1.5m8 1.5v-1.5"/><path d="M15.75 16.5A6.27 6.27 0 0 1 12 17.75a6.27 6.27 0 0 1-3.75-1.25"/>');
 export const makeVadivamIcon=make;
+export const AlignLeft=make("align-left","<path d=\"M4 6h16M4 10h10M4 14h16M4 18h10\"/>");
+export const AlignCenter=make("align-center","<path d=\"M4 6h16M7 10h10M4 14h16M7 18h10\"/>");
+export const AlignRight=make("align-right","<path d=\"M4 6h16M10 10h10M4 14h16M10 18h10\"/>");
+export const AlignJustify=make("align-justify","<path d=\"M4 6h16M4 10h16M4 14h16M4 18h16\"/>");
+export const IndentIncrease=make("indent-increase","<path d=\"M4 5h16M12 10h8M12 14h8M4 19h16M4 9l3 3-3 3\"/>");
+export const IndentDecrease=make("indent-decrease","<path d=\"M4 5h16M12 10h8M12 14h8M4 19h16M7 9l-3 3 3 3\"/>");
