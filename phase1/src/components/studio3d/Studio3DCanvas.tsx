@@ -6,7 +6,7 @@ import {useT} from '../../lib/useT';
 import {MODEL_ACCEPT,ENV_ACCEPT} from '../../lib/studio3d/model';
 import {registerStudio3DCommands,registerStudio3DOpener,registerStudio3DEnvOpener,registerStudio3DRecentOpener,studio3DController} from '../../lib/studio3d/commands';
 import {useStudio3D,patchStudio3D} from '../../lib/studio3d/session';
-import {registerStudio3DSaveShortcut} from '../../lib/studio3d/saveShortcut';
+import {registerStudio3DSaveShortcut} from './saveShortcut';
 import {refreshRecent,recentAsFile} from '../../lib/studio3d/recentSession';
 import {RecentList} from './Studio3DPanels';
 /** three.js lives in its own chunk. Nothing 3D is loaded until this studio is shown. */

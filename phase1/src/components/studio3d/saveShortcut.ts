@@ -1,8 +1,8 @@
-import {registerCommandScope,type Command} from '../commandRegistry';
+import {registerCommandScope,type Command} from '../../lib/commandRegistry';
 import {getState as getAppState} from '../../store/appStore';
-import {executeCommand} from '../commands';
-import {getStudio3DState} from './session';
-import {studio3DController} from './commands';
+import {executeCommand} from '../../lib/commands';
+import {getStudio3DState} from '../../lib/studio3d/session';
+import {studio3DController} from '../../lib/studio3d/commands';
 
 /**
  * Mod+S saves the 3D scene while this studio shows one. A scope, like the Photos studio uses, so the core
