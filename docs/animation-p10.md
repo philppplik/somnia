@@ -170,3 +170,16 @@ Checked first. Text animators already had a range selector (start, end, softness
 - Text on a path: `source.textPath` (corner and bezier points in the text layer's pixels, 2 to 64 points, validated, text layers only) and `source.textPathStart` (0..100 percent along the path). Command `animation.text.path` (`textPathEdit`): `set` copies a static path layer through both world matrices at the composition start, so it keeps its place; `start` moves the start; `clear` goes back to the straight baseline. One `layer.update` each, one undo step. Rendered as SVG `textPath` in canvas and in every export (the path is an inline `<defs>` element with id `tp-<layer id>`). Without `textPath` the output is unchanged.
 - Limits, stated plainly: the path is a copy (later edits of the path layer do not follow). Animated and compound path layers are refused. Text that does not fit the path is clipped by the renderer, as SVG does. Animator x shifts run along the path and y shifts across it. Per-glyph rotation follows the path automatically.
 - Not built: a `line` selector unit. Text layers are one line (no wrapping or line breaks in the renderer), so lines do not exist yet; characters and words are the units.
+
+## P36 - Property links, modifier inspector, wiggle in hertz
+
+Wiggle and loop modifiers already existed (`modifierModel.ts`, `modifiers.ts`). Added:
+
+- `link` modifier `{layer,prop,multiplier,offset}`: the property becomes `source * multiplier + offset` per channel. Wiggle still adds on top. Depth capped at 8.
+- Rules: one link per property, same value kind only (no vec2 to scalar), no self-link, loops are refused, a link to a removed layer is inert.
+- `modifier.set` edit and commands `animation.modifier.set` and `animation.modifier.link`. One undo step each.
+- Inspector section "Modifiers" (`PropertyModifiers.tsx`) for wiggle, loop and link.
+- Fix: the `modifier` command schema could not take an object.
+- Behavior change: wiggle frequency is now real hertz (was evaluated per tick, so it looked like white noise). Existing wiggle output changes.
+- Limit: inspector number fields show the unlinked value.
+- Preview mode `?links=1` in `test/animation-preview.tsx`.

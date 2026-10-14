@@ -111,7 +111,7 @@ const isNum=(n:unknown):n is number=>typeof n==='number'&&Number.isFinite(n);
 const isVec=(v:unknown):v is Vec2=>Array.isArray(v)&&v.length===2&&v.every(isNum);
 const okValue=(type:PropType,v:unknown)=>type==='scalar'?isNum(v):isVec(v);
 /** Strict structural validation used for recovery and import. Returns a list of problems; empty means valid. */
-import {validateModifiers} from './modifierModel';
+import {validateModifiers,linkProblems} from './modifierModel';
 import {validateMotionLib,type MotionLib} from './motionModel';
 import {validateEasingLib} from './easingModel';
 export function validateDocument(raw:unknown):string[]{
@@ -137,6 +137,7 @@ export function validateDocument(raw:unknown):string[]{
   if(!wa||!Number.isInteger(wa.in)||!Number.isInteger(wa.out)||wa.in<0||wa.out>c.duration||wa.out<=wa.in)bad(`${c.id}: bad work area`);
   if(c.markers!==undefined&&(!Array.isArray(c.markers)||c.markers.length>200||new Set(c.markers.map((m:Marker)=>m?.id)).size!==c.markers.length||!c.markers.every((m:Marker)=>m&&typeof m.id==='string'&&typeof m.label==='string'&&m.label.length<=100&&Number.isInteger(m.t)&&m.t>=c.start&&m.t<c.start+c.duration)))bad(`${c.id}: invalid markers`);
   if(!Array.isArray(c.layers)){bad(`${c.id}: layers missing`);continue;}
+  for(const m of linkProblems(c.layers as never))bad(`${c.id}: ${m}`);
   const ids=new Set<string>();
   for(const l of c.layers){
    if(!l||typeof l.id!=='string'){bad(`${c.id}: layer without id`);continue;}

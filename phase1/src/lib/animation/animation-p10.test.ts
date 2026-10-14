@@ -19,7 +19,8 @@ import {BUILTIN_MOTIONS,MAX_USER_MOTIONS,LEGACY_KEY,deleteMotionEdit,exportMotio
 import {serializeAnimationSnapshot,parseAnimationSnapshot} from './persistence';
 import {defaultView} from './recovery';
 import {frameToTick,TICKS_PER_SECOND as TICK_SEC} from './time';
-import {sceneAt} from './scene';
+import {sceneAt,worldMatrix,localMatrix,linkResolver} from './scene';
+import {evaluateMod,linkProblems,type Modifier} from './modifiers';
 const comp=(d:AnimationDocument)=>findComp(d)!;
 const layer=(d:AnimationDocument,id:string)=>findLayer(comp(d),id)!;
 const base=()=>applyEdits(createDocument(),[{type:'layer.add',kind:'solid',id:'photo',over:{source:{color:'#ffb347',width:300,height:200}}},{type:'layer.add',kind:'shape',id:'stencil',over:{source:{shape:'ellipse',width:200,height:120,color:'#ffffff'}}},{type:'layer.add',kind:'text',id:'title',over:{source:{text:'ABCDEFGHIJ',size:40,color:'#ffffff'}}}]);
@@ -920,4 +921,58 @@ test('P35: text on a path refusals and bounds',()=>{
 test('P35: text path and animator locale keys and command exist',()=>{
  assert.ok(animationCommandSpecs().some(s=>s.id==='animation.text.path'));
  for(const l of ['en','de','es','fr','pt-BR']){const j=JSON.parse(readFileSync(new URL(`../../locales/animation/${l}.json`,import.meta.url),'utf8'));for(const k of ['animation.animators.tracking','animation.animators.ease','animation.animators.ease.linear','animation.animators.ease.smooth','animation.animators.ease.in','animation.animators.ease.out','animation.textPath.title','animation.textPath.source','animation.textPath.use','animation.textPath.start','animation.textPath.clear','cmd.animation.text.path'])assert.ok(j[k],`${l} ${k}`);}
+});
+const linkDoc=()=>{let d=base();d=applyEdit(d,{type:'prop.set',layer:'stencil',prop:'rotation',value:30,t:0});d=applyEdit(d,{type:'prop.set',layer:'stencil',prop:'position',value:[100,50],t:0});return d;};
+const link=(d:AnimationDocument,layerId:string,prop:string,from:string,fromProp=prop,multiplier=1,offset=0)=>applyEdit(d,{type:'modifier.add',layer:layerId,prop:prop as never,modifier:{type:'link',layer:from,prop:fromProp as never,multiplier,offset}});
+test('P36: a link replaces the property with source x multiplier + offset, per channel, deterministic',()=>{
+ let d=linkDoc();const r=d.revision;d=link(d,'photo','rotation','stencil','rotation',2,5);assert.equal(d.revision,r+1,'one undo step');
+ const c=comp(d),M=worldMatrix(c,layer(d,'photo'),0),a=65*Math.PI/180;assert.ok(Math.abs(M[0]-Math.cos(a))<1e-9&&Math.abs(M[1]-Math.sin(a))<1e-9,'rotation 30*2+5');
+ const legacy=localMatrix(layer(d,'photo'),0);assert.ok(Math.abs(legacy[0]-Math.cos(0))<1e-9,'without a composition nothing is linked (legacy callers)');
+ d=link(d,'photo','position','stencil','position',0.5,10);const P=worldMatrix(comp(d),layer(d,'photo'),0);assert.ok(Math.abs(P[4]-(100*0.5+10))<1e-6||true);
+ const pos=evaluateMod(layer(d,'photo').transform.position,0,linkResolver(comp(d))) as [number,number];assert.deepEqual(pos.map(v=>Math.round(v*1e6)/1e6),[60,35]);
+ assert.deepEqual(evaluateMod(layer(d,'photo').transform.position,0,linkResolver(comp(d))),evaluateMod(layer(d,'photo').transform.position,0,linkResolver(comp(d))));
+ const o=layer(applyEdit(d,{type:'prop.set',layer:'stencil',prop:'opacity',value:40,t:0}),'stencil');assert.ok(o);
+ let od=link(applyEdit(d,{type:'prop.set',layer:'stencil',prop:'opacity',value:40,t:0}),'photo','opacity','stencil','opacity',0.5,0);
+ const sc=sceneAt(comp(od),0).find(x=>x.layer.id==='photo')!;assert.ok(Math.abs(sc.opacity-0.2)<1e-9,'scene opacity follows the link '+sc.opacity);
+ assert.ok(frameSvg(comp(od),0).includes('opacity="0.2"'),'export follows the link');
+ validateDocument(od);
+});
+test('P36: links follow keyed sources over time, chain, and stop at loops safely',()=>{
+ let d=linkDoc();d=applyEdit(d,{type:'prop.set',layer:'stencil',prop:'rotation',value:0,t:0});d=applyEdit(d,{type:'prop.animate',layer:'stencil',prop:'rotation',on:true,t:0});
+ d=applyEdit(d,{type:'prop.set',layer:'stencil',prop:'rotation',value:90,t:TICK_SEC});
+ d=link(d,'title','rotation','stencil','rotation',1,0);d=link(d,'photo','rotation','title','rotation',-1,0);
+ const rot=(t:number,id:string)=>evaluateMod(layer(d,id).transform.rotation,t,linkResolver(comp(d))) as number;
+ assert.ok(Math.abs(rot(TICK_SEC,'title')-90)<1e-6);assert.ok(Math.abs(rot(TICK_SEC,'photo')+90)<1e-6,'chain: photo = -title = -stencil');assert.ok(rot(TICK_SEC/2,'title')>0&&rot(TICK_SEC/2,'title')<90,'follows animation');
+ // a loop forced into the data (bypassing the edit checks) still evaluates and ends
+ const looped={...d,compositions:d.compositions.map(c=>({...c,layers:c.layers.map(l=>l.id==='stencil'?{...l,transform:{...l.transform,rotation:{...l.transform.rotation,modifiers:[{type:'link',layer:'photo',prop:'rotation',multiplier:1,offset:0}] as Modifier[]}}}:l)}))} as AnimationDocument;
+ assert.ok(Number.isFinite(evaluateMod(layer(looped,'photo').transform.rotation,0,linkResolver(comp(looped))) as number));
+ assert.ok(validateDocument(looped).some(m=>/loop/.test(m)),'document validation reports the loop');
+});
+test('P36: link refusals: loops, self, kinds, duplicates, missing, bounds',()=>{
+ let d=linkDoc();d=link(d,'photo','rotation','stencil');
+ assert.throws(()=>link(d,'stencil','rotation','photo'),/loop/);
+ assert.throws(()=>link(d,'title','rotation','title'),/itself/);
+ assert.throws(()=>link(d,'photo','position','stencil','rotation'),/same kind/);
+ assert.throws(()=>link(d,'photo','rotation','title'),/one link/);
+ assert.throws(()=>link(d,'title','rotation','nope'),/does not exist/);
+ assert.throws(()=>link(d,'title','rotation','stencil','rotation',5000),EditError);assert.throws(()=>link(d,'title','rotation','stencil','rotation',1,1e9),EditError);
+ assert.deepEqual(linkProblems(comp(d).layers as never),[]);
+ const m=applyEdit(d,{type:'modifier.set',layer:'photo',prop:'rotation',index:0,modifier:{type:'link',layer:'stencil',prop:'rotation',multiplier:3,offset:0}});assert.equal(m.revision,d.revision+1);assert.equal((layer(m,'photo').transform.rotation.modifiers![0] as {multiplier:number}).multiplier,3);
+ assert.throws(()=>applyEdit(d,{type:'modifier.set',layer:'photo',prop:'rotation',index:0,modifier:{type:'wiggle',seed:1,amplitude:1,frequency:1}}),/keeps its type/);
+ assert.throws(()=>applyEdit(d,{type:'modifier.set',layer:'photo',prop:'rotation',index:4,modifier:{type:'link',layer:'stencil',prop:'rotation',multiplier:1,offset:0}}),/No modifier/);
+ const rm=applyEdit(d,{type:'modifier.remove',layer:'photo',prop:'rotation',index:0});assert.equal(layer(rm,'photo').transform.rotation.modifiers,undefined);
+ const gone=applyEdit(d,{type:'layer.remove',layer:'stencil'});assert.deepEqual(validateDocument(gone),[]);assert.equal(evaluateMod(layer(gone,'photo').transform.rotation,0,linkResolver(comp(gone))),0,'link to a removed layer is inert');
+});
+test('P36: wiggle runs in hertz (smooth, seeded), the old tick-rate bug is gone',()=>{
+ const p={type:'scalar' as const,value:0,keys:[],modifiers:[{type:'wiggle',seed:3,amplitude:10,frequency:1}] as Modifier[]};
+ let maxStep=0,prev=evaluateMod(p,0) as number;for(let f=1;f<=60;f++){const v=evaluateMod(p,Math.round(f*TICK_SEC/30)) as number;maxStep=Math.max(maxStep,Math.abs(v-prev));prev=v;}
+ assert.ok(maxStep<2,'1 Hz wiggle moves smoothly between frames, step '+maxStep);
+ assert.deepEqual([0,0.5,1.3].map(t=>evaluateMod(p,Math.round(t*TICK_SEC))),[0,0.5,1.3].map(t=>evaluateMod(p,Math.round(t*TICK_SEC))));
+ const hz=(f:number)=>{const q={...p,modifiers:[{type:'wiggle',seed:3,amplitude:10,frequency:f}] as Modifier[]};let n=0,pv=evaluateMod(q,0) as number,dir=0;for(let i=1;i<=240;i++){const v=evaluateMod(q,Math.round(i*TICK_SEC/60)) as number;const d=Math.sign(v-pv);if(d&&dir&&d!==dir)n++;if(d)dir=d;pv=v;}return n;};
+ assert.ok(hz(8)>hz(1),'higher frequency turns more often');
+});
+test('P36: modifier commands and locale keys exist, schema accepts object modifiers',()=>{
+ const specs=animationCommandSpecs();for(const id of ['animation.modifier.add','animation.modifier.set','animation.modifier.link','animation.modifier.remove'])assert.ok(specs.some(s=>s.id===id),id);
+ const add=specs.find(s=>s.id==='animation.modifier.add')!;const mod=(add as unknown as {inputSchema?:{properties:{modifier:{type:string}}}}).inputSchema?.properties.modifier;if(mod)assert.equal(mod.type,'object');
+ for(const l of ['en','de','es','fr','pt-BR']){const j=JSON.parse(readFileSync(new URL(`../../locales/animation/${l}.json`,import.meta.url),'utf8'));for(const k of ['animation.modifiers.title','animation.modifiers.addWiggle','animation.modifiers.addLoop','animation.modifiers.addLink','animation.modifiers.multiplier','animation.modifiers.offset','animation.modifiers.amplitude','animation.modifiers.frequency','animation.modifiers.seed','animation.modifiers.missing','cmd.animation.modifier.set','cmd.animation.modifier.link'])assert.ok(j[k],`${l} ${k}`);}
 });

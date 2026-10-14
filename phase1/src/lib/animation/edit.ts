@@ -6,7 +6,7 @@ import {validateAnimationAssets} from './assetsValidation';
 import {MAX_AUDIO_VOLUME,type AudioAsset} from './audioCore';
 import {prop,createComposition,type TextAnimator,type LayerMask,type LayerMatte,type ClipItem,type KeyRef,type Vec2,createLayer,findComp,findLayer,PROP_META,wouldCycle,EASE_IN,EASE_OUT,TRANSFORM_KEYS,validateDocument,type AnimationDocument,type CompSettings,type Composition,type Interp,type Keyframe,type Layer,type LayerKind,type LayerSource,type LayerEffect,validSource,validEffects,type Property,type PropValue,type TransformKey} from './model';
 import {evaluate} from './interpolate';
-import {validateModifiers} from './modifiers';
+import {validateModifiers,linkProblems} from './modifiers';
 import {snapToFrame,tickToFrame,frameToTick,validRate} from './time';
 /** Typed `animation.*` edits. Every mutation goes through applyEdit so undo, recovery and AI share one path. */
 export type Edit=
@@ -60,7 +60,8 @@ export type Edit=
  |{type:'prop.pathMode';layer:string;mode:'parameter'|'arcLength'}
  |{type:'workarea.set';in:number;out:number}
  |{type:'modifier.add';layer:string;prop:TransformKey;modifier:import('./modifiers').Modifier}
- |{type:'modifier.remove';layer:string;prop:TransformKey;index:number};
+ |{type:'modifier.remove';layer:string;prop:TransformKey;index:number}
+ |{type:'modifier.set';layer:string;prop:TransformKey;index:number;modifier:import('./modifiers').Modifier};
 export class EditError extends Error{constructor(message:string,readonly code:'locked'|'missing'|'invalid'|'collision'|'cycle'){super(message);this.name='EditError';}}
 const fail=(code:EditError['code'],m:string):never=>{throw new EditError(m,code);};
 const compOf=(doc:AnimationDocument)=>findComp(doc)??fail('missing','No active composition.');
@@ -85,6 +86,12 @@ function checkValue(prop:TransformKey,v:PropValue):PropValue{
  if(meta.type==='scalar'){if(typeof v!=='number')return fail('invalid',`${prop} takes one number.`);return clamp(v);}
  if(!Array.isArray(v)||v.length!==2)return fail('invalid',`${prop} takes two numbers.`);
  return [clamp(v[0]),clamp(v[1])] as const;
+}
+/** A new or changed link must point at a layer of the active composition and leave the links of that composition valid (no loop, same kind, one per property). */
+function checkLinks(doc:AnimationDocument,m:import('./modifiers').Modifier):AnimationDocument{
+ const c=compOf(doc);
+ if(m.type==='link'&&!findLayer(c,m.layer))return fail('missing','The linked layer does not exist.');
+ const bad=linkProblems(c.layers as never);if(bad.length)return fail('invalid',bad[0]);return doc;
 }
 function setProp(doc:AnimationDocument,layer:string,key:TransformKey,fn:(p:Property,l:Layer)=>Property):AnimationDocument{
  const l=layerOf(doc,layer);return setLayer(doc,{...l,transform:{...l.transform,[key]:fn(l.transform[key],l)}});
@@ -283,7 +290,10 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
    return withComp(doc,{...c,workArea:{in:a,out:b}});}
   case 'modifier.add':{
    const errs=validateModifiers([e.modifier]);if(errs.length)return fail('invalid',errs[0]);
-   return setProp(doc,e.layer,e.prop,p=>({...p,modifiers:[...(p.modifiers??[]),e.modifier]}));}
+   return checkLinks(setProp(doc,e.layer,e.prop,p=>({...p,modifiers:[...(p.modifiers??[]),e.modifier]})),e.modifier);}
+  case 'modifier.set':{
+   const errs=validateModifiers([e.modifier]);if(errs.length)return fail('invalid',errs[0]);
+   return checkLinks(setProp(doc,e.layer,e.prop,p=>{const ms=[...(p.modifiers??[])];if(!Number.isInteger(e.index)||e.index<0||e.index>=ms.length)return fail('missing','No modifier at that index.');if(ms[e.index].type!==e.modifier.type)return fail('invalid','A modifier keeps its type.');ms[e.index]=e.modifier;return {...p,modifiers:ms};}),e.modifier);}
   case 'modifier.remove':
    return setProp(doc,e.layer,e.prop,p=>{const ms=[...(p.modifiers??[])];if(!Number.isInteger(e.index)||e.index<0||e.index>=ms.length)return fail('missing','No modifier at that index.');ms.splice(e.index,1);return {...p,modifiers:ms.length?ms:undefined};});
  }

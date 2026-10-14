@@ -768,8 +768,32 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.modifier.link",
+      "title": "Link a property to another layer's property",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.modifier.remove",
       "title": "Remove property modifier",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "animation.modifier.set",
+      "title": "Change a wiggle, loop or link modifier",
       "category": "Edit",
       "source": "animation",
       "keywords": [

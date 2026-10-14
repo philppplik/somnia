@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-388 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+390 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -84,7 +84,9 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `animation.mask.boolean` | Unite, subtract, intersect or exclude two masks | Insert | animation |  |
 | `animation.mask.toLayer` | Turn a path mask into a shape layer | Edit | animation |  |
 | `animation.modifier.add` | Add wiggle or loop modifier | Edit | animation |  |
+| `animation.modifier.link` | Link a property to another layer's property | Edit | animation |  |
 | `animation.modifier.remove` | Remove property modifier | Edit | animation |  |
+| `animation.modifier.set` | Change a wiggle, loop or link modifier | Edit | animation |  |
 | `animation.motion.apply` | Apply a motion preset to the selected layers | Edit | animation |  |
 | `animation.motion.delete` | Delete a saved motion preset | Edit | animation |  |
 | `animation.motion.export` | Export saved motion presets as a JSON file | Edit | animation |  |

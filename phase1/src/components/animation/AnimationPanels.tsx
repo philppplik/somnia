@@ -31,6 +31,7 @@ import {Button} from '../ui/button';
 import {InspectorNumberField} from '../studios/InspectorNumberField';
 import {easePresetOf} from '../../lib/animation/graph';
 import {EASE_LABEL,fmt,PROP_LABEL,renderSummary} from './format';
+import {PropertyModifiers} from './PropertyModifiers';
 const field='h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text';
 const run=(id:string,params?:unknown)=>void executeCommand(id,params);
 const KINDS:LayerKind[]=['solid','text','shape','null'];
@@ -136,6 +137,7 @@ export function PropertiesSection(_:InspectorSectionProps){
      <option value="custom" disabled={easePresetOf(key)!=='custom'}>{t('animation.ease.custom')}</option>
     </NativeSelect>}
    </fieldset>;})}
+  <PropertyModifiers layer={layer} comp={comp}/>
  </div>;
 }
 export function CompositionSection(_:InspectorSectionProps){

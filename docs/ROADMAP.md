@@ -253,3 +253,8 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Implemented: text animator tracking and selector ease, text on a path (copy of a path layer, start percent, canvas and exports via SVG textPath), command `animation.text.path`, inspector controls, 5 locales. Existing char/word range selector, offset and stagger were already there.
 - Validation: 5 new Animation unit tests (192 total), DS ratchet, ui-commands inventory, check:layers, isolated Chrome check (hover preview, text follows the curve, undo count).
 - Open: line unit (needs multi-line text), live link to the path layer, animated start offset, path-aware animator preview in the timeline.
+### Animation P36 (2026-10-14, integration pending)
+
+- Done: link modifier (bind a property to another layer's property with multiplier and offset), `modifier.set`, Modifiers inspector, command schema fix, wiggle frequency in hertz (behavior change).
+- Open: links across compositions, scalar-to-vec2 links, expression scripting (out of scope).
+

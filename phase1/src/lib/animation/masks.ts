@@ -1,5 +1,5 @@
 import {evaluateMod} from './modifiers';
-import {worldMatrix,type Matrix} from './scene';
+import {worldMatrix,linkResolver,type Matrix} from './scene';
 import {EASE_IN,EASE_OUT,MAX_LAYER_MASKS,MAX_MASK_POINTS,findComp,findLayer,newId,type AnimationDocument,type Composition,type Layer,type LayerMask,type LayerMatte,type MaskPath,type MaskShapeKey,MAX_SHAPE_KEYS,type MaskProp,type MaskPoint,type PropValue,type Property,type Vec2} from './model';
 import {evaluate,cubicBezier} from './interpolate';
 import {snapToFrame} from './time';
@@ -58,7 +58,7 @@ export function maskDefs(comp:Composition,tick:number,prefix:string,body:LayerBo
    const si=comp.layers.findIndex(x=>x.id===l.matte!.source),src=comp.layers[si];
    if(src){
     const live=src.visible&&(!solo||src.solo||l.solo)&&tick>=src.inT+src.offset&&tick<src.outT+src.offset;
-    const m:Matrix=worldMatrix(comp,src,tick),op=Math.min(1,Math.max(0,(evaluateMod(src.transform.opacity,tick) as number)/100));
+    const m:Matrix=worldMatrix(comp,src,tick),op=Math.min(1,Math.max(0,(evaluateMod(src.transform.opacity,tick,linkResolver(comp)) as number)/100));
     const content=live?`<g transform="matrix(${m.map(num).join(' ')})" opacity="${num(op)}">${body(src,si)}</g>`:'';
     const {mode,invert}=l.matte;
     const full=`x="0" y="0" width="${W}" height="${H}"`;
