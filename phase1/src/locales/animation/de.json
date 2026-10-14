@@ -962,5 +962,12 @@
  "animation.rig.group.hierarchy": "Hierarchie",
  "animation.rig.group.layers": "Ebenen",
  "animation.rig.number": "Ebenen nummerieren",
- "cmd.animation.layers.number": "Gewählte Ebenen nummerieren"
+ "cmd.animation.layers.number": "Gewählte Ebenen nummerieren",
+ "animation.rig.group.order": "Reihenfolge",
+ "animation.rig.order.front": "Nach vorne",
+ "animation.rig.order.back": "Nach hinten",
+ "animation.rig.order.up": "Eine Ebene nach vorne",
+ "animation.rig.order.down": "Eine Ebene nach hinten",
+ "animation.rig.order.reverse": "Reihenfolge umkehren",
+ "cmd.animation.layers.arrange": "Stapelreihenfolge der gewählten Ebenen ändern"
 }

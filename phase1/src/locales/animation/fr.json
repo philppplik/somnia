@@ -962,5 +962,12 @@
  "animation.rig.group.hierarchy": "Hiérarchie",
  "animation.rig.group.layers": "Calques",
  "animation.rig.number": "Numéroter les calques",
- "cmd.animation.layers.number": "Numéroter les calques sélectionnés"
+ "cmd.animation.layers.number": "Numéroter les calques sélectionnés",
+ "animation.rig.group.order": "Ordre",
+ "animation.rig.order.front": "Au premier plan",
+ "animation.rig.order.back": "À l’arrière-plan",
+ "animation.rig.order.up": "Avancer d’un cran",
+ "animation.rig.order.down": "Reculer d’un cran",
+ "animation.rig.order.reverse": "Inverser l’ordre",
+ "cmd.animation.layers.arrange": "Organiser l’ordre d’empilement des calques sélectionnés"
 }

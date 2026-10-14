@@ -504,3 +504,15 @@ test('P171 number layers renames top to bottom, strips copy suffixes, one undo s
  s.undo();assert.equal(s.document,before);
  s.dispatch({type:'layer.update',layer:'b',locked:true});run({layers:ids,name:'Dot'});assert.ok(!names().some((n,i)=>ids[i]==='b'&&n.startsWith('Dot')));
 });
+
+test('P172 arrange: front/back/up/down/reverse keep the rest, one undo step, no-op is refused',async()=>{
+ const {arrangedOrder}=await import('./layerArrange');const {layerArrangeSpecs}=await import('./layerArrangeCommands');const run=layerArrangeSpecs()[0].run as (p?:unknown)=>unknown;
+ const o=['a','b','c','d','e'],sel=new Set(['b','d']);
+ assert.deepEqual(arrangedOrder(o,sel,'front'),['b','d','a','c','e']);assert.deepEqual(arrangedOrder(o,sel,'back'),['a','c','e','b','d']);
+ assert.deepEqual(arrangedOrder(o,sel,'up'),['b','a','d','c','e']);assert.deepEqual(arrangedOrder(o,sel,'down'),['a','c','b','e','d']);
+ assert.deepEqual(arrangedOrder(o,sel,'reverse'),['a','d','c','b','e']);assert.deepEqual(arrangedOrder(o,new Set(['a']),'up'),o);
+ const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'shape',id:'b'});s.dispatch({type:'layer.add',kind:'shape',id:'c'});
+ const ids=()=>findComp(s.document!)!.layers.map(l=>l.id);const start=ids(),before=s.document!;
+ run({mode:'back',layers:[start[0]]});assert.deepEqual(ids(),[...start.slice(1),start[0]]);s.undo();assert.equal(s.document,before);
+ assert.throws(()=>run({mode:'front',layers:[start[0]]}),(e:any)=>e.expected===true);
+});

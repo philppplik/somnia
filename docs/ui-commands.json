@@ -1645,6 +1645,25 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.layers.arrange",
+      "title": "Arrange the stacking order of the selected layers",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "back",
+        "front",
+        "layer",
+        "lower",
+        "order",
+        "raise",
+        "reverse",
+        "stack",
+        "z-order"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.layers.duplicate",
       "title": "Duplicate the selected layers",
       "category": "Edit",

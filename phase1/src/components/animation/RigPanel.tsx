@@ -7,7 +7,7 @@ import {useAnimationState} from '../../lib/animation/session';
 import {timingPlan,TIMING_MODES,FRAME_MODES,SIGNED_MODES,MAX_STAGGER_FRAMES,type TimingMode} from '../../lib/animation/layerTiming';
 import {executeCommand} from '../../lib/commands';
 import type {Composition} from '../../lib/animation/model';
-const groups:{key:string;items:{testid:string;label:string;cmd:string;min:number}[]}[]=[
+const groups:{key:string;items:{testid:string;label:string;cmd:string;min:number;args?:object}[]}[]=[
  {key:'hierarchy',items:[
   {testid:'animation-rig-chain',label:'animation.rig.chain',cmd:'animation.rig.chain',min:2},
   {testid:'animation-rig-group',label:'animation.rig.group',cmd:'animation.rig.group',min:1},
@@ -17,13 +17,14 @@ const groups:{key:string;items:{testid:string;label:string;cmd:string;min:number
   {testid:'animation-rig-split',label:'animation.rig.split',cmd:'animation.layers.split',min:1},
   {testid:'animation-rig-workarea',label:'animation.rig.workarea',cmd:'animation.workarea.toLayers',min:1},
   {testid:'animation-rig-reseed',label:'animation.rig.reseed',cmd:'animation.modifiers.reseed',min:1},
-  {testid:'animation-rig-number',label:'animation.rig.number',cmd:'animation.layers.number',min:1}]}];
+  {testid:'animation-rig-number',label:'animation.rig.number',cmd:'animation.layers.number',min:1}]},
+ {key:'order',items:(['front','back','up','down','reverse'] as const).map(m=>({testid:`animation-rig-order-${m}`,label:`animation.rig.order.${m}`,cmd:'animation.layers.arrange',min:m==='reverse'?2:1,args:{mode:m}}))}];
 /** Left-panel section: tick layers, then chain them, group them under a control null, or release their parents. Tick order is the chain order. */
 export function RigPanel({comp}:{comp:Composition}){
  const {t}=useT();const [ticked,setTicked]=useState<string[]>([]);
  const ids=ticked.filter(id=>comp.layers.some(l=>l.id===id));
  const toggle=(id:string)=>setTicked(ids.includes(id)?ids.filter(x=>x!==id):[...ids,id]);
- const run=(cmd:string)=>void executeCommand(cmd,{layers:ids});
+ const run=(cmd:string,args?:object)=>void executeCommand(cmd,{layers:ids,...args});
  const playhead=useAnimationState().view.playhead;const [mode,setMode]=useState<TimingMode>('stagger');const [frames,setFrames]=useState('4');const [follow,setFollow]=useState('3');const followOk=follow.trim()!==''&&Number.isInteger(Number(follow))&&Number(follow)>=0&&Number(follow)<=60;
  const fn=Number(frames),usesFrames=FRAME_MODES.includes(mode),framesOk=!usesFrames||(frames.trim()!==''&&Number.isInteger(fn)&&fn>=(SIGNED_MODES.includes(mode)?-MAX_STAGGER_FRAMES:0)&&fn<=MAX_STAGGER_FRAMES);
  const plan=ids.length&&framesOk?timingPlan(comp,ids,mode,{playhead,frames:usesFrames?fn:undefined}):null;
@@ -34,7 +35,7 @@ export function RigPanel({comp}:{comp:Composition}){
   <div className="grid min-w-0 gap-1">
    <Menu><MenuTrigger render={<Button size="compact" variant="outline" className="h-auto min-w-0 whitespace-normal" disabled={ids.length<1} data-testid="animation-rig-menu">{t('animation.rig.menu')}</Button>}/>
     <MenuContent>{groups.map(g=><MenuSubmenu key={g.key}><MenuSubmenuTrigger className="menu-item" data-testid={`animation-rig-group-${g.key}`}>{t(`animation.rig.group.${g.key}`)}<span aria-hidden="true">›</span></MenuSubmenuTrigger>
-     <MenuContent>{g.items.map(it=><MenuItem key={it.testid} disabled={ids.length<it.min} onClick={()=>run(it.cmd)} data-testid={it.testid}>{t(it.label)}</MenuItem>)}</MenuContent></MenuSubmenu>)}</MenuContent></Menu>
+     <MenuContent>{g.items.map(it=><MenuItem key={it.testid} disabled={ids.length<it.min} onClick={()=>run(it.cmd,it.args)} data-testid={it.testid}>{t(it.label)}</MenuItem>)}</MenuContent></MenuSubmenu>)}</MenuContent></Menu>
    <div className="grid min-w-0 grid-cols-[1fr_4rem] gap-1"><Button size="compact" variant="outline" className="h-auto min-w-0 whitespace-normal text-left" disabled={ids.length<2||!followOk} onClick={()=>void executeCommand('animation.rig.follow',{layers:ids,frames:Number(follow)})} data-testid="animation-rig-follow">{t('animation.rig.follow')}</Button>
     <NativeInput className="h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text" type="number" min={0} max={60} step={1} value={follow} aria-label={t('animation.rig.followFrames')} onChange={e=>setFollow(e.target.value)} data-testid="animation-rig-follow-frames"/></div>
   </div>

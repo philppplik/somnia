@@ -962,5 +962,12 @@
  "animation.rig.group.hierarchy": "Jerarquía",
  "animation.rig.group.layers": "Capas",
  "animation.rig.number": "Numerar capas",
- "cmd.animation.layers.number": "Numerar las capas seleccionadas"
+ "cmd.animation.layers.number": "Numerar las capas seleccionadas",
+ "animation.rig.group.order": "Orden",
+ "animation.rig.order.front": "Al frente",
+ "animation.rig.order.back": "Al fondo",
+ "animation.rig.order.up": "Adelante un paso",
+ "animation.rig.order.down": "Atrás un paso",
+ "animation.rig.order.reverse": "Invertir orden",
+ "cmd.animation.layers.arrange": "Ordenar el apilado de las capas seleccionadas"
 }

@@ -962,5 +962,12 @@
  "animation.rig.group.hierarchy": "Hierarquia",
  "animation.rig.group.layers": "Camadas",
  "animation.rig.number": "Numerar camadas",
- "cmd.animation.layers.number": "Numerar as camadas selecionadas"
+ "cmd.animation.layers.number": "Numerar as camadas selecionadas",
+ "animation.rig.group.order": "Ordem",
+ "animation.rig.order.front": "Para a frente",
+ "animation.rig.order.back": "Para trás",
+ "animation.rig.order.up": "Avançar um passo",
+ "animation.rig.order.down": "Recuar um passo",
+ "animation.rig.order.reverse": "Inverter ordem",
+ "cmd.animation.layers.arrange": "Organizar a ordem de empilhamento das camadas selecionadas"
 }

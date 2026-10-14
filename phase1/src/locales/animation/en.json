@@ -962,5 +962,12 @@
  "animation.rig.group.hierarchy": "Hierarchy",
  "animation.rig.group.layers": "Layers",
  "animation.rig.number": "Number layers",
- "cmd.animation.layers.number": "Number the selected layers"
+ "cmd.animation.layers.number": "Number the selected layers",
+ "animation.rig.group.order": "Order",
+ "animation.rig.order.front": "To front",
+ "animation.rig.order.back": "To back",
+ "animation.rig.order.up": "Forward one step",
+ "animation.rig.order.down": "Back one step",
+ "animation.rig.order.reverse": "Reverse order",
+ "cmd.animation.layers.arrange": "Arrange the stacking order of the selected layers"
 }
