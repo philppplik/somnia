@@ -22,6 +22,7 @@ export function RigPanel({comp}:{comp:Composition}){
   <div className="grid min-w-0 gap-1">
    <Button size="compact" variant="outline" disabled={ids.length<2} onClick={()=>run('animation.rig.chain')} data-testid="animation-rig-chain">{t('animation.rig.chain')}</Button>
    <Button size="compact" variant="outline" disabled={ids.length<1} onClick={()=>run('animation.rig.group')} data-testid="animation-rig-group">{t('animation.rig.group')}</Button>
+   <Button size="compact" variant="outline" disabled={ids.length<2} onClick={()=>run('animation.rig.follow')} data-testid="animation-rig-follow">{t('animation.rig.follow')}</Button>
    <Button size="compact" variant="outline" disabled={ids.length<1} onClick={()=>run('animation.rig.release')} data-testid="animation-rig-release">{t('animation.rig.release')}</Button>
    <Button size="compact" variant="outline" disabled={ids.length<1} onClick={()=>run('animation.layers.duplicate')} data-testid="animation-rig-duplicate">{t('animation.rig.duplicate')}</Button>
    <Button size="compact" variant="outline" disabled={ids.length<1} onClick={()=>run('animation.layers.split')} data-testid="animation-rig-split">{t('animation.rig.split')}</Button></div>

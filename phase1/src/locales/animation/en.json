@@ -937,5 +937,7 @@
  "cmd.animation.comp.remove": "Delete composition",
  "animation.rig.split": "Split at playhead",
  "cmd.animation.layers.split": "Split the selected layers at the playhead",
- "animation.modifiers.delay": "Delay (frames)"
+ "animation.modifiers.delay": "Delay (frames)",
+ "animation.rig.follow": "Follow the leader",
+ "cmd.animation.rig.follow": "Follow the leader (linked lag)"
 }

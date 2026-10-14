@@ -937,5 +937,7 @@
  "cmd.animation.comp.remove": "Excluir composição",
  "animation.rig.split": "Dividir no cursor",
  "cmd.animation.layers.split": "Dividir as camadas selecionadas no cursor",
- "animation.modifiers.delay": "Atraso (quadros)"
+ "animation.modifiers.delay": "Atraso (quadros)",
+ "animation.rig.follow": "Seguir o líder",
+ "cmd.animation.rig.follow": "Seguir o líder (atraso vinculado)"
 }

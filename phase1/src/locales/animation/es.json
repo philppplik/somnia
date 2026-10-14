@@ -937,5 +937,7 @@
  "cmd.animation.comp.remove": "Eliminar composición",
  "animation.rig.split": "Dividir en el cabezal",
  "cmd.animation.layers.split": "Dividir las capas seleccionadas en el cabezal",
- "animation.modifiers.delay": "Retardo (fotogramas)"
+ "animation.modifiers.delay": "Retardo (fotogramas)",
+ "animation.rig.follow": "Seguir al líder",
+ "cmd.animation.rig.follow": "Seguir al líder (retardo enlazado)"
 }

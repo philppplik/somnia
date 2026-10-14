@@ -376,3 +376,15 @@ test('P157 link delay reads the source at t - delay, validates, and is optional'
  assert.equal(validateModifiers([{type:'link',layer:'x',prop:'rotation',multiplier:1,offset:0,delay:1.5}]).length,1);
  assert.equal(validateModifiers([{type:'link',layer:'x',prop:'rotation',multiplier:1,offset:0,delay:-16000}]).length,0);
 });
+
+test('P158 follow the leader links each layer to the previous one with a delay, one undo step',async()=>{
+ const {rigFollowSpecs}=await import('./rigFollowCommands');const run=rigFollowSpecs()[0].run as (p?:unknown)=>unknown;
+ const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'shape',id:'b'});const ids=['a','b'];
+ const before=s.document!;
+ assert.throws(()=>run({layers:[ids[0]]}),/two or more/);
+ run({layers:ids.slice(0,2),frames:4});
+ const c=findComp(s.document!)!,f=findLayer(c,ids[1])!,m=f.transform.position.modifiers!.find(x=>x.type==='link') as {layer:string;delay?:number};
+ assert.equal(m.layer,ids[0]);assert.equal(m.delay,4*8000);assert.equal(findLayer(c,ids[0])!.transform.position.modifiers?.length??0,0);
+ assert.throws(()=>run({layers:ids.slice(0,2)}),/already has a link/);
+ s.undo();assert.equal(s.document,before);setAnimationSession(null);
+});

@@ -2027,6 +2027,24 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.rig.follow",
+      "title": "Follow the leader (linked lag)",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "delay",
+        "drag",
+        "follow",
+        "lag",
+        "leader",
+        "link",
+        "overlap",
+        "rig"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.rig.group",
       "title": "Group layers under a new null",
       "category": "Edit",

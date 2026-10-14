@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-814 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+815 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -173,6 +173,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `animation.render.close` | Close render setup | Project | animation |  |
 | `animation.render.open` | Render setup | Project | animation |  |
 | `animation.rig.chain` | Parent layers as a chain | Edit | animation |  |
+| `animation.rig.follow` | Follow the leader (linked lag) | Edit | animation |  |
 | `animation.rig.group` | Group layers under a new null | Edit | animation |  |
 | `animation.rig.release` | Release layers from their parents | Edit | animation |  |
 | `animation.stroke.animate` | Toggle stroke width or opacity keyframes | Edit | animation |  |
