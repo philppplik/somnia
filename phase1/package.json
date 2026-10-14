@@ -42,10 +42,12 @@
     "predev": "node scripts/copy-pdfjs-assets.mjs",
     "prebuild": "node scripts/copy-pdfjs-assets.mjs",
     "test:vibespace": "tsx --import ./scripts/test-css-register.mjs --test src/lib/vibespace/*.test.ts src/components/vibespace/*.test.tsx",
-    "check:layers": "depcruise packages/editor-core/src src --config .dependency-cruiser.cjs --ignore-known --output-type err",
-    "layers:baseline": "depcruise packages/editor-core/src src --config .dependency-cruiser.cjs --output-type baseline --output-to .dependency-cruiser-known-violations.json && depcruise packages/editor-core/src src --config .dependency-cruiser.cjs --output-type err-long --output-to docs/layers-violations.txt || true",
+    "check:layers": "node scripts/layers.mjs check",
+    "layers:baseline": "node scripts/layers.mjs baseline",
     "test:board": "tsx --test src/lib/agentBoard/*.test.ts src/components/agentBoard/*.test.tsx",
-    "test:jobs": "tsx --test src/lib/jobs/*.test.ts src/lib/sound/transport.test.ts"
+    "test:jobs": "tsx --test src/lib/jobs/*.test.ts src/lib/sound/transport.test.ts",
+    "test:layers": "node --test scripts/layers.test.mjs",
+    "layers:install": "npm ci --prefix tools/layers --ignore-scripts"
   },
   "dependencies": {
     "@base-ui/react": "1.8.0",
@@ -116,7 +118,6 @@
     "@types/spdx-expression-parse": "3.0.5",
     "@types/turndown": "^5.0.6",
     "@vitejs/plugin-react": "6.1.1",
-    "dependency-cruiser": "18.6.0",
     "tailwindcss": "4.3.3",
     "tsx": "4.21.0",
     "typescript": "7.0.2",

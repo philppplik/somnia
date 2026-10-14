@@ -6,7 +6,8 @@
     "unresolvedTo": "./agent/privacy",
     "dependencyTypes": [
       "local",
-      "export"
+      "type-only",
+      "import"
     ],
     "rule": {
       "severity": "error",
@@ -76,8 +77,8 @@
     "unresolvedTo": "./studios/openIntake",
     "dependencyTypes": [
       "local",
-      "import",
-      "type-only"
+      "type-only",
+      "import"
     ],
     "rule": {
       "severity": "error",
@@ -856,20 +857,6 @@
   },
   {
     "type": "dependency",
-    "from": "src/lib/studios/vector.ts",
-    "to": "src/store/appStore.ts",
-    "unresolvedTo": "../../store/appStore",
-    "dependencyTypes": [
-      "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "error",
-      "name": "lib-not-up"
-    }
-  },
-  {
-    "type": "dependency",
     "from": "src/lib/svgedit/controller.ts",
     "to": "src/store/appStore.ts",
     "unresolvedTo": "../../store/appStore",
@@ -903,8 +890,8 @@
     "unresolvedTo": "../store/appStore",
     "dependencyTypes": [
       "local",
-      "import",
-      "type-only"
+      "type-only",
+      "import"
     ],
     "rule": {
       "severity": "error",
@@ -1060,8 +1047,8 @@
     "unresolvedTo": "./diagnostics",
     "dependencyTypes": [
       "local",
-      "import",
-      "type-only"
+      "type-only",
+      "import"
     ],
     "rule": {
       "severity": "error",
@@ -1072,8 +1059,8 @@
         "name": "src/lib/diagnostics.ts",
         "dependencyTypes": [
           "local",
-          "import",
-          "type-only"
+          "type-only",
+          "import"
         ]
       },
       {
@@ -1110,8 +1097,8 @@
         "name": "src/lib/agent/core.ts",
         "dependencyTypes": [
           "local",
-          "import",
-          "type-only"
+          "type-only",
+          "import"
         ]
       }
     ]
@@ -1123,8 +1110,8 @@
     "unresolvedTo": "./providerAuth",
     "dependencyTypes": [
       "local",
-      "import",
-      "type-only"
+      "type-only",
+      "import"
     ],
     "rule": {
       "severity": "error",
@@ -1135,8 +1122,8 @@
         "name": "src/lib/agent/providerAuth.ts",
         "dependencyTypes": [
           "local",
-          "import",
-          "type-only"
+          "type-only",
+          "import"
         ]
       },
       {
@@ -1155,8 +1142,8 @@
     "unresolvedTo": "./settings",
     "dependencyTypes": [
       "local",
-      "import",
-      "type-only"
+      "type-only",
+      "import"
     ],
     "rule": {
       "severity": "error",
@@ -1167,16 +1154,16 @@
         "name": "src/lib/agent/settings.ts",
         "dependencyTypes": [
           "local",
-          "import",
-          "type-only"
+          "type-only",
+          "import"
         ]
       },
       {
         "name": "src/lib/agent/panelBridge.ts",
         "dependencyTypes": [
           "local",
-          "import",
-          "type-only"
+          "type-only",
+          "import"
         ]
       }
     ]
@@ -1243,8 +1230,8 @@
         "name": "src/lib/diagnostics.ts",
         "dependencyTypes": [
           "local",
-          "import",
-          "type-only"
+          "type-only",
+          "import"
         ]
       }
     ]
@@ -1304,8 +1291,8 @@
         "name": "src/lib/extensions/manifestV2.ts",
         "dependencyTypes": [
           "local",
-          "import",
-          "type-only"
+          "type-only",
+          "import"
         ]
       }
     ]
@@ -1317,8 +1304,8 @@
     "unresolvedTo": "./runtime",
     "dependencyTypes": [
       "local",
-      "import",
-      "type-only"
+      "type-only",
+      "import"
     ],
     "rule": {
       "severity": "error",
@@ -1329,8 +1316,8 @@
         "name": "src/lib/extensions/runtime.ts",
         "dependencyTypes": [
           "local",
-          "import",
-          "type-only"
+          "type-only",
+          "import"
         ]
       },
       {
@@ -1397,8 +1384,8 @@
         "name": "src/lib/pdfedit/comments.ts",
         "dependencyTypes": [
           "local",
-          "import",
-          "type-only"
+          "type-only",
+          "import"
         ]
       }
     ]
@@ -1491,87 +1478,6 @@
       },
       {
         "name": "src/lib/studios/blank.ts",
-        "dependencyTypes": [
-          "local",
-          "import"
-        ]
-      }
-    ]
-  },
-  {
-    "type": "cycle",
-    "from": "src/lib/studios/index.ts",
-    "to": "src/lib/studios/vector.ts",
-    "unresolvedTo": "./vector",
-    "dependencyTypes": [
-      "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "error",
-      "name": "no-circular"
-    },
-    "cycle": [
-      {
-        "name": "src/lib/studios/vector.ts",
-        "dependencyTypes": [
-          "local",
-          "import"
-        ]
-      },
-      {
-        "name": "src/store/appStore.ts",
-        "dependencyTypes": [
-          "local",
-          "import"
-        ]
-      },
-      {
-        "name": "src/lib/studios/index.ts",
-        "dependencyTypes": [
-          "local",
-          "import"
-        ]
-      }
-    ]
-  },
-  {
-    "type": "cycle",
-    "from": "src/lib/studios/vector.ts",
-    "to": "src/lib/studios/blank.ts",
-    "unresolvedTo": "./blank",
-    "dependencyTypes": [
-      "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "error",
-      "name": "no-circular"
-    },
-    "cycle": [
-      {
-        "name": "src/lib/studios/blank.ts",
-        "dependencyTypes": [
-          "local",
-          "import"
-        ]
-      },
-      {
-        "name": "src/store/appStore.ts",
-        "dependencyTypes": [
-          "local",
-          "dynamic-import"
-        ]
-      },
-      {
-        "name": "src/lib/studios/index.ts",
-        "dependencyTypes": [
-          "local",
-          "import"
-        ]
-      },
-      {
-        "name": "src/lib/studios/vector.ts",
         "dependencyTypes": [
           "local",
           "import"
