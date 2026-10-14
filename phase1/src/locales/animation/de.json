@@ -1041,5 +1041,7 @@
  "animation.export.frameFormat": "Bildformat",
  "animation.export.frameQuality": "Bildqualität (%)",
  "animation.export.problem.frameFormat": "Das Bildformat muss PNG, JPEG oder WebP sein.",
- "animation.export.problem.frameQuality": "Die Bildqualität muss eine ganze Zahl von 1 bis 100 sein."
+ "animation.export.problem.frameQuality": "Die Bildqualität muss eine ganze Zahl von 1 bis 100 sein.",
+ "animation.export.padding": "Sheet-Abstand (px)",
+ "animation.export.problem.padding": "Der Sheet-Abstand muss eine ganze Zahl von 0 bis 32 sein."
 }

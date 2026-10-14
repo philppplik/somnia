@@ -4,16 +4,19 @@ import {crc32} from './apngEncode';
 export const SHEET_MAX_FRAMES=256,SHEET_MAX_PIXELS=32*1024*1024,SHEET_MAX_SIDE=16384;
 export class SheetError extends Error{constructor(message:string,readonly code:'too-many'|'too-large'|'empty'){super(message);this.name='SheetError';}}
 export interface SheetCell{index:number;x:number;y:number}
-export interface SheetPlan{columns:number;rows:number;width:number;height:number;cellW:number;cellH:number;cells:SheetCell[]}
+export interface SheetPlan{padding?:number;columns:number;rows:number;width:number;height:number;cellW:number;cellH:number;cells:SheetCell[]}
 /** Grid of count cells. `columns` defaults to the smallest near-square grid. Throws SheetError past the frame and pixel limits. */
-export function sheetPlan(count:number,cellW:number,cellH:number,columns?:number):SheetPlan{
+export const SHEET_MAX_PADDING=32;
+/** `padding` pixels of empty gutter between the cells and around the sheet edge (0 keeps the tight grid). */
+export function sheetPlan(count:number,cellW:number,cellH:number,columns?:number,padding=0):SheetPlan{
+ if(!Number.isInteger(padding)||padding<0||padding>SHEET_MAX_PADDING)throw new SheetError(`Padding must be a whole number from 0 to ${SHEET_MAX_PADDING}.`,'too-large');
  if(!Number.isInteger(count)||count<1)throw new SheetError('The work area has no frames.','empty');
  if(count>SHEET_MAX_FRAMES)throw new SheetError(`A sprite sheet is limited to ${SHEET_MAX_FRAMES} frames. Shorten the work area.`,'too-many');
  if(!Number.isInteger(cellW)||!Number.isInteger(cellH)||cellW<1||cellH<1)throw new SheetError('Invalid frame size.','too-large');
  const cols=Math.min(count,Math.max(1,Math.round(columns??Math.ceil(Math.sqrt(count)))));
- const rows=Math.ceil(count/cols),width=cols*cellW,height=rows*cellH;
+ const rows=Math.ceil(count/cols),width=cols*(cellW+padding)+(padding?padding:0),height=rows*(cellH+padding)+(padding?padding:0);
  if(width>SHEET_MAX_SIDE||height>SHEET_MAX_SIDE||width*height>SHEET_MAX_PIXELS)throw new SheetError(`The sheet would be ${width}x${height} pixels, above the limit of ${SHEET_MAX_PIXELS/1048576} megapixels. Lower the scale or shorten the work area.`,'too-large');
- return {columns:cols,rows,width,height,cellW,cellH,cells:Array.from({length:count},(_,i)=>({index:i,x:(i%cols)*cellW,y:Math.floor(i/cols)*cellH}))};
+ return {...(padding?{padding}:{}),columns:cols,rows,width,height,cellW,cellH,cells:Array.from({length:count},(_,i)=>({index:i,x:padding+(i%cols)*(cellW+padding),y:padding+Math.floor(i/cols)*(cellH+padding)}))};
 }
 /** Copies each frame (RGBA, cellW x cellH) into its cell of one RGBA buffer. */
 export function packSheet(plan:SheetPlan,frames:readonly Uint8ClampedArray[]):Uint8ClampedArray{
@@ -41,6 +44,6 @@ export function encodePngRgba(width:number,height:number,rgba:Uint8ClampedArray)
  const out=new Uint8Array(parts.reduce((n,p)=>n+p.length,0));let o=0;for(const p of parts){out.set(p,o);o+=p.length;}return out;
 }
 export function sheetManifest(plan:SheetPlan,frames:readonly {frame:number;tick:number}[],name:string,sheetFile:string,fps:{num:number;den:number}){
- return {format:'somnia-animation-sprite-sheet',version:1,image:sheetFile,composition:name,width:plan.width,height:plan.height,frameWidth:plan.cellW,frameHeight:plan.cellH,columns:plan.columns,rows:plan.rows,frameRate:{num:fps.num,den:fps.den},
+ return {format:'somnia-animation-sprite-sheet',version:1,image:sheetFile,composition:name,width:plan.width,height:plan.height,frameWidth:plan.cellW,frameHeight:plan.cellH,...(plan.padding?{padding:plan.padding}:{}),columns:plan.columns,rows:plan.rows,frameRate:{num:fps.num,den:fps.den},
   frames:plan.cells.map((c,i)=>({frame:frames[i].frame,tick:frames[i].tick,x:c.x,y:c.y,w:plan.cellW,h:plan.cellH}))};
 }

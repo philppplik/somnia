@@ -145,7 +145,7 @@ export function exportSpriteSheet(columns?:number,d:Deps={}){
  const {doc,out,ec:comp}=target('sheet');
  return guarded('sequence',async signal=>{
   const plan=sequencePlan(comp);let grid;
-  try{grid=sheetPlan(plan.length,out.width,out.height,columns??state.settings.columns??undefined);}catch(e){if(e instanceof SheetError)throw new ExportError(e.message,e.code==='too-many'?'too-many':e.code==='empty'?'empty':'too-large');throw e;}
+  try{grid=sheetPlan(plan.length,out.width,out.height,columns??state.settings.columns??undefined,state.settings.sheetPadding??0);}catch(e){if(e instanceof SheetError)throw new ExportError(e.message,e.code==='too-many'?'too-many':e.code==='empty'?'empty':'too-large');throw e;}
   const pixels=d.pixels??canvasPixels;const frames:Uint8ClampedArray[]=[];
   for(let i=0;i<plan.length;i++){
    if(signal.aborted)throw new ExportError('Export cancelled.','cancelled');

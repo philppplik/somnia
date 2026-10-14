@@ -1041,5 +1041,7 @@
  "animation.export.frameFormat": "Formato do quadro",
  "animation.export.frameQuality": "Qualidade do quadro (%)",
  "animation.export.problem.frameFormat": "O formato do quadro deve ser PNG, JPEG ou WebP.",
- "animation.export.problem.frameQuality": "A qualidade do quadro deve ser um inteiro de 1 a 100."
+ "animation.export.problem.frameQuality": "A qualidade do quadro deve ser um inteiro de 1 a 100.",
+ "animation.export.padding": "Margem da folha (px)",
+ "animation.export.problem.padding": "A margem da folha deve ser um inteiro de 0 a 32."
 }

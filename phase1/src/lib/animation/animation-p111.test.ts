@@ -813,3 +813,15 @@ test('P204 frame format: JPEG/WebP single-frame export re-encodes at the quality
  resetExportSettings();setExportTransparent(false);
  assert.throws(()=>setExportSettings({frameFormat:'gif' as never}),(e:any)=>e.code==='unsupported');assert.throws(()=>setExportSettings({frameQuality:0}),(e:any)=>e.code==='unsupported');assert.throws(()=>setExportSettings({frameQuality:101}),(e:any)=>e.code==='unsupported');
 });
+
+test('P205 sprite sheet padding: gutter between and around cells, atlas follows, default identical, bad values refused',async()=>{
+ const {sheetPlan,packSheet,sheetManifest,SheetError}=await import('./spriteSheet');const {settingsProblems,defaultExportSettings}=await import('./exportSettings');
+ const a=sheetPlan(5,10,8,3),b=sheetPlan(5,10,8,3,0);assert.deepEqual(a,b);assert.equal(a.width,30);assert.equal(a.height,16);
+ const p=sheetPlan(5,10,8,3,2);assert.equal(p.padding,2);assert.equal(p.width,2+3*12);assert.equal(p.height,2+2*10);
+ assert.deepEqual(p.cells.map(c=>[c.x,c.y]),[[2,2],[14,2],[26,2],[2,12],[14,12]]);
+ const frames=p.cells.map((_,i)=>new Uint8ClampedArray(10*8*4).fill(i+1));const px=packSheet(p,frames);
+ const at=(x:number,y:number)=>px[(y*p.width+x)*4];assert.equal(at(0,0),0);assert.equal(at(2,2),1);assert.equal(at(11,9),1);assert.equal(at(12,5),0);assert.equal(at(14,2),2);assert.equal(at(p.width-1,p.height-1),0);
+ const m=sheetManifest(p,p.cells.map((_,i)=>({frame:i,tick:i})),'n','n.png',{num:30,den:1});assert.equal((m as any).padding,2);assert.equal(m.frames[1].x,14);assert.equal((sheetManifest(a,a.cells.map((_,i)=>({frame:i,tick:i})),'n','n.png',{num:30,den:1}) as any).padding,undefined);
+ assert.throws(()=>sheetPlan(2,10,8,2,33),SheetError);assert.throws(()=>sheetPlan(2,10,8,2,1.5),SheetError);
+ assert.deepEqual(settingsProblems({...defaultExportSettings(),sheetPadding:40}),['padding']);assert.deepEqual(settingsProblems({...defaultExportSettings(),sheetPadding:4}),[]);
+});
