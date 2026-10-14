@@ -10,6 +10,8 @@ const MAX_RESIZE_ROWS: u32 = 100_000;
 const MAX_RESIZE_COLS: u32 = 16_384;
 const MAX_FREEZE: u32 = 20;
 const MAX_SHEETS: usize = 255;
+const MAX_SORT_CELLS: u64 = 1_000_000;
+const MAX_SORT_KEYS: usize = 3;
 const MAX_FORMAT_CELLS: u64 = 1_000_000;
 
 fn is_hex_color(v: &serde_json::Value) -> Option<&str> {
@@ -450,6 +452,41 @@ impl HeadlessWorkbook {
         let mut params = json!({"sheet": sheet});
         params[axis] = json!(format!("{}:{}", name(a), name(b)));
         self.session.run(command, params).map(|v| v.to_string())
+    }
+
+    /// Sorts the rows of an explicit block as ONE history entry. `op_json` is
+    /// `{"header":bool,"keys":[{"column":offset,"order":"asc"|"desc"}],"matchCase":bool}` where `column` is the
+    /// 0-based offset inside the block. The block is never widened: only the cells given are reordered, formulas
+    /// keep their relative references, and merged cells or a protected sheet are refused. At most 3 keys and
+    /// MAX_SORT_CELLS cells. The target sheet is activated first because the engine sorts the active sheet.
+    pub fn sort_range(&mut self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32, op_json: &str) -> Result<String, String> {
+        if rows < 2 || cols == 0 || u64::from(rows) * u64::from(cols) > MAX_SORT_CELLS {
+            return Err("Select at least two rows to sort (at most 1,000,000 cells).".into());
+        }
+        self.check_block(sheet, row, col, rows, cols, true)?;
+        let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "operation must be a JSON object".to_string())?;
+        let header = op.get("header").and_then(|v| v.as_bool()).ok_or("header must be true or false")?;
+        let match_case = op.get("matchCase").and_then(|v| v.as_bool()).unwrap_or(false);
+        let raw_keys = op.get("keys").and_then(|v| v.as_array()).ok_or("keys must be a list")?;
+        if raw_keys.is_empty() || raw_keys.len() > MAX_SORT_KEYS {
+            return Err(format!("Sort by 1 to {MAX_SORT_KEYS} columns."));
+        }
+        if header && rows < 3 {
+            return Err("Nothing to sort below the header row.".into());
+        }
+        let mut keys = Vec::new();
+        for k in raw_keys {
+            let column = k.get("column").and_then(|v| v.as_u64()).filter(|c| *c < u64::from(cols)).ok_or("sort column is outside the selection")?;
+            let desc = match k.get("order").and_then(|v| v.as_str()) {
+                Some("asc") => false,
+                Some("desc") => true,
+                _ => return Err("order must be asc or desc".into()),
+            };
+            keys.push(json!({"column": column, "order": if desc { "desc" } else { "asc" }}));
+        }
+        let range = format!("{}:{}", CellRef::new(row, col).a1(), CellRef::new(row + rows - 1, col + cols - 1).a1());
+        self.session.run("sheet.activate", json!({"sheet": sheet}))?;
+        self.session.run("data.sort", json!({"range": range, "header": header, "keys": keys, "matchCase": match_case})).map(|v| v.to_string())
     }
 
     /// Freezes the first `rows` rows and `cols` columns (0 and 0 unfreezes), as one history entry.
@@ -1141,6 +1178,39 @@ mod tests {
         }
         let taken = sheet_names(&book)[1].clone();
         assert!(book.edit_sheet(0, &format!(r#"{{"kind":"rename","name":"{}"}}"#, taken.to_lowercase())).is_err(), "names are unique, ignoring case");
+    }
+    #[test]
+    fn sort_range_orders_rows_in_one_undo_step_and_never_widens() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        book.set_values(0, 20, 0, r#"[["name","n"],["b","2"],["a","3"],["c","1"]]"#).unwrap();
+        book.set_values(0, 24, 0, r#"[["keep","9"]]"#).unwrap();
+        book.set_values(0, 20, 3, r#"[["x"],["x"],["x"],["x"]]"#).unwrap();
+        let op = r#"{"header":true,"keys":[{"column":1,"order":"desc"}]}"#;
+        book.sort_range(0, 20, 0, 4, 2, op).unwrap();
+        assert_eq!(text(&book, "A21"), "name");
+        assert_eq!(text(&book, "A22"), "a");
+        assert_eq!(text(&book, "A23"), "b");
+        assert_eq!(text(&book, "A24"), "c");
+        assert_eq!(text(&book, "A25"), "keep");
+        assert_eq!(text(&book, "D22"), "x");
+        book.undo().unwrap();
+        assert_eq!(text(&book, "A22"), "b");
+        assert_eq!(text(&book, "A23"), "a");
+        assert_eq!(text(&book, "B23"), "3");
+    }
+    #[test]
+    fn sort_range_rejects_bad_input_and_protected_sheets() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        let ok = r#"{"header":false,"keys":[{"column":0,"order":"asc"}]}"#;
+        assert!(book.sort_range(0, 0, 0, 1, 2, ok).is_err());
+        assert!(book.sort_range(0, 0, 0, 3, 2, r#"{"header":false,"keys":[{"column":2,"order":"asc"}]}"#).is_err());
+        assert!(book.sort_range(0, 0, 0, 3, 2, r#"{"header":false,"keys":[]}"#).is_err());
+        assert!(book.sort_range(0, 0, 0, 3, 2, r#"{"header":false,"keys":[{"column":0,"order":"up"}]}"#).is_err());
+        assert!(book.sort_range(0, 0, 0, 3, 2, r#"{"keys":[{"column":0,"order":"asc"}]}"#).is_err());
+        assert!(book.sort_range(0, 0, 0, 3, 2, "nope").is_err());
+        assert!(book.sort_range(0, 0, 0, 2_000_000, 2, ok).is_err());
+        book.session.run("review.protectSheet", json!({})).unwrap();
+        assert!(book.sort_range(0, 0, 0, 3, 2, ok).unwrap_err().contains("protected"));
     }
     #[test]
     fn the_last_visible_sheet_cannot_be_deleted() {

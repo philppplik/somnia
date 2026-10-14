@@ -20,7 +20,7 @@ test('formula builder allowlists functions and normalizes references',()=>{
 });
 test('panel commands validate payloads, reject agent execution and honor controller lifecycle',async()=>{
  const dispatcher=new CommandDispatcher();for(const spec of sheetsPanelCommandSpecs())dispatcher.register(spec);
- const calls:unknown[]=[];const controller:SheetsPanelController={ready:()=>true,navigate:(sheet,address)=>{calls.push([sheet,address]);},setCell:input=>{calls.push(input);},readRange:async()=>[],formatCells:op=>{calls.push(op);},resizeLines:(axis,op)=>{calls.push([axis,op]);},freezePanes:(rows,cols)=>{calls.push(['freeze',rows,cols]);},editLines:(axis,kind)=>{calls.push(['edit',axis,kind]);},editSheet:op=>{calls.push(['sheet',op]);}};
+ const calls:unknown[]=[];const controller:SheetsPanelController={ready:()=>true,navigate:(sheet,address)=>{calls.push([sheet,address]);},setCell:input=>{calls.push(input);},readRange:async()=>[],formatCells:op=>{calls.push(op);},resizeLines:(axis,op)=>{calls.push([axis,op]);},freezePanes:(rows,cols)=>{calls.push(['freeze',rows,cols]);},editLines:(axis,kind)=>{calls.push(['edit',axis,kind]);},editSheet:op=>{calls.push(['sheet',op]);},sortRange:op=>{calls.push(['sort',op]);}};
  const off=registerSheetsPanelController(controller);
  try{
   await dispatcher.runCommand('sheets.navigate',{sheet:1,address:'B4'},{origin:'ui'});
@@ -32,6 +32,9 @@ test('panel commands validate payloads, reject agent execution and honor control
   await dispatcher.runCommand('sheets.sheet',{kind:'rename',name:'Q1'},{origin:'ui'});
   await dispatcher.runCommand('sheets.sheet',{kind:'delete'},{origin:'ui'});
   assert.deepEqual(calls.slice(mark),[['sheet',{kind:'rename',name:'Q1'}],['sheet',{kind:'delete'}]]);calls.splice(mark);
+  await dispatcher.runCommand('sheets.sort',{column:2,order:'desc',header:true},{origin:'ui'});
+  assert.deepEqual(calls.slice(mark),[['sort',{header:true,keys:[{column:2,order:'desc'}]}]]);calls.splice(mark);
+  for(const bad of [{column:-1,order:'asc',header:false},{column:0,order:'up',header:false},{column:0,order:'asc'},{order:'asc',header:true},{column:0,order:'asc',header:false,x:1}])await assert.rejects(()=>dispatcher.runCommand('sheets.sort',bad,{origin:'ui'}),JSON.stringify(bad));
   for(const bad of [{kind:'rename',name:'a/b'},{kind:'rename'},{kind:'fly'},{kind:'move',to:300}])await assert.rejects(()=>dispatcher.runCommand('sheets.sheet',bad,{origin:'ui'}),JSON.stringify(bad));
   await dispatcher.runCommand('sheets.resize',{axis:'cols',kind:'size',px:120.4},{origin:'ui'});
   await dispatcher.runCommand('sheets.resize',{axis:'rows',kind:'autofit'},{origin:'ui'});

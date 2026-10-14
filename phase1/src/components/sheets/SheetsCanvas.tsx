@@ -12,12 +12,13 @@ import {Table2,Redo2,Undo2} from '../../lib/icons';
 import {addMediaFile,formatBytes,useMedia,type MediaItem} from '../../lib/media';
 import {useT} from '../../lib/useT';
 import {SheetsEngine} from '../../lib/sheets/engine';
-import type {SheetOp,FormatOp,LineAxis,LineEditKind,LineOp,SheetInfo,SheetLayout,ViewCell,WorkbookInfo} from '../../lib/sheets/protocol';
+import type {SortOp,SheetOp,FormatOp,LineAxis,LineEditKind,LineOp,SheetInfo,SheetLayout,ViewCell,WorkbookInfo} from '../../lib/sheets/protocol';
 import {editSpan,MAX_SHEET_COLS,MAX_SHEET_ROWS} from '../../lib/sheets/lineOps';
 import {Geometry} from '../../lib/sheets/geometry';
 import {MAX_CELL_BYTES} from '../../lib/sheets/protocol';
 import {addressOf,cellText,colName,displayValue,editText,isErrorValue,cellAlign} from '../../lib/sheets/format';
 import {MAX_SHEETS} from '../../lib/sheets/sheetOps';
+import {sortBlockProblem} from '../../lib/sheets/sortOps';
 import {formatRectOk,toggleOp,type ToggleKind} from '../../lib/sheets/formatOps';
 import {inRect,parseTsv,planPaste,rectCells,rectOf,toTsv} from '../../lib/sheets/clipboard';
 import {MAX_READ_CELLS} from '../../lib/sheets/protocol';
@@ -102,8 +103,8 @@ function Workbook({item}:{item:MediaItem}){
   try{await engine.current!.freeze(sheet,rows,cols);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
  const toggleFormat=(kind:ToggleKind)=>{void applyFormat(toggleOp(kind,cur?.style)).catch(()=>undefined);};
  const panelOperations=useRef<SheetsPanelController>(null!);
- panelOperations.current={ready:()=>phase.kind==='ready'&&!!engine.current&&!engine.current.isDisposed,navigate:async(sheetIndex,targetAddress)=>{const target=parseAddress(targetAddress);if(!target||!book?.sheets.some(s=>s.index===sheetIndex&&s.visibility==='Visible'))throw Error('Invalid sheet or cell.');if(draftRef.current!==null)await commit(draftRef.current);setSheet(sheetIndex);setSel(target);setExt(null);setDraft(null);},setCell:async input=>{if(new TextEncoder().encode(input).length>MAX_CELL_BYTES)throw Error('Cell input is too long.');const eng=engine.current!;await eng.set(sheet,address,input);setDraft(null);setDirty(true);setNotice('');setRev(r=>r+1);},formatCells:async op=>{await applyFormat(op);},resizeLines:async(axis,op)=>{await applyLines(axis,op);},editLines:async(axis,kind)=>{await applyEdit(axis,kind);},freezePanes:async(rows,cols)=>{await applyFreeze(rows,cols);},editSheet:async op=>{await applySheet(op);},readRange:async(input)=>{const r=parsePanelRange(input);if(!r)throw Error('Invalid range.');return (await engine.current!.range(sheet,r.r0,r.c0,r.r1-r.r0+1,r.c1-r.c0+1)).cells;}};
- useEffect(()=>registerSheetsPanelController({ready:()=>panelOperations.current.ready(),navigate:(...args)=>panelOperations.current.navigate(...args),setCell:input=>panelOperations.current.setCell(input),readRange:input=>panelOperations.current.readRange(input),formatCells:op=>panelOperations.current.formatCells(op),resizeLines:(axis,op)=>panelOperations.current.resizeLines(axis,op),editLines:(axis,kind)=>panelOperations.current.editLines(axis,kind),freezePanes:(rows,cols)=>panelOperations.current.freezePanes(rows,cols),editSheet:op=>panelOperations.current.editSheet(op)}),[]);
+ panelOperations.current={ready:()=>phase.kind==='ready'&&!!engine.current&&!engine.current.isDisposed,navigate:async(sheetIndex,targetAddress)=>{const target=parseAddress(targetAddress);if(!target||!book?.sheets.some(s=>s.index===sheetIndex&&s.visibility==='Visible'))throw Error('Invalid sheet or cell.');if(draftRef.current!==null)await commit(draftRef.current);setSheet(sheetIndex);setSel(target);setExt(null);setDraft(null);},setCell:async input=>{if(new TextEncoder().encode(input).length>MAX_CELL_BYTES)throw Error('Cell input is too long.');const eng=engine.current!;await eng.set(sheet,address,input);setDraft(null);setDirty(true);setNotice('');setRev(r=>r+1);},formatCells:async op=>{await applyFormat(op);},resizeLines:async(axis,op)=>{await applyLines(axis,op);},editLines:async(axis,kind)=>{await applyEdit(axis,kind);},freezePanes:async(rows,cols)=>{await applyFreeze(rows,cols);},editSheet:async op=>{await applySheet(op);},sortRange:async op=>{await applySort(op);},readRange:async(input)=>{const r=parsePanelRange(input);if(!r)throw Error('Invalid range.');return (await engine.current!.range(sheet,r.r0,r.c0,r.r1-r.r0+1,r.c1-r.c0+1)).cells;}};
+ useEffect(()=>registerSheetsPanelController({ready:()=>panelOperations.current.ready(),navigate:(...args)=>panelOperations.current.navigate(...args),setCell:input=>panelOperations.current.setCell(input),readRange:input=>panelOperations.current.readRange(input),formatCells:op=>panelOperations.current.formatCells(op),resizeLines:(axis,op)=>panelOperations.current.resizeLines(axis,op),editLines:(axis,kind)=>panelOperations.current.editLines(axis,kind),freezePanes:(rows,cols)=>panelOperations.current.freezePanes(rows,cols),editSheet:op=>panelOperations.current.editSheet(op),sortRange:op=>panelOperations.current.sortRange(op)}),[]);
  useEffect(()=>{if(phase.kind!=='ready')return;const el=scroller.current;if(!el)return;const top=geo.rowTop(sel.row),left=geo.colLeft(sel.col);if(top<el.scrollTop||top+geo.rowHeight(sel.row)>el.scrollTop+el.clientHeight-HEAD_H)el.scrollTop=Math.max(0,top);if(left<el.scrollLeft||left+geo.colWidth(sel.col)>el.scrollLeft+el.clientWidth-HEAD_W)el.scrollLeft=Math.max(0,left);},[sel.row,sel.col,sheet,geo,phase.kind]);
  const readRange=async()=>{if(rectCells(range)>MAX_READ_CELLS){setNotice(t('sheets.rangeTooLarge'));return null;}
   const r=await engine.current!.range(sheet,range.r0,range.c0,range.r1-range.r0+1,range.c1-range.c0+1);const m=new Map(r.cells.map(c=>[c.address,c]));
@@ -142,6 +143,11 @@ function Workbook({item}:{item:MediaItem}){
   const fresh=await engine.current!.sheets();if(session.current)session.current.book=fresh;setBook(fresh);
   const visible=fresh.sheets.filter(s=>s.visibility==='Visible');const want=prefer??sheet;const next=visible.some(s=>s.index===want)?want:(visible[0]?.index??0);
   if(next!==sheet||resetView){setSheet(next);setSel({row:0,col:0});setExt(null);setDraft(null);scroller.current?.scrollTo(0,0);}};
+ const applySort=async(op:SortOp)=>{
+  if(draftRef.current!==null)await commit(draftRef.current);
+  const cols=range.c1-range.c0+1,rows=range.r1-range.r0+1;if(op.keys.some(x=>x.column>=cols))throw Error('Sort column is outside the selection.');
+  const problem=sortBlockProblem(rows,cols,op.header);if(problem)throw Error('Select a block with at least two rows to sort.');
+  try{await engine.current!.sort(sheet,range.r0,range.c0,rows,cols,op);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
  const applySheet=async(op:SheetOp)=>{
   if(draftRef.current!==null)await commit(draftRef.current);
   try{const r=await engine.current!.editSheet(sheet,op);await syncSheets(r.active,op.kind==='add'||op.kind==='duplicate'||op.kind==='delete');setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};

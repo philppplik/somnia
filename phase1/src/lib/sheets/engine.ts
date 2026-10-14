@@ -1,4 +1,4 @@
-import type {SheetOp,FormatOp,LineAxis,LineOp,RangeResult,SheetInfo,SheetLayout,SheetsRequest,SheetsResponse,ViewResult,WorkbookInfo} from './protocol';
+import type {SortOp,SheetOp,FormatOp,LineAxis,LineOp,RangeResult,SheetInfo,SheetLayout,SheetsRequest,SheetsResponse,ViewResult,WorkbookInfo} from './protocol';
 import {MAX_INPUT_BYTES} from './protocol';
 type Req=SheetsRequest extends infer R?R extends {id:number}?Omit<R,'id'>:never:never;
 /** One module Worker per open workbook. A timeout or crash discards the session: callers must keep the original bytes. */
@@ -55,6 +55,8 @@ export class SheetsEngine{
  freeze(sheet:number,rows:number,cols:number){return this.result<unknown>({op:'freeze',sheet,rows,cols});}
  /** Current sheet list (reload after sheet edits and history). */
  sheets(){return this.result<WorkbookInfo>({op:'sheets'});}
+ /** Sort the rows of exactly this block (never widened), one undo step. */
+ sort(sheet:number,row:number,col:number,rows:number,cols:number,sort:SortOp){return this.result<unknown>({op:'sort',sheet,row,col,rows,cols,sort});}
  /** Add, rename, duplicate, move or delete a sheet (one undo step). Resolves to the sheet to show afterwards. */
  editSheet(sheet:number,line:SheetOp){return this.result<{active:number}>({op:'editSheet',sheet,line});}
  undo(){return this.result<unknown>({op:'undo'});}

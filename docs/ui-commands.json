@@ -4853,6 +4853,14 @@
       "hasEnabled": true
     },
     {
+      "id": "sheets.sort",
+      "title": "Sort the selected rows by a column",
+      "category": "Edit",
+      "source": "sheets",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
       "id": "sheets.undo",
       "title": "Undo workbook change",
       "category": "Edit",
@@ -6710,6 +6718,19 @@
     {
       "id": "studio3d.mesh.relax",
       "title": "Smooth a 3D mesh: vertices drift toward their neighbourhood average, borders stay put",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.mesh.remesh",
+      "title": "Rebuild meshes as an even voxel grid (remesh): uniform watertight triangles, sharp features projected back",
       "category": "Edit",
       "source": "studio3d",
       "keywords": [

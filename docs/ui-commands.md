@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-742 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+744 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -453,6 +453,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `sheets.saveCopy` | Save workbook copy | Project | sheets |  |
 | `sheets.setCell` | Apply cell value or formula | Edit | sheets |  |
 | `sheets.sheet` | Add, rename, duplicate, move or delete the current sheet | Edit | sheets |  |
+| `sheets.sort` | Sort the selected rows by a column | Edit | sheets |  |
 | `sheets.undo` | Undo workbook change | Edit | sheets |  |
 | `shell.rail.hide` | Hide rail icon | View | core |  |
 | `shell.rail.moveDown` | Move rail icon down | View | core |  |
@@ -606,6 +607,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `studio3d.mesh.mirrorMod` | Mirror modifier | Edit | studio3d |  |
 | `studio3d.mesh.normals` | Rebuild the normals of 3D meshes: flip them, recalculate outward, or re-shade smooth, flat or split by angle | Edit | studio3d |  |
 | `studio3d.mesh.relax` | Smooth a 3D mesh: vertices drift toward their neighbourhood average, borders stay put | Edit | studio3d |  |
+| `studio3d.mesh.remesh` | Rebuild meshes as an even voxel grid (remesh): uniform watertight triangles, sharp features projected back | Edit | studio3d |  |
 | `studio3d.mesh.separate` | Split 3D meshes into one object per connected part | Edit | studio3d |  |
 | `studio3d.mesh.simplify` | Simplify a 3D mesh: remove vertices while keeping its shape, UVs and normals | Edit | studio3d |  |
 | `studio3d.mesh.solidify` | Give a thin 3D mesh real thickness: offset shell with stitched side walls | Edit | studio3d |  |

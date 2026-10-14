@@ -23,6 +23,7 @@ export class HeadlessWorkbook {
      * Applies one typed formatting operation from a fixed allowlist to a block as one undo step.
      */
     edit_sheet(sheet: number, op_json: string): string;
+    sort_range(sheet: number, row: number, col: number, rows: number, cols: number, op_json: string): string;
     resize_lines(sheet: number, axis: string, first: number, count: number, op_json: string): string;
     edit_lines(sheet: number, axis: string, first: number, count: number, op_json: string): string;
     freeze_panes(sheet: number, rows: number, cols: number): string;

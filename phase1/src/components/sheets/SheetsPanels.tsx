@@ -10,7 +10,8 @@ import type {PanelHostProps,InspectorSectionProps} from '../../lib/shell/types';
 import {commandDispatcher} from '../../lib/commandDispatcher';
 import {aggregateFormula,FORMULA_FUNCTIONS,parsePanelRange,rangeAddress,summarizeCells} from '../../lib/sheets/panelModel';
 import {rectCells} from '../../lib/sheets/clipboard';
-import {addressOf,parseAddress} from '../../lib/sheets/format';
+import {addressOf,colName,parseAddress} from '../../lib/sheets/format';
+import {sortBlockProblem} from '../../lib/sheets/sortOps';
 import {MAX_SHEETS,sheetNameProblem} from '../../lib/sheets/sheetOps';
 import type {BorderLineStyle,RangeCell} from '../../lib/sheets/protocol';
 import {colWidthPx,rowHeightPx,MAX_COL_PX,MAX_ROW_PX,MAX_FREEZE} from '../../lib/sheets/lineOps';
@@ -18,6 +19,7 @@ import {BORDER_PRESETS,BORDER_STYLES,DEFAULT_BORDER_COLOR,H_ALIGNS,V_ALIGNS,CURR
 import {Button} from '../ui/button';
 import {NativeInput,NativeSelect} from '../ui/native-controls';
 import {NumberField} from '../ui/number-field';
+const MAX_SORT_OPTIONS=100;
 const field='w-full min-w-0 rounded-lg border border-subtle bg-transparent px-2 py-1.5 text-ink';
 const button='rounded-lg border border-subtle px-2 py-1.5 text-ink hover:bg-hover disabled:opacity-40 disabled:cursor-not-allowed';
 function Region({children}:{children:ReactNode}){return <div className="flex min-w-0 flex-col gap-3 p-3 text-[12px]" data-testid="sheets-panel-content">{children}</div>;}
@@ -194,6 +196,22 @@ export function SheetsLayoutPanel({context}:PanelHostProps){
    <span className="text-ink-3">{frozen?t('sheets.layout.frozen',{rows:frozen.rows,cols:frozen.cols}):t('sheets.layout.notFrozen')}</span>
    <div className="flex flex-wrap gap-1">{btn('sheets.layout.freezeTop',()=>freeze(1,0),'sheets-layout-freeze-top')}{btn('sheets.layout.freezeFirstCol',()=>freeze(0,1),'sheets-layout-freeze-col')}{btn('sheets.layout.freezeAtCell',()=>freeze(row,col),'sheets-layout-freeze-cell',row===0&&col===0||row>MAX_FREEZE||col>MAX_FREEZE)}{btn('sheets.layout.unfreeze',()=>freeze(0,0),'sheets-layout-unfreeze',!frozen)}</div>
   </div>
+  <SortGroup/>
   <p role="status">{action.notice}</p></Region>;
+}
+/** Sorts the rows of exactly the selected block by one column. The block is never widened and the header row is an explicit choice. One undo step. */
+function SortGroup(){
+ const {t}=useT(),s=useSheetsSelection(),action=useAction();const [column,setColumn]=useState(0);const [order,setOrder]=useState<'asc'|'desc'>('asc');const [header,setHeader]=useState(false);
+ const r=s?.range;if(!s||!r)return null;
+ const rows=r.r1-r.r0+1,cols=r.c1-r.c0+1,problem=sortBlockProblem(rows,cols,header),col=Math.min(column,cols-1);
+ const options=Array.from({length:Math.min(cols,MAX_SORT_OPTIONS)},(_,i)=>i);
+ return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.sort.title')}>
+  <span>{t('sheets.sort.title')}</span>
+  <label className="flex flex-col gap-1">{t('sheets.sort.column')}<NativeSelect className={field} value={col} disabled={action.busy} onChange={e=>setColumn(Number(e.currentTarget.value))} data-testid="sheets-sort-column">{options.map(i=><option key={i} value={i}>{colName(r.c0+i)}</option>)}</NativeSelect></label>
+  <label className="flex flex-col gap-1">{t('sheets.sort.order')}<NativeSelect className={field} value={order} disabled={action.busy} onChange={e=>setOrder(e.currentTarget.value==='desc'?'desc':'asc')} data-testid="sheets-sort-order"><option value="asc">{t('sheets.sort.asc')}</option><option value="desc">{t('sheets.sort.desc')}</option></NativeSelect></label>
+  <label className="flex flex-col gap-1">{t('sheets.sort.header')}<NativeSelect className={field} value={header?'yes':'no'} disabled={action.busy} onChange={e=>setHeader(e.currentTarget.value==='yes')} data-testid="sheets-sort-header"><option value="no">{t('sheets.sort.headerNo')}</option><option value="yes">{t('sheets.sort.headerYes')}</option></NativeSelect></label>
+  <Button variant="outline" size="compact" disabled={action.busy||!!problem} onClick={()=>void action.run('sheets.sort',{column:col,order,header})} data-testid="sheets-sort-apply">{t('sheets.sort.apply')}</Button>
+  <p className="text-ink-3">{t(problem?'sheets.sort.need':'sheets.sort.scope',{range:rangeAddress(r)})}</p>
+ </div>;
 }
 export function SheetsLayoutSection({sectionId,context}:InspectorSectionProps){return <SheetsLayoutPanel panelId={sectionId} context={context}/>;}
