@@ -5,6 +5,11 @@ import {getDocumentsState,patchDocuments} from './store';
 /** The one open document: engine, undo history and the refresh after each edit. UI components only call these functions. */
 let engine:DocumentsEngine|null=null;const undo=new UndoStack();let chain:Promise<unknown>=Promise.resolve();
 export const getEngine=()=>engine;
+/** Resolves when every queued edit/structural step has finished (safe boundary for checkpoints). */
+export const whenIdle=():Promise<void>=>chain.then(()=>undefined,()=>undefined);
+/** Serializable undo/redo history (additive; see UndoStack.exportJournal). */
+export const exportHistory=()=>undo.exportJournal();
+export function importHistory(j:import('./edit').UndoJournal){undo.importJournal(j);patchDocuments({...flags()});}
 const flags=()=>({canUndo:undo.canUndo,canRedo:undo.canRedo});
 export function attachEngine(e:DocumentsEngine|null){engine=e;undo.clear();chain=Promise.resolve();patchDocuments({...flags(),editError:'',edited:false});}
 async function refresh(d:{pages:number;pageSizes:readonly {width:number;height:number}[];text:string}){

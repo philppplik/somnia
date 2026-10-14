@@ -1,3 +1,4 @@
+import {jobScheduler,type JobLease} from '../jobs/scheduler';
 import { log, logWarn, describeError } from '../log';
 import { createAIProvenance } from './privacy';
 import { AgentError, describeAgentError, toAgentError } from './errors';
@@ -105,7 +106,11 @@ export class AgentSession {
     const working: AgentMessage[] = [...clone(this.messages), { role: 'user', content }];
     let calls = 0;
     this._status = 'running'; this.emit({ type: 'state', status: this._status, turnId });
+    let lease:JobLease|undefined;
+    const cancelJob=()=>controller.abort();
     try {
+      lease=await jobScheduler.acquire({kind:'ai',priority:2,documentId:this.projectId??undefined,resources:['agent.turn'],signal:controller.signal});
+      lease.signal.addEventListener('abort',cancelJob,{once:true});
       for (let step = 0; step < this.limits.steps; step++) {
         controller.signal.throwIfAborted();
         const outgoing = [systemMessage, ...working];
@@ -200,6 +205,6 @@ export class AgentSession {
       this._status = failure.code === 'aborted' ? 'cancelled' : 'error';
       this.emit({ type: 'notice', message: describeAgentError(failure), code: failure.code, detail: failure.detail, retryable: failure.retryable || failure.code === 'aborted', turnId });
       this.emit({ type: 'state', status: this._status, turnId });
-    } finally { clearTimeout(timer); this.controller = null; }
+    } finally { lease?.signal.removeEventListener('abort',cancelJob);lease?.release(this._status==='error'?'failed':controller.signal.aborted?'cancelled':'completed');clearTimeout(timer); this.controller = null; }
   }
 }

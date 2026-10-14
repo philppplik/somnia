@@ -171,6 +171,30 @@
    "recoverable": false
   },
   {
+   "id": "SOM-APP-015",
+   "slug": "lifecycle-memory-sample-unavailable",
+   "domain": "APP",
+   "category": "internal",
+   "default_severity": "warn",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.app.015",
+   "expected": false,
+   "recoverable": false
+  },
+  {
+   "id": "SOM-APP-016",
+   "slug": "lifecycle-request-denied",
+   "domain": "APP",
+   "category": "internal",
+   "default_severity": "warn",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.app.016",
+   "expected": false,
+   "recoverable": false
+  },
+  {
    "id": "SOM-APP-099",
    "slug": "legacy-untyped",
    "domain": "APP",

@@ -1,8 +1,14 @@
+import {lazyPanel} from '../studios/lazyPanel';
 import './documents-panels.css';
-import {DocumentsOutlinePanel,DocumentsFindPanel,DocumentsInfoPanel,DocumentsSelectionPanel} from './DocumentsPanelContents';
+const DocumentsOutlinePanel=lazyPanel(()=>import('./DocumentsPanelContents').then(m=>m.DocumentsOutlinePanel));
+const DocumentsFindPanel=lazyPanel(()=>import('./DocumentsPanelContents').then(m=>m.DocumentsFindPanel));
+const DocumentsInfoPanel=lazyPanel(()=>import('./DocumentsPanelContents').then(m=>m.DocumentsInfoPanel));
+const DocumentsSelectionPanel=lazyPanel(()=>import('./DocumentsPanelContents').then(m=>m.DocumentsSelectionPanel));
 import {documentsStudio} from '../../lib/studios/documents';
 import {registerStudioPanels} from '../studios/registerStudioPanels';
-import {PagesPanel,RisksSection,TextSection} from './DocumentsPanels';
+const PagesPanel=lazyPanel(()=>import('./DocumentsPanels').then(m=>m.PagesPanel));
+const RisksSection=lazyPanel(()=>import('./DocumentsPanels').then(m=>m.RisksSection));
+const TextSection=lazyPanel(()=>import('./DocumentsPanels').then(m=>m.TextSection));
 /** Components half of the Documents manifest (lib/studios/documents.ts). Imported once by the studio hosts. */
 export const disposeDocumentsShell=registerStudioPanels(documentsStudio,{
  panels:{'documents.pages':PagesPanel,'documents.outline':DocumentsOutlinePanel,'documents.find':DocumentsFindPanel},

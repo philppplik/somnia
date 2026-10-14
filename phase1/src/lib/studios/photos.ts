@@ -1,4 +1,5 @@
 import {registerStudio,type StudioDef} from './registry';
+import {getRegisteredLifecycleAdapter} from '../lifecycle/adapters';
 import type {StudioShellDef} from '../shell/types';
 import {PHOTOS_LEFT_RAIL,PHOTOS_RIGHT_RAIL} from '../photos/shellRail';
 import {PHOTOS_EXTRA_RAIL,PHOTOS_PANELS,PHOTOS_PANEL_LAYOUT} from '../photos/panelManifest';
@@ -14,6 +15,7 @@ export const photosShell:StudioShellDef={
  * honestly that develop does not cover it yet (the Code studio keeps the read-only PSD preview).
  */
 export const photosStudio:StudioDef={
+ lifecycle:()=>getRegisteredLifecycleAdapter('photos'),
  id:'photos',label:'studio.photos',icon:'Aperture',order:8,
  formats:[...['jpg','jpeg','png'].map(ext=>({ext,mime:ext==='png'?'image/png':'image/jpeg',priority:50})),{ext:'psd',mime:'image/vnd.adobe.photoshop',priority:50}],
  shell:{

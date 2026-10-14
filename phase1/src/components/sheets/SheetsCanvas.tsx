@@ -19,6 +19,8 @@ import {addressOf,cellText,colName,displayValue,editText,isErrorValue,cellAlign}
 import {inRect,parseTsv,pasteRect,rectCells,rectOf,toTsv} from '../../lib/sheets/clipboard';
 import {MAX_READ_CELLS} from '../../lib/sheets/protocol';
 import {saveSheetsCopy,setSheetsDirty,sheetsIsDirty} from '../../lib/sheets/session';
+import {readSheetsView,sheetsSessionId} from '../../lib/sheets/recovery';
+import {defaultRecoveryStore,fingerprintBytes,flushOnTeardown,registerActiveSession,SessionCheckpointer,whenFlushed} from '../../lib/sessionSafety';
 import {registerDocSaver} from '../../lib/workDocs';
 import {registerSheetsCommands,registerSheetsCommandController} from '../../lib/sheets/commands';
 import {openSheetsFormulasPanel} from './formulasHero';
@@ -38,14 +40,44 @@ function Workbook({item}:{item:MediaItem}){
  const [sel,setSel]=useState({row:0,col:0});const [ext,setExt]=useState<{row:number;col:number}|null>(null);const dragging=useRef(false);const [draft,setDraftState]=useState<string|null>(null);const draftRef=useRef<string|null>(null);const formulaRef=useRef<HTMLInputElement>(null);
  const setDraft=(v:string|null)=>{draftRef.current=v;setDraftState(v);};
  const startEdit=(v:string)=>{setDraft(v);requestAnimationFrame(()=>{const el=formulaRef.current;if(el){el.focus();el.setSelectionRange(v.length,v.length);}});};
- const [cells,setCells]=useState<Map<string,ViewCell>>(new Map());const [layout,setLayout]=useState<SheetLayout|null>(null);const [rev,setRev]=useState(0);const [dirty,setDirty]=useState(false);
+ const [cells,setCells]=useState<Map<string,ViewCell>>(new Map());const [layout,setLayout]=useState<SheetLayout|null>(null);const [rev,setRevState]=useState(0);const [dirty,setDirtyState]=useState(false);
+ const revRef=useRef(0);const dirtyRef=useRef(false);const cpRef=useRef<SessionCheckpointer|null>(null);const viewRef=useRef({sheet:0,row:0,col:0});
+ // Revision and dirty flag live in refs too, so checkpoints and the teardown flush read the latest values synchronously.
+ const setDirty=(v:boolean)=>{dirtyRef.current=v;setDirtyState(v);};
+ const setRev=(f:(r:number)=>number)=>{revRef.current=f(revRef.current);setRevState(revRef.current);if(dirtyRef.current)cpRef.current?.noteEdit();};
  const [notice,setNotice]=useState('');const [view,setView]=useState({w:800,h:400,top:0,left:0});
  const scroller=useRef<HTMLDivElement>(null);
  const fail=useCallback((e:unknown)=>{reportError('sheets.engine',e,{context:{studio:'sheets',file:item.name}});const message=e instanceof Error?e.message:String(e);if(engine.current?.isDisposed)setPhase({kind:'error',message});else setNotice(message);},[item.name]);
- // Open: the engine gets a copy; the original bytes stay here for recovery.
+ // Open: the engine gets a copy; the original bytes stay here for recovery. A verified recovery snapshot of unsaved edits wins over the file.
  useEffect(()=>{let live=true;const eng=new SheetsEngine();engine.current=eng;
-  (async()=>{try{const buf=await (await fetch(item.url)).arrayBuffer();const bytes=new Uint8Array(buf);original.current=bytes;const opened=await eng.open(bytes);if(!live)return;setBook(opened);setPhase({kind:'ready'});}catch(e){if(live)reportError('sheets.open',e,{context:{studio:'sheets',file:item.name}});if(live)setPhase({kind:'error',message:e instanceof Error?e.message:String(e)});}})();
-  return()=>{live=false;eng.dispose();engine.current=null;setSheetsSelection(null);};},[item.url]);
+  const sessionId=sheetsSessionId(item.name);const store=defaultRecoveryStore();let fp='';let offActive=()=>{};
+  (async()=>{try{const buf=await (await fetch(item.url)).arrayBuffer();const bytes=new Uint8Array(buf);original.current=bytes;
+   fp=await fingerprintBytes(bytes);await whenFlushed(sessionId);if(!live)return;
+   const cp=new SessionCheckpointer({sessionId,studio:'sheets',store,sourceFingerprint:fp,getRevision:()=>revRef.current,isDirty:()=>dirtyRef.current,
+    historyRestorable:()=>false,hasUndoHistory:()=>!!infoRef.current?.canUndo||!!infoRef.current?.canRedo,
+    capture:async()=>{const revision=revRef.current;const payload=await eng.save();return{revision,payload,history:{kind:'none'},view:{...viewRef.current,draft:draftRef.current===null?null:{row:viewRef.current.row,col:viewRef.current.col,text:draftRef.current}},format:'xlsx',engineVersion:'sheets-1'};}});
+   cpRef.current=cp;offActive=registerActiveSession(sessionId,cp,{studio:'sheets',isDirty:()=>dirtyRef.current});
+   let opened:WorkbookInfo|null=null;let restoredView:ReturnType<typeof readSheetsView>=null;
+   const r=await cp.resume(async snap=>{opened=await eng.open(snap.payload);restoredView=readSheetsView(snap.meta.view);},async()=>fp);
+   if(!live)return;
+   if(!r.ok&&r.reason!=='missing')reportError('sheets.recovery',r.detail,{level:'warn',context:{studio:'sheets',file:item.name}});
+   if(!opened)opened=await eng.open(bytes);
+   if(!live)return;
+   setBook(opened);
+   if(r.ok){const v=restoredView as ReturnType<typeof readSheetsView>;setDirty(true);setRev(x=>x+1);if(v){setSheet(v.sheet);setSel({row:v.row,col:v.col});if(v.draft)startEdit(v.draft.text);}setNotice(t('session.recovered')+' '+t('session.historyReset'));}
+   else if(r.reason==='source-changed')setNotice(t('session.conflict'));
+   setPhase({kind:'ready'});}catch(e){if(live)reportError('sheets.open',e,{context:{studio:'sheets',file:item.name}});if(live)setPhase({kind:'error',message:e instanceof Error?e.message:String(e)});}})();
+  return()=>{live=false;offActive();setSheetsSelection(null);
+   const cp=cpRef.current;cpRef.current=null;
+   // Dirty and unmounting (studio/tab switch): write a verified checkpoint from the still-running worker before stopping it.
+   if(cp&&dirtyRef.current&&fp&&!eng.isDisposed){
+    cp.close();const revision=revRef.current;const view={...viewRef.current,draft:draftRef.current===null?null:{row:sel.row,col:sel.col,text:draftRef.current}};
+    void flushOnTeardown({sessionId,studio:'sheets',store,sourceFingerprint:fp,revision,format:'xlsx',engineVersion:'sheets-1',history:{kind:'none'},view,quiesce:()=>cp.idle(),payload:()=>eng.save()})
+     .then(ok=>{if(!ok)reportError('sheets.recovery','Could not write a verified recovery checkpoint while closing the view.',{context:{studio:'sheets',file:item.name}});}).finally(()=>eng.dispose());
+   }else{cp?.close();eng.dispose();}
+   engine.current=null;};},[item.url]);
+ // Keep the selection in the checkpoint view state.
+ useEffect(()=>{viewRef.current={sheet,row:sel.row,col:sel.col};},[sheet,sel.row,sel.col]);
  // Sheet info (used range, history flags) after open, sheet switch and every edit.
  useEffect(()=>{if(phase.kind!=='ready')return;let live=true;engine.current?.info(sheet).then(i=>{if(live)setInfo(i);}).catch(fail);return()=>{live=false;};},[phase,sheet,rev,fail]);
  useEffect(()=>{if(phase.kind!=='ready')return;let live=true;engine.current?.layout(sheet).then(l=>{if(live)setLayout(l);}).catch(fail);return()=>{live=false;};},[phase,sheet,fail]);
@@ -126,7 +158,7 @@ function Workbook({item}:{item:MediaItem}){
     style={css}
     onMouseDown={e=>{e.preventDefault();if(draftRef.current!==null)void commit(draftRef.current);if(e.shiftKey)setExt({row:r,col:c});else{setSel({row:r,col:c});setExt(null);dragging.current=true;}scroller.current?.focus();}} onMouseEnter={()=>{if(dragging.current)setExt(x=>x&&x.row===r&&x.col===c?x:{row:r,col:c});}} onDoubleClick={()=>startEdit(editText(cell?.value,cell?.formula))}>{cellText(cell)}</div>);}
   return out;};
- const exportCopy=async()=>{try{const bytes=await engine.current!.save();const r=await saveSheetsCopy(item.name,bytes);if(r==='cancelled')return;if(r==='saved')setDirty(false);setNotice(t('sheets.exported'));}catch(e){fail(e);}};
+ const exportCopy=async()=>{try{const rv=revRef.current;const bytes=await engine.current!.save();const r=await saveSheetsCopy(item.name,bytes);if(r==='cancelled')return;if(r==='saved'){setDirty(false);void cpRef.current?.releaseAfterSave(rv);}setNotice(t('sheets.exported'));}catch(e){fail(e);}};
  const exportRef=useRef(exportCopy);exportRef.current=exportCopy;
  const historyRef=useRef(history);historyRef.current=history;const infoRef=useRef(info);infoRef.current=info;
  // Command layer bridge (sheets/commands.ts): exposes this workbook's engine to the sheets.* command specs while mounted.

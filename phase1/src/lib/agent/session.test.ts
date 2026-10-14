@@ -99,6 +99,7 @@ test('restore, clear and discard are blocked until the active turn settles', asy
   const session = new AgentSession({ model: 'fixture', provider: held }); const pending = session.prompt('held');
   assert.throws(() => session.restore({ version: 1, projectId: null, messages: [] }), /during work/);
   assert.throws(() => session.clear(), /active turn/); assert.throws(() => session.discardProposals(), /during a turn/);
+  await new Promise<void>(resolve=>setImmediate(resolve));
   session.cancel(); release(); await pending; session.clear(); assert.equal(session.status, 'idle');
 });
 

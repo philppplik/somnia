@@ -1,3 +1,7 @@
+# Unreleased: Studio lifecycle core
+
+- Studios now move through active/warm/suspended/evicted states: the previous studio stays warm for 30 seconds, then checkpoints its session and releases workers and caches. Slides is the first studio with a verified suspend/resume checkpoint (edited decks and history included). New Settings > Advanced > Performance section with an opt-out and a resource profile (Automatic/Low/Standard/High). Local-only lifecycle telemetry.
+
 # Unreleased: Studio shell regression fixes
 
 - Code Studio restores the inline SVG inspector inside the shared Design section, including paint, fill/stroke gradients, guides, grid and clip/mask controls.

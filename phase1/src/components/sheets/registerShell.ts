@@ -1,6 +1,11 @@
+import {lazyPanel} from '../studios/lazyPanel';
 import {sheetsStudio} from '../../lib/studios/sheets';
 import {registerStudioPanels} from '../studios/registerStudioPanels';
-import {SheetsWorkbookPanel,SheetsAnalysisPanel,SheetsFormulasPanel,SheetsCellSection,SheetsFormulasSection} from './SheetsPanels';
+const SheetsWorkbookPanel=lazyPanel(()=>import('./SheetsPanels').then(m=>m.SheetsWorkbookPanel));
+const SheetsAnalysisPanel=lazyPanel(()=>import('./SheetsPanels').then(m=>m.SheetsAnalysisPanel));
+const SheetsFormulasPanel=lazyPanel(()=>import('./SheetsPanels').then(m=>m.SheetsFormulasPanel));
+const SheetsCellSection=lazyPanel(()=>import('./SheetsPanels').then(m=>m.SheetsCellSection));
+const SheetsFormulasSection=lazyPanel(()=>import('./SheetsPanels').then(m=>m.SheetsFormulasSection));
 /** The manifest owns all names; the UI layer supplies their executable hosts. */
 export const disposeSheetsShell=registerStudioPanels(sheetsStudio,{panels:{
  'sheets.workbook':SheetsWorkbookPanel,

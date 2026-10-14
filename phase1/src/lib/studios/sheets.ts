@@ -1,3 +1,4 @@
+import {getRegisteredLifecycleAdapter} from '../lifecycle/adapters';
 import {registerStudio,type StudioDef} from './registry';
 import {sheetsShellV2} from './sheetsRail';
 /** Sheets Studio: XLSX workbooks in an isolated spreadsheet engine (WASM worker). Document buffers stay outside the shell. */
@@ -13,6 +14,7 @@ export const sheetsStudio:StudioDef={
   bottomBar:{slots:['cursor'],viewportPresets:[]},inspector:'sheets.inspector',tools:[]
  },commands:[],
  shortcuts:{},menus:{view:[]},canvas:'sheets.canvas',shellV2:sheetsShellV2,
- agent:{tools:[],contextProviders:['activeDocument'],quickActions:[]},deriveContext:context=>context
+ agent:{tools:[],contextProviders:['activeDocument'],quickActions:[]},deriveContext:context=>context,
+ lifecycle:()=>getRegisteredLifecycleAdapter('sheets')
 };
 registerStudio(sheetsStudio);

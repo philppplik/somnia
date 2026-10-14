@@ -32,6 +32,7 @@ import { SyncFolderPanel } from "./SyncFolderPanel";
 import { SettingsSearchResults } from "./SettingsSearchResults";
 import { unifiedSearch } from "../lib/settingsUnifiedSearch";
 import { modifiedCountBySection, modifiedSettings, resetPatch, type SettingEntry } from "../lib/settingsRegistry";
+import {LifecycleSettings} from "./LifecycleSettings";
 import { Pencil } from '../lib/icons';
 import { DEFAULT_UI_PREFS } from "../lib/uiPrefs";
 import { parseShortcutFile } from "../lib/shortcutTransfer";
@@ -412,6 +413,7 @@ export function Settings() {
             />
           </label>
           <p>{t("redesign.fastHint")}</p>
+          <LifecycleSettings/>
         </>
       )}
       {section === "Window" && (
