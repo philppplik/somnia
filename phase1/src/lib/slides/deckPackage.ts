@@ -2018,17 +2018,19 @@ export function setPictureDecorative(bytes:Uint8Array,slideId:number,shapeId:num
   return out;
 }
 
-/** Top-level pictures without alt text across the deck, in slide order. Bounded so a hostile deck cannot flood the panel. */
+/** Top-level pictures, groups, tables and charts without alt text (and not marked decorative) across the deck, in slide order. Bounded so a hostile deck cannot flood the panel. */
 export const MAX_ALT_REPORT=200;
 export interface MissingAlt {slideId:number;slideIndex:number;shapeId:number;name:string}
+/** Top-level object kinds that should carry alt text; text boxes and connectors are left out on purpose. */
+const ALT_KINDS:Partial<Record<ShapeKind,readonly [string,string]>>={picture:['p:pic','p:nvPicPr'],group:['p:grpSp','p:nvGrpSpPr'],table:['p:graphicFrame','p:nvGraphicFramePr'],chart:['p:graphicFrame','p:nvGraphicFramePr']};
 export function missingAltText(bytes:Uint8Array):{items:MissingAlt[];total:number}{
   const model=readDeckModel(bytes),zip=openPackage(bytes),items:MissingAlt[]=[];let total=0;
   model.slides.forEach((slide,slideIndex)=>{
-    if(slide.problems.length)return;const pics=slide.shapes.filter(s=>s.parentId===null&&s.kind==='picture');if(!pics.length)return;
+    if(slide.problems.length)return;const pics=slide.shapes.filter(s=>s.parentId===null&&ALT_KINDS[s.kind]);if(!pics.length)return;
     const xml=text(zip,slide.part);
     for(const pic of pics){
       let alt:string|null=null,decor=false;
-      try{const r=spRange(xml,pic.id,'p:pic','p:nvPicPr'),nv=xml.slice(r.start,r.end),t=/<p:cNvPr\b[^>]*>/.exec(nv);alt=t?(/\sdescr="([^"]*)"/.exec(t[0])?.[1]??''):'';decor=DECOR_RE.test(nv);}catch{continue;}
+      try{const [el,nvTag]=ALT_KINDS[pic.kind]!,r=spRange(xml,pic.id,el,nvTag),nv=xml.slice(r.start,r.end),t=/<p:cNvPr\b[^>]*>/.exec(nv);alt=t?(/\sdescr="([^"]*)"/.exec(t[0])?.[1]??''):'';decor=DECOR_RE.test(nv);}catch{continue;}
       if(dec(alt).trim()===''&&!decor){total++;if(items.length<MAX_ALT_REPORT)items.push({slideId:slide.id,slideIndex,shapeId:pic.id,name:pic.name});}
     }
   });

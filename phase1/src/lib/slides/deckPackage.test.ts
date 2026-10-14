@@ -1015,3 +1015,12 @@ test('alt text on shapes and groups: text box, group, nested shape refused, othe
   assert.throws(()=>readPictureAlt(a,sid,child.id),/top-level/);assert.throws(()=>setPictureDecorative(a,sid,child.id,true),/top-level/);
   const d=setPictureDecorative(a,sid,grp.id,true);assert.equal(readPictureDecorative(d,sid,grp.id),true);assert.equal(readPictureAlt(d,sid,grp.id),null);
 });
+
+test('missing alt report covers groups and tables, skips text boxes, honours decorative and alt on groups',()=>{
+  const b=deck(2),m=readDeckModel(b),sid=m.slides[0].id,tx=m.slides[0].shapes.filter(s=>s.kind==='text'||s.kind==='other');
+  assert.equal(missingAltText(b).total,0);
+  const g=groupShapes(b,sid,[tx[0].id,tx[1].id]),grp=readDeckModel(g).slides[0].shapes.find(s=>s.kind==='group')!;
+  assert.deepEqual(missingAltText(g).items.map(i=>[i.shapeId,i.name]),[[grp.id,grp.name]]);
+  assert.equal(missingAltText(setPictureAlt(g,sid,grp.id,'Team')).total,0);
+  assert.equal(missingAltText(setPictureDecorative(g,sid,grp.id,true)).total,0);
+});
