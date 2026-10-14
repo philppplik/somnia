@@ -46,7 +46,7 @@ new file mode 100644
 index 0000000..5b80b79
 --- /dev/null
 +++ b/crates/somnia-worker/src/lib.rs
-@@ -0,0 +1,1992 @@
+@@ -0,0 +1,2110 @@
 +//! Experimental headless adapter. No DOM, egui, filesystem or UI thread access.
 +use wasm_bindgen::prelude::*;
 +use std::sync::Arc;
@@ -811,6 +811,39 @@ index 0000000..5b80b79
 +    /// Table structure edit relative to the cell holding paragraph `block` (a cell id). `op` is `row_above`, `row_below`,
 +    /// `delete_row`, `col_left`, `col_right`, `delete_col`, `merge_right`, `split_cell`, `merge_down` or `split_down`. The table is cloned, edited and swapped in, so a refusal
 +    /// leaves the document untouched. Block ids of cell paragraphs shift afterwards; the host re-reads `blocks()`.
++    /// Sets the width in points (20-1000) of the grid column under cell paragraph `block`. The cell must not span columns.
++    fn do_set_col_width(&mut self, block: usize, width: f32) -> Result<(), String> {
++        if !width.is_finite() || !(20.0..=1000.0).contains(&width) {
++            return Err("a column is 20 to 1000 points wide".into());
++        }
++        if block < CELL_BASE {
++            return Err("the caret is not inside a table cell".into());
++        }
++        let [b, r, c, _] = self.cell_paras().nth(block - CELL_BASE).ok_or_else(|| format!("no cell paragraph {block}"))?;
++        let Some(Block::Table(t)) = self.doc.body.get(b).map(|x| &**x) else { return Err("the caret is not inside a table".into()) };
++        let mut t2 = t.clone();
++        let row = t2.rows.get(r).ok_or("no such row")?;
++        let g: usize = row.cells.iter().take(c).map(|x| x.span()).sum();
++        if row.cells.get(c).ok_or("no such cell")?.span() != 1 {
++            return Err("pick a cell that is not merged across columns".into());
++        }
++        if t2.grid.len() != t2.cols() || g >= t2.grid.len() {
++            return Err("this table has no usable column grid".into());
++        }
++        t2.grid[g] = width;
++        for row in t2.rows.iter_mut() {
++            let mut x = 0;
++            for cell in row.cells.iter_mut() {
++                if x == g && cell.span() == 1 {
++                    cell.props.width = Some(width);
++                }
++                x += cell.span();
++            }
++        }
++        self.doc.body[b] = Arc::new(Block::Table(t2));
++        self.pages = DocLayout::default();
++        Ok(())
++    }
 +    fn do_table_edit(&mut self, block: usize, op: &str) -> Result<(), String> {
 +        use wordcraft_doc::props::VMerge;
 +        if block < CELL_BASE {
@@ -834,8 +867,42 @@ index 0000000..5b80b79
 +                if t2.rows.len() <= 1 {
 +                    return Err("a table needs at least one row".into());
 +                }
-+                if t2.rows.iter().any(|row| row.cells.iter().any(|x| x.props.vmerge != VMerge::None)) {
-+                    return Err("rows of a table with vertically merged cells cannot be deleted yet".into());
++                // A vertical merge that starts in this row hands its content and its start to the row below.
++                let mut x = 0;
++                let starts: Vec<(usize, usize)> = t2.rows[r].cells.iter().enumerate().filter_map(|(i, cell)| {
++                    let at = x;
++                    x += cell.span();
++                    (cell.props.vmerge == VMerge::Restart).then_some((i, at))
++                }).collect();
++                for (i, at) in starts {
++                    let span_i = t2.rows[r].cells[i].span();
++                    let blocks = t2.rows[r].cells[i].blocks.clone();
++                    let Some(next) = t2.rows.get(r + 1) else { continue };
++                    let mut gx = 0;
++                    let mut found = None;
++                    for (k, cell) in next.cells.iter().enumerate() {
++                        if gx == at {
++                            found = Some(k);
++                            break;
++                        }
++                        gx += cell.span();
++                    }
++                    let Some(k) = found else { continue };
++                    if t2.rows[r + 1].cells[k].props.vmerge != VMerge::Continue || t2.rows[r + 1].cells[k].span() != span_i {
++                        continue;
++                    }
++                    // The merge goes on below when the row after next still continues it.
++                    let goes_on = t2.rows.get(r + 2).is_some_and(|row2| {
++                        let mut gx = 0;
++                        row2.cells.iter().any(|cell| {
++                            let hit = gx == at && cell.props.vmerge == VMerge::Continue && cell.span() == span_i;
++                            gx += cell.span();
++                            hit
++                        })
++                    });
++                    let target = &mut t2.rows[r + 1].cells[k];
++                    target.blocks = blocks;
++                    target.props.vmerge = if goes_on { VMerge::Restart } else { VMerge::None };
 +                }
 +                t2.delete_row(r);
 +            }
@@ -850,9 +917,7 @@ index 0000000..5b80b79
 +                if t2.grid.len() <= 1 {
 +                    return Err("a table needs at least one column".into());
 +                }
-+                if t2.rows.iter().any(|row| row.cells.iter().any(|x| x.props.vmerge != VMerge::None)) {
-+                    return Err("columns of a table with vertically merged cells cannot be deleted yet".into());
-+                }
++                // Every row of a vertical merge has the same span and grid position, so the whole merge goes or shrinks together.
 +                // Horizontally merged cells shrink by one grid column; single-column cells in that column go.
 +                let rows_before = t2.rows.len();
 +                t2.delete_col(grid_start);
@@ -1308,6 +1373,9 @@ index 0000000..5b80b79
 +    pub fn fit_image(&mut self, block: usize, percent: u32) -> Result<(), JsValue> {
 +        self.do_fit_image(block, percent).map_err(|e| JsValue::from_str(&e))
 +    }
++    pub fn set_col_width(&mut self, block: usize, width: f32) -> Result<(), JsValue> {
++        self.do_set_col_width(block, width).map_err(|e| JsValue::from_str(&e))
++    }
 +    pub fn set_image_alt(&mut self, block: usize, alt: &str) -> Result<(), JsValue> {
 +        self.do_set_image_alt(block, alt).map_err(|e| JsValue::from_str(&e))
 +    }
@@ -1537,6 +1605,50 @@ index 0000000..5b80b79
 +        }
 +    }
 +    #[test]
++    fn delete_row_hands_a_vertical_merge_to_the_row_below_and_column_width_is_bounded() {
++        use wordcraft_doc::props::VMerge;
++        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
++        s.do_insert_table(0, 3, 2).unwrap();
++        let slot = s.cell_paras().position(|p| p == [1, 0, 0, 0]).expect("new table at body index 1");
++        let id = CELL_BASE + slot;
++        s.do_table_edit(id, "merge_down").unwrap();
++        s.do_table_edit(id, "merge_down").unwrap();
++        let vm = |s: &DocSession, r: usize| match &*s.doc.body[1] {
++            Block::Table(t) => t.rows[r].cells[0].props.vmerge,
++            _ => panic!(),
++        };
++        assert_eq!((vm(&s, 0), vm(&s, 1), vm(&s, 2)), (VMerge::Restart, VMerge::Continue, VMerge::Continue));
++        s.do_table_edit(id, "delete_row").unwrap();
++        assert_eq!((vm(&s, 0), vm(&s, 1)), (VMerge::Restart, VMerge::Continue));
++        let id = CELL_BASE + s.cell_paras().position(|p| p == [1, 0, 0, 0]).unwrap();
++        s.do_table_edit(id, "delete_row").unwrap();
++        assert_eq!(vm(&s, 0), VMerge::None, "a merge of one row is no merge");
++        // Column width: bounded, applies to the grid and the cells of that column.
++        let id = CELL_BASE + s.cell_paras().position(|p| p == [1, 0, 1, 0]).unwrap();
++        for bad in [f32::NAN, f32::INFINITY, 19.9, 1000.1, -5.0] {
++            assert!(s.do_set_col_width(id, bad).is_err());
++        }
++        assert!(s.do_set_col_width(5, 100.0).is_err());
++        assert!(s.do_set_col_width(CELL_BASE + 99_999, 100.0).is_err());
++        s.do_set_col_width(id, 123.0).unwrap();
++        match &*s.doc.body[1] {
++            Block::Table(t) => {
++                assert_eq!(t.grid[1], 123.0);
++                assert!(t.rows.iter().all(|r| r.cells[1].props.width == Some(123.0)));
++            }
++            _ => panic!(),
++        }
++        // Vertically merged columns can be deleted too: the whole merge goes with the column.
++        let id0 = CELL_BASE + s.cell_paras().position(|p| p == [1, 0, 0, 0]).unwrap();
++        if s.do_table_edit(id0, "merge_down").is_ok() {
++            s.do_table_edit(id0, "delete_col").unwrap();
++            match &*s.doc.body[1] {
++                Block::Table(t) => assert!(t.rows.iter().all(|r| r.cells.iter().all(|c| c.props.vmerge == VMerge::None))),
++                _ => panic!(),
++            }
++        }
++    }
++    #[test]
 +    fn vertical_merge_hides_the_lower_cell_and_splits_back() {
 +        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
 +        let first = s.cell_paras().next().expect("fixture has a table");
@@ -1552,7 +1664,13 @@ index 0000000..5b80b79
 +        let saved = wordcraft_docx::write(&s.doc).unwrap();
 +        assert_eq!(DocSession::from_bytes(&saved).unwrap().cell_paras().count(), n - 1);
 +        assert!(s.do_table_edit(CELL_BASE, "merge_right").is_err());
-+        assert!(s.do_table_edit(CELL_BASE, "delete_row").is_err());
++        // A row that starts a vertical merge can now be deleted; the merge moves down and the cell count stays valid.
++        let snap = s.snapshot();
++        if rows > 2 {
++            s.do_table_edit(CELL_BASE, "delete_row").unwrap();
++            assert!(s.cell_paras().count() < n);
++            s.restore(snap).unwrap();
++        }
 +        s.do_table_edit(CELL_BASE, "split_down").unwrap();
 +        assert_eq!(s.cell_paras().count(), n);
 +        assert!(s.do_table_edit(CELL_BASE, "split_down").is_err());

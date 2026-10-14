@@ -1,4 +1,4 @@
-import {validHfText,type HeaderFooterState,checkFormatPatch,checkParaPatch,MAX_HF_CHARS,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch,type ImageOp,imageProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGES} from './protocol';
+import {validHfText,type HeaderFooterState,checkFormatPatch,checkParaPatch,MAX_HF_CHARS,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch,type ImageOp,MIN_COL_PT,MAX_COL_PT,imageProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGES} from './protocol';
 import {captureDocumentSelection} from './selectionCapture';
 import {CELL_BASE,caretAfterEdit,diffEdit,inverseOf,UndoStack,type TextEdit,type UndoEntry} from './edit';
 import {stepBoundary,utf16ToUtf8Offset,utf8ToUtf16Offset,wordBoundary} from './text';
@@ -144,7 +144,7 @@ async function structural(op:(e:DocumentsEngine)=>Promise<import('./protocol').O
  let after:Spot;try{after=typeof afterSpec==='function'?await afterSpec(e):afterSpec;}catch(err){await e.restore(b).catch(()=>undefined);throw err;}
  check();
  const a=await e.snapshot();check();undo.pushSnap({before:b,after:a,caretBefore:before,caretAfter:after});
- patchDocuments({edited:true,editError:'',caretLocked:false,imageBlock:null,caret:{block:after.block,anchor:after.off,head:after.off}});await refresh(d);
+ patchDocuments({edited:true,editError:'',caretLocked:false,imageBlock:null,imageRects:[],caret:{block:after.block,anchor:after.off,head:after.off}});await refresh(d);
 }
 /* ---- On-page caret: all offsets are UTF-8 bytes of the paragraph's current text. A selection may span paragraphs (anchorBlock differs from block). ---- */
 const enc=new TextEncoder();const u8=(s:string)=>enc.encode(s).length;
@@ -177,7 +177,7 @@ export const selectedText=()=>{
 };
 async function pointTo(page:number,x:number,y:number,extend:boolean){
  const e=engine;if(!e)return;const check=ownerGuard(),hit=await e.hit(page,x,y);check();const c=getDocumentsState().caret;
- if(!hit||hit.block===null||!hit.editable||hit.off===undefined){if(!extend){const img=hit&&hit.block!==null&&hit.block<CELL_BASE&&getDocumentsState().blocks.some(b=>b.index===hit.block&&!!b.image);patchDocuments({caret:null,caretLocked:!!hit&&!img,imageBlock:img?hit!.block:null});}return;}
+ if(!hit||hit.block===null||!hit.editable||hit.off===undefined){if(!extend){const img=hit&&hit.block!==null&&hit.block<CELL_BASE&&getDocumentsState().blocks.some(b=>b.index===hit.block&&!!b.image);patchDocuments({caret:null,caretLocked:!!hit&&!img,imageBlock:img?hit!.block:null,imageRects:[]});if(img)await syncGeometry();}return;}
  if(extend){if(!c)return;const a=norm(c).a;if(a.block!==hit.block&&!reachable(a.block,hit.block))return;setSel(a,{block:hit.block,off:hit.off});}
  else{patchDocuments({caretLocked:false,editError:'',imageBlock:null});setSel({block:hit.block,off:hit.off},{block:hit.block,off:hit.off});}
 }
@@ -293,7 +293,7 @@ export const selectAllText=()=>{
  while(lo>0&&hi-lo<MAX_SPAN_BLOCKS&&blockText(lo-1)!==null)lo--;while(hi-lo<MAX_SPAN_BLOCKS&&blockText(hi+1)!==null)hi++;
  setSel({block:lo,off:0},{block:hi,off:u8(blockText(hi)!)});
 };
-export const clearCaret=()=>patchDocuments({caret:null,caretBox:null,selRects:[],caretLocked:false});
+export const clearCaret=()=>patchDocuments({caret:null,caretBox:null,selRects:[],caretLocked:false,imageBlock:null,imageRects:[]});
 export type CaretMove='left'|'right'|'up'|'down'|'home'|'end'|'wordLeft'|'wordRight'|'pageUp'|'pageDown'|'docStart'|'docEnd';
 const nearbyBlock=(from:number,dir:-1|1)=>{const bs=getDocumentsState().blocks;const b=bs.find(x=>x.index===from+dir);return b&&b.editable&&b.text!==undefined?b:null;};
 /** First editable hit on `page`, scanning from y0 by `step` (page-space points) at most `count` times. */
@@ -334,7 +334,11 @@ export const moveCaret=(kind:CaretMove,extend:boolean)=>run(async()=>{
 /** Refreshes caret and selection geometry from the engine. A failure drops the caret instead of drawing a guess. */
 export async function syncGeometry(){
  const e=engine,g=gen,c=getDocumentsState().caret;if(!e)return;
- if(!c){patchDocuments({caretBox:null,selRects:[]});return;}
+ if(!c){
+  const ib=getDocumentsState().imageBlock;let ir:import('./protocol').Rect5[]=[];
+  if(ib!==null&&getDocumentsState().blocks.some(b=>b.index===ib&&!!b.image)){try{ir=await e.rects(ib,0,3);}catch{ir=[];}}/* the picture is one U+FFFC (3 UTF-8 bytes) */
+  if(engine===e&&gen===g&&!getDocumentsState().caret)patchDocuments({caretBox:null,selRects:[],imageRects:ir});return;
+ }
  try{
   const n=norm(c);const box=await e.caret(c.block,c.head);let rects:import('./protocol').Rect5[]=[];
   if(cmp(n.s,n.e)!==0){
@@ -353,7 +357,7 @@ export async function syncGeometry(){
   try{format=await e.formatState(n.s,n.e);}catch{format=null;}
   if(engine===e&&gen===g&&getDocumentsState().caret===c){
    const pf=getDocumentsState().pendingFormat;
-   patchDocuments({caretBox:box,selRects:rects,format,para,...(pf&&(cmp(n.s,n.e)!==0||pf.block!==n.s.block||pf.off!==n.s.off)?{pendingFormat:null}:{})});
+   patchDocuments({caretBox:box,selRects:rects,imageRects:[],format,para,...(pf&&(cmp(n.s,n.e)!==0||pf.block!==n.s.block||pf.off!==n.s.off)?{pendingFormat:null}:{})});
   }
  }catch{if(engine===e&&gen===g&&getDocumentsState().caret===c)patchDocuments({caret:null,caretBox:null,selRects:[]});}
 }
@@ -476,6 +480,13 @@ export const setHeaderFooter=(patch:{header?:string;footer?:string;pageNumber?:b
  await structural(eng=>eng.setHeaderFooter(patch),spot,spot);
 });
 
+/** Width in points of the grid column under the caret's cell (20-1000). One undo step; the caret stays. */
+export const setColumnWidth=(width:number)=>run(async()=>{
+ if(typeof width!=='number'||!Number.isFinite(width)||width<MIN_COL_PT||width>MAX_COL_PT)throw new Error(`A column is ${MIN_COL_PT} to ${MAX_COL_PT} points wide.`);
+ const c=getDocumentsState().caret;if(!c||!cellOf(getDocumentsState().blocks,c.block))throw new Error('Place the caret in a table cell.');
+ goalX=null;const spot={block:c.block,off:c.head};
+ await structural(eng=>eng.colWidth(c.block,width),spot,spot);
+});
 /* ---- Pictures: a PNG or JPEG lives in its own paragraph; clicking it selects it (imageBlock). ---- */
 /** First editable top-level paragraph at or after `from`, else the last one before it. */
 async function nearEditable(eng:DocumentsEngine,from:number):Promise<Spot>{
@@ -493,13 +504,13 @@ export const insertImage=(bytes:Uint8Array,alt=''):Promise<void>=>run(async()=>{
  await structural(eng=>eng.insertImage(at,bytes,alt),c?{block:c.block,off:c.head}:{block:at,off:0},eng=>nearEditable(eng,top+2));
 });
 /** Selects (or with null clears) the picture paragraph `block`. */
-export const selectImage=(block:number|null)=>{if(block===null){patchDocuments({imageBlock:null});return;}if(!getDocumentsState().blocks.some(b=>b.index===block&&!!b.image))return;patchDocuments({imageBlock:block,caret:null,caretLocked:false});};
+export const selectImage=(block:number|null)=>{if(block===null){patchDocuments({imageBlock:null,imageRects:[]});return;}if(!getDocumentsState().blocks.some(b=>b.index===block&&!!b.image))return;patchDocuments({imageBlock:block,caret:null,caretLocked:false});void syncGeometry();};
 async function editImage(op:ImageOp){
  const block=getDocumentsState().imageBlock;if(block===null)throw new Error('Select a picture first.');
  const b=getDocumentsState().blocks.find(x=>x.index===block);if(!b||!b.image)throw new Error('The selected picture is gone.');
  const c=getDocumentsState().caret;const before=c?{block:c.block,off:c.head}:await nearEditable(engine!,block);
  await structural(eng=>eng.imageEdit(block,op),before,before);
- patchDocuments({caret:c,imageBlock:op.op==='remove'?null:block});
+ patchDocuments({caret:null,imageBlock:op.op==='remove'?null:block});await syncGeometry();
 }
 /** Display width of the selected picture as a percentage of the text width (25, 50, 75 or 100). */
 export const resizeImageToPercent=(percent:number)=>run(async()=>{

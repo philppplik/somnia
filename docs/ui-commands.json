@@ -2829,6 +2829,17 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.table.colWidth",
+      "title": "Set column width",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.table.delete_col",
       "title": "Delete column",
       "category": "View",

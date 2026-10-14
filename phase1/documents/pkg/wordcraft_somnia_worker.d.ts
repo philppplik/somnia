@@ -51,6 +51,8 @@ export class DocSession {
     resize_image(block: number, width: number): void;
     /** Sets an image paragraph to 25, 50, 75 or 100 percent of the text width. */
     fit_image(block: number, percent: number): void;
+    /** Width in points (20-1000) of the grid column under cell paragraph `block`. */
+    set_col_width(block: number, width: number): void;
     set_image_alt(block: number, alt: string): void;
     remove_image(block: number): void;
     insert(block: number, utf8_byte_offset: number, text: string): void;

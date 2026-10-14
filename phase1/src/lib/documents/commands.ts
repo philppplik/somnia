@@ -1,8 +1,8 @@
 import {registerCommand} from '../commandRegistry';
 import {getDocumentsState,patchDocuments,stepZoom} from './store';
-import {redoEdit,setAlign,setParagraphStyle,toggleList,shiftListLevel,stepFontSize,stepIndent,toggleFormat,undoEdit,editTable,insertTable,setHeaderFooter,insertImage,resizeImageToPercent,setImageAlt,removeImage} from './session';
+import {redoEdit,setAlign,setParagraphStyle,toggleList,shiftListLevel,stepFontSize,stepIndent,toggleFormat,undoEdit,editTable,insertTable,setHeaderFooter,insertImage,resizeImageToPercent,setImageAlt,removeImage,setColumnWidth} from './session';
 import {findMedia} from '../media';
-import {IMAGE_WIDTH_PERCENTS,MAX_IMAGE_BYTES} from './protocol';
+import {IMAGE_WIDTH_PERCENTS,MAX_IMAGE_BYTES,MIN_COL_PT,MAX_COL_PT} from './protocol';
 import {CELL_BASE} from './edit';
 import {goToBlock,scrollToPage} from './navigate';
 import {documentsExportReady,patchDocumentsExportUi,requestDocumentsSaveCopy} from './exportBridge';
@@ -65,6 +65,7 @@ export function registerDocumentsCommands(){
   add('documents.image.alt','Set picture alt text',async p=>{const a=(p as Record<string,unknown>|undefined)?.alt;if(typeof a!=='string')throw expected('Missing or invalid "alt".');await setImageAlt(a);},()=>ready()&&getDocumentsState().imageBlock!==null),
   add('documents.image.remove','Remove picture',async()=>{await removeImage();},()=>ready()&&getDocumentsState().imageBlock!==null),
   add('documents.table.insert','Insert table',async p=>{await insertTable(int(p,'rows'),int(p,'cols'));},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.table.colWidth','Set column width',async p=>{const w=(p as Record<string,unknown>|undefined)?.width;if(typeof w!=='number'||!Number.isFinite(w))throw expected('Missing or invalid "width".');if(w<MIN_COL_PT||w>MAX_COL_PT)throw expected(`A column is ${MIN_COL_PT} to ${MAX_COL_PT} points wide.`);await setColumnWidth(w);},inCell),
   add('documents.table.row_above','Insert row above',async()=>{await editTable('row_above');},inCell),
   add('documents.table.row_below','Insert row below',async()=>{await editTable('row_below');},inCell),
   add('documents.table.delete_row','Delete row',async()=>{await editTable('delete_row');},inCell),

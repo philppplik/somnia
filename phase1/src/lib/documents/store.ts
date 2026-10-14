@@ -4,11 +4,11 @@ import type {RiskId} from './inspect';
 import type {DocBlock} from './edit';
 import type {PageSize} from './protocol';
 export type DocStatus='idle'|'loading'|'ready'|'error';
-export interface DocumentsState{status:DocStatus;name:string;error:string;pages:number;zoom:number;risks:readonly RiskId[];words:number;engineMs:number|null;saving:boolean;blocks:readonly DocBlock[];pageSizes:readonly PageSize[];rev:number;canUndo:boolean;canRedo:boolean;editError:string;edited:boolean;caret:Caret|null;caretLocked:boolean;imageBlock:number|null;format:import('./protocol').FormatState|null;para:import('./protocol').ParaState|null;pendingFormat:{block:number;off:number;patch:import('./protocol').FormatPatch}|null;caretBox:import('./protocol').CaretBox|null;selRects:readonly import('./protocol').Rect5[];notice:''|'undoReleased'|'lost'}
+export interface DocumentsState{status:DocStatus;name:string;error:string;pages:number;zoom:number;risks:readonly RiskId[];words:number;engineMs:number|null;saving:boolean;blocks:readonly DocBlock[];pageSizes:readonly PageSize[];rev:number;canUndo:boolean;canRedo:boolean;editError:string;edited:boolean;caret:Caret|null;caretLocked:boolean;imageBlock:number|null;imageRects:readonly import('./protocol').Rect5[];format:import('./protocol').FormatState|null;para:import('./protocol').ParaState|null;pendingFormat:{block:number;off:number;patch:import('./protocol').FormatPatch}|null;caretBox:import('./protocol').CaretBox|null;selRects:readonly import('./protocol').Rect5[];notice:''|'undoReleased'|'lost'}
 /** Selection in one top-level paragraph; offsets are UTF-8 bytes of its current text. head is the moving end. */
 /** `block` holds the head. `anchorBlock` is set only when the selection starts in another paragraph. */
 export interface Caret{block:number;anchor:number;head:number;anchorBlock?:number}
-const initial:DocumentsState={status:'idle',name:'',error:'',pages:0,zoom:1,risks:[],words:0,engineMs:null,saving:false,blocks:[],pageSizes:[],rev:0,canUndo:false,canRedo:false,editError:'',edited:false,caret:null,caretLocked:false,imageBlock:null,format:null,para:null,pendingFormat:null,caretBox:null,selRects:[],notice:''};
+const initial:DocumentsState={status:'idle',name:'',error:'',pages:0,zoom:1,risks:[],words:0,engineMs:null,saving:false,blocks:[],pageSizes:[],rev:0,canUndo:false,canRedo:false,editError:'',edited:false,caret:null,caretLocked:false,imageBlock:null,imageRects:[],format:null,para:null,pendingFormat:null,caretBox:null,selRects:[],notice:''};
 /** Everything but the zoom, which is a user preference that outlives a document. */
 export const INITIAL_VIEW=(({zoom:_zoom,...rest})=>rest)(initial);
 let state=initial;const listeners=new Set<()=>void>();

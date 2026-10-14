@@ -40,7 +40,7 @@ function Page({engine,index,width,height,zoom,rev,visible,onVisible}:{engine:Doc
   onPointerMove={e=>{if(down.current&&e.buttons&1){const [x,y]=at(e);dragTo(index,x,y);}}} onPointerUp={()=>{down.current=false;}} onPointerCancel={()=>{down.current=false;}}>
   {src&&<img src={src} alt="" draggable={false} className="absolute inset-0 h-full w-full select-none"/>}
   {failed&&<span role="alert" className="absolute inset-0 grid place-items-center text-[12px] text-ink-3">{t('documents.pageFailed')}</span>}
-  {doc.selRects.filter(r=>r[0]===index).map((r,i)=><span key={i} aria-hidden="true" className="pointer-events-none absolute bg-sky-500/30" data-testid="documents-selection" style={{left:r[1]*zoom,top:r[2]*zoom,width:r[3]*zoom,height:r[4]*zoom}}/>)}
+  {[...doc.selRects.map(r=>({r,img:false})),...doc.imageRects.map(r=>({r,img:true}))].filter(x=>x.r[0]===index).map(({r,img},i)=><span key={i} aria-hidden="true" className={img?'pointer-events-none absolute rounded-sm outline outline-2 outline-sky-500':'pointer-events-none absolute bg-sky-500/30'} data-testid={img?'documents-image-outline':'documents-selection'} style={{left:r[1]*zoom,top:r[2]*zoom,width:r[3]*zoom,height:r[4]*zoom}}/>)}
   {box&&<><span aria-hidden="true" className="documents-caret pointer-events-none absolute bg-black" data-testid="documents-caret" style={{left:box.x*zoom-0.5,top:box.top*zoom,width:1.5,height:box.height*zoom}}/>
    <CaretInput left={box.x*zoom} top={box.top*zoom}/></>}
  </div>;

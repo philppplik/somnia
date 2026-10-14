@@ -23,7 +23,7 @@ test('image limits: 5 MB, 8000 px a side, 25 megapixels',()=>{
 function core(){
  const calls:string[]=[];
  const S=class{constructor(_b?:Uint8Array){}free(){}blocks(){return '[]';}paginate(){return 1;}page_info(){return '{"pages":[],"cacheHits":0,"cacheMisses":0}';}text(){return '';}
-  insert_image(b:number,bytes:Uint8Array,alt:string){calls.push(`ins ${b} ${bytes.length} ${alt}`);}resize_image(b:number,w:number){calls.push(`size ${b} ${w}`);}fit_image(b:number,p:number){calls.push(`fit ${b} ${p}`);}set_image_alt(b:number,a:string){calls.push(`alt ${b} ${a}`);}remove_image(b:number){calls.push(`rm ${b}`);}} as unknown as new(b:Uint8Array)=>DocSessionLike;
+  insert_image(b:number,bytes:Uint8Array,alt:string){calls.push(`ins ${b} ${bytes.length} ${alt}`);}resize_image(b:number,w:number){calls.push(`size ${b} ${w}`);}fit_image(b:number,p:number){calls.push(`fit ${b} ${p}`);}set_image_alt(b:number,a:string){calls.push(`alt ${b} ${a}`);}remove_image(b:number){calls.push(`rm ${b}`);}set_col_width(b:number,w:number){calls.push(`col ${b} ${w}`);}} as unknown as new(b:Uint8Array)=>DocSessionLike;
  const k=new DocumentsCore(S);k.handle({id:1,kind:'open',bytes:new Uint8Array(4)} as never);return{k,calls};
 }
 const ins=(k:DocumentsCore,block:unknown,bytes:Uint8Array,alt:unknown='')=>k.handle({id:2,kind:'insertImage',block,bytes:bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),alt} as never).res.ok;
@@ -40,4 +40,10 @@ test('valid image requests reach the engine once',()=>{
  const {k,calls}=core();
  assert.equal(ins(k,3,png(10,10),'A chart'),true);assert.equal(ed(k,1,{op:'resize',width:100}),true);assert.equal(ed(k,1,{op:'fit',percent:50}),true);assert.equal(ed(k,1,{op:'alt',alt:'x'}),true);assert.equal(ed(k,1,{op:'remove'}),true);
  assert.deepEqual(calls,['ins 3 24 A chart','size 1 100','fit 1 50','alt 1 x','rm 1']);
+});
+test('column width requests are bounded before the engine',()=>{
+ const {k,calls}=core();const send=(block:unknown,width:unknown)=>k.handle({id:4,kind:'colWidth',block,width} as never).res.ok;
+ for(const [b,w] of [[-1,100],[1.5,100],[2**31,100],[0,19.9],[0,1000.1],[0,Number.NaN],[0,Infinity],[0,'100']] as [unknown,unknown][])assert.equal(send(b,w),false,String(b)+String(w));
+ assert.deepEqual(calls,[]);
+ assert.equal(send(1048577,123.5),true);assert.deepEqual(calls,['col 1048577 123.5']);
 });

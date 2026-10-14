@@ -65,6 +65,7 @@ export type DocumentsRequest=
  |{id:number;kind:'setList';first:number;last:number;list:ListKindId}
  |{id:number;kind:'listLevel';first:number;last:number;delta:number}
  |{id:number;kind:'tableEdit';block:number;op:TableOp}
+ |{id:number;kind:'colWidth';block:number;width:number}
  |{id:number;kind:'insertImage';block:number;bytes:ArrayBuffer;alt:string}
  |{id:number;kind:'imageEdit';block:number;op:ImageOp}
  |{id:number;kind:'headerFooterState'}
@@ -97,6 +98,7 @@ export type TableOp=typeof TABLE_OPS[number];
 
 /** Bounds of a new table. */
 export const MAX_NEW_TABLE_ROWS=20,MAX_NEW_TABLE_COLS=10;
+export const MIN_COL_PT=20,MAX_COL_PT=1000;
 /** Size presets offered by the Insert table menu. */
 export const TABLE_PRESETS:readonly (readonly [number,number])[]=[[2,2],[3,3],[4,3],[5,4],[6,5]];
 
