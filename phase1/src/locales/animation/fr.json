@@ -813,5 +813,12 @@
  "animation.keys.range.before.hint": "Choisir les clés à la tête de lecture ou avant sur les calques choisis",
  "animation.keys.range.after": "Clés ≥ tête",
  "animation.keys.range.after.hint": "Choisir les clés à la tête de lecture ou après sur les calques choisis",
- "cmd.animation.keys.selectRange": "Choisir les clés avant ou après la tête de lecture"
+ "cmd.animation.keys.selectRange": "Choisir les clés avant ou après la tête de lecture",
+ "animation.keys.values": "Changer les valeurs",
+ "animation.keys.values.amount": "Valeur",
+ "animation.keys.values.mode": "Mode de valeur",
+ "animation.keys.values.offset": "Ajouter",
+ "animation.keys.values.scale": "Échelle %",
+ "animation.keys.values.hint": "Ajoute la valeur aux clés choisies ou met à l’échelle leur écart avec la première clé de ce pourcentage",
+ "cmd.animation.keys.values": "Décaler ou mettre à l’échelle les valeurs des clés choisies"
 }

@@ -813,5 +813,12 @@
  "animation.keys.range.before.hint": "Escolher as chaves no cursor ou antes nas camadas escolhidas",
  "animation.keys.range.after": "Chaves ≥ cursor",
  "animation.keys.range.after.hint": "Escolher as chaves no cursor ou depois nas camadas escolhidas",
- "cmd.animation.keys.selectRange": "Escolher as chaves antes ou depois do cursor"
+ "cmd.animation.keys.selectRange": "Escolher as chaves antes ou depois do cursor",
+ "animation.keys.values": "Alterar valores",
+ "animation.keys.values.amount": "Quantidade",
+ "animation.keys.values.mode": "Modo de valor",
+ "animation.keys.values.offset": "Somar",
+ "animation.keys.values.scale": "Escalar %",
+ "animation.keys.values.hint": "Soma a quantidade aos valores das chaves escolhidas ou escala a distância até a primeira chave por essa porcentagem",
+ "cmd.animation.keys.values": "Deslocar ou escalar os valores das chaves escolhidas"
 }

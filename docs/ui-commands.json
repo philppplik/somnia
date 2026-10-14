@@ -905,6 +905,22 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.keys.values",
+      "title": "Offset or scale the values of the selected keys",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "add",
+        "amplitude",
+        "animation",
+        "keys",
+        "offset",
+        "scale",
+        "values"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.layer.add",
       "title": "Add layer",
       "category": "Insert",

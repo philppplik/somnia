@@ -813,5 +813,12 @@
  "animation.keys.range.before.hint": "Keys an oder vor der Abspielposition auf den gewählten Ebenen auswählen",
  "animation.keys.range.after": "Keys ≥ Position",
  "animation.keys.range.after.hint": "Keys an oder nach der Abspielposition auf den gewählten Ebenen auswählen",
- "cmd.animation.keys.selectRange": "Keys vor oder nach der Abspielposition auswählen"
+ "cmd.animation.keys.selectRange": "Keys vor oder nach der Abspielposition auswählen",
+ "animation.keys.values": "Werte ändern",
+ "animation.keys.values.amount": "Betrag",
+ "animation.keys.values.mode": "Wertemodus",
+ "animation.keys.values.offset": "Addieren",
+ "animation.keys.values.scale": "Skalieren %",
+ "animation.keys.values.hint": "Betrag auf die gewählten Key-Werte addieren oder deren Abstand zum ersten gewählten Key um diesen Prozentsatz skalieren",
+ "cmd.animation.keys.values": "Werte der gewählten Keys verschieben oder skalieren"
 }
