@@ -286,3 +286,10 @@ test('svg frame export: standalone svg file named by frame, too large rejected b
  assert.equal(r.fileName,frameSvgFileName('My Anim',5));assert.ok(r.fileName.endsWith('.svg'));
  assert.ok((await exportFrameSvg(c,f(5),'x',false).blob.text()).includes('<rect width'));
 });
+import {fitTargets} from './graphWindow';
+test('fit targets: selected keys when two or more, else all',()=>{
+ const c=findComp(base())!,ks=c.layers.find(l=>l.id==='a')!.transform.position.keys;
+ assert.equal(fitTargets(ks,[{t:ks[0].t}]).length,ks.length);
+ assert.equal(fitTargets(ks,[]).length,ks.length);
+ assert.equal(fitTargets(ks,ks.slice(0,2)).length,2);
+});

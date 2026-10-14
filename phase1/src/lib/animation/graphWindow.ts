@@ -10,3 +10,8 @@ export function graphWindow(start:number,duration:number,fps:Rational,keys:reado
  const t0=Math.max(start,lo-pad),t1=Math.min(end,hi+pad);
  return t1>t0?{t0,t1}:{t0:start,t1:end};
 }
+/** Keys the fit frames: the selected keys of the property when two or more are selected, otherwise all of them. */
+export function fitTargets(keys:readonly Keyframe[],selected:readonly {t:number}[]):readonly Keyframe[]{
+ const ts=new Set(selected.map(s=>s.t)),picked=keys.filter(k=>ts.has(k.t));
+ return picked.length>=2?picked:keys;
+}
