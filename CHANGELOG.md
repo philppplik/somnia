@@ -322,3 +322,4 @@ This entry collects the beta.6 wave and the features already present in
 
 - Add bounded multitrack session documents, atomic history, strict JSON validation, deterministic stereo mixing and float WAV encoding without new dependencies. This is a headless foundation; Arrange/Mix UI follows separately.
 - Correct the outdated Sound AI bridge documentation.
+- Sound Arrange & Mix: bounded multitrack timeline with source waveforms, split/trim/duplicate/move, fades, clip gain, track gain/pan/mute/solo, markers, looping and undo/redo. JSON save/reopen with explicit relinking, plus worker-rendered mix audition and WAV export; no new dependencies.

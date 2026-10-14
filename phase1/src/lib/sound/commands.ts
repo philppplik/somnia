@@ -10,7 +10,10 @@ let exportOpener:((name:string)=>void)|null=null;
 export function registerSoundExportOpener(open:(name:string)=>void){exportOpener=open;return()=>{if(exportOpener===open)exportOpener=null;};}
 let transport:SoundTransport|null=null;
 export function registerSoundTransport(next:SoundTransport){transport=next;return()=>{if(transport===next)transport=null;};}
-export const activeSoundName=()=>{const m=getMedia();return m.items.find(i=>i.name===m.active&&i.kind==='audio')?.name??null;};
+const clipCommandBlocks=new Set<symbol>();
+/** Session Arrange view must not let the header export an unrelated active clip. */
+export function blockSoundClipCommands(){const token=Symbol();clipCommandBlocks.add(token);return()=>{clipCommandBlocks.delete(token);};}
+export const activeSoundName=()=>{if(clipCommandBlocks.size)return null;const m=getMedia();return m.items.find(i=>i.name===m.active&&i.kind==='audio')?.name??null;};
 const session=()=>getSoundSession(activeSoundName());
 const ready=()=>!!session()?.original;
 const requireName=()=>{const n=activeSoundName();if(!n||!getSoundSession(n)?.original)throw Object.assign(new Error('Audio is not ready.'),{expected:true});return n;};

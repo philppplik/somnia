@@ -36,3 +36,22 @@ node --import tsx src/lib/sound/arrangement.test.ts
 Tests cover round-trip parsing, rejected malformed data, history atomicity and isolation, split offsets, stereo/mono panning, mute/solo, differing rates, fades, overlap clipping, range rendering, missing media and WAV payloads. These tests use deterministic PCM fixtures. This slice does not establish native playback, microphones, rendering speed or visual correctness. Full-app CI and desktop checks remain separate.
 
 Roadmap-Delta: replace the one-region/one-clip document constraint with a tested multitrack data and rendering foundation. Timeline controls, persistence files and worker integration are not complete in A1.
+
+## Arrange & Mix integration (A2)
+
+The Sound canvas now switches between **Clip editor** and **Arrange & Mix**. The original clip inspector stays intact. Arrange uses a separate bounded session, with source names and real source waveform peaks, draggable clip positions, a 0.1-second snap grid, zoom, split/duplicate/delete, numeric trim/offset/fade/clip-gain controls and keyboard-accessible track reassignment. A mixer provides track gain, pan, mute and solo. Markers, looped session playback and atomic undo/redo use the session document. Edits invalidate the rendered audition and export immediately.
+
+Open audio files through the existing file picker, then add them to the session. Sources use the original decoded clip, not the clip inspector's processed effect recipe. Each import uses the existing WASM decoder followed by PCM WAV decoding in a separate mix worker; the main thread never mixes or decodes PCM. **Render mix** produces one float WAV used for both the audio player and export. Session commands are interactive-only in the shared dispatcher; agents/MCP cannot execute them. While Arrange is mounted, single-clip commands including the existing header export are blocked, so the header cannot silently export the unrelated active clip. Use **Export mix WAV** in the Arrange transport.
+
+**Download session** saves bounded JSON edits and source descriptors. It does not embed audio or claim an OS-native session save. **Open session** validates before replacing the current session and asks before discarding edits. Reopened sources must be opened in Somnia and explicitly relinked; duration, rate and channels must match. Missing media blocks render/export. Audio is not uploaded. Full-mix WAV uses the existing native one-time save grant on desktop; browser outcomes say **Download started**. Source samples above full scale remain in the float file and the measured count is shown; there is no automatic limiter.
+
+Persistence currently means an explicit JSON file with relinking, not autosave, recovery, project-container embedding or an embedded portable audio bundle. The download request is not proof of a file written to a specific directory. The initial history stores documents only, not source PCM. The session survives switching back to the clip editor, but browser page reload still requires a saved file. Beforeunload warns for dirty sessions while Arrange is mounted; native app-close/project transitions need separate integration checks. Manual rendering, not real-time effects, is intentional in this bounded first implementation.
+
+### A2 checks
+
+- 16 focused session/command tests, plus deterministic PCM decoder tests.
+- `scripts/sound-arrange-screenshots.mjs`: real worker mix of two deterministic audio fixtures; split/undo/redo; stale output disabled after a level edit; JSON reopen and missing-media block; explicit relink of both sources; mix render and real browser WAV download.
+- Harness screenshots in light, dark and 700 px width, inspected directly. Track strip height was corrected after the first visual check. Harness decoder uses a deterministic WAV fixture stub; the mix worker is real. Production compressed-media decode and native dialogs are not established by this harness.
+- Full app typecheck is blocked only by the baseline absent generated Slides WASM module in this checkout. Focused A1 model/mixer typecheck is green.
+
+Roadmap-Delta A2: usable bounded timeline/mixer with non-destructive edits, history, JSON save/reopen/relink and worker mix audition/export. Full DAW parity, long-form streaming, local speech, recording and the serial effects rack are not included.
