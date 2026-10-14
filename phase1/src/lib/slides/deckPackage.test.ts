@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {unzipSync,zipSync,strFromU8,strToU8} from 'fflate';
-import {duplicateTitles,setPictureDecorative,readPictureDecorative,untitledSlides,missingAltText,MAX_ALT_REPORT,setPictureAlt,readPictureAlt,editSections,setSlideHidden,readHiddenSlides,setFirstSlideNum,readFirstSlideNum,setSlideFooter,setAllSlideFooters,readSlideFooter,setSlideSize,readSlideSize,setAllSlideBackgrounds,backgroundSummary,setSlideBackground,readSlideBackground,editLayoutBox,readLayoutBoxes,editMasterBox,readMaster,editTheme,readTheme,insertTable,editTable,readTable,setShapeStyle,readShapeStyle,setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
+import {slidesWithoutNotes,duplicateTitles,setPictureDecorative,readPictureDecorative,untitledSlides,missingAltText,MAX_ALT_REPORT,setPictureAlt,readPictureAlt,editSections,setSlideHidden,readHiddenSlides,setFirstSlideNum,readFirstSlideNum,setSlideFooter,setAllSlideFooters,readSlideFooter,setSlideSize,readSlideSize,setAllSlideBackgrounds,backgroundSummary,setSlideBackground,readSlideBackground,editLayoutBox,readLayoutBoxes,editMasterBox,readMaster,editTheme,readTheme,insertTable,editTable,readTable,setShapeStyle,readShapeStyle,setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
 import {readRuns,makeEditedCopy} from './editCopy';
 import {png,jpeg} from './imageFixtures';
 
@@ -1023,4 +1023,12 @@ test('missing alt report covers groups and tables, skips text boxes, honours dec
   assert.deepEqual(missingAltText(g).items.map(i=>[i.shapeId,i.name]),[[grp.id,grp.name]]);
   assert.equal(missingAltText(setPictureAlt(g,sid,grp.id,'Team')).total,0);
   assert.equal(missingAltText(setPictureDecorative(g,sid,grp.id,true)).total,0);
+});
+
+test('slides without notes: untouched deck lists all, filled and blank notes, updates after setSlideNotes, ordered',()=>{
+  const b=new Uint8Array(readFileSync(fileURLToPath(new URL('../../../slides-engine/corpus/google-slides-effects-transitions-2026-05-08.pptx',import.meta.url)))),sid=ids(b),n=sid.length;
+  assert.ok(n>=2);assert.equal(slidesWithoutNotes(b).total,n);assert.deepEqual(slidesWithoutNotes(b).items.map(i=>i.slideIndex),sid.map((_,i)=>i));
+  const c=setSlideNotes(b,sid[1],['Say hello']);assert.equal(slidesWithoutNotes(c).total,n-1);assert.equal(slidesWithoutNotes(c).items.some(i=>i.slideId===sid[1]),false);
+  const d=setSlideNotes(c,sid[0],[' ']);assert.equal(slidesWithoutNotes(d).items.some(i=>i.slideId===sid[0]),true);
+  const e=setSlideNotes(d,sid[0],['A']);assert.equal(slidesWithoutNotes(e).total,n-2);
 });

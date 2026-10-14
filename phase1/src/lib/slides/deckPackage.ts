@@ -760,6 +760,9 @@ export const MAX_NOTES_CHARS=20000,MAX_NOTES_PARAGRAPHS=200;
 export function readSlideNotes(bytes:Uint8Array,slideId:number):string[]{
   const zip=openPackage(bytes),slide=readDeckModel(bytes).slides.find(s=>s.id===slideId);
   if(!slide)throw Error('Slide not found');
+  return notesFor(zip,slide);
+}
+function notesFor(zip:Record<string,Uint8Array>,slide:SlideModel):string[]{
   const rel=readRels(zip,slide.part).find(r=>!r.external&&r.type===RT+'notesSlide');
   if(!rel)return [];
   let part:string;try{part=resolve(slide.part,rel.target);}catch{return [];}
@@ -2021,6 +2024,18 @@ export function setPictureDecorative(bytes:Uint8Array,slideId:number,shapeId:num
 /** Top-level pictures, groups, tables and charts without alt text (and not marked decorative) across the deck, in slide order. Bounded so a hostile deck cannot flood the panel. */
 export const MAX_ALT_REPORT=200;
 export interface MissingAlt {slideId:number;slideIndex:number;shapeId:number;name:string}
+/** Slides whose speaker notes are missing or blank. Slides with unsupported structure are skipped, not guessed. */
+export interface NoNotesSlide {slideId:number;slideIndex:number}
+export function slidesWithoutNotes(bytes:Uint8Array):{items:NoNotesSlide[];total:number}{
+  const model=readDeckModel(bytes),zip=openPackage(bytes),items:NoNotesSlide[]=[];let total=0;
+  model.slides.forEach((slide,slideIndex)=>{
+    if(slide.problems.length)return;
+    let lines:string[];try{lines=notesFor(zip,slide);}catch{return;}
+    if(lines.every(l=>l.trim()==='')){total++;if(items.length<MAX_ALT_REPORT)items.push({slideId:slide.id,slideIndex});}
+  });
+  return {items,total};
+}
+
 /** Top-level object kinds that should carry alt text; text boxes and connectors are left out on purpose. */
 const ALT_KINDS:Partial<Record<ShapeKind,readonly [string,string]>>={picture:['p:pic','p:nvPicPr'],group:['p:grpSp','p:nvGrpSpPr'],table:['p:graphicFrame','p:nvGraphicFramePr'],chart:['p:graphicFrame','p:nvGraphicFramePr']};
 export function missingAltText(bytes:Uint8Array):{items:MissingAlt[];total:number}{
