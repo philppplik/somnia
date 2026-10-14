@@ -1263,6 +1263,62 @@
       "hasEnabled": true
     },
     {
+      "id": "interface.addFrame",
+      "title": "Interface: Add frame",
+      "category": "Insert",
+      "source": "interface",
+      "hasEnabled": true
+    },
+    {
+      "id": "interface.addRectangle",
+      "title": "Interface: Add rectangle",
+      "category": "Insert",
+      "source": "interface",
+      "hasEnabled": true
+    },
+    {
+      "id": "interface.addText",
+      "title": "Interface: Add text",
+      "category": "Insert",
+      "source": "interface",
+      "hasEnabled": true
+    },
+    {
+      "id": "interface.delete",
+      "title": "Interface: Delete layer",
+      "category": "Edit",
+      "source": "interface",
+      "hasEnabled": true
+    },
+    {
+      "id": "interface.new",
+      "title": "Interface: New document",
+      "category": "Project",
+      "source": "interface",
+      "hasEnabled": true
+    },
+    {
+      "id": "interface.redo",
+      "title": "Interface: Redo",
+      "category": "Edit",
+      "source": "interface",
+      "hasEnabled": true
+    },
+    {
+      "id": "interface.save",
+      "title": "Interface: Save snapshot",
+      "category": "Project",
+      "source": "interface",
+      "hasEnabled": true
+    },
+    {
+      "id": "interface.undo",
+      "title": "Interface: Undo",
+      "category": "Edit",
+      "source": "interface",
+      "hasEnabled": true
+    },
+    {
       "id": "md.bold",
       "title": "Markdown: Bold",
       "category": "Insert",
@@ -2275,6 +2331,14 @@
       "category": "View",
       "source": "core",
       "shortcut": "Mod+2",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
+      "id": "studio.interface",
+      "title": "Switch to Interface Studio",
+      "category": "View",
+      "source": "core",
       "allowInInput": true,
       "hasEnabled": true
     },

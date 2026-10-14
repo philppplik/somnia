@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-291 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+300 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -137,6 +137,14 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `insert.element.8` | FAQ block | Insert | core |  |
 | `insert.element.9` | Contact fields | Insert | core |  |
 | `inspector.toggle` | Toggle inspector | View | core | `Mod+Alt+I` |
+| `interface.addFrame` | Interface: Add frame | Insert | interface |  |
+| `interface.addRectangle` | Interface: Add rectangle | Insert | interface |  |
+| `interface.addText` | Interface: Add text | Insert | interface |  |
+| `interface.delete` | Interface: Delete layer | Edit | interface |  |
+| `interface.new` | Interface: New document | Project | interface |  |
+| `interface.redo` | Interface: Redo | Edit | interface |  |
+| `interface.save` | Interface: Save snapshot | Project | interface |  |
+| `interface.undo` | Interface: Undo | Edit | interface |  |
 | `md.bold` | Markdown: Bold | Insert | core | `Mod+B` |
 | `md.bullet` | Markdown: Bulleted list | Insert | core |  |
 | `md.code` | Markdown: Inline code | Insert | core |  |
@@ -237,6 +245,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `studio.code` | Switch to Code Studio | View | core | `Mod+1` |
 | `studio.design` | Switch to Design Studio | View | core | `Mod+7` |
 | `studio.documents` | Switch to Documents Studio | View | core | `Mod+2` |
+| `studio.interface` | Switch to Interface Studio | View | core |  |
 | `studio.photos` | Switch to Photos Studio | View | core | `Mod+9` |
 | `studio.sheets` | Switch to Sheets Studio | View | core | `Mod+3` |
 | `studio.slides` | Switch to Slides Studio | View | core | `Mod+4` |

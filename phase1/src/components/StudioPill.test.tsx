@@ -5,8 +5,8 @@ import {parse} from '@babel/parser';
 import {studioShortName} from './studios/studioShortName';
 import {listStudios} from '../lib/studios';
 
-const names={code:'Code',documents:'Docs',sheets:'Sheets',slides:'Slides',sound:'Sound',photos:'Photos',video:'Video',design:'Design',vector:'Vector',vibespace:'Vibe Space',animation:'Animation'};
-test('all eleven registered studios have consistent short tab and tooltip names',()=>{
+const names={interface:'Interface',code:'Code',documents:'Docs',sheets:'Sheets',slides:'Slides',sound:'Sound',photos:'Photos',video:'Video',design:'Design',vector:'Vector',vibespace:'Vibe Space',animation:'Animation'};
+test('all registered studios have consistent short tab and tooltip names',()=>{
  assert.deepEqual(listStudios().map(s=>s.id).sort(),Object.keys(names).sort());
  for(const [id,name] of Object.entries(names))assert.equal(studioShortName(id,`Somnia ${id}`),name);
 });

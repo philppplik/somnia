@@ -71,6 +71,7 @@ import './components/video/registerShell';
 import './components/animation/registerShell';
 import './components/sound/registerShell';
 import './components/design/registerShell';
+import './components/interface/registerShell';
 import {AppDialogs} from './components/AppDialogs';
 import {DiagnosticsHost} from './components/diagnostics/DiagnosticsHost';
 import {ConfirmHost} from './components/ConfirmHost';

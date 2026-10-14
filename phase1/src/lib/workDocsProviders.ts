@@ -1,3 +1,5 @@
+import {interfaceSession} from './interface/session';
+import {saveInterfaceSnapshot} from './interface/persistence';
 /** Registers every studio's open work with the cross-studio registry (workDocs). Imported once by the app shell. */
 import {registerWorkProvider,waitForSaver,type WorkProvider} from './workDocs';
 import {getMedia,setActiveMedia,closeMediaForced,type MediaKind} from './media';
@@ -43,5 +45,6 @@ export function installWorkProviders(){
  reg({studio:'design',dirty:()=>{const d=getDesignState();return d.document&&d.dirty?[d.document.name]:[];},openCount:()=>getDesignState().document?1:0,
   async save(){const d=getDesignState().document;if(!d)return true;downloadDesign(`${d.name}.somdesign`,serializeDesignDocument(d),'application/json');markDesignSaved();return true;},
   discard:none,closeAll:()=>clearDesign()});
+ reg({studio:'interface',dirty:()=>{const s=interfaceSession.get();return s.document&&s.dirty?[s.document.name]:[];},openCount:()=>interfaceSession.get().document?1:0,save:saveInterfaceSnapshot,discard:none,closeAll:()=>interfaceSession.clear()});
  return()=>offs.forEach(f=>f());
 }
