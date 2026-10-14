@@ -936,5 +936,6 @@
  "animation.comp.remove": "Löschen",
  "cmd.animation.comp.remove": "Komposition löschen",
  "animation.rig.split": "Am Playhead teilen",
- "cmd.animation.layers.split": "Gewählte Ebenen am Playhead teilen"
+ "cmd.animation.layers.split": "Gewählte Ebenen am Playhead teilen",
+ "animation.modifiers.delay": "Verzögerung (Frames)"
 }

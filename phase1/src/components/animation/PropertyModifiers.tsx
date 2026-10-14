@@ -4,7 +4,8 @@ import {Button} from '../ui/button';
 import {NativeSelect} from '../ui/native-controls';
 import {InspectorNumberField} from '../studios/InspectorNumberField';
 import {LINK_PROPS,type Modifier} from '../../lib/animation/modifiers';
-import {TRANSFORM_KEYS,type Composition,type Layer,type TransformKey} from '../../lib/animation/model';
+import {tickToFrame} from '../../lib/animation/time';
+import {frameToTick,TRANSFORM_KEYS,type Composition,type Layer,type TransformKey} from '../../lib/animation/model';
 import {executeCommand} from '../../lib/commands';
 import {PROP_LABEL} from './format';
 const field='h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text';
@@ -28,7 +29,7 @@ export function PropertyModifiers({layer,comp}:{layer:Layer;comp:Composition}){
    {m.type==='link'&&<div className="grid gap-1">
     <div className="flex gap-1"><NativeSelect className={field} value={m.layer} aria-label={t('animation.modifiers.linkLayer')} onChange={e=>void set(i,{...m,layer:e.target.value})}>{!others.some(o=>o.id===m.layer)&&<option value={m.layer}>{t('animation.modifiers.missing')}</option>}{others.map(o=><option key={o.id} value={o.id}>{o.name}</option>)}</NativeSelect>
      <NativeSelect className={field} value={m.prop} aria-label={t('animation.modifiers.linkProp')} onChange={e=>void set(i,{...m,prop:e.target.value as typeof m.prop})}>{LINK_PROPS.map(k=><option key={k} value={k}>{t(PROP_LABEL[k])}</option>)}</NativeSelect></div>
-    <div className="grid grid-cols-2 gap-2">{num(t('animation.modifiers.multiplier'),m.multiplier,-1000,1000,0.1,v=>void set(i,{...m,multiplier:v}))}{num(t('animation.modifiers.offset'),m.offset,-100000,100000,1,v=>void set(i,{...m,offset:v}))}</div></div>}
+    <div className="grid grid-cols-3 gap-2">{num(t('animation.modifiers.multiplier'),m.multiplier,-1000,1000,0.1,v=>void set(i,{...m,multiplier:v}))}{num(t('animation.modifiers.offset'),m.offset,-100000,100000,1,v=>void set(i,{...m,offset:v}))}{num(t('animation.modifiers.delay'),tickToFrame(m.delay??0,comp.fps),-600,600,1,v=>void set(i,{...m,delay:frameToTick(Math.round(v),comp.fps)}))}</div></div>}
   </div>)}
   <div className="flex flex-wrap gap-1">
    <Button size="tiny" variant="outline" data-testid="animation-modifier-add-wiggle" onClick={()=>void run('animation.modifier.add',{modifier:{type:'wiggle',seed:1,amplitude:10,frequency:2}})}>{t('animation.modifiers.addWiggle')}</Button>

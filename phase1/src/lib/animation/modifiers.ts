@@ -26,7 +26,7 @@ export function evaluateMod(p:Property,t:number,links?:LinkResolver):PropValue{
  if(cycles&&p.keys.length>=2){const k=p.keys,d=sub(k[k.length-1].v,k[0].v);v=add(v,scale(d,cycles));}
 
  const lk=(p.modifiers??[]).find((x):x is Extract<Modifier,{type:'link'}>=>x.type==='link');
- if(lk&&links){const src=links(lk.layer,lk.prop,t);
+ if(lk&&links){const src=links(lk.layer,lk.prop,t-(lk.delay??0));
   if(typeof src==='number'&&typeof v==='number')v=src*lk.multiplier+lk.offset;
   else if(Array.isArray(src)&&Array.isArray(v))v=[src[0]*lk.multiplier+lk.offset,src[1]*lk.multiplier+lk.offset];}
  const w=(p.modifiers??[]).filter((x):x is Extract<Modifier,{type:'wiggle'}>=>x.type==='wiggle');

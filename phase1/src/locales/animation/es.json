@@ -936,5 +936,6 @@
  "animation.comp.remove": "Eliminar",
  "cmd.animation.comp.remove": "Eliminar composición",
  "animation.rig.split": "Dividir en el cabezal",
- "cmd.animation.layers.split": "Dividir las capas seleccionadas en el cabezal"
+ "cmd.animation.layers.split": "Dividir las capas seleccionadas en el cabezal",
+ "animation.modifiers.delay": "Retardo (fotogramas)"
 }

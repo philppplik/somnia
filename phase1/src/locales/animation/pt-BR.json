@@ -936,5 +936,6 @@
  "animation.comp.remove": "Excluir",
  "cmd.animation.comp.remove": "Excluir composição",
  "animation.rig.split": "Dividir no cursor",
- "cmd.animation.layers.split": "Dividir as camadas selecionadas no cursor"
+ "cmd.animation.layers.split": "Dividir as camadas selecionadas no cursor",
+ "animation.modifiers.delay": "Atraso (quadros)"
 }

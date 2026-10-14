@@ -366,3 +366,13 @@ test('P155 split layers at the playhead: later part above, one undo step, outsid
  assert.equal(a.outT,mid);assert.equal(b.inT,mid);assert.equal(b.outT,l0.outT);assert.equal(s.getState().view.selectedLayer,b.id);
  s.undo();assert.equal(s.document,before);setAnimationSession(null);
 });
+
+test('P157 link delay reads the source at t - delay, validates, and is optional',async()=>{
+ const {evaluateMod,validateModifiers}=await import('./modifiers');
+ const prop={type:'number',keys:[],value:0,modifiers:[{type:'link',layer:'x',prop:'rotation',multiplier:1,offset:0,delay:16000}]} as never;
+ const seen:number[]=[];evaluateMod(prop,40000,(_l,_p,t)=>{seen.push(t);return 5;});assert.deepEqual(seen,[24000]);
+ const nod={...(prop as object),modifiers:[{type:'link',layer:'x',prop:'rotation',multiplier:1,offset:0}]} as never;
+ seen.length=0;evaluateMod(nod,40000,(_l,_p,t)=>{seen.push(t);return 5;});assert.deepEqual(seen,[40000]);
+ assert.equal(validateModifiers([{type:'link',layer:'x',prop:'rotation',multiplier:1,offset:0,delay:1.5}]).length,1);
+ assert.equal(validateModifiers([{type:'link',layer:'x',prop:'rotation',multiplier:1,offset:0,delay:-16000}]).length,0);
+});
