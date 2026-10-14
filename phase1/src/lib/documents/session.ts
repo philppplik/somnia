@@ -1,5 +1,6 @@
 import {scrollToPage} from './navigate';
-import {propertiesProblem,linkProblem,commentProblem,COMMENT_AUTHOR,type CommentItem,validHfText,type HeaderFooterState,checkFormatPatch,checkParaPatch,MAX_HF_CHARS,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch,type ImageOp,type PageSetupPatch,type PageSetupState,pageSetupProblem,type TableStyle,type TableStyleScope,tableStyleProblem,MIN_COL_PT,MAX_COL_PT,imageProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGES} from './protocol';
+import {commentAuthor} from './author';
+import {propertiesProblem,linkProblem,commentProblem,type CommentItem,validHfText,type HeaderFooterState,checkFormatPatch,checkParaPatch,MAX_HF_CHARS,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch,type ImageOp,type PageSetupPatch,type PageSetupState,pageSetupProblem,type TableStyle,type TableStyleScope,tableStyleProblem,MIN_COL_PT,MAX_COL_PT,imageProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGES} from './protocol';
 import {captureDocumentSelection} from './selectionCapture';
 import {CELL_BASE,caretAfterEdit,diffEdit,inverseOf,UndoStack,type TextEdit,type UndoEntry} from './edit';
 import {findMatches,nextMatchIndex,textStats,validFindQuery,validReplaceText,MAX_FIND_HIGHLIGHTS,MAX_REPLACE_BLOCKS,type FindMatch} from './find';
@@ -686,7 +687,7 @@ export const addComment=(text:string)=>run(async()=>{
  const bad=commentProblem(text);if(bad)throw new Error(bad);
  const sel=commentSelection();if(!sel)throw new Error('Select text inside one paragraph to comment on.');
  const c=getDocumentsState().caret!;
- await structural(eng=>eng.addComment(sel.block,sel.start,sel.end,text.trim(),COMMENT_AUTHOR,new Date().toISOString()),{block:c.block,off:c.head},eng=>nearEditable(eng,sel.block));
+ await structural(eng=>eng.addComment(sel.block,sel.start,sel.end,text.trim(),commentAuthor(),new Date().toISOString()),{block:c.block,off:c.head},eng=>nearEditable(eng,sel.block));
 });
 const commentStep=(op:(e:DocumentsEngine)=>Promise<import('./protocol').OpenedDocument>)=>run(async()=>{
  const c=getDocumentsState().caret;const spot=c?{block:c.block,off:c.head}:await nearEditable(engine!,0);
@@ -708,7 +709,7 @@ export const replyComment=(parent:number,text:string)=>run(async()=>{
  const bad=commentProblem(text);if(bad)throw new Error(bad);
  if(!Number.isInteger(parent)||parent<0||parent>=2**31)throw new Error('The comment is not valid.');
  const c=getDocumentsState().caret;const spot=c?{block:c.block,off:c.head}:await nearEditable(engine!,0);
- await structural(eng=>eng.replyComment(parent,text.trim(),COMMENT_AUTHOR,new Date().toISOString()),spot,spot);if(!c)patchDocuments({caret:null});
+ await structural(eng=>eng.replyComment(parent,text.trim(),commentAuthor(),new Date().toISOString()),spot,spot);if(!c)patchDocuments({caret:null});
 });
 /** Scrolls to the page holding a comment's paragraph without moving the caret. False when the comment has no place in the layout. */
 export async function goToComment(block:number|null):Promise<boolean>{

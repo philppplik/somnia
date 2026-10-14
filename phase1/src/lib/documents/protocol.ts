@@ -119,7 +119,7 @@ export type DocumentsRequest=
  |{id:number;kind:'headerFooterState'}
  |{id:number;kind:'setHeaderFooter';header?:string;footer?:string;pageNumber?:boolean}
  |{id:number;kind:'insertTable';block:number;rows:number;cols:number}
- |{id:number;kind:'save';date?:string}
+ |{id:number;kind:'save';date?:string;author?:string}
  |{id:number;kind:'exportPdf';options?:PdfOptions;date?:string}
  |{id:number;kind:'close'};
 export type DocumentsResponse=

@@ -83,6 +83,7 @@ export class DocSession {
     save(): Uint8Array;
     export_pdf(): Uint8Array;
     save_at(date: string): Uint8Array;
+    save_at_by(date: string, author: string): Uint8Array;
     export_pdf_at(opts_json: string, date: string): Uint8Array;
     export_pdf_opts(opts_json: string): Uint8Array;
     /**

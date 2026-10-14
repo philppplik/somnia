@@ -1672,6 +1672,13 @@ impl DocSession {
     /// has no clock): modified = date, created = date when the file had none, revision + 1. Empty `date` = no stamp.
     /// The open document is never changed.
     fn stamped(&self, date: &str) -> Result<Option<wordcraft_doc::Document>, String> {
+        self.stamped_by(date, "")
+    }
+    /// Like `stamped`, also setting last-modified-by to `author` (at most 60 characters, no control characters) when it is not empty.
+    fn stamped_by(&self, date: &str, author: &str) -> Result<Option<wordcraft_doc::Document>, String> {
+        if author.chars().count() > 60 || author.chars().any(|c| c.is_control()) {
+            return Err("the author name is limited to 60 characters".into());
+        }
         if date.is_empty() {
             return Ok(None);
         }
@@ -1686,6 +1693,9 @@ impl DocSession {
             d.core.created = date.to_string();
         }
         d.core.revision = d.core.revision.saturating_add(1);
+        if !author.trim().is_empty() {
+            d.core.last_modified_by = author.trim().to_string();
+        }
         Ok(Some(d))
     }
     fn do_export_pdf_at(&self, opts_json: &str, date: &str) -> Result<Vec<u8>, String> {
@@ -2080,6 +2090,11 @@ impl DocSession {
     /// Like `save`, stamping the properties with the save time (see `stamped`).
     pub fn save_at(&self, date: &str) -> Result<Vec<u8>, JsValue> {
         let stamped = self.stamped(date).map_err(|e| JsValue::from_str(&e))?;
+        wordcraft_docx::write(stamped.as_ref().unwrap_or(&self.doc)).map_err(|e| JsValue::from_str(&e.to_string()))
+    }
+    /// Like `save_at`, also recording `author` as the last person to modify the file.
+    pub fn save_at_by(&self, date: &str, author: &str) -> Result<Vec<u8>, JsValue> {
+        let stamped = self.stamped_by(date, author).map_err(|e| JsValue::from_str(&e))?;
         wordcraft_docx::write(stamped.as_ref().unwrap_or(&self.doc)).map_err(|e| JsValue::from_str(&e.to_string()))
     }
     /// Like `export_pdf_opts`, with the save time as the PDF creation date and properties stamp.
@@ -2499,6 +2514,22 @@ mod tests {
         assert_eq!(s.doc.body.len(), len);
         s.do_remove_image(1).unwrap();
         assert_eq!(s.doc.body.len(), len - 1);
+    }
+    #[test]
+    fn save_records_last_modified_by_on_the_copy_only() {
+        let s = DocSession::from_bytes(FIXTURE).unwrap();
+        let before = s.doc.core.clone();
+        let saved = s.save_at_by("2026-10-14T18:00:00Z", "  Ada Lovelace ").unwrap();
+        assert_eq!(s.doc.core, before);
+        let re = DocSession::from_bytes(&saved).unwrap();
+        assert_eq!(re.doc.core.last_modified_by, "Ada Lovelace");
+        // An empty name keeps what the file had.
+        let keep = DocSession::from_bytes(&s.save_at_by("2026-10-14T18:00:00Z", "").unwrap()).unwrap();
+        assert_eq!(keep.doc.core.last_modified_by, before.last_modified_by);
+        for bad in ["bell\u{7}", "line\nbreak", &"x".repeat(61)] {
+            assert!(s.save_at_by("2026-10-14T18:00:00Z", bad).is_err(), "{bad:?}");
+        }
+        assert!(s.save_at_by("nope", "Ada").is_err());
     }
     #[test]
     fn save_stamps_a_clone_with_modified_created_and_revision() {

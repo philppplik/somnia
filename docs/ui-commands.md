@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-546 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+548 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -232,6 +232,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `documents.align.justify` | Justify | View | documents |  |
 | `documents.align.left` | Align left | View | documents |  |
 | `documents.align.right` | Align right | View | documents |  |
+| `documents.author.set` | Set the author name | View | documents |  |
 | `documents.clearFormatting` | Clear text formatting | View | documents |  |
 | `documents.clearSelection` | Clear document selection | View | documents-panels |  |
 | `documents.comments.add` | Comment on selection | View | documents |  |
@@ -383,6 +384,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `pdf.saveCopy` | PDF: Save edited copy | Project | pdfedit | `Mod+Shift+S` |
 | `pdf.undo` | PDF: Undo | Edit | pdfedit |  |
 | `photos.applyLook` | Photos: Apply a look | Edit | photos |  |
+| `photos.applyVersion` | Photos: Apply a saved version | Edit | photos |  |
 | `photos.crop.apply` | Photos: Apply crop | Edit | photos |  |
 | `photos.crop.cancel` | Photos: Cancel crop | Edit | photos |  |
 | `photos.crop.reset` | Photos: Remove crop | Edit | photos |  |

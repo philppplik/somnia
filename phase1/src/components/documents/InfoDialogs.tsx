@@ -1,6 +1,7 @@
 import {useEffect,useState} from 'react';
 import {MAX_TAB_STOPS,TAB_ALIGNS,TAB_LEADERS,tabsProblem,type TabStopSpec,MAX_DESCRIPTION_CHARS,MAX_PROPERTY_CHARS,propertiesProblem,PROPERTY_KEYS,type PropertiesPatch,type PropertiesState} from '../../lib/documents/protocol';
 import {setInfoDialog,useInfoDialog} from '../../lib/documents/infoDialog';
+import {authorProblem,MAX_AUTHOR_CHARS,savedAuthor,setAuthor} from '../../lib/documents/author';
 import {readProperties,selectedText,setProperties,setTabStops} from '../../lib/documents/session';
 import {detailedStats} from '../../lib/documents/stats';
 import {useDocuments} from '../../lib/documents/store';
@@ -25,15 +26,19 @@ function PropertiesDialog({onClose}:{onClose:()=>void}){
  const {t}=useT();const [orig,setOrig]=useState<PropertiesState|null>(null);const [form,setForm]=useState<PropertiesState|null>(null);
  useEffect(()=>{let live=true;void readProperties().then(s=>{if(live&&s){setOrig(s);setForm(s);}}).catch(()=>undefined);return()=>{live=false;};},[]);
  if(!orig||!form)return shell('documents-props-title',onClose,<h2 id="documents-props-title" className="text-sm font-medium">{t('documents.props.title')}</h2>);
+ const [author,setAuthorText]=useState(savedAuthor);const authorBad=authorProblem(author)!==null;const authorChanged=author.trim()!==savedAuthor();
  const patch=buildPropertiesPatch(orig,form);const bad=PROPERTY_KEYS.some(k=>propertiesProblem({[k]:form[k]})!==null&&form[k].trim()!==orig[k]);
  return shell('documents-props-title',onClose,<>
   <h2 id="documents-props-title" className="text-sm font-medium">{t('documents.props.title')}</h2>
   {PROPERTY_KEYS.map(k=><label key={k} className="grid gap-1 text-xs text-ink-2">{t('documents.props.field.'+k)}
    {k==='description'?<Textarea className={field} rows={3} maxLength={MAX_DESCRIPTION_CHARS} value={form[k]} onChange={e=>setForm({...form,[k]:e.currentTarget.value})} data-testid={'documents-props-'+k}/>
     :<NativeInput className={field} maxLength={MAX_PROPERTY_CHARS} value={form[k]} onChange={e=>setForm({...form,[k]:e.currentTarget.value})} data-testid={'documents-props-'+k}/>}</label>)}
-  {bad&&<p role="alert" className="text-xs text-ink-3">{t('documents.props.invalid')}</p>}
+  <label className="grid gap-1 text-xs text-ink-2">{t('documents.props.author')}
+   <NativeInput className={field} maxLength={MAX_AUTHOR_CHARS} value={author} aria-invalid={authorBad} placeholder={t('documents.props.authorDefault')} onChange={e=>setAuthorText(e.currentTarget.value)} data-testid="documents-props-author"/></label>
+  <p className="text-xs text-ink-3">{t('documents.props.authorNote')}</p>
+  {(bad||authorBad)&&<p role="alert" className="text-xs text-ink-3">{t('documents.props.invalid')}</p>}
   <div className="flex justify-end gap-2"><NativeButton className={tool} onClick={onClose}>{t('documents.para.opt.cancel')}</NativeButton>
-   <NativeButton className={tool} disabled={!patch} onClick={()=>{if(!patch)return;onClose();void setProperties(patch);}} data-testid="documents-props-apply">{t('documents.para.opt.apply')}</NativeButton></div></>);
+   <NativeButton className={tool} disabled={authorBad||(!patch&&!authorChanged)} onClick={()=>{if(authorChanged&&!setAuthor(author))return;onClose();if(patch)void setProperties(patch);}} data-testid="documents-props-apply">{t('documents.para.opt.apply')}</NativeButton></div></>);
 }
 function WordCountDialog({onClose}:{onClose:()=>void}){
  const {t}=useT();const doc=useDocuments();

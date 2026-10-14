@@ -1,4 +1,5 @@
 import type {DocumentsEngine} from './engine';
+import {savedAuthor} from './author';
 /** Saves what the engine would write as a NEW file next to the original name. The opened file is never overwritten. */
 export const copyName=(name:string)=>name.replace(/^.*[\\/]/,'').replace(/\.docx$/i,'')+' (Somnia copy).docx';
 export const MAX_COPY_NAME=120;
@@ -28,7 +29,7 @@ export async function savePdf(engine:DocumentsEngine,name:string,fileName?:strin
  const a=document.createElement('a');a.href=url;a.download=fileName?safePdfName(fileName,name):pdfName(name);a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 export async function saveCopy(engine:DocumentsEngine,name:string,fileName?:string|null){
- const bytes=await engine.save(new Date().toISOString());
+ const bytes=await engine.save(new Date().toISOString(),savedAuthor()||undefined);
  const url=URL.createObjectURL(new Blob([bytes as BlobPart],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}));
  const a=document.createElement('a');a.href=url;a.download=fileName?safeCopyName(fileName,name):copyName(name);a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }

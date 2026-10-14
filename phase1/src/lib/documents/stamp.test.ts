@@ -23,3 +23,23 @@ test('save and PDF stamp only with a valid date',()=>{
  for(const bad of ['nope','2026-10-14',42,null]){assert.equal(ok(k,{kind:'save',date:bad}),false);assert.equal(ok(k,{kind:'exportPdf',date:bad}),false);}
  assert.equal(calls.length,4,'refused dates never reach the engine');
 });
+import {authorProblem,commentAuthor,savedAuthor,setAuthor,AUTHOR_KEY} from './author';
+test('author names are bounded and stored locally',()=>{
+ const mem=new Map<string,string>();
+ (globalThis as unknown as {localStorage:Storage}).localStorage={getItem:k=>mem.get(k)??null,setItem:(k,v)=>{mem.set(k,String(v));},removeItem:k=>{mem.delete(k);},clear:()=>mem.clear(),key:()=>null,length:0};
+ assert.equal(commentAuthor(),'Somnia user');
+ assert.equal(setAuthor('  Ada Lovelace '),true);assert.equal(savedAuthor(),'Ada Lovelace');assert.equal(commentAuthor(),'Ada Lovelace');
+ for(const bad of ['x'.repeat(61),'bell\u0007','a\nb',42 as unknown as string]){assert.equal(setAuthor(bad),false,String(bad));assert.notEqual(authorProblem(bad),null);}
+ assert.equal(savedAuthor(),'Ada Lovelace','refused names change nothing');
+ mem.set(AUTHOR_KEY,'x\u0007y');assert.equal(savedAuthor(),'','a tampered stored value is ignored');
+ assert.equal(setAuthor(''),true);assert.equal(commentAuthor(),'Somnia user');
+});
+test('the author reaches the engine only when valid',()=>{
+ const {k,calls}=core();const D='2026-10-14T18:00:00.000Z';
+ const S2=class{constructor(_b?:Uint8Array){}free(){}blocks(){return '[]';}paginate(){return 1;}page_info(){return '{"pages":[],"cacheHits":0,"cacheMisses":0}';}text(){return '';}
+  save_at_by(d:string,a:string){calls.push(`by ${d} ${a}`);return enc('PK');}save_at(d:string){calls.push('at '+d);return enc('PK');}};
+ void k;const k2=new DocumentsCore(S2 as unknown as new(b:Uint8Array)=>DocSessionLike);k2.handle({id:1,kind:'open',bytes:new Uint8Array(4)} as never);
+ assert.equal(ok(k2,{kind:'save',date:D,author:' Ada '}),true);assert.equal(ok(k2,{kind:'save',date:D,author:''}),true);
+ for(const bad of ['x'.repeat(61),'bell\u0007',7])assert.equal(ok(k2,{kind:'save',date:D,author:bad}),false);
+ assert.deepEqual(calls,[`by ${D} Ada`,`at ${D}`]);
+});

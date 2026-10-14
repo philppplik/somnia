@@ -12,6 +12,7 @@ import {commentsOpen,setCommentsOpen} from './comments';
 import {setShortcutsOpen} from './shortcuts';
 import {setParagraphOptionsOpen} from './paragraphOptions';
 import {setInfoDialog} from './infoDialog';
+import {authorProblem,setAuthor} from './author';
 import {insertPageBreak,setParagraphOptions,setProperties,setTabStops} from './session';
 import {parsePdfPages,checkParaPatch,PARA_FLAG_KEYS,propertiesProblem,tabsProblem} from './protocol';
 import {addComment,commentSelection,deleteComment,goToComment,readComments,replyComment,resolveComment} from './session';
@@ -110,6 +111,10 @@ export function registerDocumentsCommands(){
    const tabs=(p as Record<string,unknown>|undefined)?.tabs;const bad=tabsProblem(tabs);if(bad)throw expected(bad);
    await setTabStops(tabs as import('./protocol').TabStopSpec[]);
   },()=>ready()&&!!getDocumentsState().caret),
+  add('documents.author.set','Set the author name',async p=>{
+   const n=(p as Record<string,unknown>|undefined)?.name;const bad=authorProblem(n);if(bad)throw expected(bad);
+   if(!setAuthor(n as string))throw expected('The name could not be saved on this device.');
+  },()=>true),
   add('documents.wordCount.show','Word count',()=>{setInfoDialog('wordCount');},()=>ready()),
   add('documents.shortcuts.show','Keyboard shortcuts',()=>{setShortcutsOpen(true);}),
   add('documents.fontSize.increase','Increase font size',async()=>{await stepFontSize(1);},()=>ready()&&!!getDocumentsState().caret),

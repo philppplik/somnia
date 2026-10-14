@@ -2474,6 +2474,17 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.author.set",
+      "title": "Set the author name",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.clearFormatting",
       "title": "Clear text formatting",
       "category": "View",
@@ -4062,6 +4073,19 @@
         "look",
         "photos",
         "preset"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "photos.applyVersion",
+      "title": "Photos: Apply a saved version",
+      "category": "Edit",
+      "source": "photos",
+      "keywords": [
+        "history",
+        "photos",
+        "snapshot",
+        "version"
       ],
       "hasEnabled": true
     },

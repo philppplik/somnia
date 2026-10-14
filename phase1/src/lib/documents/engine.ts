@@ -71,7 +71,7 @@ export class DocumentsEngine{
  async rects(block:number,a:number,b:number){return(await this.call('rects',id=>({id,kind:'rects',block,a,b}))).rects;}
  async exportPdf(options?:import('./protocol').PdfOptions,date?:string):Promise<Uint8Array>{return new Uint8Array((await this.call('saved',id=>({id,kind:'exportPdf',options,date}))).bytes);}
  /** The saved file's bytes. With `date` (UTC ISO 8601) the file's properties are stamped with the save time on a copy; the open document is unchanged. */
- async save(date?:string):Promise<Uint8Array>{return new Uint8Array((await this.call('saved',id=>({id,kind:'save',date}))).bytes);}
+ async save(date?:string,author?:string):Promise<Uint8Array>{return new Uint8Array((await this.call('saved',id=>({id,kind:'save',date,author}))).bytes);}
  async close(){if(!this.disposed)await this.call('closed',id=>({id,kind:'close'}));}
  dispose(error=new Error('Documents engine was closed.')){
   if(this.disposed)return;this.disposed=true;this.worker.terminate();
