@@ -7,8 +7,8 @@ import {commandDispatcher} from '../../lib/commandDispatcher';
 import {Button} from '../ui/button';
 import {NumberField} from '../ui/number-field';
 import {Menu,MenuTrigger,MenuContent,MenuItem} from '../ui/menu';
-import {TEXT_COLORS,colorKey} from '../../lib/slides/textFormat';
-import {MIN_SIZE_PT,MAX_SIZE_PT,ARRANGE_MODES,TRANSITION_KINDS,TRANSITION_DIRS,TRANSITION_SPEEDS,readSlideTransition,boundsEditIssue} from '../../lib/slides/deckPackage';
+import {TEXT_COLORS,GRADIENT_PRESETS,OPACITY_STEPS,LINE_WIDTHS,colorKey} from '../../lib/slides/textFormat';
+import {MIN_SIZE_PT,MAX_SIZE_PT,ARRANGE_MODES,TRANSITION_KINDS,TRANSITION_DIRS,TRANSITION_SPEEDS,LINE_DASHES,readSlideTransition,readShapeStyle,boundsEditIssue} from '../../lib/slides/deckPackage';
 import {ALIGN_MODES} from '../../lib/slides/shapeGeometry';
 import {useValidShape} from './SlidesShapeOverlay';
 
@@ -21,6 +21,12 @@ export function SlidesTextToolbar(){
   const fmt=(patch:Record<string,unknown>)=>run('slides.formatText',{source:s.source,slideId,shapeId:shape!.id,...patch});
   const pic=!multi&&!!shape&&shape.kind==='picture',file=useRef<HTMLInputElement>(null),mode=useRef<'insert'|'replace'>('insert');
   const tr=useMemo(()=>{if(!s.working||slideId===undefined)return null;try{return readSlideTransition(s.working,slideId);}catch{return null;}},[s.working,slideId]);
+  const sel=valid?[valid.shape,...valid.more]:[],styleOk=ready&&sel.length>0&&sel.every(x=>!x.parentId&&(x.kind==='text'||x.kind==='picture'));
+  const fillOk=styleOk&&sel.every(x=>x.kind==='text');
+  const st=useMemo(()=>{if(!s.working||slideId===undefined||!valid)return null;try{return readShapeStyle(s.working,slideId,valid.shape.id);}catch{return null;}},[s.working,slideId,valid]);
+  const style=(patch:Record<string,unknown>)=>run('slides.styleShapes',patch);
+  const fillAlpha=st&&(st.fill.kind==='solid'||st.fill.kind==='gradient')?st.fill.alpha??100:100;
+  const lineNow=st?.line.kind==='solid'?st.line:null;
   const setTr=(patch:Record<string,unknown>)=>run('slides.setTransition',{source:s.source,slideId,...patch});
   const [bad,setBad]=useState(false);
   const pick=(m:'insert'|'replace')=>{mode.current=m;setBad(false);file.current?.click();};
@@ -41,6 +47,21 @@ export function SlidesTextToolbar(){
       parse={d=>/^\d{1,3}$/.test(d.trim())&&Number(d)>=MIN_SIZE_PT&&Number(d)<=MAX_SIZE_PT?{ok:true,value:Number(d)}:{ok:false,error:t('slides.fmt.sizeInvalid')}} constraintError={t('slides.fmt.sizeInvalid')} onCommit={v=>fmt({sizePt:v})}/></div>
     <Menu><MenuTrigger render={<Button size="compact" variant="outline" disabled={!ready||!box}>{t('slides.fmt.color')}{colorKey(f?.color??null)?`: ${t(`slides.color.${colorKey(f!.color)}`)}`:''}</Button>}/>
       <MenuContent>{TEXT_COLORS.map(c=><MenuItem key={c.key} onClick={()=>fmt({color:c.hex})}>{t(`slides.color.${c.key}`)}</MenuItem>)}</MenuContent></Menu>
+    <Menu><MenuTrigger render={<Button size="compact" variant="outline" disabled={!fillOk||!st}>{t('slides.style.fill')}</Button>}/>
+      <MenuContent>{st&&!st.editable?<MenuItem disabled>{t('slides.style.uneditable')}</MenuItem>:<>
+        <MenuItem onClick={()=>style({fill:{kind:'none'}})}>{st?.fill.kind==='none'?'• ':''}{t('slides.style.fillNone')}</MenuItem>
+        {TEXT_COLORS.map(c=><MenuItem key={c.key} onClick={()=>style({fill:{kind:'solid',color:c.hex,alpha:fillAlpha}})}>{st?.fill.kind==='solid'&&st.fill.color===c.hex?'• ':''}{t(`slides.color.${c.key}`)}</MenuItem>)}
+        {GRADIENT_PRESETS.map(g=><MenuItem key={g.key} onClick={()=>style({fill:{kind:'gradient',from:g.from,to:g.to,angle:g.angle,alpha:fillAlpha}})}>{t(`slides.style.gradient.${g.key}`)}</MenuItem>)}
+        {(st?.fill.kind==='solid'||st?.fill.kind==='gradient')&&OPACITY_STEPS.map(o=><MenuItem key={`o-${o}`} onClick={()=>style({fill:st.fill.kind==='solid'?{kind:'solid',color:st.fill.color,alpha:o}:{kind:'gradient',from:st.fill.color,to:st.fill.to,angle:st.fill.angle??90,alpha:o}})}>{fillAlpha===o?'• ':''}{t('slides.style.opacity')} {o}%</MenuItem>)}
+      </>}</MenuContent></Menu>
+    <Menu><MenuTrigger render={<Button size="compact" variant="outline" disabled={!styleOk||!st}>{t('slides.style.outline')}</Button>}/>
+      <MenuContent>{st&&!st.editable?<MenuItem disabled>{t('slides.style.uneditable')}</MenuItem>:<>
+        <MenuItem onClick={()=>style({line:{kind:'none'}})}>{st?.line.kind==='none'?'• ':''}{t('slides.style.outlineNone')}</MenuItem>
+        {TEXT_COLORS.map(c=><MenuItem key={c.key} onClick={()=>style({line:{kind:'solid',color:c.hex,widthPt:lineNow?.widthPt??1,dash:lineNow?.dash??'solid'}})}>{lineNow?.color===c.hex?'• ':''}{t(`slides.color.${c.key}`)}</MenuItem>)}
+        {lineNow&&LINE_WIDTHS.map(w=><MenuItem key={`w-${w}`} onClick={()=>style({line:{kind:'solid',color:lineNow.color,widthPt:w,dash:lineNow.dash??'solid'}})}>{lineNow.widthPt===w?'• ':''}{w} pt</MenuItem>)}
+        {lineNow&&LINE_DASHES.map(d=><MenuItem key={`d-${d}`} onClick={()=>style({line:{kind:'solid',color:lineNow.color,widthPt:lineNow.widthPt??1,dash:d}})}>{(lineNow.dash??'solid')===d?'• ':''}{t(`slides.style.dash.${d}`)}</MenuItem>)}
+      </>}</MenuContent></Menu>
+    <Button size="compact" variant={st?.shadow==='outer'?'primary':'outline'} aria-pressed={st?.shadow==='outer'} disabled={!styleOk||!st||!st.editable} onClick={()=>style({shadow:st?.shadow!=='outer'})}>{t('slides.style.shadow')}</Button>
     <Menu><MenuTrigger render={<Button size="compact" variant="outline" disabled={!ready||!shape||[shape,...(valid?.more??[])].some(x=>!!boundsEditIssue(x))}>{t('slides.align')}</Button>}/>
       <MenuContent>
         {ALIGN_MODES.map(m=><MenuItem key={m} onClick={()=>run('slides.alignSelection',{mode:m,to:'slide'})}>{t(`slides.align.${m}`)}</MenuItem>)}

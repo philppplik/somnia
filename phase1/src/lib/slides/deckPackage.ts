@@ -1060,3 +1060,172 @@ export function setSlideNotes(bytes:Uint8Array,slideId:number,input:readonly str
   const res=finish(c,{[relsName(slide.part)]:nextRels,'[Content_Types].xml':addOverride(c.types,np,CT_NOTES)},{[np]:strToU8(notes),[relsName(np)]:strToU8(nrels)},[],check);
   verify(res);return res;
 }
+
+/* ---------------------------------------------------------------------------------------
+ * Shape styling: fill, outline, shadow, opacity, gradient on top-level p:sp / p:pic shapes.
+ * Only the pieces the user changes are regenerated, inside the shape's own p:spPr, in schema
+ * order. Picture/pattern/group fills, effect graphs and unknown spPr children are never
+ * rewritten: editing a shape that has them is refused.
+ * ------------------------------------------------------------------------------------- */
+export type FillStyle={kind:'none'}|{kind:'solid';color:string;alpha:number}|{kind:'gradient';from:string;to:string;angle:number;alpha:number};
+export type LineStyle={kind:'none'}|{kind:'solid';color:string;widthPt:number;dash:'solid'|'dash'|'dot'};
+export interface ShapeStylePatch {fill?:FillStyle;line?:LineStyle;shadow?:boolean}
+export interface ShapeStyleInfo {
+  fill:{kind:'inherit'|'none'|'solid'|'gradient'|'other';color?:string;to?:string;angle?:number;alpha?:number};
+  line:{kind:'inherit'|'none'|'solid'|'other';color?:string;widthPt?:number;dash?:'solid'|'dash'|'dot'};
+  shadow:'none'|'outer'|'other';fillable:boolean;editable:boolean;
+}
+export const LINE_DASHES=['solid','dash','dot'] as const,MIN_LINE_PT=0.25,MAX_LINE_PT=20,MIN_ALPHA=5;
+const HEX6=/^[0-9A-F]{6}$/;
+const DASH_XML={solid:'solid',dash:'dash',dot:'sysDot'} as const;
+interface SpKid {slot:'xfrm'|'geom'|'fill'|'ln'|'effect'|'rest';xml:string;flag?:'otherFill'|'otherEffect'}
+interface SpPrParts {start:number;end:number;open:string;kids:SpKid[]}
+const SP_PR=/<p:spPr\b((?:[^>"']|"[^"]*"|'[^']*')*?)(?:\/>|>([\s\S]*?)<\/p:spPr>)/;
+function spPrKids(inner:string):SpKid[]{
+  const kids:SpKid[]=[];let depth=0,start=-1,name='';
+  for(const m of inner.matchAll(TAG)){
+    if(m[2]===undefined)continue;
+    if(m[1]==='/'){depth--;if(depth===0){kids.push(classify(name,inner.slice(start,m.index!+m[0].length)));}continue;}
+    if(m[4]==='/'){if(depth===0)kids.push(classify(m[2],m[0]));continue;}
+    if(depth===0){start=m.index!;name=m[2];}
+    depth++;
+  }
+  if(depth!==0)throw Error('Malformed shape properties');
+  const rest=inner.replace(/<!--[\s\S]*?-->/g,'');void rest;
+  return kids;
+}
+function classify(tag:string,xml:string):SpKid{
+  if(tag==='a:xfrm')return {slot:'xfrm',xml};
+  if(tag==='a:prstGeom'||tag==='a:custGeom')return {slot:'geom',xml};
+  if(tag==='a:noFill'||tag==='a:solidFill'||tag==='a:gradFill')return {slot:'fill',xml};
+  if(tag==='a:blipFill'||tag==='a:pattFill'||tag==='a:grpFill')return {slot:'fill',xml,flag:'otherFill'};
+  if(tag==='a:ln')return {slot:'ln',xml};
+  if(tag==='a:effectLst')return {slot:'effect',xml};
+  if(tag==='a:effectDag')return {slot:'effect',xml,flag:'otherEffect'};
+  if(tag==='a:scene3d'||tag==='a:sp3d'||tag==='a:extLst')return {slot:'rest',xml};
+  throw Error('This shape has properties that cannot be styled here');
+}
+function spPrOf(shapeXml:string):SpPrParts|null{
+  const m=SP_PR.exec(shapeXml);if(!m)return null;
+  return {start:m.index,end:m.index+m[0].length,open:m[1],kids:m[2]===undefined?[]:spPrKids(m[2])};
+}
+const colorOf=(xml:string)=>{const m=/<a:srgbClr\s+val="([0-9A-Fa-f]{6})"\s*(?:\/>|>([\s\S]*?)<\/a:srgbClr>)/.exec(xml);if(!m)return null;const a=/<a:alpha\s+val="(\d+)"/.exec(m[2]??'');return {color:m[1].toUpperCase(),alpha:a?Math.round(Number(a[1])/1000):100};};
+function fillInfo(k:SpKid|undefined):ShapeStyleInfo['fill']{
+  if(!k)return {kind:'inherit'};if(k.flag)return {kind:'other'};
+  if(k.xml.startsWith('<a:noFill'))return {kind:'none'};
+  if(k.xml.startsWith('<a:solidFill')){const c=colorOf(k.xml);return c?{kind:'solid',...c}:{kind:'other'};}
+  const stops=[...k.xml.matchAll(/<a:gs\b[^>]*>([\s\S]*?)<\/a:gs>/g)].map(x=>colorOf(x[1]));
+  const ang=/<a:lin\b[^>]*\sang="(-?\d+)"/.exec(k.xml);
+  if(stops.length===2&&stops[0]&&stops[1]&&ang&&!/<a:path\b/.test(k.xml))return {kind:'gradient',color:stops[0].color,to:stops[1].color,angle:((Math.round(Number(ang[1])/60000)%360)+360)%360,alpha:stops[0].alpha};
+  return {kind:'other'};
+}
+function lineInfo(k:SpKid|undefined):ShapeStyleInfo['line']{
+  if(!k)return {kind:'inherit'};
+  const m=/^<a:ln\b((?:[^>"']|"[^"]*"|'[^']*')*?)(?:\/>|>([\s\S]*?)<\/a:ln>)$/.exec(k.xml);if(!m)return {kind:'other'};
+  const body=m[2]??'',w=/\sw="(\d+)"/.exec(m[1]);
+  if(/^<a:noFill\/>/.test(body.trim()))return {kind:'none'};
+  const f=/^\s*<a:solidFill>([\s\S]*?)<\/a:solidFill>/.exec(body),c=f?colorOf(f[1]):null;
+  if(!c)return {kind:'other'};
+  const d=/<a:prstDash\s+val="(\w+)"/.exec(body)?.[1];
+  return {kind:'solid',color:c.color,widthPt:w?Math.round(Number(w[1])/12700*100)/100:1,dash:d==='dash'?'dash':d==='sysDot'||d==='dot'?'dot':'solid'};
+}
+function shadowInfo(k:SpKid|undefined):ShapeStyleInfo['shadow']{
+  if(!k)return 'none';if(k.flag)return 'other';
+  if(/^<a:effectLst\s*\/>$/.test(k.xml)||/^<a:effectLst>\s*<\/a:effectLst>$/.test(k.xml))return 'none';
+  return /^<a:effectLst>\s*<a:outerShdw\b[\s\S]*<\/a:outerShdw>\s*<\/a:effectLst>$/.test(k.xml)&&(k.xml.match(/<a:outerShdw\b/g)??[]).length===1?'outer':'other';
+}
+const styleTarget=(xml:string,id:number)=>{
+  const k=topLevelShapes(xml).find(x=>x.id===id);if(!k)throw Error('Shape no longer exists');
+  const sx=xml.slice(k.start,k.end),tag=/^<(p:\w+)/.exec(sx)?.[1];
+  if(tag!=='p:sp'&&tag!=='p:pic')throw Error('Only text boxes and pictures can be styled');
+  return {k,sx,tag,sp:spPrOf(sx)};
+};
+/** Reads the style of one top-level text box or picture. `editable` is false when styling would have to rewrite content it does not understand. */
+export function readShapeStyle(bytes:Uint8Array,slideId:number,shapeId:number):ShapeStyleInfo{
+  const slide=readDeckModel(bytes).slides.find(s=>s.id===slideId);if(!slide)throw Error('Slide not found');
+  const {tag,sp}=styleTarget(text(openPackage(bytes),slide.part),shapeId);
+  const kid=(slot:SpKid['slot'])=>sp?.kids.find(k=>k.slot===slot);
+  const fill=fillInfo(kid('fill')),line=lineInfo(kid('ln')),shadow=shadowInfo(kid('effect'));
+  return {fill,line,shadow,fillable:tag==='p:sp',editable:!!sp&&fill.kind!=='other'&&shadow!=='other'&&!sp.kids.some(k=>k.flag)};
+}
+const alphaXml=(a:number)=>a<100?`<a:alpha val="${a*1000}"/>`:'';
+const clr=(hex:string,a:number)=>a<100?`<a:srgbClr val="${hex}"><a:alpha val="${a*1000}"/></a:srgbClr>`:`<a:srgbClr val="${hex}"/>`;
+function validatePatch(p:ShapeStylePatch){
+  if(!p||typeof p!=='object'||(p.fill===undefined&&p.line===undefined&&p.shadow===undefined))throw Error('Nothing to change');
+  const col=(c:unknown)=>{if(typeof c!=='string'||!HEX6.test(c))throw Error('Colors must be 6-digit uppercase hex values');};
+  const f=p.fill;
+  if(f){
+    if(f.kind==='solid'||f.kind==='gradient'){if(!Number.isInteger(f.alpha)||f.alpha<MIN_ALPHA||f.alpha>100)throw Error(`Opacity must be a whole number from ${MIN_ALPHA} to 100`);}
+    if(f.kind==='solid')col(f.color);else if(f.kind==='gradient'){col(f.from);col(f.to);if(!Number.isInteger(f.angle)||f.angle<0||f.angle>359)throw Error('Gradient angle must be a whole number from 0 to 359');}
+    else if(f.kind!=='none')throw Error('Unknown fill');
+  }
+  const l=p.line;
+  if(l){
+    if(l.kind==='solid'){col(l.color);if(!(l.widthPt>=MIN_LINE_PT&&l.widthPt<=MAX_LINE_PT))throw Error(`Outline width must be ${MIN_LINE_PT} to ${MAX_LINE_PT} pt`);if(!LINE_DASHES.includes(l.dash))throw Error('Unknown outline style');}
+    else if(l.kind!=='none')throw Error('Unknown outline');
+  }
+  if(p.shadow!==undefined&&typeof p.shadow!=='boolean')throw Error('Shadow must be on or off');
+}
+function fillXml(f:FillStyle):string{
+  if(f.kind==='none')return '<a:noFill/>';
+  if(f.kind==='solid')return `<a:solidFill>${clr(f.color,f.alpha)}</a:solidFill>`;
+  return `<a:gradFill rotWithShape="1"><a:gsLst><a:gs pos="0">${clr(f.from,f.alpha)}</a:gs><a:gs pos="100000">${clr(f.to,f.alpha)}</a:gs></a:gsLst><a:lin ang="${f.angle*60000}" scaled="0"/></a:gradFill>`;
+}
+function lineXml(old:SpKid|undefined,l:LineStyle):string{
+  const m=old?/^<a:ln\b((?:[^>"']|"[^"]*"|'[^']*')*?)(?:\/>|>([\s\S]*?)<\/a:ln>)$/.exec(old.xml):null;
+  if(old&&!m)throw Error('This shape has an outline that cannot be styled here');
+  const attrs=(m?.[1]??'').replace(/\sw="[^"]*"/,''),body=m?.[2]??'';
+  const kids:string[]=[];let depth=0,start=0;
+  for(const t of body.matchAll(TAG)){
+    if(t[2]===undefined)continue;
+    if(t[1]==='/'){depth--;if(depth===0)kids.push(body.slice(start,t.index!+t[0].length));continue;}
+    if(t[4]==='/'){if(depth===0)kids.push(t[0]);continue;}
+    if(depth===0)start=t.index!;
+    depth++;
+  }
+  const keep=kids.filter(x=>!/^<a:(noFill|solidFill|gradFill|pattFill|prstDash|custDash)\b/.test(x));
+  const head=l.kind==='none'?'<a:noFill/>':`<a:solidFill>${clr(l.color,100)}</a:solidFill><a:prstDash val="${DASH_XML[l.dash]}"/>`;
+  const w=l.kind==='solid'?` w="${Math.round(l.widthPt*12700)}"`:(/\sw="[^"]*"/.exec(m?.[1]??'')?.[0]??'');
+  return `<a:ln${w}${attrs}>${head}${l.kind==='none'?'':keep.join('')}</a:ln>`;
+}
+const SHADOW_XML='<a:effectLst><a:outerShdw blurRad="63500" dist="38100" dir="2700000" algn="tl" rotWithShape="0"><a:srgbClr val="000000"><a:alpha val="40000"/></a:srgbClr></a:outerShdw></a:effectLst>';
+function restyle(xml:string,shapeId:number,patch:ShapeStylePatch):string{
+  const {k,sx,tag,sp}=styleTarget(xml,shapeId);
+  if(!sp)throw Error('This shape has no properties block to style');
+  if(sp.kids.some(x=>x.flag)&&(patch.fill||patch.shadow!==undefined))throw Error('This shape has a fill or effect that cannot be edited here');
+  const kids=new Map<SpKid['slot'],SpKid>();const rest:SpKid[]=[];
+  for(const x of sp.kids){if(x.slot==='rest')rest.push(x);else{if(kids.has(x.slot))throw Error('Shape has duplicate properties');kids.set(x.slot,x);}}
+  if(patch.fill){if(tag!=='p:sp')throw Error('Pictures cannot be filled');kids.set('fill',{slot:'fill',xml:fillXml(patch.fill)});}
+  if(patch.line)kids.set('ln',{slot:'ln',xml:lineXml(kids.get('ln'),patch.line)});
+  if(patch.shadow!==undefined){
+    const cur=shadowInfo(kids.get('effect'));
+    if(cur==='other')throw Error('This shape has effects that cannot be edited here');
+    if(patch.shadow)kids.set('effect',{slot:'effect',xml:SHADOW_XML});else kids.delete('effect');
+  }
+  const body=['xfrm','geom','fill','ln','effect'].map(s=>kids.get(s as SpKid['slot'])?.xml??'').join('')+rest.map(r=>r.xml).join('');
+  const out=`<p:spPr${sp.open}>${body}</p:spPr>`;
+  const nsx=sx.slice(0,sp.start)+out+sx.slice(sp.end);
+  return xml.slice(0,k.start)+nsx+xml.slice(k.end);
+}
+/** Styles up to 50 top-level shapes of one slide as a single result. Verified by reopening the package. */
+export function setShapeStyle(bytes:Uint8Array,slideId:number,shapeIds:readonly number[],patch:ShapeStylePatch):Uint8Array{
+  validatePatch(patch);
+  if(!shapeIds.length||shapeIds.length>MAX_MULTI_EDIT||new Set(shapeIds).size!==shapeIds.length)throw Error(`Style between 1 and ${MAX_MULTI_EDIT} different shapes`);
+  const model=readDeckModel(bytes),slide=model.slides.find(s=>s.id===slideId);
+  if(!slide)throw Error('Slide no longer exists');if(slide.problems.length)throw Error('This slide has unsupported structure');
+  const zip=openPackage(bytes),xml=text(zip,slide.part);
+  if(new Set(topLevelShapes(xml).map(k=>k.id)).size!==topLevelShapes(xml).length)throw Error('Duplicate shape ids on this slide');
+  let out=xml;for(const id of shapeIds)out=restyle(out,id,patch);
+  if(out===xml)return bytes;
+  const res=repack(zip,{[slide.part]:out}),after=readDeckModel(res),as=after.slides.find(s=>s.id===slideId);
+  if(!as||as.problems.length||JSON.stringify(as.shapes)!==JSON.stringify(slide.shapes)||after.runs.length!==model.runs.length||after.runs.some((r,i)=>r.text!==model.runs[i].text))throw Error('Edited deck failed verification');
+  for(const id of shapeIds){
+    const i=readShapeStyle(res,slideId,id);
+    if(patch.fill&&(i.fill.kind!==patch.fill.kind||(patch.fill.kind==='solid'&&(i.fill.color!==patch.fill.color||i.fill.alpha!==patch.fill.alpha))||(patch.fill.kind==='gradient'&&(i.fill.color!==patch.fill.from||i.fill.to!==patch.fill.to||i.fill.angle!==patch.fill.angle))))throw Error('Edited deck failed verification');
+    if(patch.line&&(i.line.kind!==patch.line.kind||(patch.line.kind==='solid'&&(i.line.color!==patch.line.color||Math.abs((i.line.widthPt??0)-patch.line.widthPt)>0.01||i.line.dash!==patch.line.dash))))throw Error('Edited deck failed verification');
+    if(patch.shadow!==undefined&&i.shadow!==(patch.shadow?'outer':'none'))throw Error('Edited deck failed verification');
+  }
+  const re=unzipSync(res);
+  for(const name of Object.keys(zip))if(name!==slide.part&&(!re[name]||re[name].length!==zip[name].length||re[name].some((v,i)=>v!==zip[name][i])))throw Error('Edited deck changed an unrelated part');
+  return res;
+}

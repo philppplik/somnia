@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {unzipSync,zipSync,strFromU8,strToU8} from 'fflate';
-import {setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
+import {setShapeStyle,readShapeStyle,setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
 import {readRuns,makeEditedCopy} from './editCopy';
 import {png,jpeg} from './imageFixtures';
 
@@ -590,4 +590,51 @@ test('setSlideNotes edits an existing notes body, creates a page when a notes ma
   assert.throws(()=>setSlideNotes(corpus,sid,['bad\u0000char']),/unsupported characters/);
   assert.throws(()=>setSlideNotes(corpus,sid,[5 as never]),/must be text/);
   assert.throws(()=>setSlideNotes(corpus,999,['x']),/no longer exists/);
+});
+
+test('shape styling: fill, opacity, gradient, outline, shadow; fails closed',()=>{
+  let b=deck(2);const sid=readDeckModel(b).slides[0].id;
+  b=addTextBox(b,sid,'One');b=addTextBox(b,sid,'Two');
+  const ids=readDeckModel(b).slides[0].shapes.filter(s=>!s.ph).slice(-2).map(s=>s.id),[a,c]=ids;
+  const m0=readDeckModel(b);
+  const s0=readShapeStyle(b,sid,a);assert.equal(s0.shadow,'none');assert.equal(s0.editable,true);assert.equal(s0.fillable,true);
+  const f=setShapeStyle(b,sid,ids,{fill:{kind:'solid',color:'1F5FBF',alpha:60}});
+  for(const id of ids)assert.deepEqual(readShapeStyle(f,sid,id).fill,{kind:'solid',color:'1F5FBF',alpha:60});
+  assert.equal(JSON.stringify(readDeckModel(f).slides[0].shapes),JSON.stringify(m0.slides[0].shapes),'geometry and text untouched');
+  assert.equal(setShapeStyle(f,sid,ids,{fill:{kind:'solid',color:'1F5FBF',alpha:60}}),f,'same style: same bytes');
+  const g=setShapeStyle(f,sid,[a],{fill:{kind:'gradient',from:'1F5FBF',to:'C62828',angle:45,alpha:100}});
+  assert.deepEqual(readShapeStyle(g,sid,a).fill,{kind:'gradient',color:'1F5FBF',to:'C62828',angle:45,alpha:100});
+  assert.equal(readShapeStyle(g,sid,c).fill.kind,'solid','other shape untouched');
+  const n=setShapeStyle(g,sid,[a],{fill:{kind:'none'}});assert.equal(readShapeStyle(n,sid,a).fill.kind,'none');
+  const l=setShapeStyle(n,sid,[a],{line:{kind:'solid',color:'2E7D32',widthPt:2.5,dash:'dash'},shadow:true});
+  assert.deepEqual(readShapeStyle(l,sid,a).line,{kind:'solid',color:'2E7D32',widthPt:2.5,dash:'dash'});assert.equal(readShapeStyle(l,sid,a).shadow,'outer');
+  const x=strFromU8(unzipSync(l)['ppt/slides/slide1.xml']);
+  assert.ok(x.indexOf('</a:prstGeom>')<x.indexOf('<a:noFill/><a:ln w="31750"'),'schema order: geom, fill, ln');assert.ok(x.indexOf('<a:ln w="31750"')<x.indexOf('<a:effectLst>'));
+  const off=setShapeStyle(l,sid,[a],{shadow:false,line:{kind:'none'}});assert.equal(readShapeStyle(off,sid,a).shadow,'none');assert.equal(readShapeStyle(off,sid,a).line.kind,'none');
+  // an existing outline keeps its other settings (arrowheads)
+  const keep=patchPart(l,'ppt/slides/slide1.xml',s=>s.replace(/(<a:ln w="31750"[^>]*>[\s\S]*?)<\/a:ln>/,'$1<a:headEnd type="triangle"/></a:ln>'));
+  const k2=setShapeStyle(keep,sid,[a],{line:{kind:'solid',color:'C62828',widthPt:1,dash:'dot'}});
+  assert.match(strFromU8(unzipSync(k2)['ppt/slides/slide1.xml']),/<a:ln w="12700"><a:solidFill><a:srgbClr val="C62828"\/><\/a:solidFill><a:prstDash val="sysDot"\/><a:headEnd type="triangle"\/><\/a:ln>/);
+  // fail closed
+  const blip=patchPart(b,'ppt/slides/slide1.xml',s=>s.replace(new RegExp(`(<p:cNvPr id="${a}"[\\s\\S]*?<a:prstGeom[^>]*>[\\s\\S]*?</a:prstGeom>)`),'$1<a:pattFill prst="dkUpDiag"/>'));
+  assert.equal(readShapeStyle(blip,sid,a).editable,false);assert.throws(()=>setShapeStyle(blip,sid,[a],{fill:{kind:'none'}}),/cannot be edited/);
+  assert.equal(readShapeStyle(blip,sid,a).fill.kind,'other');
+  const dag=patchPart(b,'ppt/slides/slide1.xml',s=>s.replace(new RegExp(`(<p:cNvPr id="${a}"[\\s\\S]*?</a:prstGeom>)`),'$1<a:effectDag/>'));
+  assert.throws(()=>setShapeStyle(dag,sid,[a],{shadow:true}),/cannot be edited/);
+  assert.throws(()=>setShapeStyle(b,sid,[a],{fill:{kind:'solid',color:'zz',alpha:100}}),/6-digit/);
+  assert.throws(()=>setShapeStyle(b,sid,[a],{fill:{kind:'solid',color:'1F5FBF',alpha:0}}),/Opacity/);
+  assert.throws(()=>setShapeStyle(b,sid,[a],{fill:{kind:'gradient',from:'1F5FBF',to:'C62828',angle:360,alpha:100}}),/angle/);
+  assert.throws(()=>setShapeStyle(b,sid,[a],{line:{kind:'solid',color:'1F5FBF',widthPt:0,dash:'solid'}}),/width/);
+  assert.throws(()=>setShapeStyle(b,sid,[a],{line:{kind:'solid',color:'1F5FBF',widthPt:21,dash:'solid'}}),/width/);
+  assert.throws(()=>setShapeStyle(b,sid,[a],{}),/Nothing to change/);
+  assert.throws(()=>setShapeStyle(b,sid,[],{shadow:true}),/between 1 and 50/);
+  assert.throws(()=>setShapeStyle(b,sid,[a,a],{shadow:true}),/different shapes/);
+  assert.throws(()=>setShapeStyle(b,sid,[99999],{shadow:true}),/no longer exists/);
+  assert.throws(()=>setShapeStyle(b,999,[a],{shadow:true}),/no longer exists/);
+  // pictures: outline and shadow yes, fill no
+  const pic=deck(2,{picture:true}),pid=readDeckModel(pic).slides[0].shapes.find(s=>s.kind==='picture')!.id;
+  assert.equal(readShapeStyle(pic,readDeckModel(pic).slides[0].id,pid).fillable,false);
+  const pl=setShapeStyle(pic,readDeckModel(pic).slides[0].id,[pid],{line:{kind:'solid',color:'000000',widthPt:1,dash:'solid'},shadow:true});
+  assert.equal(readShapeStyle(pl,readDeckModel(pl).slides[0].id,pid).shadow,'outer');
+  assert.throws(()=>setShapeStyle(pic,readDeckModel(pic).slides[0].id,[pid],{fill:{kind:'none'}}),/Pictures cannot be filled/);
 });

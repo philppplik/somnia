@@ -13,7 +13,7 @@ import {hasRailIcon,registerRailIcons,resolveRailIcon,RAIL_FALLBACK_ICON} from '
 import '../../components/shell/railIconSet';
 import {CATALOGUES,translate} from '../i18n';
 const deps={state:()=>({busy:false,working:true,canUndo:true,canRedo:true,slides:3,index:0,presenting:false}),present:()=>{},exitPresent:()=>{},history:()=>{},saveCopy:()=>{},showSlide:()=>{}};
-const panelDeps={state:()=>({source:'',index:0,busy:false,working:null,runs:[],slideIds:[],layouts:[],model:null,summary:null}),thumbnails:async()=>{},edit:async()=>{},show:async()=>{},select:()=>{},move:async()=>{},duplicate:async()=>{},remove:async()=>{},add:async()=>{},setBounds:async()=>{},setMany:async()=>{},arrange:async()=>{},setTransition:async()=>{},setNotes:async()=>{},group:async()=>{},ungroup:async()=>{},format:async()=>{},addBox:async()=>{},removeBox:async()=>{},insertImage:async()=>{},replaceImage:async()=>{},removeImage:async()=>{},pick:()=>{},picked:()=>null};
+const panelDeps={state:()=>({source:'',index:0,busy:false,working:null,runs:[],slideIds:[],layouts:[],model:null,summary:null}),thumbnails:async()=>{},edit:async()=>{},show:async()=>{},select:()=>{},move:async()=>{},duplicate:async()=>{},remove:async()=>{},add:async()=>{},setBounds:async()=>{},setMany:async()=>{},arrange:async()=>{},setTransition:async()=>{},style:async()=>{},setNotes:async()=>{},group:async()=>{},ungroup:async()=>{},format:async()=>{},addBox:async()=>{},removeBox:async()=>{},insertImage:async()=>{},replaceImage:async()=>{},removeImage:async()=>{},pick:()=>{},picked:()=>null};
 const known=new Set([...slidesCommandSpecs(deps),...slidesPanelCommandSpecs(panelDeps)].map(s=>s.id));
 const shell=slidesStudio.shellV2!;
 const ids=(l:readonly {id:string}[])=>l.map(i=>i.id);

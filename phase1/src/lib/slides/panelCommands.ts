@@ -1,17 +1,18 @@
 import type {CommandSpec} from '../commandSpec';
 import {registerCommandSpec} from '../commandBridge';
 import {selectSlideText} from './panelSelection';
-import {getSlidesSessionState,loadThumbnails,editSlideText,showSlide,moveSlideTo,duplicateSlideAt,deleteSlideAt,addSlideFromLayout,setShapeBoundsAt,setShapesBoundsAt,arrangeShapesAt,setTransitionAt,setNotesAt,groupShapesAt,ungroupShapeAt,formatShapeAt,addTextBoxAt,removeTextBoxAt,insertPictureAt,replacePictureAt,removePictureAt} from './session';
+import {getSlidesSessionState,loadThumbnails,editSlideText,showSlide,moveSlideTo,duplicateSlideAt,deleteSlideAt,addSlideFromLayout,setShapeBoundsAt,setShapesBoundsAt,arrangeShapesAt,setTransitionAt,styleShapesAt,setNotesAt,groupShapesAt,ungroupShapeAt,formatShapeAt,addTextBoxAt,removeTextBoxAt,insertPictureAt,replacePictureAt,removePictureAt} from './session';
 import {textIssue} from './panelModel';
 import type {TextRun} from './editCopy';
 import './panelI18n';
 import {selectShape,getShapeSelection,type ShapeSelection} from './shapeSelection';
 import {stepShape,moveBox,resizeBox,resizeBoxAspect,boxOf,alignBox,alignBoxes,unionBox,transformGroup,distributeBoxes,ALIGN_MODES,type AlignMode} from './shapeGeometry';
 import {sniffImage,altFromName,decodeBase64,MAX_IMAGE_BASE64} from './imageSniff';
-import {boundsEditIssue,nextShapeId,MIN_SIZE_PT,MAX_SIZE_PT,MAX_SHAPES_PER_SLIDE,MAX_BOX_TEXT,MAX_MULTI_EDIT,MAX_NOTES_CHARS,MAX_NOTES_PARAGRAPHS,ARRANGE_MODES,TRANSITION_KINDS,TRANSITION_DIRS,TRANSITION_SPEEDS,type SlideTransition,type ArrangeMode,type ShapeBoundsEdit,type RunFormat,type ShapeRef,type BoundsBox} from './deckPackage';
+import {boundsEditIssue,nextShapeId,MIN_SIZE_PT,MAX_SIZE_PT,MAX_SHAPES_PER_SLIDE,MAX_BOX_TEXT,MAX_MULTI_EDIT,MAX_NOTES_CHARS,MAX_NOTES_PARAGRAPHS,ARRANGE_MODES,TRANSITION_KINDS,TRANSITION_DIRS,TRANSITION_SPEEDS,type SlideTransition,type ShapeStylePatch,LINE_DASHES,type ArrangeMode,type ShapeBoundsEdit,type RunFormat,type ShapeRef,type BoundsBox} from './deckPackage';
 const MIN_GROUP_EMU=127000;
 export interface PanelCommandDeps {
  setTransition(slideId:number,transition:SlideTransition):Promise<void>;
+ style(slideId:number,shapeIds:number[],patch:ShapeStylePatch):Promise<void>;
  setNotes(slideId:number,lines:string[]):Promise<void>;
  group(slideId:number,shapeIds:number[]):Promise<void>;
  ungroup(slideId:number,shapeId:number):Promise<void>;
@@ -136,6 +137,27 @@ export function slidesPanelCommandSpecs(d:PanelCommandDeps):CommandSpec[]{
    const v=p as {source:string;slideId:number;kind:SlideTransition['kind'];dir?:SlideTransition['dir'];speed?:SlideTransition['speed']},s=d.state();
    if(s.source!==v.source||!s.slideIds.includes(v.slideId)||!s.working)throw expected('Slide no longer exists.');
    await d.setTransition(v.slideId,{kind:v.kind,dir:v.dir??'l',speed:v.speed??'med'});}},
+  {id:'slides.styleShapes',title:'Style selected shapes',category:'Edit',level:'ui',keywords:['fill','color','colour','outline','border','stroke','shadow','opacity','transparency','gradient','style'],enabled:available,params:{type:'object',properties:{
+    fill:{type:'object',properties:{kind:{enum:['none','solid','gradient']},color:{type:'string',pattern:'^[0-9A-F]{6}$'},from:{type:'string',pattern:'^[0-9A-F]{6}$'},to:{type:'string',pattern:'^[0-9A-F]{6}$'},angle:{type:'integer',minimum:0,maximum:359},alpha:{type:'integer',minimum:5,maximum:100}},required:['kind'],additionalProperties:false},
+    line:{type:'object',properties:{kind:{enum:['none','solid']},color:{type:'string',pattern:'^[0-9A-F]{6}$'},widthPt:{type:'number',minimum:0.25,maximum:20},dash:{enum:[...LINE_DASHES]}},required:['kind'],additionalProperties:false},
+    shadow:{type:'boolean'}},additionalProperties:false},run:async p=>{
+   const v=p as {fill?:{kind:'none'|'solid'|'gradient';color?:string;from?:string;to?:string;angle?:number;alpha?:number};line?:{kind:'none'|'solid';color?:string;widthPt?:number;dash?:'solid'|'dash'|'dot'};shadow?:boolean},s=d.state(),pick=d.picked();
+   if(!pick||pick.source!==s.source||s.slideIds[s.index]!==pick.slideId)throw expected('Select a shape first.');
+   const slide=s.model?.slides.find(x=>x.id===pick.slideId);if(!slide)throw expected('Slide no longer exists.');
+   const ids=[pick.shapeId,...(pick.more??[])];
+   for(const id of ids){const sh=slide.shapes.find(x=>x.id===id&&x.parentId===null);if(!sh)throw expected('A selected shape no longer exists.');if(sh.kind!=='text'&&sh.kind!=='picture')throw expected('Only text boxes and pictures can be styled.');}
+   const patch:ShapeStylePatch={};
+   if(v.fill){const f=v.fill,alpha=f.alpha??100;
+    if(f.kind==='none')patch.fill={kind:'none'};
+    else if(f.kind==='solid'){if(!f.color)throw expected('Choose a fill color.');patch.fill={kind:'solid',color:f.color,alpha};}
+    else{if(!f.from||!f.to)throw expected('Choose both gradient colors.');patch.fill={kind:'gradient',from:f.from,to:f.to,angle:f.angle??90,alpha};}}
+   if(v.line){const l=v.line;
+    if(l.kind==='none')patch.line={kind:'none'};
+    else{if(!l.color)throw expected('Choose an outline color.');patch.line={kind:'solid',color:l.color,widthPt:l.widthPt??1,dash:l.dash??'solid'};}}
+   if(v.shadow!==undefined)patch.shadow=v.shadow;
+   if(patch.fill===undefined&&patch.line===undefined&&patch.shadow===undefined)throw expected('Nothing to change.');
+   if(patch.fill&&ids.some(id=>slide.shapes.find(x=>x.id===id)!.kind==='picture'))throw expected('Pictures cannot be filled.');
+   await d.style(pick.slideId,ids,patch);}},
   {id:'slides.setNotes',title:'Set speaker notes',category:'Edit',level:'ui',keywords:['notes','speaker','presenter','talking points'],enabled:available,params:{type:'object',properties:{source:identity.source,slideId:slideId,text:{type:'string',maxLength:MAX_NOTES_CHARS}},required:['source','slideId','text'],additionalProperties:false},run:async p=>{
    const v=p as {source:string;slideId:number;text:string},s=d.state();
    if(s.source!==v.source||!s.slideIds.includes(v.slideId))throw expected('Slide no longer exists.');
@@ -239,5 +261,5 @@ export function slidesPanelCommandSpecs(d:PanelCommandDeps):CommandSpec[]{
   }},
  ];
 }
-const deps:PanelCommandDeps={state:getSlidesSessionState,thumbnails:loadThumbnails,edit:editSlideText,show:showSlide,select:selectSlideText,move:moveSlideTo,duplicate:duplicateSlideAt,remove:deleteSlideAt,add:addSlideFromLayout,setBounds:setShapeBoundsAt,setMany:setShapesBoundsAt,arrange:arrangeShapesAt,setTransition:setTransitionAt,setNotes:setNotesAt,group:groupShapesAt,ungroup:ungroupShapeAt,format:formatShapeAt,addBox:addTextBoxAt,removeBox:removeTextBoxAt,insertImage:insertPictureAt,replaceImage:replacePictureAt,removeImage:removePictureAt,pick:selectShape,picked:getShapeSelection};
+const deps:PanelCommandDeps={state:getSlidesSessionState,thumbnails:loadThumbnails,edit:editSlideText,show:showSlide,select:selectSlideText,move:moveSlideTo,duplicate:duplicateSlideAt,remove:deleteSlideAt,add:addSlideFromLayout,setBounds:setShapeBoundsAt,setMany:setShapesBoundsAt,arrange:arrangeShapesAt,setTransition:setTransitionAt,style:styleShapesAt,setNotes:setNotesAt,group:groupShapesAt,ungroup:ungroupShapeAt,format:formatShapeAt,addBox:addTextBoxAt,removeBox:removeTextBoxAt,insertImage:insertPictureAt,replaceImage:replacePictureAt,removeImage:removePictureAt,pick:selectShape,picked:getShapeSelection};
 export function registerSlidesPanelCommands(){const offs=slidesPanelCommandSpecs(deps).map(s=>registerCommandSpec(s));return()=>offs.forEach(off=>off());}

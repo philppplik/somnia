@@ -3926,6 +3926,26 @@
       "hasEnabled": true
     },
     {
+      "id": "slides.styleShapes",
+      "title": "Style selected shapes",
+      "category": "Edit",
+      "source": "slides",
+      "keywords": [
+        "border",
+        "color",
+        "colour",
+        "fill",
+        "gradient",
+        "opacity",
+        "outline",
+        "shadow",
+        "stroke",
+        "style",
+        "transparency"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "slides.toggleShapeSelection",
       "title": "Add or remove shape from selection",
       "category": "View",
