@@ -953,5 +953,7 @@
  "animation.export.problem.columns": "Sheet-Spalten müssen 1 bis 256 sein",
  "animation.export.frameCopy": "Frame in Zwischenablage kopieren",
  "animation.export.copied": "Frame in die Zwischenablage kopiert.",
- "cmd.animation.export.frameCopy": "Aktuellen Frame in die Zwischenablage kopieren"
+ "cmd.animation.export.frameCopy": "Aktuellen Frame in die Zwischenablage kopieren",
+ "animation.modifiers.axis": "Achse",
+ "animation.modifiers.axis.both": "Beide Achsen"
 }

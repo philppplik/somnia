@@ -953,5 +953,7 @@
  "animation.export.problem.columns": "las columnas deben ser de 1 a 256",
  "animation.export.frameCopy": "Copiar fotograma al portapapeles",
  "animation.export.copied": "Fotograma copiado al portapapeles.",
- "cmd.animation.export.frameCopy": "Copiar el fotograma actual al portapapeles"
+ "cmd.animation.export.frameCopy": "Copiar el fotograma actual al portapapeles",
+ "animation.modifiers.axis": "Eje",
+ "animation.modifiers.axis.both": "Ambos ejes"
 }

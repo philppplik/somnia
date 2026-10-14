@@ -1,6 +1,6 @@
 /** Modifier model and validation: a leaf module so document validation (model.ts) does not pull in evaluation. */
 export type Modifier=
- |{type:'wiggle';seed:number;amplitude:number;frequency:number;/** Hold in ticks: the noise is sampled once per hold and kept in between (stepped jitter). Absent or 0 means smooth. */hold?:number}
+ |{type:'wiggle';seed:number;amplitude:number;frequency:number;/** Hold in ticks: the noise is sampled once per hold and kept in between (stepped jitter). Absent or 0 means smooth. */hold?:number;/** Vector properties only: shake just one axis. Absent means both. */axis?:'x'|'y'}
  |{type:'loop';mode:'cycle'|'pingpong'|'offset'}
  /** Binds the property to another layer's transform property of the same composition: value = source * multiplier + offset, per channel. Replaces the keyed value; a wiggle after it still adds. No scripting. */
  |{type:'link';layer:string;prop:LinkProp;multiplier:number;offset:number;/** Follow-the-leader lag in ticks: the source is read at t - delay. Absent means 0. */delay?:number};
@@ -17,6 +17,7 @@ export function validateModifiers(ms:readonly Modifier[]|undefined):string[]{
    if(!Number.isInteger(m.seed)||m.seed<0||m.seed>2**31-1)bad.push('wiggle seed must be an integer between 0 and 2^31-1');
    if(!(m.amplitude>=0&&m.amplitude<=WIGGLE_MAX_AMPLITUDE))bad.push(`wiggle amplitude must be between 0 and ${WIGGLE_MAX_AMPLITUDE}`);
    if(m.hold!==undefined&&!(Number.isInteger(m.hold)&&m.hold>=0&&m.hold<=WIGGLE_MAX_HOLD))bad.push(`wiggle hold must be a whole number of ticks between 0 and ${WIGGLE_MAX_HOLD}`);
+   if(m.axis!==undefined&&m.axis!=='x'&&m.axis!=='y')bad.push("wiggle axis must be x or y");
    if(!(m.frequency>0&&m.frequency<=WIGGLE_MAX_FREQUENCY))bad.push(`wiggle frequency must be between 0 and ${WIGGLE_MAX_FREQUENCY}`);
   }else if(m.type==='loop'){if(!['cycle','pingpong','offset'].includes(m.mode))bad.push('loop mode must be cycle, pingpong or offset');}
   else if(m.type==='link'){

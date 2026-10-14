@@ -9,6 +9,7 @@ import {frameToTick,TRANSFORM_KEYS,type Composition,type Layer,type TransformKey
 import {executeCommand} from '../../lib/commands';
 import {PROP_LABEL} from './format';
 const field='h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text';
+const withAxis=(m:Extract<Modifier,{type:'wiggle'}>,v:string):Modifier=>{const {axis:_a,...rest}=m;return v==='x'||v==='y'?{...rest,axis:v}:rest;};
 const fmt=(n:number)=>String(Math.round(n*1000)/1000);
 /** Wiggle (seeded noise), loop and link modifiers of one transform property. Wiggle and loop were commands only; link binds the property to another layer's property (value = source x multiplier + offset). Every change is one undo step. */
 export function PropertyModifiers({layer,comp}:{layer:Layer;comp:Composition}){
@@ -26,6 +27,7 @@ export function PropertyModifiers({layer,comp}:{layer:Layer;comp:Composition}){
     {num(t('animation.modifiers.frequency'),m.frequency,0.01,100,0.1,v=>void set(i,{...m,frequency:v}))}
     {num(t('animation.modifiers.seed'),m.seed,0,2147483647,1,v=>void set(i,{...m,seed:Math.round(v)}))}
     {num(t('animation.modifiers.hold'),tickToFrame(m.hold??0,comp.fps),0,30,1,v=>void set(i,{...m,hold:frameToTick(Math.round(v),comp.fps)}))}</div>}
+    {typeof layer.transform[prop].value!=='number'&&<label className="grid gap-1 text-ink-3">{t('animation.modifiers.axis')}<NativeSelect className={field} value={m.axis??''} aria-label={t('animation.modifiers.axis')} onChange={e=>void set(i,withAxis(m,e.target.value))} data-testid="animation-modifier-axis"><option value="">{t('animation.modifiers.axis.both')}</option><option value="x">X</option><option value="y">Y</option></NativeSelect></label>}
    {m.type==='loop'&&<NativeSelect className={field} value={m.mode} aria-label={t('animation.modifiers.loopMode')} onChange={e=>void set(i,{...m,mode:e.target.value as 'cycle'|'pingpong'|'offset'})}>{(['cycle','pingpong','offset'] as const).map(k=><option key={k} value={k}>{t(`animation.modifiers.loop.${k}`)}</option>)}</NativeSelect>}
    {m.type==='link'&&<div className="grid gap-1">
     <div className="flex gap-1"><NativeSelect className={field} value={m.layer} aria-label={t('animation.modifiers.linkLayer')} onChange={e=>void set(i,{...m,layer:e.target.value})}>{!others.some(o=>o.id===m.layer)&&<option value={m.layer}>{t('animation.modifiers.missing')}</option>}{others.map(o=><option key={o.id} value={o.id}>{o.name}</option>)}</NativeSelect>

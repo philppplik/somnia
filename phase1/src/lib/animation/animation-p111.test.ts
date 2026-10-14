@@ -469,3 +469,13 @@ test('P165 copy frame renders a PNG and refuses cleanly without a clipboard',asy
  await assert.rejects(()=>copyCurrentFrame({rasterize:async()=>new Uint8Array([1])}),/cannot copy images|clipboard/);
  assert.equal(exportState().status,'error');resetExport();setAnimationSession(null);
 });
+
+test('P166 wiggle axis limits the shake to one axis, validated',async()=>{
+ const {evaluateMod,validateModifiers}=await import('./modifiers');
+ const mk=(axis?:string)=>({type:'vec2',keys:[],value:[10,20],modifiers:[{type:'wiggle',seed:5,amplitude:30,frequency:4,...(axis?{axis}:{})}]} as never);
+ const both=evaluateMod(mk(),30000) as number[],x=evaluateMod(mk('x'),30000) as number[],y=evaluateMod(mk('y'),30000) as number[];
+ assert.notEqual(both[0],10);assert.notEqual(both[1],20);
+ assert.deepEqual([x[0],x[1]],[both[0],20]);assert.deepEqual([y[0],y[1]],[10,both[1]]);
+ assert.equal(validateModifiers([{type:'wiggle',seed:1,amplitude:1,frequency:1,axis:'z' as never}]).length,1);
+ assert.equal(validateModifiers([{type:'wiggle',seed:1,amplitude:1,frequency:1,axis:'y'}]).length,0);
+});

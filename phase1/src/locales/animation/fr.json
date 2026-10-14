@@ -953,5 +953,7 @@
  "animation.export.problem.columns": "les colonnes doivent aller de 1 à 256",
  "animation.export.frameCopy": "Copier l'image dans le presse-papiers",
  "animation.export.copied": "Image copiée dans le presse-papiers.",
- "cmd.animation.export.frameCopy": "Copier l'image actuelle dans le presse-papiers"
+ "cmd.animation.export.frameCopy": "Copier l'image actuelle dans le presse-papiers",
+ "animation.modifiers.axis": "Axe",
+ "animation.modifiers.axis.both": "Les deux axes"
 }

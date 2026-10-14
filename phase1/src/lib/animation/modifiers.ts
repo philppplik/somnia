@@ -34,7 +34,7 @@ export function evaluateMod(p:Property,t:number,links?:LinkResolver):PropValue{
  const tn=(m:{hold?:number})=>(m.hold?Math.floor(t/m.hold)*m.hold:t)/TICKS_PER_SECOND;
  if(typeof v==='number')return w.reduce((acc,m)=>acc+m.amplitude*noise(tn(m)*m.frequency,m.seed),v);
  const out:[number,number]=[v[0],v[1]];
- for(const m of w){out[0]+=m.amplitude*noise(tn(m)*m.frequency,m.seed);out[1]+=m.amplitude*noise(tn(m)*m.frequency,m.seed+100003);}
+ for(const m of w){if(m.axis!=='y')out[0]+=m.amplitude*noise(tn(m)*m.frequency,m.seed);if(m.axis!=='x')out[1]+=m.amplitude*noise(tn(m)*m.frequency,m.seed+100003);}
  return out;
 }
 const sub=(a:PropValue,b:PropValue):PropValue=>typeof a==='number'&&typeof b==='number'?a-b:[(a as Vec2)[0]-(b as Vec2)[0],(a as Vec2)[1]-(b as Vec2)[1]];

@@ -953,5 +953,7 @@
  "animation.export.problem.columns": "sprite sheet columns must be 1 to 256",
  "animation.export.frameCopy": "Copy frame to clipboard",
  "animation.export.copied": "Frame copied to the clipboard.",
- "cmd.animation.export.frameCopy": "Copy current frame to the clipboard"
+ "cmd.animation.export.frameCopy": "Copy current frame to the clipboard",
+ "animation.modifiers.axis": "Axis",
+ "animation.modifiers.axis.both": "Both axes"
 }
