@@ -20,12 +20,21 @@ test('formula builder allowlists functions and normalizes references',()=>{
 });
 test('panel commands validate payloads, reject agent execution and honor controller lifecycle',async()=>{
  const dispatcher=new CommandDispatcher();for(const spec of sheetsPanelCommandSpecs())dispatcher.register(spec);
- const calls:unknown[]=[];const controller:SheetsPanelController={ready:()=>true,navigate:(sheet,address)=>{calls.push([sheet,address]);},setCell:input=>{calls.push(input);},readRange:async()=>[]};
+ const calls:unknown[]=[];const controller:SheetsPanelController={ready:()=>true,navigate:(sheet,address)=>{calls.push([sheet,address]);},setCell:input=>{calls.push(input);},readRange:async()=>[],formatCells:op=>{calls.push(op);}};
  const off=registerSheetsPanelController(controller);
  try{
   await dispatcher.runCommand('sheets.navigate',{sheet:1,address:'B4'},{origin:'ui'});
   await dispatcher.runCommand('sheets.setCell',{input:'=SUM(A1:A3)'},{origin:'ui'});
   assert.deepEqual(calls,[[1,'B4'],'=SUM(A1:A3)']);
+  await dispatcher.runCommand('sheets.format',{kind:'bold',on:true},{origin:'ui'});
+  await dispatcher.runCommand('sheets.format',{kind:'fillColor',color:'#FFF2CC'},{origin:'ui'});
+  assert.deepEqual(calls.slice(2),[{kind:'bold',on:true},{kind:'fillColor',color:'#FFF2CC'}]);
+  await assert.rejects(dispatcher.runCommand('sheets.format',{kind:'bold',on:true},{origin:'agent'}),{code:'forbidden-origin'});
+  await assert.rejects(dispatcher.runCommand('sheets.format',{kind:'cell.set'},{origin:'ui'}));
+  await assert.rejects(dispatcher.runCommand('sheets.format',{kind:'bold'},{origin:'ui'}));
+  await assert.rejects(dispatcher.runCommand('sheets.format',{kind:'fontSize',size:9999},{origin:'ui'}));
+  await assert.rejects(dispatcher.runCommand('sheets.format',{kind:'fontColor',color:'red'},{origin:'ui'}));
+  assert.equal(calls.length,4,'rejected payloads never reach the controller');
   await assert.rejects(dispatcher.runCommand('sheets.setCell',{input:'=1'},{origin:'agent'}),{code:'forbidden-origin'});
   await assert.rejects(dispatcher.runCommand('sheets.navigate',{sheet:-1,address:'A1'},{origin:'ui'}),{code:'invalid-params'});
   await assert.rejects(dispatcher.runCommand('sheets.navigate',{sheet:0,address:'A0'},{origin:'ui'}));

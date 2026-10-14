@@ -6,6 +6,46 @@ use serde_json::json;
 use wasm_bindgen::prelude::*;
 
 const MAX_INPUT: usize = 32 * 1024 * 1024;
+const MAX_FORMAT_CELLS: u64 = 1_000_000;
+
+fn is_hex_color(v: &serde_json::Value) -> Option<&str> {
+    let s = v.as_str()?;
+    (s.len() == 7 && s.starts_with('#') && s[1..].bytes().all(|b| b.is_ascii_hexdigit())).then_some(s)
+}
+
+/// The typed allowlist: each `kind` maps to exactly one engine command with validated parameters.
+fn format_command(op: &serde_json::Value) -> Result<(&'static str, serde_json::Value), String> {
+    let kind = op.get("kind").and_then(|v| v.as_str()).ok_or("missing format kind")?;
+    let on = || op.get("on").and_then(|v| v.as_bool()).ok_or_else(|| "`on` must be true or false".to_string());
+    Ok(match kind {
+        "bold" => ("home.bold", json!({"on": on()?})),
+        "italic" => ("home.italic", json!({"on": on()?})),
+        "strike" => ("home.strikethrough", json!({"on": on()?})),
+        "underline" => ("home.underline", json!({"on": on()?, "style": "single"})),
+        "fontName" => {
+            let n = op.get("name").and_then(|v| v.as_str()).ok_or("missing font name")?;
+            if n.trim().is_empty() || n.chars().count() > 64 || n.chars().any(char::is_control) {
+                return Err("invalid font name".into());
+            }
+            ("home.fontName", json!({"name": n.trim()}))
+        }
+        "fontSize" => {
+            let z = op.get("size").and_then(|v| v.as_f64()).filter(|z| z.is_finite() && (1.0..=409.0).contains(z)).ok_or("font size must be between 1 and 409")?;
+            ("home.fontSize", json!({"size": z}))
+        }
+        "fontColor" => match op.get("color") {
+            Some(c) if c.as_str() == Some("auto") => ("home.fontColor", json!({"color": "auto"})),
+            Some(c) => ("home.fontColor", json!({"color": is_hex_color(c).ok_or("color must be #RRGGBB or auto")?})),
+            None => return Err("missing color".into()),
+        },
+        "fillColor" => match op.get("color") {
+            Some(c) if c.as_str() == Some("none") => ("home.fillColor", json!({"color": "none"})),
+            Some(c) => ("home.fillColor", json!({"color": is_hex_color(c).ok_or("color must be #RRGGBB or none")?})),
+            None => return Err("missing color".into()),
+        },
+        _ => return Err("unsupported format operation".into()),
+    })
+}
 
 #[wasm_bindgen]
 pub struct HeadlessWorkbook {
@@ -150,7 +190,7 @@ impl HeadlessWorkbook {
         if rows.is_empty() || width == 0 || cells > 10_000 || rows.iter().any(|r| r.len() != width) {
             return Err("invalid block (rectangular, 1 to 10,000 cells)".into());
         }
-        self.check_block(sheet, row, col, rows.len() as u32, width as u32)?;
+        self.check_block(sheet, row, col, rows.len() as u32, width as u32, true)?;
         if rows.iter().flatten().any(|v| v.len() > 32_767) {
             return Err("input exceeds 32,767 UTF-8 bytes".into());
         }
@@ -163,17 +203,17 @@ impl HeadlessWorkbook {
         if rows == 0 || cols == 0 || u64::from(rows) * u64::from(cols) > 10_000 {
             return Err("invalid block (1 to 10,000 cells)".into());
         }
-        self.check_block(sheet, row, col, rows, cols)?;
+        self.check_block(sheet, row, col, rows, cols, true)?;
         let a = CellRef::new(row, col).a1();
         let b = CellRef::new(row + rows - 1, col + cols - 1).a1();
         self.session.run("edit.clearContents", json!({"sheet":sheet,"range":format!("{a}:{b}")})).map(|v| v.to_string())
     }
 
-    fn check_block(&self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32) -> Result<(), String> {
+    fn check_block(&self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32, refuse_protected: bool) -> Result<(), String> {
         let doc = self.session.doc().map_err(|e| e.to_string())?;
         let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
         // range.setValues / edit.clearContents do not look at protection (cell.set does), so refuse here.
-        if sh.is_protected() {
+        if refuse_protected && sh.is_protected() {
             return Err("The sheet is protected. Unprotect it to change cells.".into());
         }
         if row.checked_add(rows).is_none_or(|v| v > gridcraft_engine::core::MAX_ROWS)
@@ -182,6 +222,25 @@ impl HeadlessWorkbook {
             return Err("block exceeds the sheet limits".into());
         }
         Ok(())
+    }
+
+    /// Applies ONE typed formatting operation to a block as one history entry. `op_json` is
+    /// `{"kind": ..., ...}` from a fixed allowlist (see `format_command`); anything else is refused, so the
+    /// host never reaches arbitrary engine commands. Whole block validated first; the engine commits
+    /// only if the operation succeeded. Protected sheets are checked by the engine's own format rule.
+    pub fn format_range(&mut self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32, op_json: &str) -> Result<String, String> {
+        if rows == 0 || cols == 0 || u64::from(rows) * u64::from(cols) > MAX_FORMAT_CELLS {
+            return Err("invalid block (1 to 1,000,000 cells)".into());
+        }
+        self.check_block(sheet, row, col, rows, cols, false)?;
+        let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "format operation must be a JSON object".to_string())?;
+        let (command, params) = format_command(&op)?;
+        let a = CellRef::new(row, col).a1();
+        let b = CellRef::new(row + rows - 1, col + cols - 1).a1();
+        let mut call = params;
+        call["sheet"] = json!(sheet);
+        call["range"] = json!(format!("{a}:{b}"));
+        self.session.run(command, call).map(|v| v.to_string())
     }
 
     /// Sets the host clock (local date-time as a 1900-system serial) used by NOW/TODAY and every other
@@ -421,6 +480,109 @@ mod tests {
         assert!(book.set_values(0, 1, 1, r#"[["9"]]"#).unwrap_err().contains("protected"));
         assert!(book.clear_contents(0, 1, 1, 1, 1).unwrap_err().contains("protected"));
         assert!(book.range(0, 1, 1, 1, 1).unwrap().contains("2.0"));
+    }
+    fn style_at(b: &HeadlessWorkbook, sheet: usize, row: u32, col: u32) -> serde_json::Value {
+        let v: serde_json::Value = serde_json::from_str(&b.view_range(sheet, row, col, 1, 1).unwrap()).unwrap();
+        v["cells"][0]["style"].clone()
+    }
+    #[test]
+    fn font_and_fill_formats_apply_read_back_undo_and_roundtrip_xlsx() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        for op in [
+            r##"{"kind":"bold","on":true}"##,
+            r##"{"kind":"italic","on":true}"##,
+            r##"{"kind":"underline","on":true}"##,
+            r##"{"kind":"strike","on":true}"##,
+            r##"{"kind":"fontName","name":"Courier New"}"##,
+            r##"{"kind":"fontSize","size":14}"##,
+            r##"{"kind":"fontColor","color":"#C00000"}"##,
+            r##"{"kind":"fillColor","color":"#FFF2CC"}"##,
+        ] {
+            book.format_range(0, 1, 1, 2, 2, op).unwrap();
+        }
+        for (r, c) in [(1, 1), (1, 2), (2, 1), (2, 2)] {
+            let st = style_at(&book, 0, r, c);
+            assert_eq!(st["bold"], true);
+            assert_eq!(st["italic"], true);
+            assert_eq!(st["underline"], true);
+            assert_eq!(st["strike"], true);
+            assert_eq!(st["font"], "Courier New");
+            assert_eq!(st["size"], 14.0);
+            assert_eq!(st["color"], "#C00000");
+            assert_eq!(st["fill"], "#FFF2CC");
+        }
+        assert_eq!(style_at(&book, 0, 3, 3)["bold"], false, "cells outside the block are untouched");
+        // XLSX roundtrip keeps every property.
+        let reopened = HeadlessWorkbook::new(&book.export_xlsx().unwrap()).unwrap();
+        let st = style_at(&reopened, 0, 2, 2);
+        assert_eq!(st["bold"], true);
+        assert_eq!(st["italic"], true);
+        assert_eq!(st["underline"], true);
+        assert_eq!(st["strike"], true);
+        assert_eq!(st["font"], "Courier New");
+        assert_eq!(st["size"], 14.0);
+        assert_eq!(st["color"], "#C00000");
+        assert_eq!(st["fill"], "#FFF2CC");
+        // Each operation is exactly one undo step, and the values never change.
+        let mut undone = 0;
+        while info_json(&book)["canUndo"] == true {
+            book.undo().unwrap();
+            undone += 1;
+        }
+        assert_eq!(undone, 8);
+        assert_eq!(style_at(&book, 0, 1, 1)["bold"], false);
+        assert_eq!(style_at(&book, 0, 1, 1)["fill"], serde_json::Value::Null);
+    }
+    #[test]
+    fn explicit_off_and_clearing_colors() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        book.format_range(0, 0, 0, 1, 1, r##"{"kind":"bold","on":false}"##).unwrap();
+        assert_eq!(style_at(&book, 0, 0, 0)["bold"], false, "fixture A1 was bold");
+        book.format_range(0, 5, 5, 1, 1, r##"{"kind":"fillColor","color":"#00FF00"}"##).unwrap();
+        book.format_range(0, 5, 5, 1, 1, r##"{"kind":"fillColor","color":"none"}"##).unwrap();
+        assert_eq!(style_at(&book, 0, 5, 5)["fill"], serde_json::Value::Null);
+        book.format_range(0, 5, 5, 1, 1, r##"{"kind":"fontColor","color":"#0000FF"}"##).unwrap();
+        book.format_range(0, 5, 5, 1, 1, r##"{"kind":"fontColor","color":"auto"}"##).unwrap();
+        assert_ne!(style_at(&book, 0, 5, 5)["color"], "#0000FF");
+    }
+    #[test]
+    fn format_range_is_a_closed_allowlist_with_validated_parameters() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        let bad = [
+            r##"{"kind":"cell.set","input":"x"}"##,
+            r##"{"kind":"home.bold","on":true}"##,
+            r##"{"kind":"bold"}"##,
+            r##"{"kind":"bold","on":"yes"}"##,
+            r##"{"kind":"fontSize","size":0}"##,
+            r##"{"kind":"fontSize","size":410}"##,
+            r##"{"kind":"fontSize","size":"12"}"##,
+            r##"{"kind":"fontName","name":""}"##,
+            r##"{"kind":"fontName","name":"bad\u0007name"}"##,
+            r##"{"kind":"fontColor","color":"red"}"##,
+            r##"{"kind":"fontColor","color":"#FFF"}"##,
+            r##"{"kind":"fillColor","color":"#GGGGGG"}"##,
+            r##"{"kind":"fillColor","color":{"theme":1}}"##,
+            r##"{"kind":"fillColor"}"##,
+            r##"[1]"##,
+            "nonsense",
+        ];
+        for op in bad {
+            assert!(book.format_range(0, 0, 0, 1, 1, op).is_err(), "{op}");
+        }
+        let long = format!(r##"{{"kind":"fontName","name":"{}"}}"##, "x".repeat(65));
+        assert!(book.format_range(0, 0, 0, 1, 1, &long).is_err());
+        assert!(book.format_range(9, 0, 0, 1, 1, r##"{"kind":"bold","on":true}"##).is_err(), "unknown sheet");
+        assert!(book.format_range(0, 0, 0, 0, 1, r##"{"kind":"bold","on":true}"##).is_err());
+        assert!(book.format_range(0, 0, 0, 1001, 1001, r##"{"kind":"bold","on":true}"##).is_err(), "over 1,000,000 cells");
+        assert!(book.format_range(0, gridcraft_engine::core::MAX_ROWS - 1, 0, 2, 1, r##"{"kind":"bold","on":true}"##).is_err());
+        assert_eq!(info_json(&book)["canUndo"], false, "rejected operations leave no history");
+    }
+    #[test]
+    fn format_respects_sheet_protection() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        book.session.run("review.protectSheet", json!({})).unwrap();
+        assert!(book.format_range(0, 1, 1, 1, 1, r##"{"kind":"bold","on":true}"##).is_err());
+        assert_eq!(style_at(&book, 0, 1, 1)["bold"], false);
     }
     #[test]
     fn clear_contents_is_one_undo_step_and_keeps_formats() {

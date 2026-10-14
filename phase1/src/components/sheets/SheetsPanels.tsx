@@ -12,6 +12,10 @@ import {aggregateFormula,FORMULA_FUNCTIONS,parsePanelRange,rangeAddress,summariz
 import {rectCells} from '../../lib/sheets/clipboard';
 import {addressOf,parseAddress} from '../../lib/sheets/format';
 import type {RangeCell} from '../../lib/sheets/protocol';
+import {DEFAULT_FILL_COLOR,DEFAULT_TEXT_COLOR,FONT_NAMES,FONT_SIZES,MAX_FONT_SIZE,MIN_FONT_SIZE,isHexColor,toggleOp,type ToggleKind} from '../../lib/sheets/formatOps';
+import {Button} from '../ui/button';
+import {NativeInput,NativeSelect} from '../ui/native-controls';
+import {NumberField} from '../ui/number-field';
 const field='w-full min-w-0 rounded-lg border border-subtle bg-transparent px-2 py-1.5 text-ink';
 const button='rounded-lg border border-subtle px-2 py-1.5 text-ink hover:bg-hover disabled:opacity-40 disabled:cursor-not-allowed';
 function Region({children}:{children:ReactNode}){return <div className="flex min-w-0 flex-col gap-3 p-3 text-[12px]" data-testid="sheets-panel-content">{children}</div>;}
@@ -97,3 +101,31 @@ export function SheetsFormulasPanel({context}:PanelHostProps){
 
 export function SheetsCellSection({sectionId,context}:InspectorSectionProps){return <SheetsCellPanel panelId={sectionId} context={context}/>;}
 export function SheetsFormulasSection({sectionId,context}:InspectorSectionProps){return <SheetsFormulasPanel panelId={sectionId} context={context}/>;}
+
+const TOGGLES:readonly {kind:ToggleKind;glyph:string;key:string;className:string}[]=[
+ {kind:'bold',glyph:'B',key:'sheets.format.bold',className:'font-extrabold'},
+ {kind:'italic',glyph:'I',key:'sheets.format.italic',className:'italic'},
+ {kind:'underline',glyph:'U',key:'sheets.format.underline',className:'underline'},
+ {kind:'strike',glyph:'S',key:'sheets.format.strike',className:'line-through'},
+];
+/** Font and fill formatting for the selected cells. Every control dispatches `sheets.format`: one operation, one undo step; nothing here edits cell values. */
+export function SheetsFormatPanel({context}:PanelHostProps){
+ const {t}=useT(),s=usePanelWorkbook(context);const action=useAction();
+ const style=s?.style;const cellKey=s?`${s.file}:${s.sheet}:${s.address}`:'';
+ // A picked color is kept only for the cell it was picked on; otherwise the pickers follow the active cell.
+ const [picked,setPicked]=useState<{key:string;text?:string;fill?:string}>({key:''});const mine=picked.key===cellKey?picked:null;
+ const textColor=mine?.text??(isHexColor(style?.color)?style!.color!.toUpperCase():DEFAULT_TEXT_COLOR),fillColor=mine?.fill??(isHexColor(style?.fill)?style!.fill!.toUpperCase():DEFAULT_FILL_COLOR);
+ const setTextColor=(text:string)=>setPicked({...(mine??{key:cellKey}),key:cellKey,text}),setFillColor=(fill:string)=>setPicked({...(mine??{key:cellKey}),key:cellKey,fill});
+ if(!s)return <Region><p>{t('sheets.panel.none')}</p></Region>;
+ const send=(params:Record<string,unknown>)=>void action.run('sheets.format',params);
+ const fonts=style&&!(FONT_NAMES as readonly string[]).includes(style.font)?[style.font,...FONT_NAMES]:[...FONT_NAMES];
+ return <Region>
+  <div className="flex flex-wrap gap-1" role="group" aria-label={t('sheets.format.style')}>{TOGGLES.map(x=><Button key={x.kind} variant="outline" size="icon" className={x.className} aria-label={t(x.key)} aria-pressed={!!style?.[x.kind]} disabled={action.busy} onClick={()=>send(toggleOp(x.kind,style))} data-testid={'sheets-format-'+x.kind}><span className={x.className} aria-hidden="true">{x.glyph}</span></Button>)}</div>
+  <label className="flex flex-col gap-1">{t('sheets.format.font')}<NativeSelect className={field} value={style?.font??''} disabled={action.busy||!style} onChange={e=>send({kind:'fontName',name:e.currentTarget.value})} data-testid="sheets-format-font">{fonts.map(f=><option key={f} value={f}>{f}</option>)}</NativeSelect></label>
+  <NumberField label={t('sheets.format.size')} unit="pt" value={style?.size??null} resetKey={`${s.address}:${s.revision??0}`} min={MIN_FONT_SIZE} max={MAX_FONT_SIZE} step={1} disabled={action.busy||!style} list="sheets-format-sizes" constraintError={t('sheets.format.sizeInvalid')} parse={v=>{const n=Number(v.trim().replace(',','.'));return v.trim()&&Number.isFinite(n)?{ok:true,value:n}:{ok:false,error:t('sheets.format.sizeInvalid')};}} onCommit={size=>send({kind:'fontSize',size})}/>
+  <datalist id="sheets-format-sizes">{FONT_SIZES.map(n=><option key={n} value={n}/>)}</datalist>
+  <div className="flex flex-col gap-1"><span>{t('sheets.format.textColor')}</span><div className="flex items-center gap-1"><span className="h-7 w-8 shrink-0 overflow-hidden rounded-sm border border-subtle"><NativeInput type="color" className="size-full cursor-pointer border-0 bg-transparent p-0 [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:border-0" aria-label={t('sheets.format.textColor')} value={textColor} onChange={e=>setTextColor(e.currentTarget.value.toUpperCase())}/></span><Button variant="outline" size="compact" disabled={action.busy} onClick={()=>send({kind:'fontColor',color:textColor})}>{t('sheets.format.apply')}</Button><Button variant="outline" size="compact" disabled={action.busy} onClick={()=>send({kind:'fontColor',color:'auto'})}>{t('sheets.format.auto')}</Button></div></div>
+  <div className="flex flex-col gap-1"><span>{t('sheets.format.fillColor')}</span><div className="flex items-center gap-1"><span className="h-7 w-8 shrink-0 overflow-hidden rounded-sm border border-subtle"><NativeInput type="color" className="size-full cursor-pointer border-0 bg-transparent p-0 [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:border-0" aria-label={t('sheets.format.fillColor')} value={fillColor} onChange={e=>setFillColor(e.currentTarget.value.toUpperCase())}/></span><Button variant="outline" size="compact" disabled={action.busy} onClick={()=>send({kind:'fillColor',color:fillColor})}>{t('sheets.format.apply')}</Button><Button variant="outline" size="compact" disabled={action.busy} onClick={()=>send({kind:'fillColor',color:'none'})}>{t('sheets.format.noFill')}</Button></div></div>
+  <p role="status">{action.notice}</p></Region>;
+}
+export function SheetsFormatSection({sectionId,context}:InspectorSectionProps){return <SheetsFormatPanel panelId={sectionId} context={context}/>;}

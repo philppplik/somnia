@@ -20,6 +20,10 @@ export class HeadlessWorkbook {
     range(sheet: number, row: number, col: number, rows: number, cols: number): string;
     redo(): string;
     /**
+     * Applies one typed formatting operation from a fixed allowlist to a block as one undo step.
+     */
+    format_range(sheet: number, row: number, col: number, rows: number, cols: number, op_json: string): string;
+    /**
      * Writes a rectangular block of inputs as one undo step; all-or-nothing.
      */
     set_values(sheet: number, row: number, col: number, values_json: string): string;
@@ -58,6 +62,7 @@ export interface InitOutput {
     readonly headlessworkbook_new: (a: number, b: number) => [number, number, number];
     readonly headlessworkbook_range: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
     readonly headlessworkbook_redo: (a: number) => [number, number, number, number];
+    readonly headlessworkbook_format_range: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number, number];
     readonly headlessworkbook_set_values: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
     readonly headlessworkbook_clear_contents: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
     readonly headlessworkbook_set_clock: (a: number, b: number) => [number, number, number, number];

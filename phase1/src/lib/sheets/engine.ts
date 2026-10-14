@@ -1,4 +1,4 @@
-import type {RangeResult,SheetInfo,SheetLayout,SheetsRequest,SheetsResponse,ViewResult,WorkbookInfo} from './protocol';
+import type {FormatOp,RangeResult,SheetInfo,SheetLayout,SheetsRequest,SheetsResponse,ViewResult,WorkbookInfo} from './protocol';
 import {MAX_INPUT_BYTES} from './protocol';
 type Req=SheetsRequest extends infer R?R extends {id:number}?Omit<R,'id'>:never:never;
 /** One module Worker per open workbook. A timeout or crash discards the session: callers must keep the original bytes. */
@@ -38,6 +38,8 @@ export class SheetsEngine{
  setValues(sheet:number,row:number,col:number,values:string[][]){return this.result<unknown>({op:'setValues',sheet,row,col,values});}
  /** One atomic clear of a block's contents (formats stay), one undo step. */
  clear(sheet:number,row:number,col:number,rows:number,cols:number){return this.result<unknown>({op:'clear',sheet,row,col,rows,cols});}
+ /** One typed formatting operation over a block (one undo step). */
+ format(sheet:number,row:number,col:number,rows:number,cols:number,format:FormatOp){return this.result<unknown>({op:'format',sheet,row,col,rows,cols,format});}
  undo(){return this.result<unknown>({op:'undo'});}
  redo(){return this.result<unknown>({op:'redo'});}
  async save():Promise<Uint8Array>{const r=await this.request({op:'save'});if(r.ok&&r.op==='bytes')return new Uint8Array(r.bytes);throw new Error('Unexpected engine response');}

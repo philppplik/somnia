@@ -10,6 +10,13 @@ export interface ViewCell extends RangeCell{text:string;numeric:boolean;fmtColor
 export interface ViewResult{sheet:number;row:number;col:number;rows:number;cols:number;cells:ViewCell[]}
 export interface SheetLayout{sheet:number;defaultColWidth:number;defaultRowHeight:number;cols:{i:number;w:number;hidden:boolean}[];rows:{i:number;h:number;hidden:boolean}[];showGridlines:boolean;freeze:{rows:number;cols:number}|null;merges:{r0:number;c0:number;r1:number;c1:number}[]}
 export interface RangeResult{sheet:number;row:number;col:number;rows:number;cols:number;cells:RangeCell[]}
+/** Typed formatting operations; the Rust bridge keeps the same closed allowlist and re-validates every field. */
+export type FormatOp=
+ |{kind:'bold'|'italic'|'underline'|'strike';on:boolean}
+ |{kind:'fontName';name:string}
+ |{kind:'fontSize';size:number}
+ |{kind:'fontColor';color:string}
+ |{kind:'fillColor';color:string};
 export type SheetsRequest=
  |{id:number;op:'init';wasmUrl:string}
  |{id:number;op:'open';bytes:ArrayBuffer}
@@ -20,6 +27,7 @@ export type SheetsRequest=
  |{id:number;op:'set';sheet:number;address:string;input:string}
  |{id:number;op:'setValues';sheet:number;row:number;col:number;values:string[][]}
  |{id:number;op:'clear';sheet:number;row:number;col:number;rows:number;cols:number}
+ |{id:number;op:'format';sheet:number;row:number;col:number;rows:number;cols:number;format:FormatOp}
  |{id:number;op:'undo'}|{id:number;op:'redo'}|{id:number;op:'save'}|{id:number;op:'close'};
 export type SheetsResponse=
  |{id:number;ok:true;op:'result';result:unknown;ms:number}

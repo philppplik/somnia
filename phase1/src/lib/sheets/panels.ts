@@ -9,5 +9,6 @@ export const sheetsPanelDefs:readonly PanelDef[]=[
 
 export const sheetsInspectorDef:InspectorDef={titleKey:'sheets.panel.cell',emptyKey:'sheets.panel.none',sections:[
  {id:'cell',title:'Cell',titleKey:'sheets.panel.cell',component:'sheets.inspector.cell',when:"services.workbook && selection.kind != 'none'",order:10,commands:['sheets.setCell']},
+ {id:'format',title:'Format',titleKey:'sheets.panel.formatting',component:'sheets.inspector.format',when:'services.workbook',order:15,commands:['sheets.format']},
  {id:'formulas',title:'Formula builder',titleKey:'sheets.panel.formulas',component:'sheets.inspector.formulas',when:'services.workbook',order:20,defaultCollapsed:true,commands:['sheets.setCell']},
 ]};

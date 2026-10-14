@@ -12,10 +12,11 @@ import {Table2,Redo2,Undo2} from '../../lib/icons';
 import {addMediaFile,formatBytes,useMedia,type MediaItem} from '../../lib/media';
 import {useT} from '../../lib/useT';
 import {SheetsEngine} from '../../lib/sheets/engine';
-import type {SheetInfo,SheetLayout,ViewCell,WorkbookInfo} from '../../lib/sheets/protocol';
+import type {FormatOp,SheetInfo,SheetLayout,ViewCell,WorkbookInfo} from '../../lib/sheets/protocol';
 import {Geometry} from '../../lib/sheets/geometry';
 import {MAX_CELL_BYTES} from '../../lib/sheets/protocol';
 import {addressOf,cellText,colName,displayValue,editText,isErrorValue,cellAlign} from '../../lib/sheets/format';
+import {formatRectOk,toggleOp,type ToggleKind} from '../../lib/sheets/formatOps';
 import {inRect,parseTsv,planPaste,rectCells,rectOf,toTsv} from '../../lib/sheets/clipboard';
 import {MAX_READ_CELLS} from '../../lib/sheets/protocol';
 import {acquireSheetsSession,getSheetsSession,releaseSheetsSession,saveSheetsCopy,setSheetsDirty,sheetsIsDirty} from '../../lib/sheets/session';
@@ -75,9 +76,15 @@ function Workbook({item}:{item:MediaItem}){
  const contextOwner=useRef<ReturnType<typeof studioContextStore.claim>|null>(null);
  useEffect(()=>{const owner=studioContextStore.claim('sheets',{id:item.name,kind:'xlsx',dirty:false,readOnly:false});contextOwner.current=owner;return()=>{owner.release();contextOwner.current=null;};},[item.name,item.url]);
  useEffect(()=>{if(phase.kind!=='ready')return;const count=rectCells(range);setSheetsSelection({file:item.name,sheet,sheetName:book?.sheets.find(s=>s.index===sheet)?.name??'',address,kind:cur?.value.t??'Empty',text:displayValue(cur?.value),formula:cur?.formula??null,dirty,canUndo:!!info?.canUndo,canRedo:!!info?.canRedo,range,workbook:book??undefined,info,layout,style:cur?.style,revision:rev});contextOwner.current?.report({document:{id:item.name,kind:'xlsx',dirty,readOnly:false},selection:{kind:count>1?'many':'one',type:'cell',count,ids:[rangeAddress(range)]},busy:false,services:{workbook:true},data:{sheet,address,range:rangeAddress(range)}});},[phase.kind,item.name,sheet,book,address,cur,dirty,info,layout,rev,range.r0,range.r1,range.c0,range.c1]);
+ // One typed formatting operation over the current selection = one engine call = one undo step. A pending cell edit is committed first so it is not lost or reordered.
+ const applyFormat=async(op:FormatOp)=>{
+  if(draftRef.current!==null)await commit(draftRef.current);
+  if(!formatRectOk(rectCells(range)))throw Error('Selection is too large to format.');
+  try{await engine.current!.format(sheet,range.r0,range.c0,range.r1-range.r0+1,range.c1-range.c0+1,op);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
+ const toggleFormat=(kind:ToggleKind)=>{void applyFormat(toggleOp(kind,cur?.style)).catch(()=>undefined);};
  const panelOperations=useRef<SheetsPanelController>(null!);
- panelOperations.current={ready:()=>phase.kind==='ready'&&!!engine.current&&!engine.current.isDisposed,navigate:async(sheetIndex,targetAddress)=>{const target=parseAddress(targetAddress);if(!target||!book?.sheets.some(s=>s.index===sheetIndex&&s.visibility==='Visible'))throw Error('Invalid sheet or cell.');if(draftRef.current!==null)await commit(draftRef.current);setSheet(sheetIndex);setSel(target);setExt(null);setDraft(null);},setCell:async input=>{if(new TextEncoder().encode(input).length>MAX_CELL_BYTES)throw Error('Cell input is too long.');const eng=engine.current!;await eng.set(sheet,address,input);setDraft(null);setDirty(true);setNotice('');setRev(r=>r+1);},readRange:async(input)=>{const r=parsePanelRange(input);if(!r)throw Error('Invalid range.');return (await engine.current!.range(sheet,r.r0,r.c0,r.r1-r.r0+1,r.c1-r.c0+1)).cells;}};
- useEffect(()=>registerSheetsPanelController({ready:()=>panelOperations.current.ready(),navigate:(...args)=>panelOperations.current.navigate(...args),setCell:input=>panelOperations.current.setCell(input),readRange:input=>panelOperations.current.readRange(input)}),[]);
+ panelOperations.current={ready:()=>phase.kind==='ready'&&!!engine.current&&!engine.current.isDisposed,navigate:async(sheetIndex,targetAddress)=>{const target=parseAddress(targetAddress);if(!target||!book?.sheets.some(s=>s.index===sheetIndex&&s.visibility==='Visible'))throw Error('Invalid sheet or cell.');if(draftRef.current!==null)await commit(draftRef.current);setSheet(sheetIndex);setSel(target);setExt(null);setDraft(null);},setCell:async input=>{if(new TextEncoder().encode(input).length>MAX_CELL_BYTES)throw Error('Cell input is too long.');const eng=engine.current!;await eng.set(sheet,address,input);setDraft(null);setDirty(true);setNotice('');setRev(r=>r+1);},formatCells:async op=>{await applyFormat(op);},readRange:async(input)=>{const r=parsePanelRange(input);if(!r)throw Error('Invalid range.');return (await engine.current!.range(sheet,r.r0,r.c0,r.r1-r.r0+1,r.c1-r.c0+1)).cells;}};
+ useEffect(()=>registerSheetsPanelController({ready:()=>panelOperations.current.ready(),navigate:(...args)=>panelOperations.current.navigate(...args),setCell:input=>panelOperations.current.setCell(input),readRange:input=>panelOperations.current.readRange(input),formatCells:op=>panelOperations.current.formatCells(op)}),[]);
  useEffect(()=>{if(phase.kind!=='ready')return;const el=scroller.current;if(!el)return;const top=geo.rowTop(sel.row),left=geo.colLeft(sel.col);if(top<el.scrollTop||top+geo.rowHeight(sel.row)>el.scrollTop+el.clientHeight-HEAD_H)el.scrollTop=Math.max(0,top);if(left<el.scrollLeft||left+geo.colWidth(sel.col)>el.scrollLeft+el.clientWidth-HEAD_W)el.scrollLeft=Math.max(0,left);},[sel.row,sel.col,sheet,geo,phase.kind]);
  const readRange=async()=>{if(rectCells(range)>MAX_READ_CELLS){setNotice(t('sheets.rangeTooLarge'));return null;}
   const r=await engine.current!.range(sheet,range.r0,range.c0,range.r1-range.r0+1,range.c1-range.c0+1);const m=new Map(r.cells.map(c=>[c.address,c]));
@@ -105,6 +112,7 @@ function Workbook({item}:{item:MediaItem}){
   else if(k==='Tab'){e.preventDefault();move(0,e.shiftKey?-1:1);}else if(k==='Enter'||k==='F2'){e.preventDefault();startEdit(editText(cur?.value,cur?.formula));}
   else if(k==='Delete'||k==='Backspace'){e.preventDefault();void clearRange();}
   else if((e.ctrlKey||e.metaKey)&&k.toLowerCase()==='a'){e.preventDefault();setSel({row:0,col:0});setExt({row:Math.max(0,(info?.rows??1)-1),col:Math.max(0,(info?.cols??1)-1)});}
+  else if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&!e.altKey&&['b','i','u'].includes(k.toLowerCase())){e.preventDefault();toggleFormat(({b:'bold',i:'italic',u:'underline'} as const)[k.toLowerCase() as 'b'|'i'|'u']);}
   else if((e.ctrlKey||e.metaKey)&&k.toLowerCase()==='z'){e.preventDefault();void history(e.shiftKey?'redo':'undo');}
   else if((e.ctrlKey||e.metaKey)&&k.toLowerCase()==='y'){e.preventDefault();void history('redo');}
   else if(k.length===1&&!e.ctrlKey&&!e.metaKey&&!e.altKey){e.preventDefault();startEdit(k);}

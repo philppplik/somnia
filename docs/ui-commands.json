@@ -3203,6 +3203,14 @@
       "hasEnabled": true
     },
     {
+      "id": "sheets.format",
+      "title": "Format selected cells",
+      "category": "Edit",
+      "source": "sheets",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
       "id": "sheets.formulas.open",
       "title": "Open Smart Formula builder",
       "category": "View",
