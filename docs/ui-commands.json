@@ -1020,6 +1020,24 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.keys.selectAroundPlayhead",
+      "title": "Select the keys before or after the playhead",
+      "category": "View",
+      "source": "animation",
+      "keywords": [
+        "after",
+        "animation",
+        "before",
+        "cursor",
+        "earlier",
+        "keys",
+        "later",
+        "playhead",
+        "select"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.keys.selectInWorkArea",
       "title": "Select the keys in the work area",
       "category": "View",

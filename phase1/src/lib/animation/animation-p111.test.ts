@@ -220,3 +220,10 @@ test('keys in work area: inclusive bounds, only listed layers',()=>{
  assert.equal(keysInWorkArea(c,['zz']).length,0);
  assert.equal(keysInWorkArea({...c,workArea:{in:f(1),out:f(2)}},['a']).length,0);
 });
+import {keysAroundPlayhead} from './keyPlayheadSelect';
+test('keys around playhead: strict before/after, listed layers only',()=>{
+ const c=findComp(base())!;
+ assert.deepEqual(keysAroundPlayhead(c,['a'],f(5),'before').map(x=>x.t),[f(0)]);
+ assert.deepEqual(keysAroundPlayhead(c,['a'],f(5),'after').map(x=>x.t),[f(10)]);
+ assert.equal(keysAroundPlayhead(c,['a'],f(0),'before').length,0);assert.equal(keysAroundPlayhead(c,['zz'],f(5),'after').length,0);
+});

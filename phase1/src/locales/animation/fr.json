@@ -897,5 +897,10 @@
  "cmd.animation.keys.workAreaToKeys": "Régler la zone de travail sur les keys sélectionnées",
  "animation.keys.inArea": "Keys dans la zone de travail",
  "animation.keys.inArea.hint": "Sélectionne toutes les keys dans la zone de travail",
- "cmd.animation.keys.selectInWorkArea": "Sélectionner les keys de la zone de travail"
+ "cmd.animation.keys.selectInWorkArea": "Sélectionner les keys de la zone de travail",
+ "animation.keys.selBefore": "Keys avant la tête de lecture",
+ "animation.keys.selAfter": "Keys après la tête de lecture",
+ "animation.keys.selBefore.hint": "Sélectionne toutes les keys avant la tête de lecture",
+ "animation.keys.selAfter.hint": "Sélectionne toutes les keys après la tête de lecture",
+ "cmd.animation.keys.selectAroundPlayhead": "Sélectionner les keys avant ou après la tête de lecture"
 }

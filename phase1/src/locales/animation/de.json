@@ -897,5 +897,10 @@
  "cmd.animation.keys.workAreaToKeys": "Arbeitsbereich auf die gewählten Keys setzen",
  "animation.keys.inArea": "Keys im Arbeitsbereich",
  "animation.keys.inArea.hint": "Alle Keys im Arbeitsbereich auswählen",
- "cmd.animation.keys.selectInWorkArea": "Keys im Arbeitsbereich auswählen"
+ "cmd.animation.keys.selectInWorkArea": "Keys im Arbeitsbereich auswählen",
+ "animation.keys.selBefore": "Keys vor dem Playhead",
+ "animation.keys.selAfter": "Keys nach dem Playhead",
+ "animation.keys.selBefore.hint": "Alle Keys vor dem Playhead auswählen",
+ "animation.keys.selAfter.hint": "Alle Keys nach dem Playhead auswählen",
+ "cmd.animation.keys.selectAroundPlayhead": "Keys vor oder nach dem Playhead auswählen"
 }

@@ -897,5 +897,10 @@
  "cmd.animation.keys.workAreaToKeys": "Definir a área de trabalho nas keys selecionadas",
  "animation.keys.inArea": "Keys na área de trabalho",
  "animation.keys.inArea.hint": "Seleciona todas as keys dentro da área de trabalho",
- "cmd.animation.keys.selectInWorkArea": "Selecionar as keys da área de trabalho"
+ "cmd.animation.keys.selectInWorkArea": "Selecionar as keys da área de trabalho",
+ "animation.keys.selBefore": "Keys antes do cursor",
+ "animation.keys.selAfter": "Keys depois do cursor",
+ "animation.keys.selBefore.hint": "Seleciona todas as keys antes do cursor",
+ "animation.keys.selAfter.hint": "Seleciona todas as keys depois do cursor",
+ "cmd.animation.keys.selectAroundPlayhead": "Selecionar as keys antes ou depois do cursor"
 }
