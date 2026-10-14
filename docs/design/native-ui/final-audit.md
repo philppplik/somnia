@@ -236,6 +236,12 @@ through native control primitives, see below.
   one drag/commit/undo step each, cap 20), unit tests and gallery
   proof added (?view=photos-grad; canvas bitmaps pixel-identical to
   the P50 base 2d9d494e).
+- P52: radial filter (drag-box ellipse with soft edge, sharing the
+  gradient EV/sat strengths, axis-aligned and inside-only by design,
+  overlay with edge/plateau ellipses and a center delete-handle, one
+  drag/commit/undo step each, cap 20), unit tests and gallery proof
+  added (?view=photos-rad; canvas bitmaps pixel-identical to the P51
+  base 64695656).
 
 
 

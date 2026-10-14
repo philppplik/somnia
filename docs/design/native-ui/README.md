@@ -65,6 +65,7 @@ All file links are repository-relative, so they remain useful on a feature branc
 35. [Photos preset sync](photos-preset-sync.md)
 36. [Photos overlay markers](photos-overlay-markers.md)
 37. [Photos graduated filter](photos-grad-filter.md)
+38. [Photos radial filter](photos-radial-filter.md)
 
 ## The system in one view
 

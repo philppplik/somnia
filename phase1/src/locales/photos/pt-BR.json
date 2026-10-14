@@ -34,6 +34,7 @@
   "photos.grad.toggle": "Filtro de gradiente",
   "photos.grad.ev": "Intensidade do gradiente",
   "photos.grad.sat": "Saturação do gradiente",
+  "photos.rad.toggle": "Filtro radial",
  "photos.crop.apply": "Aplicar recorte",
  "photos.crop.cancel": "Cancelar recorte",
  "photos.crop.guides": "Regra dos terços",
