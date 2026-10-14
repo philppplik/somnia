@@ -1005,5 +1005,8 @@
  "animation.export.quality.low": "Baixa",
  "animation.export.quality.medium": "Média",
  "animation.export.quality.high": "Alta",
- "animation.export.problem.quality": "A qualidade WebM deve ser baixa, média ou alta."
+ "animation.export.problem.quality": "A qualidade WebM deve ser baixa, média ou alta.",
+ "animation.export.background": "Fundo",
+ "animation.export.backgroundReset": "Usar a cor da composição",
+ "animation.export.problem.background": "A cor de fundo deve ter a forma #ffffff."
 }

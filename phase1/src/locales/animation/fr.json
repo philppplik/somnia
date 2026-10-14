@@ -1005,5 +1005,8 @@
  "animation.export.quality.low": "Basse",
  "animation.export.quality.medium": "Moyenne",
  "animation.export.quality.high": "Haute",
- "animation.export.problem.quality": "La qualité WebM doit être basse, moyenne ou haute."
+ "animation.export.problem.quality": "La qualité WebM doit être basse, moyenne ou haute.",
+ "animation.export.background": "Arrière-plan",
+ "animation.export.backgroundReset": "Utiliser la couleur de la composition",
+ "animation.export.problem.background": "La couleur d’arrière-plan doit ressembler à #ffffff."
 }

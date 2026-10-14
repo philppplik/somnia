@@ -40,6 +40,8 @@ let forced:string|undefined;
 export async function withExportComp<T>(compId:string,fn:()=>Promise<T>):Promise<T>{forced=compId;try{return await fn();}finally{forced=undefined;}}
 export const exportSetupSnapshot=()=>({settings:state.settings,transparent:state.transparent});
 export function restoreExportSetup(x:{settings:ExportSettings;transparent:boolean}){if(state.status!=='running')set({settings:x.settings,transparent:x.transparent});}
+/** The export background colour replaces the composition's for this export only; the document is untouched. */
+const withBg=<T extends {background:string}>(c:T):T=>state.settings.background?{...c,background:state.settings.background}:c;
 function target(format?:ExportFormat){
  const base=animationSession().document;const fileName=state.settings.fileName?.trim();
  /** A custom export name replaces the document name in every file name this export writes. */
@@ -48,10 +50,10 @@ function target(format?:ExportFormat){
  setRenderComps(doc.compositions);
  if(!format){const out={width:Math.max(1,Math.round(comp.width*state.settings.scale/100)),height:Math.max(1,Math.round(comp.height*state.settings.scale/100))};
   if(out.width*out.height>EXPORT_LIMITS.maxPixels||out.width>16384||out.height>16384)throw new ExportError(problemMessage('size'),'too-large');
-  return {doc,comp,out,ec:comp};}
+  return {doc,comp:withBg(comp),out,ec:withBg(comp)};}
  const plan=exportPlan(comp,format,state.settings);
  if(plan.problems.length)throw new ExportError(problemMessage(plan.problems[0]),plan.problems[0]==='size'?'too-large':plan.problems[0]==='range'?'empty':'too-many');
- return {doc,comp,out:{width:plan.width,height:plan.height},ec:plan.comp};
+ return {doc,comp:withBg(comp),out:{width:plan.width,height:plan.height},ec:withBg(plan.comp)};
 }
 async function guarded(kind:'frame'|'copy'|'sequence'|'gif'|'apng'|'webm',fn:(signal:AbortSignal)=>Promise<{blob:Blob;fileName:string}>,save:(b:Blob,n:string)=>void|Promise<void>){
  if(state.status==='running')throw new ExportError('An export is already running.','cancelled');

@@ -656,3 +656,15 @@ test('P188: WebM quality sets the bitrate and the size estimate',async()=>{
  assert.equal(estimateBytes('webm',800,450,60,30),estimateBytes('webm',800,450,60,30,'medium'));
  assert.deepEqual(settingsProblems({scale:100,fps:null,from:null,to:null,quality:'ultra' as never}),['quality']);
 });
+
+test('P189 export background colour: replaces the composition colour for this export only, validates, clears with null',async()=>{
+ const {exportCurrentFrame,setExportSettings,resetExportSettings,resetExport}=await import('./exportJob');const {settingsProblems,defaultExportSettings}=await import('./exportSettings');
+ const s=open();setAnimationSession(s);resetExport();resetExportSettings();
+ const svgs:string[]=[];const rasterize=async(svg:string)=>{svgs.push(svg);return new Uint8Array([1]);};const save=()=>{};
+ const orig=findComp(s.document!).background.toLowerCase();assert.notEqual(orig,'#ff00aa');
+ setExportSettings({background:'#FF00AA'});await exportCurrentFrame({rasterize,save});
+ assert.ok(svgs[0].toLowerCase().includes('#ff00aa'));assert.equal(findComp(s.document!).background.toLowerCase(),orig);
+ setExportSettings({background:null});await exportCurrentFrame({rasterize,save});assert.ok(svgs[1].toLowerCase().includes(orig));
+ assert.throws(()=>setExportSettings({background:'red'}),(e:any)=>e.code==='unsupported');assert.deepEqual(settingsProblems({...defaultExportSettings(),background:'#abcdef'}),[]);
+ resetExportSettings();
+});
