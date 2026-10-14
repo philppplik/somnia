@@ -1002,6 +1002,19 @@ test('mesh edit mode: randomize jitters the selection reproducibly by seed',asyn
  await expect(page.getByRole('alert')).toContainText('Select vertices to randomize');
 });
 
+test('mesh edit mode: move translates the selection by a typed offset',async({page})=>{
+ await blank(page);
+ const id=await insert(page,'cube',0);
+ expect(await run(page,'studio3d.edit.start',{id,mode:'vertex'})).toBe(true);
+ expect(await run(page,'studio3d.edit.select',{kind:'vertex',ids:[0,1,2,3]})).toBe(true);
+ expect(await run(page,'studio3d.edit.move',{y:0.5})).toBe(true);
+ let s=await session(page);expect(s.edit).toMatchObject({verts:4});
+ expect(await run(page,'studio3d.undo',{})).toBe(true);
+ expect(await run(page,'studio3d.edit.selectAll',{op:'none'})).toBe(true);
+ expect(await run(page,'studio3d.edit.move',{y:0.5})).toBe(false);
+ await expect(page.getByRole('alert')).toContainText('Select vertices to move');
+});
+
 test('mesh edit mode: weld merges selected vertices at their centre, undo restores them',async({page})=>{
  await blank(page);
  const id=await insert(page,'cube',0);

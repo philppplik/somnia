@@ -377,6 +377,30 @@ export function weldSelected(m:MeshData,verts:number[]):MeshData{
  if(m.uvs)out.uvs=m.uvs;
  return out;
 }
+/** Translates the selected vertices by an offset: position-equal twins move together so split sides never rip, and the strongest mask at a position protects the whole seam. Masks are carried; UVs are carried. */
+export function moveSelected(m:MeshData,verts:number[],offset:[number,number,number]):MeshData{
+ check(m);
+ if(!verts.length)throw new EditError('Select vertices to move.');
+ if(!offset.every(x=>Number.isFinite(x))||offset.every(x=>Math.abs(x)>1e6)||(offset[0]===0&&offset[1]===0&&offset[2]===0))throw new EditError('The move offset must be a finite, non-zero vector.');
+ const nv=m.positions.length/3;
+ for(const v of verts){if(!Number.isInteger(v)||v<0||v>=nv)throw new EditError(`Vertex ${v} does not exist.`);}
+ const pk=(v:number)=>`${Math.round(m.positions[v*3]*1e6)},${Math.round(m.positions[v*3+1]*1e6)},${Math.round(m.positions[v*3+2]*1e6)}`;
+ const want=new Set(verts.map(pk));
+ const damp=new Map<string,number>();
+ for(let v=0;v<nv;v++){
+  const k=pk(v);if(!want.has(k))continue;
+  const mk=m.mask?m.mask[v]:0;
+  damp.set(k,Math.min(damp.get(k)??mk,mk));
+ }
+ const positions=[...m.positions];
+ for(let v=0;v<nv;v++){
+  const k=pk(v);if(!want.has(k))continue;
+  const f=1-damp.get(k)!;if(f===0)continue;
+  positions[v*3]+=offset[0]*f;positions[v*3+1]+=offset[1]*f;positions[v*3+2]+=offset[2]*f;
+ }
+ const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
+ check(out);return out;
+}
 /** Jitters the selected vertices by a seeded pseudo-random displacement per distinct position: position-equal twins get the identical displacement so split sides never rip, the strongest mask at a position dams the whole seam, and the same seed always reproduces the same result. Masks are carried; UVs are carried. */
 export function randomizeSelected(m:MeshData,verts:number[],amount:number,seed:number):MeshData{
  check(m);

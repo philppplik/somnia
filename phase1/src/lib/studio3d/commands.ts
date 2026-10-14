@@ -135,6 +135,7 @@ export interface Studio3DController{
  editCollapse():void;
  editToSphere(factor:number):void;
  editRandomize(amount:number,seed:number):void;
+ editMove(offset:[number,number,number]):void;
  editExtrude(offset:number):void;
  editInset(amount:number):void;
  editBevel(width:number):void;
@@ -321,6 +322,7 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add('studio3d.edit.collapse','Collapse each connected island of the selection of the edited 3D mesh into one vertex at its centroid','Edit',()=>need().editCollapse(),undefined,()=>getStudio3DState().edit!=null),
   add<{factor?:number}>('studio3d.edit.toSphere','Pull the selected vertices of the edited 3D mesh onto a sphere around their centroid','Edit',p=>need().editToSphere(p?.factor??1),object({factor:{type:'number',minimum:-100,maximum:100}},[]),()=>getStudio3DState().edit!=null),
   add<{amount?:number;seed?:number}>('studio3d.edit.randomize','Jitter the selected vertices of the edited 3D mesh by a seeded random displacement','Edit',p=>need().editRandomize(p?.amount??0.1,p?.seed??1),object({amount:{type:'number',minimum:-1000000,maximum:1000000},seed:{type:'integer',minimum:1,maximum:1000000000}},[]),()=>getStudio3DState().edit!=null),
+  add<{x?:number;y?:number;z?:number}>('studio3d.edit.move','Move the selected vertices of the edited 3D mesh by an offset','Edit',p=>need().editMove([p?.x??0,p?.y??0,p?.z??0]),object({x:{type:'number',minimum:-1000000,maximum:1000000},y:{type:'number',minimum:-1000000,maximum:1000000},z:{type:'number',minimum:-1000000,maximum:1000000}},[]),()=>getStudio3DState().edit!=null),
   add<{offset:number}>('studio3d.edit.extrude','Extrude the selected faces of the edited 3D mesh','Edit',p=>need().editExtrude(p.offset),object({offset:{type:'number',minimum:-1000,maximum:1000}}),()=>getStudio3DState().edit!=null),
   add<{amount:number}>('studio3d.edit.inset','Inset the selected faces of the edited 3D mesh','Edit',p=>need().editInset(p.amount),object({amount:{type:'number',exclusiveMinimum:0,maximum:1}}),()=>getStudio3DState().edit!=null),
   add<{width:number}>('studio3d.edit.bevel','Bevel (chamfer) the selected vertices of the edited 3D mesh','Edit',p=>need().editBevel(p.width),object({width:{type:'number',exclusiveMinimum:0,maximum:1000}}),()=>getStudio3DState().edit!=null),

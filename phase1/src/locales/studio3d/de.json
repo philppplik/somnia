@@ -925,5 +925,11 @@
  "cmd.studio3d.edit.randomize": "Ausgewählte Vertizes mit reproduzierbarem Zufall versetzen",
  "studio3d.edit.randomize": "Zufällig",
  "studio3d.hist.editRandomize": "Auswahl zufällig versetzen",
- "studio3d.edit.randomSeed": "Startwert"
+ "studio3d.edit.randomSeed": "Startwert",
+ "cmd.studio3d.edit.move": "Ausgewählte Vertizes um einen Versatz verschieben",
+ "studio3d.edit.move": "Verschieben",
+ "studio3d.hist.editMove": "Auswahl verschieben",
+ "studio3d.edit.moveX": "Versatz X",
+ "studio3d.edit.moveY": "Versatz Y",
+ "studio3d.edit.moveZ": "Versatz Z"
 }

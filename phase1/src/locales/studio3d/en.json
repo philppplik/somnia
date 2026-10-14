@@ -925,5 +925,11 @@
  "cmd.studio3d.edit.randomize": "Jitter the selected vertices by a seeded random displacement",
  "studio3d.edit.randomize": "Randomize",
  "studio3d.hist.editRandomize": "Randomize selection",
- "studio3d.edit.randomSeed": "Seed"
+ "studio3d.edit.randomSeed": "Seed",
+ "cmd.studio3d.edit.move": "Move the selected vertices by an offset",
+ "studio3d.edit.move": "Move",
+ "studio3d.hist.editMove": "Move selection",
+ "studio3d.edit.moveX": "Offset X",
+ "studio3d.edit.moveY": "Offset Y",
+ "studio3d.edit.moveZ": "Offset Z"
 }

@@ -925,5 +925,11 @@
  "cmd.studio3d.edit.randomize": "Desplazar los vértices seleccionados aleatoriamente con semilla",
  "studio3d.edit.randomize": "Aleatorio",
  "studio3d.hist.editRandomize": "Aleatorizar selección",
- "studio3d.edit.randomSeed": "Semilla"
+ "studio3d.edit.randomSeed": "Semilla",
+ "cmd.studio3d.edit.move": "Mover los vértices seleccionados por un desplazamiento",
+ "studio3d.edit.move": "Mover",
+ "studio3d.hist.editMove": "Mover selección",
+ "studio3d.edit.moveX": "Desplazamiento X",
+ "studio3d.edit.moveY": "Desplazamiento Y",
+ "studio3d.edit.moveZ": "Desplazamiento Z"
 }
