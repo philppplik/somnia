@@ -850,5 +850,15 @@
  "studio3d.hist.bridge": "Unir {name} y {other} con un puente",
  "cmd.studio3d.mesh.bridge": "Unir dos mallas 3D con un túnel entre sus bordes abiertos",
  "studio3d.mesh.bridge": "Puente (elige 2)",
- "studio3d.mesh.bridgeTwist": "Desplazamiento de torsión del puente"
+ "studio3d.mesh.bridgeTwist": "Desplazamiento de torsión del puente",
+ "cmd.studio3d.texture.generate": "Generar una textura procedural (tablero, rejilla, rayas o ruido) para un canal de textura del objeto 3D seleccionado",
+ "studio3d.texture.generate": "Generar",
+ "studio3d.texture.generateKind": "Patrón",
+ "studio3d.texture.generateScale": "Celdas del patrón",
+ "studio3d.texture.generateColorA": "Color primario",
+ "studio3d.texture.generateColorB": "Color secundario",
+ "studio3d.texture.kind.checker": "Tablero",
+ "studio3d.texture.kind.grid": "Rejilla",
+ "studio3d.texture.kind.stripes": "Rayas",
+ "studio3d.texture.kind.noise": "Ruido"
 }

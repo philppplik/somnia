@@ -1649,6 +1649,17 @@ test('3D studio mesh bridge: two planes become one object and undo restores both
  await expect.poll(async()=>(await session(page)).outline.length).toBe(2);
 });
 
+test('3D studio texture generate: a checker appears in the color slot and undo removes it',async({page})=>{
+ await blank(page);
+ const id=await insert(page,'cube',0);
+ const preview=async()=>await run(page,'studio3d.texture.preview',{id,slot:'color'}) as unknown as string|null;
+ expect(await preview()).toBeNull();
+ expect(await run(page,'studio3d.texture.generate',{kind:'checker',slot:'color',scale:4})).toBe(true);
+ await expect.poll(preview).not.toBeNull();
+ expect(await run(page,'studio3d.undo',{})).toBe(true);
+ await expect.poll(preview).toBeNull();
+});
+
 test('3D studio mesh simplify: triangle count drops and undo restores it',async({page})=>{
  await blank(page);
  await insert(page,'sphere',0);

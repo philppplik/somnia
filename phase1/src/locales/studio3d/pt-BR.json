@@ -850,5 +850,15 @@
  "studio3d.hist.bridge": "Unir {name} e {other} com ponte",
  "cmd.studio3d.mesh.bridge": "Unir duas malhas 3D com um túnel entre suas bordas abertas",
  "studio3d.mesh.bridge": "Ponte (selecione 2)",
- "studio3d.mesh.bridgeTwist": "Deslocamento de torção da ponte"
+ "studio3d.mesh.bridgeTwist": "Deslocamento de torção da ponte",
+ "cmd.studio3d.texture.generate": "Gerar uma textura procedural (xadrez, grade, listras ou ruído) para um canal de textura do objeto 3D selecionado",
+ "studio3d.texture.generate": "Gerar",
+ "studio3d.texture.generateKind": "Padrão",
+ "studio3d.texture.generateScale": "Células do padrão",
+ "studio3d.texture.generateColorA": "Cor primária",
+ "studio3d.texture.generateColorB": "Cor secundária",
+ "studio3d.texture.kind.checker": "Xadrez",
+ "studio3d.texture.kind.grid": "Grade",
+ "studio3d.texture.kind.stripes": "Listras",
+ "studio3d.texture.kind.noise": "Ruído"
 }

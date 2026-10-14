@@ -4,6 +4,7 @@ import {StudioProgress} from '../studios/StudioProgress';
 import {useEffect,useMemo,useRef,useState} from 'react';
 import {patchStudio3D} from '../../lib/studio3d/session';
 import type {ObjectInfo} from '../../lib/studio3d/stage';
+import {TEXGEN_DEFAULT_COLORS} from '../../lib/studio3d/texgen';
 import {executeCommand} from '../../lib/commands';
 import {dropTextureFile} from '../../lib/studio3d/commands';
 import {useT} from '../../lib/useT';
@@ -173,6 +174,10 @@ function MaterialUserPresets({id}:{id:number}){
 }
 export function ObjectSection(_:InspectorSectionProps){
  const {t}=useT();const s=useStudio3D();const o=s.selectedInfo;
+ const [tgKind,setTgKind]=useState<'checker'|'grid'|'stripes'|'noise'>('checker');
+ const [tgScale,setTgScale]=useState(8);
+ const [tgA,setTgA]=useState<string>(TEXGEN_DEFAULT_COLORS.a);
+ const [tgB,setTgB]=useState<string>(TEXGEN_DEFAULT_COLORS.b);
  if(!o)return <p className="p-3 text-xs text-ink-3">{t('studio3d.object.none')}</p>;
  return <div className="grid gap-2 p-3" data-testid="studio3d-object-section">
   <Input key={o.id+':'+o.name} defaultValue={o.name} aria-label={t('studio3d.model.name')} onBlur={e=>{const n=e.currentTarget.value.trim();if(n&&n!==o.name)void executeCommand('studio3d.object.rename',{id:o.id,name:n});}} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();}}/>
@@ -226,6 +231,12 @@ export function ObjectSection(_:InspectorSectionProps){
      <span className="w-20 shrink-0">{t('studio3d.texture.'+slot)}</span><span className="min-w-0 flex-1 truncate text-ink-3" title={name??''}>{name??t('studio3d.texture.none')}</span>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.texture.open',{slot})}>{t('studio3d.texture.choose')}</Button>
      <Button variant="outline" disabled={!name} onClick={()=>void executeCommand('studio3d.texture.clear',{id:o.id,slot})}>{t('studio3d.texture.clear')}</Button></div>;})}
+   <div className="flex flex-wrap items-center gap-1"><NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={tgKind} aria-label={t('studio3d.texture.generateKind')} onChange={e=>setTgKind(e.currentTarget.value as 'checker'|'grid'|'stripes'|'noise')}>
+    {(['checker','grid','stripes','noise'] as const).map(k=><option key={k} value={k}>{t('studio3d.texture.kind.'+k)}</option>)}</NativeSelect>
+   <NativeInput type="number" min={1} max={64} step={1} value={tgScale} aria-label={t('studio3d.texture.generateScale')} className="w-16" onChange={e=>setTgScale(Math.min(64,Math.max(1,Number(e.currentTarget.value)||8)))}/>
+   <NativeInput type="color" value={tgA} aria-label={t('studio3d.texture.generateColorA')} className="h-7 w-9" onChange={e=>setTgA(e.currentTarget.value)}/>
+   <NativeInput type="color" value={tgB} aria-label={t('studio3d.texture.generateColorB')} className="h-7 w-9" onChange={e=>setTgB(e.currentTarget.value)}/>
+   <Button variant="outline" onClick={()=>void executeCommand('studio3d.texture.generate',{kind:tgKind,slot:'color',scale:tgScale,colorA:tgA,colorB:tgB})}>{t('studio3d.texture.generate')}</Button></div>
     {TEXTURE_SLOTS.map(slot=>{const tr=o.material!.transforms?.[slot];if(!tr)return null;const set=(p:Record<string,number>)=>void executeCommand('studio3d.texture.transform',{id:o.id,slot,...p});
      return <details key={slot} className="text-xs text-ink-2" data-testid={'studio3d-uv-'+slot}><summary className="cursor-pointer">{t('studio3d.uv.title',{slot:t('studio3d.texture.'+slot)})}</summary>
       <div className="grid grid-cols-2 gap-2 pt-1">

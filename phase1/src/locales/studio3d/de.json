@@ -850,5 +850,15 @@
  "studio3d.hist.bridge": "{name} und {other} verbrücken",
  "cmd.studio3d.mesh.bridge": "Zwei 3D-Meshes mit einem Tunnel zwischen ihren offenen Rändern verbrücken",
  "studio3d.mesh.bridge": "Verbrücken (2 wählen)",
- "studio3d.mesh.bridgeTwist": "Verbrückungsversatz"
+ "studio3d.mesh.bridgeTwist": "Verbrückungsversatz",
+ "cmd.studio3d.texture.generate": "Prozedurale Textur (Schachbrett, Raster, Streifen oder Rauschen) für einen Textur-Slot des gewählten 3D-Objekts erzeugen",
+ "studio3d.texture.generate": "Erzeugen",
+ "studio3d.texture.generateKind": "Muster",
+ "studio3d.texture.generateScale": "Musterzellen",
+ "studio3d.texture.generateColorA": "Primärfarbe",
+ "studio3d.texture.generateColorB": "Sekundärfarbe",
+ "studio3d.texture.kind.checker": "Schachbrett",
+ "studio3d.texture.kind.grid": "Raster",
+ "studio3d.texture.kind.stripes": "Streifen",
+ "studio3d.texture.kind.noise": "Rauschen"
 }

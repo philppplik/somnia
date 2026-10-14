@@ -850,5 +850,15 @@
  "studio3d.hist.bridge": "Pont entre {name} et {other}",
  "cmd.studio3d.mesh.bridge": "Relier deux maillages 3D par un tunnel entre leurs bords ouverts",
  "studio3d.mesh.bridge": "Pont (sélection 2)",
- "studio3d.mesh.bridgeTwist": "Décalage de torsion du pont"
+ "studio3d.mesh.bridgeTwist": "Décalage de torsion du pont",
+ "cmd.studio3d.texture.generate": "Générer une texture procédurale (damier, grille, rayures ou bruit) pour un canal de texture de l'objet 3D sélectionné",
+ "studio3d.texture.generate": "Générer",
+ "studio3d.texture.generateKind": "Motif",
+ "studio3d.texture.generateScale": "Cellules du motif",
+ "studio3d.texture.generateColorA": "Couleur primaire",
+ "studio3d.texture.generateColorB": "Couleur secondaire",
+ "studio3d.texture.kind.checker": "Damier",
+ "studio3d.texture.kind.grid": "Grille",
+ "studio3d.texture.kind.stripes": "Rayures",
+ "studio3d.texture.kind.noise": "Bruit"
 }

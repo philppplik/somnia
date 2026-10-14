@@ -850,5 +850,15 @@
  "studio3d.hist.bridge": "Bridge {name} and {other}",
  "cmd.studio3d.mesh.bridge": "Bridge two 3D meshes with a tunnel between their open borders",
  "studio3d.mesh.bridge": "Bridge (select 2)",
- "studio3d.mesh.bridgeTwist": "Bridge twist offset"
+ "studio3d.mesh.bridgeTwist": "Bridge twist offset",
+ "cmd.studio3d.texture.generate": "Generate a procedural texture (checker, grid, stripes or noise) for a texture slot of the selected 3D object",
+ "studio3d.texture.generate": "Generate",
+ "studio3d.texture.generateKind": "Pattern",
+ "studio3d.texture.generateScale": "Pattern cells",
+ "studio3d.texture.generateColorA": "Primary color",
+ "studio3d.texture.generateColorB": "Secondary color",
+ "studio3d.texture.kind.checker": "Checker",
+ "studio3d.texture.kind.grid": "Grid",
+ "studio3d.texture.kind.stripes": "Stripes",
+ "studio3d.texture.kind.noise": "Noise"
 }
