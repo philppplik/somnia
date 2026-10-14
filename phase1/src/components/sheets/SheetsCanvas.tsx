@@ -18,7 +18,7 @@ import {MAX_CELL_BYTES} from '../../lib/sheets/protocol';
 import {addressOf,cellText,colName,displayValue,editText,isErrorValue,cellAlign} from '../../lib/sheets/format';
 import {inRect,parseTsv,pasteRect,rectCells,rectOf,toTsv} from '../../lib/sheets/clipboard';
 import {MAX_READ_CELLS} from '../../lib/sheets/protocol';
-import {saveSheetsCopy,setSheetsDirty,sheetsIsDirty} from '../../lib/sheets/session';
+import {acquireSheetsSession,getSheetsSession,releaseSheetsSession,saveSheetsCopy,setSheetsDirty,sheetsIsDirty} from '../../lib/sheets/session';
 import {registerDocSaver} from '../../lib/workDocs';
 import {registerSheetsCommands,registerSheetsCommandController} from '../../lib/sheets/commands';
 import {openSheetsFormulasPanel} from './formulasHero';
@@ -32,20 +32,21 @@ export function SheetsCanvas(){
 }
 function Workbook({item}:{item:MediaItem}){
  const {t}=useT();
- const engine=useRef<SheetsEngine|null>(null);const original=useRef<Uint8Array|null>(null);
+ const engine=useRef<SheetsEngine|null>(null);const original=useRef<Uint8Array|null>(null);const session=useRef<ReturnType<typeof acquireSheetsSession<SheetsEngine>>|null>(null);
  const [phase,setPhase]=useState<Phase>({kind:'loading'});const [book,setBook]=useState<WorkbookInfo|null>(null);
- const [sheet,setSheet]=useState(0);const [info,setInfo]=useState<SheetInfo|null>(null);
- const [sel,setSel]=useState({row:0,col:0});const [ext,setExt]=useState<{row:number;col:number}|null>(null);const dragging=useRef(false);const [draft,setDraftState]=useState<string|null>(null);const draftRef=useRef<string|null>(null);const formulaRef=useRef<HTMLInputElement>(null);
+ const [sheet,setSheetState]=useState(()=>getSheetsSession(item.name)?.url===item.url?getSheetsSession(item.name)!.sheet:0);const setSheet=(n:number)=>{const s=getSheetsSession(item.name);if(s)s.sheet=n;setSheetState(n);};const [info,setInfo]=useState<SheetInfo|null>(null);
+ const [sel,setSelState]=useState(()=>getSheetsSession(item.name)?.url===item.url?getSheetsSession(item.name)!.sel:{row:0,col:0});const setSel=(v:{row:number;col:number})=>{const s=getSheetsSession(item.name);if(s)s.sel=v;setSelState(v);};const [ext,setExt]=useState<{row:number;col:number}|null>(null);const dragging=useRef(false);const [draft,setDraftState]=useState<string|null>(null);const draftRef=useRef<string|null>(null);const formulaRef=useRef<HTMLInputElement>(null);
  const setDraft=(v:string|null)=>{draftRef.current=v;setDraftState(v);};
  const startEdit=(v:string)=>{setDraft(v);requestAnimationFrame(()=>{const el=formulaRef.current;if(el){el.focus();el.setSelectionRange(v.length,v.length);}});};
- const [cells,setCells]=useState<Map<string,ViewCell>>(new Map());const [layout,setLayout]=useState<SheetLayout|null>(null);const [rev,setRev]=useState(0);const [dirty,setDirty]=useState(false);
+ const [cells,setCells]=useState<Map<string,ViewCell>>(new Map());const [layout,setLayout]=useState<SheetLayout|null>(null);const [rev,setRev]=useState(0);const [dirty,setDirtyState]=useState(()=>sheetsIsDirty(item.name));const setDirty=(v:boolean)=>{setSheetsDirty(item.name,v);setDirtyState(v);};
  const [notice,setNotice]=useState('');const [view,setView]=useState({w:800,h:400,top:0,left:0});
  const scroller=useRef<HTMLDivElement>(null);
- const fail=useCallback((e:unknown)=>{reportError('sheets.engine',e,{context:{studio:'sheets',file:item.name}});const message=e instanceof Error?e.message:String(e);if(engine.current?.isDisposed)setPhase({kind:'error',message});else setNotice(message);},[item.name]);
+ const fail=useCallback((e:unknown)=>{reportError('sheets.engine',e,{context:{studio:'sheets',file:item.name}});const message=e instanceof Error?e.message:String(e);if(engine.current?.isDisposed){releaseSheetsSession(item.name);setDirtyState(false);}if(engine.current?.isDisposed)setPhase({kind:'error',message});else setNotice(message);},[item.name]);
  // Open: the engine gets a copy; the original bytes stay here for recovery.
- useEffect(()=>{let live=true;const eng=new SheetsEngine();engine.current=eng;
-  (async()=>{try{const buf=await (await fetch(item.url)).arrayBuffer();const bytes=new Uint8Array(buf);original.current=bytes;const opened=await eng.open(bytes);if(!live)return;setBook(opened);setPhase({kind:'ready'});}catch(e){if(live)reportError('sheets.open',e,{context:{studio:'sheets',file:item.name}});if(live)setPhase({kind:'error',message:e instanceof Error?e.message:String(e)});}})();
-  return()=>{live=false;eng.dispose();engine.current=null;setSheetsSelection(null);};},[item.url]);
+ // Open: the session registry owns the engine, so it survives studio/tab switches; the view only attaches. The original bytes stay in the session for recovery.
+ useEffect(()=>{let live=true;const sess=acquireSheetsSession(item.name,item.url,{create:()=>new SheetsEngine(),load:async u=>new Uint8Array(await (await fetch(u)).arrayBuffer())});session.current=sess;engine.current=sess.engine;
+  sess.ready.then(opened=>{if(!live)return;original.current=sess.original;setBook(opened);setPhase({kind:'ready'});}).catch(e=>{if(!live)return;reportError('sheets.open',e,{context:{studio:'sheets',file:item.name}});setPhase({kind:'error',message:e instanceof Error?e.message:String(e)});});
+  return()=>{live=false;engine.current=null;session.current=null;setSheetsSelection(null);};},[item.url,item.name]);
  // Sheet info (used range, history flags) after open, sheet switch and every edit.
  useEffect(()=>{if(phase.kind!=='ready')return;let live=true;engine.current?.info(sheet).then(i=>{if(live)setInfo(i);}).catch(fail);return()=>{live=false;};},[phase,sheet,rev,fail]);
  useEffect(()=>{if(phase.kind!=='ready')return;let live=true;engine.current?.layout(sheet).then(l=>{if(live)setLayout(l);}).catch(fail);return()=>{live=false;};},[phase,sheet,fail]);
@@ -132,7 +133,6 @@ function Workbook({item}:{item:MediaItem}){
  // Command layer bridge (sheets/commands.ts): exposes this workbook's engine to the sheets.* command specs while mounted.
  useEffect(()=>registerSheetsCommandController({ready:()=>!!engine.current&&!engine.current.isDisposed,canUndo:()=>!!infoRef.current?.canUndo,canRedo:()=>!!infoRef.current?.canRedo,undo:()=>historyRef.current('undo'),redo:()=>historyRef.current('redo'),saveCopy:()=>exportRef.current()}),[]);
  useEffect(()=>registerDocSaver('sheets',item.name,async()=>{await exportRef.current();await new Promise(r=>setTimeout(r,100));return !sheetsIsDirty(item.name);}),[item.name]);
- useEffect(()=>{setSheetsDirty(item.name,dirty);return()=>setSheetsDirty(item.name,false);},[dirty,item.name]);
  const restart=()=>{if(original.current)window.location.reload();};
  if(phase.kind==='error')return <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center" role="alert" data-testid="sheets-error"><p className="text-[13px] text-red-600">{phase.message}</p><p className="text-[12px] text-ink-3">{t('sheets.errorHint')}</p>{original.current&&<Button onClick={restart}>{t('sheets.reopen')}</Button>}</div>;
  const names=book?.sheets??[];
