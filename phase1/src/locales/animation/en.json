@@ -918,5 +918,8 @@
  "cmd.animation.keys.growSelection": "Grow the key selection by one neighbour",
  "animation.keys.shrink": "Shrink selection",
  "animation.keys.shrink.hint": "Drop the first and last selected key of each property",
- "cmd.animation.keys.shrinkSelection": "Shrink the key selection by one key at each end"
+ "cmd.animation.keys.shrinkSelection": "Shrink the key selection by one key at each end",
+ "animation.keys.grid": "Snap to grid",
+ "animation.keys.grid.hint": "Move the selected keys to the nearest multiple of this many frames",
+ "cmd.animation.keys.snapToGrid": "Snap the selected keys to every Nth frame"
 }

@@ -918,5 +918,8 @@
  "cmd.animation.keys.growSelection": "Ampliar a seleção de keys em um vizinho",
  "animation.keys.shrink": "Reduzir seleção",
  "animation.keys.shrink.hint": "Remove a primeira e a última key selecionada de cada propriedade",
- "cmd.animation.keys.shrinkSelection": "Reduzir a seleção de keys em uma key por ponta"
+ "cmd.animation.keys.shrinkSelection": "Reduzir a seleção de keys em uma key por ponta",
+ "animation.keys.grid": "Ajustar à grade",
+ "animation.keys.grid.hint": "Move as keys selecionadas para o múltiplo mais próximo deste número de quadros",
+ "cmd.animation.keys.snapToGrid": "Ajustar as keys selecionadas a cada N quadros"
 }

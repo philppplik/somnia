@@ -256,3 +256,10 @@ test('shrink selection: drops both ends per property',()=>{
  assert.deepEqual(shrinkSelection([k(3),k(1),k(2),k(4)]).map(x=>x.t),[f(2),f(3)]);
  assert.equal(shrinkSelection([k(1),k(2)]).length,0);assert.equal(shrinkSelection([k(1),k(2),k(1,'scale')]).length,0);
 });
+import {gridMoves} from './keyGrid';
+test('snap to grid: nearest multiple of N frames, bad N rejected',()=>{
+ const c=findComp(base())!,k=(n:number)=>({layer:'a',prop:'position' as const,t:f(n)});
+ const r=gridMoves(c,[k(10)],4);assert.deepEqual(r.moves.map(m=>m.to),[f(8)]);
+ assert.equal(gridMoves(c,[k(10)],3).moves.length,1);assert.throws(()=>gridMoves(c,[k(10)],1));
+ assert.equal(gridMoves(c,[k(8)],4).moves.length,0);
+});

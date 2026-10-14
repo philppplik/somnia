@@ -1222,6 +1222,25 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.keys.snapToGrid",
+      "title": "Snap the selected keys to every Nth frame",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "fours",
+        "frames",
+        "grid",
+        "keys",
+        "quantize",
+        "round",
+        "snap",
+        "step",
+        "twos"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.keys.straighten",
       "title": "Straighten position path at selected keys",
       "category": "Edit",

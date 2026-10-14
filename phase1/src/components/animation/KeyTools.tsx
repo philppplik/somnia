@@ -18,7 +18,10 @@ export function KeyTools({selected,layers}:{selected:number;layers:readonly stri
    {id:'keyAll',testid:'animation-keys-key-all',label:t('animation.keys.keyAll'),hint:t('animation.keys.keyAll.hint'),cmd:'animation.keys.keyAll',params:L,min:0,layers:true},
    {id:'trim',testid:'animation-keys-trim',label:t('animation.keys.trim'),hint:t('animation.keys.trim.hint'),cmd:'animation.keys.trimToWorkArea',params:L,min:0,layers:true},
    {id:'echo5',testid:'animation-keys-echo',label:`${t('animation.keys.echo')} +5`,hint:t('animation.keys.echo.hint'),cmd:'animation.keys.echo',params:{frames:5},min:1},
-   {id:'echo-5',testid:'animation-keys-echo-minus',label:`${t('animation.keys.echo')} -5`,hint:t('animation.keys.echo.hint'),cmd:'animation.keys.echo',params:{frames:-5},min:1}]},
+   {id:'echo-5',testid:'animation-keys-echo-minus',label:`${t('animation.keys.echo')} -5`,hint:t('animation.keys.echo.hint'),cmd:'animation.keys.echo',params:{frames:-5},min:1},
+   {id:'grid2',testid:'animation-keys-grid-2',label:`${t('animation.keys.grid')} ${2}`,hint:t('animation.keys.grid.hint'),cmd:'animation.keys.snapToGrid',params:{frames:2},min:1},
+   {id:'grid4',testid:'animation-keys-grid-4',label:`${t('animation.keys.grid')} ${4}`,hint:t('animation.keys.grid.hint'),cmd:'animation.keys.snapToGrid',params:{frames:4},min:1},
+   {id:'grid8',testid:'animation-keys-grid-8',label:`${t('animation.keys.grid')} ${8}`,hint:t('animation.keys.grid.hint'),cmd:'animation.keys.snapToGrid',params:{frames:8},min:1}]},
   {key:'animation.keys.tools.ease',items:[
    {id:'easeCopy',testid:'animation-keys-ease-copy',label:t('animation.keys.easeCopy'),hint:t('animation.keys.easeCopy.hint'),cmd:'animation.keys.easeCopy',params:{},min:2},
    {id:'inf33',testid:'animation-keys-influence',label:`${t('animation.keys.influence')} 33%`,hint:t('animation.keys.influence.hint'),cmd:'animation.keys.influence',params:{percent:33},min:1},

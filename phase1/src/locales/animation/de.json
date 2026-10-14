@@ -918,5 +918,8 @@
  "cmd.animation.keys.growSelection": "Key-Auswahl um einen Nachbarn erweitern",
  "animation.keys.shrink": "Auswahl verkleinern",
  "animation.keys.shrink.hint": "Ersten und letzten gewählten Key jeder Eigenschaft abwählen",
- "cmd.animation.keys.shrinkSelection": "Key-Auswahl an beiden Enden um einen Key verkleinern"
+ "cmd.animation.keys.shrinkSelection": "Key-Auswahl an beiden Enden um einen Key verkleinern",
+ "animation.keys.grid": "Am Raster ausrichten",
+ "animation.keys.grid.hint": "Gewählte Keys auf das nächste Vielfache dieser Bildzahl setzen",
+ "cmd.animation.keys.snapToGrid": "Gewählte Keys auf jedes N-te Bild ausrichten"
 }

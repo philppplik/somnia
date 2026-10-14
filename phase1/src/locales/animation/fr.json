@@ -918,5 +918,8 @@
  "cmd.animation.keys.growSelection": "Étendre la sélection de keys d’un voisin",
  "animation.keys.shrink": "Réduire la sélection",
  "animation.keys.shrink.hint": "Retire la première et la dernière key sélectionnée de chaque propriété",
- "cmd.animation.keys.shrinkSelection": "Réduire la sélection de keys d’une key à chaque bout"
+ "cmd.animation.keys.shrinkSelection": "Réduire la sélection de keys d’une key à chaque bout",
+ "animation.keys.grid": "Aligner sur la grille",
+ "animation.keys.grid.hint": "Déplace les keys sélectionnées sur le multiple le plus proche de ce nombre d’images",
+ "cmd.animation.keys.snapToGrid": "Aligner les keys sélectionnées sur une image sur N"
 }
