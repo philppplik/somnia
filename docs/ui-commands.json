@@ -744,6 +744,23 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.keys.flatten",
+      "title": "Give the selected keys the value of the earliest selected key",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "equal",
+        "flatten",
+        "hold",
+        "keys",
+        "pose",
+        "same",
+        "value"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.keys.invert",
       "title": "Invert the values of the selected keys",
       "category": "Edit",

@@ -852,5 +852,8 @@
  "cmd.animation.keys.thin": "Remove selected keys that are close to a straight line between their neighbours",
  "animation.keys.match": "Match previous",
  "animation.keys.match.hint": "Give each selected key the value of the key before it",
- "cmd.animation.keys.matchPrevious": "Give the selected keys the value of the key before them"
+ "cmd.animation.keys.matchPrevious": "Give the selected keys the value of the key before them",
+ "animation.keys.flatten": "Flatten",
+ "animation.keys.flatten.hint": "Give all selected keys of a property the value of its earliest selected key",
+ "cmd.animation.keys.flatten": "Give the selected keys the value of the earliest selected key"
 }

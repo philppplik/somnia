@@ -852,5 +852,8 @@
  "cmd.animation.keys.thin": "Eliminar keys seleccionadas cercanas a la recta entre sus vecinas",
  "animation.keys.match": "Igualar anterior",
  "animation.keys.match.hint": "Da a cada key seleccionada el valor de la key anterior",
- "cmd.animation.keys.matchPrevious": "Dar a las keys seleccionadas el valor de la key anterior"
+ "cmd.animation.keys.matchPrevious": "Dar a las keys seleccionadas el valor de la key anterior",
+ "animation.keys.flatten": "Igualar",
+ "animation.keys.flatten.hint": "Da a todas las keys seleccionadas de una propiedad el valor de la primera seleccionada",
+ "cmd.animation.keys.flatten": "Dar a las keys seleccionadas el valor de la primera key seleccionada"
 }

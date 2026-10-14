@@ -123,3 +123,10 @@ test('match previous: copies predecessor value, skips first key and equal values
  assert.equal(e.length,1);assert.equal(e[0].t,f(10));assert.deepEqual(e[0].value,[100,100]);
  assert.equal(matchPreviousEdits(c,[k(0)]).length,0);
 });
+import {flattenEdits} from './keyFlatten';
+test('flatten: later selected keys take the earliest selected value',()=>{
+ const c=findComp(base())!,k=(n:number)=>({layer:'a',prop:'position' as const,t:f(n)});
+ const e=flattenEdits(c,[k(10),k(0)]) as {t:number;value:number[]}[];
+ assert.equal(e.length,1);assert.equal(e[0].t,f(10));assert.deepEqual(e[0].value,[100,100]);
+ assert.equal(flattenEdits(c,[k(0)]).length,0);
+});

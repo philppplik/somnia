@@ -37,5 +37,6 @@ export function KeyRepeat({count:selected,layers}:{count:number;layers:readonly 
   <NativeInput className={`${field} w-14`} type="number" min={0} step={0.5} value={tol} aria-label={t('animation.keys.thin.tolerance')} onChange={e=>setTol(e.target.value)} data-testid="animation-keys-thin-tolerance"/>
   <Button size="tiny" variant="ghost" disabled={selected<1||!tolOk} title={t('animation.keys.thin.hint')} onClick={()=>void executeCommand('animation.keys.thin',{tolerance:tolN})} data-testid="animation-keys-thin">{t('animation.keys.thin')}</Button>
   <Button size="tiny" variant="ghost" disabled={selected<1} title={t('animation.keys.match.hint')} onClick={()=>void executeCommand('animation.keys.matchPrevious',{})} data-testid="animation-keys-match">{t('animation.keys.match')}</Button>
+  <Button size="tiny" variant="ghost" disabled={selected<2} title={t('animation.keys.flatten.hint')} onClick={()=>void executeCommand('animation.keys.flatten',{})} data-testid="animation-keys-flatten">{t('animation.keys.flatten')}</Button>
  </span>;
 }
