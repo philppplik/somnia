@@ -67,12 +67,16 @@ export function nodesOf(root:THREE.Object3D):THREE.Object3D[]{const out:THREE.Ob
 export function collectNodeExtras(root:THREE.Object3D):NodeExtra[]{
  const out:NodeExtra[]=[];
  nodesOf(root).forEach((o,i)=>{
-  const l=o as THREE.Light;if(!l.isLight)return;const ra=o as THREE.RectAreaLight,am=o as THREE.AmbientLight;
+  let e:NodeExtra|null=null;
+  const l=o as THREE.Light;const ra=o as THREE.RectAreaLight,am=o as THREE.AmbientLight;
   if(ra.isRectAreaLight){
-   out.push({i,area:{position:o.position.toArray() as [number,number,number],quaternion:o.quaternion.toArray().slice(0,4) as [number,number,number,number],scale:o.scale.toArray() as [number,number,number],color:'#'+ra.color.getHexString(),intensity:ra.intensity,width:ra.width,height:ra.height,name:o.name}});
+   e={i,area:{position:o.position.toArray() as [number,number,number],quaternion:o.quaternion.toArray().slice(0,4) as [number,number,number,number],scale:o.scale.toArray() as [number,number,number],color:'#'+ra.color.getHexString(),intensity:ra.intensity,width:ra.width,height:ra.height,name:o.name}};
   }else if(am.isAmbientLight){
-   out.push({i,ambient:{color:'#'+am.color.getHexString(),intensity:am.intensity,name:o.name}});
-  }else if(l.castShadow)out.push({i,shadow:true});
+   e={i,ambient:{color:'#'+am.color.getHexString(),intensity:am.intensity,name:o.name}};
+  }else if(l.isLight&&l.castShadow)e={i,shadow:true};
+  if(!o.visible){e=e??{i};e.hidden=true;}
+  if(o.userData.somniaLocked===true){e=e??{i};e.locked=true;}
+  if(e)out.push(e);
  });
  return out;
 }
@@ -81,17 +85,22 @@ export function applyNodeExtras(root:THREE.Object3D,extras:readonly NodeExtra[])
  const nodes=nodesOf(root);let skipped=0;
  for(const e of extras){
   const o=nodes[e.i];if(!o){skipped++;continue;}
+  let target=o;
   if(e.ambient){
    if(!o.parent||o.children.length>0||(o as THREE.Mesh).isMesh||(o as THREE.Light).isLight){skipped++;continue;}
    const a=e.ambient;const light=new THREE.AmbientLight(new THREE.Color(a.color),a.intensity);
    light.name=a.name||o.name;
    const parent=o.parent;const at=parent.children.indexOf(o);parent.remove(o);parent.add(light);parent.children.splice(parent.children.indexOf(light),1);parent.children.splice(at,0,light);
+   target=light;
   }else if(e.area){
    if(!o.parent||o.children.length>0||(o as THREE.Mesh).isMesh||(o as THREE.Light).isLight){skipped++;continue;}
    const a=e.area;const light=new THREE.RectAreaLight(new THREE.Color(a.color),a.intensity,a.width,a.height);
    light.name=a.name||o.name;light.position.fromArray(a.position);light.quaternion.fromArray(a.quaternion);light.scale.fromArray(a.scale);
    const parent=o.parent;const at=parent.children.indexOf(o);parent.remove(o);parent.add(light);parent.children.splice(parent.children.indexOf(light),1);parent.children.splice(at,0,light);
+   target=light;
   }else if(e.shadow){const l=o as THREE.Light;if(l.isLight&&!(l as THREE.RectAreaLight).isRectAreaLight)l.castShadow=true;else skipped++;}
+  if(e.hidden)target.visible=false;
+  if(e.locked)target.userData.somniaLocked=true;
  }
  return{skipped};
 }
@@ -1598,6 +1607,32 @@ export class Stage{
    release:()=>{if(owned)for(const i of items)disposeObject(i.o);else disposeObject(result);}});
   return result;
  }
+ /** Shows or hides an object. A hidden parent hides its whole subtree. One undo step. */
+ setHidden(id:number,hidden:boolean){
+  const o=this.need(id);if(o===this.root)throw new StageError('The scene root cannot be hidden.');
+  if(o.visible===!hidden)return;
+  o.visible=!hidden;this.push({label:`${hidden?'Hide':'Show'} ${o.name}`,undo:()=>{o.visible=hidden;},redo:()=>{o.visible=!hidden;}});
+ }
+ /** Locks an object against viewport picking and marquee selection. One undo step. */
+ setLocked(id:number,locked:boolean){
+  const o=this.need(id);if(o===this.root)throw new StageError('The scene root cannot be locked.');
+  if((o.userData.somniaLocked===true)===locked)return;
+  o.userData.somniaLocked=locked;this.push({label:`${locked?'Lock':'Unlock'} ${o.name}`,undo:()=>{o.userData.somniaLocked=!locked;},redo:()=>{o.userData.somniaLocked=locked;}});
+ }
+ /** Moves objects under a new parent (null = scene root), keeping their world transforms. One undo step for all. */
+ reparent(ids:number[],parentId:number|null){
+  const objs=this.topLevel(this.needMany(ids,1));
+  const parent=parentId==null?this.root:this.need(parentId);
+  if((parent as THREE.Bone).isBone)throw new StageError('Objects cannot be moved under a bone.');
+  for(const o of objs){
+   if(o===parent)throw new StageError(`${o.name} cannot be moved into itself.`);
+   for(let p=parent.parent;p;p=p.parent)if(p===o)throw new StageError(`${o.name} cannot be moved into its own child.`);
+  }
+  const before=objs.map(o=>({o,from:o.parent!,at:o.parent!.children.indexOf(o)}));
+  const move=()=>{for(const o of objs)parent.attach(o);};
+  const back=()=>{for(const b of before){b.from.attach(b.o);const ch=b.from.children;ch.splice(ch.indexOf(b.o),1);ch.splice(Math.min(b.at,ch.length),0,b.o);}};
+  move();this.push({label:`Move ${objs.length===1?objs[0].name:`${objs.length} objects`} to ${parent===this.root?'the scene root':parent.name||'a new parent'}`,undo:back,redo:move});
+ }
  rename(id:number,name:string){
   const o=this.need(id);const n=name.trim();if(!n)throw new StageError('A name cannot be empty.');if(n===o.name)return;
   const before=o.name;o.name=n;this.push({label:`Rename ${before}`,undo:()=>{o.name=before;},redo:()=>{o.name=n;}});
@@ -1755,7 +1790,7 @@ export class Stage{
   const walk=(o:THREE.Object3D,depth:number)=>{
    const mesh=o as THREE.Mesh;const kind:OutlineEntry['kind']=(o as THREE.Bone).isBone?'bone':mesh.isMesh?'mesh':(o as THREE.Light).isLight?'light':(o as THREE.Camera).isCamera?'camera':'group';
    if(kind==='bone')stats.bones++;
-   if(depth>0){stats.nodes++;if(kind!=='bone')outline.push({id:o.id,name:o.name||`${kind} ${o.id}`,depth:depth-1,kind});}
+   if(depth>0){stats.nodes++;if(kind!=='bone')outline.push({id:o.id,name:o.name||`${kind} ${o.id}`,depth:depth-1,kind,hidden:!o.visible,locked:o.userData.somniaLocked===true});}
    if(kind==='camera')stats.cameras++;
    if(depth>0&&(o.scale.x===0||o.scale.y===0||o.scale.z===0))stats.zeroScale++;
    if(mesh.isMesh&&mesh.geometry){

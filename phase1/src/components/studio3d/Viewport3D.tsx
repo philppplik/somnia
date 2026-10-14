@@ -863,6 +863,7 @@ export default function Viewport3D(){
    save:saveDocument,deleteSelection,duplicateSelection,exportMesh,setExportOptions,renderTurntable,cancelRender:()=>{cancelFlag=true;},setUnit,openFiles,newScene,resetView:frameAll,frameSelection,select,renderStill,exportGlb,
    addPrimitive:k=>{const o=stage.addPrimitive(k);select(o.id);return o.id;},addLight:k=>{const o=stage.addLight(k);select(o.id);return o.id;},addLightRig:()=>{const l=stage.addLightRig();select(l[0].id);return l.map(x=>x.id);},
    setTransform:(id,p)=>stage.setTransform(id,p),setMaterial:(id,p)=>stage.setMaterial(id,p),rename:(id,n)=>stage.rename(id,n),
+   setObjectVisible:(id,on)=>{stage.setHidden(id,!on);sync();invalidate();},setObjectLocked:(id,on)=>{stage.setLocked(id,on);sync();},reparent:(ids,parent)=>{stage.reparent(ids,parent);sync();invalidate();},
    addCamera:(fromView,kind)=>{
     const o=fromView?stage.addCamera({position:{x:camera.position.x,y:camera.position.y,z:camera.position.z},quaternion:camera.quaternion.toArray().slice(0,4) as [number,number,number,number]},camera.fov,kind):stage.addCamera(undefined,40,kind);
     select(o.id);return o.id;},
@@ -954,6 +955,8 @@ export default function Viewport3D(){
   });
   // Pick by click (no drag) and keyboard orbit/zoom.
   let down:{x:number;y:number}|null=null;const ray=new THREE.Raycaster();
+  // Picking skips hidden and locked objects (locked parents lock their whole subtree).
+  const chainOk=(o:THREE.Object3D):boolean=>{for(let n:THREE.Object3D|null=o;n;n=n.parent){if(!n.visible)return false;if(n.userData.somniaLocked===true)return false;}return true;};
   let shiftDrag=false;let marquee:HTMLDivElement|null=null;
   const endMarquee=()=>{marquee?.remove();marquee=null;if(shiftDrag){shiftDrag=false;controls.enabled=true;}};
   // Capture phase, so orbit never starts when shift is held: shift+click toggles, shift+drag draws a marquee.
@@ -980,7 +983,7 @@ export default function Viewport3D(){
   const sculptRay=(e:PointerEvent):THREE.Intersection|null=>{
    const rect=renderer.domElement.getBoundingClientRect();
    ray.setFromCamera(new THREE.Vector2(((e.clientX-rect.left)/rect.width)*2-1,-(((e.clientY-rect.top)/rect.height)*2-1)),camera);
-   return ray.intersectObject(holder,true).find(h=>(h.object as THREE.Mesh).isMesh&&!(h.object as THREE.SkinnedMesh).isSkinnedMesh)??null;
+   return ray.intersectObject(holder,true).find(h=>(h.object as THREE.Mesh).isMesh&&!(h.object as THREE.SkinnedMesh).isSkinnedMesh&&chainOk(h.object))??null;
   };
   const onDown=(e:PointerEvent)=>{
    const st=getStudio3DState();
@@ -1026,13 +1029,13 @@ export default function Viewport3D(){
    if(Math.hypot(e.clientX-start.x,e.clientY-start.y)>4){
     if(!wasShift)return;
     const box=marqueeRect(start,{x:e.clientX,y:e.clientY});const ids:number[]=[];
-    holder.traverse(o=>{if(!(o as THREE.Mesh).isMesh)return;const b=new THREE.Box3().setFromObject(o);if(b.isEmpty())return;
+    holder.traverse(o=>{if(!(o as THREE.Mesh).isMesh||!chainOk(o))return;const b=new THREE.Box3().setFromObject(o);if(b.isEmpty())return;
      const p=b.getCenter(new THREE.Vector3()).project(camera);if(p.z>1)return;
      if(inRect(box,{x:rect.left+(p.x+1)/2*rect.width,y:rect.top+(1-p.y)/2*rect.height}))ids.push(o.id);});
     applySet(ids,ids.length?ids[ids.length-1]:null);return;
    }
    ray.setFromCamera(new THREE.Vector2(((e.clientX-rect.left)/rect.width)*2-1,-(((e.clientY-rect.top)/rect.height)*2-1)),camera);
-   const hit=ray.intersectObject(holder,true).find(h=>(h.object as THREE.Mesh).isMesh);
+   const hit=ray.intersectObject(holder,true).find(h=>(h.object as THREE.Mesh).isMesh&&chainOk(h.object));
    const target=hit?.object??null;
    const ed=getStudio3DState().edit;
    if(ed&&hit&&target&&target.id===ed.id){
@@ -1056,7 +1059,7 @@ export default function Viewport3D(){
    // No mesh under the cursor: a visible skeleton lets clicks near a joint select that bone.
    let bone:number|null=null;
    if(skelHelper&&skelHelper.visible){
-    const pts=stage.bones().map(b=>{const o=stage.find(b.id);if(!o)return null;const p=o.getWorldPosition(new THREE.Vector3());return{id:b.id,at:[p.x,p.y,p.z] as const};}).filter((x):x is{id:number;at:readonly[number,number,number]}=>x!==null);
+    const pts=stage.bones().map(b=>{const o=stage.find(b.id);if(!o||!chainOk(o))return null;const p=o.getWorldPosition(new THREE.Vector3());return{id:b.id,at:[p.x,p.y,p.z] as const};}).filter((x):x is{id:number;at:readonly[number,number,number]}=>x!==null);
     const r=bounds&&boundsValid(bounds)?boundsRadius(bounds):1;
     bone=pickBone(ray.ray.origin.toArray() as [number,number,number],ray.ray.direction.toArray() as [number,number,number],pts,bonePickRadius(r));
    }
@@ -1068,6 +1071,7 @@ export default function Viewport3D(){
     if(e.key==='w'||e.key==='W'){gizmo.setMode('translate');patchStudio3D({gizmo:'translate'});invalidate();e.preventDefault();return;}
     if(e.key==='e'||e.key==='E'){gizmo.setMode('rotate');patchStudio3D({gizmo:'rotate'});invalidate();e.preventDefault();return;}
     if(e.key==='r'||e.key==='R'){gizmo.setMode('scale');patchStudio3D({gizmo:'scale'});invalidate();e.preventDefault();return;}
+    if(e.key==='f'||e.key==='F'){frameSelection();e.preventDefault();return;}
     if((e.key==='Delete'||e.key==='Backspace')&&currentSet().length){deleteSelection();e.preventDefault();return;}
     const stepNow=getStudio3DState().snap.on?getStudio3DState().snap.move:0.1;const n=e.shiftKey&&sel!=null?nudgeFor(e.key,stepNow):null;
     if(n&&sel!=null){nudgeBy(sel,n);e.preventDefault();return;}

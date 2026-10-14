@@ -10,6 +10,15 @@ test('a document round-trips with every field',()=>{
  assert.equal(d.snap.on,true);assert.equal(d.snap.move,0.5);assert.deepEqual(d.view,base().view);assert.equal(d.extras.length,2);assert.equal(d.extras[1].area?.height,3);
  assert.ok('data' in d.scene&&Buffer.from(fromBase64(d.scene.data)).equals(Buffer.from(glb)));
 });
+test('hidden and locked node extras round-trip and are validated',()=>{
+ const doc=base();doc.extras=[{i:1,hidden:true},{i:2,locked:true},{i:4,shadow:true,hidden:true,locked:true}];
+ const d=parseDocument(buildDocument(doc));
+ assert.deepEqual(d.extras,[{i:1,hidden:true},{i:2,locked:true},{i:4,shadow:true,hidden:true,locked:true}]);
+ const bad=base();bad.extras=[{i:1,hidden:'yes'} as never];
+ assert.throws(()=>parseDocument(buildDocument(bad)),DocumentError);
+ const bad2=base();bad2.extras=[{i:1,locked:1} as never];
+ assert.throws(()=>parseDocument(buildDocument(bad2)),DocumentError);
+});
 test('ambient light extras round-trip and are validated',()=>{
  const doc=base();doc.extras=[{i:2,ambient:{color:'#aabbcc',intensity:0.8,name:'Soft fill'}}];
  const d=parseDocument(buildDocument(doc));

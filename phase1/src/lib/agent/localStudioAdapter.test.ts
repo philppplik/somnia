@@ -17,7 +17,7 @@ test('Animation selected layer name stages without mutation and preserves animat
  session.dispatch({type:'layer.update',layer:'layer',locked:true});assert.throws(()=>localStudioTarget('animation'),/unlocked/);setAnimationSession(null);
 });
 test('3D metadata description is session note only, no scene mutation or stale undo',()=>{
- resetStudio3D();const outline=[{id:1,name:'Cube',depth:0,kind:'mesh' as const}];patchStudio3D({status:'ready',name:'Scene',outline});const p=proposeLocalStudio(localStudioTarget('studio3d'),'One mesh in the scene');assert.equal(studioSceneNote(),'');p.accept();assert.equal(studioSceneNote(),'One mesh in the scene');p.undo();assert.equal(studioSceneNote(),'');
+ resetStudio3D();const outline=[{id:1,name:'Cube',depth:0,kind:'mesh' as const,hidden:false,locked:false}];patchStudio3D({status:'ready',name:'Scene',outline});const p=proposeLocalStudio(localStudioTarget('studio3d'),'One mesh in the scene');assert.equal(studioSceneNote(),'');p.accept();assert.equal(studioSceneNote(),'One mesh in the scene');p.undo();assert.equal(studioSceneNote(),'');
  const stale=proposeLocalStudio(localStudioTarget('studio3d'),'Scene summary');patchStudio3D({outline:[...outline]});assert.throws(()=>stale.accept(),/changed/);
 });
 test('Interface vision cannot be redirected to annotation or model data as code; invalid alt rejected',()=>{

@@ -556,5 +556,16 @@
  "studio3d.material.copy": "Material kopieren",
  "studio3d.material.paste": "Material einfügen",
  "cmd.studio3d.material.copy": "Material kopieren",
- "cmd.studio3d.material.paste": "Material einfügen"
+ "cmd.studio3d.material.paste": "Material einfügen",
+ "studio3d.outline.groups": "Objekte gruppieren",
+ "studio3d.outline.group": "Gruppieren",
+ "studio3d.outline.ungroup": "Gruppe auflösen",
+ "studio3d.outline.show": "{name} einblenden",
+ "studio3d.outline.hide": "{name} ausblenden",
+ "studio3d.outline.lock": "{name} sperren",
+ "studio3d.outline.unlock": "{name} entsperren",
+ "studio3d.outline.rename": "{name} umbenennen",
+ "cmd.studio3d.object.visible": "Objekt ein- oder ausblenden",
+ "cmd.studio3d.object.locked": "Objekt sperren oder entsperren",
+ "cmd.studio3d.object.reparent": "Unter ein neues Elternobjekt verschieben"
 }

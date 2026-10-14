@@ -1042,3 +1042,55 @@ test('3D studio material polish: glass and wood presets, copy/paste material and
  await expect.poll(async()=>(await session(page)).info?.material?.textures?.metal).toBe('m.png');
  await expect.poll(async()=>(await session(page)).info?.material?.color).toBe('#8a5a33');
 });
+
+test('3D studio outliner: hide/lock, ctrl/shift multi-select, inline rename, reparent and persistence',async({page})=>{
+ await blank(page);
+ const cube=await insert(page,'cube',-1);const sphere=await insert(page,'sphere',1);
+ // Hide and lock the cube from its outline row.
+ await page.getByRole('button',{name:'Hide Cube'}).click();
+ await expect.poll(async()=>(await session(page)).outline.find(o=>o.id===cube)?.hidden).toBe(true);
+ await page.getByRole('button',{name:'Lock Cube'}).click();
+ await expect.poll(async()=>(await session(page)).outline.find(o=>o.id===cube)?.locked).toBe(true);
+ // A shift-drag marquee over the viewport picks the sphere but skips the hidden, locked cube.
+ const vp=page.getByTestId('studio3d-viewport');const box=(await vp.boundingBox())!;
+ await page.keyboard.down('Shift');
+ await page.mouse.move(box.x+4,box.y+4);await page.mouse.down();await page.mouse.move(box.x+box.width-4,box.y+box.height-4,{steps:5});await page.mouse.up();
+ await page.keyboard.up('Shift');
+ await expect.poll(async()=>(await session(page)).marked).toEqual([sphere]);
+ await run(page,'studio3d.select',{id:null});
+ // Ctrl+click toggles and shift+click range-selects in the outline.
+ await page.getByTestId('studio3d-outline-row-'+cube).click();
+ await page.getByTestId('studio3d-outline-row-'+sphere).click({modifiers:['ControlOrMeta']});
+ await expect.poll(async()=>(await session(page)).marked).toEqual([cube,sphere]);
+ await expect.poll(async()=>(await session(page)).selected).toBe(sphere);
+ // Group and ungroup from the outline toolbar.
+ await page.getByTestId('studio3d-outline-groups').getByRole('button',{name:'Group'}).click();
+ const grp=(await session(page)).outline.find(o=>o.kind==='group')!;
+ expect(grp).toBeTruthy();
+ await run(page,'studio3d.select',{id:grp.id});
+ await page.getByTestId('studio3d-outline-groups').getByRole('button',{name:'Ungroup'}).click();
+ await expect.poll(async()=>(await session(page)).outline.some(o=>o.kind==='group')).toBe(false);
+ // Reparent the sphere under the cube in one undo step.
+ expect(await run(page,'studio3d.object.reparent',{ids:[sphere],parent:cube})).toBe(true);
+ await expect.poll(async()=>(await session(page)).outline.find(o=>o.id===sphere)?.depth).toBe(1);
+ await run(page,'studio3d.undo');
+ await expect.poll(async()=>(await session(page)).outline.find(o=>o.id===sphere)?.depth).toBe(0);
+ // Inline rename with a double click.
+ await page.getByTestId('studio3d-outline-row-'+cube).dblclick();
+ await page.getByRole('textbox',{name:'Rename Cube'}).fill('Hero');
+ await page.keyboard.press('Enter');
+ await expect.poll(async()=>(await session(page)).outline.find(o=>o.id===cube)?.name).toBe('Hero');
+ // Frame-selection command still works; F is its key binding.
+ expect(await run(page,'studio3d.view.frame',{})).toBe(true);
+ // Hide the sphere too, then flags survive a .som3d save and reopen.
+ await page.getByRole('button',{name:'Hide Sphere'}).click();
+ const [download]=await Promise.all([page.waitForEvent('download'),page.keyboard.press('Control+s')]);
+ const saved=readFileSync(await download.path()!);
+ await open3d(page);
+ await page.getByTestId('studio3d-file-input').setInputFiles({name:'scene.som3d',mimeType:'application/json',buffer:saved});
+ await expect.poll(async()=>(await session(page)).status).toBe('ready');
+ const after=await session(page);
+ expect(after.outline.find(o=>o.name==='Hero')?.hidden).toBe(true);
+ expect(after.outline.find(o=>o.name==='Hero')?.locked).toBe(true);
+ expect(after.outline.find(o=>o.name==='Sphere')?.hidden).toBe(true);
+});

@@ -556,5 +556,16 @@
  "studio3d.material.copy": "Copy material",
  "studio3d.material.paste": "Paste material",
  "cmd.studio3d.material.copy": "Copy material",
- "cmd.studio3d.material.paste": "Paste material"
+ "cmd.studio3d.material.paste": "Paste material",
+ "studio3d.outline.groups": "Group objects",
+ "studio3d.outline.group": "Group",
+ "studio3d.outline.ungroup": "Ungroup",
+ "studio3d.outline.show": "Show {name}",
+ "studio3d.outline.hide": "Hide {name}",
+ "studio3d.outline.lock": "Lock {name}",
+ "studio3d.outline.unlock": "Unlock {name}",
+ "studio3d.outline.rename": "Rename {name}",
+ "cmd.studio3d.object.visible": "Show or hide object",
+ "cmd.studio3d.object.locked": "Lock or unlock object",
+ "cmd.studio3d.object.reparent": "Move under a new parent"
 }

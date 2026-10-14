@@ -556,5 +556,16 @@
  "studio3d.material.copy": "Copiar material",
  "studio3d.material.paste": "Colar material",
  "cmd.studio3d.material.copy": "Copiar material",
- "cmd.studio3d.material.paste": "Colar material"
+ "cmd.studio3d.material.paste": "Colar material",
+ "studio3d.outline.groups": "Agrupar objetos",
+ "studio3d.outline.group": "Agrupar",
+ "studio3d.outline.ungroup": "Desagrupar",
+ "studio3d.outline.show": "Mostrar {name}",
+ "studio3d.outline.hide": "Ocultar {name}",
+ "studio3d.outline.lock": "Bloquear {name}",
+ "studio3d.outline.unlock": "Desbloquear {name}",
+ "studio3d.outline.rename": "Renomear {name}",
+ "cmd.studio3d.object.visible": "Mostrar ou ocultar objeto",
+ "cmd.studio3d.object.locked": "Bloquear ou desbloquear objeto",
+ "cmd.studio3d.object.reparent": "Mover para um novo pai"
 }
