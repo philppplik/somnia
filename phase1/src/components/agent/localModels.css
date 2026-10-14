@@ -28,3 +28,9 @@
 .local-ai-health ul { list-style: disc; padding-left: 20px; }
 
 .local-setup-steps { list-style: decimal; padding-left: 22px; display: grid; gap: 8px; }
+
+.agent-settings .local-comparison-results { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 12px; }
+.agent-settings .local-comparison-results pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.agent-settings .local-comparison-choice { display: flex; align-items: center; gap: 6px; }
+.agent-settings .local-comparison-choice input[type=checkbox] { width: auto; }

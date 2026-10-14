@@ -219,7 +219,7 @@ export class OllamaProvider implements AgentProvider {
       if (j.done) {
         if(this.locality==='local'&&!/(^|[:\-_/])cloud$/i.test(req.model.trim())&&!signal.aborted&&j.done_reason!=='length')recordLocalModelSuccess(this.baseUrl,req.model);
         // Local usage is real token counts; costUsd stays absent (contract: absent = unknown).
-        if (j.prompt_eval_count !== undefined || j.eval_count !== undefined) out.push({ type: 'usage', usage: { inputTokens: j.prompt_eval_count, outputTokens: j.eval_count } });
+        if (j.prompt_eval_count !== undefined || j.eval_count !== undefined) out.push({ type: 'usage', usage: { inputTokens: j.prompt_eval_count, outputTokens: j.eval_count, ...(typeof j.eval_duration==='number'&&Number.isSafeInteger(j.eval_duration)&&j.eval_duration>0?{outputDurationNs:j.eval_duration}:{}) } });
         out.push({ type: 'finish', reason: toolIndex > 0 ? 'tool_calls' : j.done_reason === 'length' ? 'length' : 'stop' });
       }
       return out;
@@ -252,7 +252,7 @@ export class OllamaProvider implements AgentProvider {
 
 interface OllamaChunk {
   message?: { content?: string; tool_calls?: Array<{ id?: string; function?: { name?: string; arguments?: unknown } }> };
-  done?: boolean; done_reason?: string; error?: string; remote_host?: string; remote_model?: string; prompt_eval_count?: number; eval_count?: number;
+  done?: boolean; done_reason?: string; error?: string; remote_host?: string; remote_model?: string; prompt_eval_count?: number; eval_duration?: number; eval_count?: number;
 }
 
 /** Maps contract messages to Ollama's /api/chat shape. Tool results are keyed by tool name, so resolve it from the earlier assistant call. */

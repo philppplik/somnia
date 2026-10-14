@@ -17,6 +17,8 @@ export interface AgentToolDefinition {
   parameters: Record<string, unknown>;
 }
 export interface AgentUsage {
+  /** Provider-reported generation duration, nanoseconds. Never wall-clock timing. */
+  outputDurationNs?: number;
   inputTokens?: number;
   outputTokens?: number;
   /** Provider-reported USD amount; absent means unknown, never zero. */
