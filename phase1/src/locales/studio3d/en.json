@@ -609,5 +609,10 @@
  "studio3d.import.summary": "Imported {tris} triangles, {materials} materials, {animations} animations.",
  "studio3d.outline.expand": "Expand {name}",
  "studio3d.outline.collapse": "Collapse {name}",
- "studio3d.outline.selection": "Selection"
+ "studio3d.outline.selection": "Selection",
+ "studio3d.material.list": "Materials in this scene",
+ "studio3d.material.users": "{count} objects",
+ "studio3d.material.selectUsers": "Select the objects using {name}",
+ "studio3d.texture.previewAlt": "Preview of the {slot} texture",
+ "cmd.studio3d.texture.preview": "Show a small preview image of a texture slot"
 }

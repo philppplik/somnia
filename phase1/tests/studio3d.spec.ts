@@ -1328,3 +1328,24 @@ test('3D studio outliner: folding groups, keyboard navigation and selection-set 
  await run(page,'studio3d.undo');
  await expect.poll(async()=>(await session(page)).outline.length).toBe(3);
 });
+
+test('3D studio materials: texture slot preview and the material list with usage counts',async({page})=>{
+ await blank(page);
+ const a=await insert(page,'cube',-1);const b=await insert(page,'sphere',1);
+ // Each primitive starts with its own material: two rows, one user each.
+ const list=page.getByTestId('studio3d-material-list');
+ await expect(list.getByRole('button')).toHaveCount(2);
+ await expect(list).toContainText('Material 1');
+ await expect(list).toContainText('1 objects');
+ // A procedural preset texture shows a thumbnail preview on its slot.
+ await run(page,'studio3d.select',{id:a});
+ await run(page,'studio3d.object.material',{id:a,preset:'wood'});
+ await expect(page.getByTestId('studio3d-texture-thumb-color')).toBeVisible();
+ // Clearing the slot removes the thumbnail again.
+ await page.getByTestId('studio3d-texture-color').getByRole('button',{name:'Clear'}).click();
+ await expect(page.getByTestId('studio3d-texture-thumb-color')).toHaveCount(0);
+ // Clicking a material entry selects the objects that share it.
+ await list.getByRole('button').first().click();
+ await expect.poll(async()=>(await session(page)).marked.length).toBeGreaterThan(0);
+ await expect.poll(async()=>(await session(page)).selected).not.toBeNull();
+});

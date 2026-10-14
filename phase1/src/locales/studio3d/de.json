@@ -609,5 +609,10 @@
  "studio3d.import.summary": "{tris} Dreiecke, {materials} Materialien und {animations} Animationen importiert.",
  "studio3d.outline.expand": "{name} aufklappen",
  "studio3d.outline.collapse": "{name} zuklappen",
- "studio3d.outline.selection": "Auswahl"
+ "studio3d.outline.selection": "Auswahl",
+ "studio3d.material.list": "Materialien in dieser Szene",
+ "studio3d.material.users": "{count} Objekte",
+ "studio3d.material.selectUsers": "Objekte mit {name} auswählen",
+ "studio3d.texture.previewAlt": "Vorschau der {slot}-Textur",
+ "cmd.studio3d.texture.preview": "Kleine Vorschau eines Texturkanals anzeigen"
 }

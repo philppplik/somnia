@@ -609,5 +609,10 @@
  "studio3d.import.summary": "Se importaron {tris} triángulos, {materials} materiales y {animations} animaciones.",
  "studio3d.outline.expand": "Expandir {name}",
  "studio3d.outline.collapse": "Contraer {name}",
- "studio3d.outline.selection": "Selección"
+ "studio3d.outline.selection": "Selección",
+ "studio3d.material.list": "Materiales de esta escena",
+ "studio3d.material.users": "{count} objetos",
+ "studio3d.material.selectUsers": "Seleccionar los objetos que usan {name}",
+ "studio3d.texture.previewAlt": "Vista previa de la textura {slot}",
+ "cmd.studio3d.texture.preview": "Mostrar una vista previa pequeña de un canal de textura"
 }

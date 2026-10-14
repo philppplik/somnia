@@ -37,7 +37,7 @@ import type {KeyPath} from '../../lib/studio3d/clips';
 import type {KeyRef,KeyData} from '../../lib/studio3d/keyEdit';
 import {advance,clampTime,checkClip,checkRange,checkSpeed,startTime,rangeFits,AnimationError,type ClipInfo,type LoopRange} from '../../lib/studio3d/animation';
 import {exportBlocker,LIMITS} from '../../lib/studio3d/validate';
-import {DEFAULT_PRESET_EMISSIVE,inspectImage,isTextureSlot,MAX_TEXTURE_FILE_BYTES,MaterialError,type TextureSlot} from '../../lib/studio3d/materials';
+import {SLOT_CONFIG,DEFAULT_PRESET_EMISSIVE,inspectImage,isTextureSlot,MAX_TEXTURE_FILE_BYTES,MaterialError,type TextureSlot} from '../../lib/studio3d/materials';
 import {viewDirection,orthoHalfHeight,type ViewPreset} from '../../lib/studio3d/viewPresets';
 import {rememberScene,forgetAutosave} from '../../lib/studio3d/recentSession';
 import {autosaveDue} from '../../lib/studio3d/recent';
@@ -117,6 +117,7 @@ export default function Viewport3D(){
   const controls=new OrbitControls<THREE.PerspectiveCamera|THREE.OrthographicCamera>(camera,renderer.domElement);controls.enableDamping=false;
   const grid=new THREE.GridHelper(20,20,0x8a8f9c,0xc3c7d0);grid.visible=getStudio3DState().grid;scene.add(grid);
   const stage=sharedStage??(sharedStage=new Stage());const holder=stage.root;scene.add(holder);
+  const previewCache=new Map<string,string>();
   let selection:THREE.Box3Helper|null=null;let bounds:Bounds|null=null;let disposed=false;let frame=0;
   const invalidate=()=>{if(frame||disposed)return;frame=requestAnimationFrame(()=>{frame=0;if(!disposed)renderer.render(scene,camera);});};
   controls.addEventListener('change',invalidate);
@@ -163,7 +164,7 @@ export default function Viewport3D(){
    if(an.clip>=infos.length&&an.clip>0){stopAnim();patchStudio3D({anim:{clip:0,playing:false,time:0,loop:true,speed:1,range:null}});}
    const head=sel==null?null:stage.ikChainHead(sel);const ik=head?{...stage.ikState(head.id)!,root:head.id}:null;
    const fhead=sel==null?null:stage.fabrikChainHead(sel);const fabrik=fhead?{...stage.fabrikState(fhead.id)!,root:fhead.id}:null;
-   patchStudio3D({clips:infos,clipKeys:keys,stats:m.stats,outline:m.outline,bones:stage.bones(),bounds:m.bounds,selected:info?sel:null,selectedInfo:info,poses:sel==null?[]:stage.poseList(sel),ik,fabrik,rigs:stage.bones().filter(b=>b.depth===0).map(b=>({id:b.id,name:b.name})),boneLimits:sel==null?null:stage.boneLimitsOf(sel),uvView:sel==null?null:stage.uvLayout(sel),dirty:stage.dirty,canUndo:stage.canUndo,canRedo:stage.canRedo,undoLabel:stage.undoLabel});
+   patchStudio3D({clips:infos,clipKeys:keys,stats:m.stats,outline:m.outline,materialList:stage.materialUsage(),bones:stage.bones(),bounds:m.bounds,selected:info?sel:null,selectedInfo:info,poses:sel==null?[]:stage.poseList(sel),ik,fabrik,rigs:stage.bones().filter(b=>b.depth===0).map(b=>({id:b.id,name:b.name})),boneLimits:sel==null?null:stage.boneLimitsOf(sel),uvView:sel==null?null:stage.uvLayout(sel),dirty:stage.dirty,canUndo:stage.canUndo,canRedo:stage.canRedo,undoLabel:stage.undoLabel});
    syncIk();syncFabrik();syncOnion();syncMotionPath();
    drawSelection();applyWire(getStudio3DState().wireframe);syncSkeleton();syncWeightPreview();syncMaskOverlay();syncUvChecker();syncSeams();for(const h of syncHooks)h();invalidate();
   };
@@ -1009,6 +1010,24 @@ export default function Viewport3D(){
     const sel=getStudio3DState().selected;if(sel!=null)patchStudio3D({selectedInfo:stage.info(sel)});
     sync();invalidate();},
    setCamera:(id,p)=>stage.setCamera(id,p),
+   /** A 64px centre-cropped preview of a texture slot as a data URL, cached per texture. */
+   texturePreview:(id,slot)=>{
+    const o=stage.find(id) as THREE.Mesh|undefined;if(!o||!(o as THREE.Mesh).isMesh)return null;
+    const mats=Array.isArray(o.material)?o.material:[o.material];
+    let tex:THREE.Texture|null=null;
+    for(const m of mats){const t=(m as THREE.MeshStandardMaterial)[SLOT_CONFIG[slot].prop] as THREE.Texture|null;if(t){tex=t;break;}}
+    if(!tex)return null;
+    const hit=previewCache.get(tex.uuid);if(hit)return hit;
+    const img=tex.image as (CanvasImageSource&{width?:number;height?:number})|undefined;
+    if(!img||!img.width||!img.height)return null;
+    const c=document.createElement('canvas');c.width=64;c.height=64;const ctx=c.getContext('2d');if(!ctx)return null;
+    const side=Math.min(img.width,img.height);
+    ctx.drawImage(img,(img.width-side)/2,(img.height-side)/2,side,side,0,0,64,64);
+    const url=c.toDataURL('image/png');
+    if(previewCache.size>200)previewCache.clear();
+    previewCache.set(tex.uuid,url);
+    return url;
+   },
    setProjection:applyProjection,
    setViewFov:fov=>{const f=Math.min(120,Math.max(1,fov));if(perspCam.fov!==f){perspCam.fov=f;perspCam.updateProjectionMatrix();invalidate();}if(getStudio3DState().viewFov!==f)patchStudio3D({viewFov:f});},
    setTurntable,

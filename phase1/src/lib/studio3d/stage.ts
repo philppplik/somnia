@@ -35,6 +35,8 @@ export interface MaterialPatch extends MaterialRequest,PbrExtras{}
 export const MAX_MERGE_VERTICES=3_000_000;
 export type MirrorAxis='x'|'y'|'z';
 export type CameraKind='perspective'|'orthographic';
+/** One material instance and the meshes that share it, for the material list. */
+export interface MaterialUsage{/** Stable per material instance. */key:string;name:string;/** '#rrggbb' display colour. */color:string;count:number;ids:number[]}
 export interface ObjectInfo{
  camera:{kind:'perspective';fov:number}|{kind:'orthographic';zoom:number}|null;
  /** Kind and parameters when the mesh is an editable primitive. */primitive?:PrimitiveData|null;
@@ -1878,6 +1880,18 @@ export class Stage{
    uv:m.isMesh?this.uvInfo(m):null,
    camera:(o as THREE.PerspectiveCamera).isPerspectiveCamera?{kind:'perspective' as const,fov:(o as THREE.PerspectiveCamera).fov}:(o as THREE.OrthographicCamera).isOrthographicCamera?{kind:'orthographic' as const,zoom:(o as THREE.OrthographicCamera).zoom}:null,
    primitive:this.primitiveOf(o),material:mat?{color:'#'+mat.color.getHexString(),metalness:mat.metalness,roughness:mat.roughness,emissive:'#'+mat.emissive.getHexString(),emissiveIntensity:mat.emissiveIntensity,opacity:mat.transparent||mat.alphaTest>0?mat.opacity:1,alphaMode:alphaModeOf(mat.transparent,mat.alphaTest),alphaCutoff:mat.alphaTest>0?mat.alphaTest:0.5,doubleSided:mat.side===THREE.DoubleSide,textures:Object.fromEntries((Object.keys(SLOT_CONFIG) as TextureSlot[]).map(k=>{const t=mat[SLOT_CONFIG[k].prop] as THREE.Texture|null;return[k,t?(t.name||'image'):null];})) as Record<TextureSlot,string|null>,transforms:Object.fromEntries((Object.keys(SLOT_CONFIG) as TextureSlot[]).map(k=>{const t=mat[SLOT_CONFIG[k].prop] as THREE.Texture|null;return[k,t?readTransform(t):null];})) as Record<TextureSlot,TextureTransform|null>}:null,light:l.isLight?lightInfo(l):null};
+ }
+ /** Materials in the scene with the meshes using them, most-used first. Unnamed instances are numbered after collection so the list is stable. */
+ materialUsage():MaterialUsage[]{
+  const map=new Map<string,MaterialUsage>();
+  this.root.traverse(o=>{const mesh=o as THREE.Mesh;if(!mesh.isMesh)return;const list=Array.isArray(mesh.material)?mesh.material:[mesh.material];
+   for(const mat of list){const std=mat as THREE.MeshStandardMaterial;let u=map.get(mat.uuid);
+    if(!u){u={key:mat.uuid,name:(mat.name??'').trim(),color:std.color?('#'+std.color.getHexString()):'#b8bcc8',count:0,ids:[]};map.set(mat.uuid,u);}
+    u.count++;u.ids.push(o.id);}});
+  const out=[...map.values()];let n=0;
+  for(const u of out)if(!u.name)u.name=`Material ${++n}`;
+  out.sort((a,b)=>b.count-a.count||a.name.localeCompare(b.name));
+  return out;
  }
  measure(animations=this.clipList.length):{stats:ModelStats;outline:OutlineEntry[];bounds:Bounds|null}{
   const stats=emptyStats();stats.animations=animations;const outline:OutlineEntry[]=[];const mats=new Set<THREE.Material>(),texs=new Set<THREE.Texture>();

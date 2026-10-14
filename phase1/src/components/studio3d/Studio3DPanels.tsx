@@ -1,7 +1,7 @@
 import {StudioStatus} from '../studios/StudioStatus';
 import {StudioRecentList} from '../studios/StudioRecentList';
 import {StudioProgress} from '../studios/StudioProgress';
-import {useMemo,useRef,useState} from 'react';
+import {useEffect,useMemo,useRef,useState} from 'react';
 import {patchStudio3D} from '../../lib/studio3d/session';
 import type {ObjectInfo} from '../../lib/studio3d/stage';
 import {executeCommand} from '../../lib/commands';
@@ -17,7 +17,7 @@ import {Button} from '../ui/button';
 import {NativeInput,NativeSelect} from '../ui/native-controls';
 import {InspectorNumberField} from '../studios/InspectorNumberField';
 import {PARAM_SPECS,MATERIAL_PRESETS} from '../../lib/studio3d/primitives';
-import {ALPHA_MODES,TEXTURE_SLOTS,MAX_EMISSIVE_INTENSITY,materialSwatch} from '../../lib/studio3d/materials';
+import {ALPHA_MODES,TEXTURE_SLOTS,MAX_EMISSIVE_INTENSITY,materialSwatch,type TextureSlot} from '../../lib/studio3d/materials';
 import {validateScene,toMB} from '../../lib/studio3d/validate';
 import {ClipTimeline} from './ClipTimeline';
 import {SPEEDS,formatClock} from '../../lib/studio3d/animation';
@@ -119,6 +119,13 @@ export function ModelSection(_:InspectorSectionProps){
   <Row k={t('studio3d.model.meshes')} v={s.stats.meshes}/><Row k={t('studio3d.model.materials')} v={s.stats.materials}/><Row k={t('studio3d.model.textures')} v={s.stats.textures}/><Row k={t('studio3d.model.textureMemory')} v={s.stats.textures?`${toMB(s.stats.textureBytes)} MB`:'-'}/><Row k={t('studio3d.model.draws')} v={formatCount(s.stats.draws)}/>
   {s.stats.bones>0&&<Row k={t('studio3d.model.bones')} v={formatCount(s.stats.bones)}/>}<Row k={t('studio3d.model.memory')} v={`${toMB(s.stats.geometryBytes+s.stats.textureBytes)} MB`}/><Row k={t('studio3d.model.animations')} v={s.stats.animations}/><Row k={t('studio3d.model.cameras')} v={s.stats.cameras}/><Row k={t('studio3d.model.dimensions')} v={size}/></>}
  </dl>
+  {s.materialList.length>0&&<div className="grid gap-1 px-3" data-testid="studio3d-material-list">
+   <p className="m-0 text-xs text-ink-3">{t('studio3d.material.list')}</p>
+   <ul className="m-0 grid list-none gap-0.5 p-0">{s.materialList.map(m=><li key={m.key}>
+    <Button variant="ghost" className="flex w-full items-center justify-start gap-2 px-1 py-0.5 text-left text-xs text-ink-2 hover:bg-hover" aria-label={t('studio3d.material.selectUsers',{name:m.name})}
+     onClick={()=>void executeCommand('studio3d.select',{id:m.ids[0]}).then(()=>patchStudio3D({marked:m.ids}))}>
+     <svg width="12" height="12" viewBox="0 0 12 12" className="shrink-0 rounded-full border border-subtle" role="img" aria-label={m.color}><rect width="12" height="12" fill={m.color}/></svg>
+     <span className="min-w-0 flex-1 truncate">{m.name}</span><span className="text-ink-3">{t('studio3d.material.users',{count:m.count})}</span></Button></li>)}</ul></div>}
   {!s.blank&&<SceneChecks/>}
   {<AnimationControls/>}
   {s.imported&&<StudioStatus className="block m-0 px-3 text-xs text-ink-2" data-testid="studio3d-import-summary">{t('studio3d.import.summary',{tris:formatCount(s.imported.triangles),materials:formatCount(s.imported.materials),animations:formatCount(s.imported.animations)})}</StudioStatus>}
@@ -137,6 +144,14 @@ function VecField({id,field,label,step}:{id:number;field:'position'|'rotation'|'
    return <InspectorNumberField key={a} resetKey={id} label={lab} value={Number(v[a].toFixed(4))} step={step}
    parse={draft=>{const n=transformExpr(draft,v[a]);return n===null?{ok:false,error:t('schemaForm.invalid',{name:lab})}:{ok:true,value:n};}}
    onCommit={n=>void executeCommand('studio3d.object.transform',{id,[field]:{[a]:n}})}/>;})}</div></fieldset>;
+}
+/** 64px preview of an occupied texture slot, fetched from the live viewport texture. */
+function TextureThumb({id,slot,name}:{id:number;slot:TextureSlot;name:string}){
+ const {t}=useT();const [url,setUrl]=useState<string|null>(null);
+ useEffect(()=>{let live=true;setUrl(null);
+  void executeCommand('studio3d.texture.preview',{id,slot}).then(u=>{if(live)setUrl(typeof u==='string'?u:null);}).catch(()=>{if(live)setUrl(null);});
+  return()=>{live=false;};},[id,slot,name]);
+ return url?<img src={url} alt={t('studio3d.texture.previewAlt',{slot:t('studio3d.texture.'+slot)})} className="h-8 w-8 shrink-0 rounded-sm border border-subtle object-cover" data-testid={'studio3d-texture-thumb-'+slot}/>:null;
 }
 /** User-saved local material presets: apply, remove, and save the mesh's current material under a name. */
 function MaterialUserPresets({id}:{id:number}){
@@ -201,6 +216,7 @@ export function ObjectSection(_:InspectorSectionProps){
     {TEXTURE_SLOTS.map(slot=>{const name=o.material!.textures?.[slot]??null;return <div key={slot} className="flex items-center gap-1 text-xs text-ink-2" data-testid={'studio3d-texture-'+slot}
      onDragOver={e=>{if(e.dataTransfer.types.includes('Files')){e.preventDefault();e.dataTransfer.dropEffect='copy';}}}
      onDrop={e=>{const f=e.dataTransfer.files?.[0];if(!f)return;e.preventDefault();dropTextureFile(slot,f);}}>
+     {name&&<TextureThumb id={o.id} slot={slot} name={name}/>}
      <span className="w-20 shrink-0">{t('studio3d.texture.'+slot)}</span><span className="min-w-0 flex-1 truncate text-ink-3" title={name??''}>{name??t('studio3d.texture.none')}</span>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.texture.open',{slot})}>{t('studio3d.texture.choose')}</Button>
      <Button variant="outline" disabled={!name} onClick={()=>void executeCommand('studio3d.texture.clear',{id:o.id,slot})}>{t('studio3d.texture.clear')}</Button></div>;})}

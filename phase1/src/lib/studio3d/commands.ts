@@ -65,6 +65,8 @@ export interface Studio3DController{
  onionSkin(on?:boolean,before?:number,after?:number):void;
  motionPathToggle(on?:boolean):void;
  retargetPreview(source:number,target?:number,clip?:number):number;
+ /** A 64px preview of a texture slot as a data URL, or null when the slot is empty. */
+ texturePreview(id:number,slot:TextureSlot):string|null;
  retargetApply(source:number,target?:number,clip?:number,name?:string):number;
  fabrikToggle(on:boolean,id?:number):void;
  fabrikSetTarget(p:readonly[number,number,number],id?:number):void;
@@ -267,6 +269,7 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{on?:boolean}>('studio3d.measure.set','Toggle the 3D measure tool','Tools',p=>need().setMeasure(p?.on??!getStudio3DState().measure),object({on:{type:'boolean'}},[]),()=>!!controller),
   add<RenderOptions>('studio3d.render.still','Render a PNG still of the 3D view or a 3D camera','Project',p=>need().renderStill(p??{}),object({camera:{type:'integer',minimum:0},width:{type:'integer',minimum:1,maximum:16384},height:{type:'integer',minimum:1,maximum:16384},transparent:{type:'boolean'}},[])),
   add<{slot:TextureSlot}>('studio3d.texture.open','Choose an image for a texture slot of the selected 3D object','Edit',p=>textureOpener!(p.slot),object({slot:{enum:[...TEXTURE_SLOTS]}}),()=>hasScene()&&!!textureOpener&&getStudio3DState().selectedInfo?.material!=null),
+  add<{id:number;slot:TextureSlot}>('studio3d.texture.preview','Show a small preview image of a texture slot','Edit',p=>need().texturePreview(p.id,p.slot),object({id:{type:'integer',minimum:0},slot:{enum:[...TEXTURE_SLOTS]}},['id','slot']),hasScene),
   add<{id?:number;slot:TextureSlot}>('studio3d.texture.clear','Remove the image from a texture slot','Edit',p=>need().setTextureFile(p.id??getStudio3DState().selected??-1,p.slot,null),object({id:{type:'integer',minimum:0},slot:{enum:[...TEXTURE_SLOTS]}},['slot']),hasScene),
   add<{axis:MirrorAxis;copy?:boolean;ids?:number[]}>('studio3d.mesh.mirror','Mirror 3D objects across a world axis','Edit',p=>need().mirrorSelection(p.axis,!!p.copy,p.ids),object({axis:{enum:['x','y','z']},copy:{type:'boolean'},ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500}},['axis']),hasScene),
   add<{ids?:number[]}>('studio3d.mesh.applyScale','Apply the scale of 3D meshes to their geometry','Edit',p=>need().applyScale(p?.ids),object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500}},[]),hasScene),

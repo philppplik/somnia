@@ -609,5 +609,10 @@
  "studio3d.import.summary": "{tris} triângulos, {materials} materiais e {animations} animações importados.",
  "studio3d.outline.expand": "Expandir {name}",
  "studio3d.outline.collapse": "Recolher {name}",
- "studio3d.outline.selection": "Seleção"
+ "studio3d.outline.selection": "Seleção",
+ "studio3d.material.list": "Materiais desta cena",
+ "studio3d.material.users": "{count} objetos",
+ "studio3d.material.selectUsers": "Selecionar os objetos que usam {name}",
+ "studio3d.texture.previewAlt": "Prévia da textura {slot}",
+ "cmd.studio3d.texture.preview": "Mostrar uma prévia pequena de um canal de textura"
 }

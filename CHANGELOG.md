@@ -1,4 +1,5 @@
 # Unreleased: 3D Studio P0
+- 3D Studio materials polish: texture slots show a 64px preview thumbnail, and a material list in the Model panel shows every material with its usage count and selects the objects that share it.
 - 3D Studio outliner polish: groups fold and expand with a chevron or the arrow keys, rows support keyboard navigation (arrows, Home/End, F2 to rename), and duplicate/delete buttons act on the whole selection set.
 - 3D Studio import polish: drop model files (with .bin/.mtl/texture sidecars) straight onto the studio, glTF imports fall back to an empty pixel for missing textures instead of failing, and a localized import summary reports triangles, materials and animations.
 - 3D Studio camera polish: viewport perspective/orthographic toggle, field-of-view and 35mm focal length fields, and a preview-only turntable orbit (view state only, never exported); saved views, frame-selected (F) and frame-all already shipped.
