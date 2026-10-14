@@ -1,4 +1,5 @@
 # Unreleased: 3D Studio P0
+- 3D Studio: mesh bakes keep UVs - mirror, symmetrize and subdivide now carry texture coordinates through the geometry rebuild (cut points interpolate, mirrored halves reuse the source UVs, subdivision smooths UVs with the position weights), so the checker preview, the UV island view and exports survive them.
 - 3D Studio: mesh subdivide - smooth Loop subdivision bakes into meshes (1-3 iterations, every triangle splits into four, boundary outlines keep their shape), batch over the marked set as one undo step; pure three-free math alongside the other mesh ops.
 - 3D Studio: symmetrize - bake a mirror symmetry into meshes (keep either side of the local X/Y/Z plane, weld the seam), batch over the marked set as one undo step; shares the clip/mirror math with the mirror modifier.
 - 3D Studio: mesh simplify (decimate) - one command and a tools-panel row reduce a mesh to a chosen vertex percentage with the bundled meshopt simplifier, keeping shape, UVs and normals; one undo step restores the exact original geometry.

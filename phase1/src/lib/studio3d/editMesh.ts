@@ -1,6 +1,6 @@
 /** Mesh edit operations on plain position/index arrays - no three.js, so every op is testable in Node and the viewport stays the only three consumer. All meshes are indexed triangle lists. */
 export class EditError extends Error{name='EditError';}
-export interface MeshData{positions:number[];index:number[];/** Per-vertex sculpt mask 0..1 (1 = fully protected). Dropped by topology-changing ops. */mask?:number[];}
+export interface MeshData{positions:number[];index:number[];/** Per-vertex sculpt mask 0..1 (1 = fully protected). Dropped by topology-changing ops. */mask?:number[];/** UVs parallel to positions (2 per vertex). Carried through by the bake ops that can preserve them (mirror/symmetrize/subdivide), dropped by the rest. */uvs?:number[];}
 /** Hard cap for one editable mesh; operations that would pass it are refused. */
 export const MAX_EDIT_VERTICES=200_000;
 export const MAX_EDIT_TRIANGLES=400_000;
@@ -20,6 +20,7 @@ export const faceCenter=(m:MeshData,f:number):[number,number,number]=>{
 const check=(m:MeshData)=>{
  const verts=m.positions.length/3,tris=m.index.length/3;
  if(!Number.isInteger(verts)||!Number.isInteger(tris)||m.positions.some(n=>!Number.isFinite(n)))throw new EditError('The mesh data is damaged.');
+ if(m.uvs&&(m.uvs.length!==verts*2||m.uvs.some(n=>!Number.isFinite(n))))throw new EditError('The mesh data is damaged.');
  if(verts>MAX_EDIT_VERTICES||tris>MAX_EDIT_TRIANGLES)throw new EditError(`This mesh is too large to edit (${Math.round(verts).toLocaleString('en-US')} vertices).`);
 };
 const checkFaces=(m:MeshData,faces:number[])=>{
@@ -305,8 +306,8 @@ export function bisectClip(m:MeshData,axis:MirrorAxis):MeshData{
  const ai=axis==='x'?0:axis==='y'?1:2;
  const EPS=1e-9;
  const side=(i:number)=>m.positions[i*3+ai]>EPS?1:m.positions[i*3+ai]<-EPS?-1:0;
- const positions:number[]=[];const remap=new Map<number,number>();
- const keep=(i:number)=>{let n=remap.get(i);if(n===undefined){n=positions.length/3;remap.set(i,n);positions.push(m.positions[i*3],m.positions[i*3+1],m.positions[i*3+2]);if(Math.abs(m.positions[i*3+ai])<=EPS)positions[n*3+ai]=0;}return n;};
+ const positions:number[]=[];const remap=new Map<number,number>();const uvs:number[]|undefined=m.uvs?[]:undefined;
+ const keep=(i:number)=>{let n=remap.get(i);if(n===undefined){n=positions.length/3;remap.set(i,n);positions.push(m.positions[i*3],m.positions[i*3+1],m.positions[i*3+2]);if(uvs)uvs.push(m.uvs![i*2],m.uvs![i*2+1]);if(Math.abs(m.positions[i*3+ai])<=EPS)positions[n*3+ai]=0;}return n;};
  const cross=new Map<string,number>();
  const cut=(x:number,y:number)=>{
   const k=x<y?`${x}_${y}`:`${y}_${x}`;let n=cross.get(k);
@@ -314,6 +315,7 @@ export function bisectClip(m:MeshData,axis:MirrorAxis):MeshData{
   const px=v3(m,x),py=v3(m,y);const dx=px[ai],dy=py[ai];const t=dx/(dx-dy);
   n=positions.length/3;cross.set(k,n);
   positions.push(px[0]+(py[0]-px[0])*t,px[1]+(py[1]-px[1])*t,px[2]+(py[2]-px[2])*t);
+  if(uvs)uvs.push(m.uvs![x*2]+(m.uvs![y*2]-m.uvs![x*2])*t,m.uvs![x*2+1]+(m.uvs![y*2+1]-m.uvs![x*2+1])*t);
   positions[n*3+ai]=0;return n;
  };
  const index:number[]=[];
@@ -332,7 +334,7 @@ export function bisectClip(m:MeshData,axis:MirrorAxis):MeshData{
   if(poly.length===3)index.push(poly[0],poly[1],poly[2]);
   else if(poly.length===4)index.push(poly[0],poly[1],poly[2], poly[0],poly[2],poly[3]);
  }
- const out={positions,index};
+ const out:MeshData=uvs?{positions,index,uvs}:{positions,index};
  if(!positions.length)throw new EditError('Nothing remains on the positive side of the mirror plane.');
  check(out);return out;
 }
@@ -346,7 +348,7 @@ export function symmetrizeMesh(m:MeshData,axis:MirrorAxis,side:'positive'|'negat
   for(let i=ai;i<positions.length;i+=3)positions[i]=-positions[i];
   const index:number[]=[];
   for(let f=0;f<d.index.length;f+=3)index.push(d.index[f],d.index[f+2],d.index[f+1]); // keep normals outward after mirroring
-  return{positions,index};
+  return d.uvs?{positions,index,uvs:[...d.uvs]}:{positions,index};
  };
  return flip(mirrorCombine(flip(m),axis,merge,true));
 }
@@ -368,18 +370,22 @@ const loopOnce=(m:MeshData):MeshData=>{
  const bnd:number[][]=Array.from({length:nv},()=>[]);
  for(const e of edges.values())if(e.opp.length===1){bnd[e.a].push(e.b);bnd[e.b].push(e.a);}
  const positions=[...m.positions];
+ const uvs=m.uvs?[...m.uvs]:undefined;
  for(let i=0;i<nv;i++){
-  const p=v3(m,i);let q:[number,number,number];
+  const p=v3(m,i);let q:[number,number,number];let wsum:[number,number]|null=null;
   if(bnd[i].length===2){
    const b0=v3(m,bnd[i][0]),b1=v3(m,bnd[i][1]);
    q=[p[0]*0.75+(b0[0]+b1[0])*0.125,p[1]*0.75+(b0[1]+b1[1])*0.125,p[2]*0.75+(b0[2]+b1[2])*0.125];
+   if(uvs)wsum=[m.uvs![i*2]*0.75+(m.uvs![bnd[i][0]*2]+m.uvs![bnd[i][1]*2])*0.125,m.uvs![i*2+1]*0.75+(m.uvs![bnd[i][0]*2+1]+m.uvs![bnd[i][1]*2+1])*0.125];
   }else if(bnd[i].length===0&&nbr[i].length>=3){
    const k=nbr[i].length,beta=(1/k)*(5/8-Math.pow(3/8+Math.cos(2*Math.PI/k)/4,2));
-   let sx=0,sy=0,sz=0;for(const j of nbr[i]){sx+=m.positions[j*3];sy+=m.positions[j*3+1];sz+=m.positions[j*3+2];}
+   let sx=0,sy=0,sz=0,su=0,sv=0;for(const j of nbr[i]){sx+=m.positions[j*3];sy+=m.positions[j*3+1];sz+=m.positions[j*3+2];if(uvs){su+=m.uvs![j*2];sv+=m.uvs![j*2+1];}}
    const w=1-k*beta;
    q=[p[0]*w+sx*beta,p[1]*w+sy*beta,p[2]*w+sz*beta];
+   if(uvs)wsum=[m.uvs![i*2]*w+su*beta,m.uvs![i*2+1]*w+sv*beta];
   }else q=p; // non-manifold or nearly isolated vertex: leave it in place
   positions[i*3]=q[0];positions[i*3+1]=q[1];positions[i*3+2]=q[2];
+  if(uvs&&wsum){uvs[i*2]=wsum[0];uvs[i*2+1]=wsum[1];}
  }
  const mid=new Map<string,number>();
  for(const [k,e] of edges){
@@ -389,6 +395,10 @@ const loopOnce=(m:MeshData):MeshData=>{
    p=[(a[0]+b[0])*0.375+(c[0]+d[0])*0.125,(a[1]+b[1])*0.375+(c[1]+d[1])*0.125,(a[2]+b[2])*0.375+(c[2]+d[2])*0.125];
   }else p=[(a[0]+b[0])/2,(a[1]+b[1])/2,(a[2]+b[2])/2];
   mid.set(k,positions.length/3);positions.push(p[0],p[1],p[2]);
+  if(uvs){
+   if(e.opp.length>=2)uvs.push((m.uvs![e.a*2]+m.uvs![e.b*2])*0.375+(m.uvs![e.opp[0]*2]+m.uvs![e.opp[1]*2])*0.125,(m.uvs![e.a*2+1]+m.uvs![e.b*2+1])*0.375+(m.uvs![e.opp[0]*2+1]+m.uvs![e.opp[1]*2+1])*0.125);
+   else uvs.push((m.uvs![e.a*2]+m.uvs![e.b*2])/2,(m.uvs![e.a*2+1]+m.uvs![e.b*2+1])/2);
+  }
  }
  const index:number[]=[];
  for(let f=0;f<nt;f++){
@@ -396,13 +406,13 @@ const loopOnce=(m:MeshData):MeshData=>{
   const ab=mid.get(key(a,b))!,bc=mid.get(key(b,c))!,ca=mid.get(key(c,a))!;
   index.push(a,ab,ca, ab,b,bc, ca,bc,c, ab,bc,ca);
  }
- return{positions,index};
+ return uvs?{positions,index,uvs}:{positions,index};
 };
 /** Subdivides the mesh smoothly with the Loop scheme, 1-3 iterations (each multiplies triangles by four, capped by the edit size limits). Drops the sculpt mask like every topology-changing op. */
 export function subdivideLoop(m:MeshData,iterations:number):MeshData{
  check(m);
  if(!Number.isInteger(iterations)||iterations<1||iterations>3)throw new EditError('Iterations must be a whole number between 1 and 3.');
- let cur:MeshData={positions:[...m.positions],index:[...m.index]};
+ let cur:MeshData=m.uvs?{positions:[...m.positions],index:[...m.index],uvs:[...m.uvs]}:{positions:[...m.positions],index:[...m.index]};
  for(let k=0;k<iterations;k++){
   if(cur.index.length/3*4>MAX_EDIT_TRIANGLES)throw new EditError(`Subdividing would exceed ${MAX_EDIT_TRIANGLES.toLocaleString('en-US')} triangles.`);
   cur=loopOnce(cur);
@@ -416,9 +426,10 @@ export function mirrorCombine(m:MeshData,axis:MirrorAxis,merge:number,bisect=fal
  if(bisect)m=bisectClip(m,axis);
  const ai=axis==='x'?0:axis==='y'?1:2;
  const nv=m.positions.length/3;
- const positions:number[]=[];const map=new Array<number>(nv);
+ const positions:number[]=[];const map=new Array<number>(nv);const uvs:number[]|undefined=m.uvs?[]:undefined;
  for(let i=0;i<nv;i++){
   const c=m.positions[i*3+ai];
+  if(uvs)uvs.push(m.uvs![i*2],m.uvs![i*2+1]);
   if(Math.abs(c)<=merge){positions.push(m.positions[i*3],m.positions[i*3+1],m.positions[i*3+2]);positions[positions.length-3+ai]=0;map[i]=i;}
   else{positions.push(m.positions[i*3],m.positions[i*3+1],m.positions[i*3+2]);map[i]=-1;}
  }
@@ -427,6 +438,7 @@ export function mirrorCombine(m:MeshData,axis:MirrorAxis,merge:number,bisect=fal
   const x=m.positions[i*3],y=m.positions[i*3+1],z=m.positions[i*3+2];
   map[i]=positions.length/3;
   positions.push(axis==='x'?-x:x,axis==='y'?-y:y,axis==='z'?-z:z);
+  if(uvs)uvs.push(m.uvs![i*2],m.uvs![i*2+1]); // mirrored twin reuses the source UVs
  }
  const welded=new Set<number>();for(let i=0;i<nv;i++)if(map[i]===i&&Math.abs(m.positions[i*3+ai])<=merge)welded.add(i);
  const index=[...m.index];
@@ -437,5 +449,5 @@ export function mirrorCombine(m:MeshData,axis:MirrorAxis,merge:number,bisect=fal
   if(a===b||b===c||a===c)continue; // face collapsed onto the plane
   index.push(a,c,b); // mirrored winding
  }
- const out={positions,index};check(out);return out;
+ const out:MeshData=uvs?{positions,index,uvs}:{positions,index};check(out);return out;
 }

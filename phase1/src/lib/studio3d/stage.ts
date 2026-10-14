@@ -655,7 +655,16 @@ export class Stage{
   const positions=Array.from((pos.array as ArrayLike<number>)).slice(0,pos.count*3) as number[];
   const idx=g.getIndex();
   const index=idx?Array.from(idx.array as ArrayLike<number>) as number[]:Array.from({length:pos.count},(_,i)=>i);
-  return{positions,index};
+  const uv=g.getAttribute('uv');
+  const uvs=uv&&uv.count===pos.count?Array.from(uv.array as ArrayLike<number>).slice(0,pos.count*2) as number[]:undefined;
+  return uvs?{positions,index,uvs}:{positions,index};
+ }
+ /** Geometry from mesh data: positions and index always, UVs when the op carried them through, normals recomputed. */
+ private buildGeometry(d:MeshData):THREE.BufferGeometry{
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.Float32BufferAttribute(d.positions,3));
+  if(d.uvs)g.setAttribute('uv',new THREE.Float32BufferAttribute(d.uvs,2));
+  g.setIndex(d.index);g.computeVertexNormals();return g;
  }
  private meshDataOf(m:THREE.Mesh):MeshData{
   const data=this.meshDataFromGeometry(m.geometry,m.name);
@@ -665,7 +674,7 @@ export class Stage{
  }
  private applyMeshData(m:THREE.Mesh,data:MeshData,label:HistoryLabel){
   const before=m.geometry,beforeData=m.userData.somniaPrimitive;
-  const make=(d:MeshData)=>{const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(d.positions,3));g.setIndex(d.index);g.computeVertexNormals();return g;};
+  const make=(d:MeshData)=>this.buildGeometry(d);
   const after=make(data);
   // Vertex indices change with the rebuild: re-find seams geometrically so surviving edges keep their mark.
   const seams0=this.seamsOf(m);let seams1:[number,number][]=[];
@@ -820,9 +829,7 @@ export class Stage{
    const base=m.geometry;
    const baseData=this.meshDataOf(m);
    let data:MeshData;try{data=mirrorCombine(baseData,axis,merge,bisect);}catch(e){throw e instanceof EditError?new StageError(e.message):e;}
-   const combined=new THREE.BufferGeometry();
-   combined.setAttribute('position',new THREE.Float32BufferAttribute(data.positions,3));
-   combined.setIndex(data.index);combined.computeVertexNormals();
+   const combined=this.buildGeometry(data);
    const seams0=this.seamsOf(m);let seams1:[number,number][]=[];
    if(seams0.length){try{seams1=remapSeams(baseData,seams0,data);}catch{seams1=[];}}
    let owned=true;
@@ -1761,7 +1768,7 @@ export class Stage{
   for(const o of objs)if(!(o as THREE.Mesh).isMesh)throw new StageError(`${o.name} is not a mesh. Symmetrize works on meshes.`);
   const list=(objs as THREE.Mesh[]).map(mesh=>{
    const data=this.meshDataOf(mesh);const out=symmetrizeMesh(data,axis,side,m);
-   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(out.positions,3));g.setIndex(out.index);g.computeVertexNormals();
+   const g=this.buildGeometry(out);
    const seams0=this.seamsOf(mesh);let seams1:[number,number][]=[];
    if(seams0.length){try{seams1=remapSeams(data,seams0,out);}catch{seams1=[];}}
    return{mesh,before:{g:mesh.geometry,d:mesh.userData.somniaPrimitive,s:seams0},after:g,seams1};
@@ -1781,7 +1788,7 @@ export class Stage{
   const list=(objs as THREE.Mesh[]).map(mesh=>{
    const data=this.meshDataOf(mesh);
    let out:MeshData;try{out=subdivideLoop(data,iterations);}catch(e){throw e instanceof EditError?new StageError(e.message):e;}
-   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(out.positions,3));g.setIndex(out.index);g.computeVertexNormals();
+   const g=this.buildGeometry(out);
    const seams0=this.seamsOf(mesh);let seams1:[number,number][]=[];
    if(seams0.length){try{seams1=remapSeams(data,seams0,out);}catch{seams1=[];}}
    return{mesh,before:{g:mesh.geometry,d:mesh.userData.somniaPrimitive,s:seams0},after:g,seams1};
