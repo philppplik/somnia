@@ -891,5 +891,8 @@
  "cmd.animation.keys.keyAll": "Añadir una key en el cabezal en cada propiedad animada de las capas",
  "animation.keys.trim": "Recortar al área de trabajo",
  "animation.keys.trim.hint": "Elimina las keys de las capas elegidas fuera del área de trabajo",
- "cmd.animation.keys.trimToWorkArea": "Eliminar las keys fuera del área de trabajo"
+ "cmd.animation.keys.trimToWorkArea": "Eliminar las keys fuera del área de trabajo",
+ "animation.keys.workArea": "Área de trabajo a keys",
+ "animation.keys.workArea.hint": "Fija el área de trabajo de la primera a la última key seleccionada",
+ "cmd.animation.keys.workAreaToKeys": "Fijar el área de trabajo a las keys seleccionadas"
 }

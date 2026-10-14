@@ -891,5 +891,8 @@
  "cmd.animation.keys.keyAll": "Ajouter une key à la tête de lecture sur chaque propriété animée des calques",
  "animation.keys.trim": "Couper à la zone de travail",
  "animation.keys.trim.hint": "Supprime les keys des calques choisis hors de la zone de travail",
- "cmd.animation.keys.trimToWorkArea": "Supprimer les keys hors de la zone de travail"
+ "cmd.animation.keys.trimToWorkArea": "Supprimer les keys hors de la zone de travail",
+ "animation.keys.workArea": "Zone de travail sur keys",
+ "animation.keys.workArea.hint": "Règle la zone de travail de la première à la dernière key sélectionnée",
+ "cmd.animation.keys.workAreaToKeys": "Régler la zone de travail sur les keys sélectionnées"
 }

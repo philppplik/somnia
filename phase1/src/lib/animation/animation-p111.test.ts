@@ -207,3 +207,9 @@ test('trim: keys outside the work area go, all-outside properties and locked lay
  assert.deepEqual(trimKeys(c,['a']).map(k=>k.t).sort((a,b)=>a-b),[f(0),f(20)]);
  assert.equal(trimKeys({...c,workArea:{in:f(30),out:f(40)}},['a']).length,0);assert.equal(trimKeys(c,['zz']).length,0);
 });
+import {workAreaForKeys} from './keyWorkArea';
+test('work area for keys: first to last, one frame minimum, clamped, null when empty',()=>{
+ const c=findComp(base())!,k=(n:number)=>({layer:'a',prop:'position' as const,t:f(n)});
+ assert.deepEqual(workAreaForKeys(c,[k(10),k(3)]),{in:f(3),out:f(10)});
+ assert.deepEqual(workAreaForKeys(c,[k(4)]),{in:f(4),out:f(5)});assert.equal(workAreaForKeys(c,[]),null);
+});

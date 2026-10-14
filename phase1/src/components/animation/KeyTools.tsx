@@ -25,6 +25,7 @@ export function KeyTools({selected,layers}:{selected:number;layers:readonly stri
    {id:'inf66',testid:'animation-keys-influence-66',label:`${t('animation.keys.influence')} 66%`,hint:t('animation.keys.influence.hint'),cmd:'animation.keys.influence',params:{percent:66},min:1},
    {id:'tame',testid:'animation-keys-tame',label:t('animation.keys.tame'),hint:t('animation.keys.tame.hint'),cmd:'animation.keys.tame',params:{},min:1}]},
   {key:'animation.keys.tools.select',items:[
+   {id:'workArea',testid:'animation-keys-work-area',label:t('animation.keys.workArea'),hint:t('animation.keys.workArea.hint'),cmd:'animation.keys.workAreaToKeys',params:{},min:1},
    {id:'peaks',testid:'animation-keys-peaks',label:t('animation.keys.peaks'),hint:t('animation.keys.peaks.hint'),cmd:'animation.keys.selectPeaks',params:L,min:0,layers:true},
    {id:'invertSel',testid:'animation-keys-invert-selection',label:t('animation.keys.invertSel'),hint:t('animation.keys.invertSel.hint'),cmd:'animation.keys.invertSelection',params:L,min:0,layers:true},
    {id:'property',testid:'animation-keys-property',label:t('animation.keys.property'),hint:t('animation.keys.property.hint'),cmd:'animation.keys.selectProperty',params:{},min:1},

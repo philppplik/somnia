@@ -1223,6 +1223,23 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.keys.workAreaToKeys",
+      "title": "Set the work area to the selected keys",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "bounds",
+        "in",
+        "keys",
+        "out",
+        "range",
+        "span",
+        "work area"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.layer.add",
       "title": "Add layer",
       "category": "Insert",
