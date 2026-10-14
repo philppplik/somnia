@@ -19,7 +19,7 @@ const COMMENT_MAX_COUNT: usize = 500;
 const PDF_MAX_PAGES: usize = 2000;
 const PDF_MAX_BYTES: usize = 100 * 1024 * 1024;
 const LINK_MAX_CHARS: usize = 2048;
-const HF_MAX_CHARS: usize = 500;: usize = 500;
+const HF_MAX_CHARS: usize = 500;
 /// Page sizes the page setup offers: name, portrait width and height in points.
 const PAGE_SIZES: [(&str, f32, f32); 4] = [("a4", 595.3, 841.9), ("letter", 612.0, 792.0), ("legal", 612.0, 1008.0), ("a5", 419.5, 595.3)];
 const IMG_MAX_BYTES: usize = 5 * 1024 * 1024;
