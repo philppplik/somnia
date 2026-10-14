@@ -33,3 +33,25 @@ export function auditInterfaceDocument(source:InterfaceDocument):A11yAudit{
   walk(frame.id,0,0,0);}
  return {findings,checked,skipped};
 }
+export interface FocusOrderEntry {id:string;name:string;kind:string;index:number;explicit:boolean;}
+/** Reading/focus order over visible interactive layers: explicit focusIndex first, then document order. Display-safe (clones). */
+export function interfaceFocusOrder(source:InterfaceDocument):FocusOrderEntry[]{
+ const doc=parseInterfaceDocument(serializeInterfaceDocument(source)),pos=new Map(doc.nodes.map((n,i)=>[n.id,i]));
+ return doc.nodes.filter(n=>!n.hidden&&n.prototypeLinks?.length).map(n=>({id:n.id,name:n.name,kind:n.kind,index:n.focusIndex??Number.MAX_SAFE_INTEGER,explicit:n.focusIndex!==undefined}))
+  .sort((a,b)=>(a.index-b.index)||(pos.get(a.id)!-pos.get(b.id)!)).map((e,i)=>({...e,index:i}));
+}
+/** Move one interactive layer earlier/later in the focus order; normalizes explicit indices for all entries as one edit. */
+export function moveInterfaceFocus(doc:InterfaceDocument,nodeId:string,delta:-1|1):void{
+ const order=interfaceFocusOrder(doc),at=order.findIndex(e=>e.id===nodeId);if(at<0)throw Error('Select an interactive layer.');
+ const swap=at+delta;if(swap<0||swap>=order.length)return;
+ const ids=order.map(e=>e.id);const tmp=ids[at];ids[at]=ids[swap];ids[swap]=tmp;
+ ids.forEach((id,i)=>{doc.nodes.find(n=>n.id===id)!.focusIndex=i;});
+}
+export interface VisionMode {id:'protanopia'|'deuteranopia'|'tritanopia';matrix:number[];}
+/** View-only color-vision deficiency simulation matrices (full severity), 4x5 feColorMatrix form; RGB rows sum to 1, alpha passthrough. */
+export const INTERFACE_VISION_MODES:VisionMode[]=[
+ {id:'protanopia',matrix:[0.567,0.433,0,0,0,0.558,0.442,0,0,0,0,0.242,0.758,0,0,0,0,0,1,0]},
+ {id:'deuteranopia',matrix:[0.625,0.375,0,0,0,0.7,0.3,0,0,0,0,0.3,0.7,0,0,0,0,0,1,0]},
+ {id:'tritanopia',matrix:[0.95,0.05,0,0,0,0,0.433,0.567,0,0,0,0.475,0.525,0,0,0,0,0,1,0]},
+];
+export function interfaceVisionFilterValues(mode:string):string|undefined{return INTERFACE_VISION_MODES.find(v=>v.id===mode)?.matrix.join(' ');}

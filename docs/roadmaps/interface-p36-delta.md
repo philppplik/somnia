@@ -1,0 +1,9 @@
+# Interface P36 delta — accessibility polish
+
+Base: P35 commit (stacked; P35 not yet upstream at build time). Scope check first: the accessibility review already had a WCAG contrast checker for text vs fill (with ranked variable suggestions and one-click apply), alt-text findings with jump-to-layer, tap-target, label and overflow checks. Gaps built:
+
+1. **Alt-text coverage report**: the review header now summarizes coverage — alt text on covered/total images plus checked text and interactive layer counts. Jump-to-layer on every finding already existed and stays.
+2. **Focus/reading order view + edit**: new `focusIndex` on nodes (validated integer 0-999). The review lists visible interactive layers in effective focus order (explicit index first, then document order), each row jumps to the layer, and up/down controls move a layer one step per edit with one undo; moves normalize explicit indices across the order so the sequence is deterministic. Ends are no-ops; non-interactive layers reject.
+3. **Color-blind simulation preview** (view only): the preview player gains a vision picker (protanopia/deuteranopia/tritanopia) rendering the frame through normalized 4x5 feColorMatrix filters (Machado-style, full severity, alpha passthrough). No document writes, no history entries. Note: an initial 9-value matrix was silently ignored by browsers — the pixel check caught it (bar stayed orange) and the matrices are now 20-value with a test asserting the shape.
+
+Tests: 358 focused tests green (+6: 5 lib tests, 1 EN/DE render test). Gates: check:ds, check:ui-commands, check:commands, check:layers all pass; tsc clean apart from known upstream studio3d/slides/stage noise. CI-only spec `Interface P36 focus order edit with one undo and vision simulation picker` added; acceptance paragraph P36 added. Light/dark screenshots inspected (EN light + DE dark: deuteranopia simulation visibly shifts the orange bar to yellow-green (255,179,71) -> (230,236,117)).
