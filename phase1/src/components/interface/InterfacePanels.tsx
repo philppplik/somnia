@@ -1,5 +1,6 @@
 import {InterfaceInteractions} from './InterfacePrototype';
 import {setInterfaceConstraint} from '../../lib/interface/constraints';
+import {InterfaceVariantProperties} from './InterfaceVariantProperties';
 import {Field} from './InterfaceField';
 export {Field};
 import {InterfaceSelectionControls} from './InterfaceSelection';
@@ -53,8 +54,10 @@ export function InterfaceProperties(){
    {node.kind==='text'&&<Field name={t('interface.text')} value={node.text??''} disabled={node.locked} onCommit={text=>run(()=>patch({text}))}/>}
    <label className="text-xs">{t('interface.parent')}<select className="mt-1 w-full rounded border border-subtle bg-panel p-2" value={node.parentId??''} disabled={node.locked} onChange={e=>run(()=>{const parent=e.target.value||null;const count=parent?doc.nodes.find(n=>n.id===parent)!.children.length:doc.pages.find(p=>p.id===node.pageId)!.children.length;interfaceSession.transact(d=>reparentNode(d,node.id,parent,count-(parent===node.parentId?1:0)));})}><option value="">{t('interface.root')}</option>{doc.nodes.filter(n=>n.pageId===node.pageId&&n.id!==node.id&&['frame','group'].includes(n.kind)&&!n.locked).map(n=><option key={n.id} value={n.id}>{n.name}</option>)}</select></label>
    {(['hidden','locked'] as const).map(key=><label key={key} className="flex items-center gap-2 text-xs"><input style={{width:14,flexShrink:0}} type="checkbox" checked={node[key]} disabled={key==='hidden'&&node.locked} onChange={e=>run(()=>patch({[key]:e.target.checked}))}/>{t(`interface.${key}`)}</label>)}
+   {node.kind==='frame'&&<Choice label={t('interface.variableMode')} value={node.variableMode??''} options={[["",t('interface.inheritMode')],["light",t('interface.mode.light')],["dark",t('interface.mode.dark')]]} disabled={node.locked} onChange={mode=>run(()=>patch({variableMode:mode?mode as 'light'|'dark':undefined}))}/>}
    <InterfaceLayoutControls node={node} run={run} patch={patch}/>
    <InterfaceComponentControls node={node} run={run}/>
+   <InterfaceVariantProperties node={node} run={run}/>
    <InterfaceBindings nodeId={node.id} run={run}/>
    <InterfaceMediaControls/>
    <InterfaceVectorControls nodeId={node.id} run={run}/>
@@ -66,7 +69,7 @@ export function InterfaceProperties(){
  </div>}</Guard>;
 }
 
-function Choice({label,value,options,disabled,onChange}:{label:string;value:string;options:[string,string][];disabled?:boolean;onChange:(value:string)=>void}){return <label className="flex min-w-0 flex-col gap-1 text-xs">{label}<select className="w-full rounded border border-subtle bg-panel p-2" value={value} disabled={disabled} onChange={e=>onChange(e.target.value)}>{options.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></label>;}
+function Choice({label,value,options,disabled,onChange}:{label:string;value:string;options:[string,string][];disabled?:boolean;onChange:(value:string)=>void}){return <label className="flex min-w-0 flex-col gap-1 text-xs">{label}<select aria-label={label} className="w-full rounded border border-subtle bg-panel p-2" value={value} disabled={disabled} onChange={e=>onChange(e.target.value)}>{options.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></label>;}
 function InspectorGroup({title,children}:{title:string;children:ReactNode}){const [open,setOpen]=useState(true);const id=useId();return <PanelSection title={title} id={`interface-inspector-${id}`} open={open} onOpenChange={setOpen} className="border-t border-subtle pt-3">{children}</PanelSection>;}
 function InterfaceLayoutControls({node,run,patch}:{node:InterfaceNode;run:(f:()=>void)=>void;patch:(change:Partial<InterfaceNode>)=>void}){
  const s=useInterfaceState(),{t}=useT();const instance=owningInstance(s.document!,node.id);const disabled=node.locked||!!instance;const layout=node.layout??DEFAULT_LAYOUT,sizing=node.sizing??DEFAULT_SIZING;

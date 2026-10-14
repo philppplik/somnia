@@ -5,11 +5,13 @@ export type ConstraintMode='start'|'end'|'center'|'stretch'|'scale';
 export interface InterfaceConstraints {horizontal:ConstraintMode;vertical:ConstraintMode;parentWidth:number;parentHeight:number;}
 export interface InstanceOverride {slot:string;values:Record<string,string|number|boolean>;}
 export interface InterfaceInstance {componentId:string;variantId:string;overrides:InstanceOverride[];}
-export interface InterfaceComponent {id:string;name:string;variants:{id:string;name:string;rootId:string}[];}
+export type VariableMode='light'|'dark';
+export interface VariantProperty {name:string;values:string[];}
+export interface InterfaceComponent {id:string;name:string;properties?:VariantProperty[];variants:{id:string;name:string;rootId:string;props?:Record<string,string>}[];}
 export const DEFAULT_LAYOUT:InterfaceLayout={direction:'free',wrap:false,gap:12,padding:[16,16,16,16],align:'start'};
 export const DEFAULT_SIZING:InterfaceSizing={width:'fixed',height:'fixed',minWidth:1,minHeight:1,maxWidth:32768,maxHeight:32768,absolute:false};
-export interface InterfaceVariable {id:string;name:string;type:'color'|'number';value:string|number;alias?:string;}
-export interface InterfaceTextStyle {id:string;name:string;fontFamily:'sans-serif'|'serif'|'monospace';fontSize:number;lineHeight:number;fontWeight:400|500|600|700;}
+export interface InterfaceVariable {id:string;name:string;type:'color'|'number';value:string|number;alias?:string;modeValues?:Partial<Record<VariableMode,string|number>>;}
+export interface InterfaceTextStyle {id:string;name:string;fontFamily:'sans-serif'|'serif'|'monospace';fontSize:number;lineHeight:number;fontWeight:400|500|600|700;modeValues?:Partial<Record<VariableMode,{fontSize:number;lineHeight:number;fontWeight:400|500|600|700}>>;}
 export interface InterfaceAsset {id:string;hash:string;mime:'image/png';width:number;height:number;data:string;sourceName:string;sourceType:'png'|'jpeg';license:'user-provided-unverified';}
 export interface PathPoint {x:number;y:number;}
 export interface InterfacePath {points:PathPoint[];closed:boolean;}
@@ -19,7 +21,7 @@ export interface InterfaceNode {
  id:string;pageId:string;parentId:string|null;children:string[];kind:NodeKind;name:string;
  x:number;y:number;width:number;height:number;fill:string;text?:string;hidden:boolean;locked:boolean;
  prototypeLinks?:PrototypeLink[];path?:InterfacePath;stroke?:string;strokeWidth?:number;imageFill?:{assetId:string;fit:'cover'|'contain'};
- altText?:string;bindings?:{fill?:string;gap?:string};textStyleId?:string;annotation?:string;ready?:boolean;layout?:InterfaceLayout;sizing?:InterfaceSizing;constraints?:InterfaceConstraints;componentSlot?:string;instance?:InterfaceInstance;
+ altText?:string;variableMode?:VariableMode;bindings?:{fill?:string;gap?:string};textStyleId?:string;annotation?:string;ready?:boolean;layout?:InterfaceLayout;sizing?:InterfaceSizing;constraints?:InterfaceConstraints;componentSlot?:string;instance?:InterfaceInstance;
  [key:string]:unknown;
 }
 export interface InterfacePage {id:string;name:string;children:string[];[key:string]:unknown;}

@@ -1,4 +1,5 @@
 import {validateInterfacePrototype} from './prototypeCore';
+import {validateVariantProperties} from './variantProperties';
 import type {InterfaceDocument} from './schema';
 import {validateInterfaceAssets} from './assetsCore';
 import {validateInterfaceVectors} from './vectorCore';
@@ -20,7 +21,7 @@ export function validateInterfaceFeatures(d:InterfaceDocument):void{
  const componentIds=new Set<string>(),variantIds=new Set<string>(),masterIds=new Set<string>();
  for(const c of components){
   if(!obj(c)||!id(c.id)||componentIds.has(c.id)||nodes.has(c.id)||d.pages.some(p=>p.id===c.id)||c.id===d.id||!name(c.name)||!Array.isArray(c.variants)||!c.variants.length||c.variants.length>50)throw Error('Invalid component.');componentIds.add(c.id);
-  const names=new Set<string>();
+  validateVariantProperties(c);const names=new Set<string>();
   for(const v of c.variants){const root=nodes.get(v.rootId);if(!obj(v)||!id(v.id)||variantIds.has(v.id)||componentIds.has(v.id)||nodes.has(v.id)||d.pages.some(p=>p.id===v.id)||d.id===v.id||!name(v.name)||names.has(v.name)||!root||root.kind!=='frame'||root.instance||masterIds.has(root.id))throw Error('Invalid component variant.');variantIds.add(v.id);names.add(v.name);masterIds.add(root.id);
    const slots=new Set<string>();const walk=(nid:string)=>{const n=nodes.get(nid)!;if(!id(n.componentSlot)||slots.has(n.componentSlot!))throw Error('Missing or duplicate component slot.');slots.add(n.componentSlot!);n.children.forEach(walk);};walk(root.id);
   }

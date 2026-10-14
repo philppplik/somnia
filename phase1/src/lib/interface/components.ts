@@ -15,7 +15,7 @@ export function addComponentVariant(doc:InterfaceDocument,componentId:string,sou
  const copies=source.map(n=>({...structuredClone(n),id:map.get(n.id)!,parentId:n.id===root.id?root.parentId:map.get(n.parentId!)!,children:n.children.map(id=>map.get(id)!)}));
  copies[0].name=name;copies[0].x+=root.width+40;doc.nodes.push(...copies);
  const siblings=root.parentId?doc.nodes.find(n=>n.id===root.parentId)!.children:doc.pages.find(p=>p.id===root.pageId)!.children;siblings.push(copies[0].id);
- const id=uid();c.variants.push({id,name,rootId:copies[0].id});return id;
+ const id=uid();const props={...v.props};if(c.properties?.length){const first=c.properties[0];let i=c.variants.length+1,value=`Value ${i}`;while(first.values.includes(value)){value=`Value ${++i}`;}first.values.push(value);props[first.name]=value;}c.variants.push({id,name,rootId:copies[0].id,...(c.properties?{props}:{})});return id;
 }
 export function instantiateComponent(doc:InterfaceDocument,componentId:string,variantId:string,pageId:string,parentId:string|null=null):string{
  const c=doc.components?.find(c=>c.id===componentId),v=c?.variants.find(v=>v.id===variantId),master=v&&doc.nodes.find(n=>n.id===v.rootId);const page=doc.pages.find(p=>p.id===pageId),parent=parentId?doc.nodes.find(n=>n.id===parentId):undefined;
@@ -29,18 +29,18 @@ export function owningInstance(doc:InterfaceDocument,id:string):InterfaceNode|un
 export function patchInterfaceNode(doc:InterfaceDocument,id:string,patch:Partial<InterfaceNode>):void{
  const node=doc.nodes.find(n=>n.id===id);if(!node||node.locked&&Object.keys(patch).some(k=>k!=='locked'))throw Error('Layer is locked or unavailable.');
  const instance=owningInstance(doc,id);
- if(instance){const keys=Object.keys(patch);const rootGeometry=id===instance.id&&keys.every(k=>['x','y','constraints','locked','annotation','ready'].includes(k));
+ if(instance){const keys=Object.keys(patch);const rootGeometry=id===instance.id&&keys.every(k=>['x','y','constraints','locked','annotation','ready','variableMode'].includes(k));
   if(!rootGeometry){if(!node.componentSlot||!keys.every(k=>validOverride(k,patch[k])))throw Error('Detach the instance before structural or layout edits.');
    let override=instance.instance!.overrides.find(o=>o.slot===node.componentSlot);if(!override){override={slot:node.componentSlot,values:{}};instance.instance!.overrides.push(override);}Object.assign(override.values,patch);
   }
  }
- Object.assign(node,patch);
+ Object.assign(node,patch);if(patch.fill!==undefined&&node.bindings){node.bindings={...node.bindings};delete node.bindings.fill;}
 }
 export function switchInstanceVariant(doc:InterfaceDocument,id:string,variantId:string):void{
  const root=doc.nodes.find(n=>n.id===id),c=doc.components?.find(c=>c.id===root?.instance?.componentId);if(!root?.instance||root.locked||!c?.variants.some(v=>v.id===variantId))throw Error('Variant unavailable.');root.instance.variantId=variantId;
 }
 export function resetInstanceOverrides(doc:InterfaceDocument,id:string):void{const root=doc.nodes.find(n=>n.id===id);if(!root?.instance||root.locked)throw Error('Instance unavailable.');root.instance.overrides=[];}
-export function detachInstance(doc:InterfaceDocument,id:string):void{const root=doc.nodes.find(n=>n.id===id);if(!root?.instance||root.locked)throw Error('Instance unavailable.');delete root.instance;}
+export function detachInstance(doc:InterfaceDocument,id:string):void{const root=doc.nodes.find(n=>n.id===id);if(!root?.instance||root.locked)throw Error('Instance unavailable.');delete root.instance;for(const n of subtree(doc,id))if(!owningInstance(doc,n.id))delete n.componentSlot;}
 /** Called once per content transaction. Derived instance changes and master edit share its undo entry. */
 export function synchronizeInstances(doc:InterfaceDocument):ComponentDiagnostic[]{
  const diagnostics:ComponentDiagnostic[]=[];const processed=new Set<string>();let expanded=0;
@@ -53,8 +53,8 @@ export function synchronizeInstances(doc:InterfaceDocument):ComponentDiagnostic[
   const generated=source.map((n,index)=>{
    if(++expanded>MAX_NODES*2)throw Error('Component expansion budget exceeded.');
    const copy:InterfaceNode={...structuredClone(n),id:ids.get(n.id)!,pageId:root.pageId,parentId:index===0?root.parentId:ids.get(n.parentId!)!,children:n.children.map(id=>ids.get(id)!)};
-   if(index===0){copy.x=root.x;copy.y=root.y;copy.locked=root.locked;copy.instance=instance;copy.constraints=root.constraints;copy.annotation=root.annotation??copy.annotation;copy.ready=root.ready??copy.ready;}
-   for(const [key,value] of Object.entries(overrides.get(n.componentSlot!)??{})){if(!OVERRIDE_KEYS.includes(key as typeof OVERRIDE_KEYS[number]))throw Error('Unknown override.');copy[key]=value;}
+   if(index===0){copy.x=root.x;copy.y=root.y;copy.locked=root.locked;copy.instance=instance;copy.constraints=root.constraints;copy.annotation=root.annotation??copy.annotation;copy.ready=root.ready??copy.ready;copy.variableMode=root.variableMode;}
+   for(const [key,value] of Object.entries(overrides.get(n.componentSlot!)??{})){if(!OVERRIDE_KEYS.includes(key as typeof OVERRIDE_KEYS[number]))throw Error('Unknown override.');copy[key]=value;if(key==='fill'&&copy.bindings){copy.bindings={...copy.bindings};delete copy.bindings.fill;}}
    return copy;
   });
   const removing=new Set(old.map(n=>n.id));doc.nodes=doc.nodes.filter(n=>!removing.has(n.id));doc.nodes.push(...generated);if(doc.nodes.length>MAX_NODES)throw Error('Component node limit exceeded.');processed.add(root.id);
