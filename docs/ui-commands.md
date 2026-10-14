@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-540 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+543 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -276,6 +276,8 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `documents.panelUndo` | Undo document edit | Edit | documents-panels |  |
 | `documents.paragraph.options` | Paragraph options | View | documents |  |
 | `documents.paragraph.set` | Set paragraph flow options | View | documents |  |
+| `documents.properties.set` | Set document properties | View | documents |  |
+| `documents.properties.show` | Document properties | View | documents |  |
 | `documents.redo` | Redo document text edit | View | documents |  |
 | `documents.replaceMatch` | Replace search result | Edit | documents-panels |  |
 | `documents.saveCopy` | Save a copy of the document | Project | documents |  |
@@ -312,6 +314,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `documents.toggleSuperscript` | Toggle superscript | View | documents |  |
 | `documents.toggleUnderline` | Toggle underline | View | documents |  |
 | `documents.undo` | Undo document text edit | View | documents |  |
+| `documents.wordCount.show` | Word count | View | documents |  |
 | `documents.zoomIn` | Zoom in on the document | View | documents |  |
 | `documents.zoomOut` | Zoom out of the document | View | documents |  |
 | `documents.zoomReset` | Reset document zoom to 100% | View | documents |  |

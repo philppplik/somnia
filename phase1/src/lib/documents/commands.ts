@@ -11,8 +11,9 @@ import {safeCopyName} from './saveCopy';
 import {commentsOpen,setCommentsOpen} from './comments';
 import {setShortcutsOpen} from './shortcuts';
 import {setParagraphOptionsOpen} from './paragraphOptions';
-import {insertPageBreak,setParagraphOptions} from './session';
-import {checkParaPatch,PARA_FLAG_KEYS} from './protocol';
+import {setInfoDialog} from './infoDialog';
+import {insertPageBreak,setParagraphOptions,setProperties} from './session';
+import {checkParaPatch,PARA_FLAG_KEYS,propertiesProblem} from './protocol';
 import {addComment,commentSelection,deleteComment,goToComment,readComments,replyComment,resolveComment} from './session';
 import {commentProblem,HIGHLIGHTS,linkProblem,type HighlightName} from './protocol';
 import {clearFormatting,hasTextSelection,setHighlight,setLink,toggleVertAlign} from './session';
@@ -92,6 +93,12 @@ export function registerDocumentsCommands(){
    await setParagraphOptions(o as import('./protocol').ParaPatch);
   },()=>ready()&&!!getDocumentsState().caret),
   add('documents.insertPageBreak','Insert page break',async()=>{await insertPageBreak();},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.properties.show','Document properties',()=>{setInfoDialog('properties');},()=>ready()),
+  add('documents.properties.set','Set document properties',async p=>{
+   const o=(p as Record<string,unknown>|undefined)??{};const bad=propertiesProblem(o);if(bad)throw expected(bad);
+   await setProperties(o as import('./protocol').PropertiesPatch);
+  },()=>ready()),
+  add('documents.wordCount.show','Word count',()=>{setInfoDialog('wordCount');},()=>ready()),
   add('documents.shortcuts.show','Keyboard shortcuts',()=>{setShortcutsOpen(true);}),
   add('documents.fontSize.increase','Increase font size',async()=>{await stepFontSize(1);},()=>ready()&&!!getDocumentsState().caret),
   add('documents.fontSize.decrease','Decrease font size',async()=>{await stepFontSize(-1);},()=>ready()&&!!getDocumentsState().caret),

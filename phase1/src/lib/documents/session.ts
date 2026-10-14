@@ -1,5 +1,5 @@
 import {scrollToPage} from './navigate';
-import {linkProblem,commentProblem,COMMENT_AUTHOR,type CommentItem,validHfText,type HeaderFooterState,checkFormatPatch,checkParaPatch,MAX_HF_CHARS,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch,type ImageOp,type PageSetupPatch,type PageSetupState,pageSetupProblem,type TableStyle,type TableStyleScope,tableStyleProblem,MIN_COL_PT,MAX_COL_PT,imageProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGES} from './protocol';
+import {propertiesProblem,linkProblem,commentProblem,COMMENT_AUTHOR,type CommentItem,validHfText,type HeaderFooterState,checkFormatPatch,checkParaPatch,MAX_HF_CHARS,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch,type ImageOp,type PageSetupPatch,type PageSetupState,pageSetupProblem,type TableStyle,type TableStyleScope,tableStyleProblem,MIN_COL_PT,MAX_COL_PT,imageProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGES} from './protocol';
 import {captureDocumentSelection} from './selectionCapture';
 import {CELL_BASE,caretAfterEdit,diffEdit,inverseOf,UndoStack,type TextEdit,type UndoEntry} from './edit';
 import {findMatches,nextMatchIndex,textStats,validFindQuery,validReplaceText,MAX_FIND_HIGHLIGHTS,MAX_REPLACE_BLOCKS,type FindMatch} from './find';
@@ -689,6 +689,17 @@ export const addComment=(text:string)=>run(async()=>{
 const commentStep=(op:(e:DocumentsEngine)=>Promise<import('./protocol').OpenedDocument>)=>run(async()=>{
  const c=getDocumentsState().caret;const spot=c?{block:c.block,off:c.head}:await nearEditable(engine!,0);
  await structural(op,spot,spot);if(!c)patchDocuments({caret:null});
+});
+/* ---- Document properties ---- */
+/** The document properties as the engine reports them (not an edit). */
+export async function readProperties():Promise<import('./protocol').PropertiesState|null>{
+ const e=engine;if(!e||getDocumentsState().status!=='ready')return null;const check=ownerGuard();const st=await e.propertiesState();check();return st;
+}
+/** Title, subject, author, keywords, description and category saved with the file. One undo step; the caret stays where it is. */
+export const setProperties=(patch:import('./protocol').PropertiesPatch)=>run(async()=>{
+ const bad=propertiesProblem(patch);if(bad)throw new Error(bad);
+ const c=getDocumentsState().caret;const spot=c?{block:c.block,off:c.head}:await nearEditable(engine!,0);
+ await structural(eng=>eng.setProperties(patch),spot,spot);if(!c)patchDocuments({caret:null});
 });
 /** Reply to a comment (a reply to a reply joins the top-level comment). One undo step. */
 export const replyComment=(parent:number,text:string)=>run(async()=>{

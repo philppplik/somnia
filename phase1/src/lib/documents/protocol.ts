@@ -85,6 +85,8 @@ export type DocumentsRequest=
  |{id:number;kind:'colWidth';block:number;width:number}
  |{id:number;kind:'insertImage';block:number;bytes:ArrayBuffer;alt:string}
  |{id:number;kind:'imageEdit';block:number;op:ImageOp}
+ |{id:number;kind:'propertiesState'}
+ |{id:number;kind:'setProperties';patch:PropertiesPatch}
  |{id:number;kind:'pageSetupState'}
  |{id:number;kind:'setPageSetup';setup:PageSetupPatch}
  |{id:number;kind:'commentsState'}
@@ -105,6 +107,7 @@ export type DocumentsResponse=
  |{id:number;ok:true;kind:'blocks';blocks:import('./edit').DocBlock[]}
  |{id:number;ok:true;kind:'comments';comments:CommentItem[]}
  |{id:number;ok:true;kind:'headerFooter';state:HeaderFooterState}
+ |{id:number;ok:true;kind:'properties';state:PropertiesState}
  |{id:number;ok:true;kind:'pageSetup';state:PageSetupState}
  |{id:number;ok:true;kind:'hit';hit:HitResult|null}
  |{id:number;ok:true;kind:'caret';caret:CaretBox|null}
@@ -221,5 +224,25 @@ export function commentProblem(text:unknown):string|null{
  const t=text.trim();if(!t)return 'The comment needs text.';
  if(Array.from(t).length>MAX_COMMENT_CHARS)return `A comment is limited to ${MAX_COMMENT_CHARS} characters.`;
  if(/[\u0000-\u0009\u000b-\u001f\u007f]/.test(t))return 'The comment has characters that are not allowed.';
+ return null;
+}
+
+/** Document properties saved in the file (File info). */
+export const PROPERTY_KEYS=['title','subject','creator','keywords','description','category'] as const;
+export type PropertyKey=typeof PROPERTY_KEYS[number];
+export type PropertiesState=Record<PropertyKey,string>;
+export type PropertiesPatch=Partial<PropertiesState>;
+export const MAX_PROPERTY_CHARS=255,MAX_DESCRIPTION_CHARS=2000;
+/** The first problem with a properties change, or null when the engine will accept it. Plain text only; the description may have line breaks. */
+export function propertiesProblem(p:unknown):string|null{
+ if(!p||typeof p!=='object'||Array.isArray(p))return 'The properties are not valid.';
+ const keys=Object.keys(p);if(keys.length===0)return 'Nothing to change.';
+ for(const k of keys){
+  if(!(PROPERTY_KEYS as readonly string[]).includes(k))return `Unknown property ${k}.`;
+  const v=(p as Record<string,unknown>)[k];if(typeof v!=='string')return `Property ${k} must be text.`;
+  const max=k==='description'?MAX_DESCRIPTION_CHARS:MAX_PROPERTY_CHARS;
+  if(Array.from(v.trim()).length>max)return `Property ${k} is limited to ${max} characters.`;
+  if((k==='description'?/[\u0000-\u0009\u000b-\u001f\u007f]/:/[\u0000-\u001f\u007f]/).test(v.trim()))return `Property ${k} has characters that are not allowed.`;
+ }
  return null;
 }

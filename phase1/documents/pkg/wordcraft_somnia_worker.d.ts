@@ -64,6 +64,8 @@ export class DocSession {
     comments(): string;
     add_comment(block: number, start: number, end: number, text: string, author: string, date: string): void;
     reply_comment(parent: number, text: string, author: string, date: string): void;
+    properties(): string;
+    set_properties(patch_json: string): void;
     resolve_comment(id: number, resolved: boolean): void;
     delete_comment(id: number): void;
     insert(block: number, utf8_byte_offset: number, text: string): void;

@@ -2940,6 +2940,28 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.properties.set",
+      "title": "Set document properties",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.properties.show",
+      "title": "Document properties",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.redo",
       "title": "Redo document text edit",
       "category": "View",
@@ -3315,6 +3337,17 @@
     {
       "id": "documents.undo",
       "title": "Undo document text edit",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.wordCount.show",
+      "title": "Word count",
       "category": "View",
       "source": "documents",
       "keywords": [

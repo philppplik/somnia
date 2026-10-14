@@ -13,7 +13,7 @@ const CELL_BASE: usize = 1 << 20;
 const CELL_LIST_MAX: usize = 20_000;
 
 /// A structural snapshot: the body (blocks are shared, not copied), the header/footer stories and the last section.
-type Snap = (wordcraft_doc::Blocks, std::collections::BTreeMap<u32, wordcraft_doc::Part>, wordcraft_doc::SectionProps, std::collections::BTreeMap<String, Arc<Vec<u8>>>, std::collections::BTreeMap<u32, wordcraft_doc::Comment>);
+type Snap = (wordcraft_doc::Blocks, std::collections::BTreeMap<u32, wordcraft_doc::Part>, wordcraft_doc::SectionProps, std::collections::BTreeMap<String, Arc<Vec<u8>>>, std::collections::BTreeMap<u32, wordcraft_doc::Comment>, wordcraft_doc::CoreProps);
 const COMMENT_MAX_CHARS: usize = 2000;
 const COMMENT_MAX_COUNT: usize = 500;
 const LINK_MAX_CHARS: usize = 2048;
@@ -1619,6 +1619,39 @@ impl DocSession {
         self.pages = DocLayout::default();
         Ok(())
     }
+    /// Document properties (title, subject, author, keywords, description, category) as JSON.
+    fn do_properties(&self) -> String {
+        let c = &self.doc.core;
+        serde_json::json!({"title": c.title, "subject": c.subject, "creator": c.creator, "keywords": c.keywords, "description": c.description, "category": c.category}).to_string()
+    }
+    /// Sets the given document properties; every value is plain text of at most 255 characters (2000 for the description).
+    /// Unknown keys and invalid values change nothing.
+    fn do_set_properties(&mut self, patch_json: &str) -> Result<(), String> {
+        if patch_json.len() > 16_000 {
+            return Err("the properties change is too large".into());
+        }
+        let v: serde_json::Value = serde_json::from_str(patch_json).map_err(|e| format!("properties are not valid JSON: {e}"))?;
+        let obj = v.as_object().ok_or("properties must be an object")?;
+        let mut next = self.doc.core.clone();
+        for (k, val) in obj {
+            let t = val.as_str().ok_or_else(|| format!("property {k} must be text"))?.trim().to_string();
+            let max = if k == "description" { 2000 } else { 255 };
+            if t.chars().count() > max || t.chars().any(|c| c.is_control() && !(k == "description" && c == '\n')) {
+                return Err(format!("property {k} is limited to {max} characters of plain text"));
+            }
+            match k.as_str() {
+                "title" => next.title = t,
+                "subject" => next.subject = t,
+                "creator" => next.creator = t,
+                "keywords" => next.keywords = t,
+                "description" => next.description = t,
+                "category" => next.category = t,
+                _ => return Err(format!("unknown property {k}")),
+            }
+        }
+        self.doc.core = next;
+        Ok(())
+    }
     /// Adds a reply to a comment (replying to a reply goes to its top-level comment). The reply is anchored inside the
     /// parent's range, so it travels with the paragraph, and starts out resolved or open like its parent.
     fn do_reply_comment(&mut self, parent: u32, text: &str, author: &str, date: &str) -> Result<(), String> {
@@ -1850,6 +1883,12 @@ impl DocSession {
     pub fn remove_image(&mut self, block: usize) -> Result<(), JsValue> {
         self.do_remove_image(block).map_err(|e| JsValue::from_str(&e))
     }
+    pub fn properties(&self) -> String {
+        self.do_properties()
+    }
+    pub fn set_properties(&mut self, patch_json: &str) -> Result<(), JsValue> {
+        self.do_set_properties(patch_json).map_err(|e| JsValue::from_str(&e))
+    }
     pub fn comments(&self) -> String {
         self.do_comments()
     }
@@ -1876,16 +1915,17 @@ impl DocSession {
     pub fn snapshot(&mut self) -> u32 {
         let id = self.next_snap;
         self.next_snap += 1;
-        self.snaps.insert(id, (self.doc.body.clone(), self.doc.parts.clone(), self.doc.last_section.clone(), self.doc.media.clone(), self.doc.comments.clone()));
+        self.snaps.insert(id, (self.doc.body.clone(), self.doc.parts.clone(), self.doc.last_section.clone(), self.doc.media.clone(), self.doc.comments.clone(), self.doc.core.clone()));
         id
     }
     pub fn restore(&mut self, id: u32) -> Result<(), JsValue> {
-        let (b, parts, last, media, comments) = self.snaps.get(&id).ok_or_else(|| JsValue::from_str("unknown snapshot"))?.clone();
+        let (b, parts, last, media, comments, core) = self.snaps.get(&id).ok_or_else(|| JsValue::from_str("unknown snapshot"))?.clone();
         self.doc.body = b;
         self.doc.parts = parts;
         self.doc.last_section = last;
         self.doc.media = media;
         self.doc.comments = comments;
+        self.doc.core = core;
         self.pages = DocLayout::default();
         Ok(())
     }
@@ -2392,6 +2432,27 @@ mod tests {
         let long = format!(r#"{{"link":"https://{}"}}"#, "a".repeat(LINK_MAX_CHARS));
         assert!(s.do_format(0, 0, 0, 3, &long).is_err());
         assert_eq!(s.do_para_state(0, 0).unwrap(), before);
+    }
+    #[test]
+    fn document_properties_set_roundtrip_and_undo_snapshot() {
+        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
+        let snap = s.snapshot();
+        s.do_set_properties(r#"{"title":"  Quarterly report ","creator":"Ada Lovelace","keywords":"a, b"}"#).unwrap();
+        let v: serde_json::Value = serde_json::from_str(&s.do_properties()).unwrap();
+        assert_eq!((v["title"].as_str(), v["creator"].as_str()), (Some("Quarterly report"), Some("Ada Lovelace")));
+        let re = DocSession::from_bytes(&wordcraft_docx::write(&s.doc).unwrap()).unwrap();
+        let r: serde_json::Value = serde_json::from_str(&re.do_properties()).unwrap();
+        assert_eq!(r["title"], "Quarterly report");
+        assert_eq!(r["keywords"], "a, b");
+        let before = s.do_properties();
+        for bad in [r#"{"title":1}"#, r#"{"nope":"x"}"#, r#"[1]"#, r#"{"title":"bell\u0007"}"#] {
+            assert!(s.do_set_properties(bad).is_err(), "{bad}");
+        }
+        assert!(s.do_set_properties(&format!(r#"{{"title":"{}"}}"#, "x".repeat(256))).is_err());
+        assert_eq!(s.do_properties(), before);
+        s.restore(snap).unwrap();
+        let w: serde_json::Value = serde_json::from_str(&s.do_properties()).unwrap();
+        assert_ne!(w["title"], "Quarterly report");
     }
     #[test]
     fn comment_replies_anchor_inside_parent_and_follow_it() {
