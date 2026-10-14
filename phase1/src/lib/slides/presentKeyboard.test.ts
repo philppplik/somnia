@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {presentationKey,presentationScale} from './presentKeyboard';
+import {presentationKey,presentationScale,sectionJump,sectionStartIndexes} from './presentKeyboard';
 import {SLIDES_PRESENT_CATALOGUES} from './panelI18n';
 const state={index:1,count:4,digits:'',black:false};
 test('presentation keyboard clamps and supports all navigation keys',()=>{
@@ -42,4 +42,17 @@ test('hidden slides are skipped by stepping and Home/End, but explicit jumps can
  assert.equal(presentationKey('Home',{...state,index:3})?.index,1);assert.equal(presentationKey('End',state)?.index,3);
  assert.equal(presentationKey('Enter',{...state,digits:'3'})?.index,2);
  assert.equal(presentationKey('ArrowRight',{...state,hidden:undefined})?.index,2);
+});
+
+test('section jumps: next/previous section start, skip hidden, stay put at the ends, stale ids ignored',()=>{
+ const ids=[10,11,12,13,14,15],starts=sectionStartIndexes([{ids:[10,11]},{ids:[12,13]},{ids:[14,15]},{ids:[99]},{ids:[]}],ids);
+ assert.deepEqual(starts,[0,2,4]);assert.deepEqual(sectionStartIndexes(null,ids),[]);assert.deepEqual(sectionStartIndexes([{ids:[15,14]}],ids),[4]);
+ assert.equal(sectionJump(starts,undefined,0,6,1),2);assert.equal(sectionJump(starts,undefined,3,6,1),4);assert.equal(sectionJump(starts,undefined,4,6,1),4);
+ assert.equal(sectionJump(starts,undefined,3,6,-1),2);assert.equal(sectionJump(starts,undefined,2,6,-1),0);assert.equal(sectionJump(starts,undefined,0,6,-1),0);
+ const hid=[false,false,true,false,false,false];assert.equal(sectionJump(starts,hid,0,6,1),3);assert.equal(sectionJump(starts,hid,3,6,-1),0);
+ const all=[false,false,true,true,false,false];assert.equal(sectionJump(starts,all,0,6,1),4);assert.equal(sectionJump(starts,all,4,6,-1),0);
+ assert.equal(sectionJump([],undefined,1,6,1),1);assert.equal(sectionJump(undefined,undefined,1,6,-1),1);
+ const st={index:0,count:6,digits:'12',black:true,sections:starts};
+ assert.deepEqual(presentationKey(']',st),{...st,index:2,digits:'',black:false});assert.equal(presentationKey('[',{...st,index:3})?.index,2);
+ assert.equal(presentationKey(']',{...st,sections:undefined})?.index,0);
 });

@@ -661,6 +661,8 @@ export const SLIDES_PRESENT_CATALOGUES:Record<string,Record<string,string>>={
     "slides.present.counter": "Slide {number} of {count}",
     "slides.present.controls": "Presentation controls",
     "slides.present.black": "Black screen",
+    "slides.present.prevSection": "Previous section",
+    "slides.present.nextSection": "Next section",
     "slides.present.rendering": "Rendering slide...",
     "slides.present.jump": "Jump to slide {number}: press Enter"
   },
@@ -707,6 +709,8 @@ export const SLIDES_PRESENT_CATALOGUES:Record<string,Record<string,string>>={
     "slides.present.counter": "Folie {number} von {count}",
     "slides.present.controls": "Präsentationssteuerung",
     "slides.present.black": "Schwarzer Bildschirm",
+    "slides.present.prevSection": "Vorheriger Abschnitt",
+    "slides.present.nextSection": "Nächster Abschnitt",
     "slides.present.rendering": "Folie wird gerendert...",
     "slides.present.jump": "Zu Folie {number} springen: Eingabetaste drücken"
   },
@@ -753,6 +757,8 @@ export const SLIDES_PRESENT_CATALOGUES:Record<string,Record<string,string>>={
     "slides.present.counter": "Diapositiva {number} de {count}",
     "slides.present.controls": "Controles de presentación",
     "slides.present.black": "Pantalla negra",
+    "slides.present.prevSection": "Sección anterior",
+    "slides.present.nextSection": "Sección siguiente",
     "slides.present.rendering": "Renderizando diapositiva...",
     "slides.present.jump": "Ir a la diapositiva {number}: pulsa Intro"
   },
@@ -799,6 +805,8 @@ export const SLIDES_PRESENT_CATALOGUES:Record<string,Record<string,string>>={
     "slides.present.counter": "Diapositive {number} sur {count}",
     "slides.present.controls": "Commandes de présentation",
     "slides.present.black": "Écran noir",
+    "slides.present.prevSection": "Section précédente",
+    "slides.present.nextSection": "Section suivante",
     "slides.present.rendering": "Rendu de la diapositive...",
     "slides.present.jump": "Aller à la diapositive {number} : appuyez sur Entrée"
   },
@@ -845,6 +853,8 @@ export const SLIDES_PRESENT_CATALOGUES:Record<string,Record<string,string>>={
     "slides.present.counter": "Slide {number} de {count}",
     "slides.present.controls": "Controles de apresentação",
     "slides.present.black": "Tela preta",
+    "slides.present.prevSection": "Seção anterior",
+    "slides.present.nextSection": "Próxima seção",
     "slides.present.rendering": "Renderizando slide...",
     "slides.present.jump": "Ir para o slide {number}: pressione Enter"
   }
