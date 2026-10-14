@@ -5,7 +5,7 @@ import {NativeInput,NativeSelect} from '../ui/native-controls';
 import {TRANSFORM_KEYS,wouldCycle,type Composition,type KeyRef,type TransformKey} from '../../lib/animation/model';
 import {playbackAt} from '../../lib/animation/playback';
 import {AudioPreview,browserAudioContext} from '../../lib/animation/audioPreview';
-import {audioSignature} from '../../lib/animation/audioTiming';
+import {audioSignature,withPrecompAudio} from '../../lib/animation/audioTiming';
 import {AudioWaveform} from './AudioWaveform';
 import {clickSelect,marqueeSelect,pruneSelection,rectsOverlap,sameKey,shiftSelection} from '../../lib/animation/selection';
 import {frameToTick,snapToFrame,tickToFrame,timecode} from '../../lib/animation/time';
@@ -53,7 +53,7 @@ export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Compo
  const toggle=async()=>{
   if(raf.current!==null||playing){stop();return;}
   const token=++gen.current;const startAt=at;setAudioNote('');sigAtStart.current=sig;let useAudio=false;
-  if(state.doc){try{useAudio=(await audio.current!.start(state.doc,comp,startAt,view.loop))!==null;}catch{setAudioNote(t('animation.audio.unavailable'));}}
+  if(state.doc){try{useAudio=(await audio.current!.start(state.doc,withPrecompAudio(comp,state.doc.compositions),startAt,view.loop))!==null;}catch{setAudioNote(t('animation.audio.unavailable'));}}
   if(token!==gen.current){audio.current!.stop();return;}
   const t0=performance.now();setPlaying(true);
   const tick=(now:number)=>{

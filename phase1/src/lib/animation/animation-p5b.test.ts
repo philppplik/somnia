@@ -2,7 +2,7 @@ import test from 'node:test';import assert from 'node:assert/strict';
 import {createDocument,findComp,validateDocument,type AnimationDocument} from './model';
 import {applyEdit,applyEdits} from './edit';
 import {bytesToDataUrl,channelPeaks,MAX_AUDIO_BYTES,parseWav,peakBinCount,sniffMp3,validateAudioAsset,validateAudioAssets,wavPeaks,type AudioAsset} from './audioCore';
-import {visiblePeaks,audibleLayers,audioSignature,clipSpan,gainCurve,playbackPlan,segmentsBetween,sourceTickAt} from './audioTiming';
+import {withPrecompAudio,visiblePeaks,audibleLayers,audioSignature,clipSpan,gainCurve,playbackPlan,segmentsBetween,sourceTickAt} from './audioTiming';
 import {AudioPreview,AudioUnavailable,START_LEAD,type AudioContextLike,type SourceLike,type GainLike} from './audioPreview';
 import {playbackAt} from './playback';
 import {serializeAnimationSnapshot,parseAnimationSnapshot} from './persistence';
@@ -191,4 +191,33 @@ test('visible peaks stay bounded and follow the trimmed range',()=>{
 test('audio layers are never drawn and do not break frame rendering',()=>{
  const d=applyEdits(withAudio(),[{type:'layer.add',kind:'solid',id:'bg'}]);const c=findComp(d)!;
  const svg=frameSvg(c,0,false,d.assets);assert.ok(svg.startsWith('<svg'));assert.equal((svg.match(/<g transform/g)??[]).length,1,'only the solid is drawn');
+});
+
+test('P48 audio of nested compositions is mapped into the parent: shift, cut, hide, solo, loop, speed',()=>{
+ const base=withAudio();const clip=layer(base);const len=clipSpan(clip).end-clipSpan(clip).start;assert.ok(len>=sec);
+ let d=applyEdit(base,{type:'comp.add',id:'par'});d=applyEdit(d,{type:'precomp.add',comp:base.activeComp,id:'pc'});
+ const par=()=>findComp(d)!,mix=()=>withPrecompAudio(par(),d.compositions),spans=()=>audibleLayers(mix()).map(l=>[l.id,clipSpan(l).start,clipSpan(l).end,l.audio!.trimIn]);
+ assert.equal(par().layers.some(l=>l.kind==='audio'),false);
+ assert.deepEqual(spans(),[['pc:0:aud',0,len,0]],'comp layer at 0: same position');
+ // shifted comp layer: clip starts later, cut at the comp layer's out point
+ d=applyEdit(d,{type:'layer.timing',layer:'pc',inT:sec,outT:sec+len/2});
+ assert.deepEqual(spans(),[['pc:0:aud',sec,sec+len/2,0]]);
+ // comp layer starts after the clip start: the clip is trimmed into the file
+ d=applyEdit(d,{type:'layer.timing',layer:'pc',inT:0,outT:len});d=applyEdit(d,{type:'layer.update',layer:'pc',source:{timeOffset:sec/2}});
+ assert.deepEqual(spans(),[['pc:0:aud',0,len-sec/2,sec/2]],'start time in the child trims the front');
+ d=applyEdit(d,{type:'layer.update',layer:'pc',source:{timeOffset:0}});
+ // segments reach the scheduler as parent-time clips
+ const seg=segmentsBetween(mix(),0,len);assert.equal(seg.length,1);assert.equal(seg[0].when,0);
+ // hidden, soloed elsewhere, speed
+ assert.equal(audibleLayers(withPrecompAudio(findComp(applyEdit(d,{type:'layer.update',layer:'pc',visible:false}))!,d.compositions)).length,0);
+ const s=applyEdits(d,[{type:'layer.add',kind:'solid',id:'s'},{type:'layer.update',layer:'s',solo:true}]);assert.equal(audibleLayers(withPrecompAudio(findComp(s)!,s.compositions)).length,0);
+ const so=applyEdit(s,{type:'layer.update',layer:'pc',solo:true});assert.equal(audibleLayers(withPrecompAudio(findComp(so)!,so.compositions)).length,1,'soloed comp layer keeps its sound');
+ d=applyEdit(d,{type:'layer.update',layer:'pc',source:{speed:200}});assert.equal(audibleLayers(mix()).length,0);
+ // loop: the child clip repeats while the comp layer lasts
+ d=applyEdit(d,{type:'layer.update',layer:'pc',source:{speed:100,loop:true}});
+ d=applyEdit(d,{type:'comp.update',comp:base.activeComp,settings:{duration:sec}});d=applyEdit(d,{type:'layer.timing',layer:'pc',inT:0,outT:Math.min(par().duration,sec*3)});
+ assert.deepEqual(audibleLayers(mix()).map(l=>[clipSpan(l).start,clipSpan(l).end]),[[0,sec],[sec,2*sec],[2*sec,3*sec]],'repeats per child pass');assert.equal(new Set(audibleLayers(mix()).map(l=>l.id)).size,audibleLayers(mix()).length);
+ // nothing nested: same object, no work
+ assert.equal(withPrecompAudio(findComp(base)!,base.compositions),findComp(base));
+ assert.notEqual(audioSignature(d,par()),'');
 });

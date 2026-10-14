@@ -1,5 +1,5 @@
 import {evaluate} from './interpolate';
-import type {AnimationDocument,Composition,Layer} from './model';
+import {MAX_PRECOMP_DEPTH,type AnimationDocument,type Composition,type Layer} from './model';
 import type {Rational} from './time';
 import {TICKS_PER_SECOND,frameToTick,tickToFrame} from './time';
 import {MAX_AUDIO_VOLUME} from './audioCore';
@@ -47,8 +47,8 @@ export function gainCurve(l:Layer,from:number,to:number):{constant:number}|{curv
  return {curve};
 }
 /** Signature of everything that changes what is heard. A change while playing pauses playback instead of drifting out of sync. */
-export function audioSignature(doc:AnimationDocument|null,comp:Composition|undefined):string{
- if(!doc||!comp)return '';const ls=comp.layers.filter(isAudioLayer);if(!ls.length)return '';
+export function audioSignature(doc:AnimationDocument|null,comp0:Composition|undefined):string{
+ if(!doc||!comp0)return '';const comp=withPrecompAudio(comp0,doc.compositions);const ls=comp.layers.filter(isAudioLayer);if(!ls.length)return '';
  return JSON.stringify([comp.layers.some(l=>l.solo),ls.map(l=>[l.id,l.visible,l.solo,l.inT,l.outT,l.offset,l.audio!.assetId,l.audio!.trimIn,l.audio!.volume])]);
 }
 /** Waveform columns (0..1) for file range [from,from+length) ticks, at most `columns` (hard cap 400) so the drawing stays bounded whatever the zoom. */
@@ -59,6 +59,40 @@ export function visiblePeaks(peaks:readonly number[],durationTicks:number,from:n
   const a=Math.floor((from+length*c/n)/durationTicks*bins),z=Math.max(a+1,Math.ceil((from+length*(c+1)/n)/durationTicks*bins));let m=0;
   for(let i=Math.max(0,a);i<Math.min(bins,z);i++)if(peaks[i]>m)m=peaks[i];
   out.push(m/255);
+ }
+ return out;
+}
+
+export const MAX_PRECOMP_AUDIO_LAYERS=200;
+/** Comp layers whose audio cannot be heard because their speed is not 100 %. */
+export const precompAudioSkipped=(pl:Layer)=>pl.kind==='comp'&&pl.source.speed!==undefined&&pl.source.speed!==100;
+/**
+ * Audio of nested compositions mapped into `comp` time: each child clip becomes a copy on the parent timeline, shifted by the comp layer's start and start-time offset, cut to the comp layer's span and to the child's length, repeated while the comp layer loops. Comp layers that are hidden (or not soloed during a solo) stay silent; speed other than 100 % is skipped. Returns `comp` itself when there is nothing to add.
+ */
+export function withPrecompAudio(comp:Composition,comps:readonly Composition[]|undefined):Composition{
+ if(!comps||!comp.layers.some(l=>l.kind==='comp'))return comp;
+ const added=nestedAudio(comp,comps,0);return added.length?{...comp,layers:[...comp.layers,...added]}:comp;
+}
+function nestedAudio(comp:Composition,comps:readonly Composition[],depth:number):Layer[]{
+ if(depth>MAX_PRECOMP_DEPTH)return [];
+ const solo=comp.layers.some(l=>l.solo),out:Layer[]=[];
+ for(const pl of comp.layers){
+  if(pl.kind!=='comp'||!pl.visible||(solo&&!pl.solo)||precompAudioSkipped(pl))continue;
+  const child=comps.find(c=>c.id===pl.source.compId);if(!child||child.id===comp.id)continue;
+  const clips=[...audibleLayers(child),...nestedAudio(child,comps,depth+1)];
+  const plStart=pl.inT+pl.offset,plEnd=pl.outT+pl.offset,cStart=child.start,cEnd=child.start+child.duration,dur=Math.max(1,child.duration);
+  const base=plStart-cStart-(pl.source.timeOffset??0);
+  for(let k=0;k<(pl.source.loop?64:1);k++){
+   const d=base+k*dur;if(d+cStart>=plEnd)break;
+   for(const cl of clips){
+    const s=cl.inT+cl.offset,e=Math.min(cl.outT+cl.offset,cEnd);
+    const ns=Math.max(s+d,plStart),ne=Math.min(e+d,plEnd);if(ne<=ns||!cl.audio)continue;
+    if(out.length>=MAX_PRECOMP_AUDIO_LAYERS)return out;
+    const vol=cl.audio.volume;
+    out.push({...cl,id:`${pl.id}:${k}:${cl.id}`,inT:ns,outT:ne,offset:0,solo:solo,visible:true,
+     audio:{...cl.audio,trimIn:cl.audio.trimIn+(ns-(s+d)),volume:d?{...vol,keys:vol.keys.map(x=>({...x,t:x.t+d}))}:vol}});
+   }
+  }
  }
  return out;
 }

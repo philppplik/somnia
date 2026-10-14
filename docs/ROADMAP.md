@@ -325,3 +325,10 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Done: two new effect kinds, `shadow` (radius 0-64, distance 0-500 px, angle, color, strength 0-1) and `glow` (radius, color, strength). They sit in the existing effect stack: same order, bypass key, animated strength, colour keys, 8-effect cap. New edit `effect.style` and command `animation.effect.style`; inspector "Drop shadow +" and "Glow +". Viewer and every export share the SVG filter (feDropShadow); filter bounds grow with radius and distance so nothing is clipped.
 - Open: shadow and glow settings other than strength and colour (radius, distance, angle) are static, not keyed; no inner shadow/glow, no spread or choke; glow is two stacked drop-shadow passes, not a separate threshold glow; the colour-key button still says "tint" for these effects.
 
+
+### Animation P48 (2026-10-14, integration pending)
+
+- Picked: child audio mix from precomps (text-animator blur sampling and inner shadow not chosen).
+- Done: audio layers inside a nested composition are heard in the parent, in the timeline preview and in the WebM export. Each child clip is mapped onto the parent timeline (shifted by the comp layer start and its start-time offset, cut to the comp layer span and to the child length, repeated while the comp layer loops, nested depth included, volume keys shifted with it). Hidden comp layers, and comp layers not soloed while another layer is soloed, stay silent, like the picture. Nothing changes for compositions without comp layers (same object returned). The audio signature includes nested audio, so edits to it pause playback like any audio change.
+- Open: comp layer speed other than 100 % is silent (no time stretch), with no note in the UI; no per-comp-layer volume; at most 200 mapped clips; the import hint text still says audio is not mixed into exports (stale since the WebM mix, not changed here).
+

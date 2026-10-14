@@ -1,5 +1,5 @@
 import {frameSvg,MAX_PIXELS,ExportError} from './exportFrames';
-import {audibleLayers} from './audioTiming';
+import {audibleLayers,withPrecompAudio} from './audioTiming';
 import {AudioPreview,type AudioContextLike} from './audioPreview';
 import {playbackAt,workAreaFrames} from './playback';
 import {frameToTick,tickToFrame} from './time';
@@ -56,12 +56,13 @@ export async function recordWebm(doc:AnimationDocument,comp:Composition,d:WebmDe
  const schedule=d.schedule??((cb:()=>void)=>requestAnimationFrame(()=>cb()));
  const draw=d.draw??drawSvgFrame;
  let audio:AudioPreview|null=null;let audioClock=false;
- if(audibleLayers(comp).length&&d.audio){
+ const mix=withPrecompAudio(comp,doc.compositions);
+ if(audibleLayers(mix).length&&d.audio){
   const actx=d.audio();
   const dest=actx?.createMediaStreamDestination?.();
   if(actx&&dest){
    audio=new AudioPreview(()=>actx);
-   await audio.start(doc,comp,startTick,false,dest);
+   await audio.start(doc,mix,startTick,false,dest);
    for(const track of dest.stream.getAudioTracks())stream.addTrack(track);
    audioClock=true;
   }
