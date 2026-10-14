@@ -238,6 +238,8 @@
     "allow-deploy-node-build-collect",
     "allow-preview-open",
     "allow-preview-close",
+    "allow-check-channel-update",
+    "allow-install-channel-update",
 
     "core:window:allow-set-always-on-top",
     "core:window:allow-set-decorations",

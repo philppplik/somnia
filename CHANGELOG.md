@@ -12,6 +12,10 @@
 - DeepSeek reasoning_content is kept separately from UI text and replayed unchanged in tool-enabled requests. Replay is private and scoped to the same provider and model.
 - Remote catalogs are validated, deduplicated and sorted without static model IDs. Native Vibe Space reasoning parity and live API tests remain outstanding.
 
+# Unreleased: Signed auto-update on alpha and beta channels
+
+- The update pill installs signed prerelease builds in-app. Per-channel manifests (`latest-beta.json`, `latest-alpha.json` on the `updater-channels` release), full SemVer comparison against `somniaRelease`, `make-latest-json.py --channels-dir`, new Tauri commands `check_channel_update` and `install_channel_update`. Docs: phase1/notes/UPDATER.md.
+
 # Unreleased: Studio shell regression fixes
 
 - Code Studio restores the inline SVG inspector inside the shared Design section, including paint, fill/stroke gradients, guides, grid and clip/mask controls.

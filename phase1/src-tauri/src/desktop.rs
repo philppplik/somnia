@@ -2959,6 +2959,8 @@ pub fn run() {
             open_dropped_project,
             read_dropped_files,
             is_store_package,
+            crate::update_channel::check_channel_update,
+            crate::update_channel::install_channel_update,
             list_files,
             read_file,
             read_media,

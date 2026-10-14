@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 // Every #[tauri::command] must be listed in build.rs and allowed in capabilities/editor.json, otherwise the call fails at runtime in the desktop app (CI cannot see that).
 test('every desktop command is allow-listed in build.rs and the editor capability',()=>{
- const rs=readFileSync('src-tauri/src/desktop.rs','utf8')+readFileSync('src-tauri/src/deploy_commands.rs','utf8');
+ const rs=readFileSync('src-tauri/src/desktop.rs','utf8')+readFileSync('src-tauri/src/deploy_commands.rs','utf8')+readFileSync('src-tauri/src/update_channel.rs','utf8');
  const commands=[...rs.matchAll(/#\[tauri::command\]\s*(?:pub\s+)?(?:async\s+)?fn\s+(\w+)/g)].map(m=>m[1]);
  assert.ok(commands.length>5,'command scan found nothing');
  const build=readFileSync('src-tauri/build.rs','utf8');const cap=readFileSync('src-tauri/capabilities/editor.json','utf8');
@@ -54,7 +54,7 @@ test('native preview has no editor capability, popup or download path',()=>{
 // Deploy commands are registered through crate:: paths: the handler list in desktop.rs must carry every one of them.
 test('every deploy command is registered in the invoke_handler and listed by the manifest',()=>{
  const rs=readFileSync('src-tauri/src/desktop.rs','utf8');
- const own=readFileSync('src-tauri/src/deploy_commands.rs','utf8');
+ const own=readFileSync('src-tauri/src/deploy_commands.rs','utf8')+readFileSync('src-tauri/src/update_channel.rs','utf8');
  const commands=[...own.matchAll(/#\[tauri::command\]\s*(?:pub\s+)?(?:async\s+)?fn\s+(\w+)/g)].map(m=>m[1]);
  assert.ok(commands.length>=17);
  for(const c of commands){assert.ok(rs.includes(`crate::deploy_commands::${c},`),`${c} missing in invoke_handler`);assert.ok(own.includes(`pub async fn ${c}(window: tauri::WebviewWindow`),`${c} must gate on the trusted editor window`);}
@@ -62,7 +62,7 @@ test('every deploy command is registered in the invoke_handler and listed by the
 
 // Setup credentials must not pass through CommandSpecs or persistent target metadata.
 test('setup commands are gated and passwords are zeroized before gate errors',()=>{
- const rs=readFileSync('src-tauri/src/deploy_commands.rs','utf8');
+ const rs=readFileSync('src-tauri/src/deploy_commands.rs','utf8')+readFileSync('src-tauri/src/update_channel.rs','utf8');
  const setup=readFileSync('src-tauri/src/deploy_setup.rs','utf8');
  assert.ok(rs.indexOf('let login_password = zeroize::Zeroizing') < rs.lastIndexOf('gate(&window)?;'));
  assert.ok(setup.includes('ok_or("deploy:host-key-unknown")'));
@@ -71,7 +71,7 @@ test('setup commands are gated and passwords are zeroized before gate errors',()
 });
 
 test('deploy readout and cancellation commands are main-window gated and have typed IPC contracts',()=>{
- const rs=readFileSync('src-tauri/src/deploy_commands.rs','utf8');
+ const rs=readFileSync('src-tauri/src/deploy_commands.rs','utf8')+readFileSync('src-tauri/src/update_channel.rs','utf8');
  const contracts=readFileSync('src/lib/commandContracts.ts','utf8');
  for(const name of ['deploy_key_public','deploy_live_release','deploy_cancel']) {
   const body=rs.slice(rs.indexOf(`pub async fn ${name}(`),rs.indexOf(`pub async fn ${name}(`)+350);
@@ -82,7 +82,7 @@ test('deploy readout and cancellation commands are main-window gated and have ty
 });
 
 test('node app-settings commands are main-window gated, typed, and never return env values',()=>{
- const rs=readFileSync('src-tauri/src/deploy_commands.rs','utf8');
+ const rs=readFileSync('src-tauri/src/deploy_commands.rs','utf8')+readFileSync('src-tauri/src/update_channel.rs','utf8');
  const contracts=readFileSync('src/lib/commandContracts.ts','utf8');
  for(const name of ['deploy_node_env_keys','deploy_node_env_apply','deploy_node_logs','deploy_node_status','deploy_node_artifact_collect']) {
   const at=rs.indexOf(`pub async fn ${name}(`);
@@ -94,7 +94,7 @@ test('node app-settings commands are main-window gated, typed, and never return 
 });
 
 test('ftp commands are main-window gated, typed, and the password never leaves the keychain path',()=>{
- const rs=readFileSync('src-tauri/src/deploy_commands.rs','utf8');
+ const rs=readFileSync('src-tauri/src/deploy_commands.rs','utf8')+readFileSync('src-tauri/src/update_channel.rs','utf8');
  const contracts=readFileSync('src/lib/commandContracts.ts','utf8');
  for(const name of ['deploy_ftp_password_set','deploy_remote_list']) {
   const at=rs.indexOf(`pub async fn ${name}(`);
