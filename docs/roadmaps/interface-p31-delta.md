@@ -1,0 +1,7 @@
+# Interface P31 delta — auto-layout polish
+
+Base: P30 commit 1aa8e5a0 (stacked; P30 not yet upstream at build time; P28+P29 landed upstream). Scope check first: min/max size constraints (P26), auto-layout wrap, absolute-position children inside auto-layout frames, fill/hug/fixed sizing per axis, gap token binding and the distribute-X/Y selection controls all already existed and were kept. One genuine gap was built:
+
+1. **Padding token binding** (`InterfaceNode.bindings.padding`): a number variable can now drive an auto-layout frame's padding alongside the existing fill/gap bindings. The binding is uniform (one value applied to all four sides, `[v,v,v,v]`), resolves through resolveInterfaceValues with full variable-mode support (light/dark modeValues plus forceMode), validates in tokens.ts (number type, auto-layout frames only, known variable), and is edited in the Variable bindings panel via a new Padding row shown for auto-layout frames — one undo per change through session transacts.
+
+Tests: 331 focused tests green (+4: 3 lib tests, 1 EN/DE render test). Gates: check:ds, check:ui-commands, check:commands, check:layers all pass; tsc clean apart from known upstream studio3d/slides/stage noise. CI-only spec `Interface P31 padding token binding shifts auto-layout content with one undo` added; acceptance paragraph P31 added. Light/dark screenshots inspected (EN light, DE dark: Card / Default selected, padding bound to the Card gap variable, value 48 committed, card content visibly inset).
