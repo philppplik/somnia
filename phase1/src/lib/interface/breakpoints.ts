@@ -45,3 +45,9 @@ export function auditInterfaceResponsive(source:InterfaceDocument,frameId:string
  }
  return {issues,checked};
 }
+/** View-only breakpoint render of one frame: resized clone for the preview player; source, history and recovery stay untouched. */
+export function previewInterfaceBreakpoint(source:InterfaceDocument,frameId:string,breakpointId:string):InterfaceDocument{
+ const doc=parseInterfaceDocument(serializeInterfaceDocument(source));const n=doc.nodes.find(n=>n.id===frameId),bp=n?.breakpoints?.find(b=>b.id===breakpointId);
+ if(!n||!bp)throw Error('Breakpoint unavailable.');
+ resizeInterfaceFrame(doc,frameId,{width:bp.width,height:bp.height});return doc;
+}
