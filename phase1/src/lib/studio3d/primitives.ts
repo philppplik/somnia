@@ -55,7 +55,7 @@ export function readPrimitive(raw:unknown):PrimitiveData|null{
  if(!isPrimitiveKind(d.kind)||!d.params||typeof d.params!=='object'||Array.isArray(d.params))return null;
  try{return{kind:d.kind,params:patchParams(d.kind,{},d.params as Record<string,unknown>)};}catch{return null;}
 }
-export interface MaterialPreset{id:string;color:string;metalness:number;roughness:number}
+export interface MaterialPreset{id:string;color:string;metalness:number;roughness:number;/** Extra PBR fields the preset applies (a request value wins over the preset). */extras?:import('./materials').PbrExtras;/** Procedural texture generated at apply time, no image file needed. */procedural?:'wood'}
 /** Starting points for the PBR sliders. Values follow common real-world references. */
 export const MATERIAL_PRESETS:readonly MaterialPreset[]=[
  {id:'matte',color:'#b8bcc8',metalness:0,roughness:0.9},
@@ -66,6 +66,8 @@ export const MATERIAL_PRESETS:readonly MaterialPreset[]=[
  {id:'gold',color:'#ffc857',metalness:1,roughness:0.25},
  {id:'copper',color:'#d9825b',metalness:1,roughness:0.35},
  {id:'brushed',color:'#a9adb3',metalness:1,roughness:0.55},
+ {id:'glass',color:'#dfe9f2',metalness:0,roughness:0.06,extras:{opacity:0.28,alphaMode:'blend',doubleSided:true}},
+ {id:'wood',color:'#8a5a33',metalness:0,roughness:0.7,procedural:'wood'},
 ];
 export const MATERIAL_PRESET_IDS=MATERIAL_PRESETS.map(p=>p.id);
 export interface MaterialRequest{preset?:string;color?:string;metalness?:number;roughness?:number}

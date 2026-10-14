@@ -549,5 +549,12 @@
  "studio3d.env.bgColor": "Hintergrundfarbe",
  "studio3d.env.bgTop": "Verlauf oben",
  "studio3d.env.bgBottom": "Verlauf unten",
- "studio3d.insert.ambient": "Umgebungslicht"
+ "studio3d.insert.ambient": "Umgebungslicht",
+ "studio3d.texture.metal": "Metall",
+ "studio3d.material.preset.glass": "Glas",
+ "studio3d.material.preset.wood": "Holz",
+ "studio3d.material.copy": "Material kopieren",
+ "studio3d.material.paste": "Material einfügen",
+ "cmd.studio3d.material.copy": "Material kopieren",
+ "cmd.studio3d.material.paste": "Material einfügen"
 }

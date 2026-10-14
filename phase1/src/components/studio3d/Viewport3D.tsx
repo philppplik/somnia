@@ -22,13 +22,14 @@ import {useT} from '../../lib/useT';
 import {getState as getAppState} from '../../store/appStore';
 import {readProjectUnit,writeProjectUnit} from '../../lib/studio3d/projectPrefs';
 import {checkPreset,presetPatch,readPresets,removePreset,savePreset,MaterialPresetError,type MaterialPreset} from '../../lib/studio3d/materialPresets';
+import type {MaterialSnapshot} from '../../lib/studio3d/stage';
 import {toggleSelection,marqueeRect,inRect,turntablePlan,frameName,exportFileName,unitScale,isUnit,isMeshFormat,mergeSnap,snapTo,stlUnitHint,mtlReferences,mtlTextures,clampRenderSize,MAX_MTL_BYTES,MAX_TEXTURE_BYTES,MAX_TEXTURE_FILES,SnapError,mergeEnv,envFormatFor,nudgeFor,EnvError,modelFormatFor,readModelHeader,externalResources,ModelError,boundsValid,boundsCenter,boundsRadius,frameDistance,clipPlanes,pickClips,extractGltfTextures,GLTF_TEXTURE_MODES} from '../../lib/studio3d/model';
 import type {Bounds} from '../../lib/studio3d/model';
 import {checkSkins,bonePickRadius,pickBone} from '../../lib/studio3d/skeleton';
 import {weightColor} from '../../lib/studio3d/skinning';
 import {Stage,beginGroupDrag,applyGroupDrag,collectNodeExtras,applyNodeExtras,type GroupDragMember,type TransformSnapshot} from '../../lib/studio3d/stage';
 import {parseDocument,buildDocument,sceneBytes,fromBase64,DocumentError} from '../../lib/studio3d/document';
-import {registerStudio3DController} from '../../lib/studio3d/commands';
+import {registerStudio3DController,registerStudio3DTextureDrop} from '../../lib/studio3d/commands';
 import {parseExtras,type ClipMeta} from '../../lib/studio3d/clipMeta';
 import type {Ease} from '../../lib/studio3d/ease';
 import type {KeyPath} from '../../lib/studio3d/clips';
@@ -778,6 +779,8 @@ export default function Viewport3D(){
   const keyRemove=(path:KeyPath,time?:number,id?:number)=>stage.removeKey(anim().clip,keyTarget(id),path,time??anim().time);
   const keyMove=(path:KeyPath,from:number,to:number,id?:number)=>stage.moveKey(anim().clip,keyTarget(id),path,from,to);
   const keyEase=(path:KeyPath,time:number,ease:Ease,id?:number)=>stage.setKeyEase(anim().clip,keyTarget(id),path,time,ease);
+  /** The material clipboard lives with the viewport: it survives undo and selection changes, and dies with the scene. */
+  let materialClipboard:MaterialSnapshot|null=null;
   /** The key clipboard lives with the viewport: it survives undo and clip switches, and dies with the scene. */
   let keyClipboard:KeyData[]=[];
   const keyCopy=(keys:KeyRef[],id?:number)=>{const data=stage.copyKeys(anim().clip,keyTarget(id),keys);keyClipboard=data;return data.length;};
@@ -851,6 +854,11 @@ export default function Viewport3D(){
   /** Auto-key records transform changes into the current clip at the playhead. Turning it on without a clip makes one. */
   const autoKey=(on:boolean)=>{if(on&&!stage.clips.length)clipAdd();patchStudio3D({autoKey:!!on});};
   stage.autoKeySource=()=>getStudio3DState().autoKey&&stage.clips.length?{clip:anim().clip,time:anim().time}:null;
+  const offDrop=registerStudio3DTextureDrop((slot,file)=>{
+   const id=getStudio3DState().selected;
+   if(id==null||getStudio3DState().selectedInfo?.material==null)return;
+   void setTextureFile(id,slot,file).catch((e:unknown)=>patchStudio3D({error:e instanceof Error?e.message:String(e)})).then(()=>{const sel=getStudio3DState().selected;if(sel!=null)patchStudio3D({selectedInfo:stage.info(sel)});sync();invalidate();});
+  });
   const off=registerStudio3DController({keyMove,keyEase,keyCopy,keyShift,clipDuplicate,animRange,selectBone,setSkeleton,skinBind,skinRebind,setWeightPreview,setWeightBrush,paintDab,poseSave,poseApply,poseRemove,poseMirror,poseBlend,ikToggle,ikSetTarget,ikSetPole,recordPose,onionSkin,motionPathToggle,retargetPreview:retargetPreviewC,retargetApply:retargetApplyC,fabrikToggle,fabrikSetTarget,fabrikLookToggle,fabrikSetLook,setBoneLimits,keyPaste,autoKey,clipAdd,clipRemove,clipRename,clipDuration,keySet,keyRemove,animPlay,animPause,animSeek,animLoop,animSpeed,setTextureTransform:(id,slot,p)=>stage.setTextureTransform(id,slot,p),exportGltf,setTextureFile,mirrorSelection,applyScale:applyScaleSel,mergeSelection:mergeSel,viewPreset,setPrimitive:(id,p)=>stage.setPrimitive(id,p),
    save:saveDocument,deleteSelection,duplicateSelection,exportMesh,setExportOptions,renderTurntable,cancelRender:()=>{cancelFlag=true;},setUnit,openFiles,newScene,resetView:frameAll,frameSelection,select,renderStill,exportGlb,
    addPrimitive:k=>{const o=stage.addPrimitive(k);select(o.id);return o.id;},addLight:k=>{const o=stage.addLight(k);select(o.id);return o.id;},addLightRig:()=>{const l=stage.addLightRig();select(l[0].id);return l.map(x=>x.id);},
@@ -890,6 +898,17 @@ export default function Viewport3D(){
     try{list=removePreset(localStorage,name);}
     catch(e){if(e instanceof MaterialPresetError)throw Object.assign(new Error(e.message),{expected:true});list=getStudio3DState().materialPresets.filter(x=>x.name!==name);}
     patchStudio3D({materialPresets:list});},
+   materialCopy:id=>{
+    const target=id??getStudio3DState().selected;
+    if(target==null)throw Object.assign(new Error('Select a mesh first.'),{expected:true});
+    materialClipboard=stage.copyMaterial(target);},
+   materialPaste:id=>{
+    if(!materialClipboard)throw Object.assign(new Error('Copy a material first.'),{expected:true});
+    const target=id??getStudio3DState().selected;
+    if(target==null)throw Object.assign(new Error('Select a mesh first.'),{expected:true});
+    stage.pasteMaterial(target,materialClipboard);
+    const sel=getStudio3DState().selected;if(sel!=null)patchStudio3D({selectedInfo:stage.info(sel)});
+    sync();invalidate();},
    setCamera:(id,p)=>stage.setCamera(id,p),
    editStart:(id,mode)=>{stage.editStart(id);patchStudio3D({edit:{id,mode:mode??'face',verts:0,edges:0,faces:0},selected:id,marked:[],selectedInfo:stage.info(id)});invalidate();},
    editEnd:()=>{stage.editEnd();patchStudio3D({edit:null});invalidate();},
@@ -1064,7 +1083,7 @@ export default function Viewport3D(){
   const cv=renderer.domElement;cv.addEventListener('pointerdown',onDownCapture,true);cv.addEventListener('pointerdown',onDown);window.addEventListener('pointermove',onMove);window.addEventListener('pointercancel',endMarquee);cv.addEventListener('pointerup',onUp);cv.addEventListener('keydown',onKey);
   sync();frameAll();void applyEnv();
   return()=>{
-   disposed=true;opening++;stopAnim();mixer?.stopAllAction();stage.autoKeySource=null;off();offAuto();if(autoTimer)clearTimeout(autoTimer);cancelAnimationFrame(frame);ro.disconnect();controls.dispose();
+   disposed=true;opening++;stopAnim();offDrop();mixer?.stopAllAction();stage.autoKeySource=null;off();offAuto();if(autoTimer)clearTimeout(autoTimer);cancelAnimationFrame(frame);ro.disconnect();controls.dispose();
    cv.removeEventListener('pointerdown',onDownCapture,true);cv.removeEventListener('pointerdown',onDown);window.removeEventListener('pointermove',onMove);window.removeEventListener('pointercancel',endMarquee);endMarquee();cv.removeEventListener('pointerup',onUp);cv.removeEventListener('keydown',onKey);
    if(getStudio3DState().status==='loading')patchStudio3D({status:stage.root.children.length?'ready':'idle',confirmReplace:null});
    gizmo.detach();gizmo.dispose();ikGizmo.detach();ikGizmo.dispose();poleGizmo.detach();poleGizmo.dispose();fkGizmo.detach();fkGizmo.dispose();lookGizmo.detach();lookGizmo.dispose();clearGhosts();scene.remove(ghosts);if(pathLine){pathLine.geometry.dispose();(pathLine.material as THREE.Material).dispose();pathLine=null;}fkTarget.geometry.dispose();(fkTarget.material as THREE.Material).dispose();fkLook.geometry.dispose();(fkLook.material as THREE.Material).dispose();ikTarget.geometry.dispose();(ikTarget.material as THREE.Material).dispose();ikPoleM.geometry.dispose();(ikPoleM.material as THREE.Material).dispose();offStage();clearSelection();if(painting){painting=false;}const openSel=getStudio3DState().selected;if(openSel!=null)stage.skinPaintEnd(openSel);if(skelHelper){scene.remove(skelHelper);skelHelper.geometry.dispose();(skelHelper.material as THREE.Material).dispose();skelHelper=null;}if(weightOverlay){scene.remove(weightOverlay);weightOverlay.geometry.dispose();(weightOverlay.material as THREE.Material).dispose();weightOverlay=null;}if(maskOverlay){scene.remove(maskOverlay);maskOverlay.geometry.dispose();(maskOverlay.material as THREE.Material).dispose();maskOverlay=null;}for(const h of helpers.values())h.dispose();grid.geometry.dispose();(grid.material as THREE.Material).dispose();for(const t of envTargets)t.dispose();envCache.clear();pmrem.dispose();renderer.dispose();renderer.forceContextLoss();

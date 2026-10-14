@@ -549,5 +549,12 @@
  "studio3d.env.bgColor": "Couleur d'arrière-plan",
  "studio3d.env.bgTop": "Haut du dégradé",
  "studio3d.env.bgBottom": "Bas du dégradé",
- "studio3d.insert.ambient": "Lumière ambiante"
+ "studio3d.insert.ambient": "Lumière ambiante",
+ "studio3d.texture.metal": "Métal",
+ "studio3d.material.preset.glass": "Verre",
+ "studio3d.material.preset.wood": "Bois",
+ "studio3d.material.copy": "Copier le matériau",
+ "studio3d.material.paste": "Coller le matériau",
+ "cmd.studio3d.material.copy": "Copier le matériau",
+ "cmd.studio3d.material.paste": "Coller le matériau"
 }

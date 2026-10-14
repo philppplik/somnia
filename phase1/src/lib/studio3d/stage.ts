@@ -1,7 +1,7 @@
-import {PRIMITIVE_KINDS,PrimitiveError,defaultParams,patchParams,readPrimitive,resolveMaterial,type PrimitiveKind,type PrimitiveData,type PrimitiveParams,type MaterialRequest} from './primitives';
+import {PRIMITIVE_KINDS,PrimitiveError,defaultParams,patchParams,readPrimitive,resolveMaterial,MATERIAL_PRESETS,type PrimitiveKind,type PrimitiveData,type PrimitiveParams,type MaterialRequest} from './primitives';
 import * as THREE from 'three';
 import {mergeGeometries} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import {checkPbr,alphaState,alphaModeOf,MaterialError,SLOT_CONFIG,type PbrExtras,type AlphaMode,type TextureSlot} from './materials';
+import {checkPbr,alphaState,alphaModeOf,MaterialError,SLOT_CONFIG,TEXTURE_SLOTS,type PbrExtras,type AlphaMode,type TextureSlot} from './materials';
 import type {NodeExtra} from './document';
 import {EASES,isEase,bakeTrack,type Ease} from './ease';
 import {buildExtras,type ClipMeta,type MetaTrack} from './clipMeta';
@@ -98,6 +98,24 @@ export function applyNodeExtras(root:THREE.Object3D,extras:readonly NodeExtra[])
 interface ClipState{tracks:THREE.KeyframeTrack[];duration:number;ease:Record<string,Ease[]>}
 const readTransform=(t:THREE.Texture):TextureTransform=>({offsetX:t.offset.x,offsetY:t.offset.y,scaleX:t.repeat.x,scaleY:t.repeat.y,rotation:t.rotation/DEG});
 const writeTransform=(t:THREE.Texture,v:TextureTransform)=>{t.offset.set(v.offsetX,v.offsetY);t.repeat.set(v.scaleX,v.scaleY);t.rotation=v.rotation*DEG;t.center.set(0,0);t.matrixAutoUpdate=true;t.updateMatrix();};
+/** Procedural wood grain as a data texture: vertical rings with a slow wobble. Deterministic, no image file, so it also runs in node tests. */
+export function woodTexture(size=256):THREE.DataTexture{
+ const data=new Uint8Array(size*size*4);
+ const dark=[0x5f,0x3d,0x22],light=[0xa9,0x7a,0x4e];
+ for(let y=0;y<size;y++)for(let x=0;x<size;x++){
+  const wobble=6*Math.sin(y*0.045)+3*Math.sin(y*0.013+1.7);
+  const ring=Math.sin((x+wobble)*0.22+2.4*Math.sin(y*0.008+x*0.004));
+  const t=0.5+0.5*Math.sin(ring*2.2);
+  const i=(y*size+x)*4;
+  data[i]=Math.round(dark[0]+(light[0]-dark[0])*t);data[i+1]=Math.round(dark[1]+(light[1]-dark[1])*t);data[i+2]=Math.round(dark[2]+(light[2]-dark[2])*t);data[i+3]=255;
+ }
+ const tex=new THREE.DataTexture(data,size,size,THREE.RGBAFormat);
+ tex.colorSpace=THREE.SRGBColorSpace;tex.wrapS=tex.wrapT=THREE.RepeatWrapping;tex.name='wood';tex.userData.somniaGenerated=true;tex.needsUpdate=true;
+ return tex;
+}
+/** Everything copy/paste carries between meshes: the PBR fields, the texture in each slot and its mapping. */
+export interface MaterialSnapshot{color:string;metalness:number;roughness:number;emissive:string;emissiveIntensity:number;opacity:number;alphaMode:AlphaMode;alphaCutoff:number;doubleSided:boolean;textures:Record<TextureSlot,THREE.Texture|null>;transforms:Record<TextureSlot,TextureTransform|null>}
+const disposeGenerated=(t:THREE.Texture|null)=>{if(t?.userData.somniaGenerated)t.dispose();};
 export class StageError extends Error{constructor(message:string){super(message);this.name='StageError';}}
 const clamp01=(n:number)=>Math.min(1,Math.max(0,n));
 const finite=(n:unknown,what:string):number=>{if(typeof n!=='number'||!Number.isFinite(n))throw new StageError(`${what} must be a finite number.`);return n;};
@@ -757,26 +775,78 @@ export class Stage{
   try{patch=resolveMaterial(request);checkPbr(request);}catch(e){throw e instanceof PrimitiveError||e instanceof MaterialError?new StageError(e.message):e;}
   if(!mesh.isMesh||Array.isArray(mesh.material)||!(mesh.material as THREE.MeshStandardMaterial).isMeshStandardMaterial)throw new StageError(`${o.name} has no editable PBR material.`);
   if(patch.color!==undefined&&!HEX.test(patch.color))throw new StageError('color must look like #rrggbb.');
+  // A preset can carry PBR extras (glass) and a procedural texture (wood); request fields win over the preset, field by field.
+  const preset=request.preset!==undefined?MATERIAL_PRESETS.find(x=>x.id===request.preset):undefined;
+  const ex:PbrExtras={};
+  for(const k of['emissive','emissiveIntensity','opacity','alphaMode','alphaCutoff','doubleSided'] as const){const v=request[k]!==undefined?request[k]:preset?.extras?.[k];if(v!==undefined)(ex as Record<string,unknown>)[k]=v;}
+  const wood=preset?.procedural==='wood';
   const mat=mesh.material as THREE.MeshStandardMaterial;
-  const take=()=>({c:mat.color.clone(),m:mat.metalness,r:mat.roughness,e:mat.emissive.clone(),ei:mat.emissiveIntensity,op:mat.opacity,tr:mat.transparent,at:mat.alphaTest,dw:mat.depthWrite,side:mat.side});
+  const take=()=>({c:mat.color.clone(),m:mat.metalness,r:mat.roughness,e:mat.emissive.clone(),ei:mat.emissiveIntensity,op:mat.opacity,tr:mat.transparent,at:mat.alphaTest,dw:mat.depthWrite,side:mat.side,map:wood?mat.map:null});
   const before=take();const next=take();
   if(patch.color)next.c=new THREE.Color(patch.color);
   if(patch.metalness!==undefined)next.m=clamp01(finite(patch.metalness,'metalness'));
   if(patch.roughness!==undefined)next.r=clamp01(finite(patch.roughness,'roughness'));
-  if(request.emissive!==undefined)next.e=new THREE.Color(request.emissive);
-  if(request.emissiveIntensity!==undefined)next.ei=request.emissiveIntensity;
-  if(request.doubleSided!==undefined)next.side=request.doubleSided?THREE.DoubleSide:THREE.FrontSide;
-  if(request.opacity!==undefined||request.alphaMode!==undefined||request.alphaCutoff!==undefined){
+  if(ex.emissive!==undefined)next.e=new THREE.Color(ex.emissive);
+  if(ex.emissiveIntensity!==undefined)next.ei=ex.emissiveIntensity;
+  if(ex.doubleSided!==undefined)next.side=ex.doubleSided?THREE.DoubleSide:THREE.FrontSide;
+  if(ex.opacity!==undefined||ex.alphaMode!==undefined||ex.alphaCutoff!==undefined){
    const cur=alphaModeOf(before.tr,before.at);
    // Lowering opacity on an opaque material means the user wants it see-through.
-   const mode=request.alphaMode??(cur==='opaque'&&request.opacity!==undefined&&request.opacity<1?'blend':cur);
-   const a=alphaState(mode,request.opacity??(before.tr||before.at>0?before.op:1),request.alphaCutoff??(before.at>0?before.at:0.5));
+   const mode=ex.alphaMode??(cur==='opaque'&&ex.opacity!==undefined&&ex.opacity<1?'blend':cur);
+   const a=alphaState(mode,ex.opacity??(before.tr||before.at>0?before.op:1),ex.alphaCutoff??(before.at>0?before.at:0.5));
    next.tr=a.transparent;next.op=a.opacity;next.at=a.alphaTest;next.dw=a.depthWrite;
   }
-  const same=(x:ReturnType<typeof take>,y:ReturnType<typeof take>)=>x.c.equals(y.c)&&x.e.equals(y.e)&&x.m===y.m&&x.r===y.r&&x.ei===y.ei&&x.op===y.op&&x.tr===y.tr&&x.at===y.at&&x.dw===y.dw&&x.side===y.side;
-  if(same(before,next))return;
-  const set=(sn:typeof before)=>{mat.color.copy(sn.c);mat.metalness=sn.m;mat.roughness=sn.r;mat.emissive.copy(sn.e);mat.emissiveIntensity=sn.ei;mat.opacity=sn.op;mat.transparent=sn.tr;mat.alphaTest=sn.at;mat.depthWrite=sn.dw;mat.side=sn.side;mat.needsUpdate=true;};
-  set(next);this.push({label:`Material of ${o.name}`,undo:()=>set(before),redo:()=>set(next)});
+  if(wood)next.map=woodTexture();
+  const same=(x:ReturnType<typeof take>,y:ReturnType<typeof take>)=>x.c.equals(y.c)&&x.e.equals(y.e)&&x.m===y.m&&x.r===y.r&&x.ei===y.ei&&x.op===y.op&&x.tr===y.tr&&x.at===y.at&&x.dw===y.dw&&x.side===y.side&&x.map===y.map;
+  if(same(before,next)){if(wood&&next.map)disposeGenerated(next.map);return;}
+  const set=(sn:typeof before)=>{mat.color.copy(sn.c);mat.metalness=sn.m;mat.roughness=sn.r;mat.emissive.copy(sn.e);mat.emissiveIntensity=sn.ei;mat.opacity=sn.op;mat.transparent=sn.tr;mat.alphaTest=sn.at;mat.depthWrite=sn.dw;mat.side=sn.side;if(wood)mat.map=sn.map;mat.needsUpdate=true;};
+  let owned=true;set(next);
+  if(wood&&before.map!==next.map)disposeGenerated(before.map);
+  this.push({label:`Material of ${o.name}`,
+   undo:()=>{set(before);owned=false;},
+   redo:()=>{set(next);owned=true;},
+   release:()=>{if(wood)disposeGenerated(owned?before.map:next.map);}});
+ }
+ /** Reads the full material of a mesh for copy/paste. Throws when the object has no editable PBR material. */
+ copyMaterial(id:number):MaterialSnapshot{
+  const o=this.need(id);const mesh=o as THREE.Mesh;
+  if(!mesh.isMesh||Array.isArray(mesh.material)||!(mesh.material as THREE.MeshStandardMaterial).isMeshStandardMaterial)throw new StageError(`${o.name} has no editable PBR material.`);
+  const mat=mesh.material as THREE.MeshStandardMaterial;
+  const textures=Object.fromEntries(TEXTURE_SLOTS.map(k=>[k,mat[SLOT_CONFIG[k].prop] as THREE.Texture|null])) as Record<TextureSlot,THREE.Texture|null>;
+  const transforms=Object.fromEntries(TEXTURE_SLOTS.map(k=>{const t=mat[SLOT_CONFIG[k].prop] as THREE.Texture|null;return[k,t?readTransform(t):null];})) as Record<TextureSlot,TextureTransform|null>;
+  return{color:'#'+mat.color.getHexString(),metalness:mat.metalness,roughness:mat.roughness,emissive:'#'+mat.emissive.getHexString(),emissiveIntensity:mat.emissiveIntensity,
+   opacity:mat.transparent||mat.alphaTest>0?mat.opacity:1,alphaMode:alphaModeOf(mat.transparent,mat.alphaTest),alphaCutoff:mat.alphaTest>0?mat.alphaTest:0.5,doubleSided:mat.side===THREE.DoubleSide,textures,transforms};
+ }
+ /** Pastes a copied material onto a mesh: PBR fields, textures and their mapping in one undo step. Textures are cloned so later tiling edits stay per object. */
+ pasteMaterial(id:number,snap:MaterialSnapshot){
+  const o=this.need(id);const mesh=o as THREE.Mesh;
+  if(!mesh.isMesh||Array.isArray(mesh.material)||!(mesh.material as THREE.MeshStandardMaterial).isMeshStandardMaterial)throw new StageError(`${o.name} has no editable PBR material.`);
+  const mat=mesh.material as THREE.MeshStandardMaterial;
+  const maps=Object.fromEntries(TEXTURE_SLOTS.map(k=>{
+   const src=snap.textures[k];if(!src)return[k,null];
+   // Re-pasting the same material keeps the existing texture instead of stacking clones: a paste that changes nothing makes no undo entry.
+   const cur=mat[SLOT_CONFIG[k].prop] as THREE.Texture|null;
+   if(cur&&(cur===src||cur.userData.somniaCloneOf===src.uuid)&&JSON.stringify(readTransform(cur))===JSON.stringify(snap.transforms[k]))return[k,cur];
+   const t=src.clone();t.userData={...src.userData,somniaClone:true,somniaCloneOf:src.uuid};delete t.userData.somniaGenerated;t.needsUpdate=true;
+   if(snap.transforms[k])writeTransform(t,snap.transforms[k]!);
+   return[k,t];
+  })) as Record<TextureSlot,THREE.Texture|null>;
+  const a=alphaState(snap.alphaMode,snap.opacity,snap.alphaCutoff);
+  const take=()=>({c:mat.color.clone(),m:mat.metalness,r:mat.roughness,e:mat.emissive.clone(),ei:mat.emissiveIntensity,op:mat.opacity,tr:mat.transparent,at:mat.alphaTest,dw:mat.depthWrite,side:mat.side,
+   maps:Object.fromEntries(TEXTURE_SLOTS.map(k=>[k,mat[SLOT_CONFIG[k].prop] as THREE.Texture|null])) as Record<TextureSlot,THREE.Texture|null>,
+   trs:Object.fromEntries(TEXTURE_SLOTS.map(k=>{const t=mat[SLOT_CONFIG[k].prop] as THREE.Texture|null;return[k,t?readTransform(t):null];})) as Record<TextureSlot,TextureTransform|null>});
+  const before=take();
+  const next:ReturnType<typeof take>={c:new THREE.Color(snap.color),m:snap.metalness,r:snap.roughness,e:new THREE.Color(snap.emissive),ei:snap.emissiveIntensity,op:a.opacity,tr:a.transparent,at:a.alphaTest,dw:a.depthWrite,side:snap.doubleSided?THREE.DoubleSide:THREE.FrontSide,
+   maps,trs:Object.fromEntries(TEXTURE_SLOTS.map(k=>[k,maps[k]?readTransform(maps[k]!):null])) as Record<TextureSlot,TextureTransform|null>};
+  const same=(x:ReturnType<typeof take>,y:ReturnType<typeof take>)=>x.c.equals(y.c)&&x.e.equals(y.e)&&x.m===y.m&&x.r===y.r&&x.ei===y.ei&&x.op===y.op&&x.tr===y.tr&&x.at===y.at&&x.dw===y.dw&&x.side===y.side
+   &&TEXTURE_SLOTS.every(k=>x.maps[k]===y.maps[k])&&JSON.stringify(x.trs)===JSON.stringify(y.trs);
+  if(same(before,next)){for(const k of TEXTURE_SLOTS){const t=maps[k];if(t?.userData.somniaClone)t.dispose();}return;}
+  const set=(sn:typeof before)=>{mat.color.copy(sn.c);mat.metalness=sn.m;mat.roughness=sn.r;mat.emissive.copy(sn.e);mat.emissiveIntensity=sn.ei;mat.opacity=sn.op;mat.transparent=sn.tr;mat.alphaTest=sn.at;mat.depthWrite=sn.dw;mat.side=sn.side;
+   for(const k of TEXTURE_SLOTS){(mat as unknown as Record<string,unknown>)[SLOT_CONFIG[k].prop]=sn.maps[k];const t=sn.maps[k];if(t&&sn.trs[k])writeTransform(t,sn.trs[k]!);}
+   mat.needsUpdate=true;};
+  let owned=true;set(next);
+  this.push({label:`Material of ${o.name} (paste)`,undo:()=>{set(before);owned=false;},redo:()=>{set(next);owned=true;},
+   release:()=>{const drop=owned?before:next;for(const k of TEXTURE_SLOTS){const t=drop.maps[k];if(t?.userData.somniaClone)t.dispose();}}});
  }
  /** Puts a decoded image into a texture slot, or clears the slot with null. The caller has already checked the file; this sets colour space and keeps one undo step. */
  setTexture(id:number,slot:TextureSlot,texture:THREE.Texture|null){

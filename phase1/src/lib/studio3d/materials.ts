@@ -32,12 +32,12 @@ export function alphaState(mode:AlphaMode,opacity:number,cutoff:number):AlphaSta
  return{transparent:true,opacity,alphaTest:0,depthWrite:opacity>=1};
 }
 export function alphaModeOf(transparent:boolean,alphaTest:number):AlphaMode{return alphaTest>0?'mask':transparent?'blend':'opaque';}
-export const TEXTURE_SLOTS=['color','normal','roughness','emissive'] as const;
+export const TEXTURE_SLOTS=['color','normal','roughness','metal','emissive'] as const;
 export type TextureSlot=typeof TEXTURE_SLOTS[number];
 export const isTextureSlot=(v:unknown):v is TextureSlot=>typeof v==='string'&&(TEXTURE_SLOTS as readonly string[]).includes(v);
 /** Which material property a slot fills, and whether the image holds colour (sRGB) or data. */
-export const SLOT_CONFIG:Record<TextureSlot,{prop:'map'|'normalMap'|'roughnessMap'|'emissiveMap';srgb:boolean}>={
- color:{prop:'map',srgb:true},normal:{prop:'normalMap',srgb:false},roughness:{prop:'roughnessMap',srgb:false},emissive:{prop:'emissiveMap',srgb:true},
+export const SLOT_CONFIG:Record<TextureSlot,{prop:'map'|'normalMap'|'roughnessMap'|'metalnessMap'|'emissiveMap';srgb:boolean}>={
+ color:{prop:'map',srgb:true},normal:{prop:'normalMap',srgb:false},roughness:{prop:'roughnessMap',srgb:false},metal:{prop:'metalnessMap',srgb:false},emissive:{prop:'emissiveMap',srgb:true},
 };
 export const MAX_TEXTURE_FILE_BYTES=32*1024*1024;
 export const MAX_TEXTURE_DIM=8192;

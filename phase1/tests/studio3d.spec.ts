@@ -1002,3 +1002,43 @@ test('3D studio lights and scene basics: ambient light, env presets and backgrou
  expect(json.extensionsUsed).toContain('KHR_lights_punctual');
  expect(json.extensions.KHR_lights_punctual.lights.map((l:{type:string})=>l.type).sort()).toEqual(['directional','point','spot']);
 });
+
+test('3D studio material polish: glass and wood presets, copy/paste material and metal texture slot',async({page})=>{
+ await blank(page);
+ const cube=await insert(page,'cube',0);
+ const sphere=await insert(page,'sphere',2);
+ // Pasting with an empty clipboard is refused.
+ expect(await run(page,'studio3d.material.paste',{id:cube})).toBe(false);
+ await expect(page.getByRole('alert')).toContainText('Copy a material first');
+ // The glass preset makes the selected cube transparent.
+ await run(page,'studio3d.select',{id:cube});
+ await page.getByTestId('studio3d-material-presets').getByRole('button',{name:'Glass'}).click();
+ await expect.poll(async()=>(await session(page)).info?.material?.opacity).toBe(0.28);
+ await expect.poll(async()=>(await session(page)).info?.material?.alphaMode).toBe('blend');
+ // The wood preset generates a wood texture in the color slot.
+ await page.getByTestId('studio3d-material-presets').getByRole('button',{name:'Wood'}).click();
+ await expect(page.getByTestId('studio3d-texture-color')).toContainText('wood');
+ await expect.poll(async()=>(await session(page)).info?.material?.color).toBe('#8a5a33');
+ // Copy the cube's material and paste it onto the sphere in one undo step.
+ await page.getByTestId('studio3d-material-copy-paste').getByRole('button',{name:'Copy material'}).click();
+ await run(page,'studio3d.select',{id:sphere});
+ const before=(await session(page)).info?.material?.color;
+ await page.getByTestId('studio3d-material-copy-paste').getByRole('button',{name:'Paste material'}).click();
+ await expect.poll(async()=>(await session(page)).info?.material?.color).toBe('#8a5a33');
+ await expect(page.getByTestId('studio3d-texture-color')).toContainText('wood');
+ await run(page,'studio3d.undo');
+ await expect.poll(async()=>(await session(page)).info?.material?.color).toBe(before);
+ // The metal slot accepts an image like the other slots.
+ await page.getByTestId('studio3d-material-copy-paste').getByRole('button',{name:'Paste material'}).click();
+ const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==','base64');
+ expect(await run(page,'studio3d.texture.open',{slot:'metal'})).toBe(true);
+ await page.getByTestId('studio3d-texture-input').setInputFiles({name:'m.png',mimeType:'image/png',buffer:png});
+ await expect.poll(async()=>(await session(page)).info?.material?.textures?.metal).toBe('m.png');
+ await expect(page.getByTestId('studio3d-texture-metal')).toContainText('m.png');
+ // Copy/paste via commands works too.
+ expect(await run(page,'studio3d.material.copy',{id:sphere})).toBe(true);
+ await run(page,'studio3d.select',{id:cube});
+ expect(await run(page,'studio3d.material.paste',{id:cube})).toBe(true);
+ await expect.poll(async()=>(await session(page)).info?.material?.textures?.metal).toBe('m.png');
+ await expect.poll(async()=>(await session(page)).info?.material?.color).toBe('#8a5a33');
+});

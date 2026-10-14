@@ -115,6 +115,10 @@ export interface Studio3DController{
  materialPresetApply(id:number,name:string):void;
  /** Deletes a local material preset. */
  materialPresetRemove(name:string):void;
+ /** Copies the material of a mesh (id or the selected one) into the session clipboard. */
+ materialCopy(id?:number):void;
+ /** Pastes the clipboard material onto a mesh with one undo step. */
+ materialPaste(id?:number):void;
  viewFromCamera(id:number):void;
  setGizmo(mode:GizmoMode):void;
  nudge(id:number,delta:{x?:number;y?:number;z?:number}):void;
@@ -148,8 +152,12 @@ export const studio3DController=()=>controller;
 let opener:(()=>void)|null=null;
 let envOpener:(()=>void)|null=null;
 let textureOpener:((slot:TextureSlot)=>void)|null=null;
+let textureDrop:((slot:TextureSlot,file:File)=>void)|null=null;
 /** The canvas owns the image file dialog (user gesture). */
 export function registerStudio3DTextureOpener(open:(slot:TextureSlot)=>void){textureOpener=open;return()=>{if(textureOpener===open)textureOpener=null;};}
+export function registerStudio3DTextureDrop(handler:(slot:TextureSlot,file:File)=>void){textureDrop=handler;return()=>{if(textureDrop===handler)textureDrop=null;};}
+/** A dropped image file goes through the same checked path as the file picker. Returns false when no viewport is listening. */
+export const dropTextureFile=(slot:TextureSlot,file:File):boolean=>{if(!textureDrop)return false;textureDrop(slot,file);return true;};
 let recentOpener:((id:string)=>Promise<void>)|null=null;
 /** The canvas owns opening a stored scene, so a request from the start screen waits for the viewport. */
 export function registerStudio3DRecentOpener(open:(id:string)=>Promise<void>){recentOpener=open;return()=>{if(recentOpener===open)recentOpener=null;};}
@@ -200,6 +208,8 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{name:string;id?:number}>('studio3d.material.preset.save','Save the material of a 3D mesh as a local material preset','Edit',p=>need().materialPresetSave(p.name,p?.id),object({name:{type:'string',minLength:1,maxLength:60},id:{type:'integer',minimum:0}},['name']),hasScene),
   add<{id:number;name:string}>('studio3d.material.preset.apply','Apply a local or built-in material preset to a 3D mesh','Edit',p=>need().materialPresetApply(p.id,p.name),object({id:{type:'integer',minimum:0},name:{type:'string',minLength:1,maxLength:60}}),hasScene),
   add<{name:string}>('studio3d.material.preset.remove','Delete a local material preset','Edit',p=>need().materialPresetRemove(p.name),object({name:{type:'string',minLength:1,maxLength:60}}),hasScene),
+  add<{id?:number}>('studio3d.material.copy','Copy the material of a 3D object','Edit',p=>need().materialCopy(p?.id),object({id:{type:'integer',minimum:0}},[]),hasScene),
+  add<{id?:number}>('studio3d.material.paste','Paste the copied material onto a 3D object','Edit',p=>need().materialPaste(p?.id),object({id:{type:'integer',minimum:0}},[]),hasScene),
   add<{id:number}>('studio3d.view.fromCamera','Look through a 3D camera','View',p=>need().viewFromCamera(p.id),object({id:{type:'integer',minimum:0}}),hasScene),
   add<{mode:GizmoMode}>('studio3d.gizmo.mode','Set the 3D transform tool','Tools',p=>need().setGizmo(p.mode),object({mode:{enum:['translate','rotate','scale']}}),()=>!!controller),
   add<{id:number;x?:number;y?:number;z?:number}>('studio3d.object.nudge','Nudge a 3D object','Edit',p=>need().nudge(p.id,p),object({id:{type:'integer',minimum:0},x:{type:'number'},y:{type:'number'},z:{type:'number'}},['id']),hasScene),

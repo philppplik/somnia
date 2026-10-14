@@ -5,6 +5,7 @@ import {useMemo,useRef,useState} from 'react';
 import {patchStudio3D} from '../../lib/studio3d/session';
 import type {ObjectInfo} from '../../lib/studio3d/stage';
 import {executeCommand} from '../../lib/commands';
+import {dropTextureFile} from '../../lib/studio3d/commands';
 import {useT} from '../../lib/useT';
 import {formatBytes} from '../../lib/media';
 import {useStudio3D} from '../../lib/studio3d/session';
@@ -110,6 +111,9 @@ export function ObjectSection(_:InspectorSectionProps){
   {o.material&&<fieldset className="m-0 grid gap-2 border-0 p-0" data-testid="studio3d-material"><legend className="text-xs text-ink-3">{t('studio3d.material.title')}</legend>
    <div className="flex flex-wrap gap-1" role="group" aria-label={t('studio3d.material.presets')} data-testid="studio3d-material-presets">{MATERIAL_PRESETS.map(p=><Button key={p.id} variant="outline" onClick={()=>void executeCommand('studio3d.object.material',{id:o.id,preset:p.id})}>{t('studio3d.material.preset.'+p.id)}</Button>)}</div>
    <MaterialUserPresets id={o.id}/>
+   <div className="flex gap-1" data-testid="studio3d-material-copy-paste">
+    <Button variant="outline" onClick={()=>void executeCommand('studio3d.material.copy',{id:o.id})}>{t('studio3d.material.copy')}</Button>
+    <Button variant="outline" onClick={()=>void executeCommand('studio3d.material.paste',{id:o.id})}>{t('studio3d.material.paste')}</Button></div>
    <label className="flex items-center justify-between gap-2 text-xs text-ink-2">{t('studio3d.material.color')}<input type="color" key={o.material.color} defaultValue={o.material.color} onBlur={e=>{if(e.currentTarget.value!==o.material!.color)void executeCommand('studio3d.object.material',{id:o.id,color:e.currentTarget.value});}}/></label>
    {(['metalness','roughness'] as const).map(k=><label key={k} className="grid gap-1 text-xs text-ink-2">{t('studio3d.material.'+k)} <span className="text-ink-3">{o.material![k].toFixed(2)}</span>
     <input type="range" min={0} max={1} step={0.01} defaultValue={o.material![k]} key={k+o.material![k]} aria-label={t('studio3d.material.'+k)} onChange={e=>void executeCommand('studio3d.object.material',{id:o.id,[k]:Number(e.currentTarget.value)})}/></label>)}
@@ -125,7 +129,9 @@ export function ObjectSection(_:InspectorSectionProps){
     <label className="flex items-center gap-2 text-xs text-ink-2"><NativeInput type="checkbox" checked={!!o.material.doubleSided} onChange={e=>void executeCommand('studio3d.object.material',{id:o.id,doubleSided:e.currentTarget.checked})}/>{t('studio3d.material.doubleSided')}</label>
    </div>
    <fieldset className="m-0 grid gap-1 border-0 p-0" data-testid="studio3d-textures"><legend className="text-xs text-ink-3">{t('studio3d.texture.title')}</legend>
-    {TEXTURE_SLOTS.map(slot=>{const name=o.material!.textures?.[slot]??null;return <div key={slot} className="flex items-center gap-1 text-xs text-ink-2" data-testid={'studio3d-texture-'+slot}>
+    {TEXTURE_SLOTS.map(slot=>{const name=o.material!.textures?.[slot]??null;return <div key={slot} className="flex items-center gap-1 text-xs text-ink-2" data-testid={'studio3d-texture-'+slot}
+     onDragOver={e=>{if(e.dataTransfer.types.includes('Files')){e.preventDefault();e.dataTransfer.dropEffect='copy';}}}
+     onDrop={e=>{const f=e.dataTransfer.files?.[0];if(!f)return;e.preventDefault();dropTextureFile(slot,f);}}>
      <span className="w-20 shrink-0">{t('studio3d.texture.'+slot)}</span><span className="min-w-0 flex-1 truncate text-ink-3" title={name??''}>{name??t('studio3d.texture.none')}</span>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.texture.open',{slot})}>{t('studio3d.texture.choose')}</Button>
      <Button variant="outline" disabled={!name} onClick={()=>void executeCommand('studio3d.texture.clear',{id:o.id,slot})}>{t('studio3d.texture.clear')}</Button></div>;})}

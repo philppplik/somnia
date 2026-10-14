@@ -37,8 +37,8 @@ test('a truncated JPEG does not loop or read past the end',()=>{
  const b=new Uint8Array([0xff,0xd8,0xff,0xe0,0xff,0xff,0,0,0,0,0,0,0,0]);assert.throws(()=>inspectImage('a.jpg',b),MaterialError);
 });
 test('every texture slot knows its property and colour space',()=>{
- assert.deepEqual(TEXTURE_SLOTS.map(s=>SLOT_CONFIG[s].prop),['map','normalMap','roughnessMap','emissiveMap']);
- assert.equal(SLOT_CONFIG.normal.srgb,false);assert.equal(SLOT_CONFIG.color.srgb,true);
+ assert.deepEqual(TEXTURE_SLOTS.map(s=>SLOT_CONFIG[s].prop),['map','normalMap','roughnessMap','metalnessMap','emissiveMap']);
+ assert.equal(SLOT_CONFIG.normal.srgb,false);assert.equal(SLOT_CONFIG.color.srgb,true);assert.equal(SLOT_CONFIG.metal.srgb,false);
 });
 test('view presets are unit vectors with distinct directions, and render sizes are sane',()=>{
  const seen=new Set<string>();for(const p of VIEW_PRESETS){const d=viewDirection(p);assert.ok(Math.abs(Math.hypot(...d)-1)<1e-9,p);seen.add(d.map(n=>n.toFixed(3)).join());}
