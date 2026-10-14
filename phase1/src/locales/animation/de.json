@@ -800,5 +800,10 @@
  "animation.keys.repeat.cycle": "Zyklus",
  "animation.keys.repeat.pingpong": "Ping-Pong",
  "animation.keys.repeat.hint": "Wiederholt die gewählten Keys nach der Auswahl; Ping-Pong spielt jede zweite Runde rückwärts. Runden hinter dem Kompositionsende entfallen.",
- "cmd.animation.keys.repeat": "Gewählte Keys als Zyklus oder Ping-Pong wiederholen"
+ "cmd.animation.keys.repeat": "Gewählte Keys als Zyklus oder Ping-Pong wiederholen",
+ "animation.keys.reverse": "Keys umkehren",
+ "animation.keys.reverse.hint": "Gewählte Keys an Ort und Stelle rückwärts abspielen; Easing-Kurven werden gespiegelt",
+ "animation.keySet.reverse": "Set umkehren",
+ "animation.keySet.reverse.hint": "Alle Keys der gewählten Ebenen innerhalb des jeweils eigenen ersten und letzten Keys rückwärts abspielen",
+ "cmd.animation.keys.reverse": "Keys zeitlich umkehren"
 }

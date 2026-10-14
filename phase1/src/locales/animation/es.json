@@ -800,5 +800,10 @@
  "animation.keys.repeat.cycle": "Ciclo",
  "animation.keys.repeat.pingpong": "Ping-pong",
  "animation.keys.repeat.hint": "Repite las claves elegidas tras la selección; ping-pong reproduce una de cada dos rondas al revés. Las rondas más allá del final de la composición se descartan.",
- "cmd.animation.keys.repeat": "Repetir las claves elegidas en ciclos o ping-pong"
+ "cmd.animation.keys.repeat": "Repetir las claves elegidas en ciclos o ping-pong",
+ "animation.keys.reverse": "Invertir claves",
+ "animation.keys.reverse.hint": "Reproduce las claves elegidas al revés en su sitio; las curvas se reflejan",
+ "animation.keySet.reverse": "Invertir grupo",
+ "animation.keySet.reverse.hint": "Reproduce al revés todas las claves de las capas marcadas dentro de su primera y última clave",
+ "cmd.animation.keys.reverse": "Invertir claves en el tiempo"
 }

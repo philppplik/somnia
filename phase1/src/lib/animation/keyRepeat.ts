@@ -7,7 +7,7 @@ export const REPEAT_MODES:readonly RepeatMode[]=['cycle','pingpong'];
 export const MAX_REPEATS=20,MAX_REPEAT_KEYS=600;
 const bad=(m:string):never=>{throw Object.assign(new Error(m),{expected:true});};
 /** The same key played backwards: ease handles mirror and swap, spatial tangents swap. Hold keys keep their hold. */
-function reversed(k:Keyframe,interp:Keyframe['interp']):Omit<Keyframe,'t'>{
+export function reversed(k:Keyframe,interp:Keyframe['interp']):Omit<Keyframe,'t'>{
  const {t:_t,channelIn:_ci,channelOut:_co,sIn,sOut,...rest}=k;
  return {...rest,interp,out:[1-k.in[0],1-k.in[1]],in:[1-k.out[0],1-k.out[1]],...(sOut?{sIn:sOut}:{}),...(sIn?{sOut:sIn}:{})};
 }

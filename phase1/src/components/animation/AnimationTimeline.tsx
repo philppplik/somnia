@@ -291,6 +291,7 @@ const marquee=(e:PointerEvent<SVGSVGElement>)=>{
    <Button size="tiny" variant="ghost" onClick={()=>run('animation.marker.add',{label:timecode(at,comp.fps)})}>{t('animation.markers.add')}</Button>
    {layerSetIds(selected).length>1&&<span className="flex items-center gap-1" role="group" aria-label={t('animation.keySet.title')} data-testid="animation-keyset">
     <Button size="tiny" variant="ghost" title={t('animation.keySet.select.hint')} onClick={()=>run('animation.keys.selectSet',{layers:layerSetIds(selected)})} data-testid="animation-keyset-select">{t('animation.keySet.select')}</Button>
+    <Button size="tiny" variant="ghost" title={t('animation.keySet.reverse.hint')} onClick={()=>run('animation.keys.reverse',{layers:layerSetIds(selected)})} data-testid="animation-keyset-reverse">{t('animation.keySet.reverse')}</Button>
     <Button size="tiny" variant="ghost" disabled={!setClip} title={t('animation.keySet.paste.hint')} onClick={()=>run('animation.keys.pasteToSet',{layers:layerSetIds(selected)})} data-testid="animation-keyset-paste">{t('animation.keySet.paste')}</Button>
     <Button size="tiny" variant="ghost" disabled={!setClip} title={t('animation.keySet.place.hint')} onClick={()=>run('animation.keys.pasteInPlace')} data-testid="animation-keyset-place">{t('animation.keySet.place')}</Button></span>}
    <KeyStretch comp={comp} keys={pruneSelection(state.doc,view.selectedKeys)} styleKeys={pruneStyleKeys(comp.layers,view.styleKeys)} at={at}/>

@@ -800,5 +800,10 @@
  "animation.keys.repeat.cycle": "Cycle",
  "animation.keys.repeat.pingpong": "Ping-pong",
  "animation.keys.repeat.hint": "Repeat the selected keys after the selection; ping-pong plays every second round backwards. Rounds past the end of the composition are dropped.",
- "cmd.animation.keys.repeat": "Repeat the selected keys as cycles or ping-pong"
+ "cmd.animation.keys.repeat": "Repeat the selected keys as cycles or ping-pong",
+ "animation.keys.reverse": "Reverse keys",
+ "animation.keys.reverse.hint": "Play the selected keys backwards in place; ease curves mirror",
+ "animation.keySet.reverse": "Reverse set",
+ "animation.keySet.reverse.hint": "Play every key of the picked layers backwards inside each own first and last key",
+ "cmd.animation.keys.reverse": "Reverse keys in time"
 }

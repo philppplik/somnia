@@ -794,6 +794,22 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.keys.reverse",
+      "title": "Reverse keys in time",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "backwards",
+        "flip",
+        "keys",
+        "mirror",
+        "reverse",
+        "time"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.keys.selectAll",
       "title": "Select all keys of the layer",
       "category": "View",
