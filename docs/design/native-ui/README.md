@@ -42,6 +42,7 @@ All file links are repository-relative, so they remain useful on a feature branc
 12. [Pdf/pdfedit areas DS adoption](pdf-adoption.md)
 13. [Agent area DS adoption](agent-adoption.md)
 14. [Vectorstudio area DS adoption](vectorstudio-adoption.md)
+15. [Settings area DS adoption](settings-adoption.md)
 
 ## The system in one view
 

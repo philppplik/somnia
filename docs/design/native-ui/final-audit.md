@@ -41,11 +41,11 @@ native-platform acceptance claim.
 | components/interface | 2 | 8 | 11 | 1 | 22 |
 | components/sheets | 14 | 6 | 1 | 1 | 22 |
 | 14 further areas | 48 | 82 | 14 | 2 | 146 |
-| **Total** | **556** | **356** | **99** | **39** | **1050** |
+| **Total** | **527** | **309** | **77** | **39** | **952** |
 
-The flat `src/components` bucket holds the largest single debtor:
-`Settings.tsx` alone accounts for 75 controls (16 buttons, 38 inputs, 21
-selects). Its migration is deliberately gated, see below.
+The flat `src/components` bucket's largest single debtor was migrated in P23:
+`Settings.tsx` and the five sibling Settings files (98 controls) now render
+through native control primitives, see below.
 
 ## Non-control debt
 
@@ -98,17 +98,21 @@ selects). Its migration is deliberately gated, see below.
 - P21: agent area migrated (48 controls to native primitives),
   ratchet budgets shrunk to zero for all 9 files, adoption tests and gallery
   proof added.
-- P22 (this slice): vectorstudio area migrated (36 controls to native
+- P22: vectorstudio area migrated (36 controls to native
   primitives), ratchet budgets shrunk to zero for all 6 files, adoption tests
   and gallery proof added.
+- P23 (this slice): Settings area migrated (98 controls to native primitives
+  across 6 flat files), ratchet budgets zero, adoption test added, capture
+  parity proven against a same-tip BEFORE (contract match; 69/72 PNGs
+  identical, rest is the dynamic update-check timestamp).
 
 ## Remaining bespoke areas
 
-- **Settings (`Settings.tsx`, 75 controls)**: migration is gated on the beta.4
-  BEFORE artifacts (screens, computed styles, behavior captures). Plan and
-  fixtures exist in [settings-migration-plan.md](settings-migration-plan.md) and
-  [settings-slice-plan.md](settings-slice-plan.md); no consumer changes until the
-  artifacts arrive.
+- **Settings**: migrated in P23. All 98 controls across the six flat Settings
+  files render through native control primitives, ratchet budgets are zero,
+  and the same-tip capture comparison matches (69/72 PNGs identical; the three
+  updates-top shots differ only in the dynamic last-checked timestamp). See
+  [settings-adoption.md](settings-adoption.md).
 - **Vibespace**: migrated in P16. All 108 controls render through native control
   primitives with their bespoke geometry and behavior intact; file allowances are
   at zero, so reintroduction fails the ratchet. The P11 specificity side effect

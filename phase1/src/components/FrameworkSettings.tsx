@@ -2,6 +2,7 @@ import {useEffect, useState} from 'react';
 import {isTauri} from '@tauri-apps/api/core';
 import {t} from '../lib/i18n';
 import {installRuntime, removeRuntime, runtimeStatus, type RuntimeStatus} from '../lib/frameworks/runner';
+import {NativeButton,NativeInput} from './ui/native-controls';
 export function FrameworkSettings() {
   const [status, setStatus] = useState<RuntimeStatus>();
   const [busy, setBusy] = useState(false);
@@ -20,10 +21,10 @@ export function FrameworkSettings() {
       {status?.installed && <small>{t('frameworks.version')} {status.version}</small>}
       {!status?.installed && isTauri() && <>
         <p>{t('frameworks.downloadConsent')}</p>
-        <label><input type="checkbox" checked={consent} disabled={busy} onChange={e=>setConsent(e.target.checked)}/>{t('frameworks.consentLabel')}</label>
-        <button type="button" disabled={busy || !consent || !status?.supported} onClick={()=>void act(installRuntime)}>{t(busy?'frameworks.downloading':'frameworks.download')}</button>
+        <label><NativeInput type="checkbox" checked={consent} disabled={busy} onChange={e=>setConsent(e.target.checked)}/>{t('frameworks.consentLabel')}</label>
+        <NativeButton type="button" disabled={busy || !consent || !status?.supported} onClick={()=>void act(installRuntime)}>{t(busy?'frameworks.downloading':'frameworks.download')}</NativeButton>
       </>}
-      {status?.installed && <button type="button" disabled={busy} onClick={()=>void act(removeRuntime)}>{t(busy?'frameworks.removing':'frameworks.remove')}</button>}
+      {status?.installed && <NativeButton type="button" disabled={busy} onClick={()=>void act(removeRuntime)}>{t(busy?'frameworks.removing':'frameworks.remove')}</NativeButton>}
       <small>{t('frameworks.safetyNote')}</small>
     </div>
     {error && <p role="alert">{t(error)}</p>}

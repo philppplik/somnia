@@ -124,9 +124,9 @@
       "inlineStyle": 1
     },
     "src/components": {
-      "rawButton": 150,
-      "rawInput": 117,
-      "rawSelect": 42,
+      "rawButton": 121,
+      "rawInput": 70,
+      "rawSelect": 20,
       "rawTextarea": 8,
       "hexTsx": 26,
       "hexCss": 0,
@@ -485,7 +485,7 @@
     },
     "src/components/studio3d": {
       "rawButton": 1,
-      "rawInput": 13,
+      "rawInput": 12,
       "rawSelect": 2,
       "rawTextarea": 0,
       "hexTsx": 0,

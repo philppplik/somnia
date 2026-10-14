@@ -109,6 +109,7 @@ import {
 import { THEME_CHOICES, type ThemeChoice } from "../lib/theme";
 import { patchState, useAppStore } from "../store/appStore";
 import type { CodeTheme, Contrast } from "../lib/appearance";
+import {NativeButton,NativeInput,NativeSelect} from './ui/native-controls';
 export function Settings() {
   const { t, locale } = useT();
   const state = useAppStore();
@@ -136,7 +137,7 @@ export function Settings() {
   const projectToggle = (id: string, label: string, current: unknown) =>
     projectSettingsAvailable() && state.nativeConnected ? (
       <label className="project-scope-toggle">
-        <input
+        <NativeInput
           type="checkbox"
           aria-label={`${t("project.overrideThis")}: ${label}`}
           checked={overridden(id)}
@@ -390,7 +391,7 @@ export function Settings() {
         <>
           <label title={t("redesign.fastHint")}>
             {t("redesign.fastParse")}
-            <input
+            <NativeInput
               type="checkbox"
               aria-label={t("redesign.fastParse")}
               checked={EditorProject.incremental.enabled}
@@ -419,7 +420,7 @@ export function Settings() {
         <fieldset disabled={nativeBusy} className="settings-ui-preferences">
           <label>
             {t("windowPref.remember")}
-            <input
+            <NativeInput
               type="checkbox"
               aria-label={t("windowPref.remember")}
               checked={state.windowPrefs.remember}
@@ -433,7 +434,7 @@ export function Settings() {
           </label>
           <label>
             {t("windowPref.width")}
-            <input
+            <NativeInput
               type="number"
               aria-label={t("windowPref.width")}
               min={960}
@@ -452,7 +453,7 @@ export function Settings() {
           </label>
           <label>
             {t("windowPref.height")}
-            <input
+            <NativeInput
               type="number"
               aria-label={t("windowPref.height")}
               min={600}
@@ -471,7 +472,7 @@ export function Settings() {
           </label>
           <label>
             {t("windowPref.pin")}
-            <input
+            <NativeInput
               type="checkbox"
               aria-label={t("windowPref.pin")}
               checked={state.windowPrefs.alwaysOnTop}
@@ -485,7 +486,7 @@ export function Settings() {
           </label>
           <label>
             {t("windowPref.frame")}
-            <select
+            <NativeSelect
               aria-label={t("windowPref.frame")}
               value={state.windowPrefs.frame}
               onChange={(e) =>
@@ -497,11 +498,11 @@ export function Settings() {
             >
               <option value="custom">{t("windowPref.custom")}</option>
               <option value="system">{t("windowPref.system")}</option>
-            </select>
+            </NativeSelect>
           </label>
           <label>
             {t("windowPref.doubleClick")}
-            <select
+            <NativeSelect
               aria-label={t("windowPref.doubleClick")}
               value={state.windowPrefs.doubleClick}
               onChange={(e) =>
@@ -513,7 +514,7 @@ export function Settings() {
             >
               <option value="maximize">{t("windowPref.maximize")}</option>
               <option value="none">{t("set.sc.none")}</option>
-            </select>
+            </NativeSelect>
           </label>
           {errs.length > 0 && <p role="alert">{errs.join(" ")}</p>}
         </fieldset>
@@ -523,7 +524,7 @@ export function Settings() {
           <p>{t("docPref.newOnly")}</p>
           <label>
             {t("docPref.font")}
-            <select
+            <NativeSelect
               aria-label={t("docPref.font")}
               value={state.documentPrefs.font}
               onChange={(e) =>
@@ -538,7 +539,7 @@ export function Settings() {
               <option value="system">{t("finish.settings.sans")}</option>
               <option value="serif">{t("finish.settings.serif")}</option>
               <option value="monospace">{t("finish.settings.mono")}</option>
-            </select>
+            </NativeSelect>
           </label>
           {(
             [
@@ -550,7 +551,7 @@ export function Settings() {
           ).map(([key, min, max, step]) => (
             <label key={key}>
               {t("docPref." + key)}
-              <input
+              <NativeInput
                 type="number"
                 aria-label={t("docPref." + key)}
                 min={min}
@@ -594,7 +595,7 @@ export function Settings() {
           <p>{t("docPref.exportHint")}</p>
           <label>
             {t("docPref.stripIds")}
-            <input
+            <NativeInput
               type="checkbox"
               aria-label={t("docPref.stripIds")}
               checked={effective("document.stripEditorIds", state.documentPrefs.stripEditorIds)}
@@ -607,7 +608,7 @@ export function Settings() {
           {projectToggle("document.stripEditorIds", t("docPref.stripIds"), effective("document.stripEditorIds", state.documentPrefs.stripEditorIds))}
           <label>
             {t("docPref.comments")}
-            <input
+            <NativeInput
               type="checkbox"
               aria-label={t("docPref.comments")}
               checked={effective("document.keepComments", state.documentPrefs.keepComments)}
@@ -625,7 +626,7 @@ export function Settings() {
           <p>{t("backup.hint")}</p>
           <label>
             {t("backup.enabled")}
-            <input
+            <NativeInput
               type="checkbox"
               aria-label={t("backup.enabled")}
               checked={state.backupPrefs.enabled}
@@ -641,7 +642,7 @@ export function Settings() {
           </label>
           <label>
             {t("backup.count")}
-            <input
+            <NativeInput
               type="number"
               aria-label={t("backup.count")}
               min={1}
@@ -660,7 +661,7 @@ export function Settings() {
               }
             />
           </label>
-          <button
+          <NativeButton
             disabled={!state.coreConnected}
             onClick={() => {
               const r = saveProjectBackup(state.files, state.projectName, true);
@@ -669,7 +670,7 @@ export function Settings() {
             }}
           >
             {t("backup.now")}
-          </button>
+          </NativeButton>
           {errs.length > 0 && <p role="alert">{errs.join(" ")}</p>}
           <ul aria-label={t("finish.settings.snapshots")}>
             {backups.map((b) => (
@@ -678,13 +679,13 @@ export function Settings() {
                   {b.name}
                   <small>{new Date(b.at).toLocaleString(locale)}</small>
                 </span>
-                <button
+                <NativeButton
                   onClick={() =>
                     downloadProject(b.files, b.name + "-snapshot", true)
                   }
                 >
                   {t("backup.download")}
-                </button>
+                </NativeButton>
               </li>
             ))}
           </ul>
@@ -694,7 +695,7 @@ export function Settings() {
         <>
           <label title={t("redesign.startupHint")}>
             {t("redesign.startup")}
-            <select
+            <NativeSelect
               aria-label={t("redesign.startup")}
               value={state.workflowPrefs.startup}
               onChange={(e) =>
@@ -709,12 +710,12 @@ export function Settings() {
               <option value="last">{t("redesign.startupLast")}</option>
               <option value="welcome">{t("redesign.startupWelcome")}</option>
               <option value="blank">{t("redesign.startupBlank")}</option>
-            </select>
+            </NativeSelect>
           </label>
           <p>{t("redesign.startupHint")}</p>
           <label>
             {t("redesign.defaultTitle")}
-            <input
+            <NativeInput
               type="text"
               aria-label={t("redesign.defaultTitle")}
               maxLength={160}
@@ -729,11 +730,11 @@ export function Settings() {
               }
             />
           </label>
-          {(['panelFollowsContext','floatingFormat'] as const).map((key,i)=><label key={key}>{t(['ctx.follow','ctx.floating'][i])}<input type="checkbox" aria-label={t(['ctx.follow','ctx.floating'][i])} checked={state.workflowPrefs[key]} onChange={e=>change({workflowPrefs:{...state.workflowPrefs,[key]:e.target.checked}})}/></label>)}
+          {(['panelFollowsContext','floatingFormat'] as const).map((key,i)=><label key={key}>{t(['ctx.follow','ctx.floating'][i])}<NativeInput type="checkbox" aria-label={t(['ctx.follow','ctx.floating'][i])} checked={state.workflowPrefs[key]} onChange={e=>change({workflowPrefs:{...state.workflowPrefs,[key]:e.target.checked}})}/></label>)}
           <Button variant="outline" onClick={resetContextSections}>{t('ctx.reset')}</Button>
           <label>
             {t("redesign.confirmDelete")}
-            <input
+            <NativeInput
               type="checkbox"
               aria-label={t("redesign.confirmDelete")}
               checked={state.workflowPrefs.confirmDelete}
@@ -749,7 +750,7 @@ export function Settings() {
           </label>
           <label>
             {t("settings.language")}
-            <select
+            <NativeSelect
               aria-label={t("settings.language")}
               value={readLocalePref()}
               onChange={(e) => {
@@ -766,7 +767,7 @@ export function Settings() {
                   {LOCALE_NAMES[l]}
                 </option>
               ))}
-            </select>
+            </NativeSelect>
           </label>
           <p>{t("settings.language.note")}</p>
         </>
@@ -775,7 +776,7 @@ export function Settings() {
         <>
           <label title={t("redesign.draftHint")}>
             {t("redesign.draftAutosave")}
-            <input
+            <NativeInput
               type="checkbox"
               aria-label={t("redesign.draftAutosave")}
               checked={state.workflowPrefs.draftAutosave}
@@ -791,7 +792,7 @@ export function Settings() {
           </label>
           <label>
             {t("redesign.draftInterval")}
-            <input
+            <NativeInput
               type="number"
               aria-label={t("redesign.draftInterval")}
               min={1}
@@ -813,7 +814,7 @@ export function Settings() {
           <p>{t("redesign.draftHint")}</p>
           <label>
             {t("redesign.imageSaveMode")}
-            <select
+            <NativeSelect
               aria-label={t("redesign.imageSaveMode")}
               value={effective("workflow.imageSaveMode", state.workflowPrefs.imageSaveMode)}
               onChange={(e) => {
@@ -823,13 +824,13 @@ export function Settings() {
             >
               <option value="overwrite">{t("redesign.imageSaveOverwrite")}</option>
               <option value="copy">{t("redesign.imageSaveCopy")}</option>
-            </select>
+            </NativeSelect>
           </label>
           {projectToggle("workflow.imageSaveMode", t("redesign.imageSaveMode"), effective("workflow.imageSaveMode", state.workflowPrefs.imageSaveMode))}
           <p>{t("redesign.imageSaveHint")}</p>
           <label>
             {t("redesign.units")}
-            <select
+            <NativeSelect
               aria-label={t("redesign.units")}
               value={effective("workflow.units", state.workflowPrefs.units)}
               onChange={(e) => {
@@ -840,7 +841,7 @@ export function Settings() {
               <option value="auto">{t("redesign.unitsAuto")}</option>
               <option value="metric">{t("redesign.unitsMetric")}</option>
               <option value="imperial">{t("redesign.unitsImperial")}</option>
-            </select>
+            </NativeSelect>
           </label>
           {projectToggle("workflow.units", t("redesign.units"), effective("workflow.units", state.workflowPrefs.units))}
           <p>{t("redesign.unitsHint")}</p>
@@ -850,7 +851,7 @@ export function Settings() {
         <>
           <label>
             {t("redesign.viewport")}
-            <select
+            <NativeSelect
               aria-label={t("redesign.viewport")}
               value={state.viewport}
               onChange={(e) => change({ viewport: Number(e.target.value) })}
@@ -863,11 +864,11 @@ export function Settings() {
               {![375, 768, 1280, 1440].includes(state.viewport) && (
                 <option value={state.viewport}>{state.viewport}px</option>
               )}
-            </select>
+            </NativeSelect>
           </label>
           <label>
             {t("redesign.zoom")}
-            <input
+            <NativeInput
               type="number"
               aria-label={t("redesign.zoom")}
               min="25"
@@ -885,7 +886,7 @@ export function Settings() {
           </label>
           <label>
             {t("redesign.defaultViewport")}
-            <select
+            <NativeSelect
               aria-label={t("redesign.defaultViewport")}
               value={state.canvasPrefs.defaultViewport}
               onChange={(e) =>
@@ -902,11 +903,11 @@ export function Settings() {
                   {v}px
                 </option>
               ))}
-            </select>
+            </NativeSelect>
           </label>
           <label>
             {t("redesign.defaultZoom")}
-            <input
+            <NativeInput
               type="number"
               aria-label={t("redesign.defaultZoom")}
               min={25}
@@ -937,7 +938,7 @@ export function Settings() {
           ).map((key) => (
             <label key={key}>
               {t("canvasPref." + key)}
-              <input
+              <NativeInput
                 type="checkbox"
                 aria-label={t("canvasPref." + key)}
                 checked={state.canvasPrefs[key]}
@@ -954,7 +955,7 @@ export function Settings() {
           ))}
           <label>
             {t("canvasPref.gridSize")}
-            <input
+            <NativeInput
               type="number"
               aria-label={t("canvasPref.gridSize")}
               min={2}
@@ -977,7 +978,7 @@ export function Settings() {
             {t("canvasPref.selectionColor")}
             <span className="settings-color-value">
               <code>{state.canvasPrefs.selectionColor ?? t("canvasPref.selectionColorTheme")}</code>
-              <input
+              <NativeInput
                 type="color"
                 aria-label={t("canvasPref.selectionColor")}
                 value={state.canvasPrefs.selectionColor ?? "#7c5cff"}
@@ -988,7 +989,7 @@ export function Settings() {
                 }
               />
               {state.canvasPrefs.selectionColor && (
-                <button
+                <NativeButton
                   type="button"
                   onClick={() =>
                     change({
@@ -997,7 +998,7 @@ export function Settings() {
                   }
                 >
                   {t("canvasPref.selectionColorTheme")}
-                </button>
+                </NativeButton>
               )}
             </span>
           </label>
@@ -1007,7 +1008,7 @@ export function Settings() {
                 {t("canvasPref." + key)}
                 <span className="settings-color-value">
                   <code>{state.canvasPrefs[key]}</code>
-                  <input
+                  <NativeInput
                     type="color"
                     aria-label={t("canvasPref." + key)}
                     value={state.canvasPrefs[key]}
@@ -1026,7 +1027,7 @@ export function Settings() {
           )}
           <label>
             {t("canvasPref.selectionWidth")}
-            <input
+            <NativeInput
               type="number"
               aria-label={t("canvasPref.selectionWidth")}
               min={1}
@@ -1047,7 +1048,7 @@ export function Settings() {
           </label>
           <label>
             {t("canvasPref.pageShadow")}
-            <select
+            <NativeSelect
               aria-label={t("canvasPref.pageShadow")}
               value={state.canvasPrefs.pageShadow}
               onChange={(e) =>
@@ -1062,7 +1063,7 @@ export function Settings() {
               <option value="none">{t("set.sc.none")}</option>
               <option value="soft">{t("redesign.soft")}</option>
               <option value="strong">{t("redesign.strong")}</option>
-            </select>
+            </NativeSelect>
           </label>
         </>
       )}
@@ -1070,7 +1071,7 @@ export function Settings() {
         <>
           <label title={t("settings.previewScripts.note")}>
             {t("settings.previewScripts")}
-            <input
+            <NativeInput
               type="checkbox"
               aria-label={t("settings.previewScripts")}
               checked={state.previewScripts}
@@ -1080,7 +1081,7 @@ export function Settings() {
           <p>{t("settings.previewScripts.note")}</p>
           <label title={t("settings.livePreviewMode.note")}>
             {t("settings.livePreviewMode")}
-            <input
+            <NativeInput
               type="checkbox"
               aria-label={t("settings.livePreviewMode")}
               checked={state.livePreview}
@@ -1094,7 +1095,7 @@ export function Settings() {
         <div>
           <p>{t("set.sc.intro")}</p>
           <div className="settings-transfer">
-            <button
+            <NativeButton
               onClick={() =>
                 downloadText(
                   JSON.stringify(shortcutOverrides(), null, 2),
@@ -1104,10 +1105,10 @@ export function Settings() {
               }
             >
               {t("redesign.exportShortcuts")}
-            </button>
+            </NativeButton>
             <label className="settings-shortcut-import">
               {t("redesign.importShortcuts")}
-              <input
+              <NativeInput
                 type="file"
                 accept=".json,application/json"
                 aria-label={t("redesign.importShortcuts")}
@@ -1198,7 +1199,7 @@ export function Settings() {
                             ? formatShortcut(c.shortcut)
                             : t("set.sc.none")}
                       </kbd>
-                      <button
+                      <NativeButton
                         aria-label={t("set.sc.change.aria", {title:c.title})}
                         onKeyDown={(e) => {
                           if (capture !== c.id) return;
@@ -1218,8 +1219,8 @@ export function Settings() {
                         onClick={() => setCapture(c.id)}
                       >
                         {t("set.sc.change")}
-                      </button>
-                      <button
+                      </NativeButton>
+                      <NativeButton
                         aria-label={t("set.sc.clear.aria", {title:c.title})}
                         onClick={() => {
                           shortcut(c.id, "");
@@ -1227,8 +1228,8 @@ export function Settings() {
                         }}
                       >
                         {t("set.sc.clear")}
-                      </button>
-                      <button
+                      </NativeButton>
+                      <NativeButton
                         aria-label={t("set.sc.reset.aria", {title:c.title})}
                         onClick={() => {
                           shortcut(c.id, null);
@@ -1236,7 +1237,7 @@ export function Settings() {
                         }}
                       >
                         {t("set.sc.reset")}
-                      </button>
+                      </NativeButton>
                     </span>
                   </li>
                 );
@@ -1258,7 +1259,7 @@ export function Settings() {
             })()}
           </p>
           <label className="flex items-center gap-2 text-[12px]">
-            <input
+            <NativeInput
               type="checkbox"
               aria-label={t("set.upd.auto.aria")}
               checked={autoCheckEnabled()}
@@ -1274,7 +1275,7 @@ export function Settings() {
           </label>
           <label>
             {t("redesign.updateInterval")}
-            <select
+            <NativeSelect
               aria-label={t("redesign.updateInterval")}
               value={state.updatePrefs.intervalMinutes}
               onChange={(e) =>
@@ -1290,11 +1291,11 @@ export function Settings() {
               <option value={60}>{t("redesign.hourly")}</option>
               <option value={1440}>{t("redesign.daily")}</option>
               <option value={10080}>{t("redesign.weekly")}</option>
-            </select>
+            </NativeSelect>
           </label>
           <label title={t("redesign.channelHint")}>
             {t("redesign.channel")}
-            <select
+            <NativeSelect
               aria-label={t("redesign.channel")}
               value={state.updatePrefs.channel}
               onChange={(e) => {
@@ -1310,13 +1311,13 @@ export function Settings() {
               <option value="stable">{t("finish.settings.stable")}</option>
               <option value="beta">Beta</option>
               <option value="alpha">Alpha</option>
-            </select>
+            </NativeSelect>
           </label>
           <p>{t("redesign.channelHint")}</p>
-          <button onClick={() => void openExternal(REPO_URL + "/releases")}>
+          <NativeButton onClick={() => void openExternal(REPO_URL + "/releases")}>
             {t("redesign.releaseNotes")}
-          </button>
-          <button
+          </NativeButton>
+          <NativeButton
             onClick={async () => {
               setUpd({ state: "checking" });
               try {
@@ -1336,7 +1337,7 @@ export function Settings() {
             }}
           >
             {upd.state === "checking" ? t("set.upd.checking") : t("set.upd.check")}
-          </button>
+          </NativeButton>
           <p role="status" aria-live="polite">
             {upd.state === "current"
               ? t("set.upd.uptodate")
@@ -1391,9 +1392,9 @@ export function Settings() {
             </a>
           </p>
           <p>
-            <button type="button" className="underline" data-testid="copy-error-report" onClick={() => { void copyErrorReport(); }}>
+            <NativeButton type="button" className="underline" data-testid="copy-error-report" onClick={() => { void copyErrorReport(); }}>
               {tOr("set.about.errorReport", "Copy error report")}
-            </button>
+            </NativeButton>
             <span className="ml-2 text-[11px] text-ink-3">{tOr("set.about.errorReport.hint", "Version info and recent log lines, without keys or tokens. Paste it into a message when something goes wrong.")}</span>
           </p>
           <details>
@@ -1418,20 +1419,20 @@ export function Settings() {
         <div>
           <p>{t("set.ext.moved")}</p>
           <ExtensionSecuritySettings />
-          <button
+          <NativeButton
             onClick={() => {
               patchState({ extensionsOpen: true, settingsOpen: false });
             }}
           >
             {t("set.ext.open")}
-          </button>
+          </NativeButton>
         </div>
       ) : null}
       {section === "Appearance" ? (
         <>
           <label>
             {t("set.ap.theme")}
-            <select
+            <NativeSelect
               aria-label={t("set.ap.theme")}
               value={state.themeChoice}
               onChange={(e) =>
@@ -1443,23 +1444,23 @@ export function Settings() {
                   {t("finish.settings.theme." + theme.id)}
                 </option>
               ))}
-            </select>
+            </NativeSelect>
           </label>
           <label>
             {t("set.ap.background")}
-            <select aria-label={t("set.ap.background")} aria-describedby="background-note"
+            <NativeSelect aria-label={t("set.ap.background")} aria-describedby="background-note"
               value={state.look.background}
               onChange={(e) => change({look:{...state.look,background:e.target.value === "glass" ? "glass" : "solid"}})}>
               <option value="solid">{t("set.ap.background.solid")}</option>
               <option value="glass">{t("set.ap.background.glass")}</option>
-            </select>
+            </NativeSelect>
           </label>
           <p id="background-note">{t("set.ap.background.note")}</p>
           <GlassSettings look={state.look} highContrast={state.contrast === "high"} onChange={(look) => change({ look })} />
           <label>
             {t("set.ap.outerRadius")}
             <span className="settings-range-value">
-              <input type="range" min="0" max="25" step="1"
+              <NativeInput type="range" min="0" max="25" step="1"
                 aria-label={t("set.ap.outerRadius")} aria-describedby="outer-radius-note"
                 aria-valuetext={`${state.look.outerRadius} px`} value={state.look.outerRadius}
                 onChange={(e) => change({look:{...state.look,outerRadius:Number(e.target.value)}})} />
@@ -1469,21 +1470,21 @@ export function Settings() {
           <p id="outer-radius-note">{t("set.ap.outerRadiusNote")}</p>
           <label>
             {t("set.ap.contrast")}
-            <select
+            <NativeSelect
               aria-label={t("set.ap.contrast")}
               value={state.contrast}
               onChange={(e) => change({ contrast: e.target.value as Contrast })}
             >
               <option value="standard">{t("set.ap.contrast.standard")}</option>
               <option value="high">{t("set.ap.contrast.high")}</option>
-            </select>
+            </NativeSelect>
           </label>
           <p>{t("set.ap.contrast.note")}</p>
           <ThemeImportPanel/>
           <fieldset className="my-3 border-0 p-0" aria-label={t("set.ap.look.aria")}>
             <label>
               {t("set.ap.accent")}
-              <input
+              <NativeInput
                 type="color"
                 aria-label={t("set.ap.accent")}
                 value={state.look.accent ?? "#6366f1"}
@@ -1506,7 +1507,7 @@ export function Settings() {
                 ["Amber", "#d97706"],
                 ["Green", "#16a34a"],
               ].map(([name, color]) => (
-                <button
+                <NativeButton
                   key={name}
                   aria-label={t("finish.settings.accentName", {name:t("finish.settings.color." + name)})}
                   title={t("finish.settings.color." + name)}
@@ -1524,7 +1525,7 @@ export function Settings() {
                 aria-label={t("finish.settings.accentExtensionPresets")}
               >
                 {state.extensionAccents.map((palette) => (
-                  <button
+                  <NativeButton
                     key={palette.id}
                     aria-label={t("finish.settings.accentName", {name:palette.label})}
                     title={palette.label}
@@ -1565,7 +1566,7 @@ export function Settings() {
               })()}
             <label>
               {t("set.ap.uiscale", {value:state.look.uiScale})}
-              <input
+              <NativeInput
                 type="range"
                 aria-label={t("set.ap.uiscale.aria")}
                 min={85}
@@ -1584,7 +1585,7 @@ export function Settings() {
             </label>
             <label>
               {t("set.ap.font", {value:state.look.editorFont})}
-              <input
+              <NativeInput
                 type="range"
                 aria-label={t("set.ap.font.aria")}
                 min={10}
@@ -1603,7 +1604,7 @@ export function Settings() {
             </label>
             <label>
               {t("set.ap.lh", {value:state.look.lineHeight})}
-              <input
+              <NativeInput
                 type="range"
                 aria-label={t("set.ap.lh.aria")}
                 min={1.2}
@@ -1622,7 +1623,7 @@ export function Settings() {
             </label>
             <label>
               {t("set.ap.density")}
-              <select
+              <NativeSelect
                 aria-label={t("set.ap.density")}
                 value={state.look.density}
                 onChange={(e) =>
@@ -1639,14 +1640,14 @@ export function Settings() {
                 <option value="comfortable">
                   {t("set.ap.density.comfortable")}
                 </option>
-              </select>
+              </NativeSelect>
             </label>
           </fieldset>
           <fieldset className="settings-ui-preferences">
             <legend>{t("redesign.interface")}</legend>
             <label>
               {t("redesign.uiFont")}
-              <select
+              <NativeSelect
                 aria-label={t("redesign.uiFont")}
                 value={state.uiPrefs.font}
                 onChange={(e) =>
@@ -1660,11 +1661,11 @@ export function Settings() {
               >
                 <option value="inter">Inter</option>
                 <option value="system">{t("redesign.systemFont")}</option>
-              </select>
+              </NativeSelect>
             </label>
             <label>
               {t("redesign.uiFontSize")}
-              <input
+              <NativeInput
                 type="number"
                 aria-label={t("redesign.uiFontSize")}
                 min={10}
@@ -1685,7 +1686,7 @@ export function Settings() {
             </label>
             <label>
               {t("redesign.animation")} ({state.uiPrefs.animationMs}ms)
-              <input
+              <NativeInput
                 type="range"
                 aria-label={t("redesign.animation")}
                 min={0}
@@ -1704,7 +1705,7 @@ export function Settings() {
             </label>
             <label title={t("redesign.motionHint")}>
               {t("redesign.motion")}
-              <select
+              <NativeSelect
                 aria-label={t("redesign.motion")}
                 value={state.uiPrefs.motion}
                 onChange={(e) =>
@@ -1719,12 +1720,12 @@ export function Settings() {
                 <option value="system">{t("settings.language.system")}</option>
                 <option value="reduce">{t("redesign.reduce")}</option>
                 <option value="full">{t("redesign.full")}</option>
-              </select>
+              </NativeSelect>
             </label>
             <p>{t("redesign.motionHint")}</p>
             <label>
               {t("redesign.shadows")}
-              <select
+              <NativeSelect
                 aria-label={t("redesign.shadows")}
                 value={state.uiPrefs.shadows}
                 onChange={(e) =>
@@ -1741,11 +1742,11 @@ export function Settings() {
                   {t("set.ap.contrast.standard")}
                 </option>
                 <option value="none">{t("set.sc.none")}</option>
-              </select>
+              </NativeSelect>
             </label>
             <label>
               {t("redesign.rememberPanels")}
-              <input
+              <NativeInput
                 type="checkbox"
                 aria-label={t("redesign.rememberPanels")}
                 checked={state.uiPrefs.rememberPanels}
@@ -1765,7 +1766,7 @@ export function Settings() {
         <>
           <label>
             {t("set.ce.wrap")}
-            <input
+            <NativeInput
               type="checkbox"
               aria-label={t("set.ce.wrap")}
               checked={state.wrapLines}
@@ -1795,7 +1796,7 @@ export function Settings() {
             ).map(([k, l]) => (
               <label key={k}>
                 {l}
-                <input
+                <NativeInput
                   type="checkbox"
                   aria-label={l}
                   checked={state.editorPrefs[k]}
@@ -1813,7 +1814,7 @@ export function Settings() {
           </fieldset>
           <label>
             {t("set.ce.indent")}
-            <select
+            <NativeSelect
               aria-label={t("set.ce.indent.aria")}
               value={String(readFormatPrefs().indent)}
               onChange={(e) => {
@@ -1831,11 +1832,11 @@ export function Settings() {
               <option value="4">{t("set.ce.indent.n", {count:4})}</option>
               <option value="8">{t("set.ce.indent.n", {count:8})}</option>
               <option value="tab">{t("set.ce.indent.tabs")}</option>
-            </select>
+            </NativeSelect>
           </label>
           <label>
             {t("set.ce.syntax")}
-            <select
+            <NativeSelect
               aria-label={t("set.ce.syntax")}
               value={state.codeTheme}
               onChange={(e) =>
@@ -1855,7 +1856,7 @@ export function Settings() {
                   {theme.label} {t("set.ce.syntax.ext")}
                 </option>
               ))}
-            </select>
+            </NativeSelect>
           </label>
           <p>{t("set.ce.syntax.note")}</p>
         </>
@@ -1890,12 +1891,12 @@ export function Settings() {
           "Shortcuts",
           "Updates",
         ].includes(section) && (
-          <button
+          <NativeButton
             aria-label={section === "Appearance" ? t("set.ap.reset.aria") : undefined}
             onClick={() => reset(section)}
           >
             {t("redesign.reset")}
-          </button>
+          </NativeButton>
         )}
       </footer>
     </section>
@@ -1932,7 +1933,7 @@ export function Settings() {
           <DialogTitle>{t("set.title")}</DialogTitle>
           <div className="settings-search">
             <Search size={14} />
-            <input
+            <NativeInput
               type="search"
               aria-label={t("redesign.search")}
               placeholder={t("redesign.search")}
@@ -1951,7 +1952,7 @@ export function Settings() {
                     {item.group ? t("redesign.group." + item.group) : ""}
                   </div>
                 )}
-                <button
+                <NativeButton
                   aria-current={
                     section === item.name && !query ? "page" : undefined
                   }
@@ -1967,20 +1968,20 @@ export function Settings() {
                       {item.name === "Modified" ? modifiedTotal : modifiedCounts[item.name]}
                     </span>
                   )}
-                </button>
+                </NativeButton>
               </div>
             ))}
           </nav>
         </aside>
         <div className="settings-main">
-          <button
+          <NativeButton
             className="settings-close"
             aria-label={t("set.close.aria")}
             title={t("set.close")}
             onClick={() => patchState({ settingsOpen: false })}
           >
             <X size={14} />
-          </button>
+          </NativeButton>
           <DialogDescription className="sr-only">
             {t(section === "Shortcuts" ? "set.sc.description" : "set.description")}
           </DialogDescription>
