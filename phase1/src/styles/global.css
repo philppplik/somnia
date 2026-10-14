@@ -1,5 +1,17 @@
 @import 'tailwindcss';
-@theme inline{--color-base:var(--bg-base);--color-panel:var(--bg-panel);--color-elevated:var(--bg-elevated);--color-surface:var(--bg-surface);--color-hover:var(--bg-hover);--color-subtle:var(--border-subtle);--color-line:var(--border-default);--color-ink:var(--text-primary);--color-ink-2:var(--text-secondary);--color-ink-3:var(--text-tertiary);--color-accent:var(--accent);--color-accent-fill:var(--accent-fill);--color-action-ink:var(--action-ink);--color-accent-soft:var(--accent-soft);--color-warning:var(--warning);--color-shell:var(--shell-bg);--radius-sm:var(--r-sm);--radius-md:var(--r-md);--radius-lg:var(--r-lg);--spacing-shell:var(--gap);--shadow-card:var(--card-shadow);--font-ui:var(--ui-font);--font-mono:var(--mono)}
+@theme inline{--color-base:var(--bg-base);--color-panel:var(--bg-panel);--color-elevated:var(--bg-elevated);--color-surface:var(--bg-surface);--color-hover:var(--bg-hover);--color-subtle:var(--border-subtle);--color-line:var(--border-default);--color-ink:var(--text-primary);--color-ink-2:var(--text-secondary);--color-ink-3:var(--text-tertiary);--color-accent:var(--accent);--color-accent-fill:var(--accent-fill);--color-accent-soft:var(--accent-soft);--color-warning:var(--warning);--color-shell:var(--shell-bg);--radius-sm:var(--r-sm);--radius-md:var(--r-md);--radius-lg:var(--r-lg);--spacing-shell:var(--gap);--shadow-card:var(--card-shadow);--font-ui:var(--ui-font);--font-mono:var(--mono)}
+@theme inline {
+ --text-ds-2xs:var(--font-size-2xs); --text-ds-xs:var(--font-size-xs); --text-ds-sm:var(--font-size-sm); --text-ds-ui:var(--font-size-ui);
+ --spacing-ds-0:var(--space-0); --spacing-2px:var(--space-2); --spacing-3px:var(--space-3); --spacing-4px:var(--space-4);
+ --spacing-6px:var(--space-6); --spacing-8px:var(--space-8); --spacing-10px:var(--space-10); --spacing-12px:var(--space-12);
+ --spacing-16px:var(--space-16); --spacing-20px:var(--space-20); --spacing-24px:var(--space-24); --spacing-32px:var(--space-32);
+ --color-action-ink:var(--action-ink);
+ --color-success-ink:var(--status-success-ink); --color-success-surface:var(--status-success-surface);
+ --color-warning-ink:var(--status-warning-ink); --color-warning-surface:var(--status-warning-surface);
+ --color-danger-ink:var(--status-danger-ink); --color-danger-surface:var(--status-danger-surface);
+ --color-info-ink:var(--status-info-ink); --color-info-surface:var(--status-info-surface);
+}
+
 @import './tokens.css';
 @import '../themes/forest.css';
 @import '../themes/royal.css';
@@ -351,6 +363,11 @@ body{font-size:var(--ui-font-size,13px)}
  --accent-soft:color-mix(in srgb, #b4a6ff 18%, transparent)!important;
 }
 
+@utility z-canvas-selection { z-index:var(--z-canvas-selection); }
+@utility z-canvas-tools { z-index:var(--z-canvas-tools); }
+@utility z-menu { z-index:var(--z-menu); }
+@utility z-dialog-backdrop { z-index:var(--z-dialog-backdrop); }
+@utility z-dialog { z-index:var(--z-dialog); }
 /* Bare control colors are intentionally unlayered until P6. Match that cascade
    for primary Button ink; a Tailwind utility alone cannot beat button{color:inherit}. */
 [data-slot=button].bg-accent-fill { color:var(--action-ink); }

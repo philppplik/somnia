@@ -15,7 +15,7 @@ Somnia is one local-first creative workspace. Its chrome stays familiar while th
 
 **Implementation baseline:** `somnia-agent` commit `d91046fdb82ed861b18e11bda1b38d73cd25c99e`, inspected on 2026-10-09. This is a source snapshot, not a claim that every branch, release or operating system has the same behavior. The documentation change does not alter runtime code.
 
-The baseline includes the Base UI/shadcn-derived primitives, Components browsing system, raster/vector/PDF inline editors and existing context-sensitive controls. The baseline snapshot predates Studio S0/S1; they have since been integrated (see [Studio direction](studio-direction.md)). Statements in this guide about the baseline were not re-audited against the Studio shell.
+The baseline includes the Base UI/shadcn-derived primitives, Components browsing system, raster/vector/PDF inline editors and existing context-sensitive controls. The historical audit snapshot predates Studio S0/S1, which are integrated in the current `int/shell` base. P0 guardrails were rechecked against `22fe72d8` on 2026-10-14 (see [P0 implementation](P0-guardrails.md)). Other historical contract findings have not all been re-audited against the current shell.
 
 Throughout the guide:
 

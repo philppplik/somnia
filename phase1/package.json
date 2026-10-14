@@ -43,6 +43,9 @@
     "predev": "node scripts/copy-pdfjs-assets.mjs",
     "prebuild": "node scripts/copy-pdfjs-assets.mjs",
     "test:vibespace": "tsx --import ./scripts/test-css-register.mjs --test src/lib/vibespace/*.test.ts src/components/vibespace/*.test.tsx",
+    "check:ds": "node scripts/check-ds.mjs",
+    "ds:baseline": "node scripts/check-ds.mjs --update",
+    "test:ds": "node --test scripts/check-ds.test.mjs",
     "check:layers": "depcruise packages/editor-core/src src --config .dependency-cruiser.cjs --ignore-known --output-type err",
     "layers:baseline": "depcruise packages/editor-core/src src --config .dependency-cruiser.cjs --output-type baseline --output-to .dependency-cruiser-known-violations.json && depcruise packages/editor-core/src src --config .dependency-cruiser.cjs --output-type err-long --output-to docs/layers-violations.txt || true",
     "test:board": "tsx --test src/lib/agentBoard/*.test.ts src/components/agentBoard/*.test.tsx"
