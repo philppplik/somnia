@@ -9,6 +9,7 @@ import {CELL_BASE} from './edit';
 import {goToBlock,scrollToPage} from './navigate';
 import {safeCopyName} from './saveCopy';
 import {commentsOpen,setCommentsOpen} from './comments';
+import {setShortcutsOpen} from './shortcuts';
 import {addComment,commentSelection,deleteComment,resolveComment} from './session';
 import {commentProblem,HIGHLIGHTS,linkProblem,type HighlightName} from './protocol';
 import {clearFormatting,hasTextSelection,setHighlight,setLink,toggleVertAlign} from './session';
@@ -69,6 +70,7 @@ export function registerDocumentsCommands(){
   },()=>ready()&&hasTextSelection()),
   add('documents.link.remove','Remove the link from the selected text',async()=>{await setLink('');},()=>ready()&&hasTextSelection()),
   add('documents.clearFormatting','Clear text formatting',async()=>{await clearFormatting();},()=>ready()&&hasTextSelection()),
+  add('documents.shortcuts.show','Keyboard shortcuts',()=>{setShortcutsOpen(true);}),
   add('documents.fontSize.increase','Increase font size',async()=>{await stepFontSize(1);},()=>ready()&&!!getDocumentsState().caret),
   add('documents.fontSize.decrease','Decrease font size',async()=>{await stepFontSize(-1);},()=>ready()&&!!getDocumentsState().caret),
   add('documents.align.left','Align left',async()=>{await setAlign('left');},()=>ready()&&!!getDocumentsState().caret),

@@ -7,7 +7,7 @@ import type {DocumentsEngine} from '../../lib/documents';
 import {getDocumentsState,patchDocuments,resetDocuments,stepZoom,useDocuments} from '../../lib/documents/store';
 import '../../lib/documents/guards';
 import {CELL_BASE} from '../../lib/documents/edit';
-import {setFindOpen,setParagraphStyle,clearCaret,deleteAtCaret,dragTo,editParagraph,getEngine,moveCaret,pasteText,settleDocument,switchDocument,pointerAt,redoEdit,selectAllText,setAlign,shiftListLevel,tabInCell,stepFontSize,stepIndent,toggleFormat,selectedText,splitAtCaret,syncGeometry,typeText,undoEdit} from '../../lib/documents/session';
+import {clearFormatting,copyLinkAt,toggleVertAlign,setFindOpen,setParagraphStyle,clearCaret,deleteAtCaret,dragTo,editParagraph,getEngine,moveCaret,pasteText,settleDocument,switchDocument,pointerAt,redoEdit,selectAllText,setAlign,shiftListLevel,tabInCell,stepFontSize,stepIndent,toggleFormat,selectedText,splitAtCaret,syncGeometry,typeText,undoEdit} from '../../lib/documents/session';
 import {saveCopy} from '../../lib/documents/saveCopy';
 import {confirmDocumentsSaveCopy,getDocumentsExportUi,patchDocumentsExportUi,registerDocumentsExport,useDocumentsExportUi} from '../../lib/documents/exportBridge';
 import {executeCommand} from '../../lib/commands';
@@ -20,6 +20,8 @@ import {getState,patchState} from '../../store/appStore';
 import {FormatBar} from './FormatBar';
 import {FindBar,StatusBar} from './FindBar';
 import {CommentsPanel} from './CommentsPanel';
+import {ShortcutsDialog} from './ShortcutsDialog';
+import {setShortcutsOpen} from '../../lib/documents/shortcuts';
 import {NativeButton,Textarea} from '../ui/native-controls';
 const bar='media-bar flex items-center gap-2 border-b border-subtle px-3 py-1.5 text-[12px]';
 const tool='grid h-7 cursor-pointer grid-flow-col items-center gap-1 rounded-sm border-0 bg-transparent px-2 text-[12px] text-ink-2 hover:bg-hover disabled:cursor-default disabled:opacity-50';
@@ -38,7 +40,7 @@ function Page({engine,index,width,height,zoom,rev,visible,onVisible}:{engine:Doc
  const at=(e:React.PointerEvent)=>{const r=ref.current!.getBoundingClientRect();return[(e.clientX-r.left)/zoom,(e.clientY-r.top)/zoom] as const;};
  const box=doc.caretBox&&doc.caretBox.page===index?doc.caretBox:null;
  return <div ref={ref} className="documents-page relative mx-auto shrink-0 cursor-text bg-white shadow-sm ring-1 ring-black/10" style={{width:width*zoom,height:height*zoom}} data-testid="documents-page" data-page={index+1} role="img" aria-label={t('documents.page',{n:index+1})}
-  onPointerDown={e=>{if(e.button!==0)return;e.preventDefault();down.current=true;e.currentTarget.setPointerCapture(e.pointerId);const [x,y]=at(e);void pointerAt(index,x,y,e.shiftKey);}}
+  onPointerDown={e=>{if(e.button!==0)return;e.preventDefault();if((e.ctrlKey||e.metaKey)&&!e.shiftKey){const [lx,ly]=at(e);void copyLinkAt(index,lx,ly).then(hit=>{if(!hit){down.current=true;void pointerAt(index,lx,ly,false);down.current=false;}});return;}down.current=true;e.currentTarget.setPointerCapture(e.pointerId);const [x,y]=at(e);void pointerAt(index,x,y,e.shiftKey);}}
   onPointerMove={e=>{if(down.current&&e.buttons&1){const [x,y]=at(e);dragTo(index,x,y);}}} onPointerUp={()=>{down.current=false;}} onPointerCancel={()=>{down.current=false;}}>
   {src&&<img src={src} alt="" draggable={false} className="absolute inset-0 h-full w-full select-none"/>}
   {failed&&<span role="alert" className="absolute inset-0 grid place-items-center text-[12px] text-ink-3">{t('documents.pageFailed')}</span>}
@@ -71,6 +73,11 @@ function CaretInput({left,top}:{left:number;top:number}){
    if(mod&&!e.altKey&&!e.shiftKey&&(e.key.toLowerCase()==='f'||e.key.toLowerCase()==='h')){e.preventDefault();setFindOpen(true);return;}
    if(mod&&e.altKey&&!e.shiftKey&&/^Digit[0-4]$/.test(e.code)){e.preventDefault();void setParagraphStyle((['Normal','Heading1','Heading2','Heading3','Heading4'] as const)[Number(e.code.slice(5))]);return;}
    if(e.key==='Enter'){e.preventDefault();void splitAtCaret();return;}
+   if(mod&&!e.altKey&&e.key==='/'){e.preventDefault();setShortcutsOpen(true);return;}
+   if(mod&&!e.altKey&&!e.shiftKey&&e.key.toLowerCase()==='k'){e.preventDefault();document.querySelector<HTMLElement>('[data-testid="documents-format-link"]')?.click();return;}
+   if(mod&&!e.altKey&&e.shiftKey&&e.key.toLowerCase()==='x'){e.preventDefault();void toggleFormat('strike');return;}
+   if(mod&&!e.altKey&&(e.key==='='||e.key==='+')){e.preventDefault();void toggleVertAlign(e.shiftKey||e.key==='+'?'superscript':'subscript');return;}
+   if(mod&&!e.altKey&&!e.shiftKey&&e.key===' '){e.preventDefault();void clearFormatting().catch(()=>undefined);return;}
    if(mod&&e.key.toLowerCase()==='a'){e.preventDefault();selectAllText();return;}
    if(mod&&!e.shiftKey&&!e.altKey&&'biu'.includes(e.key.toLowerCase())&&e.key.length===1){e.preventDefault();void toggleFormat(({b:'bold',i:'italic',u:'underline'} as const)[e.key.toLowerCase() as 'b'|'i'|'u']);return;}
    if(mod&&e.shiftKey&&(e.key==='>'||e.key==='<'||e.key==='.'||e.key===',')){e.preventDefault();void stepFontSize(e.key==='>'||e.key==='.'?1:-1);return;}
@@ -132,6 +139,7 @@ export function DocumentsCanvas(){
   {doc.status==='ready'&&<FormatBar para={doc.para} format={doc.format} held={doc.pendingFormat&&doc.caret&&doc.pendingFormat.block===doc.caret.block&&doc.pendingFormat.off===doc.caret.head&&doc.caret.anchor===doc.caret.head&&doc.caret.anchorBlock===undefined?doc.pendingFormat.patch:null} enabled={!!doc.caret} inCell={!!doc.caret&&doc.caret.block>=CELL_BASE}/>}
   {doc.status==='ready'&&<FindBar/>}
   {doc.status==='ready'&&<CommentsPanel/>}
+  <ShortcutsDialog/>
   {doc.status==='loading'&&<div role="status" className="grid flex-1 place-items-center text-[12px] text-ink-3">{t('documents.loading')}</div>}
   {doc.status==='error'&&<div role="alert" className="grid flex-1 place-items-center"><div className="grid max-w-md justify-items-center gap-2 text-center"><p className="text-[13px] text-ink" data-testid="documents-error">{doc.error}</p><NativeButton className={tool+' border border-subtle'} onClick={()=>setAttempt(a=>a+1)}>{t('documents.retry')}</NativeButton></div></div>}
   {doc.notice&&<p role="status" className="border-b border-subtle px-3 py-1 text-xs text-ink-3" data-testid="documents-session-notice">{t('documents.session.'+doc.notice)}</p>}

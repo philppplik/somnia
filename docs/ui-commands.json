@@ -2939,6 +2939,17 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.shortcuts.show",
+      "title": "Keyboard shortcuts",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.style.heading1",
       "title": "Apply Heading 1",
       "category": "View",

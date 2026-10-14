@@ -682,3 +682,17 @@ const commentStep=(op:(e:DocumentsEngine)=>Promise<import('./protocol').OpenedDo
 export const resolveComment=(id:number,resolved:boolean)=>commentStep(eng=>eng.resolveComment(id,resolved));
 /** Delete a comment, its replies and their anchors. One undo step. */
 export const deleteComment=(id:number)=>commentStep(eng=>eng.deleteComment(id));
+
+/**
+ * Ctrl+click on a link: copies its address (http, https or mailto only) and says so. Returns false when the point is not on a link.
+ * The desktop shell only opens project pages externally, so a document link is copied, never opened.
+ */
+export async function copyLinkAt(page:number,x:number,y:number):Promise<boolean>{
+ const e=engine;if(!e||getDocumentsState().status!=='ready')return false;const check=ownerGuard();
+ try{
+  const hit=await e.hit(page,x,y);check();if(!hit||hit.block===null||!hit.editable||hit.off===undefined)return false;
+  const st=await e.formatState({block:hit.block,off:hit.off},{block:hit.block,off:hit.off});check();
+  const url=st.link;if(!url||linkProblem(url)!==null)return false;
+  await navigator.clipboard.writeText(url);check();patchDocuments({notice:'linkCopied'});return true;
+ }catch{return false;}
+}
