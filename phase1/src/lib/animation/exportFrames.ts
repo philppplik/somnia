@@ -5,6 +5,7 @@ import {textFontStack,validEffects,validSource} from './model';
 import {effectPrimitives,effectBounds,revealedText,strokeAttributes} from './effects';
 import type {InterfaceAsset} from '../interface/schema';
 import {Zip,ZipPassThrough,strToU8} from 'fflate';
+import {maskDefs,maskId,matteId,hasMasks} from './masks';
 import {animatedChars} from './textAnimators';
 import {sceneAt} from './scene';
 import {workAreaFrames} from './playback';
@@ -18,6 +19,12 @@ export const MAX_PIXELS=8192*8192;
 export class ExportError extends Error{constructor(message:string,readonly code:'too-large'|'too-many'|'raster'|'cancelled'|'empty'|'unsupported'){super(message);this.name='ExportError';}}
 const esc=(s:string)=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const num=(n:number)=>String(Math.round(n*1e4)/1e4);
+/** Effects group plus content of one layer in its own space, as drawn in a frame or inside a matte. */
+export function layerBody(layer:Layer,i:number,assets:readonly InterfaceAsset[],tick:number,prefix:string):string{
+ const fx=effectPrimitives(layer,tick)?`url(#${prefix}effect-${i})`:'';
+ const content=layerSvg(layer,assets,tick,layer.source.gradient?`url(#${prefix}gradient-${i})`:undefined);
+ return fx?`<g filter="${fx}">${content}</g>`:content;
+}
 function layerSvg(l:Layer,assets:readonly InterfaceAsset[],tick:number,fillOverride?:string):string{
  const s=l.source;const fill=fillOverride??esc(s.color??'#000');
  if(l.kind==='raster'){const asset=assets.find(a=>a.id===s.assetId);if(!asset)throw new ExportError('Missing image asset.','raster');return `<image href="${asset.data}" width="${num(s.width??asset.width)}" height="${num(s.height??asset.height)}"/>`;}
@@ -38,8 +45,13 @@ export function frameSvg(comp:Composition,tick:number,transparent=false,assets:r
  if(comp.layers.some(l=>!validSource(l.source)||!validEffects(l.effects)))throw new ExportError('Invalid layer source/effects.','raster');
  const defs=comp.layers.map((l,i)=>{const b=effectBounds(l,tick);return `<filter id="effect-${i}" filterUnits="userSpaceOnUse" x="${b.x}" y="${b.y}" width="${b.width}" height="${b.height}" color-interpolation-filters="sRGB">${effectPrimitives(l,tick)}</filter>`;}).join('');
  const gradients=comp.layers.map((l,i)=>{const g=l.source.gradient;if(!g)return '';const v=gradientVector(g.angle);return `<linearGradient id="gradient-${i}" x1="${v.x1}" y1="${v.y1}" x2="${v.x2}" y2="${v.y2}"><stop offset="0" stop-color="${g.start}"/><stop offset="1" stop-color="${g.end}"/></linearGradient>`;}).join('');
- const body=sceneAt(comp,tick).map(({layer,matrix,opacity})=>`<g transform="matrix(${matrix.map(num).join(' ')})" opacity="${num(opacity)}">${effectPrimitives(layer,tick)?`<g filter="url(#effect-${comp.layers.indexOf(layer)})">`:""}${layerSvg(layer,assets,tick,layer.source.gradient?`url(#gradient-${comp.layers.indexOf(layer)})`:undefined)}${effectPrimitives(layer,tick)?"</g>":""}</g>`).join('');
- return `<svg xmlns="http://www.w3.org/2000/svg" width="${comp.width}" height="${comp.height}" viewBox="0 0 ${comp.width} ${comp.height}"><defs>${defs}${gradients}</defs>${transparent?'':`<rect width="${comp.width}" height="${comp.height}" fill="${esc(comp.background)}"/>`}${body}</svg>`;
+ const body=sceneAt(comp,tick).map(({layer,matrix,opacity})=>{const i=comp.layers.indexOf(layer);
+  const inner=layerBody(layer,i,assets,tick,'');
+  const masked=hasMasks(layer)?`<g mask="url(#${maskId('',i)})">${inner}</g>`:inner;
+  const drawn=`<g transform="matrix(${matrix.map(num).join(' ')})" opacity="${num(opacity)}">${masked}</g>`;
+  return layer.matte?`<g mask="url(#${matteId('',i)})">${drawn}</g>`:drawn;}).join('');
+ const maskDefsSvg=maskDefs(comp,tick,'',(l,i)=>layerBody(l,i,assets,tick,''));
+ return `<svg xmlns="http://www.w3.org/2000/svg" width="${comp.width}" height="${comp.height}" viewBox="0 0 ${comp.width} ${comp.height}"><defs>${defs}${gradients}${maskDefsSvg}</defs>${transparent?'':`<rect width="${comp.width}" height="${comp.height}" fill="${esc(comp.background)}"/>`}${body}</svg>`;
 }
 export const exportSlug=(name:string)=>name.normalize('NFKD').replace(/[^\w.-]+/g,'_').replace(/^[_.]+|[_.]+$/g,'').slice(0,80)||'animation';
 export const frameFileName=(name:string,frameNumber:number)=>`${exportSlug(name)}_${String(frameNumber).padStart(5,'0')}.png`;
@@ -128,5 +140,5 @@ function textBody(l:Layer,tick:number,size:string):string{
  const shown=revealedText(l,tick),spans=animatedChars(l,l.source.text??'',tick);
  if(!spans)return esc(shown);
  const count=Array.from(shown).length;
- return spans.slice(0,count).map(c=>`<tspan dx="${num(c.dx)}" dy="${num(c.dy)}" font-size="${num(Number(size)*c.scale)}" fill-opacity="${num(c.opacity)}">${esc(c.ch)}</tspan>`).join('');
+ return spans.slice(0,count).map(c=>`<tspan dx="${num(c.dx)}" dy="${num(c.dy)}" font-size="${num(Number(size)*c.scale)}" fill-opacity="${num(c.opacity)}"${c.rotate?` rotate="${num(c.rotate)}"`:''}${c.fill?` fill="${c.fill}"`:''}>${esc(c.ch)}</tspan>`).join('');
 }

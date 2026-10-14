@@ -26,8 +26,8 @@ export const applyMatrix=(m:Matrix,p:Vec2):Vec2=>[m[0]*p[0]+m[2]*p[1]+m[4],m[1]*
 export interface DrawLayer{layer:Layer;matrix:Matrix;opacity:number}
 /** Layers visible at tick `t`, bottom-most first (paint order), with world matrices. Opacity is not inherited. */
 export function sceneAt(comp:Composition,t:number):DrawLayer[]{
- const solo=comp.layers.some(l=>l.solo);
- return [...comp.layers].reverse().filter(l=>l.visible&&(!solo||l.solo)&&t>=l.inT+l.offset&&t<l.outT+l.offset&&l.kind!=='null'&&l.kind!=='audio')
+ const solo=comp.layers.some(l=>l.solo);const mattes=new Set(comp.layers.flatMap(l=>l.matte?[l.matte.source]:[]));
+ return [...comp.layers].reverse().filter(l=>l.visible&&(!solo||l.solo)&&t>=l.inT+l.offset&&t<l.outT+l.offset&&l.kind!=='null'&&l.kind!=='audio'&&!mattes.has(l.id))
   .map(l=>({layer:l,matrix:worldMatrix(comp,l,t),opacity:Math.min(1,Math.max(0,(evaluateMod(l.transform.opacity,t) as number)/100))}));
 }
 /** Matrix multiplication exported for explicit keep-world reparenting. */

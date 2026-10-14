@@ -2,7 +2,7 @@ import {evaluate} from './interpolate';
 import {MAX_TEXT_ANIMATORS,EASE_IN,EASE_OUT,findComp,findLayer,newId,type AnimationDocument,type Layer,type TextAnimator} from './model';
 import type {Edit} from './edit';
 /** One rendered character: its text, the shift relative to the previous character, and neutral-based style values. */
-export interface CharSpan{ch:string;dx:number;dy:number;scale:number;opacity:number}
+export interface CharSpan{ch:string;dx:number;dy:number;scale:number;opacity:number;/** Degrees, absolute per glyph. */rotate:number;/** Mixed fill colour, or undefined when no animator changes it. */fill?:string}
 const clamp=(v:number,min:number,max:number)=>Math.max(min,Math.min(max,v));
 /** Selector weight of character `index` of `count`, 0..1. Pure and deterministic: no randomness, no time source. */
 export function charWeight(a:TextAnimator,index:number,count:number,offset:number):number{
@@ -16,16 +16,22 @@ export function animatedChars(layer:Layer,text:string,tick:number):CharSpan[]|un
  const active=(layer.animators??[]).filter(a=>a.enabled);if(!active.length||layer.kind!=='text')return undefined;
  const chars=Array.from(text);if(!chars.length)return undefined;
  const offsets=active.map(a=>clamp(a.offset.keys.length?evaluate(a.offset,tick) as number:a.offset.value as number,-100,100));
- let px=0,py=0;
+ let px=0,py=0;const base=/^#[0-9a-fA-F]{6}$/.test(layer.source.color??'')?layer.source.color!:'#ffffff';
  return chars.map((ch,i)=>{
-  let x=0,y=0,scale=1,opacity=1;
-  active.forEach((a,k)=>{const w=charWeight(a,i,chars.length,offsets[k]);x+=a.position[0]*w;y+=a.position[1]*w;scale*=1+(a.scale/100-1)*w;opacity*=1+(a.opacity/100-1)*w;});
-  const span={ch,dx:round(x-px),dy:round(y-py),scale:round(scale),opacity:round(clamp(opacity,0,1))};px=x;py=y;return span;
+  let x=0,y=0,scale=1,opacity=1,rotate=0,fill:string|undefined;
+  active.forEach((a,k)=>{const w=charWeight(a,i,chars.length,offsets[k]);x+=a.position[0]*w;y+=a.position[1]*w;scale*=1+(a.scale/100-1)*w;opacity*=1+(a.opacity/100-1)*w;rotate+=(a.rotation??0)*w;if(a.color&&w>0)fill=mixHex(fill??base,a.color,w);});
+  const span={ch,dx:round(x-px),dy:round(y-py),scale:round(scale),opacity:round(clamp(opacity,0,1)),rotate:round(rotate),...(fill?{fill}:{})};px=x;py=y;return span;
  });
+}
+/** Linear sRGB-channel mix of two #rrggbb colours, `u` in 0..1. */
+export function mixHex(a:string,b:string,u:number):string{
+ const ch=(h:string,i:number)=>parseInt(h.slice(1+i*2,3+i*2),16);
+ return '#'+[0,1,2].map(i=>Math.round(ch(a,i)+(ch(b,i)-ch(a,i))*clamp(u,0,1)).toString(16).padStart(2,'0')).join('');
 }
 const round=(v:number)=>Math.round(v*1e4)/1e4;
 
-export type AnimatorPatch=Partial<Pick<TextAnimator,'enabled'|'start'|'end'|'softness'|'position'|'scale'|'opacity'>>;
+export const DEFAULT_ANIMATOR_COLOR='#ff7a59';
+export type AnimatorPatch=Partial<Pick<TextAnimator,'enabled'|'start'|'end'|'softness'|'position'|'scale'|'opacity'|'rotation'>>&{color?:string|null};
 export type AnimatorOp=
  |{op:'add';id?:string}
  |{op:'remove';animator:string}
@@ -44,7 +50,7 @@ export function animatorEdit(doc:AnimationDocument,layerId:string,o:AnimatorOp):
  switch(o.op){
   case 'add':if(list.length>=MAX_TEXT_ANIMATORS)throw Error(`At most ${MAX_TEXT_ANIMATORS} animators per text layer.`);return set([...list,defaultAnimator(o.id)]);
   case 'remove':return map(o.animator,a=>a)&&set(list.filter(a=>a.id!==o.animator));
-  case 'update':return map(o.animator,a=>({...a,...o.patch}));
+  case 'update':return map(o.animator,a=>{const {color,...rest}=o.patch;const next={...a,...rest};if(color===null)delete next.color;else if(color!==undefined)next.color=color;return next;});
   case 'offset':return map(o.animator,a=>({...a,offset:a.offset.keys.length?{...a.offset,keys:[...a.offset.keys.filter(k=>k.t!==o.t),key(o.t,o.value)].sort((x,y)=>x.t-y.t)}:{...a.offset,value:o.value}}));
   case 'animate':return map(o.animator,a=>{const now=evaluate(a.offset,o.t) as number;return {...a,offset:o.on?(a.offset.keys.length?a.offset:{...a.offset,keys:[key(o.t,now)]}):{...a.offset,value:now,keys:[]}};});
  }

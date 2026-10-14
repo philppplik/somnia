@@ -10,6 +10,8 @@ import {registerAnimationCommands} from '../../lib/animation/commands';
 import {animationSession,useAnimationState} from '../../lib/animation/session';
 import {findComp,type Composition,type KeyRef,type Layer} from '../../lib/animation/model';
 import {animatedChars} from '../../lib/animation/textAnimators';
+import {maskDefs,maskId,matteId,hasMasks} from '../../lib/animation/masks';
+import {layerBody} from '../../lib/animation/exportFrames';
 import {sceneAt} from '../../lib/animation/scene';
 import {pruneSelection} from '../../lib/animation/selection';
 import {executeCommand} from '../../lib/commands';
@@ -50,7 +52,7 @@ function Workspace({doc}:{doc:NonNullable<ReturnType<typeof animationSession>['d
 function animatedText(l:Layer,at:number){
  const shown=revealedText(l,at),spans=animatedChars(l,l.source.text??'',at);
  if(!spans)return shown;
- return spans.slice(0,Array.from(shown).length).map((c,i)=><tspan key={i} dx={c.dx} dy={c.dy} fontSize={(l.source.size??48)*c.scale} fillOpacity={c.opacity}>{c.ch}</tspan>);
+ return spans.slice(0,Array.from(shown).length).map((c,i)=><tspan key={i} dx={c.dx} dy={c.dy} fontSize={(l.source.size??48)*c.scale} fillOpacity={c.opacity} rotate={c.rotate||undefined} fill={c.fill}>{c.ch}</tspan>);
 }
 function layerNode(l:Layer,assets:readonly InterfaceAsset[],at:number,fillOverride?:string){
  const src=l.source;const fill=fillOverride??src.color;
@@ -62,7 +64,7 @@ function layerNode(l:Layer,assets:readonly InterfaceAsset[],at:number,fillOverri
  return <text x={0} y={src.size??48} fontSize={src.size} fill={fill} fontFamily="system-ui, sans-serif" className="select-none">{animatedText(l,at)}</text>;
 }
 function Viewer({comp,at,selected,sel,assets}:{assets:readonly InterfaceAsset[];comp:Composition;at:number;selected:string|null;sel:readonly KeyRef[]}){
- const {t}=useT();const scene=useMemo(()=>sceneAt(comp,at),[comp,at]);
+ const {t}=useT();const scene=useMemo(()=>sceneAt(comp,at),[comp,at]);const maskDefsHtml=useMemo(()=>maskDefs(comp,at,'preview-',(l,i)=>{try{return layerBody(l,i,assets,at,'preview-');}catch{return '';}}),[comp,at,assets]);
  const layer=comp.layers.find(l=>l.id===selected);const hasPos=!!layer&&layer.transform.position.keys.length>0;
  const posSel=sel.filter(k=>k.layer===selected&&k.prop==='position');
  return <div className="relative grid min-h-[160px] flex-1 place-items-center overflow-hidden bg-hover p-3" data-testid="animation-viewer">
@@ -70,8 +72,11 @@ function Viewer({comp,at,selected,sel,assets}:{assets:readonly InterfaceAsset[];
    <defs>{comp.layers.map((l,i)=><filter key={l.id} id={`preview-effect-${i}`} filterUnits="userSpaceOnUse" {...effectBounds(l,at)} colorInterpolationFilters="sRGB" dangerouslySetInnerHTML={{__html:effectPrimitives(l,at)}}/>)}</defs>
    <defs>{comp.layers.map((l,i)=>l.source.gradient&&<linearGradient key={l.id} id={`preview-gradient-${i}`} {...gradientVector(l.source.gradient.angle)}><stop offset="0" stopColor={l.source.gradient.start}/><stop offset="1" stopColor={l.source.gradient.end}/></linearGradient>)}</defs>
    <rect width={comp.width} height={comp.height} fill={comp.background}/>
-   {scene.map(({layer:l,matrix,opacity})=><g key={l.id} transform={`matrix(${matrix.join(' ')})`} opacity={opacity} data-layer={l.id} data-selected={l.id===selected||undefined}
-    onPointerDown={()=>animationSession().setView({selectedLayer:l.id})}><g filter={effectPrimitives(l,at)?`url(#preview-effect-${comp.layers.indexOf(l)})`:undefined}>{layerNode(l,assets,at,l.source.gradient?`url(#preview-gradient-${comp.layers.indexOf(l)})`:undefined)}</g></g>)}
+   <defs dangerouslySetInnerHTML={{__html:maskDefsHtml}}/>
+   {scene.map(({layer:l,matrix,opacity})=>{const i=comp.layers.indexOf(l);
+    const drawn=<g key={l.id} transform={`matrix(${matrix.join(' ')})`} opacity={opacity} data-layer={l.id} data-selected={l.id===selected||undefined}
+     onPointerDown={()=>animationSession().setView({selectedLayer:l.id})}><g mask={hasMasks(l)?`url(#${maskId('preview-',i)})`:undefined}><g filter={effectPrimitives(l,at)?`url(#preview-effect-${i})`:undefined}>{layerNode(l,assets,at,l.source.gradient?`url(#preview-gradient-${i})`:undefined)}</g></g></g>;
+    return l.matte?<g key={l.id} mask={`url(#${matteId('preview-',i)})`}>{drawn}</g>:drawn;})}
    {layer&&hasPos&&<PathOverlay comp={comp} layer={layer} at={at} sel={sel}/>}
   </svg>
   {hasPos&&<div className="absolute right-2 top-2 flex gap-1" role="group" aria-label={t('animation.path.label')}>

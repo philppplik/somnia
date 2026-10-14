@@ -3,6 +3,7 @@ import {Button} from '../ui/button';
 import {NativeInput} from '../ui/native-controls';
 import {InspectorNumberField} from '../studios/InspectorNumberField';
 import {MAX_TEXT_ANIMATORS,type Layer,type TextAnimator} from '../../lib/animation/model';
+import {DEFAULT_ANIMATOR_COLOR} from '../../lib/animation/textAnimators';
 import {evaluate} from '../../lib/animation/interpolate';
 import {executeCommand} from '../../lib/commands';
 const field='h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text';
@@ -26,6 +27,9 @@ export function TextAnimators({layer,at}:{layer:Layer;at:number}){
     {num(a,t('animation.animators.y'),a.position[1],-2000,2000,y=>({position:[a.position[0],y]}))}
     {num(a,t('animation.animators.scale'),a.scale,0,1000,scale=>({scale}))}
     {num(a,t('animation.animators.opacity'),a.opacity,0,100,opacity=>({opacity}))}
+    {num(a,t('animation.animators.rotation'),a.rotation??0,-3600,3600,rotation=>({rotation}))}
+    <div className="grid gap-1 text-ink-3"><label className="flex items-center gap-1"><NativeInput type="checkbox" className="animation-checkbox" checked={!!a.color} onChange={e=>run({layer:layer.id,op:'update',animator:a.id,patch:{color:e.target.checked?DEFAULT_ANIMATOR_COLOR:null}})}/>{t('animation.animators.color')}</label>
+     {a.color&&<NativeInput type="color" aria-label={t('animation.animators.color')} className="h-8 w-16 rounded-sm border border-subtle bg-transparent" value={a.color} onChange={e=>run({layer:layer.id,op:'update',animator:a.id,patch:{color:e.target.value}})}/>}</div>
    </div>
    <label className="flex items-center gap-1 text-ink-3"><NativeInput type="checkbox" className="animation-checkbox" checked={a.offset.keys.length>0} onChange={e=>run({layer:layer.id,op:'animate',animator:a.id,on:e.target.checked,t:at})}/>{t('animation.animators.animateOffset')}</label>
   </div>)}

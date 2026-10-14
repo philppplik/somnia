@@ -1,0 +1,18 @@
+import {test,expect} from './fixtures';
+/** CI-only full app. Not run locally: builders have no WASM toolchain. Local real-component checks live in test/animation-preview.tsx (?masks=1) and animation-p10.test.ts. */
+test('P10 masks, track matte and text rotation/colour animators',async({page})=>{
+ await page.goto('/');await page.evaluate(async()=>{const {requestStudio}=await import('/src/store/appStore.ts');requestStudio('animation');});await page.getByTestId('animation-create-blank').click();
+ await page.getByTestId('animation-add-shape').click();await page.getByTestId('animation-add-solid').click();
+ // Mask: add, then it is capped at four.
+ await page.getByTestId('animation-mask-add').click();await expect(page.getByTestId('animation-mask-0')).toBeVisible();
+ for(let i=0;i<3;i++)await page.getByTestId('animation-mask-add').click();await expect(page.getByTestId('animation-mask-add')).toBeDisabled();
+ // Track matte: pick the other layer as source; it disappears from the scene on its own.
+ const source=page.getByTestId('animation-matte-source');await source.selectOption({index:1});
+ await expect(page.getByTestId('animation-matte-mode')).toBeVisible();await page.getByTestId('animation-matte-mode').selectOption('luma');
+ await expect(page.getByTestId('animation-viewer').locator('mask').first()).toBeAttached();
+ await source.selectOption('');await expect(page.getByTestId('animation-matte-mode')).toHaveCount(0);
+ // Text animator with colour.
+ await page.getByTestId('animation-add-text').click();await page.getByTestId('animation-animator-add').click();
+ await page.getByTestId('animation-animator-0').getByRole('checkbox').nth(1).check();
+ await expect(page.getByTestId('animation-animator-0').locator('input[type=color]')).toBeVisible();
+});

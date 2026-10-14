@@ -110,6 +110,11 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Implemented: the render panel exports the work area as animated GIF (own GIF89a encoder: median-cut palette, from-scratch LZW, loop, per-frame delays), APNG (browser PNG frames re-assembled with acTL/fcTL/fdAT) and WebM (real-time `canvas.captureStream` + `MediaRecorder`, VP9/VP8 with Opus; the P5b preview mix joins the recording when audio layers are audible). All three run with StudioProgress and cancel, under shared caps (GIF 300 frames, WebM 60 s real time, 64 MB per file). New commands `animation.export.gif/.apng/.webm`; no new dependencies.
 - Validation: 7 new and 115 total Animation unit tests, DS ratchet, isolated Chrome German light/dark pixels plus real GIF/APNG/WebM decode checks. Full-app/native/WASM gates remain CI-only (`tests/animation-p7.spec.ts` not run). Details and limits: `docs/animation-p7.md`.
 
+### Animation P10 (2026-10-14, integration pending)
+
+- Implemented: up to 4 layer masks (rect/ellipse, add/subtract, feather 0..64 px, invert), track mattes (alpha/luma, invert, no chains, source hidden on its own), rotation and colour for text animators. One mask builder for viewer and all exports, undoable, validated, five locales. Details and limits: `docs/animation-p10.md`.
+- Validation: 4 new Animation unit tests, i18n, DS ratchet unchanged, isolated Chrome pixel review (`test/animation-preview.html?masks=1`). `tests/animation-p10.spec.ts` is CI-only. No new dependencies.
+
 ### Animation P9 (2026-10-14, integration pending)
 
 - Implemented: timeline parent picker on every layer row (cycle-free list, keep-world toggle in the timeline toolbar, undoable); per-character text animators (up to 4 per text layer: selector range with softness, keyable range offset, shift, scale, opacity), deterministic, shared by viewer and all exports, validated and bounded (1000 characters while animators exist). Details and limits: `docs/animation-p9.md`.

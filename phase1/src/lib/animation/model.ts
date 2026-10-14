@@ -36,9 +36,14 @@ export const TRANSFORM_KEYS=['anchor','position','scale','rotation','opacity'] a
 export type TransformKey=typeof TRANSFORM_KEYS[number];
 export interface LayerSource{color?:string;width?:number;height?:number;text?:string;size?:number;font?:TextFont;shape?:'rect'|'ellipse'|'path'|'roundedRect'|'star'|'polygon';radius?:number;sides?:number;innerRatio?:number;gradient?:{start:string;end:string;angle:number};path?:{points:readonly {x:number;y:number}[];closed:boolean};assetId?:string}
 export interface LayerEffect{id:string;kind:'blur'|'tint';enabled:boolean;amount:number;color:string;animation?:Property;colorKeys?:readonly {t:number;color:string}[];bypassKeys?:readonly {t:number;bypass:boolean}[]}
-export interface Layer{id:string;name:string;kind:LayerKind;source:LayerSource;inT:number;outT:number;offset:number;parent:string|null;transform:Transform;visible:boolean;solo:boolean;locked:boolean;effects?:readonly LayerEffect[];audio?:AudioParams;textReveal?:Property;animators?:readonly TextAnimator[];stroke?:{color:string;width:number;trim?:Property;dash?:Property}}
+export interface Layer{id:string;name:string;kind:LayerKind;source:LayerSource;inT:number;outT:number;offset:number;parent:string|null;transform:Transform;visible:boolean;solo:boolean;locked:boolean;effects?:readonly LayerEffect[];audio?:AudioParams;textReveal?:Property;animators?:readonly TextAnimator[];masks?:readonly LayerMask[];matte?:LayerMatte;stroke?:{color:string;width:number;trim?:Property;dash?:Property}}
 /** Per-character text animator. The selector covers `start`..`end` percent of the characters, shifted by the keyed `offset` percent, with a linear `softness` ramp at both edges. Characters inside get the full `position` shift, `scale` percent and `opacity` percent; the others keep the neutral values. */
-export interface TextAnimator{id:string;enabled:boolean;start:number;end:number;softness:number;offset:Property;position:Vec2;scale:number;opacity:number}
+export interface TextAnimator{id:string;enabled:boolean;start:number;end:number;softness:number;offset:Property;position:Vec2;scale:number;opacity:number;/** Degrees at full weight, -3600..3600. Absent means 0. */rotation?:number;/** Target colour at full weight, mixed from the layer colour. Absent means unchanged. */color?:string}
+/** Bounded layer mask in layer space. `add` paints the shape in, `subtract` cuts it out; `invert` uses everything outside the shape; `feather` is a blur in px. */
+export interface LayerMask{id:string;shape:'rect'|'ellipse';mode:'add'|'subtract';x:number;y:number;width:number;height:number;feather:number;invert:boolean}
+/** Track matte: another layer of the composition drives this layer's visibility by its alpha or luminance. The source layer is not drawn on its own. */
+export interface LayerMatte{source:string;mode:'alpha'|'luma';invert:boolean}
+export const MAX_LAYER_MASKS=4;
 export const MAX_TEXT_ANIMATORS=4;
 /** Animated text stays small enough to render one span per character. */
 export const MAX_ANIMATED_CHARS=1000;
@@ -123,6 +128,7 @@ export function validateDocument(raw:unknown):string[]{
    if(l.stroke!==undefined&&(l.kind!=='shape'||!/^#[0-9a-fA-F]{6}$/.test(l.stroke.color)||!isNum(l.stroke.width)||l.stroke.width<0||l.stroke.width>256||(l.stroke.trim!==undefined&&!validScalarProperty(l.stroke.trim,0,100))||(l.stroke.dash!==undefined&&!validScalarProperty(l.stroke.dash,-1000,1000))))bad(`${l.id}: invalid stroke`);
    if(!validAudio(l,d as AnimationDocument))bad(`${l.id}: invalid audio`);
    if(l.textReveal!==undefined&&(l.kind!=='text'||!validScalarProperty(l.textReveal,0,100)))bad(`${l.id}: invalid text reveal`);
+   if(!validMasks(l))bad(`${l.id}: invalid masks`);
    if(!validAnimators(l))bad(`${l.id}: invalid text animators`);
    if(!validSource(l.source)||!validEffects(l.effects))bad(`${l.id}: invalid source/effects`);
    if(!Number.isInteger(l.inT)||!Number.isInteger(l.outT)||l.outT<=l.inT)bad(`${l.id}: bad timing`);
@@ -144,6 +150,7 @@ export function validateDocument(raw:unknown):string[]{
    }
   }
   for(const l of c.layers){
+   if(l?.matte&&!validMatte(l,c.layers))bad(`${l.id}: invalid track matte`);
    if(l?.parent&&!ids.has(l.parent))bad(`${l.id}: missing parent`);
    else if(l&&l.parent&&wouldCycle({layers:c.layers} as Composition,l.id,l.parent))bad(`${l.id}: parent cycle`);
   }
@@ -178,5 +185,18 @@ export function validAnimators(l:Layer):boolean{
  const a=l.animators;if(a===undefined)return true;
  if(l.kind!=='text'||!Array.isArray(a)||a.length>MAX_TEXT_ANIMATORS||new Set(a.map(x=>x?.id)).size!==a.length)return false;
  if(a.length&&Array.from(l.source.text??'').length>MAX_ANIMATED_CHARS)return false;
- return a.every(x=>!!x&&typeof x.id==='string'&&x.id.length>0&&x.id.length<=64&&typeof x.enabled==='boolean'&&inRange(x.start,0,100)&&inRange(x.end,0,100)&&x.start<=x.end&&inRange(x.softness,0,100)&&validScalarProperty(x.offset,-100,100)&&isVec(x.position)&&x.position.every((v:number)=>Math.abs(v)<=2000)&&inRange(x.scale,0,1000)&&inRange(x.opacity,0,100));
+ return a.every(x=>!!x&&typeof x.id==='string'&&x.id.length>0&&x.id.length<=64&&typeof x.enabled==='boolean'&&inRange(x.start,0,100)&&inRange(x.end,0,100)&&x.start<=x.end&&inRange(x.softness,0,100)&&validScalarProperty(x.offset,-100,100)&&isVec(x.position)&&x.position.every((v:number)=>Math.abs(v)<=2000)&&inRange(x.scale,0,1000)&&inRange(x.opacity,0,100)&&(x.rotation===undefined||inRange(x.rotation,-3600,3600))&&(x.color===undefined||/^#[0-9a-fA-F]{6}$/.test(x.color)));
+}
+
+export function validMasks(l:Layer):boolean{
+ const m=l.masks;if(m===undefined)return true;
+ if(!Array.isArray(m)||m.length>MAX_LAYER_MASKS||(m.length&&(l.kind==='null'||l.kind==='audio'))||new Set(m.map(x=>x?.id)).size!==m.length)return false;
+ return m.every(x=>!!x&&typeof x.id==='string'&&x.id.length>0&&x.id.length<=64&&['rect','ellipse'].includes(x.shape)&&['add','subtract'].includes(x.mode)&&inRange(x.x,-16384,16384)&&inRange(x.y,-16384,16384)&&inRange(x.width,1,16384)&&inRange(x.height,1,16384)&&inRange(x.feather,0,64)&&typeof x.invert==='boolean');
+}
+/** A matte source is another drawable layer of the same composition without its own matte, and not itself matted by this layer's source. No chains, so no cycles. */
+export function validMatte(l:Layer,layers:readonly Layer[]):boolean{
+ const m=l.matte;if(m===undefined)return true;
+ if(!m||typeof m.source!=='string'||!['alpha','luma'].includes(m.mode)||typeof m.invert!=='boolean'||l.kind==='null'||l.kind==='audio'||m.source===l.id)return false;
+ const src=layers.find(x=>x.id===m.source);
+ return !!src&&src.kind!=='audio'&&src.kind!=='null'&&!src.matte&&!layers.some(x=>x.matte?.source===l.id);
 }
