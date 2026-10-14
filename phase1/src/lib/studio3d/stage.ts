@@ -714,6 +714,76 @@ export class Stage{
  editSelection():{verts:number[];edges:[number,number][];faces:number[]}{
   return{verts:[...this.editSel.verts].sort((a,b)=>a-b),edges:[...this.editSel.edges.values()],faces:[...this.editSel.faces].sort((a,b)=>a-b)};
  }
+ /** Every unique edge of the edited mesh as index pairs (low index first). */
+ private allEdges(m:THREE.Mesh):[number,number][]{
+  const idx=m.geometry.getIndex();const pos=m.geometry.getAttribute('position');
+  const n=idx?idx.count:pos.count;const at=(i:number)=>idx?idx.getX(i):i;
+  const seen=new Set<string>();const out:[number,number][]=[];
+  for(let t=0;t+2<n;t+=3){const v=[at(t),at(t+1),at(t+2)];
+   for(let e=0;e<3;e++){const a=v[e]<v[(e+1)%3]?v[e]:v[(e+1)%3],b=v[e]<v[(e+1)%3]?v[(e+1)%3]:v[e];const k=`${a}_${b}`;
+    if(!seen.has(k)){seen.add(k);out.push([a,b]);}}}
+  return out;
+ }
+ /** Selects every element of one kind, clears that kind or inverts it. Works on the current selection mode's kind; selection changes are not undo steps. */
+ editSelectAll(op:'all'|'none'|'invert',kind:'vertex'|'edge'|'face'){
+  const m=this.editMesh();
+  const verts=m.geometry.getAttribute('position').count,idx=m.geometry.getIndex();
+  const tris=(idx?idx.count:verts)/3;
+  const fill=(n:number,have:(i:number)=>boolean,add:(i:number)=>void,clear:()=>void,swap:(next:Set<number>)=>void)=>{
+   if(op==='none')clear();
+   else if(op==='all'){clear();for(let i=0;i<n;i++)add(i);}
+   else{const next=new Set<number>();for(let i=0;i<n;i++)if(!have(i))next.add(i);swap(next);}
+  };
+  if(kind==='vertex')fill(verts,i=>this.editSel.verts.has(i),i=>this.editSel.verts.add(i),()=>this.editSel.verts.clear(),s=>{this.editSel.verts=s;});
+  else if(kind==='face')fill(tris,i=>this.editSel.faces.has(i),i=>this.editSel.faces.add(i),()=>this.editSel.faces.clear(),s=>{this.editSel.faces=s;});
+  else{
+   const all=this.allEdges(m);
+   if(op==='none')this.editSel.edges.clear();
+   else if(op==='all'){this.editSel.edges.clear();for(const [a,b]of all)this.editSel.edges.set(`${a}_${b}`,[a,b]);}
+   else{const next=new Map<string,[number,number]>();for(const [a,b]of all){const k=`${a}_${b}`;if(!this.editSel.edges.has(k))next.set(k,[a,b]);}this.editSel.edges=next;}
+  }
+ }
+ /** Grows the current selection to neighbouring elements, or shrinks it by peeling the layer that touches unselected elements. Vertices grow over edges, edges over shared vertices, faces over shared edges. One step per count; selection changes are not undo steps. */
+ editSelectGrow(steps:number,shrink:boolean,kind:'vertex'|'edge'|'face'){
+  const m=this.editMesh();
+  const edges=this.allEdges(m);
+  const empty=kind==='vertex'?!this.editSel.verts.size:kind==='face'?!this.editSel.faces.size:!this.editSel.edges.size;
+  if(empty)throw new StageError('Select something first.');
+  if(kind==='vertex'){
+   const nbr=new Map<number,number[]>();
+   for(const [a,b]of edges){(nbr.get(a)??nbr.set(a,[]).get(a)!).push(b);(nbr.get(b)??nbr.set(b,[]).get(b)!).push(a);}
+   for(let s=0;s<steps;s++){
+    if(shrink){const del:number[]=[];for(const v of this.editSel.verts)if((nbr.get(v)??[]).some(w=>!this.editSel.verts.has(w)))del.push(v);
+     if(!del.length)break;for(const v of del)this.editSel.verts.delete(v);}
+    else{const before=this.editSel.verts.size;for(const v of [...this.editSel.verts])for(const w of nbr.get(v)??[])this.editSel.verts.add(w);
+     if(this.editSel.verts.size===before)break;}
+   }
+  }else if(kind==='edge'){
+   const key=([a,b]:[number,number])=>`${a}_${b}`;
+   const byVert=new Map<number,string[]>();
+   for(const e of edges){const k=key(e);(byVert.get(e[0])??byVert.set(e[0],[]).get(e[0])!).push(k);(byVert.get(e[1])??byVert.set(e[1],[]).get(e[1])!).push(k);}
+   const edgeByKey=new Map(edges.map(e=>[key(e),e]as const));
+   for(let s=0;s<steps;s++){
+    if(shrink){const del:string[]=[];for(const [k,[a,b]]of this.editSel.edges){const touch=(byVert.get(a)??[]).concat(byVert.get(b)??[]);if(touch.some(t=>t!==k&&!this.editSel.edges.has(t)))del.push(k);}
+     if(!del.length)break;for(const k of del)this.editSel.edges.delete(k);}
+    else{const before=this.editSel.edges.size;for(const [a,b]of [...this.editSel.edges.values()])for(const t of (byVert.get(a)??[]).concat(byVert.get(b)??[]))if(!this.editSel.edges.has(t))this.editSel.edges.set(t,edgeByKey.get(t)!);
+     if(this.editSel.edges.size===before)break;}
+   }
+  }else{
+   const idx=m.geometry.getIndex();const pos=m.geometry.getAttribute('position');
+   const n=idx?idx.count:pos.count;const at=(i:number)=>idx?idx.getX(i):i;
+   const faceNbr=new Map<number,Set<number>>();const edgeFace=new Map<string,number>();
+   for(let t=0,f=0;t+2<n;t+=3,f++){const v=[at(t),at(t+1),at(t+2)];
+    for(let e=0;e<3;e++){const a=Math.min(v[e],v[(e+1)%3]),b=Math.max(v[e],v[(e+1)%3]);const k=`${a}_${b}`;
+     if(edgeFace.has(k)){const g=edgeFace.get(k)!;(faceNbr.get(g)??faceNbr.set(g,new Set()).get(g)!).add(f);(faceNbr.get(f)??faceNbr.set(f,new Set()).get(f)!).add(g);}else edgeFace.set(k,f);}}
+   for(let s=0;s<steps;s++){
+    if(shrink){const del:number[]=[];for(const f of this.editSel.faces)if([...(faceNbr.get(f)??[])].some(g=>!this.editSel.faces.has(g)))del.push(f);
+     if(!del.length)break;for(const f of del)this.editSel.faces.delete(f);}
+    else{const before=this.editSel.faces.size;for(const f of [...this.editSel.faces])for(const g of faceNbr.get(f)??[])this.editSel.faces.add(g);
+     if(this.editSel.faces.size===before)break;}
+   }
+  }
+ }
  private editOp(label:HistoryLabel,run:(m:MeshData)=>MeshData){
   const mesh=this.editMesh();
   let out:MeshData;

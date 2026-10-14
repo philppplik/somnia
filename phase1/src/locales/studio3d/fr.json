@@ -871,5 +871,13 @@
  "cmd.studio3d.mesh.remesh": "Reconstruire les maillages en grille de voxels uniforme (remesh) : triangles uniformes et étanches, détails reprojetés",
  "studio3d.mesh.remesh": "Remesh (voxels)",
  "studio3d.mesh.remeshRes": "Résolution du remesh",
- "studio3d.hist.remesh": "Remesh sur {name}"
+ "studio3d.hist.remesh": "Remesh sur {name}",
+ "cmd.studio3d.edit.selectAll": "Tout sélectionner, aucun ou inverser",
+ "cmd.studio3d.edit.selectGrow": "Étendre ou réduire la sélection",
+ "studio3d.edit.selTools": "Outils de sélection",
+ "studio3d.edit.selAll": "Tout",
+ "studio3d.edit.selNone": "Aucun",
+ "studio3d.edit.selInvert": "Inverser",
+ "studio3d.edit.selGrow": "Étendre",
+ "studio3d.edit.selShrink": "Réduire"
 }

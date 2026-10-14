@@ -871,5 +871,13 @@
  "cmd.studio3d.mesh.remesh": "Rebuild meshes as an even voxel grid (remesh): uniform watertight triangles, sharp features projected back",
  "studio3d.mesh.remesh": "Remesh (voxel)",
  "studio3d.mesh.remeshRes": "Remesh resolution",
- "studio3d.hist.remesh": "Remesh {name}"
+ "studio3d.hist.remesh": "Remesh {name}",
+ "cmd.studio3d.edit.selectAll": "Select all, none or inverse",
+ "cmd.studio3d.edit.selectGrow": "Grow or shrink selection",
+ "studio3d.edit.selTools": "Selection tools",
+ "studio3d.edit.selAll": "All",
+ "studio3d.edit.selNone": "None",
+ "studio3d.edit.selInvert": "Invert",
+ "studio3d.edit.selGrow": "Grow",
+ "studio3d.edit.selShrink": "Shrink"
 }

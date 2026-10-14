@@ -871,5 +871,13 @@
  "cmd.studio3d.mesh.remesh": "Reconstruir malhas como grade de vóxeis uniforme (remesh): triângulos uniformes e herméticos, detalhes projetados",
  "studio3d.mesh.remesh": "Remesh (vóxeis)",
  "studio3d.mesh.remeshRes": "Resolução do remesh",
- "studio3d.hist.remesh": "Remesh em {name}"
+ "studio3d.hist.remesh": "Remesh em {name}",
+ "cmd.studio3d.edit.selectAll": "Selecionar tudo, nada ou inverter",
+ "cmd.studio3d.edit.selectGrow": "Aumentar ou reduzir a seleção",
+ "studio3d.edit.selTools": "Ferramentas de seleção",
+ "studio3d.edit.selAll": "Tudo",
+ "studio3d.edit.selNone": "Nada",
+ "studio3d.edit.selInvert": "Inverter",
+ "studio3d.edit.selGrow": "Aumentar",
+ "studio3d.edit.selShrink": "Reduzir"
 }

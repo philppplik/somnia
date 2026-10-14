@@ -775,6 +775,24 @@ test('mesh edit mode: select faces, extrude, undo restores the cube',async({page
  expect((await session(page)).edit).toBeNull();
 });
 
+test('mesh edit mode: select all, invert and grow update the selection counts',async({page})=>{
+ await blank(page);
+ const id=await insert(page,'cube',0);
+ expect(await run(page,'studio3d.edit.start',{id,mode:'vertex'})).toBe(true);
+ expect(await run(page,'studio3d.edit.selectAll',{op:'all'})).toBe(true);
+ let s=await session(page);expect(s.edit).toMatchObject({verts:24});
+ expect(await run(page,'studio3d.edit.selectAll',{op:'invert'})).toBe(true);
+ s=await session(page);expect(s.edit).toMatchObject({verts:0});
+ expect(await run(page,'studio3d.edit.select',{kind:'vertex',ids:[0]})).toBe(true);
+ expect(await run(page,'studio3d.edit.selectGrow',{})).toBe(true);
+ s=await session(page);expect(s.edit).toMatchObject({verts:3});
+ expect(await run(page,'studio3d.edit.selectGrow',{shrink:true})).toBe(true);
+ s=await session(page);expect(s.edit).toMatchObject({verts:1});
+ expect(await run(page,'studio3d.edit.selectAll',{op:'none'})).toBe(true);
+ expect(await run(page,'studio3d.edit.selectGrow',{})).toBe(false);
+ await expect(page.getByRole('alert')).toContainText('Select something first');
+});
+
 test('mesh edit: extrude without a selection is refused readably',async({page})=>{
  await blank(page);
  const id=await insert(page,'cube',0);

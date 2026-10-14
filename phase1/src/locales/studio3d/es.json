@@ -871,5 +871,13 @@
  "cmd.studio3d.mesh.remesh": "Reconstruir mallas como una rejilla de vóxeles uniforme (remesh): triángulos herméticos y uniformes, detalles proyectados",
  "studio3d.mesh.remesh": "Remesh (vóxeles)",
  "studio3d.mesh.remeshRes": "Resolución de remesh",
- "studio3d.hist.remesh": "Remesh en {name}"
+ "studio3d.hist.remesh": "Remesh en {name}",
+ "cmd.studio3d.edit.selectAll": "Seleccionar todo, nada o invertir",
+ "cmd.studio3d.edit.selectGrow": "Ampliar o reducir la selección",
+ "studio3d.edit.selTools": "Herramientas de selección",
+ "studio3d.edit.selAll": "Todo",
+ "studio3d.edit.selNone": "Nada",
+ "studio3d.edit.selInvert": "Invertir",
+ "studio3d.edit.selGrow": "Ampliar",
+ "studio3d.edit.selShrink": "Reducir"
 }

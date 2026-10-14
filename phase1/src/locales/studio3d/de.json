@@ -871,5 +871,13 @@
  "cmd.studio3d.mesh.remesh": "Meshes als gleichmäßiges Voxel-Gitter neu aufbauen (Remesh): einheitliche wasserdichte Dreiecke, scharfe Kanten zurückprojiziert",
  "studio3d.mesh.remesh": "Remesh (Voxel)",
  "studio3d.mesh.remeshRes": "Remesh-Auflösung",
- "studio3d.hist.remesh": "Remesh auf {name}"
+ "studio3d.hist.remesh": "Remesh auf {name}",
+ "cmd.studio3d.edit.selectAll": "Alle, keine oder umgekehrte Auswahl",
+ "cmd.studio3d.edit.selectGrow": "Auswahl erweitern oder verkleinern",
+ "studio3d.edit.selTools": "Auswahlwerkzeuge",
+ "studio3d.edit.selAll": "Alle",
+ "studio3d.edit.selNone": "Keine",
+ "studio3d.edit.selInvert": "Umkehren",
+ "studio3d.edit.selGrow": "Größer",
+ "studio3d.edit.selShrink": "Kleiner"
 }

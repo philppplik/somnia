@@ -321,6 +321,13 @@ function EditSculptFields({id}:{id:number}){
    {on&&<>
     <div className="flex flex-wrap gap-1" role="group" aria-label={t('studio3d.edit.modes')}>{modeBtn('vertex')}{modeBtn('edge')}{modeBtn('face')}</div>
     <p className="m-0 text-xs text-ink-3">{t('studio3d.edit.counts',{v:ed.verts,e:ed.edges,f:ed.faces})}</p>
+    <div className="flex flex-wrap gap-1" role="group" aria-label={t('studio3d.edit.selTools')}>
+     <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.selectAll',{op:'all'})}>{t('studio3d.edit.selAll')}</Button>
+     <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.selectAll',{op:'none'})}>{t('studio3d.edit.selNone')}</Button>
+     <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.selectAll',{op:'invert'})}>{t('studio3d.edit.selInvert')}</Button>
+     <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.selectGrow',{})}>{t('studio3d.edit.selGrow')}</Button>
+     <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.selectGrow',{shrink:true})}>{t('studio3d.edit.selShrink')}</Button>
+    </div>
     <div className="grid grid-cols-2 gap-2">
      <NumField label={t('studio3d.edit.extrude')} value={extrude} min={-10} max={10} step={0.1} onCommit={setExtrude}/>
      <NumField label={t('studio3d.edit.inset')} value={inset} min={0} max={0.95} step={0.05} onCommit={setInset}/>
