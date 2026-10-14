@@ -312,6 +312,12 @@ test('3D studio shows a skeleton overlay, keys a bone rotation and exports the s
  // Position keys on a bone are refused with a readable error.
  await run(page,'studio3d.key.set',{path:'position',time:0});
  await expect(page.getByRole('alert')).toContainText('rotation keys only');
+ // A second clip on the other bone sits next to the first, with its own keys.
+ await run(page,'studio3d.clip.add',{name:'Twist',duration:1.5});
+ await page.getByLabel('Bone').selectOption({index:1});
+ await run(page,'studio3d.key.set',{path:'rotation',time:0});
+ await run(page,'studio3d.key.set',{path:'rotation',time:1.5,y:90});
+ await expect(page.getByTestId('studio3d-keyrow-rotation')).toContainText('0:01.50');
  // Click-select: the mesh under the cursor selects, a click into empty space clears the selection.
  const vp=page.getByTestId('studio3d-viewport');const vb=await vp.boundingBox();
  await vp.click({position:{x:vb!.width/2,y:vb!.height/2}});
@@ -327,7 +333,11 @@ test('3D studio shows a skeleton overlay, keys a bone rotation and exports the s
  expect(bytes.toString('latin1')).toContain('"skins"');
  await page.getByTestId('studio3d-file-input').setInputFiles({name:'rig2.glb',mimeType:'model/gltf-binary',buffer:bytes});
  await expect(page.getByTestId('studio3d-skeleton')).toBeVisible({timeout:20_000});
- await expect.poll(async()=>(await session(page)).clips[0]?.name).toBe('Bend');
+ await expect.poll(async()=>{const c=(await session(page)).clips.map(x=>x.name).join(',');return c;}).toBe('Bend,Twist');
  await page.getByLabel('Bone').selectOption({index:2});
  await expect.poll(async()=>(await session(page)).clipKeys.find(k=>k.path==='rotation')?.times).toEqual([0,1]);
+ // The second clip kept its own bone track with its own keys.
+ await page.getByLabel('Clip').selectOption({index:1});
+ await page.getByLabel('Bone').selectOption({index:1});
+ await expect.poll(async()=>(await session(page)).clipKeys.find(k=>k.path==='rotation')?.times).toEqual([0,1.5]);
 });

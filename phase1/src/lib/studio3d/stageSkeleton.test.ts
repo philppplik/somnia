@@ -87,3 +87,23 @@ test('a click ray picks the bone under the cursor, like the viewport does',()=>{
  ray.setFromCamera(new THREE.Vector2(0.95,0.95),camera);
  assert.equal(pickBone(ray.ray.origin.toArray() as [number,number,number],ray.ray.direction.toArray() as [number,number,number],pts,bonePickRadius(r)),null);
 });
+test('several clips with bone tracks export together and reopen with their own keys and easing',async()=>{
+ const {st,hip,knee}=skinned();
+ const c1=st.addClip('Bend',2);st.setKey(c1,knee.id,'rotation',0);st.setKey(c1,knee.id,'rotation',1,{z:45});st.setKeyEase(c1,knee.id,'rotation',0,'easeIn');
+ const c2=st.addClip('Twist',1.5);st.setKey(c2,hip.id,'rotation',0);st.setKey(c2,hip.id,'rotation',0.75,{y:90});st.setKey(c2,hip.id,'rotation',1.5,{y:0});st.setKeyEase(c2,hip.id,'rotation',0.75,'step');
+ const ex=new GLTFExporter();ex.register(st.exporterPlugin() as never);
+ const out=await ex.parseAsync(st.exportScene(),{binary:false,onlyVisible:false,animations:st.exportClips()}) as {animations:{name:string;extras?:unknown}[]};
+ assert.deepEqual(out.animations.map(a=>a.name),['Bend','Twist']);
+ const g=await new Promise<{scene:THREE.Group;animations:THREE.AnimationClip[];parser:{json:{animations:{extras?:unknown}[]};getDependency(t:string,i:number):Promise<THREE.Object3D>}}>((res,rej)=>new GLTFLoader().parse(JSON.stringify(out),'',res as never,rej));
+ assert.equal(g.animations.length,2);
+ const {parseExtras}=await import('./clipMeta');const metas=g.parser.json.animations.map(a=>parseExtras(a.extras));
+ const nodes=new Map<number,THREE.Object3D>();for(const m of metas)for(const mt of m?.tracks??[])nodes.set(mt.node,await g.parser.getDependency('node',mt.node));
+ const st2=new Stage();st2.loadMany([...g.scene.children]);st2.setClips(g.animations,metas,i=>nodes.get(i));
+ const bones2=st2.bones();const hip2=bones2[0],knee2=bones2[1];
+ // Each clip kept its own length, its own bone track and its per-key easing, and both are editable again.
+ assert.equal(st2.clips[0].duration,2);assert.equal(st2.clips[1].duration,1.5);
+ const k1=st2.keysOf(0,knee2.id);assert.equal(k1.length,1);assert.deepEqual(k1[0].times,[0,1]);assert.deepEqual(k1[0].eases,['easeIn','linear']);
+ const k2=st2.keysOf(1,hip2.id);assert.equal(k2.length,1);assert.deepEqual(k2[0].times,[0,0.75,1.5]);assert.deepEqual(k2[0].eases,['linear','step','linear']);
+ assert.equal(st2.keysOf(0,hip2.id).length,0);assert.equal(st2.keysOf(1,knee2.id).length,0);
+ st2.setKey(1,knee2.id,'rotation',0.5,{x:10});assert.deepEqual(st2.keysOf(1,knee2.id)[0].times,[0.5]);
+});
