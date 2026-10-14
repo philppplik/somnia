@@ -318,5 +318,68 @@ export const SLIDES_REORDER_CATALOGUES:Record<string,Record<string,string>>={
   }
 };
 for(const [locale,strings] of Object.entries(SLIDES_REORDER_CATALOGUES))Object.assign(SLIDES_PANEL_CATALOGUES[locale],strings);
+export const SLIDES_STRUCTURE_CATALOGUES:Record<string,Record<string,string>>={
+  "en": {
+    "cmd.slides.duplicateSlide": "Duplicate slide",
+    "cmd.slides.deleteSlide": "Delete slide",
+    "cmd.slides.newSlide": "New slide from layout",
+    "slides.duplicate": "Duplicate",
+    "slides.delete": "Delete",
+    "slides.newFromLayout": "New slide",
+    "slides.layoutUnsupported": "{name} (not supported yet)",
+    "slides.duplicated": "Slide {number} duplicated",
+    "slides.deleted": "Slide {number} deleted",
+    "slides.added": "New slide added at position {position}"
+  },
+  "de": {
+    "cmd.slides.duplicateSlide": "Folie duplizieren",
+    "cmd.slides.deleteSlide": "Folie löschen",
+    "cmd.slides.newSlide": "Neue Folie aus Layout",
+    "slides.duplicate": "Duplizieren",
+    "slides.delete": "Löschen",
+    "slides.newFromLayout": "Neue Folie",
+    "slides.layoutUnsupported": "{name} (noch nicht unterstützt)",
+    "slides.duplicated": "Folie {number} dupliziert",
+    "slides.deleted": "Folie {number} gelöscht",
+    "slides.added": "Neue Folie an Position {position} eingefügt"
+  },
+  "es": {
+    "cmd.slides.duplicateSlide": "Duplicar diapositiva",
+    "cmd.slides.deleteSlide": "Eliminar diapositiva",
+    "cmd.slides.newSlide": "Nueva diapositiva desde diseño",
+    "slides.duplicate": "Duplicar",
+    "slides.delete": "Eliminar",
+    "slides.newFromLayout": "Nueva diapositiva",
+    "slides.layoutUnsupported": "{name} (aún no compatible)",
+    "slides.duplicated": "Diapositiva {number} duplicada",
+    "slides.deleted": "Diapositiva {number} eliminada",
+    "slides.added": "Nueva diapositiva añadida en la posición {position}"
+  },
+  "fr": {
+    "cmd.slides.duplicateSlide": "Dupliquer la diapositive",
+    "cmd.slides.deleteSlide": "Supprimer la diapositive",
+    "cmd.slides.newSlide": "Nouvelle diapositive depuis une mise en page",
+    "slides.duplicate": "Dupliquer",
+    "slides.delete": "Supprimer",
+    "slides.newFromLayout": "Nouvelle diapositive",
+    "slides.layoutUnsupported": "{name} (pas encore pris en charge)",
+    "slides.duplicated": "Diapositive {number} dupliquée",
+    "slides.deleted": "Diapositive {number} supprimée",
+    "slides.added": "Nouvelle diapositive ajoutée à la position {position}"
+  },
+  "pt-BR": {
+    "cmd.slides.duplicateSlide": "Duplicar slide",
+    "cmd.slides.deleteSlide": "Excluir slide",
+    "cmd.slides.newSlide": "Novo slide a partir de layout",
+    "slides.duplicate": "Duplicar",
+    "slides.delete": "Excluir",
+    "slides.newFromLayout": "Novo slide",
+    "slides.layoutUnsupported": "{name} (ainda não suportado)",
+    "slides.duplicated": "Slide {number} duplicado",
+    "slides.deleted": "Slide {number} excluído",
+    "slides.added": "Novo slide adicionado na posição {position}"
+  }
+};
+for(const [locale,strings] of Object.entries(SLIDES_STRUCTURE_CATALOGUES))Object.assign(SLIDES_PANEL_CATALOGUES[locale],strings);
 for(const [locale,strings] of Object.entries(SLIDES_PANEL_CATALOGUES))Object.assign(CATALOGUES[locale],strings);
 export function useSlidesPanelText(){const locale=useSyncExternalStore(subscribeLocale,getLocale,getLocale);return (key:string,params?:Record<string,string|number>)=>translate(locale,key,params);}

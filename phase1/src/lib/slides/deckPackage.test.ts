@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {unzipSync,zipSync,strFromU8,strToU8} from 'fflate';
-import {readDeckModel,moveSlide,reorderSlides} from './deckPackage';
+import {readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
 import {readRuns,makeEditedCopy} from './editCopy';
 
 const base=new Uint8Array(readFileSync(fileURLToPath(new URL('../../../slides-engine/fixtures/independent.pptx',import.meta.url))));
@@ -138,4 +138,109 @@ test('real corpus decks: reorder round-trips or fails closed, never corrupts',as
     moved++;
   }
   console.log('corpus decks reordered:',moved);
+});
+
+/* ---- P1: duplicate / delete / new slide ---- */
+const RTN='http://schemas.openxmlformats.org/officeDocument/2006/relationships/';
+const parts=(b:Uint8Array)=>Object.keys(unzipSync(b)).sort();
+const xmlOf=(b:Uint8Array,n:string)=>strFromU8(unzipSync(b)[n]);
+/** Deck whose slide 1 (id 256) has notes + an image, slide 2 has the same image. */
+function richDeck(extra:(z:Record<string,Uint8Array>)=>void=()=>{}):Uint8Array{
+  const z=unzipSync(deck(3));
+  z['ppt/media/image1.png']=new Uint8Array([137,80,78,71,1,2,3]);z['ppt/media/image2.png']=new Uint8Array([137,80,78,71,9,9,9]);
+  z['ppt/notesSlides/notesSlide1.xml']=strToU8('<p:notes xmlns:a="a" xmlns:p="p"><a:t>note</a:t></p:notes>');
+  z['ppt/notesSlides/_rels/notesSlide1.xml.rels']=strToU8(`<Relationships xmlns="r"><Relationship Id="rId1" Type="${RTN}slide" Target="../slides/slide1.xml"/></Relationships>`);
+  const rel=(_n:number,extraRel='')=>strToU8(`<Relationships xmlns="r"><Relationship Id="rId1" Type="${RTN}slideLayout" Target="../slideLayouts/slideLayout3.xml"/>${extraRel}</Relationships>`);
+  z['ppt/slides/_rels/slide1.xml.rels']=rel(1,`<Relationship Id="rId2" Type="${RTN}notesSlide" Target="../notesSlides/notesSlide1.xml"/><Relationship Id="rId3" Type="${RTN}image" Target="../media/image1.png"/><Relationship Id="rId4" Type="${RTN}image" Target="../media/image2.png"/>`);
+  z['ppt/slides/_rels/slide2.xml.rels']=rel(2,`<Relationship Id="rId3" Type="${RTN}image" Target="../media/image2.png"/>`);
+  z['[Content_Types].xml']=strToU8(strFromU8(z['[Content_Types].xml']).replace('</Types>','<Override PartName="/ppt/notesSlides/notesSlide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.notesSlide+xml"/></Types>'));
+  extra(z);return zipSync(z);
+}
+test('duplicate: new part, rels, override, same shape ids, placed after the source',()=>{
+  const src=richDeck(),out=duplicateSlide(src,256);
+  const m=readDeckModel(out);assert.deepEqual(m.slides.map(s=>s.id),[256,259,257,258]);
+  assert.equal(m.slides[1].part,'ppt/slides/slide4.xml');
+  assert.deepEqual(m.slides[1].shapes.map(s=>s.id),m.slides[0].shapes.map(s=>s.id));
+  assert.match(xmlOf(out,'[Content_Types].xml'),/PartName="\/ppt\/slides\/slide4.xml" ContentType="[^"]*slide\+xml"/);
+  assert.match(xmlOf(out,'ppt/_rels/presentation.xml.rels'),/Id="rId\d+"[^>]*Target="slides\/slide4.xml"/);
+  assert.equal(titles(out).filter((_,i)=>i%2===0).join(),'Slide 1,Slide 1,Slide 2,Slide 3');
+  // untouched parts stay byte-equal, shared media is not copied
+  const a=unzipSync(src),b=unzipSync(out);for(const k of Object.keys(a))if(!['ppt/presentation.xml','ppt/_rels/presentation.xml.rels','[Content_Types].xml'].includes(k))assert.deepEqual(b[k],a[k],k);
+  assert.deepEqual(parts(out).filter(p=>p.includes('media')),['ppt/media/image1.png','ppt/media/image2.png']);
+});
+test('duplicate clones the notes slide and points it at the copy',()=>{
+  const out=duplicateSlide(richDeck(),256);
+  assert.ok(parts(out).includes('ppt/notesSlides/notesSlide2.xml'));
+  assert.match(xmlOf(out,'ppt/notesSlides/_rels/notesSlide2.xml.rels'),/Target="..\/slides\/slide4.xml"/);
+  assert.match(xmlOf(out,'ppt/slides/_rels/slide4.xml.rels'),/notesSlides\/notesSlide2.xml/);
+  assert.match(xmlOf(out,'ppt/notesSlides/_rels/notesSlide1.xml.rels'),/slides\/slide1.xml/);
+  assert.match(xmlOf(out,'[Content_Types].xml'),/notesSlide2.xml/);
+});
+test('duplicate refuses linked content it cannot copy, shared notes, and the 200 cap',()=>{
+  const chart=richDeck(z=>{z['ppt/slides/_rels/slide2.xml.rels']=strToU8(strFromU8(z['ppt/slides/_rels/slide2.xml.rels']).replace('</Relationships>',`<Relationship Id="rId9" Type="${RTN}chart" Target="../charts/chart1.xml"/></Relationships>`));});
+  assert.throws(()=>duplicateSlide(chart,257),/linked content \(chart\)/);
+  const shared=richDeck(z=>{z['ppt/notesSlides/_rels/notesSlide1.xml.rels']=strToU8(`<Relationships xmlns="r"><Relationship Id="rId1" Type="${RTN}slide" Target="../slides/slide2.xml"/></Relationships>`);});
+  assert.throws(()=>duplicateSlide(shared,256),/does not belong/);
+  assert.throws(()=>duplicateSlide(richDeck(),12345),/no longer exists/);
+  assert.throws(()=>duplicateSlide(deck(200),256),/at most 200/);
+});
+test('duplicate and then move round-trips; duplicate keeps sections consistent',()=>{
+  const out=duplicateSlide(deck(4,{sections:[[1,2],[3,4]]}),257);
+  assert.deepEqual(readDeckModel(out).sections,[{name:'Sec 1',ids:[256,257,260]},{name:'Sec 2',ids:[258,259]}]);
+  assert.deepEqual(ids(out),[256,257,260,258,259]);
+});
+test('delete removes the slide, its rels, override, notes and exclusive media only',()=>{
+  const src=richDeck(),out=deleteSlide(src,256);
+  assert.deepEqual(ids(out),[257,258]);
+  const p=parts(out);
+  for(const gone of ['ppt/slides/slide1.xml','ppt/slides/_rels/slide1.xml.rels','ppt/notesSlides/notesSlide1.xml','ppt/notesSlides/_rels/notesSlide1.xml.rels','ppt/media/image1.png'])assert.ok(!p.includes(gone),gone);
+  assert.ok(p.includes('ppt/media/image2.png'),'shared media stays');
+  assert.doesNotMatch(xmlOf(out,'[Content_Types].xml'),/slide1.xml|notesSlide1/);
+  assert.doesNotMatch(xmlOf(out,'ppt/_rels/presentation.xml.rels'),/slides\/slide1.xml/);
+  assert.equal(titles(out).filter((_,i)=>i%2===0).join(),'Slide 2,Slide 3');
+});
+test('delete refuses the last slide, unknown ids, custom shows and inbound slide links',()=>{
+  const one=deleteSlide(deck(2),256);assert.throws(()=>deleteSlide(one,257),/at least one slide/);
+  assert.throws(()=>deleteSlide(deck(3),999),/no longer exists/);
+  const z=unzipSync(deck(3));
+  z['ppt/presentation.xml']=strToU8(strFromU8(z['ppt/presentation.xml']).replace('</p:presentation>','<p:custShowLst><p:custShow name="a" id="0"><p:sldLst><p:sld r:id="rId101"/></p:sldLst></p:custShow></p:custShowLst></p:presentation>'));
+  assert.throws(()=>deleteSlide(zipSync(z),256),/custom show/);
+  const y=unzipSync(deck(3));
+  y['ppt/slides/_rels/slide2.xml.rels']=strToU8(strFromU8(y['ppt/slides/_rels/slide2.xml.rels']).replace('</Relationships>',`<Relationship Id="rId9" Type="${RTN}slide" Target="slide1.xml"/></Relationships>`));
+  assert.throws(()=>deleteSlide(zipSync(y),256),/links to this slide/);
+});
+test('delete keeps sections valid, and duplicate+delete is a no-op on order',()=>{
+  const out=deleteSlide(deck(4,{sections:[[1,2],[3,4]]}),257);
+  assert.deepEqual(readDeckModel(out).sections,[{name:'Sec 1',ids:[256]},{name:'Sec 2',ids:[258,259]}]);
+  const d=duplicateSlide(deck(3),257);assert.deepEqual(ids(deleteSlide(d,259)),[256,257,258]);
+});
+test('layouts are listed with a support verdict; new slide builds editable placeholders',()=>{
+  const src=deck(2),layouts=readLayouts(src);
+  assert.ok(layouts.length>=5);assert.ok(layouts.some(l=>l.supported)&&layouts.some(l=>!l.supported));
+  const title=layouts.find(l=>l.supported&&l.placeholders.includes('ctrTitle'))!;
+  const out=newSlideFromLayout(src,title.part,256);
+  const m=readDeckModel(out);assert.deepEqual(m.slides.map(s=>s.id),[256,258,257]);
+  assert.ok(m.slides[1].shapes.length>=1);assert.ok(m.slides[1].shapes.every(s=>s.kind==='text'));
+  assert.match(xmlOf(out,m.slides[1].part.replace('slides/','slides/_rels/')+'.rels'),new RegExp(title.part.split('/').pop()!));
+  const run=readRuns(out).find(r=>r.slide===1)!;assert.equal(run.text,'');
+  const edited=makeEditedCopy(out,[{slide:1,run:run.run,old:'',text:'Hello',part:run.part}]);
+  assert.ok(titles(edited).includes('Hello'));
+  assert.deepEqual(ids(newSlideFromLayout(src,title.part,null)).slice(-1),[258]);
+});
+test('new slide refuses unsupported layouts, stale layouts and the 200 cap',()=>{
+  const src=deck(2),bad=readLayouts(src).find(l=>!l.supported)!;
+  assert.throws(()=>newSlideFromLayout(src,bad.part,256),/cannot create yet/);
+  assert.throws(()=>newSlideFromLayout(src,'ppt/slideLayouts/slideLayout99.xml',256),/no longer exists/);
+  assert.throws(()=>newSlideFromLayout(src,readLayouts(src).find(l=>l.supported)!.part,999),/no longer exists/);
+  assert.throws(()=>newSlideFromLayout(deck(200),readLayouts(deck(2)).find(l=>l.supported)!.part,256),/at most 200/);
+});
+
+test('committed Rust importer fixtures match the generator (regenerate if the model changes)',()=>{
+  const d=new URL('../../../slides-engine/fixtures/',import.meta.url),f=(n:string)=>new Uint8Array(readFileSync(fileURLToPath(new URL(n,d))));
+  const orig=f('independent.pptx'),m=readDeckModel(orig).slides.map(s=>s.id);
+  const layout=readLayouts(orig).find(l=>l.supported&&l.placeholders.includes('ctrTitle'))!;
+  assert.deepEqual(f('reordered.pptx'),moveSlide(orig,m[1],0));
+  assert.deepEqual(f('duplicated.pptx'),duplicateSlide(orig,m[0]));
+  assert.deepEqual(f('deleted.pptx'),deleteSlide(orig,m[0]));
+  assert.deepEqual(f('newslide.pptx'),newSlideFromLayout(orig,layout.part,m[0]));
 });

@@ -1,6 +1,8 @@
 import {useState} from 'react';
 import {ArrowDown,ArrowUp} from 'lucide-react';
 import {IconButton} from '../ui/icon-button';
+import {Button} from '../ui/button';
+import {Menu,MenuTrigger,MenuContent,MenuItem} from '../ui/menu';
 import type {InspectorSectionProps} from '../../lib/shell/types';
 import {useSlidesSession} from '../../lib/slides/session';
 import {useSlidesPanelText} from '../../lib/slides/panelI18n';
@@ -23,9 +25,16 @@ export function SlidesOverviewPanel(){
  if(!s.summary)return <Empty/>;
  const rows=slideOutline(s.runs,s.summary.slides,query);
  const canMove=!query.trim()&&s.slideIds.length>1&&s.slideIds.length===s.summary.slides;
+ const currentId=s.slideIds[s.index];
+ const structure=async(id:string,params:unknown,done:string)=>{setStatus('');const result=await commandDispatcher.tryRunCommand(id,params,{origin:'ui'});if(!result.ok)action.setError(result.error.message);else setStatus(done);};
  const move=async(from:number,to:number)=>{setStatus('');const id=s.slideIds[from];const result=await commandDispatcher.tryRunCommand('slides.moveSlide',{source:s.source,slideId:id,toIndex:to},{origin:'ui'});if(!result.ok)action.setError(result.error.message);else setStatus(t('slides.moved',{number:from+1,position:to+1}));};
  return <Region><p className="truncate text-xs text-ink-2" title={s.name}>{s.name}</p>
   <div className="flex flex-wrap gap-1"><button className={button} disabled={s.busy||s.index===0} onClick={()=>void action.run('slides.showSlide',{index:s.index-1})}>{t('slides.previous')}</button><button className={button} disabled={s.busy||s.index>=s.summary.slides-1} onClick={()=>void action.run('slides.showSlide',{index:s.index+1})}>{t('slides.next')}</button></div>
+  <div className="flex flex-wrap gap-1" role="group" aria-label={t('slides.panel.overview')}>
+   <Menu><MenuTrigger render={<Button size="compact" variant="outline" disabled={s.busy||!s.layouts.some(l=>l.supported)||!s.slideIds.length}>{t('slides.newFromLayout')}</Button>}/><MenuContent>{s.layouts.map(l=><MenuItem key={l.part} disabled={!l.supported} onClick={()=>void structure('slides.newSlide',{source:s.source,layoutPart:l.part,afterSlideId:currentId},t('slides.added',{position:s.index+2}))}>{l.supported?l.name:t('slides.layoutUnsupported',{name:l.name})}</MenuItem>)}</MenuContent></Menu>
+   <Button size="compact" variant="outline" disabled={s.busy||currentId===undefined} onClick={()=>void structure('slides.duplicateSlide',{source:s.source,slideId:currentId},t('slides.duplicated',{number:s.index+1}))}>{t('slides.duplicate')}</Button>
+   <Button size="compact" variant="outline" disabled={s.busy||currentId===undefined||s.slideIds.length<2} onClick={()=>void structure('slides.deleteSlide',{source:s.source,slideId:currentId},t('slides.deleted',{number:s.index+1}))}>{t('slides.delete')}</Button>
+  </div>
   <input className={input} aria-label={t('slides.search')} placeholder={t('slides.search')} value={query} onChange={e=>setQuery(e.target.value)}/>
   <label className="flex items-center gap-2 text-xs"><input className="!w-4 shrink-0" type="checkbox" checked={compact} onChange={e=>setCompact(e.target.checked)}/>{t('slides.compact')}</label>
   <button className={button} disabled={s.busy} onClick={()=>void action.run('slides.loadThumbnails')}>{t('cmd.slides.loadThumbnails')}</button>

@@ -1,6 +1,6 @@
 import type {SlidesDiagnostics} from './diagnostics';
 import type {TextRun,TextEdit} from './editCopy';
-import type {DeckModel} from './deckPackage';
+import type {DeckModel,LayoutInfo} from './deckPackage';
 import type {DeckSummary,SlidesReply,SlidesRequest} from './protocol';
 type Request=SlidesRequest extends infer R?R extends SlidesRequest?Omit<R,'id'>:never:never;
 export class SlidesClient {
@@ -18,5 +18,8 @@ export class SlidesClient {
  async copy(bytes:Uint8Array,edits:TextEdit[]){return await this.request({op:'copy',bytes,edits}) as Uint8Array;}
  async model(bytes:Uint8Array){return await this.request({op:'model',bytes}) as DeckModel;}
  async reorder(bytes:Uint8Array,slideId:number,toIndex:number){return await this.request({op:'reorder',bytes,slideId,toIndex}) as Uint8Array;}
+ async slideEdit(bytes:Uint8Array,kind:'duplicate'|'delete',slideId:number){return await this.request({op:'slideEdit',bytes,kind,slideId}) as Uint8Array;}
+ async newSlide(bytes:Uint8Array,layoutPart:string,afterSlideId:number|null){return await this.request({op:'newSlide',bytes,layoutPart,afterSlideId}) as Uint8Array;}
+ async layouts(bytes:Uint8Array){return await this.request({op:'layouts',bytes}) as LayoutInfo[];}
  dispose(error=new Error('Slides operation cancelled')){if(this.closed)return;this.closed=true;this.worker.terminate();for(const p of this.pending.values()){clearTimeout(p.timer);p.reject(error);}this.pending.clear();}
 }

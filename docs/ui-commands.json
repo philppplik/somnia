@@ -3191,6 +3191,29 @@
       "hasEnabled": true
     },
     {
+      "id": "slides.deleteSlide",
+      "title": "Delete slide",
+      "category": "Edit",
+      "source": "slides",
+      "keywords": [
+        "remove",
+        "slide"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "slides.duplicateSlide",
+      "title": "Duplicate slide",
+      "category": "Edit",
+      "source": "slides",
+      "keywords": [
+        "clone",
+        "copy",
+        "slide"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "slides.editText",
       "title": "Apply slide text",
       "category": "Edit",
@@ -3239,6 +3262,19 @@
         "after",
         "down",
         "reorder"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "slides.newSlide",
+      "title": "New slide from layout",
+      "category": "Edit",
+      "source": "slides",
+      "keywords": [
+        "add",
+        "insert",
+        "layout",
+        "slide"
       ],
       "hasEnabled": true
     },

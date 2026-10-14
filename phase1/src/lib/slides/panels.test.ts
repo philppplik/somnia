@@ -7,8 +7,8 @@ import {SLIDES_PANEL_CATALOGUES} from './panelI18n';
 import {deckMetrics,selectedRun,slideOutline,textIssue} from './panelModel';
 const runs=[{slide:0,run:0,text:'Hello world',part:'ppt/slides/slide1.xml'},{slide:1,run:0,text:'Second slide',part:'ppt/slides/slide2.xml'}];
 function fixture(){
- const state={source:'blob:deck1',index:0,busy:false,working:new Uint8Array(40),runs:runs.map(r=>({...r})),slideIds:[256,257],summary:{slides:2}};
- const calls:unknown[]=[];const deps:PanelCommandDeps={state:()=>state,thumbnails:async()=>{calls.push('thumbnails');},show:async index=>{state.index=index;calls.push(['show',index]);},edit:async(run,text)=>{state.runs=state.runs.map(r=>r.slide===run.slide&&r.run===run.run?{...r,text}:r);calls.push(['edit',text]);},select:v=>calls.push(v),move:async(id,to)=>{const a=state.slideIds.slice();a.splice(to,0,a.splice(a.indexOf(id),1)[0]);state.slideIds=a;calls.push(['move',id,to]);}};
+ const state={source:'blob:deck1',index:0,busy:false,working:new Uint8Array(40),runs:runs.map(r=>({...r})),slideIds:[256,257],layouts:[{part:'ppt/slideLayouts/slideLayout1.xml',supported:true},{part:'ppt/slideLayouts/slideLayout2.xml',supported:false}],summary:{slides:2}};
+ const calls:unknown[]=[];const deps:PanelCommandDeps={state:()=>state,thumbnails:async()=>{calls.push('thumbnails');},show:async index=>{state.index=index;calls.push(['show',index]);},edit:async(run,text)=>{state.runs=state.runs.map(r=>r.slide===run.slide&&r.run===run.run?{...r,text}:r);calls.push(['edit',text]);},select:v=>calls.push(v),move:async(id,to)=>{const a=state.slideIds.slice();a.splice(to,0,a.splice(a.indexOf(id),1)[0]);state.slideIds=a;calls.push(['move',id,to]);},duplicate:async id=>{calls.push(['dup',id]);},remove:async id=>{calls.push(['del',id]);},add:async(l,a)=>{calls.push(['add',l,a]);}};
  const dispatcher=new CommandDispatcher();slidesPanelCommandSpecs(deps).forEach(s=>dispatcher.register(s));return {state,calls,dispatcher};
 }
 test('outline searches text and slide number and preserves empty slides',()=>{
@@ -39,7 +39,7 @@ test('thumbnail command uses session operation',async()=>{const f=fixture();awai
 test('every panel command and UI key exists in all five locales',()=>{
  const keys=Object.keys(SLIDES_PANEL_CATALOGUES.en).sort();for(const locale of ['en','de','es','fr','pt-BR'])assert.deepEqual(Object.keys(SLIDES_PANEL_CATALOGUES[locale]).sort(),keys);
  for(const p of slidesPanels){assert.equal(p.component,p.id==='inspector'?'shell.inspector':`slides.${p.id}`);assert.ok(SLIDES_PANEL_CATALOGUES.en[p.titleKey!]);}
- for(const id of ['loadThumbnails','selectText','editText','moveSlide','moveSlideEarlier','moveSlideLater'])for(const locale of Object.keys(SLIDES_PANEL_CATALOGUES))assert.ok(SLIDES_PANEL_CATALOGUES[locale][`cmd.slides.${id}`]);
+ for(const id of ['loadThumbnails','selectText','editText','moveSlide','moveSlideEarlier','moveSlideLater','duplicateSlide','deleteSlide','newSlide'])for(const locale of Object.keys(SLIDES_PANEL_CATALOGUES))assert.ok(SLIDES_PANEL_CATALOGUES[locale][`cmd.slides.${id}`]);
 });
 
 test('inspector section titles and commands are declared',()=>{
@@ -64,4 +64,25 @@ test('reorder is disabled for non-canonical decks, single slides and busy sessio
  const f=fixture();f.state.slideIds=[];assert.equal(f.dispatcher.isEnabled('slides.moveSlide'),false);
  f.state.slideIds=[256];f.state.summary={slides:1};assert.equal(f.dispatcher.isEnabled('slides.moveSlide'),false);
  f.state.slideIds=[256,257];f.state.summary={slides:2};f.state.busy=true;assert.equal(f.dispatcher.isEnabled('slides.moveSlide'),false);
+});
+
+test('duplicate, delete and new slide validate source, ids, layouts, limits and origins',async()=>{
+ const f=fixture();const ok={source:'blob:deck1',slideId:257};
+ for(const id of ['slides.duplicateSlide','slides.deleteSlide']){
+  for(const p of [{...ok,source:'x'},{...ok,slideId:999},{...ok,slideId:1},{...ok,extra:1},{source:'blob:deck1'}])await assert.rejects(f.dispatcher.runCommand(id,p,{origin:'ui'}));
+  for(const origin of ['agent','mcp'] as const)await assert.rejects(f.dispatcher.runCommand(id,ok,{origin}));
+ }
+ assert.equal(f.calls.length,0);
+ await f.dispatcher.runCommand('slides.duplicateSlide',ok,{origin:'ui'});await f.dispatcher.runCommand('slides.deleteSlide',ok,{origin:'ui'});
+ assert.deepEqual(f.calls,[['dup',257],['del',257]]);
+ const good={source:'blob:deck1',layoutPart:'ppt/slideLayouts/slideLayout1.xml',afterSlideId:256};
+ for(const p of [{...good,source:'x'},{...good,layoutPart:'ppt/slideLayouts/slideLayout2.xml'},{...good,layoutPart:'ppt/slideLayouts/slideLayout9.xml'},{...good,layoutPart:'../evil.xml'},{...good,afterSlideId:999},{...good,extra:1}])await assert.rejects(f.dispatcher.runCommand('slides.newSlide',p,{origin:'ui'}));
+ await assert.rejects(f.dispatcher.runCommand('slides.newSlide',good,{origin:'agent'}));
+ await f.dispatcher.runCommand('slides.newSlide',good,{origin:'ui'});await f.dispatcher.runCommand('slides.newSlide',{source:'blob:deck1',layoutPart:good.layoutPart},{origin:'ui'});
+ assert.deepEqual(f.calls.slice(2),[['add','ppt/slideLayouts/slideLayout1.xml',256],['add','ppt/slideLayouts/slideLayout1.xml',null]]);
+});
+test('delete is disabled for a single slide; busy and unsupported-layout states disable new slide',()=>{
+ const f=fixture();f.state.slideIds=[256];f.state.summary={slides:1};assert.equal(f.dispatcher.isEnabled('slides.deleteSlide'),false);assert.equal(f.dispatcher.isEnabled('slides.duplicateSlide'),true);
+ f.state.layouts=[{part:'ppt/slideLayouts/slideLayout2.xml',supported:false}];assert.equal(f.dispatcher.isEnabled('slides.newSlide'),false);
+ f.state.busy=true;for(const id of ['slides.duplicateSlide','slides.deleteSlide','slides.newSlide'])assert.equal(f.dispatcher.isEnabled(id),false);
 });

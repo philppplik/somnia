@@ -22,7 +22,7 @@ export interface ShapeRef {id:number;name:string;kind:ShapeKind;runCount:number}
 export interface SlideModel {id:number;rid:string;part:string;shapes:ShapeRef[];problems:string[]}
 export interface ModelRun {slideId:number;shapeId:number;paragraph:number;run:number;ordinal:number;text:string;key:string}
 export interface SectionInfo {name:string;ids:number[]}
-export interface DeckModel {slides:SlideModel[];runs:ModelRun[];sections:SectionInfo[]|null}
+export interface DeckModel {slides:SlideModel[];runs:ModelRun[];sections:SectionInfo[]|null;layouts?:LayoutInfo[]}
 
 export const MAX_SLIDES=200;
 const MAX_ENTRY=16*1024*1024;
@@ -200,4 +200,186 @@ function applyOrder(_bytes:Uint8Array,zip:Record<string,Uint8Array>,pres:string,
   for(const name of Object.keys(zip))if(name!=='ppt/presentation.xml'&&(!reopened[name]||reopened[name].length!==zip[name].length||reopened[name].some((v,i)=>v!==zip[name][i])))throw Error('Reordered deck changed an unrelated part');
   if(after.runs.length!==before.runs.length)throw Error('Reordered deck failed verification');
   return out;
+}
+
+/* ---------------------------------------------------------------------------------------
+ * P1: duplicate, delete and new-from-layout. All three patch parts in place and verify the
+ * result by reopening it. Anything with a relationship type we cannot copy or clean up
+ * safely is refused instead of approximated.
+ * ------------------------------------------------------------------------------------- */
+const RT='http://schemas.openxmlformats.org/officeDocument/2006/relationships/';
+const CT_SLIDE='application/vnd.openxmlformats-officedocument.presentationml.slide+xml';
+const CT_NOTES='application/vnd.openxmlformats-officedocument.presentationml.notesSlide+xml';
+interface Rel {id:string;type:string;target:string;external:boolean;raw:string}
+const relsName=(part:string)=>part.replace(/([^/]+)$/,'_rels/$1.rels');
+function readRels(zip:Record<string,Uint8Array>,part:string):Rel[]{
+  return [...text(zip,relsName(part)).matchAll(/<Relationship\b([^>]*?)\/?>/g)].map(m=>({id:attr(m[1],'Id')??'',type:attr(m[1],'Type')??'',target:attr(m[1],'Target')??'',external:/TargetMode="External"/.test(m[1]),raw:m[0]}));
+}
+/** Resolves a relationship target against its source part, rejecting anything outside the package. */
+function resolve(part:string,target:string):string{
+  if(/^[a-z][a-z0-9+.-]*:/i.test(target))throw Error('Unsupported relationship target');
+  const segs=(target.startsWith('/')?target.slice(1):part.replace(/[^/]*$/,'')+target).split('/'),out:string[]=[];
+  for(const s of segs){if(s===''||s==='.')continue;if(s==='..'){if(!out.length)throw Error('Relationship escapes the package');out.pop();}else out.push(s);}
+  return out.join('/');
+}
+const relative=(from:string,to:string)=>{const a=from.split('/').slice(0,-1),b=to.split('/');while(a.length&&b.length>1&&a[0]===b[0]){a.shift();b.shift();}return '../'.repeat(a.length)+b.join('/');};
+const nextFree=(zip:Record<string,Uint8Array>,dir:string,stem:string,ext:string)=>{for(let n=1;n<100000;n++){const p=`${dir}/${stem}${n}.${ext}`;if(!zip[p])return p;}throw Error('No free part name');};
+const lower=(zip:Record<string,Uint8Array>)=>new Set(Object.keys(zip).map(k=>k.toLowerCase()));
+function addOverride(types:string,part:string,ct:string){return types.replace('</Types>',`<Override PartName="/${part}" ContentType="${ct}"/></Types>`);}
+function hasOverride(types:string,part:string,ct?:string){const m=new RegExp(`<Override\\b[^>]*\\sPartName="/${part.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}"[^>]*/?>`).exec(types);return !!m&&(!ct||m[0].includes(`ContentType="${ct}"`));}
+function dropOverride(types:string,part:string){return types.replace(new RegExp(`<Override\\b[^>]*\\sPartName="/${part.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}"[^>]*/>`),'');}
+function relId(rels:string,xml:string){let n=0;for(const m of (rels+xml).matchAll(/Id="rId(\d+)"|r:id="rId(\d+)"/g))n=Math.max(n,Number(m[1]??m[2]));return `rId${n+1}`;}
+
+interface Ctx {zip:Record<string,Uint8Array>;pres:string;presRels:string;types:string;list:ReturnType<typeof slideList>;slidePart:Map<number,{part:string;rid:string}>}
+function context(bytes:Uint8Array):Ctx{
+  const zip=openPackage(bytes);const model=readDeckModel(bytes);
+  const pres=text(zip,'ppt/presentation.xml'),list=slideList(pres);
+  return {zip,pres,presRels:text(zip,'ppt/_rels/presentation.xml.rels'),types:text(zip,'[Content_Types].xml'),list,slidePart:new Map(model.slides.map(s=>[s.id,{part:s.part,rid:s.rid}]))};
+}
+/** Inserts a slide id after `afterId` in the slide list and in the same section (if any). */
+function insertSlideId(c:Ctx,id:number,rid:string,afterId:number|null):string{
+  const items=c.list.items,at=afterId===null?items.length:items.findIndex(i=>i.id===afterId)+1;
+  if(afterId!==null&&at===0)throw Error('Slide no longer exists');
+  let pres=c.pres.slice(0,c.list.start)+[...items.slice(0,at).map(i=>i.raw),`<p:sldId id="${id}" r:id="${rid}"/>`,...items.slice(at).map(i=>i.raw)].join('')+c.pres.slice(c.list.end);
+  const sec=sections(c.pres);
+  if(sec){
+    const target=afterId===null?sec.items.length-1:sec.items.findIndex(s=>s.ids.includes(afterId));
+    if(target<0||!sec.items[target].list)throw Error('Slide section could not be located');
+    const s=sec.items[target];const els=[...s.list.matchAll(/<p14:sldId\b[^>]*\sid="(\d+)"[^>]*\/>/g)];
+    const pos=afterId===null?els.length:els.findIndex(e=>Number(e[1])===afterId)+1;
+    const nl='<p14:sldIdLst>'+[...els.slice(0,pos).map(e=>e[0]),`<p14:sldId id="${id}"/>`,...els.slice(pos).map(e=>e[0])].join('')+'</p14:sldIdLst>';
+    pres=pres.replace(sec.block,sec.block.replace(s.raw,s.raw.replace(s.list,nl)));
+  }
+  return pres;
+}
+const newSlideId=(c:Ctx)=>{const id=Math.max(...c.list.items.map(i=>i.id))+1;if(id>SLD_MAX)throw Error('No free slide id');return id;};
+function finish(c:Ctx,changed:Record<string,string>,add:Record<string,Uint8Array>,remove:string[],check:(after:DeckModel)=>void):Uint8Array{
+  const next:Record<string,Uint8Array>={};
+  for(const [k,v] of Object.entries(c.zip))if(!remove.includes(k))next[k]=v;
+  for(const [k,v] of Object.entries(add))next[k]=v;
+  const out=repack(next,changed);
+  const after=readDeckModel(out);check(after);
+  const reopened=unzipSync(out);
+  for(const k of Object.keys(next))if(!(k in changed)&&!(k in add)&&(!reopened[k]||reopened[k].length!==next[k].length||reopened[k].some((v,i)=>v!==next[k][i])))throw Error('Edit changed an unrelated part');
+  return out;
+}
+const COPYABLE=new Set([RT+'slideLayout',RT+'image',RT+'hyperlink',RT+'notesSlide',RT+'audio',RT+'video',RT+'media','http://schemas.microsoft.com/office/2007/relationships/media']);
+
+/** Duplicates a slide directly after itself. Notes are cloned; unsupported linked content refuses the copy. */
+export function duplicateSlide(bytes:Uint8Array,slideId:number):Uint8Array{
+  const c=context(bytes);if(c.list.items.length>=MAX_SLIDES)throw Error(`A deck can hold at most ${MAX_SLIDES} slides`);
+  const src=c.slidePart.get(slideId);if(!src)throw Error('Slide no longer exists');
+  const rels=readRels(c.zip,src.part);
+  for(const r of rels)if(!COPYABLE.has(r.type)&&!r.external)throw Error(`This slide has linked content (${r.type.split('/').pop()}) that cannot be duplicated safely`);
+  if(!hasOverride(c.types,src.part,CT_SLIDE))throw Error('Slide content type is not declared as an override');
+  const names=lower(c.zip),part=nextFree(c.zip,'ppt/slides','slide','xml');if(names.has(part.toLowerCase()))throw Error('Part name collision');
+  const add:Record<string,Uint8Array>={[part]:c.zip[src.part]};let types=addOverride(c.types,part,CT_SLIDE);
+  let relsXml=text(c.zip,relsName(src.part));
+  for(const r of rels){
+    if(r.type!==RT+'notesSlide')continue;
+    const notes=resolve(src.part,r.target);if(!c.zip[notes]||!hasOverride(c.types,notes,CT_NOTES))throw Error('Notes slide is not canonical');
+    const nrels=readRels(c.zip,notes),back=nrels.filter(n=>n.type===RT+'slide');
+    if(back.length!==1||resolve(notes,back[0].target)!==src.part)throw Error('Notes slide does not belong to this slide alone');
+    const np=nextFree(c.zip,'ppt/notesSlides','notesSlide','xml');
+    add[np]=c.zip[notes];
+    add[relsName(np)]=strToU8(text(c.zip,relsName(notes)).replace(back[0].raw,back[0].raw.replace(/Target="[^"]*"/,`Target="${relative(np,part)}"`)));
+    types=addOverride(types,np,CT_NOTES);
+    relsXml=relsXml.replace(r.raw,r.raw.replace(/Target="[^"]*"/,`Target="${relative(part,np)}"`));
+  }
+  add[relsName(part)]=strToU8(relsXml);
+  const id=newSlideId(c),rid=relId(c.presRels,c.pres);
+  const presRels=c.presRels.replace('</Relationships>',`<Relationship Id="${rid}" Type="${RT}slide" Target="slides/${part.split('/').pop()}"/></Relationships>`);
+  const order=c.list.items.map(i=>i.id);order.splice(order.indexOf(slideId)+1,0,id);
+  return finish(c,{'ppt/presentation.xml':insertSlideId(c,id,rid,slideId),'ppt/_rels/presentation.xml.rels':presRels,'[Content_Types].xml':types},add,[],after=>{
+    if(after.slides.map(s=>s.id).join()!==order.join())throw Error('Duplicated deck failed verification');
+    const a=after.slides.find(s=>s.id===id)!,b=after.slides.find(s=>s.id===slideId)!;
+    if(a.problems.length||a.shapes.map(s=>s.id).join()!==b.shapes.map(s=>s.id).join())throw Error('Duplicated deck failed verification');
+  });
+}
+
+const OWNED_PREFIX=/^ppt\/(media|charts|diagrams|embeddings|notesSlides|comments|ink|tags|drawings|slideUpdateInfos)\//;
+/** Deletes a slide (never the last one) and removes parts only it used. Refuses if something else points at it. */
+export function deleteSlide(bytes:Uint8Array,slideId:number):Uint8Array{
+  const c=context(bytes);if(c.list.items.length<=1)throw Error('A presentation needs at least one slide');
+  const src=c.slidePart.get(slideId);if(!src)throw Error('Slide no longer exists');
+  if(new RegExp(`<p:custShow\\b[\\s\\S]*?r:id="${src.rid}"`).test(c.pres))throw Error('This slide is part of a custom show. Remove it there first.');
+  for(const [name] of Object.entries(c.zip)){
+    if(!name.endsWith('.rels')||name===relsName(src.part))continue;
+    if(name==='ppt/_rels/presentation.xml.rels')continue;
+    const owner=name.replace('_rels/','').replace(/\.rels$/,'');
+    for(const r of readRels(c.zip,owner))if(!r.external&&r.type!==RT+'notesSlide'&&(()=>{try{return resolve(owner,r.target)===src.part;}catch{return false;}})()){
+      if(r.type===RT+'slide'&&owner.startsWith('ppt/notesSlides/'))continue;
+      throw Error('Another slide links to this slide. Remove the link first.');}
+  }
+  const remove=new Set<string>([src.part,relsName(src.part)]);let types=c.types;
+  types=dropOverride(types,src.part);
+  const stack=readRels(c.zip,src.part).filter(r=>!r.external).map(r=>({from:src.part,target:resolve(src.part,r.target),type:r.type}));
+  const referencedElsewhere=(p:string)=>Object.keys(c.zip).some(n=>n.endsWith('.rels')&&!remove.has(n)&&(()=>{const owner=n.replace('_rels/','').replace(/\.rels$/,'');if(remove.has(owner))return false;return readRels(c.zip,owner).some(r=>{try{return !r.external&&resolve(owner,r.target)===p;}catch{return false;}});})());
+  let budget=200;
+  while(stack.length&&budget-->0){
+    const t=stack.pop()!;
+    if(!c.zip[t.target]||remove.has(t.target)||!OWNED_PREFIX.test(t.target))continue;
+    if(t.type===RT+'notesSlide'){const back=readRels(c.zip,t.target).filter(r=>r.type===RT+'slide');if(back.length!==1||resolve(t.target,back[0].target)!==src.part)continue;}
+    else if(referencedElsewhere(t.target))continue;
+    remove.add(t.target);if(c.zip[relsName(t.target)])remove.add(relsName(t.target));types=dropOverride(types,t.target);
+    for(const r of readRels(c.zip,t.target))if(!r.external)stack.push({from:t.target,target:resolve(t.target,r.target),type:r.type});
+  }
+  const it=c.list.items.find(i=>i.id===slideId)!;
+  let pres=c.pres.slice(0,c.list.start)+c.list.items.filter(i=>i!==it).map(i=>i.raw).join('')+c.pres.slice(c.list.end);
+  const sec=sections(c.pres);
+  if(sec)for(const s of sec.items)if(s.list&&s.ids.includes(slideId)){const nl=s.list.replace(new RegExp(`<p14:sldId\\b[^>]*\\sid="${slideId}"[^>]*/>`),'');pres=pres.replace(s.list,nl);}
+  const presRels=c.presRels.replace(readRels(c.zip,'ppt/presentation.xml').find(r=>r.id===src.rid)!.raw,'');
+  const expected=c.list.items.filter(i=>i!==it).map(i=>i.id);
+  return finish(c,{'ppt/presentation.xml':pres,'ppt/_rels/presentation.xml.rels':presRels,'[Content_Types].xml':types},{},[...remove],after=>{
+    if(after.slides.map(s=>s.id).join()!==expected.join())throw Error('Deleted deck failed verification');
+  });
+}
+
+export interface LayoutInfo {part:string;name:string;supported:boolean;placeholders:string[]}
+const TEXT_PH=new Set(['title','ctrTitle','subTitle','body','']);
+const SKIP_PH=new Set(['dt','ftr','sldNum']);
+/** Layouts reachable from the slide master(s), with a verdict on whether new slides can be built from them. */
+export function readLayouts(bytes:Uint8Array):LayoutInfo[]{
+  const zip=openPackage(bytes),out:LayoutInfo[]=[];
+  const masters=readRels(zip,'ppt/presentation.xml').filter(r=>r.type===RT+'slideMaster'&&!r.external);
+  const seen=new Set<string>();
+  for(const m of masters){
+    const mp=resolve('ppt/presentation.xml',m.target);
+    for(const l of readRels(zip,mp).filter(r=>r.type===RT+'slideLayout'&&!r.external)){
+      const part=resolve(mp,l.target);if(seen.has(part)||!zip[part]||!/^ppt\/slideLayouts\/slideLayout\d+\.xml$/.test(part))continue;seen.add(part);
+      const xml=strFromU8(zip[part]);const name=dec(/<p:cSld\b[^>]*\sname="([^"]*)"/.exec(xml)?.[1]??part.split('/').pop()!);
+      const phs=[...xml.matchAll(/<p:ph\b([^>]*?)\/?>/g)].map(x=>attr(x[1],'type')??'');
+      const real=phs.filter(t=>!SKIP_PH.has(t));
+      out.push({part,name,supported:real.every(t=>TEXT_PH.has(t)),placeholders:real});
+    }
+  }
+  return out;
+}
+
+/** Builds a new slide from a supported layout: one empty text placeholder per layout text placeholder. */
+export function newSlideFromLayout(bytes:Uint8Array,layoutPart:string,afterSlideId:number|null):Uint8Array{
+  const c=context(bytes);if(c.list.items.length>=MAX_SLIDES)throw Error(`A deck can hold at most ${MAX_SLIDES} slides`);
+  const layout=readLayouts(bytes).find(l=>l.part===layoutPart);
+  if(!layout)throw Error('Layout no longer exists');
+  if(!layout.supported)throw Error('This layout has placeholders (picture, chart, table or media) that new slides cannot create yet');
+  const xml=strFromU8(c.zip[layoutPart]);
+  let shapes='',n=1;
+  for(const sp of xml.matchAll(/<p:sp\b[\s\S]*?<\/p:sp>/g)){
+    const ph=/<p:ph\b([^>]*?)\/?>/.exec(sp[0]);if(!ph)continue;
+    const type=attr(ph[1],'type')??'';if(SKIP_PH.has(type))continue;
+    const idx=attr(ph[1],'idx'),label=type==='ctrTitle'||type==='title'?'Title':type==='subTitle'?'Subtitle':'Content Placeholder';
+    n++;
+    shapes+=`<p:sp><p:nvSpPr><p:cNvPr id="${n}" name="${label} ${n-1}"/><p:cNvSpPr><a:spLocks noGrp="1"/></p:cNvSpPr><p:nvPr><p:ph${type?` type="${type}"`:''}${idx?` idx="${idx}"`:''}/></p:nvPr></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr lang="en-US"/><a:t></a:t></a:r></a:p></p:txBody></p:sp>`;
+  }
+  const slideXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/><a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr>${shapes}</p:spTree></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sld>`;
+  const part=nextFree(c.zip,'ppt/slides','slide','xml');
+  if(!hasOverride(c.types,layoutPart))throw Error('Layout content type is not declared as an override');
+  const add={[part]:strToU8(slideXml),[relsName(part)]:strToU8(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="${RT}slideLayout" Target="${relative(part,layoutPart)}"/></Relationships>`)};
+  const id=newSlideId(c),rid=relId(c.presRels,c.pres);
+  const presRels=c.presRels.replace('</Relationships>',`<Relationship Id="${rid}" Type="${RT}slide" Target="slides/${part.split('/').pop()}"/></Relationships>`);
+  const order=c.list.items.map(i=>i.id);order.splice(afterSlideId===null?order.length:order.indexOf(afterSlideId)+1,0,id);
+  return finish(c,{'ppt/presentation.xml':insertSlideId(c,id,rid,afterSlideId),'ppt/_rels/presentation.xml.rels':presRels,'[Content_Types].xml':addOverride(c.types,part,CT_SLIDE)},add,[],after=>{
+    if(after.slides.map(s=>s.id).join()!==order.join())throw Error('New slide failed verification');
+    if(after.slides.find(s=>s.id===id)!.problems.length)throw Error('New slide failed verification');
+  });
 }
