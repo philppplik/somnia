@@ -1,6 +1,8 @@
 import type {Edit} from './edit';
-import {findComp,findLayer,TRANSFORM_KEYS,type AnimationDocument,type Layer,type LayerMask,type MaskProp,type Property,type TransformKey} from './model';
-import {editMaskKeys,easeMaskKeys} from './masks';
+import {findComp,findLayer,PROP_META,TRANSFORM_KEYS,type AnimationDocument,type Layer,type LayerMask,type MaskProp,type Property,type TransformKey} from './model';
+import {editMaskKeys,easeMaskKeys,copyMaskKeys,pasteMaskKeys,removeMaskKey} from './masks';
+import {copyTransformKeys,pasteTransformEdits,type KeysClip} from './keysClipboard';
+import {snapToFrame} from './time';
 import {EASE_PRESETS,type EasePreset} from './graph';
 /**
  * One key model for every animated property of a layer. A target says where the keys live (a transform property or a mask property);
@@ -67,4 +69,53 @@ export function normalizedValue(v:Property['value'],bounds:{min:number;max:numbe
 export function keyBounds(p:Property):{min:number;max:number}{
  const vs=p.keys.map(k=>Array.isArray(k.v)?k.v[0]:(k.v as number));let min=Math.min(...vs),max=Math.max(...vs);
  if(max-min<1e-9){min-=1;max+=1;}return {min,max};
+}
+
+export const MASK_BOUNDS:Record<MaskProp,[number,number]>={position:[-16384,16384],size:[1,16384],feather:[0,64],opacity:[0,100]};
+/** Clamps a value to the limits of its property. */
+export function clampTarget(g:KeyTarget,n:number):number{
+ if(g.kind==='mask'){const [lo,hi]=MASK_BOUNDS[g.prop];return Math.min(hi,Math.max(lo,n));}
+ const m=PROP_META[g.prop];return Math.min(m.max??Infinity,Math.max(m.min??-Infinity,n));
+}
+const withFirst=(v:Property['value'],n:number):Property['value']=>Array.isArray(v)?[n,v[1]] as unknown as Property['value']:n;
+const firstOf=(v:Property['value'])=>typeof v==='number'?v:Array.isArray(v)&&typeof v[0]==='number'?v[0]:0;
+/**
+ * Moves the selected keys by `delta` ticks and adds `dv(target)` to their first channel (clamped, rounded to 0.01) in one edit list.
+ * Keys keep their ease. Used by value drags and keyboard nudges of the Mixed graph.
+ */
+export function editTargetKeys(doc:AnimationDocument,layerId:string,sel:readonly TargetKey[],delta:number,dv:(g:KeyTarget)=>number):Edit[]{
+ const comp=findComp(doc),layer=comp&&findLayer(comp,layerId);if(!comp||!layer)throw Error('Select a layer.');
+ if(!Number.isFinite(delta))throw Error('Delta must be a number.');
+ const newV=(r:TargetKey)=>{const k=propertyOf(layer,r.target)?.keys.find(x=>x.t===r.t);if(!k)throw Error('Key no longer exists.');return withFirst(k.v,Math.round(clampTarget(r.target,firstOf(k.v)+dv(r.target))*100)/100);};
+ const tr=sel.filter(r=>r.target.kind==='transform');
+ const moves=moveTargetKeys(doc,layerId,sel.filter(r=>r.target.kind==='transform'),delta);
+ const sets:Edit[]=tr.map(r=>({type:'prop.set',layer:layerId,prop:(r.target as {prop:TransformKey}).prop,t:r.t+delta,value:newV(r)}));
+ const mk=maskRefs(sel);
+ const masks:Edit[]=mk.length?masksEdit(layer,sel,(m,prop,ts)=>{return editMaskKeys(m,prop,ts.map(t=>{const r={target:{kind:'mask',mask:m.id,prop} as KeyTarget,t};return {t,to:t+delta,v:newV(r)};}),comp);}):[];
+ return [...moves,...sets,...masks];
+}
+/** Copies keys of any mix of targets; times are relative to the earliest key. */
+export interface MultiClip{items:readonly {target:KeyTarget;offset:number;clip:KeysClip}[]}
+export function copyTargetKeys(layer:Layer,sel:readonly TargetKey[]):MultiClip{
+ if(!sel.length)throw Error('No keys selected.');
+ const first=Math.min(...sel.map(r=>r.t));const ids=[...new Set(sel.map(r=>targetId(r.target)))];
+ return {items:ids.map(id=>{const rs=sel.filter(r=>targetId(r.target)===id),g=rs[0].target,ts=rs.map(r=>r.t).sort((a,b)=>a-b);
+  const clip=g.kind==='transform'?copyTransformKeys(layer,g.prop,ts):copyMaskKeys(layer.masks!.find(m=>m.id===g.mask)!,g.prop,ts);
+  return {target:g,offset:ts[0]-first,clip};})};
+}
+/** Edits that paste a multi clip with its first key at `t` on the same properties (one undo step). Refuses missing or mistyped targets. */
+export function pasteTargetKeys(doc:AnimationDocument,layerId:string,t:number,clip:MultiClip):Edit[]{
+ const comp=findComp(doc),layer=comp&&findLayer(comp,layerId);if(!comp||!layer)throw Error('Select a layer.');
+ const at=(o:number)=>{const s=snapToFrame(t+o,comp.fps);if(s<comp.start||s>=comp.start+comp.duration)throw Error('Time is outside the composition.');return s;};
+ const tr=clip.items.flatMap(i=>i.target.kind==='transform'?pasteTransformEdits(layer,i.target.prop,at(i.offset),i.clip):[]);
+ const mi=clip.items.filter(i=>i.target.kind==='mask');
+ const masks:Edit[]=mi.length?[{type:'layer.masks',layer:layer.id,masks:(layer.masks??[]).map(m=>{let out=m;for(const i of mi){if(i.target.kind==='mask'&&i.target.mask===m.id)out=pasteMaskKeys(out,i.target.prop,at(i.offset),i.clip);}return out;})}]:[];
+ if(mi.some(i=>i.target.kind==='mask'&&!layer.masks?.some(m=>m.id===(i.target as {mask:string}).mask)))throw Error('Mask no longer exists.');
+ return [...tr,...masks];
+}
+/** Edits that delete the selected keys of any mix of targets (one undo step). */
+export function deleteTargetKeys(doc:AnimationDocument,layerId:string,sel:readonly TargetKey[]):Edit[]{
+ const comp=findComp(doc),layer=comp&&findLayer(comp,layerId);if(!comp||!layer)throw Error('Select a layer.');
+ const tr=transformRefs(sel).map(r=>({...r,layer:layerId}));
+ return [...(tr.length?[{type:'keys.remove',keys:tr} as Edit]:[]),...masksEdit(layer,sel,(m,prop,ts)=>ts.reduce((o,t)=>removeMaskKey(o,prop,t),m))];
 }

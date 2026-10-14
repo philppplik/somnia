@@ -5,14 +5,14 @@ import {setGraphMixed,setGraphTarget,setMaskClip,useMaskSelection,type GraphTarg
 import {channelOf,curveSamples,speedRange,speedSamples,handleToEase,handlesOf,niceStep,valueRange,EASE_PRESETS,type EasePreset} from '../../lib/animation/graph';
 import {frameToTick,timecode} from '../../lib/animation/time';
 import type {Composition,Layer,MaskProp,PropValue,Property} from '../../lib/animation/model';
-import {animatedTargets} from '../../lib/animation/keyTargets';
+import {animatedTargets,MASK_BOUNDS} from '../../lib/animation/keyTargets';
 import {useT} from '../../lib/useT';
 import {Button} from '../ui/button';
 import {NativeSelect} from '../ui/native-controls';
 import {EASE_LABEL,EASES,fmt} from './format';
 const PAD={l:46,r:12,t:10,b:16};
 const easeOf=(k:{interp:string;out:readonly [number,number];in:readonly [number,number]}):EasePreset|'custom'=>EASES.find(p=>{const e=EASE_PRESETS[p];return e.interp===k.interp&&(!('out' in e)||(e.out[0]===k.out[0]&&e.out[1]===k.out[1]&&e.in[0]===k.in[0]&&e.in[1]===k.in[1]));})??'custom';
-const BOUNDS:Record<MaskProp,[number,number]>={position:[-16384,16384],size:[1,16384],feather:[0,64],opacity:[0,100]};
+const BOUNDS=MASK_BOUNDS;
 /** Animated mask properties (and morphing paths) of a layer, in mask order. */
 export function maskTargets(layer:Layer):(GraphTarget&{n:number})[]{
  return (layer.masks??[]).flatMap((m,i)=>[...(['position','size','feather','opacity'] as const).filter(p=>m.anim?.[p]?.keys.length).map(prop=>({mask:m.id,prop,n:i+1})),...(m.shapeKeys?.length?[{mask:m.id,prop:'path' as const,n:i+1}]:[])]);
