@@ -22,7 +22,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
  const slotA=useRef<HTMLVideoElement>(null),slotB=useRef<HTMLVideoElement>(null);
  const [playhead,setPlayhead]=useState(0),[playing,setPlaying]=useState(false),[muted,setMuted]=useState(false),[volume,setVolume]=useState(1);
  const [playable,setPlayable]=useState(true);
- const [note,setNote]=useState('');
+ const note=session?.exportOutcome?t(session.exportOutcome==='downloaded'?'video.downloaded':'video.review.'+session.exportOutcome):'';
  const playingRef=useRef(false);
  useEffect(()=>{void openVideo(item);},[item]);
  // Opening a video takes you to the Video Studio unless you picked a studio yourself.

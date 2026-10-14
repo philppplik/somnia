@@ -1,3 +1,4 @@
+import {openPublish} from './helpers';
 import {test,expect} from './fixtures';
 import {mkdirSync} from 'node:fs';
 const SHOTS=process.env.PUBLISH_SHOTS??'';
@@ -57,7 +58,7 @@ const shot=async(page:import('@playwright/test').Page,name:string)=>{if(SHOTS){a
 const setTheme=(page:import('@playwright/test').Page,theme:'light'|'dark')=>page.evaluate(t=>{document.documentElement.dataset.theme=t;},theme);
 
 async function addServer(page:import('@playwright/test').Page){
- await page.getByTestId('publish-button').click();
+ await openPublish(page);
  await expect(page.getByTestId('publish-dialog')).toBeVisible();
  await expect(page.getByTestId('publish-form')).toBeVisible();
  await page.getByLabel('Name',{exact:true}).fill('Portfolio');
@@ -201,7 +202,7 @@ for(const theme of ['light','dark'] as const){
  test(`publish builds the project first, then plans and publishes (${theme})`,async({page})=>{
   await mockDeploy(page);await mockBuild(page,'ok');await readyProject(page);await setTheme(page,theme);
   await page.evaluate(()=>{const b=(window as any).buildState;b.hold=new Promise<void>(r=>{b.release=()=>{b.hold=null;r();};});});
-  await page.getByTestId('publish-button').click();await page.getByTestId('publish-go').click();
+  await openPublish(page);await page.getByTestId('publish-go').click();
   await expect(page.getByTestId('publish-build-step')).toHaveAttribute('data-phase','building');
   await expect(page.getByTestId('deploy-confirm')).toHaveCount(0);
   expect(await calls(page)).not.toContain('deploy_plan');await shot(page,`build-${theme}-1-building`);
@@ -215,14 +216,14 @@ for(const theme of ['light','dark'] as const){
 }
 test('a failed build stops before any plan and says so in plain words',async({page})=>{
  await mockDeploy(page);await mockBuild(page,'build-fails');await readyProject(page);
- await page.getByTestId('publish-button').click();await page.getByTestId('publish-go').click();
+ await openPublish(page);await page.getByTestId('publish-go').click();
  await expect(page.getByTestId('publish-failure')).toHaveAttribute('data-code','build');
  await expect(page.getByTestId('publish-failure')).toContainText('The build did not finish');
  expect(await calls(page)).not.toContain('deploy_plan');expect(await calls(page)).not.toContain('deploy_publish');await shot(page,'build-failed');
 });
 test('an artifact with a secret file is refused and the file is named',async({page})=>{
  await mockDeploy(page);await mockBuild(page,'forbidden');await readyProject(page);
- await page.getByTestId('publish-button').click();await page.getByTestId('publish-go').click();
+ await openPublish(page);await page.getByTestId('publish-go').click();
  await expect(page.getByTestId('publish-failure')).toContainText('will not be published');
  await expect(page.getByTestId('publish-failure-path')).toHaveText('assets/.env');
  expect(await calls(page)).not.toContain('deploy_plan');await shot(page,'build-forbidden');
