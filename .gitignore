@@ -12,3 +12,9 @@ phase1/dist-voice/
 
 # Local AI guide text is bundled from docs at build/dev/test startup.
 phase1/src/lib/generated/localAIGuides.ts
+
+# Android project is generated in CI (tauri android init); never commit it or a keystore
+phase1/src-tauri/gen/
+*.jks
+*.keystore
+keystore.properties

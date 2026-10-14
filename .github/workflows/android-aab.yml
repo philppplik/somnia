@@ -1,0 +1,68 @@
+name: Android AAB
+# Free GitHub-hosted ubuntu runner only. Manual, or on pushes to the Android branch.
+on:
+  workflow_dispatch:
+  push:
+    branches: [feat/android-aab]
+    paths: [phase1/src-tauri/**, phase1/src/mobile/**, phase1/vite.config.ts, .github/workflows/android-aab.yml, phase1/scripts/android/**]
+permissions:
+  contents: read
+jobs:
+  aab:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: phase1
+    env:
+      NDK_VERSION: '27.2.12479018'
+      ANDROID_TARGET: aarch64
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Rust toolchains (app + isolated WASM bridges)
+        run: |
+          rustup toolchain install 1.95.0 --profile minimal
+          rustup target add wasm32-unknown-unknown --toolchain 1.95.0
+          rustup target add aarch64-linux-android
+          cargo +1.95.0 install wasm-bindgen-cli --version 0.2.129 --locked
+      - name: Android NDK
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;$NDK_VERSION" "platforms;android-35" "build-tools;35.0.0"
+          echo "NDK_HOME=$ANDROID_HOME/ndk/$NDK_VERSION" >> "$GITHUB_ENV"
+      - run: npm ci
+      - name: Build WASM bridges the frontend needs
+        run: npm run craft:build && npm run documents:build
+      - name: Generate the Android project
+        run: npx tauri android init --ci
+      - name: Wire release signing (only when the keystore secrets exist)
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "$KS_B64" ]; then echo "No keystore secrets: building an UNSIGNED bundle (verification only)."; exit 0; fi
+          echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/upload.jks"
+          python3 scripts/android/wire-signing.py src-tauri/gen/android/app/build.gradle.kts "$RUNNER_TEMP/upload.jks" "$KS_PASS" "$KEY_ALIAS" "$KEY_PASS"
+      - name: Build the AAB
+        run: npx tauri android build --aab --ci --target "$ANDROID_TARGET" -- --no-default-features --features mobile
+      - name: Verify the bundle
+        run: |
+          f=$(find src-tauri/gen/android -name '*.aab' | head -n1)
+          test -n "$f" || { echo "no .aab produced"; exit 1; }
+          ls -l "$f"; unzip -l "$f" | grep -E 'base/(manifest|lib/arm64-v8a)' || { echo "bundle is missing the manifest or the arm64 library"; exit 1; }
+          if jarsigner -verify "$f" 2>&1 | grep -q 'jar verified'; then echo "signed: yes"; else echo "signed: no (unsigned bundle)"; fi
+      - uses: actions/upload-artifact@v7
+        with:
+          name: somnia-android-aab-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: error
+          path: phase1/src-tauri/gen/android/**/*.aab
