@@ -1,3 +1,4 @@
+import {SlidesDeckCheck} from './SlidesDeckCheck';
 import {SlidesNotesReport} from './SlidesNotesReport';
 import {SlidesTitleReport} from './SlidesTitleReport';
 import {SlidesAltReport} from './SlidesAltReport';
@@ -53,6 +54,7 @@ export function SlidesOverviewPanel(){
   <input className={input} aria-label={t('slides.search')} placeholder={t('slides.search')} value={query} onChange={e=>setQuery(e.target.value)}/>
   <label className="flex items-center gap-2 text-xs"><input className="!w-4 shrink-0" type="checkbox" checked={compact} onChange={e=>setCompact(e.target.checked)}/>{t('slides.compact')}</label>
   <button className={button} disabled={s.busy} onClick={()=>void action.run('slides.loadThumbnails')}>{t('cmd.slides.loadThumbnails')}</button>
+  <SlidesDeckCheck/>
   <details className="rounded-lg border border-subtle"><summary className="px-2 py-1.5 text-xs">{t('slides.sections.title')}</summary><SlidesSectionsEditor/></details>
   <details className="rounded-lg border border-subtle"><summary className="px-2 py-1.5 text-xs">{t('slides.altReport.title')}</summary><SlidesAltReport/></details>
   <details className="rounded-lg border border-subtle"><summary className="px-2 py-1.5 text-xs">{t('slides.titleReport.title')}</summary><SlidesTitleReport/></details>
