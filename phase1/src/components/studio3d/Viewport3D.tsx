@@ -25,6 +25,8 @@ import type {Bounds} from '../../lib/studio3d/model';
 import {Stage,beginGroupDrag,applyGroupDrag,collectNodeExtras,applyNodeExtras,type GroupDragMember,type TransformSnapshot} from '../../lib/studio3d/stage';
 import {parseDocument,buildDocument,sceneBytes,fromBase64,DocumentError} from '../../lib/studio3d/document';
 import {registerStudio3DController} from '../../lib/studio3d/commands';
+import {inspectImage,isTextureSlot,MAX_TEXTURE_FILE_BYTES,MaterialError,type TextureSlot} from '../../lib/studio3d/materials';
+import {viewDirection,type ViewPreset} from '../../lib/studio3d/viewPresets';
 import {rememberScene,forgetAutosave} from '../../lib/studio3d/recentSession';
 import {autosaveDue} from '../../lib/studio3d/recent';
 import {patchStudio3D,resetStudio3D,getStudio3DState,useStudio3D} from '../../lib/studio3d/session';
@@ -417,7 +419,34 @@ export default function Viewport3D(){
    const result=await new GLTFExporter().parseAsync(holder.children.length===1?holder.children[0]:holder,{binary:false});
    download(new Blob([JSON.stringify(result)],{type:'model/gltf+json'}),`${stem(getStudio3DState().name||'scene')}.gltf`);
   };
-  const off=registerStudio3DController({exportGltf,setPrimitive:(id,p)=>stage.setPrimitive(id,p),
+  /** Reads an image the user chose for a texture slot. Type, size and pixel count are checked from the file header before anything decodes it. Nothing is fetched. */
+  const setTextureFile=async(id:number,slot:TextureSlot,file:File|null)=>{
+   if(!isTextureSlot(slot))throw Object.assign(new Error('Unknown texture slot.'),{expected:true});
+   if(!file){stage.setTexture(id,slot,null);return;}
+   try{inspectImage(file.name,file.size>MAX_TEXTURE_FILE_BYTES?new Uint8Array(MAX_TEXTURE_FILE_BYTES+1):new Uint8Array(await file.arrayBuffer()));}
+   catch(e){if(e instanceof MaterialError)throw Object.assign(e,{expected:true});throw e;}
+   const url=URL.createObjectURL(file);
+   try{const tex=await new THREE.TextureLoader().loadAsync(url);tex.name=file.name;stage.setTexture(id,slot,tex);}
+   finally{URL.revokeObjectURL(url);}
+  };
+  const mirrorSelection=(axis:'x'|'y'|'z',copy:boolean,ids?:number[])=>{
+   const set=ids??currentSet();if(!set.length)throw Object.assign(new Error('Select something first.'),{expected:true});
+   const out=stage.mirror(set,axis,copy);if(copy)applySet(out.map(o=>o.id),out[out.length-1].id);return out.map(o=>o.id);
+  };
+  const applyScaleSel=(ids?:number[])=>{const set=ids??currentSet();if(!set.length)throw Object.assign(new Error('Select something first.'),{expected:true});stage.applyScale(set);};
+  const mergeSel=(ids?:number[])=>{
+   const set=ids??currentSet();if(set.length<2)throw Object.assign(new Error('Tick at least two meshes in the scene list to merge them.'),{expected:true});
+   const m=stage.merge(set);applySet([],m.id);return m.id;
+  };
+  const viewPreset=(preset:ViewPreset)=>{
+   const id=getStudio3DState().selected;const obj=id==null?null:stage.find(id);
+   const box=obj?new THREE.Box3().setFromObject(obj):null;
+   const dir=new THREE.Vector3(...viewDirection(preset));
+   if(box&&!box.isEmpty())place(dir,box.getCenter(new THREE.Vector3()),Math.max(box.getSize(new THREE.Vector3()).length()/2,1e-4));
+   else if(bounds&&boundsValid(bounds))place(dir,new THREE.Vector3(...boundsCenter(bounds)),Math.max(boundsRadius(bounds),1e-4));
+   else place(dir,new THREE.Vector3(0,0,0),5);
+  };
+  const off=registerStudio3DController({exportGltf,setTextureFile,mirrorSelection,applyScale:applyScaleSel,mergeSelection:mergeSel,viewPreset,setPrimitive:(id,p)=>stage.setPrimitive(id,p),
    save:saveDocument,deleteSelection,duplicateSelection,exportMesh,renderTurntable,cancelRender:()=>{cancelFlag=true;},setUnit,openFiles,newScene,resetView:frameAll,frameSelection,select,renderStill,exportGlb,
    addPrimitive:k=>{const o=stage.addPrimitive(k);select(o.id);return o.id;},addLight:k=>{const o=stage.addLight(k);select(o.id);return o.id;},
    setTransform:(id,p)=>stage.setTransform(id,p),setMaterial:(id,p)=>stage.setMaterial(id,p),rename:(id,n)=>stage.rename(id,n),

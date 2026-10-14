@@ -1,5 +1,7 @@
 import {PRIMITIVE_KINDS,PrimitiveError,defaultParams,patchParams,readPrimitive,resolveMaterial,type PrimitiveKind,type PrimitiveData,type PrimitiveParams,type MaterialRequest} from './primitives';
 import * as THREE from 'three';
+import {mergeGeometries} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import {checkPbr,alphaState,alphaModeOf,MaterialError,SLOT_CONFIG,type PbrExtras,type AlphaMode,type TextureSlot} from './materials';
 import type {NodeExtra} from './document';
 import {emptyStats,type ModelStats,type OutlineEntry,type Bounds} from './model';
 /**
@@ -13,12 +15,14 @@ export const PRIMITIVES:readonly PrimitiveKind[]=PRIMITIVE_KINDS;
 export const LIGHTS:readonly LightKind[]=['directional','point','spot','area'];
 export interface Vec3{x:number;y:number;z:number}
 export interface TransformPatch{position?:Partial<Vec3>;/** degrees */rotation?:Partial<Vec3>;scale?:Partial<Vec3>}
-export interface MaterialPatch extends MaterialRequest{}
+export interface MaterialPatch extends MaterialRequest,PbrExtras{}
+export const MAX_MERGE_VERTICES=3_000_000;
+export type MirrorAxis='x'|'y'|'z';
 export interface ObjectInfo{
  camera:{fov:number}|null;
- /** Kind and parameters when the mesh is an editable primitive. */primitive:PrimitiveData|null;
+ /** Kind and parameters when the mesh is an editable primitive. */primitive?:PrimitiveData|null;
  id:number;name:string;kind:OutlineEntry['kind'];position:Vec3;rotation:Vec3;scale:Vec3;
- material:{color:string;metalness:number;roughness:number}|null;light:LightInfo|null;
+ material:{color:string;metalness:number;roughness:number;emissive?:string;emissiveIntensity?:number;opacity?:number;alphaMode?:AlphaMode;alphaCutoff?:number;doubleSided?:boolean;/** Name of the image in each slot, or null */textures?:Record<TextureSlot,string|null>}|null;light:LightInfo|null;
 }
 export interface LightInfo{intensity:number;color:string;/** shadow casting; absent for area lights, which cannot cast shadows */shadow?:boolean;/** spot cone, degrees */angle?:number;penumbra?:number;width?:number;height?:number}
 export interface LightPatch{intensity?:number;color?:string;shadow?:boolean;angle?:number;penumbra?:number;width?:number;height?:number}
@@ -89,6 +93,13 @@ function lightInfo(l:THREE.Light):LightInfo{
  if(sp.isSpotLight){info.angle=sp.angle/DEG;info.penumbra=sp.penumbra;}
  if(ra.isRectAreaLight){info.width=ra.width;info.height=ra.height;}
  return info;
+}
+/** Reverses the triangle order of a geometry whose transform mirrored it, so faces keep pointing outward. */
+function flipWinding(g:THREE.BufferGeometry){
+ const idx=g.index;
+ if(idx){const a=idx.array as Uint32Array|Uint16Array;for(let i=0;i+2<a.length;i+=3){const t=a[i+1];a[i+1]=a[i+2];a[i+2]=t;}idx.needsUpdate=true;return;}
+ for(const attr of Object.values(g.attributes)){const a=attr as THREE.BufferAttribute;const n=a.itemSize;const arr=a.array as unknown as {[i:number]:number};
+  for(let v=0;v+2<a.count;v+=3)for(let k=0;k<n;k++){const i1=(v+1)*n+k,i2=(v+2)*n+k;const t=arr[i1];arr[i1]=arr[i2];arr[i2]=t;}a.needsUpdate=true;}
 }
 const label=(s:string)=>s.charAt(0).toUpperCase()+s.slice(1);
 function disposeObject(root:THREE.Object3D){
@@ -317,15 +328,107 @@ export class Stage{
   this.push({label:`Shape of ${o.name}`,undo:()=>{apply(before,beforeData);owned=false;},redo:()=>{apply(after,afterData);owned=true;},release:()=>{(owned?before:after).dispose();}});
  }
  setMaterial(id:number,request:MaterialPatch){
-  const o=this.need(id);const mesh=o as THREE.Mesh;let patch:{color?:string;metalness?:number;roughness?:number};try{patch=resolveMaterial(request);}catch(e){throw e instanceof PrimitiveError?new StageError(e.message):e;}
+  const o=this.need(id);const mesh=o as THREE.Mesh;let patch:{color?:string;metalness?:number;roughness?:number};
+  try{patch=resolveMaterial(request);checkPbr(request);}catch(e){throw e instanceof PrimitiveError||e instanceof MaterialError?new StageError(e.message):e;}
   if(!mesh.isMesh||Array.isArray(mesh.material)||!(mesh.material as THREE.MeshStandardMaterial).isMeshStandardMaterial)throw new StageError(`${o.name} has no editable PBR material.`);
   if(patch.color!==undefined&&!HEX.test(patch.color))throw new StageError('color must look like #rrggbb.');
   const mat=mesh.material as THREE.MeshStandardMaterial;
-  const before={c:mat.color.clone(),m:mat.metalness,r:mat.roughness};
-  const next={c:patch.color?new THREE.Color(patch.color):before.c.clone(),m:patch.metalness===undefined?before.m:clamp01(finite(patch.metalness,'metalness')),r:patch.roughness===undefined?before.r:clamp01(finite(patch.roughness,'roughness'))};
-  if(before.c.equals(next.c)&&before.m===next.m&&before.r===next.r)return;
-  const set=(s:typeof before)=>{mat.color.copy(s.c);mat.metalness=s.m;mat.roughness=s.r;};
+  const take=()=>({c:mat.color.clone(),m:mat.metalness,r:mat.roughness,e:mat.emissive.clone(),ei:mat.emissiveIntensity,op:mat.opacity,tr:mat.transparent,at:mat.alphaTest,dw:mat.depthWrite,side:mat.side});
+  const before=take();const next=take();
+  if(patch.color)next.c=new THREE.Color(patch.color);
+  if(patch.metalness!==undefined)next.m=clamp01(finite(patch.metalness,'metalness'));
+  if(patch.roughness!==undefined)next.r=clamp01(finite(patch.roughness,'roughness'));
+  if(request.emissive!==undefined)next.e=new THREE.Color(request.emissive);
+  if(request.emissiveIntensity!==undefined)next.ei=request.emissiveIntensity;
+  if(request.doubleSided!==undefined)next.side=request.doubleSided?THREE.DoubleSide:THREE.FrontSide;
+  if(request.opacity!==undefined||request.alphaMode!==undefined||request.alphaCutoff!==undefined){
+   const cur=alphaModeOf(before.tr,before.at);
+   // Lowering opacity on an opaque material means the user wants it see-through.
+   const mode=request.alphaMode??(cur==='opaque'&&request.opacity!==undefined&&request.opacity<1?'blend':cur);
+   const a=alphaState(mode,request.opacity??(before.tr||before.at>0?before.op:1),request.alphaCutoff??(before.at>0?before.at:0.5));
+   next.tr=a.transparent;next.op=a.opacity;next.at=a.alphaTest;next.dw=a.depthWrite;
+  }
+  const same=(x:ReturnType<typeof take>,y:ReturnType<typeof take>)=>x.c.equals(y.c)&&x.e.equals(y.e)&&x.m===y.m&&x.r===y.r&&x.ei===y.ei&&x.op===y.op&&x.tr===y.tr&&x.at===y.at&&x.dw===y.dw&&x.side===y.side;
+  if(same(before,next))return;
+  const set=(sn:typeof before)=>{mat.color.copy(sn.c);mat.metalness=sn.m;mat.roughness=sn.r;mat.emissive.copy(sn.e);mat.emissiveIntensity=sn.ei;mat.opacity=sn.op;mat.transparent=sn.tr;mat.alphaTest=sn.at;mat.depthWrite=sn.dw;mat.side=sn.side;mat.needsUpdate=true;};
   set(next);this.push({label:`Material of ${o.name}`,undo:()=>set(before),redo:()=>set(next)});
+ }
+ /** Puts a decoded image into a texture slot, or clears the slot with null. The caller has already checked the file; this sets colour space and keeps one undo step. */
+ setTexture(id:number,slot:TextureSlot,texture:THREE.Texture|null){
+  const o=this.need(id);const mesh=o as THREE.Mesh;
+  if(!mesh.isMesh||Array.isArray(mesh.material)||!(mesh.material as THREE.MeshStandardMaterial).isMeshStandardMaterial)throw new StageError(`${o.name} has no editable PBR material.`);
+  const cfg=SLOT_CONFIG[slot];if(!cfg)throw new StageError(`Unknown texture slot: ${String(slot)}.`);
+  const mat=mesh.material as THREE.MeshStandardMaterial;const before=mat[cfg.prop] as THREE.Texture|null;
+  if(texture){texture.colorSpace=cfg.srgb?THREE.SRGBColorSpace:THREE.NoColorSpace;texture.wrapS=texture.wrapT=THREE.RepeatWrapping;texture.needsUpdate=true;}
+  if(before===texture||(!before&&!texture))return;
+  const set=(t:THREE.Texture|null)=>{(mat as unknown as Record<string,unknown>)[cfg.prop]=t;mat.needsUpdate=true;};
+  let owned=true;set(texture);
+  this.push({label:`${slot} texture of ${o.name}`,undo:()=>{set(before);owned=false;},redo:()=>{set(texture);owned=true;},release:()=>{(owned?before:texture)?.dispose();}});
+ }
+ /** Mirrors objects across the world plane through the origin that is perpendicular to the axis. With copy, mirrored duplicates are added instead. One undo step. */
+ mirror(ids:number[],axis:MirrorAxis,copy:boolean):THREE.Object3D[]{
+  if(!['x','y','z'].includes(axis))throw new StageError('axis must be x, y or z.');
+  const objs=this.topLevel(this.needMany(ids,1));
+  const flip=new THREE.Matrix4().makeScale(axis==='x'?-1:1,axis==='y'?-1:1,axis==='z'?-1:1);
+  const place=(o:THREE.Object3D,parent:THREE.Object3D)=>{
+   o.updateWorldMatrix(true,false);const w=flip.clone().multiply(o.matrixWorld);parent.updateWorldMatrix(true,false);
+   const local=parent.matrixWorld.clone().invert().multiply(w);const p=new THREE.Vector3(),q=new THREE.Quaternion(),sc=new THREE.Vector3();local.decompose(p,q,sc);return{p,q,sc,s:sc};
+  };
+  if(!copy){
+   const list=objs.map(o=>{const t=place(o,o.parent!);return{o,b:{p:o.position.clone(),q:o.quaternion.clone(),s:o.scale.clone()},a:t};});
+   const set=(k:'b'|'a')=>{for(const l of list){const v=l[k];l.o.position.copy(v.p);l.o.quaternion.copy(v.q);l.o.scale.copy(v.s);}};
+   set('a');this.push({label:`Mirror ${objs.length>1?objs.length+' objects':objs[0].name}`,undo:()=>set('b'),redo:()=>set('a')});return objs;
+  }
+  const items:{o:THREE.Object3D;parent:THREE.Object3D;at:number}[]=[];
+  for(const src of objs){
+   const c=src.clone(true);c.traverse(x=>{const m=x as THREE.Mesh;if(m.isMesh&&!Array.isArray(m.material))m.material=(m.material as THREE.Material).clone();});
+   const parent=src.parent??this.root;const t=place(src,parent);c.position.copy(t.p);c.quaternion.copy(t.q);c.scale.copy(t.sc);
+   c.name=this.uniqueName(src.name+' mirror');items.push({o:c,parent,at:parent.children.length});this.attach0(c,parent,parent.children.length);
+  }
+  let owned=true;
+  this.push({label:`Mirror copy of ${items.length>1?items.length+' objects':objs[0].name}`,undo:()=>{for(const i of items)i.parent.remove(i.o);owned=false;},redo:()=>{for(const i of items)this.attach0(i.o,i.parent,i.at);owned=true;},release:()=>{if(!owned)for(const i of items)disposeObject(i.o);}});
+  return items.map(i=>i.o);
+ }
+ /** Bakes each mesh's scale into its geometry and resets the scale to 1. The look does not change. A mesh with children is refused, because the children would change size. */
+ applyScale(ids:number[]){
+  const objs=this.topLevel(this.needMany(ids,1));
+  for(const o of objs){if(!(o as THREE.Mesh).isMesh)throw new StageError(`${o.name} is not a mesh. Apply scale works on meshes.`);if(o.children.length)throw new StageError(`${o.name} has child objects, so its scale cannot be applied.`);}
+  const list=objs.map(o=>o as THREE.Mesh).filter(m=>Math.abs(m.scale.x-1)>1e-9||Math.abs(m.scale.y-1)>1e-9||Math.abs(m.scale.z-1)>1e-9).map(m=>{
+   const g=m.geometry.clone();g.applyMatrix4(new THREE.Matrix4().makeScale(m.scale.x,m.scale.y,m.scale.z));
+   if(m.scale.x*m.scale.y*m.scale.z<0)flipWinding(g);g.computeBoundingBox();g.computeBoundingSphere();
+   return{m,before:{g:m.geometry,s:m.scale.clone(),d:m.userData.somniaPrimitive},after:g};});
+  if(!list.length)return;
+  const set=(k:'before'|'after')=>{for(const l of list){if(k==='after'){l.m.geometry=l.after;l.m.scale.set(1,1,1);delete l.m.userData.somniaPrimitive;}else{l.m.geometry=l.before.g;l.m.scale.copy(l.before.s);if(l.before.d!==undefined)l.m.userData.somniaPrimitive=l.before.d;}}};
+  let owned=true;set('after');
+  this.push({label:`Apply scale of ${list.length>1?list.length+' objects':list[0].m.name}`,undo:()=>{set('before');owned=false;},redo:()=>{set('after');owned=true;},release:()=>{for(const l of list)(owned?l.before.g:l.after).dispose();}});
+ }
+ /** Joins all meshes in the given objects into one mesh at the scene root. World transforms are baked in. The first mesh's material is used. One undo step. */
+ merge(ids:number[]):THREE.Mesh{
+  const objs=this.topLevel(this.needMany(ids,1));const meshes:THREE.Mesh[]=[];
+  for(const o of objs)o.traverse(x=>{if((x as THREE.Mesh).isMesh&&!Array.isArray((x as THREE.Mesh).material))meshes.push(x as THREE.Mesh);});
+  if(meshes.length<2)throw new StageError('Select at least two meshes to merge.');
+  this.root.updateWorldMatrix(true,true);const inv=this.root.matrixWorld.clone().invert();
+  const geos:THREE.BufferGeometry[]=[];let verts=0;
+  for(const m of meshes){
+   const g=m.geometry.index?m.geometry.toNonIndexed():m.geometry.clone();
+   const w=inv.clone().multiply(m.matrixWorld);g.applyMatrix4(w);if(w.determinant()<0)flipWinding(g);
+   if(!g.getAttribute('normal'))g.computeVertexNormals();
+   if(!g.getAttribute('uv'))g.setAttribute('uv',new THREE.BufferAttribute(new Float32Array(g.getAttribute('position').count*2),2));
+   for(const k of Object.keys(g.attributes))if(!['position','normal','uv'].includes(k))g.deleteAttribute(k);
+   g.clearGroups();verts+=g.getAttribute('position').count;
+   if(verts>MAX_MERGE_VERTICES){for(const x of geos)x.dispose();throw new StageError(`The merged mesh would have more than ${MAX_MERGE_VERTICES.toLocaleString('en-US')} vertices.`);}
+   geos.push(g);
+  }
+  const merged=mergeGeometries(geos,false);for(const g of geos)g.dispose();
+  if(!merged)throw new StageError('These meshes could not be merged.');
+  const first=meshes[0];const result=new THREE.Mesh(merged,(first.material as THREE.Material).clone());result.name=this.uniqueName('Merged');
+  const items=objs.map(o=>({o,parent:o.parent!,at:o.parent!.children.indexOf(o)})).sort((a,b)=>a.parent.id-b.parent.id||a.at-b.at);
+  for(const i of [...items].reverse())i.parent.remove(i.o);
+  const at=this.root.children.length;this.attach0(result,this.root,at);
+  let owned=true;
+  this.push({label:`Merge ${meshes.length} meshes`,undo:()=>{this.root.remove(result);for(const i of items)this.attach0(i.o,i.parent,i.at);owned=false;},redo:()=>{for(const i of [...items].reverse())i.parent.remove(i.o);this.attach0(result,this.root,this.root.children.length);owned=true;},
+   release:()=>{if(owned)for(const i of items)disposeObject(i.o);else disposeObject(result);}});
+  return result;
  }
  rename(id:number,name:string){
   const o=this.need(id);const n=name.trim();if(!n)throw new StageError('A name cannot be empty.');if(n===o.name)return;
@@ -350,7 +453,7 @@ export class Stage{
   return{id:o.id,name:o.name,kind:m.isMesh?'mesh':l.isLight?'light':(o as THREE.Camera).isCamera?'camera':'group',
    position:{x:o.position.x,y:o.position.y,z:o.position.z},rotation:{x:o.rotation.x/DEG,y:o.rotation.y/DEG,z:o.rotation.z/DEG},scale:{x:o.scale.x,y:o.scale.y,z:o.scale.z},
    camera:(o as THREE.PerspectiveCamera).isPerspectiveCamera?{fov:(o as THREE.PerspectiveCamera).fov}:null,
-   primitive:this.primitiveOf(o),material:mat?{color:'#'+mat.color.getHexString(),metalness:mat.metalness,roughness:mat.roughness}:null,light:l.isLight?lightInfo(l):null};
+   primitive:this.primitiveOf(o),material:mat?{color:'#'+mat.color.getHexString(),metalness:mat.metalness,roughness:mat.roughness,emissive:'#'+mat.emissive.getHexString(),emissiveIntensity:mat.emissiveIntensity,opacity:mat.transparent||mat.alphaTest>0?mat.opacity:1,alphaMode:alphaModeOf(mat.transparent,mat.alphaTest),alphaCutoff:mat.alphaTest>0?mat.alphaTest:0.5,doubleSided:mat.side===THREE.DoubleSide,textures:Object.fromEntries((Object.keys(SLOT_CONFIG) as TextureSlot[]).map(k=>{const t=mat[SLOT_CONFIG[k].prop] as THREE.Texture|null;return[k,t?(t.name||'image'):null];})) as Record<TextureSlot,string|null>}:null,light:l.isLight?lightInfo(l):null};
  }
  measure(animations=0):{stats:ModelStats;outline:OutlineEntry[];bounds:Bounds|null}{
   const stats=emptyStats();stats.animations=animations;const outline:OutlineEntry[]=[];const mats=new Set<THREE.Material>(),texs=new Set<THREE.Texture>();

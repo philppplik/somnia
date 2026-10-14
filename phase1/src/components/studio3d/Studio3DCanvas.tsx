@@ -1,13 +1,15 @@
 import {ReplaceSceneDialog} from './ReplaceSceneDialog';
 import {StudioStatus} from '../studios/StudioStatus';
+import {NativeInput} from '../ui/native-controls';
 import {lazy,Suspense,useEffect,useRef} from 'react';
 import {Boxes} from '../../lib/icons';
 import {StudioEmptyState} from '../studios/StudioEmptyState';
 import {FileTabs} from '../FileTabs';
 import {useT} from '../../lib/useT';
 import {MODEL_ACCEPT,ENV_ACCEPT} from '../../lib/studio3d/model';
-import {registerStudio3DCommands,registerStudio3DOpener,registerStudio3DEnvOpener,registerStudio3DRecentOpener,studio3DController} from '../../lib/studio3d/commands';
-import {useStudio3D,patchStudio3D} from '../../lib/studio3d/session';
+import type {TextureSlot} from '../../lib/studio3d/materials';
+import {registerStudio3DCommands,registerStudio3DOpener,registerStudio3DEnvOpener,registerStudio3DTextureOpener,registerStudio3DRecentOpener,studio3DController} from '../../lib/studio3d/commands';
+import {useStudio3D,patchStudio3D,getStudio3DState} from '../../lib/studio3d/session';
 import {registerStudio3DSaveShortcut} from './saveShortcut';
 import {refreshRecent,recentAsFile} from '../../lib/studio3d/recentSession';
 import {RecentList} from './Studio3DPanels';
@@ -19,6 +21,8 @@ export function Studio3DCanvas(){
  const {t}=useT();const s=useStudio3D();const input=useRef<HTMLInputElement|null>(null);
  useEffect(()=>registerStudio3DCommands(),[]);
  const envInput=useRef<HTMLInputElement|null>(null);
+ const texInput=useRef<HTMLInputElement|null>(null);const texSlot=useRef<TextureSlot>('color');
+ useEffect(()=>registerStudio3DTextureOpener(slot=>{texSlot.current=slot;texInput.current?.click();}),[]);
  const pick=()=>input.current?.click();
  useEffect(()=>registerStudio3DEnvOpener(()=>envInput.current?.click()),[]);
  useEffect(()=>registerStudio3DOpener(pick),[]);
@@ -46,6 +50,7 @@ export function Studio3DCanvas(){
   <FileTabs/>
   <input ref={input} type="file" accept={MODEL_ACCEPT} multiple hidden data-testid="studio3d-file-input" onChange={e=>{const files=[...(e.target.files??[])];e.target.value='';if(files.length)void withController(c=>c.openFiles(files));}}/>
   <input ref={envInput} type="file" accept={ENV_ACCEPT} hidden data-testid="studio3d-env-input" onChange={e=>{const f=e.target.files?.[0];e.target.value='';if(f)void withController(async c=>{try{await c.openEnvFile(f);patchStudio3D({status:'ready',error:''});}catch(err){patchStudio3D({status:'ready',error:err instanceof Error?err.message:String(err)});}});}}/>
+  <NativeInput ref={texInput} type="file" accept="image/png,image/jpeg,image/webp" hidden data-testid="studio3d-texture-input" onChange={e=>{const f=e.target.files?.[0];e.target.value='';const id=getStudio3DState().selected;if(f&&id!=null)void withController(async c=>{try{await c.setTextureFile(id,texSlot.current,f);patchStudio3D({status:'ready',error:''});}catch(err){patchStudio3D({status:'ready',error:err instanceof Error?err.message:String(err)});}});}}/>
   <ReplaceSceneDialog open={!!s.confirmReplace} onCancel={()=>patchStudio3D({confirmReplace:null})} onConfirm={()=>{const r=s.confirmReplace;if(r)void withController(c=>r.what==='new'?c.newScene(true):c.openFiles(r.files,true));}}/>
   {active?<Suspense fallback={<StudioStatus className="p-4 text-xs">{t('studio3d.status.loading',{name:''})}</StudioStatus>}><Viewport3D/></Suspense>:
    <><StudioEmptyState studio="3d" icon={<Boxes/>} onOpen={pick} onCreate={()=>withController(c=>c.newScene())}/><RecentList/></>}

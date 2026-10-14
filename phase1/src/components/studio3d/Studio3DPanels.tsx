@@ -11,8 +11,11 @@ import {formatCount,boundsSize,GIZMO_MODES,ENV_PRESETS,ENV_ACCEPT,UNIT_IDS} from
 import type {PanelHostProps,InspectorSectionProps} from '../../lib/shell/types';
 import {Input} from '../ui/input';
 import {Button} from '../ui/button';
+import {NativeInput,NativeSelect} from '../ui/native-controls';
 import {InspectorNumberField} from '../studios/InspectorNumberField';
 import {PARAM_SPECS,MATERIAL_PRESETS} from '../../lib/studio3d/primitives';
+import {ALPHA_MODES,TEXTURE_SLOTS,MAX_EMISSIVE_INTENSITY} from '../../lib/studio3d/materials';
+import {VIEW_PRESETS,RENDER_SIZES} from '../../lib/studio3d/viewPresets';
 const PRIMS=['cube','sphere','plane','cylinder','cone','torus'] as const;
 const LIGHTS=['directional','point','spot','area'] as const;
 const Row=({k,v}:{k:string;v:string|number})=><div className="flex justify-between gap-3 text-xs"><dt className="text-ink-3">{k}</dt><dd className="m-0 truncate text-ink-2" title={String(v)}>{v}</dd></div>;
@@ -86,6 +89,23 @@ export function ObjectSection(_:InspectorSectionProps){
    <label className="flex items-center justify-between gap-2 text-xs text-ink-2">{t('studio3d.material.color')}<input type="color" key={o.material.color} defaultValue={o.material.color} onBlur={e=>{if(e.currentTarget.value!==o.material!.color)void executeCommand('studio3d.object.material',{id:o.id,color:e.currentTarget.value});}}/></label>
    {(['metalness','roughness'] as const).map(k=><label key={k} className="grid gap-1 text-xs text-ink-2">{t('studio3d.material.'+k)} <span className="text-ink-3">{o.material![k].toFixed(2)}</span>
     <input type="range" min={0} max={1} step={0.01} defaultValue={o.material![k]} key={k+o.material![k]} aria-label={t('studio3d.material.'+k)} onChange={e=>void executeCommand('studio3d.object.material',{id:o.id,[k]:Number(e.currentTarget.value)})}/></label>)}
+   <div className="grid gap-2" data-testid="studio3d-pbr-extras">
+    <label className="flex items-center justify-between gap-2 text-xs text-ink-2">{t('studio3d.material.emissive')}<NativeInput type="color" key={'e'+o.material.emissive} defaultValue={o.material.emissive} onBlur={e=>{if(e.currentTarget.value!==o.material!.emissive)void executeCommand('studio3d.object.material',{id:o.id,emissive:e.currentTarget.value});}}/></label>
+    <NumField resetKey={o.id} label={t('studio3d.material.emissiveIntensity')} value={o.material.emissiveIntensity??1} min={0} max={MAX_EMISSIVE_INTENSITY} step={0.1} onCommit={v=>void executeCommand('studio3d.object.material',{id:o.id,emissiveIntensity:v})}/>
+    <label className="grid gap-1 text-xs text-ink-2">{t('studio3d.material.opacity')} <span className="text-ink-3">{(o.material.opacity??1).toFixed(2)}</span>
+     <NativeInput type="range" min={0} max={1} step={0.01} defaultValue={o.material.opacity??1} key={'o'+o.material.opacity} aria-label={t('studio3d.material.opacity')} onChange={e=>void executeCommand('studio3d.object.material',{id:o.id,opacity:Number(e.currentTarget.value)})}/></label>
+    <label className="grid gap-1 text-xs text-ink-2">{t('studio3d.material.alphaMode')}
+     <NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={o.material.alphaMode??'opaque'} aria-label={t('studio3d.material.alphaMode')} onChange={e=>void executeCommand('studio3d.object.material',{id:o.id,alphaMode:e.currentTarget.value})}>
+      {ALPHA_MODES.map(m=><option key={m} value={m}>{t('studio3d.material.alpha.'+m)}</option>)}</NativeSelect></label>
+    {o.material.alphaMode==='mask'&&<NumField resetKey={o.id} label={t('studio3d.material.alphaCutoff')} value={o.material.alphaCutoff??0.5} min={0} max={1} step={0.05} onCommit={v=>void executeCommand('studio3d.object.material',{id:o.id,alphaCutoff:v})}/>}
+    <label className="flex items-center gap-2 text-xs text-ink-2"><NativeInput type="checkbox" checked={!!o.material.doubleSided} onChange={e=>void executeCommand('studio3d.object.material',{id:o.id,doubleSided:e.currentTarget.checked})}/>{t('studio3d.material.doubleSided')}</label>
+   </div>
+   <fieldset className="m-0 grid gap-1 border-0 p-0" data-testid="studio3d-textures"><legend className="text-xs text-ink-3">{t('studio3d.texture.title')}</legend>
+    {TEXTURE_SLOTS.map(slot=>{const name=o.material!.textures?.[slot]??null;return <div key={slot} className="flex items-center gap-1 text-xs text-ink-2" data-testid={'studio3d-texture-'+slot}>
+     <span className="w-20 shrink-0">{t('studio3d.texture.'+slot)}</span><span className="min-w-0 flex-1 truncate text-ink-3" title={name??''}>{name??t('studio3d.texture.none')}</span>
+     <Button variant="outline" onClick={()=>void executeCommand('studio3d.texture.open',{slot})}>{t('studio3d.texture.choose')}</Button>
+     <Button variant="outline" disabled={!name} onClick={()=>void executeCommand('studio3d.texture.clear',{id:o.id,slot})}>{t('studio3d.texture.clear')}</Button></div>;})}
+    <p className="m-0 text-xs text-ink-3">{t('studio3d.texture.note')}</p></fieldset>
   </fieldset>}
   <div className="flex gap-2"><Button variant="outline" onClick={()=>void executeCommand('studio3d.object.duplicate',{id:o.id})}>{t('studio3d.object.duplicate')}</Button>
    <Button variant="outline" onClick={()=>void executeCommand('studio3d.object.delete',{id:o.id})}>{t('studio3d.object.delete')}</Button></div>
@@ -99,6 +119,8 @@ export function ViewSection(_:InspectorSectionProps){
   <div className="flex gap-2"><Button variant="outline" disabled={!s.canUndo} onClick={()=>void executeCommand('studio3d.undo')}>{t('studio3d.undo')}</Button><Button variant="outline" disabled={!s.canRedo} onClick={()=>void executeCommand('studio3d.redo')}>{t('studio3d.redo')}</Button></div>
   <div className="flex gap-2"><Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.view.reset')}>{t('studio3d.view.reset')}</Button>
    <Button variant="outline" disabled={!ready||s.selected==null} onClick={()=>void executeCommand('studio3d.view.frame')}>{t('studio3d.view.frame')}</Button></div>
+  <div className="flex flex-wrap gap-1" role="group" aria-label={t('studio3d.view.presets')} data-testid="studio3d-view-presets">{VIEW_PRESETS.map(p=><Button key={p} variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.view.preset',{preset:p})}>{t('studio3d.view.preset.'+p)}</Button>)}</div>
+  <RenderPng/>
   {s.backend&&<Row k={t('studio3d.view.backend')} v={s.backend}/>}
  </div>;
 }
@@ -170,6 +192,7 @@ export function ToolsSection(_:InspectorSectionProps){
    {s.render?<StudioProgress label={t('studio3d.turntable.progress',{done:s.render.done,total:s.render.total})} value={s.render.done} max={s.render.total} cancelLabel={t('studio3d.turntable.cancel')} onCancel={()=>void executeCommand('studio3d.render.cancel')}/>:
     <Button variant="outline" disabled={s.status!=='ready'} onClick={()=>void executeCommand('studio3d.render.turntable',{frames})}>{t('studio3d.turntable.start')}</Button>}
   </fieldset>
+  <MeshTools/>
   <fieldset className="m-0 grid gap-1 border-0 p-0" data-testid="studio3d-align"><legend className="text-xs text-ink-3">{t('studio3d.align.title',{count:n.length})}</legend>
    <p className="m-0 text-xs text-ink-3">{t('studio3d.align.hint')}</p>
    <div className="flex flex-wrap gap-1"><Button variant="outline" disabled={n.length<2} onClick={()=>void executeCommand('studio3d.selection.duplicate',{ids:n})}>{t('studio3d.selection.duplicate')}</Button>
@@ -186,4 +209,32 @@ export function RecentList({compact=false}:{compact?:boolean}){
  const {t}=useT();const s=useStudio3D();
  if(!s.recent.length)return null;
  return <StudioRecentList title={t('studio3d.recent.title')} compact={compact} testId="studio3d-recent" entries={s.recent.map(e=>({id:e.id,label:e.auto?t('studio3d.recent.autosave',{name:e.name}):e.name,metadata:`${new Date(e.savedAt).toLocaleString()} · ${formatBytes(e.size)}`,testId:e.auto?'studio3d-recent-autosave':'studio3d-recent-item'}))} onOpen={id=>void executeCommand('studio3d.recent.open',{id})} footer={<Button variant="outline" onClick={()=>void executeCommand('studio3d.recent.clear',{})}>{t('studio3d.recent.clear')}</Button>}/>;
+}
+
+/** Render the current view to a PNG at a chosen size. The size presets fill the fields; the fields can be changed freely. */
+function RenderPng(){
+ const {t}=useT();const s=useStudio3D();const ready=s.status==='ready';
+ const [w,setW]=useState(1920);const [h,setH]=useState(1080);const [alpha,setAlpha]=useState(false);
+ return <fieldset className="m-0 grid gap-2 border-0 p-0" data-testid="studio3d-render-png"><legend className="text-xs text-ink-3">{t('studio3d.renderPng.title')}</legend>
+  <label className="grid gap-1 text-xs text-ink-2">{t('studio3d.renderPng.size')}
+   <NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={RENDER_SIZES.find(r=>r.width===w&&r.height===h)?.id??'custom'} aria-label={t('studio3d.renderPng.size')}
+    onChange={e=>{const r=RENDER_SIZES.find(x=>x.id===e.currentTarget.value);if(r){setW(r.width);setH(r.height);}}}>
+    {RENDER_SIZES.map(r=><option key={r.id} value={r.id}>{t('studio3d.renderPng.'+r.id)} ({r.width} x {r.height})</option>)}<option value="custom">{t('studio3d.renderPng.custom')}</option></NativeSelect></label>
+  <div className="grid grid-cols-2 gap-2"><NumField resetKey={w} label={t('studio3d.renderPng.width')} value={w} min={1} max={16384} step={1} onCommit={v=>setW(Math.round(v))}/>
+   <NumField resetKey={h} label={t('studio3d.renderPng.height')} value={h} min={1} max={16384} step={1} onCommit={v=>setH(Math.round(v))}/></div>
+  <label className="flex items-center gap-2 text-xs text-ink-2"><NativeInput type="checkbox" checked={alpha} onChange={e=>setAlpha(e.currentTarget.checked)}/>{t('studio3d.renderPng.transparent')}</label>
+  <Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.render.still',{width:w,height:h,transparent:alpha})}>{t('studio3d.renderPng.go')}</Button>
+  <p className="m-0 text-xs text-ink-3">{t('studio3d.renderPng.note')}</p></fieldset>;
+}
+
+/** Mirror, apply scale and merge act on the ticked objects, or on the selected one. Origin to centre is the Pivot group above. */
+function MeshTools(){
+ const {t}=useT();const s=useStudio3D();const [copy,setCopy]=useState(true);
+ const set=s.marked.length?s.marked:s.selected!=null?[s.selected]:[];const ready=s.status==='ready'&&set.length>0;
+ return <fieldset className="m-0 grid gap-2 border-0 p-0" data-testid="studio3d-meshtools"><legend className="text-xs text-ink-3">{t('studio3d.mesh.title')}</legend>
+  <div className="flex flex-wrap items-center gap-1">{(['x','y','z'] as const).map(a=><Button key={a} variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.mesh.mirror',{axis:a,copy})}>{t('studio3d.mesh.mirror',{axis:a.toUpperCase()})}</Button>)}</div>
+  <label className="flex items-center gap-2 text-xs text-ink-2"><NativeInput type="checkbox" checked={copy} onChange={e=>setCopy(e.currentTarget.checked)}/>{t('studio3d.mesh.copy')}</label>
+  <div className="flex flex-wrap gap-1"><Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.mesh.applyScale',{})}>{t('studio3d.mesh.applyScale')}</Button>
+   <Button variant="outline" disabled={s.status!=='ready'||set.length<2} onClick={()=>void executeCommand('studio3d.mesh.merge',{})}>{t('studio3d.mesh.merge')}</Button></div>
+ </fieldset>;
 }

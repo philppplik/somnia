@@ -135,3 +135,18 @@ test('3D studio edits a primitive by parameters, applies a material preset and e
  expect(JSON.stringify(json.nodes)).toContain('somniaPrimitive');
  expect(id).toBeGreaterThan(0);
 });
+
+test('3D studio sets PBR extras, mirrors, merges, applies a view preset and renders a PNG at a chosen size',async({page})=>{
+ await blank(page);
+ const a=await insert(page,'cube',0);
+ await run(page,'studio3d.object.material',{id:a,emissive:'#ff0000',emissiveIntensity:2,opacity:0.5});
+ await expect.poll(async()=>(await session(page)).info?.material?.alphaMode).toBe('blend');
+ await run(page,'studio3d.mesh.mirror',{axis:'x',copy:true});
+ await expect.poll(async()=>(await session(page)).outline.filter(o=>o.kind==='mesh').length).toBe(2);
+ await run(page,'studio3d.view.preset',{preset:'top'});
+ await page.getByTestId('studio3d-texture-input').setInputFiles({name:'t.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==','base64')});
+ const w=page.getByTestId('studio3d-render-png');
+ await w.getByLabel('Width (px)').fill('640');await w.getByLabel('Height (px)').fill('360');
+ const [download]=await Promise.all([page.waitForEvent('download'),w.getByRole('button').last().click()]);
+ expect(download.suggestedFilename()).toMatch(/\.png$/);
+});

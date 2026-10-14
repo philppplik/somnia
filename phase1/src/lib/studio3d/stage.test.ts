@@ -274,3 +274,52 @@ test('material presets apply as one undo step and explicit values win',()=>{
  stage.undo();assert.equal(stage.info(m.id)!.material!.color,'#ffc857');
  assert.throws(()=>stage.setMaterial(m.id,{preset:'nope'}),StageError);
 });
+test('PBR extras: emissive, opacity and alpha mode apply as one undo step and read back',()=>{
+ const stage=new Stage();const m=stage.addPrimitive('cube');
+ stage.setMaterial(m.id,{emissive:'#ff8800',emissiveIntensity:2.5});let i=stage.info(m.id)!.material!;assert.equal(i.emissive,'#ff8800');assert.equal(i.emissiveIntensity,2.5);
+ stage.setMaterial(m.id,{opacity:0.4});i=stage.info(m.id)!.material!;assert.equal(i.alphaMode,'blend');assert.equal(i.opacity,0.4);
+ stage.setMaterial(m.id,{alphaMode:'mask',alphaCutoff:0.3});i=stage.info(m.id)!.material!;assert.equal(i.alphaMode,'mask');assert.equal(i.alphaCutoff,0.3);
+ stage.setMaterial(m.id,{alphaMode:'opaque'});assert.equal(stage.info(m.id)!.material!.opacity,1);
+ stage.setMaterial(m.id,{doubleSided:true});assert.equal(stage.info(m.id)!.material!.doubleSided,true);
+ stage.undo();assert.equal(stage.info(m.id)!.material!.doubleSided,false);stage.undo();assert.equal(stage.info(m.id)!.material!.alphaMode,'mask');
+ for(const bad of [{opacity:2},{emissive:'x'},{alphaMode:'add'},{emissiveIntensity:99}])assert.throws(()=>stage.setMaterial(m.id,bad as never),StageError);
+});
+test('a texture slot takes an image, shows its name, clears, and undoes',()=>{
+ const stage=new Stage();const m=stage.addPrimitive('plane');const tex=new THREE.Texture();tex.name='bricks.png';
+ stage.setTexture(m.id,'normal',tex);assert.equal(stage.info(m.id)!.material!.textures!.normal,'bricks.png');assert.equal(tex.colorSpace,THREE.NoColorSpace);
+ const c=new THREE.Texture();stage.setTexture(m.id,'color',c);assert.equal(c.colorSpace,THREE.SRGBColorSpace);
+ stage.setTexture(m.id,'color',null);assert.equal(stage.info(m.id)!.material!.textures!.color,null);stage.undo();assert.equal(stage.info(m.id)!.material!.textures!.color,'image');
+ assert.throws(()=>stage.setTexture(m.id,'bogus' as never,tex),StageError);assert.throws(()=>stage.setTexture(stage.addLight('point').id,'color',tex),StageError);
+});
+test('mirror flips a copy across the world plane and keeps faces pointing out',()=>{
+ const stage=new Stage();const a=stage.addPrimitive('cube');stage.setTransform(a.id,{position:{x:2,y:0.5,z:1},rotation:{y:30}});
+ const [c]=stage.mirror([a.id],'x',true);assert.ok(Math.abs(c.position.x+2)<1e-9);assert.equal(c.position.z,1);assert.equal(stage.root.children.length,2);
+ c.updateWorldMatrix(true,false);assert.ok(c.matrixWorld.determinant()<0,'a mirror has a negative determinant');
+ stage.undo();assert.equal(stage.root.children.length,1);
+ stage.mirror([a.id],'x',false);assert.ok(Math.abs(a.position.x+2)<1e-9);stage.undo();assert.equal(a.position.x,2);
+ assert.throws(()=>stage.mirror([a.id],'w' as never,true),StageError);
+});
+test('apply scale bakes size into the geometry, drops primitive data and undoes',()=>{
+ const stage=new Stage();const a=stage.addPrimitive('cube');stage.setTransform(a.id,{scale:{x:2,y:3,z:1}});
+ const before=new THREE.Box3().setFromObject(a).getSize(new THREE.Vector3());
+ stage.applyScale([a.id]);assert.equal(a.scale.x,1);assert.equal(a.scale.y,1);
+ a.geometry.computeBoundingBox();const g=a.geometry.boundingBox!.getSize(new THREE.Vector3());assert.ok(Math.abs(g.x-before.x)<1e-6&&Math.abs(g.y-before.y)<1e-6);
+ assert.equal(stage.info(a.id)!.primitive,null);
+ stage.undo();assert.equal(a.scale.y,3);assert.equal(stage.info(a.id)!.primitive?.kind,'cube');
+ const grp=stage.addLight('point');assert.throws(()=>stage.applyScale([grp.id]),StageError);
+});
+test('apply scale with a negative scale keeps faces outward',()=>{
+ const stage=new Stage();const a=stage.addPrimitive('cube');stage.setTransform(a.id,{scale:{x:-1}});stage.applyScale([a.id]);
+ const geo=a.geometry;const idx=geo.index!,pos=geo.getAttribute('position');const nor=geo.getAttribute('normal');
+ const v=(i:number)=>new THREE.Vector3().fromBufferAttribute(pos,i);let ok=0,n=0;
+ for(let i=0;i<idx.count;i+=3){const A=v(idx.getX(i)),B=v(idx.getX(i+1)),C=v(idx.getX(i+2));const face=B.sub(A).cross(C.sub(A));const nm=new THREE.Vector3().fromBufferAttribute(nor,idx.getX(i));n++;if(face.dot(nm)>0)ok++;}
+ assert.equal(ok,n);
+});
+test('merge joins meshes into one at their world positions and undoes',()=>{
+ const stage=new Stage();const a=stage.addPrimitive('cube'),b=stage.addPrimitive('sphere');stage.setTransform(a.id,{position:{x:-3}});stage.setTransform(b.id,{position:{x:3}});
+ const triBefore=stage.measure().stats.triangles;const m=stage.merge([a.id,b.id]);
+ assert.equal(stage.root.children.length,1);assert.equal(stage.measure().stats.triangles,triBefore);
+ m.geometry.computeBoundingBox();assert.ok(m.geometry.boundingBox!.min.x<-3&&m.geometry.boundingBox!.max.x>3);assert.equal(stage.info(m.id)!.primitive,null);
+ stage.undo();assert.equal(stage.root.children.length,2);stage.redo();assert.equal(stage.root.children.length,1);
+ assert.throws(()=>stage.merge([m.id]),StageError);
+});
