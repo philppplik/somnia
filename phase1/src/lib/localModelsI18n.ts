@@ -1,5 +1,13 @@
 export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
  "en": {
+  "local.search.error.model": "Exact embedding model or local runtime unavailable. Review model setup, then build again. No source text sent by this setup check.",
+  "local.search.error.build": "Index build failed or selected sources changed. No ready index accepted. Review sources/limits and rebuild.",
+  "local.search.error.query": "Query failed or was cancelled. No results accepted; the unchanged memory index may still be used.",
+  "local.search.error.stale": "Memory index is no longer ready or selected sources changed. Old results discarded; rebuild selected sources.",
+  "local.search.noResults": "No source snippets returned for this query. No answer was generated.",
+  "local.search.count": "Selected sources: {count} / 32",
+  "local.search.tooMany": "Choose at most 32 open text sources before building.",
+
   "local.embedReview.title": "Optional local search embedding model",
   "local.embedReview.facts": "Approx. 622 MB weights (rounded estimate), 768 dimensions. Ollama 0.11.10 or later required. Gemma Terms of Use apply.",
   "local.embedReview.boundary": "Embedding-only search model, not a chat answer model. No quality/fit guarantee. Review terms and use restrictions before choosing to download/use.",
@@ -565,6 +573,14 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Move earlier after local"
  },
  "de": {
+  "local.search.error.model": "Exaktes Embedding-Modell oder lokale Runtime nicht verfügbar. Modell-Setup prüfen, dann neu indexieren. Setup-Prüfung sendet keinen Quellentext.",
+  "local.search.error.build": "Indexaufbau fehlgeschlagen oder gewählte Quellen geändert. Kein Ready-Index akzeptiert. Quellen/Limits prüfen und neu indexieren.",
+  "local.search.error.query": "Anfrage fehlgeschlagen oder abgebrochen. Keine Ergebnisse akzeptiert; unveränderter Speicherindex kann weiter genutzt werden.",
+  "local.search.error.stale": "Speicherindex nicht mehr bereit oder gewählte Quellen geändert. Alte Ergebnisse verworfen; gewählte Quellen neu indexieren.",
+  "local.search.noResults": "Keine Quellenausschnitte für diese Anfrage. Keine Antwort generiert.",
+  "local.search.count": "Gewählte Quellen: {count} / 32",
+  "local.search.tooMany": "Vor dem Indexieren höchstens 32 offene Textquellen wählen.",
+
   "local.embedReview.title": "Optionales Embedding-Modell für lokale Suche",
   "local.embedReview.facts": "Ca. 622 MB Gewichte (gerundete Schätzung), 768 Dimensionen. Ollama ab 0.11.10 erforderlich. Gemma-Nutzungsbedingungen gelten.",
   "local.embedReview.boundary": "Nur Embedding-Suche, kein Chat-Antwortmodell. Keine Qualitäts-/Fit-Garantie. Bedingungen und Nutzungsbeschränkungen vor Download/Nutzung prüfen.",
@@ -1130,6 +1146,14 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Nach lokal früher einordnen"
  },
  "es": {
+  "local.search.error.model": "Modelo exacto o runtime local no disponible. Revisa el modelo y reconstruye. Esta comprobación no envía texto de fuentes.",
+  "local.search.error.build": "Falló el índice o cambiaron fuentes. No se aceptó índice listo. Revisa fuentes/límites y reconstruye.",
+  "local.search.error.query": "Consulta fallida o cancelada. No se aceptaron resultados; el índice sin cambios puede seguir usándose.",
+  "local.search.error.stale": "Índice no listo o fuentes modificadas. Resultados antiguos descartados; reconstruye las fuentes elegidas.",
+  "local.search.noResults": "No se devolvieron fragmentos para esta consulta. No se generó respuesta.",
+  "local.search.count": "Fuentes elegidas: {count} / 32",
+  "local.search.tooMany": "Elige como máximo 32 textos abiertos antes de indexar.",
+
   "local.embedReview.title": "Modelo de embeddings opcional para búsqueda local",
   "local.embedReview.facts": "Aprox. 622 MB de pesos (estimación redondeada), 768 dimensiones. Requiere Ollama 0.11.10 o posterior. Se aplican los términos de Gemma.",
   "local.embedReview.boundary": "Solo búsqueda con embeddings, no modelo de respuestas. Sin garantía de calidad/capacidad. Revisa términos y restricciones antes de descargar/usar.",
@@ -1695,6 +1719,14 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Mover antes tras local"
  },
  "fr": {
+  "local.search.error.model": "Modèle exact ou runtime local indisponible. Vérifiez le modèle puis réindexez. Cette vérification ne transmet aucun texte source.",
+  "local.search.error.build": "Indexation échouée ou sources modifiées. Aucun index prêt accepté. Vérifiez sources/limites puis réindexez.",
+  "local.search.error.query": "Requête échouée ou annulée. Aucun résultat accepté; index inchangé encore utilisable.",
+  "local.search.error.stale": "Index non prêt ou sources modifiées. Anciens résultats supprimés; réindexez les sources choisies.",
+  "local.search.noResults": "Aucun fragment retourné pour cette requête. Aucune réponse générée.",
+  "local.search.count": "Sources choisies: {count} / 32",
+  "local.search.tooMany": "Choisissez au plus 32 textes ouverts avant indexation.",
+
   "local.embedReview.title": "Modèle embedding facultatif pour recherche locale",
   "local.embedReview.facts": "Environ 622 Mo de poids (estimation arrondie), 768 dimensions. Ollama 0.11.10 ou ultérieur requis. Conditions Gemma applicables.",
   "local.embedReview.boundary": "Recherche embedding uniquement, pas de réponses chat. Aucune garantie de qualité/capacité. Vérifiez conditions et restrictions avant téléchargement/utilisation.",
@@ -2260,6 +2292,14 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Avancer après local"
  },
  "pt-BR": {
+  "local.search.error.model": "Modelo exato ou runtime local indisponível. Revise o modelo e reconstrua. Esta verificação não envia texto das fontes.",
+  "local.search.error.build": "Falha no índice ou fontes alteradas. Nenhum índice pronto aceito. Revise fontes/limites e reconstrua.",
+  "local.search.error.query": "Consulta falhou ou foi cancelada. Nenhum resultado aceito; índice sem mudanças ainda pode ser usado.",
+  "local.search.error.stale": "Índice não pronto ou fontes alteradas. Resultados antigos descartados; reconstrua fontes escolhidas.",
+  "local.search.noResults": "Nenhum trecho retornado para esta consulta. Nenhuma resposta gerada.",
+  "local.search.count": "Fontes escolhidas: {count} / 32",
+  "local.search.tooMany": "Escolha no máximo 32 textos abertos antes de indexar.",
+
   "local.embedReview.title": "Modelo de embeddings opcional para busca local",
   "local.embedReview.facts": "Aprox. 622 MB de pesos (estimativa arredondada), 768 dimensões. Requer Ollama 0.11.10 ou posterior. Termos Gemma aplicáveis.",
   "local.embedReview.boundary": "Apenas busca por embeddings, sem respostas de chat. Sem garantia de qualidade/capacidade. Revise termos e restrições antes de baixar/usar.",
