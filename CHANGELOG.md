@@ -1,4 +1,5 @@
 # Unreleased: 3D Studio P0
+- 3D Studio: edit mode deletes selected faces, or every triangle touching the selected edges or vertices, with one undo (`studio3d.edit.delete`, full-wipe refused readably).
 - 3D Studio: edit-mode selection helpers select all, none or the inverse and grow or shrink the current vertex, edge or face selection to neighbouring elements, from the edit tools or `studio3d.edit.selectAll` / `studio3d.edit.selectGrow`.
 - 3D Studio: voxel remesh rebuilds meshes as a uniform watertight triangle grid (resolution 8..128, vertices projected back onto the source surface), with undo, from the mesh tools or `studio3d.mesh.remesh`.
 - 3D Studio: combine two meshes with 3D booleans (union, subtract, intersect; world transforms baked, watertight result), with undo, from the mesh tools or `studio3d.mesh.boolean`.

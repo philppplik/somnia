@@ -879,5 +879,8 @@
  "studio3d.edit.selNone": "None",
  "studio3d.edit.selInvert": "Invert",
  "studio3d.edit.selGrow": "Grow",
- "studio3d.edit.selShrink": "Shrink"
+ "studio3d.edit.selShrink": "Shrink",
+ "cmd.studio3d.edit.delete": "Delete selected elements",
+ "studio3d.edit.delete": "Delete",
+ "studio3d.hist.editDelete": "Delete elements"
 }

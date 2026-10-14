@@ -793,6 +793,20 @@ test('mesh edit mode: select all, invert and grow update the selection counts',a
  await expect(page.getByRole('alert')).toContainText('Select something first');
 });
 
+test('mesh edit mode: delete selected faces removes triangles, undo restores them',async({page})=>{
+ await blank(page);
+ const id=await insert(page,'cube',0);
+ expect(await run(page,'studio3d.edit.start',{id,mode:'face'})).toBe(true);
+ expect(await run(page,'studio3d.edit.select',{kind:'face',ids:[4,5]})).toBe(true);
+ expect(await run(page,'studio3d.edit.delete',{})).toBe(true);
+ await expect.poll(async()=>(await session(page)).stats.triangles).toBe(10);
+ let s=await session(page);expect(s.edit).toMatchObject({faces:0,verts:0,edges:0});
+ await run(page,'studio3d.undo');
+ await expect.poll(async()=>(await session(page)).stats.triangles).toBe(12);
+ expect(await run(page,'studio3d.edit.delete',{})).toBe(false);
+ await expect(page.getByRole('alert')).toContainText('Select faces to delete');
+});
+
 test('mesh edit: extrude without a selection is refused readably',async({page})=>{
  await blank(page);
  const id=await insert(page,'cube',0);

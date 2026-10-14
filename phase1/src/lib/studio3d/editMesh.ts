@@ -354,6 +354,34 @@ export function symmetrizeMesh(m:MeshData,axis:MirrorAxis,side:'positive'|'negat
  return flip(mirrorCombine(flip(m),axis,merge,true));
 }
 
+/** Deletes selected elements: faces drop their own triangles, edges and vertices drop every triangle that touches them. Positions stay put (orphan vertices are allowed), so undo restores the exact geometry. Refuses an empty selection and a delete that would leave no triangle. */
+export function deleteElements(m:MeshData,kind:'vertex'|'edge'|'face',sel:{verts?:number[];edges?:[number,number][];faces?:number[]}):MeshData{
+ const tris=m.index.length/3,total=m.positions.length/3;
+ const drop=new Set<number>();
+ if(kind==='face'){
+  if(!sel.faces?.length)throw new EditError('Select faces to delete.');
+  for(const f of sel.faces){if(!Number.isInteger(f)||f<0||f>=tris)throw new EditError(`Face ${f} does not exist.`);drop.add(f);}
+ }else if(kind==='edge'){
+  if(!sel.edges?.length)throw new EditError('Select edges to delete.');
+  const want=sel.edges.map(([a,b])=>{if(!Number.isInteger(a)||!Number.isInteger(b)||a<0||b<0||a>=total||b>=total||a===b)throw new EditError('A selected edge does not exist.');return a<b?`${a}_${b}`:`${b}_${a}`;});
+  const hit=new Set<string>();
+  for(let f=0;f<tris;f++){const v0=m.index[f*3],v1=m.index[f*3+1],v2=m.index[f*3+2];
+   for(const k of want){const [a,b]=k.split('_').map(Number);
+    if((v0===a||v1===a||v2===a)&&(v0===b||v1===b||v2===b)){drop.add(f);hit.add(k);}}}
+  if(!hit.size)throw new EditError('The selected edges are not part of this mesh.');
+ }else{
+  if(!sel.verts?.length)throw new EditError('Select vertices to delete.');
+  const vs=new Set(sel.verts);
+  for(const v of vs)if(!Number.isInteger(v)||v<0||v>=total)throw new EditError(`Vertex ${v} does not exist.`);
+  for(let f=0;f<tris;f++){if(vs.has(m.index[f*3])||vs.has(m.index[f*3+1])||vs.has(m.index[f*3+2]))drop.add(f);}
+ }
+ if(drop.size===tris)throw new EditError('Deleting the selection would leave an empty mesh. Delete the object instead.');
+ const index:number[]=[];
+ for(let f=0;f<tris;f++)if(!drop.has(f))index.push(m.index[f*3],m.index[f*3+1],m.index[f*3+2]);
+ const out:MeshData={positions:m.positions,index};
+ if(m.uvs)out.uvs=m.uvs;
+ return out;
+}
 /** One round of the Loop subdivision scheme: every triangle splits into four; new edge points weigh the edge ends 3/8 and the two opposite vertices 1/8 (boundary edges only average their ends), original vertices are pulled towards their neighbours (boundary vertices only along the boundary). */
 const loopOnce=(m:MeshData):MeshData=>{
  const nv=m.positions.length/3,nt=m.index.length/3;
