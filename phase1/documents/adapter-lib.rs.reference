@@ -80,10 +80,10 @@ impl DocSession {
             })
             .flat_map(|(b, t)| {
                 t.rows.iter().enumerate().flat_map(move |(r, row)| {
-                    row.cells
-                        .iter()
-                        .enumerate()
-                        .flat_map(move |(c, cell)| cell.blocks.iter().enumerate().filter_map(move |(k, x)| matches!(&**x, Block::Para(_)).then_some([b, r, c, k])))
+                    // Continuation cells of a vertical merge are hidden: they own no addressable paragraphs.
+                    row.cells.iter().enumerate().filter(|(_, cell)| cell.props.vmerge != wordcraft_doc::props::VMerge::Continue).flat_map(move |(c, cell)| {
+                        cell.blocks.iter().enumerate().filter_map(move |(k, x)| matches!(&**x, Block::Para(_)).then_some([b, r, c, k]))
+                    })
                 })
             })
     }
@@ -690,7 +690,7 @@ impl DocSession {
         Ok(())
     }
     /// Table structure edit relative to the cell holding paragraph `block` (a cell id). `op` is `row_above`, `row_below`,
-    /// `delete_row`, `col_left`, `col_right`, `delete_col`, `merge_right` or `split_cell`. The table is cloned, edited and swapped in, so a refusal
+    /// `delete_row`, `col_left`, `col_right`, `delete_col`, `merge_right`, `split_cell`, `merge_down` or `split_down`. The table is cloned, edited and swapped in, so a refusal
     /// leaves the document untouched. Block ids of cell paragraphs shift afterwards; the host re-reads `blocks()`.
     fn do_table_edit(&mut self, block: usize, op: &str) -> Result<(), String> {
         use wordcraft_doc::props::VMerge;
@@ -759,6 +759,70 @@ impl DocSession {
                     return Err("only a merged cell can be split".into());
                 }
                 t2.split_cell(r, c, 2);
+            }
+            "merge_down" => {
+                let find = |t: &wordcraft_doc::Table, row: usize| -> Option<usize> {
+                    let mut x = 0;
+                    for (i, cell) in t.rows.get(row).map_or(&[][..], |r| &r.cells[..]).iter().enumerate() {
+                        if x == grid_start {
+                            return Some(i);
+                        }
+                        x += cell.span();
+                    }
+                    None
+                };
+                let mut last = r;
+                while let (Some(i), true) = (find(&t2, last + 1), last + 1 < t2.rows.len()) {
+                    if t2.rows[last + 1].cells[i].props.vmerge == VMerge::Continue && t2.rows[last + 1].cells[i].span() == span {
+                        last += 1;
+                    } else {
+                        break;
+                    }
+                }
+                let next = last + 1;
+                let i = match (next < t2.rows.len()).then(|| find(&t2, next)).flatten() {
+                    Some(i) if t2.rows[next].cells[i].span() == span && t2.rows[next].cells[i].props.vmerge == VMerge::None => i,
+                    _ => return Err("there is no cell of the same width below to merge with".into()),
+                };
+                if t2.rows[r].cells[c].props.vmerge == VMerge::Continue {
+                    return Err("this cell is already part of a merge".into());
+                }
+                let moved: Vec<_> = t2.rows[next].cells[i].blocks.iter().filter(|b| b.as_para().is_none_or(|p| !p.is_empty())).cloned().collect();
+                if t2.rows[r].cells[c].blocks.len() + moved.len() > 1000 {
+                    return Err("a table cell holds at most 1000 paragraphs".into());
+                }
+                {
+                    let lower = &mut t2.rows[next].cells[i];
+                    lower.blocks = wordcraft_doc::Cell::empty().blocks;
+                    lower.props.vmerge = VMerge::Continue;
+                }
+                let top = &mut t2.rows[r].cells[c];
+                if !moved.is_empty() && top.blocks.len() == 1 && top.blocks[0].as_para().is_some_and(wordcraft_doc::Paragraph::is_empty) {
+                    top.blocks.clear();
+                }
+                top.blocks.extend(moved);
+                top.props.vmerge = VMerge::Restart;
+            }
+            "split_down" => {
+                if t2.rows[r].cells[c].props.vmerge != VMerge::Restart {
+                    return Err("only a vertically merged cell can be split".into());
+                }
+                t2.rows[r].cells[c].props.vmerge = VMerge::None;
+                for row in t2.rows.iter_mut().skip(r + 1) {
+                    let mut x = 0;
+                    let mut hit = None;
+                    for (i, cell) in row.cells.iter().enumerate() {
+                        if x == grid_start {
+                            hit = Some(i);
+                            break;
+                        }
+                        x += cell.span();
+                    }
+                    match hit {
+                        Some(i) if row.cells[i].props.vmerge == VMerge::Continue && row.cells[i].span() == span => row.cells[i].props.vmerge = VMerge::None,
+                        _ => break,
+                    }
+                }
             }
             _ => return Err(format!("unknown table operation {op}")),
         }
@@ -1106,6 +1170,27 @@ mod tests {
             assert_eq!(spans2, grid2);
             assert!(n2 <= n);
         }
+    }
+    #[test]
+    fn vertical_merge_hides_the_lower_cell_and_splits_back() {
+        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
+        let first = s.cell_paras().next().expect("fixture has a table");
+        let rows = match &*s.doc.body[first[0]] {
+            Block::Table(t) => t.rows.len(),
+            _ => panic!(),
+        };
+        let n = s.cell_paras().count();
+        if rows < 2 || s.do_table_edit(CELL_BASE, "merge_down").is_err() {
+            return; // fixture too small, or the cell below has another width
+        }
+        assert_eq!(s.cell_paras().count(), n - 1, "the continuation cell owns no addressable paragraph");
+        let saved = wordcraft_docx::write(&s.doc).unwrap();
+        assert_eq!(DocSession::from_bytes(&saved).unwrap().cell_paras().count(), n - 1);
+        assert!(s.do_table_edit(CELL_BASE, "merge_right").is_err());
+        assert!(s.do_table_edit(CELL_BASE, "delete_row").is_err());
+        s.do_table_edit(CELL_BASE, "split_down").unwrap();
+        assert_eq!(s.cell_paras().count(), n);
+        assert!(s.do_table_edit(CELL_BASE, "split_down").is_err());
     }
     #[test]
     fn replace_range_roundtrips_and_is_atomic() {

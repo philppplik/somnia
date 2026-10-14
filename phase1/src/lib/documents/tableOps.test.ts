@@ -29,3 +29,12 @@ test('merge and split keep the caret in the same cell',()=>{
  assert.equal(blockAfterTableEdit('merge_right',at,grid(2,2)),CELL_BASE+1);
  assert.equal(blockAfterTableEdit('merge_right',{table:1,row:0,cell:2},grid(2,2)),CELL_BASE+1);
 });
+
+test('vertical merge keeps the caret in the same cell and the hidden cell is simply absent from the list',()=>{
+ const at={table:1,row:0,cell:0};
+ assert.deepEqual(wantedCell('merge_down',at),{row:0,cell:0});assert.deepEqual(wantedCell('split_down',at),{row:0,cell:0});
+ // after merge_down in a 2x2 table the lower-left cell has no entry: ids 0, 1 and 3 remain
+ const b=grid(2,2).filter(x=>!(x.row===1&&x.cell===0));
+ assert.equal(blockAfterTableEdit('merge_down',at,b),CELL_BASE);
+ assert.equal(blockAfterTableEdit('merge_down',{table:1,row:1,cell:1},b),CELL_BASE+3);
+});

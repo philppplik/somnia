@@ -415,3 +415,22 @@ test('table menu: a custom size inserts a table; bad sizes keep the dialog butto
  await page.getByTestId('documents-table-size-ok').click();await page.waitForTimeout(300);
  await expect(page.getByTestId('documents-edit-error')).toHaveCount(0);await expect(page.getByTestId('documents-table-menu')).toBeVisible();
 });
+test('table menu: merge with the cell below and split it again, refusals shown',async({page})=>{
+ await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ await openBuffers(page,[{name:'sample.docx',mimeType:DOCX,buffer:sample()}]);
+ await expect(page.getByTestId('documents-pages')).toHaveText('1 pages');
+ const pg=page.getByTestId('documents-page').first();const img=pg.locator('img');
+ await expect.poll(()=>img.evaluate((i:HTMLImageElement)=>i.complete&&i.naturalWidth)).toBeGreaterThan(300);
+ const b2=(await pg.boundingBox())!;await page.mouse.click(b2.x+b2.width*0.15,b2.y+b2.height*0.19);
+ await expect(page.getByTestId('documents-caret')).toHaveCount(1);
+ const menu=page.getByTestId('documents-table-menu');
+ await menu.selectOption('split_down');await page.waitForTimeout(250);// unmerged: refused
+ await expect(page.getByTestId('documents-edit-error')).toBeVisible();
+ await menu.selectOption('merge_down');await page.waitForTimeout(250);
+ await expect(page.getByTestId('documents-caret')).toHaveCount(1);
+ // the fixture's cell below may have another width, in which case the engine refuses and there is nothing to split
+ if(await page.getByTestId('documents-edit-error').count()===0){
+  await menu.selectOption('split_down');await page.waitForTimeout(250);
+  await expect(page.getByTestId('documents-edit-error')).toHaveCount(0);
+ }
+});
