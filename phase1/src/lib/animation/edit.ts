@@ -1,0 +1,112 @@
+import {createComposition,createLayer,findComp,findLayer,PROP_META,wouldCycle,EASE_IN,EASE_OUT,TRANSFORM_KEYS,validateDocument,type AnimationDocument,type CompSettings,type Composition,type Interp,type Keyframe,type Layer,type LayerKind,type LayerSource,type Property,type PropValue,type TransformKey} from './model';
+import {evaluate} from './interpolate';
+import {snapToFrame,validRate} from './time';
+/** Typed `animation.*` edits. Every mutation goes through applyEdit so undo, recovery and AI share one path. */
+export type Edit=
+ |{type:'comp.add';settings?:CompSettings;id?:string}
+ |{type:'comp.update';comp?:string;settings:CompSettings}
+ |{type:'comp.select';comp:string}
+ |{type:'comp.remove';comp:string}
+ |{type:'layer.add';kind:LayerKind;over?:Partial<Layer>;id?:string}
+ |{type:'layer.remove';layer:string}
+ |{type:'layer.update';layer:string;name?:string;visible?:boolean;solo?:boolean;locked?:boolean;source?:Partial<LayerSource>}
+ |{type:'layer.timing';layer:string;inT:number;outT:number}
+ |{type:'layer.parent';layer:string;parent:string|null}
+ |{type:'layer.reorder';layer:string;index:number}
+ |{type:'prop.set';layer:string;prop:TransformKey;value:PropValue;t:number}
+ |{type:'prop.animate';layer:string;prop:TransformKey;on:boolean;t:number}
+ |{type:'key.add';layer:string;prop:TransformKey;t:number}
+ |{type:'key.remove';layer:string;prop:TransformKey;t:number}
+ |{type:'key.move';layer:string;prop:TransformKey;from:number;to:number;replace?:boolean}
+ |{type:'key.interp';layer:string;prop:TransformKey;t:number;interp:Interp;out?:readonly [number,number];in?:readonly [number,number]};
+export class EditError extends Error{constructor(message:string,readonly code:'locked'|'missing'|'invalid'|'collision'|'cycle'){super(message);this.name='EditError';}}
+const fail=(code:EditError['code'],m:string):never=>{throw new EditError(m,code);};
+const compOf=(doc:AnimationDocument)=>findComp(doc)??fail('missing','No active composition.');
+const withComp=(doc:AnimationDocument,comp:Composition):AnimationDocument=>({...doc,compositions:doc.compositions.map(c=>c.id===comp.id?comp:c)});
+const withLayers=(doc:AnimationDocument,fn:(layers:readonly Layer[],comp:Composition)=>readonly Layer[]):AnimationDocument=>{const c=compOf(doc);return withComp(doc,{...c,layers:fn(c.layers,c)});};
+function layerOf(doc:AnimationDocument,id:string,allowLocked=false):Layer{
+ const l=findLayer(compOf(doc),id)??fail('missing',`Layer ${id} does not exist.`);
+ if(l.locked&&!allowLocked)fail('locked',`Layer "${l.name}" is locked.`);return l;
+}
+const setLayer=(doc:AnimationDocument,layer:Layer)=>withLayers(doc,ls=>ls.map(l=>l.id===layer.id?layer:l));
+const num=(n:unknown,m:string)=>typeof n==='number'&&Number.isFinite(n)?n:fail('invalid',m);
+function checkValue(prop:TransformKey,v:PropValue):PropValue{
+ const meta=PROP_META[prop];
+ const clamp=(n:number)=>{num(n,`${prop} needs finite numbers.`);if(meta.min!==undefined&&n<meta.min)return fail('invalid',`${prop} must be at least ${meta.min}.`);if(meta.max!==undefined&&n>meta.max)return fail('invalid',`${prop} must be at most ${meta.max}.`);return n;};
+ if(meta.type==='scalar'){if(typeof v!=='number')return fail('invalid',`${prop} takes one number.`);return clamp(v);}
+ if(!Array.isArray(v)||v.length!==2)return fail('invalid',`${prop} takes two numbers.`);
+ return [clamp(v[0]),clamp(v[1])] as const;
+}
+function setProp(doc:AnimationDocument,layer:string,key:TransformKey,fn:(p:Property,l:Layer)=>Property):AnimationDocument{
+ const l=layerOf(doc,layer);return setLayer(doc,{...l,transform:{...l.transform,[key]:fn(l.transform[key],l)}});
+}
+const upsertKey=(keys:readonly Keyframe[],k:Keyframe):Keyframe[]=>[...keys.filter(x=>x.t!==k.t),k].sort((a,b)=>a.t-b.t);
+const makeKey=(t:number,v:PropValue,interp:Interp='bezier'):Keyframe=>({t,v,interp,out:EASE_OUT,in:EASE_IN});
+function tickOf(comp:Composition,t:number):number{
+ num(t,'Time must be a number.');const s=snapToFrame(t,comp.fps);
+ return s<comp.start||s>comp.start+comp.duration?fail('invalid','Time is outside the composition.'):s;
+}
+function checkSettings(s:CompSettings){
+ if(s.width!==undefined&&(!Number.isInteger(s.width)||s.width<1||s.width>16384))fail('invalid','Width must be 1 to 16384.');
+ if(s.height!==undefined&&(!Number.isInteger(s.height)||s.height<1||s.height>16384))fail('invalid','Height must be 1 to 16384.');
+ if(s.fps&&!validRate(s.fps))fail('invalid','Frame rate must be a positive rational up to 240.');
+ if(s.duration!==undefined&&(!Number.isInteger(s.duration)||s.duration<1))fail('invalid','Duration must be a positive number of ticks.');
+ if(s.background!==undefined&&!/^#[0-9a-fA-F]{6}$/.test(s.background))fail('invalid','Background must be a #rrggbb colour.');
+}
+/** Pure reducer. Returns a new document with revision+1, or throws EditError and leaves the input untouched. */
+export function applyEdit(doc:AnimationDocument,e:Edit):AnimationDocument{
+ const out=reduce(doc,e);return out===doc?doc:{...out,revision:doc.revision+1};
+}
+function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
+ switch(e.type){
+  case 'comp.add':{checkSettings(e.settings??{});const c=createComposition({name:`Composition ${doc.compositions.length+1}`,...e.settings},e.id);if(doc.compositions.some(x=>x.id===c.id))fail('invalid','Duplicate composition id.');return {...doc,compositions:[...doc.compositions,c],activeComp:c.id};}
+  case 'comp.update':{const c=findComp(doc,e.comp??doc.activeComp)??fail('missing','Composition does not exist.');checkSettings(e.settings);
+   const duration=e.settings.duration??c.duration;
+   const clipped=c.layers.map(l=>l.outT>duration?{...l,outT:Math.max(l.inT+1,duration)}:l);
+   return withComp(doc,{...c,...e.settings,duration,fps:e.settings.fps??c.fps,layers:clipped,workArea:{in:Math.min(c.workArea.in,duration-1),out:Math.min(c.workArea.out,duration)}});}
+  case 'comp.select':if(!findComp(doc,e.comp))return fail('missing','Composition does not exist.');return e.comp===doc.activeComp?doc:{...doc,activeComp:e.comp};
+  case 'comp.remove':{if(doc.compositions.length<2)return fail('invalid','A document needs at least one composition.');if(!findComp(doc,e.comp))return fail('missing','Composition does not exist.');const rest=doc.compositions.filter(c=>c.id!==e.comp);return {...doc,compositions:rest,activeComp:doc.activeComp===e.comp?rest[0].id:doc.activeComp};}
+  case 'layer.add':{const c=compOf(doc);const l=createLayer(e.kind,c,e.over,e.id);if(c.layers.some(x=>x.id===l.id))fail('invalid','Duplicate layer id.');if(l.parent&&!findLayer(c,l.parent))fail('missing','Parent layer does not exist.');return withLayers(doc,ls=>[l,...ls]);}
+  case 'layer.remove':{const l=layerOf(doc,e.layer);return withLayers(doc,ls=>ls.filter(x=>x.id!==l.id).map(x=>x.parent===l.id?{...x,parent:null}:x));}
+  case 'layer.update':{
+   const l=layerOf(doc,e.layer,e.locked===false&&e.name===undefined&&e.source===undefined);
+   if(e.name!==undefined&&(typeof e.name!=='string'||!e.name.trim()||e.name.length>200))fail('invalid','Layer name must be 1 to 200 characters.');
+   if(e.source?.color!==undefined&&!/^#[0-9a-fA-F]{6}$/.test(e.source.color))fail('invalid','Colour must be #rrggbb.');
+   if(e.source?.size!==undefined&&!(e.source.size>0&&e.source.size<=2000))fail('invalid','Text size must be 1 to 2000.');
+   if(e.source?.text!==undefined&&e.source.text.length>2000)fail('invalid','Text is too long.');
+   return setLayer(doc,{...l,name:e.name?.trim()??l.name,visible:e.visible??l.visible,solo:e.solo??l.solo,locked:e.locked??l.locked,source:{...l.source,...e.source}});}
+  case 'layer.timing':{const c=compOf(doc);const l=layerOf(doc,e.layer);
+   if(!Number.isInteger(e.inT)||!Number.isInteger(e.outT)||e.outT<=e.inT||e.inT<0||e.outT>c.duration)fail('invalid','Layer timing must be inside the composition with out after in.');return setLayer(doc,{...l,inT:e.inT,outT:e.outT});}
+  case 'layer.parent':{const c=compOf(doc);const l=layerOf(doc,e.layer);
+   if(e.parent!==null&&!findLayer(c,e.parent))fail('missing','Parent layer does not exist.');
+   if(e.parent!==null&&wouldCycle(c,l.id,e.parent))fail('cycle','That parent would create a cycle.');return setLayer(doc,{...l,parent:e.parent});}
+  case 'layer.reorder':{const l=layerOf(doc,e.layer);if(!Number.isInteger(e.index)||e.index<0)fail('invalid','Bad index.');
+   return withLayers(doc,ls=>{const r=ls.filter(x=>x.id!==l.id);r.splice(Math.min(e.index,r.length),0,l);return r;});}
+  case 'prop.set':{const c=compOf(doc);const v=checkValue(e.prop,e.value);
+   return setProp(doc,e.layer,e.prop,p=>p.keys.length?{...p,keys:upsertKey(p.keys,makeKey(tickOf(c,e.t),v,p.keys.find(k=>k.t===snapToFrame(e.t,c.fps))?.interp??'bezier'))}:{...p,value:v});}
+  case 'prop.animate':{const c=compOf(doc);const t=tickOf(c,e.t);
+   return setProp(doc,e.layer,e.prop,p=>e.on?(p.keys.length?p:{...p,keys:[makeKey(t,p.value)]}):(p.keys.length?{...p,value:evaluate(p,t),keys:[]}:p));}
+  case 'key.add':{const c=compOf(doc);const t=tickOf(c,e.t);return setProp(doc,e.layer,e.prop,p=>({...p,keys:upsertKey(p.keys,makeKey(t,evaluate(p,t)))}));}
+  case 'key.remove':{const c=compOf(doc);const t=tickOf(c,e.t);
+   return setProp(doc,e.layer,e.prop,p=>{if(!p.keys.some(k=>k.t===t))return fail('missing','No key at that time.');
+    const keys=p.keys.filter(k=>k.t!==t);return keys.length?{...p,keys}:{...p,value:p.keys[0].v,keys:[]};});}
+  case 'key.move':{const c=compOf(doc);const from=tickOf(c,e.from),to=tickOf(c,e.to);
+   return setProp(doc,e.layer,e.prop,p=>{const k=p.keys.find(x=>x.t===from)??fail('missing','No key at the source time.');
+    if(from===to)return p;
+    if(p.keys.some(x=>x.t===to)&&!e.replace)return fail('collision','A key already exists at that time. Replace it explicitly.');
+    return {...p,keys:upsertKey(p.keys.filter(x=>x.t!==from),{...k,t:to})};});}
+  case 'key.interp':{const c=compOf(doc);const t=tickOf(c,e.t);
+   const h=(a?:readonly [number,number])=>a&&(a.length!==2||!a.every(Number.isFinite)||a[0]<0||a[0]>1)?fail('invalid','Ease handle x must be within 0 and 1.'):a;
+   const out=h(e.out),inn=h(e.in);
+   return setProp(doc,e.layer,e.prop,p=>{if(!p.keys.some(k=>k.t===t))return fail('missing','No key at that time.');
+    return {...p,keys:p.keys.map(k=>k.t===t?{...k,interp:e.interp,out:out??k.out,in:inn??k.in}:k)};});}
+ }
+}
+/** Apply several edits as one atomic step. Any failure throws and nothing is applied. */
+export function applyEdits(doc:AnimationDocument,edits:readonly Edit[]):AnimationDocument{
+ let cur=doc;for(const e of edits)cur=applyEdit(cur,e);
+ return cur===doc?doc:{...cur,revision:doc.revision+1};
+}
+/** Safety net used by recovery tests and import: an edit must never produce an invalid document. */
+export const isConsistent=(doc:AnimationDocument)=>validateDocument(doc).length===0;
+export {TRANSFORM_KEYS};

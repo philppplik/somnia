@@ -16,6 +16,7 @@ import {CODE_RAIL_CATALOGUES} from './codeRail/i18n';
 import {PHOTOS_PANEL_CATALOGUES} from './photosPanelI18n';
 import {SOUND_CATALOGUES} from './sound/i18n';
 import {VIDEO_CATALOGUES} from './video/i18n';
+import {ANIMATION_CATALOGUES} from './animation/i18n';
 import {RAIL_CATALOGUES} from './railI18n';
 import {VECTOR_CATALOGUES} from './vectorstudio/i18n';
 import {DESIGN_CATALOGUES} from './design/i18n';
@@ -36,6 +37,7 @@ for (const [tag, extra] of Object.entries(CODE_RAIL_CATALOGUES)) Object.assign(C
 for (const [tag, extra] of Object.entries(PHOTOS_PANEL_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(SOUND_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(VIDEO_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
+for (const [tag, extra] of Object.entries(ANIMATION_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(RAIL_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(VECTOR_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(DESIGN_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
