@@ -5,7 +5,7 @@ import {encodeApng} from './apngEncode';
 import {recordWebm} from './exportVideo';
 import {browserAudioContext} from './audioPreview';
 import {findComp} from './model';
-import {defaultExportSettings,exportPlan,problemMessage,settingsProblems,EXPORT_PRESETS,EXPORT_LIMITS,type ExportFormat,type ExportSettings} from './exportSettings';
+import {defaultExportSettings,exportPlan,problemMessage,settingsProblems,EXPORT_PRESETS,EXPORT_LIMITS,webmBitrate,type ExportFormat,type ExportSettings} from './exportSettings';
 import {animationSession} from './session';
 import {exportFrameSvg} from './exportSvg';
 import {Zip,ZipPassThrough,strToU8} from 'fflate';
@@ -123,7 +123,8 @@ export function exportWebM(d:Deps={}){
    const ctx=canvas.getContext('2d');if(!ctx)throw new ExportError('2D canvas is unavailable.','raster');
    return {canvas,ctx,stream:canvas.captureStream(comp.fps.num/comp.fps.den)};
   },
-  recorder:(stream,mime)=>new MediaRecorder(stream,{mimeType:mime}) as unknown as import('./exportVideo').RecorderLike,
+  bitsPerSecond:webmBitrate(out.width,out.height,comp.fps.num/comp.fps.den,state.settings.quality),
+  recorder:(stream,mime,bps)=>new MediaRecorder(stream,{mimeType:mime,...(bps?{videoBitsPerSecond:bps}:{})}) as unknown as import('./exportVideo').RecorderLike,
   isSupported:m=>typeof MediaRecorder!=='undefined'&&MediaRecorder.isTypeSupported(m),
   audio:browserAudioContext,
   signal,onProgress:(done,total)=>set({done,total}),

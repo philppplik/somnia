@@ -5,7 +5,7 @@ import {Button} from '../ui/button';
 import {InspectorNumberField} from '../studios/InspectorNumberField';
 import {executeCommand} from '../../lib/commands';
 import {useExportState} from '../../lib/animation/exportJob';
-import {EXPORT_FORMATS,EXPORT_PRESETS,exportPlan,type ExportFormat} from '../../lib/animation/exportSettings';
+import {EXPORT_FORMATS,EXPORT_PRESETS,WEBM_QUALITIES,exportPlan,type ExportFormat} from '../../lib/animation/exportSettings';
 import type {Composition} from '../../lib/animation/model';
 const field='h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text';
 const SCALES=[25,50,75,100,150,200];const FPS=[12,15,24,30,60];
@@ -27,6 +27,7 @@ export function ExportSettingsPanel({comp,busy}:{comp:Composition;busy:boolean})
    <InspectorNumberField label={t('animation.export.to')} className={field} resetKey={`${comp.id}-${base.to}`} value={base.to} min={0} step={1} onCommit={n=>void set('animation.export.settings',{to:Math.round(n),from:Math.min(Math.round(n),base.from)})}/>
    <label className="col-span-2 grid gap-1 text-ink-3">{t('animation.export.fileName')}<NativeInput className={field} type="text" maxLength={80} value={s.fileName??''} placeholder={t('animation.export.fileNameAuto')} onChange={e=>void set('animation.export.settings',{fileName:e.target.value===''?null:e.target.value})} data-testid="animation-export-filename"/></label>
    <label className="grid gap-1 text-ink-3">{t('animation.export.columns')}<NativeInput className={field} type="number" min={1} max={256} step={1} value={s.columns??''} placeholder={t('animation.export.columnsAuto')} onChange={e=>void set('animation.export.settings',{columns:e.target.value===''?null:Number(e.target.value)})} data-testid="animation-export-columns"/></label></div>
+  <label className="grid gap-1 text-ink-3">{t('animation.export.quality')}<NativeSelect className={field} value={s.quality??'medium'} onChange={e=>void set('animation.export.settings',{quality:e.target.value})} data-testid="animation-export-quality">{WEBM_QUALITIES.map(q=><option key={q} value={q}>{t(`animation.export.quality.${q}`)}</option>)}</NativeSelect></label>
   <label className="flex items-center gap-1 text-ink-3" title={t('animation.export.loop.hint')}><NativeInput type="checkbox" className="animation-checkbox" checked={s.loop!==false} onChange={e=>void set('animation.export.settings',{loop:e.target.checked})} data-testid="animation-export-loop"/>{t('animation.export.loop')}</label>
   <label className="flex items-center gap-1 text-ink-3" title={t('animation.export.dither.hint')}><NativeInput type="checkbox" className="animation-checkbox" checked={s.dither===true} onChange={e=>void set('animation.export.settings',{dither:e.target.checked})} data-testid="animation-export-dither"/>{t('animation.export.dither')}</label>
   <div className="flex gap-1"><Button size="tiny" variant="ghost" onClick={()=>void set('animation.export.settings',{reset:true})} data-testid="animation-export-reset">{t('animation.export.resetSettings')}</Button></div>

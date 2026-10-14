@@ -1000,5 +1000,10 @@
  "animation.export.fileName": "Nombre de archivo",
  "animation.export.fileNameAuto": "Nombre del documento",
  "animation.export.problem.name": "El nombre de archivo admite como máximo 80 caracteres",
- "animation.rig.pickAll": "Todas las capas"
+ "animation.rig.pickAll": "Todas las capas",
+ "animation.export.quality": "Calidad WebM",
+ "animation.export.quality.low": "Baja",
+ "animation.export.quality.medium": "Media",
+ "animation.export.quality.high": "Alta",
+ "animation.export.problem.quality": "La calidad WebM debe ser baja, media o alta."
 }

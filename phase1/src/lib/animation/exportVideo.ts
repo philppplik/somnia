@@ -24,7 +24,8 @@ export function webmPlan(comp:Composition,isSupported:(mime:string)=>boolean):We
 export interface RecorderLike{mimeType:string;ondataavailable:((e:{data:Blob})=>void)|null;onstop:(()=>void)|null;start(timeslice?:number):void;stop():void}
 export interface WebmDeps{
  createCanvas:()=>{canvas:HTMLCanvasElement;ctx:CanvasRenderingContext2D;stream:MediaStream};
- recorder:(stream:MediaStream,mime:string)=>RecorderLike;
+ recorder:(stream:MediaStream,mime:string,bitsPerSecond?:number)=>RecorderLike;
+ bitsPerSecond?:number;
  isSupported:(mime:string)=>boolean;
  audio?:()=>AudioContextLike|null;
  draw?:(ctx:CanvasRenderingContext2D,svg:string,width:number,height:number)=>Promise<void>;
@@ -67,7 +68,7 @@ export async function recordWebm(doc:AnimationDocument,comp:Composition,d:WebmDe
    audioClock=true;
   }
  }
- const recorder=d.recorder(stream,plan.mime);
+ const recorder=d.recorder(stream,plan.mime,d.bitsPerSecond);
  const chunks:Blob[]=[];let bytes=0,oversize=false;
  recorder.ondataavailable=e=>{if(e.data.size){chunks.push(e.data);bytes+=e.data.size;if(bytes>WEBM_MAX_BYTES)oversize=true;}};
  return new Promise((resolve,reject)=>{

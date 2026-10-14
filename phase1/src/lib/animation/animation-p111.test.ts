@@ -646,3 +646,13 @@ test('P186 custom export file name: replaces the document name in frame, sequenc
  assert.throws(()=>setExportSettings({fileName:'x'.repeat(81)}),(e:any)=>e.code==='unsupported');assert.deepEqual(settingsProblems({...defaultExportSettings(),fileName:'ok'}),[]);
  resetExportSettings();
 });
+
+test('P188: WebM quality sets the bitrate and the size estimate',async()=>{
+ const {webmBitrate,estimateBytes,settingsProblems}=await import('./exportSettings');
+ assert.equal(webmBitrate(1280,720,30),Math.round(1280*720*30*0.07));
+ assert.ok(webmBitrate(1280,720,30,'low')<webmBitrate(1280,720,30)&&webmBitrate(1280,720,30)<webmBitrate(1280,720,30,'high'));
+ assert.equal(webmBitrate(16,16,1,'low'),250000);assert.equal(webmBitrate(8000,8000,60,'high'),40e6);
+ assert.ok(estimateBytes('webm',800,450,60,30,'high')>estimateBytes('webm',800,450,60,30,'low'));
+ assert.equal(estimateBytes('webm',800,450,60,30),estimateBytes('webm',800,450,60,30,'medium'));
+ assert.deepEqual(settingsProblems({scale:100,fps:null,from:null,to:null,quality:'ultra' as never}),['quality']);
+});
