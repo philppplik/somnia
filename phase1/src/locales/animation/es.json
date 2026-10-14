@@ -928,5 +928,7 @@
  "animation.graph.fit.hint": "Encuadra el gráfico en las keys de esta capa",
  "animation.export.frameSvg": "Exportar fotograma como SVG",
  "animation.export.frameSvg.hint": "Archivo vectorial al tamaño del dibujo. Las fuentes se referencian por nombre, no se incrustan.",
- "cmd.animation.export.frameSvg": "Exportar el fotograma actual como SVG"
+ "cmd.animation.export.frameSvg": "Exportar el fotograma actual como SVG",
+ "animation.rig.duplicate": "Duplicar capas",
+ "cmd.animation.layers.duplicate": "Duplicar las capas seleccionadas"
 }

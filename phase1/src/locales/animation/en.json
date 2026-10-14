@@ -928,5 +928,7 @@
  "animation.graph.fit.hint": "Frame the graph on the keys of this layer",
  "animation.export.frameSvg": "Export frame as SVG",
  "animation.export.frameSvg.hint": "Vector file at drawing size. Fonts are referenced by name, not embedded.",
- "cmd.animation.export.frameSvg": "Export current frame as SVG"
+ "cmd.animation.export.frameSvg": "Export current frame as SVG",
+ "animation.rig.duplicate": "Duplicate layers",
+ "cmd.animation.layers.duplicate": "Duplicate the selected layers"
 }

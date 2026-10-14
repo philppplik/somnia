@@ -1584,6 +1584,21 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.layers.duplicate",
+      "title": "Duplicate the selected layers",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "clone",
+        "copy",
+        "duplicate",
+        "layer",
+        "layers"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.layers.stagger",
       "title": "Stagger selected layers",
       "category": "Edit",

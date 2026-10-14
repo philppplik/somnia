@@ -1,3 +1,4 @@
+import {duplicateLayers} from './layerDuplicate';
 import {worldMatrix,invertMatrix,multiplyMatrix,decomposeMatrix} from './scene';
 import {layerKeyTimes,shiftLayerKeys} from './layerShift';
 import {validateEasingLib} from './easingModel';
@@ -29,6 +30,7 @@ export type Edit=
  |{type:'layer.shift';layer:string;delta:number;mode:'slide'|'slip'}
  |{type:'layer.parent';layer:string;parent:string|null;keepWorld?:boolean;t?:number}
  |{type:'layer.reorder';layer:string;index:number}
+ |{type:'layers.duplicate';layers:readonly string[];ids:readonly string[]}
  |{type:'prop.set';layer:string;prop:TransformKey;value:PropValue;t:number}
  |{type:'prop.animate';layer:string;prop:TransformKey;on:boolean;t:number}
  |{type:'key.add';layer:string;prop:TransformKey;t:number}
@@ -528,6 +530,9 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
     const moved:Keyframe={...at,v,...(at.sIn?{sIn:mapTangent(at.sIn)}:{}),...(at.sOut?{sOut:mapTangent(at.sOut)}:{})};
     return {...p,keys:p.keys.map(k=>k.t===t?moved:k)};};
    return setLayer(doc,{...l,parent:e.parent,transform:{...l.transform,position:writeProp(l.transform.position,values!.position),scale:writeProp(l.transform.scale,values!.scale),rotation:writeProp(l.transform.rotation,values!.rotation)}});}
+  case 'layers.duplicate':{const c=compOf(doc);for(const id of e.layers)layerOf(doc,id);
+   if(e.ids.some(x=>typeof x!=='string'||!x||c.layers.some(y=>y.id===x)))fail('invalid','Duplicate layer id.');
+   try{return withLayers(doc,ls=>duplicateLayers(ls,e.layers,e.ids));}catch(x){return fail('invalid',(x as Error).message);}}
   case 'layer.reorder':{const l=layerOf(doc,e.layer);if(!Number.isInteger(e.index)||e.index<0)fail('invalid','Bad index.');
    return withLayers(doc,ls=>{const r=ls.filter(x=>x.id!==l.id);r.splice(Math.min(e.index,r.length),0,l);return r;});}
   case 'prop.set':{const c=compOf(doc);const v=checkValue(e.prop,e.value);

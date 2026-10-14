@@ -2,7 +2,7 @@ import test from 'node:test';import assert from 'node:assert/strict';
 import {createDocument,findComp,findLayer} from './model';
 import {applyEdits} from './edit';
 import {frameToTick} from './time';
-import {AnimationSession} from './session';
+import {AnimationSession,setAnimationSession} from './session';
 import {ReviewedError} from './reviewedCommit';
 const f=(n:number)=>frameToTick(n,{num:30,den:1});
 const base=()=>applyEdits(createDocument(),[{type:'layer.add',kind:'shape',id:'a'},{type:'prop.animate',layer:'a',prop:'position',on:true,t:f(0)},{type:'prop.set',layer:'a',prop:'position',t:f(0),value:[100,100]},{type:'prop.set',layer:'a',prop:'position',t:f(10),value:[200,50]}] as never);
@@ -298,4 +298,28 @@ test('window value range: covers the curve in the window, narrower than the full
  const c=findComp(base())!,p=c.layers.find(l=>l.id==='a')!.transform.position,ks=p.keys;
  const full=windowValueRange(p,0,ks[0].t,ks[ks.length-1].t),part=windowValueRange(p,0,ks[0].t,ks[0].t+(ks[1].t-ks[0].t)/4);
  assert.ok(full.max>full.min&&part.max>part.min&&part.max-part.min<=full.max-full.min+1e-9);
+});
+import {validateDocument} from './model';
+import {applyEdit} from './edit';
+import {duplicateLayers} from './layerDuplicate';
+test('duplicate layers: copies above originals, internal parents remapped, outside ones kept, bad input rejected',()=>{
+ let d=applyEdits(base(),[{type:'layer.add',kind:'shape',id:'b'},{type:'layer.parent',layer:'b',parent:'a'}]);
+ const n=findComp(d)!.layers.length;
+ const both=applyEdit(d,{type:'layers.duplicate',layers:['a','b'],ids:['a2','b2']}),ls=findComp(both)!.layers;
+ assert.equal(ls.length,n+2);assert.deepEqual(validateDocument(both),[]);
+ const ids=ls.map(l=>l.id);assert.equal(ids.indexOf('a2')+1,ids.indexOf('a'));assert.equal(ids.indexOf('b2')+1,ids.indexOf('b'));
+ assert.equal(findLayer(findComp(both)!,'b2')!.parent,'a2');assert.equal(findLayer(findComp(both)!,'a2')!.name.endsWith(' copy'),true);
+ assert.equal(findLayer(findComp(both)!,'a2')!.transform.position.keys.length,findLayer(findComp(both)!,'a')!.transform.position.keys.length);
+ const one=applyEdit(d,{type:'layers.duplicate',layers:['b'],ids:['b3']});assert.equal(findLayer(findComp(one)!,'b3')!.parent,'a');
+ assert.throws(()=>applyEdit(d,{type:'layers.duplicate',layers:['a'],ids:['b']}),/Duplicate/);
+ assert.throws(()=>applyEdit(d,{type:'layers.duplicate',layers:['zz'],ids:['q']}));
+ assert.throws(()=>duplicateLayers(findComp(d)!.layers,[],[]));
+});
+test('duplicate layers: command is one undo step and selects the copy',async()=>{
+ const s=open(),before=s.document!;setAnimationSession(s);
+ s.setView({selectedLayer:'a'});
+ const {layerDuplicateSpecs}=await import('./layerDuplicateCommands');const spec=layerDuplicateSpecs()[0];
+ await (spec.run as (p?:unknown)=>unknown)(undefined);
+ assert.equal(s.getState().view.selectedLayer!==null&&s.getState().view.selectedLayer!=='a',true);
+ s.undo();assert.deepEqual(findComp(s.document!)!.layers.map(l=>l.id),findComp(before)!.layers.map(l=>l.id));setAnimationSession(null);
 });

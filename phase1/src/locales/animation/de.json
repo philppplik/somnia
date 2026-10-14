@@ -928,5 +928,7 @@
  "animation.graph.fit.hint": "Graph auf die Keys dieser Ebene einpassen",
  "animation.export.frameSvg": "Bild als SVG exportieren",
  "animation.export.frameSvg.hint": "Vektordatei in Zeichengröße. Schriften werden nur per Name referenziert, nicht eingebettet.",
- "cmd.animation.export.frameSvg": "Aktuelles Bild als SVG exportieren"
+ "cmd.animation.export.frameSvg": "Aktuelles Bild als SVG exportieren",
+ "animation.rig.duplicate": "Ebenen duplizieren",
+ "cmd.animation.layers.duplicate": "Gewählte Ebenen duplizieren"
 }
