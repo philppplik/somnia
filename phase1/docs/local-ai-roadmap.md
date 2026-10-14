@@ -1,3 +1,7 @@
+> Historical AH-AU audit. For the later AX-BF local-search implementation and current
+> beta acceptance gaps, see [Local search beta-readiness](local-search-beta-readiness.md).
+> The local-search "no adapter/UI" gaps below describe the AV snapshot, not current code.
+
 # Local AI roadmap: real paths vs contracts
 
 2026-10-14, AH-AU source audit. 'Wired' means application code calls the path,
