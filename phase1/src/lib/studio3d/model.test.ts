@@ -59,9 +59,12 @@ test('counts format compactly',()=>{assert.equal(formatCount(999),'999');assert.
 test('mergeEnv validates, clamps and wraps',()=>{
  const d=defaultEnv();
  assert.equal(mergeEnv(d,{intensity:9}).intensity,3);assert.equal(mergeEnv(d,{intensity:-1}).intensity,0);
- assert.equal(mergeEnv(d,{rotation:190}).rotation,-170);assert.equal(mergeEnv(d,{preset:'sky',background:true}).background,true);
+ assert.equal(mergeEnv(d,{rotation:190}).rotation,-170);assert.equal(mergeEnv(d,{preset:'sky',background:true}).bg,'env','legacy background true maps to the env background');
+ assert.equal(mergeEnv(d,{background:false}).bg,'default','legacy background false maps to the default background');
  assert.throws(()=>mergeEnv(d,{preset:'moon' as never}),EnvError);assert.throws(()=>mergeEnv(d,{intensity:NaN}),EnvError);
  assert.throws(()=>mergeEnv(d,{background:'yes' as never}),EnvError);
+ assert.equal(mergeEnv(d,{bg:'gradient'}).bg,'gradient');assert.equal(mergeEnv(d,{bg:'color',bgColor:'#101820'}).bgColor,'#101820');
+ assert.throws(()=>mergeEnv(d,{bg:'wallpaper' as never}),EnvError);assert.throws(()=>mergeEnv(d,{bgColor:'red' as never}),EnvError);assert.throws(()=>mergeEnv(d,{bgColor2:'#1234' as never}),EnvError);
  assert.throws(()=>mergeEnv(d,{preset:'custom'}),EnvError,'custom needs a loaded file');
  assert.equal(mergeEnv(d,{preset:'custom',customName:'a.hdr'}).preset,'custom');
  assert.deepEqual(d,defaultEnv(),'input is not mutated');

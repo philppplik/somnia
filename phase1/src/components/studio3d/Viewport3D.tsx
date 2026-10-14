@@ -81,6 +81,8 @@ export default function Viewport3D(){
    let tex:THREE.Texture|null=null;
    if(preset==='studio'){const room=new RoomEnvironment();tex=bake(room as unknown as THREE.Scene);}
    else if(preset==='sky'){const sc=new THREE.Scene();const sky=new Sky();sky.scale.setScalar(450000);sc.add(sky);const u=sky.material.uniforms;u.turbidity.value=4;u.rayleigh.value=1.2;u.sunPosition.value.setFromSphericalCoords(1,THREE.MathUtils.degToRad(60),THREE.MathUtils.degToRad(140));tex=bake(sc);}
+   else if(preset==='outdoor'){const sc=new THREE.Scene();const sky=new Sky();sky.scale.setScalar(450000);sc.add(sky);const u=sky.material.uniforms;u.turbidity.value=6;u.rayleigh.value=2;u.sunPosition.value.setFromSphericalCoords(1,THREE.MathUtils.degToRad(35),THREE.MathUtils.degToRad(200));const ground=new THREE.Mesh(new THREE.CircleGeometry(400000,32),new THREE.MeshBasicMaterial({color:0x3a4a35}));ground.rotation.x=-Math.PI/2;sc.add(ground);tex=bake(sc);}
+   else if(preset==='dark'){const sc=new THREE.Scene();sc.background=new THREE.Color(0x07070a);const top=new THREE.Mesh(new THREE.PlaneGeometry(4,4),new THREE.MeshBasicMaterial({color:0x555560}));top.position.y=3;top.rotation.x=Math.PI/2;sc.add(top);const rim=new THREE.Mesh(new THREE.PlaneGeometry(2,1),new THREE.MeshBasicMaterial({color:0x30364a}));rim.position.set(-3,1,-2);rim.lookAt(0,0,0);sc.add(rim);tex=bake(sc);}
    else if(preset==='neutral'){const sc=new THREE.Scene();sc.background=new THREE.Color(0xd0d3da);tex=bake(sc);}
    else if(preset==='custom'&&customEnv){
     const fmt=envFormatFor(customEnv.name);const url=URL.createObjectURL(new Blob([customEnv.bytes]));
@@ -90,6 +92,13 @@ export default function Viewport3D(){
    if(tex)envCache.set(preset,tex);return tex;
   };
   let envTicket=0;
+  const bgCache=new Map<string,THREE.Texture>();
+  const gradientBackground=(top:string,bottom:string)=>{
+   const key=top+'|'+bottom;const hit=bgCache.get(key);if(hit)return hit;
+   const cv=document.createElement('canvas');cv.width=1;cv.height=256;
+   const ctx=cv.getContext('2d')!;const g=ctx.createLinearGradient(0,0,0,256);g.addColorStop(0,top);g.addColorStop(1,bottom);ctx.fillStyle=g;ctx.fillRect(0,0,1,256);
+   const t=new THREE.CanvasTexture(cv);t.colorSpace=THREE.SRGBColorSpace;bgCache.set(key,t);return t;
+  };
   const applyEnv=async()=>{
    const e=getStudio3DState().env;const ticket=++envTicket;
    let tex:THREE.Texture|null=null;
@@ -97,7 +106,7 @@ export default function Viewport3D(){
    if(ticket!==envTicket||disposed)return;
    scene.environment=tex;scene.environmentIntensity=e.intensity;scene.environmentRotation.set(0,THREE.MathUtils.degToRad(e.rotation),0);
    scene.backgroundIntensity=e.intensity;scene.backgroundRotation.set(0,THREE.MathUtils.degToRad(e.rotation),0);
-   scene.background=e.background&&tex?tex:new THREE.Color(0xe9ebf0);invalidate();
+   scene.background=e.bg==='env'&&tex?tex:e.bg==='color'?new THREE.Color(e.bgColor):e.bg==='gradient'?gradientBackground(e.bgColor,e.bgColor2):new THREE.Color(0xe9ebf0);invalidate();
   };
   const camera=new THREE.PerspectiveCamera(45,1,0.01,1000);
   const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=false;

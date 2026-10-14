@@ -15,8 +15,9 @@ export const MAX_EMBED_SCENE_BYTES=256*1024*1024;
 export const MAX_EMBED_ENV_BYTES=16*1024*1024;
 export class DocumentError extends Error{constructor(message:string){super(message);this.name='DocumentError';}}
 export interface AreaLightSpec{position:[number,number,number];quaternion:[number,number,number,number];scale:[number,number,number];color:string;intensity:number;width:number;height:number;name:string}
+export interface AmbientLightSpec{color:string;intensity:number;name:string}
 /** Data for one node, addressed by its depth-first index below the scene root. */
-export interface NodeExtra{i:number;shadow?:boolean;area?:AreaLightSpec}
+export interface NodeExtra{i:number;shadow?:boolean;area?:AreaLightSpec;ambient?:AmbientLightSpec}
 export interface SavedView{position:[number,number,number];target:[number,number,number];fov:number}
 export type SceneSource={encoding:'base64';data:string}|{uri:string};
 export interface SceneDocument{
@@ -93,6 +94,13 @@ export function parseDocument(text:string):SceneDocument{
     const w=num(a.width,'area.width'),h=num(a.height,'area.height'),it=num(a.intensity,'area.intensity');
     if(w<=0||h<=0||w>1000||h>1000||it<0||it>100000)throw new DocumentError('An area light has values out of range.');
     e.area={position:vec(a.position,3,'area.position') as [number,number,number],quaternion:vec(a.quaternion,4,'area.quaternion') as [number,number,number,number],scale:vec(a.scale,3,'area.scale') as [number,number,number],color:a.color,intensity:it,width:w,height:h,name:typeof a.name==='string'?a.name.slice(0,120):'Area light'};
+   }
+   if(x.ambient!==undefined){
+    const a=x.ambient as Record<string,unknown>;if(!a||typeof a!=='object')throw new DocumentError('An ambient light entry is damaged.');
+    if(typeof a.color!=='string'||!HEX.test(a.color))throw new DocumentError('An ambient light has an invalid colour.');
+    const it=num(a.intensity,'ambient.intensity');
+    if(it<0||it>100000)throw new DocumentError('An ambient light has values out of range.');
+    e.ambient={color:a.color,intensity:it,name:typeof a.name==='string'?a.name.slice(0,120):'Ambient light'};
    }
    extras.push(e);
   }

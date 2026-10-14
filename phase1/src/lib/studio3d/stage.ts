@@ -23,9 +23,9 @@ import {emptyStats,boundsValid,boundsCenter,boundsRadius,type ModelStats,type Ou
  * Imported only by the lazy viewport chunk.
  */
 export type {PrimitiveKind}from './primitives';
-export type LightKind='directional'|'point'|'spot'|'area';
+export type LightKind='directional'|'point'|'spot'|'area'|'ambient';
 export const PRIMITIVES:readonly PrimitiveKind[]=PRIMITIVE_KINDS;
-export const LIGHTS:readonly LightKind[]=['directional','point','spot','area'];
+export const LIGHTS:readonly LightKind[]=['directional','point','spot','area','ambient'];
 export interface Vec3{x:number;y:number;z:number}
 export interface TransformPatch{position?:Partial<Vec3>;/** degrees */rotation?:Partial<Vec3>;scale?:Partial<Vec3>}
 export interface MaterialPatch extends MaterialRequest,PbrExtras{}
@@ -63,23 +63,30 @@ export function applyGroupDrag(members:GroupDragMember[],pivot0:THREE.Matrix4,pi
 }
 /** Depth-first (pre-order) list of every node below root. The index in this list addresses a node in a saved document. */
 export function nodesOf(root:THREE.Object3D):THREE.Object3D[]{const out:THREE.Object3D[]=[];const walk=(o:THREE.Object3D)=>{for(const c of o.children){out.push(c);walk(c);}};walk(root);return out;}
-/** Data glTF cannot hold: shadow flags and area lights (glTF punctual lights have no area light). */
+/** Data glTF cannot hold: shadow flags, area lights and ambient lights (glTF punctual lights have neither). */
 export function collectNodeExtras(root:THREE.Object3D):NodeExtra[]{
  const out:NodeExtra[]=[];
  nodesOf(root).forEach((o,i)=>{
-  const l=o as THREE.Light;if(!l.isLight)return;const ra=o as THREE.RectAreaLight;
+  const l=o as THREE.Light;if(!l.isLight)return;const ra=o as THREE.RectAreaLight,am=o as THREE.AmbientLight;
   if(ra.isRectAreaLight){
    out.push({i,area:{position:o.position.toArray() as [number,number,number],quaternion:o.quaternion.toArray().slice(0,4) as [number,number,number,number],scale:o.scale.toArray() as [number,number,number],color:'#'+ra.color.getHexString(),intensity:ra.intensity,width:ra.width,height:ra.height,name:o.name}});
+  }else if(am.isAmbientLight){
+   out.push({i,ambient:{color:'#'+am.color.getHexString(),intensity:am.intensity,name:o.name}});
   }else if(l.castShadow)out.push({i,shadow:true});
  });
  return out;
 }
-/** Re-applies extras to a freshly loaded tree. Area lights replace the empty node the exporter wrote. Entries that no longer fit are skipped and counted. */
+/** Re-applies extras to a freshly loaded tree. Area and ambient lights replace the empty node the exporter wrote. Entries that no longer fit are skipped and counted. */
 export function applyNodeExtras(root:THREE.Object3D,extras:readonly NodeExtra[]):{skipped:number}{
  const nodes=nodesOf(root);let skipped=0;
  for(const e of extras){
   const o=nodes[e.i];if(!o){skipped++;continue;}
-  if(e.area){
+  if(e.ambient){
+   if(!o.parent||o.children.length>0||(o as THREE.Mesh).isMesh||(o as THREE.Light).isLight){skipped++;continue;}
+   const a=e.ambient;const light=new THREE.AmbientLight(new THREE.Color(a.color),a.intensity);
+   light.name=a.name||o.name;
+   const parent=o.parent;const at=parent.children.indexOf(o);parent.remove(o);parent.add(light);parent.children.splice(parent.children.indexOf(light),1);parent.children.splice(at,0,light);
+  }else if(e.area){
    if(!o.parent||o.children.length>0||(o as THREE.Mesh).isMesh||(o as THREE.Light).isLight){skipped++;continue;}
    const a=e.area;const light=new THREE.RectAreaLight(new THREE.Color(a.color),a.intensity,a.width,a.height);
    light.name=a.name||o.name;light.position.fromArray(a.position);light.quaternion.fromArray(a.quaternion);light.scale.fromArray(a.scale);
@@ -109,7 +116,7 @@ function geometryFor(kind:PrimitiveKind,p:PrimitiveParams):THREE.BufferGeometry{
 function lightInfo(l:THREE.Light):LightInfo{
  const info:LightInfo={intensity:l.intensity,color:'#'+l.color.getHexString()};
  const sp=l as THREE.SpotLight,ra=l as THREE.RectAreaLight;
- if(l.castShadow!==undefined&&!(l as THREE.RectAreaLight).isRectAreaLight)info.shadow=l.castShadow;
+ if(l.castShadow!==undefined&&!(l as THREE.RectAreaLight).isRectAreaLight&&!(l as THREE.AmbientLight).isAmbientLight)info.shadow=l.castShadow;
  if(sp.isSpotLight){info.angle=sp.angle/DEG;info.penumbra=sp.penumbra;}
  if(ra.isRectAreaLight){info.width=ra.width;info.height=ra.height;}
  return info;
@@ -186,8 +193,8 @@ export class Stage{
  addLight(kind:LightKind):THREE.Light{
   if(!LIGHTS.includes(kind))throw new StageError(`Unknown light: ${String(kind)}.`);
   const light:THREE.Light=kind==='directional'?new THREE.DirectionalLight(0xffffff,2):kind==='point'?new THREE.PointLight(0xffffff,40,0,2)
-   :kind==='spot'?new THREE.SpotLight(0xffffff,120,0,Math.PI/6,0.3,2):new THREE.RectAreaLight(0xffffff,6,2,2);
-  light.name=this.uniqueName({directional:'Directional light',point:'Point light',spot:'Spot light',area:'Area light'}[kind]);light.position.set(3,4,2);
+   :kind==='spot'?new THREE.SpotLight(0xffffff,120,0,Math.PI/6,0.3,2):kind==='ambient'?new THREE.AmbientLight(0xffffff,0.6):new THREE.RectAreaLight(0xffffff,6,2,2);
+  light.name=this.uniqueName({directional:'Directional light',point:'Point light',spot:'Spot light',area:'Area light',ambient:'Ambient light'}[kind]);light.position.set(3,4,2);
   if(kind==='area')light.lookAt(0,0,0);
   this.attach(light,this.root,this.root.children.length,`Add ${light.name}`);return light;
  }
@@ -273,7 +280,7 @@ export class Stage{
   const o=this.need(id) as THREE.Light;if(!o.isLight)throw new StageError(`${o.name} is not a light.`);
   const sp=o as THREE.SpotLight,ra=o as THREE.RectAreaLight;
   if(patch.color!==undefined&&!HEX.test(patch.color))throw new StageError('color must look like #rrggbb.');
-  if(patch.shadow!==undefined){if(typeof patch.shadow!=='boolean')throw new StageError('shadow must be true or false.');if(ra.isRectAreaLight)throw new StageError('Area lights cannot cast shadows.');}
+  if(patch.shadow!==undefined){if(typeof patch.shadow!=='boolean')throw new StageError('shadow must be true or false.');if(ra.isRectAreaLight)throw new StageError('Area lights cannot cast shadows.');if((o as THREE.AmbientLight).isAmbientLight)throw new StageError('Ambient lights cannot cast shadows.');}
   if(patch.angle!==undefined&&!sp.isSpotLight)throw new StageError('Only spot lights have a cone angle.');
   if(patch.penumbra!==undefined&&!sp.isSpotLight)throw new StageError('Only spot lights have a penumbra.');
   if((patch.width!==undefined||patch.height!==undefined)&&!ra.isRectAreaLight)throw new StageError('Only area lights have a width and height.');

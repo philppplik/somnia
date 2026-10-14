@@ -20,6 +20,27 @@ test('the scene exports as glTF 2.0 JSON and its primitives stay editable after 
  assert.equal(prim?.kind,'torus');assert.equal(prim?.params.radius,1.5);assert.equal(prim?.params.tubularSegments,20);
 });
 
+test('punctual lights export through KHR_lights_punctual and import back',async()=>{
+ const stage=new Stage();
+ const dir=stage.addLight('directional');stage.setLight(dir.id,{color:'#ffeedd',intensity:2.5});
+ const pt=stage.addLight('point');stage.setLight(pt.id,{color:'#3344ff'});
+ const spot=stage.addLight('spot');stage.setLight(spot.id,{angle:25,penumbra:0.5});
+ stage.addLight('ambient');
+ stage.addPrimitive('cube');
+ const out=await new GLTFExporter().parseAsync([...stage.root.children],{binary:false,onlyVisible:false}) as {asset:{version:string};extensionsUsed?:string[];extensions?:{KHR_lights_punctual?:{lights:{type:string;color?:number[];intensity?:number;spot?:{outerConeAngle:number;innerConeAngle:number}}[]}};nodes:{name?:string;extensions?:{KHR_lights_punctual?:{light:number}}}[]};
+ assert.ok(out.extensionsUsed?.includes('KHR_lights_punctual'),'extension is declared');
+ const lights=out.extensions?.KHR_lights_punctual?.lights??[];
+ assert.deepEqual(lights.map(l=>l.type).sort(),['directional','point','spot'],'ambient has no glTF punctual type and is left out');
+ const sp=lights.find(l=>l.type==='spot')!;
+ assert.ok(Math.abs(sp.spot!.outerConeAngle-25*Math.PI/180)<1e-3,'spot cone angle survives');
+ const di=lights.find(l=>l.type==='directional')!;
+ assert.ok(Math.abs(di.intensity!-2.5)<1e-3);
+ const text=JSON.stringify(out);
+ const g=await new Promise<{scene:import('three').Group}>((res,rej)=>new GLTFLoader().parse(text,'',res as never,rej));
+ const kinds=g.scene.children.map(o=>(o as import('three').Light).type).sort();
+ assert.ok(kinds.includes('DirectionalLight')&&kinds.includes('PointLight')&&kinds.includes('SpotLight'),'all three punctual lights import back');
+});
+
 /** A two-bone skinned box with a Wave clip, authored in the stage and exported the way the viewport does. */
 const skinnedStage=()=>{
  const geo=new THREE.BoxGeometry(1,2,1);

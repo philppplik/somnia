@@ -106,7 +106,7 @@ test('3D studio refuses a file that is not glTF with a readable error',async({pa
 /** Helpers for the scene tests below. They drive the real app through its command layer (dev build) and read the studio session. */
 type P=import('@playwright/test').Page;
 const run=(page:P,id:string,params:unknown={})=>page.evaluate(async([i,p])=>{const m=await import('/src/lib/commands.ts');return (await m.executeCommand(i as string,p)) as unknown;},[id,params] as const);
-const session=(page:P)=>page.evaluate(async()=>{const m=await import('/src/lib/studio3d/session.ts');const s=m.getStudio3DState();return {anim:s.anim,clips:s.clips,clipKeys:s.clipKeys,outline:s.outline,marked:s.marked,selected:s.selected,info:s.selectedInfo,dirty:s.dirty,notice:s.notice,status:s.status,name:s.name,bones:s.bones,weightPreview:s.weightPreview,stats:s.stats,exportClips:s.exportClips,poses:s.poses,ik:s.ik,boneLimits:s.boneLimits,views:s.views,materialPresets:s.materialPresets,edit:s.edit,sculpt:s.sculpt,uvChecker:s.uvChecker};});
+const session=(page:P)=>page.evaluate(async()=>{const m=await import('/src/lib/studio3d/session.ts');const s=m.getStudio3DState();return {anim:s.anim,clips:s.clips,clipKeys:s.clipKeys,outline:s.outline,marked:s.marked,selected:s.selected,info:s.selectedInfo,dirty:s.dirty,notice:s.notice,status:s.status,name:s.name,bones:s.bones,weightPreview:s.weightPreview,stats:s.stats,exportClips:s.exportClips,poses:s.poses,ik:s.ik,boneLimits:s.boneLimits,views:s.views,materialPresets:s.materialPresets,env:s.env,edit:s.edit,sculpt:s.sculpt,uvChecker:s.uvChecker};});
 const open3d=async(page:P)=>{await page.goto('/');await page.getByRole('button',{name:/3D/}).first().click();};
 const blank=async(page:P)=>{await open3d(page);await page.getByTestId('3d-create-blank').click();await expect(page.getByTestId('studio3d-viewport')).toBeVisible();};
 const insert=async(page:P,kind:string,x:number)=>{await run(page,'studio3d.insert.primitive',{kind});const s=await session(page);const id=s.selected as number;await run(page,'studio3d.object.transform',{id,position:{x,y:0,z:0}});return id;};
@@ -970,4 +970,35 @@ test('3D studio saves, applies and removes local material presets',async({page})
  await expect.poll(async()=>(await session(page)).materialPresets?.length).toBe(0);
  await run(page,'studio3d.material.preset.remove',{name:'Blue steel'});
  await expect(page.getByRole('alert')).toContainText('no preset called');
+});
+
+test('3D studio lights and scene basics: ambient light, env presets and background modes',async({page})=>{
+ await blank(page);
+ await insert(page,'cube',0);
+ await run(page,'studio3d.insert.light',{kind:'ambient'});
+ const amb=(await session(page)).selected as number;
+ await expect.poll(async()=>(await session(page)).info?.light?.intensity).toBe(0.6);
+ await expect(page.getByTestId('studio3d-light').getByLabel('Cast shadows')).toHaveCount(0);
+ await run(page,'studio3d.light.set',{id:amb,color:'#224466',intensity:1.1});
+ await expect.poll(async()=>(await session(page)).info?.light?.color).toBe('#224466');
+ await run(page,'studio3d.light.set',{id:amb,shadow:true});
+ await expect(page.getByRole('alert')).toContainText('Ambient lights cannot cast shadows');
+ await run(page,'studio3d.undo');
+ await expect.poll(async()=>(await session(page)).info?.light?.color).toBe('#ffffff');
+ await run(page,'studio3d.env.set',{preset:'outdoor'});
+ await expect.poll(async()=>(await session(page)).env?.preset).toBe('outdoor');
+ await run(page,'studio3d.env.set',{preset:'dark'});
+ await expect.poll(async()=>(await session(page)).env?.preset).toBe('dark');
+ await run(page,'studio3d.env.set',{bg:'gradient',bgColor:'#102030',bgColor2:'#405060'});
+ await expect.poll(async()=>(await session(page)).env?.bg).toBe('gradient');
+ await expect.poll(async()=>(await session(page)).env?.bgColor2).toBe('#405060');
+ await run(page,'studio3d.env.set',{bg:'color',bgColor:'#203040'});
+ await expect.poll(async()=>(await session(page)).env?.bg).toBe('color');
+ await run(page,'studio3d.env.set',{background:true});
+ await expect.poll(async()=>(await session(page)).env?.bg).toBe('env');
+ for(const kind of['directional','point','spot'])await run(page,'studio3d.insert.light',{kind});
+ const [download]=await Promise.all([page.waitForEvent('download'),page.getByTestId('studio3d-export').getByRole('button',{name:'glTF'}).click()]);
+ const json=JSON.parse(readFileSync(await download.path()!,'utf8'));
+ expect(json.extensionsUsed).toContain('KHR_lights_punctual');
+ expect(json.extensions.KHR_lights_punctual.lights.map((l:{type:string})=>l.type).sort()).toEqual(['directional','point','spot']);
 });

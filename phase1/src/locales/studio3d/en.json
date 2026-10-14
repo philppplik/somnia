@@ -538,5 +538,16 @@
  "studio3d.material.presetsUser": "My presets",
  "studio3d.material.savePreset": "Save as preset",
  "studio3d.material.presetName": "Preset name",
- "studio3d.material.removePreset": "Remove preset {name}"
+ "studio3d.material.removePreset": "Remove preset {name}",
+ "studio3d.env.outdoor": "Outdoor",
+ "studio3d.env.dark": "Dark",
+ "studio3d.env.bgMode": "Background",
+ "studio3d.env.bg.default": "Default",
+ "studio3d.env.bg.env": "Environment",
+ "studio3d.env.bg.color": "Solid color",
+ "studio3d.env.bg.gradient": "Gradient",
+ "studio3d.env.bgColor": "Background color",
+ "studio3d.env.bgTop": "Gradient top",
+ "studio3d.env.bgBottom": "Gradient bottom",
+ "studio3d.insert.ambient": "Ambient light"
 }

@@ -124,20 +124,26 @@ export const emptyStats=():ModelStats=>({meshes:0,nodes:0,bones:0,triangles:0,ve
 export const formatCount=(n:number)=>n>=1e6?(n/1e6).toFixed(n>=1e7?0:1)+' M':n>=1e4?(n/1e3).toFixed(n>=1e5?0:1)+' k':String(n);
 export interface OutlineEntry{id:number;name:string;depth:number;kind:'group'|'mesh'|'light'|'camera'|'bone'}
 
-export const ENV_PRESETS=['studio','sky','neutral','none','custom'] as const;
+export const ENV_PRESETS=['studio','outdoor','sky','dark','neutral','none','custom'] as const;
 export type EnvPreset=typeof ENV_PRESETS[number];
-export interface EnvSettings{preset:EnvPreset;/** 0 to 3 */intensity:number;/** degrees, -180 to 180 */rotation:number;background:boolean;/** file name of the loaded custom map */customName:string}
-export const defaultEnv=():EnvSettings=>({preset:'studio',intensity:1,rotation:0,background:false,customName:''});
+export const BG_MODES=['default','env','color','gradient'] as const;
+export type BgMode=typeof BG_MODES[number];
+export interface EnvSettings{preset:EnvPreset;/** 0 to 3 */intensity:number;/** degrees, -180 to 180 */rotation:number;/** What the viewport shows behind the scene: the flat default, the environment map, a solid colour or a vertical gradient. */bg:BgMode;/** Solid background colour, or the gradient top. */bgColor:string;/** Gradient bottom colour. */bgColor2:string;/** file name of the loaded custom map */customName:string}
+export const defaultEnv=():EnvSettings=>({preset:'studio',intensity:1,rotation:0,bg:'default',bgColor:'#e9ebf0',bgColor2:'#9fa4b0',customName:''});
 export const ENV_ACCEPT='.hdr,.exr';
 export const envFormatFor=(name:string):'hdr'|'exr'|null=>{const e=(name.includes('.')?name.split('.').pop()!:'').toLowerCase();return e==='hdr'||e==='exr'?e:null;};
 export class EnvError extends Error{constructor(message:string){super(message);this.name='EnvError';}}
-/** Validates a partial update and returns the merged settings. Numbers are clamped, anything else is rejected. */
-export function mergeEnv(current:EnvSettings,patch:Partial<EnvSettings>):EnvSettings{
+const HEX=/^#[0-9a-fA-F]{6}$/;
+/** Validates a partial update and returns the merged settings. The legacy background boolean maps onto bg ('env' when true, 'default' when false) so older documents and commands keep working. */
+export function mergeEnv(current:EnvSettings,patch:Partial<EnvSettings>&{background?:boolean}):EnvSettings{
  const next={...current};
  if(patch.preset!==undefined){if(!(ENV_PRESETS as readonly string[]).includes(patch.preset))throw new EnvError(`Unknown environment: ${String(patch.preset)}.`);next.preset=patch.preset;}
  if(patch.intensity!==undefined){if(typeof patch.intensity!=='number'||!Number.isFinite(patch.intensity))throw new EnvError('intensity must be a finite number.');next.intensity=Math.min(3,Math.max(0,patch.intensity));}
  if(patch.rotation!==undefined){if(typeof patch.rotation!=='number'||!Number.isFinite(patch.rotation))throw new EnvError('rotation must be a finite number.');next.rotation=((patch.rotation+180)%360+360)%360-180;}
- if(patch.background!==undefined){if(typeof patch.background!=='boolean')throw new EnvError('background must be true or false.');next.background=patch.background;}
+ if(patch.background!==undefined){if(typeof patch.background!=='boolean')throw new EnvError('background must be true or false.');next.bg=patch.background?'env':'default';}
+ if(patch.bg!==undefined){if(!(BG_MODES as readonly string[]).includes(patch.bg))throw new EnvError(`Unknown background: ${String(patch.bg)}.`);next.bg=patch.bg;}
+ if(patch.bgColor!==undefined){if(typeof patch.bgColor!=='string'||!HEX.test(patch.bgColor))throw new EnvError('bgColor must look like #rrggbb.');next.bgColor=patch.bgColor;}
+ if(patch.bgColor2!==undefined){if(typeof patch.bgColor2!=='string'||!HEX.test(patch.bgColor2))throw new EnvError('bgColor2 must look like #rrggbb.');next.bgColor2=patch.bgColor2;}
  if(patch.customName!==undefined)next.customName=String(patch.customName).slice(0,200);
  if(next.preset==='custom'&&!next.customName)throw new EnvError('Open an .hdr or .exr file first.');
  return next;

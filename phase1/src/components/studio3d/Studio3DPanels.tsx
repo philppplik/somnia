@@ -8,7 +8,7 @@ import {executeCommand} from '../../lib/commands';
 import {useT} from '../../lib/useT';
 import {formatBytes} from '../../lib/media';
 import {useStudio3D} from '../../lib/studio3d/session';
-import {formatCount,boundsSize,GIZMO_MODES,ENV_PRESETS,ENV_ACCEPT,UNIT_IDS} from '../../lib/studio3d/model';
+import {formatCount,boundsSize,GIZMO_MODES,ENV_PRESETS,ENV_ACCEPT,UNIT_IDS,BG_MODES,type BgMode} from '../../lib/studio3d/model';
 import type {PanelHostProps,InspectorSectionProps} from '../../lib/shell/types';
 import {Input} from '../ui/input';
 import {Button} from '../ui/button';
@@ -21,7 +21,7 @@ import {ClipTimeline} from './ClipTimeline';
 import {SPEEDS,formatClock} from '../../lib/studio3d/animation';
 import {VIEW_PRESETS,RENDER_SIZES} from '../../lib/studio3d/viewPresets';
 const PRIMS=['cube','sphere','plane','cylinder','cone','torus'] as const;
-const LIGHTS=['directional','point','spot','area'] as const;
+const LIGHTS=['directional','point','spot','area','ambient'] as const;
 const Row=({k,v}:{k:string;v:string|number})=><div className="flex justify-between gap-3 text-xs"><dt className="text-ink-3">{k}</dt><dd className="m-0 truncate text-ink-2" title={String(v)}>{v}</dd></div>;
 const fmt=(n:number)=>(Math.abs(n)>=100?n.toFixed(0):Math.abs(n)>=10?n.toFixed(1):n.toFixed(2));
 /** Outliner: every node of the opened model, filterable, click to select. */
@@ -395,7 +395,12 @@ export function EnvSection(_:InspectorSectionProps){
    <input type="range" min={0} max={3} step={0.05} value={e.intensity} aria-label={t('studio3d.env.intensity')} onChange={ev=>void executeCommand('studio3d.env.set',{intensity:Number(ev.currentTarget.value)})}/></label>
   <label className="grid gap-1 text-xs text-ink-2">{t('studio3d.env.rotation')} <span className="text-ink-3">{Math.round(e.rotation)}</span>
    <input type="range" min={-180} max={180} step={1} value={e.rotation} aria-label={t('studio3d.env.rotation')} onChange={ev=>void executeCommand('studio3d.env.set',{rotation:Number(ev.currentTarget.value)})}/></label>
-  <label className="flex items-center gap-2 text-xs text-ink-2"><input type="checkbox" checked={e.background} disabled={e.preset==='none'} onChange={ev=>void executeCommand('studio3d.env.set',{background:ev.currentTarget.checked})}/>{t('studio3d.env.background')}</label>
+  <label className="grid gap-1 text-xs text-ink-2">{t('studio3d.env.bgMode')}
+   <NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={e.bg} aria-label={t('studio3d.env.bgMode')}
+    onChange={ev=>void executeCommand('studio3d.env.set',{bg:ev.currentTarget.value as BgMode})}>
+    {BG_MODES.map(m=><option key={m} value={m}>{t('studio3d.env.bg.'+m)}</option>)}</NativeSelect></label>
+  {(e.bg==='color'||e.bg==='gradient')&&<label className="flex items-center justify-between gap-2 text-xs text-ink-2">{t(e.bg==='color'?'studio3d.env.bgColor':'studio3d.env.bgTop')}<NativeInput type="color" value={e.bgColor} aria-label={t(e.bg==='color'?'studio3d.env.bgColor':'studio3d.env.bgTop')} onChange={ev=>void executeCommand('studio3d.env.set',{bgColor:ev.currentTarget.value})}/></label>}
+  {e.bg==='gradient'&&<label className="flex items-center justify-between gap-2 text-xs text-ink-2">{t('studio3d.env.bgBottom')}<NativeInput type="color" value={e.bgColor2} aria-label={t('studio3d.env.bgBottom')} onChange={ev=>void executeCommand('studio3d.env.set',{bgColor2:ev.currentTarget.value})}/></label>}
   <Button variant="outline" onClick={()=>void executeCommand('studio3d.env.open')} title={ENV_ACCEPT}>{t('studio3d.env.open')}</Button>
  </div>;
 }

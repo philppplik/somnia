@@ -1,14 +1,23 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {MAX_EMBED_SCENE_BYTES,MAX_EMBED_ENV_BYTES,buildDocument,parseDocument,migrate,sceneBytes,toBase64,fromBase64,DocumentError,DOC_VERSION,type Migrations} from './document';
+import {MAX_EMBED_SCENE_BYTES,MAX_EMBED_ENV_BYTES,buildDocument,parseDocument,migrate,sceneBytes,toBase64,fromBase64,DocumentError,DOC_VERSION,type Migrations,type NodeExtra} from './document';
 import {defaultEnv,defaultSnap} from './model';
 const glb=new Uint8Array([0x67,0x6c,0x54,0x46,2,0,0,0,12,0,0,0]);
-const base=()=>({glb,unit:'mm' as const,env:{...defaultEnv(),preset:'sky' as const,intensity:1.5,background:true},snap:{...defaultSnap(),on:true,move:0.5},view:{position:[1,2,3] as [number,number,number],target:[0,0,0] as [number,number,number],fov:45},extras:[{i:0,shadow:true},{i:3,area:{position:[1,2,3] as [number,number,number],quaternion:[0,0,0,1] as [number,number,number,number],scale:[1,1,1] as [number,number,number],color:'#ffffff',intensity:6,width:2,height:3,name:'Area light'}}]});
+const base=()=>({glb,unit:'mm' as const,env:{...defaultEnv(),preset:'sky' as const,intensity:1.5,bg:'env' as const,bgColor:'#223344'},snap:{...defaultSnap(),on:true,move:0.5},view:{position:[1,2,3] as [number,number,number],target:[0,0,0] as [number,number,number],fov:45},extras:[{i:0,shadow:true},{i:3,area:{position:[1,2,3] as [number,number,number],quaternion:[0,0,0,1] as [number,number,number,number],scale:[1,1,1] as [number,number,number],color:'#ffffff',intensity:6,width:2,height:3,name:'Area light'}}] as NodeExtra[]});
 test('a document round-trips with every field',()=>{
  const d=parseDocument(buildDocument(base()));
- assert.equal(d.version,DOC_VERSION);assert.equal(d.unit,'mm');assert.equal(d.env.preset,'sky');assert.equal(d.env.intensity,1.5);assert.equal(d.env.background,true);
+ assert.equal(d.version,DOC_VERSION);assert.equal(d.unit,'mm');assert.equal(d.env.preset,'sky');assert.equal(d.env.intensity,1.5);assert.equal(d.env.bg,'env');assert.equal(d.env.bgColor,'#223344');
  assert.equal(d.snap.on,true);assert.equal(d.snap.move,0.5);assert.deepEqual(d.view,base().view);assert.equal(d.extras.length,2);assert.equal(d.extras[1].area?.height,3);
  assert.ok('data' in d.scene&&Buffer.from(fromBase64(d.scene.data)).equals(Buffer.from(glb)));
+});
+test('ambient light extras round-trip and are validated',()=>{
+ const doc=base();doc.extras=[{i:2,ambient:{color:'#aabbcc',intensity:0.8,name:'Soft fill'}}];
+ const d=parseDocument(buildDocument(doc));
+ assert.deepEqual(d.extras[0].ambient,{color:'#aabbcc',intensity:0.8,name:'Soft fill'});
+ const bad=base();bad.extras=[{i:2,ambient:{color:'blue',intensity:0.8,name:'x'}} as never];
+ assert.throws(()=>parseDocument(buildDocument(bad)),DocumentError);
+ const huge=base();huge.extras=[{i:2,ambient:{color:'#aabbcc',intensity:1e9,name:'x'}} as never];
+ assert.throws(()=>parseDocument(buildDocument(huge)),DocumentError);
 });
 test('base64 helpers handle large buffers and reject damage',()=>{
  const big=new Uint8Array(1_000_000);for(let i=0;i<big.length;i++)big[i]=(i*7919)&255;
