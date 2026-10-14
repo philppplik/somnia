@@ -4,7 +4,7 @@ export type Capability = 'text'|'vision'|'tools'|'embedding';
 export interface InstalledModel {id:string;digest?:string;sizeBytes?:number;parameterSize?:string;quantization?:string}
 export interface ModelEvidence {capabilities:Capability[]|null;locality:'reported-local'|'remote'|'unverified'}
 export interface RuntimeSnapshot {state:'running'|'stopped'|'not-found'|'unreachable'|'unavailable';installed:boolean|null;version?:string;checkedAt:number;models:InstalledModel[];inventoryError:boolean}
-export type RuntimeRead=(operation:'version'|'tags'|'show',model?:string)=>Promise<unknown>;
+export type RuntimeRead=(operation:'version'|'tags'|'show'|'ps',model?:string)=>Promise<unknown>;
 const record=(value:unknown):Record<string,unknown>|null=>value!==null&&typeof value==='object'&&!Array.isArray(value)?value as Record<string,unknown>:null;
 export function localOrigin(raw=OLLAMA_DEFAULT_URL):string {
  const base=normalizeBaseUrl(raw),u=new URL(raw);
@@ -44,6 +44,7 @@ export class LocalModelsRuntime {
   try{return {state:'running',installed:detection?.installed??null,version,models:parseInventory(await this.read('tags')),checkedAt,inventoryError:false};}
   catch{return {state:'running',installed:detection?.installed??null,version,models,checkedAt,inventoryError:true};}
  }
+ async running():Promise<unknown>{if(!this.available())return null;return this.read('ps');}
  async verify(model:string):Promise<boolean>{
   const provider=new OllamaProvider({baseUrl:this.baseUrl,fetch:async()=>new Response(JSON.stringify(await this.read('show',model)),{headers:{'content-type':'application/json'}})});
   return (await provider.verifyLocalModel(model)).local;

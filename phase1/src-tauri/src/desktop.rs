@@ -311,6 +311,11 @@ async fn local_models_read(window: WebviewWindow, base_url: String, operation: S
     crate::local_models::read(&base_url, &operation, model.as_deref()).await
 }
 #[tauri::command]
+async fn local_models_hardware(window:WebviewWindow)->std::result::Result<crate::local_hardware::Hardware,String>{
+ gate(&window).map_err(|_| "Only trusted editor may inspect hardware")?;
+ tauri::async_runtime::spawn_blocking(crate::local_hardware::snapshot).await.map_err(|_| "Hardware probe failed".into())
+}
+#[tauri::command]
 async fn local_models_start(window: WebviewWindow) -> std::result::Result<crate::local_model_actions::StartOutcome,String> {
  gate(&window).map_err(|_| "Only trusted editor may start Ollama")?;
  tauri::async_runtime::spawn_blocking(crate::local_model_actions::start).await.map_err(|_| "Ollama launch failed")?
@@ -2902,6 +2907,7 @@ pub fn run() {
             selftest_env,
             selftest_write,
             selftest_exit,
+            local_models_hardware,
             local_models_start,
             local_models_pull,
             local_models_pull_next,

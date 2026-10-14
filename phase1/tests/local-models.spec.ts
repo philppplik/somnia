@@ -1,10 +1,10 @@
 import {test,expect} from '@playwright/test';
 test('Local tab shows exact variants, advertised capability and remote provenance',async({page})=>{
  await page.goto('/test/local-models.html');
- await expect(page.getByText('qwen3:4b',{exact:true})).toBeVisible();
+ await expect(page.getByText('qwen3:4b',{exact:true}).first()).toBeVisible();
  await expect(page.getByText('Remote-backed',{exact:true})).toBeVisible();
- await expect(page.getByText('Vision',{exact:true})).toBeVisible();
- await expect(page.getByRole('button',{name:'Refresh',exact:true})).toBeEnabled();
+ await expect(page.getByText('Vision',{exact:true}).first()).toBeVisible();
+ await expect(page.getByRole('button',{name:'Refresh',exact:true}).first()).toBeEnabled();
 });
 test('shared five-tab keyboard navigates every tab and wraps',async({page})=>{
  await page.goto('/test/local-models.html');const tabs=page.getByRole('tab');
@@ -19,12 +19,13 @@ test('empty inventory and malformed inventory have different states',async({page
  await page.goto('/test/local-models.html?state=malformed');await expect(page.getByRole('alert')).toContainText('Could not read model inventory');
 });
 test('local model fixture stays readable at narrow widths and dark theme',async({page})=>{
- await page.goto('/test/local-models.html');await expect(page.getByRole('button',{name:'Refresh',exact:true})).toBeEnabled();
+ await page.goto('/test/local-models.html');await expect(page.getByRole('button',{name:'Refresh',exact:true}).first()).toBeEnabled();
+ await expect(page.getByText('Fixture GPU:',{exact:false})).toBeVisible();
  await page.evaluate(()=>document.documentElement.setAttribute('data-theme','light'));
  await page.screenshot({path:'/tmp/local-models-desktop.png',fullPage:true});
  await page.setViewportSize({width:390,height:844});
  await page.evaluate(()=>document.documentElement.setAttribute('data-theme','dark'));
- await expect(page.getByText('qwen3:4b',{exact:true})).toBeVisible();
+ await expect(page.getByText('qwen3:4b',{exact:true}).first()).toBeVisible();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBeTruthy();
  await page.screenshot({path:'/tmp/local-models-narrow.png',fullPage:true});
 });
@@ -50,4 +51,11 @@ test('cancelled owned transfer never claims daemon cancellation certainty',async
  await page.getByRole('status').getByRole('button',{name:'Cancel',exact:true}).click();
  await expect(page.getByRole('status')).toContainText('Daemon cancellation is unknown');
  await page.screenshot({path:'/tmp/local-model-cancel-unknown.png',fullPage:true});
+});
+test('hardware fit remains an estimate and daemon residency reports actual size_vram',async({page})=>{
+ await page.goto('/test/local-models.html');
+ await expect(page.getByText('Fixture GPU:',{exact:false})).toBeVisible();
+ await expect(page.getByText('Loaded: daemon reports 2 GiB in VRAM',{exact:false})).toBeVisible();
+ await expect(page.getByText('Model storage volume/free space: not checked',{exact:true})).toBeVisible();
+ await expect(page.getByText('Image input adapter not enabled',{exact:false})).toBeVisible();
 });

@@ -71,6 +71,7 @@
     "allow-ext-worker-open",
     "allow-ext-worker-url",
     "allow-ext-close",
+    "allow-local-models-hardware",
     "allow-local-models-start",
     "allow-local-models-pull",
     "allow-local-models-pull-next",

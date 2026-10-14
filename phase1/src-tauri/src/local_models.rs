@@ -40,7 +40,7 @@ pub fn endpoint(base: &str, operation: &str) -> Result<String, String> {
     if u.scheme() != "http" || !loopback || !u.username().is_empty() || u.password().is_some() || u.query().is_some() || u.fragment().is_some() || u.path() != "/" {
         return Err("Local runtime requires an HTTP loopback origin".into());
     }
-    let path = match operation { "version" => "api/version", "tags" => "api/tags", "show" => "api/show", _ => return Err("Local runtime operation is not allowed".into()) };
+    let path = match operation { "version" => "api/version", "tags" => "api/tags", "show" => "api/show", "ps" => "api/ps", _ => return Err("Local runtime operation is not allowed".into()) };
     Ok(u.join(path).map_err(|_| "Invalid local runtime endpoint")?.to_string())
 }
 
@@ -70,7 +70,7 @@ mod tests {
     use super::*;
     #[test] fn loopback_read_only_routes() {
         for base in ["http://127.0.0.1:11434", "http://127.2.3.4:11434", "http://localhost:11434", "http://[::1]:11434"] {
-            for op in ["version", "tags", "show"] { assert!(endpoint(base, op).is_ok()); }
+            for op in ["version", "tags", "show", "ps"] { assert!(endpoint(base, op).is_ok()); }
             for op in ["chat", "pull", "delete", "../api/chat"] { assert!(endpoint(base, op).is_err()); }
         }
         for base in ["https://localhost:11434", "http://example.com", "http://localhost.evil", "http://user@localhost", "http://localhost/path", "http://localhost?x=1", "http://localhost#x", "http://0.0.0.0"] { assert!(endpoint(base, "tags").is_err()); }

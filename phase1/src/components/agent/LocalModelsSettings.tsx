@@ -1,3 +1,5 @@
+import type {Hardware} from '../../lib/agent/localModelAdvice';
+import {LocalModelAdvice} from './LocalModelAdvice';
 import {LocalModelActions} from './LocalModelActions';
 import {useEffect,useMemo,useRef,useState} from 'react';
 import {useT} from '../../lib/useT';
@@ -6,7 +8,7 @@ import {Button} from '../ui/button';
 import {Badge} from '../ui/badge';
 import './localModels.css';
 
-export function LocalModelsSettings({active,runtime:provided}:{active:boolean;runtime?:LocalModelsRuntime}){
+export function LocalModelsSettings({active,runtime:provided,hardwareProbe}:{active:boolean;runtime?:LocalModelsRuntime;hardwareProbe?:()=>Promise<Hardware|null>}){
  const {t,locale}=useT();const runtime=useMemo(()=>provided??new LocalModelsRuntime(),[provided]);
  const [snapshot,setSnapshot]=useState<RuntimeSnapshot|null>(null),[busy,setBusy]=useState(false);
  const [evidence,setEvidence]=useState<Record<string,ModelEvidence|'error'>>({});
@@ -34,6 +36,7 @@ export function LocalModelsSettings({active,runtime:provided}:{active:boolean;ru
   <p>{t('local.boundary')}</p>
   <div role="status" className="local-models-runtime"><strong>Ollama</strong> · {runtime.baseUrl}<br/>{t(snapshot?'local.state.'+snapshot.state:'local.notChecked')}{snapshot?.version&&` · ${snapshot.version}`}<br/>{snapshot&&t('local.checked',{time:new Date(snapshot.checkedAt).toLocaleTimeString(locale)})}{busy&&<p>{t('local.checking')}</p>}</div>
   {snapshot?.state==='not-found'&&<a href="https://ollama.com/download" target="_blank" rel="noreferrer">{t('local.install')}</a>}
+  <LocalModelAdvice hardwareProbe={hardwareProbe} active={active} runtime={runtime} snapshot={snapshot}/>
   {!provided&&<LocalModelActions snapshot={snapshot} onChanged={refresh}/>}
   {snapshot?.state==='running'&&<>
    <h4>{t('local.installed')}</h4>

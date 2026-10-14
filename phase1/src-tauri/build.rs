@@ -57,6 +57,7 @@ fn main() {
             "selftest_env",
             "selftest_write",
             "selftest_exit",
+            "local_models_hardware",
             "local_models_start",
             "local_models_pull",
             "local_models_pull_next",
