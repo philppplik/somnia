@@ -47,6 +47,7 @@ export type Edit=
  |{type:'effect.colorKey';layer:string;effect:string;color:string;t:number}
  |{type:'effect.bypassKey';layer:string;effect:string;bypass:boolean;t:number}
  |{type:'layer.stroke';layer:string;stroke:NonNullable<Layer['stroke']>|null}
+ |{type:'gradient.color.ease';layer:string;target:'fill'|'stroke';which:'start'|'end';t:number;ease:ColorEase|null}
  |{type:'gradient.color';layer:string;target:'fill'|'stroke';which:'start'|'end';op:'set'|'animate'|'remove';color?:string;on?:boolean;t:number}
  |{type:'gradient.prop';layer:string;target:'fill'|'stroke';prop:GradientKey;op:'set'|'animate'|'remove';value?:number;on?:boolean;t:number}
  |{type:'gradient.angle';layer:string;target:'fill'|'stroke';op:'set'|'animate'|'remove';value?:number;on?:boolean;t:number}
@@ -159,6 +160,14 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
    return withComp(doc,{...c,...e.settings,duration,fps:e.settings.fps??c.fps,markers:c.markers?.filter(m=>m.t<duration+c.start),layers:clipped,workArea:{in:Math.min(c.workArea.in,duration-1),out:Math.min(c.workArea.out,duration)}});}
   case 'comp.select':if(!findComp(doc,e.comp))return fail('missing','Composition does not exist.');return e.comp===doc.activeComp?doc:{...doc,activeComp:e.comp};
   case 'comp.remove':{if(doc.compositions.length<2)return fail('invalid','A document needs at least one composition.');if(!findComp(doc,e.comp))return fail('missing','Composition does not exist.');const rest=doc.compositions.filter(c=>c.id!==e.comp);return {...doc,compositions:rest,activeComp:doc.activeComp===e.comp?rest[0].id:doc.activeComp};}
+  case 'gradient.color.ease':{
+   const l=layerOf(doc,e.layer),fill=e.target==='fill',g=fill?l.source.gradient:l.stroke?.gradient;if(!g)fail('invalid','The layer has no gradient there.');
+   const t=tickOf(compOf(doc),e.t),keys=g!.colorKeys?.[e.which];
+   if(e.ease!==null&&!(COLOR_EASES as readonly string[]).includes(e.ease))fail('invalid','Unknown ease.');
+   if(!keys||!keys.some(k=>k.t===t))fail('missing','No gradient colour key at that time.');
+   const next=keys!.map(k=>{if(k.t!==t)return k;const {ease:_o,...rest}=k;return e.ease===null||e.ease==='linear'?rest:{...rest,ease:e.ease as ColorEase};});
+   const ng={...g!,colorKeys:{...g!.colorKeys,[e.which]:next}};
+   return setLayer(doc,fill?{...l,source:{...l.source,gradient:ng}}:{...l,stroke:{...l.stroke!,gradient:ng}});}
   case 'gradient.color':{
    const l=layerOf(doc,e.layer),fill=e.target==='fill',g=fill?l.source.gradient:l.stroke?.gradient;if(!g)fail('invalid','The layer has no gradient there.');
    const w=e.which,t=tickOf(compOf(doc),e.t),keys=g!.colorKeys?.[w],cur=g![w];

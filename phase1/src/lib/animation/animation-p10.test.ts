@@ -1794,3 +1794,22 @@ test('P76 gradient colour keyframes: mix, lanes, move, bake, validation',()=>{
  assert.equal(g.colorKeys,undefined);assert.equal(g.start,'#ffffff');
  assert.throws(()=>applyEdit(d,{type:'gradient.color',layer:'pa',target:'fill',which:'end',op:'set',color:'red',t:0}),Error);
 });
+
+test('P77 gradient colour key ease: per-key ease shapes the mix, linear is not stored, validation',()=>{
+ let d=strokeDoc([{x:0.2,y:0.2},{x:0.8,y:0.2},{x:0.8,y:0.8}],true,8);
+ d=applyEdit(d,{type:'layer.update',layer:'pa',source:{gradient:{start:'#000000',end:'#ffffff',angle:0}}});
+ const T=8000*30;
+ d=applyEdit(d,{type:'gradient.color',layer:'pa',target:'fill',which:'start',op:'animate',on:true,t:0});
+ d=applyEdit(d,{type:'gradient.color',layer:'pa',target:'fill',which:'start',op:'set',color:'#ffffff',t:T*2});
+ const lin=frameSvg(comp(d),T);
+ assert.ok(lin.includes('stop-color="#808080"'));
+ const held=applyEdit(d,{type:'gradient.color.ease',layer:'pa',target:'fill',which:'start',t:0,ease:'hold'});
+ assert.ok(frameSvg(comp(held),T).includes('stop-color="#000000"'),'hold keeps the first colour until the next key');
+ assert.equal(comp(held).layers.find(l=>l.id==='pa')!.source.gradient!.colorKeys!.start![0].ease,'hold');
+ assert.deepEqual(validateDocument(held),[]);
+ const back=applyEdit(held,{type:'gradient.color.ease',layer:'pa',target:'fill',which:'start',t:0,ease:'linear'});
+ assert.equal(comp(back).layers.find(l=>l.id==='pa')!.source.gradient!.colorKeys!.start![0].ease,undefined);
+ assert.equal(frameSvg(comp(back),T),lin);
+ assert.throws(()=>applyEdit(d,{type:'gradient.color.ease',layer:'pa',target:'fill',which:'start',t:0,ease:'bogus' as never}),Error);
+ assert.throws(()=>applyEdit(d,{type:'gradient.color.ease',layer:'pa',target:'fill',which:'start',t:T,ease:'ease'}),Error);
+});

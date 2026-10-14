@@ -382,3 +382,7 @@ Repeater `hue` (deg per copy, -360..360): copy i gets `filter=hue-rotate(hue*i d
 ## P76
 
 `gradient.colorKeys` {start?,end?} are ColorKey lists (same mix as layer colour keys). Lanes gradFill/gradStroke + StartColor|EndColor reuse style.key.move and styleKeyDeleteEdits.
+
+## P77
+
+`gradient.color.ease` sets or clears the ease of the gradient colour key at the given tick (same COLOR_EASES as `color.ease`).
