@@ -7,6 +7,7 @@ import {browserAudioContext} from './audioPreview';
 import {findComp} from './model';
 import {defaultExportSettings,exportPlan,problemMessage,settingsProblems,EXPORT_PRESETS,EXPORT_LIMITS,type ExportFormat,type ExportSettings} from './exportSettings';
 import {animationSession} from './session';
+import {exportFrameSvg} from './exportSvg';
 /** Observable state of the one export job the studio runs at a time. The UI shows real progress and real failures; nothing reports success before the file was handed to the browser. */
 export interface ExportState{status:'idle'|'running'|'done'|'error';kind:'frame'|'sequence'|'gif'|'apng'|'webm'|null;done:number;total:number;message:string;fileName:string;transparent:boolean;settings:ExportSettings}
 const idle:ExportState={status:'idle',kind:null,done:0,total:0,message:'',fileName:'',transparent:false,settings:defaultExportSettings()};
@@ -58,6 +59,11 @@ async function guarded(kind:'frame'|'sequence'|'gif'|'apng'|'webm',fn:(signal:Ab
 export function exportCurrentFrame(d:Deps={}){
  const {doc,comp,out}=target();const at=animationSession().getState().view.playhead;
  return guarded('frame',()=>exportFramePng(comp,at,doc.name,d.rasterize??canvasRasterize,state.transparent,doc.assets,out),d.save??downloadBlob);
+}
+/** The playhead frame as a vector SVG file (drawing size, the scale setting does not apply). */
+export function exportCurrentFrameSvg(d:Deps={}){
+ const {doc,comp}=target();const at=animationSession().getState().view.playhead;
+ return guarded('frame',async()=>exportFrameSvg(comp,at,doc.name,state.transparent,doc.assets),d.save??downloadBlob);
 }
 export function exportWorkAreaSequence(d:Deps={}){
  const {doc,out,ec}=target('sequence');

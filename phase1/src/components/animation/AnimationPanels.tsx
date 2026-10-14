@@ -261,6 +261,7 @@ export function RenderSection(_:InspectorSectionProps){
   <label className="flex items-center gap-2 text-ink-2"><NativeInput type="checkbox" className="animation-checkbox" checked={job.transparent} disabled={busy} onChange={e=>setExportTransparent(e.target.checked)} data-testid="animation-export-alpha"/>{t('animation.export.transparent')}</label>
   <div className="grid gap-2">
    <Button size="compact" variant="outline" disabled={busy} onClick={()=>run('animation.export.frame')} data-testid="animation-export-frame">{t('animation.export.frame')}</Button>
+   <Button size="compact" variant="outline" disabled={busy} title={t('animation.export.frameSvg.hint')} onClick={()=>run('animation.export.frameSvg')} data-testid="animation-export-frame-svg">{t('animation.export.frameSvg')}</Button>
    <Button size="compact" variant="outline" disabled={busy} onClick={()=>run('animation.export.sequence')} data-testid="animation-export-sequence">{t('animation.export.sequence')}</Button>
    <Button size="compact" variant="outline" disabled={busy} onClick={()=>run('animation.export.gif')} data-testid="animation-export-gif">{t('animation.export.gif')}</Button>
    <Button size="compact" variant="outline" disabled={busy} onClick={()=>run('animation.export.apng')} data-testid="animation-export-apng">{t('animation.export.apng')}</Button>

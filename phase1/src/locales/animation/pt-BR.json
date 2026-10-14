@@ -925,5 +925,8 @@
  "animation.keys.tools.time": "Tempo",
  "cmd.animation.keys.selectByValue": "Selecionar as keys com um valor em um intervalo",
  "animation.graph.fit": "Ajustar tempo",
- "animation.graph.fit.hint": "Enquadra o gráfico nas keys desta camada"
+ "animation.graph.fit.hint": "Enquadra o gráfico nas keys desta camada",
+ "animation.export.frameSvg": "Exportar quadro como SVG",
+ "animation.export.frameSvg.hint": "Arquivo vetorial no tamanho do desenho. As fontes são referenciadas por nome, não incorporadas.",
+ "cmd.animation.export.frameSvg": "Exportar o quadro atual como SVG"
 }

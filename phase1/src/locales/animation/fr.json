@@ -925,5 +925,8 @@
  "animation.keys.tools.time": "Temps",
  "cmd.animation.keys.selectByValue": "Sélectionner les keys dont la valeur est dans une plage",
  "animation.graph.fit": "Ajuster le temps",
- "animation.graph.fit.hint": "Cadre le graphique sur les keys de ce calque"
+ "animation.graph.fit.hint": "Cadre le graphique sur les keys de ce calque",
+ "animation.export.frameSvg": "Exporter l’image en SVG",
+ "animation.export.frameSvg.hint": "Fichier vectoriel à la taille du dessin. Les polices sont référencées par nom, pas intégrées.",
+ "cmd.animation.export.frameSvg": "Exporter l’image actuelle en SVG"
 }

@@ -278,3 +278,11 @@ test('graph window: whole comp unless fit, padded and clamped keys span',()=>{
  assert.ok(w.t0>=c.start&&w.t1<=c.start+c.duration&&w.t1>w.t0&&w.t0<=ks[0].t&&w.t1>=ks[ks.length-1].t);
  assert.deepEqual(graphWindow(c.start,c.duration,c.fps,ks.slice(0,1),true),{t0:c.start,t1:c.start+c.duration});
 });
+import {exportFrameSvg,frameSvgFileName} from './exportSvg';
+test('svg frame export: standalone svg file named by frame, too large rejected by size check',async()=>{
+ const c=findComp(base())!,r=exportFrameSvg(c,f(5),'My Anim',true);
+ const txt=await r.blob.text();
+ assert.ok(txt.startsWith('<?xml')&&txt.includes('<svg')&&!txt.includes('<rect width'));
+ assert.equal(r.fileName,frameSvgFileName('My Anim',5));assert.ok(r.fileName.endsWith('.svg'));
+ assert.ok((await exportFrameSvg(c,f(5),'x',false).blob.text()).includes('<rect width'));
+});

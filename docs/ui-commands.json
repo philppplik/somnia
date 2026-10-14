@@ -371,6 +371,23 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.export.frameSvg",
+      "title": "Export current frame as SVG",
+      "category": "Project",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "export",
+        "frame",
+        "image",
+        "save",
+        "still",
+        "svg",
+        "vector"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.export.gif",
       "title": "Export work area as GIF",
       "category": "Project",
