@@ -86,10 +86,13 @@ selects). Its migration is deliberately gated, see below.
 - P16: Vibespace area migrated (108 controls to native primitives),
   ratchet budgets shrunk to zero for all 13 files, adoption tests and gallery
   proof added.
-- P17 (this slice): pdf/pdfedit areas migrated (107 controls to native
+- P17: pdf/pdfedit areas migrated (107 controls to native
   primitives), ratchet budgets shrunk to zero for all 10 files, adoption tests
-  and gallery proof added. This branch carries P14, P15 and P16 stacked beneath
-  P17.
+  and gallery proof added.
+- P18 (this slice): vs-run-open specificity fix - the run-card override now
+  matches the P11 base button rule's specificity and wins by source order, so
+  board run cards render as cards again. This branch carries P14 through P17
+  stacked beneath P18.
 
 ## Remaining bespoke areas
 
@@ -100,10 +103,8 @@ selects). Its migration is deliberately gated, see below.
   artifacts arrive.
 - **Vibespace**: migrated in P16. All 108 controls render through native control
   primitives with their bespoke geometry and behavior intact; file allowances are
-  at zero, so reintroduction fails the ratchet. A pre-existing P11 specificity
-  side effect (run cards render pill-like because
-  `.vs-root button:not([data-slot="button"])` outranks `.vs-root .vs-run-open`)
-  is unchanged by the migration and awaits a separate CSS fix.
+  at zero, so reintroduction fails the ratchet. The P11 specificity side effect
+  on run cards was fixed in P18.
 - **Extensions**: migrated in P15. All 84 controls render through native control
   primitives with their bespoke geometry and behavior intact; file allowances are
   at zero, so reintroduction fails the ratchet. Consent flows already used shared

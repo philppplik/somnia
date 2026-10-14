@@ -18,6 +18,11 @@ test('migrated vibespace controls keep behavior: run open, stop, steer toggle an
  // Stop commits through the host.
  await proof.getByRole('button',{name:'Stop'}).first().click();
  await expect(events).toContainText('action:stop');
+ // Run-open cards keep card geometry: the P11 base button rule must not paint them as pills.
+ const open=proof.getByRole('button',{name:/Check external links/}).first();
+ await expect(open).toHaveCSS('padding','0px');
+ await expect(open).toHaveCSS('border-top-width','0px');
+ await expect(open).toHaveCSS('background-color','rgba(0, 0, 0, 0)');
  // Pending locks stop and steer again.
  await page.getByRole('button',{name:'Pending'}).click();
  await expect(proof.getByRole('button',{name:'Stop'}).first()).toBeDisabled();

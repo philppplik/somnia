@@ -24,9 +24,11 @@ not a restyle.
   both themes.
 - Actual app vibespace E2E remains CI-only.
 
-## Known pre-existing issue (not caused by this slice)
+## P11 specificity side effect (fixed in P18)
 
-The P11 selector `.vs-root button:not([data-slot="button"])` carries higher
-specificity than `.vs-root .vs-run-open`, so run cards render pill-like in
-isolated surfaces. This affects raw and migrated buttons identically and
-predates P16; fixing it is a separate CSS slice, not part of the migration.
+The P11 selector `.vs-root button:not([data-slot="button"])` (specificity
+0,2,1) outranked `.vs-root .vs-run-open` (0,2,0), so run cards rendered
+pill-like. P18 raises the override to `.vs-root button.vs-run-open` (equal
+specificity, later source order wins); `vibespace-adoption.spec.ts` now asserts
+the run-open button's computed padding, border width and background so a
+regression fails the gallery spec.

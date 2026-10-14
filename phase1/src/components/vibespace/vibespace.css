@@ -28,8 +28,8 @@
 .vs-col>h3{color:var(--text-secondary,#555a69)}
 .vs-col>h3>span{margin-left:6px;font-weight:400}
 .vs-run-card{display:flex;flex-direction:column;gap:10px;padding:14px;border:1px solid var(--border-subtle,#e7e8ec);border-radius:20px;background:var(--bg-elevated,#fff);min-width:0}
-.vs-root .vs-run-open{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;text-align:left;gap:10px;background:none;border:none;padding:0;min-height:0;white-space:normal}
-.vs-root .vs-run-open:hover:not(:disabled){background:none}
+.vs-root button.vs-run-open{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;text-align:left;gap:10px;background:none;border:none;padding:0;min-height:0;white-space:normal}
+.vs-root button.vs-run-open:hover:not(:disabled){background:none}
 .vs-run-open:hover>strong{text-decoration:underline}
 .vs-run-open>strong{font-size:14px;font-weight:550}
 .vs-run-review{font-size:11px;color:var(--text-secondary,#555a69)}
