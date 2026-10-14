@@ -24,3 +24,9 @@ test('bad input, no change and out-of-range values are refused',()=>{
   assert.throws(()=>valueEdits(c,r('opacity',[0,10]),'offset',0));assert.throws(()=>valueEdits(c,r('opacity',[0]),'x' as never,1));
   assert.throws(()=>applyEdits(d,valueEdits(c,r('opacity',[0,10]),'offset',80)),EditError);
 });
+test('snap rounds scalars and both vec2 components to a step; bad steps are refused',()=>{
+  const d=applyEdits(base(),[{type:'prop.set',layer:'a',prop:'opacity',t:f(10),value:63.4},{type:'prop.set',layer:'a',prop:'position',t:f(10),value:[203,48]}] as never),c=findComp(d)!;
+  assert.deepEqual(L(applyEdits(d,valueEdits(c,r('opacity',[0,10]),'snap',5))).opacity.keys.map(k=>k.v),[20,65,30]);
+  assert.deepEqual(L(applyEdits(d,valueEdits(c,r('position',[0,10]),'snap',10))).position.keys.map(k=>k.v),[[100,100],[200,50]]);
+  assert.throws(()=>valueEdits(c,r('opacity',[0,10]),'snap',0));assert.throws(()=>valueEdits(c,r('opacity',[0,10]),'snap',-5));assert.throws(()=>valueEdits(c,r('opacity',[0]),'snap',5));
+});

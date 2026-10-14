@@ -819,6 +819,7 @@
  "animation.keys.values.mode": "Modo de valor",
  "animation.keys.values.offset": "Somar",
  "animation.keys.values.scale": "Escalar %",
- "animation.keys.values.hint": "Soma a quantidade aos valores das chaves escolhidas ou escala a distância até a primeira chave por essa porcentagem",
- "cmd.animation.keys.values": "Deslocar ou escalar os valores das chaves escolhidas"
+ "animation.keys.values.hint": "Soma a quantidade aos valores das chaves escolhidas, escala a distância até a primeira chave por essa porcentagem ou arredonda para passos desse tamanho",
+ "cmd.animation.keys.values": "Deslocar ou escalar os valores das chaves escolhidas",
+ "animation.keys.values.snap": "Ajustar ao passo"
 }
