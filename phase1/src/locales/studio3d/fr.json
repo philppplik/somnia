@@ -647,5 +647,11 @@
  "studio3d.views.update": "Mettre à jour",
  "studio3d.views.saved": "Vue {name} enregistrée",
  "cmd.studio3d.view.update": "Écraser une vue enregistrée avec la vue actuelle",
- "cmd.studio3d.view.rename": "Renommer une vue enregistrée"
+ "cmd.studio3d.view.rename": "Renommer une vue enregistrée",
+ "studio3d.history.title": "Historique",
+ "studio3d.history.undo": "Étapes à annuler",
+ "studio3d.history.redo": "Étapes à rétablir",
+ "studio3d.history.undoTo": "Annuler jusqu’à",
+ "studio3d.history.redoTo": "Rétablir jusqu’à",
+ "studio3d.history.empty": "Aucune modification pour l’instant."
 }

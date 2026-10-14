@@ -10,7 +10,7 @@ import {useT} from '../../lib/useT';
 import {formatBytes} from '../../lib/media';
 import {useStudio3D} from '../../lib/studio3d/session';
 import {formatCount,boundsSize,GIZMO_MODES,ENV_PRESETS,ENV_ACCEPT,UNIT_IDS,BG_MODES,SHADOW_QUALITIES,SHADOW_TYPES,toggleSelection,transformExpr,outlineVisible,type BgMode} from '../../lib/studio3d/model';
-import {ChevronDown,ChevronRight,Crosshair,Eye,EyeOff,Lock,LockOpen} from 'lucide-react';
+import {ChevronDown,ChevronRight,Crosshair,Eye,EyeOff,Lock,LockOpen,Redo2,Undo2} from 'lucide-react';
 import type {PanelHostProps,InspectorSectionProps} from '../../lib/shell/types';
 import {Input} from '../ui/input';
 import {Button} from '../ui/button';
@@ -597,6 +597,14 @@ export function ToolsSection(_:InspectorSectionProps){
   {s.pivot==='cursor'&&<div className="grid grid-cols-3 gap-1" data-testid="studio3d-cursor">{AXES.map(a=><NumField key={a} label={`${t('studio3d.cursor.title')} ${a.toUpperCase()}`} value={s.cursor[a]} step={0.1}
    onCommit={n=>void executeCommand('studio3d.cursor.set',{...s.cursor,[a]:n})}/>)}</div>}
   <label className="flex items-center gap-2 text-xs text-ink-2"><NativeInput type="checkbox" checked={s.measure!==null} aria-label={t('studio3d.measure.on')} onChange={e=>void executeCommand('studio3d.measure.set',{on:e.currentTarget.checked})}/>{t('studio3d.measure.on')}</label>
+  <fieldset className="m-0 grid gap-2 border-0 p-0" data-testid="studio3d-history"><legend className="text-xs text-ink-3">{t('studio3d.history.title')}</legend>
+   {s.history.undo.length===0&&s.history.redo.length===0?<p className="m-0 text-xs text-ink-3">{t('studio3d.history.empty')}</p>:<>
+    {s.history.redo.length>0&&<ul className="m-0 grid max-h-32 list-none gap-1 overflow-auto p-0" aria-label={t('studio3d.history.redo')} data-testid="studio3d-history-redo">{s.history.redo.map((label,i)=><li key={i}>
+     <Button variant="outline" className="w-full justify-start truncate text-left" aria-label={`${t('studio3d.history.redoTo')} ${label}`} onClick={()=>void executeCommand('studio3d.redo',{count:i+1})}><Redo2 size={13} aria-hidden/>{label}</Button></li>)}</ul>}
+    {s.history.undo.length>0&&<ul className="m-0 grid max-h-32 list-none gap-1 overflow-auto p-0" aria-label={t('studio3d.history.undo')} data-testid="studio3d-history-undo">{s.history.undo.map((label,i)=><li key={i}>
+     <Button variant="outline" className="w-full justify-start truncate text-left" aria-label={`${t('studio3d.history.undoTo')} ${label}`} onClick={()=>void executeCommand('studio3d.undo',{count:i+1})}><Undo2 size={13} aria-hidden/>{label}</Button></li>)}</ul>}
+   </>}
+  </fieldset>
   <fieldset className="m-0 grid gap-2 border-0 p-0" data-testid="studio3d-save"><legend className="text-xs text-ink-3">{t('studio3d.save.title')}</legend>
    <div className="flex flex-wrap gap-1"><Button variant="outline" disabled={s.status!=='ready'} onClick={()=>void executeCommand('studio3d.save',{})}>{t('studio3d.save.one')}</Button>
     <Button variant="outline" disabled={s.status!=='ready'} onClick={()=>void executeCommand('studio3d.save',{sidecar:true})}>{t('studio3d.save.sidecar')}</Button>

@@ -106,7 +106,7 @@ test('3D studio refuses a file that is not glTF with a readable error',async({pa
 /** Helpers for the scene tests below. They drive the real app through its command layer (dev build) and read the studio session. */
 type P=import('@playwright/test').Page;
 const run=(page:P,id:string,params:unknown={})=>page.evaluate(async([i,p])=>{const m=await import('/src/lib/commands.ts');return (await m.executeCommand(i as string,p)) as unknown;},[id,params] as const);
-const session=(page:P)=>page.evaluate(async()=>{const m=await import('/src/lib/studio3d/session.ts');const s=m.getStudio3DState();return {anim:s.anim,clips:s.clips,clipKeys:s.clipKeys,outline:s.outline,marked:s.marked,selected:s.selected,info:s.selectedInfo,dirty:s.dirty,notice:s.notice,status:s.status,name:s.name,bones:s.bones,weightPreview:s.weightPreview,stats:s.stats,exportClips:s.exportClips,poses:s.poses,ik:s.ik,boneLimits:s.boneLimits,views:s.views,materialPresets:s.materialPresets,env:s.env,edit:s.edit,sculpt:s.sculpt,uvChecker:s.uvChecker,snap:s.snap,pivot:s.pivot,cursor:s.cursor,measure:s.measure,viewKind:s.viewKind,viewFov:s.viewFov,turntable:s.turntable,shadows:s.shadows,lightHelpers:s.lightHelpers,ao:s.ao,perf:s.perf};});
+const session=(page:P)=>page.evaluate(async()=>{const m=await import('/src/lib/studio3d/session.ts');const s=m.getStudio3DState();return {anim:s.anim,clips:s.clips,clipKeys:s.clipKeys,outline:s.outline,marked:s.marked,selected:s.selected,info:s.selectedInfo,dirty:s.dirty,notice:s.notice,status:s.status,name:s.name,bones:s.bones,weightPreview:s.weightPreview,stats:s.stats,exportClips:s.exportClips,poses:s.poses,ik:s.ik,boneLimits:s.boneLimits,views:s.views,materialPresets:s.materialPresets,env:s.env,edit:s.edit,sculpt:s.sculpt,uvChecker:s.uvChecker,snap:s.snap,pivot:s.pivot,cursor:s.cursor,measure:s.measure,viewKind:s.viewKind,viewFov:s.viewFov,history:s.history,turntable:s.turntable,shadows:s.shadows,lightHelpers:s.lightHelpers,ao:s.ao,perf:s.perf};});
 const open3d=async(page:P)=>{await page.goto('/');await page.getByRole('button',{name:/3D/}).first().click();};
 const blank=async(page:P)=>{await open3d(page);await page.getByTestId('3d-create-blank').click();await expect(page.getByTestId('studio3d-viewport')).toBeVisible();};
 const insert=async(page:P,kind:string,x:number)=>{await run(page,'studio3d.insert.primitive',{kind});const s=await session(page);const id=s.selected as number;await run(page,'studio3d.object.transform',{id,position:{x,y:0,z:0}});return id;};
@@ -1464,6 +1464,26 @@ test('3D studio pin labels: labeled pins show a viewport overlay label; empty or
  await expect(page.locator('[data-pin-label]')).toHaveCount(0);
  await run(page,'studio3d.object.visible',{id:pinId,on:true});
  await expect(page.locator('[data-pin-label]')).toHaveCount(1);
+});
+
+test('3D studio history: labels list and multi-step undo/redo',async({page})=>{
+ await blank(page);
+ await insert(page,'cube',0);
+ await insert(page,'sphere',1);
+ const h=(await session(page)).history;
+ expect(h.undo.length).toBeGreaterThanOrEqual(2);
+ expect(h.redo).toEqual([]);
+ // Undo both inserts at once; the scene is empty and the redo side lists both steps.
+ expect(await run(page,'studio3d.undo',{count:2})).toBe(true);
+ await expect.poll(async()=>(await session(page)).outline.filter(o=>o.kind==='mesh').length).toBe(0);
+ expect((await session(page)).history.redo.length).toBe(2);
+ // Redoing beyond the available steps stops cleanly at the end.
+ expect(await run(page,'studio3d.redo',{count:5})).toBe(true);
+ await expect.poll(async()=>(await session(page)).outline.filter(o=>o.kind==='mesh').length).toBe(2);
+ expect((await session(page)).history.redo).toEqual([]);
+ // The tools panel lists the steps and a row click jumps straight to that point.
+ await page.getByTestId('studio3d-history-undo').getByRole('button').nth(1).click();
+ await expect.poll(async()=>(await session(page)).outline.filter(o=>o.kind==='mesh').length).toBe(0);
 });
 
 test('3D studio views: rename, update and the digit shortcuts',async({page})=>{

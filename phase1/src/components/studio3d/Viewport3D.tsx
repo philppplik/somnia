@@ -246,7 +246,7 @@ export default function Viewport3D(){
    if(an.clip>=infos.length&&an.clip>0){stopAnim();patchStudio3D({anim:{clip:0,playing:false,time:0,loop:true,speed:1,range:null}});}
    const head=sel==null?null:stage.ikChainHead(sel);const ik=head?{...stage.ikState(head.id)!,root:head.id}:null;
    const fhead=sel==null?null:stage.fabrikChainHead(sel);const fabrik=fhead?{...stage.fabrikState(fhead.id)!,root:fhead.id}:null;
-   patchStudio3D({clips:infos,clipKeys:keys,stats:m.stats,outline:m.outline,materialList:stage.materialUsage(),bones:stage.bones(),bounds:m.bounds,selected:info?sel:null,selectedInfo:info,poses:sel==null?[]:stage.poseList(sel),ik,fabrik,rigs:stage.bones().filter(b=>b.depth===0).map(b=>({id:b.id,name:b.name})),boneLimits:sel==null?null:stage.boneLimitsOf(sel),uvView:sel==null?null:stage.uvLayout(sel),dirty:stage.dirty,canUndo:stage.canUndo,canRedo:stage.canRedo,undoLabel:stage.undoLabel});
+   patchStudio3D({clips:infos,clipKeys:keys,stats:m.stats,outline:m.outline,materialList:stage.materialUsage(),bones:stage.bones(),bounds:m.bounds,selected:info?sel:null,selectedInfo:info,poses:sel==null?[]:stage.poseList(sel),ik,fabrik,rigs:stage.bones().filter(b=>b.depth===0).map(b=>({id:b.id,name:b.name})),boneLimits:sel==null?null:stage.boneLimitsOf(sel),uvView:sel==null?null:stage.uvLayout(sel),dirty:stage.dirty,canUndo:stage.canUndo,canRedo:stage.canRedo,undoLabel:stage.undoLabel,history:stage.historyLabels()});
    syncIk();syncFabrik();syncOnion();syncMotionPath();
    drawSelection();applyWire(getStudio3DState().wireframe);applyShadowQuality();syncSkeleton();syncWeightPreview();syncMaskOverlay();syncUvChecker();syncSeams();for(const h of syncHooks)h();updatePinLabels();invalidate();
   };

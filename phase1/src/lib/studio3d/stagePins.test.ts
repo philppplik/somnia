@@ -76,3 +76,21 @@ test('pins() reports the world position inside a moved group',()=>{
  assert.ok(p);
  assert.ok(p!.position.x>10,`world x ${p!.position.x} follows the moved group`);
 });
+
+test('historyLabels lists undo newest-first and redo next-up first',()=>{
+ const st=new Stage();
+ const a=st.addPrimitive('cube');
+ st.rename(a.id,'box');
+ st.setTransform(a.id,{position:{x:1,y:0,z:0}});
+ const h=st.historyLabels();
+ assert.equal(h.undo.length,3);
+ assert.equal(h.redo.length,0);
+ assert.equal(h.undo[0],st.undoLabel);
+ st.undo();
+ const h2=st.historyLabels();
+ assert.equal(h2.undo.length,2);
+ assert.equal(h2.redo.length,1);
+ assert.equal(h2.redo[0],h.undo[0]);
+ st.redo();
+ assert.equal(st.historyLabels().redo.length,0);
+});

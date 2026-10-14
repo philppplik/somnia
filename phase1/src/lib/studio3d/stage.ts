@@ -206,6 +206,10 @@ export class Stage{
  get canUndo(){return this.cursor>0;}
  get canRedo(){return this.cursor<this.entries.length;}
  get undoLabel(){return this.canUndo?this.entries[this.cursor-1].label:'';}
+ /** Read-only history labels for the history list: undo newest first (top row undoes one step), redo next-up first. */
+ historyLabels():{undo:string[];redo:string[]}{
+  return {undo:this.entries.slice(0,this.cursor).map(e=>e.label).reverse(),redo:this.entries.slice(this.cursor).map(e=>e.label)};
+ }
  private push(e:Entry){
   // The saved state may live on the redo side that this entry discards: then no state is clean any more.
   if(this.saved>this.cursor)this.saved=-1;

@@ -647,5 +647,11 @@
  "studio3d.views.update": "Atualizar",
  "studio3d.views.saved": "Vista {name} salva",
  "cmd.studio3d.view.update": "Substituir uma vista salva pela vista atual",
- "cmd.studio3d.view.rename": "Renomear uma vista salva"
+ "cmd.studio3d.view.rename": "Renomear uma vista salva",
+ "studio3d.history.title": "Histórico",
+ "studio3d.history.undo": "Etapas de desfazer",
+ "studio3d.history.redo": "Etapas de refazer",
+ "studio3d.history.undoTo": "Desfazer até",
+ "studio3d.history.redoTo": "Refazer até",
+ "studio3d.history.empty": "Nenhuma alteração ainda."
 }

@@ -647,5 +647,11 @@
  "studio3d.views.update": "Update",
  "studio3d.views.saved": "Saved view {name}",
  "cmd.studio3d.view.update": "Overwrite a saved view with the current viewport",
- "cmd.studio3d.view.rename": "Rename a saved view"
+ "cmd.studio3d.view.rename": "Rename a saved view",
+ "studio3d.history.title": "History",
+ "studio3d.history.undo": "Undo steps",
+ "studio3d.history.redo": "Redo steps",
+ "studio3d.history.undoTo": "Undo up to",
+ "studio3d.history.redoTo": "Redo up to",
+ "studio3d.history.empty": "No changes yet."
 }

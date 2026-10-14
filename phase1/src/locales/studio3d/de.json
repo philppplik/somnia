@@ -647,5 +647,11 @@
  "studio3d.views.update": "Aktualisieren",
  "studio3d.views.saved": "Ansicht {name} gespeichert",
  "cmd.studio3d.view.update": "Gespeicherte Ansicht mit der aktuellen Ansicht überschreiben",
- "cmd.studio3d.view.rename": "Gespeicherte Ansicht umbenennen"
+ "cmd.studio3d.view.rename": "Gespeicherte Ansicht umbenennen",
+ "studio3d.history.title": "Verlauf",
+ "studio3d.history.undo": "Rückgängig-Schritte",
+ "studio3d.history.redo": "Wiederholen-Schritte",
+ "studio3d.history.undoTo": "Rückgängig bis",
+ "studio3d.history.redoTo": "Wiederholen bis",
+ "studio3d.history.empty": "Noch keine Änderungen."
 }

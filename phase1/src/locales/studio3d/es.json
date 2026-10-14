@@ -647,5 +647,11 @@
  "studio3d.views.update": "Actualizar",
  "studio3d.views.saved": "Vista {name} guardada",
  "cmd.studio3d.view.update": "Sobrescribir una vista guardada con la vista actual",
- "cmd.studio3d.view.rename": "Renombrar una vista guardada"
+ "cmd.studio3d.view.rename": "Renombrar una vista guardada",
+ "studio3d.history.title": "Historial",
+ "studio3d.history.undo": "Pasos de deshacer",
+ "studio3d.history.redo": "Pasos de rehacer",
+ "studio3d.history.undoTo": "Deshacer hasta",
+ "studio3d.history.redoTo": "Rehacer hasta",
+ "studio3d.history.empty": "Aún no hay cambios."
 }

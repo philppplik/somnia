@@ -1,4 +1,5 @@
 # Unreleased: 3D Studio P0
+- Scene history list: the tools panel shows the undo and redo stacks with their step labels (newest/next-up first), a row click jumps straight to that point, and the undo/redo commands accept an optional count for multi-step jumps.
 - Measure picks honour the snapping settings: grid mode rounds picked points to the move step, vertex, surface and midpoint modes snap to the nearest scene candidate (the same lookup the gizmo uses), and the rubber band previews the snapped point.
 - Measure tool polish: after the first pick a live rubber-band line and dot follow the cursor over meshes and the ground plane, and the readout now shows the signed per-axis deltas and scales to the chosen scene unit (m, cm, mm, in) instead of always metres.
 - Smooth camera flights: applying a saved view or a view preset glides the camera to its new pose over a third of a second (ease-in-out), interrupted cleanly by grabbing the viewport or by another move; reduced-motion users and the orthographic projection keep instant jumps.
