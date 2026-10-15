@@ -1,7 +1,7 @@
 import {reportError} from '../log';
 import {useSyncExternalStore} from 'react';
 import {VideoEngine,type VideoEngineLike} from './engine';
-import {DEFAULT_FORMAT,exportName,type VideoFormat} from './recipe';
+import {DEFAULT_EXPORT_OPTIONS,DEFAULT_FORMAT,exportName,sanitizeExportOptions,type VideoExportOptions,type VideoFormat} from './recipe';
 import {fullClip,IMAGE_DEFAULT_SECONDS,newClipId,isNeutralTimeline,moveClip,rippleDelete,sanitizeClips,setClipEdge,setClipSpeed,setCrossfade,splitAt,timelineDuration,type TimelineClip} from './timeline';
 import {emptyVideoHistory,pushHistory,redoHistory,undoHistory,type VideoHistory,type VideoSnapshot} from './history';
 import {audioTrackEnd,duplicateAudioClip,fullAudioClip,moveAudioClip,removeAudioClip,resizeAudioClip,sanitizeAudioClips,setAudioClipDuck,setAudioClipEdge,setAudioClipFades,setAudioClipGain,setAudioClipMuted,type AudioClip} from './audioTrack';
@@ -19,7 +19,7 @@ export type VideoExportOutcome='downloaded'|'cancelled'|'unavailable';
 export interface VideoSession{exportOutcome?:VideoExportOutcome;name:string;status:VideoStatus;error:string;probe:VideoProbe|null;capabilities:VideoCapabilities|null;clips:TimelineClip[];/** The free-placed audio track (music/voiceover), mixed over the edit list. */
 audioClips:AudioClip[];selectedClipId:string|null;/** Selection on the audio track; selecting one track clears the other. */
 selectedAudioClipId:string|null;history:VideoHistory;/** Signature of the clip list at the last save/load; the session is dirty when the current list differs. */
-savedSig:string;format:VideoFormat;progress:VideoProgress|null;result:VideoResult|null;ext:string}
+savedSig:string;format:VideoFormat;exportOptions:VideoExportOptions;progress:VideoProgress|null;result:VideoResult|null;ext:string}
 const sessions=new Map<string,VideoSession>();
 let filmstrip:FilmstripController|null|undefined;
 /** One filmstrip controller per app run; null where workers are unavailable (unit tests, SSR). */
@@ -66,7 +66,7 @@ export async function openVideo(item:{name:string;url:string}):Promise<void>{
 }
 async function openVideoFresh(item:{name:string;url:string}):Promise<void>{
  stopMediaSync??=subscribeMedia(()=>{const live=new Set(getMedia().items.map(i=>i.name));for(const n of [...sessions.keys()])if(!live.has(n))closeVideo(n);});
- put({name:item.name,status:'loading',error:'',probe:null,capabilities:null,clips:[],audioClips:[],selectedClipId:null,selectedAudioClipId:null,history:emptyVideoHistory(),savedSig:clipsSignature([],[]),format:DEFAULT_FORMAT,progress:null,result:null,ext:fileExtension(item.name)});
+ put({name:item.name,status:'loading',error:'',probe:null,capabilities:null,clips:[],audioClips:[],selectedClipId:null,selectedAudioClipId:null,history:emptyVideoHistory(),savedSig:clipsSignature([],[]),format:DEFAULT_FORMAT,exportOptions:DEFAULT_EXPORT_OPTIONS,progress:null,result:null,ext:fileExtension(item.name)});
  if(getMedia().items.find(i=>i.name===item.name)?.kind==='video-project'){
   try{
    const text=await fetch(item.url).then(r=>r.text());
@@ -74,7 +74,7 @@ async function openVideoFresh(item:{name:string;url:string}):Promise<void>{
    const parsed=parseVideoProject(text);
    const clips=sanitizeClips(parsed.clips,sourceDurations(parsed.clips));
    const audioClips=sanitizeAudioClips(parsed.audioClips,{});
-   patch(item.name,{status:'ready',ext:'',clips,audioClips,format:parsed.format,savedSig:clipsSignature(clips,audioClips)});
+   patch(item.name,{status:'ready',ext:'',clips,audioClips,format:parsed.format,exportOptions:parsed.exportOptions,savedSig:clipsSignature(clips,audioClips)});
   }catch(e){patch(item.name,{status:'error',error:message(e)},e);}
   return;
  }
@@ -247,6 +247,8 @@ export function resetTimeline(root:string){
  put({...s,clips:next,audioClips:[],selectedClipId:null,selectedAudioClipId:null,result:null,history:changed?pushHistory(s.history,{clips:s.clips,audioClips:s.audioClips},null,Date.now()):s.history});
 }
 export const setVideoFormat=(root:string,format:VideoFormat)=>patch(root,{format});
+/** Sets export resolution scale and encoder quality (clamped to the supported presets). */
+export const setVideoExportOptions=(root:string,o:Partial<VideoExportOptions>)=>{const s=sessions.get(root);if(s)patch(root,{exportOptions:sanitizeExportOptions({...s.exportOptions,...o})});};
 /** Runs the export in the worker and keeps the result on the session. Cancel rejects quietly. */
 export async function runVideoExport(name:string):Promise<'exported'|'cancelled'|'unavailable'>{
  const s=sessions.get(name);
@@ -260,7 +262,7 @@ export async function runVideoExport(name:string):Promise<'exported'|'cancelled'
  revoke(s.result);put({...s,status:'exporting',error:'',progress:null,result:null,exportOutcome:undefined});
  try{
   const{engine:e}=getEngine();
-  const r=await e.export(clipSources,s.clips,s.format,p=>{if(sessions.get(name)?.status==='exporting')patch(name,{progress:p});},s.audioClips);
+  const r=await e.export(clipSources,s.clips,s.format,p=>{if(sessions.get(name)?.status==='exporting')patch(name,{progress:p});},s.audioClips,s.exportOptions);
   const cur=sessions.get(name);if(!cur)return'unavailable';
   const blob=new Blob([r.bytes],{type:r.mime});
   put({...cur,status:'ready',progress:null,result:{blob,url:URL.createObjectURL(blob),report:r.report}});
@@ -305,7 +307,7 @@ export const dirtyVideoNames=()=>[...sessions.values()].filter(videoIsDirty).map
 /** The serialized project for download or tests; null while the session is not ready. */
 export function serializeVideoProjectCopy(root:string):{text:string;fileName:string}|null{
  const s=sessions.get(root);if(!s||s.status==='loading')return null;
- return{text:serializeVideoProject(s.clips,s.audioClips,s.format),fileName:projectFileName(root)};
+ return{text:serializeVideoProject(s.clips,s.audioClips,s.format,s.exportOptions),fileName:projectFileName(root)};
 }
 /** Saves the edit list as a .video-project download and marks the session clean. Media bytes are NOT included - clips reference sources by name. */
 export function saveVideoProject(root:string):boolean{

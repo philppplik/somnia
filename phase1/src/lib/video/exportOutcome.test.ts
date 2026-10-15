@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {addBlankVideoProject,getMedia,closeMedia} from '../media';
-import {exportVideoFile,getVideoSession,openVideo,closeVideo,setVideoEngineFactory,subscribeVideo} from './session';
+import {exportVideoFile,getVideoSession,openVideo,closeVideo,runVideoExport,setVideoEngineFactory,setVideoExportOptions,subscribeVideo} from './session';
 import {addTitleClip} from './titleSession';
 import type {VideoEngineLike} from './engine';
 const engine=(cancel=false):VideoEngineLike=>({
@@ -28,5 +28,21 @@ test('cancelled and unavailable exports never claim a download',async()=>{
   assert.equal(await exportVideoFile(item.name),'unavailable');assert.equal(getVideoSession(item.name)?.exportOutcome,'unavailable');
   addTitleClip(item.name,0);assert.equal(await exportVideoFile(item.name),'cancelled');assert.equal(getVideoSession(item.name)?.exportOutcome,'cancelled');
   assert.equal(getVideoSession(item.name)?.result,null);
+ }finally{closeVideo(item.name);closeMedia(item.name);}
+});
+
+test('export options default to original/high, clamp to presets and reach the engine',async()=>{
+ let seen:unknown;
+ setVideoEngineFactory(()=>({...engine(),async export(_s,_c,_f,_p,_a,opts){seen=opts;return{bytes:new Uint8Array([1]).buffer,mime:'video/webm',report:{format:'webm',duration_s:2,bytes:1,videoCodec:'vp9',audioCodec:null,steps:[]}};}}));
+ addBlankVideoProject('export-opts.somnia-video');
+ const item=getMedia().items.find(i=>i.name===getMedia().active)!;await openVideo(item);addTitleClip(item.name,0);
+ try{
+  assert.deepEqual(getVideoSession(item.name)!.exportOptions,{scale:1,quality:'high'},'defaults');
+  setVideoExportOptions(item.name,{scale:0.5,quality:'medium'});
+  setVideoExportOptions(item.name,{scale:0.7,quality:'ultra' as never});
+  assert.deepEqual(getVideoSession(item.name)!.exportOptions,{scale:1,quality:'high'},'junk values fall back field by field');
+  setVideoExportOptions(item.name,{scale:0.25,quality:'low'});
+  assert.equal(await runVideoExport(item.name),'exported');
+  assert.deepEqual(seen,{scale:0.25,quality:'low'},'the engine receives the chosen options');
  }finally{closeVideo(item.name);closeMedia(item.name);}
 });

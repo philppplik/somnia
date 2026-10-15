@@ -114,3 +114,12 @@ test('image clips round-trip with fixed shape and clamped duration',()=>{
  const parsedLoose=parseVideoProject(loose);
  assert.deepEqual([parsedLoose.clips[0].in_s,parsedLoose.clips[0].out_s,parsedLoose.clips[0].gain,parsedLoose.clips[0].muted],[0,3600,1,false],'shape is fixed: in 0, duration clamped, no gain/mute');
 });
+
+test('export options round-trip and old files load with the defaults',()=>{
+ const withOpts=parseVideoProject(serializeVideoProject([media('m1')],[],'webm',{scale:0.5,quality:'medium'}));
+ assert.deepEqual(withOpts.exportOptions,{scale:0.5,quality:'medium'});
+ const legacy=JSON.stringify({app:'somnia-video',version:2,format:'mp4',clips:[{id:'a',kind:'media',source:'x.mp4',in_s:0,out_s:1}]});
+ assert.deepEqual(parseVideoProject(legacy).exportOptions,{scale:1,quality:'high'},'files without options keep the defaults');
+ const junk=JSON.stringify({app:'somnia-video',version:2,scale:0.7,quality:'ultra',clips:[{id:'a',kind:'media',source:'x.mp4',in_s:0,out_s:1}]});
+ assert.deepEqual(parseVideoProject(junk).exportOptions,{scale:1,quality:'high'},'unsupported values are clamped');
+});

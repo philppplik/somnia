@@ -2,7 +2,7 @@ import {useMemo,useState} from 'react';
 import {Button} from '../ui/button';
 import {useT} from '../../lib/useT';
 import {useMedia} from '../../lib/media';
-import {addAudioTrackClip,addImageClip,addTimelineClip,addTimelineClipsFromDialog,cancelVideoExport,deleteAudioTrackClip,deleteTimelineClip,duplicateAudioTrackClip,moveAudioTrackClip,moveTimelineClip,resetTimeline,resizeAudioTrackClip,setAudioTrackClipDuck,setAudioTrackClipFades,setAudioTrackClipGain,toggleAudioTrackClipMute,setTimelineClipCrossfade,setTimelineClipGain,setTimelineClipSpeed,setVideoFormat,duplicateTimelineClip,selectTimelineClip,setImageClipLength,toggleTimelineClipMute,trimTimelineClip,useVideoSession} from '../../lib/video/session';
+import {addAudioTrackClip,addImageClip,addTimelineClip,addTimelineClipsFromDialog,cancelVideoExport,deleteAudioTrackClip,deleteTimelineClip,duplicateAudioTrackClip,moveAudioTrackClip,moveTimelineClip,resetTimeline,resizeAudioTrackClip,setAudioTrackClipDuck,setAudioTrackClipFades,setAudioTrackClipGain,toggleAudioTrackClipMute,setTimelineClipCrossfade,setTimelineClipGain,setTimelineClipSpeed,setVideoFormat,duplicateTimelineClip,selectTimelineClip,setImageClipLength,setVideoExportOptions,toggleTimelineClipMute,trimTimelineClip,useVideoSession} from '../../lib/video/session';
 import {audioClipDuration,audioTrackEnd} from '../../lib/video/audioTrack';
 import {clipDuration,clipRanges,fadeOf,IMAGE_DEFAULT_SECONDS,isImageClip,MAX_GAIN,speedOf,timelineDuration} from '../../lib/video/timeline';
 import {isTitleClip} from '../../lib/video/titles';
@@ -165,6 +165,18 @@ export function VideoControls({name}:{name:string}){
    <label className="flex items-center gap-2"><NativeInput type="radio" name="video-format" className={check} checked={s.format==='webm'} disabled={webmDisabled} onChange={()=>setVideoFormat(name,'webm')} data-testid="video-format-webm"/>{t('video.format.webm')}</label>
    <label className="flex items-center gap-2"><NativeInput type="radio" name="video-format" className={check} checked={s.format==='mp4'} disabled={mp4Disabled} onChange={()=>setVideoFormat(name,'mp4')} data-testid="video-format-mp4"/>{mp4Silent?t('video.format.mp4NoAudio'):t('video.format.mp4')}</label>
    {webmDisabled&&mp4Disabled&&<p className="m-0 text-ink-3">{t('video.format.unavailable')}</p>}
+   <div className="grid grid-cols-2 gap-2">
+    <label>{t('video.exportScale')}
+     <NativeSelect className={`${field} mt-1`} value={String(s.exportOptions.scale)} onChange={e=>setVideoExportOptions(name,{scale:Number(e.target.value)})} data-testid="video-export-scale">
+      {[1,0.5,0.25].map(sc=><option key={sc} value={sc}>{sc===1?t('video.exportScaleOriginal'):`${Math.round(sc*100)}%`}{v?` · ${Math.max(2,Math.round(v.width*sc/2)*2)}×${Math.max(2,Math.round(v.height*sc/2)*2)}`:''}</option>)}
+     </NativeSelect>
+    </label>
+    <label>{t('video.exportQuality')}
+     <NativeSelect className={`${field} mt-1`} value={s.exportOptions.quality} onChange={e=>setVideoExportOptions(name,{quality:e.target.value as 'high'|'medium'|'low'})} data-testid="video-export-quality">
+      {(['high','medium','low'] as const).map(q=><option key={q} value={q}>{t(`video.exportQuality.${q}`)}</option>)}
+     </NativeSelect>
+    </label>
+   </div>
    {s.status==='exporting'?<div className="flex items-center gap-2"><progress className="h-1.5 w-full accent-[var(--accent)]" max={1} value={s.progress?.ratio}/><Button size="compact" variant="ghost" onClick={()=>cancelVideoExport(name)}>{t('video.cancel')}</Button></div>:null}
    {s.result&&<p className="m-0 text-ink-3" data-testid="video-result-inspector">{t('video.result',{duration:s.result.report.duration_s.toFixed(2),bytes:String((s.result.report.bytes/1024).toFixed(0))+' KB',video:s.result.report.videoCodec??'',audio:s.result.report.audioCodec?` + ${s.result.report.audioCodec}`:t('video.resultAudioMuted')})}</p>}
   </div>

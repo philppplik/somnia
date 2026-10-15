@@ -1,7 +1,7 @@
 /** Worker-side media pipeline: probe, capability scan and multi-clip timeline export on mediabunny + WebCodecs. No UI imports. */
-import {ALL_FORMATS,AudioSample,AudioSampleSink,AudioSampleSource,BufferSource,BufferTarget,CanvasSink,CanvasSource,Input,Mp4OutputFormat,Output,QUALITY_HIGH,WebMOutputFormat,getFirstEncodableAudioCodec,getFirstEncodableVideoCodec} from 'mediabunny';
+import {ALL_FORMATS,AudioSample,AudioSampleSink,AudioSampleSource,BufferSource,BufferTarget,CanvasSink,CanvasSource,Input,Mp4OutputFormat,Output,QUALITY_HIGH,QUALITY_LOW,QUALITY_MEDIUM,WebMOutputFormat,getFirstEncodableAudioCodec,getFirstEncodableVideoCodec} from 'mediabunny';
 import type {AudioCodec,VideoCodec} from 'mediabunny';
-import type {VideoFormat} from './recipe';
+import {sanitizeExportOptions,type VideoExportOptions,type VideoFormat} from './recipe';
 import {clipRanges,fadeOf,isImageClip,speedOf,timelineDuration,type ClipRange,type TimelineClip} from './timeline';
 import {audioEnvelope,duckGainAt,type AudioClip} from './audioTrack';
 import {WindowMixer} from './mixer';
@@ -81,7 +81,7 @@ async function emitZoneAudio(aSink:AudioSampleSink,srcStart:number,srcEnd:number
  * decode both sides on a fixed frame grid and dissolve linearly; audio is crossfaded equal-power. All audio is
  * normalized to 48 kHz stereo before encoding (per-zone gain included), muted clips contribute silence.
  */
-export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:TimelineClip[],audioClips:AudioClip[],format:VideoFormat,onProgress?:(ratio:number,processed_s:number)=>void):Promise<{bytes:ArrayBuffer;mime:string;report:VideoReport}>{
+export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:TimelineClip[],audioClips:AudioClip[],format:VideoFormat,onProgress?:(ratio:number,processed_s:number)=>void,exportOptions?:VideoExportOptions):Promise<{bytes:ArrayBuffer;mime:string;report:VideoReport}>{
  cancelled=false;
  if(!clips.length)throw new Error('The timeline is empty.');
  const steps:string[]=[];
@@ -104,7 +104,12 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
   }
   const firstMedia=clips.find(c=>needsSourceFile(c)&&!isImageClip(c));
   const first=firstMedia?inputs.get(firstMedia.source)!.probe.video!:{codec:null,width:1280,height:720,fps:null};
-  const outW=first.width,outH=first.height;
+  const opts=sanitizeExportOptions(exportOptions);
+  // Even dimensions: H.264 cannot encode odd sizes. Everything downstream (letterbox, titles, stills) follows outW/outH.
+  const outW=Math.max(2,Math.round(first.width*opts.scale/2)*2),outH=Math.max(2,Math.round(first.height*opts.scale/2)*2);
+  const encQuality=opts.quality==='medium'?QUALITY_MEDIUM:opts.quality==='low'?QUALITY_LOW:QUALITY_HIGH;
+  if(opts.scale!==1)steps.push(`Resolution scaled to ${outW}×${outH}.`);
+  if(opts.quality!=='high')steps.push(`Encoder quality: ${opts.quality}.`);
   for(const n of imageNames){
    const bytes=sources[n];
    if(!bytes)throw new Error(`Clip source "${n}" is no longer available. Re-open the file to export this timeline.`);
@@ -138,12 +143,12 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
   const ctx=canvas.getContext('2d');
   if(!ctx)throw new Error('No 2D context for the render canvas.');
   ctx.fillStyle='#000';ctx.fillRect(0,0,outW,outH);
-  const videoSource=new CanvasSource(canvas,{codec:videoCodec as VideoCodec,quality:QUALITY_HIGH});
+  const videoSource=new CanvasSource(canvas,{codec:videoCodec as VideoCodec,quality:encQuality});
   output.addVideoTrack(videoSource);
   let audioSource:AudioSampleSource|null=null;
   if(audioCodec){
    // Every sample is normalized to 48 kHz stereo f32 before it is added: the source rejects mixed raw parameters.
-   audioSource=new AudioSampleSource({codec:audioCodec as AudioCodec,quality:QUALITY_HIGH});
+   audioSource=new AudioSampleSource({codec:audioCodec as AudioCodec,quality:encQuality});
    output.addAudioTrack(audioSource);
   }
   await output.start();
