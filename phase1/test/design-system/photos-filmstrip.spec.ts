@@ -1284,6 +1284,25 @@ test('sort by name and size: the strip reorders, duplicates land side by side (l
   await expect(page.getByTestId('photos-filmstrip-item-zzz-big.png')).toHaveCount(0);
  }
 });
+test('thumbnail tooltip: name, capture date, camera and dimensions from the EXIF cache (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
+  await page.evaluate(async()=>{
+   const cd=await import('/src/lib/photos/captureDates.ts');const med=await import('/src/lib/media.ts');
+   const size=(n:string)=>med.getMedia().items.find(i=>i.name===n)!.size;
+   cd.putCaptureDate('strip-1.png',size('strip-1.png'),new Date('2026-06-01T10:30:00Z').getTime(),'Canon EOS R5',240,150);
+  });
+  const tip=await page.getByTestId('photos-filmstrip-item-strip-1.png').getAttribute('title');
+  expect(tip).toContain('strip-1.png');
+  expect(tip).toContain('Canon EOS R5');
+  expect(tip).toContain('240 × 150');
+  expect(tip).toContain('2026'); // locale-formatted capture date, any locale
+  await expect(page.getByTestId('photos-filmstrip-item-strip-2.png')).toHaveAttribute('title','strip-2.png · 240 × 150'); // real decoded dimensions, no invented date or camera
+ }
+});
 test('menu groups: labeled collapsible sections, expanded by default (light and dark)',async({page})=>{
  for(const theme of['light','dark']){
   await page.goto('/test/design-system/?view=photos-filmstrip');

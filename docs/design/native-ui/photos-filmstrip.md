@@ -765,3 +765,18 @@ whose library/name/size orders all differ and asserts the first
 strip item under each
 (`test-results/ds-photos-sort-size-{light,dark}.png`); the sort
 unit test covers alphabetical and big-first orderings with ties.
+
+## Thumbnail EXIF tooltip (P131)
+
+Every strip thumbnail carries an honest tooltip: the name plus
+whatever the EXIF cache has resolved - capture date (Intl locale
+format), camera, pixel dimensions. Visible thumbs resolve their
+entry lazily on first render; until then the tooltip is the name
+alone, and entries without a date or camera simply omit those
+parts - nothing is invented. When duplicates sit side by side
+(size sort, P130, or the duplicates rule, P128), hovering tells
+the candidates apart.
+
+Coverage: the light/dark gallery leg seeds one entry and asserts
+the full tooltip, and asserts a second thumb shows its real
+decoded dimensions with no invented date or camera.

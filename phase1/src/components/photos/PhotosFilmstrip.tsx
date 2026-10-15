@@ -12,6 +12,7 @@ import {findWbPreset,WB_PRESETS} from '../../lib/photos/wbPresets';
 import {applyLook,BUILT_IN_PRESETS,extractLook,isNeutralLook,parseUserPresets,type Look,type UserPreset} from '../../lib/photos/presets';
 import {commitPhotoSettings,getPhotoSession} from '../../lib/photos/studioSession';
 import {FILMSTRIP_SORTS,type FilmstripSort} from '../../lib/photos/filmstripSort';
+import {ensureCaptureDates,getCaptureEntry} from '../../lib/photos/captureDates';
 import {MAX_RATING,useRatings} from '../../lib/photos/ratings';
 import {useFlags} from '../../lib/photos/flags';
 import {PHOTO_LABELS,useLabels,type PhotoLabel} from '../../lib/photos/labels';
@@ -34,6 +35,13 @@ import {NativeInput,NativeSelect} from '../ui/native-controls';
 import {RatingStars} from './RatingStars';
 import {useVisiblePhotos,type SmartFilter} from './useVisiblePhotos';
 
+const tipDateFmt=new Intl.DateTimeFormat(undefined,{dateStyle:'medium',timeStyle:'short'});
+/** Honest thumbnail tooltip: name plus whatever the EXIF cache has resolved - capture date, camera, pixel dimensions. */
+function thumbTooltip(name:string,size:number):string{
+ const parts=[name];const e=getCaptureEntry(name,size);
+ if(e){if(e.t)parts.push(tipDateFmt.format(e.t));if(e.cam)parts.push(e.cam);if(e.w&&e.h)parts.push(`${e.w} × ${e.h}`);}
+ return parts.join(' · ');
+}
 /** Library filmstrip under the workspace: a thumbnail per developable photo in library order; clicking switches the active photo. */
 export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(names:string[])=>void}){
  const {t}=useT();
@@ -162,12 +170,13 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
   setSel(sel.filter(n=>!names.has(n)));
   if(names.has(active)){const next=all.find(p=>!names.has(p.name));setActiveMedia(next?next.name:null);}
  };
+ useEffect(()=>{ensureCaptureDates(photos);},[photos]); // visible thumbs fetch their EXIF line lazily: date, camera and dimensions fill the tooltip
  if(total<2&&hidden.length===0)return null; // stays mounted while hidden photos exist: the restore entry lives in the menu
  const thumb=(p:(typeof photos)[number])=><Button key={p.name} variant="outline" size="compact" aria-pressed={p.name===active} aria-label={p.name} onClick={e=>{
    if(e.shiftKey){const names=photos.map(q=>q.name);setSel(rangeSelect(names,anchor,p.name));}
    else if(e.ctrlKey||e.metaKey){setSel(toggleSelect(sel,p.name));setAnchor(p.name);}
    else{setSel([p.name]);setAnchor(p.name);setApplyNote(null);setActiveMedia(p.name);}
-  }} className={`relative h-14 shrink-0 overflow-hidden px-0.5${sel.includes(p.name)&&sel.length>1?' ring-2 ring-[var(--accent)]':''}`} data-selected={sel.includes(p.name)&&sel.length>1||undefined} data-testid={`photos-filmstrip-item-${p.name}`}>
+  }} title={thumbTooltip(p.name,p.size)} className={`relative h-14 shrink-0 overflow-hidden px-0.5${sel.includes(p.name)&&sel.length>1?' ring-2 ring-[var(--accent)]':''}`} data-selected={sel.includes(p.name)&&sel.length>1||undefined} data-testid={`photos-filmstrip-item-${p.name}`}>
    <img src={p.url} alt="" className={`h-full w-auto max-w-24 rounded-[2px] object-cover${hidden.includes(p.name)?' opacity-40':''}`}/>
    {hidden.includes(p.name)&&<span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-[2px] bg-elevated p-0.5 text-ink-3" data-testid={`photos-filmstrip-hidden-badge-${p.name}`}><EyeOff size={12}/></span>}
    {labels[p.name]&&<span className={`photos-label-dot photos-label-${labels[p.name]} absolute top-0.5 right-0.5`} data-testid={`photos-filmstrip-label-${p.name}`} data-label={labels[p.name]}/>}
