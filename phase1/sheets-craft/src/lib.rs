@@ -675,6 +675,7 @@ impl HeadlessWorkbook {
         Ok(json!({"rule": {
             "kind": format!("{:?}", dv.kind), "operator": format!("{:?}", dv.op), "f1": short(&dv.f1), "f2": dv.f2.as_deref().map(short),
             "allowBlank": dv.allow_blank, "dropdown": dv.in_cell_dropdown, "errorStyle": format!("{:?}", dv.error_style), "errorMessage": short(&dv.error_message),
+            "inputTitle": short(&dv.input_title), "inputMessage": short(&dv.input_message), "errorTitle": short(&dv.error_title),
             "ranges": dv.ranges.iter().take(8).map(|r| r.a1()).collect::<Vec<_>>()
         }}).to_string())
     }
@@ -4222,11 +4223,11 @@ impl HeadlessWorkbook {
         };
         let allowed: &[&str] = match kind {
             "clear" => &["kind"],
-            "list" => &["kind", "items", "allowBlank", "dropdown", "errorStyle", "errorMessage"],
-            "listRange" => &["kind", "source", "allowBlank", "dropdown", "errorStyle", "errorMessage"],
-            "number" => &["kind", "whole", "operator", "value", "value2", "allowBlank", "errorStyle", "errorMessage"],
-            "length" => &["kind", "operator", "value", "value2", "allowBlank", "errorStyle", "errorMessage"],
-            "date" | "time" => &["kind", "operator", "value", "value2", "allowBlank", "errorStyle", "errorMessage"],
+            "list" => &["kind", "items", "allowBlank", "dropdown", "errorStyle", "errorMessage", "inputTitle", "inputMessage", "errorTitle"],
+            "listRange" => &["kind", "source", "allowBlank", "dropdown", "errorStyle", "errorMessage", "inputTitle", "inputMessage", "errorTitle"],
+            "number" => &["kind", "whole", "operator", "value", "value2", "allowBlank", "errorStyle", "errorMessage", "inputTitle", "inputMessage", "errorTitle"],
+            "length" => &["kind", "operator", "value", "value2", "allowBlank", "errorStyle", "errorMessage", "inputTitle", "inputMessage", "errorTitle"],
+            "date" | "time" => &["kind", "operator", "value", "value2", "allowBlank", "errorStyle", "errorMessage", "inputTitle", "inputMessage", "errorTitle"],
             _ => return Err("unsupported validation kind".into()),
         };
         if op.as_object().is_none_or(|m| m.keys().any(|k| !allowed.contains(&k.as_str()))) {
@@ -4248,6 +4249,15 @@ impl HeadlessWorkbook {
             None => String::new(),
             Some(v) => v.as_str().filter(|t| t.chars().count() <= 255 && !t.chars().any(|c| c.is_control())).ok_or("the error message must be at most 255 characters")?.trim().to_string(),
         };
+        let note_text = |key: &str, max: usize| -> Result<String, String> {
+            match op.get(key) {
+                None => Ok(String::new()),
+                Some(v) => v.as_str().filter(|t| t.chars().count() <= max && !t.chars().any(|c| c.is_control())).map(|t| t.trim().to_string()).ok_or_else(|| format!("{key} must be at most {max} characters")),
+            }
+        };
+        let input_title = note_text("inputTitle", 32)?;
+        let input_message = note_text("inputMessage", 255)?;
+        let error_title = note_text("errorTitle", 32)?;
         let date_part = |v: Option<&serde_json::Value>| -> Result<String, String> {
             let t = v.and_then(|v| v.as_str()).ok_or("the rule needs a date like 2026-01-31")?;
             let p: Vec<&str> = t.split('-').collect();
@@ -4304,6 +4314,9 @@ impl HeadlessWorkbook {
                 m.insert("dropdown".into(), json!(dropdown));
                 m.insert("errorStyle".into(), json!(error_style));
                 m.insert("errorMessage".into(), json!(error_message));
+                m.insert("inputTitle".into(), json!(input_title));
+                m.insert("inputMessage".into(), json!(input_message));
+                m.insert("errorTitle".into(), json!(error_title));
             }
         }
         self.session.run("sheet.activate", json!({"sheet": sheet}))?;

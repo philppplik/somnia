@@ -1,7 +1,9 @@
 import type {CfOperator,InvalidCells,ValidationListItem,ValidationManageOp,ValidationOp,ValidationRuleInfo} from './protocol';
 import {CF_OPERATORS} from './cfOps';
 /** Data validation: validation for untrusted command input. The Rust bridge and the engine re-validate every field. */
-const OPTION_KEYS=['allowBlank','dropdown','errorStyle','errorMessage'];
+const OPTION_KEYS=['allowBlank','dropdown','errorStyle','errorMessage','inputTitle','inputMessage','errorTitle'];
+export const MAX_DV_TITLE_CHARS=32;
+const noteText=(v:unknown,max:number)=>{if(typeof v!=='string'||[...v].length>max||/[\u0000-\u001f\u007f]/.test(v))throw Error('Invalid message text.');return v.trim();};
 export const MAX_ERROR_CHARS=255;
 export const MAX_LIST_ITEMS=100,MAX_ITEM_CHARS=64,MAX_SOURCE_CELLS=500;
 const itemProblem=(t:string)=>t.length===0||[...t].length>MAX_ITEM_CHARS||/[\u0000-\u001f\u007f,"]/.test(t);
@@ -20,6 +22,9 @@ export function parseValidationCommand(input:unknown):ValidationOp{
   if(o.dropdown!==undefined){if(!dropdown||typeof o.dropdown!=='boolean')throw Error('`dropdown` only applies to lists and must be true or false.');w.dropdown=o.dropdown;}
   if(o.errorStyle!==undefined){if(o.errorStyle!=='stop'&&o.errorStyle!=='warning')throw Error('Unsupported alert style.');w.errorStyle=o.errorStyle;}
   if(o.errorMessage!==undefined){if(typeof o.errorMessage!=='string'||[...o.errorMessage].length>MAX_ERROR_CHARS||/[\u0000-\u001f\u007f]/.test(o.errorMessage))throw Error('Invalid error message.');w.errorMessage=o.errorMessage.trim();}
+  if(o.inputTitle!==undefined)w.inputTitle=noteText(o.inputTitle,MAX_DV_TITLE_CHARS);
+  if(o.inputMessage!==undefined)w.inputMessage=noteText(o.inputMessage,MAX_ERROR_CHARS);
+  if(o.errorTitle!==undefined)w.errorTitle=noteText(o.errorTitle,MAX_DV_TITLE_CHARS);
   return out as ValidationOp;};
  const compare=()=>{if(typeof o.operator!=='string'||!(CF_OPERATORS as readonly string[]).includes(o.operator))throw Error('Unsupported comparison.');const two=o.operator==='between'||o.operator==='notBetween';if(two!==(o.value2!==undefined))throw Error(two?'Between needs two numbers.':'Only between takes two numbers.');return {operator:o.operator as CfOperator,two};};
  const compare2=()=>{if(typeof o.operator!=='string'||!(CF_OPERATORS as readonly string[]).includes(o.operator))throw Error('Unsupported comparison.');const two=o.operator==='between'||o.operator==='notBetween';if(two!==(o.value2!==undefined))throw Error(two?'Between needs two values.':'Only between takes two values.');return two;};
@@ -43,12 +48,12 @@ export function hhmm(v:unknown):string{if(typeof v!=='string'||!/^([01][0-9]|2[0
 export const VALIDATION_CHOICES=['list','listRange','whole','decimal','length','date','time'] as const;
 export type ValidationChoice=typeof VALIDATION_CHOICES[number];
 /** Panel inputs to an op; null while incomplete or invalid. */
-export interface ValidationExtras{allowBlank:boolean;dropdown:boolean;errorStyle:'stop'|'warning';errorMessage:string}
+export interface ValidationExtras{allowBlank:boolean;dropdown:boolean;errorStyle:'stop'|'warning';errorMessage:string;inputTitle?:string;inputMessage?:string;errorTitle?:string}
 export const DEFAULT_VALIDATION_EXTRAS:ValidationExtras={allowBlank:true,dropdown:true,errorStyle:'stop',errorMessage:''};
 export function buildValidationOp(choice:ValidationChoice,operator:CfOperator,a:string,b:string,extras:ValidationExtras=DEFAULT_VALIDATION_EXTRAS):ValidationOp|null{
  const n=(v:string)=>v.trim()!==''&&Number.isFinite(Number(v))?Number(v):NaN;
  const two=operator==='between'||operator==='notBetween';
- const more:Record<string,unknown>={...(extras.allowBlank?{}:{allowBlank:false}),...(extras.errorStyle==='stop'?{}:{errorStyle:extras.errorStyle}),...(extras.errorMessage.trim()?{errorMessage:extras.errorMessage}:{})};
+ const more:Record<string,unknown>={...(extras.allowBlank?{}:{allowBlank:false}),...(extras.errorStyle==='stop'?{}:{errorStyle:extras.errorStyle}),...(extras.errorMessage.trim()?{errorMessage:extras.errorMessage}:{}),...(extras.inputTitle?.trim()?{inputTitle:extras.inputTitle}:{}),...(extras.inputMessage?.trim()?{inputMessage:extras.inputMessage}:{}),...(extras.errorTitle?.trim()?{errorTitle:extras.errorTitle}:{})};
  const drop=extras.dropdown?{}:{dropdown:false};
  try{
   if(choice==='list'){const items=parseItemList(a);return items?parseValidationCommand({kind:'list',items,...drop,...more}):null;}
@@ -62,7 +67,7 @@ export function buildValidationOp(choice:ValidationChoice,operator:CfOperator,a:
 export function parseValidationRule(raw:unknown):ValidationRuleInfo|null{
  const r=(raw as {rule?:unknown}|null)?.rule as Record<string,unknown>|null|undefined;if(!r||typeof r!=='object')return null;
  const t=(v:unknown,n=255)=>typeof v==='string'?v.slice(0,n):'';
- return {kind:t(r.kind,24),operator:t(r.operator,24),f1:t(r.f1),f2:typeof r.f2==='string'?r.f2.slice(0,255):null,allowBlank:r.allowBlank!==false,dropdown:r.dropdown!==false,errorStyle:t(r.errorStyle,24),errorMessage:t(r.errorMessage),ranges:Array.isArray(r.ranges)?r.ranges.filter((x):x is string=>typeof x==='string').slice(0,8).map(x=>x.slice(0,40)):[]};
+ return {kind:t(r.kind,24),operator:t(r.operator,24),f1:t(r.f1),f2:typeof r.f2==='string'?r.f2.slice(0,255):null,allowBlank:r.allowBlank!==false,dropdown:r.dropdown!==false,errorStyle:t(r.errorStyle,24),errorMessage:t(r.errorMessage),inputTitle:t(r.inputTitle,32),inputMessage:t(r.inputMessage),errorTitle:t(r.errorTitle,32),ranges:Array.isArray(r.ranges)?r.ranges.filter((x):x is string=>typeof x==='string').slice(0,8).map(x=>x.slice(0,40)):[]};
 }
 export const MAX_INVALID_CELLS=500;
 export function parseInvalidCells(raw:unknown):InvalidCells{

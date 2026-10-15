@@ -40,7 +40,7 @@ import {internalTarget,linkTargetProblem,MAX_LINK_TEXT,MAX_NOTE_CHARS} from '../
 import {dedupeBlockProblem,splitBlockProblem,parseWidths,SPLIT_DELIMITERS} from '../../lib/sheets/dataTools';
 import {replaceProblem,MAX_REPLACE_TEXT} from '../../lib/sheets/replaceOps';
 import {getSheetsPanelController} from '../../lib/sheets/panelController';
-import {describeValidationRule,VALIDATION_CHOICES,buildValidationOp,MAX_ITEM_CHARS,type ValidationChoice} from '../../lib/sheets/validationOps';
+import {describeValidationRule,VALIDATION_CHOICES,buildValidationOp,MAX_ITEM_CHARS,MAX_DV_TITLE_CHARS,type ValidationChoice} from '../../lib/sheets/validationOps';
 import type {CfOperator} from '../../lib/sheets/protocol';
 import {CF_CHOICE_GROUPS,CF_STYLES,buildCfOp,cfChoiceIsVisual,cfChoiceNeeds,MAX_CF_TEXT,type CfChoice} from '../../lib/sheets/cfOps';
 import {FILTER_CONDITIONS,MAX_FILTER_SCAN_ROWS,MAX_FILTER_VALUE,distinctValues,filterValueProblem,type DistinctValues} from '../../lib/sheets/filterOps';
@@ -1270,9 +1270,9 @@ function ReplaceGroup(){
 /** Limits what can be typed into the selected block: a list of choices or number/length bounds. One undo step. Typed entries that break a rule are refused. */
 const VALIDATION_OPERATORS:readonly CfOperator[]=['between','notBetween','equal','notEqual','greater','less','greaterOrEqual','lessOrEqual'];
 function ValidationGroup(){
- const {t}=useT(),s=useSheetsSelection(),action=useAction();const [choice,setChoice]=useState<ValidationChoice>('list');const [operator,setOperator]=useState<CfOperator>('between');const [a,setA]=useState('');const [b,setB]=useState('');const [allowBlank,setAllowBlank]=useState(true);const [dropdown,setDropdown]=useState(true);const [alertStyle,setAlertStyle]=useState<'stop'|'warning'>('stop');const [errMsg,setErrMsg]=useState('');
+ const {t}=useT(),s=useSheetsSelection(),action=useAction();const [choice,setChoice]=useState<ValidationChoice>('list');const [operator,setOperator]=useState<CfOperator>('between');const [a,setA]=useState('');const [b,setB]=useState('');const [allowBlank,setAllowBlank]=useState(true);const [dropdown,setDropdown]=useState(true);const [alertStyle,setAlertStyle]=useState<'stop'|'warning'>('stop');const [errMsg,setErrMsg]=useState('');const [inTitle,setInTitle]=useState('');const [inMsg,setInMsg]=useState('');const [errTitle,setErrTitle]=useState('');
  const r=s?.range;if(!s||!r)return null;
- const numeric=choice==='whole'||choice==='decimal'||choice==='length'||choice==='date'||choice==='time',two=numeric&&(operator==='between'||operator==='notBetween'),isList=choice==='list'||choice==='listRange',op=buildValidationOp(choice,operator,a,b,{allowBlank,dropdown,errorStyle:alertStyle,errorMessage:errMsg});
+ const numeric=choice==='whole'||choice==='decimal'||choice==='length'||choice==='date'||choice==='time',two=numeric&&(operator==='between'||operator==='notBetween'),isList=choice==='list'||choice==='listRange',op=buildValidationOp(choice,operator,a,b,{allowBlank,dropdown,errorStyle:alertStyle,errorMessage:errMsg,inputTitle:inTitle,inputMessage:inMsg,errorTitle:errTitle});
  const rule=s.validationRule,bad=s.invalidCells;
  const run=(o:object)=>void action.run('sheets.validation',o);
  const items=s.listItems;
@@ -1285,6 +1285,9 @@ function ValidationGroup(){
   {two&&<label className="flex flex-col gap-1">{t('sheets.dv.value2')}<NativeInput className={field} value={b} maxLength={32} disabled={action.busy} onChange={e=>setB(e.currentTarget.value)} data-testid="sheets-dv-value2"/></label>}
   <label className="flex flex-col gap-1">{t('sheets.dv.alert')}<NativeSelect className={field} value={alertStyle} disabled={action.busy} onChange={e=>setAlertStyle(e.currentTarget.value==='warning'?'warning':'stop')} data-testid="sheets-dv-alert"><option value="stop">{t('sheets.dv.alert.stop')}</option><option value="warning">{t('sheets.dv.alert.warning')}</option></NativeSelect></label>
   <label className="flex flex-col gap-1">{t('sheets.dv.errorMessage')}<NativeInput className={field} value={errMsg} maxLength={255} disabled={action.busy} onChange={e=>setErrMsg(e.currentTarget.value)} data-testid="sheets-dv-message"/></label>
+  <label className="flex flex-col gap-1">{t('sheets.dv.errorTitle')}<NativeInput className={field} value={errTitle} maxLength={MAX_DV_TITLE_CHARS} disabled={action.busy} onChange={e=>setErrTitle(e.currentTarget.value)} data-testid="sheets-dv-errtitle"/></label>
+  <label className="flex flex-col gap-1">{t('sheets.dv.inputTitle')}<NativeInput className={field} value={inTitle} maxLength={MAX_DV_TITLE_CHARS} disabled={action.busy} onChange={e=>setInTitle(e.currentTarget.value)} data-testid="sheets-dv-intitle"/></label>
+  <label className="flex flex-col gap-1">{t('sheets.dv.inputMessage')}<NativeInput className={field} value={inMsg} maxLength={255} disabled={action.busy} onChange={e=>setInMsg(e.currentTarget.value)} data-testid="sheets-dv-inmsg"/></label>
   <Checkbox label={t('sheets.dv.allowBlank')} checked={allowBlank} disabled={action.busy} onChange={e=>setAllowBlank(e.currentTarget.checked)}/>
   {isList&&<Checkbox label={t('sheets.dv.dropdown')} checked={dropdown} disabled={action.busy} onChange={e=>setDropdown(e.currentTarget.checked)}/>}
   <div className="flex flex-wrap gap-2">
@@ -1293,6 +1296,7 @@ function ValidationGroup(){
    <Button variant="outline" size="compact" disabled={action.busy} onClick={()=>void action.run('sheets.validationCheck',{})} data-testid="sheets-dv-check">{t('sheets.dv.check')}</Button>
   </div>
   {rule&&<p className="text-ink-3">{t('sheets.dv.current',{kind:t('sheets.dv.rk.'+rule.kind),op:rule.kind==='List'||rule.kind==='Custom'?rule.f1:t('sheets.dv.op.'+rule.operator.charAt(0).toLowerCase()+rule.operator.slice(1))+' '+rule.f1+(rule.f2?' / '+rule.f2:''),alert:t('sheets.dv.alert.'+(rule.errorStyle==='Stop'?'stop':'warning'))})}</p>}
+  {rule&&(rule.inputMessage||rule.inputTitle)&&<p className="text-ink-3">{t('sheets.dv.hint',{text:[rule.inputTitle,rule.inputMessage].filter(Boolean).join(': ')})}</p>}
   {bad&&<p className="text-ink-3">{bad.cells.length===0?t('sheets.dv.allGood'):t('sheets.dv.found',{count:bad.cells.length+(bad.truncated?'+':''),cells:bad.cells.slice(0,20).join(', ')})}</p>}
   <p className="text-ink-3">{t('sheets.dv.scope',{range:rangeAddress(r)})}</p>
  </div>;

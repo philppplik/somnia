@@ -1,5 +1,5 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';
-import {buildValidationOp,hhmm,isoDate,parseInvalidCells,parseItemList,parseValidationCommand,parseValidationRule} from './validationOps';
+import {DEFAULT_VALIDATION_EXTRAS,buildValidationOp,hhmm,isoDate,parseInvalidCells,parseItemList,parseValidationCommand,parseValidationRule} from './validationOps';
 test('parseValidationCommand accepts each shape',()=>{
  for(const ok of [{kind:'list',items:['a','b']},{kind:'listRange',source:'A1:A9'},{kind:'number',whole:true,operator:'between',value:1,value2:10},{kind:'number',whole:false,operator:'greater',value:0},{kind:'length',operator:'lessOrEqual',value:20},{kind:'clear'}])assert.deepEqual(parseValidationCommand(ok),ok);
 });
@@ -34,7 +34,10 @@ test('panel inputs build date, time and alert rules',()=>{
 });
 test('bridge answers about rules and invalid cells are bounded',()=>{
  assert.equal(parseValidationRule({rule:null}),null);assert.equal(parseValidationRule(null),null);
- assert.deepEqual(parseValidationRule({rule:{kind:'List',operator:'Between',f1:'"a,b"',f2:null,allowBlank:true,dropdown:false,errorStyle:'Stop',errorMessage:'',ranges:['A1:A3',5]}}),{kind:'List',operator:'Between',f1:'"a,b"',f2:null,allowBlank:true,dropdown:false,errorStyle:'Stop',errorMessage:'',ranges:['A1:A3']});
+ assert.deepEqual(parseValidationRule({rule:{kind:'List',operator:'Between',f1:'"a,b"',f2:null,allowBlank:true,dropdown:false,errorStyle:'Stop',errorMessage:'',ranges:['A1:A3',5]}}),{kind:'List',operator:'Between',f1:'"a,b"',f2:null,allowBlank:true,dropdown:false,errorStyle:'Stop',errorMessage:'',inputTitle:'',inputMessage:'',errorTitle:'',ranges:['A1:A3']});
+ assert.deepEqual(parseValidationCommand({kind:'list',items:['a'],inputTitle:' Pick ',inputMessage:'Choose one',errorTitle:'Oops'}),{kind:'list',items:['a'],inputTitle:'Pick',inputMessage:'Choose one',errorTitle:'Oops'});
+ for(const bad of [{inputTitle:'x'.repeat(33)},{inputMessage:'x'.repeat(256)},{errorTitle:'a\nb'},{inputMessage:5}])assert.throws(()=>parseValidationCommand({kind:'list',items:['a'],...bad}));
+ assert.deepEqual(buildValidationOp('list','between','a,b','',{...DEFAULT_VALIDATION_EXTRAS,inputTitle:'Hint',inputMessage:'Pick'}),{kind:'list',items:['a','b'],inputTitle:'Hint',inputMessage:'Pick'});
  assert.deepEqual(parseInvalidCells({invalid:['A1','bad',3,'B22'],truncated:true}),{cells:['A1','B22'],truncated:true});
  assert.deepEqual(parseInvalidCells(null),{cells:[],truncated:false});
  assert.equal(parseInvalidCells({invalid:Array.from({length:900},()=>'A1')}).cells.length,500);
