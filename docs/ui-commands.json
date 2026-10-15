@@ -6736,6 +6736,14 @@
       "hasEnabled": true
     },
     {
+      "id": "sheets.view",
+      "title": "Zoom and gridlines",
+      "category": "View",
+      "source": "sheets",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
       "id": "shell.rail.hide",
       "title": "Hide rail icon",
       "category": "View",

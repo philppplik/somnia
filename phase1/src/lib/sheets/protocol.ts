@@ -8,7 +8,7 @@ export interface CellStyle{bold:boolean;italic:boolean;strike:boolean;underline:
 export interface BorderSide{w:number;style:'solid'|'dashed'|'dotted'|'double';color:string}
 export interface ViewCell extends RangeCell{text:string;numeric:boolean;fmtColor:string|null;style:CellStyle}
 export interface ViewResult{sheet:number;row:number;col:number;rows:number;cols:number;cells:ViewCell[]}
-export interface SheetLayout{sheet:number;defaultColWidth:number;defaultRowHeight:number;cols:{i:number;w:number;hidden:boolean}[];rows:{i:number;h:number;hidden:boolean}[];showGridlines:boolean;freeze:{rows:number;cols:number}|null;merges:{r0:number;c0:number;r1:number;c1:number}[]}
+export interface SheetLayout{sheet:number;defaultColWidth:number;defaultRowHeight:number;cols:{i:number;w:number;hidden:boolean}[];rows:{i:number;h:number;hidden:boolean}[];showGridlines:boolean;zoom?:number;freeze:{rows:number;cols:number}|null;merges:{r0:number;c0:number;r1:number;c1:number}[]}
 export interface RangeResult{sheet:number;row:number;col:number;rows:number;cols:number;cells:RangeCell[]}
 /** Typed formatting operations; the Rust bridge keeps the same closed allowlist and re-validates every field. */
 /** Tables and a small PivotTable. Names come from the sheet's own first row; the Rust bridge re-validates everything. */
@@ -22,6 +22,8 @@ export interface PivotField{name:string;numeric:boolean}
 export type PaperName='Letter'|'Legal'|'A4'|'A3'|'A5'|'Tabloid'|'Executive';
 export interface PageSetupOp{orientation?:'portrait'|'landscape';paper?:PaperName;margins?:'normal'|'wide'|'narrow';scale?:number;fitWidth?:number;fitHeight?:number;centerH?:boolean;centerV?:boolean;gridlines?:boolean;headings?:boolean;header?:string;footer?:string;printArea?:string|null;titleRows?:string|null;titleCols?:string|null}
 export interface PageInfo{orientation:'portrait'|'landscape';paper:string;margins:number[];scale:number;fitWidth:number;fitHeight:number;centerH:boolean;centerV:boolean;gridlines:boolean;headings:boolean;header:string;footer:string;printArea:string|null;titleRows:string|null;titleCols:string|null}
+export type ViewOp={zoom:number}|{gridlines:boolean};
+export interface ViewOpResult{zoom:number;gridlines:boolean}
 export interface ExportOp{format:'pdf'|'csv'|'tsv'|'html';scope:'sheet'|'all'|'selection';fit?:boolean}
 export interface ExportResult{format:ExportOp['format'];base64:string;bytes:number;pages:number|null}
 export type NegativeStyle='minus'|'red'|'paren'|'redParen';
@@ -116,6 +118,7 @@ export type SheetsRequest=
  |{id:number;op:'pivotRefresh'}
  |{id:number;op:'tables';sheet:number}
  |{id:number;op:'tableOp';sheet:number;row:number;col:number;rows:number;cols:number;table:TableOp}
+ |{id:number;op:'viewOp';sheet:number;view:ViewOp}
  |{id:number;op:'pageInfo';sheet:number}
  |{id:number;op:'pageSetup';sheet:number;page:PageSetupOp}
  |{id:number;op:'exportFile';sheet:number;row:number;col:number;rows:number;cols:number;export:ExportOp}

@@ -507,7 +507,7 @@ impl HeadlessWorkbook {
         let rows: Vec<_> = sh.rows.iter().filter(|(r, _)| **r < gridcraft_engine::core::MAX_ROWS)
             .map(|(r, i)| json!({"i": r, "h": px(sh.row_height(*r)), "hidden": i.hidden})).collect();
         Ok(json!({"sheet":sheet,"defaultColWidth":px(sh.default_col_width),"defaultRowHeight":px(sh.default_row_height),
-            "cols":cols,"rows":rows,"showGridlines":sh.show_gridlines,
+            "cols":cols,"rows":rows,"showGridlines":sh.show_gridlines,"zoom":sh.zoom,
             "freeze": sh.freeze.map(|(r, c)| json!({"rows": r.min(20), "cols": c.min(20)})),
             "merges": sh.merges.iter().map(|m| json!({"r0":m.start.row,"c0":m.start.col,"r1":m.end.row,"c1":m.end.col})).collect::<Vec<_>>()}).to_string())
     }
@@ -963,6 +963,29 @@ impl HeadlessWorkbook {
             _ => return Err("unsupported table operation".into()),
         };
         self.session.run(command, params).map(|v| v.to_string()).map_err(|e| e.to_string())
+    }
+
+    /// Changes how a sheet is shown. `op_json` is `{"zoom":10..400}` (whole percent; a view setting that is not an undo step) or
+    /// `{"gridlines":true|false}` (one undo step). Exactly one key. Returns `{"zoom":n,"gridlines":b}`.
+    pub fn view_op(&mut self, sheet: usize, op_json: &str) -> Result<String, String> {
+        let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "operation must be a JSON object".to_string())?;
+        let map = op.as_object().filter(|m| m.len() == 1).ok_or("name exactly one view setting")?;
+        if self.session.doc().map_err(|e| e.to_string())?.wb.sheet(sheet).is_none() {
+            return Err("unknown sheet".into());
+        }
+        self.session.run("sheet.activate", json!({"sheet": sheet})).map_err(|e| e.to_string())?;
+        if let Some(z) = map.get("zoom") {
+            let pct = z.as_u64().filter(|n| (10..=400).contains(n)).ok_or("zoom must be a whole number from 10 to 400")?;
+            self.session.run("view.zoom", json!({"percent": pct})).map_err(|e| e.to_string())?;
+        } else if let Some(g) = map.get("gridlines") {
+            let on = g.as_bool().ok_or("gridlines must be true or false")?;
+            self.session.run("view.gridlines", json!({"on": on})).map_err(|e| e.to_string())?;
+        } else {
+            return Err("unknown view setting".into());
+        }
+        let doc = self.session.doc().map_err(|e| e.to_string())?;
+        let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+        Ok(json!({"zoom": sh.zoom, "gridlines": sh.show_gridlines}).to_string())
     }
 
     /// The page setup of a sheet (read only): `{"orientation":"portrait"|"landscape","paper":..,"margins":[l,r,t,b,header,footer],"scale":n,
@@ -2746,6 +2769,19 @@ mod tests {
         assert_eq!(text(&book, "A82"), "red RED", "nothing changed");
         book.session.run("review.protectSheet", json!({})).unwrap();
         assert!(book.replace_range(0, 80, 0, 3, 2, op).unwrap_err().contains("protected"));
+    }
+    #[test]
+    fn view_op_sets_zoom_and_gridlines_with_bounds() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        assert!(book.view_op(0, r#"{"zoom":150}"#).unwrap().contains("\"zoom\":150"));
+        assert!(book.layout(0).unwrap().contains("\"zoom\":150"));
+        assert!(book.view_op(0, r#"{"gridlines":false}"#).unwrap().contains("\"gridlines\":false"));
+        book.undo().unwrap();
+        assert!(book.layout(0).unwrap().contains("\"showGridlines\":true"), "one undo restores the gridlines");
+        for bad in ["nope", "{}", r#"{"zoom":9}"#, r#"{"zoom":401}"#, r#"{"zoom":99.5}"#, r#"{"zoom":"100"}"#, r#"{"gridlines":1}"#, r#"{"zoom":100,"gridlines":true}"#, r#"{"headings":true}"#] {
+            assert!(book.view_op(0, bad).is_err(), "{bad}");
+        }
+        assert!(book.view_op(9, r#"{"zoom":100}"#).is_err());
     }
     #[test]
     fn page_setup_and_export_are_validated_and_undoable() {

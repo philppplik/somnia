@@ -1,10 +1,13 @@
 import type {SheetLayout} from './protocol';
+import {zoomFactor} from './viewOps';
 /** Column/row positions with per-line sizes from the file. Lines without an entry use the default. Hidden lines have size 0. */
 export interface Merge{r0:number;c0:number;r1:number;c1:number}
 export class Geometry{
  private mergeAt=new Map<string,Merge>();
  /** Merge whose anchor (top-left) is this cell, or the merge covering it. */
  mergeCovering(r:number,c:number):Merge|undefined{return this.mergeAt.get(r+':'+c);}
+ /** The zoom factor of the sheet (1 = 100 percent). All sizes below already include it. */
+ readonly zoom:number;
  get freezeRows(){return Math.min(this.layout?.freeze?.rows??0,this.totalRows);}
  get freezeCols(){return Math.min(this.layout?.freeze?.cols??0,this.totalCols);}
  /** Pixel box of a cell, spanning its whole merge when it is the anchor. */
@@ -15,9 +18,10 @@ export class Geometry{
  private colStarts:number[]=[];private rowStarts:number[]=[];
  private colSize=new Map<number,number>();private rowSize=new Map<number,number>();
  constructor(readonly layout:SheetLayout|null,readonly totalRows:number,readonly totalCols:number){
-  const dw=layout?.defaultColWidth??104,dh=layout?.defaultRowHeight??24;
-  for(const c of layout?.cols??[])this.colSize.set(c.i,c.hidden?0:Math.max(0,c.w));
-  for(const r of layout?.rows??[])this.rowSize.set(r.i,r.hidden?0:Math.max(0,r.h));
+  const z=this.zoom=zoomFactor(layout?.zoom),sz=(n:number)=>Math.round(n*z);
+  const dw=sz(layout?.defaultColWidth??104),dh=sz(layout?.defaultRowHeight??24);
+  for(const c of layout?.cols??[])this.colSize.set(c.i,c.hidden?0:sz(Math.max(0,c.w)));
+  for(const r of layout?.rows??[])this.rowSize.set(r.i,r.hidden?0:sz(Math.max(0,r.h)));
   for(const m of layout?.merges??[]){if(m.r1<m.r0||m.c1<m.c0||m.r0>=totalRows||m.c0>=totalCols)continue;
    const r1=Math.min(m.r1,totalRows-1),c1=Math.min(m.c1,totalCols-1);if((r1-m.r0+1)*(c1-m.c0+1)>10_000)continue;
    const mm={r0:m.r0,c0:m.c0,r1,c1};for(let r=mm.r0;r<=r1;r++)for(let c=mm.c0;c<=c1;c++)this.mergeAt.set(r+':'+c,mm);}

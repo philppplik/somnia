@@ -16,6 +16,7 @@ import {fillBlockProblem,FILL_DIRECTIONS} from '../../lib/sheets/fillOps';
 import type {FillDirection,CfStyle} from '../../lib/sheets/protocol';
 import {PIVOT_FUNCS,tableBlockProblem} from '../../lib/sheets/tableOps';
 import {headerProblem,MAX_HEADER_CHARS} from '../../lib/sheets/printOps';
+import {MAX_ZOOM,MIN_ZOOM} from '../../lib/sheets/viewOps';
 import type {PivotField,PivotFunc} from '../../lib/sheets/protocol';
 import {nameProblem,nameTarget} from '../../lib/sheets/names';
 import {internalTarget,linkTargetProblem,MAX_LINK_TEXT,MAX_NOTE_CHARS} from '../../lib/sheets/notes';
@@ -219,6 +220,7 @@ export function SheetsLayoutPanel({context}:PanelHostProps){
   <DedupeGroup/>
   <NotesGroup/>
   <NamesGroup/>
+  <ViewGroup/>
   <TablesGroup/>
   <PivotGroup/>
   <PrintGroup/>
@@ -288,6 +290,29 @@ function TablesGroup(){
   {naming&&<label className="flex flex-col gap-1">{creating?t('sheets.tb.nameOptional'):t('sheets.tb.newName')}<NativeInput className={field} value={name} maxLength={64} aria-invalid={nameBad} disabled={action.busy} onChange={e=>setName(e.currentTarget.value)} data-testid="sheets-tb-name"/></label>}
   <Button variant="outline" size="compact" disabled={action.busy||!!problem} onClick={apply} data-testid="sheets-tb-apply">{t('sheets.nm.apply')}</Button>
   <p className="text-ink-3">{t(creating?'sheets.tb.scope':'sheets.tb.scopeTable',{range:rangeAddress(r)})}</p>
+ </div>;
+}
+/** Zoom (presets or a custom percentage, or fit to the selection) and gridlines in one grouped menu. Zoom is a view setting; gridlines are one undo step. */
+type ViewAction='z50'|'z75'|'z100'|'z125'|'z150'|'z200'|'custom'|'fit'|'gridlinesOn'|'gridlinesOff';
+function ViewGroup(){
+ const {t}=useT(),s=useSheetsSelection(),action=useAction();const [act,setAct]=useState<ViewAction>('z100');const [custom,setCustom]=useState(100);
+ const layout=s?.layout;if(!s||!layout)return null;
+ const apply=()=>{
+  if(act==='fit')void action.run('sheets.view',{fit:'selection'});
+  else if(act==='custom')void action.run('sheets.view',{zoom:custom});
+  else if(act==='gridlinesOn'||act==='gridlinesOff')void action.run('sheets.view',{gridlines:act==='gridlinesOn'});
+  else void action.run('sheets.view',{zoom:Number(act.slice(1))});
+ };
+ const opt=(id:ViewAction)=><option key={id} value={id}>{t('sheets.vw.'+id)}</option>;
+ return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.vw.title')}>
+  <span>{t('sheets.vw.title')}</span>
+  <label className="flex flex-col gap-1">{t('sheets.vw.action')}<NativeSelect className={field} value={act} disabled={action.busy} onChange={e=>setAct(e.currentTarget.value as ViewAction)} data-testid="sheets-vw-action">
+   <optgroup label={t('sheets.vw.groupZoom')}>{(['z50','z75','z100','z125','z150','z200','custom','fit'] as ViewAction[]).map(opt)}</optgroup>
+   <optgroup label={t('sheets.vw.groupShow')}>{(['gridlinesOn','gridlinesOff'] as ViewAction[]).map(opt)}</optgroup>
+  </NativeSelect></label>
+  {act==='custom'&&<NumberField label={t('sheets.vw.zoomLabel')} unit="%" value={custom} resetKey="view-zoom" min={MIN_ZOOM} max={MAX_ZOOM} step={5} disabled={action.busy} constraintError={t('sheets.vw.zoomInvalid')} parse={v=>{const n=Number(v.trim());return v.trim()&&Number.isInteger(n)&&n>=MIN_ZOOM&&n<=MAX_ZOOM?{ok:true,value:n}:{ok:false,error:t('sheets.vw.zoomInvalid')};}} onCommit={v=>setCustom(v)}/>}
+  <Button variant="outline" size="compact" disabled={action.busy} onClick={apply} data-testid="sheets-vw-apply">{t('sheets.vw.apply')}</Button>
+  <p className="text-ink-3">{t('sheets.vw.current',{zoom:layout.zoom??100,state:t(layout.showGridlines?'sheets.vw.on':'sheets.vw.off')})}</p>
  </div>;
 }
 /** Page setup and export in one grouped menu: page, print area and titles, appearance, header and footer, and file export. One undo step per change. */
