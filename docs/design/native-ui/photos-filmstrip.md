@@ -791,3 +791,17 @@ for the query and nothing is invented.
 
 Coverage: the light/dark gallery leg seeds one camera entry and
 narrows to it (`test-results/ds-photos-search-camera-{light,dark}.png`).
+
+## Orientation smart-filter rule (P133)
+
+The smart filter gains an orientation rule: landscape, portrait
+or square from the pixel dimensions in the EXIF cache (v3). The
+everyday culling question - "just the portrait shots for the
+story deliverable" - becomes one select. Photos without a
+resolved cache entry never match, like the camera and duplicates
+rules; the rule composes with the other smart rules and lives in
+the same menu block.
+
+Coverage: the light/dark gallery leg adds a real portrait photo
+next to the three landscape strips and narrows to each side
+(`test-results/ds-photos-smart-orient-{light,dark}.png`).

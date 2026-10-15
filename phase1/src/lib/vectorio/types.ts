@@ -1,4 +1,5 @@
-import type { ArrowKind } from './arrows';
+export const ARROW_KINDS = ['none', 'triangle', 'open', 'circle'] as const;
+export type ArrowKind = (typeof ARROW_KINDS)[number];
 /**
  * Vector document contract (wave 4 assignment, parent agent message):
  *   VectorDocument { width, height, paths: [{ id, closed, nodes: [{ id, x, y, kind, in?, out? }] }] }

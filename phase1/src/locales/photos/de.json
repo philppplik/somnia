@@ -270,5 +270,10 @@
  "photos.smart.type.psd": "PSD",
  "photos.smart.type.other": "Andere",
  "photos.filmstrip.sort.name": "Name",
- "photos.filmstrip.sort.size": "Größe"
+ "photos.filmstrip.sort.size": "Größe",
+ "photos.smart.orient": "Ausrichtung",
+ "photos.smart.anyOrient": "Jede Ausrichtung",
+ "photos.smart.orient.landscape": "Querformat",
+ "photos.smart.orient.portrait": "Hochformat",
+ "photos.smart.orient.square": "Quadrat"
 }

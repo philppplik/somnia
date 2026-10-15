@@ -216,6 +216,10 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
             <option value="">{t('photos.smart.anyType')}</option>
             {['jpeg','png','webp','psd','other'].map(ft=><option key={ft} value={ft}>{t(`photos.smart.type.${ft}`)}</option>)}
            </NativeSelect>
+           <NativeSelect value={smart.orient??''} aria-label={t('photos.smart.orient')} title={t('photos.smart.orient')} onChange={e=>setSmart({...smart,orient:e.currentTarget.value})} className="h-7" data-testid="photos-smart-orient">
+            <option value="">{t('photos.smart.anyOrient')}</option>
+            {['landscape','portrait','square'].map(o=><option key={o} value={o}>{t(`photos.smart.orient.${o}`)}</option>)}
+           </NativeSelect>
            <Button variant="outline" size="compact" aria-pressed={!!smart.dup} onClick={()=>setSmart({...smart,dup:!smart.dup})} data-testid="photos-smart-dup">{t('photos.smart.dup')}</Button>
           </div>}
          </div>

@@ -1,7 +1,8 @@
 import type { Style, VectorPath } from './types';
+export { ARROW_KINDS } from './types';
+export type { ArrowKind } from './types';
+import type { ArrowKind } from './types';
 /** Arrowheads are SVG <marker>s the editor writes itself (`data-vs-arrow`); only those are read back, other markers are refused. */
-export const ARROW_KINDS = ['none', 'triangle', 'open', 'circle'] as const;
-export type ArrowKind = (typeof ARROW_KINDS)[number];
 const HEX = /^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
 /** Marker colour = the stroke colour when it is a hex colour, else black (named colours and gradients are not followed). */
 export function arrowColor(stroke: string | undefined): string {
