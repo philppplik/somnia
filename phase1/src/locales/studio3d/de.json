@@ -1028,5 +1028,8 @@
  "studio3d.hist.moveToCursor_other": "{count} Objekte auf den 3D-Cursor verschieben",
  "cmd.studio3d.object.eachToCursor": "Jedes selektierte 3D-Objekt auf den 3D-Cursor verschieben",
  "studio3d.hist.moveEachToCursor_one": "{count} Objekt auf den 3D-Cursor setzen",
- "studio3d.hist.moveEachToCursor_other": "{count} Objekte auf den 3D-Cursor setzen"
+ "studio3d.hist.moveEachToCursor_other": "{count} Objekte auf den 3D-Cursor setzen",
+ "cmd.studio3d.object.randomizeTransform": "Position, Rotation und Skalierung von 3D-Objekten zufällig verwürfeln (mit Seed)",
+ "studio3d.hist.randomizeTransform_one": "Transform von {count} Objekt verwürfeln",
+ "studio3d.hist.randomizeTransform_other": "Transform von {count} Objekten verwürfeln"
 }

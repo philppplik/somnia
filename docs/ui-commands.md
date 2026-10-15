@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-945 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+946 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -827,6 +827,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `studio3d.object.nudge` | Nudge a 3D object | Edit | studio3d |  |
 | `studio3d.object.pivot` | Move the pivot of a 3D mesh | Edit | studio3d |  |
 | `studio3d.object.primitive` | Change the size or segments of a 3D primitive | Edit | studio3d |  |
+| `studio3d.object.randomizeTransform` | Jitter the position, rotation and scale of 3D objects by a seeded random amount | Edit | studio3d |  |
 | `studio3d.object.rename` | Rename a 3D object | Edit | studio3d |  |
 | `studio3d.object.reorder` | Move 3D objects next to a sibling in the outline | Edit | studio3d |  |
 | `studio3d.object.reparent` | Move under a new parent | Edit | studio3d |  |

@@ -1028,5 +1028,8 @@
  "studio3d.hist.moveToCursor_other": "Mover {count} objetos para o cursor 3D",
  "cmd.studio3d.object.eachToCursor": "Mover cada objeto 3D selecionado para o cursor 3D",
  "studio3d.hist.moveEachToCursor_one": "Mover {count} objeto para o cursor 3D",
- "studio3d.hist.moveEachToCursor_other": "Mover {count} objetos para o cursor 3D"
+ "studio3d.hist.moveEachToCursor_other": "Mover {count} objetos para o cursor 3D",
+ "cmd.studio3d.object.randomizeTransform": "Randomizar posição, rotação e escala de objetos 3D (com semente)",
+ "studio3d.hist.randomizeTransform_one": "Randomizar a transformação de {count} objeto",
+ "studio3d.hist.randomizeTransform_other": "Randomizar a transformação de {count} objetos"
 }

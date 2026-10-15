@@ -9891,6 +9891,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.object.randomizeTransform",
+      "title": "Jitter the position, rotation and scale of 3D objects by a seeded random amount",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.object.rename",
       "title": "Rename a 3D object",
       "category": "Edit",

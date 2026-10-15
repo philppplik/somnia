@@ -1265,7 +1265,7 @@ export default function Viewport3D(){
     camera.position.copy(pos);controls.target.copy(pos).addScaledVector(dir,dist);camera.near=0.05;camera.far=Math.max(500,dist*50);camera.updateProjectionMatrix();controls.update();invalidate();},
    setGizmo:mode=>{gizmo.setMode(mode);patchStudio3D({gizmo:mode});invalidate();},
    nudge:nudgeBy,
-   setLight:(id,p)=>stage.setLight(id,p),setPivot:(id,at)=>stage.setPivot(id,at),align:(ids,a,t)=>stage.align(ids,a,t),distribute:(ids,a)=>stage.distribute(ids,a),snapToGround:(ids)=>{stage.snapToGround(ids);},moveCenterTo:(ids,at)=>{stage.moveCenterTo(ids,at);},moveEachTo:(ids,at)=>{stage.moveEachTo(ids,at);},
+   setLight:(id,p)=>stage.setLight(id,p),setPivot:(id,at)=>stage.setPivot(id,at),align:(ids,a,t)=>stage.align(ids,a,t),distribute:(ids,a)=>stage.distribute(ids,a),snapToGround:(ids)=>{stage.snapToGround(ids);},moveCenterTo:(ids,at)=>{stage.moveCenterTo(ids,at);},moveEachTo:(ids,at)=>{stage.moveEachTo(ids,at);},randomizeTransform:(ids,seed,move,rotate,scale)=>{stage.randomizeTransform(ids,seed,move,rotate,scale);},
    setSnap:patch=>{patchStudio3D({snap:mergeSnap(getStudio3DState().snap,patch)});applySnap();},
    setPivotMode:mode=>{patchStudio3D({pivot:mode});syncCursorMark();syncGizmo();invalidate();},
    setCursor:p=>{patchStudio3D({cursor:p});syncCursorMark();if(getStudio3DState().pivot==='cursor')syncGizmo();invalidate();},

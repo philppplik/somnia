@@ -769,6 +769,27 @@ export class Stage{
   this.moveMany({key:'studio3d.hist.moveEachToCursor',params:{count:objs.length}},objs.map(o=>({o,delta:target.clone().sub(o.getWorldPosition(new THREE.Vector3()))})));
   return objs.length;
  }
+ /** Jitters the position, rotation and uniform scale of the objects within the given ranges, driven by a seed so a rerun reproduces the same scatter. One undo step. */
+ randomizeTransform(ids:number[],seed:number,move:number,rotate:number,scale:number):number{
+  const objs=this.topLevel(this.needMany(ids,1));
+  if(!Number.isInteger(seed))throw new StageError('The seed must be a whole number.');
+  for(const [n,v] of [['move',move],['rotate',rotate],['scale',scale]] as const)if(!Number.isFinite(v)||(v as number)<0)throw new StageError(`The ${n} range must be a non-negative number.`);
+  if(move===0&&rotate===0&&scale===0)throw new StageError('Choose a move, rotate or scale range above zero.');
+  let s=(seed>>>0)||1;
+  const rnd=()=>{s=(s+0x6D2B79F5)>>>0;let t=Math.imul(s^(s>>>15),1|s);t=(t+Math.imul(t^(t>>>7),61|t))^t;return((t^(t>>>14))>>>0)/4294967296;};
+  const list=objs.map(o=>{
+   const b={p:o.position.clone(),q:o.quaternion.clone(),s:o.scale.clone()};
+   const a={p:b.p.clone(),q:b.q.clone(),s:b.s.clone()};
+   if(move>0){a.p.x+=(rnd()*2-1)*move;a.p.y+=(rnd()*2-1)*move;a.p.z+=(rnd()*2-1)*move;}
+   if(rotate>0)a.q.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler((rnd()*2-1)*rotate*Math.PI/180,(rnd()*2-1)*rotate*Math.PI/180,(rnd()*2-1)*rotate*Math.PI/180)));
+   if(scale>0)a.s.multiplyScalar(1+(rnd()*2-1)*scale);
+   return{o,b,a};
+  });
+  const set=(k:'b'|'a')=>{for(const l of list){l.o.position.copy(l[k].p);l.o.quaternion.copy(l[k].q);l.o.scale.copy(l[k].s);}};
+  set('a');
+  this.push({label:{key:'studio3d.hist.randomizeTransform',params:{count:objs.length}},undo:()=>set('b'),redo:()=>set('a')});
+  return objs.length;
+ }
  /** Every unique edge of the edited mesh as index pairs (low index first). */
  private allEdges(m:THREE.Mesh):[number,number][]{
   const idx=m.geometry.getIndex();const pos=m.geometry.getAttribute('position');
