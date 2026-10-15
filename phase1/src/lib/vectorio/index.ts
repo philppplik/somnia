@@ -6,3 +6,4 @@ export { serializeContour } from './serialize';
 export { normalizeDoc, inferKind } from './nodes';
 export { parsePathData, arcToCubics } from './pathData';
 export { parseTransform } from './matrix';
+export { normalizeGuides, formatGuides, parseGuides, GUIDE_LIMIT } from './guides';

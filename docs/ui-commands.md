@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1081 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1083 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -1042,6 +1042,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `vector.alignSelection` | Align vector selection | Edit | vector |  |
 | `vector.booleanOp` | Combine vector shapes | Edit | vector |  |
 | `vector.clearError` | Clear vector diagnostics | View | vector |  |
+| `vector.clearGuides` | Clear all ruler guides | Edit | vector |  |
 | `vector.createBlank` | New vector document | Project | vector |  |
 | `vector.deleteNode` | Delete vector node | Edit | vector |  |
 | `vector.deleteSelection` | Delete selected vector paths | Edit | vector |  |
@@ -1055,6 +1056,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `vector.importSvg` | Add SVG to vector page | Insert | vector |  |
 | `vector.inspect` | Inspect vector document | Tools | vector |  |
 | `vector.joinPaths` | Join vector paths | Edit | vector |  |
+| `vector.moveGuide` | Add, move or remove a ruler guide | Edit | vector |  |
 | `vector.moveNode` | Move vector node | Edit | vector |  |
 | `vector.moveSelection` | Move selected vector paths | Edit | vector |  |
 | `vector.offsetPath` | Offset vector path | Edit | vector |  |

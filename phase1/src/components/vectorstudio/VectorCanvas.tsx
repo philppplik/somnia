@@ -15,6 +15,8 @@ import {togglePathSelection} from './tools/operations';
 import {selectionSvg,pasteSvgText} from '../../lib/vectorstudio/clipboard';
 import {studioContextStore} from '../../lib/shell/studioContext';
 import {getVectorSession,subscribeVector} from '../../lib/vectorstudio/session';
+import {VectorRulers,RULER_PX} from './VectorRulers';
+import type {GuideAxis} from '../../lib/vectorstudio/guideOps';
 import {VectorToolbar} from './VectorToolbar';
 
 import {NativeSelect} from '../ui/native-controls';
@@ -35,6 +37,8 @@ export function VectorCanvas(){
  const {t}=useT();const s=useVectorSession();const ref=useRef<SVGSVGElement>(null);const wrap=useRef<HTMLDivElement>(null);
  const [drag,setDrag]=useState<Drag|null>(null);const [pen,setPen]=useState<VectorNode[]>([]);const [hover,setHover]=useState<Point|null>(null);
  const [presetId,setPresetId]=useState<string>(PAGE_PRESETS[0].id);
+ const [gd,setGd]=useState<{axis:GuideAxis;from?:number;pos:number}|null>(null);const [box,setBox]=useState({w:1200,h:800});
+ useEffect(()=>{const el=wrap.current;if(!el||typeof ResizeObserver==='undefined')return;const ro=new ResizeObserver(()=>setBox({w:el.clientWidth,h:el.clientHeight}));ro.observe(el);setBox({w:el.clientWidth,h:el.clientHeight});return()=>ro.disconnect();},[s.open]);
  const penRef=useRef<VectorNode[]>([]);penRef.current=pen;
  const toDoc=useCallback((e:{clientX:number;clientY:number}):Point=>{const r=ref.current!.getBoundingClientRect();return {x:(e.clientX-r.left-s.pan.x)/s.zoom,y:(e.clientY-r.top-s.pan.y)/s.zoom};},[s.pan.x,s.pan.y,s.zoom]);
  const tol=6/s.zoom;
@@ -90,7 +94,7 @@ export function VectorCanvas(){
    const rx=snap===false?0:pt.x-drag.start.x,ry=snap===true?0:pt.y-drag.start.y;
    const base=boxOf(selected);
    if(base&&!e.altKey){const others=s.doc.paths.filter(q=>!q.hidden&&!s.selection.includes(q.id)).map(pathBox).filter((b):b is Box=>!!b);
-    const r=snapMove(base,rx,ry,[{minX:0,minY:0,maxX:s.doc.width,maxY:s.doc.height},...others],SNAP_PX/s.zoom);
+    const r=snapMove(base,rx,ry,[{minX:0,minY:0,maxX:s.doc.width,maxY:s.doc.height},...(s.doc.guides?.x??[]).map(x=>({minX:x,maxX:x,minY:Infinity,maxY:Infinity})),...(s.doc.guides?.y??[]).map(y=>({minY:y,maxY:y,minX:Infinity,maxX:Infinity})),...others],SNAP_PX/s.zoom);
     setDrag({...drag,dx:snap===false?0:r.dx,dy:snap===true?0:r.dy,guides:r.guides});return;}
    setDrag({...drag,dx:rx,dy:ry,guides:undefined});return;}
   if(drag.kind==='pen-handle'){setDrag({kind:'pen-handle',cur:pt});
@@ -115,6 +119,13 @@ export function VectorCanvas(){
   if(e.ctrlKey||e.metaKey){const r=ref.current!.getBoundingClientRect();const mx=e.clientX-r.left,my=e.clientY-r.top;const z=Math.min(32,Math.max(0.05,s.zoom*Math.exp(-e.deltaY*0.0015)));
    setView(z,{x:mx-(mx-s.pan.x)/s.zoom*z,y:my-(my-s.pan.y)/s.zoom*z});}
   else setView(s.zoom,{x:s.pan.x-e.deltaX,y:s.pan.y-e.deltaY});};
+ const guideAt=(axis:GuideAxis,e:{clientX:number;clientY:number})=>{const p=toDoc(e);return Math.round((axis==='x'?p.x:p.y)*1000)/1000;};
+ const startGuide=(axis:GuideAxis,e:RPointerEvent,from?:number)=>{if(e.button!==0)return;e.stopPropagation();(e.currentTarget as Element).setPointerCapture?.(e.pointerId);setGd({axis,from,pos:guideAt(axis,e)});};
+ const moveGuideDrag=(e:RPointerEvent)=>{if(gd)setGd({...gd,pos:guideAt(gd.axis,e)});};
+ const endGuide=(e:RPointerEvent)=>{if(!gd)return;const r=wrap.current?.getBoundingClientRect(),g=gd;setGd(null);
+  const inside=!!r&&e.clientX>r.left+RULER_PX&&e.clientX<r.right&&e.clientY>r.top+RULER_PX&&e.clientY<r.bottom;
+  const to=inside?guideAt(g.axis,e):undefined;if(to===undefined&&g.from===undefined)return;if(to===g.from)return;
+  void executeCommand('vector.moveGuide',{axis:g.axis,...(g.from!==undefined?{from:g.from}:{}),...(to!==undefined?{to}:{})});};
  const inField=(e:{target:EventTarget})=>{const tag=(e.target as HTMLElement).tagName;return tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT';};
  /* Clipboard access only through the browser's copy/cut/paste events (a user gesture); nothing reads the clipboard on its own. */
  const onCopy=(e:React.ClipboardEvent,cut:boolean)=>{if(inField(e))return;const g=getVectorSession(),svg=selectionSvg(g.doc,g.selection);if(!svg)return;e.preventDefault();e.clipboardData.setData('text/plain',svg);if(cut)deleteSelection();};
@@ -157,11 +168,15 @@ export function VectorCanvas(){
      {s.tool==='select'&&selBox&&<g data-testid="vector-selection"><rect x={selBox.minX} y={selBox.minY} width={selBox.maxX-selBox.minX} height={selBox.maxY-selBox.minY} fill="none" stroke="#2563eb" strokeWidth={1/s.zoom} strokeDasharray={`${4/s.zoom} ${3/s.zoom}`} pointerEvents="none"/>
       {CORNERS.map(([cx,cy],i)=><rect key={i} data-testid={`vector-handle-${i}`} x={(cx?selBox.maxX:selBox.minX)-4/s.zoom} y={(cy?selBox.maxY:selBox.minY)-4/s.zoom} width={8/s.zoom} height={8/s.zoom} fill="#fff" stroke="#2563eb" strokeWidth={1/s.zoom}/>)}</g>}
      {nodePath&&<NodeOverlay path={nodePath} zoom={s.zoom} active={s.selectedNode}/>}
+     {(['x','y'] as const).flatMap(axis=>(s.doc.guides?.[axis]??[]).map(v=><g key={axis+v} data-testid="vector-guide" data-axis={axis}>{!(gd&&gd.axis===axis&&gd.from===v)&&<line x1={axis==='x'?v:-1e5} x2={axis==='x'?v:1e5} y1={axis==='y'?v:-1e5} y2={axis==='y'?v:1e5} className="stroke-accent" strokeWidth={1/s.zoom} pointerEvents="none"/>}
+      {s.tool==='select'&&<line x1={axis==='x'?v:-1e5} x2={axis==='x'?v:1e5} y1={axis==='y'?v:-1e5} y2={axis==='y'?v:1e5} stroke="transparent" strokeWidth={8/s.zoom} pointerEvents="stroke" className={axis==='x'?'cursor-col-resize':'cursor-row-resize'} onPointerDown={e=>startGuide(axis,e,v)} onPointerMove={moveGuideDrag} onPointerUp={endGuide} onPointerCancel={()=>setGd(null)}/>}</g>))}
+     {gd&&<line data-testid="vector-guide-drag" x1={gd.axis==='x'?gd.pos:-1e5} x2={gd.axis==='x'?gd.pos:1e5} y1={gd.axis==='y'?gd.pos:-1e5} y2={gd.axis==='y'?gd.pos:1e5} className="stroke-accent" strokeWidth={1/s.zoom} strokeDasharray={`${4/s.zoom} ${3/s.zoom}`} pointerEvents="none"/>}
      {drag?.kind==='move'&&drag.guides&&<g data-testid="vector-snap-guides" pointerEvents="none">{drag.guides.x.map(x=><line key={'x'+x} x1={x} x2={x} y1={0} y2={s.doc.height} stroke="#e11d48" strokeWidth={1/s.zoom}/>)}{drag.guides.y.map(y=><line key={'y'+y} y1={y} y2={y} x1={0} x2={s.doc.width} stroke="#e11d48" strokeWidth={1/s.zoom}/>)}</g>}
      {drag?.kind==='marquee'&&<rect x={Math.min(drag.start.x,drag.cur.x)} y={Math.min(drag.start.y,drag.cur.y)} width={Math.abs(drag.cur.x-drag.start.x)} height={Math.abs(drag.cur.y-drag.start.y)} fill="rgba(37,99,235,.08)" stroke="#2563eb" strokeWidth={1/s.zoom} strokeDasharray={`${3/s.zoom}`}/>}
      {penPath&&<g pointerEvents="none"><path d={serializeContour(penPath.nodes,false)} fill="none" stroke="#2563eb" strokeWidth={1.5/s.zoom}/>{pen.map(n=><rect key={n.id} x={n.x-3.5/s.zoom} y={n.y-3.5/s.zoom} width={7/s.zoom} height={7/s.zoom} fill="#fff" stroke="#2563eb" strokeWidth={1/s.zoom}/>)}</g>}
     </g>
    </svg>
+   <VectorRulers zoom={s.zoom} pan={s.pan} width={box.w} height={box.h} label={t('vector.shell.rulers')} onStart={(axis,e)=>startGuide(axis,e)} onMove={moveGuideDrag} onEnd={endGuide} onCancel={()=>setGd(null)}/>
   </div>
  </section></div></main>;
 

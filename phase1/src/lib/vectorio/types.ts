@@ -64,6 +64,8 @@ export type Gradient = { id: string; stops: GradientStop[] } & (
   | { kind: 'radial'; cx: number; cy: number; r: number }
 );
 
+/** Ruler guides in document units: `x` are vertical lines, `y` horizontal. */
+export interface Guides { x: number[]; y: number[] }
 export interface VectorDocument {
   width: number;
   height: number;
@@ -72,6 +74,8 @@ export interface VectorDocument {
   gradients?: Gradient[];
   /** Extension. Optional display names of editor groups (key = `VectorPath.group`). Exported as `data-vs-group-name`. */
   groupNames?: Record<string, string>;
+  /** Extension. Ruler guides (editor aid, not drawn in the export). Exported as `data-vs-guides` on the root `<svg>`. */
+  guides?: Guides;
 }
 
 export const GRADIENT_LIMITS = Object.freeze({ maxGradients: 64, maxStops: 16 });

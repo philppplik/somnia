@@ -8,6 +8,7 @@ import {simplifySelection,SIMPLIFY_LIMITS} from './simplify';
 import {offsetSelection,outlineStroke,OFFSET_LIMITS} from './offsetOps';
 import {splitPath,joinPaths,reverseSelection} from './pathOps';
 import {toggleLock} from './lock';
+import {moveGuide,clearGuides} from './guideOps';
 import {groupSelection,ungroupSelection} from './groups';
 import {applyBoolean,BOOL_OPS} from './booleanOps';
 import {downloadSvg,downloadPng} from './exportFiles';
@@ -45,6 +46,9 @@ export function vectorShellCommandSpecs(active:()=>boolean):CommandSpec<any,unkn
   {id:'vector.roundCorners',title:'Round vector corners',category:'Edit',level:'ui',enabled:selected,params:{...empty,properties:{radius:{type:'number',minimum:RADIUS_LIMITS.min,maximum:RADIUS_LIMITS.max},nodeIds:{type:'array',items:{type:'string',minLength:1},uniqueItems:true,maxItems:200}},required:['radius']},
    run:(p:{radius:number;nodeIds?:string[]})=>{const s=S.getVectorSession(),next=roundCorners(s.doc,s.selection,p.radius,p.nodeIds);S.commit(next,{nodePath:null,selectedNode:null});}},
   {id:'vector.toggleLocked',title:'Lock or unlock vector object',category:'Edit',level:'ui',enabled:ready,params:{...empty,properties:{id:{type:'string',minLength:1,maxLength:80}},required:['id']},run:(p:{id:string})=>{const s=S.getVectorSession();S.commit(toggleLock(s.doc,p.id));}},
+  {id:'vector.moveGuide',title:'Add, move or remove a ruler guide',category:'Edit',level:'ui',enabled:ready,params:{...empty,properties:{axis:{type:'string',enum:['x','y']},from:{type:'number',minimum:-1e6,maximum:1e6},to:{type:'number',minimum:-1e6,maximum:1e6}},required:['axis']},
+   run:(p:{axis:'x'|'y';from?:number;to?:number})=>{const s=S.getVectorSession();S.commit(moveGuide(s.doc,p.axis,p.from,p.to));}},
+  {id:'vector.clearGuides',title:'Clear all ruler guides',category:'Edit',level:'ui',enabled:ready,params:empty,run:()=>{const s=S.getVectorSession();S.commit(clearGuides(s.doc));}},
   {id:'vector.group',title:'Group vector selection',category:'Edit',level:'ui',enabled:selected,params:empty,run:()=>{const s=S.getVectorSession(),next=groupSelection(s.doc,s.selection);if(next!==s.doc)S.commit(next);}},
   {id:'vector.ungroup',title:'Ungroup vector selection',category:'Edit',level:'ui',enabled:ready,params:{...empty,properties:{ids:{type:'array',items:{type:'string',minLength:1},uniqueItems:true,maxItems:200}}},run:(p:{ids?:string[]}={})=>{const s=S.getVectorSession(),next=ungroupSelection(s.doc,p.ids??s.selection);if(next!==s.doc)S.commit(next);}},
   {id:'vector.exportSvg',title:'Export vector SVG',category:'Project',level:'ui',enabled:ready,params:empty,run:()=>downloadSvg(S.getVectorSession().name)},

@@ -1,3 +1,4 @@
+import { normalizeGuides } from './guides';
 import type { NodeKind, Point, VectorDocument, VectorNode, VectorPath } from './types';
 import { DEFAULT_STYLE } from './types';
 import { pruneGradients } from './gradient';
@@ -58,6 +59,8 @@ export function normalizeDoc(doc: VectorDocument): VectorDocument {
   const live = new Set(doc.paths.map((p) => p.group));
   const names = Object.entries(doc.groupNames ?? {}).map(([k, v]) => [k, String(v).trim().slice(0, 80)] as const).filter(([k, v]) => v && live.has(k));
   if (names.length) result.groupNames = Object.fromEntries(names);
+  const gd = normalizeGuides(doc.guides);
+  if (gd) result.guides = gd;
   return result;
 }
 

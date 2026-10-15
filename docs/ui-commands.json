@@ -12661,6 +12661,13 @@
       "hasEnabled": true
     },
     {
+      "id": "vector.clearGuides",
+      "title": "Clear all ruler guides",
+      "category": "Edit",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
       "id": "vector.createBlank",
       "title": "New vector document",
       "category": "Project",
@@ -12747,6 +12754,13 @@
     {
       "id": "vector.joinPaths",
       "title": "Join vector paths",
+      "category": "Edit",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
+      "id": "vector.moveGuide",
+      "title": "Add, move or remove a ruler guide",
       "category": "Edit",
       "source": "vector",
       "hasEnabled": true
