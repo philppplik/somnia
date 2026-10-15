@@ -8121,6 +8121,14 @@
       "hasEnabled": true
     },
     {
+      "id": "sheets.shiftCells",
+      "title": "Insert or delete the selected cells and move the cells next to them",
+      "category": "Edit",
+      "source": "sheets",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
       "id": "sheets.shortcuts",
       "title": "Show the spreadsheet keyboard shortcuts",
       "category": "View",

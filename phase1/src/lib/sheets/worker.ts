@@ -46,6 +46,7 @@ scope.onmessage=({data}:MessageEvent<SheetsRequest>)=>{queue=queue.then(async()=
    case 'validationInvalid':result=JSON.parse(need().validation_invalid(data.sheet));break;
    case 'validationItems':result=JSON.parse(need().validation_items(data.sheet,data.row,data.col));break;
    case 'replace':result=JSON.parse(need().replace_range(data.sheet,data.row,data.col,data.rows,data.cols,JSON.stringify(data.replace)));break;
+   case 'shiftCells':result=JSON.parse(need().shift_cells(data.sheet,data.row,data.col,data.rows,data.cols,JSON.stringify(data.shift)));break;
    case 'findSpecial':result=JSON.parse(need().find_special(data.sheet,data.row,data.col,data.rows,data.cols,data.kind));break;
    case 'findCount':result=JSON.parse(need().find_count(data.sheet,data.row,data.col,data.rows,data.cols,JSON.stringify(data.replace)));break;
    case 'dedupe':result=JSON.parse(need().remove_duplicates(data.sheet,data.row,data.col,data.rows,data.cols,JSON.stringify(data.dedupe)));break;

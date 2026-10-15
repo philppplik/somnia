@@ -12,7 +12,7 @@ import {aggregateFormula,FORMULA_FUNCTIONS,parsePanelRange,rangeAddress,summariz
 import {rectCells} from '../../lib/sheets/clipboard';
 import {addressOf,colName,parseAddress,parseSpan} from '../../lib/sheets/format';
 import {sortBlockProblem} from '../../lib/sheets/sortOps';
-import {parseSpecialResult,SPECIAL_KINDS,type SpecialKind,type SpecialResult} from '../../lib/sheets/specialOps';
+import {parseShiftCommand,shiftBlockProblem,type ShiftKind,parseSpecialResult,SPECIAL_KINDS,type SpecialKind,type SpecialResult} from '../../lib/sheets/specialOps';
 import {addUserWord,checkCells,loadDictionary,readUserWords,replacementProblem,suggest,type SpellReport} from '../../lib/sheets/spelling';
 import {AUTOFILL_MODES,buildSeriesOp,fillBlockProblem,FILL_DIRECTIONS,SERIES_KINDS,type AutoFillMode,type SeriesKind} from '../../lib/sheets/fillOps';
 import type {FillDirection,CfStyle,PasteOp} from '../../lib/sheets/protocol';
@@ -240,6 +240,7 @@ export function SheetsLayoutPanel({context}:PanelHostProps){
   <ValidationGroup/>
   <ReplaceGroup/>
   <DedupeGroup/>
+  <ShiftCellsGroup/>
   <NotesGroup/>
   <NoteListGroup/>
   <AuditGroup/>
@@ -1016,6 +1017,23 @@ function ReviewInfoGroup(){
    <Button variant="outline" size="compact" disabled={action.busy||!chosen} onClick={()=>{if(chosen)void action.run('sheets.navigate',{sheet:chosen.sheet,address:'A1'});}} data-testid="sheets-ri-go">{t('sheets.ri.go')}</Button>
   </>}
   <p className="text-ink-3">{t('sheets.ri.hint')}</p>
+  {action.notice?<p role="alert">{action.notice}</p>:null}
+ </div>;
+}
+/** Inserts or deletes the selected cells and moves their neighbours: one grouped choice and one button. One undo step; refused with a reason when merges, tables, charts and the like would be left behind. */
+const SHIFT_OPS:Record<ShiftKind,{kind:'insert'|'delete';shift:'down'|'right'|'up'|'left'}>={insertDown:{kind:'insert',shift:'down'},insertRight:{kind:'insert',shift:'right'},deleteUp:{kind:'delete',shift:'up'},deleteLeft:{kind:'delete',shift:'left'}};
+function ShiftCellsGroup(){
+ const {t}=useT(),s=useSheetsSelection(),action=useAction();const [pick,setPick]=useState<ShiftKind>('insertDown');
+ const r=s?.range;if(!s||!r)return null;
+ const op=parseShiftCommand(SHIFT_OPS[pick]),problem=shiftBlockProblem(op,r,1_048_576,16_384);
+ return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.sh.title')}>
+  <span>{t('sheets.sh.title')}</span>
+  <label className="flex flex-col gap-1">{t('sheets.sh.action')}<NativeSelect className={field} value={pick} disabled={action.busy} onChange={e=>setPick(e.currentTarget.value as ShiftKind)} data-testid="sheets-sh-action">
+   <optgroup label={t('sheets.sh.groupInsert')}><option value="insertDown">{t('sheets.sh.insertDown')}</option><option value="insertRight">{t('sheets.sh.insertRight')}</option></optgroup>
+   <optgroup label={t('sheets.sh.groupDelete')}><option value="deleteUp">{t('sheets.sh.deleteUp')}</option><option value="deleteLeft">{t('sheets.sh.deleteLeft')}</option></optgroup>
+  </NativeSelect></label>
+  <Button variant="outline" size="compact" disabled={action.busy||!!problem} onClick={()=>void action.run('sheets.shiftCells',op)} data-testid="sheets-sh-apply">{t('sheets.sh.apply')}</Button>
+  <p className="text-ink-3">{t(problem?'sheets.sh.need':'sheets.sh.scope',{range:rangeAddress(r)})}</p>
   {action.notice?<p role="alert">{action.notice}</p>:null}
  </div>;
 }

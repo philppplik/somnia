@@ -3844,6 +3844,75 @@ impl HeadlessWorkbook {
         }
     }
 
+    /// Inserts empty cells (the cells below or to the right move away) or deletes the block (the cells below or to the right close the gap) as ONE
+    /// history entry. `op_json` is `{"kind":"insert","shift":"down"|"right"}` or `{"kind":"delete","shift":"up"|"left"}`. The engine moves the cells and
+    /// rewrites formulas and names, but not merges, tables, filters, notes, links, highlight rules, validations, array formulas, charts, sparklines or
+    /// pivots, so the operation is refused when any of those sits in the shifted band (the block's columns below it, or its rows to its right), when
+    /// the sheet has a chart, sparkline or pivot, when a chart or pivot on another sheet mentions this one, when cells would be pushed past the last
+    /// row or column, or when the sheet is protected. Whole rows and columns have their own operation.
+    pub fn shift_cells(&mut self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32, op_json: &str) -> Result<String, String> {
+        use gridcraft_engine::core::RangeRef;
+        if rows == 0 || cols == 0 || u64::from(rows) * u64::from(cols) > MAX_FILL_CELLS {
+            return Err("Select a block of at most 1,000,000 cells.".into());
+        }
+        let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "operation must be a JSON object".to_string())?;
+        let obj = op.as_object().ok_or("operation must be a JSON object")?;
+        if obj.keys().any(|k| !matches!(k.as_str(), "kind" | "shift")) {
+            return Err("unknown field".into());
+        }
+        let (cmd, shift, down) = match (obj.get("kind").and_then(|v| v.as_str()), obj.get("shift").and_then(|v| v.as_str())) {
+            (Some("insert"), Some("down")) => ("home.insertCells", "down", true),
+            (Some("insert"), Some("right")) => ("home.insertCells", "right", false),
+            (Some("delete"), Some("up")) => ("home.deleteCells", "up", true),
+            (Some("delete"), Some("left")) => ("home.deleteCells", "left", false),
+            _ => return Err("kind must be insert (shift down or right) or delete (shift up or left)".into()),
+        };
+        self.check_block(sheet, row, col, rows, cols, true)?;
+        let (max_rows, max_cols) = (gridcraft_engine::core::MAX_ROWS, gridcraft_engine::core::MAX_COLS);
+        // The band the move touches, and the part of it that would fall off the sheet when inserting.
+        let band = if down { RangeRef::new(CellRef::new(row, col), CellRef::new(max_rows - 1, col + cols - 1)) } else { RangeRef::new(CellRef::new(row, col), CellRef::new(row + rows - 1, max_cols - 1)) };
+        {
+            let doc = self.session.doc().map_err(|e| e.to_string())?;
+            let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+            let hits = |r: &RangeRef| r.intersection(&band).is_some();
+            let blocked = sh.merges.iter().any(hits)
+                || sh.tables.iter().any(|t| hits(&t.range))
+                || sh.autofilter.as_ref().is_some_and(|f| hits(&f.range))
+                || sh.comments.keys().any(|c| hits(&RangeRef::cell(*c)))
+                || sh.hyperlinks.keys().any(|c| hits(&RangeRef::cell(*c)))
+                || sh.cond_formats.iter().any(|cf| cf.ranges.iter().any(hits))
+                || sh.validations.iter().any(|dv| dv.ranges.iter().any(hits))
+                || sh.spill_ranges.values().any(hits)
+                || sh.cells.iter_range(band).any(|(_, c)| c.formula.as_ref().is_some_and(|f| f.array.is_some()));
+            if blocked {
+                return Err("Merged cells, tables, filters, notes, links, highlight rules, validations or array formulas are in the way. Move or remove them first.".into());
+            }
+            if !sh.charts.is_empty() || !sh.sparklines.is_empty() || !sh.pivots.is_empty() {
+                return Err("This sheet has charts, sparklines or pivots that point at cell ranges. Shifting cells would leave them pointing at the wrong cells.".into());
+            }
+            let me = sh.name.to_lowercase();
+            for other in doc.wb.sheets.iter().filter(|s| s.name != sh.name) {
+                let text = [serde_json::to_string(&other.charts), serde_json::to_string(&other.sparklines), serde_json::to_string(&other.pivots)];
+                if text.iter().any(|t| t.as_ref().map_or(true, |t| t.to_lowercase().contains(&me))) {
+                    return Err("A chart, sparkline or pivot on another sheet may point at this sheet, so cells cannot be shifted here.".into());
+                }
+            }
+            if cmd == "home.insertCells" {
+                let count = if down { rows } else { cols };
+                let edge = if down { RangeRef::new(CellRef::new(max_rows - count, col), CellRef::new(max_rows - 1, col + cols - 1)) } else { RangeRef::new(CellRef::new(row, max_cols - count), CellRef::new(row + rows - 1, max_cols - 1)) };
+                if sh.cells.iter_range(edge).next().is_some() {
+                    return Err("Cells at the end of the sheet would be pushed off it.".into());
+                }
+            }
+        }
+        let range = format!("{}:{}", CellRef::new(row, col).a1(), CellRef::new(row + rows - 1, col + cols - 1).a1());
+        self.session.run("sheet.activate", json!({"sheet": sheet})).map_err(|e| e.to_string())?;
+        let done = self.session.run(cmd, json!({"range": range, "shift": shift})).map_err(|e| e.to_string());
+        let _ = self.session.take_ui_requests();
+        done?;
+        Ok(json!({"range": range, "shift": shift}).to_string())
+    }
+
     /// How many cells `replace_range` would change, as `{"count":n}`. Read only.
     pub fn find_count(&self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32, op_json: &str) -> Result<String, String> {
         if rows == 0 || cols == 0 || u64::from(rows) * u64::from(cols) > MAX_FILL_CELLS {
@@ -6302,6 +6371,34 @@ mod tests {
         assert!(book.find_special(0, 800, 0, 0, 2, "blanks").is_err());
         assert!(book.find_special(0, gridcraft_engine::core::MAX_ROWS - 1, 0, 5, 1, "blanks").is_err());
         assert!(book.find_special(7, 0, 0, 1, 1, "blanks").is_err(), "unknown sheet");
+    }
+    #[test]
+    fn shift_cells_moves_in_one_undo_step_and_refuses_what_the_engine_does_not_move() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        let steps = |b: &HeadlessWorkbook| b.session.doc().unwrap().undo.len();
+        book.set_values(0, 900, 0, r#"[["a","x"],["b","y"],["c","=A902"]]"#).unwrap();
+        let before = steps(&book);
+        book.shift_cells(0, 901, 0, 1, 1, r#"{"kind":"insert","shift":"down"}"#).unwrap();
+        assert_eq!(steps(&book), before + 1);
+        assert_eq!(text(&book, "A902"), "");
+        assert_eq!(text(&book, "A903"), "b");
+        assert_eq!(text(&book, "B902"), "y", "the neighbour column stays");
+        assert_eq!(text(&book, "B904"), "", "only the chosen column moved");
+        book.undo().unwrap();
+        assert_eq!(text(&book, "A902"), "b");
+        book.shift_cells(0, 900, 0, 1, 1, r#"{"kind":"delete","shift":"up"}"#).unwrap();
+        assert_eq!(text(&book, "A901"), "b");
+        book.shift_cells(0, 900, 0, 1, 1, r#"{"kind":"insert","shift":"right"}"#).unwrap();
+        assert_eq!(text(&book, "A901"), "");
+        assert_eq!(text(&book, "B901"), "b");
+        assert_eq!(text(&book, "C901"), "x");
+        for bad in [r#"{}"#, r#"{"kind":"insert","shift":"up"}"#, r#"{"kind":"delete","shift":"down"}"#, r#"{"kind":"insert","shift":"row"}"#, r#"{"kind":"insert","shift":"down","x":1}"#, "[]"] {
+            assert!(book.shift_cells(0, 900, 0, 1, 1, bad).is_err(), "{bad}");
+        }
+        assert!(book.shift_cells(0, 900, 0, 0, 1, r#"{"kind":"insert","shift":"down"}"#).is_err());
+        assert!(book.shift_cells(0, 900, 0, 2_000_000, 1, r#"{"kind":"insert","shift":"down"}"#).is_err());
+        book.session.run("review.protectSheet", json!({})).unwrap();
+        assert!(book.shift_cells(0, 900, 0, 1, 1, r#"{"kind":"insert","shift":"down"}"#).unwrap_err().contains("protected"));
     }
     #[test]
     fn view_op_sets_zoom_and_gridlines_with_bounds() {
