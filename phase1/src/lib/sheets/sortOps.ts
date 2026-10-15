@@ -22,7 +22,7 @@ export function parseListText(text:string):string[]|null{
 export function parseSortCommand(input:unknown,cols?:number):SortOp{
  if(!input||typeof input!=='object'||Array.isArray(input))throw Error('Sort must be an object.');
  const o=input as Record<string,unknown>,multi=o.keys!==undefined;
- if(Object.keys(o).some(k=>!(multi?['keys','header','matchCase']:['column','order','header']).includes(k)))throw Error('Unknown sort field.');
+ if(Object.keys(o).some(k=>!(multi?['keys','header','matchCase','orientation']:['column','order','header']).includes(k)))throw Error('Unknown sort field.');
  if(typeof o.header!=='boolean')throw Error('Header must be true or false.');
  const key=(v:unknown)=>{
   if(!v||typeof v!=='object'||Array.isArray(v))throw Error('Invalid sort key.');
@@ -37,5 +37,6 @@ export function parseSortCommand(input:unknown,cols?:number):SortOp{
  if(!Array.isArray(o.keys)||o.keys.length<1||o.keys.length>MAX_SORT_KEYS)throw Error('Sort by 1 to 3 columns.');
  const keys=o.keys.map(key);if(new Set(keys.map(k=>k.column)).size!==keys.length)throw Error('Each column can be used once.');
  if(o.matchCase!==undefined&&typeof o.matchCase!=='boolean')throw Error('Match case must be true or false.');
- return {header:o.header,keys,...(o.matchCase===true?{matchCase:true}:{})};
+ if(o.orientation!==undefined&&o.orientation!=='rows'&&o.orientation!=='columns')throw Error('The direction must be rows or columns.');
+ return {header:o.header,keys,...(o.matchCase===true?{matchCase:true}:{}),...(o.orientation==='columns'?{orientation:'columns' as const}:{})};
 }

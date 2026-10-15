@@ -492,8 +492,8 @@ function Workbook({item}:{item:MediaItem}){
   try{await engine.current!.filter(sheet,range.r0,range.c0,range.r1-range.r0+1,range.c1-range.c0+1,op);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
  const applySort=async(op:SortOp)=>{
   if(draftRef.current!==null)await commit(draftRef.current);
-  const cols=range.c1-range.c0+1,rows=range.r1-range.r0+1;if(op.keys.some(x=>x.column>=cols))throw Error('Sort column is outside the selection.');
-  const problem=sortBlockProblem(rows,cols,op.header);if(problem)throw Error('Select a block with at least two rows to sort.');
+  const cols=range.c1-range.c0+1,rows=range.r1-range.r0+1,across=op.orientation==='columns';if(op.keys.some(x=>x.column>=(across?rows:cols)))throw Error('Sort column is outside the selection.');
+  const problem=across?sortBlockProblem(cols,rows,op.header):sortBlockProblem(rows,cols,op.header);if(problem)throw Error(across?'Select a block with at least two columns to sort.':'Select a block with at least two rows to sort.');
   try{await engine.current!.sort(sheet,range.r0,range.c0,rows,cols,op);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
  const applySheet=async(op:SheetOp)=>{
   if(draftRef.current!==null)await commit(draftRef.current);

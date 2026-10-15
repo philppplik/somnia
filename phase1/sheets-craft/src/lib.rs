@@ -1152,12 +1152,12 @@ impl HeadlessWorkbook {
     }
 
     /// Sorts the rows of an explicit block as ONE history entry. `op_json` is
-    /// `{"header":bool,"keys":[{"column":offset,"order":"asc"|"desc","list":["Low","High"]?}],"matchCase":bool}` where `column` is the
+    /// `{"header":bool,"orientation":"rows"|"columns"?,"keys":[{"column":offset,"order":"asc"|"desc","list":["Low","High"]?}],"matchCase":bool}` where `column` is the
     /// 0-based offset inside the block. The block is never widened: only the cells given are reordered, formulas
     /// keep their relative references, and merged cells or a protected sheet are refused. At most 3 keys and
     /// MAX_SORT_CELLS cells. The target sheet is activated first because the engine sorts the active sheet.
     pub fn sort_range(&mut self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32, op_json: &str) -> Result<String, String> {
-        if rows < 2 || cols == 0 || u64::from(rows) * u64::from(cols) > MAX_SORT_CELLS {
+        if rows == 0 || cols == 0 || u64::from(rows) * u64::from(cols) > MAX_SORT_CELLS {
             return Err("Select at least two rows to sort (at most 1,000,000 cells).".into());
         }
         self.check_block(sheet, row, col, rows, cols, false)?;
@@ -1165,22 +1165,35 @@ impl HeadlessWorkbook {
         let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "operation must be a JSON object".to_string())?;
         let header = op.get("header").and_then(|v| v.as_bool()).ok_or("header must be true or false")?;
         let match_case = op.get("matchCase").and_then(|v| v.as_bool()).unwrap_or(false);
+        let by_cols = match op.get("orientation").and_then(|v| v.as_str()) {
+            None | Some("rows") => false,
+            Some("columns") => true,
+            _ => return Err("orientation must be rows or columns".into()),
+        };
+        if by_cols && cols < 2 {
+            return Err("Select at least two columns to sort left to right (at most 1,000,000 cells).".into());
+        }
+        if !by_cols && rows < 2 {
+            return Err("Select at least two rows to sort (at most 1,000,000 cells).".into());
+        }
         let raw_keys = op.get("keys").and_then(|v| v.as_array()).ok_or("keys must be a list")?;
         if raw_keys.is_empty() || raw_keys.len() > MAX_SORT_KEYS {
             return Err(format!("Sort by 1 to {MAX_SORT_KEYS} columns."));
         }
-        if header && rows < 3 {
-            return Err("Nothing to sort below the header row.".into());
+        if header && (if by_cols { cols } else { rows }) < 3 {
+            return Err(if by_cols { "Nothing to sort right of the header column." } else { "Nothing to sort below the header row." }.into());
         }
         let mut keys = Vec::new();
         for k in raw_keys {
-            let column = k.get("column").and_then(|v| v.as_u64()).filter(|c| *c < u64::from(cols)).ok_or("sort column is outside the selection")?;
+            let column = k.get("column").and_then(|v| v.as_u64()).filter(|c| *c < u64::from(if by_cols { rows } else { cols })).ok_or("sort column is outside the selection")?;
             let desc = match k.get("order").and_then(|v| v.as_str()) {
                 Some("asc") => false,
                 Some("desc") => true,
                 _ => return Err("order must be asc or desc".into()),
             };
-            let mut key = json!({"column": column, "order": if desc { "desc" } else { "asc" }});
+            let order = if desc { "desc" } else { "asc" };
+            // Left to right: the key is a row (absolute, 1-based for the engine); otherwise a column offset.
+            let mut key = if by_cols { json!({"row": u64::from(row) + column + 1, "order": order}) } else { json!({"column": column, "order": order}) };
             if let Some(raw) = k.get("list") {
                 let items = raw.as_array().ok_or("the custom order must be a list")?;
                 if items.is_empty() || items.len() > 50 {
@@ -1203,7 +1216,7 @@ impl HeadlessWorkbook {
         }
         let range = format!("{}:{}", CellRef::new(row, col).a1(), CellRef::new(row + rows - 1, col + cols - 1).a1());
         self.session.run("sheet.activate", json!({"sheet": sheet}))?;
-        self.session.run("data.sort", json!({"range": range, "header": header, "keys": keys, "matchCase": match_case})).map(|v| v.to_string())
+        self.session.run("data.sort", json!({"range": range, "header": header, "keys": keys, "matchCase": match_case, "orientation": if by_cols { "columns" } else { "rows" }})).map(|v| v.to_string())
     }
 
     /// True when any cell of the block holds a formula (the engine moves cells without rewriting their references).

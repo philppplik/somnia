@@ -278,27 +278,28 @@ export function SheetsLayoutPanel({context}:PanelHostProps){
 /** Sorts the rows of exactly the selected block by up to three columns, each in order or in a custom order. The block is never widened and the header row is an explicit choice. One undo step. */
 type SortKeyState={col:number;order:'asc'|'desc'|'list';list:string};
 function SortGroup(){
- const {t}=useT(),s=useSheetsSelection(),action=useAction();const [levels,setLevels]=useState(1);const [ks,setKs]=useState<SortKeyState[]>([{col:0,order:'asc',list:''},{col:1,order:'asc',list:''},{col:2,order:'asc',list:''}]);const [header,setHeader]=useState(false);const [matchCase,setMatchCase]=useState(false);
+ const {t}=useT(),s=useSheetsSelection(),action=useAction();const [levels,setLevels]=useState(1);const [ks,setKs]=useState<SortKeyState[]>([{col:0,order:'asc',list:''},{col:1,order:'asc',list:''},{col:2,order:'asc',list:''}]);const [header,setHeader]=useState(false);const [matchCase,setMatchCase]=useState(false);const [across,setAcross]=useState(false);
  const r=s?.range;if(!s||!r)return null;
- const rows=r.r1-r.r0+1,cols=r.c1-r.c0+1,size=sortBlockProblem(rows,cols,header),n=Math.min(levels,cols,MAX_SORT_KEYS);
- const options=Array.from({length:Math.min(cols,MAX_SORT_OPTIONS)},(_,i)=>i);
- const used=ks.slice(0,n).map(k=>({...k,col:Math.min(k.col,cols-1)})),lists=used.map(k=>k.order==='list'?parseListText(k.list):null);
+ const rows=r.r1-r.r0+1,cols=r.c1-r.c0+1,lines=across?rows:cols,size=across?sortBlockProblem(cols,rows,header):sortBlockProblem(rows,cols,header),n=Math.min(levels,lines,MAX_SORT_KEYS);
+ const options=Array.from({length:Math.min(lines,MAX_SORT_OPTIONS)},(_,i)=>i);
+ const used=ks.slice(0,n).map(k=>({...k,col:Math.min(k.col,lines-1)})),lists=used.map(k=>k.order==='list'?parseListText(k.list):null);
  const dup=new Set(used.map(k=>k.col)).size<used.length,badList=used.some((k,i)=>k.order==='list'&&!lists[i]);
- const problem=size?'sheets.sort.need':dup?'sheets.sort.dup':badList?'sheets.sort.listBad':null;
+ const problem=size?(across?'sheets.sort.needCols':'sheets.sort.need'):dup?'sheets.sort.dup':badList?'sheets.sort.listBad':null;
  const setKey=(i:number,patch:Partial<SortKeyState>)=>setKs(list=>list.map((k,x)=>x===i?{...k,...patch}:k));
- const payload=()=>({header,keys:used.map((k,i)=>({column:k.col,order:k.order==='desc'?'desc':'asc',...(k.order==='list'&&lists[i]?{list:lists[i]}:{})})),...(matchCase?{matchCase:true}:{})});
+ const payload=()=>({header,...(across?{orientation:'columns'}:{}),keys:used.map((k,i)=>({column:k.col,order:k.order==='desc'?'desc':'asc',...(k.order==='list'&&lists[i]?{list:lists[i]}:{})})),...(matchCase?{matchCase:true}:{})});
  return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.sort.title')}>
   <span>{t('sheets.sort.title')}</span>
-  {cols>1&&<label className="flex flex-col gap-1">{t('sheets.sort.levels')}<NativeSelect className={field} value={n} disabled={action.busy} onChange={e=>setLevels(Number(e.currentTarget.value))} data-testid="sheets-sort-levels">{Array.from({length:Math.min(cols,MAX_SORT_KEYS)},(_,i)=><option key={i+1} value={i+1}>{i+1}</option>)}</NativeSelect></label>}
-  {used.map((k,i)=><div key={i} className="flex flex-col gap-1" role="group" aria-label={t(i===0?'sheets.sort.column':'sheets.sort.then')}>
-   <label className="flex flex-col gap-1">{t(i===0?'sheets.sort.column':'sheets.sort.then')}<NativeSelect className={field} value={k.col} disabled={action.busy} onChange={e=>setKey(i,{col:Number(e.currentTarget.value)})} data-testid={i===0?'sheets-sort-column':'sheets-sort-column-'+i}>{options.map(c=><option key={c} value={c}>{colName(r.c0+c)}</option>)}</NativeSelect></label>
+  <label className="flex flex-col gap-1">{t('sheets.sort.dir')}<NativeSelect className={field} value={across?'cols':'rows'} disabled={action.busy} onChange={e=>setAcross(e.currentTarget.value==='cols')} data-testid="sheets-sort-dir"><option value="rows">{t('sheets.sort.dirRows')}</option><option value="cols">{t('sheets.sort.dirCols')}</option></NativeSelect></label>
+  {lines>1&&<label className="flex flex-col gap-1">{t('sheets.sort.levels')}<NativeSelect className={field} value={n} disabled={action.busy} onChange={e=>setLevels(Number(e.currentTarget.value))} data-testid="sheets-sort-levels">{Array.from({length:Math.min(lines,MAX_SORT_KEYS)},(_,i)=><option key={i+1} value={i+1}>{i+1}</option>)}</NativeSelect></label>}
+  {used.map((k,i)=><div key={i} className="flex flex-col gap-1" role="group" aria-label={t(i===0?(across?'sheets.sort.row':'sheets.sort.column'):(across?'sheets.sort.thenRow':'sheets.sort.then'))}>
+   <label className="flex flex-col gap-1">{t(i===0?(across?'sheets.sort.row':'sheets.sort.column'):(across?'sheets.sort.thenRow':'sheets.sort.then'))}<NativeSelect className={field} value={k.col} disabled={action.busy} onChange={e=>setKey(i,{col:Number(e.currentTarget.value)})} data-testid={i===0?'sheets-sort-column':'sheets-sort-column-'+i}>{options.map(c=><option key={c} value={c}>{across?r.r0+c+1:colName(r.c0+c)}</option>)}</NativeSelect></label>
    <label className="flex flex-col gap-1">{t('sheets.sort.order')}<NativeSelect className={field} value={k.order} disabled={action.busy} onChange={e=>setKey(i,{order:e.currentTarget.value==='desc'?'desc':e.currentTarget.value==='list'?'list':'asc'})} data-testid={i===0?'sheets-sort-order':'sheets-sort-order-'+i}><option value="asc">{t('sheets.sort.asc')}</option><option value="desc">{t('sheets.sort.desc')}</option><option value="list">{t('sheets.sort.byList')}</option></NativeSelect></label>
    {k.order==='list'&&<label className="flex flex-col gap-1">{t('sheets.sort.list')}<NativeInput className={field} value={k.list} maxLength={400} aria-invalid={!lists[i]} disabled={action.busy} onChange={e=>setKey(i,{list:e.currentTarget.value})} data-testid={'sheets-sort-list-'+i}/></label>}
   </div>)}
-  <label className="flex flex-col gap-1">{t('sheets.sort.header')}<NativeSelect className={field} value={header?'yes':'no'} disabled={action.busy} onChange={e=>setHeader(e.currentTarget.value==='yes')} data-testid="sheets-sort-header"><option value="no">{t('sheets.sort.headerNo')}</option><option value="yes">{t('sheets.sort.headerYes')}</option></NativeSelect></label>
+  <label className="flex flex-col gap-1">{t(across?'sheets.sort.headerCol':'sheets.sort.header')}<NativeSelect className={field} value={header?'yes':'no'} disabled={action.busy} onChange={e=>setHeader(e.currentTarget.value==='yes')} data-testid="sheets-sort-header"><option value="no">{t(across?'sheets.sort.headerColNo':'sheets.sort.headerNo')}</option><option value="yes">{t(across?'sheets.sort.headerColYes':'sheets.sort.headerYes')}</option></NativeSelect></label>
   <label className="flex flex-col gap-1">{t('sheets.sort.match')}<NativeSelect className={field} value={matchCase?'yes':'no'} disabled={action.busy} onChange={e=>setMatchCase(e.currentTarget.value==='yes')} data-testid="sheets-sort-match"><option value="no">{t('sheets.sort.matchNo')}</option><option value="yes">{t('sheets.sort.matchYes')}</option></NativeSelect></label>
   <Button variant="outline" size="compact" disabled={action.busy||!!problem} onClick={()=>void action.run('sheets.sort',payload())} data-testid="sheets-sort-apply">{t('sheets.sort.apply')}</Button>
-  <p className="text-ink-3">{t(problem??'sheets.sort.scope',{range:rangeAddress(r)})}</p>
+  <p className="text-ink-3">{t(problem??(across?'sheets.sort.scopeCols':'sheets.sort.scope'),{range:rangeAddress(r)})}</p>
  </div>;
 }
 /** Slicer-style filtering of one column: load its values, tick the ones to keep, apply. Also top or bottom items and above or below average. One undo step each; the selection (header row first) creates the filter when there is none. */

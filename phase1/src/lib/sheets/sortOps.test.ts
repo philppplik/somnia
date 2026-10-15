@@ -21,3 +21,11 @@ test('several sort levels and custom orders are closed and bounded',()=>{
  assert.throws(()=>parseSortCommand({header:true,keys:[k(0),k(3)]},3));
  assert.deepEqual(parseListText(' Low, Medium ,High,'),['Low','Medium','High']);assert.equal(parseListText(''),null);assert.equal(parseListText('a,A'),null);assert.equal(parseListText('a\u0001b'),null);
 });
+
+test('left to right is a closed option',()=>{
+ assert.deepEqual(parseSortCommand({header:true,orientation:'columns',keys:[{column:0,order:'asc'}]}),{header:true,keys:[{column:0,order:'asc'}],orientation:'columns'});
+ assert.deepEqual(parseSortCommand({header:true,orientation:'rows',keys:[{column:0,order:'asc'}]}),{header:true,keys:[{column:0,order:'asc'}]});
+ assert.throws(()=>parseSortCommand({header:true,orientation:'diagonal',keys:[{column:0,order:'asc'}]}));
+ assert.throws(()=>parseSortCommand({header:true,orientation:'columns',column:0,order:'asc'}));
+ assert.equal(sortBlockProblem(3,2,true),null);assert.equal(sortBlockProblem(1,5,false),'small');
+});

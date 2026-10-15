@@ -108,7 +108,7 @@ export type LineEditKind='insertBefore'|'insertAfter'|'delete';
 export type LineOp={kind:'size';px:number}|{kind:'autofit'|'hide'|'unhide'};
 export type NumFmtPreset='general'|'number'|'comma'|'percent'|'currency'|'date'|'time'|'scientific'|'text';
 /** Sort rows of an explicit block; `column` is a 0-based offset inside the block. */
-export type SortOp={header:boolean;keys:{column:number;order:'asc'|'desc';list?:string[]}[];matchCase?:boolean};
+export type SortOp={header:boolean;orientation?:'rows'|'columns';keys:{column:number;order:'asc'|'desc';list?:string[]}[];matchCase?:boolean};
 /** Row filter on one absolute sheet column; the block only creates the filter. */
 export type FilterCondition='='|'<>'|'>'|'<'|'>='|'<='|'beginsWith'|'endsWith'|'contains'|'notContains';
 export type FilterOp={kind:'custom';column:number;op:FilterCondition;value:string}|{kind:'clear';column:number}|{kind:'clearAll'}|{kind:'off'}|{kind:'values';column:number;values:string[];blanks:boolean}|{kind:'top';column:number;count:number;bottom:boolean;percent:boolean}|{kind:'color';column:number;row:number;by:'fill'|'font'}|{kind:'aboveAverage';column:number;above:boolean};
