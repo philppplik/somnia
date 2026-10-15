@@ -1269,5 +1269,8 @@
  "cmd.animation.layers.stepMotion": "Angekreuzte Ebenen auf Zweien, Dreien oder Vieren animieren",
  "animation.rig.group.steps": "Posen halten",
  "animation.rig.freeze": "Am Playhead einfrieren",
- "cmd.animation.layers.freeze": "Angekreuzte Ebenen am Playhead einfrieren"
+ "cmd.animation.layers.freeze": "Angekreuzte Ebenen am Playhead einfrieren",
+ "animation.rig.trail.4": "Spur aus 4 Geistern",
+ "animation.rig.trail.8": "Spur aus 8 Geistern",
+ "cmd.animation.layers.trail": "Verblassende Spur aus verzögerten Kopien hinter der Ebene anlegen"
 }

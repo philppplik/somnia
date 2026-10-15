@@ -2489,6 +2489,25 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.layers.trail",
+      "title": "Add a fading trail of delayed copies behind the layer",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "afterimage",
+        "animation",
+        "copies",
+        "delay",
+        "echo",
+        "ghost",
+        "motion trail",
+        "smear",
+        "streak",
+        "trail"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.layers.trimToWorkArea",
       "title": "Trim the selected layers to the work area",
       "category": "Edit",

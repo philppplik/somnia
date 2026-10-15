@@ -1269,5 +1269,8 @@
  "cmd.animation.layers.stepMotion": "Animar las capas marcadas a dos, tres o cuatro fotogramas",
  "animation.rig.group.steps": "Mantener poses",
  "animation.rig.freeze": "Congelar en el cabezal",
- "cmd.animation.layers.freeze": "Congelar las capas marcadas en el cabezal"
+ "cmd.animation.layers.freeze": "Congelar las capas marcadas en el cabezal",
+ "animation.rig.trail.4": "Estela de 4 fantasmas",
+ "animation.rig.trail.8": "Estela de 8 fantasmas",
+ "cmd.animation.layers.trail": "Añadir una estela que se desvanece con copias retrasadas detrás de la capa"
 }

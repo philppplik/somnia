@@ -1680,3 +1680,19 @@ test('P264 freeze: ticked layers keep their pose from the playhead on, later key
  assert.throws(()=>run({layers:['a']}),/Nothing to freeze/);
  s.undo();assert.equal(T().keys.length,3);
 });
+
+test('P265 trail: delayed fading copies of a moving layer, one undo step, refuses when nothing fits',async()=>{
+ const {trailSpecs,ghostFactor}=await import('./trailCommands');const run=trailSpecs()[0].run as (p?:unknown)=>unknown;
+ assert.equal(ghostFactor(1,3),0.75);assert.equal(ghostFactor(3,3),0.25);
+ const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'shape',id:'b'});const old=new Set(findComp(s.document!)!.layers.map(l=>l.id)),n0=old.size;
+ for(const [t,v] of [[0,[0,0]],[f(30),[100,0]]]){s.dispatch({type:'key.add',layer:'a',prop:'position',t} as never);s.dispatch({type:'prop.set',layer:'a',prop:'position',t,value:v} as never);}
+ assert.throws(()=>run({layers:['a','b'],count:2}),/exactly one/);
+ const r=run({layers:['a'],count:3,gap:2}) as {ghosts:number};assert.equal(r.ghosts,3);
+ const c=findComp(s.document!)!;assert.equal(c.layers.length,n0+3);
+ const a=c.layers.find(l=>l.id==='a')!,ghosts=c.layers.filter(l=>!old.has(l.id));
+ assert.equal(ghosts.length,3);assert.ok(ghosts.every(g=>c.layers.indexOf(g)>c.layers.indexOf(a)),'ghosts sit behind the original');
+ const d1=ghosts.map(g=>g.transform.position.keys[0].t).sort((x,y)=>x-y);assert.equal(d1[0],f(2)+a.transform.position.keys[0].t);
+ assert.deepEqual(ghosts.map(g=>g.transform.opacity.value).sort(),[25,50,75].map(x=>x*(a.transform.opacity.value as number)/100).sort());
+ s.undo();assert.equal(findComp(s.document!)!.layers.length,n0);
+ const big=run({layers:['a'],count:12,gap:30}) as {ghosts:number;skipped:number};assert.ok(big.skipped>0&&big.ghosts>0&&big.ghosts+big.skipped===12);
+});

@@ -1269,5 +1269,8 @@
  "cmd.animation.layers.stepMotion": "Animar as camadas marcadas de dois em dois, três em três ou quatro em quatro quadros",
  "animation.rig.group.steps": "Manter poses",
  "animation.rig.freeze": "Congelar no cursor",
- "cmd.animation.layers.freeze": "Congelar as camadas marcadas no cursor"
+ "cmd.animation.layers.freeze": "Congelar as camadas marcadas no cursor",
+ "animation.rig.trail.4": "Rastro de 4 fantasmas",
+ "animation.rig.trail.8": "Rastro de 8 fantasmas",
+ "cmd.animation.layers.trail": "Adicionar um rastro de cópias atrasadas que esmaecem atrás da camada"
 }

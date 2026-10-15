@@ -1269,5 +1269,8 @@
  "cmd.animation.layers.stepMotion": "Animer les calques cochés sur deux, trois ou quatre images",
  "animation.rig.group.steps": "Maintenir les poses",
  "animation.rig.freeze": "Figer à la tête de lecture",
- "cmd.animation.layers.freeze": "Figer les calques cochés à la tête de lecture"
+ "cmd.animation.layers.freeze": "Figer les calques cochés à la tête de lecture",
+ "animation.rig.trail.4": "Traînée de 4 fantômes",
+ "animation.rig.trail.8": "Traînée de 8 fantômes",
+ "cmd.animation.layers.trail": "Ajouter une traînée de copies décalées qui s’estompent derrière le calque"
 }
