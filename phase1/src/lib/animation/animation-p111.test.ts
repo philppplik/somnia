@@ -1752,3 +1752,18 @@ test('P269 camera focus: the camera glides so the selected layer is centred and 
  assert.equal(cam.transform.scale.keys.length,2);
  s.undo();assert.equal(findCamera(findComp(s.document!)!)!.transform.scale.keys.length,0);
 });
+
+test('P271 spin: whole turns over the work area, unkeyed layers get two keys, keyed ones are sampled with the turn added, one undo step',async()=>{
+ const {spinSpecs,spinTimes}=await import('./spinCommands');const run=spinSpecs()[0].run as (p?:unknown)=>unknown;
+ assert.deepEqual(spinTimes(0,10,4),[0,4,8,10]);
+ const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'shape',id:'b'});
+ const R=(id:string)=>findComp(s.document!)!.layers.find(l=>l.id===id)!.transform.rotation;
+ assert.throws(()=>run({turns:0,layers:['b']}),/Turns/);assert.throws(()=>run({turns:21,layers:['b']}),/Turns/);
+ const r0=R('b').value as number,wa=findComp(s.document!)!.workArea;
+ run({turns:2,layers:['b']});const k=R('b').keys;assert.equal(k.length,2);assert.equal(k[0].t,wa.in);assert.equal(k[1].t,wa.out);assert.equal(k[0].v,r0);assert.equal(k[1].v,r0+720);assert.equal(k[0].interp,'linear');
+ s.undo();assert.equal(R('b').keys.length,0);
+ run({turns:-1,ease:true,layers:['b']});assert.equal(R('b').keys[1].v,r0-360);assert.equal(R('b').keys[0].interp,'bezier');
+ s.undo();
+ for(const [t,v] of [[0,0],[f(60),90]]){s.dispatch({type:'key.add',layer:'b',prop:'rotation',t} as never);s.dispatch({type:'prop.set',layer:'b',prop:'rotation',t,value:v} as never);s.dispatch({type:'key.interp',layer:'b',prop:'rotation',t,interp:'linear'} as never);}
+ run({turns:1,layers:['b']});const kk=R('b').keys;assert.ok(kk.length>2);assert.equal(kk[kk.length-1].t,wa.out);assert.ok((kk[kk.length-1].v as number)>=360);
+});

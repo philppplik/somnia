@@ -1289,5 +1289,10 @@
  "cmd.animation.palette.shift": "Desplazar todos los colores de la composición (tono, saturación, luminosidad)",
  "animation.camera.focus": "Acercar a la capa seleccionada",
  "cmd.animation.camera.focus": "Hacer que la cámara se acerque a la capa seleccionada",
- "animation.rig.group.copies": "Copias y estelas"
+ "animation.rig.group.copies": "Copias y estelas",
+ "animation.rig.spin.1": "Girar 1 vuelta",
+ "animation.rig.spin.2": "Girar 2 vueltas",
+ "animation.rig.spin.back": "Girar 1 vuelta hacia atrás",
+ "animation.rig.spin.1.ease": "Girar 1 vuelta, suave",
+ "cmd.animation.layers.spin": "Girar las capas marcadas alrededor de su ancla"
 }

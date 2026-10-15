@@ -110,3 +110,4 @@ Back to [Studios](../studios.md).
 - Wave (Motion > Effects): a sine wave (bob, swing or breathe) runs through the ticked layers in tick order, each 45 degrees behind the one before; baked as linear keys over the work area.
 - Shift all colours (Colours section): rotate the hue or change lightness and saturation of every solid fill and stroke in the composition in one step.
 - Camera > Zoom in on selected layer: from the playhead the camera glides (24 frames) until the selected layer is centred and fills about 60 percent of the frame, then holds. Text size is estimated from its characters.
+- Spin (Motion > Around a layer): the ticked layers turn 1 or 2 whole turns (or 1 backwards, or eased) around their anchor over the work area.

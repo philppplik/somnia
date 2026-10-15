@@ -1289,5 +1289,10 @@
  "cmd.animation.palette.shift": "Shift every colour of the composition (hue, saturation, lightness)",
  "animation.camera.focus": "Zoom in on selected layer",
  "cmd.animation.camera.focus": "Make the camera zoom in on the selected layer",
- "animation.rig.group.copies": "Copies and trails"
+ "animation.rig.group.copies": "Copies and trails",
+ "animation.rig.spin.1": "Spin 1 turn",
+ "animation.rig.spin.2": "Spin 2 turns",
+ "animation.rig.spin.back": "Spin 1 turn backwards",
+ "animation.rig.spin.1.ease": "Spin 1 turn, eased",
+ "cmd.animation.layers.spin": "Spin the ticked layers around their anchor"
 }

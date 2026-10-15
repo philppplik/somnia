@@ -2421,6 +2421,26 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.layers.spin",
+      "title": "Spin the ticked layers around their anchor",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "clockwise",
+        "gear",
+        "loader",
+        "loop",
+        "revolve",
+        "rotate",
+        "rotation",
+        "spin",
+        "turn",
+        "wheel"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.layers.split",
       "title": "Split the selected layers at the playhead",
       "category": "Edit",

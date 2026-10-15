@@ -1289,5 +1289,10 @@
  "cmd.animation.palette.shift": "Alle Farben der Komposition verschieben (Farbton, Sättigung, Helligkeit)",
  "animation.camera.focus": "Auf gewählte Ebene zoomen",
  "cmd.animation.camera.focus": "Kamera auf die gewählte Ebene zoomen lassen",
- "animation.rig.group.copies": "Kopien und Spuren"
+ "animation.rig.group.copies": "Kopien und Spuren",
+ "animation.rig.spin.1": "1 Umdrehung",
+ "animation.rig.spin.2": "2 Umdrehungen",
+ "animation.rig.spin.back": "1 Umdrehung rückwärts",
+ "animation.rig.spin.1.ease": "1 Umdrehung, weich",
+ "cmd.animation.layers.spin": "Angekreuzte Ebenen um ihren Ankerpunkt drehen"
 }

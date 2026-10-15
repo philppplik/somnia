@@ -1289,5 +1289,10 @@
  "cmd.animation.palette.shift": "Deslocar todas as cores da composição (matiz, saturação, luminosidade)",
  "animation.camera.focus": "Aproximar da camada selecionada",
  "cmd.animation.camera.focus": "Fazer a câmera aproximar da camada selecionada",
- "animation.rig.group.copies": "Cópias e rastros"
+ "animation.rig.group.copies": "Cópias e rastros",
+ "animation.rig.spin.1": "Girar 1 volta",
+ "animation.rig.spin.2": "Girar 2 voltas",
+ "animation.rig.spin.back": "Girar 1 volta ao contrário",
+ "animation.rig.spin.1.ease": "Girar 1 volta, suave",
+ "cmd.animation.layers.spin": "Girar as camadas marcadas em torno da âncora"
 }

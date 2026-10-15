@@ -1289,5 +1289,10 @@
  "cmd.animation.palette.shift": "Décaler toutes les couleurs de la composition (teinte, saturation, luminosité)",
  "animation.camera.focus": "Zoomer sur le calque sélectionné",
  "cmd.animation.camera.focus": "Faire zoomer la caméra sur le calque sélectionné",
- "animation.rig.group.copies": "Copies et traînées"
+ "animation.rig.group.copies": "Copies et traînées",
+ "animation.rig.spin.1": "Tourner d’1 tour",
+ "animation.rig.spin.2": "Tourner de 2 tours",
+ "animation.rig.spin.back": "Tourner d’1 tour en arrière",
+ "animation.rig.spin.1.ease": "Tourner d’1 tour, adouci",
+ "cmd.animation.layers.spin": "Faire tourner les calques cochés autour de leur ancre"
 }
