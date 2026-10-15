@@ -2242,6 +2242,31 @@ impl DocSession {
             _ => Err("the caret is not inside a table".into()),
         }
     }
+    /// `null` (back to the default) or `{top,left,bottom,right}` in points, each 0 to 72; every side must be given.
+    fn pad_of(val: &serde_json::Value) -> Result<Option<[f32; 4]>, String> {
+        if val.is_null() {
+            return Ok(None);
+        }
+        let o = val.as_object().ok_or("padding must be null or an object with top, left, bottom and right")?;
+        let mut out = [0.0f32; 4];
+        for (i, k) in ["top", "left", "bottom", "right"].iter().enumerate() {
+            let x = o.get(*k).and_then(|x| x.as_f64()).ok_or_else(|| format!("padding needs a number for {k}"))? as f32;
+            if !x.is_finite() || !(0.0..=72.0).contains(&x) {
+                return Err("padding is 0 to 72 points on each side".into());
+            }
+            out[i] = (x * 20.0).round() / 20.0;
+        }
+        if o.len() != 4 {
+            return Err("padding takes only top, left, bottom and right".into());
+        }
+        Ok(Some(out))
+    }
+    fn pad_json(m: Option<[f32; 4]>) -> serde_json::Value {
+        match m {
+            Some(m) => serde_json::json!({"top": m[0], "left": m[1], "bottom": m[2], "right": m[3]}),
+            None => serde_json::Value::Null,
+        }
+    }
     /// Layout of the table holding cell paragraph `block`: alignment, width, repeated header row (this row), rows kept whole, the cell's vertical alignment and alt text.
     fn do_table_layout_state(&self, block: usize) -> Result<String, String> {
         use wordcraft_doc::props::{HeightRule, VAlign};
@@ -2264,6 +2289,8 @@ impl DocSession {
             "caption": t.props.caption.clone().unwrap_or_default(),
             "rowRule": match row.props.height_rule { HeightRule::Auto => "auto", HeightRule::AtLeast => "atLeast", HeightRule::Exact => "exact" },
             "rowHeight": row.props.height,
+            "cellPadding": Self::pad_json(t.props.cell_margins),
+            "cellMargins": Self::pad_json(cell.props.margins),
         })
         .to_string())
     }
@@ -2286,6 +2313,7 @@ impl DocSession {
         let (mut header, mut keep, mut valign, mut caption) = (None, None, None, None);
         let mut row_height: Option<(HeightRule, Option<f32>)> = None;
         let mut all_rows = false;
+        let (mut pad, mut cmar): (Option<Option<[f32; 4]>>, Option<Option<[f32; 4]>>) = (None, None);
         for (k, val) in obj {
             match k.as_str() {
                 "align" => {
@@ -2337,6 +2365,8 @@ impl DocSession {
                     });
                 }
                 "allRows" => all_rows = val.as_bool().ok_or("allRows must be true or false")?,
+                "cellPadding" => pad = Some(Self::pad_of(val)?),
+                "cellMargins" => cmar = Some(Self::pad_of(val)?),
                 "caption" => {
                     let t = val.as_str().ok_or("caption must be text")?;
                     Self::hf_validate(t).map_err(|_| "alt text is limited to 500 characters without line breaks".to_string())?;
@@ -2381,6 +2411,12 @@ impl DocSession {
         }
         if let Some(va) = valign {
             t2.rows.get_mut(r).and_then(|row| row.cells.get_mut(c)).ok_or("no such cell")?.props.valign = va;
+        }
+        if let Some(m) = pad {
+            t2.props.cell_margins = m;
+        }
+        if let Some(m) = cmar {
+            t2.rows.get_mut(r).and_then(|row| row.cells.get_mut(c)).ok_or("no such cell")?.props.margins = m;
         }
         self.doc.body[b] = Arc::new(Block::Table(t2));
         self.pages = DocLayout::default();
@@ -4600,6 +4636,29 @@ mod tests {
         for bad in [r#"{"rowHeight":{"rule":"exact"}}"#, r#"{"rowHeight":{"rule":"exact","value":0}}"#, r#"{"rowHeight":{"rule":"exact","value":2000}}"#, r#"{"rowHeight":{"rule":"auto","value":5}}"#, r#"{"rowHeight":{"rule":"x"}}"#, r#"{"rowHeight":5}"#, r#"{"allRows":true}"#, r#"{"rowHeight":{"rule":"exact","value":10,"extra":1}}"#] {
             assert!(s.do_set_table_layout(blk, bad).is_err(), "{bad}");
         }
+    }
+    #[test]
+    fn cell_padding_sets_reports_roundtrips_and_validates() {
+        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
+        s.do_insert_table(0, 2, 2).unwrap();
+        let st = |s: &DocSession| serde_json::from_str::<serde_json::Value>(&s.do_table_layout_state(CELL_BASE).unwrap()).unwrap();
+        assert!(st(&s)["cellPadding"].is_null() && st(&s)["cellMargins"].is_null());
+        for bad in [r#"{"cellPadding":5}"#, r#"{"cellPadding":{}}"#, r#"{"cellPadding":{"top":1,"left":1,"bottom":1}}"#, r#"{"cellPadding":{"top":-1,"left":1,"bottom":1,"right":1}}"#,
+            r#"{"cellPadding":{"top":73,"left":1,"bottom":1,"right":1}}"#, r#"{"cellPadding":{"top":"a","left":1,"bottom":1,"right":1}}"#, r#"{"cellPadding":{"top":1,"left":1,"bottom":1,"right":1,"x":1}}"#, r#"{"cellMargins":[]}"#] {
+            assert!(s.do_set_table_layout(CELL_BASE, bad).is_err(), "{bad}");
+        }
+        let before = wordcraft_docx::write(&s.doc).unwrap();
+        assert!(s.do_set_table_layout(CELL_BASE, r#"{"cellPadding":{"top":2,"left":8,"bottom":2,"right":8},"caption":"a\nb"}"#).is_err());
+        assert_eq!(wordcraft_docx::write(&s.doc).unwrap(), before, "a refused patch changes nothing");
+        s.do_set_table_layout(CELL_BASE, r#"{"cellPadding":{"top":2,"left":8.5,"bottom":2,"right":8.5},"cellMargins":{"top":0,"left":20,"bottom":0,"right":0}}"#).unwrap();
+        let v = st(&s);
+        assert_eq!((v["cellPadding"]["left"].as_f64(), v["cellMargins"]["left"].as_f64()), (Some(8.5), Some(20.0)));
+        assert!(s.paginate() >= 1);
+        let re = DocSession::from_bytes(&s.save().unwrap()).unwrap();
+        let r = serde_json::from_str::<serde_json::Value>(&re.do_table_layout_state(CELL_BASE).unwrap()).unwrap();
+        assert_eq!((r["cellPadding"]["top"].as_f64(), r["cellPadding"]["right"].as_f64(), r["cellMargins"]["left"].as_f64()), (Some(2.0), Some(8.5), Some(20.0)));
+        s.do_set_table_layout(CELL_BASE, r#"{"cellPadding":null,"cellMargins":null}"#).unwrap();
+        assert!(st(&s)["cellPadding"].is_null() && st(&s)["cellMargins"].is_null());
     }
     #[test]
     fn delete_table_and_even_columns_work_and_unknown_ops_fail() {

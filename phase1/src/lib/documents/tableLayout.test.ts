@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
-import {buildLayoutPatch,layoutFromState} from './tableLayout';
+import {buildLayoutPatch,layoutFromState,type PadForm} from './tableLayout';
 import {tableLayoutProblem} from './protocol';
 const s=layoutFromState({align:null,widthPct:null,headerRow:false,keepRows:false,cellValign:'top',caption:''});
 test('table layout patch carries only changes and bounded values',()=>{
@@ -25,4 +25,15 @@ test('row height patches are built and validated',()=>{
  assert.deepEqual(buildLayoutPatch(a,{...a,allRows:true}),{rowHeight:{rule:'auto'},allRows:true});
  for(const bad of [{rowHeight:{rule:'exact'}},{rowHeight:{rule:'exact',value:2000}},{rowHeight:{rule:'auto',value:3}},{rowHeight:5},{rowHeight:null},{rowHeight:{rule:'x'}},{allRows:true},{rowHeight:{rule:'exact',value:10,z:1}}])assert.ok(problem(bad),JSON.stringify(bad));
  assert.equal(problem({rowHeight:{rule:'exact',value:10},allRows:true}),null);
+});
+test('cell padding: all four sides or none, bounded, only what changed',()=>{
+ const base=layoutFromState({align:null,widthPct:null,headerRow:false,keepRows:false,cellValign:'top',caption:'',cellPadding:null,cellMargins:null});
+ assert.deepEqual(buildLayoutPatch(base,{...base,pad:['2','8','2','8']}),{cellPadding:{top:2,left:8,bottom:2,right:8}});
+ assert.deepEqual(buildLayoutPatch(base,{...base,cellPad:['0','20.5','0','0']}),{cellMargins:{top:0,left:20.5,bottom:0,right:0}});
+ const set=layoutFromState({align:null,widthPct:null,headerRow:false,keepRows:false,cellValign:'top',caption:'',cellPadding:{top:1,left:2,bottom:3,right:4},cellMargins:null});
+ assert.deepEqual(set.pad,['1','2','3','4']);
+ assert.deepEqual(buildLayoutPatch(set,{...set,pad:['','','','']}),{cellPadding:null});
+ for(const bad of [['1','','','']as PadForm,['a','1','1','1']as PadForm,['73','1','1','1']as PadForm,['-1','1','1','1']as PadForm,['1.234','1','1','1']as PadForm])assert.equal(buildLayoutPatch(base,{...base,pad:bad}),null,bad.join());
+ for(const bad of [{cellPadding:5},{cellPadding:{top:1}},{cellPadding:{top:1,left:1,bottom:1,right:99}},{cellMargins:{top:1,left:1,bottom:1,right:1,x:1}},{cellMargins:[]}])assert.ok(tableLayoutProblem(bad),JSON.stringify(bad));
+ assert.equal(tableLayoutProblem({cellPadding:null,cellMargins:{top:0,left:0,bottom:0,right:72}}),null);
 });
