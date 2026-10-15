@@ -1379,3 +1379,11 @@ test('P243 layer labels: set, clear, validated, locked-safe, one undo step; old 
  label({label:'none',layers:ids});c=findComp(s.document!)!;assert.ok(c.layers.every(l=>!('label' in l)));
  assert.throws(()=>s.dispatch([{type:'layer.label',layers:['nope'],label:'red'}]),/./);
 });
+
+test('P244 timeline layer filter: words match name, kind and label; empty matches all; bounded',async()=>{
+ const {layerMatches,MAX_FILTER_LENGTH}=await import('./layerFilter');
+ const l={name:'Somnia / Title',kind:'text' as const,label:'red' as const};
+ assert.ok(layerMatches(l,'')&&layerMatches(l,'   ')&&layerMatches(l,'title')&&layerMatches(l,'SOMNIA text')&&layerMatches(l,'red'));
+ assert.ok(!layerMatches(l,'blue')&&!layerMatches(l,'title blue')&&!layerMatches({...l,label:undefined},'red'));
+ assert.ok(layerMatches(l,'x'.repeat(MAX_FILTER_LENGTH+50))===false);
+});

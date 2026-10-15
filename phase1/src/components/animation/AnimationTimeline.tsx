@@ -1,4 +1,5 @@
 import {useEffect,useRef,useState,type KeyboardEvent as ReactKeyboardEvent,type PointerEvent} from 'react';
+import {layerMatches,MAX_FILTER_LENGTH} from '../../lib/animation/layerFilter';
 import {startBarDrag,nudgeBar} from './barDrag';
 import {KeyStretch} from './KeyStretch';
 import {styleKeyShiftEdits} from '../../lib/animation/edit';
@@ -31,7 +32,7 @@ const LABEL_BG:Record<string,string>={red:'bg-red-500',amber:'bg-amber-500',gree
 export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Composition;at:number;selected:string|null;canUndo:boolean;canRedo:boolean}){
  const {t}=useT();const state=useAnimationState();const view=state.view; const layerSet=useLayerSet();const setClip=useSetClip();const [stagger,setStagger]=useState(2);const [staggerTiming,setStaggerTiming]=useState(true);
  const rulerRef=useRef<HTMLDivElement>(null);const lanesRef=useRef<HTMLDivElement>(null);
- const win=timeWindow(comp,view.zoom,view.scroll);const pc=(t:number)=>`${(t-win.t0)/win.span*100}%`;const snapOn=useTimelineSnap();const autoKey=useAutoKey();const shyOff=useShyHidden();useTrackHeights();const [drop,setDrop]=useState<{over:string;after:boolean}|null>(null);const inWin=(t:number)=>t>=win.t0&&t<=win.t0+win.span;
+ const win=timeWindow(comp,view.zoom,view.scroll);const pc=(t:number)=>`${(t-win.t0)/win.span*100}%`;const snapOn=useTimelineSnap();const autoKey=useAutoKey();const shyOff=useShyHidden();const [filter,setFilter]=useState('');useTrackHeights();const [drop,setDrop]=useState<{over:string;after:boolean}|null>(null);const inWin=(t:number)=>t>=win.t0&&t<=win.t0+win.span;
  /** Left and width in percent of a tick range, clipped to the visible window. */
  const bar=(a:number,b:number)=>{const l=Math.max(0,(a-win.t0)/win.span*100),r=Math.min(100,(b-win.t0)/win.span*100);return {left:`${l}%`,width:`${Math.max(0,r-l)}%`};};const sectionRef=useRef<HTMLElement>(null);
  const frames=Math.max(1,tickToFrame(comp.duration,comp.fps));const frame=tickToFrame(at,comp.fps);
@@ -279,6 +280,7 @@ const marquee=(e:PointerEvent<SVGSVGElement>)=>{
     <Button size="tiny" variant="ghost" onClick={()=>run('animation.timeline.tracks',{mode:'collapse'})} data-testid="animation-tracks-collapse"><ChevronsUpDown className="size-3"/>{t('animation.timeline.collapseAll')}</Button>
     <Button size="tiny" variant="ghost" onClick={()=>run('animation.timeline.tracks',{mode:'expand'})} data-testid="animation-tracks-expand">{t('animation.timeline.expandAll')}</Button>
     <Button size="tiny" variant={shyOff?'outline':'ghost'} aria-pressed={shyOff} title={t('animation.timeline.hideShyHint')} onClick={()=>run('animation.timeline.shy',{hide:!shyOff})} data-testid="animation-hide-shy">{t('animation.timeline.hideShy')}</Button>
+    <NativeInput type="search" className="h-6 w-28 min-w-0 rounded-sm border border-subtle bg-transparent px-1 text-xs text-ink" value={filter} maxLength={MAX_FILTER_LENGTH} placeholder={t('animation.timeline.filter')} aria-label={t('animation.timeline.filter')} onChange={e=>setFilter(e.target.value)} data-testid="animation-layer-filter"/>
     {win.zoom>1&&<NativeInput type="range" className="w-24" min={0} max={Math.max(1,comp.duration-win.span)} step={Math.max(1,Math.round(win.span/50))} value={win.scroll} aria-label={t('animation.timeline.scroll')} onChange={e=>animationSession().setView({scroll:Number(e.target.value)})} data-testid="animation-scroll"/>}
    </span>
    <output className="ml-1 font-mono text-ink" data-testid="animation-timecode">{timecode(at,comp.fps)}</output>
@@ -330,7 +332,7 @@ const marquee=(e:PointerEvent<SVGSVGElement>)=>{
   </div>
   {view.graph?<GraphEditor comp={comp} layerId={selected} sel={sel} playhead={at}/>:
   <div className="relative min-h-0 flex-1 overflow-auto" role="list" ref={lanesRef}>
-   {comp.layers.map((l,li)=>shyOff&&l.shy&&l.id!==selected?null:<div key={l.id} role="listitem" data-layer-row={l.id} data-drop={drop?.over===l.id?(drop.after?'after':'before'):undefined} className={`border-b border-subtle ${drop?.over===l.id?(drop.after?'border-b-2 border-b-accent':'border-t-2 border-t-accent'):''}`}>
+   {comp.layers.map((l,li)=>(shyOff&&l.shy&&l.id!==selected)||(l.id!==selected&&!layerMatches(l,filter))?null:<div key={l.id} role="listitem" data-layer-row={l.id} data-drop={drop?.over===l.id?(drop.after?'after':'before'):undefined} className={`border-b border-subtle ${drop?.over===l.id?(drop.after?'border-b-2 border-b-accent':'border-t-2 border-t-accent'):''}`}>
     <div className={`grid grid-cols-[280px_1fr] items-center ${l.id===selected||layerSet.includes(l.id)?'bg-hover':''}`} data-picked={layerSet.includes(l.id)||undefined}>
      <div className="flex items-center gap-1 px-2 py-1">
       <button type="button" aria-label={t('animation.layer.visible')} aria-pressed={l.visible} className="text-ink-2" onClick={()=>run('animation.layer.update',{layer:l.id,visible:!l.visible})}>{l.visible?<Eye className="size-3"/>:<EyeOff className="size-3"/>}</button>

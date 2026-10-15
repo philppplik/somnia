@@ -1201,5 +1201,6 @@
  "animation.rig.label.blue": "Azul",
  "animation.rig.label.violet": "Violeta",
  "animation.rig.label.none": "Sem rotulo",
- "cmd.animation.layers.label": "Definir um rotulo de cor nas camadas escolhidas"
+ "cmd.animation.layers.label": "Definir um rotulo de cor nas camadas escolhidas",
+ "animation.timeline.filter": "Filtrar camadas"
 }

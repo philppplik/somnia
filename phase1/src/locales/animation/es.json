@@ -1201,5 +1201,6 @@
  "animation.rig.label.blue": "Azul",
  "animation.rig.label.violet": "Violeta",
  "animation.rig.label.none": "Sin etiqueta",
- "cmd.animation.layers.label": "Poner una etiqueta de color a las capas elegidas"
+ "cmd.animation.layers.label": "Poner una etiqueta de color a las capas elegidas",
+ "animation.timeline.filter": "Filtrar capas"
 }

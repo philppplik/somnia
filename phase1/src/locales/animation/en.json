@@ -1201,5 +1201,6 @@
  "animation.rig.label.blue": "Blue",
  "animation.rig.label.violet": "Violet",
  "animation.rig.label.none": "No label",
- "cmd.animation.layers.label": "Set a colour label on the selected layers"
+ "cmd.animation.layers.label": "Set a colour label on the selected layers",
+ "animation.timeline.filter": "Filter layers"
 }

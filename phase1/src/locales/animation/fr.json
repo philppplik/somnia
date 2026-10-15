@@ -1201,5 +1201,6 @@
  "animation.rig.label.blue": "Bleu",
  "animation.rig.label.violet": "Violet",
  "animation.rig.label.none": "Sans etiquette",
- "cmd.animation.layers.label": "Mettre une etiquette de couleur aux calques choisis"
+ "cmd.animation.layers.label": "Mettre une etiquette de couleur aux calques choisis",
+ "animation.timeline.filter": "Filtrer les calques"
 }

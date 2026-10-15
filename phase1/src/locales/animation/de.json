@@ -1201,5 +1201,6 @@
  "animation.rig.label.blue": "Blau",
  "animation.rig.label.violet": "Violett",
  "animation.rig.label.none": "Keine Farbe",
- "cmd.animation.layers.label": "Farbmarkierung fuer die gewaehlten Ebenen setzen"
+ "cmd.animation.layers.label": "Farbmarkierung fuer die gewaehlten Ebenen setzen",
+ "animation.timeline.filter": "Ebenen filtern"
 }
