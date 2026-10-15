@@ -5,7 +5,8 @@ export const readinessSnapshot=()=>record;
 export const subscribeReadiness=(fn:()=>void)=>{listeners.add(fn);return()=>{listeners.delete(fn);};};
 /** Caller is an existing explicit metadata action only; no fetch or persistence here. */
 export function recordReadiness(snapshot:RuntimeSnapshot,endpoint:string,now=Date.now()){
- if(!Number.isFinite(snapshot.checkedAt)||snapshot.checkedAt>now||now-snapshot.checkedAt>120000)return;
+ if(!Number.isFinite(now)||!endpoint||!Number.isFinite(snapshot.checkedAt)||snapshot.checkedAt>now||now-snapshot.checkedAt>120000)return;
+ if(record?.endpoint===endpoint&&record.checkedAt>snapshot.checkedAt)return;
  record={snapshot:structuredClone(snapshot),endpoint,checkedAt:snapshot.checkedAt};listeners.forEach(fn=>fn());
 }
 export function clearReadiness(){record=null;listeners.forEach(fn=>fn());}
