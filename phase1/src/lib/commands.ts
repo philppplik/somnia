@@ -1,3 +1,4 @@
+import {openCodeSnippets} from './codeSnippets';
 import {commandRegistry as registry} from './commandRegistry';
 export {registerCommand} from './commandRegistry';
 import {registerCoreCommandSpec,NO_CORE_PARAMS} from './coreCommandRegistration';
@@ -183,3 +184,5 @@ registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'frameworks.newProj
 /* Publish: opens the panel. The deploy.* specs behind it ask for confirmation on every publish and rollback. */
 registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'deploy.open',title:'Publish...',category:'Project',keywords:['publish','deploy','server','ssh','go live','upload','website'],shortcut:'Mod+Shift+U',enabled:()=>publishAvailable(),run:()=>{ /* History: UI state only; no document undo entry. */ return getPublishStore().open(); }});
 import {publishAvailable,getPublishStore} from './deploy/publishController';
+
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'code.snippets',title:'Code snippets...',category:'Insert',keywords:['snippet','template','code'],enabled:()=>getState().activeStudio==='code',run:()=>{/* History: opening local snippet manager is UI-only; insertion uses source editor history. */openCodeSnippets();}});
