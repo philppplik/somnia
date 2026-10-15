@@ -182,5 +182,22 @@ for(const side of ['added','removed']){
   }
  }
 }
+// agent rail FAB: white icon on translucent scrim over an unknown canvas backdrop —
+// check both worst-case backdrops (pure white page, pure black page) at the 3:1 icon bar
+const agentCss=readFileSync(here('../src/styles/agent.css'),'utf8').replace(/\/\*[\s\S]*?\*\//g,'');
+{
+ const m=agentCss.match(/\.ag-rail-open\{([^}]*)\}/);
+ const inkM=m?.[1].match(/(?:^|;)\s*color:\s*(#[0-9a-fA-F]{3,8})\s*(?:;|$)/);
+ const scrM=m?.[1].match(/(?:^|;)\s*background:\s*rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([\d.]+)\s*\)\s*(?:;|$)/);
+ if(!inkM||!scrM){fail('agent .ag-rail-open: missing ink or scrim rule');}
+ else{
+  const scr={rgb:[+scrM[1],+scrM[2],+scrM[3]],alpha:+scrM[4]};
+  for(const backdrop of ['#ffffff','#000000']){
+   const comp=over(scr,{rgb:hex(backdrop.slice(1))});
+   const r=ratio(hex(inkM[1].slice(1)),comp);
+   if(r<3)fail(`agent .ag-rail-open icon over ${backdrop}: ${r.toFixed(2)} (${inkM[1]} on rgba(${scrM[1]},${scrM[2]},${scrM[3]},${scrM[4]}) over ${backdrop})`);
+  }
+ }
+}
 console.log(`${fails===0?'OK':'FAIL'}: ${fails} contrast failures across ${Object.keys(themes).length} themes${warns?` (+${warns} border warnings)`:''}`);
 if(fails>0)process.exit(1);
