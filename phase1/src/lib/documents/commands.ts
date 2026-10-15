@@ -316,7 +316,9 @@ export function registerDocumentsCommands(){
    const o=(p??{}) as Record<string,unknown>;const bad=(k:string)=>expected(`Invalid "${k}".`);
    if(o.header!==undefined&&typeof o.header!=='string')throw bad('header');if(o.footer!==undefined&&typeof o.footer!=='string')throw bad('footer');if(o.pageNumber!==undefined&&typeof o.pageNumber!=='boolean')throw bad('pageNumber');
    if(o.header===undefined&&o.footer===undefined&&o.pageNumber===undefined)throw expected('Give a header, a footer or pageNumber.');
-   await setHeaderFooter({header:o.header as string|undefined,footer:o.footer as string|undefined,pageNumber:o.pageNumber as boolean|undefined});
+   if(o.section!==undefined&&typeof o.section!=='boolean')throw bad('section');
+   const at=o.section===true?getDocumentsState().caret?.block:undefined;
+   await setHeaderFooter({header:o.header as string|undefined,footer:o.footer as string|undefined,pageNumber:o.pageNumber as boolean|undefined},at);
   },()=>ready()&&!!getDocumentsState().caret),
   add('documents.headerFooter.variants','Set first-page and odd/even headers and footers',async p=>{
    const bad=hfVariantsProblem(p);if(bad)throw expected(bad);await setHfVariants(p as import('./protocol').HfVariantsPatch);

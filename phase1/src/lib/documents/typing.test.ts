@@ -369,6 +369,13 @@ test('setHeaderFooter needs a caret, validates text, sends only what changed and
  assert.deepEqual(await readHeaderFooter(),{header:{text:'H',editable:true},footer:{text:'',pageNumber:false,editable:true}});
 });
 const code=async(p:Promise<unknown>)=>{try{await p;return 'ok';}catch(e){return e instanceof EditReceiptError?e.code:'other:'+String(e);}};
+test('setHeaderFooter and readHeaderFooter pass the paragraph of a section scope to the engine',async()=>{
+ const cd=await openCells();const calls:unknown[][]=[];
+ (cd as unknown as {setHeaderFooter:(p:object,b?:number)=>Promise<unknown>}).setHeaderFooter=async(p,b)=>{calls.push(['set',p,b]);return cd.doc();};
+ (cd as unknown as {headerFooterState:(b?:number)=>Promise<unknown>}).headerFooterState=async b=>{calls.push(['read',b]);return{section:2,sections:3,header:{text:'S',editable:true},footer:{text:'',pageNumber:false,editable:true}};};
+ at(0,1);await setHeaderFooter({header:'Part 2'},0);await setHeaderFooter({header:'All'});await readHeaderFooter(0);
+ assert.deepEqual(calls,[['set',{header:'Part 2'},0],['set',{header:'All'},undefined],['read',0]]);assert.equal(getDocumentsState().editError,'');
+});
 test('reviewed edit: applies atomically, is undoable before the receipt resolves, and reads back',async()=>{
  await open(['hello world','second']);const rev=getDocumentsState().rev;
  const r=await applyReviewedEdit({block:0,expectedRev:rev,expectedText:'hello world',hunks:[{start:0,end:5,text:'howdy'}]});

@@ -104,8 +104,8 @@ export class DocumentsEngine{
  async setProofing(on:boolean):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'setProofing',on}))).document;}
  async pageSetupState(block?:number):Promise<import('./protocol').PageSetupState>{return(await this.call('pageSetup',id=>({id,kind:'pageSetupState',...(block===undefined?{}:{block})}))).state;}
  async setPageSetup(setup:import('./protocol').PageSetupPatch,block?:number):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'setPageSetup',setup,...(block===undefined?{}:{block})}))).document;}
- async headerFooterState():Promise<import('./protocol').HeaderFooterState>{return(await this.call('headerFooter',id=>({id,kind:'headerFooterState'}))).state;}
- async setHeaderFooter(p:{header?:string;footer?:string;pageNumber?:boolean;headerAlign?:import('./protocol').HfAlign;footerAlign?:import('./protocol').HfAlign;pageTotal?:boolean}):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'setHeaderFooter',...p}))).document;}
+ async headerFooterState(block?:number):Promise<import('./protocol').HeaderFooterState>{return(await this.call('headerFooter',id=>({id,kind:'headerFooterState',...(block===undefined?{}:{block})}))).state;}
+ async setHeaderFooter(p:{header?:string;footer?:string;pageNumber?:boolean;headerAlign?:import('./protocol').HfAlign;footerAlign?:import('./protocol').HfAlign;pageTotal?:boolean},block?:number):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'setHeaderFooter',...p,...(block===undefined?{}:{block})}))).document;}
  async insertSectionBreak(block:number,sectionKind:string):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'insertSectionBreak',block,sectionKind}))).document;}
  async removeSectionBreak(block:number):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'removeSectionBreak',block}))).document;}
  async tableLayoutState(block:number):Promise<import('./protocol').TableLayoutState>{return(await this.call('tableLayout',id=>({id,kind:'tableLayoutState',block}))).state;}

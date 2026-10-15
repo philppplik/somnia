@@ -52,7 +52,7 @@ new file mode 100644
 index 0000000..5b80b79
 --- /dev/null
 +++ b/crates/somnia-worker/src/lib.rs
-@@ -0,0 +1,7091 @@
+@@ -0,0 +1,7260 @@
 +//! Experimental headless adapter. No DOM, egui, filesystem or UI thread access.
 +use wasm_bindgen::prelude::*;
 +use std::sync::Arc;
@@ -3590,6 +3590,137 @@ index 0000000..5b80b79
 +        self.pages = DocLayout::default();
 +        Ok(())
 +    }
++    /// The index (into `sections()`) of the section that holds paragraph `block`.
++    fn section_index_for(&self, block: usize) -> Result<usize, String> {
++        let secs = self.doc.sections();
++        Ok(match self.section_target(block)? {
++            Some(i) => secs.iter().position(|(e, _)| *e == i).ok_or("no such section")?,
++            None => secs.len() - 1,
++        })
++    }
++    /// The default header (`footer == false`) or footer story that applies in section `idx`: its own, else the nearest earlier one (Word's "link to previous").
++    fn hf_story_in(&self, idx: usize, footer: bool) -> Option<u32> {
++        let secs = self.doc.sections();
++        (0..=idx).rev().find_map(|k| secs.get(k).and_then(|(_, s)| if footer { s.footers.default } else { s.headers.default }))
++    }
++    /// Header and footer of one section as JSON: `{section, sections, header:{text,editable,align}, footer:{text,pageNumber,editable,align,pageTotal}}`.
++    fn do_section_hf_state(&self, block: usize) -> Result<String, String> {
++        let idx = self.section_index_for(block)?;
++        let n = self.doc.sections().len();
++        let one = |footer: bool| match self.hf_story_in(idx, footer) {
++            None => (String::new(), false, true),
++            Some(id) => match self.hf_simple(id) {
++                Some((t, pg)) => (t, pg, true),
++                None => (self.doc.plain_text(StoryRef::Part(id)), false, false),
++            },
++        };
++        let (h, _, he) = one(false);
++        let (f, fp, fe) = one(true);
++        let al = |footer: bool| self.hf_story_in(idx, footer).map_or(if footer { "center" } else { "left" }, |id| self.hf_align(id, footer));
++        Ok(serde_json::json!({"section": idx + 1, "sections": n,
++            "header": {"text": h, "editable": he, "align": al(false)},
++            "footer": {"text": f, "pageNumber": fp, "editable": fe, "align": al(true), "pageTotal": self.hf_story_in(idx, true).map_or(false, |id| self.hf_total(id))}}).to_string())
++    }
++    /// Gives section `idx` its own default header/footer story `id` and drops the story it had of its own when nothing else points at it. Returns nothing.
++    fn set_section_story(&mut self, idx: usize, footer: bool, id: u32) -> Result<(), String> {
++        let ends: Vec<usize> = self.doc.sections().iter().map(|(e, _)| *e).collect();
++        let old = {
++            let sect: &mut wordcraft_doc::SectionProps = if idx + 1 == ends.len() {
++                &mut self.doc.last_section
++            } else {
++                match self.doc.body.get_mut(ends[idx]).map(Arc::make_mut) {
++                    Some(Block::Para(p)) => p.section.as_mut().map(|b| &mut **b).ok_or("no such section")?,
++                    _ => return Err("no such section".into()),
++                }
++            };
++            let slot = if footer { &mut sect.footers.default } else { &mut sect.headers.default };
++            slot.replace(id)
++        };
++        if let Some(o) = old {
++            let used = self.doc.sections().iter().any(|(_, s)| [s.headers, s.footers].iter().any(|h| h.default == Some(o) || h.first == Some(o) || h.even == Some(o)));
++            if !used {
++                self.doc.parts.remove(&o);
++            }
++        }
++        Ok(())
++    }
++    /// Sets the default header and/or footer of only the section that holds paragraph `block`. JSON keys (all optional): `header`, `footer` (text),
++    /// `pageNumber`, `pageTotal` (bool), `headerAlign`, `footerAlign` (left|center|right). The section gets its own story, so the other sections keep theirs;
++    /// an empty text makes this section's part blank (it does not fall back to an earlier section's). A richer story is refused, not overwritten.
++    fn do_set_section_hf(&mut self, block: usize, json: &str) -> Result<(), String> {
++        use wordcraft_doc::{Align, PartKind};
++        if json.len() > 4096 {
++            return Err("the header and footer patch is too large".into());
++        }
++        let v: serde_json::Value = serde_json::from_str(json).map_err(|_| "the header and footer patch is not valid JSON".to_string())?;
++        let obj = v.as_object().ok_or("the header and footer patch must be an object")?;
++        if obj.is_empty() {
++            return Err("nothing to change".into());
++        }
++        let text = |k: &str| -> Result<Option<String>, String> {
++            match obj.get(k) {
++                None => Ok(None),
++                Some(x) => {
++                    let t = x.as_str().ok_or_else(|| format!("{k} must be text"))?;
++                    Self::hf_validate(t)?;
++                    Ok(Some(t.to_string()))
++                }
++            }
++        };
++        let flag = |k: &str| -> Result<Option<bool>, String> {
++            match obj.get(k) {
++                None => Ok(None),
++                Some(x) => x.as_bool().map(Some).ok_or_else(|| format!("{k} must be true or false")),
++            }
++        };
++        let align = |k: &str| -> Result<Option<Align>, String> {
++            match obj.get(k).map(|x| x.as_str()) {
++                None => Ok(None),
++                Some(Some("left")) => Ok(Some(Align::Left)),
++                Some(Some("center")) => Ok(Some(Align::Center)),
++                Some(Some("right")) => Ok(Some(Align::Right)),
++                Some(_) => Err(format!("{k} is left, center or right")),
++            }
++        };
++        for k in obj.keys() {
++            if !["header", "footer", "pageNumber", "pageTotal", "headerAlign", "footerAlign"].contains(&k.as_str()) {
++                return Err(format!("unknown key {k}"));
++            }
++        }
++        let (header, footer, page, total) = (text("header")?, text("footer")?, flag("pageNumber")?, flag("pageTotal")?);
++        let (h_al, f_al) = (align("headerAlign")?, align("footerAlign")?);
++        let idx = self.section_index_for(block)?;
++        let mut plan: Vec<(bool, wordcraft_doc::Paragraph)> = Vec::new();
++        if header.is_some() || h_al.is_some() {
++            let cur = self.hf_story_in(idx, false);
++            let old = match cur {
++                None => String::new(),
++                Some(id) => self.hf_simple(id).ok_or("the header has content that cannot be edited here")?.0,
++            };
++            let keep = match cur.map(|id| self.hf_align(id, false)) { Some("center") => Align::Center, Some("right") => Align::Right, _ => Align::Left };
++            plan.push((false, Self::hf_para(&header.unwrap_or(old), false, h_al.unwrap_or(keep), false)?));
++        }
++        if footer.is_some() || page.is_some() || total.is_some() || f_al.is_some() {
++            let cur = self.hf_story_in(idx, true);
++            let (old_text, old_page) = match cur {
++                None => (String::new(), false),
++                Some(id) => self.hf_simple(id).ok_or("the footer has content that cannot be edited here")?,
++            };
++            let keep = match cur.map(|id| self.hf_align(id, true)) { Some("left") => Align::Left, Some("right") => Align::Right, _ => Align::Center };
++            let old_total = cur.map_or(false, |id| self.hf_total(id));
++            let pg = page.unwrap_or(old_page);
++            plan.push((true, Self::hf_para(&footer.unwrap_or(old_text), pg, f_al.unwrap_or(keep), pg && total.unwrap_or(old_total))?));
++        }
++        if plan.is_empty() {
++            return Err("nothing to change".into());
++        }
++        for (is_footer, para) in plan {
++            let id = self.doc.add_part(if is_footer { PartKind::Footer } else { PartKind::Header }, vec![wordcraft_doc::para_block(para)]);
++            self.set_section_story(idx, is_footer, id)?;
++        }
++        self.pages = DocLayout::default();
++        Ok(())
++    }
 +    /// Inserts a PNG or JPEG as its own paragraph after the top-level block holding `block` (a paragraph, table or cell
 +    /// paragraph). The picture is scaled to fit the text width. Limits: 5 MB, 8000 px a side, 25 megapixels, 200 images.
 +    fn do_insert_image(&mut self, block: usize, bytes: &[u8], alt: &str) -> Result<(), String> {
@@ -4693,6 +4824,14 @@ index 0000000..5b80b79
 +    }
 +    pub fn set_header_footer_align(&mut self, header: Option<String>, footer: Option<String>) -> Result<(), JsValue> {
 +        self.do_set_hf_align(header.as_deref(), footer.as_deref()).map_err(|e| js_err(&e))
++    }
++    /// Header and footer of the section that holds paragraph `block`, as JSON.
++    pub fn section_header_footer(&self, block: usize) -> Result<String, JsValue> {
++        self.do_section_hf_state(block).map_err(|e| js_err(&e))
++    }
++    /// Sets the default header and footer of only the section that holds paragraph `block` (JSON patch).
++    pub fn set_section_header_footer(&mut self, block: usize, patch_json: &str) -> Result<(), JsValue> {
++        self.do_set_section_hf(block, patch_json).map_err(|e| js_err(&e))
 +    }
 +    /// State of the different-first-page and odd/even header and footer options, as JSON.
 +    pub fn header_footer_variants(&self) -> String {
@@ -6595,6 +6734,36 @@ index 0000000..5b80b79
 +        assert!(s.paginate() >= 1);
 +        let re = DocSession::from_bytes(&wordcraft_docx::write(&s.doc).unwrap()).unwrap();
 +        assert_eq!(serde_json::from_str::<serde_json::Value>(&re.do_section_setup_state(0).unwrap()).unwrap()["margins"]["left"].as_f64(), Some(100.0));
++    }
++    #[test]
++    fn section_header_footer_changes_only_that_section_and_survives_a_round_trip() {
++        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
++        s.doc.body.clear();
++        for t in ["a", "b", "c"] {
++            s.doc.body.push(wordcraft_doc::para_block(wordcraft_doc::Paragraph::with_text(t, CharProps::default())));
++        }
++        s.do_insert_section_break(0, "nextPage").unwrap();
++        s.do_set_header_footer(Some("Top"), Some("Foot"), Some(true)).unwrap();
++        let st = |s: &DocSession, b: usize| -> serde_json::Value { serde_json::from_str(&s.do_section_hf_state(b).unwrap()).unwrap() };
++        assert_eq!((st(&s, 0)["section"].as_u64(), st(&s, 0)["sections"].as_u64(), st(&s, 2)["section"].as_u64()), (Some(1), Some(2), Some(2)));
++        let before = wordcraft_docx::write(&s.doc).unwrap();
++        for bad in ["{}", "[]", r#"{"header":5}"#, r#"{"nope":"x"}"#, r#"{"header":"a\u0007"}"#, r#"{"footerAlign":"middle"}"#, r#"{"pageNumber":"yes"}"#] {
++            assert!(s.do_set_section_hf(0, bad).is_err(), "{bad}");
++        }
++        assert!(s.do_set_section_hf(99, r#"{"header":"x"}"#).is_err(), "no such paragraph");
++        assert_eq!(wordcraft_docx::write(&s.doc).unwrap(), before, "refusals change nothing");
++        s.do_set_section_hf(2, r#"{"header":"Chapter 2","footerAlign":"right"}"#).unwrap();
++        assert_eq!(st(&s, 2)["header"]["text"], "Chapter 2");
++        assert_eq!(st(&s, 0)["header"]["text"], "Top", "the first section keeps its header");
++        assert_eq!((st(&s, 2)["footer"]["text"].as_str(), st(&s, 2)["footer"]["pageNumber"].as_bool(), st(&s, 2)["footer"]["align"].as_str()), (Some("Foot"), Some(true), Some("right")));
++        assert_eq!(st(&s, 0)["footer"]["align"], "center");
++        s.do_set_section_hf(0, r#"{"header":""}"#).unwrap();
++        assert_eq!(st(&s, 0)["header"]["text"], "");
++        assert_eq!(st(&s, 2)["header"]["text"], "Chapter 2");
++        assert!(s.paginate() >= 1);
++        let re = DocSession::from_bytes(&wordcraft_docx::write(&s.doc).unwrap()).unwrap();
++        assert_eq!(st(&re, 2)["header"]["text"], "Chapter 2");
++        assert_eq!(st(&re, 0)["header"]["text"], "");
 +    }
 +    #[test]
 +    fn cover_page_goes_first_breaks_before_the_old_start_and_undoes() {

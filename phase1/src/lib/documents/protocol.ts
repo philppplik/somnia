@@ -193,14 +193,14 @@ export type DocumentsRequest=
  |{id:number;kind:'bookmarksState'}
  |{id:number;kind:'addBookmark';block:number;start:number;end:number;name:string}
  |{id:number;kind:'deleteBookmark';name:string}
- |{id:number;kind:'headerFooterState'}
+ |{id:number;kind:'headerFooterState';/** Report the section that holds this paragraph instead of the first one. */block?:number}
  |{id:number;kind:'hfVariantsState'}
  |{id:number;kind:'tableLayoutState';block:number}
  |{id:number;kind:'setTableLayout';block:number;patch:TableLayoutPatch}
  |{id:number;kind:'insertSectionBreak';block:number;sectionKind:string}
  |{id:number;kind:'removeSectionBreak';block:number}
  |{id:number;kind:'setHfVariants';patch:HfVariantsPatch}
- |{id:number;kind:'setHeaderFooter';header?:string;footer?:string;pageNumber?:boolean;headerAlign?:HfAlign;footerAlign?:HfAlign;pageTotal?:boolean}
+ |{id:number;kind:'setHeaderFooter';/** Change only the section that holds this paragraph. */block?:number;header?:string;footer?:string;pageNumber?:boolean;headerAlign?:HfAlign;footerAlign?:HfAlign;pageTotal?:boolean}
  |{id:number;kind:'insertTable';block:number;rows:number;cols:number}
  |{id:number;kind:'textToTable';first:number;last:number}
  |{id:number;kind:'save';date?:string;author?:string}
@@ -442,7 +442,7 @@ export const SECTION_BREAKS=['nextPage','continuous','evenPage','oddPage'] as co
 export type SectionBreakKind=typeof SECTION_BREAKS[number]|'nextColumn';
 export type HfAlign='left'|'center'|'right';
 export const HF_ALIGNS:readonly HfAlign[]=['left','center','right'];
-export interface HeaderFooterState{header:{text:string;editable:boolean;align?:HfAlign};footer:{text:string;pageNumber:boolean;editable:boolean;align?:HfAlign;/** The page number reads "x / y". */pageTotal?:boolean}}
+export interface HeaderFooterState{/** With a section request: its 1-based number and the section count. */section?:number;sections?:number;header:{text:string;editable:boolean;align?:HfAlign};footer:{text:string;pageNumber:boolean;editable:boolean;align?:HfAlign;/** The page number reads "x / y". */pageTotal?:boolean}}
 export interface HfVariant{header:{text:string;editable:boolean};footer:{text:string;pageNumber:boolean;editable:boolean}}
 /** Different first page and different odd/even pages, with the texts of the first-page and even-page stories. */
 export interface HfVariantsState{titlePage:boolean;evenOdd:boolean;first:HfVariant;even:HfVariant}

@@ -105,6 +105,20 @@ test('header and footer alignment is validated and sent after the text change in
  assert.equal(go({header:'H',footerAlign:'right'}),true);assert.deepEqual(calls,['text H|null|null','align null|right']);
  calls.length=0;assert.equal(go({headerAlign:'center'}),true);assert.deepEqual(calls,['align center|null']);
 });
+test('a header and footer change for one section goes to the section call with only the given keys',()=>{
+ const calls:string[]=[];
+ const S=class{constructor(_b?:Uint8Array){}free(){}blocks(){return '[]';}paginate(){return 1;}page_info(){return '{"pages":[],"cacheHits":0,"cacheMisses":0}';}text(){return '';}
+  section_header_footer(b:number){calls.push('read '+b);return '{"section":2,"sections":3,"header":{"text":"H","editable":true},"footer":{"text":"","pageNumber":false,"editable":true}}';}
+  set_section_header_footer(b:number,j:string){calls.push(`set ${b} ${j}`);}set_header_footer(){calls.push('WHOLE');}};
+ const k=new DocumentsCore(S as unknown as new(b:Uint8Array)=>DocSessionLike);k.handle({id:1,kind:'open',bytes:new Uint8Array(4)} as never);
+ const go=(r:object)=>{try{return (k.handle({id:2,kind:'setHeaderFooter',...r} as never).res as {ok:boolean}).ok;}catch{return false;}};
+ for(const bad of [{block:2},{block:-1,header:'x'},{block:1.5,header:'x'},{block:2,header:'a\nb'},{block:2,footerAlign:'x'},{block:2,pageNumber:'y'}])assert.equal(go(bad),false,JSON.stringify(bad));
+ assert.equal(calls.length,0);
+ assert.equal(go({block:2,header:'Ch 2',pageNumber:true,headerAlign:'right'}),true);assert.deepEqual(calls,['set 2 {"header":"Ch 2","pageNumber":true,"headerAlign":"right"}']);
+ calls.length=0;const st=k.handle({id:3,kind:'headerFooterState',block:4} as never).res as {state?:{section:number;sections:number}};
+ assert.deepEqual(calls,['read 4']);assert.deepEqual([st.state?.section,st.state?.sections],[2,3]);
+ assert.equal((k.handle({id:4,kind:'headerFooterState',block:-3} as never).res as {ok:boolean}).ok,false);
+});
 test('footer page total is validated and applied after the text change',()=>{
  const calls:string[]=[];
  const S=class{constructor(_b?:Uint8Array){}free(){}blocks(){return '[]';}paginate(){return 1;}page_info(){return '{"pages":[],"cacheHits":0,"cacheMisses":0}';}text(){return '';}
