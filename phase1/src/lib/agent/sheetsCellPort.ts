@@ -30,12 +30,13 @@ export class SheetsApplyError extends Error{constructor(message:string,readonly 
 export interface SheetsAppliedCell {receipt:SheetsEditReceipt;changed:boolean;}
 /** Host-owned apply of a reviewed proposal. Re-checks target, permission and token; validates the receipt. */
 export async function applyReviewedCell(proposal:SheetsCellProposal,host:SheetsCellHost,exec:SheetsCellExecutor,signal:AbortSignal):Promise<SheetsAppliedCell>{
- const t=proposal.target;
+ proposal=structuredClone(proposal);const t=proposal.target;
  try{assertTarget(t,host.current());host.assertPermission('apply',t);signal.throwIfAborted();}catch(e){throw new SheetsApplyError(e instanceof Error?e.message:'Refused.','none');}
  let fresh:SheetsCellSnapshot;
  try{fresh=await host.snapshot(signal);signal.throwIfAborted();assertTarget(fresh.target,t);assertTarget(t,host.current());}catch(e){throw new SheetsApplyError(e instanceof Error?e.message:'Refused.','none');}
- const n=fresh.native;
+ const n=fresh.native,reviewed=proposal.before.native;
  if(!n||typeof n.token!=='string'||!n.token)throw new SheetsApplyError('No native state token.','none');
+ if(!reviewed||reviewed.token!==n.token||JSON.stringify(reviewed.value)!==JSON.stringify(n.value)||reviewed.formula!==n.formula)throw new SheetsApplyError('Native cell changed since review.','none');
  const was=fresh.formula?(fresh.formula.startsWith('=')?fresh.formula:'='+fresh.formula):fresh.displayText;
  const asked=proposal.before.formula?(proposal.before.formula.startsWith('=')?proposal.before.formula:'='+proposal.before.formula):proposal.before.displayText;
  if(was!==asked)throw new SheetsApplyError('Cell changed since review.','none');
