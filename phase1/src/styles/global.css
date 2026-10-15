@@ -58,7 +58,7 @@ input,textarea,[contenteditable]:not([contenteditable="false"]),.cm-content,[dat
 
 
 
-.diff-line{display:grid;grid-template-columns:40px 40px 20px minmax(0,1fr);font:12px/1.7 var(--mono);white-space:pre}.diff-line code{font:inherit;overflow-wrap:anywhere;white-space:pre-wrap}.diff-added{background:#22864b18}.diff-removed{background:#d5404020}.diff-added>span:nth-child(3){color:#167436}.diff-removed>span:nth-child(3){color:#a82e2e}:root[data-theme=dark] .diff-added>span:nth-child(3){color:#8addac}:root[data-theme=dark] .diff-removed>span:nth-child(3){color:#ffaaaa}
+.diff-line{display:grid;grid-template-columns:40px 40px 20px minmax(0,1fr);font:12px/1.7 var(--mono);white-space:pre}.diff-line code{font:inherit;overflow-wrap:anywhere;white-space:pre-wrap}.diff-added{background:#22864b18}.diff-removed{background:#d5404020}.diff-added>span:nth-child(3){color:#146c32}.diff-removed>span:nth-child(3){color:#a82e2e}:root[data-theme=dark] .diff-added>span:nth-child(3){color:#8addac}:root[data-theme=dark] .diff-removed>span:nth-child(3){color:#ffaaaa}
 [data-code-theme=github]{--syntax-tag:#116329;--syntax-keyword:#cf222e;--syntax-string:#0a3069;--syntax-number:#0550ae;}
 :root[data-theme=dark][data-code-theme=github]{--syntax-tag:#7ee787;--syntax-keyword:#ff7b72;--syntax-string:#a5d6ff;--syntax-number:#79c0ff;}
 :root[data-code-theme=solarized]{--syntax-tag:#268bd2;--syntax-keyword:#859900;--syntax-string:#2aa198;--syntax-number:#cb4b16;}

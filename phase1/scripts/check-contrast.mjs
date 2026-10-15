@@ -169,15 +169,16 @@ const diffBody=(sel)=>{const esc=sel.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');const
 const diffHex=(body,prop)=>{const m=body?.match(new RegExp('(?:^|;)\\s*'+prop+':\\s*(#[0-9a-fA-F]{3,8})\\s*(?:;|$)'));return m?m[1]:null;};
 for(const side of ['added','removed']){
  const sur=diffHex(diffBody(`.diff-${side}`),'background');
- for(const [mode,sel] of [['light',`.diff-${side}>span:nth-child(3)`],['dark',`:root[data-theme=dark] .diff-${side}>span:nth-child(3)`]]){
-  const ink=diffHex(diffBody(sel),'color');
-  if(!sur||!ink){fail(`diff ${mode} .diff-${side}: missing surface or ink rule`);continue;}
-  const surT={rgb:hex(sur.slice(1)),alpha:hexAlpha(sur.slice(1))};
+ const inks={light:diffHex(diffBody(`.diff-${side}>span:nth-child(3)`),'color'),dark:diffHex(diffBody(`:root[data-theme=dark] .diff-${side}>span:nth-child(3)`),'color')};
+ if(!sur||!inks.light||!inks.dark){fail(`diff .diff-${side}: missing surface or ink rule`);continue;}
+ const surT={rgb:hex(sur.slice(1)),alpha:hexAlpha(sur.slice(1))};
+ for(const [name,v] of Object.entries(themes)){
+  const mode=name.includes('dark')?'dark':'light';
   for(const bk of ['--bg-base','--bg-panel','--bg-surface']){
-   if(!themes[mode][bk])continue;
-   const comp=over(surT,themes[mode][bk]);
-   const r=ratio(hex(ink.slice(1)),comp);
-   if(r<4.5)fail(`diff ${mode} .diff-${side} sign on ${bk}: ${r.toFixed(2)} (${ink} on ${sur} over ${themes[mode][bk].raw})`);
+   if(!v[bk])continue;
+   const comp=over(surT,v[bk]);
+   const r=ratio(hex(inks[mode].slice(1)),comp);
+   if(r<4.5)fail(`diff ${name} .diff-${side} sign on ${bk}: ${r.toFixed(2)} (${inks[mode]} on ${sur} over ${v[bk].raw})`);
   }
  }
 }
