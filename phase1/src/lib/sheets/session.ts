@@ -3,7 +3,8 @@ import type {WorkbookInfo} from './protocol';
 import {installBeforeUnload} from '../closeFlow';
 /** Dirty state of open workbooks, kept outside React so the media close guard and beforeunload can read it. */
 const dirty=new Set<string>();
-export const setSheetsDirty=(name:string,value:boolean)=>{if(value)dirty.add(name);else dirty.delete(name);};
+const dirtyListeners=new Set<()=>void>();export const subscribeSheetsDirty=(f:()=>void)=>{dirtyListeners.add(f);return()=>{dirtyListeners.delete(f);};};
+export const setSheetsDirty=(name:string,value:boolean)=>{if(value)dirty.add(name);else dirty.delete(name);dirtyListeners.forEach(f=>{try{f();}catch{/* Dirty state observers cannot affect native commits. */}});};
 export const sheetsIsDirty=(name:string)=>dirty.has(name);
 export const dirtySheetNames=()=>[...dirty];
 export const hasDirtySheets=()=>dirty.size>0;

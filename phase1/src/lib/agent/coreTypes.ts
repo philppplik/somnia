@@ -2,7 +2,7 @@ import type {ChangeSet, Decisions} from '../agentDiff';
 export interface AgentContext {executionMode?:'local-native';localContext?:import('./localAssistant').LocalContextChoices;task?:import('./taskRouting').LocalTask;activeFile:string;selectedElementId:string|null;disclosureProvider?:string;activeMedia?:string;studio?:import('./studioContextAdapter').AgentStudioContext}
 export interface AgentRequest {prompt:string;context:AgentContext}
 export type DiffLine={kind:'add'|'del'|'ctx';text:string};
-export interface AgentProposal {id:string;file:string;lines:DiffLine[];added:number;removed:number;changeSet?:ChangeSet;native?:import('./documentCore').NativeProposal;photo?:import('./photoStudio').PhotoPreview}
+export interface AgentProposal {id:string;file:string;lines:DiffLine[];added:number;removed:number;changeSet?:ChangeSet;native?:import('./documentCore').NativeProposal;sheets?:{address:string;before:string;after:string};photo?:import('./photoStudio').PhotoPreview}
 export type ApprovalDecision='accept'|'accept_for_session'|'decline'|'cancel';
 export interface AgentApproval {id:string;path:string;action:string;resolve:(decision:ApprovalDecision)=>void}
 export type AgentEvent =

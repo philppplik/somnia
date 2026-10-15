@@ -1,3 +1,11 @@
+import {addressOf} from '../sheets/format';
+import {createSheetsCellPort,type SheetsCellHost,type SheetsCellTarget} from './sheetsCellPort';
+import {nativeSheetsSnapshot} from './sheetsCellSnapshot';
+import {SheetsReviewedTransactions} from './sheetsReviewedTransactions';
+import {getSheetsSession,setSheetsDirty} from '../sheets/session';
+import {SheetsEngine} from '../sheets/engine';
+import {getSheetsSelection} from '../sheets/sheetsStore';
+import {findMedia} from '../media';
 import {assertLocalNativeRun,nativeRunLedger,type NativeActionReceipt} from './nativeRun';
 import {verifiedLocalProvider} from './verifiedLocalProvider';
 import {publishLocalContextBudget} from './localContextBudgetStore';
@@ -51,7 +59,7 @@ import {agentPrivacy,createAIProvenance,type AIProvenance} from './privacy';
 import {reviewChangeSet,type ChangeSet} from '../agentDiff';
 import {holdAgentAutosave} from './autosaveHold';
 import {applyOperations,getState,getProjectGeneration,subscribe,patchState,undoAIGroup,subscribeProjectTransactions} from '../../store/appStore';
-import type {AgentCore,AgentEvent,AgentApproval,AgentProposal,DiffLine} from './types';
+import type {AgentCore,AgentEvent,AgentApproval,AgentProposal,DiffLine} from './coreTypes';
 import type {AgentProvider,AgentProviderRequest} from './types';
 export interface AgentConfiguration {provider:AuthProvider;model:string;apiKey:string;allowActiveFile:boolean;customPrompts?:CustomPrompt[];localRuntime?:LocalRuntimePreferences}
 let config:AgentConfiguration={provider:'ollama',model:'',apiKey:'',allowActiveFile:false};
@@ -94,6 +102,7 @@ let sessionProvider='';
 let session:AgentSession|null=null,epoch=-1,send:((event:AgentEvent)=>void)|null=null;
 export const appliedAgentProvenance=new Map<string,AIProvenance>();
 const proposals=new Map<string,ChangeSet>();
+const sheetsTransactions=new SheetsReviewedTransactions();const sheetsProposalIds=new Set<string>();const sheetsProposalPaths=new Map<string,string>();const sheetsProposalEngines=new Map<string,SheetsEngine>();
 const permissions=new Map<string,Set<'read'|'write'>>();
 let approvalCounter=0;
 function currentFiles(){return getState().files;}
@@ -156,7 +165,13 @@ function createTools(project:string,context:ContextPackage,nodes:ReturnType<type
  // Older typed adapters stage through a synchronous host callback. Flush into the same session proposal store.
  let staged:string|undefined;const propose=(after:string)=>{scoped();documents.validate(context.document,after);staged=after;};
  const path=context.document.path,adapter=context.document.adapter;
- const registry=adapter===photoAdapter.id?createPhotoStudioRegistry({snapshot:scoped,preview:async(after,signal)=>{const preview=await previewPhoto(path,after,signal);scoped();photoPreviews.set(after,preview);}})
+ const sheetsHost=()=>{
+  if(project==='mcp')throw Error('Sheets reviewed edits are available only in the local sidepanel.');
+  const owner=getSheetsSession(path),engine=owner?.engine;if(!owner||!(engine instanceof SheetsEngine)||owner.url!==findMedia(path)?.url)throw Error('Sheets session unavailable.');
+  const current=()=>{scoped();const selected=getSheetsSelection(),live=getSheetsSession(path);if(!selected||selected.editing||selected.file!==path||live!==owner||live.engine!==engine||selected.sheet!==owner.sheet||selected.address!==addressOf(owner.sel.row,owner.sel.col)||selected.range&&(selected.range.r0!==selected.range.r1||selected.range.c0!==selected.range.c1))throw Error('Select one current Sheets cell.');const target:SheetsCellTarget={document:context.document,sheet:selected.sheet,address:selected.address,workerEpoch:engine.selectionReadEpoch};return {engine,target};};
+  const host:SheetsCellHost={current:()=>current().target,snapshot:nativeSheetsSnapshot(engine,current),assertPermission:()=>{scoped();if(getCollabEngine().snapshot().role!=='none')throw Error('Reviewed Sheets edits require an unshared workbook.');},stage:p=>{const id=crypto.randomUUID();sheetsTransactions.stage(id,p,host,engine);sheetsProposalIds.add(id);sheetsProposalPaths.set(id,path);sheetsProposalEngines.set(id,engine);const before=p.before.formula?(p.before.formula.startsWith('=')?p.before.formula:'='+p.before.formula):p.before.displayText;const publicProposal:AgentProposal={id,file:path,lines:[{kind:'del',text:before},{kind:'add',text:p.input}],added:1,removed:1,sheets:{address:p.target.address,before,after:p.input}};send?.({type:'proposal',proposal:publicProposal});}};current();return createSheetsCellPort(host);
+ };
+ const registry=context.document.studioKind==='sheets'?sheetsHost():adapter===photoAdapter.id?createPhotoStudioRegistry({snapshot:scoped,preview:async(after,signal)=>{const preview=await previewPhoto(path,after,signal);scoped();photoPreviews.set(after,preview);}})
   :adapter===photoDevelopAdapter.id?createPhotoDevelopRegistry({snapshot:scoped,info:()=>{scoped();return getPhotoDevelop(path)?.session.metadata??null;},propose})
   :adapter===soundAdapter.id?createSoundStudioRegistry({snapshot:scoped,plugins:()=>{scoped();return getSound(path)?.session.plugins??[];},info:()=>{scoped();const s=getSound(path)?.session;if(!s?.original)return null;const i=s.original.report.input,r=s.processed?.report;return {name:path,duration_s:i.duration_s,sample_rate:i.sample_rate,channels:i.channels,rendered:r?{duration_s:r.output.duration_s,peak_db:r.output.peak_db,rms_db:r.output.rms_db,steps:r.steps}:null};},propose})
   :adapter===deckAdapter.id?createDeckStudioRegistry({snapshot:scoped,propose})
@@ -196,7 +211,7 @@ export function inspectStudioToolDefinitions(path:string){
 }
 /** User-click preparation only. Pins native identity/revision, uses existing reviewed transaction + undo. */
 export function stageLocalVisionResult(path:string,text:string,destination:VisionDestination,model:string):AgentProposal {
- if(session?.status==='running'||proposals.size)throw Error('Stop generation and finish pending review before staging an image description.');
+ if(session?.status==='running'||proposals.size||sheetsTransactions.pending)throw Error('Stop generation and finish pending review before staging an image description.');
  if(getState().activeStudio!=='code'&&getState().activeStudio!=='design')throw Error('Open the target in Code or Design studio first.');
  if(path!==getState().activeFile)throw Error('Active source changed.');
  epoch=getProjectGeneration();
@@ -261,7 +276,7 @@ export const realCore:AgentCore={
  run(request,onEvent){
   if(request.context.executionMode==='local-native'&&!request.context.localContext)request={...request,context:{...request.context,localContext:{...defaultLocalContext}}};
   const trimmed=request.context.localContext?normalizeLocalContext(request.context.localContext):null;if(trimmed)request={...request,context:trimLocalContext(request.context,trimmed)};
-  if((activeController&&!activeController.signal.aborted)||session?.status==='running'||proposals.size){queueMicrotask(()=>onEvent({type:'error',message:'Stop the active turn or review the pending proposal first.'}));return {cancel(){}};}
+  if((activeController&&!activeController.signal.aborted)||session?.status==='running'||proposals.size||sheetsTransactions.pending){queueMicrotask(()=>onEvent({type:'error',message:'Stop the active turn or review the pending proposal first.'}));return {cancel(){}};}
   const controller=new AbortController();let stopped=false;const runId=++runGeneration;
   const deliver=(e:AgentEvent)=>{if(!stopped&&runId===runGeneration)onEvent(e);};send=deliver;
   const taskChoice=taskModelChoice(config.localRuntime?.taskModels,request.context.task??'chat');const requestProvider=taskChoice?.provider??config.provider;
@@ -274,7 +289,7 @@ export const realCore:AgentCore={
   const runPrompts=trimmed&&!trimmed.customPrompts?[]:config.customPrompts;
   const contextKey=JSON.stringify({executionMode:request.context.executionMode,choices:trimmed,document:request.context.activeMedia??request.context.activeFile,studio:request.context.studio?.studioId});
   const generation=getProjectGeneration();
-  if(epoch!==generation){session?.cancel();session=null;sessionSerial++;proposals.clear();permissions.clear();appliedAgentProvenance.clear();documents.clear();transactions.clear();nativeIds.clear();mcpProposalMap.clear();syncMcpProposals();epoch=generation;}
+  if(epoch!==generation){session?.cancel();session=null;sessionSerial++;sheetsTransactions.clear();sheetsProposalIds.clear();sheetsProposalPaths.clear();sheetsProposalEngines.clear();proposals.clear();permissions.clear();appliedAgentProvenance.clear();documents.clear();transactions.clear();nativeIds.clear();mcpProposalMap.clear();syncMcpProposals();epoch=generation;}
   photoPreviews.clear();policy.revoke();syncDocuments();activeController=controller;
   void (async()=>{
    if(taskChoice){const runtime=new LocalModelsRuntime();const inventory=await runtime.snapshot();controller.signal.throwIfAborted();if(inventory.inventoryError||inventory.state!=='running'||!requiresExactInstalledTaskModel(taskChoice.model,inventory.models.map(m=>m.id)))throw Error(t('local.task.missing',{model:taskChoice.model}));deliver({type:'provenance',provider:'ollama',model:taskChoice.model});}
@@ -289,12 +304,13 @@ export const realCore:AgentCore={
      if(event.type==='text')deliver({type:'text-delta',text:event.text});
      else if(event.type==='notice')deliver({type:'error',message:event.message,code:event.code,retryable:event.retryable});
      else if(event.type==='usage')deliver({type:'usage',...event.usage});
-    }});if(previous)session.restore({...previous,projectId:session.projectId,messages:previous.messages.filter(m=>m.role==='user'||m.role==='assistant'&&!m.toolCalls?.length)});await session.prompt(request.prompt);nativeRunLedger.record(ledgerRun,{phase:session.status==='error'?'failed':'done',history:0,readback:'unverified'});deliver({type:'done'});return;
+    }});if(previous)session.restore({...previous,projectId:session.projectId,messages:previous.messages.filter(m=>m.role==='user'||m.role==='assistant'&&!m.toolCalls?.length)});await session.prompt(request.prompt);if(session.status==='error')for(const id of sheetsProposalIds)if(sheetsTransactions.reject(id)){sheetsProposalIds.delete(id);sheetsProposalPaths.delete(id);sheetsProposalEngines.delete(id);}nativeRunLedger.record(ledgerRun,{phase:session.status==='error'?'failed':'done',history:0,readback:'unverified'});deliver({type:'done'});return;
    }
   // Pin identity/revision before any approval or provider work, never retarget on a tab switch.
   let base:ReturnType<DocumentRegistry['snapshot']>;
   try{base=documents.snapshot(request.context.activeMedia??request.context.activeFile);if(base.ref.studioKind==='unsupported')throw Error('No safe context for this document.');}
   catch(e){throw e;}
+  if(base.ref.studioKind==='sheets'&&requestProvider!=='ollama')throw Error('Sheets native tools require local Ollama. No cloud fallback.');
   const textSelection=trimmed&&!trimmed.selection?null:readActiveSelection();const selectedNode=getState().nodes.flatMap(function flatten(n):import('../editorPort').EditorNode[] {return [n,...n.children.flatMap(flatten)];}).find(n=>n.id===request.context.selectedElementId);
   const selection:SelectionRef|null=base.ref.studioKind!=='code'?null:textSelection?.path===base.ref.path&&textSelection.to>textSelection.from?{from:textSelection.from,to:textSelection.to}:selectedNode?{from:selectedNode.from,to:selectedNode.to,nodeId:selectedNode.id}:null;
   const nodes=structuredClone(getState().designFile===base.ref.path?getState().nodes:[]);
@@ -327,13 +343,14 @@ export const realCore:AgentCore={
     }
    }});
    if(previous)session.restore({...previous,projectId:session.projectId,messages:previous.messages.filter(m=>m.role==='user'||m.role==='assistant'&&!m.toolCalls?.length)});
-   await session.prompt(request.prompt);nativeRunLedger.record(ledgerRun,{phase:session.status==='error'?'failed':'done',history:0,readback:'unverified'});deliver({type:'done'});
+   await session.prompt(request.prompt);if(session.status==='error')for(const id of sheetsProposalIds)if(sheetsTransactions.reject(id)){sheetsProposalIds.delete(id);sheetsProposalPaths.delete(id);sheetsProposalEngines.delete(id);}nativeRunLedger.record(ledgerRun,{phase:session.status==='error'?'failed':'done',history:0,readback:'unverified'});deliver({type:'done'});
   })().catch(e=>{nativeRunLedger.record(ledgerRun,{phase:'failed',history:0,readback:'unverified'});deliver({type:'error',message:e instanceof Error?e.message:String(e)});}).finally(()=>{if(activeController===controller)activeController=null;});
-  return {cancel(){controller.abort();session?.cancel();nativeRunLedger.record(ledgerRun,{phase:'stopped',history:0,readback:'unverified'});stopped=true;}};
+  return {cancel(){for(const id of sheetsProposalIds)if(sheetsTransactions.reject(id)){sheetsProposalIds.delete(id);sheetsProposalPaths.delete(id);}controller.abort();session?.cancel();nativeRunLedger.record(ledgerRun,{phase:'stopped',history:0,readback:'unverified'});stopped=true;}};
  },
  async applyProposal(id,decisions){
   if(epoch!==getProjectGeneration())throw Error('Project changed. Proposal is no longer valid.');
   dropMcpProposal(id);
+  if(sheetsProposalIds.has(id)){const path=sheetsProposalPaths.get(id)!;try{await sheetsTransactions.accept(id,new AbortController().signal);}catch(e){if(e instanceof Error&&'outcome' in e&&e.outcome==='unknown')setSheetsDirty(path,true);throw e;}setSheetsDirty(path,true);patchState({notice:'Reviewed Sheets edit applied in memory, not saved.'});return;}
   const set=proposals.get(id);if(!set){const n=nativeIds.get(id);if(n&&transactions.get(n).state==='accepted')return;throw Error('Proposal no longer exists.');}
   const nativeId=nativeIds.get(id);
   if(nativeId){
@@ -346,9 +363,9 @@ export const realCore:AgentCore={
   throw Error('Legacy proposals are not supported in native studio mode.');
 
  },
- async rejectProposal(id){dropMcpProposal(id);const set=proposals.get(id);if(set)for(const f of set.files)photoPreviews.delete(f.proposedText);const n=nativeIds.get(id);if(n)transactions.reject(n);proposals.delete(id);session?.discardProposals();},
- async revertProposal(id){dropMcpProposal(id);const n=nativeIds.get(id);if(!n)throw Error('No native AI transaction.');await transactions.undo(n);const receipt=transactions.get(n);nativeRunLedger.record(receipt.runId,{phase:'undone',target:documents.snapshot(receipt.base.path).ref,proposalId:id,history:'unverified',readback:documents.snapshot(receipt.base.path).text===receipt.before?'verified':'unverified'});photoPreviews.delete(transactions.get(n).after);patchState({notice:'AI transaction undone, not saved.'});},
- clear(){actionReceipts.clear();nativeRunLedger.clear();photoPreviews.clear();activeController?.abort();activeController=null;runGeneration++;sessionSerial++;session?.cancel();session=null;proposals.clear();permissions.clear();policy.revoke();send=null;}
+ async rejectProposal(id){if(sheetsProposalIds.has(id)){dropMcpProposal(id);sheetsTransactions.reject(id);sheetsProposalIds.delete(id);return;}dropMcpProposal(id);const set=proposals.get(id);if(set)for(const f of set.files)photoPreviews.delete(f.proposedText);const n=nativeIds.get(id);if(n)transactions.reject(n);proposals.delete(id);session?.discardProposals();},
+ async revertProposal(id){if(sheetsProposalIds.has(id)){await sheetsTransactions.undo(id,new AbortController().signal,()=>{if(getCollabEngine().snapshot().role!=='none'||getSheetsSession(sheetsProposalPaths.get(id)!)?.engine!==sheetsProposalEngines.get(id))throw Error('Workbook is shared or replaced.');});sheetsProposalIds.delete(id);patchState({notice:'Sheets AI edit undone, not saved.'});return;}dropMcpProposal(id);const n=nativeIds.get(id);if(!n)throw Error('No native AI transaction.');await transactions.undo(n);const receipt=transactions.get(n);nativeRunLedger.record(receipt.runId,{phase:'undone',target:documents.snapshot(receipt.base.path).ref,proposalId:id,history:'unverified',readback:documents.snapshot(receipt.base.path).text===receipt.before?'verified':'unverified'});photoPreviews.delete(transactions.get(n).after);patchState({notice:'AI transaction undone, not saved.'});},
+ clear(){sheetsTransactions.clear();sheetsProposalIds.clear();sheetsProposalPaths.clear();sheetsProposalEngines.clear();actionReceipts.clear();nativeRunLedger.clear();photoPreviews.clear();activeController?.abort();activeController=null;runGeneration++;sessionSerial++;session?.cancel();session=null;proposals.clear();permissions.clear();policy.revoke();send=null;}
 };
 subscribeProjectTransactions(tx=>{for(const op of tx.operations??[])if(op.type==='renameFile'){try{documents.rename(op.file,op.to);}catch{/* document not registered yet */}}});
 subscribe(()=>{if(epoch!==getProjectGeneration()){realCore.clear?.();documents.clear();transactions.clear();nativeIds.clear();epoch=getProjectGeneration();}syncDocuments();});
