@@ -1269,6 +1269,7 @@ export default function Viewport3D(){
    setSnap:patch=>{patchStudio3D({snap:mergeSnap(getStudio3DState().snap,patch)});applySnap();},
    setPivotMode:mode=>{patchStudio3D({pivot:mode});syncCursorMark();syncGizmo();invalidate();},
    setCursor:p=>{patchStudio3D({cursor:p});syncCursorMark();if(getStudio3DState().pivot==='cursor')syncGizmo();invalidate();},
+   cursorToSelection:()=>{const a=getStudio3DState().edit!=null?stage.editSelectionCenter():stage.objectsCenter(currentSet());const p={x:a[0],y:a[1],z:a[2]};patchStudio3D({cursor:p});syncCursorMark();if(getStudio3DState().pivot==='cursor')syncGizmo();invalidate();},
    setMeasure:on=>{patchStudio3D({measure:on?{a:null,b:null}:null});syncMeasure();invalidate();},
    setEnv:patch=>{patchStudio3D({env:mergeEnv(getStudio3DState().env,patch)});void applyEnv();},
    openEnvFile:async file=>{

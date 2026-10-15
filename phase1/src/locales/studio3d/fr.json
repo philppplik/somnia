@@ -1021,5 +1021,6 @@
  "studio3d.mesh.screw": "Vis",
  "studio3d.hist.screw_one": "Visser {name}",
  "studio3d.hist.screw_other": "Visser {count} objets",
- "cmd.studio3d.edit.selectFacing": "Sélectionner les faces du maillage 3D édité orientées le long d'un axe du maillage"
+ "cmd.studio3d.edit.selectFacing": "Sélectionner les faces du maillage 3D édité orientées le long d'un axe du maillage",
+ "cmd.studio3d.cursor.toSelection": "Déplacer le curseur 3D au centre de la sélection"
 }

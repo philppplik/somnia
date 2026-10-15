@@ -724,6 +724,32 @@ export class Stage{
  editSelection():{verts:number[];edges:[number,number][];faces:number[]}{
   return{verts:[...this.editSel.verts].sort((a,b)=>a-b),edges:[...this.editSel.edges.values()],faces:[...this.editSel.faces].sort((a,b)=>a-b)};
  }
+
+ /** World-space centre of the current edit-mode selection: the centroid of every vertex touched by the selected elements. Throws when nothing is selected. */
+ editSelectionCenter():[number,number,number]{
+  const m=this.editMesh();
+  const pos=m.geometry.getAttribute('position'),idx=m.geometry.getIndex();
+  const verts=new Set<number>();
+  for(const v of this.editSel.verts)verts.add(v);
+  for(const [a,b]of this.editSel.edges.values()){verts.add(a);verts.add(b);}
+  for(const f of this.editSel.faces)for(let e=0;e<3;e++)verts.add(idx?idx.getX(f*3+e):f*3+e);
+  if(!verts.size)throw new StageError('Select something first.');
+  const c=new THREE.Vector3();
+  for(const v of verts)c.add(new THREE.Vector3(pos.getX(v),pos.getY(v),pos.getZ(v)));
+  c.divideScalar(verts.size);
+  m.updateWorldMatrix(true,false);
+  c.applyMatrix4(m.matrixWorld);
+  return[c.x,c.y,c.z];
+ }
+ /** World-space centre of a set of objects: the average of their world positions. Throws when the set is empty. */
+ objectsCenter(ids:number[]):[number,number,number]{
+  const objs=this.needMany(ids,1);
+  this.root.updateWorldMatrix(true,true);
+  const c=new THREE.Vector3();
+  for(const o of objs)c.add(o.getWorldPosition(new THREE.Vector3()));
+  c.divideScalar(objs.length);
+  return[c.x,c.y,c.z];
+ }
  /** Every unique edge of the edited mesh as index pairs (low index first). */
  private allEdges(m:THREE.Mesh):[number,number][]{
   const idx=m.geometry.getIndex();const pos=m.geometry.getAttribute('position');

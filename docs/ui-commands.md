@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-936 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+937 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -698,6 +698,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `studio3d.clip.remove` | Delete a 3D animation clip | View | studio3d |  |
 | `studio3d.clip.rename` | Rename a 3D animation clip | View | studio3d |  |
 | `studio3d.cursor.set` | Move the 3D cursor | Tools | studio3d |  |
+| `studio3d.cursor.toSelection` | Move the 3D cursor to the selection centre | Tools | studio3d |  |
 | `studio3d.edit.bevel` | Bevel vertices | Edit | studio3d |  |
 | `studio3d.edit.bevelEdge` | Bevel edges | Edit | studio3d |  |
 | `studio3d.edit.bisect` | Cut the edited mesh by an axis plane and keep both halves | Edit | studio3d |  |

@@ -227,6 +227,7 @@ export interface Studio3DController{
  setSnap(patch:Partial<SnapSettings>):void;
  setPivotMode(mode:PivotMode):void;
  setCursor(p:Vec3):void;
+ cursorToSelection():void;
  setMeasure(on:boolean):void;
  renderStill(opts?:RenderOptions):Promise<void>;
  exportGlb(opts?:{clips?:string[]|null}):Promise<void>;
@@ -397,6 +398,7 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<RenderOptions>('studio3d.render.still','Render a PNG still of the 3D view or a 3D camera','Project',p=>need().renderStill(p??{}),object({camera:{type:'integer',minimum:0},width:{type:'integer',minimum:1,maximum:16384},height:{type:'integer',minimum:1,maximum:16384},transparent:{type:'boolean'}},[])),
   add<{slot:TextureSlot}>('studio3d.texture.open','Choose an image for a texture slot of the selected 3D object','Edit',p=>textureOpener!(p.slot),object({slot:{enum:[...TEXTURE_SLOTS]}}),()=>hasScene()&&!!textureOpener&&getStudio3DState().selectedInfo?.material!=null),
   add<{id:number;slot:TextureSlot}>('studio3d.texture.preview','Show a small preview image of a texture slot','Edit',p=>need().texturePreview(p.id,p.slot),object({id:{type:'integer',minimum:0},slot:{enum:[...TEXTURE_SLOTS]}},['id','slot']),hasScene),
+  add('studio3d.cursor.toSelection','Move the 3D cursor to the selection centre','Tools',()=>need().cursorToSelection(),undefined,()=>!!controller),
   add<{id?:number;slot:TextureSlot}>('studio3d.texture.clear','Remove the image from a texture slot','Edit',p=>need().setTextureFile(p.id??getStudio3DState().selected??-1,p.slot,null),object({id:{type:'integer',minimum:0},slot:{enum:[...TEXTURE_SLOTS]}},['slot']),hasScene),
   add<{kind:'checker'|'grid'|'stripes'|'noise';slot:TextureSlot;id?:number;size?:number;scale?:number;colorA?:string;colorB?:string;seed?:number}>('studio3d.texture.generate','Generate a procedural texture (checker, grid, stripes or noise) for a texture slot of the selected 3D object','Edit',p=>need().generateTexture(p.id??getStudio3DState().selected??-1,p.slot,{kind:p.kind,size:p.size,scale:p.scale,colorA:p.colorA,colorB:p.colorB,seed:p.seed}),object({kind:{enum:['checker','grid','stripes','noise']},slot:{enum:[...TEXTURE_SLOTS]},id:{type:'integer',minimum:0},size:{type:'integer',minimum:16,maximum:1024},scale:{type:'number',minimum:1,maximum:64},colorA:{type:'string',pattern:'^#[0-9a-fA-F]{6}$'},colorB:{type:'string',pattern:'^#[0-9a-fA-F]{6}$'},seed:{type:'integer',minimum:1,maximum:1000000000}},['kind','slot']),()=>hasScene()&&getStudio3DState().selectedInfo?.material!=null),
   add<{axis:MirrorAxis;copy?:boolean;ids?:number[]}>('studio3d.mesh.mirror','Mirror 3D objects across a world axis','Edit',p=>need().mirrorSelection(p.axis,!!p.copy,p.ids),object({axis:{enum:['x','y','z']},copy:{type:'boolean'},ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500}},['axis']),hasScene),

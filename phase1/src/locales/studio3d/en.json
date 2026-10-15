@@ -1021,5 +1021,6 @@
  "studio3d.mesh.screw": "Screw",
  "studio3d.hist.screw_one": "Screw {name}",
  "studio3d.hist.screw_other": "Screw {count} objects",
- "cmd.studio3d.edit.selectFacing": "Select faces of the edited 3D mesh pointing along a mesh axis direction"
+ "cmd.studio3d.edit.selectFacing": "Select faces of the edited 3D mesh pointing along a mesh axis direction",
+ "cmd.studio3d.cursor.toSelection": "Move the 3D cursor to the selection centre"
 }

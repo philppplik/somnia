@@ -8202,6 +8202,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.cursor.toSelection",
+      "title": "Move the 3D cursor to the selection centre",
+      "category": "Tools",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.edit.bevel",
       "title": "Bevel vertices",
       "category": "Edit",

@@ -1021,5 +1021,6 @@
  "studio3d.mesh.screw": "Hélice",
  "studio3d.hist.screw_one": "Atornillar {name}",
  "studio3d.hist.screw_other": "Atornillar {count} objetos",
- "cmd.studio3d.edit.selectFacing": "Seleccionar caras de la malla 3D editada que apuntan a lo largo de un eje de la malla"
+ "cmd.studio3d.edit.selectFacing": "Seleccionar caras de la malla 3D editada que apuntan a lo largo de un eje de la malla",
+ "cmd.studio3d.cursor.toSelection": "Mover el cursor 3D al centro de la selección"
 }
