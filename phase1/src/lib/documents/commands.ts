@@ -10,7 +10,7 @@ import {CELL_BASE} from './edit';
 import {styleList} from './styles';
 import {goToBlock,scrollToPage} from './navigate';
 import {safeCopyName,safeFormatName,safePdfName} from './saveCopy';
-import {EXPORT_EXTS,type ExportExt} from './protocol';
+import {EXPORT_EXTS,PROOF_LANGS,type ExportExt} from './protocol';
 import {pickAndImport} from './importFormat';
 import {commentsOpen,setCommentsOpen} from './comments';
 import {setShortcutsOpen} from './shortcuts';
@@ -107,6 +107,12 @@ export function registerDocumentsCommands(){
   },()=>ready()&&!!getDocumentsState().caret),
   add('documents.toggleAllCaps','Toggle all caps',async()=>{await toggleFormat('allCaps');},()=>ready()&&!!getDocumentsState().caret),
   add('documents.toggleHidden','Hide or unhide the selected text',async()=>{await toggleFormat('hidden');},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.noProof.toggle','Do not check spelling in the selected text',async()=>{await toggleFormat('noProof');},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.language.set','Set the proofing language of the selected text',async p=>{
+   const l=(p as Record<string,unknown>|undefined)?.lang;
+   if(l!=='none'&&!(PROOF_LANGS as readonly unknown[]).includes(l))throw expected('Invalid "lang": use none, en-US, en-GB, de-DE, es-ES, fr-FR or pt-BR.');
+   await setCharLook({lang:l as 'none'});
+  },()=>ready()&&!!getDocumentsState().caret),
   add('documents.hidden.show','Show or hide hidden text',async()=>{await setShowHidden(!getDocumentsState().showHidden);},()=>ready()),
   add('documents.toggleDoubleStrike','Toggle double strikethrough',async()=>{await toggleFormat('doubleStrike');},()=>ready()&&!!getDocumentsState().caret),
   add('documents.charSpacing.set','Set character spacing',async p=>{

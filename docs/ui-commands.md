@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-912 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+914 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -361,6 +361,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `documents.indent.decrease` | Decrease indent | View | documents |  |
 | `documents.indent.increase` | Increase indent | View | documents |  |
 | `documents.insertPageBreak` | Insert page break | View | documents |  |
+| `documents.language.set` | Set the proofing language of the selected text | View | documents |  |
 | `documents.lineRule.set` | Set line height rule | View | documents |  |
 | `documents.link.remove` | Remove the link from the selected text | View | documents |  |
 | `documents.link.set` | Link the selected text | View | documents |  |
@@ -374,6 +375,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `documents.list.outdent` | Promote list item | View | documents |  |
 | `documents.list.restart` | Restart list numbering | View | documents |  |
 | `documents.list.style` | Set the list style | View | documents |  |
+| `documents.noProof.toggle` | Do not check spelling in the selected text | View | documents |  |
 | `documents.outline.goto` | Go to document paragraph | View | documents |  |
 | `documents.pages.goto` | Go to document page | View | documents |  |
 | `documents.pageSetup.set` | Set page setup | View | documents |  |

@@ -1,7 +1,7 @@
 import {checkFormatPatch,checkParaPatch,type FormatPatch,type FormatState,type ParaPatch,type ParaState} from './protocol';
 /** Character and paragraph formatting copied from one place, to be pasted onto another. */
 export interface Painted{format:FormatPatch;para:ParaPatch}
-const TRI=['bold','italic','underline','strike','smallCaps','allCaps','doubleStrike','hidden'] as const;
+const TRI=['bold','italic','underline','strike','smallCaps','allCaps','doubleStrike','hidden','noProof'] as const;
 const CHAR_VALUES=['font','size','color','underlineColor','charShading','spacing','scale','vertAlign'] as const;
 const PARA_VALUES=['align','indentLeft','indentFirst','indentRight','spaceBefore','spaceAfter','keepNext','keepLines','widowControl','contextualSpacing','shading'] as const;
 /** Keeps `key` only when the engine would accept it alone. */
@@ -18,6 +18,7 @@ export function capturePaint(f:FormatState|null,p:ParaState|null):Painted{
   for(const k of TRI){const v=f[k];if(v==='on')keep(format,k,true,checkFormatPatch);else if(v==='off')keep(format,k,false,checkFormatPatch);}
   if(f.underlineStyle&&f.underlineStyle!=='none')keep(format,'underlineStyle',f.underlineStyle,checkFormatPatch);
   for(const k of CHAR_VALUES){const v=f[k];if(v!==null&&v!==undefined)keep(format,k,v,checkFormatPatch);}
+  if(f.lang)keep(format,'lang',f.lang,checkFormatPatch);
   if(f.highlight&&f.highlight!=='other')keep(format,'highlight',f.highlight,checkFormatPatch);
  }
  if(p){

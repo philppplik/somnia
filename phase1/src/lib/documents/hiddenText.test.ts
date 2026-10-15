@@ -28,3 +28,11 @@ test('the character dialog only sends hidden when it changed',()=>{
  assert.deepEqual(buildLookPatch(on,{...lookFromState(on),hidden:false}),{hidden:false});
  assert.equal(buildLookPatch({bold:'off',italic:'off',underline:'off',hidden:'mixed'} as never,{...form,hidden:false}),null);
 });
+test('language and do-not-check patches are validated',()=>{
+ checkFormatPatch({noProof:true});checkFormatPatch({lang:'de-DE'});checkFormatPatch({lang:'none'});
+ for(const v of ['xx','en-us','',5,null])assert.throws(()=>checkFormatPatch({lang:v}));
+ assert.throws(()=>checkFormatPatch({noProof:'yes'}));
+ const f={bold:'off',italic:'off',underline:'off',noProof:'off',lang:null} as never;
+ const form=lookFromState(f);assert.equal(buildLookPatch(f,form),null);
+ assert.deepEqual(buildLookPatch(f,{...form,lang:'fr-FR',noProof:true}),{noProof:true,lang:'fr-FR'});
+});

@@ -590,6 +590,8 @@ impl DocSession {
         let mut char_shading: Option<Option<wordcraft_doc::props::Rgb>> = None;
         let mut double_strike: Option<bool> = None;
         let mut hidden: Option<bool> = None;
+        let mut no_proof: Option<bool> = None;
+        let mut lang: Option<Option<String>> = None;
         let mut spacing: Option<f32> = None;
         let mut scale: Option<f32> = None;
         let mut vert: Option<wordcraft_doc::props::VertAlign> = None;
@@ -672,6 +674,15 @@ impl DocSession {
                     scale = Some(n as f32);
                     continue;
                 }
+                "lang" => {
+                    let l = val.as_str().ok_or_else(|| "format field lang must be text".to_string())?;
+                    lang = Some(match l {
+                        "none" => None,
+                        "en-US" | "en-GB" | "de-DE" | "es-ES" | "fr-FR" | "pt-BR" => Some(l.to_string()),
+                        _ => return Err("format field lang must be none, en-US, en-GB, de-DE, es-ES, fr-FR or pt-BR".into()),
+                    });
+                    continue;
+                }
                 "spacing" => {
                     let n = val.as_f64().filter(|n| n.is_finite() && (-5.0..=30.0).contains(n)).ok_or_else(|| "format field spacing must be a number from -5 to 30 points".to_string())?;
                     spacing = Some(((n * 20.0).round() / 20.0) as f32);
@@ -700,6 +711,7 @@ impl DocSession {
                 "allCaps" => all_caps = Some(flag),
                 "doubleStrike" => double_strike = Some(flag),
                 "hidden" => hidden = Some(flag),
+                "noProof" => no_proof = Some(flag),
                 "clear" => {
                     if !flag {
                         return Err("format field clear must be true".into());
@@ -740,6 +752,12 @@ impl DocSession {
                 }
                 if let Some(v) = hidden {
                     cp.hidden = Some(v);
+                }
+                if let Some(v) = no_proof {
+                    cp.no_proof = Some(v);
+                }
+                if let Some(v) = &lang {
+                    cp.lang = v.clone();
                 }
                 if let Some(v) = small_caps {
                     cp.small_caps = Some(v);
@@ -815,8 +833,10 @@ impl DocSession {
         // strike, small caps, vertical alignment, highlight name, link ("" for none).
         let mut extra: Vec<(bool, bool, wordcraft_doc::props::VertAlign, &'static str, String)> = Vec::new();
         // all caps, double strike, character spacing.
-        let mut more: Vec<(bool, bool, f32, bool)> = Vec::new();
+        let mut more: Vec<(bool, bool, f32, bool, bool)> = Vec::new();
         let mut scales: Vec<f32> = Vec::new();
+        // The language tag of each run ("" for none).
+        let mut langs: Vec<String> = Vec::new();
         // underline style name, underline colour (hex or "auto"), character shading (hex or "none").
         let mut under: Vec<(&'static str, String, String)> = Vec::new();
         if sb == eb && so == eo {
@@ -828,7 +848,8 @@ impl DocSession {
             seen.push((rc.bold, rc.italic, rc.underline != wordcraft_doc::props::Underline::None));
             look.push((rc.font.clone(), rc.size, rc.color));
             extra.push(Self::extra_of(&rc, p.props_at(so)));
-            more.push((rc.caps, rc.double_strike, rc.spacing, rc.hidden));
+            more.push((rc.caps, rc.double_strike, rc.spacing, rc.hidden, rc.no_proof));
+            langs.push(rc.lang.clone().unwrap_or_default());
             scales.push(rc.scale);
             under.push(Self::under_of(&rc));
         } else {
@@ -840,7 +861,8 @@ impl DocSession {
                         seen.push((rc.bold, rc.italic, rc.underline != wordcraft_doc::props::Underline::None));
                         look.push((rc.font.clone(), rc.size, rc.color));
                         extra.push(Self::extra_of(&rc, cp));
-                        more.push((rc.caps, rc.double_strike, rc.spacing, rc.hidden));
+                        more.push((rc.caps, rc.double_strike, rc.spacing, rc.hidden, rc.no_proof));
+            langs.push(rc.lang.clone().unwrap_or_default());
                         scales.push(rc.scale);
             scales.push(rc.scale);
             under.push(Self::under_of(&rc));
@@ -876,14 +898,14 @@ impl DocSession {
         });
         let hl = e0.filter(|x| all_same(&|y| y.3 == x.3)).map(|x| x.3);
         let lk = e0.filter(|x| all_same(&|y| y.4 == x.4)).map(|x| x.4.clone());
-        let tri_m = |f: &dyn Fn(&(bool, bool, f32, bool)) -> bool| if !more.is_empty() && more.iter().all(|x| f(x)) { "on" } else if more.iter().any(|x| f(x)) { "mixed" } else { "off" };
+        let tri_m = |f: &dyn Fn(&(bool, bool, f32, bool, bool)) -> bool| if !more.is_empty() && more.iter().all(|x| f(x)) { "on" } else if more.iter().any(|x| f(x)) { "mixed" } else { "off" };
         let spacing = more.first().filter(|x| more.iter().all(|y| y.2.to_bits() == x.2.to_bits())).map(|x| x.2);
         let scale = scales.first().filter(|x| scales.iter().all(|y| y.to_bits() == x.to_bits())).copied();
         let u0 = under.first();
         let u_style = u0.filter(|x| under.iter().all(|y| y.0 == x.0)).map(|x| x.0);
         let u_color = u0.filter(|x| under.iter().all(|y| y.1 == x.1)).map(|x| x.1.clone());
         let c_shade = u0.filter(|x| under.iter().all(|y| y.2 == x.2)).map(|x| x.2.clone());
-        Ok(serde_json::json!({"underlineStyle": u_style, "underlineColor": u_color, "charShading": c_shade, "allCaps": tri_m(&|x| x.0), "doubleStrike": tri_m(&|x| x.1), "hidden": tri_m(&|x| x.3), "spacing": spacing, "scale": scale,
+        Ok(serde_json::json!({"underlineStyle": u_style, "underlineColor": u_color, "charShading": c_shade, "allCaps": tri_m(&|x| x.0), "doubleStrike": tri_m(&|x| x.1), "hidden": tri_m(&|x| x.3), "noProof": tri_m(&|x| x.4), "lang": langs.first().filter(|x| langs.iter().all(|y| y == *x)).map(|x| if x.is_empty() { "none" } else { x.as_str() }), "spacing": spacing, "scale": scale,
             "bold": tri(&seen, |x| x.0), "italic": tri(&seen, |x| x.1), "underline": tri(&seen, |x| x.2), "font": font, "size": size, "color": color,
             "strike": tri_b(&|x| x.0), "smallCaps": tri_b(&|x| x.1), "vertAlign": vert, "highlight": hl, "link": lk}).to_string())
     }
@@ -4289,6 +4311,21 @@ mod tests {
         s.paginate();
         s.set_show_hidden(false);
         s.paginate();
+    }
+    #[test]
+    fn proofing_language_and_do_not_check_set_report_and_validate() {
+        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
+        let st = |s: &DocSession| serde_json::from_str::<serde_json::Value>(&s.do_format_state(0, 0, 0, 1).unwrap()).unwrap();
+        assert_eq!((st(&s)["noProof"].as_str(), st(&s)["lang"].as_str()), (Some("off"), Some("none")));
+        s.do_format(0, 0, 0, 1, r#"{"noProof":true,"lang":"de-DE"}"#).unwrap();
+        assert_eq!((st(&s)["noProof"].as_str(), st(&s)["lang"].as_str()), (Some("on"), Some("de-DE")));
+        let s2 = DocSession::from_bytes(&s.save().unwrap()).unwrap();
+        assert_eq!((st(&s2)["noProof"].as_str(), st(&s2)["lang"].as_str()), (Some("on"), Some("de-DE")));
+        s.do_format(0, 0, 0, 1, r#"{"noProof":false,"lang":"none"}"#).unwrap();
+        assert_eq!((st(&s)["noProof"].as_str(), st(&s)["lang"].as_str()), (Some("off"), Some("none")));
+        for bad in [r#"{"lang":"xx"}"#, r#"{"lang":"en-us"}"#, r#"{"lang":5}"#, r#"{"lang":""}"#, r#"{"noProof":"yes"}"#] {
+            assert!(s.do_format(0, 0, 0, 1, bad).is_err(), "{bad}");
+        }
     }
     #[test]
     fn proofing_lists_issues_with_offsets_and_skips_marked_text() {

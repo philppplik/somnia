@@ -4,7 +4,7 @@ import {buildLookPatch,lookFromState} from './CharLookDialog';
 import {checkFormatPatch} from '../../lib/documents/protocol';
 const st:any={underlineStyle:'none',underlineColor:'auto',charShading:'none'};
 test('look form: only changes go into the patch',()=>{
- const f=lookFromState(st);assert.deepEqual(f,{style:'none',color:'',shading:'',scale:'',hidden:false});assert.equal(buildLookPatch(st,f),null);
+ const f=lookFromState(st);assert.deepEqual(f,{style:'none',color:'',shading:'',scale:'',hidden:false,noProof:false,lang:''});assert.equal(buildLookPatch(st,f),null);
  assert.deepEqual(buildLookPatch(st,{...f,style:'wave'}),{underlineStyle:'wave'});
  assert.deepEqual(buildLookPatch(st,{...f,color:'#c0392b',shading:'fff2cc'}),{underlineColor:'C0392B',charShading:'FFF2CC'});
  const on:any={underlineStyle:'double',underlineColor:'C0392B',charShading:'FFF2CC'};const g=lookFromState(on);

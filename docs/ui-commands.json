@@ -4419,6 +4419,17 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.language.set",
+      "title": "Set the proofing language of the selected text",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.lineRule.set",
       "title": "Set line height rule",
       "category": "View",
@@ -4553,6 +4564,17 @@
     {
       "id": "documents.list.style",
       "title": "Set the list style",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.noProof.toggle",
+      "title": "Do not check spelling in the selected text",
       "category": "View",
       "source": "documents",
       "keywords": [
