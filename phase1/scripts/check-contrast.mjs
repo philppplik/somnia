@@ -1,9 +1,9 @@
 /** WCAG contrast audit over tokens.css: text and status colors against every shell background,
- *  white action ink on --accent-fill, and text over --accent-soft overlays (alpha-composited
- *  per background), for dark, light and every palette. Fails (exit 1) below 4.5:1 — status
+ *  white action ink on --accent-fill, text over --accent-soft overlays (alpha-composited
+ *  per background), and status ink on its own surface, for dark, light and every palette. Fails (exit 1) below 4.5:1 — status
  *  colors double as small text (links, notices, pressed buttons), so 3:1 is not enough. */
 import {readFileSync} from 'node:fs';
-const css=readFileSync(new URL('../src/styles/tokens.css',import.meta.url),'utf8');
+const css=readFileSync(new URL('../src/styles/tokens.css',import.meta.url),'utf8').replace(/\/\*[\s\S]*?\*\//g,'');
 const blocks=[];
 const re=/([^{}]+)\{([^{}]*)\}/g;let m;
 while((m=re.exec(css))){
@@ -16,6 +16,8 @@ while((m=re.exec(css))){
   if(hexM)vars[k]={rgb:hex(hexM[1]),alpha:hexAlpha(hexM[1]),raw:v};
   const rgbaM=v.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+)\s*)?\)$/);
   if(rgbaM)vars[k]={rgb:[+rgbaM[1],+rgbaM[2],+rgbaM[3]],alpha:rgbaM[4]===undefined?1:+rgbaM[4],raw:v};
+  const refM=v.match(/^var\((--[a-z0-9-]+)\)$/);
+  if(refM)vars[k]={ref:refM[1],raw:v};
  }
  blocks.push({sel,vars});
 }
@@ -26,13 +28,25 @@ const lum=([r,g,b])=>{const f=(c)=>{c/=255;return c<=0.03928?c/12.92:Math.pow((c
 const ratio=(a,b)=>{const x=lum(a),y=lum(b);return (Math.max(x,y)+0.05)/(Math.min(x,y)+0.05);};
 const over=(fg,bg)=>fg.rgb.map((c,i)=>Math.round(c*fg.alpha+bg.rgb[i]*(1-fg.alpha)));
 
-const root=blocks.find(b=>b.sel===':root').vars;
-const light=blocks.find(b=>b.sel.includes('data-theme=light')&&!b.sel.includes('palette')).vars;
+const merge=(pred)=>Object.assign({},...blocks.filter(pred).map(b=>b.vars));
+const root=merge(b=>b.sel===':root');
+const light=merge(b=>b.sel.includes('data-theme=light')&&!b.sel.includes('data-palette='));
 const themes={dark:{...root},light:{...root,...light}};
 for(const b of blocks){
  const p=b.sel.match(/data-palette=([a-z]+)/);if(!p)continue;
  const t=b.sel.includes('data-theme=light')?'light':'dark';
  themes[t+':'+p[1]]={...themes[t],...b.vars};
+}
+for(const v of Object.values(themes)){
+ for(const k of Object.keys(v)){
+  let hops=0;
+  while(v[k]&&v[k].ref&&hops++<4){
+   const t=v[v[k].ref];
+   if(!t){delete v[k];break;}
+   v[k]=t.ref?{ref:t.ref,raw:v[k].raw}:{rgb:t.rgb,alpha:t.alpha,raw:v[k].raw+'='+t.raw};
+  }
+  if(v[k]&&v[k].ref)delete v[k];
+ }
 }
 const TEXT=['--text-primary','--text-secondary','--text-tertiary'];
 const STATUS=['--accent','--warning','--danger'];
@@ -60,6 +74,21 @@ for(const [name,v] of Object.entries(themes)){
    if(!v[tk])continue;
    const r=ratio(v[tk].rgb,comp);
    if(r<4.5)fail(`${name} ${tk} on accent-soft+${bk}: ${r.toFixed(2)} (${v[tk].raw} on ${soft.raw} over ${v[bk].raw})`);
+  }
+ }
+ // status ink on its own surface (badges, notices, banners); alpha surfaces composite per background
+ for(const [ik,sk] of [['--status-info-ink','--status-info-surface'],['--status-success-ink','--status-success-surface'],['--status-warning-ink','--status-warning-surface'],['--status-danger-ink','--status-danger-surface']]){
+  const ink=v[ik],sur=v[sk];
+  if(!ink||!sur)continue;
+  if(sur.alpha<1){
+   for(const bk of BG){
+    if(!v[bk])continue;
+    const r=ratio(ink.rgb,over(sur,v[bk]));
+    if(r<4.5)fail(`${name} ${ik} on ${sk}+${bk}: ${r.toFixed(2)} (${ink.raw} on ${sur.raw} over ${v[bk].raw})`);
+   }
+  }else{
+   const r=ratio(ink.rgb,sur.rgb);
+   if(r<4.5)fail(`${name} ${ik} on ${sk}: ${r.toFixed(2)} (${ink.raw} on ${sur.raw})`);
   }
  }
 }
