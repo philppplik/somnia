@@ -1,4 +1,5 @@
 # Unreleased: 3D Studio P0
+- 3D Studio: snap objects down until their bounds rest on the ground plane (`studio3d.object.snapToGround`).
 - 3D Studio: edit mode selects a seeded random share of elements (`studio3d.edit.selectRandom`).
 - 3D Studio: edit mode checker-deselects every nth selected element (`studio3d.edit.selectChecker`).
 - 3D Studio: bend deforms meshes along concentric arcs around the perpendicular axis (`studio3d.mesh.bend`).

@@ -469,6 +469,14 @@ export class Stage{
   const set=(k:'before'|'after')=>{for(const l of list)l.o.position.copy(l[k]);};
   set('after');this.push({label:text,undo:()=>set('before'),redo:()=>set('after')});
  }
+ /** Drops every object straight down until the bottom of its world bounds rests on the ground plane y=0. Objects already resting do not move. One undo step for the whole set. */
+ snapToGround(ids:number[]):number{
+  const objs=this.topLevel(this.needMany(ids,1));
+  const boxes=objs.map(o=>this.worldBox(o));
+  if(boxes.some(b=>b.isEmpty()))throw new StageError('Only objects with geometry can be snapped to the ground.');
+  this.moveMany({key:'studio3d.hist.snapToGround',params:{count:objs.length}},objs.map((o,i)=>({o,delta:new THREE.Vector3(0,-boxes[i].min.y,0)})));
+  return objs.length;
+ }
  /** Aligns the world bounds of the objects to the lowest, middle or highest edge of their combined bounds along one axis. */
  align(ids:number[],axis:AlignAxis,to:AlignTo){
   if(!['x','y','z'].includes(axis))throw new StageError(`Unknown axis: ${String(axis)}.`);

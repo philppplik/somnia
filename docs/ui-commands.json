@@ -9314,6 +9314,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.object.snapToGround",
+      "title": "Drop 3D objects until their bounds rest on the ground plane",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.object.transform",
       "title": "Move, rotate or scale a 3D object",
       "category": "Edit",

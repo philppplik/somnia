@@ -1013,5 +1013,7 @@
  "studio3d.mesh.bendAxis": "Eixo de deformação",
  "studio3d.mesh.bendAngle": "Ângulo de curvatura em graus",
  "cmd.studio3d.edit.selectChecker": "Desselecionar cada n-ésimo elemento selecionado da malha 3D editada, começando no deslocamento",
- "cmd.studio3d.edit.selectRandom": "Selecionar uma parcela aleatória reproduzível por semente dos elementos da malha 3D editada"
+ "cmd.studio3d.edit.selectRandom": "Selecionar uma parcela aleatória reproduzível por semente dos elementos da malha 3D editada",
+ "cmd.studio3d.object.snapToGround": "Baixar objetos 3D até que seus limites repousem no plano do chão",
+ "studio3d.hist.snapToGround": "Apoiar no chão"
 }
