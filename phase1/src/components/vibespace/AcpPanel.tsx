@@ -51,11 +51,11 @@ export function AcpPanel({store=nativeAcpPanelStore,available=isTauri(),disabled
     <NativeButton disabled={blocked||!row.turn||row.busy} onClick={()=>act(()=>store.action(row.key,()=>store.client.cancel(row.key,{graceMs:1000})))}>{text('cancel')}</NativeButton>
     <NativeButton disabled={blocked||row.busy||state?.status==='closed'} onClick={()=>act(()=>store.action(row.key,()=>store.client.cancel(row.key,{close:true})))}>{text('close')}</NativeButton>
     <NativeButton disabled={!available||row.busy} onClick={()=>void store.refresh(row.key)}>{text('refresh')}</NativeButton></div>
-   {state?.pending.map(c=><section key={c.requestId} className="vs-card vs-consent" role="alertdialog" aria-label={text('consent')}>
+   {state?.pending.map(c=>{const denyDisabled=blocked||row.readFailed||row.busy||!c.requestId||!state||!(['ready','awaiting_approval'].includes(state.status));return <section key={c.requestId} className="vs-card vs-consent" role="alertdialog" aria-label={text('consent')} onKeyDown={e=>{if(e.key==='Escape'&&!denyDisabled){e.stopPropagation();decide(c.requestId,'deny');}}}>
     <h4>{text('consent')}</h4>{c.origin&&<p>{t(c.origin.key,c.origin.params)}</p>}<dl><dt>{text('kind')}</dt><dd>{c.kind}</dd><dt>{text('target')}</dt><dd data-copyable>{c.target}</dd><dt>{text('reason')}</dt><dd>{c.reason}</dd></dl>
     {c.kind==='desktop'&&<ComputerUseReview/>}<p className="vs-muted">{text('exactConsent')}</p>
-    <div className="vs-actions">{(['allow_once','allow_for_run','deny'] as const).map(choice=><NativeButton key={choice} disabled={blocked||row.readFailed||row.busy||!c.requestId||!state||!(['ready','awaiting_approval'].includes(state.status))||(choice!=='deny'&&c.kind==='desktop')||(choice==='allow_once'&&!c.allowOnce)||(choice==='allow_for_run'&&!c.allowForRun)} onClick={()=>decide(c.requestId,choice)}>{text(choice)}</NativeButton>)}</div>
-   </section>)}
+    <div className="vs-actions">{(['allow_once','allow_for_run','deny'] as const).map(choice=><NativeButton key={choice} disabled={denyDisabled||(choice!=='deny'&&c.kind==='desktop')||(choice==='allow_once'&&!c.allowOnce)||(choice==='allow_for_run'&&!c.allowForRun)} onClick={()=>decide(c.requestId,choice)}>{text(choice)}</NativeButton>)}</div>
+   </section>;})}
    <form aria-label={text('prompt')} onSubmit={e=>{e.preventDefault();if(blocked||!ready||!row.opened||row.busy||row.turn||state?.pending.length||!prompt.trim()||promptLength(prompt)>ACP_LIMITS.prompt)return;
     const value=prompt;act(()=>store.action(row.key,()=>store.client.prompt(row.key,value).then(()=>setPrompt(current=>current===value?'':current)),true));
    }}><label>{text('prompt')}<Textarea rows={3} disabled={blocked||!ready||!row.opened||row.busy||row.turn} value={prompt} onChange={e=>setPrompt(e.target.value)}/></label>
