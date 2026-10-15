@@ -1346,5 +1346,8 @@
  "animation.rig.wipe.out.iris": "Íris fechando para o centro",
  "animation.rig.group.hue": "Ciclo de cor",
  "animation.rig.hue": "Ciclo de cor: uma volta no círculo de matizes",
- "cmd.animation.layers.hue": "Fazer a cor das camadas marcadas percorrer o círculo de matizes"
+ "cmd.animation.layers.hue": "Fazer a cor das camadas marcadas percorrer o círculo de matizes",
+ "animation.rig.group.swing": "Pêndulo",
+ "animation.rig.swing": "Balançar como pêndulo a partir do cursor",
+ "cmd.animation.layers.swing": "Balançar as camadas marcadas como um pêndulo a partir do cursor"
 }

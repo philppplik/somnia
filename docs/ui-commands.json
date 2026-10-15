@@ -2668,6 +2668,26 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.layers.swing",
+      "title": "Swing the ticked layers like a pendulum from the playhead",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "antenna",
+        "damped",
+        "dangle",
+        "hang",
+        "pendulum",
+        "rotation",
+        "settle",
+        "sign",
+        "sway",
+        "swing"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.layers.trail",
       "title": "Add a fading trail of delayed copies behind the layer",
       "category": "Edit",

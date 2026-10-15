@@ -1346,5 +1346,8 @@
  "animation.rig.wipe.out.iris": "Iris de cierre hacia el centro",
  "animation.rig.group.hue": "Ciclo de color",
  "animation.rig.hue": "Ciclo de color: una vuelta a la rueda de tonos",
- "cmd.animation.layers.hue": "Hacer que el color de las capas marcadas recorra la rueda de tonos"
+ "cmd.animation.layers.hue": "Hacer que el color de las capas marcadas recorra la rueda de tonos",
+ "animation.rig.group.swing": "Péndulo",
+ "animation.rig.swing": "Oscilar como péndulo desde el cabezal",
+ "cmd.animation.layers.swing": "Hacer oscilar las capas marcadas como un péndulo desde el cabezal"
 }

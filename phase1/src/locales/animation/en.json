@@ -1346,5 +1346,8 @@
  "animation.rig.wipe.out.iris": "Iris out to the centre",
  "animation.rig.group.hue": "Colour cycle",
  "animation.rig.hue": "Colour cycle: round the hue wheel once",
- "cmd.animation.layers.hue": "Cycle the colour of the ticked layers round the hue wheel"
+ "cmd.animation.layers.hue": "Cycle the colour of the ticked layers round the hue wheel",
+ "animation.rig.group.swing": "Swing",
+ "animation.rig.swing": "Swing like a pendulum from the playhead",
+ "cmd.animation.layers.swing": "Swing the ticked layers like a pendulum from the playhead"
 }

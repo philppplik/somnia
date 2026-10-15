@@ -1991,3 +1991,12 @@ test('P289 hue: nine colour keys round the wheel ending on the start colour, gre
  assert.throws(()=>run({layers:['hz1']}),/no colour keys/);
  s.undo();assert.equal(JSON.stringify(s.document),before);
 });
+test('P290 swing: damped angle starts at the amplitude, crosses zero, ends on the rest angle, one undo',async()=>{
+ const {swingAngles,swingSpecs}=await import('./swingCommands');const run=swingSpecs()[0].run as (p?:unknown)=>unknown;
+ const a=swingAngles(48,30,24);assert.equal(a[0],30);assert.ok(a[12]<0&&a[12]>-30);assert.ok(a[24]>0&&a[24]<30*Math.exp(-4*24/48)+0.01);assert.equal(a[48],0);
+ const s=new AnimationSession();s.open(applyEdits(base(),[{type:'layer.add',kind:'solid',id:'sw1'},{type:'prop.set',layer:'sw1',prop:'rotation',value:10}] as never));setAnimationSession(s);
+ const L=()=>findComp(s.document!)!.layers.find(x=>x.id==='sw1')!;const before=JSON.stringify(s.document);
+ s.setView({playhead:f(10)});run({layers:['sw1'],frames:48,period:24,angle:30});
+ const k=L().transform.rotation.keys;assert.equal(k.length,49);assert.equal(k[0].v,40);assert.equal(k[48].v,10);
+ s.undo();assert.equal(JSON.stringify(s.document),before);
+});

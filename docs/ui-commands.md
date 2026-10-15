@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1035 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1036 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -196,6 +196,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `animation.layers.stagger` | Stagger selected layers | Edit | animation |  |
 | `animation.layers.stepMotion` | Animate the ticked layers on twos, threes or fours | Edit | animation |  |
 | `animation.layers.stretch` | Stretch the time of the selected layers | Edit | animation |  |
+| `animation.layers.swing` | Swing the ticked layers like a pendulum from the playhead | Edit | animation |  |
 | `animation.layers.trail` | Add a fading trail of delayed copies behind the layer | Edit | animation |  |
 | `animation.layers.trimToWorkArea` | Trim the selected layers to the work area | Edit | animation |  |
 | `animation.layers.wave` | Run a wave through the ticked layers | Edit | animation |  |

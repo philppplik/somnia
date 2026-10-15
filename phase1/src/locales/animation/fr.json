@@ -1346,5 +1346,8 @@
  "animation.rig.wipe.out.iris": "Iris de fermeture vers le centre",
  "animation.rig.group.hue": "Cycle de couleur",
  "animation.rig.hue": "Cycle de couleur : un tour de roue chromatique",
- "cmd.animation.layers.hue": "Faire parcourir la roue chromatique à la couleur des calques cochés"
+ "cmd.animation.layers.hue": "Faire parcourir la roue chromatique à la couleur des calques cochés",
+ "animation.rig.group.swing": "Pendule",
+ "animation.rig.swing": "Osciller comme un pendule depuis la tête de lecture",
+ "cmd.animation.layers.swing": "Faire osciller les calques cochés comme un pendule depuis la tête de lecture"
 }
