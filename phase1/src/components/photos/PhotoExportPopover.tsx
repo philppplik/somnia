@@ -11,7 +11,7 @@ export function PhotoExportPopover(){
  const {session,name}=useActivePhoto();const e=usePhotoExportState();
  const source=useMemo(()=>({width:session?.sourceWidth??2048,height:session?.sourceHeight??2048}),[session?.sourceWidth,session?.sourceHeight]);
  const schema=useMemo(()=>photoExportSchema(source),[source]);
- const base=()=>name.replace(/\.[^.\\/]+$/,'');
+ const base=()=>(name??'photo').replace(/\.[^.\\/]+$/,'');
  const [values,setValues]=useState<ExportValues>(()=>({...photoOptionsToValues(PHOTO_EXPORT_DEFAULTS),name:base()}));
  const [preview,setPreview]=useState<ExportPreview|null>(null);const [rendering,setRendering]=useState(false);
  const [errorKey,setErrorKey]=useState<string|null>(null);const [errorDetail,setErrorDetail]=useState('');
@@ -26,7 +26,7 @@ export function PhotoExportPopover(){
  });
  const apply=(preset:ExportValues)=>setValues(v=>({...v,...preset,name:v.name}));
  useEffect(()=>{
-  if(!e.open||!session)return;
+  if(!e.open||!session||!name)return;
   if(schema.validate(values)!==null){setPreview(null);setRendering(false);return;}
   const id=++seq.current;const timer=setTimeout(()=>{setRendering(true);setErrorKey(null);
    renderPhotoExportPreview(name,valuesToPhotoOptions(values)).then(r=>{
@@ -39,7 +39,7 @@ export function PhotoExportPopover(){
   return()=>clearTimeout(timer);
  },[values,e.open,session,name,schema]);
  const run=async()=>{
-  if(e.working)return;setErrorKey(null);setPhotoExportState({working:true});
+  if(e.working||!name)return;setErrorKey(null);setPhotoExportState({working:true});
   try{const outcome=await exportPhotoCopyAdvanced(name,valuesToPhotoOptions(values));if(outcome==='saved')setPhotoExportState({open:false});}
   catch(err){setErrorKey('export.error.render');setErrorDetail(err instanceof Error?err.message:String(err));}
   finally{setPhotoExportState({working:false});}
