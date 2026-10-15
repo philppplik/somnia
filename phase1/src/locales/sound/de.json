@@ -197,6 +197,8 @@
   "sound.arrange.mute": "Stummschalten",
   "sound.arrange.unmute": "Stumm aus",
   "sound.arrange.clipPan": "Clip-Panorama",
+  "sound.arrange.clipRate": "Tempo",
+  "sound.arrange.clipRateHint": "Tape-Stil: Die Tonhöhe verschiebt sich mit dem Tempo (2x = eine Oktave höher).",
   "sound.arrange.fadeShape": "Fade-Kurve",
   "sound.arrange.fadeLinear": "Linear",
   "sound.arrange.fadeEqualPower": "Equal-Power",

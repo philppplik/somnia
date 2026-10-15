@@ -197,6 +197,8 @@
   "sound.arrange.mute": "Muet",
   "sound.arrange.unmute": "Réactiver",
   "sound.arrange.clipPan": "Panoramique du clip",
+  "sound.arrange.clipRate": "Vitesse",
+  "sound.arrange.clipRateHint": "Style bande : la hauteur change avec la vitesse (2x = une octave plus haut).",
   "sound.arrange.fadeShape": "Courbe de fondu",
   "sound.arrange.fadeLinear": "Linéaire",
   "sound.arrange.fadeEqualPower": "Puissance égale",

@@ -10,9 +10,10 @@ Session schema v12 adds `rate: number` to `ArrangeClip`; v11 sessions migrate wi
 - `src/lib/sound/arrangement.ts` — `ArrangeClip.rate`, migration v11 → v12, validator, and rate-aware `trimStartPatch` / `splitArrangeClip` (offset follows the cut at the clip rate) and `clipRegionPeak` (normalize measures the stretched region).
 - `src/lib/sound/mix.ts` — the single clip read site: `pos = (clip.offset + local * clip.rate) * sampleRate / 48000`. The rack renderer delegates clip rendering here, so rate applies everywhere (mix, freeze, glue, stems, analysis).
 - `src/lib/sound/arrangeCommands.ts` — `clip.set` accepts `rate`.
+- `src/components/sound/SoundArrange.tsx` — rate field in the clip panel (the label's tooltip says plainly that pitch shifts with rate), a ×rate badge on rated clips, and the clip waveform reads the rate-stretched source region.
 
 ## Test
 `clipRate.test.ts` (4) covers migration and validation bounds, the tape-style read math, rate-aware trim/split offsets, and the stretched normalize region. Full sound suite: 135 pass / 0 fail.
 
 ## Note
-Freeze, glue, bounce and reverse bake the current rate into their new media item (the new clip is rate 1). Rate editing UI is a separate slice.
+Freeze, glue, bounce and reverse bake the current rate into their new media item (the new clip is rate 1).
