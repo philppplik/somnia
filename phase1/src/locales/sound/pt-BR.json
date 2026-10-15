@@ -180,6 +180,8 @@
   "sound.arrange.stems": "Stems",
   "sound.arrange.stemsHint": "Exporta cada faixa como WAV (com rack, nível e pan, sem master) em um ZIP",
   "sound.arrange.clipName": "Nome do clipe",
+  "sound.arrange.glue": "Colar",
+  "sound.arrange.glueHint": "Renderiza os clips selecionados de uma faixa em um único clip (ajustes do clip embutidos, rack e fader ativos)",
   "sound.arrange.fit": "Ajustar",
   "sound.arrange.fitHint": "Ajustar o zoom para ver toda a sessão",
   "sound.arrange.trimStart": "Início no cursor",

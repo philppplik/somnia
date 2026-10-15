@@ -180,6 +180,8 @@
   "sound.arrange.stems": "Stems",
   "sound.arrange.stemsHint": "Exportiert jede Spur als eigene WAV (mit Rack und Pegel/Pan, ohne Master) in einer ZIP",
   "sound.arrange.clipName": "Clip-Name",
+  "sound.arrange.glue": "Zusammenkleben",
+  "sound.arrange.glueHint": "Rendert die ausgewählten Clips einer Spur zu einem Clip (Clip-Settings eingebrannt, Rack/Fader bleiben live)",
   "sound.arrange.fit": "Einpassen",
   "sound.arrange.fitHint": "Gesamte Session in den sichtbaren Bereich zoomen",
   "sound.arrange.trimStart": "Anfang an Playhead",

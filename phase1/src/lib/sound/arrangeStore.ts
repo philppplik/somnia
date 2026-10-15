@@ -113,6 +113,26 @@ export async function exportStems():Promise<'saved'|'cancelled'|'downloaded'>{
   await invoke('audio_save_write',zip,{headers:{'x-somnia-token':grant.token}});return'saved';
  }finally{emit({busy:false});}
 }
+/** Glues selected clips on one track: renders them with their clip-level settings (gain, fades, curves; no rack - that stays live) into "<track>-glue.wav" in the media library and replaces the selection with one clip at the earliest start. One undoable arrangement edit; the media item stays in the library like any import. */
+export async function glueClipsToMedia(trackId:string,ids:string[]){
+ if(state.busy)throw Error('Sound is busy');const token=generation;const doc=history.snapshot;
+ const track=doc.tracks.find(t=>t.id===trackId);if(!track)throw Error('Track no longer exists');
+ const clips=track.clips.filter(c=>ids.includes(c.id));if(clips.length<2||clips.length!==ids.length)throw Error('Select at least two clips on one track');
+ const sorted=[...clips].sort((a,b)=>a.start-b.start),start=sorted[0].start;
+ emit({busy:true,error:''});
+ try{
+  const result=await request({kind:'glue',session:doc,trackId,ids});if(token!==generation)throw Error('Session changed while gluing');
+  const name=uniqueMediaName(getMedia().items.map(m=>m.name),`${track.name.replace(/[^a-z0-9 _-]/gi,'_')}-glue.wav`);
+  const added=await addMediaFile(new Blob([result.wav],{type:'audio/wav'}),name,undefined,{activate:false});if('error' in added)throw Error(added.error);
+  const item=getMedia().items.find(m=>m.name===added.name&&m.kind==='audio');if(!item)throw Error('Glued audio was not registered');
+  await openSound(item);const session=getSoundSession(added.name);if(!session?.original)throw Error('Glued audio is not ready');
+  if(token!==generation)throw Error('Session changed while gluing');
+  const report=session.original.report.output,id=uid();
+  const ref:AudioSourceRef={id,name:added.name,frames:report.frames,sampleRate:report.sample_rate,channels:report.channels as 1|2};
+  const upload=await session.original.blob.arrayBuffer();if(token!==generation)throw Error('Session changed while gluing');await request({kind:'source',sourceId:id,wav:upload},[upload]);if(token!==generation)throw Error('Session changed while gluing');available.add(id);emit({sourcePeaks:{...state.sourcePeaks,[id]:session.original.peaks}});
+  history.change(s=>{const target=s.tracks.find(t=>t.id===trackId);if(!target)throw Error('Track no longer exists');s.sources.push(ref);target.clips=target.clips.filter(c=>!ids.includes(c.id));target.clips.push({...newClip(uid(),ref,start),name:sorted[0].name});});invalidate();
+ }finally{emit({busy:false});}
+}
 /** Analyses one rendered track (own inserts/level/pan, no master chain) in the mix worker. Bound to the session revision and the current output range, invalidated by edits like the full-mix report. */
 export async function analyzeTrack(trackId:string){const snapshot=history.snapshot;trackAnalysisSession(snapshot,trackId);const rev=history.revision,token=generation;emit({trackAnalysisBusy:true});try{const result=await request({kind:'analyze',session:snapshot,trackId,...(state.rangeSelection?{range:state.rangeSelection}:{})});if(token!==generation||rev!==history.revision)return;emit({trackAnalysis:{trackId,analysis:result.analysis,revision:rev}});}catch(e){if(token===generation)emit({error:e instanceof Error?e.message:String(e)});}finally{if(token===generation)emit({trackAnalysisBusy:false});}}
 export async function renderSession(){const rev=history.revision,token=generation,range=state.rangeSelection;discardMasterPreview();emit({busy:true,error:'',masterPreview:null});try{const result=await request({kind:'render',session:history.snapshot,...(range?{range}:{})});if(token!==generation||rev!==history.revision)return;if(state.url)URL.revokeObjectURL(state.url);blob=new Blob([result.wav],{type:'audio/wav'});emit({url:URL.createObjectURL(blob),peaks:new Float32Array(result.peaks),peak:result.peak,clippedSamples:result.clippedSamples,analysis:result.analysis,renderRevision:rev,renderedRange:range});}catch(e){if(token===generation)emit({error:e instanceof Error?e.message:String(e)});}finally{if(token===generation)emit({busy:false});}}

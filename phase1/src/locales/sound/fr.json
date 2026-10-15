@@ -180,6 +180,8 @@
   "sound.arrange.stems": "Stems",
   "sound.arrange.stemsHint": "Exporte chaque piste en WAV (avec rack, niveau et panoramique, sans master) dans un ZIP",
   "sound.arrange.clipName": "Nom du clip",
+  "sound.arrange.glue": "Coller ensemble",
+  "sound.arrange.glueHint": "Rend les clips sélectionnés d’une piste en un seul clip (réglages de clip intégrés, rack et fader actifs)",
   "sound.arrange.fit": "Ajuster",
   "sound.arrange.fitHint": "Zoomer pour voir toute la session",
   "sound.arrange.trimStart": "Début à la tête de lecture",
