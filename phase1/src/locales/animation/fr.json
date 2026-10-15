@@ -1062,5 +1062,6 @@
  "animation.export.problem.selectedOnly": "« Calques sélectionnés seulement » doit être activé ou désactivé.",
  "animation.export.loopSeam": "Boucle sans coupure",
  "animation.export.loopSeam.hint": "GIF et APNG : omet la dernière image si elle est identique à la première, pour que la boucle ne marque pas de pause.",
- "animation.export.problem.loopSeam": "« Boucle sans coupure » doit être activé ou désactivé."
+ "animation.export.problem.loopSeam": "« Boucle sans coupure » doit être activé ou désactivé.",
+ "animation.timing.mode.sequence": "Enchaîner les unes après les autres (écart en images)"
 }

@@ -928,3 +928,20 @@ test('P213 seamless loop export: drops a last frame identical to the first in AP
  assert.ok(await gif(true)<await gif(false));
  assert.throws(()=>setExportSettings({loopSeam:1 as never}),(e:any)=>e.code==='unsupported');assert.deepEqual(settingsProblems({...defaultExportSettings(),loopSeam:true}),[]);resetExportSettings();
 });
+
+test('P214 timing sequence: layers chained head to tail with a gap, keys move with the layer, one undo step, blocked layers skipped',async()=>{
+ const {timingPlan,TIMING_MODES,FRAME_MODES}=await import('./layerTiming');
+ assert.ok(TIMING_MODES.includes('sequence'));assert.ok(FRAME_MODES.includes('sequence'));
+ const s=open();for(const id of ['b','c','d'])s.dispatch({type:'layer.add',kind:'shape',id});
+ s.dispatch({type:'layer.timing',layer:'b',inT:0,outT:f(10)});s.dispatch({type:'layer.timing',layer:'c',inT:0,outT:f(5)});s.dispatch({type:'layer.timing',layer:'d',inT:f(1),outT:f(9)});
+ s.dispatch({type:'prop.set',layer:'c',prop:'opacity',t:0,value:0.5});
+ const c0=findComp(s.document!);const r=timingPlan(c0,['b','c','d'],'sequence',{playhead:0,frames:2});assert.equal(r.changed,2);assert.equal(r.skipped,0);
+ s.dispatch(r.edits);const c1=findComp(s.document!);const L=(id:string)=>c1.layers.find(l=>l.id===id)!;
+ assert.equal(L('b').inT,0);assert.equal(L('b').outT,f(10));assert.equal(L('c').inT,f(12));assert.equal(L('c').outT,f(17));assert.equal(L('d').inT,f(19));assert.equal(L('d').outT,f(27));
+ s.undo();const c2=findComp(s.document!);assert.equal(c2.layers.find(l=>l.id==='c')!.inT,0);assert.equal(c2.layers.find(l=>l.id==='d')!.inT,f(1));
+ const again=timingPlan(c1,['b','c','d'],'sequence',{playhead:0,frames:2});assert.equal(again.edits.length,0);
+ const rev=timingPlan(c0,['d','c','b'],'sequence',{playhead:0,frames:0});assert.equal(rev.changed,2);
+ s.dispatch({type:'layer.update',layer:'c',locked:true});
+ const lk=timingPlan(findComp(s.document!),['b','c','d'],'sequence',{playhead:0,frames:2});assert.equal(lk.skipped,1);
+ const tooFar=timingPlan(c0,['b','c'],'sequence',{playhead:0,frames:600});assert.equal(tooFar.changed,0);assert.equal(tooFar.skipped,1);
+});

@@ -1062,5 +1062,6 @@
  "animation.export.problem.selectedOnly": "«Solo capas seleccionadas» debe estar activado o desactivado.",
  "animation.export.loopSeam": "Bucle sin corte",
  "animation.export.loopSeam.hint": "GIF y APNG: omite el último fotograma si es idéntico al primero, para que el bucle no se detenga ahí.",
- "animation.export.problem.loopSeam": "«Bucle sin corte» debe estar activado o desactivado."
+ "animation.export.problem.loopSeam": "«Bucle sin corte» debe estar activado o desactivado.",
+ "animation.timing.mode.sequence": "Reproducir una tras otra (separación en fotogramas)"
 }

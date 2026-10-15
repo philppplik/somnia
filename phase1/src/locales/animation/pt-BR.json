@@ -1062,5 +1062,6 @@
  "animation.export.problem.selectedOnly": "“Somente camadas selecionadas” deve estar ligado ou desligado.",
  "animation.export.loopSeam": "Loop sem emenda",
  "animation.export.loopSeam.hint": "GIF e APNG: omite o último quadro se for idêntico ao primeiro, para o loop não parar ali.",
- "animation.export.problem.loopSeam": "“Loop sem emenda” deve estar ligado ou desligado."
+ "animation.export.problem.loopSeam": "“Loop sem emenda” deve estar ligado ou desligado.",
+ "animation.timing.mode.sequence": "Reproduzir uma após a outra (intervalo em quadros)"
 }
