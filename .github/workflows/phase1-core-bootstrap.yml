@@ -73,7 +73,9 @@ jobs:
           path: |
             phase1/validation/bench/*.json
             phase1/validation/bench/*.md
-      - run: npx playwright install --with-deps chromium
+      - name: Install Playwright browser (also when an earlier gate failed, the render guards below still run)
+        if: ${{ !cancelled() }}
+        run: npx playwright install --with-deps chromium
       - name: Isolated primitive parity and interaction gates
         run: npm run test:ds:parity
       - name: Retain primitive gallery review evidence
