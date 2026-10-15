@@ -1226,5 +1226,9 @@
  "animation.rig.bounce.3": "Tomber et rebondir 3 fois",
  "animation.rig.bounce.5": "Tomber et rebondir 5 fois",
  "cmd.animation.layers.bounce": "Faire tomber des calques sur le premier calque coche et rebondir",
- "animation.rig.group.bounce": "Rebond"
+ "animation.rig.group.bounce": "Rebond",
+ "animation.rig.group.path": "Le long du tracé",
+ "animation.rig.path.move": "Parcourir le tracé",
+ "animation.rig.path.face": "Parcourir le tracé en regardant devant",
+ "cmd.animation.layers.followPath": "Déplacer les calques le long du tracé du premier calque coché"
 }

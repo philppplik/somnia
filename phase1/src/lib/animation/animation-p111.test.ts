@@ -1488,3 +1488,20 @@ test('P249 bounce: falls onto the ground, every bounce lower, rests on the floor
  assert.ok(Math.abs(pt(c,'ball',f(0))[1]-p0[1])<0.6);assert.ok(Math.abs(pt(c,'ball',c.workArea.out)[1]-floorY)<0.6,'rests on the floor');
  s.undo();assert.equal(findComp(s.document!)!.layers.find(l=>l.id==='ball')!.transform.position.keys.length,0);
 });
+
+test('P250 travel along a path: start, middle and end sit on the path in world space, orient faces the way, rotated parent, one undo step',async()=>{
+ const {pathFollowSpecs,polylineAt}=await import('./pathFollowCommands');const {worldMatrix}=await import('./scene');const go=pathFollowSpecs()[0].run as (p?:unknown)=>unknown;
+ const q=polylineAt([[0,0],[10,0],[10,10]],0.5);assert.ok(Math.abs(q.p[0]-10)<1e-9&&Math.abs(q.p[1])<1e-9);
+ const d0=applyEdits(base(),[{type:'layer.add',kind:'shape',id:'pa',over:{source:{shape:'path',color:'#ff0000',width:400,height:100,path:{closed:false,points:[{x:0,y:0},{x:1,y:0},{x:1,y:1}]}}}},{type:'layer.add',kind:'solid',id:'g'},{type:'prop.set',layer:'g',prop:'rotation',t:f(0),value:30},{type:'layer.add',kind:'solid',id:'m'},{type:'layer.parent',layer:'m',parent:'g'}] as never);
+ const s=new AnimationSession();s.open(d0);setAnimationSession(s);
+ assert.throws(()=>go({layers:['pa']}),/Tick the path/);assert.throws(()=>go({layers:['a','m']}),/path shape/);
+ const r=go({layers:['pa','m'],orient:true}) as {travelling:number;keys:number};assert.equal(r.travelling,1);assert.ok(r.keys<=240);
+ const c=findComp(s.document!)!,pa=c.layers.find(l=>l.id==='pa')!,m=c.layers.find(l=>l.id==='m')!;
+ const pw=(x:number,y:number,t:number)=>{const w=worldMatrix(c,pa,t);return [w[0]*x+w[2]*y+w[4],w[1]*x+w[3]*y+w[5]];};
+ const an=m.transform.anchor.value as unknown as number[];const at=(t:number)=>{const w=worldMatrix(c,m,t);return [w[0]*an[0]+w[2]*an[1]+w[4],w[1]*an[0]+w[3]*an[1]+w[5]];};
+ const near=(a:number[],b:number[])=>Math.abs(a[0]-b[0])<0.6&&Math.abs(a[1]-b[1])<0.6;
+ const a=c.workArea.in,b=c.workArea.out;assert.ok(near(at(a),pw(0,0,a)),'start');assert.ok(near(at(b),pw(400,100,b)),'end');assert.ok(near(at(a+(b-a)*0.8),pw(400,0,a)),'corner at 80 percent of the length');
+ const w1=worldMatrix(c,m,a+(b-a)/4);assert.ok(Math.abs(Math.atan2(w1[1],w1[0]))<0.02,'faces +x on the first leg');
+ const w2=worldMatrix(c,m,b-(b-a)/10);assert.ok(Math.abs(Math.atan2(w2[1],w2[0])-Math.PI/2)<0.02,'faces down on the second leg');
+ s.undo();assert.equal(findComp(s.document!)!.layers.find(l=>l.id==='m')!.transform.position.keys.length,0);
+});

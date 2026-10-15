@@ -1226,5 +1226,9 @@
  "animation.rig.bounce.3": "Caer y rebotar 3 veces",
  "animation.rig.bounce.5": "Caer y rebotar 5 veces",
  "cmd.animation.layers.bounce": "Dejar caer capas sobre la primera capa marcada y rebotar",
- "animation.rig.group.bounce": "Rebote"
+ "animation.rig.group.bounce": "Rebote",
+ "animation.rig.group.path": "Por el trazado",
+ "animation.rig.path.move": "Recorrer el trazado",
+ "animation.rig.path.face": "Recorrer el trazado mirando al frente",
+ "cmd.animation.layers.followPath": "Mover capas por el trazado de la primera capa marcada"
 }

@@ -1226,5 +1226,9 @@
  "animation.rig.bounce.3": "Fallen, 3 Mal springen",
  "animation.rig.bounce.5": "Fallen, 5 Mal springen",
  "cmd.animation.layers.bounce": "Ebenen auf die erste angehakte Ebene fallen und springen lassen",
- "animation.rig.group.bounce": "Springen"
+ "animation.rig.group.bounce": "Springen",
+ "animation.rig.group.path": "Pfad entlang",
+ "animation.rig.path.move": "Dem Pfad folgen",
+ "animation.rig.path.face": "Dem Pfad folgen und in Fahrtrichtung drehen",
+ "cmd.animation.layers.followPath": "Ebenen entlang der ersten angekreuzten Pfad-Ebene bewegen"
 }

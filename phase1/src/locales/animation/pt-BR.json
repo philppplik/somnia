@@ -1226,5 +1226,9 @@
  "animation.rig.bounce.3": "Cair e quicar 3 vezes",
  "animation.rig.bounce.5": "Cair e quicar 5 vezes",
  "cmd.animation.layers.bounce": "Deixar camadas cairem na primeira camada marcada e quicar",
- "animation.rig.group.bounce": "Quique"
+ "animation.rig.group.bounce": "Quique",
+ "animation.rig.group.path": "Ao longo do caminho",
+ "animation.rig.path.move": "Percorrer o caminho",
+ "animation.rig.path.face": "Percorrer o caminho olhando para frente",
+ "cmd.animation.layers.followPath": "Mover camadas ao longo do caminho da primeira camada marcada"
 }

@@ -2069,6 +2069,25 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.layers.followPath",
+      "title": "Travel layers along the first ticked path layer",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "car",
+        "follow",
+        "motion path",
+        "move along",
+        "orient",
+        "path",
+        "route",
+        "train",
+        "travel"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.layers.label",
       "title": "Set a colour label on the selected layers",
       "category": "Edit",

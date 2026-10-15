@@ -1226,5 +1226,9 @@
  "animation.rig.bounce.3": "Drop and bounce 3 times",
  "animation.rig.bounce.5": "Drop and bounce 5 times",
  "cmd.animation.layers.bounce": "Drop layers onto the first ticked layer and bounce",
- "animation.rig.group.bounce": "Bounce"
+ "animation.rig.group.bounce": "Bounce",
+ "animation.rig.group.path": "Along path",
+ "animation.rig.path.move": "Travel along the path",
+ "animation.rig.path.face": "Travel along the path and face forward",
+ "cmd.animation.layers.followPath": "Travel layers along the first ticked path layer"
 }
