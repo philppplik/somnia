@@ -27,13 +27,13 @@ export class SheetsRangeTransactions {
  private generation=0;private flight=0;private reviews=new Map<string,Review>();private receipts=new Map<string,Review&{receipt:SheetsRangeReceipt}>();
  get pending(){return this.reviews.size>0;}get busy(){return this.flight>0;}has(id:string){return this.reviews.has(id)||this.receipts.has(id);}
  stage(id:string,r:Review){if(this.has(id))throw Error('Duplicate range review.');this.reviews.set(id,{...r,proposal:structuredClone(r.proposal),native:structuredClone(r.native)});}
- reject(id:string){return this.reviews.delete(id);}revokePending(){this.reviews.clear();}clear(){this.generation++;this.reviews.clear();this.receipts.clear();}
+ reject(id:string){return this.reviews.delete(id);}revokePending(){this.generation++;this.reviews.clear();}clear(){this.generation++;this.reviews.clear();this.receipts.clear();}
  async accept(id:string,signal:AbortSignal){
   const r=this.reviews.get(id);if(!r)throw Error('Range review is no longer pending.');this.reviews.delete(id);const gen=this.generation;this.flight++;
   let entered=false;
   try{
    r.host.permission('apply');signal.throwIfAborted();if(!eq(r.host.current(),r.proposal.target))throw Error('Selected range changed.');
-   const fresh=await r.snapshot(signal);if(!eq(fresh.native,r.native))throw Error('Native range changed since review.');
+   const fresh=await r.snapshot(signal);if(gen!==this.generation)throw Error('Review session changed before native entry.');if(!eq(fresh.native,r.native))throw Error('Native range changed since review.');
    r.host.permission('apply');signal.throwIfAborted();if(!eq(r.host.current(),r.proposal.target))throw Error('Selected range changed.');
    entered=true;const receipt=parseRangeReceipt(await r.engine.setRangeReviewed(...coords(r.proposal.target),r.native.token,r.native.cells,r.proposal.values.flat()));
    this.match(receipt,r.proposal.target);if(receipt.applied!==1||!receipt.undoable||receipt.beforeRevision!==r.native.revision||receipt.afterRevision!==receipt.beforeRevision+1)throw Error('Range receipt did not prove one undoable edit.');
@@ -41,12 +41,12 @@ export class SheetsRangeTransactions {
   }catch(e){throw new SheetsApplyError(e instanceof Error?e.message:'Range apply failed.',entered&&!(e instanceof Error&&e.message.startsWith('stale'))?'unknown':'none');}finally{this.flight--;}
  }
  async undo(id:string,signal:AbortSignal,authorize:()=>void){
-  const r=this.receipts.get(id);if(!r)throw Error('No owned range receipt.');authorize();signal.throwIfAborted();this.receipts.delete(id);this.flight++;
-  try{const receipt=parseRangeReceipt(await r.engine.undoRangeReviewed(...coords(r.proposal.target),r.receipt.token));this.match(receipt,r.proposal.target);if(receipt.applied!==1||receipt.undoable||receipt.beforeRevision!==r.receipt.afterRevision||!eq(receipt.readback,r.native.cells))throw Error('Range undo readback unverified.');await this.verify(r.engine,r.proposal.target,receipt);return structuredClone(receipt);}catch(e){throw new SheetsApplyError(e instanceof Error?e.message:'Range undo failed.','unknown');}finally{this.flight--;}
+  const r=this.receipts.get(id);if(!r)throw Error('No owned range receipt.');const gen=this.generation;authorize();signal.throwIfAborted();this.receipts.delete(id);this.flight++;
+  try{const receipt=parseRangeReceipt(await r.engine.undoRangeReviewed(...coords(r.proposal.target),r.receipt.token));this.match(receipt,r.proposal.target);if(receipt.applied!==1||receipt.undoable||receipt.beforeRevision!==r.receipt.afterRevision||!eq(receipt.readback,r.native.cells))throw Error('Range undo readback unverified.');await this.verify(r.engine,r.proposal.target,receipt);if(gen!==this.generation)throw Error('Review session changed after native undo entry.');return structuredClone(receipt);}catch(e){throw new SheetsApplyError(e instanceof Error?e.message:'Range undo failed.','unknown');}finally{this.flight--;}
  }
  private match(r:SheetsRangeReceipt,t:SheetsRangeTarget){if(!eq([r.sheet,r.row,r.col,r.rows,r.cols],coords(t)))throw Error('Wrong range receipt.');}
  private async verify(engine:RangeEngine,target:SheetsRangeTarget,receipt:SheetsRangeReceipt){
-  const before=parseNativeState(await engine.nativeState()),actual=await engine.range(...coords(target)),after=parseNativeState(await engine.nativeState());
-  if(engine.isDisposed||engine.hasPendingMutation||!eq(before,after)||after.token!==receipt.token||after.revision!==receipt.afterRevision||!eq([actual.sheet,actual.row,actual.col,actual.rows,actual.cols],coords(target))||!eq(actual.cells,receipt.readback))throw Error('Native range receipt readback unverified.');
+  const epoch=engine.selectionReadEpoch;const before=parseNativeState(await engine.nativeState()),actual=await engine.range(...coords(target)),after=parseNativeState(await engine.nativeState());
+  if(engine.isDisposed||engine.hasPendingMutation||engine.selectionReadEpoch!==epoch||!eq(before,after)||after.token!==receipt.token||after.revision!==receipt.afterRevision||!eq([actual.sheet,actual.row,actual.col,actual.rows,actual.cols],coords(target))||!eq(actual.cells,receipt.readback))throw Error('Native range receipt readback unverified.');
  }
 }
