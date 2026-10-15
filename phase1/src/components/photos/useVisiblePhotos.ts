@@ -8,6 +8,8 @@ import {usePhotoTags} from '../../lib/photos/tags';
 import type {PhotoLabel} from '../../lib/photos/labels';
 import {usePanelState} from '../../store/panelStateStore';
 
+/** The smart filter's rule set: an on switch plus the AND-combined rules minimum rating, flag, color label and exact keyword tag. */
+export interface SmartFilter{on:boolean;minRating:number;flag:string;label:string;tag:string}
 /** The filmstrip's visible list: developable photos after the rating/flag/label filter and the chosen sort. Shared by the filmstrip and the live library grid. */
 export function useVisiblePhotos(){
  const media=useMedia();
