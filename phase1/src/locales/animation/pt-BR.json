@@ -1272,5 +1272,6 @@
  "cmd.animation.layers.freeze": "Congelar as camadas marcadas no cursor",
  "animation.rig.trail.4": "Rastro de 4 fantasmas",
  "animation.rig.trail.8": "Rastro de 8 fantasmas",
- "cmd.animation.layers.trail": "Adicionar um rastro de cópias atrasadas que esmaecem atrás da camada"
+ "cmd.animation.layers.trail": "Adicionar um rastro de cópias atrasadas que esmaecem atrás da camada",
+ "animation.export.check.flash": "Piscam mais de 3 vezes por segundo, o que pode ser desconfortável ou perigoso para alguns espectadores: {names}"
 }

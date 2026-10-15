@@ -1272,5 +1272,6 @@
  "cmd.animation.layers.freeze": "Congelar las capas marcadas en el cabezal",
  "animation.rig.trail.4": "Estela de 4 fantasmas",
  "animation.rig.trail.8": "Estela de 8 fantasmas",
- "cmd.animation.layers.trail": "Añadir una estela que se desvanece con copias retrasadas detrás de la capa"
+ "cmd.animation.layers.trail": "Añadir una estela que se desvanece con copias retrasadas detrás de la capa",
+ "animation.export.check.flash": "Parpadean más de 3 veces por segundo, lo que puede resultar molesto o peligroso para algunas personas: {names}"
 }

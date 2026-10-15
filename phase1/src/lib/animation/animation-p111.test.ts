@@ -1696,3 +1696,13 @@ test('P265 trail: delayed fading copies of a moving layer, one undo step, refuse
  s.undo();assert.equal(findComp(s.document!)!.layers.length,n0);
  const big=run({layers:['a'],count:12,gap:30}) as {ghosts:number;skipped:number};assert.ok(big.skipped>0&&big.ghosts>0&&big.ghosts+big.skipped===12);
 });
+
+test('P266 export check: flash warning for more than 3 flashes a second, not for a slow blink',async()=>{
+ const {exportCheck}=await import('./exportCheck');const {defaultExportSettings}=await import('./exportSettings');const {flashes}=await import('./exportPreflight');
+ assert.equal(flashes([0,100,0,100,0,100,0,100,0,100,0,100,0,100,0],10),true);assert.equal(flashes([0,0,100,100,100,100,0,0,0,0],10),false);assert.equal(flashes([0,100,0,100],3),false,'too few samples per second to judge');
+ const blink=(id:string,name:string,every:number):Edit[]=>{const e:Edit[]=[{type:'layer.add',kind:'solid',id,over:{name}} as never];for(let i=0;i<=60;i+=every){const t=f(i);e.push({type:'key.add',layer:id,prop:'opacity',t} as never,{type:'prop.set',layer:id,prop:'opacity',t,value:(i/every)%2?0:100} as never,{type:'key.interp',layer:id,prop:'opacity',t,interp:'hold'} as never);}return e;};
+ const d0=applyEdits(base(),[...blink('fast','Strobe',2),...blink('slow','Pulse',15)] as never);
+ const s=new AnimationSession();s.open(d0);const c=findComp(s.document!)!;
+ const flash=exportCheck(c,[],defaultExportSettings()).find(i=>i.code==='flash');
+ assert.ok(flash&&flash.severity==='warn');assert.ok(flash!.layers.includes('Strobe')&&!flash!.layers.includes('Pulse'));
+});

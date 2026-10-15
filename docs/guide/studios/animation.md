@@ -106,3 +106,4 @@ Back to [Studios](../studios.md).
 - On twos/threes/fours (Rig > Appearance > Step motion): animated transform properties of the ticked layers become held poses every N frames across the work area, sampled from the current motion.
 - Freeze at the playhead (Rig > Appearance > Hold poses): the ticked layers keep the pose they have at the playhead; later keys are removed.
 - Trail (Motion > Effects): one ticked layer gets 4 or 8 fading ghost copies that follow its motion a few frames late; the ghosts sit behind the original.
+- Export check now warns about layers whose opacity flashes more than 3 times a second (checked on every frame of the exported range).

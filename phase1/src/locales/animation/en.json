@@ -1272,5 +1272,6 @@
  "cmd.animation.layers.freeze": "Freeze the ticked layers at the playhead",
  "animation.rig.trail.4": "Trail of 4 ghosts",
  "animation.rig.trail.8": "Trail of 8 ghosts",
- "cmd.animation.layers.trail": "Add a fading trail of delayed copies behind the layer"
+ "cmd.animation.layers.trail": "Add a fading trail of delayed copies behind the layer",
+ "animation.export.check.flash": "Flash more than 3 times a second, which can be uncomfortable or unsafe for some viewers: {names}"
 }

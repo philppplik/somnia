@@ -1272,5 +1272,6 @@
  "cmd.animation.layers.freeze": "Angekreuzte Ebenen am Playhead einfrieren",
  "animation.rig.trail.4": "Spur aus 4 Geistern",
  "animation.rig.trail.8": "Spur aus 8 Geistern",
- "cmd.animation.layers.trail": "Verblassende Spur aus verzögerten Kopien hinter der Ebene anlegen"
+ "cmd.animation.layers.trail": "Verblassende Spur aus verzögerten Kopien hinter der Ebene anlegen",
+ "animation.export.check.flash": "Blinken mehr als 3-mal pro Sekunde, was für manche Betrachter unangenehm oder gefährlich sein kann: {names}"
 }
