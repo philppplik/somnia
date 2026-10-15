@@ -1119,5 +1119,11 @@
  "animation.rig.array.column5": "Coluna de 5",
  "animation.rig.array.circle8": "Circulo de 8",
  "animation.rig.array.circle12": "Circulo de 12",
- "cmd.animation.layers.array": "Criar uma matriz de copias da camada em grade ou circulo"
+ "cmd.animation.layers.array": "Criar uma matriz de copias da camada em grade ou circulo",
+ "animation.export.check": "Verificacao de exportacao",
+ "animation.export.check.asset": "Arquivo de imagem ausente, estas camadas nao serao exportadas: {names}",
+ "animation.export.check.offscreen": "Fora da area exportada em todos os quadros testados: {names}",
+ "animation.export.check.inactive": "Nao visiveis no intervalo exportado: {names}",
+ "animation.export.check.hidden": "Camadas ocultas nao sao exportadas: {names}",
+ "animation.export.check.audio": "O audio nao esta incluido em exportacoes PNG, GIF, APNG ou folha: {names}"
 }

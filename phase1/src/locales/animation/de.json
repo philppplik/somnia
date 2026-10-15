@@ -1119,5 +1119,11 @@
  "animation.rig.array.column5": "Spalte mit 5",
  "animation.rig.array.circle8": "Kreis mit 8",
  "animation.rig.array.circle12": "Kreis mit 12",
- "cmd.animation.layers.array": "Kopien der Ebene als Raster oder Kreis anordnen"
+ "cmd.animation.layers.array": "Kopien der Ebene als Raster oder Kreis anordnen",
+ "animation.export.check": "Export-Pruefung",
+ "animation.export.check.asset": "Bilddatei fehlt, diese Ebenen lassen sich nicht exportieren: {names}",
+ "animation.export.check.offscreen": "Ausserhalb des exportierten Bereichs in jedem geprueften Bild: {names}",
+ "animation.export.check.inactive": "Im exportierten Bereich nicht sichtbar: {names}",
+ "animation.export.check.hidden": "Ausgeblendete Ebenen werden nicht exportiert: {names}",
+ "animation.export.check.audio": "Ton ist in PNG-, GIF-, APNG- und Sheet-Exporten nicht enthalten: {names}"
 }

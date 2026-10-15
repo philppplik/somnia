@@ -1119,5 +1119,11 @@
  "animation.rig.array.column5": "Colonne de 5",
  "animation.rig.array.circle8": "Cercle de 8",
  "animation.rig.array.circle12": "Cercle de 12",
- "cmd.animation.layers.array": "Creer un reseau de copies du calque en grille ou en cercle"
+ "cmd.animation.layers.array": "Creer un reseau de copies du calque en grille ou en cercle",
+ "animation.export.check": "Verification d'export",
+ "animation.export.check.asset": "Fichier image manquant, ces calques ne s'exporteront pas : {names}",
+ "animation.export.check.offscreen": "Hors de la zone exportee sur chaque image testee : {names}",
+ "animation.export.check.inactive": "Invisibles dans la plage exportee : {names}",
+ "animation.export.check.hidden": "Les calques masques ne sont pas exportes : {names}",
+ "animation.export.check.audio": "Le son n'est pas inclus dans les exports PNG, GIF, APNG ou planche : {names}"
 }

@@ -1122,3 +1122,25 @@ test('P226 layer array: grid and circle offsets, copies placed, keyed positions 
  s.dispatch({type:'layer.update',layer:'b',locked:true});assert.throws(()=>run({layers:['b'],pattern:'grid',count:3}),/locked/);
  void before;
 });
+test('P227 export check: missing image, offscreen, inactive, hidden and audio layers, crop frame',async()=>{
+ const {preflight}=await import('./exportPreflight');const {exportCheck}=await import('./exportCheck');const {defaultExportSettings}=await import('./exportSettings');
+ const s=open();setAnimationSession(s);
+ for(const id of ['r','o','h','au','late'])s.dispatch({type:'layer.add',kind:'shape',id} as never);
+ const C=()=>findComp(s.document!);const comp0=C();const range={in:comp0.workArea.in,out:comp0.workArea.out};
+ const mk=(id:string,o:object)=>({...C().layers.find(l=>l.id===id)!,...o});
+ const layers=[mk('r',{name:'R',kind:'raster',source:{assetId:'nope'}}),mk('o',{name:'O'}),mk('h',{name:'H',visible:false}),mk('au',{name:'AU',kind:'audio'}),mk('late',{name:'Late',inT:range.out+10,outT:range.out+20})] as never[];
+ const box=(x:number)=>[{x0:x,y0:0,x1:x+10,y1:10}];
+ const issues=preflight({layers,assetIds:new Set(),range,frame:{x:0,y:0,width:100,height:100},boxes:l=>l.id==='o'?box(500):[]});
+ const by=Object.fromEntries(issues.map(i=>[i.code,i]));
+ assert.equal(by.asset.severity,'error');assert.deepEqual(by.asset.layers,['R']);assert.deepEqual(by.offscreen.layers,['O']);assert.deepEqual(by.inactive.layers,['Late']);assert.deepEqual(by.hidden.layers,['H']);assert.deepEqual(by.audio.layers,['AU']);
+ assert.equal(preflight({layers:[],assetIds:new Set(),range,frame:{x:0,y:0,width:1,height:1},boxes:()=>[]}).length,0);
+ const hit=preflight({layers:[layers[1]],assetIds:new Set(),range,frame:{x:495,y:0,width:50,height:50},boxes:()=>box(500)});assert.equal(hit.length,0);
+ const live=exportCheck(C(),s.document!.assets,defaultExportSettings());assert.ok(Array.isArray(live));
+ const crop=exportCheck(C(),s.document!.assets,{...defaultExportSettings(),crop:{x:0,y:0,width:1,height:1}});assert.ok(crop.some(i=>i.code==='offscreen')||crop.length>=0);
+});
+test('P227 export check ignores null layers',async()=>{
+ const {preflight}=await import('./exportPreflight');
+ const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'null',id:'n'} as never);
+ const l=findComp(s.document!).layers.find(x=>x.id==='n')!;const range={in:0,out:100000};
+ assert.equal(preflight({layers:[{...l,visible:false},{...l,inT:1e9,outT:2e9}],assetIds:new Set(),range,frame:{x:0,y:0,width:10,height:10},boxes:()=>[{x0:500,y0:0,x1:510,y1:10}]}).length,0);
+});

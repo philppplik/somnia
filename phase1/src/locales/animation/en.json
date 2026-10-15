@@ -1119,5 +1119,11 @@
  "animation.rig.array.column5": "Column of 5",
  "animation.rig.array.circle8": "Circle of 8",
  "animation.rig.array.circle12": "Circle of 12",
- "cmd.animation.layers.array": "Make an array of copies of the layer in a grid or circle"
+ "cmd.animation.layers.array": "Make an array of copies of the layer in a grid or circle",
+ "animation.export.check": "Export check",
+ "animation.export.check.asset": "Image file missing, these layers will fail to export: {names}",
+ "animation.export.check.offscreen": "Outside the exported area at every sampled frame: {names}",
+ "animation.export.check.inactive": "Not visible in the exported range: {names}",
+ "animation.export.check.hidden": "Hidden layers are not exported: {names}",
+ "animation.export.check.audio": "Audio is not included in PNG, GIF, APNG or sheet exports: {names}"
 }

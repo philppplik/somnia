@@ -1119,5 +1119,11 @@
  "animation.rig.array.column5": "Columna de 5",
  "animation.rig.array.circle8": "Circulo de 8",
  "animation.rig.array.circle12": "Circulo de 12",
- "cmd.animation.layers.array": "Crear una matriz de copias de la capa en cuadricula o circulo"
+ "cmd.animation.layers.array": "Crear una matriz de copias de la capa en cuadricula o circulo",
+ "animation.export.check": "Revision de exportacion",
+ "animation.export.check.asset": "Falta el archivo de imagen, estas capas no se exportaran: {names}",
+ "animation.export.check.offscreen": "Fuera del area exportada en todos los fotogramas revisados: {names}",
+ "animation.export.check.inactive": "No visibles en el rango exportado: {names}",
+ "animation.export.check.hidden": "Las capas ocultas no se exportan: {names}",
+ "animation.export.check.audio": "El audio no se incluye en PNG, GIF, APNG ni hojas: {names}"
 }

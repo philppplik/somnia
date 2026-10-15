@@ -8,6 +8,8 @@ import {useExportState} from '../../lib/animation/exportJob';
 import {formatBytes,EXPORT_FORMATS,EXPORT_PRESETS,FRAME_FORMATS,GIF_COLORS,WEBM_QUALITIES,exportPlan,type ExportFormat} from '../../lib/animation/exportSettings';
 import {MAX_PRESET_NAME,subscribeUserPresets,userExportPresets} from '../../lib/animation/exportUserPresets';
 import type {Composition} from '../../lib/animation/model';
+import {useAnimationState} from '../../lib/animation/session';
+import {exportCheck} from '../../lib/animation/exportCheck';
 const field='h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text';
 const SCALES=[25,50,75,100,150,200];const FPS=[12,15,24,30,60];
 const size=formatBytes;
@@ -15,7 +17,7 @@ const size=formatBytes;
 export function ExportSettingsPanel({comp,busy}:{comp:Composition;busy:boolean}){
  const {t}=useT();const job=useExportState();const s=job.settings;const [err,setErr]=useState('');const [openMore,setMore]=useState(false);const [picked,setPicked]=useState('');const [naming,setNaming]=useState(false);const [pname,setPname]=useState('');const mine=useSyncExternalStore(subscribeUserPresets,userExportPresets,userExportPresets);const more=openMore||s.columns!=null||(s.sheetPadding??0)>0||s.firstNumber!=null||s.quality!==undefined&&s.quality!=='medium'||s.colors!==undefined&&s.colors!==256||s.selectedOnly===true||s.crop!=null||s.loopSeam===true||s.blur!=null||s.loop===false||s.dither===true||s.frameFormat!==undefined&&s.frameFormat!=='png';
  const set=async(id:string,params:unknown)=>{setErr('');try{await executeCommand(id,params);}catch(e){setErr((e as Error).message);}};
- const base=exportPlan(comp,'sequence',s);
+ const base=exportPlan(comp,'sequence',s);const issues=exportCheck(comp,useAnimationState().doc?.assets??[],s,base.comp.workArea);
  const scaleOpts=SCALES.includes(s.scale)?SCALES:[...SCALES,s.scale].sort((a,b)=>a-b);
  return <fieldset className="m-0 grid gap-2 border border-subtle p-2" disabled={busy} data-testid="animation-export-settings"><legend className="text-ink-3">{t('animation.export.settings')}</legend>
   <label className="grid gap-1 text-ink-3">{t('animation.export.preset')}<NativeSelect className={field} value={picked} onChange={async e=>{const v=e.target.value;if(!v){setPicked('');return;}if(v.startsWith('mine:')){await set('animation.export.preset.apply',{id:v.slice(5)});setPicked(v);}else{setPicked('');await set('animation.export.settings',{preset:v});}}} data-testid="animation-export-preset">
@@ -62,6 +64,9 @@ export function ExportSettingsPanel({comp,busy}:{comp:Composition;busy:boolean})
      {t(`animation.export.kind.${f}`)}: {t('animation.export.readout',{frames:p.frames,seconds:Math.round(p.seconds*10)/10,size:p.sheet?`${p.sheet.width}x${p.sheet.height}`:`${p.width}x${p.height}`,bytes:size(p.estimateBytes)})}
      {bad&&` - ${t(`animation.export.problem.${p.problems[0]}`)}`}{!bad&&p.overCap&&` - ${t('animation.export.overCap')}`}</li>;})}
   </ul>
+  {issues.length>0&&<ul className="m-0 grid list-none gap-1 p-0 text-ink-2" aria-label={t('animation.export.check')} data-testid="animation-export-check">
+   {issues.map(i=><li key={i.code} data-severity={i.severity} className={i.severity==='error'?'text-danger':i.severity==='info'?'text-ink-3':undefined} data-testid={`animation-export-check-${i.code}`}>{t(`animation.export.check.${i.code}`,{names:i.layers.join(', ')})}</li>)}
+  </ul>}
   <p className="m-0 text-ink-3">{t('animation.export.estimateNote')}</p>
   {err&&<div role="alert" className="text-danger">{err}</div>}
  </fieldset>;

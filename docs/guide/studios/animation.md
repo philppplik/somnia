@@ -68,3 +68,4 @@ Back to [Studios](../studios.md).
 - Export crop: "Fit to selected layers" sets the crop to the box that holds the selected layers over the whole work area (plus 8 px).
 - Poses can be applied or keyed mirrored (Mirror: around the canvas centre or around the pose); Pose to pose with Mirror on can go from a pose to its own mirror image, for walk cycles.
 - Rig > Arrange > Array of copies: grid, row, column or circle of the selected layer (keyed positions move with each copy; circles rotate the copies outward). The command takes count, columns, spacing, radius.
+- Render panel export check: under the format readouts it lists layers that would surprise you in the file (missing image, outside the crop or frame, not in the exported range, hidden, audio not included in frame exports).
