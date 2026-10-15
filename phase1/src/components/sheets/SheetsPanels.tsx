@@ -15,7 +15,7 @@ import {sortBlockProblem} from '../../lib/sheets/sortOps';
 import {fillBlockProblem,FILL_DIRECTIONS} from '../../lib/sheets/fillOps';
 import type {FillDirection,CfStyle} from '../../lib/sheets/protocol';
 import {PIVOT_FUNCS,tableBlockProblem} from '../../lib/sheets/tableOps';
-import {headerProblem,MAX_HEADER_CHARS} from '../../lib/sheets/printOps';
+import {headerProblem,MAX_HEADER_CHARS,previewHeaderFooter} from '../../lib/sheets/printOps';
 import {MAX_ZOOM,MIN_ZOOM} from '../../lib/sheets/viewOps';
 import {describeCfRule} from '../../lib/sheets/cfManageOps';
 import {CHART_COLORS,MAX_TITLE_CHARS,sparklineBlockProblem} from '../../lib/sheets/chartOps';
@@ -657,6 +657,7 @@ function PrintGroup(){
  const {t}=useT(),s=useSheetsSelection(),action=useAction();const [act,setAct]=useState<PrintAction>('pdfSheet');const [scale,setScale]=useState(100);const [text,setText]=useState('');
  const r=s?.range;if(!s||!r)return null;
  const exporting=act in PRINT_EXPORTS,page=s.page??null,isText=act==='header'||act==='footer',textBad=isText&&headerProblem(text);
+ const hf=isText?previewHeaderFooter(text,{page:1,pages:Math.max(1,s.pageList?.total??1),sheet:s.sheetName,file:s.file,date:new Date().toISOString().slice(0,10),time:new Date().toTimeString().slice(0,5)}):null;
  const breakAt=act==='rowBreakAdd'||act==='rowBreakRemove'?r.r0+1:act==='colBreakAdd'||act==='colBreakRemove'?r.c0+1:0,breakBad=(act==='rowBreakAdd'||act==='colBreakAdd')&&breakAt<2,breakNone=act==='rowBreakRemove'?!page?.rowBreaks.includes(breakAt):act==='colBreakRemove'?!page?.colBreaks.includes(breakAt):act==='breaksClear'?!page||(page.rowBreaks.length+page.colBreaks.length===0):false;
  const apply=()=>{
   const e=PRINT_EXPORTS[act];if(e){void action.run('sheets.export',e);return;}
@@ -678,6 +679,7 @@ function PrintGroup(){
   {act==='scale'&&<NumberField label={t('sheets.pr.scaleLabel')} unit="%" value={scale} resetKey="print-scale" min={10} max={400} step={5} disabled={action.busy} constraintError={t('sheets.pr.scaleInvalid')} parse={v=>{const n=Number(v.trim());return v.trim()&&Number.isInteger(n)&&n>=10&&n<=400?{ok:true,value:n}:{ok:false,error:t('sheets.pr.scaleInvalid')};}} onCommit={v=>{if(v!==null)setScale(v);}}/>}
   {isText&&<label className="flex flex-col gap-1">{t('sheets.pr.text')}<NativeInput className={field} value={text} maxLength={MAX_HEADER_CHARS} aria-invalid={textBad} disabled={action.busy} onChange={e=>setText(e.currentTarget.value)} data-testid="sheets-pr-text"/></label>}
   {isText&&<p className="text-ink-3">{t('sheets.pr.hint')}</p>}
+  {isText&&!textBad&&text!==''&&hf&&<p className="text-ink-3" data-testid="sheets-pr-preview">{t('sheets.pr.preview',{left:hf[0]||'-',center:hf[1]||'-',right:hf[2]||'-'})}</p>}
   <Button variant="outline" size="compact" disabled={action.busy||textBad||breakBad||breakNone} onClick={apply} data-testid="sheets-pr-apply">{t(exporting?'sheets.pr.applyExport':'sheets.pr.apply')}</Button>
   {page&&<p className="text-ink-3">{page.fitWidth>0?t('sheets.pr.currentFit',{orientation:t('sheets.pr.'+page.orientation),paper:page.paper,w:page.fitWidth}):t('sheets.pr.current',{orientation:t('sheets.pr.'+page.orientation),paper:page.paper,scale:page.scale})}</p>}
   {(breakBad||breakNone)&&<p className="text-ink-3">{t(breakBad?'sheets.pr.breakFirst':'sheets.pr.breakNone')}</p>}

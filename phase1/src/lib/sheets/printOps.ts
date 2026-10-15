@@ -59,3 +59,24 @@ export function parseExportResult(raw:unknown):ExportResult{
  const bytes=typeof r.bytes==='number'?r.bytes:0;if(bytes>MAX_EXPORT_BYTES)throw Error('The export is too large.');
  return {format:r.format as ExportResult['format'],base64:r.base64,bytes,pages:typeof r.pages==='number'?r.pages:null};
 }
+
+export interface HfContext{page:number;pages:number;sheet:string;file:string;date:string;time:string}
+/** What a header or footer prints on one page, as left, centre and right text. Mirrors the printer's codes (&P &N &D &T &A &F &L &C &R &&); `null` for text the printer would refuse. */
+export function previewHeaderFooter(spec:string,cx:HfContext):[string,string,string]|null{
+ if(headerProblem(spec))return null;
+ const out:[string,string,string]=['','',''];let cur=1;
+ for(let i=0;i<spec.length;i++){
+  const c=spec[i];
+  if(c!=='&'){out[cur]+=c;continue;}
+  const code=spec[++i];
+  switch(code){
+   case 'L':cur=0;break;case 'C':cur=1;break;case 'R':cur=2;break;
+   case 'P':out[cur]+=String(cx.page);break;case 'N':out[cur]+=String(cx.pages);break;
+   case 'D':out[cur]+=cx.date;break;case 'T':out[cur]+=cx.time;break;
+   case 'A':out[cur]+=cx.sheet;break;case 'F':out[cur]+=cx.file;break;
+   case '&':out[cur]+='&';break;
+   default:return null;
+  }
+ }
+ return out;
+}

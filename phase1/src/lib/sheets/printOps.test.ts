@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {headerProblem,parseExportCommand,parseExportResult,parsePageInfo,parsePageSetupCommand} from './printOps';
+import {previewHeaderFooter,headerProblem,parseExportCommand,parseExportResult,parsePageInfo,parsePageSetupCommand} from './printOps';
 import {decodeBase64,exportName} from './exportFile';
 test('page setup accepts the closed allowlist',()=>{
  assert.deepEqual(parsePageSetupCommand({orientation:'landscape',paper:'A4',margins:'narrow',scale:80,gridlines:true,header:'&C&P',footer:'Page &P of &N',printArea:' A1:F40 ',titleRows:'1:2',titleCols:'a:b'}),{orientation:'landscape',paper:'A4',margins:'narrow',scale:80,gridlines:true,header:'&C&P',footer:'Page &P of &N',printArea:'A1:F40',titleRows:'1:2',titleCols:'A:B'});
@@ -38,4 +38,11 @@ test('page break ops are bounded and stand alone',()=>{
  for(const bad of [{addRowBreak:1},{addRowBreak:1048577},{addColBreak:16385},{addColBreak:2.5},{addRowBreak:'3'},{clearBreaks:false},{addRowBreak:3,scale:50},{addRowBreak:3,addColBreak:3}])assert.throws(()=>parsePageSetupCommand(bad),String(JSON.stringify(bad)));
  const info=parsePageInfo({rowBreaks:[5,1,'x',9],colBreaks:[3]});
  assert.deepEqual(info?.rowBreaks,[5,9]);assert.deepEqual(info?.colBreaks,[3]);assert.deepEqual(parsePageInfo({})?.rowBreaks,[]);
+});
+test('header and footer preview expands the printer codes',()=>{
+ const cx={page:1,pages:3,sheet:'Q1',file:'Budget.xlsx',date:'2026-10-15',time:'04:50'};
+ assert.deepEqual(previewHeaderFooter('&LBudget&CPage &P of &N&R&D',cx),['Budget','Page 1 of 3','2026-10-15']);
+ assert.deepEqual(previewHeaderFooter('&A - &F && more',cx),['','Q1 - Budget.xlsx & more','']);
+ assert.deepEqual(previewHeaderFooter('',cx),['','','']);
+ assert.equal(previewHeaderFooter('50% &X',cx),null);assert.equal(previewHeaderFooter('a&',cx),null);assert.equal(previewHeaderFooter('x'.repeat(101),cx),null);
 });
