@@ -15,7 +15,7 @@ export const VIDEO_PROJECT_VERSION=2;
 /** Versions this build reads: 1 (clips only) and 2 (+ audio track). */
 export const VIDEO_PROJECT_READ_VERSIONS=[1,2];
 
-interface VideoProjectFile{version:number;app:'somnia-video';format?:VideoFormat;scale?:number;quality?:string;fps?:number|null;clips:unknown[];audio?:unknown[];overlay?:unknown[]}
+interface VideoProjectFile{version:number;app:'somnia-video';format?:VideoFormat;scale?:number;quality?:string;fps?:number|null;aspect?:string;clips:unknown[];audio?:unknown[];overlay?:unknown[]}
 
 /** Stable identity of the edit list for dirty tracking. Ids are included: a split changes them, and that IS an edit. */
 export const clipsSignature=(clips:TimelineClip[],audioClips:AudioClip[]=[],overlayClips:OverlayClip[]=[])=>JSON.stringify([
@@ -26,7 +26,7 @@ export const clipsSignature=(clips:TimelineClip[],audioClips:AudioClip[]=[],over
 
 /** The project file for one timeline. Deterministic (same timeline → same bytes), so tests and diffs stay readable. */
 export function serializeVideoProject(clips:TimelineClip[],audioClips:AudioClip[],format:VideoFormat,exportOptions:VideoExportOptions=DEFAULT_EXPORT_OPTIONS,overlayClips:OverlayClip[]=[]):string{
- const file:VideoProjectFile={version:VIDEO_PROJECT_VERSION,app:'somnia-video',format,scale:exportOptions.scale,quality:exportOptions.quality,fps:exportOptions.fps,clips:clips.map(c=>
+ const file:VideoProjectFile={version:VIDEO_PROJECT_VERSION,app:'somnia-video',format,scale:exportOptions.scale,quality:exportOptions.quality,fps:exportOptions.fps,...(exportOptions.aspect!=='source'?{aspect:exportOptions.aspect}:{}),clips:clips.map(c=>
   isTitleClip(c)
    ?{id:c.id,kind:'title',out_s:c.out_s,crossfade_s:c.crossfade_s??0,title:c.title}
    :c.kind==='image'
@@ -74,7 +74,7 @@ export function parseVideoProject(text:string):{clips:TimelineClip[];audioClips:
   return[sanitizeOverlay({id:typeof o.id==='string'&&o.id?o.id:newOverlayClipId(),kind:o.kind,source:typeof o.source==='string'?o.source:'',title:o.title as OverlayClip['title'],at:num(o.at),duration:num(o.duration,3),in_s:num(o.in_s),rect:o.rect as OverlayClip['rect'],opacity:num(o.opacity,1),gain:num(o.gain,1)})];
  });
  // Durations are unknown here (sources may not be open); sanitize still clamps fades and title shapes. Clips re-clamp on the next edit once sources are probed.
- return{clips:sanitizeClips(clips,{}),audioClips:sanitizeAudioClips(audioClips,{}),overlayClips:sanitizeOverlayClips(overlayClips),format:f.format==='mp4'||f.format==='webm'?f.format:DEFAULT_FORMAT,exportOptions:sanitizeExportOptions({scale:typeof f.scale==='number'?f.scale:undefined,quality:f.quality as VideoExportOptions['quality'],fps:typeof f.fps==='number'?f.fps:null})};
+ return{clips:sanitizeClips(clips,{}),audioClips:sanitizeAudioClips(audioClips,{}),overlayClips:sanitizeOverlayClips(overlayClips),format:f.format==='mp4'||f.format==='webm'?f.format:DEFAULT_FORMAT,exportOptions:sanitizeExportOptions({scale:typeof f.scale==='number'?f.scale:undefined,quality:f.quality as VideoExportOptions['quality'],fps:typeof f.fps==='number'?f.fps:null,aspect:f.aspect as VideoExportOptions['aspect']})};
 }
 
 /** The download name for a project's save: keeps `<name>.video-project`, maps a bare video file to `<base>.video-project`. */

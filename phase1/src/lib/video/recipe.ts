@@ -4,15 +4,32 @@ export const DEFAULT_FORMAT:VideoFormat='webm';
 /** Encoder quality for exports: mediabunny's qualitative levels, capped at high (the previous fixed default). */
 export type VideoExportQuality='high'|'medium'|'low';
 /** Resolution scale, encoder quality and frame-rate cap of an export. Scale 1 keeps the timeline's native size; fps null keeps each clip's native rate. */
-export interface VideoExportOptions{scale:number;quality:VideoExportQuality;fps:number|null}
+export type VideoAspect='source'|'16:9'|'9:16'|'1:1'|'4:5';
+export const EXPORT_ASPECTS:VideoAspect[]=['source','16:9','9:16','1:1','4:5'];
+export interface VideoExportOptions{scale:number;quality:VideoExportQuality;fps:number|null;aspect:VideoAspect}
 export const EXPORT_SCALES=[1,0.5,0.25] as const;
 export const EXPORT_QUALITIES:readonly VideoExportQuality[]=['high','medium','low'];
 export const EXPORT_FPS_CAPS=[24,25,30,50,60] as const;
-export const DEFAULT_EXPORT_OPTIONS:VideoExportOptions={scale:1,quality:'high',fps:null};
+export const DEFAULT_EXPORT_OPTIONS:VideoExportOptions={scale:1,quality:'high',fps:null,aspect:'source'};
 /** Clamps partial/foreign export options to the supported set. */
 export function sanitizeExportOptions(o:Partial<VideoExportOptions>|undefined):VideoExportOptions{
- return{scale:EXPORT_SCALES.includes(o?.scale as 1)?(o?.scale??1):1,quality:EXPORT_QUALITIES.includes(o?.quality as VideoExportQuality)?(o?.quality??'high'):'high',fps:EXPORT_FPS_CAPS.includes(o?.fps as 30)?(o!.fps??null):null};
+ return{scale:EXPORT_SCALES.includes(o?.scale as 1)?(o?.scale??1):1,quality:EXPORT_QUALITIES.includes(o?.quality as VideoExportQuality)?(o?.quality??'high'):'high',fps:EXPORT_FPS_CAPS.includes(o?.fps as 30)?(o!.fps??null):null,aspect:EXPORT_ASPECTS.includes(o?.aspect as VideoAspect)?(o?.aspect??'source'):'source'};
 }
+const ASPECT_RATIO:Record<Exclude<VideoAspect,'source'>,number>={'16:9':16/9,'9:16':9/16,'1:1':1,'4:5':4/5};
+/**
+ * Output frame size for a source probe: scale first, then shrink (never grow) into the target aspect - the longer
+ * relative side gives, so a 16:9 source at 9:16 keeps its height and narrows. Even dimensions (H.264 rejects odd).
+ */
+export function resolveOutputSize(width:number,height:number,scale:number,aspect:VideoAspect):{width:number;height:number}{
+ const even=(v:number)=>Math.max(2,Math.round(v/2)*2);
+ let w=width*scale,h=height*scale;
+ if(aspect!=='source'){
+  const r=ASPECT_RATIO[aspect];
+  if(w/h>r)w=h*r;else h=w/r;
+ }
+ return{width:even(w),height:even(h)};
+}
+
 /** Output frame rate of one zone: the clip's native rate capped at the export choice (never upsampled); 30 when the source rate is unknown. */
 export function cappedFps(native:number|null,cap:number|null):number{
  const n=native&&native>1?native:null;

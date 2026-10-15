@@ -117,12 +117,14 @@ test('image clips round-trip with fixed shape and clamped duration',()=>{
 });
 
 test('export options round-trip and old files load with the defaults',()=>{
- const withOpts=parseVideoProject(serializeVideoProject([media('m1')],[],'webm',{scale:0.5,quality:'medium',fps:null}));
- assert.deepEqual(withOpts.exportOptions,{scale:0.5,quality:'medium',fps:null});
+ const withOpts=parseVideoProject(serializeVideoProject([media('m1')],[],'webm',{scale:0.5,quality:'medium',fps:null,aspect:'9:16'}));
+ assert.deepEqual(withOpts.exportOptions,{scale:0.5,quality:'medium',fps:null,aspect:'9:16'},'aspect round-trips');
+ const srcAspect=parseVideoProject(serializeVideoProject([media('m1')],[],'webm'));
+ assert.equal(srcAspect.exportOptions.aspect,'source','aspect defaults to source and writes no field');
  const legacy=JSON.stringify({app:'somnia-video',version:2,format:'mp4',clips:[{id:'a',kind:'media',source:'x.mp4',in_s:0,out_s:1}]});
- assert.deepEqual(parseVideoProject(legacy).exportOptions,{scale:1,quality:'high',fps:null},'files without options keep the defaults');
+ assert.deepEqual(parseVideoProject(legacy).exportOptions,{scale:1,quality:'high',fps:null,aspect:'source'},'files without options keep the defaults');
  const junk=JSON.stringify({app:'somnia-video',version:2,scale:0.7,quality:'ultra',clips:[{id:'a',kind:'media',source:'x.mp4',in_s:0,out_s:1}]});
- assert.deepEqual(parseVideoProject(junk).exportOptions,{scale:1,quality:'high',fps:null},'unsupported values are clamped');
+ assert.deepEqual(parseVideoProject(junk).exportOptions,{scale:1,quality:'high',fps:null,aspect:'source'},'unsupported values are clamped');
 });
 
 test('clip flips round-trip; none is omitted from the file',()=>{
@@ -154,9 +156,9 @@ test('freeze frames round-trip and feed the signature',()=>{
 
 test('export fps cap round-trips; absent means source rate',()=>{
  const clip:TimelineClip={id:'c1',source:'a.mp4',in_s:0,out_s:8,gain:1,muted:false};
- const parsed=parseVideoProject(serializeVideoProject([clip],[],'webm',{scale:1,quality:'high',fps:30}));
+ const parsed=parseVideoProject(serializeVideoProject([clip],[],'webm',{scale:1,quality:'high',fps:30,aspect:'source'}));
  assert.equal(parsed.exportOptions.fps,30);
- const plain=parseVideoProject(serializeVideoProject([clip],[],'webm',{scale:1,quality:'high',fps:null}));
+ const plain=parseVideoProject(serializeVideoProject([clip],[],'webm',{scale:1,quality:'high',fps:null,aspect:'source'}));
  assert.equal(plain.exportOptions.fps,null,'absent fps keeps the native rate');
 });
 

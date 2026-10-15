@@ -292,6 +292,11 @@ export function VideoControls({name}:{name:string}){
       {(['high','medium','low'] as const).map(q=><option key={q} value={q}>{t(`video.exportQuality.${q}`)}</option>)}
      </NativeSelect>
     </label>
+    <label>{t('video.exportAspect')}
+     <NativeSelect className={`${field} mt-1`} value={s.exportOptions.aspect} onChange={e=>setVideoExportOptions(name,{aspect:e.target.value as 'source'|'16:9'|'9:16'|'1:1'|'4:5'})} data-testid="video-export-aspect">
+      {(['source','16:9','9:16','1:1','4:5'] as const).map(a=><option key={a} value={a}>{a==='source'?t('video.exportAspectSource'):a}</option>)}
+     </NativeSelect>
+    </label>
     <label>{t('video.exportFps')}
      <NativeSelect className={`${field} mt-1`} value={String(s.exportOptions.fps??0)} onChange={e=>setVideoExportOptions(name,{fps:Number(e.target.value)||null})} data-testid="video-export-fps">
       {[0,24,25,30,50,60].map(f=><option key={f} value={f}>{f===0?t('video.exportFpsSource'):t('video.exportFpsCap',{fps:f})}</option>)}

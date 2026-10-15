@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {sniffVideo,VIDEO_FILE} from './format';
-import {cappedFps,exportName,sanitizeExportOptions} from './recipe';
+import {cappedFps,exportName,resolveOutputSize,sanitizeExportOptions} from './recipe';
 import {clipFadeGain,clipRanges,cropOf,fadeInOf,fadeOutOf,flipOf,hasCrop,rotationOf,fullClip,isFreeze,isNeutralTimeline,locate,moveClip,rippleDelete,sanitizeClips,setClipEdge,setClipFades,setClipSpeed,sliceTimeline,splitAt,timelineDuration,type TimelineClip} from './timeline';
 import {probeVideo} from './pipeline';
 import {addTimelineClip,closeVideo,deleteTimelineClip,exportVideo,getVideoSession,moveTimelineClip,openVideo,resetTimeline,runVideoExport,setTimelineClipGain,setVideoEngineFactory,setVideoFormat,splitTimelineAt,toggleTimelineClipMute,trimTimelineClip} from './session';
@@ -270,6 +270,9 @@ test('timeline: freeze frame shape, sanitize, split, trim and slicing',()=>{
 
 test('recipe: export fps cap sanitizes and caps without upsampling',()=>{
  assert.deepEqual(sanitizeExportOptions({fps:30}).fps,30);
+ assert.equal(sanitizeExportOptions({}).aspect,'source','aspect defaults to source');
+ assert.equal(sanitizeExportOptions({aspect:'9:16'}).aspect,'9:16');
+ assert.equal(sanitizeExportOptions({aspect:'3:2' as '9:16'}).aspect,'source','junk aspects fall back to source');
  assert.equal(sanitizeExportOptions({fps:23}).fps,null,'unsupported rates fall back to source');
  assert.equal(sanitizeExportOptions({fps:null}).fps,null);
  assert.equal(sanitizeExportOptions(undefined).fps,null,'default keeps the native rate');
@@ -304,4 +307,13 @@ test('clip crop: normalize clamps edges and axis pairs; sanitize keeps or drops 
  assert.deepEqual(sanitizeClips([mk({left:0.25,top:0,right:0,bottom:0})],{'a.mp4':5})[0].crop,{left:0.25,top:0,right:0,bottom:0});
  assert.equal(sanitizeClips([mk({left:0,top:0,right:0,bottom:0})],{'a.mp4':5})[0].crop,undefined,'all-zero crop is dropped');
  assert.equal(sanitizeClips([mk({left:'much'})],{'a.mp4':5})[0].crop,undefined,'junk edges are dropped');
+});
+
+test('resolveOutputSize: scale first, then shrink into the target aspect, always even',()=>{
+ assert.deepEqual(resolveOutputSize(1920,1080,1,'source'),{width:1920,height:1080});
+ assert.deepEqual(resolveOutputSize(1920,1080,1,'9:16'),{width:608,height:1080},'landscape narrows into portrait');
+ assert.deepEqual(resolveOutputSize(1080,1920,1,'16:9'),{width:1080,height:608},'portrait shortens into landscape');
+ assert.deepEqual(resolveOutputSize(1920,1080,1,'1:1'),{width:1080,height:1080});
+ assert.deepEqual(resolveOutputSize(1920,1080,0.5,'4:5'),{width:432,height:540},'scale applies before the aspect fit');
+ assert.deepEqual(resolveOutputSize(1279,719,1,'9:16'),{width:404,height:720},'odd sources round to even dimensions');
 });

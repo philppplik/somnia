@@ -1,7 +1,7 @@
 /** Worker-side media pipeline: probe, capability scan and multi-clip timeline export on mediabunny + WebCodecs. No UI imports. */
 import {ALL_FORMATS,AudioSample,AudioSampleSink,AudioSampleSource,BufferSource,BufferTarget,CanvasSink,CanvasSource,Input,Mp4OutputFormat,Output,QUALITY_HIGH,QUALITY_LOW,QUALITY_MEDIUM,WebMOutputFormat,getFirstEncodableAudioCodec,getFirstEncodableVideoCodec} from 'mediabunny';
 import type {AudioCodec,VideoCodec} from 'mediabunny';
-import {cappedFps,sanitizeExportOptions,type VideoExportOptions,type VideoFormat} from './recipe';
+import {cappedFps,resolveOutputSize,sanitizeExportOptions,type VideoExportOptions,type VideoFormat} from './recipe';
 import {clipFadeGain,clipRanges,cropOf,fadeInOf,fadeOf,fadeOutOf,flipOf,hasCrop,isFreeze,isImageClip,rotationOf,speedOf,timelineDuration,type ClipRange,type ClipRotation,type TimelineClip} from './timeline';
 import {audioEnvelope,duckGainAt,type AudioClip} from './audioTrack';
 import {WindowMixer} from './mixer';
@@ -108,9 +108,10 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
   const first=firstMedia?inputs.get(firstMedia.source)!.probe.video!:{codec:null,width:1280,height:720,fps:null};
   const opts=sanitizeExportOptions(exportOptions);
   // Even dimensions: H.264 cannot encode odd sizes. Everything downstream (letterbox, titles, stills) follows outW/outH.
-  const outW=Math.max(2,Math.round(first.width*opts.scale/2)*2),outH=Math.max(2,Math.round(first.height*opts.scale/2)*2);
+  const{width:outW,height:outH}=resolveOutputSize(first.width,first.height,opts.scale,opts.aspect);
   const encQuality=opts.quality==='medium'?QUALITY_MEDIUM:opts.quality==='low'?QUALITY_LOW:QUALITY_HIGH;
   if(opts.scale!==1)steps.push(`Resolution scaled to ${outW}×${outH}.`);
+  if(opts.aspect!=='source')steps.push(`Frame aspect ${opts.aspect} (${outW}×${outH}); clips letterbox to fit. Crop clips to fill instead.`);
   if(opts.fps)steps.push(`Frame rate capped at ${opts.fps} fps.`);
   if(opts.quality!=='high')steps.push(`Encoder quality: ${opts.quality}.`);
   for(const n of imageNames){
