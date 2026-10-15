@@ -6,11 +6,12 @@ import {parseSavedViews} from './savedViews';
 import {parseFunctionCatalog} from './cellToolOps';
 import {parsePivotReports} from './pivotEditOps';
 import {parseCfRules} from './cfManageOps';
+import {parseInvalidCells,parseValidationRule} from './validationOps';
 import {parseOutlineInfo} from './outlineOps';
 import {parseObjects,pictureDataUrl} from './objectOps';
 import {parseCharts,parseScene,parseSparklines} from './chartOps';
 import {parseExportResult,parsePageInfo} from './printOps';
-import type {CfManageOp,CfRuleInfo,ChartInfo,ChartOp,ChartScene,SparklineOp,SparklineScene,ProtectOp,WhatIfOp,LayoutOp,CellToolOp,DataToolOp,PivotEditOp,PivotReport,FunctionInfo,OutlineInfo,OutlineOp,SavedView,SavedViewOp,ObjectOp,ObjectsInfo,ScenarioInfo,ViewOp,ViewOpResult,PageInfo,PageSetupOp,ExportOp,ExportResult,PivotField,PivotFunc,TableOp,TablesInfo,NameInfo,NameOp,AnnotateOp,CellAnnotations,DedupeOp,SplitOp,ReplaceOp,ValidationOp,CfOp,FillDirection,SheetsEditReceipt,SheetsRangeReceipt,SheetsNativeState,FilterOp,SortOp,SheetOp,FormatOp,LineAxis,LineOp,RangeResult,SheetInfo,SheetLayout,SheetsRequest,SheetsResponse,ViewResult,WorkbookInfo} from './protocol';
+import type {InvalidCells,ValidationRuleInfo,CfManageOp,CfRuleInfo,ChartInfo,ChartOp,ChartScene,SparklineOp,SparklineScene,ProtectOp,WhatIfOp,LayoutOp,CellToolOp,DataToolOp,PivotEditOp,PivotReport,FunctionInfo,OutlineInfo,OutlineOp,SavedView,SavedViewOp,ObjectOp,ObjectsInfo,ScenarioInfo,ViewOp,ViewOpResult,PageInfo,PageSetupOp,ExportOp,ExportResult,PivotField,PivotFunc,TableOp,TablesInfo,NameInfo,NameOp,AnnotateOp,CellAnnotations,DedupeOp,SplitOp,ReplaceOp,ValidationOp,CfOp,FillDirection,SheetsEditReceipt,SheetsRangeReceipt,SheetsNativeState,FilterOp,SortOp,SheetOp,FormatOp,LineAxis,LineOp,RangeResult,SheetInfo,SheetLayout,SheetsRequest,SheetsResponse,ViewResult,WorkbookInfo} from './protocol';
 import {MAX_INPUT_BYTES} from './protocol';
 import {parseEditReceipt,parseNativeState,parseRangeReceipt} from './receipt';
 type Req=SheetsRequest extends infer R?R extends {id:number}?Omit<R,'id'>:never:never;
@@ -153,6 +154,8 @@ export class SheetsEngine{
  /** Set or clear data validation on the block (one undo step). */
  validation(sheet:number,row:number,col:number,rows:number,cols:number,validation:ValidationOp){return this.result<unknown>({op:'validation',sheet,row,col,rows,cols,validation});}
  /** Choices of a list validation on one cell, or null. */
+ async validationInfo(sheet:number,row:number,col:number):Promise<ValidationRuleInfo|null>{return parseValidationRule(await this.result<unknown>({op:'validationInfo',sheet,row,col}));}
+ async validationInvalid(sheet:number):Promise<InvalidCells>{return parseInvalidCells(await this.result<unknown>({op:'validationInvalid',sheet}));}
  async validationItems(sheet:number,row:number,col:number):Promise<string[]|null>{const r=await this.result<{items:unknown}>({op:'validationItems',sheet,row,col});return Array.isArray(r.items)&&r.items.every(x=>typeof x==='string')?r.items as string[]:null;}
  /** Add or clear highlight (conditional format) rules (one undo step). */
  cf(sheet:number,row:number,col:number,rows:number,cols:number,cf:CfOp){return this.result<unknown>({op:'cf',sheet,row,col,rows,cols,cf});}

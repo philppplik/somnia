@@ -35,6 +35,8 @@ scope.onmessage=({data}:MessageEvent<SheetsRequest>)=>{queue=queue.then(async()=
    case 'undoReviewed':result=JSON.parse(need().undo_reviewed(data.sheet,data.address,data.token));break;
    case 'sheets':result=JSON.parse(need().sheets());break;
    case 'validation':result=JSON.parse(need().validation_range(data.sheet,data.row,data.col,data.rows,data.cols,JSON.stringify(data.validation)));break;
+   case 'validationInfo':result=JSON.parse(need().validation_info(data.sheet,data.row,data.col));break;
+   case 'validationInvalid':result=JSON.parse(need().validation_invalid(data.sheet));break;
    case 'validationItems':result=JSON.parse(need().validation_items(data.sheet,data.row,data.col));break;
    case 'replace':result=JSON.parse(need().replace_range(data.sheet,data.row,data.col,data.rows,data.cols,JSON.stringify(data.replace)));break;
    case 'findCount':result=JSON.parse(need().find_count(data.sheet,data.row,data.col,data.rows,data.cols,JSON.stringify(data.replace)));break;

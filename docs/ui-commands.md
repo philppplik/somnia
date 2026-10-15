@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1022 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1023 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -653,6 +653,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `sheets.table` | Create or change a table | Edit | sheets |  |
 | `sheets.undo` | Undo workbook change | Edit | sheets |  |
 | `sheets.validation` | Limit what can be typed into the selected cells | Edit | sheets |  |
+| `sheets.validationCheck` | Find cells whose value breaks their allowed-values rule | Edit | sheets |  |
 | `sheets.view` | Zoom, gridlines, headings and zeros | View | sheets |  |
 | `sheets.whatif` | Run goal seek, scenarios or a data table | Edit | sheets |  |
 | `shell.rail.hide` | Hide rail icon | View | core |  |

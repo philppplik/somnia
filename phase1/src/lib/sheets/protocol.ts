@@ -124,7 +124,10 @@ export type CfTextMode='contains'|'notContains'|'beginsWith'|'endsWith';
 /** Highlight rules: a closed set of shapes, no formulas. */
 export type CfOp={kind:'cell';operator:CfOperator;value:string|number;value2?:string|number;style:CfStyle}|{kind:'text';mode:CfTextMode;text:string;style:CfStyle}|{kind:'flag';flag:CfFlag;style:CfStyle}|{kind:'top';rank:number;bottom:boolean;percent:boolean;style:CfStyle}|{kind:'scale';scale:CfScale}|{kind:'bar';color:CfBarColor;gradient?:boolean}|{kind:'icons';set:CfIconSet;reverse?:boolean}|{kind:'clear'}|{kind:'clearAll'};
 /** Data validation: a closed set of shapes, no custom formulas. */
-export type ValidationOp={kind:'list';items:string[]}|{kind:'listRange';source:string}|{kind:'number';whole:boolean;operator:CfOperator;value:number;value2?:number}|{kind:'length';operator:CfOperator;value:number;value2?:number}|{kind:'clear'};
+export interface ValidationAlert{allowBlank?:boolean;dropdown?:boolean;errorStyle?:'stop'|'warning';errorMessage?:string}
+export type ValidationOp=({kind:'list';items:string[]}&ValidationAlert)|({kind:'listRange';source:string}&ValidationAlert)|({kind:'number';whole:boolean;operator:CfOperator;value:number;value2?:number}&ValidationAlert)|({kind:'length';operator:CfOperator;value:number;value2?:number}&ValidationAlert)|({kind:'date'|'time';operator:CfOperator;value:string;value2?:string}&ValidationAlert)|{kind:'clear'};
+export interface ValidationRuleInfo{kind:string;operator:string;f1:string;f2:string|null;allowBlank:boolean;dropdown:boolean;errorStyle:string;errorMessage:string;ranges:string[]}
+export interface InvalidCells{cells:string[];truncated:boolean}
 /** Find and replace inside the selected block. Literal text, no wildcards. */
 export interface ReplaceOp{what:string;with:string;matchCase:boolean;wholeCell:boolean;inFormulas:boolean}
 /** Remove duplicate rows (compared on block-relative column offsets) and split one column of text. */
@@ -160,6 +163,8 @@ export type SheetsRequest=
  |{id:number;op:'sheets'}
  |{id:number;op:'validation';sheet:number;row:number;col:number;rows:number;cols:number;validation:ValidationOp}
  |{id:number;op:'validationItems';sheet:number;row:number;col:number}
+ |{id:number;op:'validationInfo';sheet:number;row:number;col:number}
+ |{id:number;op:'validationInvalid';sheet:number}
  |{id:number;op:'replace';sheet:number;row:number;col:number;rows:number;cols:number;replace:ReplaceOp}
  |{id:number;op:'findCount';sheet:number;row:number;col:number;rows:number;cols:number;replace:ReplaceOp}
  |{id:number;op:'dedupe';sheet:number;row:number;col:number;rows:number;cols:number;dedupe:DedupeOp}

@@ -7717,6 +7717,14 @@
       "hasEnabled": true
     },
     {
+      "id": "sheets.validationCheck",
+      "title": "Find cells whose value breaks their allowed-values rule",
+      "category": "Edit",
+      "source": "sheets",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
       "id": "sheets.view",
       "title": "Zoom, gridlines, headings and zeros",
       "category": "View",

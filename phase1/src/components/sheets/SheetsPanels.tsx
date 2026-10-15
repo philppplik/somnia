@@ -898,9 +898,10 @@ function ReplaceGroup(){
 /** Limits what can be typed into the selected block: a list of choices or number/length bounds. One undo step. Typed entries that break a rule are refused. */
 const VALIDATION_OPERATORS:readonly CfOperator[]=['between','notBetween','equal','notEqual','greater','less','greaterOrEqual','lessOrEqual'];
 function ValidationGroup(){
- const {t}=useT(),s=useSheetsSelection(),action=useAction();const [choice,setChoice]=useState<ValidationChoice>('list');const [operator,setOperator]=useState<CfOperator>('between');const [a,setA]=useState('');const [b,setB]=useState('');
+ const {t}=useT(),s=useSheetsSelection(),action=useAction();const [choice,setChoice]=useState<ValidationChoice>('list');const [operator,setOperator]=useState<CfOperator>('between');const [a,setA]=useState('');const [b,setB]=useState('');const [allowBlank,setAllowBlank]=useState(true);const [dropdown,setDropdown]=useState(true);const [alertStyle,setAlertStyle]=useState<'stop'|'warning'>('stop');const [errMsg,setErrMsg]=useState('');
  const r=s?.range;if(!s||!r)return null;
- const numeric=choice==='whole'||choice==='decimal'||choice==='length',two=numeric&&(operator==='between'||operator==='notBetween'),op=buildValidationOp(choice,operator,a,b);
+ const numeric=choice==='whole'||choice==='decimal'||choice==='length'||choice==='date'||choice==='time',two=numeric&&(operator==='between'||operator==='notBetween'),isList=choice==='list'||choice==='listRange',op=buildValidationOp(choice,operator,a,b,{allowBlank,dropdown,errorStyle:alertStyle,errorMessage:errMsg});
+ const rule=s.validationRule,bad=s.invalidCells;
  const run=(o:object)=>void action.run('sheets.validation',o);
  const items=s.listItems;
  return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.dv.title')}>
@@ -908,12 +909,19 @@ function ValidationGroup(){
   {items&&items.length>0&&<label className="flex flex-col gap-1">{t('sheets.dv.pick')}<NativeSelect className={field} value="" disabled={action.busy} onChange={e=>{const v=e.currentTarget.value;if(v)void action.run('sheets.setCell',{input:v});}} data-testid="sheets-dv-pick"><option value="">{t('sheets.dv.pickNone')}</option>{items.map(i=><option key={i} value={i}>{i}</option>)}</NativeSelect></label>}
   <label className="flex flex-col gap-1">{t('sheets.dv.allow')}<NativeSelect className={field} value={choice} disabled={action.busy} onChange={e=>setChoice(e.currentTarget.value as ValidationChoice)} data-testid="sheets-dv-kind">{VALIDATION_CHOICES.map(c=><option key={c} value={c}>{t('sheets.dv.kind.'+c)}</option>)}</NativeSelect></label>
   {numeric&&<label className="flex flex-col gap-1">{t('sheets.dv.operator')}<NativeSelect className={field} value={operator} disabled={action.busy} onChange={e=>setOperator(e.currentTarget.value as CfOperator)} data-testid="sheets-dv-operator">{VALIDATION_OPERATORS.map(c=><option key={c} value={c}>{t('sheets.dv.op.'+c)}</option>)}</NativeSelect></label>}
-  <label className="flex flex-col gap-1">{t(choice==='list'?'sheets.dv.items':choice==='listRange'?'sheets.dv.source':'sheets.dv.value')}<NativeInput className={field} value={a} maxLength={choice==='list'?MAX_ITEM_CHARS*20:32} disabled={action.busy} onChange={e=>setA(e.currentTarget.value)} data-testid="sheets-dv-value"/></label>
+  <label className="flex flex-col gap-1">{t(choice==='list'?'sheets.dv.items':choice==='listRange'?'sheets.dv.source':choice==='date'?'sheets.dv.valueDate':choice==='time'?'sheets.dv.valueTime':'sheets.dv.value')}<NativeInput className={field} value={a} maxLength={choice==='list'?MAX_ITEM_CHARS*20:32} disabled={action.busy} onChange={e=>setA(e.currentTarget.value)} data-testid="sheets-dv-value"/></label>
   {two&&<label className="flex flex-col gap-1">{t('sheets.dv.value2')}<NativeInput className={field} value={b} maxLength={32} disabled={action.busy} onChange={e=>setB(e.currentTarget.value)} data-testid="sheets-dv-value2"/></label>}
+  <label className="flex flex-col gap-1">{t('sheets.dv.alert')}<NativeSelect className={field} value={alertStyle} disabled={action.busy} onChange={e=>setAlertStyle(e.currentTarget.value==='warning'?'warning':'stop')} data-testid="sheets-dv-alert"><option value="stop">{t('sheets.dv.alert.stop')}</option><option value="warning">{t('sheets.dv.alert.warning')}</option></NativeSelect></label>
+  <label className="flex flex-col gap-1">{t('sheets.dv.errorMessage')}<NativeInput className={field} value={errMsg} maxLength={255} disabled={action.busy} onChange={e=>setErrMsg(e.currentTarget.value)} data-testid="sheets-dv-message"/></label>
+  <Checkbox label={t('sheets.dv.allowBlank')} checked={allowBlank} disabled={action.busy} onChange={e=>setAllowBlank(e.currentTarget.checked)}/>
+  {isList&&<Checkbox label={t('sheets.dv.dropdown')} checked={dropdown} disabled={action.busy} onChange={e=>setDropdown(e.currentTarget.checked)}/>}
   <div className="flex flex-wrap gap-2">
    <Button variant="outline" size="compact" disabled={action.busy||!op} onClick={()=>op&&run(op)} data-testid="sheets-dv-apply">{t('sheets.dv.apply')}</Button>
    <Button variant="outline" size="compact" disabled={action.busy} onClick={()=>run({kind:'clear'})} data-testid="sheets-dv-clear">{t('sheets.dv.clear')}</Button>
+   <Button variant="outline" size="compact" disabled={action.busy} onClick={()=>void action.run('sheets.validationCheck',{})} data-testid="sheets-dv-check">{t('sheets.dv.check')}</Button>
   </div>
+  {rule&&<p className="text-ink-3">{t('sheets.dv.current',{kind:t('sheets.dv.rk.'+rule.kind),op:rule.kind==='List'||rule.kind==='Custom'?rule.f1:t('sheets.dv.op.'+rule.operator.charAt(0).toLowerCase()+rule.operator.slice(1))+' '+rule.f1+(rule.f2?' / '+rule.f2:''),alert:t('sheets.dv.alert.'+(rule.errorStyle==='Stop'?'stop':'warning'))})}</p>}
+  {bad&&<p className="text-ink-3">{bad.cells.length===0?t('sheets.dv.allGood'):t('sheets.dv.found',{count:bad.cells.length+(bad.truncated?'+':''),cells:bad.cells.slice(0,20).join(', ')})}</p>}
   <p className="text-ink-3">{t('sheets.dv.scope',{range:rangeAddress(r)})}</p>
  </div>;
 }

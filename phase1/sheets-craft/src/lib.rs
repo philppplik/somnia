@@ -604,6 +604,36 @@ impl HeadlessWorkbook {
     }
 
     /// The choices of a list validation on one cell, as `{"items":[..]}` (at most 500), or `{"items":null}` when the cell has none.
+    /// The data validation rule of one cell (read only): `{"rule":null}` or `{"rule":{"kind","operator","f1","f2","allowBlank","dropdown","errorStyle","errorMessage","ranges":[..]}}`.
+    pub fn validation_info(&self, sheet: usize, row: u32, col: u32) -> Result<String, String> {
+        let doc = self.session.doc().map_err(|e| e.to_string())?;
+        let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+        let at = CellRef::new(row, col);
+        let Some(dv) = sh.validations.iter().find(|d| d.ranges.iter().any(|r| r.contains(at))) else {
+            return Ok(json!({"rule": null}).to_string());
+        };
+        let short = |t: &str| t.chars().take(255).collect::<String>();
+        Ok(json!({"rule": {
+            "kind": format!("{:?}", dv.kind), "operator": format!("{:?}", dv.op), "f1": short(&dv.f1), "f2": dv.f2.as_deref().map(short),
+            "allowBlank": dv.allow_blank, "dropdown": dv.in_cell_dropdown, "errorStyle": format!("{:?}", dv.error_style), "errorMessage": short(&dv.error_message),
+            "ranges": dv.ranges.iter().take(8).map(|r| r.a1()).collect::<Vec<_>>()
+        }}).to_string())
+    }
+
+    /// Cells whose current value breaks their data validation rule (read only, not an undo step): `{"invalid":["A1",..],"truncated":bool}`, at most 500.
+    pub fn validation_invalid(&mut self, sheet: usize) -> Result<String, String> {
+        if self.session.doc().map_err(|e| e.to_string())?.wb.sheet(sheet).is_none() {
+            return Err("unknown sheet".into());
+        }
+        self.session.run("sheet.activate", json!({"sheet": sheet}))?;
+        let found = self.session.run("data.circleInvalid", json!({}))?;
+        let _ = self.session.take_ui_requests();
+        let all: Vec<String> = found.get("invalid").and_then(|v| v.as_array()).map(|a| a.iter().filter_map(|c| c.as_str().map(str::to_string)).collect()).unwrap_or_default();
+        let truncated = all.len() > MAX_VALIDATION_ITEMS;
+        let list: Vec<String> = all.into_iter().take(MAX_VALIDATION_ITEMS).collect();
+        Ok(json!({"invalid": list, "truncated": truncated}).to_string())
+    }
+
     pub fn validation_items(&self, sheet: usize, row: u32, col: u32) -> Result<String, String> {
         let doc = self.session.doc().map_err(|e| e.to_string())?;
         let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
@@ -3016,39 +3046,92 @@ impl HeadlessWorkbook {
             let f2 = if two { Some(num(op.get("value2"))?) } else { None };
             Ok((operator.to_string(), f1, f2))
         };
-        let args = match kind {
-            "clear" => json!({"range": range, "clear": true}),
-            "list" => {
-                let items = op.get("items").and_then(|v| v.as_array()).ok_or("the list needs items")?;
-                if items.is_empty() || items.len() > MAX_VALIDATION_ITEMS_SET {
-                    return Err(format!("A list holds 1 to {MAX_VALIDATION_ITEMS_SET} items."));
+        let allowed: &[&str] = match kind {
+            "clear" => &["kind"],
+            "list" => &["kind", "items", "allowBlank", "dropdown", "errorStyle", "errorMessage"],
+            "listRange" => &["kind", "source", "allowBlank", "dropdown", "errorStyle", "errorMessage"],
+            "number" => &["kind", "whole", "operator", "value", "value2", "allowBlank", "errorStyle", "errorMessage"],
+            "length" => &["kind", "operator", "value", "value2", "allowBlank", "errorStyle", "errorMessage"],
+            "date" | "time" => &["kind", "operator", "value", "value2", "allowBlank", "errorStyle", "errorMessage"],
+            _ => return Err("unsupported validation kind".into()),
+        };
+        if op.as_object().is_none_or(|m| m.keys().any(|k| !allowed.contains(&k.as_str()))) {
+            return Err("unknown validation field".into());
+        }
+        let allow_blank = match op.get("allowBlank") {
+            None => true,
+            Some(v) => v.as_bool().ok_or("allowBlank must be true or false")?,
+        };
+        let dropdown = match op.get("dropdown") {
+            None => true,
+            Some(v) => v.as_bool().ok_or("dropdown must be true or false")?,
+        };
+        let error_style = match op.get("errorStyle") {
+            None => "stop",
+            Some(v) => v.as_str().filter(|s| *s == "stop" || *s == "warning").ok_or("errorStyle must be stop or warning")?,
+        };
+        let error_message = match op.get("errorMessage") {
+            None => String::new(),
+            Some(v) => v.as_str().filter(|t| t.chars().count() <= 255 && !t.chars().any(|c| c.is_control())).ok_or("the error message must be at most 255 characters")?.trim().to_string(),
+        };
+        let date_part = |v: Option<&serde_json::Value>| -> Result<String, String> {
+            let t = v.and_then(|v| v.as_str()).ok_or("the rule needs a date like 2026-01-31")?;
+            let p: Vec<&str> = t.split('-').collect();
+            let (y, m, d) = match p.as_slice() {
+                [y, m, d] if y.len() == 4 && m.len() == 2 && d.len() == 2 && t.chars().all(|c| c.is_ascii_digit() || c == '-') => {
+                    (y.parse::<u32>().map_err(|_| "bad date")?, m.parse::<u32>().map_err(|_| "bad date")?, d.parse::<u32>().map_err(|_| "bad date")?)
                 }
-                let mut texts = Vec::new();
-                for i in items {
-                    let t = i.as_str().map(str::trim).filter(|t| !t.is_empty() && t.chars().count() <= 64).ok_or("each list item must be 1 to 64 characters")?;
-                    if t.chars().any(|c| c.is_control() || c == ',' || c == '"') {
-                        return Err("List items cannot contain commas, quotes or control characters.".into());
+                _ => return Err("the rule needs a date like 2026-01-31".into()),
+            };
+            let leap = (y % 4 == 0 && y % 100 != 0) || y % 400 == 0;
+            let days = match m {
+                1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
+                4 | 6 | 9 | 11 => 30,
+                2 => 28 + u32::from(leap),
+                _ => 0,
+            };
+            if !(1900..=9999).contains(&y) || d < 1 || d > days {
+                return Err("that date does not exist (use 1900-01-01 to 9999-12-31)".into());
+            }
+            Ok(format!("DATE({y},{m},{d})"))
+        };
+        let time_part = |v: Option<&serde_json::Value>| -> Result<String, String> {
+            let t = v.and_then(|v| v.as_str()).ok_or("the rule needs a time like 09:30")?;
+            let p: Vec<&str> = t.split(':').collect();
+            match p.as_slice() {
+                [h, m] if h.len() == 2 && m.len() == 2 && t.chars().all(|c| c.is_ascii_digit() || c == ':') => {
+                    let (h, m) = (h.parse::<u32>().map_err(|_| "bad time")?, m.parse::<u32>().map_err(|_| "bad time")?);
+                    if h > 23 || m > 59 {
+                        return Err("that time does not exist".into());
                     }
-                    texts.push(t.to_string());
+                    Ok(format!("TIME({h},{m},0)"))
                 }
-                json!({"range": range, "type": "list", "formula1": format!("\"{}\"", texts.join(",")), "dropdown": true, "ignoreBlank": true})
+                _ => Err("the rule needs a time like 09:30".into()),
             }
-            "listRange" => {
-                let src = op.get("source").and_then(|v| v.as_str()).ok_or("the list needs a source range")?;
-                let r = gridcraft_engine::core::RangeRef::parse(src).filter(|r| !src.contains('!') && r.count() <= 500).ok_or("the source must be a range of at most 500 cells on this sheet")?;
-                json!({"range": range, "type": "list", "formula1": format!("{}:{}", absolute_a1(&r.start.a1()), absolute_a1(&r.end.a1())), "dropdown": true, "ignoreBlank": true})
-            }
-            "number" => {
-                let whole = op.get("whole").and_then(|v| v.as_bool()).ok_or("whole must be true or false")?;
-                let (operator, f1, f2) = compare(&op)?;
-                json!({"range": range, "type": if whole { "whole" } else { "decimal" }, "operator": operator, "formula1": f1, "formula2": f2, "ignoreBlank": true})
-            }
-            "length" => {
-                let (operator, f1, f2) = compare(&op)?;
-                json!({"range": range, "type": "textLength", "operator": operator, "formula1": f1, "formula2": f2, "ignoreBlank": true})
+        };
+        let mut args = match kind {
+            "clear" => json!({"range": range, "clear": true}),
+            "date" | "time" => {
+                let operator = op.get("operator").and_then(|v| v.as_str()).filter(|o| CF_OPERATORS.contains(o)).ok_or("unsupported comparison")?;
+                let two = operator == "between" || operator == "notBetween";
+                if two != op.get("value2").is_some() {
+                    return Err(if two { "Between needs two values.".into() } else { "Only between takes two values.".into() });
+                }
+                let part = |v: Option<&serde_json::Value>| if kind == "date" { date_part(v) } else { time_part(v) };
+                let f1 = part(op.get("value"))?;
+                let f2 = if two { Some(part(op.get("value2"))?) } else { None };
+                json!({"range": range, "type": kind, "operator": operator, "formula1": f1, "formula2": f2})
             }
             _ => return Err("unsupported validation kind".into()),
         };
+        if kind != "clear" {
+            if let Some(m) = args.as_object_mut() {
+                m.insert("ignoreBlank".into(), json!(allow_blank));
+                m.insert("dropdown".into(), json!(dropdown));
+                m.insert("errorStyle".into(), json!(error_style));
+                m.insert("errorMessage".into(), json!(error_message));
+            }
+        }
         self.session.run("sheet.activate", json!({"sheet": sheet}))?;
         self.session.run("data.validation", args).map(|v| v.to_string())
     }
@@ -4778,6 +4861,26 @@ mod tests {
         book.session.run("review.protectSheet", json!({})).unwrap();
         assert!(book.cf_range(0, 50, 0, 3, 1, op).unwrap_err().contains("protected"));
     }
+    #[test]
+    fn validation_supports_dates_times_alerts_and_finds_invalid_cells() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        assert!(book.validation_info(0, 80, 0).unwrap().contains("\"rule\":null"));
+        book.validation_range(0, 80, 0, 3, 1, r#"{"kind":"date","operator":"greater","value":"2024-02-29","errorMessage":"Later than 29 Feb 2024 please"}"#).unwrap();
+        let info = book.validation_info(0, 80, 0).unwrap();
+        assert!(info.contains("DATE(2024,2,29)") && info.contains("Later than"), "{info}");
+        assert!(book.validation_range(0, 80, 0, 3, 1, r#"{"kind":"date","operator":"greater","value":"2023-02-29"}"#).is_err(), "no such day");
+        assert!(book.validation_range(0, 80, 0, 3, 1, r#"{"kind":"date","operator":"between","value":"2024-01-01"}"#).is_err());
+        assert!(book.validation_range(0, 80, 0, 3, 1, r#"{"kind":"time","operator":"less","value":"24:00"}"#).is_err());
+        book.validation_range(0, 80, 0, 3, 1, r#"{"kind":"time","operator":"between","value":"09:00","value2":"17:30","allowBlank":false}"#).unwrap();
+        assert!(book.validation_info(0, 80, 0).unwrap().contains("TIME(17,30,0)"));
+        assert!(book.validation_range(0, 80, 0, 3, 1, r#"{"kind":"list","items":["a"],"errorStyle":"burn"}"#).is_err());
+        book.validation_range(0, 80, 0, 3, 1, r#"{"kind":"number","whole":true,"operator":"greater","value":0,"errorStyle":"warning"}"#).unwrap();
+        book.set_cell(0, "A82", "-3").unwrap();
+        let bad: serde_json::Value = serde_json::from_str(&book.validation_invalid(0).unwrap()).unwrap();
+        assert!(bad["invalid"].as_array().unwrap().iter().any(|c| c == "A82"));
+        book.undo().unwrap();
+    }
+
     #[test]
     fn validation_range_gates_typed_input_and_lists_choices() {
         let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
