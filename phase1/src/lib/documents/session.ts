@@ -27,7 +27,7 @@ export const getEngine=()=>engine;
 const ownerGuard=()=>{const e=engine,g=gen,en=cur;return ()=>{if(!e||engine!==e||gen!==g||cur!==en||e.isDisposed)throw Error('Document owner changed');};};
 const flags=()=>({canUndo:undo.canUndo,canRedo:undo.canRedo});
 /* ---- Per-file sessions: a file keeps its engine, undo history and dirty flag while the studio or tab is switched away. ---- */
-const STASH=['blocks','pages','pageSizes','words','rev','canUndo','canRedo','edited','caret','risks','engineMs','editError','notice','proofing','showHidden','trackChanges'] as const;
+const STASH=['blocks','pages','pageSizes','words','rev','canUndo','canRedo','edited','caret','risks','engineMs','editError','notice','proofing','showHidden','trackChanges','showMarks','showMarkup'] as const;
 interface Entry{key:string;url:string;engine:DocumentsEngine|null;undo:UndoStack;stash:Partial<DocumentsState>;working:Uint8Array|null;dirty:boolean;used:number;undoReleased:boolean;collab:DocsCollabBinding|null}
 const entries=new Map<string,Entry>();let cur:Entry|null=null;let gen=0;let tick=0;let identity:string|null=null;
 export const MAX_LIVE_SESSIONS=4;
@@ -985,6 +985,11 @@ export async function changeAtCaret():Promise<ReviewChange|null>{
  const c=getDocumentsState().caret;if(!c)return null;const r=await readReview();
  return r.changes.find(x=>x.block===c.block&&c.head>=x.start&&c.head<=x.end)??null;
 }
+/** Draws paragraph, tab and space marks and/or tracked-change markup on the pages. No edit, no undo step. */
+export const setViewMarks=(marks:boolean,markup:boolean)=>run(async()=>{
+ const e=engine;if(!e)return;const check=ownerGuard();const d=await e.setViewMarks(marks,markup);check();
+ patchDocuments({showMarks:marks,showMarkup:markup});await refresh(d);
+});
 export const setShowHidden=(on:boolean)=>run(async()=>{
  const e=engine;if(!e)return;const check=ownerGuard();const d=await e.setShowHidden(on);check();
  patchDocuments({showHidden:on});await refresh(d);

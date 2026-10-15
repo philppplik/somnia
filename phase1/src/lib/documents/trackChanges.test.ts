@@ -36,3 +36,10 @@ test('parseReviewState drops malformed entries and caps the list',()=>{
  assert.equal(r.track,true);assert.equal(r.changes.length,1);
  const many=Array.from({length:MAX_REVIEW_CHANGES+50},()=>good);assert.equal(parseReviewState(JSON.stringify({track:false,changes:many})).changes.length,MAX_REVIEW_CHANGES);
 });
+test('setViewMarks takes two booleans and reaches the engine',()=>{
+ const calls:boolean[][]=[];class S{constructor(_b:Uint8Array){}paginate(){return 1;}free(){}set_view_marks(a:boolean,b:boolean){calls.push([a,b]);}}
+ const k=new DocumentsCore(S as never);try{k.handle({id:1,kind:'open',bytes:new Uint8Array(4)} as never);}catch{/* fake describe */}
+ for(const [marks,markup] of [['y',true],[true,1],[null,false],[true,undefined]])assert.equal(ok(k,{id:2,kind:'setViewMarks',marks,markup}),false);
+ assert.equal(calls.length,0);ok(k,{id:3,kind:'setViewMarks',marks:true,markup:false});assert.deepEqual(calls,[[true,false]]);
+ const {k:k2}=mk(false);assert.equal(ok(k2,{id:4,kind:'setViewMarks',marks:true,markup:true}),false);
+});

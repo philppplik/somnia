@@ -52,7 +52,7 @@ new file mode 100644
 index 0000000..5b80b79
 --- /dev/null
 +++ b/crates/somnia-worker/src/lib.rs
-@@ -0,0 +1,6255 @@
+@@ -0,0 +1,6289 @@
 +//! Experimental headless adapter. No DOM, egui, filesystem or UI thread access.
 +use wasm_bindgen::prelude::*;
 +use std::sync::Arc;
@@ -191,6 +191,10 @@ index 0000000..5b80b79
 +    proofing: bool,
 +    /// Hidden text is drawn (dimmed by the layout) instead of skipped.
 +    show_hidden: bool,
++    /// Paragraph, tab and space marks are drawn on the pages.
++    show_marks: bool,
++    /// Tracked changes are drawn as coloured markup (otherwise as plain text).
++    show_markup: bool,
 +    /// Edits are recorded as tracked insertions and deletions by `track_author` at `track_date`.
 +    track: bool,
 +    track_author: String,
@@ -203,7 +207,7 @@ index 0000000..5b80b79
 +            return Err("adapter input limit: 16 MiB".into());
 +        }
 +        let doc = wordcraft_docx::read(bytes).map_err(|e| e.to_string())?;
-+        Ok(Self { doc, cache: LayoutCache::new(), pages: DocLayout::default(), snaps: Default::default(), next_snap: 1, proofing: false, show_hidden: false, track: false, track_author: String::new(), track_date: String::new() })
++        Ok(Self { doc, cache: LayoutCache::new(), pages: DocLayout::default(), snaps: Default::default(), next_snap: 1, proofing: false, show_hidden: false, show_marks: false, show_markup: true, track: false, track_author: String::new(), track_date: String::new() })
 +    }
 +    fn do_insert(&mut self, block: usize, offset: usize, text: &str) -> Result<(), String> {
 +        if text.len() > 1024 * 1024 {
@@ -4256,6 +4260,11 @@ index 0000000..5b80b79
 +    pub fn set_show_hidden(&mut self, on: bool) {
 +        self.show_hidden = on;
 +    }
++    /// Shows or hides formatting marks and tracked-change markup on the rendered pages (no new layout is needed).
++    pub fn set_view_marks(&mut self, marks: bool, markup: bool) {
++        self.show_marks = marks;
++        self.show_markup = markup;
++    }
 +    /// Spelling and grammar issues of the whole document as JSON; `words_json` is the user's word list.
 +    pub fn proof_check(&self, words_json: &str) -> Result<String, JsValue> {
 +        self.do_proof_check(words_json).map_err(|e| js_err(&e))
@@ -4360,7 +4369,15 @@ index 0000000..5b80b79
 +        if p.w * scale > 2400.0 || p.h * scale > 2400.0 {
 +            return Err(js_err("adapter raster limit: 2400 px per side"));
 +        }
-+        Ok(wordcraft_render::render_page(&self.doc, p, scale, &Default::default()).to_png())
++        Ok(wordcraft_render::render_page(
++            &self.doc,
++            p,
++            scale,
++            &wordcraft_render::RenderOptions {
++                display: wordcraft_layout::display::DisplayOptions { marks: self.show_marks, markup: self.show_markup, ..Default::default() },
++                ..Default::default()
++            },
++        ).to_png())
 +    }
 +    pub fn save(&self) -> Result<Vec<u8>, JsValue> {
 +        wordcraft_docx::write(&self.doc).map_err(|e| js_err(&e.to_string()))
@@ -4812,6 +4829,23 @@ index 0000000..5b80b79
 +        for bad in [r#"{"rowHeight":{"rule":"exact"}}"#, r#"{"rowHeight":{"rule":"exact","value":0}}"#, r#"{"rowHeight":{"rule":"exact","value":2000}}"#, r#"{"rowHeight":{"rule":"auto","value":5}}"#, r#"{"rowHeight":{"rule":"x"}}"#, r#"{"rowHeight":5}"#, r#"{"allRows":true}"#, r#"{"rowHeight":{"rule":"exact","value":10,"extra":1}}"#] {
 +            assert!(s.do_set_table_layout(blk, bad).is_err(), "{bad}");
 +        }
++    }
++    #[test]
++    fn view_marks_and_markup_change_the_rendered_page() {
++        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
++        assert!(s.paginate() >= 1);
++        let plain = s.render_png(0, 0.5).unwrap();
++        s.set_view_marks(true, true);
++        let marked = s.render_png(0, 0.5).unwrap();
++        assert_ne!(plain, marked, "paragraph marks are drawn");
++        s.set_view_marks(false, true);
++        assert_eq!(s.render_png(0, 0.5).unwrap(), plain, "turning marks off restores the page");
++        s.do_set_track(true, "Ann", "2026-01-01T00:00:00Z").unwrap();
++        s.do_replace(0, 0, 0, "NEW ").unwrap();
++        assert!(s.paginate() >= 1);
++        let with_markup = s.render_png(0, 0.5).unwrap();
++        s.set_view_marks(false, false);
++        assert_ne!(s.render_png(0, 0.5).unwrap(), with_markup, "markup off draws the change as plain text");
 +    }
 +    #[test]
 +    fn suppress_line_numbers_sets_reports_roundtrips_and_validates() {

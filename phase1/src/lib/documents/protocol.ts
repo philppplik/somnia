@@ -171,6 +171,7 @@ export type DocumentsRequest=
  |{id:number;kind:'proofSuggest';word:string}
  |{id:number;kind:'setProofing';on:boolean}
  |{id:number;kind:'setShowHidden';on:boolean}
+ |{id:number;kind:'setViewMarks';marks:boolean;markup:boolean}
  |{id:number;kind:'setTrack';on:boolean;author:string;date:string}
  |{id:number;kind:'reviewState'}
  |{id:number;kind:'resolveChange';block:number;start:number;end:number;accept:boolean}

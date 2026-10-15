@@ -1,6 +1,6 @@
 import {useCallback,useEffect,useRef,useState} from 'react';
 import type {ReviewChange} from '../../lib/documents/protocol';
-import {goToChange,readReview,resolveAllChanges,resolveChange,setTrackChanges} from '../../lib/documents/session';
+import {setViewMarks,goToChange,readReview,resolveAllChanges,resolveChange,setTrackChanges} from '../../lib/documents/session';
 import {useDocuments} from '../../lib/documents/store';
 import {useT} from '../../lib/useT';
 import {NativeButton,NativeInput} from '../ui/native-controls';
@@ -18,6 +18,7 @@ export function ReviewDialog({onClose}:{onClose:()=>void}){
   <div className="grid w-[28rem] max-w-full gap-3 rounded-[var(--r-popup,25px)] bg-surface p-5 shadow-xl" data-testid="documents-review-dialog">
    <h2 id="documents-review-title" className="text-sm font-medium">{t('documents.review.title')}</h2>
    <label className="flex items-center gap-2 text-xs text-ink-2"><NativeInput type="checkbox" checked={doc.trackChanges} onChange={e=>void setTrackChanges(e.currentTarget.checked)} data-testid="documents-review-track"/>{t('documents.review.track')}</label>
+   <label className="flex items-center gap-2 text-xs text-ink-2"><NativeInput type="checkbox" checked={doc.showMarkup} onChange={e=>void setViewMarks(doc.showMarks,e.currentTarget.checked)} data-testid="documents-review-markup"/>{t('documents.view.markup')}</label>
    {failed?<p className="text-xs text-ink-3" role="alert">{t('documents.review.unavailable')}</p>:list===null?<p className="text-xs text-ink-3">{t('documents.review.loading')}</p>:list.length===0?<p className="text-xs text-ink-2" data-testid="documents-review-none">{t('documents.review.none')}</p>:<>
     <p className="text-xs text-ink-3" data-testid="documents-review-count">{t('documents.review.count',{n:list.length})}</p>
     <ul className="grid max-h-64 gap-2 overflow-auto" data-testid="documents-review-list">

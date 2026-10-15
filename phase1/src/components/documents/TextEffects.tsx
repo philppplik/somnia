@@ -1,5 +1,5 @@
 import {useState} from 'react';
-import {setTrackChanges,copyFormatting,pasteFormatting,setCharSpacing,insertPageBreak,clearFormatting,changeCase,hasTextSelection,setHighlight,setLink,toggleFormat,toggleVertAlign} from '../../lib/documents/session';
+import {setViewMarks,setTrackChanges,copyFormatting,pasteFormatting,setCharSpacing,insertPageBreak,clearFormatting,changeCase,hasTextSelection,setHighlight,setLink,toggleFormat,toggleVertAlign} from '../../lib/documents/session';
 import {HIGHLIGHTS,MAX_LINK_CHARS,linkProblem,type FormatPatch,type FormatState,type HighlightName} from '../../lib/documents/protocol';
 import {CASE_MODES,type CaseMode} from '../../lib/documents/textCase';
 import {setShortcutsOpen} from '../../lib/documents/shortcuts';
@@ -56,6 +56,7 @@ export function TextEffects({format,held,enabled}:{format:FormatState|null;held:
   <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>void insertPageBreak()} data-testid="documents-page-break">{t('documents.para.opt.insertBreak')}</NativeButton>
   <NativeButton className={tool+' border border-subtle'} disabled={!enabled||!(doc.para?.list==='bullet'||doc.para?.list==='numbered')} onClick={()=>setInfoDialog('list')} data-testid="documents-listopt-open">{t('documents.listopt.open')}</NativeButton>
   <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>setInfoDialog('styles')} data-testid="documents-styles-open">{t('documents.styles.open')}</NativeButton>
+  <NativeButton className={tool+' border border-subtle aria-pressed:bg-hover'} disabled={!enabled} aria-pressed={doc.showMarks} onClick={()=>void setViewMarks(!doc.showMarks,doc.showMarkup)} data-testid="documents-marks-toggle">{t('documents.view.marks')}</NativeButton>
   <NativeButton className={tool+' border border-subtle aria-pressed:bg-hover'} disabled={!enabled} aria-pressed={doc.trackChanges} onClick={()=>void setTrackChanges(!doc.trackChanges)} data-testid="documents-track-toggle">{t('documents.review.track')}</NativeButton>
   <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>setInfoDialog('review')} data-testid="documents-review-open">{t('documents.review.open')}</NativeButton>
   <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>setInfoDialog('charlook')} data-testid="documents-charlook-open">{t('documents.charlook.open')}</NativeButton>

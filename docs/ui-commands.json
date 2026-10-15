@@ -5761,6 +5761,28 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.view.marks",
+      "title": "Show or hide formatting marks",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.view.markup",
+      "title": "Show or hide tracked-change markup",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.wordCount.show",
       "title": "Word count",
       "category": "View",
