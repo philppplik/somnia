@@ -6518,6 +6518,14 @@
       "hasEnabled": true
     },
     {
+      "id": "sheets.pivot",
+      "title": "Build or refresh a PivotTable",
+      "category": "Edit",
+      "source": "sheets",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
       "id": "sheets.redo",
       "title": "Redo workbook change",
       "category": "Edit",
@@ -6580,6 +6588,14 @@
     {
       "id": "sheets.split",
       "title": "Split the selected column of text into columns",
+      "category": "Edit",
+      "source": "sheets",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
+      "id": "sheets.table",
+      "title": "Create or change a table",
       "category": "Edit",
       "source": "sheets",
       "allowInInput": true,

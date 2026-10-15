@@ -1,6 +1,7 @@
 import {parseAnnotations} from './notes';
 import {parseNames} from './names';
-import type {NameInfo,NameOp,AnnotateOp,CellAnnotations,DedupeOp,SplitOp,ReplaceOp,ValidationOp,CfOp,FillDirection,SheetsEditReceipt,SheetsNativeState,FilterOp,SortOp,SheetOp,FormatOp,LineAxis,LineOp,RangeResult,SheetInfo,SheetLayout,SheetsRequest,SheetsResponse,ViewResult,WorkbookInfo} from './protocol';
+import {parsePivotFields,parseTables} from './tableOps';
+import type {PivotField,PivotFunc,TableOp,TablesInfo,NameInfo,NameOp,AnnotateOp,CellAnnotations,DedupeOp,SplitOp,ReplaceOp,ValidationOp,CfOp,FillDirection,SheetsEditReceipt,SheetsNativeState,FilterOp,SortOp,SheetOp,FormatOp,LineAxis,LineOp,RangeResult,SheetInfo,SheetLayout,SheetsRequest,SheetsResponse,ViewResult,WorkbookInfo} from './protocol';
 import {MAX_INPUT_BYTES} from './protocol';
 import {parseEditReceipt,parseNativeState} from './receipt';
 type Req=SheetsRequest extends infer R?R extends {id:number}?Omit<R,'id'>:never:never;
@@ -26,7 +27,7 @@ export class SheetsEngine{
  private request(message:Req,transfer:Transferable[]=[]){
   return new Promise<SheetsResponse>((resolve,reject)=>{
    if(this.disposed){reject(new Error('Spreadsheet engine closed'));return;}
-   const mutating=['open','set','setValues','clear','format','resize','editLines','freeze','sort','filter','fill','cf','validation','replace','dedupe','split','annotate','defineName','deleteName','setReviewed','undoReviewed','editSheet','undo','redo','close'].includes(message.op);if(mutating){this.mutationEpoch++;this.mutations++;this.notifySelectionRead();}const finish=()=>{if(mutating){this.mutations--;this.mutationEpoch++;this.notifySelectionRead();}};const done=(r:SheetsResponse)=>{finish();resolve(r);},failed=(e:Error)=>{finish();reject(e);};
+   const mutating=['open','set','setValues','clear','format','resize','editLines','freeze','sort','filter','fill','cf','validation','replace','dedupe','split','annotate','defineName','deleteName','pivotCreate','pivotRefresh','tableOp','setReviewed','undoReviewed','editSheet','undo','redo','close'].includes(message.op);if(mutating){this.mutationEpoch++;this.mutations++;this.notifySelectionRead();}const finish=()=>{if(mutating){this.mutations--;this.mutationEpoch++;this.notifySelectionRead();}};const done=(r:SheetsResponse)=>{finish();resolve(r);},failed=(e:Error)=>{finish();reject(e);};
    const id=this.nextId++;
    const timer=setTimeout(()=>this.dispose(new Error('Spreadsheet engine timed out. Unsaved edits in this workbook were discarded.')),this.timeoutMs);
    this.pending.set(id,{resolve:done,reject:failed,timer});
@@ -62,6 +63,16 @@ export class SheetsEngine{
  async dedupe(sheet:number,row:number,col:number,rows:number,cols:number,dedupe:DedupeOp):Promise<number>{const r=await this.result<{removed:unknown}>({op:'dedupe',sheet,row,col,rows,cols,dedupe});return typeof r.removed==='number'?r.removed:0;}
  /** Split one column of text into the empty columns to its right (one undo step). */
  split(sheet:number,row:number,col:number,rows:number,cols:number,split:SplitOp){return this.result<unknown>({op:'split',sheet,row,col,rows,cols,split});}
+ /** The column names of the block's first row and whether each is all numbers (read only). */
+ async pivotFields(sheet:number,row:number,col:number,rows:number,cols:number):Promise<PivotField[]>{return parsePivotFields(await this.result<{fields:unknown}>({op:'pivotFields',sheet,row,col,rows,cols}));}
+ /** Builds a small PivotTable on a new sheet before `sheet` (one undo step); resolves to the report sheet's index. */
+ async pivotCreate(sheet:number,row:number,col:number,rows:number,cols:number,pivot:{rows:string;columns?:string;values:string;func?:PivotFunc}):Promise<number>{const r=await this.result<{sheet:unknown}>({op:'pivotCreate',sheet,row,col,rows,cols,pivot});if(typeof r.sheet!=='number')throw Error('The report sheet was not found.');return r.sheet;}
+ /** Refreshes every PivotTable from its source (one undo step). */
+ pivotRefresh(){return this.result<unknown>({op:'pivotRefresh'});}
+ /** The tables of a sheet and the style names to choose from (read only). */
+ async tables(sheet:number):Promise<TablesInfo>{return parseTables(await this.result<{tables:unknown;styles:unknown}>({op:'tables',sheet}));}
+ /** Creates a table from the block or changes one of the sheet's tables (one undo step). */
+ tableOp(sheet:number,row:number,col:number,rows:number,cols:number,table:TableOp){return this.result<unknown>({op:'tableOp',sheet,row,col,rows,cols,table});}
  /** Defines a name for the block (one undo step). */
  defineName(sheet:number,row:number,col:number,rows:number,cols:number,name:{name:string;scope:'workbook'|'sheet';replace?:boolean}){return this.result<unknown>({op:'defineName',sheet,row,col,rows,cols,name});}
  /** Deletes one name (one undo step). `sheet` is the sheet a sheet-scoped name belongs to. */

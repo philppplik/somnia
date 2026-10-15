@@ -16,6 +16,10 @@ const MAX_CF_RULES: usize = 64;
 const MAX_SPLIT_PARTS: usize = 20;
 const MAX_NOTE_CHARS: usize = 2000;
 const MAX_NAMES: usize = 500;
+const MAX_TABLES: usize = 200;
+const MAX_PIVOT_FIELDS: usize = 200;
+/// Summary functions the pivot builder offers.
+const PIVOT_FUNCS: &[&str] = &["sum", "count", "average", "max", "min"];
 const MAX_NAME_CHARS: usize = 64;
 const MAX_AFFIX_CHARS: usize = 12;
 const MAX_LINK_BYTES: usize = 2048;
@@ -756,6 +760,203 @@ impl HeadlessWorkbook {
         let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
         let block = gridcraft_engine::core::RangeRef::new(CellRef::new(row, col), CellRef::new(row + rows - 1, col + cols - 1));
         Ok(sh.cells.iter_range(block).any(|(_, c)| c.formula.is_some()))
+    }
+
+    /// `Sheet!$A$1:$C$9` for a block, quoted the way formulas need it.
+    fn block_source(&self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32) -> Result<String, String> {
+        let doc = self.session.doc().map_err(|e| e.to_string())?;
+        let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+        let abs = |r: u32, c: u32| format!("${}${}", gridcraft_engine::core::col_to_letters(c), r + 1);
+        Ok(format!("{}!{}:{}", gridcraft_engine::formula::quote_sheet(&sh.name), abs(row, col), abs(row + rows - 1, col + cols - 1)))
+    }
+
+    /// The column names (first row) of a block and whether each column is all numbers (read only):
+    /// `{"fields":[{"name":..,"numeric":b}]}`, at most 200. Needs at least two rows.
+    pub fn pivot_fields(&self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32) -> Result<String, String> {
+        if rows < 2 || cols == 0 || u64::from(rows) * u64::from(cols) > MAX_SORT_CELLS {
+            return Err("Select a header row and at least one data row (at most 1,000,000 cells).".into());
+        }
+        self.check_block(sheet, row, col, rows, cols, false)?;
+        let source = self.block_source(sheet, row, col, rows, cols)?;
+        let doc = self.session.doc().map_err(|e| e.to_string())?;
+        let src = gridcraft_engine::pivot::read_source(&doc.wb, &source, sheet)?;
+        let fields: Vec<serde_json::Value> = src
+            .headers
+            .iter()
+            .enumerate()
+            .take(MAX_PIVOT_FIELDS)
+            .map(|(i, h)| json!({"name": h, "numeric": src.numeric.get(i).copied().unwrap_or(false)}))
+            .collect();
+        Ok(json!({"fields": fields}).to_string())
+    }
+
+    /// Builds a small PivotTable on a NEW sheet placed before `sheet`, as ONE history entry. `op_json` is
+    /// `{"rows":field,"columns"?:field,"values":field,"func":"sum"|"count"|"average"|"max"|"min"}` with fields named in the block's
+    /// first row. Sum, average, max and min need a numeric field. Refused: protected workbook structure, unknown or repeated
+    /// fields. Returns `{"sheet":index of the report sheet}`.
+    pub fn pivot_create(&mut self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32, op_json: &str) -> Result<String, String> {
+        let fields: serde_json::Value = serde_json::from_str(&self.pivot_fields(sheet, row, col, rows, cols)?).map_err(|e| e.to_string())?;
+        let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "operation must be a JSON object".to_string())?;
+        let known = |name: &str| -> Option<bool> {
+            fields["fields"].as_array()?.iter().find(|f| f["name"].as_str() == Some(name)).map(|f| f["numeric"].as_bool().unwrap_or(false))
+        };
+        let pick = |key: &str, required: bool| -> Result<Option<String>, String> {
+            match op.get(key).and_then(|v| v.as_str()) {
+                None if required => Err(format!("{key} needs a field")),
+                None => Ok(None),
+                Some(n) => known(n).map(|_| Some(n.to_string())).ok_or_else(|| format!("{n} is not a column name in the first row")),
+            }
+        };
+        let row_field = pick("rows", true)?.unwrap_or_default();
+        let column_field = pick("columns", false)?;
+        let value_field = pick("values", true)?.unwrap_or_default();
+        if column_field.as_deref() == Some(row_field.as_str()) {
+            return Err("Rows and columns need different fields.".into());
+        }
+        let func = op.get("func").and_then(|v| v.as_str()).unwrap_or("sum");
+        if !PIVOT_FUNCS.contains(&func) {
+            return Err("unsupported summary function".into());
+        }
+        if func != "count" && known(&value_field) != Some(true) {
+            return Err("Sum, average, max and min need a field that holds only numbers.".into());
+        }
+        {
+            let doc = self.session.doc().map_err(|e| e.to_string())?;
+            if doc.wb.protected_structure {
+                return Err("The workbook structure is protected.".into());
+            }
+        }
+        let source = self.block_source(sheet, row, col, rows, cols)?;
+        self.session.run("sheet.activate", json!({"sheet": sheet})).map_err(|e| e.to_string())?;
+        let mut params = json!({"source": source, "destination": "new", "rows": [row_field], "values": [{"field": value_field, "func": func}]});
+        if let Some(c) = column_field {
+            params["columns"] = json!([c]);
+        }
+        let made = self.session.run("insert.pivotTable", params).map_err(|e| e.to_string())?;
+        let report = made.get("sheet").and_then(|v| v.as_str()).and_then(|n| self.session.doc().ok().and_then(|d| d.wb.sheet_index(n))).ok_or("the report sheet was not found")?;
+        Ok(json!({"sheet": report}).to_string())
+    }
+
+    /// Refreshes every PivotTable from its source as ONE history entry (nothing outside the reports is overwritten).
+    /// Returns `{"refreshed":n,"errors":[..]}`.
+    pub fn pivot_refresh(&mut self) -> Result<String, String> {
+        self.session.run("data.refreshAll", json!({})).map(|v| v.to_string()).map_err(|e| e.to_string())
+    }
+
+    /// Lists the tables of a sheet and the style names that can be chosen (read only):
+    /// `{"tables":[{"name":..,"range":..,"header":b,"totals":b,"banded":b,"style":..}],"styles":[..]}`.
+    pub fn tables_info(&self, sheet: usize) -> Result<String, String> {
+        let doc = self.session.doc().map_err(|e| e.to_string())?;
+        let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+        let tables: Vec<serde_json::Value> = sh
+            .tables
+            .iter()
+            .take(MAX_TABLES)
+            .map(|t| json!({"name": t.name, "range": t.range.a1(), "header": t.header_row, "totals": t.totals_row, "banded": t.banded_rows, "style": t.style}))
+            .collect();
+        Ok(json!({"tables": tables, "styles": gridcraft_engine::tables::gallery()}).to_string())
+    }
+
+    fn table_name_problem(name: &str) -> Option<&'static str> {
+        let count = name.chars().count();
+        if count == 0 || count > MAX_NAME_CHARS {
+            return Some("A table name has 1 to 64 characters.");
+        }
+        let mut chars = name.chars();
+        if !chars.next().is_some_and(|c| c.is_alphabetic() || c == '_') || !chars.all(|c| c.is_alphanumeric() || c == '_' || c == '.') {
+            return Some("A table name starts with a letter or underscore and has only letters, digits, dots and underscores.");
+        }
+        if CellRef::parse(name).is_some() {
+            return Some("This name looks like a cell address.");
+        }
+        None
+    }
+
+    /// Creates a table from the block, or changes one of this sheet's tables, as ONE history entry. `op_json` is
+    /// `{"kind":"create","name"?:..,"style"?:..}` (the first row must hold text column names, so nothing moves),
+    /// `{"kind":"totals","table":..,"on":b}` (refused when the row below the table is not empty), `{"kind":"banded","table":..,"on":b}`,
+    /// `{"kind":"style","table":..,"style":..}`, `{"kind":"rename","table":..,"newName":..}` or `{"kind":"convert","table":..}`
+    /// (keeps the look as plain formatting). Protected sheets refused; styles come from the engine's gallery.
+    pub fn table_op(&mut self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32, op_json: &str) -> Result<String, String> {
+        if rows == 0 || cols == 0 || u64::from(rows) * u64::from(cols) > MAX_FILL_CELLS {
+            return Err("Select a block of at most 1,000,000 cells.".into());
+        }
+        self.check_block(sheet, row, col, rows, cols, true)?;
+        let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "operation must be a JSON object".to_string())?;
+        let kind = op.get("kind").and_then(|v| v.as_str()).ok_or("missing operation kind")?;
+        let styles = gridcraft_engine::tables::gallery();
+        let style_of = |op: &serde_json::Value| -> Result<Option<String>, String> {
+            match op.get("style") {
+                None => Ok(None),
+                Some(v) => v.as_str().filter(|n| styles.iter().any(|s| s == n)).map(|n| Some(n.to_string())).ok_or_else(|| "unsupported table style".to_string()),
+            }
+        };
+        if kind == "create" {
+            if rows < 2 {
+                return Err("A table needs a header row and at least one data row.".into());
+            }
+            {
+                let doc = self.session.doc().map_err(|e| e.to_string())?;
+                let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+                if sh.tables.len() >= MAX_TABLES {
+                    return Err("A sheet holds at most 200 tables.".into());
+                }
+                for c in col..col + cols {
+                    let v = sh.value(CellRef::new(row, c));
+                    if !v.is_text() || v.display().trim().is_empty() {
+                        return Err("The first row must hold text column names.".into());
+                    }
+                }
+            }
+            let mut params = json!({"sheet": sheet, "range": format!("{}:{}", CellRef::new(row, col).a1(), CellRef::new(row + rows - 1, col + cols - 1).a1()), "header": true});
+            if let Some(n) = op.get("name") {
+                let n = n.as_str().ok_or("name must be text")?;
+                if let Some(why) = Self::table_name_problem(n) {
+                    return Err(why.into());
+                }
+                params["name"] = json!(n);
+            }
+            if let Some(st) = style_of(&op)? {
+                params["style"] = json!(st);
+            }
+            return self.session.run("insert.table", params).map(|v| v.to_string()).map_err(|e| e.to_string());
+        }
+        let table = op.get("table").and_then(|v| v.as_str()).ok_or("missing table name")?.to_string();
+        let (totals_now, below_empty) = {
+            let doc = self.session.doc().map_err(|e| e.to_string())?;
+            let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+            let Some(t) = sh.tables.iter().find(|t| t.name.eq_ignore_ascii_case(&table)) else {
+                return Err("There is no such table on this sheet.".into());
+            };
+            let below = gridcraft_engine::core::RangeRef::new(CellRef::new(t.range.end.row + 1, t.range.start.col), CellRef::new(t.range.end.row + 1, t.range.end.col));
+            let empty = t.range.end.row + 1 >= gridcraft_engine::core::MAX_ROWS || !sh.cells.iter_range(below).any(|(_, c)| !c.value.is_empty() || c.formula.is_some());
+            (t.totals_row, empty)
+        };
+        let flag = |op: &serde_json::Value| op.get("on").and_then(|v| v.as_bool()).ok_or_else(|| "on must be true or false".to_string());
+        let (command, params) = match kind {
+            "totals" => {
+                let on = flag(&op)?;
+                if on && !totals_now && !below_empty {
+                    return Err("The row below the table is not empty. Clear it before adding a total row.".into());
+                }
+                ("table.totalRow", json!({"table": table, "on": on}))
+            }
+            "banded" => ("table.bandedRows", json!({"table": table, "on": flag(&op)?})),
+            "style" => {
+                let st = style_of(&op)?.ok_or("missing table style")?;
+                ("table.style", json!({"table": table, "style": st}))
+            }
+            "rename" => {
+                let new_name = op.get("newName").and_then(|v| v.as_str()).ok_or("missing new name")?;
+                if let Some(why) = Self::table_name_problem(new_name) {
+                    return Err(why.into());
+                }
+                ("table.rename", json!({"table": table, "name": new_name}))
+            }
+            "convert" => ("table.convertToRange", json!({"table": table})),
+            _ => return Err("unsupported table operation".into()),
+        };
+        self.session.run(command, params).map(|v| v.to_string()).map_err(|e| e.to_string())
     }
 
     /// Lists the visible defined names (at most 500) as `{"names":[{"name":..,"refersTo":..,"scope":"Workbook"|sheet name,"comment":..}]}`.
@@ -2416,6 +2617,48 @@ mod tests {
         assert_eq!(text(&book, "A82"), "red RED", "nothing changed");
         book.session.run("review.protectSheet", json!({})).unwrap();
         assert!(book.replace_range(0, 80, 0, 3, 2, op).unwrap_err().contains("protected"));
+    }
+    #[test]
+    fn tables_and_pivots_are_validated_undoable_and_refuse_unsafe_input() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        book.set_values(0, 150, 0, r#"[["Region","Qtr","Sales"],["East","Q1","10"],["West","Q1","20"],["East","Q2","30"]]"#).unwrap();
+        let fields = book.pivot_fields(0, 150, 0, 4, 3).unwrap();
+        assert!(fields.contains("Region") && fields.contains("\"numeric\":true"));
+        assert!(book.pivot_fields(0, 150, 0, 1, 3).is_err());
+        assert!(book.pivot_create(0, 150, 0, 4, 3, r#"{"rows":"Nope","values":"Sales","func":"sum"}"#).is_err());
+        assert!(book.pivot_create(0, 150, 0, 4, 3, r#"{"rows":"Region","values":"Region","func":"sum"}"#).is_err(), "sum needs numbers");
+        assert!(book.pivot_create(0, 150, 0, 4, 3, r#"{"rows":"Region","columns":"Region","values":"Sales","func":"sum"}"#).is_err());
+        assert!(book.pivot_create(0, 150, 0, 4, 3, r#"{"rows":"Region","values":"Sales","func":"median"}"#).is_err());
+        let before = book.session.doc().unwrap().wb.sheets.len();
+        let made = book.pivot_create(0, 150, 0, 4, 3, r#"{"rows":"Region","columns":"Qtr","values":"Sales","func":"sum"}"#).unwrap();
+        assert_eq!(book.session.doc().unwrap().wb.sheets.len(), before + 1);
+        assert!(made.contains("sheet"));
+        book.undo().unwrap();
+        assert_eq!(book.session.doc().unwrap().wb.sheets.len(), before, "one undo removes the report sheet");
+        assert!(book.pivot_refresh().is_ok());
+        assert!(book.table_op(0, 150, 0, 1, 3, r#"{"kind":"create"}"#).is_err(), "needs a data row");
+        assert!(book.table_op(0, 151, 0, 3, 3, r#"{"kind":"create"}"#).is_err(), "first row must be text");
+        assert!(book.table_op(0, 150, 0, 4, 3, r#"{"kind":"create","name":"A1"}"#).is_err());
+        assert!(book.table_op(0, 150, 0, 4, 3, r#"{"kind":"create","style":"Nope"}"#).is_err());
+        book.table_op(0, 150, 0, 4, 3, r#"{"kind":"create","name":"Sales1"}"#).unwrap();
+        assert!(book.tables_info(0).unwrap().contains("Sales1"));
+        assert!(book.table_op(0, 150, 0, 4, 3, r#"{"kind":"create","name":"Other"}"#).is_err(), "no overlap");
+        book.table_op(0, 150, 0, 4, 3, r#"{"kind":"style","table":"Sales1","style":"TableStyleLight3"}"#).unwrap();
+        book.table_op(0, 150, 0, 4, 3, r#"{"kind":"banded","table":"Sales1","on":false}"#).unwrap();
+        book.set_values(0, 154, 0, r#"[["keep"]]"#).unwrap();
+        assert!(book.table_op(0, 150, 0, 4, 3, r#"{"kind":"totals","table":"Sales1","on":true}"#).is_err(), "row below is not empty");
+        book.session.run("cell.set", json!({"sheet": 0, "cell": "A155", "input": ""})).unwrap();
+        book.table_op(0, 150, 0, 4, 3, r#"{"kind":"totals","table":"Sales1","on":true}"#).unwrap();
+        assert!(book.tables_info(0).unwrap().contains("\"totals\":true"));
+        book.undo().unwrap();
+        assert!(book.tables_info(0).unwrap().contains("\"totals\":false"));
+        book.table_op(0, 150, 0, 4, 3, r#"{"kind":"rename","table":"Sales1","newName":"Orders"}"#).unwrap();
+        assert!(book.table_op(0, 150, 0, 4, 3, r#"{"kind":"rename","table":"Orders","newName":"bad name"}"#).is_err());
+        assert!(book.table_op(0, 150, 0, 4, 3, r#"{"kind":"style","table":"Missing","style":"TableStyleLight3"}"#).is_err());
+        book.table_op(0, 150, 0, 4, 3, r#"{"kind":"convert","table":"Orders"}"#).unwrap();
+        assert!(!book.tables_info(0).unwrap().contains("Orders"));
+        book.session.run("review.protectSheet", json!({})).unwrap();
+        assert!(book.table_op(0, 150, 0, 4, 3, r#"{"kind":"create"}"#).unwrap_err().contains("protected"));
     }
     #[test]
     fn custom_formats_and_names_are_structured_validated_and_undoable() {

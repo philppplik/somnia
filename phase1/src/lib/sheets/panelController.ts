@@ -4,12 +4,13 @@ import {parsePanelRange} from './panelModel';
 import {MAX_CELL_BYTES,type RangeCell} from './protocol';
 import {parseAddress} from './format';
 import {parseFormatOp} from './formatOps';
-import type {NameOp,AnnotateOp,DedupeOp,SplitOp,ReplaceOp,ValidationOp,CfOp,FillDirection,FilterOp,SortOp,FormatOp,LineAxis,LineEditKind,LineOp,SheetOp} from './protocol';
+import type {PivotField,PivotOp,TableOp,NameOp,AnnotateOp,DedupeOp,SplitOp,ReplaceOp,ValidationOp,CfOp,FillDirection,FilterOp,SortOp,FormatOp,LineAxis,LineEditKind,LineOp,SheetOp} from './protocol';
 import {parseEditLines,parseFreeze,parseLineCommand} from './lineOps';
 import {parseSheetOp} from './sheetOps';
 import {parseSortCommand} from './sortOps';
 import {parseAnnotateCommand} from './notes';
 import {parseNamesCommand} from './names';
+import {parsePivotCommand,parseTableCommand} from './tableOps';
 import {parseDedupeCommand,parseSplitCommand,SPLIT_DELIMITERS} from './dataTools';
 import {parseReplaceCommand} from './replaceOps';
 import {parseValidationCommand} from './validationOps';
@@ -46,6 +47,12 @@ export interface SheetsPanelController {
  annotateCell(op:AnnotateOp):void|Promise<void>;
  /** Defines (for the selected block) or deletes a name; one undo step. */
  nameOperation(op:NameOp):void|Promise<void>;
+ /** Creates a table from the selection or changes one of the sheet's tables (one undo step). */
+ tableOperation(op:TableOp):void|Promise<void>;
+ /** Builds a PivotTable from the selection on a new sheet, or refreshes all PivotTables (one undo step). */
+ pivotOperation(op:PivotOp):void|Promise<void>;
+ /** The column names in the first row of the selection. */
+ pivotFields():PivotField[]|Promise<PivotField[]>;
  replaceText(op:ReplaceOp):number|Promise<number>;
  /** Removes duplicate rows inside the selected block (one undo step); resolves to the number removed. */
  removeDuplicates(op:DedupeOp):number|Promise<number>;
@@ -58,7 +65,7 @@ let current:SheetsPanelController|null=null;
 export const getSheetsPanelController=()=>current;
 export function registerSheetsPanelController(controller:SheetsPanelController){current=controller;return()=>{if(current===controller)current=null;};}
 const requireController=()=>{if(!current?.ready())throw Error('No workbook is ready.');return current;};
-export const SHEETS_PANEL_COMMAND_IDS=['sheets.navigate','sheets.setCell','sheets.analyzeRange','sheets.format','sheets.resize','sheets.freeze','sheets.editLines','sheets.sheet','sheets.sort','sheets.filter','sheets.fill','sheets.highlight','sheets.validation','sheets.replace','sheets.dedupe','sheets.split','sheets.annotate','sheets.names'] as const;
+export const SHEETS_PANEL_COMMAND_IDS=['sheets.navigate','sheets.setCell','sheets.analyzeRange','sheets.format','sheets.resize','sheets.freeze','sheets.editLines','sheets.sheet','sheets.sort','sheets.filter','sheets.fill','sheets.highlight','sheets.validation','sheets.replace','sheets.dedupe','sheets.split','sheets.annotate','sheets.names','sheets.table','sheets.pivot'] as const;
 export function sheetsPanelCommandSpecs():CommandSpec[]{
  return [
  {id:'sheets.navigate',title:'Go to spreadsheet cell',category:'View',level:'ui',allowInInput:true,
@@ -115,6 +122,12 @@ export function sheetsPanelCommandSpecs():CommandSpec[]{
  {id:'sheets.names',title:'Define or delete a named range',category:'Edit',level:'ui',allowInInput:true,
   params:{type:'object',properties:{kind:{type:'string',enum:['define','delete']},name:{type:'string',minLength:1,maxLength:64},scope:{type:'string',enum:['workbook','sheet']},replace:{type:'boolean'}},required:['kind','name'],additionalProperties:false},
   enabled:()=>!!current?.ready(),run:p=>requireController().nameOperation(parseNamesCommand(p))},
+ {id:'sheets.table',title:'Create or change a table',category:'Edit',level:'ui',allowInInput:true,
+  params:{type:'object',properties:{kind:{type:'string',enum:['create','totals','banded','style','rename','convert']},table:{type:'string',minLength:1,maxLength:64},name:{type:'string',minLength:1,maxLength:64},newName:{type:'string',minLength:1,maxLength:64},style:{type:'string',maxLength:40},on:{type:'boolean'}},required:['kind'],additionalProperties:false},
+  enabled:()=>!!current?.ready(),run:p=>requireController().tableOperation(parseTableCommand(p))},
+ {id:'sheets.pivot',title:'Build or refresh a PivotTable',category:'Edit',level:'ui',allowInInput:true,
+  params:{type:'object',properties:{kind:{type:'string',enum:['create','refresh']},rows:{type:'string',minLength:1,maxLength:255},columns:{type:'string',minLength:1,maxLength:255},values:{type:'string',minLength:1,maxLength:255},func:{type:'string',enum:['sum','count','average','max','min']}},required:['kind'],additionalProperties:false},
+  enabled:()=>!!current?.ready(),run:p=>requireController().pivotOperation(parsePivotCommand(p))},
  ];
 }
 export function registerSheetsPanelCommands(){const offs=sheetsPanelCommandSpecs().map(s=>registerCommandSpec(s));return()=>offs.forEach(off=>off());}

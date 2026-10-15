@@ -14,6 +14,8 @@ import {addressOf,colName,parseAddress} from '../../lib/sheets/format';
 import {sortBlockProblem} from '../../lib/sheets/sortOps';
 import {fillBlockProblem,FILL_DIRECTIONS} from '../../lib/sheets/fillOps';
 import type {FillDirection,CfStyle} from '../../lib/sheets/protocol';
+import {PIVOT_FUNCS,tableBlockProblem} from '../../lib/sheets/tableOps';
+import type {PivotField,PivotFunc} from '../../lib/sheets/protocol';
 import {nameProblem,nameTarget} from '../../lib/sheets/names';
 import {internalTarget,linkTargetProblem,MAX_LINK_TEXT,MAX_NOTE_CHARS} from '../../lib/sheets/notes';
 import {dedupeBlockProblem,splitBlockProblem,parseWidths,SPLIT_DELIMITERS} from '../../lib/sheets/dataTools';
@@ -216,6 +218,8 @@ export function SheetsLayoutPanel({context}:PanelHostProps){
   <DedupeGroup/>
   <NotesGroup/>
   <NamesGroup/>
+  <TablesGroup/>
+  <PivotGroup/>
   <CustomFormatGroup/>
   <SplitGroup/>
   <p role="status">{action.notice}</p></Region>;
@@ -254,6 +258,57 @@ function FilterGroup(){
    <Button variant="outline" size="compact" disabled={action.busy} onClick={()=>void action.run('sheets.filter',{kind:'off'})} data-testid="sheets-filter-off">{t('sheets.filter.off')}</Button>
   </div>
   <p className="text-ink-3">{t(block?'sheets.sort.need':'sheets.filter.scope',{range:rangeAddress(r)})}</p>
+ </div>;
+}
+/** Tables in one grouped menu: make a table from the selection, or change one of this sheet's tables. One undo step each. */
+type TableAction='create'|'totalsOn'|'totalsOff'|'bandedOn'|'bandedOff'|'style'|'rename'|'convert';
+function TablesGroup(){
+ const {t}=useT(),s=useSheetsSelection(),action=useAction();const [act,setAct]=useState<TableAction>('create');const [pick,setPick]=useState('');const [name,setName]=useState('');const [style,setStyle]=useState('TableStyleMedium2');
+ const r=s?.range;if(!s||!r)return null;
+ const list=s.tables?.tables??[],styles=s.tables?.styles??[],chosen=list.find(x=>x.name===pick)??list[0]??null,creating=act==='create',naming=creating||act==='rename';
+ const block=tableBlockProblem(r.r1-r.r0+1,r.c1-r.c0+1),nameBad=name.trim()!==''&&!!nameProblem(name.trim());
+ const problem=creating?(block||nameBad?'x':null):(!chosen||(act==='rename'&&(name.trim()===''||nameBad))?'x':null);
+ const apply=()=>{
+  if(creating)void action.run('sheets.table',{kind:'create',...(name.trim()?{name:name.trim()}:{}),style}).then(x=>{if(x!==null)setName('');});
+  else if(chosen&&act==='style')void action.run('sheets.table',{kind:'style',table:chosen.name,style});
+  else if(chosen&&act==='rename')void action.run('sheets.table',{kind:'rename',table:chosen.name,newName:name.trim()}).then(x=>{if(x!==null){setName('');setPick(name.trim());}});
+  else if(chosen&&act==='convert')void action.run('sheets.table',{kind:'convert',table:chosen.name});
+  else if(chosen)void action.run('sheets.table',{kind:act.startsWith('totals')?'totals':'banded',table:chosen.name,on:act.endsWith('On')});
+ };
+ return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.tb.title')}>
+  <span>{t('sheets.tb.title')}</span>
+  <label className="flex flex-col gap-1">{t('sheets.tb.existing')}<NativeSelect className={field} value={chosen?.name??''} disabled={action.busy||list.length===0} onChange={e=>setPick(e.currentTarget.value)} data-testid="sheets-tb-pick">{list.length===0&&<option value="">{t('sheets.tb.none')}</option>}{list.map(x=><option key={x.name} value={x.name}>{x.name} {x.range}</option>)}</NativeSelect></label>
+  <label className="flex flex-col gap-1">{t('sheets.nm.action')}<NativeSelect className={field} value={act} disabled={action.busy} onChange={e=>setAct(e.currentTarget.value as TableAction)} data-testid="sheets-tb-action">
+   <optgroup label={t('sheets.nm.groupSelection')}><option value="create">{t('sheets.tb.create')}</option></optgroup>
+   <optgroup label={t('sheets.tb.groupTable')}><option value="totalsOn">{t('sheets.tb.totalsOn')}</option><option value="totalsOff">{t('sheets.tb.totalsOff')}</option><option value="bandedOn">{t('sheets.tb.bandedOn')}</option><option value="bandedOff">{t('sheets.tb.bandedOff')}</option><option value="style">{t('sheets.tb.style')}</option><option value="rename">{t('sheets.tb.rename')}</option><option value="convert">{t('sheets.tb.convert')}</option></optgroup>
+  </NativeSelect></label>
+  {(creating||act==='style')&&<label className="flex flex-col gap-1">{t('sheets.tb.styleName')}<NativeSelect className={field} value={style} disabled={action.busy} onChange={e=>setStyle(e.currentTarget.value)} data-testid="sheets-tb-style">{(styles.length?styles:[style]).map(x=><option key={x} value={x}>{x.replace('TableStyle','')}</option>)}</NativeSelect></label>}
+  {naming&&<label className="flex flex-col gap-1">{creating?t('sheets.tb.nameOptional'):t('sheets.tb.newName')}<NativeInput className={field} value={name} maxLength={64} aria-invalid={nameBad} disabled={action.busy} onChange={e=>setName(e.currentTarget.value)} data-testid="sheets-tb-name"/></label>}
+  <Button variant="outline" size="compact" disabled={action.busy||!!problem} onClick={apply} data-testid="sheets-tb-apply">{t('sheets.nm.apply')}</Button>
+  <p className="text-ink-3">{t(creating?'sheets.tb.scope':'sheets.tb.scopeTable',{range:rangeAddress(r)})}</p>
+ </div>;
+}
+/** A small PivotTable from the selection (first row = column names) on a new sheet, or a refresh of all PivotTables. One undo step. */
+type PivotAction='create'|'refresh';
+function PivotGroup(){
+ const {t}=useT(),s=useSheetsSelection(),action=useAction();const [act,setAct]=useState<PivotAction>('create');const [fields,setFields]=useState<PivotField[]>([]);const [rows,setRows]=useState('');const [cols,setCols]=useState('');const [vals,setVals]=useState('');const [func,setFunc]=useState<PivotFunc>('sum');
+ const r=s?.range;const key=r?`${s?.file}|${s?.sheet}|${r.r0}|${r.c0}|${r.r1}|${r.c1}|${s?.revision}`:'';const blockOk=!!r&&!tableBlockProblem(r.r1-r.r0+1,r.c1-r.c0+1);
+ useEffect(()=>{let live=true;const c=getSheetsPanelController();if(!blockOk||!c){setFields([]);return;}void Promise.resolve(c.pivotFields()).then(f=>{if(live)setFields(f);},()=>{if(live)setFields([]);});return()=>{live=false;};},[key,blockOk]);
+ if(!s||!r)return null;
+ const has=(n:string)=>fields.some(f=>f.name===n),numeric=(n:string)=>fields.find(f=>f.name===n)?.numeric===true;
+ const create=act==='create',problem=create?(!has(rows)||!has(vals)||(cols!==''&&(!has(cols)||cols===rows))||(func!=='count'&&!numeric(vals))):null;
+ const choose=(value:string,set:(v:string)=>void,id:string,label:string,blank?:boolean)=><label className="flex flex-col gap-1">{label}<NativeSelect className={field} value={has(value)?value:''} disabled={action.busy} onChange={e=>set(e.currentTarget.value)} data-testid={id}><option value="">{blank?t('sheets.pv.noColumns'):t('sheets.nm.none')}</option>{fields.map(f=><option key={f.name} value={f.name}>{f.name}</option>)}</NativeSelect></label>;
+ return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.pv.title')}>
+  <span>{t('sheets.pv.title')}</span>
+  <label className="flex flex-col gap-1">{t('sheets.nm.action')}<NativeSelect className={field} value={act} disabled={action.busy} onChange={e=>setAct(e.currentTarget.value as PivotAction)} data-testid="sheets-pv-action"><option value="create">{t('sheets.pv.create')}</option><option value="refresh">{t('sheets.pv.refresh')}</option></NativeSelect></label>
+  {create&&<>
+   {choose(rows,setRows,'sheets-pv-rows',t('sheets.pv.rows'))}
+   {choose(cols,setCols,'sheets-pv-cols',t('sheets.pv.cols'),true)}
+   {choose(vals,setVals,'sheets-pv-values',t('sheets.pv.values'))}
+   <label className="flex flex-col gap-1">{t('sheets.pv.func')}<NativeSelect className={field} value={func} disabled={action.busy} onChange={e=>setFunc(e.currentTarget.value as PivotFunc)} data-testid="sheets-pv-func">{PIVOT_FUNCS.map(f=><option key={f} value={f}>{t('sheets.pv.f.'+f)}</option>)}</NativeSelect></label>
+  </>}
+  <Button variant="outline" size="compact" disabled={action.busy||!!problem} onClick={()=>void action.run('sheets.pivot',create?{kind:'create',rows,values:vals,func,...(cols?{columns:cols}:{})}:{kind:'refresh'})} data-testid="sheets-pv-apply">{t('sheets.nm.apply')}</Button>
+  <p className="text-ink-3">{t(create?(blockOk?'sheets.pv.scope':'sheets.pv.need'):'sheets.pv.scopeRefresh',{range:rangeAddress(r)})}</p>
  </div>;
 }
 /** Named ranges in one grouped menu: define the selection, redefine, go to or delete a name. One undo step each. */

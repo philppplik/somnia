@@ -11,6 +11,13 @@ export interface ViewResult{sheet:number;row:number;col:number;rows:number;cols:
 export interface SheetLayout{sheet:number;defaultColWidth:number;defaultRowHeight:number;cols:{i:number;w:number;hidden:boolean}[];rows:{i:number;h:number;hidden:boolean}[];showGridlines:boolean;freeze:{rows:number;cols:number}|null;merges:{r0:number;c0:number;r1:number;c1:number}[]}
 export interface RangeResult{sheet:number;row:number;col:number;rows:number;cols:number;cells:RangeCell[]}
 /** Typed formatting operations; the Rust bridge keeps the same closed allowlist and re-validates every field. */
+/** Tables and a small PivotTable. Names come from the sheet's own first row; the Rust bridge re-validates everything. */
+export type TableOp={kind:'create';name?:string;style?:string}|{kind:'totals'|'banded';table:string;on:boolean}|{kind:'style';table:string;style:string}|{kind:'rename';table:string;newName:string}|{kind:'convert';table:string};
+export interface TableInfo{name:string;range:string;header:boolean;totals:boolean;banded:boolean;style:string}
+export interface TablesInfo{tables:TableInfo[];styles:string[]}
+export type PivotFunc='sum'|'count'|'average'|'max'|'min';
+export type PivotOp={kind:'create';rows:string;columns?:string;values:string;func?:PivotFunc}|{kind:'refresh'};
+export interface PivotField{name:string;numeric:boolean}
 export type NegativeStyle='minus'|'red'|'paren'|'redParen';
 export type ZeroStyle='show'|'dash';
 export type DatePatternId='ymd'|'dmyDot'|'mdy'|'dmy'|'long'|'weekday'|'short'|'monthYear'|'time24'|'time12'|'dateTime';
@@ -98,6 +105,11 @@ export type SheetsRequest=
  |{id:number;op:'defineName';sheet:number;row:number;col:number;rows:number;cols:number;name:{name:string;scope:'workbook'|'sheet';replace?:boolean}}
  |{id:number;op:'deleteName';sheet:number;name:{name:string;scope:'workbook'|'sheet'}}
  |{id:number;op:'names'}
+ |{id:number;op:'pivotFields';sheet:number;row:number;col:number;rows:number;cols:number}
+ |{id:number;op:'pivotCreate';sheet:number;row:number;col:number;rows:number;cols:number;pivot:{rows:string;columns?:string;values:string;func?:PivotFunc}}
+ |{id:number;op:'pivotRefresh'}
+ |{id:number;op:'tables';sheet:number}
+ |{id:number;op:'tableOp';sheet:number;row:number;col:number;rows:number;cols:number;table:TableOp}
  |{id:number;op:'cf';sheet:number;row:number;col:number;rows:number;cols:number;cf:CfOp}
  |{id:number;op:'fill';sheet:number;row:number;col:number;rows:number;cols:number;dir:FillDirection}
  |{id:number;op:'filter';sheet:number;row:number;col:number;rows:number;cols:number;filter:FilterOp}
