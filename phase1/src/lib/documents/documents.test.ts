@@ -130,7 +130,8 @@ test('real engine: hit test, caret and selection rectangles agree',{skip:!haveWa
  const hit=(core.handle({id:3,kind:'hit',page:car.page,x:car.x,y:car.top+car.height/2}).res as Extract<DocumentsResponse,{kind:'hit'}>).hit!;
  assert.deepEqual([hit.block,hit.off,hit.editable],[1,5,true]);
  const rects=(core.handle({id:4,kind:'rects',block:1,a:0,b:4}).res as Extract<DocumentsResponse,{kind:'rects'}>).rects;assert.ok(rects.length>0&&rects[0][3]>0);
- const tbl=(core.handle({id:5,kind:'hit',page:0,x:90,y:155}).res as Extract<DocumentsResponse,{kind:'hit'}>).hit!;assert.deepEqual([tbl.block,tbl.editable],[null,false]);
+ const tbl=(core.handle({id:5,kind:'hit',page:0,x:90,y:155}).res as Extract<DocumentsResponse,{kind:'hit'}>).hit!;// Table cells are editable since cell editing landed: the hit addresses the first cell paragraph (ids from 1<<20), not a read-only block.
+ assert.deepEqual([tbl.block,tbl.editable],[1<<20,true]);
 });
 test('real engine: split, merge and snapshot restore through the core; tables and bad offsets refused',{skip:!haveWasm},async()=>{
  const core=await realCore();core.handle({id:1,kind:'open',bytes:ab(fixture('sample.docx'))});
