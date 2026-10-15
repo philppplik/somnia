@@ -1,7 +1,7 @@
 import {registerCommand} from '../commandRegistry';
 import {getDocumentsState,patchDocuments,stepZoom} from './store';
 import {setTableLayout,insertSectionBreak,removeSectionBreak,setHfVariants,typeText,redoEdit,setAlign,setParagraphStyle,toggleList,clearList,shiftListLevel,stepFontSize,stepIndent,toggleFormat,undoEdit,editTable,insertTable,setHeaderFooter,insertImage,resizeImageToPercent,setImageAlt,removeImage,setColumnWidth,styleTable,setPageSetup,setFindOpen,setFindQuery,findStep,replaceAll,replaceCurrent} from './session';
-import {checkFormatPatch,MIN_SPACING_PT,MAX_SPACING_PT,stylePatchProblem,STYLE_ID_RE,type StylePatch,tocProblem,type TocOptions,listOptionsProblem,type ListOptionsPatch,pageSetupProblem,LIST_STYLES,type ListStyleId} from './protocol';
+import {checkFormatPatch,MIN_SPACING_PT,MAX_SPACING_PT,MIN_SCALE_PCT,MAX_SCALE_PCT,lineRuleProblem,type LineRule,stylePatchProblem,STYLE_ID_RE,type StylePatch,tocProblem,type TocOptions,listOptionsProblem,type ListOptionsPatch,pageSetupProblem,LIST_STYLES,type ListStyleId} from './protocol';
 import {deleteStyle,saveStyle,setCharStyle,insertToc,updateToc,removeToc,continueNumbering,restartNumbering,setListStyle,setListOptions} from './session';
 import {validFindQuery,validReplaceText} from './find';
 import {findMedia} from '../media';
@@ -20,7 +20,7 @@ import {insertPageBreak,setParagraphOptions,setProperties,setTabStops} from './s
 import {parsePdfPages,checkParaPatch,PARA_FLAG_KEYS,propertiesProblem,tabsProblem} from './protocol';
 import {addComment,commentSelection,deleteComment,goToComment,readComments,replyComment,resolveComment} from './session';
 import {commentProblem,HIGHLIGHTS,linkProblem,type HighlightName} from './protocol';
-import {setCharLook,setCharSpacing,clearFormatting,hasTextSelection,setHighlight,setLink,toggleVertAlign} from './session';
+import {setCharLook,setCharSpacing,setCharScale,setLineRule,clearFormatting,hasTextSelection,setHighlight,setLink,toggleVertAlign} from './session';
 import {documentsExportReady,patchDocumentsExportUi,requestDocumentsExportPdf,requestDocumentsSaveCopy} from './exportBridge';
 /**
  * Documents studio commands. Registered while the Documents canvas is mounted (registerDocumentsCommands),
@@ -99,6 +99,14 @@ export function registerDocumentsCommands(){
    const v=(p as Record<string,unknown>|undefined)?.points;if(typeof v!=='number'||!Number.isFinite(v)||v<MIN_SPACING_PT||v>MAX_SPACING_PT)throw expected(`Missing or invalid "points" (${MIN_SPACING_PT} to ${MAX_SPACING_PT}).`);
    await setCharSpacing(v);
   },()=>ready()&&!!getDocumentsState().caret),
+  add('documents.charScale.set','Set character width',async p=>{
+   const v=(p as Record<string,unknown>|undefined)?.percent;if(typeof v!=='number'||!Number.isInteger(v)||v<MIN_SCALE_PCT||v>MAX_SCALE_PCT)throw expected(`Missing or invalid "percent" (${MIN_SCALE_PCT} to ${MAX_SCALE_PCT}).`);
+   await setCharScale(v);
+  },()=>ready()&&!!getDocumentsState().caret),
+  add('documents.lineRule.set','Set line height rule',async p=>{
+   const o=(p as Record<string,unknown>|undefined)??{};const rule={rule:o.rule,value:o.value};const bad=lineRuleProblem(rule);if(bad)throw expected(`${bad} Pass "rule" and "value".`);
+   await setLineRule(rule as LineRule);
+  },()=>ready()&&!!getDocumentsState().caret),
   add('documents.highlight.set','Set highlight colour',async p=>{
    const c=(p as Record<string,unknown>|undefined)?.color;if(!(HIGHLIGHTS as readonly unknown[]).includes(c))throw expected('Invalid "color" (none, yellow, green, cyan, pink or gray).');
    await setHighlight(c as HighlightName);
@@ -112,7 +120,7 @@ export function registerDocumentsCommands(){
   add('documents.paragraph.options','Paragraph options',()=>{setParagraphOptionsOpen(true);},()=>ready()&&!!getDocumentsState().caret),
   add('documents.paragraph.set','Set paragraph flow options',async p=>{
    const o=(p as Record<string,unknown>|undefined)??{};const keys=Object.keys(o);
-   if(!keys.length||keys.some(k=>k!=='indentRight'&&k!=='shading'&&k!=='border'&&k!=='dropCap'&&!(PARA_FLAG_KEYS as readonly string[]).includes(k)))throw expected('Use indentRight, shading, border, dropCap, pageBreakBefore, keepNext, keepLines or widowControl.');
+   if(!keys.length||keys.some(k=>k!=='indentRight'&&k!=='shading'&&k!=='border'&&k!=='dropCap'&&!(PARA_FLAG_KEYS as readonly string[]).includes(k)))throw expected('Use indentRight, shading, border, dropCap, pageBreakBefore, keepNext, keepLines, widowControl or contextualSpacing.');
    try{checkParaPatch(o);}catch(err){throw expected(err instanceof Error?err.message:'Invalid options.');}
    await setParagraphOptions(o as import('./protocol').ParaPatch);
   },()=>ready()&&!!getDocumentsState().caret),

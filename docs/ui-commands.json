@@ -3844,6 +3844,17 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.charScale.set",
+      "title": "Set character width",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.charSpacing.set",
       "title": "Set character spacing",
       "category": "View",
@@ -4186,6 +4197,17 @@
     {
       "id": "documents.insertPageBreak",
       "title": "Insert page break",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.lineRule.set",
+      "title": "Set line height rule",
       "category": "View",
       "source": "documents",
       "keywords": [

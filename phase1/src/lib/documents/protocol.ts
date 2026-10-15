@@ -5,7 +5,7 @@ export interface HitResult{block:number|null;off?:number;editable:boolean}
 export interface CaretBox{page:number;x:number;top:number;height:number}
 export type Tri='on'|'off'|'mixed';
 /** Effective bold/italic/underline over a selection (style and direct formatting). */
-export interface FormatState{bold:Tri;italic:Tri;underline:Tri;strike?:Tri;smallCaps?:Tri;allCaps?:Tri;doubleStrike?:Tri;/** Shared underline style (`none`, `single`, ...), colour (`RRGGBB` or `auto`) and character shading (`RRGGBB` or `none`); null when mixed. */underlineStyle?:UnderlineStyle|'none'|null;underlineColor?:string|null;charShading?:string|null;/** Shared character spacing in points, or null when mixed. */spacing?:number|null;/** Shared values, or null when the selection mixes them. */vertAlign?:VertAlign|null;highlight?:HighlightName|'other'|null;/** Shared link target (empty for none), or null when mixed. */link?:string|null;/** Shared value over the selection, or null when it mixes values. */font?:string|null;size?:number|null;/** `RRGGBB`, `auto`, or null when mixed. */color?:string|null}
+export interface FormatState{bold:Tri;italic:Tri;underline:Tri;strike?:Tri;smallCaps?:Tri;allCaps?:Tri;doubleStrike?:Tri;/** Shared underline style (`none`, `single`, ...), colour (`RRGGBB` or `auto`) and character shading (`RRGGBB` or `none`); null when mixed. */underlineStyle?:UnderlineStyle|'none'|null;underlineColor?:string|null;charShading?:string|null;/** Shared character spacing in points, or null when mixed. */spacing?:number|null;/** Shared character width in percent, or null when mixed. */scale?:number|null;/** Shared values, or null when the selection mixes them. */vertAlign?:VertAlign|null;highlight?:HighlightName|'other'|null;/** Shared link target (empty for none), or null when mixed. */link?:string|null;/** Shared value over the selection, or null when it mixes values. */font?:string|null;size?:number|null;/** `RRGGBB`, `auto`, or null when mixed. */color?:string|null}
 export type VertAlign='baseline'|'superscript'|'subscript';
 export const HIGHLIGHTS=['none','yellow','green','cyan','pink','gray'] as const;export type HighlightName=typeof HIGHLIGHTS[number];
 export const MAX_LINK_CHARS=2048;
@@ -16,7 +16,7 @@ export function linkProblem(v:unknown):string|null{
  if(Array.from(v).length>MAX_LINK_CHARS||/[\s\u0000-\u001f\u007f-\u009f]/.test(v)||!/^(https?:\/\/|mailto:)./i.test(v))return 'A link starts with http://, https:// or mailto: and has no spaces.';
  return null;
 }
-export interface FormatPatch{bold?:boolean;italic?:boolean;underline?:boolean;font?:string;size?:number;color?:string;strike?:boolean;smallCaps?:boolean;allCaps?:boolean;doubleStrike?:boolean;underlineStyle?:UnderlineStyle;/** `RRGGBB` or `auto`. */underlineColor?:string;/** `RRGGBB` or `none`. */charShading?:string;/** Extra space after each character in points (-5 to 30). */spacing?:number;vertAlign?:VertAlign;highlight?:HighlightName;link?:string;/** Character style id; an empty string removes it. */charStyle?:string;/** Remove direct character formatting (links stay). Only `true`. */clear?:true}
+export interface FormatPatch{bold?:boolean;italic?:boolean;underline?:boolean;font?:string;size?:number;color?:string;strike?:boolean;smallCaps?:boolean;allCaps?:boolean;doubleStrike?:boolean;underlineStyle?:UnderlineStyle;/** `RRGGBB` or `auto`. */underlineColor?:string;/** `RRGGBB` or `none`. */charShading?:string;/** Extra space after each character in points (-5 to 30). */spacing?:number;/** Character width in percent (20 to 400). */scale?:number;vertAlign?:VertAlign;highlight?:HighlightName;link?:string;/** Character style id; an empty string removes it. */charStyle?:string;/** Remove direct character formatting (links stay). Only `true`. */clear?:true}
 export const MIN_FONT_PT=1,MAX_FONT_PT=400,MAX_FONT_NAME=64;
 /** Selection endpoints: top-level paragraph index and UTF-8 byte offset. */
 export interface DocPos{block:number;off:number}
@@ -24,6 +24,20 @@ export const MAX_FORMAT_BLOCKS=2000;
 export const UNDERLINE_STYLES=['single','double','thick','dotted','dashed','wave'] as const;
 export type UnderlineStyle=typeof UNDERLINE_STYLES[number];
 export const MIN_SPACING_PT=-5,MAX_SPACING_PT=30;
+/** Character width in percent of normal. */
+export const MIN_SCALE_PCT=20,MAX_SCALE_PCT=400;
+/** How a paragraph's line height is read: a multiple of the font, a minimum, or fixed. */
+export const LINE_RULES=['multiple','atLeast','exactly'] as const;
+export type LineRuleName=typeof LINE_RULES[number];
+export interface LineRule{rule:LineRuleName;value:number}
+export const lineRuleProblem=(v:unknown):string|null=>{
+ if(!v||typeof v!=='object'||Array.isArray(v))return 'Line rule is not valid.';
+ const o=v as Record<string,unknown>;if(Object.keys(o).some(k=>k!=='rule'&&k!=='value'))return 'Line rule is not valid.';
+ if(!(LINE_RULES as readonly unknown[]).includes(o.rule))return 'Line rule is multiple, at least or exactly.';
+ const [lo,hi]=o.rule==='multiple'?[0.5,10]:[1,1584];
+ if(typeof o.value!=='number'||!Number.isFinite(o.value)||o.value<lo||o.value>hi)return o.rule==='multiple'?'A line spacing multiple is 0.5 to 10.':'An exact or minimum line height is 1 to 1584 points.';
+ return null;
+};
 const FLAG_KEYS=['bold','italic','underline','strike','smallCaps','allCaps','doubleStrike'];
 /** Validates a format patch: flags are booleans, font is short printable text, size is 1-400 pt, color is auto or RRGGBB. */
 /** A style id: letters, digits, underscore and hyphen, at most 80 characters (the engine checks that the style exists). */
@@ -39,6 +53,7 @@ export function checkFormatPatch(patch:unknown){
   else if(k==='underlineColor'){if(typeof v!=='string'||!(v==='auto'||/^[0-9a-fA-F]{6}$/.test(v)))throw new Error('Underline colour must be automatic or six hex digits.');}
   else if(k==='charShading'){if(typeof v!=='string'||!(v==='none'||/^[0-9a-fA-F]{6}$/.test(v)))throw new Error('Shading must be none or six hex digits.');}
   else if(k==='spacing'){if(typeof v!=='number'||!Number.isFinite(v)||v<MIN_SPACING_PT||v>MAX_SPACING_PT)throw new Error(`Character spacing must be between ${MIN_SPACING_PT} and ${MAX_SPACING_PT} pt.`);}
+  else if(k==='scale'){if(typeof v!=='number'||!Number.isInteger(v)||v<MIN_SCALE_PCT||v>MAX_SCALE_PCT)throw new Error(`Character width must be a whole number from ${MIN_SCALE_PCT} to ${MAX_SCALE_PCT} percent.`);}
   else if(k==='color'){if(typeof v!=='string'||!(v==='auto'||/^[0-9a-fA-F]{6}$/.test(v)))throw new Error('Colour must be automatic or six hex digits.');}
   else if(k==='vertAlign'){if(v!=='baseline'&&v!=='superscript'&&v!=='subscript')throw new Error('Format change is not valid.');}
   else if(k==='highlight'){if(!(HIGHLIGHTS as readonly unknown[]).includes(v))throw new Error('Highlight colour is not valid.');}
@@ -71,7 +86,7 @@ export function tabsProblem(v:unknown):string|null{
  for(let i=1;i<pos.length;i++)if(pos[i]-pos[i-1]<0.5)return 'Tab stops must be at least 0.5 points apart.';
  return null;
 }
-export interface ParaPatch{tabs?:TabStopSpec[];align?:ParaAlign;indentLeft?:number;indentFirst?:number;spaceBefore?:number;spaceAfter?:number;lineSpacing?:number;indentRight?:number;pageBreakBefore?:boolean;keepNext?:boolean;keepLines?:boolean;widowControl?:boolean;/** `RRGGBB`, or `none` to clear. */shading?:string;/** A box border on all four sides, or `none`. */border?:'none'|ParaBorder;/** Lines the first letter spans (0 = off, at most 10). */dropCap?:number}
+export interface ParaPatch{tabs?:TabStopSpec[];align?:ParaAlign;indentLeft?:number;indentFirst?:number;spaceBefore?:number;spaceAfter?:number;lineSpacing?:number;indentRight?:number;pageBreakBefore?:boolean;keepNext?:boolean;keepLines?:boolean;widowControl?:boolean;/** No extra space between paragraphs of the same style. */contextualSpacing?:boolean;/** Line height as a multiple, a minimum or an exact value. */lineRule?:LineRule;/** `RRGGBB`, or `none` to clear. */shading?:string;/** A box border on all four sides, or `none`. */border?:'none'|ParaBorder;/** Lines the first letter spans (0 = off, at most 10). */dropCap?:number}
 export const MAX_DROP_CAP=10;
 export const BORDER_STYLES=['single','double','dotted','dashed','thick'] as const;
 export interface ParaBorder{style:typeof BORDER_STYLES[number];width:number;color:string}
@@ -85,9 +100,9 @@ export function paraLookProblem(k:'shading'|'border',v:unknown):string|null{
  if(typeof o.width!=='number'||!Number.isFinite(o.width)||o.width<0.25||o.width>12)return 'Border width is 0.25 to 12 points.';
  return typeof o.color==='string'&&/^[0-9a-fA-F]{6}$/.test(o.color)?null:'Border colour must be six hex digits.';
 }
-export const PARA_FLAG_KEYS=['pageBreakBefore','keepNext','keepLines','widowControl'] as const;
+export const PARA_FLAG_KEYS=['pageBreakBefore','keepNext','keepLines','widowControl','contextualSpacing'] as const;
 /** Shared effective value over the paragraphs, or null when they differ (line spacing: also null for exact/at-least heights). */
-export interface ParaState{align:ParaAlign|null;indentLeft:number|null;indentFirst:number|null;spaceBefore:number|null;spaceAfter:number|null;lineSpacing:number|null;indentRight?:number|null;/** Resolved tab stops when shared, else null. */tabs?:TabStopSpec[]|null;/** Shared flags, or null when the paragraphs differ. */pageBreakBefore?:boolean|null;keepNext?:boolean|null;keepLines?:boolean|null;widowControl?:boolean|null;/** Shared shading (`RRGGBB` or `none`) and whether a box border is set; null when mixed. */shading?:string|null;border?:'box'|'none'|null;dropCap?:number|null;/** Paragraph style id (`Normal`, `Heading2`, ...) when shared. */style?:string|null;list?:'none'|'bullet'|'numbered'|null;/** The shared list style, `other` for a list from a file that matches none, `none` outside lists, null when mixed. */listStyle?:ListStyleId|'other'|'none'|null;listLevel?:number|null}
+export interface ParaState{align:ParaAlign|null;indentLeft:number|null;indentFirst:number|null;spaceBefore:number|null;spaceAfter:number|null;lineSpacing:number|null;indentRight?:number|null;/** Resolved tab stops when shared, else null. */tabs?:TabStopSpec[]|null;/** Shared flags, or null when the paragraphs differ. */pageBreakBefore?:boolean|null;keepNext?:boolean|null;keepLines?:boolean|null;widowControl?:boolean|null;contextualSpacing?:boolean|null;/** Shared line rule, or null when mixed. */lineRule?:LineRule|null;/** Shared shading (`RRGGBB` or `none`) and whether a box border is set; null when mixed. */shading?:string|null;border?:'box'|'none'|null;dropCap?:number|null;/** Paragraph style id (`Normal`, `Heading2`, ...) when shared. */style?:string|null;list?:'none'|'bullet'|'numbered'|null;/** The shared list style, `other` for a list from a file that matches none, `none` outside lists, null when mixed. */listStyle?:ListStyleId|'other'|'none'|null;listLevel?:number|null}
 const PARA_RANGES:Record<string,[number,number]>={indentLeft:[0,1440],indentRight:[0,1440],indentFirst:[-1440,1440],spaceBefore:[0,1584],spaceAfter:[0,1584],lineSpacing:[0.5,10]};
 export function checkParaPatch(patch:unknown){
  if(!patch||typeof patch!=='object'||Array.isArray(patch))throw new Error('Paragraph change is not valid.');
@@ -96,6 +111,7 @@ export function checkParaPatch(patch:unknown){
   if(k==='align'){if(v!=='left'&&v!=='center'&&v!=='right'&&v!=='justify')throw new Error('Alignment is not valid.');}
   else if(k==='dropCap'){if(typeof v!=='number'||!Number.isInteger(v)||v<0||v>MAX_DROP_CAP)throw new Error(`Drop cap is 0 to ${MAX_DROP_CAP} lines.`);}
   else if(k==='shading'||k==='border'){const bad=paraLookProblem(k,v);if(bad)throw new Error(bad);}
+  else if(k==='lineRule'){const bad=lineRuleProblem(v);if(bad)throw new Error(bad);}
   else if(k==='tabs'){const bad=tabsProblem(v);if(bad)throw new Error(bad);}
   else if((PARA_FLAG_KEYS as readonly string[]).includes(k)){if(typeof v!=='boolean')throw new Error('Paragraph change is not valid.');}
   else if(PARA_RANGES[k]){const [lo,hi]=PARA_RANGES[k];if(typeof v!=='number'||!Number.isFinite(v)||v<lo||v>hi)throw new Error(`${k} must be between ${lo} and ${hi}.`);}

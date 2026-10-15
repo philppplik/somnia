@@ -1,5 +1,5 @@
 import {useState} from 'react';
-import {MAX_DROP_CAP,BORDER_STYLES,PARA_FLAG_KEYS,paraLookProblem,type ParaPatch,type ParaState} from '../../lib/documents/protocol';
+import {MAX_DROP_CAP,BORDER_STYLES,PARA_FLAG_KEYS,LINE_RULES,lineRuleProblem,type LineRule,paraLookProblem,type ParaPatch,type ParaState} from '../../lib/documents/protocol';
 import {setParagraphOptionsOpen,useParagraphOptionsOpen} from '../../lib/documents/paragraphOptions';
 import {setParagraphOptions} from '../../lib/documents/session';
 import {useDocuments} from '../../lib/documents/store';
@@ -13,8 +13,13 @@ export interface ParaLook{dropCap:string;shading:string;border:string;width:stri
 export const EMPTY_LOOK:ParaLook={dropCap:'',shading:'',border:'',width:'1',color:'000000'};
 export const initialLook=(para:ParaState|null):ParaLook=>({...EMPTY_LOOK,dropCap:para?.dropCap==null?'':String(para.dropCap),shading:para?.shading&&para.shading!=='none'?para.shading:''});
 const hex=(v:string)=>v.trim().replace(/^#/,'').toUpperCase();
-export function buildParagraphPatch(para:ParaState|null,flags:Partial<Record<typeof PARA_FLAG_KEYS[number],boolean>>,indent:string,look?:ParaLook):ParaPatch|null{
+export function buildParagraphPatch(para:ParaState|null,flags:Partial<Record<typeof PARA_FLAG_KEYS[number],boolean>>,indent:string,look?:ParaLook,rule?:{rule:string;value:string}):ParaPatch|null{
  const p:ParaPatch={};
+ if(rule&&rule.rule!==''){
+  const o=para?.lineRule;const v=Number(rule.value.trim().replace(',','.'));
+  if(rule.value.trim()===''||!Number.isFinite(v))return null;
+  if(!o||o.rule!==rule.rule||o.value!==v){const r={rule:rule.rule,value:v};if(lineRuleProblem(r))return null;p.lineRule=r as LineRule;}
+ }
  if(look){
   if(look.dropCap!==initialLook(para).dropCap&&look.dropCap!==''){const n=Number(look.dropCap);if(!/^\d{1,2}$/.test(look.dropCap)||n>MAX_DROP_CAP)return null;p.dropCap=n;}
   const s=hex(look.shading);
@@ -39,14 +44,21 @@ export function ParagraphDialog(){
 export function ParagraphForm({para,onClose}:{para:ParaState|null;onClose:()=>void}){
  const {t}=useT();const [flags,setFlags]=useState<Partial<Record<typeof PARA_FLAG_KEYS[number],boolean>>>({});
  const [indent,setIndent]=useState(para?.indentRight==null?'':String(para.indentRight));
+ const [rule,setRule]=useState({rule:para?.lineRule?.rule??'',value:para?.lineRule==null?'':String(para.lineRule.value)});
  const [look,setLook]=useState<ParaLook>(initialLook(para));const borderOn=look.border!==''&&look.border!=='none';
- const patch=buildParagraphPatch(para,flags,indent,look);const bad=indent!==''&&parseIndentPt(indent)===null;const badLook=buildParagraphPatch(para,{},'',look)===null&&(hex(look.shading)!==initialLook(para).shading||look.border!==''||look.dropCap!==initialLook(para).dropCap);
+ const patch=buildParagraphPatch(para,flags,indent,look,rule);const bad=indent!==''&&parseIndentPt(indent)===null;const badLook=buildParagraphPatch(para,{},'',look)===null&&(hex(look.shading)!==initialLook(para).shading||look.border!==''||look.dropCap!==initialLook(para).dropCap);
  const apply=()=>{if(!patch)return;onClose();void setParagraphOptions(patch);};
  return <div role="dialog" aria-modal="true" aria-labelledby="documents-paraopt-title" className="fixed inset-0 z-20 grid place-items-center bg-black/30" onKeyDown={e=>{if(e.key==='Escape'){e.stopPropagation();onClose();}}}>
   <div className="grid w-96 max-w-full gap-3 rounded-[var(--r-popup,25px)] bg-surface p-5 shadow-xl" data-testid="documents-paraopt-dialog">
    <h2 id="documents-paraopt-title" className="text-sm font-medium">{t('documents.para.opt.title')}</h2>
    {PARA_FLAG_KEYS.map(k=><label key={k} className="doc-paraopt-check text-xs text-ink-2">
     <NativeInput type="checkbox" checked={flags[k]??para?.[k]??false} onChange={e=>setFlags({...flags,[k]:e.currentTarget.checked})} data-testid={'documents-paraopt-'+k}/>{t('documents.para.opt.'+k)}</label>)}
+   <div className="grid grid-cols-2 gap-2">
+    <label className="grid gap-1 text-xs text-ink-2">{t('documents.para.lineRule')}
+     <NativeSelect className="rounded-lg border border-subtle bg-transparent px-2 py-1.5 text-ink" value={rule.rule} onChange={e=>setRule({rule:e.currentTarget.value,value:rule.rule===''||rule.value===''?(e.currentTarget.value==='multiple'?'1':'12'):rule.value})} data-testid="documents-para-linerule">
+      {rule.rule===''&&<option value="" disabled>{t('documents.charlook.mixed')}</option>}{LINE_RULES.map(r=><option key={r} value={r}>{t('documents.para.lineRule.'+r)}</option>)}</NativeSelect></label>
+    <label className="grid gap-1 text-xs text-ink-2">{t('documents.para.lineRule.value')}
+     <NativeInput className="rounded-lg border border-subtle bg-transparent px-2 py-1.5 text-ink tabular-nums" disabled={rule.rule===''} inputMode="decimal" value={rule.value} aria-invalid={rule.rule!==''&&lineRuleProblem({rule:rule.rule,value:Number(rule.value.replace(',','.'))})!==null} onChange={e=>setRule({...rule,value:e.currentTarget.value})} data-testid="documents-para-linerule-value"/></label></div>
    <label className="grid gap-1 text-xs text-ink-2">{t('documents.para.opt.indentRight')}
     <NativeInput className="w-24 rounded-lg border border-subtle bg-transparent px-2 py-1.5 text-ink tabular-nums" inputMode="decimal" value={indent} aria-invalid={bad} onChange={e=>setIndent(e.currentTarget.value.trim())} data-testid="documents-paraopt-indent"/></label>
    <label className="grid gap-1 text-xs text-ink-2">{t('documents.para.dropCap')}

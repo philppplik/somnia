@@ -548,6 +548,7 @@ impl DocSession {
         let mut char_shading: Option<Option<wordcraft_doc::props::Rgb>> = None;
         let mut double_strike: Option<bool> = None;
         let mut spacing: Option<f32> = None;
+        let mut scale: Option<f32> = None;
         let mut vert: Option<wordcraft_doc::props::VertAlign> = None;
         let mut highlight: Option<wordcraft_doc::props::Highlight> = None;
         let mut link: Option<Option<String>> = None;
@@ -621,6 +622,11 @@ impl DocSession {
                 }
                 "charShading" => {
                     char_shading = Some(Self::parse_para_rgb(val).map_err(|_| "format field charShading must be none or RRGGBB".to_string())?);
+                    continue;
+                }
+                "scale" => {
+                    let n = val.as_u64().filter(|n| (20..=400).contains(n)).ok_or_else(|| "format field scale must be a whole number from 20 to 400 percent".to_string())?;
+                    scale = Some(n as f32);
                     continue;
                 }
                 "spacing" => {
@@ -703,6 +709,9 @@ impl DocSession {
                 if let Some(v) = spacing {
                     cp.spacing = Some(v);
                 }
+                if let Some(v) = scale {
+                    cp.scale = Some(v);
+                }
                 if let Some(v) = vert {
                     cp.vert_align = Some(v);
                 }
@@ -760,6 +769,7 @@ impl DocSession {
         let mut extra: Vec<(bool, bool, wordcraft_doc::props::VertAlign, &'static str, String)> = Vec::new();
         // all caps, double strike, character spacing.
         let mut more: Vec<(bool, bool, f32)> = Vec::new();
+        let mut scales: Vec<f32> = Vec::new();
         // underline style name, underline colour (hex or "auto"), character shading (hex or "none").
         let mut under: Vec<(&'static str, String, String)> = Vec::new();
         if sb == eb && so == eo {
@@ -772,6 +782,7 @@ impl DocSession {
             look.push((rc.font.clone(), rc.size, rc.color));
             extra.push(Self::extra_of(&rc, p.props_at(so)));
             more.push((rc.caps, rc.double_strike, rc.spacing));
+            scales.push(rc.scale);
             under.push(Self::under_of(&rc));
         } else {
             for (b, start, end) in self.span_ranges(sb, so, eb, eo)? {
@@ -783,6 +794,8 @@ impl DocSession {
                         look.push((rc.font.clone(), rc.size, rc.color));
                         extra.push(Self::extra_of(&rc, cp));
                         more.push((rc.caps, rc.double_strike, rc.spacing));
+                        scales.push(rc.scale);
+            scales.push(rc.scale);
             under.push(Self::under_of(&rc));
                     }
                 }
@@ -818,11 +831,12 @@ impl DocSession {
         let lk = e0.filter(|x| all_same(&|y| y.4 == x.4)).map(|x| x.4.clone());
         let tri_m = |f: &dyn Fn(&(bool, bool, f32)) -> bool| if !more.is_empty() && more.iter().all(|x| f(x)) { "on" } else if more.iter().any(|x| f(x)) { "mixed" } else { "off" };
         let spacing = more.first().filter(|x| more.iter().all(|y| y.2.to_bits() == x.2.to_bits())).map(|x| x.2);
+        let scale = scales.first().filter(|x| scales.iter().all(|y| y.to_bits() == x.to_bits())).copied();
         let u0 = under.first();
         let u_style = u0.filter(|x| under.iter().all(|y| y.0 == x.0)).map(|x| x.0);
         let u_color = u0.filter(|x| under.iter().all(|y| y.1 == x.1)).map(|x| x.1.clone());
         let c_shade = u0.filter(|x| under.iter().all(|y| y.2 == x.2)).map(|x| x.2.clone());
-        Ok(serde_json::json!({"underlineStyle": u_style, "underlineColor": u_color, "charShading": c_shade, "allCaps": tri_m(&|x| x.0), "doubleStrike": tri_m(&|x| x.1), "spacing": spacing,
+        Ok(serde_json::json!({"underlineStyle": u_style, "underlineColor": u_color, "charShading": c_shade, "allCaps": tri_m(&|x| x.0), "doubleStrike": tri_m(&|x| x.1), "spacing": spacing, "scale": scale,
             "bold": tri(&seen, |x| x.0), "italic": tri(&seen, |x| x.1), "underline": tri(&seen, |x| x.2), "font": font, "size": size, "color": color,
             "strike": tri_b(&|x| x.0), "smallCaps": tri_b(&|x| x.1), "vertAlign": vert, "highlight": hl, "link": lk}).to_string())
     }
@@ -932,6 +946,7 @@ impl DocSession {
             Ok(((n * 20.0).round() / 20.0) as f32)
         };
         let mut flags: Vec<(&str, bool)> = Vec::new();
+        let mut line_rule: Option<LineSpacing> = None;
         let mut tabs: Option<Vec<wordcraft_doc::props::TabStop>> = None;
         let mut ir: Option<f32> = None;
         let mut align: Option<Align> = None;
@@ -956,7 +971,22 @@ impl DocSession {
                 "border" => border = Some(Self::parse_para_border(val)?),
                 "tabs" => tabs = Some(Self::parse_tabs(val)?),
                 "indentRight" => ir = Some(num(k, val, 0.0, 1440.0)?),
-                "pageBreakBefore" | "keepNext" | "keepLines" | "widowControl" => {
+                "lineRule" => {
+                    let o = val.as_object().ok_or("lineRule must be an object {rule, value}")?;
+                    if o.keys().any(|x| x != "rule" && x != "value") {
+                        return Err("lineRule takes rule and value".into());
+                    }
+                    let v = o.get("value").and_then(|x| x.as_f64()).filter(|x| x.is_finite()).ok_or("lineRule value must be a number")? as f32;
+                    line_rule = Some(match o.get("rule").and_then(|x| x.as_str()) {
+                        Some("multiple") if (0.5..=10.0).contains(&v) => LineSpacing::Multiple(v),
+                        Some("atLeast") if (1.0..=1584.0).contains(&v) => LineSpacing::AtLeast(v),
+                        Some("exactly") if (1.0..=1584.0).contains(&v) => LineSpacing::Exactly(v),
+                        Some("multiple") => return Err("a line spacing multiple is 0.5 to 10".into()),
+                        Some("atLeast" | "exactly") => return Err("an exact or minimum line height is 1 to 1584 points".into()),
+                        _ => return Err("the line rule is multiple, atLeast or exactly".into()),
+                    });
+                }
+                "pageBreakBefore" | "keepNext" | "keepLines" | "widowControl" | "contextualSpacing" => {
                     flags.push((k.as_str(), val.as_bool().ok_or_else(|| format!("paragraph field {k} must be true or false"))?));
                 }
                 "indentFirst" => ifirst = Some(num(k, val, -1440.0, 1440.0)?),
@@ -1004,6 +1034,7 @@ impl DocSession {
                     "pageBreakBefore" => p.props.page_break_before = Some(*v),
                     "keepNext" => p.props.keep_next = Some(*v),
                     "keepLines" => p.props.keep_lines = Some(*v),
+                    "contextualSpacing" => p.props.contextual_spacing = Some(*v),
                     _ => p.props.widow_control = Some(*v),
                 }
             }
@@ -1015,6 +1046,9 @@ impl DocSession {
             }
             if let Some(x) = ls {
                 p.props.line_spacing = Some(LineSpacing::Multiple(x));
+            }
+            if let Some(x) = line_rule {
+                p.props.line_spacing = Some(x);
             }
             done.push((b, p));
         }
@@ -1068,6 +1102,13 @@ impl DocSession {
             "keepNext": same(&rows, |r| r.keep_next),
             "keepLines": same(&rows, |r| r.keep_lines),
             "widowControl": same(&rows, |r| r.widow_control),
+            "contextualSpacing": same(&rows, |r| r.contextual_spacing),
+            "lineRule": same(&rows, |r| match r.line_spacing {
+                LineSpacing::Multiple(m) => ("multiple", m.to_bits()),
+                LineSpacing::AtLeast(v) => ("atLeast", v.to_bits()),
+                LineSpacing::Exactly(v) => ("exactly", v.to_bits()),
+            })
+            .map(|(k, b)| serde_json::json!({"rule": k, "value": f32::from_bits(b)})),
             "dropCap": same(&rows, |r| r.drop_cap),
             "shading": same(&rows, |r| r.shading).map(|c| c.map(|c| format!("{:02X}{:02X}{:02X}", c.0, c.1, c.2)).unwrap_or_else(|| "none".into())),
             "border": same(&rows, |r| r.borders.map_or(false, |b| b.top.is_some() || b.left.is_some() || b.bottom.is_some() || b.right.is_some())).map(|on| if on { "box" } else { "none" }),
@@ -3938,6 +3979,33 @@ mod tests {
         s.do_table_edit(CELL_BASE, "split_down").unwrap();
         assert_eq!(s.cell_paras().count(), n);
         assert!(s.do_table_edit(CELL_BASE, "split_down").is_err());
+    }
+    #[test]
+    fn typography_contextual_spacing_line_rule_and_char_scale() {
+        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
+        let ps = |s: &DocSession| -> serde_json::Value { serde_json::from_str(&s.do_para_state(0, 0).unwrap()).unwrap() };
+        let cs = |s: &DocSession| -> serde_json::Value { serde_json::from_str(&s.do_format_state(0, 0, 0, 1).unwrap()).unwrap() };
+        s.do_para_format(0, 0, r#"{"contextualSpacing":true,"lineRule":{"rule":"exactly","value":18}}"#).unwrap();
+        let v = ps(&s);
+        assert_eq!((v["contextualSpacing"].as_bool(), v["lineRule"]["rule"].as_str(), v["lineRule"]["value"].as_f64()), (Some(true), Some("exactly"), Some(18.0)));
+        s.do_para_format(0, 0, r#"{"lineRule":{"rule":"atLeast","value":14.5},"contextualSpacing":false}"#).unwrap();
+        let v = ps(&s);
+        assert_eq!((v["contextualSpacing"].as_bool(), v["lineRule"]["rule"].as_str(), v["lineRule"]["value"].as_f64()), (Some(false), Some("atLeast"), Some(14.5)));
+        s.do_para_format(0, 0, r#"{"lineRule":{"rule":"multiple","value":1.5}}"#).unwrap();
+        assert_eq!(ps(&s)["lineSpacing"].as_f64(), Some(1.5));
+        let before = wordcraft_docx::write(&s.doc).unwrap();
+        for bad in [r#"{"lineRule":1}"#, r#"{"lineRule":{"rule":"exactly"}}"#, r#"{"lineRule":{"rule":"exactly","value":0}}"#, r#"{"lineRule":{"rule":"exactly","value":1585}}"#, r#"{"lineRule":{"rule":"multiple","value":11}}"#, r#"{"lineRule":{"rule":"x","value":2}}"#, r#"{"lineRule":{"rule":"exactly","value":2,"z":1}}"#, r#"{"contextualSpacing":1}"#] {
+            assert!(s.do_para_format(0, 0, bad).is_err(), "{bad}");
+        }
+        assert_eq!(wordcraft_docx::write(&s.doc).unwrap(), before, "refusals change nothing");
+        s.do_format(0, 0, 0, 1, r#"{"scale":150}"#).unwrap();
+        assert_eq!(cs(&s)["scale"].as_f64(), Some(150.0));
+        for bad in [r#"{"scale":19}"#, r#"{"scale":401}"#, r#"{"scale":100.5}"#, r#"{"scale":"x"}"#] {
+            assert!(s.do_format(0, 0, 0, 1, bad).is_err(), "{bad}");
+        }
+        assert!(s.paginate() >= 1);
+        let re = DocSession::from_bytes(&wordcraft_docx::write(&s.doc).unwrap()).unwrap();
+        assert_eq!(serde_json::from_str::<serde_json::Value>(&re.do_format_state(0, 0, 0, 1).unwrap()).unwrap()["scale"].as_f64(), Some(150.0));
     }
     #[test]
     fn table_layout_sets_reads_refuses_and_roundtrips() {

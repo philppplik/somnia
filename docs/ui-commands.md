@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-879 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+881 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -312,6 +312,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `documents.author.set` | Set the author name | View | documents |  |
 | `documents.charLook.open` | Underline and shading | View | documents |  |
 | `documents.charLook.set` | Set underline style, underline colour or character shading | View | documents |  |
+| `documents.charScale.set` | Set character width | View | documents |  |
 | `documents.charSpacing.set` | Set character spacing | View | documents |  |
 | `documents.clearFormatting` | Clear text formatting | View | documents |  |
 | `documents.clearSelection` | Clear document selection | View | documents-panels |  |
@@ -345,6 +346,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `documents.indent.decrease` | Decrease indent | View | documents |  |
 | `documents.indent.increase` | Increase indent | View | documents |  |
 | `documents.insertPageBreak` | Insert page break | View | documents |  |
+| `documents.lineRule.set` | Set line height rule | View | documents |  |
 | `documents.link.remove` | Remove the link from the selected text | View | documents |  |
 | `documents.link.set` | Link the selected text | View | documents |  |
 | `documents.list.bullet` | Toggle bulleted list | View | documents |  |
