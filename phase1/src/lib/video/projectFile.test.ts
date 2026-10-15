@@ -18,7 +18,7 @@ test('serialize and parse round-trip media and title clips',()=>{
  assert.deepEqual([parsed.clips[1].source,parsed.clips[1].in_s,parsed.clips[1].out_s,parsed.clips[1].gain,parsed.clips[1].muted,parsed.clips[1].crossfade_s],['b roll.webm',1.25,3.5,0.4,true,0.75]);
  const t=parsed.clips[2];
  assert.equal(t.kind,'title');
- assert.deepEqual(t.title,{text:'Intro',size:90,color:'#a1b2c3',background:'#101010',font:'serif',bold:true,italic:true,align:'left',vAlign:'middle',fadeIn:0.5,fadeOut:0,bgAlpha:1});
+ assert.deepEqual(t.title,{text:'Intro',size:90,color:'#a1b2c3',background:'#101010',font:'serif',bold:true,italic:true,align:'left',vAlign:'middle',fadeIn:0.5,fadeOut:0,bgAlpha:1,animate:'none'});
  assert.equal(t.id,title.id,'ids round-trip');
 });
 

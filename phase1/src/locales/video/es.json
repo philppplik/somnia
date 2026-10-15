@@ -233,6 +233,7 @@
  "cmd.video.overlay.rect": "Encuadre de la superposición seleccionada (fracciones)",
  "cmd.video.overlay.opacity": "Opacidad de la superposición seleccionada",
  "cmd.video.overlay.text": "Texto del título superpuesto seleccionado",
+ "cmd.video.overlay.animate": "Establecer la animación de entrada del título superpuesto seleccionado",
  "cmd.video.overlay.bgAlpha": "Establecer la opacidad de fondo del título superpuesto seleccionado",
  "cmd.video.overlay.gain": "Establecer la ganancia de audio de la superposición de vídeo seleccionada",
  "cmd.video.overlay.in": "Establecer el inicio de origen de la superposición de vídeo seleccionada",

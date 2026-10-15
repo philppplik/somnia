@@ -34,6 +34,8 @@ export function TitleInspector({clip,onChange,onDuration}:{clip:TitleClip;onChan
     <option value="left">{t('video.card.alignLeft')}</option><option value="center">{t('video.card.alignCenter')}</option><option value="right">{t('video.card.alignRight')}</option></NativeSelect></label>
    <label>{t('video.card.vAlign')}<NativeSelect className={`${field} mt-1`} value={s.vAlign} onChange={e=>onChange({vAlign:e.target.value as TitleSpec['vAlign']})} data-testid="video-title-valign">
     <option value="top">{t('video.card.top')}</option><option value="middle">{t('video.card.middle')}</option><option value="bottom">{t('video.card.bottom')}</option></NativeSelect></label>
+   <label>{t('video.card.animate')}<NativeSelect className={`${field} mt-1`} value={s.animate} onChange={e=>onChange({animate:e.target.value as TitleSpec['animate']})} data-testid="video-title-animate">
+    <option value="none">{t('video.card.animateNone')}</option><option value="rise">{t('video.card.animateRise')}</option><option value="drop">{t('video.card.animateDrop')}</option><option value="slide">{t('video.card.animateSlide')}</option></NativeSelect></label>
    <label>{t('video.card.fadeIn')}<NativeInput type="number" className={`${field} mt-1`} min={0} max={10} step={0.1} value={s.fadeIn} onChange={e=>onChange({fadeIn:num(e.target.value,s.fadeIn)})} data-testid="video-title-fadein"/></label>
    <label>{t('video.card.fadeOut')}<NativeInput type="number" className={`${field} mt-1`} min={0} max={10} step={0.1} value={s.fadeOut} onChange={e=>onChange({fadeOut:num(e.target.value,s.fadeOut)})} data-testid="video-title-fadeout"/></label>
   </div>

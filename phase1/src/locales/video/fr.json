@@ -233,6 +233,7 @@
  "cmd.video.overlay.rect": "Cadre de l'incrustation sélectionnée (fractions)",
  "cmd.video.overlay.opacity": "Opacité de l'incrustation sélectionnée",
  "cmd.video.overlay.text": "Texte du titre incrusté sélectionné",
+ "cmd.video.overlay.animate": "Définir l'animation d'entrée du titre incrusté sélectionné",
  "cmd.video.overlay.bgAlpha": "Définir l'opacité du fond du titre incrusté sélectionné",
  "cmd.video.overlay.gain": "Définir le gain audio de l'incrustation vidéo sélectionnée",
  "cmd.video.overlay.in": "Définir le début source de l'incrustation vidéo sélectionnée",

@@ -21,7 +21,10 @@ export interface TitleSpec{
  fadeIn?:number;fadeOut?:number;
  /** Opacity of the background colour over the black base, 0-1 (default 1 = solid). 0 gives a pure black card with text. */
  bgAlpha?:number;
+ /** Entrance motion of the card content over the fade-in window (0.35 s when no fade is set): rise from below, drop from above, slide from the left. Default 'none'. */
+ animate?:TitleAnimation;
 }
+export type TitleAnimation='none'|'rise'|'drop'|'slide';
 export type TitleClip=TimelineClip&{kind:'title';title:TitleSpec};
 
 export const REFERENCE_HEIGHT=1080;
@@ -29,7 +32,7 @@ export const DEFAULT_TITLE_SECONDS=3;
 export const MAX_TITLE_SECONDS=3600;
 export const MAX_TITLE_CHARS=500;
 export const FONT_STACKS:Record<TitleFont,string>={sans:'system-ui, "Segoe UI", Helvetica, Arial, sans-serif',serif:'Georgia, "Times New Roman", serif',mono:'ui-monospace, Consolas, "Courier New", monospace'};
-export const DEFAULT_TITLE:Required<TitleSpec>={text:'Title',size:72,color:'#ffffff',background:'#111827',font:'sans',bold:true,italic:false,align:'center',vAlign:'middle',fadeIn:0,fadeOut:0,bgAlpha:1};
+export const DEFAULT_TITLE:Required<TitleSpec>={text:'Title',size:72,color:'#ffffff',background:'#111827',font:'sans',bold:true,italic:false,align:'center',vAlign:'middle',fadeIn:0,fadeOut:0,bgAlpha:1,animate:'none'};
 
 export const isTitleClip=(c:TimelineClip):c is TitleClip=>(c as {kind?:string}).kind==='title'&&typeof (c as {title?:unknown}).title==='object'&&(c as {title?:unknown}).title!==null;
 /** Clips that need an opened media file to render; the pipeline and session skip title clips with this. */
@@ -54,6 +57,7 @@ export function sanitizeTitleSpec(input:Partial<TitleSpec>|null|undefined,base:R
   vAlign:oneOf(s.vAlign,['top','middle','bottom'] as const,base.vAlign),
   fadeIn:clamp(Number(s.fadeIn??base.fadeIn),0,10,base.fadeIn),fadeOut:clamp(Number(s.fadeOut??base.fadeOut),0,10,base.fadeOut),
   bgAlpha:clamp(Number(s.bgAlpha??base.bgAlpha),0,1,base.bgAlpha),
+  animate:oneOf(s.animate,['none','rise','drop','slide'] as const,base.animate),
  };
 }
 export const clampTitleSeconds=(d:number)=>Number(clamp(d,MIN_CLIP_SECONDS,MAX_TITLE_SECONDS,DEFAULT_TITLE_SECONDS).toFixed(3));
@@ -161,11 +165,16 @@ export function layoutTitle(spec0:TitleSpec,w:number,h:number,measureWith:(font:
 export function drawTitle(ctx:TitleContext,spec0:TitleSpec,w:number,h:number,t:number,duration:number):void{
  const spec=sanitizeTitleSpec(spec0);
  const alpha=titleAlphaAt(spec,duration,t);
+ // Entrance animation: content eases in from an edge over the fade-in window (0.35 s when no fade is set); the
+ // black base stays put, so a moving card slides in over black and overlay titles slide within their box.
+ const win=spec.fadeIn>0?spec.fadeIn:0.35,p=Math.min(1,Math.max(0,t/win)),ease=1-Math.pow(1-p,3);
+ const dx=spec.animate==='slide'?(1-ease)*w*0.25:0;
+ const dy=spec.animate==='rise'?(1-ease)*h*0.25:spec.animate==='drop'?-(1-ease)*h*0.25:0;
  ctx.globalAlpha=1;ctx.fillStyle='#000';ctx.fillRect(0,0,w,h);
- ctx.globalAlpha=alpha*spec.bgAlpha;ctx.fillStyle=spec.background;ctx.fillRect(0,0,w,h);
+ ctx.globalAlpha=alpha*spec.bgAlpha;ctx.fillStyle=spec.background;ctx.fillRect(dx,dy,w,h);
  const layout=layoutTitle(spec,w,h,font=>{ctx.font=font;return s=>ctx.measureText(s).width;});
  ctx.font=fontShorthand(spec,layout.fontPx);ctx.textAlign=spec.align;ctx.textBaseline='middle';ctx.fillStyle=spec.color;
- layout.lines.forEach((line,i)=>{if(line)ctx.fillText(line,layout.x,layout.top+layout.lineHeight*(i+0.5));});
+ layout.lines.forEach((line,i)=>{if(line)ctx.fillText(line,layout.x+dx,layout.top+dy+layout.lineHeight*(i+0.5));});
  ctx.globalAlpha=1;
 }
 /** The contract entry point for the export (and any renderer): draws title clip `clip` at `t` seconds into it (default 0). */

@@ -225,6 +225,8 @@ export function VideoControls({name}:{name:string}){
    <span className="text-ink">{t('video.overlayClipTitle')}</span>
    <span className="truncate text-ink-3" data-testid="video-overlay-source">{selectedOverlay.kind==='title'?(selectedOverlay.title?.text??''):selectedOverlay.source}</span>
    {selectedOverlay.kind==='title'&&<label>{t('video.overlayText')}<NativeInput className={`${field} mt-1`} value={selectedOverlay.title?.text??''} onChange={e=>updateOverlayTitle(name,selectedOverlay.id,{text:e.target.value})} data-testid="video-overlay-text"/></label>}
+   {selectedOverlay.kind==='title'&&<label>{t('video.card.animate')}<NativeSelect className={`${field} mt-1`} value={selectedOverlay.title?.animate??'none'} onChange={e=>updateOverlayTitle(name,selectedOverlay.id,{animate:e.target.value as 'none'|'rise'|'drop'|'slide'})} data-testid="video-overlay-animate">
+    <option value="none">{t('video.card.animateNone')}</option><option value="rise">{t('video.card.animateRise')}</option><option value="drop">{t('video.card.animateDrop')}</option><option value="slide">{t('video.card.animateSlide')}</option></NativeSelect></label>}
    {selectedOverlay.kind==='title'&&<label>{t('video.overlayBgAlpha',{percent:Math.round((selectedOverlay.title?.bgAlpha??1)*100)})}
     <NativeInput type="range" className="accent-[var(--accent)]" min={0} max={1} step={0.05} value={selectedOverlay.title?.bgAlpha??1} onChange={e=>updateOverlayTitle(name,selectedOverlay.id,{bgAlpha:Number(e.target.value)})} data-testid="video-overlay-bg-alpha"/>
    </label>}

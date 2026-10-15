@@ -233,6 +233,7 @@
  "cmd.video.overlay.rect": "Bildausschnitt des gewählten Overlays (Anteile)",
  "cmd.video.overlay.opacity": "Deckkraft des gewählten Overlays setzen",
  "cmd.video.overlay.text": "Text des gewählten Titel-Overlays setzen",
+ "cmd.video.overlay.animate": "Eingangsanimation des ausgewählten Titel-Overlays setzen",
  "cmd.video.overlay.bgAlpha": "Hintergrund-Deckkraft des ausgewählten Titel-Overlays setzen",
  "cmd.video.overlay.gain": "Tonverstärkung des ausgewählten Video-Overlays setzen",
  "cmd.video.overlay.in": "Quellstart des ausgewählten Video-Overlays setzen",

@@ -152,3 +152,23 @@ test('background opacity defaults to solid, clamps and multiplies the fade alpha
  const text=ctx.log.find(l=>l.startsWith('text Hi'))!;
  assert.ok(ctx.log.indexOf(text)>ctx.log.findIndex(l=>l.startsWith('rect #112233')),'text still draws over the background');
 });
+
+test('title entrance animations: sanitize, offsets ease to zero, none stays put',()=>{
+ assert.equal(sanitizeTitleSpec({}).animate,'none','default is no animation');
+ assert.equal(sanitizeTitleSpec({animate:'rise'}).animate,'rise');
+ assert.equal(sanitizeTitleSpec({animate:'spin' as 'rise'}).animate,'none','junk animations fall back to none');
+ const ctx=fakeCtx();
+ const spec=sanitizeTitleSpec({text:'Hi',animate:'rise'});
+ drawTitle(ctx,spec,400,200,0,3);
+ const early=ctx.log.filter(l=>l.startsWith('text'))[0];
+ drawTitle(ctx,spec,400,200,3,3);
+ const late=ctx.log.filter(l=>l.startsWith('text'))[1];
+ const yOf=(l:string)=>Number(l.match(/@(-?\d+),(-?\d+)/)![2]);
+ assert.ok(yOf(early)>yOf(late),'rise starts below the resting position');
+ const ctx2=fakeCtx();
+ const still=sanitizeTitleSpec({text:'Hi',animate:'none'});
+ drawTitle(ctx2,still,400,200,0,3);
+ drawTitle(ctx2,still,400,200,3,3);
+ const texts=ctx2.log.filter(l=>l.startsWith('text'));
+ assert.equal(texts[0],texts[1],'animate none never moves the content');
+});

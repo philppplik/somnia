@@ -233,6 +233,7 @@
  "cmd.video.overlay.rect": "Set selected overlay frame rect (fractions)",
  "cmd.video.overlay.opacity": "Set selected overlay opacity",
  "cmd.video.overlay.text": "Set selected title overlay text",
+ "cmd.video.overlay.animate": "Set selected title overlay entrance animation",
  "cmd.video.overlay.bgAlpha": "Set selected title overlay background opacity",
  "cmd.video.overlay.gain": "Set selected video overlay audio gain",
  "cmd.video.overlay.in": "Set selected video overlay source start",
