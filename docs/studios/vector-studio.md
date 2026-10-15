@@ -41,7 +41,7 @@ Vector Studio edits paths and shapes on the existing `src/lib/vectorio` document
 
 ## Honest limits
 
-- No text, gradients, boolean operations or groups yet. Layers are a flat list of paths (`layer` from imported groups is preserved on export).
+- No text, gradients or groups yet. Boolean operations (Combine menu: union, subtract, intersect, exclude) work on closed shapes by flattening curves to polylines, so the result is polygonal (corner nodes) and an approximation of curved input; own implementation (`polyBoolean.ts`), limit 3000 segments, subtract cuts every upper selected shape out of the lowest one, results use the even-odd rule as a compound. Layers are a flat list of paths (`layer` from imported groups is preserved on export).
 - Document hit testing shares the tools paint contract, including evenodd/nonzero winding across compound contours, invisible paint and implicit fill closure of open contours. Hit testing flattens curves into polylines; node picking uses screen-constant radii.
 - Undo stores document snapshots (200 steps), which is fine for the 10,000 node import limit but not meant for huge artwork.
 - PNG export rasterises through an `<img>`; the result is as good as the WebView's SVG renderer.

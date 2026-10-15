@@ -12612,6 +12612,13 @@
       "hasEnabled": true
     },
     {
+      "id": "vector.booleanOp",
+      "title": "Combine vector shapes",
+      "category": "Edit",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
       "id": "vector.clearError",
       "title": "Clear vector diagnostics",
       "category": "View",

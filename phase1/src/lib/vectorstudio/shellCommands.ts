@@ -2,6 +2,7 @@ import {requestVectorExport} from './exportSetup';
 import type {CommandSpec} from '../commandSpec';
 import * as S from './session';
 import {rotateSelection,scaleSelection,selectionBounds,alignSelection,distributeSelection,ALIGN_MODES,ALIGN_TARGETS} from './transforms';
+import {applyBoolean,BOOL_OPS} from './booleanOps';
 import {downloadSvg,downloadPng} from './exportFiles';
 const empty={type:'object',properties:{},additionalProperties:false};
 export function vectorShellCommandSpecs(active:()=>boolean):CommandSpec<any,unknown>[] {
@@ -18,6 +19,8 @@ export function vectorShellCommandSpecs(active:()=>boolean):CommandSpec<any,unkn
    run:(p:{mode:typeof ALIGN_MODES[number];to:typeof ALIGN_TARGETS[number]})=>{const s=S.getVectorSession(),next=alignSelection(s.doc,s.selection,p.mode,p.to);if(next!==s.doc)S.commit(next);}},
   {id:'vector.distributeSelection',title:'Distribute vector selection',category:'Edit',level:'ui',enabled:selected,params:{...empty,properties:{axis:{type:'string',enum:['horizontal','vertical']}},required:['axis']},
    run:(p:{axis:'horizontal'|'vertical'})=>{const s=S.getVectorSession();S.commit(distributeSelection(s.doc,s.selection,p.axis));}},
+  {id:'vector.booleanOp',title:'Combine vector shapes',category:'Edit',level:'ui',enabled:selected,params:{...empty,properties:{op:{type:'string',enum:[...BOOL_OPS]}},required:['op']},
+   run:(p:{op:typeof BOOL_OPS[number]})=>{const s=S.getVectorSession(),r=applyBoolean(s.doc,s.selection,p.op);S.commit(r.doc);S.select(r.ids);}},
   {id:'vector.exportSvg',title:'Export vector SVG',category:'Project',level:'ui',enabled:ready,params:empty,run:()=>downloadSvg(S.getVectorSession().name)},
   {id:'vector.exportPng',title:'Export vector PNG',category:'Project',level:'ui',enabled:ready,params:{...empty,properties:{scale:{type:'number',minimum:0.1,maximum:8}}},run:(p:{scale?:number}={})=>{const s=S.getVectorSession();return downloadPng(s.name,s.doc.width,s.doc.height,p.scale??1);}},
  ];

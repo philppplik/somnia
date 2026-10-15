@@ -12,7 +12,7 @@ export type AlignMode=typeof ALIGN_MODES[number];
 export const ALIGN_TARGETS=['selection','page'] as const;
 export type AlignTarget=typeof ALIGN_TARGETS[number];
 /** One painted object: a compound counts once, every other visible path is its own object. Bounds are geometric (no stroke padding). */
-function objectsOf(doc:VectorDocument,ids:readonly string[]){
+export function objectsOf(doc:VectorDocument,ids:readonly string[]){
   const out=new Map<string,{ids:string[];box:{minX:number;minY:number;maxX:number;maxY:number}}>();
   for(const p of chosen(doc,ids)){const key=p.compound?'c:'+p.compound:'p:'+p.id;const e=out.get(key)??{ids:[],box:null as never};e.ids.push(p.id);out.set(key,e);}
   for(const e of out.values()){const b=boxOf(doc.paths.filter(p=>e.ids.includes(p.id)));if(!b)return null;e.box=b;}

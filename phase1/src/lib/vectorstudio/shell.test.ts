@@ -62,3 +62,19 @@ test('align and distribute commands are one undo step and reject bad params',asy
  await d.runCommand('vector.alignSelection',{mode:'left',to:'selection'},{origin:'test'});assert.notDeepEqual(S.getVectorSession().doc,before);S.undo();assert.deepEqual(S.getVectorSession().doc,before);
  await d.runCommand('vector.distributeSelection',{axis:'vertical'},{origin:'test'});S.undo();assert.deepEqual(S.getVectorSession().doc,before);
 });
+import {applyBoolean} from './booleanOps';
+test('boolean command combines shapes in one undo step and refuses unusable selections without changes',async()=>{
+ S.resetVectorSession();S.createBlankVector();S.addPath(box(0,0,100,100));S.addPath(box(50,50,100,100));S.addPath(box(300,300,20,20));
+ const all=S.getVectorSession().doc.paths.map(p=>p.id);S.select(all.slice(0,2));const before=structuredClone(S.getVectorSession().doc);
+ const d=new CommandDispatcher();commands.forEach(s=>d.register(s));
+ await assert.rejects(d.runCommand('vector.booleanOp',{op:'xor'},{origin:'test'}),e=>e instanceof CommandDispatchError&&e.code==='invalid-params');
+ await assert.rejects(d.runCommand('vector.booleanOp',{op:'union'},{origin:'agent'}),e=>e instanceof CommandDispatchError&&e.code==='forbidden-origin');
+ S.select(all.slice(2));await assert.rejects(d.runCommand('vector.booleanOp',{op:'union'},{origin:'test'}),/at least two/);
+ S.select([all[0],all[2]]);await assert.rejects(d.runCommand('vector.booleanOp',{op:'intersect'},{origin:'test'}),/empty/);
+ assert.deepEqual(S.getVectorSession().doc,before);
+ S.select(all.slice(0,2));await d.runCommand('vector.booleanOp',{op:'union'},{origin:'test'});
+ const after=S.getVectorSession().doc;assert.equal(after.paths.length,2);assert.equal(S.getVectorSession().selection.length,1);assert.ok(!after.paths.some(p=>all.slice(0,2).includes(p.id)));
+ S.undo();assert.deepEqual(S.getVectorSession().doc,before);
+ const open={...before,paths:before.paths.map((p,i)=>i===0?{...p,closed:false}:p)};assert.throws(()=>applyBoolean(open,all.slice(0,2),'union'),/closed shapes/);
+ const hole=applyBoolean(before,all.slice(0,2),'subtract');assert.equal(hole.ids.length,1);assert.equal(hole.doc.paths.length,2);
+});

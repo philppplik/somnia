@@ -5,6 +5,7 @@ import {useState} from 'react';
 import {Button} from '../ui/button';
 import {Menu,MenuTrigger,MenuContent,MenuItem,MenuGroup,MenuGroupLabel,MenuSeparator} from '../ui/menu';
 import {ALIGN_MODES,ALIGN_TARGETS} from '../../lib/vectorstudio/transforms';
+import {BOOL_OPS} from '../../lib/vectorstudio/booleanOps';
 import {DASH_PRESETS,dashArrayFor,dashPresetOf} from '../../lib/vectorstudio/strokeStyle';
 import {useT} from '../../lib/useT';
 import {executeCommand} from '../../lib/commands';
@@ -40,6 +41,8 @@ export function VectorTransformSection(){const {t}=useT(),s=useVectorSession(),b
   <Menu><MenuTrigger render={<Button size="compact" variant="outline" data-testid="vector-align-menu">{t('vector.shell.align')}</Button>}/>
    <MenuContent>{ALIGN_TARGETS.map(to=><MenuGroup key={to}><MenuGroupLabel>{t('vector.shell.align.'+to)}</MenuGroupLabel>{ALIGN_MODES.map(mode=><MenuItem key={mode} onClick={()=>run('alignSelection',{mode,to})}>{t('vector.shell.align.'+mode)}</MenuItem>)}<MenuSeparator/></MenuGroup>)}
     <MenuGroup><MenuGroupLabel>{t('vector.shell.distribute')}</MenuGroupLabel>{(['horizontal','vertical'] as const).map(axis=><MenuItem key={axis} onClick={()=>run('distributeSelection',{axis})}>{t('vector.shell.distribute.'+axis)}</MenuItem>)}</MenuGroup></MenuContent></Menu>
+  <Menu><MenuTrigger render={<Button size="compact" variant="outline" data-testid="vector-combine-menu">{t('vector.shell.combine')}</Button>}/>
+   <MenuContent>{BOOL_OPS.map(o=><MenuItem key={o} onClick={()=>run('booleanOp',{op:o})}>{t('vector.shell.combine.'+o)}</MenuItem>)}</MenuContent></Menu>
   <div className="grid grid-cols-2 gap-1">{(['front','back','forward','backward'] as const).map(mode=><Button key={mode} size="compact" onClick={()=>run('reorder',{mode})}>{t(mode==='front'?'vector.toFront':mode==='back'?'vector.shell.toBack':'vector.'+mode)}</Button>)}
    <Button size="compact" onClick={()=>run('duplicateSelection')}>{t('vector.duplicate')}</Button><Button size="compact" onClick={()=>run('deleteSelection')}>{t('vector.shell.delete')}</Button></div>
  </div>;
