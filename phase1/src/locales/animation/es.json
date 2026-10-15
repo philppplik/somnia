@@ -1220,5 +1220,11 @@
  "animation.rig.orbit.ccw1": "Una vuelta en sentido antihorario",
  "animation.rig.orbit.cw2": "Dos vueltas en sentido horario",
  "animation.rig.orbit.ccw2": "Dos vueltas en sentido antihorario",
- "cmd.animation.layers.orbit": "Hacer orbitar capas alrededor de la primera capa marcada"
+ "cmd.animation.layers.orbit": "Hacer orbitar capas alrededor de la primera capa marcada",
+ "animation.rig.group.motion": "Movimiento",
+ "animation.rig.bounce.2": "Caer y rebotar 2 veces",
+ "animation.rig.bounce.3": "Caer y rebotar 3 veces",
+ "animation.rig.bounce.5": "Caer y rebotar 5 veces",
+ "cmd.animation.layers.bounce": "Dejar caer capas sobre la primera capa marcada y rebotar",
+ "animation.rig.group.bounce": "Rebote"
 }

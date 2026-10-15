@@ -1470,3 +1470,21 @@ test('P248 orbit: constant radius around the moving target, starts where the lay
   s.undo();assert.equal(findComp(s.document!)!.layers.find(l=>l.id==='p')!.transform.position.keys.length,0);
  }
 });
+
+test('P249 bounce: falls onto the ground, every bounce lower, rests on the floor at the end, world x kept, one undo step',async()=>{
+ const {bounceSpecs,bounceHeight}=await import('./bounceCommands');const {worldMatrix}=await import('./scene');const bounce=bounceSpecs()[0].run as (p?:unknown)=>unknown;
+ assert.equal(bounceHeight(0,3,60),1);assert.ok(Math.abs(bounceHeight(1,3,60))<1e-9);
+ let peaks:number[]=[],prev=1,up=false;for(let i=1;i<=1000;i++){const h=bounceHeight(i/1000,3,60);if(h>prev&&!up)up=true;if(h<prev&&up){peaks.push(prev);up=false;}prev=h;}
+ assert.equal(peaks.length,3);assert.ok(peaks[0]>peaks[1]&&peaks[1]>peaks[2]&&Math.abs(peaks[0]-0.36)<0.01,peaks.join());
+ const d0=applyEdits(base(),[{type:'layer.add',kind:'solid',id:'floor'},{type:'prop.set',layer:'floor',prop:'position',t:f(0),value:[300,400]},{type:'layer.add',kind:'solid',id:'g'},{type:'prop.set',layer:'g',prop:'rotation',t:f(0),value:20},{type:'layer.add',kind:'solid',id:'ball'},{type:'prop.set',layer:'ball',prop:'position',t:f(0),value:[-100,-150]},{type:'layer.parent',layer:'ball',parent:'g'}] as never);
+ const s=new AnimationSession();s.open(d0);setAnimationSession(s);
+ assert.throws(()=>bounce({layers:['ball']}),/ground first/);assert.throws(()=>bounce({layers:['floor','ball'],bounces:0}),/Bounces/);assert.throws(()=>bounce({layers:['ball','floor','g']}),/hangs? from/);
+ const c0=findComp(s.document!)!;const pt=(c:typeof c0,id:string,t:number)=>{const l=c.layers.find(x=>x.id===id)!,m=worldMatrix(c,l,t),an=l.transform.anchor.value as unknown as number[];return [m[0]*an[0]+m[2]*an[1]+m[4],m[1]*an[0]+m[3]*an[1]+m[5]];};
+ const p0=pt(c0,'ball',f(0)),floorY=pt(c0,'floor',f(0))[1];
+ assert.throws(()=>bounce({layers:['a','floor']}),/above the ground/);
+ const r=bounce({layers:['floor','ball'],bounces:3}) as {dropping:number;keys:number};assert.equal(r.dropping,1);assert.ok(r.keys<=120);
+ const c=findComp(s.document!)!;
+ for(const t of [f(0),f(4),f(9),c.workArea.out]){const p=pt(c,'ball',t);assert.ok(Math.abs(p[0]-p0[0])<0.5,'x kept');assert.ok(p[1]<=floorY+0.6,'never below the floor');}
+ assert.ok(Math.abs(pt(c,'ball',f(0))[1]-p0[1])<0.6);assert.ok(Math.abs(pt(c,'ball',c.workArea.out)[1]-floorY)<0.6,'rests on the floor');
+ s.undo();assert.equal(findComp(s.document!)!.layers.find(l=>l.id==='ball')!.transform.position.keys.length,0);
+});

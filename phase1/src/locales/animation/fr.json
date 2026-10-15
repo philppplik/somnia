@@ -1220,5 +1220,11 @@
  "animation.rig.orbit.ccw1": "Un tour dans le sens antihoraire",
  "animation.rig.orbit.cw2": "Deux tours dans le sens horaire",
  "animation.rig.orbit.ccw2": "Deux tours dans le sens antihoraire",
- "cmd.animation.layers.orbit": "Faire orbiter des calques autour du premier calque coche"
+ "cmd.animation.layers.orbit": "Faire orbiter des calques autour du premier calque coche",
+ "animation.rig.group.motion": "Mouvement",
+ "animation.rig.bounce.2": "Tomber et rebondir 2 fois",
+ "animation.rig.bounce.3": "Tomber et rebondir 3 fois",
+ "animation.rig.bounce.5": "Tomber et rebondir 5 fois",
+ "cmd.animation.layers.bounce": "Faire tomber des calques sur le premier calque coche et rebondir",
+ "animation.rig.group.bounce": "Rebond"
 }

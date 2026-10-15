@@ -1220,5 +1220,11 @@
  "animation.rig.orbit.ccw1": "One turn counter-clockwise",
  "animation.rig.orbit.cw2": "Two turns clockwise",
  "animation.rig.orbit.ccw2": "Two turns counter-clockwise",
- "cmd.animation.layers.orbit": "Orbit layers around the first ticked layer"
+ "cmd.animation.layers.orbit": "Orbit layers around the first ticked layer",
+ "animation.rig.group.motion": "Motion",
+ "animation.rig.bounce.2": "Drop and bounce twice",
+ "animation.rig.bounce.3": "Drop and bounce 3 times",
+ "animation.rig.bounce.5": "Drop and bounce 5 times",
+ "cmd.animation.layers.bounce": "Drop layers onto the first ticked layer and bounce",
+ "animation.rig.group.bounce": "Bounce"
 }

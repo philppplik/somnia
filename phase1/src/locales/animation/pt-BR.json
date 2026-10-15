@@ -1220,5 +1220,11 @@
  "animation.rig.orbit.ccw1": "Uma volta no sentido anti-horario",
  "animation.rig.orbit.cw2": "Duas voltas no sentido horario",
  "animation.rig.orbit.ccw2": "Duas voltas no sentido anti-horario",
- "cmd.animation.layers.orbit": "Fazer camadas orbitarem a primeira camada marcada"
+ "cmd.animation.layers.orbit": "Fazer camadas orbitarem a primeira camada marcada",
+ "animation.rig.group.motion": "Movimento",
+ "animation.rig.bounce.2": "Cair e quicar 2 vezes",
+ "animation.rig.bounce.3": "Cair e quicar 3 vezes",
+ "animation.rig.bounce.5": "Cair e quicar 5 vezes",
+ "cmd.animation.layers.bounce": "Deixar camadas cairem na primeira camada marcada e quicar",
+ "animation.rig.group.bounce": "Quique"
 }
