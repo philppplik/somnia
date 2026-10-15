@@ -21,8 +21,8 @@ export type PivotOp={kind:'create';rows:string;columns?:string;values:string;fun
 export interface PivotField{name:string;numeric:boolean}
 /** Page setup and file export. Every field is validated again by the Rust bridge. */
 export type PaperName='Letter'|'Legal'|'A4'|'A3'|'A5'|'Tabloid'|'Executive';
-export interface PageSetupOp{orientation?:'portrait'|'landscape';paper?:PaperName;margins?:'normal'|'wide'|'narrow';scale?:number;fitWidth?:number;fitHeight?:number;centerH?:boolean;centerV?:boolean;gridlines?:boolean;headings?:boolean;header?:string;footer?:string;printArea?:string|null;titleRows?:string|null;titleCols?:string|null}
-export interface PageInfo{orientation:'portrait'|'landscape';paper:string;margins:number[];scale:number;fitWidth:number;fitHeight:number;centerH:boolean;centerV:boolean;gridlines:boolean;headings:boolean;header:string;footer:string;printArea:string|null;titleRows:string|null;titleCols:string|null}
+export interface PageSetupOp{orientation?:'portrait'|'landscape';paper?:PaperName;margins?:'normal'|'wide'|'narrow';scale?:number;fitWidth?:number;fitHeight?:number;centerH?:boolean;centerV?:boolean;gridlines?:boolean;headings?:boolean;header?:string;footer?:string;printArea?:string|null;titleRows?:string|null;titleCols?:string|null;addRowBreak?:number;addColBreak?:number;removeRowBreak?:number;removeColBreak?:number;clearBreaks?:true}
+export interface PageInfo{orientation:'portrait'|'landscape';paper:string;margins:number[];scale:number;fitWidth:number;fitHeight:number;centerH:boolean;centerV:boolean;gridlines:boolean;headings:boolean;header:string;footer:string;printArea:string|null;titleRows:string|null;titleCols:string|null;rowBreaks:number[];colBreaks:number[]}
 /** Sheet protection: the password is write-only, the sheet only reports whether one is set. */
 export type ProtectPermission='formatCells'|'formatColumns'|'formatRows'|'insertColumns'|'insertRows'|'deleteColumns'|'deleteRows'|'sort'|'autofilter';
 export type ProtectOp={kind:'protect';password?:string;allow?:ProtectPermission[]}|{kind:'unprotect';password?:string}|{kind:'lock';locked:boolean}|{kind:'workbook';on:boolean};

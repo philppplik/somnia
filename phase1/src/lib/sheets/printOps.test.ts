@@ -31,3 +31,11 @@ test('download names and decoding',()=>{
  assert.equal(exportName('Budget.xlsx','pdf'),'Budget.pdf');assert.equal(exportName('../a/b:c.xlsx','csv','Q1/Q2'),'.._a_b_c-Q1_Q2.csv');assert.equal(exportName('','html'),'workbook.html');
  assert.deepEqual([...decodeBase64('QUJD')],[65,66,67]);
 });
+test('page break ops are bounded and stand alone',()=>{
+ assert.deepEqual(parsePageSetupCommand({addRowBreak:5}),{addRowBreak:5});
+ assert.deepEqual(parsePageSetupCommand({removeColBreak:3}),{removeColBreak:3});
+ assert.deepEqual(parsePageSetupCommand({clearBreaks:true}),{clearBreaks:true});
+ for(const bad of [{addRowBreak:1},{addRowBreak:1048577},{addColBreak:16385},{addColBreak:2.5},{addRowBreak:'3'},{clearBreaks:false},{addRowBreak:3,scale:50},{addRowBreak:3,addColBreak:3}])assert.throws(()=>parsePageSetupCommand(bad),String(JSON.stringify(bad)));
+ const info=parsePageInfo({rowBreaks:[5,1,'x',9],colBreaks:[3]});
+ assert.deepEqual(info?.rowBreaks,[5,9]);assert.deepEqual(info?.colBreaks,[3]);assert.deepEqual(parsePageInfo({})?.rowBreaks,[]);
+});

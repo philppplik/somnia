@@ -79,7 +79,7 @@ const PROTECT_ALLOW: &[&str] = &["formatCells", "formatColumns", "formatRows", "
 /// Paper names the page setup offers (the engine knows more).
 const PAPERS: &[&str] = &["Letter", "Legal", "A4", "A3", "A5", "Tabloid", "Executive"];
 /// Keys `page_setup` accepts; anything else is refused.
-const PAGE_KEYS: &[&str] = &["orientation", "paper", "margins", "scale", "fitWidth", "fitHeight", "centerH", "centerV", "gridlines", "headings", "header", "footer", "printArea", "titleRows", "titleCols"];
+const PAGE_KEYS: &[&str] = &["orientation", "paper", "margins", "scale", "fitWidth", "fitHeight", "centerH", "centerV", "gridlines", "headings", "header", "footer", "printArea", "titleRows", "titleCols", "addRowBreak", "addColBreak", "removeRowBreak", "removeColBreak", "clearBreaks"];
 const MAX_PIVOT_FIELDS: usize = 200;
 /// Summary functions the pivot builder offers.
 const PIVOT_FUNCS: &[&str] = &["sum", "count", "average", "max", "min"];
@@ -2479,7 +2479,8 @@ impl HeadlessWorkbook {
             "orientation": if pr.orientation == gridcraft_engine::model::Orientation::Landscape { "landscape" } else { "portrait" },
             "paper": pr.paper, "margins": pr.margins, "scale": pr.scale, "fitWidth": fit_w, "fitHeight": fit_h,
             "centerH": pr.center_h, "centerV": pr.center_v, "gridlines": pr.gridlines, "headings": pr.headings,
-            "header": pr.header, "footer": pr.footer, "printArea": pr.print_area.map(|r| r.a1()), "titleRows": rows, "titleCols": cols
+            "header": pr.header, "footer": pr.footer, "printArea": pr.print_area.map(|r| r.a1()), "titleRows": rows, "titleCols": cols,
+            "rowBreaks": pr.row_breaks.iter().map(|r| r + 1).collect::<Vec<u32>>(), "colBreaks": pr.col_breaks.iter().map(|c| c + 1).collect::<Vec<u32>>()
         })
         .to_string())
     }
@@ -2514,6 +2515,51 @@ impl HeadlessWorkbook {
         }
         let mut call = serde_json::Map::new();
         call.insert("sheet".into(), json!(sheet));
+        // Manual page breaks: `addRowBreak`/`removeRowBreak` (row 2 to 1048576, the break goes above it), `addColBreak`/`removeColBreak`
+        // (column number 2 to 16384, the break goes left of it) and `clearBreaks` (true). The engine replaces whole lists, so read the current ones.
+        const BREAK_KEYS: [&str; 5] = ["addRowBreak", "addColBreak", "removeRowBreak", "removeColBreak", "clearBreaks"];
+        if map.keys().any(|k| BREAK_KEYS.contains(&k.as_str())) {
+            if map.len() != 1 {
+                return Err("Change page breaks on their own.".into());
+            }
+            let (key, v) = map.iter().next().ok_or("name at least one setting")?;
+            let (mut rows, mut cols) = {
+                let doc = self.session.doc().map_err(|e| e.to_string())?;
+                let pr = &doc.wb.sheet(sheet).ok_or("unknown sheet")?.print;
+                (pr.row_breaks.iter().map(|r| r + 1).collect::<Vec<u32>>(), pr.col_breaks.iter().map(|c| c + 1).collect::<Vec<u32>>())
+            };
+            if key == "clearBreaks" {
+                if v.as_bool() != Some(true) {
+                    return Err("clearBreaks must be true".into());
+                }
+                rows.clear();
+                cols.clear();
+            } else {
+                let is_row = key.ends_with("RowBreak");
+                let limit = if is_row { gridcraft_engine::core::MAX_ROWS as u64 } else { gridcraft_engine::core::MAX_COLS as u64 };
+                let n = v.as_u64().filter(|n| (2..=limit).contains(n)).ok_or("A page break needs a row or column after the first.")? as u32;
+                let list = if is_row { &mut rows } else { &mut cols };
+                if key.starts_with("add") {
+                    if list.contains(&n) {
+                        return Err("There is already a page break here.".into());
+                    }
+                    if list.len() >= 1026 {
+                        return Err("Too many page breaks.".into());
+                    }
+                    list.push(n);
+                } else {
+                    let before = list.len();
+                    list.retain(|x| *x != n);
+                    if list.len() == before {
+                        return Err("There is no page break here.".into());
+                    }
+                }
+            }
+            call.insert("rowBreaks".into(), json!(rows));
+            call.insert("colBreaks".into(), json!(cols));
+            self.session.run("pageLayout.pageSetup", serde_json::Value::Object(call)).map_err(|e| e.to_string())?;
+            return self.page_info(sheet);
+        }
         for (key, v) in map {
             let ok = match key.as_str() {
                 "orientation" => v.as_str().is_some_and(|o| o == "portrait" || o == "landscape"),
@@ -5530,6 +5576,25 @@ mod tests {
         assert!(book.protect_op(0, 0, 0, 1, 1, &format!(r#"{{"kind":"protect","password":"{}"}}"#, "x".repeat(65))).is_err());
         assert!(book.protect_op(0, 0, 0, 0, 0, r#"{"kind":"lock","locked":true}"#).is_err());
         assert!(book.protect_op(9, 0, 0, 1, 1, r#"{"kind":"workbook","on":true}"#).is_err());
+    }
+    #[test]
+    fn manual_page_breaks_add_remove_and_stay_one_undo_step() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        let before = book.session.doc().unwrap().undo.len();
+        let info = book.page_setup(0, r#"{"addRowBreak":10}"#).unwrap();
+        assert!(info.contains("\"rowBreaks\":[10]"), "{info}");
+        assert_eq!(book.session.doc().unwrap().undo.len(), before + 1);
+        let info = book.page_setup(0, r#"{"addColBreak":3}"#).unwrap();
+        assert!(info.contains("\"rowBreaks\":[10]") && info.contains("\"colBreaks\":[3]"), "{info}");
+        assert!(book.page_setup(0, r#"{"addRowBreak":10}"#).is_err(), "duplicate");
+        assert!(book.page_setup(0, r#"{"removeRowBreak":11}"#).is_err(), "missing");
+        for bad in [r#"{"addRowBreak":1}"#, r#"{"addColBreak":16385}"#, r#"{"addRowBreak":"3"}"#, r#"{"clearBreaks":false}"#, r#"{"addRowBreak":3,"scale":50}"#] {
+            assert!(book.page_setup(0, bad).is_err(), "{bad}");
+        }
+        let info = book.page_setup(0, r#"{"removeRowBreak":10}"#).unwrap();
+        assert!(info.contains("\"rowBreaks\":[]"), "{info}");
+        let info = book.page_setup(0, r#"{"clearBreaks":true}"#).unwrap();
+        assert!(info.contains("\"colBreaks\":[]"), "{info}");
     }
     #[test]
     fn view_op_sets_zoom_and_gridlines_with_bounds() {

@@ -2,7 +2,7 @@ import type {ExportOp,ExportResult,PageInfo,PageSetupOp} from './protocol';
 /** Page setup and file export: validation of untrusted command input and of bridge answers. The Rust bridge re-validates. */
 export const PAPERS=['Letter','Legal','A4','A3','A5','Tabloid','Executive'] as const;
 export const MAX_HEADER_CHARS=100,MAX_PRINT_CELLS=1_000_000,MAX_EXPORT_BYTES=40*1024*1024;
-const KEYS=['orientation','paper','margins','scale','fitWidth','fitHeight','centerH','centerV','gridlines','headings','header','footer','printArea','titleRows','titleCols'];
+const KEYS=['orientation','paper','margins','scale','fitWidth','fitHeight','centerH','centerV','gridlines','headings','header','footer','printArea','titleRows','titleCols','addRowBreak','addColBreak','removeRowBreak','removeColBreak','clearBreaks'];
 const BOOLS=['centerH','centerV','gridlines','headings'] as const;
 /** true when header or footer text is too long, has control characters or uses an `&` code the printer does not know. */
 export function headerProblem(t:unknown):boolean{
@@ -17,6 +17,15 @@ export function parsePageSetupCommand(input:unknown):PageSetupOp{
  if(keys.some(k=>!KEYS.includes(k)))throw Error('Unknown page setting.');
  if(o.scale!==undefined&&(o.fitWidth!==undefined||o.fitHeight!==undefined))throw Error('Choose a scale or fit to pages, not both.');
  const out:PageSetupOp={};
+ const BRK=['addRowBreak','addColBreak','removeRowBreak','removeColBreak','clearBreaks'];
+ if(keys.some(k=>BRK.includes(k))){
+  if(keys.length!==1)throw Error('Change page breaks on their own.');
+  const k=keys[0];
+  if(k==='clearBreaks'){if(o[k]!==true)throw Error('`clearBreaks` must be true.');return {clearBreaks:true};}
+  const lim=k.endsWith('RowBreak')?1048576:16384,v=o[k];
+  if(typeof v!=='number'||!Number.isInteger(v)||v<2||v>lim)throw Error('A page break needs a row or column after the first.');
+  return {[k]:v} as PageSetupOp;
+ }
  if(o.orientation!==undefined){if(o.orientation!=='portrait'&&o.orientation!=='landscape')throw Error('Unsupported orientation.');out.orientation=o.orientation;}
  if(o.paper!==undefined){if(!(PAPERS as readonly unknown[]).includes(o.paper))throw Error('Unsupported paper size.');out.paper=o.paper as typeof PAPERS[number];}
  if(o.margins!==undefined){if(o.margins!=='normal'&&o.margins!=='wide'&&o.margins!=='narrow')throw Error('Unsupported margins.');out.margins=o.margins;}
@@ -41,7 +50,8 @@ export function parseExportCommand(input:unknown):ExportOp{
 export function parsePageInfo(raw:unknown):PageInfo|null{
  const r=raw as Record<string,unknown>|null;if(!r||typeof r!=='object')return null;
  const n=(v:unknown,d:number)=>typeof v==='number'&&Number.isFinite(v)?v:d,b=(v:unknown)=>v===true,s=(v:unknown)=>typeof v==='string'?v.slice(0,300):'',z=(v:unknown)=>typeof v==='string'?v.slice(0,40):null;
- return {orientation:r.orientation==='landscape'?'landscape':'portrait',paper:s(r.paper),margins:Array.isArray(r.margins)?r.margins.slice(0,6).map(x=>n(x,0)):[],scale:n(r.scale,100),fitWidth:n(r.fitWidth,0),fitHeight:n(r.fitHeight,0),centerH:b(r.centerH),centerV:b(r.centerV),gridlines:b(r.gridlines),headings:b(r.headings),header:s(r.header),footer:s(r.footer),printArea:z(r.printArea),titleRows:z(r.titleRows),titleCols:z(r.titleCols)};
+ const nums=(v:unknown)=>Array.isArray(v)?v.filter((x):x is number=>typeof x==='number'&&Number.isInteger(x)&&x>=2).slice(0,1026):[];
+ return {orientation:r.orientation==='landscape'?'landscape':'portrait',paper:s(r.paper),margins:Array.isArray(r.margins)?r.margins.slice(0,6).map(x=>n(x,0)):[],scale:n(r.scale,100),fitWidth:n(r.fitWidth,0),fitHeight:n(r.fitHeight,0),centerH:b(r.centerH),centerV:b(r.centerV),gridlines:b(r.gridlines),headings:b(r.headings),header:s(r.header),footer:s(r.footer),printArea:z(r.printArea),titleRows:z(r.titleRows),titleCols:z(r.titleCols),rowBreaks:nums(r.rowBreaks),colBreaks:nums(r.colBreaks)};
 }
 export function parseExportResult(raw:unknown):ExportResult{
  const r=raw as Record<string,unknown>|null;

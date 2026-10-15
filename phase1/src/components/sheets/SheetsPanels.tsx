@@ -651,16 +651,17 @@ function ViewGroup(){
  </div>;
 }
 /** Page setup and export in one grouped menu: page, print area and titles, appearance, header and footer, and file export. One undo step per change. */
-type PrintAction='portrait'|'landscape'|'paperA4'|'paperA3'|'paperLetter'|'paperLegal'|'marginsNormal'|'marginsWide'|'marginsNarrow'|'fitWidth'|'scale'|'areaSet'|'areaClear'|'titleRowsSet'|'titleRowsClear'|'gridlinesOn'|'gridlinesOff'|'headingsOn'|'headingsOff'|'centerOn'|'centerOff'|'header'|'footer'|'pdfSheet'|'pdfAll'|'pdfSelection'|'csv'|'tsv'|'html';
+type PrintAction='portrait'|'landscape'|'paperA4'|'paperA3'|'paperLetter'|'paperLegal'|'marginsNormal'|'marginsWide'|'marginsNarrow'|'fitWidth'|'scale'|'areaSet'|'areaClear'|'rowBreakAdd'|'rowBreakRemove'|'colBreakAdd'|'colBreakRemove'|'breaksClear'|'titleRowsSet'|'titleRowsClear'|'gridlinesOn'|'gridlinesOff'|'headingsOn'|'headingsOff'|'centerOn'|'centerOff'|'header'|'footer'|'pdfSheet'|'pdfAll'|'pdfSelection'|'csv'|'tsv'|'html';
 const PRINT_EXPORTS:Record<string,{format:'pdf'|'csv'|'tsv'|'html';scope:'sheet'|'all'|'selection'}>={pdfSheet:{format:'pdf',scope:'sheet'},pdfAll:{format:'pdf',scope:'all'},pdfSelection:{format:'pdf',scope:'selection'},csv:{format:'csv',scope:'sheet'},tsv:{format:'tsv',scope:'sheet'},html:{format:'html',scope:'sheet'}};
 function PrintGroup(){
  const {t}=useT(),s=useSheetsSelection(),action=useAction();const [act,setAct]=useState<PrintAction>('pdfSheet');const [scale,setScale]=useState(100);const [text,setText]=useState('');
  const r=s?.range;if(!s||!r)return null;
  const exporting=act in PRINT_EXPORTS,page=s.page??null,isText=act==='header'||act==='footer',textBad=isText&&headerProblem(text);
+ const breakAt=act==='rowBreakAdd'||act==='rowBreakRemove'?r.r0+1:act==='colBreakAdd'||act==='colBreakRemove'?r.c0+1:0,breakBad=(act==='rowBreakAdd'||act==='colBreakAdd')&&breakAt<2,breakNone=act==='rowBreakRemove'?!page?.rowBreaks.includes(breakAt):act==='colBreakRemove'?!page?.colBreaks.includes(breakAt):act==='breaksClear'?!page||(page.rowBreaks.length+page.colBreaks.length===0):false;
  const apply=()=>{
   const e=PRINT_EXPORTS[act];if(e){void action.run('sheets.export',e);return;}
   const rows=`${r.r0+1}:${r.r1+1}`;
-  const ops:Record<string,unknown>={portrait:{orientation:'portrait'},landscape:{orientation:'landscape'},paperA4:{paper:'A4'},paperA3:{paper:'A3'},paperLetter:{paper:'Letter'},paperLegal:{paper:'Legal'},marginsNormal:{margins:'normal'},marginsWide:{margins:'wide'},marginsNarrow:{margins:'narrow'},fitWidth:{fitWidth:1,fitHeight:0},scale:{scale},areaSet:{printArea:rangeAddress(r)},areaClear:{printArea:null},titleRowsSet:{titleRows:rows},titleRowsClear:{titleRows:null},gridlinesOn:{gridlines:true},gridlinesOff:{gridlines:false},headingsOn:{headings:true},headingsOff:{headings:false},centerOn:{centerH:true,centerV:false},centerOff:{centerH:false,centerV:false},header:{header:text},footer:{footer:text}};
+  const ops:Record<string,unknown>={portrait:{orientation:'portrait'},landscape:{orientation:'landscape'},paperA4:{paper:'A4'},paperA3:{paper:'A3'},paperLetter:{paper:'Letter'},paperLegal:{paper:'Legal'},marginsNormal:{margins:'normal'},marginsWide:{margins:'wide'},marginsNarrow:{margins:'narrow'},fitWidth:{fitWidth:1,fitHeight:0},scale:{scale},areaSet:{printArea:rangeAddress(r)},rowBreakAdd:{addRowBreak:r.r0+1},rowBreakRemove:{removeRowBreak:r.r0+1},colBreakAdd:{addColBreak:r.c0+1},colBreakRemove:{removeColBreak:r.c0+1},breaksClear:{clearBreaks:true},areaClear:{printArea:null},titleRowsSet:{titleRows:rows},titleRowsClear:{titleRows:null},gridlinesOn:{gridlines:true},gridlinesOff:{gridlines:false},headingsOn:{headings:true},headingsOff:{headings:false},centerOn:{centerH:true,centerV:false},centerOff:{centerH:false,centerV:false},header:{header:text},footer:{footer:text}};
   void action.run('sheets.pageSetup',ops[act]);
  };
  const opt=(id:PrintAction)=><option key={id} value={id}>{t('sheets.pr.'+id)}</option>;
@@ -670,14 +671,17 @@ function PrintGroup(){
    <optgroup label={t('sheets.pr.groupExport')}>{(['pdfSheet','pdfAll','pdfSelection','csv','tsv','html'] as PrintAction[]).map(opt)}</optgroup>
    <optgroup label={t('sheets.pr.groupPage')}>{(['portrait','landscape','paperA4','paperA3','paperLetter','paperLegal','marginsNormal','marginsWide','marginsNarrow','fitWidth','scale'] as PrintAction[]).map(opt)}</optgroup>
    <optgroup label={t('sheets.pr.groupArea')}>{(['areaSet','areaClear','titleRowsSet','titleRowsClear'] as PrintAction[]).map(opt)}</optgroup>
+   <optgroup label={t('sheets.pr.groupBreaks')}>{(['rowBreakAdd','rowBreakRemove','colBreakAdd','colBreakRemove','breaksClear'] as PrintAction[]).map(opt)}</optgroup>
    <optgroup label={t('sheets.pr.groupLook')}>{(['gridlinesOn','gridlinesOff','headingsOn','headingsOff','centerOn','centerOff'] as PrintAction[]).map(opt)}</optgroup>
    <optgroup label={t('sheets.pr.groupText')}>{(['header','footer'] as PrintAction[]).map(opt)}</optgroup>
   </NativeSelect></label>
   {act==='scale'&&<NumberField label={t('sheets.pr.scaleLabel')} unit="%" value={scale} resetKey="print-scale" min={10} max={400} step={5} disabled={action.busy} constraintError={t('sheets.pr.scaleInvalid')} parse={v=>{const n=Number(v.trim());return v.trim()&&Number.isInteger(n)&&n>=10&&n<=400?{ok:true,value:n}:{ok:false,error:t('sheets.pr.scaleInvalid')};}} onCommit={v=>{if(v!==null)setScale(v);}}/>}
   {isText&&<label className="flex flex-col gap-1">{t('sheets.pr.text')}<NativeInput className={field} value={text} maxLength={MAX_HEADER_CHARS} aria-invalid={textBad} disabled={action.busy} onChange={e=>setText(e.currentTarget.value)} data-testid="sheets-pr-text"/></label>}
   {isText&&<p className="text-ink-3">{t('sheets.pr.hint')}</p>}
-  <Button variant="outline" size="compact" disabled={action.busy||textBad} onClick={apply} data-testid="sheets-pr-apply">{t(exporting?'sheets.pr.applyExport':'sheets.pr.apply')}</Button>
+  <Button variant="outline" size="compact" disabled={action.busy||textBad||breakBad||breakNone} onClick={apply} data-testid="sheets-pr-apply">{t(exporting?'sheets.pr.applyExport':'sheets.pr.apply')}</Button>
   {page&&<p className="text-ink-3">{page.fitWidth>0?t('sheets.pr.currentFit',{orientation:t('sheets.pr.'+page.orientation),paper:page.paper,w:page.fitWidth}):t('sheets.pr.current',{orientation:t('sheets.pr.'+page.orientation),paper:page.paper,scale:page.scale})}</p>}
+  {(breakBad||breakNone)&&<p className="text-ink-3">{t(breakBad?'sheets.pr.breakFirst':'sheets.pr.breakNone')}</p>}
+  {page&&(page.rowBreaks.length>0||page.colBreaks.length>0)&&<p className="text-ink-3">{t('sheets.pr.breaksNow',{rows:page.rowBreaks.join(', ')||'-',cols:page.colBreaks.join(', ')||'-'})}</p>}
   <p className="text-ink-3">{t('sheets.pr.scope',{range:rangeAddress(r)})}</p>
  </div>;
 }
