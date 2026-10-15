@@ -166,6 +166,7 @@
  "photos.stacks.group": "Agrupar em pilha",
  "photos.stacks.survey": "Comparar",
  "photos.stacks.cover": "Capa",
+ "photos.stacks.cull": "Escolher capa, rejeitar resto",
  "photos.stacks.ungroup": "Desagrupar",
  "photos.stacks.expand": "Expandir pilha",
  "photos.stacks.collapse": "Recolher pilha",
@@ -174,6 +175,9 @@
  "photos.menu": "Menu",
  "photos.smart": "Smart",
  "photos.smart.anyFlag": "Qualquer marca",
+ "photos.smart.unflagged": "Sem marca",
  "photos.smart.anyLabel": "Qualquer rotulo",
- "photos.smart.tag": "Tag"
+ "photos.smart.noLabel": "Sem rótulo",
+ "photos.smart.tag": "Tag",
+ "photos.hidden.restore": "Restaurar ocultas ({count})"
 }

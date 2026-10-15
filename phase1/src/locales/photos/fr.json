@@ -166,6 +166,7 @@
  "photos.stacks.group": "Regrouper en pile",
  "photos.stacks.survey": "Comparer",
  "photos.stacks.cover": "Couverture",
+ "photos.stacks.cull": "Choisir la couverture, rejeter le reste",
  "photos.stacks.ungroup": "Degrouper",
  "photos.stacks.expand": "Deployer la pile",
  "photos.stacks.collapse": "Replier la pile",
@@ -174,6 +175,9 @@
  "photos.menu": "Menu",
  "photos.smart": "Smart",
  "photos.smart.anyFlag": "Tout drapeau",
+ "photos.smart.unflagged": "Non marqué",
  "photos.smart.anyLabel": "Tout libelle",
- "photos.smart.tag": "Mot-cle"
+ "photos.smart.noLabel": "Sans libellé",
+ "photos.smart.tag": "Mot-cle",
+ "photos.hidden.restore": "Restaurer les photos masquées ({count})"
 }

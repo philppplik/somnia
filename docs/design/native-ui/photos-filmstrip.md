@@ -400,3 +400,29 @@ rates the fixture photos, saves a "three stars and up" view, turns
 the smart filter off (everything visible), applies the collection
 (smart back on with its rule, strip narrowed again) and deletes it
 (`test-results/ds-photos-smart-collection-{light,dark}.png`).
+
+## Culling completion: stack cull, hide-not-delete, ohne rules (P105)
+
+One click finishes a burst: "Pick cover, reject rest" (stacks
+section of the strip menu) flags the chosen cover (P103) as pick and
+every other member as reject - plain flags, fully reversible.
+
+"Remove rejects" now hides instead of closing: rejects leave the
+library view (strip, grid and the nav/position via `photoNav`) but
+the media items stay open in the app - original files are never
+deleted. The two-click armed confirm stays; the undo path is
+"Restore hidden" in the strip menu, visible while anything is
+hidden (`src/lib/photos/hidden.ts`, persisted).
+
+The smart filter gains "ohne" rules: the flag rule offers Unflagged
+and the label rule No label - the missing culling query "unflagged
+and two stars or better".
+
+Coverage: `hidden.test.ts` covers hide/dedupe/restore and the
+photoNav skip; the remove-rejects gallery leg gains hidden resets
+(same assertions otherwise); two new legs: the ohne rules narrow the
+strip as expected, and the cull leg goes stack -> cull -> expanded
+flag badges -> remove (hidden, position shrinks) -> restore (stack
+whole again, cover kept)
+(`test-results/ds-photos-smart-none-{light,dark}.png`,
+`ds-photos-stack-cull-{light,dark}.png`).

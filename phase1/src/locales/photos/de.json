@@ -166,6 +166,7 @@
  "photos.stacks.group": "Als Stapel gruppieren",
  "photos.stacks.survey": "Vergleichen",
  "photos.stacks.cover": "Als Cover",
+ "photos.stacks.cull": "Cover picken, Rest verwerfen",
  "photos.stacks.ungroup": "Stapel aufloesen",
  "photos.stacks.expand": "Stapel zeigen",
  "photos.stacks.collapse": "Stapel einklappen",
@@ -174,6 +175,9 @@
  "photos.menu": "Menü",
  "photos.smart": "Smart",
  "photos.smart.anyFlag": "Jedes Flag",
+ "photos.smart.unflagged": "Ohne Flag",
  "photos.smart.anyLabel": "Jedes Label",
- "photos.smart.tag": "Stichwort"
+ "photos.smart.noLabel": "Ohne Label",
+ "photos.smart.tag": "Stichwort",
+ "photos.hidden.restore": "Ausgeblendete wiederherstellen ({count})"
 }

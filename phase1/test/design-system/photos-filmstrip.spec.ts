@@ -306,6 +306,7 @@ test('remove rejected: two-click confirm drops rejects from the library (light a
   await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
   await expect(page.getByTestId('photos-workspace')).toBeVisible();
   await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible();
+  await page.evaluate(async()=>{const h=await import('/src/lib/photos/hidden.ts');h.unhideAll();}); // hidden photos persist via localStorage
   await page.getByTestId('photos-filmstrip-item-strip-2.png').click();
   await page.keyboard.press('x'); // reject the middle photo
   const remove=page.getByTestId('photos-filmstrip-remove-rejects');
@@ -317,8 +318,10 @@ test('remove rejected: two-click confirm drops rejects from the library (light a
   await remove.click(); // second click executes
   await expect(page.getByTestId('photos-filmstrip-item-strip-2.png')).toHaveCount(0);
   await expect(page.getByTestId('photos-filmstrip-item-strip-1.png')).toBeVisible(); // the rest stays
-  await expect(page.getByTestId('photos-position')).toHaveText(/\/ 2/); // library shrank
+  await expect(page.getByTestId('photos-position')).toHaveText(/\/ 2/); // library view shrank
   await expect(remove).toHaveCount(0); // no rejects left: button gone
+  await page.evaluate(async()=>{const h=await import('/src/lib/photos/hidden.ts');h.unhideAll();}); // undo: originals never leave the app
+  await expect(page.getByTestId('photos-filmstrip-item-strip-2.png')).toBeVisible();
  }
 });
 test('copy/paste settings and the unrated filter (light and dark)',async({page})=>{
@@ -650,6 +653,70 @@ test('collections: a saved view carries the smart filter (light and dark)',async
   await page.getByTestId('photos-filmstrip-collection-delete').click(); // the full state matches the set
   await smart.click(); // off again
   await page.evaluate(async()=>{const r=await import('/src/lib/photos/ratings.ts');for(const n of['strip-1.png','strip-2.png','strip-3.png'])r.setRating(n,0);}); // leave no state behind
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible();
+ }
+});
+test('smart filter: unflagged and no-label rules (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
+  await page.evaluate(async()=>{const f=await import('/src/lib/photos/flags.ts');const l=await import('/src/lib/photos/labels.ts');for(const n of['strip-1.png','strip-2.png','strip-3.png']){f.setFlag(n,null);l.setLabel(n,null);}f.setFlag('strip-1.png','pick');f.setFlag('strip-2.png','reject');l.setLabel('strip-1.png','red');}); // flags/labels persist via localStorage
+  await page.getByTestId('photos-filmstrip-menu').click();
+  const smart=page.getByTestId('photos-filmstrip-smart');
+  if(await smart.getAttribute('aria-pressed')!=='true')await smart.click(); // persisted panel state
+  await page.getByTestId('photos-smart-flag').selectOption('none'); // unflagged only
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-1.png')).toHaveCount(0);
+  await expect(page.getByTestId('photos-filmstrip-item-strip-2.png')).toHaveCount(0);
+  await page.getByTestId('photos-smart-flag').selectOption('');
+  await expect(page.getByTestId('photos-filmstrip-item-strip-1.png')).toBeVisible();
+  await page.getByTestId('photos-smart-label').selectOption('none'); // no color label
+  await expect(page.getByTestId('photos-filmstrip-item-strip-1.png')).toHaveCount(0); // red
+  await expect(page.getByTestId('photos-filmstrip-item-strip-2.png')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible();
+  await page.screenshot({path:`test-results/ds-photos-smart-none-${theme}.png`,fullPage:true}); // open menu with the ohne rules
+  await page.getByTestId('photos-smart-label').selectOption('');
+  await smart.click(); // off
+  await page.evaluate(async()=>{const f=await import('/src/lib/photos/flags.ts');const l=await import('/src/lib/photos/labels.ts');for(const n of['strip-1.png','strip-2.png','strip-3.png']){f.setFlag(n,null);l.setLabel(n,null);}}); // leave no state behind
+  await expect(page.getByTestId('photos-filmstrip-item-strip-1.png')).toBeVisible();
+ }
+});
+test('stack cull: cover picked, rest rejected, removal is hide plus undo (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
+  await page.evaluate(async()=>{
+   const st=await import('/src/lib/photos/stacks.ts');const f=await import('/src/lib/photos/flags.ts');const h=await import('/src/lib/photos/hidden.ts');
+   h.unhideAll();
+   for(const n of['strip-1.png','strip-2.png','strip-3.png']){const id=st.getStack(n);if(id)st.ungroupStacks([id]);f.setFlag(n,null);}
+   st.groupPhotos(['strip-1.png','strip-2.png','strip-3.png']);
+   const id=st.getStack('strip-1.png')!;st.setStackCover(id,'strip-2.png');
+  }); // persisted state: clean slate, one stack, strip-2 as cover
+  await expect(page.getByTestId('photos-filmstrip-stack-count-strip-2.png')).toHaveText('3');
+  await page.getByTestId('photos-filmstrip-menu').click();
+  await page.getByTestId('photos-filmstrip-stack-cull').click(); // cover -> pick, the rest -> reject
+  await page.getByTestId('photos-filmstrip-menu').click(); // close for a clean strip
+  await page.locator('[data-testid^="photos-filmstrip-stack-open-"]').first().click(); // expand inline
+  await expect(page.getByTestId('photos-filmstrip-flag-strip-2.png')).toHaveAttribute('data-flag','pick');
+  await expect(page.getByTestId('photos-filmstrip-flag-strip-1.png')).toHaveAttribute('data-flag','reject');
+  await expect(page.getByTestId('photos-filmstrip-flag-strip-3.png')).toHaveAttribute('data-flag','reject');
+  await page.screenshot({path:`test-results/ds-photos-stack-cull-${theme}.png`,fullPage:true});
+  const remove=page.getByTestId('photos-filmstrip-remove-rejects');
+  await remove.click(); // arms
+  await remove.click(); // confirms: hides the rejects, never deletes originals
+  await expect(page.getByTestId('photos-position')).toHaveCount(0); // one visible photo: the nav position hides
+  await expect(page.getByTestId('photos-filmstrip-item-strip-2.png')).toBeVisible(); // the strip stays for the undo path
+  await page.getByTestId('photos-filmstrip-menu').click();
+  await page.getByTestId('photos-filmstrip-restore-hidden').click(); // the undo path
+  await expect(page.getByTestId('photos-filmstrip-stack-count-strip-2.png')).toHaveText('3'); // stack whole again, cover kept
+  await page.evaluate(async()=>{
+   const st=await import('/src/lib/photos/stacks.ts');const f=await import('/src/lib/photos/flags.ts');
+   for(const n of['strip-1.png','strip-2.png','strip-3.png']){const id=st.getStack(n);if(id)st.ungroupStacks([id]);f.setFlag(n,null);}
+  }); // leave no state behind
   await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible();
  }
 });

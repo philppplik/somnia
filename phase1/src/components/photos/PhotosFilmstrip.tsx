@@ -2,8 +2,8 @@ import {useEffect,useRef,useState} from 'react';
 import {Star} from 'lucide-react';
 import {ChevronDown,ChevronRight,Flag,LayoutGrid,SkipForward,Tag,Trash2} from '../../lib/icons';
 import {useT} from '../../lib/useT';
-import {closeMedia,getMedia,setActiveMedia,useMedia} from '../../lib/media';
-import {developablePhotos} from '../../lib/photos/photoNav';
+import {setActiveMedia,useMedia} from '../../lib/media';
+
 import {rangeSelect,toggleSelect} from '../../lib/photos/selection';
 import {syncLookToPhotos} from '../../lib/photos/batchExport';
 import {findWbPreset,WB_PRESETS} from '../../lib/photos/wbPresets';
@@ -11,10 +11,11 @@ import {applyLook,BUILT_IN_PRESETS,extractLook,isNeutralLook,parseUserPresets,ty
 import {commitPhotoSettings,getPhotoSession} from '../../lib/photos/studioSession';
 import {FILMSTRIP_SORTS,type FilmstripSort} from '../../lib/photos/filmstripSort';
 import {MAX_RATING,useRatings} from '../../lib/photos/ratings';
-import {useFlags} from '../../lib/photos/flags';
+import {setFlag,useFlags} from '../../lib/photos/flags';
 import {PHOTO_LABELS,setLabel,useLabels,type PhotoLabel} from '../../lib/photos/labels';
 import {addTags,allTags,setTags} from '../../lib/photos/tags';
 import {groupForStrip,groupPhotos,setStackCover,ungroupStacks,useStackCovers,useStacks} from '../../lib/photos/stacks';
+import {hidePhotos,unhideAll} from '../../lib/photos/hidden';
 import {detectSeries} from '../../lib/photos/autoStack';
 import {usePanelState} from '../../store/panelStateStore';
 import {Button} from '../ui/button';
@@ -26,7 +27,7 @@ import {useVisiblePhotos,type SmartFilter} from './useVisiblePhotos';
 export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(names:string[])=>void}){
  const {t}=useT();
  const media=useMedia();
- const {ratings,flags,labels,tags,filter,all,photos,sort,query,smart,smartOn}=useVisiblePhotos();
+ const {ratings,flags,labels,tags,filter,all,total,photos,sort,query,smart,smartOn,hidden}=useVisiblePhotos();
  const [,setSmart]=usePanelState<SmartFilter>('photos.smartFilter',{on:false,minRating:0,flag:'',label:'',tag:''});
  const [,setQuery]=usePanelState<string>('photos.searchQuery','');
  const [sets,setSets]=usePanelState<Record<string,{filter:string;sort:string;query:string;smart?:SmartFilter}>>('photos.filterSets',{});
@@ -68,12 +69,11 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
   if(!armRemove){setArmRemove(true);return;}
   setArmRemove(false);
   const names=new Set(rejected.map(p=>p.name));
-  for(const n of names)closeMedia(n); // sessions close through the media cleanup hook
+  hidePhotos([...names]); // hidden from the library view only - originals are never deleted, undo lives in the menu
   setSel(sel.filter(n=>!names.has(n)));
-  const next=developablePhotos(getMedia().items)[0]; // the library is already updated
-  setActiveMedia(next?next.name:null);
+  if(names.has(active)){const next=all.find(p=>!names.has(p.name));setActiveMedia(next?next.name:null);}
  };
- if(all.length<2)return null;
+ if(total<2&&hidden.length===0)return null; // stays mounted while hidden photos exist: the restore entry lives in the menu
  const thumb=(p:(typeof photos)[number])=><Button key={p.name} variant="outline" size="compact" aria-pressed={p.name===active} aria-label={p.name} onClick={e=>{
    if(e.shiftKey){const names=photos.map(q=>q.name);setSel(rangeSelect(names,anchor,p.name));}
    else if(e.ctrlKey||e.metaKey){setSel(toggleSelect(sel,p.name));setAnchor(p.name);}
@@ -100,9 +100,11 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
        <option value="">{t('photos.smart.anyFlag')}</option>
        <option value="pick">{t('photos.flag.filter.pick')}</option>
        <option value="reject">{t('photos.flag.filter.reject')}</option>
+       <option value="none">{t('photos.smart.unflagged')}</option>
       </NativeSelect>
       <NativeSelect value={smart.label} aria-label={t('photos.smart')} title={t('photos.smart')} onChange={e=>setSmart({...smart,label:e.currentTarget.value})} className="h-7" data-testid="photos-smart-label">
        <option value="">{t('photos.smart.anyLabel')}</option>
+       <option value="none">{t('photos.smart.noLabel')}</option>
        {PHOTO_LABELS.map(l=><option key={l} value={l}>{t(`photos.label.${l}`)}</option>)}
       </NativeSelect>
       <NativeInput type="text" value={smart.tag} aria-label={t('photos.smart.tag')} title={t('photos.smart.tag')} placeholder={t('photos.smart.tag')} onChange={e=>setSmart({...smart,tag:e.currentTarget.value})} className="h-7" data-testid="photos-smart-tag"/>
@@ -133,6 +135,12 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
     <span className="flex flex-wrap gap-1">
      {onSurvey&&activeStack&&<Button variant="outline" size="compact" onClick={()=>{setMenuOpen(false);onSurvey(photos.map(p=>p.name).filter(n=>stacks[n]===activeStack));}} data-testid="photos-filmstrip-stack-survey">{t('photos.stacks.survey')}</Button>}
      {activeStack&&covers[activeStack]!==active&&<Button variant="outline" size="compact" onClick={()=>setStackCover(activeStack,active)} data-testid="photos-filmstrip-stack-cover">{t('photos.stacks.cover')}</Button>}
+     {activeStack&&<Button variant="outline" size="compact" onClick={()=>{
+      const members=photos.map(p=>p.name).filter(n=>stacks[n]===activeStack);
+      const cover=covers[activeStack]??members[0];
+      if(!cover)return;
+      for(const n of members)setFlag(n,n===cover?'pick':'reject');
+     }} data-testid="photos-filmstrip-stack-cull">{t('photos.stacks.cull')}</Button>}
      {selected.length>1&&<Button variant="outline" size="compact" onClick={()=>groupPhotos(selected.map(p=>p.name))} data-testid="photos-filmstrip-stack-group">{t('photos.stacks.group')}</Button>}
      {(()=>{const ids=[...new Set((selected.length>1?selected.map(p=>p.name):[active]).map(n=>stacks[n]).filter((v):v is string=>!!v))];return ids.length>0?<Button variant="outline" size="compact" onClick={()=>ungroupStacks(ids)} data-testid="photos-filmstrip-stack-ungroup">{t('photos.stacks.ungroup')}</Button>:null;})()}
      {detectSeries(all.map(p=>p.name)).length>0&&<Button variant="outline" size="compact" onClick={()=>{
@@ -140,6 +148,7 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
       setApplyNote(t('photos.stacks.autoDone',{count:n}));
      }} data-testid="photos-filmstrip-stack-auto">{t('photos.stacks.auto')}</Button>}
     </span>
+    {hidden.length>0&&<Button variant="outline" size="compact" onClick={()=>unhideAll()} data-testid="photos-filmstrip-restore-hidden">{t('photos.hidden.restore',{count:hidden.length})}</Button>}
    </div>}
   </span>
   <NativeSelect value={filter} aria-label={t('photos.rating.filter')} title={t('photos.rating.filter')} onChange={e=>setMinRating(e.currentTarget.value)} disabled={smartOn} className="h-7 shrink-0" data-testid="photos-filmstrip-rating-filter">
