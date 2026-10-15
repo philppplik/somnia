@@ -19,6 +19,7 @@ import {allTags} from '../../lib/photos/tags';
 import {useCaption} from '../../lib/photos/captions';
 import {cullBatch,cullSetFlag,cullSetLabel,cullSetTags,cullAddTags,cullSetCaption} from '../../lib/photos/cullHistory';
 import {copyMetadata,hasMetadataClip,pasteMetadata} from '../../lib/photos/metadataClipboard';
+import {SOFT_PROOF_MODEL_IDS} from '../../lib/photos/softProof';
 import {groupForStrip,groupPhotos,setStackCover,ungroupStacks,useStackCovers,useStacks} from '../../lib/photos/stacks';
 import {hidePhotos,unhideAll,unhidePhotos} from '../../lib/photos/hidden';
 import {nextCopyName} from '../../lib/photos/virtualCopy';
@@ -88,7 +89,9 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
  const [reference,setReference]=usePanelState<string>('photos.reference',''); // compare view: the photo the active one is measured against
  const [split,setSplit]=usePanelState<boolean>('photos.split',false);
  const [proof,setProof]=usePanelState<boolean>('photos.softProof',false); // workspace reads these: shared view state like the split
- const [gamutWarn,setGamutWarn]=usePanelState<boolean>('photos.gamutWarn',false); // shared with the workspace toolbar
+ const [gamutWarn,setGamutWarn]=usePanelState<boolean>('photos.gamutWarn',false);
+ const [proofModel,setProofModel]=usePanelState<string>('photos.proofModel','coated');
+ const [gamutSharePct]=usePanelState<number>('photos.gamutShare',0); // published by the workspace // shared with the workspace toolbar
  const [splitDir,setSplitDir]=usePanelState<'vertical'|'horizontal'>('photos.splitDir','vertical');
  const [slide,setSlide]=usePanelState<boolean>('photos.slideshow',false);
  const [slideMs,setSlideMs]=usePanelState<number>('photos.slideshowMs',4000);
@@ -228,9 +231,13 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
     <span className="flex flex-wrap gap-1">
           <Button variant="outline" size="compact" aria-pressed={proof} onClick={()=>setProof(!proof)} data-testid="photos-filmstrip-softproof">{t('photos.proof.toggle')}</Button>
           <Button variant="outline" size="compact" aria-pressed={gamutWarn} onClick={()=>setGamutWarn(!gamutWarn)} data-testid="photos-filmstrip-gamut">{t('photos.proof.gamut')}</Button>
+          {proof&&<NativeSelect value={proofModel} aria-label={t('photos.proof.model')} title={t('photos.proof.model')} onChange={e=>setProofModel(e.currentTarget.value)} className="h-7" data-testid="photos-filmstrip-proof-model">
+           {SOFT_PROOF_MODEL_IDS.map(m=><option key={m} value={m}>{t(`photos.proof.model.${m}`)}</option>)}
+          </NativeSelect>}
           <Button variant="outline" size="compact" aria-pressed={split} onClick={()=>setSplit(!split)} data-testid="photos-filmstrip-split">{t('photos.split')}</Button>
           {split&&<Button variant="outline" size="compact" aria-pressed={splitDir==='horizontal'} onClick={()=>setSplitDir(splitDir==='vertical'?'horizontal':'vertical')} data-testid="photos-filmstrip-split-dir">{t('photos.split.dir')}</Button>}
          </span>
+         {gamutWarn&&<span className="text-ink-3" data-testid="photos-filmstrip-gamut-share">{t('photos.proof.share',{pct:(gamutSharePct*100).toFixed(1)})}</span>}
          <span className="flex flex-wrap gap-1">
           {reference!==active&&<Button variant="outline" size="compact" onClick={()=>{setReference(active);setApplyNote(t('photos.compare.referenceSet',{name:active}));}} data-testid="photos-filmstrip-set-reference">{t('photos.compare.setReference')}</Button>}
           {reference&&reference!==active&&onSurvey&&<Button variant="outline" size="compact" onClick={()=>{setMenuOpen(false);onSurvey([reference,active]);}} data-testid="photos-filmstrip-compare-reference">{t('photos.compare.go')}</Button>}

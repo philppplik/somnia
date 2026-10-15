@@ -454,7 +454,7 @@ test('soft proof: the print simulation repaints the canvas, the gamut warning ov
   await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
   await expect(page.getByTestId('photos-workspace')).toBeVisible();
   await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
-  await page.evaluate(async()=>{const m=await import('/src/store/panelStateStore.ts');m.panelStateStore.set('photos.softProof',false);m.panelStateStore.set('photos.gamutWarn',false);}); // view state persists via localStorage
+  await page.evaluate(async()=>{const m=await import('/src/store/panelStateStore.ts');m.panelStateStore.set('photos.softProof',false);m.panelStateStore.set('photos.gamutWarn',false);m.panelStateStore.set('photos.proofModel','coated');m.panelStateStore.set('photos.gamutShare',0);}); // view state persists via localStorage
   await page.waitForTimeout(300);
   const canvasUrl=()=>page.getByTestId('photos-canvas').evaluate(c=>(c as HTMLCanvasElement).toDataURL('image/png'));
   const before=await canvasUrl();
@@ -466,8 +466,14 @@ test('soft proof: the print simulation repaints the canvas, the gamut warning ov
   await page.getByTestId('photos-filmstrip-gamut').click();
   await page.keyboard.press('Escape');
   await expect(page.getByTestId('photos-gamut-canvas')).toBeVisible();
+  await page.getByTestId('photos-filmstrip-menu').click(); // menu stays open across in-menu actions
+  const share=page.getByTestId('photos-filmstrip-gamut-share');
+  await expect(share).toContainText('%'); // the workspace publishes the share
+  const coatedText=(await share.textContent())!;
+  await page.getByTestId('photos-filmstrip-proof-model').selectOption('newsprint');
+  await expect(share).not.toHaveText(coatedText); // the narrower stock clips more
   await page.screenshot({path:`test-results/ds-photos-softproof-${theme}.png`,fullPage:true});
-  await page.getByTestId('photos-filmstrip-menu').click();
+  await page.getByTestId('photos-filmstrip-proof-model').selectOption('coated'); // cleanup: model persists via localStorage
   await page.getByTestId('photos-filmstrip-softproof').click();
   await page.getByTestId('photos-filmstrip-gamut').click();
   await page.keyboard.press('Escape');

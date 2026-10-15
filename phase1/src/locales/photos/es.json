@@ -253,5 +253,10 @@
  "photos.keys.redoCull": "Rehacer edición de selección",
  "photos.filmstrip.sort.capture": "Fecha de captura",
  "photos.proof.toggle": "Prueba de color (simulación de impresión)",
- "photos.proof.gamut": "Advertencia de gama"
+ "photos.proof.gamut": "Advertencia de gama",
+ "photos.proof.model": "Papel",
+ "photos.proof.model.coated": "Estucado",
+ "photos.proof.model.uncoated": "No estucado",
+ "photos.proof.model.newsprint": "Papel prensa",
+ "photos.proof.share": "{pct} % fuera de gama"
 }

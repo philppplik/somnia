@@ -253,5 +253,10 @@
  "photos.keys.redoCull": "Redo culling edit",
  "photos.filmstrip.sort.capture": "Capture date",
  "photos.proof.toggle": "Soft proof (print simulation)",
- "photos.proof.gamut": "Gamut warning"
+ "photos.proof.gamut": "Gamut warning",
+ "photos.proof.model": "Print stock",
+ "photos.proof.model.coated": "Coated",
+ "photos.proof.model.uncoated": "Uncoated",
+ "photos.proof.model.newsprint": "Newsprint",
+ "photos.proof.share": "{pct}% out of gamut"
 }

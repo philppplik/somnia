@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {chromaBoundary,chromaOf,isOutOfGamut,gamutShare,softProofImage,gamutWarningImage,DEFAULT_PRINT_MODEL,GAMUT_WARN} from './softProof.ts';
+import {chromaBoundary,chromaOf,isOutOfGamut,gamutShare,softProofImage,gamutWarningImage,DEFAULT_PRINT_MODEL,GAMUT_WARN,SOFT_PROOF_MODELS} from './softProof.ts';
 const frame=(pixels:[number,number,number][])=>{
  const data=new Uint8Array(pixels.length*4);
  pixels.forEach(([r,g,b],i)=>{data[i*4]=r;data[i*4+1]=g;data[i*4+2]=b;data[i*4+3]=255;});
@@ -35,4 +35,10 @@ test('softProof: share and warning overlay agree on which pixels are out',()=>{
  const warn=new Uint8Array(gamutWarningImage(f).bytes);
  assert.deepEqual([...warn.slice(0,4)],[...GAMUT_WARN,255]); // red pixel flagged magenta
  assert.equal(warn[7],0); // gray pixel transparent
+});
+
+test('softProof: narrower stocks clip more',()=>{
+ assert.ok(chromaBoundary(128,SOFT_PROOF_MODELS.newsprint)<chromaBoundary(128,SOFT_PROOF_MODELS.coated));
+ assert.ok(gamutShare(frame([[255,0,0],[200,60,40]]).bytes,2,1,SOFT_PROOF_MODELS.newsprint)>=gamutShare(frame([[255,0,0],[200,60,40]]).bytes,2,1,SOFT_PROOF_MODELS.coated));
+ assert.deepEqual(Object.keys(SOFT_PROOF_MODELS),['coated','uncoated','newsprint']);
 });

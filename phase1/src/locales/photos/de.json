@@ -253,5 +253,10 @@
  "photos.keys.redoCull": "Culling-Schritt wiederholen",
  "photos.filmstrip.sort.capture": "Aufnahmedatum",
  "photos.proof.toggle": "Soft-Proof (Drucksimulation)",
- "photos.proof.gamut": "Gamut-Warnung"
+ "photos.proof.gamut": "Gamut-Warnung",
+ "photos.proof.model": "Druckstock",
+ "photos.proof.model.coated": "Gestrichen",
+ "photos.proof.model.uncoated": "Ungestrichen",
+ "photos.proof.model.newsprint": "Zeitungsdruck",
+ "photos.proof.share": "{pct} % außerhalb des Gamut"
 }

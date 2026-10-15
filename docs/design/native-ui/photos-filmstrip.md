@@ -691,7 +691,15 @@ view layer as the clipping overlay, and always reads the un-proofed
 frame. Both toggles share panel state (`photos.softProof`,
 `photos.gamutWarn`) between the strip menu and the workspace.
 
+The proof select offers three stocks - coated, uncoated, newsprint
+(narrower gamut, more ink lift, warmer paper each step) - and the
+menu shows the out-of-gamut share of the current frame in percent
+while the warning is on (`photos.gamutShare`, published by the
+workspace).
+
 Coverage: the light/dark gallery leg enables the proof, checks the
-canvas repaints, enables the warning overlay and back
+canvas repaints, enables the warning overlay, reads the share and
+checks it grows on newsprint
 (`test-results/ds-photos-softproof-{light,dark}.png`); the model
-has unit tests for the boundary, the proof mapping and the overlay.
+has unit tests for the boundary, the proof mapping, the stocks and
+the overlay.

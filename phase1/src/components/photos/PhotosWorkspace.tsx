@@ -18,7 +18,7 @@ import {clampDab} from '../../lib/photos/localAdjust';
 import type {PhotoCrop} from '../../lib/photos/studioSettings';
 import {CROP_GUIDE_STYLES,cropGuideLines,type CropGuideStyle} from '../../lib/photos/cropGuides';
 import {clippingOverlayImage} from '../../lib/photos/clippingOverlay';
-import {softProofImage,gamutWarningImage} from '../../lib/photos/softProof';
+import {softProofImage,gamutWarningImage,gamutShare,SOFT_PROOF_MODELS,DEFAULT_PRINT_MODEL} from '../../lib/photos/softProof';
 import {clampSplitX,splitClearRect} from '../../lib/photos/splitView';
 import {decodeSettingsPayload,encodeSettingsPayload,settingsPayloadToText,type SettingsPayload} from '../../lib/photos/settingsClipboard';
 import {developablePhotos,photoNav} from '../../lib/photos/photoNav';
@@ -77,6 +77,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
  const [showClipping,setShowClipping]=usePanelState<boolean>('photos.clipping',false);
  const [showProof]=usePanelState<boolean>('photos.softProof',false); // toggled from the strip menu's View group, like the split
  const [showGamutWarn]=usePanelState<boolean>('photos.gamutWarn',false);
+ const [proofModelId]=usePanelState<string>('photos.proofModel','coated');
  const [showMaskOverlay]=usePanelState<boolean>('photos.lummask.overlay',false);
  const [showSplit,setShowSplit]=usePanelState<boolean>('photos.split',false);
  const [settingsClip,setSettingsClip]=usePanelState<SettingsPayload|null>('photos.settingsClipboard',null);
@@ -132,10 +133,12 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
  useEffect(()=>{if(studio==='photos'&&!['files','search'].includes(getState().leftTab))patchState({leftTab:'files'});},[studio]);
  useEffect(()=>{const el=stage.current;if(!el)return;const ro=new ResizeObserver(()=>setStageSize([el.clientWidth,el.clientHeight]));ro.observe(el);setStageSize([el.clientWidth,el.clientHeight]);return()=>ro.disconnect();},[]);
  const shown=compare&&session?.original?session.original:session?.frame??null;
- const displayed=useMemo(()=>showProof&&shown?softProofImage(shown):shown,[shown,showProof]); // the proof simulates the print look on the shown frame; the model is documented in softProof.ts
+ const proofModel=SOFT_PROOF_MODELS[proofModelId as keyof typeof SOFT_PROOF_MODELS]??DEFAULT_PRINT_MODEL;
+ const displayed=useMemo(()=>showProof&&shown?softProofImage(shown,proofModel):shown,[shown,showProof,proofModel]); // the proof simulates the print look on the shown frame; the model is documented in softProof.ts
  useEffect(()=>{draw(canvas.current,displayed);},[displayed]);
  useEffect(()=>{if(showClipping)draw(clipCanvas.current,shown?clippingOverlayImage(shown):null);},[shown,showClipping]);
- useEffect(()=>{if(showGamutWarn)draw(gamutCanvas.current,shown?gamutWarningImage(shown):null);},[shown,showGamutWarn]); // the warning always reads the un-proofed frame
+ useEffect(()=>{if(showGamutWarn)draw(gamutCanvas.current,shown?gamutWarningImage(shown,proofModel):null);},[shown,showGamutWarn,proofModel]); // the warning always reads the un-proofed frame
+ useEffect(()=>{panelStateStore.set('photos.gamutShare',shown?gamutShare(shown.bytes,shown.width,shown.height,proofModel):0);},[shown,proofModel]); // the strip menu shows the share
  const lumMask=session?.now.lumMask??neutralLumMask();
  useEffect(()=>{ // the mask overlay paints the weight map over the current frame, accent-tinted
   const c=maskCanvas.current;

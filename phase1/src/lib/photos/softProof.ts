@@ -10,6 +10,10 @@ export interface SoftProofModel{
  paperWhite:[number,number,number];
 }
 export const DEFAULT_PRINT_MODEL:SoftProofModel={chromaPeak:150,blackLift:14,paperWhite:[245,241,231]};
+/** The selectable print models: coated stock (default), uncoated (narrower gamut, more ink lift, warmer paper), newsprint (narrowest). Still one documented model family - parameters, no ICC. */
+export const SOFT_PROOF_MODELS:Record<'coated'|'uncoated'|'newsprint',SoftProofModel>={coated:DEFAULT_PRINT_MODEL,uncoated:{chromaPeak:120,blackLift:22,paperWhite:[238,232,218]},newsprint:{chromaPeak:95,blackLift:30,paperWhite:[235,230,215]}};
+export type SoftProofModelId=keyof typeof SOFT_PROOF_MODELS;
+export const SOFT_PROOF_MODEL_IDS=Object.keys(SOFT_PROOF_MODELS) as SoftProofModelId[];
 /** False-color for out-of-gamut pixels (magenta - deliberately not the clipping overlay's blue/red). */
 export const GAMUT_WARN:[number,number,number]=[255,32,255];
 /** Printable chroma ceiling at a given luma: 0 at black and white, chromaPeak at mid tones. */

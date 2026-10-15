@@ -253,5 +253,10 @@
  "photos.keys.redoCull": "Refazer edição de seleção",
  "photos.filmstrip.sort.capture": "Data de captura",
  "photos.proof.toggle": "Prova de cor (simulação de impressão)",
- "photos.proof.gamut": "Aviso de gama"
+ "photos.proof.gamut": "Aviso de gama",
+ "photos.proof.model": "Papel",
+ "photos.proof.model.coated": "Couchê",
+ "photos.proof.model.uncoated": "Não couchê",
+ "photos.proof.model.newsprint": "Papel jornal",
+ "photos.proof.share": "{pct} % fora da gama"
 }
