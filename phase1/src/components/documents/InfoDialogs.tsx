@@ -6,7 +6,7 @@ import {CoverDialog} from './CoverDialog';
 import {setInfoDialog,useInfoDialog} from '../../lib/documents/infoDialog';
 import {authorProblem,MAX_AUTHOR_CHARS,savedAuthor,setAuthor} from '../../lib/documents/author';
 import {insertToc,removeToc,updateToc,readListOptions,readProperties,selectedText,setListOptions,setProperties,setTabStops} from '../../lib/documents/session';
-import {detailedStats} from '../../lib/documents/stats';
+import {readability,detailedStats} from '../../lib/documents/stats';
 import {useDocuments} from '../../lib/documents/store';
 import {SymbolDialog} from './SymbolDialog';
 import {CharLookDialog} from './CharLookDialog';
@@ -112,7 +112,8 @@ function TocDialog({onClose}:{onClose:()=>void}){
 function WordCountDialog({onClose}:{onClose:()=>void}){
  const {t}=useT();const doc=useDocuments();
  const all=detailedStats(doc.blocks.filter(b=>b.text!==undefined).map(b=>b.text!).join('\n'));const sel=selectedText();const part=sel?detailedStats(sel):null;
- const rows:[string,number,number|null][]=[['pages',doc.pages,null],['words',all.words,part?part.words:null],['characters',all.chars,part?part.chars:null],['charactersNoSpaces',all.charsNoSpaces,part?part.charsNoSpaces:null],['sentences',all.sentences,part?part.sentences:null],['paragraphs',all.paragraphs,part?part.paragraphs:null],['readingMinutes',all.readingMinutes,null]];
+ const rd=readability(doc.blocks.filter(b=>b.text!==undefined).map(b=>b.text!).join('\n')),rs=sel?readability(sel):null;
+ const rows:[string,number,number|null][]=[['pages',doc.pages,null],['words',all.words,part?part.words:null],['characters',all.chars,part?part.chars:null],['charactersNoSpaces',all.charsNoSpaces,part?part.charsNoSpaces:null],['sentences',all.sentences,part?part.sentences:null],['paragraphs',all.paragraphs,part?part.paragraphs:null],['readingMinutes',all.readingMinutes,null],...(rd?[['uniqueWords',rd.uniqueWords,rs?rs.uniqueWords:null],['wordsPerSentence',rd.wordsPerSentence,rs?rs.wordsPerSentence:null],['charsPerWord',rd.charsPerWord,rs?rs.charsPerWord:null],['fleschEase',rd.fleschEase,rs?rs.fleschEase:null]] as [string,number,number|null][]:[])];
  return shell('documents-wc-title',onClose,<>
   <h2 id="documents-wc-title" className="text-sm font-medium">{t('documents.wc.title')}</h2>
   <table className="w-full text-xs"><thead><tr className="text-ink-3"><th className="text-left font-normal"/><th className="text-right font-normal">{t('documents.wc.document')}</th><th className="text-right font-normal">{t('documents.wc.selection')}</th></tr></thead>
