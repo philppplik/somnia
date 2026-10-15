@@ -211,3 +211,15 @@ test('clips.duplicate places a copy right after each selected clip, with name an
  await commandDispatcher.runCommand('sound.arrange.undo');
  assert.equal(getArrangementState().document.tracks[0].clips.length,1,'undo restores');
 }finally{off();resetArrangement();}});
+
+test('clips.quantize snaps starts to the grid, clamps at 0 and validates the grid',async()=>{resetArrangement();const off=registerArrangeCommands();try{
+ const source={id:'src',name:'tone.wav',frames:96000,sampleRate:48000,channels:2 as const};
+ editArrangement(s=>{s.sources.push(source);s.tracks.push({...newTrack('t1','A'),clips:[{...newClip('a',source,1150),length:2400},{...newClip('b',source,10600),length:2400}]});});
+ await commandDispatcher.runCommand('sound.arrange.clips.quantize',{ids:['a','b'],grid:2400});
+ assert.deepEqual([...getArrangementState().document.tracks[0].clips].sort((x,y)=>x.start-y.start).map(c=>c.start),[0,9600],'nearest grid point wins');
+ await assert.rejects(commandDispatcher.runCommand('sound.arrange.clips.quantize',{ids:['a'],grid:0}),/Invalid grid/);
+ await assert.rejects(commandDispatcher.runCommand('sound.arrange.clips.quantize',{ids:['a'],grid:1.5}),/Invalid grid/);
+ assert.deepEqual([...getArrangementState().document.tracks[0].clips].sort((x,y)=>x.start-y.start).map(c=>c.start),[0,9600],'rejections are atomic');
+ await commandDispatcher.runCommand('sound.arrange.undo');
+ assert.deepEqual([...getArrangementState().document.tracks[0].clips].sort((x,y)=>x.start-y.start).map(c=>c.start),[1150,10600],'undo restores');
+}finally{off();resetArrangement();}});
