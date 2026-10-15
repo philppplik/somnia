@@ -1,7 +1,7 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';
 import {trimStartPatch,trimEndPatch,type ArrangeClip} from './arrangement';
 
-const clip=():ArrangeClip=>({id:'c1',sourceId:'s1',start:0,offset:4800,length:9600,gainDb:0,fadeIn:600,fadeOut:900,gainCurve:[{at:2400,db:-6}],muted:false,pan:0,fadeShape:'linear',name:'',rate:1});
+const clip=():ArrangeClip=>({id:'c1',sourceId:'s1',start:0,offset:4800,length:9600,gainDb:0,fadeIn:600,fadeOut:900,gainCurve:[{at:2400,db:-6}],muted:false,pan:0,panCurve:[],fadeShape:'linear',name:'',rate:1});
 
 test('trim start: cut shifts start, offset and length; cut edge is clean like split',()=>{
  const p=trimStartPatch(clip(),1200);

@@ -293,6 +293,7 @@
   "cmd.sound.arrange.clip.set": "Arrangement et mixage: Éditeur de clips",
   "cmd.sound.arrange.clip.split": "Arrangement et mixage: Scinder ici",
   "cmd.sound.arrange.clip.curve": "Arrange & Mix : courbe de gain",
+  "cmd.sound.arrange.clip.panCurve": "Arrangement et mix : courbe de panoramique du clip",
   "cmd.sound.arrange.clip.duplicate": "Arrangement et mixage: Dupliquer",
   "cmd.sound.arrange.clip.crossfade": "Arrangement et mixage : Fondu enchaîné du clip",
   "cmd.sound.arrange.clip.copy": "Arrangement et mixage : Copier le clip",

@@ -7,13 +7,13 @@ export interface GainPoint{at:number;db:number}
 export interface PanPoint{at:number;pan:number}
 /** name: free label for organisation (bounces, freezes); empty falls back to the source name. */
 /** rate: playback speed (0.25-4); tape-style, so pitch shifts with rate. Fades and the gain curve stay in clip-local frames. */
-export interface ArrangeClip{id:string;sourceId:string;start:number;offset:number;length:number;gainDb:number;fadeIn:number;fadeOut:number;gainCurve:GainPoint[];muted:boolean;pan:number;fadeShape:'linear'|'equalPower';name:string;rate:number}
+export interface ArrangeClip{id:string;sourceId:string;start:number;offset:number;length:number;gainDb:number;fadeIn:number;fadeOut:number;gainCurve:GainPoint[];muted:boolean;pan:number;panCurve:PanPoint[];fadeShape:'linear'|'equalPower';name:string;rate:number}
 /** gainCurve: volume automation in session frames, added to the fader (dB); flat outside the outermost points. panCurve: pan automation, added to the static pan and clamped to -1..1. */
 export interface ArrangeTrack{id:string;name:string;gainDb:number;pan:number;mute:boolean;solo:boolean;rack:EffectRack;clips:ArrangeClip[];gainCurve:GainPoint[];panCurve:PanPoint[]}
 export interface ArrangeMarker{id:string;name:string;frame:number}
 /** tailFrames: explicit bounded effect tail appended past the last clip so reverb/delay can ring out; 0 keeps the B1 session boundary. bpm: musical tempo for the beat grid and snapping; the mix itself is tempo-agnostic. */
-export interface Arrangement{version:12;masterRack:EffectRack;name:string;sampleRate:48000;sources:AudioSourceRef[];tracks:ArrangeTrack[];markers:ArrangeMarker[];loop:{start:number;end:number}|null;tailFrames:number;bpm:number}
-export function emptyArrangement(name='Untitled session'):Arrangement{return{version:12,masterRack:emptyRack(),name,sampleRate:48000,sources:[],tracks:[],markers:[],loop:null,tailFrames:0,bpm:120};}
+export interface Arrangement{version:13;masterRack:EffectRack;name:string;sampleRate:48000;sources:AudioSourceRef[];tracks:ArrangeTrack[];markers:ArrangeMarker[];loop:{start:number;end:number}|null;tailFrames:number;bpm:number}
+export function emptyArrangement(name='Untitled session'):Arrangement{return{version:13,masterRack:emptyRack(),name,sampleRate:48000,sources:[],tracks:[],markers:[],loop:null,tailFrames:0,bpm:120};}
 const fail=(s:string):never=>{throw Error(`Invalid Sound session: ${s}`);};
 const object=(v:unknown,keys:string[]):Record<string,unknown>=>{if(!v||typeof v!=='object'||Array.isArray(v))return fail('object expected');const o=v as Record<string,unknown>;if(Object.keys(o).some(k=>!keys.includes(k))||keys.some(k=>!Object.hasOwn(o,k)))return fail('unknown or missing field');return o;};
 const text=(v:unknown,max=160):string=>typeof v==='string'&&v.trim().length>0&&v.length<=max&&!/[\x00-\x1f]/.test(v)?v:fail('text');
@@ -36,7 +36,8 @@ export function validateArrangement(raw:unknown):Arrangement{
  if(raw&&typeof raw==='object'&&(raw as {version?:unknown}).version===9){const old=object(raw,['version','name','sampleRate','sources','tracks','markers','loop','masterRack','tailFrames','bpm']);raw={...old,version:10,tracks:list(old.tracks,ARRANGE_LIMITS.tracks).map(t=>({...(t as Record<string,unknown>),gainCurve:[]}))};}
  if(raw&&typeof raw==='object'&&(raw as {version?:unknown}).version===10){const old=object(raw,['version','name','sampleRate','sources','tracks','markers','loop','masterRack','tailFrames','bpm']);raw={...old,version:11,tracks:list(old.tracks,ARRANGE_LIMITS.tracks).map(t=>({...(t as Record<string,unknown>),panCurve:[]}))};}
  if(raw&&typeof raw==='object'&&(raw as {version?:unknown}).version===11){const old=object(raw,['version','name','sampleRate','sources','tracks','markers','loop','masterRack','tailFrames','bpm']);raw={...old,version:12,tracks:list(old.tracks,ARRANGE_LIMITS.tracks).map(t=>({...(t as Record<string,unknown>),clips:(t as {clips:unknown[]}).clips.map(c=>({...(c as Record<string,unknown>),rate:1}))}))};}
- const o=object(raw,['version','name','sampleRate','sources','tracks','markers','loop','masterRack','tailFrames','bpm']);if(o.version!==12||o.sampleRate!==48000)return fail('version or sample rate');
+ if(raw&&typeof raw==='object'&&(raw as {version?:unknown}).version===12){const old=object(raw,['version','name','sampleRate','sources','tracks','markers','loop','masterRack','tailFrames','bpm']);raw={...old,version:13,tracks:list(old.tracks,ARRANGE_LIMITS.tracks).map(t=>({...(t as Record<string,unknown>),clips:(t as {clips:unknown[]}).clips.map(c=>({...(c as Record<string,unknown>),panCurve:[]}))}))};}
+ const o=object(raw,['version','name','sampleRate','sources','tracks','markers','loop','masterRack','tailFrames','bpm']);if(o.version!==13||o.sampleRate!==48000)return fail('version or sample rate');
  const ids=new Set<string>();const id=(v:unknown)=>{const s=text(v,100);if(ids.has(s))return fail('duplicate identity');ids.add(s);return s;};
  const sources=list(o.sources,ARRANGE_LIMITS.sources).map(v=>{const s=object(v,['id','name','frames','sampleRate','channels']);return{id:id(s.id),name:text(s.name),frames:number(s.frames,1,ARRANGE_LIMITS.sourceFrames,true),sampleRate:number(s.sampleRate,8000,192000,true),channels:number(s.channels,1,2,true) as 1|2};});
  if(sources.reduce((n,s)=>n+s.frames*s.channels,0)>ARRANGE_LIMITS.sourceFrames)return fail('source memory budget');
@@ -46,23 +47,25 @@ export function validateArrangement(raw:unknown):Arrangement{
   if(gainCurve.some((p,i)=>i>0&&p.at===gainCurve[i-1].at))return fail('duplicate automation point');
   const panCurve=list(t.panCurve,ARRANGE_LIMITS.gainPoints).map(v=>{const p=object(v,['at','pan']);return{at:number(p.at,0,max,true),pan:number(p.pan,-1,1)};}).sort((a,b)=>a.at-b.at);
   if(panCurve.some((p,i)=>i>0&&p.at===panCurve[i-1].at))return fail('duplicate automation point');
-  const clips=list(t.clips,ARRANGE_LIMITS.clips).map(v=>{if(++count>ARRANGE_LIMITS.clips)return fail('clip limit');const c=object(v,['id','sourceId','start','offset','length','gainDb','fadeIn','fadeOut','gainCurve','muted','pan','fadeShape','name','rate']);if(c.fadeShape!=='linear'&&c.fadeShape!=='equalPower')return fail('fade shape');if(typeof c.muted!=='boolean')return fail('clip flags');const source=sources.find(s=>s.id===c.sourceId);if(!source)return fail('missing source reference');
+  const clips=list(t.clips,ARRANGE_LIMITS.clips).map(v=>{if(++count>ARRANGE_LIMITS.clips)return fail('clip limit');const c=object(v,['id','sourceId','start','offset','length','gainDb','fadeIn','fadeOut','gainCurve','muted','pan','panCurve','fadeShape','name','rate']);if(c.fadeShape!=='linear'&&c.fadeShape!=='equalPower')return fail('fade shape');if(typeof c.muted!=='boolean')return fail('clip flags');const source=sources.find(s=>s.id===c.sourceId);if(!source)return fail('missing source reference');
    const start=number(c.start,0,max-1,true),offset=number(c.offset,0,max,true),length=number(c.length,1,max,true),rate=number(c.rate,0.25,4);if(start+length>max||offset+length*rate>Math.floor(source.frames*48000/source.sampleRate))return fail('clip outside source or timeline');
    const curve=list(c.gainCurve,ARRANGE_LIMITS.gainPoints).map(v=>{const p=object(v,['at','db']);return{at:number(p.at,0,length,true),db:number(p.db,-60,12)};}).sort((a,b)=>a.at-b.at);
    if(curve.some((p,i)=>i>0&&p.at===curve[i-1].at))return fail('duplicate automation point');
-   return{id:id(c.id),sourceId:source.id,start,offset,length,gainDb:number(c.gainDb,-60,12),fadeIn:number(c.fadeIn,0,length,true),fadeOut:number(c.fadeOut,0,length,true),gainCurve:curve,muted:c.muted,pan:number(c.pan,-1,1),fadeShape:c.fadeShape as ArrangeClip['fadeShape'],name:clipName(c.name),rate};
+   const panCurve=list(c.panCurve,ARRANGE_LIMITS.gainPoints).map(v=>{const p=object(v,['at','pan']);return{at:number(p.at,0,length,true),pan:number(p.pan,-1,1)};}).sort((a,b)=>a.at-b.at);
+   if(panCurve.some((p,i)=>i>0&&p.at===panCurve[i-1].at))return fail('duplicate automation point');
+   return{id:id(c.id),sourceId:source.id,start,offset,length,gainDb:number(c.gainDb,-60,12),fadeIn:number(c.fadeIn,0,length,true),fadeOut:number(c.fadeOut,0,length,true),gainCurve:curve,muted:c.muted,pan:number(c.pan,-1,1),panCurve,fadeShape:c.fadeShape as ArrangeClip['fadeShape'],name:clipName(c.name),rate};
   });return{id:id(t.id),name:text(t.name),gainDb:number(t.gainDb,-60,12),pan:number(t.pan,-1,1),mute:t.mute,solo:t.solo,rack:validateRack(t.rack),clips,gainCurve,panCurve};
  });
  const markers=list(o.markers,128).map(v=>{const m=object(v,['id','name','frame']);return{id:id(m.id),name:text(m.name),frame:number(m.frame,0,max,true)};});
  let loop:Arrangement['loop']=null;if(o.loop!==null){const r=object(o.loop,['start','end']);loop={start:number(r.start,0,max-1,true),end:number(r.end,1,max,true)};if(loop.end<=loop.start)return fail('loop range');}
- return{version:12,masterRack:validateRack(o.masterRack),name:text(o.name),sampleRate:48000,sources,tracks,markers,loop,tailFrames:number(o.tailFrames,0,48000*ARRANGE_LIMITS.tailSeconds,true),bpm:number(o.bpm,20,300)};
+ return{version:13,masterRack:validateRack(o.masterRack),name:text(o.name),sampleRate:48000,sources,tracks,markers,loop,tailFrames:number(o.tailFrames,0,48000*ARRANGE_LIMITS.tailSeconds,true),bpm:number(o.bpm,20,300)};
 }
 export const serializeArrangement=(s:Arrangement)=>JSON.stringify(validateArrangement(s));
 export const parseArrangement=(text:string):Arrangement=>{if(text.length>256_000)throw Error('Sound session document is too large');return validateArrangement(JSON.parse(text));};
 export const arrangementEnd=(s:Arrangement)=>Math.max(0,...s.tracks.flatMap(t=>t.clips.map(c=>c.start+c.length)));
 export const sourceTimelineFrames=(s:AudioSourceRef)=>Math.floor(s.frames*48000/s.sampleRate);
 export const newTrack=(id:string,name:string):ArrangeTrack=>({id,name,gainDb:0,pan:0,mute:false,solo:false,rack:emptyRack(),clips:[],gainCurve:[],panCurve:[]});
-export const newClip=(id:string,source:AudioSourceRef,start=0):ArrangeClip=>({id,sourceId:source.id,start,offset:0,length:sourceTimelineFrames(source),gainDb:0,fadeIn:0,fadeOut:0,gainCurve:[],muted:false,pan:0,fadeShape:'linear',name:'',rate:1});
+export const newClip=(id:string,source:AudioSourceRef,start=0):ArrangeClip=>({id,sourceId:source.id,start,offset:0,length:sourceTimelineFrames(source),gainDb:0,fadeIn:0,fadeOut:0,gainCurve:[],muted:false,pan:0,panCurve:[],fadeShape:'linear',name:'',rate:1});
 /** Toggling the loop: clears an active one; otherwise loops the selected output range, or the whole session when no range is set. */
 export const loopToggle=(current:Arrangement['loop'],range:{start:number;end:number}|null,sessionEnd:number):{start:number;end:number}|null=>current?null:range??(sessionEnd>0?{start:0,end:sessionEnd}:null);
 /** The automated level (dB) at a clip-local frame: constant outside the outermost points, linear in dB between points. */
@@ -105,11 +108,13 @@ export function normalizeGainDb(peak:number,targetDb=0):number{
 /** Field patch that trims the clip start to a frame inside it: the source offset follows the cut and the gain curve re-bases with the interpolated cut level at 0. Same rule as split: the cut edge starts clean (fade-in 0), the outer fade clamps to the new length. */
 export function trimStartPatch(clip:ArrangeClip,frame:number){if(!Number.isSafeInteger(frame)||frame<=clip.start||frame>=clip.start+clip.length)throw Error('Trim point must be inside the clip');const cut=frame-clip.start,length=clip.length-cut;
  const gainCurve=clip.gainCurve.length?[{at:0,db:gainCurveAt(clip,cut)},...clip.gainCurve.filter(p=>p.at>cut).map(p=>({at:p.at-cut,db:p.db}))]:[];
- return{start:frame,offset:clip.offset+cut*clip.rate,length,fadeIn:0,fadeOut:Math.min(clip.fadeOut,length),gainCurve};}
+ const panCurve=clip.panCurve.length?[{at:0,pan:curvePanAt(clip.panCurve,cut)},...clip.panCurve.filter(p=>p.at>cut).map(p=>({at:p.at-cut,pan:p.pan}))]:[];
+ return{start:frame,offset:clip.offset+cut*clip.rate,length,fadeIn:0,fadeOut:Math.min(clip.fadeOut,length),gainCurve,panCurve};}
 /** Field patch that trims the clip end: same rule as split - the cut edge ends clean (fade-out 0), the fade-in clamps and the gain curve ends on the interpolated cut level. */
 export function trimEndPatch(clip:ArrangeClip,frame:number){if(!Number.isSafeInteger(frame)||frame<=clip.start||frame>=clip.start+clip.length)throw Error('Trim point must be inside the clip');const length=frame-clip.start;
  const gainCurve=clip.gainCurve.length?[...clip.gainCurve.filter(p=>p.at<length),{at:length,db:gainCurveAt(clip,length)}]:[];
- return{length,fadeIn:Math.min(clip.fadeIn,length),fadeOut:0,gainCurve};}
+ const panCurve=clip.panCurve.length?[...clip.panCurve.filter(p=>p.at<length),{at:length,pan:curvePanAt(clip.panCurve,length)}]:[];
+ return{length,fadeIn:Math.min(clip.fadeIn,length),fadeOut:0,gainCurve,panCurve};}
 export function findArrangeClip(s:Arrangement,id:string){for(const track of s.tracks){const clip=track.clips.find(c=>c.id===id);if(clip)return{track,clip};}throw Error('Audio clip no longer exists');}
 /** Cuts a time range out of the whole session: clips crossing a boundary split at it (split fade/curve rules), material inside the range is removed and everything after shifts left to close the gap. Markers inside the range are removed, later markers and a fully later loop shift with the timeline; a loop intersecting the cut is cleared. */
 export function cutSessionRange(s:Arrangement,start:number,end:number,nextId:()=>string){
@@ -161,4 +166,5 @@ export function rippleDeleteClips(s:Arrangement,ids:string[]){
 /** A split preserves source position, gain and outer fades. Fades intersecting the split are shortened. */
 export function splitArrangeClip(s:Arrangement,id:string,frame:number,rightId:string){const {track,clip}=findArrangeClip(s,id);const left=frame-clip.start;if(!Number.isSafeInteger(frame)||left<=0||left>=clip.length)throw Error('Split must be inside the clip');const oldLength=clip.length;track.clips.push({...clip,id:rightId,start:frame,offset:clip.offset+left*clip.rate,length:oldLength-left,fadeIn:0,fadeOut:Math.min(clip.fadeOut,oldLength-left)});clip.length=left;clip.fadeIn=Math.min(clip.fadeIn,left);clip.fadeOut=0;
  // Automation points live on the clip-local clock: both halves carry the cut's interpolated level at the boundary.
- if(clip.gainCurve.length){const cutDb=gainCurveAt(clip,left),right=track.clips[track.clips.length-1];right.gainCurve=[{at:0,db:cutDb},...clip.gainCurve.filter(p=>p.at>left).map(p=>({at:p.at-left,db:p.db}))];clip.gainCurve=[...clip.gainCurve.filter(p=>p.at<left),{at:left,db:cutDb}];}}
+ if(clip.gainCurve.length){const cutDb=gainCurveAt(clip,left),right=track.clips[track.clips.length-1];right.gainCurve=[{at:0,db:cutDb},...clip.gainCurve.filter(p=>p.at>left).map(p=>({at:p.at-left,db:p.db}))];clip.gainCurve=[...clip.gainCurve.filter(p=>p.at<left),{at:left,db:cutDb}];}
+ if(clip.panCurve.length){const cutPan=curvePanAt(clip.panCurve,left),right=track.clips[track.clips.length-1];right.panCurve=[{at:0,pan:cutPan},...clip.panCurve.filter(p=>p.at>left).map(p=>({at:p.at-left,pan:p.pan}))];clip.panCurve=[...clip.panCurve.filter(p=>p.at<left),{at:left,pan:cutPan}];}}

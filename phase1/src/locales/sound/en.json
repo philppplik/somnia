@@ -293,6 +293,7 @@
   "cmd.sound.arrange.clip.set": "Arrange & Mix: Clip editor",
   "cmd.sound.arrange.clip.split": "Arrange & Mix: Split at playhead",
   "cmd.sound.arrange.clip.curve": "Arrange & Mix: Gain curve",
+  "cmd.sound.arrange.clip.panCurve": "Arrange & Mix: Clip pan curve",
   "cmd.sound.arrange.clip.duplicate": "Arrange & Mix: Duplicate",
   "cmd.sound.arrange.clip.crossfade": "Arrange & Mix: Crossfade clip",
   "cmd.sound.arrange.clip.copy": "Arrange & Mix: Copy clip",
