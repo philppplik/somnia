@@ -96,6 +96,8 @@ export function TextEffects({format,held,enabled}:{format:FormatState|null;held:
    {id:'track',label:(doc.trackChanges?'\u2713 ':'')+t('documents.review.track'),enabled,run:()=>void setTrackChanges(!doc.trackChanges)},
    {id:'marks',label:(doc.showMarks?'\u2713 ':'')+t('documents.view.marks'),enabled,run:()=>void setViewMarks(!doc.showMarks,doc.showMarkup)},
    {id:'smartQuotes',label:t('documents.quotes.smart'),enabled,run:()=>void convertSelectionQuotes('smart').catch(()=>undefined)},
+   {id:'deQuotes',label:t('documents.quotes.de'),enabled,run:()=>void convertSelectionQuotes('de').catch(()=>undefined)},
+   {id:'frQuotes',label:t('documents.quotes.fr'),enabled,run:()=>void convertSelectionQuotes('fr').catch(()=>undefined)},
    {id:'straightQuotes',label:t('documents.quotes.straight'),enabled,run:()=>void convertSelectionQuotes('straight').catch(()=>undefined)},
    {id:'autocorrect',label:(ac?'\u2713 ':'')+t('documents.autocorrect.toggle'),enabled:true,run:()=>{if(setAutoCorrect(!ac))setAc(!ac);}},
    {id:'a11y',label:t('documents.a11y.open'),enabled,run:()=>setInfoDialog('accessibility')},

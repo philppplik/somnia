@@ -167,9 +167,9 @@ export function registerDocumentsCommands(){
    if(typeof m!=='string'||!(CASE_MODES as readonly string[]).includes(m))throw expected('Invalid "mode": use upper, lower, title, sentence or toggle.');
    await changeCase(m as CaseMode);
   },()=>ready()&&!!getDocumentsState().caret),
-  add('documents.quotes.convert','Make the quotation marks of the selected text curly or plain',async p=>{
+  add('documents.quotes.convert','Make the quotation marks of the selected text curly, plain, German or French',async p=>{
    const m=(p as Record<string,unknown>|undefined)?.mode;
-   if(typeof m!=='string'||!(QUOTE_MODES as readonly string[]).includes(m))throw expected('Invalid "mode": use smart or straight.');
+   if(typeof m!=='string'||!(QUOTE_MODES as readonly string[]).includes(m))throw expected('Invalid "mode": use smart, straight, de or fr.');
    await convertSelectionQuotes(m as QuoteMode);
   },()=>ready()&&!!getDocumentsState().caret),
   add('documents.autocorrect.toggle','Turn AutoCorrect while typing on or off',async()=>{setAutoCorrect(!autoCorrectOn());},()=>ready()),

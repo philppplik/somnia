@@ -19,6 +19,15 @@ test('straighten undoes smarten and leaves other text alone',()=>{
  assert.equal(straightenQuotes(smartenQuotes(plain)),plain);
  assert.equal(smartenQuotes(smartenQuotes(plain)),smartenQuotes(plain));
 });
+test('German and French styles, also from curly or other-style text',()=>{
+ assert.equal(convertQuotes('He said "hi" and \'x\'','de'),'He said \u201Ehi\u201C and \u201Ax\u2018');
+ assert.equal(convertQuotes('"Ja", sagte er','de'),'\u201EJa\u201C, sagte er');
+ assert.equal(convertQuotes('\u201Chi\u201D','de'),'\u201Ehi\u201C');
+ assert.equal(convertQuotes('"oui" l\'ami','fr'),'\u00ABoui\u00BB l\u2019ami');
+ assert.equal(convertQuotes('\u00ABa\u00BB','straight'),'"a"');
+ assert.equal(convertQuotes('\u201Ea\u201C','smart'),'\u201Ca\u201D');
+ assert.equal(convertQuotes('"a"','de','a'),'\u201Ca\u201C');
+});
 test('empty text and bad mode',()=>{
  assert.equal(smartenQuotes(''),'');assert.equal(straightenQuotes(''),'');
  assert.throws(()=>convertQuotes('x','curly' as never));

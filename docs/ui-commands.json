@@ -5779,7 +5779,7 @@
     },
     {
       "id": "documents.quotes.convert",
-      "title": "Make the quotation marks of the selected text curly or plain",
+      "title": "Make the quotation marks of the selected text curly, plain, German or French",
       "category": "View",
       "source": "documents",
       "keywords": [
