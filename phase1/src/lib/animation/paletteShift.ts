@@ -1,5 +1,5 @@
 import type {Layer} from './model';
-import {HEX} from './palette';
+import {HEX,mapStatic,type StaticChange} from './palette';
 /** Shift every solid colour of the composition in HSL: hue in degrees, saturation and lightness in percentage points. Pure. */
 export interface ColorShift{hue?:number;saturation?:number;lightness?:number}
 const clamp=(x:number,lo:number,hi:number)=>Math.min(hi,Math.max(lo,x));
@@ -17,28 +17,19 @@ export function shiftColor(hex:string,s:ColorShift):string{
  const [h,sa,l]=hexToHsl(hex);
  return hslToHex(((h+(s.hue??0))%360+360)%360,clamp(sa+(s.saturation??0),0,100),clamp(l+(s.lightness??0),0,100));
 }
-export type ShiftEdit={layer:string;source?:Record<string,unknown>;stroke?:NonNullable<Layer['stroke']>;/** Edits (same shape as the animation Edit union) that move colour keys: layer fill and stroke keys, gradient end colours and stop colours. */keyed:{type:string;[k:string]:unknown}[]};
+export type ShiftEdit=StaticChange&{layer:string;/** Edits (same shape as the animation Edit union) that move colour keys: layer fill and stroke keys, gradient end colours and stop colours. */keyed:{type:string;[k:string]:unknown}[]};
 type Grad=NonNullable<Layer['source']['gradient']>;
-const hex=(c:string|undefined,s:ColorShift)=>c&&HEX.test(c)?shiftColor(c,s):c;
-/** A gradient with every static colour shifted. Keys stay as they are; `keyed` edits move them. */
-function shiftGradient(g:Grad,s:ColorShift):Grad{return {...g,start:hex(g.start,s)!,end:hex(g.end,s)!,...(g.stops?{stops:g.stops.map(x=>({...x,color:hex(x.color,s)!}))}:{})};}
 function gradientKeyed(layer:string,target:'fill'|'stroke',g:Grad,s:ColorShift,out:ShiftEdit['keyed']){
  for(const w of ['start','end'] as const)for(const k of g.colorKeys?.[w]??[])if(HEX.test(k.color))out.push({type:'gradient.color',layer,target,which:w,op:'set',color:shiftColor(k.color,s),t:k.t});
  (g.stops??[]).forEach((st,index)=>{for(const k of st.colorKeys??[])if(HEX.test(k.color))out.push({type:'gradient.stop',layer,target,index,prop:'color',op:'set',color:shiftColor(k.color,s),t:k.t});});
 }
-/** Edits for the unlocked layers' fills, strokes, gradients and colour keys; layers whose colour does not change are left out. */
+/** Edits for the unlocked layers' fills, strokes, gradients, effects and colour keys; layers whose colour does not change are left out. */
 export function shiftPalette(layers:readonly Layer[],s:ColorShift):ShiftEdit[]{
  const out:ShiftEdit[]=[];
- for(const l of layers){if(l.locked)continue;const e:ShiftEdit={layer:l.id,keyed:[]};
-  const c=l.source.color;
-  if(['solid','shape','text'].includes(l.kind)&&c&&HEX.test(c)){const n=shiftColor(c,s);if(n!==c.toLowerCase())e.source={color:n};}
-  const g=l.source.gradient;
-  if(g&&['solid','shape'].includes(l.kind)){const ng=shiftGradient(g,s);if(JSON.stringify(ng)!==JSON.stringify(g))e.source={...e.source,gradient:ng};gradientKeyed(l.id,'fill',g,s,e.keyed);}
-  if(l.kind==='shape'&&l.stroke){
-   let st=l.stroke;if(HEX.test(st.color)){const n=shiftColor(st.color,s);if(n!==st.color.toLowerCase())st={...st,color:n};}
-   if(st.gradient){const ng=shiftGradient(st.gradient,s);if(JSON.stringify(ng)!==JSON.stringify(st.gradient))st={...st,gradient:ng};gradientKeyed(l.id,'stroke',st.gradient,s,e.keyed);}
-   if(st!==l.stroke)e.stroke=st;}
+ for(const l of layers){if(l.locked)continue;const st=mapStatic(l,c=>shiftColor(c,s),true),e:ShiftEdit={layer:l.id,...st,keyed:[]};
+  if(['solid','shape'].includes(l.kind)&&l.source.gradient)gradientKeyed(l.id,'fill',l.source.gradient,s,e.keyed);
+  if(l.kind==='shape'&&l.stroke?.gradient)gradientKeyed(l.id,'stroke',l.stroke.gradient,s,e.keyed);
   for(const p of ['fill','stroke'] as const)for(const k of l.colorKeys?.[p]??[])if(HEX.test(k.color))e.keyed.push({type:'color.prop',layer:l.id,prop:p,op:'set',color:shiftColor(k.color,s),t:k.t});
-  if(e.source||e.stroke||e.keyed.length)out.push(e);}
+  if(e.source||e.stroke||e.effects||e.keyed.length)out.push(e);}
  return out;
 }

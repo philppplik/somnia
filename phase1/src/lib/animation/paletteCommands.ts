@@ -16,7 +16,7 @@ export const paletteSpecs=():CommandSpec<unknown,unknown>[]=>[{
   if(p.from.toLowerCase()===p.to.toLowerCase())return expected('The new colour is the same as the old one.');
   const ch=recolor(c.layers,p.from,p.to);
   if(!ch.length)return expected(c.layers.some(l=>paletteOf([l]).some(x=>x.color===p.from.toLowerCase()))?'Every layer with that colour is locked.':'No layer uses that colour.');
-  const edits:Edit[]=ch.flatMap(e=>[...(e.source?[{type:'layer.update',layer:e.layer,source:e.source} as Edit]:[]),...(e.stroke?[{type:'layer.stroke',layer:e.layer,stroke:e.stroke} as Edit]:[])]);
+  const edits:Edit[]=ch.flatMap(e=>[...(e.source?[{type:'layer.update',layer:e.layer,source:e.source} as Edit]:[]),...(e.stroke?[{type:'layer.stroke',layer:e.layer,stroke:e.stroke} as Edit]:[]),...(e.effects?[{type:'layer.effects',layer:e.layer,effects:e.effects} as Edit]:[])]);
   try{s.dispatch(edits);}catch(e){if(e instanceof EditError)throw Object.assign(e,{expected:true});throw e;}
   return {layers:ch.length};
  }) as (p:unknown)=>unknown},
@@ -30,7 +30,7 @@ export const paletteSpecs=():CommandSpec<unknown,unknown>[]=>[{
    if(!hue&&!saturation&&!lightness)return expected('Pick a hue, saturation or lightness change.');
    const ch=shiftPalette(c.layers,{hue,saturation,lightness});
    if(!ch.length)return expected('No unlocked layer has a colour that this would change.');
-   const edits:Edit[]=ch.flatMap(e=>[...(e.source?[{type:'layer.update',layer:e.layer,source:e.source} as Edit]:[]),...(e.stroke?[{type:'layer.stroke',layer:e.layer,stroke:e.stroke} as Edit]:[]),...(e.keyed as Edit[])]);
+   const edits:Edit[]=ch.flatMap(e=>[...(e.source?[{type:'layer.update',layer:e.layer,source:e.source} as Edit]:[]),...(e.stroke?[{type:'layer.stroke',layer:e.layer,stroke:e.stroke} as Edit]:[]),...(e.effects?[{type:'layer.effects',layer:e.layer,effects:e.effects} as Edit]:[]),...(e.keyed as Edit[])]);
    try{s.dispatch(edits);}catch(e){if(e instanceof EditError)throw Object.assign(e,{expected:true});throw e;}
    return {layers:ch.length};
   }) as (p:unknown)=>unknown}];

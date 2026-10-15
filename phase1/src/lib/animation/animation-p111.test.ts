@@ -1882,3 +1882,18 @@ test('P278 palette shift also moves gradients, colour keys and gradient colour k
  assert.ok(l.source.gradient!.colorKeys!.start!.every(k=>k.color==='#00ff00'),JSON.stringify(l.source.gradient));
  s.undo();assert.equal(JSON.stringify(L().colorKeys),before);assert.equal(L().source.gradient!.end,'#0000ff');
 });
+
+test('P279 palette: swatches and replace cover gradients and effects, shift moves effect colours and keys',async()=>{
+ const {paletteSpecs}=await import('./paletteCommands');const {paletteOf}=await import('./palette');
+ const specs=paletteSpecs(),replace=specs.find(x=>x.id==='animation.palette.replace')!.run as (p?:unknown)=>unknown,shift=specs.find(x=>x.id==='animation.palette.shift')!.run as (p?:unknown)=>unknown;
+ const d0=applyEdits(base(),[{type:'layer.add',kind:'shape',id:'g'},{type:'layer.update',layer:'g',source:{color:'#112233',gradient:{start:'#ff0000',end:'#0000ff',angle:0}}},
+  {type:'layer.effects',layer:'g',effects:[{id:'e1',kind:'glow',enabled:true,amount:0.5,color:'#ff0000',colorKeys:[{t:0,color:'#ff0000'},{t:f(10),color:'#00ff00'}]}]}] as never);
+ const s=new AnimationSession();s.open(d0);setAnimationSession(s);
+ const L=()=>findComp(s.document!)!.layers.find(l=>l.id==='g')!;
+ const red=paletteOf(findComp(s.document!)!.layers).find(x=>x.color==='#ff0000');assert.ok(red);assert.equal(red!.layers,1);
+ replace({from:'#ff0000',to:'#abcdef'});
+ assert.equal(L().source.gradient!.start,'#abcdef');assert.equal(L().effects![0].color,'#abcdef');assert.equal(L().source.gradient!.end,'#0000ff');
+ s.undo();assert.equal(L().source.gradient!.start,'#ff0000');assert.equal(L().effects![0].color,'#ff0000');
+ shift({hue:120});assert.equal(L().effects![0].color,'#00ff00');assert.deepEqual(L().effects![0].colorKeys!.map(k=>k.color),['#00ff00','#0000ff']);
+ s.undo();assert.equal(L().effects![0].colorKeys![1].color,'#00ff00');
+});
