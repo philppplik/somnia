@@ -2000,3 +2000,12 @@ test('P290 swing: damped angle starts at the amplitude, crosses zero, ends on th
  const k=L().transform.rotation.keys;assert.equal(k.length,49);assert.equal(k[0].v,40);assert.equal(k[48].v,10);
  s.undo();assert.equal(JSON.stringify(s.document),before);
 });
+test('P291 blink: seeded gaps, closed at 10 percent mid blink, keyed scale skipped, one undo',async()=>{
+ const {blinkFrames,blinkSpecs}=await import('./blinkCommands');const run=blinkSpecs()[0].run as (p?:unknown)=>unknown;
+ const a=blinkFrames(150,60,1);assert.deepEqual(a,blinkFrames(150,60,1));assert.ok(a.length>=1&&a.length<=4);assert.ok(a.every((x,i)=>x+4<=150&&(!i||x-a[i-1]>=5)));
+ const s=new AnimationSession();s.open(applyEdits(base(),[{type:'layer.add',kind:'solid',id:'bl1'},{type:'prop.set',layer:'bl1',prop:'scale',value:[50,40]},{type:'layer.add',kind:'solid',id:'bl2'},{type:'prop.animate',layer:'bl2',prop:'scale',on:true,t:0}] as never));setAnimationSession(s);
+ const L=(id:string)=>findComp(s.document!)!.layers.find(x=>x.id===id)!;const before=JSON.stringify(s.document);
+ const r=run({layers:['bl1','bl2'],gap:60}) as {layers:number;skipped:number};assert.equal(r.layers,1);assert.equal(r.skipped,1);
+ const k=L('bl1').transform.scale.keys;assert.equal(k.length,a.length*3);assert.deepEqual(k[1].v,[50,4]);assert.deepEqual(k[2].v,[50,40]);
+ s.undo();assert.equal(JSON.stringify(s.document),before);
+});

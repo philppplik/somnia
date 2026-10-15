@@ -1349,5 +1349,8 @@
  "cmd.animation.layers.hue": "Cycle the colour of the ticked layers round the hue wheel",
  "animation.rig.group.swing": "Swing",
  "animation.rig.swing": "Swing like a pendulum from the playhead",
- "cmd.animation.layers.swing": "Swing the ticked layers like a pendulum from the playhead"
+ "cmd.animation.layers.swing": "Swing the ticked layers like a pendulum from the playhead",
+ "animation.rig.group.blink": "Blink",
+ "animation.rig.blink": "Blink now and then (eyes)",
+ "cmd.animation.layers.blink": "Make the ticked layers blink now and then"
 }

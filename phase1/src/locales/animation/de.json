@@ -1349,5 +1349,8 @@
  "cmd.animation.layers.hue": "Farbe der markierten Ebenen einmal um den Farbkreis laufen lassen",
  "animation.rig.group.swing": "Pendeln",
  "animation.rig.swing": "Pendeln ab Abspielposition",
- "cmd.animation.layers.swing": "Markierte Ebenen ab der Abspielposition wie ein Pendel ausschwingen lassen"
+ "cmd.animation.layers.swing": "Markierte Ebenen ab der Abspielposition wie ein Pendel ausschwingen lassen",
+ "animation.rig.group.blink": "Blinzeln",
+ "animation.rig.blink": "Ab und zu blinzeln (Augen)",
+ "cmd.animation.layers.blink": "Markierte Ebenen ab und zu blinzeln lassen"
 }

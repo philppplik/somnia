@@ -1978,6 +1978,25 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.layers.blink",
+      "title": "Make the ticked layers blink now and then",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "blink",
+        "character",
+        "close",
+        "eye",
+        "eyes",
+        "idle",
+        "random",
+        "scale",
+        "squint"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.layers.bounce",
       "title": "Drop layers onto the first ticked layer and bounce",
       "category": "Edit",

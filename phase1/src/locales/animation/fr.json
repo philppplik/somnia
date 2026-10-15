@@ -1349,5 +1349,8 @@
  "cmd.animation.layers.hue": "Faire parcourir la roue chromatique à la couleur des calques cochés",
  "animation.rig.group.swing": "Pendule",
  "animation.rig.swing": "Osciller comme un pendule depuis la tête de lecture",
- "cmd.animation.layers.swing": "Faire osciller les calques cochés comme un pendule depuis la tête de lecture"
+ "cmd.animation.layers.swing": "Faire osciller les calques cochés comme un pendule depuis la tête de lecture",
+ "animation.rig.group.blink": "Clignement",
+ "animation.rig.blink": "Cligner de temps en temps (yeux)",
+ "cmd.animation.layers.blink": "Faire cligner les calques cochés de temps en temps"
 }

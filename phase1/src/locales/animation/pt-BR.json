@@ -1349,5 +1349,8 @@
  "cmd.animation.layers.hue": "Fazer a cor das camadas marcadas percorrer o círculo de matizes",
  "animation.rig.group.swing": "Pêndulo",
  "animation.rig.swing": "Balançar como pêndulo a partir do cursor",
- "cmd.animation.layers.swing": "Balançar as camadas marcadas como um pêndulo a partir do cursor"
+ "cmd.animation.layers.swing": "Balançar as camadas marcadas como um pêndulo a partir do cursor",
+ "animation.rig.group.blink": "Piscar",
+ "animation.rig.blink": "Piscar de vez em quando (olhos)",
+ "cmd.animation.layers.blink": "Fazer as camadas marcadas piscarem de vez em quando"
 }
