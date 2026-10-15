@@ -12,6 +12,7 @@ const MAX_FREEZE: u32 = 20;
 const MAX_SHEETS: usize = 255;
 const MAX_SORT_CELLS: u64 = 1_000_000;
 const MAX_FILL_CELLS: u64 = 1_000_000;
+const MAX_FIND_RANGES: usize = 500;
 const MAX_SPLIT_PARTS: usize = 20;
 const MAX_NOTE_CHARS: usize = 2000;
 const MAX_NAMES: usize = 500;
@@ -3804,6 +3805,45 @@ impl HeadlessWorkbook {
         Ok(out)
     }
 
+    /// Finds cells by what they are, with the engine's Go To Special search, without changing anything. `kind` is one of blanks, constants,
+    /// formulas, text, numbers, errors, comments, conditionalFormats or dataValidation. The block is the search area; a single cell searches the
+    /// whole used range of the sheet. Returns `{"count":n,"ranges":["A1:A3","C5"],"truncated":bool}` with at most 500 vertical runs, `count` 0 when
+    /// nothing matches. The engine selection is put back afterwards, so nothing is added to the history.
+    pub fn find_special(&mut self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32, kind: &str) -> Result<String, String> {
+        if !matches!(kind, "blanks" | "constants" | "formulas" | "text" | "numbers" | "errors" | "comments" | "conditionalFormats" | "dataValidation") {
+            return Err("unsupported kind of cells".into());
+        }
+        if rows == 0 || cols == 0 || u64::from(rows) * u64::from(cols) > MAX_FILL_CELLS {
+            return Err("Select a block of at most 1,000,000 cells.".into());
+        }
+        self.check_block(sheet, row, col, rows, cols, false)?;
+        self.session.run("sheet.activate", json!({"sheet": sheet})).map_err(|e| e.to_string())?;
+        let saved = self.session.doc().map_err(|e| e.to_string())?.selection.clone();
+        let range = format!("{}:{}", CellRef::new(row, col).a1(), CellRef::new(row + rows - 1, col + cols - 1).a1());
+        let found = self
+            .session
+            .run("selection.set", json!({"range": range}))
+            .and_then(|_| self.session.run("edit.goToSpecial", json!({"kind": kind})))
+            .map_err(|e| e.to_string());
+        let ranges: Vec<String> = match self.session.doc() {
+            Ok(doc) if found.is_ok() => doc.selection.ranges.iter().take(MAX_FIND_RANGES + 1).map(|r| format!("{}:{}", r.start.a1(), r.end.a1())).collect(),
+            _ => Vec::new(),
+        };
+        if let Ok(doc) = self.session.doc_mut() {
+            doc.selection = saved;
+        }
+        let _ = self.session.take_ui_requests();
+        match found {
+            Ok(v) => {
+                let count = v.get("count").and_then(|c| c.as_u64()).unwrap_or(0);
+                let truncated = ranges.len() > MAX_FIND_RANGES;
+                Ok(json!({"count": count, "ranges": ranges.into_iter().take(MAX_FIND_RANGES).collect::<Vec<_>>(), "truncated": truncated}).to_string())
+            }
+            Err(e) if e.contains("No cells were found") => Ok(json!({"count": 0, "ranges": [], "truncated": false}).to_string()),
+            Err(e) => Err(e),
+        }
+    }
+
     /// How many cells `replace_range` would change, as `{"count":n}`. Read only.
     pub fn find_count(&self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32, op_json: &str) -> Result<String, String> {
         if rows == 0 || cols == 0 || u64::from(rows) * u64::from(cols) > MAX_FILL_CELLS {
@@ -6238,6 +6278,30 @@ mod tests {
             r#"{"name":"Nope","scope":"workbook","newName":"Z"}"#, r#"{"name":"Rate","scope":"galaxy","newName":"Z"}"#, r#"{"name":"Rate","newName":"Z","x":1}"#, r#"{"name":"Rate"}"#, "[]"] {
             assert!(book.rename_name(0, bad).is_err(), "{bad}");
         }
+    }
+    #[test]
+    fn find_special_lists_cells_by_kind_and_leaves_history_and_selection_alone() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        book.set_values(0, 800, 0, r#"[["a","1"],["","=B801+1"],["c","=1/0"]]"#).unwrap();
+        let (steps, rev) = {
+            let d = book.session.doc().unwrap();
+            (d.undo.len(), d.selection.a1())
+        };
+        let formulas = book.find_special(0, 800, 0, 3, 2, "formulas").unwrap();
+        assert!(formulas.contains("\"count\":2") && formulas.contains("B802:B803"), "{formulas}");
+        let blanks = book.find_special(0, 800, 0, 3, 2, "blanks").unwrap();
+        assert!(blanks.contains("A802"), "{blanks}");
+        assert!(book.find_special(0, 800, 0, 3, 2, "errors").unwrap().contains("B803"));
+        assert!(book.find_special(0, 800, 0, 3, 2, "comments").unwrap().contains("\"count\":0"), "nothing found is a plain zero");
+        assert!(book.find_special(0, 800, 0, 1, 1, "text").unwrap().contains("A801"), "a single cell searches the used range");
+        let d = book.session.doc().unwrap();
+        assert_eq!((d.undo.len(), d.selection.a1()), (steps, rev), "no history entry, selection restored");
+        for bad in ["visible", "lastCell", "", "Blanks"] {
+            assert!(book.find_special(0, 800, 0, 3, 2, bad).is_err(), "{bad}");
+        }
+        assert!(book.find_special(0, 800, 0, 0, 2, "blanks").is_err());
+        assert!(book.find_special(0, gridcraft_engine::core::MAX_ROWS - 1, 0, 5, 1, "blanks").is_err());
+        assert!(book.find_special(7, 0, 0, 1, 1, "blanks").is_err(), "unknown sheet");
     }
     #[test]
     fn view_op_sets_zoom_and_gridlines_with_bounds() {

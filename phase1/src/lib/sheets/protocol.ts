@@ -168,6 +168,7 @@ export type SheetsRequest=
  |{id:number;op:'validationInfo';sheet:number;row:number;col:number}
  |{id:number;op:'validationInvalid';sheet:number}
  |{id:number;op:'replace';sheet:number;row:number;col:number;rows:number;cols:number;replace:ReplaceOp}
+ |{id:number;op:'findSpecial';sheet:number;row:number;col:number;rows:number;cols:number;kind:string}
  |{id:number;op:'findCount';sheet:number;row:number;col:number;rows:number;cols:number;replace:ReplaceOp}
  |{id:number;op:'dedupe';sheet:number;row:number;col:number;rows:number;cols:number;dedupe:DedupeOp}
  |{id:number;op:'split';sheet:number;row:number;col:number;rows:number;cols:number;split:SplitOp}

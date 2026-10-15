@@ -7888,6 +7888,14 @@
       "hasEnabled": true
     },
     {
+      "id": "sheets.findSpecial",
+      "title": "Find cells by what they are (blanks, formulas, errors and more)",
+      "category": "Edit",
+      "source": "sheets",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
       "id": "sheets.format",
       "title": "Format selected cells",
       "category": "Edit",

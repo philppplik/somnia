@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1063 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1064 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -651,6 +651,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `sheets.export.advanced` | Advanced export... | Project | sheets |  |
 | `sheets.fill` | Fill the selected block down, right, up or left | Edit | sheets |  |
 | `sheets.filter` | Filter rows by a column | Edit | sheets |  |
+| `sheets.findSpecial` | Find cells by what they are (blanks, formulas, errors and more) | Edit | sheets |  |
 | `sheets.format` | Format selected cells | Edit | sheets |  |
 | `sheets.formulas.open` | Open Smart Formula builder | View | sheets |  |
 | `sheets.freeze` | Freeze panes | View | sheets |  |

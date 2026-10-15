@@ -1,3 +1,4 @@
+import {parseSpecialResult,type SpecialKind,type SpecialResult} from './specialOps';
 import {parsePageList,type PageList} from './pageBreaks';
 import {parseCellInfo,type CellInfo} from './cellInfo';
 import {parseReviewResult,type ReviewResult} from './reviewInfo';
@@ -175,6 +176,8 @@ export class SheetsEngine{
  /** Replace text in the block (one undo step); resolves to the number of changed cells. */
  async replace(sheet:number,row:number,col:number,rows:number,cols:number,replace:ReplaceOp):Promise<number>{const r=await this.result<{replaced:unknown}>({op:'replace',sheet,row,col,rows,cols,replace});return typeof r.replaced==='number'?r.replaced:0;}
  /** How many cells a replace would change (read only). */
+ /** Finds cells by what they are (Go To Special): blanks, formulas, errors and so on. Reads only. */
+ async findSpecial(sheet:number,row:number,col:number,rows:number,cols:number,kind:SpecialKind):Promise<SpecialResult>{return parseSpecialResult(await this.result<unknown>({op:'findSpecial',sheet,row,col,rows,cols,kind}));}
  async findCount(sheet:number,row:number,col:number,rows:number,cols:number,replace:ReplaceOp):Promise<number>{const r=await this.result<{count:unknown}>({op:'findCount',sheet,row,col,rows,cols,replace});return typeof r.count==='number'?r.count:0;}
  /** Set or clear data validation on the block (one undo step). */
  validation(sheet:number,row:number,col:number,rows:number,cols:number,validation:ValidationOp){return this.result<unknown>({op:'validation',sheet,row,col,rows,cols,validation});}

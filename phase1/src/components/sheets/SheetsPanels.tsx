@@ -12,6 +12,7 @@ import {aggregateFormula,FORMULA_FUNCTIONS,parsePanelRange,rangeAddress,summariz
 import {rectCells} from '../../lib/sheets/clipboard';
 import {addressOf,colName,parseAddress,parseSpan} from '../../lib/sheets/format';
 import {sortBlockProblem} from '../../lib/sheets/sortOps';
+import {parseSpecialResult,SPECIAL_KINDS,type SpecialKind,type SpecialResult} from '../../lib/sheets/specialOps';
 import {addUserWord,checkCells,loadDictionary,readUserWords,replacementProblem,suggest,type SpellReport} from '../../lib/sheets/spelling';
 import {AUTOFILL_MODES,buildSeriesOp,fillBlockProblem,FILL_DIRECTIONS,SERIES_KINDS,type AutoFillMode,type SeriesKind} from '../../lib/sheets/fillOps';
 import type {FillDirection,CfStyle,PasteOp} from '../../lib/sheets/protocol';
@@ -245,6 +246,7 @@ export function SheetsLayoutPanel({context}:PanelHostProps){
   <SymbolGroup/>
   <ReviewInfoGroup/>
   <SpellingGroup/>
+  <FindSpecialGroup/>
   <CellInfoGroup/>
   <PageBreaksGroup/>
   <PasteGroup/>
@@ -1014,6 +1016,26 @@ function ReviewInfoGroup(){
    <Button variant="outline" size="compact" disabled={action.busy||!chosen} onClick={()=>{if(chosen)void action.run('sheets.navigate',{sheet:chosen.sheet,address:'A1'});}} data-testid="sheets-ri-go">{t('sheets.ri.go')}</Button>
   </>}
   <p className="text-ink-3">{t('sheets.ri.hint')}</p>
+  {action.notice?<p role="alert">{action.notice}</p>:null}
+ </div>;
+}
+/** Finds cells by what they are with the engine's Go To Special search: blanks, formulas, errors, comments and more. Lists the runs of cells and jumps to the chosen one. Reads only. */
+function FindSpecialGroup(){
+ const {t}=useT(),s=useSheetsSelection(),action=useAction();
+ const [kind,setKind]=useState<SpecialKind>('blanks'),[found,setFound]=useState<{kind:SpecialKind;sheet:number;result:SpecialResult}|null>(null);
+ if(!s)return null;
+ const shown=found&&found.sheet===s.sheet?found:null,single=!s.range||(s.range.r0===s.range.r1&&s.range.c0===s.range.c1);
+ const run=async()=>{const r=await action.run('sheets.findSpecial',{kind});if(r!==null)setFound({kind,sheet:s.sheet,result:parseSpecialResult(r)});};
+ return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.gs.title')}>
+  <span>{t('sheets.gs.title')}</span>
+  <label className="flex flex-col gap-1">{t('sheets.gs.kind')}<NativeSelect className={field} value={kind} disabled={action.busy} onChange={e=>setKind(e.currentTarget.value as SpecialKind)} data-testid="sheets-gs-kind">
+   <optgroup label={t('sheets.gs.groupContent')}>{(['blanks','constants','formulas','text','numbers','errors'] as const).map(k=><option key={k} value={k}>{t('sheets.gs.k.'+k)}</option>)}</optgroup>
+   <optgroup label={t('sheets.gs.groupRules')}>{(['comments','conditionalFormats','dataValidation'] as const).map(k=><option key={k} value={k}>{t('sheets.gs.k.'+k)}</option>)}</optgroup>
+  </NativeSelect></label>
+  <Button variant="outline" size="compact" disabled={action.busy} onClick={()=>void run()} data-testid="sheets-gs-find">{t('sheets.gs.find')}</Button>
+  <p className="text-ink-3">{t(single?'sheets.gs.scopeSheet':'sheets.gs.scopeSelection')}</p>
+  {shown&&<p data-testid="sheets-gs-count">{shown.result.count===0?t('sheets.gs.none'):t('sheets.gs.count',{n:shown.result.count,runs:shown.result.ranges.length})+(shown.result.truncated?' '+t('sheets.gs.truncated'):'')}</p>}
+  {shown&&shown.result.ranges.length>0&&<label className="flex flex-col gap-1">{t('sheets.gs.go')}<NativeSelect className={field} value="" disabled={action.busy} onChange={e=>{const a=e.currentTarget.value;if(a)void action.run('sheets.navigate',{sheet:s.sheet,address:a});}} data-testid="sheets-gs-go"><option value="">{t('sheets.gs.pick')}</option>{shown.result.ranges.map(r=><option key={r} value={r}>{r}</option>)}</NativeSelect></label>}
   {action.notice?<p role="alert">{action.notice}</p>:null}
  </div>;
 }
