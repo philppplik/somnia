@@ -1252,5 +1252,8 @@
  "animation.rig.group.effects": "Physique et effets",
  "animation.rig.overshoot.settle": "Dépasser et se stabiliser",
  "animation.rig.overshoot.anticipate": "Anticiper, dépasser et se stabiliser",
- "cmd.animation.layers.overshoot": "Ajouter dépassement (et anticipation) aux mouvements des calques cochés"
+ "cmd.animation.layers.overshoot": "Ajouter dépassement (et anticipation) aux mouvements des calques cochés",
+ "animation.rig.pulse.2": "Faire pulser une lueur, 2 fois",
+ "animation.rig.pulse.6": "Faire pulser une lueur, 6 fois",
+ "cmd.animation.layers.pulseGlow": "Faire pulser une lueur sur les calques cochés"
 }

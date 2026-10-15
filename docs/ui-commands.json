@@ -2257,6 +2257,24 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.layers.pulseGlow",
+      "title": "Pulse a glow on the ticked layers",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "breathe",
+        "effect",
+        "glow",
+        "heartbeat",
+        "light",
+        "loop",
+        "neon",
+        "pulse"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.layers.reset",
       "title": "Reset rotation, scale or opacity of the selected layers",
       "category": "Edit",

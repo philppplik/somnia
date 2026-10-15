@@ -1252,5 +1252,8 @@
  "animation.rig.group.effects": "Physics and effects",
  "animation.rig.overshoot.settle": "Overshoot and settle",
  "animation.rig.overshoot.anticipate": "Anticipate, overshoot and settle",
- "cmd.animation.layers.overshoot": "Add overshoot (and anticipation) to the ticked layers' moves"
+ "cmd.animation.layers.overshoot": "Add overshoot (and anticipation) to the ticked layers' moves",
+ "animation.rig.pulse.2": "Pulse a glow, 2 times",
+ "animation.rig.pulse.6": "Pulse a glow, 6 times",
+ "cmd.animation.layers.pulseGlow": "Pulse a glow on the ticked layers"
 }

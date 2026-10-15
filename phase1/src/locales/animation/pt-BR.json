@@ -1252,5 +1252,8 @@
  "animation.rig.group.effects": "Física e efeitos",
  "animation.rig.overshoot.settle": "Ultrapassar e assentar",
  "animation.rig.overshoot.anticipate": "Antecipar, ultrapassar e assentar",
- "cmd.animation.layers.overshoot": "Adicionar ultrapassagem (e antecipação) aos movimentos das camadas marcadas"
+ "cmd.animation.layers.overshoot": "Adicionar ultrapassagem (e antecipação) aos movimentos das camadas marcadas",
+ "animation.rig.pulse.2": "Pulsar um brilho, 2 vezes",
+ "animation.rig.pulse.6": "Pulsar um brilho, 6 vezes",
+ "cmd.animation.layers.pulseGlow": "Pulsar um brilho nas camadas marcadas"
 }

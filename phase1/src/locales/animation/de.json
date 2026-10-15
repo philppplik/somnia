@@ -1252,5 +1252,8 @@
  "animation.rig.group.effects": "Physik und Effekte",
  "animation.rig.overshoot.settle": "Überschwingen und einpendeln",
  "animation.rig.overshoot.anticipate": "Ausholen, überschwingen und einpendeln",
- "cmd.animation.layers.overshoot": "Überschwingen (und Ausholen) zu den Bewegungen der angekreuzten Ebenen hinzufügen"
+ "cmd.animation.layers.overshoot": "Überschwingen (und Ausholen) zu den Bewegungen der angekreuzten Ebenen hinzufügen",
+ "animation.rig.pulse.2": "Leuchten pulsieren lassen, 2-mal",
+ "animation.rig.pulse.6": "Leuchten pulsieren lassen, 6-mal",
+ "cmd.animation.layers.pulseGlow": "Leuchten (Glow) der angekreuzten Ebenen pulsieren lassen"
 }

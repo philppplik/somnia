@@ -1252,5 +1252,8 @@
  "animation.rig.group.effects": "Física y efectos",
  "animation.rig.overshoot.settle": "Pasarse y asentarse",
  "animation.rig.overshoot.anticipate": "Preparar, pasarse y asentarse",
- "cmd.animation.layers.overshoot": "Añadir rebasamiento (y anticipación) a los movimientos de las capas marcadas"
+ "cmd.animation.layers.overshoot": "Añadir rebasamiento (y anticipación) a los movimientos de las capas marcadas",
+ "animation.rig.pulse.2": "Pulsar un brillo, 2 veces",
+ "animation.rig.pulse.6": "Pulsar un brillo, 6 veces",
+ "cmd.animation.layers.pulseGlow": "Hacer pulsar un brillo en las capas marcadas"
 }

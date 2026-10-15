@@ -1602,3 +1602,15 @@ test('P258 overshoot: adds a key past the target at 80 percent (and a pull-back 
  const ov=after[after.length-2].v as unknown as number[],end=before[1].v as unknown as number[];assert.ok(ov[0]>end[0],'swings past the end in x (moving right)');
  s.undo();assert.equal(findComp(s.document!)!.layers.find(l=>l.id==='a')!.transform.position.keys.length,before.length);
 });
+
+test('P259 glow pulse: adds a glow with high/low/high keys across the work area, reuses an existing glow, one undo step',async()=>{
+ const {pulseSpecs,pulseKeys}=await import('./pulseCommands');const run=pulseSpecs()[0].run as (p?:unknown)=>unknown;
+ const fps=findComp(base())!.fps,pk=pulseKeys(0,f(60),3,fps);assert.equal(pk.length,7);assert.equal(pk[0].v,1);assert.equal(pk[1].v,0.25);assert.equal(pk[6].v,1);assert.equal(pk[6].t,f(60));
+ const s=open();setAnimationSession(s);assert.throws(()=>run({layers:['a'],cycles:0}),/Pulses/);
+ const wa=findComp(s.document!)!.workArea;
+ const r=run({layers:['a'],cycles:2}) as {glowsAdded:number};assert.equal(r.glowsAdded,1);
+ const fx=()=>findComp(s.document!)!.layers.find(l=>l.id==='a')!.effects!;
+ assert.equal(fx().length,1);assert.equal(fx()[0].kind,'glow');const ks=fx()[0].animation!.keys;assert.equal(ks.length,5);assert.equal(ks[0].t,wa.in);assert.equal(ks[4].t,wa.out);assert.deepEqual(ks.map(k=>k.v),[1,0.25,1,0.25,1]);
+ const r2=run({layers:['a'],cycles:3}) as {glowsAdded:number};assert.equal(r2.glowsAdded,0);assert.equal(fx().length,1);assert.equal(fx()[0].animation!.keys.length,7,'old keys replaced');
+ s.undo();assert.equal(fx()[0].animation!.keys.length,5);s.undo();assert.equal(findComp(s.document!)!.layers.find(l=>l.id==='a')!.effects?.length??0,0);
+});
