@@ -65,7 +65,7 @@
 .ag-inp{position:absolute;left:0;right:0;bottom:0;z-index:5;padding:0 14px 22px;display:flex;justify-content:center}
 .ag-field{width:100%;display:flex;align-items:center;gap:4px;height:44px;border-radius:999px;padding:0 6px 0 8px;background:color-mix(in srgb,var(--bg-panel) 82%,transparent);box-shadow:0 0 0 1px var(--ag-line),0 6px 20px -8px rgba(60,40,120,.25);backdrop-filter:blur(10px)}
 .ag-field:focus-within{box-shadow:0 0 0 1.5px rgba(238,0,255,.45),0 6px 24px -8px rgba(238,0,255,.35)}
-.ag-field input{flex:1;min-width:0;border:0;outline:0;background:transparent;font:inherit;font-size:14px;color:var(--ag-ink);border-radius:0}.ag-field input::placeholder{color:#8A8E99}
+.ag-field input{flex:1;min-width:0;border:0;outline:0;background:transparent;font:inherit;font-size:14px;color:var(--ag-ink);border-radius:0}.ag-field input::placeholder{color:var(--ag-ink2)}
 .ag-send{width:32px;height:32px;flex:none;border-radius:50%;border:0;display:grid;place-items:center;cursor:pointer;background:var(--ag-ink);color:var(--bg-panel);padding:0}
 .ag-send:disabled{background:rgba(127,127,140,.25);color:#9A9EA9;cursor:default}
 /* collapsed state: opener bottom of the right rail */
