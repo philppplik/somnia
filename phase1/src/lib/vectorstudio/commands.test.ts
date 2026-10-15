@@ -22,9 +22,9 @@ const rejects = (d: CommandDispatcher, id: string, params: unknown, code = 'inva
   assert.rejects(run(d, id, params), (e: unknown) => e instanceof CommandDispatchError && e.code === code);
 test.beforeEach(() => { S.resetVectorSession(); patchState({ activeStudio: 'vector' }); });
 
-test('studio loads 28 strict specs into dispatcher and legacy palette with localized titles', async () => {
+test('studio loads 29 strict specs into dispatcher and legacy palette with localized titles', async () => {
   await vectorCommandsReady;
-  assert.equal(vectorCommandSpecs(activeVector).length, 28);
+  assert.equal(vectorCommandSpecs(activeVector).length, 29);
   for (const spec of vectorCommandSpecs(activeVector)) {
     assert.equal(commandDispatcher.has(spec.id), true);
     assert.ok(listCommands().find(c => c.id === spec.id));

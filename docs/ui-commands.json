@@ -12746,6 +12746,13 @@
       "hasEnabled": true
     },
     {
+      "id": "vector.renameGroup",
+      "title": "Rename vector group",
+      "category": "Edit",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
       "id": "vector.renamePath",
       "title": "Rename vector path",
       "category": "Edit",

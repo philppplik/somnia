@@ -54,6 +54,9 @@ export function normalizeDoc(doc: VectorDocument): VectorDocument {
     }),
   };
   if (pruned.gradients) result.gradients = pruned.gradients;
+  const live = new Set(doc.paths.map((p) => p.group));
+  const names = Object.entries(doc.groupNames ?? {}).map(([k, v]) => [k, String(v).trim().slice(0, 80)] as const).filter(([k, v]) => v && live.has(k));
+  if (names.length) result.groupNames = Object.fromEntries(names);
   return result;
 }
 

@@ -5,7 +5,7 @@ const toolIcons=['MousePointer2','VectorNode','VectorPen','Square','VectorEllips
 export const vectorShell:StudioShellDef={
  panels:[
   {id:'files',title:'Files',component:'code.files',side:'left'},
-  {id:'layers',title:'Layers',titleKey:'vector.layers',component:'vector.layers',side:'left',commands:['vector.select','vector.toggleHidden','vector.renamePath','vector.reorder']},
+  {id:'layers',title:'Layers',titleKey:'vector.layers',component:'vector.layers',side:'left',commands:['vector.select','vector.toggleHidden','vector.renamePath','vector.renameGroup','vector.reorder']},
   {id:'tools',title:'Tools',titleKey:'vector.toolbar',component:'vector.tools',side:'left',commands:['vector.setTool']},
   {id:'export',title:'Export',titleKey:'vector.hero.export',component:'vector.export',side:'right',commands:['vector.exportSvg','vector.exportPng','vector.importSvg','vector.clearError']},
   {id:'inspector',title:'Vector',titleKey:'vector.inspector',component:'shell.inspector',side:'right',defaultOpen:true},

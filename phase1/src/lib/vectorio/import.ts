@@ -39,7 +39,7 @@ const stripNs = (n: string) => (n.startsWith('svg:') ? n.slice(4) : n);
 const STYLE_PROPS = ['fill', 'stroke', 'stroke-width', 'fill-opacity', 'stroke-opacity', 'fill-rule', 'stroke-linecap', 'stroke-linejoin', 'stroke-miterlimit', 'stroke-dasharray', 'stroke-dashoffset', 'opacity', 'display', 'visibility'];
 /** Editor-group ids are bounded and plain; anything else is ignored so the content just loads ungrouped. */
 const groupIdOf = (v: string | undefined): string | undefined => (v !== undefined && /^[A-Za-z0-9_.:-]{1,64}$/.test(v) ? v : undefined);
-const PLAIN_ATTRS = new Set([...STYLE_PROPS, 'id', 'style', 'transform', 'd', 'x', 'y', 'width', 'height', 'rx', 'ry', 'cx', 'cy', 'r', 'x1', 'y1', 'x2', 'y2', 'points', 'viewBox', 'version', 'preserveAspectRatio', 'xmlns', 'data-name', 'data-vs-group', 'pathLength', 'xml:space', 'baseProfile']);
+const PLAIN_ATTRS = new Set([...STYLE_PROPS, 'id', 'style', 'transform', 'd', 'x', 'y', 'width', 'height', 'rx', 'ry', 'cx', 'cy', 'r', 'x1', 'y1', 'x2', 'y2', 'points', 'viewBox', 'version', 'preserveAspectRatio', 'xmlns', 'data-name', 'data-vs-group', 'data-vs-group-name', 'pathLength', 'xml:space', 'baseProfile']);
 const ALLOWED = new Set(['svg', 'g', 'path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon']);
 const IGNORED_NO_RENDER = new Set(['title', 'desc', 'metadata']); // contain no geometry; harmless to drop
 
@@ -217,6 +217,7 @@ export function importSvg(source: string, opts: ImportOptions = {}): ImportResul
 
   const grads = createGradientResolver(root, bad, info);
   const paths: VectorPath[] = [];
+  const groupNames: Record<string, string> = {};
   let nodeCount = 0, segCount = 0, idc = 0, compoundC = 0;
   const nextId = () => { if (++nodeCount > LIMITS.maxNodes) fail(`more than ${LIMITS.maxNodes} nodes`); return `n${++idc}`; };
   let pathC = 0;
@@ -253,6 +254,8 @@ export function importSvg(source: string, opts: ImportOptions = {}): ImportResul
     if (name === 'g' || name === 'svg') {
       if (name === 'svg' && depth > 0) { bad('nested <svg> is not supported'); return; }
       const own = name === 'g' ? groupIdOf(el.attrs['data-vs-group']) : undefined;
+      const gname = own !== undefined ? el.attrs['data-vs-group-name']?.trim().slice(0, 80) : undefined;
+      if (own !== undefined && gname && !groupNames[own]) groupNames[own] = gname;
       const lay = layer ?? (depth === 1 && name === 'g' && own === undefined ? label : undefined);
       const inner = { ...style, opacity: 1 };
       for (const c of el.children) walk(c, inner, world, lay, depth + 1, hidden, groupOpacity * style.opacity, own ?? group);
@@ -324,5 +327,8 @@ export function importSvg(source: string, opts: ImportOptions = {}): ImportResul
   }
   const doc: VectorDocument = { width: r3(width), height: r3(height), paths };
   if (grads.gradients.length) doc.gradients = grads.gradients;
+  const liveGroups = new Set(paths.map((p) => p.group));
+  const keptNames = Object.entries(groupNames).filter(([k]) => liveGroups.has(k));
+  if (keptNames.length) doc.groupNames = Object.fromEntries(keptNames);
   return { doc, warnings: diags.filter((x) => x.severity === 'warning') };
 }

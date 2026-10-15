@@ -69,10 +69,14 @@ const mapPaths=(f:(p:VectorPath)=>VectorPath)=>(ids:readonly string[])=>({...sta
 export function addPath(p:VectorPath,select_=true){commit({...state.doc,paths:[...state.doc.paths,p]},select_?{selection:[p.id]}:{});}
 export function deleteSelection(){if(!state.selection.length)return;const ids=state.selection;commit({...state.doc,paths:state.doc.paths.filter(p=>!ids.includes(p.id))},{selection:[],nodePath:null,selectedNode:null});}
 export function duplicateSelection(offset=12){finite(offset);const ids=state.selection;if(!ids.length)return;
- const copies=remapPaths(selectedPaths(state.doc,ids).map(p=>translatePath(p,offset,offset)),state.doc);
- commit({...state.doc,paths:[...state.doc.paths,...copies]},{selection:copies.map(c=>c.id)});}
+ const gmap=new Map<string,string>(),copies=remapPaths(selectedPaths(state.doc,ids).map(p=>translatePath(p,offset,offset)),state.doc,gmap);
+ commit({...state.doc,paths:[...state.doc.paths,...copies],...carryNames(state.doc.groupNames,state.doc.groupNames,gmap)},{selection:copies.map(c=>c.id)});}
 export const moveSelection=(dx:number,dy:number)=>{finite(dx,dy);if(state.selection.length&&(dx||dy))commit(mapPaths(p=>translatePath(p,dx,dy))(state.selection));};
 export function setStyle(patch:Partial<Style>,ids:readonly string[]=state.selection){const chosen=selectionIds(state.doc,ids);if(!chosen.length)return;const have=new Set((state.doc.gradients??[]).map(g=>g.id)),gid=gradientIdOf(patch.fill);if(typeof patch.fill==='string'&&patch.fill.startsWith('url(')&&(gid===undefined||!have.has(gid))){patch={...patch};delete patch.fill;if(!Object.keys(patch).length)return;}commit(mapPaths(p=>({...p,style:{...p.style,...patch}}))(chosen));}
+export function renameGroup(group:string,name:string){
+ if(!state.doc.paths.some(p=>p.group===group))return;
+ const names={...(state.doc.groupNames??{})},n=name.trim().slice(0,80);if(n)names[group]=n;else delete names[group];
+ const {groupNames:_old,...rest}=state.doc;commit(Object.keys(names).length?{...rest,groupNames:names}:rest);}
 export function renamePath(id:string,name:string){commit(mapPaths(p=>({...p,name}))([id]));}
 export function toggleHidden(id:string){const target=state.doc.paths.find(p=>p.id===id);if(!target)return;const ids=state.doc.paths.filter(p=>p.id===id||(target.compound!==undefined&&p.compound===target.compound)).map(p=>p.id);commit(mapPaths(p=>{const {hidden:_h,...rest}=p;return target.hidden?rest:{...rest,hidden:true as const};})(ids));}
 /** z-order: 'front'|'back'|'forward'|'backward'. */
@@ -128,21 +132,26 @@ function mergeGradients(doc:VectorDocument,imported:VectorDocument,paths:VectorP
 }
 /** Imports SVG source into the open document as additional paths. Returns false on error (see session.error). */
 export function importSvgInto(source:string,opts:{strict?:boolean}={}):boolean{
- try{const r=importSvg(source,{strict:opts.strict??true});const add=remapPaths(r.doc.paths,state.doc);
+ try{const r=importSvg(source,{strict:opts.strict??true});const gmap=new Map<string,string>(),add=remapPaths(r.doc.paths,state.doc,gmap);
   const merged=mergeGradients(state.doc,r.doc,add);
-  commit({...state.doc,paths:[...state.doc.paths,...merged.paths],...(merged.gradients?{gradients:merged.gradients}:{})},{selection:add.map(p=>p.id),diagnostics:r.warnings});return true;}
+  commit({...state.doc,paths:[...state.doc.paths,...merged.paths],...(merged.gradients?{gradients:merged.gradients}:{}),...carryNames(state.doc.groupNames,r.doc.groupNames,gmap)},{selection:add.map(p=>p.id),diagnostics:r.warnings});return true;}
  catch(e){set({error:e instanceof Error?e.message:String(e),diagnostics:e instanceof SvgImportError?e.diagnostics:[]});return false;}}
 export const selectNode=(id:string|null)=>set({selectedNode:id});
 
 /** Allocate fresh identities in every space; preserve compound membership only within this batch. */
-function remapPaths(paths:readonly VectorPath[],doc:VectorDocument):VectorPath[]{
+/** Group names follow their group through a duplicate or an import (ids are remapped). */
+function carryNames(base:Record<string,string>|undefined,from:Record<string,string>|undefined,map:Map<string,string>):{groupNames?:Record<string,string>}{
+ const out={...(base??{})};for(const [old,id] of map){const n=from?.[old];if(n)out[id]=n;}
+ return Object.keys(out).length?{groupNames:out}:{};
+}
+function remapPaths(paths:readonly VectorPath[],doc:VectorDocument,groupMap?:Map<string,string>):VectorPath[]{
  const used=new Set(doc.paths.flatMap(p=>[p.id,...p.nodes.map(n=>n.id),...(p.compound===undefined?[]:[p.compound]),...(p.group===undefined?[]:[p.group])]));
  const allocate=(prefix:string)=>{let id:string;do{id=newId(prefix);}while(used.has(id));used.add(id);return id;};
  const compounds=new Map<string,string>(),groups=new Map<string,string>();
  return paths.map(p=>{
   const copy={...p,id:allocate('p'),nodes:p.nodes.map(n=>({...n,id:allocate('n')}))};
   if(p.compound!==undefined){let id=compounds.get(p.compound);if(id===undefined){id=allocate('c');compounds.set(p.compound,id);}copy.compound=id;}
-  if(p.group!==undefined){let id=groups.get(p.group);if(id===undefined){id=allocate('g');groups.set(p.group,id);}copy.group=id;}
+  if(p.group!==undefined){let id=groups.get(p.group);if(id===undefined){id=allocate('g');groups.set(p.group,id);}copy.group=id;groupMap?.set(p.group,id);}
   return copy;
  });
 }

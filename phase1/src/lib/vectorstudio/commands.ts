@@ -40,7 +40,7 @@ const gradient = object({
   x1: number, y1: number, x2: number, y2: number, cx: number, cy: number, r: { type: 'number', minimum: 0 },
   stops: { type: 'array', items: stop, minItems: 1, maxItems: 16 },
 }, ['id', 'kind', 'stops']);
-const document = object({ width: size, height: size, paths: { type: 'array', items: path, maxItems: 200 }, gradients: { type: 'array', items: gradient, maxItems: 64 } }, ['width', 'height', 'paths']);
+const document = object({ width: size, height: size, paths: { type: 'array', items: path, maxItems: 200 }, groupNames: { type: 'object', additionalProperties: { type: 'string', maxLength: 80 } }, gradients: { type: 'array', items: gradient, maxItems: 64 } }, ['width', 'height', 'paths']);
 const empty = object();
 const target = (pathId: string, nodeId?: string) => {
   const p = S.getVectorSession().doc.paths.find(p => p.id === pathId);
@@ -108,6 +108,9 @@ export function vectorCommandSpecs(active: () => boolean): CommandSpec<any, unkn
     { id: 'vector.renamePath', title: 'Rename vector path', category: 'Edit', level: 'ui',
       params: object({ id, name: text }, ['id', 'name']), enabled: open,
       run: (p: { id: string; name: string }) => { /* History: one vector commit. */ target(p.id); S.renamePath(p.id, p.name); } },
+    { id: 'vector.renameGroup', title: 'Rename vector group', category: 'Edit', level: 'ui',
+      params: object({ group: id, name: { type: 'string', maxLength: 80 } }, ['group', 'name']), enabled: open,
+      run: (p: { group: string; name: string }) => { /* History: one vector commit; unknown group is refused. */ if (!S.getVectorSession().doc.paths.some(q => q.group === p.group)) throw new Error('Unknown group'); S.renameGroup(p.group, p.name); } },
     { id: 'vector.toggleHidden', title: 'Toggle vector path visibility', category: 'Edit', level: 'ui', params: object({ id }, ['id']), enabled: open,
       run: (p: { id: string }) => { /* History: one vector commit, including compound contours. */ target(p.id); S.toggleHidden(p.id); } },
     { id: 'vector.reorder', title: 'Arrange vector paths', category: 'Edit', level: 'ui',

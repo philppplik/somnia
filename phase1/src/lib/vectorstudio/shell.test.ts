@@ -79,7 +79,7 @@ test('boolean command combines shapes in one undo step and refuses unusable sele
  const hole=applyBoolean(before,all.slice(0,2),'subtract');assert.equal(hole.ids.length,1);assert.equal(hole.doc.paths.length,2);
 });
 import {groupSelection,ungroupSelection} from './groups';
-import {exportSvg,importSvg} from '../vectorio';
+import {exportSvg,importSvg,normalizeDoc} from '../vectorio';
 test('group/ungroup: one undo step, selection expands, contiguous at top, duplicate remaps, bad input is a no-op',async()=>{
  S.resetVectorSession();S.createBlankVector();[box(0,0,10,10),box(100,0,10,10),box(200,0,10,10),box(300,0,10,10)].forEach(p=>S.addPath(p));
  const ids=S.getVectorSession().doc.paths.map(p=>p.id);S.select([ids[0],ids[2]]);const before=structuredClone(S.getVectorSession().doc);
@@ -127,4 +127,19 @@ test('ungroup accepts explicit ids (layers panel) without relying on the selecti
  await d.runCommand('vector.group',{},{origin:'test'});S.select([]);
  await d.runCommand('vector.ungroup',{ids},{origin:'test'});assert.ok(!S.getVectorSession().doc.paths.some(p=>p.group));
  await assert.rejects(d.runCommand('vector.ungroup',{ids:[1]},{origin:'test'}),e=>e instanceof CommandDispatchError&&e.code==='invalid-params');
+});
+test('group names: rename is one undo step, roundtrips through SVG, follows duplicate, dies with the group',async()=>{
+ S.resetVectorSession();S.createBlankVector();[box(0,0,10,10),box(50,0,10,10)].forEach(p=>S.addPath(p));
+ const ids=S.getVectorSession().doc.paths.map(p=>p.id);S.select(ids);const d=new CommandDispatcher();commands.forEach(s=>d.register(s));
+ await d.runCommand('vector.group',{},{origin:'test'});const g=S.getVectorSession().doc.paths[0].group!;
+ await assert.rejects(d.runCommand('vector.renameGroup',{group:'nope',name:'x'},{origin:'test'}),/Unknown group/);
+ await assert.rejects(d.runCommand('vector.renameGroup',{group:g,name:'x'.repeat(81)},{origin:'test'}),e=>e instanceof CommandDispatchError&&e.code==='invalid-params');
+ await d.runCommand('vector.renameGroup',{group:g,name:'  Logo "mark" <1> '},{origin:'test'});
+ assert.equal(S.getVectorSession().doc.groupNames![g],'Logo "mark" <1>');
+ const svg=S.toSvg();assert.match(svg,/data-vs-group-name="Logo &quot;mark&quot; &lt;1>"/);
+ const back=importSvg(svg).doc;assert.equal(Object.values(back.groupNames!)[0],'Logo "mark" <1>');assert.equal(exportSvg(normalizeDoc(back)),svg);
+ S.undo();assert.equal(S.getVectorSession().doc.groupNames,undefined);S.redo();
+ await d.runCommand('vector.duplicateSelection',{},{origin:'test'});assert.equal(Object.keys(S.getVectorSession().doc.groupNames!).length,2);
+ S.undo();S.select(ids);await d.runCommand('vector.ungroup',{},{origin:'test'});assert.ok(!normalizeDoc(S.getVectorSession().doc).groupNames);
+ assert.ok(!importSvg('<svg viewBox="0 0 10 10"><g data-vs-group-name="orphan"><path d="M0 0L5 5"/></g></svg>').doc.groupNames);
 });

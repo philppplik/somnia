@@ -64,7 +64,7 @@ export function exportSvg(doc: VectorDocument, opts: ExportOptions = {}): string
     }
     if (p.group !== openGroup) {
       closeGroup();
-      if (p.group !== undefined) { openGroup = p.group; emit(p.layer !== undefined ? 2 : 1, `<g data-vs-group="${escapeAttr(p.group)}">`); }
+      if (p.group !== undefined) { openGroup = p.group; const gn = doc.groupNames?.[p.group]; emit(p.layer !== undefined ? 2 : 1, `<g data-vs-group="${escapeAttr(p.group)}"${gn ? ` data-vs-group-name="${escapeAttr(gn)}"` : ''}>`); }
     }
     const attrs = [`d="${d}"`, ...styleAttrs(p.style)];
     if (p.name !== undefined) attrs.unshift(`data-name="${escapeAttr(p.name)}"`);

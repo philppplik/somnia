@@ -68,6 +68,8 @@ export interface VectorDocument {
   paths: VectorPath[];
   /** Extension. Absent = no gradients (every file written before gradients existed). */
   gradients?: Gradient[];
+  /** Extension. Optional display names of editor groups (key = `VectorPath.group`). Exported as `data-vs-group-name`. */
+  groupNames?: Record<string, string>;
 }
 
 export const GRADIENT_LIMITS = Object.freeze({ maxGradients: 64, maxStops: 16 });
