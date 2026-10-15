@@ -3,7 +3,7 @@ import {checkFormatPatch,checkParaPatch,type FormatPatch,type FormatState,type P
 export interface Painted{format:FormatPatch;para:ParaPatch}
 const TRI=['bold','italic','underline','strike','smallCaps','allCaps','doubleStrike','hidden','noProof'] as const;
 const CHAR_VALUES=['font','size','color','underlineColor','charShading','spacing','scale','vertAlign'] as const;
-const PARA_VALUES=['align','indentLeft','indentFirst','indentRight','spaceBefore','spaceAfter','keepNext','keepLines','widowControl','contextualSpacing','shading'] as const;
+const PARA_VALUES=['align','indentLeft','indentFirst','indentRight','spaceBefore','spaceAfter','keepNext','keepLines','widowControl','contextualSpacing','suppressLineNumbers','shading'] as const;
 /** Keeps `key` only when the engine would accept it alone. */
 function keep<T extends object>(out:T,key:string,value:unknown,check:(p:unknown)=>unknown){
  try{check({[key]:value});(out as Record<string,unknown>)[key]=value;}catch{/* a value the engine would refuse is left out */}

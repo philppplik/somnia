@@ -2645,6 +2645,7 @@
   "documents.table.sort_desc": "Ordenar linhas de Z a A por esta coluna",
   "documents.table.table_to_text": "Converter a tabela em texto",
   "documents.table.fromText": "Texto em tabela",
+  "documents.para.opt.suppressLineNumbers": "Sem números de linha neste parágrafo",
   "documents.list.demote": "Descer nível do item da lista",
   "documents.find.label": "Localizar e substituir",
   "documents.find.query": "Localizar",

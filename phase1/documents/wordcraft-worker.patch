@@ -52,7 +52,7 @@ new file mode 100644
 index 0000000..5b80b79
 --- /dev/null
 +++ b/crates/somnia-worker/src/lib.rs
-@@ -0,0 +1,6232 @@
+@@ -0,0 +1,6255 @@
 +//! Experimental headless adapter. No DOM, egui, filesystem or UI thread access.
 +use wasm_bindgen::prelude::*;
 +use std::sync::Arc;
@@ -1257,7 +1257,7 @@ index 0000000..5b80b79
 +                        _ => return Err("the line rule is multiple, atLeast or exactly".into()),
 +                    });
 +                }
-+                "pageBreakBefore" | "keepNext" | "keepLines" | "widowControl" | "contextualSpacing" => {
++                "pageBreakBefore" | "keepNext" | "keepLines" | "widowControl" | "contextualSpacing" | "suppressLineNumbers" => {
 +                    flags.push((k.as_str(), val.as_bool().ok_or_else(|| format!("paragraph field {k} must be true or false"))?));
 +                }
 +                "indentFirst" => ifirst = Some(num(k, val, -1440.0, 1440.0)?),
@@ -1306,6 +1306,7 @@ index 0000000..5b80b79
 +                    "keepNext" => p.props.keep_next = Some(*v),
 +                    "keepLines" => p.props.keep_lines = Some(*v),
 +                    "contextualSpacing" => p.props.contextual_spacing = Some(*v),
++                    "suppressLineNumbers" => p.props.suppress_line_numbers = Some(*v),
 +                    _ => p.props.widow_control = Some(*v),
 +                }
 +            }
@@ -1337,9 +1338,13 @@ index 0000000..5b80b79
 +            return Err("paragraph range is out of bounds".into());
 +        }
 +        let mut rows = Vec::new();
++        let mut no_line_numbers = Vec::new();
 +        for b in first..=last {
 +            match self.para_at(b) {
-+                Some(p) => rows.push(self.doc.styles.resolve_para(&p.props)),
++                Some(p) => {
++                    rows.push(self.doc.styles.resolve_para(&p.props));
++                    no_line_numbers.push(p.props.suppress_line_numbers == Some(true));
++                }
 +                None => return Err(format!("block {b} is not a paragraph")),
 +            }
 +        }
@@ -1374,6 +1379,7 @@ index 0000000..5b80b79
 +            "keepLines": same(&rows, |r| r.keep_lines),
 +            "widowControl": same(&rows, |r| r.widow_control),
 +            "contextualSpacing": same(&rows, |r| r.contextual_spacing),
++            "suppressLineNumbers": no_line_numbers.first().filter(|f| no_line_numbers.iter().all(|x| x == *f)),
 +            "lineRule": same(&rows, |r| match r.line_spacing {
 +                LineSpacing::Multiple(m) => ("multiple", m.to_bits()),
 +                LineSpacing::AtLeast(v) => ("atLeast", v.to_bits()),
@@ -4806,6 +4812,23 @@ index 0000000..5b80b79
 +        for bad in [r#"{"rowHeight":{"rule":"exact"}}"#, r#"{"rowHeight":{"rule":"exact","value":0}}"#, r#"{"rowHeight":{"rule":"exact","value":2000}}"#, r#"{"rowHeight":{"rule":"auto","value":5}}"#, r#"{"rowHeight":{"rule":"x"}}"#, r#"{"rowHeight":5}"#, r#"{"allRows":true}"#, r#"{"rowHeight":{"rule":"exact","value":10,"extra":1}}"#] {
 +            assert!(s.do_set_table_layout(blk, bad).is_err(), "{bad}");
 +        }
++    }
++    #[test]
++    fn suppress_line_numbers_sets_reports_roundtrips_and_validates() {
++        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
++        let st = |s: &DocSession, a: usize, b: usize| serde_json::from_str::<serde_json::Value>(&s.do_para_state(a, b).unwrap()).unwrap();
++        assert_eq!(st(&s, 0, 0)["suppressLineNumbers"].as_bool(), Some(false));
++        s.do_para_format(0, 0, r#"{"suppressLineNumbers":true}"#).unwrap();
++        assert_eq!((st(&s, 0, 0)["suppressLineNumbers"].as_bool(), st(&s, 0, 1)["suppressLineNumbers"].is_null()), (Some(true), true), "mixed paragraphs report null");
++        s.do_set_page_setup(r#"{"lineNumbers":{"countBy":1,"restart":"page"}}"#).unwrap();
++        assert!(s.paginate() >= 1);
++        let re = DocSession::from_bytes(&s.save().unwrap()).unwrap();
++        assert_eq!(st(&re, 0, 0)["suppressLineNumbers"].as_bool(), Some(true));
++        for bad in [r#"{"suppressLineNumbers":"yes"}"#, r#"{"suppressLineNumbers":1}"#, r#"{"suppressLineNumbers":null}"#] {
++            assert!(s.do_para_format(0, 0, bad).is_err(), "{bad}");
++        }
++        s.do_para_format(0, 0, r#"{"suppressLineNumbers":false}"#).unwrap();
++        assert_eq!(st(&s, 0, 0)["suppressLineNumbers"].as_bool(), Some(false));
 +    }
 +    #[test]
 +    fn text_to_table_splits_at_tabs_and_refuses_unsuitable_paragraphs() {

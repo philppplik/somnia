@@ -2645,6 +2645,7 @@
   "documents.table.sort_desc": "Sort rows Z to A by this column",
   "documents.table.table_to_text": "Convert table to text",
   "documents.table.fromText": "Text to table",
+  "documents.para.opt.suppressLineNumbers": "No line numbers for this paragraph",
   "documents.list.demote": "Demote list item",
   "documents.find.label": "Find and replace",
   "documents.find.query": "Find",

@@ -2645,6 +2645,7 @@
   "documents.table.sort_desc": "Zeilen nach dieser Spalte Z bis A sortieren",
   "documents.table.table_to_text": "Tabelle in Text umwandeln",
   "documents.table.fromText": "Text in Tabelle",
+  "documents.para.opt.suppressLineNumbers": "Keine Zeilennummern für diesen Absatz",
   "documents.list.demote": "Listeneintrag tieferstufen",
   "documents.find.label": "Suchen und Ersetzen",
   "documents.find.query": "Suchen",
