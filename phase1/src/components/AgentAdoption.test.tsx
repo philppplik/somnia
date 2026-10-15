@@ -34,3 +34,17 @@ test('no raw form controls remain anywhere in the agent area',()=>{
   assert.doesNotMatch(source,/<(button|input|select|textarea)\b/,f);
  }
 });
+
+test('sound proposals mount the audible Sound review (diff plus preview button), accept stays with the host',()=>{
+ const soundProposal:AgentProposal={id:'p2',file:'mix.mp3',added:1,removed:1,
+  lines:[{kind:'del',text:'{}'},{kind:'add',text:'{"pitch":2}'}],
+  native:{id:'proposal-2',runId:'run-1',
+   base:{documentId:'doc-2',path:'mix.mp3',studioKind:'sound',revision:1,adapter:'sound-settings-v1'},
+   before:'{}',after:'{"pitch":2}',state:'review',origin:'ai:run-1:proposal-2'}};
+ const html=renderToStaticMarkup(<NativeProposalReview proposal={soundProposal} onAccept={()=>{}} onReject={()=>{}}/>);
+ assert.match(html,/data-testid="sound-review"/,'the Sound-owned review body is mounted');
+ assert.match(html,/data-testid="sound-review-pitch"/,'the settings diff is shown');
+ assert.match(html,/0 st → 2 st/,'before and after values are visible');
+ assert.match(html,/data-testid="sound-review-preview"/,'the audible preview action is offered');
+ assert.match(html,/>Accept preview</,'accept stays with the shared host');
+});

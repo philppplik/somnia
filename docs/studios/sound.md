@@ -54,7 +54,7 @@ wasm 1.5 MB raw in this build; 3.5 s stereo MP3 decode + trim + normalize 20-40 
 
 ## Not in this package (rest plan)
 
-1. Mount the custom audible `components/sound/SoundProposalReview.tsx` in the panel. The underlying Sound tool bridge is already connected (see above).
+1. DONE (D2): the audible `components/sound/SoundProposalReview.tsx` is mounted for `sound-settings-v1` proposals via `NativeProposalReview`; see [Sound proposal review](sound-proposal-review.md).
 2. Copy/paste of regions and several regions per clip (Paket 2 has one region: crop, cut, or effects only on the selection).
 3. Writing back into the project folder. Media is not part of the project text-file store, so Save As (native dialog on desktop, download on web) is all that exists.
 4. True streaming and an inner progress percentage for long single stages (progress is per stage today; 25 MB media limit, full offline render).
