@@ -258,5 +258,7 @@
  "photos.proof.model.coated": "Gestrichen",
  "photos.proof.model.uncoated": "Ungestrichen",
  "photos.proof.model.newsprint": "Zeitungsdruck",
- "photos.proof.share": "{pct} % außerhalb des Gamut"
+ "photos.proof.share": "{pct} % außerhalb des Gamut",
+ "photos.smart.camera": "Kamera",
+ "photos.smart.anyCamera": "Alle Kameras"
 }

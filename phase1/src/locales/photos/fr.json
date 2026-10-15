@@ -258,5 +258,7 @@
  "photos.proof.model.coated": "Couché",
  "photos.proof.model.uncoated": "Non couché",
  "photos.proof.model.newsprint": "Papier journal",
- "photos.proof.share": "{pct} % hors gamut"
+ "photos.proof.share": "{pct} % hors gamut",
+ "photos.smart.camera": "Appareil",
+ "photos.smart.anyCamera": "Tous les appareils"
 }

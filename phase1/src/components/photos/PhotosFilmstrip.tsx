@@ -20,6 +20,7 @@ import {useCaption} from '../../lib/photos/captions';
 import {cullBatch,cullSetFlag,cullSetLabel,cullSetTags,cullAddTags,cullSetCaption} from '../../lib/photos/cullHistory';
 import {copyMetadata,hasMetadataClip,pasteMetadata} from '../../lib/photos/metadataClipboard';
 import {SOFT_PROOF_MODEL_IDS} from '../../lib/photos/softProof';
+import {allCameras,useCaptureDates} from '../../lib/photos/captureDates';
 import {groupForStrip,groupPhotos,setStackCover,ungroupStacks,useStackCovers,useStacks} from '../../lib/photos/stacks';
 import {hidePhotos,unhideAll,unhidePhotos} from '../../lib/photos/hidden';
 import {nextCopyName} from '../../lib/photos/virtualCopy';
@@ -91,7 +92,8 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
  const [proof,setProof]=usePanelState<boolean>('photos.softProof',false); // workspace reads these: shared view state like the split
  const [gamutWarn,setGamutWarn]=usePanelState<boolean>('photos.gamutWarn',false);
  const [proofModel,setProofModel]=usePanelState<string>('photos.proofModel','coated');
- const [gamutSharePct]=usePanelState<number>('photos.gamutShare',0); // published by the workspace // shared with the workspace toolbar
+ const [gamutSharePct]=usePanelState<number>('photos.gamutShare',0); // published by the workspace
+ useCaptureDates(); // camera options refresh as EXIF resolves // shared with the workspace toolbar
  const [splitDir,setSplitDir]=usePanelState<'vertical'|'horizontal'>('photos.splitDir','vertical');
  const [slide,setSlide]=usePanelState<boolean>('photos.slideshow',false);
  const [slideMs,setSlideMs]=usePanelState<number>('photos.slideshowMs',4000);
@@ -197,6 +199,10 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
             {PHOTO_LABELS.map(l=><option key={l} value={l}>{t(`photos.label.${l}`)}</option>)}
            </NativeSelect>
            <NativeInput type="text" value={smart.tag} aria-label={t('photos.smart.tag')} title={t('photos.smart.tag')} placeholder={t('photos.smart.tag')} onChange={e=>setSmart({...smart,tag:e.currentTarget.value})} className="h-7" data-testid="photos-smart-tag"/>
+           <NativeSelect value={smart.camera??''} aria-label={t('photos.smart.camera')} title={t('photos.smart.camera')} onChange={e=>setSmart({...smart,camera:e.currentTarget.value})} className="h-7" data-testid="photos-smart-camera">
+            <option value="">{t('photos.smart.anyCamera')}</option>
+            {allCameras().map(c=><option key={c} value={c}>{c}</option>)}
+           </NativeSelect>
           </div>}
          </div>
          <div className="grid gap-1">

@@ -258,5 +258,7 @@
  "photos.proof.model.coated": "Estucado",
  "photos.proof.model.uncoated": "No estucado",
  "photos.proof.model.newsprint": "Papel prensa",
- "photos.proof.share": "{pct} % fuera de gama"
+ "photos.proof.share": "{pct} % fuera de gama",
+ "photos.smart.camera": "Cámara",
+ "photos.smart.anyCamera": "Todas las cámaras"
 }

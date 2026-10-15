@@ -258,5 +258,7 @@
  "photos.proof.model.coated": "Coated",
  "photos.proof.model.uncoated": "Uncoated",
  "photos.proof.model.newsprint": "Newsprint",
- "photos.proof.share": "{pct}% out of gamut"
+ "photos.proof.share": "{pct}% out of gamut",
+ "photos.smart.camera": "Camera",
+ "photos.smart.anyCamera": "Any camera"
 }

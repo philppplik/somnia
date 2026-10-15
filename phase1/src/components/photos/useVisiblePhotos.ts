@@ -14,7 +14,7 @@ import {useHidden} from '../../lib/photos/hidden';
 import {useCollectionMembers} from '../../lib/photos/collections';
 
 /** The smart filter's rule set: an on switch plus the AND-combined rules minimum rating, flag, color label and exact keyword tag. */
-export interface SmartFilter{on:boolean;minRating:number;flag:string;label:string;tag:string}
+export interface SmartFilter{on:boolean;minRating:number;flag:string;label:string;tag:string;camera?:string}
 /** The filmstrip's visible list: developable photos after the rating/flag/label filter and the chosen sort. Shared by the filmstrip and the live library grid. */
 export function useVisiblePhotos(){
  const media=useMedia();
@@ -33,17 +33,18 @@ export function useVisiblePhotos(){
  const collectionMembers=useCollectionMembers(collection);
  const collectionSet=collection?new Set(collectionMembers):null;
  const filter=String(minRating); // legacy stored numbers and 'pick'/'reject'/'unrated'/'label:*' share one select
- const smartOn=smart.on&&(smart.minRating>0||smart.flag!==''||smart.label!==''||smart.tag.trim()!=='');
+ const smartOn=smart.on&&(smart.minRating>0||smart.flag!==''||smart.label!==''||smart.tag.trim()!==''||(smart.camera??'').trim()!=='');
  const hidden=useHidden();
  const hiddenSet=showHidden?new Set<string>():new Set(hidden);
  const total=developablePhotos(media.items).length;
  const all=developablePhotos(media.items).filter(p=>!hiddenSet.has(p.name));
  const q=query.trim().toLowerCase();
  const smartTag=smart.tag.trim();
- const visible=all.filter(p=>(!collectionSet||collectionSet.has(p.name))&&(!smartOn||((ratings[p.name]??0)>=smart.minRating&&(smart.flag===''||(smart.flag==='none'?flags[p.name]==null:flags[p.name]===smart.flag))&&(smart.label===''||(smart.label==='none'?labels[p.name]==null:labels[p.name]===smart.label))&&(smartTag===''||(tags[p.name]??[]).some(t=>t.toLowerCase()===smartTag.toLowerCase())))));
+ const smartCamera=(smart.camera??'').trim();
+ const visible=all.filter(p=>(!collectionSet||collectionSet.has(p.name))&&(!smartOn||((ratings[p.name]??0)>=smart.minRating&&(smart.flag===''||(smart.flag==='none'?flags[p.name]==null:flags[p.name]===smart.flag))&&(smart.label===''||(smart.label==='none'?labels[p.name]==null:labels[p.name]===smart.label))&&(smartTag===''||(tags[p.name]??[]).some(t=>t.toLowerCase()===smartTag.toLowerCase()))&&(smartCamera===''||getCaptureEntry(p.name,p.size)?.cam===smartCamera)))); // unresolved cache entries never match a camera rule
  const developable=developablePhotos(media.items);
  const developableKey=developable.map(p=>`${p.name}:${p.size}`).join('|');
- useEffect(()=>{if(sort==='capture')ensureCaptureDates(developable);},[sort,developableKey]); // eslint-disable-line react-hooks/exhaustive-deps -- the key is the stable identity of the list
+ useEffect(()=>{if(sort==='capture'||smartCamera!=='')ensureCaptureDates(developable);},[sort,developableKey,smartCamera]); // eslint-disable-line react-hooks/exhaustive-deps -- the key is the stable identity of the list
  const captureReady=sort==='capture'&&developable.every(p=>getCaptureEntry(p.name,p.size)!==null); // flip to date order only once everything resolved: no progressive jumping
  const dates:Record<string,number|null>={};if(captureReady)for(const p of developable)dates[p.name]=getCaptureEntry(p.name,p.size)!.t;
  const effectiveSort=sort==='capture'&&!captureReady?'library':sort;

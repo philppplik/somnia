@@ -258,5 +258,7 @@
  "photos.proof.model.coated": "Couchê",
  "photos.proof.model.uncoated": "Não couchê",
  "photos.proof.model.newsprint": "Papel jornal",
- "photos.proof.share": "{pct} % fora da gama"
+ "photos.proof.share": "{pct} % fora da gama",
+ "photos.smart.camera": "Câmera",
+ "photos.smart.anyCamera": "Todas as câmeras"
 }

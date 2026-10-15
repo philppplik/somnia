@@ -677,6 +677,35 @@ test('smart filter: the grouped menu combines rating, flag, label and tag (light
   await page.evaluate(async()=>{const r=await import('/src/lib/photos/ratings.ts');const f=await import('/src/lib/photos/flags.ts');for(const n of['strip-1.png','strip-2.png','strip-3.png']){r.setRating(n,0);f.setFlag(n,null);}}); // leave no state behind
  }
 });
+test('smart filter camera: narrows the strip to the chosen EXIF camera (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
+  await page.evaluate(async()=>{
+   const ps=await import('/src/store/panelStateStore.ts');const cd=await import('/src/lib/photos/captureDates.ts');const med=await import('/src/lib/media.ts');
+   ps.panelStateStore.set('photos.smartFilter',{on:false,minRating:0,flag:'',label:'',tag:'',camera:''});
+   const size=(n:string)=>med.getMedia().items.find(i=>i.name===n)!.size;
+   cd.putCaptureDate('strip-1.png',size('strip-1.png'),null,'Canon EOS R5');
+   cd.putCaptureDate('strip-2.png',size('strip-2.png'),null,'Sony A7 IV');
+   cd.putCaptureDate('strip-3.png',size('strip-3.png'),null,null); // resolved, no camera
+  });
+  await page.getByTestId('photos-filmstrip-menu').click();
+  await page.getByTestId('photos-filmstrip-smart').click();
+  await page.getByTestId('photos-smart-camera').selectOption('Canon EOS R5');
+  await expect(page.getByTestId('photos-filmstrip-item-strip-1.png')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-2.png')).toHaveCount(0);
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toHaveCount(0); // no camera on record: no match
+  await page.screenshot({path:`test-results/ds-photos-smart-camera-${theme}.png`,fullPage:true});
+  await page.getByTestId('photos-smart-camera').selectOption('');
+  await expect(page.getByTestId('photos-filmstrip-item-strip-2.png')).toBeVisible();
+  await page.getByTestId('photos-filmstrip-smart').click(); // off
+  await page.keyboard.press('Escape');
+  await page.evaluate(async()=>{const ps=await import('/src/store/panelStateStore.ts');ps.panelStateStore.set('photos.smartFilter',{on:false,minRating:0,flag:'',label:'',tag:'',camera:''});});
+ }
+});
+
 test('stack survey: compare the members and pick the cover (light and dark)',async({page})=>{
  for(const theme of['light','dark']){
   await page.goto('/test/design-system/?view=photos-filmstrip');

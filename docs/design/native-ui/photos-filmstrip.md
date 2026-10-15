@@ -703,3 +703,18 @@ checks it grows on newsprint
 (`test-results/ds-photos-softproof-{light,dark}.png`); the model
 has unit tests for the boundary, the proof mapping, the stocks and
 the overlay.
+
+## Camera smart-filter rule (P127)
+
+The smart filter gains a camera rule: the EXIF cache (now v2,
+entries carry the camera string next to the capture date - one
+fetch per photo feeds both) fills a select with every distinct
+camera in the library. Choosing one narrows the strip and the grid
+like the other smart rules; photos without a resolved cache entry
+never match a camera rule (progressive, honest). Saved filter sets
+carry the camera along (older sets without it behave as "any").
+
+Coverage: the light/dark gallery leg seeds the cache with two
+cameras, narrows to one and back
+(`test-results/ds-photos-smart-camera-{light,dark}.png`); the cache
+unit test covers camera storage and the distinct-camera list.
