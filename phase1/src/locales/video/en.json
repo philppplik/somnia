@@ -51,6 +51,10 @@
  "video.clipMuted": "muted",
  "video.missingSource": "missing",
  "video.split": "Split at playhead",
+ "video.undo": "Undo",
+ "video.undoHint": "Undo the last timeline edit (Ctrl+Z)",
+ "video.redo": "Redo",
+ "video.redoHint": "Redo the undone timeline edit (Ctrl+Shift+Z)",
  "video.splitHint": "Split the clip under the playhead in two (S)",
  "video.selectedClip": "{name} · {length} s",
  "video.timelinePanel": "Timeline",
@@ -113,5 +117,7 @@
  "video.review.cancelled": "Export cancelled.",
  "video.review.unavailable": "Export unavailable. Check source media and encoder support.",
  "video.review.failed": "Export failed. Timeline and settings are kept.",
- "cmd.video.export.open": "Export video..."
+ "cmd.video.export.open": "Export video...",
+ "cmd.video.timeline.undo": "Undo timeline edit",
+ "cmd.video.timeline.redo": "Redo timeline edit"
 }

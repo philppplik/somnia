@@ -2,7 +2,7 @@ import {registerCommandSpec} from '../commandBridge';
 import {commandRegistry} from '../commandRegistry';
 import type {CommandSpec,CommandSchema} from '../commandSpec';
 import {getMedia} from '../media';
-import {addTimelineClip,addTimelineClipsFromDialog,cancelVideoExport,deleteTimelineClip,exportVideoFile,getVideoSession,moveTimelineClip,resetTimeline,selectTimelineClip,setTimelineClipCrossfade,setTimelineClipGain,setVideoFormat,splitTimelineAt,toggleTimelineClipMute,trimTimelineClip} from './session';
+import {addTimelineClip,addTimelineClipsFromDialog,cancelVideoExport,deleteTimelineClip,exportVideoFile,getVideoSession,moveTimelineClip,redoVideoEdit,resetTimeline,selectTimelineClip,setTimelineClipCrossfade,setTimelineClipGain,setVideoFormat,splitTimelineAt,toggleTimelineClipMute,trimTimelineClip,undoVideoEdit} from './session';
 import {addTitleClip,setTitleLength,updateTitle} from './titleSession';
 import {isTitleClip,type TitleSpec} from './titles';
 import {timelineDuration} from './timeline';
@@ -37,6 +37,8 @@ export function videoCommandSpecs():CommandSpec<unknown,unknown>[] {
   spec('video.clip.crossfade','Set selected clip crossfade',(p:{seconds:number})=>setTimelineClipCrossfade(root(),clip().id,p.seconds),object({seconds:number()}),()=>selectionReady()&&activeVideoSession()!.clips.at(-1)?.id!==clip().id),
   spec('video.timeline.split','Split video timeline at time',(p:{seconds:number})=>{const s=activeVideoSession()!;if(p.seconds>=timelineDuration(s.clips))fail('Split time is outside the timeline.');splitTimelineAt(s.name,p.seconds);},object({seconds:number()}),()=>ready()&&!!activeVideoSession()!.clips.length,'Edit'),
   spec('video.timeline.reset','Reset video timeline',()=>resetTimeline(root()),undefined,ready,'Edit'),
+  spec('video.timeline.undo','Undo timeline edit',()=>undoVideoEdit(root()),undefined,()=>ready()&&!!activeVideoSession()!.history.past.length,'Edit'),
+  spec('video.timeline.redo','Redo timeline edit',()=>redoVideoEdit(root()),undefined,()=>ready()&&!!activeVideoSession()!.history.future.length,'Edit'),
   spec('video.title.add','Add a title card',()=>addTitleClip(root(),Number.MAX_SAFE_INTEGER,{text:''}),undefined,ready,'Insert'),
   spec('video.title.update','Edit selected title card',(p:Partial<TitleSpec>)=>updateTitle(root(),clip().id,p),object(titleProperties,[]),titleSelection,'Edit'),
   spec('video.title.duration','Set selected title card duration',(p:{seconds:number})=>setTitleLength(root(),clip().id,p.seconds),object({seconds:number(0.05,3600)}),titleSelection,'Edit'),

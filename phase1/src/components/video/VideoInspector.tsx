@@ -48,7 +48,7 @@ export function VideoControls({name}:{name:string}){
   </div>
   <TitleAddRow disabled={!ready} onAdd={()=>addTitleClip(name,selectedIndex>=0?clipRanges(s.clips)[selectedIndex].end:Number.MAX_SAFE_INTEGER)}/>
   {selected&&isTitleClip(selected)&&<>
-   <TitleInspector clip={selected} onChange={p2=>updateTitle(name,selected.id,p2)} onDuration={d=>setTitleLength(name,selected.id,d)}/>
+   <TitleInspector clip={selected} onChange={p2=>updateTitle(name,selected.id,p2,`title:${selected.id}`)} onDuration={d=>setTitleLength(name,selected.id,d,`title-len:${selected.id}`)}/>
    <div className={row}>
     <div className="flex flex-wrap gap-2">
      <Button size="compact" variant="outline" disabled={selectedIndex<=0} onClick={()=>moveTimelineClip(name,selected.id,-1)} data-testid="video-clip-left">{t('video.moveLeft')}</Button>
@@ -56,7 +56,7 @@ export function VideoControls({name}:{name:string}){
      <Button size="compact" variant="ghost" disabled={s.clips.length<=1} onClick={()=>{deleteTimelineClip(name,selected.id);selectTimelineClip(name,null);}} data-testid="video-clip-delete">{t('video.deleteClip')}</Button>
     </div>
     {selectedIndex>=0&&selectedIndex<s.clips.length-1&&<label>{t('video.transition')}
-     <NativeInput type="number" className={`${field} mt-1`} min={0} max={clipDuration(selected)} step={0.1} value={fadeOf(selected)} onChange={e=>setTimelineClipCrossfade(name,selected.id,Number(e.target.value))} data-testid="video-clip-transition-duration"/>
+     <NativeInput type="number" className={`${field} mt-1`} min={0} max={clipDuration(selected)} step={0.1} value={fadeOf(selected)} onChange={e=>setTimelineClipCrossfade(name,selected.id,Number(e.target.value),`fade:${selected.id}`)} data-testid="video-clip-transition-duration"/>
     </label>}
    </div>
   </>}
@@ -64,15 +64,15 @@ export function VideoControls({name}:{name:string}){
    <span className="text-ink">{t('video.clipTitle',{index:selectedIndex+1})}</span>
    <span className="truncate text-ink-3" data-testid="video-clip-source">{selected.source}</span>
    <div className="grid grid-cols-2 gap-2">
-    <label>{t('video.trimStart')}<NativeInput type="number" className={`${field} mt-1`} min={0} step={0.01} value={selected.in_s} onChange={e=>trimTimelineClip(name,selected.id,'in',Number(e.target.value))} data-testid="video-clip-in-input"/></label>
-    <label>{t('video.trimEnd')}<NativeInput type="number" className={`${field} mt-1`} min={0} step={0.01} value={selected.out_s} onChange={e=>trimTimelineClip(name,selected.id,'out',Number(e.target.value))} data-testid="video-clip-out-input"/></label>
+    <label>{t('video.trimStart')}<NativeInput type="number" className={`${field} mt-1`} min={0} step={0.01} value={selected.in_s} onChange={e=>trimTimelineClip(name,selected.id,'in',Number(e.target.value),`trim:${selected.id}:in`)} data-testid="video-clip-in-input"/></label>
+    <label>{t('video.trimEnd')}<NativeInput type="number" className={`${field} mt-1`} min={0} step={0.01} value={selected.out_s} onChange={e=>trimTimelineClip(name,selected.id,'out',Number(e.target.value),`trim:${selected.id}:out`)} data-testid="video-clip-out-input"/></label>
    </div>
    <label className="grid gap-1">{t('video.gain',{percent:Math.round(selected.gain*100)})}
-    <NativeInput type="range" className="accent-[var(--accent)]" min={0} max={MAX_GAIN} step={0.05} value={selected.gain} onChange={e=>setTimelineClipGain(name,selected.id,Number(e.target.value))} data-testid="video-clip-gain"/>
+    <NativeInput type="range" className="accent-[var(--accent)]" min={0} max={MAX_GAIN} step={0.05} value={selected.gain} onChange={e=>setTimelineClipGain(name,selected.id,Number(e.target.value),`gain:${selected.id}`)} data-testid="video-clip-gain"/>
    </label>
    <label className="flex items-center gap-2"><NativeInput type="checkbox" className={check} checked={selected.muted} onChange={()=>toggleTimelineClipMute(name,selected.id)} data-testid="video-clip-mute"/>{t('video.clipMute')}</label>
    {selectedIndex>=0&&selectedIndex<s.clips.length-1&&<label>{t('video.transition')}
-    <NativeInput type="number" className={`${field} mt-1`} min={0} max={Math.min(clipDuration(selected),clipDuration(s.clips[selectedIndex+1]))} step={0.1} value={fadeOf(selected)} onChange={e=>setTimelineClipCrossfade(name,selected.id,Number(e.target.value))} data-testid="video-clip-transition-duration"/>
+    <NativeInput type="number" className={`${field} mt-1`} min={0} max={Math.min(clipDuration(selected),clipDuration(s.clips[selectedIndex+1]))} step={0.1} value={fadeOf(selected)} onChange={e=>setTimelineClipCrossfade(name,selected.id,Number(e.target.value),`fade:${selected.id}`)} data-testid="video-clip-transition-duration"/>
    </label>}
    <div className="flex flex-wrap gap-2">
     <Button size="compact" variant="outline" disabled={selectedIndex<=0} onClick={()=>moveTimelineClip(name,selected.id,-1)} data-testid="video-clip-left">{t('video.moveLeft')}</Button>

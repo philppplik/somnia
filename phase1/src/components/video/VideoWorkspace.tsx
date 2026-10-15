@@ -1,9 +1,9 @@
 import {useCallback,useEffect,useRef,useState} from 'react';
-import {ChevronsLeft,ChevronsRight,Download,Pause,Play,Scissors,Volume2,VolumeX} from '../../lib/icons';
+import {ChevronsLeft,ChevronsRight,Download,Pause,Play,Redo2,Scissors,Undo2,Volume2,VolumeX} from '../../lib/icons';
 import {Button} from '../ui/button';
 import {useT} from '../../lib/useT';
 import {executeCommand} from '../../lib/commands';
-import {addTimelineClipsFromDialog,cancelVideoExport,deleteTimelineClip,getFilmstrip,moveTimelineClip,openVideo,selectTimelineClip,splitTimelineAt,toggleTimelineClipMute,trimTimelineClip,useVideoSession,videoIsEdited} from '../../lib/video/session';
+import {addTimelineClipsFromDialog,cancelVideoExport,deleteTimelineClip,getFilmstrip,moveTimelineClip,openVideo,redoVideoEdit,selectTimelineClip,splitTimelineAt,toggleTimelineClipMute,trimTimelineClip,undoVideoEdit,useVideoSession,videoCanRedo,videoCanUndo,videoIsEdited} from '../../lib/video/session';
 import {clipDisplayName,isTitleClip,needsSourceFile} from '../../lib/video/titles';
 import {TitlePreview} from './TitlePreview';
 import {useTitlePlayback} from './useTitlePlayback';
@@ -101,10 +101,13 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
  const onKey=(e:React.KeyboardEvent)=>{
   const skip=e.shiftKey?5:1;
   const selected=session?.selectedClipId??null;
+  const mod=e.ctrlKey||e.metaKey;
+  if(mod&&(e.key==='z'||e.key==='Z')){e.preventDefault();(e.shiftKey?redoVideoEdit:undoVideoEdit)(item.name);return;}
+  if(mod&&(e.key==='y'||e.key==='Y')){e.preventDefault();redoVideoEdit(item.name);return;}
   if(e.key===' '){e.preventDefault();toggle();}
   else if(e.key==='ArrowRight'&&!e.altKey){e.preventDefault();seek(playhead+skip);}
   else if(e.key==='ArrowLeft'&&!e.altKey){e.preventDefault();seek(playhead-skip);}
-  else if(e.key==='i'||e.key==='o'){e.preventDefault();const el=mainEl();if(entry)trimTimelineClip(item.name,entry.range.clip.id,e.key==='i'?'in':'out',el?el.currentTime:entry.sourceTime);}
+  else if(e.key==='i'||e.key==='o'){e.preventDefault();const el=mainEl();if(entry)trimTimelineClip(item.name,entry.range.clip.id,e.key==='i'?'in':'out',el?el.currentTime:entry.sourceTime,`trim:${entry.range.clip.id}:${e.key==='i'?'in':'out'}`);}
   else if(e.key==='s'||e.key==='S'){e.preventDefault();splitHere();}
   else if((e.key==='Delete'||e.key==='Backspace')&&selected){e.preventDefault();deleteTimelineClip(item.name,selected);}
   else if(e.key==='ArrowRight'&&e.altKey&&selected){e.preventDefault();moveTimelineClip(item.name,selected,1);}
@@ -151,6 +154,8 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
      <Button size="icon" variant="ghost" aria-label={t('video.frameFwd')} disabled={!playable||!clips.length} onClick={()=>step(1)} data-testid="video-frame-fwd"><ChevronsRight size={16}/></Button>
      <span className="tabular-nums" data-testid="video-time">{formatTime(playhead)} / {formatTime(duration)}</span>
      <Button size="icon" variant="ghost" aria-label={t('video.split')} title={t('video.splitHint')} disabled={!entry||exporting} onClick={splitHere} data-testid="video-split"><Scissors size={16}/></Button>
+     <Button size="icon" variant="ghost" aria-label={t('video.undo')} title={t('video.undoHint')} disabled={!videoCanUndo(session??null)} onClick={()=>undoVideoEdit(item.name)} data-testid="video-undo"><Undo2 size={16}/></Button>
+     <Button size="icon" variant="ghost" aria-label={t('video.redo')} title={t('video.redoHint')} disabled={!videoCanRedo(session??null)} onClick={()=>redoVideoEdit(item.name)} data-testid="video-redo"><Redo2 size={16}/></Button>
      {selectedClip&&<span className="rounded-full bg-[var(--accent)]/15 px-2 py-0.5 text-[11px] text-ink" data-testid="video-selected-chip">{t('video.selectedClip',{name:clipDisplayName(selectedClip,selectedClip.source.replace(/^.*[\\/]/,'')),length:(selectedClip.out_s-selectedClip.in_s).toFixed(2)})}</span>}
      <span className="flex-1"/>
      <Button size="icon" variant="ghost" aria-label={t(muted?'video.unmute':'video.mute')} aria-pressed={muted} onClick={()=>setMuted(m=>!m)} data-testid="video-mute">{muted?<VolumeX size={16}/>:<Volume2 size={16}/>}</Button>
@@ -159,7 +164,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
     <div className="px-4 pb-2 pt-1">
      <VideoTimeline clips={clips} selectedId={session?.selectedClipId??null} position={playhead} missing={missing}
       onSeek={seek} onSelect={id=>selectTimelineClip(item.name,id)}
-      onTrim={(id,edge,at)=>trimTimelineClip(item.name,id,edge,at)}
+      onTrim={(id,edge,at)=>trimTimelineClip(item.name,id,edge,at,`trim:${id}:${edge}`)}
       onMove={(id,by)=>moveTimelineClip(item.name,id,by)}
       trackHeight={48}
       renderStrip={c=>needsSourceFile(c)&&filmstrip?<FilmstripStrip controller={filmstrip} source={c.source} in_s={c.in_s} out_s={c.out_s} name={shortName(c.source)}/>:null}

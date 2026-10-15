@@ -51,6 +51,10 @@
  "video.clipMuted": "sem som",
  "video.missingSource": "ausente",
  "video.split": "Dividir no cursor",
+ "video.undo": "Desfazer",
+ "video.undoHint": "Desfazer a última edição da linha do tempo (Ctrl+Z)",
+ "video.redo": "Refazer",
+ "video.redoHint": "Refazer a edição desfeita (Ctrl+Shift+Z)",
  "video.splitHint": "Divide em dois o clipe sob o cursor (S)",
  "video.selectedClip": "{name} · {length} s",
  "video.timelinePanel": "Linha do tempo",
@@ -113,5 +117,7 @@
  "video.review.cancelled": "Exportação cancelada.",
  "video.review.unavailable": "Exportação indisponível. Verifique as fontes e o codificador.",
  "video.review.failed": "Falha na exportação. Os ajustes são mantidos.",
- "cmd.video.export.open": "Exportar vídeo..."
+ "cmd.video.export.open": "Exportar vídeo...",
+ "cmd.video.timeline.undo": "Desfazer edição da linha do tempo",
+ "cmd.video.timeline.redo": "Refazer edição da linha do tempo"
 }

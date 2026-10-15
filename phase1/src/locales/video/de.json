@@ -51,6 +51,10 @@
  "video.clipMuted": "stumm",
  "video.missingSource": "fehlt",
  "video.split": "Am Abspielkopf teilen",
+ "video.undo": "Rückgängig",
+ "video.undoHint": "Letzten Schnittschritt rückgängig machen (Strg+Z)",
+ "video.redo": "Wiederholen",
+ "video.redoHint": "Rückgängig gemachten Schritt wiederholen (Strg+Umschalt+Z)",
  "video.splitHint": "Den Clip unter dem Abspielkopf in zwei teilen (S)",
  "video.selectedClip": "{name} · {length} s",
  "video.timelinePanel": "Timeline",
@@ -113,5 +117,7 @@
  "video.review.cancelled": "Export abgebrochen.",
  "video.review.unavailable": "Export nicht verfügbar. Quellen und Encoder prüfen.",
  "video.review.failed": "Export fehlgeschlagen. Timeline und Einstellungen bleiben erhalten.",
- "cmd.video.export.open": "Video exportieren..."
+ "cmd.video.export.open": "Video exportieren...",
+ "cmd.video.timeline.undo": "Schnitt rückgängig machen",
+ "cmd.video.timeline.redo": "Schnitt wiederholen"
 }

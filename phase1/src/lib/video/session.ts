@@ -3,6 +3,7 @@ import {useSyncExternalStore} from 'react';
 import {VideoEngine,type VideoEngineLike} from './engine';
 import {DEFAULT_FORMAT,exportName,type VideoFormat} from './recipe';
 import {fullClip,isNeutralTimeline,moveClip,rippleDelete,sanitizeClips,setClipEdge,setCrossfade,splitAt,timelineDuration,type TimelineClip} from './timeline';
+import {emptyVideoHistory,pushHistory,redoHistory,undoHistory,type VideoHistory} from './history';
 import {needsSourceFile} from './titles';
 import {FilmstripController} from './filmstrip-controller';
 import {FilmstripEngine} from './filmstrip-engine';
@@ -13,7 +14,7 @@ import type {VideoCapabilities,VideoProbe,VideoProgress,VideoReport} from './pro
 export type VideoStatus='loading'|'ready'|'error'|'exporting';
 export interface VideoResult{blob:Blob;url:string;report:VideoReport}
 export type VideoExportOutcome='downloaded'|'cancelled'|'unavailable';
-export interface VideoSession{exportOutcome?:VideoExportOutcome;name:string;status:VideoStatus;error:string;probe:VideoProbe|null;capabilities:VideoCapabilities|null;clips:TimelineClip[];selectedClipId:string|null;format:VideoFormat;progress:VideoProgress|null;result:VideoResult|null;ext:string}
+export interface VideoSession{exportOutcome?:VideoExportOutcome;name:string;status:VideoStatus;error:string;probe:VideoProbe|null;capabilities:VideoCapabilities|null;clips:TimelineClip[];selectedClipId:string|null;history:VideoHistory;format:VideoFormat;progress:VideoProgress|null;result:VideoResult|null;ext:string}
 const sessions=new Map<string,VideoSession>();
 let filmstrip:FilmstripController|null|undefined;
 /** One filmstrip controller per app run; null where workers are unavailable (unit tests, SSR). */
@@ -60,7 +61,7 @@ export async function openVideo(item:{name:string;url:string}):Promise<void>{
 }
 async function openVideoFresh(item:{name:string;url:string}):Promise<void>{
  stopMediaSync??=subscribeMedia(()=>{const live=new Set(getMedia().items.map(i=>i.name));for(const n of [...sessions.keys()])if(!live.has(n))closeVideo(n);});
- put({name:item.name,status:'loading',error:'',probe:null,capabilities:null,clips:[],selectedClipId:null,format:DEFAULT_FORMAT,progress:null,result:null,ext:fileExtension(item.name)});
+ put({name:item.name,status:'loading',error:'',probe:null,capabilities:null,clips:[],selectedClipId:null,history:emptyVideoHistory(),format:DEFAULT_FORMAT,progress:null,result:null,ext:fileExtension(item.name)});
  if(getMedia().items.find(i=>i.name===item.name)?.kind==='video-project'){patch(item.name,{status:'ready',ext:''});return;}
  try{
   const bytes=await fetch(item.url).then(r=>r.arrayBuffer());
@@ -75,14 +76,31 @@ async function openVideoFresh(item:{name:string;url:string}):Promise<void>{
   patch(item.name,{status:'ready',error:'',probe,ext:sniffed.ext,capabilities:await caps.catch(()=>null),clips:[fullClip(item.name,probe.duration)]});
  }catch(e){resetEngine(e);if(sessions.has(item.name))patch(item.name,{status:'error',error:message(e)},e);}
 }
-/** Applies a timeline edit and keeps every clip inside its source bounds. */
-export function editTimeline(root:string,edit:(clips:TimelineClip[])=>TimelineClip[]|null){
+/** Field-level clip equality: a clamped no-op edit must not flood the undo stack. */
+const sameClips=(a:TimelineClip[],b:TimelineClip[])=>a.length===b.length&&a.every((c,i)=>{
+ const d=b[i];return c.id===d.id&&c.source===d.source&&c.in_s===d.in_s&&c.out_s===d.out_s&&c.gain===d.gain&&c.muted===d.muted&&c.kind===d.kind&&c.crossfade_s===d.crossfade_s&&c.title===d.title;
+});
+/** Applies a timeline edit, keeps every clip inside its source bounds and records the previous state as one undo step. `historyKey` coalesces a continuous gesture (trim drag, gain slider, title typing) into a single step. */
+export function editTimeline(root:string,edit:(clips:TimelineClip[])=>TimelineClip[]|null,opts?:{historyKey?:string}){
  const s=sessions.get(root);if(!s)return;
  const next=edit(s.clips);
  if(!next)return;
  const clean=sanitizeClips(next,sourceDurations(next));
- put({...s,clips:clean,selectedClipId:clean.some(c=>c.id===s.selectedClipId)?s.selectedClipId:null});
+ if(sameClips(clean,s.clips))return;
+ put({...s,clips:clean,selectedClipId:clean.some(c=>c.id===s.selectedClipId)?s.selectedClipId:null,history:pushHistory(s.history,s.clips,opts?.historyKey??null,Date.now())});
 }
+/** Restores a snapshot: clamps it against the sources that are still open and keeps the selection only when it survives. */
+const restoreTimeline=(root:string,step:{history:VideoHistory;clips:TimelineClip[]}|null)=>{
+ const s=sessions.get(root);if(!s||!step)return;
+ const clean=sanitizeClips(step.clips,sourceDurations(step.clips));
+ put({...s,clips:clean,selectedClipId:clean.some(c=>c.id===s.selectedClipId)?s.selectedClipId:null,history:step.history});
+};
+/** One timeline edit back. The export result is not revived - re-export after undoing. */
+export const undoVideoEdit=(root:string)=>restoreTimeline(root,undoHistory(sessions.get(root)?.history??emptyVideoHistory(),sessions.get(root)?.clips??[]));
+/** Re-applies the newest undone edit. */
+export const redoVideoEdit=(root:string)=>restoreTimeline(root,redoHistory(sessions.get(root)?.history??emptyVideoHistory(),sessions.get(root)?.clips??[]));
+export const videoCanUndo=(s:VideoSession|null)=>!!s&&s.history.past.length>0;
+export const videoCanRedo=(s:VideoSession|null)=>!!s&&s.history.future.length>0;
 /** Appends a full-length clip of another video source (opened and probed on demand) and selects it. */
 export async function addTimelineClip(root:string,item:{name:string;url:string}){
  await openVideo(item);
@@ -105,10 +123,10 @@ export function deleteTimelineClip(root:string,id:string){
  editTimeline(root,clips=>clips.length>1||getMedia().items.find(i=>i.name===root)?.kind==='video-project'?rippleDelete(clips,id):clips);
 }
 export const moveTimelineClip=(root:string,id:string,by:number)=>editTimeline(root,clips=>{const i=clips.findIndex(c=>c.id===id);return i<0?clips:moveClip(clips,id,i+by);});
-export const trimTimelineClip=(root:string,id:string,edge:'in'|'out',at:number)=>editTimeline(root,clips=>setClipEdge(clips,id,edge,at));
-export const setTimelineClipCrossfade=(root:string,id:string,seconds:number)=>editTimeline(root,clips=>setCrossfade(clips,id,seconds));
-export function setTimelineClipGain(root:string,id:string,gain:number){
- editTimeline(root,clips=>clips.map(c=>c.id===id?{...c,gain}:c));
+export const trimTimelineClip=(root:string,id:string,edge:'in'|'out',at:number,historyKey?:string)=>editTimeline(root,clips=>setClipEdge(clips,id,edge,at),historyKey?{historyKey}:undefined);
+export const setTimelineClipCrossfade=(root:string,id:string,seconds:number,historyKey?:string)=>editTimeline(root,clips=>setCrossfade(clips,id,seconds),historyKey?{historyKey}:undefined);
+export function setTimelineClipGain(root:string,id:string,gain:number,historyKey?:string){
+ editTimeline(root,clips=>clips.map(c=>c.id===id?{...c,gain}:c),historyKey?{historyKey}:undefined);
 }
 export function toggleTimelineClipMute(root:string,id:string){
  editTimeline(root,clips=>clips.map(c=>c.id===id?{...c,muted:!c.muted}:c));
@@ -117,10 +135,12 @@ export const selectTimelineClip=(root:string,id:string|null)=>patch(root,{select
 /** Back to the original: one full-length clip of the root source, output format kept. */
 export function resetTimeline(root:string){
  const s=sessions.get(root);if(!s)return;
- if(getMedia().items.find(i=>i.name===root)?.kind==='video-project'){revoke(s.result);put({...s,clips:[],selectedClipId:null,result:null});return;}
- if(!s.probe)return;
+ const project=getMedia().items.find(i=>i.name===root)?.kind==='video-project';
+ if(!project&&!s.probe)return;
+ const next=project?[]:[fullClip(root,s.probe!.duration)];
+ if(!s.clips.length&&!project)return;
  revoke(s.result);
- put({...s,clips:[fullClip(root,s.probe.duration)],selectedClipId:null,result:null});
+ put({...s,clips:next,selectedClipId:null,result:null,history:s.clips.length?pushHistory(s.history,s.clips,null,Date.now()):s.history});
 }
 export const setVideoFormat=(root:string,format:VideoFormat)=>patch(root,{format});
 /** Runs the export in the worker and keeps the result on the session. Cancel rejects quietly. */

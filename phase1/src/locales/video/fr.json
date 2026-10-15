@@ -51,6 +51,10 @@
  "video.clipMuted": "muet",
  "video.missingSource": "manquant",
  "video.split": "Diviser au curseur",
+ "video.undo": "Annuler",
+ "video.undoHint": "Annuler la dernière modification du montage (Ctrl+Z)",
+ "video.redo": "Rétablir",
+ "video.redoHint": "Rétablir la modification annulée (Ctrl+Maj+Z)",
  "video.splitHint": "Divise en deux le clip sous le curseur (S)",
  "video.selectedClip": "{name} · {length} s",
  "video.timelinePanel": "Chronologie",
@@ -113,5 +117,7 @@
  "video.review.cancelled": "Export annulé.",
  "video.review.unavailable": "Export indisponible. Vérifiez les sources et les encodeurs.",
  "video.review.failed": "Échec de l’export. Les réglages sont conservés.",
- "cmd.video.export.open": "Exporter la vidéo..."
+ "cmd.video.export.open": "Exporter la vidéo...",
+ "cmd.video.timeline.undo": "Annuler la modification du montage",
+ "cmd.video.timeline.redo": "Rétablir la modification du montage"
 }
