@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-987 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+991 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -336,6 +336,10 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `documents.align.left` | Align left | View | documents |  |
 | `documents.align.right` | Align right | View | documents |  |
 | `documents.author.set` | Set the author name | View | documents |  |
+| `documents.bookmarks.add` | Add a bookmark at the selection | View | documents |  |
+| `documents.bookmarks.delete` | Delete a bookmark | View | documents |  |
+| `documents.bookmarks.goTo` | Go to a bookmark | View | documents |  |
+| `documents.bookmarks.open` | Open bookmarks | View | documents |  |
 | `documents.case.set` | Change the case of the selected text | View | documents |  |
 | `documents.charLook.open` | Underline and shading | View | documents |  |
 | `documents.charLook.set` | Set underline style, underline colour or character shading | View | documents |  |

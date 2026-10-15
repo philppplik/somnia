@@ -107,6 +107,9 @@ export class DocSession {
     set_properties(patch_json: string): void;
     resolve_comment(id: number, resolved: boolean): void;
     delete_comment(id: number): void;
+    bookmarks(): string;
+    add_bookmark(block: number, start: number, end: number, name: string): void;
+    delete_bookmark(name: string): void;
     insert(block: number, utf8_byte_offset: number, text: string): void;
     merge_with_previous(block: number): void;
     constructor(bytes: Uint8Array);

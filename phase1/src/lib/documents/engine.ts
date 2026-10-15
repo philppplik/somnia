@@ -72,6 +72,9 @@ export class DocumentsEngine{
  async colWidth(block:number,width:number):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'colWidth',block,width}))).document;}
  async insertImage(block:number,bytes:Uint8Array,alt:string):Promise<OpenedDocument>{const buf=bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength) as ArrayBuffer;return(await this.call('edited',id=>({id,kind:'insertImage',block,bytes:buf,alt}),[buf])).document;}
  async imageEdit(block:number,op:import('./protocol').ImageOp):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'imageEdit',block,op}))).document;}
+ async bookmarksState():Promise<import('./protocol').BookmarkItem[]>{return(await this.call('bookmarks',id=>({id,kind:'bookmarksState'}))).bookmarks;}
+ async addBookmark(block:number,start:number,end:number,name:string):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'addBookmark',block,start,end,name}))).document;}
+ async deleteBookmark(name:string):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'deleteBookmark',name}))).document;}
  async commentsState():Promise<import('./protocol').CommentItem[]>{return(await this.call('comments',id=>({id,kind:'commentsState'}))).comments;}
  async addComment(block:number,start:number,end:number,text:string,author:string,date:string):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'addComment',block,start,end,text,author,date}))).document;}
  async replyComment(parent:number,text:string,author:string,date:string):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'replyComment',parent,text,author,date}))).document;}

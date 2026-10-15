@@ -24,8 +24,8 @@ import {authorProblem,setAuthor} from './author';
 import {insertPageBreak,setParagraphOptions,setProperties,setTabStops} from './session';
 import {parsePdfPages,checkParaPatch,PARA_FLAG_KEYS,propertiesProblem,tabsProblem} from './protocol';
 import {addComment,commentSelection,deleteComment,goToComment,readComments,replyComment,resolveComment} from './session';
-import {commentProblem,HIGHLIGHTS,linkProblem,type HighlightName} from './protocol';
-import {goToAdjacentChange,setViewMarks,textToTable,setTrackChanges,resolveChange,resolveAllChanges,changeAtCaret,setCharLook,setCharSpacing,setCharScale,setLineRule,setImageWrap,setImageCrop,setProofing,setShowHidden,changeCase,addToDictionary,copyFormatting,pasteFormatting,clearFormatting,hasTextSelection,setHighlight,setLink,toggleVertAlign} from './session';
+import {bookmarkProblem,commentProblem,HIGHLIGHTS,linkProblem,type HighlightName} from './protocol';
+import {addBookmark,deleteBookmark,goToComment as goToBlock0,readBookmarks,bookmarkSelection,goToAdjacentChange,setViewMarks,textToTable,setTrackChanges,resolveChange,resolveAllChanges,changeAtCaret,setCharLook,setCharSpacing,setCharScale,setLineRule,setImageWrap,setImageCrop,setProofing,setShowHidden,changeCase,addToDictionary,copyFormatting,pasteFormatting,clearFormatting,hasTextSelection,setHighlight,setLink,toggleVertAlign} from './session';
 import {documentsExportReady,patchDocumentsExportUi,requestDocumentsExportFormat,requestDocumentsExportPdf,requestDocumentsSaveCopy} from './exportBridge';
 /**
  * Documents studio commands. Registered while the Documents canvas is mounted (registerDocumentsCommands),
@@ -89,6 +89,20 @@ export function registerDocumentsCommands(){
    const id=(p as Record<string,unknown>|undefined)?.id;if(typeof id!=='number'||!Number.isInteger(id)||id<0||id>=2**31)throw expected('Invalid "id".');
    await deleteComment(id);
   }),
+  add('documents.bookmarks.open','Open bookmarks',()=>{setInfoDialog('bookmarks');},()=>ready()),
+  add('documents.bookmarks.add','Add a bookmark at the selection',async p=>{
+   const name=(p as Record<string,unknown>|undefined)?.name;const bad=bookmarkProblem(name);if(bad||typeof name!=='string')throw expected(bad??'Invalid "name".');
+   await addBookmark(name);
+  },()=>ready()&&bookmarkSelection()!==null),
+  add('documents.bookmarks.goTo','Go to a bookmark',async p=>{
+   const name=(p as Record<string,unknown>|undefined)?.name;const bad=bookmarkProblem(name);if(bad||typeof name!=='string')throw expected(bad??'Invalid "name".');
+   const b=(await readBookmarks())?.find(x=>x.name===name);if(!b)throw expected('No such bookmark.');
+   if(!(await goToBlock0(b.block)))throw expected('That bookmark has no place on a page.');
+  },()=>ready()),
+  add('documents.bookmarks.delete','Delete a bookmark',async p=>{
+   const name=(p as Record<string,unknown>|undefined)?.name;const bad=bookmarkProblem(name);if(bad||typeof name!=='string')throw expected(bad??'Invalid "name".');
+   await deleteBookmark(name);
+  },()=>ready()),
   add('documents.zoomIn','Zoom in on the document',()=>stepZoom(1)),
   add('documents.zoomOut','Zoom out of the document',()=>stepZoom(-1)),
   add('documents.zoomReset','Reset document zoom to 100%',()=>patchDocuments({zoom:1})),

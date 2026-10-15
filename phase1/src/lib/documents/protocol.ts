@@ -183,6 +183,9 @@ export type DocumentsRequest=
  |{id:number;kind:'replyComment';parent:number;text:string;author:string;date:string}
  |{id:number;kind:'resolveComment';commentId:number;resolved:boolean}
  |{id:number;kind:'deleteComment';commentId:number}
+ |{id:number;kind:'bookmarksState'}
+ |{id:number;kind:'addBookmark';block:number;start:number;end:number;name:string}
+ |{id:number;kind:'deleteBookmark';name:string}
  |{id:number;kind:'headerFooterState'}
  |{id:number;kind:'hfVariantsState'}
  |{id:number;kind:'tableLayoutState';block:number}
@@ -206,6 +209,7 @@ export type DocumentsResponse=
  |{id:number;ok:true;kind:'replaced';document:OpenedDocument;text:string}
  |{id:number;ok:true;kind:'blocks';blocks:import('./edit').DocBlock[]}
  |{id:number;ok:true;kind:'comments';comments:CommentItem[]}
+ |{id:number;ok:true;kind:'bookmarks';bookmarks:BookmarkItem[]}
  |{id:number;ok:true;kind:'headerFooter';state:HeaderFooterState}
  |{id:number;ok:true;kind:'hfVariants';state:HfVariantsState}
  |{id:number;ok:true;kind:'tableLayout';state:TableLayoutState}
@@ -440,6 +444,13 @@ export interface HfVariantsPatch{titlePage?:boolean;evenOdd?:boolean;first?:HfVa
 export const validHfText=(v:unknown):v is string=>typeof v==='string'&&Array.from(v).length<=MAX_HF_CHARS&&!/[\u0000-\u001f\u007f-\u009f\ufffc\u2028\u2029]/u.test(v);
 
 /** A comment as the engine lists it: imported and new ones, with the quoted text when its anchor sits in one paragraph. */
+export const MAX_BOOKMARK_NAME=40;
+/** A bookmark name the engine accepts: a letter first, then letters, digits or underscores, at most 40. Names starting with an underscore are Word's hidden ones. */
+export function bookmarkProblem(v:unknown):string|null{
+ if(typeof v!=='string'||!/^[A-Za-z][A-Za-z0-9_]*$/.test(v)||v.length>MAX_BOOKMARK_NAME)return `A bookmark name starts with a letter and has 1 to ${MAX_BOOKMARK_NAME} letters, digits or underscores.`;
+ return null;
+}
+export interface BookmarkItem{name:string;block:number;quote:string|null}
 export interface CommentItem{id:number;parent:number|null;author:string;initials:string;date:string;resolved:boolean;text:string;quote:string|null;block:number|null}
 export const MAX_COMMENT_CHARS=2000,COMMENT_AUTHOR='Somnia user';
 /** Why a comment text is refused (empty, too long, control characters), or null when it is fine. Line breaks are allowed. */

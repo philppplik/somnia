@@ -6,7 +6,7 @@ import {MAX_TEXT_TABLE_ROWS,type ProofIssue,type ReviewState,type ReviewChange} 
 import {setStyleList} from './styles';
 import {adjacentChange} from './reviewNav';
 import {stylePatchProblem,STYLE_ID_RE,tocProblem,isListKind,listOptionsProblem,type ListStyleId} from './protocol';
-import {imageCropProblem,imageWrapProblem,type ImageWrap,type ImageAlign,tableLayoutProblem,SECTION_BREAKS,hfVariantsProblem,HF_ALIGNS,propertiesProblem,linkProblem,commentProblem,type CommentItem,validHfText,type HeaderFooterState,checkFormatPatch,checkParaPatch,MAX_HF_CHARS,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch,type ImageOp,type PageSetupPatch,type PageSetupState,pageSetupProblem,type TableStyle,type TableStyleScope,tableStyleProblem,MIN_COL_PT,MAX_COL_PT,imageProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGES} from './protocol';
+import {imageCropProblem,imageWrapProblem,type ImageWrap,type ImageAlign,tableLayoutProblem,SECTION_BREAKS,hfVariantsProblem,HF_ALIGNS,propertiesProblem,linkProblem,commentProblem,bookmarkProblem,type BookmarkItem,type CommentItem,validHfText,type HeaderFooterState,checkFormatPatch,checkParaPatch,MAX_HF_CHARS,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch,type ImageOp,type PageSetupPatch,type PageSetupState,pageSetupProblem,type TableStyle,type TableStyleScope,tableStyleProblem,MIN_COL_PT,MAX_COL_PT,imageProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGES} from './protocol';
 import {captureDocumentSelection} from './selectionCapture';
 import {CELL_BASE,caretAfterEdit,applyEdit,diffEdit,inverseOf,UndoStack,type TextEdit,type UndoEntry} from './edit';
 import {findMatches,nextMatchIndex,textStats,validFindQuery,validReplaceText,MAX_FIND_HIGHLIGHTS,MAX_REPLACE_BLOCKS,type FindMatch} from './find';
@@ -1062,6 +1062,29 @@ export const addComment=(text:string)=>run(async()=>{
 const commentStep=(op:(e:DocumentsEngine)=>Promise<import('./protocol').OpenedDocument>)=>run(async()=>{
  const c=getDocumentsState().caret;const spot=c?{block:c.block,off:c.head}:await nearEditable(engine!,0);
  await structural(op,spot,spot);if(!c)patchDocuments({caret:null});
+});
+/* ---- Bookmarks ---- */
+/** The visible bookmarks as the engine reports them (not an edit). */
+export async function readBookmarks():Promise<BookmarkItem[]|null>{
+ const e=engine;if(!e||getDocumentsState().status!=='ready')return null;const check=ownerGuard();const list=await e.bookmarksState();check();return list;
+}
+/** The range a bookmark takes: the selection inside one editable paragraph, or the caret point. Null without a caret in an editable paragraph. */
+export function bookmarkSelection():{block:number;start:number;end:number}|null{
+ const c=getDocumentsState().caret;if(!c||(c.anchorBlock!==undefined&&c.anchorBlock!==c.block))return null;
+ const t=blockText(c.block);if(t===null)return null;const start=Math.min(c.anchor,c.head),end=Math.max(c.anchor,c.head);return end<=u8(t)?{block:c.block,start,end}:null;
+}
+/** Bookmarks the selection (or the caret point) under a name; a bookmark of that name elsewhere moves here. One undo step. The paragraph becomes read-only until the bookmark is deleted. */
+export const addBookmark=(name:string)=>run(async()=>{
+ const bad=bookmarkProblem(name);if(bad)throw new Error(bad);
+ const sel=bookmarkSelection();if(!sel)throw new Error('Put the caret in an editable paragraph to add a bookmark.');
+ const c=getDocumentsState().caret!;
+ await structural(eng=>eng.addBookmark(sel.block,sel.start,sel.end,name),{block:c.block,off:c.head},eng=>nearEditable(eng,sel.block));
+});
+/** Deletes a bookmark. One undo step. */
+export const deleteBookmark=(name:string)=>run(async()=>{
+ const bad=bookmarkProblem(name);if(bad)throw new Error(bad);
+ const c=getDocumentsState().caret;const spot=c?{block:c.block,off:c.head}:await nearEditable(engine!,0);
+ await structural(eng=>eng.deleteBookmark(name),spot,spot);if(!c)patchDocuments({caret:null});
 });
 /** The nine levels of the list at the caret (not an edit); null outside a list or without a caret. */
 export async function readListOptions():Promise<import('./protocol').ListOptionsState|null>{

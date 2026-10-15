@@ -22,6 +22,8 @@ const CELL_LIST_MAX: usize = 20_000;
 /// A structural snapshot: the body (blocks are shared, not copied), the header/footer stories, the last section, media, comments, properties, styles and list definitions.
 type Snap = (wordcraft_doc::Blocks, std::collections::BTreeMap<u32, wordcraft_doc::Part>, wordcraft_doc::SectionProps, std::collections::BTreeMap<String, Arc<Vec<u8>>>, std::collections::BTreeMap<u32, wordcraft_doc::Comment>, wordcraft_doc::CoreProps, wordcraft_doc::StyleSheet, wordcraft_doc::Numbering);
 const COMMENT_MAX_CHARS: usize = 2000;
+const BOOKMARK_MAX_NAME: usize = 40;
+const BOOKMARK_MAX_COUNT: usize = 500;
 const COMMENT_MAX_COUNT: usize = 500;
 const PDF_MAX_PAGES: usize = 2000;
 const PDF_MAX_BYTES: usize = 100 * 1024 * 1024;
@@ -3950,6 +3952,93 @@ impl DocSession {
         self.pages = DocLayout::default();
         Ok(())
     }
+    /// Visible bookmarks (names starting with `_` are Word's own and stay hidden) as JSON `[{name,block,quote}]` in document order.
+    fn do_bookmarks(&self) -> String {
+        use wordcraft_doc::InlineObject;
+        let mut starts: Vec<(String, usize, usize)> = Vec::new();
+        let mut ends: std::collections::HashMap<String, (usize, usize)> = Default::default();
+        for pid in self.all_para_ids() {
+            let Some(p) = self.para_at(pid) else { continue };
+            for (off, obj) in p.object_offsets().into_iter().zip(p.objects.iter()) {
+                match obj {
+                    InlineObject::BookmarkStart { name } if !name.starts_with('_') && starts.len() < BOOKMARK_MAX_COUNT => starts.push((name.clone(), pid, off)),
+                    InlineObject::BookmarkEnd { name } => {
+                        ends.insert(name.clone(), (pid, off));
+                    }
+                    _ => {}
+                }
+            }
+        }
+        let items: Vec<_> = starts
+            .into_iter()
+            .map(|(name, pid, so)| {
+                let quote = match (ends.get(&name), self.para_at(pid)) {
+                    (Some((ep, eo)), Some(p)) if *ep == pid && *eo >= so + OBJ.len_utf8() => {
+                        let q: String = p.text.get(so + OBJ.len_utf8()..*eo).unwrap_or("").chars().filter(|c| *c != OBJ).take(200).collect();
+                        Some(q)
+                    }
+                    _ => None,
+                };
+                serde_json::json!({"name": name, "block": pid, "quote": quote})
+            })
+            .collect();
+        serde_json::Value::Array(items).to_string()
+    }
+    /// Marks `start..end` (UTF-8 bytes, may be empty) of one paragraph that has no inline objects as a bookmark. A bookmark of the same
+    /// name in another paragraph is moved. The paragraph becomes read-only (anchors are inline objects) until the bookmark is deleted.
+    fn do_add_bookmark(&mut self, block: usize, start: usize, end: usize, name: &str) -> Result<(), String> {
+        use wordcraft_doc::InlineObject;
+        let ok = name.chars().next().is_some_and(|c| c.is_ascii_alphabetic()) && name.chars().count() <= BOOKMARK_MAX_NAME && name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_');
+        if !ok {
+            return Err(format!("a bookmark name starts with a letter and has 1 to {BOOKMARK_MAX_NAME} letters, digits or underscores"));
+        }
+        let mut p = self.para_at(block).ok_or_else(|| format!("no paragraph {block}"))?.clone();
+        if p.text.contains(OBJ) || !p.objects.is_empty() {
+            return Err(format!("paragraph {block} already has an inline object (such as a bookmark or comment) and cannot take another"));
+        }
+        if start > end || end > p.text.len() || !p.text.is_char_boundary(start) || !p.text.is_char_boundary(end) {
+            return Err("the bookmark needs a range inside one paragraph".into());
+        }
+        let existing: Vec<serde_json::Value> = serde_json::from_str(&self.do_bookmarks()).unwrap_or_default();
+        if !existing.iter().any(|b| b["name"] == name) && existing.len() >= BOOKMARK_MAX_COUNT {
+            return Err(format!("a document holds at most {BOOKMARK_MAX_COUNT} bookmarks"));
+        }
+        let had = existing.iter().any(|b| b["name"] == name);
+        if had {
+            self.do_delete_bookmark(name)?;
+            p = self.para_at(block).ok_or_else(|| format!("no paragraph {block}"))?.clone();
+        }
+        let props = if p.text.is_empty() { CharProps::default() } else { p.props_at(end.saturating_sub(1)).clone() };
+        p.insert_object(end, InlineObject::BookmarkEnd { name: name.to_string() }, &props).map_err(|e| e.to_string())?;
+        p.insert_object(start, InlineObject::BookmarkStart { name: name.to_string() }, &props).map_err(|e| e.to_string())?;
+        self.put_para(block, p)?;
+        self.pages = DocLayout::default();
+        Ok(())
+    }
+    /// Removes a bookmark's anchors everywhere (the paragraph becomes editable again when it held nothing else).
+    fn do_delete_bookmark(&mut self, name: &str) -> Result<(), String> {
+        use wordcraft_doc::InlineObject;
+        let hit = |o: &InlineObject| matches!(o, InlineObject::BookmarkStart { name: n } | InlineObject::BookmarkEnd { name: n } if n == name);
+        let mut found = false;
+        for pid in self.all_para_ids() {
+            let Some(p) = self.para_at(pid) else { continue };
+            if !p.objects.iter().any(hit) {
+                continue;
+            }
+            found = true;
+            let mut q = p.clone();
+            let offs: Vec<usize> = q.object_offsets().into_iter().zip(q.objects.iter()).filter(|(_, o)| hit(o)).map(|(off, _)| off).collect();
+            for off in offs.into_iter().rev() {
+                q.delete(off, off + OBJ.len_utf8()).map_err(|e| e.to_string())?;
+            }
+            self.put_para(pid, q)?;
+        }
+        if !found {
+            return Err(format!("no bookmark {name}"));
+        }
+        self.pages = DocLayout::default();
+        Ok(())
+    }
     /// Replaces ranges only when the paragraph still reads exactly `expected` (one atomic step inside the worker), then returns the
     /// paragraph text read back after the edit. A paragraph that changed since the caller read it is refused untouched.
     fn do_replace_checked(&mut self, block: usize, expected: &str, hunks: &[(usize, usize, String)]) -> Result<String, String> {
@@ -4260,6 +4349,15 @@ impl DocSession {
     }
     pub fn delete_comment(&mut self, id: u32) -> Result<(), JsValue> {
         self.do_delete_comment(id).map_err(|e| js_err(&e))
+    }
+    pub fn bookmarks(&self) -> String {
+        self.do_bookmarks()
+    }
+    pub fn add_bookmark(&mut self, block: usize, start: usize, end: usize, name: &str) -> Result<(), JsValue> {
+        self.do_add_bookmark(block, start, end, name).map_err(|e| js_err(&e))
+    }
+    pub fn delete_bookmark(&mut self, name: &str) -> Result<(), JsValue> {
+        self.do_delete_bookmark(name).map_err(|e| js_err(&e))
     }
     pub fn split_block(&mut self, block: usize, utf8_off: usize) -> Result<(), JsValue> {
         self.do_split(block, utf8_off).map_err(|e| js_err(&e))
@@ -5840,6 +5938,44 @@ mod tests {
         s.restore(snap).unwrap();
         let w: serde_json::Value = serde_json::from_str(&s.do_properties()).unwrap();
         assert_ne!(w["title"], "Quarterly report");
+    }
+    #[test]
+    fn bookmarks_add_move_delete_and_roundtrip() {
+        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
+        let before = s.text();
+        let snap = s.snapshot();
+        assert_eq!(s.do_bookmarks(), "[]");
+        s.do_add_bookmark(0, 0, 3, "Intro").unwrap();
+        let v: serde_json::Value = serde_json::from_str(&s.do_bookmarks()).unwrap();
+        assert_eq!(v.as_array().unwrap().len(), 1);
+        assert_eq!(v[0]["name"], "Intro");
+        assert_eq!(v[0]["block"], 0);
+        assert_eq!(v[0]["quote"], before.chars().take(3).collect::<String>());
+        // The paragraph is read-only now and takes no second anchor.
+        assert!(s.do_add_bookmark(0, 0, 1, "Other").is_err());
+        // The same name in another paragraph moves the bookmark.
+        s.do_add_bookmark(1, 0, 0, "Intro").unwrap();
+        let v: serde_json::Value = serde_json::from_str(&s.do_bookmarks()).unwrap();
+        assert_eq!(v.as_array().unwrap().len(), 1);
+        assert_eq!(v[0]["block"], 1);
+        assert_eq!(s.text(), before);
+        let saved = wordcraft_docx::write(&s.doc).unwrap();
+        let re = DocSession::from_bytes(&saved).unwrap();
+        assert!(serde_json::from_str::<serde_json::Value>(&re.do_bookmarks()).unwrap().as_array().unwrap().iter().any(|b| b["name"] == "Intro"));
+        let long = "a".repeat(BOOKMARK_MAX_NAME + 1);
+        for bad in ["", "1abc", "has space", "ünï", long.as_str()] {
+            assert!(s.do_add_bookmark(2, 0, 1, bad).is_err(), "{bad}");
+        }
+        assert!(s.do_add_bookmark(9999, 0, 0, "Gone").is_err());
+        assert!(s.do_add_bookmark(2, 3, 1, "Back").is_err());
+        assert!(s.do_add_bookmark(2, 0, 99999, "Far").is_err());
+        s.do_delete_bookmark("Intro").unwrap();
+        assert_eq!(s.do_bookmarks(), "[]");
+        assert!(s.do_delete_bookmark("Intro").is_err());
+        assert_eq!(s.text(), before);
+        s.do_add_bookmark(2, 0, 1, "Undo").unwrap();
+        s.restore(snap).unwrap();
+        assert_eq!(s.do_bookmarks(), "[]");
     }
     #[test]
     fn comment_replies_anchor_inside_parent_and_follow_it() {

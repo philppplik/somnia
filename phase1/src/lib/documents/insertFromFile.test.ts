@@ -24,3 +24,9 @@ test('adjacentChange walks forward and back and wraps',()=>{
  assert.deepEqual(adjacentChange(l,{block:2,off:5},-1),ch(2,1));
  assert.equal(adjacentChange([],{block:0,off:0},1),null);assert.deepEqual(adjacentChange(l,null,-1),ch(2,5));
 });
+import {bookmarkProblem,MAX_BOOKMARK_NAME} from './protocol';
+test('bookmarkProblem accepts Word-style names only',()=>{
+ for(const n of ['a','Intro','sec_2','A'.repeat(MAX_BOOKMARK_NAME)])assert.equal(bookmarkProblem(n),null,n);
+ for(const n of ['','1a','_hidden','has space','ünï','a-b','A'.repeat(MAX_BOOKMARK_NAME+1)])assert.ok(bookmarkProblem(n),n);
+ assert.ok(bookmarkProblem(undefined));assert.ok(bookmarkProblem(5));
+});

@@ -4295,6 +4295,50 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.bookmarks.add",
+      "title": "Add a bookmark at the selection",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.bookmarks.delete",
+      "title": "Delete a bookmark",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.bookmarks.goTo",
+      "title": "Go to a bookmark",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.bookmarks.open",
+      "title": "Open bookmarks",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.case.set",
       "title": "Change the case of the selected text",
       "category": "View",
