@@ -991,6 +991,37 @@ export class Stage{
    all.forEach((e,i)=>{if(picked.has(i))this.editSel.edges.set(`${e[0]}_${e[1]}`,e);});
   }
  }
+ /** Mirrors the current selection across an axis plane through the origin of the edited mesh, position-keyed so UV-seam twins mirror together: the mirrored vertex set replaces (or with extend joins) the vertex selection, and selected edges/faces mirror to the elements fully inside it. Throws when nothing mirrored exists. Selection changes are not undo steps. */
+ editSelectMirror(axis:'x'|'y'|'z',extend:boolean){
+  const m=this.editMesh();
+  const data=this.meshDataOf(m);
+  const ai=axis==='x'?0:axis==='y'?1:2;
+  const nv=data.positions.length/3;
+  const keyOf=(v:number,flip:boolean)=>{const c=[data.positions[v*3],data.positions[v*3+1],data.positions[v*3+2]];if(flip)c[ai]=-c[ai];return `${Math.round(c[0]*1e6)},${Math.round(c[1]*1e6)},${Math.round(c[2]*1e6)}`;};
+  const byKey=new Map<string,number[]>();
+  for(let v=0;v<nv;v++){const k=keyOf(v,false);(byKey.get(k)??byKey.set(k,[]).get(k)!).push(v);}
+  const selVerts=new Set<number>(this.editSel.verts);
+  for(const [a,b] of this.editSel.edges.values())selVerts.add(a).add(b);
+  for(const f of this.editSel.faces)for(let e=0;e<3;e++)selVerts.add(data.index[f*3+e]);
+  if(!selVerts.size)throw new StageError('Select something first.');
+  const mv=new Set<number>();
+  for(const v of selVerts)for(const t of byKey.get(keyOf(v,true))??[])mv.add(t);
+  if(!mv.size)throw new StageError('No mirrored geometry found.');
+  if(this.editSel.verts.size)this.editSel.verts=extend?new Set([...this.editSel.verts,...mv]):new Set(mv);
+  if(this.editSel.edges.size){
+   const out=new Map<string,[number,number]>();
+   for(let f=0;f<data.index.length/3;f++)for(let e=0;e<3;e++){
+    const a=data.index[f*3+e],b=data.index[f*3+(e+1)%3];
+    if(a!==b&&mv.has(a)&&mv.has(b)){const lo=Math.min(a,b),hi=Math.max(a,b);out.set(`${lo}_${hi}`,[lo,hi]);}
+   }
+   this.editSel.edges=extend?new Map([...this.editSel.edges,...out]):out;
+  }
+  if(this.editSel.faces.size){
+   const out=new Set<number>();
+   for(let f=0;f<data.index.length/3;f++)if(mv.has(data.index[f*3])&&mv.has(data.index[f*3+1])&&mv.has(data.index[f*3+2]))out.add(f);
+   this.editSel.faces=extend?new Set([...this.editSel.faces,...out]):out;
+  }
+ }
  /** Checker-deselects: drops every nth element of the current selection (sorted by id), starting at the offset. Deterministic; selection changes are not undo steps. */
  editSelectChecker(kind:'vertex'|'edge'|'face',nth:number,offset:number){
   if(!Number.isInteger(nth)||nth<2||nth>1000)throw new StageError('The checker step must be a whole number of 2 or more.');

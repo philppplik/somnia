@@ -1015,5 +1015,6 @@
  "cmd.studio3d.edit.selectChecker": "Jedes n-te selektierte Element des bearbeiteten 3D-Meshs abwählen, beginnend beim Offset",
  "cmd.studio3d.edit.selectRandom": "Eine zufällige, per Seed wiederholbare Auswahl der Elemente des bearbeiteten 3D-Meshs treffen",
  "cmd.studio3d.object.snapToGround": "3D-Objekte absenken, bis ihre Begrenzung auf der Bodenebene aufliegt",
- "studio3d.hist.snapToGround": "Auf Boden ausrichten"
+ "studio3d.hist.snapToGround": "Auf Boden ausrichten",
+ "cmd.studio3d.edit.selectMirror": "Die Auswahl des bearbeiteten 3D-Meshs an einer Achsenebene spiegeln"
 }

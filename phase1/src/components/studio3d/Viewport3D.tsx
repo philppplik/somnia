@@ -1233,6 +1233,7 @@ export default function Viewport3D(){
    editSelectPath:(from,to,kind)=>{stage.editSelectPath(from,to,kind);patchEdit();invalidate();},
    editSelectChecker:(kind,nth,offset)=>{stage.editSelectChecker(kind,nth,offset);patchEdit();invalidate();},
    editSelectRandom:(kind,ratio,seed)=>{stage.editSelectRandom(kind,ratio,seed);patchEdit();invalidate();},
+   editSelectMirror:(axis,extend)=>{stage.editSelectMirror(axis,extend);patchEdit();invalidate();},
    editSelectLoop:()=>{stage.editSelectLoop();patchEdit();invalidate();},
   editBridgeFaces:(twist)=>{stage.editBridgeFaces(twist);patchEdit();invalidate();},
   editVertSlide:(edge,factor)=>{stage.editVertSlide(edge,factor);patchEdit();invalidate();},

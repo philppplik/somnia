@@ -1015,5 +1015,6 @@
  "cmd.studio3d.edit.selectChecker": "Deselect every nth selected element of the edited 3D mesh, starting at the offset",
  "cmd.studio3d.edit.selectRandom": "Select a seeded random share of the edited 3D mesh elements",
  "cmd.studio3d.object.snapToGround": "Drop 3D objects until their bounds rest on the ground plane",
- "studio3d.hist.snapToGround": "Snap to ground"
+ "studio3d.hist.snapToGround": "Snap to ground",
+ "cmd.studio3d.edit.selectMirror": "Mirror the selection of the edited 3D mesh across an axis plane"
 }

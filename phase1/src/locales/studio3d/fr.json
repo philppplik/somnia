@@ -1015,5 +1015,6 @@
  "cmd.studio3d.edit.selectChecker": "Désélectionne un élément sélectionné sur n du maillage 3D édité, à partir du décalage",
  "cmd.studio3d.edit.selectRandom": "Sélectionne une part aléatoire reproductible par graine des éléments du maillage 3D édité",
  "cmd.studio3d.object.snapToGround": "Abaisse les objets 3D jusqu'à ce que leurs limites reposent sur le plan du sol",
- "studio3d.hist.snapToGround": "Poser au sol"
+ "studio3d.hist.snapToGround": "Poser au sol",
+ "cmd.studio3d.edit.selectMirror": "Reflète la sélection du maillage 3D édité sur un plan d'axe"
 }

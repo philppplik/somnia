@@ -1015,5 +1015,6 @@
  "cmd.studio3d.edit.selectChecker": "Deselecciona cada n-ésimo elemento seleccionado de la malla 3D editada, empezando en el desplazamiento",
  "cmd.studio3d.edit.selectRandom": "Selecciona una parte aleatoria reproducible por semilla de los elementos de la malla 3D editada",
  "cmd.studio3d.object.snapToGround": "Baja objetos 3D hasta que sus límites descansen en el plano del suelo",
- "studio3d.hist.snapToGround": "Bajar al suelo"
+ "studio3d.hist.snapToGround": "Bajar al suelo",
+ "cmd.studio3d.edit.selectMirror": "Refleja la selección de la malla 3D editada en un plano de eje"
 }
