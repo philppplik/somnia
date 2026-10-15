@@ -77,7 +77,7 @@
  "video.imageDuration": "{seconds} s lang zeigen",
  "video.imageHint": "Das Bild wird für die eingestellte Dauer gezeigt und in den Frame eingepasst. Schnittbereich und Verstärkung gelten nicht für Standbilder.",
  "video.addClip": "Hinzufügen",
- "video.timelineHint": "Clips spielen hintereinander. Ziehe einen Clip, um ihn zu verschieben; ziehe die Kanten des gewählten Clips zum Schneiden. Tasten: S teilen, Entf entfernen, Alt+←/→ verschieben, M stumm.",
+ "video.timelineHint": "Clips spielen hintereinander. Ziehe einen Clip, um ihn zu verschieben, oder lege ein Video oder Bild aus der Dateiliste auf der Spur ab; ziehe die Kanten des gewählten Clips zum Schneiden. Tasten: S teilen, Entf entfernen, Alt+←/→ verschieben, M stumm.",
  "video.audioLane": "Audiospur",
  "video.audioTrack": "Audiospur",
  "video.audioTrackSummary": "{count} Audioclips · endet bei {duration} s",

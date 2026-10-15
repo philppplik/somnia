@@ -77,7 +77,7 @@
  "video.imageDuration": "Mostrar por {seconds} s",
  "video.imageHint": "A imagem aparece pela duração definida, ajustada ao quadro. Corte e ganho não se aplicam a imagens estáticas.",
  "video.addClip": "Adicionar",
- "video.timelineHint": "Os clipes tocam em sequência. Arraste um clipe para reordená-lo; arraste as bordas do clipe selecionado para apará-lo. Teclas: S dividir, Delete remover, Alt+←/→ mover, M sem som.",
+ "video.timelineHint": "Os clipes tocam em sequência. Arraste um clipe para reordená-lo ou solte um vídeo ou imagem da lista de arquivos na faixa; arraste as bordas do clipe selecionado para cortá-lo. Teclas: S dividir, Delete remover, Alt+←/→ mover, M mudo.",
  "video.audioLane": "Faixa de áudio",
  "video.audioTrack": "Faixa de áudio",
  "video.audioTrackSummary": "{count} clipes de áudio · termina em {duration} s",

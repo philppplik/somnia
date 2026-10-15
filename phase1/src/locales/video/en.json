@@ -77,7 +77,7 @@
  "video.imageDuration": "Show for {seconds} s",
  "video.imageHint": "The image shows for the set duration, contained to the frame. Trim range and gain do not apply to stills.",
  "video.addClip": "Add",
- "video.timelineHint": "Clips play back to back. Drag a clip to reorder it; drag the edges of the selected clip to trim it. Keys: S split, Delete remove, Alt+←/→ move, M mute.",
+ "video.timelineHint": "Clips play back to back. Drag a clip to reorder it, or drop a video or image from the Files list onto the track; drag the edges of the selected clip to trim it. Keys: S split, Delete remove, Alt+←/→ move, M mute.",
  "video.audioLane": "Audio track",
  "video.audioTrack": "Audio track",
  "video.audioTrackSummary": "{count} audio clips · ends at {duration} s",

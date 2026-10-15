@@ -1,6 +1,11 @@
 import test from 'node:test';
+import {readFileSync} from 'node:fs';
 import assert from 'node:assert/strict';
 import {addBlankVideoProject,addMediaFile,closeMedia,getMedia} from '../media';
+import {addTimelineClip} from './session';
+import {setVideoEngineFactory} from './session';
+const MP4=new URL('../../../tests/assets/clip.mp4',import.meta.url);
+const bytes=(u:URL)=>new Uint8Array(readFileSync(u));
 import {addImageClip,closeVideo,duplicateTimelineClip,dirtyVideoNames,getVideoSession,openVideo,redoVideoEdit,serializeVideoProjectCopy,setImageClipLength,setVideoFormat,undoVideoEdit,videoIsDirty} from './session';
 import {addTitleClip,updateTitle} from './titleSession';
 
@@ -110,4 +115,23 @@ test('project: duplicating a timeline clip copies it right after the original an
  assert.equal(getVideoSession(a)!.clips.length,3,'undo removes the last duplicate');
  assert.ok(videoIsDirty(getVideoSession(a)));
  closeVideo(a);closeMedia(a);
+});
+
+test('project: dropping a video source inserts it at the drop time and selects it',async()=>{
+ setVideoEngineFactory(()=>({async capabilities(){return{webmVideo:'vp9',mp4Video:null,opus:true,aac:false};},async probe(){return{duration:4,video:{codec:'vp9',width:640,height:360,fps:30},audio:null};},async export(){throw new Error('not needed');},cancelExport(){},dispose(){}}));
+ const r=await addMediaFile(new Blob([bytes(MP4)],{type:'video/mp4'}),'drop-src.mp4');
+ assert.ok('name' in r,JSON.stringify(r));
+ const a='drop-target.video-project';
+ addBlankVideoProject(a);
+ await openVideo(getMedia().items.find(i=>i.name===a)!);
+ addImageClip(a,{name:'photo.png'},2);
+ await addTimelineClip(a,getMedia().items.find(i=>i.name==='drop-src.mp4')!,1);
+ let s=getVideoSession(a)!;
+ assert.deepEqual(s.clips.map(c=>[c.kind??'media',c.source]),[['image','photo.png'],['media','drop-src.mp4']],'inserted after the clip under the drop time');
+ assert.equal(s.selectedClipId,s.clips[1].id);
+ await addTimelineClip(a,getMedia().items.find(i=>i.name==='drop-src.mp4')!);
+ s=getVideoSession(a)!;
+ assert.equal(s.clips.length,3);
+ assert.equal(s.clips[2].source,'drop-src.mp4','without a time it appends as before');
+ closeVideo(a);closeMedia(a);closeMedia('drop-src.mp4');
 });

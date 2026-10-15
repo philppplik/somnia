@@ -77,7 +77,7 @@
  "video.imageDuration": "Mostrar durante {seconds} s",
  "video.imageHint": "La imagen se muestra durante la duración indicada, ajustada al fotograma. El recorte y la ganancia no se aplican a imágenes fijas.",
  "video.addClip": "Añadir",
- "video.timelineHint": "Los clips se reproducen uno tras otro. Arrastra un clip para reordenarlo; arrastra los bordes del clip seleccionado para recortarlo. Teclas: S dividir, Supr quitar, Alt+←/→ mover, M silenciar.",
+ "video.timelineHint": "Los clips se reproducen uno tras otro. Arrastra un clip para reordenarlo o suelta un vídeo o una imagen de la lista de archivos en la pista; arrastra los bordes del clip seleccionado para recortarlo. Teclas: S dividir, Supr eliminar, Alt+←/→ mover, M silenciar.",
  "video.audioLane": "Pista de audio",
  "video.audioTrack": "Pista de audio",
  "video.audioTrackSummary": "{count} clips de audio · termina en {duration} s",

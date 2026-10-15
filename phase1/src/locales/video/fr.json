@@ -77,7 +77,7 @@
  "video.imageDuration": "Afficher pendant {seconds} s",
  "video.imageHint": "L'image s'affiche pendant la durée choisie, ajustée au cadre. La plage de coupe et le gain ne s'appliquent pas aux images fixes.",
  "video.addClip": "Ajouter",
- "video.timelineHint": "Les clips sont lus à la suite. Glissez un clip pour le réordonner ; glissez les bords du clip sélectionné pour le couper. Touches : S diviser, Suppr retirer, Alt+←/→ déplacer, M muet.",
+ "video.timelineHint": "Les clips se lisent à la suite. Glisse un clip pour le réordonner ou dépose une vidéo ou une image de la liste de fichiers sur la piste ; glisse les bords du clip sélectionné pour le couper. Touches : S diviser, Suppr retirer, Alt+←/→ déplacer, M muet.",
  "video.audioLane": "Piste audio",
  "video.audioTrack": "Piste audio",
  "video.audioTrackSummary": "{count} clips audio · se termine à {duration} s",

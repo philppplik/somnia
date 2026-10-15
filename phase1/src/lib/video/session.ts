@@ -200,13 +200,13 @@ export function setImageClipLength(root:string,id:string,seconds:number,historyK
  editTimeline(root,clips=>clips.map(c=>c.id===id?{...c,out_s:clampTitleSeconds(seconds)}:c),historyKey?{historyKey}:undefined);
 }
 /** Appends a full-length clip of another video source (opened and probed on demand) and selects it. */
-export async function addTimelineClip(root:string,item:{name:string;url:string}){
+export async function addTimelineClip(root:string,item:{name:string;url:string},at?:number){
  await openVideo(item);
  const probe=sessions.get(item.name)?.probe;if(!probe)return;
  if(!sessions.get(root)?.probe)patch(root,{probe,capabilities:sessions.get(item.name)?.capabilities??null});
  const clip=fullClip(item.name,probe.duration);
- editTimeline(root,clips=>[...clips,clip]);
- patch(root,{selectedClipId:clip.id});
+ editTimeline(root,clips=>at===undefined?[...clips,clip]:insertClip(clips,clip,insertIndexAfter(clips,at)));
+ patch(root,{selectedClipId:clip.id,selectedAudioClipId:null});
 }
 /** Adds clips straight from the file dialog and returns to the project tab (opening a file activates its own tab first). */
 export async function addTimelineClipsFromDialog(root:string){

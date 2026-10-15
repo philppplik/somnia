@@ -16,14 +16,14 @@ interface Props{
  /** Ctrl+wheel zoom handler; anchored at the cursor. */
  onZoom?:(zoom:number)=>void;
  /** Optional thumbnail layer painted behind each clip's label (see lib/video/INTEGRATION.md). `trackHeight` (px) lets the track grow for it. */
- renderStrip?:(clip:TimelineClip,index:number)=>ReactNode;trackHeight?:number;
+ renderStrip?:(clip:TimelineClip,index:number)=>ReactNode;trackHeight?:number;onDropMedia?:(name:string,at:number)=>void;
  /** Time span the ruler maps onto; defaults to the video duration. Pass more when the audio track runs longer. */
  domain?:number;
  /** Lane rendered inside the same scroller under the ruler, so it shares zoom, scroll and the time mapping. */
  audioLane?:ReactNode;
 }
 /** Segmented timeline: one block per clip, drag to reorder, edge handles trim the selected clip, the playhead seeks. */
-export function VideoTimeline({clips,selectedId,position,missing,onSeek,onSelect,onTrim,onMove,label,renderStrip,trackHeight,zoom=1,onZoom,domain,audioLane}:Props){
+export function VideoTimeline({clips,selectedId,position,missing,onSeek,onSelect,onTrim,onMove,label,renderStrip,trackHeight,zoom=1,onZoom,domain,audioLane,onDropMedia}:Props){
  const {t}=useT();
  const track=useRef<HTMLDivElement>(null);
  const scroller=useRef<HTMLDivElement>(null);
@@ -99,7 +99,9 @@ export function VideoTimeline({clips,selectedId,position,missing,onSeek,onSelect
  const ticks:number[]=[];const step=tickStep(duration);for(let s=0;s<=duration+1e-6;s+=step)ticks.push(s);
  return <div ref={scroller} className={`w-full ${z>1?'overflow-x-auto':'overflow-hidden'}`} data-testid="video-timeline-scroll">
  <div className={`relative select-none ${trackHeight&&trackHeight>24?'':'h-12'}`} style={{width:z>1?`${z*100}%`:'100%',...(trackHeight&&trackHeight>24?{height:trackHeight+24}:{})}} aria-label={label} data-testid="video-timeline">
-  <div ref={track} style={{height:trackHeight??24}} className="absolute inset-x-0 top-1/2 flex -translate-y-1/2 cursor-pointer gap-px rounded-sm bg-hover" onPointerDown={seek}>
+  <div ref={track} style={{height:trackHeight??24}} className="absolute inset-x-0 top-1/2 flex -translate-y-1/2 cursor-pointer gap-px rounded-sm bg-hover" onPointerDown={seek}
+   onDragOver={e=>{if(onDropMedia&&e.dataTransfer.types.includes('application/x-somnia-media')){e.preventDefault();e.dataTransfer.dropEffect='copy';}}}
+   onDrop={e=>{const name=e.dataTransfer.getData('application/x-somnia-media');if(!name||!onDropMedia)return;e.preventDefault();onDropMedia(name,snap(at(e.clientX)));}}>
    {ranges.map((r,i)=>{
     const selected=r.clip.id===selectedId,gone=needsSourceFile(r.clip)&&missing.has(r.clip.source);
     const left=((r.start)/duration*100),width=(Math.max(0.5,(r.end-r.start)/duration*100));
