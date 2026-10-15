@@ -7,7 +7,10 @@ export const subscribeReadiness=(fn:()=>void)=>{listeners.add(fn);return()=>{lis
 export function recordReadiness(snapshot:RuntimeSnapshot,endpoint:string,now=Date.now()){
  if(!Number.isFinite(now)||!endpoint||!Number.isFinite(snapshot.checkedAt)||snapshot.checkedAt>now||now-snapshot.checkedAt>120000)return;
  if(record?.endpoint===endpoint&&record.checkedAt>snapshot.checkedAt)return;
- record={snapshot:structuredClone(snapshot),endpoint,checkedAt:snapshot.checkedAt};listeners.forEach(fn=>fn());
+ const copy=structuredClone(snapshot);
+ // Stable external-store identity, but no consumer can rewrite shared evidence.
+ copy.models.forEach(Object.freeze);Object.freeze(copy.models);Object.freeze(copy);
+ record=Object.freeze({snapshot:copy,endpoint,checkedAt:snapshot.checkedAt});listeners.forEach(fn=>fn());
 }
 export function clearReadiness(){record=null;listeners.forEach(fn=>fn());}
 export function freshReadiness(value:ReadinessRecord|null,now=Date.now()):ReadinessRecord|null{return value&&Number.isFinite(now)&&now>=value.checkedAt&&now-value.checkedAt<120000?value:null;}
