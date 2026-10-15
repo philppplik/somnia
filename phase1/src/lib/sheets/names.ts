@@ -35,6 +35,11 @@ export function nameTarget(refersTo:string):{sheet:string;address:string}|null{
  const m=/^=?(?:'((?:[^']|'')+)'|([^'!]+))!\$?([A-Za-z]{1,3})\$?([0-9]{1,7})(?::\$?[A-Za-z]{1,3}\$?[0-9]{1,7})?$/.exec(refersTo);if(!m)return null;
  return {sheet:(m[1]??m[2]).replace(/''/g,"'"),address:(m[3]+m[4]).toUpperCase()};
 }
+/** "=Sheet 1!$B$2:$C$3" -> "B2:C3" (a single cell gives "B2"); null for anything that is not a plain place. */
+export function nameSpan(refersTo:string):string|null{
+ const m=/^=?(?:'(?:[^']|'')+'|[^'!]+)!\$?([A-Za-z]{1,3})\$?([0-9]{1,7})(?::\$?([A-Za-z]{1,3})\$?([0-9]{1,7}))?$/.exec(refersTo);if(!m)return null;
+ const a=(m[1]+m[2]).toUpperCase();return m[3]?a+':'+(m[3]+m[4]).toUpperCase():a;
+}
 /** Where a typed defined name leads: the first cell of what it refers to. A name of the active sheet wins over a workbook name of the same spelling.
  *  null for unknown names, names that are not a plain place (constants, formulas) and places on hidden or missing sheets. */
 export function resolveNameJump(input:string,names:readonly NameInfo[],sheets:readonly {name:string;index:number;visibility:string}[],activeSheetName:string):{sheet:number;address:string}|null{
@@ -43,5 +48,5 @@ export function resolveNameJump(input:string,names:readonly NameInfo[],sheets:re
  const hit=hits.find(n=>n.scope!=='Workbook')??hits[0];if(!hit)return null;
  const target=nameTarget(hit.refersTo);if(!target)return null;
  const dest=sheets.find(x=>x.name.toLowerCase()===target.sheet.toLowerCase()&&x.visibility==='Visible');
- return dest?{sheet:dest.index,address:target.address}:null;
+ return dest?{sheet:dest.index,address:nameSpan(hit.refersTo)??target.address}:null;
 }

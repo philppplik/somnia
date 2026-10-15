@@ -10,7 +10,7 @@ import type {PanelHostProps,InspectorSectionProps} from '../../lib/shell/types';
 import {commandDispatcher} from '../../lib/commandDispatcher';
 import {aggregateFormula,FORMULA_FUNCTIONS,parsePanelRange,rangeAddress,summarizeCells} from '../../lib/sheets/panelModel';
 import {rectCells} from '../../lib/sheets/clipboard';
-import {addressOf,colName,parseAddress} from '../../lib/sheets/format';
+import {addressOf,colName,parseAddress,parseSpan} from '../../lib/sheets/format';
 import {sortBlockProblem} from '../../lib/sheets/sortOps';
 import {fillBlockProblem,FILL_DIRECTIONS} from '../../lib/sheets/fillOps';
 import type {FillDirection,CfStyle} from '../../lib/sheets/protocol';
@@ -33,7 +33,7 @@ import {viewNameProblem,MAX_VIEW_NAME} from '../../lib/sheets/savedViews';
 import {WHATIF_GROUPS,buildWhatIfOp,whatIfNeeds,type WhatIfAction} from '../../lib/sheets/whatIfOps';
 import {ALLOW_PRESETS,MAX_PASSWORD_CHARS,passwordBad} from '../../lib/sheets/protectOps';
 import type {PivotField,PivotFunc} from '../../lib/sheets/protocol';
-import {resolveNameJump,constantValue,MAX_COMMENT_CHARS,nameProblem,nameTarget} from '../../lib/sheets/names';
+import {resolveNameJump,constantValue,MAX_COMMENT_CHARS,nameProblem,nameSpan,nameTarget} from '../../lib/sheets/names';
 import {internalTarget,linkTargetProblem,MAX_LINK_TEXT,MAX_NOTE_CHARS} from '../../lib/sheets/notes';
 import {dedupeBlockProblem,splitBlockProblem,parseWidths,SPLIT_DELIMITERS} from '../../lib/sheets/dataTools';
 import {replaceProblem,MAX_REPLACE_TEXT} from '../../lib/sheets/replaceOps';
@@ -61,7 +61,7 @@ export function SheetsWorkbookPanel({context}:PanelHostProps){
  useEffect(()=>setName(s?.sheetName??''),[s?.file,s?.sheet,s?.sheetName]);
  if(!s)return <Region><p>{t('sheets.panel.none')}</p></Region>;
  const sheetList=s.workbook?.sheets??[],visibleCount=sheetList.filter(x=>x.visibility==='Visible').length,nameProblem=sheetNameProblem(name);
- const jump=parseAddress(address)?{sheet:s.sheet,address}:resolveNameJump(address,s.names??[],sheetList,s.sheetName);
+ const jump=parseSpan(address)?{sheet:s.sheet,address}:resolveNameJump(address,s.names??[],sheetList,s.sheetName);
  const sheets=s.workbook?.sheets.filter(sheet=>sheet.name.toLocaleLowerCase().includes(filter.toLocaleLowerCase()))??[];
  return <Region><p className="break-all font-semibold">{s.file}</p>
  <input className={field} aria-label={t('sheets.panel.filter')} placeholder={t('sheets.panel.filter')} value={filter} onChange={e=>setFilter(e.target.value)}/>
@@ -797,7 +797,7 @@ function NamesGroup(){
   else if(act==='setConstant'&&chosen)void action.run('sheets.names',{kind:'constant',name:chosen.name,scope:scopeOf,value:constantValue(value),replace:true}).then(r=>{if(r!==null)setValue('');});
   else if(act==='comment'&&chosen)void action.run('sheets.names',{kind:'comment',name:chosen.name,scope:scopeOf,text:note});
   else if(defining)void action.run('sheets.names',{kind:'define',name:name.trim(),scope:act==='defineSheet'||act==='replaceSheet'?'sheet':'workbook',replace:act==='replace'||act==='replaceSheet'}).then(r=>{if(r!==null)setName('');});
-  else if(act==='go'&&target&&dest)void action.run('sheets.navigate',{sheet:dest.index,address:target.address});
+  else if(act==='go'&&target&&dest)void action.run('sheets.navigate',{sheet:dest.index,address:chosen?nameSpan(chosen.refersTo)??target.address:target.address});
   else if(chosen)void action.run('sheets.names',{kind:'delete',name:chosen.name,scope:chosen.scope==='Workbook'?'workbook':'sheet'});
  };
  return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.nm.title')}>

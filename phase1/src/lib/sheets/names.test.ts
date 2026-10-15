@@ -1,5 +1,5 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';
-import {resolveNameJump,constantValue,nameProblem,nameTarget,parseNames,parseNamesCommand} from './names';
+import {nameSpan,resolveNameJump,constantValue,nameProblem,nameTarget,parseNames,parseNamesCommand} from './names';
 import {customNumFmtCode,DATE_PATTERNS,parseFormatOp} from './formatOps';
 test('nameProblem',()=>{
  for(const ok of ['Prices','_x','tax.rate','Größe','a1b','x'.repeat(64)])assert.equal(nameProblem(ok),null,ok);
@@ -42,8 +42,18 @@ test('names from the selection need a side and take only flags',()=>{
 test('a typed name jumps to the first cell of its place',()=>{
  const names=[{name:'Prices',refersTo:'=Data!$B$2:$B$9',scope:'Workbook',comment:''},{name:'prices',refersTo:"='My Sheet'!$C$3",scope:'My Sheet',comment:''},{name:'Rate',refersTo:'=0.07',scope:'Workbook',comment:''},{name:'Gone',refersTo:'=Hidden!$A$1',scope:'Workbook',comment:''},{name:'Other',refersTo:'=Data!$A$1',scope:'Data',comment:''}];
  const sheets=[{name:'Data',index:0,visibility:'Visible'},{name:'My Sheet',index:1,visibility:'Visible'},{name:'Hidden',index:2,visibility:'Hidden'}];
- assert.deepEqual(resolveNameJump(' PRICES ',names,sheets,'Data'),{sheet:0,address:'B2'});
+ assert.deepEqual(resolveNameJump(' PRICES ',names,sheets,'Data'),{sheet:0,address:'B2:B9'});
  assert.deepEqual(resolveNameJump('prices',names,sheets,'My Sheet'),{sheet:1,address:'C3'});
  for(const bad of ['','Rate','Gone','Nope','x'.repeat(65)])assert.equal(resolveNameJump(bad,names,sheets,'Data'),null,bad);
  assert.deepEqual(resolveNameJump('other',names,sheets,'Data'),{sheet:0,address:'A1'});
+});
+test('nameSpan keeps the whole place',()=>{
+ assert.equal(nameSpan('=Data!$B$2:$C$9'),'B2:C9');assert.equal(nameSpan("='My Sheet'!$c$3"),'C3');assert.equal(nameSpan('=0.07'),null);assert.equal(nameSpan('=SUM(A1)'),null);
+});
+test('parseSpan reads a cell or a range in any corner order',async()=>{
+ const {parseSpan}=await import('./format');
+ assert.deepEqual(parseSpan('B2'),{from:{row:1,col:1},to:null});
+ assert.deepEqual(parseSpan('C9:b2'),{from:{row:1,col:1},to:{row:8,col:2}});
+ assert.deepEqual(parseSpan('B2:B2'),{from:{row:1,col:1},to:null});
+ for(const bad of ['','A','A1:','A1:B2:C3','A0','ZZZZ1','1:2'])assert.equal(parseSpan(bad),null,bad);
 });
