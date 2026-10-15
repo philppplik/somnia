@@ -128,5 +128,11 @@
  "cmd.video.timeline.undo": "Annuler la modification du montage",
  "cmd.video.timeline.redo": "Rétablir la modification du montage",
  "cmd.video.project.save": "Enregistrer le projet vidéo",
- "cmd.video.clip.speed": "Régler la vitesse du clip"
+ "cmd.video.clip.speed": "Régler la vitesse du clip",
+ "cmd.video.audio.add": "Ajouter un fichier audio ouvert à la piste audio",
+ "cmd.video.audio.move": "Déplacer un clip audio sur la piste audio",
+ "cmd.video.audio.trim": "Raccorder un bord d'un clip audio à un temps source",
+ "cmd.video.audio.gain": "Régler le gain d’un clip audio",
+ "cmd.video.audio.fades": "Régler le fondu d’entrée et de sortie d’un clip audio",
+ "cmd.video.audio.delete": "Supprimer un clip audio"
 }

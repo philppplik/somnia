@@ -2,7 +2,7 @@ import {registerCommandSpec} from '../commandBridge';
 import {commandRegistry} from '../commandRegistry';
 import type {CommandSpec,CommandSchema} from '../commandSpec';
 import {getMedia} from '../media';
-import {addTimelineClip,addTimelineClipsFromDialog,cancelVideoExport,deleteTimelineClip,exportVideoFile,getVideoSession,moveTimelineClip,redoVideoEdit,resetTimeline,saveVideoProject,selectTimelineClip,setTimelineClipCrossfade,setTimelineClipGain,setTimelineClipSpeed,setVideoFormat,splitTimelineAt,toggleTimelineClipMute,trimTimelineClip,undoVideoEdit,videoIsDirty} from './session';
+import {addAudioTrackClip,addTimelineClip,addTimelineClipsFromDialog,deleteAudioTrackClip,cancelVideoExport,deleteTimelineClip,exportVideoFile,getVideoSession,moveTimelineClip,redoVideoEdit,resetTimeline,moveAudioTrackClip,saveVideoProject,selectTimelineClip,setAudioTrackClipFades,setAudioTrackClipGain,setTimelineClipCrossfade,setTimelineClipGain,setTimelineClipSpeed,setVideoFormat,splitTimelineAt,toggleTimelineClipMute,trimAudioTrackClip,trimTimelineClip,undoVideoEdit,videoIsDirty} from './session';
 import {addTitleClip,setTitleLength,updateTitle} from './titleSession';
 import {isTitleClip,type TitleSpec} from './titles';
 import {timelineDuration} from './timeline';
@@ -40,6 +40,12 @@ export function videoCommandSpecs():CommandSpec<unknown,unknown>[] {
   spec('video.timeline.reset','Reset video timeline',()=>resetTimeline(root()),undefined,ready,'Edit'),
   spec('video.timeline.undo','Undo timeline edit',()=>undoVideoEdit(root()),undefined,()=>ready()&&!!activeVideoSession()!.history.past.length,'Edit'),
   spec('video.timeline.redo','Redo timeline edit',()=>redoVideoEdit(root()),undefined,()=>ready()&&!!activeVideoSession()!.history.future.length,'Edit'),
+  spec('video.audio.add','Add an open audio file to the audio track',async(p:{name:string;at?:number})=>{const item=getMedia().items.find(i=>i.name===p.name&&i.kind==='audio');if(!item)fail('That audio source is not open.');if(!(await addAudioTrackClip(root(),item!,p.at)))fail('That file has no audio track.');},object({name:id,at:number()},['name']),ready,'Edit'),
+  spec('video.audio.move','Move an audio clip on the audio track',(p:{id:string;at:number})=>moveAudioTrackClip(root(),p.id,p.at),object({id,at:number()}),ready,'Edit'),
+  spec('video.audio.trim','Trim an audio clip edge to a source time',(p:{id:string;edge:'in'|'out';seconds:number})=>trimAudioTrackClip(root(),p.id,p.edge,p.seconds),object({id,edge:{enum:['in','out']},seconds:number()}),ready,'Edit'),
+  spec('video.audio.gain','Set an audio clip gain',(p:{id:string;gain:number})=>setAudioTrackClipGain(root(),p.id,p.gain),object({id,gain:number(0,2)}),ready,'Edit'),
+  spec('video.audio.fades','Set an audio clip fade in and out',(p:{id:string;fadeIn:number;fadeOut:number})=>setAudioTrackClipFades(root(),p.id,p.fadeIn,p.fadeOut),object({id,fadeIn:number(0,30),fadeOut:number(0,30)}),ready,'Edit'),
+  spec('video.audio.delete','Delete an audio clip',(p:{id:string})=>deleteAudioTrackClip(root(),p.id),object({id}),ready,'Edit'),
   spec('video.title.add','Add a title card',()=>addTitleClip(root(),Number.MAX_SAFE_INTEGER,{text:''}),undefined,ready,'Insert'),
   spec('video.title.update','Edit selected title card',(p:Partial<TitleSpec>)=>updateTitle(root(),clip().id,p),object(titleProperties,[]),titleSelection,'Edit'),
   spec('video.title.duration','Set selected title card duration',(p:{seconds:number})=>setTitleLength(root(),clip().id,p.seconds),object({seconds:number(0.05,3600)}),titleSelection,'Edit'),

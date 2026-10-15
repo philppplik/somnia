@@ -51,7 +51,7 @@ test('setClipSpeed sets media clips only and clamps',()=>{
 
 test('speed survives the .video-project round trip; old files default to 1',()=>{
  const clips=[clip('a',0,4,2.5)];
- const parsed=parseVideoProject(serializeVideoProject(clips,'webm'));
+ const parsed=parseVideoProject(serializeVideoProject(clips,[],'webm'));
  assert.equal(parsed.clips[0].speed,2.5);
  const legacy=JSON.stringify({app:'somnia-video',version:1,clips:[{id:'a',kind:'media',source:'s.mp4',in_s:0,out_s:4,gain:1,muted:false}]});
  assert.equal(parseVideoProject(legacy).clips[0].speed,1,'V3 files without speed load at 1x');

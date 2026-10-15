@@ -128,5 +128,11 @@
  "cmd.video.timeline.undo": "Schnitt rückgängig machen",
  "cmd.video.timeline.redo": "Schnitt wiederholen",
  "cmd.video.project.save": "Videoprojekt speichern",
- "cmd.video.clip.speed": "Clip-Tempo setzen"
+ "cmd.video.clip.speed": "Clip-Tempo setzen",
+ "cmd.video.audio.add": "Geöffnete Audiodatei zur Audiospur hinzufügen",
+ "cmd.video.audio.move": "Audioclip auf der Audiospur verschieben",
+ "cmd.video.audio.trim": "Audioclip-Kante auf eine Quellzeit trimmen",
+ "cmd.video.audio.gain": "Verstärkung eines Audioclips einstellen",
+ "cmd.video.audio.fades": "Ein- und Ausblendung eines Audioclips einstellen",
+ "cmd.video.audio.delete": "Audioclip löschen"
 }

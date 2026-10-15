@@ -128,5 +128,11 @@
  "cmd.video.timeline.undo": "Undo timeline edit",
  "cmd.video.timeline.redo": "Redo timeline edit",
  "cmd.video.project.save": "Save video project",
- "cmd.video.clip.speed": "Set clip playback speed"
+ "cmd.video.clip.speed": "Set clip playback speed",
+ "cmd.video.audio.add": "Add an open audio file to the audio track",
+ "cmd.video.audio.move": "Move an audio clip on the audio track",
+ "cmd.video.audio.trim": "Trim an audio clip edge to a source time",
+ "cmd.video.audio.gain": "Set an audio clip gain",
+ "cmd.video.audio.fades": "Set an audio clip fade in and out",
+ "cmd.video.audio.delete": "Delete an audio clip"
 }

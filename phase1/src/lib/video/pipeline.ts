@@ -3,6 +3,8 @@ import {ALL_FORMATS,AudioSample,AudioSampleSink,AudioSampleSource,BufferSource,B
 import type {AudioCodec,VideoCodec} from 'mediabunny';
 import type {VideoFormat} from './recipe';
 import {clipRanges,fadeOf,speedOf,timelineDuration,type ClipRange,type TimelineClip} from './timeline';
+import {audioEnvelope,type AudioClip} from './audioTrack';
+import {WindowMixer} from './mixer';
 import {drawTitleCard,isTitleClip,needsSourceFile} from './titles';
 import {renderTitleSpan} from './titleExport';
 import type {VideoCapabilities,VideoProbe,VideoReport} from './protocol';
@@ -42,12 +44,12 @@ const checkCancel=()=>{if(cancelled)throw new ExportCancelled();};
  * Streams one zone's decoded audio into the encoder as 48 kHz stereo f32 chunks:
  * linear resample, mono duplication, per-zone gain, 100 ms flushes so long clips never buffer.
  */
-async function emitZoneAudio(aSink:AudioSampleSink,srcStart:number,srcEnd:number,zoneStart:number,gain:number,speed:number,audioSource:AudioSampleSource):Promise<void>{
+async function emitZoneAudio(aSink:AudioSampleSink,srcStart:number,srcEnd:number,zoneStart:number,gain:number,speed:number,mix:WindowMixer):Promise<void>{
  let rate=0,ch=0,phase=0,consumed=0,prevL=0,prevR=0,havePrev=false,emitted=0;
  let out:number[]=[];
  const flush=async()=>{
   if(!out.length)return;
-  await audioSource.add(new AudioSample({data:new Float32Array(out),format:'f32',numberOfChannels:2,sampleRate:48_000,timestamp:zoneStart+emitted/48_000}));
+  mix.addChunk(zoneStart+emitted/48_000,new Float32Array(out));
   emitted+=out.length/2;out=[];
  };
  for await(const sample of aSink.samples(srcStart,srcEnd)){
@@ -79,19 +81,22 @@ async function emitZoneAudio(aSink:AudioSampleSink,srcStart:number,srcEnd:number
  * decode both sides on a fixed frame grid and dissolve linearly; audio is crossfaded equal-power. All audio is
  * normalized to 48 kHz stereo before encoding (per-zone gain included), muted clips contribute silence.
  */
-export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:TimelineClip[],format:VideoFormat,onProgress?:(ratio:number,processed_s:number)=>void):Promise<{bytes:ArrayBuffer;mime:string;report:VideoReport}>{
+export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:TimelineClip[],audioClips:AudioClip[],format:VideoFormat,onProgress?:(ratio:number,processed_s:number)=>void):Promise<{bytes:ArrayBuffer;mime:string;report:VideoReport}>{
  cancelled=false;
  if(!clips.length)throw new Error('The timeline is empty.');
  const steps:string[]=[];
  const inputs=new Map<string,{input:Input;probe:VideoProbe}>();
- const names=[...new Set(clips.filter(needsSourceFile).map(c=>c.source))];
+ const videoNames=new Set(clips.filter(needsSourceFile).map(c=>c.source));
+ const names=[...new Set([...videoNames,...audioClips.map(c=>c.source)])];
  try{
   for(const n of names){
    const bytes=sources[n];
    if(!bytes)throw new Error(`Clip source "${n}" is no longer available. Re-open the file to export this timeline.`);
    const input=inputOf(bytes);
    const probe=await probeVideo(bytes.slice(0));
-   if(!probe.video){input.dispose();throw new Error(`"${n}" has no video track and cannot be on a video timeline.`);}
+   // Audio-only sources (music, voiceover) are fine as long as no VIDEO clip uses them.
+   if(!probe.video&&videoNames.has(n)){input.dispose();throw new Error(`"${n}" has no video track and cannot be on a video timeline.`);}
+   if(!probe.audio&&!videoNames.has(n)){input.dispose();throw new Error(`"${n}" has no audio track and cannot be on the audio timeline.`);}
    inputs.set(n,{input,probe});
   }
   const firstMedia=clips.find(needsSourceFile);
@@ -100,7 +105,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
   const caps=await probeCapabilities(outW,outH);
   const videoCodec=format==='webm'?caps.webmVideo:caps.mp4Video;
   if(!videoCodec)throw new Error(format==='webm'?'This platform cannot encode VP9 or VP8 video.':'This platform cannot encode H.264 (AVC) video. Try WebM instead.');
-  const anyAudio=clips.some(c=>needsSourceFile(c)&&!c.muted&&inputs.get(c.source)!.probe.audio!==null);
+  const anyAudio=clips.some(c=>needsSourceFile(c)&&!c.muted&&inputs.get(c.source)!.probe.audio!==null)||audioClips.length>0;
   let audioCodec:string|null=null;
   if(anyAudio){
    audioCodec=format==='webm'?(caps.opus?'opus':null):(caps.aac?'aac':null);
@@ -135,6 +140,57 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
   await output.start();
   let processed=0;
   const note=(t:number)=>{processed=Math.max(processed,t);if(processed>0)onProgress?.(Math.min(0.99,processed/total),processed);};
+  const total_s=total;
+  // All audio flows through the windowed mixer: zones, title silence and audio-track clips sum by timeline time,
+  // then flush strictly left to right so the encoder sees monotonic timestamps. Flushes are capped at the
+  // video duration so an over-long music clip never stretches the file.
+  const mixer=audioSource?new WindowMixer():null;
+  const writeMixedThrough=async(through:number)=>{
+   if(!mixer||!audioSource)return;
+   for(const w of mixer.flushThrough(through)){
+    const maxFrames=Math.max(0,Math.ceil((total_s-w.start)*48_000));
+    if(maxFrames<=0)continue;
+    const frames=Math.min(w.data.length/2,maxFrames);
+    await audioSource.add(new AudioSample({data:w.data.slice(0,frames*2),format:'f32',numberOfChannels:2,sampleRate:48_000,timestamp:w.start}));
+   }
+  };
+  // Audio-track clips feed once the zone walk passes their start; overlaps sum in the mixer.
+  let audioMutedNote=false,audioTrimmedNote=false;
+  const audioFeed=audioClips.filter(c=>{
+   const probe=inputs.get(c.source)?.probe;
+   if(!probe?.audio){audioMutedNote=true;return false;}
+   if(c.at>=total_s){audioTrimmedNote=true;return false;}
+   if(c.at+(c.out_s-c.in_s)>total_s)audioTrimmedNote=true;
+   return true;
+  }).sort((a,b)=>a.at-b.at);
+  let feedIdx=0;
+  const mixAudioClip=async(ac:AudioClip)=>{
+   const{input}=inputs.get(ac.source)!;
+   const aSink=new AudioSampleSink((await input.getAudioTracks())[0]);
+   const chunks:Float32Array[]=[];let rate=0,ch=0,count=0;
+   for await(const sample of aSink.samples(ac.in_s,ac.out_s)){
+    checkCancel();
+    rate=sample.sampleRate;ch=sample.numberOfChannels;
+    const data=new Float32Array(sample.allocationSize({planeIndex:0,format:'f32'})/4);
+    sample.copyTo(data,{planeIndex:0,format:'f32'});
+    chunks.push(data);count+=data.length;
+   }
+   if(!count||!rate||!ch)return;
+   const raw=new Float32Array(count);let o=0;
+   for(const part of chunks){raw.set(part,o);o+=part.length;}
+   const srcFrames=count/ch,dur=ac.out_s-ac.in_s,len=Math.max(1,Math.round(dur*48_000));
+   const out=new Float32Array(len*2);
+   for(let i=0;i<len;i++){
+    const localT=i/48_000,env=audioEnvelope(ac,localT);
+    const srcPos=localT*rate,f0=Math.min(srcFrames-1,Math.floor(srcPos)),f1=Math.min(srcFrames-1,f0+1),fr=Math.min(1,Math.max(0,srcPos-f0));
+    const l=ch===1?raw[f0]*(1-fr)+raw[f1]*fr:raw[f0*ch]*(1-fr)+raw[f1*ch]*fr;
+    const r=ch===1?l:raw[f0*ch+1]*(1-fr)+raw[f1*ch+1]*fr;
+    out[i*2]=l*env;out[i*2+1]=r*env;
+   }
+   mixer!.addChunk(ac.at,out);
+  };
+  const feedAudioThrough=async(through:number)=>{while(feedIdx<audioFeed.length&&audioFeed[feedIdx].at<through-1e-9)await mixAudioClip(audioFeed[feedIdx++]);};
+
   // One CanvasSink per clip index, shared by the clip's solo zone and its neighbouring fades.
   const videoSinks=new Map<number,CanvasSink>();
   const sinkFor=async(i:number)=>{
@@ -173,7 +229,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
      await renderTitleSpan({clip:c,start:z.start,width:outW,height:outH,fps:fpsOf(z.a),ctx,checkCancel,
       addFrame:(t,d)=>videoSource.add(t,d),
       silenceFormat:{channels:2,rate:48_000},
-      addSilence:audioSource?async chunk=>{await audioSource.add(new AudioSample({data:chunk.data,format:'f32',numberOfChannels:chunk.channels,sampleRate:chunk.rate,timestamp:chunk.timestamp}));}:undefined,
+      addSilence:mixer?async chunk=>{mixer.addSilence(chunk.timestamp,chunk.data.length/chunk.channels/chunk.rate);}:undefined,
       onFrame:note});
      note(z.end);
      continue;
@@ -202,9 +258,9 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
       note(z.start+(frame.timestamp-base));
      }
     }
-    if(probe.audio&&audioSource&&!c.muted){
+    if(probe.audio&&mixer&&!c.muted){
      const aTrack=(await input.getAudioTracks())[0];
-     await emitZoneAudio(new AudioSampleSink(aTrack),srcStart,srcEnd,z.start,c.gain,speed,audioSource);
+     await emitZoneAudio(new AudioSampleSink(aTrack),srcStart,srcEnd,z.start,c.gain,speed,mixer);
     }else if(probe.audio===null&&audioSource&&z===zones[0])steps.push(`No audio track in ${c.source}.`);
    }else{
     const ra=ranges[z.a],rb=ranges[z.b],d=z.end-z.start;
@@ -221,7 +277,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
      await videoSource.add(t,1/fps);
      note(t);
     }
-    if(audioSource){
+    if(mixer){
      // Equal-power mix of both sides, resampled by hand to 48 kHz stereo; the transform passes it through untouched.
      const len=Math.max(1,Math.round(d*48_000));
      const mix=new Float32Array(len*2);
@@ -256,15 +312,14 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
        mix[i*2]+=l*env;mix[i*2+1]+=rgt*env;
       }
      }
-     if(any){
-      for(let off=0;off<len;off+=4800){
-       const count=Math.min(4800,len-off);
-       await audioSource.add(new AudioSample({data:mix.slice(off*2,(off+count)*2),format:'f32',numberOfChannels:2,sampleRate:48_000,timestamp:z.start+off/48_000}));
-      }
-     }
+     if(any)mixer!.addChunk(z.start,mix);
     }
    }
+   await feedAudioThrough(z.end);
+   await writeMixedThrough(z.end);
   }
+  await feedAudioThrough(Number.MAX_SAFE_INTEGER);
+  await writeMixedThrough(Number.MAX_SAFE_INTEGER);
   await output.finalize();
   const buffer=(output.target as BufferTarget).buffer;
   if(!buffer)throw new Error('The export produced no output.');
@@ -274,6 +329,9 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
   if(clips.some(c=>c.muted))steps.push('Muted clips kept as silence.');
   if(clips.some(c=>c.gain!==1&&!c.muted))steps.push('Per-clip gain applied.');
   if(clips.some(c=>needsSourceFile(c)&&speedOf(c)!==1))steps.push('Clip speed applied; audio is resampled (pitch shifts).');
+  if(audioFeed.length)steps.push(`${audioFeed.length} audio-track clip(s) mixed in.`);
+  if(audioMutedNote)steps.push('Some audio-track sources have no audio track and were skipped.');
+  if(audioTrimmedNote)steps.push('Audio-track clips past the end of the video were trimmed.');
   const report:VideoReport={format,duration_s:total,bytes:buffer.byteLength,videoCodec,audioCodec,steps};
   return{bytes:buffer,mime:format==='webm'?'video/webm':'video/mp4',report};
  }catch(error){

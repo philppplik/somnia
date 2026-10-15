@@ -128,5 +128,11 @@
  "cmd.video.timeline.undo": "Deshacer edición de la línea de tiempo",
  "cmd.video.timeline.redo": "Rehacer edición de la línea de tiempo",
  "cmd.video.project.save": "Guardar proyecto de vídeo",
- "cmd.video.clip.speed": "Ajustar velocidad del clip"
+ "cmd.video.clip.speed": "Ajustar velocidad del clip",
+ "cmd.video.audio.add": "Añadir un archivo de audio abierto a la pista de audio",
+ "cmd.video.audio.move": "Mover un clip de audio en la pista de audio",
+ "cmd.video.audio.trim": "Recortar un borde de un clip de audio a un tiempo de origen",
+ "cmd.video.audio.gain": "Ajustar la ganancia de un clip de audio",
+ "cmd.video.audio.fades": "Ajustar el fundido de entrada y salida de un clip de audio",
+ "cmd.video.audio.delete": "Eliminar un clip de audio"
 }

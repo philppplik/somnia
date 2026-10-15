@@ -3,7 +3,8 @@ import {useSyncExternalStore} from 'react';
 import {VideoEngine,type VideoEngineLike} from './engine';
 import {DEFAULT_FORMAT,exportName,type VideoFormat} from './recipe';
 import {fullClip,isNeutralTimeline,moveClip,rippleDelete,sanitizeClips,setClipEdge,setClipSpeed,setCrossfade,splitAt,timelineDuration,type TimelineClip} from './timeline';
-import {emptyVideoHistory,pushHistory,redoHistory,undoHistory,type VideoHistory} from './history';
+import {emptyVideoHistory,pushHistory,redoHistory,undoHistory,type VideoHistory,type VideoSnapshot} from './history';
+import {audioTrackEnd,fullAudioClip,moveAudioClip,removeAudioClip,sanitizeAudioClips,setAudioClipEdge,setAudioClipFades,setAudioClipGain,type AudioClip} from './audioTrack';
 import {clipsSignature,parseVideoProject,projectFileName,serializeVideoProject} from './projectFile';
 import {needsSourceFile} from './titles';
 import {FilmstripController} from './filmstrip-controller';
@@ -15,7 +16,8 @@ import type {VideoCapabilities,VideoProbe,VideoProgress,VideoReport} from './pro
 export type VideoStatus='loading'|'ready'|'error'|'exporting';
 export interface VideoResult{blob:Blob;url:string;report:VideoReport}
 export type VideoExportOutcome='downloaded'|'cancelled'|'unavailable';
-export interface VideoSession{exportOutcome?:VideoExportOutcome;name:string;status:VideoStatus;error:string;probe:VideoProbe|null;capabilities:VideoCapabilities|null;clips:TimelineClip[];selectedClipId:string|null;history:VideoHistory;/** Signature of the clip list at the last save/load; the session is dirty when the current list differs. */
+export interface VideoSession{exportOutcome?:VideoExportOutcome;name:string;status:VideoStatus;error:string;probe:VideoProbe|null;capabilities:VideoCapabilities|null;clips:TimelineClip[];/** The free-placed audio track (music/voiceover), mixed over the edit list. */
+audioClips:AudioClip[];selectedClipId:string|null;history:VideoHistory;/** Signature of the clip list at the last save/load; the session is dirty when the current list differs. */
 savedSig:string;format:VideoFormat;progress:VideoProgress|null;result:VideoResult|null;ext:string}
 const sessions=new Map<string,VideoSession>();
 let filmstrip:FilmstripController|null|undefined;
@@ -63,14 +65,15 @@ export async function openVideo(item:{name:string;url:string}):Promise<void>{
 }
 async function openVideoFresh(item:{name:string;url:string}):Promise<void>{
  stopMediaSync??=subscribeMedia(()=>{const live=new Set(getMedia().items.map(i=>i.name));for(const n of [...sessions.keys()])if(!live.has(n))closeVideo(n);});
- put({name:item.name,status:'loading',error:'',probe:null,capabilities:null,clips:[],selectedClipId:null,history:emptyVideoHistory(),savedSig:clipsSignature([]),format:DEFAULT_FORMAT,progress:null,result:null,ext:fileExtension(item.name)});
+ put({name:item.name,status:'loading',error:'',probe:null,capabilities:null,clips:[],audioClips:[],selectedClipId:null,history:emptyVideoHistory(),savedSig:clipsSignature([],[]),format:DEFAULT_FORMAT,progress:null,result:null,ext:fileExtension(item.name)});
  if(getMedia().items.find(i=>i.name===item.name)?.kind==='video-project'){
   try{
    const text=await fetch(item.url).then(r=>r.text());
    if(!text.trim()){patch(item.name,{status:'ready',ext:''});return;}
    const parsed=parseVideoProject(text);
    const clips=sanitizeClips(parsed.clips,sourceDurations(parsed.clips));
-   patch(item.name,{status:'ready',ext:'',clips,format:parsed.format,savedSig:clipsSignature(clips)});
+   const audioClips=sanitizeAudioClips(parsed.audioClips,{});
+   patch(item.name,{status:'ready',ext:'',clips,audioClips,format:parsed.format,savedSig:clipsSignature(clips,audioClips)});
   }catch(e){patch(item.name,{status:'error',error:message(e)},e);}
   return;
  }
@@ -85,7 +88,7 @@ async function openVideoFresh(item:{name:string;url:string}):Promise<void>{
   if(!sessions.has(item.name))return;
   if(!probe.video)throw new Error('no video track');
   const first=[fullClip(item.name,probe.duration)];
-  patch(item.name,{status:'ready',error:'',probe,ext:sniffed.ext,capabilities:await caps.catch(()=>null),clips:first,savedSig:clipsSignature(first)});
+  patch(item.name,{status:'ready',error:'',probe,ext:sniffed.ext,capabilities:await caps.catch(()=>null),clips:first,savedSig:clipsSignature(first,[])});
  }catch(e){resetEngine(e);if(sessions.has(item.name))patch(item.name,{status:'error',error:message(e)},e);}
 }
 /** Field-level clip equality: a clamped no-op edit must not flood the undo stack. */
@@ -99,20 +102,56 @@ export function editTimeline(root:string,edit:(clips:TimelineClip[])=>TimelineCl
  if(!next)return;
  const clean=sanitizeClips(next,sourceDurations(next));
  if(sameClips(clean,s.clips))return;
- put({...s,clips:clean,selectedClipId:clean.some(c=>c.id===s.selectedClipId)?s.selectedClipId:null,history:pushHistory(s.history,s.clips,opts?.historyKey??null,Date.now())});
+ put({...s,clips:clean,selectedClipId:clean.some(c=>c.id===s.selectedClipId)?s.selectedClipId:null,history:pushHistory(s.history,{clips:s.clips,audioClips:s.audioClips},opts?.historyKey??null,Date.now())});
 }
-/** Restores a snapshot: clamps it against the sources that are still open and keeps the selection only when it survives. */
-const restoreTimeline=(root:string,step:{history:VideoHistory;clips:TimelineClip[]}|null)=>{
+/** Restores a snapshot: clamps both tracks against the sources that are still open and keeps the selection only when it survives. */
+const restoreTimeline=(root:string,step:{history:VideoHistory;snapshot:VideoSnapshot}|null)=>{
  const s=sessions.get(root);if(!s||!step)return;
- const clean=sanitizeClips(step.clips,sourceDurations(step.clips));
- put({...s,clips:clean,selectedClipId:clean.some(c=>c.id===s.selectedClipId)?s.selectedClipId:null,history:step.history});
+ const clean=sanitizeClips(step.snapshot.clips,sourceDurations(step.snapshot.clips));
+ const cleanAudio=sanitizeAudioClips(step.snapshot.audioClips,audioDurationsOf(step.snapshot.audioClips));
+ put({...s,clips:clean,audioClips:cleanAudio,selectedClipId:clean.some(c=>c.id===s.selectedClipId)?s.selectedClipId:null,history:step.history});
 };
-/** One timeline edit back. The export result is not revived - re-export after undoing. */
-export const undoVideoEdit=(root:string)=>restoreTimeline(root,undoHistory(sessions.get(root)?.history??emptyVideoHistory(),sessions.get(root)?.clips??[]));
+const snapshotOf=(s:VideoSession):VideoSnapshot=>({clips:s.clips,audioClips:s.audioClips});
+/** One timeline edit back (video AND audio track). The export result is not revived - re-export after undoing. */
+export const undoVideoEdit=(root:string)=>{const s=sessions.get(root);restoreTimeline(root,s?undoHistory(s.history,snapshotOf(s)):null);};
 /** Re-applies the newest undone edit. */
-export const redoVideoEdit=(root:string)=>restoreTimeline(root,redoHistory(sessions.get(root)?.history??emptyVideoHistory(),sessions.get(root)?.clips??[]));
+export const redoVideoEdit=(root:string)=>{const s=sessions.get(root);restoreTimeline(root,s?redoHistory(s.history,snapshotOf(s)):null);};
 export const videoCanUndo=(s:VideoSession|null)=>!!s&&s.history.past.length>0;
 export const videoCanRedo=(s:VideoSession|null)=>!!s&&s.history.future.length>0;
+/** Probed durations of audio-track sources (audio files and videos alike), filled when a clip is added. */
+const audioDurations=new Map<string,number>();
+const audioDurationsOf=(clips:AudioClip[])=>Object.fromEntries([...new Set(clips.map(c=>c.source))].flatMap(n=>{const d=audioDurations.get(n);return d?[[n,d]]:[];}));
+const sameAudio=(a:AudioClip[],b:AudioClip[])=>a.length===b.length&&a.every((c,i)=>{const d=b[i];return c.id===d.id&&c.source===d.source&&c.in_s===d.in_s&&c.out_s===d.out_s&&c.at===d.at&&c.gain===d.gain&&c.fadeIn===d.fadeIn&&c.fadeOut===d.fadeOut;});
+/** Applies an audio-track edit and records the previous state (both tracks) as one undo step. */
+export function editAudioTrack(root:string,edit:(clips:AudioClip[])=>AudioClip[]|null,opts?:{historyKey?:string}){
+ const s=sessions.get(root);if(!s)return;
+ const next=edit(s.audioClips);
+ if(!next)return;
+ const clean=sanitizeAudioClips(next,audioDurationsOf(next));
+ if(sameAudio(clean,s.audioClips))return;
+ put({...s,audioClips:clean,history:pushHistory(s.history,{clips:s.clips,audioClips:s.audioClips},opts?.historyKey??null,Date.now())});
+}
+/** Adds an audio file's full range to the track at `at` (default: end of the current content). Probes the source on demand. */
+export async function addAudioTrackClip(root:string,item:{name:string;url:string},at?:number):Promise<string|null>{
+ const s=sessions.get(root);if(!s)return null;
+ let duration=audioDurations.get(item.name);
+ if(duration===undefined){
+  let bytes=sources.get(item.name);
+  if(!bytes){bytes=await fetch(item.url).then(r=>r.arrayBuffer());sources.set(item.name,bytes);}
+  const{engine:e}=getEngine();
+  const probe=await e.probe(bytes.slice(0));
+  if(!probe.audio){patch(root,{status:'error',error:`"${item.name}" has no audio track.`});return null;}
+  duration=probe.duration;audioDurations.set(item.name,duration);
+ }
+ const clip=fullAudioClip(item.name,duration,at??Math.max(timelineDuration(s.clips),audioTrackEnd(s.audioClips)));
+ editAudioTrack(root,clips=>[...clips,clip]);
+ return clip.id;
+}
+export const moveAudioTrackClip=(root:string,id:string,at:number,historyKey?:string)=>editAudioTrack(root,clips=>moveAudioClip(clips,id,at),historyKey?{historyKey}:undefined);
+export const trimAudioTrackClip=(root:string,id:string,edge:'in'|'out',at:number,historyKey?:string)=>editAudioTrack(root,clips=>setAudioClipEdge(clips,id,edge,at),historyKey?{historyKey}:undefined);
+export const setAudioTrackClipGain=(root:string,id:string,gain:number,historyKey?:string)=>editAudioTrack(root,clips=>setAudioClipGain(clips,id,gain),historyKey?{historyKey}:undefined);
+export const setAudioTrackClipFades=(root:string,id:string,fadeIn:number,fadeOut:number)=>editAudioTrack(root,clips=>setAudioClipFades(clips,id,fadeIn,fadeOut));
+export const deleteAudioTrackClip=(root:string,id:string)=>editAudioTrack(root,clips=>removeAudioClip(clips,id));
 /** Appends a full-length clip of another video source (opened and probed on demand) and selects it. */
 export async function addTimelineClip(root:string,item:{name:string;url:string}){
  await openVideo(item);
@@ -153,9 +192,10 @@ export function resetTimeline(root:string){
  const project=getMedia().items.find(i=>i.name===root)?.kind==='video-project';
  if(!project&&!s.probe)return;
  const next=project?[]:[fullClip(root,s.probe!.duration)];
- if(!s.clips.length&&!project)return;
+ if(!s.clips.length&&!s.audioClips.length&&!project)return;
  revoke(s.result);
- put({...s,clips:next,selectedClipId:null,result:null,history:s.clips.length?pushHistory(s.history,s.clips,null,Date.now()):s.history});
+ const changed=s.clips.length>0||s.audioClips.length>0;
+ put({...s,clips:next,audioClips:[],selectedClipId:null,result:null,history:changed?pushHistory(s.history,{clips:s.clips,audioClips:s.audioClips},null,Date.now()):s.history});
 }
 export const setVideoFormat=(root:string,format:VideoFormat)=>patch(root,{format});
 /** Runs the export in the worker and keeps the result on the session. Cancel rejects quietly. */
@@ -163,7 +203,7 @@ export async function runVideoExport(name:string):Promise<'exported'|'cancelled'
  const s=sessions.get(name);
  if(!s||s.status!=='ready'||!s.clips.length)return'unavailable';
  const clipSources:Record<string,ArrayBuffer>={};
- for(const n of new Set(s.clips.filter(needsSourceFile).map(c=>c.source))){
+ for(const n of new Set([...s.clips.filter(needsSourceFile).map(c=>c.source),...s.audioClips.map(c=>c.source)])){
   const bytes=sources.get(n);
   if(!bytes){patch(name,{status:'error',error:`Clip source "${n}" is no longer open. Re-open the file to export this timeline.`});return'unavailable';}
   clipSources[n]=bytes.slice(0);
@@ -171,7 +211,7 @@ export async function runVideoExport(name:string):Promise<'exported'|'cancelled'
  revoke(s.result);put({...s,status:'exporting',error:'',progress:null,result:null,exportOutcome:undefined});
  try{
   const{engine:e}=getEngine();
-  const r=await e.export(clipSources,s.clips,s.format,p=>{if(sessions.get(name)?.status==='exporting')patch(name,{progress:p});});
+  const r=await e.export(clipSources,s.clips,s.format,p=>{if(sessions.get(name)?.status==='exporting')patch(name,{progress:p});},s.audioClips);
   const cur=sessions.get(name);if(!cur)return'unavailable';
   const blob=new Blob([r.bytes],{type:r.mime});
   put({...cur,status:'ready',progress:null,result:{blob,url:URL.createObjectURL(blob),report:r.report}});
@@ -210,13 +250,13 @@ export function closeVideo(name:string){
 export const videoIsEdited=(s:VideoSession|null)=>!!s&&!isNeutralTimeline(s.clips,s.name,s.probe?.duration??0);
 export const videoTimelineDuration=(s:VideoSession|null)=>s?timelineDuration(s.clips):0;
 /** Unsaved edit-list changes: the current clips differ from the last saved/loaded state. Undoing back to that state clears the dirty flag. */
-export const videoIsDirty=(s:VideoSession|null)=>!!s&&s.status!=='loading'&&clipsSignature(s.clips)!==s.savedSig;
+export const videoIsDirty=(s:VideoSession|null)=>!!s&&s.status!=='loading'&&clipsSignature(s.clips,s.audioClips)!==s.savedSig;
 /** Names of all open video sessions with unsaved timeline changes (workDocs dirty list). */
 export const dirtyVideoNames=()=>[...sessions.values()].filter(videoIsDirty).map(s=>s.name);
 /** The serialized project for download or tests; null while the session is not ready. */
 export function serializeVideoProjectCopy(root:string):{text:string;fileName:string}|null{
  const s=sessions.get(root);if(!s||s.status==='loading')return null;
- return{text:serializeVideoProject(s.clips,s.format),fileName:projectFileName(root)};
+ return{text:serializeVideoProject(s.clips,s.audioClips,s.format),fileName:projectFileName(root)};
 }
 /** Saves the edit list as a .video-project download and marks the session clean. Media bytes are NOT included - clips reference sources by name. */
 export function saveVideoProject(root:string):boolean{
@@ -224,6 +264,6 @@ export function saveVideoProject(root:string):boolean{
  const url=URL.createObjectURL(new Blob([copy.text],{type:'application/x-somnia-video-project'}));
  const a=document.createElement('a');a.href=url;a.download=copy.fileName;a.click();
  setTimeout(()=>URL.revokeObjectURL(url),30_000);
- patch(root,{savedSig:clipsSignature(sessions.get(root)!.clips)});
+ patch(root,{savedSig:clipsSignature(sessions.get(root)!.clips,sessions.get(root)!.audioClips)});
  return true;
 }

@@ -8,9 +8,10 @@ const media=(id:string,over:Partial<TimelineClip>={}):TimelineClip=>({id,source:
 test('serialize and parse round-trip media and title clips',()=>{
  const title=newTitleClip({text:'Intro',size:90,color:'#A1B2C3',background:'#101010',font:'serif',italic:true,align:'left',fadeIn:0.5},2.5);
  const clips:TimelineClip[]=[media('m1'),{...media('m2',{source:'b roll.webm',in_s:1.25,out_s:3.5,gain:0.4,muted:true}),crossfade_s:0.75},title];
- const text=serializeVideoProject(clips,'mp4');
+ const text=serializeVideoProject(clips,[],'mp4');
  const parsed=parseVideoProject(text);
  assert.equal(parsed.format,'mp4');
+ assert.deepEqual(parsed.audioClips,[]);
  assert.equal(parsed.clips.length,3);
  assert.deepEqual(parsed.clips[0],media('m1',{crossfade_s:0}));
  assert.deepEqual([parsed.clips[1].source,parsed.clips[1].in_s,parsed.clips[1].out_s,parsed.clips[1].gain,parsed.clips[1].muted,parsed.clips[1].crossfade_s],['b roll.webm',1.25,3.5,0.4,true,0.75]);
@@ -18,6 +19,35 @@ test('serialize and parse round-trip media and title clips',()=>{
  assert.equal(t.kind,'title');
  assert.deepEqual(t.title,{text:'Intro',size:90,color:'#a1b2c3',background:'#101010',font:'serif',bold:true,italic:true,align:'left',vAlign:'middle',fadeIn:0.5,fadeOut:0});
  assert.equal(t.id,title.id,'ids round-trip');
+});
+
+test('audio clips round-trip and version 2 is the written format',()=>{
+ const audio=[{id:'au1',source:'music.mp3',in_s:2,out_s:12,at:4,gain:0.7,fadeIn:1.5,fadeOut:2}];
+ const text=serializeVideoProject([media('m1')],audio,'mp4');
+ assert.equal(JSON.parse(text).version,VIDEO_PROJECT_VERSION);
+ const parsed=parseVideoProject(text);
+ assert.equal(parsed.audioClips.length,1);
+ assert.deepEqual(parsed.audioClips[0],audio[0]);
+});
+
+test('legacy version 1 files load with an empty audio track; version 3+ is rejected',()=>{
+ const v1=JSON.stringify({app:'somnia-video',version:1,format:'mp4',clips:[{id:'a',kind:'media',source:'x.mp4',in_s:0,out_s:1}]});
+ const parsed=parseVideoProject(v1);
+ assert.equal(parsed.clips.length,1);
+ assert.deepEqual(parsed.audioClips,[]);
+ const v3=JSON.stringify({app:'somnia-video',version:3,clips:[]});
+ assert.throws(()=>parseVideoProject(v3),/version 3 is not supported/i);
+});
+
+test('audio fields are coerced and junk audio entries are skipped',()=>{
+ const text=JSON.stringify({app:'somnia-video',version:2,clips:[{id:'a',kind:'media',source:'x.mp4',in_s:0,out_s:1}],audio:[
+  {id:'au1',source:'m.mp3',in_s:-2,out_s:5,at:-1,gain:9,fadeIn:-3,fadeOut:0},
+  {source:'',in_s:0,out_s:1},
+  'garbage',
+ ]});
+ const parsed=parseVideoProject(text);
+ assert.equal(parsed.audioClips.length,1);
+ assert.deepEqual([parsed.audioClips[0].in_s,parsed.audioClips[0].at,parsed.audioClips[0].gain,parsed.audioClips[0].fadeIn],[0,0,2,0]);
 });
 
 test('parse rejects junk, foreign JSON and other versions with clear errors',()=>{
@@ -58,6 +88,9 @@ test('clipsSignature changes on edits and is stable for equal timelines',()=>{
  assert.equal(clipsSignature(a),clipsSignature([media('m1')]));
  assert.notEqual(clipsSignature(a),clipsSignature([media('m1',{muted:true})]));
  assert.notEqual(clipsSignature(a),clipsSignature([media('m2')]),'a new id is a different edit');
+ const au=[{id:'au1',source:'m.mp3',in_s:0,out_s:2,at:0,gain:1,fadeIn:0,fadeOut:0}];
+ assert.notEqual(clipsSignature(a),clipsSignature(a,au),'audio edits change the signature');
+ assert.equal(clipsSignature(a,au),clipsSignature(a,au.map(c=>({...c}))));
  assert.notEqual(clipsSignature(a),clipsSignature([{...media('m1'),crossfade_s:0.5}]));
 });
 
