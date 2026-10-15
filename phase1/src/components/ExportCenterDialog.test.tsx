@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {ExportCenterPanel} from './ExportCenterDialog';
 import {registerCommand} from '../lib/commandRegistry';
+import {recordRecent} from '../lib/exportCenter';
 import {CATALOGUES} from '../lib/i18n';
 
 const withCommands=(fn:()=>void)=>{const offs=[['project.export',false],['documents.saveCopy',true],['documents.export.open',true],['slides.saveCopy',true]].map(([id,on])=>registerCommand({id:id as string,title:'Title '+id,category:'Project',level:'ui',enabled:()=>on as boolean,run:()=>{}}));try{fn();}finally{offs.forEach(off=>off());}};
@@ -40,6 +41,23 @@ test('search input renders with its own testid and row markers are present for k
   assert.ok(html.includes('type="search"'),'search type');
   assert.ok(html.includes('data-export-row="command"'),'row marker for roving focus');
  }finally{offs.forEach(off=>off());}
+});
+
+test('a stored recent entry renders as the top group in stored order',()=>{
+ const map=new Map<string,string>();
+ const g=globalThis as {localStorage?:Storage};const prev=g.localStorage;
+ (g as Record<string,unknown>).localStorage={getItem:(k:string)=>map.get(k)??null,setItem:(k:string,v:string)=>{map.set(k,v);},removeItem:()=>{},clear:()=>map.clear(),key:()=>null,length:0};
+ try{
+  const offs=[registerCommand({id:'project.export',title:'Export project...',category:'Project',level:'ui',enabled:()=>true,run:()=>{}}),registerCommand({id:'vector.exportPng',title:'PNG',category:'Project',level:'ui',enabled:()=>true,run:()=>{}})];
+  try{
+   recordRecent('preset','png2x');recordRecent('command','project.export');
+   const html=renderToStaticMarkup(<ExportCenterPanel onClose={()=>{}}/>);
+   const rg=html.indexOf('export-center-group-recent');const pg=html.indexOf('export-center-group-project');
+   assert.ok(rg>-1&&rg<pg,'recent group before studio groups');
+   const seg=html.slice(rg,pg);
+   assert.ok(seg.indexOf('export-center-cmd-project.export')<seg.indexOf('export-center-preset-png2x'),'stored order across kinds');
+  }finally{offs.forEach(off=>off());}
+ }finally{if(prev===undefined)delete (g as Record<string,unknown>).localStorage;else g.localStorage=prev;}
 });
 
 test('empty registry renders the empty hint',()=>{

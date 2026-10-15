@@ -38,4 +38,7 @@ test('advanced export center: grouped commands, dark theme, round trip through p
  // ...and its advanced link returns to the center
  await page.getByTestId('export-advanced-open').click();
  await expect(page.getByTestId('export-center')).toBeVisible();
+ // the run export now leads the recent group
+ await expect(page.getByTestId('export-center-group-recent')).toBeVisible();
+ await expect(page.getByTestId('export-center-group-recent').getByTestId('export-center-cmd-project.export')).toBeVisible();
 });

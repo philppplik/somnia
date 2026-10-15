@@ -328,6 +328,7 @@
   "exportCenter.preset.mp4": "Copia MP4",
   "exportCenter.search": "Filtrar exportaciones...",
   "exportCenter.noMatches": "Ninguna exportación coincide con el filtro.",
+  "exportCenter.group.recent": "Usados recientemente",
   "export.page": "Página",
   "export.pageAria": "Página que exportar",
   "export.inlineCss": "CSS incrustado",
