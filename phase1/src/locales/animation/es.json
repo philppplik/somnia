@@ -1362,5 +1362,7 @@
  "animation.rig.textcase.title": "Título",
  "animation.rig.textcase.sentence": "Solo la primera mayúscula",
  "cmd.animation.text.case": "Cambiar mayúsculas y minúsculas de las capas de texto marcadas",
- "cmd.animation.text.replace": "Buscar y reemplazar texto en las capas de texto marcadas (todas si no hay ninguna marcada)"
+ "cmd.animation.text.replace": "Buscar y reemplazar texto en las capas de texto marcadas (todas si no hay ninguna marcada)",
+ "animation.rig.look": "Copiar el aspecto (relleno, trazo, efectos)",
+ "cmd.animation.layers.look": "Copiar el aspecto (relleno, trazo, efectos) de la primera capa marcada a las demás"
 }

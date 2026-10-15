@@ -1362,5 +1362,7 @@
  "animation.rig.textcase.title": "Title Case",
  "animation.rig.textcase.sentence": "Sentence case",
  "cmd.animation.text.case": "Change the case of the ticked text layers",
- "cmd.animation.text.replace": "Find and replace text in the ticked text layers (all text layers when none is ticked)"
+ "cmd.animation.text.replace": "Find and replace text in the ticked text layers (all text layers when none is ticked)",
+ "animation.rig.look": "Copy the look (fill, stroke, effects)",
+ "cmd.animation.layers.look": "Copy the look (fill, stroke, effects) of the first ticked layer to the other ticked layers"
 }

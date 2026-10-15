@@ -1362,5 +1362,7 @@
  "animation.rig.textcase.title": "Casse de titre",
  "animation.rig.textcase.sentence": "Majuscule de phrase",
  "cmd.animation.text.case": "Changer la casse des calques de texte cochés",
- "cmd.animation.text.replace": "Rechercher et remplacer le texte des calques de texte cochés (tous si aucun n'est coché)"
+ "cmd.animation.text.replace": "Rechercher et remplacer le texte des calques de texte cochés (tous si aucun n'est coché)",
+ "animation.rig.look": "Copier l'apparence (remplissage, contour, effets)",
+ "cmd.animation.layers.look": "Copier l'apparence (remplissage, contour, effets) du premier calque coché vers les autres"
 }

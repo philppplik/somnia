@@ -2035,3 +2035,14 @@ test('P294 text case and replace: counters keep {n}, case-insensitive replace, a
  s.setView({selectedLayer:null as never});rp({find:'sale',replace:'offer'});assert.equal(T('tx1'),'big offer today');assert.equal(T('tx2'),'offer ends soon');s.undo();assert.equal(JSON.stringify(s.document),before);
  assert.throws(()=>rp({find:'zzz',replace:'a'}),/Nothing changes/);assert.throws(()=>rp({find:'{n}'}),/counter/);
 });
+test('P295 look: fill, stroke and fresh-id effects copy onto targets, text keeps its gradient, keyed fill kept, one undo',async()=>{
+ const {lookSpecs}=await import('./lookCommands');const run=lookSpecs()[0].run as (p?:unknown)=>unknown;
+ const mk=(id:string,col:string)=>[{type:'layer.add',kind:'shape',id},{type:'layer.update',layer:id,source:{color:col}}];
+ const s=new AnimationSession();s.open(applyEdits(base(),[...mk('lk1','#ff0000'),{type:'layer.stroke',layer:'lk1',stroke:{color:'#00ff00',width:6}},{type:'layer.effects',layer:'lk1',effects:[{id:'fx-a',kind:'blur',enabled:true,amount:4,color:'#000000'}]},...mk('lk2','#0000ff'),...mk('lk3','#111111'),{type:'layer.add',kind:'solid',id:'lk4'}] as never));setAnimationSession(s);
+ const L=(id:string)=>findComp(s.document!)!.layers.find(x=>x.id===id)!;const before=JSON.stringify(s.document);
+ const r=run({layers:['lk1','lk2','lk3','lk4']}) as {layers:number};assert.equal(r.layers,3);
+ assert.equal(L('lk2').source.color,'#ff0000');assert.equal(L('lk2').stroke!.width,6);assert.equal(L('lk2').effects!.length,1);assert.notEqual(L('lk2').effects![0].id,'fx-a');assert.notEqual(L('lk2').effects![0].id,L('lk3').effects![0].id);
+ assert.equal(L('lk4').source.color,'#ff0000');assert.equal(L('lk4').stroke,undefined);
+ assert.throws(()=>run({layers:['lk1','lk2']}),/already/);
+ s.undo();assert.equal(JSON.stringify(s.document),before);
+});

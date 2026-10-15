@@ -2355,6 +2355,26 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.layers.look",
+      "title": "Copy the look (fill, stroke, effects) of the first ticked layer to the other ticked layers",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "appearance",
+        "copy",
+        "effects",
+        "fill",
+        "format painter",
+        "look",
+        "paste",
+        "same",
+        "stroke",
+        "style"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.layers.match",
       "title": "Match the other layers to the first layer",
       "category": "Edit",

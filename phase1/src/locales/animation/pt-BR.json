@@ -1362,5 +1362,7 @@
  "animation.rig.textcase.title": "Título",
  "animation.rig.textcase.sentence": "Apenas a primeira maiúscula",
  "cmd.animation.text.case": "Mudar maiúsculas e minúsculas das camadas de texto marcadas",
- "cmd.animation.text.replace": "Localizar e substituir texto nas camadas de texto marcadas (todas se nenhuma estiver marcada)"
+ "cmd.animation.text.replace": "Localizar e substituir texto nas camadas de texto marcadas (todas se nenhuma estiver marcada)",
+ "animation.rig.look": "Copiar o visual (preenchimento, traço, efeitos)",
+ "cmd.animation.layers.look": "Copiar o visual (preenchimento, traço, efeitos) da primeira camada marcada para as outras"
 }
