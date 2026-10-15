@@ -1,4 +1,5 @@
 import {useEffect,useState} from 'react';
+import {autoCorrectOn,setAutoCorrect} from '../../lib/documents/autocorrect';
 import {executeCommand} from '../../lib/commands';
 import {pickAndInsertText} from '../../lib/documents/insertFromFile';
 import {sortParagraphs,readParagraphSpacing,setParagraphSpacing,readBookmarks,setViewMarks,setTrackChanges,copyFormatting,pasteFormatting,setCharSpacing,insertPageBreak,clearFormatting,changeCase,hasTextSelection,setHighlight,setLink,toggleFormat,toggleVertAlign} from '../../lib/documents/session';
@@ -48,7 +49,7 @@ function ActionMenu({label,items,testId}:{label:string;testId:string;items:{id:s
 const SPACINGS=[-1,-0.5,0,0.5,1,2,3];
 /** Strikethrough, small caps, superscript, subscript, highlight, link and clear-formatting controls. */
 export function TextEffects({format,held,enabled}:{format:FormatState|null;held:FormatPatch|null;enabled:boolean}){
- const {t}=useT();const doc=useDocuments();const [linkOpen,setLinkOpen]=useState(false);
+ const {t}=useT();const doc=useDocuments();const [linkOpen,setLinkOpen]=useState(false);const [ac,setAc]=useState(autoCorrectOn);
  const on=(p:'strike'|'smallCaps'|'allCaps'|'doubleStrike')=>held?.[p]??format?.[p]==='on';
  const spacing=held?.spacing??format?.spacing;
  const vert=held?.vertAlign??format?.vertAlign??null;const hl=held?.highlight??format?.highlight??null;
@@ -91,6 +92,7 @@ export function TextEffects({format,held,enabled}:{format:FormatState|null;held:
   <ActionMenu label={t('documents.menu.review')} testId="documents-menu-review" items={[
    {id:'track',label:(doc.trackChanges?'\u2713 ':'')+t('documents.review.track'),enabled,run:()=>void setTrackChanges(!doc.trackChanges)},
    {id:'marks',label:(doc.showMarks?'\u2713 ':'')+t('documents.view.marks'),enabled,run:()=>void setViewMarks(!doc.showMarks,doc.showMarkup)},
+   {id:'autocorrect',label:(ac?'\u2713 ':'')+t('documents.autocorrect.toggle'),enabled:true,run:()=>{if(setAutoCorrect(!ac))setAc(!ac);}},
    {id:'review',label:t('documents.review.open'),enabled,run:()=>setInfoDialog('review')}]}/>
   <ActionMenu label={t('documents.menu.document')} testId="documents-menu-document" items={[
    {id:'props',label:t('documents.props.open'),enabled:true,run:()=>setInfoDialog('properties')},

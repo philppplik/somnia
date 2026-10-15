@@ -1,4 +1,5 @@
 import {registerCommand} from '../commandRegistry';
+import {autoCorrectOn,setAutoCorrect} from './autocorrect';
 import {getDocumentsState,patchDocuments,stepZoom} from './store';
 import {setTableLayout,insertSectionBreak,removeSectionBreak,setHfVariants,typeText,redoEdit,setAlign,setParagraphStyle,toggleList,clearList,shiftListLevel,stepFontSize,stepIndent,toggleFormat,undoEdit,editTable,insertTable,setHeaderFooter,insertImage,resizeImageToPercent,setImageAlt,removeImage,setColumnWidth,styleTable,setPageSetup,setFindOpen,setFindQuery,findStep,replaceAll,replaceCurrent} from './session';
 import {proofWordOk,checkFormatPatch,MIN_SPACING_PT,MAX_SPACING_PT,MIN_SCALE_PCT,MAX_SCALE_PCT,lineRuleProblem,imageWrapProblem,imageCropProblem,type ImageWrap,type ImageAlign,type LineRule,stylePatchProblem,STYLE_ID_RE,type StylePatch,tocProblem,type TocOptions,listOptionsProblem,type ListOptionsPatch,pageSetupProblem,LIST_STYLES,type ListStyleId} from './protocol';
@@ -161,6 +162,7 @@ export function registerDocumentsCommands(){
    if(typeof m!=='string'||!(CASE_MODES as readonly string[]).includes(m))throw expected('Invalid "mode": use upper, lower, title, sentence or toggle.');
    await changeCase(m as CaseMode);
   },()=>ready()&&!!getDocumentsState().caret),
+  add('documents.autocorrect.toggle','Turn AutoCorrect while typing on or off',async()=>{setAutoCorrect(!autoCorrectOn());},()=>ready()),
   add('documents.view.marks','Show or hide formatting marks',async()=>{const s=getDocumentsState();await setViewMarks(!s.showMarks,s.showMarkup);},()=>ready()),
   add('documents.view.markup','Show or hide tracked-change markup',async()=>{const s=getDocumentsState();await setViewMarks(s.showMarks,!s.showMarkup);},()=>ready()),
   add('documents.review.next','Go to the next tracked change',async()=>{if(!await goToAdjacentChange(1))throw expected('There are no tracked changes.');},()=>ready()),

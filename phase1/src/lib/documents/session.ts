@@ -278,6 +278,7 @@ async function structural(op:(e:DocumentsEngine)=>Promise<import('./protocol').O
  patchDocuments({edited:true,editError:'',caretLocked:false,imageBlock:null,imageRects:[],caret:{block:after.block,anchor:after.off,head:after.off}});await refresh(d);
 }
 /* ---- On-page caret: all offsets are UTF-8 bytes of the paragraph's current text. A selection may span paragraphs (anchorBlock differs from block). ---- */
+import {autoCorrect,autoCorrectOn} from './autocorrect';
 const enc=new TextEncoder();const u8=(s:string)=>enc.encode(s).length;
 const blockText=(i:number)=>{const b=getDocumentsState().blocks.find(x=>x.index===i);return b&&b.editable?b.text??null:null;};
 interface Pos{block:number;off:number}
@@ -362,6 +363,10 @@ export const typeText=(text:string)=>run(async()=>{
   const at=n.s.off,end=at+u8(t);
   await structural(async eng=>{await eng.replace({block:n.s.block,hunks:[{start:at,end:at,text:t}]});return eng.format({block:n.s.block,off:at},{block:n.s.block,off:end},pf.patch);},n.s,{block:n.s.block,off:end});
   patchDocuments({pendingFormat:{block:n.s.block,off:end,patch:pf.patch}});return;
+ }
+ if(n.s.block===n.e.block&&n.s.off===n.e.off&&autoCorrectOn()){
+  const cur=blockText(n.s.block),fix=cur===null?null:autoCorrect(cur,n.s.off,t);
+  if(fix){await applyAtCaret(fix,false);return;}
  }
  if(n.s.block===n.e.block)await applyAtCaret({start:n.s.off,end:n.e.off,text:t},n.s.off===n.e.off);
  else await replaceRange(n.s,n.e,t,n.h);
