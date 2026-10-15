@@ -276,6 +276,7 @@
   "sound.arrange.command.save": "Arranjo e mixagem: Baixar sessão",
   "sound.arrange.clipLevel": "Ganho do clipe (dB)",
   "sound.arrange.curve": "Curva de ganho (dB)",
+  "sound.arrange.trackCurve": "Automação da faixa",
   "sound.arrange.curveAdd": "Adicionar ponto no cursor",
   "sound.arrange.destination": "Faixa de destino",
   "cmd.sound.arrange.rename": "Arranjo e mixagem: Nome da sessão",

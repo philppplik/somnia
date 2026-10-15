@@ -276,6 +276,7 @@
   "sound.arrange.command.save": "Arrange & Mix: Download session",
   "sound.arrange.clipLevel": "Clip gain (dB)",
   "sound.arrange.curve": "Gain curve (dB)",
+  "sound.arrange.trackCurve": "Track automation",
   "sound.arrange.curveAdd": "Add point at playhead",
   "sound.arrange.destination": "Destination track",
   "cmd.sound.arrange.rename": "Arrange & Mix: Session name",

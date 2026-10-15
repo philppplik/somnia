@@ -10,6 +10,7 @@ Session schema v10 adds `gainCurve: GainPoint[]` to `ArrangeTrack`. v9 sessions 
 - `src/lib/sound/arrangement.ts` — `ArrangeTrack.gainCurve`, generic `curveDbAt(points, at)` (the clip-level `gainCurveAt` now delegates to it), migration v9 → v10, validator track-curve checks.
 - `src/lib/sound/rackRender.ts` — applies the curve per sample in session frames; range renders evaluate the curve at `range.start + i`.
 - `src/lib/sound/arrangeCommands.ts` — `track.curve {id, points}` replaces a track's automation, undoable like every arrange edit.
+- `src/components/sound/SoundArrange.tsx` — the "A" button in each mixer track row opens a point list for that track (same pattern as clip automation): add a point at the playhead, edit each point's dB, delete points.
 
 ## Test
 `trackAutomation.test.ts` (3) covers round-trip and v9 migration, per-sample gain math including range offset, and curve bounds; `arrangeCommands.test.ts` covers the command and undo. Full sound suite: 122 pass / 0 fail.

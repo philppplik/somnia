@@ -276,6 +276,7 @@
   "sound.arrange.command.save": "Arrangement & Mix: Session herunterladen",
   "sound.arrange.clipLevel": "Clip-Pegel (dB)",
   "sound.arrange.curve": "Gain-Hüllkurve (dB)",
+  "sound.arrange.trackCurve": "Spur-Automation",
   "sound.arrange.curveAdd": "Punkt am Playhead",
   "sound.arrange.destination": "Zielspur",
   "cmd.sound.arrange.rename": "Arrangement & Mix: Sessionname",
