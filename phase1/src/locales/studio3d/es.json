@@ -1025,5 +1025,8 @@
  "cmd.studio3d.cursor.toSelection": "Mover el cursor 3D al centro de la selección",
  "cmd.studio3d.object.toCursor": "Mover objetos 3D para que su centro combinado caiga sobre el cursor 3D",
  "studio3d.hist.moveToCursor_one": "Mover {count} objeto al cursor 3D",
- "studio3d.hist.moveToCursor_other": "Mover {count} objetos al cursor 3D"
+ "studio3d.hist.moveToCursor_other": "Mover {count} objetos al cursor 3D",
+ "cmd.studio3d.object.eachToCursor": "Mover cada objeto 3D seleccionado sobre el cursor 3D",
+ "studio3d.hist.moveEachToCursor_one": "Mover {count} objeto sobre el cursor 3D",
+ "studio3d.hist.moveEachToCursor_other": "Mover {count} objetos sobre el cursor 3D"
 }

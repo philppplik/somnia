@@ -9776,6 +9776,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.object.eachToCursor",
+      "title": "Move each selected 3D object onto the 3D cursor",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.object.locked",
       "title": "Lock or unlock object",
       "category": "Edit",

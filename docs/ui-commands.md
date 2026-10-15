@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-942 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+943 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -819,6 +819,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `studio3d.object.delete` | Delete a 3D object | Edit | studio3d |  |
 | `studio3d.object.distribute` | Distribute 3D objects evenly | Edit | studio3d |  |
 | `studio3d.object.duplicate` | Duplicate a 3D object | Edit | studio3d |  |
+| `studio3d.object.eachToCursor` | Move each selected 3D object onto the 3D cursor | Edit | studio3d |  |
 | `studio3d.object.locked` | Lock or unlock object | Edit | studio3d |  |
 | `studio3d.object.material` | Change the material of a 3D object | Edit | studio3d |  |
 | `studio3d.object.nudge` | Nudge a 3D object | Edit | studio3d |  |

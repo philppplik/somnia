@@ -224,6 +224,7 @@ export interface Studio3DController{
  align(ids:number[],axis:AlignAxis,to:AlignTo):void;
  snapToGround(ids:number[]):number;
  moveCenterTo(ids:number[],at:[number,number,number]):number;
+ moveEachTo(ids:number[],at:[number,number,number]):number;
  distribute(ids:number[],axis:AlignAxis):void;
  setSnap(patch:Partial<SnapSettings>):void;
  setPivotMode(mode:PivotMode):void;
@@ -393,6 +394,7 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{ids:number[];axis:AlignAxis}>('studio3d.object.distribute','Distribute 3D objects evenly','Edit',p=>need().distribute(p.ids,p.axis),object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:3,maxItems:500},axis:{enum:['x','y','z']}}),hasScene),
   add<{ids:number[]}>('studio3d.object.snapToGround','Drop 3D objects until their bounds rest on the ground plane','Edit',p=>need().snapToGround(p.ids),object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500}},['ids']),hasScene),
   add<{ids:number[]}>('studio3d.object.toCursor','Move 3D objects so their combined centre lands on the 3D cursor','Edit',p=>{const c=getStudio3DState().cursor;return need().moveCenterTo(p.ids,[c.x,c.y,c.z]);},object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500}},['ids']),hasScene),
+  add<{ids:number[]}>('studio3d.object.eachToCursor','Move each selected 3D object onto the 3D cursor','Edit',p=>{const c=getStudio3DState().cursor;return need().moveEachTo(p.ids,[c.x,c.y,c.z]);},object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500}},['ids']),hasScene),
   add<Partial<SnapSettings>>('studio3d.snap.set','Change 3D transform snapping','Tools',p=>need().setSnap(p&&Object.keys(p).length?p:{on:!getStudio3DState().snap.on}),object({on:{type:'boolean'},move:{type:'number',minimum:0.001,maximum:100},rotate:{type:'number',minimum:1,maximum:180},scale:{type:'number',minimum:0.001,maximum:10},mode:{enum:['grid','vertex','surface','midpoint']}},[]),()=>!!controller),
   add<{mode:PivotMode}>('studio3d.pivot.set','Set the 3D transform pivot','Tools',p=>need().setPivotMode(p.mode),object({mode:{enum:['center','origin','cursor']}},['mode']),()=>!!controller),
   add<{x:number;y:number;z:number}>('studio3d.cursor.set','Move the 3D cursor','Tools',p=>{for(const k of['x','y','z']as const)if(!Number.isFinite(p[k]))throw new Error('Cursor coordinates must be finite numbers.');need().setCursor({x:p.x,y:p.y,z:p.z});},object({x:{type:'number'},y:{type:'number'},z:{type:'number'}},['x','y','z']),()=>!!controller),

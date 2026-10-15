@@ -760,6 +760,15 @@ export class Stage{
   this.moveMany({key:'studio3d.hist.moveToCursor',params:{count:objs.length}},objs.map(o=>({o,delta})));
   return objs.length;
  }
+ /** Moves each object so its own origin lands on the given point (for example the 3D cursor). Objects already there stay. One undo step. */
+ moveEachTo(ids:number[],at:[number,number,number]):number{
+  if(!Array.isArray(at)||at.length!==3||at.some(n=>!Number.isFinite(n)))throw new StageError('The target point must be three numbers.');
+  const objs=this.topLevel(this.needMany(ids,1));
+  this.root.updateWorldMatrix(true,true);
+  const target=new THREE.Vector3(at[0],at[1],at[2]);
+  this.moveMany({key:'studio3d.hist.moveEachToCursor',params:{count:objs.length}},objs.map(o=>({o,delta:target.clone().sub(o.getWorldPosition(new THREE.Vector3()))})));
+  return objs.length;
+ }
  /** Every unique edge of the edited mesh as index pairs (low index first). */
  private allEdges(m:THREE.Mesh):[number,number][]{
   const idx=m.geometry.getIndex();const pos=m.geometry.getAttribute('position');
