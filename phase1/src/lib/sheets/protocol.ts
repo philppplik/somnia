@@ -171,6 +171,7 @@ export type SheetsRequest=
  |{id:number;op:'split';sheet:number;row:number;col:number;rows:number;cols:number;split:SplitOp}
  |{id:number;op:'annotate';sheet:number;row:number;col:number;annotate:AnnotateOp}
  |{id:number;op:'annotations';sheet:number;row:number;col:number}
+ |{id:number;op:'notesOverview';sheet:number}
  |{id:number;op:'defineName';sheet:number;row:number;col:number;rows:number;cols:number;name:{name:string;scope:'workbook'|'sheet';replace?:boolean}}
  |{id:number;op:'deleteName';sheet:number;name:{name:string;scope:'workbook'|'sheet'}}
  |{id:number;op:'names'}

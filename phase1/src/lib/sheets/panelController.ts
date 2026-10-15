@@ -8,7 +8,7 @@ import type {CfManageOp,ChartOp,SparklineOp,ProtectOp,WhatIfOp,LayoutOp,CellTool
 import {parseEditLines,parseFreeze,parseLineCommand} from './lineOps';
 import {parseSheetOp} from './sheetOps';
 import {parseSortCommand} from './sortOps';
-import {parseAnnotateCommand} from './notes';
+import {parseAnnotateCommand,parseNoteReviewCommand,type NoteReviewOp} from './notes';
 import {parseNamesCommand} from './names';
 import {parsePivotCommand,parseTableCommand} from './tableOps';
 import {parseProtectCommand} from './protectOps';
@@ -86,6 +86,7 @@ export interface SheetsPanelController {
  pivotEdit(op:PivotEditOp):void|Promise<void>;
  cfManage(op:CfManageOp):void|Promise<void>;
  validationCheck():void|Promise<void>;
+ noteReview(op:NoteReviewOp):void|Promise<void>;
  insertFunction(name:string):void|Promise<void>;
  /** Inserts a PNG or JPEG picture at the selected cell (one undo step). */
  insertPicture(picture:{bytes:Uint8Array;alt:string;width:number}):void|Promise<void>;
@@ -109,7 +110,7 @@ let current:SheetsPanelController|null=null;
 export const getSheetsPanelController=()=>current;
 export function registerSheetsPanelController(controller:SheetsPanelController){current=controller;return()=>{if(current===controller)current=null;};}
 const requireController=()=>{if(!current?.ready())throw Error('No workbook is ready.');return current;};
-export const SHEETS_PANEL_COMMAND_IDS=['sheets.navigate','sheets.setCell','sheets.analyzeRange','sheets.format','sheets.resize','sheets.freeze','sheets.editLines','sheets.sheet','sheets.sort','sheets.filter','sheets.fill','sheets.highlight','sheets.validation','sheets.replace','sheets.dedupe','sheets.split','sheets.annotate','sheets.names','sheets.table','sheets.pivot','sheets.pageSetup','sheets.export','sheets.view','sheets.protect','sheets.chart','sheets.sparkline','sheets.whatif','sheets.object','sheets.picture','sheets.savedView','sheets.outline','sheets.cellLayout','sheets.cellTools','sheets.insertFunction','sheets.dataTools','sheets.pivotEdit','sheets.cfManage','sheets.validationCheck'] as const;
+export const SHEETS_PANEL_COMMAND_IDS=['sheets.navigate','sheets.setCell','sheets.analyzeRange','sheets.format','sheets.resize','sheets.freeze','sheets.editLines','sheets.sheet','sheets.sort','sheets.filter','sheets.fill','sheets.highlight','sheets.validation','sheets.replace','sheets.dedupe','sheets.split','sheets.annotate','sheets.names','sheets.table','sheets.pivot','sheets.pageSetup','sheets.export','sheets.view','sheets.protect','sheets.chart','sheets.sparkline','sheets.whatif','sheets.object','sheets.picture','sheets.savedView','sheets.outline','sheets.cellLayout','sheets.cellTools','sheets.insertFunction','sheets.dataTools','sheets.pivotEdit','sheets.cfManage','sheets.validationCheck','sheets.noteReview'] as const;
 export function sheetsPanelCommandSpecs():CommandSpec[]{
  return [
  {id:'sheets.navigate',title:'Go to spreadsheet cell',category:'View',level:'ui',allowInInput:true,
@@ -205,6 +206,9 @@ export function sheetsPanelCommandSpecs():CommandSpec[]{
  {id:'sheets.pivotEdit',title:'Change the fields, values, filters or layout of a PivotTable, or refresh, re-source or delete it',category:'Edit',level:'ui',allowInInput:true,
   params:{type:'object',properties:{kind:{type:'string',enum:['addField','removeField','moveField','valueSettings','filter','sort','group','collapse','layout','changeSource','refresh','delete']},pivot:{type:'string',minLength:1,maxLength:MAX_PIVOT_TEXT},field:{type:'string',minLength:1,maxLength:MAX_PIVOT_TEXT},area:{type:'string',enum:[...PIVOT_AREAS]},from:{type:'string',enum:[...PIVOT_AREAS]},to:{type:'string',enum:[...PIVOT_AREAS]},func:{type:'string',enum:[...PIVOT_VALUE_FUNCS]},index:{type:'integer',minimum:0,maximum:63},showAs:{type:'string',enum:[...PIVOT_SHOW_AS]},numberFormat:{type:['string','null'],enum:[...PIVOT_NUMBER_FORMATS,null]},selected:{type:['array','null'],maxItems:MAX_PIVOT_ITEMS,items:{type:'string',maxLength:MAX_PIVOT_TEXT}},order:{type:'string',enum:[...PIVOT_ORDERS]},by:{type:'string',enum:[...PIVOT_GROUPS]},collapse:{type:'boolean'},layout:{type:'string',enum:[...PIVOT_LAYOUTS]},grandTotalsRows:{type:'boolean'},grandTotalsCols:{type:'boolean'},subtotals:{type:'string',enum:[...PIVOT_SUBTOTALS]},showHeaders:{type:'boolean'},style:{type:'string',maxLength:40}},required:['kind','pivot'],additionalProperties:false},
   enabled:()=>!!current?.ready(),run:p=>requireController().pivotEdit(parsePivotEditCommand(p))},
+ {id:'sheets.noteReview',title:'Resolve, reopen or delete a listed note or comment',category:'Edit',level:'ui',allowInInput:true,
+  params:{type:'object',properties:{kind:{type:'string',enum:['resolve','reopen','remove']},cell:{type:'string',minLength:2,maxLength:10}},required:['kind','cell'],additionalProperties:false},
+  enabled:()=>!!current?.ready(),run:p=>requireController().noteReview(parseNoteReviewCommand(p))},
  {id:'sheets.validationCheck',title:'Find cells whose value breaks their allowed-values rule',category:'Edit',level:'ui',allowInInput:true,
   params:{type:'object',properties:{},additionalProperties:false},
   enabled:()=>!!current?.ready(),run:p=>{if(p&&typeof p==='object'&&Object.keys(p as object).length>0)throw Error('This takes no fields.');return requireController().validationCheck();}},

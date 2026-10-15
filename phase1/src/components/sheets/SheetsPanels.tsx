@@ -233,6 +233,7 @@ export function SheetsLayoutPanel({context}:PanelHostProps){
   <ReplaceGroup/>
   <DedupeGroup/>
   <NotesGroup/>
+  <NoteListGroup/>
   <NamesGroup/>
   <ViewGroup/>
   <ChartsGroup/>
@@ -844,6 +845,24 @@ function NotesGroup(){
    {link&&<Button variant="outline" size="compact" disabled={action.busy} onClick={()=>run({kind:'unlink'})} data-testid="sheets-nt-unlink">{t('sheets.nt.unlink')}</Button>}
   </div>
   <p className="text-ink-3">{t('sheets.nt.scope',{cell:s.address})}</p>
+ </div>;
+}
+/** Every note and comment of this sheet in reading order: filter by state, go to one, resolve or reopen it, or delete it. One undo step each. Shown only when the sheet has notes. */
+type NoteFilter='all'|'open'|'resolved';type NoteListAction='go'|'resolve'|'reopen'|'remove';
+function NoteListGroup(){
+ const {t}=useT(),s=useSheetsSelection(),action=useAction();const [filter,setFilter]=useState<NoteFilter>('all');const [pick,setPick]=useState('');const [act,setAct]=useState<NoteListAction>('go');
+ const list=s?.noteList;if(!s||!list||list.notes.length===0)return null;
+ const shown=list.notes.filter(n=>filter==='all'||(filter==='resolved')===n.resolved),chosen=shown.find(n=>n.cell===pick)??shown[0]??null,open=list.notes.filter(n=>!n.resolved).length;
+ const bad=!chosen||(act==='resolve'&&(chosen.resolved||!chosen.threaded))||(act==='reopen'&&(!chosen.resolved||!chosen.threaded));
+ const apply=()=>{if(!chosen)return;if(act==='go')void action.run('sheets.navigate',{sheet:s.sheet,address:chosen.cell});else void action.run('sheets.noteReview',{kind:act,cell:chosen.cell});};
+ return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.nl.title')}>
+  <span>{t('sheets.nl.title')}</span>
+  <p className="text-ink-3">{t('sheets.nl.count',{total:list.total,open})}{list.truncated?' '+t('sheets.nl.truncated'):''}</p>
+  <label className="flex flex-col gap-1">{t('sheets.nl.filter')}<NativeSelect className={field} value={filter} disabled={action.busy} onChange={e=>setFilter(e.currentTarget.value as NoteFilter)} data-testid="sheets-nl-filter">{(['all','open','resolved'] as NoteFilter[]).map(f=><option key={f} value={f}>{t('sheets.nl.f.'+f)}</option>)}</NativeSelect></label>
+  <label className="flex flex-col gap-1">{t('sheets.nl.note')}<NativeSelect className={field} value={chosen?.cell??''} disabled={action.busy||shown.length===0} onChange={e=>setPick(e.currentTarget.value)} data-testid="sheets-nl-note">{shown.length===0&&<option value="">{t('sheets.nl.none')}</option>}{shown.map(n=><option key={n.cell} value={n.cell}>{n.cell+' · '+(n.author?n.author+': ':'')+n.text.slice(0,60)+(n.resolved?' · '+t('sheets.nt.resolved'):'')}</option>)}</NativeSelect></label>
+  {chosen&&<p data-testid="sheets-nl-text">{chosen.text}{chosen.replies>0?' ('+t('sheets.nl.replies',{n:chosen.replies})+')':''}</p>}
+  <label className="flex flex-col gap-1">{t('sheets.nl.action')}<NativeSelect className={field} value={act} disabled={action.busy} onChange={e=>setAct(e.currentTarget.value as NoteListAction)} data-testid="sheets-nl-action">{(['go','resolve','reopen','remove'] as NoteListAction[]).map(a=><option key={a} value={a}>{t('sheets.nl.a.'+a)}</option>)}</NativeSelect></label>
+  <Button variant="outline" size="compact" disabled={action.busy||bad} onClick={apply} data-testid="sheets-nl-apply">{t('sheets.nl.apply')}</Button>
  </div>;
 }
 /** Removes rows that repeat an earlier row inside exactly the selected block. One undo step. */

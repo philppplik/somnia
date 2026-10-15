@@ -2828,6 +2828,25 @@ impl HeadlessWorkbook {
         Ok(json!({"notes": notes, "links": links, "truncated": truncated}).to_string())
     }
 
+    /// Every note and comment of the sheet in reading order (read only, at most 200): `{"notes":[{"cell","author","text","threaded","resolved","replies":n}],"total":n,"truncated":b}`.
+    /// Texts are cut to 300 characters here; the full text is read per cell with `annotations`.
+    pub fn notes_overview(&self, sheet: usize) -> Result<String, String> {
+        let doc = self.session.doc().map_err(|e| e.to_string())?;
+        let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+        let mut all: Vec<(&CellRef, &gridcraft_engine::model::Comment)> = sh.comments.iter().collect();
+        all.sort_by_key(|(c, _)| (c.row, c.col));
+        let total = all.len();
+        let notes: Vec<serde_json::Value> = all
+            .into_iter()
+            .take(MAX_NOTES_LISTED)
+            .map(|(c, n)| json!({
+                "cell": c.a1(), "author": n.author.chars().take(80).collect::<String>(), "text": n.text.chars().take(300).collect::<String>(),
+                "threaded": n.threaded, "resolved": n.resolved, "replies": n.replies.len()
+            }))
+            .collect();
+        Ok(json!({"notes": notes, "total": total, "truncated": total > MAX_NOTES_LISTED}).to_string())
+    }
+
     /// Removes rows whose chosen columns repeat an earlier row (case-insensitive, the first one stays) as ONE history entry.
     /// `op_json` is `{"header":bool,"columns":[offsets inside the block]}`; the rows below move up inside the block only.
     /// Refused: protected sheets, blocks with formulas (their references would not follow the rows), fewer than two data rows.
@@ -4881,6 +4900,21 @@ mod tests {
         book.session.run("review.protectSheet", json!({})).unwrap();
         assert!(book.cf_range(0, 50, 0, 3, 1, op).unwrap_err().contains("protected"));
     }
+    #[test]
+    fn notes_overview_lists_every_note_in_reading_order() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        assert!(book.notes_overview(0).unwrap().contains("\"notes\":[]"));
+        book.annotate_cell(0, 9, 3, r#"{"kind":"comment","text":"later one"}"#).unwrap();
+        book.annotate_cell(0, 1, 0, r#"{"kind":"note","text":"first one"}"#).unwrap();
+        book.annotate_cell(0, 1, 0, r#"{"kind":"resolve","resolved":true}"#).ok();
+        let v: serde_json::Value = serde_json::from_str(&book.notes_overview(0).unwrap()).unwrap();
+        assert_eq!(v["total"], 2);
+        assert_eq!(v["notes"][0]["cell"], "A2");
+        assert_eq!(v["notes"][1]["cell"], "D10");
+        assert_eq!(v["notes"][1]["threaded"], true);
+        assert!(book.notes_overview(99).is_err());
+    }
+
     #[test]
     fn validation_supports_dates_times_alerts_and_finds_invalid_cells() {
         let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();

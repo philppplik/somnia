@@ -7554,6 +7554,14 @@
       "hasEnabled": true
     },
     {
+      "id": "sheets.noteReview",
+      "title": "Resolve, reopen or delete a listed note or comment",
+      "category": "Edit",
+      "source": "sheets",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
       "id": "sheets.object",
       "title": "Add a shape, or move, resize or delete a picture or shape",
       "category": "Edit",

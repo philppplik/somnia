@@ -37,3 +37,23 @@ export function internalTarget(target:string):{sheet:string;address:string}|null
  const sheet=target.slice(0,bang).replace(/^'(.*)'$/,'$1').replace(/''/g,"'"),address=target.slice(bang+1).split(':')[0].replace(/\$/g,'').toUpperCase();
  return /^[A-Z]{1,3}[0-9]{1,7}$/.test(address)?{sheet,address}:null;
 }
+/** One note or comment in the sheet-wide list. */
+export interface NoteListItem{cell:string;author:string;text:string;threaded:boolean;resolved:boolean;replies:number}
+export interface NoteList{notes:NoteListItem[];total:number;truncated:boolean}
+export const MAX_LISTED_NOTES=200;
+export function parseNoteList(raw:unknown):NoteList{
+ const r=raw as {notes?:unknown;total?:unknown;truncated?:unknown}|null;const list=Array.isArray(r?.notes)?(r!.notes as unknown[]):[];const out:NoteListItem[]=[];
+ for(const x of list.slice(0,MAX_LISTED_NOTES)){const n=x as Record<string,unknown>|null;if(!n||typeof n.cell!=='string'||!/^[A-Z]{1,3}[0-9]{1,7}$/.test(n.cell)||typeof n.text!=='string')continue;
+  out.push({cell:n.cell,author:typeof n.author==='string'?n.author.slice(0,80):'',text:n.text.slice(0,300),threaded:n.threaded===true,resolved:n.resolved===true,replies:typeof n.replies==='number'&&Number.isFinite(n.replies)?Math.max(0,Math.min(100000,Math.floor(n.replies))):0});}
+ return {notes:out,total:typeof r?.total==='number'&&Number.isFinite(r.total)?Math.max(out.length,Math.floor(r.total)):out.length,truncated:r?.truncated===true};
+}
+export const NOTE_REVIEW_KINDS=['resolve','reopen','remove'] as const;
+export type NoteReviewOp={kind:typeof NOTE_REVIEW_KINDS[number];cell:string};
+/** Settles or deletes one listed note, wherever the selection is. */
+export function parseNoteReviewCommand(input:unknown):NoteReviewOp{
+ if(!input||typeof input!=='object'||Array.isArray(input))throw Error('Note operation must be an object.');
+ const o=input as Record<string,unknown>;if(Object.keys(o).some(k=>k!=='kind'&&k!=='cell'))throw Error('Unknown note field.');
+ if(typeof o.kind!=='string'||!(NOTE_REVIEW_KINDS as readonly string[]).includes(o.kind))throw Error('Unsupported note operation.');
+ if(typeof o.cell!=='string'||!/^[A-Za-z]{1,3}[0-9]{1,7}$/.test(o.cell))throw Error('Name the cell of the note, like B7.');
+ return {kind:o.kind as NoteReviewOp['kind'],cell:o.cell.toUpperCase()};
+}

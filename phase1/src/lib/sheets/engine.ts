@@ -1,4 +1,4 @@
-import {parseAnnotations} from './notes';
+import {parseAnnotations,parseNoteList,type NoteList} from './notes';
 import {parseNames} from './names';
 import {parsePivotFields,parseTables} from './tableOps';
 import {parseScenarios} from './whatIfOps';
@@ -146,6 +146,7 @@ export class SheetsEngine{
  /** Adds, answers, resolves or removes a note or comment, or sets or removes a link, on one cell (one undo step). */
  annotate(sheet:number,row:number,col:number,annotate:AnnotateOp){return this.result<unknown>({op:'annotate',sheet,row,col,annotate});}
  /** The note and link of one cell (read only). */
+ async notesOverview(sheet:number):Promise<NoteList>{return parseNoteList(await this.result<unknown>({op:'notesOverview',sheet}));}
  async annotations(sheet:number,row:number,col:number):Promise<CellAnnotations>{const r=await this.result<{notes:unknown;links:unknown}>({op:'annotations',sheet,row,col});return parseAnnotations(r);}
  /** Replace text in the block (one undo step); resolves to the number of changed cells. */
  async replace(sheet:number,row:number,col:number,rows:number,cols:number,replace:ReplaceOp):Promise<number>{const r=await this.result<{replaced:unknown}>({op:'replace',sheet,row,col,rows,cols,replace});return typeof r.replaced==='number'?r.replaced:0;}
