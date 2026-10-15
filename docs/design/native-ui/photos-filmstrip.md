@@ -867,3 +867,18 @@ EXIF rule set (camera, type, orientation, ISO).
 Coverage: the light/dark gallery leg seeds two ISO values and
 narrows to one, options proven cache-driven
 (`test-results/ds-photos-smart-iso-{light,dark}.png`).
+
+## Focal-length smart-filter rule (P138)
+
+The smart filter gains a focal-length rule: a select of the focal
+lengths actually present in the EXIF cache (v4), ascending by
+millimetres - "show everything I shot at 35 mm" is one click.
+String equality on the reader-normalized value, like the camera
+rule; photos without a resolved cache entry never match, and the
+rule composes with the rest of the smart block. The slice also
+extends the lazy EXIF warm-up to the ISO rule (it previously only
+covered sort-by-capture, camera and duplicates).
+
+Coverage: the light/dark gallery leg seeds two focal lengths and
+narrows to one, options proven cache-driven
+(`test-results/ds-photos-smart-fl-{light,dark}.png`).

@@ -282,5 +282,7 @@
  "photos.p.info.exposure": "Belichtung",
  "photos.p.info.date": "Aufnahmedatum",
  "photos.smart.iso": "ISO",
- "photos.smart.anyIso": "Jede ISO"
+ "photos.smart.anyIso": "Jede ISO",
+ "photos.smart.fl": "Brennweite",
+ "photos.smart.anyFl": "Jede Brennweite"
 }

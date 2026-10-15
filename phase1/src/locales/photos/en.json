@@ -282,5 +282,7 @@
  "photos.p.info.exposure": "Exposure",
  "photos.p.info.date": "Capture date",
  "photos.smart.iso": "ISO",
- "photos.smart.anyIso": "Any ISO"
+ "photos.smart.anyIso": "Any ISO",
+ "photos.smart.fl": "Focal length",
+ "photos.smart.anyFl": "Any focal length"
 }

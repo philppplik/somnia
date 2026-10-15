@@ -1463,6 +1463,33 @@ test('smart filter ISO: narrows the strip to the chosen ISO (light and dark)',as
   await page.evaluate(async()=>{const ps=await import('/src/store/panelStateStore.ts');ps.panelStateStore.set('photos.smartFilter',{on:false,minRating:0,flag:'',label:'',tag:'',camera:'',dup:false,type:'',orient:'',iso:''});});
  }
 });
+test('smart filter focal length: narrows the strip to the chosen focal length (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
+  await page.evaluate(async()=>{
+   const ps=await import('/src/store/panelStateStore.ts');const cd=await import('/src/lib/photos/captureDates.ts');const med=await import('/src/lib/media.ts');
+   ps.panelStateStore.set('photos.smartFilter',{on:false,minRating:0,flag:'',label:'',tag:'',camera:'',dup:false,type:'',orient:'',iso:'',fl:''});
+   const size=(n:string)=>med.getMedia().items.find(i=>i.name===n)!.size;
+   cd.putCaptureDate('strip-1.png',size('strip-1.png'),null,null,240,150,{fl:'24 mm'});
+   cd.putCaptureDate('strip-2.png',size('strip-2.png'),null,null,240,150,{fl:'85 mm'});
+  });
+  await page.getByTestId('photos-filmstrip-menu').click();
+  await page.getByTestId('photos-filmstrip-smart').click();
+  await expect(page.getByTestId('photos-smart-fl').locator('option', {hasText:'85 mm'})).toHaveCount(1); // options come from the cache
+  await page.getByTestId('photos-smart-fl').selectOption('85 mm');
+  await expect(page.getByTestId('photos-filmstrip-item-strip-2.png')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-1.png')).toHaveCount(0);
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toHaveCount(0); // unresolved entry never matches
+  await page.screenshot({path:`test-results/ds-photos-smart-fl-${theme}.png`,fullPage:true});
+  await page.getByTestId('photos-smart-fl').selectOption(''); // off
+  await page.getByTestId('photos-filmstrip-smart').click();
+  await page.keyboard.press('Escape');
+  await page.evaluate(async()=>{const ps=await import('/src/store/panelStateStore.ts');ps.panelStateStore.set('photos.smartFilter',{on:false,minRating:0,flag:'',label:'',tag:'',camera:'',dup:false,type:'',orient:'',iso:'',fl:''});});
+ }
+});
 test('menu groups: labeled collapsible sections, expanded by default (light and dark)',async({page})=>{
  for(const theme of['light','dark']){
   await page.goto('/test/design-system/?view=photos-filmstrip');
