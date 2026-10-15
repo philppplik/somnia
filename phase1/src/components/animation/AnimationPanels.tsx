@@ -39,6 +39,7 @@ import {evaluate} from '../../lib/animation/interpolate';
 import {ticksToSeconds,timecode} from '../../lib/animation/time';
 import {workAreaFrames} from '../../lib/animation/playback';
 import {cancelExport,setExportTransparent,useExportState} from '../../lib/animation/exportJob';
+import {formatBytes} from '../../lib/animation/exportSettings';
 import type {InspectorSectionProps,PanelHostProps} from '../../lib/shell/types';
 import {Button} from '../ui/button';
 import {InspectorNumberField} from '../studios/InspectorNumberField';
@@ -271,7 +272,7 @@ export function RenderSection(_:InspectorSectionProps){
   </div>
   <p className="m-0 text-ink-3">{t('animation.export.videoNote')}</p>
   {busy&&<StudioProgress label={t('animation.export.progress',{done:job.done,total:job.total})} value={job.done} max={job.total} progressTestId="animation-export-progress" cancelLabel={t('animation.export.cancel')} onCancel={job.kind&&job.kind!=='frame'?cancelExport:undefined} cancelTestId="animation-export-cancel"/>}
-  {job.status==='done'&&<StudioStatus className="block m-0 text-ink" data-testid="animation-export-done">{job.kind==='copy'?t('animation.export.copied'):t('animation.export.done',{file:job.fileName})}</StudioStatus>}
+  {job.status==='done'&&<StudioStatus className="block m-0 text-ink" data-testid="animation-export-done">{job.kind==='copy'?t('animation.export.copied'):job.bytes>0?t('animation.export.doneSize',{file:job.fileName,size:formatBytes(job.bytes)}):t('animation.export.done',{file:job.fileName})}</StudioStatus>}
   {job.status==='error'&&<StudioStatus tone="error" live="assertive" className="block m-0 text-ink" data-testid="animation-export-error">{t('animation.export.error',{message:job.message})}</StudioStatus>}
   <p className="m-0 text-ink-3">{t('animation.render.note')}</p>
   <Button size="compact" variant="outline" disabled={busy} onClick={()=>run('animation.render.close')}>{t('animation.render.close')}</Button>

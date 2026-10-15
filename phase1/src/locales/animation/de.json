@@ -1063,5 +1063,6 @@
  "animation.export.loopSeam": "Nahtlose Schleife",
  "animation.export.loopSeam.hint": "GIF und APNG: lässt das letzte Bild weg, wenn es dem ersten gleicht, damit die Schleife dort nicht stockt.",
  "animation.export.problem.loopSeam": "„Nahtlose Schleife“ muss an oder aus sein.",
- "animation.timing.mode.sequence": "Nacheinander abspielen (Abstand in Bildern)"
+ "animation.timing.mode.sequence": "Nacheinander abspielen (Abstand in Bildern)",
+ "animation.export.doneSize": "{file} gespeichert ({size})"
 }

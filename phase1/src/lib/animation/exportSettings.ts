@@ -59,6 +59,8 @@ export interface ExportSettings{
 }
 /** Frames without a trailing copy of the first frame (needs at least 3 frames, so a short clip is never emptied). */
 export function withoutLoopSeam<T>(frames:T[],same:(a:T,b:T)=>boolean):T[]{return frames.length>2&&same(frames[0],frames[frames.length-1])?frames.slice(0,-1):frames;}
+/** File size for the readout and the finished-export line. */
+export const formatBytes=(n:number)=>n>=1048576?`${(n/1048576).toFixed(1)} MB`:`${Math.max(1,Math.round(n/1024))} KB`;
 export const EXPORT_BLURS=['off','high'] as const;
 export type ExportBlur=typeof EXPORT_BLURS[number];
 export const defaultExportSettings=():ExportSettings=>({scale:100,fps:null,from:null,to:null});

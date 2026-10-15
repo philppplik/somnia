@@ -5,12 +5,12 @@ import {Button} from '../ui/button';
 import {InspectorNumberField} from '../studios/InspectorNumberField';
 import {executeCommand} from '../../lib/commands';
 import {useExportState} from '../../lib/animation/exportJob';
-import {EXPORT_FORMATS,EXPORT_PRESETS,FRAME_FORMATS,GIF_COLORS,WEBM_QUALITIES,exportPlan,type ExportFormat} from '../../lib/animation/exportSettings';
+import {formatBytes,EXPORT_FORMATS,EXPORT_PRESETS,FRAME_FORMATS,GIF_COLORS,WEBM_QUALITIES,exportPlan,type ExportFormat} from '../../lib/animation/exportSettings';
 import {MAX_PRESET_NAME,subscribeUserPresets,userExportPresets} from '../../lib/animation/exportUserPresets';
 import type {Composition} from '../../lib/animation/model';
 const field='h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text';
 const SCALES=[25,50,75,100,150,200];const FPS=[12,15,24,30,60];
-const size=(n:number)=>n>=1048576?`${(n/1048576).toFixed(1)} MB`:`${Math.max(1,Math.round(n/1024))} KB`;
+const size=formatBytes;
 /** Export size, frame rate, frame range and presets, with a readout (frames, duration, pixels, rough size) per format before anything is rendered. Session state: no undo step. */
 export function ExportSettingsPanel({comp,busy}:{comp:Composition;busy:boolean}){
  const {t}=useT();const job=useExportState();const s=job.settings;const [err,setErr]=useState('');const [openMore,setMore]=useState(false);const [picked,setPicked]=useState('');const [naming,setNaming]=useState(false);const [pname,setPname]=useState('');const mine=useSyncExternalStore(subscribeUserPresets,userExportPresets,userExportPresets);const more=openMore||s.columns!=null||(s.sheetPadding??0)>0||s.firstNumber!=null||s.quality!==undefined&&s.quality!=='medium'||s.colors!==undefined&&s.colors!==256||s.selectedOnly===true||s.loopSeam===true||s.blur!=null||s.loop===false||s.dither===true||s.frameFormat!==undefined&&s.frameFormat!=='png';

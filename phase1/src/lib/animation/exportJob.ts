@@ -12,8 +12,8 @@ import {exportFrameSvg} from './exportSvg';
 import {Zip,ZipPassThrough,strToU8} from 'fflate';
 import {sheetPlan,packSheet,encodePngRgba,sheetManifest,SheetError} from './spriteSheet';
 /** Observable state of the one export job the studio runs at a time. The UI shows real progress and real failures; nothing reports success before the file was handed to the browser. */
-export interface ExportState{status:'idle'|'running'|'done'|'error';kind:'frame'|'copy'|'sequence'|'gif'|'apng'|'webm'|null;done:number;total:number;message:string;fileName:string;transparent:boolean;settings:ExportSettings}
-const idle:ExportState={status:'idle',kind:null,done:0,total:0,message:'',fileName:'',transparent:false,settings:defaultExportSettings()};
+export interface ExportState{status:'idle'|'running'|'done'|'error';kind:'frame'|'copy'|'sequence'|'gif'|'apng'|'webm'|null;done:number;total:number;message:string;fileName:string;transparent:boolean;settings:ExportSettings;/** Size of the last finished file in bytes (0 when none). */bytes:number}
+const idle:ExportState={status:'idle',kind:null,done:0,total:0,message:'',fileName:'',transparent:false,settings:defaultExportSettings(),bytes:0};
 let state=idle;let ctl:AbortController|null=null;const listeners=new Set<()=>void>();
 const set=(s:Partial<ExportState>)=>{state={...state,...s};listeners.forEach(l=>l());};
 export const exportState=()=>state;
@@ -67,8 +67,8 @@ function target(format?:ExportFormat){
 }
 async function guarded(kind:'frame'|'copy'|'sequence'|'gif'|'apng'|'webm',fn:(signal:AbortSignal)=>Promise<{blob:Blob;fileName:string}>,save:(b:Blob,n:string)=>void|Promise<void>){
  if(state.status==='running')throw new ExportError('An export is already running.','cancelled');
- ctl=new AbortController();set({status:'running',kind,done:0,total:kind==='frame'||kind==='copy'?1:0,message:'',fileName:''});
- try{const r=await fn(ctl.signal);await save(r.blob,r.fileName);set({status:'done',done:state.total,fileName:r.fileName});return r.fileName;}
+ ctl=new AbortController();set({status:'running',kind,done:0,total:kind==='frame'||kind==='copy'?1:0,message:'',fileName:'',bytes:0});
+ try{const r=await fn(ctl.signal);await save(r.blob,r.fileName);set({status:'done',done:state.total,fileName:r.fileName,bytes:r.blob.size});return r.fileName;}
  catch(e){const msg=e instanceof Error?e.message:String(e);set({status:'error',message:msg});throw e;}
  finally{ctl=null;}
 }

@@ -1063,5 +1063,6 @@
  "animation.export.loopSeam": "Seamless loop",
  "animation.export.loopSeam.hint": "GIF and APNG: leaves out the last frame when it is identical to the first, so the loop does not pause there.",
  "animation.export.problem.loopSeam": "Seamless loop must be on or off.",
- "animation.timing.mode.sequence": "Play one after another (gap in frames)"
+ "animation.timing.mode.sequence": "Play one after another (gap in frames)",
+ "animation.export.doneSize": "Saved {file} ({size})"
 }

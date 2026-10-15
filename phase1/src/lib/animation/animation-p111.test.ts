@@ -945,3 +945,13 @@ test('P214 timing sequence: layers chained head to tail with a gap, keys move wi
  const lk=timingPlan(findComp(s.document!),['b','c','d'],'sequence',{playhead:0,frames:2});assert.equal(lk.skipped,1);
  const tooFar=timingPlan(c0,['b','c'],'sequence',{playhead:0,frames:600});assert.equal(tooFar.changed,0);assert.equal(tooFar.skipped,1);
 });
+
+test('P215 finished export reports the real file size, cleared when a new export starts',async()=>{
+ const {exportCurrentFrame,exportWorkAreaSequence,exportState,resetExport,resetExportSettings}=await import('./exportJob');const {formatBytes}=await import('./exportSettings');
+ const s=open();setAnimationSession(s);s.dispatch({type:'workarea.set',in:0,out:f(2)});resetExport();resetExportSettings();assert.equal(exportState().bytes,0);
+ const saved:Blob[]=[];const rasterize=async()=>new Uint8Array([1,2,3,4,5]);const save=(b:Blob)=>{saved.push(b);};
+ await exportCurrentFrame({rasterize,save});assert.equal(exportState().status,'done');assert.equal(exportState().bytes,saved[0].size);assert.ok(exportState().bytes>0);
+ await exportWorkAreaSequence({rasterize,save});assert.equal(exportState().bytes,saved[1].size);
+ resetExport();assert.equal(exportState().bytes,0);
+ assert.equal(formatBytes(100),'1 KB');assert.equal(formatBytes(2048),'2 KB');assert.equal(formatBytes(1572864),'1.5 MB');
+});
