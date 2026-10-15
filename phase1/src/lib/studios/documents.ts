@@ -57,7 +57,7 @@ export const documentsStudio:StudioDef={
   inspector:'documents.inspector',tools:[]
  },commands:[{id:'documents.saveCopy',label:'cmd.documents.saveCopy'},{id:'documents.zoomIn',label:'cmd.documents.zoomIn'},{id:'documents.zoomOut',label:'cmd.documents.zoomOut'}],
  shortcuts:{'studio.documents':'Mod+2'},menus:{view:[]},canvas:'documents.canvas',shellV2:documentsShell,
- agent:{tools:[],contextProviders:['activeDocument'],quickActions:[]},deriveContext:context=>context
+ agentV2:{tools:['documents_inspect_block','documents_propose_block'],contextProviders:['activeDocument'],quickActions:[]},agent:{tools:['documents_inspect_block','documents_propose_block'],contextProviders:['activeDocument'],quickActions:[]},deriveContext:context=>context
 };
 registerStudio(documentsStudio);
 registerDocumentsRailIcons();
