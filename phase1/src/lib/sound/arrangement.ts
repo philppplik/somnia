@@ -118,6 +118,14 @@ export function markerJump(s:Arrangement,frame:number,dir:1|-1):number{
  if(dir===1){const next=frames.find(f=>f>frame);return next??arrangementEnd(s);}
  const prev=[...frames].reverse().find(f=>f<frame);return prev??0;
 }
+/** Clipboard payload: the clip, its origin track and a full copy of its source reference, so a paste into another session can restore the source. */
+export interface ClipBoardEntry{clip:ArrangeClip;trackId:string;source:AudioSourceRef}
+/** Pastes a clipboard clip, restoring its source reference when the session lost it (cross-session paste). The source audio must already be uploaded under the same id. Track lookup happens first, so a missing target rejects before anything changes. */
+export function restorePaste(s:Arrangement,entry:ClipBoardEntry,frame:number,newId:string,targetTrackId?:string){
+ const track=s.tracks.find(t=>t.id===(targetTrackId??entry.trackId));if(!track)throw Error('Target track no longer exists');
+ if(!s.sources.some(src=>src.id===entry.clip.sourceId))s.sources.push({...entry.source});
+ track.clips.push({...JSON.parse(JSON.stringify(entry.clip)),id:newId,start:frame});
+}
 /** Per-clip normalize gains for a selection, two-pass: a missing peak or a silent clip rejects the whole batch unchanged. */
 export function normalizeSelection(s:Arrangement,ids:string[],peaks:Record<string,Float32Array>,targetDb=0):void{
  if(!ids.length||ids.some(v=>typeof v!=='string'))throw Error('No clips selected');

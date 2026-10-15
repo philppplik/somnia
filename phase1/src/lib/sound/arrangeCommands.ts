@@ -2,12 +2,12 @@ import {validateRack} from './rack';
 import {t} from '../i18n';
 import {registerCommandSpec} from '../commandBridge';
 import type {CommandSpec} from '../commandSpec';
-import {editArrangement,undoArrangement,redoArrangement,getArrangementState,setRangeSelection,renderSession,exportArrangement,downloadArrangement,saveArrangementNative,previewMaster,acceptMasterPreview,cancelMasterPreview} from './arrangeStore';
-import {applyCrossfade,clipRegionPeak,cutSessionRange,findArrangeClip,normalizeGainDb,normalizeSelection,rippleDeleteClips,splitArrangeClip,newTrack,ARRANGE_LIMITS} from './arrangement';
+import {editArrangement,undoArrangement,redoArrangement,getArrangementState,setRangeSelection,renderSession,exportArrangement,downloadArrangement,saveArrangementNative,previewMaster,acceptMasterPreview,cancelMasterPreview,ensureClipboardSource} from './arrangeStore';
+import {applyCrossfade,clipRegionPeak,cutSessionRange,findArrangeClip,normalizeGainDb,normalizeSelection,restorePaste,rippleDeleteClips,splitArrangeClip,newTrack,ARRANGE_LIMITS,type ClipBoardEntry} from './arrangement';
 const schema=(properties:Record<string,unknown>,required=Object.keys(properties))=>({type:'object',properties,required,additionalProperties:false});
 const str={type:'string'},num={type:'number'},bool={type:'boolean'};
 const id=()=>`arrange-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`;
-let clipClipboard:{clip:ReturnType<typeof findArrangeClip>['clip'];trackId:string}|null=null;
+let clipClipboard:ClipBoardEntry|null=null;
 /** Whether a clip waits on the internal clipboard (one slot, session-wide). */
 export function hasClipClipboard(){return clipClipboard!==null;}
 
@@ -26,8 +26,8 @@ export function registerArrangeCommands(){
  add('clip.duplicate',p=>editArrangement(s=>{const {track,clip}=findArrangeClip(s,p.id);track.clips.push({...clip,id:id(),start:clip.start+clip.length});}),schema({id:str})),
  add('clips.normalize',p=>editArrangement(s=>normalizeSelection(s,p.ids as string[],getArrangementState().sourcePeaks,p.targetDb as number|undefined)),schema({ids:{type:'array'},targetDb:num},['ids'])),
  add('clip.normalize',p=>editArrangement(s=>{const {clip}=findArrangeClip(s,p.id);const source=s.sources.find(src=>src.id===clip.sourceId)!;const peaks=getArrangementState().sourcePeaks[source.id];if(!peaks)throw Error('Source waveform peaks are not available yet');clip.gainDb=normalizeGainDb(clipRegionPeak(peaks,clip.offset,clip.length,Math.floor(source.frames*48000/source.sampleRate)),p.targetDb??0);}),schema({id:str,targetDb:num},['id'])),
- add('clip.copy',p=>{const {clip,track}=findArrangeClip(getArrangementState().document,p.id);clipClipboard={clip:JSON.parse(JSON.stringify(clip)),trackId:track.id};},schema({id:str})),
- add('clip.paste',p=>editArrangement(s=>{if(!clipClipboard)throw Error('Clipboard is empty');const track=s.tracks.find(t=>t.id===(p.trackId??clipClipboard!.trackId));if(!track)throw Error('Target track no longer exists');track.clips.push({...JSON.parse(JSON.stringify(clipClipboard!.clip)),id:id(),start:p.frame});}),schema({frame:num,trackId:str},['frame'])),
+ add('clip.copy',p=>{const doc=getArrangementState().document;const {clip,track}=findArrangeClip(doc,p.id);clipClipboard={clip:JSON.parse(JSON.stringify(clip)),trackId:track.id,source:{...doc.sources.find(s=>s.id===clip.sourceId)!}};},schema({id:str})),
+ add('clip.paste',async p=>{if(!clipClipboard)throw Error('Clipboard is empty');const board=clipClipboard;if(!getArrangementState().document.sources.some(s=>s.id===board.clip.sourceId))await ensureClipboardSource(board.source);editArrangement(s=>restorePaste(s,board,p.frame,id(),p.trackId as string|undefined));},schema({frame:num,trackId:str},['frame'])),
  add('clips.move',p=>editArrangement(s=>{const ids=p.ids as string[];if(!ids.length||ids.some(v=>typeof v!=='string'))throw Error('No clips selected');for(const cid of ids)findArrangeClip(s,cid);for(const cid of ids){const {clip}=findArrangeClip(s,cid);clip.start=Math.max(0,clip.start+p.delta);}}),schema({ids:{type:'array'},delta:num})),
  add('clips.mute',p=>editArrangement(s=>{const ids=p.ids as string[];if(!ids.length||ids.some(v=>typeof v!=='string'))throw Error('No clips selected');for(const cid of ids)findArrangeClip(s,cid).clip.muted=!!p.muted;}),schema({ids:{type:'array'},muted:bool})),
  add('clips.quantize',p=>editArrangement(s=>{const ids=p.ids as string[];if(!ids.length||ids.some(v=>typeof v!=='string'))throw Error('No clips selected');const grid=p.grid;if(!Number.isSafeInteger(grid)||grid<1)throw Error('Invalid grid');for(const cid of ids){const {clip}=findArrangeClip(s,cid);clip.start=Math.max(0,Math.round(clip.start/grid)*grid);}}),schema({ids:{type:'array'},grid:num},['ids','grid'])),

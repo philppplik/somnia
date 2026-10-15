@@ -113,6 +113,17 @@ export async function exportStems():Promise<'saved'|'cancelled'|'downloaded'>{
   await invoke('audio_save_write',zip,{headers:{'x-somnia-token':grant.token}});return'saved';
  }finally{emit({busy:false});}
 }
+/** Re-opens a clipboard source from the media library and uploads it under its original id so a cross-session paste renders; verifies the audio still matches the copied reference. */
+export async function ensureClipboardSource(ref:AudioSourceRef):Promise<void>{
+ if(available.has(ref.id))return;
+ const item=getMedia().items.find(m=>m.name===ref.name&&m.kind==='audio');if(!item)throw Error('The copied source is no longer in the media library');
+ await openSound(item);const session=getSoundSession(ref.name);if(!session?.original)throw Error('Source audio is not ready');
+ const report=session.original.report.output;
+ if(report.frames!==ref.frames||report.sample_rate!==ref.sampleRate||report.channels!==ref.channels)throw Error('The copied source changed since the copy');
+ const token=generation;const wav=await session.original.blob.arrayBuffer();if(token!==generation)throw Error('Session changed while pasting');
+ await request({kind:'source',sourceId:ref.id,wav},[wav]);if(token!==generation)throw Error('Session changed while pasting');
+ available.add(ref.id);emit({sourcePeaks:{...state.sourcePeaks,[ref.id]:session.original.peaks}});
+}
 /** Glues selected clips on one track: renders them with their clip-level settings (gain, fades, curves; no rack - that stays live) into "<track>-glue.wav" in the media library and replaces the selection with one clip at the earliest start. One undoable arrangement edit; the media item stays in the library like any import. */
 export async function glueClipsToMedia(trackId:string,ids:string[]){
  if(state.busy)throw Error('Sound is busy');const token=generation;const doc=history.snapshot;
