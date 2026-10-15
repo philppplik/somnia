@@ -822,3 +822,26 @@ test('collections: add photos, apply the filter, remove and delete (light and da
   await page.keyboard.press('Escape');
  }
 });
+
+test('compare: set a reference and survey it against the active photo (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
+  await page.getByTestId('photos-filmstrip-menu').click();
+  await page.getByTestId('photos-filmstrip-set-reference').click(); // strip-1 becomes the reference
+  await expect(page.getByTestId('photos-filmstrip-apply-note')).toContainText('strip-1.png');
+  await page.getByTestId('photos-filmstrip-item-strip-2.png').click(); // make another photo active
+  await page.getByTestId('photos-filmstrip-menu').click();
+  await page.getByTestId('photos-filmstrip-compare-reference').click();
+  await expect(page.getByTestId('photos-survey')).toBeVisible(); // side by side: reference vs active
+  await expect(page.getByTestId('photos-survey-item-strip-1.png')).toBeVisible();
+  await expect(page.getByTestId('photos-survey-item-strip-2.png')).toBeVisible();
+  await page.screenshot({path:`test-results/ds-photos-compare-${theme}.png`,fullPage:true});
+  await page.keyboard.press('Escape');
+  await page.getByTestId('photos-filmstrip-menu').click();
+  await page.getByTestId('photos-filmstrip-clear-reference').click(); // leave no state behind
+  await page.keyboard.press('Escape');
+ }
+});

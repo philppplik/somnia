@@ -493,3 +493,16 @@ delete and the stable-array contract; the light/dark gallery leg
 adds the active photo to a new collection, checks the strip narrows
 to members only, then deletes the collection
 (`test-results/ds-photos-collections-{light,dark}.png`).
+
+## Compare with reference (P110)
+
+"Set as reference" in the strip menu pins the active photo as the
+comparison anchor (panel state `photos.reference`, persisted). With
+another photo active, "Compare with reference" opens the existing
+survey surface with exactly the pair - no new UI area; "Clear
+reference" drops the anchor. Read-only view: originals and settings
+are untouched.
+
+Coverage: the light/dark gallery leg pins strip-1, activates
+strip-2, opens the pair survey and clears the reference
+(`test-results/ds-photos-compare-{light,dark}.png`).

@@ -61,6 +61,7 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
  const activeSession=active?getPhotoSession(active):null;
  const snapNames=useSnapshots(active);
  const [collection,setCollection]=usePanelState<string>('photos.collection','');
+ const [reference,setReference]=usePanelState<string>('photos.reference',''); // compare view: the photo the active one is measured against
  const collNames=useCollectionNames();
  const neutral=!activeSession||isNeutralLook(activeSession.now); // nothing worth applying
  const userPresets:UserPreset[]=parseUserPresets(rawPresets);
@@ -222,6 +223,11 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
       {collection&&<Button variant="outline" size="compact" onClick={()=>{deleteCollection(collection);setCollection('');}} data-testid="photos-filmstrip-collection-drop">{t('photos.photoCollections.delete')}</Button>}
      </span>
     </div>
+    <span className="flex flex-wrap gap-1">
+     {reference!==active&&<Button variant="outline" size="compact" onClick={()=>{setReference(active);setApplyNote(t('photos.compare.referenceSet',{name:active}));}} data-testid="photos-filmstrip-set-reference">{t('photos.compare.setReference')}</Button>}
+     {reference&&reference!==active&&onSurvey&&<Button variant="outline" size="compact" onClick={()=>{setMenuOpen(false);onSurvey([reference,active]);}} data-testid="photos-filmstrip-compare-reference">{t('photos.compare.go')}</Button>}
+     {reference&&<Button variant="outline" size="compact" onClick={()=>setReference('')} data-testid="photos-filmstrip-clear-reference">{t('photos.compare.clear')}</Button>}
+    </span>
     {hidden.length>0&&<span className="flex flex-wrap gap-1">
      <Button variant="outline" size="compact" aria-pressed={showHidden} onClick={()=>setShowHidden(!showHidden)} data-testid="photos-filmstrip-show-hidden">{t('photos.hidden.show')}</Button>
      {showHidden&&hidden.includes(active)&&<Button variant="outline" size="compact" onClick={()=>unhidePhotos([active])} data-testid="photos-filmstrip-unhide-active">{t('photos.hidden.restoreActive')}</Button>}

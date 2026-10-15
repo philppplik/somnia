@@ -197,5 +197,9 @@
  "photos.photoCollections.name": "Nom de la collection",
  "photos.photoCollections.added": "{count} ajoutees a {name}",
  "photos.photoCollections.removeActive": "Retirer la photo",
- "photos.photoCollections.delete": "Supprimer la collection"
+ "photos.photoCollections.delete": "Supprimer la collection",
+ "photos.compare.setReference": "Definir comme reference",
+ "photos.compare.go": "Comparer a la reference",
+ "photos.compare.clear": "Effacer la reference",
+ "photos.compare.referenceSet": "Reference : {name}"
 }
