@@ -1324,5 +1324,6 @@
  "animation.rig.count.off": "Remover o contador",
  "animation.rig.group.count": "Contador",
  "cmd.animation.text.count": "Fazer as camadas de texto marcadas contarem de um número a outro",
- "animation.rig.group.impact": "Impacto e luz"
+ "animation.rig.group.impact": "Impacto e luz",
+ "animation.export.check.tiny": "Texto abaixo de 10 px no arquivo exportado, difícil de ler: {names}"
 }

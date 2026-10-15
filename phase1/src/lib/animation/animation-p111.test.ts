@@ -1906,3 +1906,12 @@ test('P281 shifting a layer moves its counter keys and typewriter keys with it',
  s.dispatch({type:'layer.shift',layer:'t',delta:f(10),mode:'slip'} as never);
  assert.equal(L().textCount!.value.keys[0].t,t0+f(10));assert.equal(fullText(L(),t0+f(10)),'0');assert.equal(fullText(L(),t0+f(25)),'50');
 });
+
+test('P282 export check: text under 10 px in the output is warned, scales with the export size',async()=>{
+ const {exportCheck}=await import('./exportCheck');const {defaultExportSettings}=await import('./exportSettings');
+ const d0=applyEdits(base(),[{type:'layer.add',kind:'text',id:'small',over:{name:'Fine print'}},{type:'layer.update',layer:'small',source:{text:'legal',size:14}},{type:'layer.add',kind:'text',id:'big',over:{name:'Headline'}},{type:'layer.update',layer:'big',source:{text:'hello',size:60}}] as never);
+ const s=new AnimationSession();s.open(d0);const c=findComp(s.document!)!;
+ const at=(scale:number)=>exportCheck(c,[],{...defaultExportSettings(),scale}).find(i=>i.code==='tiny');
+ assert.equal(at(100),undefined);
+ const t=at(50);assert.ok(t&&t.severity==='warn'&&t.layers.includes('Fine print')&&!t.layers.includes('Headline'));
+});

@@ -120,3 +120,4 @@ Back to [Studios](../studios.md).
 - **Palette shift** now also moves gradient colours (fill and stroke, stops included), colour keys and gradient colour keys, not only the flat fill and stroke colours.
 - **Colours panel** now lists and replaces gradient colours (fill and stroke, stops included) and effect colours (glow, shadow, tint), and "Shift all colours" moves effect colours and their colour keys too.
 - The Rig > Motion menu now has five groups: around, along, physics and effects, impact and light (pulse, flicker, shake), copies and trails.
+- **Export check** also warns about text that ends up under 10 px in the exported file, taking the layer scale, its parents and the export size into account.

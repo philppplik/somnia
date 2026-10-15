@@ -1,6 +1,6 @@
 import type {Layer} from './model';
 /** Export check: things in the composition that would surprise the user in the exported file. Pure; the caller supplies the layer box. */
-export type PreflightCode='asset'|'offscreen'|'inactive'|'hidden'|'audio'|'invisible'|'seam'|'flash'|'shrunk'|'empty';
+export type PreflightCode='asset'|'offscreen'|'inactive'|'hidden'|'audio'|'invisible'|'seam'|'flash'|'shrunk'|'empty'|'tiny';
 export interface PreflightIssue{code:PreflightCode;severity:'error'|'warn'|'info';layers:string[]}
 export interface Box{x0:number;y0:number;x1:number;y1:number}
 export const MAX_PREFLIGHT_LAYERS=8;
@@ -14,8 +14,12 @@ export interface PreflightInput{layers:readonly Layer[];assetIds:ReadonlySet<str
  /** Opacity (percent) at every frame of the range, and the frames per second. Absent: the flash check is skipped. */
  /** Smallest absolute scale component (percent) at each sampled tick. Absent: the shrunk check is skipped. */
  scales?:(l:Layer)=>readonly number[];
+ /** Rendered text height in output pixels at each sampled tick (text layers). Absent: the tiny check is skipped. */
+ textPx?:(l:Layer)=>readonly number[];
  frames?:(l:Layer)=>{opacity:readonly number[];perSecond:number}}
 /** WCAG-style flash limit: more than 3 flashes (6 hard opacity jumps) inside one second. */
+/** Text smaller than this in the exported file is hard to read. */
+export const MIN_TEXT_PX=10;
 export const FLASH_JUMP=40,MAX_FLASH_JUMPS=6;
 export function flashes(o:readonly number[],perSecond:number):boolean{
  if(!(perSecond>=6))return false;const w=Math.ceil(perSecond),jumps=o.slice(1).map((v,i)=>Math.abs(v-o[i])>=FLASH_JUMP?1:0);
@@ -30,6 +34,7 @@ export function preflight(i:PreflightInput):PreflightIssue[]{
  if(i.look)add('invisible','warn',active.filter(l=>{const o=i.look!(l).opacity;return o.length>0&&o.every(v=>v<=0);}));
  if(i.frames)add('flash','warn',active.filter(l=>{const f=i.frames!(l);return flashes(f.opacity,f.perSecond);}));
  if(i.scales)add('shrunk','warn',active.filter(l=>{const o=i.scales!(l);return o.length>0&&o.every(v=>v<=0);}));
+ if(i.textPx)add('tiny','warn',active.filter(l=>{if(l.kind!=='text'||!(l.source.text??'').trim())return false;const o=i.textPx!(l);return o.length>0&&o.every(v=>v>0&&v<MIN_TEXT_PX);}));
  add('empty','warn',active.filter(l=>l.kind==='text'&&!(l.source.text??'').trim()));
  if(i.look&&i.seamless)add('seam','info',active.filter(l=>{const k=i.look!(l);return k.first.length>0&&k.first.some((v,j)=>Math.abs(v-k.last[j])>0.5);}));
  add('inactive','info',shown.filter(l=>l.kind!=='audio'&&!(l.inT<i.range.out&&l.outT>i.range.in)));

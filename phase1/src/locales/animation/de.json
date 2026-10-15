@@ -1324,5 +1324,6 @@
  "animation.rig.count.off": "Zähler entfernen",
  "animation.rig.group.count": "Zähler",
  "cmd.animation.text.count": "Markierte Textebenen von einer Zahl zu einer anderen zählen lassen",
- "animation.rig.group.impact": "Aufprall und Licht"
+ "animation.rig.group.impact": "Aufprall und Licht",
+ "animation.export.check.tiny": "Text unter 10 px in der exportierten Datei, schwer lesbar: {names}"
 }

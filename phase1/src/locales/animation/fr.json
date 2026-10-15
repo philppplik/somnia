@@ -1324,5 +1324,6 @@
  "animation.rig.count.off": "Retirer le compteur",
  "animation.rig.group.count": "Compteur",
  "cmd.animation.text.count": "Faire compter les calques de texte cochés d’un nombre à un autre",
- "animation.rig.group.impact": "Impact et lumière"
+ "animation.rig.group.impact": "Impact et lumière",
+ "animation.export.check.tiny": "Texte de moins de 10 px dans le fichier exporté, difficile à lire : {names}"
 }
