@@ -2431,6 +2431,27 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.layers.stepMotion",
+      "title": "Animate the ticked layers on twos, threes or fours",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "choppy",
+        "fours",
+        "framerate",
+        "hand drawn",
+        "hold",
+        "posterize",
+        "stepped",
+        "stop motion",
+        "threes",
+        "time",
+        "twos"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.layers.stretch",
       "title": "Stretch the time of the selected layers",
       "category": "Edit",

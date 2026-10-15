@@ -1262,5 +1262,10 @@
  "animation.keys.soften.hint": "Ease each selected key halfway toward the average of its neighbours (first and last key of a track stay)",
  "cmd.animation.keys.soften": "Soften the values of the selected keys toward their neighbours",
  "animation.rig.crossfade": "Crossfade into each other",
- "cmd.animation.layers.crossfade": "Crossfade the ticked layers into each other"
+ "cmd.animation.layers.crossfade": "Crossfade the ticked layers into each other",
+ "animation.rig.steps.2": "On twos",
+ "animation.rig.steps.3": "On threes",
+ "animation.rig.steps.4": "On fours",
+ "cmd.animation.layers.stepMotion": "Animate the ticked layers on twos, threes or fours",
+ "animation.rig.group.steps": "Step motion (twos)"
 }

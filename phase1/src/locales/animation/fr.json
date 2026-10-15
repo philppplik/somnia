@@ -1262,5 +1262,10 @@
  "animation.keys.soften.hint": "Rapprocher chaque clé sélectionnée à mi-chemin de la moyenne de ses voisines (la première et la dernière d’une piste restent)",
  "cmd.animation.keys.soften": "Adoucir les valeurs des clés sélectionnées vers leurs voisines",
  "animation.rig.crossfade": "Fondu enchaîné",
- "cmd.animation.layers.crossfade": "Enchaîner les calques cochés en fondu"
+ "cmd.animation.layers.crossfade": "Enchaîner les calques cochés en fondu",
+ "animation.rig.steps.2": "Sur deux",
+ "animation.rig.steps.3": "Sur trois",
+ "animation.rig.steps.4": "Sur quatre",
+ "cmd.animation.layers.stepMotion": "Animer les calques cochés sur deux, trois ou quatre images",
+ "animation.rig.group.steps": "Mouvement saccadé"
 }

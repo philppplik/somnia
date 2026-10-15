@@ -1262,5 +1262,10 @@
  "animation.keys.soften.hint": "Aproximar cada key selecionado até a metade da média dos vizinhos (o primeiro e o último da trilha ficam)",
  "cmd.animation.keys.soften": "Amenizar os valores dos keys selecionados em direção aos vizinhos",
  "animation.rig.crossfade": "Dissolver entre si",
- "cmd.animation.layers.crossfade": "Dissolver as camadas marcadas uma na outra"
+ "cmd.animation.layers.crossfade": "Dissolver as camadas marcadas uma na outra",
+ "animation.rig.steps.2": "De dois em dois",
+ "animation.rig.steps.3": "De três em três",
+ "animation.rig.steps.4": "De quatro em quatro",
+ "cmd.animation.layers.stepMotion": "Animar as camadas marcadas de dois em dois, três em três ou quatro em quatro quadros",
+ "animation.rig.group.steps": "Movimento em passos"
 }
