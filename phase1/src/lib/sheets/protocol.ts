@@ -18,6 +18,12 @@ export interface TablesInfo{tables:TableInfo[];styles:string[]}
 export type PivotFunc='sum'|'count'|'average'|'max'|'min';
 export type PivotOp={kind:'create';rows:string;columns?:string;values:string;func?:PivotFunc}|{kind:'refresh'};
 export interface PivotField{name:string;numeric:boolean}
+/** Page setup and file export. Every field is validated again by the Rust bridge. */
+export type PaperName='Letter'|'Legal'|'A4'|'A3'|'A5'|'Tabloid'|'Executive';
+export interface PageSetupOp{orientation?:'portrait'|'landscape';paper?:PaperName;margins?:'normal'|'wide'|'narrow';scale?:number;fitWidth?:number;fitHeight?:number;centerH?:boolean;centerV?:boolean;gridlines?:boolean;headings?:boolean;header?:string;footer?:string;printArea?:string|null;titleRows?:string|null;titleCols?:string|null}
+export interface PageInfo{orientation:'portrait'|'landscape';paper:string;margins:number[];scale:number;fitWidth:number;fitHeight:number;centerH:boolean;centerV:boolean;gridlines:boolean;headings:boolean;header:string;footer:string;printArea:string|null;titleRows:string|null;titleCols:string|null}
+export interface ExportOp{format:'pdf'|'csv'|'tsv'|'html';scope:'sheet'|'all'|'selection';fit?:boolean}
+export interface ExportResult{format:ExportOp['format'];base64:string;bytes:number;pages:number|null}
 export type NegativeStyle='minus'|'red'|'paren'|'redParen';
 export type ZeroStyle='show'|'dash';
 export type DatePatternId='ymd'|'dmyDot'|'mdy'|'dmy'|'long'|'weekday'|'short'|'monthYear'|'time24'|'time12'|'dateTime';
@@ -110,6 +116,9 @@ export type SheetsRequest=
  |{id:number;op:'pivotRefresh'}
  |{id:number;op:'tables';sheet:number}
  |{id:number;op:'tableOp';sheet:number;row:number;col:number;rows:number;cols:number;table:TableOp}
+ |{id:number;op:'pageInfo';sheet:number}
+ |{id:number;op:'pageSetup';sheet:number;page:PageSetupOp}
+ |{id:number;op:'exportFile';sheet:number;row:number;col:number;rows:number;cols:number;export:ExportOp}
  |{id:number;op:'cf';sheet:number;row:number;col:number;rows:number;cols:number;cf:CfOp}
  |{id:number;op:'fill';sheet:number;row:number;col:number;rows:number;cols:number;dir:FillDirection}
  |{id:number;op:'filter';sheet:number;row:number;col:number;rows:number;cols:number;filter:FilterOp}

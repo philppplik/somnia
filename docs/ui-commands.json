@@ -6485,6 +6485,14 @@
       "hasEnabled": true
     },
     {
+      "id": "sheets.export",
+      "title": "Export as PDF, CSV, TSV or HTML",
+      "category": "Edit",
+      "source": "sheets",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
       "id": "sheets.fill",
       "title": "Fill the selected block down, right, up or left",
       "category": "Edit",
@@ -6550,6 +6558,14 @@
       "id": "sheets.navigate",
       "title": "Go to spreadsheet cell",
       "category": "View",
+      "source": "sheets",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
+      "id": "sheets.pageSetup",
+      "title": "Change the page setup",
+      "category": "Edit",
       "source": "sheets",
       "allowInInput": true,
       "hasEnabled": true

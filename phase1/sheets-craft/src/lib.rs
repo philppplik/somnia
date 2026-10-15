@@ -17,6 +17,12 @@ const MAX_SPLIT_PARTS: usize = 20;
 const MAX_NOTE_CHARS: usize = 2000;
 const MAX_NAMES: usize = 500;
 const MAX_TABLES: usize = 200;
+const MAX_EXPORT_BYTES: usize = 40 * 1024 * 1024;
+const MAX_HEADER_CHARS: usize = 100;
+/// Paper names the page setup offers (the engine knows more).
+const PAPERS: &[&str] = &["Letter", "Legal", "A4", "A3", "A5", "Tabloid", "Executive"];
+/// Keys `page_setup` accepts; anything else is refused.
+const PAGE_KEYS: &[&str] = &["orientation", "paper", "margins", "scale", "fitWidth", "fitHeight", "centerH", "centerV", "gridlines", "headings", "header", "footer", "printArea", "titleRows", "titleCols"];
 const MAX_PIVOT_FIELDS: usize = 200;
 /// Summary functions the pivot builder offers.
 const PIVOT_FUNCS: &[&str] = &["sum", "count", "average", "max", "min"];
@@ -957,6 +963,129 @@ impl HeadlessWorkbook {
             _ => return Err("unsupported table operation".into()),
         };
         self.session.run(command, params).map(|v| v.to_string()).map_err(|e| e.to_string())
+    }
+
+    /// The page setup of a sheet (read only): `{"orientation":"portrait"|"landscape","paper":..,"margins":[l,r,t,b,header,footer],"scale":n,
+    /// "fitWidth":n,"fitHeight":n,"centerH":b,"centerV":b,"gridlines":b,"headings":b,"header":..,"footer":..,"printArea":A1|null,
+    /// "titleRows":"1:2"|null,"titleCols":"A:B"|null}`; fit values are 0 when the sheet is not fitted to pages.
+    pub fn page_info(&self, sheet: usize) -> Result<String, String> {
+        let doc = self.session.doc().map_err(|e| e.to_string())?;
+        let pr = &doc.wb.sheet(sheet).ok_or("unknown sheet")?.print;
+        let (fit_w, fit_h) = pr.fit_to.unwrap_or((0, 0));
+        let rows = pr.title_rows.map(|(a, b)| format!("{}:{}", a + 1, b + 1));
+        let cols = pr.title_cols.map(|(a, b)| format!("{}:{}", gridcraft_engine::core::col_to_letters(a), gridcraft_engine::core::col_to_letters(b)));
+        Ok(json!({
+            "orientation": if pr.orientation == gridcraft_engine::model::Orientation::Landscape { "landscape" } else { "portrait" },
+            "paper": pr.paper, "margins": pr.margins, "scale": pr.scale, "fitWidth": fit_w, "fitHeight": fit_h,
+            "centerH": pr.center_h, "centerV": pr.center_v, "gridlines": pr.gridlines, "headings": pr.headings,
+            "header": pr.header, "footer": pr.footer, "printArea": pr.print_area.map(|r| r.a1()), "titleRows": rows, "titleCols": cols
+        })
+        .to_string())
+    }
+
+    /// Header and footer text: at most 100 characters, no control characters, and `&` only as `&P &N &D &T &A &F &C &L &R &&`.
+    fn header_problem(t: &str) -> bool {
+        if t.chars().count() > MAX_HEADER_CHARS || t.chars().any(|c| c.is_control()) {
+            return true;
+        }
+        let mut chars = t.chars();
+        while let Some(c) = chars.next() {
+            if c == '&' && !chars.next().is_some_and(|n| "PNDTAFCLR&".contains(n)) {
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Changes the page setup of a sheet as ONE history entry. `op_json` holds any of `orientation` (portrait|landscape),
+    /// `paper` (Letter, Legal, A4, A3, A5, Tabloid, Executive), `margins` (normal|wide|narrow), `scale` (10 to 400) or
+    /// `fitWidth`/`fitHeight` (0 to 20 pages, 0 = automatic; not together with `scale`), `centerH`, `centerV`, `gridlines`, `headings`
+    /// (booleans), `header`, `footer` (text, see header_problem), `printArea` (`A1:F40` or null), `titleRows` (`1:2` or null) and
+    /// `titleCols` (`A:B` or null). Unknown keys are refused. Returns the new setup like `page_info`.
+    pub fn page_setup(&mut self, sheet: usize, op_json: &str) -> Result<String, String> {
+        let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "operation must be a JSON object".to_string())?;
+        let map = op.as_object().filter(|m| !m.is_empty()).ok_or("name at least one setting")?;
+        if map.keys().any(|k| !PAGE_KEYS.contains(&k.as_str())) {
+            return Err("unknown page setting".into());
+        }
+        if map.contains_key("scale") && (map.contains_key("fitWidth") || map.contains_key("fitHeight")) {
+            return Err("Choose a scale or fit to pages, not both.".into());
+        }
+        let mut call = serde_json::Map::new();
+        call.insert("sheet".into(), json!(sheet));
+        for (key, v) in map {
+            let ok = match key.as_str() {
+                "orientation" => v.as_str().is_some_and(|o| o == "portrait" || o == "landscape"),
+                "paper" => v.as_str().is_some_and(|p| PAPERS.contains(&p)),
+                "scale" => v.as_u64().is_some_and(|n| (10..=400).contains(&n)),
+                "fitWidth" | "fitHeight" => v.as_u64().is_some_and(|n| n <= 20),
+                "centerH" | "centerV" | "gridlines" | "headings" => v.is_boolean(),
+                "header" | "footer" => v.as_str().is_some_and(|t| !Self::header_problem(t)),
+                "printArea" => v.is_null() || v.as_str().and_then(gridcraft_engine::core::RangeRef::parse).is_some_and(|r| r.count() <= MAX_FILL_CELLS),
+                "titleRows" => v.is_null() || v.as_str().is_some_and(|t| t.contains(':') && t.chars().all(|c| c.is_ascii_digit() || c == ':') && gridcraft_engine::core::RangeRef::parse(t).is_some()),
+                "titleCols" => v.is_null() || v.as_str().is_some_and(|t| t.contains(':') && t.chars().all(|c| c.is_ascii_alphabetic() || c == ':') && gridcraft_engine::core::RangeRef::parse(t).is_some()),
+                "margins" => v.as_str().is_some_and(|m| matches!(m, "normal" | "wide" | "narrow")),
+                _ => false,
+            };
+            if !ok {
+                return Err(format!("{key} has an unsupported value"));
+            }
+            if key == "margins" {
+                let m: [f64; 6] = match v.as_str() {
+                    Some("wide") => [1.0, 1.0, 1.0, 1.0, 0.5, 0.5],
+                    Some("narrow") => [0.25, 0.25, 0.75, 0.75, 0.3, 0.3],
+                    _ => [0.7, 0.7, 0.75, 0.75, 0.3, 0.3],
+                };
+                call.insert("margins".into(), json!({"left": m[0], "right": m[1], "top": m[2], "bottom": m[3], "header": m[4], "footer": m[5]}));
+            } else {
+                call.insert(key.clone(), v.clone());
+            }
+        }
+        self.session.run("pageLayout.pageSetup", serde_json::Value::Object(call)).map_err(|e| e.to_string())?;
+        self.page_info(sheet)
+    }
+
+    /// Builds a file for the host to save (nothing in the workbook changes). `op_json` is
+    /// `{"format":"pdf"|"csv"|"tsv"|"html","scope":"sheet"|"all"|"selection","fit":bool}`: only PDF may export all sheets or the
+    /// block (`row`, `col`, `rows`, `cols`); `fit` fits each sheet to one page wide. Honours each sheet's page setup and print area.
+    /// Returns `{"format":..,"base64":..,"bytes":n,"pages":n|null}`; files over 40 MB are refused.
+    pub fn export_file(&mut self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32, op_json: &str) -> Result<String, String> {
+        let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "operation must be a JSON object".to_string())?;
+        let format = op.get("format").and_then(|v| v.as_str()).ok_or("missing format")?.to_string();
+        let scope = op.get("scope").and_then(|v| v.as_str()).unwrap_or("sheet").to_string();
+        let fit = op.get("fit").and_then(|v| v.as_bool()).unwrap_or(false);
+        if !matches!(format.as_str(), "pdf" | "csv" | "tsv" | "html") || !matches!(scope.as_str(), "sheet" | "all" | "selection") {
+            return Err("unsupported export".into());
+        }
+        if format != "pdf" && (scope != "sheet" || fit) {
+            return Err("Only PDF can export all sheets, the selection or fit to a page.".into());
+        }
+        self.check_block(sheet, row, col, rows.max(1), cols.max(1), false)?;
+        self.session.run("sheet.activate", json!({"sheet": sheet})).map_err(|e| e.to_string())?;
+        let (base64, pages) = if format == "pdf" {
+            let mut params = json!({"sheets": if scope == "all" { "all" } else { "active" }});
+            if scope == "selection" {
+                if rows == 0 || cols == 0 || u64::from(rows) * u64::from(cols) > MAX_FILL_CELLS {
+                    return Err("Select a block of at most 1,000,000 cells.".into());
+                }
+                params["range"] = json!(format!("{}:{}", CellRef::new(row, col).a1(), CellRef::new(row + rows - 1, col + cols - 1).a1()));
+            }
+            if fit {
+                params["fitToPage"] = json!(true);
+            }
+            let out = self.session.run("file.exportPdf", params).map_err(|e| e.to_string())?;
+            (out.get("base64").and_then(|v| v.as_str()).unwrap_or("").to_string(), out.get("pages").and_then(|v| v.as_u64()))
+        } else {
+            let out = self.session.run("file.saveBytes", json!({"format": format})).map_err(|e| e.to_string())?;
+            (out.get("base64").and_then(|v| v.as_str()).unwrap_or("").to_string(), None)
+        };
+        if base64.is_empty() {
+            return Err("The export produced no file.".into());
+        }
+        if base64.len() / 4 * 3 > MAX_EXPORT_BYTES {
+            return Err("The export is larger than 40 MB. Export fewer sheets or a smaller block.".into());
+        }
+        Ok(json!({"format": format, "base64": base64, "bytes": base64.len() / 4 * 3, "pages": pages}).to_string())
     }
 
     /// Lists the visible defined names (at most 500) as `{"names":[{"name":..,"refersTo":..,"scope":"Workbook"|sheet name,"comment":..}]}`.
@@ -2617,6 +2746,49 @@ mod tests {
         assert_eq!(text(&book, "A82"), "red RED", "nothing changed");
         book.session.run("review.protectSheet", json!({})).unwrap();
         assert!(book.replace_range(0, 80, 0, 3, 2, op).unwrap_err().contains("protected"));
+    }
+    #[test]
+    fn page_setup_and_export_are_validated_and_undoable() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        book.set_values(0, 160, 0, r#"[["a","b"],["1","2"],["3","4"]]"#).unwrap();
+        let info = book.page_setup(0, r#"{"orientation":"landscape","paper":"A4","margins":"narrow","gridlines":true,"header":"&C&P","footer":"Page &P of &N","printArea":"A161:B163","titleRows":"161:161","fitWidth":1,"fitHeight":0}"#).unwrap();
+        for want in ["landscape", "A4", "A161:B163", "161:161", "Page &P of &N"] {
+            assert!(info.contains(want), "{want}");
+        }
+        assert!(book.page_info(0).unwrap().contains("\"gridlines\":true"));
+        book.undo().unwrap();
+        assert!(book.page_info(0).unwrap().contains("portrait"), "one undo restores the setup");
+        for bad in [
+            "nope",
+            "{}",
+            r#"{"orientation":"sideways"}"#,
+            r#"{"paper":"Bogus"}"#,
+            r#"{"margins":"huge"}"#,
+            r#"{"scale":9}"#,
+            r#"{"scale":401}"#,
+            r#"{"scale":100,"fitWidth":1}"#,
+            r#"{"fitWidth":21}"#,
+            r#"{"gridlines":"yes"}"#,
+            r#"{"header":"&X"}"#,
+            r#"{"header":"a&"}"#,
+            r#"{"footer":"line\nbreak"}"#,
+            r#"{"printArea":"nope"}"#,
+            r#"{"titleRows":"A:B"}"#,
+            r#"{"titleCols":"1:2"}"#,
+            r#"{"surprise":1}"#,
+        ] {
+            assert!(book.page_setup(0, bad).is_err(), "{bad}");
+        }
+        let pdf = book.export_file(0, 160, 0, 3, 2, r#"{"format":"pdf","scope":"sheet"}"#).unwrap();
+        assert!(pdf.contains("base64") && pdf.contains("\"pages\""));
+        assert!(book.export_file(0, 160, 0, 3, 2, r#"{"format":"pdf","scope":"selection","fit":true}"#).is_ok());
+        assert!(book.export_file(0, 160, 0, 3, 2, r#"{"format":"pdf","scope":"all"}"#).is_ok());
+        let csv = book.export_file(0, 160, 0, 3, 2, r#"{"format":"csv","scope":"sheet"}"#).unwrap();
+        assert!(csv.contains("base64"));
+        for bad in [r#"{"format":"xlsx"}"#, r#"{"format":"csv","scope":"all"}"#, r#"{"format":"csv","scope":"selection"}"#, r#"{"format":"html","fit":true}"#, r#"{"scope":"sheet"}"#, r#"{"format":"pdf","scope":"page"}"#, "nope"] {
+            assert!(book.export_file(0, 160, 0, 3, 2, bad).is_err(), "{bad}");
+        }
+        assert!(book.export_file(0, 160, 0, 0, 0, r#"{"format":"pdf","scope":"selection"}"#).is_err());
     }
     #[test]
     fn tables_and_pivots_are_validated_undoable_and_refuse_unsafe_input() {

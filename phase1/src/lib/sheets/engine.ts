@@ -1,7 +1,8 @@
 import {parseAnnotations} from './notes';
 import {parseNames} from './names';
 import {parsePivotFields,parseTables} from './tableOps';
-import type {PivotField,PivotFunc,TableOp,TablesInfo,NameInfo,NameOp,AnnotateOp,CellAnnotations,DedupeOp,SplitOp,ReplaceOp,ValidationOp,CfOp,FillDirection,SheetsEditReceipt,SheetsNativeState,FilterOp,SortOp,SheetOp,FormatOp,LineAxis,LineOp,RangeResult,SheetInfo,SheetLayout,SheetsRequest,SheetsResponse,ViewResult,WorkbookInfo} from './protocol';
+import {parseExportResult,parsePageInfo} from './printOps';
+import type {PageInfo,PageSetupOp,ExportOp,ExportResult,PivotField,PivotFunc,TableOp,TablesInfo,NameInfo,NameOp,AnnotateOp,CellAnnotations,DedupeOp,SplitOp,ReplaceOp,ValidationOp,CfOp,FillDirection,SheetsEditReceipt,SheetsNativeState,FilterOp,SortOp,SheetOp,FormatOp,LineAxis,LineOp,RangeResult,SheetInfo,SheetLayout,SheetsRequest,SheetsResponse,ViewResult,WorkbookInfo} from './protocol';
 import {MAX_INPUT_BYTES} from './protocol';
 import {parseEditReceipt,parseNativeState} from './receipt';
 type Req=SheetsRequest extends infer R?R extends {id:number}?Omit<R,'id'>:never:never;
@@ -27,7 +28,7 @@ export class SheetsEngine{
  private request(message:Req,transfer:Transferable[]=[]){
   return new Promise<SheetsResponse>((resolve,reject)=>{
    if(this.disposed){reject(new Error('Spreadsheet engine closed'));return;}
-   const mutating=['open','set','setValues','clear','format','resize','editLines','freeze','sort','filter','fill','cf','validation','replace','dedupe','split','annotate','defineName','deleteName','pivotCreate','pivotRefresh','tableOp','setReviewed','undoReviewed','editSheet','undo','redo','close'].includes(message.op);if(mutating){this.mutationEpoch++;this.mutations++;this.notifySelectionRead();}const finish=()=>{if(mutating){this.mutations--;this.mutationEpoch++;this.notifySelectionRead();}};const done=(r:SheetsResponse)=>{finish();resolve(r);},failed=(e:Error)=>{finish();reject(e);};
+   const mutating=['open','set','setValues','clear','format','resize','editLines','freeze','sort','filter','fill','cf','validation','replace','dedupe','split','annotate','defineName','deleteName','pivotCreate','pivotRefresh','tableOp','pageSetup','setReviewed','undoReviewed','editSheet','undo','redo','close'].includes(message.op);if(mutating){this.mutationEpoch++;this.mutations++;this.notifySelectionRead();}const finish=()=>{if(mutating){this.mutations--;this.mutationEpoch++;this.notifySelectionRead();}};const done=(r:SheetsResponse)=>{finish();resolve(r);},failed=(e:Error)=>{finish();reject(e);};
    const id=this.nextId++;
    const timer=setTimeout(()=>this.dispose(new Error('Spreadsheet engine timed out. Unsaved edits in this workbook were discarded.')),this.timeoutMs);
    this.pending.set(id,{resolve:done,reject:failed,timer});
@@ -72,6 +73,12 @@ export class SheetsEngine{
  /** The tables of a sheet and the style names to choose from (read only). */
  async tables(sheet:number):Promise<TablesInfo>{return parseTables(await this.result<{tables:unknown;styles:unknown}>({op:'tables',sheet}));}
  /** Creates a table from the block or changes one of the sheet's tables (one undo step). */
+ /** The page setup of a sheet (read only). */
+ async pageInfo(sheet:number):Promise<PageInfo|null>{return parsePageInfo(await this.result<unknown>({op:'pageInfo',sheet}));}
+ /** Changes the page setup of a sheet (one undo step). */
+ async pageSetup(sheet:number,page:PageSetupOp):Promise<PageInfo|null>{return parsePageInfo(await this.result<unknown>({op:'pageSetup',sheet,page}));}
+ /** Builds a PDF, CSV, TSV or HTML file for download; the workbook is not changed. */
+ async exportFile(sheet:number,row:number,col:number,rows:number,cols:number,spec:ExportOp):Promise<ExportResult>{return parseExportResult(await this.result<unknown>({op:'exportFile',sheet,row,col,rows,cols,export:spec}));}
  tableOp(sheet:number,row:number,col:number,rows:number,cols:number,table:TableOp){return this.result<unknown>({op:'tableOp',sheet,row,col,rows,cols,table});}
  /** Defines a name for the block (one undo step). */
  defineName(sheet:number,row:number,col:number,rows:number,cols:number,name:{name:string;scope:'workbook'|'sheet';replace?:boolean}){return this.result<unknown>({op:'defineName',sheet,row,col,rows,cols,name});}

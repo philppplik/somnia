@@ -15,6 +15,7 @@ import {sortBlockProblem} from '../../lib/sheets/sortOps';
 import {fillBlockProblem,FILL_DIRECTIONS} from '../../lib/sheets/fillOps';
 import type {FillDirection,CfStyle} from '../../lib/sheets/protocol';
 import {PIVOT_FUNCS,tableBlockProblem} from '../../lib/sheets/tableOps';
+import {headerProblem,MAX_HEADER_CHARS} from '../../lib/sheets/printOps';
 import type {PivotField,PivotFunc} from '../../lib/sheets/protocol';
 import {nameProblem,nameTarget} from '../../lib/sheets/names';
 import {internalTarget,linkTargetProblem,MAX_LINK_TEXT,MAX_NOTE_CHARS} from '../../lib/sheets/notes';
@@ -220,6 +221,7 @@ export function SheetsLayoutPanel({context}:PanelHostProps){
   <NamesGroup/>
   <TablesGroup/>
   <PivotGroup/>
+  <PrintGroup/>
   <CustomFormatGroup/>
   <SplitGroup/>
   <p role="status">{action.notice}</p></Region>;
@@ -286,6 +288,37 @@ function TablesGroup(){
   {naming&&<label className="flex flex-col gap-1">{creating?t('sheets.tb.nameOptional'):t('sheets.tb.newName')}<NativeInput className={field} value={name} maxLength={64} aria-invalid={nameBad} disabled={action.busy} onChange={e=>setName(e.currentTarget.value)} data-testid="sheets-tb-name"/></label>}
   <Button variant="outline" size="compact" disabled={action.busy||!!problem} onClick={apply} data-testid="sheets-tb-apply">{t('sheets.nm.apply')}</Button>
   <p className="text-ink-3">{t(creating?'sheets.tb.scope':'sheets.tb.scopeTable',{range:rangeAddress(r)})}</p>
+ </div>;
+}
+/** Page setup and export in one grouped menu: page, print area and titles, appearance, header and footer, and file export. One undo step per change. */
+type PrintAction='portrait'|'landscape'|'paperA4'|'paperA3'|'paperLetter'|'paperLegal'|'marginsNormal'|'marginsWide'|'marginsNarrow'|'fitWidth'|'scale'|'areaSet'|'areaClear'|'titleRowsSet'|'titleRowsClear'|'gridlinesOn'|'gridlinesOff'|'headingsOn'|'headingsOff'|'centerOn'|'centerOff'|'header'|'footer'|'pdfSheet'|'pdfAll'|'pdfSelection'|'csv'|'tsv'|'html';
+const PRINT_EXPORTS:Record<string,{format:'pdf'|'csv'|'tsv'|'html';scope:'sheet'|'all'|'selection'}>={pdfSheet:{format:'pdf',scope:'sheet'},pdfAll:{format:'pdf',scope:'all'},pdfSelection:{format:'pdf',scope:'selection'},csv:{format:'csv',scope:'sheet'},tsv:{format:'tsv',scope:'sheet'},html:{format:'html',scope:'sheet'}};
+function PrintGroup(){
+ const {t}=useT(),s=useSheetsSelection(),action=useAction();const [act,setAct]=useState<PrintAction>('pdfSheet');const [scale,setScale]=useState(100);const [text,setText]=useState('');
+ const r=s?.range;if(!s||!r)return null;
+ const exporting=act in PRINT_EXPORTS,page=s.page??null,isText=act==='header'||act==='footer',textBad=isText&&headerProblem(text);
+ const apply=()=>{
+  const e=PRINT_EXPORTS[act];if(e){void action.run('sheets.export',e);return;}
+  const rows=`${r.r0+1}:${r.r1+1}`;
+  const ops:Record<string,unknown>={portrait:{orientation:'portrait'},landscape:{orientation:'landscape'},paperA4:{paper:'A4'},paperA3:{paper:'A3'},paperLetter:{paper:'Letter'},paperLegal:{paper:'Legal'},marginsNormal:{margins:'normal'},marginsWide:{margins:'wide'},marginsNarrow:{margins:'narrow'},fitWidth:{fitWidth:1,fitHeight:0},scale:{scale},areaSet:{printArea:rangeAddress(r)},areaClear:{printArea:null},titleRowsSet:{titleRows:rows},titleRowsClear:{titleRows:null},gridlinesOn:{gridlines:true},gridlinesOff:{gridlines:false},headingsOn:{headings:true},headingsOff:{headings:false},centerOn:{centerH:true,centerV:false},centerOff:{centerH:false,centerV:false},header:{header:text},footer:{footer:text}};
+  void action.run('sheets.pageSetup',ops[act]);
+ };
+ const opt=(id:PrintAction)=><option key={id} value={id}>{t('sheets.pr.'+id)}</option>;
+ return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.pr.title')}>
+  <span>{t('sheets.pr.title')}</span>
+  <label className="flex flex-col gap-1">{t('sheets.pr.action')}<NativeSelect className={field} value={act} disabled={action.busy} onChange={e=>setAct(e.currentTarget.value as PrintAction)} data-testid="sheets-pr-action">
+   <optgroup label={t('sheets.pr.groupExport')}>{(['pdfSheet','pdfAll','pdfSelection','csv','tsv','html'] as PrintAction[]).map(opt)}</optgroup>
+   <optgroup label={t('sheets.pr.groupPage')}>{(['portrait','landscape','paperA4','paperA3','paperLetter','paperLegal','marginsNormal','marginsWide','marginsNarrow','fitWidth','scale'] as PrintAction[]).map(opt)}</optgroup>
+   <optgroup label={t('sheets.pr.groupArea')}>{(['areaSet','areaClear','titleRowsSet','titleRowsClear'] as PrintAction[]).map(opt)}</optgroup>
+   <optgroup label={t('sheets.pr.groupLook')}>{(['gridlinesOn','gridlinesOff','headingsOn','headingsOff','centerOn','centerOff'] as PrintAction[]).map(opt)}</optgroup>
+   <optgroup label={t('sheets.pr.groupText')}>{(['header','footer'] as PrintAction[]).map(opt)}</optgroup>
+  </NativeSelect></label>
+  {act==='scale'&&<NumberField label={t('sheets.pr.scaleLabel')} unit="%" value={scale} resetKey="print-scale" min={10} max={400} step={5} disabled={action.busy} constraintError={t('sheets.pr.scaleInvalid')} parse={v=>{const n=Number(v.trim());return v.trim()&&Number.isInteger(n)&&n>=10&&n<=400?{ok:true,value:n}:{ok:false,error:t('sheets.pr.scaleInvalid')};}} onCommit={v=>{if(v!==null)setScale(v);}}/>}
+  {isText&&<label className="flex flex-col gap-1">{t('sheets.pr.text')}<NativeInput className={field} value={text} maxLength={MAX_HEADER_CHARS} aria-invalid={textBad} disabled={action.busy} onChange={e=>setText(e.currentTarget.value)} data-testid="sheets-pr-text"/></label>}
+  {isText&&<p className="text-ink-3">{t('sheets.pr.hint')}</p>}
+  <Button variant="outline" size="compact" disabled={action.busy||textBad} onClick={apply} data-testid="sheets-pr-apply">{t(exporting?'sheets.pr.applyExport':'sheets.pr.apply')}</Button>
+  {page&&<p className="text-ink-3">{page.fitWidth>0?t('sheets.pr.currentFit',{orientation:t('sheets.pr.'+page.orientation),paper:page.paper,w:page.fitWidth}):t('sheets.pr.current',{orientation:t('sheets.pr.'+page.orientation),paper:page.paper,scale:page.scale})}</p>}
+  <p className="text-ink-3">{t('sheets.pr.scope',{range:rangeAddress(r)})}</p>
  </div>;
 }
 /** A small PivotTable from the selection (first row = column names) on a new sheet, or a refresh of all PivotTables. One undo step. */

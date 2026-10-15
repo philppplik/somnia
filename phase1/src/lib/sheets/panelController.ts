@@ -4,13 +4,14 @@ import {parsePanelRange} from './panelModel';
 import {MAX_CELL_BYTES,type RangeCell} from './protocol';
 import {parseAddress} from './format';
 import {parseFormatOp} from './formatOps';
-import type {PivotField,PivotOp,TableOp,NameOp,AnnotateOp,DedupeOp,SplitOp,ReplaceOp,ValidationOp,CfOp,FillDirection,FilterOp,SortOp,FormatOp,LineAxis,LineEditKind,LineOp,SheetOp} from './protocol';
+import type {PageSetupOp,ExportOp,PivotField,PivotOp,TableOp,NameOp,AnnotateOp,DedupeOp,SplitOp,ReplaceOp,ValidationOp,CfOp,FillDirection,FilterOp,SortOp,FormatOp,LineAxis,LineEditKind,LineOp,SheetOp} from './protocol';
 import {parseEditLines,parseFreeze,parseLineCommand} from './lineOps';
 import {parseSheetOp} from './sheetOps';
 import {parseSortCommand} from './sortOps';
 import {parseAnnotateCommand} from './notes';
 import {parseNamesCommand} from './names';
 import {parsePivotCommand,parseTableCommand} from './tableOps';
+import {parseExportCommand,parsePageSetupCommand} from './printOps';
 import {parseDedupeCommand,parseSplitCommand,SPLIT_DELIMITERS} from './dataTools';
 import {parseReplaceCommand} from './replaceOps';
 import {parseValidationCommand} from './validationOps';
@@ -51,6 +52,10 @@ export interface SheetsPanelController {
  tableOperation(op:TableOp):void|Promise<void>;
  /** Builds a PivotTable from the selection on a new sheet, or refreshes all PivotTables (one undo step). */
  pivotOperation(op:PivotOp):void|Promise<void>;
+ /** Changes the page setup of the active sheet (one undo step). */
+ pageSetup(op:PageSetupOp):void|Promise<void>;
+ /** Builds a PDF, CSV, TSV or HTML file of the active sheet, all sheets or the selection and downloads it (nothing is changed). */
+ exportFile(op:ExportOp):void|Promise<void>;
  /** The column names in the first row of the selection. */
  pivotFields():PivotField[]|Promise<PivotField[]>;
  replaceText(op:ReplaceOp):number|Promise<number>;
@@ -65,7 +70,7 @@ let current:SheetsPanelController|null=null;
 export const getSheetsPanelController=()=>current;
 export function registerSheetsPanelController(controller:SheetsPanelController){current=controller;return()=>{if(current===controller)current=null;};}
 const requireController=()=>{if(!current?.ready())throw Error('No workbook is ready.');return current;};
-export const SHEETS_PANEL_COMMAND_IDS=['sheets.navigate','sheets.setCell','sheets.analyzeRange','sheets.format','sheets.resize','sheets.freeze','sheets.editLines','sheets.sheet','sheets.sort','sheets.filter','sheets.fill','sheets.highlight','sheets.validation','sheets.replace','sheets.dedupe','sheets.split','sheets.annotate','sheets.names','sheets.table','sheets.pivot'] as const;
+export const SHEETS_PANEL_COMMAND_IDS=['sheets.navigate','sheets.setCell','sheets.analyzeRange','sheets.format','sheets.resize','sheets.freeze','sheets.editLines','sheets.sheet','sheets.sort','sheets.filter','sheets.fill','sheets.highlight','sheets.validation','sheets.replace','sheets.dedupe','sheets.split','sheets.annotate','sheets.names','sheets.table','sheets.pivot','sheets.pageSetup','sheets.export'] as const;
 export function sheetsPanelCommandSpecs():CommandSpec[]{
  return [
  {id:'sheets.navigate',title:'Go to spreadsheet cell',category:'View',level:'ui',allowInInput:true,
@@ -128,6 +133,12 @@ export function sheetsPanelCommandSpecs():CommandSpec[]{
  {id:'sheets.pivot',title:'Build or refresh a PivotTable',category:'Edit',level:'ui',allowInInput:true,
   params:{type:'object',properties:{kind:{type:'string',enum:['create','refresh']},rows:{type:'string',minLength:1,maxLength:255},columns:{type:'string',minLength:1,maxLength:255},values:{type:'string',minLength:1,maxLength:255},func:{type:'string',enum:['sum','count','average','max','min']}},required:['kind'],additionalProperties:false},
   enabled:()=>!!current?.ready(),run:p=>requireController().pivotOperation(parsePivotCommand(p))},
+ {id:'sheets.pageSetup',title:'Change the page setup',category:'Edit',level:'ui',allowInInput:true,
+  params:{type:'object',properties:{orientation:{type:'string',enum:['portrait','landscape']},paper:{type:'string',enum:['Letter','Legal','A4','A3','A5','Tabloid','Executive']},margins:{type:'string',enum:['normal','wide','narrow']},scale:{type:'integer',minimum:10,maximum:400},fitWidth:{type:'integer',minimum:0,maximum:20},fitHeight:{type:'integer',minimum:0,maximum:20},centerH:{type:'boolean'},centerV:{type:'boolean'},gridlines:{type:'boolean'},headings:{type:'boolean'},header:{type:'string',maxLength:100},footer:{type:'string',maxLength:100},printArea:{type:['string','null'],maxLength:40},titleRows:{type:['string','null'],maxLength:20},titleCols:{type:['string','null'],maxLength:20}},additionalProperties:false},
+  enabled:()=>!!current?.ready(),run:p=>requireController().pageSetup(parsePageSetupCommand(p))},
+ {id:'sheets.export',title:'Export as PDF, CSV, TSV or HTML',category:'Edit',level:'ui',allowInInput:true,
+  params:{type:'object',properties:{format:{type:'string',enum:['pdf','csv','tsv','html']},scope:{type:'string',enum:['sheet','all','selection']},fit:{type:'boolean'}},required:['format'],additionalProperties:false},
+  enabled:()=>!!current?.ready(),run:p=>requireController().exportFile(parseExportCommand(p))},
  ];
 }
 export function registerSheetsPanelCommands(){const offs=sheetsPanelCommandSpecs().map(s=>registerCommandSpec(s));return()=>offs.forEach(off=>off());}

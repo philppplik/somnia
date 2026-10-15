@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-923 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+925 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -552,6 +552,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `sheets.annotate` | Add a note, comment or link to the active cell | Edit | sheets |  |
 | `sheets.dedupe` | Remove duplicate rows in the selected block | Edit | sheets |  |
 | `sheets.editLines` | Insert or delete rows and columns | Edit | sheets |  |
+| `sheets.export` | Export as PDF, CSV, TSV or HTML | Edit | sheets |  |
 | `sheets.fill` | Fill the selected block down, right, up or left | Edit | sheets |  |
 | `sheets.filter` | Filter rows by a column | Edit | sheets |  |
 | `sheets.format` | Format selected cells | Edit | sheets |  |
@@ -560,6 +561,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `sheets.highlight` | Highlight cells with a rule or color scale | Edit | sheets |  |
 | `sheets.names` | Define or delete a named range | Edit | sheets |  |
 | `sheets.navigate` | Go to spreadsheet cell | View | sheets |  |
+| `sheets.pageSetup` | Change the page setup | Edit | sheets |  |
 | `sheets.pivot` | Build or refresh a PivotTable | Edit | sheets |  |
 | `sheets.redo` | Redo workbook change | Edit | sheets |  |
 | `sheets.replace` | Replace text in the selected cells | Edit | sheets |  |
