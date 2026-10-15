@@ -12,7 +12,7 @@ import {buildExtras,type ClipMeta,type MetaTrack} from './clipMeta';
 import {groupRefs,keyIndices,copyTrackKeys,shiftTrackKeys,pasteTrackKeys,type KeyRef,type KeyData,type TrackData} from './keyEdit';
 import {convexHullMesh} from './convexHull';
 import {shrinkwrapMesh} from './shrinkwrap';
-import {extrudeFaces,insetFaces,bevelVertices,deleteElements,weldSelected,subdivideFaces,pokeFaces,duplicateFaces,fattenSelected,relaxSelected,flipFaces,dissolveFaces,fillSelected,collapseSelected,toSphereSelected,randomizeSelected,moveSelected,ripSelected,extractFaces,sharpEdges,similarFaces,rotateSelected,scaleSelected,shearSelected,flipEdges,mergeByDistanceSelected,bisectEdit,edgeLoop,bridgeFacesSelected,vertSlideSelected,loopCut,bevelEdges,slideEdges,mirrorCombine,symmetrizeMesh,subdivideLoop,cleanupMesh,flipMesh,outsideMesh,smoothMesh,separateMesh,solidifyMesh,fillHolesMesh,relaxMesh,fattenMesh,bendMesh,bisectMesh,knifeMesh,shortestPath,twistMesh,taperMesh,spinMesh,bridgeMesh,remeshMesh,EditError,MAX_EDIT_VERTICES,MAX_EDIT_TRIANGLES,type MeshData,type CleanupResult,type NormalsOp} from './editMesh';
+import {extrudeFaces,insetFaces,bevelVertices,deleteElements,weldSelected,subdivideFaces,pokeFaces,duplicateFaces,fattenSelected,relaxSelected,flipFaces,dissolveFaces,fillSelected,collapseSelected,toSphereSelected,randomizeSelected,moveSelected,ripSelected,extractFaces,sharpEdges,similarFaces,facingFaces,rotateSelected,scaleSelected,shearSelected,flipEdges,mergeByDistanceSelected,bisectEdit,edgeLoop,bridgeFacesSelected,vertSlideSelected,loopCut,bevelEdges,slideEdges,mirrorCombine,symmetrizeMesh,subdivideLoop,cleanupMesh,flipMesh,outsideMesh,smoothMesh,separateMesh,solidifyMesh,fillHolesMesh,relaxMesh,fattenMesh,bendMesh,bisectMesh,knifeMesh,shortestPath,twistMesh,taperMesh,spinMesh,bridgeMesh,remeshMesh,EditError,MAX_EDIT_VERTICES,MAX_EDIT_TRIANGLES,type MeshData,type CleanupResult,type NormalsOp} from './editMesh';
 import {sculptDab,paintMask,SculptError,type SculptOpts} from './sculpt';
 import {KEY_PATHS,KEY_STRIDE,ClipError,MAX_CLIPS,MAX_KEYS_PER_TRACK,DEFAULT_CLIP_SECONDS,insertKey,removeKey as removeKeyData,findKey,isPlainTrack,trackName,parseTrackName,checkKeyTime,checkDuration,checkClipName,lastKeyTime,type KeyPath} from './clips';
 import {mergeTransform,DEFAULT_TRANSFORM,UvError,type TextureTransform} from './uv';
@@ -841,6 +841,14 @@ export class Stage{
   const m=this.editMesh();
   let faces:number[];
   try{faces=similarFaces(this.meshDataOf(m),[...this.editSel.faces],degrees);}catch(e){throw e instanceof EditError?new StageError(e.message):e;}
+  this.editSel.faces=new Set(faces);
+ }
+ /** Selects faces whose normal points within `degrees` of a mesh axis direction (for example '+y' for the top faces). Replaces the face selection; selection changes are not undo steps. */
+ editSelectFacing(dir:'+x'|'-x'|'+y'|'-y'|'+z'|'-z'='+y',degrees=45){
+  const m=this.editMesh();
+  const VEC={'+x':[1,0,0],'-x':[-1,0,0],'+y':[0,1,0],'-y':[0,-1,0],'+z':[0,0,1],'-z':[0,0,-1]} as const;
+  let faces:number[];
+  try{faces=facingFaces(this.meshDataOf(m),VEC[dir] as unknown as [number,number,number],degrees);}catch(e){throw e instanceof EditError?new StageError(e.message):e;}
   this.editSel.faces=new Set(faces);
  }
  /** Selects edges whose adjacent faces meet at a dihedral angle of at least `degrees` (position-keyed, so duplicated shells read as one surface). Replaces the edge selection; selection changes are not undo steps. */

@@ -143,6 +143,7 @@ export interface Studio3DController{
  editRotate(axis:'x'|'y'|'z',degrees:number):void;
  editScale(factors:[number,number,number]):void;
  editSelectSimilar(degrees?:number):void;
+ editSelectFacing(dir?:'+x'|'-x'|'+y'|'-y'|'+z'|'-z',degrees?:number):void;
  editShear(along:'x'|'y'|'z',by:'x'|'y'|'z',factor:number):void;
  editFlipEdge():void;
  editMergeByDistance(distance:number):void;
@@ -365,6 +366,7 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add('studio3d.edit.flipEdge','Rotate each selected edge of the edited 3D mesh shared by two triangles to the other diagonal','Edit',()=>need().editFlipEdge(),undefined,()=>getStudio3DState().edit!=null),
   add<{along?:'x'|'y'|'z';by?:'x'|'y'|'z';factor?:number}>('studio3d.edit.shear','Shear the selected vertices of the edited 3D mesh along one axis by their position on another','Edit',p=>need().editShear(p?.along??'x',p?.by??'y',p?.factor??0.5),object({along:{enum:['x','y','z']},by:{enum:['x','y','z']},factor:{type:'number',minimum:-1000000,maximum:1000000}},[]),()=>getStudio3DState().edit!=null),
   add<{degrees?:number}>('studio3d.edit.selectSimilar','Select faces of the edited 3D mesh whose normal is within the given angle of the current selection','Edit',p=>need().editSelectSimilar(p?.degrees??15),object({degrees:{type:'number',minimum:0,maximum:180}},[]),()=>getStudio3DState().edit!=null),
+  add<{dir?:'+x'|'-x'|'+y'|'-y'|'+z'|'-z';degrees?:number}>('studio3d.edit.selectFacing','Select faces of the edited 3D mesh pointing along a mesh axis direction','Edit',p=>need().editSelectFacing(p?.dir??'+y',p?.degrees??45),object({dir:{enum:['+x','-x','+y','-y','+z','-z']},degrees:{type:'number',minimum:0,maximum:180}},[]),()=>getStudio3DState().edit!=null),
   add<{x?:number;y?:number;z?:number}>('studio3d.edit.scale','Scale the selected vertices of the edited 3D mesh toward or away from their centroid','Edit',p=>need().editScale([p?.x??1,p?.y??1,p?.z??1]),object({x:{type:'number',minimum:-1000000,maximum:1000000},y:{type:'number',minimum:-1000000,maximum:1000000},z:{type:'number',minimum:-1000000,maximum:1000000}},[]),()=>getStudio3DState().edit!=null),
   add<{axis?:'x'|'y'|'z';degrees?:number}>('studio3d.edit.rotate','Rotate the selected vertices of the edited 3D mesh around their centroid on a world axis','Edit',p=>need().editRotate(p?.axis??'z',p?.degrees??90),object({axis:{enum:['x','y','z']},degrees:{type:'number',minimum:-36000,maximum:36000}},[]),()=>getStudio3DState().edit!=null),
   add<{degrees?:number}>('studio3d.edit.selectSharp','Select edges of the edited 3D mesh whose faces meet at an angle of at least the given degrees','Edit',p=>need().editSelectSharp(p?.degrees??30),object({degrees:{type:'number',minimum:0,maximum:180}},[]),()=>getStudio3DState().edit!=null),

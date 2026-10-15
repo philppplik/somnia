@@ -1020,5 +1020,6 @@
  "cmd.studio3d.mesh.screw": "3D-Mesh schraubenförmig um eine Achse rotieren (Helix)",
  "studio3d.mesh.screw": "Schraube",
  "studio3d.hist.screw_one": "{name} schrauben (Helix)",
- "studio3d.hist.screw_other": "{count} Objekte schrauben (Helix)"
+ "studio3d.hist.screw_other": "{count} Objekte schrauben (Helix)",
+ "cmd.studio3d.edit.selectFacing": "Faces des bearbeiteten 3D-Mesh auswählen, die entlang einer Mesh-Achse zeigen"
 }

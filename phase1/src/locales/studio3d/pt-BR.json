@@ -1020,5 +1020,6 @@
  "cmd.studio3d.mesh.screw": "Revolucionar uma malha 3D em torno de um eixo subindo ao longo dele (hélice)",
  "studio3d.mesh.screw": "Parafuso",
  "studio3d.hist.screw_one": "Parafusar {name}",
- "studio3d.hist.screw_other": "Parafusar {count} objetos"
+ "studio3d.hist.screw_other": "Parafusar {count} objetos",
+ "cmd.studio3d.edit.selectFacing": "Selecionar faces da malha 3D editada que apontam ao longo de um eixo da malha"
 }

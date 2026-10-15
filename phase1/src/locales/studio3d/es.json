@@ -1020,5 +1020,6 @@
  "cmd.studio3d.mesh.screw": "Revolucionar una malla 3D alrededor de un eje subiendo a lo largo de él (hélice)",
  "studio3d.mesh.screw": "Hélice",
  "studio3d.hist.screw_one": "Atornillar {name}",
- "studio3d.hist.screw_other": "Atornillar {count} objetos"
+ "studio3d.hist.screw_other": "Atornillar {count} objetos",
+ "cmd.studio3d.edit.selectFacing": "Seleccionar caras de la malla 3D editada que apuntan a lo largo de un eje de la malla"
 }

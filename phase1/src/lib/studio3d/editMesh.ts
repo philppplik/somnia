@@ -669,6 +669,24 @@ export function flipEdges(m:MeshData,edges:[number,number][]):MeshData{
  check(out);return out;
 }
 /** Faces whose geometric normal (from positions, so duplicated shells count alike) lies within `degrees` of the average normal of the seed faces. Returns face ordinals, seeds included. */
+export function facingFaces(m:MeshData,dir:[number,number,number],degrees:number):number[]{
+ check(m);
+ if(!Array.isArray(dir)||dir.length!==3||dir.some(n=>!Number.isFinite(n))||Math.hypot(dir[0],dir[1],dir[2])<1e-12)throw new EditError('The facing direction must be three finite numbers with a non-zero length.');
+ if(!Number.isFinite(degrees)||degrees<0||degrees>180)throw new EditError('Angle must be between 0 and 180 degrees.');
+ const dl=Math.hypot(dir[0],dir[1],dir[2]);
+ const dx=dir[0]/dl,dy=dir[1]/dl,dz=dir[2]/dl;
+ const cos=Math.cos(degrees*Math.PI/180);
+ const pos=m.positions,idx=m.index,out:number[]=[];
+ for(let f=0;f<idx.length/3;f++){
+  const a=idx[f*3],b=idx[f*3+1],c=idx[f*3+2];
+  const ux=pos[b*3]-pos[a*3],uy=pos[b*3+1]-pos[a*3+1],uz=pos[b*3+2]-pos[a*3+2];
+  const vx=pos[c*3]-pos[a*3],vy=pos[c*3+1]-pos[a*3+1],vz=pos[c*3+2]-pos[a*3+2];
+  const nx=uy*vz-uz*vy,ny=uz*vx-ux*vz,nz=ux*vy-uy*vx;
+  const l=Math.hypot(nx,ny,nz);
+  if(l>0&&(nx*dx+ny*dy+nz*dz)/l>=cos)out.push(f);
+ }
+ return out;
+}
 export function similarFaces(m:MeshData,seeds:number[],degrees:number):number[]{
  if(!seeds.length)throw new EditError('Select faces first.');
  if(!Number.isFinite(degrees)||degrees<0||degrees>180)throw new EditError('Angle must be between 0 and 180 degrees.');

@@ -1020,5 +1020,6 @@
  "cmd.studio3d.mesh.screw": "Revolve a 3D mesh around an axis while rising along it (helix)",
  "studio3d.mesh.screw": "Screw",
  "studio3d.hist.screw_one": "Screw {name}",
- "studio3d.hist.screw_other": "Screw {count} objects"
+ "studio3d.hist.screw_other": "Screw {count} objects",
+ "cmd.studio3d.edit.selectFacing": "Select faces of the edited 3D mesh pointing along a mesh axis direction"
 }
