@@ -2,7 +2,7 @@ import {registerCommandSpec} from '../commandBridge';
 import {commandRegistry} from '../commandRegistry';
 import type {CommandSpec,CommandSchema} from '../commandSpec';
 import {getMedia} from '../media';
-import {addAudioTrackClip,addTimelineClip,addTimelineClipsFromDialog,deleteAudioTrackClip,duplicateAudioTrackClip,cancelVideoExport,deleteTimelineClip,exportVideoFile,getVideoSession,moveTimelineClip,redoVideoEdit,resetTimeline,moveAudioTrackClip,saveVideoProject,selectTimelineClip,setAudioTrackClipFades,setAudioTrackClipGain,setTimelineClipCrossfade,setTimelineClipGain,setTimelineClipSpeed,setVideoFormat,splitTimelineAt,toggleAudioTrackClipMute,toggleTimelineClipMute,trimAudioTrackClip,trimTimelineClip,undoVideoEdit,videoIsDirty} from './session';
+import {addAudioTrackClip,addImageClip,addTimelineClip,addTimelineClipsFromDialog,deleteAudioTrackClip,duplicateAudioTrackClip,cancelVideoExport,deleteTimelineClip,exportVideoFile,getVideoSession,moveTimelineClip,setImageClipLength,redoVideoEdit,resetTimeline,moveAudioTrackClip,saveVideoProject,selectTimelineClip,setAudioTrackClipFades,setAudioTrackClipGain,setTimelineClipCrossfade,setTimelineClipGain,setTimelineClipSpeed,setVideoFormat,splitTimelineAt,toggleAudioTrackClipMute,toggleTimelineClipMute,trimAudioTrackClip,trimTimelineClip,undoVideoEdit,videoIsDirty} from './session';
 import {addTitleClip,setTitleLength,updateTitle} from './titleSession';
 import {isTitleClip,type TitleSpec} from './titles';
 import {timelineDuration} from './timeline';
@@ -22,7 +22,8 @@ const titleProperties={text:{type:'string',maxLength:500},size:number(8,600),col
 export function videoCommandSpecs():CommandSpec<unknown,unknown>[] {
  const spec=<P,>(id:string,title:string,run:(p:P)=>unknown,params?:CommandSchema,enabled=ready,category:CommandSpec['category']='Tools'):CommandSpec<P,unknown>=>({id,title,category,level:'ui',params,enabled,keywords:['video','timeline'],run});
  const selectionReady=()=>ready()&&!!selected();
- const mediaSelection=()=>selectionReady()&&!isTitleClip(clip());
+ const mediaSelection=()=>selectionReady()&&!isTitleClip(clip())&&clip().kind!=='image';
+ const imageSelection=()=>selectionReady()&&clip().kind==='image';
  const titleSelection=()=>selectionReady()&&isTitleClip(clip());
  return [
   spec('video.source.add','Add an open video to the timeline',async(p:{name:string})=>{const item=getMedia().items.find(i=>i.name===p.name&&i.kind==='video');if(!item)fail('That video source is not open.');await addTimelineClip(root(),item!);},object({name:id})),
@@ -49,6 +50,8 @@ export function videoCommandSpecs():CommandSpec<unknown,unknown>[] {
   spec('video.audio.duplicate','Duplicate an audio clip',(p:{id:string;at?:number})=>duplicateAudioTrackClip(root(),p.id,p.at),object({id,at:number()},['id']),ready,'Edit'),
   spec('video.audio.mute','Toggle an audio clip mute',(p:{id:string})=>toggleAudioTrackClipMute(root(),p.id),object({id}),ready,'Edit'),
   spec('video.audio.delete','Delete an audio clip',(p:{id:string})=>deleteAudioTrackClip(root(),p.id),object({id}),ready,'Edit'),
+  spec('video.image.add','Add an open image to the timeline',(p:{name:string;seconds?:number;at?:number})=>{const item=getMedia().items.find(i=>i.name===p.name&&i.kind==='image');if(!item)fail('That image is not open.');addImageClip(root(),item!,p.seconds,p.at);},object({name:id,seconds:number(0.05,3600),at:number()},['name']),ready,'Insert'),
+  spec('video.image.duration','Set selected image clip duration',(p:{seconds:number})=>setImageClipLength(root(),clip().id,p.seconds),object({seconds:number(0.05,3600)}),imageSelection,'Edit'),
   spec('video.title.add','Add a title card',()=>addTitleClip(root(),Number.MAX_SAFE_INTEGER,{text:''}),undefined,ready,'Insert'),
   spec('video.title.update','Edit selected title card',(p:Partial<TitleSpec>)=>updateTitle(root(),clip().id,p),object(titleProperties,[]),titleSelection,'Edit'),
   spec('video.title.duration','Set selected title card duration',(p:{seconds:number})=>setTitleLength(root(),clip().id,p.seconds),object({seconds:number(0.05,3600)}),titleSelection,'Edit'),

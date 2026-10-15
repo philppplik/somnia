@@ -162,3 +162,15 @@ test('blank Video starts with zero clips and no decoder, accepts clips, exports 
  await addTimelineClip(name,source);resetTimeline(name);assert.deepEqual(getVideoSession(name)?.clips,[],'reset never invents a source clip for the project');
  closeMedia(name);closeMedia(source.name);assert.equal(getVideoSession(name),null);
 });
+
+test('image clips: sanitize fixes the shape, split halves the duration, edges and speed stay off',()=>{
+ const img:TimelineClip={id:'i',source:'photo.png',in_s:2,out_s:90_000,gain:0.3,muted:true,speed:2,kind:'image'};
+ const clean=sanitizeClips([img],{});
+ assert.deepEqual(clean,[{id:'i',source:'photo.png',in_s:0,out_s:3600,gain:1,muted:false,speed:2,kind:'image'}] as TimelineClip[],'sanitized (clamped)');
+ const stills:TimelineClip[]=[{id:'a',source:'a.png',in_s:0,out_s:10,gain:1,muted:false,kind:'image',crossfade_s:1}];
+ const split=splitAt(stills,4)!;
+ assert.deepEqual(split.map(c=>[c.in_s,c.out_s,c.kind,c.crossfade_s]),[[0,4,'image',0],[0,6,'image',1]],'both halves keep in 0; the crossfade moves to the second half');
+ assert.equal(splitAt([{id:'b',source:'b.png',in_s:0,out_s:0.08,gain:1,muted:false,kind:'image'}],0.05),null,'too-short halves refuse');
+ const after=setClipEdge(stills,'a','in',3);
+ assert.deepEqual(after,stills,'image clips keep in 0 (duration changes go through setImageClipLength)');
+});

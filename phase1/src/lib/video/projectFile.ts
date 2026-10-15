@@ -27,6 +27,8 @@ export function serializeVideoProject(clips:TimelineClip[],audioClips:AudioClip[
  const file:VideoProjectFile={version:VIDEO_PROJECT_VERSION,app:'somnia-video',format,clips:clips.map(c=>
   isTitleClip(c)
    ?{id:c.id,kind:'title',out_s:c.out_s,crossfade_s:c.crossfade_s??0,title:c.title}
+   :c.kind==='image'
+   ?{id:c.id,kind:'image',source:c.source,out_s:c.out_s,crossfade_s:c.crossfade_s??0}
    :{id:c.id,kind:'media',source:c.source,in_s:c.in_s,out_s:c.out_s,gain:c.gain,muted:c.muted,speed:speedOf(c),crossfade_s:c.crossfade_s??0}),
   audio:audioClips.map(c=>({id:c.id,source:c.source,in_s:c.in_s,out_s:c.out_s,at:c.at,gain:c.gain,muted:c.muted,duck:c.duck,fadeIn:c.fadeIn,fadeOut:c.fadeOut}))};
  return JSON.stringify(file,null,1)+'\n';
@@ -51,6 +53,7 @@ export function parseVideoProject(text:string):{clips:TimelineClip[];audioClips:
    return[{id:id(o.id),kind:'title' as const,source:'',in_s:0,out_s:clampTitleSeconds(num(o.out_s,3)),gain:1,muted:false,crossfade_s:num(o.crossfade_s),title:sanitizeTitleSpec(o.title as Partial<TitleSpec>)}];
   }
   if(typeof o.source!=='string'||!o.source)return[];
+  if(o.kind==='image')return[{id:id(o.id),kind:'image' as const,source:o.source,in_s:0,out_s:clampTitleSeconds(num(o.out_s,3)),gain:1,muted:false,crossfade_s:num(o.crossfade_s)}];
   const in_s=Math.max(0,num(o.in_s)),out_s=num(o.out_s);
   if(out_s-in_s<MIN_CLIP_SECONDS)return[];
   return[{id:id(o.id),source:o.source,in_s,out_s,gain:num(o.gain,1),muted:o.muted===true,speed:num(o.speed,1),crossfade_s:num(o.crossfade_s)}];

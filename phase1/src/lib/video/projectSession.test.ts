@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {addBlankVideoProject,addMediaFile,closeMedia,getMedia} from '../media';
-import {closeVideo,dirtyVideoNames,getVideoSession,openVideo,serializeVideoProjectCopy,setVideoFormat,videoIsDirty} from './session';
+import {addImageClip,closeVideo,dirtyVideoNames,getVideoSession,openVideo,redoVideoEdit,serializeVideoProjectCopy,setImageClipLength,setVideoFormat,undoVideoEdit,videoIsDirty} from './session';
 import {addTitleClip,updateTitle} from './titleSession';
 
 test('project: a saved .video-project reloads its timeline and format, clean',async()=>{
@@ -59,4 +59,28 @@ test('project: undoing back to the saved state clears the dirty flag',async()=>{
  undoVideoEdit('save-undo2.video-project');
  assert.ok(!videoIsDirty(getVideoSession('save-undo2.video-project')),'back at the loaded state = clean');
  closeVideo('save-undo2.video-project');closeMedia('save-undo2.video-project');
+});
+
+test('project: image clips add, retime, undo and save like title clips',async()=>{
+ const a='images.video-project';
+ addBlankVideoProject(a);
+ await openVideo(getMedia().items.find(i=>i.name===a)!);
+ const id=addImageClip(a,{name:'photo.png'})!;
+ assert.ok(id,'adds without a probe');
+ let s=getVideoSession(a)!;
+ assert.deepEqual([s.clips[0].kind,s.clips[0].source,s.clips[0].in_s,s.clips[0].out_s],['image','photo.png',0,5]);
+ assert.equal(s.selectedClipId,id,'new clip is selected');
+ setImageClipLength(a,id,2.5);
+ assert.equal(getVideoSession(a)!.clips[0].out_s,2.5);
+ assert.ok(videoIsDirty(getVideoSession(a)));
+ undoVideoEdit(a);undoVideoEdit(a);
+ assert.equal(getVideoSession(a)!.clips.length,0,'undo removes the clip');
+ assert.ok(!videoIsDirty(getVideoSession(a)),'back to clean');
+ redoVideoEdit(a);
+ assert.equal(getVideoSession(a)!.clips[0].out_s,5);
+ setImageClipLength(a,id,0);
+ assert.equal(getVideoSession(a)!.clips[0].out_s,0.05,'duration clamps');
+ const copy=serializeVideoProjectCopy(a)!;
+ assert.match(copy.text,/"kind": "image"/);
+ closeVideo(a);closeMedia(a);
 });

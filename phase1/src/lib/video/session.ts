@@ -2,11 +2,11 @@ import {reportError} from '../log';
 import {useSyncExternalStore} from 'react';
 import {VideoEngine,type VideoEngineLike} from './engine';
 import {DEFAULT_FORMAT,exportName,type VideoFormat} from './recipe';
-import {fullClip,isNeutralTimeline,moveClip,rippleDelete,sanitizeClips,setClipEdge,setClipSpeed,setCrossfade,splitAt,timelineDuration,type TimelineClip} from './timeline';
+import {fullClip,IMAGE_DEFAULT_SECONDS,newClipId,isNeutralTimeline,moveClip,rippleDelete,sanitizeClips,setClipEdge,setClipSpeed,setCrossfade,splitAt,timelineDuration,type TimelineClip} from './timeline';
 import {emptyVideoHistory,pushHistory,redoHistory,undoHistory,type VideoHistory,type VideoSnapshot} from './history';
 import {audioTrackEnd,duplicateAudioClip,fullAudioClip,moveAudioClip,removeAudioClip,resizeAudioClip,sanitizeAudioClips,setAudioClipDuck,setAudioClipEdge,setAudioClipFades,setAudioClipGain,setAudioClipMuted,type AudioClip} from './audioTrack';
 import {clipsSignature,parseVideoProject,projectFileName,serializeVideoProject} from './projectFile';
-import {needsSourceFile} from './titles';
+import {clampTitleSeconds,insertClip,insertIndexAfter,needsSourceFile} from './titles';
 import {FilmstripController} from './filmstrip-controller';
 import {FilmstripEngine} from './filmstrip-engine';
 import {fileExtension,sniffVideo} from './format';
@@ -175,6 +175,21 @@ export function duplicateAudioTrackClip(root:string,id:string,at?:number):string
 }
 export const setAudioTrackClipDuck=(root:string,id:string,duck:number)=>editAudioTrack(root,clips=>setAudioClipDuck(clips,id,duck));
 export const toggleAudioTrackClipMute=(root:string,id:string)=>editAudioTrack(root,clips=>{const c=clips.find(x=>x.id===id);return c?setAudioClipMuted(clips,id,!c.muted):null;});
+/** Inserts a still image as a clip (default 5 s) after the clip at `at` (or at the end) and selects it. No probing needed. */
+export function addImageClip(root:string,item:{name:string},seconds?:number,at?:number):string|null{
+ const s=sessions.get(root);if(!s)return null;
+ const clip:TimelineClip={id:newClipId(),kind:'image',source:item.name,in_s:0,out_s:clampTitleSeconds(seconds??IMAGE_DEFAULT_SECONDS),gain:1,muted:false};
+ editTimeline(root,clips=>insertClip(clips,clip,at===undefined?clips.length:insertIndexAfter(clips,at)));
+ patch(root,{selectedClipId:clip.id,selectedAudioClipId:null});
+ return clip.id;
+}
+/** Sets an image clip's on-screen duration. No-op for other clip kinds. */
+export function setImageClipLength(root:string,id:string,seconds:number,historyKey?:string){
+ const s=sessions.get(root);if(!s)return;
+ const clip=s.clips.find(c=>c.id===id);
+ if(!clip||clip.kind!=='image')return;
+ editTimeline(root,clips=>clips.map(c=>c.id===id?{...c,out_s:clampTitleSeconds(seconds)}:c),historyKey?{historyKey}:undefined);
+}
 /** Appends a full-length clip of another video source (opened and probed on demand) and selects it. */
 export async function addTimelineClip(root:string,item:{name:string;url:string}){
  await openVideo(item);

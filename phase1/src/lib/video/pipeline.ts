@@ -2,7 +2,7 @@
 import {ALL_FORMATS,AudioSample,AudioSampleSink,AudioSampleSource,BufferSource,BufferTarget,CanvasSink,CanvasSource,Input,Mp4OutputFormat,Output,QUALITY_HIGH,WebMOutputFormat,getFirstEncodableAudioCodec,getFirstEncodableVideoCodec} from 'mediabunny';
 import type {AudioCodec,VideoCodec} from 'mediabunny';
 import type {VideoFormat} from './recipe';
-import {clipRanges,fadeOf,speedOf,timelineDuration,type ClipRange,type TimelineClip} from './timeline';
+import {clipRanges,fadeOf,isImageClip,speedOf,timelineDuration,type ClipRange,type TimelineClip} from './timeline';
 import {audioEnvelope,duckGainAt,type AudioClip} from './audioTrack';
 import {WindowMixer} from './mixer';
 import {drawTitleCard,isTitleClip,needsSourceFile} from './titles';
@@ -86,8 +86,11 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
  if(!clips.length)throw new Error('The timeline is empty.');
  const steps:string[]=[];
  const inputs=new Map<string,{input:Input;probe:VideoProbe}>();
- const videoNames=new Set(clips.filter(needsSourceFile).map(c=>c.source));
+ const imageNames=new Set(clips.filter(isImageClip).map(c=>c.source));
+ const videoNames=new Set(clips.filter(c=>needsSourceFile(c)&&!isImageClip(c)).map(c=>c.source));
  const names=[...new Set([...videoNames,...audioClips.map(c=>c.source)])];
+ // Stills decode straight to bitmaps, contain-fit onto the output canvas size decided below.
+ const bitmaps=new Map<string,ImageBitmap>();
  try{
   for(const n of names){
    const bytes=sources[n];
@@ -99,13 +102,19 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
    if(!probe.audio&&!videoNames.has(n)){input.dispose();throw new Error(`"${n}" has no audio track and cannot be on the audio timeline.`);}
    inputs.set(n,{input,probe});
   }
-  const firstMedia=clips.find(needsSourceFile);
+  const firstMedia=clips.find(c=>needsSourceFile(c)&&!isImageClip(c));
   const first=firstMedia?inputs.get(firstMedia.source)!.probe.video!:{codec:null,width:1280,height:720,fps:null};
   const outW=first.width,outH=first.height;
+  for(const n of imageNames){
+   const bytes=sources[n];
+   if(!bytes)throw new Error(`Clip source "${n}" is no longer available. Re-open the file to export this timeline.`);
+   try{bitmaps.set(n,await createImageBitmap(new Blob([bytes])));}
+   catch{throw new Error(`"${n}" could not be decoded as an image.`);}
+  }
   const caps=await probeCapabilities(outW,outH);
   const videoCodec=format==='webm'?caps.webmVideo:caps.mp4Video;
   if(!videoCodec)throw new Error(format==='webm'?'This platform cannot encode VP9 or VP8 video.':'This platform cannot encode H.264 (AVC) video. Try WebM instead.');
-  const anyAudio=clips.some(c=>needsSourceFile(c)&&!c.muted&&inputs.get(c.source)!.probe.audio!==null)||audioClips.length>0;
+  const anyAudio=clips.some(c=>needsSourceFile(c)&&!isImageClip(c)&&!c.muted&&inputs.get(c.source)!.probe.audio!==null)||audioClips.length>0;
   let audioCodec:string|null=null;
   if(anyAudio){
    audioCodec=format==='webm'?(caps.opus?'opus':null):(caps.aac?'aac':null);
@@ -200,18 +209,29 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
    if(!s){const{input}=inputs.get(ranges[i].clip.source)!;const track=(await input.getVideoTracks())[0];s=new CanvasSink(track,{width:outW,height:outH,fit:'contain',poolSize:3});videoSinks.set(i,s);}
    return s;
   };
-  const fpsOf=(i:number)=>{const c=ranges[i].clip;if(isTitleClip(c))return first.fps&&first.fps>1?first.fps:30;const f=inputs.get(c.source)!.probe.video!.fps;return f&&f>1?f:30;};
+  const fpsOf=(i:number)=>{const c=ranges[i].clip;if(isTitleClip(c)||isImageClip(c))return first.fps&&first.fps>1?first.fps:30;const f=inputs.get(c.source)!.probe.video!.fps;return f&&f>1?f:30;};
   let titlesRendered=false;
   // One scratch canvas per clip index for the card side of a dissolve; keyed redraws skip static frames.
   const cards=new Map<number,{canvas:OffscreenCanvas;ctx:OffscreenCanvasRenderingContext2D;key:string}>();
   const sideFrame=async(i:number,t:number):Promise<OffscreenCanvas|HTMLCanvasElement|ImageBitmap|VideoFrame|null>=>{
    const r=ranges[i],c=r.clip;
-   if(isTitleClip(c)){
+   if(isTitleClip(c)||isImageClip(c)){
     let card=cards.get(i);
     if(!card){
      const canvas=new OffscreenCanvas(outW,outH),ctx2=canvas.getContext('2d');
      if(!ctx2)return null;
      card={canvas,ctx:ctx2,key:''};cards.set(i,card);
+    }
+    if(isImageClip(c)){
+     // Static still, drawn once: contain-fit and centered like the video letterbox.
+     if(card.key!=='img'){
+      const bmp=bitmaps.get(c.source);if(!bmp)return null;
+      const scale=Math.min(outW/bmp.width,outH/bmp.height),w=Math.max(1,Math.round(bmp.width*scale)),h=Math.max(1,Math.round(bmp.height*scale));
+      card.ctx.fillStyle='#000';card.ctx.fillRect(0,0,outW,outH);
+      card.ctx.drawImage(bmp,Math.round((outW-w)/2),Math.round((outH-h)/2),w,h);
+      card.key='img';
+     }
+     return card.canvas;
     }
     const local=Math.max(0,t-r.start),key=`${local.toFixed(4)}`;
     if(card.key!==key){drawTitleCard(card.ctx,c,outW,outH,local);card.key=key;}
@@ -236,11 +256,11 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
      note(z.end);
      continue;
     }
-    const{input,probe}=inputs.get(c.source)!;
+    const rec=inputs.get(c.source);
     const speed=speedOf(c);
     const srcStart=c.in_s+(z.start-r.start)*speed,srcEnd=c.out_s-(r.end-z.end)*speed;
-    const sink=await sinkFor(z.a);
-    if(speed!==1){
+    const sink=rec?await sinkFor(z.a):null;
+    if(speed!==1||isImageClip(c)){
      // Sped clips render on a fixed output grid (source fps): frames drop or repeat naturally.
      const fps=fpsOf(z.a),n=Math.max(1,Math.ceil((z.end-z.start)*fps));
      for(let k=0;k<n;k++){
@@ -250,7 +270,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
       await videoSource.add(t,Math.max(1e-3,Math.min(1/fps,z.end-t)));
       note(t);
      }
-    }else{
+    }else if(sink){
      let base:number|null=null;
      for await(const frame of sink.canvases(srcStart,srcEnd)){
       checkCancel();
@@ -260,10 +280,10 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
       note(z.start+(frame.timestamp-base));
      }
     }
-    if(probe.audio&&mixer&&!c.muted){
-     const aTrack=(await input.getAudioTracks())[0];
+    if(rec?.probe.audio&&mixer&&!c.muted){
+     const aTrack=(await rec.input.getAudioTracks())[0];
      await emitZoneAudio(new AudioSampleSink(aTrack),srcStart,srcEnd,z.start,c.gain,speed,mixer);
-    }else if(probe.audio===null&&audioSource&&z===zones[0])steps.push(`No audio track in ${c.source}.`);
+    }else if(rec&&rec.probe.audio===null&&audioSource&&z===zones[0])steps.push(`No audio track in ${c.source}.`);
    }else{
     const ra=ranges[z.a],rb=ranges[z.b],d=z.end-z.start;
     if(isTitleClip(ra.clip)||isTitleClip(rb.clip))titlesRendered=true;
@@ -286,7 +306,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
      let any=false;
      for(const side of[{r:ra,sign:'out' as const},{r:rb,sign:'in' as const}]){
       const c=side.r.clip;
-      if(c.muted||isTitleClip(c))continue;
+      if(c.muted||isTitleClip(c)||isImageClip(c))continue;
       const{input,probe}=inputs.get(c.source)!;
       if(!probe.audio)continue;
       const srcStart=c.in_s+(z.start-side.r.start)*speedOf(c),srcEnd=c.in_s+(z.end-side.r.start)*speedOf(c);
@@ -345,5 +365,6 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
  }finally{
   cancelled=false;
   for(const{input}of inputs.values())input.dispose();
+  for(const b of bitmaps.values())b.close();
  }
 }

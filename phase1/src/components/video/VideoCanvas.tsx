@@ -2,6 +2,7 @@ import {useEffect,useRef} from 'react';
 import {studioContextStore} from '../../lib/shell/studioContext';
 import {registerVideoCommands} from '../../lib/video/commands';
 import {isTitleClip} from '../../lib/video/titles';
+import {isImageClip} from '../../lib/video/timeline';
 import {useVideoSession,videoIsEdited,videoTimelineDuration} from '../../lib/video/session';
 import {Film} from '../../lib/icons';
 import {StudioEmptyState} from '../studios/StudioEmptyState';
@@ -23,7 +24,7 @@ export function VideoCanvas(){
  useEffect(()=>{
   const selected=session?.clips.find(c=>c.id===session.selectedClipId);
   claim.current?.report({document:item?{id:item.name,kind:item.kind,dirty:videoIsEdited(session),readOnly:session?.status==='exporting'}:undefined,
-   selection:selected?{kind:'one',count:1,type:isTitleClip(selected)?'title':'video-clip',ids:[selected.id]}:{kind:'none',count:0,ids:[]},
+   selection:selected?{kind:'one',count:1,type:isTitleClip(selected)?'title':isImageClip(selected)?'image-clip':'video-clip',ids:[selected.id]}:{kind:'none',count:0,ids:[]},
    data:{duration:videoTimelineDuration(session),clipCount:session?.clips.length??0},busy:session?.status==='loading'||session?.status==='exporting',
    services:{ready:session?.status==='ready',exporting:session?.status==='exporting'}});
  },[item,session]);

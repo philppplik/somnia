@@ -5,12 +5,17 @@ import {clampTitleSeconds,isTitleClip,splitTitleClip} from './titles';
  * One clip: a source-time range of a media item, with per-clip audio treatment. `in_s`/`out_s` are source seconds.
  * `crossfade_s` overlaps this clip's tail with the next clip's head (0 or absent = hard cut; always 0 on the last clip).
  * Title clips (`kind:'title'`) carry no source: `in_s` stays 0 and `out_s` is the card duration.
+ * Image clips (`kind:'image'`) reference a photo file: `in_s` stays 0, `out_s` is how long the still shows.
  */
-export interface TimelineClip{id:string;source:string;in_s:number;out_s:number;gain:number;muted:boolean;crossfade_s?:number;/** Playback speed of a media clip (timeline seconds = source seconds / speed). Absent = 1; title cards have no speed. */speed?:number;kind?:'media'|'title';title?:import('./titles').TitleSpec}
+export interface TimelineClip{id:string;source:string;in_s:number;out_s:number;gain:number;muted:boolean;crossfade_s?:number;/** Playback speed of a media clip (timeline seconds = source seconds / speed). Absent = 1; title cards have no speed. */speed?:number;kind?:'media'|'title'|'image';title?:import('./titles').TitleSpec}
 /** The shortest clip worth keeping; below it splits and trims only produce broken files. */
 export const MIN_CLIP_SECONDS=0.05;
 export const MAX_GAIN=2;
 export const MIN_SPEED=0.25,MAX_SPEED=4;
+/** Default on-screen time of an image clip. */
+export const IMAGE_DEFAULT_SECONDS=5;
+/** Image clips are stills with a duration, not seekable media. */
+export const isImageClip=(c:TimelineClip)=>c.kind==='image';
 /** A media clip's playback speed, clamped to the supported range. Title cards always play at 1. */
 export const speedOf=(c:TimelineClip)=>c.kind==='title'?1:Math.min(MAX_SPEED,Math.max(MIN_SPEED,typeof c.speed==='number'&&Number.isFinite(c.speed)?c.speed:1));
 /** Timeline seconds the clip occupies: its source range played at its speed. */
@@ -63,6 +68,7 @@ export function sanitizeClips(clips:TimelineClip[],durations:Record<string,numbe
  const clean=clips.flatMap(c=>{
   // Clip shape only: the spec itself is sanitized where it is drawn, so a valid spec survives sanitation untouched.
   if(isTitleClip(c))return[{...c,kind:'title' as const,source:'',in_s:0,out_s:clampTitleSeconds(c.out_s),gain:1,muted:false}];
+  if(isImageClip(c))return[{...c,kind:'image' as const,in_s:0,out_s:clampTitleSeconds(c.out_s),gain:1,muted:false}];
   const d=durations[c.source];
   if(d===undefined)return[c];
   if(d<=0)return[];
@@ -82,8 +88,8 @@ export function splitAt(clips:TimelineClip[],time:number):TimelineClip[]|null{
  const hit=locate(clips,time);if(!hit)return null;
  const{range,sourceTime}=hit,c=range.clip;
  if(sourceTime-c.in_s<MIN_CLIP_SECONDS||c.out_s-sourceTime<MIN_CLIP_SECONDS)return null;
- if(isTitleClip(c)){
-  const halves=splitTitleClip(c,sourceTime-c.in_s);if(!halves)return null;
+ if(isTitleClip(c)||isImageClip(c)){
+  const halves=splitTitleClip(c as Parameters<typeof splitTitleClip>[0],sourceTime-c.in_s);if(!halves)return null;
   const[l,r2]=halves;
   return[...clips.slice(0,range.index),{...l,crossfade_s:0},{...r2,crossfade_s:fadeOf(c)},...clips.slice(range.index+1)];
  }
@@ -102,7 +108,7 @@ export function moveClip(clips:TimelineClip[],id:string,toIndex:number):Timeline
 /** Moves one clip edge to a source time, keeping the clip inside its bounds and above the minimum length. */
 export function setClipEdge(clips:TimelineClip[],id:string,edge:'in'|'out',at:number):TimelineClip[]{
  return clips.map(c=>{
-  if(c.id!==id||isTitleClip(c))return c;
+  if(c.id!==id||isTitleClip(c)||isImageClip(c))return c;
   const in_s=edge==='in'?Math.min(at,c.out_s-MIN_CLIP_SECONDS):c.in_s;
   const out_s=edge==='out'?Math.max(at,c.in_s+MIN_CLIP_SECONDS):c.out_s;
   return{...c,in_s:Number(Math.max(0,in_s).toFixed(3)),out_s:Number(Math.max(out_s,c.in_s+MIN_CLIP_SECONDS).toFixed(3))};
@@ -110,7 +116,7 @@ export function setClipEdge(clips:TimelineClip[],id:string,edge:'in'|'out',at:nu
 }
 /** Sets a media clip's playback speed (0.25-4, clamped); title cards are left untouched. */
 export function setClipSpeed(clips:TimelineClip[],id:string,speed:number):TimelineClip[]{
- return clips.map(c=>c.id===id&&c.kind!=='title'?{...c,speed:speedOf({...c,speed})}:c);
+ return clips.map(c=>c.id===id&&c.kind!=='title'&&c.kind!=='image'?{...c,speed:speedOf({...c,speed})}:c);
 }
 /** Sets the crossfade from one clip into the next, clamped to both clip lengths; the last clip takes none. */
 export function setCrossfade(clips:TimelineClip[],id:string,seconds:number):TimelineClip[]{

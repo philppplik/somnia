@@ -9,7 +9,7 @@ import {TitlePreview} from './TitlePreview';
 import {useTitlePlayback} from './useTitlePlayback';
 import {FilmstripStrip} from './FilmstripStrip';
 import {WaveformStrip} from './WaveformStrip';
-import {blendAt,clipRanges,locate,speedOf,timelineDuration} from '../../lib/video/timeline';
+import {blendAt,clipRanges,isImageClip,locate,speedOf,timelineDuration} from '../../lib/video/timeline';
 import {audioClipDuration,audioEnvelope,audioTrackEnd,duckGainAt} from '../../lib/video/audioTrack';
 import {AudioLane} from './AudioLane';
 import {snapPointsFor,zoomInStep,zoomOutStep} from '../../lib/video/zoom';
@@ -74,6 +74,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
  // frame; while playing, only drift over 350 ms is corrected so the element's own clock does the smooth work.
  useEffect(()=>{
   for(const e of blend){
+   if(isTitleClip(e.range.clip)||isImageClip(e.range.clip))continue;
    const el=slotOf(e.range.index).current;if(!el)continue;
    const url=urlOf(e.range.clip.source);
    if(el.dataset.slotClip!==e.range.clip.id){el.dataset.slotClip=e.range.clip.id;if(el.src!==url){el.src=url;el.currentTime=e.sourceTime;}}
@@ -89,6 +90,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
  // Play/pause follows the transport for every slot that is part of the current blend.
  useEffect(()=>{
   for(const e of blend){
+   if(isTitleClip(e.range.clip)||isImageClip(e.range.clip))continue;
    const el=slotOf(e.range.index).current;if(!el)continue;
    if(playing){if(el.paused)void el.play().catch(()=>{});}else el.pause();
   }
@@ -96,6 +98,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
  // Preview volume carries the equal-power fade weight so a crossfade is audible, not only visible.
  useEffect(()=>{
   for(const e of blend){
+   if(isTitleClip(e.range.clip)||isImageClip(e.range.clip))continue;
    const el=slotOf(e.range.index).current;if(!el)continue;
    el.muted=muted;el.volume=Math.min(1,Math.max(0,volume*e.audio));
   }
@@ -150,9 +153,9 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
   else if(e.key==='-'){e.preventDefault();setZoom(z=>zoomOutStep(z));}
   else if(e.key==='End'){e.preventDefault();seek(duration);}
  };
- // Title cards have no <video>; this rAF clock plays through them and advances at the card end.
- const titleMain=main&&isTitleClip(main.range.clip)?main:null;
- useTitlePlayback({running:playing&&!!titleMain,from:playhead,limit:titleMain?.range.end??0,onTime:setPlayhead,onEnd:()=>{if(titleMain)advance(titleMain.range.index);}});
+ // Title cards and image clips have no <video>; this rAF clock plays through them and advances at the clip end.
+ const stillMain=main&&(isTitleClip(main.range.clip)||isImageClip(main.range.clip))?main:null;
+ useTitlePlayback({running:playing&&!!stillMain,from:playhead,limit:stillMain?.range.end??0,onTime:setPlayhead,onEnd:()=>{if(stillMain)advance(stillMain.range.index);}});
  const filmstrip=getFilmstrip();
  const shortName=(n:string)=>n.replace(/^.*[\\/]/,'').replace(/\.[^.]+$/,'');
  const status=session?.status==='loading'?t('video.loading'):session?.status==='error'?t('video.error',{message:session.error}):'';
@@ -171,8 +174,8 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
   <div className="flex min-h-0 w-full flex-1">
    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
     <div className="relative flex min-h-0 flex-1 items-center justify-center bg-black/90" data-testid="video-stage">
-     {!clips.length?<div className="grid justify-items-center gap-3 text-center text-[13px] text-white" data-testid="video-empty-timeline"><p>Your timeline is empty. Add clips to start editing.</p><Button variant="outline" onClick={()=>void addTimelineClipsFromDialog(item.name)}>Add video clips</Button></div>:playable&&blend.some(e=>needsSourceFile(e.range.clip))?[slotA,slotB].map((slot,idx)=>{
-      const e=blend.find(x=>(x.range.index%2)===idx);
+     {!clips.length?<div className="grid justify-items-center gap-3 text-center text-[13px] text-white" data-testid="video-empty-timeline"><p>Your timeline is empty. Add clips to start editing.</p><Button variant="outline" onClick={()=>void addTimelineClipsFromDialog(item.name)}>Add video clips</Button></div>:playable&&blend.some(e=>needsSourceFile(e.range.clip)||isImageClip(e.range.clip))?[slotA,slotB].map((slot,idx)=>{
+      const e=blend.find(x=>!isTitleClip(x.range.clip)&&!isImageClip(x.range.clip)&&(x.range.index%2)===idx);
       return <video key={idx} ref={slot} className="absolute inset-0 h-full w-full object-contain p-2" preload="auto"
        style={{opacity:e?(main&&e.range.index===main.range.index?e.video:1):0,visibility:e?'visible':'hidden',zIndex:e&&main&&e.range.index===main.range.index?1:0,pointerEvents:'none'}}
        onTimeUpdate={onTime(idx)} onEnded={onTime(idx)} onError={()=>setPlayable(false)}
@@ -181,6 +184,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
      {playable&&blend.map(e=>isTitleClip(e.range.clip)?<div key={e.range.clip.id} className="absolute inset-0 flex items-center justify-center p-2" style={{opacity:main&&e.range.index===main.range.index?e.video:1,zIndex:main&&e.range.index===main.range.index?1:0,pointerEvents:'none'}}>
       <TitlePreview clip={e.range.clip} time={e.sourceTime} aspect={(probe?.video?.width??16)/(probe?.video?.height??9)} label={clipDisplayName(e.range.clip,'Title')}/>
      </div>:null)}
+     {playable&&blend.map(e=>isImageClip(e.range.clip)?<img key={e.range.clip.id} src={urlOf(e.range.clip.source)} alt="" className="absolute inset-0 h-full w-full object-contain p-2" style={{opacity:main&&e.range.index===main.range.index?e.video:1,zIndex:main&&e.range.index===main.range.index?1:0,pointerEvents:'none'}} data-testid="video-image-preview"/>:null)}
     </div>
     <div className="flex items-center gap-3 px-4 pt-2 text-[12px] text-ink-2">
      <Button size="icon" variant="outline" aria-label={t(playing?'video.pause':'video.play')} aria-pressed={playing} disabled={!playable||!clips.length} onClick={toggle} data-testid="video-play">{playing?<Pause size={16}/>:<Play size={16}/>}</Button>
@@ -213,7 +217,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
        snapPoints={[...snapPointsFor(clips,[playhead]),domain,...audioClips.flatMap(ac=>[ac.at,ac.at+audioClipDuration(ac)])]}
        onDropAudio={(n,t2)=>{const dropped=media.items.find((i:MediaItem)=>i.name===n&&i.kind==='audio');if(dropped)void addAudioTrackClip(item.name,dropped,t2).then(id=>{if(id)selectAudioTrackClip(item.name,id);});}}
        label={t('video.audioLane')}/>}
-      renderStrip={c=>needsSourceFile(c)&&filmstrip?<>
+      renderStrip={c=>needsSourceFile(c)&&!isImageClip(c)&&filmstrip?<>
        <FilmstripStrip controller={filmstrip} source={c.source} in_s={c.in_s} out_s={c.out_s} name={shortName(c.source)}/>
        <WaveformStrip controller={filmstrip} source={c.source} in_s={c.in_s} out_s={c.out_s} gain={c.muted?0:c.gain}/>
       </>:null}

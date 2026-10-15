@@ -102,3 +102,15 @@ test('projectFileName keeps project names and maps video files',()=>{
  assert.equal(projectFileName('holiday.mp4'),'holiday.video-project');
  assert.equal(projectFileName('a/b/clip.WEBM'),'clip.video-project');
 });
+
+test('image clips round-trip with fixed shape and clamped duration',()=>{
+ const clips:TimelineClip[]=[media('m1'),{id:'img1',kind:'image',source:'photo.png',in_s:0,out_s:5,gain:1,muted:false,crossfade_s:0.5},media('m2')];
+ const parsed=parseVideoProject(serializeVideoProject(clips,[],'webm'));
+ const img=parsed.clips[1];
+ assert.equal(img.kind,'image');
+ assert.deepEqual([img.source,img.in_s,img.out_s,img.gain,img.muted,img.crossfade_s],['photo.png',0,5,1,false,0.5]);
+ assert.equal(JSON.parse(serializeVideoProject(clips,[],'webm')).clips[1].kind,'image','serialized as image');
+ const loose=JSON.stringify({app:'somnia-video',version:2,clips:[{id:'i',kind:'image',source:'p.jpg',in_s:3,out_s:99999,gain:0.2,muted:true}]});
+ const parsedLoose=parseVideoProject(loose);
+ assert.deepEqual([parsedLoose.clips[0].in_s,parsedLoose.clips[0].out_s,parsedLoose.clips[0].gain,parsedLoose.clips[0].muted],[0,3600,1,false],'shape is fixed: in 0, duration clamped, no gain/mute');
+});
