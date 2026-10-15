@@ -205,7 +205,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
       onTrim={(id,edge,at)=>trimTimelineClip(item.name,id,edge,at,`trim:${id}:${edge}`)}
       onMove={(id,by)=>moveTimelineClip(item.name,id,by)}
       trackHeight={48} zoom={zoom} onZoom={setZoom} domain={domain}
-      audioLane={<AudioLane clips={audioClips} selectedId={session?.selectedAudioClipId??null} duration={domain}
+      audioLane={<AudioLane clips={audioClips} selectedId={session?.selectedAudioClipId??null} duration={domain} controller={filmstrip}
        onSelect={id=>selectAudioTrackClip(item.name,id)}
        onMoveAt={(id,at)=>moveAudioTrackClip(item.name,id,at,`amove:${id}`)}
        onResize={(id,edge,t2)=>resizeAudioTrackClip(item.name,id,edge,t2,`atrim:${id}:${edge}`)}

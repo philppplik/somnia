@@ -1,5 +1,7 @@
 import {useRef} from 'react';
 import {audioClipDuration,type AudioClip} from '../../lib/video/audioTrack';
+import type {FilmstripController} from '../../lib/video/filmstrip-controller';
+import {WaveformStrip} from './WaveformStrip';
 import {useT} from '../../lib/useT';
 const shortName=(n:string)=>n.replace(/^.*[\\/]/,'').replace(/\.[^.]+$/,'');
 interface Props{
@@ -7,9 +9,11 @@ interface Props{
  duration:number;
  onSelect:(id:string|null)=>void;onMoveAt:(id:string,at:number)=>void;onResize:(id:string,edge:'in'|'out',timelineTime:number)=>void;
  label:string;
+ /** Filmstrip controller for the waveform layer; null where workers are unavailable (tests, SSR). */
+ controller?:FilmstripController|null;
 }
 /** The free-placed audio track under the video timeline: blocks drag horizontally, edge handles resize, fades show as shaded wedges. */
-export function AudioLane({clips,selectedId,duration,onSelect,onMoveAt,onResize,label}:Props){
+export function AudioLane({clips,selectedId,duration,onSelect,onMoveAt,onResize,label,controller}:Props){
  const {t}=useT();
  const track=useRef<HTMLDivElement>(null);
  const atTime=(clientX:number)=>{
@@ -55,6 +59,7 @@ export function AudioLane({clips,selectedId,duration,onSelect,onMoveAt,onResize,
      else if(e.key==='ArrowRight'){e.preventDefault();onMoveAt(c.id,c.at+d);}
     }}
     data-testid="audio-clip" data-clip="true" data-clip-id={c.id} data-selected={selected||undefined}>
+    {controller&&<WaveformStrip controller={controller} source={c.source} in_s={c.in_s} out_s={c.out_s} gain={c.gain}/>}
     {(fadeInPct>0||fadeOutPct>0)&&<div className="pointer-events-none absolute inset-0" aria-hidden="true"
      style={{background:`linear-gradient(to right, rgba(0,0,0,.55) 0%, transparent ${fadeInPct}%, transparent ${100-fadeOutPct}%, rgba(0,0,0,.55) 100%)`}}/>}
     <span className="pointer-events-none absolute inset-x-1 top-1/2 -translate-y-1/2 truncate text-[10px] text-ink">

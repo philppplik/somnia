@@ -142,6 +142,9 @@ export async function addAudioTrackClip(root:string,item:{name:string;url:string
   const{engine:e}=getEngine();
   const probe=await e.probe(bytes.slice(0));
   if(!probe.audio){patch(root,{status:'error',error:`"${item.name}" has no audio track.`});return null;}
+  // Register audio-only sources for the waveform peaks decode; video sources registered themselves on open.
+  const fs=getFilmstrip();
+  if(fs&&fs.state(item.name)==='unknown')fs.register(item.name,bytes.slice(0));
   duration=probe.duration;audioDurations.set(item.name,duration);
  }
  const clip=fullAudioClip(item.name,duration,at??Math.max(timelineDuration(s.clips),audioTrackEnd(s.audioClips)));

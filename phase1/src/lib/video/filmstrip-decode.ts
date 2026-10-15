@@ -5,10 +5,16 @@ export interface OpenSource{input:Input;sinks:Map<string,CanvasSink>;track:Await
 export async function openSource(bytes:ArrayBuffer):Promise<OpenSource>{
  const input=new Input({source:new BufferSource(bytes),formats:ALL_FORMATS});
  const track=await input.getPrimaryVideoTrack();
- if(!track)throw new Error('No video track');
- if(!(await track.canDecode()))throw new Error('This video codec cannot be decoded here');
  const duration=await input.computeDuration();
- return{input,sinks:new Map(),track,info:{duration,width:track.displayWidth,height:track.displayHeight}};
+ if(track){
+  if(!(await track.canDecode()))throw new Error('This video codec cannot be decoded here');
+  return{input,sinks:new Map(),track,info:{duration,width:track.displayWidth,height:track.displayHeight}};
+ }
+ // Audio-only sources (music, voiceover) open too: no thumbnails, but the peaks decode feeds the audio-lane waveform.
+ const audio=(await input.getAudioTracks())[0];
+ if(!audio)throw new Error('No video track');
+ if(!(await audio.canDecode()))throw new Error('This audio codec cannot be decoded here');
+ return{input,sinks:new Map(),track:null,info:{duration,width:0,height:0}};
 }
 /**
  * Min/max amplitude buckets over the whole source, one decode pass of the audio track.
@@ -38,6 +44,7 @@ export async function decodePeaks(src:OpenSource,buckets:number):Promise<Float32
 }
 /** Decodes one frame per time into an ImageBitmap of exactly `width`x`height`. Failed or empty frames are null. */
 export async function decodeThumbs(src:OpenSource,times:number[],width:number,height:number):Promise<(ImageBitmap|null)[]>{
+ if(!src.track)return times.map(()=>null);// audio-only source: waveform only
  const k=`${width}x${height}`;
  let sink=src.sinks.get(k);
  if(!sink){sink=new CanvasSink(src.track!,{width,height,fit:'fill'});src.sinks.set(k,sink);}
