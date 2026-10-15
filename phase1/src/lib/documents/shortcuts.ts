@@ -10,6 +10,6 @@ export const SHORTCUTS:readonly (readonly [string,string])[]=[
  ['documents.format.strike','Ctrl+Shift+X'],['documents.format.subscript','Ctrl+='],['documents.format.superscript','Ctrl+Shift+='],
  ['documents.format.clear','Ctrl+Space'],['documents.format.link','Ctrl+K'],['documents.shortcuts.size','Ctrl+Shift+< / >'],
  ['documents.shortcuts.align','Ctrl+L / E / R / J'],['documents.shortcuts.indent','Ctrl+[ / ]'],['documents.shortcuts.styles','Ctrl+Alt+0 - 4'],
- ['documents.find.label','Ctrl+F'],['documents.goto.title','Ctrl+G'],['documents.shortcuts.selectAll','Ctrl+A'],
+ ['documents.find.label','Ctrl+F'],['documents.goto.title','Ctrl+G'],['documents.shortcuts.selectAll','Ctrl+A'],['documents.shortcuts.special','Ctrl+Shift+Space / -'],
  ['documents.undo','Ctrl+Z'],['documents.redo','Ctrl+Y'],['documents.shortcuts.title','Ctrl+/'],
 ];

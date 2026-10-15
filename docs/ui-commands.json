@@ -4756,6 +4756,61 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.insert.dateTime",
+      "title": "Insert the current date and time",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.insert.nbHyphen",
+      "title": "Insert non-breaking hyphen",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.insert.nbsp",
+      "title": "Insert non-breaking space",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.insert.softHyphen",
+      "title": "Insert optional hyphen",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.insert.time",
+      "title": "Insert the current time",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.insertPageBreak",
       "title": "Insert page break",
       "category": "View",

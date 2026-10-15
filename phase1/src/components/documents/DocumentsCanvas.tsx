@@ -10,6 +10,7 @@ import {getCollab,onSessionChange} from '../../lib/collab/session';
 import {peerCarets,type PeerCaret} from '../../lib/collab/office/docsPresence';
 import {CELL_BASE} from '../../lib/documents/edit';
 import {clearFormatting,copyLinkAt,toggleVertAlign,setFindOpen,setParagraphStyle,clearCaret,deleteAtCaret,dragTo,editParagraph,getEngine,moveCaret,pasteText,settleDocument,switchDocument,pointerAt,redoEdit,selectAllText,setAlign,shiftListLevel,tabInCell,stepFontSize,stepIndent,toggleFormat,selectedText,splitAtCaret,syncGeometry,typeText,undoEdit} from '../../lib/documents/session';
+import {specialChar} from '../../lib/documents/symbols';
 import {parsePdfPages,type PdfOptions} from '../../lib/documents/protocol';
 import {saveCopy,savePdf,saveFormat} from '../../lib/documents/saveCopy';
 import {confirmDocumentsSaveCopy,getDocumentsExportUi,patchDocumentsExportUi,registerDocumentsExport,useDocumentsExportUi} from '../../lib/documents/exportBridge';
@@ -83,6 +84,8 @@ function CaretInput({left,top}:{left:number;top:number}){
    if(mod&&!e.altKey&&!e.shiftKey&&e.key.toLowerCase()==='k'){e.preventDefault();document.querySelector<HTMLElement>('[data-testid="documents-format-link"]')?.click();return;}
    if(mod&&!e.altKey&&e.shiftKey&&e.key.toLowerCase()==='x'){e.preventDefault();void toggleFormat('strike');return;}
    if(mod&&!e.altKey&&(e.key==='='||e.key==='+')){e.preventDefault();void toggleVertAlign(e.shiftKey||e.key==='+'?'superscript':'subscript');return;}
+   if(mod&&!e.altKey&&e.shiftKey&&e.key===' '){e.preventDefault();void typeText(specialChar('nbsp'));return;}
+   if(mod&&!e.altKey&&e.shiftKey&&(e.key==='_'||e.key==='-')){e.preventDefault();void typeText(specialChar('nbHyphen'));return;}
    if(mod&&!e.altKey&&!e.shiftKey&&e.key===' '){e.preventDefault();void clearFormatting().catch(()=>undefined);return;}
    if(mod&&e.key.toLowerCase()==='a'){e.preventDefault();selectAllText();return;}
    if(mod&&!e.shiftKey&&!e.altKey&&'biu'.includes(e.key.toLowerCase())&&e.key.length===1){e.preventDefault();void toggleFormat(({b:'bold',i:'italic',u:'underline'} as const)[e.key.toLowerCase() as 'b'|'i'|'u']);return;}

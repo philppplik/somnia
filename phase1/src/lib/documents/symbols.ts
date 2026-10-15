@@ -15,6 +15,14 @@ export function symbolProblem(v:unknown):string|null{
  if(/[\u0000-\u001f\u007f-\u009f\u2028\u2029\uFFFC\uFFFD]/.test(v))return 'The text has characters that cannot be inserted.';
  return null;
 }
+/** Characters that look like a space or hyphen but change line breaking. Typed as plain text; layout and DOCX know them. */
+export const SPECIAL_CHARS=[{id:'nbsp',ch:'\u00A0'},{id:'nbHyphen',ch:'\u2011'},{id:'softHyphen',ch:'\u00AD'}] as const;
+export type SpecialCharId=typeof SPECIAL_CHARS[number]['id'];
+export const specialChar=(id:SpecialCharId):string=>SPECIAL_CHARS.find(x=>x.id===id)!.ch;
+/** The time of day, or date and time, in the reader's format. */
+export function timeText(d:Date,withDate:boolean,locale?:string):string{
+ return new Intl.DateTimeFormat(locale,withDate?{dateStyle:'medium',timeStyle:'short'}:{timeStyle:'short'}).format(d);
+}
 /** The date as ISO (2026-10-14) or in the reader's long format. */
 export function dateText(d:Date,form:'iso'|'long',locale?:string):string{
  if(form==='iso'){const p=(n:number)=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;}

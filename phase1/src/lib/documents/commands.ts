@@ -17,7 +17,8 @@ import {commentsOpen,setCommentsOpen} from './comments';
 import {setShortcutsOpen} from './shortcuts';
 import {setParagraphOptionsOpen} from './paragraphOptions';
 import {setInfoDialog} from './infoDialog';
-import {symbolProblem} from './symbols';
+import {symbolProblem,specialChar,timeText} from './symbols';
+import {getLocale as currentLocale} from '../i18n';
 import {authorProblem,setAuthor} from './author';
 import {insertPageBreak,setParagraphOptions,setProperties,setTabStops} from './session';
 import {parsePdfPages,checkParaPatch,PARA_FLAG_KEYS,propertiesProblem,tabsProblem} from './protocol';
@@ -198,6 +199,11 @@ export function registerDocumentsCommands(){
   },()=>ready()&&!!getDocumentsState().caret),
   add('documents.list.restart','Restart list numbering',async()=>{await restartNumbering();},()=>ready()&&!!getDocumentsState().caret),
   add('documents.symbol.open','Insert symbol',()=>{setInfoDialog('symbol');},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.insert.nbsp','Insert non-breaking space',async()=>{await typeText(specialChar('nbsp'));},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.insert.nbHyphen','Insert non-breaking hyphen',async()=>{await typeText(specialChar('nbHyphen'));},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.insert.softHyphen','Insert optional hyphen',async()=>{await typeText(specialChar('softHyphen'));},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.insert.time','Insert the current time',async()=>{await typeText(timeText(new Date(),false,currentLocale()));},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.insert.dateTime','Insert the current date and time',async()=>{await typeText(timeText(new Date(),true,currentLocale()));},()=>ready()&&!!getDocumentsState().caret),
   add('documents.symbol.insert','Insert symbol text',async p=>{const v=(p as Record<string,unknown>|undefined)?.text;const bad=symbolProblem(v);if(bad)throw expected(bad);await typeText(v as string);},()=>ready()&&!!getDocumentsState().caret),
   add('documents.styles.open','Styles',()=>{setInfoDialog('styles');},()=>ready()),
   add('documents.styles.save','Create or change a style',async p=>{
