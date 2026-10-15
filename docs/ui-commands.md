@@ -617,6 +617,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `sheets.analyzeRange` | Analyze spreadsheet range | Tools | sheets |  |
 | `sheets.annotate` | Add a note, comment or link to the active cell | Edit | sheets |  |
 | `sheets.audit` | Trace what a formula reads and what reads it, list error cells, or watch a cell | Edit | sheets |  |
+| `sheets.autoFill` | Continue the selection with the fill handle | Edit | sheets |  |
 | `sheets.cellLayout` | Merge, justify, rotate or clear the formats of the selected cells | Edit | sheets |  |
 | `sheets.cellTools` | Apply a cell style, AutoSum, checkboxes or copy and paste formats | Edit | sheets |  |
 | `sheets.cfManage` | Reorder or delete one highlight rule of the sheet | Edit | sheets |  |

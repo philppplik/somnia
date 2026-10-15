@@ -14,3 +14,9 @@ export function setSheetsSelection(next:SheetsSelection|null){state=next;listene
 export const useSheetsSelection=()=>useSyncExternalStore(fn=>{listeners.add(fn);return()=>{listeners.delete(fn);};},getSheetsSelection,getSheetsSelection);
 
 export const subscribeSheets=(fn:()=>void)=>{listeners.add(fn);return()=>{listeners.delete(fn);};};
+
+/** How the fill handle continues the selection (series, copy, formats only, values only); set in the Fill group, read when a drag is released. */
+let fillModeState:AutoFillMode='series';
+export const getFillMode=()=>fillModeState;
+export function setFillMode(m:AutoFillMode){fillModeState=m;listeners.forEach(l=>l());}
+export const useFillMode=()=>useSyncExternalStore(fn=>{listeners.add(fn);return()=>{listeners.delete(fn);};},getFillMode,getFillMode);

@@ -2,7 +2,7 @@ import '../../lib/sheets/panelI18n';
 import {useEffect,useRef,useState,useSyncExternalStore,type ReactNode} from 'react';
 import {useT} from '../../lib/useT';
 import {usePanelState} from '../../store/panelStateStore';
-import {getSheetsSelection,subscribeSheets,useSheetsSelection} from '../../lib/sheets/sheetsStore';
+import {getSheetsSelection,setFillMode,subscribeSheets,useFillMode,useSheetsSelection} from '../../lib/sheets/sheetsStore';
 import {getFormulasFocusRequest,subscribeFormulasFocus} from '../../lib/sheets/formulasFocus';
 import {cellHasContent,formulaTargetProblem} from '../../lib/sheets/formulaTarget';
 import {sheetsPanelDefs} from '../../lib/sheets/panels';
@@ -12,7 +12,7 @@ import {aggregateFormula,FORMULA_FUNCTIONS,parsePanelRange,rangeAddress,summariz
 import {rectCells} from '../../lib/sheets/clipboard';
 import {addressOf,colName,parseAddress,parseSpan} from '../../lib/sheets/format';
 import {sortBlockProblem} from '../../lib/sheets/sortOps';
-import {fillBlockProblem,FILL_DIRECTIONS} from '../../lib/sheets/fillOps';
+import {AUTOFILL_MODES,fillBlockProblem,FILL_DIRECTIONS,type AutoFillMode} from '../../lib/sheets/fillOps';
 import type {FillDirection,CfStyle,PasteOp} from '../../lib/sheets/protocol';
 import {PIVOT_FUNCS,tableBlockProblem} from '../../lib/sheets/tableOps';
 import {appendHeaderCode,headerProblem,HF_CODES,MAX_HEADER_CHARS,previewHeaderFooter} from '../../lib/sheets/printOps';
@@ -1171,7 +1171,7 @@ function CfRulesGroup(){
 }
 /** Fills the selected block from its first row or column. One undo step; the block is never widened. */
 function FillGroup(){
- const {t}=useT(),s=useSheetsSelection(),action=useAction();
+ const {t}=useT(),s=useSheetsSelection(),action=useAction(),mode=useFillMode();
  const r=s?.range;if(!s||!r)return null;
  const rows=r.r1-r.r0+1,cols=r.c1-r.c0+1;
  return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.fill.title')}>
@@ -1179,6 +1179,7 @@ function FillGroup(){
   <div className="flex flex-wrap gap-2">
    {FILL_DIRECTIONS.map((d:FillDirection)=><Button key={d} variant="outline" size="compact" disabled={action.busy||!!fillBlockProblem(r.r0,r.c0,rows,cols,d)} onClick={()=>void action.run('sheets.fill',{dir:d})} data-testid={'sheets-fill-'+d}>{t('sheets.fill.'+d)}</Button>)}
   </div>
+  <label className="flex flex-col gap-1">{t('sheets.fill.mode')}<NativeSelect className={field} value={mode} onChange={e=>setFillMode(e.currentTarget.value as AutoFillMode)} data-testid="sheets-fill-mode">{AUTOFILL_MODES.map(m=><option key={m} value={m}>{t('sheets.fill.mode.'+m)}</option>)}</NativeSelect></label>
   <p className="text-ink-3">{t('sheets.fill.scope',{range:rangeAddress(r)})}</p>
  </div>;
 }

@@ -2824,6 +2824,62 @@ impl HeadlessWorkbook {
         }
     }
 
+    /// The fill-handle drag as ONE history entry: continues the pattern of the block for `count` more rows or columns
+    /// away from it. `op_json` is `{"dir":"down"|"up"|"right"|"left","count":1..100000,"mode":"series"|"copy"|"formats"|"values"}`;
+    /// `mode` defaults to series (copy repeats as is, formats only copies styles, values keeps the target styles).
+    /// Refused: a target past the first or last row or column, more than 1,000,000 new cells, a protected sheet or locked cell in the new cells.
+    /// Returns `{"range":"A1:A10"}`, the source plus the new cells.
+    pub fn auto_fill(&mut self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32, op_json: &str) -> Result<String, String> {
+        if rows == 0 || cols == 0 || u64::from(rows) * u64::from(cols) > MAX_FILL_CELLS {
+            return Err("Select a block of at most 1,000,000 cells.".into());
+        }
+        let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "operation must be a JSON object".to_string())?;
+        let obj = op.as_object().ok_or("operation must be a JSON object")?;
+        if obj.keys().any(|k| !matches!(k.as_str(), "dir" | "count" | "mode")) {
+            return Err("unknown field".into());
+        }
+        let dir = match obj.get("dir").and_then(|v| v.as_str()) {
+            Some(d @ ("down" | "up" | "right" | "left")) => d,
+            _ => return Err("dir must be down, up, right or left".into()),
+        };
+        let count = obj.get("count").and_then(|v| v.as_u64()).filter(|n| (1..=100_000).contains(n)).ok_or("count must be 1 to 100000")? as u32;
+        let mode = match obj.get("mode").map(|v| v.as_str()) {
+            None | Some(Some("series")) => "series",
+            Some(Some("copy")) => "copy",
+            Some(Some("formats")) => "formats",
+            Some(Some("values")) => "values",
+            _ => return Err("mode must be series, copy, formats or values".into()),
+        };
+        let vertical = dir == "down" || dir == "up";
+        let new_cells = u64::from(count) * u64::from(if vertical { cols } else { rows });
+        if new_cells > MAX_FILL_CELLS {
+            return Err("Fill at most 1,000,000 cells.".into());
+        }
+        // The new cells and the whole target (source plus new cells), 0-based and inclusive.
+        let (new_row, new_col, new_rows, new_cols) = match dir {
+            "down" => (row + rows, col, count, cols),
+            "right" => (row, col + cols, rows, count),
+            "up" => (row.checked_sub(count).ok_or("The fill would go past the first row.")?, col, count, cols),
+            _ => (row, col.checked_sub(count).ok_or("The fill would go past the first column.")?, rows, count),
+        };
+        let (first_row, first_col) = (row.min(new_row), col.min(new_col));
+        let last_row = u64::from(row + rows - 1).max(u64::from(new_row) + u64::from(new_rows) - 1);
+        let last_col = u64::from(col + cols - 1).max(u64::from(new_col) + u64::from(new_cols) - 1);
+        if last_row >= u64::from(gridcraft_engine::core::MAX_ROWS) || last_col >= u64::from(gridcraft_engine::core::MAX_COLS) {
+            return Err("The fill would go past the last row or column.".into());
+        }
+        self.check_block(sheet, row, col, rows, cols, false)?;
+        self.check_block(sheet, new_row, new_col, new_rows, new_cols, true)?;
+        let a1 = |r: u32, c: u32| CellRef::new(r, c).a1();
+        let source = format!("{}:{}", a1(row, col), a1(row + rows - 1, col + cols - 1));
+        let target = format!("{}:{}", a1(first_row, first_col), a1(last_row as u32, last_col as u32));
+        self.session.run("sheet.activate", json!({"sheet": sheet})).map_err(|e| e.to_string())?;
+        let done = self.session.run("edit.autoFill", json!({"source": source, "target": target, "mode": mode})).map_err(|e| e.to_string());
+        let _ = self.session.take_ui_requests();
+        done?;
+        Ok(json!({"range": target}).to_string())
+    }
+
     /// Keeps the block in the engine's own clipboard (cells with formulas and formats, not the system clipboard) for `paste_special`.
     /// With `cut` the block moves when it is pasted with `what` = all (references on the same sheet follow it; the source is emptied then,
     /// not now). Changes nothing in the workbook and is no history entry. At most 1,000,000 cells. Returns `{"range":"A1:B3"}`.
@@ -5928,6 +5984,40 @@ mod tests {
         let old = book.range(0, 450, 0, 1, 1).unwrap();
         assert!(!old.contains("\"5\""), "the source is emptied: {old}");
         assert!(book.paste_special(0, 480, 0, 1, 1, "{}").is_err(), "a cut pastes once");
+    }
+    #[test]
+    fn auto_fill_continues_the_pattern_in_one_undo_step() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        let steps = |b: &HeadlessWorkbook| b.session.doc().unwrap().undo.len();
+        book.set_values(0, 500, 0, r#"[["1"],["2"]]"#).unwrap();
+        let before = steps(&book);
+        let done = book.auto_fill(0, 500, 0, 2, 1, r#"{"dir":"down","count":3}"#).unwrap();
+        assert!(done.contains("A501:A505"), "{done}");
+        assert_eq!(steps(&book), before + 1);
+        assert_eq!(text(&book, "A505"), "5", "the series goes on");
+        let up = book.auto_fill(0, 500, 0, 2, 1, r#"{"dir":"up","count":2}"#).unwrap();
+        assert!(up.contains("A499:A505"), "{up}");
+        assert_eq!(text(&book, "A499"), "-1", "the series runs backwards");
+        assert_eq!(text(&book, "A500"), "0");
+        book.set_values(0, 510, 5, r#"[["10","20"]]"#).unwrap();
+        book.auto_fill(0, 510, 5, 1, 2, r#"{"dir":"left","count":2}"#).unwrap();
+        assert_eq!(text(&book, "D511"), "-10");
+        assert_eq!(text(&book, "E511"), "0");
+        book.set_values(0, 520, 0, r#"[["Q1","x"]]"#).unwrap();
+        book.auto_fill(0, 520, 0, 1, 2, r#"{"dir":"right","count":2,"mode":"copy"}"#).unwrap();
+        assert_eq!(text(&book, "C521"), "Q1");
+        book.set_values(0, 530, 0, r#"[["7"],["",""]]"#).unwrap();
+        book.auto_fill(0, 530, 0, 1, 1, r#"{"dir":"down","count":1,"mode":"values"}"#).unwrap();
+        assert_eq!(text(&book, "A532"), "7");
+        for bad in [r#"{}"#, r#"{"dir":"sideways","count":1}"#, r#"{"dir":"down","count":0}"#, r#"{"dir":"down","count":100001}"#, r#"{"dir":"down","count":"2"}"#, r#"{"dir":"down","count":1,"mode":"fancy"}"#, r#"{"dir":"down","count":1,"x":1}"#, "[]"] {
+            assert!(book.auto_fill(0, 500, 0, 2, 1, bad).is_err(), "{bad}");
+        }
+        assert!(book.auto_fill(0, gridcraft_engine::core::MAX_ROWS - 1, 0, 1, 1, r#"{"dir":"down","count":1}"#).is_err(), "past the last row");
+        assert!(book.auto_fill(0, 2, 0, 1, 1, r#"{"dir":"up","count":3}"#).is_err(), "past the first row");
+        assert!(book.auto_fill(0, 0, 1, 1, 1, r#"{"dir":"left","count":2}"#).is_err(), "past the first column");
+        assert!(book.auto_fill(0, 500, 0, 0, 1, r#"{"dir":"down","count":1}"#).is_err());
+        book.session.run("review.protectSheet", json!({})).unwrap();
+        assert!(book.auto_fill(0, 500, 0, 2, 1, r#"{"dir":"down","count":1}"#).unwrap_err().contains("protected"));
     }
     #[test]
     fn view_op_sets_zoom_and_gridlines_with_bounds() {

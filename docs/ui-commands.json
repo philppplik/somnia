@@ -7421,6 +7421,14 @@
       "hasEnabled": true
     },
     {
+      "id": "sheets.autoFill",
+      "title": "Continue the selection with the fill handle",
+      "category": "Edit",
+      "source": "sheets",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
       "id": "sheets.cellLayout",
       "title": "Merge, justify, rotate or clear the formats of the selected cells",
       "category": "Edit",

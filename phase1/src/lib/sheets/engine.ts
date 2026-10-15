@@ -41,7 +41,7 @@ export class SheetsEngine{
  private request(message:Req,transfer:Transferable[]=[]){
   return new Promise<SheetsResponse>((resolve,reject)=>{
    if(this.disposed){reject(new Error('Spreadsheet engine closed'));return;}
-   const mutating=['open','set','setValues','clear','format','resize','editLines','freeze','sort','filter','fill','cf','validation','replace','dedupe','split','annotate','insertSymbol','defineName','deleteName','editName','createNames','pasteSpecial','pivotCreate','pivotRefresh','tableOp','pageSetup','viewOp','protectOp','whatIfOp','layoutOp','cellToolOp','dataToolOp','pivotEditOp','cfManage','outlineOp','savedViewOp','pictureOp','objectOp','chartOp','sparklineOp','setReviewed','undoReviewed','setRangeReviewed','undoRangeReviewed','editSheet','undo','redo','close'].includes(message.op);if(mutating){this.mutationEpoch++;this.mutations++;this.notifySelectionRead();}const finish=()=>{if(mutating){this.mutations--;this.mutationEpoch++;this.notifySelectionRead();}};const done=(r:SheetsResponse)=>{finish();resolve(r);},failed=(e:Error)=>{finish();reject(e);};
+   const mutating=['open','set','setValues','clear','format','resize','editLines','freeze','sort','filter','fill','cf','validation','replace','dedupe','split','annotate','insertSymbol','defineName','deleteName','editName','createNames','pasteSpecial','autoFill','pivotCreate','pivotRefresh','tableOp','pageSetup','viewOp','protectOp','whatIfOp','layoutOp','cellToolOp','dataToolOp','pivotEditOp','cfManage','outlineOp','savedViewOp','pictureOp','objectOp','chartOp','sparklineOp','setReviewed','undoReviewed','setRangeReviewed','undoRangeReviewed','editSheet','undo','redo','close'].includes(message.op);if(mutating){this.mutationEpoch++;this.mutations++;this.notifySelectionRead();}const finish=()=>{if(mutating){this.mutations--;this.mutationEpoch++;this.notifySelectionRead();}};const done=(r:SheetsResponse)=>{finish();resolve(r);},failed=(e:Error)=>{finish();reject(e);};
    const id=this.nextId++;
    const timer=setTimeout(()=>this.dispose(new Error('Spreadsheet engine timed out. Unsaved edits in this workbook were discarded.')),this.timeoutMs);
    this.pending.set(id,{resolve:done,reject:failed,timer});
@@ -145,6 +145,8 @@ export class SheetsEngine{
  defineName(sheet:number,row:number,col:number,rows:number,cols:number,name:{name:string;scope:'workbook'|'sheet';replace?:boolean}){return this.result<unknown>({op:'defineName',sheet,row,col,rows,cols,name});}
  /** Names from the labels in the top row and/or left column of the block (one undo step). */
  createNames(sheet:number,row:number,col:number,rows:number,cols:number,name:{top?:boolean;left?:boolean;replace?:boolean}){return this.result<unknown>({op:'createNames',sheet,row,col,rows,cols,name});}
+ /** The fill-handle drag: continues the pattern of the block for `count` more rows or columns (one undo step). */
+ autoFill(sheet:number,row:number,col:number,rows:number,cols:number,fill:{dir:'down'|'up'|'right'|'left';count:number;mode?:'copy'|'formats'|'values'}){return this.result<unknown>({op:'autoFill',sheet,row,col,rows,cols,fill});}
  /** Keeps the block in the engine clipboard (cells, formulas, formats) for paste special; with `cut` it moves on paste. No undo step. */
  clipCopy(sheet:number,row:number,col:number,rows:number,cols:number,cut=false){return this.result<unknown>({op:'clipCopy',sheet,row,col,rows,cols,...(cut?{cut:true}:{})});}
  /** Pastes the engine clipboard into the block (one undo step). */

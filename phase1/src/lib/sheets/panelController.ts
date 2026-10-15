@@ -11,6 +11,7 @@ import {parseSortCommand} from './sortOps';
 import {parseAnnotateCommand,parseNoteReviewCommand,type NoteReviewOp} from './notes';
 import {parseNamesCommand} from './names';
 import {parsePasteCommand} from './pasteOps';
+import {parseAutoFillCommand,type AutoFillOp} from './fillOps';
 import {parsePivotCommand,parseTableCommand} from './tableOps';
 import {parseProtectCommand} from './protectOps';
 import {SHAPES,SHAPE_FILLS,SHAPE_LINES} from './objectOps';
@@ -105,6 +106,7 @@ export interface SheetsPanelController {
  /** Changes the page setup of the active sheet (one undo step). */
  pageSetup(op:PageSetupOp):void|Promise<void>;
  pasteSpecial(op:PasteOp):void|Promise<void>;
+ autoFill(op:AutoFillOp):void|Promise<void>;
  /** Builds a PDF, CSV, TSV or HTML file of the active sheet, all sheets or the selection and downloads it (nothing is changed). */
  exportFile(op:ExportOp):void|Promise<void>;
  /** The column names in the first row of the selection. */
@@ -121,7 +123,7 @@ let current:SheetsPanelController|null=null;
 export const getSheetsPanelController=()=>current;
 export function registerSheetsPanelController(controller:SheetsPanelController){current=controller;return()=>{if(current===controller)current=null;};}
 const requireController=()=>{if(!current?.ready())throw Error('No workbook is ready.');return current;};
-export const SHEETS_PANEL_COMMAND_IDS=['sheets.navigate','sheets.setCell','sheets.analyzeRange','sheets.format','sheets.resize','sheets.freeze','sheets.editLines','sheets.sheet','sheets.sort','sheets.filter','sheets.fill','sheets.highlight','sheets.validation','sheets.replace','sheets.dedupe','sheets.split','sheets.annotate','sheets.names','sheets.table','sheets.pivot','sheets.pageSetup','sheets.export','sheets.view','sheets.protect','sheets.chart','sheets.sparkline','sheets.whatif','sheets.object','sheets.picture','sheets.savedView','sheets.outline','sheets.cellLayout','sheets.cellTools','sheets.insertFunction','sheets.dataTools','sheets.pivotEdit','sheets.cfManage','sheets.validationCheck','sheets.noteReview','sheets.audit','sheets.insertSymbol','sheets.review','sheets.pages','sheets.shortcuts','sheets.paste'] as const;
+export const SHEETS_PANEL_COMMAND_IDS=['sheets.navigate','sheets.setCell','sheets.analyzeRange','sheets.format','sheets.resize','sheets.freeze','sheets.editLines','sheets.sheet','sheets.sort','sheets.filter','sheets.fill','sheets.highlight','sheets.validation','sheets.replace','sheets.dedupe','sheets.split','sheets.annotate','sheets.names','sheets.table','sheets.pivot','sheets.pageSetup','sheets.export','sheets.view','sheets.protect','sheets.chart','sheets.sparkline','sheets.whatif','sheets.object','sheets.picture','sheets.savedView','sheets.outline','sheets.cellLayout','sheets.cellTools','sheets.insertFunction','sheets.dataTools','sheets.pivotEdit','sheets.cfManage','sheets.validationCheck','sheets.noteReview','sheets.audit','sheets.insertSymbol','sheets.review','sheets.pages','sheets.shortcuts','sheets.paste','sheets.autoFill'] as const;
 export function sheetsPanelCommandSpecs():CommandSpec[]{
  return [
  {id:'sheets.navigate',title:'Go to a spreadsheet cell or range',category:'View',level:'ui',allowInInput:true,
@@ -250,6 +252,9 @@ export function sheetsPanelCommandSpecs():CommandSpec[]{
  {id:'sheets.view',title:'Zoom, gridlines, headings, zeros and formulas',category:'View',level:'ui',allowInInput:true,
   params:{type:'object',properties:{zoom:{type:'integer',minimum:10,maximum:400},gridlines:{type:'boolean'},headings:{type:'boolean'},zeros:{type:'boolean'},formulas:{type:'boolean'},fit:{type:'string',enum:['selection']}},additionalProperties:false,minProperties:1,maxProperties:1},
   enabled:()=>!!current?.ready(),run:p=>requireController().viewOperation(parseViewCommand(p))},
+ {id:'sheets.autoFill',title:'Continue the selection with the fill handle',category:'Edit',level:'ui',allowInInput:true,
+  params:{type:'object',properties:{dir:{type:'string',enum:['down','up','right','left']},count:{type:'integer',minimum:1,maximum:100000},mode:{type:'string',enum:['series','copy','formats','values']}},required:['dir','count'],additionalProperties:false},
+  enabled:()=>!!current?.ready(),run:p=>requireController().autoFill(parseAutoFillCommand(p))},
  {id:'sheets.paste',title:'Paste what was copied with Paste Special',category:'Edit',level:'ui',allowInInput:true,
   params:{type:'object',properties:{what:{type:'string',enum:['all','formulas','values','formats','allExceptBorders','columnWidths','formulasAndNumberFormats','valuesAndNumberFormats']},operation:{type:'string',enum:['none','add','subtract','multiply','divide']},skipBlanks:{type:'boolean'},transpose:{type:'boolean'}},additionalProperties:false},
   enabled:()=>!!current?.ready(),run:p=>requireController().pasteSpecial(parsePasteCommand(p))},
