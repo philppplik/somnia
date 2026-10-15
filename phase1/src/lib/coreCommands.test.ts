@@ -16,7 +16,9 @@ test('every static Core command has a validated UI spec and keeps its menu metad
     assert.ok(spec, command.id);
     assert.equal(spec.level, 'ui', command.id);
     assert.ok(spec.params, command.id);
-    assert.equal(checkMcpArgs({}, spec.params).ok, true, command.id);
+    // Commands with required args (e.g. docs.open needs {id}) are checked with minimal valid example params.
+    const EXAMPLE_PARAMS: Record<string, unknown> = { 'docs.open': { id: 'example' } };
+    assert.equal(checkMcpArgs(EXAMPLE_PARAMS[command.id] ?? {}, spec.params).ok, true, command.id);
     assert.equal(checkMcpArgs({ unexpected: true }, spec.params).ok, false, command.id);
     assert.equal(tOr(`cmd.${spec.id}`,spec.title), command.title);
     assert.equal(spec.category, command.category);
