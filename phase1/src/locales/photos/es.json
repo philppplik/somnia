@@ -168,5 +168,10 @@
  "photos.stacks.expand": "Expandir pila",
  "photos.stacks.collapse": "Contraer pila",
  "photos.stacks.auto": "Apilado automatico",
- "photos.stacks.autoDone": "{count} series apiladas"
+ "photos.stacks.autoDone": "{count} series apiladas",
+ "photos.menu": "Menú",
+ "photos.smart": "Smart",
+ "photos.smart.anyFlag": "Cualquier marca",
+ "photos.smart.anyLabel": "Cualquier etiqueta",
+ "photos.smart.tag": "Etiqueta"
 }

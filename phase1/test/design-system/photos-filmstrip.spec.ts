@@ -511,6 +511,7 @@ test('collections: save, apply and delete a filter set (light and dark)',async({
   await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
   await page.getByTestId('photos-filmstrip-search').fill('');
   await page.getByTestId('photos-filmstrip-search').fill('strip-1');
+  await page.getByTestId('photos-filmstrip-menu').click();
   await page.getByTestId('photos-filmstrip-collection-save').click();
   await page.getByTestId('photos-filmstrip-collection-name').fill('Nur eins');
   await page.getByTestId('photos-filmstrip-collection-name').press('Enter');
@@ -533,6 +534,7 @@ test('stacks: group, collapse, expand, ungroup (light and dark)',async({page})=>
   await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
   await page.evaluate(async()=>{const m=await import('/src/lib/photos/stacks.ts');for(const n of['strip-1.png','strip-2.png','strip-3.png']){const id=m.getStack(n);if(id)m.ungroupStacks([id]);}}); // stacks persist via localStorage
   await page.getByTestId('photos-filmstrip-select').selectOption('all');
+  await page.getByTestId('photos-filmstrip-menu').click();
   await page.getByTestId('photos-filmstrip-stack-group').click(); // group all three
   await expect(page.getByTestId('photos-filmstrip-item-strip-2.png')).toHaveCount(0); // collapsed: only the cover stays
   await expect(page.getByTestId('photos-filmstrip-stack-count-strip-1.png')).toHaveText('3');
@@ -554,6 +556,7 @@ test('auto-stack: burst detection stacks the series in one click (light and dark
   await expect(page.getByTestId('photos-workspace')).toBeVisible();
   await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
   await page.evaluate(async()=>{const m=await import('/src/lib/photos/stacks.ts');for(const n of['strip-1.png','strip-2.png','strip-3.png']){const id=m.getStack(n);if(id)m.ungroupStacks([id]);}}); // stacks persist via localStorage
+  await page.getByTestId('photos-filmstrip-menu').click();
   await page.getByTestId('photos-filmstrip-stack-auto').click(); // strip-1..3 are a numbered series
   await expect(page.getByTestId('photos-filmstrip-apply-note')).toHaveText('1 series stacked');
   await expect(page.getByTestId('photos-filmstrip-stack-count-strip-1.png')).toHaveText('3');
@@ -561,5 +564,35 @@ test('auto-stack: burst detection stacks the series in one click (light and dark
   await page.screenshot({path:`test-results/ds-photos-autostack-${theme}.png`,fullPage:true});
   await page.evaluate(async()=>{const m=await import('/src/lib/photos/stacks.ts');for(const n of['strip-1.png','strip-2.png','strip-3.png']){const id=m.getStack(n);if(id)m.ungroupStacks([id]);}});
   await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible();
+ }
+});
+test('smart filter: the grouped menu combines rating, flag, label and tag (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
+  await page.evaluate(async()=>{const r=await import('/src/lib/photos/ratings.ts');const f=await import('/src/lib/photos/flags.ts');for(const n of['strip-1.png','strip-2.png','strip-3.png']){r.setRating(n,0);f.setFlag(n,null);}}); // ratings/flags persist via localStorage
+  await page.keyboard.press('3'); // strip-1: three stars
+  await page.keyboard.press('p'); // strip-1: picked
+  await page.getByTestId('photos-filmstrip-item-strip-2.png').click();
+  await page.keyboard.press('4'); // strip-2: four stars, no flag
+  await page.getByTestId('photos-filmstrip-menu').click();
+  await expect(page.getByTestId('photos-filmstrip-menu')).toHaveAttribute('aria-expanded','true');
+  await expect(page.getByTestId('photos-filmstrip-menu-panel')).toBeVisible();
+  const smart=page.getByTestId('photos-filmstrip-smart');
+  if(await smart.getAttribute('aria-pressed')!=='true')await smart.click(); // persisted panel state
+  await page.getByTestId('photos-smart-minrating').selectOption('2');
+  await page.getByTestId('photos-smart-flag').selectOption('pick');
+  await expect(page.getByTestId('photos-filmstrip-item-strip-1.png')).toBeVisible(); // 3 stars + pick passes both rules
+  await expect(page.getByTestId('photos-filmstrip-item-strip-2.png')).toHaveCount(0); // 4 stars but not picked
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toHaveCount(0);
+  await page.screenshot({path:`test-results/ds-photos-smart-menu-${theme}.png`,fullPage:true}); // open grouped menu
+  await smart.click(); // off: the whole strip comes back
+  await expect(page.getByTestId('photos-filmstrip-item-strip-2.png')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible();
+  await page.keyboard.press('Escape'); // close the menu
+  await expect(page.getByTestId('photos-filmstrip-menu-panel')).toHaveCount(0);
+  await page.evaluate(async()=>{const r=await import('/src/lib/photos/ratings.ts');const f=await import('/src/lib/photos/flags.ts');for(const n of['strip-1.png','strip-2.png','strip-3.png']){r.setRating(n,0);f.setFlag(n,null);}}); // leave no state behind
  }
 });

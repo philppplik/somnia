@@ -168,5 +168,10 @@
  "photos.stacks.expand": "Stapel zeigen",
  "photos.stacks.collapse": "Stapel einklappen",
  "photos.stacks.auto": "Auto-Stapel",
- "photos.stacks.autoDone": "{count} Serien gestapelt"
+ "photos.stacks.autoDone": "{count} Serien gestapelt",
+ "photos.menu": "Menü",
+ "photos.smart": "Smart",
+ "photos.smart.anyFlag": "Jedes Flag",
+ "photos.smart.anyLabel": "Jedes Label",
+ "photos.smart.tag": "Stichwort"
 }

@@ -168,5 +168,10 @@
  "photos.stacks.expand": "Expand stack",
  "photos.stacks.collapse": "Collapse stack",
  "photos.stacks.auto": "Auto-stack",
- "photos.stacks.autoDone": "{count} series stacked"
+ "photos.stacks.autoDone": "{count} series stacked",
+ "photos.menu": "Menu",
+ "photos.smart": "Smart",
+ "photos.smart.anyFlag": "Any flag",
+ "photos.smart.anyLabel": "Any label",
+ "photos.smart.tag": "Tag"
 }

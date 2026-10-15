@@ -168,5 +168,10 @@
  "photos.stacks.expand": "Expandir pilha",
  "photos.stacks.collapse": "Recolher pilha",
  "photos.stacks.auto": "Empilhar automatico",
- "photos.stacks.autoDone": "{count} series empilhadas"
+ "photos.stacks.autoDone": "{count} series empilhadas",
+ "photos.menu": "Menu",
+ "photos.smart": "Smart",
+ "photos.smart.anyFlag": "Qualquer marca",
+ "photos.smart.anyLabel": "Qualquer rotulo",
+ "photos.smart.tag": "Tag"
 }

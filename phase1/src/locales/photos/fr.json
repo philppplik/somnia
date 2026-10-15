@@ -168,5 +168,10 @@
  "photos.stacks.expand": "Deployer la pile",
  "photos.stacks.collapse": "Replier la pile",
  "photos.stacks.auto": "Empilage auto",
- "photos.stacks.autoDone": "{count} series empilees"
+ "photos.stacks.autoDone": "{count} series empilees",
+ "photos.menu": "Menu",
+ "photos.smart": "Smart",
+ "photos.smart.anyFlag": "Tout drapeau",
+ "photos.smart.anyLabel": "Tout libelle",
+ "photos.smart.tag": "Mot-cle"
 }

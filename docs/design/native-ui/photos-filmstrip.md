@@ -341,3 +341,28 @@ Coverage: `autoStack.test.ts` covers runs, gaps, prefixes, padded
 numbers and ignored singles; `photos-filmstrip.spec.ts` gains a
 light/dark leg that auto-stacks the three-photo fixture (note,
 collapsed count) and ungroups again.
+
+## Smart filter and the grouped strip menu (P102)
+
+The smart filter combines four rules with AND: minimum rating, flag
+(pick/reject), color label and an exact keyword tag. It lives in
+`useVisiblePhotos` (persisted as `photos.smartFilter`), so the library
+grid follows it like every other filter dimension, and while it is on
+the legacy single filter select is disabled.
+
+To keep the strip lean, the smart rules do not get their own toolbar
+row: one "Menu" button (`photos-filmstrip-menu`) opens a grouped
+popover (`menu-popup`, opens upward) with three sections - smart
+filter, collections, stacks (group/ungroup/auto-stack). Those stack
+and collection controls moved out of the toolbar into the menu; the
+toolbar keeps search, the single filter, sort and the selection
+helpers. While the menu is open the strip drops `overflow-x-auto` so
+the popover is not clipped; Escape closes it. New i18n key
+`photos.menu` in all five photo locales.
+
+Coverage: the P99/P100/P101 gallery legs open the menu before using
+their controls; a new light/dark leg rates and flags the fixture
+photos, turns the smart filter on with two rules (rating >= 2, flag
+pick) and asserts only the photo passing both survives, then toggles
+it off again (open-menu screenshots
+`test-results/ds-photos-smart-menu-{light,dark}.png`).
