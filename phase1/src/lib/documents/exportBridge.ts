@@ -1,5 +1,6 @@
 import {useSyncExternalStore} from 'react';
 import {getDocumentsState} from './store';
+import type {ExportExt} from './protocol';
 /**
  * Bridge between the Documents Export hero / commands and the live canvas. The canvas owns the engine,
  * so it registers the one save implementation here (the same flow its toolbar button always used,
@@ -11,6 +12,8 @@ export interface DocumentsExportBridge{
  save():Promise<void>;
  /** Produce and download the PDF. Must reject (not swallow) engine failures. */
  savePdf():Promise<void>;
+ /** Produce and download the document in another format (Markdown, HTML, text, RTF, ODT). Optional so older registrations keep working. */
+ saveFormat?():Promise<void>;
 }
 let bridge:DocumentsExportBridge|null=null;
 export function registerDocumentsExport(next:DocumentsExportBridge):()=>void{
@@ -19,8 +22,8 @@ export function registerDocumentsExport(next:DocumentsExportBridge):()=>void{
 export const getDocumentsExport=()=>bridge;
 
 /** Export popup and loss-warning dialog visibility. Session-only. */
-export interface DocumentsExportUi{exportOpen:boolean;confirmOpen:boolean;/** A typed copy name for the next save; null means the default name. */copyName:string|null;/** A typed PDF file name for the next PDF export; null means the default name. */pdfName:string|null;/** The format chosen in the export popup. */format:'docx'|'pdf';/** PDF pages as typed ("1-3, 5"); empty means all. */pdfPages:string;pdfMarkup:boolean;pdfTagged:boolean}
-let ui:DocumentsExportUi={exportOpen:false,confirmOpen:false,copyName:null,pdfName:null,format:'docx',pdfPages:'',pdfMarkup:false,pdfTagged:true};
+export interface DocumentsExportUi{exportOpen:boolean;confirmOpen:boolean;/** A typed copy name for the next save; null means the default name. */copyName:string|null;/** A typed PDF file name for the next PDF export; null means the default name. */pdfName:string|null;/** The format chosen in the export popup. */format:'docx'|'pdf'|ExportExt;/** A typed file name for the next export in another format; null means the default name. */formatName:string|null;/** PDF pages as typed ("1-3, 5"); empty means all. */pdfPages:string;pdfMarkup:boolean;pdfTagged:boolean}
+let ui:DocumentsExportUi={exportOpen:false,confirmOpen:false,copyName:null,pdfName:null,formatName:null,format:'docx',pdfPages:'',pdfMarkup:false,pdfTagged:true};
 const listeners=new Set<()=>void>();
 export const getDocumentsExportUi=()=>ui;
 export function patchDocumentsExportUi(patch:Partial<DocumentsExportUi>){ui={...ui,...patch};listeners.forEach(fn=>fn());}
@@ -45,6 +48,14 @@ export async function requestDocumentsSaveCopy():Promise<void>{
 export async function confirmDocumentsSaveCopy():Promise<void>{
  patchDocumentsExportUi({confirmOpen:false});
  await bridge?.save();
+}
+
+/** Exports the document as Markdown, HTML, plain text, RTF or ODT. These keep text and structure but not the page layout, so the DOCX loss warning does not apply. */
+export async function requestDocumentsExportFormat(ext:ExportExt):Promise<void>{
+ const s=getDocumentsState();
+ if(s.status!=='ready'||s.saving||!bridge?.saveFormat)return;
+ patchDocumentsExportUi({format:ext});
+ await bridge.saveFormat();
 }
 
 /** Exports the document as PDF (selectable text, embedded fonts). A rendering of the current layout, so the DOCX loss warning does not apply. */

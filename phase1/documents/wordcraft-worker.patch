@@ -2,7 +2,7 @@ diff --git a/Cargo.lock b/Cargo.lock
 index da37ae4..7feb9c0 100644
 --- a/Cargo.lock
 +++ b/Cargo.lock
-@@ -5000,6 +5000,20 @@ dependencies = [
+@@ -5000,6 +5000,21 @@ dependencies = [
   "wordcraft-layout",
  ]
  
@@ -14,6 +14,7 @@ index da37ae4..7feb9c0 100644
 + "wasm-bindgen",
 + "wordcraft-doc",
 + "wordcraft-docx",
++ "wordcraft-formats",
 + "wordcraft-layout",
 + "wordcraft-pdf",
 + "wordcraft-proof",
@@ -28,7 +29,7 @@ new file mode 100644
 index 0000000..6cee126
 --- /dev/null
 +++ b/crates/somnia-worker/Cargo.toml
-@@ -0,0 +1,16 @@
+@@ -0,0 +1,17 @@
 +[package]
 +name = "wordcraft-somnia-worker"
 +version.workspace = true
@@ -39,6 +40,7 @@ index 0000000..6cee126
 +[dependencies]
 +wordcraft-doc.workspace = true
 +wordcraft-docx.workspace = true
++wordcraft-formats.workspace = true
 +wordcraft-layout.workspace = true
 +wordcraft-pdf.workspace = true
 +wordcraft-proof.workspace = true
@@ -50,7 +52,7 @@ new file mode 100644
 index 0000000..5b80b79
 --- /dev/null
 +++ b/crates/somnia-worker/src/lib.rs
-@@ -0,0 +1,5517 @@
+@@ -0,0 +1,5552 @@
 +//! Experimental headless adapter. No DOM, egui, filesystem or UI thread access.
 +use wasm_bindgen::prelude::*;
 +use std::sync::Arc;
@@ -3354,6 +3356,18 @@ index 0000000..5b80b79
 +        }
 +        Ok(serde_json::json!(wordcraft_proof::suggest(word, 5)).to_string())
 +    }
++    /// The document in another file format: `txt`, `md`, `html`, `rtf` or `odt` (what the format can hold; no layout is kept).
++    /// The output is capped at 64 MiB.
++    fn do_export_format(&self, ext: &str) -> Result<Vec<u8>, String> {
++        if !["txt", "md", "html", "rtf", "odt"].contains(&ext) {
++            return Err("the export format is txt, md, html, rtf or odt".into());
++        }
++        let bytes = wordcraft_formats::export(ext, &self.doc).ok_or_else(|| "that format is not available".to_string())??;
++        if bytes.is_empty() || bytes.len() > 64 * 1024 * 1024 {
++            return Err("the exported file is empty or larger than 64 MiB".into());
++        }
++        Ok(bytes)
++    }
 +    fn do_export_pdf(&self, opts_json: &str) -> Result<Vec<u8>, String> {
 +        self.do_export_pdf_at(opts_json, "")
 +    }
@@ -3771,6 +3785,10 @@ index 0000000..5b80b79
 +    /// Crop in percent from the left, top, right and bottom (each 0 to 90, at most 90 per axis together).
 +    pub fn set_image_crop(&mut self, block: usize, left: f32, top: f32, right: f32, bottom: f32) -> Result<(), JsValue> {
 +        self.do_set_image_crop(block, left, top, right, bottom).map_err(|e| js_err(&e))
++    }
++    /// Exports as `txt`, `md`, `html`, `rtf` or `odt`.
++    pub fn export_format(&self, ext: &str) -> Result<Vec<u8>, JsValue> {
++        self.do_export_format(ext).map_err(|e| js_err(&e))
 +    }
 +    /// Turns the spelling and grammar squiggles on or off (they show after the next `paginate`).
 +    pub fn set_proofing(&mut self, on: bool) {
@@ -4245,6 +4263,25 @@ index 0000000..5b80b79
 +            Block::Para(p) => image_only(p).map(|i| i.1).unwrap_or(0.0),
 +            _ => 0.0,
 +        }
++    }
++    #[test]
++    fn export_formats_write_text_and_reject_unknown_ones() {
++        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
++        s.do_insert(0, 0, "Exported words ").unwrap();
++        for ext in ["txt", "md", "html", "rtf"] {
++            let b = s.do_export_format(ext).unwrap();
++            assert!(!b.is_empty(), "{ext}");
++            if ext != "rtf" {
++                assert!(String::from_utf8_lossy(&b).contains("Exported words"), "{ext}");
++            }
++        }
++        let odt = s.do_export_format("odt").unwrap();
++        assert_eq!(&odt[..2], b"PK");
++        for bad in ["", "docx", "pdf", "TXT", "md ", "../x"] {
++            assert!(s.do_export_format(bad).is_err(), "{bad}");
++        }
++        // The document itself is untouched.
++        assert!(s.text().contains("Exported words"));
 +    }
 +    #[test]
 +    fn proofing_lists_issues_with_offsets_and_skips_marked_text() {

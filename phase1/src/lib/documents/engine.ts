@@ -81,6 +81,7 @@ export class DocumentsEngine{
  async setProperties(patch:import('./protocol').PropertiesPatch):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'setProperties',patch}))).document;}
  async resolveComment(commentId:number,resolved:boolean):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'resolveComment',commentId,resolved}))).document;}
  async deleteComment(commentId:number):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'deleteComment',commentId}))).document;}
+ async exportFormat(ext:import('./protocol').ExportExt):Promise<Uint8Array>{return new Uint8Array((await this.call('saved',id=>({id,kind:'exportFormat',ext}))).bytes);}
  async proofCheck(words:string[]):Promise<import('./protocol').ProofIssue[]>{return(await this.call('proof',id=>({id,kind:'proofCheck',words}))).issues;}
  async proofSuggest(word:string):Promise<string[]>{return(await this.call('suggest',id=>({id,kind:'proofSuggest',word}))).words;}
  async setProofing(on:boolean):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'setProofing',on}))).document;}

@@ -9,7 +9,8 @@ import {tableLayoutProblem,SECTION_BREAKS,hfVariantsProblem,tableStyleProblem,IM
 import {CELL_BASE} from './edit';
 import {styleList} from './styles';
 import {goToBlock,scrollToPage} from './navigate';
-import {safeCopyName,safePdfName} from './saveCopy';
+import {safeCopyName,safeFormatName,safePdfName} from './saveCopy';
+import {EXPORT_EXTS,type ExportExt} from './protocol';
 import {commentsOpen,setCommentsOpen} from './comments';
 import {setShortcutsOpen} from './shortcuts';
 import {setParagraphOptionsOpen} from './paragraphOptions';
@@ -21,7 +22,7 @@ import {parsePdfPages,checkParaPatch,PARA_FLAG_KEYS,propertiesProblem,tabsProble
 import {addComment,commentSelection,deleteComment,goToComment,readComments,replyComment,resolveComment} from './session';
 import {commentProblem,HIGHLIGHTS,linkProblem,type HighlightName} from './protocol';
 import {setCharLook,setCharSpacing,setCharScale,setLineRule,setImageWrap,setImageCrop,setProofing,addToDictionary,copyFormatting,pasteFormatting,clearFormatting,hasTextSelection,setHighlight,setLink,toggleVertAlign} from './session';
-import {documentsExportReady,patchDocumentsExportUi,requestDocumentsExportPdf,requestDocumentsSaveCopy} from './exportBridge';
+import {documentsExportReady,patchDocumentsExportUi,requestDocumentsExportFormat,requestDocumentsExportPdf,requestDocumentsSaveCopy} from './exportBridge';
 /**
  * Documents studio commands. Registered while the Documents canvas is mounted (registerDocumentsCommands),
  * the same pattern as Sheets. Payload commands take `{page}` (0-based) or `{block}` (paragraph index).
@@ -47,6 +48,13 @@ export function registerDocumentsCommands(){
    const pg=r?.pages;if(pg!==undefined&&(typeof pg!=='string'||parsePdfPages(pg,getDocumentsState().pages)===null))throw expected('Invalid "pages": use for example "1-3, 5".');
    for(const k of ['markup','tagged'])if(r?.[k]!==undefined&&typeof r[k]!=='boolean')throw expected(`Invalid "${k}".`);
    patchDocumentsExportUi({pdfPages:typeof pg==='string'?pg:'',pdfMarkup:r?.markup===true,pdfTagged:r?.tagged!==false,pdfName:typeof n==='string'&&n.trim()?safePdfName(n,getDocumentsState().name):null});await requestDocumentsExportPdf();
+  },()=>documentsExportReady(),'Project',()=>'hero.export.none'),
+  add('documents.export.format','Export as another format',async p=>{
+   const r=p as Record<string,unknown>|undefined;const f=r?.format;
+   if(typeof f!=='string'||!(EXPORT_EXTS as readonly string[]).includes(f))throw expected('Invalid "format": use md, html, txt, rtf or odt.');
+   const n=r?.name;if(n!==undefined&&(typeof n!=='string'||n.length>400))throw expected('Invalid "name".');
+   if(typeof n==='string'&&n.trim())patchDocumentsExportUi({formatName:safeFormatName(n,getDocumentsState().name,f as ExportExt)});
+   await requestDocumentsExportFormat(f as ExportExt);
   },()=>documentsExportReady(),'Project',()=>'hero.export.none'),
   add('documents.comments.panel','Show comments',()=>{setCommentsOpen(!commentsOpen());}),
   add('documents.comments.add','Comment on selection',async p=>{

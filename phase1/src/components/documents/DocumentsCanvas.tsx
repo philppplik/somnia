@@ -11,7 +11,7 @@ import {peerCarets,type PeerCaret} from '../../lib/collab/office/docsPresence';
 import {CELL_BASE} from '../../lib/documents/edit';
 import {clearFormatting,copyLinkAt,toggleVertAlign,setFindOpen,setParagraphStyle,clearCaret,deleteAtCaret,dragTo,editParagraph,getEngine,moveCaret,pasteText,settleDocument,switchDocument,pointerAt,redoEdit,selectAllText,setAlign,shiftListLevel,tabInCell,stepFontSize,stepIndent,toggleFormat,selectedText,splitAtCaret,syncGeometry,typeText,undoEdit} from '../../lib/documents/session';
 import {parsePdfPages,type PdfOptions} from '../../lib/documents/protocol';
-import {saveCopy,savePdf} from '../../lib/documents/saveCopy';
+import {saveCopy,savePdf,saveFormat} from '../../lib/documents/saveCopy';
 import {confirmDocumentsSaveCopy,getDocumentsExportUi,patchDocumentsExportUi,registerDocumentsExport,useDocumentsExportUi} from '../../lib/documents/exportBridge';
 import {executeCommand} from '../../lib/commands';
 import {DocumentsExportDialog} from './DocumentsExportDialog';
@@ -138,9 +138,11 @@ export function DocumentsCanvas(){
  const doSave=async()=>{patchDocuments({saving:true});try{await settleDocument();const e=getEngine();if(!e)throw new Error(t('documents.session.noEngine'));await saveCopy(e,doc.name,getDocumentsExportUi().copyName);}catch(err){patchDocuments({status:'error',error:err instanceof Error?err.message:String(err)});}finally{patchDocuments({saving:false});patchDocumentsExportUi({copyName:null});}};
  const doSavePdf=async()=>{patchDocuments({saving:true});try{await settleDocument();const e=getEngine();if(!e)throw new Error(t('documents.session.noEngine'));const u=getDocumentsExportUi();const pages=parsePdfPages(u.pdfPages,doc.pages);if(pages===null)throw new Error(t('documents.export.pagesInvalid'));const opts:PdfOptions={markup:u.pdfMarkup,tagged:u.pdfTagged};if(pages.length>0)opts.pages=pages;await savePdf(e,doc.name,u.pdfName,opts);}catch(err){patchDocuments({editError:err instanceof Error?err.message:String(err)});}finally{patchDocuments({saving:false});patchDocumentsExportUi({pdfName:null});}};
  const doSavePdfRef=useRef(doSavePdf);doSavePdfRef.current=doSavePdf;
+ const doSaveFormat=async()=>{patchDocuments({saving:true});try{await settleDocument();const e=getEngine();if(!e)throw new Error(t('documents.session.noEngine'));const u=getDocumentsExportUi();if(u.format==='docx'||u.format==='pdf')throw new Error(t('documents.export.formatInvalid'));await saveFormat(e,doc.name,u.format,u.formatName);}catch(err){patchDocuments({editError:err instanceof Error?err.message:String(err)});}finally{patchDocuments({saving:false});patchDocumentsExportUi({formatName:null});}};
+ const doSaveFormatRef=useRef(doSaveFormat);doSaveFormatRef.current=doSaveFormat;
  // One save implementation for every entry point (toolbar, hero popup, Project menu, palette).
  const doSaveRef=useRef(doSave);doSaveRef.current=doSave;
- useEffect(()=>registerDocumentsExport({save:()=>doSaveRef.current(),savePdf:()=>doSavePdfRef.current()}),[]);
+ useEffect(()=>registerDocumentsExport({save:()=>doSaveRef.current(),savePdf:()=>doSavePdfRef.current(),saveFormat:()=>doSaveFormatRef.current()}),[]);
  if(!item)return <section className="canvas-stage flex min-h-0 flex-1" aria-label={t('documents.title')}>
   <StudioEmptyState studio="documents" icon={<FileText/>} onOpen={pick} onCreate={()=>createBlankProject('documents')}/></section>;
  return <section className="canvas-stage flex min-h-0 flex-1 flex-col" aria-label={t('documents.title')}>

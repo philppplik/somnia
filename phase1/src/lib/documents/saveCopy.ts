@@ -1,5 +1,6 @@
 import type {DocumentsEngine} from './engine';
 import {savedAuthor} from './author';
+import type {ExportExt} from './protocol';
 /** Saves what the engine would write as a NEW file next to the original name. The opened file is never overwritten. */
 export const copyName=(name:string)=>name.replace(/^.*[\\/]/,'').replace(/\.docx$/i,'')+' (Somnia copy).docx';
 export const MAX_COPY_NAME=120;
@@ -27,6 +28,24 @@ export async function savePdf(engine:DocumentsEngine,name:string,fileName?:strin
  const bytes=await engine.exportPdf(options,new Date().toISOString());
  const url=URL.createObjectURL(new Blob([bytes as BlobPart],{type:'application/pdf'}));
  const a=document.createElement('a');a.href=url;a.download=fileName?safePdfName(fileName,name):pdfName(name);a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+/** Name and media type of each other export format. */
+export const EXPORT_FORMATS:Record<ExportExt,{mime:string}>={
+ md:{mime:'text/markdown'},html:{mime:'text/html'},txt:{mime:'text/plain'},rtf:{mime:'application/rtf'},odt:{mime:'application/vnd.oasis.opendocument.text'},
+};
+const stripExt=(n:string)=>n.replace(/\.(docx|md|html|txt|rtf|odt|pdf)$/i,'');
+export const formatName=(name:string,ext:ExportExt)=>stripExt(baseName(name))+'.'+ext;
+/** The file name for an export in another format: a typed name made safe (no folders, no control or reserved characters, at most 120 characters, always ending in the format's extension). */
+export function safeFormatName(typed:string,original:string,ext:ExportExt):string{
+ let n=stripExt(baseName(typed).replace(/[\u0000-\u001f\u007f-\u009f<>:"|?*\\/]/g,'').trim()).replace(/^\.+|\.+$/g,'').trim();
+ n=Array.from(n).slice(0,MAX_COPY_NAME-5).join('').trim();
+ return n?n+'.'+ext:formatName(original,ext);
+}
+/** Writes the document in another format and downloads it. The opened document is untouched. */
+export async function saveFormat(engine:DocumentsEngine,name:string,ext:ExportExt,fileName?:string|null){
+ const bytes=await engine.exportFormat(ext);
+ const url=URL.createObjectURL(new Blob([bytes as BlobPart],{type:EXPORT_FORMATS[ext].mime}));
+ const a=document.createElement('a');a.href=url;a.download=fileName?safeFormatName(fileName,name,ext):formatName(name,ext);a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 export async function saveCopy(engine:DocumentsEngine,name:string,fileName?:string|null){
  const bytes=await engine.save(new Date().toISOString(),savedAuthor()||undefined);

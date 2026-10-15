@@ -187,6 +187,7 @@ export type DocumentsRequest=
  |{id:number;kind:'insertTable';block:number;rows:number;cols:number}
  |{id:number;kind:'save';date?:string;author?:string}
  |{id:number;kind:'exportPdf';options?:PdfOptions;date?:string}
+ |{id:number;kind:'exportFormat';ext:ExportExt}
  |{id:number;kind:'close'};
 export type DocumentsResponse=
  |{id:number;ok:true;kind:'ready';initMs:number}
@@ -259,6 +260,10 @@ export const TABLE_PRESETS:readonly (readonly [number,number])[]=[[2,2],[3,3],[4
 /** Limits for inserted pictures (PNG or JPEG, checked by file signature). */
 export const MAX_IMAGE_BYTES=5*1024*1024,MAX_IMAGE_SIDE=8000,MAX_IMAGE_PIXELS=25_000_000,MAX_IMAGES=200,MIN_IMAGE_PT=10,MAX_IMAGE_PT=2000;
 export const IMAGE_WIDTH_PERCENTS=[25,50,75,100] as const;
+/** Other file formats a copy can be exported in. They keep text and structure, not page layout. */
+export const EXPORT_EXTS=['md','html','txt','rtf','odt'] as const;
+export type ExportExt=typeof EXPORT_EXTS[number];
+export const MAX_EXPORT_BYTES=64*1024*1024;
 /** A spelling or grammar issue: UTF-8 byte range in one paragraph. `fixable` is false when the paragraph holds inline objects. */
 export interface ProofIssue{block:number;start:number;end:number;kind:'spelling'|'grammar';word:string;message:string;suggestions:string[];fixable:boolean}
 export const MAX_PROOF_ISSUES=400,MAX_USER_WORDS=1000,MAX_PROOF_WORD_CHARS=40;

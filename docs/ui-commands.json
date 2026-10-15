@@ -4106,6 +4106,17 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.export.format",
+      "title": "Export as another format",
+      "category": "Project",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.export.open",
       "title": "Export document",
       "category": "Project",
