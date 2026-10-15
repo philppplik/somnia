@@ -2,6 +2,7 @@ import {useEffect,useState} from 'react';
 import {MAX_TOC_LEVELS,MAX_TOC_TITLE,tocProblem,type TocOptions,LIST_NUM_FORMATS,MAX_LIST_LABEL,MAX_LIST_START,MAX_LIST_INDENT_PT,listOptionsProblem,type ListNumFormat,type ListOptionsPatch,type ListOptionsState,MAX_TAB_STOPS,TAB_ALIGNS,TAB_LEADERS,tabsProblem,type TabStopSpec,MAX_DESCRIPTION_CHARS,MAX_PROPERTY_CHARS,propertiesProblem,PROPERTY_KEYS,type PropertiesPatch,type PropertiesState} from '../../lib/documents/protocol';
 import {ReviewDialog} from './ReviewDialog';
 import {BookmarksDialog} from './BookmarksDialog';
+import {CoverDialog} from './CoverDialog';
 import {setInfoDialog,useInfoDialog} from '../../lib/documents/infoDialog';
 import {authorProblem,MAX_AUTHOR_CHARS,savedAuthor,setAuthor} from '../../lib/documents/author';
 import {insertToc,removeToc,updateToc,readListOptions,readProperties,selectedText,setListOptions,setProperties,setTabStops} from '../../lib/documents/session';
@@ -25,7 +26,7 @@ export function InfoDialogs(){
  const which=useInfoDialog();const doc=useDocuments();
  if(doc.status!=='ready'||which===null)return null;
  const close=()=>setInfoDialog(null);
- return which==='properties'?<PropertiesDialog onClose={close}/>:which==='tabs'?<TabsDialog onClose={close}/>:which==='list'?<ListOptionsDialog onClose={close}/>:which==='toc'?<TocDialog onClose={close}/>:which==='styles'?<StylesDialog onClose={close}/>:which==='symbol'?<SymbolDialog onClose={close}/>:which==='charlook'?<CharLookDialog onClose={close}/>:which==='review'?<ReviewDialog onClose={close}/>:which==='bookmarks'?<BookmarksDialog onClose={close}/>:<WordCountDialog onClose={close}/>;
+ return which==='properties'?<PropertiesDialog onClose={close}/>:which==='tabs'?<TabsDialog onClose={close}/>:which==='list'?<ListOptionsDialog onClose={close}/>:which==='toc'?<TocDialog onClose={close}/>:which==='styles'?<StylesDialog onClose={close}/>:which==='symbol'?<SymbolDialog onClose={close}/>:which==='charlook'?<CharLookDialog onClose={close}/>:which==='review'?<ReviewDialog onClose={close}/>:which==='bookmarks'?<BookmarksDialog onClose={close}/>:which==='cover'?<CoverDialog onClose={close}/>:<WordCountDialog onClose={close}/>;
 }
 function PropertiesDialog({onClose}:{onClose:()=>void}){
  const {t}=useT();const [orig,setOrig]=useState<PropertiesState|null>(null);const [form,setForm]=useState<PropertiesState|null>(null);

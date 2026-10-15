@@ -77,6 +77,7 @@ export function TextEffects({format,held,enabled}:{format:FormatState|null;held:
   <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>setInfoDialog('charlook')} data-testid="documents-charlook-open">{t('documents.charlook.open')}</NativeButton>
   <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>setInfoDialog('symbol')} data-testid="documents-symbol-open">{t('documents.symbol.open')}</NativeButton>
   <SpacingSelect enabled={enabled}/>
+  <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>setInfoDialog('cover')} data-testid="documents-cover-open">{t('documents.cover.open')}</NativeButton>
   <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>setInfoDialog('bookmarks')} data-testid="documents-bookmarks-open">{t('documents.bookmarks.open')}</NativeButton>
   <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>setInfoDialog('toc')} data-testid="documents-toc-open">{t('documents.toc.open')}</NativeButton>
   <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>setInfoDialog('tabs')} data-testid="documents-tabs-open">{t('documents.tabs.open')}</NativeButton>

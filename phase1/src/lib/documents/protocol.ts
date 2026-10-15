@@ -184,6 +184,7 @@ export type DocumentsRequest=
  |{id:number;kind:'replyComment';parent:number;text:string;author:string;date:string}
  |{id:number;kind:'resolveComment';commentId:number;resolved:boolean}
  |{id:number;kind:'deleteComment';commentId:number}
+ |{id:number;kind:'insertCoverPage';title:string;subtitle:string;author:string;date:string}
  |{id:number;kind:'paragraphSpacingState'}
  |{id:number;kind:'setParagraphSpacing';value:string}
  |{id:number;kind:'bookmarksState'}
@@ -451,6 +452,15 @@ export const validHfText=(v:unknown):v is string=>typeof v==='string'&&Array.fro
 /** Document-wide paragraph spacing presets (space after and line spacing of every paragraph that sets none itself). */
 export const PARAGRAPH_SPACINGS=['default','none','compact','tight','open','relaxed','double'] as const;
 export type ParagraphSpacing=typeof PARAGRAPH_SPACINGS[number];
+export const MAX_COVER_CHARS=120;
+export interface CoverOptions{title:string;subtitle:string;author:string;date:string}
+/** Why a cover page is refused (a title is needed; every text is plain and at most 120 characters), or null. */
+export function coverProblem(o:unknown):string|null{
+ if(!o||typeof o!=='object'||Array.isArray(o))return 'The cover page is not valid.';
+ const r=o as Record<string,unknown>;
+ for(const k of ['title','subtitle','author','date'])if(typeof r[k]!=='string'||Array.from(r[k] as string).length>MAX_COVER_CHARS||/[\u0000-\u001f\u007f-\u009f\u2028\u2029]/.test(r[k] as string))return `The cover page ${k} is plain text of at most ${MAX_COVER_CHARS} characters.`;
+ return (r.title as string).trim()===''?'The cover page needs a title.':null;
+}
 export const MAX_BOOKMARK_NAME=40;
 /** A bookmark name the engine accepts: a letter first, then letters, digits or underscores, at most 40. Names starting with an underscore are Word's hidden ones. */
 export function bookmarkProblem(v:unknown):string|null{

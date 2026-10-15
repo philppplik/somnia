@@ -4811,6 +4811,17 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.insert.coverPage",
+      "title": "Insert a cover page",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.insert.dateTime",
       "title": "Insert the current date and time",
       "category": "View",

@@ -22,6 +22,7 @@ const CELL_LIST_MAX: usize = 20_000;
 /// A structural snapshot: the body (blocks are shared, not copied), the header/footer stories, the last section, media, comments, properties, styles and list definitions.
 type Snap = (wordcraft_doc::Blocks, std::collections::BTreeMap<u32, wordcraft_doc::Part>, wordcraft_doc::SectionProps, std::collections::BTreeMap<String, Arc<Vec<u8>>>, std::collections::BTreeMap<u32, wordcraft_doc::Comment>, wordcraft_doc::CoreProps, wordcraft_doc::StyleSheet, wordcraft_doc::Numbering);
 const COMMENT_MAX_CHARS: usize = 2000;
+const COVER_MAX_CHARS: usize = 120;
 const BOOKMARK_MAX_NAME: usize = 40;
 const BOOKMARK_MAX_COUNT: usize = 500;
 const COMMENT_MAX_COUNT: usize = 500;
@@ -3957,6 +3958,66 @@ impl DocSession {
         self.pages = DocLayout::default();
         Ok(())
     }
+    /// Puts a cover page before everything else: title, subtitle, author and date, then a page break before the first
+    /// paragraph that was there. Empty subtitle, author or date are left out. Each text is at most 120 plain characters.
+    fn do_insert_cover_page(&mut self, title: &str, subtitle: &str, author: &str, date: &str) -> Result<(), String> {
+        for t in [title, subtitle, author, date] {
+            if t.chars().count() > COVER_MAX_CHARS || t.chars().any(|c| c.is_control()) {
+                return Err(format!("each cover page text is plain and at most {COVER_MAX_CHARS} characters"));
+            }
+        }
+        if title.trim().is_empty() {
+            return Err("the cover page needs a title".into());
+        }
+        if self.doc.body.len() + 8 >= 100_000 {
+            return Err("the document has too many blocks".into());
+        }
+        let mut styles = self.doc.styles.clone();
+        Self::ensure_style(&mut styles, "Title")?;
+        Self::ensure_style(&mut styles, "Subtitle")?;
+        let mk = |text: &str, style: Option<&str>, before: f32, bold: bool| {
+            let props = CharProps { bold: if bold { Some(true) } else { None }, ..Default::default() };
+            let mut p = wordcraft_doc::Paragraph::with_text(text.trim(), props);
+            if let Some(s) = style {
+                p = p.styled(s);
+            }
+            p.props.space_before = Some(before);
+            p
+        };
+        let mut cover = vec![mk(title, Some("Title"), 150.0, false)];
+        if !subtitle.trim().is_empty() {
+            cover.push(mk(subtitle, Some("Subtitle"), 0.0, false));
+        }
+        if !author.trim().is_empty() {
+            cover.push(mk(author, None, 180.0, true));
+        }
+        if !date.trim().is_empty() {
+            cover.push(mk(date, None, 0.0, false));
+        }
+        let fixed = match self.doc.body.first().map(|b| &**b) {
+            Some(Block::Para(p)) => {
+                let mut q = p.clone();
+                q.props.page_break_before = Some(true);
+                Some(q)
+            }
+            _ => None,
+        };
+        self.doc.styles = styles;
+        match fixed {
+            Some(q) => self.doc.body[0] = wordcraft_doc::para_block(q),
+            None => {
+                // The document starts with a table: a paragraph of its own carries the page break.
+                let mut q = wordcraft_doc::Paragraph::new();
+                q.props.page_break_before = Some(true);
+                self.doc.body.insert(0, wordcraft_doc::para_block(q));
+            }
+        }
+        for (k, p) in cover.into_iter().enumerate() {
+            self.doc.body.insert(k, wordcraft_doc::para_block(p));
+        }
+        self.pages = DocLayout::default();
+        Ok(())
+    }
     /// Document-wide paragraph spacing presets (the document defaults every paragraph without its own spacing inherits):
     /// (name, space before pt, space after pt, line multiple).
     const SPACINGS: [(&'static str, f32, f32, f32); 7] =
@@ -4381,6 +4442,9 @@ impl DocSession {
     }
     pub fn delete_comment(&mut self, id: u32) -> Result<(), JsValue> {
         self.do_delete_comment(id).map_err(|e| js_err(&e))
+    }
+    pub fn insert_cover_page(&mut self, title: &str, subtitle: &str, author: &str, date: &str) -> Result<(), JsValue> {
+        self.do_insert_cover_page(title, subtitle, author, date).map_err(|e| js_err(&e))
     }
     pub fn paragraph_spacing(&self) -> String {
         self.do_paragraph_spacing()
@@ -5980,6 +6044,35 @@ mod tests {
         s.restore(snap).unwrap();
         let w: serde_json::Value = serde_json::from_str(&s.do_properties()).unwrap();
         assert_ne!(w["title"], "Quarterly report");
+    }
+    #[test]
+    fn cover_page_goes_first_breaks_before_the_old_start_and_undoes() {
+        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
+        let (n0, first0) = (s.doc.body.len(), s.doc.body[0].as_para().map(|p| p.plain_text()).unwrap());
+        let snap = s.snapshot();
+        s.do_insert_cover_page("Annual report", "Year 2026", "Ada Lovelace", "October 15, 2026").unwrap();
+        assert_eq!(s.doc.body.len(), n0 + 4);
+        let text = |i: usize| s.doc.body[i].as_para().map(|p| p.plain_text()).unwrap();
+        assert_eq!((text(0).as_str(), text(1).as_str(), text(2).as_str(), text(3).as_str()), ("Annual report", "Year 2026", "Ada Lovelace", "October 15, 2026"));
+        assert_eq!(s.doc.body[0].as_para().unwrap().props.style.as_deref(), Some("Title"));
+        assert_eq!(s.doc.body[1].as_para().unwrap().props.style.as_deref(), Some("Subtitle"));
+        // The old first paragraph keeps its text and starts a new page.
+        assert_eq!(text(4), first0);
+        assert_eq!(s.doc.body[4].as_para().unwrap().props.page_break_before, Some(true));
+        let saved = wordcraft_docx::write(&s.doc).unwrap();
+        let re = DocSession::from_bytes(&saved).unwrap();
+        assert_eq!(re.doc.body.len(), n0 + 4);
+        s.restore(snap).unwrap();
+        assert_eq!(s.doc.body.len(), n0);
+        // Empty subtitle, author and date are left out; refusals change nothing.
+        s.do_insert_cover_page("Only a title", "", " ", "").unwrap();
+        assert_eq!(s.doc.body.len(), n0 + 1);
+        let n1 = s.doc.body.len();
+        let long = "x".repeat(COVER_MAX_CHARS + 1);
+        for (t, st, a, d) in [("", "s", "a", "d"), ("  ", "", "", ""), (long.as_str(), "", "", ""), ("t", long.as_str(), "", ""), ("t", "", "bad\u{7}", ""), ("t", "", "", "a\nb")] {
+            assert!(s.do_insert_cover_page(t, st, a, d).is_err(), "{t:?} {st:?} {a:?} {d:?}");
+        }
+        assert_eq!(s.doc.body.len(), n1);
     }
     #[test]
     fn paragraph_spacing_presets_apply_roundtrip_and_undo() {

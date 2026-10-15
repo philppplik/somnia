@@ -21,3 +21,10 @@ test('empty text, emoji and out-of-range indexes are safe',()=>{
 });
 import {PARAGRAPH_SPACINGS} from './protocol';
 test('spacing presets are the seven names the engine knows',()=>{assert.deepEqual([...PARAGRAPH_SPACINGS],['default','none','compact','tight','open','relaxed','double']);});
+import {coverProblem,MAX_COVER_CHARS} from './protocol';
+test('coverProblem needs a title and plain bounded texts',()=>{
+ const ok={title:'T',subtitle:'',author:'A',date:'D'};
+ assert.equal(coverProblem(ok),null);
+ for(const bad of [null,[],{...ok,title:'  '},{...ok,title:'x'.repeat(MAX_COVER_CHARS+1)},{...ok,author:'a\nb'},{...ok,date:5},{title:'T'}])assert.ok(coverProblem(bad));
+ assert.equal(coverProblem({...ok,title:'x'.repeat(MAX_COVER_CHARS)}),null);
+});

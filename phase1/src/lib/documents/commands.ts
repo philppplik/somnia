@@ -17,6 +17,7 @@ import {commentsOpen,setCommentsOpen} from './comments';
 import {setShortcutsOpen} from './shortcuts';
 import {setParagraphOptionsOpen} from './paragraphOptions';
 import {setInfoDialog} from './infoDialog';
+import {savedAuthor} from './author';
 import {pickAndInsertText} from './insertFromFile';
 import {symbolProblem,specialChar,timeText} from './symbols';
 import {getLocale as currentLocale} from '../i18n';
@@ -24,8 +25,8 @@ import {authorProblem,setAuthor} from './author';
 import {insertPageBreak,setParagraphOptions,setProperties,setTabStops} from './session';
 import {parsePdfPages,checkParaPatch,PARA_FLAG_KEYS,propertiesProblem,tabsProblem} from './protocol';
 import {addComment,commentSelection,deleteComment,goToComment,readComments,replyComment,resolveComment} from './session';
-import {PARAGRAPH_SPACINGS,type ParagraphSpacing,bookmarkProblem,commentProblem,HIGHLIGHTS,linkProblem,type HighlightName} from './protocol';
-import {setParagraphSpacing,selectUnitAtCaret,addBookmark,deleteBookmark,goToComment as goToBlock0,readBookmarks,bookmarkSelection,goToAdjacentChange,setViewMarks,textToTable,setTrackChanges,resolveChange,resolveAllChanges,changeAtCaret,setCharLook,setCharSpacing,setCharScale,setLineRule,setImageWrap,setImageCrop,setProofing,setShowHidden,changeCase,addToDictionary,copyFormatting,pasteFormatting,clearFormatting,hasTextSelection,setHighlight,setLink,toggleVertAlign} from './session';
+import {coverProblem,PARAGRAPH_SPACINGS,type ParagraphSpacing,bookmarkProblem,commentProblem,HIGHLIGHTS,linkProblem,type HighlightName} from './protocol';
+import {insertCoverPage,setParagraphSpacing,selectUnitAtCaret,addBookmark,deleteBookmark,goToComment as goToBlock0,readBookmarks,bookmarkSelection,goToAdjacentChange,setViewMarks,textToTable,setTrackChanges,resolveChange,resolveAllChanges,changeAtCaret,setCharLook,setCharSpacing,setCharScale,setLineRule,setImageWrap,setImageCrop,setProofing,setShowHidden,changeCase,addToDictionary,copyFormatting,pasteFormatting,clearFormatting,hasTextSelection,setHighlight,setLink,toggleVertAlign} from './session';
 import {documentsExportReady,patchDocumentsExportUi,requestDocumentsExportFormat,requestDocumentsExportPdf,requestDocumentsSaveCopy} from './exportBridge';
 /**
  * Documents studio commands. Registered while the Documents canvas is mounted (registerDocumentsCommands),
@@ -92,6 +93,11 @@ export function registerDocumentsCommands(){
   add('documents.design.paragraphSpacing','Set the document paragraph spacing',async p=>{
    const v=(p as Record<string,unknown>|undefined)?.value;if(typeof v!=='string'||!(PARAGRAPH_SPACINGS as readonly string[]).includes(v))throw expected('Invalid "value".');
    await setParagraphSpacing(v as ParagraphSpacing);
+  },()=>ready()),
+  add('documents.insert.coverPage','Insert a cover page',async p=>{
+   const r=(p??{}) as Record<string,unknown>;const o={title:r.title,subtitle:r.subtitle??'',author:r.author??savedAuthor(),date:r.date??''};
+   const bad=coverProblem(o);if(bad)throw expected(bad);
+   await insertCoverPage(o as import('./protocol').CoverOptions);
   },()=>ready()),
   add('documents.bookmarks.open','Open bookmarks',()=>{setInfoDialog('bookmarks');},()=>ready()),
   add('documents.bookmarks.add','Add a bookmark at the selection',async p=>{
