@@ -1125,5 +1125,7 @@
  "animation.export.check.offscreen": "Outside the exported area at every sampled frame: {names}",
  "animation.export.check.inactive": "Not visible in the exported range: {names}",
  "animation.export.check.hidden": "Hidden layers are not exported: {names}",
- "animation.export.check.audio": "Audio is not included in PNG, GIF, APNG or sheet exports: {names}"
+ "animation.export.check.audio": "Audio is not included in PNG, GIF, APNG or sheet exports: {names}",
+ "animation.rig.loop": "Close loop",
+ "cmd.animation.layers.closeLoop": "Close the loop: end values equal the start values"
 }

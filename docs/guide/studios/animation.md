@@ -69,3 +69,4 @@ Back to [Studios](../studios.md).
 - Poses can be applied or keyed mirrored (Mirror: around the canvas centre or around the pose); Pose to pose with Mirror on can go from a pose to its own mirror image, for walk cycles.
 - Rig > Arrange > Array of copies: grid, row, column or circle of the selected layer (keyed positions move with each copy; circles rotate the copies outward). The command takes count, columns, spacing, radius.
 - Render panel export check: under the format readouts it lists layers that would surprise you in the file (missing image, outside the crop or frame, not in the exported range, hidden, audio not included in frame exports).
+- Rig > Layers > Close loop: every animated property of the selected layers gets a key on the last work-area frame with its value at the work-area start, so GIF, APNG and video loops have no jump.

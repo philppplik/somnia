@@ -1125,5 +1125,7 @@
  "animation.export.check.offscreen": "Hors de la zone exportee sur chaque image testee : {names}",
  "animation.export.check.inactive": "Invisibles dans la plage exportee : {names}",
  "animation.export.check.hidden": "Les calques masques ne sont pas exportes : {names}",
- "animation.export.check.audio": "Le son n'est pas inclus dans les exports PNG, GIF, APNG ou planche : {names}"
+ "animation.export.check.audio": "Le son n'est pas inclus dans les exports PNG, GIF, APNG ou planche : {names}",
+ "animation.rig.loop": "Fermer la boucle",
+ "cmd.animation.layers.closeLoop": "Fermer la boucle : valeurs de fin egales aux valeurs de debut"
 }

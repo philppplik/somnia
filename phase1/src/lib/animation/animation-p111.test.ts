@@ -1144,3 +1144,18 @@ test('P227 export check ignores null layers',async()=>{
  const l=findComp(s.document!).layers.find(x=>x.id==='n')!;const range={in:0,out:100000};
  assert.equal(preflight({layers:[{...l,visible:false},{...l,inT:1e9,outT:2e9}],assetIds:new Set(),range,frame:{x:0,y:0,width:10,height:10},boxes:()=>[{x0:500,y0:0,x1:510,y1:10}]}).length,0);
 });
+test('P228 close loop: end key gets the start value, equal values skipped, keys past the end skipped, undo, errors',async()=>{
+ const {layerLoopSpecs,loopEnd}=await import('./layerLoopCommands');const {evaluate}=await import('./interpolate');
+ const run=(p?:unknown)=>layerLoopSpecs()[0].run(p) as {properties:number};
+ const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'shape',id:'b'});
+ const C=()=>findComp(s.document!),L=()=>C().layers.find(l=>l.id==='b')!;const T=8000,t0=C().workArea.in,t1=loopEnd(C());
+ assert.throws(()=>run({layers:['b']}),/has keys/);
+ s.dispatch({type:'key.add',layer:'b',prop:'position',t:t0});s.dispatch({type:'prop.set',layer:'b',prop:'position',value:[10,20],t:t0});s.dispatch({type:'prop.set',layer:'b',prop:'position',value:[300,20],t:t0+10*T});
+ s.dispatch({type:'key.add',layer:'b',prop:'rotation',t:t0});s.dispatch({type:'prop.set',layer:'b',prop:'rotation',value:5,t:t0});
+ const before=s.document;const r=run({layers:['b']});assert.equal(r.properties,1);
+ assert.deepEqual(evaluate(L().transform.position,t1),[10,20]);assert.equal(L().transform.position.keys.some(k=>k.t===t1),true);assert.equal(L().transform.rotation.keys.length,1);
+ assert.throws(()=>run({layers:['b']}),/already equal/);
+ s.undo();assert.equal(s.document,before);
+ s.dispatch({type:'prop.set',layer:'b',prop:'position',value:[1,1],t:t1+T});assert.throws(()=>run({layers:['b']}),/past the end/);
+ s.dispatch({type:'layer.update',layer:'b',locked:true});assert.throws(()=>run({layers:['b']}),/locked/);
+});

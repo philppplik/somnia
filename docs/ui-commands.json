@@ -1792,6 +1792,26 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.layers.closeLoop",
+      "title": "Close the loop: end values equal the start values",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "close",
+        "cycle",
+        "end",
+        "first",
+        "gif",
+        "keys",
+        "last",
+        "loop",
+        "seamless",
+        "start"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.layers.duplicate",
       "title": "Duplicate the selected layers",
       "category": "Edit",

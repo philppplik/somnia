@@ -1125,5 +1125,7 @@
  "animation.export.check.offscreen": "Fora da area exportada em todos os quadros testados: {names}",
  "animation.export.check.inactive": "Nao visiveis no intervalo exportado: {names}",
  "animation.export.check.hidden": "Camadas ocultas nao sao exportadas: {names}",
- "animation.export.check.audio": "O audio nao esta incluido em exportacoes PNG, GIF, APNG ou folha: {names}"
+ "animation.export.check.audio": "O audio nao esta incluido em exportacoes PNG, GIF, APNG ou folha: {names}",
+ "animation.rig.loop": "Fechar loop",
+ "cmd.animation.layers.closeLoop": "Fechar o loop: valores finais iguais aos iniciais"
 }

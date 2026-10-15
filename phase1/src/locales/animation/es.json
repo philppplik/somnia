@@ -1125,5 +1125,7 @@
  "animation.export.check.offscreen": "Fuera del area exportada en todos los fotogramas revisados: {names}",
  "animation.export.check.inactive": "No visibles en el rango exportado: {names}",
  "animation.export.check.hidden": "Las capas ocultas no se exportan: {names}",
- "animation.export.check.audio": "El audio no se incluye en PNG, GIF, APNG ni hojas: {names}"
+ "animation.export.check.audio": "El audio no se incluye en PNG, GIF, APNG ni hojas: {names}",
+ "animation.rig.loop": "Cerrar bucle",
+ "cmd.animation.layers.closeLoop": "Cerrar el bucle: los valores finales igualan a los iniciales"
 }
