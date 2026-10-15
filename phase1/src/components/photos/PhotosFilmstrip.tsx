@@ -1,6 +1,6 @@
 let pendingNote:string|null=null; // the workspace remounts on active change (keyed by photo name), so the copy confirmation crosses the remount here
 let lastActiveName:string=''; // same remount: the previous-photo tracker must live outside the component
-import {useEffect,useRef,useState} from 'react';
+import {useEffect,useRef,useState,type ReactNode} from 'react';
 import {Star} from 'lucide-react';
 import {ChevronDown,ChevronRight,EyeOff,Flag,LayoutGrid,SkipForward,Tag,Trash2} from '../../lib/icons';
 import {useT} from '../../lib/useT';
@@ -86,9 +86,22 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
  const [slide,setSlide]=usePanelState<boolean>('photos.slideshow',false);
  const [slideMs,setSlideMs]=usePanelState<number>('photos.slideshowMs',4000);
  const [,setShortcuts]=usePanelState<boolean>('photos.shortcuts',false);
+ const [grpFilter,setGrpFilter]=usePanelState<boolean>('photos.menuGroup.filter',false); // collapsed flags, expanded by default
+ const [grpView,setGrpView]=usePanelState<boolean>('photos.menuGroup.view',false);
+ const [grpEdit,setGrpEdit]=usePanelState<boolean>('photos.menuGroup.edit',false);
+ const [grpCollections,setGrpCollections]=usePanelState<boolean>('photos.menuGroup.collections',false);
+ const [grpInfo,setGrpInfo]=usePanelState<boolean>('photos.menuGroup.info',false);
  const [previous,setPrevious]=usePanelState<string>('photos.previousPhoto',''); // last active photo, for one-click settings paste
  useEffect(()=>{if(active&&active!==lastActiveName){if(lastActiveName)setPrevious(lastActiveName);lastActiveName=active;}},[active,setPrevious]); // module-level: a ref would reset on the workspace remount
  const slidePhotos=useRef(photos);slidePhotos.current=photos;
+ const grp:Record<string,[boolean,(v:boolean)=>void]>={filter:[grpFilter,setGrpFilter],view:[grpView,setGrpView],edit:[grpEdit,setGrpEdit],collections:[grpCollections,setGrpCollections],info:[grpInfo,setGrpInfo]};
+ const menuGroup=(id:string,titleKey:string,kids:ReactNode)=>{ // a render helper, not a component: a nested component type would remount the menu children every render
+  const[coll,setColl]=grp[id];
+  return <div className="grid gap-1" data-testid={`photos-filmstrip-groupbox-${id}`}>
+   <Button variant="ghost" size="compact" aria-expanded={!coll} onClick={()=>setColl(!coll)} className="justify-start text-ink-3" data-testid={`photos-filmstrip-group-${id}`}>{coll?<ChevronRight size={12}/>:<ChevronDown size={12}/>}{t(titleKey)}</Button>
+   {!coll&&<div className="grid gap-2">{kids}</div>}
+  </div>;
+ };
  useEffect(()=>{ // slideshow: advance through the filtered view on the chosen tempo, looping
   if(!slide)return;
   const id=setInterval(()=>{
@@ -154,154 +167,168 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
  return <div ref={strip} className={`photos-filmstrip flex items-center gap-1.5 border-t border-subtle px-3 py-1.5 ${menuOpen?'overflow-visible':'overflow-x-auto'}`} role="navigation" aria-label={t('photos.filmstrip.aria')} data-testid="photos-filmstrip">
   <span className="relative shrink-0">
    <Button variant="outline" size="compact" aria-expanded={menuOpen} aria-pressed={smartOn} aria-label={t('photos.menu')} title={t('photos.menu')} onClick={()=>setMenuOpen(!menuOpen)} data-testid="photos-filmstrip-menu">{t('photos.menu')}</Button>
-   {menuOpen&&<div className="menu-popup absolute bottom-full left-0 mb-1 grid w-60 gap-2" data-testid="photos-filmstrip-menu-panel" onKeyDown={e=>{if(e.key==='Escape')setMenuOpen(false);}}>
+   {menuOpen&&<div className="menu-popup absolute bottom-full left-0 mb-1 grid max-h-[70vh] w-60 gap-2 overflow-y-auto" data-testid="photos-filmstrip-menu-panel" onKeyDown={e=>{if(e.key==='Escape')setMenuOpen(false);}}>
+    {menuGroup('filter','photos.menu.groupFilter',<>
     <div className="grid gap-1">
-     <Button variant="outline" size="compact" aria-pressed={smart.on} aria-label={t('photos.smart')} title={t('photos.smart')} onClick={()=>setSmart({...smart,on:!smart.on})} data-testid="photos-filmstrip-smart">{t('photos.smart')}</Button>
-     {smart.on&&<div className="grid gap-1">
-      <NativeSelect value={String(smart.minRating)} aria-label={t('photos.rating.filter')} title={t('photos.rating.filter')} onChange={e=>setSmart({...smart,minRating:Number(e.currentTarget.value)})} className="h-7" data-testid="photos-smart-minrating">
-       {[0,1,2,3,4,5].map(n=><option key={n} value={String(n)}>{`≥ ${n}`}</option>)}
-      </NativeSelect>
-      <NativeSelect value={smart.flag} aria-label={t('photos.smart')} title={t('photos.smart')} onChange={e=>setSmart({...smart,flag:e.currentTarget.value})} className="h-7" data-testid="photos-smart-flag">
-       <option value="">{t('photos.smart.anyFlag')}</option>
-       <option value="pick">{t('photos.flag.filter.pick')}</option>
-       <option value="reject">{t('photos.flag.filter.reject')}</option>
-       <option value="none">{t('photos.smart.unflagged')}</option>
-      </NativeSelect>
-      <NativeSelect value={smart.label} aria-label={t('photos.smart')} title={t('photos.smart')} onChange={e=>setSmart({...smart,label:e.currentTarget.value})} className="h-7" data-testid="photos-smart-label">
-       <option value="">{t('photos.smart.anyLabel')}</option>
-       <option value="none">{t('photos.smart.noLabel')}</option>
-       {PHOTO_LABELS.map(l=><option key={l} value={l}>{t(`photos.label.${l}`)}</option>)}
-      </NativeSelect>
-      <NativeInput type="text" value={smart.tag} aria-label={t('photos.smart.tag')} title={t('photos.smart.tag')} placeholder={t('photos.smart.tag')} onChange={e=>setSmart({...smart,tag:e.currentTarget.value})} className="h-7" data-testid="photos-smart-tag"/>
-     </div>}
-    </div>
-    <div className="grid gap-1">
-     <NativeSelect value="" aria-label={t('photos.collections')} title={t('photos.collections')} onChange={e=>{
-      const fs=sets[e.currentTarget.value];e.currentTarget.value='';
-      if(fs){setMinRating(fs.filter);setSort(fs.sort as FilmstripSort);setQuery(fs.query);setSmart(fs.smart??{on:false,minRating:0,flag:'',label:'',tag:''});}
-     }} className="h-7" data-testid="photos-filmstrip-collections">
-      <option value="" disabled>{t('photos.collections')}</option>
-      {Object.keys(sets).sort((a,b)=>a.localeCompare(b)).map(n=><option key={n} value={n}>{n}</option>)}
-     </NativeSelect>
-     <span className="flex gap-1">
-      {naming
-       ?<NativeInput autoFocus type="text" aria-label={t('photos.collections.name')} title={t('photos.collections.name')} placeholder={t('photos.collections.name')} className="h-7 w-full" data-testid="photos-filmstrip-collection-name"
-         onKeyDown={e=>{
-          if(e.key==='Escape'){setNaming(false);return;}
-          if(e.key!=='Enter')return;
-          const n=e.currentTarget.value.trim();
-          if(n)setSets({...sets,[n]:{filter,sort,query,smart}});
-          setNaming(false);
-         }}/>
-       :<Button variant="outline" size="compact" aria-label={t('photos.collections.save')} title={t('photos.collections.save')} onClick={()=>setNaming(true)} data-testid="photos-filmstrip-collection-save">{t('photos.collections.save')}</Button>}
-      {(()=>{const hit=Object.entries(sets).find(([,fs])=>fs.filter===filter&&fs.sort===sort&&fs.query===query&&(fs.smart?.on??false)===smart.on&&Number(fs.smart?.minRating??0)===smart.minRating&&(fs.smart?.flag??'')===smart.flag&&(fs.smart?.label??'')===smart.label&&(fs.smart?.tag??'')===smart.tag);return hit?<Button variant="outline" size="compact" aria-label={t('photos.collections.delete')} title={t('photos.collections.delete')} onClick={()=>{const next={...sets};delete next[hit[0]];setSets(next);}} data-testid="photos-filmstrip-collection-delete">{t('photos.collections.delete')}</Button>:null;})()}
-     </span>
-    </div>
+          <Button variant="outline" size="compact" aria-pressed={smart.on} aria-label={t('photos.smart')} title={t('photos.smart')} onClick={()=>setSmart({...smart,on:!smart.on})} data-testid="photos-filmstrip-smart">{t('photos.smart')}</Button>
+          {smart.on&&<div className="grid gap-1">
+           <NativeSelect value={String(smart.minRating)} aria-label={t('photos.rating.filter')} title={t('photos.rating.filter')} onChange={e=>setSmart({...smart,minRating:Number(e.currentTarget.value)})} className="h-7" data-testid="photos-smart-minrating">
+            {[0,1,2,3,4,5].map(n=><option key={n} value={String(n)}>{`≥ ${n}`}</option>)}
+           </NativeSelect>
+           <NativeSelect value={smart.flag} aria-label={t('photos.smart')} title={t('photos.smart')} onChange={e=>setSmart({...smart,flag:e.currentTarget.value})} className="h-7" data-testid="photos-smart-flag">
+            <option value="">{t('photos.smart.anyFlag')}</option>
+            <option value="pick">{t('photos.flag.filter.pick')}</option>
+            <option value="reject">{t('photos.flag.filter.reject')}</option>
+            <option value="none">{t('photos.smart.unflagged')}</option>
+           </NativeSelect>
+           <NativeSelect value={smart.label} aria-label={t('photos.smart')} title={t('photos.smart')} onChange={e=>setSmart({...smart,label:e.currentTarget.value})} className="h-7" data-testid="photos-smart-label">
+            <option value="">{t('photos.smart.anyLabel')}</option>
+            <option value="none">{t('photos.smart.noLabel')}</option>
+            {PHOTO_LABELS.map(l=><option key={l} value={l}>{t(`photos.label.${l}`)}</option>)}
+           </NativeSelect>
+           <NativeInput type="text" value={smart.tag} aria-label={t('photos.smart.tag')} title={t('photos.smart.tag')} placeholder={t('photos.smart.tag')} onChange={e=>setSmart({...smart,tag:e.currentTarget.value})} className="h-7" data-testid="photos-smart-tag"/>
+          </div>}
+         </div>
+         <div className="grid gap-1">
+          <NativeSelect value="" aria-label={t('photos.collections')} title={t('photos.collections')} onChange={e=>{
+           const fs=sets[e.currentTarget.value];e.currentTarget.value='';
+           if(fs){setMinRating(fs.filter);setSort(fs.sort as FilmstripSort);setQuery(fs.query);setSmart(fs.smart??{on:false,minRating:0,flag:'',label:'',tag:''});}
+          }} className="h-7" data-testid="photos-filmstrip-collections">
+           <option value="" disabled>{t('photos.collections')}</option>
+           {Object.keys(sets).sort((a,b)=>a.localeCompare(b)).map(n=><option key={n} value={n}>{n}</option>)}
+          </NativeSelect>
+          <span className="flex gap-1">
+           {naming
+            ?<NativeInput autoFocus type="text" aria-label={t('photos.collections.name')} title={t('photos.collections.name')} placeholder={t('photos.collections.name')} className="h-7 w-full" data-testid="photos-filmstrip-collection-name"
+              onKeyDown={e=>{
+               if(e.key==='Escape'){setNaming(false);return;}
+               if(e.key!=='Enter')return;
+               const n=e.currentTarget.value.trim();
+               if(n)setSets({...sets,[n]:{filter,sort,query,smart}});
+               setNaming(false);
+              }}/>
+            :<Button variant="outline" size="compact" aria-label={t('photos.collections.save')} title={t('photos.collections.save')} onClick={()=>setNaming(true)} data-testid="photos-filmstrip-collection-save">{t('photos.collections.save')}</Button>}
+           {(()=>{const hit=Object.entries(sets).find(([,fs])=>fs.filter===filter&&fs.sort===sort&&fs.query===query&&(fs.smart?.on??false)===smart.on&&Number(fs.smart?.minRating??0)===smart.minRating&&(fs.smart?.flag??'')===smart.flag&&(fs.smart?.label??'')===smart.label&&(fs.smart?.tag??'')===smart.tag);return hit?<Button variant="outline" size="compact" aria-label={t('photos.collections.delete')} title={t('photos.collections.delete')} onClick={()=>{const next={...sets};delete next[hit[0]];setSets(next);}} data-testid="photos-filmstrip-collection-delete">{t('photos.collections.delete')}</Button>:null;})()}
+          </span>
+         </div>
+         {hidden.length>0&&<span className="flex flex-wrap gap-1">
+          <Button variant="outline" size="compact" aria-pressed={showHidden} onClick={()=>setShowHidden(!showHidden)} data-testid="photos-filmstrip-show-hidden">{t('photos.hidden.show')}</Button>
+          {showHidden&&hidden.includes(active)&&<Button variant="outline" size="compact" onClick={()=>unhidePhotos([active])} data-testid="photos-filmstrip-unhide-active">{t('photos.hidden.restoreActive')}</Button>}
+          <Button variant="outline" size="compact" onClick={()=>unhideAll()} data-testid="photos-filmstrip-restore-hidden">{t('photos.hidden.restore',{count:hidden.length})}</Button>
+         </span>}
+    </>)}
+    {menuGroup('view','photos.menu.groupView',<>
     <span className="flex flex-wrap gap-1">
-     {onSurvey&&activeStack&&<Button variant="outline" size="compact" onClick={()=>{setMenuOpen(false);onSurvey(photos.map(p=>p.name).filter(n=>stacks[n]===activeStack));}} data-testid="photos-filmstrip-stack-survey">{t('photos.stacks.survey')}</Button>}
-     {activeStack&&covers[activeStack]!==active&&<Button variant="outline" size="compact" onClick={()=>setStackCover(activeStack,active)} data-testid="photos-filmstrip-stack-cover">{t('photos.stacks.cover')}</Button>}
-     {activeStack&&<Button variant="outline" size="compact" onClick={()=>{
-      const members=photos.map(p=>p.name).filter(n=>stacks[n]===activeStack);
-      const cover=covers[activeStack]??members[0];
-      if(!cover)return;
-      for(const n of members)setFlag(n,n===cover?'pick':'reject');
-     }} data-testid="photos-filmstrip-stack-cull">{t('photos.stacks.cull')}</Button>}
-     {selected.length>1&&<Button variant="outline" size="compact" onClick={()=>groupPhotos(selected.map(p=>p.name))} data-testid="photos-filmstrip-stack-group">{t('photos.stacks.group')}</Button>}
-     {(()=>{const ids=[...new Set((selected.length>1?selected.map(p=>p.name):[active]).map(n=>stacks[n]).filter((v):v is string=>!!v))];return ids.length>0?<Button variant="outline" size="compact" onClick={()=>ungroupStacks(ids)} data-testid="photos-filmstrip-stack-ungroup">{t('photos.stacks.ungroup')}</Button>:null;})()}
-     {detectSeries(all.map(p=>p.name)).length>0&&<Button variant="outline" size="compact" onClick={()=>{
-      let n=0;for(const series of detectSeries(all.map(p=>p.name)))if(groupPhotos(series))n++;
-      setApplyNote(t('photos.stacks.autoDone',{count:n}));
-     }} data-testid="photos-filmstrip-stack-auto">{t('photos.stacks.auto')}</Button>}
-    </span>
+          <Button variant="outline" size="compact" aria-pressed={split} onClick={()=>setSplit(!split)} data-testid="photos-filmstrip-split">{t('photos.split')}</Button>
+          {split&&<Button variant="outline" size="compact" aria-pressed={splitDir==='horizontal'} onClick={()=>setSplitDir(splitDir==='vertical'?'horizontal':'vertical')} data-testid="photos-filmstrip-split-dir">{t('photos.split.dir')}</Button>}
+         </span>
+         <span className="flex flex-wrap gap-1">
+          {reference!==active&&<Button variant="outline" size="compact" onClick={()=>{setReference(active);setApplyNote(t('photos.compare.referenceSet',{name:active}));}} data-testid="photos-filmstrip-set-reference">{t('photos.compare.setReference')}</Button>}
+          {reference&&reference!==active&&onSurvey&&<Button variant="outline" size="compact" onClick={()=>{setMenuOpen(false);onSurvey([reference,active]);}} data-testid="photos-filmstrip-compare-reference">{t('photos.compare.go')}</Button>}
+          {reference&&<Button variant="outline" size="compact" onClick={()=>setReference('')} data-testid="photos-filmstrip-clear-reference">{t('photos.compare.clear')}</Button>}
+         </span>
+         <span className="flex flex-wrap gap-1">
+          <Button variant="outline" size="compact" aria-pressed={slide} onClick={()=>setSlide(!slide)} data-testid="photos-filmstrip-slideshow">{t('photos.slideshow')}</Button>
+          {slide&&<NativeSelect value={String(slideMs)} aria-label={t('photos.slideshow.tempo')} title={t('photos.slideshow.tempo')} onChange={e=>setSlideMs(Number(e.currentTarget.value))} className="h-7" data-testid="photos-filmstrip-slideshow-ms">
+           {[2000,4000,8000].map(ms=><option key={ms} value={ms}>{ms/1000} s</option>)}
+          </NativeSelect>}
+         </span>
+    </>)}
+    {menuGroup('edit','photos.menu.groupEdit',<>
     <span className="flex flex-wrap gap-1">
-     <Button variant="outline" size="compact" onClick={()=>{void makeVirtualCopy();}} data-testid="photos-filmstrip-virtual-copy">{t('photos.copy.create')}</Button>
-    </span>
-    <div className="grid gap-1">
-     {snapNames.map(n=><span key={n} className="flex gap-1">
-      <Button variant="outline" size="compact" className="flex-1 justify-start" onClick={()=>{
-       const snap=snapshotSettings(active,n);
-       if(snap){commitPhotoSettings(active,()=>snap);setApplyNote(t('photos.snapshots.applied',{name:n}));}
-      }} data-testid={`photos-filmstrip-snapshot-apply-${n}`}>{n}</Button>
-      <Button variant="outline" size="icon" aria-label={t('photos.snapshots.delete',{name:n})} title={t('photos.snapshots.delete',{name:n})} onClick={()=>deleteSnapshot(active,n)} className="h-7 w-7 shrink-0" data-testid={`photos-filmstrip-snapshot-delete-${n}`}><Trash2 size={12}/></Button>
-     </span>)}
-     {snapNaming
-      ?<NativeInput autoFocus type="text" aria-label={t('photos.snapshots.name')} title={t('photos.snapshots.name')} placeholder={t('photos.snapshots.name')} className="h-7 w-full" data-testid="photos-filmstrip-snapshot-name"
-        onKeyDown={e=>{
-         if(e.key==='Escape'){setSnapNaming(false);return;}
-         if(e.key!=='Enter')return;
-         const n=e.currentTarget.value.trim();
-         if(n&&activeSession&&saveSnapshot(active,n,activeSession.now))setApplyNote(t('photos.snapshots.saved',{name:n}));
-         setSnapNaming(false);
-        }}/>
-      :<Button variant="outline" size="compact" aria-label={t('photos.snapshots.save')} title={t('photos.snapshots.save')} onClick={()=>setSnapNaming(true)} disabled={!activeSession} data-testid="photos-filmstrip-snapshot-save">{t('photos.snapshots.save')}</Button>}
-    </div>
-    <div className="grid gap-1">
-     <NativeSelect value={collection} aria-label={t('photos.photoCollections')} title={t('photos.photoCollections')} onChange={e=>setCollection(e.currentTarget.value)} className="h-7" data-testid="photos-filmstrip-collection-apply">
-      <option value="">{t('photos.photoCollections.off')}</option>
-      {collNames.map(n=><option key={n} value={n}>{n}</option>)}
-     </NativeSelect>
-     <span className="flex gap-1">
-      {collNaming
-       ?<NativeInput autoFocus type="text" aria-label={t('photos.photoCollections.name')} title={t('photos.photoCollections.name')} placeholder={t('photos.photoCollections.name')} className="h-7 w-full" data-testid="photos-filmstrip-collection-name"
-         onKeyDown={e=>{
-          if(e.key==='Escape'){setCollNaming(false);return;}
-          if(e.key!=='Enter')return;
-          const n=e.currentTarget.value.trim();
-          if(n){
-           const targets=selected.length>1?selected.map(p=>p.name):[active]; // the selection joins, else just the active photo
-           const added=addToCollection(n,targets);
-           setApplyNote(t('photos.photoCollections.added',{count:added,name:n}));
-           setCollection(n);
-          }
-          setCollNaming(false);
-         }}/>
-       :<Button variant="outline" size="compact" aria-label={t('photos.photoCollections.add')} title={t('photos.photoCollections.add')} onClick={()=>setCollNaming(true)} data-testid="photos-filmstrip-collection-add">{t('photos.photoCollections.add')}</Button>}
-      {collection&&isInCollection(collection,active)&&<Button variant="outline" size="compact" onClick={()=>removeFromCollection(collection,[active])} data-testid="photos-filmstrip-collection-remove">{t('photos.photoCollections.removeActive')}</Button>}
-      {collection&&<Button variant="outline" size="compact" onClick={()=>{deleteCollection(collection);setCollection('');}} data-testid="photos-filmstrip-collection-drop">{t('photos.photoCollections.delete')}</Button>}
-     </span>
-    </div>
+          <Button variant="outline" size="compact" onClick={()=>{void makeVirtualCopy();}} data-testid="photos-filmstrip-virtual-copy">{t('photos.copy.create')}</Button>
+         </span>
+         <div className="grid gap-1">
+          {snapNames.map(n=><span key={n} className="flex gap-1">
+           <Button variant="outline" size="compact" className="flex-1 justify-start" onClick={()=>{
+            const snap=snapshotSettings(active,n);
+            if(snap){commitPhotoSettings(active,()=>snap);setApplyNote(t('photos.snapshots.applied',{name:n}));}
+           }} data-testid={`photos-filmstrip-snapshot-apply-${n}`}>{n}</Button>
+           <Button variant="outline" size="icon" aria-label={t('photos.snapshots.delete',{name:n})} title={t('photos.snapshots.delete',{name:n})} onClick={()=>deleteSnapshot(active,n)} className="h-7 w-7 shrink-0" data-testid={`photos-filmstrip-snapshot-delete-${n}`}><Trash2 size={12}/></Button>
+          </span>)}
+          {snapNaming
+           ?<NativeInput autoFocus type="text" aria-label={t('photos.snapshots.name')} title={t('photos.snapshots.name')} placeholder={t('photos.snapshots.name')} className="h-7 w-full" data-testid="photos-filmstrip-snapshot-name"
+             onKeyDown={e=>{
+              if(e.key==='Escape'){setSnapNaming(false);return;}
+              if(e.key!=='Enter')return;
+              const n=e.currentTarget.value.trim();
+              if(n&&activeSession&&saveSnapshot(active,n,activeSession.now))setApplyNote(t('photos.snapshots.saved',{name:n}));
+              setSnapNaming(false);
+             }}/>
+           :<Button variant="outline" size="compact" aria-label={t('photos.snapshots.save')} title={t('photos.snapshots.save')} onClick={()=>setSnapNaming(true)} disabled={!activeSession} data-testid="photos-filmstrip-snapshot-save">{t('photos.snapshots.save')}</Button>}
+         </div>
+         <span className="flex flex-wrap gap-1">
+          <Button variant="outline" size="compact" disabled={!previous||previous===active||!getPhotoSession(previous)} title={previous||undefined} onClick={()=>{
+           const from=getPhotoSession(previous);
+           if(from){commitPhotoSettings(active,()=>from.now);setApplyNote(t('photos.quick.pastedPrevious',{name:previous}));}
+          }} data-testid="photos-filmstrip-paste-previous">{t('photos.quick.pastePrevious')}</Button>
+          <Button variant="outline" size="compact" disabled={!activeSession} onClick={()=>commitPhotoSettings(active,cur=>({...cur,orientation:((cur.orientation+3)%4) as typeof cur.orientation}))} data-testid="photos-filmstrip-rotate-left">{t('photos.quick.rotateLeft')}</Button>
+          <Button variant="outline" size="compact" disabled={!activeSession} onClick={()=>commitPhotoSettings(active,cur=>({...cur,orientation:((cur.orientation+1)%4) as typeof cur.orientation}))} data-testid="photos-filmstrip-rotate-right">{t('photos.quick.rotateRight')}</Button>
+         </span>
+    </>)}
+    {menuGroup('collections','photos.menu.groupCollections',<>
     <span className="flex flex-wrap gap-1">
-     <Button variant="outline" size="compact" aria-pressed={split} onClick={()=>setSplit(!split)} data-testid="photos-filmstrip-split">{t('photos.split')}</Button>
-     {split&&<Button variant="outline" size="compact" aria-pressed={splitDir==='horizontal'} onClick={()=>setSplitDir(splitDir==='vertical'?'horizontal':'vertical')} data-testid="photos-filmstrip-split-dir">{t('photos.split.dir')}</Button>}
-     <Button variant="outline" size="compact" disabled={!previous||previous===active||!getPhotoSession(previous)} title={previous||undefined} onClick={()=>{
-      const from=getPhotoSession(previous);
-      if(from){commitPhotoSettings(active,()=>from.now);setApplyNote(t('photos.quick.pastedPrevious',{name:previous}));}
-     }} data-testid="photos-filmstrip-paste-previous">{t('photos.quick.pastePrevious')}</Button>
-     <Button variant="outline" size="compact" disabled={!activeSession} onClick={()=>commitPhotoSettings(active,cur=>({...cur,orientation:((cur.orientation+3)%4) as typeof cur.orientation}))} data-testid="photos-filmstrip-rotate-left">{t('photos.quick.rotateLeft')}</Button>
-     <Button variant="outline" size="compact" disabled={!activeSession} onClick={()=>commitPhotoSettings(active,cur=>({...cur,orientation:((cur.orientation+1)%4) as typeof cur.orientation}))} data-testid="photos-filmstrip-rotate-right">{t('photos.quick.rotateRight')}</Button>
-    </span>
+          {onSurvey&&activeStack&&<Button variant="outline" size="compact" onClick={()=>{setMenuOpen(false);onSurvey(photos.map(p=>p.name).filter(n=>stacks[n]===activeStack));}} data-testid="photos-filmstrip-stack-survey">{t('photos.stacks.survey')}</Button>}
+          {activeStack&&covers[activeStack]!==active&&<Button variant="outline" size="compact" onClick={()=>setStackCover(activeStack,active)} data-testid="photos-filmstrip-stack-cover">{t('photos.stacks.cover')}</Button>}
+          {activeStack&&<Button variant="outline" size="compact" onClick={()=>{
+           const members=photos.map(p=>p.name).filter(n=>stacks[n]===activeStack);
+           const cover=covers[activeStack]??members[0];
+           if(!cover)return;
+           for(const n of members)setFlag(n,n===cover?'pick':'reject');
+          }} data-testid="photos-filmstrip-stack-cull">{t('photos.stacks.cull')}</Button>}
+          {selected.length>1&&<Button variant="outline" size="compact" onClick={()=>groupPhotos(selected.map(p=>p.name))} data-testid="photos-filmstrip-stack-group">{t('photos.stacks.group')}</Button>}
+          {(()=>{const ids=[...new Set((selected.length>1?selected.map(p=>p.name):[active]).map(n=>stacks[n]).filter((v):v is string=>!!v))];return ids.length>0?<Button variant="outline" size="compact" onClick={()=>ungroupStacks(ids)} data-testid="photos-filmstrip-stack-ungroup">{t('photos.stacks.ungroup')}</Button>:null;})()}
+          {detectSeries(all.map(p=>p.name)).length>0&&<Button variant="outline" size="compact" onClick={()=>{
+           let n=0;for(const series of detectSeries(all.map(p=>p.name)))if(groupPhotos(series))n++;
+           setApplyNote(t('photos.stacks.autoDone',{count:n}));
+          }} data-testid="photos-filmstrip-stack-auto">{t('photos.stacks.auto')}</Button>}
+         </span>
+         <div className="grid gap-1">
+          <NativeSelect value={collection} aria-label={t('photos.photoCollections')} title={t('photos.photoCollections')} onChange={e=>setCollection(e.currentTarget.value)} className="h-7" data-testid="photos-filmstrip-collection-apply">
+           <option value="">{t('photos.photoCollections.off')}</option>
+           {collNames.map(n=><option key={n} value={n}>{n}</option>)}
+          </NativeSelect>
+          <span className="flex gap-1">
+           {collNaming
+            ?<NativeInput autoFocus type="text" aria-label={t('photos.photoCollections.name')} title={t('photos.photoCollections.name')} placeholder={t('photos.photoCollections.name')} className="h-7 w-full" data-testid="photos-filmstrip-collection-name"
+              onKeyDown={e=>{
+               if(e.key==='Escape'){setCollNaming(false);return;}
+               if(e.key!=='Enter')return;
+               const n=e.currentTarget.value.trim();
+               if(n){
+                const targets=selected.length>1?selected.map(p=>p.name):[active]; // the selection joins, else just the active photo
+                const added=addToCollection(n,targets);
+                setApplyNote(t('photos.photoCollections.added',{count:added,name:n}));
+                setCollection(n);
+               }
+               setCollNaming(false);
+              }}/>
+            :<Button variant="outline" size="compact" aria-label={t('photos.photoCollections.add')} title={t('photos.photoCollections.add')} onClick={()=>setCollNaming(true)} data-testid="photos-filmstrip-collection-add">{t('photos.photoCollections.add')}</Button>}
+           {collection&&isInCollection(collection,active)&&<Button variant="outline" size="compact" onClick={()=>removeFromCollection(collection,[active])} data-testid="photos-filmstrip-collection-remove">{t('photos.photoCollections.removeActive')}</Button>}
+           {collection&&<Button variant="outline" size="compact" onClick={()=>{deleteCollection(collection);setCollection('');}} data-testid="photos-filmstrip-collection-drop">{t('photos.photoCollections.delete')}</Button>}
+          </span>
+         </div>
+    </>)}
+    {menuGroup('info','photos.menu.groupInfo',<>
     <span className="flex flex-wrap gap-1">
-     <Button variant="outline" size="compact" aria-pressed={infoOpen} onClick={()=>setInfoOpen(!infoOpen)} data-testid="photos-filmstrip-info-toggle">{t('photos.info.toggle')}</Button>
-     <Button variant="outline" size="compact" aria-pressed={slide} onClick={()=>setSlide(!slide)} data-testid="photos-filmstrip-slideshow">{t('photos.slideshow')}</Button>
-     <Button variant="outline" size="compact" onClick={()=>{setMenuOpen(false);setShortcuts(true);}} data-testid="photos-filmstrip-shortcuts">{t('photos.keys.title')}</Button>
-     <Button variant="outline" size="compact" aria-pressed={statsOpen} onClick={()=>setStatsOpen(!statsOpen)} data-testid="photos-filmstrip-stats">{t('photos.stats')}</Button>
-     {slide&&<NativeSelect value={String(slideMs)} aria-label={t('photos.slideshow.tempo')} title={t('photos.slideshow.tempo')} onChange={e=>setSlideMs(Number(e.currentTarget.value))} className="h-7" data-testid="photos-filmstrip-slideshow-ms">
-      {[2000,4000,8000].map(ms=><option key={ms} value={ms}>{ms/1000} s</option>)}
-     </NativeSelect>}
-    </span>
-    {statsOpen&&<div className="grid gap-0.5 text-ink-3" data-testid="photos-filmstrip-stats-panel">
-     <span data-testid="photos-filmstrip-stats-visible">{t('photos.stats.visible',{shown:photos.length,total})}</span>
-     {(()=>{const dist=[5,4,3,2,1].map(r=>({r,n:all.filter(p=>(ratings[p.name]??0)===r).length})).filter(d=>d.n>0);const unrated=all.filter(p=>!(ratings[p.name]>=1)).length;
-      return <span data-testid="photos-filmstrip-stats-ratings">{[...dist.map(d=>`${d.r}★ ×${d.n}`),unrated>0?`${t('photos.stats.unrated')} ×${unrated}`:''].filter(Boolean).join(' · ')||t('photos.stats.empty')}</span>;})()}
-     {(()=>{const picks=all.filter(p=>flags[p.name]==='pick').length,rejects=all.filter(p=>flags[p.name]==='reject').length;
-      return picks+rejects>0?<span data-testid="photos-filmstrip-stats-flags">{[picks>0?`${t('photos.stats.picks')} ×${picks}`:'',rejects>0?`${t('photos.stats.rejects')} ×${rejects}`:''].filter(Boolean).join(' · ')}</span>:null;})()}
-     {hidden.length>0&&<span data-testid="photos-filmstrip-stats-hidden">{t('photos.stats.hidden',{count:hidden.length})}</span>}
-    </div>}
-    {infoOpen&&<div className="grid gap-0.5 text-ink-3" data-testid="photos-filmstrip-info">
-     {infoLines===null?<span data-testid="photos-filmstrip-info-loading">…</span>
-      :infoLines.length===0?<span data-testid="photos-filmstrip-info-empty">{t('photos.info.empty')}</span>
-      :infoLines.map(l=><span key={l.key} data-testid={`photos-filmstrip-info-${l.key}`}>{l.value}</span>)}
-    </div>}
-    <span className="flex flex-wrap gap-1">
-     {reference!==active&&<Button variant="outline" size="compact" onClick={()=>{setReference(active);setApplyNote(t('photos.compare.referenceSet',{name:active}));}} data-testid="photos-filmstrip-set-reference">{t('photos.compare.setReference')}</Button>}
-     {reference&&reference!==active&&onSurvey&&<Button variant="outline" size="compact" onClick={()=>{setMenuOpen(false);onSurvey([reference,active]);}} data-testid="photos-filmstrip-compare-reference">{t('photos.compare.go')}</Button>}
-     {reference&&<Button variant="outline" size="compact" onClick={()=>setReference('')} data-testid="photos-filmstrip-clear-reference">{t('photos.compare.clear')}</Button>}
-    </span>
-    {hidden.length>0&&<span className="flex flex-wrap gap-1">
-     <Button variant="outline" size="compact" aria-pressed={showHidden} onClick={()=>setShowHidden(!showHidden)} data-testid="photos-filmstrip-show-hidden">{t('photos.hidden.show')}</Button>
-     {showHidden&&hidden.includes(active)&&<Button variant="outline" size="compact" onClick={()=>unhidePhotos([active])} data-testid="photos-filmstrip-unhide-active">{t('photos.hidden.restoreActive')}</Button>}
-     <Button variant="outline" size="compact" onClick={()=>unhideAll()} data-testid="photos-filmstrip-restore-hidden">{t('photos.hidden.restore',{count:hidden.length})}</Button>
-    </span>}
+          <Button variant="outline" size="compact" aria-pressed={infoOpen} onClick={()=>setInfoOpen(!infoOpen)} data-testid="photos-filmstrip-info-toggle">{t('photos.info.toggle')}</Button>
+          <Button variant="outline" size="compact" onClick={()=>{setMenuOpen(false);setShortcuts(true);}} data-testid="photos-filmstrip-shortcuts">{t('photos.keys.title')}</Button>
+          <Button variant="outline" size="compact" aria-pressed={statsOpen} onClick={()=>setStatsOpen(!statsOpen)} data-testid="photos-filmstrip-stats">{t('photos.stats')}</Button>
+         </span>
+         {statsOpen&&<div className="grid gap-0.5 text-ink-3" data-testid="photos-filmstrip-stats-panel">
+          <span data-testid="photos-filmstrip-stats-visible">{t('photos.stats.visible',{shown:photos.length,total})}</span>
+          {(()=>{const dist=[5,4,3,2,1].map(r=>({r,n:all.filter(p=>(ratings[p.name]??0)===r).length})).filter(d=>d.n>0);const unrated=all.filter(p=>!(ratings[p.name]>=1)).length;
+           return <span data-testid="photos-filmstrip-stats-ratings">{[...dist.map(d=>`${d.r}★ ×${d.n}`),unrated>0?`${t('photos.stats.unrated')} ×${unrated}`:''].filter(Boolean).join(' · ')||t('photos.stats.empty')}</span>;})()}
+          {(()=>{const picks=all.filter(p=>flags[p.name]==='pick').length,rejects=all.filter(p=>flags[p.name]==='reject').length;
+           return picks+rejects>0?<span data-testid="photos-filmstrip-stats-flags">{[picks>0?`${t('photos.stats.picks')} ×${picks}`:'',rejects>0?`${t('photos.stats.rejects')} ×${rejects}`:''].filter(Boolean).join(' · ')}</span>:null;})()}
+          {hidden.length>0&&<span data-testid="photos-filmstrip-stats-hidden">{t('photos.stats.hidden',{count:hidden.length})}</span>}
+         </div>}
+         {infoOpen&&<div className="grid gap-0.5 text-ink-3" data-testid="photos-filmstrip-info">
+          {infoLines===null?<span data-testid="photos-filmstrip-info-loading">…</span>
+           :infoLines.length===0?<span data-testid="photos-filmstrip-info-empty">{t('photos.info.empty')}</span>
+           :infoLines.map(l=><span key={l.key} data-testid={`photos-filmstrip-info-${l.key}`}>{l.value}</span>)}
+         </div>}
+    </>)}
    </div>}
   </span>
   <NativeSelect value={filter} aria-label={t('photos.rating.filter')} title={t('photos.rating.filter')} onChange={e=>setMinRating(e.currentTarget.value)} disabled={smartOn} className="h-7 shrink-0" data-testid="photos-filmstrip-rating-filter">

@@ -236,5 +236,10 @@
  "photos.stats.picks": "Retenues",
  "photos.stats.rejects": "Rejetees",
  "photos.stats.hidden": "{count} masquees",
- "photos.stats.empty": "Pas encore de notes"
+ "photos.stats.empty": "Pas encore de notes",
+ "photos.menu.groupFilter": "Filtre",
+ "photos.menu.groupView": "Affichage",
+ "photos.menu.groupEdit": "Edition",
+ "photos.menu.groupCollections": "Collections",
+ "photos.menu.groupInfo": "Infos"
 }

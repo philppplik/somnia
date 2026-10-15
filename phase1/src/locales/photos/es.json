@@ -236,5 +236,10 @@
  "photos.stats.picks": "Seleccionadas",
  "photos.stats.rejects": "Rechazadas",
  "photos.stats.hidden": "{count} ocultas",
- "photos.stats.empty": "Aun sin puntuaciones"
+ "photos.stats.empty": "Aun sin puntuaciones",
+ "photos.menu.groupFilter": "Filtro",
+ "photos.menu.groupView": "Vista",
+ "photos.menu.groupEdit": "Edicion",
+ "photos.menu.groupCollections": "Colecciones",
+ "photos.menu.groupInfo": "Info"
 }

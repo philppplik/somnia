@@ -586,3 +586,19 @@ from the same `useVisiblePhotos` data the strip renders.
 Coverage: the light/dark gallery leg rates strip-1 four stars,
 picks strip-2, and checks the visible/ratings/flags lines
 (`test-results/ds-photos-stats-{light,dark}.png`).
+
+## Grouped strip menu (P117)
+
+The strip menu is organized into five labeled, collapsible groups -
+Filter, View, Edit, Collections, Info - with chevron headers. They
+default to expanded and the collapsed flags persist per group
+(`photos.menuGroup.<id>`), so every command stays one click away
+and all test ids and click paths are unchanged. The grouping is a
+render helper (`menuGroup`), deliberately not a nested component:
+a new component type per render would remount the menu children
+and drop their local state.
+
+Coverage: the light/dark gallery leg checks all five headers are
+expanded, collapses and re-expands View around the split toggle
+(`test-results/ds-photos-menu-groups-{light,dark}.png`); the whole
+existing filmstrip suite runs unchanged against the regrouped menu.

@@ -982,3 +982,22 @@ test('statistics: rating, flag and hidden counts over the library (light and dar
   await page.evaluate(async()=>{const r=await import('/src/lib/photos/ratings.ts');const f=await import('/src/lib/photos/flags.ts');for(const n of['strip-1.png','strip-2.png','strip-3.png']){r.setRating(n,0);f.setFlag(n,null);}}); // leave no state behind
  }
 });
+
+test('menu groups: labeled collapsible sections, expanded by default (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
+  await page.evaluate(async()=>{const p=await import('/src/store/panelStateStore.ts');for(const g of['filter','view','edit','collections','info'])p.panelStateStore.set(`photos.menuGroup.${g}`,false);}); // group state persists via localStorage
+  await page.getByTestId('photos-filmstrip-menu').click();
+  for(const g of['filter','view','edit','collections','info'])await expect(page.getByTestId(`photos-filmstrip-group-${g}`)).toHaveAttribute('aria-expanded','true');
+  await expect(page.getByTestId('photos-filmstrip-split')).toBeVisible(); // controls reachable without extra clicks
+  await page.getByTestId('photos-filmstrip-group-view').click(); // collapse
+  await expect(page.getByTestId('photos-filmstrip-split')).toHaveCount(0);
+  await page.getByTestId('photos-filmstrip-group-view').click(); // expand again
+  await expect(page.getByTestId('photos-filmstrip-split')).toBeVisible();
+  await page.screenshot({path:`test-results/ds-photos-menu-groups-${theme}.png`,fullPage:true});
+  await page.keyboard.press('Escape');
+ }
+});

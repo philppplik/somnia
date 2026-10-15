@@ -236,5 +236,10 @@
  "photos.stats.picks": "Picks",
  "photos.stats.rejects": "Rejects",
  "photos.stats.hidden": "{count} versteckt",
- "photos.stats.empty": "Noch keine Bewertungen"
+ "photos.stats.empty": "Noch keine Bewertungen",
+ "photos.menu.groupFilter": "Filter",
+ "photos.menu.groupView": "Ansicht",
+ "photos.menu.groupEdit": "Bearbeiten",
+ "photos.menu.groupCollections": "Sammlungen",
+ "photos.menu.groupInfo": "Info"
 }
