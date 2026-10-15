@@ -109,8 +109,8 @@ export function DocumentsCanvas(){
  useEffect(()=>{let off:(()=>void)|null=null;
   const wire=()=>{off?.();off=null;const c=getCollab();
    if(!c){setPeers([]);return;}
-   const sync=()=>setPeers(item?peerCarets(c.doc.awareness,item.name):[]);
-   c.doc.awareness.on('change',sync);off=()=>c.doc.awareness.off('change',sync);sync();};
+   const sync=()=>setPeers(item?peerCarets(c.awareness,item.name):[]);
+   c.awareness.on('change',sync);off=()=>c.awareness.off('change',sync);sync();};
   wire();const offS=onSessionChange(wire);
   return()=>{off?.();offS();};},[item?.name]);
  const exportUi=useDocumentsExportUi();

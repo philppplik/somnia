@@ -6,7 +6,7 @@ import {registerCommand} from '../lib/commandRegistry';
 import {recordRecent} from '../lib/exportCenter';
 import {CATALOGUES} from '../lib/i18n';
 
-const withCommands=(fn:()=>void)=>{const offs=[['project.export',false],['documents.saveCopy',true],['documents.export.open',true],['slides.saveCopy',true]].map(([id,on])=>registerCommand({id:id as string,title:'Title '+id,category:'Project',level:'ui',enabled:()=>on as boolean,run:()=>{}}));try{fn();}finally{offs.forEach(off=>off());}};
+const withCommands=(fn:()=>void)=>{const offs=[['project.export',false],['documents.saveCopy',true],['documents.export.open',true],['slides.saveCopy',true]].map(([id,on])=>registerCommand({id:id as string,title:'Title '+id,category:'Project',enabled:()=>on as boolean,run:()=>{}}));try{fn();}finally{offs.forEach(off=>off());}};
 
 test('panel groups registered export commands in studio order and disables unavailable rows',()=>{
  withCommands(()=>{
@@ -22,7 +22,7 @@ test('panel groups registered export commands in studio order and disables unava
 });
 
 test('preset rows render above the plain commands with their enabled state',()=>{
- const offs=[registerCommand({id:'vector.exportPng',title:'PNG',category:'Project',level:'ui',enabled:()=>true,run:()=>{}}),registerCommand({id:'video.export.format',title:'fmt',category:'Project',level:'ui',enabled:()=>false,run:()=>{}}),registerCommand({id:'video.export.start',title:'start',category:'Project',level:'ui',enabled:()=>true,run:()=>{}})];
+ const offs=[registerCommand({id:'vector.exportPng',title:'PNG',category:'Project',enabled:()=>true,run:()=>{}}),registerCommand({id:'video.export.format',title:'fmt',category:'Project',enabled:()=>false,run:()=>{}}),registerCommand({id:'video.export.start',title:'start',category:'Project',enabled:()=>true,run:()=>{}})];
  try{
   const html=renderToStaticMarkup(<ExportCenterPanel onClose={()=>{}}/>);
   assert.ok(html.includes('export-center-presets-vector'),'vector presets header');
@@ -34,7 +34,7 @@ test('preset rows render above the plain commands with their enabled state',()=>
 });
 
 test('search input renders with its own testid and row markers are present for keyboard nav',()=>{
- const offs=[registerCommand({id:'project.export',title:'Export project...',category:'Project',level:'ui',enabled:()=>true,run:()=>{}})];
+ const offs=[registerCommand({id:'project.export',title:'Export project...',category:'Project',enabled:()=>true,run:()=>{}})];
  try{
   const html=renderToStaticMarkup(<ExportCenterPanel onClose={()=>{}}/>);
   assert.ok(html.includes('data-testid="export-center-search"'),'search input');
@@ -48,7 +48,7 @@ test('a stored recent entry renders as the top group in stored order',()=>{
  const g=globalThis as {localStorage?:Storage};const prev=g.localStorage;
  (g as Record<string,unknown>).localStorage={getItem:(k:string)=>map.get(k)??null,setItem:(k:string,v:string)=>{map.set(k,v);},removeItem:()=>{},clear:()=>map.clear(),key:()=>null,length:0};
  try{
-  const offs=[registerCommand({id:'project.export',title:'Export project...',category:'Project',level:'ui',enabled:()=>true,run:()=>{}}),registerCommand({id:'vector.exportPng',title:'PNG',category:'Project',level:'ui',enabled:()=>true,run:()=>{}})];
+  const offs=[registerCommand({id:'project.export',title:'Export project...',category:'Project',enabled:()=>true,run:()=>{}}),registerCommand({id:'vector.exportPng',title:'PNG',category:'Project',enabled:()=>true,run:()=>{}})];
   try{
    recordRecent('preset','png2x');recordRecent('command','project.export');
    const html=renderToStaticMarkup(<ExportCenterPanel onClose={()=>{}}/>);
@@ -62,7 +62,7 @@ test('a stored recent entry renders as the top group in stored order',()=>{
 
 test('footer keyboard hints render; empty hint is a status; long labels truncate',()=>{
  const long='Export a very long document name that would otherwise overflow the dialog row '.repeat(2);
- const offs=[registerCommand({id:'project.export',title:long,category:'Project',level:'ui',enabled:()=>true,run:()=>{}})];
+ const offs=[registerCommand({id:'project.export',title:long,category:'Project',enabled:()=>true,run:()=>{}})];
  try{
   const html=renderToStaticMarkup(<ExportCenterPanel onClose={()=>{}}/>);
   assert.ok(!html.includes('exportCenter.hintNav'),'translated, not raw keys');
