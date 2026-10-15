@@ -138,8 +138,9 @@ export async function addAudioTrackClip(root:string,item:{name:string;url:string
  const s=sessions.get(root);if(!s)return null;
  let duration=audioDurations.get(item.name);
  if(duration===undefined){
-  let bytes=sources.get(item.name);
-  if(!bytes){bytes=await fetch(item.url).then(r=>r.arrayBuffer());sources.set(item.name,bytes);}
+  const cached=sources.get(item.name);
+  const bytes=cached??await fetch(item.url).then(r=>r.arrayBuffer());
+  if(!cached)sources.set(item.name,bytes);
   const{engine:e}=getEngine();
   const probe=await e.probe(bytes.slice(0));
   if(!probe.audio){patch(root,{status:'error',error:`"${item.name}" has no audio track.`});return null;}

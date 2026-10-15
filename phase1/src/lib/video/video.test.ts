@@ -213,7 +213,7 @@ test('timeline: clip audio fades clamp into the clip length and strip on stills'
  assert.equal(zero.fadeIn,undefined,'zero fades are dropped');
  const sped=sanitizeClips([{...clip,speed:2,fadeIn:9,fadeOut:9}],{'a.mp4':10})[0];
  assert.deepEqual([fadeInOf(sped),fadeOutOf(sped)],[5,0],'fades clamp to the sped timeline length');
- const title=sanitizeClips([{id:'t1',kind:'title',source:'',in_s:0,out_s:5,gain:1,muted:false,fadeIn:2,title:{text:'T'}}],{})[0];
+ const title=sanitizeClips([{id:'t1',kind:'title',source:'',in_s:0,out_s:5,gain:1,muted:false,fadeIn:2,title:{text:'T',size:32,color:'#ffffff',background:'#000000'}}],{})[0];
  assert.equal(title.fadeIn,undefined,'titles carry no fades');
  const img=sanitizeClips([{id:'i1',kind:'image',source:'p.png',in_s:0,out_s:5,gain:1,muted:false,fadeIn:2}],{})[0];
  assert.equal(img.fadeIn,undefined,'image clips carry no fades');

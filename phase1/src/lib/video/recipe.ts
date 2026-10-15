@@ -11,7 +11,7 @@ export const EXPORT_FPS_CAPS=[24,25,30,50,60] as const;
 export const DEFAULT_EXPORT_OPTIONS:VideoExportOptions={scale:1,quality:'high',fps:null};
 /** Clamps partial/foreign export options to the supported set. */
 export function sanitizeExportOptions(o:Partial<VideoExportOptions>|undefined):VideoExportOptions{
- return{scale:EXPORT_SCALES.includes(o?.scale as 1)?(o?.scale??1):1,quality:EXPORT_QUALITIES.includes(o?.quality as VideoExportQuality)?(o?.quality??'high'):'high',fps:EXPORT_FPS_CAPS.includes(o?.fps as 30)?o!.fps:null};
+ return{scale:EXPORT_SCALES.includes(o?.scale as 1)?(o?.scale??1):1,quality:EXPORT_QUALITIES.includes(o?.quality as VideoExportQuality)?(o?.quality??'high'):'high',fps:EXPORT_FPS_CAPS.includes(o?.fps as 30)?(o!.fps??null):null};
 }
 /** Output frame rate of one zone: the clip's native rate capped at the export choice (never upsampled); 30 when the source rate is unknown. */
 export function cappedFps(native:number|null,cap:number|null):number{

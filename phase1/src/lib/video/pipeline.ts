@@ -5,7 +5,7 @@ import {cappedFps,sanitizeExportOptions,type VideoExportOptions,type VideoFormat
 import {clipFadeGain,clipRanges,fadeInOf,fadeOf,fadeOutOf,flipOf,isFreeze,isImageClip,speedOf,timelineDuration,type ClipRange,type TimelineClip} from './timeline';
 import {audioEnvelope,duckGainAt,type AudioClip} from './audioTrack';
 import {WindowMixer} from './mixer';
-import {drawTitleCard,isTitleClip,needsSourceFile} from './titles';
+import {drawTitleCard,isTitleClip,needsSourceFile,type TitleClip} from './titles';
 import {renderTitleSpan} from './titleExport';
 import type {VideoCapabilities,VideoProbe,VideoReport} from './protocol';
 const inputOf=(bytes:ArrayBuffer)=>new Input({source:new BufferSource(bytes),formats:ALL_FORMATS});
@@ -241,7 +241,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
      return card.canvas;
     }
     const local=Math.max(0,t-r.start),key=`${local.toFixed(4)}`;
-    if(card.key!==key){drawTitleCard(card.ctx,c,outW,outH,local);card.key=key;}
+    if(card.key!==key){drawTitleCard(card.ctx,c as TitleClip,outW,outH,local);card.key=key;}
     return card.canvas;
    }
    const sink=await sinkFor(i);

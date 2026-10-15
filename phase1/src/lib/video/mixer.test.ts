@@ -5,7 +5,7 @@ import {WindowMixer} from './mixer';
 test('samples land at their timeline position and sum',()=>{
  const m=new WindowMixer(1,4); // 1 s windows at 4 Hz for readable math
  m.add(0.5,0.5,-0.5);
- m.add(0.5,0.25,0.25,'same slot sums');
+ m.add(0.5,0.25,0.25);
  const flushed=m.flushAll();
  assert.equal(flushed.length,1);
  assert.equal(flushed[0].start,0);

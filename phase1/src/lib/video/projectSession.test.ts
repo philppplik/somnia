@@ -186,9 +186,9 @@ test('project: image clips swap their file, titles refuse a swap',async()=>{
  const imgId=addImageClip(a,{name:'one.png'})!;
  addTitleClip(a,Number.MAX_SAFE_INTEGER,{text:'T'});
  const titleId=getVideoSession(a)!.clips[1].id;
- assert.equal(await replaceClipSource(a,imgId,{name:'two.png',kind:'image'}),true);
+ assert.equal(await replaceClipSource(a,imgId,{name:'two.png',url:'',kind:'image'}),true);
  assert.deepEqual([getVideoSession(a)!.clips[0].source,getVideoSession(a)!.clips[0].out_s],['two.png',5],'name swapped, duration kept');
- assert.equal(await replaceClipSource(a,titleId,{name:'x.mp4'}),false,'titles refuse');
+ assert.equal(await replaceClipSource(a,titleId,{name:'x.mp4',url:''}),false,'titles refuse');
  closeVideo(a);closeMedia(a);
 });
 
