@@ -6,11 +6,12 @@ export interface AudioSourceRef{id:string;name:string;frames:number;sampleRate:n
 export interface GainPoint{at:number;db:number}
 /** name: free label for organisation (bounces, freezes); empty falls back to the source name. */
 export interface ArrangeClip{id:string;sourceId:string;start:number;offset:number;length:number;gainDb:number;fadeIn:number;fadeOut:number;gainCurve:GainPoint[];muted:boolean;pan:number;fadeShape:'linear'|'equalPower';name:string}
-export interface ArrangeTrack{id:string;name:string;gainDb:number;pan:number;mute:boolean;solo:boolean;rack:EffectRack;clips:ArrangeClip[]}
+/** gainCurve: volume automation in session frames, added to the fader (dB); flat outside the outermost points. */
+export interface ArrangeTrack{id:string;name:string;gainDb:number;pan:number;mute:boolean;solo:boolean;rack:EffectRack;clips:ArrangeClip[];gainCurve:GainPoint[]}
 export interface ArrangeMarker{id:string;name:string;frame:number}
 /** tailFrames: explicit bounded effect tail appended past the last clip so reverb/delay can ring out; 0 keeps the B1 session boundary. bpm: musical tempo for the beat grid and snapping; the mix itself is tempo-agnostic. */
-export interface Arrangement{version:9;masterRack:EffectRack;name:string;sampleRate:48000;sources:AudioSourceRef[];tracks:ArrangeTrack[];markers:ArrangeMarker[];loop:{start:number;end:number}|null;tailFrames:number;bpm:number}
-export function emptyArrangement(name='Untitled session'):Arrangement{return{version:9,masterRack:emptyRack(),name,sampleRate:48000,sources:[],tracks:[],markers:[],loop:null,tailFrames:0,bpm:120};}
+export interface Arrangement{version:10;masterRack:EffectRack;name:string;sampleRate:48000;sources:AudioSourceRef[];tracks:ArrangeTrack[];markers:ArrangeMarker[];loop:{start:number;end:number}|null;tailFrames:number;bpm:number}
+export function emptyArrangement(name='Untitled session'):Arrangement{return{version:10,masterRack:emptyRack(),name,sampleRate:48000,sources:[],tracks:[],markers:[],loop:null,tailFrames:0,bpm:120};}
 const fail=(s:string):never=>{throw Error(`Invalid Sound session: ${s}`);};
 const object=(v:unknown,keys:string[]):Record<string,unknown>=>{if(!v||typeof v!=='object'||Array.isArray(v))return fail('object expected');const o=v as Record<string,unknown>;if(Object.keys(o).some(k=>!keys.includes(k))||keys.some(k=>!Object.hasOwn(o,k)))return fail('unknown or missing field');return o;};
 const text=(v:unknown,max=160):string=>typeof v==='string'&&v.trim().length>0&&v.length<=max&&!/[\x00-\x1f]/.test(v)?v:fail('text');
@@ -30,35 +31,40 @@ export function validateArrangement(raw:unknown):Arrangement{
  if(raw&&typeof raw==='object'&&(raw as {version?:unknown}).version===6){const old=object(raw,['version','name','sampleRate','sources','tracks','markers','loop','masterRack','tailFrames']);raw={...old,version:7,tracks:list(old.tracks,ARRANGE_LIMITS.tracks).map(t=>({...(t as Record<string,unknown>),clips:(t as {clips:unknown[]}).clips.map(c=>({...(c as Record<string,unknown>),fadeShape:'linear'}))}))};}
  if(raw&&typeof raw==='object'&&(raw as {version?:unknown}).version===7){const old=object(raw,['version','name','sampleRate','sources','tracks','markers','loop','masterRack','tailFrames']);raw={...old,version:8,bpm:120};}
  if(raw&&typeof raw==='object'&&(raw as {version?:unknown}).version===8){const old=object(raw,['version','name','sampleRate','sources','tracks','markers','loop','masterRack','tailFrames','bpm']);raw={...old,version:9,tracks:list(old.tracks,ARRANGE_LIMITS.tracks).map(t=>({...(t as Record<string,unknown>),clips:(t as {clips:unknown[]}).clips.map(c=>({...(c as Record<string,unknown>),name:''}))}))};}
- const o=object(raw,['version','name','sampleRate','sources','tracks','markers','loop','masterRack','tailFrames','bpm']);if(o.version!==9||o.sampleRate!==48000)return fail('version or sample rate');
+ if(raw&&typeof raw==='object'&&(raw as {version?:unknown}).version===9){const old=object(raw,['version','name','sampleRate','sources','tracks','markers','loop','masterRack','tailFrames','bpm']);raw={...old,version:10,tracks:list(old.tracks,ARRANGE_LIMITS.tracks).map(t=>({...(t as Record<string,unknown>),gainCurve:[]}))};}
+ const o=object(raw,['version','name','sampleRate','sources','tracks','markers','loop','masterRack','tailFrames','bpm']);if(o.version!==10||o.sampleRate!==48000)return fail('version or sample rate');
  const ids=new Set<string>();const id=(v:unknown)=>{const s=text(v,100);if(ids.has(s))return fail('duplicate identity');ids.add(s);return s;};
  const sources=list(o.sources,ARRANGE_LIMITS.sources).map(v=>{const s=object(v,['id','name','frames','sampleRate','channels']);return{id:id(s.id),name:text(s.name),frames:number(s.frames,1,ARRANGE_LIMITS.sourceFrames,true),sampleRate:number(s.sampleRate,8000,192000,true),channels:number(s.channels,1,2,true) as 1|2};});
  if(sources.reduce((n,s)=>n+s.frames*s.channels,0)>ARRANGE_LIMITS.sourceFrames)return fail('source memory budget');
  const max=48000*ARRANGE_LIMITS.seconds;let count=0;
- const tracks=list(o.tracks,ARRANGE_LIMITS.tracks).map(v=>{const t=object(v,['id','name','gainDb','pan','mute','solo','clips','rack']);if(typeof t.mute!=='boolean'||typeof t.solo!=='boolean')return fail('track flags');
+ const tracks=list(o.tracks,ARRANGE_LIMITS.tracks).map(v=>{const t=object(v,['id','name','gainDb','pan','mute','solo','clips','rack','gainCurve']);if(typeof t.mute!=='boolean'||typeof t.solo!=='boolean')return fail('track flags');
+  const gainCurve=list(t.gainCurve,ARRANGE_LIMITS.gainPoints).map(v=>{const p=object(v,['at','db']);return{at:number(p.at,0,max,true),db:number(p.db,-60,12)};}).sort((a,b)=>a.at-b.at);
+  if(gainCurve.some((p,i)=>i>0&&p.at===gainCurve[i-1].at))return fail('duplicate automation point');
   const clips=list(t.clips,ARRANGE_LIMITS.clips).map(v=>{if(++count>ARRANGE_LIMITS.clips)return fail('clip limit');const c=object(v,['id','sourceId','start','offset','length','gainDb','fadeIn','fadeOut','gainCurve','muted','pan','fadeShape','name']);if(c.fadeShape!=='linear'&&c.fadeShape!=='equalPower')return fail('fade shape');if(typeof c.muted!=='boolean')return fail('clip flags');const source=sources.find(s=>s.id===c.sourceId);if(!source)return fail('missing source reference');
    const start=number(c.start,0,max-1,true),offset=number(c.offset,0,max,true),length=number(c.length,1,max,true);if(start+length>max||offset+length>Math.floor(source.frames*48000/source.sampleRate))return fail('clip outside source or timeline');
    const curve=list(c.gainCurve,ARRANGE_LIMITS.gainPoints).map(v=>{const p=object(v,['at','db']);return{at:number(p.at,0,length,true),db:number(p.db,-60,12)};}).sort((a,b)=>a.at-b.at);
    if(curve.some((p,i)=>i>0&&p.at===curve[i-1].at))return fail('duplicate automation point');
    return{id:id(c.id),sourceId:source.id,start,offset,length,gainDb:number(c.gainDb,-60,12),fadeIn:number(c.fadeIn,0,length,true),fadeOut:number(c.fadeOut,0,length,true),gainCurve:curve,muted:c.muted,pan:number(c.pan,-1,1),fadeShape:c.fadeShape as ArrangeClip['fadeShape'],name:clipName(c.name)};
-  });return{id:id(t.id),name:text(t.name),gainDb:number(t.gainDb,-60,12),pan:number(t.pan,-1,1),mute:t.mute,solo:t.solo,rack:validateRack(t.rack),clips};
+  });return{id:id(t.id),name:text(t.name),gainDb:number(t.gainDb,-60,12),pan:number(t.pan,-1,1),mute:t.mute,solo:t.solo,rack:validateRack(t.rack),clips,gainCurve};
  });
  const markers=list(o.markers,128).map(v=>{const m=object(v,['id','name','frame']);return{id:id(m.id),name:text(m.name),frame:number(m.frame,0,max,true)};});
  let loop:Arrangement['loop']=null;if(o.loop!==null){const r=object(o.loop,['start','end']);loop={start:number(r.start,0,max-1,true),end:number(r.end,1,max,true)};if(loop.end<=loop.start)return fail('loop range');}
- return{version:9,masterRack:validateRack(o.masterRack),name:text(o.name),sampleRate:48000,sources,tracks,markers,loop,tailFrames:number(o.tailFrames,0,48000*ARRANGE_LIMITS.tailSeconds,true),bpm:number(o.bpm,20,300)};
+ return{version:10,masterRack:validateRack(o.masterRack),name:text(o.name),sampleRate:48000,sources,tracks,markers,loop,tailFrames:number(o.tailFrames,0,48000*ARRANGE_LIMITS.tailSeconds,true),bpm:number(o.bpm,20,300)};
 }
 export const serializeArrangement=(s:Arrangement)=>JSON.stringify(validateArrangement(s));
 export const parseArrangement=(text:string):Arrangement=>{if(text.length>256_000)throw Error('Sound session document is too large');return validateArrangement(JSON.parse(text));};
 export const arrangementEnd=(s:Arrangement)=>Math.max(0,...s.tracks.flatMap(t=>t.clips.map(c=>c.start+c.length)));
 export const sourceTimelineFrames=(s:AudioSourceRef)=>Math.floor(s.frames*48000/s.sampleRate);
-export const newTrack=(id:string,name:string):ArrangeTrack=>({id,name,gainDb:0,pan:0,mute:false,solo:false,rack:emptyRack(),clips:[]});
+export const newTrack=(id:string,name:string):ArrangeTrack=>({id,name,gainDb:0,pan:0,mute:false,solo:false,rack:emptyRack(),clips:[],gainCurve:[]});
 export const newClip=(id:string,source:AudioSourceRef,start=0):ArrangeClip=>({id,sourceId:source.id,start,offset:0,length:sourceTimelineFrames(source),gainDb:0,fadeIn:0,fadeOut:0,gainCurve:[],muted:false,pan:0,fadeShape:'linear',name:''});
 /** Toggling the loop: clears an active one; otherwise loops the selected output range, or the whole session when no range is set. */
 export const loopToggle=(current:Arrangement['loop'],range:{start:number;end:number}|null,sessionEnd:number):{start:number;end:number}|null=>current?null:range??(sessionEnd>0?{start:0,end:sessionEnd}:null);
 /** The automated level (dB) at a clip-local frame: constant outside the outermost points, linear in dB between points. */
 /** Shapes a normalized fade position (0 silent, 1 full). linear: x; equalPower: sin(x*pi/2), so equal-power crossfades sum to unity power. */
 export const fadeShapeAt=(shape:ArrangeClip['fadeShape'],x:number)=>shape==='equalPower'?Math.sin(Math.max(0,Math.min(1,x))*Math.PI/2):Math.max(0,Math.min(1,x));
-export const gainCurveAt=(clip:ArrangeClip,local:number)=>{const c=clip.gainCurve;if(!c.length)return 0;if(local<=c[0].at)return c[0].db;for(let i=1;i<c.length;i++)if(local<=c[i].at){const a=c[i-1],b=c[i];return a.db+(b.db-a.db)*(local-a.at)/(b.at-a.at);}return c[c.length-1].db;};
+/** The automated level (dB) at a frame on any gain curve: constant outside the outermost points, linear in dB between points. */
+export const curveDbAt=(c:GainPoint[],at:number)=>{if(!c.length)return 0;if(at<=c[0].at)return c[0].db;for(let i=1;i<c.length;i++)if(at<=c[i].at){const a=c[i-1],b=c[i];return a.db+(b.db-a.db)*(at-a.at)/(b.at-a.at);}return c[c.length-1].db;};
+export const gainCurveAt=(clip:ArrangeClip,local:number)=>curveDbAt(clip.gainCurve,local);
 /** History owns deep copies; failed mutations never change the document or history. */
 export class ArrangementHistory{
  private current:Arrangement;private past:Arrangement[]=[];private future:Arrangement[]=[];revision=0;

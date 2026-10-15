@@ -223,3 +223,13 @@ test('clips.quantize snaps starts to the grid, clamps at 0 and validates the gri
  await commandDispatcher.runCommand('sound.arrange.undo');
  assert.deepEqual([...getArrangementState().document.tracks[0].clips].sort((x,y)=>x.start-y.start).map(c=>c.start),[1150,10600],'undo restores');
 }finally{off();resetArrangement();}});
+
+test('track.curve sets automation points and undo restores them',async()=>{resetArrangement();const off=registerArrangeCommands();try{
+ const source={id:'src',name:'tone.wav',frames:96000,sampleRate:48000,channels:2 as const};
+ editArrangement(s=>{s.sources.push(source);s.tracks.push({...newTrack('t1','A'),clips:[newClip('a',source)]});});
+ await commandDispatcher.runCommand('sound.arrange.track.curve',{id:'t1',points:[{at:0,db:0},{at:4800,db:-6}]});
+ assert.equal(getArrangementState().document.tracks[0].gainCurve.length,2);
+ await assert.rejects(commandDispatcher.runCommand('sound.arrange.track.curve',{id:'missing',points:[]}));
+ await commandDispatcher.runCommand('sound.arrange.undo');
+ assert.equal(getArrangementState().document.tracks[0].gainCurve.length,0);
+}finally{off();resetArrangement();}});

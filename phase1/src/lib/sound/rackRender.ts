@@ -1,4 +1,4 @@
-import {arrangementEnd,validateArrangement,type Arrangement} from './arrangement';
+import {arrangementEnd,curveDbAt,validateArrangement,type Arrangement} from './arrangement';
 import {renderArrangement,type DecodedSource,type MixResult} from './mix';
 import {emptyRack,type EffectRack} from './rack';
 export type RackProcessor=(channels:[Float32Array,Float32Array],rack:EffectRack)=>[Float32Array,Float32Array];
@@ -17,8 +17,9 @@ export function renderRackedArrangement(raw:Arrangement,sources:DecodedSource[],
   const neutral={...track,gainDb:0,pan:0,rack:emptyRack()};
   const rendered=renderArrangement({...s,masterRack:emptyRack(),tracks:[neutral]},sources,range).channels;const clips:[Float32Array,Float32Array]=[new Float32Array(total),new Float32Array(total)];clips[0].set(rendered[0]);clips[1].set(rendered[1]);
   const processed=bypass?clips:process(clips,track.rack);if(processed.length!==2||processed.some(ch=>ch.length!==clips[0].length))throw Error('Rack must preserve the rendered length (session plus tail)');
-  const gain=10**(track.gainDb/20),left=Math.min(1,1-track.pan),right=Math.min(1,1+track.pan);
-  for(let i=0;i<processed[0].length;i++){output[0][i]+=processed[0][i]*gain*left;output[1][i]+=processed[1][i]*gain*right;}
+  const gain=10**(track.gainDb/20),left=Math.min(1,1-track.pan),right=Math.min(1,1+track.pan),base=range?range.start:0;
+  if(!track.gainCurve.length)for(let i=0;i<processed[0].length;i++){output[0][i]+=processed[0][i]*gain*left;output[1][i]+=processed[1][i]*gain*right;}
+  else for(let i=0;i<processed[0].length;i++){const g=10**((track.gainDb+curveDbAt(track.gainCurve,base+i))/20);output[0][i]+=processed[0][i]*g*left;output[1][i]+=processed[1][i]*g*right;}
  }
  const channels=bypass?output:process(output,s.masterRack);let peak=0,clippedSamples=0;for(const ch of channels){if(ch.length!==total)throw Error('Master rack changed duration');for(const v of ch){if(!Number.isFinite(v))throw Error('Rack produced invalid samples');peak=Math.max(peak,Math.abs(v));if(Math.abs(v)>1)clippedSamples++;}}
  return{channels,sampleRate:48000,peak,clippedSamples};
