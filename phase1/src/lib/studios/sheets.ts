@@ -13,7 +13,7 @@ export const sheetsStudio:StudioDef={
   bottomBar:{slots:['cursor'],viewportPresets:[]},inspector:'sheets.inspector',tools:[]
  },commands:[],
  shortcuts:{},menus:{view:[]},canvas:'sheets.canvas',shellV2:sheetsShellV2,
- agentV2:{tools:['sheets_inspect_cell','sheets_propose_cell'],contextProviders:['activeDocument'],quickActions:[]},
- agent:{tools:['sheets_inspect_cell','sheets_propose_cell'],contextProviders:['activeDocument'],quickActions:[]},deriveContext:context=>context
+ agentV2:{tools:['sheets_inspect_cell','sheets_propose_cell','sheets_inspect_range','sheets_propose_range'],contextProviders:['activeDocument'],quickActions:[]},
+ agent:{tools:['sheets_inspect_cell','sheets_propose_cell','sheets_inspect_range','sheets_propose_range'],contextProviders:['activeDocument'],quickActions:[]},deriveContext:context=>context
 };
 registerStudio(sheetsStudio);
