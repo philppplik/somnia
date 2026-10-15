@@ -175,6 +175,8 @@
   "sound.arrange.reverseHint": "Kehrt das Quell-Audio um (neues Medium \"<name>-reverse.wav\") und verweist den Clip darauf",
   "sound.arrange.bounce": "Bounce",
   "sound.arrange.bounceHint": "Legt den gerenderten Mix als neue Spur in der Session ab (neues Medium \"<session>-bounce.wav\")",
+  "sound.arrange.freeze": "Freeze",
+  "sound.arrange.freezeHint": "Rendert die Spur mit ihrem Rack als neue Mediendatei, ersetzt die Clips und umgeht das Rack (Undo = Unfreeze; Pegel/Pan bleiben live)",
   "sound.arrange.fit": "Einpassen",
   "sound.arrange.fitHint": "Gesamte Session in den sichtbaren Bereich zoomen",
   "sound.arrange.trimStart": "Anfang an Playhead",

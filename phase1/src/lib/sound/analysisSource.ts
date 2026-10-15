@@ -6,3 +6,8 @@ export function trackAnalysisSession(raw:Arrangement,trackId:string):Arrangement
  if(!track.clips.length)throw Error('Track has no clips to analyse');
  return{...s,masterRack:emptyRack(),tracks:[{...track,mute:false,solo:false}]};
 }
+/** The single-track session behind freeze: like the analysis session, but level and pan neutralized - freeze bakes the rack only, the fader and pan stay live on the frozen track. */
+export function freezeSession(raw:Arrangement,trackId:string):Arrangement{
+ const one=trackAnalysisSession(raw,trackId);
+ return{...one,tracks:one.tracks.map(t=>({...t,gainDb:0,pan:0}))};
+}

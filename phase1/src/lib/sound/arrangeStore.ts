@@ -80,6 +80,23 @@ export async function bounceRenderToTrack(){
  const upload=await session.original.blob.arrayBuffer();if(token!==generation)throw Error('Session changed while bouncing');await request({kind:'source',sourceId:id,wav:upload},[upload]);if(token!==generation)throw Error('Session changed while bouncing');available.add(id);emit({sourcePeaks:{...state.sourcePeaks,[id]:session.original.peaks}});
  history.change(s=>{if(s.tracks.length>=ARRANGE_LIMITS.tracks)throw Error('Track limit');s.sources.push(ref);const track=newTrack(uid(),added.name);track.clips.push(newClip(uid(),ref,state.rangeSelection?.start??0));s.tracks.push(track);});invalidate();
 }
+/** Freezes a track: renders its clips through its own rack (level and pan stay live, so the frozen track sounds identical) into "<track>-freeze.wav" in the media library, replaces the clips with the frozen audio placed at session frame 0 and bypasses the rack. One undoable arrangement edit - undo is the unfreeze. The media item stays in the library like any import. */
+export async function freezeTrackToMedia(trackId:string){
+ if(state.busy)throw Error('Sound is busy');const token=generation;const doc=history.snapshot;const track=doc.tracks.find(t=>t.id===trackId);if(!track)throw Error('Track no longer exists');if(!track.clips.length)throw Error('Track has no clips to freeze');
+ emit({busy:true,error:''});
+ try{
+  const result=await request({kind:'freeze',session:doc,trackId});if(token!==generation)throw Error('Session changed while freezing');
+  const name=uniqueMediaName(getMedia().items.map(m=>m.name),`${track.name.replace(/[^a-z0-9 _-]/gi,'_')}-freeze.wav`);
+  const added=await addMediaFile(new Blob([result.wav],{type:'audio/wav'}),name,undefined,{activate:false});if('error' in added)throw Error(added.error);
+  const item=getMedia().items.find(m=>m.name===added.name&&m.kind==='audio');if(!item)throw Error('Frozen audio was not registered');
+  await openSound(item);const session=getSoundSession(added.name);if(!session?.original)throw Error('Frozen audio is not ready');
+  if(token!==generation)throw Error('Session changed while freezing');
+  const report=session.original.report.output,id=uid();
+  const ref:AudioSourceRef={id,name:added.name,frames:report.frames,sampleRate:report.sample_rate,channels:report.channels as 1|2};
+  const upload=await session.original.blob.arrayBuffer();if(token!==generation)throw Error('Session changed while freezing');await request({kind:'source',sourceId:id,wav:upload},[upload]);if(token!==generation)throw Error('Session changed while freezing');available.add(id);emit({sourcePeaks:{...state.sourcePeaks,[id]:session.original.peaks}});
+  history.change(s=>{const target=s.tracks.find(t=>t.id===trackId);if(!target)throw Error('Track no longer exists');s.sources.push(ref);target.clips=[newClip(uid(),ref)];target.rack={...target.rack,bypass:true};});invalidate();
+ }finally{emit({busy:false});}
+}
 /** Analyses one rendered track (own inserts/level/pan, no master chain) in the mix worker. Bound to the session revision and the current output range, invalidated by edits like the full-mix report. */
 export async function analyzeTrack(trackId:string){const snapshot=history.snapshot;trackAnalysisSession(snapshot,trackId);const rev=history.revision,token=generation;emit({trackAnalysisBusy:true});try{const result=await request({kind:'analyze',session:snapshot,trackId,...(state.rangeSelection?{range:state.rangeSelection}:{})});if(token!==generation||rev!==history.revision)return;emit({trackAnalysis:{trackId,analysis:result.analysis,revision:rev}});}catch(e){if(token===generation)emit({error:e instanceof Error?e.message:String(e)});}finally{if(token===generation)emit({trackAnalysisBusy:false});}}
 export async function renderSession(){const rev=history.revision,token=generation,range=state.rangeSelection;discardMasterPreview();emit({busy:true,error:'',masterPreview:null});try{const result=await request({kind:'render',session:history.snapshot,...(range?{range}:{})});if(token!==generation||rev!==history.revision)return;if(state.url)URL.revokeObjectURL(state.url);blob=new Blob([result.wav],{type:'audio/wav'});emit({url:URL.createObjectURL(blob),peaks:new Float32Array(result.peaks),peak:result.peak,clippedSamples:result.clippedSamples,analysis:result.analysis,renderRevision:rev,renderedRange:range});}catch(e){if(token===generation)emit({error:e instanceof Error?e.message:String(e)});}finally{if(token===generation)emit({busy:false});}}

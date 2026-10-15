@@ -175,6 +175,8 @@
   "sound.arrange.reverseHint": "Inverse l’audio source (nouveau média « <name>-reverse.wav ») et y pointe le clip",
   "sound.arrange.bounce": "Bounce",
   "sound.arrange.bounceHint": "Consolide le mix rendu en nouvelle piste (nouveau média « <session>-bounce.wav »)",
+  "sound.arrange.freeze": "Geler",
+  "sound.arrange.freezeHint": "Rend la piste avec son rack dans un nouveau média, remplace les clips et contourne le rack (annuler dégèle ; niveau et panoramique restent actifs)",
   "sound.arrange.fit": "Ajuster",
   "sound.arrange.fitHint": "Zoomer pour voir toute la session",
   "sound.arrange.trimStart": "Début à la tête de lecture",
