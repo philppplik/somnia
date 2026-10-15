@@ -10368,6 +10368,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.sculpt.maskGrow",
+      "title": "Grow or shrink the sculpt mask of a 3D mesh across neighbouring vertices",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.sculpt.maskInvert",
       "title": "Invert the sculpt mask of a 3D mesh",
       "category": "Edit",

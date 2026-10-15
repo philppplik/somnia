@@ -1324,6 +1324,34 @@ export class Stage{
   set(after);
   this.push({label:{key:'studio3d.hist.invertMask',params:{name:m.name}},undo:()=>set(before),redo:()=>set(after)});
  }
+ /** Grows the sculpt mask across neighbouring vertices (negative steps shrink it back). Vertices sharing a position move together. One undo step. */
+ sculptMaskGrow(id:number,steps:number=1){
+  const m=this.editableMesh(id);const g=m.geometry;
+  const attr=g.getAttribute('somniaMask') as THREE.BufferAttribute|undefined;
+  if(!attr)throw new StageError(`${m.name} has no sculpt mask.`);
+  if(!Number.isInteger(steps)||steps===0)throw new StageError('Steps must be a nonzero integer.');
+  const pos=g.getAttribute('position') as THREE.BufferAttribute;const n=pos.count;
+  const key=(i:number)=>`${Math.round(pos.getX(i)*1e6)},${Math.round(pos.getY(i)*1e6)},${Math.round(pos.getZ(i)*1e6)}`;
+  const gids=new Map<string,number>();const grp:number[]=[];const members:number[][]=[];
+  for(let i=0;i<n;i++){const k=key(i);let gi=gids.get(k);if(gi==null){gi=members.length;gids.set(k,gi);members.push([]);}grp[i]=gi;members[gi].push(i);}
+  const adj:Set<number>[]=members.map(()=>new Set<number>());
+  const idx=g.getIndex();const tri=idx?idx.count:n;const at=(t:number)=>idx?idx.getX(t):t;
+  for(let t=0;t<tri;t+=3){const a=grp[at(t)],b=grp[at(t+1)],c=grp[at(t+2)];
+   if(a!==b){adj[a].add(b);adj[b].add(a);}if(b!==c){adj[b].add(c);adj[c].add(b);}if(a!==c){adj[a].add(c);adj[c].add(a);}}
+  let val=members.map(vs=>{let v=0;for(const i of vs)v=Math.max(v,(attr.array as Float32Array)[i]);return v;});
+  const rounds=Math.min(Math.abs(steps),32);
+  for(let s=0;s<rounds;s++){
+   const next=val.slice();
+   for(let gi=0;gi<val.length;gi++)for(const nb of adj[gi]){if(steps>0)next[gi]=Math.max(next[gi],val[nb]);else next[gi]=Math.min(next[gi],val[nb]);}
+   val=next;
+  }
+  const before=new Float32Array(attr.array as ArrayLike<number> as number[]);
+  const after=new Float32Array(n);
+  for(let i=0;i<n;i++)after[i]=val[grp[i]];
+  const set=(arr:Float32Array)=>{const a=g.getAttribute('somniaMask') as THREE.BufferAttribute;(a.array as Float32Array).set(arr);a.needsUpdate=true;};
+  set(after);
+  this.push({label:{key:'studio3d.hist.growMask',params:{name:m.name}},undo:()=>set(before),redo:()=>set(after)});
+ }
  sculptEnd(){
   const shot=this.sculptShot;this.sculptShot=null;if(!shot)return;
   const m=this.find(shot.id) as THREE.Mesh|undefined;if(!m||!(m as THREE.Mesh).isMesh)return;

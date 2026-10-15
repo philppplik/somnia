@@ -1035,5 +1035,7 @@
  "cmd.studio3d.edit.extrudeIndividual": "Extrude each selected face of the edited 3D mesh along its own normal",
  "studio3d.hist.extrudeIndividual": "Extrude faces individually",
  "cmd.studio3d.sculpt.maskInvert": "Invert the sculpt mask of a 3D mesh",
- "studio3d.hist.invertMask": "Invert mask of {name}"
+ "studio3d.hist.invertMask": "Invert mask of {name}",
+ "cmd.studio3d.sculpt.maskGrow": "Grow or shrink the sculpt mask of a 3D mesh across neighbouring vertices",
+ "studio3d.hist.growMask": "Grow or shrink mask of {name}"
 }

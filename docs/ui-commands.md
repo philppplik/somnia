@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-955 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+956 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -866,6 +866,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `studio3d.sculpt.dab` | Sculpt dab | Edit | studio3d |  |
 | `studio3d.sculpt.end` | End sculpt stroke | Edit | studio3d |  |
 | `studio3d.sculpt.maskClear` | Clear sculpt mask | Edit | studio3d |  |
+| `studio3d.sculpt.maskGrow` | Grow or shrink the sculpt mask of a 3D mesh across neighbouring vertices | Edit | studio3d |  |
 | `studio3d.sculpt.maskInvert` | Invert the sculpt mask of a 3D mesh | Edit | studio3d |  |
 | `studio3d.select` | Select a 3D object | Edit | studio3d |  |
 | `studio3d.selection.delete` | Delete the selected 3D objects | Edit | studio3d |  |

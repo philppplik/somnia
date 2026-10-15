@@ -1035,5 +1035,7 @@
  "cmd.studio3d.edit.extrudeIndividual": "Extruir cada cara seleccionada de la malla 3D editada a lo largo de su propia normal",
  "studio3d.hist.extrudeIndividual": "Extruir caras individualmente",
  "cmd.studio3d.sculpt.maskInvert": "Invertir la máscara de escultura de una malla 3D",
- "studio3d.hist.invertMask": "Invertir máscara de {name}"
+ "studio3d.hist.invertMask": "Invertir máscara de {name}",
+ "cmd.studio3d.sculpt.maskGrow": "Expandir o contraer la máscara de escultura de una malla 3D entre vértices vecinos",
+ "studio3d.hist.growMask": "Expandir o contraer la máscara de {name}"
 }

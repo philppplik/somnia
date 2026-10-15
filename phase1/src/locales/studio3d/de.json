@@ -1035,5 +1035,7 @@
  "cmd.studio3d.edit.extrudeIndividual": "Jede selektierte Face des bearbeiteten 3D-Mesh entlang ihrer eigenen Normale extrudieren",
  "studio3d.hist.extrudeIndividual": "Faces einzeln extrudieren",
  "cmd.studio3d.sculpt.maskInvert": "Sculpt-Maske eines 3D-Mesh umkehren",
- "studio3d.hist.invertMask": "Maske von {name} umkehren"
+ "studio3d.hist.invertMask": "Maske von {name} umkehren",
+ "cmd.studio3d.sculpt.maskGrow": "Sculpt-Maske eines 3D-Mesh über Nachbarvertices vergrößern oder verkleinern",
+ "studio3d.hist.growMask": "Maske von {name} vergrößern oder verkleinern"
 }

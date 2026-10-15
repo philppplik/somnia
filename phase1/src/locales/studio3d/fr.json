@@ -1035,5 +1035,7 @@
  "cmd.studio3d.edit.extrudeIndividual": "Extruder chaque face sélectionnée du maillage 3D édité le long de sa propre normale",
  "studio3d.hist.extrudeIndividual": "Extruder les faces individuellement",
  "cmd.studio3d.sculpt.maskInvert": "Inverser le masque de sculpture d'un maillage 3D",
- "studio3d.hist.invertMask": "Inverser le masque de {name}"
+ "studio3d.hist.invertMask": "Inverser le masque de {name}",
+ "cmd.studio3d.sculpt.maskGrow": "Dilater ou éroder le masque de sculpture d'un maillage 3D vers les sommets voisins",
+ "studio3d.hist.growMask": "Dilater ou éroder le masque de {name}"
 }

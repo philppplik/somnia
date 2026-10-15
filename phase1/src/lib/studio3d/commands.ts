@@ -170,6 +170,7 @@ export interface Studio3DController{
  bend(axis:'x'|'y'|'z',degrees:number,ids?:number[]):number;
  sculptMaskClear(id:number):void;
  sculptMaskInvert(id:number):void;
+ sculptMaskGrow(id:number,steps?:number):void;
  uvSeamMark(mark:boolean):void;
  uvUnwrap(id:number,opts?:{method?:'box'|'angle';pack?:boolean;padding?:number}):void;
  uvPlanar(id:number,axis:'x'|'y'|'z'):void;
@@ -388,6 +389,7 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{id:number;x:number;y:number;z:number;dx?:number;dy?:number;dz?:number;erase?:boolean}>('studio3d.sculpt.dab','Apply one sculpt dab with the configured brush (erase removes mask paint)','Edit',p=>need().sculptDab(p.id,[p.x,p.y,p.z],p.dx!==undefined?[p.dx,p.dy??0,p.dz??0]:undefined,!!p.erase),object({id:{type:'integer',minimum:0},x:{type:'number'},y:{type:'number'},z:{type:'number'},dx:{type:'number',minimum:-1000,maximum:1000},dy:{type:'number',minimum:-1000,maximum:1000},dz:{type:'number',minimum:-1000,maximum:1000},erase:{type:'boolean'}}),hasScene),
   add<{id:number}>('studio3d.sculpt.maskClear','Clear the sculpt mask of a 3D mesh','Edit',p=>need().sculptMaskClear(p.id),object({id:{type:'integer',minimum:0}}),hasScene),
   add<{id:number}>('studio3d.sculpt.maskInvert','Invert the sculpt mask of a 3D mesh','Edit',p=>need().sculptMaskInvert(p.id),object({id:{type:'integer',minimum:0}}),hasScene),
+  add<{id:number;steps?:number}>('studio3d.sculpt.maskGrow','Grow or shrink the sculpt mask of a 3D mesh across neighbouring vertices','Edit',p=>need().sculptMaskGrow(p.id,p.steps??1),object({id:{type:'integer',minimum:0},steps:{type:'integer',minimum:-32,maximum:32}},['id']),hasScene),
   add<{mark?:boolean}>('studio3d.uv.seam','Mark or clear the selected edges of the edited 3D mesh as UV seams','Edit',p=>need().uvSeamMark(p?.mark??true),object({mark:{type:'boolean'}},[]),()=>getStudio3DState().edit!=null),
   add<{id:number;method?:'box'|'angle';pack?:boolean;padding?:number}>('studio3d.uv.unwrap','Unwrap a 3D mesh: box projection per island or angle-based unfolding, packed with padding (grid layout when pack is off)','Edit',p=>need().uvUnwrap(p.id,{method:p.method,pack:p.pack,padding:p.padding}),object({id:{type:'integer',minimum:0},method:{enum:['box','angle']},pack:{type:'boolean'},padding:{type:'number',minimum:0,maximum:0.2}}),hasScene),
   add<{id:number;axis:'x'|'y'|'z'}>('studio3d.uv.planar','Planar UV projection of a 3D mesh along one axis','Edit',p=>need().uvPlanar(p.id,p.axis),object({id:{type:'integer',minimum:0},axis:{enum:['x','y','z']}}),hasScene),
