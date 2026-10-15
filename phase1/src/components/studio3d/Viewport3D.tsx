@@ -1250,6 +1250,7 @@ export default function Viewport3D(){
    editLoopSlide:f=>{stage.editLoopSlide(f);afterEditOp();},
    mirrorMod:(id,axis,merge,on,bisect)=>{stage.mirrorMod(id,axis,merge,on,!!bisect);const sel=getStudio3DState().selected;if(sel!=null)patchStudio3D({selectedInfo:stage.info(sel)});sync();invalidate();},
    sculptMaskClear:id=>{stage.sculptMaskClear(id);invalidate();},
+   sculptMaskInvert:id=>{stage.sculptMaskInvert(id);invalidate();},
    sculptBrush:patch=>{patchStudio3D({sculpt:{...getStudio3DState().sculpt,...patch}});},
    sculptBegin:id=>stage.sculptBegin(id),
    sculptDab:(id,center,delta,erase)=>{const b=getStudio3DState().sculpt;stage.sculptDabAt(id,center,{brush:b.brush,radius:b.radius,strength:b.strength,falloff:b.falloff,symmetry:b.symmetry,delta},!!erase);if(b.brush==='mask'){syncMaskOverlay();}invalidate();},

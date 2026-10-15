@@ -1307,6 +1307,23 @@ export class Stage{
   set(after);
   this.push({label:{key:'studio3d.hist.clearMask',params:{name:m.name}},undo:()=>set(before),redo:()=>set(after)});
  }
+ /** Inverts the sculpt mask of a mesh (masked becomes unmasked and back). A mesh without a mask reads as fully unmasked, so it ends fully masked. One undo step. */
+ sculptMaskInvert(id:number){
+  const m=this.editableMesh(id);const g=m.geometry;
+  const had=g.getAttribute('somniaMask') as THREE.BufferAttribute|undefined;
+  const before=had?new Float32Array(had.array as ArrayLike<number> as number[]):null;
+  const n=(g.getAttribute('position') as THREE.BufferAttribute).count;
+  const after=new Float32Array(n);
+  for(let i=0;i<n;i++)after[i]=1-(before?before[i]:0);
+  const set=(arr:Float32Array|null)=>{
+   if(arr===null){g.deleteAttribute('somniaMask');return;}
+   let a=g.getAttribute('somniaMask') as THREE.BufferAttribute|undefined;
+   if(!a){a=new THREE.BufferAttribute(new Float32Array(n),1);g.setAttribute('somniaMask',a);}
+   (a.array as Float32Array).set(arr);a.needsUpdate=true;
+  };
+  set(after);
+  this.push({label:{key:'studio3d.hist.invertMask',params:{name:m.name}},undo:()=>set(before),redo:()=>set(after)});
+ }
  sculptEnd(){
   const shot=this.sculptShot;this.sculptShot=null;if(!shot)return;
   const m=this.find(shot.id) as THREE.Mesh|undefined;if(!m||!(m as THREE.Mesh).isMesh)return;

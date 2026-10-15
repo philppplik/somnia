@@ -1,4 +1,5 @@
 # Unreleased: 3D Studio P0
+- 3D Studio: the sculpt mask inverts, and a maskless mesh becomes fully masked.
 - 3D Studio: edit mode extrudes each selected face along its own normal.
 - 3D Studio: objects scatter with a seeded random transform jitter.
 - 3D Studio: each selected object snaps its origin onto the 3D cursor.
