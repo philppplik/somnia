@@ -18,7 +18,7 @@ export const layerSplitSpecs=():CommandSpec<unknown,unknown>[]=>[{
   if(!ids.length)return expected('Select a layer first.');
   if(ids.length>MAX_DUPLICATE_LAYERS)return expected(`Pick at most ${MAX_DUPLICATE_LAYERS} layers.`);
   const r=splitPlan(c,ids,s.getState().view.playhead,n=>Array.from({length:n},()=>newId('layer')));
-  if(!r.edits.length)return expected('The playhead must be inside a layer (audio layers cannot be split).');
+  if(!r.edits.length)return expected('The playhead must be inside a layer.');
   try{s.dispatch(r.edits);}catch(e){if(e instanceof EditError)throw Object.assign(e,{expected:true});throw e;}
   const later=Object.values(r.made),primary=s.getState().view.selectedLayer;
   clearLayerSet();later.slice(1).forEach(id=>toggleLayerInSet(id));

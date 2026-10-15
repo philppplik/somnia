@@ -348,3 +348,13 @@ test('P302 purge unused compositions: keeps the open one and everything it reach
  const before=JSON.stringify(s.document);const r=run() as {removed:number};assert.equal(r.removed,2);assert.equal(s.document!.compositions.length,1);
  assert.throws(()=>run(),/in use/);s.undo();assert.equal(JSON.stringify(s.document),before);
 });
+test('P303 split audio at the playhead: two clips, the second continues the same file in sync, one undo',async()=>{
+ const {AnimationSession,setAnimationSession}=await import('./session');const {splitPlan}=await import('./layerSplit');
+ const s=new AnimationSession();s.open(withAudio(asset(wav(16000,8000,1,i=>Math.sin(i/20)*0.5),3)));setAnimationSession(s);
+ s.dispatch({type:'audio.update',layer:'aud',trimIn:sec/2,length:sec,offset:sec});const before=JSON.stringify(s.document);
+ const c=findComp(s.document!)!;assert.equal(splitPlan(c,['aud'],sec,()=>['b']).edits.length,0);assert.equal(splitPlan(c,['aud'],2*sec,()=>['b']).edits.length,0);
+ const r=splitPlan(c,['aud'],1.4*sec,()=>['aud2']);s.dispatch(r.edits);
+ const d=s.document!,a=layer(d,'aud'),b=layer(d,'aud2');
+ assert.equal(a.outT,0.4*sec);assert.equal(a.offset,sec);assert.equal(b.offset,1.4*sec);assert.equal(b.audio!.trimIn,0.9*sec);assert.equal(b.outT,0.6*sec);assert.equal(b.audio!.assetId,a.audio!.assetId);assert.equal(d.audioAssets!.length,1);assert.deepEqual(validateDocument(d),[]);
+ s.undo();assert.equal(JSON.stringify(s.document),before);
+});
