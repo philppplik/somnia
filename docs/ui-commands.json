@@ -7594,6 +7594,14 @@
       "hasEnabled": true
     },
     {
+      "id": "sheets.pages",
+      "title": "Show where the printed pages of the sheet start and end",
+      "category": "Edit",
+      "source": "sheets",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
       "id": "sheets.pageSetup",
       "title": "Change the page setup",
       "category": "Edit",

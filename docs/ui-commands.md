@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1027 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1028 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -638,6 +638,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `sheets.noteReview` | Resolve, reopen or delete a listed note or comment | Edit | sheets |  |
 | `sheets.object` | Add a shape, or move, resize or delete a picture or shape | Edit | sheets |  |
 | `sheets.outline` | Group, collapse or subtotal the selected rows or columns | Edit | sheets |  |
+| `sheets.pages` | Show where the printed pages of the sheet start and end | Edit | sheets |  |
 | `sheets.pageSetup` | Change the page setup | Edit | sheets |  |
 | `sheets.picture` | Insert a PNG or JPEG picture | Edit | sheets |  |
 | `sheets.pivot` | Build or refresh a PivotTable | Edit | sheets |  |

@@ -25,6 +25,7 @@ import {Checkbox} from '../ui/checkbox';
 import {PIVOT_AREAS,PIVOT_VALUE_FUNCS,PIVOT_SHOW_AS,PIVOT_NUMBER_FORMATS,PIVOT_LAYOUTS,PIVOT_SUBTOTALS,PIVOT_GROUPS,PIVOT_ORDERS,PIVOT_STYLES,MAX_PIVOT_ITEMS,pivotSourceProblem} from '../../lib/sheets/pivotEditOps';
 import type {PivotArea,PivotValueFunc,PivotEditOp} from '../../lib/sheets/protocol';
 import {CONSOLIDATE_FUNCTIONS,dataToolProblem,parseSourceList} from '../../lib/sheets/dataToolOps';
+import {pageStart} from '../../lib/sheets/pageBreaks';
 import {SYMBOL_GROUPS,isSymbol,symbolCode,type SymbolGroup} from '../../lib/sheets/symbols';
 import {CELL_STYLE_GROUPS,AUTOSUM_FUNCTIONS,cellToolProblem,toolFromChoice,cleanStyleName,filterFunctions,functionCategories} from '../../lib/sheets/cellToolOps';
 import {SUBTOTAL_FUNCS,MAX_SUBTOTAL_ROWS,parseColumnList,type SubtotalFunc} from '../../lib/sheets/outlineOps';
@@ -239,6 +240,7 @@ export function SheetsLayoutPanel({context}:PanelHostProps){
   <SymbolGroup/>
   <ReviewInfoGroup/>
   <CellInfoGroup/>
+  <PageBreaksGroup/>
   <NamesGroup/>
   <ViewGroup/>
   <ChartsGroup/>
@@ -971,6 +973,27 @@ function CellInfoGroup(){
  return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.ci.title')}>
   <span>{t('sheets.ci.title',{cell:i.address})}</span>
   <ul data-testid="sheets-ci-list">{lines.map((l,n)=><li key={n}>{l}</li>)}</ul>
+ </div>;
+}
+/** Where the printed pages of this sheet start and end, from the engine's print layout. Jump to the first cell of any page. Reads only. */
+function PageBreaksGroup(){
+ const {t}=useT(),s=useSheetsSelection(),action=useAction();const [pick,setPick]=useState(0);
+ if(!s)return null;
+ const list=s.pageList??null,chosen=list?.pages[pick]??list?.pages[0]??null;
+ return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.pb.title')}>
+  <span>{t('sheets.pb.title')}</span>
+  <div className="flex gap-2">
+   <Button variant="outline" size="compact" disabled={action.busy} onClick={()=>void action.run('sheets.pages',{kind:'show'})} data-testid="sheets-pb-show">{t('sheets.pb.show')}</Button>
+   {list&&<Button variant="outline" size="compact" disabled={action.busy} onClick={()=>void action.run('sheets.pages',{kind:'clear'})} data-testid="sheets-pb-clear">{t('sheets.pb.clear')}</Button>}
+  </div>
+  {list&&<p data-testid="sheets-pb-count">{list.total===0?t('sheets.pb.none'):t('sheets.pb.count',{n:list.total})+(list.total>list.pages.length?' '+t('sheets.pb.truncated'):'')}</p>}
+  {list&&list.pages.length>0&&<>
+   <label className="flex flex-col gap-1">{t('sheets.pb.page')}<NativeSelect className={field} value={chosen?list.pages.indexOf(chosen):0} disabled={action.busy} onChange={e=>setPick(Number(e.currentTarget.value))} data-testid="sheets-pb-page">{list.pages.map((p,n)=><option key={p.page} value={n}>{t('sheets.pb.item',{page:p.page,range:p.range})}</option>)}</NativeSelect></label>
+   {chosen&&<p>{t('sheets.pb.detail',{rows:chosen.rows,columns:chosen.columns,scale:chosen.scale,paper:chosen.paper,orientation:t('sheets.pb.o.'+(chosen.orientation==='landscape'?'landscape':'portrait'))})}</p>}
+   <Button variant="outline" size="compact" disabled={action.busy||!chosen} onClick={()=>{if(chosen)void action.run('sheets.navigate',{sheet:s.sheet,address:pageStart(chosen.range)});}} data-testid="sheets-pb-go">{t('sheets.pb.go')}</Button>
+  </>}
+  <p className="text-ink-3">{t('sheets.pb.hint')}</p>
+  {action.notice?<p role="alert">{action.notice}</p>:null}
  </div>;
 }
 /** Removes rows that repeat an earlier row inside exactly the selected block. One undo step. */

@@ -97,6 +97,7 @@ fn is_symbol_char(c: char) -> bool {
     in_block && !hidden && !c.is_control() && !c.is_whitespace()
 }
 const MAX_AUDIT_ITEMS: usize = 200;
+const MAX_PAGES_LISTED: usize = 500;
 const MAX_WATCHED: usize = 50;
 const MAX_CUSTOM_STYLES: usize = 50;
 const SPLIT_DELIMITERS: [char; 5] = [',', ';', '\t', ' ', '|'];
@@ -3076,6 +3077,29 @@ impl HeadlessWorkbook {
         .to_string())
     }
 
+    /// Where the printed pages of one sheet start and end (read only, from the engine's print layout with the sheet's Page Setup, manual breaks and scale):
+    /// `{"pages":[{"page":n,"range":"A1:H40","rows":"1:40","columns":"A:H","scale":85.0,"paper":"A4","orientation":"portrait"}],"total":n}`, at most 500 listed.
+    pub fn page_breaks(&mut self, sheet: usize) -> Result<String, String> {
+        let name = {
+            let doc = self.session.doc().map_err(|e| e.to_string())?;
+            doc.wb.sheet(sheet).ok_or("unknown sheet")?.name.clone()
+        };
+        let preview = self.session.run("file.printPreview", json!({"sheets": "all"}))?;
+        let list = preview.get("pageList").and_then(|l| l.as_array()).ok_or("page list unavailable")?;
+        let mine: Vec<&serde_json::Value> = list.iter().filter(|p| p.get("sheet").and_then(|s| s.as_str()) == Some(name.as_str())).collect();
+        let text = |p: &serde_json::Value, k: &str, n: usize| p.get(k).and_then(|v| v.as_str()).unwrap_or("").chars().take(n).collect::<String>();
+        let pages: Vec<serde_json::Value> = mine
+            .iter()
+            .enumerate()
+            .take(MAX_PAGES_LISTED)
+            .map(|(i, p)| json!({
+                "page": i + 1, "range": text(p, "range", 40), "rows": text(p, "rows", 24), "columns": text(p, "columns", 24),
+                "scale": p.get("scale").and_then(|v| v.as_f64()).unwrap_or(100.0), "paper": text(p, "paper", 24), "orientation": text(p, "orientation", 12)
+            }))
+            .collect();
+        Ok(json!({"pages": pages, "total": mine.len()}).to_string())
+    }
+
     /// Names of the custom cell styles saved in this workbook (read only, at most 50): `{"styles":["name"]}`.
     pub fn custom_cell_styles(&self) -> Result<String, String> {
         let doc = self.session.doc().map_err(|e| e.to_string())?;
@@ -5285,6 +5309,21 @@ mod tests {
         assert_eq!(e["type"], "empty");
         assert!(book.cell_info(0, 5_000_000, 0).is_err());
         assert!(book.cell_info(99, 0, 0).is_err());
+        assert_eq!(steps(&book), before);
+    }
+    #[test]
+    fn page_breaks_lists_pages_of_the_sheet_without_changing_anything() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        let steps = |b: &HeadlessWorkbook| b.session.doc().unwrap().undo.len();
+        let before = steps(&book);
+        let v: serde_json::Value = serde_json::from_str(&book.page_breaks(0).unwrap()).unwrap();
+        assert!(v["pages"].is_array());
+        assert_eq!(v["total"].as_u64().unwrap() as usize >= v["pages"].as_array().unwrap().len(), true);
+        if let Some(first) = v["pages"].as_array().and_then(|p| p.first()) {
+            assert_eq!(first["page"], 1);
+            assert!(first["range"].as_str().unwrap().contains(':') || first["range"].as_str().unwrap().len() >= 2);
+        }
+        assert!(book.page_breaks(99).is_err());
         assert_eq!(steps(&book), before);
     }
     #[test]

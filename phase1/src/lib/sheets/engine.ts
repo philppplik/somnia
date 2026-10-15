@@ -1,3 +1,4 @@
+import {parsePageList,type PageList} from './pageBreaks';
 import {parseCellInfo,type CellInfo} from './cellInfo';
 import {parseReviewResult,type ReviewResult} from './reviewInfo';
 import {parseAuditAnswer,type AuditAnswer,type AuditBridgeOp} from './audit';
@@ -153,6 +154,7 @@ export class SheetsEngine{
  insertSymbol(sheet:number,row:number,col:number,char:string){return this.result<unknown>({op:'insertSymbol',sheet,row,col,char});}
  async reviewInfo(sheet:number,kind:'stats'|'accessibility'):Promise<ReviewResult>{return parseReviewResult(await this.result<unknown>({op:'reviewInfo',sheet,kind}));}
  async cellInfo(sheet:number,row:number,col:number):Promise<CellInfo>{return parseCellInfo(await this.result<unknown>({op:'cellInfo',sheet,row,col}));}
+ async pageBreaks(sheet:number):Promise<PageList>{return parsePageList(await this.result<unknown>({op:'pageBreaks',sheet}));}
  async customStyles():Promise<string[]>{return parseCustomStyles(await this.result<unknown>({op:'customStyles'}));}
  async notesOverview(sheet:number):Promise<NoteList>{return parseNoteList(await this.result<unknown>({op:'notesOverview',sheet}));}
  async annotations(sheet:number,row:number,col:number):Promise<CellAnnotations>{const r=await this.result<{notes:unknown;links:unknown}>({op:'annotations',sheet,row,col});return parseAnnotations(r);}

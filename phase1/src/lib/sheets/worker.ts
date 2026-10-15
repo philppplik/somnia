@@ -39,6 +39,7 @@ scope.onmessage=({data}:MessageEvent<SheetsRequest>)=>{queue=queue.then(async()=
    case 'insertSymbol':result=JSON.parse(need().insert_symbol(data.sheet,data.row,data.col,data.char));break;
    case 'reviewInfo':result=JSON.parse(need().review_info(data.sheet,data.kind));break;
    case 'cellInfo':result=JSON.parse(need().cell_info(data.sheet,data.row,data.col));break;
+   case 'pageBreaks':result=JSON.parse(need().page_breaks(data.sheet));break;
    case 'customStyles':result=JSON.parse(need().custom_cell_styles());break;
    case 'notesOverview':result=JSON.parse(need().notes_overview(data.sheet));break;
    case 'validationInfo':result=JSON.parse(need().validation_info(data.sheet,data.row,data.col));break;
