@@ -1,5 +1,5 @@
 import {useCallback,useEffect,useRef,useState} from 'react';
-import {ChevronsLeft,ChevronsRight,Download,Pause,Play,Redo2,Scissors,Undo2,Volume2,VolumeX} from '../../lib/icons';
+import {ChevronsLeft,ChevronsRight,Download,Pause,Play,Redo2,Scissors,Undo2,Volume2,VolumeX,ZoomIn,ZoomOut} from '../../lib/icons';
 import {Button} from '../ui/button';
 import {useT} from '../../lib/useT';
 import {executeCommand} from '../../lib/commands';
@@ -9,6 +9,7 @@ import {TitlePreview} from './TitlePreview';
 import {useTitlePlayback} from './useTitlePlayback';
 import {FilmstripStrip} from './FilmstripStrip';
 import {blendAt,clipRanges,locate,timelineDuration} from '../../lib/video/timeline';
+import {zoomInStep,zoomOutStep} from '../../lib/video/zoom';
 import {formatTime} from '../../lib/video/recipe';
 import {formatBytes,getState,patchState,requestStudio,useAppStore,useMedia,type MediaItem} from './workspace-deps';
 import {VideoTimeline} from './VideoTimeline';
@@ -23,9 +24,11 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
  const slotA=useRef<HTMLVideoElement>(null),slotB=useRef<HTMLVideoElement>(null);
  const [playhead,setPlayhead]=useState(0),[playing,setPlaying]=useState(false),[muted,setMuted]=useState(false),[volume,setVolume]=useState(1);
  const [playable,setPlayable]=useState(true);
+ const [zoom,setZoom]=useState(1);
  const note=session?.exportOutcome?t(session.exportOutcome==='downloaded'?'video.downloaded':'video.review.'+session.exportOutcome):'';
  const playingRef=useRef(false);
  useEffect(()=>{void openVideo(item);},[item]);
+ useEffect(()=>{setZoom(1);},[item.name]);
  // Opening a video takes you to the Video Studio unless you picked a studio yourself.
  // The Video rail offers Files only, so do not leave the HTML Layers tree open beside video.
  useEffect(()=>{if(studio==='video'&&!['files','search'].includes(getState().leftTab))patchState({leftTab:'files'});},[studio]);
@@ -114,6 +117,8 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
   else if(e.key==='ArrowLeft'&&e.altKey&&selected){e.preventDefault();moveTimelineClip(item.name,selected,-1);}
   else if(e.key==='m'||e.key==='M'){e.preventDefault();const id=selected??entry?.range.clip.id;if(id)toggleTimelineClipMute(item.name,id);}
   else if(e.key==='Home'){e.preventDefault();seek(0);}
+  else if(e.key==='+'||e.key==='='){e.preventDefault();setZoom(z=>zoomInStep(z));}
+  else if(e.key==='-'){e.preventDefault();setZoom(z=>zoomOutStep(z));}
   else if(e.key==='End'){e.preventDefault();seek(duration);}
  };
  // Title cards have no <video>; this rAF clock plays through them and advances at the card end.
@@ -160,13 +165,17 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
      <span className="flex-1"/>
      <Button size="icon" variant="ghost" aria-label={t(muted?'video.unmute':'video.mute')} aria-pressed={muted} onClick={()=>setMuted(m=>!m)} data-testid="video-mute">{muted?<VolumeX size={16}/>:<Volume2 size={16}/>}</Button>
      <NativeInput type="range" className="w-20 accent-[var(--accent)]" min={0} max={1} step={0.05} value={volume} aria-label={t('video.volume')} onChange={e=>{const n=Number(e.target.value);setVolume(n);}} data-testid="video-volume"/>
+     <span className="mx-1 h-4 w-px bg-subtle" aria-hidden="true"/>
+     <Button size="icon" variant="ghost" aria-label={t('video.zoomOut')} disabled={zoom<=1} onClick={()=>setZoom(z=>zoomOutStep(z))} data-testid="video-zoom-out"><ZoomOut size={15}/></Button>
+     <NativeInput type="range" className="w-20 accent-[var(--accent)]" min={1} max={20} step={0.5} value={zoom} aria-label={t('video.zoom')} aria-valuetext={t('video.zoomValue',{zoom:zoom.toFixed(1)})} onChange={e=>setZoom(Math.min(20,Math.max(1,Number(e.target.value))))} data-testid="video-zoom"/>
+     <Button size="icon" variant="ghost" aria-label={t('video.zoomIn')} disabled={zoom>=20} onClick={()=>setZoom(z=>zoomInStep(z))} data-testid="video-zoom-in"><ZoomIn size={15}/></Button>
     </div>
     <div className="px-4 pb-2 pt-1">
      <VideoTimeline clips={clips} selectedId={session?.selectedClipId??null} position={playhead} missing={missing}
       onSeek={seek} onSelect={id=>selectTimelineClip(item.name,id)}
       onTrim={(id,edge,at)=>trimTimelineClip(item.name,id,edge,at,`trim:${id}:${edge}`)}
       onMove={(id,by)=>moveTimelineClip(item.name,id,by)}
-      trackHeight={48}
+      trackHeight={48} zoom={zoom} onZoom={setZoom}
       renderStrip={c=>needsSourceFile(c)&&filmstrip?<FilmstripStrip controller={filmstrip} source={c.source} in_s={c.in_s} out_s={c.out_s} name={shortName(c.source)}/>:null}
       label={t('video.timeline',{name:item.name})}/>
     </div>
