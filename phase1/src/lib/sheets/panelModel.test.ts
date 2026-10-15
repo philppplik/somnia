@@ -94,3 +94,10 @@ test('all panel strings and commands have five-locale parity',()=>{
  const en=SHEETS_PANEL_CATALOGUES.en;for(const [locale,strings] of Object.entries(SHEETS_PANEL_CATALOGUES)){assert.deepEqual(Object.keys(strings),Object.keys(en),locale);for(const value of Object.values(strings))assert.ok(value.trim(),locale);}
  for(const panel of sheetsPanelDefs){assert.ok(en[panel.titleKey!]);for(const command of panel.commands??[])if(command.startsWith('sheets.')&&!['sheets.undo','sheets.redo','sheets.saveCopy'].includes(command))assert.ok(en['cmd.'+command]);}
 });
+test('an aggregate may use a visible defined name',()=>{
+ assert.equal(aggregateFormula('SUM','prices',['Prices','Rate']),'=SUM(Prices)');
+ assert.equal(aggregateFormula('AVERAGE',' Rate ',['Prices','Rate']),'=AVERAGE(Rate)');
+ assert.equal(aggregateFormula('SUM','A1:B2',['A1B']),'=SUM(A1:B2)');
+ assert.throws(()=>aggregateFormula('SUM','Prices'));assert.throws(()=>aggregateFormula('SUM','Other',['Prices']));assert.throws(()=>aggregateFormula('SUM','',['']));
+ assert.throws(()=>aggregateFormula('WEBSERVICE','Prices',['Prices']));
+});

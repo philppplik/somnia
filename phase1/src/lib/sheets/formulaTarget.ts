@@ -12,12 +12,12 @@ export type FormulaTargetProblem='empty'|'invalid'|'circular';
  * Returns null when the target may receive the formula. An invalid *source* is reported
  * by the formula field itself, so only target problems surface here.
  */
-export function formulaTargetProblem(source:string,target:string):FormulaTargetProblem|null{
+export function formulaTargetProblem(source:string,target:string,nameRange?:string|null):FormulaTargetProblem|null{
  const trimmed=target.trim();
  if(!trimmed)return 'empty';
  const address=parseAddress(trimmed);
  if(!address)return 'invalid';
- const range=parsePanelRange(source);
+ const range=parsePanelRange(source)??(nameRange?parsePanelRange(nameRange):null);
  if(range&&inRect(range,address.row,address.col))return 'circular';
  return null;
 }

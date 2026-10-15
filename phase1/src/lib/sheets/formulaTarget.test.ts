@@ -31,3 +31,8 @@ test('cellHasContent: formulas and values count, empty cells do not',()=>{
  assert.equal(cellHasContent({value:{t:'Number',v:0}}),true);
  assert.equal(cellHasContent({value:{t:'Text',v:''}}),true);
 });
+test('a name that covers the target is circular',()=>{
+ assert.equal(formulaTargetProblem('Prices','B3','B2:B9'),'circular');
+ assert.equal(formulaTargetProblem('Prices','C3','B2:B9'),null);
+ assert.equal(formulaTargetProblem('Prices','C3',null),null);
+});

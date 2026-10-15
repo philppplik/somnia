@@ -14,8 +14,14 @@ export function summarizeCells(cells:readonly RangeCell[],total:number){
  return {total,filled,empty:Math.max(0,total-filled),numbers,errors,formulas,sum,average:numbers?sum/numbers:null,min:numbers?min:null,max:numbers?max:null};
 }
 export const FORMULA_FUNCTIONS=['SUM','AVERAGE','MIN','MAX','COUNT','COUNTA'] as const;
-export function aggregateFormula(fn:string,input:string){
+export function aggregateFormula(fn:string,input:string,definedNames:readonly string[]=[]){
  if(!FORMULA_FUNCTIONS.includes(fn as typeof FORMULA_FUNCTIONS[number]))throw Error('Unsupported aggregate function.');
- const range=parsePanelRange(input);if(!range)throw Error('Invalid or oversized range.');
+ const range=parsePanelRange(input);
+ if(!range){
+  // A defined name instead of a range: only one the caller lists as visible, written with its own spelling.
+  const want=input.trim().toLowerCase(),hit=want===''?undefined:definedNames.find(n=>n.toLowerCase()===want);
+  if(!hit)throw Error('Invalid or oversized range.');
+  return `=${fn}(${hit})`;
+ }
  return `=${fn}(${rangeAddress(range)})`;
 }
