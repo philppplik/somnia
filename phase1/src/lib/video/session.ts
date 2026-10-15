@@ -183,6 +183,25 @@ export function addImageClip(root:string,item:{name:string},seconds?:number,at?:
  patch(root,{selectedClipId:clip.id,selectedAudioClipId:null});
  return clip.id;
 }
+/** Swaps a clip's source for another open media item, keeping trim, speed, gain, fades and flip. Media clips are re-probed and clamped into the new source's bounds; image clips swap the file name directly. Titles refuse. */
+export async function replaceClipSource(root:string,id:string,item:{name:string;url:string;kind?:string}):Promise<boolean>{
+ const s=sessions.get(root);if(!s)return false;
+ const clip=s.clips.find(c=>c.id===id);
+ if(!clip||isTitleClip(clip)||clip.source===item.name)return false;
+ if(clip.kind==='image'){
+  editTimeline(root,clips=>clips.map(c=>c.id===id?{...c,source:item.name}:c));
+  return true;
+ }
+ await openVideo(item as {name:string;url:string});
+ const probe=sessions.get(item.name)?.probe;if(!probe)return false;
+ const dur=probe.duration;
+ editTimeline(root,clips=>clips.map(c=>{
+  if(c.id!==id)return c;
+  const len=c.out_s-c.in_s,in_s=Math.min(c.in_s,Math.max(0,dur-MIN_EXPORT_RANGE));
+  return{...c,source:item.name,in_s:Number(in_s.toFixed(3)),out_s:Number(Math.min(dur,in_s+len).toFixed(3))};
+ }));
+ return true;
+}
 /** Sets a clip's mirror (media and image clips; 'none' clears). */
 export function setTimelineClipFlip(root:string,id:string,flip:ClipFlip){
  const s=sessions.get(root);if(!s)return;

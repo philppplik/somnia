@@ -2,7 +2,7 @@ import {useMemo,useState} from 'react';
 import {Button} from '../ui/button';
 import {useT} from '../../lib/useT';
 import {useMedia} from '../../lib/media';
-import {addAudioTrackClip,addImageClip,addTimelineClip,addTimelineClipsFromDialog,cancelVideoExport,deleteAudioTrackClip,deleteTimelineClip,duplicateAudioTrackClip,moveAudioTrackClip,moveTimelineClip,resetTimeline,resizeAudioTrackClip,setAudioTrackClipDuck,setAudioTrackClipFades,setAudioTrackClipGain,toggleAudioTrackClipMute,setTimelineClipCrossfade,setTimelineClipGain,setTimelineClipSpeed,setVideoFormat,duplicateTimelineClip,selectTimelineClip,setImageClipLength,setTimelineClipFlip,setVideoExportOptions,setVideoExportRange,toggleTimelineClipMute,trimTimelineClip,useVideoSession} from '../../lib/video/session';
+import {addAudioTrackClip,addImageClip,addTimelineClip,addTimelineClipsFromDialog,cancelVideoExport,deleteAudioTrackClip,deleteTimelineClip,duplicateAudioTrackClip,moveAudioTrackClip,moveTimelineClip,resetTimeline,resizeAudioTrackClip,setAudioTrackClipDuck,setAudioTrackClipFades,setAudioTrackClipGain,toggleAudioTrackClipMute,setTimelineClipCrossfade,setTimelineClipGain,setTimelineClipSpeed,setVideoFormat,duplicateTimelineClip,replaceClipSource,selectTimelineClip,setImageClipLength,setTimelineClipFlip,setVideoExportOptions,setVideoExportRange,toggleTimelineClipMute,trimTimelineClip,useVideoSession} from '../../lib/video/session';
 import {audioClipDuration,audioTrackEnd} from '../../lib/video/audioTrack';
 import {clipDuration,clipRanges,fadeOf,flipOf,IMAGE_DEFAULT_SECONDS,isImageClip,MAX_GAIN,speedOf,timelineDuration,type ClipFlip} from '../../lib/video/timeline';
 import {isTitleClip} from '../../lib/video/titles';
@@ -19,6 +19,7 @@ export function VideoControls({name}:{name:string}){
  const [addPick,setAddPick]=useState('');
  const [addAudioPick,setAddAudioPick]=useState('');
  const [addImagePick,setAddImagePick]=useState('');
+ const [swapPick,setSwapPick]=useState('');
  const candidates=useMemo(()=>media.items.filter(i=>i.kind==='video'),[media.items]);
  const audioCandidates=useMemo(()=>media.items.filter(i=>i.kind==='audio'),[media.items]);
  const imageCandidates=useMemo(()=>media.items.filter(i=>i.kind==='image'),[media.items]);
@@ -89,6 +90,13 @@ export function VideoControls({name}:{name:string}){
   {selected&&isImageClip(selected)&&<div className={row} data-testid="video-image-panel">
    <span className="text-ink">{t('video.imageClipTitle')}</span>
    <span className="truncate text-ink-3" data-testid="video-image-source">{selected.source}</span>
+   <div className="flex items-center gap-2">
+    <NativeSelect className={field} value={swapPick} onChange={e=>setSwapPick(e.target.value)} aria-label={t('video.swapSourcePick')} data-testid="video-swap-pick">
+     <option value="">{t('video.swapSourcePick')}</option>
+     {imageCandidates.filter(i=>i.name!==selected.source).map(i=><option key={i.name} value={i.name}>{i.name}</option>)}
+    </NativeSelect>
+    <Button size="compact" disabled={!swapPick} onClick={()=>{const item=imageCandidates.find(i=>i.name===swapPick);if(item)void replaceClipSource(name,selected.id,item);setSwapPick('');}} data-testid="video-swap-source">{t('video.swapSource')}</Button>
+   </div>
    <label>{t('video.imageDuration',{seconds:(selected.out_s-selected.in_s).toFixed(2)})}
     <NativeInput type="number" className={`${field} mt-1`} min={0.05} max={3600} step={0.5} value={selected.out_s} onChange={e=>setImageClipLength(name,selected.id,Number(e.target.value),`image-len:${selected.id}`)} data-testid="video-image-duration"/>
    </label>
@@ -111,6 +119,13 @@ export function VideoControls({name}:{name:string}){
   {selected&&!isTitleClip(selected)&&!isImageClip(selected)&&<div className={row} data-testid="video-clip-panel">
    <span className="text-ink">{t('video.clipTitle',{index:selectedIndex+1})}</span>
    <span className="truncate text-ink-3" data-testid="video-clip-source">{selected.source}</span>
+   <div className="flex items-center gap-2">
+    <NativeSelect className={field} value={swapPick} onChange={e=>setSwapPick(e.target.value)} aria-label={t('video.swapSourcePick')} data-testid="video-swap-pick">
+     <option value="">{t('video.swapSourcePick')}</option>
+     {candidates.filter(i=>i.name!==selected.source).map(i=><option key={i.name} value={i.name}>{i.name}</option>)}
+    </NativeSelect>
+    <Button size="compact" disabled={!swapPick} onClick={()=>{const item=candidates.find(i=>i.name===swapPick);if(item)void replaceClipSource(name,selected.id,item);setSwapPick('');}} data-testid="video-swap-source">{t('video.swapSource')}</Button>
+   </div>
    <div className="grid grid-cols-2 gap-2">
     <label>{t('video.trimStart')}<NativeInput type="number" className={`${field} mt-1`} min={0} step={0.01} value={selected.in_s} onChange={e=>trimTimelineClip(name,selected.id,'in',Number(e.target.value),`trim:${selected.id}:in`)} data-testid="video-clip-in-input"/></label>
     <label>{t('video.trimEnd')}<NativeInput type="number" className={`${field} mt-1`} min={0} step={0.01} value={selected.out_s} onChange={e=>trimTimelineClip(name,selected.id,'out',Number(e.target.value),`trim:${selected.id}:out`)} data-testid="video-clip-out-input"/></label>

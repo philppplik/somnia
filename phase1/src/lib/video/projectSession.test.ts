@@ -6,7 +6,7 @@ import {addTimelineClip} from './session';
 import {setVideoEngineFactory} from './session';
 const MP4=new URL('../../../tests/assets/clip.mp4',import.meta.url);
 const bytes=(u:URL)=>new Uint8Array(readFileSync(u));
-import {addImageClip,closeVideo,duplicateTimelineClip,dirtyVideoNames,getVideoSession,openVideo,redoVideoEdit,serializeVideoProjectCopy,setImageClipLength,setTimelineClipFlip,setVideoFormat,undoVideoEdit,videoIsDirty} from './session';
+import {addImageClip,closeVideo,duplicateTimelineClip,dirtyVideoNames,getVideoSession,openVideo,redoVideoEdit,replaceClipSource,serializeVideoProjectCopy,setImageClipLength,setTimelineClipFlip,setVideoFormat,trimTimelineClip,undoVideoEdit,videoIsDirty} from './session';
 import {addTitleClip,updateTitle} from './titleSession';
 
 test('project: a saved .video-project reloads its timeline and format, clean',async()=>{
@@ -154,5 +154,40 @@ test('project: mirroring a clip sets, changes and clears the flip; titles refuse
  assert.ok(videoIsDirty(getVideoSession(a)));
  undoVideoEdit(a);undoVideoEdit(a);
  assert.equal(getVideoSession(a)!.clips[0].flip,'h','undo walks the flips back');
+ closeVideo(a);closeMedia(a);
+});
+
+test('project: replacing a clip source keeps trim, speed and flip and clamps to the new duration',async()=>{
+ setVideoEngineFactory(()=>({async capabilities(){return{webmVideo:'vp9',mp4Video:null,opus:true,aac:false};},async probe(){return{duration:4,video:{codec:'vp9',width:640,height:360,fps:30},audio:null};},async export(){throw new Error('not needed');},cancelExport(){},dispose(){}}));
+ for(const n of ['swap-a.mp4','swap-b.mp4']){const r=await addMediaFile(new Blob([bytes(MP4)],{type:'video/mp4'}),n);assert.ok('name' in r,JSON.stringify(r));}
+ const itemA=getMedia().items.find(i=>i.name==='swap-a.mp4')!;
+ await openVideo(itemA);
+ const name='swap-a.mp4';
+ trimTimelineClip(name,getVideoSession(name)!.clips[0].id,'in',1);
+ const clipId=getVideoSession(name)!.clips[0].id;
+ setTimelineClipFlip(name,clipId,'h');
+ try{
+  const ok=await replaceClipSource(name,clipId,getMedia().items.find(i=>i.name==='swap-b.mp4')!);
+  assert.ok(ok);
+  const c=getVideoSession(name)!.clips[0];
+  assert.equal(c.source,'swap-b.mp4');
+  assert.deepEqual([c.in_s,c.out_s],[1,4],'trim kept, clamped into the 4 s replacement');
+  assert.equal(c.flip,'h','flip survives');
+  assert.equal(await replaceClipSource(name,clipId,getMedia().items.find(i=>i.name==='swap-b.mp4')!),false,'same source is a no-op');
+  undoVideoEdit(getVideoSession(name)!.name);
+  assert.equal(getVideoSession(name)!.clips[0].source,'swap-a.mp4','undo restores the old source');
+ }finally{closeVideo(name);closeVideo('swap-b.mp4');closeMedia(name);closeMedia('swap-b.mp4');}
+});
+
+test('project: image clips swap their file, titles refuse a swap',async()=>{
+ const a='swap-img.video-project';
+ addBlankVideoProject(a);
+ await openVideo(getMedia().items.find(i=>i.name===a)!);
+ const imgId=addImageClip(a,{name:'one.png'})!;
+ addTitleClip(a,Number.MAX_SAFE_INTEGER,{text:'T'});
+ const titleId=getVideoSession(a)!.clips[1].id;
+ assert.equal(await replaceClipSource(a,imgId,{name:'two.png',kind:'image'}),true);
+ assert.deepEqual([getVideoSession(a)!.clips[0].source,getVideoSession(a)!.clips[0].out_s],['two.png',5],'name swapped, duration kept');
+ assert.equal(await replaceClipSource(a,titleId,{name:'x.mp4'}),false,'titles refuse');
  closeVideo(a);closeMedia(a);
 });
