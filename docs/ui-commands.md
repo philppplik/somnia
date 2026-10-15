@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1080 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1081 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -289,6 +289,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `animation.workarea.toMarkers` | Set the work area to the section between markers at the playhead | Edit | animation |  |
 | `chat.toggle` | Toggle session chat | View | core | `Mod+Alt+C` |
 | `code.attribute.set` | Set element attribute | Edit | core |  |
+| `code.definition.local` | Go to local definition | Tools | core | `F12` |
 | `code.outline.reveal` | Reveal element in source | View | core |  |
 | `code.preview.width` | Set preview width | View | core |  |
 | `code.snippets` | Code snippets... | Insert | core |  |

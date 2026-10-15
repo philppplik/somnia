@@ -3998,6 +3998,21 @@
       "hasEnabled": true
     },
     {
+      "id": "code.definition.local",
+      "title": "Go to local definition",
+      "category": "Tools",
+      "source": "core",
+      "shortcut": "F12",
+      "keywords": [
+        "definition",
+        "local",
+        "navigation",
+        "symbol"
+      ],
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
       "id": "code.outline.reveal",
       "title": "Reveal element in source",
       "category": "View",
