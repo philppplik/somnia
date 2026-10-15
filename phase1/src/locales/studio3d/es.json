@@ -1063,5 +1063,6 @@
  "studio3d.edit.proportional": "Edición proporcional",
  "studio3d.edit.proportionalRadius": "Radio de influencia",
  "cmd.studio3d.edit.gridFill": "Rellenar el bucle de aristas cerrado seleccionado de la malla 3D editada con una rejilla interpolada",
- "studio3d.hist.gridFill": "Relleno en rejilla 3D"
+ "studio3d.hist.gridFill": "Relleno en rejilla 3D",
+ "studio3d.edit.proportionalConnected": "Solo conectados"
 }

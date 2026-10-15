@@ -1,4 +1,5 @@
 # Unreleased: 3D Studio P0
+- 3D Studio: proportional editing can follow mesh connectivity, so unconnected islands no longer move along.
 - 3D Studio: grid fill closes an even edge loop with an interpolated grid instead of a triangle fan.
 - 3D Studio: edit-mode rotate, scale and shear respect the transform pivot, orbiting the world origin or the 3D cursor instead of the selection median.
 - 3D Studio: proportional editing lets nearby vertices follow move, rotate, scale and shear with a falloff.

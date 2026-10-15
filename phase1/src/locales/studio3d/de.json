@@ -1063,5 +1063,6 @@
  "studio3d.edit.proportional": "Proportionales Bearbeiten",
  "studio3d.edit.proportionalRadius": "Einflussradius",
  "cmd.studio3d.edit.gridFill": "Die ausgewählte geschlossene Kantenschleife des bearbeiteten 3D-Meshs mit einem interpolierten Gitter füllen",
- "studio3d.hist.gridFill": "3D-Gitterfüllung"
+ "studio3d.hist.gridFill": "3D-Gitterfüllung",
+ "studio3d.edit.proportionalConnected": "Nur verbundene"
 }

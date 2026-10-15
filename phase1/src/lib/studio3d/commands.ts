@@ -242,7 +242,7 @@ export interface Studio3DController{
  setSnap(patch:Partial<SnapSettings>):void;
  setPivotMode(mode:PivotMode):void;
  setCursor(p:Vec3):void;
- setProportional(patch:{on?:boolean;radius?:number;falloff?:'smooth'|'linear'|'constant'}):void;
+ setProportional(patch:{on?:boolean;radius?:number;falloff?:'smooth'|'linear'|'constant';connected?:boolean}):void;
  cursorToSelection():void;
  setMeasure(on:boolean):void;
  renderStill(opts?:RenderOptions):Promise<void>;
@@ -285,7 +285,7 @@ const KEYREFS={type:'array',items:{type:'object',properties:{path:{enum:['positi
 const hasScene=()=>!!controller&&getStudio3DState().status==='ready';
 const object=(properties:Record<string,unknown>,required=Object.keys(properties))=>({type:'object',properties,required,additionalProperties:false});
 export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
- const propArg=()=>{const pr=getStudio3DState().proportional;return pr.on?{radius:pr.radius,falloff:pr.falloff}:undefined;};
+ const propArg=()=>{const pr=getStudio3DState().proportional;return pr.on?{radius:pr.radius,falloff:pr.falloff,connected:pr.connected}:undefined;};
  const pivotArg=():[number,number,number]|undefined=>{const pv=getStudio3DState().pivot;if(pv==='origin')return [0,0,0];if(pv==='cursor'){const c=getStudio3DState().cursor;return [c.x,c.y,c.z];}return undefined;};
  const add=<P,>(id:string,title:string,category:CommandSpec['category'],run:(p:P)=>unknown,schema:Record<string,unknown>=object({},[]),enabled:()=>boolean=hasScene):CommandSpec<P,unknown>=>({id,title,category,level:'ui',keywords:['3d','model','scene','gltf'],params:schema,enabled,run});
  const need=()=>{if(!controller)throw Object.assign(new Error('The 3D viewport is not ready.'),{expected:true});return controller;};
@@ -377,7 +377,7 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{twist?:number}>('studio3d.edit.bridgeFaces','Bridge the borders of two selected face groups of the edited 3D mesh with a sewn triangle strip','Edit',p=>need().editBridgeFaces(p?.twist??0),object({twist:{type:'integer',minimum:-64,maximum:64}},[]),()=>getStudio3DState().edit!=null),
   add<{edge?:[number,number];factor?:number}>('studio3d.edit.vertSlide','Slide the selected vertex of the edited 3D mesh along an incident edge by a factor of the edge vector','Edit',p=>need().editVertSlide(p!.edge!,p?.factor??0.5),object({edge:{type:'array',items:{type:'integer',minimum:0},minItems:2,maxItems:2},factor:{type:'number',minimum:-1,maximum:1}},['edge']),()=>getStudio3DState().edit!=null),
   add<{offset?:boolean}>('studio3d.edit.snapToCursor','Move the selected vertices of the edited 3D mesh onto the 3D cursor','Edit',p=>{const c=getStudio3DState().cursor;return need().editSnapToCursor([c.x,c.y,c.z],!!p?.offset);},object({offset:{type:'boolean'}},[]),()=>getStudio3DState().edit!=null),
-  add<{on?:boolean;radius?:number;falloff?:'smooth'|'linear'|'constant'}>('studio3d.edit.proportional','Toggle proportional editing: nearby vertices follow move, rotate, scale and shear with a falloff','Edit',p=>need().setProportional(p&&Object.keys(p).length?p:{on:!getStudio3DState().proportional.on}),object({on:{type:'boolean'},radius:{type:'number',exclusiveMinimum:0,maximum:1000000},falloff:{enum:['smooth','linear','constant']}},[]),hasScene),
+  add<{on?:boolean;radius?:number;falloff?:'smooth'|'linear'|'constant';connected?:boolean}>('studio3d.edit.proportional','Toggle proportional editing: nearby vertices follow move, rotate, scale and shear with a falloff','Edit',p=>need().setProportional(p&&Object.keys(p).length?p:{on:!getStudio3DState().proportional.on}),object({on:{type:'boolean'},radius:{type:'number',exclusiveMinimum:0,maximum:1000000},falloff:{enum:['smooth','linear','constant']},connected:{type:'boolean'}},[]),hasScene),
   add('studio3d.edit.selectNonManifold','Select the vertices of the edited 3D mesh touched by edges with more than two faces','Edit',()=>need().editSelectNonManifold(),undefined,()=>getStudio3DState().edit!=null),
   add('studio3d.edit.convexHull','Replace the edited 3D mesh with the convex hull of its selected vertices','Edit',()=>need().editConvexHull(),undefined,()=>getStudio3DState().edit!=null),
   add<{axis:MirrorAxis;side?:'positive'|'negative';merge?:number}>('studio3d.edit.symmetrize','Bake a mirror symmetry into the edited 3D mesh: keep one side of the local mirror plane, mirror it onto the other and weld the seam','Edit',p=>need().editSymmetrize(p.axis,p?.side??'positive',p?.merge??0.0001),object({axis:{enum:['x','y','z']},side:{enum:['positive','negative']},merge:{type:'number',minimum:0,maximum:1000}},['axis']),()=>getStudio3DState().edit!=null),

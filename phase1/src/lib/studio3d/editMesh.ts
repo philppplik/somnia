@@ -930,18 +930,39 @@ export function ripSelected(m:MeshData,faces:number[]):MeshData{
 }
 /** Translates the selected vertices by an offset: position-equal twins move together so split sides never rip, and the strongest mask at a position protects the whole seam. Masks are carried; UVs are carried. */
 /** Proportional-editing falloff: nearby vertices follow edit transforms, shaped from 1 at the selection down to 0 at `radius`. */
-export interface PropFalloff{radius:number;falloff:'smooth'|'linear'|'constant'}
+export interface PropFalloff{radius:number;falloff:'smooth'|'linear'|'constant';/** True: distance runs along mesh edges from the selection (unconnected islands never follow); false: straight-line distance. */connected?:boolean}
 /** Falloff factor per position key: distance to the nearest selected position, shaped by the falloff curve. Only computed when proportional editing is on. */
-function propFactors(m:MeshData,want:Set<string>,prop:PropFalloff):Map<string,number>{
+function propFactors(m:MeshData,want:Set<string>,prop:PropFalloff,seed?:number[]):Map<string,number>{
  const nv=m.positions.length/3;
  const pk=(v:number)=>`${Math.round(m.positions[v*3]*1e6)},${Math.round(m.positions[v*3+1]*1e6)},${Math.round(m.positions[v*3+2]*1e6)}`;
+ let distOf:((v:number)=>number)|null=null;
+ if(prop.connected&&seed){
+  // Topology distance: multi-source Dijkstra over real index edges from the selected vertices; a position's distance is the closest of its index copies, so split seams still move as one. Vertices on unconnected islands stay at Infinity and never follow.
+  const adj=new Map<number,[number,number][]>();
+  for(let i=0;i<m.index.length;i+=3)for(let e=0;e<3;e++){
+   const a=m.index[i+e],b=m.index[i+(e+1)%3];if(a===b)continue;
+   const d=Math.hypot(m.positions[a*3]-m.positions[b*3],m.positions[a*3+1]-m.positions[b*3+1],m.positions[a*3+2]-m.positions[b*3+2]);
+   (adj.get(a)??adj.set(a,[]).get(a)!).push([b,d]);
+   (adj.get(b)??adj.set(b,[]).get(b)!).push([a,d]);
+  }
+  const dist=new Float64Array(nv).fill(Infinity);
+  const heap:[number,number][]=[];
+  const push=(d:number,v:number)=>{heap.push([d,v]);let i=heap.length-1;while(i>0){const p=(i-1)>>1;if(heap[p][0]<=heap[i][0])break;const t=heap[p];heap[p]=heap[i];heap[i]=t;i=p;}};
+  const pop=():[number,number]=>{const top=heap[0],last=heap.pop()!;if(heap.length){heap[0]=last;let i=0;for(;;){const l=2*i+1,r=l+1;let m2=i;if(l<heap.length&&heap[l][0]<heap[m2][0])m2=l;if(r<heap.length&&heap[r][0]<heap[m2][0])m2=r;if(m2===i)break;const t=heap[m2];heap[m2]=heap[i];heap[i]=t;i=m2;}}return top;};
+  for(const v of seed){if(dist[v]>0){dist[v]=0;push(0,v);}}
+  while(heap.length){const [d,v]=pop();if(d>dist[v])continue;for(const [b,w] of adj.get(v)??[]){const nd=d+w;if(nd<dist[b]){dist[b]=nd;push(nd,b);}}}
+  distOf=v=>dist[v];
+ }
  const sel:[number,number,number][]=[];const seenS=new Set<string>();
- for(let v=0;v<nv;v++){const k=pk(v);if(!want.has(k)||seenS.has(k))continue;seenS.add(k);sel.push([m.positions[v*3],m.positions[v*3+1],m.positions[v*3+2]]);}
+ if(!distOf)for(let v=0;v<nv;v++){const k=pk(v);if(!want.has(k)||seenS.has(k))continue;seenS.add(k);sel.push([m.positions[v*3],m.positions[v*3+1],m.positions[v*3+2]]);}
+ const keyDist=new Map<string,number>();
+ if(distOf)for(let v=0;v<nv;v++){const k=pk(v);const dv=distOf!(v);if(dv<(keyDist.get(k)??Infinity))keyDist.set(k,dv);}
  const out=new Map<string,number>();const seen=new Set<string>();
  for(let v=0;v<nv;v++){
   const k=pk(v);if(seen.has(k))continue;seen.add(k);
   let d=Infinity;
-  for(const q of sel){const dd=Math.hypot(m.positions[v*3]-q[0],m.positions[v*3+1]-q[1],m.positions[v*3+2]-q[2]);if(dd<d)d=dd;}
+  if(distOf)d=keyDist.get(k)??Infinity;
+  else for(const q of sel){const dd=Math.hypot(m.positions[v*3]-q[0],m.positions[v*3+1]-q[1],m.positions[v*3+2]-q[2]);if(dd<d)d=dd;}
   let f=0;
   if(d<prop.radius){
    if(prop.falloff==='constant')f=1;
@@ -967,7 +988,7 @@ export function moveSelected(m:MeshData,verts:number[],offset:[number,number,num
   const mk=m.mask?m.mask[v]:0;
   damp.set(k,Math.min(damp.get(k)??mk,mk));
  }
- const fac=prop?propFactors(m,want,prop):null;
+ const fac=prop?propFactors(m,want,prop,verts):null;
  const positions=[...m.positions];
  for(let v=0;v<nv;v++){
   const k=pk(v);
@@ -1079,7 +1100,7 @@ export function shearSelected(m:MeshData,verts:number[],along:'x'|'y'|'z',by:'x'
  }
  c/=n;
  if(pivot){if(!pivot.every(x=>Number.isFinite(x)))throw new EditError('The pivot point must be finite.');c=pivot[bi];}
- const fac=prop?propFactors(m,want,prop):null;
+ const fac=prop?propFactors(m,want,prop,verts):null;
  const positions=[...m.positions];
  for(let v=0;v<nv;v++){
   const k=pk(v);
@@ -1112,7 +1133,7 @@ export function scaleSelected(m:MeshData,verts:number[],factors:[number,number,n
  }
  cx/=n;cy/=n;cz/=n;
  if(pivot){if(!pivot.every(x=>Number.isFinite(x)))throw new EditError('The pivot point must be finite.');cx=pivot[0];cy=pivot[1];cz=pivot[2];}
- const fac=prop?propFactors(m,want,prop):null;
+ const fac=prop?propFactors(m,want,prop,verts):null;
  const positions=[...m.positions];
  for(let v=0;v<nv;v++){
   const k=pk(v);
@@ -1147,7 +1168,7 @@ export function rotateSelected(m:MeshData,verts:number[],axis:'x'|'y'|'z',degree
  cx/=n;cy/=n;cz/=n;
  if(pivot){if(!pivot.every(x=>Number.isFinite(x)))throw new EditError('The pivot point must be finite.');cx=pivot[0];cy=pivot[1];cz=pivot[2];}
  const rad=degrees*Math.PI/180,sin=Math.sin(rad),cos=Math.cos(rad);
- const fac=prop?propFactors(m,want,prop):null;
+ const fac=prop?propFactors(m,want,prop,verts):null;
  const positions=[...m.positions];
  for(let v=0;v<nv;v++){
   const k=pk(v);

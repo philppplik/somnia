@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Stage} from './stage';
+import {moveSelected} from './editMesh';
 
 const near=(a:number,b:number)=>Math.abs(a-b)<1e-6;
 const setup=()=>{
@@ -85,4 +86,14 @@ test('stage edit move without proportional leaves neighbours untouched',()=>{
  st.editSelect('vertex',[35]);
  st.editMove([0,0.5,0]);
  assert.ok(near(pos().getY(35),1)&&near(pos().getY(26),0.5),'uniform move');
+});
+
+test('proportional connected: geodesic distance leaves unconnected islands still',()=>{
+ // Two disconnected triangles: A at z=0 around the origin, B shifted +0.5y (inside the radius, no shared edges).
+ const m={positions:[0,0,0, 1,0,0, 0,0,1, 0,0.5,0, 1,0.5,0, 0,0.5,1],index:[0,1,2,3,4,5]};
+ const moved=moveSelected(m,[0],[0,0.5,0],{radius:1,falloff:'constant',connected:true});
+ assert.ok(near(moved.positions[3*3+1],0.5),`island stays put, got y=${moved.positions[3*3+1]}`);
+ assert.ok(near(moved.positions[1],0.5),'selected vertex moves');
+ const movedFree=moveSelected(m,[0],[0,0.5,0],{radius:1,falloff:'constant'});
+ assert.ok(near(movedFree.positions[3*3+1],1),'island follows when connected is off');
 });
