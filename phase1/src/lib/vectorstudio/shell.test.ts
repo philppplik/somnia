@@ -78,3 +78,34 @@ test('boolean command combines shapes in one undo step and refuses unusable sele
  const open={...before,paths:before.paths.map((p,i)=>i===0?{...p,closed:false}:p)};assert.throws(()=>applyBoolean(open,all.slice(0,2),'union'),/closed shapes/);
  const hole=applyBoolean(before,all.slice(0,2),'subtract');assert.equal(hole.ids.length,1);assert.equal(hole.doc.paths.length,2);
 });
+import {groupSelection,ungroupSelection} from './groups';
+import {exportSvg,importSvg} from '../vectorio';
+test('group/ungroup: one undo step, selection expands, contiguous at top, duplicate remaps, bad input is a no-op',async()=>{
+ S.resetVectorSession();S.createBlankVector();[box(0,0,10,10),box(100,0,10,10),box(200,0,10,10),box(300,0,10,10)].forEach(p=>S.addPath(p));
+ const ids=S.getVectorSession().doc.paths.map(p=>p.id);S.select([ids[0],ids[2]]);const before=structuredClone(S.getVectorSession().doc);
+ const d=new CommandDispatcher();commands.forEach(s=>d.register(s));
+ await assert.rejects(d.runCommand('vector.group',{},{origin:'agent'}),e=>e instanceof CommandDispatchError&&e.code==='forbidden-origin');
+ S.select([ids[0]]);await d.runCommand('vector.group',{},{origin:'test'});assert.deepEqual(S.getVectorSession().doc,before); // one object: nothing to group
+ S.select([ids[0],ids[2]]);await d.runCommand('vector.group',{},{origin:'test'});
+ const g=S.getVectorSession().doc;assert.deepEqual(g.paths.map(p=>p.id),[ids[1],ids[0],ids[2],ids[3]]);
+ assert.equal(g.paths[1].group,g.paths[2].group);assert.ok(g.paths[1].group);assert.equal(g.paths[0].group,undefined);
+ S.select([ids[2]]);assert.deepEqual([...S.getVectorSession().selection].sort(),[ids[0],ids[2]].sort());
+ S.undo();assert.deepEqual(S.getVectorSession().doc,before);S.redo();
+ S.select([ids[0]]);await d.runCommand('vector.duplicateSelection',{},{origin:'test'});
+ const dup=S.getVectorSession().doc.paths.filter(p=>p.group);assert.equal(dup.length,4);assert.equal(new Set(dup.map(p=>p.group)).size,2);
+ S.undo();S.select([ids[0]]);await d.runCommand('vector.ungroup',{},{origin:'test'});
+ assert.ok(!S.getVectorSession().doc.paths.some(p=>p.group));S.undo();
+ assert.equal(ungroupSelection(before,[ids[0]]),before);assert.equal(groupSelection(before,['nope']),before);
+});
+test('group SVG roundtrip is stable, old files load unchanged, bad ids are ignored',()=>{
+ S.resetVectorSession();S.createBlankVector();[box(0,0,10,10),box(20,0,10,10),box(40,0,10,10)].forEach(p=>S.addPath(p));
+ const doc=S.getVectorSession().doc,ids=doc.paths.map(p=>p.id);const grouped=groupSelection(doc,[ids[0],ids[1]]);
+ const svg=exportSvg(grouped);assert.match(svg,/<g data-vs-group="g[^"]*">/);
+ const back=importSvg(svg).doc;assert.equal(back.paths.filter(p=>p.group).length,2);assert.equal(back.paths[0].group,back.paths[1].group);assert.equal(back.paths[2].group,undefined);
+ assert.equal(exportSvg(back),svg);
+ const old=exportSvg(doc);assert.ok(!old.includes('data-vs-group'));assert.ok(importSvg(old).doc.paths.every(p=>p.group===undefined));
+ const plain=importSvg('<svg viewBox="0 0 10 10"><g data-name="Layer A"><path d="M0 0L5 5"/></g></svg>').doc;assert.equal(plain.paths[0].layer,'Layer A');assert.equal(plain.paths[0].group,undefined);
+ const bad=importSvg('<svg viewBox="0 0 10 10"><g data-vs-group="a b&lt;"><path d="M0 0L5 5"/></g></svg>').doc;assert.equal(bad.paths[0].group,undefined);
+ const nested=importSvg('<svg viewBox="0 0 10 10"><g data-name="L"><g data-vs-group="x"><path d="M0 0L5 5"/></g></g></svg>').doc;assert.equal(nested.paths[0].layer,'L');assert.equal(nested.paths[0].group,'x');
+ assert.match(exportSvg(nested),/<g data-name="L">\s*<g data-vs-group="x">/);
+});

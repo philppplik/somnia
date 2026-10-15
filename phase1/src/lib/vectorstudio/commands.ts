@@ -32,7 +32,7 @@ const style = object({
 const node = object({ id, x: number, y: number, kind: nodeKind, in: point, out: point }, ['id', 'x', 'y', 'kind']);
 const path = object({
   id, closed: { type: 'boolean' }, nodes: { type: 'array', items: node, maxItems: 200 },
-  style, layer: text, compound: id, name: text, hidden: { const: true },
+  style, layer: text, compound: id, group: id, name: text, hidden: { const: true },
 }, ['id', 'closed', 'nodes']);
 const document = object({ width: size, height: size, paths: { type: 'array', items: path, maxItems: 200 } }, ['width', 'height', 'paths']);
 const empty = object();

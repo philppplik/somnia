@@ -2,6 +2,7 @@ import {requestVectorExport} from './exportSetup';
 import type {CommandSpec} from '../commandSpec';
 import * as S from './session';
 import {rotateSelection,scaleSelection,selectionBounds,alignSelection,distributeSelection,ALIGN_MODES,ALIGN_TARGETS} from './transforms';
+import {groupSelection,ungroupSelection} from './groups';
 import {applyBoolean,BOOL_OPS} from './booleanOps';
 import {downloadSvg,downloadPng} from './exportFiles';
 const empty={type:'object',properties:{},additionalProperties:false};
@@ -21,6 +22,8 @@ export function vectorShellCommandSpecs(active:()=>boolean):CommandSpec<any,unkn
    run:(p:{axis:'horizontal'|'vertical'})=>{const s=S.getVectorSession();S.commit(distributeSelection(s.doc,s.selection,p.axis));}},
   {id:'vector.booleanOp',title:'Combine vector shapes',category:'Edit',level:'ui',enabled:selected,params:{...empty,properties:{op:{type:'string',enum:[...BOOL_OPS]}},required:['op']},
    run:(p:{op:typeof BOOL_OPS[number]})=>{const s=S.getVectorSession(),r=applyBoolean(s.doc,s.selection,p.op);S.commit(r.doc);S.select(r.ids);}},
+  {id:'vector.group',title:'Group vector selection',category:'Edit',level:'ui',enabled:selected,params:empty,run:()=>{const s=S.getVectorSession(),next=groupSelection(s.doc,s.selection);if(next!==s.doc)S.commit(next);}},
+  {id:'vector.ungroup',title:'Ungroup vector selection',category:'Edit',level:'ui',enabled:selected,params:empty,run:()=>{const s=S.getVectorSession(),next=ungroupSelection(s.doc,s.selection);if(next!==s.doc)S.commit(next);}},
   {id:'vector.exportSvg',title:'Export vector SVG',category:'Project',level:'ui',enabled:ready,params:empty,run:()=>downloadSvg(S.getVectorSession().name)},
   {id:'vector.exportPng',title:'Export vector PNG',category:'Project',level:'ui',enabled:ready,params:{...empty,properties:{scale:{type:'number',minimum:0.1,maximum:8}}},run:(p:{scale?:number}={})=>{const s=S.getVectorSession();return downloadPng(s.name,s.doc.width,s.doc.height,p.scale??1);}},
  ];

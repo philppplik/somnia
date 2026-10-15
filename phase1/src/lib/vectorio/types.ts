@@ -45,6 +45,8 @@ export interface VectorPath {
   layer?: string;
   /** Extension. Subpaths sharing a value were one SVG <path> (holes / evenodd) and export as one element. */
   compound?: string;
+  /** Extension. Paths sharing a value are one editor group (selected and moved together). Exported as `<g data-vs-group>`; groups do not nest. */
+  group?: string;
   name?: string;
   hidden?: true;
 }

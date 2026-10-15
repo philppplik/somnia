@@ -10,7 +10,7 @@ export {BOOL_OPS,type BoolOp};
  *  sits where the lowest selected object was, and is polygonal: curves are flattened first, so it is an approximation. Open shapes are refused. */
 export function applyBoolean(doc:VectorDocument,ids:readonly string[],op:BoolOp):{doc:VectorDocument;ids:string[]}{
   if(!(BOOL_OPS as readonly string[]).includes(op))throw Error('Unknown boolean operation');
-  const objs=objectsOf(doc,ids);if(!objs||objs.length<2)throw Error('Select at least two shapes to combine them');
+  const objs=objectsOf(doc,ids,false);if(!objs||objs.length<2)throw Error('Select at least two shapes to combine them');
   const index=new Map(doc.paths.map((p,i)=>[p.id,i]));
   const ordered=objs.map(o=>({...o,at:Math.min(...o.ids.map(id=>index.get(id)!))})).sort((a,b)=>a.at-b.at);
   const operands=ordered.map(o=>{
@@ -22,7 +22,7 @@ export function applyBoolean(doc:VectorDocument,ids:readonly string[],op:BoolOp)
   if(!loops.length)throw Error('The result would be empty');
   const source=op==='subtract'?operands[0]:operands[operands.length-1],first=source.paths[0],compound=loops.length>1?newId('c'):undefined;
   const made:VectorPath[]=loops.map((l,i)=>({id:newId('p'),closed:true,nodes:l.map(p=>({id:newId('n'),x:p.x,y:p.y,kind:'corner' as const})),
-    style:{...first.style,fillRule:loops.length>1?'evenodd':first.style?.fillRule},...(compound?{compound}:{}),...(first.layer?{layer:first.layer}:{}),name:i===0?first.name:undefined}));
+    style:{...first.style,fillRule:loops.length>1?'evenodd':first.style?.fillRule},...(compound?{compound}:{}),...(first.layer?{layer:first.layer}:{}),...(first.group&&ordered.every(o=>o.ids.every(id=>doc.paths[index.get(id)!].group===first.group))?{group:first.group}:{}),name:i===0?first.name:undefined}));
   const drop=new Set(ordered.flatMap(o=>o.ids)),at=ordered[0].at;
   const paths:VectorPath[]=[];doc.paths.forEach((p,i)=>{if(i===at)paths.push(...made);if(!drop.has(p.id))paths.push(p);});
   return {doc:{...doc,paths},ids:made.map(p=>p.id)};

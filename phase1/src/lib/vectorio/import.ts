@@ -36,7 +36,9 @@ const opacityOf = (v: string | undefined): number | undefined => {
 const stripNs = (n: string) => (n.startsWith('svg:') ? n.slice(4) : n);
 
 const STYLE_PROPS = ['fill', 'stroke', 'stroke-width', 'fill-opacity', 'stroke-opacity', 'fill-rule', 'stroke-linecap', 'stroke-linejoin', 'stroke-miterlimit', 'stroke-dasharray', 'stroke-dashoffset', 'opacity', 'display', 'visibility'];
-const PLAIN_ATTRS = new Set([...STYLE_PROPS, 'id', 'style', 'transform', 'd', 'x', 'y', 'width', 'height', 'rx', 'ry', 'cx', 'cy', 'r', 'x1', 'y1', 'x2', 'y2', 'points', 'viewBox', 'version', 'preserveAspectRatio', 'xmlns', 'data-name', 'pathLength', 'xml:space', 'baseProfile']);
+/** Editor-group ids are bounded and plain; anything else is ignored so the content just loads ungrouped. */
+const groupIdOf = (v: string | undefined): string | undefined => (v !== undefined && /^[A-Za-z0-9_.:-]{1,64}$/.test(v) ? v : undefined);
+const PLAIN_ATTRS = new Set([...STYLE_PROPS, 'id', 'style', 'transform', 'd', 'x', 'y', 'width', 'height', 'rx', 'ry', 'cx', 'cy', 'r', 'x1', 'y1', 'x2', 'y2', 'points', 'viewBox', 'version', 'preserveAspectRatio', 'xmlns', 'data-name', 'data-vs-group', 'pathLength', 'xml:space', 'baseProfile']);
 const ALLOWED = new Set(['svg', 'g', 'path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon']);
 const IGNORED_NO_RENDER = new Set(['title', 'desc', 'metadata']); // contain no geometry; harmless to drop
 
@@ -224,7 +226,7 @@ export function importSvg(source: string, opts: ImportOptions = {}): ImportResul
     }
   }
 
-  function walk(el: XmlElement, parent: Style, m: Matrix, layer: string | undefined, depth: number, hiddenAbove: boolean, groupOpacity: number): void {
+  function walk(el: XmlElement, parent: Style, m: Matrix, layer: string | undefined, depth: number, hiddenAbove: boolean, groupOpacity: number, group?: string): void {
     if (depth > LIMITS.maxDepth) fail(`element depth exceeds ${LIMITS.maxDepth}`);
     const name = stripNs(el.name);
     if (IGNORED_NO_RENDER.has(name)) return;
@@ -243,9 +245,10 @@ export function importSvg(source: string, opts: ImportOptions = {}): ImportResul
     const label = el.attrs['inkscape:label'] ?? el.attrs['data-name'] ?? el.attrs.id;
     if (name === 'g' || name === 'svg') {
       if (name === 'svg' && depth > 0) { bad('nested <svg> is not supported'); return; }
-      const lay = layer ?? (depth === 1 && name === 'g' ? label : undefined);
+      const own = name === 'g' ? groupIdOf(el.attrs['data-vs-group']) : undefined;
+      const lay = layer ?? (depth === 1 && name === 'g' && own === undefined ? label : undefined);
       const inner = { ...style, opacity: 1 };
-      for (const c of el.children) walk(c, inner, world, lay, depth + 1, hidden, groupOpacity * style.opacity);
+      for (const c of el.children) walk(c, inner, world, lay, depth + 1, hidden, groupOpacity * style.opacity, own ?? group);
       return;
     }
     let segments: Segment[] | null = null;
@@ -297,6 +300,7 @@ export function importSvg(source: string, opts: ImportOptions = {}): ImportResul
       if (Object.keys(st).length) p.style = { ...st, dashArray: st.dashArray ? [...st.dashArray] : undefined } as Partial<Style>;
       if (p.style && p.style.dashArray === undefined) delete p.style.dashArray;
       if (layer !== undefined) p.layer = layer;
+      if (group !== undefined) p.group = group;
       if (compound) p.compound = compound;
       if (baseName !== undefined) p.name = baseName;
       if (hidden) p.hidden = true;

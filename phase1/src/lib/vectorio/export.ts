@@ -46,17 +46,23 @@ export function exportSvg(doc: VectorDocument, opts: ExportOptions = {}): string
     elements.push({ p, d });
   }
   let openLayer: string | undefined | null = null; // null = none open
-  const close = () => { if (openLayer !== null && openLayer !== undefined) emit(1, '</g>'); };
+  let openGroup: string | undefined;
+  const closeGroup = () => { if (openGroup !== undefined) emit(openLayer !== null && openLayer !== undefined ? 2 : 1, '</g>'); openGroup = undefined; };
+  const close = () => { closeGroup(); if (openLayer !== null && openLayer !== undefined) emit(1, '</g>'); };
   for (const { p, d } of elements) {
     if (p.layer !== openLayer || openLayer === null) {
       if (openLayer !== null) close();
       openLayer = p.layer;
       if (p.layer !== undefined) emit(1, `<g data-name="${escapeAttr(p.layer)}">`);
     }
+    if (p.group !== openGroup) {
+      closeGroup();
+      if (p.group !== undefined) { openGroup = p.group; emit(p.layer !== undefined ? 2 : 1, `<g data-vs-group="${escapeAttr(p.group)}">`); }
+    }
     const attrs = [`d="${d}"`, ...styleAttrs(p.style)];
     if (p.name !== undefined) attrs.unshift(`data-name="${escapeAttr(p.name)}"`);
     if (p.hidden) attrs.push('display="none"');
-    emit(p.layer !== undefined ? 2 : 1, `<path ${attrs.join(' ')}/>`);
+    emit((p.layer !== undefined ? 2 : 1) + (p.group !== undefined ? 1 : 0), `<path ${attrs.join(' ')}/>`);
   }
   close();
   emit(0, '</svg>');

@@ -1,7 +1,8 @@
 import type {VectorDocument,Point} from '../vectorio';
 import {boxOf} from './geometry';
+import {selectedPaths} from './selectionClosure';
 /** Geometry-only transforms preserve stroke widths and compound membership. */
-function chosen(doc:VectorDocument,ids:readonly string[]){const groups=new Set(doc.paths.filter(p=>ids.includes(p.id)&&!p.hidden&&p.compound).map(p=>p.compound));return doc.paths.filter(p=>!p.hidden&&(ids.includes(p.id)||!!(p.compound&&groups.has(p.compound))));}
+const chosen=(doc:VectorDocument,ids:readonly string[])=>selectedPaths(doc,ids);
 export function selectionBounds(doc:VectorDocument,ids:readonly string[]){const b=boxOf(chosen(doc,ids));return b?{x:b.minX,y:b.minY,width:b.maxX-b.minX,height:b.maxY-b.minY}:null;}
 function transform(doc:VectorDocument,ids:readonly string[],fn:(pt:Point)=>Point):VectorDocument{const keys=new Set(chosen(doc,ids).map(p=>p.id));return {...doc,paths:doc.paths.map(p=>!keys.has(p.id)?p:{...p,nodes:p.nodes.map(n=>({...n,...fn(n),...(n.in?{in:fn(n.in)}:{}),...(n.out?{out:fn(n.out)}:{})}))})};}
 export function scaleSelection(doc:VectorDocument,ids:readonly string[],sx:number,sy:number,origin:Point){return transform(doc,ids,p=>({x:origin.x+(p.x-origin.x)*sx,y:origin.y+(p.y-origin.y)*sy}));}
@@ -12,9 +13,9 @@ export type AlignMode=typeof ALIGN_MODES[number];
 export const ALIGN_TARGETS=['selection','page'] as const;
 export type AlignTarget=typeof ALIGN_TARGETS[number];
 /** One painted object: a compound counts once, every other visible path is its own object. Bounds are geometric (no stroke padding). */
-export function objectsOf(doc:VectorDocument,ids:readonly string[]){
+export function objectsOf(doc:VectorDocument,ids:readonly string[],byGroup=true){
   const out=new Map<string,{ids:string[];box:{minX:number;minY:number;maxX:number;maxY:number}}>();
-  for(const p of chosen(doc,ids)){const key=p.compound?'c:'+p.compound:'p:'+p.id;const e=out.get(key)??{ids:[],box:null as never};e.ids.push(p.id);out.set(key,e);}
+  for(const p of chosen(doc,ids)){const key=byGroup&&p.group?'g:'+p.group:p.compound?'c:'+p.compound:'p:'+p.id;const e=out.get(key)??{ids:[],box:null as never};e.ids.push(p.id);out.set(key,e);}
   for(const e of out.values()){const b=boxOf(doc.paths.filter(p=>e.ids.includes(p.id)));if(!b)return null;e.box=b;}
   return [...out.values()];
 }

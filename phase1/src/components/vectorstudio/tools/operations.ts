@@ -1,4 +1,5 @@
 import type { VectorDocument, VectorPath, VectorNode, Point } from '../../../lib/vectorio';
+import {selectedPaths} from '../../../lib/vectorstudio/selectionClosure';
 import { bbox, unionBBox, flatten, nearest } from '../../../lib/vectorcore/bezier';
 import type { BBox } from '../../../lib/vectorcore/types';
 import { convertNodes, deleteNodes, insertNode, moveHandle, moveNodes, removeHandles } from '../../vectoredit/model';
@@ -10,10 +11,7 @@ export interface SelectionBox { x: number; y: number; width: number; height: num
 const finite = (...numbers: number[]) => { if (!numbers.every(Number.isFinite)) throw new RangeError('Coordinates must be finite.'); };
 
 /** Compound contours are one painted object and must transform/select together. Hidden objects stay unselected. */
-export function selectedPaths(doc: VectorDocument, ids: readonly string[]): VectorPath[] {
-  const direct = new Set(ids), compounds = new Set(doc.paths.filter(p => direct.has(p.id) && !p.hidden && p.compound).map(p => p.compound));
-  return doc.paths.filter(p => !p.hidden && (direct.has(p.id) || (p.compound && compounds.has(p.compound))));
-}
+export {selectedPaths};
 export function pathBounds(path: VectorPath): BBox | null {
   if (!path.nodes.length) return null;
   let box: BBox | null = null;

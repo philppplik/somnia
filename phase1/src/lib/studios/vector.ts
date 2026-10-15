@@ -23,7 +23,7 @@ export const vectorShell:StudioShellDef={
  tools:VECTOR_TOOLS.map((tool,i)=>({id:tool,command:'vector.tool.'+tool,icon:toolIcons[i],opensPanel:'tools'})),
  inspector:{emptyKey:'vector.shell.empty',sections:[
   {id:'page',title:'Page',titleKey:'vector.page',component:'vector.section.page',order:10,when:'services.ready',commands:['vector.resizePage','vector.replaceDocument']},
-  {id:'transform',title:'Transform',titleKey:'vector.shell.transform',component:'vector.section.transform',order:20,when:"selection.kind != 'none'",commands:['vector.setSelectionBounds','vector.rotateSelection','vector.flipSelection','vector.alignSelection','vector.distributeSelection','vector.booleanOp','vector.reorder','vector.duplicateSelection','vector.deleteSelection']},
+  {id:'transform',title:'Transform',titleKey:'vector.shell.transform',component:'vector.section.transform',order:20,when:"selection.kind != 'none'",commands:['vector.setSelectionBounds','vector.rotateSelection','vector.flipSelection','vector.alignSelection','vector.distributeSelection','vector.booleanOp','vector.group','vector.ungroup','vector.reorder','vector.duplicateSelection','vector.deleteSelection']},
   {id:'style',title:'Style',titleKey:'vector.style',component:'vector.section.style',order:30,when:"selection.kind != 'none'",commands:['vector.setStyle']},
   {id:'nodes',title:'Nodes',titleKey:'vector.tool.node',component:'vector.section.nodes',order:40,when:'services.node',commands:['vector.moveNode','vector.setNodeKind','vector.deleteNode','vector.toggleClosed']},
  ]},

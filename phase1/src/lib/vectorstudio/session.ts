@@ -126,12 +126,13 @@ export const selectNode=(id:string|null)=>set({selectedNode:id});
 
 /** Allocate fresh identities in every space; preserve compound membership only within this batch. */
 function remapPaths(paths:readonly VectorPath[],doc:VectorDocument):VectorPath[]{
- const used=new Set(doc.paths.flatMap(p=>[p.id,...p.nodes.map(n=>n.id),...(p.compound===undefined?[]:[p.compound])]));
+ const used=new Set(doc.paths.flatMap(p=>[p.id,...p.nodes.map(n=>n.id),...(p.compound===undefined?[]:[p.compound]),...(p.group===undefined?[]:[p.group])]));
  const allocate=(prefix:string)=>{let id:string;do{id=newId(prefix);}while(used.has(id));used.add(id);return id;};
- const compounds=new Map<string,string>();
+ const compounds=new Map<string,string>(),groups=new Map<string,string>();
  return paths.map(p=>{
   const copy={...p,id:allocate('p'),nodes:p.nodes.map(n=>({...n,id:allocate('n')}))};
   if(p.compound!==undefined){let id=compounds.get(p.compound);if(id===undefined){id=allocate('c');compounds.set(p.compound,id);}copy.compound=id;}
+  if(p.group!==undefined){let id=groups.get(p.group);if(id===undefined){id=allocate('g');groups.set(p.group,id);}copy.group=id;}
   return copy;
  });
 }

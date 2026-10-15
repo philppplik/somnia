@@ -43,6 +43,7 @@ export function VectorTransformSection(){const {t}=useT(),s=useVectorSession(),b
     <MenuGroup><MenuGroupLabel>{t('vector.shell.distribute')}</MenuGroupLabel>{(['horizontal','vertical'] as const).map(axis=><MenuItem key={axis} onClick={()=>run('distributeSelection',{axis})}>{t('vector.shell.distribute.'+axis)}</MenuItem>)}</MenuGroup></MenuContent></Menu>
   <Menu><MenuTrigger render={<Button size="compact" variant="outline" data-testid="vector-combine-menu">{t('vector.shell.combine')}</Button>}/>
    <MenuContent>{BOOL_OPS.map(o=><MenuItem key={o} onClick={()=>run('booleanOp',{op:o})}>{t('vector.shell.combine.'+o)}</MenuItem>)}</MenuContent></Menu>
+  <div className="grid grid-cols-2 gap-1"><Button size="compact" data-testid="vector-group" onClick={()=>run('group')}>{t('vector.shell.group')}</Button><Button size="compact" data-testid="vector-ungroup" onClick={()=>run('ungroup')}>{t('vector.shell.ungroup')}</Button></div>
   <div className="grid grid-cols-2 gap-1">{(['front','back','forward','backward'] as const).map(mode=><Button key={mode} size="compact" onClick={()=>run('reorder',{mode})}>{t(mode==='front'?'vector.toFront':mode==='back'?'vector.shell.toBack':'vector.'+mode)}</Button>)}
    <Button size="compact" onClick={()=>run('duplicateSelection')}>{t('vector.duplicate')}</Button><Button size="compact" onClick={()=>run('deleteSelection')}>{t('vector.shell.delete')}</Button></div>
  </div>;

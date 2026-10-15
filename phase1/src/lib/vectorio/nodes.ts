@@ -45,6 +45,7 @@ export function normalizeDoc(doc: VectorDocument): VectorDocument {
       }
       if (p.layer !== undefined) out.layer = p.layer;
       if (p.compound !== undefined) out.compound = p.compound;
+      if (p.group !== undefined) out.group = p.group;
       if (p.name !== undefined) out.name = p.name;
       if (p.hidden) out.hidden = true;
       return out;
