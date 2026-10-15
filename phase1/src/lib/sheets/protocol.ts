@@ -111,7 +111,7 @@ export type NumFmtPreset='general'|'number'|'comma'|'percent'|'currency'|'date'|
 export type SortOp={header:boolean;keys:{column:number;order:'asc'|'desc'}[];matchCase?:boolean};
 /** Row filter on one absolute sheet column; the block only creates the filter. */
 export type FilterCondition='='|'<>'|'>'|'<'|'>='|'<='|'beginsWith'|'endsWith'|'contains'|'notContains';
-export type FilterOp={kind:'custom';column:number;op:FilterCondition;value:string}|{kind:'clear';column:number}|{kind:'clearAll'}|{kind:'off'};
+export type FilterOp={kind:'custom';column:number;op:FilterCondition;value:string}|{kind:'clear';column:number}|{kind:'clearAll'}|{kind:'off'}|{kind:'values';column:number;values:string[];blanks:boolean}|{kind:'top';column:number;count:number;bottom:boolean;percent:boolean}|{kind:'aboveAverage';column:number;above:boolean};
 /** Native owner state: revision plus an identity token that changes on every edit, undo, redo and reopen. */
 export interface SheetsNativeState{revision:number;token:string}
 /** Immutable owner receipt for one reviewed cell edit or its exact undo. `applied` is the logical delta: 1 changed, 0 true no-op. */

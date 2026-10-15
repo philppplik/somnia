@@ -196,6 +196,7 @@ fn cf_value(v: Option<&serde_json::Value>) -> Option<serde_json::Value> {
 const MAX_SORT_KEYS: usize = 3;
 const FILTER_OPS: [&str; 10] = ["=", "<>", ">", "<", ">=", "<=", "beginsWith", "endsWith", "contains", "notContains"];
 const MAX_FILTER_VALUE: usize = 255;
+const MAX_FILTER_PICKS: usize = 200;
 const MAX_FORMAT_CELLS: u64 = 1_000_000;
 
 fn is_hex_color(v: &serde_json::Value) -> Option<&str> {
@@ -4451,8 +4452,48 @@ impl HeadlessWorkbook {
         self.session.run(cmd, json!({"range": range})).map(|v| v.to_string())
     }
 
+    /// Applies one `data.filterBy` criterion (`extra` holds its key, e.g. `{"custom":..}`) to absolute column `c`. An existing filter keeps its own
+    /// range; without one the block (header row first) creates it, and creating plus applying is ONE history entry.
+    fn filter_by_criterion(&mut self, existing: Option<(u32, u32)>, block: (u32, u32, u32, u32), c: u32, extra: serde_json::Value) -> Result<String, String> {
+        let (row, col, rows, cols) = block;
+        let with_column = |offset: u32| -> serde_json::Value {
+            let mut p = extra.clone();
+            p["column"] = json!(offset);
+            p
+        };
+        match existing {
+            Some((first, last)) => {
+                if c < first || c > last {
+                    return Err("The column is outside the filter range.".into());
+                }
+                self.session.run("data.filterBy", with_column(c - first)).map(|v| v.to_string())
+            }
+            None => {
+                if rows < 2 || cols == 0 || u64::from(rows) * u64::from(cols) > MAX_SORT_CELLS || c < col || c >= col + cols {
+                    return Err("Select a header row, at least one data row and the column to filter.".into());
+                }
+                let before = self.session.doc().map_err(|e| e.to_string())?.undo.len();
+                let range = format!("{}:{}", CellRef::new(row, col).a1(), CellRef::new(row + rows - 1, col + cols - 1).a1());
+                self.session.run("data.filter", json!({"range": range}))?;
+                let out = match self.session.run("data.filterBy", with_column(c - col)) {
+                    Ok(v) => v.to_string(),
+                    Err(e) => {
+                        let _ = self.undo();
+                        return Err(e.to_string());
+                    }
+                };
+                // Creating the filter and applying it is one user action: keep only the first snapshot.
+                let doc = self.session.doc_mut().map_err(|e| e.to_string())?;
+                if doc.undo.len() == before + 2 {
+                    doc.undo.pop();
+                }
+                Ok(out)
+            }
+        }
+    }
+
     /// Filters rows by one column as ONE history entry. `op_json` is `{"kind":"custom","column":abs,"op":..,"value":..}`
-    /// (op one of FILTER_OPS), `{"kind":"clear","column":abs}`, `{"kind":"clearAll"}` or `{"kind":"off"}`; `column` is the
+    /// (op one of FILTER_OPS), `{"kind":"values","column":abs,"values":[..200],"blanks":bool}`, `{"kind":"top","column":abs,"count":1..1000,"bottom":bool,"percent":bool}`, `{"kind":"aboveAverage","column":abs,"above":bool}`, `{"kind":"clear","column":abs}`, `{"kind":"clearAll"}` or `{"kind":"off"}`; `column` is the
     /// absolute 0-based sheet column. The block only creates the filter (its first row is the header); an existing
     /// filter keeps its own range. Protected sheets, filters inside tables, empty or oversized values are refused.
     /// Hidden rows come from the engine, so they follow the file and undo.
@@ -4503,35 +4544,36 @@ impl HeadlessWorkbook {
                     return Err(format!("A filter value must be 1 to {MAX_FILTER_VALUE} characters."));
                 }
                 let criterion = json!({"op": cmp, "value": value});
-                match existing {
-                    Some((first, last)) => {
-                        if c < first || c > last {
-                            return Err("The column is outside the filter range.".into());
-                        }
-                        self.session.run("data.filterBy", json!({"column": c - first, "custom": criterion})).map(|v| v.to_string())
-                    }
-                    None => {
-                        if rows < 2 || cols == 0 || u64::from(rows) * u64::from(cols) > MAX_SORT_CELLS || c < col || c >= col + cols {
-                            return Err("Select a header row, at least one data row and the column to filter.".into());
-                        }
-                        let before = self.session.doc().map_err(|e| e.to_string())?.undo.len();
-                        let range = format!("{}:{}", CellRef::new(row, col).a1(), CellRef::new(row + rows - 1, col + cols - 1).a1());
-                        self.session.run("data.filter", json!({"range": range}))?;
-                        let out = match self.session.run("data.filterBy", json!({"column": c - col, "custom": criterion})) {
-                            Ok(v) => v.to_string(),
-                            Err(e) => {
-                                let _ = self.undo();
-                                return Err(e.to_string());
-                            }
-                        };
-                        // Creating the filter and applying it is one user action: keep only the first snapshot.
-                        let doc = self.session.doc_mut().map_err(|e| e.to_string())?;
-                        if doc.undo.len() == before + 2 {
-                            doc.undo.pop();
-                        }
-                        Ok(out)
-                    }
+                self.filter_by_criterion(existing, (row, col, rows, cols), c, json!({"custom": criterion}))
+            }
+            "values" => {
+                let c = abs_col(&op)?;
+                let list = op.get("values").and_then(|v| v.as_array()).filter(|a| a.len() <= MAX_FILTER_PICKS).ok_or(format!("pick at most {MAX_FILTER_PICKS} values"))?;
+                let blanks = op.get("blanks").and_then(|v| v.as_bool()).ok_or("blanks must be true or false")?;
+                let mut values: Vec<String> = Vec::new();
+                for v in list {
+                    let t = v.as_str().filter(|t| !t.is_empty() && t.chars().count() <= MAX_FILTER_VALUE && !t.chars().any(char::is_control)).ok_or("a picked value must be 1 to 255 characters")?;
+                    values.push(t.to_string());
                 }
+                if values.is_empty() && !blanks {
+                    return Err("Pick at least one value.".into());
+                }
+                self.filter_by_criterion(existing, (row, col, rows, cols), c, json!({"values": values, "blanks": blanks}))
+            }
+            "top" => {
+                let c = abs_col(&op)?;
+                let count = op.get("count").and_then(|v| v.as_u64()).filter(|n| (1..=1000).contains(n)).ok_or("count must be a whole number from 1 to 1000")?;
+                let bottom = op.get("bottom").and_then(|v| v.as_bool()).ok_or("bottom must be true or false")?;
+                let percent = op.get("percent").and_then(|v| v.as_bool()).ok_or("percent must be true or false")?;
+                if percent && count > 100 {
+                    return Err("A percentage is at most 100.".into());
+                }
+                self.filter_by_criterion(existing, (row, col, rows, cols), c, json!({"top": {"count": count, "bottom": bottom, "percent": percent}}))
+            }
+            "aboveAverage" => {
+                let c = abs_col(&op)?;
+                let above = op.get("above").and_then(|v| v.as_bool()).ok_or("above must be true or false")?;
+                self.filter_by_criterion(existing, (row, col, rows, cols), c, json!({"aboveAverage": above}))
             }
             _ => Err("unsupported filter operation".into()),
         }
@@ -5570,6 +5612,34 @@ mod tests {
         assert!(book.sort_range(0, 0, 0, 2_000_000, 2, ok).is_err());
         book.session.run("review.protectSheet", json!({})).unwrap();
         assert!(book.sort_range(0, 0, 0, 3, 2, ok).unwrap_err().contains("protected"));
+    }
+    #[test]
+    fn value_and_rank_filters_hide_rows_in_one_undo_step() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        book.set_values(0, 1000, 0, r#"[["name","n"],["a","1"],["b","2"],["c","3"],["a","4"],["d","5"]]"#).unwrap();
+        let hidden = |book: &HeadlessWorkbook| book.session.doc().unwrap().wb.sheet(0).unwrap().rows.values().filter(|r| r.hidden).count();
+        let depth = book.session.doc().unwrap().undo.len();
+        book.filter_range(0, 1000, 0, 6, 2, r#"{"kind":"values","column":0,"values":["a","c"],"blanks":false}"#).unwrap();
+        assert_eq!(hidden(&book), 2, "b and d are hidden");
+        assert_eq!(book.session.doc().unwrap().undo.len(), depth + 1, "creating and applying the filter is one history entry");
+        book.filter_range(0, 1000, 0, 6, 2, r#"{"kind":"top","column":1,"count":2,"bottom":false,"percent":false}"#).unwrap();
+        assert!(hidden(&book) >= 3, "the filter on the first column stays and the top two of the rest remain");
+        book.filter_range(0, 1000, 0, 6, 2, r#"{"kind":"aboveAverage","column":1,"above":true}"#).unwrap();
+        book.filter_range(0, 1000, 0, 6, 2, r#"{"kind":"clearAll"}"#).unwrap();
+        assert_eq!(hidden(&book), 0);
+        for bad in [
+            r#"{"kind":"values","column":0,"values":[],"blanks":false}"#,
+            r#"{"kind":"values","column":0,"values":[""],"blanks":false}"#,
+            r#"{"kind":"values","column":0,"values":["a"]}"#,
+            r#"{"kind":"top","column":1,"count":0,"bottom":false,"percent":false}"#,
+            r#"{"kind":"top","column":1,"count":101,"bottom":false,"percent":true}"#,
+            r#"{"kind":"top","column":1,"count":5}"#,
+            r#"{"kind":"aboveAverage","column":1}"#,
+            r#"{"kind":"values","column":99999999,"values":["a"],"blanks":false}"#,
+        ] {
+            assert!(book.filter_range(0, 1000, 0, 6, 2, bad).is_err(), "{bad}");
+        }
+        book.undo().unwrap();
     }
     #[test]
     fn filter_range_hides_rows_in_one_undo_step_and_clears() {

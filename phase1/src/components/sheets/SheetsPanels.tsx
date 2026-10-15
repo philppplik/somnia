@@ -43,7 +43,7 @@ import {getSheetsPanelController} from '../../lib/sheets/panelController';
 import {describeValidationRule,VALIDATION_CHOICES,buildValidationOp,MAX_ITEM_CHARS,type ValidationChoice} from '../../lib/sheets/validationOps';
 import type {CfOperator} from '../../lib/sheets/protocol';
 import {CF_CHOICE_GROUPS,CF_STYLES,buildCfOp,cfChoiceIsVisual,cfChoiceNeeds,MAX_CF_TEXT,type CfChoice} from '../../lib/sheets/cfOps';
-import {FILTER_CONDITIONS,MAX_FILTER_VALUE,filterValueProblem} from '../../lib/sheets/filterOps';
+import {FILTER_CONDITIONS,MAX_FILTER_SCAN_ROWS,MAX_FILTER_VALUE,distinctValues,filterValueProblem,type DistinctValues} from '../../lib/sheets/filterOps';
 import {MAX_SHEETS,sheetNameProblem,TAB_COLORS,safeTabColor} from '../../lib/sheets/sheetOps';
 import type {BorderLineStyle,FilterCondition,RangeCell} from '../../lib/sheets/protocol';
 import {colWidthPx,rowHeightPx,MAX_COL_PX,MAX_ROW_PX,MAX_FREEZE} from '../../lib/sheets/lineOps';
@@ -234,6 +234,7 @@ export function SheetsLayoutPanel({context}:PanelHostProps){
   </div>
   <SortGroup/>
   <FilterGroup/>
+  <ValueFilterGroup/>
   <FillGroup/>
   <HighlightGroup/>
   <CfRulesGroup/>
@@ -287,6 +288,42 @@ function SortGroup(){
   <label className="flex flex-col gap-1">{t('sheets.sort.header')}<NativeSelect className={field} value={header?'yes':'no'} disabled={action.busy} onChange={e=>setHeader(e.currentTarget.value==='yes')} data-testid="sheets-sort-header"><option value="no">{t('sheets.sort.headerNo')}</option><option value="yes">{t('sheets.sort.headerYes')}</option></NativeSelect></label>
   <Button variant="outline" size="compact" disabled={action.busy||!!problem} onClick={()=>void action.run('sheets.sort',{column:col,order,header})} data-testid="sheets-sort-apply">{t('sheets.sort.apply')}</Button>
   <p className="text-ink-3">{t(problem?'sheets.sort.need':'sheets.sort.scope',{range:rangeAddress(r)})}</p>
+ </div>;
+}
+/** Slicer-style filtering of one column: load its values, tick the ones to keep, apply. Also top or bottom items and above or below average. One undo step each; the selection (header row first) creates the filter when there is none. */
+type QuickFilter='top'|'bottom'|'topPercent'|'bottomPercent'|'above'|'below';
+const QUICK_FILTERS:QuickFilter[]=['top','bottom','topPercent','bottomPercent','above','below'];
+function ValueFilterGroup(){
+ const {t}=useT(),s=useSheetsSelection(),action=useAction();const [column,setColumn]=useState(0);const [loaded,setLoaded]=useState<{key:string;data:DistinctValues}|null>(null);const [off,setOff]=useState<ReadonlySet<string>>(new Set());const [blanksOn,setBlanksOn]=useState(true);const [quick,setQuick]=useState<QuickFilter>('top');const [count,setCount]=useState(10);
+ const r=s?.range;if(!s||!r)return null;
+ const rows=r.r1-r.r0+1,cols=r.c1-r.c0+1,col=Math.min(column,cols-1),block=sortBlockProblem(rows,cols,true),key=s.sheet+':'+rangeAddress(r)+':'+col,data=loaded?.key===key?loaded.data:null;
+ const abs=r.c0+col,options=Array.from({length:Math.min(cols,MAX_SORT_OPTIONS)},(_,i)=>i),needsCount=quick!=='above'&&quick!=='below',maxCount=quick.endsWith('Percent')?100:1000;
+ const load=async()=>{
+  if(block||rows-1>MAX_FILTER_SCAN_ROWS){action.setNotice(t('sheets.vf.big',{n:MAX_FILTER_SCAN_ROWS}));return;}
+  const cells=await action.run('sheets.analyzeRange',{range:rangeAddress({r0:r.r0+1,r1:r.r1,c0:abs,c1:abs})});if(!cells)return;
+  setLoaded({key,data:distinctValues(cells as RangeCell[],rows-1)});setOff(new Set());setBlanksOn(true);
+ };
+ const picked=data?data.values.filter(v=>!off.has(v.text)).map(v=>v.text):[];
+ const applyValues=()=>{if(data)void action.run('sheets.filter',{kind:'values',column:abs,values:picked,blanks:blanksOn&&data.blanks>0});};
+ const applyQuick=()=>{
+  if(quick==='above'||quick==='below')void action.run('sheets.filter',{kind:'aboveAverage',column:abs,above:quick==='above'});
+  else void action.run('sheets.filter',{kind:'top',column:abs,count,bottom:quick.startsWith('bottom'),percent:quick.endsWith('Percent')});
+ };
+ return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.vf.title')}>
+  <span>{t('sheets.vf.title')}</span>
+  <label className="flex flex-col gap-1">{t('sheets.filter.column')}<NativeSelect className={field} value={col} disabled={action.busy} onChange={e=>setColumn(Number(e.currentTarget.value))} data-testid="sheets-vf-column">{options.map(i=><option key={i} value={i}>{colName(r.c0+i)}</option>)}</NativeSelect></label>
+  <Button variant="outline" size="compact" disabled={action.busy||!!block} onClick={()=>void load()} data-testid="sheets-vf-load">{t('sheets.vf.load')}</Button>
+  {data&&<div className="flex flex-col gap-1" data-testid="sheets-vf-list">
+   {data.values.map(v=><Checkbox key={v.text} label={v.text+' ('+v.count+')'} checked={!off.has(v.text)} disabled={action.busy} onChange={e=>{const on=e.currentTarget.checked;setOff(p=>{const n=new Set(p);if(on)n.delete(v.text);else n.add(v.text);return n;});}}/>)}
+   {data.blanks>0&&<Checkbox label={t('sheets.vf.blanks')+' ('+data.blanks+')'} checked={blanksOn} disabled={action.busy} onChange={e=>setBlanksOn(e.currentTarget.checked)}/>}
+   {data.truncated&&<p className="text-ink-3">{t('sheets.vf.truncated',{n:data.values.length})}</p>}
+   <Button variant="outline" size="compact" disabled={action.busy||(picked.length===0&&!(blanksOn&&data.blanks>0))} onClick={applyValues} data-testid="sheets-vf-apply">{t('sheets.vf.apply')}</Button>
+  </div>}
+  <label className="flex flex-col gap-1">{t('sheets.vf.quick')}<NativeSelect className={field} value={quick} disabled={action.busy} onChange={e=>setQuick(e.currentTarget.value as QuickFilter)} data-testid="sheets-vf-quick">{QUICK_FILTERS.map(q=><option key={q} value={q}>{t('sheets.vf.q.'+q)}</option>)}</NativeSelect></label>
+  {needsCount&&<NumberField label={t('sheets.vf.count')} value={count} resetKey={'vf-count-'+quick} min={1} max={maxCount} step={1} disabled={action.busy} constraintError={t('sheets.vf.countInvalid',{max:maxCount})} parse={v=>{const n=Number(v.trim());return v.trim()&&Number.isInteger(n)&&n>=1&&n<=maxCount?{ok:true,value:n}:{ok:false,error:t('sheets.vf.countInvalid',{max:maxCount})};}} onCommit={v=>setCount(v)}/>}
+  <Button variant="outline" size="compact" disabled={action.busy||!!block||(needsCount&&(count<1||count>maxCount))} onClick={applyQuick} data-testid="sheets-vf-quick-apply">{t('sheets.vf.apply')}</Button>
+  <p className="text-ink-3">{t(block?'sheets.sort.need':'sheets.vf.scope',{range:rangeAddress(r)})}</p>
+  {action.notice?<p role="alert">{action.notice}</p>:null}
  </div>;
 }
 const FILTER_LABELS:Record<FilterCondition,string>={'=':'=','<>':'\u2260','>':'>','<':'<','>=':'\u2265','<=':'\u2264',beginsWith:'',endsWith:'',contains:'',notContains:''};
