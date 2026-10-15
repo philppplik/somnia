@@ -4,6 +4,7 @@ import {layerKeyTimes,shiftLayerKeys} from './layerShift';
 import {validateEasingLib} from './easingModel';
 import {validateMotionLib} from './motionModel';
 import {validateTextPresetLib} from './textPresetModel';
+import {validatePoseLib} from './poseModel';
 import type {InterfaceAsset} from '../interface/schema';
 import {validateAnimationAssets} from './assetsValidation';
 import {MAX_AUDIO_VOLUME,type AudioAsset} from './audioCore';
@@ -80,6 +81,7 @@ export type Edit=
  |{type:'asset.import';asset:InterfaceAsset}
  /** Replace the document's saved motion presets (library edits compute the full list). */
  |{type:'easings.set';items:readonly import('./easingModel').EasingSet[]}
+ |{type:'poses.set';items:readonly import('./poseModel').PoseSet[]}
  |{type:'motions.set';items:readonly import('./motionModel').MotionSet[]}
  |{type:'layerTemplates.set';items:readonly import('./model').LayerTemplate[]}
  |{type:'layerTemplate.insert';template:string;layer:string;at:number;/** Fresh ids for the further layers of a multi-layer template, in template order. */layers?:readonly string[]}
@@ -378,6 +380,7 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
    else {const p=effect.animation??fail('missing','Effect is not animated.');const keys=p.keys.filter(k=>k.t!==t);next=keys.length?{...effect,animation:{...p,keys}}:{...effect,amount:evaluate(p,t) as number,animation:undefined};}
    return setLayer(doc,{...l,effects:l.effects!.map(x=>x.id===effect.id?next:x)});}
   case 'easings.set':{const easings={version:1 as const,items:e.items};const p=validateEasingLib(easings);if(p.length)fail('invalid',p[0]);return {...doc,easings};}
+  case 'poses.set':{const poses={version:1 as const,items:e.items};const p=validatePoseLib(poses);if(p.length)fail('invalid',p[0]);return {...doc,poses};}
   case 'motions.set':{const motions={version:1 as const,items:e.items};const p=validateMotionLib(motions);if(p.length)fail('invalid',p[0]);return {...doc,motions};}
   case 'layerTemplates.set':{const layerTemplates={version:1 as const,items:e.items};const p=validateLayerTemplates({...doc,layerTemplates});if(p.length)fail('invalid',p[0]);return {...doc,layerTemplates:e.items.length?layerTemplates:undefined};}
   case 'layerTemplate.insert':{

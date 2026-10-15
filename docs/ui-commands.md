@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-857 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+860 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -178,6 +178,9 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `animation.path.mode` | Set position path timing | Edit | animation |  |
 | `animation.playback.loop` | Toggle looped playback | View | animation |  |
 | `animation.playhead.set` | Move playhead | View | animation |  |
+| `animation.pose.apply` | Apply a saved pose | Edit | animation |  |
+| `animation.pose.delete` | Delete a saved pose | Edit | animation |  |
+| `animation.pose.save` | Save the layers’ pose | Edit | animation |  |
 | `animation.precomp.add` | Add a composition as a layer | Insert | animation |  |
 | `animation.precomp.make` | Precompose selected layers | Edit | animation |  |
 | `animation.precomp.time` | Set comp layer speed, loop and start | Edit | animation |  |

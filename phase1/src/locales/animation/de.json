@@ -1072,5 +1072,15 @@
  "animation.rig.match.opacity": "Deckkraft",
  "animation.rig.match.all": "Alles davon",
  "cmd.animation.layers.match": "Andere Ebenen an die erste Ebene angleichen",
- "animation.graph.marquee.hint": "Umschalt+Ziehen: Keys per Rahmen wählen (Strg/Cmd fügt hinzu). Ziehen: Abspielkopf bewegen."
+ "animation.graph.marquee.hint": "Umschalt+Ziehen: Keys per Rahmen wählen (Strg/Cmd fügt hinzu). Ziehen: Abspielkopf bewegen.",
+ "animation.pose.title": "Posen",
+ "animation.pose.pick": "Pose anwenden ...",
+ "animation.pose.none": "Noch keine Posen gespeichert",
+ "animation.pose.name": "Name der Pose",
+ "animation.pose.save": "Gewählte Ebenen als Pose speichern",
+ "animation.pose.saveGo": "Speichern",
+ "animation.pose.delete": "Pose löschen",
+ "cmd.animation.pose.save": "Pose der Ebenen speichern",
+ "cmd.animation.pose.apply": "Gespeicherte Pose anwenden",
+ "cmd.animation.pose.delete": "Gespeicherte Pose löschen"
 }

@@ -1072,5 +1072,15 @@
  "animation.rig.match.opacity": "Opacidad",
  "animation.rig.match.all": "Todo esto",
  "cmd.animation.layers.match": "Igualar las demás capas a la primera capa",
- "animation.graph.marquee.hint": "Mayús+arrastrar: seleccionar claves con un recuadro (Ctrl/Cmd suma). Arrastrar: mover el cabezal."
+ "animation.graph.marquee.hint": "Mayús+arrastrar: seleccionar claves con un recuadro (Ctrl/Cmd suma). Arrastrar: mover el cabezal.",
+ "animation.pose.title": "Poses",
+ "animation.pose.pick": "Aplicar una pose...",
+ "animation.pose.none": "Aún no hay poses guardadas",
+ "animation.pose.name": "Nombre de la pose",
+ "animation.pose.save": "Guardar las capas marcadas como pose",
+ "animation.pose.saveGo": "Guardar",
+ "animation.pose.delete": "Eliminar pose",
+ "cmd.animation.pose.save": "Guardar la pose de las capas",
+ "cmd.animation.pose.apply": "Aplicar una pose guardada",
+ "cmd.animation.pose.delete": "Eliminar una pose guardada"
 }

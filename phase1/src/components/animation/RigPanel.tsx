@@ -36,7 +36,7 @@ const byKey=(k:string)=>groups.find(g=>g.key===k)!;
 const tree:{key:string;items?:RigItem[];children?:{key:string;items:RigItem[]}[]}[]=[byKey('hierarchy'),byKey('layers'),{key:'arrange',children:['order','align','fit','match'].map(byKey)},{key:'appearance',children:['reset','fade'].map(byKey)},byKey('state')];
 /** Left-panel section: tick layers, then chain them, group them under a control null, or release their parents. Tick order is the chain order. */
 export function RigPanel({comp}:{comp:Composition}){
- const {t}=useT();const [ticked,setTicked]=useState<string[]>([]);
+ const {t}=useT();const [ticked,setTicked]=useState<string[]>([]);const poses=useAnimationState().doc?.poses?.items??[];const [pose,setPose]=useState('');const [naming,setNaming]=useState(false);const [pname,setPname]=useState('');
  const ids=ticked.filter(id=>comp.layers.some(l=>l.id===id));
  const toggle=(id:string)=>setTicked(ids.includes(id)?ids.filter(x=>x!==id):[...ids,id]);
  const subGroup=(g:{key:string;items:RigItem[]})=><MenuSubmenu key={g.key}><MenuSubmenuTrigger className="menu-item" data-testid={`animation-rig-group-${g.key}`}>{t(`animation.rig.group.${g.key}`)}<span aria-hidden="true">›</span></MenuSubmenuTrigger>
@@ -56,6 +56,16 @@ export function RigPanel({comp}:{comp:Composition}){
      <MenuContent>{g.children.map(c=>subGroup(c))}</MenuContent></MenuSubmenu>:subGroup(g as {key:string;items:RigItem[]}))}</MenuContent></Menu>
    <div className="grid min-w-0 grid-cols-[1fr_4rem] gap-1"><Button size="compact" variant="outline" className="h-auto min-w-0 whitespace-normal text-left" disabled={ids.length<2||!followOk} onClick={()=>void executeCommand('animation.rig.follow',{layers:ids,frames:Number(follow)})} data-testid="animation-rig-follow">{t('animation.rig.follow')}</Button>
     <NativeInput className="h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text" type="number" min={0} max={60} step={1} value={follow} aria-label={t('animation.rig.followFrames')} onChange={e=>setFollow(e.target.value)} data-testid="animation-rig-follow-frames"/></div>
+  </div>
+  <div className="grid min-w-0 gap-1" role="group" aria-label={t('animation.pose.title')} data-testid="animation-pose">
+   <NativeSelect className="h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink" value={pose} disabled={!poses.length} aria-label={t('animation.pose.title')} onChange={async e=>{const v=e.target.value;setPose(v);if(v)try{await executeCommand('animation.pose.apply',{id:v});}catch{/* the command reports expected problems */}}} data-testid="animation-pose-pick">
+    <option value="">{poses.length?t('animation.pose.pick'):t('animation.pose.none')}</option>{poses.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</NativeSelect>
+   <div className="flex min-w-0 flex-wrap items-center gap-1">
+    {naming?<><NativeInput className="h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text" type="text" maxLength={40} value={pname} placeholder={t('animation.pose.name')} aria-label={t('animation.pose.name')} onChange={e=>setPname(e.target.value)} data-testid="animation-pose-name"/>
+     <Button size="tiny" variant="ghost" disabled={!pname.trim()||ids.length<1} onClick={async()=>{try{const id=await executeCommand('animation.pose.save',{name:pname,layers:ids});setPose(typeof id==='string'?id:'');setNaming(false);setPname('');}catch{/* expected problems stay in the command result */}}} data-testid="animation-pose-save-go">{t('animation.pose.saveGo')}</Button></>
+     :<Button size="tiny" variant="ghost" disabled={ids.length<1} onClick={()=>setNaming(true)} data-testid="animation-pose-save">{t('animation.pose.save')}</Button>}
+    {pose&&!naming&&<Button size="tiny" variant="ghost" onClick={async()=>{try{await executeCommand('animation.pose.delete',{id:pose});setPose('');}catch{/* gone already */}}} data-testid="animation-pose-delete">{t('animation.pose.delete')}</Button>}
+   </div>
   </div>
   <div className="text-ink-3">{t('animation.rig.hint')}</div>
   <div className="grid min-w-0 gap-1 border-t border-subtle pt-2" role="group" aria-label={t('animation.timing.title')} data-testid="animation-timing">

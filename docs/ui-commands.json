@@ -2196,6 +2196,54 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.pose.apply",
+      "title": "Apply a saved pose",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "apply",
+        "library",
+        "pose",
+        "rig",
+        "transform"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "animation.pose.delete",
+      "title": "Delete a saved pose",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "delete",
+        "library",
+        "pose",
+        "remove"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "animation.pose.save",
+      "title": "Save the layers’ pose",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "library",
+        "opacity",
+        "pose",
+        "position",
+        "rig",
+        "rotation",
+        "save",
+        "scale",
+        "transform"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.precomp.add",
       "title": "Add a composition as a layer",
       "category": "Insert",

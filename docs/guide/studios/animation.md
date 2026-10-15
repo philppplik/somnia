@@ -32,6 +32,7 @@ Choose Animation in the studio pill. The Project menu has a command to start a b
 
 - Blur and tint effects with keyed strength, bypass and reorder.
 - Motion presets: fade, slide, bounce and typewriter entrances, plus a library of built-in presets that you can store in the document and export or import as JSON.
+- Pose library: save the position, scale, rotation and opacity of several layers at the playhead under a name (stored in the document) and apply it back in one undo step.
 
 ## Audio
 

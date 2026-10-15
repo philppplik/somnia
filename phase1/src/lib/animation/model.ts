@@ -78,7 +78,7 @@ export interface Shutter{angle:number;samples:number}
 export const SHUTTER_MAX_SAMPLES=16,SHUTTER_MAX_ANGLE=720;
 export const validShutter=(s:Shutter|undefined)=>s===undefined||(!!s&&typeof s==='object'&&isNum(s.angle)&&s.angle>=1&&s.angle<=SHUTTER_MAX_ANGLE&&Number.isInteger(s.samples)&&s.samples>=2&&s.samples<=SHUTTER_MAX_SAMPLES);
 export interface Composition{shutter?:Shutter;id:string;name:string;width:number;height:number;fps:Rational;duration:number;start:number;background:string;workArea:{in:number;out:number};layers:readonly Layer[];markers?:readonly Marker[];/** Ruler guides for the viewer; never drawn in exports. */guides?:readonly import('./guides').Guide[]}
-export interface AnimationDocument{schema:number;engine:string;id:string;name:string;revision:number;activeComp:string;compositions:readonly Composition[];assets:readonly InterfaceAsset[];audioAssets?:readonly AudioAsset[];motions?:MotionLib;textPresets?:import('./textPresetModel').TextPresetLib;easings?:import('./easingModel').EasingLib;layerTemplates?:LayerTemplateLib}
+export interface AnimationDocument{schema:number;engine:string;id:string;name:string;revision:number;activeComp:string;compositions:readonly Composition[];assets:readonly InterfaceAsset[];audioAssets?:readonly AudioAsset[];motions?:MotionLib;textPresets?:import('./textPresetModel').TextPresetLib;easings?:import('./easingModel').EasingLib;poses?:import('./poseModel').PoseLib;layerTemplates?:LayerTemplateLib}
 /** A user-saved layer: one self-contained shape, text or solid layer with its keys, times counted from its own start (the earliest of its in point and keys is 0). */
 /** `layer` is the first layer (id `template`); `extra` holds further layers of a multi-layer template (ids `template-2`..), whose parent links point at template ids. */
 export interface LayerTemplate{id:string;name:string;layer:Layer;extra?:readonly Layer[]}
@@ -138,6 +138,7 @@ import {validateMotionLib,type MotionLib} from './motionModel';
 import {validateTextPresetLib} from './textPresetModel';
 import {validGuides} from './guides';
 import {validateEasingLib} from './easingModel';
+import {validatePoseLib} from './poseModel';
 export function validateDocument(raw:unknown):string[]{
  const errs:string[]=[];const bad=(m:string)=>{if(errs.length<20)errs.push(m);};
  const d=raw as Partial<AnimationDocument>|null;
@@ -151,6 +152,7 @@ export function validateDocument(raw:unknown):string[]{
  for(const p of validateMotionLib(d.motions))bad(p);
  for(const p of validateTextPresetLib(d.textPresets))bad(p);
  for(const p of validateEasingLib(d.easings))bad(p);
+ for(const p of validatePoseLib(d.poses))bad(p);
  for(const p of validateLayerTemplates(d as AnimationDocument))bad(p);
  if(!Array.isArray(d.compositions)||!d.compositions.length)return [...errs,'no compositions'];
  const compIds=new Set<string>();

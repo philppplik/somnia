@@ -1072,5 +1072,15 @@
  "animation.rig.match.opacity": "Opacity",
  "animation.rig.match.all": "All of these",
  "cmd.animation.layers.match": "Match the other layers to the first layer",
- "animation.graph.marquee.hint": "Shift+drag: box-select keys (Ctrl/Cmd adds). Drag: move the playhead."
+ "animation.graph.marquee.hint": "Shift+drag: box-select keys (Ctrl/Cmd adds). Drag: move the playhead.",
+ "animation.pose.title": "Poses",
+ "animation.pose.pick": "Apply a pose...",
+ "animation.pose.none": "No poses saved yet",
+ "animation.pose.name": "Pose name",
+ "animation.pose.save": "Save ticked layers as pose",
+ "animation.pose.saveGo": "Save",
+ "animation.pose.delete": "Delete pose",
+ "cmd.animation.pose.save": "Save the layers’ pose",
+ "cmd.animation.pose.apply": "Apply a saved pose",
+ "cmd.animation.pose.delete": "Delete a saved pose"
 }

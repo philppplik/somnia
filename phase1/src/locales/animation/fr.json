@@ -1072,5 +1072,15 @@
  "animation.rig.match.opacity": "Opacité",
  "animation.rig.match.all": "Tout cela",
  "cmd.animation.layers.match": "Aligner les autres calques sur le premier calque",
- "animation.graph.marquee.hint": "Maj+glisser : sélectionner des clés par cadre (Ctrl/Cmd ajoute). Glisser : déplacer la tête de lecture."
+ "animation.graph.marquee.hint": "Maj+glisser : sélectionner des clés par cadre (Ctrl/Cmd ajoute). Glisser : déplacer la tête de lecture.",
+ "animation.pose.title": "Poses",
+ "animation.pose.pick": "Appliquer une pose...",
+ "animation.pose.none": "Aucune pose enregistrée",
+ "animation.pose.name": "Nom de la pose",
+ "animation.pose.save": "Enregistrer les calques cochés comme pose",
+ "animation.pose.saveGo": "Enregistrer",
+ "animation.pose.delete": "Supprimer la pose",
+ "cmd.animation.pose.save": "Enregistrer la pose des calques",
+ "cmd.animation.pose.apply": "Appliquer une pose enregistrée",
+ "cmd.animation.pose.delete": "Supprimer une pose enregistrée"
 }

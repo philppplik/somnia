@@ -1072,5 +1072,15 @@
  "animation.rig.match.opacity": "Opacidade",
  "animation.rig.match.all": "Tudo isso",
  "cmd.animation.layers.match": "Igualar as outras camadas à primeira camada",
- "animation.graph.marquee.hint": "Shift+arrastar: selecionar chaves com uma caixa (Ctrl/Cmd soma). Arrastar: mover o cursor."
+ "animation.graph.marquee.hint": "Shift+arrastar: selecionar chaves com uma caixa (Ctrl/Cmd soma). Arrastar: mover o cursor.",
+ "animation.pose.title": "Poses",
+ "animation.pose.pick": "Aplicar uma pose...",
+ "animation.pose.none": "Nenhuma pose salva ainda",
+ "animation.pose.name": "Nome da pose",
+ "animation.pose.save": "Salvar as camadas marcadas como pose",
+ "animation.pose.saveGo": "Salvar",
+ "animation.pose.delete": "Excluir pose",
+ "cmd.animation.pose.save": "Salvar a pose das camadas",
+ "cmd.animation.pose.apply": "Aplicar uma pose salva",
+ "cmd.animation.pose.delete": "Excluir uma pose salva"
 }

@@ -977,3 +977,24 @@ test('P217 graph box select: keys inside the box in any corner order, edges incl
  assert.deepEqual(keysInBox(keys,pos,{x:0,y:0},{x:60,y:60}),[0,1]);assert.deepEqual(keysInBox(keys,pos,{x:60,y:60},{x:0,y:0}),[0,1]);
  assert.deepEqual(keysInBox(keys,pos,{x:50,y:50},{x:90,y:20}),[1,2]);assert.deepEqual(keysInBox(keys,pos,{x:200,y:200},{x:300,y:300}),[]);assert.deepEqual(keysInBox([],pos,{x:0,y:0},{x:1,y:1}),[]);
 });
+
+test('P218 pose library: save by ticked layers, apply at the playhead in one undo step, replace by name, delete, limits, document validation',async()=>{
+ const {poseSpecs}=await import('./poseCommands');const {validatePoseLib,MAX_POSES}=await import('./poseModel');const {validateDocument}=await import('./model');const {evaluate}=await import('./interpolate');
+ const run=(i:number,p?:unknown)=>poseSpecs()[i].run(p) as unknown;
+ const s=open();setAnimationSession(s);s.setView({playhead:0});for(const id of ['b','c'])s.dispatch({type:'layer.add',kind:'shape',id});
+ const L=(id:string)=>findComp(s.document!).layers.find(l=>l.id===id)!;
+ s.dispatch({type:'prop.set',layer:'b',prop:'position',value:[10,20],t:0});s.dispatch({type:'prop.set',layer:'b',prop:'rotation',value:15,t:0});s.dispatch({type:'prop.set',layer:'c',prop:'opacity',value:30,t:0});
+ assert.equal(run(0,{name:'  Hero  A ',layers:['b','c']}),'hero a');assert.equal(s.document!.poses!.items[0].name,'Hero A');assert.deepEqual(validateDocument(s.document),[]);
+ s.dispatch({type:'prop.set',layer:'b',prop:'position',value:[99,99],t:0});s.dispatch({type:'prop.set',layer:'b',prop:'rotation',value:0,t:0});s.dispatch({type:'prop.set',layer:'c',prop:'opacity',value:100,t:0});
+ run(1,{id:'hero a'});assert.deepEqual(evaluate(L('b').transform.position,0),[10,20]);assert.equal(evaluate(L('b').transform.rotation,0),15);assert.equal(evaluate(L('c').transform.opacity,0),30);
+ s.undo();assert.deepEqual(evaluate(L('b').transform.position,0),[99,99]);
+ run(1,{id:'hero a'});assert.throws(()=>run(1,{id:'hero a'}),(e:any)=>/already match/.test(e.message));
+ run(0,{name:'HERO a',layers:['b']});assert.equal(s.document!.poses!.items.length,1);assert.equal(s.document!.poses!.items[0].layers.length,1);
+ s.dispatch({type:'layer.update',layer:'b',locked:true});assert.throws(()=>run(1,{id:'hero a'}),(e:any)=>e.expected===true);
+ for(const bad of [{name:''},{name:'x'.repeat(41)},{name:'ok',layers:['nope']}])assert.throws(()=>run(0,bad),(e:any)=>e.expected===true);
+ assert.throws(()=>run(1,{id:'nope'}),(e:any)=>e.expected===true);assert.throws(()=>run(2,{id:'nope'}),(e:any)=>e.expected===true);
+ s.dispatch({type:'layer.update',layer:'b',locked:false});for(let i=1;i<MAX_POSES;i++)run(0,{name:`p${i}`,layers:['c']});assert.throws(()=>run(0,{name:'extra',layers:['c']}),(e:any)=>/Delete one first/.test(e.message));
+ run(2,{id:'p1'});assert.equal(s.document!.poses!.items.length,MAX_POSES-1);
+ s.undo();assert.equal(s.document!.poses!.items.length,MAX_POSES);
+ assert.ok(validatePoseLib({version:2,items:[]}).length);assert.ok(validatePoseLib({version:1,items:[{id:'a',name:'a',layers:[{layer:'x'}]}]}).length);assert.ok(validatePoseLib({version:1,items:[{id:'a',name:'a',layers:[{layer:'x',opacity:101}]}]}).length);assert.deepEqual(validatePoseLib(undefined),[]);
+});
