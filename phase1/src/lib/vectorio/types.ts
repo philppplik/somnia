@@ -91,6 +91,9 @@ export interface VectorText {
   back?: boolean; // painted behind all shapes instead of above them, omitted when false
 }
 
+/** A placed raster image (extension): PNG/JPEG/WebP data URI, painted behind all paths and texts. Exported as `<image data-vs-image="1">`. */
+export interface VectorImage { id: string; x: number; y: number; width: number; height: number; href: string; opacity?: number }
+
 /** Ruler guides in document units: `x` are vertical lines, `y` horizontal. */
 export interface Guides { x: number[]; y: number[] }
 export interface VectorDocument {
@@ -107,6 +110,8 @@ export interface VectorDocument {
   swatches?: string[];
   /** Extension. Text objects, painted above all paths (no z-order among shapes). */
   texts?: VectorText[];
+  /** Extension. Placed images, painted behind everything (reference layers). */
+  images?: VectorImage[];
 }
 
 export const GRADIENT_LIMITS = Object.freeze({ maxGradients: 64, maxStops: 16 });

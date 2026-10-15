@@ -1,5 +1,5 @@
 import type {ReactElement} from 'react';
-import {serializeContour,pathArrows,textLines,textTransform,LINE_HEIGHT,type VectorText,type ArrowSpec,type Gradient,type Style,type VectorPath,fxSpec,type FxSpec} from '../../lib/vectorio';
+import {serializeContour,pathArrows,textLines,textTransform,LINE_HEIGHT,type VectorText,type VectorImage,type ArrowSpec,type Gradient,type Style,type VectorPath,fxSpec,type FxSpec} from '../../lib/vectorio';
 /** SVG attributes for one path style. Absent keys follow SVG defaults (black fill, no stroke), same as the exporter. */
 export function styleProps(s:Partial<Style>|undefined){
  return {fill:s?.fill??'#000000',stroke:s?.stroke??'none',strokeWidth:s?.strokeWidth??1,strokeLinecap:s?.lineCap,strokeLinejoin:s?.lineJoin,strokeMiterlimit:s?.miterLimit,
@@ -41,3 +41,7 @@ export function GradientDefs({gradients}:{gradients?:readonly Gradient[]}){
 export function TextLayer({texts}:{texts:readonly VectorText[]}){
  return <>{texts.map(t=><text key={t.id} data-text-id={t.id} x={t.x} y={t.y} fontFamily={t.fontFamily} fontSize={t.fontSize} fontWeight={t.fontWeight} fontStyle={t.fontStyle} textAnchor={t.anchor} fill={t.fill} opacity={t.opacity} transform={textTransform(t)} xmlSpace="preserve">
   {textLines(t).map((l,i)=><tspan key={i} x={t.x} dy={i===0?0:t.fontSize*LINE_HEIGHT}>{l}</tspan>)}</text>)}</>;}
+
+/** Placed images (reference layers), painted behind all paths and texts. */
+export function ImageLayer({images}:{images:readonly VectorImage[]}){
+ return <>{images.map(i=><image key={i.id} data-image-id={i.id} x={i.x} y={i.y} width={i.width} height={i.height} preserveAspectRatio="none" opacity={i.opacity} href={i.href}/>)}</>;}

@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1104 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1108 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -1054,6 +1054,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `vector.clearGuides` | Clear all ruler guides | Edit | vector |  |
 | `vector.copyStyle` | Copy vector style | Edit | vector |  |
 | `vector.createBlank` | New vector document | Project | vector |  |
+| `vector.deleteImage` | Delete a placed image | Edit | vector |  |
 | `vector.deleteNode` | Delete vector node | Edit | vector |  |
 | `vector.deleteSelection` | Delete selected vector paths | Edit | vector |  |
 | `vector.deleteText` | Delete text | Edit | vector |  |
@@ -1076,6 +1077,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `vector.openSvg` | Open vector SVG source | Project | vector |  |
 | `vector.outlineStroke` | Outline vector stroke | Edit | vector |  |
 | `vector.pasteStyle` | Paste vector style | Edit | vector |  |
+| `vector.placeImage` | Place an image | Insert | vector |  |
 | `vector.redo` | Redo vector edit | Edit | vector |  |
 | `vector.releaseClip` | Release clipping mask | Edit | vector |  |
 | `vector.removeSwatch` | Remove colour swatch | Edit | vector |  |
@@ -1088,10 +1090,12 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `vector.rotateSelection` | Rotate vector selection | Edit | vector |  |
 | `vector.roundCorners` | Round vector corners | Edit | vector |  |
 | `vector.select` | Select vector paths | View | vector |  |
+| `vector.selectImage` | Select a placed image | Edit | vector |  |
 | `vector.selectNode` | Select vector node | View | vector |  |
 | `vector.selectText` | Select a text object | Edit | vector |  |
 | `vector.setGradient` | Set vector gradient fill | Edit | vector |  |
 | `vector.setGrid` | Set the grid | View | vector |  |
+| `vector.setImage` | Edit a placed image | Edit | vector |  |
 | `vector.setNodeKind` | Set vector node kind | Edit | vector |  |
 | `vector.setSelectionBounds` | Set vector selection bounds | Edit | vector |  |
 | `vector.setShapeOptions` | Set shape tool options | Edit | vector |  |

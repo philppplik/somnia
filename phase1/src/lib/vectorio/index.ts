@@ -3,6 +3,7 @@ export * from './arrows';
 export * from './effects';
 export * from './swatches';
 export * from './text';
+export * from './image';
 export { importSvg, SvgImportError, type ImportOptions, type ImportResult } from './import';
 export { exportSvg, type ExportOptions } from './export';
 export { gradientIdOf, gradientFill, pruneGradients } from './gradient';

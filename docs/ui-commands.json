@@ -12779,6 +12779,13 @@
       "hasEnabled": true
     },
     {
+      "id": "vector.deleteImage",
+      "title": "Delete a placed image",
+      "category": "Edit",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
       "id": "vector.deleteNode",
       "title": "Delete vector node",
       "category": "Edit",
@@ -12933,6 +12940,13 @@
       "hasEnabled": true
     },
     {
+      "id": "vector.placeImage",
+      "title": "Place an image",
+      "category": "Insert",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
       "id": "vector.redo",
       "title": "Redo vector edit",
       "category": "Edit",
@@ -13017,6 +13031,13 @@
       "hasEnabled": true
     },
     {
+      "id": "vector.selectImage",
+      "title": "Select a placed image",
+      "category": "Edit",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
       "id": "vector.selectNode",
       "title": "Select vector node",
       "category": "View",
@@ -13041,6 +13062,13 @@
       "id": "vector.setGrid",
       "title": "Set the grid",
       "category": "View",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
+      "id": "vector.setImage",
+      "title": "Edit a placed image",
+      "category": "Edit",
       "source": "vector",
       "hasEnabled": true
     },

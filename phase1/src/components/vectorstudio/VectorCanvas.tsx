@@ -6,14 +6,14 @@ import {FileTabs} from '../FileTabs';
 import {useT} from '../../lib/useT';
 import {executeCommand} from '../../lib/commands';
 import {serializeContour,type Point,type VectorNode,type VectorPath} from '../../lib/vectorio';
-import {selectText,deleteText,duplicateText,updateText,selectNode,moveSelection,addNodeNear,addPath,commit,createBlankVector,deleteNode,deleteSelection,duplicateSelection,moveNode,openSvgSource,PAGE_PRESETS,redo,select,setTool,setView,undo,useVectorSession,type VectorTool} from '../../lib/vectorstudio/session';
+import {selectImage,deleteImage,updateImage,selectText,deleteText,duplicateText,updateText,selectNode,moveSelection,addNodeNear,addPath,commit,createBlankVector,deleteNode,deleteSelection,duplicateSelection,moveNode,openSvgSource,PAGE_PRESETS,redo,select,setTool,setView,undo,useVectorSession,type VectorTool} from '../../lib/vectorstudio/session';
 import {boxOf,fitPath,hitDocument,pathBox,translatePath,type Box} from '../../lib/vectorstudio/geometry';
 import {buildShape,newId,DEFAULT_SHAPE_STYLE,type ShapeKind} from '../../lib/vectorstudio/shapes';
 import {openSvgDialog} from '../../lib/vectorstudio/open';
 import {handleLocal,handlePoint,rotationFor,HANDLE_GAP_PX} from '../../lib/vectorstudio/textRotate';
 import {selectionHandle,angleAround,centerOf,turnPoint} from '../../lib/vectorstudio/rotateHandle';
 import {rotateSelection,selectionBounds} from '../../lib/vectorstudio/transforms';
-import {PathLayer,GradientDefs,TextLayer} from './render';
+import {PathLayer,GradientDefs,TextLayer,ImageLayer} from './render';
 import {textBox,textTransform,unrotateAround,type VectorText} from '../../lib/vectorio';
 import {togglePathSelection} from './tools/operations';
 import {selectionSvg,pasteSvgText} from '../../lib/vectorstudio/clipboard';
@@ -32,6 +32,7 @@ type Drag=
  |{kind:'node';path:string;node:string;part:'anchor'|'in'|'out';cur:Point}
  |{kind:'text-move';id:string;start:Point;dx:number;dy:number}
  |{kind:'text-rotate';id:string;rotation:number}
+ |{kind:'image-move';id:string;start:Point;dx:number;dy:number}
  |{kind:'sel-rotate';center:Point;handle:Point;deg:number}
  |{kind:'pan';sx:number;sy:number;pan:Point}
  |{kind:'pen-handle';cur:Point};
@@ -76,6 +77,9 @@ export function VectorCanvas(){
   return p;};
  const paths=s.doc.paths.map(preview);
  const texts=(s.doc.texts??[]).map(t=>drag?.kind==='text-move'&&drag.id===t.id?{...t,x:t.x+drag.dx,y:t.y+drag.dy}:drag?.kind==='text-rotate'&&drag.id===t.id?{...t,rotation:drag.rotation}:t);
+ const images=(s.doc.images??[]).map(i=>drag?.kind==='image-move'&&drag.id===i.id?{...i,x:i.x+drag.dx,y:i.y+drag.dy}:i);
+ const selImage=images.find(i=>i.id===s.imageSel);
+ const hitImage=(pt:Point):string|null=>{for(let i=images.length-1;i>=0;i--){const m=images[i];if(pt.x>=m.x-tol&&pt.x<=m.x+m.width+tol&&pt.y>=m.y-tol&&pt.y<=m.y+m.height+tol)return m.id;}return null;};
  const selText=texts.find(t=>t.id===s.textSel);const selTextBox=selText?textBox(selText):null;
  const hitText=(pt:Point,back=false):string|null=>{for(let i=texts.length-1;i>=0;i--){if(!!texts[i].back!==back)continue;const b=textBox(texts[i]),q=unrotateAround(texts[i],pt);if(q.x>=b.minX-tol&&q.x<=b.maxX+tol&&q.y>=b.minY-tol&&q.y<=b.maxY+tol)return texts[i].id;}return null;};
  const selBox=boxOf(selected.map(preview));
@@ -104,12 +108,14 @@ export function VectorCanvas(){
   if(id){const next=e.shiftKey?togglePathSelection(s.doc,s.selection,id,true):s.selection.includes(id)?s.selection:togglePathSelection(s.doc,s.selection,id);select(next);
    if(next.includes(id))setDrag({kind:'move',start:pt,dx:0,dy:0});return;}
   {const hit=hitText(pt,true);if(hit){selectText(hit);setDrag({kind:'text-move',id:hit,start:pt,dx:0,dy:0});return;}}
-  if(!e.shiftKey){select([]);selectText(null);}setDrag({kind:'marquee',start:pt,cur:pt});};
+  {const hit=hitImage(pt);if(hit){selectImage(hit);setDrag({kind:'image-move',id:hit,start:pt,dx:0,dy:0});return;}}
+  if(!e.shiftKey){select([]);selectText(null);selectImage(null);}setDrag({kind:'marquee',start:pt,cur:pt});};
  const onMove=(e:RPointerEvent<SVGSVGElement>)=>{
   const raw=toDoc(e),pt=s.grid.snap&&!e.altKey&&(drag?.kind==='shape'||drag?.kind==='scale'||drag?.kind==='node'||drag?.kind==='pen-handle'||(!drag&&s.tool==='pen'))?snapPointToGrid(raw,s.grid.size):raw;setHover(pt);if(!drag)return;
   if(drag.kind==='pan'){setView(s.zoom,{x:drag.pan.x+e.clientX-drag.sx,y:drag.pan.y+e.clientY-drag.sy});return;}
   if(drag.kind==='sel-rotate'){setDrag({...drag,deg:angleAround(drag.center,drag.handle,pt,e.shiftKey)});return;}
   if(drag.kind==='text-rotate'){const base=(s.doc.texts??[]).find(t=>t.id===drag.id);if(base)setDrag({...drag,rotation:rotationFor({...base,rotation:0},pt,s.zoom,e.shiftKey)});return;}
+  if(drag.kind==='image-move'){const i0=(s.doc.images??[]).find(i=>i.id===drag.id),rx=raw.x-drag.start.x,ry=raw.y-drag.start.y;const g=s.grid.snap&&!e.altKey&&i0?{dx:snapValue(i0.x+rx,s.grid.size)-i0.x,dy:snapValue(i0.y+ry,s.grid.size)-i0.y}:null;setDrag({...drag,dx:g?g.dx:rx,dy:g?g.dy:ry});return;}
   if(drag.kind==='text-move'){const t0=(s.doc.texts??[]).find(t=>t.id===drag.id),rx=raw.x-drag.start.x,ry=raw.y-drag.start.y;const g=s.grid.snap&&!e.altKey&&t0?{dx:snapValue(t0.x+rx,s.grid.size)-t0.x,dy:snapValue(t0.y+ry,s.grid.size)-t0.y}:null;setDrag({...drag,dx:g?g.dx:rx,dy:g?g.dy:ry});return;}
   if(drag.kind==='move'){const snap=e.shiftKey?Math.abs(pt.x-drag.start.x)>Math.abs(pt.y-drag.start.y):null;
    const rx=snap===false?0:pt.x-drag.start.x,ry=snap===true?0:pt.y-drag.start.y;
@@ -126,6 +132,7 @@ export function VectorCanvas(){
  const onUp=()=>{
   const d=drag;setDrag(null);if(!d)return;
   if(d.kind==='text-rotate'){const cur=(s.doc.texts??[]).find(t=>t.id===d.id);if(cur&&d.rotation!==(cur.rotation??0))updateText(d.id,{rotation:d.rotation});}
+  else if(d.kind==='image-move'){if(d.dx||d.dy){const cur=(s.doc.images??[]).find(i=>i.id===d.id);if(cur)updateImage(d.id,{x:cur.x+d.dx,y:cur.y+d.dy});}}
   else if(d.kind==='text-move'){if(d.dx||d.dy){const cur=(s.doc.texts??[]).find(t=>t.id===d.id);if(cur)updateText(d.id,{x:cur.x+d.dx,y:cur.y+d.dy});}}
   else if(d.kind==='sel-rotate'){if(d.deg)commit(rotateSelection(s.doc,s.selection,d.deg,d.center));}
   else if(d.kind==='move'&&(d.dx||d.dy)){commit({...s.doc,paths:s.doc.paths.map(p=>s.selection.includes(p.id)?translatePath(p,d.dx,d.dy):p)});}
@@ -166,8 +173,8 @@ export function VectorCanvas(){
   if(mod&&e.key.toLowerCase()==='g'){e.preventDefault();void executeCommand(e.shiftKey?'vector.ungroup':'vector.group');return;}
   if(mod&&e.key.toLowerCase()==='a'){e.preventDefault();select(s.doc.paths.filter(p=>!p.hidden).map(p=>p.id));return;}
   if(e.key==='Enter'&&s.tool==='pen'){e.preventDefault();finishPen(false);return;}
-  if(e.key==='Escape'){if(pen.length){setPen([]);}else if(drag)setDrag(null);else select([]);return;}
-  if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();if(s.tool==='node'&&s.nodePath&&s.selectedNode)deleteNode(s.nodePath,s.selectedNode);else if(s.textSel)deleteText(s.textSel);else deleteSelection();return;}
+  if(e.key==='Escape'){if(pen.length){setPen([]);}else if(drag)setDrag(null);else{select([]);selectImage(null);}return;}
+  if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();if(s.tool==='node'&&s.nodePath&&s.selectedNode)deleteNode(s.nodePath,s.selectedNode);else if(s.textSel)deleteText(s.textSel);else if(s.imageSel)deleteImage(s.imageSel);else deleteSelection();return;}
   if(e.key.startsWith('Arrow')&&s.selection.length){e.preventDefault();const k=e.shiftKey?10:1;const dx=e.key==='ArrowLeft'?-k:e.key==='ArrowRight'?k:0,dy=e.key==='ArrowUp'?-k:e.key==='ArrowDown'?k:0;
    moveSelection(dx,dy);return;}
   if(!mod){const map:Record<string,VectorTool>={v:'select',a:'node',p:'pen',r:'rect',e:'ellipse',l:'line',g:'polygon',s:'star',t:'text'};const tool=map[e.key.toLowerCase()];if(tool){setTool(tool);}}};
@@ -191,11 +198,12 @@ export function VectorCanvas(){
     <g transform={`translate(${s.pan.x} ${s.pan.y}) scale(${s.zoom})`}>
      <rect width={s.doc.width} height={s.doc.height} fill="url(#vs-checker)" stroke="rgba(0,0,0,.18)" strokeWidth={1/s.zoom}/>
      {gridVisible(s.grid,s.zoom)&&<rect data-testid="vector-grid" width={s.doc.width} height={s.doc.height} fill="url(#vs-grid)" pointerEvents="none"/>}
-     <svg width={s.doc.width} height={s.doc.height} overflow="hidden" data-testid="vector-artboard"><TextLayer texts={texts.filter(t=>t.back)}/><PathLayer paths={paths} page={s.doc}/><TextLayer texts={texts.filter(t=>!t.back)}/>
+     <svg width={s.doc.width} height={s.doc.height} overflow="hidden" data-testid="vector-artboard"><ImageLayer images={images}/><TextLayer texts={texts.filter(t=>t.back)}/><PathLayer paths={paths} page={s.doc}/><TextLayer texts={texts.filter(t=>!t.back)}/>
       {draft&&<path d={serializeContour(draft.nodes,draft.closed)} fill={draft.closed?'rgba(109,94,245,.25)':'none'} stroke="#2563eb" strokeWidth={1.5/s.zoom}/>}</svg>
      {selected.map(p=>{const pp=preview(p);return <path key={p.id} d={serializeContour(pp.nodes,pp.closed)} fill="none" stroke="#2563eb" strokeWidth={1/s.zoom} pointerEvents="none"/>;})}
      {s.tool==='select'&&selBox&&<g data-testid="vector-selection"><rect x={selBox.minX} y={selBox.minY} width={selBox.maxX-selBox.minX} height={selBox.maxY-selBox.minY} fill="none" stroke="#2563eb" strokeWidth={1/s.zoom} strokeDasharray={`${4/s.zoom} ${3/s.zoom}`} pointerEvents="none"/>
       {CORNERS.map(([cx,cy],i)=><rect key={i} data-testid={`vector-handle-${i}`} x={(cx?selBox.maxX:selBox.minX)-4/s.zoom} y={(cy?selBox.maxY:selBox.minY)-4/s.zoom} width={8/s.zoom} height={8/s.zoom} fill="#fff" stroke="#2563eb" strokeWidth={1/s.zoom}/>)}</g>}
+     {selImage&&<rect data-testid="vector-image-selection" x={selImage.x} y={selImage.y} width={selImage.width} height={selImage.height} fill="none" stroke="#2563eb" strokeWidth={1/s.zoom} strokeDasharray={`${4/s.zoom} ${3/s.zoom}`} pointerEvents="none"/>}
      {selTextBox&&<rect data-testid="vector-text-selection" transform={selText?textTransform(selText):undefined} x={selTextBox.minX} y={selTextBox.minY} width={selTextBox.maxX-selTextBox.minX} height={selTextBox.maxY-selTextBox.minY} fill="none" stroke="#2563eb" strokeWidth={1/s.zoom} strokeDasharray={`${4/s.zoom} ${3/s.zoom}`} pointerEvents="none"/>}
      {selBox&&!selText&&(!drag||drag.kind==='sel-rotate')&&(()=>{const bnd=selectionBounds(s.doc,s.selection);if(!bnd)return null;const c=centerOf(bnd),h0=selectionHandle(bnd,s.zoom),h=drag?.kind==='sel-rotate'?turnPoint(c,h0,drag.deg):h0;return <g pointerEvents="none"><line x1={drag?.kind==='sel-rotate'?c.x:h0.x} y1={drag?.kind==='sel-rotate'?c.y:h0.y+HANDLE_GAP_PX/s.zoom} x2={h.x} y2={h.y} stroke="#2563eb" strokeWidth={1/s.zoom}/><circle data-testid="vector-rotate-handle" cx={h.x} cy={h.y} r={5/s.zoom} fill="#fff" stroke="#2563eb" strokeWidth={1/s.zoom}/></g>;})()}
      {selText&&selTextBox&&<g transform={textTransform(selText)}><line x1={(selTextBox.minX+selTextBox.maxX)/2} y1={selTextBox.minY} x2={handleLocal(selText,s.zoom).x} y2={handleLocal(selText,s.zoom).y} stroke="#2563eb" strokeWidth={1/s.zoom} pointerEvents="none"/><circle data-testid="vector-text-rotate-handle" cx={handleLocal(selText,s.zoom).x} cy={handleLocal(selText,s.zoom).y} r={5/s.zoom} fill="#fff" stroke="#2563eb" strokeWidth={1/s.zoom} pointerEvents="none"/></g>}

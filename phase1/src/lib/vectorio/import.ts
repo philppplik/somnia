@@ -8,6 +8,7 @@ import { inferKind, r3 } from './nodes';
 import { createGradientResolver, isGradientElement, nodesBox } from './gradientImport';
 import { parseXml, XmlError, type XmlElement } from './xml';
 import { isArrowKind, type ArrowKind } from './arrows';
+import { IMAGE_LIMITS, parseImageElement } from './image';
 import { FX_KEYS, fxStyle, hasFx, parseFxFilter, type FxSpec } from './effects';
 import { BLEND_MODES, DEFAULT_STYLE, IDENTITY, LIMITS, type BlendMode, type Diagnostic, type Matrix, type Point, type Style, type VectorDocument, type VectorNode, type VectorPath } from './types';
 
@@ -272,6 +273,8 @@ export function importSvg(source: string, opts: ImportOptions = {}): ImportResul
   let clipC = 0;
   const paths: VectorPath[] = [];
   const texts: import('./types').VectorText[] = [];
+  const images: import('./types').VectorImage[] = [];
+  let imgChars = 0;
   const groupNames: Record<string, string> = {};
   let nodeCount = 0, segCount = 0, idc = 0, compoundC = 0;
   const nextId = () => { if (++nodeCount > LIMITS.maxNodes) fail(`more than ${LIMITS.maxNodes} nodes`); return `n${++idc}`; };
@@ -294,6 +297,13 @@ export function importSvg(source: string, opts: ImportOptions = {}): ImportResul
     const name = stripNs(el.name);
     if (IGNORED_NO_RENDER.has(name)) return;
     if (name === 'clipPath') return; // read up front, validated where it is used
+    if (name === 'image') {
+      if (depth !== 1) { bad('<image> is only read at the top level of the document (not inside groups)'); return; }
+      if (images.length >= IMAGE_LIMITS.maxImages) { bad(`more than ${IMAGE_LIMITS.maxImages} images`); return; }
+      const im = parseImageElement(el, `i${images.length + 1}`, bad);
+      if (im) { imgChars += im.href.length; if (imgChars > IMAGE_LIMITS.maxTotalChars) bad('images are larger than the total limit'); else images.push(im); }
+      return;
+    }
     if (name === 'text') {
       if (depth !== 1) { bad('<text> is only read at the top level of the document (not inside groups)'); return; }
       if (texts.length >= TEXT_LIMITS.maxTexts) { bad(`more than ${TEXT_LIMITS.maxTexts} text objects`); return; }
@@ -437,6 +447,7 @@ export function importSvg(source: string, opts: ImportOptions = {}): ImportResul
     else if (g.x.length + g.y.length) doc.guides = g;
   }
   if (texts.length) doc.texts = texts;
+  if (images.length) doc.images = images;
   const sAttr = stripNs(root.name) === 'svg' ? root.attrs['data-vs-swatches'] : undefined;
   if (sAttr !== undefined) {
     const sw = parseSwatches(sAttr);

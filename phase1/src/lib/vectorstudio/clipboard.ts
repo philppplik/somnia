@@ -7,7 +7,7 @@ export const PASTE_OFFSET=12;
 export function selectionSvg(doc:VectorDocument,ids:readonly string[],textId:string|null=null):string|null{
  const paths=selectedPaths(doc,ids),text=paths.length||!textId?undefined:(doc.texts??[]).find(t=>t.id===textId);
  if(!paths.length&&!text)return null;
- const {texts:_t,...rest}=doc;
+ const {texts:_t,images:_im,...rest}=doc;
  return exportSvg(normalizeDoc({...rest,paths,...(text?{texts:[text]}:{})}));
 }
 /** Text that cannot be a vector document is ignored, so pasting ordinary text never raises an error or changes the document. */

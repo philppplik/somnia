@@ -1,7 +1,7 @@
 import {VectorImportControls} from './VectorImportControls';
 import {pngDimensions} from '../../lib/vectorstudio/exportFiles';
 import {commandDispatcher} from '../../lib/commandDispatcher';
-import {useState} from 'react';
+import {useRef,useState} from 'react';
 import {Button} from '../ui/button';
 import {Menu,MenuTrigger,MenuContent,MenuItem,MenuGroup,MenuGroupLabel,MenuSeparator} from '../ui/menu';
 import {ALIGN_MODES,ALIGN_TARGETS} from '../../lib/vectorstudio/transforms';
@@ -12,7 +12,7 @@ import {exportAreaDoc,EXPORT_AREAS,PADDING_LIMITS,type ExportArea} from '../../l
 import {SIMPLIFY_LIMITS} from '../../lib/vectorstudio/simplify';
 import {OFFSET_LIMITS} from '../../lib/vectorstudio/offsetOps';
 import {GRADIENT_KINDS,angleOf,hexOr} from '../../lib/vectorstudio/gradients';
-import {swatchColor,gradientIdOf,BLEND_MODES,ARROW_KINDS,arrowsApply,FX_LIMITS,FX_DEFAULT_COLOR,type Style} from '../../lib/vectorio';
+import {swatchColor,gradientIdOf,BLEND_MODES,ARROW_KINDS,arrowsApply,FX_LIMITS,FX_DEFAULT_COLOR,IMAGE_LIMITS,type Style} from '../../lib/vectorio';
 import {DASH_PRESETS,dashArrayFor,dashPresetOf} from '../../lib/vectorstudio/strokeStyle';
 import {useT} from '../../lib/useT';
 import {executeCommand} from '../../lib/commands';
@@ -163,6 +163,23 @@ export function VectorExportPanel(){const {t}=useT(),s=useVectorSession();const 
  </div>;}
 
 /** Text section: edits the selected text object; the Text tool (T) creates one with a click. */
+const readDataUri=(f:File)=>new Promise<string>((ok,no)=>{const r=new FileReader();r.onload=()=>ok(String(r.result));r.onerror=()=>no(new Error('read'));r.readAsDataURL(f);});
+const imageSize=(uri:string)=>new Promise<{width:number;height:number}>((ok,no)=>{const im=new Image();im.onload=()=>ok({width:im.naturalWidth,height:im.naturalHeight});im.onerror=()=>no(new Error('decode'));im.src=uri;});
+/** Places raster images (PNG, JPEG, WebP) behind the artwork and edits the selected one. */
+export function VectorImageSection(){const {t}=useT(),s=useVectorSession(),file=useRef<HTMLInputElement>(null);const [note,setNote]=useState('');
+ const cur=(s.doc.images??[]).find(i=>i.id===s.imageSel);
+ const place=async(f:File|undefined)=>{if(!f)return;setNote('');try{const href=await readDataUri(f),dim=await imageSize(href),k=Math.min(1,s.doc.width/dim.width,s.doc.height/dim.height);
+  await commandDispatcher.runCommand('vector.placeImage',{href,width:Math.max(1,Math.round(dim.width*k*100)/100),height:Math.max(1,Math.round(dim.height*k*100)/100),x:0,y:0},{origin:'ui'});}catch(e){setNote(e instanceof RangeError||(e instanceof Error&&e.message!=='read'&&e.message!=='decode')?e.message:t('vector.shell.image.failed'));}};
+ const num=(key:'x'|'y'|'width'|'height'|'opacity',min:number,max:number,step:number)=>cur&&<label className={row} key={key}>{t('vector.shell.image.'+key)}<NativeInput className={field} key={key+cur[key]} type="number" min={min} max={max} step={step} defaultValue={cur[key]??1} data-testid={'vector-image-'+key} onBlur={e=>{const n=Number(e.target.value);if(e.target.value===''||!Number.isFinite(n)||n<min||n>max){e.target.value=String(cur[key]??1);return;}
+  const patch=key==='width'?{width:n,height:Math.max(IMAGE_LIMITS.minSize,Math.round(n*cur.height/cur.width*1000)/1000)}:key==='height'?{height:n,width:Math.max(IMAGE_LIMITS.minSize,Math.round(n*cur.width/cur.height*1000)/1000)}:{[key]:n};
+  run('setImage',{id:cur.id,patch});}}/></label>;
+ return <div className="grid grid-cols-2 gap-2" data-testid="vector-shell-image">
+  <NativeInput ref={file} type="file" accept="image/png,image/jpeg,image/webp" hidden disabled={!s.open} aria-label={t('vector.shell.image.place')} data-testid="vector-image-file" onChange={e=>{const f=e.currentTarget.files?.[0];e.currentTarget.value='';void place(f);}}/>
+  <Button size="compact" className="col-span-2" disabled={!s.open} data-testid="vector-image-place" onClick={()=>file.current?.click()}>{t('vector.shell.image.place')}</Button>
+  {note&&<p role="status" className="col-span-2 m-0 text-ink-3" data-testid="vector-image-note">{note}</p>}
+  {cur&&<>{num('x',-1e6,1e6,1)}{num('y',-1e6,1e6,1)}{num('width',IMAGE_LIMITS.minSize,IMAGE_LIMITS.maxSize,1)}{num('height',IMAGE_LIMITS.minSize,IMAGE_LIMITS.maxSize,1)}{num('opacity',0,1,0.05)}
+   <Button size="compact" className="col-span-2" data-testid="vector-image-delete" onClick={()=>run('deleteImage',{id:cur.id})}>{t('vector.shell.image.delete')}</Button></>}
+ </div>;}
 export function VectorTextSection(){const {t}=useT(),s=useVectorSession(),f=useSystemFonts();const cur=(s.doc.texts??[]).find(x=>x.id===s.textSel);
  const set=(patch:object)=>cur&&run('setText',{id:cur.id,patch});
  if(!cur)return <p className="m-0 text-ink-3" data-testid="vector-shell-text">{t('vector.shell.textHint')}</p>;

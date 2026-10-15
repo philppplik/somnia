@@ -1,4 +1,5 @@
 import { formatGuides, normalizeGuides } from './guides';
+import { imageSvg, normalizeImages } from './image';
 import { textSvg, normalizeTexts } from './text';
 import { formatSwatches, normalizeSwatches } from './swatches';
 import { escapeAttr } from './xml';
@@ -106,6 +107,7 @@ export function exportSvg(doc: VectorDocument, opts: ExportOptions = {}): string
     if (p.compound !== undefined) byCompound.set(p.compound, elements.length);
     elements.push({ p, d });
   }
+  for (const im of normalizeImages(doc.images) ?? []) emit(1, imageSvg(im)); // reference layers, behind everything
   const allTexts = normalizeTexts(doc.texts) ?? [];
   for (const t of allTexts) if (t.back) emit(1, textSvg(t)); // behind every shape
   let openLayer: string | undefined | null = null; // null = none open
