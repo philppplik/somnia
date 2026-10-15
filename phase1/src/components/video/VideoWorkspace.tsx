@@ -8,7 +8,7 @@ import {clipDisplayName,isTitleClip,needsSourceFile} from '../../lib/video/title
 import {TitlePreview} from './TitlePreview';
 import {useTitlePlayback} from './useTitlePlayback';
 import {FilmstripStrip} from './FilmstripStrip';
-import {blendAt,clipRanges,locate,timelineDuration} from '../../lib/video/timeline';
+import {blendAt,clipRanges,locate,speedOf,timelineDuration} from '../../lib/video/timeline';
 import {zoomInStep,zoomOutStep} from '../../lib/video/zoom';
 import {formatTime} from '../../lib/video/recipe';
 import {formatBytes,getState,patchState,requestStudio,useAppStore,useMedia,type MediaItem} from './workspace-deps';
@@ -52,6 +52,8 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
    const el=slotOf(e.range.index).current;if(!el)continue;
    const url=urlOf(e.range.clip.source);
    if(el.dataset.slotClip!==e.range.clip.id){el.dataset.slotClip=e.range.clip.id;if(el.src!==url){el.src=url;el.currentTime=e.sourceTime;}}
+   // Speed applies in the preview too; preservesPitch off so the preview sounds like the export (resampled, shifted pitch).
+   el.playbackRate=speedOf(e.range.clip);el.preservesPitch=false;
    if(!playing||Math.abs(el.currentTime-e.sourceTime)>0.35)el.currentTime=e.sourceTime;
   }
   for(const slot of [slotA,slotB]){
@@ -89,7 +91,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
  // The element clock is fresher than the React playhead (timeupdate lags a frame), so cuts land where the frame actually is.
  const splitHere=useCallback(()=>{
   const el=mainEl();
-  splitTimelineAt(item.name,el&&entry?entry.range.start+(el.currentTime-entry.range.clip.in_s):playhead);
+  splitTimelineAt(item.name,el&&entry?entry.range.start+(el.currentTime-entry.range.clip.in_s)/speedOf(entry.range.clip):playhead);
  },[item.name,playhead,entry,main]);
  // The main slot drives the playhead and the boundary advance; the outgoing slot only stops at its own out point.
  const onTime=(slotIndex:number)=>(e:React.SyntheticEvent<HTMLVideoElement>)=>{
@@ -97,7 +99,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
   const mine=blend.find(x=>(x.range.index%2)===slotIndex);if(!mine)return;
   const c=mine.range.clip;
   if(main&&mine.range.index===main.range.index){
-   setPlayhead(Math.min(duration,mine.range.start+(el.currentTime-c.in_s)));
+   setPlayhead(Math.min(duration,mine.range.start+(el.currentTime-c.in_s)/speedOf(c)));
    if(el.currentTime>=c.out_s-0.001)advance(mine.range.index);
   }else if(el.currentTime>=c.out_s-0.001)el.pause();
  };

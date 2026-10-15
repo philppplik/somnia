@@ -3,7 +3,7 @@
  * Honest scope: the file stores clip REFERENCES by media name, not media bytes. Sources that are not open show as missing.
  * Pure - no DOM, no engine.
  */
-import {MIN_CLIP_SECONDS,newClipId,sanitizeClips,type TimelineClip} from './timeline';
+import {MIN_CLIP_SECONDS,newClipId,sanitizeClips,speedOf,type TimelineClip} from './timeline';
 import {clampTitleSeconds,isTitleClip,sanitizeTitleSpec,type TitleSpec} from './titles';
 import {DEFAULT_FORMAT,type VideoFormat} from './recipe';
 
@@ -14,14 +14,14 @@ export const VIDEO_PROJECT_VERSION=1;
 interface VideoProjectFile{version:number;app:'somnia-video';format?:VideoFormat;clips:unknown[]}
 
 /** Stable identity of the edit list for dirty tracking. Ids are included: a split changes them, and that IS an edit. */
-export const clipsSignature=(clips:TimelineClip[])=>JSON.stringify(clips.map(c=>[c.id,c.source,c.in_s,c.out_s,c.gain,c.muted,c.crossfade_s??0,c.kind??'media',isTitleClip(c)?c.title:null]));
+export const clipsSignature=(clips:TimelineClip[])=>JSON.stringify(clips.map(c=>[c.id,c.source,c.in_s,c.out_s,c.gain,c.muted,c.crossfade_s??0,speedOf(c),c.kind??'media',isTitleClip(c)?c.title:null]));
 
 /** The project file for one timeline. Deterministic (same timeline → same bytes), so tests and diffs stay readable. */
 export function serializeVideoProject(clips:TimelineClip[],format:VideoFormat):string{
  const file:VideoProjectFile={version:VIDEO_PROJECT_VERSION,app:'somnia-video',format,clips:clips.map(c=>
   isTitleClip(c)
    ?{id:c.id,kind:'title',out_s:c.out_s,crossfade_s:c.crossfade_s??0,title:c.title}
-   :{id:c.id,kind:'media',source:c.source,in_s:c.in_s,out_s:c.out_s,gain:c.gain,muted:c.muted,crossfade_s:c.crossfade_s??0})};
+   :{id:c.id,kind:'media',source:c.source,in_s:c.in_s,out_s:c.out_s,gain:c.gain,muted:c.muted,speed:speedOf(c),crossfade_s:c.crossfade_s??0})};
  return JSON.stringify(file,null,1)+'\n';
 }
 
@@ -46,7 +46,7 @@ export function parseVideoProject(text:string):{clips:TimelineClip[];format:Vide
   if(typeof o.source!=='string'||!o.source)return[];
   const in_s=Math.max(0,num(o.in_s)),out_s=num(o.out_s);
   if(out_s-in_s<MIN_CLIP_SECONDS)return[];
-  return[{id:id(o.id),source:o.source,in_s,out_s,gain:num(o.gain,1),muted:o.muted===true,crossfade_s:num(o.crossfade_s)}];
+  return[{id:id(o.id),source:o.source,in_s,out_s,gain:num(o.gain,1),muted:o.muted===true,speed:num(o.speed,1),crossfade_s:num(o.crossfade_s)}];
  });
  // Durations are unknown here (sources may not be open); sanitize still clamps fades and title shapes. Clips re-clamp on the next edit once sources are probed.
  return{clips:sanitizeClips(clips,{}),format:f.format==='mp4'||f.format==='webm'?f.format:DEFAULT_FORMAT};

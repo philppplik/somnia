@@ -2,7 +2,7 @@ import {registerCommandSpec} from '../commandBridge';
 import {commandRegistry} from '../commandRegistry';
 import type {CommandSpec,CommandSchema} from '../commandSpec';
 import {getMedia} from '../media';
-import {addTimelineClip,addTimelineClipsFromDialog,cancelVideoExport,deleteTimelineClip,exportVideoFile,getVideoSession,moveTimelineClip,redoVideoEdit,resetTimeline,saveVideoProject,selectTimelineClip,setTimelineClipCrossfade,setTimelineClipGain,setVideoFormat,splitTimelineAt,toggleTimelineClipMute,trimTimelineClip,undoVideoEdit,videoIsDirty} from './session';
+import {addTimelineClip,addTimelineClipsFromDialog,cancelVideoExport,deleteTimelineClip,exportVideoFile,getVideoSession,moveTimelineClip,redoVideoEdit,resetTimeline,saveVideoProject,selectTimelineClip,setTimelineClipCrossfade,setTimelineClipGain,setTimelineClipSpeed,setVideoFormat,splitTimelineAt,toggleTimelineClipMute,trimTimelineClip,undoVideoEdit,videoIsDirty} from './session';
 import {addTitleClip,setTitleLength,updateTitle} from './titleSession';
 import {isTitleClip,type TitleSpec} from './titles';
 import {timelineDuration} from './timeline';
@@ -33,6 +33,7 @@ export function videoCommandSpecs():CommandSpec<unknown,unknown>[] {
   spec('video.clip.delete','Delete selected video clip',()=>deleteTimelineClip(root(),clip().id),undefined,()=>selectionReady()&&(activeVideoSession()!.clips.length>1||getMedia().items.find(i=>i.name===root())?.kind==='video-project'),'Edit'),
   spec('video.clip.trim','Trim selected video clip',(p:{edge:'in'|'out';seconds:number})=>trimTimelineClip(root(),clip().id,p.edge,p.seconds),object({edge:{enum:['in','out']},seconds:number()}),mediaSelection,'Edit'),
   spec('video.clip.gain','Set selected clip audio gain',(p:{gain:number})=>setTimelineClipGain(root(),clip().id,p.gain),object({gain:number(0,2)}),mediaSelection),
+  spec('video.clip.speed','Set selected clip playback speed',(p:{speed:number})=>setTimelineClipSpeed(root(),clip().id,p.speed),object({speed:number(0.25,4)}),mediaSelection,'Edit'),
   spec('video.clip.mute','Toggle selected clip audio mute',()=>toggleTimelineClipMute(root(),clip().id),undefined,mediaSelection),
   spec('video.clip.crossfade','Set selected clip crossfade',(p:{seconds:number})=>setTimelineClipCrossfade(root(),clip().id,p.seconds),object({seconds:number()}),()=>selectionReady()&&activeVideoSession()!.clips.at(-1)?.id!==clip().id),
   spec('video.timeline.split','Split video timeline at time',(p:{seconds:number})=>{const s=activeVideoSession()!;if(p.seconds>=timelineDuration(s.clips))fail('Split time is outside the timeline.');splitTimelineAt(s.name,p.seconds);},object({seconds:number()}),()=>ready()&&!!activeVideoSession()!.clips.length,'Edit'),

@@ -69,6 +69,8 @@
  "video.timelineHint": "Clips play back to back. Drag a clip to reorder it; drag the edges of the selected clip to trim it. Keys: S split, Delete remove, Alt+←/→ move, M mute.",
  "video.clipTitle": "Clip {index}",
  "video.gain": "Gain · {percent}%",
+ "video.clipSpeed": "Speed",
+ "video.clipSpeedValue": "{speed}×",
  "video.clipMute": "Mute this clip in the export",
  "video.moveLeft": "← Move",
  "video.moveRight": "Move →",
@@ -125,5 +127,6 @@
  "cmd.video.export.open": "Export video...",
  "cmd.video.timeline.undo": "Undo timeline edit",
  "cmd.video.timeline.redo": "Redo timeline edit",
- "cmd.video.project.save": "Save video project"
+ "cmd.video.project.save": "Save video project",
+ "cmd.video.clip.speed": "Set clip playback speed"
 }

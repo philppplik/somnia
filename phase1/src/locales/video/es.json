@@ -69,6 +69,8 @@
  "video.timelineHint": "Los clips se reproducen uno tras otro. Arrastra un clip para reordenarlo; arrastra los bordes del clip seleccionado para recortarlo. Teclas: S dividir, Supr quitar, Alt+←/→ mover, M silenciar.",
  "video.clipTitle": "Clip {index}",
  "video.gain": "Ganancia · {percent}%",
+ "video.clipSpeed": "Velocidad",
+ "video.clipSpeedValue": "{speed}×",
  "video.clipMute": "Silenciar este clip en la exportación",
  "video.moveLeft": "← Mover",
  "video.moveRight": "Mover →",
@@ -125,5 +127,6 @@
  "cmd.video.export.open": "Exportar vídeo...",
  "cmd.video.timeline.undo": "Deshacer edición de la línea de tiempo",
  "cmd.video.timeline.redo": "Rehacer edición de la línea de tiempo",
- "cmd.video.project.save": "Guardar proyecto de vídeo"
+ "cmd.video.project.save": "Guardar proyecto de vídeo",
+ "cmd.video.clip.speed": "Ajustar velocidad del clip"
 }

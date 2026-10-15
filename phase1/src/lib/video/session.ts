@@ -2,7 +2,7 @@ import {reportError} from '../log';
 import {useSyncExternalStore} from 'react';
 import {VideoEngine,type VideoEngineLike} from './engine';
 import {DEFAULT_FORMAT,exportName,type VideoFormat} from './recipe';
-import {fullClip,isNeutralTimeline,moveClip,rippleDelete,sanitizeClips,setClipEdge,setCrossfade,splitAt,timelineDuration,type TimelineClip} from './timeline';
+import {fullClip,isNeutralTimeline,moveClip,rippleDelete,sanitizeClips,setClipEdge,setClipSpeed,setCrossfade,splitAt,timelineDuration,type TimelineClip} from './timeline';
 import {emptyVideoHistory,pushHistory,redoHistory,undoHistory,type VideoHistory} from './history';
 import {clipsSignature,parseVideoProject,projectFileName,serializeVideoProject} from './projectFile';
 import {needsSourceFile} from './titles';
@@ -139,6 +139,9 @@ export const trimTimelineClip=(root:string,id:string,edge:'in'|'out',at:number,h
 export const setTimelineClipCrossfade=(root:string,id:string,seconds:number,historyKey?:string)=>editTimeline(root,clips=>setCrossfade(clips,id,seconds),historyKey?{historyKey}:undefined);
 export function setTimelineClipGain(root:string,id:string,gain:number,historyKey?:string){
  editTimeline(root,clips=>clips.map(c=>c.id===id?{...c,gain}:c),historyKey?{historyKey}:undefined);
+}
+export function setTimelineClipSpeed(root:string,id:string,speed:number){
+ editTimeline(root,clips=>setClipSpeed(clips,id,speed));
 }
 export function toggleTimelineClipMute(root:string,id:string){
  editTimeline(root,clips=>clips.map(c=>c.id===id?{...c,muted:!c.muted}:c));

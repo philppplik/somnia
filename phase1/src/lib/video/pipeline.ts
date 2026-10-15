@@ -2,7 +2,7 @@
 import {ALL_FORMATS,AudioSample,AudioSampleSink,AudioSampleSource,BufferSource,BufferTarget,CanvasSink,CanvasSource,Input,Mp4OutputFormat,Output,QUALITY_HIGH,WebMOutputFormat,getFirstEncodableAudioCodec,getFirstEncodableVideoCodec} from 'mediabunny';
 import type {AudioCodec,VideoCodec} from 'mediabunny';
 import type {VideoFormat} from './recipe';
-import {clipRanges,fadeOf,timelineDuration,type ClipRange,type TimelineClip} from './timeline';
+import {clipRanges,fadeOf,speedOf,timelineDuration,type ClipRange,type TimelineClip} from './timeline';
 import {drawTitleCard,isTitleClip,needsSourceFile} from './titles';
 import {renderTitleSpan} from './titleExport';
 import type {VideoCapabilities,VideoProbe,VideoReport} from './protocol';
@@ -42,7 +42,7 @@ const checkCancel=()=>{if(cancelled)throw new ExportCancelled();};
  * Streams one zone's decoded audio into the encoder as 48 kHz stereo f32 chunks:
  * linear resample, mono duplication, per-zone gain, 100 ms flushes so long clips never buffer.
  */
-async function emitZoneAudio(aSink:AudioSampleSink,srcStart:number,srcEnd:number,zoneStart:number,gain:number,audioSource:AudioSampleSource):Promise<void>{
+async function emitZoneAudio(aSink:AudioSampleSink,srcStart:number,srcEnd:number,zoneStart:number,gain:number,speed:number,audioSource:AudioSampleSource):Promise<void>{
  let rate=0,ch=0,phase=0,consumed=0,prevL=0,prevR=0,havePrev=false,emitted=0;
  let out:number[]=[];
  const flush=async()=>{
@@ -55,7 +55,8 @@ async function emitZoneAudio(aSink:AudioSampleSink,srcStart:number,srcEnd:number
   if(!rate){rate=sample.sampleRate;ch=sample.numberOfChannels;}
   const data=new Float32Array(sample.allocationSize({planeIndex:0,format:'f32'})/4);
   sample.copyTo(data,{planeIndex:0,format:'f32'});
-  const step=rate/48_000,inFrames=data.length/ch;
+  // speed>1 consumes that many more source frames per output frame: the zone is (srcEnd-srcStart)/speed long, and the pitch rises (no pitch correction, same as the preview's playbackRate with preservesPitch off).
+  const step=rate/48_000*speed,inFrames=data.length/ch;
   for(let f=0;f<inFrames;f++){
    const l=ch===1?data[f]:data[f*ch],r=ch===1?data[f]:data[f*ch+1];
    if(!havePrev){prevL=l;prevR=r;havePrev=true;consumed=1;continue;}
@@ -159,7 +160,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
     return card.canvas;
    }
    const sink=await sinkFor(i);
-   const src=Math.min(c.out_s-1e-3,c.in_s+(t-r.start));
+   const src=Math.min(c.out_s-1e-3,c.in_s+(t-r.start)*speedOf(c));
    const f=await sink.getCanvas(src);
    return f?f.canvas:null;
   };
@@ -178,19 +179,32 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
      continue;
     }
     const{input,probe}=inputs.get(c.source)!;
-    const srcStart=c.in_s+(z.start-r.start),srcEnd=c.out_s-(r.end-z.end);
+    const speed=speedOf(c);
+    const srcStart=c.in_s+(z.start-r.start)*speed,srcEnd=c.out_s-(r.end-z.end)*speed;
     const sink=await sinkFor(z.a);
-    let base:number|null=null;
-    for await(const frame of sink.canvases(srcStart,srcEnd)){
-     checkCancel();
-     if(base===null)base=frame.timestamp;
-     ctx.globalAlpha=1;ctx.drawImage(frame.canvas,0,0);
-     await videoSource.add(z.start+(frame.timestamp-base),frame.duration);
-     note(z.start+(frame.timestamp-base));
+    if(speed!==1){
+     // Sped clips render on a fixed output grid (source fps): frames drop or repeat naturally.
+     const fps=fpsOf(z.a),n=Math.max(1,Math.ceil((z.end-z.start)*fps));
+     for(let k=0;k<n;k++){
+      checkCancel();
+      const t=z.start+k/fps,f=await sideFrame(z.a,t);
+      if(f){ctx.globalAlpha=1;ctx.drawImage(f as CanvasImageSource,0,0);}
+      await videoSource.add(t,Math.max(1e-3,Math.min(1/fps,z.end-t)));
+      note(t);
+     }
+    }else{
+     let base:number|null=null;
+     for await(const frame of sink.canvases(srcStart,srcEnd)){
+      checkCancel();
+      if(base===null)base=frame.timestamp;
+      ctx.globalAlpha=1;ctx.drawImage(frame.canvas,0,0);
+      await videoSource.add(z.start+(frame.timestamp-base),frame.duration);
+      note(z.start+(frame.timestamp-base));
+     }
     }
     if(probe.audio&&audioSource&&!c.muted){
      const aTrack=(await input.getAudioTracks())[0];
-     await emitZoneAudio(new AudioSampleSink(aTrack),srcStart,srcEnd,z.start,c.gain,audioSource);
+     await emitZoneAudio(new AudioSampleSink(aTrack),srcStart,srcEnd,z.start,c.gain,speed,audioSource);
     }else if(probe.audio===null&&audioSource&&z===zones[0])steps.push(`No audio track in ${c.source}.`);
    }else{
     const ra=ranges[z.a],rb=ranges[z.b],d=z.end-z.start;
@@ -217,7 +231,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
       if(c.muted||isTitleClip(c))continue;
       const{input,probe}=inputs.get(c.source)!;
       if(!probe.audio)continue;
-      const srcStart=c.in_s+(z.start-side.r.start),srcEnd=c.in_s+(z.end-side.r.start);
+      const srcStart=c.in_s+(z.start-side.r.start)*speedOf(c),srcEnd=c.in_s+(z.end-side.r.start)*speedOf(c);
       const aSink=new AudioSampleSink((await input.getAudioTracks())[0]);
       let rate=0,ch=0,total2=0;
       const chunks:Float32Array[]=[];
@@ -236,7 +250,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
       for(let i=0;i<len;i++){
        const pr=i/len;
        const env=(side.sign==='out'?Math.cos(pr*Math.PI/2):Math.sin(pr*Math.PI/2))*c.gain;
-       const srcPos=i/48_000*rate,f0=Math.floor(srcPos),f1=Math.min(frames-1,f0+1),fr=srcPos-f0;
+       const srcPos=i/48_000*rate*speedOf(c),f0=Math.min(frames-1,Math.floor(srcPos)),f1=Math.min(frames-1,f0+1),fr=Math.min(1,Math.max(0,srcPos-f0));
        const l=ch===1?raw[f0]*(1-fr)+raw[f1]*fr:raw[f0*ch]*(1-fr)+raw[f1*ch]*fr;
        const rgt=ch===1?l:raw[f0*ch+1]*(1-fr)+raw[f1*ch+1]*fr;
        mix[i*2]+=l*env;mix[i*2+1]+=rgt*env;
@@ -259,6 +273,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
   if(titlesRendered)steps.push('Title cards rendered.');
   if(clips.some(c=>c.muted))steps.push('Muted clips kept as silence.');
   if(clips.some(c=>c.gain!==1&&!c.muted))steps.push('Per-clip gain applied.');
+  if(clips.some(c=>needsSourceFile(c)&&speedOf(c)!==1))steps.push('Clip speed applied; audio is resampled (pitch shifts).');
   const report:VideoReport={format,duration_s:total,bytes:buffer.byteLength,videoCodec,audioCodec,steps};
   return{bytes:buffer,mime:format==='webm'?'video/webm':'video/mp4',report};
  }catch(error){

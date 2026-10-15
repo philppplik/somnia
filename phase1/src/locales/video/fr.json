@@ -69,6 +69,8 @@
  "video.timelineHint": "Les clips sont lus à la suite. Glissez un clip pour le réordonner ; glissez les bords du clip sélectionné pour le couper. Touches : S diviser, Suppr retirer, Alt+←/→ déplacer, M muet.",
  "video.clipTitle": "Clip {index}",
  "video.gain": "Gain · {percent}%",
+ "video.clipSpeed": "Vitesse",
+ "video.clipSpeedValue": "{speed}×",
  "video.clipMute": "Rendre ce clip muet à l’export",
  "video.moveLeft": "← Déplacer",
  "video.moveRight": "Déplacer →",
@@ -125,5 +127,6 @@
  "cmd.video.export.open": "Exporter la vidéo...",
  "cmd.video.timeline.undo": "Annuler la modification du montage",
  "cmd.video.timeline.redo": "Rétablir la modification du montage",
- "cmd.video.project.save": "Enregistrer le projet vidéo"
+ "cmd.video.project.save": "Enregistrer le projet vidéo",
+ "cmd.video.clip.speed": "Régler la vitesse du clip"
 }

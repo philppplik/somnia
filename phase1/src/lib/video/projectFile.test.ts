@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {clipsSignature,parseVideoProject,projectFileName,serializeVideoProject,VIDEO_PROJECT_VERSION} from './projectFile';
 import {newTitleClip} from './titles';
 import type {TimelineClip} from './timeline';
-const media=(id:string,over:Partial<TimelineClip>={}):TimelineClip=>({id,source:'clip.mp4',in_s:0,out_s:5,gain:1,muted:false,...over});
+const media=(id:string,over:Partial<TimelineClip>={}):TimelineClip=>({id,source:'clip.mp4',in_s:0,out_s:5,gain:1,muted:false,speed:1,...over});
 
 test('serialize and parse round-trip media and title clips',()=>{
  const title=newTitleClip({text:'Intro',size:90,color:'#A1B2C3',background:'#101010',font:'serif',italic:true,align:'left',fadeIn:0.5},2.5);
