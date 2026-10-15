@@ -70,6 +70,20 @@ export class ArrangementHistory{
 export function findCrossfadePair(s:Arrangement,clipId:string){const {track,clip}=findArrangeClip(s,clipId);for(const other of track.clips){if(other.id===clip.id)continue;const earlier=clip.start<other.start?clip:other,later=clip.start<other.start?other:clip,eEnd=earlier.start+earlier.length,lEnd=later.start+later.length;if(earlier.start<later.start&&later.start<eEnd&&eEnd<lEnd)return{earlier,later,overlap:eEnd-later.start};}return null;}
 /** Complementary equal-power fades over the overlap: constant power for the pair. */
 export function applyCrossfade(s:Arrangement,clipId:string){const pair=findCrossfadePair(s,clipId);if(!pair)throw Error('No staggered overlap on this track');pair.earlier.fadeOut=pair.overlap;pair.earlier.fadeShape='equalPower';pair.later.fadeIn=pair.overlap;pair.later.fadeShape='equalPower';return pair;}
+/** Peak over the clip's used source region, from the cached min/max waveform columns of the source. */
+export function clipRegionPeak(peaks:ArrayLike<number>,offset:number,length:number,totalTimelineFrames:number):number{
+ if(!Number.isSafeInteger(offset)||!Number.isSafeInteger(length)||length<1||totalTimelineFrames<1)throw Error('Invalid clip region');
+ const cols=Math.floor(peaks.length/2);if(cols<1)throw Error('No waveform peaks');
+ const from=Math.max(0,Math.floor(offset/totalTimelineFrames*cols)),to=Math.min(cols,Math.ceil((offset+length)/totalTimelineFrames*cols));
+ let peak=0;for(let c=from;c<to;c++)peak=Math.max(peak,Math.abs(peaks[c*2]),Math.abs(peaks[c*2+1]));
+ return peak;
+}
+/** Gain in dB that brings a region peak to the target, clamped to the clip gain range. Silent regions are rejected instead of blasting gain into noise. */
+export function normalizeGainDb(peak:number,targetDb=0):number{
+ if(!Number.isFinite(peak)||peak<=0)throw Error('Clip region is silent');
+ if(!Number.isFinite(targetDb)||targetDb<-60||targetDb>12)throw Error('Invalid normalize target');
+ return Math.round(Math.max(-60,Math.min(12,targetDb-20*Math.log10(peak)))*10)/10;
+}
 export function findArrangeClip(s:Arrangement,id:string){for(const track of s.tracks){const clip=track.clips.find(c=>c.id===id);if(clip)return{track,clip};}throw Error('Audio clip no longer exists');}
 /** A split preserves source position, gain and outer fades. Fades intersecting the split are shortened. */
 export function splitArrangeClip(s:Arrangement,id:string,frame:number,rightId:string){const {track,clip}=findArrangeClip(s,id);const left=frame-clip.start;if(!Number.isSafeInteger(frame)||left<=0||left>=clip.length)throw Error('Split must be inside the clip');const oldLength=clip.length;track.clips.push({...clip,id:rightId,start:frame,offset:clip.offset+left,length:oldLength-left,fadeIn:0,fadeOut:Math.min(clip.fadeOut,oldLength-left)});clip.length=left;clip.fadeIn=Math.min(clip.fadeIn,left);clip.fadeOut=0;
