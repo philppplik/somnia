@@ -974,6 +974,7 @@ function NoteListGroup(){
   {chosen&&<p data-testid="sheets-nl-text">{chosen.text}{chosen.replies>0?' ('+t('sheets.nl.replies',{n:chosen.replies})+')':''}</p>}
   <label className="flex flex-col gap-1">{t('sheets.nl.action')}<NativeSelect className={field} value={act} disabled={action.busy} onChange={e=>setAct(e.currentTarget.value as NoteListAction)} data-testid="sheets-nl-action">{(['go','resolve','reopen','remove'] as NoteListAction[]).map(a=><option key={a} value={a}>{t('sheets.nl.a.'+a)}</option>)}</NativeSelect></label>
   <Button variant="outline" size="compact" disabled={action.busy||bad} onClick={apply} data-testid="sheets-nl-apply">{t('sheets.nl.apply')}</Button>
+  <Button variant="outline" size="compact" disabled={action.busy||shown.length===0||(s.workbook?.sheets.length??0)>=MAX_SHEETS} onClick={()=>void action.run('sheets.sheet',{kind:'notesList',name:t('sheets.nl.sheetName'),filter,headers:['cell','author','text','status','replies'].map(k=>t('sheets.nl.h.'+k)),status:[t('sheets.nl.s.open'),t('sheets.nl.s.resolved')]})} data-testid="sheets-nl-sheet">{t('sheets.nl.toSheet')}</Button>
  </div>;
 }
 /** Formula auditing in one grouped menu: trace what the active cell reads and what reads it, list error cells and circular references, watch cells. Reads only; the watch list is view state. */

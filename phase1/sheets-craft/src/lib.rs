@@ -87,6 +87,8 @@ const MAX_NAME_CHARS: usize = 64;
 const MAX_AFFIX_CHARS: usize = 12;
 const MAX_LINK_BYTES: usize = 2048;
 const MAX_NOTES_LISTED: usize = 200;
+const MAX_NOTES_SHEET_ROWS: usize = 2000;
+const MAX_NOTE_CELL_CHARS: usize = 2000;
 const MAX_STYLE_NAME: usize = 60;
 /// One symbol of the Insert Symbol picker: Latin-1 punctuation and signs, Greek, general punctuation, currency, letter-like, number forms, arrows, math, technical and shape blocks.
 /// No spacing, zero-width or direction-changing characters.
@@ -943,6 +945,73 @@ impl HeadlessWorkbook {
                     return Err("The tab color must be #RRGGBB or none.".into());
                 }
                 self.session.run("sheet.tabColor", json!({"sheet": sheet, "color": color}))?;
+            }
+            "notesList" => {
+                if count >= MAX_SHEETS {
+                    return Err(format!("A workbook can have at most {MAX_SHEETS} sheets."));
+                }
+                if op.as_object().is_some_and(|m| m.keys().any(|k| !["kind", "name", "filter", "headers", "status"].contains(&k.as_str()))) {
+                    return Err("unknown notes list field".into());
+                }
+                let filter = op.get("filter").and_then(|v| v.as_str()).filter(|f| ["all", "open", "resolved"].contains(f)).ok_or("filter must be all, open or resolved")?;
+                let labels = |key: &str, n: usize| -> Result<Vec<String>, String> {
+                    let list = op.get(key).and_then(|v| v.as_array()).filter(|a| a.len() == n).ok_or(format!("{key} must list {n} labels"))?;
+                    list.iter()
+                        .map(|v| v.as_str().map(str::trim).filter(|t| !t.is_empty() && t.chars().count() <= 40 && !t.chars().any(char::is_control)).map(str::to_string).ok_or(format!("{key} labels must be 1 to 40 characters")))
+                        .collect()
+                };
+                let headers = labels("headers", 5)?;
+                let status = labels("status", 2)?;
+                let base = name.ok_or("missing sheet name")?;
+                let rows: Vec<[String; 5]> = {
+                    let doc = self.session.doc().map_err(|e| e.to_string())?;
+                    let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+                    let mut all: Vec<(&CellRef, &gridcraft_engine::model::Comment)> = sh.comments.iter().collect();
+                    all.sort_by_key(|(c, _)| (c.row, c.col));
+                    all.into_iter()
+                        .filter(|(_, n)| filter == "all" || (filter == "resolved") == n.resolved)
+                        .take(MAX_NOTES_SHEET_ROWS)
+                        .map(|(c, n)| {
+                            let state = if !n.threaded { String::new() } else if n.resolved { status[1].clone() } else { status[0].clone() };
+                            let replies = n.replies.iter().map(|(a, t)| format!("{}: {}", a.chars().take(80).collect::<String>(), t)).collect::<Vec<_>>().join(" | ");
+                            [c.a1(), n.author.chars().take(80).collect(), n.text.chars().take(MAX_NOTE_CELL_CHARS).collect(), state, replies.chars().take(MAX_NOTE_CELL_CHARS).collect()]
+                        })
+                        .collect()
+                };
+                if rows.is_empty() {
+                    return Err("There are no notes to list.".into());
+                }
+                let unique = {
+                    let doc = self.session.doc().map_err(|e| e.to_string())?;
+                    (1..=count + 1)
+                        .map(|n| if n == 1 { base.clone() } else { format!("{} {}", base.chars().take(31 - 1 - n.to_string().len()).collect::<String>().trim_end(), n) })
+                        .find(|c| doc.wb.check_sheet_name(c, None).is_ok())
+                        .ok_or("no free sheet name")?
+                };
+                // One engine edit adds the sheet (one undo step); the rows are then written into that new sheet in place.
+                self.session.run("home.insertSheet", json!({"before": count, "name": unique}))?;
+                let doc = self.session.doc_mut().map_err(|e| e.to_string())?;
+                let wb = std::sync::Arc::make_mut(&mut doc.wb);
+                let at = wb.active_sheet;
+                let target = std::sync::Arc::make_mut(wb.sheets.get_mut(at).ok_or("sheet missing")?);
+                let text = |t: &str| gridcraft_engine::core::Value::Text(t.into());
+                for (c, h) in headers.iter().enumerate() {
+                    target.set_value(CellRef::new(0, c as u32), text(h));
+                }
+                for (r, row) in rows.iter().enumerate() {
+                    for (c, v) in row.iter().enumerate() {
+                        if !v.is_empty() {
+                            target.set_value(CellRef::new(r as u32 + 1, c as u32), text(v));
+                        }
+                    }
+                }
+                for (c, w) in [60.0f32, 120.0, 360.0, 70.0, 240.0].into_iter().enumerate() {
+                    target.cols.insert(c as u32, gridcraft_engine::model::LineInfo { size: Some(w), ..Default::default() });
+                }
+                target.freeze = Some((1, 0));
+                target.print.orientation = gridcraft_engine::model::Orientation::Landscape;
+                target.print.title_rows = Some((0, 0));
+                target.print.fit_to = Some((1, 0));
             }
             _ => return Err("unsupported sheet operation".into()),
         }
@@ -5718,6 +5787,37 @@ mod tests {
         assert!(book.outline_op(9, 700, 0, 4, 2, r#"{"kind":"group","axis":"rows"}"#).is_err());
         book.session.run("review.protectSheet", json!({})).unwrap();
         assert!(book.outline_op(0, 701, 0, 2, 1, r#"{"kind":"group","axis":"rows"}"#).unwrap_err().contains("protected"));
+    }
+    #[test]
+    fn notes_list_becomes_one_new_sheet_in_one_undo_step() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        let sheets_before = book.session.doc().unwrap().wb.sheets.len();
+        let op = |filter: &str| format!(r#"{{"kind":"notesList","name":"Notes","filter":"{filter}","headers":["Cell","Author","Comment","Status","Replies"],"status":["Open","Resolved"]}}"#);
+        assert!(book.edit_sheet(0, &op("all")).is_err(), "no notes yet");
+        book.set_values(0, 130, 0, r#"[["x","y"]]"#).unwrap();
+        book.annotate_cell(0, 130, 0, r#"{"kind":"comment","text":"check this"}"#).unwrap();
+        book.annotate_cell(0, 130, 0, r#"{"kind":"reply","text":"done"}"#).unwrap();
+        book.annotate_cell(0, 130, 1, r#"{"kind":"note","text":"plain"}"#).ok();
+        let r: serde_json::Value = serde_json::from_str(&book.edit_sheet(0, &op("all")).unwrap()).unwrap();
+        let at = r["active"].as_u64().unwrap() as usize;
+        {
+            let doc = book.session.doc().unwrap();
+            assert_eq!(doc.wb.sheets.len(), sheets_before + 1);
+            let sh = doc.wb.sheet(at).unwrap();
+            assert_eq!(sh.name, "Notes");
+            let v = |row, col| format!("{:?}", sh.cells.get(CellRef::new(row, col)).map(|c| c.value.clone()));
+            assert!(v(0, 0).contains("Cell") && v(1, 0).contains("A131") && v(1, 2).contains("check this") && v(1, 4).contains("done") && v(1, 3).contains("Open"));
+        }
+        let again: serde_json::Value = serde_json::from_str(&book.edit_sheet(0, &op("open")).unwrap()).unwrap();
+        assert_eq!(book.session.doc().unwrap().wb.sheet(again["active"].as_u64().unwrap() as usize).unwrap().name, "Notes 2", "a taken name gets a number");
+        assert!(book.edit_sheet(0, &op("resolved")).is_err(), "no resolved notes");
+        for bad in [r#"{"kind":"notesList","name":"N","filter":"x","headers":["a","b","c","d","e"],"status":["o","r"]}"#, r#"{"kind":"notesList","name":"N","filter":"all","headers":["a"],"status":["o","r"]}"#, r#"{"kind":"notesList","name":"N","filter":"all","headers":["a","b","c","d","e"],"status":["o","r"],"extra":1}"#, r#"{"kind":"notesList","filter":"all","headers":["a","b","c","d","e"],"status":["o","r"]}"#] {
+            assert!(book.edit_sheet(0, bad).is_err(), "{bad}");
+        }
+        book.undo().unwrap();
+        assert_eq!(book.session.doc().unwrap().wb.sheets.len(), sheets_before + 1, "undo removes only the last list sheet");
+        book.undo().unwrap();
+        assert_eq!(book.session.doc().unwrap().wb.sheets.len(), sheets_before);
     }
     #[test]
     fn sheet_hide_unhide_tab_color_and_view_flags() {

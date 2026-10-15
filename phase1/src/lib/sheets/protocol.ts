@@ -144,7 +144,7 @@ export interface CellNote{author:string;text:string;threaded:boolean;resolved:bo
 export interface CellLink{target:string;tooltip:string|null}
 export interface CellAnnotations{note:CellNote|null;link:CellLink|null}
 export type FillDirection='down'|'right'|'up'|'left';
-export type SheetOp={kind:'add';name?:string}|{kind:'rename';name:string}|{kind:'duplicate'}|{kind:'delete'}|{kind:'move';to:number}|{kind:'hide'}|{kind:'unhide';index:number}|{kind:'tabColor';color:string};
+export type SheetOp={kind:'add';name?:string}|{kind:'rename';name:string}|{kind:'duplicate'}|{kind:'delete'}|{kind:'move';to:number}|{kind:'hide'}|{kind:'unhide';index:number}|{kind:'tabColor';color:string}|{kind:'notesList';name:string;filter:'all'|'open'|'resolved';headers:string[];status:string[]};
 export type SheetsRequest=
  |{id:number;op:'init';wasmUrl:string}
  |{id:number;op:'open';bytes:ArrayBuffer}

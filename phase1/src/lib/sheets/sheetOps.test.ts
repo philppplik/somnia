@@ -10,3 +10,8 @@ test('sheet names follow the engine rules and operations come from a closed list
  assert.deepEqual(parseSheetOp({kind:'duplicate'}),{kind:'duplicate'});assert.deepEqual(parseSheetOp({kind:'delete'}),{kind:'delete'});
  for(const bad of [null,[],{kind:'rename'},{kind:'rename',name:'a:b'},{kind:'add',name:5},{kind:'move',to:-1},{kind:'move',to:1.5},{kind:'move',to:255},{kind:'delete',name:'x'},{kind:'drop'}])assert.throws(()=>parseSheetOp(bad),JSON.stringify(bad));
 });
+test('notes list operation is validated field by field',()=>{
+ const ok={kind:'notesList',name:'Notes',filter:'open',headers:['a','b','c','d','e'],status:['o','r']};
+ assert.deepEqual(parseSheetOp(ok),ok);
+ for(const bad of [{...ok,filter:'x'},{...ok,headers:['a']},{...ok,status:['o','']},{...ok,name:'a/b'},{...ok,extra:1},{...ok,headers:['a','b','c','d','x'.repeat(41)]},{...ok,status:['o','r\u0001']},{kind:'notesList'}])assert.throws(()=>parseSheetOp(bad),String(JSON.stringify(bad)));
+});

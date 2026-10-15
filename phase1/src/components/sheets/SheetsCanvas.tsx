@@ -494,8 +494,8 @@ function Workbook({item}:{item:MediaItem}){
   try{await engine.current!.sort(sheet,range.r0,range.c0,rows,cols,op);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
  const applySheet=async(op:SheetOp)=>{
   if(draftRef.current!==null)await commit(draftRef.current);
-  if(collab.current&&(op.kind==='move'||op.kind==='duplicate'||op.kind==='hide'||op.kind==='unhide'||op.kind==='tabColor')){setNotice(t('sheets.collabSheetOpUnsupported'));return;}   // position-keyed shared cells would detach from their sheet
-  try{const r=await engine.current!.editSheet(sheet,op);const fresh=await syncSheets(r.active,op.kind==='add'||op.kind==='duplicate'||op.kind==='delete'||op.kind==='hide'||op.kind==='unhide');
+  if(collab.current&&(op.kind==='move'||op.kind==='duplicate'||op.kind==='hide'||op.kind==='unhide'||op.kind==='tabColor'||op.kind==='notesList')){setNotice(t('sheets.collabSheetOpUnsupported'));return;}   // position-keyed shared cells would detach from their sheet
+  try{const r=await engine.current!.editSheet(sheet,op);const fresh=await syncSheets(r.active,op.kind==='add'||op.kind==='duplicate'||op.kind==='delete'||op.kind==='hide'||op.kind==='unhide'||op.kind==='notesList');
    if(collab.current&&fresh&&op.kind!=='duplicate'){const idx=op.kind==='add'?r.active:sheet;collab.current.binding.applyLocalSheetOp(idx,op.kind as 'add'|'delete'|'rename',fresh.sheets[idx]?.name);}
    setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
  const history=async(kind:'undo'|'redo')=>{try{
