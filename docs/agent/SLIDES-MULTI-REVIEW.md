@@ -18,3 +18,10 @@ owner's broader 50-run limit does not increase model context. Layout, notes,
 dimensions and run structure are read-only. Full Rust/WASM/desktop roundtrip
 coverage remains CI-only. Local tests cover actual OOXML edited-copy validation,
 private transactions and synthetic panel review, not native worker execution.
+
+`slidesMultiOwnerRoundtrip.test.ts` combines actual OOXML same-slide edits with
+private transactions and the real JS apply/undo receipt algorithm. It proves a
+single history entry, unchanged other slide, exact byte restoration, and refusal
+before undo entry after a newer revision. Its stage is synthetic, so it does not
+prove native worker rendering or WASM. The full-native test is explicitly skipped
+locally and must run in CI.
