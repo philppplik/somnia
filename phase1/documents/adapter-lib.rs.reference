@@ -134,6 +134,8 @@ pub struct DocSession {
     next_snap: u32,
     /// Red and blue squiggles under spelling and grammar issues (English word list).
     proofing: bool,
+    /// Hidden text is drawn (dimmed by the layout) instead of skipped.
+    show_hidden: bool,
 }
 
 impl DocSession {
@@ -142,7 +144,7 @@ impl DocSession {
             return Err("adapter input limit: 16 MiB".into());
         }
         let doc = wordcraft_docx::read(bytes).map_err(|e| e.to_string())?;
-        Ok(Self { doc, cache: LayoutCache::new(), pages: DocLayout::default(), snaps: Default::default(), next_snap: 1, proofing: false })
+        Ok(Self { doc, cache: LayoutCache::new(), pages: DocLayout::default(), snaps: Default::default(), next_snap: 1, proofing: false, show_hidden: false })
     }
     fn do_insert(&mut self, block: usize, offset: usize, text: &str) -> Result<(), String> {
         if text.len() > 1024 * 1024 {
@@ -587,6 +589,7 @@ impl DocSession {
         let mut underline_color: Option<Option<wordcraft_doc::props::Rgb>> = None;
         let mut char_shading: Option<Option<wordcraft_doc::props::Rgb>> = None;
         let mut double_strike: Option<bool> = None;
+        let mut hidden: Option<bool> = None;
         let mut spacing: Option<f32> = None;
         let mut scale: Option<f32> = None;
         let mut vert: Option<wordcraft_doc::props::VertAlign> = None;
@@ -696,6 +699,7 @@ impl DocSession {
                 "smallCaps" => small_caps = Some(flag),
                 "allCaps" => all_caps = Some(flag),
                 "doubleStrike" => double_strike = Some(flag),
+                "hidden" => hidden = Some(flag),
                 "clear" => {
                     if !flag {
                         return Err("format field clear must be true".into());
@@ -733,6 +737,9 @@ impl DocSession {
                     if v {
                         cp.double_strike = None;
                     }
+                }
+                if let Some(v) = hidden {
+                    cp.hidden = Some(v);
                 }
                 if let Some(v) = small_caps {
                     cp.small_caps = Some(v);
@@ -808,7 +815,7 @@ impl DocSession {
         // strike, small caps, vertical alignment, highlight name, link ("" for none).
         let mut extra: Vec<(bool, bool, wordcraft_doc::props::VertAlign, &'static str, String)> = Vec::new();
         // all caps, double strike, character spacing.
-        let mut more: Vec<(bool, bool, f32)> = Vec::new();
+        let mut more: Vec<(bool, bool, f32, bool)> = Vec::new();
         let mut scales: Vec<f32> = Vec::new();
         // underline style name, underline colour (hex or "auto"), character shading (hex or "none").
         let mut under: Vec<(&'static str, String, String)> = Vec::new();
@@ -821,7 +828,7 @@ impl DocSession {
             seen.push((rc.bold, rc.italic, rc.underline != wordcraft_doc::props::Underline::None));
             look.push((rc.font.clone(), rc.size, rc.color));
             extra.push(Self::extra_of(&rc, p.props_at(so)));
-            more.push((rc.caps, rc.double_strike, rc.spacing));
+            more.push((rc.caps, rc.double_strike, rc.spacing, rc.hidden));
             scales.push(rc.scale);
             under.push(Self::under_of(&rc));
         } else {
@@ -833,7 +840,7 @@ impl DocSession {
                         seen.push((rc.bold, rc.italic, rc.underline != wordcraft_doc::props::Underline::None));
                         look.push((rc.font.clone(), rc.size, rc.color));
                         extra.push(Self::extra_of(&rc, cp));
-                        more.push((rc.caps, rc.double_strike, rc.spacing));
+                        more.push((rc.caps, rc.double_strike, rc.spacing, rc.hidden));
                         scales.push(rc.scale);
             scales.push(rc.scale);
             under.push(Self::under_of(&rc));
@@ -869,14 +876,14 @@ impl DocSession {
         });
         let hl = e0.filter(|x| all_same(&|y| y.3 == x.3)).map(|x| x.3);
         let lk = e0.filter(|x| all_same(&|y| y.4 == x.4)).map(|x| x.4.clone());
-        let tri_m = |f: &dyn Fn(&(bool, bool, f32)) -> bool| if !more.is_empty() && more.iter().all(|x| f(x)) { "on" } else if more.iter().any(|x| f(x)) { "mixed" } else { "off" };
+        let tri_m = |f: &dyn Fn(&(bool, bool, f32, bool)) -> bool| if !more.is_empty() && more.iter().all(|x| f(x)) { "on" } else if more.iter().any(|x| f(x)) { "mixed" } else { "off" };
         let spacing = more.first().filter(|x| more.iter().all(|y| y.2.to_bits() == x.2.to_bits())).map(|x| x.2);
         let scale = scales.first().filter(|x| scales.iter().all(|y| y.to_bits() == x.to_bits())).copied();
         let u0 = under.first();
         let u_style = u0.filter(|x| under.iter().all(|y| y.0 == x.0)).map(|x| x.0);
         let u_color = u0.filter(|x| under.iter().all(|y| y.1 == x.1)).map(|x| x.1.clone());
         let c_shade = u0.filter(|x| under.iter().all(|y| y.2 == x.2)).map(|x| x.2.clone());
-        Ok(serde_json::json!({"underlineStyle": u_style, "underlineColor": u_color, "charShading": c_shade, "allCaps": tri_m(&|x| x.0), "doubleStrike": tri_m(&|x| x.1), "spacing": spacing, "scale": scale,
+        Ok(serde_json::json!({"underlineStyle": u_style, "underlineColor": u_color, "charShading": c_shade, "allCaps": tri_m(&|x| x.0), "doubleStrike": tri_m(&|x| x.1), "hidden": tri_m(&|x| x.3), "spacing": spacing, "scale": scale,
             "bold": tri(&seen, |x| x.0), "italic": tri(&seen, |x| x.1), "underline": tri(&seen, |x| x.2), "font": font, "size": size, "color": color,
             "strike": tri_b(&|x| x.0), "smallCaps": tri_b(&|x| x.1), "vertAlign": vert, "highlight": hl, "link": lk}).to_string())
     }
@@ -3758,6 +3765,10 @@ impl DocSession {
     pub fn set_proofing(&mut self, on: bool) {
         self.proofing = on;
     }
+    /// Shows or hides text formatted as hidden (it shows after the next `paginate`).
+    pub fn set_show_hidden(&mut self, on: bool) {
+        self.show_hidden = on;
+    }
     /// Spelling and grammar issues of the whole document as JSON; `words_json` is the user's word list.
     pub fn proof_check(&self, words_json: &str) -> Result<String, JsValue> {
         self.do_proof_check(words_json).map_err(|e| js_err(&e))
@@ -3846,7 +3857,7 @@ impl DocSession {
         self.do_insert(block, utf8_byte_offset, text).map_err(|e| js_err(&e))
     }
     pub fn paginate(&mut self) -> usize {
-        self.pages = wordcraft_layout::layout(&self.doc, &mut self.cache, &LayoutOptions { proofing: self.proofing, ..LayoutOptions::default() });
+        self.pages = wordcraft_layout::layout(&self.doc, &mut self.cache, &LayoutOptions { proofing: self.proofing, show_hidden: self.show_hidden, ..LayoutOptions::default() });
         self.pages.pages.len()
     }
     pub fn page_info(&self) -> String {
@@ -4260,6 +4271,24 @@ mod tests {
         }
         assert!(DocSession::do_import_format("odt", b"not a zip").is_err());
         assert!(DocSession::do_import_format("txt", &vec![b'a'; 17 * 1024 * 1024]).is_err());
+    }
+    #[test]
+    fn hidden_text_flag_reports_roundtrips_and_validates() {
+        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
+        let st = |s: &DocSession| serde_json::from_str::<serde_json::Value>(&s.do_format_state(0, 0, 0, 1).unwrap()).unwrap();
+        assert_eq!(st(&s)["hidden"].as_str(), Some("off"));
+        s.do_format(0, 0, 0, 1, r#"{"hidden":true}"#).unwrap();
+        assert_eq!(st(&s)["hidden"].as_str(), Some("on"));
+        let saved = s.save().unwrap();
+        let s2 = DocSession::from_bytes(&saved).unwrap();
+        assert_eq!(st(&s2)["hidden"].as_str(), Some("on"));
+        s.do_format(0, 0, 0, 1, r#"{"hidden":false}"#).unwrap();
+        assert_eq!(st(&s)["hidden"].as_str(), Some("off"));
+        assert!(s.do_format(0, 0, 0, 1, r#"{"hidden":"yes"}"#).is_err());
+        s.set_show_hidden(true);
+        s.paginate();
+        s.set_show_hidden(false);
+        s.paginate();
     }
     #[test]
     fn proofing_lists_issues_with_offsets_and_skips_marked_text() {

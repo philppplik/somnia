@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-910 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+912 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -349,6 +349,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `documents.goToPage` | Go to document page | View | documents-panels |  |
 | `documents.headerFooter.set` | Set header and footer | View | documents |  |
 | `documents.headerFooter.variants` | Set first-page and odd/even headers and footers | View | documents |  |
+| `documents.hidden.show` | Show or hide hidden text | View | documents |  |
 | `documents.highlight.set` | Set highlight colour | View | documents |  |
 | `documents.image.alt` | Set picture alt text | View | documents |  |
 | `documents.image.crop` | Crop picture | View | documents |  |
@@ -430,6 +431,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `documents.toggleAllCaps` | Toggle all caps | View | documents |  |
 | `documents.toggleBold` | Toggle bold | View | documents |  |
 | `documents.toggleDoubleStrike` | Toggle double strikethrough | View | documents |  |
+| `documents.toggleHidden` | Hide or unhide the selected text | View | documents |  |
 | `documents.toggleItalic` | Toggle italic | View | documents |  |
 | `documents.toggleSmallCaps` | Toggle small caps | View | documents |  |
 | `documents.toggleStrike` | Toggle strikethrough | View | documents |  |

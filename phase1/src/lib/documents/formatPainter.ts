@@ -1,7 +1,7 @@
 import {checkFormatPatch,checkParaPatch,type FormatPatch,type FormatState,type ParaPatch,type ParaState} from './protocol';
 /** Character and paragraph formatting copied from one place, to be pasted onto another. */
 export interface Painted{format:FormatPatch;para:ParaPatch}
-const TRI=['bold','italic','underline','strike','smallCaps','allCaps','doubleStrike'] as const;
+const TRI=['bold','italic','underline','strike','smallCaps','allCaps','doubleStrike','hidden'] as const;
 const CHAR_VALUES=['font','size','color','underlineColor','charShading','spacing','scale','vertAlign'] as const;
 const PARA_VALUES=['align','indentLeft','indentFirst','indentRight','spaceBefore','spaceAfter','keepNext','keepLines','widowControl','contextualSpacing','shading'] as const;
 /** Keeps `key` only when the engine would accept it alone. */

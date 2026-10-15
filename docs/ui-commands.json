@@ -4287,6 +4287,17 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.hidden.show",
+      "title": "Show or hide hidden text",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.highlight.set",
       "title": "Set highlight colour",
       "category": "View",
@@ -5151,6 +5162,17 @@
     {
       "id": "documents.toggleDoubleStrike",
       "title": "Toggle double strikethrough",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.toggleHidden",
+      "title": "Hide or unhide the selected text",
       "category": "View",
       "source": "documents",
       "keywords": [

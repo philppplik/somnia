@@ -22,7 +22,7 @@ import {insertPageBreak,setParagraphOptions,setProperties,setTabStops} from './s
 import {parsePdfPages,checkParaPatch,PARA_FLAG_KEYS,propertiesProblem,tabsProblem} from './protocol';
 import {addComment,commentSelection,deleteComment,goToComment,readComments,replyComment,resolveComment} from './session';
 import {commentProblem,HIGHLIGHTS,linkProblem,type HighlightName} from './protocol';
-import {setCharLook,setCharSpacing,setCharScale,setLineRule,setImageWrap,setImageCrop,setProofing,addToDictionary,copyFormatting,pasteFormatting,clearFormatting,hasTextSelection,setHighlight,setLink,toggleVertAlign} from './session';
+import {setCharLook,setCharSpacing,setCharScale,setLineRule,setImageWrap,setImageCrop,setProofing,setShowHidden,addToDictionary,copyFormatting,pasteFormatting,clearFormatting,hasTextSelection,setHighlight,setLink,toggleVertAlign} from './session';
 import {documentsExportReady,patchDocumentsExportUi,requestDocumentsExportFormat,requestDocumentsExportPdf,requestDocumentsSaveCopy} from './exportBridge';
 /**
  * Documents studio commands. Registered while the Documents canvas is mounted (registerDocumentsCommands),
@@ -106,6 +106,8 @@ export function registerDocumentsCommands(){
    await setCharLook(o as import('./protocol').FormatPatch);
   },()=>ready()&&!!getDocumentsState().caret),
   add('documents.toggleAllCaps','Toggle all caps',async()=>{await toggleFormat('allCaps');},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.toggleHidden','Hide or unhide the selected text',async()=>{await toggleFormat('hidden');},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.hidden.show','Show or hide hidden text',async()=>{await setShowHidden(!getDocumentsState().showHidden);},()=>ready()),
   add('documents.toggleDoubleStrike','Toggle double strikethrough',async()=>{await toggleFormat('doubleStrike');},()=>ready()&&!!getDocumentsState().caret),
   add('documents.charSpacing.set','Set character spacing',async p=>{
    const v=(p as Record<string,unknown>|undefined)?.points;if(typeof v!=='number'||!Number.isFinite(v)||v<MIN_SPACING_PT||v>MAX_SPACING_PT)throw expected(`Missing or invalid "points" (${MIN_SPACING_PT} to ${MAX_SPACING_PT}).`);

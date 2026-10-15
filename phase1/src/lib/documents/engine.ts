@@ -85,6 +85,7 @@ export class DocumentsEngine{
  async importFormat(ext:import('./protocol').ExportExt,bytes:ArrayBuffer):Promise<Uint8Array>{return new Uint8Array((await this.call('saved',id=>({id,kind:'importFormat',ext,bytes}),[bytes])).bytes);}
  async proofCheck(words:string[]):Promise<import('./protocol').ProofIssue[]>{return(await this.call('proof',id=>({id,kind:'proofCheck',words}))).issues;}
  async proofSuggest(word:string):Promise<string[]>{return(await this.call('suggest',id=>({id,kind:'proofSuggest',word}))).words;}
+ async setShowHidden(on:boolean):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'setShowHidden',on}))).document;}
  async setProofing(on:boolean):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'setProofing',on}))).document;}
  async pageSetupState():Promise<import('./protocol').PageSetupState>{return(await this.call('pageSetup',id=>({id,kind:'pageSetupState'}))).state;}
  async setPageSetup(setup:import('./protocol').PageSetupPatch):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'setPageSetup',setup}))).document;}

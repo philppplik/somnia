@@ -86,6 +86,7 @@ export class DocSession {
     set_image_alt(block: number, alt: string): void;
     set_image_wrap(block: number, wrap: string, align: string): void;
     export_format(ext: string): Uint8Array;
+    set_show_hidden(on: boolean): void;
     static import_format(ext: string, bytes: Uint8Array): Uint8Array;
     set_proofing(on: boolean): void;
     proof_check(words_json: string): string;

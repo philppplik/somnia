@@ -351,7 +351,7 @@ export const typeText=(text:string)=>run(async()=>{
  if(n.s.block===n.e.block)await applyAtCaret({start:n.s.off,end:n.e.off,text:t},n.s.off===n.e.off);
  else await replaceRange(n.s,n.e,t,n.h);
 });
-const FORMAT_PROPS=['bold','italic','underline','strike','smallCaps','allCaps','doubleStrike'] as const;
+const FORMAT_PROPS=['bold','italic','underline','strike','smallCaps','allCaps','doubleStrike','hidden'] as const;
 export type FormatProp=typeof FORMAT_PROPS[number];
 /**
  * Bold/italic/underline on the selection with Word semantics: when every character already has it, it is removed, otherwise it is applied to all.
@@ -400,7 +400,7 @@ export const setCharSpacing=(pt:number)=>run(()=>applyFormat({spacing:pt}));
 export const setCharScale=(pct:number)=>run(()=>applyFormat({scale:pct}));
 /** Line height as a multiple, a minimum or an exact value for every paragraph the selection touches. One undo step. */
 export const setLineRule=(rule:import('./protocol').LineRule)=>run(()=>applyPara({lineRule:rule}));
-export const setCharLook=(patch:Pick<import('./protocol').FormatPatch,'underline'|'underlineStyle'|'underlineColor'|'charShading'|'scale'>)=>run(()=>applyFormat(patch));
+export const setCharLook=(patch:Pick<import('./protocol').FormatPatch,'underline'|'underlineStyle'|'underlineColor'|'charShading'|'scale'|'hidden'>)=>run(()=>applyFormat(patch));
 export const setHighlight=(h:import('./protocol').HighlightName)=>run(()=>applyFormat({highlight:h}));
 /** The selected text must exist: a link cannot be held for typing. */
 const needSelection=()=>{const c=getDocumentsState().caret;if(!c)return false;const n=norm(c);return cmp(n.s,n.e)!==0;};
@@ -913,6 +913,11 @@ export function documentStats():{words:number;chars:number;charsNoSpaces:number;
 export const setProofing=(on:boolean)=>run(async()=>{
  const e=engine;if(!e)return;const check=ownerGuard();const d=await e.setProofing(on);check();
  patchDocuments({proofing:on});await refresh(d);
+});
+/** Shows or hides text formatted as hidden on the pages. Not an edit: nothing goes on the undo stack. */
+export const setShowHidden=(on:boolean)=>run(async()=>{
+ const e=engine;if(!e)return;const check=ownerGuard();const d=await e.setShowHidden(on);check();
+ patchDocuments({showHidden:on});await refresh(d);
 });
 /** Every spelling and grammar issue (at most 400) with the user's own words accepted. */
 export async function proofCheck():Promise<ProofIssue[]>{

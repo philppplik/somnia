@@ -5,7 +5,7 @@ export interface HitResult{block:number|null;off?:number;editable:boolean}
 export interface CaretBox{page:number;x:number;top:number;height:number}
 export type Tri='on'|'off'|'mixed';
 /** Effective bold/italic/underline over a selection (style and direct formatting). */
-export interface FormatState{bold:Tri;italic:Tri;underline:Tri;strike?:Tri;smallCaps?:Tri;allCaps?:Tri;doubleStrike?:Tri;/** Shared underline style (`none`, `single`, ...), colour (`RRGGBB` or `auto`) and character shading (`RRGGBB` or `none`); null when mixed. */underlineStyle?:UnderlineStyle|'none'|null;underlineColor?:string|null;charShading?:string|null;/** Shared character spacing in points, or null when mixed. */spacing?:number|null;/** Shared character width in percent, or null when mixed. */scale?:number|null;/** Shared values, or null when the selection mixes them. */vertAlign?:VertAlign|null;highlight?:HighlightName|'other'|null;/** Shared link target (empty for none), or null when mixed. */link?:string|null;/** Shared value over the selection, or null when it mixes values. */font?:string|null;size?:number|null;/** `RRGGBB`, `auto`, or null when mixed. */color?:string|null}
+export interface FormatState{bold:Tri;italic:Tri;underline:Tri;strike?:Tri;smallCaps?:Tri;allCaps?:Tri;doubleStrike?:Tri;/** Text formatted as hidden. */hidden?:Tri;/** Shared underline style (`none`, `single`, ...), colour (`RRGGBB` or `auto`) and character shading (`RRGGBB` or `none`); null when mixed. */underlineStyle?:UnderlineStyle|'none'|null;underlineColor?:string|null;charShading?:string|null;/** Shared character spacing in points, or null when mixed. */spacing?:number|null;/** Shared character width in percent, or null when mixed. */scale?:number|null;/** Shared values, or null when the selection mixes them. */vertAlign?:VertAlign|null;highlight?:HighlightName|'other'|null;/** Shared link target (empty for none), or null when mixed. */link?:string|null;/** Shared value over the selection, or null when it mixes values. */font?:string|null;size?:number|null;/** `RRGGBB`, `auto`, or null when mixed. */color?:string|null}
 export type VertAlign='baseline'|'superscript'|'subscript';
 export const HIGHLIGHTS=['none','yellow','green','cyan','pink','gray'] as const;export type HighlightName=typeof HIGHLIGHTS[number];
 export const MAX_LINK_CHARS=2048;
@@ -16,7 +16,7 @@ export function linkProblem(v:unknown):string|null{
  if(Array.from(v).length>MAX_LINK_CHARS||/[\s\u0000-\u001f\u007f-\u009f]/.test(v)||!/^(https?:\/\/|mailto:)./i.test(v))return 'A link starts with http://, https:// or mailto: and has no spaces.';
  return null;
 }
-export interface FormatPatch{bold?:boolean;italic?:boolean;underline?:boolean;font?:string;size?:number;color?:string;strike?:boolean;smallCaps?:boolean;allCaps?:boolean;doubleStrike?:boolean;underlineStyle?:UnderlineStyle;/** `RRGGBB` or `auto`. */underlineColor?:string;/** `RRGGBB` or `none`. */charShading?:string;/** Extra space after each character in points (-5 to 30). */spacing?:number;/** Character width in percent (20 to 400). */scale?:number;vertAlign?:VertAlign;highlight?:HighlightName;link?:string;/** Character style id; an empty string removes it. */charStyle?:string;/** Remove direct character formatting (links stay). Only `true`. */clear?:true}
+export interface FormatPatch{bold?:boolean;italic?:boolean;underline?:boolean;font?:string;size?:number;color?:string;strike?:boolean;smallCaps?:boolean;allCaps?:boolean;doubleStrike?:boolean;/** Hide the text (it only shows while "Show hidden text" is on). */hidden?:boolean;underlineStyle?:UnderlineStyle;/** `RRGGBB` or `auto`. */underlineColor?:string;/** `RRGGBB` or `none`. */charShading?:string;/** Extra space after each character in points (-5 to 30). */spacing?:number;/** Character width in percent (20 to 400). */scale?:number;vertAlign?:VertAlign;highlight?:HighlightName;link?:string;/** Character style id; an empty string removes it. */charStyle?:string;/** Remove direct character formatting (links stay). Only `true`. */clear?:true}
 export const MIN_FONT_PT=1,MAX_FONT_PT=400,MAX_FONT_NAME=64;
 /** Selection endpoints: top-level paragraph index and UTF-8 byte offset. */
 export interface DocPos{block:number;off:number}
@@ -38,7 +38,7 @@ export const lineRuleProblem=(v:unknown):string|null=>{
  if(typeof o.value!=='number'||!Number.isFinite(o.value)||o.value<lo||o.value>hi)return o.rule==='multiple'?'A line spacing multiple is 0.5 to 10.':'An exact or minimum line height is 1 to 1584 points.';
  return null;
 };
-const FLAG_KEYS=['bold','italic','underline','strike','smallCaps','allCaps','doubleStrike'];
+const FLAG_KEYS=['bold','italic','underline','strike','smallCaps','allCaps','doubleStrike','hidden'];
 /** Validates a format patch: flags are booleans, font is short printable text, size is 1-400 pt, color is auto or RRGGBB. */
 /** A style id: letters, digits, underscore and hyphen, at most 80 characters (the engine checks that the style exists). */
 export const STYLE_ID_RE=/^[\p{L}\p{N}_-]{1,80}$/u;
@@ -169,6 +169,7 @@ export type DocumentsRequest=
  |{id:number;kind:'proofCheck';words:string[]}
  |{id:number;kind:'proofSuggest';word:string}
  |{id:number;kind:'setProofing';on:boolean}
+ |{id:number;kind:'setShowHidden';on:boolean}
  |{id:number;kind:'pageSetupState'}
  |{id:number;kind:'setPageSetup';setup:PageSetupPatch}
  |{id:number;kind:'commentsState'}
