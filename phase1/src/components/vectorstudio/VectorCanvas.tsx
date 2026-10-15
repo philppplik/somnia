@@ -10,6 +10,7 @@ import {selectText,deleteText,duplicateText,updateText,selectNode,moveSelection,
 import {boxOf,fitPath,hitDocument,pathBox,translatePath,type Box} from '../../lib/vectorstudio/geometry';
 import {buildShape,newId,DEFAULT_SHAPE_STYLE,type ShapeKind} from '../../lib/vectorstudio/shapes';
 import {openSvgDialog} from '../../lib/vectorstudio/open';
+import {handleLocal,handlePoint,rotationFor} from '../../lib/vectorstudio/textRotate';
 import {PathLayer,GradientDefs,TextLayer} from './render';
 import {textBox,textTransform,unrotateAround,type VectorText} from '../../lib/vectorio';
 import {togglePathSelection} from './tools/operations';
@@ -28,6 +29,7 @@ type Drag=
  |{kind:'shape';tool:ShapeKind;start:Point;cur:Point}
  |{kind:'node';path:string;node:string;part:'anchor'|'in'|'out';cur:Point}
  |{kind:'text-move';id:string;start:Point;dx:number;dy:number}
+ |{kind:'text-rotate';id:string;rotation:number}
  |{kind:'pan';sx:number;sy:number;pan:Point}
  |{kind:'pen-handle';cur:Point};
 import {snapMove} from '../../lib/vectorstudio/snap';
@@ -67,7 +69,7 @@ export function VectorCanvas(){
   if(drag.kind==='node'&&p.id===drag.path)return {...p,nodes:p.nodes.map(n=>n.id!==drag.node?n:moved(n,drag.part,drag.cur))};
   return p;};
  const paths=s.doc.paths.map(preview);
- const texts=(s.doc.texts??[]).map(t=>drag?.kind==='text-move'&&drag.id===t.id?{...t,x:t.x+drag.dx,y:t.y+drag.dy}:t);
+ const texts=(s.doc.texts??[]).map(t=>drag?.kind==='text-move'&&drag.id===t.id?{...t,x:t.x+drag.dx,y:t.y+drag.dy}:drag?.kind==='text-rotate'&&drag.id===t.id?{...t,rotation:drag.rotation}:t);
  const selText=texts.find(t=>t.id===s.textSel);const selTextBox=selText?textBox(selText):null;
  const hitText=(pt:Point,back=false):string|null=>{for(let i=texts.length-1;i>=0;i--){if(!!texts[i].back!==back)continue;const b=textBox(texts[i]),q=unrotateAround(texts[i],pt);if(q.x>=b.minX-tol&&q.x<=b.maxX+tol&&q.y>=b.minY-tol&&q.y<=b.maxY+tol)return texts[i].id;}return null;};
  const selBox=boxOf(selected.map(preview));
@@ -87,6 +89,7 @@ export function VectorCanvas(){
     const hitN=p.nodes.find(n=>Math.hypot(n.x-pt.x,n.y-pt.y)<=tol);if(hitN){select([p.id]);selectNode(hitN.id);setDrag({kind:'node',path:p.id,node:hitN.id,part:'anchor',cur:pt});return;}}
    const id=hitDocument(s.doc,pt,tol);if(id){select([id]);selectNode(null);}else if(!e.shiftKey)select([]);return;}
   // select tool
+  if(selText&&Math.hypot(handlePoint(selText,s.zoom).x-pt.x,handlePoint(selText,s.zoom).y-pt.y)<=tol*1.2){setDrag({kind:'text-rotate',id:selText.id,rotation:selText.rotation??0});return;}
   {const hit=hitText(pt);if(hit){selectText(hit);setDrag({kind:'text-move',id:hit,start:pt,dx:0,dy:0});return;}}
   const corner=selBox?cornerAt(selBox,pt,tol*1.4):-1;
   if(corner>=0&&selBox){setDrag({kind:'scale',corner,from:selBox,cur:pt});return;}
@@ -98,6 +101,7 @@ export function VectorCanvas(){
  const onMove=(e:RPointerEvent<SVGSVGElement>)=>{
   const pt=toDoc(e);setHover(pt);if(!drag)return;
   if(drag.kind==='pan'){setView(s.zoom,{x:drag.pan.x+e.clientX-drag.sx,y:drag.pan.y+e.clientY-drag.sy});return;}
+  if(drag.kind==='text-rotate'){const base=(s.doc.texts??[]).find(t=>t.id===drag.id);if(base)setDrag({...drag,rotation:rotationFor({...base,rotation:0},pt,s.zoom,e.shiftKey)});return;}
   if(drag.kind==='text-move'){setDrag({...drag,dx:pt.x-drag.start.x,dy:pt.y-drag.start.y});return;}
   if(drag.kind==='move'){const snap=e.shiftKey?Math.abs(pt.x-drag.start.x)>Math.abs(pt.y-drag.start.y):null;
    const rx=snap===false?0:pt.x-drag.start.x,ry=snap===true?0:pt.y-drag.start.y;
@@ -111,7 +115,8 @@ export function VectorCanvas(){
   setDrag({...drag,cur:pt} as Drag);};
  const onUp=()=>{
   const d=drag;setDrag(null);if(!d)return;
-  if(d.kind==='text-move'){if(d.dx||d.dy){const cur=(s.doc.texts??[]).find(t=>t.id===d.id);if(cur)updateText(d.id,{x:cur.x+d.dx,y:cur.y+d.dy});}}
+  if(d.kind==='text-rotate'){const cur=(s.doc.texts??[]).find(t=>t.id===d.id);if(cur&&d.rotation!==(cur.rotation??0))updateText(d.id,{rotation:d.rotation});}
+  else if(d.kind==='text-move'){if(d.dx||d.dy){const cur=(s.doc.texts??[]).find(t=>t.id===d.id);if(cur)updateText(d.id,{x:cur.x+d.dx,y:cur.y+d.dy});}}
   else if(d.kind==='move'&&(d.dx||d.dy)){commit({...s.doc,paths:s.doc.paths.map(p=>s.selection.includes(p.id)?translatePath(p,d.dx,d.dy):p)});}
   else if(d.kind==='scale'){const to=scaledBox(d,shiftHeld.current);if(to)commit({...s.doc,paths:s.doc.paths.map(p=>s.selection.includes(p.id)?fitPath(p,d.from,to):p)});}
   else if(d.kind==='node'){moveNode(d.path,d.node,d.cur,d.part);}
@@ -180,6 +185,7 @@ export function VectorCanvas(){
      {s.tool==='select'&&selBox&&<g data-testid="vector-selection"><rect x={selBox.minX} y={selBox.minY} width={selBox.maxX-selBox.minX} height={selBox.maxY-selBox.minY} fill="none" stroke="#2563eb" strokeWidth={1/s.zoom} strokeDasharray={`${4/s.zoom} ${3/s.zoom}`} pointerEvents="none"/>
       {CORNERS.map(([cx,cy],i)=><rect key={i} data-testid={`vector-handle-${i}`} x={(cx?selBox.maxX:selBox.minX)-4/s.zoom} y={(cy?selBox.maxY:selBox.minY)-4/s.zoom} width={8/s.zoom} height={8/s.zoom} fill="#fff" stroke="#2563eb" strokeWidth={1/s.zoom}/>)}</g>}
      {selTextBox&&<rect data-testid="vector-text-selection" transform={selText?textTransform(selText):undefined} x={selTextBox.minX} y={selTextBox.minY} width={selTextBox.maxX-selTextBox.minX} height={selTextBox.maxY-selTextBox.minY} fill="none" stroke="#2563eb" strokeWidth={1/s.zoom} strokeDasharray={`${4/s.zoom} ${3/s.zoom}`} pointerEvents="none"/>}
+     {selText&&selTextBox&&<g transform={textTransform(selText)}><line x1={(selTextBox.minX+selTextBox.maxX)/2} y1={selTextBox.minY} x2={handleLocal(selText,s.zoom).x} y2={handleLocal(selText,s.zoom).y} stroke="#2563eb" strokeWidth={1/s.zoom} pointerEvents="none"/><circle data-testid="vector-text-rotate-handle" cx={handleLocal(selText,s.zoom).x} cy={handleLocal(selText,s.zoom).y} r={5/s.zoom} fill="#fff" stroke="#2563eb" strokeWidth={1/s.zoom} pointerEvents="none"/></g>}
      {nodePath&&<NodeOverlay path={nodePath} zoom={s.zoom} active={s.selectedNode}/>}
      {(['x','y'] as const).flatMap(axis=>(s.doc.guides?.[axis]??[]).map(v=><g key={axis+v} data-testid="vector-guide" data-axis={axis}>{!(gd&&gd.axis===axis&&gd.from===v)&&<line x1={axis==='x'?v:-1e5} x2={axis==='x'?v:1e5} y1={axis==='y'?v:-1e5} y2={axis==='y'?v:1e5} className="stroke-accent" strokeWidth={1/s.zoom} pointerEvents="none"/>}
       {s.tool==='select'&&<line x1={axis==='x'?v:-1e5} x2={axis==='x'?v:1e5} y1={axis==='y'?v:-1e5} y2={axis==='y'?v:1e5} stroke="transparent" strokeWidth={8/s.zoom} pointerEvents="stroke" className={axis==='x'?'cursor-col-resize':'cursor-row-resize'} onPointerDown={e=>startGuide(axis,e,v)} onPointerMove={moveGuideDrag} onPointerUp={endGuide} onPointerCancel={()=>setGd(null)}/>}</g>))}
