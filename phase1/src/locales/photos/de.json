@@ -166,5 +166,7 @@
  "photos.stacks.group": "Als Stapel gruppieren",
  "photos.stacks.ungroup": "Stapel aufloesen",
  "photos.stacks.expand": "Stapel zeigen",
- "photos.stacks.collapse": "Stapel einklappen"
+ "photos.stacks.collapse": "Stapel einklappen",
+ "photos.stacks.auto": "Auto-Stapel",
+ "photos.stacks.autoDone": "{count} Serien gestapelt"
 }

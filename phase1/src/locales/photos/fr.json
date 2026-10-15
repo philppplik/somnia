@@ -166,5 +166,7 @@
  "photos.stacks.group": "Regrouper en pile",
  "photos.stacks.ungroup": "Degrouper",
  "photos.stacks.expand": "Deployer la pile",
- "photos.stacks.collapse": "Replier la pile"
+ "photos.stacks.collapse": "Replier la pile",
+ "photos.stacks.auto": "Empilage auto",
+ "photos.stacks.autoDone": "{count} series empilees"
 }

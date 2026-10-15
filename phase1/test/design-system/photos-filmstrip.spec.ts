@@ -547,3 +547,19 @@ test('stacks: group, collapse, expand, ungroup (light and dark)',async({page})=>
   await page.getByTestId('photos-filmstrip-select').selectOption('none');
  }
 });
+test('auto-stack: burst detection stacks the series in one click (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
+  await page.evaluate(async()=>{const m=await import('/src/lib/photos/stacks.ts');for(const n of['strip-1.png','strip-2.png','strip-3.png']){const id=m.getStack(n);if(id)m.ungroupStacks([id]);}}); // stacks persist via localStorage
+  await page.getByTestId('photos-filmstrip-stack-auto').click(); // strip-1..3 are a numbered series
+  await expect(page.getByTestId('photos-filmstrip-apply-note')).toHaveText('1 series stacked');
+  await expect(page.getByTestId('photos-filmstrip-stack-count-strip-1.png')).toHaveText('3');
+  await expect(page.getByTestId('photos-filmstrip-item-strip-2.png')).toHaveCount(0);
+  await page.screenshot({path:`test-results/ds-photos-autostack-${theme}.png`,fullPage:true});
+  await page.evaluate(async()=>{const m=await import('/src/lib/photos/stacks.ts');for(const n of['strip-1.png','strip-2.png','strip-3.png']){const id=m.getStack(n);if(id)m.ungroupStacks([id]);}});
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible();
+ }
+});

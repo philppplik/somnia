@@ -166,5 +166,7 @@
  "photos.stacks.group": "Agrupar en pila",
  "photos.stacks.ungroup": "Desagrupar",
  "photos.stacks.expand": "Expandir pila",
- "photos.stacks.collapse": "Contraer pila"
+ "photos.stacks.collapse": "Contraer pila",
+ "photos.stacks.auto": "Apilado automatico",
+ "photos.stacks.autoDone": "{count} series apiladas"
 }

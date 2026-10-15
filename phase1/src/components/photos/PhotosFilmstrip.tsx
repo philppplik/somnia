@@ -15,6 +15,7 @@ import {useFlags} from '../../lib/photos/flags';
 import {PHOTO_LABELS,setLabel,useLabels,type PhotoLabel} from '../../lib/photos/labels';
 import {addTags,allTags,setTags} from '../../lib/photos/tags';
 import {groupForStrip,groupPhotos,ungroupStacks,useStacks} from '../../lib/photos/stacks';
+import {detectSeries} from '../../lib/photos/autoStack';
 import {usePanelState} from '../../store/panelStateStore';
 import {Button} from '../ui/button';
 import {NativeInput,NativeSelect} from '../ui/native-controls';
@@ -155,6 +156,10 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
   </NativeSelect>}
   {onSurvey&&<Button variant="outline" size="icon" aria-label={t('photos.filmstrip.survey')} title={t('photos.filmstrip.survey')} onClick={()=>onSurvey(selected.length>1?selected.map(p=>p.name):[])} className="h-7 w-7 shrink-0" data-testid="photos-filmstrip-survey"><LayoutGrid size={12}/></Button>} {/* with a selection it surveys the selection, else the whole filtered view */}
   {selected.length>1&&<Button variant="outline" size="compact" onClick={()=>groupPhotos(selected.map(p=>p.name))} data-testid="photos-filmstrip-stack-group">{t('photos.stacks.group')}</Button>}
+  {detectSeries(all.map(p=>p.name)).length>0&&<Button variant="outline" size="compact" onClick={()=>{
+   let n=0;for(const series of detectSeries(all.map(p=>p.name)))if(groupPhotos(series))n++;
+   setApplyNote(t('photos.stacks.autoDone',{count:n}));
+  }} data-testid="photos-filmstrip-stack-auto">{t('photos.stacks.auto')}</Button>}
   {(()=>{const ids=[...new Set((selected.length>1?selected.map(p=>p.name):[active]).map(n=>stacks[n]).filter((v):v is string=>!!v))];return ids.length>0?<Button variant="outline" size="compact" onClick={()=>ungroupStacks(ids)} data-testid="photos-filmstrip-stack-ungroup">{t('photos.stacks.ungroup')}</Button>:null;})()}
   {rejected.length>0&&<Button variant={armRemove?'primary':'outline'} size="compact" onClick={removeRejected} className="shrink-0" data-testid="photos-filmstrip-remove-rejects"><Trash2 size={12}/>{armRemove?t('photos.filmstrip.removeRejectsConfirm',{count:rejected.length}):t('photos.filmstrip.removeRejects',{count:rejected.length})}</Button>}
   <Button variant="outline" size="icon" aria-pressed={autoAdvance} aria-label={t('photos.filmstrip.autoAdvance')} title={t('photos.filmstrip.autoAdvance')} onClick={()=>setAutoAdvance(!autoAdvance)} className="h-7 w-7 shrink-0" data-testid="photos-filmstrip-autoadvance"><SkipForward size={12}/></Button>

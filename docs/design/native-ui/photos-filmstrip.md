@@ -328,3 +328,16 @@ Coverage: `stacks.test.ts` covers group/join/ungroup and the
 strip-row grouping helper; `photos-filmstrip.spec.ts` gains a
 light/dark leg that groups three photos (cover + count), expands and
 collapses inline, and ungroups again.
+
+## Auto-stack (P101)
+
+One click stacks every detected burst: `detectSeries` finds photos
+whose names share a prefix and differ only in a trailing, consecutive
+number (IMG_1234..IMG_1237), extension- and order-agnostic, and feeds
+each series into the stacks store. The button appears only when a
+series exists; the apply note reports how many were stacked.
+
+Coverage: `autoStack.test.ts` covers runs, gaps, prefixes, padded
+numbers and ignored singles; `photos-filmstrip.spec.ts` gains a
+light/dark leg that auto-stacks the three-photo fixture (note,
+collapsed count) and ungroups again.
