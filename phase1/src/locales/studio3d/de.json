@@ -1050,5 +1050,8 @@
  "studio3d.uvtools.dv": "V verschieben",
  "studio3d.uvtools.rotate": "UVs drehen",
  "studio3d.uvtools.scale": "UVs skalieren",
- "studio3d.uvtools.apply": "UVs transformieren"
+ "studio3d.uvtools.apply": "UVs transformieren",
+ "cmd.studio3d.uv.seamsFromIslands": "Die Grenzen der aktuellen UV-Inseln als Schnitte markieren",
+ "studio3d.hist.seamsFromIslands": "Schnitte aus UV-Inseln",
+ "studio3d.uvtools.fromIslands": "Schnitte aus Inseln"
 }

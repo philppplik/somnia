@@ -292,6 +292,7 @@ function UvFields({id}:{id:number}){
    <NumField label={t('studio3d.uvtools.rotate')} value={uvRot} min={-360} max={360} step={5} onCommit={setUvRot}/>
    <NumField label={t('studio3d.uvtools.scale')} value={uvScale} min={-100} max={100} step={0.1} onCommit={setUvScale}/>
    <Button variant="outline" onClick={()=>void executeCommand('studio3d.uv.transform',{du:uvDu,dv:uvDv,rotate:uvRot,scale:uvScale})}>{t('studio3d.uvtools.apply')}</Button>
+   <Button variant="outline" onClick={()=>void executeCommand('studio3d.uv.seamsFromIslands',{})}>{t('studio3d.uvtools.fromIslands')}</Button>
   </div>}
   {on&&ed.mode!=='edge'&&<p className="m-0 text-xs text-ink-3">{t('studio3d.uvtools.edgeHint')}</p>}
   {!on&&<>

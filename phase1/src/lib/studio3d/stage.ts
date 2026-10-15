@@ -16,7 +16,7 @@ import {extrudeFaces,extrudeFacesIndividual,insetFaces,bevelVertices,deleteEleme
 import {sculptDab,paintMask,SculptError,type SculptOpts} from './sculpt';
 import {KEY_PATHS,KEY_STRIDE,ClipError,MAX_CLIPS,MAX_KEYS_PER_TRACK,DEFAULT_CLIP_SECONDS,insertKey,removeKey as removeKeyData,findKey,isPlainTrack,trackName,parseTrackName,checkKeyTime,checkDuration,checkClipName,lastKeyTime,type KeyPath} from './clips';
 import {mergeTransform,DEFAULT_TRANSFORM,UvError,type TextureTransform} from './uv';
-import {uvIslands,unwrapBox,unfoldAngles,planarProject,seamsAround,remapSeams,type UvResult,type UvLayoutOpts} from './uvUnwrap';
+import {uvIslands,unwrapBox,unfoldAngles,planarProject,seamsAround,islandBorders,remapSeams,type UvResult,type UvLayoutOpts} from './uvUnwrap';
 import {textureBytes} from './validate';
 import {smoothWeights,rigidWeights,paintWeights,SkinError,type BoneSegment,type SkinWeights,type BrushSettings} from './skinning';
 import {checkPoseName,mirrorPose,blendPoses,PoseError,MAX_POSES} from './poses';import type {Pose,PoseBone} from './poses';
@@ -1189,6 +1189,15 @@ export class Stage{
   }
   this.setSeams(m,after);
   this.push({label:{key:mark?'studio3d.hist.markSeams':'studio3d.hist.clearSeams'},undo:()=>this.setSeams(m,before),redo:()=>this.setSeams(m,after)});
+ }
+ /** Replaces the UV seams of the edited mesh with the borders of its current UV islands (position edges whose sides use different UVs), one undo step. */
+ uvSeamsFromIslands(){
+  const m=this.editMesh();
+  let hit:[number,number][];
+  try{hit=islandBorders(this.meshDataOf(m));}catch(e){throw e instanceof UvError?new StageError(e.message):e;}
+  const before=this.seamsOf(m);
+  this.setSeams(m,hit);
+  this.push({label:{key:'studio3d.hist.seamsFromIslands'},undo:()=>this.setSeams(m,before),redo:()=>this.setSeams(m,hit)});
  }
  private uvTarget(id:number):THREE.Mesh{
   const o=this.need(id);const m=o as THREE.Mesh;

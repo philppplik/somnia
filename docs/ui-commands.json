@@ -10932,6 +10932,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.uv.seamsFromIslands",
+      "title": "Mark the borders of the current UV islands as seams",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.uv.transform",
       "title": "Move, rotate and scale the UVs of the selected faces",
       "category": "Edit",

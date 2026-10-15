@@ -1050,5 +1050,8 @@
  "studio3d.uvtools.dv": "Déplacer V",
  "studio3d.uvtools.rotate": "Pivoter les UV",
  "studio3d.uvtools.scale": "Échelle des UV",
- "studio3d.uvtools.apply": "Transformer les UV"
+ "studio3d.uvtools.apply": "Transformer les UV",
+ "cmd.studio3d.uv.seamsFromIslands": "Marquer les bordures des îles UV actuelles comme coutures",
+ "studio3d.hist.seamsFromIslands": "Coutures depuis les îles UV",
+ "studio3d.uvtools.fromIslands": "Coutures des îles"
 }

@@ -177,6 +177,7 @@ export interface Studio3DController{
  sculptMaskSmooth(id:number,amount?:number):void;
  editMaskToSelection(threshold?:number):void;
  uvSeamMark(mark:boolean):void;
+ uvSeamsFromIslands():void;
  uvUnwrap(id:number,opts?:{method?:'box'|'angle';pack?:boolean;padding?:number}):void;
  uvPlanar(id:number,axis:'x'|'y'|'z'):void;
  setUvChecker(on:boolean):void;
@@ -365,6 +366,7 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add('studio3d.edit.selectLoop','Extend the selected edges of the edited 3D mesh to their full edge loops','Edit',()=>need().editSelectLoop(),undefined,()=>getStudio3DState().edit!=null),
   add('studio3d.edit.selectRing','Extend the selected edges of the edited 3D mesh to their full edge rings','Edit',()=>need().editSelectRing(),undefined,()=>getStudio3DState().edit!=null),
   add<{du?:number;dv?:number;rotate?:number;scale?:number}>('studio3d.uv.transform','Move, rotate and scale the UVs of the selected faces of the edited 3D mesh','Edit',p=>need().editUvTransform(p?.du??0,p?.dv??0,p?.rotate??0,p?.scale??1),object({du:{type:'number',minimum:-1000000,maximum:1000000},dv:{type:'number',minimum:-1000000,maximum:1000000},rotate:{type:'number',minimum:-360,maximum:360},scale:{type:'number',minimum:-1000000,maximum:1000000}},[]),()=>getStudio3DState().edit!=null),
+  add('studio3d.uv.seamsFromIslands','Mark the borders of the current UV islands of the edited 3D mesh as seams','Edit',()=>need().uvSeamsFromIslands(),undefined,()=>getStudio3DState().edit!=null),
   add<{twist?:number}>('studio3d.edit.bridgeFaces','Bridge the borders of two selected face groups of the edited 3D mesh with a sewn triangle strip','Edit',p=>need().editBridgeFaces(p?.twist??0),object({twist:{type:'integer',minimum:-64,maximum:64}},[]),()=>getStudio3DState().edit!=null),
   add<{edge?:[number,number];factor?:number}>('studio3d.edit.vertSlide','Slide the selected vertex of the edited 3D mesh along an incident edge by a factor of the edge vector','Edit',p=>need().editVertSlide(p.edge,p?.factor??0.5),object({edge:{type:'array',items:{type:'integer',minimum:0},minItems:2,maxItems:2},factor:{type:'number',minimum:-1,maximum:1}},['edge']),()=>getStudio3DState().edit!=null),
   add('studio3d.edit.convexHull','Replace the edited 3D mesh with the convex hull of its selected vertices','Edit',()=>need().editConvexHull(),undefined,()=>getStudio3DState().edit!=null),

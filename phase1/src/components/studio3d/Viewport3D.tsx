@@ -1290,6 +1290,7 @@ export default function Viewport3D(){
    setWireframe:on=>{applyWire(on);patchStudio3D({wireframe:on});invalidate();},
    setUvChecker:on=>{patchStudio3D({uvChecker:on});syncUvChecker();invalidate();},
    uvSeamMark:mark=>{stage.uvSeamMark(mark);afterEditOp();},
+   uvSeamsFromIslands:()=>{stage.uvSeamsFromIslands();afterEditOp();},
    uvUnwrap:(id,opts)=>{stage.uvUnwrap(id,opts);const sel=getStudio3DState().selected;if(sel!=null)patchStudio3D({selectedInfo:stage.info(sel)});sync();invalidate();},
    uvPlanar:(id,axis)=>{stage.uvPlanar(id,axis);const sel=getStudio3DState().selected;if(sel!=null)patchStudio3D({selectedInfo:stage.info(sel)});sync();invalidate();},
   });

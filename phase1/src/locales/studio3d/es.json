@@ -1050,5 +1050,8 @@
  "studio3d.uvtools.dv": "Mover V",
  "studio3d.uvtools.rotate": "Rotar UVs",
  "studio3d.uvtools.scale": "Escalar UVs",
- "studio3d.uvtools.apply": "Transformar UVs"
+ "studio3d.uvtools.apply": "Transformar UVs",
+ "cmd.studio3d.uv.seamsFromIslands": "Marcar los bordes de las islas UV actuales como cortes",
+ "studio3d.hist.seamsFromIslands": "Cortes desde islas UV",
+ "studio3d.uvtools.fromIslands": "Cortes de islas"
 }

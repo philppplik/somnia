@@ -243,6 +243,31 @@ const matchPts=(m:MeshData,pts:[number,number,number][]):[number,number][]=>{
  return[...out.values()];
 };
 /** Seam edge lookup helper: geometric match, so unwelded meshes mark all coincident copies. */
+/** Position edges whose touching sides use different UV coordinates at the shared endpoints - the borders of the current UV islands. Boundary edges (one side only) are not borders. One representative index pair per position edge, low index first. */
+export function islandBorders(m:MeshData):[number,number][]{
+ check(m);
+ if(!m.uvs||m.uvs.length!==m.positions.length/3*2)throw new UvError('The mesh has no UVs.');
+ const uses=new Map<string,[number,number][]>();
+ for(let f=0;f<m.index.length;f+=3)for(let e=0;e<3;e++){
+  const a=m.index[f+e],b=m.index[f+(e+1)%3];
+  const pa=geoKey(v3(m,a)),pb=geoKey(v3(m,b));
+  const gk=pa<pb?`${pa}|${pb}`:`${pb}|${pa}`;
+  const arr=uses.get(gk);if(arr)arr.push([a,b]);else uses.set(gk,[[a,b]]);
+ }
+ const out:[number,number][]=[];
+ for(const corners of uses.values()){
+  if(corners.length<2)continue;
+  const uvAt=new Map<string,[number,number]>();
+  for(const v of corners[0])uvAt.set(geoKey(v3(m,v)),[m.uvs[v*2],m.uvs[v*2+1]]);
+  let border=false;
+  for(let u=1;u<corners.length&&!border;u++)for(const v of corners[u]){
+   const ref=uvAt.get(geoKey(v3(m,v)))!;
+   if(Math.abs(m.uvs[v*2]-ref[0])>EPS||Math.abs(m.uvs[v*2+1]-ref[1])>EPS){border=true;break;}
+  }
+  if(border){const [a,b]=corners[0];out.push(a<b?[a,b]:[b,a]);}
+ }
+ return out;
+}
 export function seamsAround(m:MeshData,edges:[number,number][]):[number,number][]{
  check(m);
  return matchPts(m,edges.flatMap(e=>[v3(m,e[0]),v3(m,e[1])]));

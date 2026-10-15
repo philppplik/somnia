@@ -1,4 +1,5 @@
 # Unreleased: 3D Studio P0
+- 3D Studio: the UV seams of a mesh follow the borders of its UV islands.
 - 3D Studio: the UVs of selected faces move, rotate and scale in edit mode.
 - 3D Studio: the selected edges grow into their full edge rings.
 - 3D Studio: the sculpt mask becomes the edit-mode vertex selection.
