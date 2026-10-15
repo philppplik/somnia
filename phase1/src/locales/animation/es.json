@@ -1249,5 +1249,8 @@
  "cmd.animation.layers.scatter": "Dispersar, mover un poco o mezclar las capas marcadas",
  "animation.rig.group.around": "Alrededor de una capa",
  "animation.rig.group.along": "A lo largo y a través",
- "animation.rig.group.effects": "Física y efectos"
+ "animation.rig.group.effects": "Física y efectos",
+ "animation.rig.overshoot.settle": "Pasarse y asentarse",
+ "animation.rig.overshoot.anticipate": "Preparar, pasarse y asentarse",
+ "cmd.animation.layers.overshoot": "Añadir rebasamiento (y anticipación) a los movimientos de las capas marcadas"
 }

@@ -1249,5 +1249,8 @@
  "cmd.animation.layers.scatter": "Angekreuzte Ebenen streuen, leicht verschieben oder mischen",
  "animation.rig.group.around": "Um eine Ebene",
  "animation.rig.group.along": "Entlang und quer",
- "animation.rig.group.effects": "Physik und Effekte"
+ "animation.rig.group.effects": "Physik und Effekte",
+ "animation.rig.overshoot.settle": "Überschwingen und einpendeln",
+ "animation.rig.overshoot.anticipate": "Ausholen, überschwingen und einpendeln",
+ "cmd.animation.layers.overshoot": "Überschwingen (und Ausholen) zu den Bewegungen der angekreuzten Ebenen hinzufügen"
 }

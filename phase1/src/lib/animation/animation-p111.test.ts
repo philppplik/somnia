@@ -1586,3 +1586,19 @@ test('P256 scatter: frame mode stays inside the frame, nudge stays within 60 px,
  const a=L('a').transform.position.keys;assert.ok(Math.abs((a[1].v as unknown as number[])[0]-(a[0].v as unknown as number[])[0]-100)<0.02&&Math.abs((a[1].v as unknown as number[])[1]-(a[0].v as unknown as number[])[1]+50)<0.02,'keyed layer keeps its motion, only shifted');
  s.undo();assert.deepEqual(findComp(s.document!)!.layers.find(l=>l.id==='s1')!.transform.position.value as unknown as number[],[100,100]);
 });
+
+test('P258 overshoot: adds a key past the target at 80 percent (and a pull-back at 12), existing key times unchanged, short or still segments skipped, undo restores',async()=>{
+ const {overshootSpecs,segmentKeys}=await import('./overshootCommands');const run=overshootSpecs()[0].run as (p?:unknown)=>unknown;
+ const fps=findComp(base())!.fps;
+ const mk=(t:number,v:number|number[])=>({t,v,interp:'bezier',out:[0.25,0.1],in:[0.75,0.9]}) as never;
+ assert.equal(segmentKeys(mk(0,0),mk(f(2),10),20,false,fps,false),null,'under 4 frames');assert.equal(segmentKeys(mk(0,5),mk(f(20),5),20,false,fps,false),null,'no change');
+ const ks=segmentKeys(mk(0,0),mk(f(20),100),20,true,fps,false)!;assert.equal(ks.length,2);assert.equal(ks[0].v,-10);assert.equal(ks[1].v,120);assert.ok(ks[0].t<ks[1].t&&ks[1].t<f(20));
+ assert.equal((segmentKeys(mk(0,[100,100]),mk(f(20),[0,0]),50,false,fps,true)![0].v as number[])[0],0,'scale never goes below 0');
+ const s=open();setAnimationSession(s);const before=findComp(s.document!)!.layers.find(l=>l.id==='a')!.transform.position.keys;
+ assert.throws(()=>run({layers:['a'],amount:3}),/amount/);
+ const r=run({layers:['a'],amount:20,anticipate:true}) as {keys:number};
+ const after=findComp(s.document!)!.layers.find(l=>l.id==='a')!.transform.position.keys;
+ assert.equal(after.length,before.length+r.keys);assert.deepEqual(after.filter(k=>before.some(b=>b.t===k.t)).map(k=>k.v),before.map(k=>k.v),'original keys untouched');
+ const ov=after[after.length-2].v as unknown as number[],end=before[1].v as unknown as number[];assert.ok(ov[0]>end[0],'swings past the end in x (moving right)');
+ s.undo();assert.equal(findComp(s.document!)!.layers.find(l=>l.id==='a')!.transform.position.keys.length,before.length);
+});

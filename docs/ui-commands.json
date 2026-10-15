@@ -2220,6 +2220,24 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.layers.overshoot",
+      "title": "Add overshoot (and anticipation) to the ticked layers' moves",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "anticipation",
+        "ease",
+        "follow through",
+        "overshoot",
+        "polish",
+        "principles",
+        "settle",
+        "spring"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.layers.parallax",
       "title": "Parallax: drift the ticked layers, far to near",
       "category": "Edit",

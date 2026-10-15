@@ -1249,5 +1249,8 @@
  "cmd.animation.layers.scatter": "Espalhar, mover um pouco ou embaralhar as camadas marcadas",
  "animation.rig.group.around": "Ao redor de uma camada",
  "animation.rig.group.along": "Ao longo e através",
- "animation.rig.group.effects": "Física e efeitos"
+ "animation.rig.group.effects": "Física e efeitos",
+ "animation.rig.overshoot.settle": "Ultrapassar e assentar",
+ "animation.rig.overshoot.anticipate": "Antecipar, ultrapassar e assentar",
+ "cmd.animation.layers.overshoot": "Adicionar ultrapassagem (e antecipação) aos movimentos das camadas marcadas"
 }

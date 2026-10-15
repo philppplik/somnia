@@ -1249,5 +1249,8 @@
  "cmd.animation.layers.scatter": "Disperser, décaler ou mélanger les calques cochés",
  "animation.rig.group.around": "Autour d'un calque",
  "animation.rig.group.along": "Le long et à travers",
- "animation.rig.group.effects": "Physique et effets"
+ "animation.rig.group.effects": "Physique et effets",
+ "animation.rig.overshoot.settle": "Dépasser et se stabiliser",
+ "animation.rig.overshoot.anticipate": "Anticiper, dépasser et se stabiliser",
+ "cmd.animation.layers.overshoot": "Ajouter dépassement (et anticipation) aux mouvements des calques cochés"
 }

@@ -1249,5 +1249,8 @@
  "cmd.animation.layers.scatter": "Scatter, nudge or shuffle the ticked layers",
  "animation.rig.group.around": "Around a layer",
  "animation.rig.group.along": "Along and across",
- "animation.rig.group.effects": "Physics and effects"
+ "animation.rig.group.effects": "Physics and effects",
+ "animation.rig.overshoot.settle": "Overshoot and settle",
+ "animation.rig.overshoot.anticipate": "Anticipate, overshoot and settle",
+ "cmd.animation.layers.overshoot": "Add overshoot (and anticipation) to the ticked layers' moves"
 }
