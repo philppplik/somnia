@@ -167,12 +167,17 @@ export class OllamaProvider implements AgentProvider {
     let j: { models?: Array<{ name?: string; model?: string; size?: number; details?: Record<string, unknown> }> };
     try { j = await boundedJson(r,signal,this.timeout) as typeof j; } catch { throw new ProviderError('protocol', 'Ollama returned invalid JSON for /api/tags'); }
     if (!j||typeof j!=='object'||!Array.isArray(j.models)) throw new ProviderError('protocol', 'Unexpected /api/tags response');
+    const seen=new Set<string>();
     return j.models
       .map((m) => {
+        if(!m||typeof m!=='object'||Array.isArray(m))throw new ProviderError('protocol','Invalid Ollama inventory row');
+        const valid=(v:unknown)=>typeof v==='string'&&v.trim().length>0&&v.length<=512;
+        if(m.model===undefined&&m.name===undefined||m.model!==undefined&&!valid(m.model)||m.name!==undefined&&!valid(m.name)||m.model!==undefined&&m.name!==undefined&&m.model!==m.name)throw new ProviderError('protocol','Ambiguous Ollama model identity');
         const id = m.model || m.name || '';
+        if(seen.has(id))throw new ProviderError('protocol','Duplicate Ollama model identity');seen.add(id);
         const details: Record<string, string> = {};
         for (const [k, v] of Object.entries(m.details ?? {})) if (typeof v === 'string' && v) details[k] = v;
-        return { id, label: m.name || id, sizeBytes: typeof m.size === 'number' ? m.size : undefined, details } as ModelInfo;
+        return { id, label: m.name || id, sizeBytes: typeof m.size === 'number' && Number.isFinite(m.size) && m.size>=0 ? m.size : undefined, details } as ModelInfo;
       })
       .filter((m) => m.id)
       .sort((a, b) => a.label.localeCompare(b.label));
