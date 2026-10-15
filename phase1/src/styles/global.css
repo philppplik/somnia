@@ -181,7 +181,7 @@ body{font-size:var(--ui-font-size,13px)}
 .welcome-title{margin:36px 0 0;font:400 40px/1 'Momo Signature',cursive;letter-spacing:0;color:var(--text-primary)}
 .welcome-version{margin:6px 0 0;font:600 18px/1.2 var(--ui-font);color:var(--text-secondary)}
 .welcome-actions{position:absolute;z-index:1;left:0;right:0;bottom:6%;display:flex;flex-direction:column;align-items:center;gap:14px}
-.welcome-start.welcome-start{height:52px;padding:0 28px;border-radius:999px;border:0;background:var(--accent-fill);color:#fff;font-size:20px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.28)}
+.welcome-start.welcome-start{height:52px;padding:0 28px;border-radius:999px;border:0;background:var(--accent-fill);color:var(--action-ink);font-size:20px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.28)}
 .welcome-start.welcome-start:hover{background:var(--accent-fill);filter:brightness(1.1)}
 .welcome-changelog{border:0;background:transparent;color:#fff;font-size:16px;cursor:pointer;text-decoration:none;padding:4px 8px;border-radius:6px;text-shadow:0 1px 8px rgba(0,0,0,.35)}
 .welcome-changelog:hover{text-decoration:underline}
@@ -218,8 +218,8 @@ body{font-size:var(--ui-font-size,13px)}
 .export-foot{display:flex;justify-content:flex-end;gap:10px;margin-top:16px;padding:16px 32px 20px;border-top:1px solid var(--border-subtle)}
 .export-foot button{height:34px;padding:0 16px;font-size:12px;font-weight:500;border-radius:var(--r-control);border:1px solid var(--border-default);background:var(--bg-surface);color:var(--text-primary)}
 .export-foot button:hover:not(:disabled){background:var(--bg-hover)}
-.export-foot button[data-variant=primary],.export-foot .bg-accent-fill{border-color:var(--accent-fill);background:var(--accent-fill);color:#fff}
-.export-foot .bg-accent-fill:hover:not(:disabled){background:var(--accent-fill);filter:brightness(1.1);color:#fff}
+.export-foot button[data-variant=primary],.export-foot .bg-accent-fill{border-color:var(--accent-fill);background:var(--accent-fill);color:var(--action-ink)}
+.export-foot .bg-accent-fill:hover:not(:disabled){background:var(--accent-fill);filter:brightness(1.1);color:var(--action-ink)}
 .export-foot button:focus-visible,.export-popup .export-close:focus-visible{outline:2px solid var(--accent-fill);outline-offset:2px}
 /* Save / unsaved-changes dialogs: Export popup language (see docs in save-dialog spec). */
 .dialog-popup.dlg-popup{width:520px;max-width:calc(100vw - 32px);max-height:calc(100dvh - 32px);top:50%;left:50%;transform:translate(-50%,-50%);padding:0;border:0;border-radius:var(--r-panel);background:var(--bg-panel);color:var(--text-primary);display:flex;flex-direction:column;overflow:hidden}
@@ -258,8 +258,8 @@ body{font-size:var(--ui-font-size,13px)}
 .dlg-foot button{flex:0 0 auto;height:34px;padding:0 16px;font-size:12px;font-weight:500;line-height:1;white-space:nowrap;border-radius:var(--r-control);border:1px solid var(--border-default);background:var(--bg-surface);color:var(--text-primary)}
 .dlg-foot button:hover:not(:disabled){background:var(--bg-hover)}
 .dlg-foot button:disabled{opacity:.5}
-.dlg-foot button[data-variant=primary],.dlg-foot .bg-accent-fill{border-color:var(--accent-fill);background:var(--accent-fill);color:#fff}
-.dlg-foot .bg-accent-fill:hover:not(:disabled){background:var(--accent-fill);filter:brightness(1.1);color:#fff}
+.dlg-foot button[data-variant=primary],.dlg-foot .bg-accent-fill{border-color:var(--accent-fill);background:var(--accent-fill);color:var(--action-ink)}
+.dlg-foot .bg-accent-fill:hover:not(:disabled){background:var(--accent-fill);filter:brightness(1.1);color:var(--action-ink)}
 .dlg-foot .dlg-cancel{border-color:transparent;background:transparent;color:var(--text-secondary)}
 .dlg-foot .dlg-danger{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 45%,var(--border-default))}
 .dlg-foot[data-stack=true]{flex-direction:column-reverse;align-items:stretch}

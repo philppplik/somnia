@@ -7,7 +7,7 @@
 .ext-nav-item:hover,.ext-add-btn:hover{background:var(--bg-hover)}
 .ext-nav-item[aria-selected=true],.ext-add-btn.is-active{background:var(--bg-elevated);color:var(--accent);font-weight:600;box-shadow:var(--card-shadow)}
 .ext-add-btn{color:var(--text-secondary)}
-.ext-count{background:var(--accent-fill);color:#fff;border-radius:999px;font-size:11px;font-weight:700;min-width:22px;padding:2px 7px;text-align:center}
+.ext-count{background:var(--accent-fill);color:var(--action-ink);border-radius:999px;font-size:11px;font-weight:700;min-width:22px;padding:2px 7px;text-align:center}
 .ext-main{flex:1;min-width:0;display:flex;flex-direction:column;padding:22px 26px 0;gap:12px}
 .ext-header{display:flex;justify-content:space-between;align-items:center;min-height:40px}
 .ext-h1{font-size:22px;font-weight:700;margin:0}
@@ -24,7 +24,7 @@
 .ext-btn{min-height:40px;padding:0 16px;border:1px solid var(--border-default);background:var(--bg-elevated);border-radius:14px;font-size:13px;font-weight:500;white-space:nowrap}
 .ext-btn:hover:not(:disabled){background:var(--bg-hover)}
 .ext-btn:disabled{opacity:.5}
-.ext-btn-primary{background:var(--accent-fill);border-color:transparent;color:#fff}
+.ext-btn-primary{background:var(--accent-fill);border-color:transparent;color:var(--action-ink)}
 .ext-btn-primary:hover:not(:disabled){background:var(--accent-fill);filter:brightness(1.08)}
 .ext-btn-danger{background:var(--danger);border-color:transparent;color:#fff}
 .ext-btn-danger-quiet{color:var(--danger)}
