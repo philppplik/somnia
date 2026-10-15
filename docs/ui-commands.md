@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-872 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+873 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -681,6 +681,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `studio3d.edit.selectSimilar` | Select faces whose normal is within the given angle of the current selection | Edit | studio3d |  |
 | `studio3d.edit.separate` | Split the selected faces out into a new object | Edit | studio3d |  |
 | `studio3d.edit.shear` | Shear the selected vertices along one axis by their position on another | Edit | studio3d |  |
+| `studio3d.edit.shrinkwrap` | Project the selected vertices of the edited 3D mesh onto the closest surface of another mesh | Edit | studio3d |  |
 | `studio3d.edit.start` | Edit mesh | Edit | studio3d |  |
 | `studio3d.edit.subdivide` | Split selected triangles into four by edge midpoints | Edit | studio3d |  |
 | `studio3d.edit.symmetrize` | Bake a mirror symmetry into the edited 3D mesh: keep one side of the local mirror plane, mirror it onto the other and weld the seam | Edit | studio3d |  |

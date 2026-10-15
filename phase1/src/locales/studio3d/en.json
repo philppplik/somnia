@@ -990,5 +990,10 @@
  "cmd.studio3d.edit.symmetrize": "Bake a mirror symmetry into the edited 3D mesh: keep one side of the local mirror plane, mirror it onto the other and weld the seam",
  "studio3d.edit.symmetrize": "Symmetrize",
  "studio3d.hist.editSymmetrize": "Symmetrize",
- "studio3d.edit.symmetrizeAxis": "Symmetry axis"
+ "studio3d.edit.symmetrizeAxis": "Symmetry axis",
+ "cmd.studio3d.edit.shrinkwrap": "Project the selected vertices of the edited 3D mesh onto the closest surface of another mesh",
+ "studio3d.edit.shrinkwrap": "Shrinkwrap",
+ "studio3d.hist.editShrinkwrap": "Shrinkwrap",
+ "studio3d.edit.shrinkwrapTarget": "Target object id",
+ "studio3d.edit.shrinkwrapOffset": "Surface offset"
 }

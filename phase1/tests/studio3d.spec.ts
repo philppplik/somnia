@@ -1170,6 +1170,19 @@ test('mesh edit mode: bisect cuts the mesh by a plane and keeps both halves',asy
  await expect(page.getByRole('alert')).toContainText('does not cut through the mesh');
 });
 
+test('mesh edit mode: shrinkwrap projects selected vertices onto another mesh',async({page})=>{
+ await blank(page);
+ const id=await insert(page,'cube',0);
+ const target=await insert(page,'cube',0);
+ expect(await run(page,'studio3d.object.transform',{id:target,position:{x:0,y:2,z:0},scale:{x:2,y:1,z:2}})).toBe(true);
+ expect(await run(page,'studio3d.edit.start',{id,mode:'vertex'})).toBe(true);
+ expect(await run(page,'studio3d.edit.shrinkwrap',{target,offset:0})).toBe(false);
+ await expect(page.getByRole('alert')).toContainText('Select vertices to shrinkwrap');
+ expect(await run(page,'studio3d.edit.selectAll',{op:'all'})).toBe(true);
+ expect(await run(page,'studio3d.edit.shrinkwrap',{target,offset:0})).toBe(true);
+ expect(await run(page,'studio3d.undo',{})).toBe(true);
+});
+
 test('mesh edit mode: symmetrize mirrors one side of the edited mesh onto the other',async({page})=>{
  await blank(page);
  const id=await insert(page,'cube',0);

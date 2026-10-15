@@ -990,5 +990,10 @@
  "cmd.studio3d.edit.symmetrize": "Hornea una simetría especular en la malla 3D editada: conserva un lado del plano de espejo local, lo refleja en el otro y suelda la costura",
  "studio3d.edit.symmetrize": "Simetrizar",
  "studio3d.hist.editSymmetrize": "Simetrizado",
- "studio3d.edit.symmetrizeAxis": "Eje de simetría"
+ "studio3d.edit.symmetrizeAxis": "Eje de simetría",
+ "cmd.studio3d.edit.shrinkwrap": "Proyecta los vértices seleccionados de la malla 3D editada sobre la superficie más cercana de otra malla",
+ "studio3d.edit.shrinkwrap": "Shrinkwrap",
+ "studio3d.hist.editShrinkwrap": "Shrinkwrap",
+ "studio3d.edit.shrinkwrapTarget": "ID del objeto destino",
+ "studio3d.edit.shrinkwrapOffset": "Desplazamiento de superficie"
 }

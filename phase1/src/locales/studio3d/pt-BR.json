@@ -990,5 +990,10 @@
  "cmd.studio3d.edit.symmetrize": "Aplica uma simetria espelhada à malha 3D editada: mantém um lado do plano de espelho local, espelha-o no outro e solda a costura",
  "studio3d.edit.symmetrize": "Simetrizar",
  "studio3d.hist.editSymmetrize": "Simetrizado",
- "studio3d.edit.symmetrizeAxis": "Eixo de simetria"
+ "studio3d.edit.symmetrizeAxis": "Eixo de simetria",
+ "cmd.studio3d.edit.shrinkwrap": "Projeta os vértices selecionados da malha 3D editada na superfície mais próxima de outra malha",
+ "studio3d.edit.shrinkwrap": "Shrinkwrap",
+ "studio3d.hist.editShrinkwrap": "Shrinkwrap",
+ "studio3d.edit.shrinkwrapTarget": "ID do objeto alvo",
+ "studio3d.edit.shrinkwrapOffset": "Deslocamento de superfície"
 }

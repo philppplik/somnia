@@ -990,5 +990,10 @@
  "cmd.studio3d.edit.symmetrize": "Backt eine Spiegelsymmetrie in das bearbeitete 3D-Mesh: eine Seite der lokalen Spiegelebene behalten, auf die andere spiegeln und die Naht schweißen",
  "studio3d.edit.symmetrize": "Symmetrisieren",
  "studio3d.hist.editSymmetrize": "Symmetrisiert",
- "studio3d.edit.symmetrizeAxis": "Symmetrieachse"
+ "studio3d.edit.symmetrizeAxis": "Symmetrieachse",
+ "cmd.studio3d.edit.shrinkwrap": "Projiziert die selektierten Vertices des bearbeiteten 3D-Meshs auf die naechste Oberflaeche eines anderen Meshs",
+ "studio3d.edit.shrinkwrap": "Shrinkwrap",
+ "studio3d.hist.editShrinkwrap": "Shrinkwrap",
+ "studio3d.edit.shrinkwrapTarget": "Ziel-Objekt-ID",
+ "studio3d.edit.shrinkwrapOffset": "Oberflaechen-Offset"
 }

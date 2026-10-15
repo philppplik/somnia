@@ -11,6 +11,7 @@ import {EASES,isEase,bakeTrack,type Ease} from './ease';
 import {buildExtras,type ClipMeta,type MetaTrack} from './clipMeta';
 import {groupRefs,keyIndices,copyTrackKeys,shiftTrackKeys,pasteTrackKeys,type KeyRef,type KeyData,type TrackData} from './keyEdit';
 import {convexHullMesh} from './convexHull';
+import {shrinkwrapMesh} from './shrinkwrap';
 import {extrudeFaces,insetFaces,bevelVertices,deleteElements,weldSelected,subdivideFaces,pokeFaces,duplicateFaces,fattenSelected,relaxSelected,flipFaces,dissolveFaces,fillSelected,collapseSelected,toSphereSelected,randomizeSelected,moveSelected,ripSelected,extractFaces,sharpEdges,similarFaces,rotateSelected,scaleSelected,shearSelected,flipEdges,mergeByDistanceSelected,bisectEdit,edgeLoop,bridgeFacesSelected,vertSlideSelected,loopCut,bevelEdges,slideEdges,mirrorCombine,symmetrizeMesh,subdivideLoop,cleanupMesh,flipMesh,outsideMesh,smoothMesh,separateMesh,solidifyMesh,fillHolesMesh,relaxMesh,fattenMesh,bisectMesh,twistMesh,taperMesh,spinMesh,bridgeMesh,remeshMesh,EditError,MAX_EDIT_VERTICES,MAX_EDIT_TRIANGLES,type MeshData,type CleanupResult,type NormalsOp} from './editMesh';
 import {sculptDab,paintMask,SculptError,type SculptOpts} from './sculpt';
 import {KEY_PATHS,KEY_STRIDE,ClipError,MAX_CLIPS,MAX_KEYS_PER_TRACK,DEFAULT_CLIP_SECONDS,insertKey,removeKey as removeKeyData,findKey,isPlainTrack,trackName,parseTrackName,checkKeyTime,checkDuration,checkClipName,lastKeyTime,type KeyPath} from './clips';
@@ -808,6 +809,16 @@ export class Stage{
   try{edges=edgeLoop(this.meshDataOf(m),[...this.editSel.edges.values()]);}catch(e){throw e instanceof EditError?new StageError(e.message):e;}
   this.editSel.edges=new Map();
   for(const [a,b] of edges)this.editSel.edges.set(`${a}_${b}`,[a,b]);
+ }
+ /** Projects the selected vertices onto the closest surface point of another mesh plus an offset along its normal, one undo step. The selection stays. */
+ editShrinkwrap(targetId:number,offset:number){
+  const mesh=this.editMesh();
+  if(targetId===this.editId)throw new StageError('Choose another object as the shrinkwrap target.');
+  const target=this.editableMesh(targetId);
+  const data=this.meshDataOf(target);
+  this.root.updateMatrixWorld(true);
+  const ew=[...mesh.matrixWorld.elements],tw=[...target.matrixWorld.elements];
+  this.editOp({key:'studio3d.hist.editShrinkwrap'},m=>shrinkwrapMesh(m,[...this.editSel.verts],data,ew,tw,offset));
  }
  /** Bakes a mirror symmetry into the edited mesh: keeps one side of the local mirror plane, mirrors it onto the other and welds the seam, one undo step. The selection is cleared afterwards because ordinals shift. */
  editSymmetrize(axis:'x'|'y'|'z',side:'positive'|'negative',merge:number){this.editOp({key:'studio3d.hist.editSymmetrize'},m=>symmetrizeMesh(m,axis,side,merge));this.editSel={verts:new Set(),edges:new Map(),faces:new Set()};}

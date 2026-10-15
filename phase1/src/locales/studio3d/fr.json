@@ -990,5 +990,10 @@
  "cmd.studio3d.edit.symmetrize": "Applique une symétrie miroir au maillage 3D édité : conserve un côté du plan miroir local, le reflète sur l'autre et soude la jointure",
  "studio3d.edit.symmetrize": "Symétriser",
  "studio3d.hist.editSymmetrize": "Symétrisé",
- "studio3d.edit.symmetrizeAxis": "Axe de symétrie"
+ "studio3d.edit.symmetrizeAxis": "Axe de symétrie",
+ "cmd.studio3d.edit.shrinkwrap": "Projette les sommets sélectionnés du maillage 3D édité sur la surface la plus proche d'un autre maillage",
+ "studio3d.edit.shrinkwrap": "Shrinkwrap",
+ "studio3d.hist.editShrinkwrap": "Shrinkwrap",
+ "studio3d.edit.shrinkwrapTarget": "ID de l'objet cible",
+ "studio3d.edit.shrinkwrapOffset": "Décalage de surface"
 }

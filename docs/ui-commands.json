@@ -8043,6 +8043,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.edit.shrinkwrap",
+      "title": "Project the selected vertices of the edited 3D mesh onto the closest surface of another mesh",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.edit.start",
       "title": "Edit mesh",
       "category": "Edit",
