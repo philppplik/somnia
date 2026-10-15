@@ -277,6 +277,7 @@
   "sound.arrange.clipLevel": "Gain du clip (dB)",
   "sound.arrange.curve": "Courbe de gain (dB)",
   "sound.arrange.trackCurve": "Automation de la piste",
+  "sound.arrange.liveMeter": "Niveau en direct",
   "sound.arrange.curveAdd": "Ajouter un point au curseur",
   "sound.arrange.destination": "Piste de destination",
   "cmd.sound.arrange.rename": "Arrangement et mixage: Nom de session",
