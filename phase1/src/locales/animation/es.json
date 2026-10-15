@@ -1304,5 +1304,8 @@
  "animation.rig.wipe.out.left": "Salir con cortinilla desde la izquierda",
  "animation.rig.wipe.out.right": "Salir con cortinilla desde la derecha",
  "animation.rig.wipe.out.up": "Salir con cortinilla desde arriba",
- "animation.rig.wipe.out.down": "Salir con cortinilla desde abajo"
+ "animation.rig.wipe.out.down": "Salir con cortinilla desde abajo",
+ "animation.rig.flicker.12": "Parpadear como un letrero averiado, 12 fotogramas",
+ "animation.rig.flicker.36": "Parpadear como un letrero averiado, 36 fotogramas",
+ "cmd.animation.layers.flicker": "Hacer parpadear las capas marcadas como un letrero averiado"
 }

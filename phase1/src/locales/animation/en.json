@@ -1304,5 +1304,8 @@
  "animation.rig.wipe.out.left": "Wipe out from the left",
  "animation.rig.wipe.out.right": "Wipe out from the right",
  "animation.rig.wipe.out.up": "Wipe out from the top",
- "animation.rig.wipe.out.down": "Wipe out from the bottom"
+ "animation.rig.wipe.out.down": "Wipe out from the bottom",
+ "animation.rig.flicker.12": "Flicker like a failing sign, 12 frames",
+ "animation.rig.flicker.36": "Flicker like a failing sign, 36 frames",
+ "cmd.animation.layers.flicker": "Flicker the ticked layers like a failing sign"
 }

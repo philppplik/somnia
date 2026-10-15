@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1002 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1003 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -169,6 +169,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `animation.layers.fade` | Fade the selected layers in or out | Edit | animation |  |
 | `animation.layers.fit` | Fit the selected layers to the composition | Edit | animation |  |
 | `animation.layers.flag` | Switch a layer flag for the selected layers | Edit | animation |  |
+| `animation.layers.flicker` | Flicker the ticked layers like a failing sign | Edit | animation |  |
 | `animation.layers.followPath` | Travel layers along the first ticked path layer | Edit | animation |  |
 | `animation.layers.freeze` | Freeze the ticked layers at the playhead | Edit | animation |  |
 | `animation.layers.label` | Set a colour label on the selected layers | Edit | animation |  |

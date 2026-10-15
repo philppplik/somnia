@@ -1304,5 +1304,8 @@
  "animation.rig.wipe.out.left": "Auswischen von links",
  "animation.rig.wipe.out.right": "Auswischen von rechts",
  "animation.rig.wipe.out.up": "Auswischen von oben",
- "animation.rig.wipe.out.down": "Auswischen von unten"
+ "animation.rig.wipe.out.down": "Auswischen von unten",
+ "animation.rig.flicker.12": "Flackern wie ein defektes Schild, 12 Bilder",
+ "animation.rig.flicker.36": "Flackern wie ein defektes Schild, 36 Bilder",
+ "cmd.animation.layers.flicker": "Markierte Ebenen wie ein defektes Leuchtschild flackern lassen"
 }

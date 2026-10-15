@@ -2162,6 +2162,25 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.layers.flicker",
+      "title": "Flicker the ticked layers like a failing sign",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "blink",
+        "flicker",
+        "glitch",
+        "light",
+        "neon",
+        "opacity",
+        "sign",
+        "strobe",
+        "stutter"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.layers.followPath",
       "title": "Travel layers along the first ticked path layer",
       "category": "Edit",

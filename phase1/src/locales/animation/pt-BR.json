@@ -1304,5 +1304,8 @@
  "animation.rig.wipe.out.left": "Saída em cortina da esquerda",
  "animation.rig.wipe.out.right": "Saída em cortina da direita",
  "animation.rig.wipe.out.up": "Saída em cortina de cima",
- "animation.rig.wipe.out.down": "Saída em cortina de baixo"
+ "animation.rig.wipe.out.down": "Saída em cortina de baixo",
+ "animation.rig.flicker.12": "Piscar como um letreiro com defeito, 12 quadros",
+ "animation.rig.flicker.36": "Piscar como um letreiro com defeito, 36 quadros",
+ "cmd.animation.layers.flicker": "Fazer as camadas marcadas piscarem como um letreiro com defeito"
 }

@@ -1788,3 +1788,22 @@ test('P272 wipe out reverses keys, down starts from the top edge below',async()=
  assert.equal(m.anim!.size!.keys[0].t,l0.outT-f(6));assert.deepEqual(m.anim!.position!.keys[0].v,[0,0]);
  assert.deepEqual(m.anim!.position!.keys[1].v,[0,m.height]);assert.equal(m.anim!.size!.keys[0].interp,'linear');
 });
+
+test('P273 flicker pattern is seeded, starts dim and settles on full',async()=>{
+ const {flickerKeys}=await import('./flicker');
+ const a=flickerKeys(24,100,5),b=flickerKeys(24,100,5),c=flickerKeys(24,100,6);
+ assert.deepEqual(a,b);assert.notDeepEqual(a,c);
+ assert.equal(a[0].frame,0);assert.ok(a[0].value<=55);assert.deepEqual(a[a.length-1],{frame:24,value:100});
+ assert.ok(a.every((k,i)=>i===0||k.frame>a[i-1].frame));assert.ok(a.length<=25);
+});
+test('P273 flicker command writes hold opacity keys, skips animated, one undo',async()=>{
+ const {flickerSpecs}=await import('./flickerCommands');const run=flickerSpecs()[0].run as (p?:unknown)=>unknown;
+ const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'shape',id:'b'});
+ const O=(id:string)=>findComp(s.document!)!.layers.find(l=>l.id===id)!.transform.opacity;
+ assert.throws(()=>run({frames:1,layers:['b']}),/2 to/);
+ const r=run({frames:12,seed:3,layers:['b']}) as {layers:number};assert.equal(r.layers,1);
+ const k=O('b').keys;assert.ok(k.length>=3);assert.ok(k.every(x=>x.interp==='hold'));
+ assert.throws(()=>run({layers:['b']}),/opacity already animated/);
+ s.undo();assert.equal(O('b').keys.length,0);
+ s.dispatch({type:'layer.update',layer:'b',locked:true} as never);assert.throws(()=>run({layers:['b']}),/unlocked/);
+});
