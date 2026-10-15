@@ -1372,5 +1372,7 @@
  "animation.audio.duck": "Baisser sous un autre clip…",
  "cmd.animation.audio.duck": "Baisser le volume d'un calque audio pendant la lecture d'un autre calque audio",
  "animation.audio.normalize": "Normaliser à un pic de 90 %",
- "cmd.animation.audio.normalize": "Normaliser le volume des calques audio sur un pic cible"
+ "cmd.animation.audio.normalize": "Normaliser le volume des calques audio sur un pic cible",
+ "animation.audio.trimSilence": "Couper le silence au début et à la fin",
+ "cmd.animation.audio.trimSilence": "Couper le silence au début et à la fin des calques audio"
 }

@@ -99,6 +99,25 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.audio.trimSilence",
+      "title": "Trim silence off the start and end of the audio layers",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "audio",
+        "clean",
+        "cut",
+        "dead air",
+        "head",
+        "quiet",
+        "silence",
+        "tail",
+        "trim"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.audio.update",
       "title": "Trim and place audio clip",
       "category": "Edit",

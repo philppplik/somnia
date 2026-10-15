@@ -1372,5 +1372,7 @@
  "animation.audio.duck": "Unter anderem Clip absenken…",
  "cmd.animation.audio.duck": "Lautstärke einer Audio-Ebene absenken, solange eine andere Audio-Ebene spielt",
  "animation.audio.normalize": "Auf 90% Spitze normalisieren",
- "cmd.animation.audio.normalize": "Lautstärke der Audio-Ebenen auf einen Zielpegel normalisieren"
+ "cmd.animation.audio.normalize": "Lautstärke der Audio-Ebenen auf einen Zielpegel normalisieren",
+ "animation.audio.trimSilence": "Stille am Anfang und Ende kürzen",
+ "cmd.animation.audio.trimSilence": "Stille am Anfang und Ende der Audio-Ebenen abschneiden"
 }

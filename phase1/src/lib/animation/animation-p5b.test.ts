@@ -316,3 +316,15 @@ test('P299 normalize: volume scales so the played peak hits the target, keyed vo
  assert.throws(()=>run({layers:['aud'],target:90}),/already/);
  s.undo();assert.equal(JSON.stringify(s.document),before);
 });
+test('P300 trim silence: quiet head and tail are cut, the sound stays in place on the timeline, all-quiet refused, one undo',async()=>{
+ const {silenceSpecs,soundBounds}=await import('./silenceCommands');const {AnimationSession,setAnimationSession}=await import('./session');
+ const run=silenceSpecs()[0].run as (p?:unknown)=>unknown;
+ const pk=[0,0,0,200,200,0,0,0,0,0];const b=soundBounds(pk,10*sec,0,10*sec,4,0)!;assert.equal(b.start,3*sec);assert.equal(b.end,5*sec);assert.equal(soundBounds([0,0],2*sec,0,2*sec,4,0),null);
+ // a 2s clip: 0.5s silence, 1s tone, 0.5s silence
+ const w=wav(16000,8000,1,i=>i<4000||i>=12000?0:Math.sin(i/20)*0.5);
+ const s=new AnimationSession();s.open(withAudio(asset(w,3)));setAnimationSession(s);const before=JSON.stringify(s.document);
+ run({layers:['aud'],padding:0});const l=layer(s.document!);
+ assert.ok(Math.abs(l.audio!.trimIn-0.5*sec)<0.05*sec,String(l.audio!.trimIn));assert.ok(Math.abs((l.outT-l.inT)-1*sec)<0.1*sec,String(l.outT));assert.equal(l.offset,l.audio!.trimIn);
+ assert.throws(()=>run({layers:['aud'],padding:0}),/no silence|nothing/i);
+ s.undo();assert.equal(JSON.stringify(s.document),before);
+});

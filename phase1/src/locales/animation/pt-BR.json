@@ -1372,5 +1372,7 @@
  "animation.audio.duck": "Abaixar sob outro clipe…",
  "cmd.animation.audio.duck": "Abaixar o volume de uma camada de áudio enquanto outra camada de áudio toca",
  "animation.audio.normalize": "Normalizar para um pico de 90%",
- "cmd.animation.audio.normalize": "Normalizar o volume das camadas de áudio para um pico alvo"
+ "cmd.animation.audio.normalize": "Normalizar o volume das camadas de áudio para um pico alvo",
+ "animation.audio.trimSilence": "Cortar o silêncio no início e no fim",
+ "cmd.animation.audio.trimSilence": "Cortar o silêncio no início e no fim das camadas de áudio"
 }

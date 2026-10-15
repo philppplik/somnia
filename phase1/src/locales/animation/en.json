@@ -1372,5 +1372,7 @@
  "animation.audio.duck": "Duck under another clip…",
  "cmd.animation.audio.duck": "Duck the volume of an audio layer while another audio layer plays",
  "animation.audio.normalize": "Normalise to a 90% peak",
- "cmd.animation.audio.normalize": "Normalise the volume of the audio layers to a target peak"
+ "cmd.animation.audio.normalize": "Normalise the volume of the audio layers to a target peak",
+ "animation.audio.trimSilence": "Trim silence at start and end",
+ "cmd.animation.audio.trimSilence": "Trim silence off the start and end of the audio layers"
 }
