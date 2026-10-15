@@ -1864,3 +1864,21 @@ test('P277 counter: formats deterministically, replaces {n}, keys count, validat
  s.dispatch({type:'layer.update',layer:'t',source:{text:'x'}} as never);run({from:0,to:10,decimals:1,layers:['t']});assert.equal(fullText(L(),L().inT+f(60)),'10.0');
  run({remove:true,layers:['t']});assert.equal(fullText(L(),0),'x');
 });
+
+test('P278 palette shift also moves gradients, colour keys and gradient colour keys',async()=>{
+ const {paletteSpecs}=await import('./paletteCommands');const run=paletteSpecs()[1].run as (p?:unknown)=>unknown;
+ const T=f(30);
+ const d0=applyEdits(base(),[{type:'layer.add',kind:'shape',id:'g'},{type:'layer.update',layer:'g',source:{color:'#ff0000',gradient:{start:'#ff0000',end:'#0000ff',angle:0}}},
+  {type:'layer.stroke',layer:'g',stroke:{color:'#ff0000',width:4,gradient:{start:'#ff0000',end:'#00ff00',angle:0}}},
+  {type:'color.prop',layer:'g',prop:'fill',op:'animate',on:true,t:0},{type:'color.prop',layer:'g',prop:'fill',op:'set',color:'#00ff00',t:T},
+  {type:'gradient.color',layer:'g',target:'fill',which:'start',op:'animate',on:true,t:0},{type:'gradient.color',layer:'g',target:'fill',which:'start',op:'set',color:'#ff0000',t:T}] as never);
+ const s=new AnimationSession();s.open(d0);setAnimationSession(s);
+ const L=()=>findComp(s.document!)!.layers.find(l=>l.id==='g')!;
+ const before=JSON.stringify(L().colorKeys);
+ run({hue:120});
+ const l=L();
+ assert.equal(l.source.gradient!.end,'#ff0000');assert.equal(l.stroke!.gradient!.start,'#00ff00');assert.equal(l.stroke!.gradient!.end,'#0000ff');
+ assert.ok(l.colorKeys!.fill!.some(k=>k.t===T&&k.color==='#0000ff'),JSON.stringify(l.colorKeys));
+ assert.ok(l.source.gradient!.colorKeys!.start!.every(k=>k.color==='#00ff00'),JSON.stringify(l.source.gradient));
+ s.undo();assert.equal(JSON.stringify(L().colorKeys),before);assert.equal(L().source.gradient!.end,'#0000ff');
+});

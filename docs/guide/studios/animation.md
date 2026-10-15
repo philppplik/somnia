@@ -117,3 +117,4 @@ Back to [Studios](../studios.md).
 - **Export check** also warns about layers scaled down to zero for the whole export range and text layers with no text.
 - **Fly in / out** (Rig > Appearance > Slide): the ticked layers fly in from past the left or right canvas edge to where they are, or out past it, over 12 frames. Command parameters also allow up and down. Layers with a parent or animated position are skipped.
 - **Counter** (Rig > Appearance > Count): a text layer counts from 0 to 100 (or 10,000 with thousands commas) over 60 frames from its in point. Write `{n}` in the text where the number goes, for example `{n}% done`; without it the number is the whole text. The command `animation.text.count` also takes from, to, frames, decimals and grouping. Not drawn by the Lottie export.
+- **Palette shift** now also moves gradient colours (fill and stroke, stops included), colour keys and gradient colour keys, not only the flat fill and stroke colours.

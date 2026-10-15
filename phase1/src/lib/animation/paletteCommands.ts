@@ -30,7 +30,7 @@ export const paletteSpecs=():CommandSpec<unknown,unknown>[]=>[{
    if(!hue&&!saturation&&!lightness)return expected('Pick a hue, saturation or lightness change.');
    const ch=shiftPalette(c.layers,{hue,saturation,lightness});
    if(!ch.length)return expected('No unlocked layer has a colour that this would change.');
-   const edits:Edit[]=ch.flatMap(e=>[...(e.source?[{type:'layer.update',layer:e.layer,source:e.source} as Edit]:[]),...(e.stroke?[{type:'layer.stroke',layer:e.layer,stroke:e.stroke} as Edit]:[])]);
+   const edits:Edit[]=ch.flatMap(e=>[...(e.source?[{type:'layer.update',layer:e.layer,source:e.source} as Edit]:[]),...(e.stroke?[{type:'layer.stroke',layer:e.layer,stroke:e.stroke} as Edit]:[]),...(e.keyed as Edit[])]);
    try{s.dispatch(edits);}catch(e){if(e instanceof EditError)throw Object.assign(e,{expected:true});throw e;}
    return {layers:ch.length};
   }) as (p:unknown)=>unknown}];
