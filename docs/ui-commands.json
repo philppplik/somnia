@@ -1825,6 +1825,26 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.layers.match",
+      "title": "Match the other layers to the first layer",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "copy",
+        "first",
+        "layer",
+        "match",
+        "opacity",
+        "position",
+        "rotation",
+        "same",
+        "scale",
+        "transform"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.layers.number",
       "title": "Number the selected layers",
       "category": "Edit",

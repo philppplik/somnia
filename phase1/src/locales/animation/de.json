@@ -1064,5 +1064,12 @@
  "animation.export.loopSeam.hint": "GIF und APNG: lässt das letzte Bild weg, wenn es dem ersten gleicht, damit die Schleife dort nicht stockt.",
  "animation.export.problem.loopSeam": "„Nahtlose Schleife“ muss an oder aus sein.",
  "animation.timing.mode.sequence": "Nacheinander abspielen (Abstand in Bildern)",
- "animation.export.doneSize": "{file} gespeichert ({size})"
+ "animation.export.doneSize": "{file} gespeichert ({size})",
+ "animation.rig.group.match": "An erste Ebene angleichen",
+ "animation.rig.match.position": "Position",
+ "animation.rig.match.scale": "Skalierung",
+ "animation.rig.match.rotation": "Drehung",
+ "animation.rig.match.opacity": "Deckkraft",
+ "animation.rig.match.all": "Alles davon",
+ "cmd.animation.layers.match": "Andere Ebenen an die erste Ebene angleichen"
 }

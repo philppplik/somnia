@@ -955,3 +955,18 @@ test('P215 finished export reports the real file size, cleared when a new export
  resetExport();assert.equal(exportState().bytes,0);
  assert.equal(formatBytes(100),'1 KB');assert.equal(formatBytes(2048),'2 KB');assert.equal(formatBytes(1572864),'1.5 MB');
 });
+
+test('P216 match first layer: position by world anchor, scale, rotation, opacity, all; one undo step; locked skipped; no-op refused',async()=>{
+ const {layerMatchSpecs}=await import('./layerMatchCommands');const run=layerMatchSpecs()[0].run as (p?:unknown)=>unknown;const {worldMatrix,applyMatrix}=await import('./scene');const {evaluate}=await import('./interpolate');
+ const s=open();setAnimationSession(s);s.setView({playhead:0});for(const id of ['b','c','d'])s.dispatch({type:'layer.add',kind:'shape',id});
+ s.dispatch({type:'prop.set',layer:'b',prop:'position',value:[100,50],t:0});s.dispatch({type:'prop.set',layer:'b',prop:'scale',value:[50,60],t:0});s.dispatch({type:'prop.set',layer:'b',prop:'rotation',value:30,t:0});s.dispatch({type:'prop.set',layer:'b',prop:'opacity',value:40,t:0});
+ s.dispatch({type:'layer.update',layer:'d',locked:true});
+ const L=(id:string)=>findComp(s.document!).layers.find(l=>l.id===id)!;
+ run({mode:'scale',layers:['b','c','d']});assert.deepEqual(evaluate(L('c').transform.scale,0),[50,60]);assert.deepEqual(evaluate(L('d').transform.scale,0),[100,100]);
+ s.undo();assert.deepEqual(evaluate(L('c').transform.scale,0),[100,100]);
+ run({mode:'all',layers:['b','c']});const c=findComp(s.document!);const w=(id:string)=>applyMatrix(worldMatrix(c,L(id),0),evaluate(L(id).transform.anchor,0) as [number,number]);
+ assert.ok(Math.abs(w('c')[0]-w('b')[0])<0.02&&Math.abs(w('c')[1]-w('b')[1])<0.02);assert.equal(evaluate(L('c').transform.rotation,0),30);assert.equal(evaluate(L('c').transform.opacity,0),40);
+ s.undo();assert.equal(evaluate(L('c').transform.rotation,0),0);
+ for(const bad of [{mode:'x',layers:['b','c']},{mode:'all',layers:['b']},{mode:'all',layers:['b','d']}])assert.throws(()=>run(bad),(e:any)=>e.expected===true);
+ run({mode:'opacity',layers:['b','c']});assert.throws(()=>run({mode:'opacity',layers:['b','c']}),(e:any)=>/already match/.test(e.message));
+});

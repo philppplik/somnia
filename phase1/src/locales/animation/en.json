@@ -1064,5 +1064,12 @@
  "animation.export.loopSeam.hint": "GIF and APNG: leaves out the last frame when it is identical to the first, so the loop does not pause there.",
  "animation.export.problem.loopSeam": "Seamless loop must be on or off.",
  "animation.timing.mode.sequence": "Play one after another (gap in frames)",
- "animation.export.doneSize": "Saved {file} ({size})"
+ "animation.export.doneSize": "Saved {file} ({size})",
+ "animation.rig.group.match": "Match first layer",
+ "animation.rig.match.position": "Position",
+ "animation.rig.match.scale": "Scale",
+ "animation.rig.match.rotation": "Rotation",
+ "animation.rig.match.opacity": "Opacity",
+ "animation.rig.match.all": "All of these",
+ "cmd.animation.layers.match": "Match the other layers to the first layer"
 }

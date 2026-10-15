@@ -1064,5 +1064,12 @@
  "animation.export.loopSeam.hint": "GIF e APNG: omite o último quadro se for idêntico ao primeiro, para o loop não parar ali.",
  "animation.export.problem.loopSeam": "“Loop sem emenda” deve estar ligado ou desligado.",
  "animation.timing.mode.sequence": "Reproduzir uma após a outra (intervalo em quadros)",
- "animation.export.doneSize": "{file} salvo ({size})"
+ "animation.export.doneSize": "{file} salvo ({size})",
+ "animation.rig.group.match": "Igualar à primeira camada",
+ "animation.rig.match.position": "Posição",
+ "animation.rig.match.scale": "Escala",
+ "animation.rig.match.rotation": "Rotação",
+ "animation.rig.match.opacity": "Opacidade",
+ "animation.rig.match.all": "Tudo isso",
+ "cmd.animation.layers.match": "Igualar as outras camadas à primeira camada"
 }

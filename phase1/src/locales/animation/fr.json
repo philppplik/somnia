@@ -1064,5 +1064,12 @@
  "animation.export.loopSeam.hint": "GIF et APNG : omet la dernière image si elle est identique à la première, pour que la boucle ne marque pas de pause.",
  "animation.export.problem.loopSeam": "« Boucle sans coupure » doit être activé ou désactivé.",
  "animation.timing.mode.sequence": "Enchaîner les unes après les autres (écart en images)",
- "animation.export.doneSize": "{file} enregistré ({size})"
+ "animation.export.doneSize": "{file} enregistré ({size})",
+ "animation.rig.group.match": "Aligner sur le premier calque",
+ "animation.rig.match.position": "Position",
+ "animation.rig.match.scale": "Échelle",
+ "animation.rig.match.rotation": "Rotation",
+ "animation.rig.match.opacity": "Opacité",
+ "animation.rig.match.all": "Tout cela",
+ "cmd.animation.layers.match": "Aligner les autres calques sur le premier calque"
 }

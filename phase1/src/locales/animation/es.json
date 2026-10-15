@@ -1064,5 +1064,12 @@
  "animation.export.loopSeam.hint": "GIF y APNG: omite el último fotograma si es idéntico al primero, para que el bucle no se detenga ahí.",
  "animation.export.problem.loopSeam": "«Bucle sin corte» debe estar activado o desactivado.",
  "animation.timing.mode.sequence": "Reproducir una tras otra (separación en fotogramas)",
- "animation.export.doneSize": "Guardado {file} ({size})"
+ "animation.export.doneSize": "Guardado {file} ({size})",
+ "animation.rig.group.match": "Igualar a la primera capa",
+ "animation.rig.match.position": "Posición",
+ "animation.rig.match.scale": "Escala",
+ "animation.rig.match.rotation": "Rotación",
+ "animation.rig.match.opacity": "Opacidad",
+ "animation.rig.match.all": "Todo esto",
+ "cmd.animation.layers.match": "Igualar las demás capas a la primera capa"
 }

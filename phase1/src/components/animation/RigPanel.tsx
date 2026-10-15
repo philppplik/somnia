@@ -26,13 +26,14 @@ const groups:{key:string;items:RigItem[]}[]=[
   {testid:'animation-rig-markers',label:'animation.rig.markers',cmd:'animation.marker.fromLayers',min:1}]},
  {key:'order',items:(['front','back','up','down','reverse'] as const).map(m=>({testid:`animation-rig-order-${m}`,label:`animation.rig.order.${m}`,cmd:'animation.layers.arrange',min:m==='reverse'?2:1,args:{mode:m}}))},
  {key:'align',items:(['left','centerX','right','top','centerY','bottom','distributeX','distributeY'] as const).map(m=>({testid:`animation-rig-align-${m}`,label:`animation.rig.align.${m}`,cmd:'animation.layers.align',min:m.startsWith('distribute')?3:2,args:{mode:m}}))},
+ {key:'match',items:(['position','scale','rotation','opacity','all'] as const).map(m=>({testid:`animation-rig-match-${m}`,label:`animation.rig.match.${m}`,cmd:'animation.layers.match',min:2,args:{mode:m}}))},
  {key:'reset',items:(['rotation','scale','opacity','all'] as const).map(m=>({testid:`animation-rig-reset-${m}`,label:`animation.rig.reset.${m}`,cmd:'animation.layers.reset',min:1,args:{mode:m}}))},
  {key:'fit',items:(['contain','cover','width','height'] as const).map(m=>({testid:`animation-rig-fit-${m}`,label:`animation.rig.fit.${m}`,cmd:'animation.layers.fit',min:1,args:{mode:m}}))},
  {key:'fade',items:(['in','out','both'] as const).map(m=>({testid:`animation-rig-fade-${m}`,label:`animation.rig.fade.${m}`,cmd:'animation.layers.fade',min:1,args:{mode:m}}))},
  {key:'state',items:(['visible','solo','locked','shy'] as const).map(f=>({testid:`animation-rig-flag-${f}`,label:`animation.rig.flag.${f}`,cmd:'animation.layers.flag',min:1,args:{flag:f}}))}];
 /** Menu layout: the small groups are nested so the top level stays at five entries. */
 const byKey=(k:string)=>groups.find(g=>g.key===k)!;
-const tree:{key:string;items?:RigItem[];children?:{key:string;items:RigItem[]}[]}[]=[byKey('hierarchy'),byKey('layers'),{key:'arrange',children:['order','align','fit'].map(byKey)},{key:'appearance',children:['reset','fade'].map(byKey)},byKey('state')];
+const tree:{key:string;items?:RigItem[];children?:{key:string;items:RigItem[]}[]}[]=[byKey('hierarchy'),byKey('layers'),{key:'arrange',children:['order','align','fit','match'].map(byKey)},{key:'appearance',children:['reset','fade'].map(byKey)},byKey('state')];
 /** Left-panel section: tick layers, then chain them, group them under a control null, or release their parents. Tick order is the chain order. */
 export function RigPanel({comp}:{comp:Composition}){
  const {t}=useT();const [ticked,setTicked]=useState<string[]>([]);
