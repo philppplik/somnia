@@ -24,8 +24,8 @@ import {authorProblem,setAuthor} from './author';
 import {insertPageBreak,setParagraphOptions,setProperties,setTabStops} from './session';
 import {parsePdfPages,checkParaPatch,PARA_FLAG_KEYS,propertiesProblem,tabsProblem} from './protocol';
 import {addComment,commentSelection,deleteComment,goToComment,readComments,replyComment,resolveComment} from './session';
-import {bookmarkProblem,commentProblem,HIGHLIGHTS,linkProblem,type HighlightName} from './protocol';
-import {selectUnitAtCaret,addBookmark,deleteBookmark,goToComment as goToBlock0,readBookmarks,bookmarkSelection,goToAdjacentChange,setViewMarks,textToTable,setTrackChanges,resolveChange,resolveAllChanges,changeAtCaret,setCharLook,setCharSpacing,setCharScale,setLineRule,setImageWrap,setImageCrop,setProofing,setShowHidden,changeCase,addToDictionary,copyFormatting,pasteFormatting,clearFormatting,hasTextSelection,setHighlight,setLink,toggleVertAlign} from './session';
+import {PARAGRAPH_SPACINGS,type ParagraphSpacing,bookmarkProblem,commentProblem,HIGHLIGHTS,linkProblem,type HighlightName} from './protocol';
+import {setParagraphSpacing,selectUnitAtCaret,addBookmark,deleteBookmark,goToComment as goToBlock0,readBookmarks,bookmarkSelection,goToAdjacentChange,setViewMarks,textToTable,setTrackChanges,resolveChange,resolveAllChanges,changeAtCaret,setCharLook,setCharSpacing,setCharScale,setLineRule,setImageWrap,setImageCrop,setProofing,setShowHidden,changeCase,addToDictionary,copyFormatting,pasteFormatting,clearFormatting,hasTextSelection,setHighlight,setLink,toggleVertAlign} from './session';
 import {documentsExportReady,patchDocumentsExportUi,requestDocumentsExportFormat,requestDocumentsExportPdf,requestDocumentsSaveCopy} from './exportBridge';
 /**
  * Documents studio commands. Registered while the Documents canvas is mounted (registerDocumentsCommands),
@@ -89,6 +89,10 @@ export function registerDocumentsCommands(){
    const id=(p as Record<string,unknown>|undefined)?.id;if(typeof id!=='number'||!Number.isInteger(id)||id<0||id>=2**31)throw expected('Invalid "id".');
    await deleteComment(id);
   }),
+  add('documents.design.paragraphSpacing','Set the document paragraph spacing',async p=>{
+   const v=(p as Record<string,unknown>|undefined)?.value;if(typeof v!=='string'||!(PARAGRAPH_SPACINGS as readonly string[]).includes(v))throw expected('Invalid "value".');
+   await setParagraphSpacing(v as ParagraphSpacing);
+  },()=>ready()),
   add('documents.bookmarks.open','Open bookmarks',()=>{setInfoDialog('bookmarks');},()=>ready()),
   add('documents.bookmarks.add','Add a bookmark at the selection',async p=>{
    const name=(p as Record<string,unknown>|undefined)?.name;const bad=bookmarkProblem(name);if(bad||typeof name!=='string')throw expected(bad??'Invalid "name".');

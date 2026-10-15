@@ -1,7 +1,7 @@
 import {useEffect,useState} from 'react';
 import {pickAndInsertText} from '../../lib/documents/insertFromFile';
-import {readBookmarks,setViewMarks,setTrackChanges,copyFormatting,pasteFormatting,setCharSpacing,insertPageBreak,clearFormatting,changeCase,hasTextSelection,setHighlight,setLink,toggleFormat,toggleVertAlign} from '../../lib/documents/session';
-import {HIGHLIGHTS,MAX_LINK_CHARS,linkProblem,type FormatPatch,type FormatState,type HighlightName} from '../../lib/documents/protocol';
+import {readParagraphSpacing,setParagraphSpacing,readBookmarks,setViewMarks,setTrackChanges,copyFormatting,pasteFormatting,setCharSpacing,insertPageBreak,clearFormatting,changeCase,hasTextSelection,setHighlight,setLink,toggleFormat,toggleVertAlign} from '../../lib/documents/session';
+import {PARAGRAPH_SPACINGS,type ParagraphSpacing,HIGHLIGHTS,MAX_LINK_CHARS,linkProblem,type FormatPatch,type FormatState,type HighlightName} from '../../lib/documents/protocol';
 import {CASE_MODES,type CaseMode} from '../../lib/documents/textCase';
 import {setShortcutsOpen} from '../../lib/documents/shortcuts';
 import {setInfoDialog} from '../../lib/documents/infoDialog';
@@ -30,6 +30,14 @@ export function LinkDialog({current,onClose}:{current:string;onClose:()=>void}){
     <NativeButton className={tool+' border border-subtle'} disabled={v===''||bad} onClick={()=>apply(v)} data-testid="documents-link-apply">{t('documents.format.linkApply')}</NativeButton></div>
   </div>
  </div>;
+}
+/** Document-wide paragraph spacing presets. */
+function SpacingSelect({enabled}:{enabled:boolean}){
+ const {t}=useT();const doc=useDocuments();const [v,setV]=useState<string|null>(null);
+ useEffect(()=>{let live=true;void readParagraphSpacing().then(r=>{if(live)setV(r);}).catch(()=>undefined);return()=>{live=false;};},[doc.rev]);
+ return <NativeSelect className={sel} disabled={!enabled||v===null} aria-label={t('documents.spacing.label')} title={t('documents.spacing.label')} value={v??'default'} onChange={e=>void setParagraphSpacing(e.currentTarget.value as ParagraphSpacing)} data-testid="documents-spacing">
+  {v==='custom'&&<option value="custom" disabled>{t('documents.spacing.custom')}</option>}
+  {PARAGRAPH_SPACINGS.map(k=><option key={k} value={k}>{t('documents.spacing.'+k)}</option>)}</NativeSelect>;
 }
 const SPACINGS=[-1,-0.5,0,0.5,1,2,3];
 /** Strikethrough, small caps, superscript, subscript, highlight, link and clear-formatting controls. */
@@ -68,6 +76,7 @@ export function TextEffects({format,held,enabled}:{format:FormatState|null;held:
   <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>setInfoDialog('review')} data-testid="documents-review-open">{t('documents.review.open')}</NativeButton>
   <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>setInfoDialog('charlook')} data-testid="documents-charlook-open">{t('documents.charlook.open')}</NativeButton>
   <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>setInfoDialog('symbol')} data-testid="documents-symbol-open">{t('documents.symbol.open')}</NativeButton>
+  <SpacingSelect enabled={enabled}/>
   <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>setInfoDialog('bookmarks')} data-testid="documents-bookmarks-open">{t('documents.bookmarks.open')}</NativeButton>
   <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>setInfoDialog('toc')} data-testid="documents-toc-open">{t('documents.toc.open')}</NativeButton>
   <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>setInfoDialog('tabs')} data-testid="documents-tabs-open">{t('documents.tabs.open')}</NativeButton>

@@ -107,6 +107,8 @@ export class DocSession {
     set_properties(patch_json: string): void;
     resolve_comment(id: number, resolved: boolean): void;
     delete_comment(id: number): void;
+    paragraph_spacing(): string;
+    set_paragraph_spacing(value: string): void;
     bookmarks(): string;
     add_bookmark(block: number, start: number, end: number, name: string): void;
     delete_bookmark(name: string): void;

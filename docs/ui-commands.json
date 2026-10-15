@@ -4487,6 +4487,17 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.design.paragraphSpacing",
+      "title": "Set the document paragraph spacing",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.export.copy",
       "title": "Save a copy with a file name",
       "category": "Project",

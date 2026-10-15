@@ -184,6 +184,8 @@ export type DocumentsRequest=
  |{id:number;kind:'replyComment';parent:number;text:string;author:string;date:string}
  |{id:number;kind:'resolveComment';commentId:number;resolved:boolean}
  |{id:number;kind:'deleteComment';commentId:number}
+ |{id:number;kind:'paragraphSpacingState'}
+ |{id:number;kind:'setParagraphSpacing';value:string}
  |{id:number;kind:'bookmarksState'}
  |{id:number;kind:'addBookmark';block:number;start:number;end:number;name:string}
  |{id:number;kind:'deleteBookmark';name:string}
@@ -211,6 +213,7 @@ export type DocumentsResponse=
  |{id:number;ok:true;kind:'blocks';blocks:import('./edit').DocBlock[]}
  |{id:number;ok:true;kind:'comments';comments:CommentItem[]}
  |{id:number;ok:true;kind:'bookmarks';bookmarks:BookmarkItem[]}
+ |{id:number;ok:true;kind:'paragraphSpacing';value:string}
  |{id:number;ok:true;kind:'headerFooter';state:HeaderFooterState}
  |{id:number;ok:true;kind:'hfVariants';state:HfVariantsState}
  |{id:number;ok:true;kind:'tableLayout';state:TableLayoutState}
@@ -445,6 +448,9 @@ export interface HfVariantsPatch{titlePage?:boolean;evenOdd?:boolean;first?:HfVa
 export const validHfText=(v:unknown):v is string=>typeof v==='string'&&Array.from(v).length<=MAX_HF_CHARS&&!/[\u0000-\u001f\u007f-\u009f\ufffc\u2028\u2029]/u.test(v);
 
 /** A comment as the engine lists it: imported and new ones, with the quoted text when its anchor sits in one paragraph. */
+/** Document-wide paragraph spacing presets (space after and line spacing of every paragraph that sets none itself). */
+export const PARAGRAPH_SPACINGS=['default','none','compact','tight','open','relaxed','double'] as const;
+export type ParagraphSpacing=typeof PARAGRAPH_SPACINGS[number];
 export const MAX_BOOKMARK_NAME=40;
 /** A bookmark name the engine accepts: a letter first, then letters, digits or underscores, at most 40. Names starting with an underscore are Word's hidden ones. */
 export function bookmarkProblem(v:unknown):string|null{

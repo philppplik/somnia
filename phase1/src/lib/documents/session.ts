@@ -7,7 +7,7 @@ import {setStyleList} from './styles';
 import {unitRange,type SelectUnit} from './selectUnit';
 import {adjacentChange} from './reviewNav';
 import {stylePatchProblem,STYLE_ID_RE,tocProblem,isListKind,listOptionsProblem,type ListStyleId} from './protocol';
-import {imageCropProblem,imageWrapProblem,type ImageWrap,type ImageAlign,tableLayoutProblem,SECTION_BREAKS,hfVariantsProblem,HF_ALIGNS,propertiesProblem,linkProblem,commentProblem,bookmarkProblem,type BookmarkItem,type CommentItem,validHfText,type HeaderFooterState,checkFormatPatch,checkParaPatch,MAX_HF_CHARS,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch,type ImageOp,type PageSetupPatch,type PageSetupState,pageSetupProblem,type TableStyle,type TableStyleScope,tableStyleProblem,MIN_COL_PT,MAX_COL_PT,imageProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGES} from './protocol';
+import {imageCropProblem,imageWrapProblem,type ImageWrap,type ImageAlign,tableLayoutProblem,SECTION_BREAKS,hfVariantsProblem,HF_ALIGNS,propertiesProblem,linkProblem,commentProblem,bookmarkProblem,PARAGRAPH_SPACINGS,type ParagraphSpacing,type BookmarkItem,type CommentItem,validHfText,type HeaderFooterState,checkFormatPatch,checkParaPatch,MAX_HF_CHARS,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch,type ImageOp,type PageSetupPatch,type PageSetupState,pageSetupProblem,type TableStyle,type TableStyleScope,tableStyleProblem,MIN_COL_PT,MAX_COL_PT,imageProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGES} from './protocol';
 import {captureDocumentSelection} from './selectionCapture';
 import {CELL_BASE,caretAfterEdit,applyEdit,diffEdit,inverseOf,UndoStack,type TextEdit,type UndoEntry} from './edit';
 import {findMatches,nextMatchIndex,textStats,validFindQuery,validReplaceText,MAX_FIND_HIGHLIGHTS,MAX_REPLACE_BLOCKS,type FindMatch} from './find';
@@ -1070,6 +1070,17 @@ export const addComment=(text:string)=>run(async()=>{
 const commentStep=(op:(e:DocumentsEngine)=>Promise<import('./protocol').OpenedDocument>)=>run(async()=>{
  const c=getDocumentsState().caret;const spot=c?{block:c.block,off:c.head}:await nearEditable(engine!,0);
  await structural(op,spot,spot);if(!c)patchDocuments({caret:null});
+});
+/* ---- Document paragraph spacing ---- */
+/** The preset the document's default paragraph spacing matches, or 'custom' (not an edit). */
+export async function readParagraphSpacing():Promise<string|null>{
+ const e=engine;if(!e||getDocumentsState().status!=='ready')return null;const check=ownerGuard();const v=await e.paragraphSpacingState();check();return v;
+}
+/** Sets the document-wide paragraph spacing preset. One undo step; the caret stays. Paragraphs or styles with their own spacing keep it. */
+export const setParagraphSpacing=(value:ParagraphSpacing)=>run(async()=>{
+ if(!(PARAGRAPH_SPACINGS as readonly string[]).includes(value))throw new Error('The paragraph spacing is not valid.');
+ const c=getDocumentsState().caret;const spot=c?{block:c.block,off:c.head}:await nearEditable(engine!,0);
+ await structural(eng=>eng.setParagraphSpacing(value),spot,spot);if(!c)patchDocuments({caret:null});
 });
 /* ---- Bookmarks ---- */
 /** The visible bookmarks as the engine reports them (not an edit). */

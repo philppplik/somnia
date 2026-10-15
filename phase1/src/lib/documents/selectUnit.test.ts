@@ -19,3 +19,5 @@ test('empty text, emoji and out-of-range indexes are safe',()=>{
  assert.equal(pick('abc',-4,'word'),'abc');assert.equal(pick('abc',99,'word'),'abc');
  assert.equal(pick('x'.repeat(5000),100,'word').length,5000);
 });
+import {PARAGRAPH_SPACINGS} from './protocol';
+test('spacing presets are the seven names the engine knows',()=>{assert.deepEqual([...PARAGRAPH_SPACINGS],['default','none','compact','tight','open','relaxed','double']);});

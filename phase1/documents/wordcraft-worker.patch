@@ -52,7 +52,7 @@ new file mode 100644
 index 0000000..5b80b79
 --- /dev/null
 +++ b/crates/somnia-worker/src/lib.rs
-@@ -0,0 +1,6449 @@
+@@ -0,0 +1,6502 @@
 +//! Experimental headless adapter. No DOM, egui, filesystem or UI thread access.
 +use wasm_bindgen::prelude::*;
 +use std::sync::Arc;
@@ -4012,6 +4012,33 @@ index 0000000..5b80b79
 +        self.pages = DocLayout::default();
 +        Ok(())
 +    }
++    /// Document-wide paragraph spacing presets (the document defaults every paragraph without its own spacing inherits):
++    /// (name, space before pt, space after pt, line multiple).
++    const SPACINGS: [(&'static str, f32, f32, f32); 7] =
++        [("default", 0.0, 8.0, 1.15), ("none", 0.0, 0.0, 1.0), ("compact", 0.0, 4.0, 1.0), ("tight", 0.0, 6.0, 1.15), ("open", 0.0, 10.0, 1.15), ("relaxed", 0.0, 6.0, 1.5), ("double", 0.0, 8.0, 2.0)];
++    /// The preset the document defaults match, or `custom`.
++    fn do_paragraph_spacing(&self) -> String {
++        use wordcraft_doc::props::LineSpacing;
++        let d = &self.doc.styles.default_para;
++        let (b, a) = (d.space_before.unwrap_or(0.0), d.space_after.unwrap_or(0.0));
++        let l = match d.line_spacing {
++            Some(LineSpacing::Multiple(m)) => Some(m),
++            None => Some(1.0),
++            _ => None,
++        };
++        let hit = l.and_then(|l| Self::SPACINGS.iter().find(|(_, sb, sa, sl)| (sb - b).abs() < 0.01 && (sa - a).abs() < 0.01 && (sl - l).abs() < 0.01));
++        hit.map_or("custom", |h| h.0).to_string()
++    }
++    fn do_set_paragraph_spacing(&mut self, value: &str) -> Result<(), String> {
++        use wordcraft_doc::props::LineSpacing;
++        let (_, b, a, l) = *Self::SPACINGS.iter().find(|s| s.0 == value).ok_or_else(|| "the paragraph spacing is not one of default, none, compact, tight, open, relaxed or double".to_string())?;
++        let d = &mut self.doc.styles.default_para;
++        d.space_before = Some(b);
++        d.space_after = Some(a);
++        d.line_spacing = Some(LineSpacing::Multiple(l));
++        self.pages = DocLayout::default();
++        Ok(())
++    }
 +    /// Visible bookmarks (names starting with `_` are Word's own and stay hidden) as JSON `[{name,block,quote}]` in document order.
 +    fn do_bookmarks(&self) -> String {
 +        use wordcraft_doc::InlineObject;
@@ -4409,6 +4436,12 @@ index 0000000..5b80b79
 +    }
 +    pub fn delete_comment(&mut self, id: u32) -> Result<(), JsValue> {
 +        self.do_delete_comment(id).map_err(|e| js_err(&e))
++    }
++    pub fn paragraph_spacing(&self) -> String {
++        self.do_paragraph_spacing()
++    }
++    pub fn set_paragraph_spacing(&mut self, value: &str) -> Result<(), JsValue> {
++        self.do_set_paragraph_spacing(value).map_err(|e| js_err(&e))
 +    }
 +    pub fn bookmarks(&self) -> String {
 +        self.do_bookmarks()
@@ -6002,6 +6035,26 @@ index 0000000..5b80b79
 +        s.restore(snap).unwrap();
 +        let w: serde_json::Value = serde_json::from_str(&s.do_properties()).unwrap();
 +        assert_ne!(w["title"], "Quarterly report");
++    }
++    #[test]
++    fn paragraph_spacing_presets_apply_roundtrip_and_undo() {
++        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
++        let snap = s.snapshot();
++        let before = s.do_paragraph_spacing();
++        for v in ["none", "compact", "tight", "open", "relaxed", "double", "default"] {
++            s.do_set_paragraph_spacing(v).unwrap();
++            assert_eq!(s.do_paragraph_spacing(), v);
++        }
++        s.do_set_paragraph_spacing("double").unwrap();
++        let saved = wordcraft_docx::write(&s.doc).unwrap();
++        let re = DocSession::from_bytes(&saved).unwrap();
++        assert_eq!(re.do_paragraph_spacing(), "double");
++        for bad in ["", "Double", "wide", "double "] {
++            assert!(s.do_set_paragraph_spacing(bad).is_err(), "{bad}");
++        }
++        assert_eq!(s.do_paragraph_spacing(), "double");
++        s.restore(snap).unwrap();
++        assert_eq!(s.do_paragraph_spacing(), before);
 +    }
 +    #[test]
 +    fn link_to_a_bookmark_roundtrips_through_docx() {
