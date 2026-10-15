@@ -11,7 +11,8 @@ import {FilmstripController} from './filmstrip-controller';
 import {FilmstripEngine} from './filmstrip-engine';
 import {fileExtension,sniffVideo} from './format';
 import {openVideoDialog} from './open';
-import {getMedia,setActiveMedia,subscribeMedia} from '../media';
+import {closeMediaForced,getMedia,setActiveMedia,subscribeMedia,type MediaKind} from '../media';
+import {registerWorkProvider} from '../workDocs';
 import type {VideoCapabilities,VideoProbe,VideoProgress,VideoReport} from './protocol';
 export type VideoStatus='loading'|'ready'|'error'|'exporting';
 export interface VideoResult{blob:Blob;url:string;report:VideoReport}
@@ -358,3 +359,11 @@ export function saveVideoProject(root:string):boolean{
  patch(root,{savedSig:clipsSignature(sessions.get(root)!.clips,sessions.get(root)!.audioClips)});
  return true;
 }
+
+/** Media kinds the video studio answers for in the cross-studio work registry (workDocs). */
+const WORK_MEDIA_KINDS:MediaKind[]=['docx','audio','video','video-project'];
+/* Self-registers with workDocs: the studio layer registers upward, so root lib modules never import studio code
+   (layer rule lib-core-not-up-to-studios; same pattern as the sound studio's arrangeStore). */
+registerWorkProvider({studio:'media',dirty:dirtyVideoNames,openCount:()=>getMedia().items.filter(i=>WORK_MEDIA_KINDS.includes(i.kind)).length,
+ async save(name){const s=getVideoSession(name);return s&&videoIsDirty(s)?saveVideoProject(name):true;},
+ discard:()=>[],closeAll:()=>{for(const i of getMedia().items.filter(i=>WORK_MEDIA_KINDS.includes(i.kind)))closeMediaForced(i.name);}});
