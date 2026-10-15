@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {addBlankVideoProject,addMediaFile,closeMedia,getMedia} from '../media';
 import {addAudioTrackClip,closeVideo,deleteAudioTrackClip,getVideoSession,moveAudioTrackClip,openVideo,redoVideoEdit,serializeVideoProjectCopy,setAudioTrackClipFades,setAudioTrackClipGain,setVideoEngineFactory,trimAudioTrackClip,undoVideoEdit,videoIsDirty} from './session';
-import type {VideoEngineLike,VideoProbe} from './engine';
+import type {VideoEngineLike} from './engine';import type {VideoProbe} from './protocol';
 
 const AUDIO_PROBE:VideoProbe={duration:8,video:null,audio:{codec:'opus',channels:2,rate:48000}};
 const fakeAudioEngine=(probe:VideoProbe=AUDIO_PROBE):VideoEngineLike=>({

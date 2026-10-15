@@ -2,7 +2,7 @@ import {registerCommandSpec} from '../commandBridge';
 import {commandRegistry} from '../commandRegistry';
 import type {CommandSpec,CommandSchema} from '../commandSpec';
 import {getMedia} from '../media';
-import {addAudioTrackClip,addImageClip,addTimelineClip,duplicateTimelineClip,addTimelineClipsFromDialog,deleteAudioTrackClip,duplicateAudioTrackClip,cancelVideoExport,deleteTimelineClip,exportVideoFile,getVideoSession,moveTimelineClip,setImageClipLength,redoVideoEdit,resetTimeline,moveAudioTrackClip,saveVideoProject,selectTimelineClip,setAudioTrackClipFades,setAudioTrackClipGain,setTimelineClipCrossfade,setTimelineClipGain,setTimelineClipFlip,setTimelineClipSpeed,setVideoExportOptions,setVideoExportRange,setVideoFormat,splitTimelineAt,toggleAudioTrackClipMute,toggleTimelineClipMute,trimAudioTrackClip,trimTimelineClip,undoVideoEdit,videoIsDirty} from './session';
+import {addAudioTrackClip,addImageClip,addTimelineClip,duplicateTimelineClip,addTimelineClipsFromDialog,deleteAudioTrackClip,duplicateAudioTrackClip,cancelVideoExport,setAudioTrackClipDuck,deleteTimelineClip,exportVideoFile,getVideoSession,moveTimelineClip,setImageClipLength,redoVideoEdit,resetTimeline,moveAudioTrackClip,saveVideoProject,selectTimelineClip,setAudioTrackClipFades,setAudioTrackClipGain,setTimelineClipCrossfade,setTimelineClipGain,setTimelineClipFlip,setTimelineClipSpeed,setVideoExportOptions,setVideoExportRange,setVideoFormat,splitTimelineAt,toggleAudioTrackClipMute,toggleTimelineClipMute,trimAudioTrackClip,trimTimelineClip,undoVideoEdit,videoIsDirty} from './session';
 import {addTitleClip,setTitleLength,updateTitle} from './titleSession';
 import {isTitleClip,type TitleSpec} from './titles';
 import {timelineDuration} from './timeline';
