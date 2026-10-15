@@ -38,7 +38,7 @@ export class SheetsEngine{
  private request(message:Req,transfer:Transferable[]=[]){
   return new Promise<SheetsResponse>((resolve,reject)=>{
    if(this.disposed){reject(new Error('Spreadsheet engine closed'));return;}
-   const mutating=['open','set','setValues','clear','format','resize','editLines','freeze','sort','filter','fill','cf','validation','replace','dedupe','split','annotate','defineName','deleteName','pivotCreate','pivotRefresh','tableOp','pageSetup','viewOp','protectOp','whatIfOp','layoutOp','cellToolOp','dataToolOp','pivotEditOp','cfManage','outlineOp','savedViewOp','pictureOp','objectOp','chartOp','sparklineOp','setReviewed','undoReviewed','setRangeReviewed','undoRangeReviewed','editSheet','undo','redo','close'].includes(message.op);if(mutating){this.mutationEpoch++;this.mutations++;this.notifySelectionRead();}const finish=()=>{if(mutating){this.mutations--;this.mutationEpoch++;this.notifySelectionRead();}};const done=(r:SheetsResponse)=>{finish();resolve(r);},failed=(e:Error)=>{finish();reject(e);};
+   const mutating=['open','set','setValues','clear','format','resize','editLines','freeze','sort','filter','fill','cf','validation','replace','dedupe','split','annotate','insertSymbol','defineName','deleteName','pivotCreate','pivotRefresh','tableOp','pageSetup','viewOp','protectOp','whatIfOp','layoutOp','cellToolOp','dataToolOp','pivotEditOp','cfManage','outlineOp','savedViewOp','pictureOp','objectOp','chartOp','sparklineOp','setReviewed','undoReviewed','setRangeReviewed','undoRangeReviewed','editSheet','undo','redo','close'].includes(message.op);if(mutating){this.mutationEpoch++;this.mutations++;this.notifySelectionRead();}const finish=()=>{if(mutating){this.mutations--;this.mutationEpoch++;this.notifySelectionRead();}};const done=(r:SheetsResponse)=>{finish();resolve(r);},failed=(e:Error)=>{finish();reject(e);};
    const id=this.nextId++;
    const timer=setTimeout(()=>this.dispose(new Error('Spreadsheet engine timed out. Unsaved edits in this workbook were discarded.')),this.timeoutMs);
    this.pending.set(id,{resolve:done,reject:failed,timer});
@@ -148,6 +148,7 @@ export class SheetsEngine{
  annotate(sheet:number,row:number,col:number,annotate:AnnotateOp){return this.result<unknown>({op:'annotate',sheet,row,col,annotate});}
  /** The note and link of one cell (read only). */
  async auditOp(sheet:number,row:number,col:number,audit:AuditBridgeOp):Promise<AuditAnswer>{return parseAuditAnswer(await this.result<unknown>({op:'auditOp',sheet,row,col,audit}));}
+ insertSymbol(sheet:number,row:number,col:number,char:string){return this.result<unknown>({op:'insertSymbol',sheet,row,col,char});}
  async customStyles():Promise<string[]>{return parseCustomStyles(await this.result<unknown>({op:'customStyles'}));}
  async notesOverview(sheet:number):Promise<NoteList>{return parseNoteList(await this.result<unknown>({op:'notesOverview',sheet}));}
  async annotations(sheet:number,row:number,col:number):Promise<CellAnnotations>{const r=await this.result<{notes:unknown;links:unknown}>({op:'annotations',sheet,row,col});return parseAnnotations(r);}

@@ -25,6 +25,7 @@ import {Checkbox} from '../ui/checkbox';
 import {PIVOT_AREAS,PIVOT_VALUE_FUNCS,PIVOT_SHOW_AS,PIVOT_NUMBER_FORMATS,PIVOT_LAYOUTS,PIVOT_SUBTOTALS,PIVOT_GROUPS,PIVOT_ORDERS,PIVOT_STYLES,MAX_PIVOT_ITEMS,pivotSourceProblem} from '../../lib/sheets/pivotEditOps';
 import type {PivotArea,PivotValueFunc,PivotEditOp} from '../../lib/sheets/protocol';
 import {CONSOLIDATE_FUNCTIONS,dataToolProblem,parseSourceList} from '../../lib/sheets/dataToolOps';
+import {SYMBOL_GROUPS,isSymbol,symbolCode,type SymbolGroup} from '../../lib/sheets/symbols';
 import {CELL_STYLE_GROUPS,AUTOSUM_FUNCTIONS,cellToolProblem,toolFromChoice,cleanStyleName,filterFunctions,functionCategories} from '../../lib/sheets/cellToolOps';
 import {SUBTOTAL_FUNCS,MAX_SUBTOTAL_ROWS,parseColumnList,type SubtotalFunc} from '../../lib/sheets/outlineOps';
 import {viewNameProblem,MAX_VIEW_NAME} from '../../lib/sheets/savedViews';
@@ -235,6 +236,7 @@ export function SheetsLayoutPanel({context}:PanelHostProps){
   <NotesGroup/>
   <NoteListGroup/>
   <AuditGroup/>
+  <SymbolGroup/>
   <NamesGroup/>
   <ViewGroup/>
   <ChartsGroup/>
@@ -904,6 +906,20 @@ function AuditGroup(){
    <Button variant="outline" size="compact" disabled={action.busy||!watched} onClick={()=>{if(watched)void action.run('sheets.audit',{kind:'watchRemove',ref:watched.ref});}} data-testid="sheets-au-remove">{t('sheets.au.remove')}</Button>
   </div>}
   <p className="text-ink-3">{t('sheets.au.hint')}</p>
+  {action.notice?<p role="alert">{action.notice}</p>:null}
+ </div>;
+}
+/** Insert Symbol: one grouped select with the symbol and its code, appended to the text of the selected cell. One undo step. */
+function SymbolGroup(){
+ const {t}=useT(),s=useSheetsSelection(),action=useAction();const [pick,setPick]=useState('€');
+ if(!s)return null;
+ return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.sy.title')}>
+  <span>{t('sheets.sy.title')}</span>
+  <label className="flex flex-col gap-1">{t('sheets.sy.pick')}<NativeSelect className={field} value={pick} disabled={action.busy} onChange={e=>setPick(e.currentTarget.value)} data-testid="sheets-sy-pick">
+   {(Object.keys(SYMBOL_GROUPS) as SymbolGroup[]).map(g=><optgroup key={g} label={t('sheets.sy.g.'+g)}>{SYMBOL_GROUPS[g].map(c=><option key={c} value={c}>{c+'  '+symbolCode(c)}</option>)}</optgroup>)}
+  </NativeSelect></label>
+  <Button variant="outline" size="compact" disabled={action.busy||!isSymbol(pick)} onClick={()=>void action.run('sheets.insertSymbol',{char:pick})} data-testid="sheets-sy-apply">{t('sheets.sy.apply',{cell:s.address})}</Button>
+  <p className="text-ink-3">{t('sheets.sy.hint')}</p>
   {action.notice?<p role="alert">{action.notice}</p>:null}
  </div>;
 }

@@ -88,6 +88,14 @@ const MAX_AFFIX_CHARS: usize = 12;
 const MAX_LINK_BYTES: usize = 2048;
 const MAX_NOTES_LISTED: usize = 200;
 const MAX_STYLE_NAME: usize = 60;
+/// One symbol of the Insert Symbol picker: Latin-1 punctuation and signs, Greek, general punctuation, currency, letter-like, number forms, arrows, math, technical and shape blocks.
+/// No spacing, zero-width or direction-changing characters.
+fn is_symbol_char(c: char) -> bool {
+    let u = c as u32;
+    let in_block = (0xA1..=0xFF).contains(&u) || (0x370..=0x3FF).contains(&u) || (0x2010..=0x2BFF).contains(&u);
+    let hidden = u == 0xAD || (0x2028..=0x202F).contains(&u) || (0x205F..=0x206F).contains(&u) || (0x200B..=0x200F).contains(&u);
+    in_block && !hidden && !c.is_control() && !c.is_whitespace()
+}
 const MAX_AUDIT_ITEMS: usize = 200;
 const MAX_WATCHED: usize = 50;
 const MAX_CUSTOM_STYLES: usize = 50;
@@ -2920,6 +2928,62 @@ impl HeadlessWorkbook {
         }
     }
 
+    /// Appends one symbol to the text of the cell at `row`,`col` as ONE history entry (the engine's insert.symbol). Only a single character from the
+    /// punctuation, currency, arrow, math, Greek, letter-like or shape blocks is accepted (no control, spacing or direction-changing characters).
+    /// Refused: protected sheets, cells that hold a formula (the symbol would change it), text longer than 32,767 characters.
+    pub fn insert_symbol(&mut self, sheet: usize, row: u32, col: u32, symbol: &str) -> Result<String, String> {
+        let mut chars = symbol.chars();
+        let ch = chars.next().ok_or("Choose a symbol.")?;
+        if chars.next().is_some() || !is_symbol_char(ch) {
+            return Err("Unsupported symbol.".into());
+        }
+        self.check_block(sheet, row, col, 1, 1, true)?;
+        let at = CellRef::new(row, col);
+        {
+            let doc = self.session.doc().map_err(|e| e.to_string())?;
+            let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+            if let Some(cell) = sh.cell(at) {
+                if cell.formula.is_some() {
+                    return Err("This cell holds a formula. Edit the formula text instead.".into());
+                }
+                if cell.input_text().chars().count() >= 32_767 {
+                    return Err("The cell text is already at the 32,767 character limit.".into());
+                }
+            }
+        }
+        let (before, snap_sel) = {
+            let doc = self.session.doc().map_err(|e| e.to_string())?;
+            (doc.undo.len(), doc.selection.clone())
+        };
+        let outcome: Result<String, String> = (|| {
+            self.session.run("sheet.activate", json!({"sheet": sheet}))?;
+            self.session.run("selection.set", json!({"sheet": sheet, "range": at.a1()}))?;
+            self.session.run("insert.symbol", json!({"char": ch.to_string()})).map(|v| v.to_string())
+        })();
+        let _ = self.session.take_ui_requests();
+        match outcome {
+            Ok(text) => {
+                let doc = self.session.doc_mut().map_err(|e| e.to_string())?;
+                if doc.undo.len() > before + 1 {
+                    doc.undo.truncate(before + 1);
+                }
+                doc.redo.clear();
+                Ok(text)
+            }
+            Err(e) => {
+                while self.session.doc().map_err(|e| e.to_string())?.undo.len() > before {
+                    if self.undo().is_err() {
+                        break;
+                    }
+                }
+                if let Ok(doc) = self.session.doc_mut() {
+                    doc.selection = snap_sel;
+                }
+                Err(e)
+            }
+        }
+    }
+
     /// Names of the custom cell styles saved in this workbook (read only, at most 50): `{"styles":["name"]}`.
     pub fn custom_cell_styles(&self) -> Result<String, String> {
         let doc = self.session.doc().map_err(|e| e.to_string())?;
@@ -5074,6 +5138,26 @@ mod tests {
         }
         assert!(book.audit_op(0, 9_999_999, 0, r#"{"kind":"trace"}"#).is_err());
         assert_eq!(steps(&book), before, "auditing leaves no history entry");
+    }
+    #[test]
+    fn insert_symbol_appends_to_text_as_one_step_and_refuses_bad_input() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        book.session.run("cell.set", json!({"sheet": 0, "cell": "A960", "input": "Price "})).unwrap();
+        book.session.run("cell.set", json!({"sheet": 0, "cell": "B960", "input": "=1+1"})).unwrap();
+        let steps = |b: &HeadlessWorkbook| b.session.doc().unwrap().undo.len();
+        let before = steps(&book);
+        book.insert_symbol(0, 959, 0, "\u{20AC}").unwrap();
+        assert_eq!(steps(&book), before + 1);
+        assert!(book.view_range(0, 959, 0, 1, 1).unwrap().contains("Price \u{20AC}"));
+        book.insert_symbol(0, 970, 3, "\u{03A9}").unwrap();
+        for bad in ["", "ab", "\u{20AC}\u{20AC}", "\n", " ", "\u{200B}", "\u{202E}", "A", "\u{1F600}"] {
+            assert!(book.insert_symbol(0, 959, 0, bad).is_err(), "{bad:?}");
+        }
+        assert!(book.insert_symbol(0, 959, 1, "\u{20AC}").unwrap_err().contains("formula"));
+        assert!(book.insert_symbol(0, 5_000_000, 0, "\u{20AC}").is_err());
+        assert_eq!(steps(&book), before + 2, "refusals leave no history entry");
+        book.session.run("review.protectSheet", json!({})).unwrap();
+        assert!(book.insert_symbol(0, 959, 0, "\u{20AC}").unwrap_err().contains("protected"));
     }
     #[test]
     fn notes_overview_lists_every_note_in_reading_order() {

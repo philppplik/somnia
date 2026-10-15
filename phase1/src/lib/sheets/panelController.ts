@@ -19,6 +19,7 @@ import {parseLayoutCommand,MERGE_HOWS,ROTATE_MODES} from './layoutOps';
 import {parseCfManageCommand} from './cfManageOps';
 import {parsePivotEditCommand,PIVOT_AREAS,PIVOT_VALUE_FUNCS,PIVOT_SHOW_AS,PIVOT_NUMBER_FORMATS,PIVOT_LAYOUTS,PIVOT_SUBTOTALS,PIVOT_GROUPS,PIVOT_ORDERS,MAX_PIVOT_ITEMS,MAX_PIVOT_TEXT} from './pivotEditOps';
 import {parseDataToolCommand,CONSOLIDATE_FUNCTIONS,MAX_CONSOLIDATE_SOURCES,MAX_SOURCE_CHARS} from './dataToolOps';
+import {parseSymbolCommand} from './symbols';
 import {parseAuditCommand,type AuditOp} from './audit';
 import {parseCellToolCommand,AUTOSUM_FUNCTIONS,CELL_STYLES,SIMPLE_CELL_TOOLS,isFunctionName} from './cellToolOps';
 import {parseOutlineCommand,SUBTOTAL_FUNCS,type OutlineCommand} from './outlineOps';
@@ -89,6 +90,7 @@ export interface SheetsPanelController {
  validationCheck():void|Promise<void>;
  noteReview(op:NoteReviewOp):void|Promise<void>;
  audit(op:AuditOp):void|Promise<void>;
+ insertSymbol(char:string):void|Promise<void>;
  insertFunction(name:string):void|Promise<void>;
  /** Inserts a PNG or JPEG picture at the selected cell (one undo step). */
  insertPicture(picture:{bytes:Uint8Array;alt:string;width:number}):void|Promise<void>;
@@ -112,7 +114,7 @@ let current:SheetsPanelController|null=null;
 export const getSheetsPanelController=()=>current;
 export function registerSheetsPanelController(controller:SheetsPanelController){current=controller;return()=>{if(current===controller)current=null;};}
 const requireController=()=>{if(!current?.ready())throw Error('No workbook is ready.');return current;};
-export const SHEETS_PANEL_COMMAND_IDS=['sheets.navigate','sheets.setCell','sheets.analyzeRange','sheets.format','sheets.resize','sheets.freeze','sheets.editLines','sheets.sheet','sheets.sort','sheets.filter','sheets.fill','sheets.highlight','sheets.validation','sheets.replace','sheets.dedupe','sheets.split','sheets.annotate','sheets.names','sheets.table','sheets.pivot','sheets.pageSetup','sheets.export','sheets.view','sheets.protect','sheets.chart','sheets.sparkline','sheets.whatif','sheets.object','sheets.picture','sheets.savedView','sheets.outline','sheets.cellLayout','sheets.cellTools','sheets.insertFunction','sheets.dataTools','sheets.pivotEdit','sheets.cfManage','sheets.validationCheck','sheets.noteReview'] as const;
+export const SHEETS_PANEL_COMMAND_IDS=['sheets.navigate','sheets.setCell','sheets.analyzeRange','sheets.format','sheets.resize','sheets.freeze','sheets.editLines','sheets.sheet','sheets.sort','sheets.filter','sheets.fill','sheets.highlight','sheets.validation','sheets.replace','sheets.dedupe','sheets.split','sheets.annotate','sheets.names','sheets.table','sheets.pivot','sheets.pageSetup','sheets.export','sheets.view','sheets.protect','sheets.chart','sheets.sparkline','sheets.whatif','sheets.object','sheets.picture','sheets.savedView','sheets.outline','sheets.cellLayout','sheets.cellTools','sheets.insertFunction','sheets.dataTools','sheets.pivotEdit','sheets.cfManage','sheets.validationCheck','sheets.noteReview','sheets.audit','sheets.insertSymbol'] as const;
 export function sheetsPanelCommandSpecs():CommandSpec[]{
  return [
  {id:'sheets.navigate',title:'Go to spreadsheet cell',category:'View',level:'ui',allowInInput:true,
@@ -214,6 +216,9 @@ export function sheetsPanelCommandSpecs():CommandSpec[]{
  {id:'sheets.audit',title:'Trace what a formula reads and what reads it, list error cells, or watch a cell',category:'Edit',level:'ui',allowInInput:true,
   params:{type:'object',properties:{kind:{type:'string',enum:['trace','errors','watchAdd','watchRemove','clear']},ref:{type:'string',minLength:1,maxLength:100,description:'The watched cell to stop watching (watchRemove only)'}},required:['kind'],additionalProperties:false},
   enabled:()=>!!current?.ready(),run:p=>requireController().audit(parseAuditCommand(p))},
+ {id:'sheets.insertSymbol',title:'Add a symbol such as a currency sign, arrow or Greek letter to the end of the selected cell text',category:'Edit',level:'ui',allowInInput:true,
+  params:{type:'object',properties:{char:{type:'string',minLength:1,maxLength:1}},required:['char'],additionalProperties:false},
+  enabled:()=>!!current?.ready(),run:p=>requireController().insertSymbol(parseSymbolCommand(p).char)},
  {id:'sheets.validationCheck',title:'Find cells whose value breaks their allowed-values rule',category:'Edit',level:'ui',allowInInput:true,
   params:{type:'object',properties:{},additionalProperties:false},
   enabled:()=>!!current?.ready(),run:p=>{if(p&&typeof p==='object'&&Object.keys(p as object).length>0)throw Error('This takes no fields.');return requireController().validationCheck();}},

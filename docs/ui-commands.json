@@ -7546,6 +7546,14 @@
       "hasEnabled": true
     },
     {
+      "id": "sheets.insertSymbol",
+      "title": "Add a symbol such as a currency sign, arrow or Greek letter to the end of the selected cell text",
+      "category": "Edit",
+      "source": "sheets",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
       "id": "sheets.names",
       "title": "Define or delete a named range",
       "category": "Edit",

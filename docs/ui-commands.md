@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1025 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1026 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -632,6 +632,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `sheets.freeze` | Freeze panes | View | sheets |  |
 | `sheets.highlight` | Highlight cells with a rule or color scale | Edit | sheets |  |
 | `sheets.insertFunction` | Start a formula with a function from the library | Edit | sheets |  |
+| `sheets.insertSymbol` | Add a symbol such as a currency sign, arrow or Greek letter to the end of the selected cell text | Edit | sheets |  |
 | `sheets.names` | Define or delete a named range | Edit | sheets |  |
 | `sheets.navigate` | Go to spreadsheet cell | View | sheets |  |
 | `sheets.noteReview` | Resolve, reopen or delete a listed note or comment | Edit | sheets |  |
