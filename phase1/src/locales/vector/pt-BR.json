@@ -271,6 +271,7 @@
  "cmd.vector.addText":"Adicionar texto",
  "cmd.vector.setText":"Editar texto",
  "cmd.vector.deleteText":"Excluir texto",
+ "cmd.vector.alignText":"Alinhar um objeto de texto à página",
  "vector.shell.layers.texts":"Objetos de texto",
  "vector.shell.layers.textBehind":"atrás",
  "cmd.vector.selectText":"Selecionar um objeto de texto",

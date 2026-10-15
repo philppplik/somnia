@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1101 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1102 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -1046,6 +1046,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `vector.addSwatch` | Add colour swatch | Edit | vector |  |
 | `vector.addText` | Add text | Edit | vector |  |
 | `vector.alignSelection` | Align vector selection | Edit | vector |  |
+| `vector.alignText` | Align a text object to the page | Edit | vector |  |
 | `vector.applySwatch` | Apply colour swatch | Edit | vector |  |
 | `vector.booleanOp` | Combine vector shapes | Edit | vector |  |
 | `vector.clearError` | Clear vector diagnostics | View | vector |  |

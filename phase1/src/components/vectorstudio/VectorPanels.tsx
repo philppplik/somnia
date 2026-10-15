@@ -171,6 +171,8 @@ export function VectorTextSection(){const {t}=useT(),s=useVectorSession(),f=useS
   <label className={row}>{t('vector.shell.textStack')}<NativeSelect className={field} value={cur.back?'back':'front'} data-testid="vector-text-stack" onChange={e=>set({back:e.target.value==='back'})}><option value="front">{t('vector.shell.textStack.front')}</option><option value="back">{t('vector.shell.textStack.back')}</option></NativeSelect></label>
   <label className={row}>{t('vector.shell.textAnchor')}<NativeSelect className={field} value={cur.anchor} onChange={e=>set({anchor:e.target.value})}>{TEXT_ANCHORS.map(v=><option key={v} value={v}>{t('vector.shell.textAnchor.'+v)}</option>)}</NativeSelect></label>
   <p className="m-0 text-ink-3">{t('vector.shell.textLimits')}</p>
+  <Menu><MenuTrigger render={<Button size="compact" variant="outline" data-testid="vector-text-align-menu">{t('vector.shell.align')}</Button>}/>
+   <MenuContent><MenuGroup><MenuGroupLabel>{t('vector.shell.align.page')}</MenuGroupLabel>{ALIGN_MODES.map(mode=><MenuItem key={mode} onClick={()=>run('alignText',{id:cur.id,mode})}>{t('vector.shell.align.'+mode)}</MenuItem>)}</MenuGroup></MenuContent></Menu>
   <Button size="compact" onClick={()=>run('duplicateText',{id:cur.id})} data-testid="vector-text-duplicate">{t('vector.shell.textDuplicate')}</Button>
   <Button size="compact" onClick={()=>run('deleteText',{id:cur.id})} data-testid="vector-text-delete">{t('vector.shell.textDelete')}</Button>
  </div>;}

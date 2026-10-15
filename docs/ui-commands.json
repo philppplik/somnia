@@ -12717,6 +12717,13 @@
       "hasEnabled": true
     },
     {
+      "id": "vector.alignText",
+      "title": "Align a text object to the page",
+      "category": "Edit",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
       "id": "vector.applySwatch",
       "title": "Apply colour swatch",
       "category": "Edit",
