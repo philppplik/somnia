@@ -1260,5 +1260,7 @@
  "cmd.animation.layers.copyEffects": "Copier les effets du premier calque coché vers les autres calques cochés",
  "animation.keys.soften": "Adoucir",
  "animation.keys.soften.hint": "Rapprocher chaque clé sélectionnée à mi-chemin de la moyenne de ses voisines (la première et la dernière d’une piste restent)",
- "cmd.animation.keys.soften": "Adoucir les valeurs des clés sélectionnées vers leurs voisines"
+ "cmd.animation.keys.soften": "Adoucir les valeurs des clés sélectionnées vers leurs voisines",
+ "animation.rig.crossfade": "Fondu enchaîné",
+ "cmd.animation.layers.crossfade": "Enchaîner les calques cochés en fondu"
 }

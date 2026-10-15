@@ -1260,5 +1260,7 @@
  "cmd.animation.layers.copyEffects": "Copiar los efectos de la primera capa marcada a las demás marcadas",
  "animation.keys.soften": "Suavizar valores",
  "animation.keys.soften.hint": "Acercar cada key seleccionado a medio camino del promedio de sus vecinos (el primero y el último de una pista no cambian)",
- "cmd.animation.keys.soften": "Suavizar los valores de los keys seleccionados hacia sus vecinos"
+ "cmd.animation.keys.soften": "Suavizar los valores de los keys seleccionados hacia sus vecinos",
+ "animation.rig.crossfade": "Fundir entre sí",
+ "cmd.animation.layers.crossfade": "Fundir las capas marcadas una en otra"
 }

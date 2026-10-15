@@ -2053,6 +2053,23 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.layers.crossfade",
+      "title": "Crossfade the ticked layers into each other",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "crossfade",
+        "dissolve",
+        "fade",
+        "overlap",
+        "sequence",
+        "slideshow",
+        "transition"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.layers.duplicate",
       "title": "Duplicate the selected layers",
       "category": "Edit",

@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-963 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+964 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -163,6 +163,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `animation.layers.centerAnchor` | Center the anchor point of the selected layers | Edit | animation |  |
 | `animation.layers.closeLoop` | Close the loop: end values equal the start values | Edit | animation |  |
 | `animation.layers.copyEffects` | Copy the first ticked layer’s effects to the other ticked layers | Edit | animation |  |
+| `animation.layers.crossfade` | Crossfade the ticked layers into each other | Edit | animation |  |
 | `animation.layers.duplicate` | Duplicate the selected layers | Edit | animation |  |
 | `animation.layers.fade` | Fade the selected layers in or out | Edit | animation |  |
 | `animation.layers.fit` | Fit the selected layers to the composition | Edit | animation |  |

@@ -1638,3 +1638,16 @@ test('P261 soften keys: pulls selected inner keys toward neighbours, keeps track
  const after=tr().keys.map(k=>k.v);assert.notDeepEqual(after,before);assert.equal(after[0],before[0]);assert.equal(after[4],before[4]);
  s.undo();assert.deepEqual(tr().keys.map(k=>k.v),before);
 });
+
+test('P262 crossfade: next layer fades in over the overlap while the previous fades out, one undo step',async()=>{
+ const {crossfadeSpecs}=await import('./crossfadeCommands');const run=crossfadeSpecs()[0].run as (p?:unknown)=>unknown;
+ const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'shape',id:'b'});
+ const L=(id:string)=>findComp(s.document!)!.layers.find(l=>l.id===id)!;
+ s.dispatch({type:'layer.timing',layer:'a',inT:0,outT:f(30)});s.dispatch({type:'layer.timing',layer:'b',inT:f(30),outT:f(60)});
+ assert.throws(()=>run({layers:['a']}),/two layers/);
+ const r=run({layers:['b','a'],frames:10}) as {joins:number};assert.equal(r.joins,1);
+ assert.equal(L('a').outT,f(40));assert.deepEqual(L('a').transform.opacity.keys.map(k=>[k.t,k.v]),[[f(30),100],[f(39),0]]);
+ assert.deepEqual(L('b').transform.opacity.keys.map(k=>[k.t,k.v]),[[f(30),0],[f(39),100]]);
+ assert.throws(()=>run({layers:['a','b']}),/Nothing to crossfade/);
+ s.undo();assert.equal(L('a').outT,f(30));assert.equal(L('a').transform.opacity.keys.length,0);assert.equal(L('b').transform.opacity.keys.length,0);
+});

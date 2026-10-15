@@ -1260,5 +1260,7 @@
  "cmd.animation.layers.copyEffects": "Effekte der ersten angekreuzten Ebene auf die anderen angekreuzten kopieren",
  "animation.keys.soften": "Entzerren",
  "animation.keys.soften.hint": "Jeden gewählten Key zur Hälfte zum Mittel seiner Nachbarn ziehen (erster und letzter Key einer Spur bleiben)",
- "cmd.animation.keys.soften": "Werte der gewählten Keys zu ihren Nachbarn hin angleichen"
+ "cmd.animation.keys.soften": "Werte der gewählten Keys zu ihren Nachbarn hin angleichen",
+ "animation.rig.crossfade": "Ineinander überblenden",
+ "cmd.animation.layers.crossfade": "Angekreuzte Ebenen ineinander überblenden"
 }

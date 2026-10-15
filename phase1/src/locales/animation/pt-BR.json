@@ -1260,5 +1260,7 @@
  "cmd.animation.layers.copyEffects": "Copiar os efeitos da primeira camada marcada para as outras marcadas",
  "animation.keys.soften": "Amenizar",
  "animation.keys.soften.hint": "Aproximar cada key selecionado até a metade da média dos vizinhos (o primeiro e o último da trilha ficam)",
- "cmd.animation.keys.soften": "Amenizar os valores dos keys selecionados em direção aos vizinhos"
+ "cmd.animation.keys.soften": "Amenizar os valores dos keys selecionados em direção aos vizinhos",
+ "animation.rig.crossfade": "Dissolver entre si",
+ "cmd.animation.layers.crossfade": "Dissolver as camadas marcadas uma na outra"
 }

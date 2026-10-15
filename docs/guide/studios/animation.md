@@ -102,3 +102,4 @@ Back to [Studios](../studios.md).
 - Glow pulse (Motion > Effects): a glow on the ticked layers breathes up and down across the work area, keyed (2 or 6 pulses).
 - Copy effects (Motion > Effects): the first ticked layer's whole effect stack, keys included, is cloned onto the other ticked layers.
 - Soften (Keys tools > Values): each selected key moves halfway toward the average of its neighbours; the first and last key of a track stay.
+- Crossfade (Rig > Appearance > Fade): ticked layers dissolve into each other in start order, 12 frames overlap; the earlier layer's out point is extended when it ends sooner.
