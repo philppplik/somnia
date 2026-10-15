@@ -14,7 +14,7 @@ import {MAX_RATING,useRatings} from '../../lib/photos/ratings';
 import {useFlags} from '../../lib/photos/flags';
 import {PHOTO_LABELS,setLabel,useLabels,type PhotoLabel} from '../../lib/photos/labels';
 import {addTags,allTags,setTags} from '../../lib/photos/tags';
-import {groupForStrip,groupPhotos,ungroupStacks,useStacks} from '../../lib/photos/stacks';
+import {groupForStrip,groupPhotos,setStackCover,ungroupStacks,useStackCovers,useStacks} from '../../lib/photos/stacks';
 import {detectSeries} from '../../lib/photos/autoStack';
 import {usePanelState} from '../../store/panelStateStore';
 import {Button} from '../ui/button';
@@ -33,6 +33,8 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
  const [naming,setNaming]=useState(false);
  const [menuOpen,setMenuOpen]=useState(false);
  const stacks=useStacks();
+ const covers=useStackCovers();
+ const activeStack=stacks[active]??null;
  const [expanded,setExpanded]=useState<Record<string,boolean>>({});
  const [,setMinRating]=usePanelState<number|string>('photos.ratingFilter',0);
  const [,setSort]=usePanelState<FilmstripSort>('photos.filmstripSort','library');
@@ -129,6 +131,8 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
      </span>
     </div>
     <span className="flex flex-wrap gap-1">
+     {onSurvey&&activeStack&&<Button variant="outline" size="compact" onClick={()=>{setMenuOpen(false);onSurvey(photos.map(p=>p.name).filter(n=>stacks[n]===activeStack));}} data-testid="photos-filmstrip-stack-survey">{t('photos.stacks.survey')}</Button>}
+     {activeStack&&covers[activeStack]!==active&&<Button variant="outline" size="compact" onClick={()=>setStackCover(activeStack,active)} data-testid="photos-filmstrip-stack-cover">{t('photos.stacks.cover')}</Button>}
      {selected.length>1&&<Button variant="outline" size="compact" onClick={()=>groupPhotos(selected.map(p=>p.name))} data-testid="photos-filmstrip-stack-group">{t('photos.stacks.group')}</Button>}
      {(()=>{const ids=[...new Set((selected.length>1?selected.map(p=>p.name):[active]).map(n=>stacks[n]).filter((v):v is string=>!!v))];return ids.length>0?<Button variant="outline" size="compact" onClick={()=>ungroupStacks(ids)} data-testid="photos-filmstrip-stack-ungroup">{t('photos.stacks.ungroup')}</Button>:null;})()}
      {detectSeries(all.map(p=>p.name)).length>0&&<Button variant="outline" size="compact" onClick={()=>{
@@ -196,7 +200,7 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
   <Button variant="outline" size="icon" aria-pressed={autoAdvance} aria-label={t('photos.filmstrip.autoAdvance')} title={t('photos.filmstrip.autoAdvance')} onClick={()=>setAutoAdvance(!autoAdvance)} className="h-7 w-7 shrink-0" data-testid="photos-filmstrip-autoadvance"><SkipForward size={12}/></Button>
   {applyNote&&<span className="shrink-0 text-ink-3" data-testid="photos-filmstrip-apply-note">{applyNote}</span>}
   <RatingStars name={active} prefix="photos-filmstrip"/>
-  {groupForStrip(photos.map(p=>p.name),stacks,{}).map(row=>{
+  {groupForStrip(photos.map(p=>p.name),stacks,{},covers).map(row=>{
    if(row.kind==='single')return thumb(byName(row.name));
    if(expanded[row.id])return <span key={row.id} className="flex shrink-0 items-center gap-1" data-testid={`photos-filmstrip-stack-${row.id}`} data-expanded="true">
     <Button variant="outline" size="icon" aria-label={t('photos.stacks.collapse')} title={t('photos.stacks.collapse')} onClick={()=>setExpanded({...expanded,[row.id]:false})} className="h-7 w-7 shrink-0" data-testid={`photos-filmstrip-stack-close-${row.id}`}><ChevronDown size={12}/></Button>

@@ -164,6 +164,8 @@
  "photos.collections.name": "Nombre de la coleccion",
  "photos.collections.delete": "Eliminar conjunto",
  "photos.stacks.group": "Agrupar en pila",
+ "photos.stacks.survey": "Comparar",
+ "photos.stacks.cover": "Portada",
  "photos.stacks.ungroup": "Desagrupar",
  "photos.stacks.expand": "Expandir pila",
  "photos.stacks.collapse": "Contraer pila",

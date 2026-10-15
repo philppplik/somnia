@@ -366,3 +366,22 @@ photos, turns the smart filter on with two rules (rating >= 2, flag
 pick) and asserts only the photo passing both survives, then toggles
 it off again (open-menu screenshots
 `test-results/ds-photos-smart-menu-{light,dark}.png`).
+
+## Stack survey and cover choice (P103)
+
+A burst's best shot becomes the cover: the menu's stacks section opens
+the survey with exactly the active stack's members (visible order) -
+compare them side by side, click the winner - and a "Make cover"
+button persists that member as the stack's cover. The collapsed strip
+row then shows the chosen cover with the member count; the default
+stays the first visible member. Covers persist in their own
+localStorage key and die with their stack on ungroup.
+`groupForStrip` takes an optional covers map (existing three-arg
+calls unchanged).
+
+Coverage: `stacks.test.ts` covers set/get, non-member rejection, the
+cover leading the collapsed row and the ungroup cleanup;
+`photos-filmstrip.spec.ts` gains a light/dark leg that stacks the
+fixture series, surveys the members, picks strip-2, makes it the
+cover (count badge moves, old cover back inside) and ungroups again
+(`test-results/ds-photos-stack-survey-{light,dark}.png`).

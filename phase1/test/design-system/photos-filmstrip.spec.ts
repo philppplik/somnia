@@ -596,3 +596,28 @@ test('smart filter: the grouped menu combines rating, flag, label and tag (light
   await page.evaluate(async()=>{const r=await import('/src/lib/photos/ratings.ts');const f=await import('/src/lib/photos/flags.ts');for(const n of['strip-1.png','strip-2.png','strip-3.png']){r.setRating(n,0);f.setFlag(n,null);}}); // leave no state behind
  }
 });
+test('stack survey: compare the members and pick the cover (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
+  await page.evaluate(async()=>{const m=await import('/src/lib/photos/stacks.ts');for(const n of['strip-1.png','strip-2.png','strip-3.png']){const id=m.getStack(n);if(id)m.ungroupStacks([id]);}m.groupPhotos(['strip-1.png','strip-2.png','strip-3.png']);}); // stacks persist via localStorage: clean slate, then one stack
+  await expect(page.getByTestId('photos-filmstrip-stack-count-strip-1.png')).toHaveText('3'); // default cover: the first member
+  await page.getByTestId('photos-filmstrip-menu').click();
+  await page.getByTestId('photos-filmstrip-stack-survey').click(); // compare the members side by side
+  await expect(page.getByTestId('photos-survey-item-strip-1.png')).toBeVisible();
+  await expect(page.getByTestId('photos-survey-item-strip-2.png')).toBeVisible();
+  await expect(page.getByTestId('photos-survey-item-strip-3.png')).toBeVisible();
+  await page.getByTestId('photos-survey-pick-strip-2.png').click(); // the best shot
+  await expect(page.getByTestId('photos-survey')).toHaveCount(0); // closed, strip-2 is active
+  await page.getByTestId('photos-filmstrip-menu').click();
+  await page.getByTestId('photos-filmstrip-stack-cover').click(); // make it the cover
+  await expect(page.getByTestId('photos-filmstrip-stack-count-strip-2.png')).toHaveText('3');
+  await expect(page.getByTestId('photos-filmstrip-item-strip-1.png')).toHaveCount(0); // old cover back inside the stack
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toHaveCount(0);
+  await page.screenshot({path:`test-results/ds-photos-stack-survey-${theme}.png`,fullPage:true});
+  await page.evaluate(async()=>{const m=await import('/src/lib/photos/stacks.ts');for(const n of['strip-1.png','strip-2.png','strip-3.png']){const id=m.getStack(n);if(id)m.ungroupStacks([id]);}});
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible();
+ }
+});
