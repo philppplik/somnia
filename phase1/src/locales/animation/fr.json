@@ -1206,5 +1206,7 @@
  "animation.modifiers.spring": "Rebond",
  "animation.modifiers.addSpring": "Ajouter un rebond",
  "animation.modifiers.springAmount": "Depassement %",
- "animation.modifiers.damping": "Amortissement"
+ "animation.modifiers.damping": "Amortissement",
+ "animation.rig.unpack": "Defaire la precomposition",
+ "cmd.animation.precomp.unpack": "Defaire les calques de precomposition dans cette composition"
 }

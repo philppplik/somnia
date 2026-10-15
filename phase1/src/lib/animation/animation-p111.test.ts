@@ -1403,3 +1403,33 @@ test('P245 spring modifier: rings out after the last key, continuous, decays, va
  const one=s.document!;s.dispatch([{type:'modifier.remove',layer:'a',prop:'opacity',index:0}]);s.undo();assert.deepEqual(s.document,one);
  assert.ok(l);
 });
+
+test('P246 unpack precomp: same picture, group null keeps the precomp transform, stack order kept, blockers explained, one undo step',async()=>{
+ const {precompUnpackSpecs}=await import('./precompUnpackCommands');const {worldMatrix,multiplyMatrix}=await import('./scene');
+ const unpack=precompUnpackSpecs()[0].run as (p?:unknown)=>unknown;
+ const d0=applyEdits(base(),[{type:'layer.add',kind:'shape',id:'b'},{type:'layer.parent',layer:'b',parent:'a'},{type:'layer.add',kind:'solid',id:'top'},{type:'layer.add',kind:'solid',id:'low'},{type:'layer.reorder',layer:'low',index:3},{type:'precomp.make',layers:['a','b'],id:'pc',compId:'pcc',name:'Group'},{type:'prop.set',layer:'pc',prop:'position',t:f(0),value:[330,220]},{type:'prop.set',layer:'pc',prop:'rotation',t:f(0),value:12}] as never);
+ const s=new AnimationSession();s.open(d0);setAnimationSession(s);
+ const parent0=findComp(s.document!)!,child=s.document!.compositions.find(x=>x.id==='pcc')!;
+ const times=[f(0),f(4),f(10)];
+ const before=(id:string,t:number)=>multiplyMatrix(worldMatrix(parent0,parent0.layers.find(l=>l.id==='pc')!,t),worldMatrix(child,child.layers.find(l=>l.id===id)!,t));
+ const order0=parent0.layers.map(l=>l.id);
+ const r=unpack({layers:['pc']}) as {unpacked:number;layers:number};assert.equal(r.unpacked,1);assert.equal(r.layers,3);
+ const after=findComp(s.document!)!;assert.ok(!after.layers.some(l=>l.id==='pc'));
+ for(const id of ['a','b'])for(const t of times){const m1=before(id,t),m2=worldMatrix(after,after.layers.find(l=>l.id===id)!,t);m1.forEach((v,i)=>assert.ok(Math.abs(v-m2[i])<1e-6,`${id}@${t}[${i}] ${v} vs ${m2[i]}`));}
+ const idx=(c:typeof after,id:string)=>c.layers.findIndex(l=>l.id===id);
+ assert.ok(idx(after,'top')<idx(after,'a')&&idx(after,'b')<idx(after,'low')&&idx(after,'a')<idx(after,'low'),after.layers.map(l=>l.id).join());
+ assert.equal(after.layers.length,order0.length-1+3);
+ s.undo();assert.equal(findComp(s.document!)!.layers.length,order0.length);assert.ok(findComp(s.document!)!.layers.some(l=>l.id==='pc'));
+ s.dispatch([{type:'prop.set',layer:'pc',prop:'opacity',t:f(0),value:50}] as never);
+ assert.throws(()=>unpack({layers:['pc']}),/opacity/);
+ assert.throws(()=>unpack({layers:['top']}),/precomposition layer first/);
+});
+
+test('P246 unpack twice: colliding ids get fresh ids and parents follow',async()=>{
+ const {precompUnpackSpecs}=await import('./precompUnpackCommands');const unpack=precompUnpackSpecs()[0].run as (p?:unknown)=>unknown;
+ const d0=applyEdits(base(),[{type:'layer.add',kind:'shape',id:'b'},{type:'layer.parent',layer:'b',parent:'a'},{type:'precomp.make',layers:['a','b'],id:'pc',compId:'pcc',name:'G'},{type:'precomp.add',comp:'pcc',id:'pc2'}] as never);
+ const s=new AnimationSession();s.open(d0);setAnimationSession(s);
+ unpack({layers:['pc']});unpack({layers:['pc2']});const c=findComp(s.document!)!;
+ assert.equal(c.layers.length,6);assert.equal(new Set(c.layers.map(l=>l.id)).size,6);
+ const bs=c.layers.filter(l=>l.kind==='shape'&&c.layers.some(x=>x.id===l.parent&&x.kind==='shape'));assert.equal(bs.length,2);assert.notEqual(bs[0].parent,bs[1].parent);
+});

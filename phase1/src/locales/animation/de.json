@@ -1206,5 +1206,7 @@
  "animation.modifiers.spring": "Nachschwingen",
  "animation.modifiers.addSpring": "Nachschwingen +",
  "animation.modifiers.springAmount": "Ueberschwingen %",
- "animation.modifiers.damping": "Daempfung"
+ "animation.modifiers.damping": "Daempfung",
+ "animation.rig.unpack": "Vorkomposition aufloesen",
+ "cmd.animation.precomp.unpack": "Vorkompositions-Ebenen in diese Komposition aufloesen"
 }

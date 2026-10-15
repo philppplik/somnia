@@ -1206,5 +1206,7 @@
  "animation.modifiers.spring": "Rebote",
  "animation.modifiers.addSpring": "Anadir rebote",
  "animation.modifiers.springAmount": "Sobrepaso %",
- "animation.modifiers.damping": "Amortiguacion"
+ "animation.modifiers.damping": "Amortiguacion",
+ "animation.rig.unpack": "Deshacer precomposicion",
+ "cmd.animation.precomp.unpack": "Deshacer capas de precomposicion en esta composicion"
 }

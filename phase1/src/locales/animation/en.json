@@ -1206,5 +1206,7 @@
  "animation.modifiers.spring": "Spring",
  "animation.modifiers.addSpring": "Add spring",
  "animation.modifiers.springAmount": "Overshoot %",
- "animation.modifiers.damping": "Damping"
+ "animation.modifiers.damping": "Damping",
+ "animation.rig.unpack": "Unpack precomposition",
+ "cmd.animation.precomp.unpack": "Unpack precomposition layers into this composition"
 }

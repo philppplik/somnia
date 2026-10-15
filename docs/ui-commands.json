@@ -2637,6 +2637,25 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.precomp.unpack",
+      "title": "Unpack precomposition layers into this composition",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "dissolve",
+        "expand",
+        "explode",
+        "inline",
+        "nested",
+        "precomp",
+        "precomposition",
+        "ungroup",
+        "unpack"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.precomp.volume.animate",
       "title": "Toggle comp layer volume keyframes",
       "category": "Edit",

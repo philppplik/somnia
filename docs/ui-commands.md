@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-922 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+923 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -203,6 +203,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `animation.precomp.add` | Add a composition as a layer | Insert | animation |  |
 | `animation.precomp.make` | Precompose selected layers | Edit | animation |  |
 | `animation.precomp.time` | Set comp layer speed, loop and start | Edit | animation |  |
+| `animation.precomp.unpack` | Unpack precomposition layers into this composition | Edit | animation |  |
 | `animation.precomp.volume.animate` | Toggle comp layer volume keyframes | Edit | animation |  |
 | `animation.precomp.volume.keyRemove` | Remove comp layer volume keyframe | Edit | animation |  |
 | `animation.preset.apply` | Apply entrance preset | Edit | animation |  |

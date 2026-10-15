@@ -1206,5 +1206,7 @@
  "animation.modifiers.spring": "Mola",
  "animation.modifiers.addSpring": "Adicionar mola",
  "animation.modifiers.springAmount": "Ultrapassagem %",
- "animation.modifiers.damping": "Amortecimento"
+ "animation.modifiers.damping": "Amortecimento",
+ "animation.rig.unpack": "Desfazer pre-composicao",
+ "cmd.animation.precomp.unpack": "Desfazer camadas de pre-composicao nesta composicao"
 }

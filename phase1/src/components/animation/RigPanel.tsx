@@ -20,6 +20,7 @@ const groups:{key:string;items:RigItem[]}[]=[
   {testid:'animation-rig-release',label:'animation.rig.release',cmd:'animation.rig.release',min:1}]},
  {key:'layers',items:[
   {testid:'animation-rig-duplicate',label:'animation.rig.duplicate',cmd:'animation.layers.duplicate',min:1},
+  {testid:'animation-rig-unpack',label:'animation.rig.unpack',cmd:'animation.precomp.unpack',min:1},
   {testid:'animation-rig-split',label:'animation.rig.split',cmd:'animation.layers.split',min:1},
   {testid:'animation-rig-workarea',label:'animation.rig.workarea',cmd:'animation.workarea.toLayers',min:1},
   {testid:'animation-rig-workarea-markers',label:'animation.rig.workareaMarkers',cmd:'animation.workarea.toMarkers',min:0},
