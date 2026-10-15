@@ -37,3 +37,9 @@ export function planPaste(origin:{row:number;col:number},data:string[][],maxByte
  const values=Array.from({length:rows},(_,i)=>Array.from({length:cols},(_,j)=>data[i]?.[j]??''));
  for(const row of values)for(const v of row)if(enc.encode(v).length>maxBytes)return {ok:false,reason:'tooLong'};
  return {ok:true,rect,values};}
+const sameText=(t:string)=>t.replace(/\r\n?/g,'\n').replace(/\n+$/,'');
+/** True when a paste should use the engine's own copy (formulas with adjusted references, formats): no live collaboration, a copy was made in this app, and the system clipboard still holds exactly the text that copy produced. Anything else (outside text, edited clipboard, collaboration) stays a plain text paste. */
+export function pasteFromEngineCopy(o:{collab:boolean;hasCopy:boolean;copiedText:string|null;pastedText:string}):boolean{
+ if(o.collab||!o.hasCopy||o.copiedText===null)return false;
+ const pasted=sameText(o.pastedText);return pasted!==''&&pasted===sameText(o.copiedText);
+}

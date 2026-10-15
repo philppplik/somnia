@@ -19,3 +19,15 @@ test('planPaste validates the whole block before anything is written',()=>{
  assert.deepEqual(planPaste({row:0,col:0},Array.from({length:101},()=>Array.from({length:100},()=>'1')),100),{ok:false,reason:'tooLarge'});});
 test('planPaste clips at the sheet edge instead of failing',()=>{
  const p=planPaste({row:1_048_575,col:0},[['a'],['b']],100);assert.ok(p.ok);if(p.ok){assert.equal(p.rect.r1,1_048_575);assert.deepEqual(p.values,[['a']]);}});
+import {pasteFromEngineCopy} from './clipboard';
+test('engine copy is used only for an unchanged own copy without collaboration',()=>{
+ const base={collab:false,hasCopy:true,copiedText:'1\t2\n3\t4\n',pastedText:'1\t2\n3\t4'};
+ assert.equal(pasteFromEngineCopy(base),true);
+ assert.equal(pasteFromEngineCopy({...base,pastedText:'1\r\n'.replace('1','1\t2')+'3\t4\r\n'}),true);
+ assert.equal(pasteFromEngineCopy({...base,collab:true}),false);
+ assert.equal(pasteFromEngineCopy({...base,hasCopy:false}),false);
+ assert.equal(pasteFromEngineCopy({...base,copiedText:null}),false);
+ assert.equal(pasteFromEngineCopy({...base,pastedText:'1\t2\n3\t5'}),false);
+ assert.equal(pasteFromEngineCopy({...base,pastedText:''}),false);
+ assert.equal(pasteFromEngineCopy({...base,copiedText:'',pastedText:''}),false);
+});
