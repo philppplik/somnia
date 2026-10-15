@@ -9,9 +9,8 @@ import {NativeInput} from '../ui/native-controls';
 import {useT} from '../../lib/useT';
 import {applyPhotoCrop,cancelPhotoCrop,dirtyPhoto,exportPhotoCopy,historyPhoto,openPhoto,resetPhoto,rotatePhoto,setPhotoCropping,setPhotoCropDraft,usePhotoSession,type PhotoFrame,renderPhotoBytes} from '../../lib/photos/studioSession';
 import {autoSource,clampSpot} from '../../lib/photos/healSpots';
-import {setRating} from '../../lib/photos/ratings';
-import {setFlag} from '../../lib/photos/flags';
-import {PHOTO_LABELS,setLabel} from '../../lib/photos/labels';
+import {PHOTO_LABELS} from '../../lib/photos/labels';
+import {cullBatch,cullSetRating,cullSetFlag,cullSetLabel,undoCull,redoCull} from '../../lib/photos/cullHistory';
 import {deriveSpotWhiteBalance} from '../../lib/photos/autoTone';
 import {clampGrad,MAX_GRADS,type GradFilter,clampRad,MAX_RADS,type RadFilter} from '../../lib/photos/localAdjust';
 import {MAX_BRUSH_STROKES,MAX_BRUSH_TOTAL_DABS,brushTotalDabs,type BrushStroke} from '../../lib/photos/brushStrokes';
@@ -176,6 +175,16 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
  const maybeAdvance=(active:string,targets:string[])=>{if(targets.length===1&&targets[0]===active&&panelStateStore.get<boolean>('photos.autoAdvance',false)&&nav.next)setActiveMedia(nav.next);};
  useEffect(()=>{ // arrows walk the library like the prev/next buttons, digits 0-5 rate the active photo; editable targets and modifiers keep their keys
   const onKey=(e:KeyboardEvent)=>{
+   if((e.ctrlKey||e.metaKey)&&!e.altKey&&!e.shiftKey&&(e.key==='z'||e.key==='Z')){ // culling undo; editable targets keep native text undo
+    const el=e.target as HTMLElement|null;
+    if(!(el&&el.closest('input,select,textarea,[contenteditable="true"]'))){if(undoCull())e.preventDefault();}
+    return;
+   }
+   if((e.ctrlKey||e.metaKey)&&!e.altKey&&((e.shiftKey&&(e.key==='Z'||e.key==='z'))||e.key==='y'||e.key==='Y')){ // culling redo
+    const el=e.target as HTMLElement|null;
+    if(!(el&&el.closest('input,select,textarea,[contenteditable="true"]'))){if(redoCull())e.preventDefault();}
+    return;
+   }
    if(e.metaKey||e.ctrlKey||e.altKey)return;
    const el=e.target as HTMLElement|null;
    if(el&&el.closest('input,select,textarea,[contenteditable="true"]'))return;
@@ -188,11 +197,11 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
    }
    if(e.key==='ArrowLeft'&&nav.prev){e.preventDefault();setActiveMedia(nav.prev);}
    else if(e.key==='ArrowRight'&&nav.next){e.preventDefault();setActiveMedia(nav.next);}
-   else if(/^[0-5]$/.test(e.key)){const t=cullTargets(item.name);for(const n of t)setRating(n,Number(e.key));maybeAdvance(item.name,t);}
-   else if(e.key==='p'||e.key==='P'){const t=cullTargets(item.name);for(const n of t)setFlag(n,'pick');maybeAdvance(item.name,t);}
-   else if(e.key==='x'||e.key==='X'){const t=cullTargets(item.name);for(const n of t)setFlag(n,'reject');maybeAdvance(item.name,t);}
-   else if(e.key==='u'||e.key==='U'){const t=cullTargets(item.name);for(const n of t)setFlag(n,null);maybeAdvance(item.name,t);}
-   else if(/^[6-9]$/.test(e.key)){const t=cullTargets(item.name);const l=PHOTO_LABELS[Number(e.key)-6];for(const n of t)setLabel(n,l);maybeAdvance(item.name,t);} // 6-9: red/yellow/green/blue, like Lightroom
+   else if(/^[0-5]$/.test(e.key)){const t=cullTargets(item.name);cullBatch(()=>{for(const n of t)cullSetRating(n,Number(e.key));});maybeAdvance(item.name,t);}
+   else if(e.key==='p'||e.key==='P'){const t=cullTargets(item.name);cullBatch(()=>{for(const n of t)cullSetFlag(n,'pick');});maybeAdvance(item.name,t);}
+   else if(e.key==='x'||e.key==='X'){const t=cullTargets(item.name);cullBatch(()=>{for(const n of t)cullSetFlag(n,'reject');});maybeAdvance(item.name,t);}
+   else if(e.key==='u'||e.key==='U'){const t=cullTargets(item.name);cullBatch(()=>{for(const n of t)cullSetFlag(n,null);});maybeAdvance(item.name,t);}
+   else if(/^[6-9]$/.test(e.key)){const t=cullTargets(item.name);const l=PHOTO_LABELS[Number(e.key)-6];cullBatch(()=>{for(const n of t)cullSetLabel(n,l);});maybeAdvance(item.name,t);} // 6-9: red/yellow/green/blue, like Lightroom
    else if(e.key==='o'||e.key==='O')setGuideStyle(CROP_GUIDE_STYLES[(CROP_GUIDE_STYLES.indexOf(guideStyle)+1)%CROP_GUIDE_STYLES.length]);
    else if(e.key==='z'||e.key==='Z'){if(zoom===null){setZoom(1);setPan([0,0]);}else{setZoom(null);setPan([0,0]);}} // same states as the fit/actual buttons
    else if(e.key==='\\'&&!e.repeat)setCompare(true); // hold to peek at the original, like the compare button

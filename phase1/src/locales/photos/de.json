@@ -247,5 +247,7 @@
  "photos.metadata.paste": "Metadaten einfügen",
  "photos.metadata.copied": "Metadaten von {name} kopiert",
  "photos.metadata.pasted": "Metadaten auf {count} Fotos eingefügt",
- "photos.keys.labels": "Farb-Label (Rot/Gelb/Grün/Blau)"
+ "photos.keys.labels": "Farb-Label (Rot/Gelb/Grün/Blau)",
+ "photos.keys.undoCull": "Culling-Schritt rückgängig",
+ "photos.keys.redoCull": "Culling-Schritt wiederholen"
 }

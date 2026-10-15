@@ -640,3 +640,21 @@ like with rating and flag keys. The shortcuts overlay lists the row.
 Coverage: the light/dark gallery leg labels a two-photo selection
 with 7 and a single photo with 9, checking the thumb badges
 (`test-results/ds-photos-label-keys-{light,dark}.png`).
+
+## Culling undo (P121)
+
+One undo history spans the culling metadata - rating, flag, color
+label, tags and caption - via wrapped setters in
+`src/lib/photos/cullHistory.ts`. Ctrl+Z undoes, Ctrl+Shift+Z (or
+Ctrl+Y) redoes, editable targets keep their native text undo.
+Multi-target actions (selection batch, stack cover/reject sweep,
+metadata paste) record as one step through `cullBatch`; caption
+typing coalesces within a short window. The develop-settings
+undo/redo buttons stay a separate history - deliberately not mixed.
+History is session-level and capped at 200 entries.
+
+Coverage: the light/dark gallery leg rates a photo, batch-labels a
+two-photo selection, and checks one Ctrl+Z undoes the whole batch,
+the next undoes the rating, and redo brings it back
+(`test-results/ds-photos-cull-undo-{light,dark}.png`); the library
+has unit tests for single edits, batches and coalescing.

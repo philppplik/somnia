@@ -929,6 +929,37 @@ test('photo info: the menu shows dimensions and file size read from the bytes (l
  }
 });
 
+test('cull undo: Ctrl+Z walks rating, label and caption edits, batch in one step (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
+  await page.evaluate(async()=>{ // culling metadata persists via localStorage: start clean
+   const r=await import('/src/lib/photos/ratings.ts');const l=await import('/src/lib/photos/labels.ts');
+   for(const n of['strip-1.png','strip-2.png','strip-3.png']){r.setRating(n,0);l.setLabel(n,null);}
+  });
+  await page.getByTestId('photos-filmstrip-item-strip-1.png').click();
+  await page.getByTestId('photos-filmstrip-rating-star-4').click(); // one entry: rate strip-1
+  await expect(page.getByTestId('photos-filmstrip-rating-badge-strip-1.png')).toHaveText('4');
+  await page.getByTestId('photos-filmstrip-item-strip-2.png').click();
+  await page.getByTestId('photos-filmstrip-item-strip-3.png').click({modifiers:['ControlOrMeta']}); // selection: 2+3
+  await page.keyboard.press('7'); // one batch entry: yellow on both
+  await expect(page.getByTestId('photos-filmstrip-label-strip-2.png')).toHaveAttribute('data-label','yellow');
+  await expect(page.getByTestId('photos-filmstrip-label-strip-3.png')).toHaveAttribute('data-label','yellow');
+  await page.keyboard.press('Control+z'); // one step undoes the whole batch
+  await expect(page.getByTestId('photos-filmstrip-label-strip-2.png')).toHaveCount(0);
+  await expect(page.getByTestId('photos-filmstrip-label-strip-3.png')).toHaveCount(0);
+  await expect(page.getByTestId('photos-filmstrip-rating-badge-strip-1.png')).toHaveText('4'); // the earlier edit survives
+  await page.keyboard.press('Control+z'); // second step undoes the rating
+  await expect(page.getByTestId('photos-filmstrip-rating-badge-strip-1.png')).toHaveCount(0);
+  await page.keyboard.press('Control+Shift+Z'); // redo the rating
+  await expect(page.getByTestId('photos-filmstrip-rating-badge-strip-1.png')).toHaveText('4');
+  await page.screenshot({path:`test-results/ds-photos-cull-undo-${theme}.png`,fullPage:true});
+  await page.evaluate(async()=>{const r=await import('/src/lib/photos/ratings.ts');r.setRating('strip-1.png',0);}); // cleanup between the legs
+ }
+});
+
 test('metadata clipboard: copy from the active photo, paste onto a selection (light and dark)',async({page})=>{
  for(const theme of['light','dark']){
   await page.goto('/test/design-system/?view=photos-filmstrip');

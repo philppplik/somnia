@@ -247,5 +247,7 @@
  "photos.metadata.paste": "Coller les métadonnées",
  "photos.metadata.copied": "Métadonnées copiées depuis {name}",
  "photos.metadata.pasted": "Métadonnées collées sur {count} photos",
- "photos.keys.labels": "Libellé couleur (rouge/jaune/vert/bleu)"
+ "photos.keys.labels": "Libellé couleur (rouge/jaune/vert/bleu)",
+ "photos.keys.undoCull": "Annuler la modification",
+ "photos.keys.redoCull": "Rétablir la modification"
 }

@@ -4,7 +4,8 @@ import {useT} from '../../lib/useT';
 import type {MediaItem} from '../../lib/media';
 import {ensurePhotoReady} from '../../lib/photos/batchExport';
 import {getPhotoSession} from '../../lib/photos/studioSession';
-import {setFlag,useFlags} from '../../lib/photos/flags';
+import {useFlags} from '../../lib/photos/flags';
+import {cullSetFlag} from '../../lib/photos/cullHistory';
 import {PHOTO_LABELS,useLabels} from '../../lib/photos/labels';
 import {FILMSTRIP_SORTS,type FilmstripSort} from '../../lib/photos/filmstripSort';
 import {usePanelState} from '../../store/panelStateStore';
@@ -76,8 +77,8 @@ export function PhotosSurvey({names,items,live=false,onPick,onClose}:{names:stri
      <span className="flex min-w-0 items-center gap-1 truncate text-ink-3">{labels[n]&&<span className={`photos-label-dot photos-label-${labels[n]} shrink-0`} data-testid={`photos-survey-label-${n}`} data-label={labels[n]}/>}{n}</span>
      <RatingStars name={n} prefix={`photos-survey-${n}`}/>
      <span className="flex items-center gap-0.5">
-      <Button variant="ghost" size="compact" aria-pressed={flags[n]==='pick'} aria-label={t('photos.flag.filter.pick')} title={t('photos.flag.filter.pick')} onClick={()=>setFlag(n,flags[n]==='pick'?null:'pick')} className="px-1" data-testid={`photos-survey-pick-flag-${n}`}><Flag size={12} fill={flags[n]==='pick'?'currentColor':'none'} className={flags[n]==='pick'?'text-[var(--accent)]':'text-ink-3'}/></Button>
-      <Button variant="ghost" size="compact" aria-pressed={flags[n]==='reject'} aria-label={t('photos.flag.filter.reject')} title={t('photos.flag.filter.reject')} onClick={()=>setFlag(n,flags[n]==='reject'?null:'reject')} className="px-1" data-testid={`photos-survey-reject-flag-${n}`}><Flag size={12} fill={flags[n]==='reject'?'currentColor':'none'} className={flags[n]==='reject'?'text-[var(--danger)]':'text-ink-3'}/></Button>
+      <Button variant="ghost" size="compact" aria-pressed={flags[n]==='pick'} aria-label={t('photos.flag.filter.pick')} title={t('photos.flag.filter.pick')} onClick={()=>cullSetFlag(n,flags[n]==='pick'?null:'pick')} className="px-1" data-testid={`photos-survey-pick-flag-${n}`}><Flag size={12} fill={flags[n]==='pick'?'currentColor':'none'} className={flags[n]==='pick'?'text-[var(--accent)]':'text-ink-3'}/></Button>
+      <Button variant="ghost" size="compact" aria-pressed={flags[n]==='reject'} aria-label={t('photos.flag.filter.reject')} title={t('photos.flag.filter.reject')} onClick={()=>cullSetFlag(n,flags[n]==='reject'?null:'reject')} className="px-1" data-testid={`photos-survey-reject-flag-${n}`}><Flag size={12} fill={flags[n]==='reject'?'currentColor':'none'} className={flags[n]==='reject'?'text-[var(--danger)]':'text-ink-3'}/></Button>
      </span>
     </div>
    </div>)}

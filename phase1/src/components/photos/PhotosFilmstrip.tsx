@@ -13,10 +13,11 @@ import {applyLook,BUILT_IN_PRESETS,extractLook,isNeutralLook,parseUserPresets,ty
 import {commitPhotoSettings,getPhotoSession} from '../../lib/photos/studioSession';
 import {FILMSTRIP_SORTS,type FilmstripSort} from '../../lib/photos/filmstripSort';
 import {MAX_RATING,useRatings} from '../../lib/photos/ratings';
-import {setFlag,useFlags} from '../../lib/photos/flags';
-import {PHOTO_LABELS,setLabel,useLabels,type PhotoLabel} from '../../lib/photos/labels';
-import {addTags,allTags,setTags} from '../../lib/photos/tags';
-import {setCaption,useCaption} from '../../lib/photos/captions';
+import {useFlags} from '../../lib/photos/flags';
+import {PHOTO_LABELS,useLabels,type PhotoLabel} from '../../lib/photos/labels';
+import {allTags} from '../../lib/photos/tags';
+import {useCaption} from '../../lib/photos/captions';
+import {cullBatch,cullSetFlag,cullSetLabel,cullSetTags,cullAddTags,cullSetCaption} from '../../lib/photos/cullHistory';
 import {copyMetadata,hasMetadataClip,pasteMetadata} from '../../lib/photos/metadataClipboard';
 import {groupForStrip,groupPhotos,setStackCover,ungroupStacks,useStackCovers,useStacks} from '../../lib/photos/stacks';
 import {hidePhotos,unhideAll,unhidePhotos} from '../../lib/photos/hidden';
@@ -282,7 +283,7 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
            const members=photos.map(p=>p.name).filter(n=>stacks[n]===activeStack);
            const cover=covers[activeStack]??members[0];
            if(!cover)return;
-           for(const n of members)setFlag(n,n===cover?'pick':'reject');
+           cullBatch(()=>{for(const n of members)cullSetFlag(n,n===cover?'pick':'reject');});
           }} data-testid="photos-filmstrip-stack-cull">{t('photos.stacks.cull')}</Button>}
           {selected.length>1&&<Button variant="outline" size="compact" onClick={()=>groupPhotos(selected.map(p=>p.name))} data-testid="photos-filmstrip-stack-group">{t('photos.stacks.group')}</Button>}
           {(()=>{const ids=[...new Set((selected.length>1?selected.map(p=>p.name):[active]).map(n=>stacks[n]).filter((v):v is string=>!!v))];return ids.length>0?<Button variant="outline" size="compact" onClick={()=>ungroupStacks(ids)} data-testid="photos-filmstrip-stack-ungroup">{t('photos.stacks.ungroup')}</Button>:null;})()}
@@ -323,7 +324,7 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
           <Button variant="outline" size="compact" onClick={()=>{setMenuOpen(false);setShortcuts(true);}} data-testid="photos-filmstrip-shortcuts">{t('photos.keys.title')}</Button>
           <Button variant="outline" size="compact" aria-pressed={statsOpen} onClick={()=>setStatsOpen(!statsOpen)} data-testid="photos-filmstrip-stats">{t('photos.stats')}</Button>
          </span>
-         {active&&<NativeInput value={caption} aria-label={t('photos.caption')} title={t('photos.caption')} placeholder={t('photos.caption')} onChange={e=>setCaption(active,e.currentTarget.value)} className="h-7 w-full" data-testid="photos-filmstrip-caption"/>}
+         {active&&<NativeInput value={caption} aria-label={t('photos.caption')} title={t('photos.caption')} placeholder={t('photos.caption')} onChange={e=>cullSetCaption(active,e.currentTarget.value)} className="h-7 w-full" data-testid="photos-filmstrip-caption"/>}
          {statsOpen&&<div className="grid gap-0.5 text-ink-3" data-testid="photos-filmstrip-stats-panel">
           <span data-testid="photos-filmstrip-stats-visible">{t('photos.stats.visible',{shown:photos.length,total})}</span>
           {(()=>{const dist=[5,4,3,2,1].map(r=>({r,n:all.filter(p=>(ratings[p.name]??0)===r).length})).filter(d=>d.n>0);const unrated=all.filter(p=>!(ratings[p.name]>=1)).length;
@@ -365,7 +366,7 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
   </NativeSelect>
   <NativeSelect value="" aria-label={t('photos.label.set')} title={t('photos.label.set')} onChange={e=>{
    const v=e.currentTarget.value;e.currentTarget.value='';
-   for(const n of selected.length>1?selected.map(p=>p.name):[active])setLabel(n,v==='none'?null:v as PhotoLabel); // selection first, else the active photo
+   cullBatch(()=>{for(const n of selected.length>1?selected.map(p=>p.name):[active])cullSetLabel(n,v==='none'?null:v as PhotoLabel);}); // selection first, else the active photo
   }} className="h-7 shrink-0" data-testid="photos-filmstrip-label">
    <option value="" disabled>{t('photos.label.set')}</option>
    {PHOTO_LABELS.map(l=><option key={l} value={l}>{t(`photos.label.${l}`)}</option>)}
@@ -374,7 +375,7 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
   <NativeInput type="search" value={query} aria-label={t('photos.search')} title={t('photos.search')} placeholder={t('photos.search')} onChange={e=>setQuery(e.currentTarget.value)} className="h-7 w-28 shrink-0" data-testid="photos-filmstrip-search"/>
   <NativeInput key={active} type="text" defaultValue={(tags[active]??[]).join(', ')} aria-label={t('photos.tags.label')} title={t('photos.tags.label')} placeholder={t('photos.tags.label')} className="h-7 w-36 shrink-0" data-testid="photos-filmstrip-tags"
    onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();}}
-   onBlur={e=>{const v=e.currentTarget.value.split(',');for(const n of selected.length>1?selected.map(p=>p.name):[active]){if(selected.length>1)addTags(n,v);else setTags(n,v);}}}/> {/* batch merges, a single photo replaces */}
+   onBlur={e=>{const v=e.currentTarget.value.split(',');cullBatch(()=>{for(const n of selected.length>1?selected.map(p=>p.name):[active]){if(selected.length>1)cullAddTags(n,v);else cullSetTags(n,v);}});}}/> {/* batch merges, a single photo replaces */}
   <Button variant="outline" size="compact" disabled={neutral} onClick={()=>activeSession&&setCopied(extractLook(activeSession.now))} data-testid="photos-filmstrip-copy">{t('photos.filmstrip.copy')}</Button>
   <Button variant="outline" size="compact" disabled={!copied||applying||(!active&&selected.length<2)} onClick={()=>{
    if(!copied)return;
