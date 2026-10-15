@@ -2824,6 +2824,80 @@ impl HeadlessWorkbook {
         }
     }
 
+    /// Keeps the block in the engine's own clipboard (cells with formulas and formats, not the system clipboard) for `paste_special`.
+    /// Changes nothing in the workbook and is no history entry. At most 1,000,000 cells. Returns `{"range":"A1:B3"}`.
+    pub fn clip_copy(&mut self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32) -> Result<String, String> {
+        if rows == 0 || cols == 0 || u64::from(rows) * u64::from(cols) > MAX_FILL_CELLS {
+            return Err("Select a block of at most 1,000,000 cells.".into());
+        }
+        {
+            let doc = self.session.doc().map_err(|e| e.to_string())?;
+            doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+        }
+        let range = format!("{}:{}", CellRef::new(row, col).a1(), CellRef::new(row + rows - 1, col + cols - 1).a1());
+        let done = self.session.run("edit.copy", json!({"sheet": sheet, "range": range})).map_err(|e| e.to_string());
+        let _ = self.session.take_ui_requests();
+        done?;
+        Ok(json!({"range": range}).to_string())
+    }
+
+    /// Pastes the engine clipboard (see `clip_copy`) into the block as ONE history entry. `op_json` holds `what` (all, formulas, values,
+    /// formats, allExceptBorders, columnWidths, formulasAndNumberFormats, valuesAndNumberFormats, comments, validation), and optionally
+    /// `operation` (none, add, subtract, multiply, divide: numbers combine with what is there), `skipBlanks` and `transpose` (booleans).
+    /// A destination that is a whole multiple of the copied size is tiled, otherwise the copy lands at the block's top-left cell.
+    /// Refused: nothing copied, a protected sheet or locked cell in the target, a target over 1,000,000 cells. Returns `{"range":"D1:E3"}`.
+    pub fn paste_special(&mut self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32, op_json: &str) -> Result<String, String> {
+        if rows == 0 || cols == 0 || u64::from(rows) * u64::from(cols) > MAX_FILL_CELLS {
+            return Err("Select a block of at most 1,000,000 cells.".into());
+        }
+        let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "operation must be a JSON object".to_string())?;
+        let obj = op.as_object().ok_or("operation must be a JSON object")?;
+        if obj.keys().any(|k| !matches!(k.as_str(), "what" | "operation" | "skipBlanks" | "transpose")) {
+            return Err("unknown field".into());
+        }
+        let what = obj.get("what").and_then(|v| v.as_str()).unwrap_or("all");
+        if !matches!(what, "all" | "formulas" | "values" | "formats" | "allExceptBorders" | "columnWidths" | "formulasAndNumberFormats" | "valuesAndNumberFormats" | "comments" | "validation") {
+            return Err("what has an unsupported value".into());
+        }
+        let operation = obj.get("operation").and_then(|v| v.as_str()).unwrap_or("none");
+        if !matches!(operation, "none" | "add" | "subtract" | "multiply" | "divide") || (obj.contains_key("operation") && !obj["operation"].is_string()) {
+            return Err("operation has an unsupported value".into());
+        }
+        let flag = |k: &str| -> Result<bool, String> {
+            match obj.get(k) {
+                None => Ok(false),
+                Some(serde_json::Value::Bool(b)) => Ok(*b),
+                _ => Err(format!("{k} must be true or false")),
+            }
+        };
+        let (skip, transpose) = (flag("skipBlanks")?, flag("transpose")?);
+        let (src_rows, src_cols) = {
+            let doc = self.session.doc().map_err(|e| e.to_string())?;
+            doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+            let clip = self.session.clipboard.as_ref().ok_or("Nothing was copied yet.")?;
+            if clip.wb.sheet(clip.sheet).is_none() {
+                return Err("The copied sheet no longer exists.".into());
+            }
+            (clip.range.height(), clip.range.width())
+        };
+        let (h, w) = if transpose { (src_cols, src_rows) } else { (src_rows, src_cols) };
+        let tile = (rows, cols) != (1, 1) && rows % h == 0 && cols % w == 0;
+        let (dr, dc) = if tile { (rows, cols) } else { (h, w) };
+        let dr = dr.min(gridcraft_engine::core::MAX_ROWS.saturating_sub(row));
+        let dc = dc.min(gridcraft_engine::core::MAX_COLS.saturating_sub(col));
+        if dr == 0 || dc == 0 || u64::from(dr) * u64::from(dc) > MAX_FILL_CELLS {
+            return Err("The paste target is too large.".into());
+        }
+        self.check_block(sheet, row, col, dr, dc, true)?;
+        let range = format!("{}:{}", CellRef::new(row, col).a1(), CellRef::new(row + rows - 1, col + cols - 1).a1());
+        self.session.run("sheet.activate", json!({"sheet": sheet})).map_err(|e| e.to_string())?;
+        self.session.run("selection.set", json!({"range": range})).map_err(|e| e.to_string())?;
+        let done = self.session.run("edit.pasteSpecial", json!({"what": what, "operation": operation, "skipBlanks": skip, "transpose": transpose, "sheet": sheet})).map_err(|e| e.to_string());
+        let _ = self.session.take_ui_requests();
+        done?;
+        Ok(json!({"range": format!("{}:{}", CellRef::new(row, col).a1(), CellRef::new(row + dr - 1, col + dc - 1).a1())}).to_string())
+    }
+
     /// Edits a defined name as ONE history entry. `op_json` is `{"kind":"comment","name":..,"scope":"workbook"|"sheet","text":..}` (up to
     /// 255 characters, no control characters, empty clears it; the name keeps what it refers to) or `{"kind":"constant","name":..,"scope":..,
     /// "value":number|text,"replace":bool}` (a name that stands for a number or a text, no formula; an existing name of the same scope is
@@ -5807,6 +5881,29 @@ mod tests {
             assert!(book.create_names(0, 300, 0, 3, 2, bad).is_err(), "{bad}");
         }
         assert!(book.create_names(0, 300, 0, 0, 2, r#"{"top":true}"#).is_err());
+    }
+    #[test]
+    fn paste_special_uses_the_engine_clipboard_with_bounds() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        let steps = |b: &HeadlessWorkbook| b.session.doc().unwrap().undo.len();
+        assert!(book.paste_special(0, 400, 0, 1, 1, "{}").is_err(), "nothing copied yet");
+        book.set_values(0, 400, 0, r#"[["1","2"],["3","=A401+B401"]]"#).unwrap();
+        let before = steps(&book);
+        book.clip_copy(0, 400, 0, 2, 2).unwrap();
+        assert_eq!(steps(&book), before, "copying is no history entry");
+        let done = book.paste_special(0, 410, 0, 1, 1, r#"{"what":"all"}"#).unwrap();
+        assert!(done.contains("A411:B412"), "{done}");
+        assert_eq!(steps(&book), before + 1);
+        let shown = book.range(0, 410, 0, 2, 2).unwrap();
+        assert!(shown.contains("A411"), "{shown}");
+        book.paste_special(0, 420, 0, 1, 1, r#"{"what":"values","transpose":true}"#).unwrap();
+        book.paste_special(0, 430, 0, 4, 4, r#"{"what":"formats"}"#).unwrap();
+        book.paste_special(0, 410, 0, 1, 1, r#"{"what":"values","operation":"add","skipBlanks":true}"#).unwrap();
+        for bad in [r#"{"what":"nope"}"#, r#"{"operation":"pow"}"#, r#"{"operation":3}"#, r#"{"transpose":"y"}"#, r#"{"x":1}"#, "[]"] {
+            assert!(book.paste_special(0, 440, 0, 1, 1, bad).is_err(), "{bad}");
+        }
+        assert!(book.paste_special(0, 440, 0, 0, 1, "{}").is_err());
+        assert!(book.clip_copy(0, 400, 0, 0, 2).is_err());
     }
     #[test]
     fn view_op_sets_zoom_and_gridlines_with_bounds() {

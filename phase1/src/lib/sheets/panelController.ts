@@ -4,12 +4,13 @@ import {parsePanelRange} from './panelModel';
 import {MAX_CELL_BYTES,type RangeCell} from './protocol';
 import {parseAddress,parseSpan} from './format';
 import {parseFormatOp} from './formatOps';
-import type {CfManageOp,ChartOp,SparklineOp,ProtectOp,WhatIfOp,LayoutOp,CellToolOp,DataToolOp,PivotEditOp,SavedViewOp,ObjectOp,ViewOp,PageSetupOp,ExportOp,PivotField,PivotOp,TableOp,NameOp,AnnotateOp,DedupeOp,SplitOp,ReplaceOp,ValidationOp,CfOp,FillDirection,FilterOp,SortOp,FormatOp,LineAxis,LineEditKind,LineOp,SheetOp} from './protocol';
+import type {CfManageOp,ChartOp,SparklineOp,ProtectOp,WhatIfOp,LayoutOp,CellToolOp,DataToolOp,PivotEditOp,SavedViewOp,ObjectOp,ViewOp,PageSetupOp,PasteOp,ExportOp,PivotField,PivotOp,TableOp,NameOp,AnnotateOp,DedupeOp,SplitOp,ReplaceOp,ValidationOp,CfOp,FillDirection,FilterOp,SortOp,FormatOp,LineAxis,LineEditKind,LineOp,SheetOp} from './protocol';
 import {parseEditLines,parseFreeze,parseLineCommand} from './lineOps';
 import {parseSheetOp} from './sheetOps';
 import {parseSortCommand} from './sortOps';
 import {parseAnnotateCommand,parseNoteReviewCommand,type NoteReviewOp} from './notes';
 import {parseNamesCommand} from './names';
+import {parsePasteCommand} from './pasteOps';
 import {parsePivotCommand,parseTableCommand} from './tableOps';
 import {parseProtectCommand} from './protectOps';
 import {SHAPES,SHAPE_FILLS,SHAPE_LINES} from './objectOps';
@@ -103,6 +104,7 @@ export interface SheetsPanelController {
  viewOperation(op:ViewCommand):void|Promise<void>;
  /** Changes the page setup of the active sheet (one undo step). */
  pageSetup(op:PageSetupOp):void|Promise<void>;
+ pasteSpecial(op:PasteOp):void|Promise<void>;
  /** Builds a PDF, CSV, TSV or HTML file of the active sheet, all sheets or the selection and downloads it (nothing is changed). */
  exportFile(op:ExportOp):void|Promise<void>;
  /** The column names in the first row of the selection. */
@@ -119,7 +121,7 @@ let current:SheetsPanelController|null=null;
 export const getSheetsPanelController=()=>current;
 export function registerSheetsPanelController(controller:SheetsPanelController){current=controller;return()=>{if(current===controller)current=null;};}
 const requireController=()=>{if(!current?.ready())throw Error('No workbook is ready.');return current;};
-export const SHEETS_PANEL_COMMAND_IDS=['sheets.navigate','sheets.setCell','sheets.analyzeRange','sheets.format','sheets.resize','sheets.freeze','sheets.editLines','sheets.sheet','sheets.sort','sheets.filter','sheets.fill','sheets.highlight','sheets.validation','sheets.replace','sheets.dedupe','sheets.split','sheets.annotate','sheets.names','sheets.table','sheets.pivot','sheets.pageSetup','sheets.export','sheets.view','sheets.protect','sheets.chart','sheets.sparkline','sheets.whatif','sheets.object','sheets.picture','sheets.savedView','sheets.outline','sheets.cellLayout','sheets.cellTools','sheets.insertFunction','sheets.dataTools','sheets.pivotEdit','sheets.cfManage','sheets.validationCheck','sheets.noteReview','sheets.audit','sheets.insertSymbol','sheets.review','sheets.pages','sheets.shortcuts'] as const;
+export const SHEETS_PANEL_COMMAND_IDS=['sheets.navigate','sheets.setCell','sheets.analyzeRange','sheets.format','sheets.resize','sheets.freeze','sheets.editLines','sheets.sheet','sheets.sort','sheets.filter','sheets.fill','sheets.highlight','sheets.validation','sheets.replace','sheets.dedupe','sheets.split','sheets.annotate','sheets.names','sheets.table','sheets.pivot','sheets.pageSetup','sheets.export','sheets.view','sheets.protect','sheets.chart','sheets.sparkline','sheets.whatif','sheets.object','sheets.picture','sheets.savedView','sheets.outline','sheets.cellLayout','sheets.cellTools','sheets.insertFunction','sheets.dataTools','sheets.pivotEdit','sheets.cfManage','sheets.validationCheck','sheets.noteReview','sheets.audit','sheets.insertSymbol','sheets.review','sheets.pages','sheets.shortcuts','sheets.paste'] as const;
 export function sheetsPanelCommandSpecs():CommandSpec[]{
  return [
  {id:'sheets.navigate',title:'Go to a spreadsheet cell or range',category:'View',level:'ui',allowInInput:true,
@@ -248,6 +250,9 @@ export function sheetsPanelCommandSpecs():CommandSpec[]{
  {id:'sheets.view',title:'Zoom, gridlines, headings, zeros and formulas',category:'View',level:'ui',allowInInput:true,
   params:{type:'object',properties:{zoom:{type:'integer',minimum:10,maximum:400},gridlines:{type:'boolean'},headings:{type:'boolean'},zeros:{type:'boolean'},formulas:{type:'boolean'},fit:{type:'string',enum:['selection']}},additionalProperties:false,minProperties:1,maxProperties:1},
   enabled:()=>!!current?.ready(),run:p=>requireController().viewOperation(parseViewCommand(p))},
+ {id:'sheets.paste',title:'Paste what was copied with Paste Special',category:'Edit',level:'ui',allowInInput:true,
+  params:{type:'object',properties:{what:{type:'string',enum:['all','formulas','values','formats','allExceptBorders','columnWidths','formulasAndNumberFormats','valuesAndNumberFormats']},operation:{type:'string',enum:['none','add','subtract','multiply','divide']},skipBlanks:{type:'boolean'},transpose:{type:'boolean'}},additionalProperties:false},
+  enabled:()=>!!current?.ready(),run:p=>requireController().pasteSpecial(parsePasteCommand(p))},
  {id:'sheets.pageSetup',title:'Change the page setup',category:'Edit',level:'ui',allowInInput:true,
   params:{type:'object',properties:{orientation:{type:'string',enum:['portrait','landscape']},paper:{type:'string',enum:['Letter','Legal','A4','A3','A5','Tabloid','Executive']},margins:{type:'string',enum:['normal','wide','narrow']},scale:{type:'integer',minimum:10,maximum:400},fitWidth:{type:'integer',minimum:0,maximum:20},fitHeight:{type:'integer',minimum:0,maximum:20},centerH:{type:'boolean'},centerV:{type:'boolean'},gridlines:{type:'boolean'},headings:{type:'boolean'},header:{type:'string',maxLength:100},footer:{type:'string',maxLength:100},printArea:{type:['string','null'],maxLength:40},titleRows:{type:['string','null'],maxLength:20},titleCols:{type:['string','null'],maxLength:20},addRowBreak:{type:'integer',minimum:2},addColBreak:{type:'integer',minimum:2},removeRowBreak:{type:'integer',minimum:2},removeColBreak:{type:'integer',minimum:2},clearBreaks:{type:'boolean',const:true}},additionalProperties:false},
   enabled:()=>!!current?.ready(),run:p=>requireController().pageSetup(parsePageSetupCommand(p))},

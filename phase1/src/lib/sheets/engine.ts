@@ -15,7 +15,7 @@ import {parseOutlineInfo} from './outlineOps';
 import {parseObjects,pictureDataUrl} from './objectOps';
 import {parseCharts,parseScene,parseSparklines} from './chartOps';
 import {parseExportResult,parsePageInfo} from './printOps';
-import type {InvalidCells,ValidationRuleInfo,CfManageOp,CfRuleInfo,ChartInfo,ChartOp,ChartScene,SparklineOp,SparklineScene,ProtectOp,WhatIfOp,LayoutOp,CellToolOp,DataToolOp,PivotEditOp,PivotReport,FunctionInfo,OutlineInfo,OutlineOp,SavedView,SavedViewOp,ObjectOp,ObjectsInfo,ScenarioInfo,ViewOp,ViewOpResult,PageInfo,PageSetupOp,ExportOp,ExportResult,PivotField,PivotFunc,TableOp,TablesInfo,NameInfo,NameOp,AnnotateOp,CellAnnotations,DedupeOp,SplitOp,ReplaceOp,ValidationOp,CfOp,FillDirection,SheetsEditReceipt,SheetsRangeReceipt,SheetsNativeState,FilterOp,SortOp,SheetOp,FormatOp,LineAxis,LineOp,RangeResult,SheetInfo,SheetLayout,SheetsRequest,SheetsResponse,ViewResult,WorkbookInfo} from './protocol';
+import type {InvalidCells,ValidationRuleInfo,CfManageOp,CfRuleInfo,ChartInfo,ChartOp,ChartScene,SparklineOp,SparklineScene,ProtectOp,WhatIfOp,LayoutOp,CellToolOp,DataToolOp,PivotEditOp,PivotReport,FunctionInfo,OutlineInfo,OutlineOp,SavedView,SavedViewOp,ObjectOp,ObjectsInfo,ScenarioInfo,ViewOp,ViewOpResult,PageInfo,PageSetupOp,ExportOp,ExportResult,PivotField,PivotFunc,TableOp,TablesInfo,NameInfo,NameOp,AnnotateOp,CellAnnotations,DedupeOp,SplitOp,ReplaceOp,ValidationOp,CfOp,FillDirection,SheetsEditReceipt,SheetsRangeReceipt,SheetsNativeState,FilterOp,SortOp,SheetOp,FormatOp,LineAxis,LineOp,RangeResult,SheetInfo,SheetLayout,SheetsRequest,SheetsResponse,ViewResult,WorkbookInfo,PasteOp} from './protocol';
 import {MAX_INPUT_BYTES} from './protocol';
 import {parseEditReceipt,parseNativeState,parseRangeReceipt} from './receipt';
 type Req=SheetsRequest extends infer R?R extends {id:number}?Omit<R,'id'>:never:never;
@@ -41,7 +41,7 @@ export class SheetsEngine{
  private request(message:Req,transfer:Transferable[]=[]){
   return new Promise<SheetsResponse>((resolve,reject)=>{
    if(this.disposed){reject(new Error('Spreadsheet engine closed'));return;}
-   const mutating=['open','set','setValues','clear','format','resize','editLines','freeze','sort','filter','fill','cf','validation','replace','dedupe','split','annotate','insertSymbol','defineName','deleteName','editName','createNames','pivotCreate','pivotRefresh','tableOp','pageSetup','viewOp','protectOp','whatIfOp','layoutOp','cellToolOp','dataToolOp','pivotEditOp','cfManage','outlineOp','savedViewOp','pictureOp','objectOp','chartOp','sparklineOp','setReviewed','undoReviewed','setRangeReviewed','undoRangeReviewed','editSheet','undo','redo','close'].includes(message.op);if(mutating){this.mutationEpoch++;this.mutations++;this.notifySelectionRead();}const finish=()=>{if(mutating){this.mutations--;this.mutationEpoch++;this.notifySelectionRead();}};const done=(r:SheetsResponse)=>{finish();resolve(r);},failed=(e:Error)=>{finish();reject(e);};
+   const mutating=['open','set','setValues','clear','format','resize','editLines','freeze','sort','filter','fill','cf','validation','replace','dedupe','split','annotate','insertSymbol','defineName','deleteName','editName','createNames','pasteSpecial','pivotCreate','pivotRefresh','tableOp','pageSetup','viewOp','protectOp','whatIfOp','layoutOp','cellToolOp','dataToolOp','pivotEditOp','cfManage','outlineOp','savedViewOp','pictureOp','objectOp','chartOp','sparklineOp','setReviewed','undoReviewed','setRangeReviewed','undoRangeReviewed','editSheet','undo','redo','close'].includes(message.op);if(mutating){this.mutationEpoch++;this.mutations++;this.notifySelectionRead();}const finish=()=>{if(mutating){this.mutations--;this.mutationEpoch++;this.notifySelectionRead();}};const done=(r:SheetsResponse)=>{finish();resolve(r);},failed=(e:Error)=>{finish();reject(e);};
    const id=this.nextId++;
    const timer=setTimeout(()=>this.dispose(new Error('Spreadsheet engine timed out. Unsaved edits in this workbook were discarded.')),this.timeoutMs);
    this.pending.set(id,{resolve:done,reject:failed,timer});
@@ -145,6 +145,10 @@ export class SheetsEngine{
  defineName(sheet:number,row:number,col:number,rows:number,cols:number,name:{name:string;scope:'workbook'|'sheet';replace?:boolean}){return this.result<unknown>({op:'defineName',sheet,row,col,rows,cols,name});}
  /** Names from the labels in the top row and/or left column of the block (one undo step). */
  createNames(sheet:number,row:number,col:number,rows:number,cols:number,name:{top?:boolean;left?:boolean;replace?:boolean}){return this.result<unknown>({op:'createNames',sheet,row,col,rows,cols,name});}
+ /** Keeps the block in the engine clipboard (cells, formulas, formats) for paste special. No undo step. */
+ clipCopy(sheet:number,row:number,col:number,rows:number,cols:number){return this.result<unknown>({op:'clipCopy',sheet,row,col,rows,cols});}
+ /** Pastes the engine clipboard into the block (one undo step). */
+ pasteSpecial(sheet:number,row:number,col:number,rows:number,cols:number,paste:PasteOp){return this.result<unknown>({op:'pasteSpecial',sheet,row,col,rows,cols,paste});}
  /** Sets a name's comment or turns it into a number or text constant (one undo step). */
  editName(sheet:number,name:{kind:'comment'|'constant';name:string;scope:'workbook'|'sheet';text?:string;value?:number|string;replace?:boolean}){return this.result<unknown>({op:'editName',sheet,name});}
  /** Deletes one name (one undo step). `sheet` is the sheet a sheet-scoped name belongs to. */

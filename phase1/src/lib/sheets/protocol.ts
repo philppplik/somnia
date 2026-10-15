@@ -21,6 +21,7 @@ export type PivotOp={kind:'create';rows:string;columns?:string;values:string;fun
 export interface PivotField{name:string;numeric:boolean}
 /** Page setup and file export. Every field is validated again by the Rust bridge. */
 export type PaperName='Letter'|'Legal'|'A4'|'A3'|'A5'|'Tabloid'|'Executive';
+export interface PasteOp{what:'all'|'formulas'|'values'|'formats'|'allExceptBorders'|'columnWidths'|'formulasAndNumberFormats'|'valuesAndNumberFormats';operation?:'add'|'subtract'|'multiply'|'divide';skipBlanks?:true;transpose?:true}
 export interface PageSetupOp{orientation?:'portrait'|'landscape';paper?:PaperName;margins?:'normal'|'wide'|'narrow';scale?:number;fitWidth?:number;fitHeight?:number;centerH?:boolean;centerV?:boolean;gridlines?:boolean;headings?:boolean;header?:string;footer?:string;printArea?:string|null;titleRows?:string|null;titleCols?:string|null;addRowBreak?:number;addColBreak?:number;removeRowBreak?:number;removeColBreak?:number;clearBreaks?:true}
 export interface PageInfo{orientation:'portrait'|'landscape';paper:string;margins:number[];scale:number;fitWidth:number;fitHeight:number;centerH:boolean;centerV:boolean;gridlines:boolean;headings:boolean;header:string;footer:string;printArea:string|null;titleRows:string|null;titleCols:string|null;rowBreaks:number[];colBreaks:number[]}
 /** Sheet protection: the password is write-only, the sheet only reports whether one is set. */
@@ -183,6 +184,8 @@ export type SheetsRequest=
  |{id:number;op:'deleteName';sheet:number;name:{name:string;scope:'workbook'|'sheet'}}
  |{id:number;op:'editName';sheet:number;name:{kind:'comment'|'constant';name:string;scope:'workbook'|'sheet';text?:string;value?:number|string;replace?:boolean}}
  |{id:number;op:'createNames';sheet:number;row:number;col:number;rows:number;cols:number;name:{top?:boolean;left?:boolean;replace?:boolean}}
+ |{id:number;op:'clipCopy';sheet:number;row:number;col:number;rows:number;cols:number}
+ |{id:number;op:'pasteSpecial';sheet:number;row:number;col:number;rows:number;cols:number;paste:PasteOp}
  |{id:number;op:'names'}
  |{id:number;op:'pivotFields';sheet:number;row:number;col:number;rows:number;cols:number}
  |{id:number;op:'pivotCreate';sheet:number;row:number;col:number;rows:number;cols:number;pivot:{rows:string;columns?:string;values:string;func?:PivotFunc}}

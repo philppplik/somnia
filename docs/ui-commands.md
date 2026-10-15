@@ -640,6 +640,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `sheets.outline` | Group, collapse or subtotal the selected rows or columns | Edit | sheets |  |
 | `sheets.pages` | Show where the printed pages of the sheet start and end | Edit | sheets |  |
 | `sheets.pageSetup` | Change the page setup | Edit | sheets |  |
+| `sheets.paste` | Paste what was copied with Paste Special | Edit | sheets |  |
 | `sheets.picture` | Insert a PNG or JPEG picture | Edit | sheets |  |
 | `sheets.pivot` | Build or refresh a PivotTable | Edit | sheets |  |
 | `sheets.pivotEdit` | Change the fields, values, filters or layout of a PivotTable, or refresh, re-source or delete it | Edit | sheets |  |

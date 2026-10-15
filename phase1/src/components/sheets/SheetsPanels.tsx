@@ -13,7 +13,7 @@ import {rectCells} from '../../lib/sheets/clipboard';
 import {addressOf,colName,parseAddress,parseSpan} from '../../lib/sheets/format';
 import {sortBlockProblem} from '../../lib/sheets/sortOps';
 import {fillBlockProblem,FILL_DIRECTIONS} from '../../lib/sheets/fillOps';
-import type {FillDirection,CfStyle} from '../../lib/sheets/protocol';
+import type {FillDirection,CfStyle,PasteOp} from '../../lib/sheets/protocol';
 import {PIVOT_FUNCS,tableBlockProblem} from '../../lib/sheets/tableOps';
 import {appendHeaderCode,headerProblem,HF_CODES,MAX_HEADER_CHARS,previewHeaderFooter} from '../../lib/sheets/printOps';
 import {MAX_ZOOM,MIN_ZOOM} from '../../lib/sheets/viewOps';
@@ -245,6 +245,7 @@ export function SheetsLayoutPanel({context}:PanelHostProps){
   <ReviewInfoGroup/>
   <CellInfoGroup/>
   <PageBreaksGroup/>
+  <PasteGroup/>
   <NamesGroup/>
   <ViewGroup/>
   <ChartsGroup/>
@@ -786,6 +787,29 @@ function PivotEditGroup(){
   <Button variant="outline" size="compact" disabled={action.busy||!op} onClick={()=>void action.run('sheets.pivotEdit',op)} data-testid="sheets-pe-apply">{t('sheets.pe.apply')}</Button>
   <p className="text-ink-3">{t(act==='useSelection'?'sheets.pe.sourceHint':usesField&&fieldList.length===0?'sheets.pe.noField':'sheets.pe.hint',{range:rangeAddress(r)})}</p>
   {action.notice?<p role="alert">{action.notice}</p>:null}
+ </div>;
+}
+/** Paste special from the engine's own copy (formulas and formats, filled by Ctrl+C or the copy menu), in one grouped menu. One undo step. */
+type PasteWhat=PasteOp['what'];
+const PASTE_COMBINE=['none','add','subtract','multiply','divide'] as const;
+function PasteGroup(){
+ const {t}=useT(),s=useSheetsSelection(),action=useAction();const [what,setWhat]=useState<PasteWhat>('values');const [combine,setCombine]=useState<(typeof PASTE_COMBINE)[number]>('none');const [skip,setSkip]=useState(false);const [flip,setFlip]=useState(false);
+ if(!s)return null;
+ const calc=['all','formulas','values','valuesAndNumberFormats'].includes(what),clip=s.clip??null;
+ const opt=(id:PasteWhat)=><option key={id} value={id}>{t('sheets.ps.'+id)}</option>;
+ const apply=()=>{void action.run('sheets.paste',{what,...(calc&&combine!=='none'?{operation:combine}:{}),skipBlanks:skip,transpose:flip});};
+ return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.ps.title')}>
+  <span>{t('sheets.ps.title')}</span>
+  <label className="flex flex-col gap-1">{t('sheets.ps.what')}<NativeSelect className={field} value={what} disabled={action.busy} onChange={e=>setWhat(e.currentTarget.value as PasteWhat)} data-testid="sheets-ps-what">
+   <optgroup label={t('sheets.ps.groupAll')}>{(['all','allExceptBorders'] as PasteWhat[]).map(opt)}</optgroup>
+   <optgroup label={t('sheets.ps.groupContent')}>{(['formulas','values','formulasAndNumberFormats','valuesAndNumberFormats'] as PasteWhat[]).map(opt)}</optgroup>
+   <optgroup label={t('sheets.ps.groupLook')}>{(['formats','columnWidths'] as PasteWhat[]).map(opt)}</optgroup>
+  </NativeSelect></label>
+  {calc&&<label className="flex flex-col gap-1">{t('sheets.ps.combine')}<NativeSelect className={field} value={combine} disabled={action.busy} onChange={e=>setCombine(e.currentTarget.value as (typeof PASTE_COMBINE)[number])} data-testid="sheets-ps-combine">{PASTE_COMBINE.map(c=><option key={c} value={c}>{t('sheets.ps.op.'+c)}</option>)}</NativeSelect></label>}
+  <Checkbox label={t('sheets.ps.skip')} checked={skip} disabled={action.busy} onChange={e=>setSkip(e.currentTarget.checked)}/>
+  <Checkbox label={t('sheets.ps.transpose')} checked={flip} disabled={action.busy} onChange={e=>setFlip(e.currentTarget.checked)}/>
+  <Button variant="outline" size="compact" disabled={action.busy||!clip} onClick={apply} data-testid="sheets-ps-apply">{t('sheets.ps.apply')}</Button>
+  <p className="text-ink-3">{clip?t('sheets.ps.copied',{range:clip.sheetName+'!'+clip.address}):t('sheets.ps.nothing')}</p>
  </div>;
 }
 /** Named ranges in one grouped menu: define the selection, redefine, go to or delete a name. One undo step each. */

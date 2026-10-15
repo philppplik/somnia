@@ -7610,6 +7610,14 @@
       "hasEnabled": true
     },
     {
+      "id": "sheets.paste",
+      "title": "Paste what was copied with Paste Special",
+      "category": "Edit",
+      "source": "sheets",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
       "id": "sheets.picture",
       "title": "Insert a PNG or JPEG picture",
       "category": "Edit",
