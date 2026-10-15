@@ -4048,6 +4048,22 @@
       "hasEnabled": true
     },
     {
+      "id": "code.symbols",
+      "title": "Go to file symbol...",
+      "category": "Tools",
+      "source": "core",
+      "shortcut": "Mod+Shift+o",
+      "keywords": [
+        "class",
+        "function",
+        "navigation",
+        "outline",
+        "symbol"
+      ],
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
       "id": "collab.join",
       "title": "Join shared project...",
       "category": "Tools",
@@ -12758,6 +12774,13 @@
     {
       "id": "vector.duplicateSelection",
       "title": "Duplicate selected vector paths",
+      "category": "Edit",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
+      "id": "vector.duplicateText",
+      "title": "Duplicate a text object",
       "category": "Edit",
       "source": "vector",
       "hasEnabled": true

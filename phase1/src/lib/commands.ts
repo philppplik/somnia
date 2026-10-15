@@ -1,3 +1,4 @@
+import {openCodeSymbols} from './codeSymbolsSession';
 import {openLocalRename} from './localRenameSession';
 import {goToLocalDefinition} from './localDefinitionCommand';
 import {openCodeSnippets} from './codeSnippets';
@@ -119,7 +120,7 @@ export function attachKeyboardShortcuts(target:Window=window){
   let command:Command|undefined=matches[0];
   if(!isMac()&&matchesShortcut(event,'Mod+Y'))command=list.find(c=>c.id==='edit.redo');
   const coreEditor=element instanceof HTMLElement&&element.matches('[data-core-editor]');
-  if((command?.id==='code.definition.local'||command?.id==='code.rename.local')&&input&&!coreEditor)return;
+  if((command?.id==='code.symbols'||command?.id==='code.definition.local'||command?.id==='code.rename.local')&&input&&!coreEditor)return;
   const mdEditor=coreEditor&&/\.(md|markdown)$/i.test(getState().activeFile);
   if(!command||(input&&!command.allowInInput&&command.id!=='palette.open'&&!(coreEditor&&command.id.startsWith('edit.'))&&!(mdEditor&&command.id.startsWith('view.'))))return;
   event.preventDefault();void executeCommand(command.id);
@@ -196,3 +197,5 @@ registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'code.snippets',tit
 registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'code.definition.local',title:'Go to local definition',category:'Tools',shortcut:'F12',allowInInput:true,keywords:['definition','navigation','local','symbol'],enabled:()=>getState().activeStudio==='code'&&getState().coreConnected,run:()=>{/* History: read-only local syntax navigation. No document mutation. */goToLocalDefinition();}});
 
 registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'code.rename.local',title:'Rename local symbol...',category:'Tools',shortcut:'F2',allowInInput:true,enabled:()=>getState().activeStudio==='code'&&getState().coreConnected,run:()=>{/* History: review only; accepted rename has an isolated owner transaction. */openLocalRename();}});
+
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'code.symbols',title:'Go to file symbol...',category:'Tools',shortcut:'Mod+Shift+o',allowInInput:true,keywords:['outline','symbol','function','class','navigation'],enabled:()=>getState().activeStudio==='code'&&getState().coreConnected,run:()=>{/* History: read-only syntax navigation. */openCodeSymbols();}});

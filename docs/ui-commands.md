@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1096 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1098 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -294,6 +294,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `code.preview.width` | Set preview width | View | core |  |
 | `code.rename.local` | Rename local symbol... | Tools | core | `F2` |
 | `code.snippets` | Code snippets... | Insert | core |  |
+| `code.symbols` | Go to file symbol... | Tools | core | `Mod+Shift+o` |
 | `collab.join` | Join shared project... | Tools | core |  |
 | `collab.share` | Share project... | Tools | core |  |
 | `css.open` | CSS variables and classes | View | core |  |
@@ -1055,6 +1056,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `vector.deleteText` | Delete text | Edit | vector |  |
 | `vector.distributeSelection` | Distribute vector selection | Edit | vector |  |
 | `vector.duplicateSelection` | Duplicate selected vector paths | Edit | vector |  |
+| `vector.duplicateText` | Duplicate a text object | Edit | vector |  |
 | `vector.export.open` | Vector: Export... | Project | vector |  |
 | `vector.exportPng` | Export vector PNG | Project | vector |  |
 | `vector.exportSvg` | Export vector SVG | Project | vector |  |
