@@ -158,6 +158,7 @@ export interface Studio3DController{
  editUvTransform(du:number,dv:number,rotate:number,scale:number):void;
  editBridgeFaces(twist:number):void;
  editVertSlide(edge:[number,number],factor:number):void;
+ editSnapToCursor(cursorWorld:[number,number,number],withOffset:boolean):void;
  editConvexHull():void;
  editSymmetrize(axis:MirrorAxis,side:'positive'|'negative',merge:number):void;
  editShrinkwrap(target:number,offset:number):void;
@@ -369,6 +370,7 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add('studio3d.uv.seamsFromIslands','Mark the borders of the current UV islands of the edited 3D mesh as seams','Edit',()=>need().uvSeamsFromIslands(),undefined,()=>getStudio3DState().edit!=null),
   add<{twist?:number}>('studio3d.edit.bridgeFaces','Bridge the borders of two selected face groups of the edited 3D mesh with a sewn triangle strip','Edit',p=>need().editBridgeFaces(p?.twist??0),object({twist:{type:'integer',minimum:-64,maximum:64}},[]),()=>getStudio3DState().edit!=null),
   add<{edge?:[number,number];factor?:number}>('studio3d.edit.vertSlide','Slide the selected vertex of the edited 3D mesh along an incident edge by a factor of the edge vector','Edit',p=>need().editVertSlide(p.edge,p?.factor??0.5),object({edge:{type:'array',items:{type:'integer',minimum:0},minItems:2,maxItems:2},factor:{type:'number',minimum:-1,maximum:1}},['edge']),()=>getStudio3DState().edit!=null),
+  add<{offset?:boolean}>('studio3d.edit.snapToCursor','Move the selected vertices of the edited 3D mesh onto the 3D cursor','Edit',p=>{const c=getStudio3DState().cursor;return need().editSnapToCursor([c.x,c.y,c.z],!!p?.offset);},object({offset:{type:'boolean'}},[]),()=>getStudio3DState().edit!=null),
   add('studio3d.edit.convexHull','Replace the edited 3D mesh with the convex hull of its selected vertices','Edit',()=>need().editConvexHull(),undefined,()=>getStudio3DState().edit!=null),
   add<{axis:MirrorAxis;side?:'positive'|'negative';merge?:number}>('studio3d.edit.symmetrize','Bake a mirror symmetry into the edited 3D mesh: keep one side of the local mirror plane, mirror it onto the other and weld the seam','Edit',p=>need().editSymmetrize(p.axis,p?.side??'positive',p?.merge??0.0001),object({axis:{enum:['x','y','z']},side:{enum:['positive','negative']},merge:{type:'number',minimum:0,maximum:1000}},['axis']),()=>getStudio3DState().edit!=null),
   add<{target?:number;offset?:number}>('studio3d.edit.shrinkwrap','Project the selected vertices of the edited 3D mesh onto the closest surface of another mesh','Edit',p=>need().editShrinkwrap(p.target,p?.offset??0),object({target:{type:'integer',minimum:0},offset:{type:'number',minimum:-1000000,maximum:1000000}},['target']),()=>getStudio3DState().edit!=null),

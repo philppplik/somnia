@@ -1053,5 +1053,9 @@
  "studio3d.uvtools.apply": "Transformar UVs",
  "cmd.studio3d.uv.seamsFromIslands": "Marcar as bordas das ilhas UV atuais como costuras",
  "studio3d.hist.seamsFromIslands": "Costuras das ilhas UV",
- "studio3d.uvtools.fromIslands": "Costuras de ilhas"
+ "studio3d.uvtools.fromIslands": "Costuras de ilhas",
+ "cmd.studio3d.edit.snapToCursor": "Mover os vértices selecionados para o cursor 3D",
+ "studio3d.hist.snapToCursor": "Encaixar seleção no cursor",
+ "studio3d.edit.snapToCursor": "Ao cursor",
+ "studio3d.edit.snapToCursorOffset": "Ao cursor, manter forma"
 }

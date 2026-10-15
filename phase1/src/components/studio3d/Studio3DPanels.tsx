@@ -386,6 +386,8 @@ function EditSculptFields({id}:{id:number}){
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.toSphere',{factor:sphereF})}>{t('studio3d.edit.toSphere')}</Button>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.randomize',{amount:randAmt,seed:randSeed})}>{t('studio3d.edit.randomize')}</Button>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.move',{x:moveX,y:moveY,z:moveZ})}>{t('studio3d.edit.move')}</Button>
+     <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.snapToCursor',{})}>{t('studio3d.edit.snapToCursor')}</Button>
+     <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.snapToCursor',{offset:true})}>{t('studio3d.edit.snapToCursorOffset')}</Button>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.rotate',{axis:'x',degrees:rotDeg})}>{t('studio3d.edit.rotateX')}</Button>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.rotate',{axis:'y',degrees:rotDeg})}>{t('studio3d.edit.rotateY')}</Button>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.rotate',{axis:'z',degrees:rotDeg})}>{t('studio3d.edit.rotateZ')}</Button>

@@ -1053,5 +1053,9 @@
  "studio3d.uvtools.apply": "UVs transformieren",
  "cmd.studio3d.uv.seamsFromIslands": "Die Grenzen der aktuellen UV-Inseln als Schnitte markieren",
  "studio3d.hist.seamsFromIslands": "Schnitte aus UV-Inseln",
- "studio3d.uvtools.fromIslands": "Schnitte aus Inseln"
+ "studio3d.uvtools.fromIslands": "Schnitte aus Inseln",
+ "cmd.studio3d.edit.snapToCursor": "Ausgewählte Vertices auf den 3D-Cursor ziehen",
+ "studio3d.hist.snapToCursor": "Selektion zum Cursor",
+ "studio3d.edit.snapToCursor": "Zum Cursor",
+ "studio3d.edit.snapToCursorOffset": "Zum Cursor, Form behalten"
 }

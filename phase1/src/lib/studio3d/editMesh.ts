@@ -952,6 +952,34 @@ export function moveSelected(m:MeshData,verts:number[],offset:[number,number,num
  const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
  check(out);return out;
 }
+/** Moves the selected vertices onto the target point; withOffset keeps the selection shape by landing its centroid on the target instead. Position-keyed so twins move together, masks damp the pull, UVs and masks are carried. */
+export function snapSelected(m:MeshData,verts:number[],target:[number,number,number],withOffset:boolean):MeshData{
+ check(m);
+ if(!verts.length)throw new EditError('Select vertices to snap.');
+ if(!target.every(x=>Number.isFinite(x)))throw new EditError('The snap target must be a finite point.');
+ const nv=m.positions.length/3;
+ for(const v of verts){if(!Number.isInteger(v)||v<0||v>=nv)throw new EditError(`Vertex ${v} does not exist.`);}
+ const pk=(v:number)=>`${Math.round(m.positions[v*3]*1e6)},${Math.round(m.positions[v*3+1]*1e6)},${Math.round(m.positions[v*3+2]*1e6)}`;
+ const want=new Set(verts.map(pk));
+ const damp=new Map<string,number>();
+ const sum:[number,number,number]=[0,0,0];const seen=new Set<string>();
+ for(let v=0;v<nv;v++){
+  const k=pk(v);if(!want.has(k))continue;
+  const mk=m.mask?m.mask[v]:0;
+  damp.set(k,Math.min(damp.get(k)??mk,mk));
+  if(!seen.has(k)){seen.add(k);sum[0]+=m.positions[v*3];sum[1]+=m.positions[v*3+1];sum[2]+=m.positions[v*3+2];}
+ }
+ const offset:[number,number,number]=[target[0]-sum[0]/seen.size,target[1]-sum[1]/seen.size,target[2]-sum[2]/seen.size];
+ const positions=[...m.positions];
+ for(let v=0;v<nv;v++){
+  const k=pk(v);if(!want.has(k))continue;
+  const f=1-damp.get(k)!;if(f===0)continue;
+  if(withOffset){positions[v*3]+=offset[0]*f;positions[v*3+1]+=offset[1]*f;positions[v*3+2]+=offset[2]*f;}
+  else{positions[v*3]+=(target[0]-m.positions[v*3])*f;positions[v*3+1]+=(target[1]-m.positions[v*3+1])*f;positions[v*3+2]+=(target[2]-m.positions[v*3+2])*f;}
+ }
+ const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
+ check(out);return out;
+}
 /** Slides one selected vertex along an incident edge by `factor` of the edge vector (0 = stay, 1 = the far endpoint, negative slides the other way along the edge line). The edge is matched position-keyed so twin indices work. Position-equal twins move together via moveSelected; masks and UVs are carried. */
 export function vertSlideSelected(m:MeshData,verts:number[],edge:[number,number],factor:number):MeshData{
  check(m);

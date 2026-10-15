@@ -1053,5 +1053,9 @@
  "studio3d.uvtools.apply": "Transform UVs",
  "cmd.studio3d.uv.seamsFromIslands": "Mark the borders of the current UV islands as seams",
  "studio3d.hist.seamsFromIslands": "Seams from UV islands",
- "studio3d.uvtools.fromIslands": "Seams from islands"
+ "studio3d.uvtools.fromIslands": "Seams from islands",
+ "cmd.studio3d.edit.snapToCursor": "Move the selected vertices onto the 3D cursor",
+ "studio3d.hist.snapToCursor": "Snap selection to cursor",
+ "studio3d.edit.snapToCursor": "Snap to cursor",
+ "studio3d.edit.snapToCursorOffset": "Snap to cursor, keep shape"
 }

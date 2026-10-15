@@ -9151,6 +9151,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.edit.snapToCursor",
+      "title": "Move the selected vertices onto the 3D cursor",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.edit.start",
       "title": "Edit mesh",
       "category": "Edit",
