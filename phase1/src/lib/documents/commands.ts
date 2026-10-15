@@ -114,6 +114,7 @@ export function registerDocumentsCommands(){
    const bad=coverProblem(o);if(bad)throw expected(bad);
    await insertCoverPage(o as import('./protocol').CoverOptions);
   },()=>ready()),
+  add('documents.review.accessibility','Check the document for accessibility problems',()=>{setInfoDialog('accessibility');},()=>ready()),
   add('documents.bookmarks.open','Open bookmarks',()=>{setInfoDialog('bookmarks');},()=>ready()),
   add('documents.bookmarks.add','Add a bookmark at the selection',async p=>{
    const name=(p as Record<string,unknown>|undefined)?.name;const bad=bookmarkProblem(name);if(bad||typeof name!=='string')throw expected(bad??'Invalid "name".');

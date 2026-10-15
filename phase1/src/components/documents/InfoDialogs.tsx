@@ -6,6 +6,7 @@ import {CoverDialog} from './CoverDialog';
 import {setInfoDialog,useInfoDialog} from '../../lib/documents/infoDialog';
 import {authorProblem,MAX_AUTHOR_CHARS,savedAuthor,setAuthor} from '../../lib/documents/author';
 import {insertToc,removeToc,updateToc,readListOptions,readProperties,selectedText,setListOptions,setProperties,setTabStops} from '../../lib/documents/session';
+import {AccessibilityDialog} from './AccessibilityDialog';
 import {readability,detailedStats} from '../../lib/documents/stats';
 import {useDocuments} from '../../lib/documents/store';
 import {SymbolDialog} from './SymbolDialog';
@@ -26,7 +27,7 @@ export function InfoDialogs(){
  const which=useInfoDialog();const doc=useDocuments();
  if(doc.status!=='ready'||which===null)return null;
  const close=()=>setInfoDialog(null);
- return which==='properties'?<PropertiesDialog onClose={close}/>:which==='tabs'?<TabsDialog onClose={close}/>:which==='list'?<ListOptionsDialog onClose={close}/>:which==='toc'?<TocDialog onClose={close}/>:which==='styles'?<StylesDialog onClose={close}/>:which==='symbol'?<SymbolDialog onClose={close}/>:which==='charlook'?<CharLookDialog onClose={close}/>:which==='review'?<ReviewDialog onClose={close}/>:which==='bookmarks'?<BookmarksDialog onClose={close}/>:which==='cover'?<CoverDialog onClose={close}/>:<WordCountDialog onClose={close}/>;
+ return which==='properties'?<PropertiesDialog onClose={close}/>:which==='tabs'?<TabsDialog onClose={close}/>:which==='list'?<ListOptionsDialog onClose={close}/>:which==='toc'?<TocDialog onClose={close}/>:which==='styles'?<StylesDialog onClose={close}/>:which==='symbol'?<SymbolDialog onClose={close}/>:which==='charlook'?<CharLookDialog onClose={close}/>:which==='review'?<ReviewDialog onClose={close}/>:which==='bookmarks'?<BookmarksDialog onClose={close}/>:which==='cover'?<CoverDialog onClose={close}/>:which==='accessibility'?<AccessibilityDialog onClose={close}/>:<WordCountDialog onClose={close}/>;
 }
 function PropertiesDialog({onClose}:{onClose:()=>void}){
  const {t}=useT();const [orig,setOrig]=useState<PropertiesState|null>(null);const [form,setForm]=useState<PropertiesState|null>(null);

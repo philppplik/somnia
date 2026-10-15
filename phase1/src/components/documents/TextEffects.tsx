@@ -95,6 +95,7 @@ export function TextEffects({format,held,enabled}:{format:FormatState|null;held:
    {id:'track',label:(doc.trackChanges?'\u2713 ':'')+t('documents.review.track'),enabled,run:()=>void setTrackChanges(!doc.trackChanges)},
    {id:'marks',label:(doc.showMarks?'\u2713 ':'')+t('documents.view.marks'),enabled,run:()=>void setViewMarks(!doc.showMarks,doc.showMarkup)},
    {id:'autocorrect',label:(ac?'\u2713 ':'')+t('documents.autocorrect.toggle'),enabled:true,run:()=>{if(setAutoCorrect(!ac))setAc(!ac);}},
+   {id:'a11y',label:t('documents.a11y.open'),enabled,run:()=>setInfoDialog('accessibility')},
    {id:'compare',label:t('documents.review.compare'),enabled,run:()=>void pickAndCompareText().catch(()=>undefined)},
    {id:'review',label:t('documents.review.open'),enabled,run:()=>setInfoDialog('review')}]}/>
   <ActionMenu label={t('documents.menu.document')} testId="documents-menu-document" items={[

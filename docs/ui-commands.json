@@ -5786,6 +5786,17 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.review.accessibility",
+      "title": "Check the document for accessibility problems",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.review.compareFile",
       "title": "Compare the document with a text file",
       "category": "View",
