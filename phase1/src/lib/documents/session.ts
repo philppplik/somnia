@@ -4,6 +4,7 @@ import {addUserWord,savedUserWords} from './userWords';
 import {capturePaint,paintIsEmpty,type Painted} from './formatPainter';
 import {MAX_TEXT_TABLE_ROWS,type ProofIssue,type ReviewState,type ReviewChange} from './protocol';
 import {setStyleList} from './styles';
+import {unitRange,type SelectUnit} from './selectUnit';
 import {adjacentChange} from './reviewNav';
 import {stylePatchProblem,STYLE_ID_RE,tocProblem,isListKind,listOptionsProblem,type ListStyleId} from './protocol';
 import {imageCropProblem,imageWrapProblem,type ImageWrap,type ImageAlign,tableLayoutProblem,SECTION_BREAKS,hfVariantsProblem,HF_ALIGNS,propertiesProblem,linkProblem,commentProblem,bookmarkProblem,type BookmarkItem,type CommentItem,validHfText,type HeaderFooterState,checkFormatPatch,checkParaPatch,MAX_HF_CHARS,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch,type ImageOp,type PageSetupPatch,type PageSetupState,pageSetupProblem,type TableStyle,type TableStyleScope,tableStyleProblem,MIN_COL_PT,MAX_COL_PT,imageProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGES} from './protocol';
@@ -484,6 +485,13 @@ export const deleteAtCaret=(dir:-1|1,word=false)=>run(async()=>{
  if(j===i){await joinAtEdge(c.block,t,dir);return;}
  const k=utf16ToUtf8Offset(t,j);await applyAtCaret(dir<0?{start:k,end:c.head,text:''}:{start:c.head,end:k,text:''});
 });
+/** Selects the word (with its trailing spaces), sentence or paragraph around the caret inside one editable paragraph. False when the caret is not in one. */
+export function selectUnitAtCaret(unit:SelectUnit):boolean{
+ const c=getDocumentsState().caret;if(!c||(c.anchorBlock!==undefined&&c.anchorBlock!==c.block))return false;
+ const t=blockText(c.block);if(t===null)return false;
+ const [a,b]=unitRange(t,utf8ToUtf16Offset(t,Math.min(c.head,u8(t))),unit);
+ patchDocuments({caret:{block:c.block,anchor:utf16ToUtf8Offset(t,a),head:utf16ToUtf8Offset(t,b)}});return true;
+}
 export const selectAllInParagraph=()=>{const c=getDocumentsState().caret;if(!c)return;const t=blockText(c.block);if(t!==null)patchDocuments({caret:{block:c.block,anchor:0,head:u8(t)}});};
 /** Ctrl+A: every consecutive editable paragraph around the caret (a table or object paragraph ends the run). */
 export const selectAllText=()=>{

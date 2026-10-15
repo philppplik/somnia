@@ -5297,6 +5297,39 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.select.paragraph",
+      "title": "Select the paragraph at the caret",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.select.sentence",
+      "title": "Select the sentence at the caret",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.select.word",
+      "title": "Select the word at the caret",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.selectMatch",
       "title": "Select search result",
       "category": "View",

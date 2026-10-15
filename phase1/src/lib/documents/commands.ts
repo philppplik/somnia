@@ -25,7 +25,7 @@ import {insertPageBreak,setParagraphOptions,setProperties,setTabStops} from './s
 import {parsePdfPages,checkParaPatch,PARA_FLAG_KEYS,propertiesProblem,tabsProblem} from './protocol';
 import {addComment,commentSelection,deleteComment,goToComment,readComments,replyComment,resolveComment} from './session';
 import {bookmarkProblem,commentProblem,HIGHLIGHTS,linkProblem,type HighlightName} from './protocol';
-import {addBookmark,deleteBookmark,goToComment as goToBlock0,readBookmarks,bookmarkSelection,goToAdjacentChange,setViewMarks,textToTable,setTrackChanges,resolveChange,resolveAllChanges,changeAtCaret,setCharLook,setCharSpacing,setCharScale,setLineRule,setImageWrap,setImageCrop,setProofing,setShowHidden,changeCase,addToDictionary,copyFormatting,pasteFormatting,clearFormatting,hasTextSelection,setHighlight,setLink,toggleVertAlign} from './session';
+import {selectUnitAtCaret,addBookmark,deleteBookmark,goToComment as goToBlock0,readBookmarks,bookmarkSelection,goToAdjacentChange,setViewMarks,textToTable,setTrackChanges,resolveChange,resolveAllChanges,changeAtCaret,setCharLook,setCharSpacing,setCharScale,setLineRule,setImageWrap,setImageCrop,setProofing,setShowHidden,changeCase,addToDictionary,copyFormatting,pasteFormatting,clearFormatting,hasTextSelection,setHighlight,setLink,toggleVertAlign} from './session';
 import {documentsExportReady,patchDocumentsExportUi,requestDocumentsExportFormat,requestDocumentsExportPdf,requestDocumentsSaveCopy} from './exportBridge';
 /**
  * Documents studio commands. Registered while the Documents canvas is mounted (registerDocumentsCommands),
@@ -103,6 +103,9 @@ export function registerDocumentsCommands(){
    const name=(p as Record<string,unknown>|undefined)?.name;const bad=bookmarkProblem(name);if(bad||typeof name!=='string')throw expected(bad??'Invalid "name".');
    await deleteBookmark(name);
   },()=>ready()),
+  add('documents.select.word','Select the word at the caret',()=>{if(!selectUnitAtCaret('word'))throw expected('Put the caret in an editable paragraph.');},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.select.sentence','Select the sentence at the caret',()=>{if(!selectUnitAtCaret('sentence'))throw expected('Put the caret in an editable paragraph.');},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.select.paragraph','Select the paragraph at the caret',()=>{if(!selectUnitAtCaret('paragraph'))throw expected('Put the caret in an editable paragraph.');},()=>ready()&&!!getDocumentsState().caret),
   add('documents.zoomIn','Zoom in on the document',()=>stepZoom(1)),
   add('documents.zoomOut','Zoom out of the document',()=>stepZoom(-1)),
   add('documents.zoomReset','Reset document zoom to 100%',()=>patchDocuments({zoom:1})),

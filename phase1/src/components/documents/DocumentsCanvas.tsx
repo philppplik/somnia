@@ -9,7 +9,7 @@ import '../../lib/documents/guards';
 import {getCollab,onSessionChange} from '../../lib/collab/session';
 import {peerCarets,type PeerCaret} from '../../lib/collab/office/docsPresence';
 import {CELL_BASE} from '../../lib/documents/edit';
-import {clearFormatting,copyLinkAt,toggleVertAlign,setFindOpen,setParagraphStyle,clearCaret,deleteAtCaret,dragTo,editParagraph,getEngine,moveCaret,pasteText,settleDocument,switchDocument,pointerAt,redoEdit,selectAllText,setAlign,shiftListLevel,tabInCell,stepFontSize,stepIndent,toggleFormat,selectedText,splitAtCaret,syncGeometry,typeText,undoEdit} from '../../lib/documents/session';
+import {selectUnitAtCaret,clearFormatting,copyLinkAt,toggleVertAlign,setFindOpen,setParagraphStyle,clearCaret,deleteAtCaret,dragTo,editParagraph,getEngine,moveCaret,pasteText,settleDocument,switchDocument,pointerAt,redoEdit,selectAllText,setAlign,shiftListLevel,tabInCell,stepFontSize,stepIndent,toggleFormat,selectedText,splitAtCaret,syncGeometry,typeText,undoEdit} from '../../lib/documents/session';
 import {specialChar} from '../../lib/documents/symbols';
 import {parsePdfPages,type PdfOptions} from '../../lib/documents/protocol';
 import {saveCopy,savePdf,saveFormat} from '../../lib/documents/saveCopy';
@@ -43,11 +43,11 @@ function Page({engine,index,width,height,zoom,rev,visible,onVisible}:{engine:Doc
   engine.render(index,scale).then(b=>{if(!live)return;url=URL.createObjectURL(b);setSrc(url);}).catch(()=>{if(live)setFailed(true);});
   return()=>{live=false;if(url)URL.revokeObjectURL(url);};
  },[engine,index,zoom,visible,rev]);
- const doc=useDocuments();const down=useRef(false);
+ const doc=useDocuments();const down=useRef(false);const clicks=useRef({t:0,x:0,y:0,n:0});
  const at=(e:React.PointerEvent)=>{const r=ref.current!.getBoundingClientRect();return[(e.clientX-r.left)/zoom,(e.clientY-r.top)/zoom] as const;};
  const box=doc.caretBox&&doc.caretBox.page===index?doc.caretBox:null;
  return <div ref={ref} className="documents-page relative mx-auto shrink-0 cursor-text bg-white shadow-sm ring-1 ring-black/10" style={{width:width*zoom,height:height*zoom}} data-testid="documents-page" data-page={index+1} role="img" aria-label={t('documents.page',{n:index+1})}
-  onPointerDown={e=>{if(e.button!==0)return;e.preventDefault();if((e.ctrlKey||e.metaKey)&&!e.shiftKey){const [lx,ly]=at(e);void copyLinkAt(index,lx,ly).then(hit=>{if(!hit){down.current=true;void pointerAt(index,lx,ly,false);down.current=false;}});return;}down.current=true;e.currentTarget.setPointerCapture(e.pointerId);const [x,y]=at(e);void pointerAt(index,x,y,e.shiftKey);}}
+  onPointerDown={e=>{if(e.button!==0)return;e.preventDefault();if((e.ctrlKey||e.metaKey)&&!e.shiftKey){const [lx,ly]=at(e);void copyLinkAt(index,lx,ly).then(hit=>{if(!hit){down.current=true;void pointerAt(index,lx,ly,false);down.current=false;}});return;}const [x,y]=at(e);const k=clicks.current;const n=!e.shiftKey&&e.timeStamp-k.t<500&&Math.abs(e.clientX-k.x)<5&&Math.abs(e.clientY-k.y)<5?Math.min(3,k.n+1):1;clicks.current={t:e.timeStamp,x:e.clientX,y:e.clientY,n};if(n>1){void pointerAt(index,x,y,false).then(()=>{selectUnitAtCaret(n===2?'word':'paragraph');});return;}down.current=true;e.currentTarget.setPointerCapture(e.pointerId);void pointerAt(index,x,y,e.shiftKey);}}
   onPointerMove={e=>{if(down.current&&e.buttons&1){const [x,y]=at(e);dragTo(index,x,y);}}} onPointerUp={()=>{down.current=false;}} onPointerCancel={()=>{down.current=false;}}>
   {src&&<img src={src} alt="" draggable={false} className="absolute inset-0 h-full w-full select-none"/>}
   {failed&&<span role="alert" className="absolute inset-0 grid place-items-center text-[12px] text-ink-3">{t('documents.pageFailed')}</span>}
