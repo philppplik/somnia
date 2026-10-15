@@ -671,6 +671,35 @@ export function addTextBox(bytes:Uint8Array,slideId:number,label:string):Uint8Ar
   for(const name of Object.keys(zip))if(name!==slide.part&&(!re[name]||re[name].length!==zip[name].length||re[name].some((v,i)=>v!==zip[name][i])))throw Error('Edited deck changed an unrelated part');
   return out;
 }
+export const SHAPE_PRESETS=['rect','roundRect','ellipse','triangle','rightArrow','diamond'] as const;
+export type ShapePreset=typeof SHAPE_PRESETS[number];
+const PRESET_NAMES:Record<ShapePreset,string>={rect:'Rectangle',roundRect:'Rounded Rectangle',ellipse:'Oval',triangle:'Triangle',rightArrow:'Arrow',diamond:'Diamond'};
+/** Adds one preset shape in the deck's theme style (accent fill and line from the theme, no fixed colours), below the centre of the slide.
+ *  The shape carries an empty text body like shapes made in desktop editors, so it can be moved, resized, styled and removed like a box. */
+export function addShape(bytes:Uint8Array,slideId:number,preset:ShapePreset):Uint8Array{
+  if(!(SHAPE_PRESETS as readonly string[]).includes(preset))throw Error('Shape type is not supported');
+  const model=readDeckModel(bytes),size=model.slideSize,slide=model.slides.find(s=>s.id===slideId);
+  if(!size)throw Error('Slide size is not readable');if(!slide)throw Error('Slide no longer exists');
+  if(slide.problems.length)throw Error('This slide has unsupported structure');
+  if(slide.shapes.length>=MAX_SHAPES_PER_SLIDE)throw Error(`A slide can hold at most ${MAX_SHAPES_PER_SLIDE} shapes`);
+  const id=nextShapeId(slide),line=false,nudge=Math.round(size.cx*0.02)*(slide.shapes.length%8);
+  const w=Math.round(size.cx*(line?0.3:preset==='rightArrow'?0.25:0.2)),h=line?0:Math.max(MIN_BOX_EMU,Math.round(size.cy*(preset==='rightArrow'?0.15:0.2)));
+  const x=Math.round((size.cx-w)/2)+nudge,y=Math.round(size.cy*0.5)+nudge;
+  if(x+w>size.cx||y+h>size.cy)throw Error('The shape does not fit on this slide');
+  const zip=openPackage(bytes),xml=text(zip,slide.part);
+  const style=`<p:style><a:lnRef idx="${line?1:2}"><a:schemeClr val="accent1"/></a:lnRef><a:fillRef idx="${line?0:1}"><a:schemeClr val="accent1"/></a:fillRef><a:effectRef idx="0"><a:schemeClr val="accent1"/></a:effectRef><a:fontRef idx="minor"><a:schemeClr val="${line?'tx1':'lt1'}"/></a:fontRef></p:style>`;
+  const sp=`<p:sp><p:nvSpPr><p:cNvPr id="${id}" name="${PRESET_NAMES[preset]} ${id-1}"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="${x}" y="${y}"/><a:ext cx="${w}" cy="${h}"/></a:xfrm><a:prstGeom prst="${preset}"><a:avLst/></a:prstGeom></p:spPr>${style}<p:txBody><a:bodyPr rtlCol="0" anchor="ctr"/><a:lstStyle/><a:p><a:pPr algn="ctr"/><a:endParaRPr lang="en-US"/></a:p></p:txBody></p:sp>`;
+  const tail=/(<p:extLst>(?:(?!<\/p:spTree>)[\s\S])*?<\/p:extLst>\s*)?<\/p:spTree>/.exec(xml);
+  if(!tail||xml.indexOf('</p:spTree>')!==tail.index+tail[0].length-'</p:spTree>'.length)throw Error('Slide shape tree is not in a supported form');
+  const out=repack(zip,{[slide.part]:xml.slice(0,tail.index)+sp+xml.slice(tail.index)});
+  const after=readDeckModel(out),as=after.slides.find(s=>s.id===slideId),box=as?.shapes.find(s=>s.id===id);
+  if(!as||as.problems.length||!box||box.kind!=='text'||box.parentId!==null||as.shapes.length!==slide.shapes.length+1)throw Error('Edited deck failed verification');
+  const b=box.bounds;if(!b||b.source!=='slide'||b.x!==x||b.y!==y||b.w!==w||b.h!==h)throw Error('Edited deck failed verification');
+  if(after.runs.length!==model.runs.length||after.runs.some((r,i)=>r.text!==model.runs[i].text||r.key!==model.runs[i].key))throw Error('Edited deck failed verification');
+  const re=unzipSync(out);
+  for(const name of Object.keys(zip))if(name!==slide.part&&(!re[name]||re[name].length!==zip[name].length||re[name].some((v,i)=>v!==zip[name][i])))throw Error('Edited deck changed an unrelated part');
+  return out;
+}
 /** Removes one top-level text box. Refused while an animation or connector still points at it. */
 export function removeTextBox(bytes:Uint8Array,slideId:number,shapeId:number):Uint8Array{
   const model=readDeckModel(bytes),slide=model.slides.find(s=>s.id===slideId);

@@ -46,6 +46,7 @@ export class SlidesClient {
  async paragraph(bytes:Uint8Array,slideId:number,shapeId:number,format:import('./deckPackage').ParagraphFormat){return await this.request({op:'paragraph',bytes,slideId,shapeId,format}) as Uint8Array;}
  async formatText(bytes:Uint8Array,slideId:number,shapeId:number,format:RunFormat){return await this.request({op:'formatText',bytes,slideId,shapeId,format}) as Uint8Array;}
  async addBox(bytes:Uint8Array,slideId:number,label:string){return await this.request({op:'boxEdit',kind:'add',bytes,slideId,label}) as Uint8Array;}
+ async addShape(bytes:Uint8Array,slideId:number,preset:'rect'|'roundRect'|'ellipse'|'triangle'|'rightArrow'|'diamond'){return await this.request({op:'boxEdit',kind:'shape',bytes,slideId,preset}) as Uint8Array;}
  async removeBox(bytes:Uint8Array,slideId:number,shapeId:number){return await this.request({op:'boxEdit',kind:'remove',bytes,slideId,shapeId}) as Uint8Array;}
  async insertPicture(bytes:Uint8Array,slideId:number,image:Uint8Array,alt:string){return await this.request({op:'pictureEdit',kind:'insert',bytes,slideId,image,alt}) as Uint8Array;}
  async replacePicture(bytes:Uint8Array,slideId:number,shapeId:number,image:Uint8Array){return await this.request({op:'pictureEdit',kind:'replace',bytes,slideId,shapeId,image}) as Uint8Array;}

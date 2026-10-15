@@ -3,7 +3,7 @@ import {reportError} from '../log';
 import {readDeckDocument,serializeDeck,parseDeck,editedDeckBytes,singleRunEditBytes,sameSlideEditBytes} from './deckDocument';
 import type {SlidesDiagnostics} from './diagnostics';
 import type {TextRun} from './editCopy';
-import type {LayoutInfo,DeckModel,BoundsBox,RunFormat,ShapeBoundsEdit,ArrangeMode,SlideTransition,ShapeStylePatch,TableEdit,ThemeEdit,SlideBackground,FooterEdit,SectionEdit} from './deckPackage';
+import type {ShapePreset,LayoutInfo,DeckModel,BoundsBox,RunFormat,ShapeBoundsEdit,ArrangeMode,SlideTransition,ShapeStylePatch,TableEdit,ThemeEdit,SlideBackground,FooterEdit,SectionEdit} from './deckPackage';
 import {installBeforeUnload} from '../closeFlow';
 import {useEffect,useSyncExternalStore} from 'react';
 import {SlidesClient} from './client';
@@ -208,6 +208,7 @@ export const ungroupShapeAt=(slideId:number,shapeId:number)=>route('ungroup',()=
 export const paragraphAt=(slideId:number,shapeId:number,format:import('./deckPackage').ParagraphFormat)=>route('paragraph',()=>[slideId,shapeId,format],e=>idAt(e,slideId));
 export const formatShapeAt=(slideId:number,shapeId:number,format:RunFormat)=>route('formatText',()=>[slideId,shapeId,format],e=>idAt(e,slideId));
 export const addTextBoxAt=(slideId:number,label:string)=>route('boxEdit',()=>['add',slideId,label],e=>idAt(e,slideId));
+export const addShapeAt=(slideId:number,preset:ShapePreset)=>route('boxEdit',()=>['shape',slideId,preset],e=>idAt(e,slideId));
 export const removeTextBoxAt=(slideId:number,shapeId:number)=>route('boxEdit',()=>['remove',slideId,shapeId],e=>idAt(e,slideId));
 /** Picture payloads are inline bytes: not part of the CO3 journal. */
 const picturesBlocked=()=>{const e=sessions.get(getMedia().active??'');if(e?.collab)throw Error('Picture edits are not available while the deck is shared.');};

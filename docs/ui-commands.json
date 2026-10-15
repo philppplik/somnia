@@ -8268,6 +8268,24 @@
       "hasEnabled": true
     },
     {
+      "id": "slides.addShape",
+      "title": "Insert shape",
+      "category": "Edit",
+      "source": "slides",
+      "keywords": [
+        "arrow",
+        "diamond",
+        "ellipse",
+        "insert",
+        "oval",
+        "rectangle",
+        "rounded",
+        "shape",
+        "triangle"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "slides.addTextBox",
       "title": "Add text box",
       "category": "Edit",

@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1054 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1055 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -694,6 +694,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `shell.rail.unpin` | Move rail icon to overflow | View | core |  |
 | `sidebar.toggle` | Toggle sidebar | View | core | `Mod+B` |
 | `slides.addSection` | Start section at slide | Edit | slides |  |
+| `slides.addShape` | Insert shape | Edit | slides |  |
 | `slides.addTextBox` | Add text box | Edit | slides |  |
 | `slides.alignSelection` | Align selected shapes | Edit | slides |  |
 | `slides.alignShape` | Align shape to slide | Edit | slides |  |

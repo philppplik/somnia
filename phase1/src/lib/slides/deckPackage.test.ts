@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {unzipSync,zipSync,strFromU8,strToU8} from 'fflate';
-import {formatShapeParagraphs,readParagraphFormat,replaceSkippedSlides,smallTextSlides,countTextMatches,emptySlides,textMatchesBySlide,replaceTextAll,slidesWithoutNotes,duplicateTitles,setPictureDecorative,readPictureDecorative,untitledSlides,missingAltText,MAX_ALT_REPORT,setPictureAlt,readPictureAlt,editSections,setSlideHidden,readHiddenSlides,setFirstSlideNum,readFirstSlideNum,setSlideFooter,setAllSlideFooters,readSlideFooter,setSlideSize,readSlideSize,setAllSlideBackgrounds,backgroundSummary,setSlideBackground,readSlideBackground,editLayoutBox,readLayoutBoxes,editMasterBox,readMaster,editTheme,readTheme,insertTable,editTable,readTable,setShapeStyle,readShapeStyle,setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
+import {addShape,SHAPE_PRESETS,formatShapeParagraphs,readParagraphFormat,replaceSkippedSlides,smallTextSlides,countTextMatches,emptySlides,textMatchesBySlide,replaceTextAll,slidesWithoutNotes,duplicateTitles,setPictureDecorative,readPictureDecorative,untitledSlides,missingAltText,MAX_ALT_REPORT,setPictureAlt,readPictureAlt,editSections,setSlideHidden,readHiddenSlides,setFirstSlideNum,readFirstSlideNum,setSlideFooter,setAllSlideFooters,readSlideFooter,setSlideSize,readSlideSize,setAllSlideBackgrounds,backgroundSummary,setSlideBackground,readSlideBackground,editLayoutBox,readLayoutBoxes,editMasterBox,readMaster,editTheme,readTheme,insertTable,editTable,readTable,setShapeStyle,readShapeStyle,setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
 import {readRuns,makeEditedCopy} from './editCopy';
 import {png,jpeg} from './imageFixtures';
 
@@ -1129,4 +1129,23 @@ test('formatShapeParagraphs keeps an existing pPr, its level and spacing, and or
   const src=zipSync({...z,[slide.part]:strToU8(xml)}),out=unzipSync(formatShapeParagraphs(src,slide.id,box.id,{bullet:'dot'}));
   const p=strFromU8(out[slide.part]);
   assert.match(p,/<a:pPr lvl="1" marL="342900" indent="-342900"><a:spcBef><a:spcPts val="600"\/><\/a:spcBef><a:buFont typeface="Arial"\/><a:buChar char="&#8226;"\/><a:tabLst>/);
+});
+
+test('addShape adds each preset in theme style, selectable, movable and removable, and touches only the slide part',()=>{
+  for(const preset of SHAPE_PRESETS){
+    const src=deck(2),before=readDeckModel(src).slides[0],out=addShape(src,256,preset),id=nextShapeId(before),after=readDeckModel(out).slides[0],box=after.shapes.find(s=>s.id===id)!;
+    assert.equal(after.shapes.length,before.shapes.length+1);assert.equal(box.kind,'text');assert.equal(box.runCount,0);assert.ok(box.bounds&&box.bounds.source==='slide'&&box.bounds.rot===0);
+    const xml=strFromU8(unzipSync(out)['ppt/slides/slide1.xml']);assert.ok(xml.includes(`prst="${preset}"`));assert.ok(!/srgbClr/.test(xml.slice(xml.indexOf(`id="${id}"`))));assert.ok(xml.includes('<a:schemeClr val="accent1"/>'));
+    const moved=setShapeBounds(out,256,id,{x:box.bounds!.x,y:box.bounds!.y,w:box.bounds!.w,h:box.bounds!.h},{x:box.bounds!.x+12700,y:box.bounds!.y,w:box.bounds!.w,h:box.bounds!.h});assert.ok(moved.length>0);
+    assert.deepEqual(readDeckModel(removeTextBox(out,256,id)).slides[0].shapes.map(s=>s.id),before.shapes.map(s=>s.id));
+    const a=unzipSync(src),b=unzipSync(out);for(const n of Object.keys(a))if(n!=='ppt/slides/slide1.xml')assert.deepEqual(b[n],a[n]);
+  }
+  {const o=addShape(deck(2),256,'rect'),st=readShapeStyle(o,256,nextShapeId(readDeckModel(deck(2)).slides[0]));assert.ok(st.editable);}
+});
+test('addShape refuses unknown presets, missing slides, the shape cap and keeps ids unique when repeated',()=>{
+  assert.throws(()=>addShape(deck(2),256,'star' as never),/not supported/);assert.throws(()=>addShape(deck(2),256,'__proto__' as never),/not supported/);
+  assert.throws(()=>addShape(deck(2),999,'rect'),/no longer exists/);
+  let b=deck(2);const ids=new Set<number>();for(let i=0;i<20;i++)b=addShape(b,256,SHAPE_PRESETS[i%SHAPE_PRESETS.length]);
+  for(const s of readDeckModel(b).slides[0].shapes){assert.ok(!ids.has(s.id));ids.add(s.id);}
+  const slide=readDeckModel(b).slides[0];for(const s of slide.shapes)if(s.bounds){assert.ok(s.bounds.x+s.bounds.w<=readDeckModel(b).slideSize!.cx);}
 });
