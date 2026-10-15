@@ -267,6 +267,7 @@ function UvFields({id}:{id:number}){
  const {t}=useT();const s=useStudio3D();const o=s.selectedInfo;
  const [axis,setAxis]=useState<'x'|'y'|'z'>('z');
  const [method,setMethod]=useState<'box'|'angle'>('box');const [pack,setPack]=useState(true);const [padding,setPadding]=useState(0.02);
+ const [uvDu,setUvDu]=useState(0);const [uvDv,setUvDv]=useState(0);const [uvRot,setUvRot]=useState(0);const [uvScale,setUvScale]=useState(1);
  const layout=s.uvView;
  const sig=`${id}:${layout?layout.islands.length:0}:${o?.uv?.seams??0}:${layout?layout.uv[0]:''}:${layout?layout.uv[layout.uv.length-1]:''}`;
  const polys=useMemo(()=>{
@@ -284,6 +285,13 @@ function UvFields({id}:{id:number}){
   {on&&ed.mode==='edge'&&<div className="flex flex-wrap gap-1">
    <Button variant="outline" onClick={()=>void executeCommand('studio3d.uv.seam',{mark:true})}>{t('studio3d.uvtools.mark')}</Button>
    <Button variant="outline" onClick={()=>void executeCommand('studio3d.uv.seam',{mark:false})}>{t('studio3d.uvtools.unmark')}</Button>
+  </div>}
+  {on&&<div className="flex flex-wrap items-center gap-1" data-testid="studio3d-uvtools-transform">
+   <NumField label={t('studio3d.uvtools.du')} value={uvDu} min={-10} max={10} step={0.05} onCommit={setUvDu}/>
+   <NumField label={t('studio3d.uvtools.dv')} value={uvDv} min={-10} max={10} step={0.05} onCommit={setUvDv}/>
+   <NumField label={t('studio3d.uvtools.rotate')} value={uvRot} min={-360} max={360} step={5} onCommit={setUvRot}/>
+   <NumField label={t('studio3d.uvtools.scale')} value={uvScale} min={-100} max={100} step={0.1} onCommit={setUvScale}/>
+   <Button variant="outline" onClick={()=>void executeCommand('studio3d.uv.transform',{du:uvDu,dv:uvDv,rotate:uvRot,scale:uvScale})}>{t('studio3d.uvtools.apply')}</Button>
   </div>}
   {on&&ed.mode!=='edge'&&<p className="m-0 text-xs text-ink-3">{t('studio3d.uvtools.edgeHint')}</p>}
   {!on&&<>

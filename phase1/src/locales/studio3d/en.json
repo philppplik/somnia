@@ -1043,5 +1043,12 @@
  "cmd.studio3d.sculpt.maskSmooth": "Blur the sculpt mask of a 3D mesh towards its neighbourhood",
  "studio3d.hist.smoothMask": "Smooth mask of {name}",
  "cmd.studio3d.sculpt.maskToSelection": "Select the masked vertices of the edited 3D mesh",
- "cmd.studio3d.edit.selectRing": "Extend the selected edges to their full edge rings"
+ "cmd.studio3d.edit.selectRing": "Extend the selected edges to their full edge rings",
+ "cmd.studio3d.uv.transform": "Move, rotate and scale the UVs of the selected faces",
+ "studio3d.hist.uvTransform": "Transform UVs",
+ "studio3d.uvtools.du": "Move U",
+ "studio3d.uvtools.dv": "Move V",
+ "studio3d.uvtools.rotate": "Rotate UVs",
+ "studio3d.uvtools.scale": "Scale UVs",
+ "studio3d.uvtools.apply": "Transform UVs"
 }

@@ -1043,5 +1043,12 @@
  "cmd.studio3d.sculpt.maskSmooth": "Difuminar la máscara de escultura de una malla 3D hacia su vecindad",
  "studio3d.hist.smoothMask": "Suavizar máscara de {name}",
  "cmd.studio3d.sculpt.maskToSelection": "Seleccionar los vértices enmascarados de la malla 3D editada",
- "cmd.studio3d.edit.selectRing": "Extender las aristas seleccionadas a sus anillos completos"
+ "cmd.studio3d.edit.selectRing": "Extender las aristas seleccionadas a sus anillos completos",
+ "cmd.studio3d.uv.transform": "Mover, rotar y escalar los UV de las caras seleccionadas",
+ "studio3d.hist.uvTransform": "Transformar UVs",
+ "studio3d.uvtools.du": "Mover U",
+ "studio3d.uvtools.dv": "Mover V",
+ "studio3d.uvtools.rotate": "Rotar UVs",
+ "studio3d.uvtools.scale": "Escalar UVs",
+ "studio3d.uvtools.apply": "Transformar UVs"
 }

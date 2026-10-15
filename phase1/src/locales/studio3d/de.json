@@ -1043,5 +1043,12 @@
  "cmd.studio3d.sculpt.maskSmooth": "Sculpt-Maske eines 3D-Mesh zur Nachbarschaft hin weichzeichnen",
  "studio3d.hist.smoothMask": "Maske von {name} glätten",
  "cmd.studio3d.sculpt.maskToSelection": "Maskierte Vertices des bearbeiteten 3D-Mesh auswählen",
- "cmd.studio3d.edit.selectRing": "Ausgewählte Kanten auf ihre vollständigen Kantenringe erweitern"
+ "cmd.studio3d.edit.selectRing": "Ausgewählte Kanten auf ihre vollständigen Kantenringe erweitern",
+ "cmd.studio3d.uv.transform": "UVs der ausgewählten Flächen verschieben, drehen und skalieren",
+ "studio3d.hist.uvTransform": "UVs transformieren",
+ "studio3d.uvtools.du": "U verschieben",
+ "studio3d.uvtools.dv": "V verschieben",
+ "studio3d.uvtools.rotate": "UVs drehen",
+ "studio3d.uvtools.scale": "UVs skalieren",
+ "studio3d.uvtools.apply": "UVs transformieren"
 }

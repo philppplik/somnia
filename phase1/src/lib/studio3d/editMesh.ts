@@ -544,6 +544,28 @@ export function edgeRing(m:MeshData,seeds:[number,number][]):[number,number][]{
  }
  return out;
 }
+/** Moves, rotates and scales the UVs of the selected faces around their UV centroid. Vertices shared with unselected faces move with the selection. Positions stay untouched; the bake keeps positions, index and UVs. */
+export function transformUvs(m:MeshData,sel:number[],du:number,dv:number,rotate:number,scaleU:number,scaleV:number):MeshData{
+ check(m);
+ if(!m.uvs)throw new EditError('The mesh has no UVs to transform.');
+ const nt=m.index.length/3;
+ if(!sel.length)throw new EditError('Select faces to transform their UVs.');
+ for(const f of sel)if(!Number.isInteger(f)||f<0||f>=nt)throw new EditError('A selected face does not exist.');
+ for(const n of [du,dv,rotate,scaleU,scaleV])if(!Number.isFinite(n))throw new EditError('The UV transform needs finite numbers.');
+ const verts=new Set<number>();
+ for(const f of sel){verts.add(m.index[f*3]);verts.add(m.index[f*3+1]);verts.add(m.index[f*3+2]);}
+ let cu=0,cv=0;
+ for(const v of verts){cu+=m.uvs[v*2];cv+=m.uvs[v*2+1];}
+ cu/=verts.size;cv/=verts.size;
+ const rad=rotate*Math.PI/180,c=Math.cos(rad),sn=Math.sin(rad);
+ const uvs=[...m.uvs];
+ for(const v of verts){
+  const u=(m.uvs[v*2]-cu)*scaleU,w=(m.uvs[v*2+1]-cv)*scaleV;
+  uvs[v*2]=u*c-w*sn+cu+du;
+  uvs[v*2+1]=u*sn+w*c+cv+dv;
+ }
+ return {positions:[...m.positions],index:[...m.index],uvs};
+}
 /** Bridges the border loops of two selected face groups with a sewn triangle strip (bridge edge loops). The selected faces are removed; each group's border loop keeps its original vertices and the loops are sewn with an arc-length zigzag, so unequal loop lengths work. The start vertex and direction are chosen for the shortest strip, twist shifts the start by hand; winding is unified outward across the whole result. UVs survive untouched because no vertex is created; sculpt masks are dropped (topology changes). */
 export function bridgeFacesSelected(m:MeshData,sel:number[],twist:number):MeshData{
  check(m);

@@ -1043,5 +1043,12 @@
  "cmd.studio3d.sculpt.maskSmooth": "Desfocar a máscara de escultura de uma malha 3D em direção à vizinhança",
  "studio3d.hist.smoothMask": "Suavizar máscara de {name}",
  "cmd.studio3d.sculpt.maskToSelection": "Selecionar os vértices mascarados da malha 3D editada",
- "cmd.studio3d.edit.selectRing": "Estender as arestas selecionadas para seus anéis completos"
+ "cmd.studio3d.edit.selectRing": "Estender as arestas selecionadas para seus anéis completos",
+ "cmd.studio3d.uv.transform": "Mover, girar e escalar os UVs das faces selecionadas",
+ "studio3d.hist.uvTransform": "Transformar UVs",
+ "studio3d.uvtools.du": "Mover U",
+ "studio3d.uvtools.dv": "Mover V",
+ "studio3d.uvtools.rotate": "Girar UVs",
+ "studio3d.uvtools.scale": "Escalar UVs",
+ "studio3d.uvtools.apply": "Transformar UVs"
 }

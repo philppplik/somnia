@@ -1043,5 +1043,12 @@
  "cmd.studio3d.sculpt.maskSmooth": "Flouter le masque de sculpture d'un maillage 3D vers son voisinage",
  "studio3d.hist.smoothMask": "Lisser le masque de {name}",
  "cmd.studio3d.sculpt.maskToSelection": "Sélectionner les sommets masqués du maillage 3D édité",
- "cmd.studio3d.edit.selectRing": "Étendre les arêtes sélectionnées à leurs anneaux complets"
+ "cmd.studio3d.edit.selectRing": "Étendre les arêtes sélectionnées à leurs anneaux complets",
+ "cmd.studio3d.uv.transform": "Déplacer, pivoter et mettre à l’échelle les UV des faces sélectionnées",
+ "studio3d.hist.uvTransform": "Transformer les UV",
+ "studio3d.uvtools.du": "Déplacer U",
+ "studio3d.uvtools.dv": "Déplacer V",
+ "studio3d.uvtools.rotate": "Pivoter les UV",
+ "studio3d.uvtools.scale": "Échelle des UV",
+ "studio3d.uvtools.apply": "Transformer les UV"
 }

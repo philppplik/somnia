@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-970 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+971 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -905,6 +905,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `studio3d.uv.planar` | Planar UV projection | Edit | studio3d |  |
 | `studio3d.uv.preview` | UV checker preview | View | studio3d |  |
 | `studio3d.uv.seam` | Mark UV seam | Edit | studio3d |  |
+| `studio3d.uv.transform` | Move, rotate and scale the UVs of the selected faces | Edit | studio3d |  |
 | `studio3d.uv.unwrap` | Unwrap UVs | Edit | studio3d |  |
 | `studio3d.view.ao` | Switch the ambient occlusion preview on or off (viewport only) | View | studio3d |  |
 | `studio3d.view.apply` | Look at the scene from a saved named view | View | studio3d |  |
