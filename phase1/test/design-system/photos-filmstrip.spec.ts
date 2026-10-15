@@ -909,6 +909,28 @@ test('photo info: the menu shows dimensions and file size read from the bytes (l
  }
 });
 
+test('caption: per-photo text persists and the search matches it (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await page.getByTestId('photos-filmstrip-menu').click();
+  await page.getByTestId('photos-filmstrip-caption').fill('Golden hour at the lake');
+  await page.screenshot({path:`test-results/ds-photos-caption-${theme}.png`,fullPage:true});
+  await page.keyboard.press('Escape');
+  await page.getByTestId('photos-filmstrip-search').fill('golden hour');
+  await expect(page.getByTestId('photos-filmstrip-item-strip-1.png')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-2.png')).toHaveCount(0);
+  await page.getByTestId('photos-filmstrip-search').fill('');
+  if(theme==='dark'){ // cleanup once, after both legs
+   await page.getByTestId('photos-filmstrip-menu').click();
+   await page.getByTestId('photos-filmstrip-caption').fill('');
+   await page.keyboard.press('Escape');
+   await expect(page.getByTestId('photos-filmstrip-item-strip-2.png')).toBeVisible();
+  }
+ }
+});
+
 test('slideshow: autoplay advances through the filtered view on the chosen tempo (light and dark)',async({page})=>{
  for(const theme of['light','dark']){
   await page.goto('/test/design-system/?view=photos-filmstrip');

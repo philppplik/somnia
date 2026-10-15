@@ -16,6 +16,7 @@ import {MAX_RATING,useRatings} from '../../lib/photos/ratings';
 import {setFlag,useFlags} from '../../lib/photos/flags';
 import {PHOTO_LABELS,setLabel,useLabels,type PhotoLabel} from '../../lib/photos/labels';
 import {addTags,allTags,setTags} from '../../lib/photos/tags';
+import {setCaption,useCaption} from '../../lib/photos/captions';
 import {groupForStrip,groupPhotos,setStackCover,ungroupStacks,useStackCovers,useStacks} from '../../lib/photos/stacks';
 import {hidePhotos,unhideAll,unhidePhotos} from '../../lib/photos/hidden';
 import {nextCopyName} from '../../lib/photos/virtualCopy';
@@ -78,6 +79,7 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
  useEffect(()=>{strip.current?.querySelector('[aria-pressed="true"]')?.scrollIntoView({block:'nearest',inline:'nearest'});},[active]);
  const selected=photos.filter(p=>sel.includes(p.name));
  const activeSession=active?getPhotoSession(active):null;
+ const caption=useCaption(active);
  const snapNames=useSnapshots(active);
  const [collection,setCollection]=usePanelState<string>('photos.collection','');
  const [reference,setReference]=usePanelState<string>('photos.reference',''); // compare view: the photo the active one is measured against
@@ -315,6 +317,7 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
           <Button variant="outline" size="compact" onClick={()=>{setMenuOpen(false);setShortcuts(true);}} data-testid="photos-filmstrip-shortcuts">{t('photos.keys.title')}</Button>
           <Button variant="outline" size="compact" aria-pressed={statsOpen} onClick={()=>setStatsOpen(!statsOpen)} data-testid="photos-filmstrip-stats">{t('photos.stats')}</Button>
          </span>
+         {active&&<NativeInput value={caption} aria-label={t('photos.caption')} title={t('photos.caption')} placeholder={t('photos.caption')} onChange={e=>setCaption(active,e.currentTarget.value)} className="h-7 w-full" data-testid="photos-filmstrip-caption"/>}
          {statsOpen&&<div className="grid gap-0.5 text-ink-3" data-testid="photos-filmstrip-stats-panel">
           <span data-testid="photos-filmstrip-stats-visible">{t('photos.stats.visible',{shown:photos.length,total})}</span>
           {(()=>{const dist=[5,4,3,2,1].map(r=>({r,n:all.filter(p=>(ratings[p.name]??0)===r).length})).filter(d=>d.n>0);const unrated=all.filter(p=>!(ratings[p.name]>=1)).length;

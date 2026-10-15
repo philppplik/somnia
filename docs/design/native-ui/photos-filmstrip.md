@@ -602,3 +602,16 @@ Coverage: the light/dark gallery leg checks all five headers are
 expanded, collapses and re-expands View around the split toggle
 (`test-results/ds-photos-menu-groups-{light,dark}.png`); the whole
 existing filmstrip suite runs unchanged against the regrouped menu.
+
+## Captions (P118)
+
+Each photo gets a free-text caption, edited in the Info group of the
+strip menu and persisted locally (`src/lib/photos/captions.ts`,
+keyed by media name - the shared media model stays untouched).
+Clearing the field removes the entry; text is capped at 500 chars.
+The library search matches captions in addition to names and tags,
+so the strip and the live grid both narrow via `useVisiblePhotos`.
+
+Coverage: the light/dark gallery leg types a caption on the active
+photo, finds the photo back through the search, and clears it again
+(`test-results/ds-photos-caption-{light,dark}.png`).

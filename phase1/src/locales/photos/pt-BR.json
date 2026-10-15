@@ -241,5 +241,6 @@
  "photos.menu.groupView": "Visualizacao",
  "photos.menu.groupEdit": "Edicao",
  "photos.menu.groupCollections": "Colecoes",
- "photos.menu.groupInfo": "Info"
+ "photos.menu.groupInfo": "Info",
+ "photos.caption": "Legenda"
 }

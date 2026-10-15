@@ -241,5 +241,6 @@
  "photos.menu.groupView": "Affichage",
  "photos.menu.groupEdit": "Edition",
  "photos.menu.groupCollections": "Collections",
- "photos.menu.groupInfo": "Infos"
+ "photos.menu.groupInfo": "Infos",
+ "photos.caption": "Légende"
 }

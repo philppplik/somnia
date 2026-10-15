@@ -241,5 +241,6 @@
  "photos.menu.groupView": "Ansicht",
  "photos.menu.groupEdit": "Bearbeiten",
  "photos.menu.groupCollections": "Sammlungen",
- "photos.menu.groupInfo": "Info"
+ "photos.menu.groupInfo": "Info",
+ "photos.caption": "Bildunterschrift"
 }

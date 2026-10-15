@@ -241,5 +241,6 @@
  "photos.menu.groupView": "Vista",
  "photos.menu.groupEdit": "Edicion",
  "photos.menu.groupCollections": "Colecciones",
- "photos.menu.groupInfo": "Info"
+ "photos.menu.groupInfo": "Info",
+ "photos.caption": "Leyenda"
 }

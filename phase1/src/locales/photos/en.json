@@ -241,5 +241,6 @@
  "photos.menu.groupView": "View",
  "photos.menu.groupEdit": "Edit",
  "photos.menu.groupCollections": "Collections",
- "photos.menu.groupInfo": "Info"
+ "photos.menu.groupInfo": "Info",
+ "photos.caption": "Caption"
 }
