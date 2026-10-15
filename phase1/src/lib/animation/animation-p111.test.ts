@@ -1193,3 +1193,20 @@ test('P230 squash and stretch: factors keep volume, keys follow speed, base scal
  assert.throws(()=>run({layers:['b'],amount:0}),/amount/);assert.throws(()=>run({layers:['b'],step:0}),/key step/);
  s.dispatch({type:'layer.update',layer:'b',locked:true});assert.throws(()=>run({layers:['b']}),/locked/);
 });
+test('P231 comp resize with content: fit/fill/center maths, keyed and static layers, children follow, one undo step, errors',async()=>{
+ const {compResizeSpecs,resizeScale}=await import('./compResizeCommands');const {evaluate}=await import('./interpolate');
+ assert.equal(resizeScale(800,450,1080,1080,'fit'),1.35);assert.equal(resizeScale(800,450,1080,1080,'fill'),2.4);assert.equal(resizeScale(800,450,1080,1080,'center'),1);
+ const run=(p?:unknown)=>compResizeSpecs()[0].run(p) as {layers:number;scale:number};
+ const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'shape',id:'b'});s.dispatch({type:'layer.add',kind:'shape',id:'c'});
+ const C=()=>findComp(s.document!),L=(id:string)=>C().layers.find(l=>l.id===id)!;
+ const W=C().width,H=C().height;
+ s.dispatch({type:'prop.set',layer:'b',prop:'position',value:[W/2+100,H/2],t:0});s.dispatch({type:'prop.set',layer:'b',prop:'scale',value:[100,100],t:0});
+ s.dispatch({type:'layer.parent',layer:'c',parent:'b'} as never);
+ const before=s.document;
+ const r=run({width:W*2,height:H*2,mode:'fit'});assert.equal(r.scale,200);
+ assert.equal(C().width,W*2);assert.deepEqual(evaluate(L('b').transform.position,0),[W+200,H]);assert.deepEqual(evaluate(L('b').transform.scale,0),[200,200]);
+ s.undo();assert.equal(s.document,before);
+ run({width:W+100,height:H,mode:'center'});assert.deepEqual(evaluate(L('b').transform.position,0),[W/2+100+50,H/2]);assert.deepEqual(evaluate(L('b').transform.scale,0),[100,100]);
+ assert.throws(()=>run({width:W+100,height:H,mode:'center'}),/already/);assert.throws(()=>run({width:0,height:5,mode:'fit'}),/whole pixels/);assert.throws(()=>run({width:5,height:5,mode:'x'}),/mode/);
+ s.dispatch({type:'layer.update',layer:'b',locked:true});assert.throws(()=>run({width:10,height:10,mode:'fit'}),/Unlock/);
+});

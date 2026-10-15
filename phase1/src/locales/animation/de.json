@@ -1136,5 +1136,13 @@
  "animation.rig.squash.light": "Leicht",
  "animation.rig.squash.medium": "Mittel",
  "animation.rig.squash.strong": "Stark",
- "cmd.animation.layers.squash": "Die gewaehlten Ebenen je nach Bewegung stauchen und strecken"
+ "cmd.animation.layers.squash": "Die gewaehlten Ebenen je nach Bewegung stauchen und strecken",
+ "animation.comp.resizeMode": "Bei Groessenaenderung",
+ "animation.comp.resize.keep": "Ebenen nicht veraendern",
+ "animation.comp.resize.fit": "Inhalt einpassen (sichtbar skalieren)",
+ "animation.comp.resize.fill": "Inhalt fuellen (bildfuellend skalieren)",
+ "animation.comp.resize.center": "Inhalt zentrieren (Groesse behalten)",
+ "cmd.animation.comp.resize": "Kompositionsgroesse aendern und die Ebenen mitnehmen",
+ "animation.comp.sizePreset": "Groessenvorlage",
+ "animation.comp.sizePick": "Groesse waehlen..."
 }

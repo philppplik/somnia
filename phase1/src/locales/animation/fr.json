@@ -1136,5 +1136,13 @@
  "animation.rig.squash.light": "Leger",
  "animation.rig.squash.medium": "Moyen",
  "animation.rig.squash.strong": "Fort",
- "cmd.animation.layers.squash": "Ecraser et etirer les calques selectionnes selon leur mouvement"
+ "cmd.animation.layers.squash": "Ecraser et etirer les calques selectionnes selon leur mouvement",
+ "animation.comp.resizeMode": "Quand la taille change",
+ "animation.comp.resize.keep": "Laisser les calques en place",
+ "animation.comp.resize.fit": "Ajuster le contenu (reduire pour tout voir)",
+ "animation.comp.resize.fill": "Remplir avec le contenu (agrandir pour couvrir)",
+ "animation.comp.resize.center": "Centrer le contenu (garder la taille)",
+ "cmd.animation.comp.resize": "Changer la taille de la composition et deplacer les calques avec elle",
+ "animation.comp.sizePreset": "Taille predefinie",
+ "animation.comp.sizePick": "Choisir une taille..."
 }

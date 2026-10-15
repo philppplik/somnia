@@ -72,3 +72,4 @@ Back to [Studios](../studios.md).
 - Rig > Layers > Close loop: every animated property of the selected layers gets a key on the last work-area frame with its value at the work-area start, so GIF, APNG and video loops have no jump.
 - Colours (left panel): the solid colours the composition uses, with how many layers use each. Pick a new colour in a swatch to replace it in every layer's fill and stroke (one undo step, locked layers keep theirs).
 - Rig > Appearance > Squash and stretch (light, medium, strong): scale keys that stretch a layer along its fastest axis and squash the other, from the speed of its position; a bouncing ball gets cartoon timing in one click.
+- Composition settings: pick a size preset (1920x1080, 1080x1080, 1080x1920 and more) and choose what happens to the layers: keep, fit (scale to stay visible), fill (scale to cover) or centre (keep size). The top-level layers move and scale in one undo step; children follow their parents.

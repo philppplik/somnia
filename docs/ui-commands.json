@@ -206,6 +206,29 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.comp.resize",
+      "title": "Change the composition size and move the layers with it",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "aspect",
+        "composition",
+        "content",
+        "fill",
+        "fit",
+        "height",
+        "resize",
+        "scale",
+        "size",
+        "social",
+        "square",
+        "vertical",
+        "width"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.comp.select",
       "title": "Switch composition",
       "category": "View",

@@ -1136,5 +1136,13 @@
  "animation.rig.squash.light": "Light",
  "animation.rig.squash.medium": "Medium",
  "animation.rig.squash.strong": "Strong",
- "cmd.animation.layers.squash": "Squash and stretch the selected layers from their motion"
+ "cmd.animation.layers.squash": "Squash and stretch the selected layers from their motion",
+ "animation.comp.resizeMode": "When the size changes",
+ "animation.comp.resize.keep": "Keep layers where they are",
+ "animation.comp.resize.fit": "Fit content (scale to stay visible)",
+ "animation.comp.resize.fill": "Fill content (scale to cover)",
+ "animation.comp.resize.center": "Centre content (keep size)",
+ "cmd.animation.comp.resize": "Change the composition size and move the layers with it",
+ "animation.comp.sizePreset": "Size preset",
+ "animation.comp.sizePick": "Pick a size..."
 }

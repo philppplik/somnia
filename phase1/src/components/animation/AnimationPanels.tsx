@@ -237,13 +237,17 @@ export function PropertiesSection(_:InspectorSectionProps){
  </div>;
 }
 export function CompositionSection(_:InspectorSectionProps){
- const {t}=useT();const s=useAnimationState();const comp=s.doc&&findComp(s.doc);if(!comp)return null;
+ const {t}=useT();const [rmode,setRmode]=useState<'keep'|'fit'|'fill'|'center'>('keep');const s=useAnimationState();const comp=s.doc&&findComp(s.doc);if(!comp)return null;
  const fpsVal=comp.fps.num/comp.fps.den;
+ const sizePreset=(v:string)=>{const [w,h]=v.split('x').map(Number);if(w&&h)rmode==='keep'?run('animation.comp.update',{width:w,height:h}):run('animation.comp.resize',{width:w,height:h,mode:rmode});};
+ const resizeTo=(w:number,h:number)=>rmode==='keep'?run('animation.comp.update',w!==comp.width?{width:w}:{height:h}):run('animation.comp.resize',{width:w,height:h,mode:rmode});
  return <div className="grid gap-2 p-3 text-xs" data-testid="animation-composition-settings">
   <label className="grid gap-1 text-ink-3">{t('animation.comp.name')}<NativeInput className={field} defaultValue={comp.name} key={comp.id+comp.name} onBlur={e=>{const v=e.currentTarget.value.trim();if(v&&v!==comp.name)run('animation.comp.update',{name:v});}}/></label>
   <div className="grid grid-cols-2 gap-2">
-   <NumberField resetKey={comp.id} label={t('animation.comp.width')} value={comp.width} onCommit={n=>run('animation.comp.update',{width:Math.round(n)})}/>
-   <NumberField resetKey={comp.id} label={t('animation.comp.height')} value={comp.height} onCommit={n=>run('animation.comp.update',{height:Math.round(n)})}/>
+   <NumberField resetKey={comp.id} label={t('animation.comp.width')} value={comp.width} onCommit={n=>resizeTo(Math.round(n),comp.height)}/>
+   <NumberField resetKey={comp.id} label={t('animation.comp.height')} value={comp.height} onCommit={n=>resizeTo(comp.width,Math.round(n))}/>
+   <label className="col-span-2 grid gap-1 text-ink-3">{t('animation.comp.sizePreset')}<NativeSelect className={field} value="" onChange={e=>sizePreset(e.target.value)} data-testid="animation-comp-size-preset"><option value="">{t('animation.comp.sizePick')}</option>{['1920x1080','1280x720','1080x1080','1080x1920','1080x1350','3840x2160'].map(v=><option key={v} value={v}>{v.replace('x',' x ')}</option>)}</NativeSelect></label>
+   <label className="col-span-2 grid gap-1 text-ink-3">{t('animation.comp.resizeMode')}<NativeSelect className={field} value={rmode} onChange={e=>setRmode(e.target.value as 'keep'|'fit'|'fill'|'center')} data-testid="animation-comp-resize-mode"><option value="keep">{t('animation.comp.resize.keep')}</option><option value="fit">{t('animation.comp.resize.fit')}</option><option value="fill">{t('animation.comp.resize.fill')}</option><option value="center">{t('animation.comp.resize.center')}</option></NativeSelect></label>
    <NumberField resetKey={comp.id} label={t('animation.comp.fps')} value={fpsVal} disabled={comp.fps.den!==1} onCommit={n=>run('animation.comp.update',{fps:Math.round(n)})}/>
    <NumberField resetKey={comp.id} label={t('animation.comp.duration')} step={0.5} value={ticksToSeconds(comp.duration)} onCommit={n=>run('animation.comp.update',{seconds:n})}/>
   </div>

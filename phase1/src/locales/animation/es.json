@@ -1136,5 +1136,13 @@
  "animation.rig.squash.light": "Suave",
  "animation.rig.squash.medium": "Medio",
  "animation.rig.squash.strong": "Fuerte",
- "cmd.animation.layers.squash": "Aplastar y estirar las capas seleccionadas segun su movimiento"
+ "cmd.animation.layers.squash": "Aplastar y estirar las capas seleccionadas segun su movimiento",
+ "animation.comp.resizeMode": "Al cambiar el tamano",
+ "animation.comp.resize.keep": "Dejar las capas donde estan",
+ "animation.comp.resize.fit": "Ajustar contenido (escalar para que quepa)",
+ "animation.comp.resize.fill": "Rellenar contenido (escalar para cubrir)",
+ "animation.comp.resize.center": "Centrar contenido (mantener tamano)",
+ "cmd.animation.comp.resize": "Cambiar el tamano de la composicion y mover las capas con el",
+ "animation.comp.sizePreset": "Tamano predefinido",
+ "animation.comp.sizePick": "Elegir un tamano..."
 }
