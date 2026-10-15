@@ -1137,6 +1137,7 @@ export async function copyLinkAt(page:number,x:number,y:number):Promise<boolean>
   const hit=await e.hit(page,x,y);check();if(!hit||hit.block===null||!hit.editable||hit.off===undefined)return false;
   const st=await e.formatState({block:hit.block,off:hit.off},{block:hit.block,off:hit.off});check();
   const url=st.link;if(!url||linkProblem(url)!==null)return false;
+  if(url.startsWith('#')){const b=(await e.bookmarksState()).find(x=>x.name===url.slice(1));check();return b?await goToComment(b.block):false;}
   await navigator.clipboard.writeText(url);check();patchDocuments({notice:'linkCopied'});return true;
  }catch{return false;}
 }

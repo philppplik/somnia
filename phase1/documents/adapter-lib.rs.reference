@@ -716,8 +716,13 @@ impl DocSession {
             _ => "other",
         }
     }
-    /// A hyperlink target: http, https or mailto, up to 2048 characters, no spaces or control characters.
+    /// A hyperlink target: http, https or mailto, up to 2048 characters, no spaces or control characters, or `#name` for a bookmark
+    /// (a letter or underscore, then letters, digits or underscores, at most 40 characters; the bookmark need not exist yet).
     fn link_ok(l: &str) -> Result<String, String> {
+        if let Some(name) = l.strip_prefix('#') {
+            let ok = name.chars().next().is_some_and(|c| c.is_ascii_alphabetic() || c == '_') && name.chars().count() <= BOOKMARK_MAX_NAME && name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_');
+            return if ok { Ok(l.to_string()) } else { Err(format!("a link to a bookmark is # and its name: a letter first, then letters, digits or underscores, at most {BOOKMARK_MAX_NAME}")) };
+        }
         let low = l.to_ascii_lowercase();
         let rest = ["https://", "http://", "mailto:"].iter().find(|p| low.starts_with(*p)).map(|p| &l[p.len()..]);
         if l.chars().count() > LINK_MAX_CHARS || l.chars().any(|c| c.is_control() || c.is_whitespace()) || rest.is_none_or(|r| r.is_empty()) {
@@ -5906,6 +5911,10 @@ mod tests {
             r#"{"link":"http://"}"#,
             r#"{"link":"https://a b.com"}"#,
             r#"{"link":"ftp://x.org"}"#,
+            r##"{"link":"#"}"##,
+            r##"{"link":"#1a"}"##,
+            r##"{"link":"#a b"}"##,
+            r##"{"link":"#a-b"}"##,
             r#"{"link":5}"#,
             r#"{"highlight":"purple"}"#,
             r#"{"vertAlign":"up"}"#,
@@ -5938,6 +5947,21 @@ mod tests {
         s.restore(snap).unwrap();
         let w: serde_json::Value = serde_json::from_str(&s.do_properties()).unwrap();
         assert_ne!(w["title"], "Quarterly report");
+    }
+    #[test]
+    fn link_to_a_bookmark_roundtrips_through_docx() {
+        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
+        s.do_add_bookmark(1, 0, 0, "Target").unwrap();
+        s.do_format(0, 0, 0, 3, r##"{"link":"#Target"}"##).unwrap();
+        let st: serde_json::Value = serde_json::from_str(&s.do_format_state(0, 0, 0, 1).unwrap()).unwrap();
+        assert_eq!(st["link"], "#Target");
+        let saved = wordcraft_docx::write(&s.doc).unwrap();
+        let re = DocSession::from_bytes(&saved).unwrap();
+        let st: serde_json::Value = serde_json::from_str(&re.do_format_state(0, 0, 0, 1).unwrap()).unwrap();
+        assert_eq!(st["link"], "#Target");
+        assert!(serde_json::from_str::<serde_json::Value>(&re.do_bookmarks()).unwrap().as_array().unwrap().iter().any(|b| b["name"] == "Target"));
+        // A link can be removed again.
+        s.do_format(0, 0, 0, 3, r#"{"link":""}"#).unwrap();
     }
     #[test]
     fn bookmarks_add_move_delete_and_roundtrip() {

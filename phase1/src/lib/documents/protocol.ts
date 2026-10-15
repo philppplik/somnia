@@ -9,10 +9,11 @@ export interface FormatState{bold:Tri;italic:Tri;underline:Tri;strike?:Tri;small
 export type VertAlign='baseline'|'superscript'|'subscript';
 export const HIGHLIGHTS=['none','yellow','green','cyan','pink','gray'] as const;export type HighlightName=typeof HIGHLIGHTS[number];
 export const MAX_LINK_CHARS=2048;
-/** A link target the engine accepts: http, https or mailto, no spaces or control characters, at most 2048 characters. Empty removes a link. Returns the reason it is refused, or null. */
+/** A link target the engine accepts: http, https or mailto, no spaces or control characters, at most 2048 characters, or #name for a bookmark. Empty removes a link. Returns the reason it is refused, or null. */
 export function linkProblem(v:unknown):string|null{
  if(typeof v!=='string')return 'The link is not valid.';
  if(v==='')return null;
+ if(v.startsWith('#'))return /^#[A-Za-z_][A-Za-z0-9_]{0,39}$/.test(v)?null:'A link to a bookmark is # and its name: a letter first, then letters, digits or underscores.';
  if(Array.from(v).length>MAX_LINK_CHARS||/[\s\u0000-\u001f\u007f-\u009f]/.test(v)||!/^(https?:\/\/|mailto:)./i.test(v))return 'A link starts with http://, https:// or mailto: and has no spaces.';
  return null;
 }

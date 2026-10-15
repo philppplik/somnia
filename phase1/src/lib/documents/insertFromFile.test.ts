@@ -30,3 +30,8 @@ test('bookmarkProblem accepts Word-style names only',()=>{
  for(const n of ['','1a','_hidden','has space','ünï','a-b','A'.repeat(MAX_BOOKMARK_NAME+1)])assert.ok(bookmarkProblem(n),n);
  assert.ok(bookmarkProblem(undefined));assert.ok(bookmarkProblem(5));
 });
+import {linkProblem} from './protocol';
+test('linkProblem accepts #bookmark links',()=>{
+ for(const u of ['#Intro','#_Toc123','#a','https://a.org','mailto:a@b.c',''])assert.equal(linkProblem(u),null,u);
+ for(const u of ['#','#1a','#a b','#a-b','#'+'a'.repeat(41),'ftp://x','#ünï'])assert.ok(linkProblem(u),u);
+});

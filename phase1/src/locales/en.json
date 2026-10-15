@@ -2684,6 +2684,8 @@
   "documents.bookmarks.goTo": "Go to",
   "documents.bookmarks.delete": "Delete",
   "documents.bookmarks.close": "Close",
+  "documents.format.linkBookmark": "Or link to a bookmark",
+  "documents.format.linkBookmarkNone": "(none)",
   "documents.list.demote": "Demote list item",
   "documents.find.label": "Find and replace",
   "documents.find.query": "Find",

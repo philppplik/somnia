@@ -1,6 +1,6 @@
-import {useState} from 'react';
+import {useEffect,useState} from 'react';
 import {pickAndInsertText} from '../../lib/documents/insertFromFile';
-import {setViewMarks,setTrackChanges,copyFormatting,pasteFormatting,setCharSpacing,insertPageBreak,clearFormatting,changeCase,hasTextSelection,setHighlight,setLink,toggleFormat,toggleVertAlign} from '../../lib/documents/session';
+import {readBookmarks,setViewMarks,setTrackChanges,copyFormatting,pasteFormatting,setCharSpacing,insertPageBreak,clearFormatting,changeCase,hasTextSelection,setHighlight,setLink,toggleFormat,toggleVertAlign} from '../../lib/documents/session';
 import {HIGHLIGHTS,MAX_LINK_CHARS,linkProblem,type FormatPatch,type FormatState,type HighlightName} from '../../lib/documents/protocol';
 import {CASE_MODES,type CaseMode} from '../../lib/documents/textCase';
 import {setShortcutsOpen} from '../../lib/documents/shortcuts';
@@ -15,11 +15,16 @@ const sel='h-7 rounded-sm border border-subtle bg-surface px-1 text-xs text-ink 
 export function LinkDialog({current,onClose}:{current:string;onClose:()=>void}){
  const {t}=useT();const [v,setV]=useState(current);const bad=v!==''&&linkProblem(v)!==null;
  const apply=(url:string)=>{if(linkProblem(url)!==null)return;onClose();void setLink(url);};
+ const [marks,setMarks]=useState<string[]>([]);
+ useEffect(()=>{let live=true;void readBookmarks().then(l=>{if(live&&l)setMarks(l.map(b=>b.name));}).catch(()=>undefined);return()=>{live=false;};},[]);
  return <div role="dialog" aria-modal="true" aria-labelledby="documents-link-title" className="fixed inset-0 z-20 grid place-items-center bg-black/30" onKeyDown={e=>{if(e.key==='Escape'){e.stopPropagation();onClose();}if(e.key==='Enter'){e.preventDefault();apply(v);}}}>
   <div className="grid w-96 max-w-full gap-3 rounded-[var(--r-popup,25px)] bg-surface p-5 shadow-xl" data-testid="documents-link-dialog">
    <h2 id="documents-link-title" className="text-sm font-medium">{t('documents.format.linkTitle')}</h2>
    <label className="grid gap-1 text-xs text-ink-2">{t('documents.format.linkUrl')}
     <NativeInput className="rounded-lg border border-subtle bg-transparent px-2 py-1.5 text-ink" autoFocus maxLength={MAX_LINK_CHARS} value={v} placeholder="https://" aria-invalid={bad} onChange={e=>setV(e.currentTarget.value.trim())} data-testid="documents-link-input"/></label>
+   {marks.length>0&&<label className="grid gap-1 text-xs text-ink-2">{t('documents.format.linkBookmark')}
+    <NativeSelect className="h-7 rounded-sm border border-subtle bg-surface px-1 text-xs text-ink" value={marks.includes(v.slice(1))&&v.startsWith('#')?v.slice(1):''} onChange={e=>setV(e.currentTarget.value===''?'':'#'+e.currentTarget.value)} data-testid="documents-link-bookmark">
+     <option value="">{t('documents.format.linkBookmarkNone')}</option>{marks.map(m=><option key={m} value={m}>{m}</option>)}</NativeSelect></label>}
    <div className="flex justify-end gap-2">
     {current!==''&&<NativeButton className={tool+' border border-subtle'} onClick={()=>apply('')} data-testid="documents-link-remove">{t('documents.format.linkRemove')}</NativeButton>}
     <NativeButton className={tool+' border border-subtle'} disabled={v===''||bad} onClick={()=>apply(v)} data-testid="documents-link-apply">{t('documents.format.linkApply')}</NativeButton></div>

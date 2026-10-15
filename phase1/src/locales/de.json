@@ -2684,6 +2684,8 @@
   "documents.bookmarks.goTo": "Gehe zu",
   "documents.bookmarks.delete": "Löschen",
   "documents.bookmarks.close": "Schließen",
+  "documents.format.linkBookmark": "Oder auf ein Lesezeichen verlinken",
+  "documents.format.linkBookmarkNone": "(keins)",
   "documents.list.demote": "Listeneintrag tieferstufen",
   "documents.find.label": "Suchen und Ersetzen",
   "documents.find.query": "Suchen",
