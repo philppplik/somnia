@@ -158,6 +158,8 @@ export type DocumentsRequest=
  |{id:number;kind:'resolveComment';commentId:number;resolved:boolean}
  |{id:number;kind:'deleteComment';commentId:number}
  |{id:number;kind:'headerFooterState'}
+ |{id:number;kind:'hfVariantsState'}
+ |{id:number;kind:'setHfVariants';patch:HfVariantsPatch}
  |{id:number;kind:'setHeaderFooter';header?:string;footer?:string;pageNumber?:boolean;headerAlign?:HfAlign;footerAlign?:HfAlign;pageTotal?:boolean}
  |{id:number;kind:'insertTable';block:number;rows:number;cols:number}
  |{id:number;kind:'save';date?:string;author?:string}
@@ -172,6 +174,7 @@ export type DocumentsResponse=
  |{id:number;ok:true;kind:'blocks';blocks:import('./edit').DocBlock[]}
  |{id:number;ok:true;kind:'comments';comments:CommentItem[]}
  |{id:number;ok:true;kind:'headerFooter';state:HeaderFooterState}
+ |{id:number;ok:true;kind:'hfVariants';state:HfVariantsState}
  |{id:number;ok:true;kind:'properties';state:PropertiesState}
  |{id:number;ok:true;kind:'styles';items:StyleItem[]}
  |{id:number;ok:true;kind:'styleSaved';styleId:string;document:OpenedDocument}
@@ -309,6 +312,11 @@ export function pageSetupProblem(p:unknown):string|null{
 export type HfAlign='left'|'center'|'right';
 export const HF_ALIGNS:readonly HfAlign[]=['left','center','right'];
 export interface HeaderFooterState{header:{text:string;editable:boolean;align?:HfAlign};footer:{text:string;pageNumber:boolean;editable:boolean;align?:HfAlign;/** The page number reads "x / y". */pageTotal?:boolean}}
+export interface HfVariant{header:{text:string;editable:boolean};footer:{text:string;pageNumber:boolean;editable:boolean}}
+/** Different first page and different odd/even pages, with the texts of the first-page and even-page stories. */
+export interface HfVariantsState{titlePage:boolean;evenOdd:boolean;first:HfVariant;even:HfVariant}
+export interface HfVariantPatch{header?:string;footer?:string;pageNumber?:boolean}
+export interface HfVariantsPatch{titlePage?:boolean;evenOdd?:boolean;first?:HfVariantPatch;even?:HfVariantPatch}
 /** A header/footer text the engine accepts: at most 500 characters and no control characters or line breaks. */
 export const validHfText=(v:unknown):v is string=>typeof v==='string'&&Array.from(v).length<=MAX_HF_CHARS&&!/[\u0000-\u001f\u007f-\u009f\ufffc\u2028\u2029]/u.test(v);
 
@@ -459,3 +467,23 @@ export function pdfOptionsProblem(o:unknown,pageCount?:number):string|null{
 
 /** The save time the host stamps into a saved file's properties: UTC ISO 8601 such as 2026-10-14T18:00:00.000Z. */
 export const SAVE_DATE=/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,6})?Z$/;
+
+/** Why a variants patch is refused, or null. Mirrors the worker: known keys only, bounded text, at least one change. */
+export function hfVariantsProblem(p:unknown):string|null{
+ if(typeof p!=='object'||p===null||Array.isArray(p))return 'The header and footer options are not valid.';
+ const o=p as Record<string,unknown>;let n=0;
+ for(const k of Object.keys(o)){
+  if(k==='titlePage'||k==='evenOdd'){if(typeof o[k]!=='boolean')return `Invalid "${k}".`;n++;continue;}
+  if(k==='first'||k==='even'){
+   const v=o[k];if(typeof v!=='object'||v===null||Array.isArray(v))return `Invalid "${k}".`;
+   for(const [kk,vv] of Object.entries(v as Record<string,unknown>)){
+    if(kk==='pageNumber'){if(typeof vv!=='boolean')return `Invalid "${k}.pageNumber".`;n++;}
+    else if(kk==='header'||kk==='footer'){if(!validHfText(vv))return `Header and footer text is limited to ${MAX_HF_CHARS} characters, without line breaks.`;n++;}
+    else return `Unknown option "${k}.${kk}".`;
+   }
+   continue;
+  }
+  return `Unknown option "${k}".`;
+ }
+ return n===0?'Nothing to change.':null;
+}

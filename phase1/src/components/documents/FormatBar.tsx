@@ -3,6 +3,7 @@ import {useDocuments} from '../../lib/documents/store';
 import {customParagraphStyles,useStyleList} from '../../lib/documents/styles';
 import {TableSizeDialog} from './TableSizeDialog';
 import {HeaderFooterDialog} from './HeaderFooterDialog';
+import {HeaderFooterVariantsDialog} from './HeaderFooterVariantsDialog';
 import {ImageControls} from './ImageControls';
 import {TableStyleDialog} from './TableStyleDialog';
 import {PageSetupDialog} from './PageSetupDialog';
@@ -31,7 +32,7 @@ export function FormatBar({format,held,para,enabled,inCell=false}:{format:Format
  const commentsOpen=useCommentsOpen();const docState=useDocuments();const styles=useStyleList();const customStyles=customParagraphStyles(styles);
  useEffect(()=>{if(docState.status==='ready')void refreshStyles();},[docState.status,docState.name,docState.rev]);
  const styleKnown=!!para?.style&&((DOC_STYLES as readonly string[]).includes(para.style)||customStyles.some(s=>s.id===para.style));
- const [sizeOpen,setSizeOpen]=useState(false),[hfOpen,setHfOpen]=useState(false),[colW,setColW]=useState(''),[styleOpen,setStyleOpen]=useState(false),[pageOpen,setPageOpen]=useState(false),[gotoOpen,setGotoOpen]=useState(false);
+ const [sizeOpen,setSizeOpen]=useState(false),[hfOpen,setHfOpen]=useState(false),[hfvOpen,setHfvOpen]=useState(false),[colW,setColW]=useState(''),[styleOpen,setStyleOpen]=useState(false),[pageOpen,setPageOpen]=useState(false),[gotoOpen,setGotoOpen]=useState(false);
  const colOk=/^\d+(\.\d+)?$/.test(colW)&&Number(colW)>=MIN_COL_PT&&Number(colW)<=MAX_COL_PT;
  const flag=(p:'bold'|'italic'|'underline')=>held?.[p]??format?.[p]==='on';
  const font=held?.font??format?.font??'';const size=held?.size??format?.size??null;const color=held?.color??format?.color??null;
@@ -72,6 +73,8 @@ export function FormatBar({format,held,para,enabled,inCell=false}:{format:Format
   {sizeOpen&&<TableSizeDialog onClose={()=>setSizeOpen(false)}/>}
   <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>setHfOpen(true)} data-testid="documents-hf-open">{t('documents.hf.title')}</NativeButton>
   {hfOpen&&<HeaderFooterDialog onClose={()=>setHfOpen(false)}/>}
+  <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>setHfvOpen(true)} data-testid="documents-hfv-open">{t('documents.hfv.open')}</NativeButton>
+  {hfvOpen&&<HeaderFooterVariantsDialog onClose={()=>setHfvOpen(false)}/>}
   <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>setPageOpen(true)} data-testid="documents-page-open">{t('documents.page.title')}</NativeButton>
   {pageOpen&&<PageSetupDialog onClose={()=>setPageOpen(false)}/>}
   <NativeButton className={tool+' border border-subtle'} aria-pressed={commentsOpen} onClick={()=>setCommentsOpen(!commentsOpen)} data-testid="documents-comments-toggle">{t('documents.comments.title')}</NativeButton>

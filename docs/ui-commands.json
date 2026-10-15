@@ -4096,6 +4096,17 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.headerFooter.variants",
+      "title": "Set first-page and odd/even headers and footers",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.highlight.set",
       "title": "Set highlight colour",
       "category": "View",

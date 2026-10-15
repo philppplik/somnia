@@ -54,6 +54,10 @@ export class DocSession {
     /** JSON `{header:{text,editable},footer:{text,pageNumber,editable}}` for the default header and footer. */
     header_footer(): string;
     /** Sets default header/footer text and page number of every section; `undefined` keeps a part. */
+    /** State of the different-first-page and odd/even header/footer options, as JSON. */
+    header_footer_variants(): string;
+    /** Applies {titlePage?, evenOdd?, first?:{header?,footer?,pageNumber?}, even?:{..}} atomically. */
+    set_header_footer_variants(patch_json: string): void;
     set_footer_page_total(total: boolean): void;
     set_header_footer_align(header?: string | null, footer?: string | null): void;
     set_header_footer(header?: string | null, footer?: string | null, page_number?: boolean | null): void;

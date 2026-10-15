@@ -115,3 +115,15 @@ test('footer page total is validated and applied after the text change',()=>{
  assert.equal(calls.length,0);
  assert.equal(go({pageNumber:true,pageTotal:true}),true);assert.deepEqual(calls,['text null|null|true','total true']);
 });
+test('header/footer variants: validated before the engine, one call, state read back',()=>{
+ const calls:string[]=[];
+ const S=class{constructor(_b?:Uint8Array){}free(){}blocks(){return '[]';}paginate(){return 1;}page_info(){return '{"pages":[],"cacheHits":0,"cacheMisses":0}';}text(){return '';}
+  header_footer_variants(){return '{"titlePage":true,"evenOdd":false,"first":{"header":{"text":"C","editable":true},"footer":{"text":"","pageNumber":false,"editable":true}},"even":{"header":{"text":"","editable":true},"footer":{"text":"","pageNumber":false,"editable":true}}}';}
+  set_header_footer_variants(j:string){calls.push(j);}};
+ const k=new DocumentsCore(S as unknown as new(b:Uint8Array)=>DocSessionLike);k.handle({id:1,kind:'open',bytes:new Uint8Array(4)} as never);
+ const go=(patch:unknown)=>{try{return (k.handle({id:2,kind:'setHfVariants',patch} as never).res as {ok:boolean}).ok;}catch{return false;}};
+ for(const bad of [null,[],{},{x:1},{titlePage:1},{first:{header:5}},{first:{z:1}},{first:null},{even:{header:'a\nb'}},{first:{footer:'x'.repeat(501)}}])assert.equal(go(bad),false,JSON.stringify(bad));
+ assert.equal(calls.length,0);
+ assert.equal(go({titlePage:true,first:{header:'Cover'}}),true);assert.deepEqual(calls,['{"titlePage":true,"first":{"header":"Cover"}}']);
+ const st=(k.handle({id:3,kind:'hfVariantsState'} as never).res as unknown as {state:{titlePage:boolean}}).state;assert.equal(st.titlePage,true);
+});
