@@ -5499,6 +5499,17 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.review.compareFile",
+      "title": "Compare the document with a text file",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.review.next",
       "title": "Go to the next tracked change",
       "category": "View",

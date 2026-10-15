@@ -7,7 +7,7 @@ import {setStyleList} from './styles';
 import {unitRange,type SelectUnit} from './selectUnit';
 import {adjacentChange} from './reviewNav';
 import {stylePatchProblem,STYLE_ID_RE,tocProblem,isListKind,listOptionsProblem,type ListStyleId} from './protocol';
-import {imageCropProblem,imageWrapProblem,type ImageWrap,type ImageAlign,tableLayoutProblem,SECTION_BREAKS,hfVariantsProblem,HF_ALIGNS,propertiesProblem,linkProblem,commentProblem,MAX_SORT_PARAGRAPHS,coverProblem,bookmarkProblem,PARAGRAPH_SPACINGS,type ParagraphSpacing,type BookmarkItem,type CommentItem,validHfText,type HeaderFooterState,checkFormatPatch,checkParaPatch,MAX_HF_CHARS,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch,type ImageOp,type PageSetupPatch,type PageSetupState,pageSetupProblem,type TableStyle,type TableStyleScope,tableStyleProblem,MIN_COL_PT,MAX_COL_PT,imageProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGES} from './protocol';
+import {imageCropProblem,imageWrapProblem,type ImageWrap,type ImageAlign,tableLayoutProblem,SECTION_BREAKS,hfVariantsProblem,HF_ALIGNS,propertiesProblem,linkProblem,commentProblem,MAX_SORT_PARAGRAPHS,MAX_COMPARE_CHARS,coverProblem,bookmarkProblem,PARAGRAPH_SPACINGS,type ParagraphSpacing,type BookmarkItem,type CommentItem,validHfText,type HeaderFooterState,checkFormatPatch,checkParaPatch,MAX_HF_CHARS,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch,type ImageOp,type PageSetupPatch,type PageSetupState,pageSetupProblem,type TableStyle,type TableStyleScope,tableStyleProblem,MIN_COL_PT,MAX_COL_PT,imageProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGES} from './protocol';
 import {captureDocumentSelection} from './selectionCapture';
 import {CELL_BASE,caretAfterEdit,applyEdit,diffEdit,inverseOf,UndoStack,type TextEdit,type UndoEntry} from './edit';
 import {findMatches,nextMatchIndex,textStats,validFindQuery,validReplaceText,MAX_FIND_HIGHLIGHTS,MAX_REPLACE_BLOCKS,type FindMatch} from './find';
@@ -1088,6 +1088,12 @@ export const printCurrent=()=>run(async()=>{
  const e=getEngine();if(!e)throw new Error('Open a document first.');
  await settleDocument();const sizes=getDocumentsState().pageSizes;
  await printDocument(e,sizes);
+});
+/** Compares the document with a text and turns the differences into tracked changes by "Compare" (one undo step). Refuses documents with tables or objects. */
+export const compareWithText=(text:string)=>run(async()=>{
+ if(typeof text!=='string'||text===''||text.length>MAX_COMPARE_CHARS)throw new Error('The text to compare with is empty or too long.');
+ const c=getDocumentsState().caret;const spot=c?{block:c.block,off:c.head}:await nearEditable(engine!,0);
+ await structural(eng=>eng.compareText(text),spot,eng=>nearEditable(eng,0));
 });
 /** Moves the selected paragraphs one place up (-1) or down (+1). One undo step; the selection moves with them. */
 export const moveParagraphs=(delta:-1|1)=>run(async()=>{

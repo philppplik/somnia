@@ -1,4 +1,4 @@
-import {pasteText} from './session';
+import {pasteText,compareWithText} from './session';
 /** Same caps as a paste: the text of one insert. */
 export const MAX_TEXT_FILE_CHARS=1_000_000;
 export const MAX_TEXT_FILE_LINES=5000;
@@ -21,6 +21,18 @@ export function decodeTextFile(bytes:ArrayBuffer,name:string):{text:string}|{err
  if(s.length>MAX_TEXT_FILE_CHARS)return{error:`${name} has more than ${MAX_TEXT_FILE_CHARS} characters.`};
  if(s.split('\n').length>MAX_TEXT_FILE_LINES)return{error:`${name} has more than ${MAX_TEXT_FILE_LINES} lines.`};
  return{text:s};
+}
+/** Opens the file picker and compares the document with the chosen text file as tracked changes. Resolves null when cancelled. */
+export function pickAndCompareText():Promise<{error:string}|{chars:number}|null>{
+ return new Promise(resolve=>{
+  const input=document.createElement('input');input.type='file';input.accept=EXTS.map(e=>'.'+e).join(',');
+  input.onchange=()=>{
+   const f=input.files?.[0];if(!f){resolve(null);return;}
+   const bad=textFileProblem(f.name,f.size);if(bad){resolve({error:bad});return;}
+   void f.arrayBuffer().then(async b=>{const r=decodeTextFile(b,f.name);if('error' in r){resolve(r);return;}await compareWithText(r.text);resolve({chars:r.text.length});}).catch(e=>resolve({error:e instanceof Error?e.message:String(e)}));
+  };
+  input.oncancel=()=>resolve(null);input.click();
+ });
 }
 /** Opens the file picker and inserts the chosen file's text at the caret as one undo step. Resolves null when cancelled. */
 export function pickAndInsertText():Promise<{error:string}|{chars:number}|null>{

@@ -1,7 +1,7 @@
 import {useEffect,useState} from 'react';
 import {autoCorrectOn,setAutoCorrect} from '../../lib/documents/autocorrect';
 import {executeCommand} from '../../lib/commands';
-import {pickAndInsertText} from '../../lib/documents/insertFromFile';
+import {pickAndCompareText,pickAndInsertText} from '../../lib/documents/insertFromFile';
 import {printCurrent,moveParagraphs,sortParagraphs,readParagraphSpacing,setParagraphSpacing,readBookmarks,setViewMarks,setTrackChanges,copyFormatting,pasteFormatting,setCharSpacing,insertPageBreak,clearFormatting,changeCase,hasTextSelection,setHighlight,setLink,toggleFormat,toggleVertAlign} from '../../lib/documents/session';
 import {PARAGRAPH_SPACINGS,type ParagraphSpacing,HIGHLIGHTS,MAX_LINK_CHARS,linkProblem,type FormatPatch,type FormatState,type HighlightName} from '../../lib/documents/protocol';
 import {CASE_MODES,type CaseMode} from '../../lib/documents/textCase';
@@ -95,6 +95,7 @@ export function TextEffects({format,held,enabled}:{format:FormatState|null;held:
    {id:'track',label:(doc.trackChanges?'\u2713 ':'')+t('documents.review.track'),enabled,run:()=>void setTrackChanges(!doc.trackChanges)},
    {id:'marks',label:(doc.showMarks?'\u2713 ':'')+t('documents.view.marks'),enabled,run:()=>void setViewMarks(!doc.showMarks,doc.showMarkup)},
    {id:'autocorrect',label:(ac?'\u2713 ':'')+t('documents.autocorrect.toggle'),enabled:true,run:()=>{if(setAutoCorrect(!ac))setAc(!ac);}},
+   {id:'compare',label:t('documents.review.compare'),enabled,run:()=>void pickAndCompareText().catch(()=>undefined)},
    {id:'review',label:t('documents.review.open'),enabled,run:()=>setInfoDialog('review')}]}/>
   <ActionMenu label={t('documents.menu.document')} testId="documents-menu-document" items={[
    {id:'print',label:t('documents.print.open'),enabled,run:()=>void printCurrent()},

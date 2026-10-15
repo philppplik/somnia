@@ -20,7 +20,7 @@ import {setParagraphOptionsOpen} from './paragraphOptions';
 import {setInfoDialog} from './infoDialog';
 import {savedAuthor} from './author';
 import {zoomToFit} from './zoomFit';
-import {pickAndInsertText} from './insertFromFile';
+import {pickAndCompareText,pickAndInsertText} from './insertFromFile';
 import {symbolProblem,specialChar,timeText} from './symbols';
 import {getLocale as currentLocale} from '../i18n';
 import {authorProblem,setAuthor} from './author';
@@ -170,6 +170,7 @@ export function registerDocumentsCommands(){
   add('documents.view.markup','Show or hide tracked-change markup',async()=>{const s=getDocumentsState();await setViewMarks(s.showMarks,!s.showMarkup);},()=>ready()),
   add('documents.review.next','Go to the next tracked change',async()=>{if(!await goToAdjacentChange(1))throw expected('There are no tracked changes.');},()=>ready()),
   add('documents.review.previous','Go to the previous tracked change',async()=>{if(!await goToAdjacentChange(-1))throw expected('There are no tracked changes.');},()=>ready()),
+  add('documents.review.compareFile','Compare the document with a text file',async()=>{const r=await pickAndCompareText();if(r&&'error' in r)throw expected(r.error);},()=>ready()),
   add('documents.insert.textFile','Insert text from a file',async()=>{const r=await pickAndInsertText();if(r&&'error' in r)throw expected(r.error);},()=>ready()&&!!getDocumentsState().caret),
   add('documents.review.track','Track changes on or off',async()=>{await setTrackChanges(!getDocumentsState().trackChanges);},()=>ready()),
   add('documents.review.open','Review tracked changes',()=>{setInfoDialog('review');},()=>ready()),
