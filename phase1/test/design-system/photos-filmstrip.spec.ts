@@ -448,6 +448,34 @@ test('label keys: 6-9 set color labels on the selection (light and dark)',async(
  }
 });
 
+test('soft proof: the print simulation repaints the canvas, the gamut warning overlays (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
+  await page.evaluate(async()=>{const m=await import('/src/store/panelStateStore.ts');m.panelStateStore.set('photos.softProof',false);m.panelStateStore.set('photos.gamutWarn',false);}); // view state persists via localStorage
+  await page.waitForTimeout(300);
+  const canvasUrl=()=>page.getByTestId('photos-canvas').evaluate(c=>(c as HTMLCanvasElement).toDataURL('image/png'));
+  const before=await canvasUrl();
+  await page.getByTestId('photos-filmstrip-menu').click();
+  await page.getByTestId('photos-filmstrip-softproof').click();
+  await page.keyboard.press('Escape');
+  await expect.poll(canvasUrl).not.toBe(before); // the proof repaints with the print simulation
+  await page.getByTestId('photos-filmstrip-menu').click();
+  await page.getByTestId('photos-filmstrip-gamut').click();
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('photos-gamut-canvas')).toBeVisible();
+  await page.screenshot({path:`test-results/ds-photos-softproof-${theme}.png`,fullPage:true});
+  await page.getByTestId('photos-filmstrip-menu').click();
+  await page.getByTestId('photos-filmstrip-softproof').click();
+  await page.getByTestId('photos-filmstrip-gamut').click();
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('photos-gamut-canvas')).toHaveCount(0);
+  await expect.poll(canvasUrl).toBe(before); // proof off restores the exact pixels
+ }
+});
+
 test('library grid: the survey opens the whole filtered view without a selection (light and dark)',async({page})=>{
  for(const theme of['light','dark']){
   await page.goto('/test/design-system/?view=photos-filmstrip');

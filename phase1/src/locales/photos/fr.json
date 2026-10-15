@@ -251,5 +251,7 @@
  "photos.keys.labels": "Libellé couleur (rouge/jaune/vert/bleu)",
  "photos.keys.undoCull": "Annuler la modification",
  "photos.keys.redoCull": "Rétablir la modification",
- "photos.filmstrip.sort.capture": "Date de capture"
+ "photos.filmstrip.sort.capture": "Date de capture",
+ "photos.proof.toggle": "Épreuvage (simulation d’impression)",
+ "photos.proof.gamut": "Avertissement de gamut"
 }

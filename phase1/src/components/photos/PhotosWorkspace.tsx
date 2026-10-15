@@ -1,7 +1,7 @@
 import {StudioStatus} from '../studios/StudioStatus';
 import {reportError} from '../../lib/log';
 import {usePublishPhotosContext} from './panels/publishContext';
-import {useCallback,useEffect,useRef,useState} from 'react';
+import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {AlertTriangle,Bandage,Brush,Contrast,ArrowLeft,ArrowRight,Check,ClipboardPaste,Columns2,Copy,Download,Eye,Frame,Grid3x3,RotateCcw,Undo2,Redo2,X,ZoomIn,ZoomOut,Maximize2,Minimize2,SquareDashed,Circle,Rows2,Ruler} from '../../lib/icons';
 import {Button} from '../ui/button';
 import {PhotosHandoffBar} from './PhotosHandoffBar';
@@ -18,6 +18,7 @@ import {clampDab} from '../../lib/photos/localAdjust';
 import type {PhotoCrop} from '../../lib/photos/studioSettings';
 import {CROP_GUIDE_STYLES,cropGuideLines,type CropGuideStyle} from '../../lib/photos/cropGuides';
 import {clippingOverlayImage} from '../../lib/photos/clippingOverlay';
+import {softProofImage,gamutWarningImage} from '../../lib/photos/softProof';
 import {clampSplitX,splitClearRect} from '../../lib/photos/splitView';
 import {decodeSettingsPayload,encodeSettingsPayload,settingsPayloadToText,type SettingsPayload} from '../../lib/photos/settingsClipboard';
 import {developablePhotos,photoNav} from '../../lib/photos/photoNav';
@@ -62,7 +63,7 @@ type DragMode={kind:'move';dx:number;dy:number}|{kind:'nw'|'ne'|'sw'|'se'};
 export function PhotosWorkspace({item}:{item:MediaItem}){
  const {t}=useT();const studio=useAppStore().activeStudio;const session=usePhotoSession(item.name);
  const media=useMedia();const nav=photoNav(media.items,item.name);
- const stage=useRef<HTMLDivElement>(null),canvas=useRef<HTMLCanvasElement>(null),clipCanvas=useRef<HTMLCanvasElement>(null),splitCanvas=useRef<HTMLCanvasElement>(null),maskCanvas=useRef<HTMLCanvasElement>(null),imgBox=useRef<HTMLDivElement>(null);
+ const stage=useRef<HTMLDivElement>(null),canvas=useRef<HTMLCanvasElement>(null),clipCanvas=useRef<HTMLCanvasElement>(null),splitCanvas=useRef<HTMLCanvasElement>(null),maskCanvas=useRef<HTMLCanvasElement>(null),gamutCanvas=useRef<HTMLCanvasElement>(null),imgBox=useRef<HTMLDivElement>(null);
  const [stageSize,setStageSize]=useState<[number,number]>([0,0]);
  const [zoom,setZoom]=useState<number|null>(null); // null = fit
  const [pan,setPan]=useState<[number,number]>([0,0]);
@@ -74,6 +75,8 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
  const [guideStyle,setGuideStyle]=usePanelState<CropGuideStyle>('photos.cropGuideStyle','thirds');
  const [lightsOut,setLightsOut]=usePanelState<boolean>('photos.lightsOut',false);
  const [showClipping,setShowClipping]=usePanelState<boolean>('photos.clipping',false);
+ const [showProof]=usePanelState<boolean>('photos.softProof',false); // toggled from the strip menu's View group, like the split
+ const [showGamutWarn]=usePanelState<boolean>('photos.gamutWarn',false);
  const [showMaskOverlay]=usePanelState<boolean>('photos.lummask.overlay',false);
  const [showSplit,setShowSplit]=usePanelState<boolean>('photos.split',false);
  const [settingsClip,setSettingsClip]=usePanelState<SettingsPayload|null>('photos.settingsClipboard',null);
@@ -129,8 +132,10 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
  useEffect(()=>{if(studio==='photos'&&!['files','search'].includes(getState().leftTab))patchState({leftTab:'files'});},[studio]);
  useEffect(()=>{const el=stage.current;if(!el)return;const ro=new ResizeObserver(()=>setStageSize([el.clientWidth,el.clientHeight]));ro.observe(el);setStageSize([el.clientWidth,el.clientHeight]);return()=>ro.disconnect();},[]);
  const shown=compare&&session?.original?session.original:session?.frame??null;
- useEffect(()=>{draw(canvas.current,shown);},[shown]);
+ const displayed=useMemo(()=>showProof&&shown?softProofImage(shown):shown,[shown,showProof]); // the proof simulates the print look on the shown frame; the model is documented in softProof.ts
+ useEffect(()=>{draw(canvas.current,displayed);},[displayed]);
  useEffect(()=>{if(showClipping)draw(clipCanvas.current,shown?clippingOverlayImage(shown):null);},[shown,showClipping]);
+ useEffect(()=>{if(showGamutWarn)draw(gamutCanvas.current,shown?gamutWarningImage(shown):null);},[shown,showGamutWarn]); // the warning always reads the un-proofed frame
  const lumMask=session?.now.lumMask??neutralLumMask();
  useEffect(()=>{ // the mask overlay paints the weight map over the current frame, accent-tinted
   const c=maskCanvas.current;
@@ -447,6 +452,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
    <div ref={imgBox} className="absolute left-1/2 top-1/2" style={{width:dispW,height:dispH,transform:`translate(-50%,-50%) translate(${pan[0]}px,${pan[1]}px)`}}>
     <canvas ref={canvas} role="img" aria-label={t('photos.canvas.aria',{name:item.name})} className="block size-full rounded-[2px] shadow-sm" style={{imageRendering:scale>4?'pixelated':'auto'}} data-testid="photos-canvas"/>
     {showClipping&&<canvas ref={clipCanvas} className={`pointer-events-none absolute inset-0 size-full${scale>4?' pixelated':''}`} aria-hidden="true" data-testid="photos-clipping-canvas"/>}
+    {showGamutWarn&&<canvas ref={gamutCanvas} className={`pointer-events-none absolute inset-0 size-full${scale>4?' pixelated':''}`} aria-hidden="true" data-testid="photos-gamut-canvas"/>}
     {showMaskOverlay&&!lumMaskWindowNeutral(lumMask)&&<canvas ref={maskCanvas} className="pointer-events-none absolute inset-0 size-full" data-testid="photos-lummask-overlay"/>}
     {straightening&&straightDraft.current&&<svg className="pointer-events-none absolute inset-0 size-full" viewBox="0 0 1 1" preserveAspectRatio="none" data-testid="photos-straighten-line"><line x1={straightDraft.current.x0} y1={straightDraft.current.y0} x2={straightDraft.current.x1} y2={straightDraft.current.y1} stroke="var(--accent)" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeDasharray="6 4"/></svg>}
     {showSplit&&original&&<canvas ref={splitCanvas} className={`pointer-events-none absolute inset-0 size-full${scale>4?' pixelated':''}`} aria-hidden="true" data-testid="photos-split-canvas"/>}

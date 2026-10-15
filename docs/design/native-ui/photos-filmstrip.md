@@ -676,3 +676,22 @@ oldest, strip-2 undated), picks the capture sort and checks the
 order plus the way back
 (`test-results/ds-photos-sort-capture-{light,dark}.png`); parsing
 and cache invalidation have unit tests.
+
+## Soft proof + gamut warning (P124/P125)
+
+The strip menu's View group toggles a print soft proof: the shown
+frame renders through the documented model in
+`src/lib/photos/softProof.ts` - printable chroma is bounded by a
+luma-dependent ceiling, out-of-gamut chroma compresses toward the
+luma gray, black lifts to the ink floor and white maps onto a warm
+paper white. It is a mathematical model, NOT an ICC profile; the
+UI calls it a print simulation. "Gamut warning" paints the
+out-of-gamut pixels solid magenta in an overlay canvas, the same
+view layer as the clipping overlay, and always reads the un-proofed
+frame. Both toggles share panel state (`photos.softProof`,
+`photos.gamutWarn`) between the strip menu and the workspace.
+
+Coverage: the light/dark gallery leg enables the proof, checks the
+canvas repaints, enables the warning overlay and back
+(`test-results/ds-photos-softproof-{light,dark}.png`); the model
+has unit tests for the boundary, the proof mapping and the overlay.

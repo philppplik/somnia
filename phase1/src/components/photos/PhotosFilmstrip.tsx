@@ -86,7 +86,9 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
  const snapNames=useSnapshots(active);
  const [collection,setCollection]=usePanelState<string>('photos.collection','');
  const [reference,setReference]=usePanelState<string>('photos.reference',''); // compare view: the photo the active one is measured against
- const [split,setSplit]=usePanelState<boolean>('photos.split',false); // shared with the workspace toolbar
+ const [split,setSplit]=usePanelState<boolean>('photos.split',false);
+ const [proof,setProof]=usePanelState<boolean>('photos.softProof',false); // workspace reads these: shared view state like the split
+ const [gamutWarn,setGamutWarn]=usePanelState<boolean>('photos.gamutWarn',false); // shared with the workspace toolbar
  const [splitDir,setSplitDir]=usePanelState<'vertical'|'horizontal'>('photos.splitDir','vertical');
  const [slide,setSlide]=usePanelState<boolean>('photos.slideshow',false);
  const [slideMs,setSlideMs]=usePanelState<number>('photos.slideshowMs',4000);
@@ -224,6 +226,8 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
     </>)}
     {menuGroup('view','photos.menu.groupView',<>
     <span className="flex flex-wrap gap-1">
+          <Button variant="outline" size="compact" aria-pressed={proof} onClick={()=>setProof(!proof)} data-testid="photos-filmstrip-softproof">{t('photos.proof.toggle')}</Button>
+          <Button variant="outline" size="compact" aria-pressed={gamutWarn} onClick={()=>setGamutWarn(!gamutWarn)} data-testid="photos-filmstrip-gamut">{t('photos.proof.gamut')}</Button>
           <Button variant="outline" size="compact" aria-pressed={split} onClick={()=>setSplit(!split)} data-testid="photos-filmstrip-split">{t('photos.split')}</Button>
           {split&&<Button variant="outline" size="compact" aria-pressed={splitDir==='horizontal'} onClick={()=>setSplitDir(splitDir==='vertical'?'horizontal':'vertical')} data-testid="photos-filmstrip-split-dir">{t('photos.split.dir')}</Button>}
          </span>
