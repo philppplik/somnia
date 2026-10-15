@@ -156,5 +156,6 @@
  "photos.label.blue": "Azul",
  "photos.label.none": "Sem rotulo",
  "photos.survey.selected": "{count} selecionadas",
- "photos.survey.toggle": "Selecionar {name}"
+ "photos.survey.toggle": "Selecionar {name}",
+ "photos.tags.label": "Tags"
 }

@@ -156,5 +156,6 @@
  "photos.label.blue": "Blau",
  "photos.label.none": "Keine Markierung",
  "photos.survey.selected": "{count} ausgewaehlt",
- "photos.survey.toggle": "{name} auswaehlen"
+ "photos.survey.toggle": "{name} auswaehlen",
+ "photos.tags.label": "Stichwoerter"
 }

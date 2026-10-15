@@ -156,5 +156,6 @@
  "photos.label.blue": "Blue",
  "photos.label.none": "No label",
  "photos.survey.selected": "{count} selected",
- "photos.survey.toggle": "Select {name}"
+ "photos.survey.toggle": "Select {name}",
+ "photos.tags.label": "Tags"
 }

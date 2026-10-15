@@ -274,3 +274,18 @@ selection, so batch paste/apply/survey work straight from browsing.
 Coverage: `photos-filmstrip.spec.ts` gains a light/dark leg that
 toggles two photos in the grid (pressed, count visible) and finds the
 filmstrip's apply button offering the two-photo batch after closing.
+
+## Keyword tags (P97)
+
+A third organization layer: free-form keyword tags per photo in a
+persisted `tags` store (trimmed, deduped, capped at 20 per photo). A
+comma-separated tag input in the filmstrip edits the active photo's
+tags (replace) or, with a selection, merges the typed tags onto every
+selected photo. Tagged thumbnails get a chip with the first tag and
+an overflow count, and the filter dropdown lists every tag in the
+library as a dynamic option.
+
+Coverage: `tags.test.ts` covers set/merge/clear, invalid input, the
+cap and the sorted union; `photos-filmstrip.spec.ts` gains a
+light/dark leg that batch-tags two photos (badges on both), filters
+to the new dynamic tag option and clears again.

@@ -461,3 +461,24 @@ test('library grid: cells toggle the filmstrip selection (light and dark)',async
   await page.getByTestId('photos-filmstrip-select').selectOption('none');
  }
 });
+test('keyword tags: batch edit, badges, dynamic filter (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
+  await page.evaluate(async()=>{const m=await import('/src/lib/photos/tags.ts');for(const n of['strip-1.png','strip-2.png','strip-3.png'])m.setTags(n,[]);}); // tags persist via localStorage
+  await page.getByTestId('photos-filmstrip-select').selectOption('none');
+  await page.getByTestId('photos-filmstrip-item-strip-1.png').click();
+  await page.getByTestId('photos-filmstrip-item-strip-2.png').click({modifiers:['ControlOrMeta']}); // two selected
+  await page.getByTestId('photos-filmstrip-tags').fill('reise, 2026');
+  await page.getByTestId('photos-filmstrip-tags').press('Enter'); // batch: merges onto both
+  await expect(page.getByTestId('photos-filmstrip-tags-badge-strip-1.png')).toHaveText('reise +1');
+  await expect(page.getByTestId('photos-filmstrip-tags-badge-strip-2.png')).toHaveText('reise +1');
+  await page.getByTestId('photos-filmstrip-rating-filter').selectOption('tag:reise'); // dynamic option from the library's tags
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toHaveCount(0); // untagged photo leaves the view
+  await page.screenshot({path:`test-results/ds-photos-tags-${theme}.png`,fullPage:true});
+  await page.getByTestId('photos-filmstrip-rating-filter').selectOption('0');
+  await page.evaluate(async()=>{const m=await import('/src/lib/photos/tags.ts');for(const n of['strip-1.png','strip-2.png','strip-3.png'])m.setTags(n,[]);});
+ }
+});
