@@ -9,7 +9,7 @@ import {TitlePreview} from './TitlePreview';
 import {useTitlePlayback} from './useTitlePlayback';
 import {FilmstripStrip} from './FilmstripStrip';
 import {WaveformStrip} from './WaveformStrip';
-import {blendAt,clipFadeGain,clipRanges,cropOf,flipOf,isFreeze,isImageClip,locate,rotationOf,speedOf,timelineDuration,transitionOf,transitionVisual,isReversed,type BlendEntry,type TimelineClip,type TransitionVisual} from '../../lib/video/timeline';
+import {blendAt,clipFadeGain,clipRanges,cropOf,flipOf,isFreeze,isImageClip,locate,rotationOf,speedOf,timelineDuration,cropAt,transitionOf,transitionVisual,isReversed,type BlendEntry,type ClipCrop,type TimelineClip,type TransitionVisual} from '../../lib/video/timeline';
 import {shuttleFaster,shuttleSlower} from '../../lib/video/shuttle';
 import {audioClipDuration,audioEnvelope,audioTrackEnd,duckGainAt} from '../../lib/video/audioTrack';
 import {AudioLane} from './AudioLane';
@@ -110,9 +110,9 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
  // with an inverse-mapped polygon, so the preview shows the same contain-fitted region the export renders.
  // A wipe/slide transition on the incoming clip composes here: slide is an outermost screen-space translate,
  // wipe is a clip polygon - inverse-mapped like the crop when the clip itself is rotated/mirrored.
- const applyPreviewTransform=(el:HTMLElement,clip:TimelineClip,trans?:TransitionVisual)=>{
+ const applyPreviewTransform=(el:HTMLElement,clip:TimelineClip,trans?:TransitionVisual,cropOverride?:ClipCrop)=>{
   const f=flipOf(clip),r=rotationOf(clip),w=el.clientWidth,h=el.clientHeight;
-  const cr=cropOf(clip),cropped=cr.left>0||cr.top>0||cr.right>0||cr.bottom>0;
+  const cr=cropOverride??cropOf(clip),cropped=cr.left>0||cr.top>0||cr.right>0||cr.bottom>0;
   const dx=(trans?.dx??0)*w,dy=(trans?.dy??0)*h;
   const wipe=trans?.rect?{x0:trans.rect.x*w,y0:trans.rect.y*h,x1:(trans.rect.x+trans.rect.w)*w,y1:(trans.rect.y+trans.rect.h)*h}:null;
   if(!cropped&&!(wipe&&(r!==0||f!=='none'))){
@@ -169,7 +169,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
   for(const e of blend){
    if(!isImageClip(e.range.clip))continue;
    const el=stageRef.current?.querySelector<HTMLImageElement>(`img[data-img-clip="${e.range.clip.id}"]`);if(!el)continue;
-   applyPreviewTransform(el,e.range.clip,transVisual(e));
+   applyPreviewTransform(el,e.range.clip,transVisual(e),e.range.clip.cropKeys?.length?cropAt(e.range.clip,Math.max(0,playhead-e.range.start)):undefined);
   }
   for(const slot of [slotA,slotB]){
    const el=slot.current;

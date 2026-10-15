@@ -160,6 +160,7 @@
  "video.transition": "Transición al siguiente (s)",
  "video.reverse": "Marcha atrás (exportación)",
  "video.overlayAnimateRect": "Animar posición/tamaño",
+ "video.kenBurns": "Ken Burns (zoom lento)",
  "video.overlayAnimateOpacity": "Animar opacidad",
  "video.overlayKeysActive": "{count} claves",
  "video.overlayKeysClear": "Borrar claves",

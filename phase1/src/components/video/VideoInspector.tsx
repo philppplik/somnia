@@ -2,11 +2,11 @@ import {useMemo,useState} from 'react';
 import {Button} from '../ui/button';
 import {useT} from '../../lib/useT';
 import {useMedia} from '../../lib/media';
-import {addAudioTrackClip,addImageClip,addOverlayImage,addOverlayTitle,addOverlayVideo,importSubtitleText,addTimelineClip,addTimelineClipsFromDialog,cancelVideoExport,deleteAudioTrackClip,deleteTimelineClip,duplicateAudioTrackClip,moveAudioTrackClip,moveTimelineClip,resetTimeline,resizeAudioTrackClip,setAudioTrackClipDuck,setAudioTrackClipFades,setAudioTrackClipGain,toggleAudioTrackClipMute,setTimelineClipCrossfade,setTimelineClipFades,setTimelineClipFreeze,setTimelineClipGain,setTimelineClipSpeed,setVideoFormat,duplicateTimelineClip,replaceClipSource,selectTimelineClip,setImageClipLength,setTimelineClipCrop,setTimelineClipFlip,setTimelineClipReversed,setTimelineClipRotation,setVideoExportOptions,setVideoExportRange,toggleTimelineClipMute,trimTimelineClip,useVideoSession,deleteOverlayClip,moveOverlayClip,selectOverlayClip,setOverlayDuration,setOverlayGain,setOverlayInS,clearOverlayKeys,setOverlayOpacity,setOverlayOpacityKey,setOverlayRect,setOverlayRectKey,useVideoPlayhead,updateOverlayTitle} from '../../lib/video/session';
+import {addAudioTrackClip,addImageClip,addOverlayImage,addOverlayTitle,addOverlayVideo,importSubtitleText,addTimelineClip,addTimelineClipsFromDialog,cancelVideoExport,deleteAudioTrackClip,deleteTimelineClip,duplicateAudioTrackClip,moveAudioTrackClip,moveTimelineClip,resetTimeline,resizeAudioTrackClip,setAudioTrackClipDuck,setAudioTrackClipFades,setAudioTrackClipGain,toggleAudioTrackClipMute,setTimelineClipCrossfade,setTimelineClipFades,setTimelineClipFreeze,setTimelineClipGain,setTimelineClipSpeed,setVideoFormat,duplicateTimelineClip,replaceClipSource,selectTimelineClip,setImageClipLength,clearTimelineClipCropKeys,setTimelineClipCrop,setTimelineClipCropKey,setTimelineClipCropKeys,setTimelineClipFlip,setTimelineClipReversed,setTimelineClipRotation,setVideoExportOptions,setVideoExportRange,toggleTimelineClipMute,trimTimelineClip,useVideoSession,deleteOverlayClip,moveOverlayClip,selectOverlayClip,setOverlayDuration,setOverlayGain,setOverlayInS,clearOverlayKeys,setOverlayOpacity,setOverlayOpacityKey,setOverlayRect,setOverlayRectKey,useVideoPlayhead,updateOverlayTitle} from '../../lib/video/session';
 import {audioClipDuration,audioTrackEnd} from '../../lib/video/audioTrack';
 import {decodeSubtitleBytes} from '../../lib/video/subtitles';
 import {overlayTrackEnd,overlayOpacityAt,overlayRectAt} from '../../lib/video/overlayTrack';
-import {clipDuration,clipRanges,fadeInOf,fadeOf,fadeOutOf,cropOf,flipOf,rotationOf,isFreeze,isReversed,IMAGE_DEFAULT_SECONDS,isImageClip,MAX_GAIN,speedOf,timelineDuration,type ClipFlip,type ClipRotation} from '../../lib/video/timeline';
+import {clipDuration,clipRanges,fadeInOf,fadeOf,fadeOutOf,cropAt,cropOf,kenBurnsPreset,flipOf,rotationOf,isFreeze,isReversed,IMAGE_DEFAULT_SECONDS,isImageClip,MAX_GAIN,speedOf,timelineDuration,type ClipFlip,type ClipRotation} from '../../lib/video/timeline';
 import {isTitleClip} from '../../lib/video/titles';
 import {addTitleClip,setTitleLength,updateTitle} from '../../lib/video/titleSession';
 import {TitleAddRow,TitleInspector} from './TitleInspector';
@@ -151,10 +151,15 @@ export function VideoControls({name}:{name:string}){
    <label className="grid gap-1">{t('video.crop')}
     <div className="grid grid-cols-2 gap-2">
      {(['left','top','right','bottom'] as const).map(edge=><label key={edge}>{t(`video.crop.${edge}`)}
-      <NativeInput type="number" className={`${field} mt-1`} min={0} max={90} step={1} value={Math.round(cropOf(selected)[edge]*100)} onChange={e=>{const cr=cropOf(selected);setTimelineClipCrop(name,selected.id,{...cr,[edge]:Math.min(90,Math.max(0,Number(e.target.value)||0))/100});}} data-testid={`video-clip-crop-${edge}`}/>
+      <NativeInput type="number" className={`${field} mt-1`} min={0} max={90} step={1} value={Math.round((selected.cropKeys?.length?cropAt(selected,Math.max(0,playhead-(clipRanges(s.clips).find(r=>r.clip.id===selected.id)?.start??0))):cropOf(selected))[edge]*100)} onChange={e=>{const base=selected.cropKeys?.length?cropAt(selected,Math.max(0,playhead-(clipRanges(s.clips).find(r=>r.clip.id===selected.id)?.start??0))):cropOf(selected);const next={...base,[edge]:Math.min(90,Math.max(0,Number(e.target.value)||0))/100};if(selected.cropKeys?.length)setTimelineClipCropKey(name,selected.id,Math.max(0,playhead-(clipRanges(s.clips).find(r=>r.clip.id===selected.id)?.start??0)),next,`cropkey:${selected.id}`);else setTimelineClipCrop(name,selected.id,next);}} data-testid={`video-clip-crop-${edge}`}/>
      </label>)}
     </div>
    </label>
+   <div className="flex items-center gap-2">
+    {!selected.cropKeys?.length
+     ?<Button size="compact" variant="ghost" onClick={()=>setTimelineClipCropKeys(name,selected.id,kenBurnsPreset(clipDuration(selected)))} data-testid="video-clip-kenburns">{t('video.kenBurns')}</Button>
+     :<><span className="text-ink-3" data-testid="video-clip-crop-keys">{t('video.overlayKeysActive',{count:selected.cropKeys.length})}</span><Button size="compact" variant="ghost" onClick={()=>clearTimelineClipCropKeys(name,selected.id)} data-testid="video-clip-crop-keys-clear">{t('video.overlayKeysClear')}</Button></>}
+   </div>
    <div className="flex flex-wrap gap-2">
     <Button size="compact" variant="outline" disabled={selectedIndex<=0} onClick={()=>moveTimelineClip(name,selected.id,-1)} data-testid="video-clip-left">{t('video.moveLeft')}</Button>
     <Button size="compact" variant="outline" disabled={selectedIndex<0||selectedIndex>=s.clips.length-1} onClick={()=>moveTimelineClip(name,selected.id,1)} data-testid="video-clip-right">{t('video.moveRight')}</Button>

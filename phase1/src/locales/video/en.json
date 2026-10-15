@@ -160,6 +160,7 @@
  "video.transition": "Crossfade into next (s)",
  "video.reverse": "Reverse (export)",
  "video.overlayAnimateRect": "Animate position/size",
+ "video.kenBurns": "Ken Burns (slow zoom)",
  "video.overlayAnimateOpacity": "Animate opacity",
  "video.overlayKeysActive": "{count} keys",
  "video.overlayKeysClear": "Clear keys",

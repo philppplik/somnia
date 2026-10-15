@@ -160,6 +160,7 @@
  "video.transition": "Überblendung zum nächsten (s)",
  "video.reverse": "Rückwärts (Export)",
  "video.overlayAnimateRect": "Position/Größe animieren",
+ "video.kenBurns": "Ken Burns (langsamer Zoom)",
  "video.overlayAnimateOpacity": "Deckkraft animieren",
  "video.overlayKeysActive": "{count} Keys",
  "video.overlayKeysClear": "Keys entfernen",

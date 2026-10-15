@@ -1,5 +1,5 @@
 import {useCallback,useEffect,useRef,type ReactNode} from 'react';
-import {clipRanges,fadeOf,isReversed,speedOf,timelineDuration,type TimelineClip} from '../../lib/video/timeline';
+import {clipDuration,clipRanges,fadeOf,isReversed,speedOf,timelineDuration,type TimelineClip} from '../../lib/video/timeline';
 import {scrollLeftForTime,snapPointsFor,snapThresholdSeconds,snapTime,ZOOM_MAX,ZOOM_MIN} from '../../lib/video/zoom';
 import {clipDisplayName,needsSourceFile} from '../../lib/video/titles';
 import {useT} from '../../lib/useT';
@@ -118,6 +118,7 @@ export function VideoTimeline({clips,selectedId,position,missing,onSeek,onSelect
       {clipDisplayName(r.clip,shortName(r.clip.source))}{speedOf(r.clip)!==1?` · ${speedOf(r.clip)}×`:''}{needsSourceFile(r.clip)&&ranges.filter(x=>x.clip.source===r.clip.source).length>1?` · ${ranges.filter(x=>x.clip.source===r.clip.source).findIndex(x=>x.clip.id===r.clip.id)+1}`:''}
       {r.clip.muted&&<VolumeX size={10} className="ml-1 inline-block align-[-1px]" aria-label={t('video.clipMuted')}/>}
       {isReversed(r.clip)&&<span className="ml-1" aria-label={t('video.clipReversed')} data-testid="video-clip-reversed-badge">◂◂</span>}
+      {r.clip.cropKeys?.map(k=>k.t).filter((kt,ki,arr)=>arr.indexOf(kt)===ki).map(kt=><span key={kt} className="pointer-events-none absolute bottom-0 text-[8px] leading-none text-white [text-shadow:0_0_3px_rgba(0,0,0,.9)]" style={{left:`${Math.min(100,Math.max(0,kt/clipDuration(r.clip)*100))}%`}} data-testid="video-clip-key-marker">◆</span>)}
       {gone&&<span className="ml-1 text-[var(--danger)]">{t('video.missingSource')}</span>}
      </span>
      {selected&&(['in','out'] as const).map(edge=>{
