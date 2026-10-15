@@ -2036,6 +2036,18 @@ export function slidesWithoutNotes(bytes:Uint8Array):{items:NoNotesSlide[];total
   return {items,total};
 }
 
+/** Slides with no visible content: no picture, table, chart, group, connector or other object, and no non-blank text. Unsupported structure is skipped, not guessed. */
+export function emptySlides(bytes:Uint8Array):{items:NoNotesSlide[];total:number}{
+  const model=readDeckModel(bytes),items:NoNotesSlide[]=[];let total=0;
+  model.slides.forEach((slide,slideIndex)=>{
+    if(slide.problems.length)return;
+    if(slide.shapes.some(x=>x.parentId===null&&x.kind!=='text'))return;
+    if(model.runs.some(r=>r.slideId===slide.id&&r.text.trim()!==''))return;
+    total++;if(items.length<MAX_ALT_REPORT)items.push({slideId:slide.id,slideIndex});
+  });
+  return {items,total};
+}
+
 /** Top-level object kinds that should carry alt text; text boxes and connectors are left out on purpose. */
 const ALT_KINDS:Partial<Record<ShapeKind,readonly [string,string]>>={picture:['p:pic','p:nvPicPr'],group:['p:grpSp','p:nvGrpSpPr'],table:['p:graphicFrame','p:nvGraphicFramePr'],chart:['p:graphicFrame','p:nvGraphicFramePr']};
 export function missingAltText(bytes:Uint8Array):{items:MissingAlt[];total:number}{
