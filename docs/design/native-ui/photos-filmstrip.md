@@ -750,3 +750,18 @@ Coverage: the light/dark gallery leg adds a real JPEG next to the
 three PNGs and narrows to each side
 (`test-results/ds-photos-smart-type-{light,dark}.png`); a unit
 test covers the MIME mapping.
+
+## Name and size sort (P130)
+
+The sort select gains "Name" (A-Z) and "Size" (big files first).
+Size sort doubles as the duplicate-hunting view: identical
+captures share their byte size, so candidates land side by side -
+the manual companion to the duplicates smart-filter rule. Both
+orders keep library order inside ties (stable sort), and the
+shared select picks them up in the survey view too.
+
+Coverage: the light/dark gallery leg adds a tiny and a big file
+whose library/name/size orders all differ and asserts the first
+strip item under each
+(`test-results/ds-photos-sort-size-{light,dark}.png`); the sort
+unit test covers alphabetical and big-first orderings with ties.

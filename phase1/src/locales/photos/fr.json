@@ -268,5 +268,7 @@
  "photos.smart.type.png": "PNG",
  "photos.smart.type.webp": "WebP",
  "photos.smart.type.psd": "PSD",
- "photos.smart.type.other": "Autres"
+ "photos.smart.type.other": "Autres",
+ "photos.filmstrip.sort.name": "Nom",
+ "photos.filmstrip.sort.size": "Taille"
 }

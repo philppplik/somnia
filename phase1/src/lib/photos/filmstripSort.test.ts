@@ -19,3 +19,12 @@ test('sorting never mutates the input array',()=>{
  sortFilmstrip(items,'rating',{'a.png':5},{});
  assert.deepEqual(items,before);
 });
+test('name sort orders alphabetically',()=>{
+ assert.deepEqual(sortFilmstrip(items,'name',{},{},undefined,{}).map(i=>i.name),['a.png','b.png','c.png','d.png']);
+ const mixed=[img('zzz.png'),img('aaa.png'),img('mmm.png')];
+ assert.deepEqual(sortFilmstrip(mixed,'name',{},{},undefined,{}).map(i=>i.name),['aaa.png','mmm.png','zzz.png']);
+});
+test('size sort orders big files first, library order inside ties',()=>{
+ const sorted=sortFilmstrip(items,'size',{},{},undefined,{'b.png':100,'d.png':900,'a.png':900,'c.png':50}).map(i=>i.name);
+ assert.deepEqual(sorted,['a.png','d.png','b.png','c.png']);
+});
