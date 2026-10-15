@@ -780,3 +780,14 @@ the candidates apart.
 Coverage: the light/dark gallery leg seeds one entry and asserts
 the full tooltip, and asserts a second thumb shows its real
 decoded dimensions with no invented date or camera.
+
+## Camera in library search (P132)
+
+The library search matches the camera from the EXIF cache next
+to name, tags and caption - "nikon" narrows the strip to every
+resolved Nikon. Progressive like the camera smart-filter rule:
+only resolved cache entries match, nothing is fetched eagerly
+for the query and nothing is invented.
+
+Coverage: the light/dark gallery leg seeds one camera entry and
+narrows to it (`test-results/ds-photos-search-camera-{light,dark}.png`).

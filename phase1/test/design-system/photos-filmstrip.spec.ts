@@ -1303,6 +1303,27 @@ test('thumbnail tooltip: name, capture date, camera and dimensions from the EXIF
   await expect(page.getByTestId('photos-filmstrip-item-strip-2.png')).toHaveAttribute('title','strip-2.png · 240 × 150'); // real decoded dimensions, no invented date or camera
  }
 });
+test('library search: camera from the EXIF cache narrows the strip (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
+  await page.evaluate(async()=>{
+   const cd=await import('/src/lib/photos/captureDates.ts');const med=await import('/src/lib/media.ts');
+   const size=(n:string)=>med.getMedia().items.find(i=>i.name===n)!.size;
+   cd.putCaptureDate('strip-2.png',size('strip-2.png'),null,'Nikon Z6',240,150);
+  });
+  const search=page.getByTestId('photos-filmstrip-search');
+  await search.fill('');
+  await search.fill('nikon'); // case-insensitive camera match
+  await expect(page.getByTestId('photos-filmstrip-item-strip-2.png')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-1.png')).toHaveCount(0);
+  await page.screenshot({path:`test-results/ds-photos-search-camera-${theme}.png`,fullPage:true});
+  await search.fill('');
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible();
+ }
+});
 test('menu groups: labeled collapsible sections, expanded by default (light and dark)',async({page})=>{
  for(const theme of['light','dark']){
   await page.goto('/test/design-system/?view=photos-filmstrip');
