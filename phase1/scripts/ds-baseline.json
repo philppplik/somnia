@@ -1,497 +1,497 @@
 {
- "schemaVersion": 1,
- "exceptions": [
-  {
-   "path": "src/components/ui/native-controls.tsx",
-   "metrics": [
-    "rawButton",
-    "rawInput",
-    "rawSelect",
-    "rawTextarea"
-   ],
-   "reason": "Native backing elements of P1 primitives. Consumer areas remain fully ratcheted; hex, typography and inline debt are still counted."
-  },
-  {
-   "path": "src/components/ui/number-field.tsx",
-   "metrics": [
-    "rawButton",
-    "rawInput",
-    "rawSelect",
-    "rawTextarea"
-   ],
-   "reason": "Native backing elements of P1 primitives. Consumer areas remain fully ratcheted; hex, typography and inline debt are still counted."
-  },
-  {
-   "path": "src/components/ui/range-field.tsx",
-   "metrics": [
-    "rawButton",
-    "rawInput",
-    "rawSelect",
-    "rawTextarea"
-   ],
-   "reason": "Native backing elements of P1 primitives. Consumer areas remain fully ratcheted; hex, typography and inline debt are still counted."
-  },
-  {
-   "path": "src/components/ui/panel.tsx",
-   "metrics": [
-    "rawButton",
-    "rawInput",
-    "rawSelect",
-    "rawTextarea"
-   ],
-   "reason": "Native backing elements of P1 primitives. Consumer areas remain fully ratcheted; hex, typography and inline debt are still counted."
-  },
-  {
-   "path": "src/components/ui/checkbox.tsx",
-   "metrics": [
-    "rawButton",
-    "rawInput",
-    "rawSelect",
-    "rawTextarea"
-   ],
-   "reason": "Native backing elements of P1 primitives. Consumer areas remain fully ratcheted; hex, typography and inline debt are still counted."
-  },
-  {
-   "path": "src/components/ui/switch.tsx",
-   "metrics": [
-    "rawButton",
-    "rawInput",
-    "rawSelect",
-    "rawTextarea"
-   ],
-   "reason": "Native backing elements of P1 primitives. Consumer areas remain fully ratcheted; hex, typography and inline debt are still counted."
-  },
-  {
-   "path": "src/components/ui/radio-group.tsx",
-   "metrics": [
-    "rawButton",
-    "rawInput",
-    "rawSelect",
-    "rawTextarea"
-   ],
-   "reason": "Native backing elements of P1 primitives. Consumer areas remain fully ratcheted; hex, typography and inline debt are still counted."
-  },
-  {
-   "path": "src/lib/frameworks/templates/",
-   "metrics": "all",
-   "reason": "Generated user projects are authored content, not application chrome."
-  },
-  {
-   "path": "src/themes/",
-   "metrics": [
-    "hexCss"
-   ],
-   "reason": "Syntax theme palettes are independent of application appearance."
-  },
-  {
-   "path": "src/styles/tokens.css",
-   "metrics": [
-    "hexCss"
-   ],
-   "reason": "Canonical token definitions own literal colors."
-  },
-  {
-   "path": "src/components/vectorstudio/VectorCanvas.tsx",
-   "metrics": [
-    "hexTsx"
-   ],
-   "reason": "Vector document colors and editing previews. Controls remain counted."
-  },
-  {
-   "path": "src/components/vectoredit/PenToolEditor.tsx",
-   "metrics": [
-    "hexTsx"
-   ],
-   "reason": "Vector document colors and editing previews. Controls remain counted."
-  },
-  {
-   "path": "src/components/svgedit/GradientEditor.tsx",
-   "metrics": [
-    "hexTsx"
-   ],
-   "reason": "Vector document colors and editing previews. Controls remain counted."
+  "schemaVersion": 1,
+  "exceptions": [
+    {
+      "path": "src/components/ui/native-controls.tsx",
+      "metrics": [
+        "rawButton",
+        "rawInput",
+        "rawSelect",
+        "rawTextarea"
+      ],
+      "reason": "Native backing elements of P1 primitives. Consumer areas remain fully ratcheted; hex, typography and inline debt are still counted."
+    },
+    {
+      "path": "src/components/ui/number-field.tsx",
+      "metrics": [
+        "rawButton",
+        "rawInput",
+        "rawSelect",
+        "rawTextarea"
+      ],
+      "reason": "Native backing elements of P1 primitives. Consumer areas remain fully ratcheted; hex, typography and inline debt are still counted."
+    },
+    {
+      "path": "src/components/ui/range-field.tsx",
+      "metrics": [
+        "rawButton",
+        "rawInput",
+        "rawSelect",
+        "rawTextarea"
+      ],
+      "reason": "Native backing elements of P1 primitives. Consumer areas remain fully ratcheted; hex, typography and inline debt are still counted."
+    },
+    {
+      "path": "src/components/ui/panel.tsx",
+      "metrics": [
+        "rawButton",
+        "rawInput",
+        "rawSelect",
+        "rawTextarea"
+      ],
+      "reason": "Native backing elements of P1 primitives. Consumer areas remain fully ratcheted; hex, typography and inline debt are still counted."
+    },
+    {
+      "path": "src/components/ui/checkbox.tsx",
+      "metrics": [
+        "rawButton",
+        "rawInput",
+        "rawSelect",
+        "rawTextarea"
+      ],
+      "reason": "Native backing elements of P1 primitives. Consumer areas remain fully ratcheted; hex, typography and inline debt are still counted."
+    },
+    {
+      "path": "src/components/ui/switch.tsx",
+      "metrics": [
+        "rawButton",
+        "rawInput",
+        "rawSelect",
+        "rawTextarea"
+      ],
+      "reason": "Native backing elements of P1 primitives. Consumer areas remain fully ratcheted; hex, typography and inline debt are still counted."
+    },
+    {
+      "path": "src/components/ui/radio-group.tsx",
+      "metrics": [
+        "rawButton",
+        "rawInput",
+        "rawSelect",
+        "rawTextarea"
+      ],
+      "reason": "Native backing elements of P1 primitives. Consumer areas remain fully ratcheted; hex, typography and inline debt are still counted."
+    },
+    {
+      "path": "src/lib/frameworks/templates/",
+      "metrics": "all",
+      "reason": "Generated user projects are authored content, not application chrome."
+    },
+    {
+      "path": "src/themes/",
+      "metrics": [
+        "hexCss"
+      ],
+      "reason": "Syntax theme palettes are independent of application appearance."
+    },
+    {
+      "path": "src/styles/tokens.css",
+      "metrics": [
+        "hexCss"
+      ],
+      "reason": "Canonical token definitions own literal colors."
+    },
+    {
+      "path": "src/components/vectorstudio/VectorCanvas.tsx",
+      "metrics": [
+        "hexTsx"
+      ],
+      "reason": "Vector document colors and editing previews. Controls remain counted."
+    },
+    {
+      "path": "src/components/vectoredit/PenToolEditor.tsx",
+      "metrics": [
+        "hexTsx"
+      ],
+      "reason": "Vector document colors and editing previews. Controls remain counted."
+    },
+    {
+      "path": "src/components/svgedit/GradientEditor.tsx",
+      "metrics": [
+        "hexTsx"
+      ],
+      "reason": "Vector document colors and editing previews. Controls remain counted."
+    }
+  ],
+  "counts": {
+    "src/App.tsx": {
+      "rawButton": 0,
+      "rawInput": 0,
+      "rawSelect": 0,
+      "rawTextarea": 0,
+      "hexTsx": 0,
+      "hexCss": 0,
+      "pixelText": 0,
+      "inlineStyle": 1
+    },
+    "src/components": {
+      "rawButton": 116,
+      "rawInput": 57,
+      "rawSelect": 18,
+      "rawTextarea": 8,
+      "hexTsx": 26,
+      "hexCss": 0,
+      "pixelText": 191,
+      "inlineStyle": 70
+    },
+    "src/components/agent": {
+      "rawButton": 0,
+      "rawInput": 0,
+      "rawSelect": 0,
+      "rawTextarea": 0,
+      "hexTsx": 0,
+      "hexCss": 0,
+      "pixelText": 0,
+      "inlineStyle": 3
+    },
+    "src/components/agentBoard": {
+      "rawButton": 0,
+      "rawInput": 0,
+      "rawSelect": 0,
+      "rawTextarea": 0,
+      "hexTsx": 0,
+      "hexCss": 0,
+      "pixelText": 0,
+      "inlineStyle": 0
+    },
+    "src/components/design": {
+      "rawButton": 4,
+      "rawInput": 16,
+      "rawSelect": 6,
+      "rawTextarea": 1,
+      "hexTsx": 3,
+      "hexCss": 0,
+      "pixelText": 0,
+      "inlineStyle": 8
+    },
+    "src/components/diagnostics": {
+      "rawButton": 21,
+      "rawInput": 1,
+      "rawSelect": 0,
+      "rawTextarea": 0,
+      "hexTsx": 0,
+      "hexCss": 0,
+      "pixelText": 0,
+      "inlineStyle": 0
+    },
+    "src/components/documents": {
+      "rawButton": 0,
+      "rawInput": 0,
+      "rawSelect": 0,
+      "rawTextarea": 0,
+      "hexTsx": 0,
+      "hexCss": 0,
+      "pixelText": 27,
+      "inlineStyle": 5
+    },
+    "src/components/extensions": {
+      "rawButton": 0,
+      "rawInput": 0,
+      "rawSelect": 0,
+      "rawTextarea": 0,
+      "hexTsx": 1,
+      "hexCss": 0,
+      "pixelText": 0,
+      "inlineStyle": 3
+    },
+    "src/components/imageedit": {
+      "rawButton": 0,
+      "rawInput": 0,
+      "rawSelect": 0,
+      "rawTextarea": 0,
+      "hexTsx": 5,
+      "hexCss": 0,
+      "pixelText": 0,
+      "inlineStyle": 9
+    },
+    "src/components/imgedit": {
+      "rawButton": 0,
+      "rawInput": 0,
+      "rawSelect": 0,
+      "rawTextarea": 0,
+      "hexTsx": 1,
+      "hexCss": 0,
+      "pixelText": 8,
+      "inlineStyle": 3
+    },
+    "src/components/pdf": {
+      "rawButton": 0,
+      "rawInput": 0,
+      "rawSelect": 0,
+      "rawTextarea": 0,
+      "hexTsx": 1,
+      "hexCss": 15,
+      "pixelText": 0,
+      "inlineStyle": 0
+    },
+    "src/components/pdfedit": {
+      "rawButton": 0,
+      "rawInput": 0,
+      "rawSelect": 0,
+      "rawTextarea": 0,
+      "hexTsx": 5,
+      "hexCss": 0,
+      "pixelText": 6,
+      "inlineStyle": 18
+    },
+    "src/components/photos": {
+      "rawButton": 0,
+      "rawInput": 0,
+      "rawSelect": 0,
+      "rawTextarea": 0,
+      "hexTsx": 3,
+      "hexCss": 0,
+      "pixelText": 15,
+      "inlineStyle": 11
+    },
+    "src/components/sheets": {
+      "rawButton": 14,
+      "rawInput": 6,
+      "rawSelect": 1,
+      "rawTextarea": 1,
+      "hexTsx": 1,
+      "hexCss": 0,
+      "pixelText": 13,
+      "inlineStyle": 6
+    },
+    "src/components/shell": {
+      "rawButton": 6,
+      "rawInput": 0,
+      "rawSelect": 0,
+      "rawTextarea": 0,
+      "hexTsx": 0,
+      "hexCss": 0,
+      "pixelText": 2,
+      "inlineStyle": 5
+    },
+    "src/components/slides": {
+      "rawButton": 18,
+      "rawInput": 4,
+      "rawSelect": 1,
+      "rawTextarea": 2,
+      "hexTsx": 4,
+      "hexCss": 0,
+      "pixelText": 0,
+      "inlineStyle": 0
+    },
+    "src/components/sound": {
+      "rawButton": 1,
+      "rawInput": 13,
+      "rawSelect": 2,
+      "rawTextarea": 0,
+      "hexTsx": 3,
+      "hexCss": 0,
+      "pixelText": 10,
+      "inlineStyle": 8
+    },
+    "src/components/studios": {
+      "rawButton": 2,
+      "rawInput": 4,
+      "rawSelect": 0,
+      "rawTextarea": 0,
+      "hexTsx": 0,
+      "hexCss": 3,
+      "pixelText": 7,
+      "inlineStyle": 1
+    },
+    "src/components/svgedit": {
+      "rawButton": 0,
+      "rawInput": 0,
+      "rawSelect": 0,
+      "rawTextarea": 0,
+      "hexTsx": 13,
+      "hexCss": 0,
+      "pixelText": 16,
+      "inlineStyle": 22
+    },
+    "src/components/ui": {
+      "rawButton": 0,
+      "rawInput": 1,
+      "rawSelect": 0,
+      "rawTextarea": 0,
+      "hexTsx": 0,
+      "hexCss": 0,
+      "pixelText": 3,
+      "inlineStyle": 0
+    },
+    "src/components/vectoredit": {
+      "rawButton": 13,
+      "rawInput": 1,
+      "rawSelect": 0,
+      "rawTextarea": 0,
+      "hexTsx": 0,
+      "hexCss": 0,
+      "pixelText": 0,
+      "inlineStyle": 14
+    },
+    "src/components/vectorstudio": {
+      "rawButton": 0,
+      "rawInput": 0,
+      "rawSelect": 0,
+      "rawTextarea": 0,
+      "hexTsx": 9,
+      "hexCss": 0,
+      "pixelText": 18,
+      "inlineStyle": 18
+    },
+    "src/components/versions": {
+      "rawButton": 0,
+      "rawInput": 0,
+      "rawSelect": 0,
+      "rawTextarea": 0,
+      "hexTsx": 0,
+      "hexCss": 0,
+      "pixelText": 41,
+      "inlineStyle": 2
+    },
+    "src/components/vibespace": {
+      "rawButton": 0,
+      "rawInput": 0,
+      "rawSelect": 0,
+      "rawTextarea": 0,
+      "hexTsx": 0,
+      "hexCss": 96,
+      "pixelText": 0,
+      "inlineStyle": 5
+    },
+    "src/components/video": {
+      "rawButton": 0,
+      "rawInput": 0,
+      "rawSelect": 0,
+      "rawTextarea": 0,
+      "hexTsx": 0,
+      "hexCss": 0,
+      "pixelText": 11,
+      "inlineStyle": 16
+    },
+    "src/dev": {
+      "rawButton": 1,
+      "rawInput": 0,
+      "rawSelect": 0,
+      "rawTextarea": 0,
+      "hexTsx": 0,
+      "hexCss": 0,
+      "pixelText": 0,
+      "inlineStyle": 1
+    },
+    "src/lib": {
+      "rawButton": 0,
+      "rawInput": 0,
+      "rawSelect": 0,
+      "rawTextarea": 0,
+      "hexTsx": 0,
+      "hexCss": 0,
+      "pixelText": 0,
+      "inlineStyle": 0
+    },
+    "src/lib/design": {
+      "rawButton": 0,
+      "rawInput": 0,
+      "rawSelect": 0,
+      "rawTextarea": 0,
+      "hexTsx": 0,
+      "hexCss": 0,
+      "pixelText": 0,
+      "inlineStyle": 0
+    },
+    "src/lib/frameworks": {
+      "rawButton": 0,
+      "rawInput": 0,
+      "rawSelect": 0,
+      "rawTextarea": 0,
+      "hexTsx": 0,
+      "hexCss": 0,
+      "pixelText": 0,
+      "inlineStyle": 0
+    },
+    "src/lib/pdf": {
+      "rawButton": 2,
+      "rawInput": 8,
+      "rawSelect": 0,
+      "rawTextarea": 0,
+      "hexTsx": 0,
+      "hexCss": 13,
+      "pixelText": 0,
+      "inlineStyle": 0
+    },
+    "src/lib/photos": {
+      "rawButton": 0,
+      "rawInput": 0,
+      "rawSelect": 0,
+      "rawTextarea": 0,
+      "hexTsx": 0,
+      "hexCss": 0,
+      "pixelText": 0,
+      "inlineStyle": 0
+    },
+    "src/lib/visualDiff": {
+      "rawButton": 1,
+      "rawInput": 1,
+      "rawSelect": 1,
+      "rawTextarea": 0,
+      "hexTsx": 2,
+      "hexCss": 14,
+      "pixelText": 0,
+      "inlineStyle": 5
+    },
+    "src/main.tsx": {
+      "rawButton": 0,
+      "rawInput": 0,
+      "rawSelect": 0,
+      "rawTextarea": 0,
+      "hexTsx": 0,
+      "hexCss": 0,
+      "pixelText": 0,
+      "inlineStyle": 0
+    },
+    "src/styles": {
+      "rawButton": 0,
+      "rawInput": 0,
+      "rawSelect": 0,
+      "rawTextarea": 0,
+      "hexTsx": 0,
+      "hexCss": 282,
+      "pixelText": 0,
+      "inlineStyle": 0
+    },
+    "src/themes": {
+      "rawButton": 0,
+      "rawInput": 0,
+      "rawSelect": 0,
+      "rawTextarea": 0,
+      "hexTsx": 0,
+      "hexCss": 0,
+      "pixelText": 0,
+      "inlineStyle": 0
+    },
+    "src/components/animation": {
+      "rawButton": 7,
+      "rawInput": 1,
+      "rawSelect": 0,
+      "rawTextarea": 0,
+      "hexTsx": 0,
+      "hexCss": 0,
+      "pixelText": 3,
+      "inlineStyle": 10
+    },
+    "src/components/interface": {
+      "rawButton": 2,
+      "rawInput": 6,
+      "rawSelect": 11,
+      "rawTextarea": 1,
+      "hexTsx": 1,
+      "hexCss": 0,
+      "pixelText": 2,
+      "inlineStyle": 14
+    },
+    "src/components/studio3d": {
+      "rawButton": 1,
+      "rawInput": 12,
+      "rawSelect": 2,
+      "rawTextarea": 0,
+      "hexTsx": 0,
+      "hexCss": 0,
+      "pixelText": 0,
+      "inlineStyle": 1
+    }
   }
- ],
- "counts": {
-  "src/App.tsx": {
-   "rawButton": 0,
-   "rawInput": 0,
-   "rawSelect": 0,
-   "rawTextarea": 0,
-   "hexTsx": 0,
-   "hexCss": 0,
-   "pixelText": 0,
-   "inlineStyle": 1
-  },
-  "src/components": {
-   "rawButton": 116,
-   "rawInput": 57,
-   "rawSelect": 18,
-   "rawTextarea": 8,
-   "hexTsx": 26,
-   "hexCss": 0,
-   "pixelText": 191,
-   "inlineStyle": 70
-  },
-  "src/components/agent": {
-   "rawButton": 0,
-   "rawInput": 0,
-   "rawSelect": 0,
-   "rawTextarea": 0,
-   "hexTsx": 0,
-   "hexCss": 0,
-   "pixelText": 0,
-   "inlineStyle": 3
-  },
-  "src/components/agentBoard": {
-   "rawButton": 0,
-   "rawInput": 0,
-   "rawSelect": 0,
-   "rawTextarea": 0,
-   "hexTsx": 0,
-   "hexCss": 0,
-   "pixelText": 0,
-   "inlineStyle": 0
-  },
-  "src/components/design": {
-   "rawButton": 4,
-   "rawInput": 16,
-   "rawSelect": 6,
-   "rawTextarea": 1,
-   "hexTsx": 3,
-   "hexCss": 0,
-   "pixelText": 0,
-   "inlineStyle": 8
-  },
-  "src/components/diagnostics": {
-   "rawButton": 21,
-   "rawInput": 1,
-   "rawSelect": 0,
-   "rawTextarea": 0,
-   "hexTsx": 0,
-   "hexCss": 0,
-   "pixelText": 0,
-   "inlineStyle": 0
-  },
-  "src/components/documents": {
-   "rawButton": 0,
-   "rawInput": 0,
-   "rawSelect": 0,
-   "rawTextarea": 0,
-   "hexTsx": 0,
-   "hexCss": 0,
-   "pixelText": 27,
-   "inlineStyle": 5
-  },
-  "src/components/extensions": {
-   "rawButton": 0,
-   "rawInput": 0,
-   "rawSelect": 0,
-   "rawTextarea": 0,
-   "hexTsx": 1,
-   "hexCss": 0,
-   "pixelText": 0,
-   "inlineStyle": 3
-  },
-  "src/components/imageedit": {
-   "rawButton": 0,
-   "rawInput": 0,
-   "rawSelect": 0,
-   "rawTextarea": 0,
-   "hexTsx": 5,
-   "hexCss": 0,
-   "pixelText": 0,
-   "inlineStyle": 9
-  },
-  "src/components/imgedit": {
-   "rawButton": 0,
-   "rawInput": 0,
-   "rawSelect": 0,
-   "rawTextarea": 0,
-   "hexTsx": 1,
-   "hexCss": 0,
-   "pixelText": 8,
-   "inlineStyle": 3
-  },
-  "src/components/pdf": {
-   "rawButton": 0,
-   "rawInput": 0,
-   "rawSelect": 0,
-   "rawTextarea": 0,
-   "hexTsx": 1,
-   "hexCss": 15,
-   "pixelText": 0,
-   "inlineStyle": 0
-  },
-  "src/components/pdfedit": {
-   "rawButton": 0,
-   "rawInput": 0,
-   "rawSelect": 0,
-   "rawTextarea": 0,
-   "hexTsx": 5,
-   "hexCss": 0,
-   "pixelText": 6,
-   "inlineStyle": 18
-  },
-  "src/components/photos": {
-   "rawButton": 0,
-   "rawInput": 0,
-   "rawSelect": 0,
-   "rawTextarea": 0,
-   "hexTsx": 3,
-   "hexCss": 0,
-   "pixelText": 15,
-   "inlineStyle": 11
-  },
-  "src/components/sheets": {
-   "rawButton": 14,
-   "rawInput": 6,
-   "rawSelect": 1,
-   "rawTextarea": 1,
-   "hexTsx": 1,
-   "hexCss": 0,
-   "pixelText": 13,
-   "inlineStyle": 6
-  },
-  "src/components/shell": {
-   "rawButton": 6,
-   "rawInput": 0,
-   "rawSelect": 0,
-   "rawTextarea": 0,
-   "hexTsx": 0,
-   "hexCss": 0,
-   "pixelText": 2,
-   "inlineStyle": 5
-  },
-  "src/components/slides": {
-   "rawButton": 18,
-   "rawInput": 4,
-   "rawSelect": 1,
-   "rawTextarea": 2,
-   "hexTsx": 4,
-   "hexCss": 0,
-   "pixelText": 0,
-   "inlineStyle": 0
-  },
-  "src/components/sound": {
-   "rawButton": 1,
-   "rawInput": 13,
-   "rawSelect": 2,
-   "rawTextarea": 0,
-   "hexTsx": 3,
-   "hexCss": 0,
-   "pixelText": 10,
-   "inlineStyle": 8
-  },
-  "src/components/studios": {
-   "rawButton": 2,
-   "rawInput": 4,
-   "rawSelect": 0,
-   "rawTextarea": 0,
-   "hexTsx": 0,
-   "hexCss": 3,
-   "pixelText": 7,
-   "inlineStyle": 1
-  },
-  "src/components/svgedit": {
-   "rawButton": 0,
-   "rawInput": 0,
-   "rawSelect": 0,
-   "rawTextarea": 0,
-   "hexTsx": 13,
-   "hexCss": 0,
-   "pixelText": 16,
-   "inlineStyle": 22
-  },
-  "src/components/ui": {
-   "rawButton": 0,
-   "rawInput": 1,
-   "rawSelect": 0,
-   "rawTextarea": 0,
-   "hexTsx": 0,
-   "hexCss": 0,
-   "pixelText": 3,
-   "inlineStyle": 0
-  },
-  "src/components/vectoredit": {
-   "rawButton": 13,
-   "rawInput": 1,
-   "rawSelect": 0,
-   "rawTextarea": 0,
-   "hexTsx": 0,
-   "hexCss": 0,
-   "pixelText": 0,
-   "inlineStyle": 14
-  },
-  "src/components/vectorstudio": {
-   "rawButton": 0,
-   "rawInput": 0,
-   "rawSelect": 0,
-   "rawTextarea": 0,
-   "hexTsx": 9,
-   "hexCss": 0,
-   "pixelText": 18,
-   "inlineStyle": 18
-  },
-  "src/components/versions": {
-   "rawButton": 0,
-   "rawInput": 0,
-   "rawSelect": 0,
-   "rawTextarea": 0,
-   "hexTsx": 0,
-   "hexCss": 0,
-   "pixelText": 41,
-   "inlineStyle": 2
-  },
-  "src/components/vibespace": {
-   "rawButton": 0,
-   "rawInput": 0,
-   "rawSelect": 0,
-   "rawTextarea": 0,
-   "hexTsx": 0,
-   "hexCss": 96,
-   "pixelText": 0,
-   "inlineStyle": 5
-  },
-  "src/components/video": {
-   "rawButton": 0,
-   "rawInput": 0,
-   "rawSelect": 0,
-   "rawTextarea": 0,
-   "hexTsx": 0,
-   "hexCss": 0,
-   "pixelText": 10,
-   "inlineStyle": 14
-  },
-  "src/dev": {
-   "rawButton": 1,
-   "rawInput": 0,
-   "rawSelect": 0,
-   "rawTextarea": 0,
-   "hexTsx": 0,
-   "hexCss": 0,
-   "pixelText": 0,
-   "inlineStyle": 1
-  },
-  "src/lib": {
-   "rawButton": 0,
-   "rawInput": 0,
-   "rawSelect": 0,
-   "rawTextarea": 0,
-   "hexTsx": 0,
-   "hexCss": 0,
-   "pixelText": 0,
-   "inlineStyle": 0
-  },
-  "src/lib/design": {
-   "rawButton": 0,
-   "rawInput": 0,
-   "rawSelect": 0,
-   "rawTextarea": 0,
-   "hexTsx": 0,
-   "hexCss": 0,
-   "pixelText": 0,
-   "inlineStyle": 0
-  },
-  "src/lib/frameworks": {
-   "rawButton": 0,
-   "rawInput": 0,
-   "rawSelect": 0,
-   "rawTextarea": 0,
-   "hexTsx": 0,
-   "hexCss": 0,
-   "pixelText": 0,
-   "inlineStyle": 0
-  },
-  "src/lib/pdf": {
-   "rawButton": 2,
-   "rawInput": 8,
-   "rawSelect": 0,
-   "rawTextarea": 0,
-   "hexTsx": 0,
-   "hexCss": 13,
-   "pixelText": 0,
-   "inlineStyle": 0
-  },
-  "src/lib/photos": {
-   "rawButton": 0,
-   "rawInput": 0,
-   "rawSelect": 0,
-   "rawTextarea": 0,
-   "hexTsx": 0,
-   "hexCss": 0,
-   "pixelText": 0,
-   "inlineStyle": 0
-  },
-  "src/lib/visualDiff": {
-   "rawButton": 1,
-   "rawInput": 1,
-   "rawSelect": 1,
-   "rawTextarea": 0,
-   "hexTsx": 2,
-   "hexCss": 14,
-   "pixelText": 0,
-   "inlineStyle": 5
-  },
-  "src/main.tsx": {
-   "rawButton": 0,
-   "rawInput": 0,
-   "rawSelect": 0,
-   "rawTextarea": 0,
-   "hexTsx": 0,
-   "hexCss": 0,
-   "pixelText": 0,
-   "inlineStyle": 0
-  },
-  "src/styles": {
-   "rawButton": 0,
-   "rawInput": 0,
-   "rawSelect": 0,
-   "rawTextarea": 0,
-   "hexTsx": 0,
-   "hexCss": 282,
-   "pixelText": 0,
-   "inlineStyle": 0
-  },
-  "src/themes": {
-   "rawButton": 0,
-   "rawInput": 0,
-   "rawSelect": 0,
-   "rawTextarea": 0,
-   "hexTsx": 0,
-   "hexCss": 0,
-   "pixelText": 0,
-   "inlineStyle": 0
-  },
-  "src/components/animation": {
-   "rawButton": 7,
-   "rawInput": 1,
-   "rawSelect": 0,
-   "rawTextarea": 0,
-   "hexTsx": 0,
-   "hexCss": 0,
-   "pixelText": 3,
-   "inlineStyle": 10
-  },
-  "src/components/interface": {
-   "rawButton": 2,
-   "rawInput": 6,
-   "rawSelect": 11,
-   "rawTextarea": 1,
-   "hexTsx": 1,
-   "hexCss": 0,
-   "pixelText": 2,
-   "inlineStyle": 14
-  },
-  "src/components/studio3d": {
-   "rawButton": 1,
-   "rawInput": 12,
-   "rawSelect": 2,
-   "rawTextarea": 0,
-   "hexTsx": 0,
-   "hexCss": 0,
-   "pixelText": 0,
-   "inlineStyle": 1
-  }
- }
 }
