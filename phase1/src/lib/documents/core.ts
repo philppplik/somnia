@@ -1,5 +1,5 @@
 import type {DocumentsRequest,DocumentsResponse,OpenedDocument} from './protocol';
-import {EXPORT_EXTS,MAX_EXPORT_BYTES,parseProofIssues,proofWordOk,MAX_USER_WORDS,imageCropProblem,imageWrapProblem,tableLayoutProblem,SECTION_BREAKS,hfVariantsProblem,HF_ALIGNS,stylePatchProblem,STYLE_ID_RE,tocProblem,listOptionsProblem,isListKind,SAVE_DATE,pdfOptionsProblem,MAX_PDF_BYTES,propertiesProblem,commentProblem,validHfText,checkFormatPatch,checkParaPatch,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,DOC_STYLES,MAX_DOCX_BYTES,MAX_FORMAT_BLOCKS,MAX_SCALE,MIN_SCALE,imageProblem,tableStyleProblem,pageSetupProblem,MIN_COL_PT,MAX_COL_PT,IMAGE_WIDTH_PERCENTS,MIN_IMAGE_PT,MAX_IMAGE_PT} from './protocol';
+import {parseReviewState,EXPORT_EXTS,MAX_EXPORT_BYTES,parseProofIssues,proofWordOk,MAX_USER_WORDS,imageCropProblem,imageWrapProblem,tableLayoutProblem,SECTION_BREAKS,hfVariantsProblem,HF_ALIGNS,stylePatchProblem,STYLE_ID_RE,tocProblem,listOptionsProblem,isListKind,SAVE_DATE,pdfOptionsProblem,MAX_PDF_BYTES,propertiesProblem,commentProblem,validHfText,checkFormatPatch,checkParaPatch,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,DOC_STYLES,MAX_DOCX_BYTES,MAX_FORMAT_BLOCKS,MAX_SCALE,MIN_SCALE,imageProblem,tableStyleProblem,pageSetupProblem,MIN_COL_PT,MAX_COL_PT,IMAGE_WIDTH_PERCENTS,MIN_IMAGE_PT,MAX_IMAGE_PT} from './protocol';
 const IMAGE_ERRORS={empty:'The image is empty.',size:'An image is limited to 5 MB.',type:'Only PNG and JPEG images can be inserted.',dimensions:'An image is limited to 8000 pixels a side and 25 megapixels.'} as const;
 const posOk=(p:{block:number;off:number})=>Number.isInteger(p.block)&&p.block>=0&&Number.isInteger(p.off)&&p.off>=0;
 function checkParaRange(first:number,last:number){
@@ -12,12 +12,15 @@ function checkSpan(start:{block:number;off:number},end:{block:number;off:number}
  if(end.block-start.block>=MAX_FORMAT_BLOCKS)throw new Error('Selection spans too many paragraphs.');
 }
 /** The slice of the wasm DocSession the host uses. Lets tests run the real engine without a Worker. */
-export interface DocSessionLike{free():void;table_layout?(block:number):string;set_table_layout?(block:number,patchJson:string):void;insert_section_break?(block:number,kind:string):void;remove_section_break?(block:number):void;header_footer_variants?():string;set_header_footer_variants?(patchJson:string):void;set_footer_page_total?(total:boolean):void;set_header_footer_align?(header:string|null,footer:string|null):void;replace_checked?(block:number,expected:string,hunks_json:string):string;styles_list():string;upsert_style(json:string):string;delete_style(id:string):void;insert_toc(block:number,levels:number,title:string,pages:boolean):void;update_toc(block:number):void;remove_toc(block:number):void;continue_list(first:number,last:number):void;list_options(block:number):string;set_list_options(block:number,patchJson:string):void;restart_list(first:number,last:number):void;blocks():string;replace_ranges(block:number,hunksJson:string):void;format_range(sb:number,so:number,eb:number,eo:number,patchJson:string):void;format_state(sb:number,so:number,eb:number,eo:number):string;format_paragraphs(first:number,last:number,patchJson:string):void;paragraph_state(first:number,last:number):string;set_paragraph_style(first:number,last:number,style:string):void;set_list(first:number,last:number,kind:string):void;edit_table(block:number,op:string):void;insert_table(block:number,rows:number,cols:number):void;header_footer():string;set_header_footer(header?:string|null,footer?:string|null,pageNumber?:boolean|null):void;insert_image(block:number,bytes:Uint8Array,alt:string):void;resize_image(block:number,width:number):void;fit_image(block:number,percent:number):void;set_col_width(block:number,width:number):void;page_setup():string;set_page_setup(setupJson:string):void;style_table(block:number,scope:string,styleJson:string):void;set_image_alt(block:number,alt:string):void;set_image_wrap?(block:number,wrap:string,align:string):void;export_format?(ext:string):Uint8Array;set_proofing?(on:boolean):void;set_show_hidden?(on:boolean):void;proof_check?(words:string):string;proof_suggest?(word:string):string;set_image_crop?(block:number,l:number,t:number,r:number,b:number):void;remove_image(block:number):void;shift_list_level(first:number,last:number,delta:number):void;insert(block:number,utf8Offset:number,text:string):void;page_info():string;paginate():number;render_png(page:number,scale:number):Uint8Array;save():Uint8Array;save_at(date:string):Uint8Array;save_at_by(date:string,author:string):Uint8Array;export_pdf_at(optsJson:string,date:string):Uint8Array;export_pdf():Uint8Array;export_pdf_opts(optsJson:string):Uint8Array;text():string;split_block(block:number,off:number):void;merge_with_previous(block:number):void;snapshot():number;restore(snap:number):void;hit_test(page:number,x:number,y:number):string;caret_at(block:number,off:number):string;selection_rects(block:number,a:number,b:number):string;comments():string;properties():string;set_properties(patchJson:string):void;add_comment(block:number,start:number,end:number,text:string,author:string,date:string):void;reply_comment(parent:number,text:string,author:string,date:string):void;resolve_comment(id:number,resolved:boolean):void;delete_comment(id:number):void}
+export interface DocSessionLike{free():void;table_layout?(block:number):string;set_table_layout?(block:number,patchJson:string):void;insert_section_break?(block:number,kind:string):void;remove_section_break?(block:number):void;header_footer_variants?():string;set_header_footer_variants?(patchJson:string):void;set_footer_page_total?(total:boolean):void;set_header_footer_align?(header:string|null,footer:string|null):void;replace_checked?(block:number,expected:string,hunks_json:string):string;styles_list():string;upsert_style(json:string):string;delete_style(id:string):void;insert_toc(block:number,levels:number,title:string,pages:boolean):void;update_toc(block:number):void;remove_toc(block:number):void;continue_list(first:number,last:number):void;list_options(block:number):string;set_list_options(block:number,patchJson:string):void;restart_list(first:number,last:number):void;blocks():string;replace_ranges(block:number,hunksJson:string):void;format_range(sb:number,so:number,eb:number,eo:number,patchJson:string):void;format_state(sb:number,so:number,eb:number,eo:number):string;format_paragraphs(first:number,last:number,patchJson:string):void;paragraph_state(first:number,last:number):string;set_paragraph_style(first:number,last:number,style:string):void;set_list(first:number,last:number,kind:string):void;edit_table(block:number,op:string):void;insert_table(block:number,rows:number,cols:number):void;header_footer():string;set_header_footer(header?:string|null,footer?:string|null,pageNumber?:boolean|null):void;insert_image(block:number,bytes:Uint8Array,alt:string):void;resize_image(block:number,width:number):void;fit_image(block:number,percent:number):void;set_col_width(block:number,width:number):void;page_setup():string;set_page_setup(setupJson:string):void;style_table(block:number,scope:string,styleJson:string):void;set_image_alt(block:number,alt:string):void;set_image_wrap?(block:number,wrap:string,align:string):void;export_format?(ext:string):Uint8Array;set_proofing?(on:boolean):void;set_track_changes?(on:boolean,author:string,date:string):void;set_track_date?(date:string):void;review_state?():string;resolve_change?(block:number,start:number,end:number,accept:boolean):void;resolve_all_changes?(accept:boolean):number;set_show_hidden?(on:boolean):void;proof_check?(words:string):string;proof_suggest?(word:string):string;set_image_crop?(block:number,l:number,t:number,r:number,b:number):void;remove_image(block:number):void;shift_list_level(first:number,last:number,delta:number):void;insert(block:number,utf8Offset:number,text:string):void;page_info():string;paginate():number;render_png(page:number,scale:number):Uint8Array;save():Uint8Array;save_at(date:string):Uint8Array;save_at_by(date:string,author:string):Uint8Array;export_pdf_at(optsJson:string,date:string):Uint8Array;export_pdf():Uint8Array;export_pdf_opts(optsJson:string):Uint8Array;text():string;split_block(block:number,off:number):void;merge_with_previous(block:number):void;snapshot():number;restore(snap:number):void;hit_test(page:number,x:number,y:number):string;caret_at(block:number,off:number):string;selection_rects(block:number,a:number,b:number):string;comments():string;properties():string;set_properties(patchJson:string):void;add_comment(block:number,start:number,end:number,text:string,author:string,date:string):void;reply_comment(parent:number,text:string,author:string,date:string):void;resolve_comment(id:number,resolved:boolean):void;delete_comment(id:number):void}
 export interface DocSessionCtor{new(bytes:Uint8Array):DocSessionLike}
 const ab=(u:Uint8Array):ArrayBuffer=>u.byteOffset===0&&u.byteLength===u.buffer.byteLength?u.buffer as ArrayBuffer:u.slice().buffer as ArrayBuffer;
 /** Owns one open session. Every failure leaves the previous state usable and never keeps a freed pointer. */
 export class DocumentsCore{
  private session:DocSessionLike|null=null;
+ /** Tracking is on: each edit is stamped with the current time first. */
+ private track=false;
+ private stampTrack(s:DocSessionLike){if(this.track&&s.set_track_date)s.set_track_date(new Date().toISOString().replace(/\.\d+Z$/,'Z'));}
  constructor(private readonly Session:DocSessionCtor,private readonly now:()=>number=()=>performance.now()){}
  private timed<T>(fn:()=>T):[T,number]{const t=this.now();const v=fn();return[v,this.now()-t];}
  private describe(openMs:number,layoutMs:number,pages:number):OpenedDocument{
@@ -29,7 +32,7 @@ export class DocumentsCore{
   try{
    if(req.kind==='open'){
     if(req.bytes.byteLength>MAX_DOCX_BYTES)throw new Error('DOCX is larger than 16 MB.');
-    this.session?.free();this.session=null;
+    this.session?.free();this.session=null;this.track=false;
     const [opened,openMs]=this.timed(()=>new this.Session(new Uint8Array(req.bytes)));this.session=opened;
     const [pages,layoutMs]=this.timed(()=>opened.paginate());
     return{res:{id:req.id,ok:true,kind:'opened',document:this.describe(openMs,layoutMs,pages)},transfer:[]};
@@ -47,13 +50,13 @@ export class DocumentsCore{
     return{res:{id:req.id,ok:true,kind:'blocks',blocks:JSON.parse(this.need().blocks())},transfer:[]};
    }
    if(req.kind==='replace'){
-    const s=this.need();const [,editMs]=this.timed(()=>s.replace_ranges(req.block,JSON.stringify(req.hunks.map(h=>[h.start,h.end,h.text]))));const [pages,layoutMs]=this.timed(()=>s.paginate());
+    const s=this.need();this.stampTrack(s);const [,editMs]=this.timed(()=>s.replace_ranges(req.block,JSON.stringify(req.hunks.map(h=>[h.start,h.end,h.text]))));const [pages,layoutMs]=this.timed(()=>s.paginate());
     return{res:{id:req.id,ok:true,kind:'edited',document:this.describe(editMs,layoutMs,pages)},transfer:[]};
    }
    if(req.kind==='replaceChecked'){
     if(!Number.isInteger(req.block)||req.block<0||typeof req.expected!=='string'||req.expected.length>1_000_000||!Array.isArray(req.hunks)||req.hunks.length===0||req.hunks.length>10_000)throw new Error('The edit is not valid.');
     for(const h of req.hunks)if(!h||!Number.isInteger(h.start)||!Number.isInteger(h.end)||h.start<0||h.end<h.start||typeof h.text!=='string'||h.text.length>1_000_000)throw new Error('The edit is not valid.');
-    const s=this.need();if(!s.replace_checked)throw new Error('This engine cannot check an edit before applying it.');
+    const s=this.need();this.stampTrack(s);if(!s.replace_checked)throw new Error('This engine cannot check an edit before applying it.');
     const [text,editMs]=this.timed(()=>s.replace_checked!(req.block,req.expected,JSON.stringify(req.hunks.map(h=>[h.start,h.end,h.text]))));const [pages,layoutMs]=this.timed(()=>s.paginate());
     return{res:{id:req.id,ok:true,kind:'replaced',document:this.describe(editMs,layoutMs,pages),text},transfer:[]};
    }
@@ -155,6 +158,31 @@ export class DocumentsCore{
     const s=this.need();if(!s.proof_suggest)throw new Error('This engine cannot suggest spellings.');
     let w:unknown;try{w=JSON.parse(s.proof_suggest(req.word));}catch{w=[];}
     return{res:{id:req.id,ok:true,kind:'suggest',words:Array.isArray(w)?w.filter(proofWordOk).slice(0,5):[]},transfer:[]};
+   }
+   if(req.kind==='setTrack'){
+    if(typeof req.on!=='boolean')throw new Error('The tracking setting is not valid.');
+    if(typeof req.author!=='string'||req.author.trim()===''||req.author.length>60||/[\u0000-\u001f\u007f-\u009f]/.test(req.author))throw new Error('The author name is not valid.');
+    if(typeof req.date!=='string'||!SAVE_DATE.test(req.date))throw new Error('The tracking date is not valid.');
+    const s=this.need();if(!s.set_track_changes)throw new Error('This engine cannot track changes.');
+    const [,editMs]=this.timed(()=>s.set_track_changes!(req.on,req.author,req.date));this.track=req.on;const [pages,layoutMs]=this.timed(()=>s.paginate());
+    return{res:{id:req.id,ok:true,kind:'edited',document:this.describe(editMs,layoutMs,pages)},transfer:[]};
+   }
+   if(req.kind==='reviewState'){
+    const s=this.need();if(!s.review_state)throw new Error('This engine cannot list changes.');
+    return{res:{id:req.id,ok:true,kind:'review',state:parseReviewState(s.review_state())},transfer:[]};
+   }
+   if(req.kind==='resolveChange'){
+    const int=(n:unknown):n is number=>typeof n==='number'&&Number.isInteger(n)&&n>=0&&n<2**31;
+    if(!int(req.block)||!int(req.start)||!int(req.end)||req.end<=req.start||typeof req.accept!=='boolean')throw new Error('The change is not valid.');
+    const s=this.need();if(!s.resolve_change)throw new Error('This engine cannot resolve changes.');
+    const [,editMs]=this.timed(()=>s.resolve_change!(req.block,req.start,req.end,req.accept));const [pages,layoutMs]=this.timed(()=>s.paginate());
+    return{res:{id:req.id,ok:true,kind:'edited',document:this.describe(editMs,layoutMs,pages)},transfer:[]};
+   }
+   if(req.kind==='resolveAll'){
+    if(typeof req.accept!=='boolean')throw new Error('The choice is not valid.');
+    const s=this.need();if(!s.resolve_all_changes)throw new Error('This engine cannot resolve changes.');
+    const [,editMs]=this.timed(()=>s.resolve_all_changes!(req.accept));const [pages,layoutMs]=this.timed(()=>s.paginate());
+    return{res:{id:req.id,ok:true,kind:'edited',document:this.describe(editMs,layoutMs,pages)},transfer:[]};
    }
    if(req.kind==='setShowHidden'){
     if(typeof req.on!=='boolean')throw new Error('The hidden text setting is not valid.');

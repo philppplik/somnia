@@ -171,6 +171,10 @@ export type DocumentsRequest=
  |{id:number;kind:'proofSuggest';word:string}
  |{id:number;kind:'setProofing';on:boolean}
  |{id:number;kind:'setShowHidden';on:boolean}
+ |{id:number;kind:'setTrack';on:boolean;author:string;date:string}
+ |{id:number;kind:'reviewState'}
+ |{id:number;kind:'resolveChange';block:number;start:number;end:number;accept:boolean}
+ |{id:number;kind:'resolveAll';accept:boolean}
  |{id:number;kind:'pageSetupState'}
  |{id:number;kind:'setPageSetup';setup:PageSetupPatch}
  |{id:number;kind:'commentsState'}
@@ -208,6 +212,7 @@ export type DocumentsResponse=
  |{id:number;ok:true;kind:'styleSaved';styleId:string;document:OpenedDocument}
  |{id:number;ok:true;kind:'listOptions';state:ListOptionsState}
  |{id:number;ok:true;kind:'proof';issues:ProofIssue[]}
+ |{id:number;ok:true;kind:'review';state:ReviewState}
  |{id:number;ok:true;kind:'suggest';words:string[]}
  |{id:number;ok:true;kind:'pageSetup';state:PageSetupState}
  |{id:number;ok:true;kind:'hit';hit:HitResult|null}
@@ -263,6 +268,23 @@ export const TABLE_PRESETS:readonly (readonly [number,number])[]=[[2,2],[3,3],[4
 /** Limits for inserted pictures (PNG or JPEG, checked by file signature). */
 export const MAX_IMAGE_BYTES=5*1024*1024,MAX_IMAGE_SIDE=8000,MAX_IMAGE_PIXELS=25_000_000,MAX_IMAGES=200,MIN_IMAGE_PT=10,MAX_IMAGE_PT=2000;
 export const IMAGE_WIDTH_PERCENTS=[25,50,75,100] as const;
+/** One tracked change: a run of inserted or deleted text in one paragraph. Offsets are UTF-8 bytes of the paragraph text. */
+export interface ReviewChange{id:number;kind:'insert'|'delete';author:string;date:string;block:number;start:number;end:number;text:string}
+export interface ReviewState{track:boolean;changes:ReviewChange[]}
+export const MAX_REVIEW_CHANGES=500;
+/** Reads the worker's review JSON; anything malformed gives no changes. */
+export function parseReviewState(json:string):ReviewState{
+ let v:unknown;try{v=JSON.parse(json);}catch{return{track:false,changes:[]};}
+ if(!v||typeof v!=='object')return{track:false,changes:[]};const o=v as Record<string,unknown>;
+ const int=(n:unknown):n is number=>typeof n==='number'&&Number.isInteger(n)&&n>=0&&n<2**31;
+ const changes:ReviewChange[]=[];
+ if(Array.isArray(o.changes))for(const x of o.changes){
+  if(changes.length>=MAX_REVIEW_CHANGES)break;if(!x||typeof x!=='object')continue;const c=x as Record<string,unknown>;
+  if(!int(c.id)||!int(c.block)||!int(c.start)||!int(c.end)||c.end<=c.start||(c.kind!=='insert'&&c.kind!=='delete')||typeof c.author!=='string'||typeof c.date!=='string'||typeof c.text!=='string')continue;
+  changes.push({id:c.id,kind:c.kind,author:c.author.slice(0,60),date:c.date.slice(0,40),block:c.block,start:c.start,end:c.end,text:c.text.slice(0,200)});
+ }
+ return{track:o.track===true,changes};
+}
 /** Proofing languages a run can be tagged with. Only English is checked today; the others are skipped so they get no false marks. */
 export const PROOF_LANGS=['en-US','en-GB','de-DE','es-ES','fr-FR','pt-BR'] as const;
 export type ProofLang=typeof PROOF_LANGS[number];

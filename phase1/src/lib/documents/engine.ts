@@ -85,6 +85,10 @@ export class DocumentsEngine{
  async importFormat(ext:import('./protocol').ExportExt,bytes:ArrayBuffer):Promise<Uint8Array>{return new Uint8Array((await this.call('saved',id=>({id,kind:'importFormat',ext,bytes}),[bytes])).bytes);}
  async proofCheck(words:string[]):Promise<import('./protocol').ProofIssue[]>{return(await this.call('proof',id=>({id,kind:'proofCheck',words}))).issues;}
  async proofSuggest(word:string):Promise<string[]>{return(await this.call('suggest',id=>({id,kind:'proofSuggest',word}))).words;}
+ async setTrack(on:boolean,author:string,date:string):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'setTrack',on,author,date}))).document;}
+ async reviewState():Promise<import('./protocol').ReviewState>{return(await this.call('review',id=>({id,kind:'reviewState'}))).state;}
+ async resolveChange(block:number,start:number,end:number,accept:boolean):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'resolveChange',block,start,end,accept}))).document;}
+ async resolveAll(accept:boolean):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'resolveAll',accept}))).document;}
  async setShowHidden(on:boolean):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'setShowHidden',on}))).document;}
  async setProofing(on:boolean):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'setProofing',on}))).document;}
  async pageSetupState():Promise<import('./protocol').PageSetupState>{return(await this.call('pageSetup',id=>({id,kind:'pageSetupState'}))).state;}

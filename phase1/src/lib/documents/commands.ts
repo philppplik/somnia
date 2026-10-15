@@ -23,7 +23,7 @@ import {insertPageBreak,setParagraphOptions,setProperties,setTabStops} from './s
 import {parsePdfPages,checkParaPatch,PARA_FLAG_KEYS,propertiesProblem,tabsProblem} from './protocol';
 import {addComment,commentSelection,deleteComment,goToComment,readComments,replyComment,resolveComment} from './session';
 import {commentProblem,HIGHLIGHTS,linkProblem,type HighlightName} from './protocol';
-import {setCharLook,setCharSpacing,setCharScale,setLineRule,setImageWrap,setImageCrop,setProofing,setShowHidden,changeCase,addToDictionary,copyFormatting,pasteFormatting,clearFormatting,hasTextSelection,setHighlight,setLink,toggleVertAlign} from './session';
+import {setTrackChanges,resolveChange,resolveAllChanges,changeAtCaret,setCharLook,setCharSpacing,setCharScale,setLineRule,setImageWrap,setImageCrop,setProofing,setShowHidden,changeCase,addToDictionary,copyFormatting,pasteFormatting,clearFormatting,hasTextSelection,setHighlight,setLink,toggleVertAlign} from './session';
 import {documentsExportReady,patchDocumentsExportUi,requestDocumentsExportFormat,requestDocumentsExportPdf,requestDocumentsSaveCopy} from './exportBridge';
 /**
  * Documents studio commands. Registered while the Documents canvas is mounted (registerDocumentsCommands),
@@ -119,6 +119,12 @@ export function registerDocumentsCommands(){
    if(typeof m!=='string'||!(CASE_MODES as readonly string[]).includes(m))throw expected('Invalid "mode": use upper, lower, title, sentence or toggle.');
    await changeCase(m as CaseMode);
   },()=>ready()&&!!getDocumentsState().caret),
+  add('documents.review.track','Track changes on or off',async()=>{await setTrackChanges(!getDocumentsState().trackChanges);},()=>ready()),
+  add('documents.review.open','Review tracked changes',()=>{setInfoDialog('review');},()=>ready()),
+  add('documents.review.accept','Accept the tracked change at the cursor',async()=>{const ch=await changeAtCaret();if(ch)await resolveChange(ch,true);},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.review.reject','Reject the tracked change at the cursor',async()=>{const ch=await changeAtCaret();if(ch)await resolveChange(ch,false);},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.review.acceptAll','Accept all tracked changes',async()=>{await resolveAllChanges(true);},()=>ready()),
+  add('documents.review.rejectAll','Reject all tracked changes',async()=>{await resolveAllChanges(false);},()=>ready()),
   add('documents.hidden.show','Show or hide hidden text',async()=>{await setShowHidden(!getDocumentsState().showHidden);},()=>ready()),
   add('documents.toggleDoubleStrike','Toggle double strikethrough',async()=>{await toggleFormat('doubleStrike');},()=>ready()&&!!getDocumentsState().caret),
   add('documents.charSpacing.set','Set character spacing',async p=>{

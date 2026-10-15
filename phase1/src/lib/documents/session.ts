@@ -159,6 +159,15 @@ async function apply(edit:TextEdit,record:'new'|'undo'|'redo',o:{merge?:boolean;
  let d:import('./protocol').OpenedDocument,readback:string|undefined;
  if(o.expect!==undefined){const r=await e.replaceChecked(edit,o.expect);d=r.document;readback=r.text;}else d=await e.replace(edit);
  if(owner!==gen||engine!==e)throw Error('Document owner changed during replacement');
+ if(record==='new'&&getDocumentsState().trackChanges&&edit.hunks.some(h=>h.end>h.start)){
+  // A tracked deletion keeps the text and marks it, so the plain inverse edit cannot undo it: use engine snapshots.
+  const check=ownerGuard();const bf=await e.snapshot();check();
+  d=await e.replace(edit);check();const af=await e.snapshot();check();
+  const cb=getDocumentsState().caret;const at=o.caret??caretAfterEdit(edit);
+  undo.pushSnap({before:bf,after:af,caretBefore:{block:edit.block,off:cb?cb.head:0},caretAfter:{block:edit.block,off:at}});
+  patchDocuments({edited:true,notice:'',editError:'',caretLocked:false,caret:{block:edit.block,anchor:at,head:at}});await refresh(d);
+  return readback;
+ }
  if(record==='new')undo.push(inv,o.merge);else if(record==='undo')undo.pushRedo(inv);else undo.pushUndo(inv);
  const at=record==='new'?o.caret:caretAfterEdit(edit);
  patchDocuments({edited:true,notice:'',editError:'',caretLocked:false,caret:at==null?null:{block:edit.block,anchor:at,head:at}});await refresh(d);
@@ -938,6 +947,28 @@ export const setProofing=(on:boolean)=>run(async()=>{
  patchDocuments({proofing:on});await refresh(d);
 });
 /** Shows or hides text formatted as hidden on the pages. Not an edit: nothing goes on the undo stack. */
+export const setTrackChanges=(on:boolean)=>run(async()=>{
+ const e=engine;if(!e)return;const check=ownerGuard();const d=await e.setTrack(on,commentAuthor(),new Date().toISOString().replace(/\.\d+Z$/,'Z'));check();
+ patchDocuments({trackChanges:on});await refresh(d);
+});
+export async function readReview():Promise<ReviewState>{
+ const e=engine;if(!e||getDocumentsState().status!=='ready')return{track:false,changes:[]};const check=ownerGuard();const r=await e.reviewState();check();return r;
+}
+export const resolveChange=(c:ReviewChange,accept:boolean)=>run(async()=>{
+ const cr=getDocumentsState().caret;const spot={block:c.block,off:c.start};
+ await structural(eng=>eng.resolveChange(c.block,c.start,c.end,accept),cr?{block:cr.block,off:cr.head}:spot,spot);
+});
+export const resolveAllChanges=(accept:boolean)=>run(async()=>{
+ const cr=getDocumentsState().caret;const spot=cr?{block:cr.block,off:0}:{block:0,off:0};
+ await structural(eng=>eng.resolveAll(accept),cr?{block:cr.block,off:cr.head}:spot,spot);
+});
+/** Selects a tracked change on the page. */
+export const goToChange=(c:ReviewChange)=>run(async()=>{goalX=null;patchDocuments({caretLocked:false,imageBlock:null,caret:{block:c.block,anchor:c.start,head:c.end}});await syncGeometry();});
+/** The tracked change under the caret, if any. */
+export async function changeAtCaret():Promise<ReviewChange|null>{
+ const c=getDocumentsState().caret;if(!c)return null;const r=await readReview();
+ return r.changes.find(x=>x.block===c.block&&c.head>=x.start&&c.head<=x.end)??null;
+}
 export const setShowHidden=(on:boolean)=>run(async()=>{
  const e=engine;if(!e)return;const check=ownerGuard();const d=await e.setShowHidden(on);check();
  patchDocuments({showHidden:on});await refresh(d);

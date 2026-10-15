@@ -4766,6 +4766,72 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.review.accept",
+      "title": "Accept the tracked change at the cursor",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.review.acceptAll",
+      "title": "Accept all tracked changes",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.review.open",
+      "title": "Review tracked changes",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.review.reject",
+      "title": "Reject the tracked change at the cursor",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.review.rejectAll",
+      "title": "Reject all tracked changes",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.review.track",
+      "title": "Track changes on or off",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.saveCopy",
       "title": "Save a copy of the document",
       "category": "Project",

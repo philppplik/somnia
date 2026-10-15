@@ -87,6 +87,11 @@ export class DocSession {
     set_image_wrap(block: number, wrap: string, align: string): void;
     export_format(ext: string): Uint8Array;
     set_show_hidden(on: boolean): void;
+    set_track_changes(on: boolean, author: string, date: string): void;
+    set_track_date(date: string): void;
+    review_state(): string;
+    resolve_change(block: number, start: number, end: number, accept: boolean): void;
+    resolve_all_changes(accept: boolean): number;
     static import_format(ext: string, bytes: Uint8Array): Uint8Array;
     set_proofing(on: boolean): void;
     proof_check(words_json: string): string;

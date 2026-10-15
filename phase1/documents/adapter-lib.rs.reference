@@ -136,6 +136,10 @@ pub struct DocSession {
     proofing: bool,
     /// Hidden text is drawn (dimmed by the layout) instead of skipped.
     show_hidden: bool,
+    /// Edits are recorded as tracked insertions and deletions by `track_author` at `track_date`.
+    track: bool,
+    track_author: String,
+    track_date: String,
 }
 
 impl DocSession {
@@ -144,7 +148,7 @@ impl DocSession {
             return Err("adapter input limit: 16 MiB".into());
         }
         let doc = wordcraft_docx::read(bytes).map_err(|e| e.to_string())?;
-        Ok(Self { doc, cache: LayoutCache::new(), pages: DocLayout::default(), snaps: Default::default(), next_snap: 1, proofing: false, show_hidden: false })
+        Ok(Self { doc, cache: LayoutCache::new(), pages: DocLayout::default(), snaps: Default::default(), next_snap: 1, proofing: false, show_hidden: false, track: false, track_author: String::new(), track_date: String::new() })
     }
     fn do_insert(&mut self, block: usize, offset: usize, text: &str) -> Result<(), String> {
         if text.len() > 1024 * 1024 {
@@ -413,6 +417,49 @@ impl DocSession {
             prev_end = *end;
         }
         let mut p = orig.clone();
+        if self.track {
+            let (rid_ins, rid_del) = (self.track_rev(wordcraft_doc::RevisionKind::Insert), self.track_rev(wordcraft_doc::RevisionKind::Delete));
+            let author = self.track_author.clone();
+            for (start, end, text) in hunks.iter().rev() {
+                let (start, end) = (*start, *end);
+                let mut props = if start < end {
+                    p.props_of_char(start).clone()
+                } else if start > 0 {
+                    let prev = p.text[..start].char_indices().next_back().map(|(i, _)| i).unwrap_or(0);
+                    p.props_of_char(prev).clone()
+                } else if !p.text.is_empty() {
+                    p.props_of_char(0).clone()
+                } else {
+                    p.mark.clone()
+                };
+                // Deleted text stays (marked); text this author inserted just goes away. The new text goes in front of what it replaces.
+                if start < end {
+                    let ranges: Vec<(usize, usize, bool, bool)> = p
+                        .run_ranges()
+                        .filter(|(r, _)| r.end > start && r.start < end)
+                        .map(|(r, c)| {
+                            let own = c.ins.and_then(|i| self.doc.revisions.get(i as usize)).is_some_and(|rv| rv.author == author);
+                            (r.start.max(start), r.end.min(end), own, c.del.is_some())
+                        })
+                        .collect();
+                    for (x, y, own, deleted) in ranges.into_iter().rev() {
+                        if own {
+                            p.delete(x, y).map_err(|e| e.to_string())?;
+                        } else if !deleted {
+                            p.format(x, y, &|c| c.del = Some(rid_del)).map_err(|e| e.to_string())?;
+                        }
+                    }
+                }
+                if !text.is_empty() {
+                    props.ins = Some(rid_ins);
+                    props.del = None;
+                    p.insert_text(start, text, &props).map_err(|e| e.to_string())?;
+                }
+            }
+            self.put_para(block, p)?;
+            self.pages = DocLayout::default();
+            return Ok(());
+        }
         for (start, end, text) in hunks.iter().rev() {
             let (start, end) = (*start, *end);
             let props = if start < end {
@@ -433,6 +480,107 @@ impl DocSession {
         self.put_para(block, p)?;
         self.pages = DocLayout::default();
         Ok(())
+    }
+    /// The id of a revision record for the tracking author and time, reusing an identical one.
+    fn track_rev(&mut self, kind: wordcraft_doc::RevisionKind) -> u32 {
+        let (author, date) = (self.track_author.clone(), self.track_date.clone());
+        if let Some((i, _)) = self.doc.revisions.iter().enumerate().rev().find(|(_, r)| r.kind == kind && r.author == author && r.date == date) {
+            return i as u32;
+        }
+        self.doc.revisions.push(wordcraft_doc::Revision { kind, author, date });
+        (self.doc.revisions.len() - 1) as u32
+    }
+    /// Every paragraph that can hold a change, with its block id: top-level paragraphs, then table-cell paragraphs.
+    fn review_blocks(&self) -> Vec<usize> {
+        let mut ids: Vec<usize> = self.doc.body.iter().enumerate().filter(|(_, b)| matches!(&***b, Block::Para(_))).map(|(i, _)| i).collect();
+        ids.extend((0..self.cell_paras().count()).map(|n| CELL_BASE + n));
+        ids
+    }
+    /// `{"track": bool, "changes": [{id, kind, author, date, block, start, end, text}]}`, at most 500 changes. A change is a run of text
+    /// with one revision mark in one paragraph.
+    fn do_review_state(&self) -> String {
+        let mut out = Vec::new();
+        'all: for block in self.review_blocks() {
+            let Some(p) = self.para_at(block) else { continue };
+            let mut open: Option<(usize, usize, u32, &'static str)> = None;
+            let flush = |o: &mut Option<(usize, usize, u32, &'static str)>, out: &mut Vec<serde_json::Value>| {
+                if let Some((s, e, id, kind)) = o.take() {
+                    let rv = self.doc.revisions.get(id as usize);
+                    let text: String = p.text.get(s..e).unwrap_or("").chars().take(200).collect();
+                    out.push(serde_json::json!({"id": id, "kind": kind, "author": rv.map(|r| r.author.clone()).unwrap_or_default(), "date": rv.map(|r| r.date.clone()).unwrap_or_default(), "block": block, "start": s, "end": e, "text": text}));
+                }
+            };
+            for (r, c) in p.run_ranges() {
+                let mark = match (c.ins, c.del) {
+                    (_, Some(d)) => Some((d, "delete")),
+                    (Some(i), None) => Some((i, "insert")),
+                    _ => None,
+                };
+                match mark {
+                    Some((id, kind)) => {
+                        if let Some(o) = open.as_mut().filter(|o| o.2 == id && o.3 == kind && o.1 == r.start) {
+                            o.1 = r.end;
+                        } else {
+                            flush(&mut open, &mut out);
+                            open = Some((r.start, r.end, id, kind));
+                        }
+                    }
+                    None => flush(&mut open, &mut out),
+                }
+            }
+            flush(&mut open, &mut out);
+            if out.len() >= 500 {
+                out.truncate(500);
+                break 'all;
+            }
+        }
+        serde_json::json!({"track": self.track, "changes": out}).to_string()
+    }
+    /// Accepts or rejects the marked text of paragraph `block` between `start` and `end`.
+    fn resolve_range(p: &mut wordcraft_doc::Paragraph, from: usize, to: usize, accept: bool) -> Result<(), String> {
+        let ranges: Vec<(usize, usize, bool, bool)> = p.run_ranges().filter(|(r, _)| r.end > from && r.start < to).map(|(r, c)| (r.start.max(from), r.end.min(to), c.ins.is_some(), c.del.is_some())).collect();
+        for (a, b, ins, del) in ranges.into_iter().rev() {
+            if (del && accept) || (ins && !accept) {
+                p.delete(a, b).map_err(|e| e.to_string())?;
+            } else if ins || del {
+                p.format(a, b, &|c| {
+                    c.ins = None;
+                    c.del = None;
+                })
+                .map_err(|e| e.to_string())?;
+            }
+        }
+        Ok(())
+    }
+    fn do_resolve_change(&mut self, block: usize, start: usize, end: usize, accept: bool) -> Result<(), String> {
+        let Some(orig) = self.para_at(block) else { return Err(format!("block {block} is not a paragraph")) };
+        if start >= end || end > orig.text.len() || !orig.text.is_char_boundary(start) || !orig.text.is_char_boundary(end) {
+            return Err("that change is not in the document any more".into());
+        }
+        if !orig.run_ranges().any(|(r, c)| r.end > start && r.start < end && (c.ins.is_some() || c.del.is_some())) {
+            return Err("there is no tracked change there".into());
+        }
+        let mut p = orig.clone();
+        Self::resolve_range(&mut p, start, end, accept)?;
+        self.put_para(block, p)?;
+        self.pages = DocLayout::default();
+        Ok(())
+    }
+    fn do_resolve_all(&mut self, accept: bool) -> Result<usize, String> {
+        let mut n = 0;
+        for block in self.review_blocks() {
+            let Some(orig) = self.para_at(block) else { continue };
+            if !orig.run_ranges().any(|(_, c)| c.ins.is_some() || c.del.is_some()) {
+                continue;
+            }
+            let len = orig.text.len();
+            let mut p = orig.clone();
+            Self::resolve_range(&mut p, 0, len, accept)?;
+            self.put_para(block, p)?;
+            n += 1;
+        }
+        self.pages = DocLayout::default();
+        Ok(n)
     }
     fn plain_para(&self, block: usize) -> Result<&wordcraft_doc::Paragraph, String> {
         if block < CELL_BASE && matches!(self.doc.body.get(block).map(|b| &**b), Some(Block::Table(_))) {
@@ -3397,6 +3545,24 @@ impl DocSession {
     }
     /// The document in another file format: `txt`, `md`, `html`, `rtf` or `odt` (what the format can hold; no layout is kept).
     /// The output is capped at 64 MiB.
+    fn check_track_date(date: &str) -> Result<(), String> {
+        if date.is_empty() || date.len() > 40 || !date.bytes().all(|b| b.is_ascii_digit() || b"-:TZ.+".contains(&b)) {
+            return Err("the tracking date is not valid".into());
+        }
+        Ok(())
+    }
+    fn do_set_track(&mut self, on: bool, author: &str, date: &str) -> Result<(), String> {
+        let author = author.trim();
+        if author.is_empty() || author.chars().count() > 60 || author.chars().any(|c| c.is_control()) {
+            return Err("the author name is 1 to 60 printable characters".into());
+        }
+        Self::check_track_date(date)?;
+        self.track = on;
+        self.track_author = author.to_string();
+        self.track_date = date.to_string();
+        self.doc.settings.track_changes = on;
+        Ok(())
+    }
     fn do_export_format(&self, ext: &str) -> Result<Vec<u8>, String> {
         if !["txt", "md", "html", "rtf", "odt"].contains(&ext) {
             return Err("the export format is txt, md, html, rtf or odt".into());
@@ -3851,6 +4017,29 @@ impl DocSession {
     /// Turns the spelling and grammar squiggles on or off (they show after the next `paginate`).
     pub fn set_proofing(&mut self, on: bool) {
         self.proofing = on;
+    }
+    /// Turns tracking of text edits on or off. While it is on, typed text is recorded as an insertion and removed text as a deletion
+    /// by `author` (at most 60 printable characters) at `date` (ISO 8601). Paragraph breaks and formatting are not tracked.
+    pub fn set_track_changes(&mut self, on: bool, author: &str, date: &str) -> Result<(), JsValue> {
+        self.do_set_track(on, author, date).map_err(|e| JsValue::from_str(&e))
+    }
+    /// Updates the time stamped on the next tracked edits.
+    pub fn set_track_date(&mut self, date: &str) -> Result<(), JsValue> {
+        Self::check_track_date(date).map_err(|e| JsValue::from_str(&e))?;
+        self.track_date = date.to_string();
+        Ok(())
+    }
+    /// Tracked changes as JSON (see `do_review_state`).
+    pub fn review_state(&self) -> String {
+        self.do_review_state()
+    }
+    /// Accepts (`accept` true) or rejects the change that covers `start..end` (UTF-8 offsets) of paragraph `block`.
+    pub fn resolve_change(&mut self, block: usize, start: usize, end: usize, accept: bool) -> Result<(), JsValue> {
+        self.do_resolve_change(block, start, end, accept).map_err(|e| JsValue::from_str(&e))
+    }
+    /// Accepts or rejects every tracked change; returns how many paragraphs changed.
+    pub fn resolve_all_changes(&mut self, accept: bool) -> Result<usize, JsValue> {
+        self.do_resolve_all(accept).map_err(|e| JsValue::from_str(&e))
     }
     /// Shows or hides text formatted as hidden (it shows after the next `paginate`).
     pub fn set_show_hidden(&mut self, on: bool) {
@@ -4433,6 +4622,46 @@ mod tests {
         assert!(s.do_table_edit(0, "delete_table").is_err());
         let reopened = DocSession::from_bytes(&s.save().unwrap()).unwrap();
         assert!(width(&reopened).is_empty());
+    }
+    #[test]
+    fn tracked_edits_mark_resolve_and_roundtrip() {
+        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
+        let before = s.para_at(0).unwrap().text.clone();
+        assert!(before.len() > 4);
+        assert!(s.do_set_track(true, "", "2026-01-01T00:00:00Z").is_err());
+        assert!(s.do_set_track(true, "Ann", "yesterday!").is_err());
+        s.do_set_track(true, "Ann", "2026-01-01T00:00:00Z").unwrap();
+        // Replace the first two characters: the old text stays marked deleted, the new text is an insertion in front.
+        s.do_replace(0, 0, 2, "ZZ").unwrap();
+        let st: serde_json::Value = serde_json::from_str(&s.do_review_state()).unwrap();
+        let kinds: Vec<&str> = st["changes"].as_array().unwrap().iter().map(|c| c["kind"].as_str().unwrap()).collect();
+        assert_eq!(kinds, ["insert", "delete"]);
+        assert_eq!(s.para_at(0).unwrap().text, format!("ZZ{before}"));
+        // Own insertion typed again and removed again leaves no trace.
+        s.do_replace(0, 0, 2, "").unwrap();
+        let st: serde_json::Value = serde_json::from_str(&s.do_review_state()).unwrap();
+        assert_eq!(st["changes"].as_array().unwrap().len(), 1);
+        // The marks survive a save.
+        let re = DocSession::from_bytes(&s.save().unwrap()).unwrap();
+        let st2: serde_json::Value = serde_json::from_str(&re.do_review_state()).unwrap();
+        assert_eq!(st2["changes"][0]["kind"].as_str(), Some("delete"));
+        assert_eq!(st2["changes"][0]["author"].as_str(), Some("Ann"));
+        // Reject restores the original text; accept removes the deleted text.
+        let mut r = DocSession::from_bytes(&s.save().unwrap()).unwrap();
+        let c = serde_json::from_str::<serde_json::Value>(&r.do_review_state()).unwrap()["changes"][0].clone();
+        r.do_resolve_change(0, c["start"].as_u64().unwrap() as usize, c["end"].as_u64().unwrap() as usize, false).unwrap();
+        assert_eq!(r.para_at(0).unwrap().text, before);
+        assert_eq!(serde_json::from_str::<serde_json::Value>(&r.do_review_state()).unwrap()["changes"].as_array().unwrap().len(), 0);
+        let mut a = DocSession::from_bytes(&s.save().unwrap()).unwrap();
+        a.do_resolve_all(true).unwrap();
+        assert_eq!(a.para_at(0).unwrap().text, before[2..]);
+        assert!(a.do_resolve_change(0, 0, 1, true).is_err());
+        assert!(a.do_resolve_change(0, 5, 2, true).is_err());
+        assert!(a.do_resolve_change(9999, 0, 1, true).is_err());
+        // Tracking off edits plainly again.
+        s.do_set_track(false, "Ann", "2026-01-01T00:00:00Z").unwrap();
+        s.do_replace(0, 0, 0, "Q").unwrap();
+        assert!(!serde_json::from_str::<serde_json::Value>(&s.do_review_state()).unwrap()["changes"].as_array().unwrap().iter().any(|c| c["text"] == "Q"));
     }
     #[test]
     fn proofing_lists_issues_with_offsets_and_skips_marked_text() {
