@@ -12718,6 +12718,13 @@
       "hasEnabled": true
     },
     {
+      "id": "vector.joinPaths",
+      "title": "Join vector paths",
+      "category": "Edit",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
       "id": "vector.moveNode",
       "title": "Move vector node",
       "category": "Edit",
@@ -12776,6 +12783,13 @@
     {
       "id": "vector.resizePage",
       "title": "Resize vector page",
+      "category": "Edit",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
+      "id": "vector.reversePath",
+      "title": "Reverse vector path direction",
       "category": "Edit",
       "source": "vector",
       "hasEnabled": true
@@ -12840,6 +12854,13 @@
       "id": "vector.setView",
       "title": "Set vector view",
       "category": "View",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
+      "id": "vector.splitPath",
+      "title": "Split vector path at node",
+      "category": "Edit",
       "source": "vector",
       "hasEnabled": true
     },

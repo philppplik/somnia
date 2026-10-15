@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1071 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1074 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -1052,6 +1052,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `vector.group` | Group vector selection | Edit | vector |  |
 | `vector.importSvg` | Add SVG to vector page | Insert | vector |  |
 | `vector.inspect` | Inspect vector document | Tools | vector |  |
+| `vector.joinPaths` | Join vector paths | Edit | vector |  |
 | `vector.moveNode` | Move vector node | Edit | vector |  |
 | `vector.moveSelection` | Move selected vector paths | Edit | vector |  |
 | `vector.openSvg` | Open vector SVG source | Project | vector |  |
@@ -1061,6 +1062,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `vector.reorder` | Arrange vector paths | Edit | vector |  |
 | `vector.replaceDocument` | Replace vector document | Edit | vector |  |
 | `vector.resizePage` | Resize vector page | Edit | vector |  |
+| `vector.reversePath` | Reverse vector path direction | Edit | vector |  |
 | `vector.rotateSelection` | Rotate vector selection | Edit | vector |  |
 | `vector.select` | Select vector paths | View | vector |  |
 | `vector.selectNode` | Select vector node | View | vector |  |
@@ -1070,6 +1072,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `vector.setStyle` | Set vector path style | Edit | vector |  |
 | `vector.setTool` | Set vector tool | View | vector |  |
 | `vector.setView` | Set vector view | View | vector |  |
+| `vector.splitPath` | Split vector path at node | Edit | vector |  |
 | `vector.toggleClosed` | Toggle closed vector path | Edit | vector |  |
 | `vector.toggleHidden` | Toggle vector path visibility | Edit | vector |  |
 | `vector.tool.ellipse` | Ellipse | View | vector |  |

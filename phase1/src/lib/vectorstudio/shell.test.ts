@@ -143,3 +143,31 @@ test('group names: rename is one undo step, roundtrips through SVG, follows dupl
  S.undo();S.select(ids);await d.runCommand('vector.ungroup',{},{origin:'test'});assert.ok(!normalizeDoc(S.getVectorSession().doc).groupNames);
  assert.ok(!importSvg('<svg viewBox="0 0 10 10"><g data-vs-group-name="orphan"><path d="M0 0L5 5"/></g></svg>').doc.groupNames);
 });
+import {splitPath,joinPaths,reverseSelection} from './pathOps';
+const open=(id:string,pts:[number,number][],extra:object={})=>({id,closed:false,nodes:pts.map(([x,y],i)=>({id:id+'n'+i,x,y,kind:'corner' as const})),...extra}) as never;
+test('path ops: split, join and reverse are single undo steps, keep geometry, and refuse unusable input',async()=>{
+ S.resetVectorSession();S.createBlankVector();
+ S.addPath(open('a',[[0,0],[10,0],[20,0]]),false);S.addPath(open('b',[[20,0.2],[30,10]]),false);S.addPath(open('far',[[100,100],[120,100]]),false);
+ const d=new CommandDispatcher();commands.forEach(s=>d.register(s));const before=structuredClone(S.getVectorSession().doc);
+ await assert.rejects(d.runCommand('vector.joinPaths',{},{origin:'agent'}),e=>e instanceof CommandDispatchError&&e.code==='forbidden-origin');
+ S.select(['a']);await assert.rejects(d.runCommand('vector.joinPaths',{},{origin:'test'}),/exactly two/);
+ S.select(['a','b']);await d.runCommand('vector.joinPaths',{},{origin:'test'});
+ let doc=S.getVectorSession().doc;assert.equal(doc.paths.length,2);assert.deepEqual(doc.paths[0].nodes.map(n=>[n.x,n.y]),[[0,0],[10,0],[20,0],[30,10]]);
+ S.undo();assert.deepEqual(S.getVectorSession().doc,before);
+ S.select(['a','far']);await d.runCommand('vector.joinPaths',{},{origin:'test'});doc=S.getVectorSession().doc;assert.equal(doc.paths[0].nodes.length,5);S.undo();
+ // reversed order join: b's start meets a's start
+ const r=joinPaths({...before,paths:[open('p',[[20,0],[30,0]]),open('q',[[20,0],[20,10]])]},['p','q']);assert.deepEqual(r.doc.paths[0].nodes.map(n=>[n.x,n.y]),[[30,0],[20,0],[20,10]]);
+ await assert.rejects(d.runCommand('vector.splitPath',{pathId:'a',nodeId:'an0'},{origin:'test'}),/inside the path/);
+ await assert.rejects(d.runCommand('vector.splitPath',{pathId:'a',nodeId:'nope'},{origin:'test'}),/Unknown node/);
+ await d.runCommand('vector.splitPath',{pathId:'a',nodeId:'an1'},{origin:'test'});
+ doc=S.getVectorSession().doc;assert.equal(doc.paths.length,4);assert.deepEqual(doc.paths[0].nodes.map(n=>n.x),[0,10]);assert.deepEqual(doc.paths[1].nodes.map(n=>n.x),[10,20]);
+ assert.equal(new Set(doc.paths.flatMap(p=>p.nodes.map(n=>n.id))).size,doc.paths.flatMap(p=>p.nodes).length);S.undo();assert.deepEqual(S.getVectorSession().doc,before);
+ // closed split + handles
+ const sq={id:'sq',closed:true,nodes:[{id:'s0',x:0,y:0,kind:'smooth',in:{x:-1,y:0},out:{x:1,y:0}},{id:'s1',x:10,y:0,kind:'corner'},{id:'s2',x:10,y:10,kind:'corner'}]} as never;
+ const sp=splitPath({width:1,height:1,paths:[sq]},'sq','s0').doc.paths[0];
+ assert.equal(sp.closed,false);assert.equal(sp.nodes.length,4);assert.equal(sp.nodes[0].in,undefined);assert.deepEqual(sp.nodes[0].out,{x:1,y:0});assert.equal(sp.nodes[3].out,undefined);assert.deepEqual(sp.nodes[3].in,{x:-1,y:0});
+ // reverse swaps handles, twice is identity for open paths
+ const h={id:'h',closed:false,nodes:[{id:'h0',x:0,y:0,kind:'corner',out:{x:1,y:1}},{id:'h1',x:5,y:5,kind:'corner',in:{x:4,y:4}}]} as never;
+ const doc1={width:1,height:1,paths:[h]};const rev=reverseSelection(doc1,['h']);assert.deepEqual(rev.paths[0].nodes[0],{id:'h1',x:5,y:5,kind:'corner',out:{x:4,y:4}});assert.deepEqual(reverseSelection(rev,['h']),doc1);
+ assert.equal(reverseSelection(doc1,['nope']),doc1);
+});

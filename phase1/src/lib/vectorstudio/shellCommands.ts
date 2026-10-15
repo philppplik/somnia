@@ -3,6 +3,7 @@ import type {CommandSpec} from '../commandSpec';
 import * as S from './session';
 import {rotateSelection,scaleSelection,selectionBounds,alignSelection,distributeSelection,ALIGN_MODES,ALIGN_TARGETS} from './transforms';
 import {applyGradient,GRADIENT_KINDS,type GradientPatch} from './gradients';
+import {splitPath,joinPaths,reverseSelection} from './pathOps';
 import {groupSelection,ungroupSelection} from './groups';
 import {applyBoolean,BOOL_OPS} from './booleanOps';
 import {downloadSvg,downloadPng} from './exportFiles';
@@ -25,6 +26,12 @@ export function vectorShellCommandSpecs(active:()=>boolean):CommandSpec<any,unkn
    run:(p:{op:typeof BOOL_OPS[number]})=>{const s=S.getVectorSession(),r=applyBoolean(s.doc,s.selection,p.op);S.commit(r.doc);S.select(r.ids);}},
   {id:'vector.setGradient',title:'Set vector gradient fill',category:'Edit',level:'ui',enabled:selected,params:{...empty,properties:{kind:{type:'string',enum:[...GRADIENT_KINDS]},angle:{type:'number',minimum:0,maximum:360},startColor:{type:'string',pattern:'^#[0-9a-fA-F]{6}$'},endColor:{type:'string',pattern:'^#[0-9a-fA-F]{6}$'},stops:{type:'array',minItems:2,maxItems:16,items:{type:'object',properties:{offset:{type:'number',minimum:0,maximum:1},color:{type:'string',pattern:'^#[0-9a-fA-F]{6}$'},opacity:{type:'number',minimum:0,maximum:1}},required:['offset','color','opacity'],additionalProperties:false}}}},
    run:(p:GradientPatch)=>{const s=S.getVectorSession(),next=applyGradient(s.doc,s.selection,p);if(next!==s.doc)S.commit(next);}},
+  {id:'vector.splitPath',title:'Split vector path at node',category:'Edit',level:'ui',enabled:ready,params:{...empty,properties:{pathId:{type:'string',minLength:1},nodeId:{type:'string',minLength:1}},required:['pathId','nodeId']},
+   run:(p:{pathId:string;nodeId:string})=>{const s=S.getVectorSession(),r=splitPath(s.doc,p.pathId,p.nodeId);S.commit(r.doc,{selection:r.ids,nodePath:null,selectedNode:null});}},
+  {id:'vector.joinPaths',title:'Join vector paths',category:'Edit',level:'ui',enabled:selected,params:empty,
+   run:()=>{const s=S.getVectorSession(),r=joinPaths(s.doc,s.selection);S.commit(r.doc,{selection:[r.id],nodePath:null,selectedNode:null});}},
+  {id:'vector.reversePath',title:'Reverse vector path direction',category:'Edit',level:'ui',enabled:selected,params:empty,
+   run:()=>{const s=S.getVectorSession(),next=reverseSelection(s.doc,s.selection);if(next!==s.doc)S.commit(next);}},
   {id:'vector.group',title:'Group vector selection',category:'Edit',level:'ui',enabled:selected,params:empty,run:()=>{const s=S.getVectorSession(),next=groupSelection(s.doc,s.selection);if(next!==s.doc)S.commit(next);}},
   {id:'vector.ungroup',title:'Ungroup vector selection',category:'Edit',level:'ui',enabled:ready,params:{...empty,properties:{ids:{type:'array',items:{type:'string',minLength:1},uniqueItems:true,maxItems:200}}},run:(p:{ids?:string[]}={})=>{const s=S.getVectorSession(),next=ungroupSelection(s.doc,p.ids??s.selection);if(next!==s.doc)S.commit(next);}},
   {id:'vector.exportSvg',title:'Export vector SVG',category:'Project',level:'ui',enabled:ready,params:empty,run:()=>downloadSvg(S.getVectorSession().name)},
