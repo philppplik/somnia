@@ -7835,6 +7835,19 @@
       "hasEnabled": true
     },
     {
+      "id": "sheets.export.advanced",
+      "title": "Sheets: Advanced export with name and metadata",
+      "category": "Project",
+      "source": "sheets",
+      "keywords": [
+        "advanced",
+        "export",
+        "metadata",
+        "xlsx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "sheets.fill",
       "title": "Fill the selected block down, right, up or left",
       "category": "Edit",

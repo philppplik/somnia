@@ -33,9 +33,9 @@ test('controller registry keeps exactly the mounted workbook',()=>{
 
 test('sheets specs carry stable dotted ids, ui level and categories',()=>{
   const specs=sheetsCommandSpecs({controller:()=>null});
-  assert.deepEqual(specs.map(s=>s.id),['sheets.undo','sheets.redo','sheets.saveCopy','sheets.formulas.open']);
+  assert.deepEqual(specs.map(s=>s.id),['sheets.undo','sheets.redo','sheets.export.advanced','sheets.saveCopy','sheets.formulas.open']);
   for(const spec of specs)assert.equal(spec.level,'ui',spec.id);
-  assert.deepEqual(specs.map(s=>s.category),['Edit','Edit','Project','View']);
+  assert.deepEqual(specs.map(s=>s.category),['Edit','Edit','Project','Project','View']);
 });
 
 test('the Smart Formula opener reveals the panel through the injected opener and never writes a cell',async()=>{
@@ -98,7 +98,7 @@ test('dispatcher refuses agent origins and disabled commands, logs activity',asy
     assert.deepEqual(calls,['undo','saveCopy']);
     assert.equal(commandDispatcher.recentActivity().at(-1)?.outcome,'ok');
     const listed=listCommands().map(c=>c.id);
-    for(const id of ['sheets.undo','sheets.redo','sheets.saveCopy'])assert.ok(listed.includes(id),id);
+    for(const id of ['sheets.undo','sheets.redo','sheets.export.advanced','sheets.saveCopy'])assert.ok(listed.includes(id),id);
   }finally{offController();offSpecs();}
   assert.equal(listCommands().some(c=>c.id==='sheets.undo'),false);
   assert.equal(commandDispatcher.has('sheets.undo'),false);

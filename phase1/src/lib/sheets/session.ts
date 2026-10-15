@@ -1,6 +1,7 @@
 import {registerMediaCloseCleanup,registerMediaCloseGuard} from '../media';
 import type {WorkbookInfo} from './protocol';
 import {installBeforeUnload} from '../closeFlow';
+import {writeCoreProperties,type CorePropsMeta} from '../office/coreProps';
 /** Dirty state of open workbooks, kept outside React so the media close guard and beforeunload can read it. */
 const dirty=new Set<string>();
 const dirtyListeners=new Set<()=>void>();export const subscribeSheetsDirty=(f:()=>void)=>{dirtyListeners.add(f);return()=>{dirtyListeners.delete(f);};};
@@ -31,7 +32,10 @@ if(typeof window!=='undefined'){installBeforeUnload(hasDirtySheets);registerMedi
 export const copyFileName=(name:string)=>name.replace(/^.*[\\/]/,'').replace(/\.xlsx$/i,'')+'-edited.xlsx';
 const MIME='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 /** Saves bytes as a NEW file. Desktop: native save dialog + one-time grant (never overwrites). Web: download. Returns 'saved' when written natively, 'downloaded' for the browser, 'cancelled' when the dialog was dismissed. */
-export async function saveSheetsCopy(name:string,bytes:Uint8Array):Promise<'saved'|'downloaded'|'cancelled'>{
- const suggestedName=copyFileName(name);const {isTauri,invoke}=await import('@tauri-apps/api/core');
+async function persistSheetsCopy(suggestedName:string,bytes:Uint8Array):Promise<'saved'|'downloaded'|'cancelled'>{
+ const {isTauri,invoke}=await import('@tauri-apps/api/core');
  if(isTauri()){const grant=await invoke<{token:string}|null>('sheets_save_pick',{suggestedName});if(!grant)return 'cancelled';await invoke('sheets_save_write',bytes,{headers:{'x-somnia-token':grant.token}});return 'saved';}
  const url=URL.createObjectURL(new Blob([bytes as BlobPart],{type:MIME}));const a=document.createElement('a');a.href=url;a.download=suggestedName;a.click();setTimeout(()=>URL.revokeObjectURL(url),30_000);return 'downloaded';}
+export async function saveSheetsCopy(name:string,bytes:Uint8Array):Promise<'saved'|'downloaded'|'cancelled'>{return persistSheetsCopy(copyFileName(name),bytes);}
+/** Advanced export (AE1): name chosen in the dialog, Dublin Core metadata injected into the copy. */
+export async function saveSheetsCopyAdvanced(base:string,bytes:Uint8Array,meta:CorePropsMeta):Promise<'saved'|'downloaded'|'cancelled'>{return persistSheetsCopy((base.trim()||'export')+'.xlsx',writeCoreProperties(bytes,meta));}

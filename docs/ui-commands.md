@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1057 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1058 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -646,6 +646,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `sheets.dedupe` | Remove duplicate rows in the selected block | Edit | sheets |  |
 | `sheets.editLines` | Insert or delete rows and columns | Edit | sheets |  |
 | `sheets.export` | Export as PDF, CSV, TSV or HTML | Edit | sheets |  |
+| `sheets.export.advanced` | Sheets: Advanced export with name and metadata | Project | sheets |  |
 | `sheets.fill` | Fill the selected block down, right, up or left | Edit | sheets |  |
 | `sheets.filter` | Filter rows by a column | Edit | sheets |  |
 | `sheets.format` | Format selected cells | Edit | sheets |  |

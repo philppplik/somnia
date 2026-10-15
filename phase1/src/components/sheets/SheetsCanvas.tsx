@@ -52,6 +52,8 @@ import {MAX_READ_CELLS} from '../../lib/sheets/protocol';
 import {acquireSheetsSession,getSheetsSession,releaseSheetsSession,saveSheetsCopy,setSheetsDirty,sheetsIsDirty,subscribeSheetsDirty} from '../../lib/sheets/session';
 import {registerDocSaver} from '../../lib/workDocs';
 import {registerSheetsCommands,registerSheetsCommandController} from '../../lib/sheets/commands';
+import {setSheetsExportState} from '../../lib/sheets/exportState';
+import {SheetsExportPopover} from './SheetsExportPopover';
 import {openSheetsFormulasPanel} from './formulasHero';
 import {getCollab,onSessionChange} from '../../lib/collab/session';
 import {shareSheetsFile,adoptSheetsFile} from '../../lib/collab/office/officeSession';
@@ -69,7 +71,7 @@ const AbsBoxImg=({box,surface,...rest}:{box:AbsBox;surface?:boolean}&React.ImgHT
  return <img ref={ref} draggable={false} className="pointer-events-none absolute" {...rest}/>;
 };
 export function SheetsCanvas(){
- const media=useMedia();const {t}=useT();useEffect(()=>registerSheetsCommands({openFormulas:openSheetsFormulasPanel}),[]);const item=media.items.find(i=>i.name===media.active&&i.kind==='xlsx');
+ const media=useMedia();const {t}=useT();useEffect(()=>registerSheetsCommands({openFormulas:openSheetsFormulasPanel,openExportAdvanced:()=>setSheetsExportState({open:true})}),[]);const item=media.items.find(i=>i.name===media.active&&i.kind==='xlsx');
  if(!item)return <main className="center" aria-label={t('sheets.workspace')}><div className="workspace"><section className="code-pane" aria-label={t('sheets.workspace')}><FileTabs/><StudioEmptyState studio="sheets" icon={<Table2/>} onOpen={()=>new Promise<void>((resolve,reject)=>{const input=document.createElement('input');input.type='file';input.accept='.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';input.oncancel=()=>resolve();input.onchange=async()=>{try{const file=input.files?.[0];if(file){const result=await addMediaFile(file,file.name);if('error' in result)throw Error(result.error);}resolve();}catch(e){reject(e);}};input.click();})} onCreate={()=>createBlankProject('sheets')} testId="sheets-empty"/></section></div></main>;
  return <main className="center" aria-label={t('sheets.workspace')}><div className="workspace"><section className="code-pane" aria-label={t('sheets.workspace')}><FileTabs/><Workbook key={item.url} item={item}/></section></div></main>;
 }
@@ -526,6 +528,7 @@ function Workbook({item}:{item:MediaItem}){
    <Button size="icon" aria-label={t('cmd.edit.redo')} title={t('cmd.edit.redo')} disabled={collab.current?!collab.current.binding.canRedo:!info?.canRedo} onClick={()=>void history('redo')}><Redo2/></Button>
    <Button variant="outline" disabled={phase.kind!=='ready'} onClick={()=>void exportCopy()} data-testid="sheets-export">{t('sheets.exportCopy')}</Button>
   </div>
+  <SheetsExportPopover name={item.name} ready={phase.kind==='ready'&&!!engine.current&&!engine.current.isDisposed} getBytes={()=>engine.current!.save()} onSaved={r=>{if(r==='saved')setDirty(false);if(r!=='cancelled')setNotice(t('sheets.exported'));}}/>
   {book&&book.warnings.length>0&&<ul className="px-3 py-1 text-[12px] text-ink-3" role="note" data-testid="sheets-warnings">{book.warnings.map(w=><li key={w}>{w}</li>)}</ul>}
   <p className="px-3 py-1 text-[12px] text-ink-3" role="note" data-testid="sheets-fidelity">{t('sheets.fidelity')}</p>
   <SheetsHandoffBar file={item.name} disabled={phase.kind!=='ready'} onError={setNotice} getRows={async()=>{

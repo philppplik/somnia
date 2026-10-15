@@ -48,6 +48,8 @@ export interface SheetsCommandDeps {
    * Owned by the component layer (panel layout lives in src/store); absent in the command inventory.
    */
   openFormulas?:()=>void;
+  /** Opens the Advanced Export dialog. Owned by the component layer; absent in the command inventory. */
+  openExportAdvanced?:()=>void;
 }
 
 const expected=(message:string)=>{const e=new Error(message) as Error&{expected:boolean};e.expected=true;return e;};
@@ -66,6 +68,12 @@ export function sheetsCommandSpecs(deps:SheetsCommandDeps):CommandSpec[] {
       enabled:()=>deps.controller()?.canRedo()??false,
       // History: the WASM engine redo stack (worker op 'redo' in engine.ts).
       run:()=>requireController(deps).redo(),
+    },
+    {
+      id:'sheets.export.advanced',title:'Sheets: Advanced export with name and metadata',category:'Project',level:'ui',
+      keywords:['xlsx','export','advanced','metadata'],
+      enabled:()=>deps.controller()?.ready()??false,
+      run:()=>{requireController(deps);deps.openExportAdvanced?.();},
     },
     {
       id:'sheets.saveCopy',title:'Save workbook copy',category:'Project',level:'ui',
@@ -89,7 +97,7 @@ export function sheetsCommandSpecs(deps:SheetsCommandDeps):CommandSpec[] {
  * Returns one disposer that removes every registration. SheetsCanvas calls this on mount
  * with the component-layer panel opener; the command inventory calls it without one.
  */
-export function registerSheetsCommands(deps:{openFormulas?:()=>void}={}):()=>void {
+export function registerSheetsCommands(deps:{openFormulas?:()=>void;openExportAdvanced?:()=>void}={}):()=>void {
   const specs=sheetsCommandSpecs({controller:getSheetsCommandController,openFormulas:deps.openFormulas});
   const offs=[...specs.map(spec=>registerCommandSpec(spec)),registerSheetsPanelCommands()];
   return()=>{for(const off of offs)off();};
