@@ -25,7 +25,13 @@ export function SoundArrange(){
   else if(e.ctrlKey&&!e.shiftKey&&e.key.toLowerCase()==='y'){e.preventDefault();void run('redo');}
   else if(e.key===' '){const a=audio.current;if(!a||!state.url)return;e.preventDefault();if(a.paused)void a.play();else a.pause();}
   else if(e.key.toLowerCase()==='m'&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&selected.length){e.preventDefault();const clips=s.tracks.flatMap(t=>t.clips).filter(c=>selected.includes(c.id));if(clips.length){const mute=clips.some(c=>!c.muted);if(clips.length>1)void run('clips.mute',{ids:selected,muted:mute});else void run('clip.set',{id:clips[0].id,muted:mute});}}
-  else if((e.key==='Delete'||e.key==='Backspace')&&selected.length){e.preventDefault();if(e.shiftKey)void run('clips.rippleDelete',{ids:selected});else if(selected.length>1)void run('clips.delete',{ids:selected});else void run('clip.delete',{id:selected[0]});setSelected([]);}};
+  else if((e.key==='Delete'||e.key==='Backspace')&&selected.length){e.preventDefault();if(e.shiftKey)void run('clips.rippleDelete',{ids:selected});else if(selected.length>1)void run('clips.delete',{ids:selected});else void run('clip.delete',{id:selected[0]});setSelected([]);}
+  else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='a'){e.preventDefault();setSelected(s.tracks.flatMap(t=>t.clips).map(c=>c.id));}
+  else if(e.key==='Escape'&&selected.length){e.preventDefault();setSelected([]);}
+  else if(e.key==='Home'){e.preventDefault();setTime(0);}
+  else if(e.key==='End'){e.preventDefault();setTime(arrangementEnd(s));}
+  else if((e.key==='+'||e.key==='=')&&!e.ctrlKey&&!e.metaKey&&!e.altKey){e.preventDefault();setZoom(z=>Math.min(5,z+0.5));}
+  else if(e.key==='-'&&!e.ctrlKey&&!e.metaKey&&!e.altKey){e.preventDefault();setZoom(z=>Math.max(1,z-0.5));}};
  window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey);},[state.url,selected,state.revision]);
  const dirty=serializeArrangement(s)!==state.savedText;
  const end=arrangementEnd(s),span=Math.max(48000*12,Math.min(48000*ARRANGE_LIMITS.seconds,end+48000));
