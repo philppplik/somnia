@@ -1,5 +1,5 @@
 import {useCallback,useEffect,useRef,useState} from 'react';
-import {ChevronsLeft,ChevronsRight,Download,Pause,Play,Redo2,RotateCcw,Scissors,Undo2,Volume2,VolumeX,ZoomIn,ZoomOut} from '../../lib/icons';
+import {ChevronsLeft,ChevronsRight,Mic,Download,Pause,Play,Redo2,RotateCcw,Scissors,Undo2,Volume2,VolumeX,ZoomIn,ZoomOut} from '../../lib/icons';
 import {Button} from '../ui/button';
 import {useT} from '../../lib/useT';
 import {executeCommand} from '../../lib/commands';
@@ -15,6 +15,8 @@ import {audioClipDuration,audioEnvelope,audioTrackEnd,duckGainAt} from '../../li
 import {AudioLane} from './AudioLane';
 import {snapPointsFor,zoomInStep,zoomOutStep} from '../../lib/video/zoom';
 import {formatTime} from '../../lib/video/recipe';
+import {pickVoiceoverMime,voiceoverExtension,voiceoverFileName} from '../../lib/video/voiceover';
+import {addMediaFile,getMedia} from '../../lib/media';
 import {formatBytes,getState,patchState,requestStudio,useAppStore,useMedia,type MediaItem} from './workspace-deps';
 import {VideoTimeline} from './VideoTimeline';
 import {VideoControls} from './VideoInspector';
@@ -160,6 +162,50 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
   else{playingRef.current=false;setPlaying(false);setPlayhead(duration);}
  },[ranges,duration,loop]);
  const pauseAll=useCallback(()=>{playingRef.current=false;setPlaying(false);slotA.current?.pause();slotB.current?.pause();},[]);
+ // Voiceover: records the microphone while the preview plays, then drops the take on the audio track at the
+ // playhead position where recording started. The recorder lives in a ref; only the on/off flag is state.
+ const [recording,setRecording]=useState(false);
+ const [voiceoverError,setVoiceoverError]=useState('');
+ const voiceoverRef=useRef<{rec:MediaRecorder;stream:MediaStream;chunks:Blob[];startAt:number;mime:string}|null>(null);
+ const stopVoiceover=useCallback(()=>{
+  const r=voiceoverRef.current;if(!r)return;
+  voiceoverRef.current=null;setRecording(false);
+  playingRef.current=false;setPlaying(false);slotA.current?.pause();slotB.current?.pause();
+  r.rec.onstop=()=>{
+   r.stream.getTracks().forEach(track=>track.stop());
+   const ext=voiceoverExtension(r.mime);
+   const blob=new Blob(r.chunks,{type:r.mime||'audio/webm'});
+   const name=voiceoverFileName(getMedia().items.map(i=>i.name),ext);
+   void addMediaFile(blob,name,undefined,{activate:false}).then(res=>{
+    if('error' in res){setVoiceoverError(res.error);return;}
+    const item=getMedia().items.find(i=>i.name===res.name);
+    if(item)void addAudioTrackClip(item.name,item,r.startAt);
+   });
+  };
+  r.rec.stop();
+ },[]);
+ const toggleVoiceover=useCallback(()=>{
+  if(voiceoverRef.current){stopVoiceover();return;}
+  setVoiceoverError('');
+  void (async()=>{
+   try{
+    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    const mime=pickVoiceoverMime(type=>MediaRecorder.isTypeSupported(type));
+    const rec=new MediaRecorder(stream,mime?{mimeType:mime}:undefined);
+    const chunks:Blob[]=[];
+    rec.ondataavailable=e=>{if(e.data.size>0)chunks.push(e.data);};
+    voiceoverRef.current={rec,stream,chunks,startAt:playhead,mime:rec.mimeType||mime};
+    rec.start(250);
+    setRecording(true);
+    playingRef.current=true;setPlaying(true);
+   }catch{
+    setVoiceoverError(t('video.voiceoverMicError'));
+   }
+  })();
+ },[playhead,stopVoiceover,t]);
+ // A closing workspace must not leave the microphone open.
+ useEffect(()=>()=>{const r=voiceoverRef.current;if(r){voiceoverRef.current=null;try{r.rec.stop();}catch{/* already stopped */}r.stream.getTracks().forEach(track=>track.stop());}},[]);
+
  const toggle=useCallback(()=>{
   if(playing){pauseAll();return;}
   if(playhead>=duration-0.02)setPlayhead(0);
@@ -245,8 +291,10 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
      <Button size="icon" variant="outline" aria-label={t(playing?'video.pause':'video.play')} aria-pressed={playing} disabled={!playable||!clips.length} onClick={toggle} data-testid="video-play">{playing?<Pause size={16}/>:<Play size={16}/>}</Button>
      <Button size="icon" variant="ghost" aria-label={t('video.frameBack')} disabled={!playable||!clips.length} onClick={()=>step(-1)} data-testid="video-frame-back"><ChevronsLeft size={16}/></Button>
      <Button size="icon" variant="ghost" aria-label={t('video.frameFwd')} disabled={!playable||!clips.length} onClick={()=>step(1)} data-testid="video-frame-fwd"><ChevronsRight size={16}/></Button>
+     <Button size="icon" variant={recording?'outline':'ghost'} aria-label={t(recording?'video.voiceoverStop':'video.voiceoverRecord')} aria-pressed={recording} disabled={!playable||!clips.length||exporting} onClick={toggleVoiceover} data-testid="video-voiceover-record"><Mic size={16}/>{recording&&<span className="ml-0.5 inline-block h-1.5 w-1.5 rounded-full bg-red-500" aria-hidden="true"/>}</Button>
      <span className="tabular-nums" data-testid="video-time">{formatTime(playhead)} / {formatTime(duration)}</span>
      <Button size="icon" variant="ghost" aria-label={t('video.split')} title={t('video.splitHint')} disabled={!entry||exporting} onClick={splitHere} data-testid="video-split"><Scissors size={16}/></Button>
+     {voiceoverError&&<span className="text-red-500" data-testid="video-voiceover-error">{voiceoverError}</span>}
      <Button size="icon" variant="ghost" aria-label={t('video.undo')} title={t('video.undoHint')} disabled={!videoCanUndo(session??null)} onClick={()=>undoVideoEdit(item.name)} data-testid="video-undo"><Undo2 size={16}/></Button>
      <Button size="icon" variant="ghost" aria-label={t('video.redo')} title={t('video.redoHint')} disabled={!videoCanRedo(session??null)} onClick={()=>redoVideoEdit(item.name)} data-testid="video-redo"><Redo2 size={16}/></Button>
      {selectedClip&&<span className="rounded-full bg-[var(--accent)]/15 px-2 py-0.5 text-[11px] text-ink" data-testid="video-selected-chip">{t('video.selectedClip',{name:clipDisplayName(selectedClip,selectedClip.source.replace(/^.*[\\/]/,'')),length:(selectedClip.out_s-selectedClip.in_s).toFixed(2)})}</span>}
