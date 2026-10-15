@@ -12,7 +12,6 @@ const MAX_FREEZE: u32 = 20;
 const MAX_SHEETS: usize = 255;
 const MAX_SORT_CELLS: u64 = 1_000_000;
 const MAX_FILL_CELLS: u64 = 1_000_000;
-const MAX_CF_RULES: usize = 64;
 const MAX_SPLIT_PARTS: usize = 20;
 const MAX_NOTE_CHARS: usize = 2000;
 const MAX_NAMES: usize = 500;
