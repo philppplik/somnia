@@ -229,5 +229,12 @@
  "photos.keys.lightsOut": "Extinction des lumieres",
  "photos.keys.rotate": "Rotation 90° gauche / droite",
  "photos.keys.guides": "Changer les guides de recadrage",
- "photos.keys.commitCrop": "Appliquer le recadrage"
+ "photos.keys.commitCrop": "Appliquer le recadrage",
+ "photos.stats": "Statistiques",
+ "photos.stats.visible": "{shown} sur {total} photos",
+ "photos.stats.unrated": "Non notees",
+ "photos.stats.picks": "Retenues",
+ "photos.stats.rejects": "Rejetees",
+ "photos.stats.hidden": "{count} masquees",
+ "photos.stats.empty": "Pas encore de notes"
 }

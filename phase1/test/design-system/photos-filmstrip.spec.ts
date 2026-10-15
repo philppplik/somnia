@@ -958,3 +958,27 @@ test('keyboard reference: opens from the menu and the ? key, lists the wired sho
   await expect(page.getByTestId('photos-shortcuts')).toHaveCount(0);
  }
 });
+
+test('statistics: rating, flag and hidden counts over the library (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
+  await page.evaluate(async()=>{const r=await import('/src/lib/photos/ratings.ts');const f=await import('/src/lib/photos/flags.ts');for(const n of['strip-1.png','strip-2.png','strip-3.png']){r.setRating(n,0);f.setFlag(n,null);}}); // ratings and flags persist via localStorage
+  await page.keyboard.press('4'); // strip-1: four stars
+  await page.getByTestId('photos-filmstrip-item-strip-2.png').click();
+  await page.keyboard.press('p'); // strip-2: pick
+  await page.getByTestId('photos-filmstrip-menu').click();
+  await page.getByTestId('photos-filmstrip-stats').click();
+  await expect(page.getByTestId('photos-filmstrip-stats-visible')).toContainText('3'); // shown of total
+  await expect(page.getByTestId('photos-filmstrip-stats-ratings')).toContainText('4★ ×1');
+  await expect(page.getByTestId('photos-filmstrip-stats-ratings')).toContainText('×2'); // two unrated
+  await expect(page.getByTestId('photos-filmstrip-stats-flags')).toContainText('×1'); // one pick
+  await page.screenshot({path:`test-results/ds-photos-stats-${theme}.png`,fullPage:true});
+  await page.getByTestId('photos-filmstrip-stats').click(); // close again
+  await expect(page.getByTestId('photos-filmstrip-stats-panel')).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await page.evaluate(async()=>{const r=await import('/src/lib/photos/ratings.ts');const f=await import('/src/lib/photos/flags.ts');for(const n of['strip-1.png','strip-2.png','strip-3.png']){r.setRating(n,0);f.setFlag(n,null);}}); // leave no state behind
+ }
+});

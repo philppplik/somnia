@@ -229,5 +229,12 @@
  "photos.keys.lightsOut": "Apagar luces",
  "photos.keys.rotate": "Girar 90° izquierda / derecha",
  "photos.keys.guides": "Cambiar guias de recorte",
- "photos.keys.commitCrop": "Aplicar recorte"
+ "photos.keys.commitCrop": "Aplicar recorte",
+ "photos.stats": "Estadisticas",
+ "photos.stats.visible": "{shown} de {total} fotos",
+ "photos.stats.unrated": "Sin puntuar",
+ "photos.stats.picks": "Seleccionadas",
+ "photos.stats.rejects": "Rechazadas",
+ "photos.stats.hidden": "{count} ocultas",
+ "photos.stats.empty": "Aun sin puntuaciones"
 }

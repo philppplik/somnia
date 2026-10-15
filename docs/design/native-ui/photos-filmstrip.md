@@ -574,3 +574,15 @@ Docs-only surface, no settings touched.
 Coverage: the light/dark gallery leg opens from the menu, checks
 representative rows, closes with Escape, re-opens with ? and closes
 with ? again (`test-results/ds-photos-shortcuts-{light,dark}.png`).
+
+## Statistics (P116)
+
+"Statistics" in the strip menu opens a compact text block: visible
+vs total, the star distribution (only rated buckets plus unrated),
+pick/reject counts and the hidden count. Text only - no bars, so no
+inline styles and the design ratchets stay put. Read-only, computed
+from the same `useVisiblePhotos` data the strip renders.
+
+Coverage: the light/dark gallery leg rates strip-1 four stars,
+picks strip-2, and checks the visible/ratings/flags lines
+(`test-results/ds-photos-stats-{light,dark}.png`).

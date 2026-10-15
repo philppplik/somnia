@@ -229,5 +229,12 @@
  "photos.keys.lightsOut": "Lights out",
  "photos.keys.rotate": "Rotate 90° left / right",
  "photos.keys.guides": "Cycle crop guides",
- "photos.keys.commitCrop": "Apply crop"
+ "photos.keys.commitCrop": "Apply crop",
+ "photos.stats": "Statistics",
+ "photos.stats.visible": "{shown} of {total} photos",
+ "photos.stats.unrated": "Unrated",
+ "photos.stats.picks": "Picks",
+ "photos.stats.rejects": "Rejects",
+ "photos.stats.hidden": "{count} hidden",
+ "photos.stats.empty": "No ratings yet"
 }

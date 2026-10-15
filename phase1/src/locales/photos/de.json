@@ -229,5 +229,12 @@
  "photos.keys.lightsOut": "Licht aus",
  "photos.keys.rotate": "90° links / rechts drehen",
  "photos.keys.guides": "Zuschnitt-Hilfslinien wechseln",
- "photos.keys.commitCrop": "Zuschnitt anwenden"
+ "photos.keys.commitCrop": "Zuschnitt anwenden",
+ "photos.stats": "Statistik",
+ "photos.stats.visible": "{shown} von {total} Fotos",
+ "photos.stats.unrated": "Unbewertet",
+ "photos.stats.picks": "Picks",
+ "photos.stats.rejects": "Rejects",
+ "photos.stats.hidden": "{count} versteckt",
+ "photos.stats.empty": "Noch keine Bewertungen"
 }

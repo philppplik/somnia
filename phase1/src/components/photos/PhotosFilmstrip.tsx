@@ -54,6 +54,7 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
  const [collNaming,setCollNaming]=useState(false);
  const [infoOpen,setInfoOpen]=useState(false);
  const [infoLines,setInfoLines]=useState<{key:string;value:string}[]|null>(null);
+ const [statsOpen,setStatsOpen]=useState(false);
  useEffect(()=>{if(pendingNote){setApplyNote(pendingNote);pendingNote=null;}},[]); // pick up a confirmation that crossed the workspace remount
  useEffect(()=>{ // lazy-read the active photo's metadata while the info panel is open
   if(!infoOpen){setInfoLines(null);return;}
@@ -273,10 +274,19 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
      <Button variant="outline" size="compact" aria-pressed={infoOpen} onClick={()=>setInfoOpen(!infoOpen)} data-testid="photos-filmstrip-info-toggle">{t('photos.info.toggle')}</Button>
      <Button variant="outline" size="compact" aria-pressed={slide} onClick={()=>setSlide(!slide)} data-testid="photos-filmstrip-slideshow">{t('photos.slideshow')}</Button>
      <Button variant="outline" size="compact" onClick={()=>{setMenuOpen(false);setShortcuts(true);}} data-testid="photos-filmstrip-shortcuts">{t('photos.keys.title')}</Button>
+     <Button variant="outline" size="compact" aria-pressed={statsOpen} onClick={()=>setStatsOpen(!statsOpen)} data-testid="photos-filmstrip-stats">{t('photos.stats')}</Button>
      {slide&&<NativeSelect value={String(slideMs)} aria-label={t('photos.slideshow.tempo')} title={t('photos.slideshow.tempo')} onChange={e=>setSlideMs(Number(e.currentTarget.value))} className="h-7" data-testid="photos-filmstrip-slideshow-ms">
       {[2000,4000,8000].map(ms=><option key={ms} value={ms}>{ms/1000} s</option>)}
      </NativeSelect>}
     </span>
+    {statsOpen&&<div className="grid gap-0.5 text-ink-3" data-testid="photos-filmstrip-stats-panel">
+     <span data-testid="photos-filmstrip-stats-visible">{t('photos.stats.visible',{shown:photos.length,total})}</span>
+     {(()=>{const dist=[5,4,3,2,1].map(r=>({r,n:all.filter(p=>(ratings[p.name]??0)===r).length})).filter(d=>d.n>0);const unrated=all.filter(p=>!(ratings[p.name]>=1)).length;
+      return <span data-testid="photos-filmstrip-stats-ratings">{[...dist.map(d=>`${d.r}★ ×${d.n}`),unrated>0?`${t('photos.stats.unrated')} ×${unrated}`:''].filter(Boolean).join(' · ')||t('photos.stats.empty')}</span>;})()}
+     {(()=>{const picks=all.filter(p=>flags[p.name]==='pick').length,rejects=all.filter(p=>flags[p.name]==='reject').length;
+      return picks+rejects>0?<span data-testid="photos-filmstrip-stats-flags">{[picks>0?`${t('photos.stats.picks')} ×${picks}`:'',rejects>0?`${t('photos.stats.rejects')} ×${rejects}`:''].filter(Boolean).join(' · ')}</span>:null;})()}
+     {hidden.length>0&&<span data-testid="photos-filmstrip-stats-hidden">{t('photos.stats.hidden',{count:hidden.length})}</span>}
+    </div>}
     {infoOpen&&<div className="grid gap-0.5 text-ink-3" data-testid="photos-filmstrip-info">
      {infoLines===null?<span data-testid="photos-filmstrip-info-loading">…</span>
       :infoLines.length===0?<span data-testid="photos-filmstrip-info-empty">{t('photos.info.empty')}</span>
