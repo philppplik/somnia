@@ -9,7 +9,7 @@ test('tempo: schema v8 migrates v7 sessions with 120 bpm and strict v8 requires 
  const v7=JSON.parse(JSON.stringify(session())) as Record<string,unknown>;
  v7.version=7;delete v7.bpm;
  const migrated=validateArrangement(v7);
- assert.equal(migrated.version,8);
+ assert.equal(migrated.version,9);
  assert.equal(migrated.bpm,120,'v7 sessions gain the neutral 120 bpm');
  const broken=JSON.parse(JSON.stringify(session())) as Record<string,unknown>;
  delete broken.bpm;

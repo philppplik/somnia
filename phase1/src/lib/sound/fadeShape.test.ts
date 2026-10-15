@@ -24,7 +24,7 @@ test('fade shape: schema v7 migrates v6 clips with linear and rejects unknown sh
  v6.version=6;delete (v6 as Record<string,unknown>).bpm;
  for(const t of (v6 as {tracks:{clips:Record<string,unknown>[]}[]}).tracks)for(const c of t.clips)delete c.fadeShape;
  const migrated=validateArrangement(v6);
- assert.equal(migrated.version,8);
+ assert.equal(migrated.version,9);
  assert.equal(migrated.tracks[0].clips[0].fadeShape,'linear','v6 clips keep the historical linear fades');
  const broken=JSON.parse(JSON.stringify(session('equalPower'))) as Record<string,unknown>;
  for(const t of (broken as {tracks:{clips:Record<string,unknown>[]}[]}).tracks)for(const c of t.clips)c.fadeShape='exp';

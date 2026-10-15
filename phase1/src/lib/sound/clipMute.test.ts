@@ -16,7 +16,7 @@ test('clip mute: schema v5 migrates v4 sessions with muted:false and strict v5 c
  v4.version=4;delete (v4 as Record<string,unknown>).bpm;
  for(const t of (v4 as {tracks:{clips:Record<string,unknown>[]}[]}).tracks)for(const c of t.clips)delete c.muted;
  const migrated=validateArrangement(v4);
- assert.equal(migrated.version,8);
+ assert.equal(migrated.version,9);
  assert.equal(migrated.tracks[0].clips[0].muted,false,'v4 clips gain muted:false');
  assert.equal(validateArrangement(migrated).tracks[0].clips[0].muted,false,'v5 re-validation keeps the flag');
  const broken=JSON.parse(JSON.stringify(session(true))) as Record<string,unknown>;

@@ -149,3 +149,14 @@ test('clips.rippleDelete closes the gap per track, keeps other tracks and undoes
  await commandDispatcher.runCommand('sound.arrange.undo');
  assert.deepEqual(getArrangementState().document.tracks[0].clips.map(c=>[c.id,c.start]),[['a',0],['b',9600],['c',19200]],'undo restores clips and positions');
 }finally{off();resetArrangement();}});
+
+test('clip.set renames a clip and undo restores the name',async()=>{resetArrangement();const off=registerArrangeCommands();try{
+ const source={id:'src',name:'tone.wav',frames:96000,sampleRate:48000,channels:2 as const};
+ editArrangement(s=>{s.sources.push(source);s.tracks.push({...newTrack('t1','A'),clips:[newClip('a',source)]});});
+ await commandDispatcher.runCommand('sound.arrange.clip.set',{id:'a',name:'Chorus take'});
+ assert.equal(getArrangementState().document.tracks[0].clips[0].name,'Chorus take');
+ await commandDispatcher.runCommand('sound.arrange.clip.set',{id:'a',name:''});
+ assert.equal(getArrangementState().document.tracks[0].clips[0].name,'','clearing falls back to the source name');
+ await commandDispatcher.runCommand('sound.arrange.undo');
+ assert.equal(getArrangementState().document.tracks[0].clips[0].name,'Chorus take');
+}finally{off();resetArrangement();}});

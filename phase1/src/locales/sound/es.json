@@ -179,6 +179,7 @@
   "sound.arrange.freezeHint": "Renderiza la pista con su rack como nuevo medio, reemplaza los clips y omite el rack (deshacer descongela; nivel y panorama siguen activos)",
   "sound.arrange.stems": "Stems",
   "sound.arrange.stemsHint": "Exporta cada pista como WAV (con rack, nivel y panorama, sin máster) en un ZIP",
+  "sound.arrange.clipName": "Nombre del clip",
   "sound.arrange.fit": "Ajustar",
   "sound.arrange.fitHint": "Ver toda la sesión en pantalla",
   "sound.arrange.trimStart": "Inicio al cursor",
