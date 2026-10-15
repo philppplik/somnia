@@ -1057,5 +1057,6 @@
  "cmd.studio3d.edit.snapToCursor": "Mover os vértices selecionados para o cursor 3D",
  "studio3d.hist.snapToCursor": "Encaixar seleção no cursor",
  "studio3d.edit.snapToCursor": "Ao cursor",
- "studio3d.edit.snapToCursorOffset": "Ao cursor, manter forma"
+ "studio3d.edit.snapToCursorOffset": "Ao cursor, manter forma",
+ "cmd.studio3d.edit.selectNonManifold": "Selecionar os vértices tocados por arestas com mais de duas faces"
 }

@@ -1057,5 +1057,6 @@
  "cmd.studio3d.edit.snapToCursor": "Move the selected vertices onto the 3D cursor",
  "studio3d.hist.snapToCursor": "Snap selection to cursor",
  "studio3d.edit.snapToCursor": "Snap to cursor",
- "studio3d.edit.snapToCursorOffset": "Snap to cursor, keep shape"
+ "studio3d.edit.snapToCursorOffset": "Snap to cursor, keep shape",
+ "cmd.studio3d.edit.selectNonManifold": "Select the vertices touched by edges with more than two faces"
 }

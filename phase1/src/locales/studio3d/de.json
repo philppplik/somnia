@@ -1057,5 +1057,6 @@
  "cmd.studio3d.edit.snapToCursor": "Ausgewählte Vertices auf den 3D-Cursor ziehen",
  "studio3d.hist.snapToCursor": "Selektion zum Cursor",
  "studio3d.edit.snapToCursor": "Zum Cursor",
- "studio3d.edit.snapToCursorOffset": "Zum Cursor, Form behalten"
+ "studio3d.edit.snapToCursorOffset": "Zum Cursor, Form behalten",
+ "cmd.studio3d.edit.selectNonManifold": "Vertices auswählen, die Kanten mit mehr als zwei Flächen berühren"
 }

@@ -952,6 +952,27 @@ export function moveSelected(m:MeshData,verts:number[],offset:[number,number,num
  const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
  check(out);return out;
 }
+/** Vertices touched by non-manifold edges: position-keyed edges with more than two adjacent triangles. Every index twin of a touched position comes along. */
+export function nonManifoldVerts(m:MeshData):number[]{
+ check(m);
+ const nv=m.positions.length/3;
+ const pk=(v:number)=>`${Math.round(m.positions[v*3]*1e6)}_${Math.round(m.positions[v*3+1]*1e6)}_${Math.round(m.positions[v*3+2]*1e6)}`;
+ const edgeUse=new Map<string,number>();
+ for(let f=0;f<m.index.length;f+=3){
+  const t=[pk(m.index[f]),pk(m.index[f+1]),pk(m.index[f+2])];
+  for(let e=0;e<3;e++){
+   const a=t[e],b=t[(e+1)%3];
+   if(a===b)continue;
+   const k=a<b?a+'|'+b:b+'|'+a;
+   edgeUse.set(k,(edgeUse.get(k)??0)+1);
+  }
+ }
+ const bad=new Set<string>();
+ for(const [k,c] of edgeUse)if(c>2){const [a,b]=k.split('|');bad.add(a);bad.add(b);}
+ const out:number[]=[];
+ for(let v=0;v<nv;v++)if(bad.has(pk(v)))out.push(v);
+ return out;
+}
 /** Moves the selected vertices onto the target point; withOffset keeps the selection shape by landing its centroid on the target instead. Position-keyed so twins move together, masks damp the pull, UVs and masks are carried. */
 export function snapSelected(m:MeshData,verts:number[],target:[number,number,number],withOffset:boolean):MeshData{
  check(m);

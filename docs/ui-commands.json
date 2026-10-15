@@ -9300,6 +9300,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.edit.selectNonManifold",
+      "title": "Select the vertices touched by edges with more than two faces",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.edit.selectPath",
       "title": "Select the shortest edge path between two vertices of the edited 3D mesh",
       "category": "Edit",

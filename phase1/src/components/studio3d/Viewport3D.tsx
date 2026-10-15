@@ -1241,6 +1241,7 @@ export default function Viewport3D(){
   editBridgeFaces:(twist)=>{stage.editBridgeFaces(twist);patchEdit();invalidate();},
   editVertSlide:(edge,factor)=>{stage.editVertSlide(edge,factor);patchEdit();invalidate();},
   editSnapToCursor:(c,off)=>{stage.editSnapToCursor(c,off);patchEdit();invalidate();},
+  editSelectNonManifold:()=>{stage.editSelectNonManifold();patchEdit();invalidate();},
   editConvexHull:()=>{stage.editConvexHull();patchEdit();invalidate();},
   editSymmetrize:(axis,side,merge)=>{stage.editSymmetrize(axis,side,merge);patchEdit();invalidate();},
   editShrinkwrap:(target,offset)=>{stage.editShrinkwrap(target,offset);patchEdit();invalidate();},

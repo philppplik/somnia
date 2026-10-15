@@ -1,4 +1,5 @@
 # Unreleased: 3D Studio P0
+- 3D Studio: non-manifold geometry is one selection away.
 - 3D Studio: the edit selection snaps onto the 3D cursor, with or without its shape.
 - 3D Studio: the UV seams of a mesh follow the borders of its UV islands.
 - 3D Studio: the UVs of selected faces move, rotate and scale in edit mode.
