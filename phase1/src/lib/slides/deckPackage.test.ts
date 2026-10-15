@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {unzipSync,zipSync,strFromU8,strToU8} from 'fflate';
-import {countTextMatches,replaceTextAll,slidesWithoutNotes,duplicateTitles,setPictureDecorative,readPictureDecorative,untitledSlides,missingAltText,MAX_ALT_REPORT,setPictureAlt,readPictureAlt,editSections,setSlideHidden,readHiddenSlides,setFirstSlideNum,readFirstSlideNum,setSlideFooter,setAllSlideFooters,readSlideFooter,setSlideSize,readSlideSize,setAllSlideBackgrounds,backgroundSummary,setSlideBackground,readSlideBackground,editLayoutBox,readLayoutBoxes,editMasterBox,readMaster,editTheme,readTheme,insertTable,editTable,readTable,setShapeStyle,readShapeStyle,setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
+import {countTextMatches,textMatchesBySlide,replaceTextAll,slidesWithoutNotes,duplicateTitles,setPictureDecorative,readPictureDecorative,untitledSlides,missingAltText,MAX_ALT_REPORT,setPictureAlt,readPictureAlt,editSections,setSlideHidden,readHiddenSlides,setFirstSlideNum,readFirstSlideNum,setSlideFooter,setAllSlideFooters,readSlideFooter,setSlideSize,readSlideSize,setAllSlideBackgrounds,backgroundSummary,setSlideBackground,readSlideBackground,editLayoutBox,readLayoutBoxes,editMasterBox,readMaster,editTheme,readTheme,insertTable,editTable,readTable,setShapeStyle,readShapeStyle,setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
 import {readRuns,makeEditedCopy} from './editCopy';
 import {png,jpeg} from './imageFixtures';
 
@@ -1044,4 +1044,13 @@ test('replace text: counts, case option, formatting kept, escaping, no-op, bound
   const e=replaceTextAll(b,'Slide ','',true);assert.ok(readDeckModel(e).runs.some(r=>r.text==='1'));
   assert.throws(()=>replaceTextAll(b,'','x',false),/Enter the text/);assert.throws(()=>replaceTextAll(b,'x'.repeat(201),'y',false),/limited/);assert.throws(()=>replaceTextAll(b,'a','y'.repeat(501),false),/limited/);assert.throws(()=>replaceTextAll(b,'a\n','y',false),/unsupported/);assert.throws(()=>countTextMatches(b,'',false),/Enter the text/);
   const z=unzipSync(c),zb=unzipSync(b);for(const k of Object.keys(zb))if(!/^ppt\/slides\/slide\d+\.xml$/.test(k))assert.deepEqual(z[k],zb[k],k);
+});
+
+test('textMatchesBySlide lists slides with matches and rejects bad input',()=>{
+ const bytes=base;
+ const rows=textMatchesBySlide(bytes,'e',false);
+ assert.ok(rows.length>0&&rows.every(r=>r.count>0&&r.slideIndex>=0));
+ assert.equal(rows.reduce((a,r)=>a+r.count,0),countTextMatches(bytes,'e',false));
+ assert.deepEqual(textMatchesBySlide(bytes,'zzqxnomatch',true),[]);
+ assert.throws(()=>textMatchesBySlide(bytes,'',false));
 });

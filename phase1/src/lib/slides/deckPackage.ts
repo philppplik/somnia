@@ -2075,6 +2075,13 @@ export function countTextMatches(bytes:Uint8Array,find:string,matchCase:boolean)
   for(const slide of model.slides){if(slide.problems.length)continue;total+=replaceInXml(text(zip,slide.part),re,null).count;if(total>MAX_REPLACEMENTS)return total;}
   return total;
 }
+/** Match count per slide (zero-based index), only slides with matches. Slides with unsupported structure are skipped. */
+export function textMatchesBySlide(bytes:Uint8Array,find:string,matchCase:boolean):{slideIndex:number;count:number}[]{
+  const issue=findTextIssue(find);if(issue)throw Error(issue);
+  const model=readDeckModel(bytes),zip=openPackage(bytes),re=textRe(find,matchCase),out:{slideIndex:number;count:number}[]=[];let total=0;
+  model.slides.forEach((slide,slideIndex)=>{if(slide.problems.length||total>MAX_REPLACEMENTS)return;const n=replaceInXml(text(zip,slide.part),re,null).count;if(n){total+=n;out.push({slideIndex,count:n});}});
+  return out;
+}
 export function replaceTextAll(bytes:Uint8Array,find:string,replacement:string,matchCase:boolean):Uint8Array{
   const issue=findTextIssue(find)||replaceTextIssue(replacement);if(issue)throw Error(issue);
   const model=readDeckModel(bytes),zip=openPackage(bytes),re=textRe(find,matchCase),changed:Record<string,string>={};let total=0;
