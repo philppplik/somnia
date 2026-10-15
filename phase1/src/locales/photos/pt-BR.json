@@ -249,5 +249,6 @@
  "photos.metadata.pasted": "Metadados colados em {count} fotos",
  "photos.keys.labels": "Rótulo de cor (vermelho/amarelo/verde/azul)",
  "photos.keys.undoCull": "Desfazer edição de seleção",
- "photos.keys.redoCull": "Refazer edição de seleção"
+ "photos.keys.redoCull": "Refazer edição de seleção",
+ "photos.filmstrip.sort.capture": "Data de captura"
 }

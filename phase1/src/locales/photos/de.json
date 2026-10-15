@@ -249,5 +249,6 @@
  "photos.metadata.pasted": "Metadaten auf {count} Fotos eingefügt",
  "photos.keys.labels": "Farb-Label (Rot/Gelb/Grün/Blau)",
  "photos.keys.undoCull": "Culling-Schritt rückgängig",
- "photos.keys.redoCull": "Culling-Schritt wiederholen"
+ "photos.keys.redoCull": "Culling-Schritt wiederholen",
+ "photos.filmstrip.sort.capture": "Aufnahmedatum"
 }

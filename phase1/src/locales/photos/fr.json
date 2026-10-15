@@ -249,5 +249,6 @@
  "photos.metadata.pasted": "Métadonnées collées sur {count} photos",
  "photos.keys.labels": "Libellé couleur (rouge/jaune/vert/bleu)",
  "photos.keys.undoCull": "Annuler la modification",
- "photos.keys.redoCull": "Rétablir la modification"
+ "photos.keys.redoCull": "Rétablir la modification",
+ "photos.filmstrip.sort.capture": "Date de capture"
 }

@@ -249,5 +249,6 @@
  "photos.metadata.pasted": "Metadata pasted to {count} photos",
  "photos.keys.labels": "Color label (red/yellow/green/blue)",
  "photos.keys.undoCull": "Undo culling edit",
- "photos.keys.redoCull": "Redo culling edit"
+ "photos.keys.redoCull": "Redo culling edit",
+ "photos.filmstrip.sort.capture": "Capture date"
 }

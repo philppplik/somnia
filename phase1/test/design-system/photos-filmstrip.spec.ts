@@ -405,6 +405,30 @@ test('color labels: batch set, badge, filter, clear (light and dark)',async({pag
   await expect(page.getByTestId('photos-filmstrip-label-strip-1.png')).toHaveCount(0);
  }
 });
+test('capture sort: EXIF dates order the strip oldest-first, undated last (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
+  const names=()=>page.getByTestId('photos-filmstrip').locator('[data-testid^="photos-filmstrip-item-"]').evaluateAll(els=>els.map(e=>e.getAttribute('data-testid')!.replace('photos-filmstrip-item-','')));
+  await page.evaluate(async()=>{ // seed the date cache directly: strip-3 oldest, strip-1 middle, strip-2 undated
+   const m=await import('/src/lib/photos/captureDates.ts');
+   const med=await import('/src/lib/media.ts');
+   const size=(n:string)=>med.getMedia().items.find(i=>i.name===n)!.size;
+   m.putCaptureDate('strip-3.png',size('strip-3.png'),new Date(2024,0,15,12,0,0).getTime());
+   m.putCaptureDate('strip-1.png',size('strip-1.png'),new Date(2025,5,20,12,0,0).getTime());
+   m.putCaptureDate('strip-2.png',size('strip-2.png'),null);
+  });
+  const sort=page.getByTestId('photos-filmstrip-sort');
+  await sort.selectOption('capture');
+  await expect.poll(names).toEqual(['strip-3.png','strip-1.png','strip-2.png']); // oldest first, undated last
+  await page.screenshot({path:`test-results/ds-photos-sort-capture-${theme}.png`,fullPage:true});
+  await sort.selectOption('library');
+  await expect.poll(names).toEqual(['strip-1.png','strip-2.png','strip-3.png']); // back to library order
+ }
+});
+
 test('label keys: 6-9 set color labels on the selection (light and dark)',async({page})=>{
  for(const theme of['light','dark']){
   await page.goto('/test/design-system/?view=photos-filmstrip');

@@ -6,6 +6,8 @@ import {useFlags} from '../../lib/photos/flags';
 import {useLabels} from '../../lib/photos/labels';
 import {usePhotoTags} from '../../lib/photos/tags';
 import {useAllCaptions} from '../../lib/photos/captions';
+import {ensureCaptureDates,getCaptureEntry,useCaptureDates} from '../../lib/photos/captureDates';
+import {useEffect} from 'react';
 import type {PhotoLabel} from '../../lib/photos/labels';
 import {usePanelState} from '../../store/panelStateStore';
 import {useHidden} from '../../lib/photos/hidden';
@@ -21,6 +23,7 @@ export function useVisiblePhotos(){
  const labels=useLabels();
  const tags=usePhotoTags();
  const captions=useAllCaptions();
+ useCaptureDates(); // re-render as EXIF dates land
  const [minRating]=usePanelState<number|string>('photos.ratingFilter',0);
  const [sort]=usePanelState<FilmstripSort>('photos.filmstripSort','library');
  const [query]=usePanelState<string>('photos.searchQuery','');
@@ -38,6 +41,12 @@ export function useVisiblePhotos(){
  const q=query.trim().toLowerCase();
  const smartTag=smart.tag.trim();
  const visible=all.filter(p=>(!collectionSet||collectionSet.has(p.name))&&(!smartOn||((ratings[p.name]??0)>=smart.minRating&&(smart.flag===''||(smart.flag==='none'?flags[p.name]==null:flags[p.name]===smart.flag))&&(smart.label===''||(smart.label==='none'?labels[p.name]==null:labels[p.name]===smart.label))&&(smartTag===''||(tags[p.name]??[]).some(t=>t.toLowerCase()===smartTag.toLowerCase())))));
- const photos=sortFilmstrip(visible.filter(p=>q&&!(p.name.toLowerCase().includes(q)||(tags[p.name]??[]).some(t=>t.toLowerCase().includes(q))||(captions[p.name]??'').toLowerCase().includes(q))?false:filter==='pick'?flags[p.name]==='pick':filter==='reject'?flags[p.name]==='reject':filter==='unrated'?!(ratings[p.name]>=1):filter.startsWith('label:')?labels[p.name]===filter.slice(6):filter.startsWith('tag:')?(tags[p.name]??[]).includes(filter.slice(4)):(ratings[p.name]??0)>=Number(smartOn?0:filter)),sort,ratings,flags); // sorting is display-only, prev/next keeps library order
+ const developable=developablePhotos(media.items);
+ const developableKey=developable.map(p=>`${p.name}:${p.size}`).join('|');
+ useEffect(()=>{if(sort==='capture')ensureCaptureDates(developable);},[sort,developableKey]); // eslint-disable-line react-hooks/exhaustive-deps -- the key is the stable identity of the list
+ const captureReady=sort==='capture'&&developable.every(p=>getCaptureEntry(p.name,p.size)!==null); // flip to date order only once everything resolved: no progressive jumping
+ const dates:Record<string,number|null>={};if(captureReady)for(const p of developable)dates[p.name]=getCaptureEntry(p.name,p.size)!.t;
+ const effectiveSort=sort==='capture'&&!captureReady?'library':sort;
+ const photos=sortFilmstrip(visible.filter(p=>q&&!(p.name.toLowerCase().includes(q)||(tags[p.name]??[]).some(t=>t.toLowerCase().includes(q))||(captions[p.name]??'').toLowerCase().includes(q))?false:filter==='pick'?flags[p.name]==='pick':filter==='reject'?flags[p.name]==='reject':filter==='unrated'?!(ratings[p.name]>=1):filter.startsWith('label:')?labels[p.name]===filter.slice(6):filter.startsWith('tag:')?(tags[p.name]??[]).includes(filter.slice(4)):(ratings[p.name]??0)>=Number(smartOn?0:filter)),effectiveSort,ratings,flags,dates); // sorting is display-only, prev/next keeps library order
  return {photos,all,total,ratings,flags,labels,tags,filter,sort,query,smart,smartOn,hidden,showHidden,collection};
 }

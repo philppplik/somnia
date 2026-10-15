@@ -249,5 +249,6 @@
  "photos.metadata.pasted": "Metadatos pegados en {count} fotos",
  "photos.keys.labels": "Etiqueta de color (rojo/amarillo/verde/azul)",
  "photos.keys.undoCull": "Deshacer edición de selección",
- "photos.keys.redoCull": "Rehacer edición de selección"
+ "photos.keys.redoCull": "Rehacer edición de selección",
+ "photos.filmstrip.sort.capture": "Fecha de captura"
 }

@@ -658,3 +658,21 @@ two-photo selection, and checks one Ctrl+Z undoes the whole batch,
 the next undoes the rating, and redo brings it back
 (`test-results/ds-photos-cull-undo-{light,dark}.png`); the library
 has unit tests for single edits, batches and coalescing.
+
+## Capture-date sort (P123)
+
+The strip sort select gains "Capture date": EXIF DateTimeOriginal
+from each photo, oldest first, undated photos keep library order at
+the end. Dates live in a persisted cache
+(`src/lib/photos/captureDates.ts`, keyed by media name, invalidated
+by byte size) loaded with bounded concurrency. The strip stays in
+library order until every visible photo's date has resolved - no
+progressive jumping - and read failures resolve as undated so the
+gate always settles. Sorting is display-only; prev/next keeps
+library order.
+
+Coverage: the light/dark gallery leg seeds the cache (strip-3
+oldest, strip-2 undated), picks the capture sort and checks the
+order plus the way back
+(`test-results/ds-photos-sort-capture-{light,dark}.png`); parsing
+and cache invalidation have unit tests.
