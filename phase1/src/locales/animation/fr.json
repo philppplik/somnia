@@ -1208,5 +1208,11 @@
  "animation.modifiers.springAmount": "Depassement %",
  "animation.modifiers.damping": "Amortissement",
  "animation.rig.unpack": "Defaire la precomposition",
- "cmd.animation.precomp.unpack": "Defaire les calques de precomposition dans cette composition"
+ "cmd.animation.precomp.unpack": "Defaire les calques de precomposition dans cette composition",
+ "animation.rig.group.aim": "Viser la premiere cochee",
+ "animation.rig.aim.right": "Pointe a droite",
+ "animation.rig.aim.down": "Pointe en bas",
+ "animation.rig.aim.left": "Pointe a gauche",
+ "animation.rig.aim.up": "Pointe en haut",
+ "cmd.animation.layers.aim": "Viser le premier calque coche avec les autres"
 }

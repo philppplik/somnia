@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-933 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+934 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -153,6 +153,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `animation.layer.reorder` | Reorder layer | Edit | animation |  |
 | `animation.layer.timing` | Set layer in and out | Edit | animation |  |
 | `animation.layer.update` | Edit layer | Edit | animation |  |
+| `animation.layers.aim` | Aim layers at the first ticked layer | Edit | animation |  |
 | `animation.layers.align` | Align or distribute the selected layers | Edit | animation |  |
 | `animation.layers.arrange` | Arrange the stacking order of the selected layers | Edit | animation |  |
 | `animation.layers.array` | Make an array of copies of the layer in a grid or circle | Edit | animation |  |

@@ -1433,3 +1433,22 @@ test('P246 unpack twice: colliding ids get fresh ids and parents follow',async()
  assert.equal(c.layers.length,6);assert.equal(new Set(c.layers.map(l=>l.id)).size,6);
  const bs=c.layers.filter(l=>l.kind==='shape'&&c.layers.some(x=>x.id===l.parent&&x.kind==='shape'));assert.equal(bs.length,2);assert.notEqual(bs[0].parent,bs[1].parent);
 });
+
+test('P247 aim: the layer points at the target at every sampled time, also under a rotated parent, unwrapped, one undo step',async()=>{
+ const {aimSpecs,aimKeys}=await import('./aimCommands');const {worldMatrix}=await import('./scene');const aim=aimSpecs()[0].run as (p?:unknown)=>unknown;
+ const d0=applyEdits(base(),[{type:'layer.add',kind:'solid',id:'g'},{type:'prop.set',layer:'g',prop:'rotation',t:f(0),value:30},{type:'prop.set',layer:'g',prop:'position',t:f(0),value:[50,20]},{type:'layer.add',kind:'solid',id:'p'},{type:'prop.set',layer:'p',prop:'position',t:f(0),value:[400,300]},{type:'layer.parent',layer:'p',parent:'g'}] as never);
+ const s=new AnimationSession();s.open(d0);setAnimationSession(s);
+ assert.throws(()=>aim({layers:['a']}),/target first/);
+ assert.throws(()=>aim({layers:['p','a','g']}),/hangs? from/);
+ for(const off of [0,90]){
+  const r=aim({layers:['a','p'],offset:off}) as {aimed:number;keys:number};assert.equal(r.aimed,1);assert.ok(r.keys>=2&&r.keys<=120);
+  const c=findComp(s.document!)!,L=c.layers.find(l=>l.id==='p')!,T=c.layers.find(l=>l.id==='a')!;
+  const pt=(l:typeof L,t:number)=>{const m=worldMatrix(c,l,t),an=l.transform.anchor.value as unknown as number[];return [m[0]*an[0]+m[2]*an[1]+m[4],m[1]*an[0]+m[3]*an[1]+m[5]];};
+  for(const t of [f(0),f(3),f(7),f(10)]){const m=worldMatrix(c,L,t),p=pt(L,t),q=pt(T,t);
+   const want=Math.atan2(q[1]-p[1],q[0]-p[0])*180/Math.PI+off,got=Math.atan2(m[1],m[0])*180/Math.PI;
+   const diff=((want-got)%360+540)%360-180;assert.ok(Math.abs(diff)<0.6,`off ${off} t ${t}: ${diff}`);}
+  const ks=L.transform.rotation.keys;for(let i=1;i<ks.length;i++)assert.ok(Math.abs((ks[i].v as number)-(ks[i-1].v as number))<180);
+  s.undo();assert.equal(findComp(s.document!)!.layers.find(l=>l.id==='p')!.transform.rotation.keys.length,0);
+ }
+ assert.deepEqual(aimKeys(findComp(s.document!)!,findComp(s.document!)!.layers.find(l=>l.id==='p')!,findComp(s.document!)!.layers.find(l=>l.id==='a')!,0,f(10),0).length>1,true);
+});

@@ -1208,5 +1208,11 @@
  "animation.modifiers.springAmount": "Overshoot %",
  "animation.modifiers.damping": "Damping",
  "animation.rig.unpack": "Unpack precomposition",
- "cmd.animation.precomp.unpack": "Unpack precomposition layers into this composition"
+ "cmd.animation.precomp.unpack": "Unpack precomposition layers into this composition",
+ "animation.rig.group.aim": "Aim at first ticked",
+ "animation.rig.aim.right": "Points right",
+ "animation.rig.aim.down": "Points down",
+ "animation.rig.aim.left": "Points left",
+ "animation.rig.aim.up": "Points up",
+ "cmd.animation.layers.aim": "Aim layers at the first ticked layer"
 }

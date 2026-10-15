@@ -1208,5 +1208,11 @@
  "animation.modifiers.springAmount": "Ultrapassagem %",
  "animation.modifiers.damping": "Amortecimento",
  "animation.rig.unpack": "Desfazer pre-composicao",
- "cmd.animation.precomp.unpack": "Desfazer camadas de pre-composicao nesta composicao"
+ "cmd.animation.precomp.unpack": "Desfazer camadas de pre-composicao nesta composicao",
+ "animation.rig.group.aim": "Mirar na primeira marcada",
+ "animation.rig.aim.right": "Aponta para a direita",
+ "animation.rig.aim.down": "Aponta para baixo",
+ "animation.rig.aim.left": "Aponta para a esquerda",
+ "animation.rig.aim.up": "Aponta para cima",
+ "cmd.animation.layers.aim": "Mirar as camadas na primeira camada marcada"
 }

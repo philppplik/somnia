@@ -1208,5 +1208,11 @@
  "animation.modifiers.springAmount": "Sobrepaso %",
  "animation.modifiers.damping": "Amortiguacion",
  "animation.rig.unpack": "Deshacer precomposicion",
- "cmd.animation.precomp.unpack": "Deshacer capas de precomposicion en esta composicion"
+ "cmd.animation.precomp.unpack": "Deshacer capas de precomposicion en esta composicion",
+ "animation.rig.group.aim": "Apuntar a la primera marcada",
+ "animation.rig.aim.right": "Apunta a la derecha",
+ "animation.rig.aim.down": "Apunta abajo",
+ "animation.rig.aim.left": "Apunta a la izquierda",
+ "animation.rig.aim.up": "Apunta arriba",
+ "cmd.animation.layers.aim": "Apuntar capas a la primera capa marcada"
 }

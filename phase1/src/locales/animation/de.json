@@ -1208,5 +1208,11 @@
  "animation.modifiers.springAmount": "Ueberschwingen %",
  "animation.modifiers.damping": "Daempfung",
  "animation.rig.unpack": "Vorkomposition aufloesen",
- "cmd.animation.precomp.unpack": "Vorkompositions-Ebenen in diese Komposition aufloesen"
+ "cmd.animation.precomp.unpack": "Vorkompositions-Ebenen in diese Komposition aufloesen",
+ "animation.rig.group.aim": "Auf erste angehakte zielen",
+ "animation.rig.aim.right": "Zeigt nach rechts",
+ "animation.rig.aim.down": "Zeigt nach unten",
+ "animation.rig.aim.left": "Zeigt nach links",
+ "animation.rig.aim.up": "Zeigt nach oben",
+ "cmd.animation.layers.aim": "Ebenen auf die erste angehakte Ebene ausrichten"
 }
