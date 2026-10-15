@@ -1,4 +1,4 @@
-import {arrangementEnd,validateArrangement,type Arrangement} from './arrangement';
+import {arrangementEnd,gainCurveAt,validateArrangement,type Arrangement} from './arrangement';
 export interface DecodedSource{id:string;sampleRate:number;channels:Float32Array[]}
 export interface MixResult{channels:[Float32Array,Float32Array];sampleRate:48000;peak:number;clippedSamples:number}
 /** Offline deterministic stereo mix. Linear sample-rate interpolation is explicit, not mastering quality. */
@@ -13,7 +13,7 @@ export function renderArrangement(raw:Arrangement,sources:DecodedSource[],range?
   for(const clip of track.clips){const d=decoded.get(clip.sourceId)!;const from=Math.max(start,clip.start),to=Math.min(stop,clip.start+clip.length);const gain=trackGain*10**(clip.gainDb/20);const mono=d.channels.length===1;
    // Mono uses equal-power pan. Stereo uses balance, preserving both channels at centre.
    const left=mono?Math.cos((track.pan+1)*Math.PI/4):Math.min(1,1-track.pan),right=mono?Math.sin((track.pan+1)*Math.PI/4):Math.min(1,1+track.pan);
-   for(let frame=from;frame<to;frame++){const local=frame-clip.start,pos=(clip.offset+local)*d.sampleRate/48000;const a=Math.floor(pos),b=Math.min(a+1,d.channels[0].length-1),f=pos-a;const envelope=Math.min(clip.fadeIn?local/clip.fadeIn:1,clip.fadeOut?(clip.length-1-local)/clip.fadeOut:1,1);const sample=(ch:number)=>{const c=d.channels[ch];return c[a]+(c[b]-c[a])*f;};const i=frame-start;channels[0][i]+=sample(0)*gain*envelope*left;channels[1][i]+=sample(mono?0:1)*gain*envelope*right;}
+   for(let frame=from;frame<to;frame++){const local=frame-clip.start,pos=(clip.offset+local)*d.sampleRate/48000;const a=Math.floor(pos),b=Math.min(a+1,d.channels[0].length-1),f=pos-a;const envelope=Math.min(clip.fadeIn?local/clip.fadeIn:1,clip.fadeOut?(clip.length-1-local)/clip.fadeOut:1,1)*10**(gainCurveAt(clip,local)/20);const sample=(ch:number)=>{const c=d.channels[ch];return c[a]+(c[b]-c[a])*f;};const i=frame-start;channels[0][i]+=sample(0)*gain*envelope*left;channels[1][i]+=sample(mono?0:1)*gain*envelope*right;}
   }
  }
  let peak=0,clippedSamples=0;for(const ch of channels)for(const value of ch){peak=Math.max(peak,Math.abs(value));if(Math.abs(value)>1)clippedSamples++;}
