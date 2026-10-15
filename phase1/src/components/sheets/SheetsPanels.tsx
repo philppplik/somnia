@@ -13,7 +13,7 @@ import {rectCells} from '../../lib/sheets/clipboard';
 import {addressOf,colName,parseAddress,parseSpan} from '../../lib/sheets/format';
 import {sortBlockProblem} from '../../lib/sheets/sortOps';
 import {parseShiftCommand,shiftBlockProblem,type ShiftKind,parseSpecialResult,SPECIAL_KINDS,type SpecialKind,type SpecialResult} from '../../lib/sheets/specialOps';
-import {addUserWord,checkCells,loadDictionary,readUserWords,replacementProblem,suggest,type SpellReport} from '../../lib/sheets/spelling';
+import {addUserWord,checkCells,loadDictionary,readUserWords,replacementProblem,SPELL_LANGS,suggest,type SpellLang,type SpellReport,type WordList} from '../../lib/sheets/spelling';
 import {AUTOFILL_MODES,buildSeriesOp,fillBlockProblem,FILL_DIRECTIONS,SERIES_KINDS,type AutoFillMode,type SeriesKind} from '../../lib/sheets/fillOps';
 import type {FillDirection,CfStyle,PasteOp} from '../../lib/sheets/protocol';
 import {PIVOT_FUNCS,tableBlockProblem} from '../../lib/sheets/tableOps';
@@ -1100,16 +1100,16 @@ const fetchAsset=async(path:string)=>{const r=await fetch(location.origin+path);
 function SpellingGroup(){
  const {t}=useT(),s=useSheetsSelection(),action=useAction();
  const [scope,setScope]=useState<'selection'|'sheet'>('selection'),[report,setReport]=useState<SpellReport|null>(null),[pick,setPick]=useState(0),[to,setTo]=useState(''),[act,setAct]=useState<SpellAct>('change');
- const [dict,setDict]=useState<ReadonlySet<string>|null>(null),[ignore,setIgnore]=useState<ReadonlySet<string>>(new Set()),[user,setUser]=useState<ReadonlySet<string>>(()=>readUserWords());
+ const [lang,setLang]=useState<SpellLang>('en-US'),[dict,setDict]=useState<WordList|null>(null),[ignore,setIgnore]=useState<ReadonlySet<string>>(new Set()),[user,setUser]=useState<ReadonlySet<string>>(()=>readUserWords());
  if(!s)return null;
  const range=scope==='sheet'?SPELL_SHEET:s.range?rangeAddress(s.range):s.address,valid=!!parsePanelRange(range);
- const issues=report?.issues??[],chosen=issues[pick]??issues[0]??null,options=chosen&&dict?suggest(chosen.word,dict):[];
+ const issues=report?.issues??[],chosen=issues[pick]??issues[0]??null,options=chosen&&dict?suggest(chosen.word,dict,lang):[];
  const drop=(word:string,cell?:string)=>{if(!report)return;const next=report.issues.filter(i=>cell?!(i.cell===cell&&i.word===word):i.word.toLowerCase()!==word.toLowerCase());setReport({...report,issues:next,total:Math.max(0,report.total-(report.issues.length-next.length))});setPick(0);setTo('');};
  const check=async()=>{
   if(!valid)return;
-  let d=dict;if(!d){try{d=await loadDictionary(fetchAsset);setDict(d);}catch{action.setNotice(t('sheets.spl.noDict'));return;}}
+  let d=dict;if(!d){action.setNotice(t('sheets.spl.loading'));try{d=await loadDictionary(fetchAsset,lang);setDict(d);}catch{action.setNotice(t('sheets.spl.noDict'));return;}}
   const cells=await action.run('sheets.analyzeRange',{range});if(!cells)return;
-  setReport(checkCells(cells as RangeCell[],d,user,ignore));setPick(0);setTo('');
+  setReport(checkCells(cells as RangeCell[],d,user,ignore,lang));setPick(0);setTo('');
  };
  const problem=act==='change'?replacementProblem(to):null;
  const apply=()=>{
@@ -1120,6 +1120,7 @@ function SpellingGroup(){
  };
  return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.spl.title')}>
   <span>{t('sheets.spl.title')}</span>
+  <label className="flex flex-col gap-1">{t('sheets.spl.lang')}<NativeSelect className={field} value={lang} disabled={action.busy} onChange={e=>{const v=e.currentTarget.value as SpellLang;if(!SPELL_LANGS.includes(v))return;setLang(v);setDict(null);setReport(null);setIgnore(new Set());}} data-testid="sheets-sp-lang">{SPELL_LANGS.map(l=><option key={l} value={l}>{t('sheets.spl.lang.'+l)}</option>)}</NativeSelect></label>
   <label className="flex flex-col gap-1">{t('sheets.spl.scope')}<NativeSelect className={field} value={scope} disabled={action.busy} onChange={e=>{setScope(e.currentTarget.value as 'selection'|'sheet');setReport(null);}} data-testid="sheets-sp-scope"><option value="selection">{t('sheets.spl.selection')}</option><option value="sheet">{t('sheets.spl.sheet',{range:SPELL_SHEET})}</option></NativeSelect></label>
   <Button variant="outline" size="compact" disabled={action.busy||!valid} onClick={()=>void check()} data-testid="sheets-sp-check">{t('sheets.spl.check')}</Button>
   {!valid&&<p className="text-ink-3">{t('sheets.spl.big')}</p>}
@@ -1131,7 +1132,7 @@ function SpellingGroup(){
    <label className="flex flex-col gap-1">{t('sheets.spl.action')}<NativeSelect className={field} value={act} disabled={action.busy} onChange={e=>setAct(e.currentTarget.value as SpellAct)} data-testid="sheets-sp-action"><option value="change">{t('sheets.spl.a.change')}</option><option value="ignore">{t('sheets.spl.a.ignore')}</option><option value="add">{t('sheets.spl.a.add')}</option></NativeSelect></label>
    <Button variant="outline" size="compact" disabled={action.busy||(act==='change'&&!!problem)} onClick={apply} data-testid="sheets-sp-apply">{t('sheets.spl.apply')}</Button>
   </>}
-  <p className="text-ink-3">{t('sheets.spl.hint')}</p>
+  <p className="text-ink-3">{t(lang==='en-US'?'sheets.spl.hint':'sheets.spl.hintLang')}</p>
   {action.notice?<p role="alert">{action.notice}</p>:null}
  </div>;
 }
