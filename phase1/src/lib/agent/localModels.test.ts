@@ -57,3 +57,5 @@ test('show metadata concurrency stays bounded even across multiple callers',asyn
  await Promise.all(Array.from({length:8},(_,i)=>runtime.evidence('model:'+i)));
  assert.equal(peak,2);assert.equal(active,0);
 });
+test('ambiguous installed inventory identities fail closed instead of inventing installed evidence',()=>{for(const models of [[{model:'a:1',name:'b:1'}],[{model:'',name:'a:1'}],[{model:42,name:'a:1'}],[{model:'a:1',name:42}],[{model:'a:1'},{name:'a:1'}],[{model:'a:1',name:''}]])assert.throws(()=>parseInventory({models}),JSON.stringify(models));assert.equal(parseInventory({models:[{model:'a:1',name:'a:1'}]})[0].id,'a:1');assert.equal(parseInventory({models:[{name:'b:1'}]})[0].id,'b:1');});
+test('ambiguous installed inventory is unknown, not missing or successfully empty',async()=>{const runtime=new LocalModelsRuntime(undefined,async op=>op==='version'?version:{models:[{model:'a:1'},{name:'a:1'}]},async()=>({installed:true}),()=>true);const s=await runtime.snapshot();assert.equal(s.state,'running');assert.equal(s.inventoryError,true);assert.deepEqual(s.models,[]);});

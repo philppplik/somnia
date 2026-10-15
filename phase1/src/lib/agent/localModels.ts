@@ -13,10 +13,13 @@ export function localOrigin(raw=OLLAMA_DEFAULT_URL):string {
 }
 export function parseInventory(value:unknown):InstalledModel[]{
  const data=record(value);if(!data||!Array.isArray(data.models))throw Error('Invalid model inventory');
+ const seen=new Set<string>();
  return data.models.map(value=>{
   const model=record(value);if(!model)throw Error('Invalid inventory row');
+  if(model.model!==undefined&&(typeof model.model!=='string'||!model.model.trim())||model.name!==undefined&&(typeof model.name!=='string'||!model.name.trim())||model.model!==undefined&&model.name!==undefined&&model.model!==model.name)throw Error('Ambiguous model identity');
   const id=typeof model.model==='string'?model.model:model.name;
   if(typeof id!=='string'||!id.trim()||id.length>512)throw Error('Invalid model name');
+  if(seen.has(id))throw Error('Duplicate model identity');seen.add(id);
   const details=record(model.details);
   return {id,digest:typeof model.digest==='string'?model.digest:undefined,sizeBytes:typeof model.size==='number'&&Number.isFinite(model.size)&&model.size>=0?model.size:undefined,parameterSize:typeof details?.parameter_size==='string'?details.parameter_size:undefined,quantization:typeof details?.quantization_level==='string'?details.quantization_level:undefined};
  }).sort((a,b)=>a.id.localeCompare(b.id));
