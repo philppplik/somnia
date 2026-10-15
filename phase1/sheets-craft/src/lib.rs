@@ -909,13 +909,7 @@ impl HeadlessWorkbook {
         if count == 0 || count > cap || first.checked_add(count).is_none_or(|v| v > limit) {
             return Err(format!("invalid {axis} span (1 to {cap} lines inside the sheet)"));
         }
-        {
-            let doc = self.session.doc().map_err(|e| e.to_string())?;
-            let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
-            if sh.is_protected() {
-                return Err("The sheet is protected. Unprotect it to change rows or columns.".into());
-            }
-        }
+        self.guard_permission(sheet, if rows { "formatRows" } else { "formatColumns" }, None)?;
         let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "operation must be a JSON object".to_string())?;
         let kind = op.get("kind").and_then(|v| v.as_str()).ok_or("missing operation kind")?;
         let a = if rows { first + 1 } else { first };
@@ -961,14 +955,19 @@ impl HeadlessWorkbook {
         if count == 0 || count > cap || first.checked_add(count).is_none_or(|v| v > limit) {
             return Err(format!("invalid {axis} span (1 to {cap} lines inside the sheet)"));
         }
-        {
-            let doc = self.session.doc().map_err(|e| e.to_string())?;
-            let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
-            if sh.is_protected() {
-                return Err("The sheet is protected. Unprotect it to insert or delete rows or columns.".into());
-            }
-        }
         let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "operation must be a JSON object".to_string())?;
+        {
+            use gridcraft_engine::core::{RangeRef, MAX_COLS, MAX_ROWS};
+            let kind = op.get("kind").and_then(|v| v.as_str());
+            let (perm, locked_in) = match (kind, rows) {
+                (Some("insert"), true) => ("insertRows", None),
+                (Some("insert"), false) => ("insertColumns", None),
+                (Some("delete"), true) => ("deleteRows", Some(RangeRef::new(CellRef::new(first, 0), CellRef::new(first + count - 1, MAX_COLS - 1)))),
+                (Some("delete"), false) => ("deleteColumns", Some(RangeRef::new(CellRef::new(0, first), CellRef::new(MAX_ROWS - 1, first + count - 1)))),
+                _ => return Err("unsupported row or column operation".into()),
+            };
+            self.guard_permission(sheet, perm, locked_in)?;
+        }
         let command = match (op.get("kind").and_then(|v| v.as_str()), rows) {
             (Some("insert"), true) => "home.insertRows",
             (Some("insert"), false) => "home.insertColumns",
@@ -992,7 +991,8 @@ impl HeadlessWorkbook {
         if rows < 2 || cols == 0 || u64::from(rows) * u64::from(cols) > MAX_SORT_CELLS {
             return Err("Select at least two rows to sort (at most 1,000,000 cells).".into());
         }
-        self.check_block(sheet, row, col, rows, cols, true)?;
+        self.check_block(sheet, row, col, rows, cols, false)?;
+        self.guard_permission(sheet, "sort", Some(gridcraft_engine::core::RangeRef::new(CellRef::new(row, col), CellRef::new(row + rows - 1, col + cols - 1))))?;
         let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "operation must be a JSON object".to_string())?;
         let header = op.get("header").and_then(|v| v.as_bool()).ok_or("header must be true or false")?;
         let match_case = op.get("matchCase").and_then(|v| v.as_bool()).unwrap_or(false);
@@ -1549,6 +1549,23 @@ impl HeadlessWorkbook {
         }
     }
 
+    /// A protected sheet lets an operation through only when its permission was switched on while protecting (`perm` is the command name such as
+    /// "sort"), and, when `locked_in` is given, only when no stored cell in that range is still locked (like Excel: sorting or deleting lines needs
+    /// unlocked cells). An unprotected sheet always passes. Cells without a record are not looked at.
+    fn guard_permission(&self, sheet: usize, perm: &str, locked_in: Option<gridcraft_engine::core::RangeRef>) -> Result<(), String> {
+        let doc = self.session.doc().map_err(|e| e.to_string())?;
+        let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+        let Some(p) = sh.protection.as_ref() else { return Ok(()) };
+        if !Self::allowed_names(p).contains(&perm) {
+            return Err("The sheet is protected and this was not allowed when it was protected. Unprotect it first.".into());
+        }
+        if let Some(r) = locked_in {
+            if sh.cells.iter_range(r).any(|(_, cell)| doc.wb.styles.get(cell.style).protection.locked) {
+                return Err("The sheet is protected: unlock the cells involved first.".into());
+            }
+        }
+        Ok(())
+    }
     /// The protection permissions that are switched on, by their command names.
     fn allowed_names(p: &gridcraft_engine::model::SheetProtection) -> Vec<&'static str> {
         [("formatCells", p.format_cells), ("formatColumns", p.format_columns), ("formatRows", p.format_rows), ("insertColumns", p.insert_columns),
@@ -4261,7 +4278,8 @@ impl HeadlessWorkbook {
     /// filter keeps its own range. Protected sheets, filters inside tables, empty or oversized values are refused.
     /// Hidden rows come from the engine, so they follow the file and undo.
     pub fn filter_range(&mut self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32, op_json: &str) -> Result<String, String> {
-        self.check_block(sheet, row, col, rows.max(1), cols.max(1), true)?;
+        self.check_block(sheet, row, col, rows.max(1), cols.max(1), false)?;
+        self.guard_permission(sheet, "autofilter", None)?;
         let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "operation must be a JSON object".to_string())?;
         let kind = op.get("kind").and_then(|v| v.as_str()).ok_or("missing operation kind")?;
         let (existing, in_table) = {
@@ -6444,6 +6462,23 @@ mod tests {
         assert!(book.find_special(0, 800, 0, 3, 2, "invalidData").unwrap().contains("\"count\":0"), "no rule, nothing invalid");
         assert!(book.find_special(0, gridcraft_engine::core::MAX_ROWS - 1, 0, 5, 1, "blanks").is_err());
         assert!(book.find_special(7, 0, 0, 1, 1, "blanks").is_err(), "unknown sheet");
+    }
+    #[test]
+    fn protected_sheet_lets_through_only_what_was_allowed() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        book.set_values(0, 1000, 0, r#"[["b"],["a"],["c"]]"#).unwrap();
+        book.protect_op(0, 1000, 0, 3, 1, r#"{"kind":"lock","locked":false}"#).unwrap();
+        book.protect_op(0, 0, 0, 1, 1, r#"{"kind":"protect","allow":["sort","insertRows","formatRows"]}"#).unwrap();
+        let sort = r#"{"header":false,"keys":[{"column":0,"order":"asc"}]}"#;
+        book.sort_range(0, 1000, 0, 3, 1, sort).unwrap();
+        assert_eq!(text(&book, "A1001"), "a");
+        book.edit_lines(0, "rows", 1000, 1, r#"{"kind":"insert"}"#).unwrap();
+        assert!(book.edit_lines(0, "rows", 1000, 1, r#"{"kind":"delete"}"#).unwrap_err().contains("not allowed"));
+        assert!(book.edit_lines(0, "cols", 5, 1, r#"{"kind":"insert"}"#).unwrap_err().contains("not allowed"));
+        book.resize_lines(0, "rows", 1002, 1, r#"{"kind":"size","px":40}"#).unwrap();
+        assert!(book.resize_lines(0, "cols", 1, 1, r#"{"kind":"size","px":80}"#).unwrap_err().contains("not allowed"));
+        assert!(book.filter_range(0, 1000, 0, 4, 1, r#"{"kind":"custom","column":0,"op":"contains","value":"a"}"#).unwrap_err().contains("not allowed"));
+        assert!(book.edit_lines(0, "rows", 0, 1, r#"{"kind":"bogus"}"#).is_err());
     }
     #[test]
     fn saved_styles_can_be_renamed_and_deleted_in_one_undo_step() {

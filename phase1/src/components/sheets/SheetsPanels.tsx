@@ -33,7 +33,7 @@ import {CELL_STYLE_GROUPS,AUTOSUM_FUNCTIONS,cellToolProblem,toolFromChoice,clean
 import {SUBTOTAL_FUNCS,MAX_SUBTOTAL_ROWS,parseColumnList,type SubtotalFunc} from '../../lib/sheets/outlineOps';
 import {viewNameProblem,MAX_VIEW_NAME} from '../../lib/sheets/savedViews';
 import {WHATIF_GROUPS,buildWhatIfOp,whatIfNeeds,type WhatIfAction} from '../../lib/sheets/whatIfOps';
-import {ALLOW_PRESETS,MAX_PASSWORD_CHARS,passwordBad} from '../../lib/sheets/protectOps';
+import {ALLOW_PRESETS,MAX_PASSWORD_CHARS,PROTECT_ALLOW,passwordBad} from '../../lib/sheets/protectOps';
 import type {PivotField,PivotFunc} from '../../lib/sheets/protocol';
 import {resolveNameJump,constantValue,MAX_COMMENT_CHARS,nameProblem,nameSpan,nameTarget} from '../../lib/sheets/names';
 import {internalTarget,linkTargetProblem,MAX_LINK_TEXT,MAX_NOTE_CHARS} from '../../lib/sheets/notes';
@@ -400,14 +400,14 @@ function ChartsGroup(){
 /** Protection in one grouped menu: lock or unlock the selected cells, protect or unprotect the sheet (optional password, what stays allowed) and lock the sheet structure. One undo step each. */
 type ProtectAction='lock'|'unlock'|'protect'|'unprotect'|'bookLock'|'bookUnlock';
 function ProtectGroup(){
- const {t}=useT(),s=useSheetsSelection(),action=useAction();const [act,setAct]=useState<ProtectAction>('lock');const [allow,setAllow]=useState('none');const [pw,setPw]=useState('');
+ const {t}=useT(),s=useSheetsSelection(),action=useAction();const [act,setAct]=useState<ProtectAction>('lock');const [allow,setAllow]=useState('none');const [picked,setPicked]=useState<readonly string[]>([]);const [pw,setPw]=useState('');
  const layout=s?.layout;if(!s||!layout)return null;
  const prot=layout.protection??null,asksPw=act==='protect'||(act==='unprotect'&&!!prot?.password),pwBad=passwordBad(pw);
  const off=(act==='lock'||act==='unlock')?!!prot:act==='protect'?!!prot:act==='unprotect'?!prot:false;
  const apply=()=>{
   const done=(x:unknown)=>{if(x!==null)setPw('');};
   if(act==='lock'||act==='unlock')void action.run('sheets.protect',{kind:'lock',locked:act==='lock'});
-  else if(act==='protect')void action.run('sheets.protect',{kind:'protect',...(pw?{password:pw}:{}),allow:[...(ALLOW_PRESETS[allow]??[])]}).then(done);
+  else if(act==='protect')void action.run('sheets.protect',{kind:'protect',...(pw?{password:pw}:{}),allow:allow==='custom'?PROTECT_ALLOW.filter(p=>picked.includes(p)):[...(ALLOW_PRESETS[allow]??[])]}).then(done);
   else if(act==='unprotect')void action.run('sheets.protect',{kind:'unprotect',...(pw?{password:pw}:{})}).then(done);
   else void action.run('sheets.protect',{kind:'workbook',on:act==='bookLock'});
  };
@@ -418,7 +418,8 @@ function ProtectGroup(){
    <optgroup label={t('sheets.pt.groupSheet')}><option value="protect">{t('sheets.pt.protect')}</option><option value="unprotect">{t('sheets.pt.unprotect')}</option></optgroup>
    <optgroup label={t('sheets.pt.groupBook')}><option value="bookLock">{t('sheets.pt.bookLock')}</option><option value="bookUnlock">{t('sheets.pt.bookUnlock')}</option></optgroup>
   </NativeSelect></label>
-  {act==='protect'&&<label className="flex flex-col gap-1">{t('sheets.pt.allowLabel')}<NativeSelect className={field} value={allow} disabled={action.busy} onChange={e=>setAllow(e.currentTarget.value)} data-testid="sheets-pt-allow">{Object.keys(ALLOW_PRESETS).map(k=><option key={k} value={k}>{t('sheets.pt.allow.'+k)}</option>)}</NativeSelect></label>}
+  {act==='protect'&&<label className="flex flex-col gap-1">{t('sheets.pt.allowLabel')}<NativeSelect className={field} value={allow} disabled={action.busy} onChange={e=>setAllow(e.currentTarget.value)} data-testid="sheets-pt-allow">{[...Object.keys(ALLOW_PRESETS),'custom'].map(k=><option key={k} value={k}>{t('sheets.pt.allow.'+k)}</option>)}</NativeSelect></label>}
+  {act==='protect'&&allow==='custom'&&PROTECT_ALLOW.map(p=><Checkbox key={p} label={t('sheets.pt.perm.'+p)} checked={picked.includes(p)} disabled={action.busy} onChange={e=>{const on=e.currentTarget.checked;setPicked(l=>on?[...l.filter(x=>x!==p),p]:l.filter(x=>x!==p));}}/>)}
   {asksPw&&<label className="flex flex-col gap-1">{act==='protect'?t('sheets.pt.password'):t('sheets.pt.passwordNeeded')}<NativeInput className={field} type="password" autoComplete="off" value={pw} maxLength={MAX_PASSWORD_CHARS} aria-invalid={pwBad} disabled={action.busy} onChange={e=>setPw(e.currentTarget.value)} data-testid="sheets-pt-password"/></label>}
   <Button variant="outline" size="compact" disabled={action.busy||off||pwBad} onClick={apply} data-testid="sheets-pt-apply">{t('sheets.pt.apply')}</Button>
   <p className="text-ink-3">{prot?t('sheets.pt.stateOn',{password:prot.password?t('sheets.pt.withPassword'):''}):t('sheets.pt.stateOff')}{layout.workbookLocked?' '+t('sheets.pt.bookOn'):''}</p>
