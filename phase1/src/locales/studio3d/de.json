@@ -1037,5 +1037,7 @@
  "cmd.studio3d.sculpt.maskInvert": "Sculpt-Maske eines 3D-Mesh umkehren",
  "studio3d.hist.invertMask": "Maske von {name} umkehren",
  "cmd.studio3d.sculpt.maskGrow": "Sculpt-Maske eines 3D-Mesh über Nachbarvertices vergrößern oder verkleinern",
- "studio3d.hist.growMask": "Maske von {name} vergrößern oder verkleinern"
+ "studio3d.hist.growMask": "Maske von {name} vergrößern oder verkleinern",
+ "cmd.studio3d.sculpt.maskFromSelection": "Ausgewählte Vertices des bearbeiteten 3D-Mesh für das Sculpten maskieren",
+ "studio3d.hist.maskFromSelection": "Auswahl von {name} maskieren"
 }

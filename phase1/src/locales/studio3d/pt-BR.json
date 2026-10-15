@@ -1037,5 +1037,7 @@
  "cmd.studio3d.sculpt.maskInvert": "Inverter a máscara de escultura de uma malha 3D",
  "studio3d.hist.invertMask": "Inverter máscara de {name}",
  "cmd.studio3d.sculpt.maskGrow": "Expandir ou contrair a máscara de escultura de uma malha 3D pelos vértices vizinhos",
- "studio3d.hist.growMask": "Expandir ou contrair a máscara de {name}"
+ "studio3d.hist.growMask": "Expandir ou contrair a máscara de {name}",
+ "cmd.studio3d.sculpt.maskFromSelection": "Mascarar os vértices selecionados da malha 3D editada para esculpir",
+ "studio3d.hist.maskFromSelection": "Mascarar seleção de {name}"
 }

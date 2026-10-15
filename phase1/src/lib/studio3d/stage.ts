@@ -1352,6 +1352,26 @@ export class Stage{
   set(after);
   this.push({label:{key:'studio3d.hist.growMask',params:{name:m.name}},undo:()=>set(before),redo:()=>set(after)});
  }
+ /** Writes the current edit-mode vertex selection into the sculpt mask: selected vertices become fully masked, position-equal twins together; every other vertex keeps its value. One undo step. */
+ sculptMaskFromSelection(){
+  const m=this.editMesh();const g=m.geometry;
+  const had=g.getAttribute('somniaMask') as THREE.BufferAttribute|undefined;
+  const before=had?new Float32Array(had.array as ArrayLike<number> as number[]):null;
+  const pos=g.getAttribute('position') as THREE.BufferAttribute;const n=pos.count;
+  const key=(i:number)=>`${Math.round(pos.getX(i)*1e6)},${Math.round(pos.getY(i)*1e6)},${Math.round(pos.getZ(i)*1e6)}`;
+  const sel=new Set([...this.editSel.verts].map(key));
+  if(!sel.size)throw new StageError('Select vertices to mask.');
+  const after=before?new Float32Array(before):new Float32Array(n);
+  for(let i=0;i<n;i++)if(sel.has(key(i)))after[i]=1;
+  const set=(arr:Float32Array|null)=>{
+   if(arr===null){g.deleteAttribute('somniaMask');return;}
+   let a=g.getAttribute('somniaMask') as THREE.BufferAttribute|undefined;
+   if(!a){a=new THREE.BufferAttribute(new Float32Array(n),1);g.setAttribute('somniaMask',a);}
+   (a.array as Float32Array).set(arr);a.needsUpdate=true;
+  };
+  set(after);
+  this.push({label:{key:'studio3d.hist.maskFromSelection',params:{name:m.name}},undo:()=>set(before),redo:()=>set(after)});
+ }
  sculptEnd(){
   const shot=this.sculptShot;this.sculptShot=null;if(!shot)return;
   const m=this.find(shot.id) as THREE.Mesh|undefined;if(!m||!(m as THREE.Mesh).isMesh)return;
