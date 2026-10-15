@@ -63,6 +63,8 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
  const snapNames=useSnapshots(active);
  const [collection,setCollection]=usePanelState<string>('photos.collection','');
  const [reference,setReference]=usePanelState<string>('photos.reference',''); // compare view: the photo the active one is measured against
+ const [split,setSplit]=usePanelState<boolean>('photos.split',false); // shared with the workspace toolbar
+ const [splitDir,setSplitDir]=usePanelState<'vertical'|'horizontal'>('photos.splitDir','vertical');
  const [previous,setPrevious]=usePanelState<string>('photos.previousPhoto',''); // last active photo, for one-click settings paste
  useEffect(()=>{if(active&&active!==lastActiveName){if(lastActiveName)setPrevious(lastActiveName);lastActiveName=active;}},[active,setPrevious]); // module-level: a ref would reset on the workspace remount
  const collNames=useCollectionNames();
@@ -227,6 +229,8 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
      </span>
     </div>
     <span className="flex flex-wrap gap-1">
+     <Button variant="outline" size="compact" aria-pressed={split} onClick={()=>setSplit(!split)} data-testid="photos-filmstrip-split">{t('photos.split')}</Button>
+     {split&&<Button variant="outline" size="compact" aria-pressed={splitDir==='horizontal'} onClick={()=>setSplitDir(splitDir==='vertical'?'horizontal':'vertical')} data-testid="photos-filmstrip-split-dir">{t('photos.split.dir')}</Button>}
      <Button variant="outline" size="compact" disabled={!previous||previous===active||!getPhotoSession(previous)} title={previous||undefined} onClick={()=>{
       const from=getPhotoSession(previous);
       if(from){commitPhotoSettings(active,()=>from.now);setApplyNote(t('photos.quick.pastedPrevious',{name:previous}));}

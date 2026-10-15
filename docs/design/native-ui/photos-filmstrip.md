@@ -520,3 +520,16 @@ go through `commitPhotoSettings` (undoable), originals untouched.
 Coverage: the light/dark gallery leg styles strip-1, activates
 strip-2, pastes (temp jumps), rotates right (orientation 1) and
 back (`test-results/ds-photos-quick-develop-{light,dark}.png`).
+
+## Before/after split from the strip (P112)
+
+The strip menu carries the before/after split toggle and its
+direction button, mirroring the workspace toolbar through the
+shared panel state (`photos.split`, `photos.splitDir`) - flip it
+while culling without reaching back to the stage. Reuses the
+existing `photos.split` labels; view-only, originals untouched.
+
+Coverage: the light/dark gallery leg toggles the split from the
+strip, asserts the workspace buttons follow (aria-pressed), flips
+the direction and turns it off
+(`test-results/ds-photos-split-strip-{light,dark}.png`).

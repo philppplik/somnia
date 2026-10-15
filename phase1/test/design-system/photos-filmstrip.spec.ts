@@ -871,3 +871,22 @@ test('quick develop: paste settings from the previous photo and rotate by 90 deg
   await page.evaluate(async()=>{const st=await import('/src/lib/photos/studioSession.ts');st.commitPhotoSettings('strip-1.png',cur=>({...cur,temp:6500}));st.commitPhotoSettings('strip-2.png',cur=>({...cur,temp:6500,orientation:0}));const p=await import('/src/store/panelStateStore.ts');p.panelStateStore.set('photos.previousPhoto','');}); // leave no state behind
  }
 });
+
+test('before/after split: the strip menu drives the shared workspace split state (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
+  await page.evaluate(async()=>{const p=await import('/src/store/panelStateStore.ts');p.panelStateStore.set('photos.split',false);p.panelStateStore.set('photos.splitDir','vertical');}); // panel state persists via localStorage
+  await page.getByTestId('photos-filmstrip-menu').click();
+  await page.getByTestId('photos-filmstrip-split').click();
+  await expect(page.getByTestId('photos-split')).toHaveAttribute('aria-pressed','true'); // the workspace toolbar follows the shared state
+  await page.getByTestId('photos-filmstrip-split-dir').click();
+  await expect(page.getByTestId('photos-split-dir')).toHaveAttribute('aria-pressed','true'); // horizontal now
+  await page.screenshot({path:`test-results/ds-photos-split-strip-${theme}.png`,fullPage:true});
+  await page.getByTestId('photos-filmstrip-split').click(); // off again
+  await expect(page.getByTestId('photos-split')).toHaveAttribute('aria-pressed','false');
+  await page.keyboard.press('Escape');
+ }
+});
