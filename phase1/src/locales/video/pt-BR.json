@@ -228,6 +228,7 @@
  "cmd.video.overlay.opacity": "Opacidade da sobreposição selecionada",
  "cmd.video.overlay.text": "Texto do título sobreposto selecionado",
  "cmd.video.overlay.bgAlpha": "Definir a opacidade do fundo do título sobreposto selecionado",
+ "cmd.video.overlay.gain": "Definir o ganho de áudio da sobreposição de vídeo selecionada",
  "cmd.video.overlay.in": "Definir o início da fonte da sobreposição de vídeo selecionada",
  "cmd.video.clip.speed": "Definir velocidade do clipe",
  "cmd.video.audio.add": "Adicionar um arquivo de áudio aberto à faixa de áudio",

@@ -181,7 +181,7 @@ test('clip crop round-trips; full frame writes no crop field',()=>{
 });
 
 test('overlay track round-trips; old files load with an empty track',()=>{
- const ov:OverlayClip={id:'o1',kind:'title',source:'',title:{text:'Lower',size:72,color:'#ffffff',background:'#111827',font:'sans',bold:true,italic:false,align:'center',vAlign:'middle',fadeIn:0,fadeOut:0,bgAlpha:1},at:1.5,duration:3,in_s:0,rect:{x:0.05,y:0.72,w:0.6,h:0.23},opacity:0.9};
+ const ov:OverlayClip={id:'o1',kind:'title',source:'',title:{text:'Lower',size:72,color:'#ffffff',background:'#111827',font:'sans',bold:true,italic:false,align:'center',vAlign:'middle',fadeIn:0,fadeOut:0,bgAlpha:1},at:1.5,duration:3,in_s:0,gain:1,rect:{x:0.05,y:0.72,w:0.6,h:0.23},opacity:0.9};
  const parsed=parseVideoProject(serializeVideoProject([media('m1')],[],'webm',undefined,[ov]));
  assert.equal(parsed.overlayClips.length,1);
  assert.equal(parsed.overlayClips[0].kind,'title');
@@ -198,7 +198,7 @@ test('overlay track round-trips; old files load with an empty track',()=>{
 });
 
 test('video overlays (PiP) round-trip with in_s; zero in_s is omitted from the file',()=>{
- const ov:OverlayClip={id:'p1',kind:'video',source:'cam.mp4',at:2,duration:4,in_s:7.5,rect:{x:0.66,y:0.66,w:0.32,h:0.32},opacity:1};
+ const ov:OverlayClip={id:'p1',kind:'video',source:'cam.mp4',at:2,duration:4,in_s:7.5,gain:1,rect:{x:0.66,y:0.66,w:0.32,h:0.32},opacity:1};
  const text=serializeVideoProject([media('m1')],[],'webm',undefined,[ov,{...ov,id:'p2',in_s:0}]);
  const parsed=parseVideoProject(text);
  assert.equal(parsed.overlayClips.length,2);
@@ -206,4 +206,7 @@ test('video overlays (PiP) round-trip with in_s; zero in_s is omitted from the f
  assert.equal(parsed.overlayClips[0].in_s,7.5,'in_s survives the round-trip');
  assert.equal(parsed.overlayClips[1].in_s,0,'missing in_s parses as 0');
  assert.ok(!text.includes('"in_s":0'),'zero in_s writes no field');
+ const withGain=parseVideoProject(serializeVideoProject([media('m1')],[],'webm',undefined,[{...ov,gain:0.4}]));
+ assert.equal(withGain.overlayClips[0].gain,0.4,'gain survives the round-trip');
+ assert.ok((JSON.parse(text).overlay as Record<string,unknown>[]).every(o=>!('gain' in o)),'gain 1 writes no field');
 });

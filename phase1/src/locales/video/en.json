@@ -228,6 +228,7 @@
  "cmd.video.overlay.opacity": "Set selected overlay opacity",
  "cmd.video.overlay.text": "Set selected title overlay text",
  "cmd.video.overlay.bgAlpha": "Set selected title overlay background opacity",
+ "cmd.video.overlay.gain": "Set selected video overlay audio gain",
  "cmd.video.overlay.in": "Set selected video overlay source start",
  "cmd.video.clip.speed": "Set clip playback speed",
  "cmd.video.audio.add": "Add an open audio file to the audio track",

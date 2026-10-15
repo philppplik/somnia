@@ -36,4 +36,7 @@ test('video overlays (PiP): corner placement, in_s clamped, source time maps lin
  assert.equal(sanitizeOverlay({...v,in_s:-3}).in_s,0,'negative in_s clamps to 0');
  assert.equal(sanitizeOverlay({...v,in_s:Number.NaN}).in_s,0,'NaN in_s falls back to 0');
  assert.equal(sanitizeOverlay(v).kind,'video');
+ assert.equal(v.gain,1,'video overlays default to full gain');
+ assert.equal(sanitizeOverlay({...v,gain:-1}).gain,0,'gain clamps at 0 (muted)');
+ assert.equal(sanitizeOverlay({...v,gain:9}).gain,2,'gain clamps at MAX_GAIN');
 });

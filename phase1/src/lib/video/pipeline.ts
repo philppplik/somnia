@@ -213,9 +213,10 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
   const mixAudioClip=(ac:AudioClip)=>mixBufferedAudio(ac.source,ac.in_s,ac.out_s,ac.at,t2=>audioEnvelope(ac,t2)*duckGainAt(audioClips,ac,ac.at+t2));
   const feedAudioThrough=async(through:number)=>{while(feedIdx<audioFeed.length&&audioFeed[feedIdx].at<through-1e-9)await mixAudioClip(audioFeed[feedIdx++]);};
 
-  // PiP audio: video overlays mix their source audio over the visible span at full volume (see mixBufferedAudio).
+  // PiP audio: video overlays mix their source audio over the visible span, scaled by their gain (0 mutes).
   const overlayFeed=overlayClips.filter(o=>{
    if(o.kind!=='video')return false;
+   if(o.gain<=0){audioMuteSkip=true;return false;}
    const probe=inputs.get(o.source)?.probe;
    if(!probe?.audio){audioMutedNote=true;return false;}
    if(o.at>=total_s){audioTrimmedNote=true;return false;}
@@ -223,7 +224,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
    return true;
   }).sort((a,b)=>a.at-b.at);
   let overlayFeedIdx=0;
-  const feedOverlayThrough=async(through:number)=>{while(overlayFeedIdx<overlayFeed.length&&overlayFeed[overlayFeedIdx].at<through-1e-9){const o=overlayFeed[overlayFeedIdx++];await mixBufferedAudio(o.source,o.in_s,o.in_s+o.duration,o.at,()=>1);}};
+  const feedOverlayThrough=async(through:number)=>{while(overlayFeedIdx<overlayFeed.length&&overlayFeed[overlayFeedIdx].at<through-1e-9){const o=overlayFeed[overlayFeedIdx++];await mixBufferedAudio(o.source,o.in_s,o.in_s+o.duration,o.at,()=>o.gain);}};
 
   // One CanvasSink per clip index, shared by the clip's solo zone and its neighbouring fades.
   const videoSinks=new Map<number,CanvasSink>();

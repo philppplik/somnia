@@ -228,6 +228,7 @@
  "cmd.video.overlay.opacity": "Opacité de l'incrustation sélectionnée",
  "cmd.video.overlay.text": "Texte du titre incrusté sélectionné",
  "cmd.video.overlay.bgAlpha": "Définir l'opacité du fond du titre incrusté sélectionné",
+ "cmd.video.overlay.gain": "Définir le gain audio de l'incrustation vidéo sélectionnée",
  "cmd.video.overlay.in": "Définir le début source de l'incrustation vidéo sélectionnée",
  "cmd.video.clip.speed": "Régler la vitesse du clip",
  "cmd.video.audio.add": "Ajouter un fichier audio ouvert à la piste audio",

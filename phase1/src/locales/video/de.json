@@ -228,6 +228,7 @@
  "cmd.video.overlay.opacity": "Deckkraft des gewählten Overlays setzen",
  "cmd.video.overlay.text": "Text des gewählten Titel-Overlays setzen",
  "cmd.video.overlay.bgAlpha": "Hintergrund-Deckkraft des ausgewählten Titel-Overlays setzen",
+ "cmd.video.overlay.gain": "Tonverstärkung des ausgewählten Video-Overlays setzen",
  "cmd.video.overlay.in": "Quellstart des ausgewählten Video-Overlays setzen",
  "cmd.video.clip.speed": "Clip-Tempo setzen",
  "cmd.video.audio.add": "Geöffnete Audiodatei zur Audiospur hinzufügen",

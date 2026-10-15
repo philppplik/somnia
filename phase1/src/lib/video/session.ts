@@ -185,6 +185,7 @@ export const moveOverlayClip=(root:string,id:string,at:number,historyKey?:string
 export const setOverlayInS=(root:string,id:string,seconds:number,historyKey?:string)=>editOverlays(root,clips=>clips.map(c=>c.id===id&&c.kind==='video'?{...c,in_s:Math.max(0,seconds)}:c),historyKey?{historyKey}:undefined);
 export const setOverlayDuration=(root:string,id:string,seconds:number,historyKey?:string)=>editOverlays(root,clips=>clips.map(c=>c.id===id?{...c,duration:seconds}:c),historyKey?{historyKey}:undefined);
 export const setOverlayRect=(root:string,id:string,rect:OverlayRect,historyKey?:string)=>editOverlays(root,clips=>clips.map(c=>c.id===id?{...c,rect:sanitizeRect(rect)}:c),historyKey?{historyKey}:undefined);
+export const setOverlayGain=(root:string,id:string,gain:number,historyKey?:string)=>editOverlays(root,clips=>clips.map(c=>c.id===id&&c.kind==='video'?{...c,gain}:c),historyKey?{historyKey}:undefined);
 export const setOverlayOpacity=(root:string,id:string,opacity:number,historyKey?:string)=>editOverlays(root,clips=>clips.map(c=>c.id===id?{...c,opacity}:c),historyKey?{historyKey}:undefined);
 /** Patches the text/style spec of a title overlay. */
 export const updateOverlayTitle=(root:string,id:string,spec:Partial<import('./titles').TitleSpec>)=>editOverlays(root,clips=>clips.map(c=>c.id===id&&c.kind==='title'?{...c,title:sanitizeTitleSpec({...c.title,...spec})}:c));

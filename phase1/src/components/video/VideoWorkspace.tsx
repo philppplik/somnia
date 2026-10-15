@@ -31,11 +31,12 @@ function PipPreview({o,playhead,playing,rate,url}:{o:OverlayClip;playhead:number
  useEffect(()=>{
   const v=ref.current;if(!v)return;
   v.playbackRate=rate;v.preservesPitch=false;
+  v.muted=o.gain<=0;v.volume=Math.min(1,o.gain);
   const target=o.in_s+Math.max(0,playhead-o.at);
   if(Math.abs(v.currentTime-target)>0.3)v.currentTime=target;
   if(playing)void v.play().catch(()=>{});else v.pause();
- },[o.in_s,o.at,playhead,playing,rate]);
- return <video ref={ref} src={url} muted playsInline className="h-full w-full object-contain" data-testid="video-pip-preview"/>;
+ },[o.in_s,o.at,o.gain,playhead,playing,rate]);
+ return <video ref={ref} src={url} playsInline className="h-full w-full object-contain" data-testid="video-pip-preview"/>;
 }
 
 /** Player, transport and the multi-clip timeline of one video project. `withPanel` adds the settings when the Video inspector is not on screen. */
