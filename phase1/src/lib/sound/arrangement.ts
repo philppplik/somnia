@@ -85,6 +85,14 @@ export function normalizeGainDb(peak:number,targetDb=0):number{
  if(!Number.isFinite(targetDb)||targetDb<-60||targetDb>12)throw Error('Invalid normalize target');
  return Math.round(Math.max(-60,Math.min(12,targetDb-20*Math.log10(peak)))*10)/10;
 }
+/** Field patch that trims the clip start to a frame inside it: the source offset follows the cut and the gain curve re-bases with the interpolated cut level at 0. Same rule as split: the cut edge starts clean (fade-in 0), the outer fade clamps to the new length. */
+export function trimStartPatch(clip:ArrangeClip,frame:number){if(!Number.isSafeInteger(frame)||frame<=clip.start||frame>=clip.start+clip.length)throw Error('Trim point must be inside the clip');const cut=frame-clip.start,length=clip.length-cut;
+ const gainCurve=clip.gainCurve.length?[{at:0,db:gainCurveAt(clip,cut)},...clip.gainCurve.filter(p=>p.at>cut).map(p=>({at:p.at-cut,db:p.db}))]:[];
+ return{start:frame,offset:clip.offset+cut,length,fadeIn:0,fadeOut:Math.min(clip.fadeOut,length),gainCurve};}
+/** Field patch that trims the clip end: same rule as split - the cut edge ends clean (fade-out 0), the fade-in clamps and the gain curve ends on the interpolated cut level. */
+export function trimEndPatch(clip:ArrangeClip,frame:number){if(!Number.isSafeInteger(frame)||frame<=clip.start||frame>=clip.start+clip.length)throw Error('Trim point must be inside the clip');const length=frame-clip.start;
+ const gainCurve=clip.gainCurve.length?[...clip.gainCurve.filter(p=>p.at<length),{at:length,db:gainCurveAt(clip,length)}]:[];
+ return{length,fadeIn:Math.min(clip.fadeIn,length),fadeOut:0,gainCurve};}
 export function findArrangeClip(s:Arrangement,id:string){for(const track of s.tracks){const clip=track.clips.find(c=>c.id===id);if(clip)return{track,clip};}throw Error('Audio clip no longer exists');}
 /** A split preserves source position, gain and outer fades. Fades intersecting the split are shortened. */
 export function splitArrangeClip(s:Arrangement,id:string,frame:number,rightId:string){const {track,clip}=findArrangeClip(s,id);const left=frame-clip.start;if(!Number.isSafeInteger(frame)||left<=0||left>=clip.length)throw Error('Split must be inside the clip');const oldLength=clip.length;track.clips.push({...clip,id:rightId,start:frame,offset:clip.offset+left,length:oldLength-left,fadeIn:0,fadeOut:Math.min(clip.fadeOut,oldLength-left)});clip.length=left;clip.fadeIn=Math.min(clip.fadeIn,left);clip.fadeOut=0;
