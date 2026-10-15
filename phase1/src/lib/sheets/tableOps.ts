@@ -19,7 +19,7 @@ export function parseTableCommand(input:unknown):TableOp{
   case 'totals':case 'banded':only('kind','table','on');if(typeof o.on!=='boolean')throw Error('`on` must be true or false.');return {kind:o.kind,table:table(),on:o.on};
   case 'style':only('kind','table','style');return {kind:'style',table:table(),style:style(o.style)};
   case 'rename':{only('kind','table','newName');if(typeof o.newName!=='string'||nameProblem(o.newName.trim())!==null)throw Error('Invalid table name.');return {kind:'rename',table:table(),newName:o.newName.trim()};}
-  case 'convert':only('kind','table');return {kind:'convert',table:table()};
+  case 'convert':case 'resize':only('kind','table');return {kind:o.kind,table:table()};
   default:throw Error('Unsupported table operation.');
  }
 }

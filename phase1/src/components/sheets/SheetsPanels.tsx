@@ -20,6 +20,8 @@ import {MAX_ZOOM,MIN_ZOOM} from '../../lib/sheets/viewOps';
 import {MAX_TITLE_CHARS,sparklineBlockProblem} from '../../lib/sheets/chartOps';
 import {OBJECT_GROUPS,SHAPE_FILLS,SHAPE_LINES,MAX_PICTURE_BYTES,MAX_SHAPE_TEXT,MAX_ALT,buildObjectOp,bytesToBase64,objectIsShape,objectNeedsPick,type ObjectAction} from '../../lib/sheets/objectOps';
 import {layoutBlockProblem,MERGE_HOWS,ROTATE_MODES} from '../../lib/sheets/layoutOps';
+import {Checkbox} from '../ui/checkbox';
+import {CONSOLIDATE_FUNCTIONS,dataToolProblem,parseSourceList} from '../../lib/sheets/dataToolOps';
 import {CELL_STYLE_GROUPS,AUTOSUM_FUNCTIONS,cellToolProblem,toolFromChoice,filterFunctions,functionCategories} from '../../lib/sheets/cellToolOps';
 import {SUBTOTAL_FUNCS,MAX_SUBTOTAL_ROWS,parseColumnList,type SubtotalFunc} from '../../lib/sheets/outlineOps';
 import {viewNameProblem,MAX_VIEW_NAME} from '../../lib/sheets/savedViews';
@@ -236,6 +238,7 @@ export function SheetsLayoutPanel({context}:PanelHostProps){
   <CellLayoutGroup/>
   <CellToolsGroup/>
   <InsertFunctionGroup/>
+  <DataToolsGroup/>
   <SheetTabGroup/>
   <OutlineGroup/>
   <SavedViewsGroup/>
@@ -283,18 +286,19 @@ function FilterGroup(){
  </div>;
 }
 /** Tables in one grouped menu: make a table from the selection, or change one of this sheet's tables. One undo step each. */
-type TableAction='create'|'totalsOn'|'totalsOff'|'bandedOn'|'bandedOff'|'style'|'rename'|'convert';
+type TableAction='create'|'totalsOn'|'totalsOff'|'bandedOn'|'bandedOff'|'style'|'rename'|'convert'|'resize';
 function TablesGroup(){
  const {t}=useT(),s=useSheetsSelection(),action=useAction();const [act,setAct]=useState<TableAction>('create');const [pick,setPick]=useState('');const [name,setName]=useState('');const [style,setStyle]=useState('TableStyleMedium2');
  const r=s?.range;if(!s||!r)return null;
  const list=s.tables?.tables??[],styles=s.tables?.styles??[],chosen=list.find(x=>x.name===pick)??list[0]??null,creating=act==='create',naming=creating||act==='rename';
  const block=tableBlockProblem(r.r1-r.r0+1,r.c1-r.c0+1),nameBad=name.trim()!==''&&!!nameProblem(name.trim());
- const problem=creating?(block||nameBad?'x':null):(!chosen||(act==='rename'&&(name.trim()===''||nameBad))?'x':null);
+ const problem=creating?(block||nameBad?'x':null):(!chosen||(act==='rename'&&(name.trim()===''||nameBad))||(act==='resize'&&block)?'x':null);
  const apply=()=>{
   if(creating)void action.run('sheets.table',{kind:'create',...(name.trim()?{name:name.trim()}:{}),style}).then(x=>{if(x!==null)setName('');});
   else if(chosen&&act==='style')void action.run('sheets.table',{kind:'style',table:chosen.name,style});
   else if(chosen&&act==='rename')void action.run('sheets.table',{kind:'rename',table:chosen.name,newName:name.trim()}).then(x=>{if(x!==null){setName('');setPick(name.trim());}});
   else if(chosen&&act==='convert')void action.run('sheets.table',{kind:'convert',table:chosen.name});
+  else if(chosen&&act==='resize')void action.run('sheets.table',{kind:'resize',table:chosen.name});
   else if(chosen)void action.run('sheets.table',{kind:act.startsWith('totals')?'totals':'banded',table:chosen.name,on:act.endsWith('On')});
  };
  return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.tb.title')}>
@@ -302,12 +306,12 @@ function TablesGroup(){
   <label className="flex flex-col gap-1">{t('sheets.tb.existing')}<NativeSelect className={field} value={chosen?.name??''} disabled={action.busy||list.length===0} onChange={e=>setPick(e.currentTarget.value)} data-testid="sheets-tb-pick">{list.length===0&&<option value="">{t('sheets.tb.none')}</option>}{list.map(x=><option key={x.name} value={x.name}>{x.name} {x.range}</option>)}</NativeSelect></label>
   <label className="flex flex-col gap-1">{t('sheets.nm.action')}<NativeSelect className={field} value={act} disabled={action.busy} onChange={e=>setAct(e.currentTarget.value as TableAction)} data-testid="sheets-tb-action">
    <optgroup label={t('sheets.nm.groupSelection')}><option value="create">{t('sheets.tb.create')}</option></optgroup>
-   <optgroup label={t('sheets.tb.groupTable')}><option value="totalsOn">{t('sheets.tb.totalsOn')}</option><option value="totalsOff">{t('sheets.tb.totalsOff')}</option><option value="bandedOn">{t('sheets.tb.bandedOn')}</option><option value="bandedOff">{t('sheets.tb.bandedOff')}</option><option value="style">{t('sheets.tb.style')}</option><option value="rename">{t('sheets.tb.rename')}</option><option value="convert">{t('sheets.tb.convert')}</option></optgroup>
+   <optgroup label={t('sheets.tb.groupTable')}><option value="totalsOn">{t('sheets.tb.totalsOn')}</option><option value="totalsOff">{t('sheets.tb.totalsOff')}</option><option value="bandedOn">{t('sheets.tb.bandedOn')}</option><option value="bandedOff">{t('sheets.tb.bandedOff')}</option><option value="style">{t('sheets.tb.style')}</option><option value="rename">{t('sheets.tb.rename')}</option><option value="convert">{t('sheets.tb.convert')}</option><option value="resize">{t('sheets.tb.resize')}</option></optgroup>
   </NativeSelect></label>
   {(creating||act==='style')&&<label className="flex flex-col gap-1">{t('sheets.tb.styleName')}<NativeSelect className={field} value={style} disabled={action.busy} onChange={e=>setStyle(e.currentTarget.value)} data-testid="sheets-tb-style">{(styles.length?styles:[style]).map(x=><option key={x} value={x}>{x.replace('TableStyle','')}</option>)}</NativeSelect></label>}
   {naming&&<label className="flex flex-col gap-1">{creating?t('sheets.tb.nameOptional'):t('sheets.tb.newName')}<NativeInput className={field} value={name} maxLength={64} aria-invalid={nameBad} disabled={action.busy} onChange={e=>setName(e.currentTarget.value)} data-testid="sheets-tb-name"/></label>}
   <Button variant="outline" size="compact" disabled={action.busy||!!problem} onClick={apply} data-testid="sheets-tb-apply">{t('sheets.nm.apply')}</Button>
-  <p className="text-ink-3">{t(creating?'sheets.tb.scope':'sheets.tb.scopeTable',{range:rangeAddress(r)})}</p>
+  <p className="text-ink-3">{t(creating?'sheets.tb.scope':act==='resize'?'sheets.tb.resizeNote':'sheets.tb.scopeTable',{range:rangeAddress(r)})}</p>
  </div>;
 }
 /** Charts and sparklines in one grouped menu: make a chart from the selection, change or delete one of this sheet's charts, or add a sparkline. One undo step each. */
@@ -440,6 +444,31 @@ function CellToolsGroup(){
   </NativeSelect></label>
   <Button variant="outline" size="compact" disabled={action.busy||!op||!!problem} onClick={()=>void action.run('sheets.cellTools',op)} data-testid="sheets-ct-apply">{t('sheets.ct.apply')}</Button>
   <p className="text-ink-3">{t(problem==='many'?'sheets.ct.many':'sheets.ct.hint',{range:rangeAddress(r)})}</p>
+  {action.notice?<p role="alert">{action.notice}</p>:null}
+ </div>;
+}
+/** Flash Fill and Consolidate in one grouped menu. One undo step each; Consolidate never overwrites filled cells. */
+function DataToolsGroup(){
+ const {t}=useT(),s=useSheetsSelection(),action=useAction();const [act,setAct]=useState<'flashFill'|'consolidate'>('flashFill');
+ const [func,setFunc]=useState<typeof CONSOLIDATE_FUNCTIONS[number]>('sum');const [sources,setSources]=useState('');const [top,setTop]=useState(false);const [left,setLeft]=useState(false);
+ const r=s?.range;if(!s||!r)return null;
+ const list=parseSourceList(sources),consolidating=act==='consolidate',needLeft=!consolidating&&dataToolProblem({kind:'flashFill'},r.c0)==='left';
+ const problem=consolidating?(list?null:'sources'):needLeft?'left':null;
+ const op=consolidating&&list?{kind:'consolidate',function:func,sources:list,topRow:top,leftColumn:left}:{kind:'flashFill'};
+ return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.dt.title')}>
+  <span>{t('sheets.dt.title')}</span>
+  <label className="flex flex-col gap-1">{t('sheets.dt.action')}<NativeSelect className={field} value={act} disabled={action.busy} onChange={e=>setAct(e.currentTarget.value as 'flashFill'|'consolidate')} data-testid="sheets-dt-action">
+   <optgroup label={t('sheets.dt.flashFill')}><option value="flashFill">{t('sheets.dt.flashFill')}</option></optgroup>
+   <optgroup label={t('sheets.dt.consolidate')}><option value="consolidate">{t('sheets.dt.consolidate')}</option></optgroup>
+  </NativeSelect></label>
+  {consolidating&&<>
+   <label className="flex flex-col gap-1">{t('sheets.dt.function')}<NativeSelect className={field} value={func} disabled={action.busy} onChange={e=>setFunc(e.currentTarget.value as typeof func)} data-testid="sheets-dt-function">{CONSOLIDATE_FUNCTIONS.map(f=><option key={f} value={f}>{t('sheets.dt.fn.'+f)}</option>)}</NativeSelect></label>
+   <label className="flex flex-col gap-1">{t('sheets.dt.sources')}<NativeInput className={field} value={sources} maxLength={1000} aria-invalid={sources.trim()!==''&&!list} disabled={action.busy} onChange={e=>setSources(e.currentTarget.value)} data-testid="sheets-dt-sources"/></label>
+   <Checkbox label={t('sheets.dt.topRow')} checked={top} disabled={action.busy} onChange={e=>setTop(e.currentTarget.checked)}/>
+   <Checkbox label={t('sheets.dt.leftColumn')} checked={left} disabled={action.busy} onChange={e=>setLeft(e.currentTarget.checked)}/>
+  </>}
+  <Button variant="outline" size="compact" disabled={action.busy||!!problem} onClick={()=>void action.run('sheets.dataTools',op)} data-testid="sheets-dt-apply">{t('sheets.dt.apply')}</Button>
+  <p className="text-ink-3">{t(needLeft?'sheets.dt.needLeft':problem==='sources'?'sheets.dt.badSources':consolidating?'sheets.dt.hintConsolidate':'sheets.dt.hintFlash',{range:rangeAddress(r)})}</p>
   {action.notice?<p role="alert">{action.notice}</p>:null}
  </div>;
 }

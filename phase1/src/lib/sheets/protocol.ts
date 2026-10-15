@@ -12,7 +12,7 @@ export interface SheetLayout{sheet:number;defaultColWidth:number;defaultRowHeigh
 export interface RangeResult{sheet:number;row:number;col:number;rows:number;cols:number;cells:RangeCell[]}
 /** Typed formatting operations; the Rust bridge keeps the same closed allowlist and re-validates every field. */
 /** Tables and a small PivotTable. Names come from the sheet's own first row; the Rust bridge re-validates everything. */
-export type TableOp={kind:'create';name?:string;style?:string}|{kind:'totals'|'banded';table:string;on:boolean}|{kind:'style';table:string;style:string}|{kind:'rename';table:string;newName:string}|{kind:'convert';table:string};
+export type TableOp={kind:'create';name?:string;style?:string}|{kind:'totals'|'banded';table:string;on:boolean}|{kind:'style';table:string;style:string}|{kind:'rename';table:string;newName:string}|{kind:'convert';table:string}|{kind:'resize';table:string};
 export interface TableInfo{name:string;range:string;header:boolean;totals:boolean;banded:boolean;style:string}
 export interface TablesInfo{tables:TableInfo[];styles:string[]}
 export type PivotFunc='sum'|'count'|'average'|'max'|'min';
@@ -54,6 +54,8 @@ export type SavedViewOp={kind:'save'|'show'|'delete';name:string};
 /** Merge, justify, rotate, double underline and clear formats on the selected block (one undo step). */
 /** Built-in cell styles, AutoSum, checkboxes and the format painter (one undo step each, except picking up a format). */
 export type CellToolOp={kind:'style';name:string}|{kind:'autoSum';function:'SUM'|'AVERAGE'|'COUNT'|'MAX'|'MIN'}|{kind:'insertCheckbox'|'toggleCheckbox'|'pickFormat'|'pasteFormat'};
+/** Flash Fill (empty cells only) and Consolidate (never over filled cells); one undo step each. */
+export type DataToolOp={kind:'flashFill'}|{kind:'consolidate';function:'sum'|'count'|'countNums'|'average'|'max'|'min'|'product';sources:string[];topRow:boolean;leftColumn:boolean};
 export interface FunctionInfo{name:string;category:string;signature:string;description:string}
 export type LayoutOp={kind:'merge';how:'cells'|'center'|'across'|'unmerge'}|{kind:'rotate';mode:'none'|'up'|'down'|'stacked'}|{kind:'doubleUnderline';on:boolean}|{kind:'justify'|'clearFormats'};
 /** Outline groups and subtotals on the selected lines or block (column offsets are inside the selection). */
@@ -169,6 +171,7 @@ export type SheetsRequest=
  |{id:number;op:'sparklineOp';sheet:number;row:number;col:number;rows:number;cols:number;sparkline:SparklineOp}
  |{id:number;op:'cellToolOp';sheet:number;row:number;col:number;rows:number;cols:number;tool:CellToolOp}
  |{id:number;op:'functionCatalog'}
+ |{id:number;op:'dataToolOp';sheet:number;row:number;col:number;rows:number;cols:number;tool:DataToolOp}
  |{id:number;op:'layoutOp';sheet:number;row:number;col:number;rows:number;cols:number;layout:LayoutOp}
  |{id:number;op:'outline';sheet:number}
  |{id:number;op:'outlineOp';sheet:number;row:number;col:number;rows:number;cols:number;outline:OutlineOp}

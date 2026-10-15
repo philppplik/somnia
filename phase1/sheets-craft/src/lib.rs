@@ -33,6 +33,7 @@ const MAX_SAVED_VIEWS: usize = 50;
 const MAX_VIEW_NAME: usize = 64;
 /// Reviewed range edits: at most this many cells, and this many bytes of old and new text.
 const CELL_STYLE_NAMES: &[&str] = &["Normal", "Good", "Bad", "Neutral", "Calculation", "Check Cell", "Explanatory Text", "Input", "Linked Cell", "Note", "Output", "Warning Text", "Title", "Heading 1", "Heading 2", "Heading 3", "Heading 4", "Total", "Currency", "Comma", "Percent", "Currency [0]", "Comma [0]"];
+const CONSOLIDATE_FUNCTIONS: &[&str] = &["sum", "count", "countNums", "average", "max", "min", "product"];
 const AUTOSUM_FUNCTIONS: &[&str] = &["SUM", "AVERAGE", "COUNT", "MAX", "MIN"];
 const MAX_REVIEWED_RANGE_CELLS: u64 = 1000;
 const MAX_REVIEWED_RANGE_BYTES: usize = 1_000_000;
@@ -1121,6 +1122,45 @@ impl HeadlessWorkbook {
             return self.session.run("insert.table", params).map(|v| v.to_string()).map_err(|e| e.to_string());
         }
         let table = op.get("table").and_then(|v| v.as_str()).ok_or("missing table name")?.to_string();
+        if kind == "resize" {
+            if op.as_object().is_some_and(|m| m.keys().any(|k| k != "kind" && k != "table")) {
+                return Err("unknown table field".into());
+            }
+            {
+                let doc = self.session.doc().map_err(|e| e.to_string())?;
+                let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+                let Some(t) = sh.tables.iter().find(|t| t.name.eq_ignore_ascii_case(&table)) else {
+                    return Err("There is no such table on this sheet.".into());
+                };
+                if t.totals_row {
+                    return Err("Turn the total row off before resizing the table.".into());
+                }
+                if t.range.start.row != row || t.range.start.col != col {
+                    return Err("The new range must start at the first cell of the table.".into());
+                }
+                if rows < 2 {
+                    return Err("A table needs a header row and at least one data row.".into());
+                }
+                let (last_row, last_col) = (row + rows - 1, col + cols - 1);
+                if sh.tables.iter().any(|o| {
+                    !o.name.eq_ignore_ascii_case(&t.name) && o.range.start.row <= last_row && o.range.end.row >= row && o.range.start.col <= last_col && o.range.end.col >= col
+                }) {
+                    return Err("The new range would overlap another table.".into());
+                }
+                let mut seen: Vec<String> = Vec::new();
+                for c in col..col + cols {
+                    let v = sh.value(CellRef::new(row, c));
+                    let head = v.display().trim().to_lowercase();
+                    if !v.is_text() || head.is_empty() || seen.contains(&head) {
+                        return Err("Every table column needs a unique text header.".into());
+                    }
+                    seen.push(head);
+                }
+            }
+            self.session.run("sheet.activate", json!({"sheet": sheet}))?;
+            let range = format!("{}:{}", CellRef::new(row, col).a1(), CellRef::new(row + rows - 1, col + cols - 1).a1());
+            return self.session.run("table.resize", json!({"table": table, "range": range})).map(|v| v.to_string());
+        }
         let (totals_now, below_empty) = {
             let doc = self.session.doc().map_err(|e| e.to_string())?;
             let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
@@ -1156,6 +1196,99 @@ impl HeadlessWorkbook {
             _ => return Err("unsupported table operation".into()),
         };
         self.session.run(command, params).map(|v| v.to_string()).map_err(|e| e.to_string())
+    }
+
+    /// Flash Fill and Consolidate over existing engine commands, ONE undo step each. `op_json` is `{"kind":"flashFill"}` (the cell at `row`,`col`
+    /// is a cell of the column to fill: it learns from the examples already typed in that column and the single column to its left, and fills
+    /// only EMPTY cells) or `{"kind":"consolidate","function":"sum"|"count"|"countNums"|"average"|"max"|"min"|"product","sources":[1 to 20 range texts],
+    /// "topRow"?:bool,"leftColumn"?:bool}` which writes the combined values with its upper-left corner at `row`,`col`. Consolidate is REFUSED (and
+    /// everything restored) when it would overwrite filled cells. Protected sheets refused.
+    pub fn data_tools_op(&mut self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32, op_json: &str) -> Result<String, String> {
+        if rows == 0 || cols == 0 {
+            return Err("Select at least one cell.".into());
+        }
+        let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "operation must be a JSON object".to_string())?;
+        let map = op.as_object().ok_or("operation must be a JSON object")?;
+        let kind = map.get("kind").and_then(|v| v.as_str()).ok_or("unsupported data tool")?;
+        let known: &[&str] = if kind == "consolidate" { &["kind", "function", "sources", "topRow", "leftColumn"] } else { &["kind"] };
+        if map.keys().any(|k| !known.contains(&k.as_str())) {
+            return Err("unknown data tool field".into());
+        }
+        self.check_block(sheet, row, col, 1, 1, true)?;
+        let at = CellRef::new(row, col);
+        let params = match kind {
+            "flashFill" => {
+                if col == 0 {
+                    return Err("Flash Fill learns from the column to the left; pick a cell in column B or further right.".into());
+                }
+                None
+            }
+            "consolidate" => {
+                let func = map.get("function").and_then(|v| v.as_str()).filter(|f| CONSOLIDATE_FUNCTIONS.contains(f)).ok_or("unsupported function")?;
+                let sources: Vec<&str> = map
+                    .get("sources")
+                    .and_then(|v| v.as_array())
+                    .filter(|a| !a.is_empty() && a.len() <= 20)
+                    .ok_or("give 1 to 20 source ranges")?
+                    .iter()
+                    .map(|v| v.as_str().filter(|t| !t.trim().is_empty() && t.chars().count() <= 255 && !t.chars().any(|c| c.is_control() || c == ';')))
+                    .collect::<Option<Vec<&str>>>()
+                    .ok_or("a source range is empty, too long or has forbidden characters")?;
+                let flag = |k: &str| map.get(k).map_or(Ok(false), |v| v.as_bool().ok_or(format!("{k} must be true or false")));
+                Some(json!({"function": func, "sources": sources, "topRow": flag("topRow")?, "leftColumn": flag("leftColumn")?, "destination": at.a1()}))
+            }
+            _ => return Err("unsupported data tool".into()),
+        };
+        let (before_rev, before_len, snap_wb, snap_sel, snap_redo) = {
+            let doc = self.session.doc().map_err(|e| e.to_string())?;
+            (doc.revision, doc.undo.len(), doc.wb.clone(), doc.selection.clone(), doc.redo.clone())
+        };
+        let outcome: Result<String, String> = (|| {
+            self.session.run("sheet.activate", json!({"sheet": sheet}))?;
+            match &params {
+                None => self.session.run("edit.flashFill", json!({"sheet": sheet, "range": at.a1()})).map(|v| v.to_string()),
+                Some(p) => {
+                    let result = self.session.run("data.consolidate", p.clone())?;
+                    let doc = self.session.doc().map_err(|e| e.to_string())?;
+                    let (old, new) = (snap_wb.sheet(sheet).ok_or("unknown sheet")?, doc.wb.sheet(sheet).ok_or("unknown sheet")?);
+                    let everything = gridcraft_engine::core::RangeRef::new(
+                        CellRef::new(0, 0),
+                        CellRef::new(gridcraft_engine::core::MAX_ROWS - 1, gridcraft_engine::core::MAX_COLS - 1),
+                    );
+                    let overwritten = old.cells.iter_range(everything).any(|(cell_at, was)| {
+                        let filled = was.formula.is_some() || !was.value.display().is_empty();
+                        let now_formula = new.cells.iter_range(gridcraft_engine::core::RangeRef::new(cell_at, cell_at)).any(|(_, c)| c.formula.is_some());
+                        filled && (new.value(cell_at).display() != was.value.display() || was.formula.is_some() != now_formula)
+                    });
+                    if overwritten {
+                        return Err("Consolidate would overwrite filled cells. Pick an empty destination.".into());
+                    }
+                    Ok(result.to_string())
+                }
+            }
+        })();
+        let _ = self.session.take_ui_requests();
+        let doc = self.session.doc_mut().map_err(|e| e.to_string())?;
+        match outcome {
+            Ok(text) => {
+                if doc.undo.len() > before_len {
+                    doc.undo.truncate(before_len + 1);
+                    doc.redo.clear();
+                }
+                Ok(text)
+            }
+            Err(e) => {
+                // Restore exactly: nothing of a refused or failed tool may remain.
+                doc.undo.truncate(before_len);
+                doc.wb = snap_wb;
+                doc.selection = snap_sel;
+                doc.revision = before_rev;
+                doc.redo = snap_redo;
+                let wb = doc.wb.clone();
+                doc.calc.rebuild(&wb);
+                Err(e)
+            }
+        }
     }
 
     /// The protection permissions that are switched on, by their command names.
@@ -3880,6 +4013,44 @@ mod tests {
         assert!(book.cell_tools_op(9, 949, 0, 1, 1, r#"{"kind":"pickFormat"}"#).is_err());
         let catalog: serde_json::Value = serde_json::from_str(&book.function_catalog().unwrap()).unwrap();
         assert!(catalog["functions"].as_array().unwrap().iter().any(|f| f["name"] == "SUM"));
+    }
+
+    #[test]
+    fn data_tools_flash_fill_consolidate_and_table_resize_are_single_undo_steps_and_refuse_overwrites() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        for (a, v) in [("A980", "Ada Lovelace"), ("A981", "Alan Turing"), ("A982", "Grace Hopper"), ("B980", "Lovelace")] {
+            book.session.run("cell.set", json!({"sheet": 0, "cell": a, "input": v})).unwrap();
+        }
+        let steps = |b: &HeadlessWorkbook| b.session.doc().unwrap().undo.len();
+        let before = steps(&book);
+        book.data_tools_op(0, 980, 1, 1, 1, r#"{"kind":"flashFill"}"#).unwrap();
+        assert_eq!(steps(&book), before + 1);
+        assert!(book.view_range(0, 980, 1, 1, 1).unwrap().contains("Turing"));
+        assert!(book.data_tools_op(0, 980, 0, 1, 1, r#"{"kind":"flashFill"}"#).is_err(), "column A has no column to its left");
+        for (a, v) in [("D980", "x"), ("D981", "y"), ("E980", "1"), ("E981", "2")] {
+            book.session.run("cell.set", json!({"sheet": 0, "cell": a, "input": v})).unwrap();
+        }
+        let before = steps(&book);
+        book.data_tools_op(0, 989, 6, 1, 1, r#"{"kind":"consolidate","function":"sum","sources":["D980:E981"],"topRow":false,"leftColumn":true}"#).unwrap();
+        assert_eq!(steps(&book), before + 1);
+        let again = book.data_tools_op(0, 989, 6, 1, 1, r#"{"kind":"consolidate","function":"sum","sources":["D980:E981"],"topRow":false,"leftColumn":true}"#);
+        assert!(again.unwrap_err().contains("overwrite"));
+        assert_eq!(steps(&book), before + 1, "a refused consolidate leaves no history");
+        for bad in ["nope", r#"{"kind":"x"}"#, r#"{"kind":"flashFill","x":1}"#, r#"{"kind":"consolidate","function":"median","sources":["A1"]}"#, r#"{"kind":"consolidate","function":"sum","sources":[]}"#, r#"{"kind":"consolidate","function":"sum","sources":["A1;B2"]}"#, r#"{"kind":"consolidate","function":"sum","sources":[5]}"#, r#"{"kind":"consolidate","function":"sum","sources":["A1"],"topRow":"y"}"#] {
+            assert!(book.data_tools_op(0, 999, 6, 1, 1, bad).is_err(), "{bad}");
+        }
+        assert!(book.data_tools_op(9, 980, 1, 1, 1, r#"{"kind":"flashFill"}"#).is_err());
+        for (a, v) in [("A1000", "Name"), ("B1000", "Qty"), ("A1001", "a"), ("B1001", "1"), ("A1002", "b"), ("B1002", "2"), ("C1000", "Extra")] {
+            book.session.run("cell.set", json!({"sheet": 0, "cell": a, "input": v})).unwrap();
+        }
+        book.table_op(0, 999, 0, 3, 2, r#"{"kind":"create","name":"Stock1"}"#).unwrap();
+        let before = steps(&book);
+        book.table_op(0, 999, 0, 3, 3, r#"{"kind":"resize","table":"Stock1"}"#).unwrap();
+        assert_eq!(steps(&book), before + 1);
+        assert!(book.table_op(0, 1000, 0, 3, 3, r#"{"kind":"resize","table":"Stock1"}"#).is_err(), "must start at the first cell");
+        assert!(book.table_op(0, 999, 0, 1, 3, r#"{"kind":"resize","table":"Stock1"}"#).is_err(), "needs a data row");
+        assert!(book.table_op(0, 999, 0, 3, 3, r#"{"kind":"resize","table":"Nope"}"#).is_err());
+        assert!(book.table_op(0, 999, 0, 3, 3, r#"{"kind":"resize","table":"Stock1","x":1}"#).is_err());
     }
 
     #[test]
