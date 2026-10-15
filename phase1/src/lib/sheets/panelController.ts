@@ -19,6 +19,7 @@ import {parseLayoutCommand,MERGE_HOWS,ROTATE_MODES} from './layoutOps';
 import {parseCfManageCommand} from './cfManageOps';
 import {parsePivotEditCommand,PIVOT_AREAS,PIVOT_VALUE_FUNCS,PIVOT_SHOW_AS,PIVOT_NUMBER_FORMATS,PIVOT_LAYOUTS,PIVOT_SUBTOTALS,PIVOT_GROUPS,PIVOT_ORDERS,MAX_PIVOT_ITEMS,MAX_PIVOT_TEXT} from './pivotEditOps';
 import {parseDataToolCommand,CONSOLIDATE_FUNCTIONS,MAX_CONSOLIDATE_SOURCES,MAX_SOURCE_CHARS} from './dataToolOps';
+import {setSheetsShortcutsOpen} from './shortcuts';
 import {parsePagesCommand} from './pageBreaks';
 import {parseReviewCommand,type ReviewKind} from './reviewInfo';
 import {parseSymbolCommand} from './symbols';
@@ -118,7 +119,7 @@ let current:SheetsPanelController|null=null;
 export const getSheetsPanelController=()=>current;
 export function registerSheetsPanelController(controller:SheetsPanelController){current=controller;return()=>{if(current===controller)current=null;};}
 const requireController=()=>{if(!current?.ready())throw Error('No workbook is ready.');return current;};
-export const SHEETS_PANEL_COMMAND_IDS=['sheets.navigate','sheets.setCell','sheets.analyzeRange','sheets.format','sheets.resize','sheets.freeze','sheets.editLines','sheets.sheet','sheets.sort','sheets.filter','sheets.fill','sheets.highlight','sheets.validation','sheets.replace','sheets.dedupe','sheets.split','sheets.annotate','sheets.names','sheets.table','sheets.pivot','sheets.pageSetup','sheets.export','sheets.view','sheets.protect','sheets.chart','sheets.sparkline','sheets.whatif','sheets.object','sheets.picture','sheets.savedView','sheets.outline','sheets.cellLayout','sheets.cellTools','sheets.insertFunction','sheets.dataTools','sheets.pivotEdit','sheets.cfManage','sheets.validationCheck','sheets.noteReview','sheets.audit','sheets.insertSymbol','sheets.review','sheets.pages'] as const;
+export const SHEETS_PANEL_COMMAND_IDS=['sheets.navigate','sheets.setCell','sheets.analyzeRange','sheets.format','sheets.resize','sheets.freeze','sheets.editLines','sheets.sheet','sheets.sort','sheets.filter','sheets.fill','sheets.highlight','sheets.validation','sheets.replace','sheets.dedupe','sheets.split','sheets.annotate','sheets.names','sheets.table','sheets.pivot','sheets.pageSetup','sheets.export','sheets.view','sheets.protect','sheets.chart','sheets.sparkline','sheets.whatif','sheets.object','sheets.picture','sheets.savedView','sheets.outline','sheets.cellLayout','sheets.cellTools','sheets.insertFunction','sheets.dataTools','sheets.pivotEdit','sheets.cfManage','sheets.validationCheck','sheets.noteReview','sheets.audit','sheets.insertSymbol','sheets.review','sheets.pages','sheets.shortcuts'] as const;
 export function sheetsPanelCommandSpecs():CommandSpec[]{
  return [
  {id:'sheets.navigate',title:'Go to spreadsheet cell',category:'View',level:'ui',allowInInput:true,
@@ -229,6 +230,9 @@ export function sheetsPanelCommandSpecs():CommandSpec[]{
  {id:'sheets.pages',title:'Show where the printed pages of the sheet start and end',category:'Edit',level:'ui',allowInInput:true,
   params:{type:'object',properties:{kind:{type:'string',enum:['show','clear']}},required:['kind'],additionalProperties:false},
   enabled:()=>!!current?.ready(),run:p=>requireController().pages(parsePagesCommand(p).kind)},
+ {id:'sheets.shortcuts',title:'Show the spreadsheet keyboard shortcuts',category:'View',level:'ui',allowInInput:true,
+  params:{type:'object',properties:{},additionalProperties:false},
+  enabled:()=>!!current?.ready(),run:()=>{setSheetsShortcutsOpen(true);}},
  {id:'sheets.validationCheck',title:'Find cells whose value breaks their allowed-values rule',category:'Edit',level:'ui',allowInInput:true,
   params:{type:'object',properties:{},additionalProperties:false},
   enabled:()=>!!current?.ready(),run:p=>{if(p&&typeof p==='object'&&Object.keys(p as object).length>0)throw Error('This takes no fields.');return requireController().validationCheck();}},

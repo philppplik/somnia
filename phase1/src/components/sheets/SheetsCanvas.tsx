@@ -23,6 +23,8 @@ import {SheetsHandoffBar} from './SheetsHandoffBar';
 import {useT} from '../../lib/useT';
 import {SheetsEngine} from '../../lib/sheets/engine';
 import type {NoteList,NoteReviewOp} from '../../lib/sheets/notes';
+import {SheetsShortcutsDialog} from './SheetsShortcutsDialog';
+import {setSheetsShortcutsOpen} from '../../lib/sheets/shortcuts';
 import type {PageList} from '../../lib/sheets/pageBreaks';
 import type {CellInfo} from '../../lib/sheets/cellInfo';
 import type {ReviewKind,ReviewResult} from '../../lib/sheets/reviewInfo';
@@ -40,6 +42,7 @@ import {fitZoom,type ViewCommand} from '../../lib/sheets/viewOps';
 import {addressOf,cellText,colName,displayValue,editText,isErrorValue,cellAlign} from '../../lib/sheets/format';
 import {MAX_SHEETS,safeTabColor} from '../../lib/sheets/sheetOps';
 import {SheetTabDot} from './SheetTabDot';
+import {SheetBreakLine} from './SheetBreakLine';
 import {sortBlockProblem} from '../../lib/sheets/sortOps';
 import {fillBlockProblem} from '../../lib/sheets/fillOps';
 import {formatRectOk,toggleOp,type ToggleKind} from '../../lib/sheets/formatOps';
@@ -241,6 +244,7 @@ function Workbook({item}:{item:MediaItem}){
   else if((e.ctrlKey||e.metaKey)&&k.toLowerCase()==='z'){e.preventDefault();void history(e.shiftKey?'redo':'undo');}
   else if((e.ctrlKey||e.metaKey)&&k.toLowerCase()==='y'){e.preventDefault();void history('redo');}
   else if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&!e.altKey&&k==='`'){e.preventDefault();void applyView({formulas:!layout?.showFormulas}).catch(()=>undefined);}
+  else if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&!e.altKey&&k==='/'){e.preventDefault();setSheetsShortcutsOpen(true);}
   else if(k.length===1&&!e.ctrlKey&&!e.metaKey&&!e.altKey){e.preventDefault();startEdit(k);}
  };
  // The sheet list can change through sheet edits and undo/redo: reload it, keep the shown sheet when it still exists, otherwise fall back to the first visible one.
@@ -273,6 +277,19 @@ function Workbook({item}:{item:MediaItem}){
   for(const i of objects.images)place('image',i);
   for(const o of objects.shapes)place('shape',o);
   for(const s of sparks){const box=geo.box(s.scene.row,s.scene.col);if(!box||box.width===0||box.height===0)continue;out.push(<AbsBoxImg key={'spark'+s.scene.row+':'+s.scene.col} src={s.url} alt="" box={{left:HEAD_W+box.left,top:HEAD_H+box.top,width:box.width,height:box.height}}/>);}
+   if(pageList){
+    // Page edges from the engine's print layout: the rectangle of every page, each shared edge drawn once.
+    const seen=new Set<string>();
+    for(const p of pageList.pages){
+     const [a,b]=p.range.split(':'),from=parseAddress(a),to=parseAddress(b??a);if(!from||!to)continue;
+     const left=HEAD_W+geo.colLeft(from.col),right=HEAD_W+geo.colLeft(to.col+1),top=HEAD_H+geo.rowTop(from.row),bottom=HEAD_H+geo.rowTop(to.row+1);
+     for(const [kind,at] of [['h',from.row],['h',to.row+1],['v',from.col],['v',to.col+1]] as const){
+      const key=kind+at+(kind==='h'?':'+from.col+':'+to.col:':'+from.row+':'+to.row);if(seen.has(key)||seen.size>=400)continue;seen.add(key);
+      if(kind==='h')out.push(<SheetBreakLine key={'pb'+key} left={left} top={at===from.row?top:bottom} length={right-left} vertical={false} testId="sheets-page-break"/>);
+      else out.push(<SheetBreakLine key={'pb'+key} left={at===from.col?left:right} top={top} length={bottom-top} vertical testId="sheets-page-break"/>);
+     }
+    }
+   }
   return out;};
  const applyProtect=async(op:ProtectOp)=>{
   if(collab.current){setNotice(t('sheets.pt.collab'));return;}
@@ -453,6 +470,7 @@ function Workbook({item}:{item:MediaItem}){
  const names=book?.sheets??[];
  const reviewReady=phase.kind==='ready'&&draft===null&&!!engine.current&&!engine.current.isDisposed&&!engine.current.hasPendingMutation&&book?.sheets.find(s=>s.index===sheet)?.visibility==='Visible'&&rectCells(range)<=100;
  return <section className="canvas-stage flex min-h-0 flex-1 flex-col" aria-label={t('sheets.workbook',{name:item.name})}><details><summary>{t('sheets.liveReview.title')}</summary><SheetsLiveSelectionReview scope={reviewScope} read={reviewReady?readSelection:null}/></details>
+  <SheetsShortcutsDialog/>
   <div className="media-bar flex items-center gap-2 border-b border-subtle px-3 py-1.5 text-[12px]">
    <span className="truncate" data-testid="media-name">{item.name}</span><span className="text-ink-3">XLSX, {formatBytes(item.size)}</span>
    {dirty&&<span className="rounded-sm bg-hover px-1.5 text-ink-2" data-testid="sheets-dirty">{t('sheets.edited')}</span>}<span className="flex-1"/>

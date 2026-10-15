@@ -7710,6 +7710,14 @@
       "hasEnabled": true
     },
     {
+      "id": "sheets.shortcuts",
+      "title": "Show the spreadsheet keyboard shortcuts",
+      "category": "View",
+      "source": "sheets",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
       "id": "sheets.sort",
       "title": "Sort the selected rows by a column",
       "category": "Edit",
