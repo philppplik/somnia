@@ -6217,6 +6217,14 @@
       "hasEnabled": true
     },
     {
+      "id": "sheets.highlight",
+      "title": "Highlight cells with a rule or color scale",
+      "category": "Edit",
+      "source": "sheets",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
       "id": "sheets.navigate",
       "title": "Go to spreadsheet cell",
       "category": "View",

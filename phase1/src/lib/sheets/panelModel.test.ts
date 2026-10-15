@@ -20,7 +20,7 @@ test('formula builder allowlists functions and normalizes references',()=>{
 });
 test('panel commands validate payloads, reject agent execution and honor controller lifecycle',async()=>{
  const dispatcher=new CommandDispatcher();for(const spec of sheetsPanelCommandSpecs())dispatcher.register(spec);
- const calls:unknown[]=[];const controller:SheetsPanelController={ready:()=>true,navigate:(sheet,address)=>{calls.push([sheet,address]);},setCell:input=>{calls.push(input);},readRange:async()=>[],formatCells:op=>{calls.push(op);},resizeLines:(axis,op)=>{calls.push([axis,op]);},freezePanes:(rows,cols)=>{calls.push(['freeze',rows,cols]);},editLines:(axis,kind)=>{calls.push(['edit',axis,kind]);},editSheet:op=>{calls.push(['sheet',op]);},sortRange:op=>{calls.push(['sort',op]);},filterRows:op=>{calls.push(['filter',op]);},fillRange:dir=>{calls.push(['fill',dir]);}};
+ const calls:unknown[]=[];const controller:SheetsPanelController={ready:()=>true,navigate:(sheet,address)=>{calls.push([sheet,address]);},setCell:input=>{calls.push(input);},readRange:async()=>[],formatCells:op=>{calls.push(op);},resizeLines:(axis,op)=>{calls.push([axis,op]);},freezePanes:(rows,cols)=>{calls.push(['freeze',rows,cols]);},editLines:(axis,kind)=>{calls.push(['edit',axis,kind]);},editSheet:op=>{calls.push(['sheet',op]);},sortRange:op=>{calls.push(['sort',op]);},filterRows:op=>{calls.push(['filter',op]);},fillRange:dir=>{calls.push(['fill',dir]);},highlightRules:op=>{calls.push(['cf',op]);}};
  const off=registerSheetsPanelController(controller);
  try{
   await dispatcher.runCommand('sheets.navigate',{sheet:1,address:'B4'},{origin:'ui'});
@@ -36,6 +36,8 @@ test('panel commands validate payloads, reject agent execution and honor control
   assert.deepEqual(calls.slice(mark),[['sort',{header:true,keys:[{column:2,order:'desc'}]}]]);calls.splice(mark);
   await dispatcher.runCommand('sheets.fill',{dir:'down'},{origin:'ui'});assert.deepEqual(calls.splice(mark),[['fill','down']]);
   for(const bad of [{},{dir:'x'},{dir:'down',y:1}])await assert.rejects(()=>dispatcher.runCommand('sheets.fill',bad,{origin:'ui'}),JSON.stringify(bad));
+  await dispatcher.runCommand('sheets.highlight',{kind:'flag',flag:'duplicate',style:'yellow'},{origin:'ui'});assert.deepEqual(calls.splice(mark),[['cf',{kind:'flag',flag:'duplicate',style:'yellow'}]]);
+  for(const bad of [{},{kind:'expression'},{kind:'flag',flag:'duplicate'},{kind:'clear',x:1}])await assert.rejects(()=>dispatcher.runCommand('sheets.highlight',bad,{origin:'ui'}),JSON.stringify(bad));
   await dispatcher.runCommand('sheets.filter',{kind:'custom',column:1,op:'>=',value:'5'},{origin:'ui'});await dispatcher.runCommand('sheets.filter',{kind:'off'},{origin:'ui'});
   assert.deepEqual(calls.slice(mark),[['filter',{kind:'custom',column:1,op:'>=',value:'5'}],['filter',{kind:'off'}]]);calls.splice(mark);
   for(const bad of [{kind:'custom',column:1,op:'regex',value:'a'},{kind:'custom',column:1,op:'=',value:''},{kind:'off',column:1},{kind:'clear'},{}])await assert.rejects(()=>dispatcher.runCommand('sheets.filter',bad,{origin:'ui'}),JSON.stringify(bad));

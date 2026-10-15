@@ -12,6 +12,16 @@ const MAX_FREEZE: u32 = 20;
 const MAX_SHEETS: usize = 255;
 const MAX_SORT_CELLS: u64 = 1_000_000;
 const MAX_FILL_CELLS: u64 = 1_000_000;
+const MAX_CF_RULES: usize = 64;
+const CF_OPERATORS: [&str; 8] = ["greater", "less", "equal", "notEqual", "greaterOrEqual", "lessOrEqual", "between", "notBetween"];
+/// A comparison value: a finite number or a short single-line text. Anything else is refused.
+fn cf_value(v: Option<&serde_json::Value>) -> Option<serde_json::Value> {
+    match v? {
+        serde_json::Value::Number(n) if n.as_f64().is_some_and(f64::is_finite) => Some(serde_json::Value::Number(n.clone())),
+        serde_json::Value::String(t) if !t.is_empty() && t.chars().count() <= MAX_FILTER_VALUE && !t.chars().any(char::is_control) => Some(serde_json::Value::String(t.clone())),
+        _ => None,
+    }
+}
 const MAX_SORT_KEYS: usize = 3;
 const FILTER_OPS: [&str; 10] = ["=", "<>", ">", "<", ">=", "<=", "beginsWith", "endsWith", "contains", "notContains"];
 const MAX_FILTER_VALUE: usize = 255;
@@ -290,20 +300,45 @@ impl HeadlessWorkbook {
         let doc = self.session.doc().map_err(|e| e.to_string())?;
         let wb = &doc.wb;
         let sh = wb.sheet(sheet).ok_or("unknown sheet")?;
+        let mut cf_cache = if sh.cond_formats.is_empty() { None } else { Some(gridcraft_engine::cf::CfCache::new()) };
         let mut cells = Vec::new();
         for r in row..row + rows {
             for c in col..col + cols {
                 let at = CellRef::new(r, c);
                 let value = sh.value(at);
                 let formula = sh.cell(at).and_then(|v| v.formula.as_ref()).map(|f| f.text.clone());
-                let st = wb.styles.get(sh.style_id(at));
-                let fmt = NumberFormat::parse(st.num_fmt.as_str());
+                let base = wb.styles.get(sh.style_id(at));
+                let fmt = NumberFormat::parse(base.num_fmt.as_str());
                 let shown = format_value(&value, &fmt, wb.date_system);
+                let mut style_json_value = style_json(base, &wb.theme);
+                if let Some(cf) = cf_cache.as_mut()
+                    && let Some(look) = cf.look(wb, sheet, at)
+                {
+                    let mut st = base.clone();
+                    if let Some(d) = &look.style {
+                        if d.fill.pattern != gridcraft_engine::model::style::PatternType::None {
+                            st.fill = d.fill;
+                        }
+                        if d.font.color != Color::Auto {
+                            st.font.color = d.font.color;
+                        }
+                        st.font.bold |= d.font.bold;
+                        st.font.italic |= d.font.italic;
+                        st.font.strike |= d.font.strike;
+                        if d.font.underline != Underline::None {
+                            st.font.underline = d.font.underline;
+                        }
+                    }
+                    style_json_value = style_json(&st, &wb.theme);
+                    if let Some(rgb) = look.scale_fill {
+                        style_json_value["fill"] = json!(format!("#{:02X}{:02X}{:02X}", rgb[0], rgb[1], rgb[2]));
+                    }
+                }
                 cells.push(json!({
                     "address": at.a1(), "value": value, "formula": formula,
                     "text": shown.text, "numeric": shown.numeric,
                     "fmtColor": shown.color.map(format_color),
-                    "style": style_json(st, &wb.theme),
+                    "style": style_json_value,
                 }));
             }
         }
@@ -572,6 +607,100 @@ impl HeadlessWorkbook {
         let range = format!("{}:{}", CellRef::new(row, col).a1(), CellRef::new(row + rows - 1, col + cols - 1).a1());
         self.session.run("sheet.activate", json!({"sheet": sheet}))?;
         self.session.run("data.sort", json!({"range": range, "header": header, "keys": keys, "matchCase": match_case})).map(|v| v.to_string())
+    }
+
+    /// Adds or clears conditional-format rules as ONE history entry. `op_json` is one of
+    /// `{"kind":"cell","operator":..,"value":..,"value2":..,"style":..}`, `{"kind":"text","mode":..,"text":..,"style":..}`,
+    /// `{"kind":"flag","flag":..,"style":..}`, `{"kind":"top","rank":n,"bottom":b,"percent":b,"style":..}`,
+    /// `{"kind":"scale","scale":..}`, `{"kind":"clear"}` (rules touching the block) or `{"kind":"clearAll"}` (whole sheet).
+    /// Only these allowlisted shapes reach the engine; at most 64 rules per sheet, protected sheets refused.
+    pub fn cf_range(&mut self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32, op_json: &str) -> Result<String, String> {
+        if rows == 0 || cols == 0 || u64::from(rows) * u64::from(cols) > MAX_FILL_CELLS {
+            return Err("Select a block of at most 1,000,000 cells.".into());
+        }
+        self.check_block(sheet, row, col, rows, cols, true)?;
+        let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "operation must be a JSON object".to_string())?;
+        let kind = op.get("kind").and_then(|v| v.as_str()).ok_or("missing operation kind")?;
+        let range = format!("{}:{}", CellRef::new(row, col).a1(), CellRef::new(row + rows - 1, col + cols - 1).a1());
+        let existing = {
+            let doc = self.session.doc().map_err(|e| e.to_string())?;
+            doc.wb.sheet(sheet).ok_or("unknown sheet")?.cond_formats.len()
+        };
+        let style_of = |op: &serde_json::Value| -> Result<&'static str, String> {
+            match op.get("style").and_then(|v| v.as_str()) {
+                Some("lightRed") => Ok("lightRedFillDarkRedText"),
+                Some("yellow") => Ok("yellowFillDarkYellowText"),
+                Some("green") => Ok("greenFillDarkGreenText"),
+                Some("redText") => Ok("redText"),
+                _ => Err("unsupported highlight style".into()),
+            }
+        };
+        let rule = match kind {
+            "clear" | "clearAll" => {
+                if existing == 0 {
+                    return Err("There are no highlight rules on this sheet.".into());
+                }
+                self.session.run("sheet.activate", json!({"sheet": sheet}))?;
+                let args = if kind == "clear" { json!({"range": range}) } else { json!({"sheet": true}) };
+                return self.session.run("home.clearRules", args).map(|v| v.to_string());
+            }
+            "cell" => {
+                let operator = op.get("operator").and_then(|v| v.as_str()).filter(|o| CF_OPERATORS.contains(o)).ok_or("unsupported comparison")?;
+                let value = cf_value(op.get("value")).ok_or("the comparison needs a value")?;
+                let mut rule = json!({"type": "cellIs", "operator": operator, "value": value, "preset": style_of(&op)?});
+                if operator == "between" || operator == "notBetween" {
+                    rule["value2"] = cf_value(op.get("value2")).ok_or("between needs two values")?;
+                }
+                rule
+            }
+            "text" => {
+                let mode = match op.get("mode").and_then(|v| v.as_str()) {
+                    Some("contains") => "containsText",
+                    Some("notContains") => "notContainsText",
+                    Some("beginsWith") => "beginsWith",
+                    Some("endsWith") => "endsWith",
+                    _ => return Err("unsupported text rule".into()),
+                };
+                let text = op.get("text").and_then(|v| v.as_str()).ok_or("the text rule needs text")?;
+                if text.is_empty() || text.chars().count() > MAX_FILTER_VALUE || text.chars().any(char::is_control) {
+                    return Err(format!("The text must be 1 to {MAX_FILTER_VALUE} characters."));
+                }
+                json!({"type": mode, "text": text, "preset": style_of(&op)?})
+            }
+            "flag" => {
+                let flag = op.get("flag").and_then(|v| v.as_str()).ok_or("missing flag")?;
+                match flag {
+                    "blanks" | "noBlanks" | "errors" | "noErrors" | "duplicate" | "unique" => json!({"type": flag, "preset": style_of(&op)?}),
+                    "aboveAverage" | "belowAverage" => json!({"type": "aboveAverage", "below": flag == "belowAverage", "preset": style_of(&op)?}),
+                    _ => return Err("unsupported rule".into()),
+                }
+            }
+            "top" => {
+                let rank = op.get("rank").and_then(|v| v.as_u64()).filter(|r| (1..=1000).contains(r)).ok_or("rank must be 1 to 1000")?;
+                let bottom = op.get("bottom").and_then(|v| v.as_bool()).ok_or("bottom must be true or false")?;
+                let percent = op.get("percent").and_then(|v| v.as_bool()).ok_or("percent must be true or false")?;
+                if percent && rank > 100 {
+                    return Err("A percentage can be at most 100.".into());
+                }
+                json!({"type": "top10", "rank": rank, "bottom": bottom, "percent": percent, "preset": style_of(&op)?})
+            }
+            "scale" => {
+                let colors: [&str; 3] = match op.get("scale").and_then(|v| v.as_str()) {
+                    Some("greenYellowRed") => ["#63BE7B", "#FFEB84", "#F8696B"],
+                    Some("redYellowGreen") => ["#F8696B", "#FFEB84", "#63BE7B"],
+                    Some("whiteBlue") => ["#FFFFFF", "#9DC3E6", "#2E75B6"],
+                    Some("whiteRed") => ["#FFFFFF", "#F4B183", "#C55A11"],
+                    _ => return Err("unsupported color scale".into()),
+                };
+                json!({"type": "colorScale", "colors": colors})
+            }
+            _ => return Err("unsupported rule kind".into()),
+        };
+        if existing >= MAX_CF_RULES {
+            return Err(format!("A sheet can hold at most {MAX_CF_RULES} highlight rules."));
+        }
+        self.session.run("sheet.activate", json!({"sheet": sheet}))?;
+        self.session.run("home.conditionalFormat", json!({"range": range, "rule": rule})).map(|v| v.to_string())
     }
 
     /// Fills the selected block in one direction (`down`, `right`, `up`, `left`) as ONE history entry, copying the first
@@ -1517,5 +1646,38 @@ mod tests {
         assert!(book.fill_range(0, 0, 0, 2_000_000, 2, "down").is_err());
         book.session.run("review.protectSheet", json!({})).unwrap();
         assert!(book.fill_range(0, 5, 0, 3, 2, "down").unwrap_err().contains("protected"));
+    }
+    #[test]
+    fn cf_range_highlights_cells_in_one_undo_step_and_refuses_bad_input() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        book.set_values(0, 50, 0, r#"[["1"],["5"],["9"]]"#).unwrap();
+        let op = r#"{"kind":"cell","operator":"greater","value":4,"style":"yellow"}"#;
+        book.cf_range(0, 50, 0, 3, 1, op).unwrap();
+        let fill = |b: &HeadlessWorkbook, r: u32| serde_json::from_str::<serde_json::Value>(&b.view_range(0, r, 0, 1, 1).unwrap()).unwrap()["cells"][0]["style"]["fill"].clone();
+        assert_eq!(fill(&book, 50), serde_json::Value::Null);
+        assert_eq!(fill(&book, 52), serde_json::json!("#FFEB9C"));
+        book.undo().unwrap();
+        assert_eq!(fill(&book, 52), serde_json::Value::Null);
+        book.cf_range(0, 50, 0, 3, 1, op).unwrap();
+        book.cf_range(0, 50, 0, 3, 1, r#"{"kind":"scale","scale":"whiteBlue"}"#).unwrap();
+        book.cf_range(0, 50, 0, 3, 1, r#"{"kind":"clearAll"}"#).unwrap();
+        assert_eq!(fill(&book, 52), serde_json::Value::Null);
+        assert!(book.cf_range(0, 50, 0, 3, 1, r#"{"kind":"clearAll"}"#).is_err(), "nothing left to clear");
+        for bad in [
+            "nope",
+            r#"{"kind":"cell","operator":"regex","value":1,"style":"yellow"}"#,
+            r#"{"kind":"cell","operator":"greater","style":"yellow"}"#,
+            r#"{"kind":"cell","operator":"between","value":1,"style":"yellow"}"#,
+            r#"{"kind":"cell","operator":"greater","value":1,"style":"neon"}"#,
+            r#"{"kind":"text","mode":"contains","text":"","style":"green"}"#,
+            r#"{"kind":"top","rank":0,"bottom":false,"percent":false,"style":"green"}"#,
+            r#"{"kind":"flag","flag":"expression","style":"green"}"#,
+            r#"{"kind":"scale","scale":"rainbow"}"#,
+            r#"{"kind":"expression"}"#,
+        ] {
+            assert!(book.cf_range(0, 50, 0, 3, 1, bad).is_err(), "{bad}");
+        }
+        book.session.run("review.protectSheet", json!({})).unwrap();
+        assert!(book.cf_range(0, 50, 0, 3, 1, op).unwrap_err().contains("protected"));
     }
 }
