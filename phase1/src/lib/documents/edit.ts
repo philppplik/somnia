@@ -1,7 +1,8 @@
 /** `outline` is the heading level 0-8 (Heading 1 = 0) when the paragraph is an outline entry. */
 /** Block ids from here address a paragraph inside a table cell (mirrors CELL_BASE in the engine adapter). */
 export const CELL_BASE=1<<20;
-export interface DocBlock{index:number;kind:'para'|'table'|'cell';text?:string;editable:boolean;outline?:number|null;/** Cell entries only: body index of the table and the cell's row, cell and paragraph index. */table?:number;row?:number;cell?:number;para?:number;/** Set on a paragraph that ends a section: how the section after it starts. */sectionBreak?:import('./protocol').SectionBreakKind;/** Top-level paragraphs that hold only a picture: its display size in points and alt text. */image?:{w:number;h:number;alt:string}}
+import type {ImageWrap,ImageAlign} from './protocol';
+export interface DocBlock{index:number;kind:'para'|'table'|'cell';text?:string;editable:boolean;outline?:number|null;/** Cell entries only: body index of the table and the cell's row, cell and paragraph index. */table?:number;row?:number;cell?:number;para?:number;/** Set on a paragraph that ends a section: how the section after it starts. */sectionBreak?:import('./protocol').SectionBreakKind;/** Top-level paragraphs that hold only a picture: its display size in points and alt text. */image?:{w:number;h:number;alt:string;wrap?:ImageWrap;align?:ImageAlign}}
 /** One replacement in UTF-8 byte offsets of the paragraph text it applies to. */
 export interface Hunk{start:number;end:number;text:string}
 /** All hunks of one paragraph, ascending and non-overlapping, applied atomically. */

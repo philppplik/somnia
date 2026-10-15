@@ -254,7 +254,12 @@ export const TABLE_PRESETS:readonly (readonly [number,number])[]=[[2,2],[3,3],[4
 /** Limits for inserted pictures (PNG or JPEG, checked by file signature). */
 export const MAX_IMAGE_BYTES=5*1024*1024,MAX_IMAGE_SIDE=8000,MAX_IMAGE_PIXELS=25_000_000,MAX_IMAGES=200,MIN_IMAGE_PT=10,MAX_IMAGE_PT=2000;
 export const IMAGE_WIDTH_PERCENTS=[25,50,75,100] as const;
-export type ImageOp={op:'resize';width:number}|{op:'fit';percent:number}|{op:'alt';alt:string}|{op:'remove'};
+export const IMAGE_WRAPS=['inline','square','topAndBottom','behind','front'] as const;
+export const IMAGE_ALIGNS=['left','center','right'] as const;
+export type ImageWrap=typeof IMAGE_WRAPS[number];
+export type ImageAlign=typeof IMAGE_ALIGNS[number];
+export const imageWrapProblem=(wrap:unknown,align:unknown):string|null=>!(IMAGE_WRAPS as readonly unknown[]).includes(wrap)?'Wrap is inline, square, top and bottom, behind or in front.':!(IMAGE_ALIGNS as readonly unknown[]).includes(align)?'Picture alignment is left, center or right.':null;
+export type ImageOp={op:'wrap';wrap:ImageWrap;align:ImageAlign}|{op:'resize';width:number}|{op:'fit';percent:number}|{op:'alt';alt:string}|{op:'remove'};
 /** PNG/JPEG pixel size read from the header only; null for anything else or a damaged header. */
 export function sniffImage(b:Uint8Array):{type:'png'|'jpeg';w:number;h:number}|null{
  const dv=new DataView(b.buffer,b.byteOffset,b.byteLength);

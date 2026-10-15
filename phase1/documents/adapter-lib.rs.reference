@@ -92,6 +92,39 @@ fn image_only(p: &wordcraft_doc::Paragraph) -> Option<(&str, f32, f32, &str)> {
     }
 }
 
+/// Distance between a floating picture and the text around it, points.
+const IMG_WRAP_DIST: f32 = 10.0;
+fn wrap_name(w: wordcraft_doc::para::Wrap) -> &'static str {
+    use wordcraft_doc::para::Wrap;
+    match w {
+        Wrap::Inline => "inline",
+        Wrap::Square | Wrap::Tight | Wrap::Through => "square",
+        Wrap::TopAndBottom => "topAndBottom",
+        Wrap::BehindText => "behind",
+        Wrap::InFrontOfText => "front",
+    }
+}
+/// Horizontal offset (from the column edge) of a floating picture `w` wide for `align`.
+fn float_x(align: &str, text_w: f32, w: f32) -> f32 {
+    match align {
+        "right" => (text_w - w).max(0.0),
+        "center" => ((text_w - w) / 2.0).max(0.0),
+        _ => 0.0,
+    }
+}
+/// Wrap mode and horizontal alignment of an image paragraph: a floating picture reads its offset, an inline one the paragraph alignment.
+fn image_wrap_state(p: &wordcraft_doc::Paragraph, text_w: f32) -> (&'static str, &'static str) {
+    use wordcraft_doc::InlineObject;
+    match p.objects.first() {
+        Some(InlineObject::Image { w, float, .. }) if float.wrap != wordcraft_doc::para::Wrap::Inline => {
+            let free = (text_w - *w).max(0.0);
+            let a = if free < 1.0 || float.x < free / 4.0 { "left" } else if float.x > free * 0.75 { "right" } else { "center" };
+            (wrap_name(float.wrap), a)
+        }
+        _ => ("inline", match p.props.align { Some(wordcraft_doc::Align::Center) => "center", Some(wordcraft_doc::Align::Right) => "right", _ => "left" }),
+    }
+}
+
 #[wasm_bindgen]
 pub struct DocSession {
     doc: Document,
@@ -246,7 +279,8 @@ impl DocSession {
                         v["sectionBreak"] = serde_json::json!(k);
                     }
                     if let Some((_, w, h, alt)) = image_only(p) {
-                        v["image"] = serde_json::json!({"w": w, "h": h, "alt": alt});
+                        let (wrap, align) = image_wrap_state(p, self.doc.last_section.text_width());
+                        v["image"] = serde_json::json!({"w": w, "h": h, "alt": alt, "wrap": wrap, "align": align});
                     }
                     v
                 }
@@ -2984,9 +3018,14 @@ impl DocSession {
         let mut p = self.image_para(block)?.clone();
         let (_, w0, h0, _) = image_only(&p).ok_or("this block is not an image")?;
         let h = (width * h0 / w0.max(1.0)).clamp(IMG_MIN_PT, IMG_MAX_PT);
-        if let Some(wordcraft_doc::InlineObject::Image { w, h: hh, .. }) = p.objects.get_mut(0) {
+        let text_w = self.doc.last_section.text_width();
+        let (_, align) = image_wrap_state(&p, text_w);
+        if let Some(wordcraft_doc::InlineObject::Image { w, h: hh, float, .. }) = p.objects.get_mut(0) {
             *w = width;
             *hh = h;
+            if float.wrap != wordcraft_doc::para::Wrap::Inline {
+                float.x = float_x(align, text_w, width);
+            }
         }
         self.doc.body[block] = Arc::new(Block::Para(p));
         self.pages = DocLayout::default();
@@ -2999,6 +3038,38 @@ impl DocSession {
         }
         let width = (self.doc.last_section.text_width() * percent as f32 / 100.0).clamp(IMG_MIN_PT, IMG_MAX_PT);
         self.do_resize_image(block, width)
+    }
+    /// Sets how an image paragraph sits in the text: `inline`, `square`, `topAndBottom`, `behind` or `front`, aligned
+    /// `left`, `center` or `right`. Inline pictures align through the paragraph; the others float against the column.
+    fn do_set_image_wrap(&mut self, block: usize, wrap: &str, align: &str) -> Result<(), String> {
+        use wordcraft_doc::para::{Anchor, Float, Wrap};
+        let mode = match wrap {
+            "inline" => Wrap::Inline,
+            "square" => Wrap::Square,
+            "topAndBottom" => Wrap::TopAndBottom,
+            "behind" => Wrap::BehindText,
+            "front" => Wrap::InFrontOfText,
+            _ => return Err("the wrap is inline, square, topAndBottom, behind or front".into()),
+        };
+        let al = match align {
+            "left" => wordcraft_doc::Align::Left,
+            "center" => wordcraft_doc::Align::Center,
+            "right" => wordcraft_doc::Align::Right,
+            _ => return Err("the picture alignment is left, center or right".into()),
+        };
+        let mut p = self.image_para(block)?.clone();
+        let text_w = self.doc.last_section.text_width();
+        if let Some(wordcraft_doc::InlineObject::Image { w, float, .. }) = p.objects.get_mut(0) {
+            *float = if mode == Wrap::Inline {
+                Float::default()
+            } else {
+                Float { wrap: mode, h_rel: Anchor::Column, v_rel: Anchor::Paragraph, x: float_x(align, text_w, *w), y: 0.0, dist: IMG_WRAP_DIST }
+            };
+        }
+        p.props.align = Some(if mode == Wrap::Inline { al } else { wordcraft_doc::Align::Left });
+        self.doc.body[block] = Arc::new(Block::Para(p));
+        self.pages = DocLayout::default();
+        Ok(())
     }
     fn do_set_image_alt(&mut self, block: usize, alt: &str) -> Result<(), String> {
         Self::hf_validate(alt).map_err(|_| "alt text is limited to 500 characters without line breaks".to_string())?;
@@ -3522,6 +3593,10 @@ impl DocSession {
     /// Display width in points (10-2000) of the image paragraph `block`; the height follows the aspect ratio.
     pub fn resize_image(&mut self, block: usize, width: f32) -> Result<(), JsValue> {
         self.do_resize_image(block, width).map_err(|e| js_err(&e))
+    }
+    /// Picture wrap (`inline`, `square`, `topAndBottom`, `behind`, `front`) and alignment (`left`, `center`, `right`).
+    pub fn set_image_wrap(&mut self, block: usize, wrap: &str, align: &str) -> Result<(), JsValue> {
+        self.do_set_image_wrap(block, wrap, align).map_err(|e| js_err(&e))
     }
     pub fn fit_image(&mut self, block: usize, percent: u32) -> Result<(), JsValue> {
         self.do_fit_image(block, percent).map_err(|e| js_err(&e))
@@ -4253,6 +4328,26 @@ mod tests {
         .unwrap();
         assert!((w3 - s.doc.last_section.text_width() / 2.0).abs() < 0.01);
         assert!(s.do_fit_image(1, 33).is_err());
+        s.do_set_image_wrap(1, "square", "right").unwrap();
+        let v: serde_json::Value = serde_json::from_str(&s.block_list()).unwrap();
+        assert_eq!((v[1]["image"]["wrap"].as_str(), v[1]["image"]["align"].as_str()), (Some("square"), Some("right")));
+        s.do_resize_image(1, 120.0).unwrap();
+        let v: serde_json::Value = serde_json::from_str(&s.block_list()).unwrap();
+        assert_eq!((v[1]["image"]["wrap"].as_str(), v[1]["image"]["align"].as_str()), (Some("square"), Some("right")), "resize keeps the side");
+        s.do_set_image_wrap(1, "inline", "center").unwrap();
+        let v: serde_json::Value = serde_json::from_str(&s.block_list()).unwrap();
+        assert_eq!((v[1]["image"]["wrap"].as_str(), v[1]["image"]["align"].as_str()), (Some("inline"), Some("center")));
+        for (w, a) in [("tight", "left"), ("square", "middle"), ("", "left")] {
+            assert!(s.do_set_image_wrap(1, w, a).is_err(), "{w} {a}");
+        }
+        assert!(s.do_set_image_wrap(0, "square", "left").is_err(), "text paragraph");
+        assert!(s.do_set_image_wrap(99_999, "square", "left").is_err());
+        s.do_set_image_wrap(1, "topAndBottom", "center").unwrap();
+        assert!(s.paginate() >= 1);
+        let re = DocSession::from_bytes(&wordcraft_docx::write(&s.doc).unwrap()).unwrap();
+        let v: serde_json::Value = serde_json::from_str(&re.block_list()).unwrap();
+        assert_eq!(v[1]["image"]["wrap"], "topAndBottom");
+        s.do_set_image_wrap(1, "inline", "left").unwrap();
         s.do_set_image_alt(1, "New text").unwrap();
         let v: serde_json::Value = serde_json::from_str(&s.block_list()).unwrap();
         assert_eq!(v[1]["image"]["alt"], "New text");

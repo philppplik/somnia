@@ -4173,6 +4173,17 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.image.wrap",
+      "title": "Set picture wrap",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.indent.decrease",
       "title": "Decrease indent",
       "category": "View",

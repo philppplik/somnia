@@ -84,6 +84,7 @@ export class DocSession {
     /** Sets size (a4, letter, legal, a5), landscape and margins (0-288 pt) on every section; JSON with any of those keys. */
     set_page_setup(setup_json: string): void;
     set_image_alt(block: number, alt: string): void;
+    set_image_wrap(block: number, wrap: string, align: string): void;
     remove_image(block: number): void;
     comments(): string;
     add_comment(block: number, start: number, end: number, text: string, author: string, date: string): void;
