@@ -1354,5 +1354,6 @@
  "animation.rig.blink": "Cligner de temps en temps (yeux)",
  "cmd.animation.layers.blink": "Faire cligner les calques cochés de temps en temps",
  "animation.rig.grid": "Aligner les positions sur une grille de 10 px",
- "cmd.animation.layers.grid": "Aligner la position des calques cochés sur une grille de pixels"
+ "cmd.animation.layers.grid": "Aligner la position des calques cochés sur une grille de pixels",
+ "animation.rig.cascade.random": "Ordre aléatoire"
 }

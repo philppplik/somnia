@@ -1354,5 +1354,6 @@
  "animation.rig.blink": "Parpadear de vez en cuando (ojos)",
  "cmd.animation.layers.blink": "Hacer que las capas marcadas parpadeen de vez en cuando",
  "animation.rig.grid": "Ajustar posiciones a una cuadrícula de 10 px",
- "cmd.animation.layers.grid": "Ajustar la posición de las capas marcadas a una cuadrícula de píxeles"
+ "cmd.animation.layers.grid": "Ajustar la posición de las capas marcadas a una cuadrícula de píxeles",
+ "animation.rig.cascade.random": "Orden aleatorio"
 }

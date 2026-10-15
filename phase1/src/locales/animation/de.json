@@ -1354,5 +1354,6 @@
  "animation.rig.blink": "Ab und zu blinzeln (Augen)",
  "cmd.animation.layers.blink": "Markierte Ebenen ab und zu blinzeln lassen",
  "animation.rig.grid": "Positionen auf 10-px-Raster setzen",
- "cmd.animation.layers.grid": "Position der markierten Ebenen auf ein Pixelraster runden"
+ "cmd.animation.layers.grid": "Position der markierten Ebenen auf ein Pixelraster runden",
+ "animation.rig.cascade.random": "Zufällige Reihenfolge"
 }

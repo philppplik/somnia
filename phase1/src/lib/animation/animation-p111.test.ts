@@ -2019,3 +2019,9 @@ test('P292 grid: static position and every key snap, grid-aligned layers refused
  assert.throws(()=>run({layers:['gr1','gr2']}),/already/);
  s.undo();assert.equal(JSON.stringify(s.document),before);
 });
+test('P293 cascade random: seeded, spans 0..spread, differs by seed',async()=>{
+ const {cascadeDelays}=await import('./cascadeCommands');const pts:[number,number][]=[[0,0],[10,0],[20,0],[30,0],[40,0]];
+ const a=cascadeDelays(pts,'random',100,1)!,b=cascadeDelays(pts,'random',100,1)!,c=cascadeDelays(pts,'random',100,2)!;
+ assert.deepEqual(a,b);assert.notDeepEqual(a,c);assert.equal(Math.min(...a),0);assert.equal(Math.max(...a),100);
+ assert.notEqual(cascadeDelays([[5,5],[5,5]],'random',10,1),null);
+});

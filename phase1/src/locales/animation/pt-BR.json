@@ -1354,5 +1354,6 @@
  "animation.rig.blink": "Piscar de vez em quando (olhos)",
  "cmd.animation.layers.blink": "Fazer as camadas marcadas piscarem de vez em quando",
  "animation.rig.grid": "Ajustar posições a uma grade de 10 px",
- "cmd.animation.layers.grid": "Ajustar a posição das camadas marcadas a uma grade de pixels"
+ "cmd.animation.layers.grid": "Ajustar a posição das camadas marcadas a uma grade de pixels",
+ "animation.rig.cascade.random": "Ordem aleatória"
 }

@@ -41,7 +41,7 @@ const groups:{key:string;items:RigItem[]}[]=[
  {key:'count',items:[{testid:'animation-rig-count-100',label:'animation.rig.count.100',cmd:'animation.text.count',min:1,args:{from:0,to:100}},{testid:'animation-rig-count-1000',label:'animation.rig.count.1000',cmd:'animation.text.count',min:1,args:{from:0,to:10000,grouping:true}},{testid:'animation-rig-count-off',label:'animation.rig.count.off',cmd:'animation.text.count',min:1,args:{remove:true}}]},
  {key:'slide',items:([['in','left'],['in','right'],['out','left'],['out','right']] as const).map(([m,d])=>({testid:`animation-rig-slide-${m}-${d}`,label:`animation.rig.slide.${m}.${d}`,cmd:'animation.layers.slide',min:1,args:{mode:m,dir:d}}))},
  {key:'draw',items:(['on','off'] as const).map(m=>({testid:`animation-rig-draw-${m}`,label:`animation.rig.draw.${m}`,cmd:'animation.layers.draw',min:1,args:{mode:m}}))},
- {key:'cascade',items:(['right','left','down','up','out','in'] as const).map(d=>({testid:`animation-rig-cascade-${d}`,label:`animation.rig.cascade.${d}`,cmd:'animation.layers.cascade',min:2,args:{dir:d}}))},
+ {key:'cascade',items:(['right','left','down','up','out','in','random'] as const).map(d=>({testid:`animation-rig-cascade-${d}`,label:`animation.rig.cascade.${d}`,cmd:'animation.layers.cascade',min:2,args:{dir:d}}))},
  {key:'hue',items:[{testid:'animation-rig-hue',label:'animation.rig.hue',cmd:'animation.layers.hue',min:1,args:{}}]},
  {key:'swing',items:[{testid:'animation-rig-swing',label:'animation.rig.swing',cmd:'animation.layers.swing',min:1,args:{}}]},
  {key:'blink',items:[{testid:'animation-rig-blink',label:'animation.rig.blink',cmd:'animation.layers.blink',min:1,args:{}}]},
