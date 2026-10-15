@@ -190,5 +190,12 @@
  "photos.snapshots.name": "Snapshot-Name",
  "photos.snapshots.saved": "Snapshot gespeichert: {name}",
  "photos.snapshots.applied": "Snapshot angewendet: {name}",
- "photos.snapshots.delete": "Snapshot {name} loeschen"
+ "photos.snapshots.delete": "Snapshot {name} loeschen",
+ "photos.photoCollections": "Foto-Kollektionen",
+ "photos.photoCollections.off": "Keine Kollektion",
+ "photos.photoCollections.add": "Zur Kollektion hinzufuegen",
+ "photos.photoCollections.name": "Name der Kollektion",
+ "photos.photoCollections.added": "{count} in {name} aufgenommen",
+ "photos.photoCollections.removeActive": "Foto entfernen",
+ "photos.photoCollections.delete": "Kollektion loeschen"
 }

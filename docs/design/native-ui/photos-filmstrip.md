@@ -476,3 +476,20 @@ and the stable-name-array contract for `useSyncExternalStore`; the
 light/dark gallery leg saves a snapshot, moves the settings,
 applies it back and deletes the row
 (`test-results/ds-photos-snapshots-{light,dark}.png`).
+
+## Manual collections (P109)
+
+"Add to collection" in the strip menu files the active photo (or the
+selection) under a name; the collection select above it applies the
+collection as a library filter - the grid follows for free because
+`useVisiblePhotos` owns the filter dimension (panel state
+`photos.collection`). With a collection applied, "Remove photo"
+takes the active photo out and "Delete collection" drops the whole
+group and clears the filter. Members keep insertion order, names
+are unique; persisted locally, originals are never touched.
+
+Coverage: `collections.test.ts` covers add/dedupe/remove/rename/
+delete and the stable-array contract; the light/dark gallery leg
+adds the active photo to a new collection, checks the strip narrows
+to members only, then deletes the collection
+(`test-results/ds-photos-collections-{light,dark}.png`).

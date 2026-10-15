@@ -190,5 +190,12 @@
  "photos.snapshots.name": "Snapshot name",
  "photos.snapshots.saved": "Snapshot saved: {name}",
  "photos.snapshots.applied": "Snapshot applied: {name}",
- "photos.snapshots.delete": "Delete snapshot {name}"
+ "photos.snapshots.delete": "Delete snapshot {name}",
+ "photos.photoCollections": "Photo collections",
+ "photos.photoCollections.off": "No collection",
+ "photos.photoCollections.add": "Add to collection",
+ "photos.photoCollections.name": "Collection name",
+ "photos.photoCollections.added": "Added {count} to {name}",
+ "photos.photoCollections.removeActive": "Remove photo",
+ "photos.photoCollections.delete": "Delete collection"
 }

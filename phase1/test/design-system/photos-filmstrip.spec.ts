@@ -799,3 +799,26 @@ test('snapshots: save, apply and delete a named settings snapshot (light and dar
   await page.evaluate(async()=>{const st=await import('/src/lib/photos/studioSession.ts');st.commitPhotoSettings('strip-1.png',cur=>({...cur,temp:6500}));}); // leave no state behind
  }
 });
+
+test('collections: add photos, apply the filter, remove and delete (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
+  await page.evaluate(async()=>{const c=await import('/src/lib/photos/collections.ts');for(const n of c.collectionNames())c.deleteCollection(n);}); // collections persist via localStorage
+  await page.getByTestId('photos-filmstrip-menu').click();
+  await page.getByTestId('photos-filmstrip-collection-add').click();
+  await page.getByTestId('photos-filmstrip-collection-name').fill('Favs');
+  await page.keyboard.press('Enter'); // active photo joins a new collection, filter applies
+  await expect(page.getByTestId('photos-filmstrip-apply-note')).toContainText('Favs');
+  await expect(page.getByTestId('photos-filmstrip-collection-apply')).toHaveValue('Favs');
+  await expect(page.getByTestId('photos-filmstrip-item-strip-1.png')).toBeVisible(); // the member stays
+  await expect(page.getByTestId('photos-filmstrip-item-strip-2.png')).toHaveCount(0); // non-members leave the strip
+  await page.screenshot({path:`test-results/ds-photos-collections-${theme}.png`,fullPage:true});
+  await page.getByTestId('photos-filmstrip-collection-drop').click(); // still in the open menu
+  await expect(page.getByTestId('photos-filmstrip-collection-apply')).toHaveValue('');
+  await expect(page.getByTestId('photos-filmstrip-item-strip-2.png')).toBeVisible(); // strip back to full
+  await page.keyboard.press('Escape');
+ }
+});

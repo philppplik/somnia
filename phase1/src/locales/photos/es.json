@@ -190,5 +190,12 @@
  "photos.snapshots.name": "Nombre de la instantanea",
  "photos.snapshots.saved": "Instantanea guardada: {name}",
  "photos.snapshots.applied": "Instantanea aplicada: {name}",
- "photos.snapshots.delete": "Eliminar instantanea {name}"
+ "photos.snapshots.delete": "Eliminar instantanea {name}",
+ "photos.photoCollections": "Colecciones de fotos",
+ "photos.photoCollections.off": "Sin coleccion",
+ "photos.photoCollections.add": "Anadir a coleccion",
+ "photos.photoCollections.name": "Nombre de la coleccion",
+ "photos.photoCollections.added": "{count} anadidas a {name}",
+ "photos.photoCollections.removeActive": "Quitar foto",
+ "photos.photoCollections.delete": "Eliminar coleccion"
 }

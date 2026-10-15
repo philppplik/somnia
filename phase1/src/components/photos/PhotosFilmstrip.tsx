@@ -19,6 +19,7 @@ import {groupForStrip,groupPhotos,setStackCover,ungroupStacks,useStackCovers,use
 import {hidePhotos,unhideAll,unhidePhotos} from '../../lib/photos/hidden';
 import {nextCopyName} from '../../lib/photos/virtualCopy';
 import {saveSnapshot,snapshotSettings,deleteSnapshot,useSnapshots} from '../../lib/photos/snapshots';
+import {addToCollection,removeFromCollection,deleteCollection,isInCollection,useCollectionNames} from '../../lib/photos/collections';
 import {detectSeries} from '../../lib/photos/autoStack';
 import {usePanelState} from '../../store/panelStateStore';
 import {Button} from '../ui/button';
@@ -48,6 +49,7 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
  const [anchor,setAnchor]=usePanelState<string|null>('photos.filmstripAnchor',null);
  const [applyNote,setApplyNote]=useState<string|null>(null);
  const [snapNaming,setSnapNaming]=useState(false);
+ const [collNaming,setCollNaming]=useState(false);
  useEffect(()=>{if(pendingNote){setApplyNote(pendingNote);pendingNote=null;}},[]); // pick up a confirmation that crossed the workspace remount
  const [armRemove,setArmRemove]=useState(false);
  const [rawPresets]=usePanelState<unknown>('photos.presets.user',[]);
@@ -58,6 +60,8 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
  const selected=photos.filter(p=>sel.includes(p.name));
  const activeSession=active?getPhotoSession(active):null;
  const snapNames=useSnapshots(active);
+ const [collection,setCollection]=usePanelState<string>('photos.collection','');
+ const collNames=useCollectionNames();
  const neutral=!activeSession||isNeutralLook(activeSession.now); // nothing worth applying
  const userPresets:UserPreset[]=parseUserPresets(rawPresets);
  const applyLookToSelection=async(look:Parameters<typeof syncLookToPhotos>[1])=>{
@@ -192,6 +196,31 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
          setSnapNaming(false);
         }}/>
       :<Button variant="outline" size="compact" aria-label={t('photos.snapshots.save')} title={t('photos.snapshots.save')} onClick={()=>setSnapNaming(true)} disabled={!activeSession} data-testid="photos-filmstrip-snapshot-save">{t('photos.snapshots.save')}</Button>}
+    </div>
+    <div className="grid gap-1">
+     <NativeSelect value={collection} aria-label={t('photos.photoCollections')} title={t('photos.photoCollections')} onChange={e=>setCollection(e.currentTarget.value)} className="h-7" data-testid="photos-filmstrip-collection-apply">
+      <option value="">{t('photos.photoCollections.off')}</option>
+      {collNames.map(n=><option key={n} value={n}>{n}</option>)}
+     </NativeSelect>
+     <span className="flex gap-1">
+      {collNaming
+       ?<NativeInput autoFocus type="text" aria-label={t('photos.photoCollections.name')} title={t('photos.photoCollections.name')} placeholder={t('photos.photoCollections.name')} className="h-7 w-full" data-testid="photos-filmstrip-collection-name"
+         onKeyDown={e=>{
+          if(e.key==='Escape'){setCollNaming(false);return;}
+          if(e.key!=='Enter')return;
+          const n=e.currentTarget.value.trim();
+          if(n){
+           const targets=selected.length>1?selected.map(p=>p.name):[active]; // the selection joins, else just the active photo
+           const added=addToCollection(n,targets);
+           setApplyNote(t('photos.photoCollections.added',{count:added,name:n}));
+           setCollection(n);
+          }
+          setCollNaming(false);
+         }}/>
+       :<Button variant="outline" size="compact" aria-label={t('photos.photoCollections.add')} title={t('photos.photoCollections.add')} onClick={()=>setCollNaming(true)} data-testid="photos-filmstrip-collection-add">{t('photos.photoCollections.add')}</Button>}
+      {collection&&isInCollection(collection,active)&&<Button variant="outline" size="compact" onClick={()=>removeFromCollection(collection,[active])} data-testid="photos-filmstrip-collection-remove">{t('photos.photoCollections.removeActive')}</Button>}
+      {collection&&<Button variant="outline" size="compact" onClick={()=>{deleteCollection(collection);setCollection('');}} data-testid="photos-filmstrip-collection-drop">{t('photos.photoCollections.delete')}</Button>}
+     </span>
     </div>
     {hidden.length>0&&<span className="flex flex-wrap gap-1">
      <Button variant="outline" size="compact" aria-pressed={showHidden} onClick={()=>setShowHidden(!showHidden)} data-testid="photos-filmstrip-show-hidden">{t('photos.hidden.show')}</Button>
