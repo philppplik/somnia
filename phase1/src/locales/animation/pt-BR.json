@@ -1352,5 +1352,7 @@
  "cmd.animation.layers.swing": "Balançar as camadas marcadas como um pêndulo a partir do cursor",
  "animation.rig.group.blink": "Piscar",
  "animation.rig.blink": "Piscar de vez em quando (olhos)",
- "cmd.animation.layers.blink": "Fazer as camadas marcadas piscarem de vez em quando"
+ "cmd.animation.layers.blink": "Fazer as camadas marcadas piscarem de vez em quando",
+ "animation.rig.grid": "Ajustar posições a uma grade de 10 px",
+ "cmd.animation.layers.grid": "Ajustar a posição das camadas marcadas a uma grade de pixels"
 }

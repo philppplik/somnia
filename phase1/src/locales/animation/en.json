@@ -1352,5 +1352,7 @@
  "cmd.animation.layers.swing": "Swing the ticked layers like a pendulum from the playhead",
  "animation.rig.group.blink": "Blink",
  "animation.rig.blink": "Blink now and then (eyes)",
- "cmd.animation.layers.blink": "Make the ticked layers blink now and then"
+ "cmd.animation.layers.blink": "Make the ticked layers blink now and then",
+ "animation.rig.grid": "Snap positions to a 10 px grid",
+ "cmd.animation.layers.grid": "Snap the position of the ticked layers to a pixel grid"
 }

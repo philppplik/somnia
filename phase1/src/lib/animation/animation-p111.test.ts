@@ -2009,3 +2009,13 @@ test('P291 blink: seeded gaps, closed at 10 percent mid blink, keyed scale skipp
  const k=L('bl1').transform.scale.keys;assert.equal(k.length,a.length*3);assert.deepEqual(k[1].v,[50,4]);assert.deepEqual(k[2].v,[50,40]);
  s.undo();assert.equal(JSON.stringify(s.document),before);
 });
+test('P292 grid: static position and every key snap, grid-aligned layers refused, one undo',async()=>{
+ const {snapTo,gridSpecs}=await import('./gridCommands');const run=gridSpecs()[0].run as (p?:unknown)=>unknown;
+ assert.equal(snapTo(14,10),10);assert.equal(snapTo(15,10),20);assert.equal(snapTo(-14,10),-10);assert.equal(snapTo(0.4,10),0);
+ const s=new AnimationSession();s.open(applyEdits(base(),[{type:'layer.add',kind:'solid',id:'gr1'},{type:'prop.set',layer:'gr1',prop:'position',value:[103,247]},{type:'layer.add',kind:'solid',id:'gr2'},{type:'prop.set',layer:'gr2',prop:'position',value:[100,200]},
+  {type:'prop.animate',layer:'gr2',prop:'position',on:true,t:0},{type:'prop.set',layer:'gr2',prop:'position',t:0,value:[101,199]},{type:'prop.animate',layer:'gr2',prop:'position',on:true,t:f(10)},{type:'prop.set',layer:'gr2',prop:'position',t:f(10),value:[333,333]}] as never));setAnimationSession(s);
+ const L=(id:string)=>findComp(s.document!)!.layers.find(x=>x.id===id)!;const before=JSON.stringify(s.document);
+ run({layers:['gr1','gr2']});assert.deepEqual(L('gr1').transform.position.value,[100,250]);assert.deepEqual(L('gr2').transform.position.keys.map(k=>k.v),[[100,200],[330,330]]);
+ assert.throws(()=>run({layers:['gr1','gr2']}),/already/);
+ s.undo();assert.equal(JSON.stringify(s.document),before);
+});

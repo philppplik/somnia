@@ -2277,6 +2277,24 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.layers.grid",
+      "title": "Snap the position of the ticked layers to a pixel grid",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "align",
+        "animation",
+        "grid",
+        "layout",
+        "pixel",
+        "position",
+        "round",
+        "snap",
+        "tidy"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.layers.hue",
       "title": "Cycle the colour of the ticked layers round the hue wheel",
       "category": "Edit",
