@@ -48,7 +48,7 @@ new file mode 100644
 index 0000000..5b80b79
 --- /dev/null
 +++ b/crates/somnia-worker/src/lib.rs
-@@ -0,0 +1,5377 @@
+@@ -0,0 +1,5416 @@
 +//! Experimental headless adapter. No DOM, egui, filesystem or UI thread access.
 +use wasm_bindgen::prelude::*;
 +use std::sync::Arc;
@@ -2456,6 +2456,8 @@ index 0000000..5b80b79
 +        serde_json::json!({"size": size, "landscape": s.landscape, "width": s.page_w, "height": s.page_h,
 +            "margins": {"top": s.margin_top, "bottom": s.margin_bottom, "left": s.margin_left, "right": s.margin_right},
 +            "columns": {"count": s.columns.count.clamp(1, 45), "space": s.columns.space, "separator": s.columns.separator, "uneven": !s.columns.widths.is_empty()},
++            "pageColor": self.doc.settings.page_color.map(|c| format!("#{:02X}{:02X}{:02X}", c.0, c.1, c.2)),
++            "defaultTab": self.doc.settings.default_tab,
 +            "valign": match s.valign { wordcraft_doc::props::VAlign::Top => "top", wordcraft_doc::props::VAlign::Center => "center", wordcraft_doc::props::VAlign::Bottom => "bottom" },
 +            "pageNumbers": {"start": s.page_num_start, "format": Self::num_format_name(s.page_num_format).filter(|n| *n != "bullet" && *n != "decimalZero").unwrap_or("decimal")},
 +            "pageBorder": s.page_borders.as_ref().and_then(|b| b.top).filter(|b| b.style != wordcraft_doc::props::BorderStyle::None).map(|b| serde_json::json!({"style": match b.style { wordcraft_doc::props::BorderStyle::Double => "double", wordcraft_doc::props::BorderStyle::Thick => "thick", wordcraft_doc::props::BorderStyle::Dotted => "dotted", wordcraft_doc::props::BorderStyle::Dashed => "dashed", _ => "single" }, "width": b.width, "color": b.color.map(|c| format!("#{}", c.hex()))})),
@@ -2485,8 +2487,25 @@ index 0000000..5b80b79
 +        let mut valign: Option<wordcraft_doc::props::VAlign> = None;
 +        let mut pnum: Option<(Option<u32>, wordcraft_doc::section::NumFormat)> = None;
 +        let mut pborder: Option<Option<wordcraft_doc::props::Borders>> = None;
++        // Document-wide: the colour behind every page (null = none) and the default tab stop interval.
++        let mut page_color: Option<Option<wordcraft_doc::props::Rgb>> = None;
++        let mut default_tab: Option<f32> = None;
 +        for (k, val) in obj {
 +            match k.as_str() {
++                "pageColor" => {
++                    page_color = Some(if val.is_null() {
++                        None
++                    } else {
++                        Some(wordcraft_doc::props::Rgb::parse(val.as_str().ok_or("the page colour must be text")?).ok_or("the page colour is #RRGGBB")?)
++                    })
++                }
++                "defaultTab" => {
++                    let x = val.as_f64().ok_or("the default tab stop must be a number")? as f32;
++                    if !x.is_finite() || !(9.0..=288.0).contains(&x) {
++                        return Err("the default tab stop is 9 to 288 points".into());
++                    }
++                    default_tab = Some((x * 20.0).round() / 20.0);
++                }
 +                "valign" => {
 +                    valign = Some(match val.as_str() {
 +                        Some("top") => wordcraft_doc::props::VAlign::Top,
@@ -2644,6 +2663,12 @@ index 0000000..5b80b79
 +            if n > 1 && (w - m[2] - m[3] - space.max(0.0) * (n - 1) as f32) / (n as f32) < 36.0 {
 +                return Err("the existing columns would be narrower than 36 points".into());
 +            }
++        }
++        if let Some(c) = page_color {
++            self.doc.settings.page_color = c;
++        }
++        if let Some(x) = default_tab {
++            self.doc.settings.default_tab = x;
 +        }
 +        let set = |s: &mut wordcraft_doc::SectionProps| {
 +            s.page_w = w;
@@ -4254,6 +4279,20 @@ index 0000000..5b80b79
 +        let r = st(&re);
 +        assert_eq!((r["valign"].as_str(), r["pageNumbers"]["start"].as_u64(), r["pageNumbers"]["format"].as_str(), r["pageBorder"]["style"].as_str()), (Some("center"), Some(5), Some("lowerRoman"), Some("double")));
 +        assert!(s.paginate() >= 1);
++        s.do_set_page_setup(r##"{"pageColor":"#FFF2CC","defaultTab":24}"##).unwrap();
++        let v: serde_json::Value = serde_json::from_str(&s.page_setup()).unwrap();
++        assert_eq!((v["pageColor"].as_str(), v["defaultTab"].as_f64()), (Some("#FFF2CC"), Some(24.0)));
++        let re = DocSession::from_bytes(&wordcraft_docx::write(&s.doc).unwrap()).unwrap();
++        let r: serde_json::Value = serde_json::from_str(&re.page_setup()).unwrap();
++        assert_eq!((r["pageColor"].as_str(), r["defaultTab"].as_f64()), (Some("#FFF2CC"), Some(24.0)), "page colour and tab stop survive a save");
++        assert!(s.render_png(0, 0.5).is_ok());
++        for bad in [r#"{"pageColor":"red"}"#, r#"{"pageColor":5}"#, r#"{"defaultTab":8}"#, r#"{"defaultTab":289}"#, r#"{"defaultTab":"x"}"#, r#"{"defaultTab":null}"#] {
++            assert!(s.do_set_page_setup(bad).is_err(), "{bad}");
++        }
++        let v: serde_json::Value = serde_json::from_str(&s.page_setup()).unwrap();
++        assert_eq!((v["pageColor"].as_str(), v["defaultTab"].as_f64()), (Some("#FFF2CC"), Some(24.0)), "refusals change nothing");
++        s.do_set_page_setup(r#"{"pageColor":null,"defaultTab":36}"#).unwrap();
++        assert!(serde_json::from_str::<serde_json::Value>(&s.page_setup()).unwrap()["pageColor"].is_null());
 +        s.do_set_page_setup(r#"{"pageNumbers":{"start":null},"pageBorder":null,"valign":"top"}"#).unwrap();
 +        let v = st(&s);
 +        assert_eq!((v["valign"].as_str(), v["pageNumbers"]["start"].is_null(), v["pageNumbers"]["format"].as_str(), v["pageBorder"].is_null()), (Some("top"), true, Some("lowerRoman"), true));

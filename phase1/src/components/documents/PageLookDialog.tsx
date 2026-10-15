@@ -1,6 +1,6 @@
 import {useEffect,useState} from 'react';
 import {PAGE_BORDER_STYLES,PAGE_NUM_FORMATS,PAGE_VALIGNS,type PageBorderStyle,type PageNumFormat,type PageVAlign} from '../../lib/documents/protocol';
-import {buildLookPatch,lookFromState,type PageLookForm} from '../../lib/documents/pageLook';
+import {buildLookPatch,lookFromState,PAGE_COLOR_SWATCH,type PageLookForm} from '../../lib/documents/pageLook';
 import {readPageSetup,setPageSetup} from '../../lib/documents/session';
 import {useT} from '../../lib/useT';
 import {NativeButton,NativeInput,NativeSelect} from '../ui/native-controls';
@@ -26,6 +26,12 @@ export function PageLookDialog({onClose}:{onClose:()=>void}){
      <label className="grid gap-1 text-xs text-ink-2">{t('documents.look.numFormat')}
       <NativeSelect className={sel} value={f.format} onChange={e=>{const v=e.currentTarget.value;if((PAGE_NUM_FORMATS as readonly string[]).includes(v))setF({...f,format:v as PageNumFormat});}} data-testid="documents-look-format">
        {PAGE_NUM_FORMATS.map(v=><option key={v} value={v}>{t('documents.look.numFormat.'+v)}</option>)}</NativeSelect></label></div>
+    <div className="flex items-end gap-2">
+     <label className="grid gap-1 text-xs text-ink-2">{t('documents.look.pageColor')}
+      <NativeInput type="color" className="h-7 w-10 cursor-pointer rounded-sm border border-subtle bg-transparent p-0" value={f.pageColor===''?PAGE_COLOR_SWATCH:f.pageColor} onChange={e=>setF({...f,pageColor:e.currentTarget.value})} data-testid="documents-look-pagecolor"/></label>
+     <NativeButton className={tool+' border border-subtle'} disabled={f.pageColor===''} onClick={()=>setF({...f,pageColor:''})} data-testid="documents-look-pagecolor-clear">{t('documents.look.pageColor.none')}</NativeButton>
+     <label className="grid gap-1 text-xs text-ink-2">{t('documents.look.defaultTab')}
+      <NativeInput className={num} inputMode="decimal" value={f.tab} aria-invalid={!/^\d{1,3}([.,]\d{1,2})?$/.test(f.tab)} onChange={e=>setF({...f,tab:e.currentTarget.value})} data-testid="documents-look-tab"/></label></div>
     <label className="flex items-center gap-2 text-xs text-ink-2"><NativeInput type="checkbox" checked={f.border} onChange={e=>setF({...f,border:e.currentTarget.checked})} data-testid="documents-look-border"/>{t('documents.look.border')}</label>
     <div className="flex items-end gap-2">
      <label className="grid gap-1 text-xs text-ink-2">{t('documents.look.borderStyle')}

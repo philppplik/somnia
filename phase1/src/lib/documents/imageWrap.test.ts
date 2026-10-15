@@ -31,3 +31,15 @@ test('a crop request reaches the engine once, only when valid',()=>{
  for(const [b,c] of [[-1,[0,0,0,0]],[1,[91,0,0,0]],[1,[60,0,40,0]],[1,'x'],[1,[0,0,0]]] as [unknown,unknown][])assert.equal(send(b,c),false);
  assert.deepEqual(calls,[]);assert.equal(send(2,[10,0,5,0]),true);assert.deepEqual(calls,['2 10 0 5 0']);
 });
+import {pageSetupProblem} from './protocol';
+import {buildLookPatch as buildPageLook,lookFromState as pageLookFrom} from './pageLook';
+test('page colour and default tab are bounded and sent only when changed',()=>{
+ assert.equal(pageSetupProblem({pageColor:'#FFF2CC',defaultTab:24}),null);assert.equal(pageSetupProblem({pageColor:null}),null);
+ for(const bad of [{pageColor:'red'},{pageColor:'#FFF'},{pageColor:5},{defaultTab:8},{defaultTab:289},{defaultTab:'x'},{defaultTab:null},{defaultTab:Number.NaN}])assert.notEqual(pageSetupProblem(bad),null,JSON.stringify(bad));
+ const st={size:'a4',landscape:false,width:595,height:842,margins:{top:72,bottom:72,left:72,right:72},columns:{count:1,space:36,separator:false,uneven:false},pageColor:null,defaultTab:36} as never;
+ const a=pageLookFrom(st);assert.equal(a.pageColor,'');assert.equal(a.tab,'36');assert.equal(buildPageLook(a,a),null);
+ assert.deepEqual(buildPageLook(a,{...a,pageColor:'#ffeecc'}),{pageColor:'#ffeecc'});
+ assert.deepEqual(buildPageLook(a,{...a,tab:'18,5'}),{defaultTab:18.5});
+ const b={...a,pageColor:'#ffeecc'};assert.deepEqual(buildPageLook(b,{...b,pageColor:''}),{pageColor:null});
+ for(const bad of ['x','8','500',''])assert.equal(buildPageLook(a,{...a,tab:bad}),null,bad);
+});
