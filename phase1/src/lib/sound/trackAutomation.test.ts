@@ -10,8 +10,8 @@ test('v10: tracks carry a gain curve, v9 migrates with an empty one',()=>{
  const s=fixture();assert.deepEqual(s.tracks[0].gainCurve,[]);
  s.tracks[0].gainCurve=[{at:0,db:0},{at:480,db:-12}];
  assert.deepEqual(parseArrangement(serializeArrangement(s)),s,'round-trip preserves the curve');
- const v9=JSON.parse(serializeArrangement(s));v9.version=9;for(const t of v9.tracks){delete t.gainCurve;delete t.panCurve;}
- const migrated=validateArrangement(v9);assert.equal(migrated.version,13);assert.deepEqual(migrated.tracks[0].gainCurve,[]);
+ const v9=JSON.parse(serializeArrangement(s));v9.version=9;delete (v9 as Record<string,unknown>).masterCurve;for(const t of v9.tracks){delete t.gainCurve;delete t.panCurve;}
+ const migrated=validateArrangement(v9);assert.equal(migrated.version,14);assert.deepEqual(migrated.tracks[0].gainCurve,[]);
  const dup=fixture();dup.tracks[0].gainCurve=[{at:100,db:0},{at:100,db:-3}];
  assert.throws(()=>validateArrangement(dup),/duplicate automation point/);
  const hot=fixture();hot.tracks[0].gainCurve=[{at:100,db:13}];
@@ -38,8 +38,8 @@ test('v11: tracks carry a pan curve, v10 migrates with an empty one, validation 
  const s=fixture();assert.deepEqual(s.tracks[0].panCurve,[]);
  s.tracks[0].panCurve=[{at:0,pan:-0.5},{at:480,pan:0.5}];
  assert.deepEqual(parseArrangement(serializeArrangement(s)),s,'round-trip preserves the pan curve');
- const v10=JSON.parse(serializeArrangement(s));v10.version=10;for(const t of v10.tracks)delete t.panCurve;
- const migrated=validateArrangement(v10);assert.equal(migrated.version,13);assert.deepEqual(migrated.tracks[0].panCurve,[]);
+ const v10=JSON.parse(serializeArrangement(s));v10.version=10;delete (v10 as Record<string,unknown>).masterCurve;for(const t of v10.tracks)delete t.panCurve;
+ const migrated=validateArrangement(v10);assert.equal(migrated.version,14);assert.deepEqual(migrated.tracks[0].panCurve,[]);
  const dup=fixture();dup.tracks[0].panCurve=[{at:100,pan:0},{at:100,pan:0.5}];
  assert.throws(()=>validateArrangement(dup),/duplicate automation point/);
  const wide=fixture();wide.tracks[0].panCurve=[{at:100,pan:1.5}];

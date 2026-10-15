@@ -24,10 +24,10 @@ test('clip pan: clip pan adds to the track pan and clamps at the edges',()=>{
 
 test('clip pan: schema v6 migrates v5 clips with pan 0 and strict v6 requires it',()=>{
  const v5=JSON.parse(JSON.stringify(session(0.5))) as Record<string,unknown>;
- v5.version=5;delete (v5 as Record<string,unknown>).bpm;
+ v5.version=5;delete (v5 as Record<string,unknown>).bpm;delete (v5 as Record<string,unknown>).masterCurve;
  for(const t of (v5 as {tracks:{clips:Record<string,unknown>[]}[]}).tracks)for(const c of t.clips)delete c.pan;
  const migrated=validateArrangement(v5);
- assert.equal(migrated.version,13);
+ assert.equal(migrated.version,14);
  assert.equal(migrated.tracks[0].clips[0].pan,0,'v5 clips gain a neutral pan');
  const broken=JSON.parse(JSON.stringify(session(0))) as Record<string,unknown>;
  for(const t of (broken as {tracks:{clips:Record<string,unknown>[]}[]}).tracks)for(const c of t.clips)delete c.pan;

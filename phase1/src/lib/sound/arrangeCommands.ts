@@ -43,6 +43,7 @@ export function registerArrangeCommands(){
  add('marker.set',p=>editArrangement(s=>{const m=s.markers.find(m=>m.id===p.id);if(!m)throw Error('Marker no longer exists');m.name=p.name;}),schema({id:str,name:str})),
  add('marker.delete',p=>editArrangement(s=>{s.markers=s.markers.filter(m=>m.id!==p.id);}),schema({id:str})),
  add('loop.set',p=>editArrangement(s=>{s.loop=p.enabled?{start:p.start,end:p.end}:null;}),schema({enabled:bool,start:num,end:num})),
+ add('session.masterCurve',p=>editArrangement(s=>{s.masterCurve=p.points as typeof s.masterCurve;}),schema({points:{type:'array'}})),
  add('session.setBpm',p=>editArrangement(s=>{s.bpm=Math.round(p.bpm*10)/10;}),schema({bpm:num})),
  add('session.splitAtMarkers',()=>editArrangement(s=>{if(!s.markers.length)throw Error('No markers');let n=0;for(const m of [...s.markers].sort((a,b)=>a.frame-b.frame))for(const track of s.tracks){const clip=track.clips.find(c=>m.frame>c.start&&m.frame<c.start+c.length);if(clip){splitArrangeClip(s,clip.id,m.frame,id());n++;}}if(!n)throw Error('No clip at any marker');}),schema({})),
  add('session.cutRange',p=>editArrangement(s=>cutSessionRange(s,p.start,p.end,id)),schema({start:num,end:num})),

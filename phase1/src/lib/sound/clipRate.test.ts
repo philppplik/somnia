@@ -9,8 +9,8 @@ const ramp=()=>[{id:'src',sampleRate:48000,channels:[Float32Array.from({length:4
 test('v12: clips carry a rate, v11 migrates with rate 1, round-trip preserves it',()=>{
  const s=fixture(1.5);assert.equal(s.tracks[0].clips[0].rate,1.5);
  assert.deepEqual(parseArrangement(serializeArrangement(s)),s,'round-trip preserves rate');
- const v11=JSON.parse(serializeArrangement(s));v11.version=11;for(const t of v11.tracks)for(const c of t.clips){delete c.rate;delete c.panCurve;}
- const migrated=validateArrangement(v11);assert.equal(migrated.version,13,'v11 chains through v12 to the current schema');assert.equal(migrated.tracks[0].clips[0].rate,1);
+ const v11=JSON.parse(serializeArrangement(s));v11.version=11;delete (v11 as Record<string,unknown>).masterCurve;for(const t of v11.tracks)for(const c of t.clips){delete c.rate;delete c.panCurve;}
+ const migrated=validateArrangement(v11);assert.equal(migrated.version,14,'v11 chains to the current schema');assert.equal(migrated.tracks[0].clips[0].rate,1);
  assert.throws(()=>validateArrangement(fixture(0.1)),/outside|Invalid/,'rate below the floor rejected');
  const tooLong=fixture(2);tooLong.tracks[0].clips[0].length=300;
  assert.throws(()=>validateArrangement(tooLong),/outside/,'rate stretches the source bounds check: 300 frames at 2x need 600 source frames');

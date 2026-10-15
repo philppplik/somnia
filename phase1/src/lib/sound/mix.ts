@@ -3,7 +3,7 @@ export interface DecodedSource{id:string;sampleRate:number;channels:Float32Array
 export interface MixResult{channels:[Float32Array,Float32Array];sampleRate:48000;peak:number;clippedSamples:number}
 /** Offline deterministic stereo mix. Linear sample-rate interpolation is explicit, not mastering quality. */
 export function renderArrangement(raw:Arrangement,sources:DecodedSource[],range?:{start:number;end:number}):MixResult{
- const s=validateArrangement(raw);if(!s.masterRack.bypass&&s.masterRack.slots.some(slot=>slot.enabled)||s.tracks.some(t=>!t.rack.bypass&&t.rack.slots.some(slot=>slot.enabled)))throw Error('Use the rack renderer for sessions with active inserts');const end=arrangementEnd(s);const start=range?.start??0,stop=range?.end??end;
+ const s=validateArrangement(raw);if(!s.masterRack.bypass&&s.masterRack.slots.some(slot=>slot.enabled)||s.tracks.some(t=>!t.rack.bypass&&t.rack.slots.some(slot=>slot.enabled)))throw Error('Use the rack renderer for sessions with active inserts');if(s.masterCurve.length)throw Error('Use the rack renderer for sessions with master automation');const end=arrangementEnd(s);const start=range?.start??0,stop=range?.end??end;
  if(!Number.isSafeInteger(start)||!Number.isSafeInteger(stop)||start<0||stop<=start||stop>end)throw Error('Invalid mix range or empty session');
  const decoded=new Map<string,DecodedSource>();for(const source of sources){if(decoded.has(source.id))throw Error('Duplicate decoded source');decoded.set(source.id,source);}
  // Missing media never silently produces a partial export, even on muted tracks.

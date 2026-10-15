@@ -7,9 +7,9 @@ function session(){const s=emptyArrangement();s.sources.push(source);s.tracks.pu
 
 test('tempo: schema v8 migrates v7 sessions with 120 bpm and strict v8 requires the field',()=>{
  const v7=JSON.parse(JSON.stringify(session())) as Record<string,unknown>;
- v7.version=7;delete v7.bpm;
+ v7.version=7;delete v7.bpm;delete v7.masterCurve;
  const migrated=validateArrangement(v7);
- assert.equal(migrated.version,13);
+ assert.equal(migrated.version,14);
  assert.equal(migrated.bpm,120,'v7 sessions gain the neutral 120 bpm');
  const broken=JSON.parse(JSON.stringify(session())) as Record<string,unknown>;
  delete broken.bpm;

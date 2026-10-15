@@ -43,9 +43,9 @@ test('gaincurve: validation bounds points, sorts them and rejects duplicates',()
 test('gaincurve: v3 migrates neutrally and the session round-trips the curve',()=>{
  const s=fixture();s.tracks[0].clips[0].gainCurve=[{at:10,db:-6}];
  assert.deepEqual(parseArrangement(serializeArrangement(s)),s);
- const v3=JSON.parse(serializeArrangement(s));v3.version=3;delete (v3 as Record<string,unknown>).bpm;for(const t of v3.tracks)for(const c of t.clips)delete c.gainCurve;
+ const v3=JSON.parse(serializeArrangement(s));v3.version=3;delete (v3 as Record<string,unknown>).bpm;delete (v3 as Record<string,unknown>).masterCurve;for(const t of v3.tracks)for(const c of t.clips)delete c.gainCurve;
  const migrated=validateArrangement(v3);
- assert.equal(migrated.version,13);
+ assert.equal(migrated.version,14);
  assert.deepEqual(migrated.tracks[0].clips[0].gainCurve,[],'migration adds a neutral curve');
 });
 
