@@ -156,3 +156,5 @@
 .ag-prompt-chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;list-style:none;margin:12px 0 0;padding:0}.ag-prompt-chip{font-size:11px;line-height:1.4;padding:5px 9px;border:1px solid var(--border-default);border-radius:12px;background:transparent;color:var(--ag-ink2)}.ag-prompt-chip:hover{color:var(--ag-ink);background:var(--bg-hover)}
 
 .ag-review-history{font-size:12px;color:var(--ag-ink2);padding:8px 10px;border:1px solid var(--border-default);border-radius:12px}.ag-review-history ul{margin:8px 0;padding-left:16px}.ag-review-history p{margin:8px 0 0;font-size:11px}
+
+.ag-panel button:focus-visible,.ag-panel summary:focus-visible{outline:2px solid var(--text-primary);outline-offset:3px}
