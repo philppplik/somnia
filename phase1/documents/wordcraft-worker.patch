@@ -52,7 +52,7 @@ new file mode 100644
 index 0000000..5b80b79
 --- /dev/null
 +++ b/crates/somnia-worker/src/lib.rs
-@@ -0,0 +1,5987 @@
+@@ -0,0 +1,5995 @@
 +//! Experimental headless adapter. No DOM, egui, filesystem or UI thread access.
 +use wasm_bindgen::prelude::*;
 +use std::sync::Arc;
@@ -1065,10 +1065,9 @@ index 0000000..5b80b79
 +                        look.push((rc.font.clone(), rc.size, rc.color));
 +                        extra.push(Self::extra_of(&rc, cp));
 +                        more.push((rc.caps, rc.double_strike, rc.spacing, rc.hidden, rc.no_proof));
-+            langs.push(rc.lang.clone().unwrap_or_default());
++                        langs.push(rc.lang.clone().unwrap_or_default());
 +                        scales.push(rc.scale);
-+            scales.push(rc.scale);
-+            under.push(Self::under_of(&rc));
++                        under.push(Self::under_of(&rc));
 +                    }
 +                }
 +            }
@@ -4625,13 +4624,15 @@ index 0000000..5b80b79
 +    fn proofing_language_and_do_not_check_set_report_and_validate() {
 +        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
 +        let st = |s: &DocSession| serde_json::from_str::<serde_json::Value>(&s.do_format_state(0, 0, 0, 1).unwrap()).unwrap();
-+        assert_eq!((st(&s)["noProof"].as_str(), st(&s)["lang"].as_str()), (Some("off"), Some("none")));
++        // The fixture's default style carries en-US, so a run without its own tag reports that language.
++        assert_eq!((st(&s)["noProof"].as_str(), st(&s)["lang"].as_str()), (Some("off"), Some("en-US")));
 +        s.do_format(0, 0, 0, 1, r#"{"noProof":true,"lang":"de-DE"}"#).unwrap();
 +        assert_eq!((st(&s)["noProof"].as_str(), st(&s)["lang"].as_str()), (Some("on"), Some("de-DE")));
 +        let s2 = DocSession::from_bytes(&s.save().unwrap()).unwrap();
 +        assert_eq!((st(&s2)["noProof"].as_str(), st(&s2)["lang"].as_str()), (Some("on"), Some("de-DE")));
++        // "none" drops the run's own tag, so the style's en-US shows through again.
 +        s.do_format(0, 0, 0, 1, r#"{"noProof":false,"lang":"none"}"#).unwrap();
-+        assert_eq!((st(&s)["noProof"].as_str(), st(&s)["lang"].as_str()), (Some("off"), Some("none")));
++        assert_eq!((st(&s)["noProof"].as_str(), st(&s)["lang"].as_str()), (Some("off"), Some("en-US")));
 +        for bad in [r#"{"lang":"xx"}"#, r#"{"lang":"en-us"}"#, r#"{"lang":5}"#, r#"{"lang":""}"#, r#"{"noProof":"yes"}"#] {
 +            assert!(s.do_format(0, 0, 0, 1, bad).is_err(), "{bad}");
 +        }
@@ -4664,6 +4665,10 @@ index 0000000..5b80b79
 +            Some(g) => g,
 +            None => vec![],
 +        };
++        // The fixture already holds one table, so count tables instead of asking for "the" table.
++        let tables = |s: &DocSession| s.doc.body.iter().filter_map(|b| if let Block::Table(_) = &**b { Some(()) } else { None }).count();
++        let t0 = tables(&s);
++        assert_eq!(t0, 2);
 +        let before: f32 = width(&s).iter().sum();
 +        s.do_table_edit(CELL_BASE, "even_cols").unwrap();
 +        let g = width(&s);
@@ -4673,10 +4678,10 @@ index 0000000..5b80b79
 +        let blocks = s.doc.body.len();
 +        s.do_table_edit(CELL_BASE, "delete_table").unwrap();
 +        assert_eq!(s.doc.body.len(), blocks - 1);
-+        assert!(width(&s).is_empty());
++        assert_eq!(tables(&s), t0 - 1);
 +        assert!(s.do_table_edit(0, "delete_table").is_err());
 +        let reopened = DocSession::from_bytes(&s.save().unwrap()).unwrap();
-+        assert!(width(&reopened).is_empty());
++        assert_eq!(tables(&reopened), t0 - 1);
 +    }
 +    #[test]
 +    fn tracked_edits_mark_resolve_and_roundtrip() {
@@ -4726,7 +4731,8 @@ index 0000000..5b80b79
 +        let text = s.para_at(0).unwrap().text.clone();
 +        assert!(v.iter().any(|i| i["kind"] == "spelling" && i["word"] == "brwn"), "{v:?}");
 +        assert!(v.iter().any(|i| i["kind"] == "grammar" && i["message"].as_str().is_some_and(|m| m.contains("Repeated"))), "{v:?}");
-+        for i in &v {
++        assert!(v.iter().any(|i| i["block"] != 0), "the check covers every paragraph, not only the first");
++        for i in v.iter().filter(|i| i["block"] == 0) {
 +            let (a, b) = (i["start"].as_u64().unwrap() as usize, i["end"].as_u64().unwrap() as usize);
 +            assert!(a < b && b <= text.len() && text.is_char_boundary(a) && text.is_char_boundary(b));
 +            assert_eq!(i["word"].as_str().unwrap(), &text[a..b]);
@@ -4860,6 +4866,8 @@ index 0000000..5b80b79
 +        let re = DocSession::from_bytes(&wordcraft_docx::write(&s.doc).unwrap()).unwrap();
 +        let r: serde_json::Value = serde_json::from_str(&re.page_setup()).unwrap();
 +        assert_eq!((r["pageColor"].as_str(), r["defaultTab"].as_f64()), (Some("#FFF2CC"), Some(24.0)), "page colour and tab stop survive a save");
++        // A page-setup change drops the layout, so lay the pages out again before drawing one.
++        assert!(s.paginate() >= 1);
 +        assert!(s.render_png(0, 0.5).is_ok());
 +        for bad in [r#"{"pageColor":"red"}"#, r#"{"pageColor":5}"#, r#"{"defaultTab":8}"#, r#"{"defaultTab":289}"#, r#"{"defaultTab":"x"}"#, r#"{"defaultTab":null}"#] {
 +            assert!(s.do_set_page_setup(bad).is_err(), "{bad}");
