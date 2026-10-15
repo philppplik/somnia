@@ -22,6 +22,6 @@ for (const mode of ['dark', 'light']) {
       }
     }
     assert.ok(contrast('#ffffff', tokens['--accent-fill']) >= 4.5, 'White on accent-fill');
-    assert.ok(contrast(tokens['--accent-ink'], tokens['--accent']) >= 4.5, 'accent-ink on accent');
+    assert.ok(contrast(tokens['--accent-ink'], tokens['--accent-fill']) >= 4.5, 'accent-ink on accent-fill');
   });
 }

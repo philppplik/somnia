@@ -1,57 +1,82 @@
-/** WCAG contrast audit over tokens.css: text and status colors against every shell background,
- *  white action ink on --accent-fill, text over --accent-soft overlays (alpha-composited
- *  per background), and status ink on its own surface, for dark, light and every palette. Fails (exit 1) below 4.5:1 — status
- *  colors double as small text (links, notices, pressed buttons), so 3:1 is not enough. */
-import {readFileSync} from 'node:fs';
-const css=readFileSync(new URL('../src/styles/tokens.css',import.meta.url),'utf8').replace(/\/\*[\s\S]*?\*\//g,'');
-const blocks=[];
-const re=/([^{}]+)\{([^{}]*)\}/g;let m;
-while((m=re.exec(css))){
- const sel=m[1].trim();const vars={};
- for(const d of m[2].split(';')){
-  const i=d.indexOf(':');if(i<0)continue;
-  const k=d.slice(0,i).trim();const v=d.slice(i+1).trim();
-  if(!k.startsWith('--'))continue;
-  const hexM=v.match(/^#([0-9a-fA-F]{3,8})$/);
-  if(hexM)vars[k]={rgb:hex(hexM[1]),alpha:hexAlpha(hexM[1]),raw:v};
-  const rgbaM=v.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+)\s*)?\)$/);
-  if(rgbaM)vars[k]={rgb:[+rgbaM[1],+rgbaM[2],+rgbaM[3]],alpha:rgbaM[4]===undefined?1:+rgbaM[4],raw:v};
-  const refM=v.match(/^var\((--[a-z0-9-]+)\)$/);
-  if(refM)vars[k]={ref:refM[1],raw:v};
- }
- blocks.push({sel,vars});
-}
+/** WCAG contrast audit: dark/light + the inline palettes (tokens.css), every palette file in
+ *  src/themes/*.css, and both high-contrast modes (global.css data-contrast=high overrides).
+ *  Per theme variant: text + status colors on every shell background, the resolved action ink
+ *  (--action-ink -> var(--accent-ink, #fff)) on --accent-fill, text/accent on --accent-soft
+ *  alpha-composited over every background, and status ink on its own surface.
+ *  Fails (exit 1) below 4.5:1 — status colors double as small text, so 3:1 is not enough. */
+import {readFileSync,readdirSync} from 'node:fs';
+
 function hexAlpha(h){if(h.length===4)return parseInt(h[3]+h[3],16)/255;if(h.length===8)return parseInt(h.slice(6,8),16)/255;return 1;}
 function hex(h){if(h.length===3||h.length===4)h=h.split('').map(c=>c+c).join('');return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];}
+
+const parse=(css)=>{
+ css=css.replace(/\/\*[\s\S]*?\*\//g,'');
+ const blocks=[];
+ const re=/([^{}]+)\{([^{}]*)\}/g;let m;
+ while((m=re.exec(css))){
+  const sel=m[1].trim().replace(/:not\([^)]*\)/g,'');
+  const vars={};
+  for(const d of m[2].split(';')){
+   const i=d.indexOf(':');if(i<0)continue;
+   const k=d.slice(0,i).trim();const v=d.slice(i+1).trim().replace(/!important$/,'');
+   if(!k.startsWith('--'))continue;
+   const hexM=v.match(/^#([0-9a-fA-F]{3,8})$/);
+   if(hexM){vars[k]={rgb:hex(hexM[1]),alpha:hexAlpha(hexM[1]),raw:v};continue;}
+   const rgbaM=v.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+)\s*)?\)$/);
+   if(rgbaM){vars[k]={rgb:[+rgbaM[1],+rgbaM[2],+rgbaM[3]],alpha:rgbaM[4]===undefined?1:+rgbaM[4],raw:v};continue;}
+   const cmM=v.match(/^color-mix\(in srgb,\s*(#[0-9a-fA-F]{3,8})\s+([\d.]+)%\s*,\s*transparent\s*\)$/);
+   if(cmM){vars[k]={rgb:hex(cmM[1]),alpha:+cmM[2]/100,raw:v};continue;}
+   const refM=v.match(/^var\((--[a-z0-9-]+)\s*(?:,\s*(#[0-9a-fA-F]{3,8})\s*)?\)$/);
+   if(refM)vars[k]={ref:refM[1],fb:refM[2],raw:v};
+  }
+  blocks.push({sel,vars});
+ }
+ return blocks;
+};
 
 const lum=([r,g,b])=>{const f=(c)=>{c/=255;return c<=0.03928?c/12.92:Math.pow((c+0.055)/1.055,2.4);};return 0.2126*f(r)+0.7152*f(g)+0.0722*f(b);};
 const ratio=(a,b)=>{const x=lum(a),y=lum(b);return (Math.max(x,y)+0.05)/(Math.min(x,y)+0.05);};
 const over=(fg,bg)=>fg.rgb.map((c,i)=>Math.round(c*fg.alpha+bg.rgb[i]*(1-fg.alpha)));
 
-const merge=(pred)=>Object.assign({},...blocks.filter(pred).map(b=>b.vars));
-const root=merge(b=>b.sel===':root');
-const light=merge(b=>b.sel.includes('data-theme=light')&&!b.sel.includes('data-palette='));
-const themes={dark:{...root},light:{...root,...light}};
-for(const b of blocks){
- const p=b.sel.match(/data-palette=([a-z]+)/);if(!p)continue;
- const t=b.sel.includes('data-theme=light')?'light':'dark';
- themes[t+':'+p[1]]={...themes[t],...b.vars};
+const here=(p)=>new URL(p,import.meta.url);
+const tokenBlocks=parse(readFileSync(here('../src/styles/tokens.css'),'utf8'));
+const globalBlocks=parse(readFileSync(here('../src/styles/global.css'),'utf8'));
+const themeDir=here('../src/themes/');
+const paletteBlocks=readdirSync(themeDir).filter(f=>f.endsWith('.css'))
+ .flatMap(f=>parse(readFileSync(new URL(f,themeDir),'utf8')));
+
+const attrs=(sel)=>Object.fromEntries([...sel.matchAll(/\[([\w-]+)=["']?([\w-]+)["']?\]/g)].map(a=>[a[1],a[2]]));
+const merge=(blocks,pred)=>Object.assign({},...blocks.filter(b=>pred(attrs(b.sel))).map(b=>b.vars));
+
+const dark=merge(tokenBlocks,a=>Object.keys(a).length===0);
+const light={...dark,...merge(tokenBlocks,a=>a['data-theme']==='light'&&!a['data-palette']&&!a['data-contrast']&&!a['data-motion'])};
+const themes={dark,light};
+for(const b of [...tokenBlocks,...paletteBlocks]){
+ const a=attrs(b.sel);
+ if(!a['data-palette']||!a['data-theme']||a['data-contrast'])continue;
+ const key=a['data-theme']+':'+a['data-palette'];
+ themes[key]={...(themes[key]||(a['data-theme']==='light'?light:dark)),...b.vars};
 }
+themes['hc-light']={...light,...merge(globalBlocks,a=>a['data-contrast']==='high'&&a['data-theme']!=='dark'&&!a['data-palette'])};
+themes['hc-dark']={...dark,...merge(globalBlocks,a=>a['data-contrast']==='high'&&!a['data-palette'])};
+
+// resolve var(--x[, fallback]) aliases through the merged theme (status ink/surface, action ink)
 for(const v of Object.values(themes)){
  for(const k of Object.keys(v)){
   let hops=0;
   while(v[k]&&v[k].ref&&hops++<4){
    const t=v[v[k].ref];
-   if(!t){delete v[k];break;}
-   v[k]=t.ref?{ref:t.ref,raw:v[k].raw}:{rgb:t.rgb,alpha:t.alpha,raw:v[k].raw+'='+t.raw};
+   if(!t){v[k]=v[k].fb?{rgb:hex(v[k].fb),alpha:hexAlpha(v[k].fb),raw:v[k].raw}:undefined;if(!v[k])delete v[k];break;}
+   v[k]=t.ref?{ref:t.ref,fb:v[k].fb,raw:v[k].raw}:{rgb:t.rgb,alpha:t.alpha,raw:v[k].raw+'='+t.raw};
   }
   if(v[k]&&v[k].ref)delete v[k];
  }
 }
+
 const TEXT=['--text-primary','--text-secondary','--text-tertiary'];
 const STATUS=['--accent','--warning','--danger'];
 const BG=['--bg-base','--bg-panel','--bg-elevated','--bg-surface','--bg-hover','--canvas-bg','--shell-bg'];
-const WHITE={rgb:[255,255,255],alpha:1,raw:'#fff'};
+const PAIRS=[['--status-info-ink','--status-info-surface'],['--status-success-ink','--status-success-surface'],['--status-warning-ink','--status-warning-surface'],['--status-danger-ink','--status-danger-surface']];
 let fails=0;
 const fail=(msg)=>{fails++;console.log('FAIL '+msg);};
 for(const [name,v] of Object.entries(themes)){
@@ -60,10 +85,10 @@ for(const [name,v] of Object.entries(themes)){
   const r=ratio(v[tk].rgb,v[bk].rgb);
   if(r<4.5)fail(`${name} ${tk} on ${bk}: ${r.toFixed(2)} (${v[tk].raw} on ${v[bk].raw})`);
  }
- // white action ink on the filled accent button
- if(v['--accent-fill']){
-  const r=ratio(WHITE.rgb,v['--accent-fill'].rgb);
-  if(r<4.5)fail(`${name} action-ink #fff on --accent-fill: ${r.toFixed(2)} (${v['--accent-fill'].raw})`);
+ // action ink (--accent-ink or white) on the filled accent button
+ if(v['--accent-fill']&&v['--action-ink']){
+  const r=ratio(v['--action-ink'].rgb,v['--accent-fill'].rgb);
+  if(r<4.5)fail(`${name} --action-ink on --accent-fill: ${r.toFixed(2)} (${v['--action-ink'].raw} on ${v['--accent-fill'].raw})`);
  }
  // text over accent-soft overlays (menu highlight, pressed buttons, checked options, badges)
  const soft=v['--accent-soft'];
@@ -77,7 +102,7 @@ for(const [name,v] of Object.entries(themes)){
   }
  }
  // status ink on its own surface (badges, notices, banners); alpha surfaces composite per background
- for(const [ik,sk] of [['--status-info-ink','--status-info-surface'],['--status-success-ink','--status-success-surface'],['--status-warning-ink','--status-warning-surface'],['--status-danger-ink','--status-danger-surface']]){
+ for(const [ik,sk] of PAIRS){
   const ink=v[ik],sur=v[sk];
   if(!ink||!sur)continue;
   if(sur.alpha<1){

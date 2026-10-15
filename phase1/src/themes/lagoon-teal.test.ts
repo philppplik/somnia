@@ -17,7 +17,7 @@ for (const {mode, palette} of LAGOON_TEAL_THEMES) {
         assert.ok(ratio >= 4.5, `${foreground} on ${surface}: ${ratio}:1`);
       }
     }
-    assert.ok(contrastRatio(tokens['accent-ink'], tokens.accent) >= 4.5);
+    assert.ok(contrastRatio(tokens['accent-ink'], tokens['accent-fill']) >= 4.5);
     // Existing filled CTA and badge components use white text on accent-fill.
     assert.ok(contrastRatio('#ffffff', tokens['accent-fill']) >= 4.5);
   });

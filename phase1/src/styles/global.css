@@ -106,7 +106,7 @@ input,textarea,[contenteditable]:not([contenteditable="false"]),.cm-content,[dat
 /* Look options (Settings > Appearance): UI scale via zoom, compensated so the app still fills the window. */
 #root{zoom:var(--ui-zoom,1)}
 #root .app-frame{height:calc(100dvh / var(--ui-zoom,1))}
-.accent-fill{background:var(--accent);color:var(--accent-ink,#fff)}
+.accent-fill{background:var(--accent-fill);color:var(--accent-ink,#fff)}
 /* Confirm-style dialogs (close, save): card padding, readable width, consistent title and text rhythm. */
 .dialog-popup.confirm-dialog{width:460px;padding:22px 22px 18px;top:20vh}
 .confirm-dialog [data-slot=title],.confirm-dialog h2{margin:0 0 8px;font-size:15px;font-weight:600;color:var(--text-primary)}
