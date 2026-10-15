@@ -1310,5 +1310,7 @@
  "cmd.animation.layers.flicker": "Fazer as camadas marcadas piscarem como um letreiro com defeito",
  "animation.rig.shake.6": "Sacudir a partir do cursor, leve",
  "animation.rig.shake.20": "Sacudir a partir do cursor, forte",
- "cmd.animation.layers.shake": "Sacudir as camadas marcadas a partir do cursor como um impacto"
+ "cmd.animation.layers.shake": "Sacudir as camadas marcadas a partir do cursor como um impacto",
+ "animation.export.check.shrunk": "Reduzida a zero em todo o intervalo de exportação, então nunca aparece: {names}",
+ "animation.export.check.empty": "Camada de texto sem texto, não desenha nada: {names}"
 }

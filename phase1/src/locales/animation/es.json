@@ -1310,5 +1310,7 @@
  "cmd.animation.layers.flicker": "Hacer parpadear las capas marcadas como un letrero averiado",
  "animation.rig.shake.6": "Sacudir desde el cabezal, suave",
  "animation.rig.shake.20": "Sacudir desde el cabezal, fuerte",
- "cmd.animation.layers.shake": "Sacudir las capas marcadas desde el cabezal como un impacto"
+ "cmd.animation.layers.shake": "Sacudir las capas marcadas desde el cabezal como un impacto",
+ "animation.export.check.shrunk": "Reducida a cero en todo el rango de exportación, así que nunca se ve: {names}",
+ "animation.export.check.empty": "Capa de texto sin texto, no dibuja nada: {names}"
 }

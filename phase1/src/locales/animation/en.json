@@ -1310,5 +1310,7 @@
  "cmd.animation.layers.flicker": "Flicker the ticked layers like a failing sign",
  "animation.rig.shake.6": "Shake at the playhead, light",
  "animation.rig.shake.20": "Shake at the playhead, strong",
- "cmd.animation.layers.shake": "Shake the ticked layers from the playhead like an impact"
+ "cmd.animation.layers.shake": "Shake the ticked layers from the playhead like an impact",
+ "animation.export.check.shrunk": "Scaled down to nothing for the whole export range, so it never shows: {names}",
+ "animation.export.check.empty": "Text layer with no text, so it draws nothing: {names}"
 }

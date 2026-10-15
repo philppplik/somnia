@@ -1310,5 +1310,7 @@
  "cmd.animation.layers.flicker": "Faire scintiller les calques cochés comme une enseigne défectueuse",
  "animation.rig.shake.6": "Secouer depuis la tête de lecture, léger",
  "animation.rig.shake.20": "Secouer depuis la tête de lecture, fort",
- "cmd.animation.layers.shake": "Secouer les calques cochés depuis la tête de lecture comme un choc"
+ "cmd.animation.layers.shake": "Secouer les calques cochés depuis la tête de lecture comme un choc",
+ "animation.export.check.shrunk": "Réduit à zéro sur toute la plage d’export, donc jamais visible : {names}",
+ "animation.export.check.empty": "Calque de texte sans texte, ne dessine rien : {names}"
 }

@@ -1310,5 +1310,7 @@
  "cmd.animation.layers.flicker": "Markierte Ebenen wie ein defektes Leuchtschild flackern lassen",
  "animation.rig.shake.6": "Rütteln ab Abspielkopf, leicht",
  "animation.rig.shake.20": "Rütteln ab Abspielkopf, stark",
- "cmd.animation.layers.shake": "Markierte Ebenen ab dem Abspielkopf wie bei einem Aufprall rütteln"
+ "cmd.animation.layers.shake": "Markierte Ebenen ab dem Abspielkopf wie bei einem Aufprall rütteln",
+ "animation.export.check.shrunk": "Im gesamten Exportbereich auf 0 skaliert und daher nie sichtbar: {names}",
+ "animation.export.check.empty": "Textebene ohne Text, zeichnet nichts: {names}"
 }

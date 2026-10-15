@@ -1825,3 +1825,13 @@ test('P274 shake command keys position per frame from the playhead, one undo',as
  s.undo();assert.equal(P().keys.length,0);
  s.setView({playhead:findComp(s.document!)!.duration-f(2)} as never);assert.throws(()=>run({layers:['b']}),/room/);
 });
+
+test('P275 export check: shrunk to zero and empty text are warned, normal layers are not',async()=>{
+ const {exportCheck}=await import('./exportCheck');const {defaultExportSettings}=await import('./exportSettings');
+ const d0=applyEdits(base(),[{type:'layer.add',kind:'solid',id:'z',over:{name:'Gone'}},{type:'prop.set',layer:'z',prop:'scale',value:[0,0]},{type:'layer.add',kind:'text',id:'e',over:{name:'Blank'}},{type:'layer.update',layer:'e',source:{text:'  '}}] as never);
+ const s=new AnimationSession();s.open(d0);const c=findComp(s.document!)!;
+ const iss=exportCheck(c,[],defaultExportSettings());
+ const sh=iss.find(i=>i.code==='shrunk'),em=iss.find(i=>i.code==='empty');
+ assert.ok(sh&&sh.severity==='warn'&&sh.layers.includes('Gone')&&sh.layers.length===1);
+ assert.ok(em&&em.layers.includes('Blank'));
+});

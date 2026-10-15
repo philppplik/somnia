@@ -12,6 +12,7 @@ export function exportCheck(comp:Composition,assets:readonly InterfaceAsset[],s:
  return preflight({layers:comp.layers,assetIds:new Set(assets.map(a=>a.id)),range:r,frame:s.crop??{x:0,y:0,width:comp.width,height:comp.height},
   seamless:s.loopSeam===true,
   frames:l=>{const a=snapToFrame(r.in,comp.fps),one=frameToTick(1,comp.fps),n=Math.min(MAX_FLASH_FRAMES,Math.max(0,Math.floor((r.out-a)/one)));return {opacity:Array.from({length:n},(_,i)=>evaluateMod(l.transform.opacity,a+i*one) as number),perSecond:comp.fps.num/comp.fps.den};},
+  scales:l=>ticks.map(t=>Math.min(...(evaluateMod(l.transform.scale,t) as number[]).map(Math.abs))),
   look:l=>{const T=l.transform,at=(t:number)=>[...(evaluateMod(T.position,t) as number[]),...(evaluateMod(T.scale,t) as number[]),evaluateMod(T.rotation,t) as number,evaluateMod(T.opacity,t) as number];
    return {opacity:ticks.map(t=>evaluateMod(T.opacity,t) as number),first:at(ticks[0]),last:at(ticks[ticks.length-1])};},
   boxes:l=>{const w=l.source.width,h=l.source.height;if(!(w&&h&&w>0&&h>0))return [];
