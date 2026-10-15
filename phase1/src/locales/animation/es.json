@@ -1267,5 +1267,7 @@
  "animation.rig.steps.3": "A tres fotogramas",
  "animation.rig.steps.4": "A cuatro fotogramas",
  "cmd.animation.layers.stepMotion": "Animar las capas marcadas a dos, tres o cuatro fotogramas",
- "animation.rig.group.steps": "Movimiento escalonado"
+ "animation.rig.group.steps": "Mantener poses",
+ "animation.rig.freeze": "Congelar en el cabezal",
+ "cmd.animation.layers.freeze": "Congelar las capas marcadas en el cabezal"
 }

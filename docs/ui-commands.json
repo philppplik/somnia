@@ -2162,6 +2162,24 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.layers.freeze",
+      "title": "Freeze the ticked layers at the playhead",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "frame",
+        "freeze",
+        "hold",
+        "pause",
+        "playhead",
+        "stay",
+        "still",
+        "stop"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.layers.label",
       "title": "Set a colour label on the selected layers",
       "category": "Edit",

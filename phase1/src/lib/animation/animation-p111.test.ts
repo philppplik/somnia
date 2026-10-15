@@ -1668,3 +1668,15 @@ test('P263 on twos: animated props become hold keys every N frames sampled from 
  assert.throws(()=>run({layers:['b'],frames:2}),/Tick at least|None of/);
  s.undo();assert.equal(T('opacity').keys.length,2);
 });
+
+test('P264 freeze: ticked layers keep their pose from the playhead on, later keys go, undo restores',async()=>{
+ const {freezeSpecs}=await import('./freezeCommands');const run=freezeSpecs()[0].run as (p?:unknown)=>unknown;
+ const s=open();setAnimationSession(s);
+ const T=()=>findComp(s.document!)!.layers.find(l=>l.id==='a')!.transform.opacity;
+ for(const [t,v] of [[0,0],[f(30),100],[f(60),0]]){s.dispatch({type:'key.add',layer:'a',prop:'opacity',t} as never);s.dispatch({type:'prop.set',layer:'a',prop:'opacity',t,value:v} as never);s.dispatch({type:'key.interp',layer:'a',prop:'opacity',t,interp:'linear'} as never);}
+ s.setView({playhead:f(15)} as never);
+ const r=run({layers:['a']}) as {properties:number};assert.ok(r.properties>=1);
+ const ks=T().keys;assert.deepEqual(ks.map(k=>k.t),[0,f(15)]);assert.equal(ks[1].v,50);assert.equal(ks[1].interp,'hold');
+ assert.throws(()=>run({layers:['a']}),/Nothing to freeze/);
+ s.undo();assert.equal(T().keys.length,3);
+});

@@ -1267,5 +1267,7 @@
  "animation.rig.steps.3": "Sur trois",
  "animation.rig.steps.4": "Sur quatre",
  "cmd.animation.layers.stepMotion": "Animer les calques cochés sur deux, trois ou quatre images",
- "animation.rig.group.steps": "Mouvement saccadé"
+ "animation.rig.group.steps": "Maintenir les poses",
+ "animation.rig.freeze": "Figer à la tête de lecture",
+ "cmd.animation.layers.freeze": "Figer les calques cochés à la tête de lecture"
 }

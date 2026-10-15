@@ -1267,5 +1267,7 @@
  "animation.rig.steps.3": "De três em três",
  "animation.rig.steps.4": "De quatro em quatro",
  "cmd.animation.layers.stepMotion": "Animar as camadas marcadas de dois em dois, três em três ou quatro em quatro quadros",
- "animation.rig.group.steps": "Movimento em passos"
+ "animation.rig.group.steps": "Manter poses",
+ "animation.rig.freeze": "Congelar no cursor",
+ "cmd.animation.layers.freeze": "Congelar as camadas marcadas no cursor"
 }

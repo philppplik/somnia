@@ -1267,5 +1267,7 @@
  "animation.rig.steps.3": "Auf Dreien",
  "animation.rig.steps.4": "Auf Vieren",
  "cmd.animation.layers.stepMotion": "Angekreuzte Ebenen auf Zweien, Dreien oder Vieren animieren",
- "animation.rig.group.steps": "Gestufte Bewegung"
+ "animation.rig.group.steps": "Posen halten",
+ "animation.rig.freeze": "Am Playhead einfrieren",
+ "cmd.animation.layers.freeze": "Angekreuzte Ebenen am Playhead einfrieren"
 }

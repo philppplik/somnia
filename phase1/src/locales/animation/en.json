@@ -1267,5 +1267,7 @@
  "animation.rig.steps.3": "On threes",
  "animation.rig.steps.4": "On fours",
  "cmd.animation.layers.stepMotion": "Animate the ticked layers on twos, threes or fours",
- "animation.rig.group.steps": "Step motion (twos)"
+ "animation.rig.group.steps": "Hold poses",
+ "animation.rig.freeze": "Freeze at the playhead",
+ "cmd.animation.layers.freeze": "Freeze the ticked layers at the playhead"
 }
