@@ -91,6 +91,7 @@ const AUTOSUM_FUNCTIONS: &[&str] = &["SUM", "AVERAGE", "COUNT", "MAX", "MIN"];
 const MAX_REVIEWED_RANGE_CELLS: u64 = 1000;
 const MAX_REVIEWED_RANGE_BYTES: usize = 1_000_000;
 const MAX_SUBTOTAL_GROUPS: usize = 100;
+const MAX_TABLE_COLUMNS: usize = 200;
 const MAX_PICTURES: usize = 100;
 const MAX_PICTURE_BYTES: usize = 10 * 1024 * 1024;
 const MAX_SHAPE_TEXT: usize = 200;
@@ -1497,7 +1498,7 @@ impl HeadlessWorkbook {
             .tables
             .iter()
             .take(MAX_TABLES)
-            .map(|t| json!({"name": t.name, "range": t.range.a1(), "header": t.header_row, "totals": t.totals_row, "banded": t.banded_rows, "bandedCols": t.banded_cols, "firstCol": t.first_col, "lastCol": t.last_col, "style": t.style}))
+            .map(|t| json!({"name": t.name, "range": t.range.a1(), "header": t.header_row, "totals": t.totals_row, "banded": t.banded_rows, "bandedCols": t.banded_cols, "firstCol": t.first_col, "lastCol": t.last_col, "style": t.style, "columns": t.columns.iter().take(MAX_TABLE_COLUMNS).map(|c| c.name.clone()).collect::<Vec<_>>()}))
             .collect();
         Ok(json!({"tables": tables, "styles": gridcraft_engine::tables::gallery()}).to_string())
     }

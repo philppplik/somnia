@@ -36,7 +36,7 @@ export function parsePivotCommand(input:unknown):PivotOp{
 }
 export function parseTables(raw:{tables:unknown;styles:unknown}):TablesInfo{
  const tables:TableInfo[]=[];
- if(Array.isArray(raw.tables))for(const t of raw.tables.slice(0,MAX_TABLES)){const r=t as Record<string,unknown>|null;if(r&&typeof r.name==='string'&&typeof r.range==='string')tables.push({name:r.name,range:r.range,header:r.header===true,totals:r.totals===true,banded:r.banded===true,bandedCols:r.bandedCols===true,firstCol:r.firstCol===true,lastCol:r.lastCol===true,style:typeof r.style==='string'?r.style:''});}
+ if(Array.isArray(raw.tables))for(const t of raw.tables.slice(0,MAX_TABLES)){const r=t as Record<string,unknown>|null;if(r&&typeof r.name==='string'&&typeof r.range==='string')tables.push({name:r.name,range:r.range,header:r.header===true,totals:r.totals===true,banded:r.banded===true,bandedCols:r.bandedCols===true,firstCol:r.firstCol===true,lastCol:r.lastCol===true,style:typeof r.style==='string'?r.style:'',columns:Array.isArray(r.columns)?r.columns.filter((c):c is string=>typeof c==='string'&&c.length>0&&c.length<=255).slice(0,200):[]});}
  return {tables,styles:Array.isArray(raw.styles)?raw.styles.filter((s):s is string=>typeof s==='string'&&STYLE.test(s)).slice(0,100):[]};
 }
 export function parsePivotFields(raw:{fields:unknown}):PivotField[]{

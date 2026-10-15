@@ -32,7 +32,7 @@ import type {ReviewKind,ReviewResult} from '../../lib/sheets/reviewInfo';
 import type {AuditOp,TraceInfo,ErrorsInfo,WatchRow} from '../../lib/sheets/audit';
 import type {ValidationListItem,ValidationManageOp,InvalidCells,ValidationRuleInfo,CfManageOp,CfRuleInfo,ChartInfo,ChartScene,SparklineScene,ChartOp,SparklineOp,ProtectOp,WhatIfOp,ScenarioInfo,SavedViewOp,SavedView,OutlineInfo,LayoutOp,CellToolOp,DataToolOp,PivotEditOp,PivotReport,FunctionInfo,ObjectOp,ObjectsInfo,ImageObject,ShapeObject,PageInfo,PageSetupOp,PasteOp,ExportOp,PivotOp,TableOp,TablesInfo,FillDirection,NameInfo,NameOp,AnnotateOp,CellAnnotations,DedupeOp,SplitOp,ReplaceOp,ValidationOp,CfOp,FilterOp,SortOp,SheetOp,FormatOp,LineAxis,LineEditKind,LineOp,SheetInfo,SheetLayout,ViewCell,WorkbookInfo} from '../../lib/sheets/protocol';
 import {functionHint} from '../../lib/sheets/formulaHint';
-import {applySuggestion,suggestNames,wordAtCaret} from '../../lib/sheets/nameComplete';
+import {applySuggestion,completionAt} from '../../lib/sheets/nameComplete';
 import {NativeSelect} from '../ui/native-controls';
 import {editSpan,MAX_SHEET_COLS,MAX_SHEET_ROWS} from '../../lib/sheets/lineOps';
 import {Geometry} from '../../lib/sheets/geometry';
@@ -543,7 +543,7 @@ function Workbook({item}:{item:MediaItem}){
  if(phase.kind==='error')return <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center" role="alert" data-testid="sheets-error"><p className="text-[13px] text-red-600">{phase.message}</p><p className="text-[12px] text-ink-3">{t('sheets.errorHint')}</p>{original.current&&<Button onClick={restart}>{t('sheets.reopen')}</Button>}</div>;
  const names=book?.sheets??[];
  const fnHint=draft!==null?functionHint(functions,draft,caret):null;
- const word=draft!==null?wordAtCaret(draft,caret):null,suggestions=word?suggestNames(functions,definedNames,word.word):[];
+ const comp=draft!==null?completionAt(draft,caret,{fns:functions,names:definedNames,tables:tablesInfo?.tables??[],sheets:(book?.sheets??[]).filter(x=>x.visibility==='Visible').map(x=>x.name)}):null,word=comp,suggestions=comp?.suggestions??[];
  const pickSuggestion=(i:number)=>{const s=suggestions[i];if(!s||!word||draft===null)return;const r=applySuggestion(draft,word.start,caret,s);if(!r)return;setDraft(r.text);setCaret(r.caret);requestAnimationFrame(()=>{const el=formulaRef.current;if(el){el.focus();el.setSelectionRange(r.caret,r.caret);}});};
  const reviewReady=phase.kind==='ready'&&draft===null&&!!engine.current&&!engine.current.isDisposed&&!engine.current.hasPendingMutation&&book?.sheets.find(s=>s.index===sheet)?.visibility==='Visible'&&rectCells(range)<=100;
  return <section className="canvas-stage flex min-h-0 flex-1 flex-col" aria-label={t('sheets.workbook',{name:item.name})}><details><summary>{t('sheets.liveReview.title')}</summary><SheetsLiveSelectionReview scope={reviewScope} read={reviewReady?readSelection:null}/></details>
@@ -573,7 +573,7 @@ function Workbook({item}:{item:MediaItem}){
     onBlur={()=>{if(acDown.current){acDown.current=false;return;}if(draftRef.current!==null)void commit(draftRef.current);}}/>
   </div>
   {valRule&&(valRule.inputMessage||valRule.inputTitle)&&<p className="px-3 py-1 text-xs text-ink-3" role="note" data-testid="sheets-input-hint">{[valRule.inputTitle,valRule.inputMessage].filter(Boolean).join(': ')}</p>}
-  {suggestions.length>0&&<NativeSelect className="mx-3 my-1 w-64" aria-label={t('sheets.ac.pick')} value="" onChange={e=>{const i=Number(e.currentTarget.value);if(Number.isInteger(i))pickSuggestion(i);}} onPointerDown={()=>{acDown.current=true;}} onKeyDown={()=>{acDown.current=true;}} data-testid="sheets-ac"><option value="">{t('sheets.ac.pick')}</option>{suggestions.map((s,i)=><option key={s.kind+s.label} value={i}>{s.label+(s.kind==='fn'?' ( )':' ')+t(s.kind==='fn'?'sheets.ac.fn':'sheets.ac.name')}</option>)}</NativeSelect>}
+  {suggestions.length>0&&<NativeSelect className="mx-3 my-1 w-64" aria-label={t('sheets.ac.pick')} value="" onChange={e=>{const i=Number(e.currentTarget.value);if(Number.isInteger(i))pickSuggestion(i);}} onPointerDown={()=>{acDown.current=true;}} onKeyDown={()=>{acDown.current=true;}} data-testid="sheets-ac"><option value="">{t('sheets.ac.pick')}</option>{suggestions.map((s,i)=><option key={s.kind+s.label} value={i}>{s.label+(s.kind==='fn'?' ( )':' ')+t('sheets.ac.'+s.kind)}</option>)}</NativeSelect>}
   {fnHint&&<p className="px-3 py-1 text-xs text-ink-3" role="note" data-testid="sheets-fn-hint">{fnHint.name}({fnHint.args.map((a,i)=><span key={i}>{i>0&&', '}{i===fnHint.active?<strong>{a}</strong>:a}</span>)}) - {fnHint.description}</p>}
   <div ref={scroller} role="grid" tabIndex={0} aria-label={t('sheets.grid',{sheet:names[sheet]?.name??''})} aria-rowcount={totalRows} aria-colcount={totalCols} data-testid="sheets-grid"
    className="relative min-h-0 flex-1 overflow-auto outline-none focus-visible:ring-2 focus-visible:ring-accent" onKeyDown={onGridKey} onCopy={e=>onCopy(e,false)} onCut={e=>onCopy(e,true)} onPaste={onPaste}
