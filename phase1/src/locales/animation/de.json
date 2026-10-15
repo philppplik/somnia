@@ -1277,5 +1277,14 @@
  "animation.rig.wave.bob": "Welle: auf und ab",
  "animation.rig.wave.swing": "Welle: hin und her schwingen",
  "animation.rig.wave.breathe": "Welle: atmen (Skalierung)",
- "cmd.animation.layers.wave": "Welle durch die angekreuzten Ebenen laufen lassen"
+ "cmd.animation.layers.wave": "Welle durch die angekreuzten Ebenen laufen lassen",
+ "animation.palette.shift": "Alle Farben verschieben",
+ "animation.palette.shift.hue30": "Farbton +30°",
+ "animation.palette.shift.hue90": "Farbton +90°",
+ "animation.palette.shift.hue180": "Gegenfarbe (180°)",
+ "animation.palette.shift.lighter": "Heller",
+ "animation.palette.shift.darker": "Dunkler",
+ "animation.palette.shift.vivid": "Kräftiger",
+ "animation.palette.shift.muted": "Gedämpfter",
+ "cmd.animation.palette.shift": "Alle Farben der Komposition verschieben (Farbton, Sättigung, Helligkeit)"
 }

@@ -2821,6 +2821,29 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.palette.shift",
+      "title": "Shift every colour of the composition (hue, saturation, lightness)",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "brightness",
+        "color",
+        "colour",
+        "darker",
+        "hue",
+        "lighter",
+        "muted",
+        "palette",
+        "saturation",
+        "shift",
+        "theme",
+        "variant",
+        "vivid"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.path.mode",
       "title": "Set position path timing",
       "category": "Edit",

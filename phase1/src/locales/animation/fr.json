@@ -1277,5 +1277,14 @@
  "animation.rig.wave.bob": "Onde : monter et descendre",
  "animation.rig.wave.swing": "Onde : balancer de côté",
  "animation.rig.wave.breathe": "Onde : respirer (échelle)",
- "cmd.animation.layers.wave": "Faire courir une onde à travers les calques cochés"
+ "cmd.animation.layers.wave": "Faire courir une onde à travers les calques cochés",
+ "animation.palette.shift": "Décaler toutes les couleurs",
+ "animation.palette.shift.hue30": "Teinte +30°",
+ "animation.palette.shift.hue90": "Teinte +90°",
+ "animation.palette.shift.hue180": "Teinte opposée (180°)",
+ "animation.palette.shift.lighter": "Plus clair",
+ "animation.palette.shift.darker": "Plus sombre",
+ "animation.palette.shift.vivid": "Plus vif",
+ "animation.palette.shift.muted": "Plus terne",
+ "cmd.animation.palette.shift": "Décaler toutes les couleurs de la composition (teinte, saturation, luminosité)"
 }

@@ -1723,3 +1723,15 @@ test('P267 wave: each ticked layer gets the same sine one step later, linear key
  s.undo();assert.equal(T('b').keys.length,0);
  assert.ok(ka.length===r.keys);
 });
+
+test('P268 palette shift: hue rotates, lightness and saturation move, greys stay grey, locked layers keep their colour, one undo step',async()=>{
+ const {shiftColor,hexToHsl}=await import('./paletteShift');const {paletteSpecs}=await import('./paletteCommands');const run=paletteSpecs()[1].run as (p?:unknown)=>unknown;
+ assert.equal(shiftColor('#ff0000',{hue:120}),'#00ff00');assert.equal(shiftColor('#ff0000',{hue:180}),'#00ffff');assert.equal(shiftColor('#808080',{hue:90}),'#808080');
+ assert.equal(shiftColor('#000000',{lightness:-20}),'#000000');assert.ok(hexToHsl(shiftColor('#336699',{lightness:10}))[2]>hexToHsl('#336699')[2]);assert.equal(shiftColor('#ff0000',{hue:-180}),shiftColor('#ff0000',{hue:180}));
+ const d0=applyEdits(base(),[{type:'layer.add',kind:'solid',id:'s1'},{type:'layer.update',layer:'s1',source:{color:'#ff0000'}},{type:'layer.add',kind:'solid',id:'s2'},{type:'layer.update',layer:'s2',source:{color:'#ff0000'}},{type:'layer.update',layer:'s2',locked:true}] as never);
+ const s=new AnimationSession();s.open(d0);setAnimationSession(s);
+ const col=(id:string)=>findComp(s.document!)!.layers.find(l=>l.id===id)!.source.color;
+ assert.throws(()=>run({}),/Pick/);assert.throws(()=>run({hue:200}),/Hue is/);
+ run({hue:120});assert.equal(col('s1'),'#00ff00');assert.equal(col('s2'),'#ff0000');
+ s.undo();assert.equal(col('s1'),'#ff0000');
+});

@@ -1277,5 +1277,14 @@
  "animation.rig.wave.bob": "Wave: bob up and down",
  "animation.rig.wave.swing": "Wave: swing side to side",
  "animation.rig.wave.breathe": "Wave: breathe (scale)",
- "cmd.animation.layers.wave": "Run a wave through the ticked layers"
+ "cmd.animation.layers.wave": "Run a wave through the ticked layers",
+ "animation.palette.shift": "Shift all colours",
+ "animation.palette.shift.hue30": "Hue +30°",
+ "animation.palette.shift.hue90": "Hue +90°",
+ "animation.palette.shift.hue180": "Opposite hue (180°)",
+ "animation.palette.shift.lighter": "Lighter",
+ "animation.palette.shift.darker": "Darker",
+ "animation.palette.shift.vivid": "More vivid",
+ "animation.palette.shift.muted": "More muted",
+ "cmd.animation.palette.shift": "Shift every colour of the composition (hue, saturation, lightness)"
 }
