@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-866 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+867 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -180,6 +180,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `animation.motion.import` | Import motion presets from a JSON file | Edit | animation |  |
 | `animation.motion.save` | Save the selected keys as a motion preset | Edit | animation |  |
 | `animation.onion.set` | Set onion skin | View | animation |  |
+| `animation.palette.replace` | Replace a colour in every layer of the composition | Edit | animation |  |
 | `animation.path.mode` | Set position path timing | Edit | animation |  |
 | `animation.playback.loop` | Toggle looped playback | View | animation |  |
 | `animation.playhead.set` | Move playhead | View | animation |  |

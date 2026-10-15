@@ -2259,6 +2259,26 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.palette.replace",
+      "title": "Replace a colour in every layer of the composition",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "brand",
+        "color",
+        "colour",
+        "fill",
+        "palette",
+        "recolor",
+        "replace",
+        "stroke",
+        "swap",
+        "theme"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.path.mode",
       "title": "Set position path timing",
       "category": "Edit",

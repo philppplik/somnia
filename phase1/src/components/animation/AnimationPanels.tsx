@@ -30,6 +30,7 @@ import {useT} from '../../lib/useT';
 import {GuidesPanel} from './GuidesPanel';
 import {OnionPanel} from './OnionPanel';
 import {RigPanel} from './RigPanel';
+import {PalettePanel} from './PalettePanel';
 import {layerTemplates} from '../../lib/animation/layerTemplates';
 import {TemplateThumb} from './TemplateThumb';
 import {TEMPLATE_IDS,type TemplateId} from '../../lib/animation/templates';
@@ -67,7 +68,7 @@ export function CompositionsPanel(_:PanelHostProps){
   <ul className="m-0 grid list-none gap-1 p-0" aria-label={t('animation.comp.list')}>{doc.compositions.map(c=><li key={c.id}>
    <button type="button" aria-current={c.id===doc.activeComp} className={`w-full truncate rounded-sm border px-2 py-1.5 text-left text-ink ${c.id===doc.activeComp?'border-line bg-hover':'border-subtle'}`} onClick={()=>run('animation.comp.select',{comp:c.id})}>{c.name}</button></li>)}</ul>
   <div className="flex flex-wrap gap-1"><Button size="compact" variant="outline" onClick={()=>run('animation.comp.add')}>{t('animation.comp.new')}</Button><Button size="compact" variant="outline" onClick={()=>run('animation.comp.duplicate')} data-testid="animation-comp-duplicate">{t('animation.comp.duplicate')}</Button><Button size="compact" variant="outline" disabled={doc.compositions.length<2} onClick={()=>run('animation.comp.remove')} data-testid="animation-comp-remove">{t('animation.comp.remove')}</Button></div>
-  {findComp(doc)&&<GuidesPanel comp={findComp(doc)!}/>}{findComp(doc)&&<OnionPanel/>}{findComp(doc)&&<RigPanel comp={findComp(doc)!}/>}
+  {findComp(doc)&&<GuidesPanel comp={findComp(doc)!}/>}{findComp(doc)&&<OnionPanel/>}{findComp(doc)&&<RigPanel comp={findComp(doc)!}/>}{findComp(doc)&&<PalettePanel comp={findComp(doc)!}/>}
   <h3 className="m-0 mt-2 text-[11px] font-semibold uppercase tracking-wide text-ink-3">{t('animation.layer.addHeading')}</h3>
   {doc.compositions.length>1&&<div className="flex gap-1" data-testid="animation-precomp">
    <NativeSelect className="h-8 min-w-0 flex-1 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text" aria-label={t('animation.precomp.pick')} value={pre} onChange={e=>setPre(e.target.value)} data-testid="animation-precomp-select">

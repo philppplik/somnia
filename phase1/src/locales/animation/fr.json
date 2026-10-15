@@ -1127,5 +1127,9 @@
  "animation.export.check.hidden": "Les calques masques ne sont pas exportes : {names}",
  "animation.export.check.audio": "Le son n'est pas inclus dans les exports PNG, GIF, APNG ou planche : {names}",
  "animation.rig.loop": "Fermer la boucle",
- "cmd.animation.layers.closeLoop": "Fermer la boucle : valeurs de fin egales aux valeurs de debut"
+ "cmd.animation.layers.closeLoop": "Fermer la boucle : valeurs de fin egales aux valeurs de debut",
+ "animation.palette.title": "Couleurs",
+ "animation.palette.uses": "Utilisee par {n} calques",
+ "animation.palette.hint": "Choisissez une nouvelle couleur pour la remplacer dans tous les calques (fonds et contours). Le nombre indique combien de calques l'utilisent. Les calques verrouilles restent inchanges.",
+ "cmd.animation.palette.replace": "Remplacer une couleur dans tous les calques de la composition"
 }

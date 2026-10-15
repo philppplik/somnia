@@ -1159,3 +1159,21 @@ test('P228 close loop: end key gets the start value, equal values skipped, keys 
  s.dispatch({type:'prop.set',layer:'b',prop:'position',value:[1,1],t:t1+T});assert.throws(()=>run({layers:['b']}),/past the end/);
  s.dispatch({type:'layer.update',layer:'b',locked:true});assert.throws(()=>run({layers:['b']}),/locked/);
 });
+test('P229 palette: colours with use counts, replace in fills and strokes in one undo step, locked kept, errors',async()=>{
+ const {paletteOf,recolor}=await import('./palette');const {paletteSpecs}=await import('./paletteCommands');
+ const run=(p?:unknown)=>paletteSpecs()[0].run(p) as {layers:number};
+ const s=open();setAnimationSession(s);
+ for(const id of ['p','q','r'])s.dispatch({type:'layer.add',kind:'shape',id} as never);
+ for(const [id,c] of [['p','#ff0000'],['q','#FF0000'],['r','#00ff00']])s.dispatch({type:'layer.update',layer:id,source:{color:c}} as never);
+ s.dispatch({type:'layer.stroke',layer:'r',stroke:{color:'#ff0000',width:2}} as never);
+ const C=()=>findComp(s.document!),L=(id:string)=>C().layers.find(l=>l.id===id)!;
+ const red=paletteOf(C().layers).find(x=>x.color==='#ff0000')!;assert.equal(red.layers,3);assert.ok(paletteOf(C().layers).length<=12);
+ const before=s.document;
+ s.dispatch({type:'layer.update',layer:'q',locked:true} as never);
+ assert.equal(recolor(C().layers,'#ff0000','#0000ff').length,2);
+ const r=run({from:'#ff0000',to:'#0000FF'});assert.equal(r.layers,2);
+ assert.equal(L('p').source.color,'#0000ff');assert.equal(L('q').source.color,'#FF0000');assert.equal(L('r').stroke!.color,'#0000ff');assert.equal(L('r').source.color,'#00ff00');
+ s.undo();assert.equal(L('p').source.color,'#ff0000');assert.equal(L('r').stroke!.color,'#ff0000');
+ assert.throws(()=>run({from:'red',to:'#000000'}),/#rrggbb/);assert.throws(()=>run({from:'#ff0000',to:'#FF0000'}),/same/);assert.throws(()=>run({from:'#123456',to:'#000000'}),/No layer/);
+ void before;
+});

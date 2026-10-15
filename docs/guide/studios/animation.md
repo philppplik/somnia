@@ -70,3 +70,4 @@ Back to [Studios](../studios.md).
 - Rig > Arrange > Array of copies: grid, row, column or circle of the selected layer (keyed positions move with each copy; circles rotate the copies outward). The command takes count, columns, spacing, radius.
 - Render panel export check: under the format readouts it lists layers that would surprise you in the file (missing image, outside the crop or frame, not in the exported range, hidden, audio not included in frame exports).
 - Rig > Layers > Close loop: every animated property of the selected layers gets a key on the last work-area frame with its value at the work-area start, so GIF, APNG and video loops have no jump.
+- Colours (left panel): the solid colours the composition uses, with how many layers use each. Pick a new colour in a swatch to replace it in every layer's fill and stroke (one undo step, locked layers keep theirs).

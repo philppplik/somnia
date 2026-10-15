@@ -1127,5 +1127,9 @@
  "animation.export.check.hidden": "Las capas ocultas no se exportan: {names}",
  "animation.export.check.audio": "El audio no se incluye en PNG, GIF, APNG ni hojas: {names}",
  "animation.rig.loop": "Cerrar bucle",
- "cmd.animation.layers.closeLoop": "Cerrar el bucle: los valores finales igualan a los iniciales"
+ "cmd.animation.layers.closeLoop": "Cerrar el bucle: los valores finales igualan a los iniciales",
+ "animation.palette.title": "Colores",
+ "animation.palette.uses": "Usado en {n} capas",
+ "animation.palette.hint": "Elige un color nuevo para reemplazarlo en todas las capas (rellenos y trazos). El numero indica cuantas capas lo usan. Las capas bloqueadas se quedan igual.",
+ "cmd.animation.palette.replace": "Reemplazar un color en todas las capas de la composicion"
 }

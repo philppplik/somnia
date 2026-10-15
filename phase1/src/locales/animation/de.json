@@ -1127,5 +1127,9 @@
  "animation.export.check.hidden": "Ausgeblendete Ebenen werden nicht exportiert: {names}",
  "animation.export.check.audio": "Ton ist in PNG-, GIF-, APNG- und Sheet-Exporten nicht enthalten: {names}",
  "animation.rig.loop": "Loop schliessen",
- "cmd.animation.layers.closeLoop": "Loop schliessen: Endwerte gleich Startwerte"
+ "cmd.animation.layers.closeLoop": "Loop schliessen: Endwerte gleich Startwerte",
+ "animation.palette.title": "Farben",
+ "animation.palette.uses": "In {n} Ebenen verwendet",
+ "animation.palette.hint": "Neue Farbe waehlen, um sie in allen Ebenen zu ersetzen (Flaechen und Konturen). Die Zahl zeigt, wie viele Ebenen sie nutzen. Gesperrte Ebenen bleiben.",
+ "cmd.animation.palette.replace": "Eine Farbe in allen Ebenen der Komposition ersetzen"
 }

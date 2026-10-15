@@ -1127,5 +1127,9 @@
  "animation.export.check.hidden": "Hidden layers are not exported: {names}",
  "animation.export.check.audio": "Audio is not included in PNG, GIF, APNG or sheet exports: {names}",
  "animation.rig.loop": "Close loop",
- "cmd.animation.layers.closeLoop": "Close the loop: end values equal the start values"
+ "cmd.animation.layers.closeLoop": "Close the loop: end values equal the start values",
+ "animation.palette.title": "Colours",
+ "animation.palette.uses": "Used by {n} layers",
+ "animation.palette.hint": "Pick a new colour to replace it in every layer (fills and strokes). The number is how many layers use it. Locked layers keep theirs.",
+ "cmd.animation.palette.replace": "Replace a colour in every layer of the composition"
 }
