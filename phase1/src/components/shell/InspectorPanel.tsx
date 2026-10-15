@@ -21,7 +21,7 @@ export function InspectorPanel({panelId,context}:PanelHostProps){
  const empty=!!def?.emptyWhen&&evalWhen(def.emptyWhen,context);const sections=empty?[]:resolveInspectorSections(def?.sections??[],context);
  const [collapsed,setCollapsed]=usePanelState<string[]>(`${context.studio}.${panelId}.collapsed`,(def?.sections??[]).filter(s=>s.defaultCollapsed).map(s=>s.id));
  const toggle=(id:string)=>setCollapsed(collapsed.includes(id)?collapsed.filter(x=>x!==id):[...collapsed,id]);
- return <aside style={{overflowY:'auto'}} className="panel inspector grid min-h-0 content-start overflow-auto" aria-label={t(def?.titleKey??'shell.inspector.title')} data-testid="shell-inspector" data-studio={context.studio}>
+ return <aside style={{overflowY:'auto'}} className="panel inspector grid min-h-0 content-start overflow-auto" aria-label={t(def?.titleKey??'shell.inspector.title')} data-testid="shell-inspector" data-shell-region="inspector" tabIndex={-1} data-studio={context.studio}>
   {sections.length===0&&<div className="p-3" data-testid="inspector-empty-state"><p className="m-0 text-[12px] text-ink-3" data-testid="shell-inspector-empty">{t(def?.emptyKey??'shell.inspector.empty')}</p></div>}
   {sections.map(sec=>{
    const Host=sectionHosts.get(sec.component);if(!Host)throw new Error(`Inspector section unavailable: ${sec.component}`);

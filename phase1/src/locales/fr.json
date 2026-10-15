@@ -4147,5 +4147,8 @@
   "agent.panel.inspect": "Autoriser la lecture du document actif et de la sélection. Les modifications restent soumises à vérification.",
   "agent.panel.disclose": "Transmettre le document et la sélection du prochain tour à {provider}.",
   "agent.panel.oneUse": "Autorisation unique, invalidée par un changement de cible, contexte ou configuration. Le consentement cloud reste nécessaire.",
-  "agent.panel.tip": "Choisissez modèle et contexte dans Réglages, puis décrivez votre tâche. Les modifications restent à vérifier."
+  "agent.panel.tip": "Choisissez modèle et contexte dans Réglages, puis décrivez votre tâche. Les modifications restent à vérifier.",
+  "cmd.studio.next": "Passer au studio suivant",
+  "cmd.shell.focus.inspector": "Mettre le focus sur l’inspecteur",
+  "cmd.docs.open": "Ouvrir un lien de documentation du studio"
 }

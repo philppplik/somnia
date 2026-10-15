@@ -4147,5 +4147,8 @@
   "agent.panel.inspect": "Aktives Dokument und Auswahl prüfen lassen. Änderungen brauchen weiter eine Vorschaufreigabe.",
   "agent.panel.disclose": "Dokument und Auswahl des nächsten Durchlaufs an {provider} weitergeben.",
   "agent.panel.oneUse": "Die Freigabe gilt einmal und verfällt bei Ziel-, Kontext- oder Konfigurationsänderungen. Cloud-Zustimmung ist zusätzlich nötig.",
-  "agent.panel.tip": "Modell und Chat-Kontext in Einstellungen wählen, dann die Aufgabe beschreiben. Änderungen brauchen weiter Freigabe."
+  "agent.panel.tip": "Modell und Chat-Kontext in Einstellungen wählen, dann die Aufgabe beschreiben. Änderungen brauchen weiter Freigabe.",
+  "cmd.studio.next": "Zum nächsten Studio wechseln",
+  "cmd.shell.focus.inspector": "Inspektor fokussieren",
+  "cmd.docs.open": "Docs-Link des Studios öffnen"
 }

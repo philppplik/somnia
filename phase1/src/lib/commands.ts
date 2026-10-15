@@ -13,6 +13,9 @@ import {listStudios,getStudio} from './studios';
 import {studioModes} from './studios/modes';
 import {getUiContext} from './uiContextStore';
 import {requestStudio} from '../store/appStore';
+import {cycleStudioId} from './studioCycle';
+import {openDocsLink} from './docsLinkOpen';
+import {resolveDocsLinks} from './shell/docsLinks';
 import {copyErrorReport} from './diagnostics/hostStore';
 import {t,tOr} from './i18n';
 import {openExternal,REPO_URL} from './openExternal';
@@ -64,6 +67,10 @@ ui('sidebar.toggle','Toggle sidebar','Mod+B',()=>patchState({sidebarOpen:!getSta
 ui('agent.toggle','Toggle Somnia Agent','Mod+Alt+A',()=>patchState({agentOpen:!getState().agentOpen}));
 registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'chat.toggle',title:'Toggle session chat',category:'View',shortcut:'Mod+Alt+C',allowInInput:true,enabled:()=>!!getChatSession(),run:()=> /* History: UI/file state only; no document undo entry. */ toggleSessionChat()});
 ui('inspector.toggle','Toggle inspector','Mod+Alt+I',()=>patchState({inspectorOpen:!getState().inspectorOpen}));
+/* Assumption (Philipp's wording for S/W was not recoverable): Mod+Alt+S cycles to the next studio, Mod+Alt+W moves focus into the inspector. Change the shortcut strings here only. */
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'studio.next',title:'Switch to next studio',category:'View',shortcut:'Mod+Alt+S',allowInInput:true,keywords:['studio','switch','next','cycle'],run:()=> /* History: UI state only; no document undo entry. */ {const to=cycleStudioId(listStudios().map(x=>x.id),getState().activeStudio);if(to&&to!==getState().activeStudio)requestStudio(to);}});
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'shell.focus.inspector',title:'Focus inspector',category:'View',shortcut:'Mod+Alt+W',keywords:['inspector','focus','panel','properties'],run:()=> /* History: UI state only; no document undo entry. */ {patchState({inspectorOpen:true});requestAnimationFrame(()=>requestAnimationFrame(()=>document.querySelector<HTMLElement>('[data-shell-region="inspector"]')?.focus()));}});
+registerCoreCommandSpec({level:'ui',params:{type:'object',properties:{id:{type:'string',minLength:1,maxLength:80}},required:['id'],additionalProperties:false},id:'docs.open',title:'Open a studio docs link',category:'Help',keywords:['docs','help','documentation','link'],run:async(params:{id:string})=> /* History: UI state only; opens the system browser for a checked allowlisted URL. */ {const link=resolveDocsLinks(getStudio(getState().activeStudio).shellV2?.docsLinks).find(l=>l.id===params.id);if(!link||!(await openDocsLink(link.url).catch(()=>false)))patchState({notice:'That docs link is not available.'});}});
 ui('problems.toggle','Toggle problems','Mod+J',()=>patchState({problemsOpen:!getState().problemsOpen}));
 const canUseCodeMode=(mode:string)=>studioModes(getStudio(getState().activeStudio)).some(m=>m.command==='view.'+mode)&&!['raster','vector','pdf'].includes(getUiContext().domain);
 for(const [mode,title,key] of [['code','Code',3],['design','Design',1],['split','Split',2]] as const)registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'view.'+mode,title:title+' view',category:'View',shortcut:'Mod+Alt+'+key,enabled:()=>canUseCodeMode(mode),run:()=> /* History: UI/file state only; no document undo entry. */ patchState({viewMode:mode})});
