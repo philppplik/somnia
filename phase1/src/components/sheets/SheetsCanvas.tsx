@@ -42,6 +42,11 @@ import {setSheetsSelection} from '../../lib/sheets/sheetsStore';
 import {PeerSwatch,PeerSelectionBox} from '../collab/PeerSwatch';
 const HEAD_W=48,HEAD_H=24;
 type Phase={kind:'loading'}|{kind:'error';message:string}|{kind:'ready'};
+type AbsBox={left:number;top:number;width:number;height:number};
+const AbsBoxImg=({box,surface,...rest}:{box:AbsBox;surface?:boolean}&React.ImgHTMLAttributes<HTMLImageElement>)=>{
+ const ref=useCallback((el:HTMLImageElement|null)=>{if(!el)return;el.style.left=box.left+'px';el.style.top=box.top+'px';el.style.width=box.width+'px';el.style.height=box.height+'px';el.style.zIndex='1';el.style.background=surface?'var(--surface)':'';},[box.left,box.top,box.width,box.height,surface]);
+ return <img ref={ref} draggable={false} className="pointer-events-none absolute" {...rest}/>;
+};
 export function SheetsCanvas(){
  const media=useMedia();const {t}=useT();useEffect(()=>registerSheetsCommands({openFormulas:openSheetsFormulasPanel}),[]);const item=media.items.find(i=>i.name===media.active&&i.kind==='xlsx');
  if(!item)return <main className="center" aria-label={t('sheets.workspace')}><div className="workspace"><section className="code-pane" aria-label={t('sheets.workspace')}><FileTabs/><StudioEmptyState studio="sheets" icon={<Table2/>} onOpen={()=>new Promise<void>((resolve,reject)=>{const input=document.createElement('input');input.type='file';input.accept='.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';input.oncancel=()=>resolve();input.onchange=async()=>{try{const file=input.files?.[0];if(file){const result=await addMediaFile(file,file.name);if('error' in result)throw Error(result.error);}resolve();}catch(e){reject(e);}};input.click();})} onCreate={()=>createBlankProject('sheets')} testId="sheets-empty"/></section></div></main>;
@@ -219,8 +224,8 @@ function Workbook({item}:{item:MediaItem}){
   if(draftRef.current!==null)await commit(draftRef.current);
   try{await engine.current!.sparklineOp(sheet,range.r0,range.c0,range.r1-range.r0+1,range.c1-range.c0+1,op);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
  const renderObjects=()=>{const out:React.ReactNode[]=[];
-  for(const c of charts){const url=chartImages.get(c.id);if(!url)continue;out.push(<img key={'chart'+c.id} src={url} alt={c.title??''} draggable={false} data-testid={'sheets-chart-'+c.id} className="pointer-events-none absolute" style={{left:HEAD_W+geo.colLeft(c.col)+c.dx*geo.zoom,top:HEAD_H+geo.rowTop(c.row)+c.dy*geo.zoom,width:c.width*geo.zoom,height:c.height*geo.zoom,zIndex:1,background:'var(--surface)'}}/>);}
-  for(const s of sparks){const box=geo.box(s.scene.row,s.scene.col);if(!box||box.width===0||box.height===0)continue;out.push(<img key={'spark'+s.scene.row+':'+s.scene.col} src={s.url} alt="" draggable={false} className="pointer-events-none absolute" style={{left:HEAD_W+box.left,top:HEAD_H+box.top,width:box.width,height:box.height,zIndex:1}}/>);}
+  for(const c of charts){const url=chartImages.get(c.id);if(!url)continue;out.push(<AbsBoxImg key={'chart'+c.id} src={url} alt={c.title??''} data-testid={'sheets-chart-'+c.id} surface box={{left:HEAD_W+geo.colLeft(c.col)+c.dx*geo.zoom,top:HEAD_H+geo.rowTop(c.row)+c.dy*geo.zoom,width:c.width*geo.zoom,height:c.height*geo.zoom}}/>);}
+  for(const s of sparks){const box=geo.box(s.scene.row,s.scene.col);if(!box||box.width===0||box.height===0)continue;out.push(<AbsBoxImg key={'spark'+s.scene.row+':'+s.scene.col} src={s.url} alt="" box={{left:HEAD_W+box.left,top:HEAD_H+box.top,width:box.width,height:box.height}}/>);}
   return out;};
  const applyProtect=async(op:ProtectOp)=>{
   if(collab.current){setNotice(t('sheets.pt.collab'));return;}
