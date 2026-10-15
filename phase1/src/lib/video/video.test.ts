@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {sniffVideo,VIDEO_FILE} from './format';
 import {exportName} from './recipe';
-import {clipRanges,flipOf,fullClip,isNeutralTimeline,locate,moveClip,rippleDelete,sanitizeClips,setClipEdge,sliceTimeline,splitAt,timelineDuration,type TimelineClip} from './timeline';
+import {clipFadeGain,clipRanges,fadeInOf,fadeOutOf,flipOf,fullClip,isNeutralTimeline,locate,moveClip,rippleDelete,sanitizeClips,setClipEdge,setClipFades,sliceTimeline,splitAt,timelineDuration,type TimelineClip} from './timeline';
 import {probeVideo} from './pipeline';
 import {addTimelineClip,closeVideo,deleteTimelineClip,exportVideo,getVideoSession,moveTimelineClip,openVideo,resetTimeline,runVideoExport,setTimelineClipGain,setVideoEngineFactory,setVideoFormat,splitTimelineAt,toggleTimelineClipMute,trimTimelineClip} from './session';
 import type {VideoEngineLike,VideoResult} from './engine';
@@ -201,4 +201,39 @@ test('clip flips: sanitize keeps the four real values and drops junk and none',(
  assert.equal(sanitizeClips([mk('diagonal')],{'a.mp4':5})[0].flip,undefined);
  assert.equal(flipOf(mk('v')),'v');
  assert.equal(flipOf(mk(undefined)),'none');
+});
+
+test('timeline: clip audio fades clamp into the clip length and strip on stills',()=>{
+ const clip={...fullClip('a.mp4',10),fadeIn:3,fadeOut:4};
+ const clean=sanitizeClips([clip],{'a.mp4':10})[0];
+ assert.deepEqual([fadeInOf(clean),fadeOutOf(clean)],[3,4],'fades inside the length survive');
+ const over=sanitizeClips([{...clip,fadeIn:8,fadeOut:8}],{'a.mp4':10})[0];
+ assert.deepEqual([fadeInOf(over),fadeOutOf(over)],[8,2],'fadeOut caps at duration minus fadeIn');
+ const zero=sanitizeClips([{...clip,fadeIn:0,fadeOut:0}],{'a.mp4':10})[0];
+ assert.equal(zero.fadeIn,undefined,'zero fades are dropped');
+ const sped=sanitizeClips([{...clip,speed:2,fadeIn:9,fadeOut:9}],{'a.mp4':10})[0];
+ assert.deepEqual([fadeInOf(sped),fadeOutOf(sped)],[5,0],'fades clamp to the sped timeline length');
+ const title=sanitizeClips([{id:'t1',kind:'title',source:'',in_s:0,out_s:5,gain:1,muted:false,fadeIn:2,title:{text:'T'}}],{})[0];
+ assert.equal(title.fadeIn,undefined,'titles carry no fades');
+ const img=sanitizeClips([{id:'i1',kind:'image',source:'p.png',in_s:0,out_s:5,gain:1,muted:false,fadeIn:2}],{})[0];
+ assert.equal(img.fadeIn,undefined,'image clips carry no fades');
+});
+
+test('timeline: clipFadeGain is an equal-power envelope over the clip range',()=>{
+ const c={...fullClip('a.mp4',10),fadeIn:2,fadeOut:2};
+ assert.equal(clipFadeGain(c,0,10,5),1,'untouched in the middle');
+ assert.equal(clipFadeGain(c,0,10,0),0,'silent at the head');
+ assert.ok(Math.abs(clipFadeGain(c,0,10,1)-Math.SQRT1_2)<1e-9,'half the fade-in is equal power');
+ assert.ok(clipFadeGain(c,0,10,10)<1e-9,'silent at the tail');
+ assert.ok(Math.abs(clipFadeGain(c,0,10,9)-Math.SQRT1_2)<1e-9,'half the fade-out is equal power');
+ const plain=fullClip('a.mp4',10);
+ assert.equal(clipFadeGain(plain,0,10,0),1,'no fades means unity');
+});
+
+test('timeline: setClipFades + a faded clip is no longer neutral',()=>{
+ const clips=[fullClip('a.mp4',10)];
+ const faded=setClipFades(clips,clips[0].id,1,2);
+ assert.deepEqual([fadeInOf(faded[0]),fadeOutOf(faded[0])],[1,2]);
+ assert.equal(isNeutralTimeline(faded,'a.mp4',10),false,'fades make the timeline edited');
+ assert.equal(isNeutralTimeline(clips,'a.mp4',10),true,'untouched stays neutral');
 });

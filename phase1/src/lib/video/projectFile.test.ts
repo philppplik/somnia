@@ -133,3 +133,13 @@ test('clip flips round-trip; none is omitted from the file',()=>{
  const junk=JSON.stringify({app:'somnia-video',version:2,clips:[{id:'a',kind:'media',source:'x.mp4',in_s:0,out_s:1,flip:'diagonal'}]});
  assert.equal(parseVideoProject(junk).clips[0].flip,undefined,'unsupported values drop');
 });
+
+test('media clip audio fades round-trip and feed the signature',()=>{
+ const clip:TimelineClip={id:'c1',source:'a.mp4',in_s:0,out_s:8,gain:1,muted:false,fadeIn:1.5,fadeOut:2.5};
+ const text=serializeVideoProject([clip],[],'webm');
+ const parsed=parseVideoProject(text);
+ assert.deepEqual([parsed.clips[0].fadeIn,parsed.clips[0].fadeOut],[1.5,2.5]);
+ assert.notEqual(clipsSignature([clip]),clipsSignature([{...clip,fadeOut:1}]),'fades are part of the dirty signature');
+ const plain=parseVideoProject(serializeVideoProject([{...clip,fadeIn:undefined,fadeOut:undefined}],[],'webm'));
+ assert.equal(plain.clips[0].fadeIn,undefined,'absent fades stay absent');
+});

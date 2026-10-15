@@ -174,6 +174,7 @@
  "cmd.video.timeline.undo": "Undo timeline edit",
  "cmd.video.timeline.redo": "Redo timeline edit",
  "cmd.video.project.save": "Save video project",
+ "cmd.video.clip.fades": "Set audio fades on the selected clip",
  "cmd.video.clip.replaceSource": "Replace selected clip source",
  "cmd.video.clip.flip": "Mirror selected clip",
  "cmd.video.clip.speed": "Set clip playback speed",

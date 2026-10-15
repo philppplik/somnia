@@ -6,7 +6,7 @@ import {addTimelineClip} from './session';
 import {setVideoEngineFactory} from './session';
 const MP4=new URL('../../../tests/assets/clip.mp4',import.meta.url);
 const bytes=(u:URL)=>new Uint8Array(readFileSync(u));
-import {addImageClip,closeVideo,duplicateTimelineClip,dirtyVideoNames,getVideoSession,openVideo,redoVideoEdit,replaceClipSource,serializeVideoProjectCopy,setImageClipLength,setTimelineClipFlip,setVideoFormat,trimTimelineClip,undoVideoEdit,videoIsDirty} from './session';
+import {addImageClip,closeVideo,duplicateTimelineClip,dirtyVideoNames,getVideoSession,openVideo,redoVideoEdit,replaceClipSource,serializeVideoProjectCopy,setImageClipLength,setTimelineClipFades,setTimelineClipFlip,setVideoFormat,trimTimelineClip,undoVideoEdit,videoIsDirty} from './session';
 import {addTitleClip,updateTitle} from './titleSession';
 
 test('project: a saved .video-project reloads its timeline and format, clean',async()=>{
@@ -190,4 +190,26 @@ test('project: image clips swap their file, titles refuse a swap',async()=>{
  assert.deepEqual([getVideoSession(a)!.clips[0].source,getVideoSession(a)!.clips[0].out_s],['two.png',5],'name swapped, duration kept');
  assert.equal(await replaceClipSource(a,titleId,{name:'x.mp4'}),false,'titles refuse');
  closeVideo(a);closeMedia(a);
+});
+
+test('project: clip audio fades set, undo and never get swallowed as no-ops',async()=>{
+ const name='fade-a.mp4';
+ setVideoEngineFactory(()=>({async capabilities(){return{webmVideo:'vp9',mp4Video:null,opus:true,aac:false};},async probe(){return{duration:6,video:{codec:'vp9',width:640,height:360,fps:30},audio:null};},async export(){throw new Error('not needed');},cancelExport(){},dispose(){}}));
+ const r=await addMediaFile(new Blob([bytes(MP4)],{type:'video/mp4'}),name);assert.ok('name' in r,JSON.stringify(r));
+ await openVideo(getMedia().items.find(i=>i.name===name)!);
+ try{
+  const id=getVideoSession(name)!.clips[0].id;
+  const before=getVideoSession(name)!.history.past.length;
+  setTimelineClipFades(name,id,1,2);
+  let c=getVideoSession(name)!.clips[0];
+  assert.deepEqual([c.fadeIn??0,c.fadeOut??0],[1,2]);
+  assert.equal(getVideoSession(name)!.history.past.length,before+1,'a fade-only edit is recorded, not swallowed');
+  setTimelineClipFades(name,id,1,2);
+  assert.equal(getVideoSession(name)!.history.past.length,before+1,'repeating the same fades is a no-op');
+  setTimelineClipFades(name,id,99,99);
+  c=getVideoSession(name)!.clips[0];
+  assert.deepEqual([c.fadeIn??0,c.fadeOut??0],[6,0],'fades clamp into the clip length');
+  undoVideoEdit(name);
+  assert.deepEqual([getVideoSession(name)!.clips[0].fadeIn??0,getVideoSession(name)!.clips[0].fadeOut??0],[1,2],'undo restores the previous fades');
+ }finally{closeVideo(name);closeMedia(name);}
 });

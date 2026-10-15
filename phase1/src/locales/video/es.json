@@ -174,6 +174,7 @@
  "cmd.video.timeline.undo": "Deshacer edición de la línea de tiempo",
  "cmd.video.timeline.redo": "Rehacer edición de la línea de tiempo",
  "cmd.video.project.save": "Guardar proyecto de vídeo",
+ "cmd.video.clip.fades": "Ajustar los fundidos de audio del clip seleccionado",
  "cmd.video.clip.replaceSource": "Sustituir la fuente del clip seleccionado",
  "cmd.video.clip.flip": "Espejar el clip seleccionado",
  "cmd.video.clip.speed": "Ajustar velocidad del clip",

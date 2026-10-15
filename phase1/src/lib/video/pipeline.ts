@@ -2,7 +2,7 @@
 import {ALL_FORMATS,AudioSample,AudioSampleSink,AudioSampleSource,BufferSource,BufferTarget,CanvasSink,CanvasSource,Input,Mp4OutputFormat,Output,QUALITY_HIGH,QUALITY_LOW,QUALITY_MEDIUM,WebMOutputFormat,getFirstEncodableAudioCodec,getFirstEncodableVideoCodec} from 'mediabunny';
 import type {AudioCodec,VideoCodec} from 'mediabunny';
 import {sanitizeExportOptions,type VideoExportOptions,type VideoFormat} from './recipe';
-import {clipRanges,fadeOf,flipOf,isImageClip,speedOf,timelineDuration,type ClipRange,type TimelineClip} from './timeline';
+import {clipFadeGain,clipRanges,fadeInOf,fadeOf,fadeOutOf,flipOf,isImageClip,speedOf,timelineDuration,type ClipRange,type TimelineClip} from './timeline';
 import {audioEnvelope,duckGainAt,type AudioClip} from './audioTrack';
 import {WindowMixer} from './mixer';
 import {drawTitleCard,isTitleClip,needsSourceFile} from './titles';
@@ -42,9 +42,9 @@ const checkCancel=()=>{if(cancelled)throw new ExportCancelled();};
 /** Scales a decoded, resampled sample by the gain of the timeline clip it belongs to. Runs inside mediabunny's transform chain. */
 /**
  * Streams one zone's decoded audio into the encoder as 48 kHz stereo f32 chunks:
- * linear resample, mono duplication, per-zone gain, 100 ms flushes so long clips never buffer.
+ * linear resample, mono duplication, per-sample gain (clip gain x audio fades), 100 ms flushes so long clips never buffer.
  */
-async function emitZoneAudio(aSink:AudioSampleSink,srcStart:number,srcEnd:number,zoneStart:number,gain:number,speed:number,mix:WindowMixer):Promise<void>{
+async function emitZoneAudio(aSink:AudioSampleSink,srcStart:number,srcEnd:number,zoneStart:number,gainAt:(t:number)=>number,speed:number,mix:WindowMixer):Promise<void>{
  let rate=0,ch=0,phase=0,consumed=0,prevL=0,prevR=0,havePrev=false,emitted=0;
  let out:number[]=[];
  const flush=async()=>{
@@ -65,7 +65,8 @@ async function emitZoneAudio(aSink:AudioSampleSink,srcStart:number,srcEnd:number
    const g=consumed;
    while(phase<g){
     const frac=phase-(g-1);
-    out.push((prevL+(l-prevL)*frac)*gain,(prevR+(r-prevR)*frac)*gain);
+    const g2=gainAt(zoneStart+(emitted+out.length/2)/48_000);
+    out.push((prevL+(l-prevL)*frac)*g2,(prevR+(r-prevR)*frac)*g2);
     phase+=step;
     if(out.length>=9600)await flush();
    }
@@ -296,7 +297,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
     }
     if(rec?.probe.audio&&mixer&&!c.muted){
      const aTrack=(await rec.input.getAudioTracks())[0];
-     await emitZoneAudio(new AudioSampleSink(aTrack),srcStart,srcEnd,z.start,c.gain,speed,mixer);
+     await emitZoneAudio(new AudioSampleSink(aTrack),srcStart,srcEnd,z.start,(t)=>c.gain*clipFadeGain(c,r.start,r.end,t),speed,mixer);
     }else if(rec&&rec.probe.audio===null&&audioSource&&z===zones[0])steps.push(`No audio track in ${c.source}.`);
    }else{
     const ra=ranges[z.a],rb=ranges[z.b],d=z.end-z.start;
@@ -341,7 +342,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
       any=true;
       for(let i=0;i<len;i++){
        const pr=i/len;
-       const env=(side.sign==='out'?Math.cos(pr*Math.PI/2):Math.sin(pr*Math.PI/2))*c.gain;
+       const env=(side.sign==='out'?Math.cos(pr*Math.PI/2):Math.sin(pr*Math.PI/2))*c.gain*clipFadeGain(c,side.r.start,side.r.end,z.start+i/48_000);
        const srcPos=i/48_000*rate*speedOf(c),f0=Math.min(frames-1,Math.floor(srcPos)),f1=Math.min(frames-1,f0+1),fr=Math.min(1,Math.max(0,srcPos-f0));
        const l=ch===1?raw[f0]*(1-fr)+raw[f1]*fr:raw[f0*ch]*(1-fr)+raw[f1*ch]*fr;
        const rgt=ch===1?l:raw[f0*ch+1]*(1-fr)+raw[f1*ch+1]*fr;
@@ -364,6 +365,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
   if(titlesRendered)steps.push('Title cards rendered.');
   if(clips.some(c=>c.muted))steps.push('Muted clips kept as silence.');
   if(clips.some(c=>c.gain!==1&&!c.muted))steps.push('Per-clip gain applied.');
+  if(clips.some(c=>fadeInOf(c)>0||fadeOutOf(c)>0))steps.push('Clip audio fades applied.');
   if(clips.some(c=>needsSourceFile(c)&&speedOf(c)!==1))steps.push('Clip speed applied; audio is resampled (pitch shifts).');
   if(audioFeed.length)steps.push(`${audioFeed.length} audio-track clip(s) mixed in.`);
   if(audioClips.some(c=>c.duck>0&&!c.muted))steps.push('Auto-duck applied under foreground audio.');
