@@ -33,7 +33,7 @@ import {viewNameProblem,MAX_VIEW_NAME} from '../../lib/sheets/savedViews';
 import {WHATIF_GROUPS,buildWhatIfOp,whatIfNeeds,type WhatIfAction} from '../../lib/sheets/whatIfOps';
 import {ALLOW_PRESETS,MAX_PASSWORD_CHARS,passwordBad} from '../../lib/sheets/protectOps';
 import type {PivotField,PivotFunc} from '../../lib/sheets/protocol';
-import {constantValue,MAX_COMMENT_CHARS,nameProblem,nameTarget} from '../../lib/sheets/names';
+import {resolveNameJump,constantValue,MAX_COMMENT_CHARS,nameProblem,nameTarget} from '../../lib/sheets/names';
 import {internalTarget,linkTargetProblem,MAX_LINK_TEXT,MAX_NOTE_CHARS} from '../../lib/sheets/notes';
 import {dedupeBlockProblem,splitBlockProblem,parseWidths,SPLIT_DELIMITERS} from '../../lib/sheets/dataTools';
 import {replaceProblem,MAX_REPLACE_TEXT} from '../../lib/sheets/replaceOps';
@@ -61,11 +61,13 @@ export function SheetsWorkbookPanel({context}:PanelHostProps){
  useEffect(()=>setName(s?.sheetName??''),[s?.file,s?.sheet,s?.sheetName]);
  if(!s)return <Region><p>{t('sheets.panel.none')}</p></Region>;
  const sheetList=s.workbook?.sheets??[],visibleCount=sheetList.filter(x=>x.visibility==='Visible').length,nameProblem=sheetNameProblem(name);
+ const jump=parseAddress(address)?{sheet:s.sheet,address}:resolveNameJump(address,s.names??[],sheetList,s.sheetName);
  const sheets=s.workbook?.sheets.filter(sheet=>sheet.name.toLocaleLowerCase().includes(filter.toLocaleLowerCase()))??[];
  return <Region><p className="break-all font-semibold">{s.file}</p>
  <input className={field} aria-label={t('sheets.panel.filter')} placeholder={t('sheets.panel.filter')} value={filter} onChange={e=>setFilter(e.target.value)}/>
  <div className="flex flex-col gap-1" role="group" aria-label={t('sheets.tabs')}>{sheets.map(sheet=><button className={button+' text-left'} key={sheet.index} disabled={sheet.visibility!=='Visible'||action.busy} aria-pressed={sheet.index===s.sheet} onClick={()=>void action.run('sheets.navigate',{sheet:sheet.index,address:'A1'})}>{sheet.name}{sheet.visibility!=='Visible'&&<span className="ml-2 text-ink-3">{t('sheets.panel.hidden')}</span>}</button>)}{!sheets.length&&<p>{t('sheets.panel.noMatches')}</p>}</div>
- <form className="flex gap-1" onSubmit={e=>{e.preventDefault();void action.run('sheets.navigate',{sheet:s.sheet,address});}}><input className={field} aria-label={t('sheets.address')} value={address} onChange={e=>setAddress(e.target.value)} autoCapitalize="characters"/><button className={button} disabled={action.busy||!parseAddress(address)}>{t('sheets.panel.go')}</button></form>
+ <form className="flex gap-1" onSubmit={e=>{e.preventDefault();if(!jump)return;void action.run('sheets.navigate',jump);}}><input className={field} aria-label={t('sheets.address')} value={address} onChange={e=>setAddress(e.target.value)} autoCapitalize="characters"/><button className={button} disabled={action.busy||!jump}>{t('sheets.panel.go')}</button></form>
+ <p className="text-ink-3">{t('sheets.panel.addressHint')}</p>
  <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.sheetOps.title')}>
   <form className="flex flex-col gap-1" onSubmit={e=>{e.preventDefault();if(!nameProblem)void action.run('sheets.sheet',{kind:'rename',name:name.trim()});}}>
    <label className="flex flex-col gap-1">{t('sheets.sheetOps.name')}<NativeInput className={field} value={name} maxLength={64} aria-invalid={!!nameProblem} onChange={e=>setName(e.currentTarget.value)} data-testid="sheets-sheet-name"/></label>
