@@ -109,3 +109,4 @@ Back to [Studios](../studios.md).
 - Export check now warns about layers whose opacity flashes more than 3 times a second (checked on every frame of the exported range).
 - Wave (Motion > Effects): a sine wave (bob, swing or breathe) runs through the ticked layers in tick order, each 45 degrees behind the one before; baked as linear keys over the work area.
 - Shift all colours (Colours section): rotate the hue or change lightness and saturation of every solid fill and stroke in the composition in one step.
+- Camera > Zoom in on selected layer: from the playhead the camera glides (24 frames) until the selected layer is centred and fills about 60 percent of the frame, then holds. Text size is estimated from its characters.

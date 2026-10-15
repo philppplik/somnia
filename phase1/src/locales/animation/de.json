@@ -1286,5 +1286,7 @@
  "animation.palette.shift.darker": "Dunkler",
  "animation.palette.shift.vivid": "Kräftiger",
  "animation.palette.shift.muted": "Gedämpfter",
- "cmd.animation.palette.shift": "Alle Farben der Komposition verschieben (Farbton, Sättigung, Helligkeit)"
+ "cmd.animation.palette.shift": "Alle Farben der Komposition verschieben (Farbton, Sättigung, Helligkeit)",
+ "animation.camera.focus": "Auf gewählte Ebene zoomen",
+ "cmd.animation.camera.focus": "Kamera auf die gewählte Ebene zoomen lassen"
 }

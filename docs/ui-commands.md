@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-999 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1000 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -32,6 +32,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `animation.blur.comp` | Set composition motion blur (shutter) | Edit | animation |  |
 | `animation.blur.layers` | Toggle motion blur on layers | Edit | animation |  |
 | `animation.camera.add` | Add a camera for the whole scene | Insert | animation |  |
+| `animation.camera.focus` | Make the camera zoom in on the selected layer | Edit | animation |  |
 | `animation.camera.follow` | Make the camera follow the selected layer | Edit | animation |  |
 | `animation.camera.move` | Animate the camera over the work area | Edit | animation |  |
 | `animation.camera.reset` | Reset the camera to rest | Edit | animation |  |

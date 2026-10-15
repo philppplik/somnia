@@ -1286,5 +1286,7 @@
  "animation.palette.shift.darker": "Darker",
  "animation.palette.shift.vivid": "More vivid",
  "animation.palette.shift.muted": "More muted",
- "cmd.animation.palette.shift": "Shift every colour of the composition (hue, saturation, lightness)"
+ "cmd.animation.palette.shift": "Shift every colour of the composition (hue, saturation, lightness)",
+ "animation.camera.focus": "Zoom in on selected layer",
+ "cmd.animation.camera.focus": "Make the camera zoom in on the selected layer"
 }

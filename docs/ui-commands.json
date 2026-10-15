@@ -150,6 +150,25 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.camera.focus",
+      "title": "Make the camera zoom in on the selected layer",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "camera",
+        "close up",
+        "emphasis",
+        "focus",
+        "frame",
+        "highlight",
+        "punch in",
+        "spotlight",
+        "zoom"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.camera.follow",
       "title": "Make the camera follow the selected layer",
       "category": "Edit",

@@ -1735,3 +1735,20 @@ test('P268 palette shift: hue rotates, lightness and saturation move, greys stay
  run({hue:120});assert.equal(col('s1'),'#00ff00');assert.equal(col('s2'),'#ff0000');
  s.undo();assert.equal(col('s1'),'#ff0000');
 });
+
+test('P269 camera focus: the camera glides so the selected layer is centred and fills about 60 percent, holds afterwards, one undo step',async()=>{
+ const {cameraFocusSpecs,focusPose}=await import('./cameraFocusCommands');const {cameraSpecs,findCamera}=await import('./cameraCommands');const {worldMatrix,applyMatrix}=await import('./scene');
+ const run=cameraFocusSpecs()[0].run as (p?:unknown)=>unknown,add=cameraSpecs().find(x=>x.id==='animation.camera.add')!.run as ()=>unknown;
+ const c0=findComp(base())!;assert.deepEqual(focusPose(c0,{cx:c0.width/2,cy:c0.height/2,w:c0.width*0.3,h:c0.height*0.3}),{scale:200,position:[c0.width/2,c0.height/2]});
+ const d0=applyEdits(base(),[{type:'layer.add',kind:'solid',id:'t1',over:{name:'Target'}},{type:'layer.update',layer:'t1',source:{width:100,height:60}},{type:'prop.set',layer:'t1',prop:'position',t:0,value:[600,100]}] as never);
+ const s=new AnimationSession();s.open(d0);setAnimationSession(s);
+ assert.throws(()=>run({layer:'t1'}),/Add a camera/);add();
+ s.setView({playhead:f(10),selectedLayer:'t1'} as never);
+ assert.throws(()=>run({layer:'t1',frames:0}),/frames/);
+ const r=run({layer:'t1',frames:20}) as {to:number;scale:number};assert.ok(r.scale>100);
+ const c=findComp(s.document!)!,cam=findCamera(c)!,t=c.layers.find(l=>l.id==='t1')!;
+ const ctr=(tt:number)=>{const m=worldMatrix(c,t,tt),ps=[[0,0],[100,0],[0,60],[100,60]].map(q=>applyMatrix(m,[q[0],q[1]]));return [(Math.min(...ps.map(p=>p[0]))+Math.max(...ps.map(p=>p[0])))/2,(Math.min(...ps.map(p=>p[1]))+Math.max(...ps.map(p=>p[1])))/2];};
+ const e=ctr(r.to),ee=ctr(r.to+f(30));assert.ok(Math.abs(e[0]-c.width/2)<1&&Math.abs(e[1]-c.height/2)<1,'centred at the end');assert.ok(Math.abs(ee[0]-e[0])<1e-6,'holds after');
+ assert.equal(cam.transform.scale.keys.length,2);
+ s.undo();assert.equal(findCamera(findComp(s.document!)!)!.transform.scale.keys.length,0);
+});
