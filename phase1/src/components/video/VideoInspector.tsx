@@ -4,6 +4,7 @@ import {useT} from '../../lib/useT';
 import {useMedia} from '../../lib/media';
 import {addAudioTrackClip,addImageClip,addOverlayImage,addOverlayTitle,addOverlayVideo,importSubtitleText,addTimelineClip,addTimelineClipsFromDialog,cancelVideoExport,deleteAudioTrackClip,deleteTimelineClip,duplicateAudioTrackClip,moveAudioTrackClip,moveTimelineClip,resetTimeline,resizeAudioTrackClip,setAudioTrackClipDuck,setAudioTrackClipFades,setAudioTrackClipGain,toggleAudioTrackClipMute,setTimelineClipCrossfade,setTimelineClipFades,setTimelineClipFreeze,setTimelineClipGain,setTimelineClipSpeed,setVideoFormat,duplicateTimelineClip,replaceClipSource,selectTimelineClip,setImageClipLength,setTimelineClipCrop,setTimelineClipFlip,setTimelineClipRotation,setVideoExportOptions,setVideoExportRange,toggleTimelineClipMute,trimTimelineClip,useVideoSession,deleteOverlayClip,moveOverlayClip,selectOverlayClip,setOverlayDuration,setOverlayGain,setOverlayInS,setOverlayOpacity,setOverlayRect,updateOverlayTitle} from '../../lib/video/session';
 import {audioClipDuration,audioTrackEnd} from '../../lib/video/audioTrack';
+import {decodeSubtitleBytes} from '../../lib/video/subtitles';
 import {overlayTrackEnd} from '../../lib/video/overlayTrack';
 import {clipDuration,clipRanges,fadeInOf,fadeOf,fadeOutOf,cropOf,flipOf,rotationOf,isFreeze,IMAGE_DEFAULT_SECONDS,isImageClip,MAX_GAIN,speedOf,timelineDuration,type ClipFlip,type ClipRotation} from '../../lib/video/timeline';
 import {isTitleClip} from '../../lib/video/titles';
@@ -95,8 +96,8 @@ export function VideoControls({name}:{name:string}){
     </NativeSelect>
     <Button size="compact" disabled={!addOverlayVideoPick} onClick={()=>{if(addOverlayVideoPick){addOverlayVideo(name,addOverlayVideoPick,0);setAddOverlayVideoPick('');}}} data-testid="video-overlay-add-video">{t('video.overlayAddVideo')}</Button>
     <Button size="compact" onClick={()=>{
-     const input=document.createElement('input');input.type='file';input.accept='.srt,.vtt';
-     input.onchange=async()=>{const f=input.files?.[0];if(f)importSubtitleText(name,await f.text());};
+     const input=document.createElement('input');input.type='file';input.accept='.srt,.vtt,.ass';
+     input.onchange=async()=>{const f=input.files?.[0];if(f)importSubtitleText(name,decodeSubtitleBytes(new Uint8Array(await f.arrayBuffer())));};
      input.click();
     }} data-testid="video-overlay-import-subtitles">{t('video.subtitlesImport')}</Button>
    </div>

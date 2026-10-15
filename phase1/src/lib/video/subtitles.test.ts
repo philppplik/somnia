@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {cuesToTitleOverlays,parseSubtitles} from './subtitles';
+import {cuesToTitleOverlays,decodeSubtitleBytes,parseSubtitles} from './subtitles';
 
 test('SRT: cues parse with times, multi-line bodies join, tags strip',()=>{
  const srt=`1
@@ -63,4 +63,54 @@ test('cues become lower-third title overlays at their times',()=>{
  assert.equal(ovs[0].at,1);
  assert.equal(ovs[0].duration,1);
  assert.equal(ovs[0].title?.text,'Hi');
+});
+
+test('SRT styling: font colour wins once, bold/italic are cue-wide',()=>{
+ const cues=parseSubtitles(`1
+00:00:01,000 --> 00:00:02,000
+<font color="#ff0000">Red</font> <b>bold</b> <i>italic</i> <font color="blue">ignored</font>
+`);
+ assert.equal(cues[0].color,'#ff0000');
+ assert.equal(cues[0].bold,true);
+ assert.equal(cues[0].italic,true);
+ assert.equal(cues[0].text,'Red bold italic ignored');
+ const ovs=cuesToTitleOverlays(cues);
+ assert.equal(ovs[0].title?.color,'#ff0000');
+ assert.equal(ovs[0].title?.bold,true);
+});
+
+test('VTT cue settings: align maps, position/line recentre the rect inside the frame',()=>{
+ const cues=parseSubtitles(`WEBVTT
+
+00:01.000 --> 00:02.000 align:end position:80% line:10%
+Top right
+`);
+ assert.equal(cues[0].align,'right');
+ assert.ok(cues[0].rect&&cues[0].rect.x>0.3&&cues[0].rect.y<0.05,JSON.stringify(cues[0].rect));
+});
+
+test('ASS basics: dialogue times (centiseconds), override tags, BGR colour, \\N breaks',()=>{
+ const ass=`[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:01.00,0:00:03.50,Default,,0,0,0,,{\\b1\\c&H0000FF&}Red bold
+Dialogue: 0,0:00:04.00,0:00:05.00,Default,,0,0,0,,{\\an7\\pos(200,100)}top left\\Nsecond line
+Comment: 0,0:00:06.00,0:00:07.00,Default,,0,0,0,,not a dialogue
+`;
+ const cues=parseSubtitles(ass);
+ assert.equal(cues.length,2);
+ assert.equal(cues[0].at,1);
+ assert.equal(cues[0].duration,2.5);
+ assert.equal(cues[0].color,'#ff0000','ASS stores BGR, the spec wants RGB');
+ assert.equal(cues[0].bold,true);
+ assert.equal(cues[1].vAlign,'top');
+ assert.equal(cues[1].align,'left');
+ assert.equal(cues[1].text,'top left\nsecond line');
+ assert.ok(cues[1].rect&&cues[1].rect.y<0.05);
+});
+
+test('encoding: strict UTF-8 first, Latin-1 fallback for legacy files',()=>{
+ const utf8=new TextEncoder().encode('1\n00:00:01,000 --> 00:00:02,000\nGrüße\n');
+ assert.ok(decodeSubtitleBytes(utf8).includes('Grüße'));
+ const latin1=Uint8Array.from([0x47,0x72,0xfc,0xdf,0x65]); // "Grüße" in ISO-8859-1 (invalid UTF-8)
+ assert.equal(decodeSubtitleBytes(latin1),'Grüße');
 });
