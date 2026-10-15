@@ -3793,7 +3793,7 @@ mod tests {
     fn sheet_hide_unhide_tab_color_and_view_flags() {
         let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
         book.edit_sheet(0, r#"{"kind":"add"}"#).unwrap();
-        book.edit_sheet(0, r#"{"kind":"tabColor","color":"#2E7D32"}"#).unwrap();
+        book.edit_sheet(0, r##"{"kind":"tabColor","color":"#2E7D32"}"##).unwrap();
         let listed = book.sheets().unwrap();
         assert!(listed.contains("#2E7D32"), "{listed}");
         book.edit_sheet(0, r#"{"kind":"tabColor","color":"none"}"#).unwrap();
