@@ -3,6 +3,7 @@ import {slidesIsDirty,useSlidesSession} from '../lib/slides/session';
 import {pdfIsDirty,usePdfEpoch} from '../lib/pdfedit/session';
 import {useEffect,useRef,useState} from 'react';
 import {useMenuFocusReturn} from '../lib/useMenuFocusReturn';
+import {nextTabIndex} from '../lib/tabNav';
 import {X} from '../lib/icons';
 import {closeFileTab,openFileTab,useAppStore} from '../store/appStore';
 import {cn} from '../lib/cn';
@@ -18,7 +19,8 @@ export function FileTabs(){useSlidesSession();usePdfEpoch();const {t}=useT();
  useEffect(()=>{if(!menu)return;ref.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus();const down=(e:PointerEvent)=>{if(!ref.current?.contains(e.target as Node))setMenu(null);};const key=(e:KeyboardEvent)=>{if(e.key==='Escape')setMenu(null);};window.addEventListener('pointerdown',down);window.addEventListener('keydown',key);return()=>{window.removeEventListener('pointerdown',down);window.removeEventListener('keydown',key);};},[menu]);
  const files=scopedFiles(s.openFiles,s.activeStudio,s.studioByTab),mediaItems=media.items.filter(m=>mediaTabStudio(m.name,s.studioByTab,()=>studioForMedia(m.kind,s.activeStudio))===s.activeStudio);
  const others=(file:string)=>files.filter(f=>f!==file);
- return <div role="tablist" aria-label={t('rest.fileTabs.openFiles')} className="flex shrink-0 items-end gap-0.5 overflow-x-auto border-b border-subtle px-2 pt-1.5">
+ return <div role="tablist" aria-label={t('rest.fileTabs.openFiles')} className="flex shrink-0 items-end gap-0.5 overflow-x-auto border-b border-subtle px-2 pt-1.5"
+  onKeyDown={e=>{const tabs=[...e.currentTarget.querySelectorAll<HTMLElement>('[role=tab]')];const n=nextTabIndex(e.key,tabs.indexOf(document.activeElement as HTMLElement),tabs.length);if(n===null)return;e.preventDefault();tabs[n]?.focus();tabs[n]?.click();}}>
   {files.map(file=><div key={file} role="tab" aria-selected={file===s.activeFile&&!media.active} tabIndex={file===s.activeFile&&!media.active?0:-1} title={file}
    className={cn('group flex h-8 max-w-[180px] cursor-pointer items-center gap-1 rounded-t-sm border border-b-0 border-transparent px-3 text-xs text-ink-2 hover:bg-hover',file===s.activeFile&&!media.active&&'border-subtle bg-base text-ink')}
    onClick={()=>openFileTab(file)} onAuxClick={e=>{if(e.button===1)closeFileTab(file);}}
