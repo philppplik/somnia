@@ -2543,7 +2543,10 @@ impl HeadlessWorkbook {
     /// `{"kind":"group"|"ungroup"|"hide"|"show","axis":"rows"|"cols"}` for the selected lines (`row`,`col`,`rows`,`cols` is the selection;
     /// at most 10,000 rows or 200 columns; group levels stop at 7; hide and show act on the whole group around the selection) or
     /// `{"kind":"subtotal","groupBy":offset,"function":"sum"|"count"|"average"|"max"|"min"|"product","columns":[offsets]}` for a block with a
-    /// header row (at least 3 rows, at most 2,000 rows and 100 groups, 1 to 8 value columns, offsets inside the block). Subtotal inserts a
+    /// header row (at least 3 rows, at most 2,000 rows and 100 groups, 1 to 8 value columns, offsets inside the block), `{"kind":"removeSubtotals"}`
+    /// (deletes the rows of the block that hold only SUBTOTAL formulas and at most one text label, then ungroups the rest once) or
+    /// `{"kind":"level","axis":"rows"|"cols","level":1..7}` (the whole sheet: grouped lines deeper than the level are collapsed, the others shown;
+    /// rows are refused while a filter is active). Subtotal inserts a
     /// SUBTOTAL row under every run of equal values in the group column plus a grand total and groups each run. Protected sheets and merged
     /// cells inside a subtotal block are refused. The engine acts on the active sheet, so it is activated first.
     pub fn outline_op(&mut self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32, op_json: &str) -> Result<String, String> {
@@ -2554,7 +2557,12 @@ impl HeadlessWorkbook {
         let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "operation must be a JSON object".to_string())?;
         let map = op.as_object().ok_or("operation must be a JSON object")?;
         let kind = map.get("kind").and_then(|v| v.as_str()).ok_or("unsupported outline operation")?;
-        let known: &[&str] = if kind == "subtotal" { &["kind", "groupBy", "function", "columns"] } else { &["kind", "axis"] };
+        let known: &[&str] = match kind {
+            "subtotal" => &["kind", "groupBy", "function", "columns"],
+            "removeSubtotals" => &["kind"],
+            "level" => &["kind", "axis", "level"],
+            _ => &["kind", "axis"],
+        };
         if map.keys().any(|k| !known.contains(&k.as_str())) {
             return Err("unknown outline field".into());
         }
@@ -2629,6 +2637,100 @@ impl HeadlessWorkbook {
                     self.session
                         .run("data.subtotal", json!({"range": range, "groupBy": letters(group_by), "function": func, "columns": columns, "header": true}))
                         .map(|v| v.to_string())
+                }
+                "removeSubtotals" => {
+                    if rows > 10_000 || cols > 200 {
+                        return Err("Select at most 10,000 rows and 200 columns.".into());
+                    }
+                    // A subtotal row holds SUBTOTAL formulas plus at most one text label; anything else in a row keeps it.
+                    let hits: Vec<u32> = {
+                        let doc = self.session.doc().map_err(|e| e.to_string())?;
+                        let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+                        let mut found = Vec::new();
+                        for r in row..row + rows {
+                            let line = gridcraft_engine::core::RangeRef::new(CellRef::new(r, col), CellRef::new(r, col + cols - 1));
+                            let (mut subs, mut others, mut labels) = (0u32, 0u32, 0u32);
+                            for (_, c) in sh.cells.iter_range(line) {
+                                if let Some(f) = c.formula.as_ref() {
+                                    if f.text.trim_start_matches('=').trim_start().to_ascii_uppercase().starts_with("SUBTOTAL(") {
+                                        subs += 1;
+                                    } else {
+                                        others += 1;
+                                    }
+                                } else if !c.value.is_empty() {
+                                    if c.value.display().trim().parse::<f64>().is_ok() {
+                                        others += 1;
+                                    } else {
+                                        labels += 1;
+                                    }
+                                }
+                            }
+                            if subs > 0 && others == 0 && labels <= 1 {
+                                found.push(r);
+                            }
+                        }
+                        found
+                    };
+                    if hits.is_empty() {
+                        return Err("There are no subtotal rows in the selection.".into());
+                    }
+                    if hits.len() > 2_100 {
+                        return Err("Too many subtotal rows (at most 2,100).".into());
+                    }
+                    // Bottom-up, one delete per run of neighbouring rows, so the earlier indices stay valid.
+                    let mut end = hits.len();
+                    while end > 0 {
+                        let mut start = end - 1;
+                        while start > 0 && hits[start - 1] + 1 == hits[start] {
+                            start -= 1;
+                        }
+                        self.session.run("home.deleteRows", json!({"rows": format!("{}:{}", hits[start] + 1, hits[end - 1] + 1)}))?;
+                        end = start;
+                    }
+                    let left = rows - hits.len() as u32;
+                    if left >= 2 {
+                        self.session.run("data.ungroup", json!({"rows": format!("{}:{}", row + 2, row + left)}))?;
+                    }
+                    Ok(json!({"kind": kind, "removed": hits.len()}).to_string())
+                }
+                "level" => {
+                    let rows_axis = match map.get("axis").and_then(|v| v.as_str()) {
+                        Some("rows") => true,
+                        Some("cols") => false,
+                        _ => return Err("axis must be rows or cols".to_string()),
+                    };
+                    let level = map.get("level").and_then(|v| v.as_u64()).filter(|l| (1..=7).contains(l)).ok_or("level must be 1 to 7")? as u8;
+                    {
+                        let doc = self.session.doc().map_err(|e| e.to_string())?;
+                        let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+                        if rows_axis && sh.autofilter.is_some() {
+                            return Err("Clear the filter first: showing a level would also show rows the filter hides.".into());
+                        }
+                        let lines = if rows_axis { &sh.rows } else { &sh.cols };
+                        if !lines.values().any(|i| i.outline > 0) {
+                            return Err("There are no grouped lines on this axis.".into());
+                        }
+                    }
+                    // The engine has no command for this: one harmless engine edit makes the undo snapshot, then the lines are set in place.
+                    const TMP: &str = "\u{1}pending";
+                    self.session.run("home.newCellStyle", json!({"name": TMP, "fromCell": "A1"}))?;
+                    let doc = self.session.doc_mut().map_err(|e| e.to_string())?;
+                    let wb = std::sync::Arc::make_mut(&mut doc.wb);
+                    wb.cell_styles.retain(|(n, _)| n != TMP);
+                    let mut shown = 0usize;
+                    if let Some(sh) = wb.sheets.get_mut(sheet) {
+                        let sh = std::sync::Arc::make_mut(sh);
+                        let lines = if rows_axis { &mut sh.rows } else { &mut sh.cols };
+                        for info in lines.values_mut() {
+                            if info.outline > 0 {
+                                info.hidden = info.outline > level;
+                                if !info.hidden {
+                                    shown += 1;
+                                }
+                            }
+                        }
+                    }
+                    Ok(json!({"kind": kind, "level": level, "shown": shown}).to_string())
                 }
                 _ => Err("unsupported outline operation".into()),
             }

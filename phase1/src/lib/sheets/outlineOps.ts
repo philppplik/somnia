@@ -3,7 +3,8 @@ import type {OutlineInfo,OutlineOp} from './protocol';
 export const MAX_OUTLINE_ROWS=10_000,MAX_OUTLINE_COLS=200,MAX_SUBTOTAL_ROWS=2000,MAX_SUBTOTAL_VALUES=8;
 export const SUBTOTAL_FUNCS=['sum','count','average','max','min','product'] as const;
 export type SubtotalFunc=typeof SUBTOTAL_FUNCS[number];
-export type OutlineCommand={kind:'group'|'ungroup'|'hide'|'show';axis:'rows'|'cols'}|{kind:'subtotal';groupBy:string;function:SubtotalFunc;columns:string[]};
+export type OutlineCommand={kind:'group'|'ungroup'|'hide'|'show';axis:'rows'|'cols'}|{kind:'subtotal';groupBy:string;function:SubtotalFunc;columns:string[]}|{kind:'removeSubtotals'}|{kind:'level';axis:'rows'|'cols';level:number};
+export const MAX_OUTLINE_LEVEL=7;
 const LETTERS=/^[A-Z]{1,3}$/;
 const colIndex=(s:string)=>[...s].reduce((n,ch)=>n*26+ch.charCodeAt(0)-64,0)-1;
 export function parseOutlineCommand(input:unknown):OutlineCommand{
@@ -11,6 +12,9 @@ export function parseOutlineCommand(input:unknown):OutlineCommand{
  const o=input as Record<string,unknown>,only=(...k:string[])=>{if(Object.keys(o).some(x=>!k.includes(x)))throw Error('Unknown outline field.');};
  switch(o.kind){
   case 'group':case 'ungroup':case 'hide':case 'show':only('kind','axis');if(o.axis!=='rows'&&o.axis!=='cols')throw Error('The axis must be rows or cols.');return {kind:o.kind,axis:o.axis};
+  case 'removeSubtotals':only('kind');return {kind:'removeSubtotals'};
+  case 'level':{only('kind','axis','level');if(o.axis!=='rows'&&o.axis!=='cols')throw Error('The axis must be rows or cols.');
+   if(typeof o.level!=='number'||!Number.isInteger(o.level)||o.level<1||o.level>MAX_OUTLINE_LEVEL)throw Error('The level must be 1 to 7.');return {kind:'level',axis:o.axis,level:o.level};}
   case 'subtotal':{only('kind','groupBy','function','columns');
    const letter=(v:unknown)=>{if(typeof v!=='string'||!LETTERS.test(v.trim().toUpperCase()))throw Error('Columns must be letters like C.');return v.trim().toUpperCase();};
    const fn=o.function===undefined?'sum':o.function;if(!SUBTOTAL_FUNCS.includes(fn as SubtotalFunc))throw Error('Unsupported subtotal function.');
@@ -22,6 +26,8 @@ export function parseOutlineCommand(input:unknown):OutlineCommand{
 /** Turns a command into the bridge op (column offsets inside the selection); throws when the selection does not fit. */
 export function toBridgeOp(cmd:OutlineCommand,sel:{r0:number;r1:number;c0:number;c1:number}):OutlineOp{
  const rows=sel.r1-sel.r0+1,cols=sel.c1-sel.c0+1;
+ if(cmd.kind==='level')return {kind:'level',axis:cmd.axis,level:cmd.level};
+ if(cmd.kind==='removeSubtotals'){if(rows>MAX_OUTLINE_ROWS||cols>MAX_OUTLINE_COLS)throw Error('Too many lines selected.');return {kind:'removeSubtotals'};}
  if(cmd.kind!=='subtotal'){
   if(cmd.axis==='rows'?rows>MAX_OUTLINE_ROWS:cols>MAX_OUTLINE_COLS)throw Error('Too many lines selected.');
   return {kind:cmd.kind,axis:cmd.axis};

@@ -18,3 +18,13 @@ test('column lists and bridge replies are parsed defensively',()=>{
  assert.deepEqual(parseColumnList(' c, d;C '),['C','D']);assert.equal(parseColumnList(''),null);assert.equal(parseColumnList('C1'),null);assert.equal(parseColumnList('A,B,C,D,E,F,G,H,I'),null);
  assert.deepEqual(parseOutlineInfo({rows:{lines:3,deepest:2,hidden:1},cols:{lines:-1,deepest:'x'}}),{rows:{lines:3,deepest:2,hidden:1},cols:{lines:0,deepest:0,hidden:0}});assert.deepEqual(parseOutlineInfo(null).rows,{lines:0,deepest:0,hidden:0});
 });
+
+test('remove-subtotals and level commands are closed and bounded',()=>{
+ assert.deepEqual(parseOutlineCommand({kind:'removeSubtotals'}),{kind:'removeSubtotals'});
+ assert.deepEqual(parseOutlineCommand({kind:'level',axis:'cols',level:3}),{kind:'level',axis:'cols',level:3});
+ for(const bad of [{kind:'removeSubtotals',axis:'rows'},{kind:'level',axis:'rows'},{kind:'level',axis:'rows',level:0},{kind:'level',axis:'rows',level:8},{kind:'level',axis:'rows',level:1.5},{kind:'level',axis:'x',level:1},{kind:'level',axis:'rows',level:'2'}])assert.throws(()=>parseOutlineCommand(bad),bad.toString());
+ const sel={r0:0,r1:9,c0:0,c1:2};
+ assert.deepEqual(toBridgeOp({kind:'removeSubtotals'},sel),{kind:'removeSubtotals'});
+ assert.throws(()=>toBridgeOp({kind:'removeSubtotals'},{...sel,r1:10_000}));
+ assert.deepEqual(toBridgeOp({kind:'level',axis:'rows',level:2},sel),{kind:'level',axis:'rows',level:2});
+});

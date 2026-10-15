@@ -74,7 +74,7 @@ export interface PivotReport{name:string;source:string;range:string|null;rows:{f
 export interface FunctionInfo{name:string;category:string;signature:string;description:string}
 export type LayoutOp={kind:'merge';how:'cells'|'center'|'across'|'unmerge'}|{kind:'rotate';mode:'none'|'up'|'down'|'stacked'}|{kind:'doubleUnderline';on:boolean}|{kind:'justify'|'clearFormats'};
 /** Outline groups and subtotals on the selected lines or block (column offsets are inside the selection). */
-export type OutlineOp={kind:'group'|'ungroup'|'hide'|'show';axis:'rows'|'cols'}|{kind:'subtotal';groupBy:number;function:'sum'|'count'|'average'|'max'|'min'|'product';columns:number[]};
+export type OutlineOp={kind:'group'|'ungroup'|'hide'|'show';axis:'rows'|'cols'}|{kind:'subtotal';groupBy:number;function:'sum'|'count'|'average'|'max'|'min'|'product';columns:number[]}|{kind:'removeSubtotals'}|{kind:'level';axis:'rows'|'cols';level:number};
 export interface OutlineLines{lines:number;deepest:number;hidden:number}
 export interface OutlineInfo{rows:OutlineLines;cols:OutlineLines}
 export interface SavedView{name:string;sheet:number;selection:string;zoom:number}

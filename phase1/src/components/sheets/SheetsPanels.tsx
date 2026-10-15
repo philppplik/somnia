@@ -619,28 +619,29 @@ function SheetTabGroup(){
  </div>;
 }
 /** Outline: group, collapse or expand the selected lines, or insert subtotals under every run of equal values. One undo step each. */
-type OutlineAction='group'|'ungroup'|'hide'|'show'|'subtotal';
+type OutlineAction='group'|'ungroup'|'hide'|'show'|'level'|'subtotal'|'removeSubtotals';
 function OutlineGroup(){
- const {t}=useT(),s=useSheetsSelection(),action=useAction();const [act,setAct]=useState<OutlineAction>('group');const [axis,setAxis]=useState<'rows'|'cols'>('rows');const [by,setBy]=useState('');const [fn,setFn]=useState<SubtotalFunc>('sum');const [values,setValues]=useState('');
+ const {t}=useT(),s=useSheetsSelection(),action=useAction();const [act,setAct]=useState<OutlineAction>('group');const [axis,setAxis]=useState<'rows'|'cols'>('rows');const [by,setBy]=useState('');const [fn,setFn]=useState<SubtotalFunc>('sum');const [values,setValues]=useState('');const [lvl,setLvl]=useState(1);
  const r=s?.range;if(!s||!r)return null;
  const sub=act==='subtotal',rows=r.r1-r.r0+1,letters=Array.from({length:Math.min(r.c1-r.c0+1,200)},(_,i)=>colName(r.c0+i));
  const groupBy=by&&letters.includes(by)?by:letters[0]??'',cols=parseColumnList(values);
- const inside=!!cols&&cols.every(c=>letters.includes(c)),ok=sub?rows>=3&&rows<=MAX_SUBTOTAL_ROWS&&inside:true;
- const apply=()=>{if(ok)void action.run('sheets.outline',sub?{kind:'subtotal',groupBy,function:fn,columns:cols}:{kind:act,axis});};
+ const inside=!!cols&&cols.every(c=>letters.includes(c)),deepest=s.outline?.[axis].deepest??0,level=Math.min(lvl,Math.max(deepest,1)),ok=sub?rows>=3&&rows<=MAX_SUBTOTAL_ROWS&&inside:act==='level'?deepest>0:true;
+ const apply=()=>{if(ok)void action.run('sheets.outline',sub?{kind:'subtotal',groupBy,function:fn,columns:cols}:act==='removeSubtotals'?{kind:act}:act==='level'?{kind:act,axis,level}:{kind:act,axis});};
  const info=s.outline;
  return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.ol.title')}>
   <span>{t('sheets.ol.title')}</span>
   <label className="flex flex-col gap-1">{t('sheets.ol.action')}<NativeSelect className={field} value={act} disabled={action.busy} onChange={e=>setAct(e.currentTarget.value as OutlineAction)} data-testid="sheets-ol-action">
    <optgroup label={t('sheets.ol.groupLines')}><option value="group">{t('sheets.ol.group')}</option><option value="ungroup">{t('sheets.ol.ungroup')}</option></optgroup>
-   <optgroup label={t('sheets.ol.groupDetail')}><option value="hide">{t('sheets.ol.hide')}</option><option value="show">{t('sheets.ol.show')}</option></optgroup>
-   <optgroup label={t('sheets.ol.groupTotals')}><option value="subtotal">{t('sheets.ol.subtotal')}</option></optgroup>
+   <optgroup label={t('sheets.ol.groupDetail')}><option value="hide">{t('sheets.ol.hide')}</option><option value="show">{t('sheets.ol.show')}</option><option value="level">{t('sheets.ol.level')}</option></optgroup>
+   <optgroup label={t('sheets.ol.groupTotals')}><option value="subtotal">{t('sheets.ol.subtotal')}</option><option value="removeSubtotals">{t('sheets.ol.removeSub')}</option></optgroup>
   </NativeSelect></label>
-  {!sub&&<label className="flex flex-col gap-1">{t('sheets.ol.axis')}<NativeSelect className={field} value={axis} disabled={action.busy} onChange={e=>setAxis(e.currentTarget.value as 'rows'|'cols')} data-testid="sheets-ol-axis"><option value="rows">{t('sheets.ol.rows')}</option><option value="cols">{t('sheets.ol.cols')}</option></NativeSelect></label>}
+  {act!=='subtotal'&&act!=='removeSubtotals'&&<label className="flex flex-col gap-1">{t('sheets.ol.axis')}<NativeSelect className={field} value={axis} disabled={action.busy} onChange={e=>setAxis(e.currentTarget.value as 'rows'|'cols')} data-testid="sheets-ol-axis"><option value="rows">{t('sheets.ol.rows')}</option><option value="cols">{t('sheets.ol.cols')}</option></NativeSelect></label>}
+  {act==='level'&&<label className="flex flex-col gap-1">{t('sheets.ol.levelPick')}<NativeSelect className={field} value={String(level)} disabled={action.busy||deepest===0} onChange={e=>setLvl(Number(e.currentTarget.value))} data-testid="sheets-ol-level">{Array.from({length:Math.max(deepest,1)},(_,i)=><option key={i+1} value={String(i+1)}>{i+1}</option>)}</NativeSelect></label>}
   {sub&&<label className="flex flex-col gap-1">{t('sheets.ol.by')}<NativeSelect className={field} value={groupBy} disabled={action.busy} onChange={e=>setBy(e.currentTarget.value)} data-testid="sheets-ol-by">{letters.map(l=><option key={l} value={l}>{l}</option>)}</NativeSelect></label>}
   {sub&&<label className="flex flex-col gap-1">{t('sheets.ol.func')}<NativeSelect className={field} value={fn} disabled={action.busy} onChange={e=>setFn(e.currentTarget.value as SubtotalFunc)} data-testid="sheets-ol-func">{SUBTOTAL_FUNCS.map(f=><option key={f} value={f}>{t('sheets.ol.f.'+f)}</option>)}</NativeSelect></label>}
   {sub&&<label className="flex flex-col gap-1">{t('sheets.ol.values')}<NativeInput className={field} value={values} maxLength={40} aria-invalid={values!==''&&!inside} disabled={action.busy} onChange={e=>setValues(e.currentTarget.value)} data-testid="sheets-ol-values"/></label>}
   <Button variant="outline" size="compact" disabled={action.busy||!ok} onClick={apply} data-testid="sheets-ol-apply">{t('sheets.ol.apply')}</Button>
-  <p className="text-ink-3">{t(sub?'sheets.ol.subHint':'sheets.ol.hint',{range:rangeAddress(r)})}</p>
+  <p className="text-ink-3">{t(sub?'sheets.ol.subHint':act==='removeSubtotals'?'sheets.ol.removeHint':act==='level'?'sheets.ol.levelHint':'sheets.ol.hint',{range:rangeAddress(r)})}</p>
   {info&&(info.rows.lines>0||info.cols.lines>0)&&<p className="text-ink-3" data-testid="sheets-ol-info">{t('sheets.ol.info',{rows:info.rows.lines,cols:info.cols.lines,hidden:info.rows.hidden+info.cols.hidden})}</p>}
  </div>;
 }
