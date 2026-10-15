@@ -10,7 +10,7 @@ import '../../lib/documents/guards';
 import {getCollab,onSessionChange} from '../../lib/collab/session';
 import {peerCarets,type PeerCaret} from '../../lib/collab/office/docsPresence';
 import {CELL_BASE} from '../../lib/documents/edit';
-import {moveParagraphs,setLineSpacing,toggleList,insertPageBreak,copyFormatting,pasteFormatting,selectUnitAtCaret,clearFormatting,copyLinkAt,toggleVertAlign,setFindOpen,setParagraphStyle,clearCaret,deleteAtCaret,dragTo,editParagraph,getEngine,moveCaret,pasteText,settleDocument,switchDocument,pointerAt,redoEdit,selectAllText,setAlign,shiftListLevel,tabInCell,stepFontSize,stepIndent,toggleFormat,selectedText,splitAtCaret,syncGeometry,typeText,undoEdit} from '../../lib/documents/session';
+import {printCurrent,moveParagraphs,setLineSpacing,toggleList,insertPageBreak,copyFormatting,pasteFormatting,selectUnitAtCaret,clearFormatting,copyLinkAt,toggleVertAlign,setFindOpen,setParagraphStyle,clearCaret,deleteAtCaret,dragTo,editParagraph,getEngine,moveCaret,pasteText,settleDocument,switchDocument,pointerAt,redoEdit,selectAllText,setAlign,shiftListLevel,tabInCell,stepFontSize,stepIndent,toggleFormat,selectedText,splitAtCaret,syncGeometry,typeText,undoEdit} from '../../lib/documents/session';
 import {specialChar} from '../../lib/documents/symbols';
 import {parsePdfPages,type PdfOptions} from '../../lib/documents/protocol';
 import {saveCopy,savePdf,saveFormat} from '../../lib/documents/saveCopy';
@@ -88,7 +88,7 @@ function CaretInput({left,top}:{left:number;top:number}){
     case 'bullets':void toggleList('bullet');break;case 'pageBreak':void insertPageBreak();break;
     case 'painterCopy':copyFormatting();break;case 'painterPaste':void pasteFormatting();break;
     case 'allCaps':void toggleFormat('allCaps');break;case 'smallCaps':void toggleFormat('smallCaps');break;
-    case 'normalStyle':void setParagraphStyle('Normal');break;case 'charLook':setInfoDialog('charlook');break;}
+    case 'normalStyle':void setParagraphStyle('Normal');break;case 'charLook':setInfoDialog('charlook');break;case 'print':void printCurrent();break;}
     return;}
    if(e.key==='Enter'){e.preventDefault();void splitAtCaret();return;}
    if(mod&&!e.altKey&&e.key==='/'){e.preventDefault();setShortcutsOpen(true);return;}

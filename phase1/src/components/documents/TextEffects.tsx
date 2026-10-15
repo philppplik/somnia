@@ -2,7 +2,7 @@ import {useEffect,useState} from 'react';
 import {autoCorrectOn,setAutoCorrect} from '../../lib/documents/autocorrect';
 import {executeCommand} from '../../lib/commands';
 import {pickAndInsertText} from '../../lib/documents/insertFromFile';
-import {moveParagraphs,sortParagraphs,readParagraphSpacing,setParagraphSpacing,readBookmarks,setViewMarks,setTrackChanges,copyFormatting,pasteFormatting,setCharSpacing,insertPageBreak,clearFormatting,changeCase,hasTextSelection,setHighlight,setLink,toggleFormat,toggleVertAlign} from '../../lib/documents/session';
+import {printCurrent,moveParagraphs,sortParagraphs,readParagraphSpacing,setParagraphSpacing,readBookmarks,setViewMarks,setTrackChanges,copyFormatting,pasteFormatting,setCharSpacing,insertPageBreak,clearFormatting,changeCase,hasTextSelection,setHighlight,setLink,toggleFormat,toggleVertAlign} from '../../lib/documents/session';
 import {PARAGRAPH_SPACINGS,type ParagraphSpacing,HIGHLIGHTS,MAX_LINK_CHARS,linkProblem,type FormatPatch,type FormatState,type HighlightName} from '../../lib/documents/protocol';
 import {CASE_MODES,type CaseMode} from '../../lib/documents/textCase';
 import {setShortcutsOpen} from '../../lib/documents/shortcuts';
@@ -97,6 +97,7 @@ export function TextEffects({format,held,enabled}:{format:FormatState|null;held:
    {id:'autocorrect',label:(ac?'\u2713 ':'')+t('documents.autocorrect.toggle'),enabled:true,run:()=>{if(setAutoCorrect(!ac))setAc(!ac);}},
    {id:'review',label:t('documents.review.open'),enabled,run:()=>setInfoDialog('review')}]}/>
   <ActionMenu label={t('documents.menu.document')} testId="documents-menu-document" items={[
+   {id:'print',label:t('documents.print.open'),enabled,run:()=>void printCurrent()},
    {id:'props',label:t('documents.props.open'),enabled:true,run:()=>setInfoDialog('properties')},
    {id:'wc',label:t('documents.wc.open'),enabled:true,run:()=>setInfoDialog('wordCount')},
    {id:'png',label:t('documents.export.pagePng'),enabled,run:()=>void executeCommand('documents.export.pagePng')},

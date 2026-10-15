@@ -28,7 +28,7 @@ import {insertPageBreak,setParagraphOptions,setProperties,setTabStops} from './s
 import {parsePdfPages,checkParaPatch,PARA_FLAG_KEYS,propertiesProblem,tabsProblem} from './protocol';
 import {addComment,commentSelection,deleteComment,goToComment,readComments,replyComment,resolveComment} from './session';
 import {coverProblem,PARAGRAPH_SPACINGS,type ParagraphSpacing,bookmarkProblem,commentProblem,HIGHLIGHTS,linkProblem,type HighlightName} from './protocol';
-import {moveParagraphs,sortParagraphs,settleDocument,getEngine,insertCoverPage,setParagraphSpacing,selectUnitAtCaret,addBookmark,deleteBookmark,goToComment as goToBlock0,readBookmarks,bookmarkSelection,goToAdjacentChange,setViewMarks,textToTable,setTrackChanges,resolveChange,resolveAllChanges,changeAtCaret,setCharLook,setCharSpacing,setCharScale,setLineRule,setImageWrap,setImageCrop,setProofing,setShowHidden,changeCase,addToDictionary,copyFormatting,pasteFormatting,clearFormatting,hasTextSelection,setHighlight,setLink,toggleVertAlign} from './session';
+import {printCurrent,moveParagraphs,sortParagraphs,settleDocument,getEngine,insertCoverPage,setParagraphSpacing,selectUnitAtCaret,addBookmark,deleteBookmark,goToComment as goToBlock0,readBookmarks,bookmarkSelection,goToAdjacentChange,setViewMarks,textToTable,setTrackChanges,resolveChange,resolveAllChanges,changeAtCaret,setCharLook,setCharSpacing,setCharScale,setLineRule,setImageWrap,setImageCrop,setProofing,setShowHidden,changeCase,addToDictionary,copyFormatting,pasteFormatting,clearFormatting,hasTextSelection,setHighlight,setLink,toggleVertAlign} from './session';
 import {documentsExportReady,patchDocumentsExportUi,requestDocumentsExportFormat,requestDocumentsExportPdf,requestDocumentsSaveCopy} from './exportBridge';
 /**
  * Documents studio commands. Registered while the Documents canvas is mounted (registerDocumentsCommands),
@@ -104,6 +104,7 @@ export function registerDocumentsCommands(){
    const v=(p as Record<string,unknown>|undefined)?.value;if(typeof v!=='string'||!(PARAGRAPH_SPACINGS as readonly string[]).includes(v))throw expected('Invalid "value".');
    await setParagraphSpacing(v as ParagraphSpacing);
   },()=>ready()),
+  add('documents.print','Print the document',async()=>{await printCurrent();},()=>ready()),
   add('documents.paragraphs.moveUp','Move the selected paragraphs up',async()=>{await moveParagraphs(-1);},()=>ready()&&!!getDocumentsState().caret),
   add('documents.paragraphs.moveDown','Move the selected paragraphs down',async()=>{await moveParagraphs(1);},()=>ready()&&!!getDocumentsState().caret),
   add('documents.paragraphs.sortAsc','Sort the selected paragraphs A to Z',async()=>{await sortParagraphs(false);},()=>ready()&&!!getDocumentsState().caret),

@@ -5403,6 +5403,17 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.print",
+      "title": "Print the document",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.proofing.addWord",
       "title": "Add a word to the spelling dictionary",
       "category": "View",

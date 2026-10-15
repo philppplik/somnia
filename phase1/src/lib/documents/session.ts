@@ -279,6 +279,7 @@ async function structural(op:(e:DocumentsEngine)=>Promise<import('./protocol').O
 }
 /* ---- On-page caret: all offsets are UTF-8 bytes of the paragraph's current text. A selection may span paragraphs (anchorBlock differs from block). ---- */
 import {autoCorrect,autoCorrectOn} from './autocorrect';
+import {printDocument} from './print';
 const enc=new TextEncoder();const u8=(s:string)=>enc.encode(s).length;
 const blockText=(i:number)=>{const b=getDocumentsState().blocks.find(x=>x.index===i);return b&&b.editable?b.text??null:null;};
 interface Pos{block:number;off:number}
@@ -1075,6 +1076,12 @@ export const addComment=(text:string)=>run(async()=>{
 const commentStep=(op:(e:DocumentsEngine)=>Promise<import('./protocol').OpenedDocument>)=>run(async()=>{
  const c=getDocumentsState().caret;const spot=c?{block:c.block,off:c.head}:await nearEditable(engine!,0);
  await structural(op,spot,spot);if(!c)patchDocuments({caret:null});
+});
+/** Prints the document through the system print dialog (pages are rendered as images; at most 100 pages). */
+export const printCurrent=()=>run(async()=>{
+ const e=getEngine();if(!e)throw new Error('Open a document first.');
+ await settleDocument();const sizes=getDocumentsState().pageSizes;
+ await printDocument(e,sizes);
 });
 /** Moves the selected paragraphs one place up (-1) or down (+1). One undo step; the selection moves with them. */
 export const moveParagraphs=(delta:-1|1)=>run(async()=>{
