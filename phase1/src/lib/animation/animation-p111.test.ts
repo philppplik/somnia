@@ -1897,3 +1897,12 @@ test('P279 palette: swatches and replace cover gradients and effects, shift move
  shift({hue:120});assert.equal(L().effects![0].color,'#00ff00');assert.deepEqual(L().effects![0].colorKeys!.map(k=>k.color),['#00ff00','#0000ff']);
  s.undo();assert.equal(L().effects![0].colorKeys![1].color,'#00ff00');
 });
+
+test('P281 shifting a layer moves its counter keys and typewriter keys with it',async()=>{
+ const {countSpecs}=await import('./countCommands');const {fullText}=await import('./effects');const run=countSpecs()[0].run as (p?:unknown)=>unknown;
+ const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'text',id:'t'});s.dispatch({type:'layer.update',layer:'t',source:{text:'{n}'}} as never);
+ const L=()=>findComp(s.document!)!.layers.find(l=>l.id==='t')!;
+ run({from:0,to:100,frames:30,ease:false,layers:['t']});const t0=L().inT;
+ s.dispatch({type:'layer.shift',layer:'t',delta:f(10),mode:'slip'} as never);
+ assert.equal(L().textCount!.value.keys[0].t,t0+f(10));assert.equal(fullText(L(),t0+f(10)),'0');assert.equal(fullText(L(),t0+f(25)),'50');
+});
