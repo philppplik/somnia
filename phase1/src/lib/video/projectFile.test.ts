@@ -143,3 +143,10 @@ test('media clip audio fades round-trip and feed the signature',()=>{
  const plain=parseVideoProject(serializeVideoProject([{...clip,fadeIn:undefined,fadeOut:undefined}],[],'webm'));
  assert.equal(plain.clips[0].fadeIn,undefined,'absent fades stay absent');
 });
+
+test('freeze frames round-trip and feed the signature',()=>{
+ const clip:TimelineClip={id:'c1',source:'a.mp4',in_s:0,out_s:4,gain:1,muted:false,freeze:2.5};
+ const parsed=parseVideoProject(serializeVideoProject([clip],[],'webm'));
+ assert.deepEqual([parsed.clips[0].freeze,parsed.clips[0].in_s,parsed.clips[0].out_s],[2.5,0,4]);
+ assert.notEqual(clipsSignature([clip]),clipsSignature([{...clip,freeze:undefined}]),'freeze is part of the dirty signature');
+});

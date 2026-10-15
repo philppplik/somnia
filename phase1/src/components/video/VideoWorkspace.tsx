@@ -9,7 +9,7 @@ import {TitlePreview} from './TitlePreview';
 import {useTitlePlayback} from './useTitlePlayback';
 import {FilmstripStrip} from './FilmstripStrip';
 import {WaveformStrip} from './WaveformStrip';
-import {blendAt,clipFadeGain,clipRanges,flipOf,isImageClip,locate,speedOf,timelineDuration} from '../../lib/video/timeline';
+import {blendAt,clipFadeGain,clipRanges,flipOf,isFreeze,isImageClip,locate,speedOf,timelineDuration} from '../../lib/video/timeline';
 import {shuttleFaster,shuttleSlower} from '../../lib/video/shuttle';
 import {audioClipDuration,audioEnvelope,audioTrackEnd,duckGainAt} from '../../lib/video/audioTrack';
 import {AudioLane} from './AudioLane';
@@ -93,7 +93,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
  // Play/pause follows the transport for every slot that is part of the current blend.
  useEffect(()=>{
   for(const e of blend){
-   if(isTitleClip(e.range.clip)||isImageClip(e.range.clip))continue;
+   if(isTitleClip(e.range.clip)||isImageClip(e.range.clip)||isFreeze(e.range.clip))continue;
    const el=slotOf(e.range.index).current;if(!el)continue;
    if(playing){if(el.paused)void el.play().catch(()=>{});}else el.pause();
   }
@@ -104,7 +104,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
    if(isTitleClip(e.range.clip)||isImageClip(e.range.clip))continue;
    const el=slotOf(e.range.index).current;if(!el)continue;
    const c=e.range.clip;
-   el.muted=muted;el.volume=Math.min(1,Math.max(0,volume*e.audio*(c.muted?0:c.gain)*clipFadeGain(c,e.range.start,e.range.end,playhead)));
+   el.muted=muted;el.volume=isFreeze(c)?0:Math.min(1,Math.max(0,volume*e.audio*(c.muted?0:c.gain)*clipFadeGain(c,e.range.start,e.range.end,playhead)));
   }
  },[blend,volume,muted,playhead]);
  const advance=useCallback((fromIndex:number)=>{
@@ -124,7 +124,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
  // The element clock is fresher than the React playhead (timeupdate lags a frame), so cuts land where the frame actually is.
  const splitHere=useCallback(()=>{
   const el=mainEl();
-  splitTimelineAt(item.name,el&&entry?entry.range.start+(el.currentTime-entry.range.clip.in_s)/speedOf(entry.range.clip):playhead);
+  splitTimelineAt(item.name,el&&entry&&!isFreeze(entry.range.clip)?entry.range.start+(el.currentTime-entry.range.clip.in_s)/speedOf(entry.range.clip):playhead);
  },[item.name,playhead,entry,main]);
  // The main slot drives the playhead and the boundary advance; the outgoing slot only stops at its own out point.
  const onTime=(slotIndex:number)=>(e:React.SyntheticEvent<HTMLVideoElement>)=>{
@@ -162,7 +162,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
   else if(e.key==='End'){e.preventDefault();seek(duration);}
  };
  // Title cards and image clips have no <video>; this rAF clock plays through them and advances at the clip end.
- const stillMain=main&&(isTitleClip(main.range.clip)||isImageClip(main.range.clip))?main:null;
+ const stillMain=main&&(isTitleClip(main.range.clip)||isImageClip(main.range.clip)||isFreeze(main.range.clip))?main:null;
  useTitlePlayback({running:playing&&!!stillMain,from:playhead,limit:stillMain?.range.end??0,rate:rateMul,onTime:setPlayhead,onEnd:()=>{if(stillMain)advance(stillMain.range.index);}});
  const filmstrip=getFilmstrip();
  const shortName=(n:string)=>n.replace(/^.*[\\/]/,'').replace(/\.[^.]+$/,'');

@@ -2,7 +2,7 @@ import {reportError} from '../log';
 import {useSyncExternalStore} from 'react';
 import {VideoEngine,type VideoEngineLike} from './engine';
 import {DEFAULT_EXPORT_OPTIONS,DEFAULT_FORMAT,exportName,sanitizeExportOptions,type VideoExportOptions,type VideoFormat} from './recipe';
-import {fadeInOf,fadeOutOf,flipOf,fullClip,IMAGE_DEFAULT_SECONDS,newClipId,MIN_CLIP_SECONDS as MIN_EXPORT_RANGE,sliceTimeline,type ClipFlip,isNeutralTimeline,moveClip,rippleDelete,sanitizeClips,setClipEdge,setClipFades,setClipSpeed,setCrossfade,splitAt,timelineDuration,type TimelineClip} from './timeline';
+import {fadeInOf,fadeOutOf,flipOf,fullClip,isFreeze,IMAGE_DEFAULT_SECONDS,newClipId,MIN_CLIP_SECONDS as MIN_EXPORT_RANGE,sliceTimeline,type ClipFlip,isNeutralTimeline,moveClip,rippleDelete,sanitizeClips,setClipEdge,setClipFades,setClipSpeed,setCrossfade,speedOf,splitAt,timelineDuration,type TimelineClip} from './timeline';
 import {emptyVideoHistory,pushHistory,redoHistory,undoHistory,type VideoHistory,type VideoSnapshot} from './history';
 import {audioTrackEnd,duplicateAudioClip,fullAudioClip,moveAudioClip,removeAudioClip,resizeAudioClip,sanitizeAudioClips,setAudioClipDuck,setAudioClipEdge,setAudioClipFades,setAudioClipGain,setAudioClipMuted,type AudioClip,sliceAudioClips} from './audioTrack';
 import {clipsSignature,parseVideoProject,projectFileName,serializeVideoProject} from './projectFile';
@@ -95,7 +95,7 @@ async function openVideoFresh(item:{name:string;url:string}):Promise<void>{
 }
 /** Field-level clip equality: a clamped no-op edit must not flood the undo stack. */
 const sameClips=(a:TimelineClip[],b:TimelineClip[])=>a.length===b.length&&a.every((c,i)=>{
- const d=b[i];return c.id===d.id&&c.source===d.source&&c.in_s===d.in_s&&c.out_s===d.out_s&&c.gain===d.gain&&c.muted===d.muted&&c.kind===d.kind&&c.crossfade_s===d.crossfade_s&&c.title===d.title&&flipOf(c)===flipOf(d)&&fadeInOf(c)===fadeInOf(d)&&fadeOutOf(c)===fadeOutOf(d);
+ const d=b[i];return c.id===d.id&&c.source===d.source&&c.in_s===d.in_s&&c.out_s===d.out_s&&c.gain===d.gain&&c.muted===d.muted&&c.kind===d.kind&&c.crossfade_s===d.crossfade_s&&c.title===d.title&&flipOf(c)===flipOf(d)&&fadeInOf(c)===fadeInOf(d)&&fadeOutOf(c)===fadeOutOf(d)&&c.freeze===d.freeze;
 });
 /** Applies a timeline edit, keeps every clip inside its source bounds and records the previous state as one undo step. `historyKey` coalesces a continuous gesture (trim drag, gain slider, title typing) into a single step. */
 export function editTimeline(root:string,edit:(clips:TimelineClip[])=>TimelineClip[]|null,opts?:{historyKey?:string}){
@@ -251,6 +251,23 @@ export const moveTimelineClip=(root:string,id:string,by:number)=>editTimeline(ro
 export const trimTimelineClip=(root:string,id:string,edge:'in'|'out',at:number,historyKey?:string)=>editTimeline(root,clips=>setClipEdge(clips,id,edge,at),historyKey?{historyKey}:undefined);
 export const setTimelineClipCrossfade=(root:string,id:string,seconds:number,historyKey?:string)=>editTimeline(root,clips=>setCrossfade(clips,id,seconds),historyKey?{historyKey}:undefined);
 export const setTimelineClipFades=(root:string,id:string,fadeIn:number,fadeOut:number,historyKey?:string)=>editTimeline(root,clips=>setClipFades(clips,id,fadeIn,fadeOut),historyKey?{historyKey}:undefined);
+/** Freezes a media clip on one source frame (default: its first frame); null unfreezes back to normal playback over the same timeline length. */
+export function setTimelineClipFreeze(root:string,id:string,frame:number|null){
+ const s=sessions.get(root);if(!s)return;
+ const clip=s.clips.find(c=>c.id===id);
+ if(!clip||isTitleClip(clip)||clip.kind==='image')return;
+ editTimeline(root,clips=>clips.map(c=>{
+  if(c.id!==id)return c;
+  if(frame===null){
+   if(!isFreeze(c))return c;
+   const start=c.freeze!,o:TimelineClip={...c,in_s:Number(start.toFixed(3)),out_s:Number((start+c.out_s).toFixed(3))};
+   delete o.freeze;return o;
+  }
+  if(isFreeze(c))return{...c,freeze:Math.max(0,frame)};
+  const dur=(c.out_s-c.in_s)/speedOf(c);
+  return{...c,freeze:Math.max(0,Math.min(frame,c.out_s)),in_s:0,out_s:Number(dur.toFixed(3)),speed:undefined,fadeIn:undefined,fadeOut:undefined};
+ }));
+}
 export function setTimelineClipGain(root:string,id:string,gain:number,historyKey?:string){
  editTimeline(root,clips=>clips.map(c=>c.id===id?{...c,gain}:c),historyKey?{historyKey}:undefined);
 }

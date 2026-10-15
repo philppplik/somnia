@@ -18,7 +18,7 @@ interface VideoProjectFile{version:number;app:'somnia-video';format?:VideoFormat
 
 /** Stable identity of the edit list for dirty tracking. Ids are included: a split changes them, and that IS an edit. */
 export const clipsSignature=(clips:TimelineClip[],audioClips:AudioClip[]=[])=>JSON.stringify([
- clips.map(c=>[c.id,c.source,c.in_s,c.out_s,c.gain,c.muted,c.crossfade_s??0,speedOf(c),c.kind??'media',isTitleClip(c)?c.title:null,c.flip??'none',fadeInOf(c),fadeOutOf(c)]),
+ clips.map(c=>[c.id,c.source,c.in_s,c.out_s,c.gain,c.muted,c.crossfade_s??0,speedOf(c),c.kind??'media',isTitleClip(c)?c.title:null,c.flip??'none',fadeInOf(c),fadeOutOf(c),c.freeze??null]),
  audioClips.map(c=>[c.id,c.source,c.in_s,c.out_s,c.at,c.gain,c.muted,c.duck,c.fadeIn,c.fadeOut]),
 ]);
 
@@ -29,7 +29,7 @@ export function serializeVideoProject(clips:TimelineClip[],audioClips:AudioClip[
    ?{id:c.id,kind:'title',out_s:c.out_s,crossfade_s:c.crossfade_s??0,title:c.title}
    :c.kind==='image'
    ?{id:c.id,kind:'image',source:c.source,out_s:c.out_s,crossfade_s:c.crossfade_s??0,...(c.flip?{flip:c.flip}:{})}
-   :{id:c.id,kind:'media',source:c.source,in_s:c.in_s,out_s:c.out_s,gain:c.gain,muted:c.muted,speed:speedOf(c),crossfade_s:c.crossfade_s??0,...(c.flip?{flip:c.flip}:{}),...(fadeInOf(c)>0?{fadeIn:fadeInOf(c)}:{}),...(fadeOutOf(c)>0?{fadeOut:fadeOutOf(c)}:{})}),
+   :{id:c.id,kind:'media',source:c.source,in_s:c.in_s,out_s:c.out_s,gain:c.gain,muted:c.muted,speed:speedOf(c),crossfade_s:c.crossfade_s??0,...(c.flip?{flip:c.flip}:{}),...(fadeInOf(c)>0?{fadeIn:fadeInOf(c)}:{}),...(fadeOutOf(c)>0?{fadeOut:fadeOutOf(c)}:{}),...(typeof c.freeze==='number'?{freeze:c.freeze}:{})}),
   audio:audioClips.map(c=>({id:c.id,source:c.source,in_s:c.in_s,out_s:c.out_s,at:c.at,gain:c.gain,muted:c.muted,duck:c.duck,fadeIn:c.fadeIn,fadeOut:c.fadeOut}))};
  return JSON.stringify(file,null,1)+'\n';
 }
@@ -56,7 +56,7 @@ export function parseVideoProject(text:string):{clips:TimelineClip[];audioClips:
   if(o.kind==='image')return[{id:id(o.id),kind:'image' as const,source:o.source,in_s:0,out_s:clampTitleSeconds(num(o.out_s,3)),gain:1,muted:false,crossfade_s:num(o.crossfade_s),...(CLIP_FLIPS.includes(o.flip as ClipFlip)&&o.flip!=='none'?{flip:o.flip as ClipFlip}:{})}];
   const in_s=Math.max(0,num(o.in_s)),out_s=num(o.out_s);
   if(out_s-in_s<MIN_CLIP_SECONDS)return[];
-  return[{id:id(o.id),source:o.source,in_s,out_s,gain:num(o.gain,1),muted:o.muted===true,speed:num(o.speed,1),crossfade_s:num(o.crossfade_s),...(CLIP_FLIPS.includes(o.flip as ClipFlip)&&o.flip!=='none'?{flip:o.flip as ClipFlip}:{}),...(num(o.fadeIn)>0?{fadeIn:num(o.fadeIn)}:{}),...(num(o.fadeOut)>0?{fadeOut:num(o.fadeOut)}:{})}];
+  return[{id:id(o.id),source:o.source,in_s,out_s,gain:num(o.gain,1),muted:o.muted===true,speed:num(o.speed,1),crossfade_s:num(o.crossfade_s),...(CLIP_FLIPS.includes(o.flip as ClipFlip)&&o.flip!=='none'?{flip:o.flip as ClipFlip}:{}),...(num(o.fadeIn)>0?{fadeIn:num(o.fadeIn)}:{}),...(num(o.fadeOut)>0?{fadeOut:num(o.fadeOut)}:{}),...(typeof o.freeze==='number'&&Number.isFinite(o.freeze)?{freeze:o.freeze}:{})}];
  });
  const audioClips=(Array.isArray(f.audio)?f.audio:[]).flatMap((c):AudioClip[]=>{
   if(!c||typeof c!=='object')return[];

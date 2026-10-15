@@ -2,7 +2,7 @@
 import {ALL_FORMATS,AudioSample,AudioSampleSink,AudioSampleSource,BufferSource,BufferTarget,CanvasSink,CanvasSource,Input,Mp4OutputFormat,Output,QUALITY_HIGH,QUALITY_LOW,QUALITY_MEDIUM,WebMOutputFormat,getFirstEncodableAudioCodec,getFirstEncodableVideoCodec} from 'mediabunny';
 import type {AudioCodec,VideoCodec} from 'mediabunny';
 import {sanitizeExportOptions,type VideoExportOptions,type VideoFormat} from './recipe';
-import {clipFadeGain,clipRanges,fadeInOf,fadeOf,fadeOutOf,flipOf,isImageClip,speedOf,timelineDuration,type ClipRange,type TimelineClip} from './timeline';
+import {clipFadeGain,clipRanges,fadeInOf,fadeOf,fadeOutOf,flipOf,isFreeze,isImageClip,speedOf,timelineDuration,type ClipRange,type TimelineClip} from './timeline';
 import {audioEnvelope,duckGainAt,type AudioClip} from './audioTrack';
 import {WindowMixer} from './mixer';
 import {drawTitleCard,isTitleClip,needsSourceFile} from './titles';
@@ -120,7 +120,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
   const caps=await probeCapabilities(outW,outH);
   const videoCodec=format==='webm'?caps.webmVideo:caps.mp4Video;
   if(!videoCodec)throw new Error(format==='webm'?'This platform cannot encode VP9 or VP8 video.':'This platform cannot encode H.264 (AVC) video. Try WebM instead.');
-  const anyAudio=clips.some(c=>needsSourceFile(c)&&!isImageClip(c)&&!c.muted&&inputs.get(c.source)!.probe.audio!==null)||audioClips.length>0;
+  const anyAudio=clips.some(c=>needsSourceFile(c)&&!isImageClip(c)&&!isFreeze(c)&&!c.muted&&inputs.get(c.source)!.probe.audio!==null)||audioClips.length>0;
   let audioCodec:string|null=null;
   if(anyAudio){
    audioCodec=format==='webm'?(caps.opus?'opus':null):(caps.aac?'aac':null);
@@ -244,7 +244,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
     return card.canvas;
    }
    const sink=await sinkFor(i);
-   const src=Math.min(c.out_s-1e-3,c.in_s+(t-r.start)*speedOf(c));
+   const src=isFreeze(c)?c.freeze!:Math.min(c.out_s-1e-3,c.in_s+(t-r.start)*speedOf(c));
    const f=await sink.getCanvas(src);
    return f?f.canvas:null;
   };
@@ -275,7 +275,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
     const speed=speedOf(c);
     const srcStart=c.in_s+(z.start-r.start)*speed,srcEnd=c.out_s-(r.end-z.end)*speed;
     const sink=rec?await sinkFor(z.a):null;
-    if(speed!==1||isImageClip(c)){
+    if(speed!==1||isImageClip(c)||isFreeze(c)){
      // Sped clips render on a fixed output grid (source fps): frames drop or repeat naturally.
      const fps=fpsOf(z.a),n=Math.max(1,Math.ceil((z.end-z.start)*fps));
      for(let k=0;k<n;k++){
@@ -295,7 +295,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
       note(z.start+(frame.timestamp-base));
      }
     }
-    if(rec?.probe.audio&&mixer&&!c.muted){
+    if(rec?.probe.audio&&mixer&&!c.muted&&!isFreeze(c)){
      const aTrack=(await rec.input.getAudioTracks())[0];
      await emitZoneAudio(new AudioSampleSink(aTrack),srcStart,srcEnd,z.start,(t)=>c.gain*clipFadeGain(c,r.start,r.end,t),speed,mixer);
     }else if(rec&&rec.probe.audio===null&&audioSource&&z===zones[0])steps.push(`No audio track in ${c.source}.`);
@@ -321,7 +321,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
      let any=false;
      for(const side of[{r:ra,sign:'out' as const},{r:rb,sign:'in' as const}]){
       const c=side.r.clip;
-      if(c.muted||isTitleClip(c)||isImageClip(c))continue;
+      if(c.muted||isTitleClip(c)||isImageClip(c)||isFreeze(c))continue;
       const{input,probe}=inputs.get(c.source)!;
       if(!probe.audio)continue;
       const srcStart=c.in_s+(z.start-side.r.start)*speedOf(c),srcEnd=c.in_s+(z.end-side.r.start)*speedOf(c);
@@ -366,6 +366,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
   if(clips.some(c=>c.muted))steps.push('Muted clips kept as silence.');
   if(clips.some(c=>c.gain!==1&&!c.muted))steps.push('Per-clip gain applied.');
   if(clips.some(c=>fadeInOf(c)>0||fadeOutOf(c)>0))steps.push('Clip audio fades applied.');
+  if(clips.some(isFreeze))steps.push('Freeze frames held.');
   if(clips.some(c=>needsSourceFile(c)&&speedOf(c)!==1))steps.push('Clip speed applied; audio is resampled (pitch shifts).');
   if(audioFeed.length)steps.push(`${audioFeed.length} audio-track clip(s) mixed in.`);
   if(audioClips.some(c=>c.duck>0&&!c.muted))steps.push('Auto-duck applied under foreground audio.');

@@ -2,9 +2,9 @@ import {useMemo,useState} from 'react';
 import {Button} from '../ui/button';
 import {useT} from '../../lib/useT';
 import {useMedia} from '../../lib/media';
-import {addAudioTrackClip,addImageClip,addTimelineClip,addTimelineClipsFromDialog,cancelVideoExport,deleteAudioTrackClip,deleteTimelineClip,duplicateAudioTrackClip,moveAudioTrackClip,moveTimelineClip,resetTimeline,resizeAudioTrackClip,setAudioTrackClipDuck,setAudioTrackClipFades,setAudioTrackClipGain,toggleAudioTrackClipMute,setTimelineClipCrossfade,setTimelineClipFades,setTimelineClipGain,setTimelineClipSpeed,setVideoFormat,duplicateTimelineClip,replaceClipSource,selectTimelineClip,setImageClipLength,setTimelineClipFlip,setVideoExportOptions,setVideoExportRange,toggleTimelineClipMute,trimTimelineClip,useVideoSession} from '../../lib/video/session';
+import {addAudioTrackClip,addImageClip,addTimelineClip,addTimelineClipsFromDialog,cancelVideoExport,deleteAudioTrackClip,deleteTimelineClip,duplicateAudioTrackClip,moveAudioTrackClip,moveTimelineClip,resetTimeline,resizeAudioTrackClip,setAudioTrackClipDuck,setAudioTrackClipFades,setAudioTrackClipGain,toggleAudioTrackClipMute,setTimelineClipCrossfade,setTimelineClipFades,setTimelineClipFreeze,setTimelineClipGain,setTimelineClipSpeed,setVideoFormat,duplicateTimelineClip,replaceClipSource,selectTimelineClip,setImageClipLength,setTimelineClipFlip,setVideoExportOptions,setVideoExportRange,toggleTimelineClipMute,trimTimelineClip,useVideoSession} from '../../lib/video/session';
 import {audioClipDuration,audioTrackEnd} from '../../lib/video/audioTrack';
-import {clipDuration,clipRanges,fadeInOf,fadeOf,fadeOutOf,flipOf,IMAGE_DEFAULT_SECONDS,isImageClip,MAX_GAIN,speedOf,timelineDuration,type ClipFlip} from '../../lib/video/timeline';
+import {clipDuration,clipRanges,fadeInOf,fadeOf,fadeOutOf,flipOf,isFreeze,IMAGE_DEFAULT_SECONDS,isImageClip,MAX_GAIN,speedOf,timelineDuration,type ClipFlip} from '../../lib/video/timeline';
 import {isTitleClip} from '../../lib/video/titles';
 import {addTitleClip,setTitleLength,updateTitle} from '../../lib/video/titleSession';
 import {TitleAddRow,TitleInspector} from './TitleInspector';
@@ -127,19 +127,21 @@ export function VideoControls({name}:{name:string}){
     <Button size="compact" disabled={!swapPick} onClick={()=>{const item=candidates.find(i=>i.name===swapPick);if(item)void replaceClipSource(name,selected.id,item);setSwapPick('');}} data-testid="video-swap-source">{t('video.swapSource')}</Button>
    </div>
    <div className="grid grid-cols-2 gap-2">
-    <label>{t('video.trimStart')}<NativeInput type="number" className={`${field} mt-1`} min={0} step={0.01} value={selected.in_s} onChange={e=>trimTimelineClip(name,selected.id,'in',Number(e.target.value),`trim:${selected.id}:in`)} data-testid="video-clip-in-input"/></label>
+    {!isFreeze(selected)&&<label>{t('video.trimStart')}<NativeInput type="number" className={`${field} mt-1`} min={0} step={0.01} value={selected.in_s} onChange={e=>trimTimelineClip(name,selected.id,'in',Number(e.target.value),`trim:${selected.id}:in`)} data-testid="video-clip-in-input"/></label>}
     <label>{t('video.trimEnd')}<NativeInput type="number" className={`${field} mt-1`} min={0} step={0.01} value={selected.out_s} onChange={e=>trimTimelineClip(name,selected.id,'out',Number(e.target.value),`trim:${selected.id}:out`)} data-testid="video-clip-out-input"/></label>
    </div>
-   <label className="grid gap-1">{t('video.clipSpeed')}
+   {!isFreeze(selected)&&<label className="grid gap-1">{t('video.clipSpeed')}
     <NativeSelect className={field} value={String(speedOf(selected))} onChange={e=>setTimelineClipSpeed(name,selected.id,Number(e.target.value))} data-testid="video-clip-speed">
      {[0.25,0.5,0.75,1,1.25,1.5,2,3,4].map(v=><option key={v} value={v}>{t('video.clipSpeedValue',{speed:v})}</option>)}
     </NativeSelect>
-   </label>
+   </label>}
    <label className="grid gap-1">{t('video.clipFlip')}
     <NativeSelect className={field} value={flipOf(selected)} onChange={e=>setTimelineClipFlip(name,selected.id,e.target.value as ClipFlip)} data-testid="video-clip-flip">
      {(['none','h','v','hv'] as const).map(f=><option key={f} value={f}>{t(`video.clipFlip.${f}`)}</option>)}
     </NativeSelect>
    </label>
+   <label className="flex items-center gap-2"><NativeInput type="checkbox" className={check} checked={isFreeze(selected)} onChange={()=>setTimelineClipFreeze(name,selected.id,isFreeze(selected)?null:selected.in_s)} data-testid="video-clip-freeze"/>{t('video.freeze')}</label>
+   {isFreeze(selected)&&<label>{t('video.freezeAt')}<NativeInput type="number" className={`${field} mt-1`} min={0} step={0.1} value={selected.freeze} onChange={e=>setTimelineClipFreeze(name,selected.id,Number(e.target.value))} data-testid="video-clip-freeze-at"/></label>}
    <label className="grid gap-1">{t('video.gain',{percent:Math.round(selected.gain*100)})}
     <NativeInput type="range" className="accent-[var(--accent)]" min={0} max={MAX_GAIN} step={0.05} value={selected.gain} onChange={e=>setTimelineClipGain(name,selected.id,Number(e.target.value),`gain:${selected.id}`)} data-testid="video-clip-gain"/>
    </label>

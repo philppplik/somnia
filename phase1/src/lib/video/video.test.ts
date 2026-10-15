@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {sniffVideo,VIDEO_FILE} from './format';
 import {exportName} from './recipe';
-import {clipFadeGain,clipRanges,fadeInOf,fadeOutOf,flipOf,fullClip,isNeutralTimeline,locate,moveClip,rippleDelete,sanitizeClips,setClipEdge,setClipFades,sliceTimeline,splitAt,timelineDuration,type TimelineClip} from './timeline';
+import {clipFadeGain,clipRanges,fadeInOf,fadeOutOf,flipOf,fullClip,isFreeze,isNeutralTimeline,locate,moveClip,rippleDelete,sanitizeClips,setClipEdge,setClipFades,setClipSpeed,sliceTimeline,splitAt,timelineDuration,type TimelineClip} from './timeline';
 import {probeVideo} from './pipeline';
 import {addTimelineClip,closeVideo,deleteTimelineClip,exportVideo,getVideoSession,moveTimelineClip,openVideo,resetTimeline,runVideoExport,setTimelineClipGain,setVideoEngineFactory,setVideoFormat,splitTimelineAt,toggleTimelineClipMute,trimTimelineClip} from './session';
 import type {VideoEngineLike,VideoResult} from './engine';
@@ -236,4 +236,34 @@ test('timeline: setClipFades + a faded clip is no longer neutral',()=>{
  assert.deepEqual([fadeInOf(faded[0]),fadeOutOf(faded[0])],[1,2]);
  assert.equal(isNeutralTimeline(faded,'a.mp4',10),false,'fades make the timeline edited');
  assert.equal(isNeutralTimeline(clips,'a.mp4',10),true,'untouched stays neutral');
+});
+
+test('timeline: freeze frame shape, sanitize, split, trim and slicing',()=>{
+ const fz={...fullClip('a.mp4',10),freeze:2,in_s:0,out_s:4,speed:2,fadeIn:1};
+ const clean=sanitizeClips([fz],{'a.mp4':10})[0];
+ assert.ok(isFreeze(clean));
+ assert.deepEqual([clean.in_s,clean.out_s,clean.freeze],[0,4,2],'still shape, frame kept');
+ assert.equal(clean.speed,undefined,'freeze has no speed');
+ assert.equal(clean.fadeIn,undefined,'freeze has no audio fades');
+ const clamped=sanitizeClips([{...fz,freeze:99}],{'a.mp4':10})[0];
+ assert.ok(clamped.freeze!<10,'frame clamps into the source');
+ // locate/blendAt report the frozen frame, constantly
+ const located=locate([clean],2.5)!;
+ assert.equal(located.sourceTime,2,'constant frame mid-clip');
+ // split halves the hold, same frame on both sides
+ const halves=splitAt([clean],2)!;
+ assert.equal(halves.length,2);
+ assert.deepEqual([halves[0].freeze,halves[1].freeze],[2,2]);
+ assert.ok(Math.abs(halves[0].out_s+halves[1].out_s-4)<1e-9,'durations add up');
+ // trim: in edge refused, out edge sets the hold length
+ const trimmed=setClipEdge([clean],clean.id,'out',7);
+ assert.equal(trimmed[0].out_s,7);
+ assert.equal(setClipEdge([clean],clean.id,'in',3)[0].in_s,0,'freeze in edge stays 0');
+ // speed is refused
+ assert.equal(setClipSpeed([clean],clean.id,4)[0].speed,undefined);
+ // range slicing shrinks the hold and keeps the frame
+ const sliced=sliceTimeline([clean],1,3);
+ assert.deepEqual([sliced[0].in_s,sliced[0].out_s,sliced[0].freeze],[0,2,2]);
+ // a frozen clip is an edit
+ assert.equal(isNeutralTimeline([clean],'a.mp4',10),false);
 });

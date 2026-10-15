@@ -6,7 +6,7 @@ import {addTimelineClip} from './session';
 import {setVideoEngineFactory} from './session';
 const MP4=new URL('../../../tests/assets/clip.mp4',import.meta.url);
 const bytes=(u:URL)=>new Uint8Array(readFileSync(u));
-import {addImageClip,closeVideo,duplicateTimelineClip,dirtyVideoNames,getVideoSession,openVideo,redoVideoEdit,replaceClipSource,serializeVideoProjectCopy,setImageClipLength,setTimelineClipFades,setTimelineClipFlip,setVideoFormat,trimTimelineClip,undoVideoEdit,videoIsDirty} from './session';
+import {addImageClip,closeVideo,duplicateTimelineClip,dirtyVideoNames,getVideoSession,openVideo,redoVideoEdit,replaceClipSource,serializeVideoProjectCopy,setImageClipLength,setTimelineClipFades,setTimelineClipFlip,setTimelineClipFreeze,setVideoFormat,trimTimelineClip,undoVideoEdit,videoIsDirty} from './session';
 import {addTitleClip,updateTitle} from './titleSession';
 
 test('project: a saved .video-project reloads its timeline and format, clean',async()=>{
@@ -211,5 +211,29 @@ test('project: clip audio fades set, undo and never get swallowed as no-ops',asy
   assert.deepEqual([c.fadeIn??0,c.fadeOut??0],[6,0],'fades clamp into the clip length');
   undoVideoEdit(name);
   assert.deepEqual([getVideoSession(name)!.clips[0].fadeIn??0,getVideoSession(name)!.clips[0].fadeOut??0],[1,2],'undo restores the previous fades');
+ }finally{closeVideo(name);closeMedia(name);}
+});
+
+test('project: freeze frame toggles, re-frames, unfreezes and undoes',async()=>{
+ const name='freeze-a.mp4';
+ setVideoEngineFactory(()=>({async capabilities(){return{webmVideo:'vp9',mp4Video:null,opus:true,aac:false};},async probe(){return{duration:6,video:{codec:'vp9',width:640,height:360,fps:30},audio:null};},async export(){throw new Error('not needed');},cancelExport(){},dispose(){}}));
+ const r=await addMediaFile(new Blob([bytes(MP4)],{type:'video/mp4'}),name);assert.ok('name' in r,JSON.stringify(r));
+ await openVideo(getMedia().items.find(i=>i.name===name)!);
+ try{
+  const id=getVideoSession(name)!.clips[0].id;
+  trimTimelineClip(name,id,'in',1);trimTimelineClip(name,id,'out',5);
+  const before=getVideoSession(name)!.history.past.length;
+  setTimelineClipFreeze(name,id,2);
+  let c=getVideoSession(name)!.clips[0];
+  assert.deepEqual([c.freeze,c.in_s,c.out_s],[2,0,4],'frame at 2 s, hold keeps the timeline length');
+  assert.equal(getVideoSession(name)!.history.past.length,before+1,'freeze-only edit is recorded');
+  setTimelineClipFreeze(name,id,3.5);
+  assert.equal(getVideoSession(name)!.clips[0].freeze,3.5,'re-framing a frozen clip moves the frame');
+  setTimelineClipFreeze(name,id,null);
+  c=getVideoSession(name)!.clips[0];
+  assert.equal(c.freeze,undefined,'unfrozen');
+  assert.deepEqual([c.in_s,c.out_s],[3.5,6],'playback resumes from the frozen frame, clamped to the source');
+  undoVideoEdit(name);
+  assert.equal(getVideoSession(name)!.clips[0].freeze,3.5,'undo restores the freeze');
  }finally{closeVideo(name);closeMedia(name);}
 });

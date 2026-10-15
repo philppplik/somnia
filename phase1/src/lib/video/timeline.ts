@@ -7,7 +7,7 @@ import {clampTitleSeconds,isTitleClip,splitTitleClip} from './titles';
  * Title clips (`kind:'title'`) carry no source: `in_s` stays 0 and `out_s` is the card duration.
  * Image clips (`kind:'image'`) reference a photo file: `in_s` stays 0, `out_s` is how long the still shows.
  */
-export interface TimelineClip{id:string;source:string;in_s:number;out_s:number;gain:number;muted:boolean;crossfade_s?:number;/** Audio fade-in of a media clip, in timeline seconds. Absent/0 = none; titles and images carry no audio fades. */fadeIn?:number;/** Audio fade-out of a media clip, in timeline seconds. Absent/0 = none. */fadeOut?:number;/** Mirroring of the clip's picture (media and image clips). Absent = not flipped. */flip?:ClipFlip;/** Playback speed of a media clip (timeline seconds = source seconds / speed). Absent = 1; title cards have no speed. */speed?:number;kind?:'media'|'title'|'image';title?:import('./titles').TitleSpec}
+export interface TimelineClip{id:string;source:string;in_s:number;out_s:number;gain:number;muted:boolean;crossfade_s?:number;/** Freeze frame: source time (seconds) of the single held frame. Set = the clip is a freeze; it takes the still shape (in_s 0, out_s = display duration), has no audio and no speed. Absent = normal playback. */freeze?:number;/** Audio fade-in of a media clip, in timeline seconds. Absent/0 = none; titles and images carry no audio fades. */fadeIn?:number;/** Audio fade-out of a media clip, in timeline seconds. Absent/0 = none. */fadeOut?:number;/** Mirroring of the clip's picture (media and image clips). Absent = not flipped. */flip?:ClipFlip;/** Playback speed of a media clip (timeline seconds = source seconds / speed). Absent = 1; title cards have no speed. */speed?:number;kind?:'media'|'title'|'image';title?:import('./titles').TitleSpec}
 /** The shortest clip worth keeping; below it splits and trims only produce broken files. */
 export const MIN_CLIP_SECONDS=0.05;
 export const MAX_GAIN=2;
@@ -16,19 +16,21 @@ export const MIN_SPEED=0.25,MAX_SPEED=4;
 export const IMAGE_DEFAULT_SECONDS=5;
 /** Image clips are stills with a duration, not seekable media. */
 export const isImageClip=(c:TimelineClip)=>c.kind==='image';
+/** A media clip frozen on one source frame (freeze = that frame's source time). */
+export const isFreeze=(c:TimelineClip)=>typeof c.freeze==='number'&&Number.isFinite(c.freeze)&&!isTitleClip(c)&&!isImageClip(c);
 /** Mirroring of a media or image clip: horizontal, vertical, or both (= 180° rotation). Dimension-preserving; 90/270° rotation is deliberately not supported. */
 export type ClipFlip='none'|'h'|'v'|'hv';
 export const CLIP_FLIPS:readonly ClipFlip[]=['none','h','v','hv'];
 export const flipOf=(c:TimelineClip):ClipFlip=>CLIP_FLIPS.includes(c.flip as ClipFlip)?(c.flip as ClipFlip):'none';
 /** A media clip's playback speed, clamped to the supported range. Title cards always play at 1. */
-export const speedOf=(c:TimelineClip)=>c.kind==='title'?1:Math.min(MAX_SPEED,Math.max(MIN_SPEED,typeof c.speed==='number'&&Number.isFinite(c.speed)?c.speed:1));
+export const speedOf=(c:TimelineClip)=>c.kind==='title'||isFreeze(c)?1:Math.min(MAX_SPEED,Math.max(MIN_SPEED,typeof c.speed==='number'&&Number.isFinite(c.speed)?c.speed:1));
 /** Timeline seconds the clip occupies: its source range played at its speed. */
 export const clipDuration=(c:TimelineClip)=>Math.max(0,(c.out_s-c.in_s)/speedOf(c));
 /** The crossfade from this clip into the next one, in seconds. 0 means a hard cut. */
 export const fadeOf=(c:TimelineClip)=>c.crossfade_s??0;
 /** Audio fade-in of a clip in timeline seconds (0 for titles/images: they have no source audio). */
-export const fadeInOf=(c:TimelineClip)=>isTitleClip(c)||isImageClip(c)?0:Math.max(0,typeof c.fadeIn==='number'&&Number.isFinite(c.fadeIn)?c.fadeIn:0);
-export const fadeOutOf=(c:TimelineClip)=>isTitleClip(c)||isImageClip(c)?0:Math.max(0,typeof c.fadeOut==='number'&&Number.isFinite(c.fadeOut)?c.fadeOut:0);
+export const fadeInOf=(c:TimelineClip)=>isTitleClip(c)||isImageClip(c)||isFreeze(c)?0:Math.max(0,typeof c.fadeIn==='number'&&Number.isFinite(c.fadeIn)?c.fadeIn:0);
+export const fadeOutOf=(c:TimelineClip)=>isTitleClip(c)||isImageClip(c)||isFreeze(c)?0:Math.max(0,typeof c.fadeOut==='number'&&Number.isFinite(c.fadeOut)?c.fadeOut:0);
 /** Equal-power multiplier of a clip's own audio fades at timeline time t, the clip's range being [start,end). Independent of the crossfade weight. */
 export function clipFadeGain(c:TimelineClip,start:number,end:number,t:number):number{
  const fI=fadeInOf(c),fO=fadeOutOf(c);if(fI<=0&&fO<=0)return 1;
@@ -38,7 +40,7 @@ export function clipFadeGain(c:TimelineClip,start:number,end:number,t:number):nu
  return e;
 }
 /** A neutral timeline is one untrimmed full-length clip of its root source at unity gain - it exports the original. */
-export const isNeutralTimeline=(clips:TimelineClip[],root:string,rootDuration:number)=>clips.length===1&&!isTitleClip(clips[0])&&clips[0].source===root&&clips[0].in_s===0&&Math.abs(clips[0].out_s-rootDuration)<0.01&&clips[0].gain===1&&!clips[0].muted&&speedOf(clips[0])===1&&fadeInOf(clips[0])===0&&fadeOutOf(clips[0])===0;
+export const isNeutralTimeline=(clips:TimelineClip[],root:string,rootDuration:number)=>clips.length===1&&!isTitleClip(clips[0])&&clips[0].source===root&&clips[0].in_s===0&&Math.abs(clips[0].out_s-rootDuration)<0.01&&clips[0].gain===1&&!clips[0].muted&&speedOf(clips[0])===1&&fadeInOf(clips[0])===0&&fadeOutOf(clips[0])===0&&!isFreeze(clips[0]);
 /** Total timeline length: the clip durations minus the crossfade overlaps. */
 export const timelineDuration=(clips:TimelineClip[])=>{const r=clipRanges(clips);return r.length?r[r.length-1].end:0;};
 export interface ClipRange{clip:TimelineClip;index:number;start:number;end:number}
@@ -52,7 +54,7 @@ export function clipRanges(clips:TimelineClip[]):ClipRange[]{
 export function locate(clips:TimelineClip[],time:number):{range:ClipRange;sourceTime:number}|null{
  const ranges=clipRanges(clips);if(!ranges.length)return null;
  const r=ranges.find(r=>time<r.end)??ranges[ranges.length-1];
- const sourceTime=Math.min(r.clip.out_s,r.clip.in_s+Math.max(0,time-r.start)*speedOf(r.clip));
+ const sourceTime=isFreeze(r.clip)?r.clip.freeze!:Math.min(r.clip.out_s,r.clip.in_s+Math.max(0,time-r.start)*speedOf(r.clip));
  return{range:r,sourceTime};
 }
 export interface BlendEntry{range:ClipRange;sourceTime:number;video:number;audio:number}
@@ -64,7 +66,7 @@ export function blendAt(clips:TimelineClip[],time:number):BlendEntry[]{
  const ranges=clipRanges(clips);if(!ranges.length)return[];
  const hit=ranges.findIndex(r=>time<r.end);
  const i=hit<0?ranges.length-1:hit;
- const entry=(r:ClipRange,video:number,audio:number):BlendEntry=>({range:r,sourceTime:Math.min(r.clip.out_s,r.clip.in_s+Math.max(0,time-r.start)*speedOf(r.clip)),video,audio});
+ const entry=(r:ClipRange,video:number,audio:number):BlendEntry=>({range:r,sourceTime:isFreeze(r.clip)?r.clip.freeze!:Math.min(r.clip.out_s,r.clip.in_s+Math.max(0,time-r.start)*speedOf(r.clip)),video,audio});
  const r=ranges[i],next=ranges[i+1];
  const d=fadeOf(r.clip);
  if(next&&d>0&&time>=next.start){
@@ -84,6 +86,13 @@ export function sanitizeClips(clips:TimelineClip[],durations:Record<string,numbe
   // Clip shape only: the spec itself is sanitized where it is drawn, so a valid spec survives sanitation untouched.
   if(isTitleClip(c)){const o:TimelineClip={...c,kind:'title' as const,source:'',in_s:0,out_s:clampTitleSeconds(c.out_s),gain:1,muted:false};delete o.fadeIn;delete o.fadeOut;return[o];}
   if(isImageClip(c)){const o:TimelineClip={...c,kind:'image' as const,in_s:0,out_s:clampTitleSeconds(c.out_s),gain:1,muted:false};delete o.fadeIn;delete o.fadeOut;return[o];}
+  if(isFreeze(c)){
+   const d=durations[c.source];
+   const fr=d===undefined?Math.max(0,c.freeze!):Math.min(Math.max(0,c.freeze!),Math.max(0,d-MIN_CLIP_SECONDS));
+   const o:TimelineClip={...c,in_s:0,out_s:clampTitleSeconds(c.in_s===0?c.out_s:c.out_s-c.in_s),gain:Math.min(MAX_GAIN,Math.max(0,typeof c.gain==='number'&&Number.isFinite(c.gain)?c.gain:1)),muted:!!c.muted,flip:flipOf(c)==='none'?undefined:flipOf(c),freeze:Number(fr.toFixed(3))};
+   delete o.speed;delete o.fadeIn;delete o.fadeOut;
+   return[o];
+  }
   const d=durations[c.source];
   if(d===undefined)return[c];
   if(d<=0)return[];
@@ -106,6 +115,11 @@ export function splitAt(clips:TimelineClip[],time:number):TimelineClip[]|null{
  const hit=locate(clips,time);if(!hit)return null;
  const{range,sourceTime}=hit,c=range.clip;
  if(sourceTime-c.in_s<MIN_CLIP_SECONDS||c.out_s-sourceTime<MIN_CLIP_SECONDS)return null;
+ if(isFreeze(c)){
+  const halves=splitTitleClip(c as Parameters<typeof splitTitleClip>[0],Math.max(0,time-range.start));if(!halves)return null;
+  const[l,r2]=halves;
+  return[...clips.slice(0,range.index),{...l,crossfade_s:0},{...r2,crossfade_s:fadeOf(c)},...clips.slice(range.index+1)];
+ }
  if(isTitleClip(c)||isImageClip(c)){
   const halves=splitTitleClip(c as Parameters<typeof splitTitleClip>[0],sourceTime-c.in_s);if(!halves)return null;
   const[l,r2]=halves;
@@ -127,6 +141,7 @@ export function moveClip(clips:TimelineClip[],id:string,toIndex:number):Timeline
 export function setClipEdge(clips:TimelineClip[],id:string,edge:'in'|'out',at:number):TimelineClip[]{
  return clips.map(c=>{
   if(c.id!==id||isTitleClip(c)||isImageClip(c))return c;
+  if(isFreeze(c)){if(edge==='in')return c;return{...c,out_s:Number(Math.max(at,MIN_CLIP_SECONDS).toFixed(3))};}
   const in_s=edge==='in'?Math.min(at,c.out_s-MIN_CLIP_SECONDS):c.in_s;
   const out_s=edge==='out'?Math.max(at,c.in_s+MIN_CLIP_SECONDS):c.out_s;
   return{...c,in_s:Number(Math.max(0,in_s).toFixed(3)),out_s:Number(Math.max(out_s,c.in_s+MIN_CLIP_SECONDS).toFixed(3))};
@@ -134,7 +149,7 @@ export function setClipEdge(clips:TimelineClip[],id:string,edge:'in'|'out',at:nu
 }
 /** Sets a media clip's playback speed (0.25-4, clamped); title cards are left untouched. */
 export function setClipSpeed(clips:TimelineClip[],id:string,speed:number):TimelineClip[]{
- return clips.map(c=>c.id===id&&c.kind!=='title'&&c.kind!=='image'?{...c,speed:speedOf({...c,speed})}:c);
+ return clips.map(c=>c.id===id&&c.kind!=='title'&&c.kind!=='image'&&!isFreeze(c)?{...c,speed:speedOf({...c,speed})}:c);
 }
 /** Cuts the timeline to [start,end) for a range export: edges become hard cuts (a cut crossfade dissolves into nothing), interior fades survive. Title and image clips shrink by the cut amount; media clips shift their source window. */
 export function sliceTimeline(clips:TimelineClip[],start:number,end:number):TimelineClip[]{
@@ -144,7 +159,7 @@ export function sliceTimeline(clips:TimelineClip[],start:number,end:number):Time
   const s=Math.max(r.start,start),e=Math.min(r.end,end);
   if(e-s<MIN_CLIP_SECONDS)continue;
   const c=r.clip,sp=speedOf(c);
-  const isStill=isTitleClip(c)||isImageClip(c);
+  const isStill=isTitleClip(c)||isImageClip(c)||isFreeze(c);
   const cutTail=r.end-e>1e-9;
   out.push({...c,id:newClipId(),
    in_s:isStill?0:Number((c.in_s+(s-r.start)*sp).toFixed(3)),
