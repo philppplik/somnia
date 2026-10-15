@@ -104,3 +104,23 @@ test('clip copy/paste lands at the playhead with a fresh id and undo removes the
  await commandDispatcher.runCommand('sound.arrange.undo');
  assert.equal(getArrangementState().document.tracks[0].clips.length,2,'undo removes the latest paste');
 }finally{off();resetArrangement();}});
+
+test('clips.move shifts a selection atomically with clamping and undo; clips.delete removes it',async()=>{resetArrangement();const off=registerArrangeCommands();try{
+ const source={id:'src',name:'tone.wav',frames:96000,sampleRate:48000,channels:2 as const};
+ editArrangement(s=>{s.sources.push(source);s.tracks.push({...newTrack('t1','A'),clips:[{...newClip('a',source,0),length:4800},{...newClip('b',source,9600),length:4800}]},{...newTrack('t2','B'),clips:[{...newClip('c',source,19200),length:4800}]});});
+ await commandDispatcher.runCommand('sound.arrange.clips.move',{ids:['a','c'],delta:4800});
+ const tracks=()=>getArrangementState().document.tracks;
+ assert.deepEqual(tracks()[0].clips.map(c=>c.start),[4800,9600]);
+ assert.equal(tracks()[1].clips[0].start,24000,'selection spans tracks');
+ await commandDispatcher.runCommand('sound.arrange.clips.move',{ids:['a','c'],delta:-9600});
+ assert.deepEqual(tracks()[0].clips.map(c=>c.start),[0,9600],'clamped at zero, never negative');
+ assert.equal(tracks()[1].clips[0].start,14400);
+ await assert.rejects(commandDispatcher.runCommand('sound.arrange.clips.move',{ids:['a','missing'],delta:4800}));
+ assert.deepEqual(tracks()[0].clips.map(c=>c.start),[0,9600],'rejection leaves every clip untouched');
+ await commandDispatcher.runCommand('sound.arrange.clips.delete',{ids:['a','c']});
+ assert.deepEqual(tracks()[0].clips.map(c=>c.id),['b']);
+ assert.equal(tracks()[1].clips.length,0);
+ await commandDispatcher.runCommand('sound.arrange.undo');
+ assert.equal(tracks()[0].clips.length,2,'undo restores the group delete');
+ assert.equal(tracks()[1].clips.length,1);
+}finally{off();resetArrangement();}});
