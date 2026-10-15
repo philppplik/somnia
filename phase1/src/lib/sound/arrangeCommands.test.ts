@@ -75,3 +75,12 @@ test('marker.set renames atomically, rejects empty names and undo restores the o
  await commandDispatcher.runCommand('sound.arrange.undo');
  assert.equal(getArrangementState().document.markers[0].name,'Verse');
 }finally{off();resetArrangement();}});
+
+test('slip edits: clip.set offset stays inside the source and rejects overflow atomically',async()=>{resetArrangement();const off=registerArrangeCommands();try{
+ const source={id:'src',name:'tone.wav',frames:9600,sampleRate:48000,channels:2 as const};
+ editArrangement(s=>{s.sources.push(source);s.tracks.push({...newTrack('t1','A'),clips:[{...newClip('a',source,0),length:4800}]});});
+ await commandDispatcher.runCommand('sound.arrange.clip.set',{id:'a',offset:2400});
+ assert.equal(getArrangementState().document.tracks[0].clips[0].offset,2400);
+ await assert.rejects(commandDispatcher.runCommand('sound.arrange.clip.set',{id:'a',offset:7200}),'offset+length beyond the source');
+ assert.equal(getArrangementState().document.tracks[0].clips[0].offset,2400,'rejection preserves the offset');
+}finally{off();resetArrangement();}});

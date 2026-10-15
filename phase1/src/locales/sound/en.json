@@ -185,6 +185,7 @@
   "sound.arrange.splitAll": "Split all",
   "sound.arrange.splitAllHint": "Splits every clip under the playhead in two",
   "sound.arrange.markerName": "Marker name",
+  "sound.arrange.slipHint": "Drag moves the clip, Alt+drag slips the content",
   "sound.arrange.loop": "Loop session",
   "sound.arrange.loopHint": "Loop follows the selected output range, otherwise the whole session.",
   "sound.arrange.tail": "Effect tail (s)",

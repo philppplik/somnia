@@ -185,6 +185,7 @@
   "sound.arrange.splitAll": "Alle teilen",
   "sound.arrange.splitAllHint": "Teilt jeden Clip unter dem Playhead in zwei Hälften",
   "sound.arrange.markerName": "Marker-Name",
+  "sound.arrange.slipHint": "Ziehen verschiebt den Clip, Alt+Ziehen schiebt den Inhalt (Slip)",
   "sound.arrange.loop": "Session wiederholen",
   "sound.arrange.loopHint": "Loop folgt dem gewählten Ausgabebereich, sonst der ganzen Session.",
   "sound.arrange.tail": "Effekt-Tail (s)",

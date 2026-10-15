@@ -185,6 +185,7 @@
   "sound.arrange.splitAll": "Tout scinder",
   "sound.arrange.splitAllHint": "Scinde chaque clip sous la tête de lecture en deux",
   "sound.arrange.markerName": "Nom du marqueur",
+  "sound.arrange.slipHint": "Glisser déplace le clip, Alt+glisser décale le contenu (slip)",
   "sound.arrange.loop": "Boucler la session",
   "sound.arrange.loopHint": "La boucle suit la plage de sortie choisie, sinon toute la session.",
   "sound.arrange.tail": "Queue d’effet (s)",

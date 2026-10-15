@@ -185,6 +185,7 @@
   "sound.arrange.splitAll": "Dividir todo",
   "sound.arrange.splitAllHint": "Divide cada clip bajo el cursor en dos",
   "sound.arrange.markerName": "Nombre del marcador",
+  "sound.arrange.slipHint": "Arrastrar mueve el clip, Alt+arrastrar desliza el contenido (slip)",
   "sound.arrange.loop": "Repetir sesión",
   "sound.arrange.loopHint": "El bucle sigue el rango de salida elegido, si no, toda la sesión.",
   "sound.arrange.tail": "Cola de efecto (s)",
