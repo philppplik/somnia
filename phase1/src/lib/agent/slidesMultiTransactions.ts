@@ -23,9 +23,10 @@ export class SlidesMultiTransactions {
    r.host.permission('apply');signal.throwIfAborted();if(generation!==this.generation||!eq(r.preview.target,r.host.current()))throw Error('Review or slide changed.');
    entered=true;const receipt=await r.host.apply(structuredClone(r.review),r.origin);
    const now=r.host.snapshot();
+   if(generation===this.generation&&receipt.status==='precommit'&&receipt.origin===r.origin&&receipt.identity===r.review.identity&&receipt.generation===r.review.generation&&receipt.beforeRevision===r.review.revision&&receipt.afterRevision===null&&receipt.historyDelta===0&&receipt.undoable===false&&receipt.token===null&&now.text===r.review.expectedText&&now.revision===r.review.revision&&now.generation===r.review.generation&&now.identity===r.review.identity)throw new SlidesMultiApplyError('Native edit refused before commit. Nothing applied.','none');
    if(generation!==this.generation||receipt.status!=='applied'||receipt.origin!==r.origin||receipt.identity!==r.review.identity||receipt.generation!==r.review.generation||receipt.beforeRevision!==r.review.revision||receipt.afterRevision!==r.review.revision+1||receipt.historyDelta!==1||!receipt.undoable||!receipt.token||receipt.readback!==r.review.afterText||receipt.readbackMatches!==true||now.text!==r.review.afterText||now.revision!==receipt.afterRevision||now.generation!==r.review.generation||now.identity!==r.review.identity)throw Error('Multi-text receipt/readback unverified. Inspect before retrying.');
    this.owned.set(id,{...r,receipt:structuredClone(receipt)});return structuredClone(receipt);
-  }catch(e){throw new SlidesMultiApplyError(e instanceof Error?e.message:'Multi-text apply failed.',!entered||e instanceof ReceiptError?'none':'unknown');}finally{this.flight--;}
+  }catch(e){throw new SlidesMultiApplyError(e instanceof Error?e.message:'Multi-text apply failed.',e instanceof SlidesMultiApplyError?e.outcome:!entered||e instanceof ReceiptError?'none':'unknown');}finally{this.flight--;}
  }
  async undo(id:string,signal:AbortSignal){
   const r=this.owned.get(id);if(!r)throw Error('No owned multi-text receipt.');const generation=this.generation;r.host.permission('undo');signal.throwIfAborted();const before=r.host.snapshot();
