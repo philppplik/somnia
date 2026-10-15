@@ -168,6 +168,7 @@
   "sound.arrange.delete": "Supprimer",
   "sound.arrange.mute": "Muet",
   "sound.arrange.unmute": "Réactiver",
+  "sound.arrange.clipPan": "Panoramique du clip",
   "sound.arrange.start": "Début (s)",
   "sound.arrange.offset": "Entrée source (s)",
   "sound.arrange.length": "Durée (s)",

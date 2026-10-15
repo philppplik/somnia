@@ -45,7 +45,7 @@ test('gaincurve: v3 migrates neutrally and the session round-trips the curve',()
  assert.deepEqual(parseArrangement(serializeArrangement(s)),s);
  const v3=JSON.parse(serializeArrangement(s));v3.version=3;for(const t of v3.tracks)for(const c of t.clips)delete c.gainCurve;
  const migrated=validateArrangement(v3);
- assert.equal(migrated.version,5);
+ assert.equal(migrated.version,6);
  assert.deepEqual(migrated.tracks[0].clips[0].gainCurve,[],'migration adds a neutral curve');
 });
 
