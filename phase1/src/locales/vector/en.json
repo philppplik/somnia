@@ -257,6 +257,8 @@
  "vector.shell.fontStyle.normal":"Normal",
  "vector.shell.fontStyle.italic":"Italic",
  "vector.shell.textAnchor":"Alignment",
+ "vector.shell.textRotation":"Rotation (°)",
+ "vector.shell.textOpacity":"Opacity (%)",
  "vector.shell.textAnchor.start":"Left",
  "vector.shell.textAnchor.middle":"Centre",
  "vector.shell.textAnchor.end":"Right",

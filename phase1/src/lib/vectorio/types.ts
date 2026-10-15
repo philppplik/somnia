@@ -79,6 +79,8 @@ export interface VectorText {
   id: string; x: number; y: number; text: string; // text may hold '\n' line breaks
   fontFamily: string; fontSize: number; fontWeight: 'normal' | 'bold'; fontStyle: 'normal' | 'italic';
   anchor: 'start' | 'middle' | 'end'; fill: string; // fill is #rrggbb
+  rotation?: number; // degrees about (x, y), -360..360, omitted when 0
+  opacity?: number; // 0..1, omitted when 1
 }
 
 /** Ruler guides in document units: `x` are vertical lines, `y` horizontal. */

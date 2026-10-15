@@ -11,7 +11,7 @@ import {boxOf,fitPath,hitDocument,pathBox,translatePath,type Box} from '../../li
 import {buildShape,newId,DEFAULT_SHAPE_STYLE,type ShapeKind} from '../../lib/vectorstudio/shapes';
 import {openSvgDialog} from '../../lib/vectorstudio/open';
 import {PathLayer,GradientDefs,TextLayer} from './render';
-import {textBox,type VectorText} from '../../lib/vectorio';
+import {textBox,textTransform,unrotateAround,type VectorText} from '../../lib/vectorio';
 import {togglePathSelection} from './tools/operations';
 import {selectionSvg,pasteSvgText} from '../../lib/vectorstudio/clipboard';
 import {studioContextStore} from '../../lib/shell/studioContext';
@@ -69,7 +69,7 @@ export function VectorCanvas(){
  const paths=s.doc.paths.map(preview);
  const texts=(s.doc.texts??[]).map(t=>drag?.kind==='text-move'&&drag.id===t.id?{...t,x:t.x+drag.dx,y:t.y+drag.dy}:t);
  const selText=texts.find(t=>t.id===s.textSel);const selTextBox=selText?textBox(selText):null;
- const hitText=(pt:Point):string|null=>{for(let i=texts.length-1;i>=0;i--){const b=textBox(texts[i]);if(pt.x>=b.minX-tol&&pt.x<=b.maxX+tol&&pt.y>=b.minY-tol&&pt.y<=b.maxY+tol)return texts[i].id;}return null;};
+ const hitText=(pt:Point):string|null=>{for(let i=texts.length-1;i>=0;i--){const b=textBox(texts[i]),q=unrotateAround(texts[i],pt);if(q.x>=b.minX-tol&&q.x<=b.maxX+tol&&q.y>=b.minY-tol&&q.y<=b.maxY+tol)return texts[i].id;}return null;};
  const selBox=boxOf(selected.map(preview));
 
  const onDown=(e:RPointerEvent<SVGSVGElement>)=>{
@@ -178,7 +178,7 @@ export function VectorCanvas(){
      {selected.map(p=>{const pp=preview(p);return <path key={p.id} d={serializeContour(pp.nodes,pp.closed)} fill="none" stroke="#2563eb" strokeWidth={1/s.zoom} pointerEvents="none"/>;})}
      {s.tool==='select'&&selBox&&<g data-testid="vector-selection"><rect x={selBox.minX} y={selBox.minY} width={selBox.maxX-selBox.minX} height={selBox.maxY-selBox.minY} fill="none" stroke="#2563eb" strokeWidth={1/s.zoom} strokeDasharray={`${4/s.zoom} ${3/s.zoom}`} pointerEvents="none"/>
       {CORNERS.map(([cx,cy],i)=><rect key={i} data-testid={`vector-handle-${i}`} x={(cx?selBox.maxX:selBox.minX)-4/s.zoom} y={(cy?selBox.maxY:selBox.minY)-4/s.zoom} width={8/s.zoom} height={8/s.zoom} fill="#fff" stroke="#2563eb" strokeWidth={1/s.zoom}/>)}</g>}
-     {selTextBox&&<rect data-testid="vector-text-selection" x={selTextBox.minX} y={selTextBox.minY} width={selTextBox.maxX-selTextBox.minX} height={selTextBox.maxY-selTextBox.minY} fill="none" stroke="#2563eb" strokeWidth={1/s.zoom} strokeDasharray={`${4/s.zoom} ${3/s.zoom}`} pointerEvents="none"/>}
+     {selTextBox&&<rect data-testid="vector-text-selection" transform={selText?textTransform(selText):undefined} x={selTextBox.minX} y={selTextBox.minY} width={selTextBox.maxX-selTextBox.minX} height={selTextBox.maxY-selTextBox.minY} fill="none" stroke="#2563eb" strokeWidth={1/s.zoom} strokeDasharray={`${4/s.zoom} ${3/s.zoom}`} pointerEvents="none"/>}
      {nodePath&&<NodeOverlay path={nodePath} zoom={s.zoom} active={s.selectedNode}/>}
      {(['x','y'] as const).flatMap(axis=>(s.doc.guides?.[axis]??[]).map(v=><g key={axis+v} data-testid="vector-guide" data-axis={axis}>{!(gd&&gd.axis===axis&&gd.from===v)&&<line x1={axis==='x'?v:-1e5} x2={axis==='x'?v:1e5} y1={axis==='y'?v:-1e5} y2={axis==='y'?v:1e5} className="stroke-accent" strokeWidth={1/s.zoom} pointerEvents="none"/>}
       {s.tool==='select'&&<line x1={axis==='x'?v:-1e5} x2={axis==='x'?v:1e5} y1={axis==='y'?v:-1e5} y2={axis==='y'?v:1e5} stroke="transparent" strokeWidth={8/s.zoom} pointerEvents="stroke" className={axis==='x'?'cursor-col-resize':'cursor-row-resize'} onPointerDown={e=>startGuide(axis,e,v)} onPointerMove={moveGuideDrag} onPointerUp={endGuide} onPointerCancel={()=>setGd(null)}/>}</g>))}

@@ -1,5 +1,5 @@
 import type {VectorDocument,VectorPath} from '../vectorio';
-import {DEFAULT_STYLE,textBox} from '../vectorio';
+import {DEFAULT_STYLE,textBoxRotated} from '../vectorio';
 import {pathBox,translatePath,type Box} from './geometry';
 import {selectedPaths} from './selectionClosure';
 
@@ -35,7 +35,7 @@ export function exportAreaDoc(doc:VectorDocument,selection:readonly string[],are
   let b=visualBox(p);if(!b)continue;
   if(mk){b={minX:Math.max(b.minX,mk.minX),minY:Math.max(b.minY,mk.minY),maxX:Math.min(b.maxX,mk.maxX),maxY:Math.min(b.maxY,mk.maxY)};if(b.maxX<b.minX||b.maxY<b.minY)continue;}
   box=box?{minX:Math.min(box.minX,b.minX),minY:Math.min(box.minY,b.minY),maxX:Math.max(box.maxX,b.maxX),maxY:Math.max(box.maxY,b.maxY)}:b;}
- for(const t of texts){const b=textBox(t);box=box?{minX:Math.min(box.minX,b.minX),minY:Math.min(box.minY,b.minY),maxX:Math.max(box.maxX,b.maxX),maxY:Math.max(box.maxY,b.maxY)}:b;}
+ for(const t of texts){const b=textBoxRotated(t);box=box?{minX:Math.min(box.minX,b.minX),minY:Math.min(box.minY,b.minY),maxX:Math.max(box.maxX,b.maxX),maxY:Math.max(box.maxY,b.maxY)}:b;}
  if(!box)throw Error('Nothing to export');
  const x0=box.minX-padding,y0=box.minY-padding,w=r3(box.maxX-box.minX+2*padding),h=r3(box.maxY-box.minY+2*padding);
  if(w<=0||h<=0)throw Error('The export area is empty');

@@ -257,6 +257,8 @@
  "vector.shell.fontStyle.normal":"Normal",
  "vector.shell.fontStyle.italic":"Kursiv",
  "vector.shell.textAnchor":"Ausrichtung",
+ "vector.shell.textRotation":"Drehung (°)",
+ "vector.shell.textOpacity":"Deckkraft (%)",
  "vector.shell.textAnchor.start":"Links",
  "vector.shell.textAnchor.middle":"Zentriert",
  "vector.shell.textAnchor.end":"Rechts",

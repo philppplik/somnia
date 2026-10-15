@@ -79,3 +79,19 @@ test('paste respects the 200 text cap and never changes the document on failure'
  const g=S.getVectorSession(),svg=selectionSvg(g.doc,[],g.doc.texts![0].id)!;
  assert.equal(pasteSvgText(svg),false);assert.equal(S.getVectorSession().doc.texts!.length,TEXT_LIMITS.maxTexts);assert.match(S.getVectorSession().error??'',/At most 200/);
 });
+test('text rotation and opacity: roundtrip, strict parse, bounds and hit frame follow the rotation',async()=>{
+ const {textBoxRotated,unrotateAround}=await import('../vectorio');
+ const t=T({x:50,y:60,rotation:90,opacity:0.5});const out=exportSvg(doc(t));
+ assert.match(out,/transform="rotate\(90 50 60\)"/);assert.match(out,/opacity="0.5"/);
+ const back=importSvg(out).doc.texts![0];assert.equal(back.rotation,90);assert.equal(back.opacity,0.5);
+ const plain=importSvg(exportSvg(doc(T()))).doc.texts![0];assert.equal(plain.rotation,undefined);assert.equal(plain.opacity,undefined);
+ const W=(a:string)=>`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text data-vs-text="1" x="50" y="60" font-family="Arial" font-size="12" fill="#000" ${a}>hi</text></svg>`;
+ for(const a of ['transform="rotate(90 1 1)"','transform="translate(5 5)"','transform="rotate(400 50 60)"','transform="rotate(NaN 50 60)"','opacity="2"','opacity="-1"','opacity="abc"'])assert.throws(()=>importSvg(W(a)),SvgImportError,a);
+ const n=normalizeText({...T(),rotation:1e9,opacity:-5})!;assert.equal(n.rotation,360);assert.equal(n.opacity,0);
+ const b0=textBox(T({x:50,y:60})),b=textBoxRotated(t);assert.ok(Math.abs((b.maxX-b.minX)-(b0.maxY-b0.minY))<1e-6);
+ const u=unrotateAround({x:50,y:60,rotation:90},{x:50,y:100});assert.ok(Math.abs(u.x-90)<1e-6&&Math.abs(u.y-60)<1e-6);
+ const d=setup();await d.runCommand('vector.addText',{x:20,y:50,rotation:30},o);const id=S.getVectorSession().textSel!;
+ await d.runCommand('vector.setText',{id,patch:{rotation:-45,opacity:0.25}},o);assert.equal(S.getVectorSession().doc.texts![0].rotation,-45);
+ await assert.rejects(d.runCommand('vector.setText',{id,patch:{rotation:999}},o),CommandDispatchError);
+ S.undo();assert.equal(S.getVectorSession().doc.texts![0].rotation,30);
+});
