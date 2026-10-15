@@ -20,6 +20,18 @@ test('panel groups registered export commands in studio order and disables unava
  });
 });
 
+test('preset rows render above the plain commands with their enabled state',()=>{
+ const offs=[registerCommand({id:'vector.exportPng',title:'PNG',category:'Project',level:'ui',enabled:()=>true,run:()=>{}}),registerCommand({id:'video.export.format',title:'fmt',category:'Project',level:'ui',enabled:()=>false,run:()=>{}}),registerCommand({id:'video.export.start',title:'start',category:'Project',level:'ui',enabled:()=>true,run:()=>{}})];
+ try{
+  const html=renderToStaticMarkup(<ExportCenterPanel onClose={()=>{}}/>);
+  assert.ok(html.includes('export-center-presets-vector'),'vector presets header');
+  assert.ok(html.includes('export-center-preset-png2x'),'preset row testid');
+  const row=html.slice(html.indexOf('export-center-preset-webm'));
+  assert.match(row,/disabled=""/,'preset with a disabled step renders disabled');
+  assert.ok(html.indexOf('export-center-preset-png1x')<html.indexOf('export-center-cmd-vector.exportPng'),'presets before commands');
+ }finally{offs.forEach(off=>off());}
+});
+
 test('empty registry renders the empty hint',()=>{
  const html=renderToStaticMarkup(<ExportCenterPanel onClose={()=>{}}/>);
  // other suites may have registered exports; only assert when none are present

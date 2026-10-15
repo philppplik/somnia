@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
-import {EXPORT_GROUP_IDS,exportGroups} from './exportCenter';
+import {EXPORT_GROUP_IDS,EXPORT_PRESETS,exportGroups,runPreset,type ExportPreset} from './exportCenter';
 import type {Command} from './commandRegistry';
 
 const cmd=(id:string):Command=>({id,title:id,category:'Project',level:'ui',run:()=>{}});
@@ -23,5 +23,40 @@ test('every listed group id is a non-empty unique command id list',()=>{
  for(const [studio,ids] of Object.entries(EXPORT_GROUP_IDS)){
   assert.ok(ids.length>0,studio);
   for(const id of ids){assert.ok(!seen.has(id),id);seen.add(id);}
+ }
+});
+
+test('presets appear only when every step command is registered, enabled only when every step is',()=>{
+ const on=(id:string,en=true):Command=>({id,title:id,category:'Project',level:'ui',enabled:()=>en,run:()=>{}});
+ let g=exportGroups([on('vector.exportPng')]);
+ assert.deepEqual(g[0].presets.map(p=>p.preset.id),['png1x','png2x','png4x']);
+ assert.ok(g[0].presets.every(p=>p.enabled));
+ g=exportGroups([on('vector.exportPng',false)]);
+ assert.ok(g[0].presets.every(p=>!p.enabled));
+ // video presets need both steps: only the format helper registered -> no presets, and the group drops out (format is not a standalone row)
+ g=exportGroups([on('video.export.format')]);
+ assert.equal(g.length,0);
+ // groups with neither commands nor presets drop out; groups with only presets survive
+ g=exportGroups([on('video.export.format'),on('video.export.start')]);
+ assert.equal(g.length,1);
+ assert.deepEqual(g[0].presets.map(p=>p.preset.id),['webm','mp4']);
+});
+
+test('runPreset runs the steps in order with their payloads',async()=>{
+ const seen:[string,unknown][]=[];
+ const p:ExportPreset=EXPORT_PRESETS.video[1];
+ await runPreset(p,(id,payload)=>{seen.push([id,payload]);});
+ assert.deepEqual(seen,[['video.export.format',{format:'mp4'}],['video.export.start',undefined]]);
+ const seen2:[string,unknown][]=[];
+ await runPreset(EXPORT_PRESETS.documents[2],(id,payload)=>{seen2.push([id,payload]);});
+ assert.deepEqual(seen2,[['documents.export.pdf',{markup:false,tagged:true}]]);
+});
+
+test('preset steps stay inside their studio namespace and presets have unique ids',()=>{
+ const seen=new Set<string>();
+ for(const [studio,presets] of Object.entries(EXPORT_PRESETS))for(const p of presets){
+  assert.ok(p.id&&p.steps.length>0,studio);
+  assert.ok(!seen.has(p.id),p.id);seen.add(p.id);
+  for(const [id] of p.steps)assert.ok(id.startsWith(studio+'.'),`${studio}:${p.id} -> ${id}`);
  }
 });

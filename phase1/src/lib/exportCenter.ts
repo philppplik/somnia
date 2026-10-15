@@ -27,11 +27,39 @@ export const EXPORT_GROUP_IDS:Readonly<Record<string,readonly string[]>>={
  pdf:['pdf.saveCopy'],
 };
 
-export interface ExportGroup{studio:string;commands:Command[]}
-/** Groups the currently registered commands; studios whose commands are not registered (studio not mounted) drop out. */
-export function exportGroups(all:readonly Command[]):ExportGroup[]{
+/** A preset bundles existing export commands with fixed payloads (format/quality choices). It adds no new command. */
+export interface ExportPreset{id:string;steps:readonly (readonly [string,unknown?])[]}
+export const EXPORT_PRESETS:Readonly<Record<string,readonly ExportPreset[]>>={
+ documents:[
+  {id:'docxCopy',steps:[['documents.export.copy']]},
+  {id:'pdfMarkup',steps:[['documents.export.pdf',{markup:true,tagged:true}]]},
+  {id:'pdfClean',steps:[['documents.export.pdf',{markup:false,tagged:true}]]},
+ ],
+ vector:[
+  {id:'png1x',steps:[['vector.exportPng',{scale:1}]]},
+  {id:'png2x',steps:[['vector.exportPng',{scale:2}]]},
+  {id:'png4x',steps:[['vector.exportPng',{scale:4}]]},
+ ],
+ video:[
+  {id:'webm',steps:[['video.export.format',{format:'webm'}],['video.export.start']]},
+  {id:'mp4',steps:[['video.export.format',{format:'mp4'}],['video.export.start']]},
+ ],
+};
+
+export interface ResolvedPreset{preset:ExportPreset;enabled:boolean}
+export interface ExportGroup{studio:string;commands:Command[];presets:ResolvedPreset[]}
+/** Groups the currently registered commands; studios whose commands are not registered (studio not mounted) drop out. A preset appears only when every step's command is registered, and is enabled only when every step currently is. */
+export function exportGroups(all:readonly Command[],enabled:(c:Command)=>boolean=(c)=>c.enabled?.()??true):ExportGroup[]{
  const byId=new Map(all.map(c=>[c.id,c]));
  return Object.entries(EXPORT_GROUP_IDS)
-  .map(([studio,ids])=>({studio,commands:ids.map(id=>byId.get(id)).filter((c):c is Command=>!!c)}))
-  .filter(g=>g.commands.length>0);
+  .map(([studio,ids])=>{
+   const commands=ids.map(id=>byId.get(id)).filter((c):c is Command=>!!c);
+   const presets=(EXPORT_PRESETS[studio]??[])
+    .filter(p=>p.steps.every(([id])=>byId.has(id)))
+    .map(p=>({preset:p,enabled:p.steps.every(([id])=>enabled(byId.get(id)!))}));
+   return {studio,commands,presets};
+  })
+  .filter(g=>g.commands.length>0||g.presets.length>0);
 }
+/** Runs a preset's steps in order through the caller's executor (executeCommand in the dialog, a spy in tests). */
+export async function runPreset(preset:ExportPreset,exec:(id:string,payload?:unknown)=>void|Promise<void>):Promise<void>{for(const [id,payload] of preset.steps)await exec(id,payload);}
