@@ -3031,6 +3031,51 @@ impl HeadlessWorkbook {
         }
     }
 
+    /// Facts about one cell (read only): `{"address","type","display","formula","numberFormat","locked","hiddenFormula","sheetProtected","merged","table","validation","highlightRules","note","link","spill","reads","readBy"}`.
+    /// Optional facts are null when absent; texts are bounded; counts come from the engine's dependency graph.
+    pub fn cell_info(&self, sheet: usize, row: u32, col: u32) -> Result<String, String> {
+        if row >= gridcraft_engine::core::MAX_ROWS || col >= gridcraft_engine::core::MAX_COLS {
+            return Err("cell is outside the sheet".into());
+        }
+        let doc = self.session.doc().map_err(|e| e.to_string())?;
+        let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+        let at = CellRef::new(row, col);
+        let cell = sh.cell(at);
+        let value = sh.value(at);
+        let kind = if value.is_empty() {
+            "empty"
+        } else {
+            match value {
+                gridcraft_engine::core::Value::Number(_) => "number",
+                gridcraft_engine::core::Value::Text(_) => "text",
+                gridcraft_engine::core::Value::Bool(_) => "bool",
+                gridcraft_engine::core::Value::Error(_) => "error",
+                _ => "other",
+            }
+        };
+        let style = doc.wb.styles.get(sh.style_id(at));
+        let formula = cell.and_then(|c| c.formula.as_ref()).map(|f| format!("={}", f.text).chars().take(500).collect::<String>());
+        let merged = sh.merges.iter().find(|m| m.contains(at)).map(|m| m.a1());
+        let table = sh.tables.iter().find(|t| t.range.contains(at)).map(|t| t.name.chars().take(64).collect::<String>());
+        let validation = sh.validations.iter().find(|v| v.ranges.iter().any(|r| r.contains(at))).map(|v| format!("{:?}", v.kind).to_lowercase());
+        let rules = sh.cond_formats.iter().filter(|cf| cf.ranges.iter().any(|r| r.contains(at))).count();
+        let note = sh.comments.get(&at).map(|n| if n.threaded { "comment" } else { "note" });
+        let link = sh.hyperlinks.get(&at).map(|h| h.target.chars().take(200).collect::<String>());
+        let spill = sh.spill_ranges.iter().find(|(_, r)| r.contains(at)).map(|(a, r)| json!({"anchor": a.a1(), "range": r.a1()}));
+        let reads: usize = doc.calc.graph.precedents_of((sheet, at)).len();
+        let mut deps = Vec::new();
+        doc.calc.graph.dependents(sheet, at, &mut deps);
+        deps.sort();
+        deps.dedup();
+        Ok(json!({
+            "address": at.a1(), "type": kind, "display": value.display().chars().take(200).collect::<String>(), "formula": formula,
+            "numberFormat": style.num_fmt.as_str().chars().take(64).collect::<String>(), "locked": style.protection.locked, "hiddenFormula": style.protection.hidden,
+            "sheetProtected": sh.is_protected(), "merged": merged, "table": table, "validation": validation, "highlightRules": rules,
+            "note": note, "link": link, "spill": spill, "reads": reads, "readBy": deps.len()
+        })
+        .to_string())
+    }
+
     /// Names of the custom cell styles saved in this workbook (read only, at most 50): `{"styles":["name"]}`.
     pub fn custom_cell_styles(&self) -> Result<String, String> {
         let doc = self.session.doc().map_err(|e| e.to_string())?;
@@ -5221,6 +5266,26 @@ mod tests {
         assert!(book.review_info(0, "nope").is_err());
         assert!(book.review_info(99, "stats").is_err());
         assert_eq!(steps(&book), before, "reading leaves no history entry");
+    }
+    #[test]
+    fn cell_info_reports_facts_without_changing_anything() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        book.session.run("cell.set", json!({"sheet": 0, "cell": "A990", "input": "5"})).unwrap();
+        book.session.run("cell.set", json!({"sheet": 0, "cell": "B990", "input": "=A990*2"})).unwrap();
+        let steps = |b: &HeadlessWorkbook| b.session.doc().unwrap().undo.len();
+        let before = steps(&book);
+        let a: serde_json::Value = serde_json::from_str(&book.cell_info(0, 989, 0).unwrap()).unwrap();
+        assert_eq!(a["type"], "number");
+        assert_eq!(a["readBy"], 1);
+        assert!(a["formula"].is_null());
+        let b: serde_json::Value = serde_json::from_str(&book.cell_info(0, 989, 1).unwrap()).unwrap();
+        assert_eq!(b["formula"], "=A990*2");
+        assert_eq!(b["reads"], 1);
+        let e: serde_json::Value = serde_json::from_str(&book.cell_info(0, 2000, 9).unwrap()).unwrap();
+        assert_eq!(e["type"], "empty");
+        assert!(book.cell_info(0, 5_000_000, 0).is_err());
+        assert!(book.cell_info(99, 0, 0).is_err());
+        assert_eq!(steps(&book), before);
     }
     #[test]
     fn notes_overview_lists_every_note_in_reading_order() {

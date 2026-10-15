@@ -238,6 +238,7 @@ export function SheetsLayoutPanel({context}:PanelHostProps){
   <AuditGroup/>
   <SymbolGroup/>
   <ReviewInfoGroup/>
+  <CellInfoGroup/>
   <NamesGroup/>
   <ViewGroup/>
   <ChartsGroup/>
@@ -951,6 +952,25 @@ function ReviewInfoGroup(){
   </>}
   <p className="text-ink-3">{t('sheets.ri.hint')}</p>
   {action.notice?<p role="alert">{action.notice}</p>:null}
+ </div>;
+}
+/** Facts about the selected cell, read live from the engine: type, format, formula, protection, merge, table, rules, note, link, spill and formula links. Display only. */
+function CellInfoGroup(){
+ const {t}=useT(),s=useSheetsSelection();const i=s?.cellInfo;if(!s||!i)return null;
+ const lines:string[]=[t('sheets.ci.type',{type:t('sheets.ci.t.'+i.type),format:i.numberFormat})];
+ if(i.formula)lines.push(t('sheets.ci.formula',{formula:i.formula}));
+ if(i.reads>0||i.readBy>0)lines.push(t('sheets.ci.links',{reads:i.reads,readBy:i.readBy}));
+ lines.push(t(i.sheetProtected&&i.locked?'sheets.ci.lockedProtected':i.locked?'sheets.ci.locked':'sheets.ci.unlocked')+(i.hiddenFormula?' '+t('sheets.ci.hiddenFormula'):''));
+ if(i.merged)lines.push(t('sheets.ci.merged',{range:i.merged}));
+ if(i.table)lines.push(t('sheets.ci.table',{name:i.table}));
+ if(i.validation&&i.validation!=='any')lines.push(t('sheets.ci.validation',{kind:i.validation}));
+ if(i.highlightRules>0)lines.push(t('sheets.ci.rules',{n:i.highlightRules}));
+ if(i.note)lines.push(t(i.note==='comment'?'sheets.ci.comment':'sheets.ci.note'));
+ if(i.link)lines.push(t('sheets.ci.link',{target:i.link}));
+ if(i.spill)lines.push(t('sheets.ci.spill',{range:i.spill.range,anchor:i.spill.anchor}));
+ return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.ci.title')}>
+  <span>{t('sheets.ci.title',{cell:i.address})}</span>
+  <ul data-testid="sheets-ci-list">{lines.map((l,n)=><li key={n}>{l}</li>)}</ul>
  </div>;
 }
 /** Removes rows that repeat an earlier row inside exactly the selected block. One undo step. */
