@@ -1,8 +1,9 @@
+import {useSyncExternalStore} from 'react';
 /** Apply formatting: Prettier (standalone, loaded on first use) for HTML, CSS and JS/TS. Indentation comes from Settings > Code editor. */
 export interface FormatPrefs{indent:2|4|8|'tab'}
 const KEY='somnia.format.v1';
 export const readFormatPrefs=():FormatPrefs=>{try{const v=JSON.parse(localStorage.getItem(KEY)||'{}');return{indent:v.indent===4||v.indent===8||v.indent==='tab'?v.indent:2};}catch{return{indent:2};}};
-export const saveFormatPrefs=(p:FormatPrefs)=>{try{localStorage.setItem(KEY,JSON.stringify(p));}catch{/* storage unavailable */}};
+export const saveFormatPrefs=(p:FormatPrefs)=>{try{localStorage.setItem(KEY,JSON.stringify(p));}catch{/* storage unavailable */}if(typeof window!=='undefined')window.dispatchEvent(new Event('somnia:format-prefs'));};
 export type Lang='html'|'css'|'babel'|'typescript'|'json';
 export const langFor=(file:string):Lang|null=>/\.html?$/i.test(file)?'html':/\.css$/i.test(file)?'css':/\.(jsx?|mjs)$/i.test(file)?'babel':/\.tsx?$/i.test(file)?'typescript':/\.(jsonc?|webmanifest)$/i.test(file)?'json':null;
 export async function formatCode(text:string,lang:Lang,prefs:FormatPrefs=readFormatPrefs()):Promise<string>{
@@ -11,3 +12,5 @@ export async function formatCode(text:string,lang:Lang,prefs:FormatPrefs=readFor
  const need=lang==='html'?['html','postcss','babel','estree'] as const:lang==='css'?['postcss'] as const:lang==='babel'?['babel','estree'] as const:lang==='json'?['babel','estree'] as const:['typescript','estree'] as const;
  const [prettier,...plugins]=await Promise.all([import('prettier/standalone'),...need.map(pick)]);
  return prettier.format(text,{parser:lang,plugins,useTabs:prefs.indent==='tab',tabWidth:prefs.indent==='tab'?4:prefs.indent,printWidth:100});}
+
+export function useFormatIndent(){return useSyncExternalStore(fn=>{if(typeof window==='undefined')return()=>{};const storage=(event:StorageEvent)=>{if(event.key===KEY||event.key===null)fn();};window.addEventListener('somnia:format-prefs',fn);window.addEventListener('storage',storage);return()=>{window.removeEventListener('somnia:format-prefs',fn);window.removeEventListener('storage',storage);};},()=>readFormatPrefs().indent,()=>2 as const);}
