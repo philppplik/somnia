@@ -890,3 +890,21 @@ test('before/after split: the strip menu drives the shared workspace split state
   await page.keyboard.press('Escape');
  }
 });
+
+test('photo info: the menu shows dimensions and file size read from the bytes (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
+  await page.getByTestId('photos-filmstrip-menu').click();
+  await page.getByTestId('photos-filmstrip-info-toggle').click();
+  await expect(page.getByTestId('photos-filmstrip-info')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-info-dimensions')).toHaveText('240 × 150 px'); // read from the PNG IHDR
+  await expect(page.getByTestId('photos-filmstrip-info-size')).toContainText('B'); // file size line joins
+  await page.screenshot({path:`test-results/ds-photos-info-${theme}.png`,fullPage:true});
+  await page.getByTestId('photos-filmstrip-info-toggle').click(); // close again
+  await expect(page.getByTestId('photos-filmstrip-info')).toHaveCount(0);
+  await page.keyboard.press('Escape');
+ }
+});

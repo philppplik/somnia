@@ -205,5 +205,7 @@
  "photos.quick.pastePrevious": "Ajustes de la foto anterior",
  "photos.quick.pastedPrevious": "Ajustes aplicados de {name}",
  "photos.quick.rotateLeft": "Girar 90° a la izquierda",
- "photos.quick.rotateRight": "Girar 90° a la derecha"
+ "photos.quick.rotateRight": "Girar 90° a la derecha",
+ "photos.info.toggle": "Info de la foto",
+ "photos.info.empty": "Sin metadatos"
 }

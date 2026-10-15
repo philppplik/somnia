@@ -533,3 +533,18 @@ Coverage: the light/dark gallery leg toggles the split from the
 strip, asserts the workspace buttons follow (aria-pressed), flips
 the direction and turns it off
 (`test-results/ds-photos-split-strip-{light,dark}.png`).
+
+## Photo info (P113)
+
+"Photo info" in the strip menu opens a compact metadata block
+inside the menu: dimensions, camera, lens, exposure/aperture/ISO/
+focal length, date and file size, read lazily from the file bytes
+by a dependency-free mini parser (`exifInfo.ts`: JPEG SOF + APP1
+EXIF, PNG IHDR + eXIf, small TIFF reader). Best effort - fields
+that are absent just do not render. Read-only.
+
+Coverage: `exifInfo.test.ts` runs a synthetic EXIF JPEG (camera
+name dedupe, exposure formatting, rationals) and the PNG/garbage
+fall backs; the light/dark gallery leg opens the panel and checks
+the dimensions and size lines
+(`test-results/ds-photos-info-{light,dark}.png`).

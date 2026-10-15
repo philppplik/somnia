@@ -205,5 +205,7 @@
  "photos.quick.pastePrevious": "Settings vom vorherigen Foto",
  "photos.quick.pastedPrevious": "Settings von {name} uebernommen",
  "photos.quick.rotateLeft": "90° links",
- "photos.quick.rotateRight": "90° rechts"
+ "photos.quick.rotateRight": "90° rechts",
+ "photos.info.toggle": "Foto-Info",
+ "photos.info.empty": "Keine Metadaten"
 }

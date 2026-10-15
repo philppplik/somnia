@@ -21,6 +21,7 @@ import {hidePhotos,unhideAll,unhidePhotos} from '../../lib/photos/hidden';
 import {nextCopyName} from '../../lib/photos/virtualCopy';
 import {saveSnapshot,snapshotSettings,deleteSnapshot,useSnapshots} from '../../lib/photos/snapshots';
 import {addToCollection,removeFromCollection,deleteCollection,isInCollection,useCollectionNames} from '../../lib/photos/collections';
+import {readPhotoInfo,photoInfoLines,formatBytes} from '../../lib/photos/exifInfo';
 import {detectSeries} from '../../lib/photos/autoStack';
 import {usePanelState} from '../../store/panelStateStore';
 import {Button} from '../ui/button';
@@ -51,7 +52,23 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
  const [applyNote,setApplyNote]=useState<string|null>(null);
  const [snapNaming,setSnapNaming]=useState(false);
  const [collNaming,setCollNaming]=useState(false);
+ const [infoOpen,setInfoOpen]=useState(false);
+ const [infoLines,setInfoLines]=useState<{key:string;value:string}[]|null>(null);
  useEffect(()=>{if(pendingNote){setApplyNote(pendingNote);pendingNote=null;}},[]); // pick up a confirmation that crossed the workspace remount
+ useEffect(()=>{ // lazy-read the active photo's metadata while the info panel is open
+  if(!infoOpen){setInfoLines(null);return;}
+  let dead=false;
+  void(async()=>{
+   const item=getMedia().items.find(i=>i.name===active);if(!item||dead)return;
+   try{
+    const buf=await (await fetch(item.url)).arrayBuffer();
+    const lines=photoInfoLines(readPhotoInfo(item.mime,buf));
+    if(item.size>0)lines.push({key:'size',value:formatBytes(item.size)});
+    if(!dead)setInfoLines(lines);
+   }catch{if(!dead)setInfoLines([]);}
+  })();
+  return()=>{dead=true;};
+ },[infoOpen,active]);
  const [armRemove,setArmRemove]=useState(false);
  const [rawPresets]=usePanelState<unknown>('photos.presets.user',[]);
  const [applying,setApplying]=useState(false);
@@ -238,6 +255,14 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
      <Button variant="outline" size="compact" disabled={!activeSession} onClick={()=>commitPhotoSettings(active,cur=>({...cur,orientation:((cur.orientation+3)%4) as typeof cur.orientation}))} data-testid="photos-filmstrip-rotate-left">{t('photos.quick.rotateLeft')}</Button>
      <Button variant="outline" size="compact" disabled={!activeSession} onClick={()=>commitPhotoSettings(active,cur=>({...cur,orientation:((cur.orientation+1)%4) as typeof cur.orientation}))} data-testid="photos-filmstrip-rotate-right">{t('photos.quick.rotateRight')}</Button>
     </span>
+    <span className="flex flex-wrap gap-1">
+     <Button variant="outline" size="compact" aria-pressed={infoOpen} onClick={()=>setInfoOpen(!infoOpen)} data-testid="photos-filmstrip-info-toggle">{t('photos.info.toggle')}</Button>
+    </span>
+    {infoOpen&&<div className="grid gap-0.5 text-ink-3" data-testid="photos-filmstrip-info">
+     {infoLines===null?<span data-testid="photos-filmstrip-info-loading">…</span>
+      :infoLines.length===0?<span data-testid="photos-filmstrip-info-empty">{t('photos.info.empty')}</span>
+      :infoLines.map(l=><span key={l.key} data-testid={`photos-filmstrip-info-${l.key}`}>{l.value}</span>)}
+    </div>}
     <span className="flex flex-wrap gap-1">
      {reference!==active&&<Button variant="outline" size="compact" onClick={()=>{setReference(active);setApplyNote(t('photos.compare.referenceSet',{name:active}));}} data-testid="photos-filmstrip-set-reference">{t('photos.compare.setReference')}</Button>}
      {reference&&reference!==active&&onSurvey&&<Button variant="outline" size="compact" onClick={()=>{setMenuOpen(false);onSurvey([reference,active]);}} data-testid="photos-filmstrip-compare-reference">{t('photos.compare.go')}</Button>}
