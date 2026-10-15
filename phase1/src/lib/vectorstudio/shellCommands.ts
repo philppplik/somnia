@@ -9,6 +9,7 @@ import {offsetSelection,outlineStroke,OFFSET_LIMITS} from './offsetOps';
 import {splitPath,joinPaths,reverseSelection} from './pathOps';
 import {toggleLock} from './lock';
 import {makeClip,releaseClip} from './clip';
+import {copyStyle,bufferedStyle,hasStyleBuffer} from './styleClip';
 import {moveGuide,clearGuides} from './guideOps';
 import {groupSelection,ungroupSelection} from './groups';
 import {applyBoolean,BOOL_OPS} from './booleanOps';
@@ -53,6 +54,8 @@ export function vectorShellCommandSpecs(active:()=>boolean):CommandSpec<any,unkn
    run:(p:{axis:'x'|'y';from?:number;to?:number})=>{const s=S.getVectorSession();S.commit(moveGuide(s.doc,p.axis,p.from,p.to));}},
   {id:'vector.clearGuides',title:'Clear all ruler guides',category:'Edit',level:'ui',enabled:ready,params:empty,run:()=>{const s=S.getVectorSession();S.commit(clearGuides(s.doc));}},
   {id:'vector.makeClip',title:'Make clipping mask',category:'Edit',level:'ui',enabled:selected,params:empty,run:()=>{const s=S.getVectorSession();S.commit(makeClip(s.doc,s.selection));}},
+  {id:'vector.copyStyle',title:'Copy vector style',category:'Edit',level:'ui',enabled:selected,params:empty,run:()=>{const s=S.getVectorSession();copyStyle(s.doc,s.selection);}},
+  {id:'vector.pasteStyle',title:'Paste vector style',category:'Edit',level:'ui',enabled:()=>selected()&&hasStyleBuffer(),params:empty,run:()=>{const b=bufferedStyle();if(b)S.setStyle(b);}},
   {id:'vector.releaseClip',title:'Release clipping mask',category:'Edit',level:'ui',enabled:selected,params:empty,run:()=>{const s=S.getVectorSession();S.commit(releaseClip(s.doc,s.selection));}},
   {id:'vector.group',title:'Group vector selection',category:'Edit',level:'ui',enabled:selected,params:empty,run:()=>{const s=S.getVectorSession(),next=groupSelection(s.doc,s.selection);if(next!==s.doc)S.commit(next);}},
   {id:'vector.ungroup',title:'Ungroup vector selection',category:'Edit',level:'ui',enabled:ready,params:{...empty,properties:{ids:{type:'array',items:{type:'string',minLength:1},uniqueItems:true,maxItems:200}}},run:(p:{ids?:string[]}={})=>{const s=S.getVectorSession(),next=ungroupSelection(s.doc,p.ids??s.selection);if(next!==s.doc)S.commit(next);}},
