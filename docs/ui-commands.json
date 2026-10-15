@@ -7726,7 +7726,7 @@
     },
     {
       "id": "sheets.view",
-      "title": "Zoom, gridlines, headings and zeros",
+      "title": "Zoom, gridlines, headings, zeros and formulas",
       "category": "View",
       "source": "sheets",
       "allowInInput": true,

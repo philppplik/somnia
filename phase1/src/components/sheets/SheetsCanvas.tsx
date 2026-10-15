@@ -322,7 +322,7 @@ function Workbook({item}:{item:MediaItem}){
    setDirty(true);setNotice(op.kind==='goalSeek'?goalNotice(parseGoalResult(r)):'');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
  const goalNotice=(g:{value:number;converged:boolean}|null)=>g?t(g.converged?'sheets.wi.goalFound':'sheets.wi.goalNear',{value:String(Math.round(g.value*1e6)/1e6)}):'';
  const applyView=async(op:ViewCommand)=>{
-  if(('gridlines' in op||'headings' in op||'zeros' in op)&&collab.current){setNotice(t('sheets.vw.collab'));return;}
+  if(('gridlines' in op||'headings' in op||'zeros' in op||'formulas' in op)&&collab.current){setNotice(t('sheets.vw.collab'));return;}
   if(draftRef.current!==null)await commit(draftRef.current);
   try{const req='fit' in op?{zoom:fitZoom(geo.colLeft(range.c1+1)-geo.colLeft(range.c0),geo.rowTop(range.r1+1)-geo.rowTop(range.r0),view.w-HEAD_W,view.h-HEAD_H,geo.zoom)}:op;await engine.current!.viewOp(sheet,req);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
  const applyPageSetup=async(op:PageSetupOp)=>{

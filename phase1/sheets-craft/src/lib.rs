@@ -670,9 +670,17 @@ impl HeadlessWorkbook {
                 let formula = sh.cell(at).and_then(|v| v.formula.as_ref()).map(|f| f.text.clone());
                 let base = wb.styles.get(sh.style_id(at));
                 let fmt = NumberFormat::parse(base.num_fmt.as_str());
-                let shown = format_value(&value, &fmt, wb.date_system);
+                let mut shown = format_value(&value, &fmt, wb.date_system);
                 // "Show zeros" off blanks numeric zeros in the display only; the value and its formula are untouched.
-                let shown = if !sh.show_zeros && value.as_f64() == Some(0.0) { Default::default() } else { shown };
+                let mut shown = if !sh.show_zeros && value.as_f64() == Some(0.0) { Default::default() } else { shown };
+                // "Show formulas" shows the formula text of formula cells; values stay as they are.
+                if sh.show_formulas
+                    && let Some(f) = &formula
+                {
+                    shown.text = format!("={f}");
+                    shown.numeric = false;
+                    shown.color = None;
+                }
                 let mut style_json_value = style_json(base, &wb.theme);
                 if let Some(cf) = cf_cache.as_mut()
                     && let Some(look) = cf.look(wb, sheet, at)
@@ -721,7 +729,7 @@ impl HeadlessWorkbook {
         let rows: Vec<_> = sh.rows.iter().filter(|(r, _)| **r < gridcraft_engine::core::MAX_ROWS)
             .map(|(r, i)| json!({"i": r, "h": px(sh.row_height(*r)), "hidden": i.hidden})).collect();
         Ok(json!({"sheet":sheet,"defaultColWidth":px(sh.default_col_width),"defaultRowHeight":px(sh.default_row_height),
-            "cols":cols,"rows":rows,"showGridlines":sh.show_gridlines,"showHeadings":sh.show_headings,"showZeros":sh.show_zeros,"zoom":sh.zoom,"protection":sh.protection.as_ref().map(|p| json!({"password": p.password_hash.is_some(), "allow": Self::allowed_names(p)})),"workbookLocked":doc.wb.protected_structure,
+            "cols":cols,"rows":rows,"showGridlines":sh.show_gridlines,"showHeadings":sh.show_headings,"showZeros":sh.show_zeros,"showFormulas":sh.show_formulas,"zoom":sh.zoom,"protection":sh.protection.as_ref().map(|p| json!({"password": p.password_hash.is_some(), "allow": Self::allowed_names(p)})),"workbookLocked":doc.wb.protected_structure,
             "freeze": sh.freeze.map(|(r, c)| json!({"rows": r.min(20), "cols": c.min(20)})),
             "merges": sh.merges.iter().map(|m| json!({"r0":m.start.row,"c0":m.start.col,"r1":m.end.row,"c1":m.end.col})).collect::<Vec<_>>()}).to_string())
     }
@@ -2230,6 +2238,9 @@ impl HeadlessWorkbook {
         } else if let Some(g) = map.get("headings") {
             let on = g.as_bool().ok_or("headings must be true or false")?;
             self.session.run("view.headings", json!({"on": on})).map_err(|e| e.to_string())?;
+        } else if let Some(g) = map.get("formulas") {
+            let on = g.as_bool().ok_or("formulas must be true or false")?;
+            self.session.run("formulas.showFormulas", json!({"on": on}))?;
         } else if let Some(g) = map.get("zeros") {
             let on = g.as_bool().ok_or("zeros must be true or false")?;
             self.session.run("view.showZeros", json!({"on": on})).map_err(|e| e.to_string())?;
@@ -2238,7 +2249,7 @@ impl HeadlessWorkbook {
         }
         let doc = self.session.doc().map_err(|e| e.to_string())?;
         let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
-        Ok(json!({"zoom": sh.zoom, "gridlines": sh.show_gridlines, "headings": sh.show_headings, "zeros": sh.show_zeros}).to_string())
+        Ok(json!({"zoom": sh.zoom, "gridlines": sh.show_gridlines, "headings": sh.show_headings, "zeros": sh.show_zeros, "formulas": sh.show_formulas}).to_string())
     }
 
     /// The saved views of the workbook (read only): `{"views":[{"name","sheet","selection","zoom"}]}` in name order, at most 50. A saved view remembers the
@@ -4633,6 +4644,15 @@ mod tests {
         let lay: serde_json::Value = serde_json::from_str(&book.layout(0).unwrap()).unwrap();
         assert_eq!((lay["showHeadings"].as_bool(), lay["showZeros"].as_bool()), (Some(false), Some(false)));
         assert!(book.view_op(0, r#"{"headings":"no"}"#).is_err());
+        book.set_cell(0, "B1", "=1+2").unwrap();
+        let shown = |book: &HeadlessWorkbook| -> String { book.view_range(0, 0, 1, 1, 1).unwrap() };
+        assert!(shown(&book).contains("\"text\":\"3\""));
+        let on: serde_json::Value = serde_json::from_str(&book.view_op(0, r#"{"formulas":true}"#).unwrap()).unwrap();
+        assert_eq!(on["formulas"], true);
+        assert!(shown(&book).contains("\"text\":\"=1+2\""), "formula text is shown");
+        assert!(book.view_op(0, r#"{"formulas":"yes"}"#).is_err());
+        book.undo().unwrap();
+        assert!(shown(&book).contains("\"text\":\"3\""), "one undo shows values again");
         assert!(book.view_op(0, r#"{"headings":true,"zeros":true}"#).is_err());
     }
     #[test]

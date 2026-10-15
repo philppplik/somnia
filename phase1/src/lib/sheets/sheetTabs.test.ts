@@ -10,6 +10,10 @@ test('hide, unhide and tab color commands are closed shapes',()=>{
  assert.ok(TAB_COLORS.every(([,hex])=>safeTabColor(hex)===hex));
  assert.equal(safeTabColor('url(x)'),null);assert.equal(safeTabColor(null),null);
 });
+test('formulas is a single boolean view setting',()=>{
+ assert.deepEqual(parseViewCommand({formulas:true}),{formulas:true});
+ for(const bad of [{formulas:'on'},{formulas:1},{formulas:true,zeros:true}])assert.throws(()=>parseViewCommand(bad),JSON.stringify(bad));
+});
 test('headings and zeros are single booleans',()=>{
  assert.deepEqual(parseViewCommand({headings:false}),{headings:false});assert.deepEqual(parseViewCommand({zeros:true}),{zeros:true});
  for(const bad of [{headings:'no'},{zeros:1},{headings:true,zeros:true},{}])assert.throws(()=>parseViewCommand(bad),JSON.stringify(bad));

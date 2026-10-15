@@ -654,7 +654,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `sheets.undo` | Undo workbook change | Edit | sheets |  |
 | `sheets.validation` | Limit what can be typed into the selected cells | Edit | sheets |  |
 | `sheets.validationCheck` | Find cells whose value breaks their allowed-values rule | Edit | sheets |  |
-| `sheets.view` | Zoom, gridlines, headings and zeros | View | sheets |  |
+| `sheets.view` | Zoom, gridlines, headings, zeros and formulas | View | sheets |  |
 | `sheets.whatif` | Run goal seek, scenarios or a data table | Edit | sheets |  |
 | `shell.rail.hide` | Hide rail icon | View | core |  |
 | `shell.rail.moveDown` | Move rail icon down | View | core |  |

@@ -612,7 +612,7 @@ function ObjectsGroup(){
  </div>;
 }
 /** Zoom (presets or a custom percentage, or fit to the selection) and gridlines in one grouped menu. Zoom is a view setting; gridlines are one undo step. */
-type ViewAction='z50'|'z75'|'z100'|'z125'|'z150'|'z200'|'custom'|'fit'|'gridlinesOn'|'gridlinesOff'|'headingsOn'|'headingsOff'|'zerosOn'|'zerosOff';
+type ViewAction='z50'|'z75'|'z100'|'z125'|'z150'|'z200'|'custom'|'fit'|'gridlinesOn'|'gridlinesOff'|'headingsOn'|'headingsOff'|'zerosOn'|'zerosOff'|'formulasOn'|'formulasOff';
 function ViewGroup(){
  const {t}=useT(),s=useSheetsSelection(),action=useAction();const [act,setAct]=useState<ViewAction>('z100');const [custom,setCustom]=useState(100);
  const layout=s?.layout;if(!s||!layout)return null;
@@ -622,6 +622,7 @@ function ViewGroup(){
   else if(act==='gridlinesOn'||act==='gridlinesOff')void action.run('sheets.view',{gridlines:act==='gridlinesOn'});
   else if(act==='headingsOn'||act==='headingsOff')void action.run('sheets.view',{headings:act==='headingsOn'});
   else if(act==='zerosOn'||act==='zerosOff')void action.run('sheets.view',{zeros:act==='zerosOn'});
+  else if(act==='formulasOn'||act==='formulasOff')void action.run('sheets.view',{formulas:act==='formulasOn'});
   else void action.run('sheets.view',{zoom:Number(act.slice(1))});
  };
  const opt=(id:ViewAction)=><option key={id} value={id}>{t('sheets.vw.'+id)}</option>;
@@ -629,11 +630,11 @@ function ViewGroup(){
   <span>{t('sheets.vw.title')}</span>
   <label className="flex flex-col gap-1">{t('sheets.vw.action')}<NativeSelect className={field} value={act} disabled={action.busy} onChange={e=>setAct(e.currentTarget.value as ViewAction)} data-testid="sheets-vw-action">
    <optgroup label={t('sheets.vw.groupZoom')}>{(['z50','z75','z100','z125','z150','z200','custom','fit'] as ViewAction[]).map(opt)}</optgroup>
-   <optgroup label={t('sheets.vw.groupShow')}>{(['gridlinesOn','gridlinesOff','headingsOn','headingsOff','zerosOn','zerosOff'] as ViewAction[]).map(opt)}</optgroup>
+   <optgroup label={t('sheets.vw.groupShow')}>{(['gridlinesOn','gridlinesOff','headingsOn','headingsOff','zerosOn','zerosOff','formulasOn','formulasOff'] as ViewAction[]).map(opt)}</optgroup>
   </NativeSelect></label>
   {act==='custom'&&<NumberField label={t('sheets.vw.zoomLabel')} unit="%" value={custom} resetKey="view-zoom" min={MIN_ZOOM} max={MAX_ZOOM} step={5} disabled={action.busy} constraintError={t('sheets.vw.zoomInvalid')} parse={v=>{const n=Number(v.trim());return v.trim()&&Number.isInteger(n)&&n>=MIN_ZOOM&&n<=MAX_ZOOM?{ok:true,value:n}:{ok:false,error:t('sheets.vw.zoomInvalid')};}} onCommit={v=>setCustom(v)}/>}
   <Button variant="outline" size="compact" disabled={action.busy} onClick={apply} data-testid="sheets-vw-apply">{t('sheets.vw.apply')}</Button>
-  <p className="text-ink-3">{t('sheets.vw.current',{zoom:layout.zoom??100,state:t(layout.showGridlines?'sheets.vw.on':'sheets.vw.off')})} {t('sheets.vw.current2',{headings:t(layout.showHeadings===false?'sheets.vw.off':'sheets.vw.on'),zeros:t(layout.showZeros===false?'sheets.vw.off':'sheets.vw.on')})}</p>
+  <p className="text-ink-3">{t('sheets.vw.current',{zoom:layout.zoom??100,state:t(layout.showGridlines?'sheets.vw.on':'sheets.vw.off')})} {t('sheets.vw.current2',{headings:t(layout.showHeadings===false?'sheets.vw.off':'sheets.vw.on'),zeros:t(layout.showZeros===false?'sheets.vw.off':'sheets.vw.on')})} {t('sheets.vw.current3',{state:t(layout.showFormulas?'sheets.vw.on':'sheets.vw.off')})}</p>
  </div>;
 }
 /** Page setup and export in one grouped menu: page, print area and titles, appearance, header and footer, and file export. One undo step per change. */
