@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {parseExifDate,getCaptureEntry,putCaptureDate,allCameras,duplicateKey,entryFromInfo,entryToInfo,exposureLine} from './captureDates.ts';
+import {parseExifDate,getCaptureEntry,putCaptureDate,allCameras,allApertures,allLenses,allShutterSpeeds,duplicateKey,entryFromInfo,entryToInfo,exposureLine} from './captureDates.ts';
 test('captureDates: EXIF date parsing',()=>{
  const t=parseExifDate('2026:10:14 09:30:00');
  assert.equal(typeof t,'number');
@@ -35,6 +35,17 @@ test('captureDates: entryFromInfo maps the full daily EXIF set, exposureLine sca
  assert.equal(exposureLine(bare),'');
  assert.equal(exposureLine(entryFromInfo(1,{iso:6400})),'ISO 6400'); // partial sets show their parts only
 });
+test('captureDates: lens, aperture and shutter options sort photographically',()=>{
+ putCaptureDate('o1.png',11,null,null,null,null,{lens:'Zoom 24-70',ap:'f/2.8',exp:'1/125 s'});
+ putCaptureDate('o2.png',22,null,null,null,null,{lens:'Prime 35',ap:'f/1.4',exp:'1/30 s'});
+ putCaptureDate('o3.png',33,null,null,null,null,{lens:'Prime 35',ap:'f/8',exp:'2 s'});
+ assert.deepEqual(allLenses(),['Prime 35','Zoom 24-70']); // distinct, alphabetical
+ assert.deepEqual(allApertures(),['f/1.4','f/2.8','f/8']); // fast first
+ assert.deepEqual(allShutterSpeeds(),['1/125 s','1/30 s','2 s']); // fast first, text form understood
+ for(const n of['o1.png','o2.png','o3.png'])putCaptureDate(n,0,null); // drain: size mismatch removes them from the options
+ assert.deepEqual(allApertures(),[]);
+});
+
 test('captureDates: entryToInfo inverts entryFromInfo for display',()=>{
  const info={dateTime:'2026:10:14 09:30:05',camera:'Canon EOS R5',width:240,height:150,lens:'RF 35mm F1.8',exposure:'1/125',aperture:'f/2.8',iso:200,focalLength:'35 mm'};
  assert.deepEqual(entryToInfo(entryFromInfo(2131,info)),info); // exact round-trip: the panel can read the cache instead of the file

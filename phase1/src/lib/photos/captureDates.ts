@@ -66,6 +66,14 @@ export function ensureCaptureDates(items:readonly {name:string;size:number;url:s
 export const allIsos=():number[]=>[...new Set(Object.values(state).map(e=>e.iso).filter((i):i is number=>typeof i==='number'))].sort((a,b)=>a-b);
 /** Every distinct focal length in the cache ('35 mm'), ascending by millimetres - the focal-length filter's options. */
 export const allFocalLengths=():string[]=>[...new Set(Object.values(state).map(e=>e.fl).filter((f):f is string=>!!f))].sort((a,b)=>parseFloat(a)-parseFloat(b));
+/** Every distinct lens in the cache, alphabetical - the lens filter's options. */
+export const allLenses=():string[]=>[...new Set(Object.values(state).map(e=>e.lens).filter((l):l is string=>!!l))].sort((a,b)=>a.localeCompare(b));
+/** Every distinct aperture in the cache, fast (wide open) first - the aperture filter's options. */
+export const allApertures=():string[]=>[...new Set(Object.values(state).map(e=>e.ap).filter((a):a is string=>!!a))].sort((a,b)=>parseFloat(a.slice(2))-parseFloat(b.slice(2)));
+/** Shutter speed text ('1/125 s' or '2 s') to seconds, for sorting. */
+const shutterSeconds=(v:string):number=>v.startsWith('1/')?1/Number(v.slice(2,v.length-2)):parseFloat(v);
+/** Every distinct shutter speed in the cache, fast first - the shutter filter's options. */
+export const allShutterSpeeds=():string[]=>[...new Set(Object.values(state).map(e=>e.exp).filter((x):x is string=>!!x))].sort((a,b)=>shutterSeconds(a)-shutterSeconds(b));
 export const allCameras=():string[]=>[...new Set(Object.values(state).map(e=>e.cam).filter((c):c is string=>!!c))].sort((a,b)=>a.localeCompare(b));
 /** The duplicate key: byte size plus pixel dimensions. A heuristic, not a content hash - documented as candidates. */
 export const duplicateKey=(e:CaptureEntry):string|null=>e.w&&e.h?`${e.s}:${e.w}x${e.h}`:null;

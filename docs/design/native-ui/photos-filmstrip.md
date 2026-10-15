@@ -899,3 +899,18 @@ EXIF values and asserts zero fetch() requests for the photo when
 the panel opens (`test-results/ds-photos-info-cache-{light,dark}.png`).
 The existing info leg keeps its assertions (dimensions now come
 from the cache, which read the PNG IHDR).
+
+## Lens, aperture and shutter smart-filter rules (P140)
+
+The EXIF rule set is complete: lens, aperture and shutter speed
+join camera, type, orientation, ISO and focal length in the smart
+filter. Each is a select of the values actually present in the
+EXIF cache (v4) - lens alphabetical, aperture fast-first by
+f-number, shutter fast-first in seconds. String equality like the
+camera rule; photos without a resolved cache entry never match,
+and the lazy warm-up now also covers these three rules.
+
+Coverage: one light/dark gallery leg seeds two full exposure sets
+and narrows with each rule in turn, options proven cache-driven
+(`test-results/ds-photos-smart-exposure-{light,dark}.png`); unit
+tests pin the photographic sort orders.

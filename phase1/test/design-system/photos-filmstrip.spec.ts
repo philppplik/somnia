@@ -1519,6 +1519,43 @@ test('info panel: reads the EXIF cache, no second fetch (light and dark)',async(
   await page.keyboard.press('Escape');
  }
 });
+test('smart filter lens, aperture and shutter: the exposure rules narrow the strip (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
+  await page.evaluate(async()=>{
+   const ps=await import('/src/store/panelStateStore.ts');const cd=await import('/src/lib/photos/captureDates.ts');const med=await import('/src/lib/media.ts');
+   ps.panelStateStore.set('photos.smartFilter',{on:false,minRating:0,flag:'',label:'',tag:'',camera:'',dup:false,type:'',orient:'',iso:'',fl:'',lens:'',ap:'',exp:''});
+   const size=(n:string)=>med.getMedia().items.find(i=>i.name===n)!.size;
+   cd.putCaptureDate('strip-1.png',size('strip-1.png'),null,null,240,150,{lens:'Lens Alpha',ap:'f/1.4',exp:'1/500 s'});
+   cd.putCaptureDate('strip-2.png',size('strip-2.png'),null,null,240,150,{lens:'Lens Beta',ap:'f/8',exp:'1/15 s'});
+  });
+  await page.getByTestId('photos-filmstrip-menu').click();
+  await page.getByTestId('photos-filmstrip-smart').click();
+  await expect(page.getByTestId('photos-smart-lens').locator('option',{hasText:'Lens Beta'})).toHaveCount(1); // options come from the cache
+  await expect(page.getByTestId('photos-smart-aperture').locator('option',{hasText:'f/1.4'})).toHaveCount(1);
+  await expect(page.getByTestId('photos-smart-shutter').locator('option',{hasText:'1/15 s'})).toHaveCount(1);
+  await page.getByTestId('photos-smart-lens').selectOption('Lens Beta');
+  await expect(page.getByTestId('photos-filmstrip-item-strip-2.png')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-1.png')).toHaveCount(0);
+  await page.getByTestId('photos-smart-lens').selectOption(''); // off
+  await page.getByTestId('photos-smart-aperture').selectOption('f/1.4');
+  await expect(page.getByTestId('photos-filmstrip-item-strip-1.png')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-2.png')).toHaveCount(0);
+  await page.getByTestId('photos-smart-aperture').selectOption('');
+  await page.getByTestId('photos-smart-shutter').selectOption('1/15 s');
+  await expect(page.getByTestId('photos-filmstrip-item-strip-2.png')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-1.png')).toHaveCount(0);
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toHaveCount(0); // unresolved entry never matches
+  await page.screenshot({path:`test-results/ds-photos-smart-exposure-${theme}.png`,fullPage:true});
+  await page.getByTestId('photos-smart-shutter').selectOption(''); // off
+  await page.getByTestId('photos-filmstrip-smart').click();
+  await page.keyboard.press('Escape');
+  await page.evaluate(async()=>{const ps=await import('/src/store/panelStateStore.ts');ps.panelStateStore.set('photos.smartFilter',{on:false,minRating:0,flag:'',label:'',tag:'',camera:'',dup:false,type:'',orient:'',iso:'',fl:'',lens:'',ap:'',exp:''});});
+ }
+});
 test('menu groups: labeled collapsible sections, expanded by default (light and dark)',async({page})=>{
  for(const theme of['light','dark']){
   await page.goto('/test/design-system/?view=photos-filmstrip');

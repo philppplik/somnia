@@ -21,7 +21,7 @@ import {useCaption} from '../../lib/photos/captions';
 import {cullBatch,cullSetFlag,cullSetLabel,cullSetTags,cullAddTags,cullSetCaption} from '../../lib/photos/cullHistory';
 import {copyMetadata,hasMetadataClip,pasteMetadata} from '../../lib/photos/metadataClipboard';
 import {SOFT_PROOF_MODEL_IDS} from '../../lib/photos/softProof';
-import {allCameras,allFocalLengths,allIsos,useCaptureDates} from '../../lib/photos/captureDates';
+import {allCameras,allApertures,allFocalLengths,allIsos,allLenses,allShutterSpeeds,useCaptureDates} from '../../lib/photos/captureDates';
 import {groupForStrip,groupPhotos,setStackCover,ungroupStacks,useStackCovers,useStacks} from '../../lib/photos/stacks';
 import {hidePhotos,unhideAll,unhidePhotos} from '../../lib/photos/hidden';
 import {nextCopyName} from '../../lib/photos/virtualCopy';
@@ -234,6 +234,18 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
            <NativeSelect value={smart.fl??''} aria-label={t('photos.smart.fl')} title={t('photos.smart.fl')} onChange={e=>setSmart({...smart,fl:e.currentTarget.value})} className="h-7" data-testid="photos-smart-fl">
             <option value="">{t('photos.smart.anyFl')}</option>
             {allFocalLengths().map(f=><option key={f} value={f}>{f}</option>)}
+           </NativeSelect>
+           <NativeSelect value={smart.lens??''} aria-label={t('photos.smart.lens')} title={t('photos.smart.lens')} onChange={e=>setSmart({...smart,lens:e.currentTarget.value})} className="h-7" data-testid="photos-smart-lens">
+            <option value="">{t('photos.smart.anyLens')}</option>
+            {allLenses().map(l=><option key={l} value={l}>{l}</option>)}
+           </NativeSelect>
+           <NativeSelect value={smart.ap??''} aria-label={t('photos.smart.aperture')} title={t('photos.smart.aperture')} onChange={e=>setSmart({...smart,ap:e.currentTarget.value})} className="h-7" data-testid="photos-smart-aperture">
+            <option value="">{t('photos.smart.anyAperture')}</option>
+            {allApertures().map(a=><option key={a} value={a}>{a}</option>)}
+           </NativeSelect>
+           <NativeSelect value={smart.exp??''} aria-label={t('photos.smart.shutter')} title={t('photos.smart.shutter')} onChange={e=>setSmart({...smart,exp:e.currentTarget.value})} className="h-7" data-testid="photos-smart-shutter">
+            <option value="">{t('photos.smart.anyShutter')}</option>
+            {allShutterSpeeds().map(x=><option key={x} value={x}>{x}</option>)}
            </NativeSelect>
            <Button variant="outline" size="compact" aria-pressed={!!smart.dup} onClick={()=>setSmart({...smart,dup:!smart.dup})} data-testid="photos-smart-dup">{t('photos.smart.dup')}</Button>
           </div>}

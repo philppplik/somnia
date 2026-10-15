@@ -284,5 +284,11 @@
  "photos.smart.iso": "ISO",
  "photos.smart.anyIso": "Jede ISO",
  "photos.smart.fl": "Brennweite",
- "photos.smart.anyFl": "Jede Brennweite"
+ "photos.smart.anyFl": "Jede Brennweite",
+ "photos.smart.lens": "Objektiv",
+ "photos.smart.anyLens": "Jedes Objektiv",
+ "photos.smart.aperture": "Blende",
+ "photos.smart.anyAperture": "Jede Blende",
+ "photos.smart.shutter": "Verschluss",
+ "photos.smart.anyShutter": "Jeder Verschluss"
 }

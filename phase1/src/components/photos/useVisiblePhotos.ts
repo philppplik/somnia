@@ -15,7 +15,7 @@ import {useHidden} from '../../lib/photos/hidden';
 import {useCollectionMembers} from '../../lib/photos/collections';
 
 /** The smart filter's rule set: an on switch plus the AND-combined rules minimum rating, flag, color label and exact keyword tag. */
-export interface SmartFilter{on:boolean;minRating:number;flag:string;label:string;tag:string;camera?:string;dup?:boolean;type?:string;orient?:string;iso?:string;fl?:string}
+export interface SmartFilter{on:boolean;minRating:number;flag:string;label:string;tag:string;camera?:string;dup?:boolean;type?:string;orient?:string;iso?:string;fl?:string;lens?:string;ap?:string;exp?:string}
 /** The filmstrip's visible list: developable photos after the rating/flag/label filter and the chosen sort. Shared by the filmstrip and the live library grid. */
 export function useVisiblePhotos(){
  const media=useMedia();
@@ -34,7 +34,7 @@ export function useVisiblePhotos(){
  const collectionMembers=useCollectionMembers(collection);
  const collectionSet=collection?new Set(collectionMembers):null;
  const filter=String(minRating); // legacy stored numbers and 'pick'/'reject'/'unrated'/'label:*' share one select
- const smartOn=smart.on&&(smart.minRating>0||smart.flag!==''||smart.label!==''||smart.tag.trim()!==''||(smart.camera??'').trim()!==''||!!smart.dup||(smart.type??'').trim()!==''||(smart.orient??'').trim()!==''||(smart.iso??'').trim()!==''||(smart.fl??'').trim()!=='');
+ const smartOn=smart.on&&(smart.minRating>0||smart.flag!==''||smart.label!==''||smart.tag.trim()!==''||(smart.camera??'').trim()!==''||!!smart.dup||(smart.type??'').trim()!==''||(smart.orient??'').trim()!==''||(smart.iso??'').trim()!==''||(smart.fl??'').trim()!==''||(smart.lens??'').trim()!==''||(smart.ap??'').trim()!==''||(smart.exp??'').trim()!=='');
  const hidden=useHidden();
  const hiddenSet=showHidden?new Set<string>():new Set(hidden);
  const total=developablePhotos(media.items).length;
@@ -50,11 +50,14 @@ export function useVisiblePhotos(){
  const smartOrient=(smart.orient??'').trim();
  const smartIso=(smart.iso??'').trim();
  const smartFl=(smart.fl??'').trim();
+ const smartLens=(smart.lens??'').trim();
+ const smartAp=(smart.ap??'').trim();
+ const smartExp=(smart.exp??'').trim();
  const dupKeys=new Map<string,number>();if(smart.dup)for(const p of all){const e=getCaptureEntry(p.name,p.size);const k=e?duplicateKey(e):null;if(k)dupKeys.set(k,(dupKeys.get(k)??0)+1);}
- const visible=all.filter(p=>(!collectionSet||collectionSet.has(p.name))&&(!smartOn||((ratings[p.name]??0)>=smart.minRating&&(smart.flag===''||(smart.flag==='none'?flags[p.name]==null:flags[p.name]===smart.flag))&&(smart.label===''||(smart.label==='none'?labels[p.name]==null:labels[p.name]===smart.label))&&(smartTag===''||(tags[p.name]??[]).some(t=>t.toLowerCase()===smartTag.toLowerCase()))&&(smartCamera===''||getCaptureEntry(p.name,p.size)?.cam===smartCamera)&&(smartType===''||photoFileType(p.mime)===smartType)&&(smartOrient===''||(()=>{const e=getCaptureEntry(p.name,p.size);if(!e?.w||!e?.h)return false;return smartOrient===(e.w>e.h?'landscape':e.h>e.w?'portrait':'square');})())&&(smartIso===''||getCaptureEntry(p.name,p.size)?.iso===Number(smartIso))&&(smartFl===''||getCaptureEntry(p.name,p.size)?.fl===smartFl)&&(!smart.dup||(()=>{const e=getCaptureEntry(p.name,p.size);const k=e?duplicateKey(e):null;return k!==null&&(dupKeys.get(k)??0)>1;})())))); // unresolved entries match neither a camera rule nor the duplicates rule
+ const visible=all.filter(p=>(!collectionSet||collectionSet.has(p.name))&&(!smartOn||((ratings[p.name]??0)>=smart.minRating&&(smart.flag===''||(smart.flag==='none'?flags[p.name]==null:flags[p.name]===smart.flag))&&(smart.label===''||(smart.label==='none'?labels[p.name]==null:labels[p.name]===smart.label))&&(smartTag===''||(tags[p.name]??[]).some(t=>t.toLowerCase()===smartTag.toLowerCase()))&&(smartCamera===''||getCaptureEntry(p.name,p.size)?.cam===smartCamera)&&(smartType===''||photoFileType(p.mime)===smartType)&&(smartOrient===''||(()=>{const e=getCaptureEntry(p.name,p.size);if(!e?.w||!e?.h)return false;return smartOrient===(e.w>e.h?'landscape':e.h>e.w?'portrait':'square');})())&&(smartIso===''||getCaptureEntry(p.name,p.size)?.iso===Number(smartIso))&&(smartFl===''||getCaptureEntry(p.name,p.size)?.fl===smartFl)&&(smartLens===''||getCaptureEntry(p.name,p.size)?.lens===smartLens)&&(smartAp===''||getCaptureEntry(p.name,p.size)?.ap===smartAp)&&(smartExp===''||getCaptureEntry(p.name,p.size)?.exp===smartExp)&&(!smart.dup||(()=>{const e=getCaptureEntry(p.name,p.size);const k=e?duplicateKey(e):null;return k!==null&&(dupKeys.get(k)??0)>1;})())))); // unresolved entries match neither a camera rule nor the duplicates rule
  const developable=developablePhotos(media.items);
  const developableKey=developable.map(p=>`${p.name}:${p.size}`).join('|');
- useEffect(()=>{if(sort==='capture'||smartCamera!==''||smartIso!==''||smartFl!==''||smart.dup)ensureCaptureDates(developable);},[sort,developableKey,smartCamera,smartIso,smartFl,smart.dup]); // eslint-disable-line react-hooks/exhaustive-deps -- the key is the stable identity of the list
+ useEffect(()=>{if(sort==='capture'||smartCamera!==''||smartIso!==''||smartFl!==''||smartLens!==''||smartAp!==''||smartExp!==''||smart.dup)ensureCaptureDates(developable);},[sort,developableKey,smartCamera,smartIso,smartFl,smartLens,smartAp,smartExp,smart.dup]); // eslint-disable-line react-hooks/exhaustive-deps -- the key is the stable identity of the list
  const captureReady=sort==='capture'&&developable.every(p=>getCaptureEntry(p.name,p.size)!==null); // flip to date order only once everything resolved: no progressive jumping
  const dates:Record<string,number|null>={};if(captureReady)for(const p of developable)dates[p.name]=getCaptureEntry(p.name,p.size)!.t;
  const sizes:Record<string,number>={};for(const p of developable)sizes[p.name]=p.size;

@@ -284,5 +284,11 @@
  "photos.smart.iso": "ISO",
  "photos.smart.anyIso": "Qualquer ISO",
  "photos.smart.fl": "Distância focal",
- "photos.smart.anyFl": "Qualquer distância focal"
+ "photos.smart.anyFl": "Qualquer distância focal",
+ "photos.smart.lens": "Lente",
+ "photos.smart.anyLens": "Qualquer lente",
+ "photos.smart.aperture": "Abertura",
+ "photos.smart.anyAperture": "Qualquer abertura",
+ "photos.smart.shutter": "Obturador",
+ "photos.smart.anyShutter": "Qualquer obturador"
 }
