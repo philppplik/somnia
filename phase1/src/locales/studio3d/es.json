@@ -1061,5 +1061,7 @@
  "cmd.studio3d.edit.selectNonManifold": "Seleccionar los vértices que tocan aristas con más de dos caras",
  "cmd.studio3d.edit.proportional": "Activar la edición proporcional: los vértices cercanos siguen mover, rotar, escalar y sesgar con un decaimiento",
  "studio3d.edit.proportional": "Edición proporcional",
- "studio3d.edit.proportionalRadius": "Radio de influencia"
+ "studio3d.edit.proportionalRadius": "Radio de influencia",
+ "cmd.studio3d.edit.gridFill": "Rellenar el bucle de aristas cerrado seleccionado de la malla 3D editada con una rejilla interpolada",
+ "studio3d.hist.gridFill": "Relleno en rejilla 3D"
 }

@@ -1061,5 +1061,7 @@
  "cmd.studio3d.edit.selectNonManifold": "Vertices auswählen, die Kanten mit mehr als zwei Flächen berühren",
  "cmd.studio3d.edit.proportional": "Proportionales Bearbeiten umschalten: Nahe Vertices folgen Verschieben, Drehen, Skalieren und Scheren mit Abfall",
  "studio3d.edit.proportional": "Proportionales Bearbeiten",
- "studio3d.edit.proportionalRadius": "Einflussradius"
+ "studio3d.edit.proportionalRadius": "Einflussradius",
+ "cmd.studio3d.edit.gridFill": "Die ausgewählte geschlossene Kantenschleife des bearbeiteten 3D-Meshs mit einem interpolierten Gitter füllen",
+ "studio3d.hist.gridFill": "3D-Gitterfüllung"
 }

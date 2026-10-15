@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1108 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1109 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -834,6 +834,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `studio3d.edit.fill` | Fill the selected closed edge loop with a centroid triangle fan | Edit | studio3d |  |
 | `studio3d.edit.flip` | Flip the normals of selected faces | Edit | studio3d |  |
 | `studio3d.edit.flipEdge` | Rotate each selected edge shared by two triangles to the other diagonal | Edit | studio3d |  |
+| `studio3d.edit.gridFill` | Fill the selected closed edge loop of the edited 3D mesh with an interpolated grid | Edit | studio3d |  |
 | `studio3d.edit.inset` | Inset faces | Edit | studio3d |  |
 | `studio3d.edit.knife` | Slice the selected faces of the edited 3D mesh with a free plane and keep both sides connected | Edit | studio3d |  |
 | `studio3d.edit.loopCut` | Loop cut | Edit | studio3d |  |

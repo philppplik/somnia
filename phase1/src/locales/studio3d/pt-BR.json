@@ -1061,5 +1061,7 @@
  "cmd.studio3d.edit.selectNonManifold": "Selecionar os vértices tocados por arestas com mais de duas faces",
  "cmd.studio3d.edit.proportional": "Ativar edição proporcional: vértices próximos seguem mover, girar, escalar e cisalhar com decaimento",
  "studio3d.edit.proportional": "Edição proporcional",
- "studio3d.edit.proportionalRadius": "Raio de influência"
+ "studio3d.edit.proportionalRadius": "Raio de influência",
+ "cmd.studio3d.edit.gridFill": "Preencher o loop de arestas fechado selecionado da malha 3D editada com uma grade interpolada",
+ "studio3d.hist.gridFill": "Preenchimento em grade 3D"
 }

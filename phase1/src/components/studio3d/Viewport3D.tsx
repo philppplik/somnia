@@ -1215,6 +1215,7 @@ export default function Viewport3D(){
    editFlip:()=>{stage.editFlip();patchEdit();invalidate();},
    editDissolve:()=>{stage.editDissolve();patchEdit();invalidate();},
    editFill:()=>{stage.editFill();patchEdit();invalidate();},
+   editGridFill:()=>{stage.editGridFill();patchEdit();invalidate();},
    editCollapse:()=>{stage.editCollapse();patchEdit();invalidate();},
    editToSphere:(factor)=>{stage.editToSphere(factor);patchEdit();invalidate();},
    editRandomize:(amount,seed)=>{stage.editRandomize(amount,seed);patchEdit();invalidate();},

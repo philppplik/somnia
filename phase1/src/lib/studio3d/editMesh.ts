@@ -1459,6 +1459,86 @@ export function fillSelected(m:MeshData,edges:[number,number][]):MeshData{
  if(uvs)out.uvs=uvs;
  return out;
 }
+/** Fills one selected closed edge loop with an interpolated grid (a Coons patch): the loop needs an even edge count, its two halves between opposite corners become the grid sides, the sharpest corner splits the sides into rows and columns, and interior points and UVs blend bilinearly between the four sides. Boundary vertices are reused; the winding matches the faces around the loop like fill; masks and explicit normals are dropped. */
+export function gridFillSelected(m:MeshData,edges:[number,number][]):MeshData{
+ if(!edges.length)throw new EditError('Select an edge loop to grid-fill.');
+ const nv=m.positions.length/3;
+ const adj=new Map<number,number[]>();
+ const addAdj=(a:number,b:number)=>{const l=adj.get(a);if(l)l.push(b);else adj.set(a,[b]);};
+ for(const [a,b] of edges){
+  if(!Number.isInteger(a)||!Number.isInteger(b)||a<0||b<0||a>=nv||b>=nv)throw new EditError(`Edge ${a}-${b} does not exist.`);
+  addAdj(a,b);addAdj(b,a);
+ }
+ for(const l of adj.values())if(l.length!==2)throw new EditError('Select one closed edge loop to grid-fill.');
+ const start=adj.keys().next().value!;
+ const loop=[start];
+ let prev=-1,cur=start;
+ while(true){
+  const nexts=adj.get(cur)!.filter(v=>v!==prev);
+  if(!nexts.length)throw new EditError('Select one closed edge loop to grid-fill.');
+  const nxt=nexts[0];
+  if(nxt===start)break;
+  if(loop.includes(nxt))throw new EditError('Select one closed edge loop to grid-fill.');
+  loop.push(nxt);prev=cur;cur=nxt;
+ }
+ if(loop.length!==adj.size||loop.length<4||loop.length%2)throw new EditError('Grid fill needs a closed edge loop with an even number of edges.');
+ // Winding vote like fill: existing faces traversing a loop edge want the cap to traverse it the other way; edges match by POSITION so split sides still vote.
+ const pk=(v:number)=>`${Math.round(m.positions[v*3]*1e6)},${Math.round(m.positions[v*3+1]*1e6)},${Math.round(m.positions[v*3+2]*1e6)}`;
+ let vote=0;
+ const surf=new Map<string,number>();
+ const nt=m.index.length/3;
+ for(let f=0;f<nt;f++)for(let e=0;e<3;e++){
+  const a=m.index[f*3+e],b=m.index[f*3+(e+1)%3];
+  const ka=pk(a),kb=pk(b);
+  surf.set(`${ka}|${kb}`,(surf.get(`${ka}|${kb}`)??0)+1);
+ }
+ for(let i=0;i<loop.length;i++){
+  const ka=pk(loop[i]),kb=pk(loop[(i+1)%loop.length]);
+  vote+=(surf.get(`${ka}|${kb}`)??0)-(surf.get(`${kb}|${ka}`)??0);
+ }
+ const ring=vote>=0?[...loop].reverse():[...loop];
+ const N=ring.length,h=N/2;
+ const A:number[]=[],B:number[]=[];
+ for(let i=0;i<=h;i++){A.push(ring[i]);B.push(ring[(2*h-i)%(2*h)]);}
+ // Sharpest corner on chain A (smallest cosine between the joined segments) splits it into left and top; ties keep the earliest corner.
+ let H=1,bestCos=2;
+ for(let k=1;k<h;k++){
+  const ax=m.positions[A[k-1]*3],ay=m.positions[A[k-1]*3+1],az=m.positions[A[k-1]*3+2];
+  const bx=m.positions[A[k]*3],by=m.positions[A[k]*3+1],bz=m.positions[A[k]*3+2];
+  const cx=m.positions[A[k+1]*3],cy=m.positions[A[k+1]*3+1],cz=m.positions[A[k+1]*3+2];
+  const ux=bx-ax,uy=by-ay,uz=bz-az,wx=cx-bx,wy=cy-by,wz=cz-bz;
+  const lu=Math.hypot(ux,uy,uz),lw=Math.hypot(wx,wy,wz);
+  const cos=lu>1e-12&&lw>1e-12?(ux*wx+uy*wy+uz*wz)/(lu*lw):1;
+  if(cos<bestCos-1e-9){bestCos=cos;H=k;}
+ }
+ const W=h-H;
+ const positions=[...m.positions];
+ const uvs=m.uvs?[...m.uvs]:undefined;
+ const G:number[][]=[];
+ for(let i=0;i<=H;i++){G.push(new Array<number>(W+1).fill(-1));}
+ for(let i=0;i<=H;i++){G[i][0]=A[i];G[i][W]=B[W+i];}
+ for(let j=0;j<=W;j++){G[0][j]=B[j];G[H][j]=A[H+j];}
+ const px=(v:number)=>m.positions[v*3],py=(v:number)=>m.positions[v*3+1],pz=(v:number)=>m.positions[v*3+2];
+ for(let i=1;i<H;i++)for(let j=1;j<W;j++){
+  const sc=j/W,tc=i/H;
+  const blend=(f:(v:number)=>number)=>{
+   const L=f(A[i]),R=f(B[W+i]),T=f(B[j]),Bo=f(A[H+j]);
+   const TL=f(A[0]),TR=f(B[W]),BL=f(A[H]),BR=f(A[h]);
+   return (1-sc)*L+sc*R+(1-tc)*T+tc*Bo-((1-sc)*(1-tc)*TL+sc*(1-tc)*TR+(1-sc)*tc*BL+sc*tc*BR);
+  };
+  G[i][j]=positions.length/3;
+  positions.push(blend(px),blend(py),blend(pz));
+  if(uvs)uvs.push((1-sc)*m.uvs![A[i]*2]+sc*m.uvs![B[W+i]*2]+(1-tc)*m.uvs![B[j]*2]+tc*m.uvs![A[H+j]*2]-((1-sc)*(1-tc)*m.uvs![A[0]*2]+sc*(1-tc)*m.uvs![B[W]*2]+(1-sc)*tc*m.uvs![A[H]*2]+sc*tc*m.uvs![A[h]*2]),(1-sc)*m.uvs![A[i]*2+1]+sc*m.uvs![B[W+i]*2+1]+(1-tc)*m.uvs![B[j]*2+1]+tc*m.uvs![A[H+j]*2+1]-((1-sc)*(1-tc)*m.uvs![A[0]*2+1]+sc*(1-tc)*m.uvs![B[W]*2+1]+(1-sc)*tc*m.uvs![A[H]*2+1]+sc*tc*m.uvs![A[h]*2+1]));
+ }
+ const index=[...m.index];
+ for(let i=0;i<H;i++)for(let j=0;j<W;j++){
+  index.push(G[i][j],G[i+1][j],G[i+1][j+1]);
+  index.push(G[i][j],G[i+1][j+1],G[i][j+1]);
+ }
+ const out:MeshData={positions,index};
+ if(uvs)out.uvs=uvs;
+ check(out);return out;
+}
 /** Deletes selected elements: faces drop their own triangles, edges and vertices drop every triangle that touches them. Positions stay put (orphan vertices are allowed), so undo restores the exact geometry. Refuses an empty selection and a delete that would leave no triangle. */
 export function deleteElements(m:MeshData,kind:'vertex'|'edge'|'face',sel:{verts?:number[];edges?:[number,number][];faces?:number[]}):MeshData{
  const tris=m.index.length/3,total=m.positions.length/3;

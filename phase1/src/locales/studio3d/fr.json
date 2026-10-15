@@ -1061,5 +1061,7 @@
  "cmd.studio3d.edit.selectNonManifold": "Sélectionner les sommets touchant des arêtes de plus de deux faces",
  "cmd.studio3d.edit.proportional": "Activer l’édition proportionnelle : les sommets proches suivent déplacement, rotation, échelle et cisaillement avec un déclin",
  "studio3d.edit.proportional": "Édition proportionnelle",
- "studio3d.edit.proportionalRadius": "Rayon d’influence"
+ "studio3d.edit.proportionalRadius": "Rayon d’influence",
+ "cmd.studio3d.edit.gridFill": "Remplir la boucle d’arêtes fermée sélectionnée du maillage 3D édité avec une grille interpolée",
+ "studio3d.hist.gridFill": "Remplissage en grille 3D"
 }

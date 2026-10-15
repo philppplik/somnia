@@ -1061,5 +1061,7 @@
  "cmd.studio3d.edit.selectNonManifold": "Select the vertices touched by edges with more than two faces",
  "cmd.studio3d.edit.proportional": "Toggle proportional editing: nearby vertices follow move, rotate, scale and shear with a falloff",
  "studio3d.edit.proportional": "Proportional editing",
- "studio3d.edit.proportionalRadius": "Influence radius"
+ "studio3d.edit.proportionalRadius": "Influence radius",
+ "cmd.studio3d.edit.gridFill": "Fill the selected closed edge loop of the edited 3D mesh with an interpolated grid",
+ "studio3d.hist.gridFill": "3D grid fill"
 }

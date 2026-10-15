@@ -10020,6 +10020,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.edit.gridFill",
+      "title": "Fill the selected closed edge loop of the edited 3D mesh with an interpolated grid",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.edit.inset",
       "title": "Inset faces",
       "category": "Edit",

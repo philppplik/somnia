@@ -133,6 +133,7 @@ export interface Studio3DController{
  editFlip():void;
  editDissolve():void;
  editFill():void;
+ editGridFill():void;
  editCollapse():void;
  editToSphere(factor:number):void;
  editRandomize(amount:number,seed:number):void;
@@ -362,6 +363,7 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add('studio3d.edit.flip','Flip the normals of the selected triangles of the edited 3D mesh','Edit',()=>need().editFlip(),undefined,()=>getStudio3DState().edit!=null),
   add('studio3d.edit.dissolve','Merge the selected triangles of the edited 3D mesh into one face, dropping interior edges and vertices','Edit',()=>need().editDissolve(),undefined,()=>getStudio3DState().edit!=null),
   add('studio3d.edit.fill','Fill the selected closed edge loop of the edited 3D mesh with a centroid triangle fan','Edit',()=>need().editFill(),undefined,()=>getStudio3DState().edit!=null),
+  add('studio3d.edit.gridFill','Fill the selected closed edge loop of the edited 3D mesh with an interpolated grid','Edit',()=>need().editGridFill(),undefined,()=>getStudio3DState().edit!=null),
   add('studio3d.edit.collapse','Collapse each connected island of the selection of the edited 3D mesh into one vertex at its centroid','Edit',()=>need().editCollapse(),undefined,()=>getStudio3DState().edit!=null),
   add<{factor?:number}>('studio3d.edit.toSphere','Pull the selected vertices of the edited 3D mesh onto a sphere around their centroid','Edit',p=>need().editToSphere(p?.factor??1),object({factor:{type:'number',minimum:-100,maximum:100}},[]),()=>getStudio3DState().edit!=null),
   add<{amount?:number;seed?:number}>('studio3d.edit.randomize','Jitter the selected vertices of the edited 3D mesh by a seeded random displacement','Edit',p=>need().editRandomize(p?.amount??0.1,p?.seed??1),object({amount:{type:'number',minimum:-1000000,maximum:1000000},seed:{type:'integer',minimum:1,maximum:1000000000}},[]),()=>getStudio3DState().edit!=null),
