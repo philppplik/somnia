@@ -128,6 +128,12 @@ for(const [name,v] of Object.entries(themes)){
   const r=ratio(v['--focus-ring'].rgb,v[bk].rgb);
   if(r<3)fail(`${name} --focus-ring on ${bk}: ${r.toFixed(2)} (${v['--focus-ring'].raw} on ${v[bk].raw})`);
  }
+ // non-text: input/control borders at 3:1 (WCAG 1.4.11) — blocking since they carry the fix
+ if(v['--border-control'])for(const bk of ['--bg-base','--bg-panel','--bg-elevated']){
+  if(!v[bk])continue;
+  const r=ratio(v['--border-control'].rgb,v[bk].rgb);
+  if(r<3)fail(`${name} --border-control on ${bk}: ${r.toFixed(2)} (${v['--border-control'].raw} on ${v[bk].raw})`);
+ }
  // non-text, advisory only: control borders at 3:1 (WCAG 1.4.11) — dark-mode border
  // subtlety is a design decision, so these warn without failing the audit
  for(const bk of ['--bg-base','--bg-panel','--bg-elevated']){
