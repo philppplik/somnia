@@ -1273,5 +1273,9 @@
  "animation.rig.trail.4": "Traînée de 4 fantômes",
  "animation.rig.trail.8": "Traînée de 8 fantômes",
  "cmd.animation.layers.trail": "Ajouter une traînée de copies décalées qui s’estompent derrière le calque",
- "animation.export.check.flash": "Clignotent plus de 3 fois par seconde, ce qui peut être inconfortable ou dangereux pour certains spectateurs : {names}"
+ "animation.export.check.flash": "Clignotent plus de 3 fois par seconde, ce qui peut être inconfortable ou dangereux pour certains spectateurs : {names}",
+ "animation.rig.wave.bob": "Onde : monter et descendre",
+ "animation.rig.wave.swing": "Onde : balancer de côté",
+ "animation.rig.wave.breathe": "Onde : respirer (échelle)",
+ "cmd.animation.layers.wave": "Faire courir une onde à travers les calques cochés"
 }

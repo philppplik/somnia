@@ -107,3 +107,4 @@ Back to [Studios](../studios.md).
 - Freeze at the playhead (Rig > Appearance > Hold poses): the ticked layers keep the pose they have at the playhead; later keys are removed.
 - Trail (Motion > Effects): one ticked layer gets 4 or 8 fading ghost copies that follow its motion a few frames late; the ghosts sit behind the original.
 - Export check now warns about layers whose opacity flashes more than 3 times a second (checked on every frame of the exported range).
+- Wave (Motion > Effects): a sine wave (bob, swing or breathe) runs through the ticked layers in tick order, each 45 degrees behind the one before; baked as linear keys over the work area.

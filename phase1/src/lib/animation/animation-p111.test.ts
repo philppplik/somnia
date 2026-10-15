@@ -1706,3 +1706,20 @@ test('P266 export check: flash warning for more than 3 flashes a second, not for
  const flash=exportCheck(c,[],defaultExportSettings()).find(i=>i.code==='flash');
  assert.ok(flash&&flash.severity==='warn');assert.ok(flash!.layers.includes('Strobe')&&!flash!.layers.includes('Pulse'));
 });
+
+test('P267 wave: each ticked layer gets the same sine one step later, linear keys over the work area, end key exact, one undo step',async()=>{
+ const {waveSpecs,waveOffset,waveTimes,applyWave}=await import('./waveCommands');const run=waveSpecs()[0].run as (p?:unknown)=>unknown;
+ assert.deepEqual(waveTimes(0,10,4),[0,4,8,10]);assert.equal(waveOffset(0,0,100,20),0);assert.ok(Math.abs(waveOffset(0,25,100,20)-20)<1e-9);
+ assert.deepEqual(applyWave('bob',[10,20] as never,5),[10,25]);assert.deepEqual(applyWave('breathe',[100,100] as never,10),[110,110]);
+ const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'shape',id:'b'});
+ const T=(id:string)=>findComp(s.document!)!.layers.find(l=>l.id===id)!.transform.position;
+ assert.throws(()=>run({kind:'nope'}),/Unknown/);assert.throws(()=>run({kind:'bob',amount:0,layers:['a']}),/size/);
+ const r=run({kind:'bob',amount:20,periodFrames:40,layers:['b','a']}) as {layers:number;keys:number};assert.equal(r.layers,2);assert.ok(r.keys>=10&&r.keys<=120);
+ const wa=findComp(s.document!)!.workArea,kb=T('b').keys,ka=T('a').keys;
+ assert.equal(kb.length,r.keys);assert.equal(kb[kb.length-1].t,wa.out);assert.ok(kb.every(k=>k.interp==='linear'));
+ const dy=(ks:typeof kb,i:number,base:number)=>(ks[i].v as number[])[1]-base;
+ const b0=(T('b').value as number[])[1];
+ assert.ok(Math.abs(dy(kb,0,b0))<0.01,'first layer starts at 0');
+ s.undo();assert.equal(T('b').keys.length,0);
+ assert.ok(ka.length===r.keys);
+});

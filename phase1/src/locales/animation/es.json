@@ -1273,5 +1273,9 @@
  "animation.rig.trail.4": "Estela de 4 fantasmas",
  "animation.rig.trail.8": "Estela de 8 fantasmas",
  "cmd.animation.layers.trail": "Añadir una estela que se desvanece con copias retrasadas detrás de la capa",
- "animation.export.check.flash": "Parpadean más de 3 veces por segundo, lo que puede resultar molesto o peligroso para algunas personas: {names}"
+ "animation.export.check.flash": "Parpadean más de 3 veces por segundo, lo que puede resultar molesto o peligroso para algunas personas: {names}",
+ "animation.rig.wave.bob": "Onda: subir y bajar",
+ "animation.rig.wave.swing": "Onda: balancear de lado a lado",
+ "animation.rig.wave.breathe": "Onda: respirar (escala)",
+ "cmd.animation.layers.wave": "Hacer correr una onda por las capas marcadas"
 }

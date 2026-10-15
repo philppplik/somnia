@@ -1273,5 +1273,9 @@
  "animation.rig.trail.4": "Trail of 4 ghosts",
  "animation.rig.trail.8": "Trail of 8 ghosts",
  "cmd.animation.layers.trail": "Add a fading trail of delayed copies behind the layer",
- "animation.export.check.flash": "Flash more than 3 times a second, which can be uncomfortable or unsafe for some viewers: {names}"
+ "animation.export.check.flash": "Flash more than 3 times a second, which can be uncomfortable or unsafe for some viewers: {names}",
+ "animation.rig.wave.bob": "Wave: bob up and down",
+ "animation.rig.wave.swing": "Wave: swing side to side",
+ "animation.rig.wave.breathe": "Wave: breathe (scale)",
+ "cmd.animation.layers.wave": "Run a wave through the ticked layers"
 }
