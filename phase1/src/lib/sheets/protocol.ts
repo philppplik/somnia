@@ -25,6 +25,9 @@ export interface PageInfo{orientation:'portrait'|'landscape';paper:string;margin
 /** Sheet protection: the password is write-only, the sheet only reports whether one is set. */
 export type ProtectPermission='formatCells'|'formatColumns'|'formatRows'|'insertColumns'|'insertRows'|'deleteColumns'|'deleteRows'|'sort'|'autofilter';
 export type ProtectOp={kind:'protect';password?:string;allow?:ProtectPermission[]}|{kind:'unprotect';password?:string}|{kind:'lock';locked:boolean}|{kind:'workbook';on:boolean};
+/** What-if analysis. References are plain cells of the current sheet; the bridge re-validates. */
+export type WhatIfOp={kind:'goalSeek';set:string;to:number;changing:string}|{kind:'scenarioAdd';name:string;changing:string;values?:(string|number|boolean|null)[];comment?:string;replace?:boolean}|{kind:'scenarioShow';name:string}|{kind:'scenarioDelete';name:string}|{kind:'scenarioSummary';resultCells?:string}|{kind:'dataTable';range:string;rowInput?:string;columnInput?:string};
+export interface ScenarioInfo{name:string;changing:string;comment:string;values:string[]}
 export interface ProtectionInfo{password:boolean;allow:ProtectPermission[]}
 /** Charts and sparklines. The bridge draws them as primitives (parsed and bounded in chartOps.ts); the Rust side re-validates every operation. */
 export type ChartType='column'|'bar'|'line'|'pie'|'doughnut'|'area'|'scatter'|'radar'|'histogram'|'waterfall'|'funnel'|'treemap';
@@ -140,6 +143,8 @@ export type SheetsRequest=
  |{id:number;op:'sparklines';sheet:number}
  |{id:number;op:'chartOp';sheet:number;row:number;col:number;rows:number;cols:number;chart:ChartOp}
  |{id:number;op:'sparklineOp';sheet:number;row:number;col:number;rows:number;cols:number;sparkline:SparklineOp}
+ |{id:number;op:'whatIfOp';sheet:number;whatIf:WhatIfOp}
+ |{id:number;op:'scenarios';sheet:number}
  |{id:number;op:'protectOp';sheet:number;row:number;col:number;rows:number;cols:number;protect:ProtectOp}
  |{id:number;op:'pageInfo';sheet:number}
  |{id:number;op:'pageSetup';sheet:number;page:PageSetupOp}

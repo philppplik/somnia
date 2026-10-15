@@ -18,6 +18,7 @@ import {PIVOT_FUNCS,tableBlockProblem} from '../../lib/sheets/tableOps';
 import {headerProblem,MAX_HEADER_CHARS} from '../../lib/sheets/printOps';
 import {MAX_ZOOM,MIN_ZOOM} from '../../lib/sheets/viewOps';
 import {MAX_TITLE_CHARS,sparklineBlockProblem} from '../../lib/sheets/chartOps';
+import {WHATIF_GROUPS,buildWhatIfOp,whatIfNeeds,type WhatIfAction} from '../../lib/sheets/whatIfOps';
 import {ALLOW_PRESETS,MAX_PASSWORD_CHARS,passwordBad} from '../../lib/sheets/protectOps';
 import type {PivotField,PivotFunc} from '../../lib/sheets/protocol';
 import {nameProblem,nameTarget} from '../../lib/sheets/names';
@@ -225,6 +226,7 @@ export function SheetsLayoutPanel({context}:PanelHostProps){
   <ViewGroup/>
   <ChartsGroup/>
   <ProtectGroup/>
+  <WhatIfGroup/>
   <TablesGroup/>
   <PivotGroup/>
   <PrintGroup/>
@@ -366,6 +368,30 @@ function ProtectGroup(){
   <Button variant="outline" size="compact" disabled={action.busy||off||pwBad} onClick={apply} data-testid="sheets-pt-apply">{t('sheets.pt.apply')}</Button>
   <p className="text-ink-3">{prot?t('sheets.pt.stateOn',{password:prot.password?t('sheets.pt.withPassword'):''}):t('sheets.pt.stateOff')}{layout.workbookLocked?' '+t('sheets.pt.bookOn'):''}</p>
   <p className="text-ink-3">{t('sheets.pt.hint')}</p>
+ </div>;
+}
+/** Goal seek, scenarios and data tables in one grouped menu. Fields in, typed op out; each action is one undo step. */
+function WhatIfGroup(){
+ const {t}=useT(),s=useSheetsSelection(),action=useAction();const [act,setAct]=useState<WhatIfAction>('goalSeek');
+ const [f,setF]=useState({set:'',to:'',changing:'',name:'',pick:'',results:'',rowInput:'',columnInput:''});const r=s?.range;
+ if(!s||!r)return null;
+ const need=whatIfNeeds(act),list=s.scenarios??[],selection=rangeAddress(r),cells=(r.r1-r.r0+1)*(r.c1-r.c0+1);
+ const op=buildWhatIfOp(act,{...f,selection,selectionCells:cells}),on=(k:keyof typeof f)=>(e:React.ChangeEvent<HTMLInputElement>)=>setF(x=>({...x,[k]:e.currentTarget.value}));
+ const input=(k:keyof typeof f,label:string,max:number)=><label className="flex flex-col gap-1">{label}<NativeInput className={field} value={f[k]} maxLength={max} disabled={action.busy} onChange={on(k)} data-testid={'sheets-wi-'+k}/></label>;
+ return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.wi.title')}>
+  <span>{t('sheets.wi.title')}</span>
+  <label className="flex flex-col gap-1">{t('sheets.wi.action')}<NativeSelect className={field} value={act} disabled={action.busy} onChange={e=>setAct(e.currentTarget.value as WhatIfAction)} data-testid="sheets-wi-action">{WHATIF_GROUPS.map(([g,items])=><optgroup key={g} label={t('sheets.wi.group.'+g)}>{items.map(a=><option key={a} value={a}>{t('sheets.wi.act.'+a)}</option>)}</optgroup>)}</NativeSelect></label>
+  {need.set&&input('set',t('sheets.wi.set'),12)}
+  {need.to&&input('to',t('sheets.wi.to'),24)}
+  {need.changing&&input('changing',t('sheets.wi.changing'),12)}
+  {need.name&&input('name',t('sheets.wi.name'),255)}
+  {need.pick&&<label className="flex flex-col gap-1">{t('sheets.wi.pick')}<NativeSelect className={field} value={f.pick} disabled={action.busy} onChange={e=>setF(x=>({...x,pick:e.currentTarget.value}))} data-testid="sheets-wi-pick"><option value="">{t('sheets.wi.pickNone')}</option>{list.map(x=><option key={x.name} value={x.name}>{x.name} ({x.changing})</option>)}</NativeSelect></label>}
+  {need.results&&input('results',t('sheets.wi.results'),200)}
+  {need.columnInput&&input('columnInput',t('sheets.wi.columnInput'),12)}
+  {need.rowInput&&input('rowInput',t('sheets.wi.rowInput'),12)}
+  <Button variant="outline" size="compact" disabled={action.busy||!op} onClick={()=>op&&void action.run('sheets.whatif',op)} data-testid="sheets-wi-apply">{t('sheets.wi.apply')}</Button>
+  <p className="text-ink-3">{t('sheets.wi.scope.'+(act==='goalSeek'?'goal':act.startsWith('table')?'table':act==='scenarioSummary'||act==='scenarioShow'||act==='scenarioDelete'?'name':'selection'),{range:selection})}</p>
+  <p className="text-ink-3">{t('sheets.wi.hint')}</p>
  </div>;
 }
 /** Zoom (presets or a custom percentage, or fit to the selection) and gridlines in one grouped menu. Zoom is a view setting; gridlines are one undo step. */

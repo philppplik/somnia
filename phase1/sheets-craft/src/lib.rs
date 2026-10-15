@@ -25,6 +25,9 @@ const ICON_SETS: &[&str] = &["3Arrows", "3TrafficLights1", "3Symbols", "3Flags",
 const MAX_SPARKLINES: usize = 500;
 const MAX_SCENE_PRIMS: usize = 20_000;
 const MAX_TITLE_CHARS: usize = 120;
+const MAX_WHATIF_REFS: usize = 200;
+const MAX_WHATIF_NAME: usize = 255;
+const MAX_WHATIF_VALUES: usize = 32;
 const CHART_TYPES: &[&str] = &["column", "bar", "line", "pie", "doughnut", "area", "scatter", "radar", "histogram", "waterfall", "funnel", "treemap"];
 const CHART_SUBTYPES: &[&str] = &["clustered", "stacked", "stacked100", "markers", "lines"];
 const SPARKLINE_TYPES: &[&str] = &["line", "column", "winLoss"];
@@ -1061,6 +1064,127 @@ impl HeadlessWorkbook {
             }
         }
         self.layout(sheet)
+    }
+
+    /// What-if analysis on one sheet (one history entry each). `op_json` is `{"kind":"goalSeek","set":"B5","to":number,"changing":"B2"}`
+    /// (a formula cell is steered by changing one constant cell), `{"kind":"scenarioAdd","name","changing":"B2:B4","values"?:[..],"comment"?,"replace"?}`
+    /// (at most 32 cells; values default to the current ones), `{"kind":"scenarioShow","name"}`, `{"kind":"scenarioDelete","name"}`,
+    /// `{"kind":"scenarioSummary","resultCells"?:"B10:B12"}` (adds a summary sheet) or `{"kind":"dataTable","range":"D2:F10","rowInput"?,"columnInput"?}`
+    /// (static values, at most 100,000 cells). References are plain A1 text on this sheet (no sheet names). Goal seek, showing a scenario and data
+    /// tables write cells, so protected sheets are refused; the summary needs an unlocked workbook structure. Returns the engine's result object.
+    pub fn whatif_op(&mut self, sheet: usize, op_json: &str) -> Result<String, String> {
+        let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "operation must be a JSON object".to_string())?;
+        let map = op.as_object().ok_or("operation must be a JSON object")?;
+        let kind = map.get("kind").and_then(|v| v.as_str()).ok_or("missing kind")?.to_string();
+        let allowed: &[&str] = match kind.as_str() {
+            "goalSeek" => &["kind", "set", "to", "changing"],
+            "scenarioAdd" => &["kind", "name", "changing", "values", "comment", "replace"],
+            "scenarioShow" | "scenarioDelete" => &["kind", "name"],
+            "scenarioSummary" => &["kind", "resultCells"],
+            "dataTable" => &["kind", "range", "rowInput", "columnInput"],
+            _ => return Err("unsupported what-if operation".into()),
+        };
+        if map.keys().any(|k| !allowed.contains(&k.as_str())) {
+            return Err("unknown what-if field".into());
+        }
+        let refs = |key: &str, required: bool| -> Result<Option<String>, String> {
+            match map.get(key) {
+                None if !required => Ok(None),
+                None => Err(format!("missing {key}")),
+                Some(v) => {
+                    let t = v.as_str().map(str::trim).filter(|t| !t.is_empty() && t.chars().count() <= MAX_WHATIF_REFS && t.chars().all(|c| c.is_ascii_alphanumeric() || c == ':' || c == ',' || c == '$')).ok_or_else(|| format!("{key} must be cell references on this sheet"))?;
+                    Ok(Some(t.to_uppercase()))
+                }
+            }
+        };
+        let single = |t: &str| -> bool { CellRef::parse(t).is_some() };
+        let name_ok = |v: &serde_json::Value| v.as_str().map(str::trim).filter(|t| !t.is_empty() && t.chars().count() <= MAX_WHATIF_NAME && !t.chars().any(|c| c.is_control())).map(str::to_string);
+        let (protected, locked) = {
+            let doc = self.session.doc().map_err(|e| e.to_string())?;
+            (doc.wb.sheet(sheet).ok_or("unknown sheet")?.is_protected(), doc.wb.protected_structure)
+        };
+        let writes = matches!(kind.as_str(), "goalSeek" | "scenarioShow" | "dataTable" | "scenarioSummary");
+        if writes && protected {
+            return Err("The sheet is protected. Unprotect it to change cells.".into());
+        }
+        let (id, params) = match kind.as_str() {
+            "goalSeek" => {
+                let set = refs("set", true)?.filter(|t| single(t)).ok_or("set must be one cell")?;
+                let changing = refs("changing", true)?.filter(|t| single(t)).ok_or("changing must be one cell")?;
+                let to = map.get("to").and_then(|v| v.as_f64()).filter(|v| v.is_finite()).ok_or("to must be a number")?;
+                ("data.goalSeek", json!({"set": set, "to": to, "changing": changing}))
+            }
+            "scenarioAdd" => {
+                let name = name_ok(map.get("name").ok_or("missing name")?).ok_or("The scenario name must be 1 to 255 characters without control characters.")?;
+                let changing = refs("changing", true)?.ok_or("missing changing")?;
+                let mut params = json!({"name": name, "changing": changing});
+                if let Some(v) = map.get("values") {
+                    let list = v.as_array().filter(|a| a.len() <= MAX_WHATIF_VALUES).ok_or("values must be a short list")?;
+                    for item in list {
+                        let ok = match item {
+                            serde_json::Value::Number(n) => n.as_f64().is_some_and(f64::is_finite),
+                            serde_json::Value::Bool(_) | serde_json::Value::Null => true,
+                            serde_json::Value::String(t) => t.chars().count() <= 255 && !t.chars().any(|c| c.is_control()),
+                            _ => false,
+                        };
+                        if !ok {
+                            return Err("Scenario values must be numbers, text, true or false.".into());
+                        }
+                    }
+                    params["values"] = v.clone();
+                }
+                if let Some(c) = map.get("comment") {
+                    params["comment"] = json!(c.as_str().filter(|t| t.chars().count() <= 255 && !t.chars().any(|ch| ch.is_control())).ok_or("The comment is too long or has control characters.")?);
+                }
+                if let Some(r) = map.get("replace") {
+                    params["replace"] = json!(r.as_bool().ok_or("replace must be true or false")?);
+                }
+                ("data.scenarioAdd", params)
+            }
+            "scenarioShow" | "scenarioDelete" => {
+                let name = name_ok(map.get("name").ok_or("missing name")?).ok_or("The scenario name must be 1 to 255 characters without control characters.")?;
+                (if kind == "scenarioShow" { "data.scenarioShow" } else { "data.scenarioDelete" }, json!({"name": name}))
+            }
+            "scenarioSummary" => {
+                if locked {
+                    return Err("The workbook structure is protected. Unprotect it to add a sheet.".into());
+                }
+                let mut params = json!({});
+                if let Some(t) = refs("resultCells", false)? {
+                    params["resultCells"] = json!(t);
+                }
+                ("data.scenarioSummary", params)
+            }
+            _ => {
+                let range = refs("range", true)?.ok_or("missing range")?;
+                if !range.contains(':') || range.contains(',') {
+                    return Err("range must be one block like D2:F10".into());
+                }
+                let mut params = json!({"range": range});
+                for key in ["rowInput", "columnInput"] {
+                    if let Some(t) = refs(key, false)? {
+                        if !single(&t) {
+                            return Err(format!("{key} must be one cell"));
+                        }
+                        params[key] = json!(t);
+                    }
+                }
+                if params.get("rowInput").is_none() && params.get("columnInput").is_none() {
+                    return Err("give a row input cell, a column input cell or both".into());
+                }
+                ("data.dataTable", params)
+            }
+        };
+        self.session.run("sheet.activate", json!({"sheet": sheet})).map_err(|e| e.to_string())?;
+        let out = self.session.run(id, params).map_err(|e| e.to_string())?;
+        Ok(out.to_string())
+    }
+
+    /// The scenarios stored for a sheet (read only): `{"scenarios":[{"name","changing","values","comment"}]}`, at most 1000.
+    pub fn scenarios_info(&mut self, sheet: usize) -> Result<String, String> {
+        let name = self.session.doc().map_err(|e| e.to_string())?.wb.sheet(sheet).ok_or("unknown sheet")?.name.clone();
+        let out = self.session.run("data.scenarioManager", json!({"sheet": name})).map_err(|e| e.to_string())?;
+        Ok(out.to_string())
     }
 
     /// The charts of a sheet (read only): `[{"id","kind","title","row","col","dx","dy","width","height","legend","dataLabels","gridlines","style","xTitle","yTitle","series","byRows"}]`
@@ -2935,6 +3059,44 @@ mod tests {
         assert!(book.fill_range(0, 0, 0, 2_000_000, 2, "down").is_err());
         book.session.run("review.protectSheet", json!({})).unwrap();
         assert!(book.fill_range(0, 5, 0, 3, 2, "down").unwrap_err().contains("protected"));
+    }
+    #[test]
+    fn whatif_op_seeks_goals_keeps_scenarios_and_refuses_bad_input() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        book.set_values(0, 300, 0, r#"[["2"],["=A301*3"]]"#).unwrap();
+        let value = |b: &HeadlessWorkbook, r: u32| serde_json::from_str::<serde_json::Value>(&b.range(0, r, 0, 1, 1).unwrap()).unwrap().to_string();
+        let before = value(&book, 300);
+        let got = book.whatif_op(0, r#"{"kind":"goalSeek","set":"A302","to":30,"changing":"A301"}"#).unwrap();
+        assert!(got.contains("converged"), "{got}");
+        assert_ne!(value(&book, 300), before, "the changing cell moved");
+        book.undo().unwrap();
+        assert_eq!(value(&book, 300), before);
+        book.whatif_op(0, r#"{"kind":"scenarioAdd","name":"Base","changing":"A301"}"#).unwrap();
+        assert!(book.scenarios_info(0).unwrap().contains("Base"));
+        assert!(book.whatif_op(0, r#"{"kind":"scenarioAdd","name":"Base","changing":"A301"}"#).is_err(), "duplicate names need replace");
+        book.whatif_op(0, r#"{"kind":"scenarioAdd","name":"Base","changing":"A301","values":[7],"replace":true}"#).unwrap();
+        book.whatif_op(0, r#"{"kind":"scenarioShow","name":"Base"}"#).unwrap();
+        assert_ne!(value(&book, 300), before, "showing the scenario wrote its value");
+        book.whatif_op(0, r#"{"kind":"scenarioDelete","name":"Base"}"#).unwrap();
+        assert!(!book.scenarios_info(0).unwrap().contains("Base"));
+        for bad in [
+            "nope",
+            r#"{"kind":"goalSeek","set":"A302","to":"x","changing":"A301"}"#,
+            r#"{"kind":"goalSeek","set":"Sheet2!A302","to":1,"changing":"A301"}"#,
+            r#"{"kind":"goalSeek","set":"A302:A303","to":1,"changing":"A301"}"#,
+            r#"{"kind":"goalSeek","set":"A301","to":1,"changing":"A301"}"#,
+            r#"{"kind":"scenarioAdd","name":"","changing":"A301"}"#,
+            r#"{"kind":"scenarioAdd","name":"x","changing":"A301","values":[[1]]}"#,
+            r#"{"kind":"scenarioShow","name":"Nobody"}"#,
+            r#"{"kind":"dataTable","range":"A301:A302"}"#,
+            r#"{"kind":"dataTable","range":"A301","columnInput":"B1"}"#,
+            r#"{"kind":"formula","x":1}"#,
+        ] {
+            assert!(book.whatif_op(0, bad).is_err(), "{bad}");
+        }
+        assert!(book.whatif_op(9, r#"{"kind":"scenarioDelete","name":"x"}"#).is_err());
+        book.session.run("review.protectSheet", json!({})).unwrap();
+        assert!(book.whatif_op(0, r#"{"kind":"goalSeek","set":"A302","to":30,"changing":"A301"}"#).unwrap_err().contains("protected"));
     }
     #[test]
     fn cf_range_highlights_cells_in_one_undo_step_and_refuses_bad_input() {

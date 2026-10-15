@@ -6881,6 +6881,14 @@
       "hasEnabled": true
     },
     {
+      "id": "sheets.whatif",
+      "title": "Run goal seek, scenarios or a data table",
+      "category": "Edit",
+      "source": "sheets",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
       "id": "shell.rail.hide",
       "title": "Hide rail icon",
       "category": "View",
