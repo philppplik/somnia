@@ -1376,5 +1376,6 @@
  "animation.audio.trimSilence": "Trim silence at start and end",
  "cmd.animation.audio.trimSilence": "Trim silence off the start and end of the audio layers",
  "cmd.animation.comp.fitDuration": "Set the composition length to the end of the last layer",
- "cmd.animation.comp.purgeUnused": "Remove compositions that nothing uses"
+ "cmd.animation.comp.purgeUnused": "Remove compositions that nothing uses",
+ "cmd.animation.audio.loopToEnd": "Repeat the audio clip until the composition ends"
 }

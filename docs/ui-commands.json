@@ -67,6 +67,24 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.audio.loopToEnd",
+      "title": "Repeat the audio clip until the composition ends",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "audio",
+        "background",
+        "duplicate",
+        "end",
+        "fill",
+        "loop",
+        "music",
+        "repeat"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.audio.normalize",
       "title": "Normalise the volume of the audio layers to a target peak",
       "category": "Edit",

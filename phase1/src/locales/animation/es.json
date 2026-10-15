@@ -1376,5 +1376,6 @@
  "animation.audio.trimSilence": "Recortar el silencio al inicio y al final",
  "cmd.animation.audio.trimSilence": "Recortar el silencio al inicio y al final de las capas de audio",
  "cmd.animation.comp.fitDuration": "Ajustar la duración de la composición al final de la última capa",
- "cmd.animation.comp.purgeUnused": "Eliminar las composiciones que nadie usa"
+ "cmd.animation.comp.purgeUnused": "Eliminar las composiciones que nadie usa",
+ "cmd.animation.audio.loopToEnd": "Repetir el clip de audio hasta el final de la composición"
 }

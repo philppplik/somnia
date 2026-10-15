@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1046 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1047 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -25,6 +25,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `animation.audio.duck` | Duck the volume of an audio layer while another audio layer plays | Edit | animation |  |
 | `animation.audio.grid` | Place beat markers on a steady BPM grid | Edit | animation |  |
 | `animation.audio.import` | Import audio (WAV or MP3) | Insert | animation |  |
+| `animation.audio.loopToEnd` | Repeat the audio clip until the composition ends | Edit | animation |  |
 | `animation.audio.normalize` | Normalise the volume of the audio layers to a target peak | Edit | animation |  |
 | `animation.audio.reactive` | Make a layer follow the loudness of the audio clip | Edit | animation |  |
 | `animation.audio.trimSilence` | Trim silence off the start and end of the audio layers | Edit | animation |  |

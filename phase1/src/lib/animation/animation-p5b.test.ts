@@ -358,3 +358,16 @@ test('P303 split audio at the playhead: two clips, the second continues the same
  assert.equal(a.outT,0.4*sec);assert.equal(a.offset,sec);assert.equal(b.offset,1.4*sec);assert.equal(b.audio!.trimIn,0.9*sec);assert.equal(b.outT,0.6*sec);assert.equal(b.audio!.assetId,a.audio!.assetId);assert.equal(d.audioAssets!.length,1);assert.deepEqual(validateDocument(d),[]);
  s.undo();assert.equal(JSON.stringify(s.document),before);
 });
+test('P304 loop audio to end: copies run back to back, last one cut at the end, keyed volume refused, one undo',async()=>{
+ const {audioLoopSpecs,loopPlan}=await import('./audioLoopCommands');const {AnimationSession,setAnimationSession}=await import('./session');
+ const run=audioLoopSpecs()[0].run as (p?:unknown)=>unknown;
+ const s=new AnimationSession();s.open(withAudio(asset(wav(16000,8000,1,i=>Math.sin(i/20)*0.5),3)));setAnimationSession(s);
+ s.dispatch({type:'comp.update',settings:{duration:5*sec}});s.dispatch({type:'audio.update',layer:'aud',length:sec,offset:0});
+ const before=JSON.stringify(s.document);assert.equal(loopPlan(findComp(s.document!)!,'aud',['a'])!.copies,1);
+ const r=run({layers:['aud']}) as {copies:number};assert.equal(r.copies,4);
+ const ls=findComp(s.document!)!.layers.filter(l=>l.kind==='audio').sort((a,b)=>a.offset-b.offset);
+ assert.deepEqual(ls.map(l=>l.offset),[0,sec,2*sec,3*sec,4*sec]);assert.ok(ls.every(l=>l.outT===sec));assert.deepEqual(validateDocument(s.document!),[]);
+ assert.throws(()=>run({layers:['aud']}),/already/);s.undo();assert.equal(JSON.stringify(s.document),before);
+ s.dispatch({type:'comp.update',settings:{duration:4.5*sec}});run({layers:['aud']});
+ const last=findComp(s.document!)!.layers.filter(l=>l.kind==='audio').sort((a,b)=>a.offset-b.offset).pop()!;assert.equal(last.offset+last.outT,4.5*sec);
+});
