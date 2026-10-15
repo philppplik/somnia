@@ -3798,7 +3798,7 @@ mod tests {
         assert!(listed.contains("#2E7D32"), "{listed}");
         book.edit_sheet(0, r#"{"kind":"tabColor","color":"none"}"#).unwrap();
         assert!(!book.sheets().unwrap().contains("#2E7D32"));
-        for bad in [r#"{"kind":"tabColor","color":"red"}"#, r#"{"kind":"tabColor","color":"#12345"}"#, r#"{"kind":"tabColor","color":"#GGGGGG"}"#, r#"{"kind":"tabColor"}"#, r#"{"kind":"unhide","index":0}"#, r#"{"kind":"unhide"}"#, r#"{"kind":"unhide","index":99}"#] {
+        for bad in [r#"{"kind":"tabColor","color":"red"}"#, r##"{"kind":"tabColor","color":"#12345"}"##, r##"{"kind":"tabColor","color":"#GGGGGG"}"##, r#"{"kind":"tabColor"}"#, r#"{"kind":"unhide","index":0}"#, r#"{"kind":"unhide"}"#, r#"{"kind":"unhide","index":99}"#] {
             assert!(book.edit_sheet(0, bad).is_err(), "{bad}");
         }
         let n = sheet_names(&book).len();
