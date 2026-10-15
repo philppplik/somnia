@@ -1927,3 +1927,22 @@ test('P284 export check: empty frames at the start or end of the range are repor
  const s2=new AnimationSession();s2.open(full);const iss2=exportCheck(findComp(s2.document!)!,[],defaultExportSettings());
  assert.ok(!iss2.some(i=>i.code==='head'||i.code==='tail'));
 });
+
+test('P285 reach: the hand lands on the target on every sampled frame, out of reach stretches straight, one undo',async()=>{
+ const {ikSpecs,ikDeltas}=await import('./ikCommands');const {worldMatrix}=await import('./scene');const run=ikSpecs()[0].run as (p?:unknown)=>unknown;
+ // Pure step: arm along +x with two bones of 100, target straight above the shoulder at distance 100.
+ const r=ikDeltas([0,0],[100,0],[200,0],[0,100],1);const rad=Math.PI/180;
+ const e:[number,number]=[100*Math.cos(r.d1*rad),100*Math.sin(r.d1*rad)],h:[number,number]=[e[0]+100*Math.cos((r.d1+r.d2)*rad),e[1]+100*Math.sin((r.d1+r.d2)*rad)];
+ assert.ok(Math.hypot(h[0]-0,h[1]-100)<1e-6,JSON.stringify(h));
+ const far=ikDeltas([0,0],[100,0],[200,0],[0,1000],1);assert.ok(Math.abs(far.d1-90)<1e-6&&Math.abs(far.d2)<1e-6);
+ const mk=(id:string,parent:string|null,pos:[number,number])=>[{type:'layer.add',kind:'solid',id},{type:'layer.update',layer:id,source:{width:100,height:10}},{type:'prop.set',layer:id,prop:'anchor',value:[0,5]},{type:'prop.set',layer:id,prop:'position',value:pos},...(parent?[{type:'layer.parent',layer:id,parent}]:[])];
+ const d0=applyEdits(base(),[...mk('up',null,[300,200]),...mk('lo',null,[100,5]),...mk('hand',null,[100,5]),...mk('tg',null,[300,300]),{type:'layer.parent',layer:'lo',parent:'up'},{type:'layer.parent',layer:'hand',parent:'lo'},
+  {type:'prop.animate',layer:'tg',prop:'position',on:true,t:0},{type:'prop.set',layer:'tg',prop:'position',t:f(30),value:[420,120]}] as never);
+ const s=new AnimationSession();s.open(d0);setAnimationSession(s);
+ const c=()=>findComp(s.document!)!;const before=JSON.stringify(s.document);
+ assert.throws(()=>run({layers:['up','hand','lo','tg']}),/forearm must hang/);
+ run({layers:['up','lo','hand','tg']});
+ const at=(id:string,t:number)=>{const l=c().layers.find(x=>x.id===id)!,m=worldMatrix(c(),l,t),a=l.transform.anchor.value as number[];return [m[0]*a[0]+m[2]*a[1]+m[4],m[1]*a[0]+m[3]*a[1]+m[5]];};
+ for(const fr of [0,10,20,30]){const hh=at('hand',f(fr)),tt=at('tg',f(fr));assert.ok(Math.hypot(hh[0]-tt[0],hh[1]-tt[1])<1,`frame ${fr}: ${hh} vs ${tt}`);}
+ s.undo();assert.equal(JSON.stringify(s.document),before);
+});

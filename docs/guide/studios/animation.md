@@ -122,3 +122,4 @@ Back to [Studios](../studios.md).
 - The Rig > Motion menu now has five groups: around, along, physics and effects, impact and light (pulse, flicker, shake), copies and trails.
 - **Export check** also warns about text that ends up under 10 px in the exported file, taking the layer scale, its parents and the export size into account.
 - **Export check** also says when no layer shows in the first or last six or more frames of the export range, so you can trim it (Work area to layers).
+- **Reach** (Rig > Motion > around): a two-bone arm or leg. Tick upper arm, forearm, hand and target in that order (forearm hangs from the upper arm, hand from the forearm, anchors at the joints). The upper arm and forearm get rotation keys over the work area so the hand's anchor lands on the target's anchor; the elbow keeps its side. A target out of reach stretches the arm straight at it. Baked keys (at most 120), not a live constraint.

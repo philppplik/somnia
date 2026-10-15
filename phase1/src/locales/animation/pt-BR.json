@@ -1327,5 +1327,7 @@
  "animation.rig.group.impact": "Impacto e luz",
  "animation.export.check.tiny": "Texto abaixo de 10 px no arquivo exportado, difícil de ler: {names}",
  "animation.export.check.head": "Nenhuma camada aparece nos primeiros {names} quadros do intervalo. Reduza o intervalo para começar onde a imagem começa.",
- "animation.export.check.tail": "Nenhuma camada aparece nos últimos {names} quadros do intervalo. Reduza o intervalo para terminar onde a imagem termina."
+ "animation.export.check.tail": "Nenhuma camada aparece nos últimos {names} quadros do intervalo. Reduza o intervalo para terminar onde a imagem termina.",
+ "animation.rig.ik": "Alcançar com um braço: marque braço, antebraço, mão e alvo",
+ "cmd.animation.layers.ik": "Alcançar a última camada marcada com um braço de três camadas"
 }

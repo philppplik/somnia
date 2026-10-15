@@ -1327,5 +1327,7 @@
  "animation.rig.group.impact": "Aufprall und Licht",
  "animation.export.check.tiny": "Text unter 10 px in der exportierten Datei, schwer lesbar: {names}",
  "animation.export.check.head": "In den ersten {names} Bildern des Bereichs ist keine Ebene sichtbar. Den Bereich dort beginnen lassen, wo das Bild beginnt.",
- "animation.export.check.tail": "In den letzten {names} Bildern des Bereichs ist keine Ebene sichtbar. Den Bereich dort enden lassen, wo das Bild endet."
+ "animation.export.check.tail": "In den letzten {names} Bildern des Bereichs ist keine Ebene sichtbar. Den Bereich dort enden lassen, wo das Bild endet.",
+ "animation.rig.ik": "Greifen: Oberarm, Unterarm, Hand, Ziel ankreuzen",
+ "cmd.animation.layers.ik": "Mit einem dreiteiligen Arm die zuletzt markierte Ebene erreichen"
 }

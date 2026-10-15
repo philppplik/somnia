@@ -2218,6 +2218,29 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.layers.ik",
+      "title": "Reach the last ticked layer with a three-layer arm",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "arm",
+        "bone",
+        "chain",
+        "elbow",
+        "hand",
+        "ik",
+        "inverse kinematics",
+        "knee",
+        "leg",
+        "limb",
+        "reach",
+        "rig",
+        "target"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.layers.label",
       "title": "Set a colour label on the selected layers",
       "category": "Edit",

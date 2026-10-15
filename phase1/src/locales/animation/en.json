@@ -1327,5 +1327,7 @@
  "animation.rig.group.impact": "Impact and light",
  "animation.export.check.tiny": "Text under 10 px in the exported file, hard to read: {names}",
  "animation.export.check.head": "No layer shows in the first {names} frames of the range. Trim the range to start where the picture does.",
- "animation.export.check.tail": "No layer shows in the last {names} frames of the range. Trim the range to end where the picture does."
+ "animation.export.check.tail": "No layer shows in the last {names} frames of the range. Trim the range to end where the picture does.",
+ "animation.rig.ik": "Reach with an arm: tick upper arm, forearm, hand, target",
+ "cmd.animation.layers.ik": "Reach the last ticked layer with a three-layer arm"
 }
