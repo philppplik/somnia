@@ -157,5 +157,6 @@
  "photos.label.none": "Aucun libelle",
  "photos.survey.selected": "{count} selectionnees",
  "photos.survey.toggle": "Selectionner {name}",
- "photos.tags.label": "Mots-cles"
+ "photos.tags.label": "Mots-cles",
+ "photos.search": "Rechercher des photos"
 }

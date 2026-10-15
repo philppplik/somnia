@@ -289,3 +289,14 @@ Coverage: `tags.test.ts` covers set/merge/clear, invalid input, the
 cap and the sorted union; `photos-filmstrip.spec.ts` gains a
 light/dark leg that batch-tags two photos (badges on both), filters
 to the new dynamic tag option and clears again.
+
+## Library search (P98)
+
+A search field in the filmstrip narrows the strip (and, through the
+shared `useVisiblePhotos` state, the grid) by substring match on the
+photo name or any of its tags, case-insensitively; empty shows
+everything again. The query persists in the panel state.
+
+Coverage: `photos-filmstrip.spec.ts` gains a light/dark leg that
+searches a name in caps, then a tag (each hides the other photos),
+and clears back to the full strip.

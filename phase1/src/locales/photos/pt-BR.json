@@ -157,5 +157,6 @@
  "photos.label.none": "Sem rotulo",
  "photos.survey.selected": "{count} selecionadas",
  "photos.survey.toggle": "Selecionar {name}",
- "photos.tags.label": "Tags"
+ "photos.tags.label": "Tags",
+ "photos.search": "Buscar fotos"
 }

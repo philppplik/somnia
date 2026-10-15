@@ -157,5 +157,6 @@
  "photos.label.none": "Keine Markierung",
  "photos.survey.selected": "{count} ausgewaehlt",
  "photos.survey.toggle": "{name} auswaehlen",
- "photos.tags.label": "Stichwoerter"
+ "photos.tags.label": "Stichwoerter",
+ "photos.search": "Fotos suchen"
 }

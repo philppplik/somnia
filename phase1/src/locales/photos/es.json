@@ -157,5 +157,6 @@
  "photos.label.none": "Sin etiqueta",
  "photos.survey.selected": "{count} seleccionadas",
  "photos.survey.toggle": "Seleccionar {name}",
- "photos.tags.label": "Etiquetas"
+ "photos.tags.label": "Etiquetas",
+ "photos.search": "Buscar fotos"
 }

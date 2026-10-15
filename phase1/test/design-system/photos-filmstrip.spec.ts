@@ -482,3 +482,24 @@ test('keyword tags: batch edit, badges, dynamic filter (light and dark)',async({
   await page.evaluate(async()=>{const m=await import('/src/lib/photos/tags.ts');for(const n of['strip-1.png','strip-2.png','strip-3.png'])m.setTags(n,[]);});
  }
 });
+test('library search: name and tag matches narrow the strip (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
+  await page.evaluate(async()=>{const m=await import('/src/lib/photos/tags.ts');for(const n of['strip-1.png','strip-2.png','strip-3.png'])m.setTags(n,[]);m.setTags('strip-2.png',['reise']);});
+  const search=page.getByTestId('photos-filmstrip-search');
+  await search.fill('');
+  await search.fill('STRIP-1'); // case-insensitive name match
+  await expect(page.getByTestId('photos-filmstrip-item-strip-1.png')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-2.png')).toHaveCount(0);
+  await search.fill('reise'); // tag match
+  await expect(page.getByTestId('photos-filmstrip-item-strip-2.png')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-1.png')).toHaveCount(0);
+  await page.screenshot({path:`test-results/ds-photos-search-${theme}.png`,fullPage:true});
+  await search.fill(''); // back to the full strip
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible();
+  await page.evaluate(async()=>{const m=await import('/src/lib/photos/tags.ts');m.setTags('strip-2.png',[]);});
+ }
+});

@@ -24,7 +24,8 @@ import {useVisiblePhotos} from './useVisiblePhotos';
 export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(names:string[])=>void}){
  const {t}=useT();
  const media=useMedia();
- const {ratings,flags,labels,tags,filter,all,photos,sort}=useVisiblePhotos();
+ const {ratings,flags,labels,tags,filter,all,photos,sort,query}=useVisiblePhotos();
+ const [,setQuery]=usePanelState<string>('photos.searchQuery','');
  const [,setMinRating]=usePanelState<number|string>('photos.ratingFilter',0);
  const [,setSort]=usePanelState<FilmstripSort>('photos.filmstripSort','library');
  const [sel,setSel]=usePanelState<string[]>('photos.filmstripSelection',[]);
@@ -95,6 +96,7 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
    {PHOTO_LABELS.map(l=><option key={l} value={l}>{t(`photos.label.${l}`)}</option>)}
    <option value="none">{t('photos.label.none')}</option>
   </NativeSelect>
+  <NativeInput type="search" value={query} aria-label={t('photos.search')} title={t('photos.search')} placeholder={t('photos.search')} onChange={e=>setQuery(e.currentTarget.value)} className="h-7 w-28 shrink-0" data-testid="photos-filmstrip-search"/>
   <NativeInput key={active} type="text" defaultValue={(tags[active]??[]).join(', ')} aria-label={t('photos.tags.label')} title={t('photos.tags.label')} placeholder={t('photos.tags.label')} className="h-7 w-36 shrink-0" data-testid="photos-filmstrip-tags"
    onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();}}
    onBlur={e=>{const v=e.currentTarget.value.split(',');for(const n of selected.length>1?selected.map(p=>p.name):[active]){if(selected.length>1)addTags(n,v);else setTags(n,v);}}}/> {/* batch merges, a single photo replaces */}
