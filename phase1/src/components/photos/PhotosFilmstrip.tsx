@@ -1,4 +1,5 @@
 let pendingNote:string|null=null; // the workspace remounts on active change (keyed by photo name), so the copy confirmation crosses the remount here
+let lastActiveName:string=''; // same remount: the previous-photo tracker must live outside the component
 import {useEffect,useRef,useState} from 'react';
 import {Star} from 'lucide-react';
 import {ChevronDown,ChevronRight,EyeOff,Flag,LayoutGrid,SkipForward,Tag,Trash2} from '../../lib/icons';
@@ -62,6 +63,8 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
  const snapNames=useSnapshots(active);
  const [collection,setCollection]=usePanelState<string>('photos.collection','');
  const [reference,setReference]=usePanelState<string>('photos.reference',''); // compare view: the photo the active one is measured against
+ const [previous,setPrevious]=usePanelState<string>('photos.previousPhoto',''); // last active photo, for one-click settings paste
+ useEffect(()=>{if(active&&active!==lastActiveName){if(lastActiveName)setPrevious(lastActiveName);lastActiveName=active;}},[active,setPrevious]); // module-level: a ref would reset on the workspace remount
  const collNames=useCollectionNames();
  const neutral=!activeSession||isNeutralLook(activeSession.now); // nothing worth applying
  const userPresets:UserPreset[]=parseUserPresets(rawPresets);
@@ -223,6 +226,14 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
       {collection&&<Button variant="outline" size="compact" onClick={()=>{deleteCollection(collection);setCollection('');}} data-testid="photos-filmstrip-collection-drop">{t('photos.photoCollections.delete')}</Button>}
      </span>
     </div>
+    <span className="flex flex-wrap gap-1">
+     <Button variant="outline" size="compact" disabled={!previous||previous===active||!getPhotoSession(previous)} title={previous||undefined} onClick={()=>{
+      const from=getPhotoSession(previous);
+      if(from){commitPhotoSettings(active,()=>from.now);setApplyNote(t('photos.quick.pastedPrevious',{name:previous}));}
+     }} data-testid="photos-filmstrip-paste-previous">{t('photos.quick.pastePrevious')}</Button>
+     <Button variant="outline" size="compact" disabled={!activeSession} onClick={()=>commitPhotoSettings(active,cur=>({...cur,orientation:((cur.orientation+3)%4) as typeof cur.orientation}))} data-testid="photos-filmstrip-rotate-left">{t('photos.quick.rotateLeft')}</Button>
+     <Button variant="outline" size="compact" disabled={!activeSession} onClick={()=>commitPhotoSettings(active,cur=>({...cur,orientation:((cur.orientation+1)%4) as typeof cur.orientation}))} data-testid="photos-filmstrip-rotate-right">{t('photos.quick.rotateRight')}</Button>
+    </span>
     <span className="flex flex-wrap gap-1">
      {reference!==active&&<Button variant="outline" size="compact" onClick={()=>{setReference(active);setApplyNote(t('photos.compare.referenceSet',{name:active}));}} data-testid="photos-filmstrip-set-reference">{t('photos.compare.setReference')}</Button>}
      {reference&&reference!==active&&onSurvey&&<Button variant="outline" size="compact" onClick={()=>{setMenuOpen(false);onSurvey([reference,active]);}} data-testid="photos-filmstrip-compare-reference">{t('photos.compare.go')}</Button>}

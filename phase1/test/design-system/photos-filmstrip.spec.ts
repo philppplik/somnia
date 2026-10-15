@@ -845,3 +845,29 @@ test('compare: set a reference and survey it against the active photo (light and
   await page.keyboard.press('Escape');
  }
 });
+
+test('quick develop: paste settings from the previous photo and rotate by 90 degrees (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
+  await page.evaluate(async()=>{const p=await import('/src/store/panelStateStore.ts');p.panelStateStore.set('photos.previousPhoto','');}); // panel state persists via localStorage
+  await page.evaluate(async()=>{const st=await import('/src/lib/photos/studioSession.ts');st.commitPhotoSettings('strip-1.png',cur=>({...cur,temp:6512}));st.commitPhotoSettings('strip-2.png',cur=>({...cur,temp:6500,orientation:0}));});
+  await page.getByTestId('photos-filmstrip-item-strip-2.png').click(); // strip-1 becomes the previous photo
+  await page.getByTestId('photos-filmstrip-menu').click();
+  await page.getByTestId('photos-filmstrip-paste-previous').click();
+  await expect(page.getByTestId('photos-filmstrip-apply-note')).toContainText('strip-1.png');
+  const pasted=await page.evaluate(async()=>{const st=await import('/src/lib/photos/studioSession.ts');return st.getPhotoSession('strip-2.png')?.now.temp;});
+  expect(pasted).toBe(6512); // one click instead of copy+paste
+  await page.getByTestId('photos-filmstrip-rotate-right').click(); // menu stays open
+  const turned=await page.evaluate(async()=>{const st=await import('/src/lib/photos/studioSession.ts');return st.getPhotoSession('strip-2.png')?.now.orientation;});
+  expect(turned).toBe(1); // one quarter turn clockwise
+  await page.screenshot({path:`test-results/ds-photos-quick-develop-${theme}.png`,fullPage:true});
+  await page.getByTestId('photos-filmstrip-rotate-left').click(); // and back
+  const back=await page.evaluate(async()=>{const st=await import('/src/lib/photos/studioSession.ts');return st.getPhotoSession('strip-2.png')?.now.orientation;});
+  expect(back).toBe(0);
+  await page.keyboard.press('Escape');
+  await page.evaluate(async()=>{const st=await import('/src/lib/photos/studioSession.ts');st.commitPhotoSettings('strip-1.png',cur=>({...cur,temp:6500}));st.commitPhotoSettings('strip-2.png',cur=>({...cur,temp:6500,orientation:0}));const p=await import('/src/store/panelStateStore.ts');p.panelStateStore.set('photos.previousPhoto','');}); // leave no state behind
+ }
+});

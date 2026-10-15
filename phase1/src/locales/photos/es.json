@@ -201,5 +201,9 @@
  "photos.compare.setReference": "Fijar como referencia",
  "photos.compare.go": "Comparar con referencia",
  "photos.compare.clear": "Quitar referencia",
- "photos.compare.referenceSet": "Referencia: {name}"
+ "photos.compare.referenceSet": "Referencia: {name}",
+ "photos.quick.pastePrevious": "Ajustes de la foto anterior",
+ "photos.quick.pastedPrevious": "Ajustes aplicados de {name}",
+ "photos.quick.rotateLeft": "Girar 90° a la izquierda",
+ "photos.quick.rotateRight": "Girar 90° a la derecha"
 }

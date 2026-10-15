@@ -506,3 +506,17 @@ are untouched.
 Coverage: the light/dark gallery leg pins strip-1, activates
 strip-2, opens the pair survey and clears the reference
 (`test-results/ds-photos-compare-{light,dark}.png`).
+
+## Quick develop (P111)
+
+The daily two in one grouped menu row: "Settings from previous
+photo" is Lightroom's Previous button - the last active photo is
+tracked module-level (`lastActiveName`, survives the workspace
+remount) in panel state `photos.previousPhoto`, and one click
+commits its develop settings onto the active photo. "Rotate 90°
+left/right" turns the orientation setting by a quarter turn. Both
+go through `commitPhotoSettings` (undoable), originals untouched.
+
+Coverage: the light/dark gallery leg styles strip-1, activates
+strip-2, pastes (temp jumps), rotates right (orientation 1) and
+back (`test-results/ds-photos-quick-develop-{light,dark}.png`).
