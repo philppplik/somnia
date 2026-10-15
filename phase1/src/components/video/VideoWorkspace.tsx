@@ -209,6 +209,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
        onSelect={id=>selectAudioTrackClip(item.name,id)}
        onMoveAt={(id,at)=>moveAudioTrackClip(item.name,id,at,`amove:${id}`)}
        onResize={(id,edge,t2)=>resizeAudioTrackClip(item.name,id,edge,t2,`atrim:${id}:${edge}`)}
+       onDuplicate={id=>duplicateAudioTrackClip(item.name,id)}
        snapPoints={[...snapPointsFor(clips,[playhead]),domain,...audioClips.flatMap(ac=>[ac.at,ac.at+audioClipDuration(ac)])]}
        onDropAudio={(n,t2)=>{const dropped=media.items.find((i:MediaItem)=>i.name===n&&i.kind==='audio');if(dropped)void addAudioTrackClip(item.name,dropped,t2).then(id=>{if(id)selectAudioTrackClip(item.name,id);});}}
        label={t('video.audioLane')}/>}

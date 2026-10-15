@@ -10,6 +10,8 @@ interface Props{
  clips:AudioClip[];selectedId:string|null;/** Timeline span the lane maps onto (same domain as the video track above). */
  duration:number;
  onSelect:(id:string|null)=>void;onMoveAt:(id:string,at:number)=>void;onResize:(id:string,edge:'in'|'out',timelineTime:number)=>void;
+ /** Alt+drag: duplicates the clip and returns the copy's id, which the drag then moves. */
+ onDuplicate?:(id:string)=>string|null;
  label:string;
  /** Filmstrip controller for the waveform layer; null where workers are unavailable (tests, SSR). */
  controller?:FilmstripController|null;
@@ -19,7 +21,7 @@ interface Props{
  onDropAudio?:(name:string,at:number)=>void;
 }
 /** The free-placed audio track under the video timeline: blocks drag horizontally, edge handles resize, fades show as shaded wedges. */
-export function AudioLane({clips,selectedId,duration,onSelect,onMoveAt,onResize,label,controller,snapPoints,onDropAudio}:Props){
+export function AudioLane({clips,selectedId,duration,onSelect,onMoveAt,onResize,label,controller,snapPoints,onDropAudio,onDuplicate}:Props){
  const {t}=useT();
  const track=useRef<HTMLDivElement>(null);
  const atTime=(clientX:number)=>{
@@ -30,12 +32,14 @@ export function AudioLane({clips,selectedId,duration,onSelect,onMoveAt,onResize,
  const moveDrag=(c:AudioClip)=>(e:React.PointerEvent)=>{
   if((e.target as HTMLElement).dataset.handle)return;
   e.preventDefault();e.stopPropagation();
-  onSelect(c.id);
+  // Alt+drag leaves the original in place and drags a fresh copy (standard duplicate gesture).
+  const dragId=e.altKey&&onDuplicate?(onDuplicate(c.id)??c.id):c.id;
+  onSelect(dragId);
   const base=c.at,startX=e.clientX;
   const move=(ev:PointerEvent)=>{
    const box=track.current?.getBoundingClientRect();if(!box||box.width===0||duration<=0)return;
    const raw=Math.max(0,base+(ev.clientX-startX)/box.width*duration);
-   onMoveAt(c.id,snapPoints?snapTime(raw,snapPoints,snapThresholdSeconds(8,box.width,duration)):raw);
+   onMoveAt(dragId,snapPoints?snapTime(raw,snapPoints,snapThresholdSeconds(8,box.width,duration)):raw);
   };
   const up=()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);};
   window.addEventListener('pointermove',move);window.addEventListener('pointerup',up);

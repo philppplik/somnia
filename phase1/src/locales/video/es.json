@@ -82,6 +82,7 @@
  "video.audioDuck": "Ducking",
  "video.audioDuckOff": "Desactivado",
  "video.audioDuckHint": "Baja este clip mientras suena otro audio sin ducking (p. ej., la música cede bajo una voz).",
+ "video.duplicateClip": "Duplicar clip",
  "video.clipTitle": "Clip {index}",
  "video.gain": "Ganancia · {percent}%",
  "video.clipSpeed": "Velocidad",
@@ -151,5 +152,6 @@
  "cmd.video.audio.fades": "Ajustar el fundido de entrada y salida de un clip de audio",
  "cmd.video.audio.delete": "Eliminar un clip de audio",
  "cmd.video.audio.mute": "Silenciar o activar un clip de audio",
- "cmd.video.audio.duck": "Ajustar el auto-ducking de un clip de audio"
+ "cmd.video.audio.duck": "Ajustar el auto-ducking de un clip de audio",
+ "cmd.video.audio.duplicate": "Duplicar un clip de audio"
 }

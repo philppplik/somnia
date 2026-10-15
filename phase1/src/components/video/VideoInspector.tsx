@@ -2,7 +2,7 @@ import {useMemo,useState} from 'react';
 import {Button} from '../ui/button';
 import {useT} from '../../lib/useT';
 import {useMedia} from '../../lib/media';
-import {addAudioTrackClip,addTimelineClip,addTimelineClipsFromDialog,cancelVideoExport,deleteAudioTrackClip,deleteTimelineClip,moveAudioTrackClip,moveTimelineClip,resetTimeline,resizeAudioTrackClip,setAudioTrackClipDuck,setAudioTrackClipFades,setAudioTrackClipGain,toggleAudioTrackClipMute,setTimelineClipCrossfade,setTimelineClipGain,setTimelineClipSpeed,setVideoFormat,selectTimelineClip,toggleTimelineClipMute,trimTimelineClip,useVideoSession} from '../../lib/video/session';
+import {addAudioTrackClip,addTimelineClip,addTimelineClipsFromDialog,cancelVideoExport,deleteAudioTrackClip,deleteTimelineClip,duplicateAudioTrackClip,moveAudioTrackClip,moveTimelineClip,resetTimeline,resizeAudioTrackClip,setAudioTrackClipDuck,setAudioTrackClipFades,setAudioTrackClipGain,toggleAudioTrackClipMute,setTimelineClipCrossfade,setTimelineClipGain,setTimelineClipSpeed,setVideoFormat,selectTimelineClip,toggleTimelineClipMute,trimTimelineClip,useVideoSession} from '../../lib/video/session';
 import {audioClipDuration,audioTrackEnd} from '../../lib/video/audioTrack';
 import {clipDuration,clipRanges,fadeOf,MAX_GAIN,speedOf,timelineDuration} from '../../lib/video/timeline';
 import {isTitleClip} from '../../lib/video/titles';
@@ -128,6 +128,7 @@ export function VideoControls({name}:{name:string}){
    </div>
    <p className="m-0 text-ink-3">{t('video.audioDuckHint')}</p>
    <div className="flex flex-wrap gap-2">
+    <Button size="compact" variant="outline" onClick={()=>duplicateAudioTrackClip(name,selectedAudio.id)} data-testid="video-audio-clip-duplicate">{t('video.duplicateClip')}</Button>
     <Button size="compact" variant="ghost" onClick={()=>deleteAudioTrackClip(name,selectedAudio.id)} data-testid="video-audio-clip-delete">{t('video.deleteClip')}</Button>
    </div>
   </div>}

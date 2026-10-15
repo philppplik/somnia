@@ -174,3 +174,23 @@ test('audio track: duck sets, dirties and undoes',async()=>{
   assert.equal(getVideoSession('au-duck.video-project')!.audioClips[0].duck,0,'undo restores duck 0');
  }finally{done();}
 });
+
+test('audio track: duplicate selects the copy, dirties and undoes',async()=>{
+ setVideoEngineFactory(()=>fakeAudioEngine());
+ const done=await freshProject('au-dupe.video-project');
+ try{
+  const {duplicateAudioTrackClip}=await import('./session');
+  const id=await addAudioTrackClip('au-dupe.video-project',audioItem('loop.mp3'),2);
+  const copy=duplicateAudioTrackClip('au-dupe.video-project',id!);
+  assert.ok(copy&&copy!==id);
+  const s=getVideoSession('au-dupe.video-project')!;
+  assert.equal(s.audioClips.length,2);
+  assert.equal(s.audioClips[1].at,10,'copy lands after the 8 s original at 2');
+  assert.equal(s.selectedAudioClipId,copy,'the copy is selected');
+  assert.ok(videoIsDirty(s));
+  undoVideoEdit('au-dupe.video-project');
+  const s2=getVideoSession('au-dupe.video-project')!;
+  assert.equal(s2.audioClips.length,1,'undo drops the copy');
+  assert.equal(s2.selectedAudioClipId,null,'and the dead selection goes with it');
+ }finally{done();}
+});

@@ -4,7 +4,7 @@ import {VideoEngine,type VideoEngineLike} from './engine';
 import {DEFAULT_FORMAT,exportName,type VideoFormat} from './recipe';
 import {fullClip,isNeutralTimeline,moveClip,rippleDelete,sanitizeClips,setClipEdge,setClipSpeed,setCrossfade,splitAt,timelineDuration,type TimelineClip} from './timeline';
 import {emptyVideoHistory,pushHistory,redoHistory,undoHistory,type VideoHistory,type VideoSnapshot} from './history';
-import {audioTrackEnd,fullAudioClip,moveAudioClip,removeAudioClip,resizeAudioClip,sanitizeAudioClips,setAudioClipDuck,setAudioClipEdge,setAudioClipFades,setAudioClipGain,setAudioClipMuted,type AudioClip} from './audioTrack';
+import {audioTrackEnd,duplicateAudioClip,fullAudioClip,moveAudioClip,removeAudioClip,resizeAudioClip,sanitizeAudioClips,setAudioClipDuck,setAudioClipEdge,setAudioClipFades,setAudioClipGain,setAudioClipMuted,type AudioClip} from './audioTrack';
 import {clipsSignature,parseVideoProject,projectFileName,serializeVideoProject} from './projectFile';
 import {needsSourceFile} from './titles';
 import {FilmstripController} from './filmstrip-controller';
@@ -158,6 +158,21 @@ export const resizeAudioTrackClip=(root:string,id:string,edge:'in'|'out',timelin
 export const setAudioTrackClipGain=(root:string,id:string,gain:number,historyKey?:string)=>editAudioTrack(root,clips=>setAudioClipGain(clips,id,gain),historyKey?{historyKey}:undefined);
 export const setAudioTrackClipFades=(root:string,id:string,fadeIn:number,fadeOut:number)=>editAudioTrack(root,clips=>setAudioClipFades(clips,id,fadeIn,fadeOut));
 export const deleteAudioTrackClip=(root:string,id:string)=>editAudioTrack(root,clips=>removeAudioClip(clips,id));
+/** Duplicates an audio clip (optionally at a position) and selects the copy. Returns the copy's id. */
+export function duplicateAudioTrackClip(root:string,id:string,at?:number):string|null{
+ const s=sessions.get(root);if(!s)return null;
+ const src=s.audioClips.find(c=>c.id===id);if(!src)return null;
+ let copyId:string|null=null;
+ editAudioTrack(root,clips=>{
+  const before=clips.length;
+  const next=duplicateAudioClip(clips,id,at);
+  if(next.length===before)return null;
+  copyId=next[next.length-1].id;
+  return next;
+ });
+ if(copyId)patch(root,{selectedAudioClipId:copyId,selectedClipId:null});
+ return copyId;
+}
 export const setAudioTrackClipDuck=(root:string,id:string,duck:number)=>editAudioTrack(root,clips=>setAudioClipDuck(clips,id,duck));
 export const toggleAudioTrackClipMute=(root:string,id:string)=>editAudioTrack(root,clips=>{const c=clips.find(x=>x.id===id);return c?setAudioClipMuted(clips,id,!c.muted):null;});
 /** Appends a full-length clip of another video source (opened and probed on demand) and selects it. */

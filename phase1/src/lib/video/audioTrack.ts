@@ -78,6 +78,11 @@ export function duckGainAt(clips:AudioClip[],c:AudioClip,t:number):number{
  return 1-c.duck*Math.min(1,level);
 }
 
+/** Copies a clip with a fresh id, placed at `at` (default: right after the original). */
+export function duplicateAudioClip(clips:AudioClip[],id:string,at?:number):AudioClip[]{
+ const c=clips.find(x=>x.id===id);if(!c)return clips;
+ return[...clips,{...c,id:newAudioClipId(),at:Math.max(0,at??c.at+audioClipDuration(c))}];
+}
 export const removeAudioClip=(clips:AudioClip[],id:string)=>clips.filter(c=>c.id!==id);
 /** Repositions a clip on the timeline (clamped at 0). */
 export const moveAudioClip=(clips:AudioClip[],id:string,at:number)=>clips.map(c=>c.id===id?{...c,at:Math.max(0,at)}:c);

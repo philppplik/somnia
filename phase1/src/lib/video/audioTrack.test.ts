@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {audioClipDuration,audioEnvelope,audioTrackEnd,fullAudioClip,moveAudioClip,removeAudioClip,resizeAudioClip,sanitizeAudioClips,setAudioClipMuted,setAudioClipDuck,duckGainAt,DUCK_RAMP_SECONDS,setAudioClipEdge,setAudioClipFades,setAudioClipGain,type AudioClip} from './audioTrack';
+import {audioClipDuration,audioEnvelope,audioTrackEnd,fullAudioClip,moveAudioClip,removeAudioClip,resizeAudioClip,sanitizeAudioClips,duplicateAudioClip,setAudioClipMuted,setAudioClipDuck,duckGainAt,DUCK_RAMP_SECONDS,setAudioClipEdge,setAudioClipFades,setAudioClipGain,type AudioClip} from './audioTrack';
 const clip=(id:string,over:Partial<AudioClip>={}):AudioClip=>({id,source:'song.mp3',in_s:0,out_s:10,at:0,gain:1,muted:false,duck:0,fadeIn:0,fadeOut:0,...over});
 
 test('free placement: gaps and overlaps are legal, the track end is the last clip end',()=>{
@@ -101,4 +101,16 @@ test('duck: foreground overlap lowers a ducking clip with ramps; foreground itse
  assert.equal(sanitizeAudioClips([{...music,duck:9}],{})[0].duck,1);
  assert.equal(sanitizeAudioClips([{...music,duck:undefined as never}],{})[0].duck,0);
  assert.equal(setAudioClipDuck([music],'m',0.5)[0].duck,0.5);
+});
+
+test('duplicateAudioClip: fresh id, placed after the original or at a given time, original untouched',()=>{
+ const c=clip('a',{at:5,in_s:0,out_s:8});
+ const r=duplicateAudioClip([c],'a');
+ assert.equal(r.length,2);
+ assert.notEqual(r[1].id,'a');
+ assert.equal(r[1].at,13,'default: right after the original');
+ assert.deepEqual([r[1].in_s,r[1].out_s,r[1].gain,r[1].duck],[0,8,1,0]);
+ const r2=duplicateAudioClip([c],'a',20);
+ assert.equal(r2[1].at,20);
+ assert.equal(duplicateAudioClip([c],'nope').length,1,'unknown id is a no-op');
 });
