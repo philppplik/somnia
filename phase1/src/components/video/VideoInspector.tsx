@@ -2,7 +2,7 @@ import {useMemo,useState} from 'react';
 import {Button} from '../ui/button';
 import {useT} from '../../lib/useT';
 import {useMedia} from '../../lib/media';
-import {addAudioTrackClip,addImageClip,addTimelineClip,addTimelineClipsFromDialog,cancelVideoExport,deleteAudioTrackClip,deleteTimelineClip,duplicateAudioTrackClip,moveAudioTrackClip,moveTimelineClip,resetTimeline,resizeAudioTrackClip,setAudioTrackClipDuck,setAudioTrackClipFades,setAudioTrackClipGain,toggleAudioTrackClipMute,setTimelineClipCrossfade,setTimelineClipGain,setTimelineClipSpeed,setVideoFormat,duplicateTimelineClip,selectTimelineClip,setImageClipLength,setVideoExportOptions,toggleTimelineClipMute,trimTimelineClip,useVideoSession} from '../../lib/video/session';
+import {addAudioTrackClip,addImageClip,addTimelineClip,addTimelineClipsFromDialog,cancelVideoExport,deleteAudioTrackClip,deleteTimelineClip,duplicateAudioTrackClip,moveAudioTrackClip,moveTimelineClip,resetTimeline,resizeAudioTrackClip,setAudioTrackClipDuck,setAudioTrackClipFades,setAudioTrackClipGain,toggleAudioTrackClipMute,setTimelineClipCrossfade,setTimelineClipGain,setTimelineClipSpeed,setVideoFormat,duplicateTimelineClip,selectTimelineClip,setImageClipLength,setVideoExportOptions,setVideoExportRange,toggleTimelineClipMute,trimTimelineClip,useVideoSession} from '../../lib/video/session';
 import {audioClipDuration,audioTrackEnd} from '../../lib/video/audioTrack';
 import {clipDuration,clipRanges,fadeOf,IMAGE_DEFAULT_SECONDS,isImageClip,MAX_GAIN,speedOf,timelineDuration} from '../../lib/video/timeline';
 import {isTitleClip} from '../../lib/video/titles';
@@ -177,6 +177,15 @@ export function VideoControls({name}:{name:string}){
      </NativeSelect>
     </label>
    </div>
+   <div className="grid grid-cols-2 gap-2">
+    <label>{t('video.exportRangeFrom')}
+     <NativeInput type="number" className={`${field} mt-1`} min={0} max={timelineDuration(s.clips)} step={0.1} value={s.exportRange?.start??0} onChange={e=>setVideoExportRange(name,{start:Number(e.target.value),end:s.exportRange?.end??timelineDuration(s.clips)})} data-testid="video-export-from"/>
+    </label>
+    <label>{t('video.exportRangeTo')}
+     <NativeInput type="number" className={`${field} mt-1`} min={0} max={timelineDuration(s.clips)} step={0.1} value={s.exportRange?.end??timelineDuration(s.clips)} onChange={e=>setVideoExportRange(name,{start:s.exportRange?.start??0,end:Number(e.target.value)})} data-testid="video-export-to"/>
+    </label>
+   </div>
+   {s.exportRange&&<p className="m-0 text-ink-3" data-testid="video-export-range-note">{t('video.exportRangeActive',{start:s.exportRange.start.toFixed(2),end:s.exportRange.end.toFixed(2)})}</p>}
    {s.status==='exporting'?<div className="flex items-center gap-2"><progress className="h-1.5 w-full accent-[var(--accent)]" max={1} value={s.progress?.ratio}/><Button size="compact" variant="ghost" onClick={()=>cancelVideoExport(name)}>{t('video.cancel')}</Button></div>:null}
    {s.result&&<p className="m-0 text-ink-3" data-testid="video-result-inspector">{t('video.result',{duration:s.result.report.duration_s.toFixed(2),bytes:String((s.result.report.bytes/1024).toFixed(0))+' KB',video:s.result.report.videoCodec??'',audio:s.result.report.audioCodec?` + ${s.result.report.audioCodec}`:t('video.resultAudioMuted')})}</p>}
   </div>

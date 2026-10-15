@@ -2,9 +2,9 @@ import {reportError} from '../log';
 import {useSyncExternalStore} from 'react';
 import {VideoEngine,type VideoEngineLike} from './engine';
 import {DEFAULT_EXPORT_OPTIONS,DEFAULT_FORMAT,exportName,sanitizeExportOptions,type VideoExportOptions,type VideoFormat} from './recipe';
-import {fullClip,IMAGE_DEFAULT_SECONDS,newClipId,isNeutralTimeline,moveClip,rippleDelete,sanitizeClips,setClipEdge,setClipSpeed,setCrossfade,splitAt,timelineDuration,type TimelineClip} from './timeline';
+import {fullClip,IMAGE_DEFAULT_SECONDS,newClipId,MIN_CLIP_SECONDS as MIN_EXPORT_RANGE,sliceTimeline,isNeutralTimeline,moveClip,rippleDelete,sanitizeClips,setClipEdge,setClipSpeed,setCrossfade,splitAt,timelineDuration,type TimelineClip} from './timeline';
 import {emptyVideoHistory,pushHistory,redoHistory,undoHistory,type VideoHistory,type VideoSnapshot} from './history';
-import {audioTrackEnd,duplicateAudioClip,fullAudioClip,moveAudioClip,removeAudioClip,resizeAudioClip,sanitizeAudioClips,setAudioClipDuck,setAudioClipEdge,setAudioClipFades,setAudioClipGain,setAudioClipMuted,type AudioClip} from './audioTrack';
+import {audioTrackEnd,duplicateAudioClip,fullAudioClip,moveAudioClip,removeAudioClip,resizeAudioClip,sanitizeAudioClips,setAudioClipDuck,setAudioClipEdge,setAudioClipFades,setAudioClipGain,setAudioClipMuted,type AudioClip,sliceAudioClips} from './audioTrack';
 import {clipsSignature,parseVideoProject,projectFileName,serializeVideoProject} from './projectFile';
 import {clampTitleSeconds,insertClip,insertIndexAfter,needsSourceFile} from './titles';
 import {FilmstripController} from './filmstrip-controller';
@@ -19,7 +19,7 @@ export type VideoExportOutcome='downloaded'|'cancelled'|'unavailable';
 export interface VideoSession{exportOutcome?:VideoExportOutcome;name:string;status:VideoStatus;error:string;probe:VideoProbe|null;capabilities:VideoCapabilities|null;clips:TimelineClip[];/** The free-placed audio track (music/voiceover), mixed over the edit list. */
 audioClips:AudioClip[];selectedClipId:string|null;/** Selection on the audio track; selecting one track clears the other. */
 selectedAudioClipId:string|null;history:VideoHistory;/** Signature of the clip list at the last save/load; the session is dirty when the current list differs. */
-savedSig:string;format:VideoFormat;exportOptions:VideoExportOptions;progress:VideoProgress|null;result:VideoResult|null;ext:string}
+savedSig:string;format:VideoFormat;exportOptions:VideoExportOptions;exportRange:{start:number;end:number}|null;progress:VideoProgress|null;result:VideoResult|null;ext:string}
 const sessions=new Map<string,VideoSession>();
 let filmstrip:FilmstripController|null|undefined;
 /** One filmstrip controller per app run; null where workers are unavailable (unit tests, SSR). */
@@ -66,7 +66,7 @@ export async function openVideo(item:{name:string;url:string}):Promise<void>{
 }
 async function openVideoFresh(item:{name:string;url:string}):Promise<void>{
  stopMediaSync??=subscribeMedia(()=>{const live=new Set(getMedia().items.map(i=>i.name));for(const n of [...sessions.keys()])if(!live.has(n))closeVideo(n);});
- put({name:item.name,status:'loading',error:'',probe:null,capabilities:null,clips:[],audioClips:[],selectedClipId:null,selectedAudioClipId:null,history:emptyVideoHistory(),savedSig:clipsSignature([],[]),format:DEFAULT_FORMAT,exportOptions:DEFAULT_EXPORT_OPTIONS,progress:null,result:null,ext:fileExtension(item.name)});
+ put({name:item.name,status:'loading',error:'',probe:null,capabilities:null,clips:[],audioClips:[],selectedClipId:null,selectedAudioClipId:null,history:emptyVideoHistory(),savedSig:clipsSignature([],[]),format:DEFAULT_FORMAT,exportOptions:DEFAULT_EXPORT_OPTIONS,exportRange:null,progress:null,result:null,ext:fileExtension(item.name)});
  if(getMedia().items.find(i=>i.name===item.name)?.kind==='video-project'){
   try{
    const text=await fetch(item.url).then(r=>r.text());
@@ -247,6 +247,15 @@ export function resetTimeline(root:string){
  put({...s,clips:next,audioClips:[],selectedClipId:null,selectedAudioClipId:null,result:null,history:changed?pushHistory(s.history,{clips:s.clips,audioClips:s.audioClips},null,Date.now()):s.history});
 }
 export const setVideoFormat=(root:string,format:VideoFormat)=>patch(root,{format});
+/** Limits the export to a timeline range (seconds, clamped to the timeline; null or an empty range exports everything). */
+export const setVideoExportRange=(root:string,range:{start:number;end:number}|null)=>{
+ const s=sessions.get(root);if(!s)return;
+ if(!range){patch(root,{exportRange:null});return;}
+ const total=timelineDuration(s.clips);
+ const start=Math.min(Math.max(0,range.start),total),end=Math.min(Math.max(0,range.end),total);
+ const next=end-start>=MIN_EXPORT_RANGE?{start:Number(start.toFixed(3)),end:Number(end.toFixed(3))}:null;
+ patch(root,{exportRange:next&&next.start<=0&&next.end>=total?null:next});
+};
 /** Sets export resolution scale and encoder quality (clamped to the supported presets). */
 export const setVideoExportOptions=(root:string,o:Partial<VideoExportOptions>)=>{const s=sessions.get(root);if(s)patch(root,{exportOptions:sanitizeExportOptions({...s.exportOptions,...o})});};
 /** Runs the export in the worker and keeps the result on the session. Cancel rejects quietly. */
@@ -262,7 +271,11 @@ export async function runVideoExport(name:string):Promise<'exported'|'cancelled'
  revoke(s.result);put({...s,status:'exporting',error:'',progress:null,result:null,exportOutcome:undefined});
  try{
   const{engine:e}=getEngine();
-  const r=await e.export(clipSources,s.clips,s.format,p=>{if(sessions.get(name)?.status==='exporting')patch(name,{progress:p});},s.audioClips,s.exportOptions);
+  const range=s.exportRange;
+ const clips=range?sliceTimeline(s.clips,range.start,range.end):s.clips;
+ const audioClips=range?sliceAudioClips(s.audioClips,range.start,range.end):s.audioClips;
+ if(!clips.length){patch(name,{status:'error',error:'The export range is empty.'});return'unavailable';}
+ const r=await e.export(clipSources,clips,s.format,p=>{if(sessions.get(name)?.status==='exporting')patch(name,{progress:p});},audioClips,s.exportOptions);
   const cur=sessions.get(name);if(!cur)return'unavailable';
   const blob=new Blob([r.bytes],{type:r.mime});
   put({...cur,status:'ready',progress:null,result:{blob,url:URL.createObjectURL(blob),report:r.report}});

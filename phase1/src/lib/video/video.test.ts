@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {sniffVideo,VIDEO_FILE} from './format';
 import {exportName} from './recipe';
-import {clipRanges,fullClip,isNeutralTimeline,locate,moveClip,rippleDelete,sanitizeClips,setClipEdge,splitAt,timelineDuration,type TimelineClip} from './timeline';
+import {clipRanges,fullClip,isNeutralTimeline,locate,moveClip,rippleDelete,sanitizeClips,setClipEdge,sliceTimeline,splitAt,timelineDuration,type TimelineClip} from './timeline';
 import {probeVideo} from './pipeline';
 import {addTimelineClip,closeVideo,deleteTimelineClip,exportVideo,getVideoSession,moveTimelineClip,openVideo,resetTimeline,runVideoExport,setTimelineClipGain,setVideoEngineFactory,setVideoFormat,splitTimelineAt,toggleTimelineClipMute,trimTimelineClip} from './session';
 import type {VideoEngineLike,VideoResult} from './engine';
@@ -173,4 +173,22 @@ test('image clips: sanitize fixes the shape, split halves the duration, edges an
  assert.equal(splitAt([{id:'b',source:'b.png',in_s:0,out_s:0.08,gain:1,muted:false,kind:'image'}],0.05),null,'too-short halves refuse');
  const after=setClipEdge(stills,'a','in',3);
  assert.deepEqual(after,stills,'image clips keep in 0 (duration changes go through setImageClipLength)');
+});
+
+test('range export slicing: media windows shift, stills shrink, cut fades die, interior fades survive',()=>{
+ const a:TimelineClip={id:'a',source:'a.mp4',in_s:10,out_s:20,gain:1,muted:false,crossfade_s:1};
+ const b:TimelineClip={id:'b',source:'b.png',in_s:0,out_s:6,gain:1,muted:false,kind:'image'};
+ const c2:TimelineClip={id:'c',source:'c.mp4',in_s:0,out_s:4,gain:1,muted:false,speed:2};
+ const clips=[a,b,c2]; // a: 0-10, b: 10-16, c: 16-18 (2 timeline s at 2x)
+ const sliced=sliceTimeline(clips,5,14);
+ assert.deepEqual(sliced.map(c=>[c.source,c.in_s,c.out_s,c.crossfade_s]),[
+  ['a.mp4',15,20,1],['b.png',0,5,0]],'a keeps its fade into b (the fade zone overlaps b by 1 s); the cut through b becomes a hard cut');
+ assert.equal(timelineDuration(sliced),9);
+ const inside=sliceTimeline(clips,16.5,17.5);
+ assert.deepEqual(inside.map(c=>[c.in_s,c.out_s]),[[3,4]],'sped clip (15-17 on the timeline): source window moves at 2x and clamps to the clip end');
+ assert.deepEqual(sliceTimeline(clips,3,3),[],'empty range');
+ assert.deepEqual(sliceTimeline(clips,50,60),[],'outside the timeline');
+ const full=sliceTimeline(clips,0,18);
+ assert.equal(full.length,3);
+ assert.equal(full[0].crossfade_s,1,'uncut fade survives');
 });

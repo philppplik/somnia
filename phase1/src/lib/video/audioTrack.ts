@@ -23,6 +23,19 @@ export interface AudioClip{
 }
 
 export const audioClipDuration=(c:AudioClip)=>Math.max(0,c.out_s-c.in_s);
+/** Cuts the audio track to [start,end) for a range export and re-bases positions to 0. Fades shrink when their zone is cut away. */
+export function sliceAudioClips(clips:AudioClip[],start:number,end:number):AudioClip[]{
+ if(!(end>start))return[];
+ const out:AudioClip[]=[];
+ for(const c of clips){
+  const aEnd=c.at+audioClipDuration(c);
+  const s=Math.max(c.at,start),e=Math.min(aEnd,end);
+  if(e-s<0.05)continue;
+  out.push({...c,in_s:Number((c.in_s+(s-c.at)).toFixed(3)),out_s:Number((c.out_s-(aEnd-e)).toFixed(3)),at:Number((s-start).toFixed(3)),
+   fadeIn:Number(Math.max(0,c.fadeIn-(s-c.at)).toFixed(3)),fadeOut:Number(Math.max(0,c.fadeOut-(aEnd-e)).toFixed(3))});
+ }
+ return out;
+}
 /** The timeline second where the audio track ends; 0 when empty. */
 export const audioTrackEnd=(clips:AudioClip[])=>clips.reduce((end,c)=>Math.max(end,c.at+audioClipDuration(c)),0);
 

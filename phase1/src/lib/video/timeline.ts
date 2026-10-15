@@ -118,6 +118,23 @@ export function setClipEdge(clips:TimelineClip[],id:string,edge:'in'|'out',at:nu
 export function setClipSpeed(clips:TimelineClip[],id:string,speed:number):TimelineClip[]{
  return clips.map(c=>c.id===id&&c.kind!=='title'&&c.kind!=='image'?{...c,speed:speedOf({...c,speed})}:c);
 }
+/** Cuts the timeline to [start,end) for a range export: edges become hard cuts (a cut crossfade dissolves into nothing), interior fades survive. Title and image clips shrink by the cut amount; media clips shift their source window. */
+export function sliceTimeline(clips:TimelineClip[],start:number,end:number):TimelineClip[]{
+ if(!(end>start))return[];
+ const out:TimelineClip[]=[];
+ for(const r of clipRanges(clips)){
+  const s=Math.max(r.start,start),e=Math.min(r.end,end);
+  if(e-s<MIN_CLIP_SECONDS)continue;
+  const c=r.clip,sp=speedOf(c);
+  const isStill=isTitleClip(c)||isImageClip(c);
+  const cutTail=r.end-e>1e-9;
+  out.push({...c,id:newClipId(),
+   in_s:isStill?0:Number((c.in_s+(s-r.start)*sp).toFixed(3)),
+   out_s:isStill?Number((e-s).toFixed(3)):Number((c.out_s-(r.end-e)*sp).toFixed(3)),
+   crossfade_s:cutTail?0:c.crossfade_s});
+ }
+ return out;
+}
 /** Sets the crossfade from one clip into the next, clamped to both clip lengths; the last clip takes none. */
 export function setCrossfade(clips:TimelineClip[],id:string,seconds:number):TimelineClip[]{
  const i=clips.findIndex(c=>c.id===id);if(i<0)return clips;

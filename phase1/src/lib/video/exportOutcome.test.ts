@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {addBlankVideoProject,getMedia,closeMedia} from '../media';
-import {exportVideoFile,getVideoSession,openVideo,closeVideo,runVideoExport,setVideoEngineFactory,setVideoExportOptions,subscribeVideo} from './session';
+import {exportVideoFile,getVideoSession,openVideo,closeVideo,runVideoExport,setVideoEngineFactory,setVideoExportOptions,setVideoExportRange,subscribeVideo} from './session';
 import {addTitleClip} from './titleSession';
 import type {VideoEngineLike} from './engine';
 const engine=(cancel=false):VideoEngineLike=>({
@@ -45,4 +45,27 @@ test('export options default to original/high, clamp to presets and reach the en
   assert.equal(await runVideoExport(item.name),'exported');
   assert.deepEqual(seen,{scale:0.25,quality:'low'},'the engine receives the chosen options');
  }finally{closeVideo(item.name);closeMedia(item.name);}
+});
+
+test('export range clamps to the timeline, normalizes a full range away and slices what the engine sees',async()=>{
+ let seenClips:unknown,seenAudio:unknown;
+ setVideoEngineFactory(()=>({...engine(),async export(_s,c,_f,_p,a){seenClips=c;seenAudio=a;return{bytes:new Uint8Array([1]).buffer,mime:'video/webm',report:{format:'webm',duration_s:2,bytes:1,videoCodec:'vp9',audioCodec:null,steps:[]}};}}));
+ addBlankVideoProject('range-opts.somnia-video');
+ const item=getMedia().items.find(i=>i.name===getMedia().active)!;await openVideo(item);addTitleClip(item.name,0);
+ const name=item.name;
+ try{
+  setVideoExportRange(name,{start:-5,end:999});
+  assert.equal(getVideoSession(name)!.exportRange,null,'a range covering everything normalizes to a full export');
+  setVideoExportRange(name,{start:2,end:1});
+  assert.equal(getVideoSession(name)!.exportRange,null,'an inverted range is dropped');
+  setVideoExportRange(name,{start:1,end:2.5});
+  assert.deepEqual(getVideoSession(name)!.exportRange,{start:1,end:2.5});
+  assert.equal(await runVideoExport(name),'exported');
+  const sc=seenClips as {in_s:number;out_s:number;kind?:string}[];
+  assert.equal(sc.length,1);
+  assert.deepEqual([sc[0].in_s,sc[0].out_s],[0,1.5],'the title shrinks to the range');
+  assert.deepEqual(seenAudio,[]);
+  setVideoExportRange(name,null);
+  assert.equal(getVideoSession(name)!.exportRange,null);
+ }finally{closeVideo(name);closeMedia(name);}
 });

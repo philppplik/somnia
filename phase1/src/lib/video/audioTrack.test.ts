@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {audioClipDuration,audioEnvelope,audioTrackEnd,fullAudioClip,moveAudioClip,removeAudioClip,resizeAudioClip,sanitizeAudioClips,duplicateAudioClip,setAudioClipMuted,setAudioClipDuck,duckGainAt,DUCK_RAMP_SECONDS,setAudioClipEdge,setAudioClipFades,setAudioClipGain,type AudioClip} from './audioTrack';
+import {audioClipDuration,audioEnvelope,audioTrackEnd,fullAudioClip,moveAudioClip,removeAudioClip,resizeAudioClip,sanitizeAudioClips,sliceAudioClips,duplicateAudioClip,setAudioClipMuted,setAudioClipDuck,duckGainAt,DUCK_RAMP_SECONDS,setAudioClipEdge,setAudioClipFades,setAudioClipGain,type AudioClip} from './audioTrack';
 const clip=(id:string,over:Partial<AudioClip>={}):AudioClip=>({id,source:'song.mp3',in_s:0,out_s:10,at:0,gain:1,muted:false,duck:0,fadeIn:0,fadeOut:0,...over});
 
 test('free placement: gaps and overlaps are legal, the track end is the last clip end',()=>{
@@ -113,4 +113,12 @@ test('duplicateAudioClip: fresh id, placed after the original or at a given time
  const r2=duplicateAudioClip([c],'a',20);
  assert.equal(r2[1].at,20);
  assert.equal(duplicateAudioClip([c],'nope').length,1,'unknown id is a no-op');
+});
+
+test('range export slicing re-bases the audio track and shrinks cut fades',()=>{
+ const clips=[{id:'m',source:'m.mp3',in_s:2,out_s:12,at:4,gain:1,muted:false,duck:0,fadeIn:1,fadeOut:2}];
+ const sliced=sliceAudioClips(clips,6,10);
+ assert.deepEqual(sliced,[{id:'m',source:'m.mp3',in_s:4,out_s:8,at:0,gain:1,muted:false,duck:0,fadeIn:0,fadeOut:0}],'window shrinks at both ends; the cut eats the fade');
+ assert.deepEqual(sliceAudioClips(clips,20,30),[],'fully outside drops');
+ assert.deepEqual(sliceAudioClips(clips,0,100),[{...clips[0]}],'untouched range passes through');
 });
