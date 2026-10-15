@@ -3,7 +3,7 @@ import {t} from '../i18n';
 import {registerCommandSpec} from '../commandBridge';
 import type {CommandSpec} from '../commandSpec';
 import {editArrangement,undoArrangement,redoArrangement,getArrangementState,renderSession,exportArrangement,downloadArrangement,saveArrangementNative,previewMaster,acceptMasterPreview,cancelMasterPreview} from './arrangeStore';
-import {findArrangeClip,splitArrangeClip,newTrack} from './arrangement';
+import {findArrangeClip,splitArrangeClip,newTrack,ARRANGE_LIMITS} from './arrangement';
 const schema=(properties:Record<string,unknown>,required=Object.keys(properties))=>({type:'object',properties,required,additionalProperties:false});
 const str={type:'string'},num={type:'number'},bool={type:'boolean'};
 const id=()=>`arrange-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`;
@@ -21,6 +21,7 @@ export function registerArrangeCommands(){
  add('marker.add',p=>editArrangement(s=>s.markers.push({id:id(),name:p.name,frame:p.frame})),schema({name:str,frame:num})),
  add('marker.delete',p=>editArrangement(s=>{s.markers=s.markers.filter(m=>m.id!==p.id);}),schema({id:str})),
  add('loop.set',p=>editArrangement(s=>{s.loop=p.enabled?{start:p.start,end:p.end}:null;}),schema({enabled:bool,start:num,end:num})),
+ add('session.tail',p=>editArrangement(s=>{s.tailFrames=Math.round(Math.min(ARRANGE_LIMITS.tailSeconds,Math.max(0,Number(p.seconds)))*48000);}),schema({seconds:num})),
  add('rack.set',p=>editArrangement(s=>{const rack=validateRack(p.rack);if(p.target==='master')s.masterRack=rack;else{const track=s.tracks.find(t=>t.id===p.target);if(!track)throw Error('Rack target no longer exists');track.rack=rack;}}),schema({target:str,rack:{type:'object'}})),
  add('master.preview',p=>previewMaster(p),schema({lufs:num,ceilingDb:num,limit:bool})),add('master.accept',acceptMasterPreview),add('master.cancel',cancelMasterPreview),
  add('undo',undoArrangement),add('redo',redoArrangement),add('render',renderSession),add('export',exportArrangement),add('save',downloadArrangement),add('saveNative',saveArrangementNative)
