@@ -1193,5 +1193,13 @@
  "animation.camera.shake": "Tremor de camera",
  "cmd.animation.camera.shake": "Adicionar tremor a camera",
  "animation.camera.reset": "Redefinir camera",
- "cmd.animation.camera.reset": "Redefinir a camera para o repouso"
+ "cmd.animation.camera.reset": "Redefinir a camera para o repouso",
+ "animation.rig.group.label": "Rotulo",
+ "animation.rig.label.red": "Vermelho",
+ "animation.rig.label.amber": "Ambar",
+ "animation.rig.label.green": "Verde",
+ "animation.rig.label.blue": "Azul",
+ "animation.rig.label.violet": "Violeta",
+ "animation.rig.label.none": "Sem rotulo",
+ "cmd.animation.layers.label": "Definir um rotulo de cor nas camadas escolhidas"
 }

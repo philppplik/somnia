@@ -1193,5 +1193,13 @@
  "animation.camera.shake": "Temblor de camara",
  "cmd.animation.camera.shake": "Anadir temblor de camara",
  "animation.camera.reset": "Restablecer camara",
- "cmd.animation.camera.reset": "Restablecer la camara en reposo"
+ "cmd.animation.camera.reset": "Restablecer la camara en reposo",
+ "animation.rig.group.label": "Etiqueta",
+ "animation.rig.label.red": "Rojo",
+ "animation.rig.label.amber": "Ambar",
+ "animation.rig.label.green": "Verde",
+ "animation.rig.label.blue": "Azul",
+ "animation.rig.label.violet": "Violeta",
+ "animation.rig.label.none": "Sin etiqueta",
+ "cmd.animation.layers.label": "Poner una etiqueta de color a las capas elegidas"
 }

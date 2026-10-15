@@ -8,7 +8,7 @@ import {validatePoseLib} from './poseModel';
 import type {InterfaceAsset} from '../interface/schema';
 import {validateAnimationAssets} from './assetsValidation';
 import {MAX_AUDIO_VOLUME,type AudioAsset} from './audioCore';
-import {validPathFx,validateLayerTemplates,type GradientStop,GRADIENT_RANGE,REPEATER_RANGE,validRepeater,STYLE_KINDS,OFFSET_KINDS,MAX_COLOR_KEYS,type ColorKey,type ColorEase,COLOR_EASES,validShutter,type Shutter,validatePrecomps,precompTransform,prop,createComposition,type TextAnimator,type LayerMask,type LayerMatte,type ClipItem,type KeyRef,type Vec2,createLayer,findComp,findLayer,PROP_META,wouldCycle,EASE_IN,EASE_OUT,TRANSFORM_KEYS,validateDocument,type AnimationDocument,type CompSettings,type Composition,type Interp,type Keyframe,type Layer,type LayerKind,type LayerSource,type LayerEffect,validSource,validEffects,type Property,type PropValue,type TransformKey} from './model';
+import {validPathFx,validateLayerTemplates,type GradientStop,GRADIENT_RANGE,REPEATER_RANGE,validRepeater,STYLE_KINDS,OFFSET_KINDS,MAX_COLOR_KEYS,type ColorKey,type ColorEase,COLOR_EASES,validShutter,type Shutter,validatePrecomps,precompTransform,prop,createComposition,type TextAnimator,type LayerMask,type LayerMatte,type ClipItem,type KeyRef,type Vec2,createLayer,findComp,findLayer,PROP_META,wouldCycle,EASE_IN,EASE_OUT,TRANSFORM_KEYS,validateDocument,type AnimationDocument,type CompSettings,type Composition,type Interp,type LayerLabel,LAYER_LABELS,type Keyframe,type Layer,type LayerKind,type LayerSource,type LayerEffect,validSource,validEffects,type Property,type PropValue,type TransformKey} from './model';
 import {setGradientStop} from './shapes';
 import {parseGradientStopLane,parseGradientLane,parseGradientColorLane,type GradientKey,type RepeaterKey,type StyleLaneId} from './keyTypes';
 import {evaluate} from './interpolate';
@@ -46,6 +46,7 @@ export type Edit=
  /** Gives keys exact new ticks in one step (each key its own target). */
  /** Adds a layer that shows another composition of the document. */
  |{type:'precomp.add';comp:string;id?:string}
+ |{type:'layer.label';layers:readonly string[];label:LayerLabel|null}
  |{type:'layer.motionBlur';layers:readonly string[];enabled:boolean}
  |{type:'comp.shutter';comp?:string;shutter:Shutter|null}
  |{type:'precomp.make';layers:readonly string[];name?:string;id?:string;compId?:string}
@@ -607,6 +608,9 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
    const rest=c.layers.filter(l=>!set.has(l.id));const at=c.layers.slice(0,top).filter(l=>!set.has(l.id)).length;
    const next:AnimationDocument={...doc,compositions:[...doc.compositions.map(x=>x.id===c.id?{...c,layers:[...rest.slice(0,at),pl,...rest.slice(at)]}:x),child]};
    const probs=validatePrecomps(next);if(probs.length)return fail('invalid',probs[0].replace(/^[^:]*: /,'').replace(/^./,m=>m.toUpperCase())+'.');return next;}
+  case 'layer.label':{const ids=[...new Set(e.layers??[])];if(!ids.length||ids.length>200)return fail('invalid','Select 1 to 200 layers.');if(e.label!==null&&!(LAYER_LABELS as readonly unknown[]).includes(e.label))return fail('invalid','Unknown label.');
+   ids.forEach(id=>layerOf(doc,id));const set=new Set(ids);
+   return withLayers(doc,all=>all.map(l=>set.has(l.id)?(e.label?{...l,label:e.label}:Object.fromEntries(Object.entries(l).filter(([k])=>k!=='label')) as unknown as Layer):l));}
   case 'layer.motionBlur':{const ids=[...new Set(e.layers??[])];if(!ids.length||ids.length>200)return fail('invalid','Select 1 to 200 layers.');if(typeof e.enabled!=='boolean')return fail('invalid','Motion blur must be on or off.');
    const ls=ids.map(id=>layerOf(doc,id));if(ls.some(l=>l.kind==='audio'))return fail('invalid','Audio layers have no motion blur.');
    const set=new Set(ids);return withLayers(doc,all=>all.map(l=>set.has(l.id)?(e.enabled?{...l,motionBlur:true}:Object.fromEntries(Object.entries(l).filter(([k])=>k!=='motionBlur')) as unknown as Layer):l));}

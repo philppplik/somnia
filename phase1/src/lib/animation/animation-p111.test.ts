@@ -1366,3 +1366,16 @@ test('P242 camera shake and reset: seeded, bounded, rest at the ends, reset clea
  assert.throws(()=>reset({}),/no keys/);
  s.undo();assert.equal(findCamera(findComp(s.document!)!)!.transform.scale.keys.length,2);
 });
+
+test('P243 layer labels: set, clear, validated, locked-safe, one undo step; old files unchanged',async()=>{
+ const {layerLabelSpecs}=await import('./layerLabelCommands');const {validateDocument}=await import('./model');
+ const label=layerLabelSpecs()[0].run as (p?:unknown)=>unknown;const s=open();setAnimationSession(s);const c0=findComp(s.document!)!;
+ assert.ok(c0.layers.every(l=>l.label===undefined));
+ const ids=c0.layers.map(l=>l.id);assert.throws(()=>label({label:'pink',layers:ids}),/Unknown/);
+ label({label:'red',layers:ids});let c=findComp(s.document!)!;assert.ok(c.layers.every(l=>l.label==='red'));validateDocument(s.document!);
+ assert.throws(()=>label({label:'red',layers:ids}),/already/);
+ label({label:'blue',layers:[ids[0]]});c=findComp(s.document!)!;assert.equal(c.layers[0].label,'blue');assert.equal(c.layers[1]?.label??'red','red');
+ s.undo();assert.equal(findComp(s.document!)!.layers[0].label,'red');
+ label({label:'none',layers:ids});c=findComp(s.document!)!;assert.ok(c.layers.every(l=>!('label' in l)));
+ assert.throws(()=>s.dispatch([{type:'layer.label',layers:['nope'],label:'red'}]),/./);
+});

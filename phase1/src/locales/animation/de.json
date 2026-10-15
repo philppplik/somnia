@@ -1193,5 +1193,13 @@
  "animation.camera.shake": "Handkamera-Wackeln",
  "cmd.animation.camera.shake": "Kamera wackeln lassen",
  "animation.camera.reset": "Kamera zuruecksetzen",
- "cmd.animation.camera.reset": "Kamera in Ruhelage zuruecksetzen"
+ "cmd.animation.camera.reset": "Kamera in Ruhelage zuruecksetzen",
+ "animation.rig.group.label": "Farbe",
+ "animation.rig.label.red": "Rot",
+ "animation.rig.label.amber": "Gelb",
+ "animation.rig.label.green": "Gruen",
+ "animation.rig.label.blue": "Blau",
+ "animation.rig.label.violet": "Violett",
+ "animation.rig.label.none": "Keine Farbe",
+ "cmd.animation.layers.label": "Farbmarkierung fuer die gewaehlten Ebenen setzen"
 }

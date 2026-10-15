@@ -83,3 +83,4 @@ Back to [Studios](../studios.md).
 - Add layer > Camera...: adds a Camera null at the composition centre that all unlocked top level layers hang from, and ready-made moves (push in, pull out, pan, roll) keyed over the work area. Animate the Camera layer's position, scale or rotation for your own moves.
 - Add layer > Camera... > Follow selected layer: keys the Camera position over the work area so the selected layer stays where it is in frame while everything else moves past (at most 120 linear keys; replaces the camera's position keys).
 - Add layer > Camera... > Handheld shake: seeded position shake over the work area (default 8 px, rests at both ends). Reset camera clears the camera's position, scale and rotation keys.
+- Rig and timing > Rig actions > Appearance > Label: tag the ticked layers with a colour (red, amber, green, blue, violet) or clear it. The colour shows on the layer bar in the timeline only; it is never rendered or exported.

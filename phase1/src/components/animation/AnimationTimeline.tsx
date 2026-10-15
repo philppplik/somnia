@@ -27,6 +27,7 @@ import {GraphEditor} from './GraphEditor';
 const run=(id:string,params?:unknown)=>void executeCommand(id,params);
 interface Box{x0:number;y0:number;x1:number;y1:number}
 /** Timeline of the Animation studio: transport, work area, layer bars, key lanes with marquee selection, or the graph editor. */
+const LABEL_BG:Record<string,string>={red:'bg-red-500',amber:'bg-amber-500',green:'bg-emerald-500',blue:'bg-sky-500',violet:'bg-violet-500'};
 export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Composition;at:number;selected:string|null;canUndo:boolean;canRedo:boolean}){
  const {t}=useT();const state=useAnimationState();const view=state.view; const layerSet=useLayerSet();const setClip=useSetClip();const [stagger,setStagger]=useState(2);const [staggerTiming,setStaggerTiming]=useState(true);
  const rulerRef=useRef<HTMLDivElement>(null);const lanesRef=useRef<HTMLDivElement>(null);
@@ -346,7 +347,7 @@ const marquee=(e:PointerEvent<SVGSVGElement>)=>{
      <div className={`relative ${trackHeightOf(l.id)==='compact'?'h-4':trackHeightOf(l.id)==='tall'?'h-10':'h-5'}`} data-track-height={trackHeightOf(l.id)}>
       {l.kind==='audio'&&l.audio?<div className="absolute inset-0 overflow-hidden" data-testid="animation-audio-clip"><div className="absolute inset-y-0.5 overflow-hidden rounded-sm bg-accent-soft" style={{left:`${(l.inT+l.offset-win.t0)/win.span*100}%`,width:`${Math.max(0,(l.outT-l.inT)/win.span*100)}%`}}>
        {(a=>a&&<AudioWaveform asset={a} trimIn={l.audio.trimIn} length={l.outT-l.inT} label={t('animation.audio.waveform',{name:a.sourceName})}/>)(state.doc?.audioAssets?.find(x=>x.id===l.audio!.assetId))}</div></div>
-      :<div className={`absolute h-3 touch-none rounded-sm bg-accent-fill opacity-70 ${l.locked?'':'cursor-grab '}${trackHeightOf(l.id)==='tall'?'top-3':trackHeightOf(l.id)==='compact'?'top-0.5':'top-1'}`} style={bar(l.inT,l.outT)} data-testid={`animation-layer-bar-${l.id}`} title={l.locked?undefined:t('animation.bar.hint')} tabIndex={l.locked?undefined:0} aria-label={l.locked?undefined:t('animation.bar.aria',{name:l.name})} onKeyDown={e=>nudgeBar(e,l)} onPointerDown={e=>startBarDrag(e,l,'body',x=>tickAtX(x))}>
+      :<div className={`absolute h-3 touch-none rounded-sm ${l.label?LABEL_BG[l.label]:'bg-accent-fill'} opacity-70 ${l.locked?'':'cursor-grab '}${trackHeightOf(l.id)==='tall'?'top-3':trackHeightOf(l.id)==='compact'?'top-0.5':'top-1'}`} style={bar(l.inT,l.outT)} data-testid={`animation-layer-bar-${l.id}`} title={l.locked?undefined:t('animation.bar.hint')} tabIndex={l.locked?undefined:0} aria-label={l.locked?undefined:t('animation.bar.aria',{name:l.name})} onKeyDown={e=>nudgeBar(e,l)} onPointerDown={e=>startBarDrag(e,l,'body',x=>tickAtX(x))}>
        {!l.locked&&<><div className="absolute inset-y-0 left-0 w-1.5 cursor-ew-resize touch-none rounded-l-sm bg-accent-fill" data-testid={`animation-layer-trim-in-${l.id}`} onPointerDown={e=>startBarDrag(e,l,'in',x=>tickAtX(x))}/><div className="absolute inset-y-0 right-0 w-1.5 cursor-ew-resize touch-none rounded-r-sm bg-accent-fill" data-testid={`animation-layer-trim-out-${l.id}`} onPointerDown={e=>startBarDrag(e,l,'out',x=>tickAtX(x))}/></>}</div>}
      </div>
     </div>

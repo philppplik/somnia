@@ -1193,5 +1193,13 @@
  "animation.camera.shake": "Camera a l epaule",
  "cmd.animation.camera.shake": "Ajouter un tremblement de camera",
  "animation.camera.reset": "Reinitialiser la camera",
- "cmd.animation.camera.reset": "Remettre la camera au repos"
+ "cmd.animation.camera.reset": "Remettre la camera au repos",
+ "animation.rig.group.label": "Etiquette",
+ "animation.rig.label.red": "Rouge",
+ "animation.rig.label.amber": "Ambre",
+ "animation.rig.label.green": "Vert",
+ "animation.rig.label.blue": "Bleu",
+ "animation.rig.label.violet": "Violet",
+ "animation.rig.label.none": "Sans etiquette",
+ "cmd.animation.layers.label": "Mettre une etiquette de couleur aux calques choisis"
 }
