@@ -207,5 +207,7 @@
  "photos.quick.rotateLeft": "Rotation 90° a gauche",
  "photos.quick.rotateRight": "Rotation 90° a droite",
  "photos.info.toggle": "Infos photo",
- "photos.info.empty": "Aucune metadonnee"
+ "photos.info.empty": "Aucune metadonnee",
+ "photos.slideshow": "Diaporama",
+ "photos.slideshow.tempo": "Rythme"
 }

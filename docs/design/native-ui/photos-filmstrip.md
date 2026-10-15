@@ -548,3 +548,16 @@ name dedupe, exposure formatting, rationals) and the PNG/garbage
 fall backs; the light/dark gallery leg opens the panel and checks
 the dimensions and size lines
 (`test-results/ds-photos-info-{light,dark}.png`).
+
+## Slideshow (P114)
+
+"Slideshow" in the strip menu autoplay-loops through the current
+filtered view (the same `useVisiblePhotos` list the strip shows) at
+a chosen tempo (2/4/8 s select, panel state `photos.slideshow` /
+`photos.slideshowMs`). The same toggle parks the show; a photo
+switch remounts the workspace, so the interval re-arms from module
+state and the list lives in a ref. View-only.
+
+Coverage: the light/dark gallery leg sets a fast tempo, starts the
+show, watches the active photo advance twice, then stops and checks
+it stays parked (`test-results/ds-photos-slideshow-{light,dark}.png`).

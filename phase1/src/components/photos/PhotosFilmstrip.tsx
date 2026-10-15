@@ -82,8 +82,21 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
  const [reference,setReference]=usePanelState<string>('photos.reference',''); // compare view: the photo the active one is measured against
  const [split,setSplit]=usePanelState<boolean>('photos.split',false); // shared with the workspace toolbar
  const [splitDir,setSplitDir]=usePanelState<'vertical'|'horizontal'>('photos.splitDir','vertical');
+ const [slide,setSlide]=usePanelState<boolean>('photos.slideshow',false);
+ const [slideMs,setSlideMs]=usePanelState<number>('photos.slideshowMs',4000);
  const [previous,setPrevious]=usePanelState<string>('photos.previousPhoto',''); // last active photo, for one-click settings paste
  useEffect(()=>{if(active&&active!==lastActiveName){if(lastActiveName)setPrevious(lastActiveName);lastActiveName=active;}},[active,setPrevious]); // module-level: a ref would reset on the workspace remount
+ const slidePhotos=useRef(photos);slidePhotos.current=photos;
+ useEffect(()=>{ // slideshow: advance through the filtered view on the chosen tempo, looping
+  if(!slide)return;
+  const id=setInterval(()=>{
+   const list=slidePhotos.current;if(list.length<2)return;
+   const idx=list.findIndex(p=>p.name===getMedia().active);
+   const next=list[(idx+1)%list.length];
+   if(next&&next.name!==getMedia().active)setActiveMedia(next.name);
+  },Math.max(200,slideMs));
+  return()=>clearInterval(id);
+ },[slide,slideMs]);
  const collNames=useCollectionNames();
  const neutral=!activeSession||isNeutralLook(activeSession.now); // nothing worth applying
  const userPresets:UserPreset[]=parseUserPresets(rawPresets);
@@ -257,6 +270,10 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
     </span>
     <span className="flex flex-wrap gap-1">
      <Button variant="outline" size="compact" aria-pressed={infoOpen} onClick={()=>setInfoOpen(!infoOpen)} data-testid="photos-filmstrip-info-toggle">{t('photos.info.toggle')}</Button>
+     <Button variant="outline" size="compact" aria-pressed={slide} onClick={()=>setSlide(!slide)} data-testid="photos-filmstrip-slideshow">{t('photos.slideshow')}</Button>
+     {slide&&<NativeSelect value={String(slideMs)} aria-label={t('photos.slideshow.tempo')} title={t('photos.slideshow.tempo')} onChange={e=>setSlideMs(Number(e.currentTarget.value))} className="h-7" data-testid="photos-filmstrip-slideshow-ms">
+      {[2000,4000,8000].map(ms=><option key={ms} value={ms}>{ms/1000} s</option>)}
+     </NativeSelect>}
     </span>
     {infoOpen&&<div className="grid gap-0.5 text-ink-3" data-testid="photos-filmstrip-info">
      {infoLines===null?<span data-testid="photos-filmstrip-info-loading">…</span>

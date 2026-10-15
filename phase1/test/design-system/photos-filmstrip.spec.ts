@@ -908,3 +908,31 @@ test('photo info: the menu shows dimensions and file size read from the bytes (l
   await page.keyboard.press('Escape');
  }
 });
+
+test('slideshow: autoplay advances through the filtered view on the chosen tempo (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
+  await page.evaluate(async()=>{const p=await import('/src/store/panelStateStore.ts');p.panelStateStore.set('photos.slideshow',false);p.panelStateStore.set('photos.slideshowMs',300);}); // panel state persists; fast tempo for the proof
+  await page.getByTestId('photos-filmstrip-menu').click();
+  await page.getByTestId('photos-filmstrip-slideshow').click();
+  await expect(page.getByTestId('photos-filmstrip-slideshow')).toHaveAttribute('aria-pressed','true');
+  await page.keyboard.press('Escape'); // the show runs with the menu closed
+  await page.waitForTimeout(700);
+  const moved=await page.evaluate(()=>document.querySelector('[data-testid="photos-name"]')?.textContent??'');
+  expect(moved.startsWith('strip-1.png')).toBe(false); // advanced past the first photo
+  await page.waitForTimeout(500);
+  const moved2=await page.evaluate(()=>document.querySelector('[data-testid="photos-name"]')?.textContent??'');
+  expect(moved2).not.toBe(moved); // keeps looping
+  await page.screenshot({path:`test-results/ds-photos-slideshow-${theme}.png`,fullPage:true});
+  await page.getByTestId('photos-filmstrip-menu').click();
+  await page.getByTestId('photos-filmstrip-slideshow').click(); // stop
+  await page.keyboard.press('Escape');
+  const stopped=await page.evaluate(()=>document.querySelector('[data-testid="photos-name"]')?.textContent??'');
+  await page.waitForTimeout(600);
+  expect(await page.evaluate(()=>document.querySelector('[data-testid="photos-name"]')?.textContent??'')).toBe(stopped); // parked
+  await page.evaluate(async()=>{const p=await import('/src/store/panelStateStore.ts');p.panelStateStore.set('photos.slideshow',false);p.panelStateStore.set('photos.slideshowMs',4000);}); // leave no state behind
+ }
+});
