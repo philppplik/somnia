@@ -137,7 +137,7 @@ export function VectorCanvas(){
   void executeCommand('vector.moveGuide',{axis:g.axis,...(g.from!==undefined?{from:g.from}:{}),...(to!==undefined?{to}:{})});};
  const inField=(e:{target:EventTarget})=>{const tag=(e.target as HTMLElement).tagName;return tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT';};
  /* Clipboard access only through the browser's copy/cut/paste events (a user gesture); nothing reads the clipboard on its own. */
- const onCopy=(e:React.ClipboardEvent,cut:boolean)=>{if(inField(e))return;const g=getVectorSession(),svg=selectionSvg(g.doc,g.selection);if(!svg)return;e.preventDefault();e.clipboardData.setData('text/plain',svg);if(cut)deleteSelection();};
+ const onCopy=(e:React.ClipboardEvent,cut:boolean)=>{if(inField(e))return;const g=getVectorSession(),svg=selectionSvg(g.doc,g.selection,g.textSel);if(!svg)return;e.preventDefault();e.clipboardData.setData('text/plain',svg);if(cut){if(g.selection.length)deleteSelection();else if(g.textSel)deleteText(g.textSel);}};
  const onPaste=(e:React.ClipboardEvent)=>{if(inField(e))return;const text=e.clipboardData.getData('text/plain');if(text&&pasteSvgText(text))e.preventDefault();};
  const onKey=(e:React.KeyboardEvent)=>{
   shiftHeld.current=e.shiftKey;const mod=e.ctrlKey||e.metaKey;const tag=(e.target as HTMLElement).tagName;if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT')return;

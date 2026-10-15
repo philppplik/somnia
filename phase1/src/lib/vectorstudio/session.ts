@@ -1,7 +1,7 @@
 import {reportError} from '../log';
 /** Vector Studio session: one open vector document, selection, tool, view and undo history. Framework-agnostic store plus a React hook. */
 import {useSyncExternalStore} from 'react';
-import {exportSvg,importSvg,normalizeDoc,normalizeText,gradientIdOf,SvgImportError,type Diagnostic,type Point,type Style,type VectorDocument,type VectorPath,type VectorText} from '../vectorio';
+import {exportSvg,importSvg,normalizeDoc,normalizeText,TEXT_LIMITS,gradientIdOf,SvgImportError,type Diagnostic,type Point,type Style,type VectorDocument,type VectorPath,type VectorText} from '../vectorio';
 import {boxOf,fitPath,translatePath,type Box} from './geometry';
 import {newId} from './shapes';
 import {t} from '../i18n';
@@ -139,7 +139,11 @@ function mergeGradients(doc:VectorDocument,imported:VectorDocument,paths:VectorP
 export function importSvgInto(source:string,opts:{strict?:boolean;offset?:number}={}):boolean{
  try{const r=importSvg(source,{strict:opts.strict??true}),off=opts.offset??0;finite(off);const gmap=new Map<string,string>(),add=remapPaths(off?r.doc.paths.map(p=>translatePath(p,off,off)):r.doc.paths,state.doc,gmap);
   const merged=mergeGradients(state.doc,r.doc,add);
-  commit({...state.doc,paths:[...state.doc.paths,...merged.paths],...(merged.gradients?{gradients:merged.gradients}:{}),...carryNames(state.doc.groupNames,r.doc.groupNames,gmap)},{selection:add.map(p=>p.id),diagnostics:r.warnings});return true;}
+  const have=state.doc.texts??[],inc=(r.doc.texts??[]).map(t=>({...t,id:newId('t'),x:t.x+off,y:t.y+off}));
+  if(have.length+inc.length>TEXT_LIMITS.maxTexts)throw new RangeError(`At most ${TEXT_LIMITS.maxTexts} text objects`);
+  const texts=[...have,...inc];
+  commit({...state.doc,paths:[...state.doc.paths,...merged.paths],...(texts.length?{texts}:{}),...(merged.gradients?{gradients:merged.gradients}:{}),...carryNames(state.doc.groupNames,r.doc.groupNames,gmap)},{selection:add.map(p=>p.id),diagnostics:r.warnings});
+  if(!add.length&&inc.length)set({textSel:inc[inc.length-1].id});return true;}
  catch(e){set({error:e instanceof Error?e.message:String(e),diagnostics:e instanceof SvgImportError?e.diagnostics:[]});return false;}}
 export const selectNode=(id:string|null)=>set({selectedNode:id});
 

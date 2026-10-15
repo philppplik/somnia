@@ -62,3 +62,20 @@ test('fonts: only valid family names are offered, sorted and unique; the current
  assert.deepEqual(familiesOf([{family:'Zed'},{family:'Alpha'},{family:'Alpha'},{family:'bad;name'},{family:42},{}]),['Alpha','Zed']);
  assert.ok(fontOptions('Comic Neue',['Alpha']).includes('Comic Neue'));assert.ok(fontOptions('Arial',['Arial','Alpha']).filter(f=>f==='Arial').length===1);
 });
+test('copy/paste: a selected text round-trips through the clipboard SVG, offset, new id, one undo step; paths copy never drags texts along',async()=>{
+ const {selectionSvg,pasteSvgText,PASTE_OFFSET}=await import('./clipboard');
+ const d=setup();await d.runCommand('vector.addText',{x:30,y:40,text:'Copy\nme',fontWeight:'bold'},o);
+ const g=S.getVectorSession(),id=g.textSel!;const svg=selectionSvg(g.doc,[],id)!;assert.match(svg,/data-vs-text/);
+ assert.ok(pasteSvgText(svg));const ts=S.getVectorSession().doc.texts!;assert.equal(ts.length,2);
+ assert.notEqual(ts[1].id,id);assert.equal(ts[1].x,30+PASTE_OFFSET);assert.equal(ts[1].text,'Copy\nme');assert.equal(ts[1].fontWeight,'bold');assert.equal(S.getVectorSession().textSel,ts[1].id);
+ S.undo();assert.equal(S.getVectorSession().doc.texts!.length,1);
+ S.addPath({...rectPath({x:0,y:0,w:10,h:10}),id:'a'} as any,false);S.select(['a']);
+ assert.equal(/data-vs-text/.test(selectionSvg(S.getVectorSession().doc,['a'],id)!),false);
+ S.select([]);assert.equal(selectionSvg(S.getVectorSession().doc,[],null),null);
+});
+test('paste respects the 200 text cap and never changes the document on failure',async()=>{
+ const {selectionSvg,pasteSvgText}=await import('./clipboard');
+ setup();for(let i=0;i<TEXT_LIMITS.maxTexts;i++)S.addText({x:i,y:1});
+ const g=S.getVectorSession(),svg=selectionSvg(g.doc,[],g.doc.texts![0].id)!;
+ assert.equal(pasteSvgText(svg),false);assert.equal(S.getVectorSession().doc.texts!.length,TEXT_LIMITS.maxTexts);assert.match(S.getVectorSession().error??'',/At most 200/);
+});
