@@ -35,6 +35,7 @@ scope.onmessage=({data}:MessageEvent<SheetsRequest>)=>{queue=queue.then(async()=
    case 'undoReviewed':result=JSON.parse(need().undo_reviewed(data.sheet,data.address,data.token));break;
    case 'sheets':result=JSON.parse(need().sheets());break;
    case 'validation':result=JSON.parse(need().validation_range(data.sheet,data.row,data.col,data.rows,data.cols,JSON.stringify(data.validation)));break;
+   case 'auditOp':result=JSON.parse(need().audit_op(data.sheet,data.row,data.col,JSON.stringify(data.audit)));break;
    case 'customStyles':result=JSON.parse(need().custom_cell_styles());break;
    case 'notesOverview':result=JSON.parse(need().notes_overview(data.sheet));break;
    case 'validationInfo':result=JSON.parse(need().validation_info(data.sheet,data.row,data.col));break;

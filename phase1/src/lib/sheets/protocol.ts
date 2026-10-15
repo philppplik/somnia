@@ -1,3 +1,4 @@
+import type {AuditBridgeOp} from './audit';
 /** Worker protocol for the Sheets Studio spreadsheet engine (GridCraft headless, isolated WASM). */
 export type CellValue={t:'Empty'}|{t:'Number';v:number}|{t:'Text';v:string}|{t:'Bool';v:boolean}|{t:'Error';v:unknown}|{t:'Array';v?:unknown};
 export interface SheetMeta{index:number;name:string;visibility:string;tabColor?:string|null}
@@ -173,6 +174,7 @@ export type SheetsRequest=
  |{id:number;op:'annotations';sheet:number;row:number;col:number}
  |{id:number;op:'notesOverview';sheet:number}
  |{id:number;op:'customStyles'}
+ |{id:number;op:'auditOp';sheet:number;row:number;col:number;audit:AuditBridgeOp}
  |{id:number;op:'defineName';sheet:number;row:number;col:number;rows:number;cols:number;name:{name:string;scope:'workbook'|'sheet';replace?:boolean}}
  |{id:number;op:'deleteName';sheet:number;name:{name:string;scope:'workbook'|'sheet'}}
  |{id:number;op:'names'}

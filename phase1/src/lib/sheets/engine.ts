@@ -1,3 +1,4 @@
+import {parseAuditAnswer,type AuditAnswer,type AuditBridgeOp} from './audit';
 import {parseAnnotations,parseNoteList,type NoteList} from './notes';
 import {parseNames} from './names';
 import {parsePivotFields,parseTables} from './tableOps';
@@ -146,6 +147,7 @@ export class SheetsEngine{
  /** Adds, answers, resolves or removes a note or comment, or sets or removes a link, on one cell (one undo step). */
  annotate(sheet:number,row:number,col:number,annotate:AnnotateOp){return this.result<unknown>({op:'annotate',sheet,row,col,annotate});}
  /** The note and link of one cell (read only). */
+ async auditOp(sheet:number,row:number,col:number,audit:AuditBridgeOp):Promise<AuditAnswer>{return parseAuditAnswer(await this.result<unknown>({op:'auditOp',sheet,row,col,audit}));}
  async customStyles():Promise<string[]>{return parseCustomStyles(await this.result<unknown>({op:'customStyles'}));}
  async notesOverview(sheet:number):Promise<NoteList>{return parseNoteList(await this.result<unknown>({op:'notesOverview',sheet}));}
  async annotations(sheet:number,row:number,col:number):Promise<CellAnnotations>{const r=await this.result<{notes:unknown;links:unknown}>({op:'annotations',sheet,row,col});return parseAnnotations(r);}

@@ -234,6 +234,7 @@ export function SheetsLayoutPanel({context}:PanelHostProps){
   <DedupeGroup/>
   <NotesGroup/>
   <NoteListGroup/>
+  <AuditGroup/>
   <NamesGroup/>
   <ViewGroup/>
   <ChartsGroup/>
@@ -867,6 +868,43 @@ function NoteListGroup(){
   {chosen&&<p data-testid="sheets-nl-text">{chosen.text}{chosen.replies>0?' ('+t('sheets.nl.replies',{n:chosen.replies})+')':''}</p>}
   <label className="flex flex-col gap-1">{t('sheets.nl.action')}<NativeSelect className={field} value={act} disabled={action.busy} onChange={e=>setAct(e.currentTarget.value as NoteListAction)} data-testid="sheets-nl-action">{(['go','resolve','reopen','remove'] as NoteListAction[]).map(a=><option key={a} value={a}>{t('sheets.nl.a.'+a)}</option>)}</NativeSelect></label>
   <Button variant="outline" size="compact" disabled={action.busy||bad} onClick={apply} data-testid="sheets-nl-apply">{t('sheets.nl.apply')}</Button>
+ </div>;
+}
+/** Formula auditing in one grouped menu: trace what the active cell reads and what reads it, list error cells and circular references, watch cells. Reads only; the watch list is view state. */
+type AuditChoice='trace'|'errors'|'watchAdd'|'clear';
+function AuditGroup(){
+ const {t}=useT(),s=useSheetsSelection(),action=useAction();const [act,setAct]=useState<AuditChoice>('trace');const [go,setGo]=useState('');const [unwatch,setUnwatch]=useState('');
+ if(!s)return null;
+ const result=s.auditResult??null,watch=s.watchRows??[],sheets=s.workbook?.sheets??[];
+ const items:{key:string;label:string;sheet:number;address:string}[]=[];
+ if(result?.trace){const at=(name:string)=>sheets.find(x=>x.name===name)?.index??-1;
+  result.trace.precedents.forEach((p,i)=>{const sh=at(p.sheet);if(sh>=0)items.push({key:'p'+i,label:t('sheets.au.reads')+' '+p.sheet+'!'+p.range,sheet:sh,address:p.range.split(':')[0]});});
+  result.trace.dependents.forEach((d,i)=>{const sh=at(d.sheet);if(sh>=0)items.push({key:'d'+i,label:t('sheets.au.readBy')+' '+d.sheet+'!'+d.cell,sheet:sh,address:d.cell});});}
+ if(result?.errors)result.errors.errors.forEach((e,i)=>items.push({key:'e'+i,label:e.sheetName+'!'+e.cell+' '+e.error,sheet:e.sheet,address:e.cell}));
+ const chosen=items.find(i=>i.key===go)??items[0]??null,watched=watch.find(w=>w.ref===unwatch)??watch[0]??null;
+ return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.au.title')}>
+  <span>{t('sheets.au.title')}</span>
+  <label className="flex flex-col gap-1">{t('sheets.au.action')}<NativeSelect className={field} value={act} disabled={action.busy} onChange={e=>setAct(e.currentTarget.value as AuditChoice)} data-testid="sheets-au-action">
+   <optgroup label={t('sheets.au.groupTrace')}><option value="trace">{t('sheets.au.a.trace',{cell:s.address})}</option></optgroup>
+   <optgroup label={t('sheets.au.groupCheck')}><option value="errors">{t('sheets.au.a.errors')}</option></optgroup>
+   <optgroup label={t('sheets.au.groupWatch')}><option value="watchAdd">{t('sheets.au.a.watchAdd',{cell:s.address})}</option></optgroup>
+   <optgroup label={t('sheets.au.groupResults')}><option value="clear">{t('sheets.au.a.clear')}</option></optgroup>
+  </NativeSelect></label>
+  <Button variant="outline" size="compact" disabled={action.busy} onClick={()=>void action.run('sheets.audit',{kind:act})} data-testid="sheets-au-apply">{t('sheets.au.apply')}</Button>
+  {result?.trace&&<p data-testid="sheets-au-trace">{t('sheets.au.traceOf',{cell:result.trace.cell,formula:result.trace.formula??t('sheets.au.noFormula'),reads:result.trace.precedentsTotal,readBy:result.trace.dependentsTotal})}</p>}
+  {result?.errors&&<p data-testid="sheets-au-errors">{result.errors.total===0&&result.errors.circular.length===0?t('sheets.au.noErrors'):t('sheets.au.errorCount',{n:result.errors.total})+(result.errors.circular.length>0?' '+t('sheets.au.circular',{cells:result.errors.circular.join(', ')}):'')}{result.errors.total>result.errors.errors.length?' '+t('sheets.au.truncated'):''}</p>}
+  {items.length>0&&<>
+   <label className="flex flex-col gap-1">{t('sheets.au.found')}<NativeSelect className={field} value={chosen?.key??''} disabled={action.busy} onChange={e=>setGo(e.currentTarget.value)} data-testid="sheets-au-found">{items.map(i=><option key={i.key} value={i.key}>{i.label}</option>)}</NativeSelect></label>
+   <Button variant="outline" size="compact" disabled={action.busy||!chosen} onClick={()=>{if(chosen)void action.run('sheets.navigate',{sheet:chosen.sheet,address:chosen.address});}} data-testid="sheets-au-go">{t('sheets.au.go')}</Button>
+  </>}
+  {watch.length>0&&<div className="flex flex-col gap-1" data-testid="sheets-au-watch">
+   <span>{t('sheets.au.watching',{n:watch.length})}</span>
+   <ul>{watch.map(w=><li key={w.ref}>{w.ref.replace(/'/g,'')}: {w.value}{w.formula?' ('+w.formula+')':''}</li>)}</ul>
+   <label className="flex flex-col gap-1">{t('sheets.au.unwatch')}<NativeSelect className={field} value={watched?.ref??''} disabled={action.busy} onChange={e=>setUnwatch(e.currentTarget.value)} data-testid="sheets-au-unwatch">{watch.map(w=><option key={w.ref} value={w.ref}>{w.ref.replace(/'/g,'')}</option>)}</NativeSelect></label>
+   <Button variant="outline" size="compact" disabled={action.busy||!watched} onClick={()=>{if(watched)void action.run('sheets.audit',{kind:'watchRemove',ref:watched.ref});}} data-testid="sheets-au-remove">{t('sheets.au.remove')}</Button>
+  </div>}
+  <p className="text-ink-3">{t('sheets.au.hint')}</p>
+  {action.notice?<p role="alert">{action.notice}</p>:null}
  </div>;
 }
 /** Removes rows that repeat an earlier row inside exactly the selected block. One undo step. */

@@ -19,6 +19,7 @@ import {parseLayoutCommand,MERGE_HOWS,ROTATE_MODES} from './layoutOps';
 import {parseCfManageCommand} from './cfManageOps';
 import {parsePivotEditCommand,PIVOT_AREAS,PIVOT_VALUE_FUNCS,PIVOT_SHOW_AS,PIVOT_NUMBER_FORMATS,PIVOT_LAYOUTS,PIVOT_SUBTOTALS,PIVOT_GROUPS,PIVOT_ORDERS,MAX_PIVOT_ITEMS,MAX_PIVOT_TEXT} from './pivotEditOps';
 import {parseDataToolCommand,CONSOLIDATE_FUNCTIONS,MAX_CONSOLIDATE_SOURCES,MAX_SOURCE_CHARS} from './dataToolOps';
+import {parseAuditCommand,type AuditOp} from './audit';
 import {parseCellToolCommand,AUTOSUM_FUNCTIONS,CELL_STYLES,SIMPLE_CELL_TOOLS,isFunctionName} from './cellToolOps';
 import {parseOutlineCommand,SUBTOTAL_FUNCS,type OutlineCommand} from './outlineOps';
 import {parseObjectCommand,decodePicture,MAX_PICTURE_BASE64} from './objectOps';
@@ -87,6 +88,7 @@ export interface SheetsPanelController {
  cfManage(op:CfManageOp):void|Promise<void>;
  validationCheck():void|Promise<void>;
  noteReview(op:NoteReviewOp):void|Promise<void>;
+ audit(op:AuditOp):void|Promise<void>;
  insertFunction(name:string):void|Promise<void>;
  /** Inserts a PNG or JPEG picture at the selected cell (one undo step). */
  insertPicture(picture:{bytes:Uint8Array;alt:string;width:number}):void|Promise<void>;
@@ -209,6 +211,9 @@ export function sheetsPanelCommandSpecs():CommandSpec[]{
  {id:'sheets.noteReview',title:'Resolve, reopen or delete a listed note or comment',category:'Edit',level:'ui',allowInInput:true,
   params:{type:'object',properties:{kind:{type:'string',enum:['resolve','reopen','remove']},cell:{type:'string',minLength:2,maxLength:10}},required:['kind','cell'],additionalProperties:false},
   enabled:()=>!!current?.ready(),run:p=>requireController().noteReview(parseNoteReviewCommand(p))},
+ {id:'sheets.audit',title:'Trace what a formula reads and what reads it, list error cells, or watch a cell',category:'Edit',level:'ui',allowInInput:true,
+  params:{type:'object',properties:{kind:{type:'string',enum:['trace','errors','watchAdd','watchRemove','clear']},ref:{type:'string',minLength:1,maxLength:100,description:'The watched cell to stop watching (watchRemove only)'}},required:['kind'],additionalProperties:false},
+  enabled:()=>!!current?.ready(),run:p=>requireController().audit(parseAuditCommand(p))},
  {id:'sheets.validationCheck',title:'Find cells whose value breaks their allowed-values rule',category:'Edit',level:'ui',allowInInput:true,
   params:{type:'object',properties:{},additionalProperties:false},
   enabled:()=>!!current?.ready(),run:p=>{if(p&&typeof p==='object'&&Object.keys(p as object).length>0)throw Error('This takes no fields.');return requireController().validationCheck();}},

@@ -88,6 +88,8 @@ const MAX_AFFIX_CHARS: usize = 12;
 const MAX_LINK_BYTES: usize = 2048;
 const MAX_NOTES_LISTED: usize = 200;
 const MAX_STYLE_NAME: usize = 60;
+const MAX_AUDIT_ITEMS: usize = 200;
+const MAX_WATCHED: usize = 50;
 const MAX_CUSTOM_STYLES: usize = 50;
 const SPLIT_DELIMITERS: [char; 5] = [',', ';', '\t', ' ', '|'];
 const MAX_REPLACE_CELLS: usize = 10_000;
@@ -2830,6 +2832,94 @@ impl HeadlessWorkbook {
         Ok(json!({"notes": notes, "links": links, "truncated": truncated}).to_string())
     }
 
+    /// Formula auditing over the engine's dependency graph and Watch Window (the cells are never changed).
+    /// `op_json` is `{"kind":"trace"}` (what the cell at `row`,`col` reads and what reads it), `{"kind":"errors"}` (error values of every sheet and circular cells),
+    /// `{"kind":"watchList"}`, `{"kind":"watchAdd"}` (watches the cell) or `{"kind":"watchRemove","ref":"'Sheet'!B5"}`.
+    /// Lists are capped (200 errors, 100 trace entries, 50 watched cells) with the real totals; the watch list is view state, not an undo step.
+    pub fn audit_op(&mut self, sheet: usize, row: u32, col: u32, op_json: &str) -> Result<String, String> {
+        let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "operation must be a JSON object".to_string())?;
+        let map = op.as_object().ok_or("operation must be a JSON object")?;
+        let kind = map.get("kind").and_then(|v| v.as_str()).ok_or("unsupported audit")?;
+        let known: &[&str] = if kind == "watchRemove" { &["kind", "ref"] } else { &["kind"] };
+        if map.keys().any(|k| !known.contains(&k.as_str())) {
+            return Err("unknown audit field".into());
+        }
+        if row >= gridcraft_engine::core::MAX_ROWS || col >= gridcraft_engine::core::MAX_COLS {
+            return Err("cell is outside the sheet".into());
+        }
+        let at = CellRef::new(row, col);
+        match kind {
+            "trace" => {
+                let doc = self.session.doc().map_err(|e| e.to_string())?;
+                let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+                let name = |i: usize| doc.wb.sheet(i).map(|s| s.name.clone()).unwrap_or_default();
+                let areas = doc.calc.graph.precedents_of((sheet, at));
+                let mut deps = Vec::new();
+                doc.calc.graph.dependents(sheet, at, &mut deps);
+                deps.sort();
+                deps.dedup();
+                let precedents: Vec<serde_json::Value> = areas.iter().take(100).map(|a| json!({"sheet": name(a.sheet), "range": a.range.a1()})).collect();
+                let dependents: Vec<serde_json::Value> = deps.iter().take(100).map(|(si, c)| json!({"sheet": name(*si), "cell": c.a1()})).collect();
+                let formula = sh.cell(at).and_then(|x| x.formula.as_ref()).map(|f| format!("={}", f.text).chars().take(500).collect::<String>());
+                Ok(json!({"trace": {"cell": at.a1(), "formula": formula, "precedents": precedents, "dependents": dependents, "precedentsTotal": areas.len(), "dependentsTotal": deps.len()}}).to_string())
+            }
+            "errors" => {
+                let doc = self.session.doc().map_err(|e| e.to_string())?;
+                let mut found: Vec<(usize, u32, u32, String, Option<String>)> = Vec::new();
+                for (si, sh) in doc.wb.sheets.iter().enumerate() {
+                    for (c, cell) in sh.cells.iter() {
+                        if let Some(e) = cell.value.as_error() {
+                            found.push((si, c.row, c.col, e.as_str().to_string(), cell.formula.as_ref().map(|f| format!("={}", f.text).chars().take(200).collect::<String>())));
+                        }
+                    }
+                }
+                found.sort_by_key(|f| (f.0, f.1, f.2));
+                let total = found.len();
+                let errors: Vec<serde_json::Value> = found
+                    .into_iter()
+                    .take(MAX_AUDIT_ITEMS)
+                    .map(|(si, r, c, e, f)| json!({"sheet": si, "sheetName": doc.wb.sheet(si).map(|s| s.name.clone()).unwrap_or_default(), "cell": CellRef::new(r, c).a1(), "error": e, "formula": f}))
+                    .collect();
+                let circular: Vec<String> = doc.calc.circular.iter().take(50).map(|(si, c)| format!("{}!{}", doc.wb.sheet(*si).map(|s| s.name.clone()).unwrap_or_default(), c.a1())).collect();
+                Ok(json!({"errors": {"errors": errors, "total": total, "circular": circular}}).to_string())
+            }
+            "watchList" | "watchAdd" | "watchRemove" => {
+                let listed = self.session.run("formulas.watchWindow", json!({}))?;
+                let mut rows = listed.as_array().cloned().unwrap_or_default();
+                if kind == "watchAdd" {
+                    let doc = self.session.doc().map_err(|e| e.to_string())?;
+                    let name = doc.wb.sheet(sheet).ok_or("unknown sheet")?.name.clone();
+                    if name.contains('!') {
+                        return Err("A sheet name with ! cannot be watched.".into());
+                    }
+                    let reference = format!("'{}'!{}", name.replace('\'', "''"), at.a1());
+                    if !rows.iter().any(|r| r.get("cell").and_then(|c| c.as_str()) == Some(reference.as_str())) {
+                        if rows.len() >= MAX_WATCHED {
+                            return Err("At most 50 watched cells.".into());
+                        }
+                        rows = self.session.run("formulas.watchWindow", json!({"add": reference}))?.as_array().cloned().unwrap_or_default();
+                    }
+                } else if kind == "watchRemove" {
+                    let reference = map.get("ref").and_then(|v| v.as_str()).filter(|r| r.chars().count() <= 100 && !r.chars().any(char::is_control)).ok_or("unknown watched cell")?;
+                    if !rows.iter().any(|r| r.get("cell").and_then(|c| c.as_str()) == Some(reference)) {
+                        return Err("That cell is not on the watch list.".into());
+                    }
+                    rows = self.session.run("formulas.watchWindow", json!({"remove": reference}))?.as_array().cloned().unwrap_or_default();
+                }
+                let watch: Vec<serde_json::Value> = rows
+                    .iter()
+                    .take(MAX_WATCHED)
+                    .map(|r| {
+                        let text = |k: &str, n: usize| r.get(k).and_then(|v| v.as_str()).unwrap_or("").chars().take(n).collect::<String>();
+                        json!({"ref": text("cell", 100), "value": text("value", 100), "formula": r.get("formula").and_then(|v| v.as_str()).map(|f| f.chars().take(200).collect::<String>())})
+                    })
+                    .collect();
+                Ok(json!({"watch": watch}).to_string())
+            }
+            _ => Err("unsupported audit".into()),
+        }
+    }
+
     /// Names of the custom cell styles saved in this workbook (read only, at most 50): `{"styles":["name"]}`.
     pub fn custom_cell_styles(&self) -> Result<String, String> {
         let doc = self.session.doc().map_err(|e| e.to_string())?;
@@ -4956,6 +5046,34 @@ mod tests {
         // Saving the same name again replaces it instead of adding a second one.
         book.cell_tools_op(0, 4, 2, 1, 1, r#"{"kind":"newStyle","name":"brand"}"#).unwrap();
         assert_eq!(book.session.doc().unwrap().wb.cell_styles.len(), 1);
+    }
+    #[test]
+    fn audit_traces_lists_errors_and_keeps_a_bounded_watch_list() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        book.session.run("cell.set", json!({"sheet": 0, "cell": "A950", "input": "4"})).unwrap();
+        book.session.run("cell.set", json!({"sheet": 0, "cell": "B950", "input": "=A950*2"})).unwrap();
+        book.session.run("cell.set", json!({"sheet": 0, "cell": "C950", "input": "=1/0"})).unwrap();
+        let steps = |b: &HeadlessWorkbook| b.session.doc().unwrap().undo.len();
+        let before = steps(&book);
+        let t: serde_json::Value = serde_json::from_str(&book.audit_op(0, 949, 1, r#"{"kind":"trace"}"#).unwrap()).unwrap();
+        assert_eq!(t["trace"]["precedents"][0]["range"], "A950");
+        let d: serde_json::Value = serde_json::from_str(&book.audit_op(0, 949, 0, r#"{"kind":"trace"}"#).unwrap()).unwrap();
+        assert_eq!(d["trace"]["dependents"][0]["cell"], "B950");
+        let e: serde_json::Value = serde_json::from_str(&book.audit_op(0, 0, 0, r#"{"kind":"errors"}"#).unwrap()).unwrap();
+        assert!(e["errors"]["errors"].as_array().unwrap().iter().any(|x| x["cell"] == "C950"));
+        let w: serde_json::Value = serde_json::from_str(&book.audit_op(0, 949, 1, r#"{"kind":"watchAdd"}"#).unwrap()).unwrap();
+        assert_eq!(w["watch"].as_array().unwrap().len(), 1);
+        let again: serde_json::Value = serde_json::from_str(&book.audit_op(0, 949, 1, r#"{"kind":"watchAdd"}"#).unwrap()).unwrap();
+        assert_eq!(again["watch"].as_array().unwrap().len(), 1, "adding twice keeps one entry");
+        let reference = w["watch"][0]["ref"].as_str().unwrap().to_string();
+        assert!(book.audit_op(0, 0, 0, r#"{"kind":"watchRemove","ref":"'Nope'!A1"}"#).is_err());
+        let gone: serde_json::Value = serde_json::from_str(&book.audit_op(0, 0, 0, &format!(r#"{{"kind":"watchRemove","ref":{}}}"#, serde_json::Value::String(reference))).unwrap()).unwrap();
+        assert!(gone["watch"].as_array().unwrap().is_empty());
+        for bad in [r#"{"kind":"nope"}"#, r#"{"kind":"trace","x":1}"#, "[]", "x"] {
+            assert!(book.audit_op(0, 0, 0, bad).is_err(), "{bad}");
+        }
+        assert!(book.audit_op(0, 9_999_999, 0, r#"{"kind":"trace"}"#).is_err());
+        assert_eq!(steps(&book), before, "auditing leaves no history entry");
     }
     #[test]
     fn notes_overview_lists_every_note_in_reading_order() {
