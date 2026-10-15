@@ -16,5 +16,7 @@ Session schema v14 adds `masterCurve: GainPoint[]` at the root; v13 sessions mig
 ## Test
 `masterAutomation.test.ts` (3) covers migration and bounds, per-sample gain math including range offset and the legacy-renderer refusal, and pre-master single-track sessions; `arrangeCommands.test.ts` covers the command and undo. Full sound suite: 143 pass / 0 fail.
 
+- `src/components/sound/SoundArrange.tsx` — an "A" toggle in the render row opens the master point list (same pattern as track and clip automation).
+
 ## Note
-Editing UI follows the same point-list pattern as track and clip automation.
+The master curve applies after the master rack; the mastering preview measures the rendered mix including the curve.
