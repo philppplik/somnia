@@ -63,3 +63,15 @@ test('session.splitAt splits every clip under the frame in one undoable step',as
  await commandDispatcher.runCommand('sound.arrange.undo');
  assert.equal(getArrangementState().document.tracks[0].clips.length,1,'one undo restores both tracks');
 }finally{off();resetArrangement();}});
+
+test('marker.set renames atomically, rejects empty names and undo restores the old name',async()=>{resetArrangement();const off=registerArrangeCommands();try{
+ await commandDispatcher.runCommand('sound.arrange.marker.add',{name:'Verse',frame:4800});
+ const id=getArrangementState().document.markers[0].id;
+ await commandDispatcher.runCommand('sound.arrange.marker.set',{id,name:'Chorus'});
+ assert.equal(getArrangementState().document.markers[0].name,'Chorus');
+ await assert.rejects(commandDispatcher.runCommand('sound.arrange.marker.set',{id,name:'  '}));
+ assert.equal(getArrangementState().document.markers[0].name,'Chorus','rejection preserves the name');
+ await assert.rejects(commandDispatcher.runCommand('sound.arrange.marker.set',{id:'missing',name:'X'}));
+ await commandDispatcher.runCommand('sound.arrange.undo');
+ assert.equal(getArrangementState().document.markers[0].name,'Verse');
+}finally{off();resetArrangement();}});

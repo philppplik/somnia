@@ -24,6 +24,7 @@ export function registerArrangeCommands(){
  add('clip.crossfade',p=>editArrangement(s=>{applyCrossfade(s,p.id);}),schema({id:str})),
  add('clip.delete',p=>editArrangement(s=>{const {track}=findArrangeClip(s,p.id);track.clips=track.clips.filter(c=>c.id!==p.id);}),schema({id:str})),
  add('marker.add',p=>editArrangement(s=>s.markers.push({id:id(),name:p.name,frame:p.frame})),schema({name:str,frame:num})),
+ add('marker.set',p=>editArrangement(s=>{const m=s.markers.find(m=>m.id===p.id);if(!m)throw Error('Marker no longer exists');m.name=p.name;}),schema({id:str,name:str})),
  add('marker.delete',p=>editArrangement(s=>{s.markers=s.markers.filter(m=>m.id!==p.id);}),schema({id:str})),
  add('loop.set',p=>editArrangement(s=>{s.loop=p.enabled?{start:p.start,end:p.end}:null;}),schema({enabled:bool,start:num,end:num})),
  add('session.splitAt',p=>editArrangement(s=>{let n=0;for(const track of s.tracks)for(const clip of [...track.clips])if(p.frame>clip.start&&p.frame<clip.start+clip.length){splitArrangeClip(s,clip.id,p.frame,id());n++;}if(!n)throw Error('No clip at the playhead');}),schema({frame:num})),
