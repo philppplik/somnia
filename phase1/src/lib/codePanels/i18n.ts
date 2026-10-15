@@ -1,5 +1,11 @@
 /** Studio-local catalogue, merged by the common i18n entry point. */
 const rows:Record<string,readonly string[]>={
+ 'code.search.applyFailed':['Replace could not finish. Check the editor files before retrying.','Ersetzen konnte nicht abgeschlossen werden. Vor erneutem Versuch Editor-Dateien prüfen.','No se pudo completar. Revisa los archivos antes de reintentar.','Le remplacement n’a pas pu finir. Vérifiez les fichiers avant de réessayer.','Não foi possível concluir. Confira os arquivos antes de tentar novamente.'],
+ 'code.search.before':['Before','Vorher','Antes','Avant','Antes'],
+ 'code.search.after':['After','Nachher','Después','Après','Depois'],
+ 'code.search.reviewBoundary':['Review each changed file. Applies to editor memory only; save separately.','Prüfe jede geänderte Datei. Nur im Editor angewendet; separat speichern.','Revisa cada archivo cambiado. Solo en la memoria del editor; guarda aparte.','Vérifiez chaque fichier modifié. Mémoire de l’éditeur uniquement ; enregistrez séparément.','Revise cada arquivo alterado. Apenas na memória do editor; salve separadamente.'],
+ 'code.search.reviewStale':['Files or search settings changed. Cancel and review again; nothing from this review was applied.','Dateien oder Sucheinstellungen geändert. Abbrechen und neu prüfen; diese Vorschau wurde nicht angewendet.','Archivos o búsqueda cambiaron. Cancela y revisa otra vez; no se aplicó esta revisión.','Fichiers ou recherche modifiés. Annulez et vérifiez à nouveau ; cette révision n’a pas été appliquée.','Arquivos ou busca mudaram. Cancele e revise novamente; esta revisão não foi aplicada.'],
+ 'code.search.reviewLimit':['Review exceeds 100 files or 512 KiB of before/after text. Narrow the search.','Vorschau über 100 Dateien oder 512 KiB Vorher/Nachher-Text. Suche eingrenzen.','La revisión supera 100 archivos o 512 KiB de texto. Reduce la búsqueda.','La révision dépasse 100 fichiers ou 512 Kio de texte. Réduisez la recherche.','A revisão excede 100 arquivos ou 512 KiB de texto. Reduza a busca.'],
  'code.panel.outline':['DOM outline','DOM-Gliederung','Esquema DOM','Plan DOM','Estrutura DOM'],
  'code.panel.responsive':['Responsive','Responsiv','Adaptable','Responsive','Responsivo'],
  'code.panel.interactions':['Interactions','Interaktionen','Interacciones','Interactions','Interações'],
