@@ -1016,5 +1016,9 @@
  "cmd.studio3d.edit.selectRandom": "Sélectionne une part aléatoire reproductible par graine des éléments du maillage 3D édité",
  "cmd.studio3d.object.snapToGround": "Abaisse les objets 3D jusqu'à ce que leurs limites reposent sur le plan du sol",
  "studio3d.hist.snapToGround": "Poser au sol",
- "cmd.studio3d.edit.selectMirror": "Reflète la sélection du maillage 3D édité sur un plan d'axe"
+ "cmd.studio3d.edit.selectMirror": "Reflète la sélection du maillage 3D édité sur un plan d'axe",
+ "cmd.studio3d.mesh.screw": "Faire tourner un maillage 3D autour d'un axe en montant le long de celui-ci (hélice)",
+ "studio3d.mesh.screw": "Vis",
+ "studio3d.hist.screw_one": "Visser {name}",
+ "studio3d.hist.screw_other": "Visser {count} objets"
 }

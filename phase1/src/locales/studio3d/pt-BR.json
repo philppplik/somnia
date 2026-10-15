@@ -1016,5 +1016,9 @@
  "cmd.studio3d.edit.selectRandom": "Selecionar uma parcela aleatória reproduzível por semente dos elementos da malha 3D editada",
  "cmd.studio3d.object.snapToGround": "Baixar objetos 3D até que seus limites repousem no plano do chão",
  "studio3d.hist.snapToGround": "Apoiar no chão",
- "cmd.studio3d.edit.selectMirror": "Espelhar a seleção da malha 3D editada em um plano de eixo"
+ "cmd.studio3d.edit.selectMirror": "Espelhar a seleção da malha 3D editada em um plano de eixo",
+ "cmd.studio3d.mesh.screw": "Revolucionar uma malha 3D em torno de um eixo subindo ao longo dele (hélice)",
+ "studio3d.mesh.screw": "Parafuso",
+ "studio3d.hist.screw_one": "Parafusar {name}",
+ "studio3d.hist.screw_other": "Parafusar {count} objetos"
 }

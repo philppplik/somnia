@@ -1016,5 +1016,9 @@
  "cmd.studio3d.edit.selectRandom": "Select a seeded random share of the edited 3D mesh elements",
  "cmd.studio3d.object.snapToGround": "Drop 3D objects until their bounds rest on the ground plane",
  "studio3d.hist.snapToGround": "Snap to ground",
- "cmd.studio3d.edit.selectMirror": "Mirror the selection of the edited 3D mesh across an axis plane"
+ "cmd.studio3d.edit.selectMirror": "Mirror the selection of the edited 3D mesh across an axis plane",
+ "cmd.studio3d.mesh.screw": "Revolve a 3D mesh around an axis while rising along it (helix)",
+ "studio3d.mesh.screw": "Screw",
+ "studio3d.hist.screw_one": "Screw {name}",
+ "studio3d.hist.screw_other": "Screw {count} objects"
 }

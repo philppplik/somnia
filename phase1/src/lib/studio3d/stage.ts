@@ -2445,6 +2445,26 @@ export class Stage{
   this.push({label:{key:'studio3d.hist.spin',params:{count:list.length,name:list[0].mesh.name}},undo:()=>{set('before');owned=false;},redo:()=>{set('after');owned=true;},release:()=>{for(const l of list)(owned?l.before.g:l.after).dispose();}});
   return list.length;
  }
+ /** Screws each mesh around an axis like spin, but the sweep rises along the axis by the given total rise (helix). World transforms are baked in, smooth normals recomputed, one undo step for the whole set. */
+ screw(axis:MirrorAxis,degrees:number,steps:number,center:[number,number,number],rise:number,ids:number[]):number{
+  if(this.editId!=null)throw new StageError('Leave edit mode before screwing.');
+  const objs=this.topLevel(this.needMany(ids,1));
+  for(const o of objs)if(!(o as THREE.Mesh).isMesh)throw new StageError(`${o.name} is not a mesh. Screw works on meshes.`);
+  const list=(objs as THREE.Mesh[]).map(mesh=>{
+   const data=this.meshDataOf(mesh);
+   let out:MeshData;
+   try{out=spinMesh(data,axis,degrees,steps,center,rise);}catch(e){throw e instanceof EditError?new StageError(e.message):e;}
+   const g=this.buildGeometry(out);
+   const seams0=this.seamsOf(mesh);let seams1:[number,number][]=[];
+   if(seams0.length){try{seams1=remapSeams(data,seams0,out);}catch{seams1=[];}}
+   return{mesh,before:{g:mesh.geometry,d:mesh.userData.somniaPrimitive,s:seams0},after:g,seams1};
+  });
+  const set=(k:'before'|'after')=>{for(const l of list){if(k==='after'){l.mesh.geometry=l.after;delete l.mesh.userData.somniaPrimitive;this.setSeams(l.mesh,l.seams1);}else{l.mesh.geometry=l.before.g;if(l.before.d!==undefined)l.mesh.userData.somniaPrimitive=l.before.d;this.setSeams(l.mesh,l.before.s);}}};
+  let owned=true;
+  set('after');
+  this.push({label:{key:'studio3d.hist.screw',params:{count:list.length,name:list[0].mesh.name}},undo:()=>{set('before');owned=false;},redo:()=>{set('after');owned=true;},release:()=>{for(const l of list)(owned?l.before.g:l.after).dispose();}});
+  return list.length;
+ }
  /** Bridges two meshes through their largest open border loops: world transforms are baked, a sewn tunnel connects the loops and the pair becomes one mesh at the scene root (keeping the first mesh's name and material). One undo step. */
  bridge(ids:number[],twist:number):number{
   if(this.editId!=null)throw new StageError('Leave edit mode before bridging.');

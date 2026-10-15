@@ -2148,11 +2148,12 @@ export function bendMesh(m:MeshData,axis:MirrorAxis,degrees:number):MeshData{
 }
 
 /** Revolves the mesh around an axis through the given center (lathe/spin). Every border edge sweeps a wall of quads across the steps; the original faces cap the start and, for partial turns, the end as well; a full 360 degree turn welds the last ring back onto the first instead of duplicating it. UVs are copied onto every ring, sculpt masks are dropped (topology changes), explicit normals are dropped (rebuilt smooth on the stage). */
-export function spinMesh(m:MeshData,axis:MirrorAxis,degrees:number,steps:number,center:[number,number,number]):MeshData{
+export function spinMesh(m:MeshData,axis:MirrorAxis,degrees:number,steps:number,center:[number,number,number],rise=0):MeshData{
  check(m);
  if(!Number.isFinite(degrees)||degrees===0||Math.abs(degrees)>360)throw new EditError('The spin angle must be a non-zero number of degrees between -360 and 360.');
  if(!Number.isInteger(steps)||steps<1||steps>128)throw new EditError('The spin steps must be a whole number between 1 and 128.');
  if(!Array.isArray(center)||center.length!==3||center.some(n=>!Number.isFinite(n)))throw new EditError('The spin center must be three numbers.');
+ if(!Number.isFinite(rise))throw new EditError('The screw rise must be a finite number.');
  const ai=axis==='x'?0:axis==='y'?1:2;
  const u=(ai+1)%3,w=(ai+2)%3;
  const nv=m.positions.length/3,nt=m.index.length/3;
@@ -2168,7 +2169,7 @@ export function spinMesh(m:MeshData,axis:MirrorAxis,degrees:number,steps:number,
  }
  const borders=[...use.values()].filter(x=>x.n===1);
  if(!borders.length)throw new EditError('The mesh has no open border edges to sweep.');
- const full=Math.abs(Math.abs(degrees)-360)<1e-9;
+ const full=Math.abs(Math.abs(degrees)-360)<1e-9&&rise===0; // a rising full turn cannot weld its seam ring
  const rings=full?steps:steps+1;
  const fwd=degrees>0;
  const positions:number[]=new Array(rings*nv*3);
@@ -2179,7 +2180,7 @@ export function spinMesh(m:MeshData,axis:MirrorAxis,degrees:number,steps:number,
   for(let v=0;v<nv;v++){
    const i=(r*nv+v)*3;
    const du=m.positions[v*3+u]-center[u],dw=m.positions[v*3+w]-center[w];
-   positions[i+ai]=m.positions[v*3+ai];
+   positions[i+ai]=m.positions[v*3+ai]+rise*r/steps;
    positions[i+u]=center[u]+du*c-dw*s;
    positions[i+w]=center[w]+du*s+dw*c;
    if(uvs){uvs[(r*nv+v)*2]=m.uvs![v*2];uvs[(r*nv+v)*2+1]=m.uvs![v*2+1];}

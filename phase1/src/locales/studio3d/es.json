@@ -1016,5 +1016,9 @@
  "cmd.studio3d.edit.selectRandom": "Selecciona una parte aleatoria reproducible por semilla de los elementos de la malla 3D editada",
  "cmd.studio3d.object.snapToGround": "Baja objetos 3D hasta que sus límites descansen en el plano del suelo",
  "studio3d.hist.snapToGround": "Bajar al suelo",
- "cmd.studio3d.edit.selectMirror": "Refleja la selección de la malla 3D editada en un plano de eje"
+ "cmd.studio3d.edit.selectMirror": "Refleja la selección de la malla 3D editada en un plano de eje",
+ "cmd.studio3d.mesh.screw": "Revolucionar una malla 3D alrededor de un eje subiendo a lo largo de él (hélice)",
+ "studio3d.mesh.screw": "Hélice",
+ "studio3d.hist.screw_one": "Atornillar {name}",
+ "studio3d.hist.screw_other": "Atornillar {count} objetos"
 }

@@ -9333,6 +9333,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.mesh.screw",
+      "title": "Revolve a 3D mesh around an axis while rising along it (helix)",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.mesh.separate",
       "title": "Split 3D meshes into one object per connected part",
       "category": "Edit",

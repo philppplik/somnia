@@ -1,4 +1,5 @@
 # Unreleased: 3D Studio P0
+- 3D Studio: screw revolves meshes around an axis while rising along it (helix), with undo.
 - 3D Studio: edit mode mirrors the selection across an axis plane (`studio3d.edit.selectMirror`).
 - 3D Studio: snap objects down until their bounds rest on the ground plane (`studio3d.object.snapToGround`).
 - 3D Studio: edit mode selects a seeded random share of elements (`studio3d.edit.selectRandom`).

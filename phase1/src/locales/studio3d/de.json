@@ -1016,5 +1016,9 @@
  "cmd.studio3d.edit.selectRandom": "Eine zufällige, per Seed wiederholbare Auswahl der Elemente des bearbeiteten 3D-Meshs treffen",
  "cmd.studio3d.object.snapToGround": "3D-Objekte absenken, bis ihre Begrenzung auf der Bodenebene aufliegt",
  "studio3d.hist.snapToGround": "Auf Boden ausrichten",
- "cmd.studio3d.edit.selectMirror": "Die Auswahl des bearbeiteten 3D-Meshs an einer Achsenebene spiegeln"
+ "cmd.studio3d.edit.selectMirror": "Die Auswahl des bearbeiteten 3D-Meshs an einer Achsenebene spiegeln",
+ "cmd.studio3d.mesh.screw": "3D-Mesh schraubenförmig um eine Achse rotieren (Helix)",
+ "studio3d.mesh.screw": "Schraube",
+ "studio3d.hist.screw_one": "{name} schrauben (Helix)",
+ "studio3d.hist.screw_other": "{count} Objekte schrauben (Helix)"
 }
