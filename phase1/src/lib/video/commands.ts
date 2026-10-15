@@ -2,10 +2,10 @@ import {registerCommandSpec} from '../commandBridge';
 import {commandRegistry} from '../commandRegistry';
 import type {CommandSpec,CommandSchema} from '../commandSpec';
 import {getMedia} from '../media';
-import {addAudioTrackClip,addImageClip,addTimelineClip,duplicateTimelineClip,addTimelineClipsFromDialog,deleteAudioTrackClip,duplicateAudioTrackClip,cancelVideoExport,setAudioTrackClipDuck,deleteTimelineClip,exportVideoFile,getVideoSession,moveTimelineClip,setImageClipLength,redoVideoEdit,resetTimeline,moveAudioTrackClip,saveVideoProject,selectTimelineClip,setAudioTrackClipFades,setAudioTrackClipGain,setTimelineClipCrossfade,setTimelineClipFades,setTimelineClipFreeze,setTimelineClipGain,replaceClipSource,setTimelineClipFlip,setTimelineClipSpeed,setVideoExportOptions,setVideoExportRange,setVideoFormat,splitTimelineAt,toggleAudioTrackClipMute,toggleTimelineClipMute,trimAudioTrackClip,trimTimelineClip,undoVideoEdit,videoIsDirty} from './session';
+import {addAudioTrackClip,addImageClip,addTimelineClip,duplicateTimelineClip,addTimelineClipsFromDialog,deleteAudioTrackClip,duplicateAudioTrackClip,cancelVideoExport,setAudioTrackClipDuck,deleteTimelineClip,exportVideoFile,getVideoSession,moveTimelineClip,setImageClipLength,redoVideoEdit,resetTimeline,moveAudioTrackClip,saveVideoProject,selectTimelineClip,setAudioTrackClipFades,setAudioTrackClipGain,setTimelineClipCrossfade,setTimelineClipFades,setTimelineClipFreeze,setTimelineClipGain,replaceClipSource,setTimelineClipFlip,setTimelineClipRotation,setTimelineClipSpeed,setVideoExportOptions,setVideoExportRange,setVideoFormat,splitTimelineAt,toggleAudioTrackClipMute,toggleTimelineClipMute,trimAudioTrackClip,trimTimelineClip,undoVideoEdit,videoIsDirty} from './session';
 import {addTitleClip,setTitleLength,updateTitle} from './titleSession';
 import {isTitleClip,type TitleSpec} from './titles';
-import {isFreeze,timelineDuration} from './timeline';
+import {isFreeze,timelineDuration,type ClipRotation} from './timeline';
 let exportOpener:((name:string)=>void)|null=null;
 export function registerVideoExportOpener(open:(name:string)=>void){exportOpener=open;return()=>{if(exportOpener===open)exportOpener=null;};}
 export const activeVideoSession=()=>getVideoSession(getMedia().active);
@@ -39,6 +39,7 @@ export function videoCommandSpecs():CommandSpec<unknown,unknown>[] {
   spec('video.clip.fades','Set clip audio fade in and out',(p:{fadeIn:number;fadeOut:number})=>setTimelineClipFades(root(),clip().id,p.fadeIn,p.fadeOut),object({fadeIn:number(0,30),fadeOut:number(0,30)}),()=>mediaSelection(),'Edit'),
   spec('video.clip.replaceSource','Replace selected clip source',async(p:{name:string})=>{const item=getMedia().items.find(i=>i.name===p.name&&(i.kind==='video'||i.kind==='image'));if(!item)fail('That source is not open.');if(!(await replaceClipSource(root(),clip().id,item!)))fail('The source could not be replaced.');},object({name:id}),()=>selectionReady()&&!isTitleClip(clip()),'Edit'),
   spec('video.clip.flip','Mirror selected clip',(p:{flip:'none'|'h'|'v'|'hv'})=>setTimelineClipFlip(root(),clip().id,p.flip),object({flip:{enum:['none','h','v','hv']}}),()=>selectionReady()&&!isTitleClip(clip())),
+  spec('video.clip.rotate','Rotate selected clip by quarter turns',(p:{rotation:ClipRotation})=>setTimelineClipRotation(root(),clip().id,p.rotation),object({rotation:{enum:[0,90,180,270]}}),()=>selectionReady()&&!isTitleClip(clip())),
   spec('video.clip.speed','Set selected clip playback speed',(p:{speed:number})=>setTimelineClipSpeed(root(),clip().id,p.speed),object({speed:number(0.25,4)}),mediaSelection,'Edit'),
   spec('video.clip.mute','Toggle selected clip audio mute',()=>toggleTimelineClipMute(root(),clip().id),undefined,mediaSelection),
   spec('video.clip.crossfade','Set selected clip crossfade',(p:{seconds:number})=>setTimelineClipCrossfade(root(),clip().id,p.seconds),object({seconds:number()}),()=>selectionReady()&&activeVideoSession()!.clips.at(-1)?.id!==clip().id),

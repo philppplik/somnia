@@ -158,3 +158,13 @@ test('export fps cap round-trips; absent means source rate',()=>{
  const plain=parseVideoProject(serializeVideoProject([clip],[],'webm',{scale:1,quality:'high',fps:null}));
  assert.equal(plain.exportOptions.fps,null,'absent fps keeps the native rate');
 });
+
+test('clip rotation round-trips; zero is omitted from the file and junk is dropped',()=>{
+ const clips:TimelineClip[]=[media('m1',{rotation:90}),{id:'img1',kind:'image',source:'photo.png',in_s:0,out_s:5,gain:1,muted:false,rotation:270}];
+ const parsed=parseVideoProject(serializeVideoProject(clips,[],'webm'));
+ assert.equal(parsed.clips[0].rotation,90);
+ assert.equal(parsed.clips[1].rotation,270);
+ assert.ok(!JSON.stringify(serializeVideoProject([media('m1')],[],'webm')).includes('rotation'),'unrotated clips write no rotation field');
+ const junk=JSON.stringify({app:'somnia-video',version:2,clips:[{id:'a',kind:'media',source:'x.mp4',in_s:0,out_s:1,rotation:45}]});
+ assert.equal(parseVideoProject(junk).clips[0].rotation,undefined,'only right angles survive parsing');
+});

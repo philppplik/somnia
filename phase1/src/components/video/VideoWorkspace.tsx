@@ -9,7 +9,7 @@ import {TitlePreview} from './TitlePreview';
 import {useTitlePlayback} from './useTitlePlayback';
 import {FilmstripStrip} from './FilmstripStrip';
 import {WaveformStrip} from './WaveformStrip';
-import {blendAt,clipFadeGain,clipRanges,flipOf,isFreeze,isImageClip,locate,speedOf,timelineDuration} from '../../lib/video/timeline';
+import {blendAt,clipFadeGain,clipRanges,flipOf,isFreeze,isImageClip,locate,rotationOf,speedOf,timelineDuration,type TimelineClip} from '../../lib/video/timeline';
 import {shuttleFaster,shuttleSlower} from '../../lib/video/shuttle';
 import {audioClipDuration,audioEnvelope,audioTrackEnd,duckGainAt} from '../../lib/video/audioTrack';
 import {AudioLane} from './AudioLane';
@@ -72,6 +72,16 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
   }
  },[audioClips,playhead,playing,volume,muted,media]);
  useEffect(()=>{const els=audioEls.current;return()=>els.forEach(el=>el.pause());},[]);
+ // Preview transform matching the export: quarter turns shrink the slot to keep the contain fit (the export fits the
+ // swapped box instead), mirroring applies inside the rotated frame. Uniform scale commutes with the rotate.
+ const previewTransform=(clip:TimelineClip,w:number,h:number):string=>{
+  const f=flipOf(clip),r=rotationOf(clip);
+  if(f==='none'&&r===0)return'';
+  const parts:string[]=[];
+  if(r!==0){const sFit=r===180?1:(w>0&&h>0?Math.min(w/h,h/w):1);parts.push(`rotate(${r}deg)`,`scale(${sFit})`);}
+  if(f!=='none')parts.push(`scale(${f.includes('h')?-1:1},${f.includes('v')?-1:1})`);
+  return parts.join(' ');
+ };
  // Every active slot sits on its clip's source and frame. A paused transport (seek, frame step) always syncs the
  // frame; while playing, only drift over 350 ms is corrected so the element's own clock does the smooth work.
  useEffect(()=>{
@@ -80,10 +90,15 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
    const el=slotOf(e.range.index).current;if(!el)continue;
    const url=urlOf(e.range.clip.source);
    if(el.dataset.slotClip!==e.range.clip.id){el.dataset.slotClip=e.range.clip.id;if(el.src!==url){el.src=url;el.currentTime=e.sourceTime;}}
-   {const f=flipOf(e.range.clip),t=f==='none'?'':`scale(${f.includes('h')?-1:1},${f.includes('v')?-1:1})`;if(el.style.transform!==t)el.style.transform=t;}
+   {const t=previewTransform(e.range.clip,el.clientWidth,el.clientHeight);if(el.style.transform!==t)el.style.transform=t;}
    // Speed applies in the preview too; preservesPitch off so the preview sounds like the export (resampled, shifted pitch).
    el.playbackRate=speedOf(e.range.clip)*rateMul;el.preservesPitch=false;
    if(!playing||Math.abs(el.currentTime-e.sourceTime)>0.35)el.currentTime=e.sourceTime;
+  }
+  for(const e of blend){
+   if(!isImageClip(e.range.clip))continue;
+   const el=stageRef.current?.querySelector<HTMLImageElement>(`img[data-img-clip="${e.range.clip.id}"]`);if(!el)continue;
+   const t=previewTransform(e.range.clip,el.clientWidth,el.clientHeight);if(el.style.transform!==t)el.style.transform=t;
   }
   for(const slot of [slotA,slotB]){
    const el=slot.current;
@@ -165,6 +180,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
  const stillMain=main&&(isTitleClip(main.range.clip)||isImageClip(main.range.clip)||isFreeze(main.range.clip))?main:null;
  useTitlePlayback({running:playing&&!!stillMain,from:playhead,limit:stillMain?.range.end??0,rate:rateMul,onTime:setPlayhead,onEnd:()=>{if(stillMain)advance(stillMain.range.index);}});
  const filmstrip=getFilmstrip();
+ const stageRef=useRef<HTMLDivElement|null>(null);
  const shortName=(n:string)=>n.replace(/^.*[\\/]/,'').replace(/\.[^.]+$/,'');
  const status=session?.status==='loading'?t('video.loading'):session?.status==='error'?t('video.error',{message:session.error}):'';
  const v=probe?.video;
@@ -181,7 +197,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
   </div>
   <div className="flex min-h-0 w-full flex-1">
    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-    <div className="relative flex min-h-0 flex-1 items-center justify-center bg-black/90" data-testid="video-stage">
+    <div ref={stageRef} className="relative flex min-h-0 flex-1 items-center justify-center bg-black/90" data-testid="video-stage">
      {!clips.length?<div className="grid justify-items-center gap-3 text-center text-[13px] text-white" data-testid="video-empty-timeline"><p>Your timeline is empty. Add clips to start editing.</p><Button variant="outline" onClick={()=>void addTimelineClipsFromDialog(item.name)}>Add video clips</Button></div>:playable&&blend.some(e=>needsSourceFile(e.range.clip)||isImageClip(e.range.clip))?[slotA,slotB].map((slot,idx)=>{
       const e=blend.find(x=>!isTitleClip(x.range.clip)&&!isImageClip(x.range.clip)&&(x.range.index%2)===idx);
       return <video key={idx} ref={slot} className="absolute inset-0 h-full w-full object-contain p-2" preload="auto"
@@ -192,7 +208,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
      {playable&&blend.map(e=>isTitleClip(e.range.clip)?<div key={e.range.clip.id} className="absolute inset-0 flex items-center justify-center p-2" style={{opacity:main&&e.range.index===main.range.index?e.video:1,zIndex:main&&e.range.index===main.range.index?1:0,pointerEvents:'none'}}>
       <TitlePreview clip={e.range.clip} time={e.sourceTime} aspect={(probe?.video?.width??16)/(probe?.video?.height??9)} label={clipDisplayName(e.range.clip,'Title')}/>
      </div>:null)}
-     {playable&&blend.map(e=>isImageClip(e.range.clip)?<img key={e.range.clip.id} src={urlOf(e.range.clip.source)} alt="" className="absolute inset-0 h-full w-full object-contain p-2" style={{opacity:main&&e.range.index===main.range.index?e.video:1,zIndex:main&&e.range.index===main.range.index?1:0,pointerEvents:'none',transform:flipOf(e.range.clip)==='none'?'':`scale(${flipOf(e.range.clip).includes('h')?-1:1},${flipOf(e.range.clip).includes('v')?-1:1})`}} data-testid="video-image-preview"/>:null)}
+     {playable&&blend.map(e=>isImageClip(e.range.clip)?<img key={e.range.clip.id} src={urlOf(e.range.clip.source)} alt="" className="absolute inset-0 h-full w-full object-contain p-2" style={{opacity:main&&e.range.index===main.range.index?e.video:1,zIndex:main&&e.range.index===main.range.index?1:0,pointerEvents:'none'}} data-testid="video-image-preview" data-img-clip={e.range.clip.id}/>:null)}
     </div>
     <div className="flex items-center gap-3 px-4 pt-2 text-[12px] text-ink-2">
      <Button size="icon" variant="outline" aria-label={t(playing?'video.pause':'video.play')} aria-pressed={playing} disabled={!playable||!clips.length} onClick={toggle} data-testid="video-play">{playing?<Pause size={16}/>:<Play size={16}/>}</Button>

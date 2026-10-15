@@ -2,7 +2,7 @@
 import {ALL_FORMATS,AudioSample,AudioSampleSink,AudioSampleSource,BufferSource,BufferTarget,CanvasSink,CanvasSource,Input,Mp4OutputFormat,Output,QUALITY_HIGH,QUALITY_LOW,QUALITY_MEDIUM,WebMOutputFormat,getFirstEncodableAudioCodec,getFirstEncodableVideoCodec} from 'mediabunny';
 import type {AudioCodec,VideoCodec} from 'mediabunny';
 import {cappedFps,sanitizeExportOptions,type VideoExportOptions,type VideoFormat} from './recipe';
-import {clipFadeGain,clipRanges,fadeInOf,fadeOf,fadeOutOf,flipOf,isFreeze,isImageClip,speedOf,timelineDuration,type ClipRange,type TimelineClip} from './timeline';
+import {clipFadeGain,clipRanges,fadeInOf,fadeOf,fadeOutOf,flipOf,isFreeze,isImageClip,rotationOf,speedOf,timelineDuration,type ClipRange,type ClipRotation,type TimelineClip} from './timeline';
 import {audioEnvelope,duckGainAt,type AudioClip} from './audioTrack';
 import {WindowMixer} from './mixer';
 import {drawTitleCard,isTitleClip,needsSourceFile,type TitleClip} from './titles';
@@ -213,7 +213,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
   const videoSinks=new Map<number,CanvasSink>();
   const sinkFor=async(i:number)=>{
    let s=videoSinks.get(i);
-   if(!s){const{input}=inputs.get(ranges[i].clip.source)!;const track=(await input.getVideoTracks())[0];s=new CanvasSink(track,{width:outW,height:outH,fit:'contain',poolSize:3});videoSinks.set(i,s);}
+   if(!s){const{input}=inputs.get(ranges[i].clip.source)!;const track=(await input.getVideoTracks())[0];const rot=rotationOf(ranges[i].clip),swap=rot===90||rot===270;s=new CanvasSink(track,{width:swap?outH:outW,height:swap?outW:outH,fit:'contain',poolSize:3});videoSinks.set(i,s);}
    return s;
   };
   const fpsOf=(i:number)=>{const c=ranges[i].clip;if(isTitleClip(c)||isImageClip(c)||isFreeze(c))return cappedFps(first.fps,opts.fps);const f=inputs.get(c.source)!.probe.video!.fps;return cappedFps(f,opts.fps);};
@@ -233,9 +233,10 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
      // Static still, drawn once: contain-fit and centered like the video letterbox.
      if(card.key!=='img'){
       const bmp=bitmaps.get(c.source);if(!bmp)return null;
-      const scale=Math.min(outW/bmp.width,outH/bmp.height),w=Math.max(1,Math.round(bmp.width*scale)),h=Math.max(1,Math.round(bmp.height*scale));
+      const rot=rotationOf(c),ew=rot===90||rot===270?bmp.height:bmp.width,eh=rot===90||rot===270?bmp.width:bmp.height;
+      const scale=Math.min(outW/ew,outH/eh),w=Math.max(1,Math.round(bmp.width*scale)),h=Math.max(1,Math.round(bmp.height*scale));
       card.ctx.fillStyle='#000';card.ctx.fillRect(0,0,outW,outH);
-      card.ctx.drawImage(bmp,Math.round((outW-w)/2),Math.round((outH-h)/2),w,h);
+      card.ctx.save();card.ctx.translate(outW/2,outH/2);card.ctx.rotate(rot*Math.PI/180);card.ctx.drawImage(bmp,-w/2,-h/2,w,h);card.ctx.restore();
       card.key='img';
      }
      return card.canvas;
@@ -249,15 +250,21 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
    const f=await sink.getCanvas(src);
    return f?f.canvas:null;
   };
-  // Mirrored clips draw through this instead of a bare drawImage; titles never pass a flip.
-  const drawFlip=(img:CanvasImageSource,flip:string)=>{
-   if(flip==='none'){ctx.drawImage(img,0,0);return;}
+  // Transformed clips (mirror and/or quarter turn) draw through this instead of a bare drawImage. Titles never pass a
+  // transform; image cards bake their rotation into the card itself, so they only ever pass a flip here. Quarter turns
+  // arrive on a width/height-swapped sink canvas, so the rotated picture keeps its contain fit instead of cropping.
+  const drawTransform=(img:CanvasImageSource,flip:string,rot:ClipRotation)=>{
+   if(flip==='none'&&rot===0){ctx.drawImage(img,0,0);return;}
+   const w=rot===90||rot===270?outH:outW,h=rot===90||rot===270?outW:outH;
    ctx.save();
-   ctx.translate(flip.includes('h')?outW:0,flip.includes('v')?outH:0);
+   ctx.translate(outW/2,outH/2);
+   ctx.rotate(rot*Math.PI/180);
    ctx.scale(flip.includes('h')?-1:1,flip.includes('v')?-1:1);
-   ctx.drawImage(img,0,0);
+   ctx.drawImage(img,-w/2,-h/2);
    ctx.restore();
   };
+  // Image clips bake rotation into their card (see sideFrame); every other clip passes its own rotation.
+  const drawClip=(img:CanvasImageSource,c:TimelineClip)=>drawTransform(img,flipOf(c),isImageClip(c)?0:rotationOf(c));
   for(const z of zones){
    checkCancel();
    if(z.kind==='solo'){
@@ -282,7 +289,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
      for(let k=0;k<n;k++){
       checkCancel();
       const t=z.start+k/fps,f=await sideFrame(z.a,t);
-      if(f){ctx.globalAlpha=1;drawFlip(f as CanvasImageSource,flipOf(c));}
+      if(f){ctx.globalAlpha=1;drawClip(f as CanvasImageSource,c);}
       await videoSource.add(t,Math.max(1e-3,Math.min(1/fps,z.end-t)));
       note(t);
      }
@@ -291,7 +298,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
      for await(const frame of sink.canvases(srcStart,srcEnd)){
       checkCancel();
       if(base===null)base=frame.timestamp;
-      ctx.globalAlpha=1;drawFlip(frame.canvas,flipOf(c));
+      ctx.globalAlpha=1;drawClip(frame.canvas,c);
       await videoSource.add(z.start+(frame.timestamp-base),frame.duration);
       note(z.start+(frame.timestamp-base));
      }
@@ -309,8 +316,8 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
      const t=z.start+k/fps,p=Math.min(1,(t-z.start)/d);
      const[fa,fb]=await Promise.all([sideFrame(z.a,t),sideFrame(z.b,t)]);
      ctx.globalAlpha=1;ctx.fillStyle='#000';ctx.fillRect(0,0,outW,outH);
-     if(fa){ctx.globalAlpha=1;drawFlip(fa as CanvasImageSource,flipOf(ra.clip));}
-     if(fb){ctx.globalAlpha=p;drawFlip(fb as CanvasImageSource,flipOf(rb.clip));}
+     if(fa){ctx.globalAlpha=1;drawClip(fa as CanvasImageSource,ra.clip);}
+     if(fb){ctx.globalAlpha=p;drawClip(fb as CanvasImageSource,rb.clip);}
      ctx.globalAlpha=1;
      await videoSource.add(t,1/fps);
      note(t);

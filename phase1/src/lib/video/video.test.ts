@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {sniffVideo,VIDEO_FILE} from './format';
 import {cappedFps,exportName,sanitizeExportOptions} from './recipe';
-import {clipFadeGain,clipRanges,fadeInOf,fadeOutOf,flipOf,fullClip,isFreeze,isNeutralTimeline,locate,moveClip,rippleDelete,sanitizeClips,setClipEdge,setClipFades,setClipSpeed,sliceTimeline,splitAt,timelineDuration,type TimelineClip} from './timeline';
+import {clipFadeGain,clipRanges,fadeInOf,fadeOutOf,flipOf,rotationOf,fullClip,isFreeze,isNeutralTimeline,locate,moveClip,rippleDelete,sanitizeClips,setClipEdge,setClipFades,setClipSpeed,sliceTimeline,splitAt,timelineDuration,type TimelineClip} from './timeline';
 import {probeVideo} from './pipeline';
 import {addTimelineClip,closeVideo,deleteTimelineClip,exportVideo,getVideoSession,moveTimelineClip,openVideo,resetTimeline,runVideoExport,setTimelineClipGain,setVideoEngineFactory,setVideoFormat,splitTimelineAt,toggleTimelineClipMute,trimTimelineClip} from './session';
 import type {VideoEngineLike,VideoResult} from './engine';
@@ -279,4 +279,16 @@ test('recipe: export fps cap sanitizes and caps without upsampling',()=>{
  assert.equal(cappedFps(null,30),30,'unknown source falls back to the cap');
  assert.equal(cappedFps(null,null),30,'unknown both falls back to 30');
  assert.equal(cappedFps(50,null),50,'no cap keeps native');
+});
+
+test('clip rotation: sanitize keeps right angles and drops junk and zero',()=>{
+ const mk=(rotation:unknown):TimelineClip=>({id:'a',source:'a.mp4',in_s:0,out_s:2,gain:1,muted:false,rotation:rotation as never});
+ assert.deepEqual(sanitizeClips([mk(90)],{'a.mp4':5})[0].rotation,90);
+ assert.deepEqual(sanitizeClips([mk(270)],{'a.mp4':5})[0].rotation,270);
+ assert.equal(sanitizeClips([mk(0)],{'a.mp4':5})[0].rotation,undefined);
+ assert.equal(sanitizeClips([mk(45)],{'a.mp4':5})[0].rotation,undefined);
+ assert.equal(sanitizeClips([mk(90)],{'a.mp4':5})[0].hasOwnProperty('rotation'),true);
+ assert.equal(rotationOf(mk(180)),180);
+ assert.equal(rotationOf(mk(undefined)),0);
+ assert.equal(rotationOf(mk(45)),0);
 });
