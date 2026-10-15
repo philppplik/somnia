@@ -41,7 +41,7 @@ export class SheetsEngine{
  private request(message:Req,transfer:Transferable[]=[]){
   return new Promise<SheetsResponse>((resolve,reject)=>{
    if(this.disposed){reject(new Error('Spreadsheet engine closed'));return;}
-   const mutating=['open','set','setValues','clear','format','resize','editLines','freeze','sort','filter','fill','cf','validation','replace','dedupe','split','annotate','insertSymbol','defineName','deleteName','editName','createNames','pasteSpecial','autoFill','fillSeries','pivotCreate','pivotRefresh','tableOp','pageSetup','viewOp','protectOp','whatIfOp','layoutOp','cellToolOp','dataToolOp','pivotEditOp','cfManage','outlineOp','savedViewOp','pictureOp','objectOp','chartOp','sparklineOp','setReviewed','undoReviewed','setRangeReviewed','undoRangeReviewed','editSheet','undo','redo','close'].includes(message.op);if(mutating){this.mutationEpoch++;this.mutations++;this.notifySelectionRead();}const finish=()=>{if(mutating){this.mutations--;this.mutationEpoch++;this.notifySelectionRead();}};const done=(r:SheetsResponse)=>{finish();resolve(r);},failed=(e:Error)=>{finish();reject(e);};
+   const mutating=['open','set','setValues','clear','format','resize','editLines','freeze','sort','filter','fill','cf','validation','replace','dedupe','split','annotate','insertSymbol','defineName','deleteName','editName','createNames','pasteSpecial','autoFill','fillSeries','renameName','pivotCreate','pivotRefresh','tableOp','pageSetup','viewOp','protectOp','whatIfOp','layoutOp','cellToolOp','dataToolOp','pivotEditOp','cfManage','outlineOp','savedViewOp','pictureOp','objectOp','chartOp','sparklineOp','setReviewed','undoReviewed','setRangeReviewed','undoRangeReviewed','editSheet','undo','redo','close'].includes(message.op);if(mutating){this.mutationEpoch++;this.mutations++;this.notifySelectionRead();}const finish=()=>{if(mutating){this.mutations--;this.mutationEpoch++;this.notifySelectionRead();}};const done=(r:SheetsResponse)=>{finish();resolve(r);},failed=(e:Error)=>{finish();reject(e);};
    const id=this.nextId++;
    const timer=setTimeout(()=>this.dispose(new Error('Spreadsheet engine timed out. Unsaved edits in this workbook were discarded.')),this.timeoutMs);
    this.pending.set(id,{resolve:done,reject:failed,timer});
@@ -156,6 +156,8 @@ export class SheetsEngine{
  /** Sets a name's comment or turns it into a number or text constant (one undo step). */
  editName(sheet:number,name:{kind:'comment'|'constant';name:string;scope:'workbook'|'sheet';text?:string;value?:number|string;replace?:boolean}){return this.result<unknown>({op:'editName',sheet,name});}
  /** Deletes one name (one undo step). `sheet` is the sheet a sheet-scoped name belongs to. */
+ /** Renames a name that nothing refers to (formulas are not rewritten, so used names are refused). One undo step. */
+ renameName(sheet:number,name:{name:string;scope:'workbook'|'sheet';newName:string}){return this.result<unknown>({op:'renameName',sheet,name});}
  deleteName(sheet:number,name:{name:string;scope:'workbook'|'sheet'}){return this.result<unknown>({op:'deleteName',sheet,name});}
  /** The visible defined names (read only). */
  async names():Promise<NameInfo[]>{return parseNames(await this.result<{names:unknown}>({op:'names'}));}

@@ -58,6 +58,7 @@ scope.onmessage=({data}:MessageEvent<SheetsRequest>)=>{queue=queue.then(async()=
    case 'clipCopy':result=JSON.parse(need().clip_copy(data.sheet,data.row,data.col,data.rows,data.cols,data.cut===true));break;
    case 'pasteSpecial':result=JSON.parse(need().paste_special(data.sheet,data.row,data.col,data.rows,data.cols,JSON.stringify(data.paste)));break;
    case 'editName':result=JSON.parse(need().edit_name(data.sheet,JSON.stringify(data.name)));break;
+   case 'renameName':result=JSON.parse(need().rename_name(data.sheet,JSON.stringify(data.name)));break;
    case 'deleteName':result=JSON.parse(need().delete_name(data.sheet,JSON.stringify(data.name)));break;
    case 'names':result=JSON.parse(need().list_names());break;
    case 'pivotFields':result=JSON.parse(need().pivot_fields(data.sheet,data.row,data.col,data.rows,data.cols));break;

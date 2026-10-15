@@ -57,3 +57,8 @@ test('parseSpan reads a cell or a range in any corner order',async()=>{
  assert.deepEqual(parseSpan('B2:B2'),{from:{row:1,col:1},to:null});
  for(const bad of ['','A','A1:','A1:B2:C3','A0','ZZZZ1','1:2'])assert.equal(parseSpan(bad),null,bad);
 });
+test('rename accepts a valid new name and rejects the rest',()=>{
+ assert.deepEqual(parseNamesCommand({kind:'rename',name:'Rate',newName:' Tax '}),{kind:'rename',name:'Rate',scope:'workbook',newName:'Tax'});
+ assert.deepEqual(parseNamesCommand({kind:'rename',name:'Rate',scope:'sheet',newName:'Tax'}),{kind:'rename',name:'Rate',scope:'sheet',newName:'Tax'});
+ for(const bad of [{kind:'rename',name:'Rate'},{kind:'rename',name:'Rate',newName:'A1'},{kind:'rename',name:'Rate',newName:''},{kind:'rename',name:'',newName:'Tax'},{kind:'rename',name:'Rate',newName:'Tax',x:1},{kind:'rename',name:'Rate',newName:5},{kind:'rename',name:'Rate',scope:'galaxy',newName:'Tax'}])assert.throws(()=>parseNamesCommand(bad),JSON.stringify(bad));
+});

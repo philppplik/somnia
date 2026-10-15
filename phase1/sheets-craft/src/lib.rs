@@ -3099,6 +3099,104 @@ impl HeadlessWorkbook {
         Ok(json!({"name": stored_name, "refersTo": format!("={refers}")}).to_string())
     }
 
+    /// Renames a defined name as ONE history entry, only when nothing refers to it. `op_json` is `{"name":..,"scope":"workbook"|"sheet","newName":..}`
+    /// with `sheet` the sheet a sheet-scoped name belongs to. The engine does not rewrite formulas, so the rename is refused while the old name
+    /// shows up in a cell formula, another name, a conditional format, a validation, a chart or a sparkline (counted over the words in
+    /// their text; an overlap with plain text is refused too, which is the safe side). A change of letter case only is always allowed.
+    /// Refused: protected workbook structure, an invalid or taken new name, a name that exists in several scopes, a missing name.
+    pub fn rename_name(&mut self, sheet: usize, op_json: &str) -> Result<String, String> {
+        let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "operation must be a JSON object".to_string())?;
+        let obj = op.as_object().ok_or("operation must be a JSON object")?;
+        if obj.keys().any(|k| !matches!(k.as_str(), "name" | "scope" | "newName")) {
+            return Err("unknown field".into());
+        }
+        let name = obj.get("name").and_then(|v| v.as_str()).ok_or("missing name")?.to_string();
+        let new_name = obj.get("newName").and_then(|v| v.as_str()).ok_or("missing new name")?.to_string();
+        let scope = match obj.get("scope").and_then(|v| v.as_str()).unwrap_or("workbook") {
+            "workbook" => None,
+            "sheet" => Some(sheet),
+            _ => return Err("scope must be workbook or sheet".into()),
+        };
+        if let Some(why) = Self::name_problem(&new_name) {
+            return Err(why.into());
+        }
+        let case_only = name.eq_ignore_ascii_case(&new_name);
+        let (refers, comment, scope_param) = {
+            let doc = self.session.doc().map_err(|e| e.to_string())?;
+            if doc.wb.protected_structure {
+                return Err("The workbook structure is protected.".into());
+            }
+            let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+            let same: Vec<_> = doc.wb.names.iter().filter(|n| n.name.eq_ignore_ascii_case(&name)).collect();
+            let found = same.iter().find(|n| n.scope == scope && !n.hidden).ok_or("There is no such name.")?;
+            if same.len() > 1 {
+                return Err("This name exists in several scopes. Rename the others first.".into());
+            }
+            if !case_only && doc.wb.names.iter().any(|n| n.name.eq_ignore_ascii_case(&new_name) && n.scope == scope) {
+                return Err("A name like this already exists here. Choose another.".into());
+            }
+            if !case_only {
+                let mentions = |text: &str| -> bool {
+                    let (mut word, mut quoted) = (String::new(), false);
+                    for c in text.chars().chain(std::iter::once(' ')) {
+                        if c == '"' {
+                            quoted = !quoted;
+                            word.clear();
+                            continue;
+                        }
+                        if !quoted && (c.is_alphanumeric() || c == '_' || c == '.') {
+                            word.push(c);
+                        } else {
+                            if !word.is_empty() && word.eq_ignore_ascii_case(&name) {
+                                return true;
+                            }
+                            word.clear();
+                        }
+                    }
+                    false
+                };
+                let mut used = doc.wb.names.iter().filter(|n| !n.name.eq_ignore_ascii_case(&name)).any(|n| mentions(&n.formula));
+                for s in &doc.wb.sheets {
+                    if used {
+                        break;
+                    }
+                    used = s.cells.iter().any(|(_, c)| c.formula.as_ref().is_some_and(|f| mentions(&f.text)))
+                        || [serde_json::to_string(&s.cond_formats), serde_json::to_string(&s.validations), serde_json::to_string(&s.charts), serde_json::to_string(&s.sparklines)]
+                            .iter()
+                            .any(|j| j.as_ref().map_or(true, |t| mentions(t)));
+                }
+                if used {
+                    return Err("Formulas, formats, validations or charts still use this name. The engine does not rewrite them, so the rename is refused.".into());
+                }
+            }
+            let scope_param = if scope.is_some() { sh.name.clone() } else { "Workbook".to_string() };
+            (found.formula.clone(), found.comment.clone(), scope_param)
+        };
+        let (before_rev, before_len, snap_wb, snap_sel, snap_redo) = {
+            let doc = self.session.doc().map_err(|e| e.to_string())?;
+            (doc.revision, doc.undo.len(), doc.wb.clone(), doc.selection.clone(), doc.redo.clone())
+        };
+        let mut failure: Option<String> = self.session.run("formulas.deleteName", json!({"name": name})).err().map(|e| e.to_string());
+        if failure.is_none() {
+            failure = self.session.run("formulas.defineName", json!({"name": new_name, "refersTo": format!("={refers}"), "scope": scope_param, "comment": comment})).err().map(|e| e.to_string());
+        }
+        let doc = self.session.doc_mut().map_err(|e| e.to_string())?;
+        if let Some(e) = failure {
+            doc.undo.truncate(before_len);
+            doc.wb = snap_wb;
+            doc.selection = snap_sel;
+            doc.revision = before_rev;
+            doc.redo = snap_redo;
+            let wb = doc.wb.clone();
+            doc.calc.rebuild(&wb);
+            return Err(e);
+        }
+        // Delete and define were two snapshots; the first restores the state before both, so keep only that one as the single step.
+        doc.undo.truncate(before_len + 1);
+        doc.revision = before_rev + 1;
+        Ok(json!({"name": new_name, "refersTo": format!("={refers}")}).to_string())
+    }
+
     /// Deletes one name as ONE history entry. `op_json` is `{"name":..,"scope":"workbook"|"sheet"}` with `sheet` the sheet a sheet-scoped
     /// name belongs to. Formulas that use the name are not rewritten, so they show #NAME? afterwards.
     pub fn delete_name(&mut self, sheet: usize, op_json: &str) -> Result<String, String> {
@@ -6119,6 +6217,28 @@ mod tests {
         assert!(book.fill_series_op(0, 600, 0, 5, 1, r#"{"axis":"right","kind":"linear","step":1}"#).is_err(), "one column is no series along rows");
         book.session.run("review.protectSheet", json!({})).unwrap();
         assert!(book.fill_series_op(0, 600, 0, 5, 1, r#"{"axis":"down","kind":"linear","step":1}"#).unwrap_err().contains("protected"));
+    }
+    #[test]
+    fn rename_name_moves_unused_names_in_one_undo_step_and_refuses_used_ones() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        let steps = |b: &HeadlessWorkbook| b.session.doc().unwrap().undo.len();
+        book.edit_name(0, r#"{"kind":"constant","name":"Rate","scope":"workbook","value":5}"#).unwrap();
+        let before = steps(&book);
+        book.rename_name(0, r#"{"name":"Rate","scope":"workbook","newName":"Tax"}"#).unwrap();
+        assert_eq!(steps(&book), before + 1);
+        let names = book.session.doc().unwrap().wb.names.iter().map(|n| n.name.clone()).collect::<Vec<_>>();
+        assert!(names.contains(&"Tax".to_string()) && !names.contains(&"Rate".to_string()), "{names:?}");
+        book.undo().unwrap();
+        let names = book.session.doc().unwrap().wb.names.iter().map(|n| n.name.clone()).collect::<Vec<_>>();
+        assert!(names.contains(&"Rate".to_string()) && !names.contains(&"Tax".to_string()), "one undo restores {names:?}");
+        book.set_values(0, 700, 0, r#"[["=Rate*2"]]"#).unwrap();
+        assert!(book.rename_name(0, r#"{"name":"Rate","scope":"workbook","newName":"Tax"}"#).unwrap_err().contains("still use"));
+        book.rename_name(0, r#"{"name":"Rate","scope":"workbook","newName":"RATE"}"#).unwrap();
+        book.edit_name(0, r#"{"kind":"constant","name":"Other","scope":"workbook","value":1}"#).unwrap();
+        for bad in [r#"{"name":"Rate","scope":"workbook","newName":"Other"}"#, r#"{"name":"Rate","scope":"workbook","newName":"A1"}"#, r#"{"name":"Rate","scope":"workbook","newName":""}"#,
+            r#"{"name":"Nope","scope":"workbook","newName":"Z"}"#, r#"{"name":"Rate","scope":"galaxy","newName":"Z"}"#, r#"{"name":"Rate","newName":"Z","x":1}"#, r#"{"name":"Rate"}"#, "[]"] {
+            assert!(book.rename_name(0, bad).is_err(), "{bad}");
+        }
     }
     #[test]
     fn view_op_sets_zoom_and_gridlines_with_bounds() {

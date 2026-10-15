@@ -451,6 +451,8 @@ const rows:Record<string,readonly string[]>={
  'sheets.nm.replace':['Redefine as the selection (workbook)','Als Auswahl neu festlegen (Arbeitsmappe)','Redefinir como la selección (libro)','Redéfinir comme la sélection (classeur)','Redefinir como a seleção (pasta)'],
  'sheets.nm.replaceSheet':['Redefine as the selection (this sheet)','Als Auswahl neu festlegen (dieses Blatt)','Redefinir como la selección (esta hoja)','Redéfinir comme la sélection (cette feuille)','Redefinir como a seleção (esta planilha)'],
  'sheets.nm.go':['Go to the chosen name','Zum gewählten Namen springen','Ir al nombre elegido','Aller au nom choisi','Ir para o nome escolhido'],
+ 'sheets.nm.rename':['Rename the chosen name (only if nothing uses it)','Gewählten Namen umbenennen (nur wenn ihn nichts verwendet)','Renombrar el nombre elegido (solo si nada lo usa)','Renommer le nom choisi (seulement si rien ne l’utilise)','Renomear o nome escolhido (só se nada o usar)'],
+ 'sheets.nm.newName':['New name','Neuer Name','Nombre nuevo','Nouveau nom','Novo nome'],
  'sheets.nm.delete':['Delete the chosen name','Gewählten Namen löschen','Eliminar el nombre elegido','Supprimer le nom choisi','Excluir o nome escolhido'],
  'sheets.nm.name':['New name','Neuer Name','Nombre nuevo','Nouveau nom','Novo nome'],
  'sheets.nm.groupConstant':['Constants and notes','Konstanten und Notizen','Constantes y notas','Constantes et notes','Constantes e notas'],
