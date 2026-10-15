@@ -23,6 +23,13 @@ export function parseObjectCommand(input:unknown):ObjectOp{
    if(o.width!==undefined)out.width=size(o.width,'The width',1);if(o.height!==undefined)out.height=size(o.height,'The height',0);
    if(o.here!==undefined){if(typeof o.here!=='boolean')throw Error('`here` must be true or false.');out.here=o.here;}
    if(out.width===undefined&&out.height===undefined&&!out.here)throw Error('Nothing to change.');return out;}
+  case 'place':{only('kind','object','id','row','col','dx','dy','width','height');
+   const cell=(v:unknown,max:number,what:string)=>{if(typeof v!=='number'||!Number.isInteger(v)||v<0||v>=max)throw Error(`The ${what} is out of range.`);return v;};
+   const off=(v:unknown,what:string)=>{if(typeof v!=='number'||!Number.isFinite(v)||v<0||v>100_000)throw Error(`The ${what} offset must be 0 to 100,000 points.`);return v;};
+   const out:ObjectOp={kind:'place',object:object(),id:id(),row:cell(o.row,1_048_576,'row'),col:cell(o.col,16_384,'column'),dx:off(o.dx,'horizontal'),dy:off(o.dy,'vertical')};
+   if(o.width!==undefined)out.width=size(o.width,'The width',1);if(o.height!==undefined)out.height=size(o.height,'The height',0);return out;}
+  case 'order':{only('kind','object','id','to');return {kind:'order',object:object(),id:id(),to:oneOf(['front','forward','backward','back'] as const,o.to,'stacking order')};}
+  case 'turn':only('kind','id');return {kind:'turn',id:id()};
   case 'delete':only('kind','object','id');return {kind:'delete',object:object(),id:id()};
   default:throw Error('Unsupported object operation.');
  }
@@ -80,11 +87,11 @@ export function shapeSvg(s:ShapeObject):string|null{
 }
 export const pictureDataUrl=(mime:string,base64:string)=>(mime==='image/png'||mime==='image/jpeg')&&/^[A-Za-z0-9+/]+={0,2}$/.test(base64)?`data:${mime};base64,${base64}`:null;
 /** The panel's single action choice. */
-export const OBJECT_ACTIONS=['picture','rectangle','roundedRectangle','ellipse','triangle','line','arrow','textBox','move','resize','delete'] as const;
+export const OBJECT_ACTIONS=['picture','rectangle','roundedRectangle','ellipse','triangle','line','arrow','textBox','move','resize','front','forward','backward','back','turn','delete'] as const;
 export type ObjectAction=typeof OBJECT_ACTIONS[number];
-export const OBJECT_GROUPS:readonly (readonly [string,readonly ObjectAction[]])[]=[['picture',['picture']],['shapes',['rectangle','roundedRectangle','ellipse','triangle','line','arrow','textBox']],['object',['move','resize','delete']]];
+export const OBJECT_GROUPS:readonly (readonly [string,readonly ObjectAction[]])[]=[['picture',['picture']],['shapes',['rectangle','roundedRectangle','ellipse','triangle','line','arrow','textBox']],['object',['move','resize','delete']],['order',['front','forward','backward','back','turn']]];
 export const objectIsShape=(a:ObjectAction)=>(SHAPES as readonly string[]).includes(a);
-export const objectNeedsPick=(a:ObjectAction)=>a==='move'||a==='resize'||a==='delete';
+export const objectNeedsPick=(a:ObjectAction)=>a==='move'||a==='resize'||a==='delete'||a==='front'||a==='forward'||a==='backward'||a==='back'||a==='turn';
 export interface ObjectFields{fill:string;line:string;text:string;width:string;height:string;pick:string}
 /** Builds the op for shapes and object changes; null while the inputs are incomplete or invalid. `pick` is `image:3` or `shape:4`. */
 export function buildObjectOp(a:ObjectAction,f:ObjectFields):ObjectOp|null{
@@ -93,6 +100,8 @@ export function buildObjectOp(a:ObjectAction,f:ObjectFields):ObjectOp|null{
   if(objectIsShape(a)){const w=n(f.width),h=n(f.height);return parseObjectCommand({kind:'shape',shape:a,fill:f.fill||undefined,line:f.line||undefined,...(w!==undefined?{width:w}:{}),...(h!==undefined?{height:h}:{}),...(a==='textBox'&&f.text!==''?{text:f.text}:{})});}
   const m=/^(image|shape):(\d{1,10})$/.exec(f.pick);if(!m)return null;const id=Number(m[2]);
   if(a==='delete')return parseObjectCommand({kind:'delete',object:m[1],id});
+  if(a==='front'||a==='forward'||a==='backward'||a==='back')return parseObjectCommand({kind:'order',object:m[1],id,to:a});
+  if(a==='turn')return m[1]==='shape'?parseObjectCommand({kind:'turn',id}):null;
   if(a==='move')return parseObjectCommand({kind:'move',object:m[1],id,here:true});
   const w=n(f.width),h=n(f.height);return parseObjectCommand({kind:'move',object:m[1],id,...(w!==undefined?{width:w}:{}),...(h!==undefined?{height:h}:{})});
  }catch{return null;}

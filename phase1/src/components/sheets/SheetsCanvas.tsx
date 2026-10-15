@@ -16,14 +16,15 @@ import {readXlsx} from '../../lib/office/xlsx';
 import {SheetsHandoffBar} from './SheetsHandoffBar';
 import {useT} from '../../lib/useT';
 import {SheetsEngine} from '../../lib/sheets/engine';
-import type {ChartInfo,ChartScene,SparklineScene,ChartOp,SparklineOp,ProtectOp,WhatIfOp,ScenarioInfo,ObjectOp,ObjectsInfo,PageInfo,PageSetupOp,ExportOp,PivotOp,TableOp,TablesInfo,FillDirection,NameInfo,NameOp,AnnotateOp,CellAnnotations,DedupeOp,SplitOp,ReplaceOp,ValidationOp,CfOp,FilterOp,SortOp,SheetOp,FormatOp,LineAxis,LineEditKind,LineOp,SheetInfo,SheetLayout,ViewCell,WorkbookInfo} from '../../lib/sheets/protocol';
+import type {ChartInfo,ChartScene,SparklineScene,ChartOp,SparklineOp,ProtectOp,WhatIfOp,ScenarioInfo,ObjectOp,ObjectsInfo,ImageObject,ShapeObject,PageInfo,PageSetupOp,ExportOp,PivotOp,TableOp,TablesInfo,FillDirection,NameInfo,NameOp,AnnotateOp,CellAnnotations,DedupeOp,SplitOp,ReplaceOp,ValidationOp,CfOp,FilterOp,SortOp,SheetOp,FormatOp,LineAxis,LineEditKind,LineOp,SheetInfo,SheetLayout,ViewCell,WorkbookInfo} from '../../lib/sheets/protocol';
 import {editSpan,MAX_SHEET_COLS,MAX_SHEET_ROWS} from '../../lib/sheets/lineOps';
 import {Geometry} from '../../lib/sheets/geometry';
 import {MAX_CELL_BYTES} from '../../lib/sheets/protocol';
 import {downloadExport,exportName} from '../../lib/sheets/exportFile';
 import {sceneToSvg,svgDataUrl} from '../../lib/sheets/chartOps';
 import {shapeSvg} from '../../lib/sheets/objectOps';
-import {SheetObjectImg} from './SheetObjectImg';
+import {SheetObjectImg,SheetObjectHandle} from './SheetObjectImg';
+import {dropPlacement,type ObjectDrag} from '../../lib/sheets/objectDrag';
 import {fitZoom,type ViewCommand} from '../../lib/sheets/viewOps';
 import {addressOf,cellText,colName,displayValue,editText,isErrorValue,cellAlign} from '../../lib/sheets/format';
 import {MAX_SHEETS} from '../../lib/sheets/sheetOps';
@@ -144,7 +145,7 @@ function Workbook({item}:{item:MediaItem}){
 
  const contextOwner=useRef<ReturnType<typeof studioContextStore.claim>|null>(null);
  useEffect(()=>{const owner=studioContextStore.claim('sheets',{id:item.name,kind:'xlsx',dirty:false,readOnly:false});contextOwner.current=owner;return()=>{owner.release();contextOwner.current=null;};},[item.name,item.url]);
- const [listItems,setListItems]=useState<string[]|null>(null);const [annotations,setAnnotations]=useState<CellAnnotations|null>(null);const [definedNames,setDefinedNames]=useState<NameInfo[]>([]);const [scenarios,setScenarios]=useState<ScenarioInfo[]>([]);const [objects,setObjects]=useState<ObjectsInfo>({images:[],shapes:[]});const [objectUrls,setObjectUrls]=useState<Map<string,string>>(new Map());const pictureCache=useRef(new Map<string,string>());const [tablesInfo,setTablesInfo]=useState<TablesInfo|null>(null);const [pageInfo,setPageInfo]=useState<PageInfo|null>(null);const [charts,setCharts]=useState<ChartInfo[]>([]);const [chartImages,setChartImages]=useState<Map<number,string>>(new Map());const [sparks,setSparks]=useState<{scene:SparklineScene;url:string}[]>([]);
+ const [listItems,setListItems]=useState<string[]|null>(null);const [annotations,setAnnotations]=useState<CellAnnotations|null>(null);const [definedNames,setDefinedNames]=useState<NameInfo[]>([]);const [scenarios,setScenarios]=useState<ScenarioInfo[]>([]);const [objects,setObjects]=useState<ObjectsInfo>({images:[],shapes:[]});const [objectUrls,setObjectUrls]=useState<Map<string,string>>(new Map());const pictureCache=useRef(new Map<string,string>());const [selObj,setSelObj]=useState<string|null>(null);const [drag,setDrag]=useState<ObjectDrag|null>(null);const dragRef=useRef<ObjectDrag|null>(null);dragRef.current=drag;const [tablesInfo,setTablesInfo]=useState<TablesInfo|null>(null);const [pageInfo,setPageInfo]=useState<PageInfo|null>(null);const [charts,setCharts]=useState<ChartInfo[]>([]);const [chartImages,setChartImages]=useState<Map<number,string>>(new Map());const [sparks,setSparks]=useState<{scene:SparklineScene;url:string}[]>([]);
  useEffect(()=>{const e=engine.current;if(phase.kind!=='ready'||!e||e.isDisposed){setTablesInfo(null);return;}let live=true;void e.tables(sheet).then(x=>{if(live)setTablesInfo(x);},()=>{if(live)setTablesInfo(null);});return()=>{live=false;};},[phase.kind,sheet,rev]);
  useEffect(()=>{const e=engine.current;if(phase.kind!=='ready'||!e||e.isDisposed){setCharts([]);setChartImages(new Map());setSparks([]);return;}let live=true;void (async()=>{const list=await e.charts(sheet);const images=new Map<number,string>();for(const c of list){const sc=await e.chartScene(sheet,c.id);if(sc)images.set(c.id,svgDataUrl(sceneToSvg(sc)));}const sp=(await e.sparklines(sheet)).map(scene=>({scene,url:svgDataUrl(sceneToSvg(scene))}));if(live){setCharts(list);setChartImages(images);setSparks(sp);}})().catch(()=>{if(live){setCharts([]);setChartImages(new Map());setSparks([]);}});return()=>{live=false;};},[phase.kind,sheet,rev]);
  useEffect(()=>{const e=engine.current;if(phase.kind!=='ready'||!e||e.isDisposed){setPageInfo(null);return;}let live=true;void e.pageInfo(sheet).then(x=>{if(live)setPageInfo(x);},()=>{if(live)setPageInfo(null);});return()=>{live=false;};},[phase.kind,sheet,rev]);
@@ -235,8 +236,15 @@ function Workbook({item}:{item:MediaItem}){
   try{await engine.current!.sparklineOp(sheet,range.r0,range.c0,range.r1-range.r0+1,range.c1-range.c0+1,op);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
  const renderObjects=()=>{const out:React.ReactNode[]=[];
   for(const c of charts){const url=chartImages.get(c.id);if(!url)continue;out.push(<AbsBoxImg key={'chart'+c.id} src={url} alt={c.title??''} data-testid={'sheets-chart-'+c.id} surface box={{left:HEAD_W+geo.colLeft(c.col)+c.dx*geo.zoom,top:HEAD_H+geo.rowTop(c.row)+c.dy*geo.zoom,width:c.width*geo.zoom,height:c.height*geo.zoom}}/>);}
-  for(const i of objects.images){const url=objectUrls.get('image:'+i.id);if(!url)continue;out.push(<SheetObjectImg key={'image'+i.id} src={url} alt={i.alt} left={HEAD_W+geo.colLeft(i.col)+i.dx*geo.zoom} top={HEAD_H+geo.rowTop(i.row)+i.dy*geo.zoom} width={i.width*geo.zoom} height={i.height*geo.zoom} z={1} testId={'sheets-image-'+i.id}/>);}
-  for(const o of objects.shapes){const url=objectUrls.get('shape:'+o.id);if(!url)continue;out.push(<SheetObjectImg key={'shape'+o.id} src={url} alt={o.text} left={HEAD_W+geo.colLeft(o.col)+o.dx*geo.zoom} top={HEAD_H+geo.rowTop(o.row)+o.dy*geo.zoom} width={Math.max(o.width,2)*geo.zoom} height={Math.max(o.height,2)*geo.zoom} z={1} testId={'sheets-shape-'+o.id}/>);}
+  const place=(kind:'image'|'shape',o:ImageObject|ShapeObject)=>{
+   const key=kind+':'+o.id,url=objectUrls.get(key);if(!url)return;const d=drag&&drag.key===key?drag:null,z=geo.zoom;
+   const w=Math.max(o.width,kind==='shape'?2:1)*z+(d?.mode==='resize'?d.mx:0),h=Math.max(o.height,kind==='shape'?2:1)*z+(d?.mode==='resize'?d.my:0),left=HEAD_W+geo.colLeft(o.col)+o.dx*z+(d?.mode==='move'?d.mx:0),top=HEAD_H+geo.rowTop(o.row)+o.dy*z+(d?.mode==='move'?d.my:0);
+   const chosen=selObj===key;
+   out.push(<SheetObjectImg key={key} src={url} alt={'alt' in o?o.alt:o.text} left={left} top={top} width={Math.max(4,w)} height={Math.max(4,h)} z={chosen?2:1} selected={chosen} onPointerDown={collab.current?undefined:e=>{e.preventDefault();e.stopPropagation();if(draftRef.current!==null)void commit(draftRef.current);setSelObj(key);setDrag({key,mode:'move',x0:e.clientX,y0:e.clientY,mx:0,my:0});}} testId={'sheets-'+kind+'-'+o.id}/>);
+   if(chosen&&!collab.current)out.push(<SheetObjectHandle key={key+':handle'} left={left+Math.max(4,w)-6} top={top+Math.max(4,h)-6} onPointerDown={e=>{e.preventDefault();e.stopPropagation();setDrag({key,mode:'resize',x0:e.clientX,y0:e.clientY,mx:0,my:0});}} testId={'sheets-'+kind+'-'+o.id+'-resize'}/>);
+  };
+  for(const i of objects.images)place('image',i);
+  for(const o of objects.shapes)place('shape',o);
   for(const s of sparks){const box=geo.box(s.scene.row,s.scene.col);if(!box||box.width===0||box.height===0)continue;out.push(<AbsBoxImg key={'spark'+s.scene.row+':'+s.scene.col} src={s.url} alt="" box={{left:HEAD_W+box.left,top:HEAD_H+box.top,width:box.width,height:box.height}}/>);}
   return out;};
  const applyProtect=async(op:ProtectOp)=>{
@@ -319,6 +327,14 @@ function Workbook({item}:{item:MediaItem}){
   setDirty(true);setRev(r=>r+1);}catch(e){fail(e);}};
  const cellBackground=(l:CfLayer|null,overlay:boolean):React.CSSProperties=>{const o='linear-gradient(rgba(59,130,246,0.16),rgba(59,130,246,0.16))';if(!l)return overlay?{backgroundImage:o}:{};return overlay?{backgroundImage:o+', '+l.image,backgroundSize:'auto, '+l.size,backgroundPosition:'0 0, '+l.position,backgroundRepeat:'repeat, no-repeat'}:{backgroundImage:l.image,backgroundSize:l.size,backgroundPosition:l.position,backgroundRepeat:'no-repeat'};};
  const side=(b:{w:number;style:string;color:string}|null|undefined)=>b?`${Math.max(1,Math.min(3,Math.round(b.w)))}px ${b.style} ${b.color}`:undefined;
+ useEffect(()=>{if(!drag)return;const key=drag.key;
+  const move=(e:PointerEvent)=>setDrag(d=>d&&d.key===key?{...d,mx:e.clientX-d.x0,my:e.clientY-d.y0}:d);
+  const up=()=>{const d=dragRef.current;setDrag(null);if(!d||Math.abs(d.mx)+Math.abs(d.my)<3)return;const m=/^(image|shape):(\d+)$/.exec(d.key);if(!m)return;
+   const list=m[1]==='image'?objects.images:objects.shapes,o=list.find(x=>x.id===Number(m[2]));if(!o)return;
+   const op=dropPlacement(m[1] as 'image'|'shape',o,d,geo);void applyObject(op).catch(()=>undefined);};
+  const esc=(e:globalThis.KeyboardEvent)=>{if(e.key==='Escape')setDrag(null);};
+  window.addEventListener('pointermove',move);window.addEventListener('pointerup',up,{once:true});window.addEventListener('keydown',esc);
+  return()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);window.removeEventListener('keydown',esc);};},[drag?.key,drag?.mode]);
  const renderCells=()=>{
   const fr=geo.freezeRows,fc=geo.freezeCols;const out:React.ReactNode[]=[];const seen=new Set<string>();
   const rowsList=[...new Set([...Array.from({length:fr},(_,i)=>i),...Array.from({length:win.rows},(_,i)=>win.row+i)])],colsList=[...new Set([...Array.from({length:fc},(_,i)=>i),...Array.from({length:win.cols},(_,j)=>win.col+j)])];
@@ -335,7 +351,7 @@ function Workbook({item}:{item:MediaItem}){
    out.push(<div key={a} role="gridcell" aria-selected={selected||(multi&&inRect(range,r,c))} aria-rowindex={r+1} aria-colindex={c+1} data-address={a} data-frozen={frozenR||frozenC?'true':undefined} data-merged={geo.mergeCovering(r,c)?'true':undefined}
     className={'border-b border-r px-1.5 text-[12px] '+(layout?.showGridlines===false?'border-transparent ':'border-subtle ')+(selected?(st?.fill?'':'bg-hover ')+'outline outline-2 -outline-offset-2 outline-accent':'')+(isErrorValue(cell?.value)?' text-red-600':'')}
     style={css}
-    onMouseDown={e=>{e.preventDefault();if(draftRef.current!==null)void commit(draftRef.current);if(e.shiftKey)setExt({row:r,col:c});else{setSel({row:r,col:c});setExt(null);dragging.current=true;}scroller.current?.focus();}} onMouseEnter={()=>{if(dragging.current)setExt(x=>x&&x.row===r&&x.col===c?x:{row:r,col:c});}} onDoubleClick={()=>startEdit(editText(cell?.value,cell?.formula))}>{cellText(cell)}</div>);}
+    onMouseDown={e=>{e.preventDefault();setSelObj(null);if(draftRef.current!==null)void commit(draftRef.current);if(e.shiftKey)setExt({row:r,col:c});else{setSel({row:r,col:c});setExt(null);dragging.current=true;}scroller.current?.focus();}} onMouseEnter={()=>{if(dragging.current)setExt(x=>x&&x.row===r&&x.col===c?x:{row:r,col:c});}} onDoubleClick={()=>startEdit(editText(cell?.value,cell?.formula))}>{cellText(cell)}</div>);}
   return out;};
  const exportCopy=async()=>{try{const bytes=await engine.current!.save();const r=await saveSheetsCopy(item.name,bytes);if(r==='cancelled')return;if(r==='saved')setDirty(false);setNotice(t('sheets.exported'));}catch(e){fail(e);}};
  const exportRef=useRef(exportCopy);exportRef.current=exportCopy;

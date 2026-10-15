@@ -1277,7 +1277,9 @@ impl HeadlessWorkbook {
     /// "fill"?:preset,"line"?:preset,"width"?,"height"?,"text"?}` (placed at the cell `row`,`col`; 8 to 4,000 points; text at most 200 characters, text boxes only;
     /// at most 200 shapes), `{"kind":"move","object":"image"|"shape","id","width"?,"height"?,"here"?:true}` (`here` moves it to the cell) or
     /// `{"kind":"delete","object":"image"|"shape","id"}`. Fill presets blue, green, orange, red, grey, yellow, white, none; line presets blue, green, orange, red, grey, black, none.
-    /// Protected sheets refused. Returns the engine's result object.
+    /// Also `{"kind":"place","object","id","row","col","dx","dy","width"?,"height"?}` (drop at a cell plus an offset in points, from a mouse drag),
+    /// `{"kind":"order","object","id","to":"front"|"forward"|"backward"|"back"}` (stacking order among objects of that kind) and
+    /// `{"kind":"turn","id"}` (a shape turned by 90 degrees: width and height swap). Protected sheets refused. Returns the engine's result object.
     pub fn object_op(&mut self, sheet: usize, row: u32, col: u32, op_json: &str) -> Result<String, String> {
         self.check_block(sheet, row, col, 1, 1, true)?;
         let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "operation must be a JSON object".to_string())?;
@@ -1287,6 +1289,9 @@ impl HeadlessWorkbook {
             "shape" => &["kind", "shape", "fill", "line", "width", "height", "text"],
             "move" => &["kind", "object", "id", "width", "height", "here"],
             "delete" => &["kind", "object", "id"],
+            "place" => &["kind", "object", "id", "row", "col", "dx", "dy", "width", "height"],
+            "order" => &["kind", "object", "id", "to"],
+            "turn" => &["kind", "id"],
             _ => return Err("unsupported object operation".into()),
         };
         if map.keys().any(|k| !allowed.contains(&k.as_str())) {
@@ -1330,7 +1335,7 @@ impl HeadlessWorkbook {
             }
             ("insert.shape", params)
         } else {
-            let object = map.get("object").and_then(|v| v.as_str()).filter(|o| *o == "image" || *o == "shape").ok_or("object must be image or shape")?;
+            let object = if kind == "turn" { "shape" } else { map.get("object").and_then(|v| v.as_str()).filter(|o| *o == "image" || *o == "shape").ok_or("object must be image or shape")? };
             let oid = map.get("id").and_then(|v| v.as_u64()).filter(|n| *n <= u64::from(u32::MAX)).ok_or("missing object id")?;
             let exists = {
                 let sh = self.session.doc().map_err(|e| e.to_string())?.wb.sheet(sheet).ok_or("unknown sheet")?;
@@ -1360,6 +1365,38 @@ impl HeadlessWorkbook {
                     return Err("Nothing to change.".into());
                 }
                 ("object.move", params)
+            } else if kind == "place" {
+                let at = |key: &str, max: u32| map.get(key).and_then(|v| v.as_u64()).filter(|n| *n < u64::from(max)).map(|n| n as u32);
+                let (r, c) = (at("row", gridcraft_engine::core::MAX_ROWS).ok_or("row is out of range")?, at("col", gridcraft_engine::core::MAX_COLS).ok_or("col is out of range")?);
+                let off = |key: &str| -> Result<f64, String> { map.get(key).and_then(|v| v.as_f64()).filter(|n| n.is_finite() && (0.0..=100_000.0).contains(n)).ok_or_else(|| format!("{key} must be 0 to 100,000 points")) };
+                params["at"] = json!(CellRef::new(r, c).a1());
+                params["dx"] = json!(off("dx")?);
+                params["dy"] = json!(off("dy")?);
+                for key in ["width", "height"] {
+                    if let Some(n) = size(key)? {
+                        if n < 1.0 && !(key == "height" && n == 0.0) {
+                            return Err(format!("{key} must be at least 1 point"));
+                        }
+                        params[key] = json!(n);
+                    }
+                }
+                ("object.move", params)
+            } else if kind == "order" {
+                match map.get("to").and_then(|v| v.as_str()) {
+                    Some("front") => {
+                        params["toFront"] = json!(true);
+                        ("arrange.bringForward", params)
+                    }
+                    Some("forward") => ("arrange.bringForward", params),
+                    Some("back") => {
+                        params["toBack"] = json!(true);
+                        ("arrange.sendBackward", params)
+                    }
+                    Some("backward") => ("arrange.sendBackward", params),
+                    _ => return Err("to must be front, forward, backward or back".into()),
+                }
+            } else if kind == "turn" {
+                ("arrange.rotate", json!({"id": oid}))
             } else {
                 ("object.delete", params)
             }
@@ -3271,6 +3308,28 @@ mod tests {
         assert_eq!(serde_json::from_str::<serde_json::Value>(&book.objects_info(0).unwrap()).unwrap()["shapes"].as_array().unwrap().len(), 1);
         book.undo().unwrap();
         assert_eq!(serde_json::from_str::<serde_json::Value>(&book.objects_info(0).unwrap()).unwrap()["shapes"].as_array().unwrap().len(), 2);
+        book.object_op(0, 0, 0, &format!(r#"{{"kind":"place","object":"image","id":{id},"row":420,"col":5,"dx":3.5,"dy":2,"width":50,"height":25}}"#)).unwrap();
+        let placed: serde_json::Value = serde_json::from_str(&book.objects_info(0).unwrap()).unwrap();
+        assert_eq!(placed["images"][0]["row"], 420);
+        assert_eq!(placed["images"][0]["col"], 5);
+        assert_eq!(placed["images"][0]["width"], serde_json::json!(50.0));
+        book.object_op(0, 0, 0, &format!(r#"{{"kind":"order","object":"shape","id":{sid},"to":"front"}}"#)).unwrap();
+        let ordered: serde_json::Value = serde_json::from_str(&book.objects_info(0).unwrap()).unwrap();
+        assert_eq!(ordered["shapes"][1]["id"].as_u64().unwrap(), sid, "now on top");
+        book.object_op(0, 0, 0, &format!(r#"{{"kind":"turn","id":{sid}}}"#)).unwrap();
+        let turned: serde_json::Value = serde_json::from_str(&book.objects_info(0).unwrap()).unwrap();
+        assert_eq!(turned["shapes"][1]["width"], serde_json::json!(40.0));
+        assert_eq!(turned["shapes"][1]["height"], serde_json::json!(120.0));
+        for bad in [
+            format!(r#"{{"kind":"place","object":"image","id":{id},"row":999999999,"col":5,"dx":0,"dy":0}}"#),
+            format!(r#"{{"kind":"place","object":"image","id":{id},"row":1,"col":5,"dx":-1,"dy":0}}"#),
+            format!(r#"{{"kind":"place","object":"image","id":{id},"row":1,"col":5,"dx":0}}"#),
+            format!(r#"{{"kind":"order","object":"image","id":{id},"to":"sideways"}}"#),
+            format!(r#"{{"kind":"turn","id":{id}}}"#),
+            r#"{"kind":"turn","id":424242}"#.to_string(),
+        ] {
+            assert!(book.object_op(0, 0, 0, &bad).is_err(), "{bad}");
+        }
         let mut fake = png.clone();
         fake[1] = 0x51;
         assert!(book.insert_picture(0, 400, 1, &fake, "", 0.0).is_err(), "not a PNG");

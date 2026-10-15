@@ -30,7 +30,7 @@ export type WhatIfOp={kind:'goalSeek';set:string;to:number;changing:string}|{kin
 export interface ScenarioInfo{name:string;changing:string;comment:string;values:string[]}
 /** Pictures and shapes. Anchors are in points; the bridge re-validates. */
 export type ShapeName='rectangle'|'roundedRectangle'|'ellipse'|'triangle'|'line'|'arrow'|'textBox';
-export type ObjectOp={kind:'shape';shape:ShapeName;fill?:string;line?:string;width?:number;height?:number;text?:string}|{kind:'move';object:'image'|'shape';id:number;width?:number;height?:number;here?:boolean}|{kind:'delete';object:'image'|'shape';id:number};
+export type ObjectOp={kind:'shape';shape:ShapeName;fill?:string;line?:string;width?:number;height?:number;text?:string}|{kind:'move';object:'image'|'shape';id:number;width?:number;height?:number;here?:boolean}|{kind:'delete';object:'image'|'shape';id:number}|{kind:'place';object:'image'|'shape';id:number;row:number;col:number;dx:number;dy:number;width?:number;height?:number}|{kind:'order';object:'image'|'shape';id:number;to:'front'|'forward'|'backward'|'back'}|{kind:'turn';id:number};
 export interface PictureOp{base64:string;alt?:string;width?:number}
 interface ObjectBase{id:number;row:number;col:number;dx:number;dy:number;width:number;height:number}
 export interface ImageObject extends ObjectBase{mime:string;alt:string;bytes:number}

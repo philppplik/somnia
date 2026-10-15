@@ -6,7 +6,10 @@ test('object commands accept closed shapes only',()=>{
  assert.deepEqual(parseObjectCommand({kind:'shape',shape:'line',height:0}),{kind:'shape',shape:'line',height:0});
  assert.deepEqual(parseObjectCommand({kind:'move',object:'image',id:3,here:true}),{kind:'move',object:'image',id:3,here:true});
  assert.deepEqual(parseObjectCommand({kind:'delete',object:'shape',id:4}),{kind:'delete',object:'shape',id:4});
- for(const bad of [null,[],{},{kind:'x'},{kind:'shape',shape:'star'},{kind:'shape',shape:'rectangle',fill:'#ff0000'},{kind:'shape',shape:'rectangle',line:'yellow'},{kind:'shape',shape:'rectangle',text:'x'},{kind:'shape',shape:'rectangle',height:0},{kind:'shape',shape:'textBox',width:5},{kind:'shape',shape:'textBox',width:4001},{kind:'shape',shape:'textBox',text:'x'.repeat(201)},{kind:'shape',shape:'textBox',text:'a\u0007'},{kind:'shape',shape:'textBox',extra:1},
+ assert.deepEqual(parseObjectCommand({kind:'place',object:'image',id:3,row:4,col:5,dx:1.5,dy:0,width:50}),{kind:'place',object:'image',id:3,row:4,col:5,dx:1.5,dy:0,width:50});
+ assert.deepEqual(parseObjectCommand({kind:'order',object:'shape',id:3,to:'front'}),{kind:'order',object:'shape',id:3,to:'front'});
+ assert.deepEqual(parseObjectCommand({kind:'turn',id:3}),{kind:'turn',id:3});
+ for(const bad of [{kind:'place',object:'image',id:3,row:-1,col:0,dx:0,dy:0},{kind:'place',object:'image',id:3,row:2000000,col:0,dx:0,dy:0},{kind:'place',object:'image',id:3,row:0,col:0,dx:-1,dy:0},{kind:'place',object:'image',id:3,row:0,col:0,dx:0},{kind:'place',object:'image',id:3,row:0,col:0,dx:0,dy:0,width:0},{kind:'order',object:'image',id:3,to:'up'},{kind:'turn',id:3,object:'shape'},{kind:'turn',id:'x'},null,[],{},{kind:'x'},{kind:'shape',shape:'star'},{kind:'shape',shape:'rectangle',fill:'#ff0000'},{kind:'shape',shape:'rectangle',line:'yellow'},{kind:'shape',shape:'rectangle',text:'x'},{kind:'shape',shape:'rectangle',height:0},{kind:'shape',shape:'textBox',width:5},{kind:'shape',shape:'textBox',width:4001},{kind:'shape',shape:'textBox',text:'x'.repeat(201)},{kind:'shape',shape:'textBox',text:'a\u0007'},{kind:'shape',shape:'textBox',extra:1},
   {kind:'move',object:'chart',id:1,here:true},{kind:'move',object:'image',id:-1,here:true},{kind:'move',object:'image',id:1.5,here:true},{kind:'move',object:'image',id:1},{kind:'move',object:'image',id:1,here:'y'},{kind:'delete',object:'image'}])assert.throws(()=>parseObjectCommand(bad),JSON.stringify(bad));
 });
 test('pictures are decoded only when they are bounded PNG or JPEG',()=>{
@@ -25,7 +28,8 @@ test('bridge replies are parsed defensively and shapes draw safely',()=>{
 });
 test('the panel builds ops from complete fields',()=>{
  const f={fill:'blue',line:'',text:'',width:'',height:'',pick:'image:3'};
- for(const a of OBJECT_ACTIONS.filter(x=>x!=='picture'))assert.ok(buildObjectOp(a,a==='resize'?{...f,width:'90'}:f),a);
+ for(const a of OBJECT_ACTIONS.filter(x=>x!=='picture'&&x!=='turn'))assert.ok(buildObjectOp(a,a==='resize'?{...f,width:'90'}:f),a);
+ assert.equal(buildObjectOp('turn',f),null,'only shapes turn');assert.deepEqual(buildObjectOp('turn',{...f,pick:'shape:7'}),{kind:'turn',id:7});assert.deepEqual(buildObjectOp('back',{...f,pick:'shape:7'}),{kind:'order',object:'shape',id:7,to:'back'});
  assert.equal(buildObjectOp('resize',f),null);assert.equal(buildObjectOp('delete',{...f,pick:''}),null);assert.equal(buildObjectOp('delete',{...f,pick:'chart:3'}),null);assert.equal(buildObjectOp('rectangle',{...f,width:'2'}),null);
  assert.equal(OBJECT_GROUPS.flatMap(g=>g[1]).length,OBJECT_ACTIONS.length);
 });
