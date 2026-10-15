@@ -1022,5 +1022,8 @@
  "studio3d.hist.screw_one": "{name} schrauben (Helix)",
  "studio3d.hist.screw_other": "{count} Objekte schrauben (Helix)",
  "cmd.studio3d.edit.selectFacing": "Faces des bearbeiteten 3D-Mesh auswählen, die entlang einer Mesh-Achse zeigen",
- "cmd.studio3d.cursor.toSelection": "3D-Cursor an die Mitte der Selektion setzen"
+ "cmd.studio3d.cursor.toSelection": "3D-Cursor an die Mitte der Selektion setzen",
+ "cmd.studio3d.object.toCursor": "3D-Objekte so verschieben, dass ihre gemeinsame Mitte auf dem 3D-Cursor liegt",
+ "studio3d.hist.moveToCursor_one": "{count} Objekt auf den 3D-Cursor verschieben",
+ "studio3d.hist.moveToCursor_other": "{count} Objekte auf den 3D-Cursor verschieben"
 }

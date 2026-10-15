@@ -1022,5 +1022,8 @@
  "studio3d.hist.screw_one": "Atornillar {name}",
  "studio3d.hist.screw_other": "Atornillar {count} objetos",
  "cmd.studio3d.edit.selectFacing": "Seleccionar caras de la malla 3D editada que apuntan a lo largo de un eje de la malla",
- "cmd.studio3d.cursor.toSelection": "Mover el cursor 3D al centro de la selección"
+ "cmd.studio3d.cursor.toSelection": "Mover el cursor 3D al centro de la selección",
+ "cmd.studio3d.object.toCursor": "Mover objetos 3D para que su centro combinado caiga sobre el cursor 3D",
+ "studio3d.hist.moveToCursor_one": "Mover {count} objeto al cursor 3D",
+ "studio3d.hist.moveToCursor_other": "Mover {count} objetos al cursor 3D"
 }

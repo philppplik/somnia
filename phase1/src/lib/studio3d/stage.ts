@@ -750,6 +750,16 @@ export class Stage{
   c.divideScalar(objs.length);
   return[c.x,c.y,c.z];
  }
+ /** Moves the objects so their combined centre lands on the given point (for example the 3D cursor), keeping their relative offsets. One undo step. */
+ moveCenterTo(ids:number[],at:[number,number,number]):number{
+  if(!Array.isArray(at)||at.length!==3||at.some(n=>!Number.isFinite(n)))throw new StageError('The target point must be three numbers.');
+  const objs=this.topLevel(this.needMany(ids,1));
+  const c=this.objectsCenter(objs.map(o=>o.id));
+  const delta=new THREE.Vector3(at[0]-c[0],at[1]-c[1],at[2]-c[2]);
+  if(delta.lengthSq()<1e-18)return 0;
+  this.moveMany({key:'studio3d.hist.moveToCursor',params:{count:objs.length}},objs.map(o=>({o,delta})));
+  return objs.length;
+ }
  /** Every unique edge of the edited mesh as index pairs (low index first). */
  private allEdges(m:THREE.Mesh):[number,number][]{
   const idx=m.geometry.getIndex();const pos=m.geometry.getAttribute('position');

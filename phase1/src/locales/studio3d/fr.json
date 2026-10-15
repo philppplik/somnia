@@ -1022,5 +1022,8 @@
  "studio3d.hist.screw_one": "Visser {name}",
  "studio3d.hist.screw_other": "Visser {count} objets",
  "cmd.studio3d.edit.selectFacing": "Sélectionner les faces du maillage 3D édité orientées le long d'un axe du maillage",
- "cmd.studio3d.cursor.toSelection": "Déplacer le curseur 3D au centre de la sélection"
+ "cmd.studio3d.cursor.toSelection": "Déplacer le curseur 3D au centre de la sélection",
+ "cmd.studio3d.object.toCursor": "Déplacer les objets 3D pour que leur centre combiné arrive sur le curseur 3D",
+ "studio3d.hist.moveToCursor_one": "Déplacer {count} objet sur le curseur 3D",
+ "studio3d.hist.moveToCursor_other": "Déplacer {count} objets sur le curseur 3D"
 }

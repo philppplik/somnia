@@ -1022,5 +1022,8 @@
  "studio3d.hist.screw_one": "Parafusar {name}",
  "studio3d.hist.screw_other": "Parafusar {count} objetos",
  "cmd.studio3d.edit.selectFacing": "Selecionar faces da malha 3D editada que apontam ao longo de um eixo da malha",
- "cmd.studio3d.cursor.toSelection": "Mover o cursor 3D para o centro da seleção"
+ "cmd.studio3d.cursor.toSelection": "Mover o cursor 3D para o centro da seleção",
+ "cmd.studio3d.object.toCursor": "Mover objetos 3D para que seu centro combinado caia sobre o cursor 3D",
+ "studio3d.hist.moveToCursor_one": "Mover {count} objeto para o cursor 3D",
+ "studio3d.hist.moveToCursor_other": "Mover {count} objetos para o cursor 3D"
 }
