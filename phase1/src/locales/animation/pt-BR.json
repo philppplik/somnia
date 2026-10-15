@@ -1368,5 +1368,7 @@
  "animation.audio.fade.in": "Fade in",
  "animation.audio.fade.out": "Fade out",
  "animation.audio.fade.both": "Fade in e out",
- "animation.audio.fade": "Fade de volume…"
+ "animation.audio.fade": "Fade de volume…",
+ "animation.audio.duck": "Abaixar sob outro clipe…",
+ "cmd.animation.audio.duck": "Abaixar o volume de uma camada de áudio enquanto outra camada de áudio toca"
 }

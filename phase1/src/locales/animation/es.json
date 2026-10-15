@@ -1368,5 +1368,7 @@
  "animation.audio.fade.in": "Fundido de entrada",
  "animation.audio.fade.out": "Fundido de salida",
  "animation.audio.fade.both": "Entrada y salida",
- "animation.audio.fade": "Fundido de volumen…"
+ "animation.audio.fade": "Fundido de volumen…",
+ "animation.audio.duck": "Bajar bajo otro clip…",
+ "cmd.animation.audio.duck": "Bajar el volumen de una capa de audio mientras suena otra capa de audio"
 }

@@ -1368,5 +1368,7 @@
  "animation.audio.fade.in": "Fade in",
  "animation.audio.fade.out": "Fade out",
  "animation.audio.fade.both": "Fade in and out",
- "animation.audio.fade": "Fade volume…"
+ "animation.audio.fade": "Fade volume…",
+ "animation.audio.duck": "Duck under another clip…",
+ "cmd.animation.audio.duck": "Duck the volume of an audio layer while another audio layer plays"
 }

@@ -23,6 +23,26 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.audio.duck",
+      "title": "Duck the volume of an audio layer while another audio layer plays",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "audio",
+        "dip",
+        "duck",
+        "ducking",
+        "lower",
+        "music",
+        "narration",
+        "sidechain",
+        "voice",
+        "volume"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.audio.grid",
       "title": "Place beat markers on a steady BPM grid",
       "category": "Edit",

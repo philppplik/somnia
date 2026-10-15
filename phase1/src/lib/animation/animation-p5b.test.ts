@@ -293,3 +293,15 @@ test('P296 fade works on audio clips: volume keys 0 to full and back inside the 
  assert.throws(()=>run({mode:'in',layers:['aud']}),/already|No selected/);
  s.undo();assert.equal(JSON.stringify(s.document),before);
 });
+test('P298 duck: music dips while the voice plays and returns after, existing keys inside the stretch replaced, one undo',async()=>{
+ const {duckSpecs}=await import('./duckCommands');const {AnimationSession,setAnimationSession}=await import('./session');const {evaluate}=await import('./interpolate');
+ const run=duckSpecs()[0].run as (p?:unknown)=>unknown;
+ let d=withAudio();d=applyEdit(d,{type:'audio.import',asset:asset(wav(8000,8000,1,i=>Math.sin(i/20)*0.5),2,'voice.wav'),id:'voice'});
+ d=applyEdit(d,{type:'audio.update',layer:'voice',offset:sec/2*1});// voice plays 0.5s..1.5s
+ const s=new AnimationSession();s.open(d);setAnimationSession(s);const before=JSON.stringify(s.document);
+ assert.throws(()=>run({layer:'aud',under:'aud'}),/different/);
+ run({layer:'aud',under:'voice',level:20,frames:6});
+ const v=layer(s.document!).audio!.volume,at=(t:number)=>evaluate(v,t) as number;
+ assert.equal(at(0),100);assert.equal(Math.round(at(sec)),20);assert.equal(at(Math.round(sec*1.5)+frameToTick(6,{num:30,den:1})+1),100);
+ s.undo();assert.equal(JSON.stringify(s.document),before);
+});

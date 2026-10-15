@@ -1368,5 +1368,7 @@
  "animation.audio.fade.in": "Fondu en entrée",
  "animation.audio.fade.out": "Fondu en sortie",
  "animation.audio.fade.both": "Entrée et sortie",
- "animation.audio.fade": "Fondu du volume…"
+ "animation.audio.fade": "Fondu du volume…",
+ "animation.audio.duck": "Baisser sous un autre clip…",
+ "cmd.animation.audio.duck": "Baisser le volume d'un calque audio pendant la lecture d'un autre calque audio"
 }
