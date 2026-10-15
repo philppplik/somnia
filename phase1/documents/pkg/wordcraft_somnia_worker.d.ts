@@ -111,6 +111,8 @@ export class DocSession {
     sort_paragraphs(first: number, last: number, descending: boolean): void;
     move_paragraphs(first: number, last: number, delta: number): void;
     compare_text(text: string): void;
+    section_setup(block: number): string;
+    set_section_setup(block: number, setup_json: string): void;
     paragraph_spacing(): string;
     set_paragraph_spacing(value: string): void;
     bookmarks(): string;

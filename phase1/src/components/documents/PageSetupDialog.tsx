@@ -1,6 +1,7 @@
 import {useEffect,useState} from 'react';
 import {LINE_RESTARTS,MAX_COLUMNS,MAX_COLUMN_SPACE_PT,MAX_MARGIN_PT,PAGE_SIZE_IDS,pageSetupProblem,type PageMargins,type PageSetupPatch,type PageSetupState,type PageSizeId} from '../../lib/documents/protocol';
 import {readPageSetup,setPageSetup} from '../../lib/documents/session';
+import {getDocumentsState} from '../../lib/documents/store';
 import {useT} from '../../lib/useT';
 import {NativeButton,NativeInput,NativeSelect} from '../ui/native-controls';
 const tool='grid h-7 cursor-pointer grid-flow-col items-center gap-1 rounded-sm border-0 bg-transparent px-2 text-xs text-ink-2 hover:bg-hover disabled:cursor-default disabled:opacity-50';
@@ -39,15 +40,19 @@ export function buildPageSetupPatch(start:PageSetupForm,f:PageSetupForm):PageSet
 /** Paper size, orientation and margins (in centimetres) for the whole document, applied as one undo step. */
 export function PageSetupDialog({onClose}:{onClose:()=>void}){
  const {t}=useT();const [start,setStart]=useState<PageSetupForm|null>(null);const [f,setF]=useState<PageSetupForm|null>(null);const [failed,setFailed]=useState(false);
- useEffect(()=>{let live=true;void readPageSetup().then(s=>{if(!live)return;if(!s){setFailed(true);return;}const x=formFromState(s);setStart(x);setF(x);}).catch(()=>{if(live)setFailed(true);});return()=>{live=false;};},[]);
+ const [scope,setScope]=useState<'document'|'section'>('document');const [block]=useState(()=>getDocumentsState().caret?.block);
+ useEffect(()=>{let live=true;void readPageSetup(scope==='section'?block:undefined).then(s=>{if(!live)return;if(!s){setFailed(true);return;}const x=formFromState(s);setStart(x);setF(x);}).catch(()=>{if(live)setFailed(true);});return()=>{live=false;};},[scope,block]);
  const patch=start&&f?buildPageSetupPatch(start,f):null;
- const go=()=>{if(!patch)return;onClose();void setPageSetup(patch);};
+ const go=()=>{if(!patch)return;onClose();void setPageSetup(patch,scope==='section'?block:undefined);};
  const margin=(k:keyof PageMargins)=>f&&<label key={k} className="grid gap-1 text-xs text-ink-2">{t('documents.page.margin.'+k)}
   <NativeInput className={field} inputMode="decimal" value={f.margins[k]} aria-invalid={cmToPt(f.margins[k])===null} onChange={e=>setF({...f,margins:{...f.margins,[k]:e.currentTarget.value}})} data-testid={'documents-page-margin-'+k}/></label>;
  return <div role="dialog" aria-modal="true" aria-labelledby="documents-page-title" className="fixed inset-0 z-20 grid place-items-center bg-black/30" onKeyDown={e=>{if(e.key==='Escape'){e.stopPropagation();onClose();}if(e.key==='Enter'&&e.target instanceof HTMLInputElement){e.preventDefault();go();}}}>
   <div className="grid max-w-md gap-3 rounded-[var(--r-popup,25px)] bg-surface p-5 shadow-xl" data-testid="documents-page-dialog">
    <h2 id="documents-page-title" className="text-sm font-medium">{t('documents.page.title')}</h2>
    {failed?<p className="text-xs text-ink-3" role="alert">{t('documents.page.unavailable')}</p>:!f?<p className="text-xs text-ink-3">{t('documents.page.loading')}</p>:<>
+    <label className="grid gap-1 text-xs text-ink-2">{t('documents.page.scope')}
+     <NativeSelect className="h-7 rounded-sm border border-subtle bg-surface px-1 text-xs text-ink" value={scope} onChange={e=>setScope(e.currentTarget.value==='section'&&block!==undefined?'section':'document')} data-testid="documents-page-scope">
+      <option value="document">{t('documents.page.scope.document')}</option><option value="section" disabled={block===undefined}>{t('documents.page.scope.section')}</option></NativeSelect></label>
     <label className="grid gap-1 text-xs text-ink-2">{t('documents.page.size')}
      <NativeSelect className="h-7 rounded-sm border border-subtle bg-surface px-1 text-xs text-ink" value={f.size} onChange={e=>{const v=e.currentTarget.value;if((PAGE_SIZE_IDS as readonly string[]).includes(v))setF({...f,size:v as PageSizeId});}} data-testid="documents-page-size">
       {f.size==='custom'&&<option value="custom" disabled>{t('documents.page.custom')}</option>}{PAGE_SIZE_IDS.map(s=><option key={s} value={s}>{t('documents.page.size.'+s)}</option>)}</NativeSelect></label>

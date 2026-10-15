@@ -52,7 +52,7 @@ new file mode 100644
 index 0000000..5b80b79
 --- /dev/null
 +++ b/crates/somnia-worker/src/lib.rs
-@@ -0,0 +1,7002 @@
+@@ -0,0 +1,7091 @@
 +//! Experimental headless adapter. No DOM, egui, filesystem or UI thread access.
 +use wasm_bindgen::prelude::*;
 +use std::sync::Arc;
@@ -2946,7 +2946,27 @@ index 0000000..5b80b79
 +    }
 +    /// `{"size":"a4|letter|legal|a5|custom","landscape":bool,"width","height","margins":{"top","bottom","left","right"}}` of the last section (points).
 +    fn do_page_setup_state(&self) -> String {
-+        let s = &self.doc.last_section;
++        self.page_setup_json(&self.doc.last_section)
++    }
++    /// The top-level body index of the paragraph that carries the section containing `block` (a section break closes its section), or `None` for the last section.
++    fn section_target(&self, block: usize) -> Result<Option<usize>, String> {
++        let top = if block >= CELL_BASE { self.cell_paras().nth(block - CELL_BASE).map(|s| s[0]).ok_or_else(|| format!("no cell paragraph {block}"))? } else { block };
++        if top >= self.doc.body.len() {
++            return Err("no such paragraph".into());
++        }
++        Ok((top..self.doc.body.len()).find(|&i| matches!(&*self.doc.body[i], Block::Para(p) if p.section.is_some())))
++    }
++    /// The page setup of the section that holds `block`, as `page_setup` reports it for the last section.
++    fn do_section_setup_state(&self, block: usize) -> Result<String, String> {
++        Ok(match self.section_target(block)? {
++            Some(i) => match &*self.doc.body[i] {
++                Block::Para(p) => self.page_setup_json(p.section.as_ref().ok_or("no section")?),
++                _ => return Err("no such section".into()),
++            },
++            None => self.do_page_setup_state(),
++        })
++    }
++    fn page_setup_json(&self, s: &wordcraft_doc::SectionProps) -> String {
 +        let (a, b) = if s.page_w >= s.page_h { (s.page_h, s.page_w) } else { (s.page_w, s.page_h) };
 +        let size = PAGE_SIZES.iter().find(|(_, w, h)| (a - w).abs() < 1.0 && (b - h).abs() < 1.0).map_or("custom", |(n, _, _)| n);
 +        serde_json::json!({"size": size, "landscape": s.landscape, "width": s.page_w, "height": s.page_h,
@@ -2963,6 +2983,13 @@ index 0000000..5b80b79
 +    /// Sets page size, orientation and margins on every section. JSON keys (all optional): `size` ("a4", "letter", "legal", "a5"),
 +    /// `landscape` (bool) and `margins` ({top,bottom,left,right}, each 0-288 pt). The text area must stay at least 72 pt each way.
 +    fn do_set_page_setup(&mut self, json: &str) -> Result<(), String> {
++        self.do_set_page_setup_in(json, None)
++    }
++    /// The same for only the section that holds paragraph `block` (the document-wide page colour and default tab stop are refused there).
++    fn do_set_section_setup(&mut self, block: usize, json: &str) -> Result<(), String> {
++        self.do_set_page_setup_in(json, Some(block))
++    }
++    fn do_set_page_setup_in(&mut self, json: &str, scope: Option<usize>) -> Result<(), String> {
 +        if json.len() > 1024 {
 +            return Err("the page setup is too long".into());
 +        }
@@ -2971,7 +2998,20 @@ index 0000000..5b80b79
 +        if obj.is_empty() {
 +            return Err("nothing to change".into());
 +        }
-+        let cur = self.doc.last_section.clone();
++        let target = match scope {
++            Some(b) => self.section_target(b)?,
++            None => None,
++        };
++        let cur = match target {
++            Some(i) => match &*self.doc.body[i] {
++                Block::Para(p) => p.section.clone().ok_or("no section")?,
++                _ => return Err("no such section".into()),
++            },
++            None => self.doc.last_section.clone(),
++        };
++        if scope.is_some() && (obj.contains_key("pageColor") || obj.contains_key("defaultTab")) {
++            return Err("the page colour and the default tab stop belong to the whole document".into());
++        }
 +        let (mut w, mut h, mut land) = (cur.page_w, cur.page_h, cur.landscape);
 +        let mut m = [cur.margin_top, cur.margin_bottom, cur.margin_left, cur.margin_right];
 +        let mut new_size: Option<(f32, f32)> = None;
@@ -3196,6 +3236,20 @@ index 0000000..5b80b79
 +                s.page_borders = *b;
 +            }
 +        };
++        if scope.is_some() {
++            match target {
++                Some(i) => {
++                    if let Block::Para(p) = Arc::make_mut(&mut self.doc.body[i]) {
++                        if let Some(s) = p.section.as_mut() {
++                            set(s);
++                        }
++                    }
++                }
++                None => set(&mut self.doc.last_section),
++            }
++            self.pages = DocLayout::default();
++            return Ok(());
++        }
 +        for blk in self.doc.body.iter_mut() {
 +            if matches!(&**blk, Block::Para(p) if p.section.is_some()) {
 +                if let Block::Para(p) = Arc::make_mut(blk) {
@@ -4746,6 +4800,13 @@ index 0000000..5b80b79
 +    /// Page size, orientation and margins as JSON (see `set_page_setup`).
 +    pub fn page_setup(&self) -> String {
 +        self.do_page_setup_state()
++    }
++    /// Page setup of the section that holds paragraph `block`.
++    pub fn section_setup(&self, block: usize) -> Result<String, JsValue> {
++        self.do_section_setup_state(block).map_err(|e| js_err(&e))
++    }
++    pub fn set_section_setup(&mut self, block: usize, setup_json: &str) -> Result<(), JsValue> {
++        self.do_set_section_setup(block, setup_json).map_err(|e| js_err(&e))
 +    }
 +    pub fn set_page_setup(&mut self, setup_json: &str) -> Result<(), JsValue> {
 +        self.do_set_page_setup(setup_json).map_err(|e| js_err(&e))
@@ -6506,6 +6567,34 @@ index 0000000..5b80b79
 +        assert_eq!(texts(&s), before);
 +        s.doc.body.push(std::sync::Arc::new(Block::Table(wordcraft_doc::Table::new(1, 1, 100.0))));
 +        assert!(s.do_compare_text("x").is_err(), "a table refuses");
++    }
++    #[test]
++    fn section_setup_changes_only_the_section_that_holds_the_paragraph_and_refuses_document_wide_keys() {
++        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
++        s.doc.body.clear();
++        for t in ["a", "b", "c"] {
++            s.doc.body.push(wordcraft_doc::para_block(wordcraft_doc::Paragraph::with_text(t, CharProps::default())));
++        }
++        s.do_insert_section_break(0, "nextPage").unwrap();
++        let st = |s: &DocSession, b: usize| -> serde_json::Value { serde_json::from_str(&s.do_section_setup_state(b).unwrap()).unwrap() };
++        let was = st(&s, 2)["landscape"].as_bool().unwrap();
++        let before = wordcraft_docx::write(&s.doc).unwrap();
++        for bad in [r#"{"pageColor":"#ff0000"}"#, r#"{"defaultTab":36}"#, r#"{"size":"b7"}"#, "{}", "[]"] {
++            assert!(s.do_set_section_setup(0, bad).is_err(), "{bad}");
++        }
++        assert!(s.do_set_section_setup(99, r#"{"landscape":true}"#).is_err(), "no such paragraph");
++        assert_eq!(wordcraft_docx::write(&s.doc).unwrap(), before, "refusals change nothing");
++        s.do_set_section_setup(0, &format!(r#"{{"landscape":{},"margins":{{"left":100}}}}"#, !was)).unwrap();
++        assert_eq!(st(&s, 0)["landscape"].as_bool(), Some(!was));
++        assert_eq!(st(&s, 0)["margins"]["left"].as_f64(), Some(100.0));
++        assert_eq!(st(&s, 2)["landscape"].as_bool(), Some(was), "the last section is untouched");
++        assert_eq!(s.do_page_setup_state(), st(&s, 2).to_string());
++        s.do_set_section_setup(2, &format!(r#"{{"landscape":{}}}"#, !was)).unwrap();
++        assert_eq!(st(&s, 2)["landscape"].as_bool(), Some(!was));
++        assert_eq!(st(&s, 0)["margins"]["left"].as_f64(), Some(100.0));
++        assert!(s.paginate() >= 1);
++        let re = DocSession::from_bytes(&wordcraft_docx::write(&s.doc).unwrap()).unwrap();
++        assert_eq!(serde_json::from_str::<serde_json::Value>(&re.do_section_setup_state(0).unwrap()).unwrap()["margins"]["left"].as_f64(), Some(100.0));
 +    }
 +    #[test]
 +    fn cover_page_goes_first_breaks_before_the_old_start_and_undoes() {

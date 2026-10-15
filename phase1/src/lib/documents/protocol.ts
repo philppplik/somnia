@@ -177,8 +177,8 @@ export type DocumentsRequest=
  |{id:number;kind:'reviewState'}
  |{id:number;kind:'resolveChange';block:number;start:number;end:number;accept:boolean}
  |{id:number;kind:'resolveAll';accept:boolean}
- |{id:number;kind:'pageSetupState'}
- |{id:number;kind:'setPageSetup';setup:PageSetupPatch}
+ |{id:number;kind:'pageSetupState';block?:number}
+ |{id:number;kind:'setPageSetup';setup:PageSetupPatch;block?:number}
  |{id:number;kind:'commentsState'}
  |{id:number;kind:'addComment';block:number;start:number;end:number;text:string;author:string;date:string}
  |{id:number;kind:'replyComment';parent:number;text:string;author:string;date:string}

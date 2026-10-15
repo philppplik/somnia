@@ -102,8 +102,8 @@ export class DocumentsEngine{
  async resolveAll(accept:boolean):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'resolveAll',accept}))).document;}
  async setShowHidden(on:boolean):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'setShowHidden',on}))).document;}
  async setProofing(on:boolean):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'setProofing',on}))).document;}
- async pageSetupState():Promise<import('./protocol').PageSetupState>{return(await this.call('pageSetup',id=>({id,kind:'pageSetupState'}))).state;}
- async setPageSetup(setup:import('./protocol').PageSetupPatch):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'setPageSetup',setup}))).document;}
+ async pageSetupState(block?:number):Promise<import('./protocol').PageSetupState>{return(await this.call('pageSetup',id=>({id,kind:'pageSetupState',...(block===undefined?{}:{block})}))).state;}
+ async setPageSetup(setup:import('./protocol').PageSetupPatch,block?:number):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'setPageSetup',setup,...(block===undefined?{}:{block})}))).document;}
  async headerFooterState():Promise<import('./protocol').HeaderFooterState>{return(await this.call('headerFooter',id=>({id,kind:'headerFooterState'}))).state;}
  async setHeaderFooter(p:{header?:string;footer?:string;pageNumber?:boolean;headerAlign?:import('./protocol').HfAlign;footerAlign?:import('./protocol').HfAlign;pageTotal?:boolean}):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'setHeaderFooter',...p}))).document;}
  async insertSectionBreak(block:number,sectionKind:string):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'insertSectionBreak',block,sectionKind}))).document;}

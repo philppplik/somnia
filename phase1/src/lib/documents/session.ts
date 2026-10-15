@@ -1051,14 +1051,15 @@ export const applyProofFix=(i:ProofIssue,text:string)=>run(async()=>{
 
 /* ---- Page setup and go to page ---- */
 /** The page size, orientation and margins as the engine reports them (not an edit). */
-export async function readPageSetup():Promise<PageSetupState|null>{
- const e=engine;if(!e||getDocumentsState().status!=='ready')return null;const check=ownerGuard();const st=await e.pageSetupState();check();return st;
+export async function readPageSetup(block?:number):Promise<PageSetupState|null>{
+ const e=engine;if(!e||getDocumentsState().status!=='ready')return null;const check=ownerGuard();const st=await e.pageSetupState(block);check();return st;
 }
 /** Page size, orientation and margins for every section. One undo step; the caret stays where it is. */
-export const setPageSetup=(patch:PageSetupPatch)=>run(async()=>{
+/** With `block`, only the section holding that paragraph changes (the page colour and default tab stop stay document-wide and are refused there). */
+export const setPageSetup=(patch:PageSetupPatch,block?:number)=>run(async()=>{
  const bad=pageSetupProblem(patch);if(bad)throw new Error(bad);
  const c=getDocumentsState().caret;const spot=c?{block:c.block,off:c.head}:await nearEditable(engine!,0);
- await structural(eng=>eng.setPageSetup(patch),spot,spot);
+ await structural(eng=>eng.setPageSetup(patch,block),spot,spot);
  if(!c)patchDocuments({caret:null});
 });
 
