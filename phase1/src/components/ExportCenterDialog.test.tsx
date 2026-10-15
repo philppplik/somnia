@@ -60,6 +60,22 @@ test('a stored recent entry renders as the top group in stored order',()=>{
  }finally{if(prev===undefined)delete (g as Record<string,unknown>).localStorage;else g.localStorage=prev;}
 });
 
+test('footer keyboard hints render; empty hint is a status; long labels truncate',()=>{
+ const long='Export a very long document name that would otherwise overflow the dialog row '.repeat(2);
+ const offs=[registerCommand({id:'project.export',title:long,category:'Project',level:'ui',enabled:()=>true,run:()=>{}})];
+ try{
+  const html=renderToStaticMarkup(<ExportCenterPanel onClose={()=>{}}/>);
+  assert.ok(!html.includes('exportCenter.hintNav'),'translated, not raw keys');
+  const foot=html.slice(html.lastIndexOf('<footer'));
+  assert.ok(foot.includes('to navigate')&&foot.includes('to run'),'footer hints');
+  const row=html.slice(html.indexOf('export-center-cmd-project.export'));
+  assert.match(row,/class="[^"]*truncate[^"]*"/,'row label truncates');
+  assert.match(html,/<h3[^>]*class="[^"]*truncate/,'group header truncates');
+ }finally{offs.forEach(off=>off());}
+ const html=renderToStaticMarkup(<ExportCenterPanel onClose={()=>{}}/>);
+ if(html.includes('export-center-empty'))assert.match(html,/role="status"[^>]*data-testid="export-center-empty"|data-testid="export-center-empty"[^>]*role="status"/,'empty hint is a status');
+});
+
 test('empty registry renders the empty hint',()=>{
  const html=renderToStaticMarkup(<ExportCenterPanel onClose={()=>{}}/>);
  // other suites may have registered exports; only assert when none are present

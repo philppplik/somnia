@@ -329,6 +329,8 @@
   "exportCenter.search": "Filter exports...",
   "exportCenter.noMatches": "No exports match the filter.",
   "exportCenter.group.recent": "Recently used",
+  "exportCenter.hintNav": "↑ ↓ to navigate",
+  "exportCenter.hintRun": "Enter to run",
   "export.page": "Page",
   "export.pageAria": "Page to export",
   "export.inlineCss": "Inline CSS",

@@ -42,3 +42,16 @@ test('advanced export center: grouped commands, dark theme, round trip through p
  await expect(page.getByTestId('export-center-group-recent')).toBeVisible();
  await expect(page.getByTestId('export-center-group-recent').getByTestId('export-center-cmd-project.export')).toBeVisible();
 });
+test('export center in light theme: focused row shows the global focus ring',async({page})=>{
+ await page.addInitScript(()=>{try{localStorage.setItem('somnia.theme','light');}catch{/* storage unavailable */}});
+ await page.goto('/');
+ await expect(page.getByRole('radio',{name:'Somnia Code',exact:true})).toBeVisible();
+ await page.evaluate(async()=>{const m=await import('/src/lib/commands.ts');await m.executeCommand('project.export.advanced');});
+ await expect(page.getByTestId('export-center')).toBeVisible();
+ await page.getByTestId('export-center-search').press('ArrowDown');
+ const row=page.getByTestId('export-center-cmd-project.export');
+ await expect(row).toBeFocused();
+ const outline=await row.evaluate(el=>getComputedStyle(el).outlineStyle);
+ expect(outline).toBe('solid');
+ await page.getByRole('dialog').screenshot({path:'test-results/export-center-light-focus.png'});
+});
