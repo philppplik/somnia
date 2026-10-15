@@ -4285,7 +4285,7 @@ impl DocSession {
                     k += 1;
                 }
                 CmpOp::Ins => {
-                    let mut p = Paragraph::with_text(&lines[j], &CharProps::default());
+                    let mut p = Paragraph::with_text(&lines[j], CharProps::default());
                     let len = p.len();
                     let _ = p.format(0, len, &|c| c.ins = Some(ins));
                     out.push(wordcraft_doc::para_block(p));
