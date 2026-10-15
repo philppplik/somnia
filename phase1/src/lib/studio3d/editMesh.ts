@@ -1055,7 +1055,7 @@ export function vertSlideSelected(m:MeshData,verts:number[],edge:[number,number]
  return moveSelected(m,[v],[dx*factor,dy*factor,dz*factor]);
 }
 /** Shears the selected vertices: offsets them along one world axis proportional to their distance from the selection centroid on a second axis. Position-equal twins shear together; the strongest mask at a position dams the whole seam (as a partial shear). Masks are carried; UVs are carried. */
-export function shearSelected(m:MeshData,verts:number[],along:'x'|'y'|'z',by:'x'|'y'|'z',factor:number,prop?:PropFalloff):MeshData{
+export function shearSelected(m:MeshData,verts:number[],along:'x'|'y'|'z',by:'x'|'y'|'z',factor:number,prop?:PropFalloff,pivot?:[number,number,number]):MeshData{
  check(m);
  if(!verts.length)throw new EditError('Select vertices to shear.');
  if(along!=='x'&&along!=='y'&&along!=='z')throw new EditError('The shear axis must be x, y or z.');
@@ -1078,6 +1078,7 @@ export function shearSelected(m:MeshData,verts:number[],along:'x'|'y'|'z',by:'x'
   if(want.has(k)&&!counted.has(k)){counted.add(k);c+=m.positions[v*3+bi];n++;}
  }
  c/=n;
+ if(pivot){if(!pivot.every(x=>Number.isFinite(x)))throw new EditError('The pivot point must be finite.');c=pivot[bi];}
  const fac=prop?propFactors(m,want,prop):null;
  const positions=[...m.positions];
  for(let v=0;v<nv;v++){
@@ -1091,7 +1092,7 @@ export function shearSelected(m:MeshData,verts:number[],along:'x'|'y'|'z',by:'x'
  check(out);return out;
 }
 /** Scales the selected vertices toward or away from the centroid of their distinct positions with per-axis factors: position-equal twins scale together, the strongest mask at a position dams the whole seam (as a partial scale). Masks are carried; UVs are carried. */
-export function scaleSelected(m:MeshData,verts:number[],factors:[number,number,number],prop?:PropFalloff):MeshData{
+export function scaleSelected(m:MeshData,verts:number[],factors:[number,number,number],prop?:PropFalloff,pivot?:[number,number,number]):MeshData{
  check(m);
  if(!verts.length)throw new EditError('Select vertices to scale.');
  if(!factors.every(x=>Number.isFinite(x))||factors.some(x=>Math.abs(x)>1e6))throw new EditError('The scale factors must be finite numbers.');
@@ -1110,6 +1111,7 @@ export function scaleSelected(m:MeshData,verts:number[],factors:[number,number,n
   if(want.has(k)&&!counted.has(k)){counted.add(k);cx+=m.positions[v*3];cy+=m.positions[v*3+1];cz+=m.positions[v*3+2];n++;}
  }
  cx/=n;cy/=n;cz/=n;
+ if(pivot){if(!pivot.every(x=>Number.isFinite(x)))throw new EditError('The pivot point must be finite.');cx=pivot[0];cy=pivot[1];cz=pivot[2];}
  const fac=prop?propFactors(m,want,prop):null;
  const positions=[...m.positions];
  for(let v=0;v<nv;v++){
@@ -1123,8 +1125,8 @@ export function scaleSelected(m:MeshData,verts:number[],factors:[number,number,n
  const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
  check(out);return out;
 }
-/** Rotates the selected vertices around the centroid of their distinct positions on a world axis: position-equal twins rotate together, the strongest mask at a position dams the whole seam (as a partial rotation toward the full angle). Masks are carried; UVs are carried. */
-export function rotateSelected(m:MeshData,verts:number[],axis:'x'|'y'|'z',degrees:number,prop?:PropFalloff):MeshData{
+/** Rotates the selected vertices around the centroid of their distinct positions (or an explicit pivot point) on a world axis: position-equal twins rotate together, the strongest mask at a position dams the whole seam (as a partial rotation toward the full angle). Masks are carried; UVs are carried. */
+export function rotateSelected(m:MeshData,verts:number[],axis:'x'|'y'|'z',degrees:number,prop?:PropFalloff,pivot?:[number,number,number]):MeshData{
  check(m);
  if(!verts.length)throw new EditError('Select vertices to rotate.');
  if(axis!=='x'&&axis!=='y'&&axis!=='z')throw new EditError('The rotation axis must be x, y or z.');
@@ -1143,6 +1145,7 @@ export function rotateSelected(m:MeshData,verts:number[],axis:'x'|'y'|'z',degree
   if(want.has(k)&&!counted.has(k)){counted.add(k);cx+=m.positions[v*3];cy+=m.positions[v*3+1];cz+=m.positions[v*3+2];n++;}
  }
  cx/=n;cy/=n;cz/=n;
+ if(pivot){if(!pivot.every(x=>Number.isFinite(x)))throw new EditError('The pivot point must be finite.');cx=pivot[0];cy=pivot[1];cz=pivot[2];}
  const rad=degrees*Math.PI/180,sin=Math.sin(rad),cos=Math.cos(rad);
  const fac=prop?propFactors(m,want,prop):null;
  const positions=[...m.positions];

@@ -140,11 +140,11 @@ export interface Studio3DController{
  editRip():void;
  editSeparate():void;
  editSelectSharp(degrees?:number):void;
- editRotate(axis:'x'|'y'|'z',degrees:number,prop?:{radius:number;falloff:'smooth'|'linear'|'constant'}):void;
- editScale(factors:[number,number,number],prop?:{radius:number;falloff:'smooth'|'linear'|'constant'}):void;
+ editRotate(axis:'x'|'y'|'z',degrees:number,prop?:{radius:number;falloff:'smooth'|'linear'|'constant'},pivot?:[number,number,number]):void;
+ editScale(factors:[number,number,number],prop?:{radius:number;falloff:'smooth'|'linear'|'constant'},pivot?:[number,number,number]):void;
  editSelectSimilar(degrees?:number):void;
  editSelectFacing(dir?:'+x'|'-x'|'+y'|'-y'|'+z'|'-z',degrees?:number):void;
- editShear(along:'x'|'y'|'z',by:'x'|'y'|'z',factor:number,prop?:{radius:number;falloff:'smooth'|'linear'|'constant'}):void;
+ editShear(along:'x'|'y'|'z',by:'x'|'y'|'z',factor:number,prop?:{radius:number;falloff:'smooth'|'linear'|'constant'},pivot?:[number,number,number]):void;
  editFlipEdge():void;
  editMergeByDistance(distance:number):void;
  editBisect(axis:'x'|'y'|'z',offset:number,fill:boolean):void;
@@ -285,6 +285,7 @@ const hasScene=()=>!!controller&&getStudio3DState().status==='ready';
 const object=(properties:Record<string,unknown>,required=Object.keys(properties))=>({type:'object',properties,required,additionalProperties:false});
 export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
  const propArg=()=>{const pr=getStudio3DState().proportional;return pr.on?{radius:pr.radius,falloff:pr.falloff}:undefined;};
+ const pivotArg=():[number,number,number]|undefined=>{const pv=getStudio3DState().pivot;if(pv==='origin')return [0,0,0];if(pv==='cursor'){const c=getStudio3DState().cursor;return [c.x,c.y,c.z];}return undefined;};
  const add=<P,>(id:string,title:string,category:CommandSpec['category'],run:(p:P)=>unknown,schema:Record<string,unknown>=object({},[]),enabled:()=>boolean=hasScene):CommandSpec<P,unknown>=>({id,title,category,level:'ui',keywords:['3d','model','scene','gltf'],params:schema,enabled,run});
  const need=()=>{if(!controller)throw Object.assign(new Error('The 3D viewport is not ready.'),{expected:true});return controller;};
  return [
@@ -387,11 +388,11 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{axis:'x'|'y'|'z';extend?:boolean}>('studio3d.edit.selectMirror','Mirror the selection of the edited 3D mesh across an axis plane','Edit',p=>need().editSelectMirror(p.axis,p?.extend??false),object({axis:{enum:['x','y','z']},extend:{type:'boolean'}},['axis']),()=>getStudio3DState().edit!=null),
   add<{distance?:number}>('studio3d.edit.mergeByDistance','Weld the selected vertices of the edited 3D mesh that lie within the given distance','Edit',p=>need().editMergeByDistance(p?.distance??0.001),object({distance:{type:'number',exclusiveMinimum:0,maximum:1000000}},[]),()=>getStudio3DState().edit!=null),
   add('studio3d.edit.flipEdge','Rotate each selected edge of the edited 3D mesh shared by two triangles to the other diagonal','Edit',()=>need().editFlipEdge(),undefined,()=>getStudio3DState().edit!=null),
-  add<{along?:'x'|'y'|'z';by?:'x'|'y'|'z';factor?:number}>('studio3d.edit.shear','Shear the selected vertices of the edited 3D mesh along one axis by their position on another','Edit',p=>need().editShear(p?.along??'x',p?.by??'y',p?.factor??0.5,propArg()),object({along:{enum:['x','y','z']},by:{enum:['x','y','z']},factor:{type:'number',minimum:-1000000,maximum:1000000}},[]),()=>getStudio3DState().edit!=null),
+  add<{along?:'x'|'y'|'z';by?:'x'|'y'|'z';factor?:number}>('studio3d.edit.shear','Shear the selected vertices of the edited 3D mesh along one axis by their position on another','Edit',p=>need().editShear(p?.along??'x',p?.by??'y',p?.factor??0.5,propArg(),pivotArg()),object({along:{enum:['x','y','z']},by:{enum:['x','y','z']},factor:{type:'number',minimum:-1000000,maximum:1000000}},[]),()=>getStudio3DState().edit!=null),
   add<{degrees?:number}>('studio3d.edit.selectSimilar','Select faces of the edited 3D mesh whose normal is within the given angle of the current selection','Edit',p=>need().editSelectSimilar(p?.degrees??15),object({degrees:{type:'number',minimum:0,maximum:180}},[]),()=>getStudio3DState().edit!=null),
   add<{dir?:'+x'|'-x'|'+y'|'-y'|'+z'|'-z';degrees?:number}>('studio3d.edit.selectFacing','Select faces of the edited 3D mesh pointing along a mesh axis direction','Edit',p=>need().editSelectFacing(p?.dir??'+y',p?.degrees??45),object({dir:{enum:['+x','-x','+y','-y','+z','-z']},degrees:{type:'number',minimum:0,maximum:180}},[]),()=>getStudio3DState().edit!=null),
-  add<{x?:number;y?:number;z?:number}>('studio3d.edit.scale','Scale the selected vertices of the edited 3D mesh toward or away from their centroid','Edit',p=>need().editScale([p?.x??1,p?.y??1,p?.z??1],propArg()),object({x:{type:'number',minimum:-1000000,maximum:1000000},y:{type:'number',minimum:-1000000,maximum:1000000},z:{type:'number',minimum:-1000000,maximum:1000000}},[]),()=>getStudio3DState().edit!=null),
-  add<{axis?:'x'|'y'|'z';degrees?:number}>('studio3d.edit.rotate','Rotate the selected vertices of the edited 3D mesh around their centroid on a world axis','Edit',p=>need().editRotate(p?.axis??'z',p?.degrees??90,propArg()),object({axis:{enum:['x','y','z']},degrees:{type:'number',minimum:-36000,maximum:36000}},[]),()=>getStudio3DState().edit!=null),
+  add<{x?:number;y?:number;z?:number}>('studio3d.edit.scale','Scale the selected vertices of the edited 3D mesh toward or away from their centroid','Edit',p=>need().editScale([p?.x??1,p?.y??1,p?.z??1],propArg(),pivotArg()),object({x:{type:'number',minimum:-1000000,maximum:1000000},y:{type:'number',minimum:-1000000,maximum:1000000},z:{type:'number',minimum:-1000000,maximum:1000000}},[]),()=>getStudio3DState().edit!=null),
+  add<{axis?:'x'|'y'|'z';degrees?:number}>('studio3d.edit.rotate','Rotate the selected vertices of the edited 3D mesh around their centroid on a world axis','Edit',p=>need().editRotate(p?.axis??'z',p?.degrees??90,propArg(),pivotArg()),object({axis:{enum:['x','y','z']},degrees:{type:'number',minimum:-36000,maximum:36000}},[]),()=>getStudio3DState().edit!=null),
   add<{degrees?:number}>('studio3d.edit.selectSharp','Select edges of the edited 3D mesh whose faces meet at an angle of at least the given degrees','Edit',p=>need().editSelectSharp(p?.degrees??30),object({degrees:{type:'number',minimum:0,maximum:180}},[]),()=>getStudio3DState().edit!=null),
   add<{offset:number}>('studio3d.edit.extrude','Extrude the selected faces of the edited 3D mesh','Edit',p=>need().editExtrude(p.offset),object({offset:{type:'number',minimum:-1000,maximum:1000}}),()=>getStudio3DState().edit!=null),
   add<{offset:number}>('studio3d.edit.extrudeIndividual','Extrude each selected face of the edited 3D mesh along its own normal','Edit',p=>need().editExtrudeIndividual(p.offset),object({offset:{type:'number',minimum:-1000,maximum:1000}}),()=>getStudio3DState().edit!=null),

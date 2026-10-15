@@ -1039,9 +1039,9 @@ export class Stage{
  editRandomize(amount:number,seed:number){this.editOp({key:'studio3d.hist.editRandomize'},m=>randomizeSelected(m,[...this.editSel.verts],amount,seed));}
  /** Translates the selected edit-mode vertices by an offset, one undo step. The selection stays. */
  editMove(offset:[number,number,number],prop?:PropFalloff){this.editOp({key:'studio3d.hist.editMove'},m=>moveSelected(m,[...this.editSel.verts],offset,prop));}
- editRotate(axis:'x'|'y'|'z',degrees:number,prop?:PropFalloff){this.editOp({key:'studio3d.hist.editRotate'},m=>rotateSelected(m,[...this.editSel.verts],axis,degrees,prop));}
- editScale(factors:[number,number,number],prop?:PropFalloff){this.editOp({key:'studio3d.hist.editScale'},m=>scaleSelected(m,[...this.editSel.verts],factors,prop));}
- editShear(along:'x'|'y'|'z',by:'x'|'y'|'z',factor:number,prop?:PropFalloff){this.editOp({key:'studio3d.hist.editShear'},m=>shearSelected(m,[...this.editSel.verts],along,by,factor,prop));}
+ editRotate(axis:'x'|'y'|'z',degrees:number,prop?:PropFalloff,pivot?:[number,number,number]){this.editOp({key:'studio3d.hist.editRotate'},m=>rotateSelected(m,[...this.editSel.verts],axis,degrees,prop,pivot));}
+ editScale(factors:[number,number,number],prop?:PropFalloff,pivot?:[number,number,number]){this.editOp({key:'studio3d.hist.editScale'},m=>scaleSelected(m,[...this.editSel.verts],factors,prop,pivot));}
+ editShear(along:'x'|'y'|'z',by:'x'|'y'|'z',factor:number,prop?:PropFalloff,pivot?:[number,number,number]){this.editOp({key:'studio3d.hist.editShear'},m=>shearSelected(m,[...this.editSel.verts],along,by,factor,prop,pivot));}
  editFlipEdge(){this.editOp({key:'studio3d.hist.editFlipEdge'},m=>flipEdges(m,[...this.editSel.edges.values()]));}
  editMergeByDistance(distance:number){this.editOp({key:'studio3d.hist.editMergeByDistance'},m=>mergeByDistanceSelected(m,[...this.editSel.verts],distance));}
  editBisect(axis:'x'|'y'|'z',offset:number,fill:boolean){this.editOp({key:'studio3d.hist.editBisect'},m=>bisectEdit(m,axis,offset,fill));this.editSel={verts:new Set(),edges:new Map(),faces:new Set()};}

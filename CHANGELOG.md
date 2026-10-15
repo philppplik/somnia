@@ -1,4 +1,5 @@
 # Unreleased: 3D Studio P0
+- 3D Studio: edit-mode rotate, scale and shear respect the transform pivot, orbiting the world origin or the 3D cursor instead of the selection median.
 - 3D Studio: proportional editing lets nearby vertices follow move, rotate, scale and shear with a falloff.
 - 3D Studio: non-manifold geometry is one selection away.
 - 3D Studio: the edit selection snaps onto the 3D cursor, with or without its shape.
