@@ -278,7 +278,7 @@ async function structural(op:(e:DocumentsEngine)=>Promise<import('./protocol').O
  patchDocuments({edited:true,editError:'',caretLocked:false,imageBlock:null,imageRects:[],caret:{block:after.block,anchor:after.off,head:after.off}});await refresh(d);
 }
 /* ---- On-page caret: all offsets are UTF-8 bytes of the paragraph's current text. A selection may span paragraphs (anchorBlock differs from block). ---- */
-import {autoCorrect,autoCorrectOn} from './autocorrect';
+import {autoLink,autoCorrect,autoCorrectOn} from './autocorrect';
 import {printDocument} from './print';
 const enc=new TextEncoder();const u8=(s:string)=>enc.encode(s).length;
 const blockText=(i:number)=>{const b=getDocumentsState().blocks.find(x=>x.index===i);return b&&b.editable?b.text??null:null;};
@@ -367,6 +367,12 @@ export const typeText=(text:string)=>run(async()=>{
  }
  if(n.s.block===n.e.block&&n.s.off===n.e.off&&autoCorrectOn()){
   const cur=blockText(n.s.block),fix=cur===null?null:autoCorrect(cur,n.s.off,t);
+  const lk=cur===null||fix?null:autoLink(cur,n.s.off,t);
+  if(lk&&linkProblem(lk.url)===null){
+   const at=n.s.off,blk=n.s.block;
+   await structural(async eng=>{await eng.replace({block:blk,hunks:[{start:at,end:at,text:t}]});return eng.format({block:blk,off:lk.start},{block:blk,off:lk.end},{link:lk.url});},n.s,{block:blk,off:at+1});
+   return;
+  }
   if(fix){await applyAtCaret(fix,false);return;}
  }
  if(n.s.block===n.e.block)await applyAtCaret({start:n.s.off,end:n.e.off,text:t},n.s.off===n.e.off);

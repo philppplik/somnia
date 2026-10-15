@@ -30,3 +30,25 @@ export function autoCorrect(text:string,caret:number,typed:string):Correction|nu
  if(typed==='.'&&word==='..')return null;
  return {start:caret-bytes(word),end:caret,text:rep+typed};
 }
+
+export interface AutoLink{start:number;end:number;url:string}
+/** Characters that end a sentence, not an address, when they trail a pasted or typed URL. */
+const TRAIL=/[.,;:!?)\]}'"\u2019\u201d]+$/;
+/**
+ * The link to make when `typed` (a space) is typed after a web address or e-mail address: returns the byte range of the address (without trailing
+ * punctuation) and its link target, or null. Addresses starting with http://, https:// or www. and plain e-mail addresses count; the result always passes the link check.
+ */
+export function autoLink(text:string,caret:number,typed:string):AutoLink|null{
+ if(typed!==' '||!Number.isInteger(caret)||caret<0)return null;
+ let idx=0,b=0;for(const ch of text){if(b>=caret)break;b+=bytes(ch);idx+=ch.length;}
+ if(b!==caret)return null;
+ const before=text.slice(0,idx);const ws=Math.max(before.lastIndexOf(' '),before.lastIndexOf('\t'),before.lastIndexOf('\n'),before.lastIndexOf('\u00a0'));
+ let word=before.slice(ws+1).replace(TRAIL,'');if(!word||word.length>2000)return null;
+ let url:string|null=null;
+ if(/^https?:\/\/[^\s/?#]+\.[^\s]{1,}$/i.test(word)||/^https?:\/\/localhost(:\d+)?([/?#]\S*)?$/i.test(word))url=word;
+ else if(/^www\.[^\s/?#.]+\.[^\s]+$/i.test(word))url='https://'+word;
+ else if(/^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}$/.test(word))url='mailto:'+word;
+ if(url===null||Array.from(url).length>2000||/[\u0000-\u001f\u007f-\u009f\s]/.test(url))return null;
+ const start=caret-bytes(before.slice(ws+1));
+ return {start,end:start+bytes(word),url};
+}

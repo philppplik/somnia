@@ -20,3 +20,22 @@ test('ordinary typing, partial tokens and bad input are left alone',()=>{
  assert.equal(autoCorrect('abc',99,' '),null);assert.equal(autoCorrect('abc',-1,' '),null);assert.equal(autoCorrect('abc',1.5,' '),null);
  assert.equal(autoCorrect('\u00e4',1,' '),null,'caret inside a character');
 });
+import {autoLink} from './autocorrect';
+import {linkProblem} from './protocol';
+const lk=(t:string)=>autoLink(t,new TextEncoder().encode(t).length,' ');
+test('web and e-mail addresses become links when a space follows',()=>{
+ assert.deepEqual(lk('see https://example.com/a?b=1'),{start:4,end:29,url:'https://example.com/a?b=1'});
+ assert.deepEqual(lk('go www.example.org'),{start:3,end:18,url:'https://www.example.org'});
+ assert.deepEqual(lk('mail me@example.com'),{start:5,end:19,url:'mailto:me@example.com'});
+ assert.equal(lk('http://localhost:3000/x')?.url,'http://localhost:3000/x');
+ assert.equal(lk('(https://example.com).'),null,'a leading bracket is part of the word, so no link');
+});
+test('trailing sentence punctuation stays out of the link and byte offsets hold',()=>{
+ assert.deepEqual(lk('\u00e4 https://example.com.'),{start:3,end:22,url:'https://example.com'});
+ for(const t of ['see https://example.com/a?b=1','go www.example.org','mail me@example.com'])assert.equal(linkProblem(lk(t)!.url),null);
+});
+test('ordinary words, odd addresses and bad input make no link',()=>{
+ for(const t of ['hello','https://','www.','a@b','e.g.','http://nodot','']) assert.equal(lk(t),null,t);
+ assert.equal(autoLink('www.example.org',3,' '),null,'caret inside the word start is still fine only at a boundary or after text');
+ assert.equal(autoLink('www.example.org',99,' '),null);assert.equal(autoLink('www.example.org',15,'x'),null);assert.equal(autoLink('www.example.org',-1,' '),null);
+});
