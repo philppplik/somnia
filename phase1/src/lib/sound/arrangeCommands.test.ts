@@ -2,7 +2,7 @@ import {test} from 'node:test';import assert from 'node:assert/strict';
 import {registerArrangeCommands} from './arrangeCommands';
 import {commandDispatcher} from '../commandDispatcher';
 import {getArrangementState,resetArrangement,editArrangement,loadArrangement} from './arrangeStore';
-import {serializeArrangement,newTrack} from './arrangement';
+import {serializeArrangement,newClip,newTrack} from './arrangement';
 test('session commands validate payloads, preserve state on errors and reject external execution',async()=>{resetArrangement();const off=registerArrangeCommands();try{await commandDispatcher.runCommand('sound.arrange.track.add');assert.equal(getArrangementState().document.tracks.length,1);const track=getArrangementState().document.tracks[0];await commandDispatcher.runCommand('sound.arrange.track.set',{id:track.id,gainDb:-12});assert.equal(getArrangementState().document.tracks[0].gainDb,-12);await assert.rejects(commandDispatcher.runCommand('sound.arrange.track.set',{id:track.id,pan:3}));assert.equal(getArrangementState().document.tracks[0].pan,0);await assert.rejects(commandDispatcher.runCommand('sound.arrange.track.set',{id:track.id,extra:true}));await assert.rejects(commandDispatcher.runCommand('sound.arrange.undo',{}, {origin:'agent'}));await commandDispatcher.runCommand('sound.arrange.undo');assert.equal(getArrangementState().document.tracks[0].gainDb,0);await commandDispatcher.runCommand('sound.arrange.redo');assert.equal(getArrangementState().document.tracks[0].gainDb,-12);}finally{off();resetArrangement();}});
 test('malformed reopen is atomic and valid reopen starts a clean history',()=>{resetArrangement();editArrangement(s=>s.tracks.push(newTrack('t','Voice')));const before=serializeArrangement(getArrangementState().document);assert.throws(()=>loadArrangement('{"version":900}'));assert.equal(serializeArrangement(getArrangementState().document),before);loadArrangement(before);assert.equal(getArrangementState().canUndo,false);assert.equal(getArrangementState().savedText,before);resetArrangement();});
 
@@ -20,4 +20,24 @@ test('track.move reorders tracks atomically with boundary no-ops and undo',async
  await assert.rejects(commandDispatcher.runCommand('sound.arrange.track.move',{id:'missing',delta:1}));
  await commandDispatcher.runCommand('sound.arrange.undo');
  assert.deepEqual(ids(),before,'undo restores the order');
+}finally{off();resetArrangement();}});
+
+test('track.duplicate copies a track with fresh ids right after the original and undo removes the copy',async()=>{resetArrangement();const off=registerArrangeCommands();try{
+ const source={id:'src',name:'tone.wav',frames:4800,sampleRate:48000,channels:2 as const};
+ editArrangement(s=>{s.sources.push(source);s.tracks.push({...newTrack('t1','Voice'),clips:[{...newClip('c1',source,0),length:4800}]});});
+ await commandDispatcher.runCommand('sound.arrange.track.duplicate',{id:'t1'});
+ const tracks=getArrangementState().document.tracks;
+ assert.equal(tracks.length,2);
+ assert.equal(tracks[1].name,'Voice','copy keeps the name');
+ assert.notEqual(tracks[1].id,'t1','copy gets a fresh track id');
+ assert.equal(tracks[1].clips.length,1);
+ assert.notEqual(tracks[1].clips[0].id,'c1','copied clips get fresh ids');
+ assert.deepEqual({...tracks[1].clips[0],id:'c1'},{...tracks[0].clips[0]},'clip content is identical');
+ await commandDispatcher.runCommand('sound.arrange.track.duplicate',{id:'t1'});
+ const all=getArrangementState().document.tracks.flatMap(t=>t.clips.map(c=>c.id));assert.equal(new Set(all).size,all.length,'repeated copies never collide');
+ await assert.rejects(commandDispatcher.runCommand('sound.arrange.track.duplicate',{id:'missing'}));
+ await commandDispatcher.runCommand('sound.arrange.undo');
+ assert.equal(getArrangementState().document.tracks.length,2,'undo removes the latest copy');
+ await commandDispatcher.runCommand('sound.arrange.undo');
+ assert.equal(getArrangementState().document.tracks.length,1,'a second undo restores the original alone');
 }finally{off();resetArrangement();}});
