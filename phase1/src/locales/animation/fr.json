@@ -1091,5 +1091,12 @@
  "animation.pose.frames": "Images",
  "animation.pose.ease": "Interpolation",
  "animation.pose.transitionGo": "Créer les clés de pose à pose",
- "cmd.animation.pose.transition": "Créer les clés d’une pose à une autre sur plusieurs images"
+ "cmd.animation.pose.transition": "Créer les clés d’une pose à une autre sur plusieurs images",
+ "animation.export.crop": "Recadrer sur une zone",
+ "animation.export.crop.hint": "Exporte seulement ce rectangle de la composition, en pixels. Decochez pour tout exporter.",
+ "animation.export.crop.x": "X",
+ "animation.export.crop.y": "Y",
+ "animation.export.crop.width": "Largeur",
+ "animation.export.crop.height": "Hauteur",
+ "animation.export.problem.crop": "Le recadrage doit etre en pixels entiers et rester dans la composition."
 }

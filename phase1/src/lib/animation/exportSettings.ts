@@ -56,7 +56,11 @@ export interface ExportSettings{
  sheetPadding?:number;
  /** JPEG and WebP quality, whole number 1 to 100. Absent means 90. */
  frameQuality?:number;
+ /** Export only this rectangle of the composition (pixels at 100%), or null/absent for the whole picture. Must lie inside the composition. */
+ crop?:ExportCrop|null;
 }
+export interface ExportCrop{x:number;y:number;width:number;height:number}
+export const cropInside=(c:ExportCrop,w:number,h:number)=>c.x+c.width<=w&&c.y+c.height<=h;
 /** Frames without a trailing copy of the first frame (needs at least 3 frames, so a short clip is never emptied). */
 export function withoutLoopSeam<T>(frames:T[],same:(a:T,b:T)=>boolean):T[]{return frames.length>2&&same(frames[0],frames[frames.length-1])?frames.slice(0,-1):frames;}
 /** File size for the readout and the finished-export line. */
@@ -73,7 +77,7 @@ export const EXPORT_PRESETS:readonly ExportPreset[]=[
  {id:'frames-png',format:'sequence',scale:100,fps:null,transparent:true},
  {id:'frames-2x',format:'sequence',scale:200,fps:null,transparent:false},
 ];
-export type ExportProblem='padding'|'frameFormat'|'frameQuality'|'colors'|'number'|'background'|'blur'|'loopSeam'|'selectedOnly'|'quality'|'size'|'frames'|'seconds'|'range'|'scale'|'fps'|'columns'|'name';
+export type ExportProblem='padding'|'frameFormat'|'frameQuality'|'colors'|'number'|'background'|'blur'|'loopSeam'|'selectedOnly'|'crop'|'quality'|'size'|'frames'|'seconds'|'range'|'scale'|'fps'|'columns'|'name';
 export interface ExportPlan{
  format:ExportFormat;width:number;height:number;frames:number;seconds:number;fps:{num:number;den:number};
  /** Frame range at the composition rate, inclusive. */
@@ -103,6 +107,7 @@ export function settingsProblems(s:ExportSettings):ExportProblem[]{
  if(s.loopSeam!==undefined&&typeof s.loopSeam!=='boolean')p.push('loopSeam');
  if(s.blur!==undefined&&s.blur!==null&&!(EXPORT_BLURS as readonly string[]).includes(s.blur))p.push('blur');
  if(s.quality!==undefined&&!WEBM_QUALITIES.includes(s.quality))p.push('quality');
+ if(s.crop!==undefined&&s.crop!==null){const c=s.crop;if(![c.x,c.y,c.width,c.height].every(Number.isInteger)||c.x<0||c.y<0||c.width<1||c.height<1||c.width>16384||c.height>16384)p.push('crop');}
  return p;
 }
 const BYTES_PER_PIXEL:Record<Exclude<ExportFormat,'webm'>,number>={sequence:0.35,gif:0.12,apng:0.3,sheet:0.3};
@@ -116,7 +121,9 @@ export function estimateBytes(format:ExportFormat,width:number,height:number,fra
 export function exportPlan(comp:Composition,format:ExportFormat,s:ExportSettings):ExportPlan{
  const problems=settingsProblems(s);const ok=(k:ExportProblem)=>!problems.includes(k);
  const scale=ok('scale')?s.scale:100;
- const width=Math.max(1,Math.round(comp.width*scale/100)),height=Math.max(1,Math.round(comp.height*scale/100));
+ const crop=ok('crop')?s.crop??null:null;
+ const srcW=crop?.width??comp.width,srcH=crop?.height??comp.height;
+ const width=Math.max(1,Math.round(srcW*scale/100)),height=Math.max(1,Math.round(srcH*scale/100));
  const total=Math.max(1,Math.round(comp.duration*comp.fps.num/(comp.fps.den*TICKS_PER_SECOND)));
  let inTick=comp.workArea.in,outTick=comp.workArea.out,from=Math.max(0,tickToFrame(inTick-comp.start,comp.fps)),to=Math.max(from,tickToFrame(outTick-comp.start,comp.fps)-1);
  if(ok('range')&&(s.from!==null||s.to!==null)){
@@ -131,11 +138,12 @@ export function exportPlan(comp:Composition,format:ExportFormat,s:ExportSettings
  const seconds=frames*rate.den/rate.num;
  if(comp.width*comp.height>EXPORT_LIMITS.maxPixels||width*height>EXPORT_LIMITS.maxPixels||width>16384||height>16384)problems.push('size');
  if(frames>EXPORT_LIMITS.maxFrames||(format==='gif'&&frames>EXPORT_LIMITS.gifFrames))problems.push('frames');
+ if(crop&&!cropInside(crop,comp.width,comp.height))problems.push('crop');
  let sheet:ExportPlan['sheet'];
  if(format==='sheet'){try{const g=sheetPlan(frames,width,height,s.columns??undefined,ok('padding')?s.sheetPadding??0:0);sheet={width:g.width,height:g.height,columns:g.columns,rows:g.rows};}catch(x){if(x instanceof SheetError)problems.push(x.code==='too-large'?'size':'frames');else throw x;}}
  if(format==='webm'&&seconds>EXPORT_LIMITS.webmSeconds)problems.push('seconds');
  const est=estimateBytes(format,sheet?.width??width,sheet?.height??height,sheet?1:frames,rate.num/rate.den,ok('quality')?s.quality:'medium',ok('colors')?s.colors:256);
  return {format,width,height,frames,seconds,fps:rate,from,to,comp:derived,...(sheet?{sheet}:{}),estimateBytes:est,overCap:est>EXPORT_LIMITS.maxBytes,problems:[...new Set(problems)]};
 }
-const MSG:Record<ExportProblem,string>={size:'The output size is above the supported limit. Lower the scale.',frames:'Too many frames for this format. Shorten the range or lower the frame rate.',seconds:`WebM records in real time and is limited to ${EXPORT_LIMITS.webmSeconds} seconds. Shorten the range.`,range:'The frame range is not valid for this composition.',scale:`Scale must be a whole number from ${SCALE_MIN} to ${SCALE_MAX} percent.`,fps:`Frame rate must be a whole number from 1 to ${FPS_MAX}.`,columns:'Sprite sheet columns must be a whole number from 1 to 256.',name:'The file name must be at most 80 characters.',padding:'Sheet padding must be a whole number from 0 to 32.',frameFormat:'The frame format must be PNG, JPEG or WebP.',frameQuality:'The frame quality must be a whole number from 1 to 100.',colors:'GIF colors must be 16, 32, 64, 128 or 256.',number:'The first frame number must be a whole number from 0 to 99999.',background:'The background colour must look like #ffffff.',quality:'WebM quality must be low, medium or high.',blur:'Motion blur must be off or high.',selectedOnly:'Selected layers only must be on or off.',loopSeam:'Seamless loop must be on or off.'};
+const MSG:Record<ExportProblem,string>={crop:'The crop area must be whole pixels and lie inside the composition.',size:'The output size is above the supported limit. Lower the scale.',frames:'Too many frames for this format. Shorten the range or lower the frame rate.',seconds:`WebM records in real time and is limited to ${EXPORT_LIMITS.webmSeconds} seconds. Shorten the range.`,range:'The frame range is not valid for this composition.',scale:`Scale must be a whole number from ${SCALE_MIN} to ${SCALE_MAX} percent.`,fps:`Frame rate must be a whole number from 1 to ${FPS_MAX}.`,columns:'Sprite sheet columns must be a whole number from 1 to 256.',name:'The file name must be at most 80 characters.',padding:'Sheet padding must be a whole number from 0 to 32.',frameFormat:'The frame format must be PNG, JPEG or WebP.',frameQuality:'The frame quality must be a whole number from 1 to 100.',colors:'GIF colors must be 16, 32, 64, 128 or 256.',number:'The first frame number must be a whole number from 0 to 99999.',background:'The background colour must look like #ffffff.',quality:'WebM quality must be low, medium or high.',blur:'Motion blur must be off or high.',selectedOnly:'Selected layers only must be on or off.',loopSeam:'Seamless loop must be on or off.'};
 export const problemMessage=(p:ExportProblem)=>MSG[p];

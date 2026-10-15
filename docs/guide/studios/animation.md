@@ -62,3 +62,4 @@ Every output file over 64 MB is refused.
 [Concept](../../concepts/animation-studio.md), [P0](../../studios/animation-p0.md), [P1](../../studios/animation-p1.md), [P7 export](../../animation-p7.md), [P10 masks and mattes](../../animation-p10.md).
 
 Back to [Studios](../studios.md).
+- Export (Render panel > More): Crop to area exports only a pixel rectangle of the composition for every format; it scales with the size setting.

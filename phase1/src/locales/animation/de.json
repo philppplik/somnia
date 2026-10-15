@@ -1091,5 +1091,12 @@
  "animation.pose.frames": "Bilder",
  "animation.pose.ease": "Easing",
  "animation.pose.transitionGo": "Pose zu Pose keyen",
- "cmd.animation.pose.transition": "Eine Pose über mehrere Bilder in eine andere keyen"
+ "cmd.animation.pose.transition": "Eine Pose über mehrere Bilder in eine andere keyen",
+ "animation.export.crop": "Auf Bereich zuschneiden",
+ "animation.export.crop.hint": "Nur dieses Rechteck der Komposition exportieren, in Pixeln. Abwaehlen exportiert alles.",
+ "animation.export.crop.x": "X",
+ "animation.export.crop.y": "Y",
+ "animation.export.crop.width": "Breite",
+ "animation.export.crop.height": "Hoehe",
+ "animation.export.problem.crop": "Der Zuschnitt muss aus ganzen Pixeln bestehen und in der Komposition liegen."
 }

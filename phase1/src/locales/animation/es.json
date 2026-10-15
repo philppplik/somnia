@@ -1091,5 +1091,12 @@
  "animation.pose.frames": "Fotogramas",
  "animation.pose.ease": "Suavizado",
  "animation.pose.transitionGo": "Crear claves de pose a pose",
- "cmd.animation.pose.transition": "Crear claves de una pose a otra en varios fotogramas"
+ "cmd.animation.pose.transition": "Crear claves de una pose a otra en varios fotogramas",
+ "animation.export.crop": "Recortar a un area",
+ "animation.export.crop.hint": "Exporta solo este rectangulo de la composicion, en pixeles. Desmarca para exportar todo.",
+ "animation.export.crop.x": "X",
+ "animation.export.crop.y": "Y",
+ "animation.export.crop.width": "Ancho",
+ "animation.export.crop.height": "Alto",
+ "animation.export.problem.crop": "El recorte debe ser de pixeles enteros y estar dentro de la composicion."
 }

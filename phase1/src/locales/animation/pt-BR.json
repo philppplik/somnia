@@ -1091,5 +1091,12 @@
  "animation.pose.frames": "Quadros",
  "animation.pose.ease": "Suavização",
  "animation.pose.transitionGo": "Criar chaves de pose para pose",
- "cmd.animation.pose.transition": "Criar chaves de uma pose para outra em vários quadros"
+ "cmd.animation.pose.transition": "Criar chaves de uma pose para outra em vários quadros",
+ "animation.export.crop": "Cortar para uma area",
+ "animation.export.crop.hint": "Exporta so este retangulo da composicao, em pixels. Desmarque para exportar tudo.",
+ "animation.export.crop.x": "X",
+ "animation.export.crop.y": "Y",
+ "animation.export.crop.width": "Largura",
+ "animation.export.crop.height": "Altura",
+ "animation.export.problem.crop": "O corte deve ter pixels inteiros e ficar dentro da composicao."
 }

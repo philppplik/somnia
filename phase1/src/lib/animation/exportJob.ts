@@ -6,7 +6,7 @@ import {recordWebm} from './exportVideo';
 import {browserAudioContext} from './audioPreview';
 import {findComp,type Layer} from './model';
 import {layerSetIds} from './layerSet';
-import {defaultExportSettings,exportPlan,problemMessage,settingsProblems,EXPORT_PRESETS,EXPORT_LIMITS,withoutLoopSeam,DEFAULT_FRAME_QUALITY,webmBitrate,type ExportFormat,type ExportSettings} from './exportSettings';
+import {defaultExportSettings,exportPlan,problemMessage,settingsProblems,EXPORT_PRESETS,EXPORT_LIMITS,cropInside,withoutLoopSeam,DEFAULT_FRAME_QUALITY,webmBitrate,type ExportFormat,type ExportSettings} from './exportSettings';
 import {animationSession} from './session';
 import {exportFrameSvg} from './exportSvg';
 import {Zip,ZipPassThrough,strToU8} from 'fflate';
@@ -43,7 +43,8 @@ export const exportSetupSnapshot=()=>({settings:state.settings,transparent:state
 export function restoreExportSetup(x:{settings:ExportSettings;transparent:boolean}){if(state.status!=='running')set({settings:x.settings,transparent:x.transparent});}
 /** The export background colour replaces the composition's for this export only; the document is untouched. */
 const withBg=<T extends {background:string;shutter?:{angle:number;samples:number};layers:readonly Layer[]}>(c:T):T=>{
- const {background,blur,selectedOnly}=state.settings;let o=background?{...c,background}:c;
+ const {background,blur,selectedOnly,crop}=state.settings;let o=background?{...c,background}:c;
+ if(crop){const w=(c as unknown as {width:number}).width,h=(c as unknown as {height:number}).height;if(!cropInside(crop,w,h))throw new ExportError(problemMessage('crop'),'empty');o={...o,width:crop.width,height:crop.height,viewOrigin:{x:crop.x,y:crop.y}} as T;}
  if(blur==='off'&&o.shutter){const {shutter:_s,...rest}=o;o=rest as T;}else if(blur==='high'&&o.shutter)o={...o,shutter:{...o.shutter,samples:16}};
  if(selectedOnly){
   const sel=new Set(layerSetIds(animationSession().getState().view.selectedLayer).filter(id=>c.layers.some(l=>l.id===id)));
@@ -58,7 +59,7 @@ function target(format?:ExportFormat){
  const doc=base&&fileName?{...base,name:fileName}:base;const comp=doc&&findComp(doc,forced);
  if(!doc||!comp)throw new ExportError('Open an animation first.','empty');
  setRenderComps(doc.compositions);
- if(!format){const out={width:Math.max(1,Math.round(comp.width*state.settings.scale/100)),height:Math.max(1,Math.round(comp.height*state.settings.scale/100))};
+ if(!format){const cr=state.settings.crop;const out={width:Math.max(1,Math.round((cr?.width??comp.width)*state.settings.scale/100)),height:Math.max(1,Math.round((cr?.height??comp.height)*state.settings.scale/100))};
   if(out.width*out.height>EXPORT_LIMITS.maxPixels||out.width>16384||out.height>16384)throw new ExportError(problemMessage('size'),'too-large');
   return {doc,comp:withBg(comp),out,ec:withBg(comp)};}
  const plan=exportPlan(comp,format,state.settings);

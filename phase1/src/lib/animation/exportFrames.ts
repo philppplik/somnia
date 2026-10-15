@@ -95,7 +95,7 @@ function frameSvgBody(comp:Composition,tick:number,transparent:boolean,assets:re
   const drawn=blur.length?`<g opacity="${num(opacity)}">${blur.map((m,j)=>`<g transform="matrix(${m.matrix.map(num).join(' ')})" opacity="${num(1/(j+1))}">${each?wrap(layerBody(layer,i,assets,m.tick,'')):masked}</g>`).join('')}</g>`:`<g transform="matrix(${matrix.map(num).join(' ')})" opacity="${num(opacity)}">${masked}</g>`;
   return layer.matte?`<g mask="url(#${matteId('',i)})">${drawn}</g>`:drawn;}).join('');
  const maskDefsSvg=maskDefs(comp,tick,'',(l,i)=>layerBody(l,i,assets,tick,''));
- return `<svg xmlns="http://www.w3.org/2000/svg" width="${comp.width}" height="${comp.height}" viewBox="0 0 ${comp.width} ${comp.height}"><defs>${defs}${gradients}${maskDefsSvg}</defs>${transparent?'':`<rect width="${comp.width}" height="${comp.height}" fill="${esc(comp.background)}"/>`}${body}</svg>`;
+ return `<svg xmlns="http://www.w3.org/2000/svg" width="${comp.width}" height="${comp.height}" viewBox="0 0 ${comp.width} ${comp.height}"><defs>${defs}${gradients}${maskDefsSvg}</defs>${transparent?'':`<rect width="${comp.width}" height="${comp.height}" fill="${esc(comp.background)}"/>`}${comp.viewOrigin?`<g transform="translate(${-comp.viewOrigin.x} ${-comp.viewOrigin.y})">${body}</g>`:body}</svg>`;
 }
 export const exportSlug=(name:string)=>name.normalize('NFKD').replace(/[^\w.-]+/g,'_').replace(/^[_.]+|[_.]+$/g,'').slice(0,80)||'animation';
 export const frameFileName=(name:string,frameNumber:number)=>`${exportSlug(name)}_${String(frameNumber).padStart(5,'0')}.png`;

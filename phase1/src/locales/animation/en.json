@@ -1091,5 +1091,12 @@
  "animation.pose.frames": "Frames",
  "animation.pose.ease": "Ease",
  "animation.pose.transitionGo": "Key pose to pose",
- "cmd.animation.pose.transition": "Key one pose to another over a number of frames"
+ "cmd.animation.pose.transition": "Key one pose to another over a number of frames",
+ "animation.export.crop": "Crop to area",
+ "animation.export.crop.hint": "Export only this rectangle of the composition, in pixels. Clear to export everything.",
+ "animation.export.crop.x": "X",
+ "animation.export.crop.y": "Y",
+ "animation.export.crop.width": "Width",
+ "animation.export.crop.height": "Height",
+ "animation.export.problem.crop": "The crop area must be whole pixels and lie inside the composition."
 }
