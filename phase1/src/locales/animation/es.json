@@ -1255,5 +1255,7 @@
  "cmd.animation.layers.overshoot": "Añadir rebasamiento (y anticipación) a los movimientos de las capas marcadas",
  "animation.rig.pulse.2": "Pulsar un brillo, 2 veces",
  "animation.rig.pulse.6": "Pulsar un brillo, 6 veces",
- "cmd.animation.layers.pulseGlow": "Hacer pulsar un brillo en las capas marcadas"
+ "cmd.animation.layers.pulseGlow": "Hacer pulsar un brillo en las capas marcadas",
+ "animation.rig.copyfx": "Copiar efectos de la primera capa marcada",
+ "cmd.animation.layers.copyEffects": "Copiar los efectos de la primera capa marcada a las demás marcadas"
 }

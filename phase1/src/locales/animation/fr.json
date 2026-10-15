@@ -1255,5 +1255,7 @@
  "cmd.animation.layers.overshoot": "Ajouter dépassement (et anticipation) aux mouvements des calques cochés",
  "animation.rig.pulse.2": "Faire pulser une lueur, 2 fois",
  "animation.rig.pulse.6": "Faire pulser une lueur, 6 fois",
- "cmd.animation.layers.pulseGlow": "Faire pulser une lueur sur les calques cochés"
+ "cmd.animation.layers.pulseGlow": "Faire pulser une lueur sur les calques cochés",
+ "animation.rig.copyfx": "Copier les effets du premier calque coché",
+ "cmd.animation.layers.copyEffects": "Copier les effets du premier calque coché vers les autres calques cochés"
 }

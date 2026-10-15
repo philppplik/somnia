@@ -1255,5 +1255,7 @@
  "cmd.animation.layers.overshoot": "Add overshoot (and anticipation) to the ticked layers' moves",
  "animation.rig.pulse.2": "Pulse a glow, 2 times",
  "animation.rig.pulse.6": "Pulse a glow, 6 times",
- "cmd.animation.layers.pulseGlow": "Pulse a glow on the ticked layers"
+ "cmd.animation.layers.pulseGlow": "Pulse a glow on the ticked layers",
+ "animation.rig.copyfx": "Copy effects from the first ticked layer",
+ "cmd.animation.layers.copyEffects": "Copy the first ticked layer’s effects to the other ticked layers"
 }

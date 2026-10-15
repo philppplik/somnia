@@ -2016,6 +2016,25 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.layers.copyEffects",
+      "title": "Copy the first ticked layer’s effects to the other ticked layers",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "blur",
+        "copy",
+        "effects",
+        "glow",
+        "match",
+        "paste",
+        "same look",
+        "shadow",
+        "tint"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.layers.duplicate",
       "title": "Duplicate the selected layers",
       "category": "Edit",

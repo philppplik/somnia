@@ -1255,5 +1255,7 @@
  "cmd.animation.layers.overshoot": "Überschwingen (und Ausholen) zu den Bewegungen der angekreuzten Ebenen hinzufügen",
  "animation.rig.pulse.2": "Leuchten pulsieren lassen, 2-mal",
  "animation.rig.pulse.6": "Leuchten pulsieren lassen, 6-mal",
- "cmd.animation.layers.pulseGlow": "Leuchten (Glow) der angekreuzten Ebenen pulsieren lassen"
+ "cmd.animation.layers.pulseGlow": "Leuchten (Glow) der angekreuzten Ebenen pulsieren lassen",
+ "animation.rig.copyfx": "Effekte der ersten Ebene auf die anderen kopieren",
+ "cmd.animation.layers.copyEffects": "Effekte der ersten angekreuzten Ebene auf die anderen angekreuzten kopieren"
 }

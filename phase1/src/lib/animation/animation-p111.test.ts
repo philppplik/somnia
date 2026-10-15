@@ -1614,3 +1614,15 @@ test('P259 glow pulse: adds a glow with high/low/high keys across the work area,
  const r2=run({layers:['a'],cycles:3}) as {glowsAdded:number};assert.equal(r2.glowsAdded,0);assert.equal(fx().length,1);assert.equal(fx()[0].animation!.keys.length,7,'old keys replaced');
  s.undo();assert.equal(fx()[0].animation!.keys.length,5);s.undo();assert.equal(findComp(s.document!)!.layers.find(l=>l.id==='a')!.effects?.length??0,0);
 });
+
+test('P259b copy effects: clones the stack with fresh ids onto targets, one undo step, refuses a lone layer',async()=>{
+ const {effectCopySpecs}=await import('./effectCopyCommands');const run=effectCopySpecs()[0].run as (p?:unknown)=>unknown;
+ const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'shape',id:'b'});const ls=['x','x','b','a'];
+ const {pulseSpecs}=await import('./pulseCommands');(pulseSpecs()[0].run as (p?:unknown)=>unknown)({layers:[ls[3]],cycles:1});
+ assert.throws(()=>run({layers:[ls[3]]}),/Tick the source/);
+ const fx=(id:string)=>findComp(s.document!)!.layers.find(l=>l.id===id)!.effects??[];
+ const r=run({layers:[ls[3],ls[2]]}) as {copiedTo:number};assert.equal(r.copiedTo,1);
+ assert.equal(fx(ls[2]).length,fx(ls[3]).length);assert.notEqual(fx(ls[2])[0].id,fx(ls[3])[0].id);
+ assert.deepEqual(fx(ls[2]).find(e=>e.kind==='glow')!.animation!.keys.map(k=>k.v),fx(ls[3]).find(e=>e.kind==='glow')!.animation!.keys.map(k=>k.v));
+ s.undo();assert.equal(fx(ls[2]).length,0);
+});

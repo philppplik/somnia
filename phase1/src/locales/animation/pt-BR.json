@@ -1255,5 +1255,7 @@
  "cmd.animation.layers.overshoot": "Adicionar ultrapassagem (e antecipação) aos movimentos das camadas marcadas",
  "animation.rig.pulse.2": "Pulsar um brilho, 2 vezes",
  "animation.rig.pulse.6": "Pulsar um brilho, 6 vezes",
- "cmd.animation.layers.pulseGlow": "Pulsar um brilho nas camadas marcadas"
+ "cmd.animation.layers.pulseGlow": "Pulsar um brilho nas camadas marcadas",
+ "animation.rig.copyfx": "Copiar efeitos da primeira camada marcada",
+ "cmd.animation.layers.copyEffects": "Copiar os efeitos da primeira camada marcada para as outras marcadas"
 }
