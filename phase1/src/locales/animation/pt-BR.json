@@ -1189,5 +1189,9 @@
  "animation.camera.rollLeft": "Girar para a esquerda",
  "animation.camera.rollRight": "Girar para a direita",
  "animation.camera.follow": "Seguir a camada selecionada",
- "cmd.animation.camera.follow": "A camera segue a camada selecionada"
+ "cmd.animation.camera.follow": "A camera segue a camada selecionada",
+ "animation.camera.shake": "Tremor de camera",
+ "cmd.animation.camera.shake": "Adicionar tremor a camera",
+ "animation.camera.reset": "Redefinir camera",
+ "cmd.animation.camera.reset": "Redefinir a camera para o repouso"
 }

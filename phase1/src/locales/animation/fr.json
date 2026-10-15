@@ -1189,5 +1189,9 @@
  "animation.camera.rollLeft": "Rotation gauche",
  "animation.camera.rollRight": "Rotation droite",
  "animation.camera.follow": "Suivre le calque selectionne",
- "cmd.animation.camera.follow": "La camera suit le calque selectionne"
+ "cmd.animation.camera.follow": "La camera suit le calque selectionne",
+ "animation.camera.shake": "Camera a l epaule",
+ "cmd.animation.camera.shake": "Ajouter un tremblement de camera",
+ "animation.camera.reset": "Reinitialiser la camera",
+ "cmd.animation.camera.reset": "Remettre la camera au repos"
 }

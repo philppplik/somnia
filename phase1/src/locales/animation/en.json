@@ -1189,5 +1189,9 @@
  "animation.camera.rollLeft": "Roll left",
  "animation.camera.rollRight": "Roll right",
  "animation.camera.follow": "Follow selected layer",
- "cmd.animation.camera.follow": "Make the camera follow the selected layer"
+ "cmd.animation.camera.follow": "Make the camera follow the selected layer",
+ "animation.camera.shake": "Handheld shake",
+ "cmd.animation.camera.shake": "Add handheld shake to the camera",
+ "animation.camera.reset": "Reset camera",
+ "cmd.animation.camera.reset": "Reset the camera to rest"
 }

@@ -186,6 +186,39 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.camera.reset",
+      "title": "Reset the camera to rest",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "camera",
+        "clear",
+        "keys",
+        "reset",
+        "rest",
+        "undo moves"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "animation.camera.shake",
+      "title": "Add handheld shake to the camera",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "camera",
+        "earthquake",
+        "handheld",
+        "impact",
+        "jitter",
+        "shake",
+        "work area"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.color.animate",
       "title": "Toggle fill or stroke colour keyframes",
       "category": "Edit",

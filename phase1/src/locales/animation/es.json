@@ -1189,5 +1189,9 @@
  "animation.camera.rollLeft": "Girar a la izquierda",
  "animation.camera.rollRight": "Girar a la derecha",
  "animation.camera.follow": "Seguir la capa seleccionada",
- "cmd.animation.camera.follow": "La camara sigue la capa seleccionada"
+ "cmd.animation.camera.follow": "La camara sigue la capa seleccionada",
+ "animation.camera.shake": "Temblor de camara",
+ "cmd.animation.camera.shake": "Anadir temblor de camara",
+ "animation.camera.reset": "Restablecer camara",
+ "cmd.animation.camera.reset": "Restablecer la camara en reposo"
 }

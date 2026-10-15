@@ -1189,5 +1189,9 @@
  "animation.camera.rollLeft": "Rollen links",
  "animation.camera.rollRight": "Rollen rechts",
  "animation.camera.follow": "Ausgewaehlter Ebene folgen",
- "cmd.animation.camera.follow": "Kamera folgt der ausgewaehlten Ebene"
+ "cmd.animation.camera.follow": "Kamera folgt der ausgewaehlten Ebene",
+ "animation.camera.shake": "Handkamera-Wackeln",
+ "cmd.animation.camera.shake": "Kamera wackeln lassen",
+ "animation.camera.reset": "Kamera zuruecksetzen",
+ "cmd.animation.camera.reset": "Kamera in Ruhelage zuruecksetzen"
 }

@@ -23,6 +23,15 @@ export function cameraFollowEdits(c:Composition,cam:Layer,target:Layer,a:number,
  for(const t of ts){const p=pt(t);edits.push({type:'key.add',layer:cam.id,prop:'position',t},{type:'prop.set',layer:cam.id,prop:'position',t,value:[r2(cx-(p[0]-p0[0])),r2(cy-(p[1]-p0[1]))] as never},{type:'key.interp',layer:cam.id,prop:'position',t,interp:'linear'});}
  return edits;
 }
+/** Handheld shake: position keys every other frame (at most MAX_FOLLOW_KEYS), a fixed seed so the same call gives the same shake. Starts and ends at rest. */
+export function cameraShakeEdits(c:Composition,cam:Layer,a:number,b:number,px:number):Edit[]{
+ const cx=c.width/2,cy=c.height/2,r2=(n:number)=>Math.round(n*100)/100;let seed=2463534242;const rnd=()=>{seed^=seed<<13;seed>>>=0;seed^=seed>>>17;seed^=seed<<5;seed>>>=0;return seed/4294967296*2-1;};
+ const f0=tickToFrame(a,c.fps),f1=tickToFrame(b,c.fps),step=Math.max(2,Math.ceil((f1-f0)/(MAX_FOLLOW_KEYS-1)));
+ const fs:number[]=[];for(let f=f0;f<f1;f+=step)fs.push(f);fs.push(f1);
+ const edits:Edit[]=cam.transform.position.keys.map((k):Edit=>({type:'key.remove',layer:cam.id,prop:'position',t:k.t}));
+ fs.forEach((f,i)=>{const t=frameToTick(f,c.fps),rest=i===0||i===fs.length-1,v=rest?[cx,cy]:[r2(cx+rnd()*px),r2(cy+rnd()*px)];edits.push({type:'key.add',layer:cam.id,prop:'position',t},{type:'prop.set',layer:cam.id,prop:'position',t,value:v as never},{type:'key.interp',layer:cam.id,prop:'position',t,interp:'linear'});});
+ return edits;
+}
 export const MIN_CAMERA_AMOUNT=1,MAX_CAMERA_AMOUNT=100;
 /** Edits that move the camera from its rest pose at `a` to the move's end pose at `b`. `amount` is percent (zoom, pan as share of the comp size) or degrees (roll). */
 export function cameraMoveEdits(c:Composition,cam:Layer,move:CameraMove,a:number,b:number,amount:number):Edit[]{
@@ -79,4 +88,30 @@ export const cameraSpecs=():CommandSpec<unknown,unknown>[]=>[{
   const edits=cameraFollowEdits(c,cam,target,a,b);
   try{s.dispatch(edits);}catch(e){if(e instanceof EditError)throw Object.assign(e,{expected:true});throw e;}
   s.setView({selectedLayer:cam.id});return {target:target.id,keys:edits.filter(e=>e.type==='key.add').length};
+ }) as (p:unknown)=>unknown},{
+ id:'animation.camera.shake',title:'Add handheld shake to the camera',category:'Edit',level:'ui',keywords:['animation','camera','shake','handheld','earthquake','impact','jitter','work area'],
+ params:{type:'object',properties:{amount:{type:'integer',minimum:1,maximum:100}},additionalProperties:false},
+ enabled:()=>{const d=animationSession().document,c=d?findComp(d):undefined;return !!c&&!!findCamera(c);},
+ run:((p?:{amount?:number})=>{
+  const s=animationSession(),d=s.document,c=d?findComp(d):undefined;if(!c)return expected('No composition is open.');
+  const cam=findCamera(c);if(!cam)return expected('Add a camera first.');if(cam.locked)return expected('The camera is locked.');
+  const px=p?.amount??8;if(!Number.isInteger(px)||px<1||px>100)return expected('The shake is 1 to 100 pixels.');
+  const a=c.workArea.in,b=c.workArea.out;if(b<=a)return expected('The work area is empty.');
+  const edits=cameraShakeEdits(c,cam,a,b,px);
+  try{s.dispatch(edits);}catch(e){if(e instanceof EditError)throw Object.assign(e,{expected:true});throw e;}
+  s.setView({selectedLayer:cam.id});return {keys:edits.filter(e=>e.type==='key.add').length,amount:px};
+ }) as (p:unknown)=>unknown},{
+ id:'animation.camera.reset',title:'Reset the camera to rest',category:'Edit',level:'ui',keywords:['animation','camera','reset','clear','rest','keys','undo moves'],
+ params:{type:'object',properties:{},additionalProperties:false},
+ enabled:()=>{const d=animationSession().document,c=d?findComp(d):undefined,cam=c?findCamera(c):undefined;return !!cam&&(cam.transform.position.keys.length>0||cam.transform.scale.keys.length>0||cam.transform.rotation.keys.length>0);},
+ run:(()=>{
+  const s=animationSession(),d=s.document,c=d?findComp(d):undefined;if(!c)return expected('No composition is open.');
+  const cam=findCamera(c);if(!cam)return expected('Add a camera first.');if(cam.locked)return expected('The camera is locked.');
+  const T=cam.transform,edits:Edit[]=[];let n=0;
+  for(const [pr,pp,rest] of [['position',T.position,[c.width/2,c.height/2]],['scale',T.scale,[100,100]],['rotation',T.rotation,0]] as const){
+   if(!pp.keys.length)continue;for(const k of pp.keys){edits.push({type:'key.remove',layer:cam.id,prop:pr,t:k.t});n++;}
+   edits.push({type:'prop.set',layer:cam.id,prop:pr,t:c.workArea.in,value:rest as never});}
+  if(!edits.length)return expected('The camera has no keys to clear.');
+  try{s.dispatch(edits);}catch(e){if(e instanceof EditError)throw Object.assign(e,{expected:true});throw e;}
+  s.setView({selectedLayer:cam.id});return {removed:n};
  }) as (p:unknown)=>unknown}];

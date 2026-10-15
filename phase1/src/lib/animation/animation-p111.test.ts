@@ -1350,3 +1350,19 @@ test('P241 camera follow: the followed layer stays put in frame, linear keys, bo
  const p0=pt(c.workArea.in);for(const t of [c.workArea.out,Math.round(c.workArea.out/2)]){const p=pt(t);assert.ok(Math.abs(p[0]-p0[0])<1.5&&Math.abs(p[1]-p0[1])<1.5,`${t}: ${p} vs ${p0}`);}
  s.undo();assert.equal(findCamera(findComp(s.document!)!)!.transform.position.keys.length,0);
 });
+
+test('P242 camera shake and reset: seeded, bounded, rest at the ends, reset clears keys, one undo step each',async()=>{
+ const {cameraSpecs,findCamera,MAX_FOLLOW_KEYS}=await import('./cameraCommands');
+ const sp=cameraSpecs(),add=sp[0].run as (p?:unknown)=>unknown,move=sp[1].run as (p?:unknown)=>unknown,shake=sp[3].run as (p?:unknown)=>unknown,reset=sp[4].run as (p?:unknown)=>unknown;
+ const s=open();setAnimationSession(s);assert.throws(()=>shake({}),/camera first/i);add({});
+ assert.throws(()=>shake({amount:0}),/1 to 100/);
+ shake({amount:10});let c=findComp(s.document!)!;let cam=findCamera(c)!;const ks=cam.transform.position.keys;
+ assert.ok(ks.length>=3&&ks.length<=MAX_FOLLOW_KEYS+1);assert.deepEqual(ks[0].v,[c.width/2,c.height/2]);assert.deepEqual(ks[ks.length-1].v,[c.width/2,c.height/2]);
+ assert.ok(ks.every(k=>Math.abs((k.v as number[])[0]-c.width/2)<=10&&Math.abs((k.v as number[])[1]-c.height/2)<=10));
+ const first=JSON.stringify(ks.map(k=>k.v));s.undo();assert.equal(findCamera(findComp(s.document!)!)!.transform.position.keys.length,0);
+ shake({amount:10});assert.equal(JSON.stringify(findCamera(findComp(s.document!)!)!.transform.position.keys.map(k=>k.v)),first);
+ move({move:'pushIn'});reset({});cam=findCamera(findComp(s.document!)!)!;
+ assert.equal(cam.transform.position.keys.length+cam.transform.scale.keys.length,0);assert.deepEqual(cam.transform.scale.value,[100,100]);assert.deepEqual(cam.transform.position.value,[c.width/2,c.height/2]);
+ assert.throws(()=>reset({}),/no keys/);
+ s.undo();assert.equal(findCamera(findComp(s.document!)!)!.transform.scale.keys.length,2);
+});
