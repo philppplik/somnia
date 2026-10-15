@@ -97,6 +97,20 @@ export function trimEndPatch(clip:ArrangeClip,frame:number){if(!Number.isSafeInt
  const gainCurve=clip.gainCurve.length?[...clip.gainCurve.filter(p=>p.at<length),{at:length,db:gainCurveAt(clip,length)}]:[];
  return{length,fadeIn:Math.min(clip.fadeIn,length),fadeOut:0,gainCurve};}
 export function findArrangeClip(s:Arrangement,id:string){for(const track of s.tracks){const clip=track.clips.find(c=>c.id===id);if(clip)return{track,clip};}throw Error('Audio clip no longer exists');}
+/** Cuts a time range out of the whole session: clips crossing a boundary split at it (split fade/curve rules), material inside the range is removed and everything after shifts left to close the gap. Markers inside the range are removed, later markers and a fully later loop shift with the timeline; a loop intersecting the cut is cleared. */
+export function cutSessionRange(s:Arrangement,start:number,end:number,nextId:()=>string){
+ if(!Number.isSafeInteger(start)||!Number.isSafeInteger(end)||start<0||end<=start||end>arrangementEnd(s))throw Error('Invalid cut range');
+ const cut=end-start;
+ for(const track of s.tracks){
+  for(const clip of [...track.clips])if(end>clip.start&&end<clip.start+clip.length)splitArrangeClip(s,clip.id,end,nextId());
+  for(const clip of [...track.clips])if(start>clip.start&&start<clip.start+clip.length)splitArrangeClip(s,clip.id,start,nextId());
+  track.clips=track.clips.filter(c=>!(c.start>=start&&c.start+c.length<=end));
+  for(const clip of track.clips)if(clip.start>=end)clip.start-=cut;
+ }
+ s.markers=s.markers.filter(m=>!(m.frame>=start&&m.frame<end));
+ for(const m of s.markers)if(m.frame>=end)m.frame-=cut;
+ if(s.loop){if(s.loop.start>=end)s.loop={start:s.loop.start-cut,end:s.loop.end-cut};else if(s.loop.end>start)s.loop=null;}
+}
 /** Deletes the given clips and closes their gaps on the same track: every later clip shifts left by the total deleted length that fully precedes it. Markers and the session length stay untouched. */
 export function rippleDeleteClips(s:Arrangement,ids:string[]){
  if(!ids.length||ids.some(v=>typeof v!=='string'))throw Error('No clips selected');

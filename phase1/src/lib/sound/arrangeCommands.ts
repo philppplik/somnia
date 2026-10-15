@@ -3,7 +3,7 @@ import {t} from '../i18n';
 import {registerCommandSpec} from '../commandBridge';
 import type {CommandSpec} from '../commandSpec';
 import {editArrangement,undoArrangement,redoArrangement,getArrangementState,setRangeSelection,renderSession,exportArrangement,downloadArrangement,saveArrangementNative,previewMaster,acceptMasterPreview,cancelMasterPreview} from './arrangeStore';
-import {applyCrossfade,clipRegionPeak,findArrangeClip,normalizeGainDb,rippleDeleteClips,splitArrangeClip,newTrack,ARRANGE_LIMITS} from './arrangement';
+import {applyCrossfade,clipRegionPeak,cutSessionRange,findArrangeClip,normalizeGainDb,rippleDeleteClips,splitArrangeClip,newTrack,ARRANGE_LIMITS} from './arrangement';
 const schema=(properties:Record<string,unknown>,required=Object.keys(properties))=>({type:'object',properties,required,additionalProperties:false});
 const str={type:'string'},num={type:'number'},bool={type:'boolean'};
 const id=()=>`arrange-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`;
@@ -38,6 +38,7 @@ export function registerArrangeCommands(){
  add('marker.delete',p=>editArrangement(s=>{s.markers=s.markers.filter(m=>m.id!==p.id);}),schema({id:str})),
  add('loop.set',p=>editArrangement(s=>{s.loop=p.enabled?{start:p.start,end:p.end}:null;}),schema({enabled:bool,start:num,end:num})),
  add('session.setBpm',p=>editArrangement(s=>{s.bpm=Math.round(p.bpm*10)/10;}),schema({bpm:num})),
+ add('session.cutRange',p=>editArrangement(s=>cutSessionRange(s,p.start,p.end,id)),schema({start:num,end:num})),
  add('session.splitAt',p=>editArrangement(s=>{let n=0;for(const track of s.tracks)for(const clip of [...track.clips])if(p.frame>clip.start&&p.frame<clip.start+clip.length){splitArrangeClip(s,clip.id,p.frame,id());n++;}if(!n)throw Error('No clip at the playhead');}),schema({frame:num})),
  add('session.range',p=>setRangeSelection(p.clear?null:{start:p.start,end:p.end}),schema({start:num,end:num,clear:bool},[])),
  add('session.tail',p=>editArrangement(s=>{s.tailFrames=Math.round(Math.min(ARRANGE_LIMITS.tailSeconds,Math.max(0,Number(p.seconds)))*48000);}),schema({seconds:num})),

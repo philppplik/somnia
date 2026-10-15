@@ -160,3 +160,16 @@ test('clip.set renames a clip and undo restores the name',async()=>{resetArrange
  await commandDispatcher.runCommand('sound.arrange.undo');
  assert.equal(getArrangementState().document.tracks[0].clips[0].name,'Chorus take');
 }finally{off();resetArrangement();}});
+
+test('session.cutRange cuts across tracks, rejects stale ranges and undoes fully',async()=>{resetArrangement();const off=registerArrangeCommands();try{
+ const source={id:'src',name:'tone.wav',frames:96000,sampleRate:48000,channels:2 as const};
+ editArrangement(s=>{s.sources.push(source);
+  s.tracks.push({...newTrack('t1','A'),clips:[{...newClip('a',source,0),length:4800}]});
+  s.tracks.push({...newTrack('t2','B'),clips:[{...newClip('b',source,2400),length:4800}]});});
+ await commandDispatcher.runCommand('sound.arrange.session.cutRange',{start:1200,end:3600});
+ assert.deepEqual([...getArrangementState().document.tracks[0].clips].sort((x,y)=>x.start-y.start).map(c=>[c.start,c.offset,c.length]),[[0,0,1200],[1200,3600,1200]],'track A split at both boundaries, gap closed');
+ assert.deepEqual([...getArrangementState().document.tracks[1].clips].sort((x,y)=>x.start-y.start).map(c=>[c.start,c.offset,c.length]),[[1200,1200,3600]],'track B: the cut removes the clip head, the remainder closes the gap');
+ await assert.rejects(commandDispatcher.runCommand('sound.arrange.session.cutRange',{start:0,end:999999}),/Invalid cut range/);
+ await commandDispatcher.runCommand('sound.arrange.undo');
+ assert.deepEqual(getArrangementState().document.tracks.map(t=>t.clips.map(c=>[c.start,c.length])),[[[0,4800]],[[2400,4800]]],'undo restores both tracks');
+}finally{off();resetArrangement();}});
