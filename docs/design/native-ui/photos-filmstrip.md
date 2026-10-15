@@ -932,3 +932,16 @@ Coverage: a light/dark gallery leg saves two views that differ
 only in the file-type rule (the legacy-equal one saved first),
 applies the second and proves delete removes exactly that one
 (`test-results/ds-photos-collection-distinct-{light,dark}.png`).
+
+## Search covers lens and the exposure line (P142)
+
+The filmstrip search completes its EXIF coverage: next to name,
+tags, captions, camera and capture date it now matches the lens
+name and the exposure scan line - "f/1.4", "ISO 6400", "35 mm"
+or "1/125" find the shots, one substring match over resolved
+cache entries, like the camera and date rules before it. Photos
+without a resolved cache entry never match.
+
+Coverage: the light/dark gallery leg seeds two full exposure
+sets and narrows by lens name, aperture, ISO and focal length in
+turn (`test-results/ds-photos-search-exif-{light,dark}.png`).

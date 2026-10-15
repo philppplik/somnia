@@ -1585,6 +1585,34 @@ test('collections: views differing only in a newer smart rule stay distinct (lig
   await page.evaluate(async()=>{const ps=await import('/src/store/panelStateStore.ts');ps.panelStateStore.set('photos.filterSets',{});ps.panelStateStore.set('photos.smartFilter',{on:false,minRating:0,flag:'',label:'',tag:'',camera:'',dup:false,type:'',orient:'',iso:'',fl:'',lens:'',ap:'',exp:''});}); // leave no state behind
  }
 });
+test('search: lens name and exposure line join the query (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
+  await page.evaluate(async()=>{
+   const cd=await import('/src/lib/photos/captureDates.ts');const med=await import('/src/lib/media.ts');
+   const size=(n:string)=>med.getMedia().items.find(i=>i.name===n)!.size;
+   cd.putCaptureDate('strip-1.png',size('strip-1.png'),null,null,240,150,{lens:'Prime 35',exp:'1/500 s',ap:'f/1.4',iso:200,fl:'35 mm'});
+   cd.putCaptureDate('strip-2.png',size('strip-2.png'),null,null,240,150,{lens:'Zoom 70-200',exp:'1/15 s',ap:'f/8',iso:6400,fl:'85 mm'});
+  });
+  await page.getByTestId('photos-filmstrip-search').fill('prime'); // lens name, case-insensitive
+  await expect(page.getByTestId('photos-filmstrip-item-strip-1.png')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-2.png')).toHaveCount(0);
+  await page.getByTestId('photos-filmstrip-search').fill('f/8'); // aperture from the exposure line
+  await expect(page.getByTestId('photos-filmstrip-item-strip-2.png')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-1.png')).toHaveCount(0);
+  await page.getByTestId('photos-filmstrip-search').fill('iso 200'); // ISO from the exposure line
+  await expect(page.getByTestId('photos-filmstrip-item-strip-1.png')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-2.png')).toHaveCount(0);
+  await page.getByTestId('photos-filmstrip-search').fill('85 mm'); // focal length from the exposure line
+  await expect(page.getByTestId('photos-filmstrip-item-strip-2.png')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toHaveCount(0); // unresolved entry never matches
+  await page.screenshot({path:`test-results/ds-photos-search-exif-${theme}.png`,fullPage:true});
+  await page.getByTestId('photos-filmstrip-search').fill(''); // off
+ }
+});
 test('menu groups: labeled collapsible sections, expanded by default (light and dark)',async({page})=>{
  for(const theme of['light','dark']){
   await page.goto('/test/design-system/?view=photos-filmstrip');

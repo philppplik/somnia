@@ -6,7 +6,7 @@ import {useFlags} from '../../lib/photos/flags';
 import {useLabels} from '../../lib/photos/labels';
 import {usePhotoTags} from '../../lib/photos/tags';
 import {useAllCaptions} from '../../lib/photos/captions';
-import {ensureCaptureDates,getCaptureEntry,useCaptureDates,duplicateKey} from '../../lib/photos/captureDates';
+import {ensureCaptureDates,exposureLine,getCaptureEntry,useCaptureDates,duplicateKey} from '../../lib/photos/captureDates';
 import {photoFileType} from '../../lib/photos/fileType';
 import {useEffect} from 'react';
 import type {PhotoLabel} from '../../lib/photos/labels';
@@ -50,6 +50,10 @@ export function useVisiblePhotos(){
   if(!e?.t)return false;const d=new Date(e.t);const m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');
   return `${d.getFullYear()}`.includes(q)||`${d.getFullYear()}-${m}`.includes(q)||`${d.getFullYear()}-${m}-${day}`.includes(q);
  };
+ const qExif=(e:ReturnType<typeof getCaptureEntry>):boolean=>{ // lens name and the exposure scan line (shutter, aperture, ISO, focal) over resolved cache entries
+  if(!e)return false;
+  return (e.lens?.toLowerCase().includes(q)??false)||exposureLine(e).toLowerCase().includes(q);
+ };
  const smartTag=smart.tag.trim();
  const smartCamera=(smart.camera??'').trim();
  const smartType=(smart.type??'').trim();
@@ -68,6 +72,6 @@ export function useVisiblePhotos(){
  const dates:Record<string,number|null>={};if(captureReady)for(const p of developable)dates[p.name]=getCaptureEntry(p.name,p.size)!.t;
  const sizes:Record<string,number>={};for(const p of developable)sizes[p.name]=p.size;
  const effectiveSort=sort==='capture'&&!captureReady?'library':sort;
- const photos=sortFilmstrip(visible.filter(p=>q&&!(p.name.toLowerCase().includes(q)||(tags[p.name]??[]).some(t=>t.toLowerCase().includes(q))||(captions[p.name]??'').toLowerCase().includes(q)||(getCaptureEntry(p.name,p.size)?.cam?.toLowerCase().includes(q)??false)||qDate(getCaptureEntry(p.name,p.size)))?false:filter==='pick'?flags[p.name]==='pick':filter==='reject'?flags[p.name]==='reject':filter==='unrated'?!(ratings[p.name]>=1):filter.startsWith('label:')?labels[p.name]===filter.slice(6):filter.startsWith('tag:')?(tags[p.name]??[]).includes(filter.slice(4)):(ratings[p.name]??0)>=Number(smartOn?0:filter)),effectiveSort,ratings,flags,dates,sizes); // sorting is display-only, prev/next keeps library order
+ const photos=sortFilmstrip(visible.filter(p=>q&&!(p.name.toLowerCase().includes(q)||(tags[p.name]??[]).some(t=>t.toLowerCase().includes(q))||(captions[p.name]??'').toLowerCase().includes(q)||(getCaptureEntry(p.name,p.size)?.cam?.toLowerCase().includes(q)??false)||qDate(getCaptureEntry(p.name,p.size))||qExif(getCaptureEntry(p.name,p.size)))?false:filter==='pick'?flags[p.name]==='pick':filter==='reject'?flags[p.name]==='reject':filter==='unrated'?!(ratings[p.name]>=1):filter.startsWith('label:')?labels[p.name]===filter.slice(6):filter.startsWith('tag:')?(tags[p.name]??[]).includes(filter.slice(4)):(ratings[p.name]??0)>=Number(smartOn?0:filter)),effectiveSort,ratings,flags,dates,sizes); // sorting is display-only, prev/next keeps library order
  return {photos,all,total,ratings,flags,labels,tags,filter,sort,query,smart,smartOn,hidden,showHidden,collection};
 }
