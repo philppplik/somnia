@@ -12,7 +12,7 @@ import {findWbPreset,WB_PRESETS} from '../../lib/photos/wbPresets';
 import {applyLook,BUILT_IN_PRESETS,extractLook,isNeutralLook,parseUserPresets,type Look,type UserPreset} from '../../lib/photos/presets';
 import {commitPhotoSettings,getPhotoSession} from '../../lib/photos/studioSession';
 import {FILMSTRIP_SORTS,type FilmstripSort} from '../../lib/photos/filmstripSort';
-import {ensureCaptureDates,exposureLine,getCaptureEntry} from '../../lib/photos/captureDates';
+import {ensureCaptureDates,entryToInfo,exposureLine,getCaptureEntry} from '../../lib/photos/captureDates';
 import {MAX_RATING,useRatings} from '../../lib/photos/ratings';
 import {useFlags} from '../../lib/photos/flags';
 import {PHOTO_LABELS,useLabels,type PhotoLabel} from '../../lib/photos/labels';
@@ -27,7 +27,7 @@ import {hidePhotos,unhideAll,unhidePhotos} from '../../lib/photos/hidden';
 import {nextCopyName} from '../../lib/photos/virtualCopy';
 import {saveSnapshot,snapshotSettings,deleteSnapshot,useSnapshots} from '../../lib/photos/snapshots';
 import {addToCollection,removeFromCollection,deleteCollection,isInCollection,useCollectionNames} from '../../lib/photos/collections';
-import {readPhotoInfo,photoInfoLines,formatBytes} from '../../lib/photos/exifInfo';
+import {photoInfoLines,formatBytes} from '../../lib/photos/exifInfo';
 import {detectSeries} from '../../lib/photos/autoStack';
 import {usePanelState} from '../../store/panelStateStore';
 import {Button} from '../ui/button';
@@ -69,20 +69,17 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
  const [infoLines,setInfoLines]=useState<{key:string;value:string}[]|null>(null);
  const [statsOpen,setStatsOpen]=useState(false);
  useEffect(()=>{if(pendingNote){setApplyNote(pendingNote);pendingNote=null;}},[]); // pick up a confirmation that crossed the workspace remount
- useEffect(()=>{ // lazy-read the active photo's metadata while the info panel is open
+ useCaptureDates(); // re-render as EXIF resolves: camera/ISO/focal options refresh and the info effect below re-reads the entry
+ const infoItem=infoOpen?getMedia().items.find(i=>i.name===active):undefined;
+ const infoEntry=infoItem?getCaptureEntry(infoItem.name,infoItem.size):null;
+ useEffect(()=>{ // the info panel reads the shared EXIF cache - no second fetch; a miss just warms the cache and the subscription above re-runs this effect
   if(!infoOpen){setInfoLines(null);return;}
-  let dead=false;
-  void(async()=>{
-   const item=getMedia().items.find(i=>i.name===active);if(!item||dead)return;
-   try{
-    const buf=await (await fetch(item.url)).arrayBuffer();
-    const lines=photoInfoLines(readPhotoInfo(item.mime,buf));
-    if(item.size>0)lines.push({key:'size',value:formatBytes(item.size)});
-    if(!dead)setInfoLines(lines);
-   }catch{if(!dead)setInfoLines([]);}
-  })();
-  return()=>{dead=true;};
- },[infoOpen,active]);
+  if(!infoItem){setInfoLines(null);return;}
+  if(!infoEntry){setInfoLines(null);ensureCaptureDates([infoItem]);return;}
+  const lines=photoInfoLines(entryToInfo(infoEntry));
+  if(infoItem.size>0)lines.push({key:'size',value:formatBytes(infoItem.size)});
+  setInfoLines(lines);
+ },[infoOpen,active,infoItem,infoEntry]);
  const [armRemove,setArmRemove]=useState(false);
  const [rawPresets]=usePanelState<unknown>('photos.presets.user',[]);
  const [applying,setApplying]=useState(false);
@@ -101,7 +98,7 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
  const [gamutWarn,setGamutWarn]=usePanelState<boolean>('photos.gamutWarn',false);
  const [proofModel,setProofModel]=usePanelState<string>('photos.proofModel','coated');
  const [gamutSharePct]=usePanelState<number>('photos.gamutShare',0); // published by the workspace
- useCaptureDates(); // camera options refresh as EXIF resolves // shared with the workspace toolbar
+
  const [splitDir,setSplitDir]=usePanelState<'vertical'|'horizontal'>('photos.splitDir','vertical');
  const [slide,setSlide]=usePanelState<boolean>('photos.slideshow',false);
  const [slideMs,setSlideMs]=usePanelState<number>('photos.slideshowMs',4000);

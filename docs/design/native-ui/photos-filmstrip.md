@@ -882,3 +882,20 @@ covered sort-by-capture, camera and duplicates).
 Coverage: the light/dark gallery leg seeds two focal lengths and
 narrows to one, options proven cache-driven
 (`test-results/ds-photos-smart-fl-{light,dark}.png`).
+
+## Info panel reads the EXIF cache (P139)
+
+The info panel no longer fetches the file bytes itself: it reads
+the shared EXIF cache (v4) through entryToInfo, the display
+inverse of entryFromInfo. A cache miss just triggers the lazy
+warm-up and the panel fills when the subscription re-renders -
+exactly one fetch per photo, whichever surface (tooltip, info
+panel, smart rules) asks first. The date renders back in the
+EXIF string shape, so the panel's lines are unchanged.
+
+Coverage: a unit round-trip (entryFromInfo -> entryToInfo is the
+identity), and a light/dark gallery leg that seeds cache-only
+EXIF values and asserts zero fetch() requests for the photo when
+the panel opens (`test-results/ds-photos-info-cache-{light,dark}.png`).
+The existing info leg keeps its assertions (dimensions now come
+from the cache, which read the PNG IHDR).

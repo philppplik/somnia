@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {parseExifDate,getCaptureEntry,putCaptureDate,allCameras,duplicateKey,entryFromInfo,exposureLine} from './captureDates.ts';
+import {parseExifDate,getCaptureEntry,putCaptureDate,allCameras,duplicateKey,entryFromInfo,entryToInfo,exposureLine} from './captureDates.ts';
 test('captureDates: EXIF date parsing',()=>{
  const t=parseExifDate('2026:10:14 09:30:00');
  assert.equal(typeof t,'number');
@@ -34,4 +34,10 @@ test('captureDates: entryFromInfo maps the full daily EXIF set, exposureLine sca
  assert.deepEqual(bare,{t:null,s:50,cam:null,w:null,h:null,lens:null,exp:null,ap:null,iso:null,fl:null});
  assert.equal(exposureLine(bare),'');
  assert.equal(exposureLine(entryFromInfo(1,{iso:6400})),'ISO 6400'); // partial sets show their parts only
+});
+test('captureDates: entryToInfo inverts entryFromInfo for display',()=>{
+ const info={dateTime:'2026:10:14 09:30:05',camera:'Canon EOS R5',width:240,height:150,lens:'RF 35mm F1.8',exposure:'1/125',aperture:'f/2.8',iso:200,focalLength:'35 mm'};
+ assert.deepEqual(entryToInfo(entryFromInfo(2131,info)),info); // exact round-trip: the panel can read the cache instead of the file
+ const bare=entryToInfo(entryFromInfo(50,{}));
+ assert.equal(bare.camera,undefined);assert.equal(bare.dateTime,undefined);assert.equal(bare.width,undefined);assert.equal(bare.iso,undefined); // nulls become absent fields
 });

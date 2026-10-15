@@ -1,6 +1,6 @@
 /** Capture-date cache for the EXIF sort: one entry per photo (keyed by media name, invalidated by byte size), persisted locally. Missing entries load async with bounded concurrency; a photo whose EXIF has no date resolves as undated (null), so the sort can gate on completeness instead of reordering progressively. Originals are never modified. */
 import {useSyncExternalStore} from 'react';
-import {readPhotoInfo} from './exifInfo';
+import {readPhotoInfo,type PhotoInfo} from './exifInfo';
 const KEY='somnia.photos.captureDates.v4'; // v4: entries carry the full daily EXIF set (lens/exposure/aperture/ISO/focal) next to date+camera+dimensions (one fetch feeds all); older entries reload
 const CONCURRENCY=3;
 export interface CaptureEntry{t:number|null;s:number;cam:string|null;w:number|null;h:number|null;lens:string|null;exp:string|null;ap:string|null;iso:number|null;fl:string|null}
@@ -25,6 +25,13 @@ export const putCaptureDate=(name:string,size:number,t:number|null,cam:string|nu
 /** Pure mapping from the parsed EXIF info to a cache entry - the one place the loader and the tests share. */
 export function entryFromInfo(size:number,info:{dateTime?:string;camera?:string;width?:number;height?:number;lens?:string;exposure?:string;aperture?:string;iso?:number;focalLength?:string}):CaptureEntry{
  return{t:parseExifDate(info.dateTime),s:size,cam:info.camera??null,w:info.width??null,h:info.height??null,lens:info.lens??null,exp:info.exposure??null,ap:info.aperture??null,iso:info.iso??null,fl:info.focalLength??null};
+}
+const pad2=(n:number)=>String(n).padStart(2,'0');
+/** Inverse of entryFromInfo for display: the cache entry back as photo info, the date rendered in the EXIF string shape (local time, like the parse). Lets the info panel read the cache instead of fetching the file a second time. */
+export function entryToInfo(e:CaptureEntry):PhotoInfo{
+ let dateTime:string|undefined;
+ if(e.t!=null){const d=new Date(e.t);dateTime=`${d.getFullYear()}:${pad2(d.getMonth()+1)}:${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;}
+ return{width:e.w??undefined,height:e.h??undefined,camera:e.cam??undefined,lens:e.lens??undefined,exposure:e.exp??undefined,aperture:e.ap??undefined,iso:e.iso??undefined,focalLength:e.fl??undefined,dateTime};
 }
 /** The exposure scan line photographers read: shutter, aperture, ISO, focal length - only the parts present. */
 export function exposureLine(e:CaptureEntry):string{

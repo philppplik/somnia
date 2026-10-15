@@ -1046,7 +1046,7 @@ test('photo info: the menu shows dimensions and file size read from the bytes (l
   await page.getByTestId('photos-filmstrip-menu').click();
   await page.getByTestId('photos-filmstrip-info-toggle').click();
   await expect(page.getByTestId('photos-filmstrip-info')).toBeVisible();
-  await expect(page.getByTestId('photos-filmstrip-info-dimensions')).toHaveText('240 × 150 px'); // read from the PNG IHDR
+  await expect(page.getByTestId('photos-filmstrip-info-dimensions')).toHaveText('240 × 150 px'); // from the EXIF cache (which read the PNG IHDR)
   await expect(page.getByTestId('photos-filmstrip-info-size')).toContainText('B'); // file size line joins
   await page.screenshot({path:`test-results/ds-photos-info-${theme}.png`,fullPage:true});
   await page.getByTestId('photos-filmstrip-info-toggle').click(); // close again
@@ -1488,6 +1488,35 @@ test('smart filter focal length: narrows the strip to the chosen focal length (l
   await page.getByTestId('photos-filmstrip-smart').click();
   await page.keyboard.press('Escape');
   await page.evaluate(async()=>{const ps=await import('/src/store/panelStateStore.ts');ps.panelStateStore.set('photos.smartFilter',{on:false,minRating:0,flag:'',label:'',tag:'',camera:'',dup:false,type:'',orient:'',iso:'',fl:''});});
+ }
+});
+test('info panel: reads the EXIF cache, no second fetch (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  const fetches:string[]=[];
+  await page.route('**/*',r=>{if(r.request().resourceType()==='fetch')fetches.push(r.request().url());void r.continue();});
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
+  await page.waitForFunction(async()=>{ // the warm-up pump settled: every strip photo has a cache entry
+   const cd=await import('/src/lib/photos/captureDates.ts');const med=await import('/src/lib/media.ts');
+   return ['strip-1.png','strip-2.png','strip-3.png'].every(n=>{const i=med.getMedia().items.find(x=>x.name===n);return !i||cd.getCaptureEntry(i.name,i.size)!==null;});
+  });
+  await page.evaluate(async()=>{ // cache-only values: the fixture bytes carry no such EXIF
+   const cd=await import('/src/lib/photos/captureDates.ts');const med=await import('/src/lib/media.ts');
+   const size=(n:string)=>med.getMedia().items.find(i=>i.name===n)!.size;
+   cd.putCaptureDate('strip-1.png',size('strip-1.png'),null,'Dedupe Cam',240,150,{iso:777,fl:'123 mm'});
+  });
+  fetches.length=0; // count only what opening the panel triggers
+  await page.getByTestId('photos-filmstrip-menu').click();
+  await page.getByTestId('photos-filmstrip-info-toggle').click();
+  await expect(page.getByTestId('photos-filmstrip-info-camera')).toHaveText('Dedupe Cam');
+  await expect(page.getByTestId('photos-filmstrip-info-exposure')).toContainText('ISO 777');
+  await expect(page.getByTestId('photos-filmstrip-info-exposure')).toContainText('123 mm');
+  expect(fetches.filter(u=>u.includes('strip-1.png'))).toHaveLength(0); // no second fetch for the open panel
+  await page.screenshot({path:`test-results/ds-photos-info-cache-${theme}.png`,fullPage:true});
+  await page.getByTestId('photos-filmstrip-info-toggle').click(); // close again
+  await page.keyboard.press('Escape');
  }
 });
 test('menu groups: labeled collapsible sections, expanded by default (light and dark)',async({page})=>{
