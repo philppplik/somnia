@@ -84,7 +84,7 @@ export function duplicateSelection(offset=12){finite(offset);const ids=state.sel
  const gmap=new Map<string,string>(),copies=remapPaths(selectedPaths(state.doc,ids).map(p=>translatePath(p,offset,offset)),state.doc,gmap);
  commit({...state.doc,paths:[...state.doc.paths,...copies],...carryNames(state.doc.groupNames,state.doc.groupNames,gmap)},{selection:copies.map(c=>c.id)});}
 export const moveSelection=(dx:number,dy:number)=>{finite(dx,dy);if(state.selection.length&&(dx||dy))commit(mapPaths(p=>translatePath(p,dx,dy))(state.selection));};
-export function setStyle(patch:Partial<Style>,ids:readonly string[]=state.selection){const chosen=selectionIds(state.doc,ids);if(!chosen.length)return;checkFxPatch(patch as Record<string,unknown>);const have=new Set((state.doc.gradients??[]).map(g=>g.id)),gid=gradientIdOf(patch.fill);if(typeof patch.fill==='string'&&patch.fill.startsWith('url(')&&(gid===undefined||!have.has(gid))){patch={...patch};delete patch.fill;if(!Object.keys(patch).length)return;}commit(mapPaths(p=>({...p,style:{...p.style,...patch}}))(chosen));}
+export function setStyle(patch:Partial<Style>,ids:readonly string[]=state.selection){const chosen=selectionIds(state.doc,ids);if(!chosen.length)return;checkFxPatch(patch as Record<string,unknown>);const have=new Set((state.doc.gradients??[]).map(g=>g.id));for(const key of ['fill','stroke'] as const){const v=patch[key],gid=gradientIdOf(v);if(typeof v==='string'&&v.startsWith('url(')&&(gid===undefined||!have.has(gid))){patch={...patch};delete patch[key];}}if(!Object.keys(patch).length)return;commit(mapPaths(p=>({...p,style:{...p.style,...patch}}))(chosen));}
 export function renameGroup(group:string,name:string){
  if(!state.doc.paths.some(p=>p.group===group))return;
  const names={...(state.doc.groupNames??{})},n=name.trim().slice(0,80);if(n)names[group]=n;else delete names[group];
@@ -140,7 +140,7 @@ function mergeGradients(doc:VectorDocument,imported:VectorDocument,paths:VectorP
  const used=new Set((doc.gradients??[]).map(g=>g.id)),map=new Map<string,string>();let n=1;
  const fresh=()=>{while(used.has('vsg'+n))n++;const id='vsg'+n;used.add(id);return id;};
  const add=imported.gradients.map(g=>{const id=fresh();map.set(g.id,id);return{...g,id};});
- return{paths:paths.map(p=>{const gid=gradientIdOf(p.style?.fill),to=gid?map.get(gid):undefined;return to?{...p,style:{...p.style,fill:`url(#${to})`}}:p;}),gradients:[...(doc.gradients??[]),...add]};
+ return{paths:paths.map(p=>{let q=p;for(const key of ['fill','stroke'] as const){const gid=gradientIdOf(q.style?.[key]),to=gid?map.get(gid):undefined;if(to)q={...q,style:{...q.style,[key]:`url(#${to})`}};}return q;}),gradients:[...(doc.gradients??[]),...add]};
 }
 /** Imports SVG source into the open document as additional paths. Returns false on error (see session.error). */
 export function importSvgInto(source:string,opts:{strict?:boolean;offset?:number}={}):boolean{

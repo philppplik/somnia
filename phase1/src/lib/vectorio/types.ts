@@ -74,7 +74,7 @@ export interface GradientStop { offset: number; color: string; opacity: number }
 /**
  * Extension. Gradients live on the document and are referenced by `style.fill = "url(#id)"`.
  * Coordinates are always in objectBoundingBox units (0..1 of the painted object's box), so a gradient follows its
- * object when it moves or scales. Pad spread only; no gradientTransform; fill only (no stroke gradients).
+ * object when it moves or scales. Pad spread only; no gradientTransform; used by `style.fill` and `style.stroke`.
  */
 export type Gradient = { id: string; stops: GradientStop[] } & (
   | { kind: 'linear'; x1: number; y1: number; x2: number; y2: number }

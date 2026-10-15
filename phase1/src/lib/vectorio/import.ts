@@ -74,8 +74,7 @@ function cascade(parent: Style, d: Record<string, string>, err: (m: string) => v
     if (p === null) err(`unsupported ${key} value "${raw}"`);
     else if (p.startsWith('url(')) {
       const ref = /^url\(\s*#([^)\s]+)\s*\)/.exec(p)?.[1];
-      if (key === 'stroke') err(`stroke references ${p}: stroke gradients and patterns are not supported`);
-      else if (ref === undefined || !hasGradient(ref)) err(`fill references ${p}: only linear and radial gradients defined in the file are supported`);
+      if (ref === undefined || !hasGradient(ref)) err(`${key} references ${p}: only linear and radial gradients defined in the file are supported`);
       else s[key] = `url(#${ref})`;
     } else s[key] = p;
   }
@@ -405,9 +404,12 @@ export function importSvg(source: string, opts: ImportOptions = {}): ImportResul
     }
     if (groupOpacity !== 1) info('group opacity was multiplied into each child path (overlapping children may differ)');
     const compound = contours.length > 1 ? `c${++compoundC}` : undefined;
-    if (typeof st.fill === 'string' && st.fill.startsWith('url(#')) {
-      const ref = st.fill.slice(5, -1), resolved = grads.resolve(ref, world, nodesBox(contours));
-      if (resolved === null) st.fill = 'none'; else st.fill = `url(#${resolved})`;
+    for (const key of ['fill', 'stroke'] as const) {
+      const v = st[key];
+      if (typeof v === 'string' && v.startsWith('url(#')) {
+        const ref = v.slice(5, -1), resolved = grads.resolve(ref, world, nodesBox(contours));
+        if (resolved === null) st[key] = 'none'; else st[key] = `url(#${resolved})`;
+      }
     }
     const baseName = label;
     const locked = el.attrs['data-vs-locked'] === '1';

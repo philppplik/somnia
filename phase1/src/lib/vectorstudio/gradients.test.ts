@@ -33,7 +33,7 @@ test('gradient import: unsupported features are refused, not guessed',()=>{
  bad(LIN.replace('x1="0"','gradientTransform="rotate(45)" x1="0"'));
  bad(LIN.replace('x1="0"','spreadMethod="repeat" x1="0"'));
  bad(LIN,RECT.replace('fill="url(#a)"','fill="url(#nope)"'));
- bad(LIN,RECT.replace('fill="url(#a)"','fill="none" stroke="url(#a)"'));
+ // stroke gradients are supported since the stroke-gradient slice (see strokeGradient.test.ts)
  bad('<linearGradient id="a"/>');
  bad(LIN+'<pattern id="p"/>');
 });

@@ -34,11 +34,17 @@ export function pruneGradients(doc: VectorDocument): { gradients: Gradient[] | u
   const have = new Map((doc.gradients ?? []).map((g) => [g.id, g]));
   const used = new Set<string>();
   const paths = doc.paths.map((p) => {
-    const id = gradientIdOf(p.style?.fill);
-    if (id === undefined || have.has(id)) { if (id !== undefined) used.add(id); return p; }
-    const { fill: _f, ...rest } = p.style as Partial<Style>;
+    let rest = p.style as Partial<Style> | undefined, changed = false;
+    for (const key of ['fill', 'stroke'] as const) {
+      const id = gradientIdOf(p.style?.[key]);
+      if (id === undefined) continue;
+      if (have.has(id)) { used.add(id); continue; }
+      const { [key]: _drop, ...others } = rest as Partial<Style>;
+      rest = others; changed = true;
+    }
+    if (!changed) return p;
     const q: VectorPath = { ...p };
-    if (Object.keys(rest).length) q.style = rest; else delete q.style;
+    if (rest && Object.keys(rest).length) q.style = rest; else delete q.style;
     return q;
   });
   const gradients = [...have.values()].filter((g) => used.has(g.id)).slice(0, GRADIENT_LIMITS.maxGradients).map(cleanGradient);

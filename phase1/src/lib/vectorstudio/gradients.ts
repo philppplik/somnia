@@ -2,6 +2,7 @@ import type {Gradient,GradientStop,VectorDocument} from '../vectorio';
 import {GRADIENT_LIMITS} from '../vectorio';
 import {gradientFill,gradientIdOf,pruneGradients} from '../vectorio/gradient';
 import {selectedPaths} from './selectionClosure';
+import {pathBox} from './geometry';
 
 export const GRADIENT_KINDS=['none','linear','radial'] as const;
 export type GradientKind=typeof GRADIENT_KINDS[number];
@@ -22,23 +23,27 @@ const solid=(fill:string|undefined)=>fill&&HEX.test(fill)?fill.toLowerCase():'#0
  * gradient that is sized to each object's own box. Unspecified fields keep the current gradient of the first selected
  * path, so changing only the angle keeps imported multi-stop gradients intact.
  */
-export function applyGradient(doc:VectorDocument,ids:readonly string[],patch:GradientPatch):VectorDocument{
+export const GRADIENT_TARGETS=['fill','stroke'] as const;
+export type GradientTarget=typeof GRADIENT_TARGETS[number];
+export function applyGradient(doc:VectorDocument,ids:readonly string[],patch:GradientPatch,target:GradientTarget='fill'):VectorDocument{
+  if(!GRADIENT_TARGETS.includes(target))throw new RangeError('target must be fill or stroke');
   const chosen=selectedPaths(doc,ids);if(!chosen.length)return doc;
+  if(target==='stroke'&&patch.kind!=='none')for(const p of chosen){if(p.clip)continue;const b=pathBox(p);if(!b||b.maxX-b.minX<=0||b.maxY-b.minY<=0)throw new RangeError('A gradient stroke needs objects with both width and height (a straight horizontal or vertical line would not be drawn)');}
   if(patch.angle!==undefined&&!(Number.isFinite(patch.angle)&&patch.angle>=0&&patch.angle<=360))throw new RangeError('angle must be 0-360');
   for(const c of [patch.startColor,patch.endColor])if(c!==undefined&&!HEX.test(c))throw new RangeError('colours must be #rrggbb');
   if(patch.stops){
     if(patch.stops.length<2||patch.stops.length>GRADIENT_LIMITS.maxStops)throw new RangeError(`stops: 2-${GRADIENT_LIMITS.maxStops} required`);
     for(const s of patch.stops)if(!(Number.isFinite(s.offset)&&s.offset>=0&&s.offset<=1&&Number.isFinite(s.opacity)&&s.opacity>=0&&s.opacity<=1&&HEX.test(s.color)))throw new RangeError('invalid stop');
   }
-  const first=chosen[0],curId=gradientIdOf(first.style?.fill),cur=curId?doc.gradients?.find(g=>g.id===curId):undefined;
+  const first=chosen[0],curId=gradientIdOf(first.style?.[target]),cur=curId?doc.gradients?.find(g=>g.id===curId):undefined;
   if(patch.kind==='none'||(patch.kind===undefined&&!cur&&!patch.stops&&patch.angle===undefined&&patch.startColor===undefined&&patch.endColor===undefined)){
     if(!cur)return doc;
     const color=cur.stops[0]?.color??'#000000',set=new Set(chosen.map(p=>p.id));
-    const next={...doc,paths:doc.paths.map(p=>set.has(p.id)&&gradientIdOf(p.style?.fill)?{...p,style:{...p.style,fill:HEX.test(color)?color:'#000000'}}:p)};
+    const next={...doc,paths:doc.paths.map(p=>set.has(p.id)&&gradientIdOf(p.style?.[target])?{...p,style:{...p.style,[target]:HEX.test(color)?color:'#000000'}}:p)};
     return prune(next);
   }
   const kind=patch.kind??cur?.kind??'linear';
-  let stops:GradientStop[]=patch.stops?patch.stops.map(s=>({...s,color:s.color.toLowerCase()})):cur?cur.stops.map(s=>({...s})):[{offset:0,color:solid(first.style?.fill),opacity:1},{offset:1,color:'#ffffff',opacity:1}];
+  let stops:GradientStop[]=patch.stops?patch.stops.map(s=>({...s,color:s.color.toLowerCase()})):cur?cur.stops.map(s=>({...s})):[{offset:0,color:solid(first.style?.[target]),opacity:1},{offset:1,color:'#ffffff',opacity:1}];
   if(patch.startColor)stops[0]={...stops[0],color:patch.startColor.toLowerCase()};
   if(patch.endColor)stops[stops.length-1]={...stops[stops.length-1],color:patch.endColor.toLowerCase()};
   if(stops.length===1)stops=[stops[0],{...stops[0],offset:1}];
@@ -51,6 +56,6 @@ export function applyGradient(doc:VectorDocument,ids:readonly string[],patch:Gra
   }else g=cur&&cur.kind==='radial'?{...cur,id,stops}:{id,kind:'radial',cx:.5,cy:.5,r:.5,stops};
   if(!used.has(id)&&(doc.gradients?.length??0)>=GRADIENT_LIMITS.maxGradients&&!cur)throw new RangeError('too many gradients');
   const set=new Set(chosen.map(p=>p.id));
-  return prune({...doc,gradients:[...(doc.gradients??[]),g],paths:doc.paths.map(p=>set.has(p.id)?{...p,style:{...p.style,fill:gradientFill(id)}}:p)});
+  return prune({...doc,gradients:[...(doc.gradients??[]),g],paths:doc.paths.map(p=>set.has(p.id)?{...p,style:{...p.style,[target]:gradientFill(id)}}:p)});
 }
 function prune(doc:VectorDocument):VectorDocument{const r=pruneGradients(doc),next={...doc,paths:r.paths};if(r.gradients)next.gradients=r.gradients;else delete next.gradients;return next;}

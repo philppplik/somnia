@@ -6,7 +6,7 @@ import type {CommandSpec} from '../commandSpec';
 import * as S from './session';
 import type {AlignMode} from './transforms';
 import {rotateSelection,scaleSelection,selectionBounds,alignSelection,distributeSelection,ALIGN_MODES,ALIGN_TARGETS} from './transforms';
-import {applyGradient,GRADIENT_KINDS,type GradientPatch} from './gradients';
+import {applyGradient,GRADIENT_KINDS,GRADIENT_TARGETS,type GradientPatch,type GradientTarget} from './gradients';
 import {roundCorners,RADIUS_LIMITS} from './roundCorners';
 import {simplifySelection,SIMPLIFY_LIMITS} from './simplify';
 import {offsetSelection,outlineStroke,OFFSET_LIMITS} from './offsetOps';
@@ -39,8 +39,8 @@ export function vectorShellCommandSpecs(active:()=>boolean):CommandSpec<any,unkn
    run:(p:{axis:'horizontal'|'vertical'})=>{const s=S.getVectorSession();S.commit(distributeSelection(s.doc,s.selection,p.axis));}},
   {id:'vector.booleanOp',title:'Combine vector shapes',category:'Edit',level:'ui',enabled:selected,params:{...empty,properties:{op:{type:'string',enum:[...BOOL_OPS]}},required:['op']},
    run:(p:{op:typeof BOOL_OPS[number]})=>{const s=S.getVectorSession(),r=applyBoolean(s.doc,s.selection,p.op);S.commit(r.doc);S.select(r.ids);}},
-  {id:'vector.setGradient',title:'Set vector gradient fill',category:'Edit',level:'ui',enabled:selected,params:{...empty,properties:{kind:{type:'string',enum:[...GRADIENT_KINDS]},angle:{type:'number',minimum:0,maximum:360},startColor:{type:'string',pattern:'^#[0-9a-fA-F]{6}$'},endColor:{type:'string',pattern:'^#[0-9a-fA-F]{6}$'},stops:{type:'array',minItems:2,maxItems:16,items:{type:'object',properties:{offset:{type:'number',minimum:0,maximum:1},color:{type:'string',pattern:'^#[0-9a-fA-F]{6}$'},opacity:{type:'number',minimum:0,maximum:1}},required:['offset','color','opacity'],additionalProperties:false}}}},
-   run:(p:GradientPatch)=>{const s=S.getVectorSession(),next=applyGradient(s.doc,s.selection,p);if(next!==s.doc)S.commit(next);}},
+  {id:'vector.setGradient',title:'Set vector gradient fill',category:'Edit',level:'ui',enabled:selected,params:{...empty,properties:{target:{type:'string',enum:[...GRADIENT_TARGETS]},kind:{type:'string',enum:[...GRADIENT_KINDS]},angle:{type:'number',minimum:0,maximum:360},startColor:{type:'string',pattern:'^#[0-9a-fA-F]{6}$'},endColor:{type:'string',pattern:'^#[0-9a-fA-F]{6}$'},stops:{type:'array',minItems:2,maxItems:16,items:{type:'object',properties:{offset:{type:'number',minimum:0,maximum:1},color:{type:'string',pattern:'^#[0-9a-fA-F]{6}$'},opacity:{type:'number',minimum:0,maximum:1}},required:['offset','color','opacity'],additionalProperties:false}}}},
+   run:(p:GradientPatch&{target?:GradientTarget})=>{const {target,...patch}=p,s=S.getVectorSession(),next=applyGradient(s.doc,s.selection,patch,target);if(next!==s.doc)S.commit(next);}},
   {id:'vector.splitPath',title:'Split vector path at node',category:'Edit',level:'ui',enabled:ready,params:{...empty,properties:{pathId:{type:'string',minLength:1},nodeId:{type:'string',minLength:1}},required:['pathId','nodeId']},
    run:(p:{pathId:string;nodeId:string})=>{const s=S.getVectorSession(),r=splitPath(s.doc,p.pathId,p.nodeId);S.commit(r.doc,{selection:r.ids,nodePath:null,selectedNode:null});}},
   {id:'vector.joinPaths',title:'Join vector paths',category:'Edit',level:'ui',enabled:selected,params:empty,

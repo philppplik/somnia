@@ -113,6 +113,7 @@
  "vector.shell.group":"Grouper",
  "vector.shell.ungroup":"Dissocier",
  "vector.shell.gradient":"Dégradé",
+ "vector.shell.gradient.target":"Appliquer à",
  "vector.shell.gradient.kind.none":"Aucun",
  "vector.shell.gradient.kind.linear":"Linéaire",
  "vector.shell.gradient.kind.radial":"Radial",
