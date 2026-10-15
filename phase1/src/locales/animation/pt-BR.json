@@ -1214,5 +1214,11 @@
  "animation.rig.aim.down": "Aponta para baixo",
  "animation.rig.aim.left": "Aponta para a esquerda",
  "animation.rig.aim.up": "Aponta para cima",
- "cmd.animation.layers.aim": "Mirar as camadas na primeira camada marcada"
+ "cmd.animation.layers.aim": "Mirar as camadas na primeira camada marcada",
+ "animation.rig.group.orbit": "Orbitar a primeira marcada",
+ "animation.rig.orbit.cw1": "Uma volta no sentido horario",
+ "animation.rig.orbit.ccw1": "Uma volta no sentido anti-horario",
+ "animation.rig.orbit.cw2": "Duas voltas no sentido horario",
+ "animation.rig.orbit.ccw2": "Duas voltas no sentido anti-horario",
+ "cmd.animation.layers.orbit": "Fazer camadas orbitarem a primeira camada marcada"
 }

@@ -1214,5 +1214,11 @@
  "animation.rig.aim.down": "Apunta abajo",
  "animation.rig.aim.left": "Apunta a la izquierda",
  "animation.rig.aim.up": "Apunta arriba",
- "cmd.animation.layers.aim": "Apuntar capas a la primera capa marcada"
+ "cmd.animation.layers.aim": "Apuntar capas a la primera capa marcada",
+ "animation.rig.group.orbit": "Orbitar la primera marcada",
+ "animation.rig.orbit.cw1": "Una vuelta en sentido horario",
+ "animation.rig.orbit.ccw1": "Una vuelta en sentido antihorario",
+ "animation.rig.orbit.cw2": "Dos vueltas en sentido horario",
+ "animation.rig.orbit.ccw2": "Dos vueltas en sentido antihorario",
+ "cmd.animation.layers.orbit": "Hacer orbitar capas alrededor de la primera capa marcada"
 }

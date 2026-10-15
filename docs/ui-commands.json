@@ -2106,6 +2106,25 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.layers.orbit",
+      "title": "Orbit layers around the first ticked layer",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "circle",
+        "circular",
+        "orbit",
+        "path",
+        "planet",
+        "revolve",
+        "rotate around",
+        "satellite",
+        "target"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.layers.orient",
       "title": "Rotate the selected layers to face along their motion path",
       "category": "Edit",

@@ -1214,5 +1214,11 @@
  "animation.rig.aim.down": "Points down",
  "animation.rig.aim.left": "Points left",
  "animation.rig.aim.up": "Points up",
- "cmd.animation.layers.aim": "Aim layers at the first ticked layer"
+ "cmd.animation.layers.aim": "Aim layers at the first ticked layer",
+ "animation.rig.group.orbit": "Orbit first ticked",
+ "animation.rig.orbit.cw1": "One turn clockwise",
+ "animation.rig.orbit.ccw1": "One turn counter-clockwise",
+ "animation.rig.orbit.cw2": "Two turns clockwise",
+ "animation.rig.orbit.ccw2": "Two turns counter-clockwise",
+ "cmd.animation.layers.orbit": "Orbit layers around the first ticked layer"
 }

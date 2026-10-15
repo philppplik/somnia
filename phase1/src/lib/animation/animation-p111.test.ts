@@ -1452,3 +1452,21 @@ test('P247 aim: the layer points at the target at every sampled time, also under
  }
  assert.deepEqual(aimKeys(findComp(s.document!)!,findComp(s.document!)!.layers.find(l=>l.id==='p')!,findComp(s.document!)!.layers.find(l=>l.id==='a')!,0,f(10),0).length>1,true);
 });
+
+test('P248 orbit: constant radius around the moving target, starts where the layer is, full turns, rotated parent ok, one undo step',async()=>{
+ const {orbitSpecs}=await import('./orbitCommands');const {worldMatrix}=await import('./scene');const orbit=orbitSpecs()[0].run as (p?:unknown)=>unknown;
+ const d0=applyEdits(base(),[{type:'layer.add',kind:'solid',id:'g'},{type:'prop.set',layer:'g',prop:'rotation',t:f(0),value:30},{type:'prop.set',layer:'g',prop:'position',t:f(0),value:[50,20]},{type:'layer.add',kind:'solid',id:'p'},{type:'prop.set',layer:'p',prop:'position',t:f(0),value:[400,300]},{type:'layer.parent',layer:'p',parent:'g'}] as never);
+ const s=new AnimationSession();s.open(d0);setAnimationSession(s);
+ assert.throws(()=>orbit({layers:['a']}),/centre first/);assert.throws(()=>orbit({layers:['a','p'],turns:0}),/Turns/);assert.throws(()=>orbit({layers:['p','a','g']}),/hangs? from/);
+ const c0=findComp(s.document!)!;const pt=(c:typeof c0,id:string,t:number)=>{const l=c.layers.find(x=>x.id===id)!,m=worldMatrix(c,l,t),an=l.transform.anchor.value as unknown as number[];return [m[0]*an[0]+m[2]*an[1]+m[4],m[1]*an[0]+m[3]*an[1]+m[5]];};
+ const p0=pt(c0,'p',f(0)),q0=pt(c0,'a',f(0)),r0=Math.hypot(p0[0]-q0[0],p0[1]-q0[1]);
+ for(const turns of [1,-2]){
+  const r=orbit({layers:['a','p'],turns}) as {orbiting:number;keys:number};assert.equal(r.orbiting,1);assert.ok(r.keys>=2&&r.keys<=120);
+  const c=findComp(s.document!)!,end=c.workArea.out;
+  for(const t of [f(0),f(3),f(7),end]){const p=pt(c,'p',t),q=pt(c,'a',t);assert.ok(Math.abs(Math.hypot(p[0]-q[0],p[1]-q[1])-r0)<r0*0.01+0.5,`radius at ${t}`);}
+  const ps=pt(c,'p',f(0));assert.ok(Math.abs(ps[0]-p0[0])<0.6&&Math.abs(ps[1]-p0[1])<0.6,'starts where it is');
+  const pe=pt(c,'p',end),qe=pt(c,'a',end),a0=Math.atan2(p0[1]-q0[1],p0[0]-q0[0]),a1=Math.atan2(pe[1]-qe[1],pe[0]-qe[0]);assert.ok(Math.abs(Math.sin(a1-a0))<0.02&&Math.cos(a1-a0)>0.98,'full turns end where they began');
+  const mid=pt(c,'p',Math.round(end/ (turns===1?2:4))),qm=pt(c,'a',Math.round(end/(turns===1?2:4)));const am=Math.atan2(mid[1]-qm[1],mid[0]-qm[0]);assert.ok(Math.cos(am-a0)<-0.95,'half way round is opposite');
+  s.undo();assert.equal(findComp(s.document!)!.layers.find(l=>l.id==='p')!.transform.position.keys.length,0);
+ }
+});

@@ -1214,5 +1214,11 @@
  "animation.rig.aim.down": "Pointe en bas",
  "animation.rig.aim.left": "Pointe a gauche",
  "animation.rig.aim.up": "Pointe en haut",
- "cmd.animation.layers.aim": "Viser le premier calque coche avec les autres"
+ "cmd.animation.layers.aim": "Viser le premier calque coche avec les autres",
+ "animation.rig.group.orbit": "Orbiter autour de la premiere cochee",
+ "animation.rig.orbit.cw1": "Un tour dans le sens horaire",
+ "animation.rig.orbit.ccw1": "Un tour dans le sens antihoraire",
+ "animation.rig.orbit.cw2": "Deux tours dans le sens horaire",
+ "animation.rig.orbit.ccw2": "Deux tours dans le sens antihoraire",
+ "cmd.animation.layers.orbit": "Faire orbiter des calques autour du premier calque coche"
 }
