@@ -95,6 +95,8 @@ export type FilterOp={kind:'custom';column:number;op:FilterCondition;value:strin
 /** Native owner state: revision plus an identity token that changes on every edit, undo, redo and reopen. */
 export interface SheetsNativeState{revision:number;token:string}
 /** Immutable owner receipt for one reviewed cell edit or its exact undo. `applied` is the logical delta: 1 changed, 0 true no-op. */
+/** Owner receipt for one reviewed range edit (row-major readback, at most 1,000 cells) or its exact undo. */
+export interface SheetsRangeReceipt{sheet:number;row:number;col:number;rows:number;cols:number;beforeRevision:number;afterRevision:number;applied:0|1;undoable:boolean;token:string;readback:{address:string;value:unknown;formula:string|null}[]}
 export interface SheetsEditReceipt{sheet:number;address:string;beforeRevision:number;afterRevision:number;applied:0|1;undoable:boolean;token:string;readback:{address:string;value:unknown;formula:string|null}}
 export type CfStyle='lightRed'|'yellow'|'green'|'redText';
 export type CfScale='greenYellowRed'|'redYellowGreen'|'whiteBlue'|'whiteRed';
@@ -137,6 +139,8 @@ export type SheetsRequest=
  |{id:number;op:'nativeState'}
  |{id:number;op:'setReviewed';sheet:number;address:string;token:string;old:string;input:string}
  |{id:number;op:'undoReviewed';sheet:number;address:string;token:string}
+ |{id:number;op:'setRangeReviewed';sheet:number;row:number;col:number;rows:number;cols:number;token:string;old:string;inputs:string}
+ |{id:number;op:'undoRangeReviewed';sheet:number;row:number;col:number;rows:number;cols:number;token:string}
  |{id:number;op:'sheets'}
  |{id:number;op:'validation';sheet:number;row:number;col:number;rows:number;cols:number;validation:ValidationOp}
  |{id:number;op:'validationItems';sheet:number;row:number;col:number}

@@ -30,6 +30,8 @@ scope.onmessage=({data}:MessageEvent<SheetsRequest>)=>{queue=queue.then(async()=
    case 'freeze':result=JSON.parse(need().freeze_panes(data.sheet,data.rows,data.cols));break;
    case 'nativeState':result=JSON.parse(need().native_state());break;
    case 'setReviewed':result=JSON.parse(need().set_cell_reviewed(data.sheet,data.address,data.token,data.old,data.input));break;
+   case 'setRangeReviewed':result=JSON.parse(need().set_range_reviewed(data.sheet,data.row,data.col,data.rows,data.cols,data.token,data.old,data.inputs));break;
+   case 'undoRangeReviewed':result=JSON.parse(need().undo_range_reviewed(data.sheet,data.row,data.col,data.rows,data.cols,data.token));break;
    case 'undoReviewed':result=JSON.parse(need().undo_reviewed(data.sheet,data.address,data.token));break;
    case 'sheets':result=JSON.parse(need().sheets());break;
    case 'validation':result=JSON.parse(need().validation_range(data.sheet,data.row,data.col,data.rows,data.cols,JSON.stringify(data.validation)));break;

@@ -7,9 +7,9 @@ import {parseOutlineInfo} from './outlineOps';
 import {parseObjects,pictureDataUrl} from './objectOps';
 import {parseCharts,parseScene,parseSparklines} from './chartOps';
 import {parseExportResult,parsePageInfo} from './printOps';
-import type {ChartInfo,ChartOp,ChartScene,SparklineOp,SparklineScene,ProtectOp,WhatIfOp,LayoutOp,OutlineInfo,OutlineOp,SavedView,SavedViewOp,ObjectOp,ObjectsInfo,ScenarioInfo,ViewOp,ViewOpResult,PageInfo,PageSetupOp,ExportOp,ExportResult,PivotField,PivotFunc,TableOp,TablesInfo,NameInfo,NameOp,AnnotateOp,CellAnnotations,DedupeOp,SplitOp,ReplaceOp,ValidationOp,CfOp,FillDirection,SheetsEditReceipt,SheetsNativeState,FilterOp,SortOp,SheetOp,FormatOp,LineAxis,LineOp,RangeResult,SheetInfo,SheetLayout,SheetsRequest,SheetsResponse,ViewResult,WorkbookInfo} from './protocol';
+import type {ChartInfo,ChartOp,ChartScene,SparklineOp,SparklineScene,ProtectOp,WhatIfOp,LayoutOp,OutlineInfo,OutlineOp,SavedView,SavedViewOp,ObjectOp,ObjectsInfo,ScenarioInfo,ViewOp,ViewOpResult,PageInfo,PageSetupOp,ExportOp,ExportResult,PivotField,PivotFunc,TableOp,TablesInfo,NameInfo,NameOp,AnnotateOp,CellAnnotations,DedupeOp,SplitOp,ReplaceOp,ValidationOp,CfOp,FillDirection,SheetsEditReceipt,SheetsRangeReceipt,SheetsNativeState,FilterOp,SortOp,SheetOp,FormatOp,LineAxis,LineOp,RangeResult,SheetInfo,SheetLayout,SheetsRequest,SheetsResponse,ViewResult,WorkbookInfo} from './protocol';
 import {MAX_INPUT_BYTES} from './protocol';
-import {parseEditReceipt,parseNativeState} from './receipt';
+import {parseEditReceipt,parseNativeState,parseRangeReceipt} from './receipt';
 type Req=SheetsRequest extends infer R?R extends {id:number}?Omit<R,'id'>:never:never;
 /** One module Worker per open workbook. A timeout or crash discards the session: callers must keep the original bytes. */
 export class SheetsEngine{
@@ -33,7 +33,7 @@ export class SheetsEngine{
  private request(message:Req,transfer:Transferable[]=[]){
   return new Promise<SheetsResponse>((resolve,reject)=>{
    if(this.disposed){reject(new Error('Spreadsheet engine closed'));return;}
-   const mutating=['open','set','setValues','clear','format','resize','editLines','freeze','sort','filter','fill','cf','validation','replace','dedupe','split','annotate','defineName','deleteName','pivotCreate','pivotRefresh','tableOp','pageSetup','viewOp','protectOp','whatIfOp','layoutOp','outlineOp','savedViewOp','pictureOp','objectOp','chartOp','sparklineOp','setReviewed','undoReviewed','editSheet','undo','redo','close'].includes(message.op);if(mutating){this.mutationEpoch++;this.mutations++;this.notifySelectionRead();}const finish=()=>{if(mutating){this.mutations--;this.mutationEpoch++;this.notifySelectionRead();}};const done=(r:SheetsResponse)=>{finish();resolve(r);},failed=(e:Error)=>{finish();reject(e);};
+   const mutating=['open','set','setValues','clear','format','resize','editLines','freeze','sort','filter','fill','cf','validation','replace','dedupe','split','annotate','defineName','deleteName','pivotCreate','pivotRefresh','tableOp','pageSetup','viewOp','protectOp','whatIfOp','layoutOp','outlineOp','savedViewOp','pictureOp','objectOp','chartOp','sparklineOp','setReviewed','undoReviewed','setRangeReviewed','undoRangeReviewed','editSheet','undo','redo','close'].includes(message.op);if(mutating){this.mutationEpoch++;this.mutations++;this.notifySelectionRead();}const finish=()=>{if(mutating){this.mutations--;this.mutationEpoch++;this.notifySelectionRead();}};const done=(r:SheetsResponse)=>{finish();resolve(r);},failed=(e:Error)=>{finish();reject(e);};
    const id=this.nextId++;
    const timer=setTimeout(()=>this.dispose(new Error('Spreadsheet engine timed out. Unsaved edits in this workbook were discarded.')),this.timeoutMs);
    this.pending.set(id,{resolve:done,reject:failed,timer});
@@ -149,6 +149,10 @@ export class SheetsEngine{
  nativeState(){return this.result<SheetsNativeState>({op:'nativeState'}).then(parseNativeState);}
  /** Atomic reviewed cell write: token and exact old cell are checked inside the worker's commit; resolves to the owner receipt. A rejected promise whose message starts with 'stale' changed nothing. */
  setReviewed(sheet:number,address:string,token:string,old:{value:unknown;formula:string|null;address:string},input:string){return this.result<SheetsEditReceipt>({op:'setReviewed',sheet,address,token,old:JSON.stringify(old),input}).then(parseEditReceipt);}
+ /** Atomic reviewed RANGE write (row-major, at most 1,000 cells): the token and every old cell are checked inside the worker's commit; one undo step; a rejected promise whose message starts with 'stale' changed nothing. */
+ setRangeReviewed(sheet:number,row:number,col:number,rows:number,cols:number,token:string,old:{address:string;value:unknown;formula:string|null}[],inputs:string[]){return this.result<SheetsRangeReceipt>({op:'setRangeReviewed',sheet,row,col,rows,cols,token,old:JSON.stringify(old),inputs:JSON.stringify(inputs)}).then(parseRangeReceipt);}
+ /** Exact undo of a reviewed range edit; refused (stale) once anything newer happened. */
+ undoRangeReviewed(sheet:number,row:number,col:number,rows:number,cols:number,token:string){return this.result<SheetsRangeReceipt>({op:'undoRangeReviewed',sheet,row,col,rows,cols,token}).then(parseRangeReceipt);}
  /** Exact undo of the reviewed edit; refused (stale) once anything newer happened. */
  undoReviewed(sheet:number,address:string,token:string){return this.result<SheetsEditReceipt>({op:'undoReviewed',sheet,address,token}).then(parseEditReceipt);}
  /** Sort the rows of exactly this block (never widened), one undo step. */

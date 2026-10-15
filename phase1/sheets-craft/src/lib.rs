@@ -31,6 +31,9 @@ const MAX_WHATIF_VALUES: usize = 32;
 const MAX_OBJECTS: usize = 200;
 const MAX_SAVED_VIEWS: usize = 50;
 const MAX_VIEW_NAME: usize = 64;
+/// Reviewed range edits: at most this many cells, and this many bytes of old and new text.
+const MAX_REVIEWED_RANGE_CELLS: u64 = 1000;
+const MAX_REVIEWED_RANGE_BYTES: usize = 1_000_000;
 const MAX_SUBTOTAL_GROUPS: usize = 100;
 const MAX_PICTURES: usize = 100;
 const MAX_PICTURE_BYTES: usize = 10 * 1024 * 1024;
@@ -411,6 +414,128 @@ impl HeadlessWorkbook {
         let applied = u32::from(ptr(self)? != before_ptr);
         let readback = self.cell_readback(sheet, at.row, at.col)?;
         Ok(json!({"sheet": sheet, "address": at.a1(), "beforeRevision": before_rev, "afterRevision": self.session.doc().map_err(|e| e.to_string())?.revision,
+            "applied": applied, "undoable": false, "token": self.state_token()?, "readback": readback}).to_string())
+    }
+
+    /// The cells of a block read back row by row as `{"address","value","formula"}` (the same shape `cell_readback` gives one cell).
+    fn range_readback(&self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32) -> Result<Vec<serde_json::Value>, String> {
+        let mut out = Vec::with_capacity((rows * cols) as usize);
+        for r in row..row + rows {
+            for c in col..col + cols {
+                out.push(self.cell_readback(sheet, r, c)?);
+            }
+        }
+        Ok(out)
+    }
+
+    #[cfg(test)]
+    fn range_readback_json(&self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32) -> String {
+        serde_json::Value::Array(self.range_readback(sheet, row, col, rows, cols).unwrap()).to_string()
+    }
+
+    /// Writes a reviewed RANGE atomically as ONE history entry, like `set_cell_reviewed` does for a cell. `expected_old_json` is the exact old
+    /// block as a row-major array of `{"address","value","formula"}` (what `range` returns, with addresses), `inputs_json` a row-major array of
+    /// strings, one per cell (at most 1,000 cells, 1,000,000 bytes of text each way). The owner state token and EVERY old cell are checked in the
+    /// same call that commits, so a change between review and apply fails with a `stale` error and no mutation. All inputs and data-validation
+    /// Stop rules are checked BEFORE the first write; if the engine still fails midway, the workbook, selection, redo stack and revision are
+    /// restored exactly. Protected sheets refused. Returns a receipt `{"sheet","row","col","rows","cols","beforeRevision","afterRevision",
+    /// "applied","undoable","token","readback":[cells]}`; `applied` is 0 for a true no-op (nothing changes, not even the redo stack).
+    pub fn set_range_reviewed(&mut self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32, expected_token: &str, expected_old_json: &str, inputs_json: &str) -> Result<String, String> {
+        if rows == 0 || cols == 0 || u64::from(rows) * u64::from(cols) > MAX_REVIEWED_RANGE_CELLS {
+            return Err("invalid range (1 to 1,000 cells)".into());
+        }
+        if expected_old_json.len() > MAX_REVIEWED_RANGE_BYTES * 4 || inputs_json.len() > MAX_REVIEWED_RANGE_BYTES * 2 {
+            return Err("range text too large".into());
+        }
+        self.check_block(sheet, row, col, rows, cols, true)?;
+        let inputs: Vec<String> = match serde_json::from_str::<serde_json::Value>(inputs_json) {
+            Ok(serde_json::Value::Array(list)) => list.iter().map(|v| v.as_str().map(str::to_string).ok_or("every input must be text")).collect::<Result<_, _>>()?,
+            _ => return Err("inputs must be a list of text".into()),
+        };
+        let count = (rows * cols) as usize;
+        if inputs.len() != count {
+            return Err("one input per cell is required".into());
+        }
+        if inputs.iter().any(|t| t.len() > 32_767) {
+            return Err("input exceeds 32,767 UTF-8 bytes".into());
+        }
+        if inputs.iter().map(String::len).sum::<usize>() > MAX_REVIEWED_RANGE_BYTES {
+            return Err("range text too large".into());
+        }
+        if self.state_token()? != expected_token {
+            return Err("stale: the workbook changed since this edit was reviewed".into());
+        }
+        let expected_old: serde_json::Value = serde_json::from_str(expected_old_json).map_err(|_| "expected range must be a JSON list".to_string())?;
+        let old_now = self.range_readback(sheet, row, col, rows, cols)?;
+        if expected_old.as_array().is_none_or(|a| a.len() != count) || expected_old.as_array() != Some(&old_now) {
+            return Err("stale: the range changed since this edit was reviewed".into());
+        }
+        let cells: Vec<CellRef> = (row..row + rows).flat_map(|r| (col..col + cols).map(move |c| CellRef::new(r, c))).collect();
+        {
+            let doc = self.session.doc().map_err(|e| e.to_string())?;
+            for (at, new) in cells.iter().zip(&inputs) {
+                if !new.starts_with('=')
+                    && let Some((dv, msg)) = gridcraft_engine::cmd::data::check_validation(&doc.wb, sheet, *at, new)
+                    && dv.error_style == gridcraft_engine::model::ErrorStyle::Stop
+                {
+                    return Err(format!("{}: {msg}", at.a1()));
+                }
+            }
+        }
+        let (before_rev, before_len, snap_wb, snap_sel, snap_redo) = {
+            let doc = self.session.doc().map_err(|e| e.to_string())?;
+            (doc.revision, doc.undo.len(), doc.wb.clone(), doc.selection.clone(), doc.redo.clone())
+        };
+        let mut failure: Option<String> = None;
+        for (at, new) in cells.iter().zip(&inputs) {
+            if let Err(e) = self.session.run("cell.set", json!({"sheet": sheet, "cell": at.a1(), "input": new})) {
+                failure = Some(e.to_string());
+                break;
+            }
+        }
+        let readback = if failure.is_none() { Some(self.range_readback(sheet, row, col, rows, cols)?) } else { None };
+        let unchanged = readback.as_ref().is_some_and(|r| *r == old_now);
+        if failure.is_some() || unchanged {
+            // Restore exactly: failed midway, or every write left the block as it was (a true no-op).
+            let doc = self.session.doc_mut().map_err(|e| e.to_string())?;
+            doc.undo.truncate(before_len);
+            doc.wb = snap_wb;
+            doc.selection = snap_sel;
+            doc.revision = before_rev;
+            doc.redo = snap_redo;
+            let wb = doc.wb.clone();
+            doc.calc.rebuild(&wb);
+            if let Some(e) = failure {
+                return Err(e);
+            }
+        } else {
+            // Every cell was its own snapshot; the first restores the state before the whole write, so keep only that as one step.
+            let doc = self.session.doc_mut().map_err(|e| e.to_string())?;
+            doc.undo.truncate(before_len + 1);
+            doc.revision = before_rev + 1;
+        }
+        let applied = u32::from(!unchanged);
+        let after = self.session.doc().map_err(|e| e.to_string())?.revision;
+        Ok(json!({"sheet": sheet, "row": row, "col": col, "rows": rows, "cols": cols, "beforeRevision": before_rev, "afterRevision": after,
+            "applied": applied, "undoable": applied == 1, "token": self.state_token()?, "readback": readback.unwrap_or_default()}).to_string())
+    }
+
+    /// Undoes exactly the reviewed range edit: refused (`stale`) unless the owner state is still the state its receipt returned, then one undo and
+    /// a receipt with the block read back and `applied` 1 only when the workbook snapshot really changed.
+    pub fn undo_range_reviewed(&mut self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32, expected_token: &str) -> Result<String, String> {
+        if rows == 0 || cols == 0 || u64::from(rows) * u64::from(cols) > MAX_REVIEWED_RANGE_CELLS {
+            return Err("invalid range (1 to 1,000 cells)".into());
+        }
+        self.check_block(sheet, row, col, rows, cols, false)?;
+        if self.state_token()? != expected_token {
+            return Err("stale: newer changes exist, so this edit can no longer be undone on its own".into());
+        }
+        let ptr = |b: &Self| -> Result<usize, String> { Ok(std::sync::Arc::as_ptr(&b.session.doc().map_err(|e| e.to_string())?.wb) as usize) };
+        let (before_ptr, before_rev) = (ptr(self)?, self.session.doc().map_err(|e| e.to_string())?.revision);
+        self.session.run("edit.undo", json!({}))?;
+        let applied = u32::from(ptr(self)? != before_ptr);
+        let readback = self.range_readback(sheet, row, col, rows, cols)?;
+        Ok(json!({"sheet": sheet, "row": row, "col": col, "rows": rows, "cols": cols, "beforeRevision": before_rev, "afterRevision": self.session.doc().map_err(|e| e.to_string())?.revision,
             "applied": applied, "undoable": false, "token": self.state_token()?, "readback": readback}).to_string())
     }
 
@@ -3723,6 +3848,44 @@ mod tests {
         assert!(book.layout_op(9, 899, 0, 2, 2, r#"{"kind":"justify"}"#).is_err());
         book.session.run("review.protectSheet", json!({})).unwrap();
         assert!(book.layout_op(0, 899, 0, 2, 2, r#"{"kind":"justify"}"#).unwrap_err().contains("protected"));
+    }
+    #[test]
+    fn reviewed_range_writes_are_atomic_one_step_and_refuse_stale_or_bad_input() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        let token = |b: &HeadlessWorkbook| serde_json::from_str::<serde_json::Value>(&b.native_state().unwrap()).unwrap()["token"].as_str().unwrap().to_string();
+        let old = |b: &HeadlessWorkbook| serde_json::from_str::<serde_json::Value>(&b.range_readback_json(0, 949, 0, 2, 2)).unwrap().to_string();
+        let t0 = token(&book);
+        let steps = |b: &HeadlessWorkbook| b.session.doc().unwrap().undo.len();
+        let before = steps(&book);
+        let receipt: serde_json::Value = serde_json::from_str(&book.set_range_reviewed(0, 949, 0, 2, 2, &t0, &old(&book), r#"["1","2","=A950+B950","x"]"#).unwrap()).unwrap();
+        assert_eq!(receipt["applied"], 1);
+        assert_eq!(steps(&book), before + 1, "one history entry");
+        assert_eq!(receipt["readback"].as_array().unwrap().len(), 4);
+        assert!(receipt["readback"][2]["formula"].as_str().unwrap().contains("A950"));
+        let t1 = receipt["token"].as_str().unwrap().to_string();
+        // stale token and stale old range change nothing
+        assert!(book.set_range_reviewed(0, 949, 0, 2, 2, &t0, &old(&book), r#"["a","b","c","d"]"#).unwrap_err().starts_with("stale"));
+        let wrong_old = old(&book).replace("\"x\"", "\"y\"");
+        assert_ne!(wrong_old, old(&book), "the test must really change the old range");
+        assert!(book.set_range_reviewed(0, 949, 0, 2, 2, &t1, &wrong_old, r#"["a","b","c","d"]"#).unwrap_err().starts_with("stale"));
+        assert_eq!(token(&book), t1, "refused writes leave the owner state alone");
+        // a true no-op restores state and token
+        let noop: serde_json::Value = serde_json::from_str(&book.set_range_reviewed(0, 949, 0, 2, 2, &t1, &old(&book), r#"["1","2","=A950+B950","x"]"#).unwrap()).unwrap();
+        assert_eq!((noop["applied"].as_u64(), noop["undoable"].as_bool()), (Some(0), Some(false)));
+        assert_eq!(token(&book), t1);
+        // bad shapes
+        for (r, c, inputs) in [(2u32, 2u32, r#"["a"]"#), (2, 2, r#"["a","b","c",4]"#), (2, 2, "nope"), (0, 2, "[]"), (40, 40, "[]")] {
+            assert!(book.set_range_reviewed(0, 949, 0, r, c, &t1, "[]", inputs).is_err());
+        }
+        assert!(book.set_range_reviewed(9, 949, 0, 2, 2, &t1, "[]", r#"["a","b","c","d"]"#).is_err());
+        // exact undo, then it cannot be repeated
+        let u: serde_json::Value = serde_json::from_str(&book.undo_range_reviewed(0, 949, 0, 2, 2, &t1).unwrap()).unwrap();
+        assert_eq!(u["applied"], 1);
+        assert_eq!(steps(&book), before);
+        assert!(book.undo_range_reviewed(0, 949, 0, 2, 2, &t1).unwrap_err().starts_with("stale"));
+        book.session.run("review.protectSheet", json!({})).unwrap();
+        let t2 = token(&book);
+        assert!(book.set_range_reviewed(0, 949, 0, 2, 2, &t2, &old(&book), r#"["a","b","c","d"]"#).unwrap_err().contains("protected"));
     }
     #[test]
     fn objects_insert_move_and_delete_in_single_undo_steps_and_refuse_bad_input() {
