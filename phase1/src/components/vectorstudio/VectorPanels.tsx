@@ -6,6 +6,7 @@ import {Button} from '../ui/button';
 import {Menu,MenuTrigger,MenuContent,MenuItem,MenuGroup,MenuGroupLabel,MenuSeparator} from '../ui/menu';
 import {ALIGN_MODES,ALIGN_TARGETS} from '../../lib/vectorstudio/transforms';
 import {BOOL_OPS} from '../../lib/vectorstudio/booleanOps';
+import {layerRows} from '../../lib/vectorstudio/layerRows';
 import {GRADIENT_KINDS,angleOf,hexOr} from '../../lib/vectorstudio/gradients';
 import {gradientIdOf} from '../../lib/vectorio';
 import {DASH_PRESETS,dashArrayFor,dashPresetOf} from '../../lib/vectorstudio/strokeStyle';
@@ -23,14 +24,19 @@ const run=(id:string,p?:unknown)=>void executeCommand('vector.'+id,p);
 /** Persist filtering, not engine data. Hidden paths stay visible in this list so users can restore them. */
 export function VectorLayersPanel({panelId,context}:PanelHostProps){
  const {t}=useT(),s=useVectorSession();const [filter,setFilter]=usePanelState(`${context.studio}.${panelId}.filter`,'');
- const paths=[...s.doc.paths].reverse().filter(p=>(p.name??t('vector.path')).toLocaleLowerCase().includes(filter.toLocaleLowerCase()));
+ const [folded,setFolded]=usePanelState(`${context.studio}.${panelId}.folded`,'');const collapsed=new Set(folded.split(',').filter(Boolean));
+ const rows=layerRows(s.doc.paths,p=>(p.name??t('vector.path')).toLocaleLowerCase().includes(filter.toLocaleLowerCase()),collapsed);
  return <div className="grid gap-2 p-2 text-[12px]" data-testid="vector-shell-layers">
   <NativeInput className={field} value={filter} onChange={e=>setFilter(e.target.value)} placeholder={t('vector.shell.filter')} aria-label={t('vector.shell.filter')}/>
-  {!s.open?<p>{t('vector.shell.empty')}</p>:paths.length===0?<p className="text-ink-3">{t('vector.noLayers')}</p>:<ul className="m-0 grid list-none gap-1 p-0">{paths.map(p=><li key={p.id} className={'grid grid-cols-[1fr_auto] items-center gap-1 rounded-sm p-1 '+(s.selection.includes(p.id)?'bg-accent-soft':'')}>
+  {!s.open?<p>{t('vector.shell.empty')}</p>:rows.length===0?<p className="text-ink-3">{t('vector.noLayers')}</p>:<ul className="m-0 grid list-none gap-1 p-0">{rows.map(row=>{if(row.kind==='group'){const open=!collapsed.has(row.group),all=row.ids.every(id=>s.selection.includes(id));return <li key={'g:'+row.group} data-testid="vector-layer-group" className={'flex flex-wrap items-center gap-1 rounded-sm p-1 '+(all?'bg-accent-soft':'')}>
+   <Button size="compact" aria-expanded={open} aria-label={open?t('vector.shell.layers.collapse'):t('vector.shell.layers.expand')} onClick={()=>{const next=new Set(collapsed);if(open)next.add(row.group);else next.delete(row.group);setFolded([...next].join(','));}}>{open?'▾':'▸'}</Button>
+   <NativeButton type="button" className="flex-1 whitespace-nowrap rounded-sm bg-transparent p-1 text-left font-medium hover:bg-hover" aria-pressed={all} onClick={()=>run('select',{ids:row.ids})}>{t('vector.shell.layers.group')} ({row.ids.length})</NativeButton>
+   <Button size="compact" onClick={()=>run('ungroup',{ids:row.ids})}>{t('vector.shell.ungroup')}</Button></li>;}
+  const p=row.path;return <li key={p.id} className={'grid grid-cols-[1fr_auto] items-center gap-1 rounded-sm p-1 '+(row.indent?'ml-4 ':'')+(s.selection.includes(p.id)?'bg-accent-soft':'')}>
    <NativeButton type="button" className="truncate rounded-sm bg-transparent p-1 text-left hover:bg-hover" disabled={!!p.hidden} aria-pressed={s.selection.includes(p.id)} onClick={e=>run('select',{ids:e.shiftKey?(s.selection.includes(p.id)?s.selection.filter(id=>id!==p.id):[...s.selection,p.id]):[p.id]})}>{p.name??t('vector.path')}</NativeButton>
    <Button size="compact" aria-label={p.hidden?t('vector.show'):t('vector.hide')} onClick={()=>run('toggleHidden',{id:p.id})}>{p.hidden?t('vector.show'):t('vector.hide')}</Button>
    <NativeInput className={field+' col-span-2'} key={p.id+':'+p.name} defaultValue={p.name??''} aria-label={t('vector.rename')} onBlur={e=>{if(e.target.value!==p.name)run('renamePath',{id:p.id,name:e.target.value});}} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();}}/>
-  </li>)}</ul>}
+  </li>;})}</ul>}
  </div>;
 }
 export function VectorToolsPanel(){const {t}=useT(),s=useVectorSession();return <div role="toolbar" aria-label={t('vector.toolbar')} className="grid grid-cols-2 gap-1 p-2" data-testid="vector-shell-tools">{VECTOR_TOOLS.map(tool=><Button key={tool} size="compact" disabled={!s.open} aria-pressed={s.tool===tool} className={s.tool===tool?'bg-accent-soft text-accent':''} onClick={()=>run('setTool',{tool})}>{t('vector.tool.'+tool)}</Button>)}</div>;}

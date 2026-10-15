@@ -109,3 +109,22 @@ test('group SVG roundtrip is stable, old files load unchanged, bad ids are ignor
  const nested=importSvg('<svg viewBox="0 0 10 10"><g data-name="L"><g data-vs-group="x"><path d="M0 0L5 5"/></g></g></svg>').doc;assert.equal(nested.paths[0].layer,'L');assert.equal(nested.paths[0].group,'x');
  assert.match(exportSvg(nested),/<g data-name="L">\s*<g data-vs-group="x">/);
 });
+import {layerRows} from './layerRows';
+test('layer rows: groups listed together under a header, collapse and filter keep it consistent',()=>{
+ const p=(id:string,group?:string,name=id)=>({id,closed:true,nodes:[],name,...(group?{group}:{})}) as never;
+ const paths=[p('a'),p('b','g1'),p('c'),p('d','g1'),p('e')];
+ const all=()=>true;
+ const rows=layerRows(paths,all);
+ assert.deepEqual(rows.map(r=>r.kind==='group'?'G:'+r.group+':'+r.ids.join(''):(r.indent?'  ':'')+r.path.id),['e','G:g1:db','  d','  b','c','a']);
+ assert.deepEqual(layerRows(paths,all,new Set(['g1'])).map(r=>r.kind),['path','group','path','path']);
+ assert.deepEqual(layerRows(paths,x=>x.id==='b').map(r=>r.kind==='group'?'G':r.path.id),['G','b']);
+ assert.deepEqual(layerRows(paths,x=>x.id==='zzz'),[]);
+ assert.deepEqual(layerRows([],all),[]);
+});
+test('ungroup accepts explicit ids (layers panel) without relying on the selection',async()=>{
+ S.resetVectorSession();S.createBlankVector();[box(0,0,10,10),box(50,0,10,10)].forEach(p=>S.addPath(p));
+ const ids=S.getVectorSession().doc.paths.map(p=>p.id);S.select(ids);const d=new CommandDispatcher();commands.forEach(s=>d.register(s));
+ await d.runCommand('vector.group',{},{origin:'test'});S.select([]);
+ await d.runCommand('vector.ungroup',{ids},{origin:'test'});assert.ok(!S.getVectorSession().doc.paths.some(p=>p.group));
+ await assert.rejects(d.runCommand('vector.ungroup',{ids:[1]},{origin:'test'}),e=>e instanceof CommandDispatchError&&e.code==='invalid-params');
+});
