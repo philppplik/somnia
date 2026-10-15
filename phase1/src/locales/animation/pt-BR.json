@@ -1257,5 +1257,8 @@
  "animation.rig.pulse.6": "Pulsar um brilho, 6 vezes",
  "cmd.animation.layers.pulseGlow": "Pulsar um brilho nas camadas marcadas",
  "animation.rig.copyfx": "Copiar efeitos da primeira camada marcada",
- "cmd.animation.layers.copyEffects": "Copiar os efeitos da primeira camada marcada para as outras marcadas"
+ "cmd.animation.layers.copyEffects": "Copiar os efeitos da primeira camada marcada para as outras marcadas",
+ "animation.keys.soften": "Amenizar",
+ "animation.keys.soften.hint": "Aproximar cada key selecionado até a metade da média dos vizinhos (o primeiro e o último da trilha ficam)",
+ "cmd.animation.keys.soften": "Amenizar os valores dos keys selecionados em direção aos vizinhos"
 }

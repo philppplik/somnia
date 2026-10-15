@@ -1257,5 +1257,8 @@
  "animation.rig.pulse.6": "Pulse a glow, 6 times",
  "cmd.animation.layers.pulseGlow": "Pulse a glow on the ticked layers",
  "animation.rig.copyfx": "Copy effects from the first ticked layer",
- "cmd.animation.layers.copyEffects": "Copy the first ticked layer’s effects to the other ticked layers"
+ "cmd.animation.layers.copyEffects": "Copy the first ticked layer’s effects to the other ticked layers",
+ "animation.keys.soften": "Soften",
+ "animation.keys.soften.hint": "Ease each selected key halfway toward the average of its neighbours (first and last key of a track stay)",
+ "cmd.animation.keys.soften": "Soften the values of the selected keys toward their neighbours"
 }

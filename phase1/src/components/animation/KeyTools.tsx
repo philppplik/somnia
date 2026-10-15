@@ -13,6 +13,7 @@ export function KeyTools({selected,layers}:{selected:number;layers:readonly stri
    {id:'average',testid:'animation-keys-average',label:t('animation.keys.average'),hint:t('animation.keys.average.hint'),cmd:'animation.keys.flatten',params:{to:'average'},min:2},
    {id:'match',testid:'animation-keys-match',label:t('animation.keys.match'),hint:t('animation.keys.match.hint'),cmd:'animation.keys.matchPrevious',params:{},min:1},
    {id:'matchNext',testid:'animation-keys-match-next',label:t('animation.keys.matchNext'),hint:t('animation.keys.matchNext.hint'),cmd:'animation.keys.matchPrevious',params:{side:'next'},min:1},
+   {id:'soften',testid:'animation-keys-soften',label:t('animation.keys.soften'),hint:t('animation.keys.soften.hint'),cmd:'animation.keys.soften',params:{},min:1},
    {id:'ramp',testid:'animation-keys-ramp',label:t('animation.keys.ramp'),hint:t('animation.keys.ramp.hint'),cmd:'animation.keys.ramp',params:{},min:3},
    {id:'thin',testid:'animation-keys-thin',label:`${t('animation.keys.thin')} 1`,hint:t('animation.keys.thin.hint'),cmd:'animation.keys.thin',params:{tolerance:1},min:1},
   ]},

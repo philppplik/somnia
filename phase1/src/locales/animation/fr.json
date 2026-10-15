@@ -1257,5 +1257,8 @@
  "animation.rig.pulse.6": "Faire pulser une lueur, 6 fois",
  "cmd.animation.layers.pulseGlow": "Faire pulser une lueur sur les calques cochés",
  "animation.rig.copyfx": "Copier les effets du premier calque coché",
- "cmd.animation.layers.copyEffects": "Copier les effets du premier calque coché vers les autres calques cochés"
+ "cmd.animation.layers.copyEffects": "Copier les effets du premier calque coché vers les autres calques cochés",
+ "animation.keys.soften": "Adoucir",
+ "animation.keys.soften.hint": "Rapprocher chaque clé sélectionnée à mi-chemin de la moyenne de ses voisines (la première et la dernière d’une piste restent)",
+ "cmd.animation.keys.soften": "Adoucir les valeurs des clés sélectionnées vers leurs voisines"
 }

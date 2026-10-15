@@ -1257,5 +1257,8 @@
  "animation.rig.pulse.6": "Pulsar un brillo, 6 veces",
  "cmd.animation.layers.pulseGlow": "Hacer pulsar un brillo en las capas marcadas",
  "animation.rig.copyfx": "Copiar efectos de la primera capa marcada",
- "cmd.animation.layers.copyEffects": "Copiar los efectos de la primera capa marcada a las demás marcadas"
+ "cmd.animation.layers.copyEffects": "Copiar los efectos de la primera capa marcada a las demás marcadas",
+ "animation.keys.soften": "Suavizar valores",
+ "animation.keys.soften.hint": "Acercar cada key seleccionado a medio camino del promedio de sus vecinos (el primero y el último de una pista no cambian)",
+ "cmd.animation.keys.soften": "Suavizar los valores de los keys seleccionados hacia sus vecinos"
 }

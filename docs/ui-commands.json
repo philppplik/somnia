@@ -1552,6 +1552,24 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.keys.soften",
+      "title": "Soften the values of the selected keys toward their neighbours",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "average",
+        "baked",
+        "clean",
+        "jitter",
+        "keys",
+        "noise",
+        "soften",
+        "soften"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.keys.straighten",
       "title": "Straighten position path at selected keys",
       "category": "Edit",

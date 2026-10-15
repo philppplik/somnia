@@ -1257,5 +1257,8 @@
  "animation.rig.pulse.6": "Leuchten pulsieren lassen, 6-mal",
  "cmd.animation.layers.pulseGlow": "Leuchten (Glow) der angekreuzten Ebenen pulsieren lassen",
  "animation.rig.copyfx": "Effekte der ersten Ebene auf die anderen kopieren",
- "cmd.animation.layers.copyEffects": "Effekte der ersten angekreuzten Ebene auf die anderen angekreuzten kopieren"
+ "cmd.animation.layers.copyEffects": "Effekte der ersten angekreuzten Ebene auf die anderen angekreuzten kopieren",
+ "animation.keys.soften": "Entzerren",
+ "animation.keys.soften.hint": "Jeden gewählten Key zur Hälfte zum Mittel seiner Nachbarn ziehen (erster und letzter Key einer Spur bleiben)",
+ "cmd.animation.keys.soften": "Werte der gewählten Keys zu ihren Nachbarn hin angleichen"
 }

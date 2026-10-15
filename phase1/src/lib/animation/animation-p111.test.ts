@@ -1626,3 +1626,15 @@ test('P259b copy effects: clones the stack with fresh ids onto targets, one undo
  assert.deepEqual(fx(ls[2]).find(e=>e.kind==='glow')!.animation!.keys.map(k=>k.v),fx(ls[3]).find(e=>e.kind==='glow')!.animation!.keys.map(k=>k.v));
  s.undo();assert.equal(fx(ls[2]).length,0);
 });
+
+test('P261 soften keys: pulls selected inner keys toward neighbours, keeps track ends, one undo step',async()=>{
+ const {softenValue}=await import('./keySoften');const {keySoftenSpecs}=await import('./keySoftenCommands');const run=keySoftenSpecs()[0].run as (p?:unknown)=>unknown;
+ assert.equal(softenValue(0,30,0,0.5),20);assert.deepEqual(softenValue([0,0],[30,60],[0,0],1),[10,20]);
+ const s=open();setAnimationSession(s);const tr=()=>findComp(s.document!)!.layers.find(l=>l.id==='a')!.transform.opacity;
+ for(const [t,v] of [[0,100],[f(10),0],[f(20),100],[f(30),0],[f(40),100]]){s.dispatch({type:'key.add',layer:'a',prop:'opacity',t} as never);s.dispatch({type:'prop.set',layer:'a',prop:'opacity',t,value:v} as never);}
+ const keys=tr().keys;assert.ok(keys.length>=5);
+ const mid=keys[2];s.setView({selectedKeys:[{layer:'a',prop:'opacity',t:mid.t}]} as never);
+ const before=keys.map(k=>k.v);const r=run({percent:100}) as {keys:number};assert.equal(r.keys,1);
+ const after=tr().keys.map(k=>k.v);assert.notDeepEqual(after,before);assert.equal(after[0],before[0]);assert.equal(after[4],before[4]);
+ s.undo();assert.deepEqual(tr().keys.map(k=>k.v),before);
+});
