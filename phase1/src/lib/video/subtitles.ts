@@ -115,7 +115,11 @@ export const cuesToTitleOverlays=(cues:SubtitleCue[]):OverlayClip[]=>cues.map(c=
  return o;
 });
 
-/** Decodes a subtitle file's bytes: strict UTF-8 first, ISO-8859-1 (Latin-1) as the fallback for legacy SRTs. */
+/**
+ * Decodes a subtitle file's bytes: strict UTF-8 first, then the legacy fallback. The 'iso-8859-1' label follows
+ * the WHATWG Encoding Standard, which maps it to the windows-1252 decoder - so smart quotes, the euro sign and
+ * German typographic quotes in the 0x80-0x9F range decode correctly instead of becoming control characters.
+ */
 export function decodeSubtitleBytes(bytes:Uint8Array):string{
  try{return new TextDecoder('utf-8',{fatal:true}).decode(bytes);}
  catch{return new TextDecoder('iso-8859-1').decode(bytes);}

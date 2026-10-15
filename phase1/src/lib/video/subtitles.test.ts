@@ -113,4 +113,7 @@ test('encoding: strict UTF-8 first, Latin-1 fallback for legacy files',()=>{
  assert.ok(decodeSubtitleBytes(utf8).includes('Grüße'));
  const latin1=Uint8Array.from([0x47,0x72,0xfc,0xdf,0x65]); // "Grüße" in ISO-8859-1 (invalid UTF-8)
  assert.equal(decodeSubtitleBytes(latin1),'Grüße');
+ // The WHATWG 'iso-8859-1' label maps to the windows-1252 decoder: C1 bytes are typography, not controls.
+ const win1252=decodeSubtitleBytes(Uint8Array.from([0x93,0x48,0x61,0x6c,0x6c,0x6f,0x94,0x20,0x38,0x30,0x80]));
+ assert.equal(win1252,'\u201cHallo\u201d 80\u20ac','smart quotes and the euro sign survive');
 });
