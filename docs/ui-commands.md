@@ -646,7 +646,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `sheets.dedupe` | Remove duplicate rows in the selected block | Edit | sheets |  |
 | `sheets.editLines` | Insert or delete rows and columns | Edit | sheets |  |
 | `sheets.export` | Export as PDF, CSV, TSV or HTML | Edit | sheets |  |
-| `sheets.export.advanced` | Sheets: Advanced export with name and metadata | Project | sheets |  |
+| `sheets.export.advanced` | Advanced export... | Project | sheets |  |
 | `sheets.fill` | Fill the selected block down, right, up or left | Edit | sheets |  |
 | `sheets.filter` | Filter rows by a column | Edit | sheets |  |
 | `sheets.format` | Format selected cells | Edit | sheets |  |
@@ -709,7 +709,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `slides.editTable` | Edit table | Edit | slides |  |
 | `slides.editText` | Apply slide text | Edit | slides |  |
 | `slides.editTheme` | Edit theme | Edit | slides |  |
-| `slides.export.advanced` | Slides: Advanced export with name and metadata | Project | slides |  |
+| `slides.export.advanced` | Advanced export... | Project | slides |  |
 | `slides.exportPng` | Export slides as PNG images | Project | slides |  |
 | `slides.formatParagraph` | Align text and set bullets | Edit | slides |  |
 | `slides.formatText` | Format text box text | Edit | slides |  |

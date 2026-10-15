@@ -7836,7 +7836,7 @@
     },
     {
       "id": "sheets.export.advanced",
-      "title": "Sheets: Advanced export with name and metadata",
+      "title": "Advanced export...",
       "category": "Project",
       "source": "sheets",
       "keywords": [
@@ -8496,7 +8496,7 @@
     },
     {
       "id": "slides.export.advanced",
-      "title": "Slides: Advanced export with name and metadata",
+      "title": "Advanced export...",
       "category": "Project",
       "source": "slides",
       "keywords": [

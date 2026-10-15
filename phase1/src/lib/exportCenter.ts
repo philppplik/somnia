@@ -17,7 +17,7 @@ export const useExportCenterOpen=()=>useSyncExternalStore(cb=>{subs.add(cb);retu
 export const EXPORT_GROUP_IDS:Readonly<Record<string,readonly string[]>>={
  project:['project.export','project.export.md'],
  documents:['documents.export.open','documents.saveCopy','documents.export.pdf','documents.export.copy'],
- sheets:['sheets.saveCopy'],
+ sheets:['sheets.export.advanced','sheets.saveCopy'],
  slides:['slides.export.advanced','slides.saveCopy'],
  design:['design.export.open','design.exportSvg','design.exportAllSvg','design.exportProject'],
  photos:['photos.export.open','photos.export.png','photos.export.jpeg','photos.export.advanced'],
@@ -25,6 +25,8 @@ export const EXPORT_GROUP_IDS:Readonly<Record<string,readonly string[]>>={
  sound:['sound.export.open','sound.export'],
  video:['video.export.open','video.export.start'],
  pdf:['pdf.saveCopy'],
+ '3d':['studio3d.export.glb','studio3d.export.gltf','studio3d.render.turntable','studio3d.render.still'],
+ animation:['animation.export.frame','animation.export.sequence'],
 };
 
 /** A preset bundles existing export commands with fixed payloads (format/quality choices). It adds no new command. */
