@@ -1147,5 +1147,8 @@
  "animation.comp.sizePick": "Elegir un tamano...",
  "animation.shape.more": "Mas formas...",
  "animation.shape.poly": "Poligono, {n} lados",
- "cmd.animation.shape.polygon": "Anadir una capa de poligono o estrella"
+ "cmd.animation.shape.polygon": "Anadir una capa de poligono o estrella",
+ "animation.keys.snapMarkers": "Ajustar a marcadores",
+ "animation.keys.snapMarkers.hint": "Mueve cada clave seleccionada al marcador mas cercano (sincronia con el ritmo). La variante (6) solo mueve claves a menos de 6 fotogramas.",
+ "cmd.animation.keys.snapToMarkers": "Ajustar las claves seleccionadas al marcador mas cercano"
 }

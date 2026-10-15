@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-870 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+871 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -123,6 +123,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `animation.keys.shrinkSelection` | Shrink the key selection by one key at each end | View | animation |  |
 | `animation.keys.smooth` | Smooth position path through selected keys | Edit | animation |  |
 | `animation.keys.snapToGrid` | Snap the selected keys to every Nth frame | Edit | animation |  |
+| `animation.keys.snapToMarkers` | Snap the selected keys to the nearest marker | Edit | animation |  |
 | `animation.keys.straighten` | Straighten position path at selected keys | Edit | animation |  |
 | `animation.keys.stretch` | Stretch the selected keys in time | Edit | animation |  |
 | `animation.keys.tame` | Remove overshoot and anticipation from the ease of the selected keys | Edit | animation |  |

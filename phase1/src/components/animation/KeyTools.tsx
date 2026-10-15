@@ -23,6 +23,8 @@ export function KeyTools({selected,layers}:{selected:number;layers:readonly stri
    {id:'echo-5',testid:'animation-keys-echo-minus',label:`${t('animation.keys.echo')} -5`,hint:t('animation.keys.echo.hint'),cmd:'animation.keys.echo',params:{frames:-5},min:1},
    {id:'grid2',testid:'animation-keys-grid-2',label:`${t('animation.keys.grid')} ${2}`,hint:t('animation.keys.grid.hint'),cmd:'animation.keys.snapToGrid',params:{frames:2},min:1},
    {id:'grid4',testid:'animation-keys-grid-4',label:`${t('animation.keys.grid')} ${4}`,hint:t('animation.keys.grid.hint'),cmd:'animation.keys.snapToGrid',params:{frames:4},min:1},
+   {id:'marker',testid:'animation-keys-snap-markers',label:t('animation.keys.snapMarkers'),hint:t('animation.keys.snapMarkers.hint'),cmd:'animation.keys.snapToMarkers',params:{},min:1},
+   {id:'marker6',testid:'animation-keys-snap-markers-6',label:`${t('animation.keys.snapMarkers')} (6)`,hint:t('animation.keys.snapMarkers.hint'),cmd:'animation.keys.snapToMarkers',params:{maxFrames:6},min:1},
    {id:'grid8',testid:'animation-keys-grid-8',label:`${t('animation.keys.grid')} ${8}`,hint:t('animation.keys.grid.hint'),cmd:'animation.keys.snapToGrid',params:{frames:8},min:1}]},
   {key:'animation.keys.tools.ease',items:[
    {id:'easeCopy',testid:'animation-keys-ease-copy',label:t('animation.keys.easeCopy'),hint:t('animation.keys.easeCopy.hint'),cmd:'animation.keys.easeCopy',params:{},min:2},

@@ -1222,3 +1222,18 @@ test('P232 polygon and star shape layers: points, valid source, centred, one und
  run({sides:5,star:true,inner:40});assert.equal(C().layers.length,n0+1);assert.equal(C().layers[0].source.path!.points.length,10);
  assert.throws(()=>run({sides:2}),/sides/);assert.throws(()=>run({sides:5,inner:5}),/inner/);assert.throws(()=>run({sides:5,radius:1}),/radius/);assert.throws(()=>run({sides:5,color:'red'}),/Colour/);
 });
+test('P233 snap keys to markers: nearest marker, max distance, one undo step, errors',async()=>{
+ const {keyMarkerSpecs}=await import('./keyMarkerCommands');const run=keyMarkerSpecs()[0].run as (p?:unknown)=>unknown;
+ const s=open();setAnimationSession(s);const c0=findComp(s.document!)!;const l=c0.layers[0].id;
+ assert.throws(()=>run({}),/markers/i);
+ s.dispatch({type:'markers.set',markers:[{id:'m1',t:c0.start+f(10),label:'a'},{id:'m2',t:c0.start+f(30),label:'b'}]});
+ s.dispatch({type:'key.add',layer:l,prop:'rotation',t:c0.start+f(13)} as never);
+ s.dispatch({type:'key.add',layer:l,prop:'rotation',t:c0.start+f(24)} as never);
+ const ts=()=>findComp(s.document!)!.layers.find(x=>x.id===l)!.transform.rotation.keys.map(k=>k.t).sort((a,b)=>a-b);
+ const sel=()=>s.selectKeys([{layer:l,prop:'rotation',t:c0.start+f(13)},{layer:l,prop:'rotation',t:c0.start+f(24)}]);
+ sel();assert.throws(()=>run({maxFrames:2}),/close to a marker/);
+ run({maxFrames:3});assert.deepEqual(ts(),[c0.start+f(10),c0.start+f(24)]);
+ s.undo();assert.deepEqual(ts(),[c0.start+f(13),c0.start+f(24)]);
+ sel();run({});assert.deepEqual(ts(),[c0.start+f(10),c0.start+f(30)]);
+ assert.throws(()=>run({}),/already/);
+});

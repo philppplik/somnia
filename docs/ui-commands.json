@@ -1429,6 +1429,23 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.keys.snapToMarkers",
+      "title": "Snap the selected keys to the nearest marker",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "align",
+        "animation",
+        "beat",
+        "keys",
+        "marker",
+        "music",
+        "snap",
+        "sync"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.keys.straighten",
       "title": "Straighten position path at selected keys",
       "category": "Edit",

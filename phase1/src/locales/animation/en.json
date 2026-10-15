@@ -1147,5 +1147,8 @@
  "animation.comp.sizePick": "Pick a size...",
  "animation.shape.more": "More shapes...",
  "animation.shape.poly": "Polygon, {n} sides",
- "cmd.animation.shape.polygon": "Add a polygon or star shape layer"
+ "cmd.animation.shape.polygon": "Add a polygon or star shape layer",
+ "animation.keys.snapMarkers": "Snap to markers",
+ "animation.keys.snapMarkers.hint": "Move each selected key to the nearest composition marker (beat sync). The (6) variant only moves keys within 6 frames.",
+ "cmd.animation.keys.snapToMarkers": "Snap the selected keys to the nearest marker"
 }

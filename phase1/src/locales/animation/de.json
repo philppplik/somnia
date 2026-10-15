@@ -1147,5 +1147,8 @@
  "animation.comp.sizePick": "Groesse waehlen...",
  "animation.shape.more": "Weitere Formen...",
  "animation.shape.poly": "Vieleck, {n} Seiten",
- "cmd.animation.shape.polygon": "Eine Vieleck- oder Stern-Formebene hinzufuegen"
+ "cmd.animation.shape.polygon": "Eine Vieleck- oder Stern-Formebene hinzufuegen",
+ "animation.keys.snapMarkers": "An Marker einrasten",
+ "animation.keys.snapMarkers.hint": "Verschiebt jeden gewaehlten Key zum naechsten Marker der Komposition (Beat-Sync). Die Variante (6) bewegt nur Keys innerhalb von 6 Bildern.",
+ "cmd.animation.keys.snapToMarkers": "Gewaehlte Keys am naechsten Marker einrasten"
 }

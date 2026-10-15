@@ -1147,5 +1147,8 @@
  "animation.comp.sizePick": "Choisir une taille...",
  "animation.shape.more": "Plus de formes...",
  "animation.shape.poly": "Polygone, {n} cotes",
- "cmd.animation.shape.polygon": "Ajouter un calque polygone ou etoile"
+ "cmd.animation.shape.polygon": "Ajouter un calque polygone ou etoile",
+ "animation.keys.snapMarkers": "Aimanter aux reperes",
+ "animation.keys.snapMarkers.hint": "Deplace chaque cle selectionnee vers le repere le plus proche (synchro au rythme). La variante (6) ne deplace que les cles a moins de 6 images.",
+ "cmd.animation.keys.snapToMarkers": "Aimanter les cles selectionnees au repere le plus proche"
 }
