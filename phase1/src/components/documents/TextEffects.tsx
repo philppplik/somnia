@@ -39,6 +39,11 @@ function SpacingSelect({enabled}:{enabled:boolean}){
   {v==='custom'&&<option value="custom" disabled>{t('documents.spacing.custom')}</option>}
   {PARAGRAPH_SPACINGS.map(k=><option key={k} value={k}>{t('documents.spacing.'+k)}</option>)}</NativeSelect>;
 }
+/** A drop-down of actions: choosing an entry runs it and the menu stays on its title. Keeps the bar short. */
+function ActionMenu({label,items,testId}:{label:string;testId:string;items:{id:string;label:string;enabled:boolean;run:()=>void}[]}){
+ return <NativeSelect className={sel+' w-24'} aria-label={label} title={label} value="" onChange={e=>{const it=items.find(x=>x.id===e.currentTarget.value);e.currentTarget.value='';if(it&&it.enabled)it.run();}} data-testid={testId}>
+  <option value="" disabled>{label}</option>{items.map(i=><option key={i.id} value={i.id} disabled={!i.enabled}>{i.label}</option>)}</NativeSelect>;
+}
 const SPACINGS=[-1,-0.5,0,0.5,1,2,3];
 /** Strikethrough, small caps, superscript, subscript, highlight, link and clear-formatting controls. */
 export function TextEffects({format,held,enabled}:{format:FormatState|null;held:FormatPatch|null;enabled:boolean}){
@@ -66,24 +71,28 @@ export function TextEffects({format,held,enabled}:{format:FormatState|null;held:
   <NativeButton className={tool+' border border-subtle'} title={t('documents.painter.copy')} disabled={!enabled} onClick={()=>copyFormatting()} data-testid="documents-painter-copy">{t('documents.painter.copy')}</NativeButton>
   <NativeButton className={tool+' border border-subtle'} title={t('documents.painter.paste')} disabled={!enabled||!doc.painted} onClick={()=>void pasteFormatting()} data-testid="documents-painter-paste">{t('documents.painter.paste')}</NativeButton>
   <NativeButton className={tool+' border border-subtle'} title={t('documents.format.clear')+' (Ctrl+Space)'} disabled={!enabled||!picked} onClick={()=>void clearFormatting()} data-testid="documents-format-clear">{t('documents.format.clear')}</NativeButton>
-  <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>setParagraphOptionsOpen(true)} data-testid="documents-paraopt-open">{t('documents.para.opt.open')}</NativeButton>
-  <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>void insertPageBreak()} data-testid="documents-page-break">{t('documents.para.opt.insertBreak')}</NativeButton>
-  <NativeButton className={tool+' border border-subtle'} disabled={!enabled||!(doc.para?.list==='bullet'||doc.para?.list==='numbered')} onClick={()=>setInfoDialog('list')} data-testid="documents-listopt-open">{t('documents.listopt.open')}</NativeButton>
-  <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>setInfoDialog('styles')} data-testid="documents-styles-open">{t('documents.styles.open')}</NativeButton>
-  <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>void pickAndInsertText()} data-testid="documents-text-file">{t('documents.insert.textFile')}</NativeButton>
-  <NativeButton className={tool+' border border-subtle aria-pressed:bg-hover'} disabled={!enabled} aria-pressed={doc.showMarks} onClick={()=>void setViewMarks(!doc.showMarks,doc.showMarkup)} data-testid="documents-marks-toggle">{t('documents.view.marks')}</NativeButton>
-  <NativeButton className={tool+' border border-subtle aria-pressed:bg-hover'} disabled={!enabled} aria-pressed={doc.trackChanges} onClick={()=>void setTrackChanges(!doc.trackChanges)} data-testid="documents-track-toggle">{t('documents.review.track')}</NativeButton>
-  <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>setInfoDialog('review')} data-testid="documents-review-open">{t('documents.review.open')}</NativeButton>
-  <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>setInfoDialog('charlook')} data-testid="documents-charlook-open">{t('documents.charlook.open')}</NativeButton>
-  <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>setInfoDialog('symbol')} data-testid="documents-symbol-open">{t('documents.symbol.open')}</NativeButton>
   <SpacingSelect enabled={enabled}/>
-  <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>setInfoDialog('cover')} data-testid="documents-cover-open">{t('documents.cover.open')}</NativeButton>
-  <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>setInfoDialog('bookmarks')} data-testid="documents-bookmarks-open">{t('documents.bookmarks.open')}</NativeButton>
-  <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>setInfoDialog('toc')} data-testid="documents-toc-open">{t('documents.toc.open')}</NativeButton>
-  <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>setInfoDialog('tabs')} data-testid="documents-tabs-open">{t('documents.tabs.open')}</NativeButton>
-  <NativeButton className={tool+' border border-subtle'} onClick={()=>setInfoDialog('properties')} data-testid="documents-props-open">{t('documents.props.open')}</NativeButton>
-  <NativeButton className={tool+' border border-subtle'} onClick={()=>setInfoDialog('wordCount')} data-testid="documents-wc-open">{t('documents.wc.open')}</NativeButton>
-  <NativeButton className={tool+' border border-subtle'} onClick={()=>setShortcutsOpen(true)} title={t('documents.shortcuts.title')+' (Ctrl+/)'} data-testid="documents-shortcuts-open">{t('documents.shortcuts.open')}</NativeButton>
+  <ActionMenu label={t('documents.menu.format')} testId="documents-menu-format" items={[
+   {id:'para',label:t('documents.para.opt.open'),enabled,run:()=>setParagraphOptionsOpen(true)},
+   {id:'list',label:t('documents.listopt.open'),enabled:enabled&&(doc.para?.list==='bullet'||doc.para?.list==='numbered'),run:()=>setInfoDialog('list')},
+   {id:'styles',label:t('documents.styles.open'),enabled,run:()=>setInfoDialog('styles')},
+   {id:'charlook',label:t('documents.charlook.open'),enabled,run:()=>setInfoDialog('charlook')},
+   {id:'tabs',label:t('documents.tabs.open'),enabled,run:()=>setInfoDialog('tabs')}]}/>
+  <ActionMenu label={t('documents.menu.insert')} testId="documents-menu-insert" items={[
+   {id:'break',label:t('documents.para.opt.insertBreak'),enabled,run:()=>void insertPageBreak()},
+   {id:'file',label:t('documents.insert.textFile'),enabled,run:()=>void pickAndInsertText()},
+   {id:'symbol',label:t('documents.symbol.open'),enabled,run:()=>setInfoDialog('symbol')},
+   {id:'cover',label:t('documents.cover.open'),enabled,run:()=>setInfoDialog('cover')},
+   {id:'bookmarks',label:t('documents.bookmarks.open'),enabled,run:()=>setInfoDialog('bookmarks')},
+   {id:'toc',label:t('documents.toc.open'),enabled,run:()=>setInfoDialog('toc')}]}/>
+  <ActionMenu label={t('documents.menu.review')} testId="documents-menu-review" items={[
+   {id:'track',label:(doc.trackChanges?'\u2713 ':'')+t('documents.review.track'),enabled,run:()=>void setTrackChanges(!doc.trackChanges)},
+   {id:'marks',label:(doc.showMarks?'\u2713 ':'')+t('documents.view.marks'),enabled,run:()=>void setViewMarks(!doc.showMarks,doc.showMarkup)},
+   {id:'review',label:t('documents.review.open'),enabled,run:()=>setInfoDialog('review')}]}/>
+  <ActionMenu label={t('documents.menu.document')} testId="documents-menu-document" items={[
+   {id:'props',label:t('documents.props.open'),enabled:true,run:()=>setInfoDialog('properties')},
+   {id:'wc',label:t('documents.wc.open'),enabled:true,run:()=>setInfoDialog('wordCount')},
+   {id:'keys',label:t('documents.shortcuts.title')+' (Ctrl+/)',enabled:true,run:()=>setShortcutsOpen(true)}]}/>
   {linkOpen&&<LinkDialog current={format?.link??''} onClose={()=>setLinkOpen(false)}/>}
  </>;
 }
