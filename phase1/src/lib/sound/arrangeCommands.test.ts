@@ -135,3 +135,17 @@ test('clips.mute toggles a selection atomically and undo restores the flags',asy
  await commandDispatcher.runCommand('sound.arrange.undo');
  assert.deepEqual(getArrangementState().document.tracks[0].clips.map(c=>c.muted),[false,false]);
 }finally{off();resetArrangement();}});
+
+test('clips.rippleDelete closes the gap per track, keeps other tracks and undoes cleanly',async()=>{resetArrangement();const off=registerArrangeCommands();try{
+ const source={id:'src',name:'tone.wav',frames:96000,sampleRate:48000,channels:2 as const};
+ editArrangement(s=>{s.sources.push(source);
+  s.tracks.push({...newTrack('t1','A'),clips:[{...newClip('a',source,0),length:4800},{...newClip('b',source,9600),length:4800},{...newClip('c',source,19200),length:4800}]});
+  s.tracks.push({...newTrack('t2','B'),clips:[{...newClip('x',source,4800),length:4800}]});});
+ await commandDispatcher.runCommand('sound.arrange.clips.rippleDelete',{ids:['a','b']});
+ assert.deepEqual(getArrangementState().document.tracks[0].clips.map(c=>[c.id,c.start]),[['c',9600]],'both clips shift: 19200 - 4800 - 4800 = 9600');
+ assert.deepEqual(getArrangementState().document.tracks[1].clips.map(c=>[c.id,c.start]),[['x',4800]],'other tracks untouched');
+ await assert.rejects(commandDispatcher.runCommand('sound.arrange.clips.rippleDelete',{ids:['missing']}));
+ assert.equal(getArrangementState().document.tracks[0].clips.length,1,'rejection is atomic');
+ await commandDispatcher.runCommand('sound.arrange.undo');
+ assert.deepEqual(getArrangementState().document.tracks[0].clips.map(c=>[c.id,c.start]),[['a',0],['b',9600],['c',19200]],'undo restores clips and positions');
+}finally{off();resetArrangement();}});

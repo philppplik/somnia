@@ -94,6 +94,17 @@ export function trimEndPatch(clip:ArrangeClip,frame:number){if(!Number.isSafeInt
  const gainCurve=clip.gainCurve.length?[...clip.gainCurve.filter(p=>p.at<length),{at:length,db:gainCurveAt(clip,length)}]:[];
  return{length,fadeIn:Math.min(clip.fadeIn,length),fadeOut:0,gainCurve};}
 export function findArrangeClip(s:Arrangement,id:string){for(const track of s.tracks){const clip=track.clips.find(c=>c.id===id);if(clip)return{track,clip};}throw Error('Audio clip no longer exists');}
+/** Deletes the given clips and closes their gaps on the same track: every later clip shifts left by the total deleted length that fully precedes it. Markers and the session length stay untouched. */
+export function rippleDeleteClips(s:Arrangement,ids:string[]){
+ if(!ids.length||ids.some(v=>typeof v!=='string'))throw Error('No clips selected');
+ for(const id of ids)findArrangeClip(s,id);
+ for(const track of s.tracks){
+  const gone=track.clips.filter(c=>ids.includes(c.id)).map(c=>({start:c.start,end:c.start+c.length})).sort((a,b)=>a.start-b.start);
+  if(!gone.length)continue;
+  track.clips=track.clips.filter(c=>!ids.includes(c.id));
+  for(const clip of track.clips){let shift=0;for(const g of gone)if(g.end<=clip.start)shift+=g.end-g.start;clip.start-=shift;}
+ }
+}
 /** A split preserves source position, gain and outer fades. Fades intersecting the split are shortened. */
 export function splitArrangeClip(s:Arrangement,id:string,frame:number,rightId:string){const {track,clip}=findArrangeClip(s,id);const left=frame-clip.start;if(!Number.isSafeInteger(frame)||left<=0||left>=clip.length)throw Error('Split must be inside the clip');const oldLength=clip.length;track.clips.push({...clip,id:rightId,start:frame,offset:clip.offset+left,length:oldLength-left,fadeIn:0,fadeOut:Math.min(clip.fadeOut,oldLength-left)});clip.length=left;clip.fadeIn=Math.min(clip.fadeIn,left);clip.fadeOut=0;
  // Automation points live on the clip-local clock: both halves carry the cut's interpolated level at the boundary.

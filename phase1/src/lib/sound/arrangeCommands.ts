@@ -3,7 +3,7 @@ import {t} from '../i18n';
 import {registerCommandSpec} from '../commandBridge';
 import type {CommandSpec} from '../commandSpec';
 import {editArrangement,undoArrangement,redoArrangement,getArrangementState,setRangeSelection,renderSession,exportArrangement,downloadArrangement,saveArrangementNative,previewMaster,acceptMasterPreview,cancelMasterPreview} from './arrangeStore';
-import {applyCrossfade,clipRegionPeak,findArrangeClip,normalizeGainDb,splitArrangeClip,newTrack,ARRANGE_LIMITS} from './arrangement';
+import {applyCrossfade,clipRegionPeak,findArrangeClip,normalizeGainDb,rippleDeleteClips,splitArrangeClip,newTrack,ARRANGE_LIMITS} from './arrangement';
 const schema=(properties:Record<string,unknown>,required=Object.keys(properties))=>({type:'object',properties,required,additionalProperties:false});
 const str={type:'string'},num={type:'number'},bool={type:'boolean'};
 const id=()=>`arrange-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`;
@@ -29,6 +29,7 @@ export function registerArrangeCommands(){
  add('clip.paste',p=>editArrangement(s=>{if(!clipClipboard)throw Error('Clipboard is empty');const track=s.tracks.find(t=>t.id===(p.trackId??clipClipboard!.trackId));if(!track)throw Error('Target track no longer exists');track.clips.push({...JSON.parse(JSON.stringify(clipClipboard!.clip)),id:id(),start:p.frame});}),schema({frame:num,trackId:str},['frame'])),
  add('clips.move',p=>editArrangement(s=>{const ids=p.ids as string[];if(!ids.length||ids.some(v=>typeof v!=='string'))throw Error('No clips selected');for(const cid of ids)findArrangeClip(s,cid);for(const cid of ids){const {clip}=findArrangeClip(s,cid);clip.start=Math.max(0,clip.start+p.delta);}}),schema({ids:{type:'array'},delta:num})),
  add('clips.mute',p=>editArrangement(s=>{const ids=p.ids as string[];if(!ids.length||ids.some(v=>typeof v!=='string'))throw Error('No clips selected');for(const cid of ids)findArrangeClip(s,cid).clip.muted=!!p.muted;}),schema({ids:{type:'array'},muted:bool})),
+ add('clips.rippleDelete',p=>editArrangement(s=>rippleDeleteClips(s,p.ids as string[])),schema({ids:{type:'array'}})),
  add('clips.delete',p=>editArrangement(s=>{const ids=p.ids as string[];if(!ids.length||ids.some(v=>typeof v!=='string'))throw Error('No clips selected');for(const cid of ids)findArrangeClip(s,cid);for(const t of s.tracks)t.clips=t.clips.filter(c=>!ids.includes(c.id));}),schema({ids:{type:'array'}})),
  add('clip.crossfade',p=>editArrangement(s=>{applyCrossfade(s,p.id);}),schema({id:str})),
  add('clip.delete',p=>editArrangement(s=>{const {track}=findArrangeClip(s,p.id);track.clips=track.clips.filter(c=>c.id!==p.id);}),schema({id:str})),
