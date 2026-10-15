@@ -46,7 +46,8 @@ export function booleanContours(operands:readonly Operand[],op:BoolOp):Pt[][]{
       segs.push({a,b});minX=Math.min(minX,a.x);maxX=Math.max(maxX,a.x);minY=Math.min(minY,a.y);maxY=Math.max(maxY,a.y);}}
   if(segs.length>MAX_BOOL_EDGES)throw Error(`The shapes are too detailed for a boolean operation (limit ${MAX_BOOL_EDGES} segments)`);
   const diag=Math.hypot(maxX-minX,maxY-minY)||1;
-  const ts:number[][]=segs.map(()=>[0,1]);
+  // A split carries its snapped point, so both edges meeting at a crossing share exactly the same coordinates.
+  const ts:{t:number;p?:Pt}[][]=segs.map(()=>[{t:0},{t:1}]);
   const E=1e-9;
   for(let i=0;i<segs.length;i++)for(let j=i+1;j<segs.length;j++){
     const s=segs[i],t=segs[j];
@@ -55,19 +56,19 @@ export function booleanContours(operands:readonly Operand[],op:BoolOp):Pt[][]{
     const ls=Math.hypot(rx,ry),lt=Math.hypot(qx,qy);
     if(Math.abs(den)>E*ls*lt){
       const u=(wx*qy-wy*qx)/den,v=(wx*ry-wy*rx)/den;
-      if(u>=-E&&u<=1+E&&v>=-E&&v<=1+E){ts[i].push(Math.min(1,Math.max(0,u)));ts[j].push(Math.min(1,Math.max(0,v)));}
+      if(u>=-E&&u<=1+E&&v>=-E&&v<=1+E){const cu=Math.min(1,Math.max(0,u)),cv=Math.min(1,Math.max(0,v)),p={x:snap(s.a.x+rx*cu),y:snap(s.a.y+ry*cu)};ts[i].push({t:cu,p});ts[j].push({t:cv,p});}
     }else if(Math.abs(wx*ry-wy*rx)<=1e-7*Math.max(1,ls)){ // collinear: endpoints of each inside the other
       const proj=(p:Pt,o:Seg,len:number)=>((p.x-o.a.x)*(o.b.x-o.a.x)+(p.y-o.a.y)*(o.b.y-o.a.y))/(len*len);
-      for(const p of [t.a,t.b]){const u=proj(p,s,ls);if(u>0&&u<1)ts[i].push(u);}
-      for(const p of [s.a,s.b]){const v=proj(p,t,lt);if(v>0&&v<1)ts[j].push(v);}
+      for(const p of [t.a,t.b]){const u=proj(p,s,ls);if(u>0&&u<1)ts[i].push({t:u,p:{x:snap(p.x),y:snap(p.y)}});}
+      for(const p of [s.a,s.b]){const v=proj(p,t,lt);if(v>0&&v<1)ts[j].push({t:v,p:{x:snap(p.x),y:snap(p.y)}});}
     }
   }
   const edges=new Map<string,{u:Pt;v:Pt}>();
   segs.forEach((s,i)=>{
-    const list=[...new Set(ts[i].map(t=>Math.round(t*1e9)/1e9))].sort((a,b)=>a-b);
+    const seen=new Set<number>(),list=ts[i].map(x=>({t:Math.round(x.t*1e9)/1e9,p:x.p})).sort((a,b)=>a.t-b.t).filter(x=>!seen.has(x.t)&&seen.add(x.t));
     let prev:Pt={x:s.a.x,y:s.a.y};
     for(let k=1;k<list.length;k++){
-      const t=list[k],p=k===list.length-1?{x:s.b.x,y:s.b.y}:{x:snap(s.a.x+(s.b.x-s.a.x)*t),y:snap(s.a.y+(s.b.y-s.a.y)*t)};
+      const t=list[k].t,p=k===list.length-1?{x:s.b.x,y:s.b.y}:list[k].p??{x:snap(s.a.x+(s.b.x-s.a.x)*t),y:snap(s.a.y+(s.b.y-s.a.y)*t)};
       const ka=key(prev),kb=key(p);
       if(ka!==kb){const id=ka<kb?ka+'|'+kb:kb+'|'+ka;if(!edges.has(id))edges.set(id,{u:prev,v:p});}
       prev=p;

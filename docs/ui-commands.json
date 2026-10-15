@@ -12751,9 +12751,23 @@
       "hasEnabled": true
     },
     {
+      "id": "vector.offsetPath",
+      "title": "Offset vector path",
+      "category": "Edit",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
       "id": "vector.openSvg",
       "title": "Open vector SVG source",
       "category": "Project",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
+      "id": "vector.outlineStroke",
+      "title": "Outline vector stroke",
+      "category": "Edit",
       "source": "vector",
       "hasEnabled": true
     },

@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1075 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1077 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -1056,7 +1056,9 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `vector.joinPaths` | Join vector paths | Edit | vector |  |
 | `vector.moveNode` | Move vector node | Edit | vector |  |
 | `vector.moveSelection` | Move selected vector paths | Edit | vector |  |
+| `vector.offsetPath` | Offset vector path | Edit | vector |  |
 | `vector.openSvg` | Open vector SVG source | Project | vector |  |
+| `vector.outlineStroke` | Outline vector stroke | Edit | vector |  |
 | `vector.redo` | Redo vector edit | Edit | vector |  |
 | `vector.renameGroup` | Rename vector group | Edit | vector |  |
 | `vector.renamePath` | Rename vector path | Edit | vector |  |

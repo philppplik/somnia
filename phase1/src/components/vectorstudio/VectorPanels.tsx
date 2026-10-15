@@ -7,6 +7,7 @@ import {Menu,MenuTrigger,MenuContent,MenuItem,MenuGroup,MenuGroupLabel,MenuSepar
 import {ALIGN_MODES,ALIGN_TARGETS} from '../../lib/vectorstudio/transforms';
 import {BOOL_OPS} from '../../lib/vectorstudio/booleanOps';
 import {layerRows} from '../../lib/vectorstudio/layerRows';
+import {OFFSET_LIMITS} from '../../lib/vectorstudio/offsetOps';
 import {GRADIENT_KINDS,angleOf,hexOr} from '../../lib/vectorstudio/gradients';
 import {gradientIdOf} from '../../lib/vectorio';
 import {DASH_PRESETS,dashArrayFor,dashPresetOf} from '../../lib/vectorstudio/strokeStyle';
@@ -51,12 +52,18 @@ export function VectorTransformSection(){const {t}=useT(),s=useVectorSession(),b
    <MenuContent>{ALIGN_TARGETS.map(to=><MenuGroup key={to}><MenuGroupLabel>{t('vector.shell.align.'+to)}</MenuGroupLabel>{ALIGN_MODES.map(mode=><MenuItem key={mode} onClick={()=>run('alignSelection',{mode,to})}>{t('vector.shell.align.'+mode)}</MenuItem>)}<MenuSeparator/></MenuGroup>)}
     <MenuGroup><MenuGroupLabel>{t('vector.shell.distribute')}</MenuGroupLabel>{(['horizontal','vertical'] as const).map(axis=><MenuItem key={axis} onClick={()=>run('distributeSelection',{axis})}>{t('vector.shell.distribute.'+axis)}</MenuItem>)}</MenuGroup></MenuContent></Menu>
   <div className="grid grid-cols-2 gap-1"><Button size="compact" data-testid="vector-join" onClick={()=>run('joinPaths')}>{t('vector.shell.join')}</Button><Button size="compact" data-testid="vector-reverse" onClick={()=>run('reversePath')}>{t('vector.shell.reverse')}</Button></div>
+  <OffsetControls/>
   <Menu><MenuTrigger render={<Button size="compact" variant="outline" data-testid="vector-combine-menu">{t('vector.shell.combine')}</Button>}/>
    <MenuContent>{BOOL_OPS.map(o=><MenuItem key={o} onClick={()=>run('booleanOp',{op:o})}>{t('vector.shell.combine.'+o)}</MenuItem>)}</MenuContent></Menu>
   <div className="grid grid-cols-2 gap-1"><Button size="compact" data-testid="vector-group" onClick={()=>run('group')}>{t('vector.shell.group')}</Button><Button size="compact" data-testid="vector-ungroup" onClick={()=>run('ungroup')}>{t('vector.shell.ungroup')}</Button></div>
   <div className="grid grid-cols-2 gap-1">{(['front','back','forward','backward'] as const).map(mode=><Button key={mode} size="compact" onClick={()=>run('reorder',{mode})}>{t(mode==='front'?'vector.toFront':mode==='back'?'vector.shell.toBack':'vector.'+mode)}</Button>)}
    <Button size="compact" onClick={()=>run('duplicateSelection')}>{t('vector.duplicate')}</Button><Button size="compact" onClick={()=>run('deleteSelection')}>{t('vector.shell.delete')}</Button></div>
  </div>;
+}
+function OffsetControls(){
+ const {t}=useT();const [amount,setAmount]=useState('4');const n=Number(amount),ok=amount.trim()!==''&&Number.isFinite(n)&&Math.abs(n)>=OFFSET_LIMITS.min&&Math.abs(n)<=OFFSET_LIMITS.max;
+ return <div className="grid gap-1" data-testid="vector-offset"><label className={row}>{t('vector.shell.offset')}<NativeInput className={field} type="number" step="any" value={amount} aria-invalid={!ok} onChange={e=>setAmount(e.target.value)}/></label>
+  <div className="grid grid-cols-2 gap-1"><Button size="compact" disabled={!ok} onClick={()=>run('offsetPath',{distance:n})}>{t('vector.shell.offset.apply')}</Button><Button size="compact" onClick={()=>run('outlineStroke')}>{t('vector.shell.outlineStroke')}</Button></div></div>;
 }
 function GradientControls(){
  const {t}=useT(),s=useVectorSession(),first=s.doc.paths.find(p=>s.selection.includes(p.id));if(!first)return null;
