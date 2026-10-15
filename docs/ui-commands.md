@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-984 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+987 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -383,6 +383,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `documents.insert.nbHyphen` | Insert non-breaking hyphen | View | documents |  |
 | `documents.insert.nbsp` | Insert non-breaking space | View | documents |  |
 | `documents.insert.softHyphen` | Insert optional hyphen | View | documents |  |
+| `documents.insert.textFile` | Insert text from a file | View | documents |  |
 | `documents.insert.time` | Insert the current time | View | documents |  |
 | `documents.insertPageBreak` | Insert page break | View | documents |  |
 | `documents.language.set` | Set the proofing language of the selected text | View | documents |  |
@@ -415,7 +416,9 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `documents.replaceMatch` | Replace search result | Edit | documents-panels |  |
 | `documents.review.accept` | Accept the tracked change at the cursor | View | documents |  |
 | `documents.review.acceptAll` | Accept all tracked changes | View | documents |  |
+| `documents.review.next` | Go to the next tracked change | View | documents |  |
 | `documents.review.open` | Review tracked changes | View | documents |  |
+| `documents.review.previous` | Go to the previous tracked change | View | documents |  |
 | `documents.review.reject` | Reject the tracked change at the cursor | View | documents |  |
 | `documents.review.rejectAll` | Reject all tracked changes | View | documents |  |
 | `documents.review.track` | Track changes on or off | View | documents |  |

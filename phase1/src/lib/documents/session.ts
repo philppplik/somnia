@@ -4,6 +4,7 @@ import {addUserWord,savedUserWords} from './userWords';
 import {capturePaint,paintIsEmpty,type Painted} from './formatPainter';
 import {MAX_TEXT_TABLE_ROWS,type ProofIssue,type ReviewState,type ReviewChange} from './protocol';
 import {setStyleList} from './styles';
+import {adjacentChange} from './reviewNav';
 import {stylePatchProblem,STYLE_ID_RE,tocProblem,isListKind,listOptionsProblem,type ListStyleId} from './protocol';
 import {imageCropProblem,imageWrapProblem,type ImageWrap,type ImageAlign,tableLayoutProblem,SECTION_BREAKS,hfVariantsProblem,HF_ALIGNS,propertiesProblem,linkProblem,commentProblem,type CommentItem,validHfText,type HeaderFooterState,checkFormatPatch,checkParaPatch,MAX_HF_CHARS,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch,type ImageOp,type PageSetupPatch,type PageSetupState,pageSetupProblem,type TableStyle,type TableStyleScope,tableStyleProblem,MIN_COL_PT,MAX_COL_PT,imageProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGES} from './protocol';
 import {captureDocumentSelection} from './selectionCapture';
@@ -978,6 +979,12 @@ export const resolveAllChanges=(accept:boolean)=>run(async()=>{
  const cr=getDocumentsState().caret;const spot=cr?{block:cr.block,off:0}:{block:0,off:0};
  await structural(eng=>eng.resolveAll(accept),cr?{block:cr.block,off:cr.head}:spot,spot);
 });
+/** Moves to the next or previous tracked change (wrapping) and selects it. Resolves false when there are none. */
+export async function goToAdjacentChange(dir:1|-1):Promise<boolean>{
+ const r=await readReview();const c=getDocumentsState().caret;
+ const n=c?norm(c):null;const ch=adjacentChange(r.changes,n?{block:dir>0?n.e.block:n.s.block,off:dir>0?n.e.off:n.s.off}:null,dir);
+ if(!ch)return false;await goToChange(ch);return true;
+}
 /** Selects a tracked change on the page. */
 export const goToChange=(c:ReviewChange)=>run(async()=>{goalX=null;patchDocuments({caretLocked:false,imageBlock:null,caret:{block:c.block,anchor:c.start,head:c.end}});await syncGeometry();});
 /** The tracked change under the caret, if any. */

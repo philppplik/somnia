@@ -1,6 +1,6 @@
 import {useCallback,useEffect,useRef,useState} from 'react';
 import type {ReviewChange} from '../../lib/documents/protocol';
-import {setViewMarks,goToChange,readReview,resolveAllChanges,resolveChange,setTrackChanges} from '../../lib/documents/session';
+import {goToAdjacentChange,setViewMarks,goToChange,readReview,resolveAllChanges,resolveChange,setTrackChanges} from '../../lib/documents/session';
 import {useDocuments} from '../../lib/documents/store';
 import {useT} from '../../lib/useT';
 import {NativeButton,NativeInput} from '../ui/native-controls';
@@ -33,6 +33,8 @@ export function ReviewDialog({onClose}:{onClose:()=>void}){
      </li>)}
     </ul>
     <span className="flex flex-wrap gap-1">
+     <NativeButton className={tool} onClick={()=>void goToAdjacentChange(-1)} data-testid="documents-review-prev">{t('documents.review.previous')}</NativeButton>
+     <NativeButton className={tool} onClick={()=>void goToAdjacentChange(1)} data-testid="documents-review-next">{t('documents.review.next')}</NativeButton>
      <NativeButton className={tool} onClick={()=>void all(true)} data-testid="documents-review-accept-all">{t('documents.review.acceptAll')}</NativeButton>
      <NativeButton className={tool} onClick={()=>void all(false)} data-testid="documents-review-reject-all">{t('documents.review.rejectAll')}</NativeButton>
     </span></>}

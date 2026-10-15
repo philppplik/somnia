@@ -4800,6 +4800,17 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.insert.textFile",
+      "title": "Insert text from a file",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.insert.time",
       "title": "Insert the current time",
       "category": "View",
@@ -5143,8 +5154,30 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.review.next",
+      "title": "Go to the next tracked change",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.review.open",
       "title": "Review tracked changes",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.review.previous",
+      "title": "Go to the previous tracked change",
       "category": "View",
       "source": "documents",
       "keywords": [
