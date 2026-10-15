@@ -4505,8 +4505,64 @@ impl HeadlessWorkbook {
         }
     }
 
+    /// Filters one column by the fill or font colour of a sample cell in that column (a data row of the filter), as ONE history entry.
+    /// `data.filterBy` cannot build colour criteria (they only come from files), but the engine evaluates and saves them: one harmless
+    /// `data.reapply` makes the undo snapshot, the criterion is set in place, and a second `data.reapply` hides the rows.
+    fn filter_by_color(&mut self, existing: Option<(u32, u32)>, block: (u32, u32, u32, u32), c: u32, sample_row: u32, font: bool) -> Result<String, String> {
+        let (row, col, rows, cols) = block;
+        let sheet = self.session.doc().map_err(|e| e.to_string())?.wb.active_sheet;
+        let (first, last, top, bottom) = match existing {
+            Some((first, last)) => {
+                let doc = self.session.doc().map_err(|e| e.to_string())?;
+                let af = doc.wb.sheet(sheet).and_then(|sh| sh.autofilter.as_ref()).ok_or("There is no filter on this sheet.")?;
+                (first, last, af.range.start.row, af.range.end.row)
+            }
+            None => {
+                if rows < 2 || cols == 0 || u64::from(rows) * u64::from(cols) > MAX_SORT_CELLS {
+                    return Err("Select a header row, at least one data row and the column to filter.".into());
+                }
+                (col, col + cols - 1, row, row + rows - 1)
+            }
+        };
+        if c < first || c > last {
+            return Err("The column is outside the filter range.".into());
+        }
+        if sample_row <= top || sample_row > bottom {
+            return Err("Click a data cell of the filtered range (not the header) to take its colour.".into());
+        }
+        let color = {
+            let doc = self.session.doc().map_err(|e| e.to_string())?;
+            let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+            let style = doc.wb.styles.get(sh.style_id(CellRef::new(sample_row, c)));
+            if font { style.font.color } else { style.fill.fg }
+        };
+        if color == gridcraft_engine::model::style::Color::Auto {
+            return Err(if font { "That cell has no font colour set." } else { "That cell has no fill colour set." }.into());
+        }
+        let before = self.session.doc().map_err(|e| e.to_string())?.undo.len();
+        if existing.is_none() {
+            let range = format!("{}:{}", CellRef::new(row, col).a1(), CellRef::new(row + rows - 1, col + cols - 1).a1());
+            self.session.run("data.filter", json!({"range": range}))?;
+        }
+        self.session.run("data.reapply", json!({}))?;
+        {
+            let doc = self.session.doc_mut().map_err(|e| e.to_string())?;
+            let wb = std::sync::Arc::make_mut(&mut doc.wb);
+            let af = wb.sheets.get_mut(sheet).and_then(|sh| sh.autofilter.as_mut()).ok_or("There is no filter on this sheet.")?;
+            let off = c - af.range.start.col;
+            af.criteria.retain(|(o, _)| *o != off);
+            af.criteria.push((off, if font { gridcraft_engine::model::FilterCriterion::FontColor(color) } else { gridcraft_engine::model::FilterCriterion::FillColor(color) }));
+        }
+        let out = self.session.run("data.reapply", json!({})).map(|v| v.to_string())?;
+        let doc = self.session.doc_mut().map_err(|e| e.to_string())?;
+        if doc.undo.len() > before + 1 {
+            doc.undo.truncate(before + 1);
+        }
+        Ok(out)
+    }
+
     /// Filters rows by one column as ONE history entry. `op_json` is `{"kind":"custom","column":abs,"op":..,"value":..}`
-    /// (op one of FILTER_OPS), `{"kind":"values","column":abs,"values":[..200],"blanks":bool}`, `{"kind":"top","column":abs,"count":1..1000,"bottom":bool,"percent":bool}`, `{"kind":"aboveAverage","column":abs,"above":bool}`, `{"kind":"clear","column":abs}`, `{"kind":"clearAll"}` or `{"kind":"off"}`; `column` is the
+    /// (op one of FILTER_OPS), `{"kind":"values","column":abs,"values":[..200],"blanks":bool}`, `{"kind":"top","column":abs,"count":1..1000,"bottom":bool,"percent":bool}`, `{"kind":"aboveAverage","column":abs,"above":bool}`, `{"kind":"color","column":abs,"row":abs,"by":"fill"|"font"}` (the colour of that data cell), `{"kind":"clear","column":abs}`, `{"kind":"clearAll"}` or `{"kind":"off"}`; `column` is the
     /// absolute 0-based sheet column. The block only creates the filter (its first row is the header); an existing
     /// filter keeps its own range. Protected sheets, filters inside tables, empty or oversized values are refused.
     /// Hidden rows come from the engine, so they follow the file and undo.
@@ -4587,6 +4643,16 @@ impl HeadlessWorkbook {
                 let c = abs_col(&op)?;
                 let above = op.get("above").and_then(|v| v.as_bool()).ok_or("above must be true or false")?;
                 self.filter_by_criterion(existing, (row, col, rows, cols), c, json!({"aboveAverage": above}))
+            }
+            "color" => {
+                let c = abs_col(&op)?;
+                let sample = op.get("row").and_then(|v| v.as_u64()).filter(|r| *r < u64::from(gridcraft_engine::core::MAX_ROWS)).ok_or("the sample row is outside the sheet")? as u32;
+                let font = match op.get("by").and_then(|v| v.as_str()) {
+                    Some("fill") => false,
+                    Some("font") => true,
+                    _ => return Err("by must be fill or font".into()),
+                };
+                self.filter_by_color(existing, (row, col, rows, cols), c, sample, font)
             }
             _ => Err("unsupported filter operation".into()),
         }
@@ -5626,6 +5692,25 @@ mod tests {
         book.session.run("review.protectSheet", json!({})).unwrap();
         assert!(book.sort_range(0, 0, 0, 3, 2, ok).unwrap_err().contains("protected"));
     }
+    #[test]
+    fn colour_filter_hides_other_rows_in_one_undo_step() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        book.set_values(0, 1100, 0, r#"[["name"],["a"],["b"],["c"],["d"]]"#).unwrap();
+        book.format_range(0, 1101, 0, 1, 1, r##"{"kind":"fillColor","color":"#FF0000"}"##).unwrap();
+        book.format_range(0, 1103, 0, 1, 1, r##"{"kind":"fillColor","color":"#FF0000"}"##).unwrap();
+        let hidden = |book: &HeadlessWorkbook| book.session.doc().unwrap().wb.sheet(0).unwrap().rows.values().filter(|r| r.hidden).count();
+        let depth = book.session.doc().unwrap().undo.len();
+        assert!(book.filter_range(0, 1100, 0, 5, 1, r#"{"kind":"color","column":0,"row":1100,"by":"fill"}"#).is_err(), "the header row is not a sample");
+        assert!(book.filter_range(0, 1100, 0, 5, 1, r#"{"kind":"color","column":0,"row":1102,"by":"fill"}"#).is_err(), "an uncoloured cell is refused");
+        assert_eq!(book.session.doc().unwrap().undo.len(), depth, "refusals change nothing");
+        book.filter_range(0, 1100, 0, 5, 1, r#"{"kind":"color","column":0,"row":1101,"by":"fill"}"#).unwrap();
+        assert_eq!(hidden(&book), 2, "the two uncoloured rows are hidden");
+        assert_eq!(book.session.doc().unwrap().undo.len(), depth + 1, "one history entry");
+        book.undo().unwrap();
+        assert_eq!(hidden(&book), 0);
+        assert!(book.filter_range(0, 1100, 0, 5, 1, r#"{"kind":"color","column":0,"row":1101,"by":"border"}"#).is_err());
+    }
+
     #[test]
     fn value_and_rank_filters_hide_rows_in_one_undo_step() {
         let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();

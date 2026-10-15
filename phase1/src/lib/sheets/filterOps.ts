@@ -36,6 +36,9 @@ export function parseFilterCommand(input:unknown):FilterOp{
    if(typeof o.bottom!=='boolean'||typeof o.percent!=='boolean')throw Error('Bottom and percent must be true or false.');
    if(o.percent&&o.count>100)throw Error('A percentage is at most 100.');
    return {kind:'top',column:c,count:o.count,bottom:o.bottom,percent:o.percent};}
+  case 'color':{only('kind','column','row','by');const c=column();
+   if(typeof o.row!=='number'||!Number.isInteger(o.row)||o.row<0||o.row>1048575)throw Error('The colour row is outside the sheet.');
+   if(o.by!=='fill'&&o.by!=='font')throw Error('Colour must come from fill or font.');return {kind:'color',column:c,row:o.row,by:o.by};}
   case 'aboveAverage':{only('kind','column','above');const c=column();if(typeof o.above!=='boolean')throw Error('Above must be true or false.');return {kind:'aboveAverage',column:c,above:o.above};}
   case 'clear':only('kind','column');return {kind:'clear',column:column()};
   case 'clearAll':case 'off':only('kind');return {kind:o.kind};

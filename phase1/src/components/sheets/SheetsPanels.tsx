@@ -291,13 +291,13 @@ function SortGroup(){
  </div>;
 }
 /** Slicer-style filtering of one column: load its values, tick the ones to keep, apply. Also top or bottom items and above or below average. One undo step each; the selection (header row first) creates the filter when there is none. */
-type QuickFilter='top'|'bottom'|'topPercent'|'bottomPercent'|'above'|'below';
-const QUICK_FILTERS:QuickFilter[]=['top','bottom','topPercent','bottomPercent','above','below'];
+type QuickFilter='top'|'bottom'|'topPercent'|'bottomPercent'|'above'|'below'|'fillColor'|'fontColor';
+const QUICK_FILTERS:QuickFilter[]=['top','bottom','topPercent','bottomPercent','above','below','fillColor','fontColor'];
 function ValueFilterGroup(){
  const {t}=useT(),s=useSheetsSelection(),action=useAction();const [column,setColumn]=useState(0);const [loaded,setLoaded]=useState<{key:string;data:DistinctValues}|null>(null);const [off,setOff]=useState<ReadonlySet<string>>(new Set());const [blanksOn,setBlanksOn]=useState(true);const [quick,setQuick]=useState<QuickFilter>('top');const [count,setCount]=useState(10);
  const r=s?.range;if(!s||!r)return null;
  const rows=r.r1-r.r0+1,cols=r.c1-r.c0+1,col=Math.min(column,cols-1),block=sortBlockProblem(rows,cols,true),key=s.sheet+':'+rangeAddress(r)+':'+col,data=loaded?.key===key?loaded.data:null;
- const abs=r.c0+col,options=Array.from({length:Math.min(cols,MAX_SORT_OPTIONS)},(_,i)=>i),needsCount=quick!=='above'&&quick!=='below',maxCount=quick.endsWith('Percent')?100:1000;
+ const abs=r.c0+col,options=Array.from({length:Math.min(cols,MAX_SORT_OPTIONS)},(_,i)=>i),needsCount=quick!=='above'&&quick!=='below'&&quick!=='fillColor'&&quick!=='fontColor',maxCount=quick.endsWith('Percent')?100:1000;
  const load=async()=>{
   if(block||rows-1>MAX_FILTER_SCAN_ROWS){action.setNotice(t('sheets.vf.big',{n:MAX_FILTER_SCAN_ROWS}));return;}
   const cells=await action.run('sheets.analyzeRange',{range:rangeAddress({r0:r.r0+1,r1:r.r1,c0:abs,c1:abs})});if(!cells)return;
@@ -306,7 +306,8 @@ function ValueFilterGroup(){
  const picked=data?data.values.filter(v=>!off.has(v.text)).map(v=>v.text):[];
  const applyValues=()=>{if(data)void action.run('sheets.filter',{kind:'values',column:abs,values:picked,blanks:blanksOn&&data.blanks>0});};
  const applyQuick=()=>{
-  if(quick==='above'||quick==='below')void action.run('sheets.filter',{kind:'aboveAverage',column:abs,above:quick==='above'});
+  if(quick==='fillColor'||quick==='fontColor')void action.run('sheets.filter',{kind:'color',column:abs,row:r.r1,by:quick==='fillColor'?'fill':'font'});
+  else if(quick==='above'||quick==='below')void action.run('sheets.filter',{kind:'aboveAverage',column:abs,above:quick==='above'});
   else void action.run('sheets.filter',{kind:'top',column:abs,count,bottom:quick.startsWith('bottom'),percent:quick.endsWith('Percent')});
  };
  return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.vf.title')}>
@@ -322,6 +323,7 @@ function ValueFilterGroup(){
   <label className="flex flex-col gap-1">{t('sheets.vf.quick')}<NativeSelect className={field} value={quick} disabled={action.busy} onChange={e=>setQuick(e.currentTarget.value as QuickFilter)} data-testid="sheets-vf-quick">{QUICK_FILTERS.map(q=><option key={q} value={q}>{t('sheets.vf.q.'+q)}</option>)}</NativeSelect></label>
   {needsCount&&<NumberField label={t('sheets.vf.count')} value={count} resetKey={'vf-count-'+quick} min={1} max={maxCount} step={1} disabled={action.busy} constraintError={t('sheets.vf.countInvalid',{max:maxCount})} parse={v=>{const n=Number(v.trim());return v.trim()&&Number.isInteger(n)&&n>=1&&n<=maxCount?{ok:true,value:n}:{ok:false,error:t('sheets.vf.countInvalid',{max:maxCount})};}} onCommit={v=>setCount(v)}/>}
   <Button variant="outline" size="compact" disabled={action.busy||!!block||(needsCount&&(count<1||count>maxCount))} onClick={applyQuick} data-testid="sheets-vf-quick-apply">{t('sheets.vf.apply')}</Button>
+  {(quick==='fillColor'||quick==='fontColor')&&<p className="text-ink-3">{t('sheets.vf.colorHint',{cell:colName(abs)+(r.r1+1)})}</p>}
   <p className="text-ink-3">{t(block?'sheets.sort.need':'sheets.vf.scope',{range:rangeAddress(r)})}</p>
   {action.notice?<p role="alert">{action.notice}</p>:null}
  </div>;
