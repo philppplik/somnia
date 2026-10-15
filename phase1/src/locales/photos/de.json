@@ -21,6 +21,7 @@
  "photos.nav.next": "Nächstes Foto",
  "photos.compare": "Halten, um mit dem Original zu vergleichen",
  "photos.filmstrip.aria": "Foto-Filmstreifen",
+ "photos.canvas.aria": "Bearbeitetes Foto: {name}",
  "photos.undo": "Rückgängig",
  "photos.redo": "Wiederholen",
  "photos.reset": "Alles zurücksetzen",

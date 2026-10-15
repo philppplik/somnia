@@ -445,11 +445,11 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
   <PhotosHandoffBar file={item.name} disabled={!ready} getImage={()=>renderPhotoBytes(item.name)}/>
   <div ref={stage} className="media-checker relative min-h-0 w-full flex-1 overflow-hidden" onWheel={onWheel} onPointerDown={onStageDown} onPointerMove={onStageMove} onPointerUp={onStageUp} onPointerCancel={onStageUp} onPointerLeave={()=>{setHealCursor(null);setRgbPos(null);}} data-testid="photos-stage" style={{touchAction:'none',cursor:session?.cropping?'default':healing||dodging||grading||radial||brushing||straightening||targetArmed?'crosshair':'grab'}}>
    <div ref={imgBox} className="absolute left-1/2 top-1/2" style={{width:dispW,height:dispH,transform:`translate(-50%,-50%) translate(${pan[0]}px,${pan[1]}px)`}}>
-    <canvas ref={canvas} className="block size-full rounded-[2px] shadow-sm" style={{imageRendering:scale>4?'pixelated':'auto'}} data-testid="photos-canvas"/>
-    {showClipping&&<canvas ref={clipCanvas} className={`pointer-events-none absolute inset-0 size-full${scale>4?' pixelated':''}`} data-testid="photos-clipping-canvas"/>}
+    <canvas ref={canvas} role="img" aria-label={t('photos.canvas.aria',{name:item.name})} className="block size-full rounded-[2px] shadow-sm" style={{imageRendering:scale>4?'pixelated':'auto'}} data-testid="photos-canvas"/>
+    {showClipping&&<canvas ref={clipCanvas} className={`pointer-events-none absolute inset-0 size-full${scale>4?' pixelated':''}`} aria-hidden="true" data-testid="photos-clipping-canvas"/>}
     {showMaskOverlay&&!lumMaskWindowNeutral(lumMask)&&<canvas ref={maskCanvas} className="pointer-events-none absolute inset-0 size-full" data-testid="photos-lummask-overlay"/>}
     {straightening&&straightDraft.current&&<svg className="pointer-events-none absolute inset-0 size-full" viewBox="0 0 1 1" preserveAspectRatio="none" data-testid="photos-straighten-line"><line x1={straightDraft.current.x0} y1={straightDraft.current.y0} x2={straightDraft.current.x1} y2={straightDraft.current.y1} stroke="var(--accent)" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeDasharray="6 4"/></svg>}
-    {showSplit&&original&&<canvas ref={splitCanvas} className={`pointer-events-none absolute inset-0 size-full${scale>4?' pixelated':''}`} data-testid="photos-split-canvas"/>}
+    {showSplit&&original&&<canvas ref={splitCanvas} className={`pointer-events-none absolute inset-0 size-full${scale>4?' pixelated':''}`} aria-hidden="true" data-testid="photos-split-canvas"/>}
     {showSplit&&original&&<svg className="absolute inset-0 size-full" data-testid="photos-split-divider" data-direction={splitDir}>
      {splitDir==='vertical'
       ?<line x1={splitX*dispW} y1={0} x2={splitX*dispW} y2={dispH} stroke="rgba(255,255,255,0.9)" strokeWidth={2} pointerEvents="none"/>

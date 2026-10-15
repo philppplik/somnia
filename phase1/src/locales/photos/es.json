@@ -21,6 +21,7 @@
  "photos.nav.next": "Foto siguiente",
  "photos.compare": "Mantén pulsado para comparar con el original",
  "photos.filmstrip.aria": "Tira de fotos",
+ "photos.canvas.aria": "Foto editada: {name}",
  "photos.undo": "Deshacer",
  "photos.redo": "Rehacer",
  "photos.reset": "Restablecer todo",

@@ -21,6 +21,7 @@
  "photos.nav.next": "Next photo",
  "photos.compare": "Hold to compare with the original",
  "photos.filmstrip.aria": "Photo filmstrip",
+ "photos.canvas.aria": "Edited photo: {name}",
  "photos.undo": "Undo",
  "photos.redo": "Redo",
  "photos.reset": "Reset all",

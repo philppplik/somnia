@@ -21,6 +21,7 @@
  "photos.nav.next": "Photo suivante",
  "photos.compare": "Maintenir pour comparer avec l'original",
  "photos.filmstrip.aria": "Pellicule photo",
+ "photos.canvas.aria": "Photo retouchée : {name}",
  "photos.undo": "Annuler",
  "photos.redo": "Rétablir",
  "photos.reset": "Tout réinitialiser",
