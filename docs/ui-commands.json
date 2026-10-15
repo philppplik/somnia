@@ -2257,6 +2257,25 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.layers.scatter",
+      "title": "Scatter, nudge or shuffle the ticked layers",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "confetti",
+        "jitter",
+        "nudge",
+        "random",
+        "randomize",
+        "scatter",
+        "shuffle",
+        "stars",
+        "swap"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.layers.sendTo",
       "title": "Copy or move layers to another composition",
       "category": "Edit",

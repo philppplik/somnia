@@ -1249,5 +1249,10 @@
  "animation.rig.burst.8": "8 copies",
  "animation.rig.burst.16": "16 copies",
  "animation.rig.burst.24": "24 copies",
- "cmd.animation.layers.burst": "Projeter des copies du calque vers l’extérieur depuis la tête de lecture"
+ "cmd.animation.layers.burst": "Projeter des copies du calque vers l’extérieur depuis la tête de lecture",
+ "animation.rig.group.scatter": "Disperser",
+ "animation.rig.scatter.frame": "Disperser dans tout le cadre",
+ "animation.rig.scatter.nudge": "Décaler un peu (60 px)",
+ "animation.rig.scatter.shuffle": "Mélanger les positions",
+ "cmd.animation.layers.scatter": "Disperser, décaler ou mélanger les calques cochés"
 }

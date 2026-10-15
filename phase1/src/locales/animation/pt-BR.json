@@ -1249,5 +1249,10 @@
  "animation.rig.burst.8": "8 cópias",
  "animation.rig.burst.16": "16 cópias",
  "animation.rig.burst.24": "24 cópias",
- "cmd.animation.layers.burst": "Lançar cópias da camada para fora a partir do cursor"
+ "cmd.animation.layers.burst": "Lançar cópias da camada para fora a partir do cursor",
+ "animation.rig.group.scatter": "Espalhar",
+ "animation.rig.scatter.frame": "Espalhar pelo quadro",
+ "animation.rig.scatter.nudge": "Mover um pouco (60 px)",
+ "animation.rig.scatter.shuffle": "Embaralhar posições",
+ "cmd.animation.layers.scatter": "Espalhar, mover um pouco ou embaralhar as camadas marcadas"
 }

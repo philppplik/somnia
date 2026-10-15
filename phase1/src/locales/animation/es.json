@@ -1249,5 +1249,10 @@
  "animation.rig.burst.8": "8 copias",
  "animation.rig.burst.16": "16 copias",
  "animation.rig.burst.24": "24 copias",
- "cmd.animation.layers.burst": "Lanzar copias de la capa hacia fuera desde el cabezal"
+ "cmd.animation.layers.burst": "Lanzar copias de la capa hacia fuera desde el cabezal",
+ "animation.rig.group.scatter": "Dispersar",
+ "animation.rig.scatter.frame": "Dispersar por todo el encuadre",
+ "animation.rig.scatter.nudge": "Mover un poco (60 px)",
+ "animation.rig.scatter.shuffle": "Mezclar posiciones",
+ "cmd.animation.layers.scatter": "Dispersar, mover un poco o mezclar las capas marcadas"
 }

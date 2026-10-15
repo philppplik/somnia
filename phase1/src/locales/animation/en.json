@@ -1249,5 +1249,10 @@
  "animation.rig.burst.8": "8 copies",
  "animation.rig.burst.16": "16 copies",
  "animation.rig.burst.24": "24 copies",
- "cmd.animation.layers.burst": "Burst copies of the layer outwards from the playhead"
+ "cmd.animation.layers.burst": "Burst copies of the layer outwards from the playhead",
+ "animation.rig.group.scatter": "Scatter",
+ "animation.rig.scatter.frame": "Scatter anywhere in the frame",
+ "animation.rig.scatter.nudge": "Nudge a little (60 px)",
+ "animation.rig.scatter.shuffle": "Shuffle positions",
+ "cmd.animation.layers.scatter": "Scatter, nudge or shuffle the ticked layers"
 }

@@ -1570,3 +1570,19 @@ test('P255 burst: copies start on the layer at the playhead, fly out by 60 to 10
  for(const k of copies){const a=anc(k,r.from),b=anc(k,r.to),dd=Math.hypot(b[0]-a[0],b[1]-a[1]);assert.ok(Math.hypot(a[0]-p0[0],a[1]-p0[1])<0.5,'starts on the emitter');assert.ok(dd>=60&&dd<=200+120,'flew out (with the small fall at the end)');assert.equal(k.outT,r.to);assert.equal(k.transform.opacity.keys[k.transform.opacity.keys.length-1].v,0);}
  s.undo();assert.equal(findComp(s.document!)!.layers.length,before);
 });
+
+test('P256 scatter: frame mode stays inside the frame, nudge stays within 60 px, shuffle keeps the same set of positions, keyed layers move as a whole, same seed same result, one undo step',async()=>{
+ const {scatterSpecs,scatterTargets}=await import('./scatterCommands');const run=scatterSpecs()[0].run as (p?:unknown)=>unknown;
+ const from:[number,number][]=[[10,10],[200,50],[300,300],[40,400]];
+ assert.deepEqual(scatterTargets('frame',from,800,450,7),scatterTargets('frame',from,800,450,7));
+ for(const q of scatterTargets('frame',from,800,450,9))assert.ok(q[0]>=0&&q[0]<=800&&q[1]>=0&&q[1]<=450);
+ scatterTargets('nudge',from,800,450,5).forEach((q,i)=>assert.ok(Math.abs(q[0]-from[i][0])<=60&&Math.abs(q[1]-from[i][1])<=60));
+ assert.deepEqual([...scatterTargets('shuffle',from,800,450,5)].sort(),[...from].sort());
+ const d0=applyEdits(base(),[{type:'layer.add',kind:'solid',id:'s1'},{type:'prop.set',layer:'s1',prop:'position',t:f(0),value:[100,100]},{type:'layer.add',kind:'solid',id:'s2'},{type:'prop.set',layer:'s2',prop:'position',t:f(0),value:[500,300]},{type:'layer.add',kind:'solid',id:'kid'},{type:'layer.parent',layer:'kid',parent:'s1'}] as never);
+ const s=new AnimationSession();s.open(d0);setAnimationSession(s);
+ assert.throws(()=>run({layers:['s1','s2']}),/Choose/);assert.throws(()=>run({mode:'shuffle',layers:['s1','kid']}),/two/);
+ const r=run({mode:'frame',seed:3,layers:['s1','s2','a','kid']}) as {moved:number;skipped:number};assert.equal(r.moved,3);assert.equal(r.skipped,1);
+ const c=findComp(s.document!)!,L=(id:string)=>c.layers.find(l=>l.id===id)!;
+ const a=L('a').transform.position.keys;assert.ok(Math.abs((a[1].v as unknown as number[])[0]-(a[0].v as unknown as number[])[0]-100)<0.02&&Math.abs((a[1].v as unknown as number[])[1]-(a[0].v as unknown as number[])[1]+50)<0.02,'keyed layer keeps its motion, only shifted');
+ s.undo();assert.deepEqual(findComp(s.document!)!.layers.find(l=>l.id==='s1')!.transform.position.value as unknown as number[],[100,100]);
+});

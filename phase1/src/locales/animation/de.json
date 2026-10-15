@@ -1249,5 +1249,10 @@
  "animation.rig.burst.8": "8 Kopien",
  "animation.rig.burst.16": "16 Kopien",
  "animation.rig.burst.24": "24 Kopien",
- "cmd.animation.layers.burst": "Kopien der Ebene vom Abspielkopf aus nach außen schleudern"
+ "cmd.animation.layers.burst": "Kopien der Ebene vom Abspielkopf aus nach außen schleudern",
+ "animation.rig.group.scatter": "Streuen",
+ "animation.rig.scatter.frame": "Zufällig im Bild verteilen",
+ "animation.rig.scatter.nudge": "Leicht verschieben (60 px)",
+ "animation.rig.scatter.shuffle": "Positionen mischen",
+ "cmd.animation.layers.scatter": "Angekreuzte Ebenen streuen, leicht verschieben oder mischen"
 }
