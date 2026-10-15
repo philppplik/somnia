@@ -11,6 +11,7 @@ import {setParagraphOptionsOpen} from '../../lib/documents/paragraphOptions';
 import {useDocuments} from '../../lib/documents/store';
 import {useT} from '../../lib/useT';
 import {NativeButton,NativeInput,NativeSelect} from '../ui/native-controls';
+import {dialogTrapKeyDown} from '../../lib/focusTrap';
 const tool='grid h-7 cursor-pointer grid-flow-col items-center gap-1 rounded-sm border-0 bg-transparent px-2 text-xs text-ink-2 hover:bg-hover aria-pressed:bg-hover aria-pressed:text-ink disabled:cursor-default disabled:opacity-50';
 const sel='h-7 rounded-sm border border-subtle bg-surface px-1 text-xs text-ink disabled:opacity-50';
 /** Link the selected text: http, https or mailto only. An empty address removes the link. */
@@ -19,7 +20,7 @@ export function LinkDialog({current,onClose}:{current:string;onClose:()=>void}){
  const apply=(url:string)=>{if(linkProblem(url)!==null)return;onClose();void setLink(url);};
  const [marks,setMarks]=useState<string[]>([]);
  useEffect(()=>{let live=true;void readBookmarks().then(l=>{if(live&&l)setMarks(l.map(b=>b.name));}).catch(()=>undefined);return()=>{live=false;};},[]);
- return <div role="dialog" aria-modal="true" aria-labelledby="documents-link-title" className="fixed inset-0 z-20 grid place-items-center bg-black/30" onKeyDown={e=>{if(e.key==='Escape'){e.stopPropagation();onClose();}if(e.key==='Enter'){e.preventDefault();apply(v);}}}>
+ return <div role="dialog" aria-modal="true" aria-labelledby="documents-link-title" className="fixed inset-0 z-20 grid place-items-center bg-black/30" onKeyDown={e=>{if(e.key==='Escape'){e.stopPropagation();onClose();}if(e.key==='Enter'){e.preventDefault();apply(v);dialogTrapKeyDown(e);}}}>
   <div className="grid w-96 max-w-full gap-3 rounded-[var(--r-popup,25px)] bg-surface p-5 shadow-xl" data-testid="documents-link-dialog">
    <h2 id="documents-link-title" className="text-sm font-medium">{t('documents.format.linkTitle')}</h2>
    <label className="grid gap-1 text-xs text-ink-2">{t('documents.format.linkUrl')}

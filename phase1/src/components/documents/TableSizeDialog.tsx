@@ -3,6 +3,7 @@ import {MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS} from '../../lib/documents/protoco
 import {insertTable} from '../../lib/documents/session';
 import {useT} from '../../lib/useT';
 import {NativeButton,NativeInput} from '../ui/native-controls';
+import {dialogTrapKeyDown} from '../../lib/focusTrap';
 const tool='grid h-7 cursor-pointer grid-flow-col items-center gap-1 rounded-sm border-0 bg-transparent px-2 text-xs text-ink-2 hover:bg-hover disabled:cursor-default disabled:opacity-50';
 const field='w-20 rounded-lg border border-subtle bg-transparent px-2 py-1.5 text-ink tabular-nums';
 /** Whole number inside `1..max`, or null while the field is empty, fractional or out of range. */
@@ -12,7 +13,7 @@ export function TableSizeDialog({onClose}:{onClose:()=>void}){
  const {t}=useT();const [rows,setRows]=useState('3'),[cols,setCols]=useState('3');
  const r=parseSize(rows,MAX_NEW_TABLE_ROWS),c=parseSize(cols,MAX_NEW_TABLE_COLS);
  const go=()=>{if(r===null||c===null)return;onClose();void insertTable(r,c);};
- return <div role="dialog" aria-modal="true" aria-labelledby="documents-table-size-title" className="fixed inset-0 z-20 grid place-items-center bg-black/30" onKeyDown={e=>{if(e.key==='Escape'){e.stopPropagation();onClose();}if(e.key==='Enter'){e.preventDefault();go();}}}>
+ return <div role="dialog" aria-modal="true" aria-labelledby="documents-table-size-title" className="fixed inset-0 z-20 grid place-items-center bg-black/30" onKeyDown={e=>{if(e.key==='Escape'){e.stopPropagation();onClose();}if(e.key==='Enter'){e.preventDefault();go();dialogTrapKeyDown(e);}}}>
   <div className="grid max-w-md gap-3 rounded-[var(--r-popup,25px)] bg-surface p-5 shadow-xl" data-testid="documents-table-size-dialog">
    <h2 id="documents-table-size-title" className="text-sm font-medium">{t('documents.table.insert')}</h2>
    <label className="grid gap-1 text-xs text-ink-2">{t('documents.table.rows',{max:MAX_NEW_TABLE_ROWS})}

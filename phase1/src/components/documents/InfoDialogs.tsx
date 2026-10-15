@@ -14,9 +14,10 @@ import {CharLookDialog} from './CharLookDialog';
 import {StylesDialog} from './StylesDialog';
 import {useT} from '../../lib/useT';
 import {NativeButton,NativeInput,NativeSelect,Textarea} from '../ui/native-controls';
+import {dialogTrapKeyDown} from '../../lib/focusTrap';
 const tool='grid h-7 cursor-pointer grid-flow-col items-center gap-1 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink-2 hover:bg-hover disabled:cursor-default disabled:opacity-50';
 const field='rounded-lg border border-subtle bg-transparent px-2 py-1.5 text-ink';
-const shell=(id:string,onClose:()=>void,body:React.ReactNode,wide=false)=><div role="dialog" aria-modal="true" aria-labelledby={id} className="fixed inset-0 z-20 grid place-items-center bg-black/30" onKeyDown={e=>{if(e.key==='Escape'){e.stopPropagation();onClose();}}}><div className={(wide?'doc-info-wide ':'w-96 ')+'grid max-w-full gap-3 rounded-[var(--r-popup,25px)] bg-surface p-5 shadow-xl'} data-testid={id.replace('-title','-dialog')}>{body}</div></div>;
+const shell=(id:string,onClose:()=>void,body:React.ReactNode,wide=false)=><div role="dialog" aria-modal="true" aria-labelledby={id} className="fixed inset-0 z-20 grid place-items-center bg-black/30" onKeyDown={e=>{if(e.key==='Escape'){e.stopPropagation();onClose();}dialogTrapKeyDown(e);}}><div className={(wide?'doc-info-wide ':'w-96 ')+'grid max-w-full gap-3 rounded-[var(--r-popup,25px)] bg-surface p-5 shadow-xl'} data-testid={id.replace('-title','-dialog')}>{body}</div></div>;
 /** Only the properties that differ from what the file has; null when nothing changed or a value is not acceptable. */
 export function buildPropertiesPatch(orig:PropertiesState,form:PropertiesState):PropertiesPatch|null{
  const p:PropertiesPatch={};for(const k of PROPERTY_KEYS)if(form[k].trim()!==orig[k])p[k]=form[k];

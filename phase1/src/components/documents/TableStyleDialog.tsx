@@ -4,6 +4,7 @@ import {DOC_COLORS,FILL_COLORS} from '../../lib/documents/palette';
 import {styleTable} from '../../lib/documents/session';
 import {useT} from '../../lib/useT';
 import {NativeButton,NativeInput,NativeSelect} from '../ui/native-controls';
+import {dialogTrapKeyDown} from '../../lib/focusTrap';
 const tool='grid h-7 cursor-pointer grid-flow-col items-center gap-1 rounded-sm border-0 bg-transparent px-2 text-xs text-ink-2 hover:bg-hover disabled:cursor-default disabled:opacity-50';
 const field='w-24 rounded-lg border border-subtle bg-transparent px-2 py-1.5 text-ink tabular-nums';
 export const BORDER_WIDTHS={thin:0.5,medium:1.5,thick:3} as const;
@@ -25,7 +26,7 @@ export function TableStyleDialog({onClose}:{onClose:()=>void}){
  const style=buildTableStyle(f);const set=(p:Partial<TableStyleForm>)=>setF({...f,...p});
  const go=()=>{if(!style)return;onClose();void styleTable(scope,style);};
  const sw=(h:string,cls:string,on:boolean,pick:()=>void,id:string)=><NativeButton key={h} className={'h-5 w-5 cursor-pointer rounded-sm border '+cls+' '+(on?'border-ink':'border-subtle')} aria-label={'#'+h} title={'#'+h} aria-pressed={on} onClick={pick} data-testid={id+h}/>;
- return <div role="dialog" aria-modal="true" aria-labelledby="documents-table-style-title" className="fixed inset-0 z-20 grid place-items-center bg-black/30" onKeyDown={e=>{if(e.key==='Escape'){e.stopPropagation();onClose();}}}>
+ return <div role="dialog" aria-modal="true" aria-labelledby="documents-table-style-title" className="fixed inset-0 z-20 grid place-items-center bg-black/30" onKeyDown={e=>{if(e.key==='Escape'){e.stopPropagation();onClose();dialogTrapKeyDown(e);}}}>
   <div className="grid max-w-md gap-3 rounded-[var(--r-popup,25px)] bg-surface p-5 shadow-xl" data-testid="documents-table-style-dialog">
    <h2 id="documents-table-style-title" className="text-sm font-medium">{t('documents.tableStyle.title')}</h2>
    <label className="grid gap-1 text-xs text-ink-2">{t('documents.tableStyle.scope')}

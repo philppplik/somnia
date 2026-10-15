@@ -4,6 +4,7 @@ import {readHeaderFooter,setHeaderFooter} from '../../lib/documents/session';
 import {getDocumentsState} from '../../lib/documents/store';
 import {useT} from '../../lib/useT';
 import {NativeButton,NativeInput,NativeSelect} from '../ui/native-controls';
+import {dialogTrapKeyDown} from '../../lib/focusTrap';
 const tool='grid h-7 cursor-pointer grid-flow-col items-center gap-1 rounded-sm border-0 bg-transparent px-2 text-xs text-ink-2 hover:bg-hover disabled:cursor-default disabled:opacity-50';
 const field='w-72 rounded-lg border border-subtle bg-transparent px-2 py-1.5 text-ink disabled:opacity-50';
 /** Header and footer text for every section or, with "This section", for only the section under the caret (it then gets its own).  plus a page number in the footer. Parts with richer content stay read-only. */
@@ -27,7 +28,7 @@ export function HeaderFooterDialog({onClose}:{onClose:()=>void}){
   if(st.footer.editable&&fAlign!==(st.footer.align??'center')&&(footer!==''||page||st.footer.text!==''))patch.footerAlign=fAlign;
   onClose();if(Object.keys(patch).length>0)void setHeaderFooter(patch,sectionBlock);
  };
- return <div role="dialog" aria-modal="true" aria-labelledby="documents-hf-title" className="fixed inset-0 z-20 grid place-items-center bg-black/30" onKeyDown={e=>{if(e.key==='Escape'){e.stopPropagation();onClose();}}}>
+ return <div role="dialog" aria-modal="true" aria-labelledby="documents-hf-title" className="fixed inset-0 z-20 grid place-items-center bg-black/30" onKeyDown={e=>{if(e.key==='Escape'){e.stopPropagation();onClose();dialogTrapKeyDown(e);}}}>
   <div className="grid max-w-md gap-3 rounded-[var(--r-popup,25px)] bg-surface p-5 shadow-xl" data-testid="documents-hf-dialog">
    <h2 id="documents-hf-title" className="text-sm font-medium">{t('documents.hf.title')}</h2>
    <label className="grid gap-1 text-xs text-ink-2">{t('documents.page.scope')}

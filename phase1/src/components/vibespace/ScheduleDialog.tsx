@@ -22,7 +22,7 @@ export function ScheduleDialog({studioId,transport,onClose,onSaved}:{studioId:st
   setBusy(true);setError('');
   try{await transport.create(spec);onSaved?.();onClose();}catch{setError(label('failed'));}finally{setBusy(false);}
  };
- return <section className="vs-schedule" role="dialog" aria-labelledby="schedule-title">
+ return <section className="vs-schedule" role="dialog" aria-labelledby="schedule-title" onKeyDown={e=>{if(e.key==='Escape'){e.stopPropagation();onClose();}}}>
   <h2 id="schedule-title">{label('title')}</h2>
   <form onSubmit={e=>{e.preventDefault();void save();}}>
    <fieldset disabled={busy}><label>{label('name')}<NativeInput maxLength={200} value={spec.name} onChange={e=>edit({name:e.target.value})}/></label>

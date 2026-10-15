@@ -5,6 +5,7 @@ import {setParagraphOptions} from '../../lib/documents/session';
 import {useDocuments} from '../../lib/documents/store';
 import {useT} from '../../lib/useT';
 import {NativeButton,NativeInput,NativeSelect} from '../ui/native-controls';
+import {dialogTrapKeyDown} from '../../lib/focusTrap';
 const tool='grid h-7 cursor-pointer grid-flow-col items-center gap-1 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink-2 hover:bg-hover disabled:cursor-default disabled:opacity-50';
 /** Right indent in points typed as "12" or "12.5"; null when it is not a number inside 0..1440. */
 export const parseIndentPt=(v:string):number|null=>{if(!/^\d{1,4}([.,]\d{1,2})?$/.test(v))return null;const n=Number(v.replace(',','.'));return n>=0&&n<=1440?n:null;};
@@ -48,7 +49,7 @@ export function ParagraphForm({para,onClose}:{para:ParaState|null;onClose:()=>vo
  const [look,setLook]=useState<ParaLook>(initialLook(para));const borderOn=look.border!==''&&look.border!=='none';
  const patch=buildParagraphPatch(para,flags,indent,look,rule);const bad=indent!==''&&parseIndentPt(indent)===null;const badLook=buildParagraphPatch(para,{},'',look)===null&&(hex(look.shading)!==initialLook(para).shading||look.border!==''||look.dropCap!==initialLook(para).dropCap);
  const apply=()=>{if(!patch)return;onClose();void setParagraphOptions(patch);};
- return <div role="dialog" aria-modal="true" aria-labelledby="documents-paraopt-title" className="fixed inset-0 z-20 grid place-items-center bg-black/30" onKeyDown={e=>{if(e.key==='Escape'){e.stopPropagation();onClose();}}}>
+ return <div role="dialog" aria-modal="true" aria-labelledby="documents-paraopt-title" className="fixed inset-0 z-20 grid place-items-center bg-black/30" onKeyDown={e=>{if(e.key==='Escape'){e.stopPropagation();onClose();dialogTrapKeyDown(e);}}}>
   <div className="grid w-96 max-w-full gap-3 rounded-[var(--r-popup,25px)] bg-surface p-5 shadow-xl" data-testid="documents-paraopt-dialog">
    <h2 id="documents-paraopt-title" className="text-sm font-medium">{t('documents.para.opt.title')}</h2>
    {PARA_FLAG_KEYS.map(k=><label key={k} className="doc-paraopt-check text-xs text-ink-2">

@@ -5,6 +5,7 @@ import {useDocuments} from '../../lib/documents/store';
 import {useStyleList} from '../../lib/documents/styles';
 import {useT} from '../../lib/useT';
 import {NativeButton,NativeInput,NativeSelect} from '../ui/native-controls';
+import {dialogTrapKeyDown} from '../../lib/focusTrap';
 const tool='grid h-7 cursor-pointer grid-flow-col items-center gap-1 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink-2 hover:bg-hover disabled:cursor-default disabled:opacity-50';
 const field='rounded-lg border border-subtle bg-transparent px-2 py-1.5 text-ink';
 const ALIGNS:ParaAlign[]=['left','center','right','justify'];
@@ -62,7 +63,7 @@ export function StylesDialog({onClose}:{onClose:()=>void}){
  const triSel=(k:'bold'|'italic')=><label className="grid gap-1 text-xs text-ink-2">{t('documents.styles.'+k)}
   <NativeSelect className={field} value={f[k]} onChange={e=>set({[k]:e.currentTarget.value})} data-testid={'documents-styles-'+k}><option value="">{t('documents.styles.inherit')}</option><option value="on">{t('documents.styles.on')}</option><option value="off">{t('documents.styles.off')}</option></NativeSelect></label>;
  const bad=(v:string)=>parseStyleNum(v)===undefined;
- return <div role="dialog" aria-modal="true" aria-labelledby="documents-styles-title" className="fixed inset-0 z-20 grid place-items-center bg-black/30" onKeyDown={e=>{if(e.key==='Escape'){e.stopPropagation();onClose();}}}>
+ return <div role="dialog" aria-modal="true" aria-labelledby="documents-styles-title" className="fixed inset-0 z-20 grid place-items-center bg-black/30" onKeyDown={e=>{if(e.key==='Escape'){e.stopPropagation();onClose();dialogTrapKeyDown(e);}}}>
   <div className="grid max-h-[90vh] w-[32rem] max-w-full gap-3 overflow-y-auto rounded-[var(--r-popup,25px)] bg-surface p-5 shadow-xl" data-testid="documents-styles-dialog">
    <h2 id="documents-styles-title" className="text-sm font-medium">{t('documents.styles.title')}</h2>
    <label className="grid gap-1 text-xs text-ink-2">{t('documents.styles.pick')}

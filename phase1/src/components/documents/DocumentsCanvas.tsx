@@ -15,6 +15,7 @@ import {specialChar} from '../../lib/documents/symbols';
 import {parsePdfPages,type PdfOptions} from '../../lib/documents/protocol';
 import {saveCopy,savePdf,saveFormat} from '../../lib/documents/saveCopy';
 import {confirmDocumentsSaveCopy,getDocumentsExportUi,patchDocumentsExportUi,registerDocumentsExport,useDocumentsExportUi} from '../../lib/documents/exportBridge';
+import {dialogTrapKeyDown} from '../../lib/focusTrap';
 import {executeCommand} from '../../lib/commands';
 import {DocumentsExportDialog} from './DocumentsExportDialog';
 import {registerDocumentPanelCommands} from '../../lib/documents/panelCommands';
@@ -185,7 +186,7 @@ export function DocumentsCanvas(){
   {doc.status==='ready'&&engine&&<div className="min-h-0 flex-1 overflow-auto bg-hover/40 p-6" data-testid="documents-scroll"><div className="flex flex-col gap-4">
    {doc.pageSizes.map((p,i)=><Page key={i} engine={engine} index={i} width={p.width} height={p.height} zoom={doc.zoom} rev={doc.rev} visible={near.has(i)} onVisible={onVisible}/>)}</div></div>}
   <StatusBar/>
-  {exportUi.confirmOpen&&<div role="alertdialog" aria-modal="true" aria-labelledby="documents-confirm-title" className="absolute inset-0 z-20 grid place-items-center bg-black/30"><div className="grid max-w-md gap-3 rounded-[var(--r-popup,25px)] bg-surface p-5 shadow-xl">
+  {exportUi.confirmOpen&&<div role="alertdialog" aria-modal="true" aria-labelledby="documents-confirm-title" className="absolute inset-0 z-20 grid place-items-center bg-black/30" onKeyDown={e=>{if(e.key==='Escape'){e.stopPropagation();patchDocumentsExportUi({confirmOpen:false,copyName:null});}dialogTrapKeyDown(e);}}><div className="grid max-w-md gap-3 rounded-[var(--r-popup,25px)] bg-surface p-5 shadow-xl">
    <h2 id="documents-confirm-title" className="text-[14px] font-medium">{t('documents.lossTitle')}</h2><p className="text-[12px] text-ink-2">{t('documents.lossBody')}</p>
    <ul className="list-disc pl-5 text-[12px] text-ink-2" data-testid="documents-loss-list">{doc.risks.map(r=><li key={r}>{t('documents.risk.'+r)}</li>)}</ul>
    <div className="flex justify-end gap-2"><NativeButton className={tool} autoFocus onClick={()=>patchDocumentsExportUi({confirmOpen:false,copyName:null})}>{t('documents.cancel')}</NativeButton><NativeButton className={tool+' border border-subtle'} onClick={()=>void confirmDocumentsSaveCopy()} data-testid="documents-save-anyway">{t('documents.saveAnyway')}</NativeButton></div></div></div>}

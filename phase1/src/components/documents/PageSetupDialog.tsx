@@ -4,6 +4,7 @@ import {readPageSetup,setPageSetup} from '../../lib/documents/session';
 import {getDocumentsState} from '../../lib/documents/store';
 import {useT} from '../../lib/useT';
 import {NativeButton,NativeInput,NativeSelect} from '../ui/native-controls';
+import {dialogTrapKeyDown} from '../../lib/focusTrap';
 const tool='grid h-7 cursor-pointer grid-flow-col items-center gap-1 rounded-sm border-0 bg-transparent px-2 text-xs text-ink-2 hover:bg-hover disabled:cursor-default disabled:opacity-50';
 const field='w-20 rounded-lg border border-subtle bg-transparent px-2 py-1.5 text-ink tabular-nums';
 const PT_PER_CM=72/2.54;
@@ -46,7 +47,7 @@ export function PageSetupDialog({onClose}:{onClose:()=>void}){
  const go=()=>{if(!patch)return;onClose();void setPageSetup(patch,scope==='section'?block:undefined);};
  const margin=(k:keyof PageMargins)=>f&&<label key={k} className="grid gap-1 text-xs text-ink-2">{t('documents.page.margin.'+k)}
   <NativeInput className={field} inputMode="decimal" value={f.margins[k]} aria-invalid={cmToPt(f.margins[k])===null} onChange={e=>setF({...f,margins:{...f.margins,[k]:e.currentTarget.value}})} data-testid={'documents-page-margin-'+k}/></label>;
- return <div role="dialog" aria-modal="true" aria-labelledby="documents-page-title" className="fixed inset-0 z-20 grid place-items-center bg-black/30" onKeyDown={e=>{if(e.key==='Escape'){e.stopPropagation();onClose();}if(e.key==='Enter'&&e.target instanceof HTMLInputElement){e.preventDefault();go();}}}>
+ return <div role="dialog" aria-modal="true" aria-labelledby="documents-page-title" className="fixed inset-0 z-20 grid place-items-center bg-black/30" onKeyDown={e=>{if(e.key==='Escape'){e.stopPropagation();onClose();}if(e.key==='Enter'&&e.target instanceof HTMLInputElement){e.preventDefault();go();dialogTrapKeyDown(e);}}}>
   <div className="grid max-w-md gap-3 rounded-[var(--r-popup,25px)] bg-surface p-5 shadow-xl" data-testid="documents-page-dialog">
    <h2 id="documents-page-title" className="text-sm font-medium">{t('documents.page.title')}</h2>
    {failed?<p className="text-xs text-ink-3" role="alert">{t('documents.page.unavailable')}</p>:!f?<p className="text-xs text-ink-3">{t('documents.page.loading')}</p>:<>

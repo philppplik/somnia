@@ -5,6 +5,7 @@ import {describeChange,filterInstalled,groupByDay,shortHash,showsSignedMatch,sor
 import type {ActivityEvent} from '../../lib/extensions/securityActivity';
 import {ExtensionIdentity,InlineError,PermissionTags,Switch,useApiLabel,useInlineError} from './parts';
 import {NativeButton,NativeInput} from '../ui/native-controls';
+import {dialogTrapKeyDown} from '../../lib/focusTrap';
 
 const FILTERS:StateFilter[]=['all','enabled','panels','themes','commands'];
 
@@ -40,7 +41,7 @@ export function InstalledView({list,host,query,setQuery,filter,setFilter,onOpen,
  if(list.length===0)return <div className="ext-empty"><h3>{t('ext.empty.title')}</h3><p>{t('ext.empty.body')}</p><div className="ext-row"><NativeButton type="button" className="ext-btn ext-btn-primary" onClick={onBrowse}>{t('ext.nav.browse')}</NativeButton><NativeButton type="button" className="ext-btn" onClick={onAdd}>{t('ext.add.button')}</NativeButton></div></div>;
  return <div className="ext-view">
   <div className="ext-toolbar"><NativeInput type="search" aria-label={t('ext.search.installed')} placeholder={t('ext.search.installed')} value={query} onChange={e=>setQuery(e.target.value)}/><NativeButton type="button" className="ext-btn" onClick={()=>setConfirm(true)} disabled={enabledN===0}>{t('ext.disableAll')}</NativeButton></div>
-  {confirm?<div className="ext-confirm" role="alertdialog" aria-label={t('ext.disableAll.title')}><p><strong>{t('ext.disableAll.title')}</strong> {t('ext.disableAll.body',{count:enabledN})}</p><div className="ext-row"><NativeButton type="button" autoFocus className="ext-btn" onClick={()=>setConfirm(false)}>{t('ext.cancel')}</NativeButton><NativeButton type="button" className="ext-btn ext-btn-danger" onClick={disableAll}>{t('ext.disableAll')}</NativeButton></div></div>:null}
+  {confirm?<div className="ext-confirm" role="alertdialog" aria-label={t('ext.disableAll.title')} onKeyDown={e=>{if(e.key==='Escape'){e.stopPropagation();setConfirm(false);}dialogTrapKeyDown(e);}}><p><strong>{t('ext.disableAll.title')}</strong> {t('ext.disableAll.body',{count:enabledN})}</p><div className="ext-row"><NativeButton type="button" autoFocus className="ext-btn" onClick={()=>setConfirm(false)}>{t('ext.cancel')}</NativeButton><NativeButton type="button" className="ext-btn ext-btn-danger" onClick={disableAll}>{t('ext.disableAll')}</NativeButton></div></div>:null}
   {done&&!confirm?<p role="status" className="ext-status-line">{t('ext.disableAll.done')}</p>:null}
   <InlineError id={id} message={error}/>
   <div className="ext-chips" role="group" aria-label={t('ext.filter.aria')}>{FILTERS.map(f=><NativeButton key={f} type="button" aria-pressed={filter===f} className="ext-chip" onClick={()=>setFilter(f)}>{t(`ext.filter.${f}`)}{f==='all'?` ${list.length}`:f==='enabled'?` ${enabledN}`:''}</NativeButton>)}</div>
@@ -100,7 +101,7 @@ export function DetailView({ext,host,log,focusSection,onBack,onChanged,onActivit
    <div className="ext-head-actions"><label className="ext-enabled"><span>{ext.enabled?t('ext.enabled'):t('ext.status.disabled')}</span><Switch checked={sw.checked} disabled={!sw.canEnable&&!ext.enabled} busy={pending} label={t(ext.enabled?'ext.switch.disable':'ext.switch.enable',{name:ext.name})} onChange={toggle}/></label><NativeButton type="button" className="ext-btn ext-btn-danger-quiet" onClick={()=>setConfirm(true)}>{t('ext.remove')}</NativeButton></div></div>
   <InlineError id={id} message={error}/>
   {ext.status==='blocked'||ext.status==='crashed'?<div className="ext-callout" role="status"><strong>{t(ext.status==='blocked'?'ext.status.blocked':'ext.status.crashed')}</strong>{ext.statusReason?<div>{ext.statusReason}</div>:null}</div>:null}
-  {confirm?<div className="ext-confirm" role="alertdialog" aria-label={t('ext.remove.title',{name:ext.name})}><p><strong>{t('ext.remove.title',{name:ext.name})}</strong> {t('ext.remove.body')}</p>
+  {confirm?<div className="ext-confirm" role="alertdialog" aria-label={t('ext.remove.title',{name:ext.name})} onKeyDown={e=>{if(e.key==='Escape'){e.stopPropagation();setConfirm(false);}dialogTrapKeyDown(e);}}><p><strong>{t('ext.remove.title',{name:ext.name})}</strong> {t('ext.remove.body')}</p>
     <label className="ext-check"><NativeInput type="checkbox" checked={deleteData} onChange={e=>setDeleteData(e.target.checked)}/> {t('ext.remove.deleteData')}</label>
     <div className="ext-row"><NativeButton type="button" autoFocus className="ext-btn" onClick={()=>setConfirm(false)}>{t('ext.cancel')}</NativeButton><NativeButton type="button" className="ext-btn ext-btn-danger" onClick={remove}>{t('ext.remove')}</NativeButton></div></div>:null}
   <div className="ext-split">

@@ -6,6 +6,7 @@ import {copyName,formatName,MAX_COPY_NAME,pdfName,safeCopyName,safeFormatName,sa
 import {executeCommand} from '../../lib/commands';
 import {useT} from '../../lib/useT';
 import {NativeButton,NativeInput,NativeSelect} from '../ui/native-controls';
+import {dialogTrapKeyDown} from '../../lib/focusTrap';
 const tool='grid h-7 cursor-pointer grid-flow-col items-center gap-1 rounded-sm border-0 bg-transparent px-2 text-xs text-ink-2 hover:bg-hover disabled:cursor-default disabled:opacity-50';
 /**
  * The Documents Export hero popup (docs/concepts/hero-action-documents.md). Deliberately small:
@@ -21,7 +22,7 @@ export function DocumentsExportDialog(){
  const shown=typed??def;const finalName=other?safeFormatName(shown,doc.name,other):pdf?safePdfName(shown,doc.name):safeCopyName(shown,doc.name);
  const close=()=>{setTyped(null);patchDocumentsExportUi({exportOpen:false});};
  const save=()=>{const custom=typed===null||finalName===def?null:finalName;if(other){patchDocumentsExportUi({exportOpen:false,formatName:custom});setTyped(null);void executeCommand('documents.export.format',{format:other});return;}patchDocumentsExportUi(pdf?{exportOpen:false,pdfName:custom}:{exportOpen:false,copyName:custom});setTyped(null);void executeCommand(pdf?'documents.export.pdf':'documents.saveCopy');};
- return <div role="dialog" aria-modal="true" aria-labelledby="documents-export-title" className="absolute inset-0 z-20 grid place-items-center bg-black/30" onKeyDown={e=>{if(e.key==='Escape'){e.stopPropagation();close();}}}>
+ return <div role="dialog" aria-modal="true" aria-labelledby="documents-export-title" className="absolute inset-0 z-20 grid place-items-center bg-black/30" onKeyDown={e=>{if(e.key==='Escape'){e.stopPropagation();close();dialogTrapKeyDown(e);}}}>
   <div className="grid max-w-md gap-3 rounded-[var(--r-popup,25px)] bg-surface p-5 shadow-xl" data-testid="documents-export-dialog">
    <h2 id="documents-export-title" className="text-[14px] font-medium">{t('documents.export.title')}</h2>
    <label className="grid gap-1 text-xs text-ink-2">{t('documents.export.format')}
