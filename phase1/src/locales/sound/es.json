@@ -253,7 +253,7 @@
   "sound.analysis.na": "No disponible",
   "sound.analysis.spectrum": "Espectro fijo de la mezcla",
   "sound.analysis.scope": "Mezcla completa, revisión",
-  "sound.analysis.stereo": "potencia estéreo, primeras 4096 muestras",
+  "sound.analysis.averaged": "potencia estéreo, promediada en {count} ventanas",
   "sound.analysis.measured-unverified": "Medidor sin verificar: no certifica normas de emisión.",
   "sound.analysis.unavailable": "Loudness/pico real no disponible. Reconstruye Sound WASM.",
   "sound.analysis.insufficient": "Silencio o duración insuficiente para medir loudness.",

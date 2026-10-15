@@ -253,7 +253,7 @@
   "sound.analysis.na": "Unavailable",
   "sound.analysis.spectrum": "Frozen spectrum of rendered mix",
   "sound.analysis.scope": "Full mix, rendered revision",
-  "sound.analysis.stereo": "stereo power, first 4096 samples",
+  "sound.analysis.averaged": "stereo power, averaged over {count} windows",
   "sound.analysis.measured-unverified": "Unverified meter implementation: not certified for broadcast compliance.",
   "sound.analysis.unavailable": "Loudness/true peak unavailable. Rebuild the Sound WASM engine for analysis.",
   "sound.analysis.insufficient": "Silence or insufficient duration: no usable loudness measurement.",

@@ -253,7 +253,7 @@
   "sound.analysis.na": "Indisponible",
   "sound.analysis.spectrum": "Spectre figé du mixage",
   "sound.analysis.scope": "Mixage complet, révision",
-  "sound.analysis.stereo": "puissance stéréo, 4096 premiers échantillons",
+  "sound.analysis.averaged": "puissance stéréo, moyennée sur {count} fenêtres",
   "sound.analysis.measured-unverified": "Mesure non vérifiée : aucune certification de diffusion.",
   "sound.analysis.unavailable": "Sonie/crête vraie indisponible. Reconstruire Sound WASM.",
   "sound.analysis.insufficient": "Silence ou durée insuffisante pour mesurer la sonie.",
