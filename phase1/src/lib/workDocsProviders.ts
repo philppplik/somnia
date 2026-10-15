@@ -3,6 +3,7 @@ import {saveInterfaceSnapshot} from './interface/persistence';
 /** Registers every studio's open work with the cross-studio registry (workDocs). Imported once by the app shell. */
 import {registerWorkProvider,waitForSaver,type WorkProvider} from './workDocs';
 import {getMedia,setActiveMedia,closeMediaForced,type MediaKind} from './media';
+import {dirtyVideoNames,getVideoSession,saveVideoProject,videoIsDirty} from './video/session';
 import {getState,dirtyFileNames,closeAllFileTabs,discardUnsavedFiles} from '../store/appStore';
 import {executeCommand} from './commands';
 import {dirtySheetNames} from './sheets/session';
@@ -39,7 +40,8 @@ export function installWorkProviders(){
    if(photoDirtyNames().includes(name)){const r=await exportPhotoCopy(name,/\.jpe?g$/i.test(name)?'jpeg':'png');if(r!=='saved')return false;}
    return !rasterDirtyNames().includes(name)&&!photoDirtyNames().includes(name);},
   discard:none,closeAll:()=>closeMedia(['image','psd','raster-preview'])});
- reg({studio:'media',dirty:()=>[],openCount:()=>mediaOf('docx','audio','video','video-project').length,save:async()=>true,discard:none,closeAll:()=>closeMedia(['docx','audio','video','video-project'])});
+ reg({studio:'media',dirty:dirtyVideoNames,openCount:()=>mediaOf('docx','audio','video','video-project').length,
+  async save(name){const s=getVideoSession(name);return s&&videoIsDirty(s)?saveVideoProject(name):true;},discard:none,closeAll:()=>closeMedia(['docx','audio','video','video-project'])});
  reg({studio:'vector',dirty:()=>{const v=getVectorSession();return v.open&&v.dirty?[v.name]:[];},openCount:()=>getVectorSession().open?1:0,
   async save(name){downloadSvg(name);markVectorSaved();return true;},discard:none,closeAll:()=>{if(getVectorSession().open)resetVectorSession();}});
  reg({studio:'design',dirty:()=>{const d=getDesignState();return d.document&&d.dirty?[d.document.name]:[];},openCount:()=>getDesignState().document?1:0,

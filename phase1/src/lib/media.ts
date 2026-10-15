@@ -5,9 +5,9 @@ import {AUDIO_EXTENSIONS,sniffAudio} from './sound/format';
 import {VIDEO_EXTENSIONS,sniffVideo} from './video/format';
 export type MediaKind='image'|'pdf'|'psd'|'docx'|'xlsx'|'pptx'|'raster-preview'|'audio'|'video'|'video-project';
 export interface MediaItem{name:string;kind:MediaKind;mime:string;url:string;size:number;sourceUrl?:string;warning?:string}
-export const MEDIA_FILE=new RegExp(`\\.(${RASTER_EXTENSIONS}|pdf|psd|docx|xlsx|pptx|${AUDIO_EXTENSIONS}|${VIDEO_EXTENSIONS})$`,'i');
+export const MEDIA_FILE=new RegExp(`\\.(${RASTER_EXTENSIONS}|pdf|psd|docx|xlsx|pptx|${AUDIO_EXTENSIONS}|${VIDEO_EXTENSIONS}|video-project)$`,'i');
 export const MAX_MEDIA_BYTES=25_000_000;
-export const MEDIA_ACCEPT=RASTER_ACCEPT+',.psd,.png,.jpg,.jpeg,.webp,.pdf,image/png,image/jpeg,image/webp,application/pdf,.docx,.xlsx,.pptx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,.mp3,.wav,.flac,.ogg,.oga,.aif,.aiff,audio/mpeg,audio/wav,audio/flac,audio/ogg,audio/aiff,.mp4,.m4v,.mov,.webm,.mkv,video/mp4,video/quicktime,video/webm,video/x-matroska,video/x-m4v';
+export const MEDIA_ACCEPT=RASTER_ACCEPT+',.psd,.png,.jpg,.jpeg,.webp,.pdf,image/png,image/jpeg,image/webp,application/pdf,.docx,.xlsx,.pptx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,.mp3,.wav,.flac,.ogg,.oga,.aif,.aiff,audio/mpeg,audio/wav,audio/flac,audio/ogg,audio/aiff,.mp4,.m4v,.mov,.webm,.mkv,.video-project,video/mp4,video/quicktime,video/webm,video/x-matroska,video/x-m4v';
 const OFFICE_MIME={pptx:'application/vnd.openxmlformats-officedocument.presentationml.presentation',docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'} as const;
 export const isMarkdown=(f:string)=>/\.(md|markdown)$/i.test(f);
 export const isSvg=(f:string)=>/\.svg$/i.test(f);
@@ -52,7 +52,8 @@ export async function prepareMediaFile(file:Blob,rawName:string,key?:string):Pro
 
   if(k==='docx'||k==='xlsx'||k==='pptx')sniffed={kind:k,mime:OFFICE_MIME[k]};}
  if(!sniffed&&/\.tga$/i.test(name))sniffed={kind:'raster-preview',mime:'image/x-tga'};
- if(!sniffed)return{error:/\.(docx|xlsx|pptx)$/i.test(name)?`${name} is not a valid ${name.slice(-4).toUpperCase()} file.`:/\.psd$/i.test(name)?`${name} is not a valid PSD v1 file.`:`${name} is not a valid supported raster image or PDF file.`};
+ if(!sniffed&&/\.video-project$/i.test(name))sniffed={kind:'video-project',mime:'application/x-somnia-video-project'};
+ if(!sniffed)return{error:/\.video-project$/i.test(name)?`${name} is not a valid video project file.`:/\.(docx|xlsx|pptx)$/i.test(name)?`${name} is not a valid ${name.slice(-4).toUpperCase()} file.`:/\.psd$/i.test(name)?`${name} is not a valid PSD v1 file.`:`${name} is not a valid supported raster image or PDF file.`};
  let preview:{blob:Blob;mime:string;warning?:string}={blob:file,mime:sniffed.mime};
  if(sniffed.kind==='raster-preview')try{preview=await decodeRasterPreview(file,name,sniffed.mime);}catch(error){return{error:`${name}: ${error instanceof Error?error.message:String(error)}`};}
  const url=URL.createObjectURL(new Blob([preview.blob],{type:preview.mime}));

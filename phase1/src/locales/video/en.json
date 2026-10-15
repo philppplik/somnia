@@ -52,6 +52,7 @@
  "video.missingSource": "missing",
  "video.split": "Split at playhead",
  "video.undo": "Undo",
+ "video.unsaved": "Unsaved project changes",
  "video.zoom": "Timeline zoom",
  "video.zoomIn": "Zoom timeline in (+)",
  "video.zoomOut": "Zoom timeline out (-)",
@@ -123,5 +124,6 @@
  "video.review.failed": "Export failed. Timeline and settings are kept.",
  "cmd.video.export.open": "Export video...",
  "cmd.video.timeline.undo": "Undo timeline edit",
- "cmd.video.timeline.redo": "Redo timeline edit"
+ "cmd.video.timeline.redo": "Redo timeline edit",
+ "cmd.video.project.save": "Save video project"
 }

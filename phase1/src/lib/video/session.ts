@@ -4,6 +4,7 @@ import {VideoEngine,type VideoEngineLike} from './engine';
 import {DEFAULT_FORMAT,exportName,type VideoFormat} from './recipe';
 import {fullClip,isNeutralTimeline,moveClip,rippleDelete,sanitizeClips,setClipEdge,setCrossfade,splitAt,timelineDuration,type TimelineClip} from './timeline';
 import {emptyVideoHistory,pushHistory,redoHistory,undoHistory,type VideoHistory} from './history';
+import {clipsSignature,parseVideoProject,projectFileName,serializeVideoProject} from './projectFile';
 import {needsSourceFile} from './titles';
 import {FilmstripController} from './filmstrip-controller';
 import {FilmstripEngine} from './filmstrip-engine';
@@ -14,7 +15,8 @@ import type {VideoCapabilities,VideoProbe,VideoProgress,VideoReport} from './pro
 export type VideoStatus='loading'|'ready'|'error'|'exporting';
 export interface VideoResult{blob:Blob;url:string;report:VideoReport}
 export type VideoExportOutcome='downloaded'|'cancelled'|'unavailable';
-export interface VideoSession{exportOutcome?:VideoExportOutcome;name:string;status:VideoStatus;error:string;probe:VideoProbe|null;capabilities:VideoCapabilities|null;clips:TimelineClip[];selectedClipId:string|null;history:VideoHistory;format:VideoFormat;progress:VideoProgress|null;result:VideoResult|null;ext:string}
+export interface VideoSession{exportOutcome?:VideoExportOutcome;name:string;status:VideoStatus;error:string;probe:VideoProbe|null;capabilities:VideoCapabilities|null;clips:TimelineClip[];selectedClipId:string|null;history:VideoHistory;/** Signature of the clip list at the last save/load; the session is dirty when the current list differs. */
+savedSig:string;format:VideoFormat;progress:VideoProgress|null;result:VideoResult|null;ext:string}
 const sessions=new Map<string,VideoSession>();
 let filmstrip:FilmstripController|null|undefined;
 /** One filmstrip controller per app run; null where workers are unavailable (unit tests, SSR). */
@@ -61,8 +63,17 @@ export async function openVideo(item:{name:string;url:string}):Promise<void>{
 }
 async function openVideoFresh(item:{name:string;url:string}):Promise<void>{
  stopMediaSync??=subscribeMedia(()=>{const live=new Set(getMedia().items.map(i=>i.name));for(const n of [...sessions.keys()])if(!live.has(n))closeVideo(n);});
- put({name:item.name,status:'loading',error:'',probe:null,capabilities:null,clips:[],selectedClipId:null,history:emptyVideoHistory(),format:DEFAULT_FORMAT,progress:null,result:null,ext:fileExtension(item.name)});
- if(getMedia().items.find(i=>i.name===item.name)?.kind==='video-project'){patch(item.name,{status:'ready',ext:''});return;}
+ put({name:item.name,status:'loading',error:'',probe:null,capabilities:null,clips:[],selectedClipId:null,history:emptyVideoHistory(),savedSig:clipsSignature([]),format:DEFAULT_FORMAT,progress:null,result:null,ext:fileExtension(item.name)});
+ if(getMedia().items.find(i=>i.name===item.name)?.kind==='video-project'){
+  try{
+   const text=await fetch(item.url).then(r=>r.text());
+   if(!text.trim()){patch(item.name,{status:'ready',ext:''});return;}
+   const parsed=parseVideoProject(text);
+   const clips=sanitizeClips(parsed.clips,sourceDurations(parsed.clips));
+   patch(item.name,{status:'ready',ext:'',clips,format:parsed.format,savedSig:clipsSignature(clips)});
+  }catch(e){patch(item.name,{status:'error',error:message(e)},e);}
+  return;
+ }
  try{
   const bytes=await fetch(item.url).then(r=>r.arrayBuffer());
   const sniffed=sniffVideo(new Uint8Array(bytes,0,Math.min(bytes.byteLength,512)));
@@ -73,7 +84,8 @@ async function openVideoFresh(item:{name:string;url:string}):Promise<void>{
   const probe=await e.probe(bytes.slice(0));
   if(!sessions.has(item.name))return;
   if(!probe.video)throw new Error('no video track');
-  patch(item.name,{status:'ready',error:'',probe,ext:sniffed.ext,capabilities:await caps.catch(()=>null),clips:[fullClip(item.name,probe.duration)]});
+  const first=[fullClip(item.name,probe.duration)];
+  patch(item.name,{status:'ready',error:'',probe,ext:sniffed.ext,capabilities:await caps.catch(()=>null),clips:first,savedSig:clipsSignature(first)});
  }catch(e){resetEngine(e);if(sessions.has(item.name))patch(item.name,{status:'error',error:message(e)},e);}
 }
 /** Field-level clip equality: a clamped no-op edit must not flood the undo stack. */
@@ -194,3 +206,21 @@ export function closeVideo(name:string){
 }
 export const videoIsEdited=(s:VideoSession|null)=>!!s&&!isNeutralTimeline(s.clips,s.name,s.probe?.duration??0);
 export const videoTimelineDuration=(s:VideoSession|null)=>s?timelineDuration(s.clips):0;
+/** Unsaved edit-list changes: the current clips differ from the last saved/loaded state. Undoing back to that state clears the dirty flag. */
+export const videoIsDirty=(s:VideoSession|null)=>!!s&&s.status!=='loading'&&clipsSignature(s.clips)!==s.savedSig;
+/** Names of all open video sessions with unsaved timeline changes (workDocs dirty list). */
+export const dirtyVideoNames=()=>[...sessions.values()].filter(videoIsDirty).map(s=>s.name);
+/** The serialized project for download or tests; null while the session is not ready. */
+export function serializeVideoProjectCopy(root:string):{text:string;fileName:string}|null{
+ const s=sessions.get(root);if(!s||s.status==='loading')return null;
+ return{text:serializeVideoProject(s.clips,s.format),fileName:projectFileName(root)};
+}
+/** Saves the edit list as a .video-project download and marks the session clean. Media bytes are NOT included - clips reference sources by name. */
+export function saveVideoProject(root:string):boolean{
+ const copy=serializeVideoProjectCopy(root);if(!copy)return false;
+ const url=URL.createObjectURL(new Blob([copy.text],{type:'application/x-somnia-video-project'}));
+ const a=document.createElement('a');a.href=url;a.download=copy.fileName;a.click();
+ setTimeout(()=>URL.revokeObjectURL(url),30_000);
+ patch(root,{savedSig:clipsSignature(sessions.get(root)!.clips)});
+ return true;
+}

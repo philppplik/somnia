@@ -3,7 +3,7 @@ import {ChevronsLeft,ChevronsRight,Download,Pause,Play,Redo2,Scissors,Undo2,Volu
 import {Button} from '../ui/button';
 import {useT} from '../../lib/useT';
 import {executeCommand} from '../../lib/commands';
-import {addTimelineClipsFromDialog,cancelVideoExport,deleteTimelineClip,getFilmstrip,moveTimelineClip,openVideo,redoVideoEdit,selectTimelineClip,splitTimelineAt,toggleTimelineClipMute,trimTimelineClip,undoVideoEdit,useVideoSession,videoCanRedo,videoCanUndo,videoIsEdited} from '../../lib/video/session';
+import {addTimelineClipsFromDialog,cancelVideoExport,deleteTimelineClip,getFilmstrip,moveTimelineClip,openVideo,redoVideoEdit,saveVideoProject,selectTimelineClip,splitTimelineAt,toggleTimelineClipMute,trimTimelineClip,undoVideoEdit,useVideoSession,videoCanRedo,videoCanUndo,videoIsDirty,videoIsEdited} from '../../lib/video/session';
 import {clipDisplayName,isTitleClip,needsSourceFile} from '../../lib/video/titles';
 import {TitlePreview} from './TitlePreview';
 import {useTitlePlayback} from './useTitlePlayback';
@@ -107,6 +107,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
   const mod=e.ctrlKey||e.metaKey;
   if(mod&&(e.key==='z'||e.key==='Z')){e.preventDefault();(e.shiftKey?redoVideoEdit:undoVideoEdit)(item.name);return;}
   if(mod&&(e.key==='y'||e.key==='Y')){e.preventDefault();redoVideoEdit(item.name);return;}
+  if(mod&&(e.key==='s'||e.key==='S')){e.preventDefault();saveVideoProject(item.name);return;}
   if(e.key===' '){e.preventDefault();toggle();}
   else if(e.key==='ArrowRight'&&!e.altKey){e.preventDefault();seek(playhead+skip);}
   else if(e.key==='ArrowLeft'&&!e.altKey){e.preventDefault();seek(playhead-skip);}
@@ -133,7 +134,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
  const selectedClip=clips.find(c=>c.id===session?.selectedClipId)??null;
  return <section className="canvas-stage flex min-h-0 w-full flex-1 flex-col" aria-label={t('video.title')} data-testid="video-workspace" tabIndex={-1} onKeyDown={onKey}>
   <div className={bar}>
-   <span className="truncate font-medium text-ink" data-testid="video-name">{item.name}</span>
+   <span className="truncate font-medium text-ink" data-testid="video-name">{item.name}{videoIsDirty(session??null)&&<span className="text-ink-3" title={t('video.unsaved')}> ●</span>}</span>
    <span className="text-ink-3" data-testid="video-info">{v?t('video.info',{duration:(probe?.duration??0).toFixed(2),width:v.width,height:v.height,codec:v.codec??'?'})+(v.fps?` · ${t('video.infoFps',{fps:v.fps})}`:''):''}</span>
    {clips.length>1&&<span className="text-ink-3" data-testid="video-clip-count">{t('video.clipCount',{count:clips.length})}</span>}
    <span className="flex-1"/>

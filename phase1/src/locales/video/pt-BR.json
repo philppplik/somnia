@@ -52,6 +52,7 @@
  "video.missingSource": "ausente",
  "video.split": "Dividir no cursor",
  "video.undo": "Desfazer",
+ "video.unsaved": "Alterações do projeto não salvas",
  "video.zoom": "Zoom da linha do tempo",
  "video.zoomIn": "Ampliar a linha do tempo (+)",
  "video.zoomOut": "Reduzir a linha do tempo (-)",
@@ -123,5 +124,6 @@
  "video.review.failed": "Falha na exportação. Os ajustes são mantidos.",
  "cmd.video.export.open": "Exportar vídeo...",
  "cmd.video.timeline.undo": "Desfazer edição da linha do tempo",
- "cmd.video.timeline.redo": "Refazer edição da linha do tempo"
+ "cmd.video.timeline.redo": "Refazer edição da linha do tempo",
+ "cmd.video.project.save": "Salvar projeto de vídeo"
 }

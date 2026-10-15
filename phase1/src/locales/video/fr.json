@@ -52,6 +52,7 @@
  "video.missingSource": "manquant",
  "video.split": "Diviser au curseur",
  "video.undo": "Annuler",
+ "video.unsaved": "Modifications du projet non enregistrées",
  "video.zoom": "Zoom du montage",
  "video.zoomIn": "Zoomer sur le montage (+)",
  "video.zoomOut": "Dézoomer le montage (-)",
@@ -123,5 +124,6 @@
  "video.review.failed": "Échec de l’export. Les réglages sont conservés.",
  "cmd.video.export.open": "Exporter la vidéo...",
  "cmd.video.timeline.undo": "Annuler la modification du montage",
- "cmd.video.timeline.redo": "Rétablir la modification du montage"
+ "cmd.video.timeline.redo": "Rétablir la modification du montage",
+ "cmd.video.project.save": "Enregistrer le projet vidéo"
 }

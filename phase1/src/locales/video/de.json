@@ -52,6 +52,7 @@
  "video.missingSource": "fehlt",
  "video.split": "Am Abspielkopf teilen",
  "video.undo": "Rückgängig",
+ "video.unsaved": "Ungespeicherte Projektänderungen",
  "video.zoom": "Timeline-Zoom",
  "video.zoomIn": "Timeline vergrößern (+)",
  "video.zoomOut": "Timeline verkleinern (-)",
@@ -123,5 +124,6 @@
  "video.review.failed": "Export fehlgeschlagen. Timeline und Einstellungen bleiben erhalten.",
  "cmd.video.export.open": "Video exportieren...",
  "cmd.video.timeline.undo": "Schnitt rückgängig machen",
- "cmd.video.timeline.redo": "Schnitt wiederholen"
+ "cmd.video.timeline.redo": "Schnitt wiederholen",
+ "cmd.video.project.save": "Videoprojekt speichern"
 }
