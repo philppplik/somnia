@@ -21,7 +21,9 @@ export function SoundArrange(){
  useEffect(()=>{const commands=registerArrangeCommands(),block=blockSoundClipCommands();return()=>{commands();block();};},[]);
  // Space toggles the preview, but never steals the key from form controls or buttons.
  useEffect(()=>{const onKey=(e:KeyboardEvent)=>{const target=e.target as HTMLElement|null;if(target&&target.closest('input,select,textarea,button,[contenteditable="true"]'))return;
-  if(e.key===' '){const a=audio.current;if(!a||!state.url)return;e.preventDefault();if(a.paused)void a.play();else a.pause();}
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();void run(e.shiftKey?'redo':'undo');}
+  else if(e.ctrlKey&&!e.shiftKey&&e.key.toLowerCase()==='y'){e.preventDefault();void run('redo');}
+  else if(e.key===' '){const a=audio.current;if(!a||!state.url)return;e.preventDefault();if(a.paused)void a.play();else a.pause();}
   else if((e.key==='Delete'||e.key==='Backspace')&&selected.length){e.preventDefault();if(selected.length>1)void run('clips.delete',{ids:selected});else void run('clip.delete',{id:selected[0]});setSelected([]);}};
  window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey);},[state.url,selected]);
  const dirty=serializeArrangement(s)!==state.savedText;
