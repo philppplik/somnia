@@ -584,7 +584,7 @@ fn capture(
         }
     });
 }
-fn kill_tree(child: &mut Child) {
+pub(crate) fn kill_tree(child: &mut Child) {
     #[cfg(unix)]
     unsafe {
         libc::kill(-(child.id() as i32), libc::SIGKILL);
@@ -593,12 +593,12 @@ fn kill_tree(child: &mut Child) {
     let _ = child.wait();
 }
 #[cfg(windows)]
-struct WindowsJob(windows_sys::Win32::Foundation::HANDLE);
+pub(crate) struct WindowsJob(windows_sys::Win32::Foundation::HANDLE);
 #[cfg(windows)]
 unsafe impl Send for WindowsJob {}
 #[cfg(windows)]
 impl WindowsJob {
-    fn attach(child: &Child) -> Result<Self, String> {
+    pub(crate) fn attach(child: &Child) -> Result<Self, String> {
         use std::os::windows::io::AsRawHandle;
         use windows_sys::Win32::System::JobObjects::*;
         unsafe {

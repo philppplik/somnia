@@ -4048,6 +4048,18 @@
       "hasEnabled": true
     },
     {
+      "id": "code.terminal",
+      "title": "Command terminal...",
+      "category": "Tools",
+      "source": "core",
+      "keywords": [
+        "command",
+        "shell",
+        "terminal"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "collab.join",
       "title": "Join shared project...",
       "category": "Tools",

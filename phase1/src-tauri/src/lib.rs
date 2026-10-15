@@ -80,6 +80,7 @@ pub mod deploy_artifact;
 
 pub mod runtime;
 pub mod proc_runner;
+pub mod command_terminal;
 
 #[cfg(feature = "desktop")]
 pub mod framework_preview;

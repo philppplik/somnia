@@ -1750,6 +1750,27 @@ fn preview_open(window: WebviewWindow, app: tauri::AppHandle, runner: State<'_, 
 fn preview_close(window: WebviewWindow, app: tauri::AppHandle, run_id: String) -> std::result::Result<(), String> {
     gate(&window).map_err(|_| "frameworks.denied")?; crate::framework_preview::close(&app, &run_id)
 }
+// Command terminal is deliberately separate from framework fixed executable tasks.
+#[tauri::command]
+fn terminal_context(window: WebviewWindow,state: State<'_,Shared>,project_id:String)->std::result::Result<String,String>{
+ gate(&window).map_err(|_|"terminal.denied")?;
+ let mut backend=state.lock().map_err(|_|"terminal.busy")?;
+ let root=project(&mut backend,&project_id).map_err(|_|"terminal.projectMissing")?.root_path().canonicalize().map_err(|_|"terminal.projectMissing")?;
+ Ok(root.to_string_lossy().into_owned())
+}
+
+#[tauri::command]
+fn terminal_run(window: WebviewWindow,state: State<'_,Shared>,terminal: State<'_,crate::command_terminal::CommandTerminal>,project_id:String,command:String,request_id:String,expected_cwd:String)->std::result::Result<crate::command_terminal::TerminalSnapshot,String>{
+ gate(&window).map_err(|_|"terminal.denied")?;
+ let mut backend=state.lock().map_err(|_|"terminal.busy")?;
+ let root=project(&mut backend,&project_id).map_err(|_|"terminal.projectMissing")?.root_path().to_path_buf();
+ if root.canonicalize().map_err(|_|"terminal.projectMissing")?!=std::path::PathBuf::from(expected_cwd){return Err("terminal.projectMissing".into());}
+ terminal.start(&root,project_id,window.label().to_string(),command,request_id)
+}
+#[tauri::command]
+fn terminal_status(window: WebviewWindow,terminal: State<'_,crate::command_terminal::CommandTerminal>,run_id:String)->std::result::Result<crate::command_terminal::TerminalSnapshot,String>{gate(&window).map_err(|_|"terminal.denied")?;terminal.status(&run_id,window.label())}
+#[tauri::command]
+fn terminal_stop(window: WebviewWindow,terminal: State<'_,crate::command_terminal::CommandTerminal>,run_id:String)->std::result::Result<(),String>{gate(&window).map_err(|_|"terminal.denied")?;terminal.stop(&run_id,window.label())}
 // Framework commands resolve the root from an opened project, never renderer paths.
 #[tauri::command]
 fn runtime_status(window: WebviewWindow, app: tauri::AppHandle) -> std::result::Result<crate::runtime::RuntimeStatus, String> {
@@ -1821,12 +1842,14 @@ async fn close_project(
 ) -> Result<()> {
     gate(&window)?;
     let close_runner = runner.inner().clone();
+    let close_terminal = window.state::<crate::command_terminal::CommandTerminal>().inner().clone();
     work(state.inner().clone(), move |b| {
         if project(b, &project_id)?.has_dirty() && !keep_recovery {
             return Err(AppError::Dirty);
         }
         let root = project(b, &project_id)?.root_path().to_path_buf();
         close_runner.stop_root(&root);
+        close_terminal.stop_root(&root);
         b.projects
             .remove(&project_id)
             .ok_or(AppError::UnknownProject)?;
@@ -2866,6 +2889,7 @@ pub fn run() {
             if let tauri::WindowEvent::Destroyed = event {
                 if window.label()=="main"{crate::local_voice::cancel_owned();}
                 window.state::<crate::proc_runner::ProcessRunner>().stop_all();
+                window.state::<crate::command_terminal::CommandTerminal>().stop_owner(window.label());
             }
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 let shared = window.state::<Shared>();
@@ -2880,11 +2904,14 @@ pub fn run() {
                     let _ = window.emit("somnia://close-blocked", ());
                 } else {
                     window.state::<crate::proc_runner::ProcessRunner>().stop_all();
+                    window.state::<crate::command_terminal::CommandTerminal>().stop_owner(window.label());
                 }
             }
         })
         .manage(crate::proc_runner::ProcessRunner::default())
+        .manage(crate::command_terminal::CommandTerminal::default())
         .invoke_handler(tauri::generate_handler![
+            terminal_context, terminal_run, terminal_status, terminal_stop,
             runtime_status, runtime_install, runtime_remove, project_run, project_stop, project_status, project_logs, project_stop_all, deploy_artifact_collect, deploy_node_build_collect, preview_open, preview_close,
             crate::vibespace_schedule_commands::vibespace_schedule_preview,
             crate::vibespace_schedule_commands::vibespace_schedule_create,

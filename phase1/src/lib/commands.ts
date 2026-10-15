@@ -1,3 +1,4 @@
+import {commandTerminal} from './commandTerminal';
 import {openLocalRename} from './localRenameSession';
 import {goToLocalDefinition} from './localDefinitionCommand';
 import {openCodeSnippets} from './codeSnippets';
@@ -193,3 +194,5 @@ registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'code.snippets',tit
 registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'code.definition.local',title:'Go to local definition',category:'Tools',shortcut:'F12',allowInInput:true,keywords:['definition','navigation','local','symbol'],enabled:()=>getState().activeStudio==='code'&&getState().coreConnected,run:()=>{/* History: read-only local syntax navigation. No document mutation. */goToLocalDefinition();}});
 
 registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'code.rename.local',title:'Rename local symbol...',category:'Tools',shortcut:'F2',allowInInput:true,enabled:()=>getState().activeStudio==='code'&&getState().coreConnected,run:()=>{/* History: review only; accepted rename has an isolated owner transaction. */openLocalRename();}});
+
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'code.terminal',title:'Command terminal...',category:'Tools',keywords:['terminal','shell','command'],enabled:()=>getState().activeStudio==='code',run:()=> /* History: UI only. Execution needs the explicit dialog action. */ commandTerminal.open()});
