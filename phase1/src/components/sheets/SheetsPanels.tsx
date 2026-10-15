@@ -14,6 +14,8 @@ import {addressOf,colName,parseAddress} from '../../lib/sheets/format';
 import {sortBlockProblem} from '../../lib/sheets/sortOps';
 import {fillBlockProblem,FILL_DIRECTIONS} from '../../lib/sheets/fillOps';
 import type {FillDirection,CfStyle} from '../../lib/sheets/protocol';
+import {replaceProblem,MAX_REPLACE_TEXT} from '../../lib/sheets/replaceOps';
+import {getSheetsPanelController} from '../../lib/sheets/panelController';
 import {VALIDATION_CHOICES,buildValidationOp,MAX_ITEM_CHARS,type ValidationChoice} from '../../lib/sheets/validationOps';
 import type {CfOperator} from '../../lib/sheets/protocol';
 import {CF_CHOICES,CF_STYLES,buildCfOp,cfChoiceNeeds,MAX_CF_TEXT,type CfChoice} from '../../lib/sheets/cfOps';
@@ -207,6 +209,7 @@ export function SheetsLayoutPanel({context}:PanelHostProps){
   <FillGroup/>
   <HighlightGroup/>
   <ValidationGroup/>
+  <ReplaceGroup/>
   <p role="status">{action.notice}</p></Region>;
 }
 /** Sorts the rows of exactly the selected block by one column. The block is never widened and the header row is an explicit choice. One undo step. */
@@ -243,6 +246,27 @@ function FilterGroup(){
    <Button variant="outline" size="compact" disabled={action.busy} onClick={()=>void action.run('sheets.filter',{kind:'off'})} data-testid="sheets-filter-off">{t('sheets.filter.off')}</Button>
   </div>
   <p className="text-ink-3">{t(block?'sheets.sort.need':'sheets.filter.scope',{range:rangeAddress(r)})}</p>
+ </div>;
+}
+/** Finds and replaces literal text inside exactly the selected block. One undo step; the block is never widened. */
+function ReplaceGroup(){
+ const {t}=useT(),s=useSheetsSelection(),action=useAction();const [what,setWhat]=useState('');const [to,setTo]=useState('');const [matchCase,setMatchCase]=useState(false);const [whole,setWhole]=useState(false);const [formulas,setFormulas]=useState(false);
+ const r=s?.range;if(!s||!r)return null;
+ const problem=replaceProblem(what,to),op={what,with:to,matchCase,wholeCell:whole,inFormulas:formulas};
+ const yesNo=(label:string,value:boolean,set:(v:boolean)=>void,id:string)=><label className="flex flex-col gap-1">{label}<NativeSelect className={field} value={value?'yes':'no'} disabled={action.busy} onChange={e=>set(e.currentTarget.value==='yes')} data-testid={id}><option value="no">{t('sheets.rp.no')}</option><option value="yes">{t('sheets.rp.yes')}</option></NativeSelect></label>;
+ const count=async()=>{try{const n=await getSheetsPanelController()?.countMatches(op);action.setNotice(t('sheets.rp.found',{n:String(n??0)}));}catch{action.setNotice(t('sheets.panel.failed'));}};
+ return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.rp.title')}>
+  <span>{t('sheets.rp.title')}</span>
+  <label className="flex flex-col gap-1">{t('sheets.rp.what')}<NativeInput className={field} value={what} maxLength={MAX_REPLACE_TEXT} disabled={action.busy} aria-invalid={!!what&&problem==='what'} onChange={e=>setWhat(e.currentTarget.value)} data-testid="sheets-rp-what"/></label>
+  <label className="flex flex-col gap-1">{t('sheets.rp.with')}<NativeInput className={field} value={to} maxLength={MAX_REPLACE_TEXT} disabled={action.busy} aria-invalid={problem==='with'} onChange={e=>setTo(e.currentTarget.value)} data-testid="sheets-rp-with"/></label>
+  {yesNo(t('sheets.rp.case'),matchCase,setMatchCase,'sheets-rp-case')}
+  {yesNo(t('sheets.rp.whole'),whole,setWhole,'sheets-rp-whole')}
+  {yesNo(t('sheets.rp.formulas'),formulas,setFormulas,'sheets-rp-formulas')}
+  <div className="flex flex-wrap gap-2">
+   <Button variant="outline" size="compact" disabled={action.busy||!!problem} onClick={()=>void count()} data-testid="sheets-rp-count">{t('sheets.rp.count')}</Button>
+   <Button variant="outline" size="compact" disabled={action.busy||!!problem} onClick={()=>void action.run('sheets.replace',op).then(n=>{if(n!==null)action.setNotice(t('sheets.rp.done'));})} data-testid="sheets-rp-apply">{t('sheets.rp.apply')}</Button>
+  </div>
+  <p className="text-ink-3">{t('sheets.rp.scope',{range:rangeAddress(r)})}</p>
  </div>;
 }
 /** Limits what can be typed into the selected block: a list of choices or number/length bounds. One undo step. Typed entries that break a rule are refused. */

@@ -13,9 +13,40 @@ const MAX_SHEETS: usize = 255;
 const MAX_SORT_CELLS: u64 = 1_000_000;
 const MAX_FILL_CELLS: u64 = 1_000_000;
 const MAX_CF_RULES: usize = 64;
+const MAX_REPLACE_CELLS: usize = 10_000;
 const MAX_VALIDATION_ITEMS: usize = 500;
 const MAX_VALIDATION_ITEMS_SET: usize = 100;
 const CF_OPERATORS: [&str; 8] = ["greater", "less", "equal", "notEqual", "greaterOrEqual", "lessOrEqual", "between", "notBetween"];
+/// Literal find and replace in one text. `whole` needs the whole text to match; otherwise every occurrence is replaced.
+/// Case-insensitive matching compares char by char, so it never depends on byte lengths. `None` = no match.
+fn replace_text(text: &str, what: &str, with: &str, match_case: bool, whole: bool) -> Option<String> {
+    let same = |a: char, b: char| a == b || (!match_case && a.to_lowercase().eq(b.to_lowercase()));
+    let n = what.chars().count();
+    if n == 0 {
+        return None;
+    }
+    let at = |from: usize| -> bool { text[from..].chars().take(n).count() == n && text[from..].chars().zip(what.chars()).all(|(a, b)| same(a, b)) };
+    if whole {
+        return (text.chars().count() == n && at(0)).then(|| with.to_string());
+    }
+    let mut out = String::new();
+    let mut hit = false;
+    let mut skip = 0;
+    for (i, c) in text.char_indices() {
+        if skip > 0 {
+            skip -= 1;
+            continue;
+        }
+        if at(i) {
+            out.push_str(with);
+            hit = true;
+            skip = n - 1;
+        } else {
+            out.push(c);
+        }
+    }
+    hit.then_some(out)
+}
 /// `B7` -> `$B$7`, so a list source does not shift from cell to cell.
 fn absolute_a1(a1: &str) -> String {
     let split = a1.find(|c: char| c.is_ascii_digit()).unwrap_or(a1.len());
@@ -638,6 +669,96 @@ impl HeadlessWorkbook {
         let range = format!("{}:{}", CellRef::new(row, col).a1(), CellRef::new(row + rows - 1, col + cols - 1).a1());
         self.session.run("sheet.activate", json!({"sheet": sheet}))?;
         self.session.run("data.sort", json!({"range": range, "header": header, "keys": keys, "matchCase": match_case})).map(|v| v.to_string())
+    }
+
+    /// Cells in the block that a replace would change: `(cell, new input)`. Literal matching (no wildcards), formulas only
+    /// with `inFormulas`. At most 10,000 changes, so a replace can never run away.
+    fn replace_changes(&self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32, op: &serde_json::Value) -> Result<Vec<(CellRef, String)>, String> {
+        let text_of = |key: &str, min: usize| -> Result<String, String> {
+            let t = op.get(key).and_then(|v| v.as_str()).ok_or_else(|| format!("{key} must be text"))?;
+            if t.chars().count() < min || t.chars().count() > MAX_FILTER_VALUE || t.chars().any(char::is_control) {
+                return Err(format!("{key} must be {min} to {MAX_FILTER_VALUE} characters without control characters"));
+            }
+            Ok(t.to_string())
+        };
+        let what = text_of("what", 1)?;
+        let with = text_of("with", 0)?;
+        let flag = |key: &str| op.get(key).and_then(|v| v.as_bool()).ok_or_else(|| format!("{key} must be true or false"));
+        let (match_case, whole, in_formulas) = (flag("matchCase")?, flag("wholeCell")?, flag("inFormulas")?);
+        let doc = self.session.doc().map_err(|e| e.to_string())?;
+        let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+        let block = gridcraft_engine::core::RangeRef::new(CellRef::new(row, col), CellRef::new(row + rows - 1, col + cols - 1));
+        let mut out = Vec::new();
+        for (at, cell) in sh.cells.iter_range(block) {
+            if cell.formula.is_some() && !in_formulas {
+                continue;
+            }
+            let old = cell.input_text();
+            if let Some(new) = replace_text(&old, &what, &with, match_case, whole)
+                && new != old
+            {
+                if out.len() >= MAX_REPLACE_CELLS {
+                    return Err(format!("More than {MAX_REPLACE_CELLS} cells would change. Select a smaller block."));
+                }
+                out.push((at, new));
+            }
+        }
+        Ok(out)
+    }
+
+    /// How many cells `replace_range` would change, as `{"count":n}`. Read only.
+    pub fn find_count(&self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32, op_json: &str) -> Result<String, String> {
+        if rows == 0 || cols == 0 || u64::from(rows) * u64::from(cols) > MAX_FILL_CELLS {
+            return Err("Select a block of at most 1,000,000 cells.".into());
+        }
+        self.check_block(sheet, row, col, rows, cols, false)?;
+        let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "operation must be a JSON object".to_string())?;
+        Ok(json!({"count": self.replace_changes(sheet, row, col, rows, cols, &op)?.len()}).to_string())
+    }
+
+    /// Replaces text in the cells of the block as ONE history entry. `op_json` is
+    /// `{"what":..,"with":..,"matchCase":b,"wholeCell":b,"inFormulas":b}`. Literal matching, the block is never widened, protected
+    /// sheets are refused, and a typed value that breaks a stop validation refuses the whole replace before anything changes.
+    /// Returns `{"replaced":n}`.
+    pub fn replace_range(&mut self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32, op_json: &str) -> Result<String, String> {
+        if rows == 0 || cols == 0 || u64::from(rows) * u64::from(cols) > MAX_FILL_CELLS {
+            return Err("Select a block of at most 1,000,000 cells.".into());
+        }
+        self.check_block(sheet, row, col, rows, cols, true)?;
+        let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "operation must be a JSON object".to_string())?;
+        let changes = self.replace_changes(sheet, row, col, rows, cols, &op)?;
+        if changes.is_empty() {
+            return Ok(json!({"replaced": 0}).to_string());
+        }
+        {
+            let doc = self.session.doc().map_err(|e| e.to_string())?;
+            for (at, new) in &changes {
+                if new.len() > 32_767 {
+                    return Err("input exceeds 32,767 UTF-8 bytes".into());
+                }
+                if !new.starts_with('=')
+                    && let Some((dv, msg)) = gridcraft_engine::cmd::data::check_validation(&doc.wb, sheet, *at, new)
+                    && dv.error_style == gridcraft_engine::model::ErrorStyle::Stop
+                {
+                    return Err(format!("{}: {msg}", at.a1()));
+                }
+            }
+        }
+        let before = self.session.doc().map_err(|e| e.to_string())?.undo.len();
+        for (at, new) in &changes {
+            if let Err(e) = self.session.run("cell.set", json!({"sheet": sheet, "cell": at.a1(), "input": new})) {
+                while self.session.doc().map_err(|e| e.to_string())?.undo.len() > before {
+                    if self.undo().is_err() {
+                        break;
+                    }
+                }
+                return Err(e.to_string());
+            }
+        }
+        // Every cell was its own snapshot; the first one restores the state before the replace, so keep only that.
+        let doc = self.session.doc_mut().map_err(|e| e.to_string())?;
+        doc.undo.truncate(before + 1);
+        Ok(json!({"replaced": changes.len()}).to_string())
     }
 
     /// Sets or clears data validation on the block as ONE history entry. `op_json` is
@@ -1806,5 +1927,40 @@ mod tests {
         }
         book.session.run("review.protectSheet", json!({})).unwrap();
         assert!(book.validation_range(0, 60, 0, 3, 1, r#"{"kind":"clear"}"#).unwrap_err().contains("protected"));
+    }
+    #[test]
+    fn replace_range_is_one_undo_step_bounded_and_atomic() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        book.set_values(0, 80, 0, r#"[["Red apple","keep"],["red RED","=1+1"],["blue","x"]]"#).unwrap();
+        book.set_values(0, 80, 3, r#"[["red"]]"#).unwrap();
+        let op = r#"{"what":"red","with":"green","matchCase":false,"wholeCell":false,"inFormulas":false}"#;
+        assert!(book.find_count(0, 80, 0, 3, 2, op).unwrap().contains("2"));
+        let out = book.replace_range(0, 80, 0, 3, 2, op).unwrap();
+        assert!(out.contains("2"));
+        assert_eq!(text(&book, "A81"), "green apple");
+        assert_eq!(text(&book, "A82"), "green green");
+        assert_eq!(text(&book, "B81"), "keep");
+        assert_eq!(text(&book, "D81"), "red", "outside the block");
+        book.undo().unwrap();
+        assert_eq!(text(&book, "A81"), "Red apple");
+        assert_eq!(text(&book, "A82"), "red RED");
+        let whole = r#"{"what":"BLUE","with":"sky","matchCase":false,"wholeCell":true,"inFormulas":false}"#;
+        book.replace_range(0, 80, 0, 3, 2, whole).unwrap();
+        assert_eq!(text(&book, "A83"), "sky");
+        let none = r#"{"what":"zzz","with":"y","matchCase":true,"wholeCell":false,"inFormulas":false}"#;
+        assert!(book.replace_range(0, 80, 0, 3, 2, none).unwrap().contains("0"));
+        for bad in [
+            "nope",
+            r#"{"what":"","with":"y","matchCase":true,"wholeCell":false,"inFormulas":false}"#,
+            r#"{"what":"a","with":"y","matchCase":true,"wholeCell":false}"#,
+            r#"{"what":"a","with":"y\u0001","matchCase":true,"wholeCell":false,"inFormulas":false}"#,
+        ] {
+            assert!(book.replace_range(0, 80, 0, 3, 2, bad).is_err(), "{bad}");
+        }
+        book.validation_range(0, 80, 0, 1, 1, r#"{"kind":"list","items":["Red apple","pear"]}"#).unwrap();
+        assert!(book.replace_range(0, 80, 0, 3, 2, op).is_err(), "a stop rule refuses the whole replace");
+        assert_eq!(text(&book, "A82"), "red RED", "nothing changed");
+        book.session.run("review.protectSheet", json!({})).unwrap();
+        assert!(book.replace_range(0, 80, 0, 3, 2, op).unwrap_err().contains("protected"));
     }
 }
