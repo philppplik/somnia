@@ -15,6 +15,9 @@ const MAX_FILL_CELLS: u64 = 1_000_000;
 const MAX_CF_RULES: usize = 64;
 const MAX_SPLIT_PARTS: usize = 20;
 const MAX_NOTE_CHARS: usize = 2000;
+const MAX_NAMES: usize = 500;
+const MAX_NAME_CHARS: usize = 64;
+const MAX_AFFIX_CHARS: usize = 12;
 const MAX_LINK_BYTES: usize = 2048;
 const MAX_NOTES_LISTED: usize = 200;
 const SPLIT_DELIMITERS: [char; 5] = [',', ';', '\t', ' ', '|'];
@@ -139,7 +142,78 @@ fn format_command(op: &serde_json::Value) -> Result<(&'static str, serde_json::V
             ("home.borders", json!({"preset": preset, "style": style, "color": color}))
         }
         "numFmt" => ("home.numberFormat", json!({"code": number_format_code(op)?})),
+        "numFmtCustom" => ("home.numberFormat", json!({"code": custom_number_code(op)?})),
+        "dateFmt" => {
+            let id = op.get("pattern").and_then(|v| v.as_str()).ok_or("missing date pattern")?;
+            let code = DATE_PATTERNS.iter().find(|(k, _)| *k == id).map(|(_, c)| *c).ok_or("unsupported date pattern")?;
+            ("home.numberFormat", json!({"code": code}))
+        }
         _ => return Err("unsupported format operation".into()),
+    })
+}
+
+/// Date and time patterns the editor offers; ids are what the UI sends, codes are what the engine gets.
+const DATE_PATTERNS: &[(&str, &str)] = &[
+    ("ymd", "yyyy-mm-dd"),
+    ("dmyDot", "dd.mm.yyyy"),
+    ("mdy", "mm/dd/yyyy"),
+    ("dmy", "dd/mm/yyyy"),
+    ("long", "d mmmm yyyy"),
+    ("weekday", "dddd, d mmmm yyyy"),
+    ("short", "d mmm yy"),
+    ("monthYear", "mmm yyyy"),
+    ("time24", "hh:mm"),
+    ("time12", "h:mm AM/PM"),
+    ("dateTime", "yyyy-mm-dd hh:mm"),
+];
+
+/// Builds a custom number code from structured fields (never from free text): digits, grouping, decimals, percent, a quoted
+/// prefix and suffix, and how negatives and zero look. Prefix and suffix cannot hold quotes, backslashes, semicolons,
+/// brackets or asterisks, so nothing can open a new section, a color or a repeat fill.
+fn custom_number_code(op: &serde_json::Value) -> Result<String, String> {
+    let decimals = match op.get("decimals") {
+        None => 2,
+        Some(v) => v.as_u64().filter(|d| *d <= 10).ok_or("decimals must be a whole number from 0 to 10")? as usize,
+    };
+    let flag = |key: &str| -> Result<bool, String> {
+        match op.get(key) {
+            None => Ok(false),
+            Some(v) => v.as_bool().ok_or_else(|| format!("{key} must be true or false")),
+        }
+    };
+    let grouping = flag("grouping")?;
+    let percent = flag("percent")?;
+    let affix = |key: &str| -> Result<String, String> {
+        let t = match op.get(key) {
+            None => "",
+            Some(v) => v.as_str().ok_or_else(|| format!("{key} must be text"))?,
+        };
+        if t.chars().count() > MAX_AFFIX_CHARS || t.chars().any(|c| c.is_control() || matches!(c, '"' | '\\' | ';' | '[' | ']' | '*')) {
+            return Err("prefix and suffix are at most 12 characters without quotes, backslashes, semicolons, brackets or asterisks".into());
+        }
+        Ok(if t.is_empty() { String::new() } else { format!("\"{t}\"") })
+    };
+    let (prefix, suffix) = (affix("prefix")?, affix("suffix")?);
+    let dec = if decimals == 0 { String::new() } else { format!(".{}", "0".repeat(decimals)) };
+    let body = format!("{prefix}{}{dec}{}{suffix}", if grouping { "#,##0" } else { "0" }, if percent { "%" } else { "" });
+    let negative = match op.get("negative").and_then(|v| v.as_str()).unwrap_or("minus") {
+        "minus" => format!("-{body}"),
+        "red" => format!("[Red]-{body}"),
+        "paren" => format!("({body})"),
+        "redParen" => format!("[Red]({body})"),
+        _ => return Err("unsupported negative style".into()),
+    };
+    let zero_dash = match op.get("zero").and_then(|v| v.as_str()).unwrap_or("show") {
+        "show" => false,
+        "dash" => true,
+        _ => return Err("unsupported zero style".into()),
+    };
+    Ok(if zero_dash {
+        format!("{body};{negative};\"-\"")
+    } else if negative == format!("-{body}") {
+        body
+    } else {
+        format!("{body};{negative}")
     })
 }
 
@@ -682,6 +756,112 @@ impl HeadlessWorkbook {
         let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
         let block = gridcraft_engine::core::RangeRef::new(CellRef::new(row, col), CellRef::new(row + rows - 1, col + cols - 1));
         Ok(sh.cells.iter_range(block).any(|(_, c)| c.formula.is_some()))
+    }
+
+    /// Lists the visible defined names (at most 500) as `{"names":[{"name":..,"refersTo":..,"scope":"Workbook"|sheet name,"comment":..}]}`.
+    pub fn list_names(&self) -> Result<String, String> {
+        let doc = self.session.doc().map_err(|e| e.to_string())?;
+        let names: Vec<serde_json::Value> = doc
+            .wb
+            .names
+            .iter()
+            .filter(|n| !n.hidden)
+            .take(MAX_NAMES)
+            .map(|n| {
+                let scope = n.scope.and_then(|i| doc.wb.sheet(i)).map(|s| s.name.clone()).unwrap_or_else(|| "Workbook".to_string());
+                json!({"name": n.name, "refersTo": format!("={}", n.formula), "scope": scope, "comment": n.comment})
+            })
+            .collect();
+        Ok(json!({"names": names}).to_string())
+    }
+
+    fn name_problem(name: &str) -> Option<&'static str> {
+        let count = name.chars().count();
+        if count == 0 || count > MAX_NAME_CHARS {
+            return Some("A name has 1 to 64 characters.");
+        }
+        let mut chars = name.chars();
+        if !chars.next().is_some_and(|c| c.is_alphabetic() || c == '_') || !chars.all(|c| c.is_alphanumeric() || c == '_' || c == '.') {
+            return Some("A name starts with a letter or underscore and has only letters, digits, dots and underscores.");
+        }
+        let lower = name.to_ascii_lowercase();
+        let rc = lower.strip_prefix('r').is_some_and(|rest| {
+            let rest = rest.trim_start_matches(|c: char| c.is_ascii_digit());
+            rest.strip_prefix('c').is_some_and(|tail| tail.chars().all(|c| c.is_ascii_digit()))
+        });
+        if lower == "r" || lower == "c" || rc || CellRef::parse(name).is_some() {
+            return Some("This name looks like a cell address.");
+        }
+        None
+    }
+
+    /// Defines a name for the block as ONE history entry. `op_json` is `{"name":..,"scope":"workbook"|"sheet","replace":bool}`; the
+    /// name refers to the block on `sheet` (absolute). An existing name of the same scope is only replaced with `replace`.
+    /// Refused: protected workbook structure, invalid or cell-like names, more than 500 names. Returns `{"name":..,"refersTo":..}`.
+    pub fn define_name(&mut self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32, op_json: &str) -> Result<String, String> {
+        if rows == 0 || cols == 0 || u64::from(rows) * u64::from(cols) > MAX_FILL_CELLS {
+            return Err("Select a block of at most 1,000,000 cells.".into());
+        }
+        self.check_block(sheet, row, col, rows, cols, false)?;
+        let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "operation must be a JSON object".to_string())?;
+        let name = op.get("name").and_then(|v| v.as_str()).ok_or("missing name")?.to_string();
+        if let Some(why) = Self::name_problem(&name) {
+            return Err(why.into());
+        }
+        let sheet_scope = match op.get("scope").and_then(|v| v.as_str()).unwrap_or("workbook") {
+            "workbook" => false,
+            "sheet" => true,
+            _ => return Err("scope must be workbook or sheet".into()),
+        };
+        let replace = op.get("replace").and_then(|v| v.as_bool()).unwrap_or(false);
+        let (sheet_name, refers) = {
+            let doc = self.session.doc().map_err(|e| e.to_string())?;
+            if doc.wb.protected_structure {
+                return Err("The workbook structure is protected.".into());
+            }
+            let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+            let scope = if sheet_scope { Some(sheet) } else { None };
+            let same = doc.wb.names.iter().any(|n| n.name.eq_ignore_ascii_case(&name) && n.scope == scope);
+            if same && !replace {
+                return Err("A name like this already exists here. Choose another or replace it.".into());
+            }
+            if !same && doc.wb.names.iter().filter(|n| !n.hidden).count() >= MAX_NAMES {
+                return Err("A workbook holds at most 500 names.".into());
+            }
+            let abs = |r: u32, c: u32| format!("${}${}", gridcraft_engine::core::col_to_letters(c), r + 1);
+            let body = if rows == 1 && cols == 1 { abs(row, col) } else { format!("{}:{}", abs(row, col), abs(row + rows - 1, col + cols - 1)) };
+            (sh.name.clone(), format!("{}!{body}", gridcraft_engine::formula::quote_sheet(&sh.name)))
+        };
+        let scope_param = if sheet_scope { sheet_name } else { "Workbook".to_string() };
+        self.session.run("formulas.defineName", json!({"name": name, "refersTo": format!("={refers}"), "scope": scope_param})).map_err(|e| e.to_string())?;
+        Ok(json!({"name": name, "refersTo": format!("={refers}")}).to_string())
+    }
+
+    /// Deletes one name as ONE history entry. `op_json` is `{"name":..,"scope":"workbook"|"sheet"}` with `sheet` the sheet a sheet-scoped
+    /// name belongs to. Formulas that use the name are not rewritten, so they show #NAME? afterwards.
+    pub fn delete_name(&mut self, sheet: usize, op_json: &str) -> Result<String, String> {
+        let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "operation must be a JSON object".to_string())?;
+        let name = op.get("name").and_then(|v| v.as_str()).ok_or("missing name")?.to_string();
+        let scope = match op.get("scope").and_then(|v| v.as_str()).unwrap_or("workbook") {
+            "workbook" => None,
+            "sheet" => Some(sheet),
+            _ => return Err("scope must be workbook or sheet".into()),
+        };
+        {
+            let doc = self.session.doc().map_err(|e| e.to_string())?;
+            if doc.wb.protected_structure {
+                return Err("The workbook structure is protected.".into());
+            }
+            let same: Vec<_> = doc.wb.names.iter().filter(|n| n.name.eq_ignore_ascii_case(&name)).collect();
+            if !same.iter().any(|n| n.scope == scope) {
+                return Err("There is no such name.".into());
+            }
+            if same.len() > 1 {
+                return Err("This name exists in several scopes. Rename the others first.".into());
+            }
+        }
+        self.session.run("formulas.deleteName", json!({"name": name})).map_err(|e| e.to_string())?;
+        Ok(json!({"deleted": name}).to_string())
     }
 
     /// Adds, answers, resolves or removes a note or comment, or sets or removes a link, on ONE cell as ONE history entry.
@@ -2236,6 +2416,51 @@ mod tests {
         assert_eq!(text(&book, "A82"), "red RED", "nothing changed");
         book.session.run("review.protectSheet", json!({})).unwrap();
         assert!(book.replace_range(0, 80, 0, 3, 2, op).unwrap_err().contains("protected"));
+    }
+    #[test]
+    fn custom_formats_and_names_are_structured_validated_and_undoable() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        book.set_values(0, 140, 0, r#"[["-1234.5","0"]]"#).unwrap();
+        for (op, code, shown) in [
+            (r##"{"kind":"numFmtCustom","grouping":true,"decimals":1}"##, "#,##0.0", "-1,234.5"),
+            (r##"{"kind":"numFmtCustom","grouping":true,"decimals":0,"prefix":"EUR ","negative":"paren"}"##, "\"EUR \"#,##0;(\"EUR \"#,##0)", "(EUR 1,235)"),
+            (r##"{"kind":"numFmtCustom","decimals":2,"suffix":" kg","zero":"dash"}"##, "0.00\" kg\";-0.00\" kg\";\"-\"", "-1234.50 kg"),
+        ] {
+            assert_eq!(custom_number_code(&serde_json::from_str(op).unwrap()).unwrap(), code);
+            book.format_range(0, 140, 0, 1, 1, op).unwrap();
+            assert_eq!(text(&book, "A141"), shown);
+        }
+        book.format_range(0, 140, 0, 1, 1, r##"{"kind":"dateFmt","pattern":"dmyDot"}"##).unwrap();
+        for bad in [
+            r##"{"kind":"numFmtCustom","prefix":"a\"b"}"##,
+            r##"{"kind":"numFmtCustom","prefix":"a;b"}"##,
+            r##"{"kind":"numFmtCustom","suffix":"[Red]"}"##,
+            r##"{"kind":"numFmtCustom","suffix":"0123456789abc"}"##,
+            r##"{"kind":"numFmtCustom","decimals":11}"##,
+            r##"{"kind":"numFmtCustom","negative":"blue"}"##,
+            r##"{"kind":"numFmtCustom","zero":"x"}"##,
+            r##"{"kind":"numFmtCustom","grouping":"yes"}"##,
+            r##"{"kind":"dateFmt","pattern":"yyyy"}"##,
+            r##"{"kind":"dateFmt"}"##,
+        ] {
+            assert!(book.format_range(0, 140, 0, 1, 1, bad).is_err(), "{bad}");
+        }
+        let out = book.define_name(0, 140, 0, 1, 2, r#"{"name":"Prices","scope":"workbook","replace":false}"#).unwrap();
+        assert!(out.contains("$A$141:$B$141"));
+        assert!(book.list_names().unwrap().contains("Prices"));
+        assert!(book.define_name(0, 140, 0, 1, 1, r#"{"name":"prices","scope":"workbook","replace":false}"#).is_err(), "no silent overwrite");
+        book.define_name(0, 140, 0, 1, 1, r#"{"name":"prices","scope":"workbook","replace":true}"#).unwrap();
+        for bad in ["", "1abc", "A1", "r1c1", "R", "a b", "x;y", "a\"b"] {
+            let op = serde_json::json!({"name": bad, "scope": "workbook", "replace": false}).to_string();
+            assert!(book.define_name(0, 140, 0, 1, 1, &op).is_err(), "{bad}");
+        }
+        book.undo().unwrap();
+        assert!(book.list_names().unwrap().contains("$A$141:$B$141"), "undo restores the first definition");
+        assert!(book.delete_name(0, r#"{"name":"Nope","scope":"workbook"}"#).is_err());
+        book.delete_name(0, r#"{"name":"Prices","scope":"workbook"}"#).unwrap();
+        assert!(!book.list_names().unwrap().contains("Prices"));
+        book.undo().unwrap();
+        assert!(book.list_names().unwrap().contains("Prices"));
     }
     #[test]
     fn notes_and_links_are_one_undo_step_validated_and_refuse_protected_sheets() {

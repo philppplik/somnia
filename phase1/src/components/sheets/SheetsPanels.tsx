@@ -14,6 +14,7 @@ import {addressOf,colName,parseAddress} from '../../lib/sheets/format';
 import {sortBlockProblem} from '../../lib/sheets/sortOps';
 import {fillBlockProblem,FILL_DIRECTIONS} from '../../lib/sheets/fillOps';
 import type {FillDirection,CfStyle} from '../../lib/sheets/protocol';
+import {nameProblem,nameTarget} from '../../lib/sheets/names';
 import {internalTarget,linkTargetProblem,MAX_LINK_TEXT,MAX_NOTE_CHARS} from '../../lib/sheets/notes';
 import {dedupeBlockProblem,splitBlockProblem,parseWidths,SPLIT_DELIMITERS} from '../../lib/sheets/dataTools';
 import {replaceProblem,MAX_REPLACE_TEXT} from '../../lib/sheets/replaceOps';
@@ -25,7 +26,7 @@ import {FILTER_CONDITIONS,MAX_FILTER_VALUE,filterValueProblem} from '../../lib/s
 import {MAX_SHEETS,sheetNameProblem} from '../../lib/sheets/sheetOps';
 import type {BorderLineStyle,FilterCondition,RangeCell} from '../../lib/sheets/protocol';
 import {colWidthPx,rowHeightPx,MAX_COL_PX,MAX_ROW_PX,MAX_FREEZE} from '../../lib/sheets/lineOps';
-import {BORDER_PRESETS,BORDER_STYLES,DEFAULT_BORDER_COLOR,H_ALIGNS,V_ALIGNS,CURRENCY_SYMBOLS,DECIMAL_PRESETS,MAX_DECIMALS,NUM_PRESETS,detectNumFmt,DEFAULT_FILL_COLOR,DEFAULT_TEXT_COLOR,FONT_NAMES,FONT_SIZES,MAX_FONT_SIZE,MIN_FONT_SIZE,isHexColor,toggleOp,type ToggleKind} from '../../lib/sheets/formatOps';
+import {BORDER_PRESETS,BORDER_STYLES,DEFAULT_BORDER_COLOR,H_ALIGNS,V_ALIGNS,CURRENCY_SYMBOLS,DECIMAL_PRESETS,MAX_DECIMALS,NUM_PRESETS,detectNumFmt,DEFAULT_FILL_COLOR,DEFAULT_TEXT_COLOR,FONT_NAMES,FONT_SIZES,MAX_FONT_SIZE,MIN_FONT_SIZE,isHexColor,toggleOp,type ToggleKind,affixProblem,customNumFmtCode,DATE_PATTERNS,MAX_AFFIX,NEGATIVE_STYLES,ZERO_STYLES} from '../../lib/sheets/formatOps';
 import {Button} from '../ui/button';
 import {NativeInput,NativeSelect} from '../ui/native-controls';
 import {NumberField} from '../ui/number-field';
@@ -214,6 +215,8 @@ export function SheetsLayoutPanel({context}:PanelHostProps){
   <ReplaceGroup/>
   <DedupeGroup/>
   <NotesGroup/>
+  <NamesGroup/>
+  <CustomFormatGroup/>
   <SplitGroup/>
   <p role="status">{action.notice}</p></Region>;
 }
@@ -251,6 +254,59 @@ function FilterGroup(){
    <Button variant="outline" size="compact" disabled={action.busy} onClick={()=>void action.run('sheets.filter',{kind:'off'})} data-testid="sheets-filter-off">{t('sheets.filter.off')}</Button>
   </div>
   <p className="text-ink-3">{t(block?'sheets.sort.need':'sheets.filter.scope',{range:rangeAddress(r)})}</p>
+ </div>;
+}
+/** Named ranges in one grouped menu: define the selection, redefine, go to or delete a name. One undo step each. */
+type NameAction='define'|'defineSheet'|'replace'|'replaceSheet'|'go'|'delete';
+function NamesGroup(){
+ const {t}=useT(),s=useSheetsSelection(),action=useAction();const [act,setAct]=useState<NameAction>('define');const [pick,setPick]=useState('');const [name,setName]=useState('');
+ if(!s)return null;
+ const list=s.names??[],chosen=list.find(n=>n.scope+'|'+n.name===pick)??null,defining=act==='define'||act==='defineSheet'||act==='replace'||act==='replaceSheet';
+ const own=chosen&&(chosen.scope==='Workbook'||chosen.scope===s.sheetName),target=chosen?nameTarget(chosen.refersTo):null,dest=target?(s.workbook?.sheets??[]).find(x=>x.name.toLowerCase()===target.sheet.toLowerCase()&&x.visibility==='Visible'):undefined;
+ const problem=defining?(nameProblem(name.trim())):act==='go'?(target&&dest?null:'target'):(chosen&&own?null:'pick');
+ const apply=()=>{
+  if(defining)void action.run('sheets.names',{kind:'define',name:name.trim(),scope:act==='defineSheet'||act==='replaceSheet'?'sheet':'workbook',replace:act==='replace'||act==='replaceSheet'}).then(r=>{if(r!==null)setName('');});
+  else if(act==='go'&&target&&dest)void action.run('sheets.navigate',{sheet:dest.index,address:target.address});
+  else if(chosen)void action.run('sheets.names',{kind:'delete',name:chosen.name,scope:chosen.scope==='Workbook'?'workbook':'sheet'});
+ };
+ return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.nm.title')}>
+  <span>{t('sheets.nm.title')}</span>
+  <label className="flex flex-col gap-1">{t('sheets.nm.existing')}<NativeSelect className={field} value={pick} disabled={action.busy} onChange={e=>setPick(e.currentTarget.value)} data-testid="sheets-nm-pick"><option value="">{t('sheets.nm.none')}</option>{list.map(n=><option key={n.scope+'|'+n.name} value={n.scope+'|'+n.name}>{n.name} ({n.scope}) {n.refersTo}</option>)}</NativeSelect></label>
+  <label className="flex flex-col gap-1">{t('sheets.nm.action')}<NativeSelect className={field} value={act} disabled={action.busy} onChange={e=>setAct(e.currentTarget.value as NameAction)} data-testid="sheets-nm-action">
+   <optgroup label={t('sheets.nm.groupSelection')}><option value="define">{t('sheets.nm.define')}</option><option value="defineSheet">{t('sheets.nm.defineSheet')}</option><option value="replace">{t('sheets.nm.replace')}</option><option value="replaceSheet">{t('sheets.nm.replaceSheet')}</option></optgroup>
+   <optgroup label={t('sheets.nm.groupName')}><option value="go">{t('sheets.nm.go')}</option><option value="delete">{t('sheets.nm.delete')}</option></optgroup>
+  </NativeSelect></label>
+  {defining&&<label className="flex flex-col gap-1">{t('sheets.nm.name')}<NativeInput className={field} value={name} maxLength={64} aria-invalid={name.trim()!==''&&!!problem} disabled={action.busy} onChange={e=>setName(e.currentTarget.value)} data-testid="sheets-nm-name"/></label>}
+  <Button variant="outline" size="compact" disabled={action.busy||!!problem} onClick={apply} data-testid="sheets-nm-apply">{t('sheets.nm.apply')}</Button>
+  <p className="text-ink-3">{t(defining&&s.range?'sheets.nm.scope':'sheets.nm.scopeName',{range:s.range?rangeAddress(s.range):s.address})}</p>
+ </div>;
+}
+/** Custom number and date formats in one grouped menu. Built from fields, never from free text; one undo step. */
+function CustomFormatGroup(){
+ const {t}=useT(),s=useSheetsSelection(),action=useAction();
+ const [kind,setKind]=useState('number');const [decimals,setDecimals]=useState(2);const [grouping,setGrouping]=useState(true);const [percent,setPercent]=useState(false);const [prefix,setPrefix]=useState('');const [suffix,setSuffix]=useState('');const [neg,setNeg]=useState<(typeof NEGATIVE_STYLES)[number]>('minus');const [zero,setZero]=useState<(typeof ZERO_STYLES)[number]>('show');
+ if(!s||!s.range)return null;
+ const isNumber=kind==='number',bad=isNumber&&(affixProblem(prefix)||affixProblem(suffix));
+ const spec={grouping,percent,decimals,...(prefix?{prefix}:{}),...(suffix?{suffix}:{}),negative:neg,zero};
+ const op=isNumber?{kind:'numFmtCustom',...spec}:{kind:'dateFmt',pattern:kind};
+ return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.cf2.title')}>
+  <span>{t('sheets.cf2.title')}</span>
+  <label className="flex flex-col gap-1">{t('sheets.cf2.kind')}<NativeSelect className={field} value={kind} disabled={action.busy} onChange={e=>setKind(e.currentTarget.value)} data-testid="sheets-cf2-kind">
+   <optgroup label={t('sheets.cf2.groupNumber')}><option value="number">{t('sheets.cf2.number')}</option></optgroup>
+   <optgroup label={t('sheets.cf2.groupDate')}>{DATE_PATTERNS.map(p=><option key={p.id} value={p.id}>{p.code}</option>)}</optgroup>
+  </NativeSelect></label>
+  {isNumber&&<>
+   <label className="flex flex-col gap-1">{t('sheets.format.decimals')}<NativeSelect className={field} value={decimals} disabled={action.busy} onChange={e=>setDecimals(Number(e.currentTarget.value))} data-testid="sheets-cf2-decimals">{Array.from({length:MAX_DECIMALS+1},(_,i)=><option key={i} value={i}>{i}</option>)}</NativeSelect></label>
+   <label className="flex flex-col gap-1">{t('sheets.cf2.grouping')}<NativeSelect className={field} value={grouping?'yes':'no'} disabled={action.busy} onChange={e=>setGrouping(e.currentTarget.value==='yes')} data-testid="sheets-cf2-grouping"><option value="yes">{t('sheets.rp.yes')}</option><option value="no">{t('sheets.rp.no')}</option></NativeSelect></label>
+   <label className="flex flex-col gap-1">{t('sheets.cf2.percent')}<NativeSelect className={field} value={percent?'yes':'no'} disabled={action.busy} onChange={e=>setPercent(e.currentTarget.value==='yes')} data-testid="sheets-cf2-percent"><option value="no">{t('sheets.rp.no')}</option><option value="yes">{t('sheets.rp.yes')}</option></NativeSelect></label>
+   <label className="flex flex-col gap-1">{t('sheets.cf2.prefix')}<NativeInput className={field} value={prefix} maxLength={MAX_AFFIX} aria-invalid={affixProblem(prefix)} disabled={action.busy} onChange={e=>setPrefix(e.currentTarget.value)} data-testid="sheets-cf2-prefix"/></label>
+   <label className="flex flex-col gap-1">{t('sheets.cf2.suffix')}<NativeInput className={field} value={suffix} maxLength={MAX_AFFIX} aria-invalid={affixProblem(suffix)} disabled={action.busy} onChange={e=>setSuffix(e.currentTarget.value)} data-testid="sheets-cf2-suffix"/></label>
+   <label className="flex flex-col gap-1">{t('sheets.cf2.negative')}<NativeSelect className={field} value={neg} disabled={action.busy} onChange={e=>setNeg(e.currentTarget.value as typeof neg)} data-testid="sheets-cf2-negative">{NEGATIVE_STYLES.map(n=><option key={n} value={n}>{t('sheets.cf2.neg.'+n)}</option>)}</NativeSelect></label>
+   <label className="flex flex-col gap-1">{t('sheets.cf2.zero')}<NativeSelect className={field} value={zero} disabled={action.busy} onChange={e=>setZero(e.currentTarget.value as typeof zero)} data-testid="sheets-cf2-zero">{ZERO_STYLES.map(z=><option key={z} value={z}>{t('sheets.cf2.zero.'+z)}</option>)}</NativeSelect></label>
+   <p className="text-ink-3" data-testid="sheets-cf2-code">{bad?t('sheets.cf2.badAffix'):customNumFmtCode(spec)}</p>
+  </>}
+  <Button variant="outline" size="compact" disabled={action.busy||bad} onClick={()=>void action.run('sheets.format',op)} data-testid="sheets-cf2-apply">{t('sheets.cf2.apply')}</Button>
+  <p className="text-ink-3">{t('sheets.cf2.scope',{range:rangeAddress(s.range)})}</p>
  </div>;
 }
 /** Notes, threaded comments and links on the active cell. One undo step each; links are shown and followed inside the workbook only. */

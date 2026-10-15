@@ -40,6 +40,9 @@ scope.onmessage=({data}:MessageEvent<SheetsRequest>)=>{queue=queue.then(async()=
    case 'split':result=JSON.parse(need().text_to_columns(data.sheet,data.row,data.col,data.rows,data.cols,JSON.stringify(data.split)));break;
    case 'annotate':result=JSON.parse(need().annotate_cell(data.sheet,data.row,data.col,JSON.stringify(data.annotate)));break;
    case 'annotations':result=JSON.parse(need().annotations(data.sheet,data.row,data.col,1,1));break;
+   case 'defineName':result=JSON.parse(need().define_name(data.sheet,data.row,data.col,data.rows,data.cols,JSON.stringify(data.name)));break;
+   case 'deleteName':result=JSON.parse(need().delete_name(data.sheet,JSON.stringify(data.name)));break;
+   case 'names':result=JSON.parse(need().list_names());break;
    case 'cf':result=JSON.parse(need().cf_range(data.sheet,data.row,data.col,data.rows,data.cols,JSON.stringify(data.cf)));break;
    case 'fill':result=JSON.parse(need().fill_range(data.sheet,data.row,data.col,data.rows,data.cols,data.dir));break;
    case 'filter':result=JSON.parse(need().filter_range(data.sheet,data.row,data.col,data.rows,data.cols,JSON.stringify(data.filter)));break;

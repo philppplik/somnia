@@ -6502,6 +6502,14 @@
       "hasEnabled": true
     },
     {
+      "id": "sheets.names",
+      "title": "Define or delete a named range",
+      "category": "Edit",
+      "source": "sheets",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
       "id": "sheets.navigate",
       "title": "Go to spreadsheet cell",
       "category": "View",

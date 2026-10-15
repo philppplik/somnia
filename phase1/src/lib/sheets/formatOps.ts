@@ -1,4 +1,4 @@
-import type {BorderLineStyle,BorderPreset,CellStyle,FormatOp,NumFmtPreset} from './protocol';
+import type {DatePatternId,NegativeStyle,ZeroStyle,BorderLineStyle,BorderPreset,CellStyle,FormatOp,NumFmtPreset} from './protocol';
 /** Formatting model for the Sheets studio: validation, toggling and the fixed choice lists. The engine bridge re-validates everything. */
 export const FORMAT_MAX_CELLS=1_000_000;
 export const FONT_NAMES=['Calibri','Arial','Verdana','Tahoma','Georgia','Times New Roman','Courier New','Consolas'] as const;
@@ -11,7 +11,21 @@ export const isHexColor=(v:unknown):v is string=>typeof v==='string'&&HEX.test(v
 export const NUM_PRESETS=['general','number','comma','percent','currency','date','time','scientific','text'] as const;
 export const DECIMAL_PRESETS:readonly NumFmtPreset[]=['number','comma','percent','currency','scientific'];
 export const CURRENCY_SYMBOLS=['$','€','£','¥','CHF'] as const;
-export const MAX_DECIMALS=10;
+export const MAX_DECIMALS=10,MAX_AFFIX=12;
+export const NEGATIVE_STYLES:readonly NegativeStyle[]=['minus','red','paren','redParen'];
+export const ZERO_STYLES:readonly ZeroStyle[]=['show','dash'];
+/** Same ids and codes as the Rust bridge (kept in sync by tests on both sides). */
+export const DATE_PATTERNS:readonly {id:DatePatternId;code:string}[]=[{id:'ymd',code:'yyyy-mm-dd'},{id:'dmyDot',code:'dd.mm.yyyy'},{id:'mdy',code:'mm/dd/yyyy'},{id:'dmy',code:'dd/mm/yyyy'},{id:'long',code:'d mmmm yyyy'},{id:'weekday',code:'dddd, d mmmm yyyy'},{id:'short',code:'d mmm yy'},{id:'monthYear',code:'mmm yyyy'},{id:'time24',code:'hh:mm'},{id:'time12',code:'h:mm AM/PM'},{id:'dateTime',code:'yyyy-mm-dd hh:mm'}];
+/** Prefix and suffix cannot open a section, a color or a fill: no quotes, backslashes, semicolons, brackets or asterisks. */
+export const affixProblem=(t:string)=>[...t].length>MAX_AFFIX||/["\\;[\]*\u0000-\u001f\u007f]/.test(t);
+export interface CustomNumFmt{grouping?:boolean;percent?:boolean;decimals?:number;prefix?:string;suffix?:string;negative?:NegativeStyle;zero?:ZeroStyle}
+export function customNumFmtCode(f:CustomNumFmt):string{
+ const decimals=f.decimals??2,dec=decimals>0?'.'+'0'.repeat(decimals):'',q=(t?:string)=>t?`"${t}"`:'';
+ const body=`${q(f.prefix)}${f.grouping?'#,##0':'0'}${dec}${f.percent?'%':''}${q(f.suffix)}`;
+ const neg={minus:`-${body}`,red:`[Red]-${body}`,paren:`(${body})`,redParen:`[Red](${body})`}[f.negative??'minus'];
+ if((f.zero??'show')==='dash')return `${body};${neg};"-"`;
+ return neg===`-${body}`?body:`${body};${neg}`;
+}
 /** Same codes the Rust bridge generates (kept in sync by tests on both sides). */
 export function numFmtCode(preset:NumFmtPreset,decimals=preset==='percent'?0:2,symbol:string='$'):string{
  const dec=decimals>0?'.'+'0'.repeat(decimals):'';
@@ -50,6 +64,14 @@ export function parseFormatOp(input:unknown):FormatOp{
    if(o.decimals!==undefined){if(!DECIMAL_PRESETS.includes(preset))throw Error('This number format has no decimals.');if(typeof o.decimals!=='number'||!Number.isInteger(o.decimals)||o.decimals<0||o.decimals>MAX_DECIMALS)throw Error('Decimals must be a whole number from 0 to 10.');out.decimals=o.decimals;}
    if(o.symbol!==undefined){if(preset!=='currency'||typeof o.symbol!=='string'||!(CURRENCY_SYMBOLS as readonly string[]).includes(o.symbol))throw Error('Unsupported currency symbol.');out.symbol=o.symbol;}
    return out;}
+  case 'numFmtCustom':{only('kind','grouping','percent','decimals','prefix','suffix','negative','zero');const out:FormatOp={kind:'numFmtCustom'};
+   for(const k of ['grouping','percent'] as const)if(o[k]!==undefined){if(typeof o[k]!=='boolean')throw Error(`${k} must be true or false.`);out[k]=o[k] as boolean;}
+   if(o.decimals!==undefined){if(typeof o.decimals!=='number'||!Number.isInteger(o.decimals)||o.decimals<0||o.decimals>MAX_DECIMALS)throw Error('Decimals must be a whole number from 0 to 10.');out.decimals=o.decimals;}
+   for(const k of ['prefix','suffix'] as const)if(o[k]!==undefined){if(typeof o[k]!=='string'||affixProblem(o[k] as string))throw Error('Prefix and suffix are at most 12 characters without quotes, backslashes, semicolons, brackets or asterisks.');if(o[k])out[k]=o[k] as string;}
+   if(o.negative!==undefined){if(!(NEGATIVE_STYLES as readonly unknown[]).includes(o.negative))throw Error('Unsupported negative style.');out.negative=o.negative as NegativeStyle;}
+   if(o.zero!==undefined){if(!(ZERO_STYLES as readonly unknown[]).includes(o.zero))throw Error('Unsupported zero style.');out.zero=o.zero as ZeroStyle;}
+   return out;}
+  case 'dateFmt':{only('kind','pattern');const hit=DATE_PATTERNS.find(p=>p.id===o.pattern);if(!hit)throw Error('Unsupported date pattern.');return {kind:'dateFmt',pattern:hit.id};}
   case 'decimals':only('kind','delta');if(o.delta!==1&&o.delta!==-1)throw Error('Delta must be 1 or -1.');return {kind:'decimals',delta:o.delta};
   case 'hAlign':case 'vAlign':{only('kind','align');const list:readonly unknown[]=o.kind==='hAlign'?H_ALIGNS:V_ALIGNS;if(!list.includes(o.align))throw Error('Unsupported alignment.');return {kind:o.kind,align:o.align} as FormatOp;}
   case 'wrap':only('kind','on');if(typeof o.on!=='boolean')throw Error('`on` must be true or false.');return {kind:'wrap',on:o.on};

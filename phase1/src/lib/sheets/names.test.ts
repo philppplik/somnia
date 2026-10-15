@@ -1,0 +1,28 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';
+import {nameProblem,nameTarget,parseNames,parseNamesCommand} from './names';
+import {customNumFmtCode,DATE_PATTERNS,parseFormatOp} from './formatOps';
+test('nameProblem',()=>{
+ for(const ok of ['Prices','_x','tax.rate','Größe','a1b','x'.repeat(64)])assert.equal(nameProblem(ok),null,ok);
+ for(const bad of ['','1abc','A1','$B$2','r1c1','R','C','a b','x;y','a"b','x'.repeat(65)])assert.notEqual(nameProblem(bad),null,bad);
+});
+test('parseNamesCommand',()=>{
+ assert.deepEqual(parseNamesCommand({kind:'define',name:' Prices '}),{kind:'define',name:'Prices',scope:'workbook'});
+ assert.deepEqual(parseNamesCommand({kind:'define',name:'P',scope:'sheet',replace:true}),{kind:'define',name:'P',scope:'sheet',replace:true});
+ assert.deepEqual(parseNamesCommand({kind:'delete',name:'P'}),{kind:'delete',name:'P',scope:'workbook'});
+ for(const bad of [null,[],{},{kind:'x',name:'a'},{kind:'define'},{kind:'define',name:'A1'},{kind:'define',name:'a',scope:'all'},{kind:'define',name:'a',replace:'y'},{kind:'define',name:'a',x:1},{kind:'delete',name:''},{kind:'delete',name:'a',replace:true}])assert.throws(()=>parseNamesCommand(bad),JSON.stringify(bad));
+});
+test('parseNames and nameTarget',()=>{
+ assert.deepEqual(parseNames({names:[{name:'a',refersTo:'=S!$A$1',scope:'Workbook',comment:''},{name:1},null]}),[{name:'a',refersTo:'=S!$A$1',scope:'Workbook',comment:''}]);
+ assert.deepEqual(parseNames({names:'x'}),[]);
+ assert.deepEqual(nameTarget("='My Sheet'!$B$2:$C$3"),{sheet:'My Sheet',address:'B2'});assert.deepEqual(nameTarget('=Sheet1!$A$1'),{sheet:'Sheet1',address:'A1'});
+ assert.equal(nameTarget('=SUM(A1:A2)'),null);assert.equal(nameTarget('=Sheet1!A:A'),null);
+});
+test('custom number and date formats match the Rust bridge',()=>{
+ assert.equal(customNumFmtCode({grouping:true,decimals:1}),'#,##0.0');
+ assert.equal(customNumFmtCode({grouping:true,decimals:0,prefix:'EUR ',negative:'paren'}),'"EUR "#,##0;("EUR "#,##0)');
+ assert.equal(customNumFmtCode({decimals:2,suffix:' kg',zero:'dash'}),'0.00" kg";-0.00" kg";"-"');
+ assert.equal(customNumFmtCode({percent:true,decimals:0,negative:'redParen'}),'0%;[Red](0%)');
+ assert.deepEqual(parseFormatOp({kind:'numFmtCustom',grouping:true,decimals:0,prefix:'EUR '}),{kind:'numFmtCustom',grouping:true,decimals:0,prefix:'EUR '});
+ for(const bad of [{kind:'numFmtCustom',prefix:'a"b'},{kind:'numFmtCustom',prefix:'a;b'},{kind:'numFmtCustom',suffix:'[Red]'},{kind:'numFmtCustom',suffix:'0123456789abc'},{kind:'numFmtCustom',decimals:11},{kind:'numFmtCustom',negative:'blue'},{kind:'numFmtCustom',zero:'x'},{kind:'numFmtCustom',grouping:'yes'},{kind:'numFmtCustom',code:'0'},{kind:'dateFmt',pattern:'yyyy'},{kind:'dateFmt'}])assert.throws(()=>parseFormatOp(bad),JSON.stringify(bad));
+ assert.deepEqual(parseFormatOp({kind:'dateFmt',pattern:'dmyDot'}),{kind:'dateFmt',pattern:'dmyDot'});assert.equal(DATE_PATTERNS.length,11);
+});

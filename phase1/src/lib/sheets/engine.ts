@@ -1,5 +1,6 @@
 import {parseAnnotations} from './notes';
-import type {AnnotateOp,CellAnnotations,DedupeOp,SplitOp,ReplaceOp,ValidationOp,CfOp,FillDirection,SheetsEditReceipt,SheetsNativeState,FilterOp,SortOp,SheetOp,FormatOp,LineAxis,LineOp,RangeResult,SheetInfo,SheetLayout,SheetsRequest,SheetsResponse,ViewResult,WorkbookInfo} from './protocol';
+import {parseNames} from './names';
+import type {NameInfo,NameOp,AnnotateOp,CellAnnotations,DedupeOp,SplitOp,ReplaceOp,ValidationOp,CfOp,FillDirection,SheetsEditReceipt,SheetsNativeState,FilterOp,SortOp,SheetOp,FormatOp,LineAxis,LineOp,RangeResult,SheetInfo,SheetLayout,SheetsRequest,SheetsResponse,ViewResult,WorkbookInfo} from './protocol';
 import {MAX_INPUT_BYTES} from './protocol';
 import {parseEditReceipt,parseNativeState} from './receipt';
 type Req=SheetsRequest extends infer R?R extends {id:number}?Omit<R,'id'>:never:never;
@@ -25,7 +26,7 @@ export class SheetsEngine{
  private request(message:Req,transfer:Transferable[]=[]){
   return new Promise<SheetsResponse>((resolve,reject)=>{
    if(this.disposed){reject(new Error('Spreadsheet engine closed'));return;}
-   const mutating=['open','set','setValues','clear','format','resize','editLines','freeze','sort','filter','fill','cf','validation','replace','dedupe','split','annotate','setReviewed','undoReviewed','editSheet','undo','redo','close'].includes(message.op);if(mutating){this.mutationEpoch++;this.mutations++;this.notifySelectionRead();}const finish=()=>{if(mutating){this.mutations--;this.mutationEpoch++;this.notifySelectionRead();}};const done=(r:SheetsResponse)=>{finish();resolve(r);},failed=(e:Error)=>{finish();reject(e);};
+   const mutating=['open','set','setValues','clear','format','resize','editLines','freeze','sort','filter','fill','cf','validation','replace','dedupe','split','annotate','defineName','deleteName','setReviewed','undoReviewed','editSheet','undo','redo','close'].includes(message.op);if(mutating){this.mutationEpoch++;this.mutations++;this.notifySelectionRead();}const finish=()=>{if(mutating){this.mutations--;this.mutationEpoch++;this.notifySelectionRead();}};const done=(r:SheetsResponse)=>{finish();resolve(r);},failed=(e:Error)=>{finish();reject(e);};
    const id=this.nextId++;
    const timer=setTimeout(()=>this.dispose(new Error('Spreadsheet engine timed out. Unsaved edits in this workbook were discarded.')),this.timeoutMs);
    this.pending.set(id,{resolve:done,reject:failed,timer});
@@ -61,6 +62,12 @@ export class SheetsEngine{
  async dedupe(sheet:number,row:number,col:number,rows:number,cols:number,dedupe:DedupeOp):Promise<number>{const r=await this.result<{removed:unknown}>({op:'dedupe',sheet,row,col,rows,cols,dedupe});return typeof r.removed==='number'?r.removed:0;}
  /** Split one column of text into the empty columns to its right (one undo step). */
  split(sheet:number,row:number,col:number,rows:number,cols:number,split:SplitOp){return this.result<unknown>({op:'split',sheet,row,col,rows,cols,split});}
+ /** Defines a name for the block (one undo step). */
+ defineName(sheet:number,row:number,col:number,rows:number,cols:number,name:{name:string;scope:'workbook'|'sheet';replace?:boolean}){return this.result<unknown>({op:'defineName',sheet,row,col,rows,cols,name});}
+ /** Deletes one name (one undo step). `sheet` is the sheet a sheet-scoped name belongs to. */
+ deleteName(sheet:number,name:{name:string;scope:'workbook'|'sheet'}){return this.result<unknown>({op:'deleteName',sheet,name});}
+ /** The visible defined names (read only). */
+ async names():Promise<NameInfo[]>{return parseNames(await this.result<{names:unknown}>({op:'names'}));}
  /** Adds, answers, resolves or removes a note or comment, or sets or removes a link, on one cell (one undo step). */
  annotate(sheet:number,row:number,col:number,annotate:AnnotateOp){return this.result<unknown>({op:'annotate',sheet,row,col,annotate});}
  /** The note and link of one cell (read only). */

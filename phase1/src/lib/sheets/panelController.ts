@@ -4,11 +4,12 @@ import {parsePanelRange} from './panelModel';
 import {MAX_CELL_BYTES,type RangeCell} from './protocol';
 import {parseAddress} from './format';
 import {parseFormatOp} from './formatOps';
-import type {AnnotateOp,DedupeOp,SplitOp,ReplaceOp,ValidationOp,CfOp,FillDirection,FilterOp,SortOp,FormatOp,LineAxis,LineEditKind,LineOp,SheetOp} from './protocol';
+import type {NameOp,AnnotateOp,DedupeOp,SplitOp,ReplaceOp,ValidationOp,CfOp,FillDirection,FilterOp,SortOp,FormatOp,LineAxis,LineEditKind,LineOp,SheetOp} from './protocol';
 import {parseEditLines,parseFreeze,parseLineCommand} from './lineOps';
 import {parseSheetOp} from './sheetOps';
 import {parseSortCommand} from './sortOps';
 import {parseAnnotateCommand} from './notes';
+import {parseNamesCommand} from './names';
 import {parseDedupeCommand,parseSplitCommand,SPLIT_DELIMITERS} from './dataTools';
 import {parseReplaceCommand} from './replaceOps';
 import {parseValidationCommand} from './validationOps';
@@ -43,6 +44,8 @@ export interface SheetsPanelController {
  /** Replaces text in the selected block (one undo step); resolves to the number of changed cells. */
  /** Adds, answers, resolves or removes a note, comment or link on the active cell (one undo step). */
  annotateCell(op:AnnotateOp):void|Promise<void>;
+ /** Defines (for the selected block) or deletes a name; one undo step. */
+ nameOperation(op:NameOp):void|Promise<void>;
  replaceText(op:ReplaceOp):number|Promise<number>;
  /** Removes duplicate rows inside the selected block (one undo step); resolves to the number removed. */
  removeDuplicates(op:DedupeOp):number|Promise<number>;
@@ -55,7 +58,7 @@ let current:SheetsPanelController|null=null;
 export const getSheetsPanelController=()=>current;
 export function registerSheetsPanelController(controller:SheetsPanelController){current=controller;return()=>{if(current===controller)current=null;};}
 const requireController=()=>{if(!current?.ready())throw Error('No workbook is ready.');return current;};
-export const SHEETS_PANEL_COMMAND_IDS=['sheets.navigate','sheets.setCell','sheets.analyzeRange','sheets.format','sheets.resize','sheets.freeze','sheets.editLines','sheets.sheet','sheets.sort','sheets.filter','sheets.fill','sheets.highlight','sheets.validation','sheets.replace','sheets.dedupe','sheets.split','sheets.annotate'] as const;
+export const SHEETS_PANEL_COMMAND_IDS=['sheets.navigate','sheets.setCell','sheets.analyzeRange','sheets.format','sheets.resize','sheets.freeze','sheets.editLines','sheets.sheet','sheets.sort','sheets.filter','sheets.fill','sheets.highlight','sheets.validation','sheets.replace','sheets.dedupe','sheets.split','sheets.annotate','sheets.names'] as const;
 export function sheetsPanelCommandSpecs():CommandSpec[]{
  return [
  {id:'sheets.navigate',title:'Go to spreadsheet cell',category:'View',level:'ui',allowInInput:true,
@@ -68,7 +71,7 @@ export function sheetsPanelCommandSpecs():CommandSpec[]{
   params:{type:'object',properties:{range:{type:'string',minLength:2,maxLength:24}},required:['range'],additionalProperties:false},
   enabled:()=>!!current?.ready(),run:p=>{const {range}=p as {range:string};if(!parsePanelRange(range))throw Error('Invalid or oversized range.');return requireController().readRange(range);}},
  {id:'sheets.format',title:'Format selected cells',category:'Edit',level:'ui',allowInInput:true,
-  params:{type:'object',properties:{kind:{type:'string',enum:['bold','italic','underline','strike','fontName','fontSize','fontColor','fillColor','numFmt','decimals','hAlign','vAlign','wrap','indent','borders']},align:{type:'string',enum:['left','center','right','top','middle','bottom']},style:{type:'string',enum:['thin','medium','thick','dashed','dotted','double','hair']},on:{type:'boolean'},preset:{type:'string',enum:['general','number','comma','percent','currency','date','time','scientific','text','none','all','outside','thickOutside','inside','insideHorizontal','insideVertical','top','bottom','left','right','thickBottom','doubleBottom','topBottom','topThickBottom','topDoubleBottom']},decimals:{type:'integer',minimum:0,maximum:10},symbol:{type:'string',minLength:1,maxLength:3},delta:{type:'integer',minimum:-1,maximum:1},name:{type:'string',minLength:1,maxLength:64},size:{type:'number',minimum:1,maximum:409},color:{type:'string',minLength:4,maxLength:7}},required:['kind'],additionalProperties:false},
+  params:{type:'object',properties:{kind:{type:'string',enum:['bold','italic','underline','strike','fontName','fontSize','fontColor','fillColor','numFmt','numFmtCustom','dateFmt','decimals','hAlign','vAlign','wrap','indent','borders']},align:{type:'string',enum:['left','center','right','top','middle','bottom']},style:{type:'string',enum:['thin','medium','thick','dashed','dotted','double','hair']},on:{type:'boolean'},preset:{type:'string',enum:['general','number','comma','percent','currency','date','time','scientific','text','none','all','outside','thickOutside','inside','insideHorizontal','insideVertical','top','bottom','left','right','thickBottom','doubleBottom','topBottom','topThickBottom','topDoubleBottom']},decimals:{type:'integer',minimum:0,maximum:10},grouping:{type:'boolean'},percent:{type:'boolean'},prefix:{type:'string',maxLength:12},suffix:{type:'string',maxLength:12},negative:{type:'string',enum:['minus','red','paren','redParen']},zero:{type:'string',enum:['show','dash']},pattern:{type:'string',enum:['ymd','dmyDot','mdy','dmy','long','weekday','short','monthYear','time24','time12','dateTime']},symbol:{type:'string',minLength:1,maxLength:3},delta:{type:'integer',minimum:-1,maximum:1},name:{type:'string',minLength:1,maxLength:64},size:{type:'number',minimum:1,maximum:409},color:{type:'string',minLength:4,maxLength:7}},required:['kind'],additionalProperties:false},
   enabled:()=>!!current?.ready(),run:p=>requireController().formatCells(parseFormatOp(p))},
  {id:'sheets.resize',title:'Resize, autofit or hide rows and columns',category:'Edit',level:'ui',allowInInput:true,
   params:{type:'object',properties:{axis:{type:'string',enum:['rows','cols']},kind:{type:'string',enum:['size','autofit','hide','unhide']},px:{type:'number',minimum:0,maximum:2400}},required:['axis','kind'],additionalProperties:false},
@@ -109,6 +112,9 @@ export function sheetsPanelCommandSpecs():CommandSpec[]{
  {id:'sheets.annotate',title:'Add a note, comment or link to the active cell',category:'Edit',level:'ui',allowInInput:true,
   params:{type:'object',properties:{kind:{type:'string',enum:['note','comment','reply','resolve','remove','link','unlink']},text:{type:'string',maxLength:2000},resolved:{type:'boolean'},target:{type:'string',maxLength:2048},tooltip:{type:'string',maxLength:255}},required:['kind'],additionalProperties:false},
   enabled:()=>!!current?.ready(),run:p=>requireController().annotateCell(parseAnnotateCommand(p))},
+ {id:'sheets.names',title:'Define or delete a named range',category:'Edit',level:'ui',allowInInput:true,
+  params:{type:'object',properties:{kind:{type:'string',enum:['define','delete']},name:{type:'string',minLength:1,maxLength:64},scope:{type:'string',enum:['workbook','sheet']},replace:{type:'boolean'}},required:['kind','name'],additionalProperties:false},
+  enabled:()=>!!current?.ready(),run:p=>requireController().nameOperation(parseNamesCommand(p))},
  ];
 }
 export function registerSheetsPanelCommands(){const offs=sheetsPanelCommandSpecs().map(s=>registerCommandSpec(s));return()=>offs.forEach(off=>off());}

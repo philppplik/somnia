@@ -11,6 +11,12 @@ export interface ViewResult{sheet:number;row:number;col:number;rows:number;cols:
 export interface SheetLayout{sheet:number;defaultColWidth:number;defaultRowHeight:number;cols:{i:number;w:number;hidden:boolean}[];rows:{i:number;h:number;hidden:boolean}[];showGridlines:boolean;freeze:{rows:number;cols:number}|null;merges:{r0:number;c0:number;r1:number;c1:number}[]}
 export interface RangeResult{sheet:number;row:number;col:number;rows:number;cols:number;cells:RangeCell[]}
 /** Typed formatting operations; the Rust bridge keeps the same closed allowlist and re-validates every field. */
+export type NegativeStyle='minus'|'red'|'paren'|'redParen';
+export type ZeroStyle='show'|'dash';
+export type DatePatternId='ymd'|'dmyDot'|'mdy'|'dmy'|'long'|'weekday'|'short'|'monthYear'|'time24'|'time12'|'dateTime';
+/** Defined names: the block is the active selection. `delete` acts on the workbook name, or on the active sheet's own name. */
+export type NameOp={kind:'define';name:string;scope:'workbook'|'sheet';replace?:boolean}|{kind:'delete';name:string;scope:'workbook'|'sheet'};
+export interface NameInfo{name:string;refersTo:string;scope:string;comment:string}
 export type FormatOp=
  |{kind:'bold'|'italic'|'underline'|'strike';on:boolean}
  |{kind:'fontName';name:string}
@@ -18,6 +24,8 @@ export type FormatOp=
  |{kind:'fontColor';color:string}
  |{kind:'fillColor';color:string}
  |{kind:'numFmt';preset:NumFmtPreset;decimals?:number;symbol?:string}
+ |{kind:'numFmtCustom';grouping?:boolean;percent?:boolean;decimals?:number;prefix?:string;suffix?:string;negative?:NegativeStyle;zero?:ZeroStyle}
+ |{kind:'dateFmt';pattern:DatePatternId}
  |{kind:'decimals';delta:1|-1;at?:{row:number;col:number}}
  |{kind:'hAlign';align:'left'|'center'|'right'}
  |{kind:'vAlign';align:'top'|'middle'|'bottom'}
@@ -87,6 +95,9 @@ export type SheetsRequest=
  |{id:number;op:'split';sheet:number;row:number;col:number;rows:number;cols:number;split:SplitOp}
  |{id:number;op:'annotate';sheet:number;row:number;col:number;annotate:AnnotateOp}
  |{id:number;op:'annotations';sheet:number;row:number;col:number}
+ |{id:number;op:'defineName';sheet:number;row:number;col:number;rows:number;cols:number;name:{name:string;scope:'workbook'|'sheet';replace?:boolean}}
+ |{id:number;op:'deleteName';sheet:number;name:{name:string;scope:'workbook'|'sheet'}}
+ |{id:number;op:'names'}
  |{id:number;op:'cf';sheet:number;row:number;col:number;rows:number;cols:number;cf:CfOp}
  |{id:number;op:'fill';sheet:number;row:number;col:number;rows:number;cols:number;dir:FillDirection}
  |{id:number;op:'filter';sheet:number;row:number;col:number;rows:number;cols:number;filter:FilterOp}
