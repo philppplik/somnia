@@ -170,6 +170,7 @@
   "sound.arrange.fadeOut": "Saída gradual (s)",
   "sound.arrange.marker": "Marcador",
   "sound.arrange.loop": "Repetir sessão",
+  "sound.arrange.loopHint": "O loop segue o intervalo de saída escolhido, senão a sessão inteira.",
   "sound.arrange.tail": "Cauda de efeito (s)",
   "sound.arrange.tailHint": "Estende a saída com silêncio para que reverb e delay possam decair. A duração exportada aumenta na mesma medida.",
   "sound.arrange.range": "Intervalo de saída",

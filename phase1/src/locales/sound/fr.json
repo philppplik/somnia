@@ -170,6 +170,7 @@
   "sound.arrange.fadeOut": "Fondu sortant (s)",
   "sound.arrange.marker": "Repère",
   "sound.arrange.loop": "Boucler la session",
+  "sound.arrange.loopHint": "La boucle suit la plage de sortie choisie, sinon toute la session.",
   "sound.arrange.tail": "Queue d’effet (s)",
   "sound.arrange.tailHint": "Prolonge la sortie de silence pour laisser la réverbération et le délai s’éteindre. La durée exportée augmente d’autant.",
   "sound.arrange.range": "Plage de sortie",

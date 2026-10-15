@@ -170,6 +170,7 @@
   "sound.arrange.fadeOut": "Salida gradual (s)",
   "sound.arrange.marker": "Marcador",
   "sound.arrange.loop": "Repetir sesión",
+  "sound.arrange.loopHint": "El bucle sigue el rango de salida elegido, si no, toda la sesión.",
   "sound.arrange.tail": "Cola de efecto (s)",
   "sound.arrange.tailHint": "Prolonga la salida con silencio para que la reverberación y el retardo puedan decaer. La duración exportada crece en consecuencia.",
   "sound.arrange.range": "Rango de salida",

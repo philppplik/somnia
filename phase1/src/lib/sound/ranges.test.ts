@@ -52,3 +52,11 @@ test('ranges: the session.range command sets, validates and clears the selection
   assert.equal(getArrangementState().rangeSelection,null);
  }finally{off();resetArrangement();}
 });
+
+import {loopToggle} from './arrangement';
+test('ranges: the loop toggle follows the range selection or the whole session',()=>{
+ assert.deepEqual(loopToggle(null,{start:4800,end:9600},48000),{start:4800,end:9600},'a selected range becomes the loop');
+ assert.deepEqual(loopToggle(null,null,48000),{start:0,end:48000},'no range loops the whole session');
+ assert.equal(loopToggle({start:0,end:100},{start:4800,end:9600},48000),null,'an active loop toggles off');
+ assert.equal(loopToggle(null,null,0),null,'an empty session cannot loop');
+});

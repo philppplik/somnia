@@ -170,6 +170,7 @@
   "sound.arrange.fadeOut": "Ausblenden (s)",
   "sound.arrange.marker": "Marker",
   "sound.arrange.loop": "Session wiederholen",
+  "sound.arrange.loopHint": "Loop folgt dem gewählten Ausgabebereich, sonst der ganzen Session.",
   "sound.arrange.tail": "Effekt-Tail (s)",
   "sound.arrange.tailHint": "Verlängert den Ausgang um Stille, damit Hall und Delay ausklingen können. Die Exportdauer wächst entsprechend.",
   "sound.arrange.range": "Ausgabebereich",

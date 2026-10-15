@@ -46,6 +46,8 @@ export const arrangementEnd=(s:Arrangement)=>Math.max(0,...s.tracks.flatMap(t=>t
 export const sourceTimelineFrames=(s:AudioSourceRef)=>Math.floor(s.frames*48000/s.sampleRate);
 export const newTrack=(id:string,name:string):ArrangeTrack=>({id,name,gainDb:0,pan:0,mute:false,solo:false,rack:emptyRack(),clips:[]});
 export const newClip=(id:string,source:AudioSourceRef,start=0):ArrangeClip=>({id,sourceId:source.id,start,offset:0,length:sourceTimelineFrames(source),gainDb:0,fadeIn:0,fadeOut:0,gainCurve:[]});
+/** Toggling the loop: clears an active one; otherwise loops the selected output range, or the whole session when no range is set. */
+export const loopToggle=(current:Arrangement['loop'],range:{start:number;end:number}|null,sessionEnd:number):{start:number;end:number}|null=>current?null:range??(sessionEnd>0?{start:0,end:sessionEnd}:null);
 /** The automated level (dB) at a clip-local frame: constant outside the outermost points, linear in dB between points. */
 export const gainCurveAt=(clip:ArrangeClip,local:number)=>{const c=clip.gainCurve;if(!c.length)return 0;if(local<=c[0].at)return c[0].db;for(let i=1;i<c.length;i++)if(local<=c[i].at){const a=c[i-1],b=c[i];return a.db+(b.db-a.db)*(local-a.at)/(b.at-a.at);}return c[c.length-1].db;};
 /** History owns deep copies; failed mutations never change the document or history. */

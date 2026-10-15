@@ -170,6 +170,7 @@
   "sound.arrange.fadeOut": "Fade out (s)",
   "sound.arrange.marker": "Marker",
   "sound.arrange.loop": "Loop session",
+  "sound.arrange.loopHint": "Loop follows the selected output range, otherwise the whole session.",
   "sound.arrange.tail": "Effect tail (s)",
   "sound.arrange.tailHint": "Extends the output with silence so reverb and delay can ring out. The exported duration grows accordingly.",
   "sound.arrange.range": "Output range",
