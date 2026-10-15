@@ -13004,6 +13004,13 @@
       "hasEnabled": true
     },
     {
+      "id": "vector.selectText",
+      "title": "Select a text object",
+      "category": "Edit",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
       "id": "vector.setGradient",
       "title": "Set vector gradient fill",
       "category": "Edit",
