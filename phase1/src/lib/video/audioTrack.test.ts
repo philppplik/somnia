@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {audioClipDuration,audioEnvelope,audioTrackEnd,fullAudioClip,moveAudioClip,removeAudioClip,resizeAudioClip,sanitizeAudioClips,setAudioClipEdge,setAudioClipFades,setAudioClipGain,type AudioClip} from './audioTrack';
-const clip=(id:string,over:Partial<AudioClip>={}):AudioClip=>({id,source:'song.mp3',in_s:0,out_s:10,at:0,gain:1,fadeIn:0,fadeOut:0,...over});
+import {audioClipDuration,audioEnvelope,audioTrackEnd,fullAudioClip,moveAudioClip,removeAudioClip,resizeAudioClip,sanitizeAudioClips,setAudioClipMuted,setAudioClipEdge,setAudioClipFades,setAudioClipGain,type AudioClip} from './audioTrack';
+const clip=(id:string,over:Partial<AudioClip>={}):AudioClip=>({id,source:'song.mp3',in_s:0,out_s:10,at:0,gain:1,muted:false,fadeIn:0,fadeOut:0,...over});
 
 test('free placement: gaps and overlaps are legal, the track end is the last clip end',()=>{
  const clips=[clip('a',{at:5}),clip('b',{at:7,out_s:20})];
@@ -47,7 +47,7 @@ test('edits: remove, move clamps at 0, edges hold the minimum, gain and fades se
 });
 
 test('resizeAudioClip: in-edge carries the position, out-edge only resizes, both respect the minimum length',()=>{
- const c:AudioClip={id:'a',source:'m.mp3',in_s:2,out_s:8,at:10,gain:1,fadeIn:0,fadeOut:0};
+ const c:AudioClip={id:'a',source:'m.mp3',in_s:2,out_s:8,at:10,gain:1,muted:false,fadeIn:0,fadeOut:0};
  // in-edge dragged 2s right: at follows, content offset stays.
  const r1=resizeAudioClip([c],'a','in',12);
  assert.deepEqual([r1[0].at,r1[0].in_s,r1[0].out_s],[12,4,8]);
@@ -63,4 +63,15 @@ test('resizeAudioClip: in-edge carries the position, out-edge only resizes, both
  // out-edge respects the minimum length.
  const r5=resizeAudioClip([c],'a','out',10);
  assert.equal(Math.round(r5[0].out_s*1000),Math.round((c.in_s+0.05)*1000));
+});
+
+test('mute: envelope is silent, toggle flips, sanitize defaults and coerces',()=>{
+ const c=clip('a');
+ assert.equal(audioEnvelope({...c,muted:true},1),0);
+ assert.equal(audioEnvelope(c,1)>0,true);
+ const on=setAudioClipMuted([c],'a',true);
+ assert.equal(on[0].muted,true);
+ assert.equal(setAudioClipMuted(on,'a',false)[0].muted,false);
+ assert.equal(sanitizeAudioClips([{...c,muted:undefined as never}],{})[0].muted,false,'missing muted defaults to false');
+ assert.equal(sanitizeAudioClips([{...c,muted:'yes' as never}],{})[0].muted,false,'non-boolean muted coerces to false');
 });

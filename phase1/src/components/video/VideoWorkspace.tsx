@@ -57,7 +57,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
   for(const ac of audioClips){
    const el=audioEls.current.get(ac.id);if(!el)continue;
    const dur=audioClipDuration(ac),active=playhead>=ac.at&&playhead<ac.at+dur;
-   if(playing&&active){
+   if(playing&&active&&!ac.muted){
     const url=media.items.find((i:MediaItem)=>i.name===ac.source)?.url;
     if(!url){el.pause();continue;}
     if(el.dataset.clipSource!==ac.source){el.dataset.clipSource=ac.source;if(el.src!==url)el.src=url;}

@@ -4,6 +4,7 @@ import type {FilmstripController} from '../../lib/video/filmstrip-controller';
 import {snapThresholdSeconds,snapTime} from '../../lib/video/zoom';
 import {WaveformStrip} from './WaveformStrip';
 import {useT} from '../../lib/useT';
+import {VolumeX} from '../../lib/icons';
 const shortName=(n:string)=>n.replace(/^.*[\\/]/,'').replace(/\.[^.]+$/,'');
 interface Props{
  clips:AudioClip[];selectedId:string|null;/** Timeline span the lane maps onto (same domain as the video track above). */
@@ -54,7 +55,7 @@ export function AudioLane({clips,selectedId,duration,onSelect,onMoveAt,onResize,
    const dur=audioClipDuration(c),selected=c.id===selectedId;
    const fadeInPct=dur>0?Math.min(100,c.fadeIn/dur*100):0,fadeOutPct=dur>0?Math.min(100,c.fadeOut/dur*100):0;
    return <div key={c.id} role="button" tabIndex={0} aria-pressed={selected} aria-label={t('video.audioClipLabel',{index:i+1,name:shortName(c.source)})}
-    className={`group absolute top-0.5 bottom-0.5 overflow-hidden rounded-sm outline-1 ${selected?'bg-[var(--accent)]/40 outline-[var(--accent)]':'bg-[var(--accent)]/15 outline-transparent hover:bg-[var(--accent)]/25'}`}
+    className={`group absolute top-0.5 bottom-0.5 overflow-hidden rounded-sm outline-1 ${selected?'bg-[var(--accent)]/40 outline-[var(--accent)]':'bg-[var(--accent)]/15 outline-transparent hover:bg-[var(--accent)]/25'} ${c.muted?'opacity-45':''}`}
     style={{left:pct(c.at),width:`${Math.max(0.5,dur/duration*100)}%`}}
     onPointerDown={moveDrag(c)}
     onKeyDown={e=>{
@@ -64,11 +65,11 @@ export function AudioLane({clips,selectedId,duration,onSelect,onMoveAt,onResize,
      else if(e.key==='ArrowRight'){e.preventDefault();onMoveAt(c.id,c.at+d);}
     }}
     data-testid="audio-clip" data-clip="true" data-clip-id={c.id} data-selected={selected||undefined}>
-    {controller&&<WaveformStrip controller={controller} source={c.source} in_s={c.in_s} out_s={c.out_s} gain={c.gain}/>}
+    {controller&&<WaveformStrip controller={controller} source={c.source} in_s={c.in_s} out_s={c.out_s} gain={c.muted?0:c.gain}/>}
     {(fadeInPct>0||fadeOutPct>0)&&<div className="pointer-events-none absolute inset-0" aria-hidden="true"
      style={{background:`linear-gradient(to right, rgba(0,0,0,.55) 0%, transparent ${fadeInPct}%, transparent ${100-fadeOutPct}%, rgba(0,0,0,.55) 100%)`}}/>}
     <span className="pointer-events-none absolute inset-x-1 top-1/2 -translate-y-1/2 truncate text-[10px] text-ink">
-     {shortName(c.source)}{c.gain!==1?` · ${Math.round(c.gain*100)}%`:''}
+     {shortName(c.source)}{c.gain!==1?` · ${Math.round(c.gain*100)}%`:''}{c.muted&&<VolumeX size={10} className="ml-1 inline-block align-[-1px]" aria-label={t('video.clipMuted')}/>}
     </span>
     {selected&&(['in','out'] as const).map(edge=><div key={edge} data-handle="true" role="slider"
      aria-label={edge==='in'?t('video.trimStart'):t('video.trimEnd')}

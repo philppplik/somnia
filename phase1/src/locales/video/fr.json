@@ -146,5 +146,6 @@
  "cmd.video.audio.trim": "Raccorder un bord d'un clip audio à un temps source",
  "cmd.video.audio.gain": "Régler le gain d’un clip audio",
  "cmd.video.audio.fades": "Régler le fondu d’entrée et de sortie d’un clip audio",
- "cmd.video.audio.delete": "Supprimer un clip audio"
+ "cmd.video.audio.delete": "Supprimer un clip audio",
+ "cmd.video.audio.mute": "Couper ou rétablir le son d’un clip audio"
 }

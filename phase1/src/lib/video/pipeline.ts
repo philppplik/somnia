@@ -156,7 +156,9 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
   };
   // Audio-track clips feed once the zone walk passes their start; overlaps sum in the mixer.
   let audioMutedNote=false,audioTrimmedNote=false;
+  let audioMuteSkip=false;
   const audioFeed=audioClips.filter(c=>{
+   if(c.muted){audioMuteSkip=true;return false;}
    const probe=inputs.get(c.source)?.probe;
    if(!probe?.audio){audioMutedNote=true;return false;}
    if(c.at>=total_s){audioTrimmedNote=true;return false;}
@@ -330,6 +332,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
   if(clips.some(c=>c.gain!==1&&!c.muted))steps.push('Per-clip gain applied.');
   if(clips.some(c=>needsSourceFile(c)&&speedOf(c)!==1))steps.push('Clip speed applied; audio is resampled (pitch shifts).');
   if(audioFeed.length)steps.push(`${audioFeed.length} audio-track clip(s) mixed in.`);
+  if(audioMuteSkip)steps.push('Muted audio clips kept as silence.');
   if(audioMutedNote)steps.push('Some audio-track sources have no audio track and were skipped.');
   if(audioTrimmedNote)steps.push('Audio-track clips past the end of the video were trimmed.');
   const report:VideoReport={format,duration_s:total,bytes:buffer.byteLength,videoCodec,audioCodec,steps};

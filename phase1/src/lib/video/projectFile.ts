@@ -19,7 +19,7 @@ interface VideoProjectFile{version:number;app:'somnia-video';format?:VideoFormat
 /** Stable identity of the edit list for dirty tracking. Ids are included: a split changes them, and that IS an edit. */
 export const clipsSignature=(clips:TimelineClip[],audioClips:AudioClip[]=[])=>JSON.stringify([
  clips.map(c=>[c.id,c.source,c.in_s,c.out_s,c.gain,c.muted,c.crossfade_s??0,speedOf(c),c.kind??'media',isTitleClip(c)?c.title:null]),
- audioClips.map(c=>[c.id,c.source,c.in_s,c.out_s,c.at,c.gain,c.fadeIn,c.fadeOut]),
+ audioClips.map(c=>[c.id,c.source,c.in_s,c.out_s,c.at,c.gain,c.muted,c.fadeIn,c.fadeOut]),
 ]);
 
 /** The project file for one timeline. Deterministic (same timeline → same bytes), so tests and diffs stay readable. */
@@ -28,7 +28,7 @@ export function serializeVideoProject(clips:TimelineClip[],audioClips:AudioClip[
   isTitleClip(c)
    ?{id:c.id,kind:'title',out_s:c.out_s,crossfade_s:c.crossfade_s??0,title:c.title}
    :{id:c.id,kind:'media',source:c.source,in_s:c.in_s,out_s:c.out_s,gain:c.gain,muted:c.muted,speed:speedOf(c),crossfade_s:c.crossfade_s??0}),
-  audio:audioClips.map(c=>({id:c.id,source:c.source,in_s:c.in_s,out_s:c.out_s,at:c.at,gain:c.gain,fadeIn:c.fadeIn,fadeOut:c.fadeOut}))};
+  audio:audioClips.map(c=>({id:c.id,source:c.source,in_s:c.in_s,out_s:c.out_s,at:c.at,gain:c.gain,muted:c.muted,fadeIn:c.fadeIn,fadeOut:c.fadeOut}))};
  return JSON.stringify(file,null,1)+'\n';
 }
 
@@ -59,7 +59,7 @@ export function parseVideoProject(text:string):{clips:TimelineClip[];audioClips:
   if(!c||typeof c!=='object')return[];
   const o=c as Record<string,unknown>;
   if(typeof o.source!=='string'||!o.source)return[];
-  return[{id:id(o.id),source:o.source,in_s:num(o.in_s),out_s:num(o.out_s),at:num(o.at),gain:num(o.gain,1),fadeIn:num(o.fadeIn),fadeOut:num(o.fadeOut)}];
+  return[{id:id(o.id),source:o.source,in_s:num(o.in_s),out_s:num(o.out_s),at:num(o.at),gain:num(o.gain,1),muted:o.muted===true,fadeIn:num(o.fadeIn),fadeOut:num(o.fadeOut)}];
  });
  // Durations are unknown here (sources may not be open); sanitize still clamps fades and title shapes. Clips re-clamp on the next edit once sources are probed.
  return{clips:sanitizeClips(clips,{}),audioClips:sanitizeAudioClips(audioClips,{}),format:f.format==='mp4'||f.format==='webm'?f.format:DEFAULT_FORMAT};

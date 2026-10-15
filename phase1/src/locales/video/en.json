@@ -146,5 +146,6 @@
  "cmd.video.audio.trim": "Trim an audio clip edge to a source time",
  "cmd.video.audio.gain": "Set an audio clip gain",
  "cmd.video.audio.fades": "Set an audio clip fade in and out",
- "cmd.video.audio.delete": "Delete an audio clip"
+ "cmd.video.audio.delete": "Delete an audio clip",
+ "cmd.video.audio.mute": "Toggle an audio clip mute"
 }

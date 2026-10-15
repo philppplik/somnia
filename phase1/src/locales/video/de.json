@@ -146,5 +146,6 @@
  "cmd.video.audio.trim": "Audioclip-Kante auf eine Quellzeit trimmen",
  "cmd.video.audio.gain": "Verstärkung eines Audioclips einstellen",
  "cmd.video.audio.fades": "Ein- und Ausblendung eines Audioclips einstellen",
- "cmd.video.audio.delete": "Audioclip löschen"
+ "cmd.video.audio.delete": "Audioclip löschen",
+ "cmd.video.audio.mute": "Stummschaltung eines Audioclips umschalten"
 }

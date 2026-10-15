@@ -146,5 +146,6 @@
  "cmd.video.audio.trim": "Recortar un borde de un clip de audio a un tiempo de origen",
  "cmd.video.audio.gain": "Ajustar la ganancia de un clip de audio",
  "cmd.video.audio.fades": "Ajustar el fundido de entrada y salida de un clip de audio",
- "cmd.video.audio.delete": "Eliminar un clip de audio"
+ "cmd.video.audio.delete": "Eliminar un clip de audio",
+ "cmd.video.audio.mute": "Silenciar o activar un clip de audio"
 }

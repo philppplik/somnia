@@ -4012,6 +4012,18 @@
       "hasEnabled": true
     },
     {
+      "id": "code.snippets",
+      "title": "Code snippets...",
+      "category": "Insert",
+      "source": "core",
+      "keywords": [
+        "code",
+        "snippet",
+        "template"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "collab.join",
       "title": "Join shared project...",
       "category": "Tools",

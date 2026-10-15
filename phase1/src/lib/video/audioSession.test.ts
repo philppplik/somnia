@@ -139,3 +139,23 @@ test('audio track: undo restores a deleted clip; selection follows the current s
   assert.equal(getVideoSession('au-undosel.video-project')!.selectedAudioClipId,audioId,'and can be set again');
  }finally{done();}
 });
+
+test('audio track: mute toggles, dirties and undoes',async()=>{
+ setVideoEngineFactory(()=>fakeAudioEngine());
+ const done=await freshProject('au-mute.video-project');
+ try{
+  const {toggleAudioTrackClipMute}=await import('./session');
+  const id=await addAudioTrackClip('au-mute.video-project',audioItem('pad.mp3'));
+  assert.equal(getVideoSession('au-mute.video-project')!.audioClips[0].muted,false);
+  const sig=serializeVideoProjectCopy('au-mute.video-project')!.text;
+  toggleAudioTrackClipMute('au-mute.video-project',id!);
+  assert.equal(getVideoSession('au-mute.video-project')!.audioClips[0].muted,true);
+  assert.ok(videoIsDirty(getVideoSession('au-mute.video-project')));
+  toggleAudioTrackClipMute('au-mute.video-project',id!);
+  assert.equal(getVideoSession('au-mute.video-project')!.audioClips[0].muted,false);
+  undoVideoEdit('au-mute.video-project');
+  assert.equal(getVideoSession('au-mute.video-project')!.audioClips[0].muted,true,'undo restores the muted state');
+  assert.match(serializeVideoProjectCopy('au-mute.video-project')!.text,/"muted": true/,'mute lands in the saved copy');
+  void sig;
+ }finally{done();}
+});

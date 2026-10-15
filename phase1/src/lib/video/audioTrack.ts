@@ -14,6 +14,8 @@ export interface AudioClip{
  /** Timeline position (start, seconds). Free placement, gaps allowed. */
  at:number;
  gain:number;
+ /** Muted clips stay on the track but contribute silence (kept in the project file). */
+ muted:boolean;
  /** Equal-power edge fades, seconds. */
  fadeIn:number;fadeOut:number;
 }
@@ -25,7 +27,7 @@ export const audioTrackEnd=(clips:AudioClip[])=>clips.reduce((end,c)=>Math.max(e
 let nextId=1;
 export const newAudioClipId=()=>`aclip-${nextId++}-${Math.random().toString(36).slice(2,7)}`;
 
-export const fullAudioClip=(source:string,duration:number,at:number):AudioClip=>({id:newAudioClipId(),source,in_s:0,out_s:Math.max(MIN_CLIP_SECONDS,duration),at:Math.max(0,at),gain:1,fadeIn:0,fadeOut:0});
+export const fullAudioClip=(source:string,duration:number,at:number):AudioClip=>({id:newAudioClipId(),source,in_s:0,out_s:Math.max(MIN_CLIP_SECONDS,duration),at:Math.max(0,at),gain:1,muted:false,fadeIn:0,fadeOut:0});
 
 /** Clamps every clip into its source bounds (when known), rounds to milliseconds, drops degenerate ranges and caps the fades at the clip length. */
 export function sanitizeAudioClips(clips:AudioClip[],durations:Record<string,number|undefined>):AudioClip[]{
@@ -40,12 +42,13 @@ export function sanitizeAudioClips(clips:AudioClip[],durations:Record<string,num
   const gain=Math.min(MAX_GAIN,Math.max(0,typeof c.gain==='number'&&Number.isFinite(c.gain)?c.gain:1));
   const fadeIn=Math.min(Math.max(0,Number.isFinite(c.fadeIn)?c.fadeIn:0),dur);
   const fadeOut=Math.min(Math.max(0,Number.isFinite(c.fadeOut)?c.fadeOut:0),Math.max(0,dur-fadeIn));
-  return[{...c,in_s:Number(in_s.toFixed(3)),out_s:Number(out_s.toFixed(3)),at:Number(Math.max(0,Number.isFinite(c.at)?c.at:0).toFixed(3)),gain,fadeIn:Number(fadeIn.toFixed(3)),fadeOut:Number(fadeOut.toFixed(3))}];
+  return[{...c,in_s:Number(in_s.toFixed(3)),out_s:Number(out_s.toFixed(3)),at:Number(Math.max(0,Number.isFinite(c.at)?c.at:0).toFixed(3)),gain,muted:c.muted===true,fadeIn:Number(fadeIn.toFixed(3)),fadeOut:Number(fadeOut.toFixed(3))}];
  });
 }
 
 /** The equal-power envelope gain at local time `t` (0 = clip start). */
 export function audioEnvelope(c:AudioClip,t:number):number{
+ if(c.muted)return 0;
  const dur=audioClipDuration(c);
  let e=1;
  if(c.fadeIn>0&&t<c.fadeIn)e*=Math.sin(Math.min(1,t/c.fadeIn)*Math.PI/2);
@@ -78,4 +81,5 @@ export function resizeAudioClip(clips:AudioClip[],id:string,edge:'in'|'out',time
  });
 }
 export const setAudioClipGain=(clips:AudioClip[],id:string,gain:number)=>clips.map(c=>c.id===id?{...c,gain}:c);
+export const setAudioClipMuted=(clips:AudioClip[],id:string,muted:boolean)=>clips.map(c=>c.id===id?{...c,muted}:c);
 export const setAudioClipFades=(clips:AudioClip[],id:string,fadeIn:number,fadeOut:number)=>clips.map(c=>c.id===id?{...c,fadeIn,fadeOut}:c);
