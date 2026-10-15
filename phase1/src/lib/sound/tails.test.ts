@@ -12,7 +12,7 @@ test('tails: v2 and v1 sessions migrate neutrally to v3 with a zero tail',()=>{
  const s=fixture();
  const v2:any=JSON.parse(serializeArrangement(s));v2.version=2;delete v2.tailFrames;delete v2.bpm;
  assert.deepEqual(validateArrangement(v2),s,'v2 gains a neutral tail and nothing else');
- const v1:any=JSON.parse(serializeArrangement(s));v1.version=1;delete v1.tailFrames;delete v1.bpm;delete v1.masterRack;for(const t of v1.tracks){delete t.rack;delete t.gainCurve;}
+ const v1:any=JSON.parse(serializeArrangement(s));v1.version=1;delete v1.tailFrames;delete v1.bpm;delete v1.masterRack;for(const t of v1.tracks){delete t.rack;delete t.gainCurve;delete t.panCurve;}
  assert.deepEqual(validateArrangement(v1),s,'v1 gains racks and a neutral tail');
  assert.deepEqual(parseArrangement(serializeArrangement(s)),s,'v3 round-trip');
 });

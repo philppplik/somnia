@@ -31,9 +31,9 @@ test('glue render equals the same material in the unfrozen track render',()=>{
 });
 
 test('glue ignores track volume automation: the curve stays live, never baked',()=>{
- const s=fixture();s.tracks[0].gainCurve=[{at:0,db:0},{at:720,db:-12}];
+ const s=fixture();s.tracks[0].gainCurve=[{at:0,db:0},{at:720,db:-12}];s.tracks[0].panCurve=[{at:0,pan:-1}];
  const g=glueSession(s,'a',['c1','c2']);
- assert.equal(g.tracks[0].gainCurve.length,0,'glue session clears the curve so the live track keeps owning it');
+ assert.equal(g.tracks[0].gainCurve.length,0,'glue session clears the gain curve so the live track keeps owning it');assert.equal(g.tracks[0].panCurve.length,0,'glue session clears the pan curve too');
  const plain=glueSession(fixture(),'a',['c1','c2']);
  const glued=renderRackedArrangement(g,sources(),c=>c,true,{start:0,end:720}),expected=renderRackedArrangement(plain,sources(),c=>c,true,{start:0,end:720});
  for(let i=0;i<720;i+=113)assert.ok(Math.abs(glued.channels[0][i]-expected.channels[0][i])<1e-7,`glued audio identical with and without a live curve at ${i}`);

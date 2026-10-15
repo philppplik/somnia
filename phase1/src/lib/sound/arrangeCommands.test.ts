@@ -233,3 +233,13 @@ test('track.curve sets automation points and undo restores them',async()=>{reset
  await commandDispatcher.runCommand('sound.arrange.undo');
  assert.equal(getArrangementState().document.tracks[0].gainCurve.length,0);
 }finally{off();resetArrangement();}});
+
+test('track.panCurve sets pan automation points and undo restores them',async()=>{resetArrangement();const off=registerArrangeCommands();try{
+ const source={id:'src',name:'tone.wav',frames:96000,sampleRate:48000,channels:2 as const};
+ editArrangement(s=>{s.sources.push(source);s.tracks.push({...newTrack('t1','A'),clips:[newClip('a',source)]});});
+ await commandDispatcher.runCommand('sound.arrange.track.panCurve',{id:'t1',points:[{at:0,pan:-1},{at:4800,pan:1}]});
+ assert.equal(getArrangementState().document.tracks[0].panCurve.length,2);
+ await assert.rejects(commandDispatcher.runCommand('sound.arrange.track.panCurve',{id:'missing',points:[]}));
+ await commandDispatcher.runCommand('sound.arrange.undo');
+ assert.equal(getArrangementState().document.tracks[0].panCurve.length,0);
+}finally{off();resetArrangement();}});

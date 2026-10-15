@@ -12,10 +12,10 @@ export function glueSession(raw:Arrangement,trackId:string,ids:string[]):Arrange
  if(!Array.isArray(ids)||ids.length<2)throw Error('Select at least two clips on one track');
  const clips=track.clips.filter(c=>ids.includes(c.id));
  if(clips.length!==ids.length)throw Error('All glued clips must be on the same track');
- return{...s,masterRack:emptyRack(),tailFrames:0,tracks:[{...track,gainDb:0,pan:0,gainCurve:[],mute:false,solo:false,rack:emptyRack(),clips}]};
+ return{...s,masterRack:emptyRack(),tailFrames:0,tracks:[{...track,gainDb:0,pan:0,gainCurve:[],panCurve:[],mute:false,solo:false,rack:emptyRack(),clips}]};
 }
 /** The single-track session behind freeze: like the analysis session, but level, pan and volume automation neutralized - freeze bakes the rack only, the fader, pan and gain curve stay live on the frozen track. */
 export function freezeSession(raw:Arrangement,trackId:string):Arrangement{
  const one=trackAnalysisSession(raw,trackId);
- return{...one,tracks:one.tracks.map(t=>({...t,gainDb:0,pan:0,gainCurve:[]}))};
+ return{...one,tracks:one.tracks.map(t=>({...t,gainDb:0,pan:0,gainCurve:[],panCurve:[]}))};
 }

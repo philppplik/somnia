@@ -33,9 +33,9 @@ test('freeze render bakes the rack without fader/pan, so the frozen track sums b
 });
 
 test('freeze ignores track volume automation: the curve stays live, never baked',()=>{
- const s=fixture();s.tracks[0].gainCurve=[{at:0,db:0},{at:480,db:-12}];
+ const s=fixture();s.tracks[0].gainCurve=[{at:0,db:0},{at:480,db:-12}];s.tracks[0].panCurve=[{at:0,pan:-1}];
  const frozen=renderRackedArrangement(freezeSession(s,'a'),sources(),gainRack);
  const plain=fixture();const unfrozen=renderRackedArrangement(freezeSession(plain,'a'),sources(),gainRack);
  for(let i=0;i<480;i+=97)assert.ok(Math.abs(frozen.channels[0][i]-unfrozen.channels[0][i])<1e-7,`frozen audio identical with and without a live curve at ${i}`);
- assert.equal(freezeSession(s,'a').tracks[0].gainCurve.length,0,'freeze session clears the curve so the live track keeps owning it');
+ assert.equal(freezeSession(s,'a').tracks[0].gainCurve.length,0,'freeze session clears the gain curve so the live track keeps owning it');assert.equal(freezeSession(s,'a').tracks[0].panCurve.length,0,'freeze session clears the pan curve too');
 });
