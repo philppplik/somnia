@@ -9,7 +9,7 @@ import {commandDispatcher} from '../../lib/commandDispatcher';
 import {blockSoundClipCommands} from '../../lib/sound/commands';
 import {hasClipClipboard,registerArrangeCommands} from '../../lib/sound/arrangeCommands';
 import {useArrangement,addArrangementMedia,loadArrangement,resetArrangement,reverseClipToMedia,bounceRenderToTrack,freezeTrackToMedia,exportStems,glueClipsToMedia} from '../../lib/sound/arrangeStore';
-import {arrangementEnd,ARRANGE_LIMITS,findCrossfadePair,gainCurveAt,loopToggle,serializeArrangement,trimEndPatch,trimStartPatch} from '../../lib/sound/arrangement';
+import {arrangementEnd,ARRANGE_LIMITS,findCrossfadePair,gainCurveAt,loopToggle,markerJump,serializeArrangement,trimEndPatch,trimStartPatch} from '../../lib/sound/arrangement';
 import {snapFrame,snapPoints} from '../../lib/sound/snap';
 import {Button} from '../ui/button';
 import {NativeButton,NativeInput,NativeSelect} from '../ui/native-controls';
@@ -29,11 +29,12 @@ export function SoundArrange(){
   else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='a'){e.preventDefault();setSelected(s.tracks.flatMap(t=>t.clips).map(c=>c.id));}
   else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='d'&&selected.length){e.preventDefault();void run('clips.duplicate',{ids:selected});}
   else if(e.key==='Escape'&&selected.length){e.preventDefault();setSelected([]);}
+  else if((e.ctrlKey||e.metaKey)&&(e.key==='ArrowLeft'||e.key==='ArrowRight')){e.preventDefault();setTime(markerJump(s,frame,e.key==='ArrowRight'?1:-1));}
   else if(e.key==='Home'){e.preventDefault();setTime(0);}
   else if(e.key==='End'){e.preventDefault();setTime(arrangementEnd(s));}
   else if((e.key==='+'||e.key==='=')&&!e.ctrlKey&&!e.metaKey&&!e.altKey){e.preventDefault();setZoom(z=>Math.min(5,z+0.5));}
   else if(e.key==='-'&&!e.ctrlKey&&!e.metaKey&&!e.altKey){e.preventDefault();setZoom(z=>Math.max(1,z-0.5));}};
- window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey);},[state.url,selected,state.revision]);
+ window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey);},[state.url,selected,state.revision,frame]);
  const dirty=serializeArrangement(s)!==state.savedText;
  const end=arrangementEnd(s),span=Math.max(48000*12,Math.min(48000*ARRANGE_LIMITS.seconds,end+48000));
  const beatFrames=Math.round(48000*60/s.bpm),gridFrames=gridMode==='s01'?4800:beatFrames*(gridMode==='bar'?4:1);

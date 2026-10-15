@@ -111,6 +111,13 @@ export function cutSessionRange(s:Arrangement,start:number,end:number,nextId:()=
  for(const m of s.markers)if(m.frame>=end)m.frame-=cut;
  if(s.loop){if(s.loop.start>=end)s.loop={start:s.loop.start-cut,end:s.loop.end-cut};else if(s.loop.end>start)s.loop=null;}
 }
+/** Playhead jump target for marker navigation: the nearest marker before/after the frame; with none on that side, the session boundary (0 or the end). */
+export function markerJump(s:Arrangement,frame:number,dir:1|-1):number{
+ if(!Number.isSafeInteger(frame))throw Error('Invalid frame');
+ const frames=s.markers.map(m=>m.frame).sort((a,b)=>a-b);
+ if(dir===1){const next=frames.find(f=>f>frame);return next??arrangementEnd(s);}
+ const prev=[...frames].reverse().find(f=>f<frame);return prev??0;
+}
 /** Per-clip normalize gains for a selection, two-pass: a missing peak or a silent clip rejects the whole batch unchanged. */
 export function normalizeSelection(s:Arrangement,ids:string[],peaks:Record<string,Float32Array>,targetDb=0):void{
  if(!ids.length||ids.some(v=>typeof v!=='string'))throw Error('No clips selected');
