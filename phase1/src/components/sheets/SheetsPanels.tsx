@@ -685,7 +685,7 @@ function ViewGroup(){
  </div>;
 }
 /** Page setup and export in one grouped menu: page, print area and titles, appearance, header and footer, and file export. One undo step per change. */
-type PrintAction='portrait'|'landscape'|'paperA4'|'paperA3'|'paperLetter'|'paperLegal'|'marginsNormal'|'marginsWide'|'marginsNarrow'|'fitWidth'|'scale'|'areaSet'|'areaClear'|'rowBreakAdd'|'rowBreakRemove'|'colBreakAdd'|'colBreakRemove'|'breaksClear'|'titleRowsSet'|'titleRowsClear'|'gridlinesOn'|'gridlinesOff'|'headingsOn'|'headingsOff'|'centerOn'|'centerOff'|'header'|'footer'|'pdfSheet'|'pdfAll'|'pdfSelection'|'csv'|'tsv'|'html';
+type PrintAction='portrait'|'landscape'|'paperA4'|'paperA3'|'paperLetter'|'paperLegal'|'marginsNormal'|'marginsWide'|'marginsNarrow'|'fitWidth'|'scale'|'areaSet'|'areaClear'|'rowBreakAdd'|'rowBreakRemove'|'colBreakAdd'|'colBreakRemove'|'breaksClear'|'titleRowsSet'|'titleRowsClear'|'titleColsSet'|'titleColsClear'|'areaGo'|'gridlinesOn'|'gridlinesOff'|'headingsOn'|'headingsOff'|'centerOn'|'centerOff'|'header'|'footer'|'pdfSheet'|'pdfAll'|'pdfSelection'|'csv'|'tsv'|'html';
 const PRINT_EXPORTS:Record<string,{format:'pdf'|'csv'|'tsv'|'html';scope:'sheet'|'all'|'selection'}>={pdfSheet:{format:'pdf',scope:'sheet'},pdfAll:{format:'pdf',scope:'all'},pdfSelection:{format:'pdf',scope:'selection'},csv:{format:'csv',scope:'sheet'},tsv:{format:'tsv',scope:'sheet'},html:{format:'html',scope:'sheet'}};
 function PrintGroup(){
  const {t}=useT(),s=useSheetsSelection(),action=useAction();const [act,setAct]=useState<PrintAction>('pdfSheet');const [scale,setScale]=useState(100);const [text,setText]=useState('');
@@ -695,8 +695,9 @@ function PrintGroup(){
  const breakAt=act==='rowBreakAdd'||act==='rowBreakRemove'?r.r0+1:act==='colBreakAdd'||act==='colBreakRemove'?r.c0+1:0,breakBad=(act==='rowBreakAdd'||act==='colBreakAdd')&&breakAt<2,breakNone=act==='rowBreakRemove'?!page?.rowBreaks.includes(breakAt):act==='colBreakRemove'?!page?.colBreaks.includes(breakAt):act==='breaksClear'?!page||(page.rowBreaks.length+page.colBreaks.length===0):false;
  const apply=()=>{
   const e=PRINT_EXPORTS[act];if(e){void action.run('sheets.export',e);return;}
+  if(act==='areaGo'){if(page?.printArea)void action.run('sheets.navigate',{sheet:s.sheet,address:page.printArea});return;}
   const rows=`${r.r0+1}:${r.r1+1}`;
-  const ops:Record<string,unknown>={portrait:{orientation:'portrait'},landscape:{orientation:'landscape'},paperA4:{paper:'A4'},paperA3:{paper:'A3'},paperLetter:{paper:'Letter'},paperLegal:{paper:'Legal'},marginsNormal:{margins:'normal'},marginsWide:{margins:'wide'},marginsNarrow:{margins:'narrow'},fitWidth:{fitWidth:1,fitHeight:0},scale:{scale},areaSet:{printArea:rangeAddress(r)},rowBreakAdd:{addRowBreak:r.r0+1},rowBreakRemove:{removeRowBreak:r.r0+1},colBreakAdd:{addColBreak:r.c0+1},colBreakRemove:{removeColBreak:r.c0+1},breaksClear:{clearBreaks:true},areaClear:{printArea:null},titleRowsSet:{titleRows:rows},titleRowsClear:{titleRows:null},gridlinesOn:{gridlines:true},gridlinesOff:{gridlines:false},headingsOn:{headings:true},headingsOff:{headings:false},centerOn:{centerH:true,centerV:false},centerOff:{centerH:false,centerV:false},header:{header:text},footer:{footer:text}};
+  const ops:Record<string,unknown>={portrait:{orientation:'portrait'},landscape:{orientation:'landscape'},paperA4:{paper:'A4'},paperA3:{paper:'A3'},paperLetter:{paper:'Letter'},paperLegal:{paper:'Legal'},marginsNormal:{margins:'normal'},marginsWide:{margins:'wide'},marginsNarrow:{margins:'narrow'},fitWidth:{fitWidth:1,fitHeight:0},scale:{scale},areaSet:{printArea:rangeAddress(r)},rowBreakAdd:{addRowBreak:r.r0+1},rowBreakRemove:{removeRowBreak:r.r0+1},colBreakAdd:{addColBreak:r.c0+1},colBreakRemove:{removeColBreak:r.c0+1},breaksClear:{clearBreaks:true},areaClear:{printArea:null},titleRowsSet:{titleRows:rows},titleRowsClear:{titleRows:null},titleColsSet:{titleCols:`${colName(r.c0)}:${colName(r.c1)}`},titleColsClear:{titleCols:null},gridlinesOn:{gridlines:true},gridlinesOff:{gridlines:false},headingsOn:{headings:true},headingsOff:{headings:false},centerOn:{centerH:true,centerV:false},centerOff:{centerH:false,centerV:false},header:{header:text},footer:{footer:text}};
   void action.run('sheets.pageSetup',ops[act]);
  };
  const opt=(id:PrintAction)=><option key={id} value={id}>{t('sheets.pr.'+id)}</option>;
@@ -705,7 +706,7 @@ function PrintGroup(){
   <label className="flex flex-col gap-1">{t('sheets.pr.action')}<NativeSelect className={field} value={act} disabled={action.busy} onChange={e=>setAct(e.currentTarget.value as PrintAction)} data-testid="sheets-pr-action">
    <optgroup label={t('sheets.pr.groupExport')}>{(['pdfSheet','pdfAll','pdfSelection','csv','tsv','html'] as PrintAction[]).map(opt)}</optgroup>
    <optgroup label={t('sheets.pr.groupPage')}>{(['portrait','landscape','paperA4','paperA3','paperLetter','paperLegal','marginsNormal','marginsWide','marginsNarrow','fitWidth','scale'] as PrintAction[]).map(opt)}</optgroup>
-   <optgroup label={t('sheets.pr.groupArea')}>{(['areaSet','areaClear','titleRowsSet','titleRowsClear'] as PrintAction[]).map(opt)}</optgroup>
+   <optgroup label={t('sheets.pr.groupArea')}>{(['areaSet','areaGo','areaClear','titleRowsSet','titleRowsClear','titleColsSet','titleColsClear'] as PrintAction[]).map(opt)}</optgroup>
    <optgroup label={t('sheets.pr.groupBreaks')}>{(['rowBreakAdd','rowBreakRemove','colBreakAdd','colBreakRemove','breaksClear'] as PrintAction[]).map(opt)}</optgroup>
    <optgroup label={t('sheets.pr.groupLook')}>{(['gridlinesOn','gridlinesOff','headingsOn','headingsOff','centerOn','centerOff'] as PrintAction[]).map(opt)}</optgroup>
    <optgroup label={t('sheets.pr.groupText')}>{(['header','footer'] as PrintAction[]).map(opt)}</optgroup>
@@ -719,8 +720,9 @@ function PrintGroup(){
   </NativeSelect></label>}
   {isText&&<p className="text-ink-3">{t('sheets.pr.hint')}</p>}
   {isText&&!textBad&&text!==''&&hf&&<p className="text-ink-3" data-testid="sheets-pr-preview">{t('sheets.pr.preview',{left:hf[0]||'-',center:hf[1]||'-',right:hf[2]||'-'})}</p>}
-  <Button variant="outline" size="compact" disabled={action.busy||textBad||breakBad||breakNone} onClick={apply} data-testid="sheets-pr-apply">{t(exporting?'sheets.pr.applyExport':'sheets.pr.apply')}</Button>
+  <Button variant="outline" size="compact" disabled={action.busy||textBad||breakBad||breakNone||(act==='areaGo'&&!page?.printArea)} onClick={apply} data-testid="sheets-pr-apply">{t(exporting?'sheets.pr.applyExport':'sheets.pr.apply')}</Button>
   {page&&<p className="text-ink-3">{page.fitWidth>0?t('sheets.pr.currentFit',{orientation:t('sheets.pr.'+page.orientation),paper:page.paper,w:page.fitWidth}):t('sheets.pr.current',{orientation:t('sheets.pr.'+page.orientation),paper:page.paper,scale:page.scale})}</p>}
+  {page&&(page.printArea||page.titleRows||page.titleCols)&&<p className="text-ink-3" data-testid="sheets-pr-area-now">{t('sheets.pr.areaNow',{area:page.printArea??'-',rows:page.titleRows??'-',cols:page.titleCols??'-'})}</p>}
   {(breakBad||breakNone)&&<p className="text-ink-3">{t(breakBad?'sheets.pr.breakFirst':'sheets.pr.breakNone')}</p>}
   {page&&(page.rowBreaks.length>0||page.colBreaks.length>0)&&<p className="text-ink-3">{t('sheets.pr.breaksNow',{rows:page.rowBreaks.join(', ')||'-',cols:page.colBreaks.join(', ')||'-'})}</p>}
   <p className="text-ink-3">{t('sheets.pr.scope',{range:rangeAddress(r)})}</p>
@@ -750,8 +752,8 @@ function PivotGroup(){
  </div>;
 }
 /** Edit an existing PivotTable of this sheet in one grouped menu. One undo step each; a report never overwrites other data. */
-type PivotAct='addField'|'removeField'|'moveField'|'valueFunc'|'valueShowAs'|'valueFormat'|'filterItems'|'filterAll'|'sort'|'group'|'collapse'|'expand'|'layout'|'totals'|'subtotals'|'headers'|'style'|'useSelection'|'refresh'|'delete';
-const PIVOT_ACTS:[string,PivotAct[]][]=[['groupFields',['addField','removeField','moveField']],['groupValues',['valueFunc','valueShowAs','valueFormat']],['groupItems',['filterItems','filterAll','sort','group','collapse','expand']],['groupLayout',['layout','totals','subtotals','headers','style']],['groupReport',['useSelection','refresh','delete']]];
+type PivotAct='addField'|'removeField'|'moveField'|'valueFunc'|'valueShowAs'|'valueFormat'|'filterItems'|'filterAll'|'sort'|'group'|'collapse'|'expand'|'layout'|'totals'|'subtotals'|'headers'|'style'|'useSelection'|'refresh'|'delete'|'goReport'|'goSource';
+const PIVOT_ACTS:[string,PivotAct[]][]=[['groupFields',['addField','removeField','moveField']],['groupValues',['valueFunc','valueShowAs','valueFormat']],['groupItems',['filterItems','filterAll','sort','group','collapse','expand']],['groupLayout',['layout','totals','subtotals','headers','style']],['groupReport',['goReport','goSource','useSelection','refresh','delete']]];
 function PivotEditGroup(){
  const {t}=useT(),s=useSheetsSelection(),action=useAction();
  const [pick,setPick]=useState('');const [act,setAct]=useState<PivotAct>('addField');const [fieldPick,setFieldPick]=useState('');const [area,setArea]=useState<PivotArea>('rows');const [to,setTo]=useState<PivotArea>('columns');
@@ -785,11 +787,16 @@ function PivotEditGroup(){
    case 'subtotals':return {kind:'layout',pivot,subtotals:subs};
    case 'headers':return {kind:'layout',pivot,showHeaders:heads==='show'};
    case 'style':return {kind:'layout',pivot,style};
+   case 'goReport':case 'goSource':return null;
    case 'useSelection':return pivotSourceProblem(rows,cols)?null:{kind:'changeSource',pivot};
    default:return {kind:act,pivot};
   }
  };
  const op=build();
+ const place=(()=>{if(act==='goReport')return p.range?{sheet:s.sheet,address:p.range}:null;if(act!=='goSource'||!p.source)return null;
+  const named=nameTarget(p.source),found=named?(s.workbook?.sheets??[]).find(x=>x.name.toLowerCase()===named.sheet.toLowerCase()&&x.visibility==='Visible'):undefined,span=nameSpan(p.source.includes('!')?p.source:'=X!'+p.source);
+  return found&&span?{sheet:found.index,address:span}:!p.source.includes('!')&&span?{sheet:s.sheet,address:span}:null;})();
+ const going=act==='goReport'||act==='goSource';
  const sel=<T extends string>(label:string,value:T,set:(v:T)=>void,options:{value:string;text:string}[],id:string)=><label className="flex flex-col gap-1">{label}<NativeSelect className={field} value={value} disabled={action.busy||options.length===0} onChange={e=>set(e.currentTarget.value as T)} data-testid={id}>{options.map(o=><option key={o.value} value={o.value}>{o.text}</option>)}</NativeSelect></label>;
  const areaOpts=PIVOT_AREAS.map(a=>({value:a,text:t('sheets.pe.area.'+a)}));
  return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.pe.title')}>
@@ -813,7 +820,7 @@ function PivotEditGroup(){
   {act==='headers'&&sel(t('sheets.pe.headers'),heads,setHeads,(['show','hide'] as const).map(f=>({value:f,text:t('sheets.pe.h.'+f)})),'sheets-pe-headers')}
   {act==='style'&&sel(t('sheets.pe.style'),style,setStyle,PIVOT_STYLES.map(f=>({value:f,text:f.replace('PivotStyle','')})),'sheets-pe-style')}
   {act==='filterItems'&&<label className="flex flex-col gap-1">{t('sheets.pe.items')}<NativeInput className={field} value={items} maxLength={2000} disabled={action.busy} onChange={e=>setItems(e.currentTarget.value)} data-testid="sheets-pe-items"/></label>}
-  <Button variant="outline" size="compact" disabled={action.busy||!op} onClick={()=>void action.run('sheets.pivotEdit',op)} data-testid="sheets-pe-apply">{t('sheets.pe.apply')}</Button>
+  <Button variant="outline" size="compact" disabled={action.busy||(going?!place:!op)} onClick={()=>void(going&&place?action.run('sheets.navigate',place):action.run('sheets.pivotEdit',op))} data-testid="sheets-pe-apply">{t('sheets.pe.apply')}</Button>
   <p className="text-ink-3">{t(act==='useSelection'?'sheets.pe.sourceHint':usesField&&fieldList.length===0?'sheets.pe.noField':'sheets.pe.hint',{range:rangeAddress(r)})}</p>
   {action.notice?<p role="alert">{action.notice}</p>:null}
  </div>;
