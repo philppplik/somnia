@@ -7,9 +7,9 @@ export interface GainPoint{at:number;db:number}
 export interface ArrangeClip{id:string;sourceId:string;start:number;offset:number;length:number;gainDb:number;fadeIn:number;fadeOut:number;gainCurve:GainPoint[];muted:boolean;pan:number;fadeShape:'linear'|'equalPower'}
 export interface ArrangeTrack{id:string;name:string;gainDb:number;pan:number;mute:boolean;solo:boolean;rack:EffectRack;clips:ArrangeClip[]}
 export interface ArrangeMarker{id:string;name:string;frame:number}
-/** tailFrames: explicit bounded effect tail appended past the last clip so reverb/delay can ring out; 0 keeps the B1 session boundary. */
-export interface Arrangement{version:7;masterRack:EffectRack;name:string;sampleRate:48000;sources:AudioSourceRef[];tracks:ArrangeTrack[];markers:ArrangeMarker[];loop:{start:number;end:number}|null;tailFrames:number}
-export function emptyArrangement(name='Untitled session'):Arrangement{return{version:7,masterRack:emptyRack(),name,sampleRate:48000,sources:[],tracks:[],markers:[],loop:null,tailFrames:0};}
+/** tailFrames: explicit bounded effect tail appended past the last clip so reverb/delay can ring out; 0 keeps the B1 session boundary. bpm: musical tempo for the beat grid and snapping; the mix itself is tempo-agnostic. */
+export interface Arrangement{version:8;masterRack:EffectRack;name:string;sampleRate:48000;sources:AudioSourceRef[];tracks:ArrangeTrack[];markers:ArrangeMarker[];loop:{start:number;end:number}|null;tailFrames:number;bpm:number}
+export function emptyArrangement(name='Untitled session'):Arrangement{return{version:8,masterRack:emptyRack(),name,sampleRate:48000,sources:[],tracks:[],markers:[],loop:null,tailFrames:0,bpm:120};}
 const fail=(s:string):never=>{throw Error(`Invalid Sound session: ${s}`);};
 const object=(v:unknown,keys:string[]):Record<string,unknown>=>{if(!v||typeof v!=='object'||Array.isArray(v))return fail('object expected');const o=v as Record<string,unknown>;if(Object.keys(o).some(k=>!keys.includes(k))||keys.some(k=>!Object.hasOwn(o,k)))return fail('unknown or missing field');return o;};
 const text=(v:unknown,max=160):string=>typeof v==='string'&&v.trim().length>0&&v.length<=max&&!/[\x00-\x1f]/.test(v)?v:fail('text');
@@ -26,7 +26,8 @@ export function validateArrangement(raw:unknown):Arrangement{
  if(raw&&typeof raw==='object'&&(raw as {version?:unknown}).version===4){const old=object(raw,['version','name','sampleRate','sources','tracks','markers','loop','masterRack','tailFrames']);raw={...old,version:5,tracks:list(old.tracks,ARRANGE_LIMITS.tracks).map(t=>({...(t as Record<string,unknown>),clips:(t as {clips:unknown[]}).clips.map(c=>({...(c as Record<string,unknown>),muted:false}))}))};}
  if(raw&&typeof raw==='object'&&(raw as {version?:unknown}).version===5){const old=object(raw,['version','name','sampleRate','sources','tracks','markers','loop','masterRack','tailFrames']);raw={...old,version:6,tracks:list(old.tracks,ARRANGE_LIMITS.tracks).map(t=>({...(t as Record<string,unknown>),clips:(t as {clips:unknown[]}).clips.map(c=>({...(c as Record<string,unknown>),pan:0}))}))};}
  if(raw&&typeof raw==='object'&&(raw as {version?:unknown}).version===6){const old=object(raw,['version','name','sampleRate','sources','tracks','markers','loop','masterRack','tailFrames']);raw={...old,version:7,tracks:list(old.tracks,ARRANGE_LIMITS.tracks).map(t=>({...(t as Record<string,unknown>),clips:(t as {clips:unknown[]}).clips.map(c=>({...(c as Record<string,unknown>),fadeShape:'linear'}))}))};}
- const o=object(raw,['version','name','sampleRate','sources','tracks','markers','loop','masterRack','tailFrames']);if(o.version!==7||o.sampleRate!==48000)return fail('version or sample rate');
+ if(raw&&typeof raw==='object'&&(raw as {version?:unknown}).version===7){const old=object(raw,['version','name','sampleRate','sources','tracks','markers','loop','masterRack','tailFrames']);raw={...old,version:8,bpm:120};}
+ const o=object(raw,['version','name','sampleRate','sources','tracks','markers','loop','masterRack','tailFrames','bpm']);if(o.version!==8||o.sampleRate!==48000)return fail('version or sample rate');
  const ids=new Set<string>();const id=(v:unknown)=>{const s=text(v,100);if(ids.has(s))return fail('duplicate identity');ids.add(s);return s;};
  const sources=list(o.sources,ARRANGE_LIMITS.sources).map(v=>{const s=object(v,['id','name','frames','sampleRate','channels']);return{id:id(s.id),name:text(s.name),frames:number(s.frames,1,ARRANGE_LIMITS.sourceFrames,true),sampleRate:number(s.sampleRate,8000,192000,true),channels:number(s.channels,1,2,true) as 1|2};});
  if(sources.reduce((n,s)=>n+s.frames*s.channels,0)>ARRANGE_LIMITS.sourceFrames)return fail('source memory budget');
@@ -41,7 +42,7 @@ export function validateArrangement(raw:unknown):Arrangement{
  });
  const markers=list(o.markers,128).map(v=>{const m=object(v,['id','name','frame']);return{id:id(m.id),name:text(m.name),frame:number(m.frame,0,max,true)};});
  let loop:Arrangement['loop']=null;if(o.loop!==null){const r=object(o.loop,['start','end']);loop={start:number(r.start,0,max-1,true),end:number(r.end,1,max,true)};if(loop.end<=loop.start)return fail('loop range');}
- return{version:7,masterRack:validateRack(o.masterRack),name:text(o.name),sampleRate:48000,sources,tracks,markers,loop,tailFrames:number(o.tailFrames,0,48000*ARRANGE_LIMITS.tailSeconds,true)};
+ return{version:8,masterRack:validateRack(o.masterRack),name:text(o.name),sampleRate:48000,sources,tracks,markers,loop,tailFrames:number(o.tailFrames,0,48000*ARRANGE_LIMITS.tailSeconds,true),bpm:number(o.bpm,20,300)};
 }
 export const serializeArrangement=(s:Arrangement)=>JSON.stringify(validateArrangement(s));
 export const parseArrangement=(text:string):Arrangement=>{if(text.length>256_000)throw Error('Sound session document is too large');return validateArrangement(JSON.parse(text));};
