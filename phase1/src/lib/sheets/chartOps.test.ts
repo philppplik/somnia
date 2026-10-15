@@ -6,6 +6,16 @@ test('chart commands accept the closed allowlist',()=>{
  assert.deepEqual(parseChartCommand({kind:'set',chart:3,legend:'none',dataLabels:true,style:16,at:'h2',width:480,height:288,xTitle:'X'}),{kind:'set',chart:3,xTitle:'X',legend:'none',dataLabels:true,style:16,at:'H2',width:480,height:288});
  assert.deepEqual(parseChartCommand({kind:'delete',chart:0}),{kind:'delete',chart:0});assert.deepEqual(parseChartCommand({kind:'switch',chart:7}),{kind:'switch',chart:7});
 });
+test('chart editing commands: palette, color, data, layout, element, moveSheet',()=>{
+ assert.deepEqual(parseChartCommand({kind:'palette',chart:1,palette:'accent3'}),{kind:'palette',chart:1,palette:'accent3'});
+ assert.deepEqual(parseChartCommand({kind:'color',chart:1,series:2,color:'#C0392B'}),{kind:'color',chart:1,series:2,color:'#c0392b'});
+ assert.deepEqual(parseChartCommand({kind:'data',chart:1}),{kind:'data',chart:1});assert.deepEqual(parseChartCommand({kind:'data',chart:1,byRows:true}),{kind:'data',chart:1,byRows:true});
+ assert.deepEqual(parseChartCommand({kind:'layout',chart:1,layout:6}),{kind:'layout',chart:1,layout:6});
+ assert.deepEqual(parseChartCommand({kind:'element',chart:1,element:'axisTitles',on:false}),{kind:'element',chart:1,element:'axisTitles',on:false});
+ assert.deepEqual(parseChartCommand({kind:'moveSheet',chart:1,sheet:'Data 2'}),{kind:'moveSheet',chart:1,sheet:'Data 2'});
+ for(const bad of [{kind:'palette',chart:1,palette:'neon'},{kind:'palette',chart:1},{kind:'color',chart:1,series:64,color:'#000000'},{kind:'color',chart:1,series:0,color:'red'},{kind:'color',chart:1,series:0,color:'#12345'},{kind:'data',chart:1,byRows:'yes'},{kind:'data',chart:1,range:'A1'},{kind:'layout',chart:1,layout:0},{kind:'layout',chart:1,layout:7},{kind:'element',chart:1,element:'legend',on:true},{kind:'element',chart:1,element:'title'},{kind:'moveSheet',chart:1,sheet:''},{kind:'moveSheet',chart:1,sheet:'a\u0007'},{kind:'moveSheet',chart:1,sheet:'x'.repeat(65)},{kind:'moveSheet',chart:-1,sheet:'A'}])
+  assert.throws(()=>parseChartCommand(bad),JSON.stringify(bad));
+});
 test('chart commands refuse malformed input',()=>{
  for(const bad of [null,[],'x',{},{kind:'burn'},{kind:'create',type:'bubble'},{kind:'create',subtype:'x'},{kind:'create',extra:1},{kind:'create',title:'a\u0007'},{kind:'create',title:'x'.repeat(121)},{kind:'set'},{kind:'set',chart:1},{kind:'set',chart:-1,title:'a'},{kind:'set',chart:1.5,title:'a'},{kind:'set',chart:1,style:17},{kind:'set',chart:1,style:0},{kind:'set',chart:1,legend:'middle'},{kind:'set',chart:1,dataLabels:'y'},{kind:'set',chart:1,at:'nope'},{kind:'set',chart:1,width:19},{kind:'set',chart:1,height:4001},{kind:'delete'},{kind:'delete',chart:1,x:1}])
   assert.throws(()=>parseChartCommand(bad),JSON.stringify(bad));

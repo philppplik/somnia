@@ -17,7 +17,7 @@ import type {FillDirection,CfStyle} from '../../lib/sheets/protocol';
 import {PIVOT_FUNCS,tableBlockProblem} from '../../lib/sheets/tableOps';
 import {headerProblem,MAX_HEADER_CHARS} from '../../lib/sheets/printOps';
 import {MAX_ZOOM,MIN_ZOOM} from '../../lib/sheets/viewOps';
-import {MAX_TITLE_CHARS,sparklineBlockProblem} from '../../lib/sheets/chartOps';
+import {CHART_COLORS,MAX_TITLE_CHARS,sparklineBlockProblem} from '../../lib/sheets/chartOps';
 import {OBJECT_GROUPS,SHAPE_FILLS,SHAPE_LINES,MAX_PICTURE_BYTES,MAX_SHAPE_TEXT,MAX_ALT,buildObjectOp,bytesToBase64,objectIsShape,objectNeedsPick,type ObjectAction} from '../../lib/sheets/objectOps';
 import {layoutBlockProblem,MERGE_HOWS,ROTATE_MODES} from '../../lib/sheets/layoutOps';
 import {Checkbox} from '../ui/checkbox';
@@ -319,25 +319,38 @@ function TablesGroup(){
 }
 /** Charts and sparklines in one grouped menu: make a chart from the selection, change or delete one of this sheet's charts, or add a sparkline. One undo step each. */
 type ChartAction=string;
-const CHART_CREATE:Record<string,{type:string;subtype?:string}>={createColumn:{type:'column'},createColumnStacked:{type:'column',subtype:'stacked'},createBar:{type:'bar'},createLine:{type:'line'},createLineMarkers:{type:'line',subtype:'markers'},createArea:{type:'area'},createPie:{type:'pie'},createDoughnut:{type:'doughnut'},createScatter:{type:'scatter'},createRadar:{type:'radar'}};
-const CHART_TYPE:Record<string,string>={typeColumn:'column',typeBar:'bar',typeLine:'line',typePie:'pie',typeArea:'area'};
+const CHART_CREATE:Record<string,{type:string;subtype?:string}>={createColumn:{type:'column'},createColumnStacked:{type:'column',subtype:'stacked'},createBar:{type:'bar'},createLine:{type:'line'},createLineMarkers:{type:'line',subtype:'markers'},createArea:{type:'area'},createPie:{type:'pie'},createDoughnut:{type:'doughnut'},createScatter:{type:'scatter'},createRadar:{type:'radar'},createHistogram:{type:'histogram'},createWaterfall:{type:'waterfall'},createFunnel:{type:'funnel'},createTreemap:{type:'treemap'}};
+const CHART_TYPE:Record<string,{type:string;subtype?:string}>={ctColumn:{type:'column'},ctColumnStacked:{type:'column',subtype:'stacked'},ctColumn100:{type:'column',subtype:'stacked100'},ctBar:{type:'bar'},ctBarStacked:{type:'bar',subtype:'stacked'},ctLine:{type:'line'},ctLineMarkers:{type:'line',subtype:'markers'},ctArea:{type:'area'},ctPie:{type:'pie'},ctDoughnut:{type:'doughnut'},ctScatter:{type:'scatter'},ctScatterLines:{type:'scatter',subtype:'lines'},ctRadar:{type:'radar'},ctHistogram:{type:'histogram'},ctWaterfall:{type:'waterfall'},ctFunnel:{type:'funnel'},ctTreemap:{type:'treemap'}};
+const CHART_PALETTE_IDS=['colorful','monochrome','accent1','accent2','accent3','accent4','accent5','accent6'];
+const CHART_LAYOUT_IDS=['1','2','3','4','5','6'],CHART_LEGEND_IDS=['none','bottom','top','left','right'];
+/** Change actions that need one extra choice, and the choices they offer. */
+const CHART_ARG_ACTIONS=['changeType','palette','seriesColor','layout','legendPos','moveSheet'];
 const CHART_SIZE:Record<string,[number,number]>={sizeSmall:[360,216],sizeMedium:[480,288],sizeLarge:[720,432]};
-const CHART_FLAGS:Record<string,Record<string,unknown>>={legendNone:{legend:'none'},legendBottom:{legend:'bottom'},legendRight:{legend:'right'},labelsOn:{dataLabels:true},labelsOff:{dataLabels:false},gridOn:{gridlines:true},gridOff:{gridlines:false}};
+const CHART_FLAGS:Record<string,Record<string,unknown>>={axisTitlesOn:{element:'axisTitles',on:true},axisTitlesOff:{element:'axisTitles',on:false},titleOff:{element:'title',on:false},labelsOn:{dataLabels:true},labelsOff:{dataLabels:false},gridOn:{gridlines:true},gridOff:{gridlines:false}};
 const SPARK_ACTIONS:Record<string,string>={sparkLine:'line',sparkColumn:'column',sparkWinLoss:'winLoss'};
 function ChartsGroup(){
- const {t}=useT(),s=useSheetsSelection(),action=useAction();const [act,setAct]=useState<ChartAction>('createColumn');const [pick,setPick]=useState(0);const [text,setText]=useState('');const [style,setStyle]=useState(1);
+ const {t}=useT(),s=useSheetsSelection(),action=useAction();const [act,setAct]=useState<ChartAction>('createColumn');const [pick,setPick]=useState(0);const [text,setText]=useState('');const [style,setStyle]=useState(1);const [arg,setArg]=useState('');const [seriesPick,setSeriesPick]=useState(0);
  const r=s?.range;if(!s||!r)return null;
+ const otherSheets=(s.workbook?.sheets??[]).filter(x=>x.index!==s.sheet&&x.visibility==='Visible').map(x=>x.name);
+ const argIds:string[]=act==='changeType'?Object.keys(CHART_TYPE):act==='palette'?CHART_PALETTE_IDS:act==='seriesColor'?Object.keys(CHART_COLORS):act==='layout'?CHART_LAYOUT_IDS:act==='legendPos'?CHART_LEGEND_IDS:act==='moveSheet'?otherSheets:[];
+ const argVal=argIds.includes(arg)?arg:argIds[0]??'';
  const list=s.charts??[],chosen=list.find(x=>x.id===pick)??list[0]??null;
  const creating=act in CHART_CREATE,spark=act in SPARK_ACTIONS,titled=act==='title2'||act==='xTitle'||act==='yTitle',styled=act==='style';
  const rows=r.r1-r.r0+1,cols=r.c1-r.c0+1;
- const problem=creating?(tableBlockProblem(rows,cols)==='large'||rows*cols<2?'x':null):spark?(sparklineBlockProblem(rows,cols)?'x':null):!chosen||(titled&&text.trim()===''&&act!=='title2')?'x':null;
+ const problem=creating?(tableBlockProblem(rows,cols)==='large'||rows*cols<2?'x':null):spark?(sparklineBlockProblem(rows,cols)?'x':null):!chosen||(CHART_ARG_ACTIONS.includes(act)&&!argVal)||(titled&&text.trim()===''&&act!=='title2')?'x':null;
  const apply=()=>{
   if(creating)return void action.run('sheets.chart',{kind:'create',...CHART_CREATE[act]});
   if(spark)return void action.run('sheets.sparkline',{type:SPARK_ACTIONS[act]});
   if(!chosen)return;const chart=chosen.id;
   if(act==='delete')void action.run('sheets.chart',{kind:'delete',chart});
   else if(act==='switch')void action.run('sheets.chart',{kind:'switch',chart});
-  else if(act in CHART_TYPE)void action.run('sheets.chart',{kind:'set',chart,type:CHART_TYPE[act]});
+  else if(act==='changeType')void action.run('sheets.chart',{kind:'set',chart,type:CHART_TYPE[argVal].type,subtype:CHART_TYPE[argVal].subtype??'clustered'});
+  else if(act==='palette')void action.run('sheets.chart',{kind:'palette',chart,palette:argVal});
+  else if(act==='seriesColor')void action.run('sheets.chart',{kind:'color',chart,series:Math.min(seriesPick,Math.max(0,chosen.series-1)),color:CHART_COLORS[argVal as keyof typeof CHART_COLORS]});
+  else if(act==='layout')void action.run('sheets.chart',{kind:'layout',chart,layout:Number(argVal)});
+  else if(act==='legendPos')void action.run('sheets.chart',{kind:'set',chart,legend:argVal});
+  else if(act==='moveSheet')void action.run('sheets.chart',{kind:'moveSheet',chart,sheet:argVal});
+  else if(act==='selectData')void action.run('sheets.chart',{kind:'data',chart});
   else if(act==='title2')void action.run('sheets.chart',{kind:'set',chart,title:text});
   else if(act==='xTitle')void action.run('sheets.chart',{kind:'set',chart,xTitle:text});
   else if(act==='yTitle')void action.run('sheets.chart',{kind:'set',chart,yTitle:text});
@@ -352,9 +365,11 @@ function ChartsGroup(){
   <label className="flex flex-col gap-1">{t('sheets.ch.existing')}<NativeSelect className={field} value={chosen?.id??''} disabled={action.busy||list.length===0} onChange={e=>setPick(Number(e.currentTarget.value))} data-testid="sheets-ch-pick">{list.length===0&&<option value="">{t('sheets.ch.none')}</option>}{list.map(x=><option key={x.id} value={x.id}>{x.title||t('sheets.ch.chartName',{id:x.id})}</option>)}</NativeSelect></label>
   <label className="flex flex-col gap-1">{t('sheets.ch.action')}<NativeSelect className={field} value={act} disabled={action.busy} onChange={e=>setAct(e.currentTarget.value)} data-testid="sheets-ch-action">
    <optgroup label={t('sheets.ch.groupCreate')}>{opts(Object.keys(CHART_CREATE))}</optgroup>
-   <optgroup label={t('sheets.ch.groupChange')}>{opts([...Object.keys(CHART_TYPE),'switch','title2','xTitle','yTitle',...Object.keys(CHART_FLAGS),'style','moveHere',...Object.keys(CHART_SIZE),'delete'])}</optgroup>
+   <optgroup label={t('sheets.ch.groupChange')}>{opts(['changeType','switch','selectData','title2','titleOff','xTitle','yTitle',...Object.keys(CHART_FLAGS),'legendPos','layout','palette','seriesColor','style','moveHere',...(otherSheets.length?['moveSheet']:[]),...Object.keys(CHART_SIZE),'delete'])}</optgroup>
    <optgroup label={t('sheets.ch.groupSpark')}>{opts(Object.keys(SPARK_ACTIONS))}</optgroup>
   </NativeSelect></label>
+  {argIds.length>0&&<label className="flex flex-col gap-1">{t('sheets.ch.arg.'+act)}<NativeSelect className={field} value={argVal} disabled={action.busy} onChange={e=>setArg(e.currentTarget.value)} data-testid="sheets-ch-arg">{argIds.map(id=><option key={id} value={id}>{act==='moveSheet'?id:t('sheets.ch.'+(act==='changeType'?'':act==='palette'?'pal.':act==='seriesColor'?'col.':act==='layout'?'lay.':'leg.')+id)}</option>)}</NativeSelect></label>}
+  {act==='seriesColor'&&chosen&&<label className="flex flex-col gap-1">{t('sheets.ch.arg.series')}<NativeSelect className={field} value={Math.min(seriesPick,Math.max(0,chosen.series-1))} disabled={action.busy} onChange={e=>setSeriesPick(Number(e.currentTarget.value))} data-testid="sheets-ch-series">{Array.from({length:Math.min(64,Math.max(1,chosen.series))},(_,i)=><option key={i} value={i}>{t('sheets.ch.seriesN',{n:i+1})}</option>)}</NativeSelect></label>}
   {titled&&<label className="flex flex-col gap-1">{t('sheets.ch.text')}<NativeInput className={field} value={text} maxLength={MAX_TITLE_CHARS} disabled={action.busy} onChange={e=>setText(e.currentTarget.value)} data-testid="sheets-ch-text"/></label>}
   {styled&&<NumberField label={t('sheets.ch.styleLabel')} value={style} resetKey="chart-style" min={1} max={16} step={1} disabled={action.busy} constraintError={t('sheets.ch.styleInvalid')} parse={v=>{const n=Number(v.trim());return v.trim()&&Number.isInteger(n)&&n>=1&&n<=16?{ok:true,value:n}:{ok:false,error:t('sheets.ch.styleInvalid')};}} onCommit={v=>setStyle(v)}/>}
   <Button variant="outline" size="compact" disabled={action.busy||!!problem} onClick={apply} data-testid="sheets-ch-apply">{t('sheets.ch.apply')}</Button>

@@ -40,7 +40,8 @@ export interface ProtectionInfo{password:boolean;allow:ProtectPermission[]}
 /** Charts and sparklines. The bridge draws them as primitives (parsed and bounded in chartOps.ts); the Rust side re-validates every operation. */
 export type ChartType='column'|'bar'|'line'|'pie'|'doughnut'|'area'|'scatter'|'radar'|'histogram'|'waterfall'|'funnel'|'treemap';
 export type ChartLegend='none'|'bottom'|'top'|'left'|'right';
-export type ChartOp={kind:'create';type?:ChartType;subtype?:string;title?:string}|{kind:'set';chart:number;type?:ChartType;subtype?:string;title?:string;legend?:ChartLegend;dataLabels?:boolean;gridlines?:boolean;style?:number;xTitle?:string;yTitle?:string;at?:string;width?:number;height?:number}|{kind:'switch'|'delete';chart:number};
+export type ChartOp={kind:'create';type?:ChartType;subtype?:string;title?:string}|{kind:'set';chart:number;type?:ChartType;subtype?:string;title?:string;legend?:ChartLegend;dataLabels?:boolean;gridlines?:boolean;style?:number;xTitle?:string;yTitle?:string;at?:string;width?:number;height?:number}|{kind:'switch'|'delete';chart:number}|{kind:'palette';chart:number;palette:ChartPalette}|{kind:'color';chart:number;series:number;color:string}|{kind:'data';chart:number;byRows?:boolean}|{kind:'layout';chart:number;layout:number}|{kind:'element';chart:number;element:'title'|'axisTitles';on:boolean}|{kind:'moveSheet';chart:number;sheet:string};
+export type ChartPalette='colorful'|'monochrome'|'accent1'|'accent2'|'accent3'|'accent4'|'accent5'|'accent6';
 export interface SparklineOp{type?:'line'|'column'|'winLoss';markers?:boolean}
 export interface ChartInfo{id:number;kind:string;title:string|null;row:number;col:number;dx:number;dy:number;width:number;height:number;legend:string;dataLabels:boolean;gridlines:boolean;style:number;series:number}
 type Rgba=[number,number,number,number];type Stroke={c:Rgba;w:number}|null;

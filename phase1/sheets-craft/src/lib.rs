@@ -71,6 +71,8 @@ fn shape_color(name: &str, line: bool) -> Option<&'static str> {
 const CHART_TYPES: &[&str] = &["column", "bar", "line", "pie", "doughnut", "area", "scatter", "radar", "histogram", "waterfall", "funnel", "treemap"];
 const CHART_SUBTYPES: &[&str] = &["clustered", "stacked", "stacked100", "markers", "lines"];
 const SPARKLINE_TYPES: &[&str] = &["line", "column", "winLoss"];
+const CHART_PALETTES: &[&str] = &["colorful", "monochrome", "accent1", "accent2", "accent3", "accent4", "accent5", "accent6"];
+const CHART_ELEMENTS: &[&str] = &["title", "axisTitles"];
 const LEGENDS: &[&str] = &["none", "bottom", "top", "left", "right"];
 const PROTECT_ALLOW: &[&str] = &["formatCells", "formatColumns", "formatRows", "insertColumns", "insertRows", "deleteColumns", "deleteRows", "sort", "autofilter"];
 /// Paper names the page setup offers (the engine knows more).
@@ -1957,6 +1959,12 @@ impl HeadlessWorkbook {
             "create" => &["kind", "type", "subtype", "title"],
             "set" => &["kind", "chart", "type", "subtype", "title", "legend", "dataLabels", "gridlines", "style", "xTitle", "yTitle", "at", "width", "height"],
             "switch" | "delete" => &["kind", "chart"],
+            "palette" => &["kind", "chart", "palette"],
+            "color" => &["kind", "chart", "series", "color"],
+            "data" => &["kind", "chart", "byRows"],
+            "layout" => &["kind", "chart", "layout"],
+            "element" => &["kind", "chart", "element", "on"],
+            "moveSheet" => &["kind", "chart", "sheet"],
             _ => return Err("unsupported chart operation".into()),
         };
         if map.keys().any(|k| !allowed.contains(&k.as_str())) {
@@ -1977,6 +1985,13 @@ impl HeadlessWorkbook {
                 "at" => v.as_str().and_then(CellRef::parse).is_some(),
                 "width" | "height" => v.as_u64().is_some_and(|n| (20..=4000).contains(&n)),
                 "chart" => v.as_u64().is_some_and(|n| n <= u64::from(u32::MAX)),
+                "palette" => v.as_str().is_some_and(|t| CHART_PALETTES.contains(&t)),
+                "series" => v.as_u64().is_some_and(|n| n < 64),
+                "color" => v.as_str().is_some_and(|t| t.len() == 7 && t.starts_with('#') && t[1..].chars().all(|c| c.is_ascii_hexdigit())),
+                "byRows" | "on" => v.is_boolean(),
+                "layout" => v.as_u64().is_some_and(|n| (1..=6).contains(&n)),
+                "element" => v.as_str().is_some_and(|t| CHART_ELEMENTS.contains(&t)),
+                "sheet" => v.as_str().is_some_and(|t| !t.is_empty() && t.chars().count() <= 64 && !t.chars().any(|c| c.is_control())),
                 _ => false,
             };
             if !ok {
@@ -2002,14 +2017,47 @@ impl HeadlessWorkbook {
             if doc.wb.sheet(sheet).ok_or("unknown sheet")?.is_protected() {
                 return Err("The sheet is protected. Unprotect it to change charts.".into());
             }
-            if !doc.wb.sheet(sheet).ok_or("unknown sheet")?.charts.iter().any(|c| u64::from(c.id) == id) {
+            let Some(chart) = doc.wb.sheet(sheet).ok_or("unknown sheet")?.charts.iter().find(|c| u64::from(c.id) == id) else {
                 return Err("no such chart".into());
+            };
+            if kind == "color" {
+                let series = map.get("series").and_then(|v| v.as_u64()).ok_or("missing series")?;
+                if series >= chart.series.len() as u64 {
+                    return Err("This chart has no such data series.".into());
+                }
+            }
+            if kind == "data" {
+                if rows == 0 || cols == 0 || u64::from(rows) * u64::from(cols) < 2 || u64::from(rows) * u64::from(cols) > MAX_FILL_CELLS {
+                    return Err("Select a block of 2 to 1,000,000 cells for the chart data.".into());
+                }
+                self.check_block(sheet, row, col, rows, cols, true)?;
+                params.insert("range".into(), json!(format!("{}:{}", CellRef::new(row, col).a1(), CellRef::new(row + rows - 1, col + cols - 1).a1())));
+            }
+            if kind == "moveSheet" {
+                let name = map.get("sheet").and_then(|v| v.as_str()).ok_or("missing sheet")?;
+                let dest = doc.wb.sheet_index(name).ok_or("no such sheet")?;
+                if dest == sheet {
+                    return Err("The chart is already on this sheet.".into());
+                }
+                let target = doc.wb.sheet(dest).ok_or("no such sheet")?;
+                if target.is_protected() {
+                    return Err("The other sheet is protected. Unprotect it to move a chart there.".into());
+                }
+                if target.charts.len() >= MAX_CHARTS {
+                    return Err("The other sheet already has 50 charts.".into());
+                }
             }
         }
         let command = match kind.as_str() {
             "create" => "insert.chart",
             "set" => "chart.set",
             "switch" => "chart.switchRowColumn",
+            "palette" => "chart.changeColors",
+            "color" => "chart.formatSelection",
+            "data" => "chart.selectData",
+            "layout" => "chart.quickLayout",
+            "element" => "chart.addElement",
+            "moveSheet" => "chart.move",
             _ => "chart.delete",
         };
         self.session.run("sheet.activate", json!({"sheet": sheet})).map_err(|e| e.to_string())?;
@@ -4724,6 +4772,17 @@ mod tests {
         let scene: serde_json::Value = serde_json::from_str(&book.chart_scene(0, id as u32).unwrap()).unwrap();
         assert!(!scene["prims"].as_array().unwrap().is_empty());
         assert!(book.chart_scene(0, 9999).is_err());
+        let pal = book.chart_op(0, 0, 0, 1, 1, &format!(r#"{{"kind":"palette","chart":{id},"palette":"accent2"}}"#)).unwrap();
+        assert!(pal.contains(&format!("\"id\":{id}")));
+        assert!(book.chart_op(0, 0, 0, 1, 1, &format!(r##"{{"kind":"color","chart":{id},"series":0,"color":"#c0392b"}}"##)).is_ok());
+        assert!(book.chart_op(0, 0, 0, 1, 1, &format!(r##"{{"kind":"color","chart":{id},"series":40,"color":"#c0392b"}}"##)).is_err(), "no such series");
+        assert!(book.chart_op(0, 0, 0, 1, 1, &format!(r#"{{"kind":"color","chart":{id},"series":0,"color":"red"}}"#)).is_err());
+        assert!(book.chart_op(0, 0, 0, 1, 1, &format!(r#"{{"kind":"layout","chart":{id},"layout":9}}"#)).is_err());
+        assert!(book.chart_op(0, 0, 0, 1, 1, &format!(r#"{{"kind":"layout","chart":{id},"layout":2}}"#)).is_ok());
+        assert!(book.chart_op(0, 0, 0, 1, 1, &format!(r#"{{"kind":"element","chart":{id},"element":"axisTitles","on":true}}"#)).unwrap().contains("Axis Title"));
+        assert!(book.chart_op(0, 0, 0, 1, 1, &format!(r#"{{"kind":"data","chart":{id}}}"#)).is_err(), "one cell is not chart data");
+        assert!(book.chart_op(0, 200, 0, 3, 2, &format!(r#"{{"kind":"data","chart":{id},"byRows":false}}"#)).is_ok());
+        assert!(book.chart_op(0, 0, 0, 1, 1, &format!(r#"{{"kind":"moveSheet","chart":{id},"sheet":"No such sheet"}}"#)).is_err());
         let set = book.chart_op(0, 0, 0, 1, 1, &format!(r#"{{"kind":"set","chart":{id},"type":"column","legend":"none","dataLabels":true,"style":3,"title":"Q1"}}"#)).unwrap();
         assert!(set.contains("\"title\":\"Q1\"") && set.contains("\"legend\":\"None\"") && set.contains("\"dataLabels\":true"));
         book.undo().unwrap();

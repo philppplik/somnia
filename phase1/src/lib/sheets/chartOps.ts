@@ -1,9 +1,13 @@
-import type {ChartInfo,ChartOp,ChartScene,Prim,SparklineOp,SparklineScene} from './protocol';
+import type {ChartPalette,ChartInfo,ChartOp,ChartScene,Prim,SparklineOp,SparklineScene} from './protocol';
 /** Charts and sparklines: validation of untrusted command input and of bridge answers, and the drawing of the bridge's primitives as an SVG image.
  *  The Rust bridge re-validates every field. */
 export const CHART_TYPES=['column','bar','line','pie','doughnut','area','scatter','radar','histogram','waterfall','funnel','treemap'] as const;
 export const CHART_SUBTYPES=['clustered','stacked','stacked100','markers','lines'] as const;
 export const LEGENDS=['none','bottom','top','left','right'] as const;
+export const CHART_PALETTES=['colorful','monochrome','accent1','accent2','accent3','accent4','accent5','accent6'] as const;
+/** Series colors the panel offers (the engine accepts any #rrggbb). */
+export const CHART_COLORS={blue:'#2f6fd0',red:'#c0392b',green:'#2e8b57',orange:'#e08a1e',purple:'#7d4cc2',teal:'#1f9a9a',pink:'#d6458f',gray:'#6b7280'} as const;
+export const MAX_SERIES=64;
 export const SPARKLINE_TYPES=['line','column','winLoss'] as const;
 export const MAX_CHARTS=50,MAX_SPARKLINES=500,MAX_PRIMS=20_000,MAX_TITLE_CHARS=120,MIN_CHART_PX=20,MAX_CHART_PX=4000;
 const titleBad=(v:unknown)=>typeof v!=='string'||[...v].length>MAX_TITLE_CHARS||/[\u0000-\u001f\u007f]/.test(v);
@@ -25,6 +29,12 @@ export function parseChartCommand(input:unknown):ChartOp{
    for(const k of ['width','height'])if(o[k]!==undefined){if(!intIn(o[k],MIN_CHART_PX,MAX_CHART_PX))throw Error('Size must be '+MIN_CHART_PX+' to '+MAX_CHART_PX+' pixels.');out[k]=o[k];}
    if(Object.keys(out).length<3)throw Error('Name at least one chart setting.');return out as ChartOp;}
   case 'switch':case 'delete':only('kind','chart');return {kind:o.kind,chart:id()};
+  case 'palette':{only('kind','chart','palette');if(!oneOf(CHART_PALETTES,o.palette))throw Error('Unsupported palette.');return {kind:'palette',chart:id(),palette:o.palette as ChartPalette};}
+  case 'color':{only('kind','chart','series','color');if(!intIn(o.series,0,MAX_SERIES-1))throw Error('Pick a data series.');if(typeof o.color!=='string'||!/^#[0-9a-fA-F]{6}$/.test(o.color))throw Error('Color must be like #2f6fd0.');return {kind:'color',chart:id(),series:o.series as number,color:o.color.toLowerCase()};}
+  case 'data':{only('kind','chart','byRows');const out:ChartOp={kind:'data',chart:id()};if(o.byRows!==undefined){if(typeof o.byRows!=='boolean')throw Error('`byRows` must be true or false.');out.byRows=o.byRows;}return out;}
+  case 'layout':{only('kind','chart','layout');if(!intIn(o.layout,1,6))throw Error('Layout must be 1 to 6.');return {kind:'layout',chart:id(),layout:o.layout as number};}
+  case 'element':{only('kind','chart','element','on');if(o.element!=='title'&&o.element!=='axisTitles')throw Error('Unsupported chart element.');if(typeof o.on!=='boolean')throw Error('`on` must be true or false.');return {kind:'element',chart:id(),element:o.element,on:o.on};}
+  case 'moveSheet':{only('kind','chart','sheet');if(typeof o.sheet!=='string'||o.sheet===''||[...o.sheet].length>64||/[\u0000-\u001f\u007f]/.test(o.sheet))throw Error('Name the sheet to move the chart to.');return {kind:'moveSheet',chart:id(),sheet:o.sheet};}
   default:throw Error('Unsupported chart operation.');
  }
 }
