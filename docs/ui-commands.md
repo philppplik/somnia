@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1051 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1052 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -453,6 +453,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `documents.proofing.toggle` | Toggle spelling and grammar marks | View | documents |  |
 | `documents.properties.set` | Set document properties | View | documents |  |
 | `documents.properties.show` | Document properties | View | documents |  |
+| `documents.quotes.convert` | Make the quotation marks of the selected text curly or plain | View | documents |  |
 | `documents.redo` | Redo document text edit | View | documents |  |
 | `documents.replaceMatch` | Replace search result | Edit | documents-panels |  |
 | `documents.review.accept` | Accept the tracked change at the cursor | View | documents |  |

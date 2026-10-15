@@ -5778,6 +5778,17 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.quotes.convert",
+      "title": "Make the quotation marks of the selected text curly or plain",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.redo",
       "title": "Redo document text edit",
       "category": "View",

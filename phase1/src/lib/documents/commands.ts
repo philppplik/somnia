@@ -13,6 +13,7 @@ import {goToBlock,scrollToPage} from './navigate';
 import {savePagePng,safeCopyName,safeFormatName,safePdfName} from './saveCopy';
 import {EXPORT_EXTS,PROOF_LANGS,type ExportExt} from './protocol';
 import {pickAndImport} from './importFormat';
+import {QUOTE_MODES,type QuoteMode} from './quotes';
 import {CASE_MODES,type CaseMode} from './textCase';
 import {commentsOpen,setCommentsOpen} from './comments';
 import {setShortcutsOpen} from './shortcuts';
@@ -24,7 +25,7 @@ import {pickAndCompareText,pickAndInsertText} from './insertFromFile';
 import {symbolProblem,specialChar,timeText} from './symbols';
 import {getLocale as currentLocale} from '../i18n';
 import {authorProblem,setAuthor} from './author';
-import {stepHanging,insertBlankPage,insertPageBreak,setParagraphOptions,setProperties,setTabStops} from './session';
+import {convertSelectionQuotes,stepHanging,insertBlankPage,insertPageBreak,setParagraphOptions,setProperties,setTabStops} from './session';
 import {parsePdfPages,checkParaPatch,PARA_FLAG_KEYS,propertiesProblem,tabsProblem} from './protocol';
 import {addComment,commentSelection,deleteComment,goToComment,readComments,replyComment,resolveComment} from './session';
 import {coverProblem,PARAGRAPH_SPACINGS,type ParagraphSpacing,bookmarkProblem,commentProblem,HIGHLIGHTS,linkProblem,type HighlightName} from './protocol';
@@ -165,6 +166,11 @@ export function registerDocumentsCommands(){
    const m=(p as Record<string,unknown>|undefined)?.mode;
    if(typeof m!=='string'||!(CASE_MODES as readonly string[]).includes(m))throw expected('Invalid "mode": use upper, lower, title, sentence or toggle.');
    await changeCase(m as CaseMode);
+  },()=>ready()&&!!getDocumentsState().caret),
+  add('documents.quotes.convert','Make the quotation marks of the selected text curly or plain',async p=>{
+   const m=(p as Record<string,unknown>|undefined)?.mode;
+   if(typeof m!=='string'||!(QUOTE_MODES as readonly string[]).includes(m))throw expected('Invalid "mode": use smart or straight.');
+   await convertSelectionQuotes(m as QuoteMode);
   },()=>ready()&&!!getDocumentsState().caret),
   add('documents.autocorrect.toggle','Turn AutoCorrect while typing on or off',async()=>{setAutoCorrect(!autoCorrectOn());},()=>ready()),
   add('documents.view.marks','Show or hide formatting marks',async()=>{const s=getDocumentsState();await setViewMarks(!s.showMarks,s.showMarkup);},()=>ready()),

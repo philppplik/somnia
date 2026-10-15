@@ -11,6 +11,7 @@ import {imageCropProblem,imageWrapProblem,type ImageWrap,type ImageAlign,tableLa
 import {captureDocumentSelection} from './selectionCapture';
 import {CELL_BASE,caretAfterEdit,applyEdit,diffEdit,inverseOf,UndoStack,type TextEdit,type UndoEntry} from './edit';
 import {findMatches,nextMatchIndex,textStats,validFindQuery,validReplaceText,MAX_FIND_HIGHLIGHTS,MAX_REPLACE_BLOCKS,type FindMatch} from './find';
+import {convertQuotes,QUOTE_MODES,type QuoteMode} from './quotes';
 import {applyCase,CASE_MODES,wordAround} from './textCase';
 import {listMarkerKind,stepBoundary,utf16ToUtf8Offset,utf8ToUtf16Offset,wordBoundary} from './text';
 import {getDocumentsState,patchDocuments,resetDocuments,subscribeDocuments,INITIAL_VIEW,type Caret,type DocumentsState} from './store';
@@ -973,6 +974,27 @@ export const changeCase=(mode:import('./textCase').CaseMode)=>run(async()=>{
   const before=t.slice(a,b);if(!before)continue;
   const startsSentence=a===0||/[.!?\u2026]\s*$/.test(t.slice(0,a));
   const after=applyCase(before,mode,startsSentence);
+  const d=diffEdit(block,before,after);if(!d)continue;
+  const base=u8(t.slice(0,a));edits.push({block,hunks:d.hunks.map(h=>({start:h.start+base,end:h.end+base,text:h.text}))});
+ }
+ if(edits.length===0)return;
+ await structural(async eng=>{let d:import('./protocol').OpenedDocument|null=null;for(const x of edits)d=await eng.replace(x);return d!;},{block:c.block,off:c.head},{block:c.block,off:c.head});
+});
+/**
+ * Turns the quotation marks of the selected text into curly ('smart') or plain ('straight') ones, keeping each character's formatting. One undo step.
+ * Needs a selection; only the quote characters that change are replaced.
+ */
+export const convertSelectionQuotes=(mode:QuoteMode)=>run(async()=>{
+ if(!QUOTE_MODES.includes(mode))throw new Error('Unknown quote mode.');
+ const c=getDocumentsState().caret;if(!c)return;const n=norm(c);
+ if(n.s.block===n.e.block&&n.s.off===n.e.off)throw new Error('Select text to change its quotation marks.');
+ const ts=spanTexts(n.s.block,n.e.block);if(!ts)throw new Error(n.e.block-n.s.block+1>MAX_SPAN_BLOCKS?`Selection is too large for one edit (limit ${MAX_SPAN_BLOCKS} paragraphs).`:'This selection includes a part that cannot be edited as text.');
+ const edits:{block:number;hunks:import('./edit').Hunk[]}[]=[];
+ for(let k=0;k<ts.length;k++){
+  const t=ts[k];const block=n.s.block+k;
+  const a=k===0?utf8ToUtf16Offset(t,n.s.off):0,b=k===ts.length-1?utf8ToUtf16Offset(t,n.e.off):t.length;
+  const before=t.slice(a,b);if(!before)continue;
+  const after=convertQuotes(before,mode,a>0?t[a-1]:'');
   const d=diffEdit(block,before,after);if(!d)continue;
   const base=u8(t.slice(0,a));edits.push({block,hunks:d.hunks.map(h=>({start:h.start+base,end:h.end+base,text:h.text}))});
  }

@@ -2,7 +2,7 @@ import {useEffect,useState} from 'react';
 import {autoCorrectOn,setAutoCorrect} from '../../lib/documents/autocorrect';
 import {executeCommand} from '../../lib/commands';
 import {pickAndCompareText,pickAndInsertText} from '../../lib/documents/insertFromFile';
-import {insertBlankPage,printCurrent,moveParagraphs,sortParagraphs,readParagraphSpacing,setParagraphSpacing,readBookmarks,setViewMarks,setTrackChanges,copyFormatting,pasteFormatting,setCharSpacing,insertPageBreak,clearFormatting,changeCase,hasTextSelection,setHighlight,setLink,toggleFormat,toggleVertAlign} from '../../lib/documents/session';
+import {convertSelectionQuotes,insertBlankPage,printCurrent,moveParagraphs,sortParagraphs,readParagraphSpacing,setParagraphSpacing,readBookmarks,setViewMarks,setTrackChanges,copyFormatting,pasteFormatting,setCharSpacing,insertPageBreak,clearFormatting,changeCase,hasTextSelection,setHighlight,setLink,toggleFormat,toggleVertAlign} from '../../lib/documents/session';
 import {PARAGRAPH_SPACINGS,type ParagraphSpacing,HIGHLIGHTS,MAX_LINK_CHARS,linkProblem,type FormatPatch,type FormatState,type HighlightName} from '../../lib/documents/protocol';
 import {CASE_MODES,type CaseMode} from '../../lib/documents/textCase';
 import {setShortcutsOpen} from '../../lib/documents/shortcuts';
@@ -95,6 +95,8 @@ export function TextEffects({format,held,enabled}:{format:FormatState|null;held:
   <ActionMenu label={t('documents.menu.review')} testId="documents-menu-review" items={[
    {id:'track',label:(doc.trackChanges?'\u2713 ':'')+t('documents.review.track'),enabled,run:()=>void setTrackChanges(!doc.trackChanges)},
    {id:'marks',label:(doc.showMarks?'\u2713 ':'')+t('documents.view.marks'),enabled,run:()=>void setViewMarks(!doc.showMarks,doc.showMarkup)},
+   {id:'smartQuotes',label:t('documents.quotes.smart'),enabled,run:()=>void convertSelectionQuotes('smart').catch(()=>undefined)},
+   {id:'straightQuotes',label:t('documents.quotes.straight'),enabled,run:()=>void convertSelectionQuotes('straight').catch(()=>undefined)},
    {id:'autocorrect',label:(ac?'\u2713 ':'')+t('documents.autocorrect.toggle'),enabled:true,run:()=>{if(setAutoCorrect(!ac))setAc(!ac);}},
    {id:'a11y',label:t('documents.a11y.open'),enabled,run:()=>setInfoDialog('accessibility')},
    {id:'compare',label:t('documents.review.compare'),enabled,run:()=>void pickAndCompareText().catch(()=>undefined)},
