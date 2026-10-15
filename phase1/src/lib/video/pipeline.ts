@@ -6,7 +6,7 @@ import {clipFadeGain,clipRanges,cropOf,fadeInOf,fadeOf,fadeOutOf,flipOf,hasCrop,
 import {audioEnvelope,duckGainAt,type AudioClip} from './audioTrack';
 import {WindowMixer} from './mixer';
 import {DEFAULT_TITLE,drawTitleCard,isTitleClip,needsSourceFile,type TitleClip} from './titles';
-import {overlaysAt,type OverlayClip} from './overlayTrack';
+import {overlaySourceTime,overlaysAt,type OverlayClip} from './overlayTrack';
 import {renderTitleSpan} from './titleExport';
 import type {VideoCapabilities,VideoProbe,VideoReport} from './protocol';
 const inputOf=(bytes:ArrayBuffer)=>new Input({source:new BufferSource(bytes),formats:ALL_FORMATS});
@@ -89,7 +89,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
  const steps:string[]=[];
  const inputs=new Map<string,{input:Input;probe:VideoProbe}>();
  const imageNames=new Set([...clips.filter(isImageClip).map(c=>c.source),...overlayClips.filter(o=>o.kind==='image').map(o=>o.source)]);
- const videoNames=new Set(clips.filter(c=>needsSourceFile(c)&&!isImageClip(c)).map(c=>c.source));
+ const videoNames=new Set([...clips.filter(c=>needsSourceFile(c)&&!isImageClip(c)).map(c=>c.source),...overlayClips.filter(o=>o.kind==='video').map(o=>o.source)]);
  const names=[...new Set([...videoNames,...audioClips.map(c=>c.source)])];
  // Stills decode straight to bitmaps, contain-fit onto the output canvas size decided below.
  const bitmaps=new Map<string,ImageBitmap>();
@@ -266,12 +266,22 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
   };
   // Image clips bake rotation into their card (see sideFrame); every other clip passes its own rotation.
   const drawClip=(img:CanvasImageSource,c:TimelineClip)=>drawTransform(img,flipOf(c),isImageClip(c)?0:rotationOf(c));
-  // Overlay track (titles/images over the running video): one scratch card per overlay id, keyed redraws skip static
-  // frames; the card is blitted into its frame rect at the clip's opacity. Array order is the z-order.
+  // Overlay track (titles/images/video over the running video): one scratch card per static overlay id, keyed redraws
+  // skip static frames; the card is blitted into its frame rect at the clip's opacity. Array order is the z-order.
   const overlayCards=new Map<string,{canvas:OffscreenCanvas;ctx:OffscreenCanvasRenderingContext2D;key:string}>();
-  const drawOverlays=(t:number)=>{
+  // Video overlays (PiP): one CanvasSink per overlay id, sized to its frame rect; frames decode straight onto the
+  // output at the overlay's opacity. Video-only by design - PiP audio is never mixed into the export.
+  const overlaySinks=new Map<string,{sink:CanvasSink;w:number;h:number}>();
+  const drawOverlays=async(t:number)=>{
    for(const o of overlaysAt(overlayClips,t)){
     const rw=Math.max(1,Math.round(o.rect.w*outW)),rh=Math.max(1,Math.round(o.rect.h*outH));
+    if(o.kind==='video'){
+     let rec=overlaySinks.get(o.id);
+     if(!rec||rec.w!==rw||rec.h!==rh){const{input}=inputs.get(o.source)!;const track=(await input.getVideoTracks())[0];rec={sink:new CanvasSink(track,{width:rw,height:rh,fit:'contain',poolSize:2}),w:rw,h:rh};overlaySinks.set(o.id,rec);}
+     const f=await rec.sink.getCanvas(overlaySourceTime(o,t));
+     if(f){ctx.globalAlpha=o.opacity;ctx.drawImage(f.canvas,Math.round(o.rect.x*outW),Math.round(o.rect.y*outH));ctx.globalAlpha=1;}
+     continue;
+    }
     let card=overlayCards.get(o.id);
     if(!card||card.canvas.width!==rw||card.canvas.height!==rh){const canvas=new OffscreenCanvas(rw,rh),ctx2=canvas.getContext('2d');if(!ctx2)continue;card={canvas,ctx:ctx2,key:''};overlayCards.set(o.id,card);}
     if(o.kind==='title'){
@@ -308,7 +318,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
     if(isTitleClip(c)){
      titlesRendered=true;
      await renderTitleSpan({clip:c,start:z.start,width:outW,height:outH,fps:fpsOf(z.a),ctx,checkCancel,
-      addFrame:(t,d)=>{drawOverlays(t);return videoSource.add(t,d);},
+      addFrame:async(t,d)=>{await drawOverlays(t);return videoSource.add(t,d);},
       silenceFormat:{channels:2,rate:48_000},
       addSilence:mixer?async chunk=>{mixer.addSilence(chunk.timestamp,chunk.data.length/chunk.channels/chunk.rate);}:undefined,
       onFrame:note});
@@ -326,7 +336,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
       checkCancel();
       const t=z.start+k/fps,f=await sideFrame(z.a,t);
       if(f){ctx.globalAlpha=1;drawClip(f as CanvasImageSource,c);}
-      drawOverlays(t);
+      await drawOverlays(t);
       await videoSource.add(t,Math.max(1e-3,Math.min(1/fps,z.end-t)));
       note(t);
      }
@@ -336,7 +346,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
       checkCancel();
       if(base===null)base=frame.timestamp;
       ctx.globalAlpha=1;drawClip(cropFrame(z.a,c,frame.canvas),c);
-      drawOverlays(z.start+(frame.timestamp-base));
+      await drawOverlays(z.start+(frame.timestamp-base));
       await videoSource.add(z.start+(frame.timestamp-base),frame.duration);
       note(z.start+(frame.timestamp-base));
      }
@@ -357,7 +367,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
      if(fa){ctx.globalAlpha=1;drawClip(fa as CanvasImageSource,ra.clip);}
      if(fb){ctx.globalAlpha=p;drawClip(fb as CanvasImageSource,rb.clip);}
      ctx.globalAlpha=1;
-     drawOverlays(t);
+     await drawOverlays(t);
      await videoSource.add(t,1/fps);
      note(t);
     }

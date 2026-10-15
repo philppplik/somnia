@@ -181,7 +181,7 @@ test('clip crop round-trips; full frame writes no crop field',()=>{
 });
 
 test('overlay track round-trips; old files load with an empty track',()=>{
- const ov:OverlayClip={id:'o1',kind:'title',source:'',title:{text:'Lower',size:72,color:'#ffffff',background:'#111827',font:'sans',bold:true,italic:false,align:'center',vAlign:'middle',fadeIn:0,fadeOut:0,bgAlpha:1},at:1.5,duration:3,rect:{x:0.05,y:0.72,w:0.6,h:0.23},opacity:0.9};
+ const ov:OverlayClip={id:'o1',kind:'title',source:'',title:{text:'Lower',size:72,color:'#ffffff',background:'#111827',font:'sans',bold:true,italic:false,align:'center',vAlign:'middle',fadeIn:0,fadeOut:0,bgAlpha:1},at:1.5,duration:3,in_s:0,rect:{x:0.05,y:0.72,w:0.6,h:0.23},opacity:0.9};
  const parsed=parseVideoProject(serializeVideoProject([media('m1')],[],'webm',undefined,[ov]));
  assert.equal(parsed.overlayClips.length,1);
  assert.equal(parsed.overlayClips[0].kind,'title');
@@ -190,9 +190,20 @@ test('overlay track round-trips; old files load with an empty track',()=>{
  assert.equal(parsed.overlayClips[0].title?.text,'Lower');
  const legacy=JSON.stringify({app:'somnia-video',version:2,clips:[{id:'a',kind:'media',source:'x.mp4',in_s:0,out_s:1}]});
  assert.deepEqual(parseVideoProject(legacy).overlayClips,[],'files without overlay load an empty track');
- const junk=JSON.stringify({app:'somnia-video',version:2,clips:[{id:'a',kind:'media',source:'x.mp4',in_s:0,out_s:1}],overlay:[{id:'b',kind:'image',source:'x.png',at:-1,duration:0,rect:{x:0.9,y:0.9,w:5,h:5},opacity:9},{kind:'weird'},{id:'c',kind:'image',source:'',at:0,duration:1}]});
+ const junk=JSON.stringify({app:'somnia-video',version:2,clips:[{id:'a',kind:'media',source:'x.mp4',in_s:0,out_s:1}],overlay:[{id:'b',kind:'image',source:'x.png',at:-1,duration:0,rect:{x:0.9,y:0.9,w:5,h:5},opacity:9},{kind:'weird'},{id:'c',kind:'image',source:'',at:0,duration:1},{id:'d',kind:'video',source:'',at:0,duration:1}]});
  const cleaned=parseVideoProject(junk).overlayClips;
- assert.equal(cleaned.length,1,'junk kinds and source-less images drop');
+ assert.equal(cleaned.length,1,'junk kinds and source-less images/videos drop');
  assert.equal(cleaned[0].at,0);
  assert.ok(cleaned[0].rect.w<=1&&cleaned[0].opacity<=1);
+});
+
+test('video overlays (PiP) round-trip with in_s; zero in_s is omitted from the file',()=>{
+ const ov:OverlayClip={id:'p1',kind:'video',source:'cam.mp4',at:2,duration:4,in_s:7.5,rect:{x:0.66,y:0.66,w:0.32,h:0.32},opacity:1};
+ const text=serializeVideoProject([media('m1')],[],'webm',undefined,[ov,{...ov,id:'p2',in_s:0}]);
+ const parsed=parseVideoProject(text);
+ assert.equal(parsed.overlayClips.length,2);
+ assert.equal(parsed.overlayClips[0].kind,'video');
+ assert.equal(parsed.overlayClips[0].in_s,7.5,'in_s survives the round-trip');
+ assert.equal(parsed.overlayClips[1].in_s,0,'missing in_s parses as 0');
+ assert.ok(!text.includes('"in_s":0'),'zero in_s writes no field');
 });

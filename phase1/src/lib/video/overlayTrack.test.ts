@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {CENTER_OVERLAY,LOWER_THIRD,newImageOverlay,newTitleOverlay,overlaysAt,overlayTrackEnd,sanitizeOverlay,sanitizeRect} from './overlayTrack';
+import {CENTER_OVERLAY,LOWER_THIRD,PIP_OVERLAY,newImageOverlay,newTitleOverlay,newVideoOverlay,overlaySourceTime,overlaysAt,overlayTrackEnd,sanitizeOverlay,sanitizeRect} from './overlayTrack';
 
 test('sanitizeRect clamps into the frame and never sticks out',()=>{
  assert.deepEqual(sanitizeRect(null),LOWER_THIRD);
@@ -26,4 +26,14 @@ test('overlaysAt: visible inside [at, at+duration), z-order kept',()=>{
  assert.deepEqual(overlaysAt([a,b],2.5),[a,b],'overlap keeps array order');
  assert.deepEqual(overlaysAt([a,b],3),[b],'end is exclusive');
  assert.equal(overlayTrackEnd([a,b]),4);
+});
+
+test('video overlays (PiP): corner placement, in_s clamped, source time maps linearly',()=>{
+ const v=newVideoOverlay('cam.mp4',2,4);
+ assert.equal(v.kind,'video');
+ assert.deepEqual(v.rect,PIP_OVERLAY);
+ assert.equal(overlaySourceTime({...v,in_s:7.5},4),9.5,'source time = in_s + (t - at)');
+ assert.equal(sanitizeOverlay({...v,in_s:-3}).in_s,0,'negative in_s clamps to 0');
+ assert.equal(sanitizeOverlay({...v,in_s:Number.NaN}).in_s,0,'NaN in_s falls back to 0');
+ assert.equal(sanitizeOverlay(v).kind,'video');
 });

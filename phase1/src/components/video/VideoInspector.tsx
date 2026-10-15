@@ -2,7 +2,7 @@ import {useMemo,useState} from 'react';
 import {Button} from '../ui/button';
 import {useT} from '../../lib/useT';
 import {useMedia} from '../../lib/media';
-import {addAudioTrackClip,addImageClip,addOverlayImage,addOverlayTitle,addTimelineClip,addTimelineClipsFromDialog,cancelVideoExport,deleteAudioTrackClip,deleteTimelineClip,duplicateAudioTrackClip,moveAudioTrackClip,moveTimelineClip,resetTimeline,resizeAudioTrackClip,setAudioTrackClipDuck,setAudioTrackClipFades,setAudioTrackClipGain,toggleAudioTrackClipMute,setTimelineClipCrossfade,setTimelineClipFades,setTimelineClipFreeze,setTimelineClipGain,setTimelineClipSpeed,setVideoFormat,duplicateTimelineClip,replaceClipSource,selectTimelineClip,setImageClipLength,setTimelineClipCrop,setTimelineClipFlip,setTimelineClipRotation,setVideoExportOptions,setVideoExportRange,toggleTimelineClipMute,trimTimelineClip,useVideoSession,deleteOverlayClip,moveOverlayClip,selectOverlayClip,setOverlayDuration,setOverlayOpacity,setOverlayRect,updateOverlayTitle} from '../../lib/video/session';
+import {addAudioTrackClip,addImageClip,addOverlayImage,addOverlayTitle,addOverlayVideo,addTimelineClip,addTimelineClipsFromDialog,cancelVideoExport,deleteAudioTrackClip,deleteTimelineClip,duplicateAudioTrackClip,moveAudioTrackClip,moveTimelineClip,resetTimeline,resizeAudioTrackClip,setAudioTrackClipDuck,setAudioTrackClipFades,setAudioTrackClipGain,toggleAudioTrackClipMute,setTimelineClipCrossfade,setTimelineClipFades,setTimelineClipFreeze,setTimelineClipGain,setTimelineClipSpeed,setVideoFormat,duplicateTimelineClip,replaceClipSource,selectTimelineClip,setImageClipLength,setTimelineClipCrop,setTimelineClipFlip,setTimelineClipRotation,setVideoExportOptions,setVideoExportRange,toggleTimelineClipMute,trimTimelineClip,useVideoSession,deleteOverlayClip,moveOverlayClip,selectOverlayClip,setOverlayDuration,setOverlayInS,setOverlayOpacity,setOverlayRect,updateOverlayTitle} from '../../lib/video/session';
 import {audioClipDuration,audioTrackEnd} from '../../lib/video/audioTrack';
 import {overlayTrackEnd} from '../../lib/video/overlayTrack';
 import {clipDuration,clipRanges,fadeInOf,fadeOf,fadeOutOf,cropOf,flipOf,rotationOf,isFreeze,IMAGE_DEFAULT_SECONDS,isImageClip,MAX_GAIN,speedOf,timelineDuration,type ClipFlip,type ClipRotation} from '../../lib/video/timeline';
@@ -22,9 +22,11 @@ export function VideoControls({name}:{name:string}){
  const [addImagePick,setAddImagePick]=useState('');
  const [swapPick,setSwapPick]=useState('');
  const [addOverlayPick,setAddOverlayPick]=useState('');
+ const [addOverlayVideoPick,setAddOverlayVideoPick]=useState('');
  const candidates=useMemo(()=>media.items.filter(i=>i.kind==='video'),[media.items]);
  const audioCandidates=useMemo(()=>media.items.filter(i=>i.kind==='audio'),[media.items]);
  const imageCandidates=useMemo(()=>media.items.filter(i=>i.kind==='image'),[media.items]);
+ const videoCandidates=useMemo(()=>media.items.filter(i=>i.kind==='video'),[media.items]);
  if(!s)return <p className="p-3 text-xs text-ink-3">{t('video.loading')}</p>;
  const ready=s.status==='ready'||s.status==='exporting';
  const p=s.probe,v=p?.video,a=p?.audio,dur=p?.duration??0;
@@ -85,6 +87,13 @@ export function VideoControls({name}:{name:string}){
      {imageCandidates.map(i=><option key={i.name} value={i.name}>{i.name}</option>)}
     </NativeSelect>
     <Button size="compact" disabled={!addOverlayPick} onClick={()=>{if(addOverlayPick){addOverlayImage(name,addOverlayPick,0);setAddOverlayPick('');}}} data-testid="video-overlay-add-image">{t('video.overlayAddImage')}</Button>
+   </div>
+   <div className="flex items-center gap-2">
+    <NativeSelect className={field} value={addOverlayVideoPick} onChange={e=>setAddOverlayVideoPick(e.target.value)} aria-label={t('video.overlayAddVideo')} data-testid="video-overlay-add-video-pick">
+     <option value="">{t('video.overlayAddVideoPick')}</option>
+     {videoCandidates.map(i=><option key={i.name} value={i.name}>{i.name}</option>)}
+    </NativeSelect>
+    <Button size="compact" disabled={!addOverlayVideoPick} onClick={()=>{if(addOverlayVideoPick){addOverlayVideo(name,addOverlayVideoPick,0);setAddOverlayVideoPick('');}}} data-testid="video-overlay-add-video">{t('video.overlayAddVideo')}</Button>
    </div>
    {s.overlayClips.length>0&&<div className="grid gap-1">
     {s.overlayClips.map(o=><Button key={o.id} variant={o.id===s.selectedOverlayClipId?'outline':'ghost'} size="compact" className="justify-between" onClick={()=>selectOverlayClip(name,o.id===s.selectedOverlayClipId?null:o.id)} data-testid="video-overlay-item">
@@ -211,6 +220,7 @@ export function VideoControls({name}:{name:string}){
    <span className="text-ink">{t('video.overlayClipTitle')}</span>
    <span className="truncate text-ink-3" data-testid="video-overlay-source">{selectedOverlay.kind==='title'?(selectedOverlay.title?.text??''):selectedOverlay.source}</span>
    {selectedOverlay.kind==='title'&&<label>{t('video.overlayText')}<NativeInput className={`${field} mt-1`} value={selectedOverlay.title?.text??''} onChange={e=>updateOverlayTitle(name,selectedOverlay.id,{text:e.target.value})} data-testid="video-overlay-text"/></label>}
+   {selectedOverlay.kind==='video'&&<label>{t('video.trimStart')}<NativeInput type="number" className={`${field} mt-1`} min={0} step={0.1} value={selectedOverlay.in_s} onChange={e=>setOverlayInS(name,selectedOverlay.id,Number(e.target.value),`oins:${selectedOverlay.id}`)} data-testid="video-overlay-in"/></label>}
    <div className="grid grid-cols-2 gap-2">
     <label>{t('video.audioAt')}<NativeInput type="number" className={`${field} mt-1`} min={0} step={0.1} value={selectedOverlay.at} onChange={e=>moveOverlayClip(name,selectedOverlay.id,Number(e.target.value),`omove:${selectedOverlay.id}`)} data-testid="video-overlay-at"/></label>
     <label>{t('video.overlayDuration')}<NativeInput type="number" className={`${field} mt-1`} min={0.05} max={3600} step={0.1} value={selectedOverlay.duration} onChange={e=>setOverlayDuration(name,selectedOverlay.id,Number(e.target.value))} data-testid="video-overlay-duration"/></label>

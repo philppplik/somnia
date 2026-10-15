@@ -1,8 +1,8 @@
 /**
  * The overlay track: titles and images placed ON TOP of the running video (lower thirds, watermarks), each at an
  * explicit `at` time with its own duration and frame rect. Unlike the gap-free edit list, overlays may overlap;
- * array order is the z-order (later = on top). Pure model - no DOM, no engine. Video overlays (PiP) are deliberately
- * a separate feature: they need their own decode sinks in the export pipeline.
+ * array order is the z-order (later = on top). Pure model - no DOM, no engine. Video overlays (PiP) play a source
+ * video inside their rect starting at `in_s`; their audio is never mixed into the export (video-only by design).
  */
 import {MIN_CLIP_SECONDS} from './timeline';
 import {clampTitleSeconds,DEFAULT_TITLE,sanitizeTitleSpec,type TitleSpec} from './titles';
@@ -12,8 +12,8 @@ export interface OverlayRect{x:number;y:number;w:number;h:number}
 
 export interface OverlayClip{
  id:string;
- kind:'title'|'image';
- /** Image file name; '' for titles. */
+ kind:'title'|'image'|'video';
+ /** Media file name; '' for titles. Required for image and video overlays. */
  source:string;
  /** Title overlays carry their spec; image overlays leave it undefined. */
  title?:TitleSpec;
@@ -21,6 +21,8 @@ export interface OverlayClip{
  at:number;
  /** Seconds the overlay stays visible. */
  duration:number;
+ /** Video overlays: source second the visible span starts at. Unused by titles and images (always 0). */
+ in_s:number;
  rect:OverlayRect;
  /** 0..1, multiplied over the frame. */
  opacity:number;
@@ -31,6 +33,8 @@ export const DEFAULT_OVERLAY_SECONDS=3;
 export const LOWER_THIRD:OverlayRect={x:0.05,y:0.72,w:0.6,h:0.23};
 /** Centered half-frame: the default placement for a new image overlay. */
 export const CENTER_OVERLAY:OverlayRect={x:0.25,y:0.25,w:0.5,h:0.5};
+/** Bottom-right corner, about a third of the frame: the classic picture-in-picture placement. */
+export const PIP_OVERLAY:OverlayRect={x:0.66,y:0.66,w:0.32,h:0.32};
 
 const frac=(v:unknown,fb:number)=>typeof v==='number'&&Number.isFinite(v)?Math.min(1,Math.max(0,v)):fb;
 
@@ -44,12 +48,13 @@ export const sanitizeRect=(r:Partial<OverlayRect>|null|undefined,fb:OverlayRect=
 let nextId=1;
 export const newOverlayClipId=()=>`ovl-${nextId++}-${Math.random().toString(36).slice(2,7)}`;
 
-export const newTitleOverlay=(spec:Partial<TitleSpec>={},at=0,duration=DEFAULT_OVERLAY_SECONDS):OverlayClip=>({id:newOverlayClipId(),kind:'title',source:'',title:sanitizeTitleSpec(spec),at:Math.max(0,at),duration:clampTitleSeconds(duration),rect:{...LOWER_THIRD},opacity:1});
-export const newImageOverlay=(source:string,at=0,duration=DEFAULT_OVERLAY_SECONDS):OverlayClip=>({id:newOverlayClipId(),kind:'image',source,at:Math.max(0,at),duration:clampTitleSeconds(duration),rect:{...CENTER_OVERLAY},opacity:1});
+export const newTitleOverlay=(spec:Partial<TitleSpec>={},at=0,duration=DEFAULT_OVERLAY_SECONDS):OverlayClip=>({id:newOverlayClipId(),kind:'title',source:'',title:sanitizeTitleSpec(spec),at:Math.max(0,at),duration:clampTitleSeconds(duration),in_s:0,rect:{...LOWER_THIRD},opacity:1});
+export const newImageOverlay=(source:string,at=0,duration=DEFAULT_OVERLAY_SECONDS):OverlayClip=>({id:newOverlayClipId(),kind:'image',source,at:Math.max(0,at),duration:clampTitleSeconds(duration),in_s:0,rect:{...CENTER_OVERLAY},opacity:1});
+export const newVideoOverlay=(source:string,at=0,duration=DEFAULT_OVERLAY_SECONDS):OverlayClip=>({id:newOverlayClipId(),kind:'video',source,at:Math.max(0,at),duration:clampTitleSeconds(duration),in_s:0,rect:{...PIP_OVERLAY},opacity:1});
 
 /** Normalizes one overlay: title specs sanitized, image overlays never carry one; rect and opacity clamped. */
 export function sanitizeOverlay(c:OverlayClip):OverlayClip{
- const base:OverlayClip={...c,at:Math.max(0,Number.isFinite(c.at)?c.at:0),duration:clampTitleSeconds(c.duration),rect:sanitizeRect(c.rect),opacity:Math.min(1,Math.max(0,typeof c.opacity==='number'&&Number.isFinite(c.opacity)?c.opacity:1))};
+ const base:OverlayClip={...c,at:Math.max(0,Number.isFinite(c.at)?c.at:0),duration:clampTitleSeconds(c.duration),in_s:Math.max(0,typeof c.in_s==='number'&&Number.isFinite(c.in_s)?c.in_s:0),rect:sanitizeRect(c.rect),opacity:Math.min(1,Math.max(0,typeof c.opacity==='number'&&Number.isFinite(c.opacity)?c.opacity:1))};
  if(base.kind==='title')base.title=sanitizeTitleSpec(base.title??DEFAULT_TITLE);
  else delete base.title;
  return base;
@@ -64,3 +69,6 @@ export const overlayTrackEnd=(clips:OverlayClip[])=>clips.reduce((end,c)=>Math.m
 export const overlaysAt=(clips:OverlayClip[],t:number)=>clips.filter(c=>t>=c.at&&t<c.at+c.duration);
 
 export const overlayTitleOf=(c:OverlayClip):Required<TitleSpec>|null=>c.kind==='title'?sanitizeTitleSpec(c.title??DEFAULT_TITLE):null;
+
+/** Source second a video overlay shows at timeline second `t`. */
+export const overlaySourceTime=(c:OverlayClip,t:number)=>c.in_s+Math.max(0,t-c.at);

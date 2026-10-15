@@ -17,13 +17,27 @@ import {OverlayLane} from './OverlayLane';
 import {snapPointsFor,zoomInStep,zoomOutStep} from '../../lib/video/zoom';
 import {formatTime} from '../../lib/video/recipe';
 import {pickVoiceoverMime,voiceoverExtension,voiceoverFileName} from '../../lib/video/voiceover';
-import {overlaysAt,overlayTrackEnd} from '../../lib/video/overlayTrack';
+import {overlaysAt,overlayTrackEnd,type OverlayClip} from '../../lib/video/overlayTrack';
 import {addMediaFile,getMedia} from '../../lib/media';
 import {formatBytes,getState,patchState,requestStudio,useAppStore,useMedia,type MediaItem} from './workspace-deps';
 import {VideoTimeline} from './VideoTimeline';
 import {VideoControls} from './VideoInspector';
 import {NativeInput} from '../ui/native-controls';
 const bar='media-bar flex items-center gap-2 border-b border-subtle px-3 py-1.5 text-[12px]';
+/** A video overlay (PiP) on the preview stage: a muted <video> element synced to the playhead offset. Drift over
+ * 0.3 s re-seeks; the playback rate follows the JKL shuttle like the main players. */
+function PipPreview({o,playhead,playing,rate,url}:{o:OverlayClip;playhead:number;playing:boolean;rate:number;url:string}){
+ const ref=useRef<HTMLVideoElement|null>(null);
+ useEffect(()=>{
+  const v=ref.current;if(!v)return;
+  v.playbackRate=rate;v.preservesPitch=false;
+  const target=o.in_s+Math.max(0,playhead-o.at);
+  if(Math.abs(v.currentTime-target)>0.3)v.currentTime=target;
+  if(playing)void v.play().catch(()=>{});else v.pause();
+ },[o.in_s,o.at,playhead,playing,rate]);
+ return <video ref={ref} src={url} muted playsInline className="h-full w-full object-contain" data-testid="video-pip-preview"/>;
+}
+
 /** Player, transport and the multi-clip timeline of one video project. `withPanel` adds the settings when the Video inspector is not on screen. */
 export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?:boolean}){
  const {t}=useT();const studio=useAppStore().activeStudio;const session=useVideoSession(item.name);
@@ -311,7 +325,9 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
        <div className="pointer-events-none flex h-full w-full items-center justify-center">
         {o.kind==='title'
          ?<TitlePreview clip={{id:o.id,kind:'title',source:'',in_s:0,out_s:o.duration,gain:1,muted:false,title:o.title??DEFAULT_TITLE}} time={Math.max(0,playhead-o.at)} aspect={(o.rect.w*(v?.width??16))/(o.rect.h*(v?.height??9))} label={o.title?.text??'Overlay'}/>
-         :<img src={urlOf(o.source)} alt="" className="max-h-full max-w-full object-contain"/>}
+         :o.kind==='image'
+         ?<img src={urlOf(o.source)} alt="" className="max-h-full max-w-full object-contain"/>
+         :<PipPreview o={o} playhead={playhead} playing={playing} rate={rateMul} url={urlOf(o.source)}/>}
        </div>
       </div>;
      })}

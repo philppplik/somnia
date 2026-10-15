@@ -2,7 +2,7 @@ import {reportError} from '../log';
 import {useSyncExternalStore} from 'react';
 import {VideoEngine,type VideoEngineLike} from './engine';
 import {DEFAULT_EXPORT_OPTIONS,DEFAULT_FORMAT,exportName,sanitizeExportOptions,type VideoExportOptions,type VideoFormat} from './recipe';
-import {LOWER_THIRD,CENTER_OVERLAY,newImageOverlay,newTitleOverlay,overlaysAt as _overlaysAt,sanitizeOverlayClips,sanitizeRect,type OverlayClip,type OverlayRect} from './overlayTrack';
+import {LOWER_THIRD,CENTER_OVERLAY,newImageOverlay,newVideoOverlay,newTitleOverlay,overlaysAt as _overlaysAt,sanitizeOverlayClips,sanitizeRect,type OverlayClip,type OverlayRect} from './overlayTrack';
 import {cropOf,fadeInOf,fadeOutOf,flipOf,hasCrop,rotationOf,CLIP_ROTATIONS,fullClip,isFreeze,IMAGE_DEFAULT_SECONDS,newClipId,MIN_CLIP_SECONDS as MIN_EXPORT_RANGE,sliceTimeline,type ClipCrop,type ClipFlip,type ClipRotation,isNeutralTimeline,moveClip,rippleDelete,sanitizeClips,setClipEdge,setClipFades,setClipSpeed,setCrossfade,speedOf,splitAt,timelineDuration,type TimelineClip} from './timeline';
 import {emptyVideoHistory,pushHistory,redoHistory,undoHistory,type VideoHistory,type VideoSnapshot} from './history';
 import {audioTrackEnd,duplicateAudioClip,fullAudioClip,moveAudioClip,removeAudioClip,resizeAudioClip,sanitizeAudioClips,setAudioClipDuck,setAudioClipEdge,setAudioClipFades,setAudioClipGain,setAudioClipMuted,type AudioClip,sliceAudioClips} from './audioTrack';
@@ -178,9 +178,11 @@ export function editOverlays(root:string,edit:(clips:OverlayClip[])=>OverlayClip
 export const addOverlayTitle=(root:string,at:number)=>{const c=newTitleOverlay({},at);editOverlays(root,clips=>[...clips,c]);patch(root,{selectedOverlayClipId:c.id,selectedClipId:null,selectedAudioClipId:null});return c.id;};
 /** Adds an image overlay (centered half-frame) at `at` and selects it. */
 export const addOverlayImage=(root:string,source:string,at:number)=>{const c=newImageOverlay(source,at);editOverlays(root,clips=>[...clips,c]);patch(root,{selectedOverlayClipId:c.id,selectedClipId:null,selectedAudioClipId:null});return c.id;};
+export const addOverlayVideo=(root:string,source:string,at:number)=>{const c=newVideoOverlay(source,at);editOverlays(root,clips=>[...clips,c]);patch(root,{selectedOverlayClipId:c.id,selectedClipId:null,selectedAudioClipId:null});return c.id;};
 export const selectOverlayClip=(root:string,id:string|null)=>patch(root,{selectedOverlayClipId:id,...(id?{selectedClipId:null,selectedAudioClipId:null}:{})});
 export const deleteOverlayClip=(root:string,id:string)=>editOverlays(root,clips=>clips.filter(c=>c.id!==id));
 export const moveOverlayClip=(root:string,id:string,at:number,historyKey?:string)=>editOverlays(root,clips=>clips.map(c=>c.id===id?{...c,at:Math.max(0,at)}:c),historyKey?{historyKey}:undefined);
+export const setOverlayInS=(root:string,id:string,seconds:number,historyKey?:string)=>editOverlays(root,clips=>clips.map(c=>c.id===id&&c.kind==='video'?{...c,in_s:Math.max(0,seconds)}:c),historyKey?{historyKey}:undefined);
 export const setOverlayDuration=(root:string,id:string,seconds:number,historyKey?:string)=>editOverlays(root,clips=>clips.map(c=>c.id===id?{...c,duration:seconds}:c),historyKey?{historyKey}:undefined);
 export const setOverlayRect=(root:string,id:string,rect:OverlayRect,historyKey?:string)=>editOverlays(root,clips=>clips.map(c=>c.id===id?{...c,rect:sanitizeRect(rect)}:c),historyKey?{historyKey}:undefined);
 export const setOverlayOpacity=(root:string,id:string,opacity:number,historyKey?:string)=>editOverlays(root,clips=>clips.map(c=>c.id===id?{...c,opacity}:c),historyKey?{historyKey}:undefined);

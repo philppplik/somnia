@@ -21,7 +21,7 @@ interface VideoProjectFile{version:number;app:'somnia-video';format?:VideoFormat
 export const clipsSignature=(clips:TimelineClip[],audioClips:AudioClip[]=[],overlayClips:OverlayClip[]=[])=>JSON.stringify([
  clips.map(c=>[c.id,c.source,c.in_s,c.out_s,c.gain,c.muted,c.crossfade_s??0,speedOf(c),c.kind??'media',isTitleClip(c)?c.title:null,c.flip??'none',fadeInOf(c),fadeOutOf(c),c.freeze??null,rotationOf(c),hasCrop(c)?cropOf(c):null]),
  audioClips.map(c=>[c.id,c.source,c.in_s,c.out_s,c.at,c.gain,c.muted,c.duck,c.fadeIn,c.fadeOut]),
- overlayClips.map(c=>[c.id,c.kind,c.source,c.at,c.duration,c.rect,c.opacity,c.title??null]),
+ overlayClips.map(c=>[c.id,c.kind,c.source,c.at,c.duration,c.in_s,c.rect,c.opacity,c.title??null]),
 ]);
 
 /** The project file for one timeline. Deterministic (same timeline → same bytes), so tests and diffs stay readable. */
@@ -32,7 +32,7 @@ export function serializeVideoProject(clips:TimelineClip[],audioClips:AudioClip[
    :c.kind==='image'
    ?{id:c.id,kind:'image',source:c.source,out_s:c.out_s,crossfade_s:c.crossfade_s??0,...(c.flip?{flip:c.flip}:{}),...(rotationOf(c)!==0?{rotation:rotationOf(c)}:{}),...(hasCrop(c)?{crop:cropOf(c)}:{})}
    :{id:c.id,kind:'media',source:c.source,in_s:c.in_s,out_s:c.out_s,gain:c.gain,muted:c.muted,speed:speedOf(c),crossfade_s:c.crossfade_s??0,...(c.flip?{flip:c.flip}:{}),...(fadeInOf(c)>0?{fadeIn:fadeInOf(c)}:{}),...(fadeOutOf(c)>0?{fadeOut:fadeOutOf(c)}:{}),...(typeof c.freeze==='number'?{freeze:c.freeze}:{}),...(rotationOf(c)!==0?{rotation:rotationOf(c)}:{}),...(hasCrop(c)?{crop:cropOf(c)}:{})}),
-  audio:audioClips.map(c=>({id:c.id,source:c.source,in_s:c.in_s,out_s:c.out_s,at:c.at,gain:c.gain,muted:c.muted,duck:c.duck,fadeIn:c.fadeIn,fadeOut:c.fadeOut})),...(overlayClips.length?{overlay:overlayClips.map(c=>({id:c.id,kind:c.kind,source:c.source,at:c.at,duration:c.duration,rect:c.rect,opacity:c.opacity,...(c.kind==='title'?{title:c.title}:{})}))}:{})};
+  audio:audioClips.map(c=>({id:c.id,source:c.source,in_s:c.in_s,out_s:c.out_s,at:c.at,gain:c.gain,muted:c.muted,duck:c.duck,fadeIn:c.fadeIn,fadeOut:c.fadeOut})),...(overlayClips.length?{overlay:overlayClips.map(c=>({id:c.id,kind:c.kind,source:c.source,at:c.at,duration:c.duration,rect:c.rect,opacity:c.opacity,...(c.in_s>0?{in_s:c.in_s}:{}),...(c.kind==='title'?{title:c.title}:{})}))}:{})};
  return JSON.stringify(file,null,1)+'\n';
 }
 
@@ -69,9 +69,9 @@ export function parseVideoProject(text:string):{clips:TimelineClip[];audioClips:
  const overlayClips=(Array.isArray(f.overlay)?f.overlay:[]).flatMap((c):OverlayClip[]=>{
   if(!c||typeof c!=='object')return[];
   const o=c as Record<string,unknown>;
-  if(o.kind!=='title'&&o.kind!=='image')return[];
-  if(o.kind==='image'&&(typeof o.source!=='string'||!o.source))return[];
-  return[sanitizeOverlay({id:typeof o.id==='string'&&o.id?o.id:newOverlayClipId(),kind:o.kind,source:typeof o.source==='string'?o.source:'',title:o.title as OverlayClip['title'],at:num(o.at),duration:num(o.duration,3),rect:o.rect as OverlayClip['rect'],opacity:num(o.opacity,1)})];
+  if(o.kind!=='title'&&o.kind!=='image'&&o.kind!=='video')return[];
+  if(o.kind!=='title'&&(typeof o.source!=='string'||!o.source))return[];
+  return[sanitizeOverlay({id:typeof o.id==='string'&&o.id?o.id:newOverlayClipId(),kind:o.kind,source:typeof o.source==='string'?o.source:'',title:o.title as OverlayClip['title'],at:num(o.at),duration:num(o.duration,3),in_s:num(o.in_s),rect:o.rect as OverlayClip['rect'],opacity:num(o.opacity,1)})];
  });
  // Durations are unknown here (sources may not be open); sanitize still clamps fades and title shapes. Clips re-clamp on the next edit once sources are probed.
  return{clips:sanitizeClips(clips,{}),audioClips:sanitizeAudioClips(audioClips,{}),overlayClips:sanitizeOverlayClips(overlayClips),format:f.format==='mp4'||f.format==='webm'?f.format:DEFAULT_FORMAT,exportOptions:sanitizeExportOptions({scale:typeof f.scale==='number'?f.scale:undefined,quality:f.quality as VideoExportOptions['quality'],fps:typeof f.fps==='number'?f.fps:null})};
