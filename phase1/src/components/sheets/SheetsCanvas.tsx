@@ -566,6 +566,7 @@ function Workbook({item}:{item:MediaItem}){
     onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();void commit(draftRef.current??'').then(()=>{move(1,0);scroller.current?.focus();});}else if(e.key==='Escape'){e.preventDefault();setDraft(null);scroller.current?.focus();}}}
     onBlur={()=>{if(draftRef.current!==null)void commit(draftRef.current);}}/>
   </div>
+  {valRule&&(valRule.inputMessage||valRule.inputTitle)&&<p className="px-3 py-1 text-xs text-ink-3" role="note" data-testid="sheets-input-hint">{[valRule.inputTitle,valRule.inputMessage].filter(Boolean).join(': ')}</p>}
   <div ref={scroller} role="grid" tabIndex={0} aria-label={t('sheets.grid',{sheet:names[sheet]?.name??''})} aria-rowcount={totalRows} aria-colcount={totalCols} data-testid="sheets-grid"
    className="relative min-h-0 flex-1 overflow-auto outline-none focus-visible:ring-2 focus-visible:ring-accent" onKeyDown={onGridKey} onCopy={e=>onCopy(e,false)} onCut={e=>onCopy(e,true)} onPaste={onPaste}
    onScroll={e=>{const el=e.currentTarget;setView(v=>({...v,top:el.scrollTop,left:el.scrollLeft}));}}>
