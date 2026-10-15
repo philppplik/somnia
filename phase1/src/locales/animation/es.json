@@ -1131,5 +1131,10 @@
  "animation.palette.title": "Colores",
  "animation.palette.uses": "Usado en {n} capas",
  "animation.palette.hint": "Elige un color nuevo para reemplazarlo en todas las capas (rellenos y trazos). El numero indica cuantas capas lo usan. Las capas bloqueadas se quedan igual.",
- "cmd.animation.palette.replace": "Reemplazar un color en todas las capas de la composicion"
+ "cmd.animation.palette.replace": "Reemplazar un color en todas las capas de la composicion",
+ "animation.rig.group.squash": "Aplastar y estirar",
+ "animation.rig.squash.light": "Suave",
+ "animation.rig.squash.medium": "Medio",
+ "animation.rig.squash.strong": "Fuerte",
+ "cmd.animation.layers.squash": "Aplastar y estirar las capas seleccionadas segun su movimiento"
 }

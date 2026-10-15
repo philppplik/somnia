@@ -1131,5 +1131,10 @@
  "animation.palette.title": "Colours",
  "animation.palette.uses": "Used by {n} layers",
  "animation.palette.hint": "Pick a new colour to replace it in every layer (fills and strokes). The number is how many layers use it. Locked layers keep theirs.",
- "cmd.animation.palette.replace": "Replace a colour in every layer of the composition"
+ "cmd.animation.palette.replace": "Replace a colour in every layer of the composition",
+ "animation.rig.group.squash": "Squash and stretch",
+ "animation.rig.squash.light": "Light",
+ "animation.rig.squash.medium": "Medium",
+ "animation.rig.squash.strong": "Strong",
+ "cmd.animation.layers.squash": "Squash and stretch the selected layers from their motion"
 }

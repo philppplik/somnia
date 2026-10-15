@@ -1975,6 +1975,26 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.layers.squash",
+      "title": "Squash and stretch the selected layers from their motion",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "bounce",
+        "cartoon",
+        "layer",
+        "motion",
+        "principle",
+        "scale",
+        "speed",
+        "squash",
+        "stretch",
+        "velocity"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.layers.stagger",
       "title": "Stagger selected layers",
       "category": "Edit",

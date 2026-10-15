@@ -1177,3 +1177,19 @@ test('P229 palette: colours with use counts, replace in fills and strokes in one
  assert.throws(()=>run({from:'red',to:'#000000'}),/#rrggbb/);assert.throws(()=>run({from:'#ff0000',to:'#FF0000'}),/same/);assert.throws(()=>run({from:'#123456',to:'#000000'}),/No layer/);
  void before;
 });
+test('P230 squash and stretch: factors keep volume, keys follow speed, base scale kept, replace, undo, errors',async()=>{
+ const {layerSquashSpecs,squashFactors}=await import('./layerSquashCommands');const {evaluate}=await import('./interpolate');
+ assert.deepEqual(squashFactors(0,0,60),{x:1,y:1});const f=squashFactors(0,30,100);assert.ok(f.y>1&&f.x<1);assert.ok(Math.abs(f.x*f.y-1)<0.02);
+ const g=squashFactors(30,0,100);assert.ok(g.x>1&&g.y<1);const big=squashFactors(0,9999,100);assert.ok(big.y<=Math.sqrt(2)+0.01);
+ const run=(p?:unknown)=>layerSquashSpecs()[0].run(p) as {layers:number};
+ const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'shape',id:'b'});
+ const C=()=>findComp(s.document!),L=()=>C().layers.find(l=>l.id==='b')!;const T=8000;
+ assert.throws(()=>run({layers:['b']}),/animated position/);
+ s.dispatch({type:'key.add',layer:'b',prop:'position',t:0});s.dispatch({type:'prop.set',layer:'b',prop:'position',value:[100,0],t:0});s.dispatch({type:'prop.set',layer:'b',prop:'position',value:[100,600],t:10*T});
+ s.dispatch({type:'key.add',layer:'b',prop:'scale',t:5*T});s.dispatch({type:'prop.set',layer:'b',prop:'scale',value:[50,50],t:5*T});
+ const before=s.document;run({layers:['b'],amount:100,step:2});
+ const sc=L().transform.scale;const mid=evaluate(sc,5*T) as number[];assert.ok(mid[1]>mid[0]);assert.ok(sc.keys.length>=5);assert.equal(sc.keys.some(k=>k.t===5*T&&k.v[0]===50&&k.v[1]===50),false);
+ s.undo();assert.equal(s.document,before);
+ assert.throws(()=>run({layers:['b'],amount:0}),/amount/);assert.throws(()=>run({layers:['b'],step:0}),/key step/);
+ s.dispatch({type:'layer.update',layer:'b',locked:true});assert.throws(()=>run({layers:['b']}),/locked/);
+});

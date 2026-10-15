@@ -1131,5 +1131,10 @@
  "animation.palette.title": "Farben",
  "animation.palette.uses": "In {n} Ebenen verwendet",
  "animation.palette.hint": "Neue Farbe waehlen, um sie in allen Ebenen zu ersetzen (Flaechen und Konturen). Die Zahl zeigt, wie viele Ebenen sie nutzen. Gesperrte Ebenen bleiben.",
- "cmd.animation.palette.replace": "Eine Farbe in allen Ebenen der Komposition ersetzen"
+ "cmd.animation.palette.replace": "Eine Farbe in allen Ebenen der Komposition ersetzen",
+ "animation.rig.group.squash": "Squash und Stretch",
+ "animation.rig.squash.light": "Leicht",
+ "animation.rig.squash.medium": "Mittel",
+ "animation.rig.squash.strong": "Stark",
+ "cmd.animation.layers.squash": "Die gewaehlten Ebenen je nach Bewegung stauchen und strecken"
 }
