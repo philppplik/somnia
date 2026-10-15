@@ -1106,5 +1106,7 @@
  "animation.rig.orient.up": "Le dessin regarde en haut",
  "cmd.animation.layers.orient": "Tourner les calques selectionnes selon leur trajet",
  "animation.rig.bake": "Convertir les modificateurs en cles",
- "cmd.animation.modifiers.bake": "Convertir les modificateurs wiggle, boucle et lien des calques selectionnes en cles"
+ "cmd.animation.modifiers.bake": "Convertir les modificateurs wiggle, boucle et lien des calques selectionnes en cles",
+ "animation.export.crop.layers": "Ajuster aux calques choisis",
+ "cmd.animation.export.cropToLayers": "Ajuster le recadrage d'export aux calques selectionnes"
 }

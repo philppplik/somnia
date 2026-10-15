@@ -386,6 +386,24 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.export.cropToLayers",
+      "title": "Set the export crop to the selected layers",
+      "category": "Project",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "area",
+        "bounds",
+        "crop",
+        "export",
+        "fit",
+        "layers",
+        "sprite",
+        "trim"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.export.frame",
       "title": "Export current frame as PNG",
       "category": "Project",

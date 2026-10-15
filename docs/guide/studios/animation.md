@@ -65,3 +65,4 @@ Back to [Studios](../studios.md).
 - Export (Render panel > More): Crop to area exports only a pixel rectangle of the composition for every format; it scales with the size setting.
 - Rig > Appearance > Orient to path: rotation keys that make selected layers with a moving position face along it (pick which way the artwork points).
 - Rig > Layers > Bake modifiers to keys: wiggle, loop and link modifiers become plain keys over the work area (every frame), then the modifiers are removed.
+- Export crop: "Fit to selected layers" sets the crop to the box that holds the selected layers over the whole work area (plus 8 px).

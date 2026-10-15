@@ -1073,3 +1073,17 @@ test('P223 bake modifiers: wiggle and loop become keys over the work area, modif
  assert.throws(()=>run({layers:['b'],step:0}),/key step/);
  s.dispatch({type:'layer.update',layer:'b',locked:true});assert.throws(()=>run({layers:['b']}),/locked/);
 });
+test('P224 export crop from layers: union over the work area with padding, clamped, unsized layers, errors',async()=>{
+ const {exportCropSpecs,layerCrop,workAreaTicks}=await import('./exportCropCommands');const {exportState,resetExportSettings}=await import('./exportJob');
+ const run=(p?:unknown)=>exportCropSpecs()[0].run(p) as {x:number;y:number;width:number;height:number};
+ const s=open();setAnimationSession(s);s.setView({playhead:0});resetExportSettings();
+ s.dispatch({type:'layer.add',kind:'solid',id:'b'});const c=findComp(s.document!);
+ const l=c.layers.find(x=>x.id==='b')!;assert.ok(workAreaTicks(c).length>=2);
+ s.dispatch({type:'layer.update',layer:'b',source:{...l.source,width:100,height:50}} as never);
+ s.dispatch({type:'prop.set',layer:'b',prop:'position',value:[300,200],t:0});s.dispatch({type:'prop.set',layer:'b',prop:'anchor',value:[0,0],t:0});
+ const r=run({layers:['b'],padding:10,range:'frame'});assert.deepEqual([r.width,r.height],[120,70]);assert.deepEqual([r.x,r.y],[290,190]);
+ assert.deepEqual(exportState().settings.crop,{x:290,y:190,width:120,height:70});
+ const c2=findComp(s.document!);const big=layerCrop(c2,['b'],[0],5000);assert.deepEqual(big.crop,{x:0,y:0,width:c2.width,height:c2.height});
+ assert.throws(()=>run({layers:['b'],padding:-1}),/padding/);assert.throws(()=>run({layers:['b'],range:'x'}),/range/);
+ assert.equal(layerCrop(c2,['nope'],[0],0).crop,null);
+});

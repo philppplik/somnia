@@ -1106,5 +1106,7 @@
  "animation.rig.orient.up": "El dibujo mira hacia arriba",
  "cmd.animation.layers.orient": "Girar las capas seleccionadas segun su trayectoria",
  "animation.rig.bake": "Convertir modificadores en claves",
- "cmd.animation.modifiers.bake": "Convertir los modificadores de oscilacion, bucle y enlace de las capas seleccionadas en claves"
+ "cmd.animation.modifiers.bake": "Convertir los modificadores de oscilacion, bucle y enlace de las capas seleccionadas en claves",
+ "animation.export.crop.layers": "Ajustar a las capas elegidas",
+ "cmd.animation.export.cropToLayers": "Ajustar el recorte de exportacion a las capas seleccionadas"
 }

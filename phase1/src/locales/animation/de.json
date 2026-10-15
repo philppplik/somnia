@@ -1106,5 +1106,7 @@
  "animation.rig.orient.up": "Grafik zeigt nach oben",
  "cmd.animation.layers.orient": "Die gewaehlten Ebenen entlang ihres Bewegungspfads drehen",
  "animation.rig.bake": "Modifier in Keys umwandeln",
- "cmd.animation.modifiers.bake": "Wiggle-, Loop- und Link-Modifier der gewaehlten Ebenen in Keys umwandeln"
+ "cmd.animation.modifiers.bake": "Wiggle-, Loop- und Link-Modifier der gewaehlten Ebenen in Keys umwandeln",
+ "animation.export.crop.layers": "An gewaehlte Ebenen anpassen",
+ "cmd.animation.export.cropToLayers": "Den Export-Zuschnitt auf die gewaehlten Ebenen setzen"
 }

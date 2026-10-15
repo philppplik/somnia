@@ -1106,5 +1106,7 @@
  "animation.rig.orient.up": "A arte aponta para cima",
  "cmd.animation.layers.orient": "Girar as camadas selecionadas ao longo do trajeto",
  "animation.rig.bake": "Converter modificadores em chaves",
- "cmd.animation.modifiers.bake": "Converter os modificadores de tremor, loop e vinculo das camadas selecionadas em chaves"
+ "cmd.animation.modifiers.bake": "Converter os modificadores de tremor, loop e vinculo das camadas selecionadas em chaves",
+ "animation.export.crop.layers": "Ajustar as camadas selecionadas",
+ "cmd.animation.export.cropToLayers": "Ajustar o corte de exportacao as camadas selecionadas"
 }
