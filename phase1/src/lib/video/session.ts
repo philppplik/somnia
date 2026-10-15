@@ -183,6 +183,15 @@ export function addImageClip(root:string,item:{name:string},seconds?:number,at?:
  patch(root,{selectedClipId:clip.id,selectedAudioClipId:null});
  return clip.id;
 }
+/** Duplicates a timeline clip right after the original and selects the copy. Works for media, title and image clips. */
+export function duplicateTimelineClip(root:string,id:string):string|null{
+ const s=sessions.get(root);if(!s)return null;
+ const src=s.clips.find(c=>c.id===id);if(!src)return null;
+ const copy:TimelineClip={...src,id:newClipId()};
+ editTimeline(root,clips=>{const i=clips.findIndex(c=>c.id===id);return i<0?clips:[...clips.slice(0,i+1),copy,...clips.slice(i+1)];});
+ patch(root,{selectedClipId:copy.id,selectedAudioClipId:null});
+ return copy.id;
+}
 /** Sets an image clip's on-screen duration. No-op for other clip kinds. */
 export function setImageClipLength(root:string,id:string,seconds:number,historyKey?:string){
  const s=sessions.get(root);if(!s)return;

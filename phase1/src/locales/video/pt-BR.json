@@ -119,6 +119,7 @@
   "cmd.video.clip.select": "Selecionar clipe",
   "cmd.video.clip.deselect": "Limpar seleção de clipe",
   "cmd.video.clip.move": "Mover clipe selecionado",
+  "cmd.video.clip.duplicate": "Duplicar o clipe da linha do tempo selecionado",
   "cmd.video.clip.delete": "Excluir clipe selecionado",
   "cmd.video.clip.trim": "Aparar clipe selecionado",
   "cmd.video.clip.gain": "Ajustar ganho de áudio do clipe",

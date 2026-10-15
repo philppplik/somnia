@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {addBlankVideoProject,addMediaFile,closeMedia,getMedia} from '../media';
-import {addImageClip,closeVideo,dirtyVideoNames,getVideoSession,openVideo,redoVideoEdit,serializeVideoProjectCopy,setImageClipLength,setVideoFormat,undoVideoEdit,videoIsDirty} from './session';
+import {addImageClip,closeVideo,duplicateTimelineClip,dirtyVideoNames,getVideoSession,openVideo,redoVideoEdit,serializeVideoProjectCopy,setImageClipLength,setVideoFormat,undoVideoEdit,videoIsDirty} from './session';
 import {addTitleClip,updateTitle} from './titleSession';
 
 test('project: a saved .video-project reloads its timeline and format, clean',async()=>{
@@ -82,5 +82,32 @@ test('project: image clips add, retime, undo and save like title clips',async()=
  assert.equal(getVideoSession(a)!.clips[0].out_s,0.05,'duration clamps');
  const copy=serializeVideoProjectCopy(a)!;
  assert.match(copy.text,/"kind": "image"/);
+ closeVideo(a);closeMedia(a);
+});
+
+test('project: duplicating a timeline clip copies it right after the original and selects the copy',async()=>{
+ const a='dup.video-project';
+ addBlankVideoProject(a);
+ await openVideo(getMedia().items.find(i=>i.name===a)!);
+ addTitleClip(a,Number.MAX_SAFE_INTEGER,{text:'Intro'});
+ const titleId=getVideoSession(a)!.clips[0].id;
+ const imgId=addImageClip(a,{name:'photo.png'})!;
+ const copyId=duplicateTimelineClip(a,titleId)!;
+ let s=getVideoSession(a)!;
+ assert.notEqual(copyId,titleId);
+ assert.deepEqual(s.clips.map(c=>c.id),[titleId,copyId,imgId],'copy lands right after the original');
+ assert.equal(s.clips[1].title?.text,'Intro','title spec copied');
+ assert.equal(s.selectedClipId,copyId,'copy is selected');
+ const imgCopy=duplicateTimelineClip(a,imgId)!;
+ s=getVideoSession(a)!;
+ assert.deepEqual([s.clips[3].kind,s.clips[3].source,s.clips[3].out_s],['image','photo.png',5]);
+ updateTitle(a,copyId,{text:'Changed'});
+ assert.equal(getVideoSession(a)!.clips[0].title?.text,'Intro','copy is independent of the original');
+ assert.equal(duplicateTimelineClip(a,'nope'),null,'unknown id is a no-op');
+ undoVideoEdit(a);
+ assert.equal(getVideoSession(a)!.clips[1].title?.text,'Intro','undo reverts the copy edit');
+ undoVideoEdit(a);
+ assert.equal(getVideoSession(a)!.clips.length,3,'undo removes the last duplicate');
+ assert.ok(videoIsDirty(getVideoSession(a)));
  closeVideo(a);closeMedia(a);
 });

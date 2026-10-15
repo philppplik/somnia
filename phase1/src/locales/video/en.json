@@ -119,6 +119,7 @@
   "cmd.video.clip.select": "Select a timeline clip",
   "cmd.video.clip.deselect": "Clear video clip selection",
   "cmd.video.clip.move": "Move selected video clip",
+  "cmd.video.clip.duplicate": "Duplicate selected timeline clip",
   "cmd.video.clip.delete": "Delete selected video clip",
   "cmd.video.clip.trim": "Trim selected video clip",
   "cmd.video.clip.gain": "Set selected clip audio gain",

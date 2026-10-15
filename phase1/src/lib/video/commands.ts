@@ -2,7 +2,7 @@ import {registerCommandSpec} from '../commandBridge';
 import {commandRegistry} from '../commandRegistry';
 import type {CommandSpec,CommandSchema} from '../commandSpec';
 import {getMedia} from '../media';
-import {addAudioTrackClip,addImageClip,addTimelineClip,addTimelineClipsFromDialog,deleteAudioTrackClip,duplicateAudioTrackClip,cancelVideoExport,deleteTimelineClip,exportVideoFile,getVideoSession,moveTimelineClip,setImageClipLength,redoVideoEdit,resetTimeline,moveAudioTrackClip,saveVideoProject,selectTimelineClip,setAudioTrackClipFades,setAudioTrackClipGain,setTimelineClipCrossfade,setTimelineClipGain,setTimelineClipSpeed,setVideoFormat,splitTimelineAt,toggleAudioTrackClipMute,toggleTimelineClipMute,trimAudioTrackClip,trimTimelineClip,undoVideoEdit,videoIsDirty} from './session';
+import {addAudioTrackClip,addImageClip,addTimelineClip,duplicateTimelineClip,addTimelineClipsFromDialog,deleteAudioTrackClip,duplicateAudioTrackClip,cancelVideoExport,deleteTimelineClip,exportVideoFile,getVideoSession,moveTimelineClip,setImageClipLength,redoVideoEdit,resetTimeline,moveAudioTrackClip,saveVideoProject,selectTimelineClip,setAudioTrackClipFades,setAudioTrackClipGain,setTimelineClipCrossfade,setTimelineClipGain,setTimelineClipSpeed,setVideoFormat,splitTimelineAt,toggleAudioTrackClipMute,toggleTimelineClipMute,trimAudioTrackClip,trimTimelineClip,undoVideoEdit,videoIsDirty} from './session';
 import {addTitleClip,setTitleLength,updateTitle} from './titleSession';
 import {isTitleClip,type TitleSpec} from './titles';
 import {timelineDuration} from './timeline';
@@ -31,6 +31,7 @@ export function videoCommandSpecs():CommandSpec<unknown,unknown>[] {
   spec('video.clip.select','Select a timeline clip',(p:{id:string})=>{const s=activeVideoSession()!;if(!s.clips.some(c=>c.id===p.id))fail('That clip is not in the active timeline.');selectTimelineClip(s.name,p.id);},object({id}),ready,'View'),
   spec('video.clip.deselect','Clear video clip selection',()=>selectTimelineClip(root(),null),undefined,selectionReady,'View'),
   spec('video.clip.move','Move selected video clip',(p:{by:number})=>moveTimelineClip(root(),clip().id,p.by),object({by:{type:'integer',enum:[-1,1]}}),selectionReady,'Edit'),
+  spec('video.clip.duplicate','Duplicate selected timeline clip',()=>duplicateTimelineClip(root(),clip().id),undefined,selectionReady,'Edit'),
   spec('video.clip.delete','Delete selected video clip',()=>deleteTimelineClip(root(),clip().id),undefined,()=>selectionReady()&&(activeVideoSession()!.clips.length>1||getMedia().items.find(i=>i.name===root())?.kind==='video-project'),'Edit'),
   spec('video.clip.trim','Trim selected video clip',(p:{edge:'in'|'out';seconds:number})=>trimTimelineClip(root(),clip().id,p.edge,p.seconds),object({edge:{enum:['in','out']},seconds:number()}),mediaSelection,'Edit'),
   spec('video.clip.gain','Set selected clip audio gain',(p:{gain:number})=>setTimelineClipGain(root(),clip().id,p.gain),object({gain:number(0,2)}),mediaSelection),

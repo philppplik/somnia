@@ -2,7 +2,7 @@ import {useMemo,useState} from 'react';
 import {Button} from '../ui/button';
 import {useT} from '../../lib/useT';
 import {useMedia} from '../../lib/media';
-import {addAudioTrackClip,addImageClip,addTimelineClip,addTimelineClipsFromDialog,cancelVideoExport,deleteAudioTrackClip,deleteTimelineClip,duplicateAudioTrackClip,moveAudioTrackClip,moveTimelineClip,resetTimeline,resizeAudioTrackClip,setAudioTrackClipDuck,setAudioTrackClipFades,setAudioTrackClipGain,toggleAudioTrackClipMute,setTimelineClipCrossfade,setTimelineClipGain,setTimelineClipSpeed,setVideoFormat,selectTimelineClip,setImageClipLength,toggleTimelineClipMute,trimTimelineClip,useVideoSession} from '../../lib/video/session';
+import {addAudioTrackClip,addImageClip,addTimelineClip,addTimelineClipsFromDialog,cancelVideoExport,deleteAudioTrackClip,deleteTimelineClip,duplicateAudioTrackClip,moveAudioTrackClip,moveTimelineClip,resetTimeline,resizeAudioTrackClip,setAudioTrackClipDuck,setAudioTrackClipFades,setAudioTrackClipGain,toggleAudioTrackClipMute,setTimelineClipCrossfade,setTimelineClipGain,setTimelineClipSpeed,setVideoFormat,duplicateTimelineClip,selectTimelineClip,setImageClipLength,toggleTimelineClipMute,trimTimelineClip,useVideoSession} from '../../lib/video/session';
 import {audioClipDuration,audioTrackEnd} from '../../lib/video/audioTrack';
 import {clipDuration,clipRanges,fadeOf,IMAGE_DEFAULT_SECONDS,isImageClip,MAX_GAIN,speedOf,timelineDuration} from '../../lib/video/timeline';
 import {isTitleClip} from '../../lib/video/titles';
@@ -78,6 +78,7 @@ export function VideoControls({name}:{name:string}){
     <div className="flex flex-wrap gap-2">
      <Button size="compact" variant="outline" disabled={selectedIndex<=0} onClick={()=>moveTimelineClip(name,selected.id,-1)} data-testid="video-clip-left">{t('video.moveLeft')}</Button>
      <Button size="compact" variant="outline" disabled={selectedIndex<0||selectedIndex>=s.clips.length-1} onClick={()=>moveTimelineClip(name,selected.id,1)} data-testid="video-clip-right">{t('video.moveRight')}</Button>
+     <Button size="compact" variant="outline" onClick={()=>duplicateTimelineClip(name,selected.id)} data-testid="video-clip-duplicate">{t('video.duplicateClip')}</Button>
      <Button size="compact" variant="ghost" disabled={s.clips.length<=1} onClick={()=>{deleteTimelineClip(name,selected.id);selectTimelineClip(name,null);}} data-testid="video-clip-delete">{t('video.deleteClip')}</Button>
     </div>
     {selectedIndex>=0&&selectedIndex<s.clips.length-1&&<label>{t('video.transition')}
@@ -94,6 +95,7 @@ export function VideoControls({name}:{name:string}){
    <div className="flex flex-wrap gap-2">
     <Button size="compact" variant="outline" disabled={selectedIndex<=0} onClick={()=>moveTimelineClip(name,selected.id,-1)} data-testid="video-clip-left">{t('video.moveLeft')}</Button>
     <Button size="compact" variant="outline" disabled={selectedIndex<0||selectedIndex>=s.clips.length-1} onClick={()=>moveTimelineClip(name,selected.id,1)} data-testid="video-clip-right">{t('video.moveRight')}</Button>
+    <Button size="compact" variant="outline" onClick={()=>duplicateTimelineClip(name,selected.id)} data-testid="video-clip-duplicate">{t('video.duplicateClip')}</Button>
     <Button size="compact" variant="ghost" disabled={s.clips.length<=1&&media.items.find(i=>i.name===name)?.kind!=='video-project'} onClick={()=>{deleteTimelineClip(name,selected.id);selectTimelineClip(name,null);}} data-testid="video-clip-delete">{t('video.deleteClip')}</Button>
    </div>
    {selectedIndex>=0&&selectedIndex<s.clips.length-1&&<label>{t('video.transition')}
@@ -123,6 +125,7 @@ export function VideoControls({name}:{name:string}){
    <div className="flex flex-wrap gap-2">
     <Button size="compact" variant="outline" disabled={selectedIndex<=0} onClick={()=>moveTimelineClip(name,selected.id,-1)} data-testid="video-clip-left">{t('video.moveLeft')}</Button>
     <Button size="compact" variant="outline" disabled={selectedIndex<0||selectedIndex>=s.clips.length-1} onClick={()=>moveTimelineClip(name,selected.id,1)} data-testid="video-clip-right">{t('video.moveRight')}</Button>
+    <Button size="compact" variant="outline" onClick={()=>duplicateTimelineClip(name,selected.id)} data-testid="video-clip-duplicate">{t('video.duplicateClip')}</Button>
     <Button size="compact" variant="ghost" disabled={s.clips.length<=1&&media.items.find(i=>i.name===name)?.kind!=='video-project'} onClick={()=>{deleteTimelineClip(name,selected.id);selectTimelineClip(name,null);}} data-testid="video-clip-delete">{t('video.deleteClip')}</Button>
    </div>
    <p className="m-0 text-ink-3">{t('video.clipHint')}</p>

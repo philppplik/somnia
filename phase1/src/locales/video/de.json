@@ -119,6 +119,7 @@
   "cmd.video.clip.select": "Clip in der Zeitleiste auswählen",
   "cmd.video.clip.deselect": "Clipauswahl aufheben",
   "cmd.video.clip.move": "Ausgewählten Clip verschieben",
+  "cmd.video.clip.duplicate": "Gewählten Timeline-Clip duplizieren",
   "cmd.video.clip.delete": "Ausgewählten Clip löschen",
   "cmd.video.clip.trim": "Ausgewählten Clip trimmen",
   "cmd.video.clip.gain": "Audioverstärkung des Clips einstellen",
