@@ -49,3 +49,17 @@ test('clip nudge never pushes a clip before zero: the validator rejects negative
  await assert.rejects(commandDispatcher.runCommand('sound.arrange.clip.set',{id:'c1',start:-1}));
  assert.equal(getArrangementState().document.tracks[0].clips[0].start,4800,'rejection preserves the position');
 }finally{off();resetArrangement();}});
+
+test('session.splitAt splits every clip under the frame in one undoable step',async()=>{resetArrangement();const off=registerArrangeCommands();try{
+ const source={id:'src',name:'tone.wav',frames:96000,sampleRate:48000,channels:2 as const};
+ editArrangement(s=>{s.sources.push(source);s.tracks.push({...newTrack('t1','A'),clips:[{...newClip('a',source,0),length:9600}]},{...newTrack('t2','B'),clips:[{...newClip('b',source,4800),length:9600},{...newClip('c',source,48000),length:4800}]});});
+ await commandDispatcher.runCommand('sound.arrange.session.splitAt',{frame:7200});
+ const tracks=getArrangementState().document.tracks;
+ assert.equal(tracks[0].clips.length,2,'clip a split');
+ assert.equal(tracks[1].clips.length,3,'clip b split, clip c untouched');
+ assert.deepEqual(tracks[0].clips.map(c=>[c.start,c.length]),[[0,7200],[7200,2400]]);
+ assert.deepEqual(tracks[1].clips.filter(c=>c.start<48000).map(c=>[c.start,c.length]),[[4800,2400],[7200,7200]]);
+ await assert.rejects(commandDispatcher.runCommand('sound.arrange.session.splitAt',{frame:40000}),/No clip at the playhead/);
+ await commandDispatcher.runCommand('sound.arrange.undo');
+ assert.equal(getArrangementState().document.tracks[0].clips.length,1,'one undo restores both tracks');
+}finally{off();resetArrangement();}});
