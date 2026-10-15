@@ -1098,5 +1098,11 @@
  "animation.export.crop.y": "Y",
  "animation.export.crop.width": "Largura",
  "animation.export.crop.height": "Altura",
- "animation.export.problem.crop": "O corte deve ter pixels inteiros e ficar dentro da composicao."
+ "animation.export.problem.crop": "O corte deve ter pixels inteiros e ficar dentro da composicao.",
+ "animation.rig.group.orient": "Orientar pelo trajeto",
+ "animation.rig.orient.right": "A arte aponta para a direita",
+ "animation.rig.orient.down": "A arte aponta para baixo",
+ "animation.rig.orient.left": "A arte aponta para a esquerda",
+ "animation.rig.orient.up": "A arte aponta para cima",
+ "cmd.animation.layers.orient": "Girar as camadas selecionadas ao longo do trajeto"
 }

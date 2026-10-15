@@ -1098,5 +1098,11 @@
  "animation.export.crop.y": "Y",
  "animation.export.crop.width": "Ancho",
  "animation.export.crop.height": "Alto",
- "animation.export.problem.crop": "El recorte debe ser de pixeles enteros y estar dentro de la composicion."
+ "animation.export.problem.crop": "El recorte debe ser de pixeles enteros y estar dentro de la composicion.",
+ "animation.rig.group.orient": "Orientar al trayecto",
+ "animation.rig.orient.right": "El dibujo mira a la derecha",
+ "animation.rig.orient.down": "El dibujo mira hacia abajo",
+ "animation.rig.orient.left": "El dibujo mira a la izquierda",
+ "animation.rig.orient.up": "El dibujo mira hacia arriba",
+ "cmd.animation.layers.orient": "Girar las capas seleccionadas segun su trayectoria"
 }

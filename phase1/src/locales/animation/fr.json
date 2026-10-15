@@ -1098,5 +1098,11 @@
  "animation.export.crop.y": "Y",
  "animation.export.crop.width": "Largeur",
  "animation.export.crop.height": "Hauteur",
- "animation.export.problem.crop": "Le recadrage doit etre en pixels entiers et rester dans la composition."
+ "animation.export.problem.crop": "Le recadrage doit etre en pixels entiers et rester dans la composition.",
+ "animation.rig.group.orient": "Orienter sur le trajet",
+ "animation.rig.orient.right": "Le dessin regarde a droite",
+ "animation.rig.orient.down": "Le dessin regarde en bas",
+ "animation.rig.orient.left": "Le dessin regarde a gauche",
+ "animation.rig.orient.up": "Le dessin regarde en haut",
+ "cmd.animation.layers.orient": "Tourner les calques selectionnes selon leur trajet"
 }

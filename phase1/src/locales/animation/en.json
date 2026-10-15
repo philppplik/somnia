@@ -1098,5 +1098,11 @@
  "animation.export.crop.y": "Y",
  "animation.export.crop.width": "Width",
  "animation.export.crop.height": "Height",
- "animation.export.problem.crop": "The crop area must be whole pixels and lie inside the composition."
+ "animation.export.problem.crop": "The crop area must be whole pixels and lie inside the composition.",
+ "animation.rig.group.orient": "Orient to path",
+ "animation.rig.orient.right": "Artwork points right",
+ "animation.rig.orient.down": "Artwork points down",
+ "animation.rig.orient.left": "Artwork points left",
+ "animation.rig.orient.up": "Artwork points up",
+ "cmd.animation.layers.orient": "Rotate the selected layers to face along their motion path"
 }

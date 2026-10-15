@@ -1036,3 +1036,24 @@ test('P220 pose to pose: keys pose A at the playhead and pose B N frames later w
  for(const bad of [{from:'a',to:'a',frames:5},{from:'a',to:'nope',frames:5},{from:'a',to:'b',frames:0},{from:'a',to:'b',frames:601},{from:'a',to:'b',frames:600},{from:'a',to:'b',frames:5,ease:'nope'}])assert.throws(()=>run(T,bad),(e:any)=>e.expected===true||/must be|ease/i.test(e.message));
  assert.ok(rev>=0);
 });
+test('P222 orient to path: rotation follows the position heading, unwraps, replaces keys, validation, one undo step',async()=>{
+ const {layerOrientSpecs,unwrapAngles,headingOf}=await import('./layerOrientCommands');const {evaluate}=await import('./interpolate');
+ assert.deepEqual(unwrapAngles([170,-170,-150]),[170,190,210]);assert.equal(headingOf(0,0),null);assert.equal(headingOf(0,5),90);
+ const run=(p?:unknown)=>layerOrientSpecs()[0].run(p) as unknown;
+ const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'shape',id:'b'});
+ const L=()=>findComp(s.document!).layers.find(l=>l.id==='b')!;
+ assert.throws(()=>run({layers:['b']}),/animated position/);
+ const f=(n:number)=>frameToTick(n,{num:30,den:1});
+ s.dispatch({type:'key.add',layer:'b',prop:'position',t:f(0)});s.dispatch({type:'prop.set',layer:'b',prop:'position',value:[0,0],t:f(0)});
+ s.dispatch({type:'prop.set',layer:'b',prop:'position',value:[100,0],t:f(10)});s.dispatch({type:'prop.set',layer:'b',prop:'position',value:[100,100],t:f(20)});
+ s.dispatch({type:'key.add',layer:'b',prop:'rotation',t:f(5)});s.dispatch({type:'prop.set',layer:'b',prop:'rotation',value:77,t:f(5)});
+ const before=s.document;
+ const r=run({layers:['b'],step:5}) as {layers:number};assert.equal(r.layers,1);
+ const rot=L().transform.rotation;assert.ok(rot.keys.length>=4);
+ assert.equal(rot.keys.some(k=>k.t===f(5)&&evaluate(rot,f(5))===77),false);
+ assert.ok(Math.abs((evaluate(rot,f(2)) as number))<1);assert.ok(Math.abs((evaluate(rot,f(18)) as number)-90)<1);
+ const r2=run({layers:['b'],step:5,offset:90});assert.ok(r2);assert.ok(Math.abs((evaluate(L().transform.rotation,f(18)) as number)-180)<1);
+ s.undo();assert.ok(Math.abs((evaluate(L().transform.rotation,f(18)) as number)-90)<1);s.undo();assert.equal(s.document,before);
+ assert.throws(()=>run({layers:['b'],step:0}),/key step/);assert.throws(()=>run({layers:['b'],offset:200}),/offset/);
+ s.dispatch({type:'layer.update',layer:'b',locked:true});assert.throws(()=>run({layers:['b']}),/locked/);
+});

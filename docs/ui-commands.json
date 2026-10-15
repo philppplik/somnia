@@ -1862,6 +1862,26 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.layers.orient",
+      "title": "Rotate the selected layers to face along their motion path",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "auto-orient",
+        "direction",
+        "face",
+        "heading",
+        "layer",
+        "motion",
+        "orient",
+        "path",
+        "position",
+        "rotate"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.layers.reset",
       "title": "Reset rotation, scale or opacity of the selected layers",
       "category": "Edit",

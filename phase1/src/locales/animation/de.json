@@ -1098,5 +1098,11 @@
  "animation.export.crop.y": "Y",
  "animation.export.crop.width": "Breite",
  "animation.export.crop.height": "Hoehe",
- "animation.export.problem.crop": "Der Zuschnitt muss aus ganzen Pixeln bestehen und in der Komposition liegen."
+ "animation.export.problem.crop": "Der Zuschnitt muss aus ganzen Pixeln bestehen und in der Komposition liegen.",
+ "animation.rig.group.orient": "An Pfad ausrichten",
+ "animation.rig.orient.right": "Grafik zeigt nach rechts",
+ "animation.rig.orient.down": "Grafik zeigt nach unten",
+ "animation.rig.orient.left": "Grafik zeigt nach links",
+ "animation.rig.orient.up": "Grafik zeigt nach oben",
+ "cmd.animation.layers.orient": "Die gewaehlten Ebenen entlang ihres Bewegungspfads drehen"
 }
