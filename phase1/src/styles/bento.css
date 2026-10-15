@@ -130,3 +130,4 @@ input,select,textarea{border-radius:var(--r-sm)}
 .photos-label-yellow{background:rgb(230 195 92)}
 .photos-label-green{background:rgb(48 164 108)}
 .photos-label-blue{background:rgb(62 99 221)}
+.photos-split-divider:focus-within line{stroke:var(--accent)}

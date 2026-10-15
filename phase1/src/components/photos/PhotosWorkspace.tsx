@@ -450,18 +450,22 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
     {showMaskOverlay&&!lumMaskWindowNeutral(lumMask)&&<canvas ref={maskCanvas} className="pointer-events-none absolute inset-0 size-full" data-testid="photos-lummask-overlay"/>}
     {straightening&&straightDraft.current&&<svg className="pointer-events-none absolute inset-0 size-full" viewBox="0 0 1 1" preserveAspectRatio="none" data-testid="photos-straighten-line"><line x1={straightDraft.current.x0} y1={straightDraft.current.y0} x2={straightDraft.current.x1} y2={straightDraft.current.y1} stroke="var(--accent)" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeDasharray="6 4"/></svg>}
     {showSplit&&original&&<canvas ref={splitCanvas} className={`pointer-events-none absolute inset-0 size-full${scale>4?' pixelated':''}`} aria-hidden="true" data-testid="photos-split-canvas"/>}
-    {showSplit&&original&&<svg className="absolute inset-0 size-full" data-testid="photos-split-divider" data-direction={splitDir}>
+    {showSplit&&original&&<svg className="absolute inset-0 size-full photos-split-divider" data-testid="photos-split-divider" data-direction={splitDir}>
      {splitDir==='vertical'
       ?<line x1={splitX*dispW} y1={0} x2={splitX*dispW} y2={dispH} stroke="rgba(255,255,255,0.9)" strokeWidth={2} pointerEvents="none"/>
       :<line x1={0} y1={splitX*dispH} x2={dispW} y2={splitX*dispH} stroke="rgba(255,255,255,0.9)" strokeWidth={2} pointerEvents="none"/>}
      {splitDir==='vertical'
       ?<line x1={splitX*dispW} y1={0} x2={splitX*dispW} y2={dispH} stroke="transparent" strokeWidth={14} className="cursor-col-resize" data-testid="photos-split-handle"
+      role="separator" aria-orientation="vertical" aria-label={t('photos.split')} aria-valuenow={Math.round(splitX*100)} aria-valuemin={0} aria-valuemax={100} tabIndex={0}
+      onKeyDown={e=>{const step=e.shiftKey?0.1:0.02;if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();setSplitX(clampSplitX(splitX+(e.key==='ArrowRight'?step:-step)));}else if(e.key==='Home'){e.preventDefault();setSplitX(clampSplitX(0));}else if(e.key==='End'){e.preventDefault();setSplitX(clampSplitX(1));}}}
       onPointerDown={e=>{e.stopPropagation();(e.target as Element).setPointerCapture(e.pointerId);splitDrag.current=true;}}
       onDoubleClick={e=>{e.stopPropagation();setSplitX(0.5);}}
       onPointerMove={e=>{if(splitDrag.current){const p=pointerPos(e);setSplitX(clampSplitX(splitDir==='vertical'?p.x:p.y));}}}
       onPointerUp={()=>{splitDrag.current=false;}}
       onPointerCancel={()=>{splitDrag.current=false;}}/>
       :<line x1={0} y1={splitX*dispH} x2={dispW} y2={splitX*dispH} stroke="transparent" strokeWidth={14} className="cursor-row-resize" data-testid="photos-split-handle"
+      role="separator" aria-orientation="horizontal" aria-label={t('photos.split')} aria-valuenow={Math.round(splitX*100)} aria-valuemin={0} aria-valuemax={100} tabIndex={0}
+      onKeyDown={e=>{const step=e.shiftKey?0.1:0.02;if(e.key==='ArrowUp'||e.key==='ArrowDown'){e.preventDefault();setSplitX(clampSplitX(splitX+(e.key==='ArrowDown'?step:-step)));}else if(e.key==='Home'){e.preventDefault();setSplitX(clampSplitX(0));}else if(e.key==='End'){e.preventDefault();setSplitX(clampSplitX(1));}}}
       onPointerDown={e=>{e.stopPropagation();(e.target as Element).setPointerCapture(e.pointerId);splitDrag.current=true;}}
       onPointerMove={e=>{if(splitDrag.current){const p=pointerPos(e);setSplitX(clampSplitX(p.y));}}}
       onPointerUp={()=>{splitDrag.current=false;}}
