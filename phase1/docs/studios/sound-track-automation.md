@@ -16,4 +16,4 @@ Session schema v10 adds `gainCurve: GainPoint[]` to `ArrangeTrack`. v9 sessions 
 `trackAutomation.test.ts` (3) covers round-trip and v9 migration, per-sample gain math including range offset, and curve bounds; `arrangeCommands.test.ts` covers the command and undo. Full sound suite: 122 pass / 0 fail.
 
 ## Note
-Pan stays a static per-track value; automating it is deliberately out of scope for now.
+Pan stays a static per-track value; automating it is deliberately out of scope for now. Freeze and glue render with the track curve neutralized (`gainCurve: []` in their single-track sessions) so automation stays live on the track and is never baked twice.
