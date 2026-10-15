@@ -3,6 +3,7 @@ import {useSyncExternalStore} from 'react';
 import {VideoEngine,type VideoEngineLike} from './engine';
 import {DEFAULT_EXPORT_OPTIONS,DEFAULT_FORMAT,exportName,sanitizeExportOptions,type VideoExportOptions,type VideoFormat} from './recipe';
 import {LOWER_THIRD,CENTER_OVERLAY,newImageOverlay,newVideoOverlay,newTitleOverlay,overlaysAt as _overlaysAt,sanitizeOverlayClips,sanitizeRect,type OverlayClip,type OverlayRect} from './overlayTrack';
+import {cuesToTitleOverlays,parseSubtitles} from './subtitles';
 import {cropOf,fadeInOf,fadeOutOf,flipOf,hasCrop,rotationOf,CLIP_ROTATIONS,fullClip,isFreeze,IMAGE_DEFAULT_SECONDS,newClipId,MIN_CLIP_SECONDS as MIN_EXPORT_RANGE,sliceTimeline,type ClipCrop,type ClipFlip,type ClipRotation,isNeutralTimeline,moveClip,rippleDelete,sanitizeClips,setClipEdge,setClipFades,setClipSpeed,setCrossfade,speedOf,splitAt,timelineDuration,type TimelineClip} from './timeline';
 import {emptyVideoHistory,pushHistory,redoHistory,undoHistory,type VideoHistory,type VideoSnapshot} from './history';
 import {audioTrackEnd,duplicateAudioClip,fullAudioClip,moveAudioClip,removeAudioClip,resizeAudioClip,sanitizeAudioClips,setAudioClipDuck,setAudioClipEdge,setAudioClipFades,setAudioClipGain,setAudioClipMuted,type AudioClip,sliceAudioClips} from './audioTrack';
@@ -178,6 +179,14 @@ export function editOverlays(root:string,edit:(clips:OverlayClip[])=>OverlayClip
 export const addOverlayTitle=(root:string,at:number)=>{const c=newTitleOverlay({},at);editOverlays(root,clips=>[...clips,c]);patch(root,{selectedOverlayClipId:c.id,selectedClipId:null,selectedAudioClipId:null});return c.id;};
 /** Adds an image overlay (centered half-frame) at `at` and selects it. */
 export const addOverlayImage=(root:string,source:string,at:number)=>{const c=newImageOverlay(source,at);editOverlays(root,clips=>[...clips,c]);patch(root,{selectedOverlayClipId:c.id,selectedClipId:null,selectedAudioClipId:null});return c.id;};
+/** Imports SRT/VTT subtitle text as lower-third title overlays; returns the cue count (0 = nothing parsed). */
+export const importSubtitleText=(root:string,text:string):number=>{
+ const ovs=cuesToTitleOverlays(parseSubtitles(text));
+ if(!ovs.length)return 0;
+ editOverlays(root,clips=>[...clips,...ovs]);
+ patch(root,{selectedOverlayClipId:ovs[ovs.length-1].id,selectedClipId:null,selectedAudioClipId:null});
+ return ovs.length;
+};
 export const addOverlayVideo=(root:string,source:string,at:number)=>{const c=newVideoOverlay(source,at);editOverlays(root,clips=>[...clips,c]);patch(root,{selectedOverlayClipId:c.id,selectedClipId:null,selectedAudioClipId:null});return c.id;};
 export const selectOverlayClip=(root:string,id:string|null)=>patch(root,{selectedOverlayClipId:id,...(id?{selectedClipId:null,selectedAudioClipId:null}:{})});
 export const deleteOverlayClip=(root:string,id:string)=>editOverlays(root,clips=>clips.filter(c=>c.id!==id));
