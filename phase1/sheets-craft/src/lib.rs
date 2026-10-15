@@ -19,6 +19,8 @@ const MAX_NAMES: usize = 500;
 const MAX_TABLES: usize = 200;
 const MAX_EXPORT_BYTES: usize = 40 * 1024 * 1024;
 const MAX_HEADER_CHARS: usize = 100;
+const MAX_PASSWORD_CHARS: usize = 64;
+const PROTECT_ALLOW: &[&str] = &["formatCells", "formatColumns", "formatRows", "insertColumns", "insertRows", "deleteColumns", "deleteRows", "sort", "autofilter"];
 /// Paper names the page setup offers (the engine knows more).
 const PAPERS: &[&str] = &["Letter", "Legal", "A4", "A3", "A5", "Tabloid", "Executive"];
 /// Keys `page_setup` accepts; anything else is refused.
@@ -507,7 +509,7 @@ impl HeadlessWorkbook {
         let rows: Vec<_> = sh.rows.iter().filter(|(r, _)| **r < gridcraft_engine::core::MAX_ROWS)
             .map(|(r, i)| json!({"i": r, "h": px(sh.row_height(*r)), "hidden": i.hidden})).collect();
         Ok(json!({"sheet":sheet,"defaultColWidth":px(sh.default_col_width),"defaultRowHeight":px(sh.default_row_height),
-            "cols":cols,"rows":rows,"showGridlines":sh.show_gridlines,"zoom":sh.zoom,
+            "cols":cols,"rows":rows,"showGridlines":sh.show_gridlines,"zoom":sh.zoom,"protection":sh.protection.as_ref().map(|p| json!({"password": p.password_hash.is_some(), "allow": Self::allowed_names(p)})),"workbookLocked":doc.wb.protected_structure,
             "freeze": sh.freeze.map(|(r, c)| json!({"rows": r.min(20), "cols": c.min(20)})),
             "merges": sh.merges.iter().map(|m| json!({"r0":m.start.row,"c0":m.start.col,"r1":m.end.row,"c1":m.end.col})).collect::<Vec<_>>()}).to_string())
     }
@@ -963,6 +965,90 @@ impl HeadlessWorkbook {
             _ => return Err("unsupported table operation".into()),
         };
         self.session.run(command, params).map(|v| v.to_string()).map_err(|e| e.to_string())
+    }
+
+    /// The protection permissions that are switched on, by their command names.
+    fn allowed_names(p: &gridcraft_engine::model::SheetProtection) -> Vec<&'static str> {
+        [("formatCells", p.format_cells), ("formatColumns", p.format_columns), ("formatRows", p.format_rows), ("insertColumns", p.insert_columns),
+         ("insertRows", p.insert_rows), ("deleteColumns", p.delete_columns), ("deleteRows", p.delete_rows), ("sort", p.sort), ("autofilter", p.autofilter)]
+            .into_iter().filter(|(_, on)| *on).map(|(n, _)| n).collect()
+    }
+
+    /// Locks or protects. `op_json` is one of `{"kind":"protect","password"?:text,"allow"?:[names]}` (the sheet must not be protected yet;
+    /// the password is at most 64 characters without control characters and is only stored as a hash; `allow` names are
+    /// formatCells, formatColumns, formatRows, insertColumns, insertRows, deleteColumns, deleteRows, sort, autofilter),
+    /// `{"kind":"unprotect","password"?:text}`, `{"kind":"lock","locked":bool}` for the block (`row`, `col`, `rows`, `cols`; unprotected
+    /// sheets only) or `{"kind":"workbook","on":bool}` (structure lock). One history entry each. Protection is a convenience, not security.
+    pub fn protect_op(&mut self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32, op_json: &str) -> Result<String, String> {
+        let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "operation must be a JSON object".to_string())?;
+        let map = op.as_object().ok_or("operation must be a JSON object")?;
+        let kind = map.get("kind").and_then(|v| v.as_str()).ok_or("missing kind")?.to_string();
+        let allowed_keys: &[&str] = match kind.as_str() {
+            "protect" => &["kind", "password", "allow"],
+            "unprotect" => &["kind", "password"],
+            "lock" => &["kind", "locked"],
+            "workbook" => &["kind", "on"],
+            _ => return Err("unsupported protection operation".into()),
+        };
+        if map.keys().any(|k| !allowed_keys.contains(&k.as_str())) {
+            return Err("unknown protection field".into());
+        }
+        let password = match map.get("password") {
+            None => None,
+            Some(v) => {
+                let t = v.as_str().filter(|t| t.chars().count() <= MAX_PASSWORD_CHARS && !t.chars().any(|c| c.is_control())).ok_or("The password is too long or has control characters.")?;
+                Some(t.to_string())
+            }
+        };
+        let protected = self.session.doc().map_err(|e| e.to_string())?.wb.sheet(sheet).ok_or("unknown sheet")?.is_protected();
+        match kind.as_str() {
+            "protect" => {
+                if protected {
+                    return Err("The sheet is already protected.".into());
+                }
+                let mut params = serde_json::Map::new();
+                params.insert("sheet".into(), json!(sheet));
+                if let Some(pw) = password.filter(|t| !t.is_empty()) {
+                    params.insert("password".into(), json!(pw));
+                }
+                if let Some(a) = map.get("allow") {
+                    let list = a.as_array().ok_or("allow must be a list")?;
+                    if list.len() > PROTECT_ALLOW.len() {
+                        return Err("too many permissions".into());
+                    }
+                    for n in list {
+                        let name = n.as_str().filter(|n| PROTECT_ALLOW.contains(n)).ok_or("unknown permission")?;
+                        params.insert(name.into(), json!(true));
+                    }
+                }
+                self.session.run("review.protectSheet", serde_json::Value::Object(params)).map_err(|e| e.to_string())?;
+            }
+            "unprotect" => {
+                if !protected {
+                    return Err("The sheet is not protected.".into());
+                }
+                let mut params = json!({"sheet": sheet});
+                if let Some(pw) = password {
+                    params["password"] = json!(pw);
+                }
+                self.session.run("review.unprotectSheet", params).map_err(|e| e.to_string())?;
+            }
+            "lock" => {
+                let locked = map.get("locked").and_then(|v| v.as_bool()).ok_or("locked must be true or false")?;
+                self.check_block(sheet, row, col, rows.max(1), cols.max(1), true)?;
+                if rows == 0 || cols == 0 || u64::from(rows) * u64::from(cols) > MAX_FILL_CELLS {
+                    return Err("Select a block of at most 1,000,000 cells.".into());
+                }
+                self.session.run("sheet.activate", json!({"sheet": sheet})).map_err(|e| e.to_string())?;
+                let range = format!("{}:{}", CellRef::new(row, col).a1(), CellRef::new(row + rows - 1, col + cols - 1).a1());
+                self.session.run("home.lockCell", json!({"range": range, "on": locked})).map_err(|e| e.to_string())?;
+            }
+            _ => {
+                let on = map.get("on").and_then(|v| v.as_bool()).ok_or("on must be true or false")?;
+                self.session.run("review.protectWorkbook", json!({"on": on})).map_err(|e| e.to_string())?;
+            }
+        }
+        self.layout(sheet)
     }
 
     /// Changes how a sheet is shown. `op_json` is `{"zoom":10..400}` (whole percent; a view setting that is not an undo step) or
@@ -2769,6 +2855,31 @@ mod tests {
         assert_eq!(text(&book, "A82"), "red RED", "nothing changed");
         book.session.run("review.protectSheet", json!({})).unwrap();
         assert!(book.replace_range(0, 80, 0, 3, 2, op).unwrap_err().contains("protected"));
+    }
+    #[test]
+    fn protect_op_protects_unprotects_locks_and_validates() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        let on = book.protect_op(0, 0, 0, 1, 1, r#"{"kind":"protect","password":"pw","allow":["sort","formatCells"]}"#).unwrap();
+        assert!(on.contains("\"password\":true") && on.contains("sort") && on.contains("formatCells"));
+        assert!(book.set_cell(0, "B2", "5").is_err(), "locked cells refuse edits");
+        assert!(book.protect_op(0, 0, 0, 1, 1, r#"{"kind":"protect"}"#).is_err(), "already protected");
+        assert!(book.protect_op(0, 0, 0, 1, 1, r#"{"kind":"lock","locked":false}"#).is_err(), "no locking on a protected sheet");
+        assert!(book.protect_op(0, 0, 0, 1, 1, r#"{"kind":"unprotect","password":"wrong"}"#).is_err());
+        assert!(book.protect_op(0, 0, 0, 1, 1, r#"{"kind":"unprotect"}"#).is_err());
+        let off = book.protect_op(0, 0, 0, 1, 1, r#"{"kind":"unprotect","password":"pw"}"#).unwrap();
+        assert!(off.contains("\"protection\":null"));
+        assert!(book.protect_op(0, 0, 0, 1, 1, r#"{"kind":"unprotect"}"#).is_err(), "not protected");
+        book.protect_op(0, 0, 0, 2, 2, r#"{"kind":"lock","locked":false}"#).unwrap();
+        book.undo().unwrap();
+        assert!(book.protect_op(0, 0, 0, 1, 1, r#"{"kind":"workbook","on":true}"#).unwrap().contains("\"workbookLocked\":true"));
+        book.protect_op(0, 0, 0, 1, 1, r#"{"kind":"workbook","on":false}"#).unwrap();
+        for bad in ["nope", "[]", "{}", r#"{"kind":"burn"}"#, r#"{"kind":"protect","extra":1}"#, r#"{"kind":"protect","allow":["everything"]}"#, r#"{"kind":"protect","allow":"sort"}"#,
+                    r#"{"kind":"protect","password":"a\u0007b"}"#, r#"{"kind":"lock"}"#, r#"{"kind":"lock","locked":"y"}"#, r#"{"kind":"workbook"}"#] {
+            assert!(book.protect_op(0, 0, 0, 1, 1, bad).is_err(), "{bad}");
+        }
+        assert!(book.protect_op(0, 0, 0, 1, 1, &format!(r#"{{"kind":"protect","password":"{}"}}"#, "x".repeat(65))).is_err());
+        assert!(book.protect_op(0, 0, 0, 0, 0, r#"{"kind":"lock","locked":true}"#).is_err());
+        assert!(book.protect_op(9, 0, 0, 1, 1, r#"{"kind":"workbook","on":true}"#).is_err());
     }
     #[test]
     fn view_op_sets_zoom_and_gridlines_with_bounds() {

@@ -6665,6 +6665,14 @@
       "hasEnabled": true
     },
     {
+      "id": "sheets.protect",
+      "title": "Protect a sheet or lock cells",
+      "category": "Edit",
+      "source": "sheets",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
       "id": "sheets.redo",
       "title": "Redo workbook change",
       "category": "Edit",

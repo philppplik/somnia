@@ -2,7 +2,7 @@ import {parseAnnotations} from './notes';
 import {parseNames} from './names';
 import {parsePivotFields,parseTables} from './tableOps';
 import {parseExportResult,parsePageInfo} from './printOps';
-import type {ViewOp,ViewOpResult,PageInfo,PageSetupOp,ExportOp,ExportResult,PivotField,PivotFunc,TableOp,TablesInfo,NameInfo,NameOp,AnnotateOp,CellAnnotations,DedupeOp,SplitOp,ReplaceOp,ValidationOp,CfOp,FillDirection,SheetsEditReceipt,SheetsNativeState,FilterOp,SortOp,SheetOp,FormatOp,LineAxis,LineOp,RangeResult,SheetInfo,SheetLayout,SheetsRequest,SheetsResponse,ViewResult,WorkbookInfo} from './protocol';
+import type {ProtectOp,ViewOp,ViewOpResult,PageInfo,PageSetupOp,ExportOp,ExportResult,PivotField,PivotFunc,TableOp,TablesInfo,NameInfo,NameOp,AnnotateOp,CellAnnotations,DedupeOp,SplitOp,ReplaceOp,ValidationOp,CfOp,FillDirection,SheetsEditReceipt,SheetsNativeState,FilterOp,SortOp,SheetOp,FormatOp,LineAxis,LineOp,RangeResult,SheetInfo,SheetLayout,SheetsRequest,SheetsResponse,ViewResult,WorkbookInfo} from './protocol';
 import {MAX_INPUT_BYTES} from './protocol';
 import {parseEditReceipt,parseNativeState} from './receipt';
 type Req=SheetsRequest extends infer R?R extends {id:number}?Omit<R,'id'>:never:never;
@@ -28,7 +28,7 @@ export class SheetsEngine{
  private request(message:Req,transfer:Transferable[]=[]){
   return new Promise<SheetsResponse>((resolve,reject)=>{
    if(this.disposed){reject(new Error('Spreadsheet engine closed'));return;}
-   const mutating=['open','set','setValues','clear','format','resize','editLines','freeze','sort','filter','fill','cf','validation','replace','dedupe','split','annotate','defineName','deleteName','pivotCreate','pivotRefresh','tableOp','pageSetup','viewOp','setReviewed','undoReviewed','editSheet','undo','redo','close'].includes(message.op);if(mutating){this.mutationEpoch++;this.mutations++;this.notifySelectionRead();}const finish=()=>{if(mutating){this.mutations--;this.mutationEpoch++;this.notifySelectionRead();}};const done=(r:SheetsResponse)=>{finish();resolve(r);},failed=(e:Error)=>{finish();reject(e);};
+   const mutating=['open','set','setValues','clear','format','resize','editLines','freeze','sort','filter','fill','cf','validation','replace','dedupe','split','annotate','defineName','deleteName','pivotCreate','pivotRefresh','tableOp','pageSetup','viewOp','protectOp','setReviewed','undoReviewed','editSheet','undo','redo','close'].includes(message.op);if(mutating){this.mutationEpoch++;this.mutations++;this.notifySelectionRead();}const finish=()=>{if(mutating){this.mutations--;this.mutationEpoch++;this.notifySelectionRead();}};const done=(r:SheetsResponse)=>{finish();resolve(r);},failed=(e:Error)=>{finish();reject(e);};
    const id=this.nextId++;
    const timer=setTimeout(()=>this.dispose(new Error('Spreadsheet engine timed out. Unsaved edits in this workbook were discarded.')),this.timeoutMs);
    this.pending.set(id,{resolve:done,reject:failed,timer});
@@ -73,6 +73,8 @@ export class SheetsEngine{
  /** The tables of a sheet and the style names to choose from (read only). */
  async tables(sheet:number):Promise<TablesInfo>{return parseTables(await this.result<{tables:unknown;styles:unknown}>({op:'tables',sheet}));}
  /** Creates a table from the block or changes one of the sheet's tables (one undo step). */
+ /** Protects or unprotects the sheet, locks or unlocks the block, or locks the workbook structure (one undo step). The password is passed through once and not kept. */
+ async protectOp(sheet:number,row:number,col:number,rows:number,cols:number,protect:ProtectOp):Promise<void>{await this.result<unknown>({op:'protectOp',sheet,row,col,rows,cols,protect});}
  /** Zoom (10 to 400 percent, not an undo step) or gridlines (one undo step) of a sheet. */
  viewOp(sheet:number,view:ViewOp){return this.result<ViewOpResult>({op:'viewOp',sheet,view});}
  /** The page setup of a sheet (read only). */
