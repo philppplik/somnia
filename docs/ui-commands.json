@@ -2047,6 +2047,25 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.layers.stretch",
+      "title": "Stretch the time of the selected layers",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "duration",
+        "fast",
+        "layers",
+        "retime",
+        "scale",
+        "slow",
+        "speed",
+        "stretch",
+        "time"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.layers.trimToWorkArea",
       "title": "Trim the selected layers to the work area",
       "category": "Edit",

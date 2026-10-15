@@ -17,3 +17,16 @@ function walk(v:unknown,fn:(t:number)=>number):unknown{
 export function layerKeyTimes(l:Layer):number[]{const out:number[]=[];walk(l,t=>{out.push(t);return t;});return out;}
 /** The layer with every key moved by `delta` ticks. Nothing else changes. */
 export const shiftLayerKeys=(l:Layer,delta:number):Layer=>walk(l,t=>t+delta) as Layer;
+/** The layer with every key and its in and out point scaled about its in point by `percent`, each time snapped to a whole frame. */
+export const stretchLayer=(l:Layer,percent:number,snap:(t:number)=>number):Layer=>{
+ const a=l.inT,f=(t:number)=>snap(a+(t-a)*percent/100),m=walk(l,f) as Layer;
+ return {...m,inT:a,outT:f(l.outT)};
+};
+/** True when two keys of one keyed array share a time. */
+export function hasKeyCollision(v:unknown):boolean{
+ if(Array.isArray(v)){
+  if(isKeyArray(v)&&new Set(v.map(k=>k.t)).size!==v.length)return true;
+  return v.some(hasKeyCollision);
+ }
+ return !!v&&typeof v==='object'&&Object.values(v).some(hasKeyCollision);
+}

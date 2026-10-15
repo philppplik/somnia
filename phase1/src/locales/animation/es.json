@@ -1152,5 +1152,11 @@
  "animation.keys.snapMarkers.hint": "Mueve cada clave seleccionada al marcador mas cercano (sincronia con el ritmo). La variante (6) solo mueve claves a menos de 6 fotogramas.",
  "cmd.animation.keys.snapToMarkers": "Ajustar las claves seleccionadas al marcador mas cercano",
  "animation.rig.workareaMarkers": "Area de trabajo a seccion de marcadores",
- "cmd.animation.workarea.toMarkers": "Ajustar el area de trabajo a la seccion entre marcadores en el cabezal"
+ "cmd.animation.workarea.toMarkers": "Ajustar el area de trabajo a la seccion entre marcadores en el cabezal",
+ "animation.rig.group.stretch": "Estirar el tiempo",
+ "animation.rig.stretch.50": "50 % de duracion (el doble de rapido)",
+ "animation.rig.stretch.75": "75 % de duracion",
+ "animation.rig.stretch.125": "125 % de duracion",
+ "animation.rig.stretch.200": "200 % de duracion (la mitad de rapido)",
+ "cmd.animation.layers.stretch": "Estirar el tiempo de las capas seleccionadas"
 }

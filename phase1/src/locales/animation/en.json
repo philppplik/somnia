@@ -1152,5 +1152,11 @@
  "animation.keys.snapMarkers.hint": "Move each selected key to the nearest composition marker (beat sync). The (6) variant only moves keys within 6 frames.",
  "cmd.animation.keys.snapToMarkers": "Snap the selected keys to the nearest marker",
  "animation.rig.workareaMarkers": "Work area to marker section",
- "cmd.animation.workarea.toMarkers": "Set the work area to the section between markers at the playhead"
+ "cmd.animation.workarea.toMarkers": "Set the work area to the section between markers at the playhead",
+ "animation.rig.group.stretch": "Stretch time",
+ "animation.rig.stretch.50": "50% length (twice as fast)",
+ "animation.rig.stretch.75": "75% length",
+ "animation.rig.stretch.125": "125% length",
+ "animation.rig.stretch.200": "200% length (twice as slow)",
+ "cmd.animation.layers.stretch": "Stretch the time of the selected layers"
 }

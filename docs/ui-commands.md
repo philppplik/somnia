@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-873 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+874 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -163,6 +163,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `animation.layers.split` | Split the selected layers at the playhead | Edit | animation |  |
 | `animation.layers.squash` | Squash and stretch the selected layers from their motion | Edit | animation |  |
 | `animation.layers.stagger` | Stagger selected layers | Edit | animation |  |
+| `animation.layers.stretch` | Stretch the time of the selected layers | Edit | animation |  |
 | `animation.layers.trimToWorkArea` | Trim the selected layers to the work area | Edit | animation |  |
 | `animation.marker.add` | Add timing marker | Edit | animation |  |
 | `animation.marker.clear` | Clear timing markers | Edit | animation |  |

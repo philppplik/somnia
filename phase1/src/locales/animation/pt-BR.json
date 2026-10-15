@@ -1152,5 +1152,11 @@
  "animation.keys.snapMarkers.hint": "Move cada chave selecionada para o marcador mais proximo (sincronia com a batida). A variante (6) so move chaves a ate 6 quadros.",
  "cmd.animation.keys.snapToMarkers": "Ajustar as chaves selecionadas ao marcador mais proximo",
  "animation.rig.workareaMarkers": "Area de trabalho para secao de marcadores",
- "cmd.animation.workarea.toMarkers": "Definir a area de trabalho para a secao entre marcadores no cursor"
+ "cmd.animation.workarea.toMarkers": "Definir a area de trabalho para a secao entre marcadores no cursor",
+ "animation.rig.group.stretch": "Esticar o tempo",
+ "animation.rig.stretch.50": "50% da duracao (duas vezes mais rapido)",
+ "animation.rig.stretch.75": "75% da duracao",
+ "animation.rig.stretch.125": "125% da duracao",
+ "animation.rig.stretch.200": "200% da duracao (metade da velocidade)",
+ "cmd.animation.layers.stretch": "Esticar o tempo das camadas selecionadas"
 }

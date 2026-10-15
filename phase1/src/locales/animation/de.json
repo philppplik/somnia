@@ -1152,5 +1152,11 @@
  "animation.keys.snapMarkers.hint": "Verschiebt jeden gewaehlten Key zum naechsten Marker der Komposition (Beat-Sync). Die Variante (6) bewegt nur Keys innerhalb von 6 Bildern.",
  "cmd.animation.keys.snapToMarkers": "Gewaehlte Keys am naechsten Marker einrasten",
  "animation.rig.workareaMarkers": "Arbeitsbereich auf Marker-Abschnitt",
- "cmd.animation.workarea.toMarkers": "Arbeitsbereich auf den Abschnitt zwischen Markern am Abspielkopf setzen"
+ "cmd.animation.workarea.toMarkers": "Arbeitsbereich auf den Abschnitt zwischen Markern am Abspielkopf setzen",
+ "animation.rig.group.stretch": "Zeit dehnen",
+ "animation.rig.stretch.50": "50 % Laenge (doppelt so schnell)",
+ "animation.rig.stretch.75": "75 % Laenge",
+ "animation.rig.stretch.125": "125 % Laenge",
+ "animation.rig.stretch.200": "200 % Laenge (halb so schnell)",
+ "cmd.animation.layers.stretch": "Zeit der gewaehlten Ebenen dehnen"
 }

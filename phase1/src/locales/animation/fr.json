@@ -1152,5 +1152,11 @@
  "animation.keys.snapMarkers.hint": "Deplace chaque cle selectionnee vers le repere le plus proche (synchro au rythme). La variante (6) ne deplace que les cles a moins de 6 images.",
  "cmd.animation.keys.snapToMarkers": "Aimanter les cles selectionnees au repere le plus proche",
  "animation.rig.workareaMarkers": "Zone de travail sur section de reperes",
- "cmd.animation.workarea.toMarkers": "Regler la zone de travail sur la section entre reperes a la tete de lecture"
+ "cmd.animation.workarea.toMarkers": "Regler la zone de travail sur la section entre reperes a la tete de lecture",
+ "animation.rig.group.stretch": "Etirer le temps",
+ "animation.rig.stretch.50": "50 % de duree (deux fois plus vite)",
+ "animation.rig.stretch.75": "75 % de duree",
+ "animation.rig.stretch.125": "125 % de duree",
+ "animation.rig.stretch.200": "200 % de duree (deux fois plus lent)",
+ "cmd.animation.layers.stretch": "Etirer le temps des calques selectionnes"
 }

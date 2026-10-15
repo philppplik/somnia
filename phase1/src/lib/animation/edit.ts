@@ -1,6 +1,6 @@
 import {duplicateLayers} from './layerDuplicate';
 import {worldMatrix,invertMatrix,multiplyMatrix,decomposeMatrix} from './scene';
-import {layerKeyTimes,shiftLayerKeys} from './layerShift';
+import {layerKeyTimes,shiftLayerKeys,stretchLayer,hasKeyCollision} from './layerShift';
 import {validateEasingLib} from './easingModel';
 import {validateMotionLib} from './motionModel';
 import {validateTextPresetLib} from './textPresetModel';
@@ -29,6 +29,7 @@ export type Edit=
  |{type:'layer.remove';layer:string}
  |{type:'layer.update';layer:string;name?:string;visible?:boolean;solo?:boolean;locked?:boolean;shy?:boolean;source?:Partial<LayerSource>}
  |{type:'layer.timing';layer:string;inT:number;outT:number}
+ |{type:'layer.stretch';layer:string;percent:number}
  |{type:'layer.shift';layer:string;delta:number;mode:'slide'|'slip'}
  |{type:'layer.parent';layer:string;parent:string|null;keepWorld?:boolean;t?:number}
  |{type:'layer.reorder';layer:string;index:number}
@@ -504,6 +505,14 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
    return setLayer(doc,{...l,name:e.name?.trim()??l.name,visible:e.visible??l.visible,solo:e.solo??l.solo,locked:e.locked??l.locked,...(e.shy!==undefined?{shy:e.shy}:{}),source:{...l.source,...e.source}});}
   case 'layer.timing':{const c=compOf(doc);const l=layerOf(doc,e.layer);if(l.kind==='audio')fail('invalid','Use audio trim and offset for audio layers.');
    if(!Number.isInteger(e.inT)||!Number.isInteger(e.outT)||e.outT<=e.inT||e.inT<0||e.outT>c.duration)fail('invalid','Layer timing must be inside the composition with out after in.');return setLayer(doc,{...l,inT:e.inT,outT:e.outT});}
+  case 'layer.stretch':{const c=compOf(doc);const l=layerOf(doc,e.layer);
+   if(l.kind==='audio')fail('invalid','Use audio trim and offset for audio layers.');
+   if(!Number.isInteger(e.percent)||e.percent<10||e.percent>1000||e.percent===100)fail('invalid','Stretch is a whole percent from 10 to 1000, other than 100.');
+   const m=stretchLayer(l,e.percent,t=>snapToFrame(t,c.fps)),lo=c.start,hi=c.start+c.duration;
+   if(m.outT>c.duration||m.outT<=m.inT)fail('invalid','The stretched layer would leave the composition or vanish.');
+   if(layerKeyTimes(m).some(t=>t<lo||t>hi))fail('invalid','Keys would leave the composition.');
+   if(hasKeyCollision(m))fail('collision','Two keys would land on the same frame. Stretch less.');
+   return setLayer(doc,m);}
   case 'layer.shift':{const c=compOf(doc);const l=layerOf(doc,e.layer);
    if(l.kind==='audio')fail('invalid','Use audio trim and offset for audio layers.');
    if(!Number.isInteger(e.delta)||e.delta===0||Math.abs(e.delta)>c.duration)fail('invalid','Shift must be a non-zero whole number of ticks inside the composition length.');

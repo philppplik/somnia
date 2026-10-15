@@ -1250,3 +1250,16 @@ test('P234 work area to the section between markers at the playhead, one undo st
  s.setView({playhead:f(2)});run({});assert.deepEqual([wa().in,wa().out],[0,f(10)]);
  s.setView({playhead:f(40)});run({});assert.deepEqual([wa().in,wa().out],[f(30),c0.duration]);
 });
+
+test('P235 layer time stretch: keys and out point scale about the in point, one undo step, refusals',async()=>{
+ const {layerStretchSpecs}=await import('./layerStretchCommands');const run=layerStretchSpecs()[0].run as (p?:unknown)=>unknown;
+ const s=open();setAnimationSession(s);const c0=findComp(s.document!)!;const L0=c0.layers.find(l=>l.transform.position.keys.length>1)!;
+ const get=()=>findComp(s.document!)!.layers.find(l=>l.id===L0.id)!;
+ const k0=L0.transform.position.keys.map(k=>k.t),span=L0.outT-L0.inT;
+ run({percent:50,layers:[L0.id]});
+ const l1=get();assert.equal(l1.inT,L0.inT);assert.ok(Math.abs((l1.outT-l1.inT)-span/2)<=frameToTick(1,{num:30,den:1}));
+ assert.ok(l1.transform.position.keys.every((k,i)=>Math.abs(k.t-(L0.inT+(k0[i]-L0.inT)/2))<=frameToTick(1,{num:30,den:1})));
+ s.undo();assert.deepEqual(get().transform.position.keys.map(k=>k.t),k0);assert.equal(get().outT,L0.outT);
+ assert.throws(()=>run({percent:100,layers:[L0.id]}),/percent/);assert.throws(()=>run({percent:5,layers:[L0.id]}),/percent/);
+ assert.throws(()=>run({percent:1000,layers:[L0.id]}),/No layer|leave/);
+});

@@ -76,3 +76,4 @@ Back to [Studios](../studios.md).
 - Add layer > More shapes: regular polygons (3, 5, 6, 8 sides) and stars (5, 6, 8 points) as editable path layers, centred in the composition. The command takes sides, star, inner radius, radius and colour.
 - Key tools > Time > Snap to markers: moves the selected keys to the nearest composition marker (beat sync); the (6) variant only moves keys within 6 frames.
 - Rig > Layers > Work area to marker section: sets the work area to the stretch between the markers around the playhead (or the comp start/end), so preview loops and exports cover one section.
+- Rig > Arrange > Stretch time: slows down or speeds up whole layers (50%, 75%, 125%, 200% length). Every key, colour key, effect and animator key and the out point scale about the layer's in point, snapped to frames. Layers that would leave the composition or whose keys would meet are skipped.
