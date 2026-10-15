@@ -23,8 +23,16 @@ test('advanced export center: grouped commands, dark theme, round trip through p
  await page.getByTestId('export-center-presets-vector').waitFor({state:'visible'});
  await expect(page.getByTestId('export-center-preset-png2x')).toBeVisible();
  await dialog.screenshot({path:'test-results/export-center-presets-dark.png'});
+ // filter narrows the list; arrow keys walk input -> rows; Enter runs the focused row
+ await page.getByTestId('export-center-search').fill('Export project');
+ await expect(page.getByTestId('export-center-cmd-project.export')).toBeVisible();
+ await expect(page.getByTestId('export-center-cmd-project.export.advanced')).toHaveCount(0);
+ await expect(page.getByTestId('export-center-group-vector')).toHaveCount(0);
+ await page.getByTestId('export-center-search').press('ArrowDown');
+ await expect(page.getByTestId('export-center-cmd-project.export')).toBeFocused();
  // a row runs its command: the project export dialog opens
- await page.getByTestId('export-center-cmd-project.export').click();
+ await page.getByTestId('export-center-search').fill('');
+ await page.getByTestId('export-center-cmd-project.export').press('Enter');
  await expect(page.getByTestId('export-center')).toHaveCount(0);
  await expect(page.getByLabel('Export project', {exact:false})).toBeVisible();
  // ...and its advanced link returns to the center

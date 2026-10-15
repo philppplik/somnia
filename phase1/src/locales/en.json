@@ -326,6 +326,8 @@
   "exportCenter.preset.png4x": "PNG 4×",
   "exportCenter.preset.webm": "WebM copy",
   "exportCenter.preset.mp4": "MP4 copy",
+  "exportCenter.search": "Filter exports...",
+  "exportCenter.noMatches": "No exports match the filter.",
   "export.page": "Page",
   "export.pageAria": "Page to export",
   "export.inlineCss": "Inline CSS",

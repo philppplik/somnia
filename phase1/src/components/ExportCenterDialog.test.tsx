@@ -32,6 +32,16 @@ test('preset rows render above the plain commands with their enabled state',()=>
  }finally{offs.forEach(off=>off());}
 });
 
+test('search input renders with its own testid and row markers are present for keyboard nav',()=>{
+ const offs=[registerCommand({id:'project.export',title:'Export project...',category:'Project',level:'ui',enabled:()=>true,run:()=>{}})];
+ try{
+  const html=renderToStaticMarkup(<ExportCenterPanel onClose={()=>{}}/>);
+  assert.ok(html.includes('data-testid="export-center-search"'),'search input');
+  assert.ok(html.includes('type="search"'),'search type');
+  assert.ok(html.includes('data-export-row="command"'),'row marker for roving focus');
+ }finally{offs.forEach(off=>off());}
+});
+
 test('empty registry renders the empty hint',()=>{
  const html=renderToStaticMarkup(<ExportCenterPanel onClose={()=>{}}/>);
  // other suites may have registered exports; only assert when none are present

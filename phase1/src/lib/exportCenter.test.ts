@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
-import {EXPORT_GROUP_IDS,EXPORT_PRESETS,exportGroups,runPreset,type ExportPreset} from './exportCenter';
+import {EXPORT_GROUP_IDS,EXPORT_PRESETS,exportGroups,filterExportGroups,runPreset,type ExportGroup,type ExportPreset} from './exportCenter';
 import type {Command} from './commandRegistry';
 
 const cmd=(id:string):Command=>({id,title:id,category:'Project',level:'ui',run:()=>{}});
@@ -59,4 +59,26 @@ test('preset steps stay inside their studio namespace and presets have unique id
   assert.ok(!seen.has(p.id),p.id);seen.add(p.id);
   for(const [id] of p.steps)assert.ok(id.startsWith(studio+'.'),`${studio}:${p.id} -> ${id}`);
  }
+});
+
+test('filterExportGroups matches command title and id, preset label and id, case-insensitive',()=>{
+ const groups:ExportGroup[]=[
+  {studio:'project',commands:[cmd('project.export'),cmd('project.export.md')],presets:[]},
+  {studio:'vector',commands:[{...cmd('vector.exportPng'),title:'Export vector PNG'}],presets:[{preset:EXPORT_PRESETS.vector[1],enabled:true}]},
+ ];
+ const label=(id:string)=>'PNG 2x';
+ let f=filterExportGroups(groups,'png',label);
+ assert.deepEqual(f.map(g=>g.studio),['vector']);
+ assert.deepEqual(f[0].commands.map(c=>c.id),['vector.exportPng']);
+ assert.deepEqual(f[0].presets.map(p=>p.preset.id),['png2x']);
+ f=filterExportGroups(groups,'EXPORT.MD',label);
+ assert.deepEqual(f.map(g=>g.studio),['project']);
+ assert.deepEqual(f[0].commands.map(c=>c.id),['project.export.md']);
+ f=filterExportGroups(groups,'  ',label);
+ assert.equal(f.length,2);
+ f=filterExportGroups(groups,'zzz',label);
+ assert.equal(f.length,0);
+ // label miss falls back to preset id match
+ f=filterExportGroups(groups,'png2x',()=>'Unrelated');
+ assert.deepEqual(f.map(g=>g.studio),['vector']);
 });

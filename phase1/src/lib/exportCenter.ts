@@ -63,3 +63,13 @@ export function exportGroups(all:readonly Command[],enabled:(c:Command)=>boolean
 }
 /** Runs a preset's steps in order through the caller's executor (executeCommand in the dialog, a spy in tests). */
 export async function runPreset(preset:ExportPreset,exec:(id:string,payload?:unknown)=>void|Promise<void>):Promise<void>{for(const [id,payload] of preset.steps)await exec(id,payload);}
+
+/** Filters groups by a case-insensitive substring over command title/id and preset label/id. Empty query returns the input unchanged; groups with no surviving rows drop out. */
+export function filterExportGroups(groups:readonly ExportGroup[],query:string,presetLabel:(id:string)=>string):ExportGroup[]{
+ const q=query.trim().toLowerCase();if(!q)return groups.slice();
+ return groups
+  .map(g=>({...g,
+   commands:g.commands.filter(c=>c.title.toLowerCase().includes(q)||c.id.toLowerCase().includes(q)),
+   presets:g.presets.filter(p=>presetLabel(p.preset.id).toLowerCase().includes(q)||p.preset.id.toLowerCase().includes(q))}))
+  .filter(g=>g.commands.length>0||g.presets.length>0);
+}
