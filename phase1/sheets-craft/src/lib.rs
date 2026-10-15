@@ -100,6 +100,7 @@ const MAX_AUDIT_ITEMS: usize = 200;
 const MAX_PAGES_LISTED: usize = 500;
 const MAX_WATCHED: usize = 50;
 const MAX_CUSTOM_STYLES: usize = 50;
+const MAX_VALIDATION_RULES: usize = 200;
 const SPLIT_DELIMITERS: [char; 5] = [',', ';', '\t', ' ', '|'];
 const MAX_REPLACE_CELLS: usize = 10_000;
 const MAX_VALIDATION_ITEMS: usize = 500;
@@ -631,6 +632,59 @@ impl HeadlessWorkbook {
             "allowBlank": dv.allow_blank, "dropdown": dv.in_cell_dropdown, "errorStyle": format!("{:?}", dv.error_style), "errorMessage": short(&dv.error_message),
             "ranges": dv.ranges.iter().take(8).map(|r| r.a1()).collect::<Vec<_>>()
         }}).to_string())
+    }
+
+    /// Every data validation rule of the sheet (read only, at most 200): `{"rules":[{"index","kind","operator","f1","f2","allowBlank","dropdown","errorStyle","ranges":[..]}]}`.
+    pub fn validation_rules(&self, sheet: usize) -> Result<String, String> {
+        let doc = self.session.doc().map_err(|e| e.to_string())?;
+        let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+        let short = |t: &str| t.chars().take(100).collect::<String>();
+        let rules: Vec<serde_json::Value> = sh
+            .validations
+            .iter()
+            .enumerate()
+            .take(MAX_VALIDATION_RULES)
+            .map(|(index, dv)| json!({
+                "index": index, "kind": format!("{:?}", dv.kind), "operator": format!("{:?}", dv.op), "f1": short(&dv.f1), "f2": dv.f2.as_deref().map(short),
+                "allowBlank": dv.allow_blank, "dropdown": dv.in_cell_dropdown, "errorStyle": format!("{:?}", dv.error_style),
+                "ranges": dv.ranges.iter().take(8).map(|r| r.a1()).collect::<Vec<_>>()
+            }))
+            .collect();
+        Ok(json!({"rules": rules}).to_string())
+    }
+
+    /// Deletes one data validation rule of the sheet, with all its ranges, as ONE history entry. `op_json` is `{"kind":"delete","index":n}` where `index` is
+    /// the position in `validation_rules`. Cells keep their values. Refused on a protected sheet or for an index that does not exist. Returns `validation_rules`.
+    pub fn validation_manage(&mut self, sheet: usize, op_json: &str) -> Result<String, String> {
+        let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "operation must be a JSON object".to_string())?;
+        let map = op.as_object().ok_or("operation must be a JSON object")?;
+        if map.keys().any(|k| k != "kind" && k != "index") || map.get("kind").and_then(|v| v.as_str()) != Some("delete") {
+            return Err("unsupported rule operation".into());
+        }
+        let index = map.get("index").and_then(|v| v.as_u64()).filter(|n| *n < MAX_VALIDATION_RULES as u64).ok_or("index must be a whole number below 200")? as usize;
+        {
+            let doc = self.session.doc().map_err(|e| e.to_string())?;
+            let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+            if sh.is_protected() {
+                return Err("The sheet is protected. Unprotect it to manage rules.".into());
+            }
+            if index >= sh.validations.len() {
+                return Err("no such rule".into());
+            }
+        }
+        // The engine has no command for removing one rule: one harmless engine edit makes the undo snapshot, then the rule is removed in place.
+        const TMP: &str = "\u{1}pending";
+        self.session.run("sheet.activate", json!({"sheet": sheet}))?;
+        self.session.run("home.newCellStyle", json!({"name": TMP, "fromCell": "A1"}))?;
+        let doc = self.session.doc_mut().map_err(|e| e.to_string())?;
+        let wb = std::sync::Arc::make_mut(&mut doc.wb);
+        wb.cell_styles.retain(|(n, _)| n != TMP);
+        if let Some(sh) = wb.sheets.get_mut(sheet) {
+            if index < sh.validations.len() {
+                sh.validations.remove(index);
+            }
+        }
+        self.validation_rules(sheet)
     }
 
     /// Cells whose current value breaks their data validation rule (read only, not an undo step): `{"invalid":["A1",..],"truncated":bool}`, at most 500.
@@ -6462,6 +6516,26 @@ mod tests {
         assert!(book.find_special(0, 800, 0, 3, 2, "invalidData").unwrap().contains("\"count\":0"), "no rule, nothing invalid");
         assert!(book.find_special(0, gridcraft_engine::core::MAX_ROWS - 1, 0, 5, 1, "blanks").is_err());
         assert!(book.find_special(7, 0, 0, 1, 1, "blanks").is_err(), "unknown sheet");
+    }
+    #[test]
+    fn validation_rules_are_listed_and_one_can_be_deleted_in_one_undo_step() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        book.session.run("data.validation", json!({"range": "D1100:D1103", "type": "whole", "operator": "between", "formula1": "1", "formula2": "9"})).unwrap();
+        book.session.run("data.validation", json!({"range": "E1100", "type": "list", "formula1": "a,b"})).unwrap();
+        let list: serde_json::Value = serde_json::from_str(&book.validation_rules(0).unwrap()).unwrap();
+        let rules = list["rules"].as_array().unwrap();
+        let at = rules.iter().position(|r| r["ranges"][0] == "D1100:D1103").unwrap();
+        let steps = book.session.doc().unwrap().undo.len();
+        let left: serde_json::Value = serde_json::from_str(&book.validation_manage(0, &format!(r#"{{"kind":"delete","index":{at}}}"#)).unwrap()).unwrap();
+        assert_eq!(left["rules"].as_array().unwrap().len(), rules.len() - 1);
+        assert!(!left.to_string().contains("D1100:D1103"));
+        assert_eq!(book.session.doc().unwrap().undo.len(), steps + 1);
+        book.undo().unwrap();
+        assert!(book.validation_rules(0).unwrap().contains("D1100:D1103"), "undo brings the rule back");
+        for bad in [r#"{"kind":"delete","index":999}"#, r#"{"kind":"delete"}"#, r#"{"kind":"move","index":0}"#, r#"{"kind":"delete","index":0,"x":1}"#, "nope"] {
+            assert!(book.validation_manage(0, bad).is_err(), "{bad}");
+        }
+        assert!(!book.custom_cell_styles().unwrap().contains("pending"));
     }
     #[test]
     fn protected_sheet_lets_through_only_what_was_allowed() {

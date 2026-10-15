@@ -11,6 +11,8 @@ import {parseSavedViews} from './savedViews';
 import {parseFunctionCatalog,parseCustomStyles} from './cellToolOps';
 import {parsePivotReports} from './pivotEditOps';
 import {parseCfRules} from './cfManageOps';
+import {parseValidationRules} from './validationOps';
+import type {ValidationListItem,ValidationManageOp} from './protocol';
 import {parseInvalidCells,parseValidationRule} from './validationOps';
 import {parseOutlineInfo} from './outlineOps';
 import {parseObjects,pictureDataUrl} from './objectOps';
@@ -42,7 +44,7 @@ export class SheetsEngine{
  private request(message:Req,transfer:Transferable[]=[]){
   return new Promise<SheetsResponse>((resolve,reject)=>{
    if(this.disposed){reject(new Error('Spreadsheet engine closed'));return;}
-   const mutating=['open','set','setValues','clear','format','resize','editLines','freeze','sort','filter','fill','cf','validation','replace','dedupe','split','annotate','insertSymbol','defineName','deleteName','editName','createNames','pasteSpecial','autoFill','fillSeries','renameName','shiftCells','pivotCreate','pivotRefresh','tableOp','pageSetup','viewOp','protectOp','whatIfOp','layoutOp','cellToolOp','dataToolOp','pivotEditOp','cfManage','outlineOp','savedViewOp','pictureOp','objectOp','chartOp','sparklineOp','setReviewed','undoReviewed','setRangeReviewed','undoRangeReviewed','editSheet','undo','redo','close'].includes(message.op);if(mutating){this.mutationEpoch++;this.mutations++;this.notifySelectionRead();}const finish=()=>{if(mutating){this.mutations--;this.mutationEpoch++;this.notifySelectionRead();}};const done=(r:SheetsResponse)=>{finish();resolve(r);},failed=(e:Error)=>{finish();reject(e);};
+   const mutating=['open','set','setValues','clear','format','resize','editLines','freeze','sort','filter','fill','cf','validation','replace','dedupe','split','annotate','insertSymbol','defineName','deleteName','editName','createNames','pasteSpecial','autoFill','fillSeries','renameName','shiftCells','validationManage','pivotCreate','pivotRefresh','tableOp','pageSetup','viewOp','protectOp','whatIfOp','layoutOp','cellToolOp','dataToolOp','pivotEditOp','cfManage','outlineOp','savedViewOp','pictureOp','objectOp','chartOp','sparklineOp','setReviewed','undoReviewed','setRangeReviewed','undoRangeReviewed','editSheet','undo','redo','close'].includes(message.op);if(mutating){this.mutationEpoch++;this.mutations++;this.notifySelectionRead();}const finish=()=>{if(mutating){this.mutations--;this.mutationEpoch++;this.notifySelectionRead();}};const done=(r:SheetsResponse)=>{finish();resolve(r);},failed=(e:Error)=>{finish();reject(e);};
    const id=this.nextId++;
    const timer=setTimeout(()=>this.dispose(new Error('Spreadsheet engine timed out. Unsaved edits in this workbook were discarded.')),this.timeoutMs);
    this.pending.set(id,{resolve:done,reject:failed,timer});
@@ -104,6 +106,8 @@ export class SheetsEngine{
  /** Flash Fill or Consolidate: one undo step; a rejected promise changed nothing. */
  dataToolOp(sheet:number,row:number,col:number,rows:number,cols:number,tool:DataToolOp){return this.result<unknown>({op:'dataToolOp',sheet,row,col,rows,cols,tool});}
  /** The PivotTables of a sheet with layout and source fields (read only). */
+ async validationRules(sheet:number):Promise<ValidationListItem[]>{return parseValidationRules(await this.result<unknown>({op:'validationRules',sheet}));}
+ validationManage(sheet:number,manage:ValidationManageOp){return this.result<unknown>({op:'validationManage',sheet,manage});}
  async cfRules(sheet:number):Promise<CfRuleInfo[]>{return parseCfRules(await this.result<unknown>({op:'cfRules',sheet}));}
  cfManage(sheet:number,manage:CfManageOp){return this.result<unknown>({op:'cfManage',sheet,manage});}
  async pivotInfo(sheet:number):Promise<PivotReport[]>{return parsePivotReports(await this.result<unknown>({op:'pivotInfo',sheet}));}

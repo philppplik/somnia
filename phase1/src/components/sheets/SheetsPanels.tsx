@@ -40,7 +40,7 @@ import {internalTarget,linkTargetProblem,MAX_LINK_TEXT,MAX_NOTE_CHARS} from '../
 import {dedupeBlockProblem,splitBlockProblem,parseWidths,SPLIT_DELIMITERS} from '../../lib/sheets/dataTools';
 import {replaceProblem,MAX_REPLACE_TEXT} from '../../lib/sheets/replaceOps';
 import {getSheetsPanelController} from '../../lib/sheets/panelController';
-import {VALIDATION_CHOICES,buildValidationOp,MAX_ITEM_CHARS,type ValidationChoice} from '../../lib/sheets/validationOps';
+import {describeValidationRule,VALIDATION_CHOICES,buildValidationOp,MAX_ITEM_CHARS,type ValidationChoice} from '../../lib/sheets/validationOps';
 import type {CfOperator} from '../../lib/sheets/protocol';
 import {CF_CHOICE_GROUPS,CF_STYLES,buildCfOp,cfChoiceIsVisual,cfChoiceNeeds,MAX_CF_TEXT,type CfChoice} from '../../lib/sheets/cfOps';
 import {FILTER_CONDITIONS,MAX_FILTER_VALUE,filterValueProblem} from '../../lib/sheets/filterOps';
@@ -237,6 +237,7 @@ export function SheetsLayoutPanel({context}:PanelHostProps){
   <FillGroup/>
   <HighlightGroup/>
   <CfRulesGroup/>
+  <ValidationRulesGroup/>
   <ValidationGroup/>
   <ReplaceGroup/>
   <DedupeGroup/>
@@ -1275,6 +1276,19 @@ function CfRulesGroup(){
   <label className="flex flex-col gap-1">{t('sheets.cm.action')}<NativeSelect className={field} value={act} disabled={action.busy} onChange={e=>setAct(e.currentTarget.value as (typeof CF_MANAGE_ACTIONS)[number])} data-testid="sheets-cm-action">{CF_MANAGE_ACTIONS.map(a=><option key={a} value={a}>{t('sheets.cm.'+a)}</option>)}</NativeSelect></label>
   <Button variant="outline" size="compact" disabled={action.busy||blocked} onClick={()=>void action.run('sheets.cfManage',{kind:act,index:chosen.index})} data-testid="sheets-cm-apply">{t('sheets.cm.apply')}</Button>
   <p className="text-ink-3">{t('sheets.cm.hint',{count:rules.length})}</p>
+ </div>;
+}
+/** The data validation rules of this sheet: jump to the first range of one, or delete it (cells keep their values). One undo step for a delete. Shown only when the sheet has rules. */
+function ValidationRulesGroup(){
+ const {t}=useT(),s=useSheetsSelection(),action=useAction();const [pick,setPick]=useState(0);const [act,setAct]=useState<'go'|'delete'>('go');
+ const rules=s?.validationRules??[];if(!s||rules.length===0)return null;
+ const chosen=rules.find(x=>x.index===pick)??rules[0],first=chosen.ranges[0];
+ return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.vm.title')}>
+  <span>{t('sheets.vm.title')}</span>
+  <label className="flex flex-col gap-1">{t('sheets.vm.rule')}<NativeSelect className={field} value={chosen.index} disabled={action.busy} onChange={e=>setPick(Number(e.currentTarget.value))} data-testid="sheets-vm-rule">{rules.map(x=><option key={x.index} value={x.index}>{(x.index+1)+'. '+describeValidationRule(x,k=>t('sheets.vm.kind.'+k))}</option>)}</NativeSelect></label>
+  <label className="flex flex-col gap-1">{t('sheets.vm.action')}<NativeSelect className={field} value={act} disabled={action.busy} onChange={e=>setAct(e.currentTarget.value as 'go'|'delete')} data-testid="sheets-vm-action"><option value="go">{t('sheets.vm.go')}</option><option value="delete">{t('sheets.vm.delete')}</option></NativeSelect></label>
+  <Button variant="outline" size="compact" disabled={action.busy||(act==='go'&&!first)} onClick={()=>void(act==='go'?action.run('sheets.navigate',{sheet:s.sheet,address:first}):action.run('sheets.validationManage',{kind:'delete',index:chosen.index}))} data-testid="sheets-vm-apply">{t('sheets.vm.apply')}</Button>
+  <p className="text-ink-3">{t('sheets.vm.hint',{count:rules.length})}</p>
  </div>;
 }
 /** Fills the selected block from its first row or column. One undo step; the block is never widened. */

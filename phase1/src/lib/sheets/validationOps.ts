@@ -1,4 +1,4 @@
-import type {CfOperator,InvalidCells,ValidationOp,ValidationRuleInfo} from './protocol';
+import type {CfOperator,InvalidCells,ValidationListItem,ValidationManageOp,ValidationOp,ValidationRuleInfo} from './protocol';
 import {CF_OPERATORS} from './cfOps';
 /** Data validation: validation for untrusted command input. The Rust bridge and the engine re-validate every field. */
 const OPTION_KEYS=['allowBlank','dropdown','errorStyle','errorMessage'];
@@ -68,4 +68,26 @@ export const MAX_INVALID_CELLS=500;
 export function parseInvalidCells(raw:unknown):InvalidCells{
  const r=raw as {invalid?:unknown;truncated?:unknown}|null;const list=Array.isArray(r?.invalid)?(r!.invalid as unknown[]):[];
  return {cells:list.filter((x):x is string=>typeof x==='string'&&/^[A-Z]{1,3}[0-9]{1,7}$/.test(x)).slice(0,MAX_INVALID_CELLS),truncated:r?.truncated===true};
+}
+
+export const MAX_VALIDATION_RULES=200;
+export function parseValidationManageCommand(input:unknown):ValidationManageOp{
+ if(!input||typeof input!=='object'||Array.isArray(input))throw Error('Rule operation must be an object.');
+ const o=input as Record<string,unknown>;if(Object.keys(o).some(k=>k!=='kind'&&k!=='index'))throw Error('Unknown rule field.');
+ if(o.kind!=='delete')throw Error('Unsupported rule operation.');
+ if(typeof o.index!=='number'||!Number.isInteger(o.index)||o.index<0||o.index>=MAX_VALIDATION_RULES)throw Error('Pick a rule.');
+ return {kind:'delete',index:o.index};
+}
+/** The bridge's list of validation rules, bounded and cleaned. */
+export function parseValidationRules(raw:unknown):ValidationListItem[]{
+ const list=(raw as {rules?:unknown}|null)?.rules;if(!Array.isArray(list))return [];const out:ValidationListItem[]=[];
+ const s=(v:unknown,n:number)=>typeof v==='string'?v.slice(0,n):'';
+ for(const r of list.slice(0,MAX_VALIDATION_RULES)){const o=r as Record<string,unknown>|null;if(!o||typeof o!=='object'||typeof o.index!=='number'||typeof o.kind!=='string')continue;
+  out.push({index:o.index,kind:s(o.kind,24),operator:s(o.operator,24),f1:s(o.f1,100),f2:typeof o.f2==='string'?o.f2.slice(0,100):null,allowBlank:o.allowBlank===true,dropdown:o.dropdown===true,errorStyle:s(o.errorStyle,16),ranges:Array.isArray(o.ranges)?o.ranges.filter((x):x is string=>typeof x==='string').slice(0,8).map(x=>x.slice(0,40)):[]});}
+ return out;
+}
+/** One short line for the list: kind, limits, where. */
+export function describeValidationRule(rule:ValidationListItem,label:(kind:string)=>string):string{
+ const parts=[label(rule.kind)];if(rule.f1!=='')parts.push(rule.f1);if(rule.f2)parts.push(rule.f2);
+ return parts.join(' ')+' · '+(rule.ranges.join(', ')||'-');
 }

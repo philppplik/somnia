@@ -8200,6 +8200,14 @@
       "hasEnabled": true
     },
     {
+      "id": "sheets.validationManage",
+      "title": "Delete one data validation rule of the sheet",
+      "category": "Edit",
+      "source": "sheets",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
       "id": "sheets.view",
       "title": "Zoom, gridlines, headings, zeros and formulas",
       "category": "View",

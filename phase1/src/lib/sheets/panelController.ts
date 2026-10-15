@@ -4,7 +4,7 @@ import {parsePanelRange} from './panelModel';
 import {MAX_CELL_BYTES,type RangeCell} from './protocol';
 import {parseAddress,parseSpan} from './format';
 import {parseFormatOp} from './formatOps';
-import type {CfManageOp,ChartOp,SparklineOp,ProtectOp,WhatIfOp,LayoutOp,CellToolOp,DataToolOp,PivotEditOp,SavedViewOp,ObjectOp,ViewOp,PageSetupOp,PasteOp,ExportOp,PivotField,PivotOp,TableOp,NameOp,AnnotateOp,DedupeOp,SplitOp,ReplaceOp,ValidationOp,CfOp,FillDirection,FilterOp,SortOp,FormatOp,LineAxis,LineEditKind,LineOp,SheetOp} from './protocol';
+import type {ValidationManageOp,CfManageOp,ChartOp,SparklineOp,ProtectOp,WhatIfOp,LayoutOp,CellToolOp,DataToolOp,PivotEditOp,SavedViewOp,ObjectOp,ViewOp,PageSetupOp,PasteOp,ExportOp,PivotField,PivotOp,TableOp,NameOp,AnnotateOp,DedupeOp,SplitOp,ReplaceOp,ValidationOp,CfOp,FillDirection,FilterOp,SortOp,FormatOp,LineAxis,LineEditKind,LineOp,SheetOp} from './protocol';
 import {parseEditLines,parseFreeze,parseLineCommand} from './lineOps';
 import {parseSheetOp} from './sheetOps';
 import {parseSortCommand} from './sortOps';
@@ -21,6 +21,7 @@ import {parseWhatIfCommand} from './whatIfOps';
 import {parseSavedViewCommand} from './savedViews';
 import {parseLayoutCommand,MERGE_HOWS,ROTATE_MODES} from './layoutOps';
 import {parseCfManageCommand} from './cfManageOps';
+import {parseValidationManageCommand} from './validationOps';
 import {parsePivotEditCommand,PIVOT_AREAS,PIVOT_VALUE_FUNCS,PIVOT_SHOW_AS,PIVOT_NUMBER_FORMATS,PIVOT_LAYOUTS,PIVOT_SUBTOTALS,PIVOT_GROUPS,PIVOT_ORDERS,MAX_PIVOT_ITEMS,MAX_PIVOT_TEXT} from './pivotEditOps';
 import {parseDataToolCommand,CONSOLIDATE_FUNCTIONS,MAX_CONSOLIDATE_SOURCES,MAX_SOURCE_CHARS} from './dataToolOps';
 import {setSheetsShortcutsOpen} from './shortcuts';
@@ -94,6 +95,7 @@ export interface SheetsPanelController {
  dataTool(op:DataToolOp):void|Promise<void>;
  pivotEdit(op:PivotEditOp):void|Promise<void>;
  cfManage(op:CfManageOp):void|Promise<void>;
+ validationManage(op:ValidationManageOp):void|Promise<void>;
  validationCheck():void|Promise<void>;
  noteReview(op:NoteReviewOp):void|Promise<void>;
  audit(op:AuditOp):void|Promise<void>;
@@ -129,7 +131,7 @@ let current:SheetsPanelController|null=null;
 export const getSheetsPanelController=()=>current;
 export function registerSheetsPanelController(controller:SheetsPanelController){current=controller;return()=>{if(current===controller)current=null;};}
 const requireController=()=>{if(!current?.ready())throw Error('No workbook is ready.');return current;};
-export const SHEETS_PANEL_COMMAND_IDS=['sheets.navigate','sheets.setCell','sheets.analyzeRange','sheets.format','sheets.resize','sheets.freeze','sheets.editLines','sheets.sheet','sheets.sort','sheets.filter','sheets.fill','sheets.highlight','sheets.validation','sheets.replace','sheets.dedupe','sheets.split','sheets.annotate','sheets.names','sheets.table','sheets.pivot','sheets.pageSetup','sheets.export','sheets.view','sheets.protect','sheets.chart','sheets.sparkline','sheets.whatif','sheets.object','sheets.picture','sheets.savedView','sheets.outline','sheets.cellLayout','sheets.cellTools','sheets.insertFunction','sheets.dataTools','sheets.pivotEdit','sheets.cfManage','sheets.validationCheck','sheets.noteReview','sheets.audit','sheets.insertSymbol','sheets.review','sheets.pages','sheets.shortcuts','sheets.paste','sheets.autoFill','sheets.series','sheets.spellChange','sheets.findSpecial','sheets.shiftCells'] as const;
+export const SHEETS_PANEL_COMMAND_IDS=['sheets.navigate','sheets.setCell','sheets.analyzeRange','sheets.format','sheets.resize','sheets.freeze','sheets.editLines','sheets.sheet','sheets.sort','sheets.filter','sheets.fill','sheets.highlight','sheets.validation','sheets.replace','sheets.dedupe','sheets.split','sheets.annotate','sheets.names','sheets.table','sheets.pivot','sheets.pageSetup','sheets.export','sheets.view','sheets.protect','sheets.chart','sheets.sparkline','sheets.whatif','sheets.object','sheets.picture','sheets.savedView','sheets.outline','sheets.cellLayout','sheets.cellTools','sheets.insertFunction','sheets.dataTools','sheets.pivotEdit','sheets.cfManage','sheets.validationCheck','sheets.noteReview','sheets.audit','sheets.insertSymbol','sheets.review','sheets.pages','sheets.shortcuts','sheets.paste','sheets.autoFill','sheets.series','sheets.spellChange','sheets.findSpecial','sheets.shiftCells','sheets.validationManage'] as const;
 export function sheetsPanelCommandSpecs():CommandSpec[]{
  return [
  {id:'sheets.navigate',title:'Go to a spreadsheet cell or range',category:'View',level:'ui',allowInInput:true,
@@ -246,6 +248,9 @@ export function sheetsPanelCommandSpecs():CommandSpec[]{
  {id:'sheets.validationCheck',title:'Find cells whose value breaks their allowed-values rule',category:'Edit',level:'ui',allowInInput:true,
   params:{type:'object',properties:{},additionalProperties:false},
   enabled:()=>!!current?.ready(),run:p=>{if(p&&typeof p==='object'&&Object.keys(p as object).length>0)throw Error('This takes no fields.');return requireController().validationCheck();}},
+ {id:'sheets.validationManage',title:'Delete one data validation rule of the sheet',category:'Edit',level:'ui',allowInInput:true,
+  params:{type:'object',properties:{kind:{type:'string',enum:['delete']},index:{type:'integer',minimum:0,maximum:199}},required:['kind','index'],additionalProperties:false},
+  enabled:()=>!!current?.ready(),run:p=>requireController().validationManage(parseValidationManageCommand(p))},
  {id:'sheets.cfManage',title:'Reorder or delete one highlight rule of the sheet',category:'Edit',level:'ui',allowInInput:true,
   params:{type:'object',properties:{kind:{type:'string',enum:['delete','moveUp','moveDown','moveTop','moveBottom']},index:{type:'integer',minimum:0,maximum:199}},required:['kind','index'],additionalProperties:false},
   enabled:()=>!!current?.ready(),run:p=>requireController().cfManage(parseCfManageCommand(p))},
