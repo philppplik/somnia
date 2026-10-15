@@ -1333,5 +1333,13 @@
  "animation.rig.group.draw": "Zeichnen",
  "animation.rig.draw.on": "Einzeichnen",
  "animation.rig.draw.off": "Ausblenden per Linie",
- "cmd.animation.layers.draw": "Markierte Konturformen nacheinander ein- oder auszeichnen"
+ "cmd.animation.layers.draw": "Markierte Konturformen nacheinander ein- oder auszeichnen",
+ "animation.rig.group.cascade": "Kaskade nach Position",
+ "animation.rig.cascade.right": "Kaskade von links",
+ "animation.rig.cascade.left": "Kaskade von rechts",
+ "animation.rig.cascade.down": "Kaskade von oben",
+ "animation.rig.cascade.up": "Kaskade von unten",
+ "animation.rig.cascade.out": "Kaskade von der Mitte nach außen",
+ "animation.rig.cascade.in": "Kaskade von außen nach innen",
+ "cmd.animation.layers.cascade": "Markierte Ebenen nach ihrer Position auf der Fläche verzögern"
 }

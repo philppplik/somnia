@@ -2016,6 +2016,28 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.layers.cascade",
+      "title": "Delay the ticked layers by their position on the canvas",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "cascade",
+        "centre",
+        "delay",
+        "grid",
+        "left",
+        "order",
+        "outward",
+        "position",
+        "right",
+        "ripple",
+        "stagger",
+        "wave"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.layers.centerAnchor",
       "title": "Center the anchor point of the selected layers",
       "category": "Edit",

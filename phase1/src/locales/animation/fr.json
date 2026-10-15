@@ -1333,5 +1333,13 @@
  "animation.rig.group.draw": "Tracer",
  "animation.rig.draw.on": "Tracer le contour",
  "animation.rig.draw.off": "Effacer le contour",
- "cmd.animation.layers.draw": "Tracer ou effacer les contours cochés l'un après l'autre"
+ "cmd.animation.layers.draw": "Tracer ou effacer les contours cochés l'un après l'autre",
+ "animation.rig.group.cascade": "Cascade par position",
+ "animation.rig.cascade.right": "Cascade depuis la gauche",
+ "animation.rig.cascade.left": "Cascade depuis la droite",
+ "animation.rig.cascade.down": "Cascade depuis le haut",
+ "animation.rig.cascade.up": "Cascade depuis le bas",
+ "animation.rig.cascade.out": "Cascade du centre vers l'extérieur",
+ "animation.rig.cascade.in": "Cascade des bords vers le centre",
+ "cmd.animation.layers.cascade": "Décaler les calques cochés selon leur position sur la toile"
 }

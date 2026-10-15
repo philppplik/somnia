@@ -1333,5 +1333,13 @@
  "animation.rig.group.draw": "Dibujar",
  "animation.rig.draw.on": "Dibujar trazo",
  "animation.rig.draw.off": "Borrar trazo",
- "cmd.animation.layers.draw": "Dibujar o borrar los trazos marcados uno tras otro"
+ "cmd.animation.layers.draw": "Dibujar o borrar los trazos marcados uno tras otro",
+ "animation.rig.group.cascade": "Cascada por posición",
+ "animation.rig.cascade.right": "Cascada desde la izquierda",
+ "animation.rig.cascade.left": "Cascada desde la derecha",
+ "animation.rig.cascade.down": "Cascada desde arriba",
+ "animation.rig.cascade.up": "Cascada desde abajo",
+ "animation.rig.cascade.out": "Cascada del centro hacia fuera",
+ "animation.rig.cascade.in": "Cascada de los bordes hacia dentro",
+ "cmd.animation.layers.cascade": "Retrasar las capas marcadas según su posición en el lienzo"
 }

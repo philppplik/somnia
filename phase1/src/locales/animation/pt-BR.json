@@ -1333,5 +1333,13 @@
  "animation.rig.group.draw": "Desenhar",
  "animation.rig.draw.on": "Desenhar traço",
  "animation.rig.draw.off": "Apagar traço",
- "cmd.animation.layers.draw": "Desenhar ou apagar os traços marcados um após o outro"
+ "cmd.animation.layers.draw": "Desenhar ou apagar os traços marcados um após o outro",
+ "animation.rig.group.cascade": "Cascata por posição",
+ "animation.rig.cascade.right": "Cascata da esquerda",
+ "animation.rig.cascade.left": "Cascata da direita",
+ "animation.rig.cascade.down": "Cascata de cima",
+ "animation.rig.cascade.up": "Cascata de baixo",
+ "animation.rig.cascade.out": "Cascata do centro para fora",
+ "animation.rig.cascade.in": "Cascata das bordas para dentro",
+ "cmd.animation.layers.cascade": "Atrasar as camadas marcadas pela posição na tela"
 }

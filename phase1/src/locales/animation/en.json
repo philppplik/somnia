@@ -1333,5 +1333,13 @@
  "animation.rig.group.draw": "Draw",
  "animation.rig.draw.on": "Draw on",
  "animation.rig.draw.off": "Draw off",
- "cmd.animation.layers.draw": "Draw the ticked stroked shapes on or off, one after the other"
+ "cmd.animation.layers.draw": "Draw the ticked stroked shapes on or off, one after the other",
+ "animation.rig.group.cascade": "Cascade by position",
+ "animation.rig.cascade.right": "Cascade from the left",
+ "animation.rig.cascade.left": "Cascade from the right",
+ "animation.rig.cascade.down": "Cascade from the top",
+ "animation.rig.cascade.up": "Cascade from the bottom",
+ "animation.rig.cascade.out": "Cascade from the centre outward",
+ "animation.rig.cascade.in": "Cascade from the edges inward",
+ "cmd.animation.layers.cascade": "Delay the ticked layers by their position on the canvas"
 }

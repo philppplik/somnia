@@ -1960,3 +1960,16 @@ test('P286 draw: staggered trim keys, off reverses, strokeless shapes refused, o
  s.undo();assert.equal(JSON.stringify(s.document),before);
  run({layers:['dwa','dwb'],mode:'off',frames:10,gap:5});assert.deepEqual(L('dwa').stroke!.trim!.keys.map(k=>k.v),[100,0]);
 });
+test('P287 cascade: delays follow position, centre-out and in mirror, one undo',async()=>{
+ const {cascadeDelays,cascadeSpecs}=await import('./cascadeCommands');const run=cascadeSpecs()[0].run as (p?:unknown)=>unknown;
+ assert.deepEqual(cascadeDelays([[0,0],[50,0],[100,0]],'right',10),[0,5,10]);assert.deepEqual(cascadeDelays([[0,0],[50,0],[100,0]],'left',10),[10,5,0]);
+ assert.deepEqual(cascadeDelays([[0,0],[50,0],[100,0]],'out',10),[10,0,10]);assert.deepEqual(cascadeDelays([[0,0],[50,0],[100,0]],'in',10),[0,10,0]);
+ assert.equal(cascadeDelays([[5,5],[5,5]],'right',10),null);
+ const mk=(id:string,x:number)=>[{type:'layer.add',kind:'solid',id},{type:'prop.set',layer:id,prop:'position',value:[x,200]}];
+ const s=new AnimationSession();s.open(applyEdits(base(),[...mk('cx1',100),...mk('cx2',300),...mk('cx3',500)] as never));setAnimationSession(s);const before=JSON.stringify(s.document);
+ const L=(id:string)=>findComp(s.document!)!.layers.find(x=>x.id===id)!;
+ const r=run({layers:['cx3','cx1','cx2'],frames:10}) as {trimmed:number};assert.equal(r.trimmed,2);
+ assert.equal(L('cx1').inT,0);assert.equal(L('cx3').inT,f(10));assert.equal(L('cx2').inT,f(5));
+ s.undo();assert.equal(JSON.stringify(s.document),before);
+ assert.throws(()=>run({layers:['cx1']}),/two/);
+});
