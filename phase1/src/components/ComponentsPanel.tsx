@@ -1,4 +1,5 @@
 import {useEffect,useMemo,useRef,useState} from 'react';
+import {tabListKeyDown} from '../lib/tabNav';
 import {useMenuFocusReturn} from '../lib/useMenuFocusReturn';
 import {useT} from '../lib/useT';
 import {useAppStore,patchState} from '../store/appStore';
@@ -121,8 +122,8 @@ export function ComponentsPanel(){
   <label className="flex items-center gap-2 rounded-[16px] border border-subtle bg-elevated px-3 text-ink-3 [&_input]:border-0! [&_input]:bg-transparent! [&_input]:px-0! [&_input]:py-2! [&_input]:text-xs"><Search size={14}/>
    <input type="search" aria-label={t('panels.browse.searchComponents')} placeholder={t('panels.components.searchPlaceholder')} value={text} onChange={e=>setText(e.target.value)} className="min-w-0 flex-1"/>
    {text&&<button type="button" aria-label={t('panels.components.clearSearch')} className="border-0 bg-transparent p-0 text-ink-3 hover:text-ink" onClick={()=>setText('')}><X size={14}/></button>}</label>
-  <div role="tablist" aria-label={t('panels.components.scopeLabel')} className="grid grid-cols-2 gap-1 rounded-[16px] bg-[color-mix(in_srgb,var(--bg-surface)_90%,#000_4%)] p-1">
-   {(['blocks','mine'] as const).map(k=><button key={k} role="tab" type="button" aria-selected={scope===k} data-testid={`scope-${k}`} className={cn('h-7 rounded-[12px] border-0 bg-transparent text-[11px] text-ink-2',scope===k&&'bg-elevated font-semibold text-ink shadow-sm')} onClick={()=>setScope(k)}>{k==='blocks'?t('panels.components.scopeBlocks'):t('panels.components.scopeMine')} · {k==='blocks'?blocks.reduce((n,c)=>n+c.variants.length,0):lib.length}</button>)}
+  <div role="tablist" aria-label={t('panels.components.scopeLabel')} className="grid grid-cols-2 gap-1 rounded-[16px] bg-[color-mix(in_srgb,var(--bg-surface)_90%,#000_4%)] p-1" onKeyDown={tabListKeyDown}>
+   {(['blocks','mine'] as const).map(k=><button key={k} role="tab" type="button" aria-selected={scope===k} tabIndex={scope===k?0:-1} data-testid={`scope-${k}`} className={cn('h-7 rounded-[12px] border-0 bg-transparent text-[11px] text-ink-2',scope===k&&'bg-elevated font-semibold text-ink shadow-sm')} onClick={()=>setScope(k)}>{k==='blocks'?t('panels.components.scopeBlocks'):t('panels.components.scopeMine')} · {k==='blocks'?blocks.reduce((n,c)=>n+c.variants.length,0):lib.length}</button>)}
   </div>
   {scope==='blocks'&&<div role="group" aria-label={t('panels.components.categoriesLabel')} className="flex gap-1 overflow-x-auto pb-1" data-testid="category-chips">
    {([null,...CATEGORIES] as (Category|null)[]).map(k=><Button key={k??'all'} size="compact" variant={category===k?'primary':'outline'} aria-pressed={category===k} className="shrink-0" onClick={()=>setCategory(k)}>{k?t('panels.components.cat.'+k):t('panels.components.catAll')}</Button>)}</div>}

@@ -14,6 +14,7 @@ import {reportError} from '../../lib/log';
 import {StudioEmptyState} from '../studios/StudioEmptyState';
 import {createBlankProject} from '../../lib/studios/blank';
 import {useCallback,useEffect,useMemo,useRef,useState,type ClipboardEvent,type KeyboardEvent} from 'react';
+import {tabListKeyDown} from '../../lib/tabNav';
 import {FileTabs} from '../FileTabs';
 import {Button} from '../ui/button';
 import {Table2,Redo2,Undo2} from '../../lib/icons';
@@ -559,9 +560,9 @@ function Workbook({item}:{item:MediaItem}){
     {renderObjects()}
    </div>
   </div>
-  <div role="tablist" aria-label={t('sheets.tabs')} className="flex w-full gap-1 border-t border-subtle px-3 py-1">
+  <div role="tablist" aria-label={t('sheets.tabs')} className="flex w-full gap-1 border-t border-subtle px-3 py-1" onKeyDown={tabListKeyDown}>
    <Button variant="outline" size="icon" aria-label={t('sheets.sheetOps.add')} disabled={names.length>=MAX_SHEETS} onClick={()=>void applySheet({kind:'add'}).catch(()=>undefined)} data-testid="sheets-tab-add">+</Button>
-   {names.filter(s=>s.visibility==='Visible').map(s=><button key={s.index} role="tab" aria-selected={s.index===sheet} className={'h-7 cursor-pointer rounded-sm border-0 bg-transparent px-2 text-[12px] text-ink-2 hover:bg-hover'+(s.index===sheet?' bg-hover font-semibold':'')} onClick={()=>{setSheet(s.index);setSel({row:0,col:0});setExt(null);setDraft(null);scroller.current?.scrollTo(0,0);}}>{safeTabColor(s.tabColor)&&<SheetTabDot color={safeTabColor(s.tabColor)??''} testId={'sheets-tab-color-'+s.index}/>}{s.name}</button>)}
+   {names.filter(s=>s.visibility==='Visible').map(s=><button key={s.index} role="tab" aria-selected={s.index===sheet} tabIndex={s.index===sheet?0:-1} className={'h-7 cursor-pointer rounded-sm border-0 bg-transparent px-2 text-[12px] text-ink-2 hover:bg-hover'+(s.index===sheet?' bg-hover font-semibold':'')} onClick={()=>{setSheet(s.index);setSel({row:0,col:0});setExt(null);setDraft(null);scroller.current?.scrollTo(0,0);}}>{safeTabColor(s.tabColor)&&<SheetTabDot color={safeTabColor(s.tabColor)??''} testId={'sheets-tab-color-'+s.index}/>}{s.name}</button>)}
   </div>
  </section>;
 }

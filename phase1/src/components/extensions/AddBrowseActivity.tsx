@@ -1,4 +1,5 @@
 import {useCallback,useEffect,useRef,useState} from 'react';
+import {tabListKeyDown} from '../../lib/tabNav';
 import {useT} from '../../lib/useT';
 import type {BrowseResult,ExtensionsPopupHost} from '../../lib/extensions/popupHost';
 import {activityTabs,canInstall,groupByDay,resultKey,timeOf,toActivityFilter,type CandidateState,type ChipId,type LogState,type PopupExtension} from '../../lib/extensions/popupModel';
@@ -100,7 +101,7 @@ export function ActivityView({host,installed,initial,onQueryChange}:{host:Extens
  const tabs=activityTabs(installed,seen);
  const exportLog=async()=>{setError(null);setMsg(null);try{const p=await host.exportActivity(filter);if(p)setMsg(t('ext.export.done'));}catch(e){setError(e instanceof Error&&e.message?e.message:t('ext.error.generic'));}};
  return <div className="ext-view ext-activity">
-  <div className="ext-tabs-scroll" role="tablist" aria-label={t('ext.act.tabs')}>{[{id:null as string|null,name:t('ext.act.all'),removed:false},...tabs].map(x=><NativeButton key={x.id??'all'} role="tab" aria-selected={extId===x.id} className="ext-subtab" onClick={()=>setExtId(x.id)}>{x.name}{x.removed?` (${t('ext.act.removed')})`:''}</NativeButton>)}</div>
+  <div className="ext-tabs-scroll" role="tablist" aria-label={t('ext.act.tabs')} onKeyDown={tabListKeyDown}>{[{id:null as string|null,name:t('ext.act.all'),removed:false},...tabs].map(x=><NativeButton key={x.id??'all'} role="tab" aria-selected={extId===x.id} tabIndex={extId===x.id?0:-1} className="ext-subtab" onClick={()=>setExtId(x.id)}>{x.name}{x.removed?` (${t('ext.act.removed')})`:''}</NativeButton>)}</div>
   <div className="ext-toolbar"><NativeInput type="search" aria-label={t('ext.search.activity')} placeholder={t('ext.search.activity')} value={text} onChange={e=>setText(e.target.value)}/><NativeButton type="button" className="ext-btn" onClick={exportLog}>{t('ext.export')}</NativeButton></div>
   <div className="ext-chips" role="group" aria-label={t('ext.filter.aria')}>{CHIPS.map(c=><NativeButton key={c} ref={c==='network'?chipRef:undefined} type="button" className="ext-chip" aria-pressed={chip===c} onClick={()=>{setChip(c);onQueryChange?.();}}>{t(`ext.chip.${c}`)}</NativeButton>)}</div>
   <InlineError id={id} message={error}/>{msg?<p role="status" className="ext-status-line">{msg}</p>:null}

@@ -1,6 +1,7 @@
 import {AcpPanel} from './AcpPanel';
 import {ComputerUseReview} from './ComputerUseReview';
 import {useEffect,useState,useSyncExternalStore} from 'react';
+import {tabListKeyDown} from '../../lib/tabNav';
 import {getLocale,subscribeLocale,t} from '../../lib/i18n';
 import {costLabel,reviewedHunksAllowed,studioControls} from '../../lib/vibespace/state';
 import type {Studio,VibeSpaceTransport,VibeIntent,ReviewDetails,HunkSelection} from '../../lib/vibespace/types';
@@ -20,9 +21,9 @@ export function ReviewExtensions({studio,transport,disabled,onAction}:{studio:St
  const allowed=!!details&&reviewedHunksAllowed(studio,details,paths,hunks)&&!disabled&&transport.capabilities.includes('apply-hunks');
  const changeAllowed=studioControls(studio,false).review&&!disabled&&transport.capabilities.includes('request-changes');
  return <>
-  <div className="vs-actions" role="tablist" aria-label={t('vibespace.acp.ui.dock')}>
-   <NativeButton role="tab" aria-selected={tab==='review'} aria-controls="vs-review-dock" id="vs-review-tab" onClick={()=>setTab('review')}>{t('vibespace.acp.ui.reviewTab')}</NativeButton>
-   <NativeButton role="tab" aria-selected={tab==='acp'} aria-controls="vs-acp-dock" id="vs-acp-tab" onClick={()=>setTab('acp')}>{t('vibespace.acp.ui.title')}</NativeButton>
+  <div className="vs-actions" role="tablist" aria-label={t('vibespace.acp.ui.dock')} onKeyDown={tabListKeyDown}>
+   <NativeButton role="tab" aria-selected={tab==='review'} tabIndex={tab==='review'?0:-1} aria-controls="vs-review-dock" id="vs-review-tab" onClick={()=>setTab('review')}>{t('vibespace.acp.ui.reviewTab')}</NativeButton>
+   <NativeButton role="tab" aria-selected={tab==='acp'} tabIndex={tab==='acp'?0:-1} aria-controls="vs-acp-dock" id="vs-acp-tab" onClick={()=>setTab('acp')}>{t('vibespace.acp.ui.title')}</NativeButton>
   </div>
   <div role="tabpanel" id="vs-acp-dock" aria-labelledby="vs-acp-tab" hidden={tab!=='acp'}>{tab==='acp'&&<AcpPanel disabled={disabled}/>}</div>
   <div role="tabpanel" id="vs-review-dock" aria-labelledby="vs-review-tab" hidden={tab!=='review'}>

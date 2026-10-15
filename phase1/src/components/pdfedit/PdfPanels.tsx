@@ -16,6 +16,7 @@ import {
 import type { PdfFieldValue } from "../../lib/pdfforms";
 import { pdfButton } from "./PdfInlineEditor";
 import {NativeButton,NativeInput,NativeSelect,Textarea} from '../ui/native-controls';
+import { tabListKeyDown } from "../../lib/tabNav";
 function Thumbnail({ bytes, page }: { bytes: Uint8Array; page: number }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
@@ -102,11 +103,13 @@ export function PdfPagesPanel() {
       <div
         className="flex shrink-0 border-b border-subtle p-2"
         role="tablist"
+        onKeyDown={tabListKeyDown}
         aria-label="PDF navigation"
       >
         <NativeButton
           role="tab"
           aria-selected={tab === "pages"}
+          tabIndex={tab === "pages" ? 0 : -1}
           className={pdfButton}
           onClick={() => setTab("pages")}
         >
@@ -115,6 +118,7 @@ export function PdfPagesPanel() {
         <NativeButton
           role="tab"
           aria-selected={tab === "search"}
+          tabIndex={tab === "search" ? 0 : -1}
           className={pdfButton}
           onClick={() => setTab("search")}
         >
@@ -324,12 +328,14 @@ export function PdfPropertiesPanel() {
       <div
         className="flex shrink-0 border-b border-subtle p-2"
         role="tablist"
+        onKeyDown={tabListKeyDown}
         aria-label="PDF tools"
       >
         <NativeButton
           className={pdfButton}
           role="tab"
           aria-selected={tab === "add"}
+          tabIndex={tab === "add" ? 0 : -1}
           onClick={() => {
             selectPdfMarkup(s.name, null);
             setTab("add");
@@ -341,6 +347,7 @@ export function PdfPropertiesPanel() {
           className={pdfButton}
           role="tab"
           aria-selected={tab === "fields"}
+          tabIndex={tab === "fields" ? 0 : -1}
           onClick={() => {
             placePdfAnnotation(s.name, null);
             selectPdfMarkup(s.name, null);
@@ -353,6 +360,7 @@ export function PdfPropertiesPanel() {
           className={pdfButton}
           role="tab"
           aria-selected={tab === "comments"}
+          tabIndex={tab === "comments" ? 0 : -1}
           onClick={() => {
             placePdfAnnotation(s.name, null);
             setTab("comments");
