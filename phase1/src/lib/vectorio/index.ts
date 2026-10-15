@@ -1,4 +1,5 @@
 export * from './types';
+export * from './arrows';
 export { importSvg, SvgImportError, type ImportOptions, type ImportResult } from './import';
 export { exportSvg, type ExportOptions } from './export';
 export { gradientIdOf, gradientFill, pruneGradients } from './gradient';

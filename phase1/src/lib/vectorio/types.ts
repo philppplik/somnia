@@ -1,3 +1,4 @@
+import type { ArrowKind } from './arrows';
 /**
  * Vector document contract (wave 4 assignment, parent agent message):
  *   VectorDocument { width, height, paths: [{ id, closed, nodes: [{ id, x, y, kind, in?, out? }] }] }
@@ -36,6 +37,8 @@ export interface Style {
   miterLimit: number;
   dashArray: number[];
   dashOffset: number;
+  arrowStart?: ArrowKind; // arrowheads on open single paths ('none' = absent)
+  arrowEnd?: ArrowKind;
   blendMode?: BlendMode; // CSS mix-blend-mode on the object; absent = 'normal'
 }
 
@@ -88,7 +91,7 @@ export const GRADIENT_LIMITS = Object.freeze({ maxGradients: 64, maxStops: 16 })
 
 export const DEFAULT_STYLE: Style = Object.freeze({
   fill: '#000000', stroke: 'none', strokeWidth: 1, fillOpacity: 1, strokeOpacity: 1, opacity: 1,
-  fillRule: 'nonzero', lineCap: 'butt', lineJoin: 'miter', miterLimit: 4, dashArray: [], dashOffset: 0, blendMode: 'normal',
+  fillRule: 'nonzero', lineCap: 'butt', lineJoin: 'miter', miterLimit: 4, dashArray: [], dashOffset: 0, blendMode: 'normal', arrowStart: 'none', arrowEnd: 'none',
 }) as Style;
 
 export type Matrix = [number, number, number, number, number, number];

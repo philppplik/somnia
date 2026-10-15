@@ -3,6 +3,7 @@ import { escapeAttr } from './xml';
 import { gradientSvg, pruneGradients } from './gradient';
 import { fmt } from './matrix';
 import { serializeContour } from './serialize';
+import { arrowMarkerSvg, pathArrows, type ArrowSpec } from './arrows';
 import { BLEND_MODES, DEFAULT_STYLE, type Style, type VectorDocument, type VectorPath } from './types';
 
 export interface ExportOptions { /** '' for a single line. Default two spaces. */ indent?: string }
@@ -74,6 +75,13 @@ export function exportSvg(doc: VectorDocument, opts: ExportOptions = {}): string
     for (const b of clipBlocks) for (const l of b) emit(2, l);
     emit(1, '</defs>');
   }
+  const arrowDefs = new Map<string, ArrowSpec>();
+  for (const p of pruned.paths) { const a = pathArrows(p); for (const s of [a.start, a.end]) if (s && !arrowDefs.has(s.id)) arrowDefs.set(s.id, s); }
+  if (arrowDefs.size) {
+    emit(1, '<defs>');
+    for (const a of arrowDefs.values()) for (const l of arrowMarkerSvg(a)) emit(2, l);
+    emit(1, '</defs>');
+  }
   // merge compound subpaths into one element, keep paint order of the first subpath
   const elements: { p: VectorPath; d: string }[] = [];
   const byCompound = new Map<string, number>();
@@ -102,6 +110,9 @@ export function exportSvg(doc: VectorDocument, opts: ExportOptions = {}): string
     }
     const attrs = [`d="${d}"`, ...styleAttrs(p.style)];
     if (p.name !== undefined) attrs.unshift(`data-name="${escapeAttr(p.name)}"`);
+    const ar = pathArrows(p);
+    if (ar.start) attrs.push(`marker-start="url(#${ar.start.id})"`);
+    if (ar.end) attrs.push(`marker-end="url(#${ar.end.id})"`);
     if (p.hidden) attrs.push('display="none"');
     if (p.locked) attrs.push('data-vs-locked="1"');
     emit((p.layer !== undefined ? 2 : 1) + (p.group !== undefined ? 1 : 0), `<path ${attrs.join(' ')}/>`);

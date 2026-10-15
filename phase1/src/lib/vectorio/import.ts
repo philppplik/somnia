@@ -5,6 +5,7 @@ import { normalizePaint } from './color';
 import { inferKind, r3 } from './nodes';
 import { createGradientResolver, isGradientElement, nodesBox } from './gradientImport';
 import { parseXml, XmlError, type XmlElement } from './xml';
+import { isArrowKind, type ArrowKind } from './arrows';
 import { BLEND_MODES, DEFAULT_STYLE, IDENTITY, LIMITS, type BlendMode, type Diagnostic, type Matrix, type Point, type Style, type VectorDocument, type VectorNode, type VectorPath } from './types';
 
 
@@ -37,7 +38,7 @@ const opacityOf = (v: string | undefined): number | undefined => {
 };
 const stripNs = (n: string) => (n.startsWith('svg:') ? n.slice(4) : n);
 
-const STYLE_PROPS = ['fill', 'stroke', 'stroke-width', 'fill-opacity', 'stroke-opacity', 'fill-rule', 'stroke-linecap', 'stroke-linejoin', 'stroke-miterlimit', 'stroke-dasharray', 'stroke-dashoffset', 'opacity', 'mix-blend-mode', 'display', 'visibility'];
+const STYLE_PROPS = ['fill', 'stroke', 'stroke-width', 'fill-opacity', 'stroke-opacity', 'fill-rule', 'stroke-linecap', 'stroke-linejoin', 'stroke-miterlimit', 'stroke-dasharray', 'stroke-dashoffset', 'opacity', 'mix-blend-mode', 'marker-start', 'marker-end', 'display', 'visibility'];
 /** Editor-group ids are bounded and plain; anything else is ignored so the content just loads ungrouped. */
 const groupIdOf = (v: string | undefined): string | undefined => (v !== undefined && /^[A-Za-z0-9_.:-]{1,64}$/.test(v) ? v : undefined);
 const PLAIN_ATTRS = new Set([...STYLE_PROPS, 'id', 'style', 'transform', 'd', 'x', 'y', 'width', 'height', 'rx', 'ry', 'cx', 'cy', 'r', 'x1', 'y1', 'x2', 'y2', 'points', 'viewBox', 'version', 'preserveAspectRatio', 'xmlns', 'data-name', 'data-vs-group', 'data-vs-group-name', 'data-vs-locked', 'data-vs-guides', 'clip-rule', 'pathLength', 'xml:space', 'baseProfile']);
@@ -60,7 +61,7 @@ function declared(el: XmlElement, err: (m: string) => void): Record<string, stri
   return out;
 }
 
-function cascade(parent: Style, d: Record<string, string>, err: (m: string) => void, hasGradient: (id: string) => boolean): Style {
+function cascade(parent: Style, d: Record<string, string>, err: (m: string) => void, hasGradient: (id: string) => boolean, arrowOf: (id: string) => ArrowKind | undefined = () => undefined): Style {
   const s: Style = { ...parent, dashArray: [...parent.dashArray], opacity: 1 };
   for (const key of ['fill', 'stroke'] as const) {
     const raw = d[key];
@@ -79,6 +80,15 @@ function cascade(parent: Style, d: Record<string, string>, err: (m: string) => v
   s.strokeOpacity = opacityOf(d['stroke-opacity']) ?? s.strokeOpacity;
   s.opacity = opacityOf(d.opacity) ?? 1;
   s.blendMode = 'normal'; // not inherited
+  s.arrowStart = 'none'; s.arrowEnd = 'none';
+  for (const [prop, key] of [['marker-start', 'arrowStart'], ['marker-end', 'arrowEnd']] as const) {
+    const raw = d[prop]?.trim();
+    if (raw === undefined || raw === 'none') continue;
+    const kind = /^url\(\s*#([^)\s]+)\s*\)$/.exec(raw)?.[1];
+    const a = kind === undefined ? undefined : arrowOf(kind);
+    if (a === undefined) err(`${prop} "${raw}": only the arrowhead markers this editor writes are supported`);
+    else s[key] = a;
+  }
   if (d['mix-blend-mode'] !== undefined) {
     const v = d['mix-blend-mode'].trim().toLowerCase();
     if ((BLEND_MODES as readonly string[]).includes(v)) s.blendMode = v as BlendMode;
@@ -231,6 +241,12 @@ export function importSvg(source: string, opts: ImportOptions = {}): ImportResul
     for (const c of e.children) collectClips(c, n + 1);
   };
   collectClips(root);
+  const arrowMarkers = new Map<string, ArrowKind>();
+  const collectMarkers = (e: XmlElement): void => {
+    if (stripNs(e.name) === 'marker') { const k = e.attrs['data-vs-arrow']; if (e.attrs.id && isArrowKind(k) && k !== 'none') arrowMarkers.set(e.attrs.id, k); }
+    for (const c of e.children) collectMarkers(c);
+  };
+  collectMarkers(root);
   let clipC = 0;
   const paths: VectorPath[] = [];
   const groupNames: Record<string, string> = {};
@@ -256,7 +272,7 @@ export function importSvg(source: string, opts: ImportOptions = {}): ImportResul
     if (IGNORED_NO_RENDER.has(name)) return;
     if (name === 'clipPath') return; // read up front, validated where it is used
     if (!ALLOWED.has(name)) {
-      if (name === 'defs' && el.children.every((c) => isGradientElement(c) || stripNs(c.name) === 'clipPath')) return; // gradients are read up front
+      if (name === 'defs' && el.children.every((c) => isGradientElement(c) || stripNs(c.name) === 'clipPath' || (stripNs(c.name) === 'marker' && arrowMarkers.has(c.attrs.id ?? '')))) return; // gradients are read up front
       if (isGradientElement(el)) return;
       bad(`<${name}> is not supported`);
       return;
@@ -267,7 +283,8 @@ export function importSvg(source: string, opts: ImportOptions = {}): ImportResul
     const tf = parseTransform(el.attrs.transform);
     if (tf === null) bad(`malformed transform "${el.attrs.transform}"`);
     const world = multiply(m, tf ?? IDENTITY);
-    const style = cascade(parent, d, bad, grads.has);
+    const style = cascade(parent, d, bad, grads.has, (id) => arrowMarkers.get(id));
+    if ((style.arrowStart !== 'none' || style.arrowEnd !== 'none') && name === 'g') bad('marker-start/marker-end on a group are not supported; set them on the path');
     if (name === 'g' && style.blendMode !== 'normal') bad('mix-blend-mode on a group is not supported; set it on the shapes');
     const label = el.attrs['inkscape:label'] ?? el.attrs['data-name'] ?? el.attrs.id;
     // clip-path: the element becomes a clipping group (editor group + mask shape); groups do not nest

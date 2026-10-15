@@ -5,7 +5,7 @@
  */
 import { registerCommandSpec } from '../commandBridge';
 import type { CommandSchema, CommandSpec } from '../commandSpec';
-import { BLEND_MODES } from '../vectorio';
+import { BLEND_MODES, ARROW_KINDS } from '../vectorio';
 import type { Point, Style, VectorDocument, VectorPath } from '../vectorio';
 import * as S from './session';
 import {vectorShellCommandSpecs} from './shellCommands';
@@ -28,6 +28,7 @@ const style = object({
   lineCap: { type: 'string', enum: ['butt', 'round', 'square'] },
   lineJoin: { type: 'string', enum: ['miter', 'round', 'bevel'] },
   miterLimit: { type: 'number', minimum: 1 },
+  arrowStart: { type: 'string', enum: [...ARROW_KINDS] }, arrowEnd: { type: 'string', enum: [...ARROW_KINDS] },
   blendMode: { type: 'string', enum: [...BLEND_MODES] },
   dashArray: { type: 'array', items: { type: 'number', minimum: 0 }, maxItems: 200 }, dashOffset: number,
 });

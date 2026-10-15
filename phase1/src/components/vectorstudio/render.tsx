@@ -1,5 +1,5 @@
 import type {ReactElement} from 'react';
-import {serializeContour,type Gradient,type Style,type VectorPath} from '../../lib/vectorio';
+import {serializeContour,pathArrows,type ArrowSpec,type Gradient,type Style,type VectorPath} from '../../lib/vectorio';
 /** SVG attributes for one path style. Absent keys follow SVG defaults (black fill, no stroke), same as the exporter. */
 export function styleProps(s:Partial<Style>|undefined){
  return {fill:s?.fill??'#000000',stroke:s?.stroke??'none',strokeWidth:s?.strokeWidth??1,strokeLinecap:s?.lineCap,strokeLinejoin:s?.lineJoin,strokeMiterlimit:s?.miterLimit,
@@ -20,11 +20,13 @@ export function PathLayer({paths}:{paths:readonly VectorPath[]}){
  const flush=()=>{const r=open.pop();if(r)nodes.push(<g key={'clip:'+r.g+':'+nodes.length} clipPath={`url(#${cid(r.g)})`}>{r.items}</g>);};
  for(const e of out){
   const g=e.p.group;if(e.p.clip&&g!==undefined&&masks.has(g))continue;
-  const el=<path key={e.key} d={e.d} data-path-id={e.p.id} {...styleProps(e.p.style)}/>;
+  const ar=pathArrows(e.p);
+  const el=<path key={e.key} d={e.d} data-path-id={e.p.id} {...styleProps(e.p.style)} markerStart={ar.start?`url(#${ar.start.id})`:undefined} markerEnd={ar.end?`url(#${ar.end.id})`:undefined}/>;
   if(g!==undefined&&masks.has(g)){if(open.length&&open[0].g!==g)flush();if(!open.length)open.push({g,items:[]});open[0].items.push(el);}else{flush();nodes.push(el);}
  }
  flush();
- return <>{[...masks].map(([g,m])=><clipPath key={'def:'+g} id={cid(g)}><path d={m.d} clipRule={m.evenodd?'evenodd':'nonzero'}/></clipPath>)}{nodes}</>;}
+ const arrows=new Map<string,ArrowSpec>();for(const e of out){const a=pathArrows(e.p);for(const s of [a.start,a.end])if(s)arrows.set(s.id,s);}
+ return <>{[...arrows.values()].map(a=><marker key={'m:'+a.id} id={a.id} viewBox="0 0 10 10" refX={a.refX} refY={5} markerWidth={4} markerHeight={4} orient="auto-start-reverse">{a.shape==='circle'?<circle cx={5} cy={5} r={4} fill={'#'+a.color}/>:a.filled?<path d={a.d} fill={'#'+a.color}/>:<path d={a.d} fill="none" stroke={'#'+a.color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"/>}</marker>)}{[...masks].map(([g,m])=><clipPath key={'def:'+g} id={cid(g)}><path d={m.d} clipRule={m.evenodd?'evenodd':'nonzero'}/></clipPath>)}{nodes}</>;}
 
 /** Document gradients as SVG paint servers (objectBoundingBox units, pad), so fills `url(#id)` resolve in the editor canvas. */
 export function GradientDefs({gradients}:{gradients?:readonly Gradient[]}){
