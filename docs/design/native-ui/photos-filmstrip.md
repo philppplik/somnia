@@ -459,3 +459,20 @@ names, extensions, localized word); the light/dark gallery leg
 rates the source, creates a copy (own entry, active, library count
 grows, source rating kept, copy unrated), rates the copy
 independently (`test-results/ds-photos-virtual-copy-{light,dark}.png`).
+
+## Snapshots (P108)
+
+"Save snapshot" in the strip menu freezes the active photo's current
+develop settings under a name (per-photo, persisted locally,
+validated on read via the settings-payload codec). Each snapshot
+shows as a grouped menu row: clicking the name applies it through
+`commitPhotoSettings` (undoable via history), the trash button
+deletes it. Saving with an existing name overwrites. Originals are
+never touched; snapshots live next to virtual copies - a copy forks
+the photo, a snapshot forks its settings timeline.
+
+Coverage: `snapshots.test.ts` covers save/read-back/rename/delete
+and the stable-name-array contract for `useSyncExternalStore`; the
+light/dark gallery leg saves a snapshot, moves the settings,
+applies it back and deletes the row
+(`test-results/ds-photos-snapshots-{light,dark}.png`).

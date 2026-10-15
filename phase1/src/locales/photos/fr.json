@@ -185,5 +185,10 @@
  "photos.copy.word": "Copie",
  "photos.copy.create": "Copie virtuelle",
  "photos.copy.done": "Copie créée : {name}",
- "photos.copy.failed": "Copie échouée"
+ "photos.copy.failed": "Copie échouée",
+ "photos.snapshots.save": "Enregistrer un instantane",
+ "photos.snapshots.name": "Nom de l'instantane",
+ "photos.snapshots.saved": "Instantane enregistre : {name}",
+ "photos.snapshots.applied": "Instantane applique : {name}",
+ "photos.snapshots.delete": "Supprimer l'instantane {name}"
 }

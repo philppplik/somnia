@@ -773,3 +773,29 @@ test('virtual copy: independent entry that starts with the source settings (ligh
   await page.evaluate(async()=>{const r=await import('/src/lib/photos/ratings.ts');for(const n of['strip-1.png','strip-2.png','strip-3.png','strip-1 (Copy 1).png'])r.setRating(n,0);}); // leave no state behind
  }
 });
+
+test('snapshots: save, apply and delete a named settings snapshot (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
+  await page.evaluate(async()=>{const s=await import('/src/lib/photos/snapshots.ts');for(const n of[...s.snapshotsFor('strip-1.png')])s.deleteSnapshot('strip-1.png',n);}); // snapshots persist via localStorage
+  await page.evaluate(async()=>{const st=await import('/src/lib/photos/studioSession.ts');st.commitPhotoSettings('strip-1.png',cur=>({...cur,temp:6512}));}); // a known non-neutral setting
+  await page.getByTestId('photos-filmstrip-menu').click();
+  await page.getByTestId('photos-filmstrip-snapshot-save').click();
+  await page.getByTestId('photos-filmstrip-snapshot-name').fill('A');
+  await page.keyboard.press('Enter');
+  await expect(page.getByTestId('photos-filmstrip-apply-note')).toContainText('A'); // snapshot saved
+  await page.evaluate(async()=>{const st=await import('/src/lib/photos/studioSession.ts');st.commitPhotoSettings('strip-1.png',cur=>({...cur,temp:6530}));}); // move away from the snapshot
+  await page.getByTestId('photos-filmstrip-snapshot-apply-A').click(); // the menu stayed open after saving
+  await expect(page.getByTestId('photos-filmstrip-apply-note')).toContainText('A'); // snapshot applied
+  const temp=await page.evaluate(async()=>{const st=await import('/src/lib/photos/studioSession.ts');return st.getPhotoSession('strip-1.png')?.now.temp;});
+  expect(temp).toBe(6512); // settings jumped back
+  await page.screenshot({path:`test-results/ds-photos-snapshots-${theme}.png`,fullPage:true});
+  await page.getByTestId('photos-filmstrip-snapshot-delete-A').click(); // still in the open menu
+  await expect(page.getByTestId('photos-filmstrip-snapshot-apply-A')).toHaveCount(0); // deleted, row gone
+  await page.keyboard.press('Escape');
+  await page.evaluate(async()=>{const st=await import('/src/lib/photos/studioSession.ts');st.commitPhotoSettings('strip-1.png',cur=>({...cur,temp:6500}));}); // leave no state behind
+ }
+});

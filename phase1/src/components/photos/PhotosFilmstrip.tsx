@@ -18,6 +18,7 @@ import {addTags,allTags,setTags} from '../../lib/photos/tags';
 import {groupForStrip,groupPhotos,setStackCover,ungroupStacks,useStackCovers,useStacks} from '../../lib/photos/stacks';
 import {hidePhotos,unhideAll,unhidePhotos} from '../../lib/photos/hidden';
 import {nextCopyName} from '../../lib/photos/virtualCopy';
+import {saveSnapshot,snapshotSettings,deleteSnapshot,useSnapshots} from '../../lib/photos/snapshots';
 import {detectSeries} from '../../lib/photos/autoStack';
 import {usePanelState} from '../../store/panelStateStore';
 import {Button} from '../ui/button';
@@ -46,6 +47,7 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
  const [autoAdvance,setAutoAdvance]=usePanelState<boolean>('photos.autoAdvance',false);
  const [anchor,setAnchor]=usePanelState<string|null>('photos.filmstripAnchor',null);
  const [applyNote,setApplyNote]=useState<string|null>(null);
+ const [snapNaming,setSnapNaming]=useState(false);
  useEffect(()=>{if(pendingNote){setApplyNote(pendingNote);pendingNote=null;}},[]); // pick up a confirmation that crossed the workspace remount
  const [armRemove,setArmRemove]=useState(false);
  const [rawPresets]=usePanelState<unknown>('photos.presets.user',[]);
@@ -55,6 +57,7 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
  useEffect(()=>{strip.current?.querySelector('[aria-pressed="true"]')?.scrollIntoView({block:'nearest',inline:'nearest'});},[active]);
  const selected=photos.filter(p=>sel.includes(p.name));
  const activeSession=active?getPhotoSession(active):null;
+ const snapNames=useSnapshots(active);
  const neutral=!activeSession||isNeutralLook(activeSession.now); // nothing worth applying
  const userPresets:UserPreset[]=parseUserPresets(rawPresets);
  const applyLookToSelection=async(look:Parameters<typeof syncLookToPhotos>[1])=>{
@@ -171,6 +174,25 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
     <span className="flex flex-wrap gap-1">
      <Button variant="outline" size="compact" onClick={()=>{void makeVirtualCopy();}} data-testid="photos-filmstrip-virtual-copy">{t('photos.copy.create')}</Button>
     </span>
+    <div className="grid gap-1">
+     {snapNames.map(n=><span key={n} className="flex gap-1">
+      <Button variant="outline" size="compact" className="flex-1 justify-start" onClick={()=>{
+       const snap=snapshotSettings(active,n);
+       if(snap){commitPhotoSettings(active,()=>snap);setApplyNote(t('photos.snapshots.applied',{name:n}));}
+      }} data-testid={`photos-filmstrip-snapshot-apply-${n}`}>{n}</Button>
+      <Button variant="outline" size="icon" aria-label={t('photos.snapshots.delete',{name:n})} title={t('photos.snapshots.delete',{name:n})} onClick={()=>deleteSnapshot(active,n)} className="h-7 w-7 shrink-0" data-testid={`photos-filmstrip-snapshot-delete-${n}`}><Trash2 size={12}/></Button>
+     </span>)}
+     {snapNaming
+      ?<NativeInput autoFocus type="text" aria-label={t('photos.snapshots.name')} title={t('photos.snapshots.name')} placeholder={t('photos.snapshots.name')} className="h-7 w-full" data-testid="photos-filmstrip-snapshot-name"
+        onKeyDown={e=>{
+         if(e.key==='Escape'){setSnapNaming(false);return;}
+         if(e.key!=='Enter')return;
+         const n=e.currentTarget.value.trim();
+         if(n&&activeSession&&saveSnapshot(active,n,activeSession.now))setApplyNote(t('photos.snapshots.saved',{name:n}));
+         setSnapNaming(false);
+        }}/>
+      :<Button variant="outline" size="compact" aria-label={t('photos.snapshots.save')} title={t('photos.snapshots.save')} onClick={()=>setSnapNaming(true)} disabled={!activeSession} data-testid="photos-filmstrip-snapshot-save">{t('photos.snapshots.save')}</Button>}
+    </div>
     {hidden.length>0&&<span className="flex flex-wrap gap-1">
      <Button variant="outline" size="compact" aria-pressed={showHidden} onClick={()=>setShowHidden(!showHidden)} data-testid="photos-filmstrip-show-hidden">{t('photos.hidden.show')}</Button>
      {showHidden&&hidden.includes(active)&&<Button variant="outline" size="compact" onClick={()=>unhidePhotos([active])} data-testid="photos-filmstrip-unhide-active">{t('photos.hidden.restoreActive')}</Button>}

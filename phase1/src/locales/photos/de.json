@@ -185,5 +185,10 @@
  "photos.copy.word": "Kopie",
  "photos.copy.create": "Virtuelle Kopie",
  "photos.copy.done": "Kopie erstellt: {name}",
- "photos.copy.failed": "Kopie fehlgeschlagen"
+ "photos.copy.failed": "Kopie fehlgeschlagen",
+ "photos.snapshots.save": "Snapshot speichern",
+ "photos.snapshots.name": "Snapshot-Name",
+ "photos.snapshots.saved": "Snapshot gespeichert: {name}",
+ "photos.snapshots.applied": "Snapshot angewendet: {name}",
+ "photos.snapshots.delete": "Snapshot {name} loeschen"
 }
