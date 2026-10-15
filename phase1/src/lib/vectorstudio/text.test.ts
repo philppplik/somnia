@@ -117,3 +117,10 @@ test('text stacking: back texts are written before the shapes, read back, and st
  await dd.runCommand('vector.setText',{id,patch:{back:false}},o);assert.equal(S.getVectorSession().doc.texts![0].back,undefined);
  S.undo();assert.equal(S.getVectorSession().doc.texts![0].back,true);
 });
+test('layers list helpers and vector.selectText: label is the shortened first line, select works, unknown id and agent refused',async()=>{
+ const d=setup();await d.runCommand('vector.addText',{x:1,y:1,text:'First line\nSecond'},o);const id=S.getVectorSession().textSel!;
+ S.selectText(null);await d.runCommand('vector.selectText',{id},o);assert.equal(S.getVectorSession().textSel,id);
+ await assert.rejects(d.runCommand('vector.selectText',{id:'zzz'},o),/Unknown text/);
+ await assert.rejects(d.runCommand('vector.selectText',{id},{origin:'agent'}),e=>e instanceof CommandDispatchError&&e.code==='forbidden-origin');
+ const {textLabel}=await import('../../components/vectorstudio/VectorPanels');assert.equal(textLabel('First line\nSecond'),'First line');assert.equal(textLabel('x'.repeat(100)).length,40);assert.equal(textLabel('  \nabc'),'abc');
+});

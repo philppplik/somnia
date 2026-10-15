@@ -27,6 +27,8 @@ import {TEXT_LIMITS,FONT_WEIGHTS,FONT_STYLES,TEXT_ANCHORS} from '../../lib/vecto
 import {fontOptions,loadSystemFonts,fontsAvailable,useSystemFonts} from '../../lib/vectorstudio/fonts';
 import {NativeButton,NativeInput,NativeSelect} from '../ui/native-controls';
 const field='h-8 w-full min-w-0 rounded-sm border border-line bg-elevated px-2 text-[12px] text-ink';
+/** First non-empty line of a text, shortened for the layers list. */
+export const textLabel=(text:string)=>{const l=(text.split('\n').map(x=>x.trim()).find(Boolean)??'');return l.length>40?l.slice(0,39)+'…':l;};
 const row='grid gap-1 text-[11px] text-ink-3';
 const run=(id:string,p?:unknown)=>void executeCommand('vector.'+id,p);
 /** Persist filtering, not engine data. Hidden paths stay visible in this list so users can restore them. */
@@ -34,9 +36,10 @@ export function VectorLayersPanel({panelId,context}:PanelHostProps){
  const {t}=useT(),s=useVectorSession();const [filter,setFilter]=usePanelState(`${context.studio}.${panelId}.filter`,'');
  const [folded,setFolded]=usePanelState(`${context.studio}.${panelId}.folded`,'');const collapsed=new Set(folded.split(',').filter(Boolean));
  const rows=layerRows(s.doc.paths,p=>(p.name??t('vector.path')).toLocaleLowerCase().includes(filter.toLocaleLowerCase()),collapsed);
+ const textRows=(s.doc.texts??[]).filter(x=>textLabel(x.text).toLocaleLowerCase().includes(filter.toLocaleLowerCase())).reverse();
  return <div className="grid gap-2 p-2 text-[12px]" data-testid="vector-shell-layers">
   <NativeInput className={field} value={filter} onChange={e=>setFilter(e.target.value)} placeholder={t('vector.shell.filter')} aria-label={t('vector.shell.filter')}/>
-  {!s.open?<p>{t('vector.shell.empty')}</p>:rows.length===0?<p className="text-ink-3">{t('vector.noLayers')}</p>:<ul className="m-0 grid list-none gap-1 p-0">{rows.map(row=>{if(row.kind==='group'){const open=!collapsed.has(row.group),all=row.ids.every(id=>s.selection.includes(id));return <li key={'g:'+row.group} data-testid="vector-layer-group" className={'flex flex-wrap items-center gap-1 rounded-sm p-1 '+(all?'bg-accent-soft':'')}>
+  {!s.open?<p>{t('vector.shell.empty')}</p>:rows.length===0&&textRows.length===0?<p className="text-ink-3">{t('vector.noLayers')}</p>:<ul className="m-0 grid list-none gap-1 p-0">{rows.map(row=>{if(row.kind==='group'){const open=!collapsed.has(row.group),all=row.ids.every(id=>s.selection.includes(id));return <li key={'g:'+row.group} data-testid="vector-layer-group" className={'flex flex-wrap items-center gap-1 rounded-sm p-1 '+(all?'bg-accent-soft':'')}>
    <Button size="compact" aria-expanded={open} aria-label={open?t('vector.shell.layers.collapse'):t('vector.shell.layers.expand')} onClick={()=>{const next=new Set(collapsed);if(open)next.add(row.group);else next.delete(row.group);setFolded([...next].join(','));}}>{open?'▾':'▸'}</Button>
    <NativeButton type="button" className="flex-1 whitespace-nowrap rounded-sm bg-transparent p-1 text-left font-medium hover:bg-hover" aria-pressed={all} onClick={()=>run('select',{ids:row.ids})}>{s.doc.groupNames?.[row.group]??t('vector.shell.layers.group')} ({row.ids.length}){row.clipped?' · '+t('vector.shell.layers.clipped'):''}</NativeButton>
    <Button size="compact" aria-pressed={row.locked} onClick={()=>run('toggleLocked',{id:row.ids[0]})}>{row.locked?t('vector.shell.unlock'):t('vector.shell.lock')}</Button>
@@ -47,6 +50,9 @@ export function VectorLayersPanel({panelId,context}:PanelHostProps){
    <span className="flex gap-1"><Button size="compact" aria-pressed={!!p.locked} onClick={()=>run('toggleLocked',{id:p.id})}>{p.locked?t('vector.shell.unlock'):t('vector.shell.lock')}</Button><Button size="compact" aria-label={p.hidden?t('vector.show'):t('vector.hide')} onClick={()=>run('toggleHidden',{id:p.id})}>{p.hidden?t('vector.show'):t('vector.hide')}</Button></span>
    <NativeInput className={field+' col-span-2'} key={p.id+':'+p.name} defaultValue={p.name??''} aria-label={t('vector.rename')} onBlur={e=>{if(e.target.value!==p.name)run('renamePath',{id:p.id,name:e.target.value});}} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();}}/>
   </li>;})}</ul>}
+  {s.open&&textRows.length>0&&<div className="grid gap-1" data-testid="vector-layer-texts"><p className="m-0 font-medium">{t('vector.shell.layers.texts')} ({textRows.length})</p><ul className="m-0 grid list-none gap-1 p-0">{textRows.map(x=><li key={x.id} data-testid="vector-layer-text" className={'grid grid-cols-[1fr_auto] items-center gap-1 rounded-sm p-1 '+(s.textSel===x.id?'bg-accent-soft':'')}>
+   <NativeButton type="button" className="truncate rounded-sm bg-transparent p-1 text-left hover:bg-hover" aria-pressed={s.textSel===x.id} onClick={()=>run('selectText',{id:x.id})}>{textLabel(x.text)}{x.back?' · '+t('vector.shell.layers.textBehind'):''}</NativeButton>
+   <Button size="compact" onClick={()=>run('deleteText',{id:x.id})}>{t('vector.shell.textDelete')}</Button></li>)}</ul></div>}
  </div>;
 }
 export function VectorToolsPanel(){const {t}=useT(),s=useVectorSession();return <div role="toolbar" aria-label={t('vector.toolbar')} className="grid grid-cols-2 gap-1 p-2" data-testid="vector-shell-tools">{VECTOR_TOOLS.map(tool=><Button key={tool} size="compact" disabled={!s.open} aria-pressed={s.tool===tool} className={s.tool===tool?'bg-accent-soft text-accent':''} onClick={()=>run('setTool',{tool})}>{t('vector.tool.'+tool)}</Button>)}</div>;}
