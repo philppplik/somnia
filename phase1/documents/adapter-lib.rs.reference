@@ -2952,7 +2952,7 @@ impl DocSession {
                 Block::Para(p) => p.section.clone().ok_or("no section")?,
                 _ => return Err("no such section".into()),
             },
-            None => self.doc.last_section.clone(),
+            None => Box::new(self.doc.last_section.clone()),
         };
         if scope.is_some() && (obj.contains_key("pageColor") || obj.contains_key("defaultTab")) {
             return Err("the page colour and the default tab stop belong to the whole document".into());
@@ -6663,7 +6663,7 @@ mod tests {
         let st = |s: &DocSession, b: usize| -> serde_json::Value { serde_json::from_str(&s.do_section_setup_state(b).unwrap()).unwrap() };
         let was = st(&s, 2)["landscape"].as_bool().unwrap();
         let before = wordcraft_docx::write(&s.doc).unwrap();
-        for bad in [r#"{"pageColor":"#ff0000"}"#, r#"{"defaultTab":36}"#, r#"{"size":"b7"}"#, "{}", "[]"] {
+        for bad in [r##"{"pageColor":"#ff0000"}"##, r#"{"defaultTab":36}"#, r#"{"size":"b7"}"#, "{}", "[]"] {
             assert!(s.do_set_section_setup(0, bad).is_err(), "{bad}");
         }
         assert!(s.do_set_section_setup(99, r#"{"landscape":true}"#).is_err(), "no such paragraph");
