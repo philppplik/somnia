@@ -525,3 +525,25 @@ test('collections: save, apply and delete a filter set (light and dark)',async({
   await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible();
  }
 });
+test('stacks: group, collapse, expand, ungroup (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
+  await page.evaluate(async()=>{const m=await import('/src/lib/photos/stacks.ts');for(const n of['strip-1.png','strip-2.png','strip-3.png']){const id=m.getStack(n);if(id)m.ungroupStacks([id]);}}); // stacks persist via localStorage
+  await page.getByTestId('photos-filmstrip-select').selectOption('all');
+  await page.getByTestId('photos-filmstrip-stack-group').click(); // group all three
+  await expect(page.getByTestId('photos-filmstrip-item-strip-2.png')).toHaveCount(0); // collapsed: only the cover stays
+  await expect(page.getByTestId('photos-filmstrip-stack-count-strip-1.png')).toHaveText('3');
+  await page.screenshot({path:`test-results/ds-photos-stacks-${theme}.png`,fullPage:true});
+  await page.locator('[data-testid^="photos-filmstrip-stack-open-"]').first().click(); // expand inline
+  await expect(page.getByTestId('photos-filmstrip-item-strip-2.png')).toBeVisible();
+  await page.locator('[data-testid^="photos-filmstrip-stack-close-"]').first().click(); // collapse again
+  await expect(page.getByTestId('photos-filmstrip-item-strip-2.png')).toHaveCount(0);
+  await page.getByTestId('photos-filmstrip-stack-ungroup').click(); // selection still holds all three
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-stack-count-strip-1.png')).toHaveCount(0);
+  await page.getByTestId('photos-filmstrip-select').selectOption('none');
+ }
+});

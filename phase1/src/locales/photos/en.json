@@ -162,5 +162,9 @@
  "photos.collections": "Collections",
  "photos.collections.save": "Save filter",
  "photos.collections.name": "Collection name",
- "photos.collections.delete": "Delete set"
+ "photos.collections.delete": "Delete set",
+ "photos.stacks.group": "Group into stack",
+ "photos.stacks.ungroup": "Ungroup",
+ "photos.stacks.expand": "Expand stack",
+ "photos.stacks.collapse": "Collapse stack"
 }

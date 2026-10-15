@@ -162,5 +162,9 @@
  "photos.collections": "Sammlungen",
  "photos.collections.save": "Filter speichern",
  "photos.collections.name": "Name der Sammlung",
- "photos.collections.delete": "Set loeschen"
+ "photos.collections.delete": "Set loeschen",
+ "photos.stacks.group": "Als Stapel gruppieren",
+ "photos.stacks.ungroup": "Stapel aufloesen",
+ "photos.stacks.expand": "Stapel zeigen",
+ "photos.stacks.collapse": "Stapel einklappen"
 }

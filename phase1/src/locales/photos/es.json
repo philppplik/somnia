@@ -162,5 +162,9 @@
  "photos.collections": "Colecciones",
  "photos.collections.save": "Guardar filtro",
  "photos.collections.name": "Nombre de la coleccion",
- "photos.collections.delete": "Eliminar conjunto"
+ "photos.collections.delete": "Eliminar conjunto",
+ "photos.stacks.group": "Agrupar en pila",
+ "photos.stacks.ungroup": "Desagrupar",
+ "photos.stacks.expand": "Expandir pila",
+ "photos.stacks.collapse": "Contraer pila"
 }

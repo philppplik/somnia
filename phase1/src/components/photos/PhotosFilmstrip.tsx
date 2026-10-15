@@ -1,6 +1,6 @@
 import {useEffect,useRef,useState} from 'react';
 import {Star} from 'lucide-react';
-import {Flag,LayoutGrid,SkipForward,Tag,Trash2} from '../../lib/icons';
+import {ChevronDown,ChevronRight,Flag,LayoutGrid,SkipForward,Tag,Trash2} from '../../lib/icons';
 import {useT} from '../../lib/useT';
 import {closeMedia,getMedia,setActiveMedia,useMedia} from '../../lib/media';
 import {developablePhotos} from '../../lib/photos/photoNav';
@@ -14,6 +14,7 @@ import {MAX_RATING,useRatings} from '../../lib/photos/ratings';
 import {useFlags} from '../../lib/photos/flags';
 import {PHOTO_LABELS,setLabel,useLabels,type PhotoLabel} from '../../lib/photos/labels';
 import {addTags,allTags,setTags} from '../../lib/photos/tags';
+import {groupForStrip,groupPhotos,ungroupStacks,useStacks} from '../../lib/photos/stacks';
 import {usePanelState} from '../../store/panelStateStore';
 import {Button} from '../ui/button';
 import {NativeInput,NativeSelect} from '../ui/native-controls';
@@ -28,6 +29,8 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
  const [,setQuery]=usePanelState<string>('photos.searchQuery','');
  const [sets,setSets]=usePanelState<Record<string,{filter:string;sort:string;query:string}>>('photos.filterSets',{});
  const [naming,setNaming]=useState(false);
+ const stacks=useStacks();
+ const [expanded,setExpanded]=useState<Record<string,boolean>>({});
  const [,setMinRating]=usePanelState<number|string>('photos.ratingFilter',0);
  const [,setSort]=usePanelState<FilmstripSort>('photos.filmstripSort','library');
  const [sel,setSel]=usePanelState<string[]>('photos.filmstripSelection',[]);
@@ -66,6 +69,18 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
   setActiveMedia(next?next.name:null);
  };
  if(all.length<2)return null;
+ const thumb=(p:(typeof photos)[number])=><Button key={p.name} variant="outline" size="compact" aria-pressed={p.name===active} aria-label={p.name} onClick={e=>{
+   if(e.shiftKey){const names=photos.map(q=>q.name);setSel(rangeSelect(names,anchor,p.name));}
+   else if(e.ctrlKey||e.metaKey){setSel(toggleSelect(sel,p.name));setAnchor(p.name);}
+   else{setSel([p.name]);setAnchor(p.name);setApplyNote(null);setActiveMedia(p.name);}
+  }} className={`relative h-14 shrink-0 overflow-hidden px-0.5${sel.includes(p.name)&&sel.length>1?' ring-2 ring-[var(--accent)]':''}`} data-selected={sel.includes(p.name)&&sel.length>1||undefined} data-testid={`photos-filmstrip-item-${p.name}`}>
+   <img src={p.url} alt="" className="h-full w-auto max-w-24 rounded-[2px] object-cover"/>
+   {labels[p.name]&&<span className={`photos-label-dot photos-label-${labels[p.name]} absolute top-0.5 right-0.5`} data-testid={`photos-filmstrip-label-${p.name}`} data-label={labels[p.name]}/>}
+   {(tags[p.name]?.length??0)>0&&<span className="absolute top-0.5 left-0.5 flex max-w-[70%] items-center gap-0.5 truncate rounded-[2px] bg-elevated px-1 text-ink-3" title={(tags[p.name]??[]).join(', ')} data-testid={`photos-filmstrip-tags-badge-${p.name}`}><Tag size={10}/>{tags[p.name]![0]}{tags[p.name]!.length>1?` +${tags[p.name]!.length-1}`:''}</span>}
+   {(ratings[p.name]??0)>0&&<span className="absolute bottom-0.5 right-0.5 flex items-center gap-0.5 rounded-[2px] bg-elevated px-1 text-ink" data-testid={`photos-filmstrip-rating-badge-${p.name}`}><Star size={10} fill="currentColor" className="text-[var(--accent)]"/>{ratings[p.name]}</span>}
+   {flags[p.name]&&<span className="absolute bottom-0.5 left-0.5 flex items-center rounded-[2px] bg-elevated px-1 text-ink" data-testid={`photos-filmstrip-flag-${p.name}`} data-flag={flags[p.name]}><Flag size={10} fill="currentColor" className={flags[p.name]==='pick'?'text-[var(--accent)]':'text-[var(--danger)]'}/></span>}
+  </Button>;
+ const byName=(n:string)=>photos.find(p=>p.name===n)!;
  return <div ref={strip} className="photos-filmstrip flex items-center gap-1.5 overflow-x-auto border-t border-subtle px-3 py-1.5" role="navigation" aria-label={t('photos.filmstrip.aria')} data-testid="photos-filmstrip">
   <NativeSelect value={filter} aria-label={t('photos.rating.filter')} title={t('photos.rating.filter')} onChange={e=>setMinRating(e.currentTarget.value)} className="h-7 shrink-0" data-testid="photos-filmstrip-rating-filter">
    <option value="0">{t('photos.rating.filter.all')}</option>
@@ -139,20 +154,23 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
    {userPresets.map(p=><option key={p.id} value={`user:${p.id}`}>{p.name}</option>)}
   </NativeSelect>}
   {onSurvey&&<Button variant="outline" size="icon" aria-label={t('photos.filmstrip.survey')} title={t('photos.filmstrip.survey')} onClick={()=>onSurvey(selected.length>1?selected.map(p=>p.name):[])} className="h-7 w-7 shrink-0" data-testid="photos-filmstrip-survey"><LayoutGrid size={12}/></Button>} // with a selection it surveys the selection, else the whole filtered view
+  {selected.length>1&&<Button variant="outline" size="compact" onClick={()=>groupPhotos(selected.map(p=>p.name))} data-testid="photos-filmstrip-stack-group">{t('photos.stacks.group')}</Button>}
+  {(()=>{const ids=[...new Set((selected.length>1?selected.map(p=>p.name):[active]).map(n=>stacks[n]).filter((v):v is string=>!!v))];return ids.length>0?<Button variant="outline" size="compact" onClick={()=>ungroupStacks(ids)} data-testid="photos-filmstrip-stack-ungroup">{t('photos.stacks.ungroup')}</Button>:null;})()}
   {rejected.length>0&&<Button variant={armRemove?'primary':'outline'} size="compact" onClick={removeRejected} className="shrink-0" data-testid="photos-filmstrip-remove-rejects"><Trash2 size={12}/>{armRemove?t('photos.filmstrip.removeRejectsConfirm',{count:rejected.length}):t('photos.filmstrip.removeRejects',{count:rejected.length})}</Button>}
   <Button variant="outline" size="icon" aria-pressed={autoAdvance} aria-label={t('photos.filmstrip.autoAdvance')} title={t('photos.filmstrip.autoAdvance')} onClick={()=>setAutoAdvance(!autoAdvance)} className="h-7 w-7 shrink-0" data-testid="photos-filmstrip-autoadvance"><SkipForward size={12}/></Button>
   {applyNote&&<span className="shrink-0 text-ink-3" data-testid="photos-filmstrip-apply-note">{applyNote}</span>}
   <RatingStars name={active} prefix="photos-filmstrip"/>
-  {photos.map(p=><Button key={p.name} variant="outline" size="compact" aria-pressed={p.name===active} aria-label={p.name} onClick={e=>{
-   if(e.shiftKey){const names=photos.map(q=>q.name);setSel(rangeSelect(names,anchor,p.name));}
-   else if(e.ctrlKey||e.metaKey){setSel(toggleSelect(sel,p.name));setAnchor(p.name);}
-   else{setSel([p.name]);setAnchor(p.name);setApplyNote(null);setActiveMedia(p.name);}
-  }} className={`relative h-14 shrink-0 overflow-hidden px-0.5${sel.includes(p.name)&&sel.length>1?' ring-2 ring-[var(--accent)]':''}`} data-selected={sel.includes(p.name)&&sel.length>1||undefined} data-testid={`photos-filmstrip-item-${p.name}`}>
-   <img src={p.url} alt="" className="h-full w-auto max-w-24 rounded-[2px] object-cover"/>
-   {labels[p.name]&&<span className={`photos-label-dot photos-label-${labels[p.name]} absolute top-0.5 right-0.5`} data-testid={`photos-filmstrip-label-${p.name}`} data-label={labels[p.name]}/>}
-   {(tags[p.name]?.length??0)>0&&<span className="absolute top-0.5 left-0.5 flex max-w-[70%] items-center gap-0.5 truncate rounded-[2px] bg-elevated px-1 text-ink-3" title={(tags[p.name]??[]).join(', ')} data-testid={`photos-filmstrip-tags-badge-${p.name}`}><Tag size={10}/>{tags[p.name]![0]}{tags[p.name]!.length>1?` +${tags[p.name]!.length-1}`:''}</span>}
-   {(ratings[p.name]??0)>0&&<span className="absolute bottom-0.5 right-0.5 flex items-center gap-0.5 rounded-[2px] bg-elevated px-1 text-ink" data-testid={`photos-filmstrip-rating-badge-${p.name}`}><Star size={10} fill="currentColor" className="text-[var(--accent)]"/>{ratings[p.name]}</span>}
-   {flags[p.name]&&<span className="absolute bottom-0.5 left-0.5 flex items-center rounded-[2px] bg-elevated px-1 text-ink" data-testid={`photos-filmstrip-flag-${p.name}`} data-flag={flags[p.name]}><Flag size={10} fill="currentColor" className={flags[p.name]==='pick'?'text-[var(--accent)]':'text-[var(--danger)]'}/></span>}
-  </Button>)}
+  {groupForStrip(photos.map(p=>p.name),stacks,{}).map(row=>{
+   if(row.kind==='single')return thumb(byName(row.name));
+   if(expanded[row.id])return <span key={row.id} className="flex shrink-0 items-center gap-1" data-testid={`photos-filmstrip-stack-${row.id}`} data-expanded="true">
+    <Button variant="outline" size="icon" aria-label={t('photos.stacks.collapse')} title={t('photos.stacks.collapse')} onClick={()=>setExpanded({...expanded,[row.id]:false})} className="h-7 w-7 shrink-0" data-testid={`photos-filmstrip-stack-close-${row.id}`}><ChevronDown size={12}/></Button>
+    {row.members.map(n=>thumb(byName(n)))}
+   </span>;
+   return <span key={row.id} className="relative flex shrink-0 items-center" data-testid={`photos-filmstrip-stack-${row.id}`}>
+    {thumb(byName(row.members[0]))}
+    <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 rounded-[2px] bg-elevated px-1 text-ink tabular-nums" data-testid={`photos-filmstrip-stack-count-${row.members[0]}`}>{row.members.length}</span>
+    <Button variant="outline" size="icon" aria-label={t('photos.stacks.expand')} title={t('photos.stacks.expand')} onClick={e=>{e.stopPropagation();setExpanded({...expanded,[row.id]:true});}} className="absolute top-0.5 right-0.5 h-5 w-5" data-testid={`photos-filmstrip-stack-open-${row.id}`}><ChevronRight size={10}/></Button>
+   </span>;
+  })}
  </div>;
 }

@@ -313,3 +313,18 @@ grid too.
 Coverage: `photos-filmstrip.spec.ts` gains a light/dark leg that
 saves a search as a collection, clears, applies the set (search
 restored, other photos hidden) and deletes it again.
+
+## Stacks (P100)
+
+Bursts and series group into stacks: a persisted `stacks` store maps
+photos to stack ids, "Group into stack" pulls the selection into one
+stack (joining a member's existing stack), "Ungroup" drops it. A
+collapsed stack shows its first visible photo with a member count and
+a chevron that expands the members inline (and back). Grouping
+follows the visible strip order, so a stack whose members are split
+by a sort shows its consecutive runs.
+
+Coverage: `stacks.test.ts` covers group/join/ungroup and the
+strip-row grouping helper; `photos-filmstrip.spec.ts` gains a
+light/dark leg that groups three photos (cover + count), expands and
+collapses inline, and ungroups again.

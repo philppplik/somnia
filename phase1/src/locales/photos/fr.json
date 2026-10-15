@@ -162,5 +162,9 @@
  "photos.collections": "Collections",
  "photos.collections.save": "Enregistrer le filtre",
  "photos.collections.name": "Nom de la collection",
- "photos.collections.delete": "Supprimer le jeu"
+ "photos.collections.delete": "Supprimer le jeu",
+ "photos.stacks.group": "Regrouper en pile",
+ "photos.stacks.ungroup": "Degrouper",
+ "photos.stacks.expand": "Deployer la pile",
+ "photos.stacks.collapse": "Replier la pile"
 }
