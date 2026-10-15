@@ -6,6 +6,7 @@ import {Menu,MenuTrigger,MenuContent,MenuItem,MenuSubmenu,MenuSubmenuTrigger} fr
 import {useAnimationState} from '../../lib/animation/session';
 import {timingPlan,TIMING_MODES,FRAME_MODES,SIGNED_MODES,MAX_STAGGER_FRAMES,type TimingMode} from '../../lib/animation/layerTiming';
 import {executeCommand} from '../../lib/commands';
+import {poseId} from '../../lib/animation/poseModel';
 import type {Composition} from '../../lib/animation/model';
 /** The commands take at most 50 layers, so "all" stops there. */
 const MAX_PICK=50;
@@ -36,7 +37,7 @@ const byKey=(k:string)=>groups.find(g=>g.key===k)!;
 const tree:{key:string;items?:RigItem[];children?:{key:string;items:RigItem[]}[]}[]=[byKey('hierarchy'),byKey('layers'),{key:'arrange',children:['order','align','fit','match'].map(byKey)},{key:'appearance',children:['reset','fade'].map(byKey)},byKey('state')];
 /** Left-panel section: tick layers, then chain them, group them under a control null, or release their parents. Tick order is the chain order. */
 export function RigPanel({comp}:{comp:Composition}){
- const {t}=useT();const [ticked,setTicked]=useState<string[]>([]);const poses=useAnimationState().doc?.poses?.items??[];const [pose,setPose]=useState('');const [naming,setNaming]=useState(false);const [pname,setPname]=useState('');
+ const {t}=useT();const [ticked,setTicked]=useState<string[]>([]);const poses=useAnimationState().doc?.poses?.items??[];const [pose,setPose]=useState('');const [naming,setNaming]=useState(false);const [pname,setPname]=useState('');const [pamount,setPamount]=useState('100');const [pkeys,setPkeys]=useState(false);const amountOk=Number.isInteger(Number(pamount))&&Number(pamount)>=1&&Number(pamount)<=100&&pamount.trim()!=='';const applyPose=async(id:string)=>{try{await executeCommand('animation.pose.apply',{id,keys:pkeys,amount:Number(pamount)});}catch{/* the command reports expected problems */}};
  const ids=ticked.filter(id=>comp.layers.some(l=>l.id===id));
  const toggle=(id:string)=>setTicked(ids.includes(id)?ids.filter(x=>x!==id):[...ids,id]);
  const subGroup=(g:{key:string;items:RigItem[]})=><MenuSubmenu key={g.key}><MenuSubmenuTrigger className="menu-item" data-testid={`animation-rig-group-${g.key}`}>{t(`animation.rig.group.${g.key}`)}<span aria-hidden="true">›</span></MenuSubmenuTrigger>
@@ -58,12 +59,15 @@ export function RigPanel({comp}:{comp:Composition}){
     <NativeInput className="h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text" type="number" min={0} max={60} step={1} value={follow} aria-label={t('animation.rig.followFrames')} onChange={e=>setFollow(e.target.value)} data-testid="animation-rig-follow-frames"/></div>
   </div>
   <div className="grid min-w-0 gap-1" role="group" aria-label={t('animation.pose.title')} data-testid="animation-pose">
-   <NativeSelect className="h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink" value={pose} disabled={!poses.length} aria-label={t('animation.pose.title')} onChange={async e=>{const v=e.target.value;setPose(v);if(v)try{await executeCommand('animation.pose.apply',{id:v});}catch{/* the command reports expected problems */}}} data-testid="animation-pose-pick">
+   <NativeSelect className="h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink" value={pose} disabled={!poses.length} aria-label={t('animation.pose.title')} onChange={async e=>{const v=e.target.value;setPose(v);if(v&&amountOk)await applyPose(v);}} data-testid="animation-pose-pick">
     <option value="">{poses.length?t('animation.pose.pick'):t('animation.pose.none')}</option>{poses.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</NativeSelect>
+   {poses.length>0&&<div className="flex min-w-0 flex-wrap items-center gap-2 text-ink-3"><label className="flex items-center gap-1">{t('animation.pose.amount')}<NativeInput className="h-8 w-16 min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text" type="number" min={1} max={100} step={1} value={pamount} onChange={e=>setPamount(e.target.value)} data-testid="animation-pose-amount"/></label>
+    <label className="flex items-center gap-1"><NativeInput type="checkbox" className="animation-checkbox" checked={pkeys} onChange={e=>setPkeys(e.target.checked)} data-testid="animation-pose-keys"/>{t('animation.pose.keys')}</label></div>}
    <div className="flex min-w-0 flex-wrap items-center gap-1">
     {naming?<><NativeInput className="h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text" type="text" maxLength={40} value={pname} placeholder={t('animation.pose.name')} aria-label={t('animation.pose.name')} onChange={e=>setPname(e.target.value)} data-testid="animation-pose-name"/>
-     <Button size="tiny" variant="ghost" disabled={!pname.trim()||ids.length<1} onClick={async()=>{try{const id=await executeCommand('animation.pose.save',{name:pname,layers:ids});setPose(typeof id==='string'?id:'');setNaming(false);setPname('');}catch{/* expected problems stay in the command result */}}} data-testid="animation-pose-save-go">{t('animation.pose.saveGo')}</Button></>
+     <Button size="tiny" variant="ghost" disabled={!pname.trim()||ids.length<1} onClick={async()=>{try{await executeCommand('animation.pose.save',{name:pname,layers:ids});setPose(poseId(pname));setNaming(false);setPname('');}catch{/* expected problems stay in the command result */}}} data-testid="animation-pose-save-go">{t('animation.pose.saveGo')}</Button></>
      :<Button size="tiny" variant="ghost" disabled={ids.length<1} onClick={()=>setNaming(true)} data-testid="animation-pose-save">{t('animation.pose.save')}</Button>}
+    {pose&&!naming&&<Button size="tiny" variant="ghost" disabled={!amountOk} onClick={()=>void applyPose(pose)} data-testid="animation-pose-apply">{t('animation.pose.apply')}</Button>}
     {pose&&!naming&&<Button size="tiny" variant="ghost" onClick={async()=>{try{await executeCommand('animation.pose.delete',{id:pose});setPose('');}catch{/* gone already */}}} data-testid="animation-pose-delete">{t('animation.pose.delete')}</Button>}
    </div>
   </div>

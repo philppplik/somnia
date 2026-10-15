@@ -1082,5 +1082,8 @@
  "animation.pose.delete": "Pose löschen",
  "cmd.animation.pose.save": "Pose der Ebenen speichern",
  "cmd.animation.pose.apply": "Gespeicherte Pose anwenden",
- "cmd.animation.pose.delete": "Gespeicherte Pose löschen"
+ "cmd.animation.pose.delete": "Gespeicherte Pose löschen",
+ "animation.pose.amount": "Stärke (%)",
+ "animation.pose.keys": "Keys setzen",
+ "animation.pose.apply": "Pose anwenden"
 }

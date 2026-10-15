@@ -998,3 +998,22 @@ test('P218 pose library: save by ticked layers, apply at the playhead in one und
  s.undo();assert.equal(s.document!.poses!.items.length,MAX_POSES);
  assert.ok(validatePoseLib({version:2,items:[]}).length);assert.ok(validatePoseLib({version:1,items:[{id:'a',name:'a',layers:[{layer:'x'}]}]}).length);assert.ok(validatePoseLib({version:1,items:[{id:'a',name:'a',layers:[{layer:'x',opacity:101}]}]}).length);assert.deepEqual(validatePoseLib(undefined),[]);
 });
+
+test('P219 pose apply: set keys on static and animated props, blend by amount, validation, one undo step',async()=>{
+ const {poseSpecs,blend}=await import('./poseCommands');const {evaluate}=await import('./interpolate');
+ const run=(i:number,p?:unknown)=>poseSpecs()[i].run(p) as unknown;
+ assert.equal(blend(10,20,50),15);assert.deepEqual(blend([0,100],[100,0],25),[25,75]);assert.equal(blend(5,9,100),9);
+ const s=open();setAnimationSession(s);s.setView({playhead:0});s.dispatch({type:'layer.add',kind:'shape',id:'b'});
+ const L=()=>findComp(s.document!).layers.find(l=>l.id==='b')!;
+ s.dispatch({type:'prop.set',layer:'b',prop:'position',value:[100,0],t:0});s.dispatch({type:'prop.set',layer:'b',prop:'rotation',value:40,t:0});
+ run(0,{name:'A',layers:['b']});
+ s.dispatch({type:'prop.set',layer:'b',prop:'position',value:[0,0],t:0});s.dispatch({type:'prop.set',layer:'b',prop:'rotation',value:0,t:0});
+ run(1,{id:'a',amount:50});assert.deepEqual(evaluate(L().transform.position,0),[50,0]);assert.equal(evaluate(L().transform.rotation,0),20);assert.equal(L().transform.position.keys.length,0);
+ s.undo();assert.deepEqual(evaluate(L().transform.position,0),[0,0]);
+ s.setView({playhead:f(10)});run(1,{id:'a',keys:true});assert.equal(L().transform.position.keys.length,1);assert.equal(L().transform.position.keys[0].t,f(10));assert.deepEqual(L().transform.position.keys[0].v,[100,0]);assert.equal(L().transform.rotation.keys.length,1);assert.equal(L().transform.opacity.keys.length,1);
+ s.undo();assert.equal(L().transform.position.keys.length,0);assert.equal(L().transform.opacity.keys.length,0);
+ s.setView({playhead:0});run(1,{id:'a',keys:true});s.setView({playhead:f(10)});s.dispatch({type:'prop.set',layer:'b',prop:'position',value:[5,5],t:f(10)});run(1,{id:'a',keys:true,amount:100});
+ assert.equal(L().transform.position.keys.length,2);assert.deepEqual(L().transform.position.keys[1].v,[100,0]);
+ assert.throws(()=>run(1,{id:'a',keys:true}),(e:any)=>/already match/.test(e.message));
+ for(const bad of [0,101,2.5])assert.throws(()=>run(1,{id:'a',amount:bad}),(e:any)=>e.expected===true);
+});

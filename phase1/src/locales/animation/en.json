@@ -1082,5 +1082,8 @@
  "animation.pose.delete": "Delete pose",
  "cmd.animation.pose.save": "Save the layers’ pose",
  "cmd.animation.pose.apply": "Apply a saved pose",
- "cmd.animation.pose.delete": "Delete a saved pose"
+ "cmd.animation.pose.delete": "Delete a saved pose",
+ "animation.pose.amount": "Amount (%)",
+ "animation.pose.keys": "Set keys",
+ "animation.pose.apply": "Apply pose"
 }

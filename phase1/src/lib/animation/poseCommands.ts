@@ -4,10 +4,14 @@ import {findComp,findLayer,type PropValue} from './model';
 import {EditError,type Edit} from './edit';
 import {layerSetIds} from './layerSet';
 import {evaluate} from './interpolate';
+import {snapToFrame} from './time';
 import {MAX_POSES,MAX_POSE_LAYERS,MAX_POSE_NAME,POSE_PROPS,poseId,type PoseLayer,type PoseSet} from './poseModel';
 /** Pose library: the transform (position, scale, rotation, opacity) of several layers at the playhead, saved by name in the document and applied back later. Own file so the big command array keeps cheap type inference. */
 const expected=(m:string):never=>{throw Object.assign(new Error(m),{expected:true});};
 const same=(a:PropValue,b:PropValue)=>typeof a==='number'||typeof b==='number'?a===b:a[0]===b[0]&&a[1]===b[1];
+const round=(n:number)=>Math.round(n*100)/100;
+/** Value `amount` percent of the way from `cur` to `goal`. */
+export const blend=(cur:PropValue,goal:PropValue,amount:number):PropValue=>typeof cur==='number'&&typeof goal==='number'?round(cur+(goal-cur)*amount/100):[round(cur[0]+(goal[0]-cur[0])*amount/100),round(cur[1]+(goal[1]-cur[1])*amount/100)] as PropValue;
 const dispatch=(e:Edit|Edit[])=>{try{animationSession().dispatch(e);}catch(x){if(x instanceof EditError)throw Object.assign(x,{expected:true});throw x;}};
 const idsParam={type:'array',items:{type:'string',minLength:1,maxLength:200},minItems:1,maxItems:MAX_POSE_LAYERS};
 export const poseSpecs=():CommandSpec<unknown,unknown>[]=>[
@@ -26,14 +30,19 @@ export const poseSpecs=():CommandSpec<unknown,unknown>[]=>[
    dispatch({type:'poses.set',items:i<0?[...cur,pose]:cur.map((x,j)=>j===i?pose:x)});return pose.id;
   }) as (p:unknown)=>unknown},
  {id:'animation.pose.apply',title:'Apply a saved pose',category:'Edit',level:'ui',keywords:['animation','pose','apply','library','rig','transform'],
-  params:{type:'object',properties:{id:{type:'string',minLength:1,maxLength:80}},required:['id'],additionalProperties:false},
+  params:{type:'object',properties:{id:{type:'string',minLength:1,maxLength:80},keys:{type:'boolean'},amount:{type:'integer',minimum:1,maximum:100}},required:['id'],additionalProperties:false},
   enabled:()=>!!animationSession().document?.poses?.items.length,
-  run:((p:{id:string})=>{
+  run:((p:{id:string;keys?:boolean;amount?:number})=>{
    const s=animationSession(),d=s.document,c=d?findComp(d):undefined;if(!d||!c)return expected('No composition is open.');
    const pose=d.poses?.items.find(x=>x.id===p?.id);if(!pose)return expected('Unknown pose.');
-   const t=s.getState().view.playhead,edits:Edit[]=[];let found=0,locked=0;
+   const amount=p.amount??100;if(!Number.isInteger(amount)||amount<1||amount>100)return expected('The amount must be a whole number from 1 to 100 percent.');
+   const t=s.getState().view.playhead,tk=snapToFrame(t,c.fps),edits:Edit[]=[];let found=0,locked=0;
    for(const e of pose.layers){const l=findLayer(c,e.layer);if(!l||l.kind==='audio')continue;found++;if(l.locked){locked++;continue;}
-    for(const k of POSE_PROPS){const v=e[k] as PropValue|undefined;if(v!==undefined&&!same(evaluate(l.transform[k],t),v))edits.push({type:'prop.set',layer:l.id,prop:k,value:v,t});}}
+    for(const k of POSE_PROPS){const goal=e[k] as PropValue|undefined;if(goal===undefined)continue;const pr=l.transform[k],cur=evaluate(pr,t);
+     const v=amount===100?goal:blend(cur,goal,amount);const hasKey=pr.keys.some(x=>x.t===tk);
+     if(same(cur,v)&&!(p.keys&&!hasKey))continue;
+     if(p.keys&&!pr.keys.length)edits.push({type:'key.add',layer:l.id,prop:k,t});
+     edits.push({type:'prop.set',layer:l.id,prop:k,value:v,t});}}
    if(!found)return expected('None of the pose\u2019s layers exist in this composition any more.');
    if(!edits.length)return expected(locked===found?'The pose\u2019s layers are locked.':'The layers already match this pose.');
    dispatch(edits);return {changed:edits.length,skippedLocked:locked};

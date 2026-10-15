@@ -1082,5 +1082,8 @@
  "animation.pose.delete": "Supprimer la pose",
  "cmd.animation.pose.save": "Enregistrer la pose des calques",
  "cmd.animation.pose.apply": "Appliquer une pose enregistrée",
- "cmd.animation.pose.delete": "Supprimer une pose enregistrée"
+ "cmd.animation.pose.delete": "Supprimer une pose enregistrée",
+ "animation.pose.amount": "Intensité (%)",
+ "animation.pose.keys": "Créer des clés",
+ "animation.pose.apply": "Appliquer la pose"
 }

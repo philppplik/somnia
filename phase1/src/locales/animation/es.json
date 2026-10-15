@@ -1082,5 +1082,8 @@
  "animation.pose.delete": "Eliminar pose",
  "cmd.animation.pose.save": "Guardar la pose de las capas",
  "cmd.animation.pose.apply": "Aplicar una pose guardada",
- "cmd.animation.pose.delete": "Eliminar una pose guardada"
+ "cmd.animation.pose.delete": "Eliminar una pose guardada",
+ "animation.pose.amount": "Cantidad (%)",
+ "animation.pose.keys": "Crear claves",
+ "animation.pose.apply": "Aplicar pose"
 }

@@ -1082,5 +1082,8 @@
  "animation.pose.delete": "Excluir pose",
  "cmd.animation.pose.save": "Salvar a pose das camadas",
  "cmd.animation.pose.apply": "Aplicar uma pose salva",
- "cmd.animation.pose.delete": "Excluir uma pose salva"
+ "cmd.animation.pose.delete": "Excluir uma pose salva",
+ "animation.pose.amount": "Quantidade (%)",
+ "animation.pose.keys": "Criar chaves",
+ "animation.pose.apply": "Aplicar pose"
 }
