@@ -35,7 +35,7 @@ type Drag=
  |{kind:'sel-rotate';center:Point;handle:Point;deg:number}
  |{kind:'pan';sx:number;sy:number;pan:Point}
  |{kind:'pen-handle';cur:Point};
-import {gridDelta,gridVisible,snapPointToGrid} from '../../lib/vectorstudio/grid';
+import {gridDelta,gridVisible,snapPointToGrid,snapValue} from '../../lib/vectorstudio/grid';
 import {snapMove} from '../../lib/vectorstudio/snap';
 const SHAPE_TOOLS:readonly string[]=['rect','ellipse','line','polygon','star'];
 const CORNERS:readonly [number,number][]=[[0,0],[1,0],[1,1],[0,1]];
@@ -106,11 +106,11 @@ export function VectorCanvas(){
   {const hit=hitText(pt,true);if(hit){selectText(hit);setDrag({kind:'text-move',id:hit,start:pt,dx:0,dy:0});return;}}
   if(!e.shiftKey){select([]);selectText(null);}setDrag({kind:'marquee',start:pt,cur:pt});};
  const onMove=(e:RPointerEvent<SVGSVGElement>)=>{
-  const raw=toDoc(e),pt=s.grid.snap&&(drag?.kind==='shape'||drag?.kind==='pen-handle'||(!drag&&s.tool==='pen'))?snapPointToGrid(raw,s.grid.size):raw;setHover(pt);if(!drag)return;
+  const raw=toDoc(e),pt=s.grid.snap&&!e.altKey&&(drag?.kind==='shape'||drag?.kind==='scale'||drag?.kind==='node'||drag?.kind==='pen-handle'||(!drag&&s.tool==='pen'))?snapPointToGrid(raw,s.grid.size):raw;setHover(pt);if(!drag)return;
   if(drag.kind==='pan'){setView(s.zoom,{x:drag.pan.x+e.clientX-drag.sx,y:drag.pan.y+e.clientY-drag.sy});return;}
   if(drag.kind==='sel-rotate'){setDrag({...drag,deg:angleAround(drag.center,drag.handle,pt,e.shiftKey)});return;}
   if(drag.kind==='text-rotate'){const base=(s.doc.texts??[]).find(t=>t.id===drag.id);if(base)setDrag({...drag,rotation:rotationFor({...base,rotation:0},pt,s.zoom,e.shiftKey)});return;}
-  if(drag.kind==='text-move'){setDrag({...drag,dx:pt.x-drag.start.x,dy:pt.y-drag.start.y});return;}
+  if(drag.kind==='text-move'){const t0=(s.doc.texts??[]).find(t=>t.id===drag.id),rx=raw.x-drag.start.x,ry=raw.y-drag.start.y;const g=s.grid.snap&&!e.altKey&&t0?{dx:snapValue(t0.x+rx,s.grid.size)-t0.x,dy:snapValue(t0.y+ry,s.grid.size)-t0.y}:null;setDrag({...drag,dx:g?g.dx:rx,dy:g?g.dy:ry});return;}
   if(drag.kind==='move'){const snap=e.shiftKey?Math.abs(pt.x-drag.start.x)>Math.abs(pt.y-drag.start.y):null;
    const rx=snap===false?0:pt.x-drag.start.x,ry=snap===true?0:pt.y-drag.start.y;
    const base=boxOf(selected);
