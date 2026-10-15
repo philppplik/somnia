@@ -3,7 +3,7 @@ import {commandDispatcher} from '../../lib/commandDispatcher';
 import {getVideoSession} from '../../lib/video/session';
 import {getMedia,useMedia} from '../../lib/media';
 import {useVideoSession} from '../../lib/video/session';
-import {clipDuration,clipRanges,fadeOf,MAX_GAIN,timelineDuration} from '../../lib/video/timeline';
+import {clipDuration,clipRanges,fadeOf,MAX_GAIN,timelineDuration,CLIP_TRANSITIONS,transitionOf,type ClipTransition} from '../../lib/video/timeline';
 import {clipDisplayName,isTitleClip,needsSourceFile} from '../../lib/video/titles';
 import {formatTime} from '../../lib/video/recipe';
 import {executeCommand} from '../../lib/commands';
@@ -12,7 +12,7 @@ import {usePanelState} from '../../store/panelStateStore';
 import type {PanelHostProps,InspectorSectionProps} from '../../lib/shell/types';
 import {Button} from '../ui/button';
 import {TitleInspector} from './TitleInspector';
-import {NativeButton,NativeInput} from '../ui/native-controls';
+import {NativeButton,NativeInput,NativeSelect} from '../ui/native-controls';
 const field='h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text';
 const run=(id:string,params?:unknown)=>void executeCommand(id,params);
 function useActive(){const media=useMedia();const s=useVideoSession(media.active);return {media,s,selected:s?.clips.find(c=>c.id===s.selectedClipId),ready:s?.status==='ready'};}
@@ -82,6 +82,7 @@ export function VideoSelectionSection(_:InspectorSectionProps){
   </div>
  </fieldset>;
 }
+const TRANSITION_LABELS:Record<ClipTransition,string>={dissolve:'video.transitionKind.dissolve','wipe-l':'video.transitionKind.wipeL','wipe-r':'video.transitionKind.wipeR','wipe-t':'video.transitionKind.wipeT','wipe-b':'video.transitionKind.wipeB','slide-l':'video.transitionKind.slideL','slide-r':'video.transitionKind.slideR','slide-t':'video.transitionKind.slideT','slide-b':'video.transitionKind.slideB'};
 const getKind=(name:string)=>getMedia().items.find(i=>i.name===name)?.kind;
 export function VideoAudioSection(_:InspectorSectionProps){
  const {t}=useT();const {s,selected,ready}=useActive();if(!s||!selected)return null;
@@ -91,7 +92,10 @@ export function VideoAudioSection(_:InspectorSectionProps){
    <label className="grid gap-2">{t('video.gain',{percent:Math.round(selected.gain*100)})}<NativeInput type="range" className="w-full accent-[var(--accent)]" min={0} max={MAX_GAIN} step={0.05} value={selected.gain} onChange={e=>run('video.clip.gain',{gain:Number(e.target.value)})} data-testid="video-clip-gain"/></label>
    <label className="flex items-center gap-2"><NativeInput type="checkbox" className="!size-4 !w-4 accent-[var(--accent)]" checked={selected.muted} onChange={()=>run('video.clip.mute')} data-testid="video-clip-mute"/>{t('video.clipMute')}</label>
   </>}
-  {next?<label>{t('video.transition')}<NativeInput className={field} type="number" min={0} max={Math.min(clipDuration(selected),clipDuration(next))} step={0.1} value={fadeOf(selected)} onChange={e=>run('video.clip.crossfade',{seconds:Number(e.target.value)})} data-testid="video-clip-transition-duration"/></label>:<p className="m-0 text-ink-3">{t('video.shell.lastClip')}</p>}
+  {next?<>
+   <label>{t('video.transition')}<NativeInput className={field} type="number" min={0} max={Math.min(clipDuration(selected),clipDuration(next))} step={0.1} value={fadeOf(selected)} onChange={e=>run('video.clip.crossfade',{seconds:Number(e.target.value)})} data-testid="video-clip-transition-duration"/></label>
+   <label>{t('video.transitionStyle')}<NativeSelect className={field} value={transitionOf(selected)} onChange={e=>run('video.clip.transition',{transition:e.target.value as ClipTransition})} data-testid="video-clip-transition-style">{CLIP_TRANSITIONS.map(tr=><option key={tr} value={tr}>{t(TRANSITION_LABELS[tr])}</option>)}</NativeSelect></label>
+  </>:<p className="m-0 text-ink-3">{t('video.shell.lastClip')}</p>}
  </fieldset>;
 }
 export function VideoExportSection({reviewName}:InspectorSectionProps&{reviewName?:string}){

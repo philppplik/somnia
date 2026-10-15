@@ -4,7 +4,7 @@ import {VideoEngine,type VideoEngineLike} from './engine';
 import {DEFAULT_EXPORT_OPTIONS,DEFAULT_FORMAT,exportName,sanitizeExportOptions,type VideoExportOptions,type VideoFormat} from './recipe';
 import {LOWER_THIRD,CENTER_OVERLAY,newImageOverlay,newVideoOverlay,newTitleOverlay,overlaysAt as _overlaysAt,sanitizeOverlayClips,sanitizeRect,type OverlayClip,type OverlayRect} from './overlayTrack';
 import {cuesToTitleOverlays,parseSubtitles} from './subtitles';
-import {cropOf,fadeInOf,fadeOutOf,flipOf,hasCrop,rotationOf,CLIP_ROTATIONS,fullClip,isFreeze,IMAGE_DEFAULT_SECONDS,newClipId,MIN_CLIP_SECONDS as MIN_EXPORT_RANGE,sliceTimeline,type ClipCrop,type ClipFlip,type ClipRotation,isNeutralTimeline,moveClip,rippleDelete,sanitizeClips,setClipEdge,setClipFades,setClipSpeed,setCrossfade,speedOf,splitAt,timelineDuration,type TimelineClip} from './timeline';
+import {cropOf,fadeInOf,fadeOutOf,flipOf,hasCrop,rotationOf,CLIP_ROTATIONS,fullClip,isFreeze,IMAGE_DEFAULT_SECONDS,newClipId,MIN_CLIP_SECONDS as MIN_EXPORT_RANGE,sliceTimeline,type ClipCrop,type ClipFlip,type ClipRotation,type ClipTransition,isNeutralTimeline,moveClip,rippleDelete,sanitizeClips,setClipEdge,setClipFades,setClipSpeed,setCrossfade,setTransition,transitionOf,speedOf,splitAt,timelineDuration,type TimelineClip} from './timeline';
 import {emptyVideoHistory,pushHistory,redoHistory,undoHistory,type VideoHistory,type VideoSnapshot} from './history';
 import {audioTrackEnd,duplicateAudioClip,fullAudioClip,moveAudioClip,removeAudioClip,resizeAudioClip,sanitizeAudioClips,setAudioClipDuck,setAudioClipEdge,setAudioClipFades,setAudioClipGain,setAudioClipMuted,type AudioClip,sliceAudioClips} from './audioTrack';
 import {clipsSignature,parseVideoProject,projectFileName,serializeVideoProject} from './projectFile';
@@ -98,7 +98,7 @@ async function openVideoFresh(item:{name:string;url:string}):Promise<void>{
 }
 /** Field-level clip equality: a clamped no-op edit must not flood the undo stack. */
 const sameClips=(a:TimelineClip[],b:TimelineClip[])=>a.length===b.length&&a.every((c,i)=>{
- const d=b[i];return c.id===d.id&&c.source===d.source&&c.in_s===d.in_s&&c.out_s===d.out_s&&c.gain===d.gain&&c.muted===d.muted&&c.kind===d.kind&&c.crossfade_s===d.crossfade_s&&c.title===d.title&&flipOf(c)===flipOf(d)&&fadeInOf(c)===fadeInOf(d)&&fadeOutOf(c)===fadeOutOf(d)&&c.freeze===d.freeze&&rotationOf(c)===rotationOf(d)&&JSON.stringify(cropOf(c))===JSON.stringify(cropOf(d));
+ const d=b[i];return c.id===d.id&&c.source===d.source&&c.in_s===d.in_s&&c.out_s===d.out_s&&c.gain===d.gain&&c.muted===d.muted&&c.kind===d.kind&&c.crossfade_s===d.crossfade_s&&c.title===d.title&&flipOf(c)===flipOf(d)&&fadeInOf(c)===fadeInOf(d)&&fadeOutOf(c)===fadeOutOf(d)&&c.freeze===d.freeze&&rotationOf(c)===rotationOf(d)&&transitionOf(c)===transitionOf(d)&&JSON.stringify(cropOf(c))===JSON.stringify(cropOf(d));
 });
 /** Applies a timeline edit, keeps every clip inside its source bounds and records the previous state as one undo step. `historyKey` coalesces a continuous gesture (trim drag, gain slider, title typing) into a single step. */
 export function editTimeline(root:string,edit:(clips:TimelineClip[])=>TimelineClip[]|null,opts?:{historyKey?:string}){
@@ -307,6 +307,7 @@ export function deleteTimelineClip(root:string,id:string){
 export const moveTimelineClip=(root:string,id:string,by:number)=>editTimeline(root,clips=>{const i=clips.findIndex(c=>c.id===id);return i<0?clips:moveClip(clips,id,i+by);});
 export const trimTimelineClip=(root:string,id:string,edge:'in'|'out',at:number,historyKey?:string)=>editTimeline(root,clips=>setClipEdge(clips,id,edge,at),historyKey?{historyKey}:undefined);
 export const setTimelineClipCrossfade=(root:string,id:string,seconds:number,historyKey?:string)=>editTimeline(root,clips=>setCrossfade(clips,id,seconds),historyKey?{historyKey}:undefined);
+export const setTimelineClipTransition=(root:string,id:string,tr:ClipTransition)=>editTimeline(root,clips=>setTransition(clips,id,tr));
 export const setTimelineClipFades=(root:string,id:string,fadeIn:number,fadeOut:number,historyKey?:string)=>editTimeline(root,clips=>setClipFades(clips,id,fadeIn,fadeOut),historyKey?{historyKey}:undefined);
 /** Freezes a media clip on one source frame (default: its first frame); null unfreezes back to normal playback over the same timeline length. */
 export function setTimelineClipFreeze(root:string,id:string,frame:number|null){

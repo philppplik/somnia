@@ -9,7 +9,7 @@ import {TitlePreview} from './TitlePreview';
 import {useTitlePlayback} from './useTitlePlayback';
 import {FilmstripStrip} from './FilmstripStrip';
 import {WaveformStrip} from './WaveformStrip';
-import {blendAt,clipFadeGain,clipRanges,cropOf,flipOf,isFreeze,isImageClip,locate,rotationOf,speedOf,timelineDuration,type TimelineClip} from '../../lib/video/timeline';
+import {blendAt,clipFadeGain,clipRanges,cropOf,flipOf,isFreeze,isImageClip,locate,rotationOf,speedOf,timelineDuration,transitionOf,transitionVisual,type BlendEntry,type TimelineClip,type TransitionVisual} from '../../lib/video/timeline';
 import {shuttleFaster,shuttleSlower} from '../../lib/video/shuttle';
 import {audioClipDuration,audioEnvelope,audioTrackEnd,duckGainAt} from '../../lib/video/audioTrack';
 import {AudioLane} from './AudioLane';
@@ -69,6 +69,16 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
  const entry=clips.length?locate(clips,playhead):null;
  const blend=blendAt(clips,playhead);
  const main=blend.length?blend[blend.length-1]:null;
+ // Wipe/slide transition: during a crossfade the incoming clip is revealed by clip-path or offset instead of alpha.
+ const transition=blend.length===2&&main?transitionOf(blend[0].range.clip):'dissolve';
+ const transVisual=(e:BlendEntry):TransitionVisual|undefined=>main&&blend.length===2&&e.range.index===main.range.index&&transition!=='dissolve'?transitionVisual(transition,e.video,1,1):undefined;
+ // Title cards carry no element transform, so their transition is a plain CSS inset/translate (percent = stage box).
+ const transCss=(e:BlendEntry):CSSProperties|undefined=>{
+  const v=transVisual(e);if(!v)return undefined;
+  if(v.kind==='wipe'&&v.rect)return{clipPath:`inset(${v.rect.y*100}% ${(1-v.rect.x-v.rect.w)*100}% ${(1-v.rect.y-v.rect.h)*100}% ${v.rect.x*100}%)`};
+  if(v.kind==='slide')return{transform:`translate(${v.dx*100}%,${v.dy*100}%)`};
+  return undefined;
+ };
  const slotOf=(index:number)=>index%2===0?slotA:slotB;
  // Sources of clips that lost their media tab render as missing and block the export with a clear message.
  const missing=new Set(clips.filter(needsSourceFile).map(c=>c.source).filter((n:string)=>!media.items.some((i:MediaItem)=>i.name===n)));
@@ -97,17 +107,23 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
  // swapped box instead), mirroring applies inside the rotated frame. Uniform scale commutes with the rotate. A crop
  // zooms the remaining region back into the frame (outermost translate+scale, screen space) and clips the overflow
  // with an inverse-mapped polygon, so the preview shows the same contain-fitted region the export renders.
- const applyPreviewTransform=(el:HTMLElement,clip:TimelineClip)=>{
+ // A wipe/slide transition on the incoming clip composes here: slide is an outermost screen-space translate,
+ // wipe is a clip polygon - inverse-mapped like the crop when the clip itself is rotated/mirrored.
+ const applyPreviewTransform=(el:HTMLElement,clip:TimelineClip,trans?:TransitionVisual)=>{
   const f=flipOf(clip),r=rotationOf(clip),w=el.clientWidth,h=el.clientHeight;
   const cr=cropOf(clip),cropped=cr.left>0||cr.top>0||cr.right>0||cr.bottom>0;
-  if(!cropped){
+  const dx=(trans?.dx??0)*w,dy=(trans?.dy??0)*h;
+  const wipe=trans?.rect?{x0:trans.rect.x*w,y0:trans.rect.y*h,x1:(trans.rect.x+trans.rect.w)*w,y1:(trans.rect.y+trans.rect.h)*h}:null;
+  if(!cropped&&!(wipe&&(r!==0||f!=='none'))){
    const parts:string[]=[];
+   if(dx||dy)parts.push(`translate(${dx.toFixed(1)}px,${dy.toFixed(1)}px)`);
    if(r!==0){const sFit=r===180?1:(w>0&&h>0?Math.min(w/h,h/w):1);parts.push(`rotate(${r}deg)`,`scale(${sFit})`);}
    if(f!=='none')parts.push(`scale(${f.includes('h')?-1:1},${f.includes('v')?-1:1})`);
    const t=parts.join(' ');
    if(el.style.transformOrigin)el.style.transformOrigin='';
    if(el.style.transform!==t)el.style.transform=t;
-   if(el.style.clipPath)el.style.clipPath='';
+   const cp=wipe?`inset(${wipe.y0.toFixed(1)}px ${(w-wipe.x1).toFixed(1)}px ${(h-wipe.y1).toFixed(1)}px ${wipe.x0.toFixed(1)}px)`:'';
+   if(el.style.clipPath!==cp)el.style.clipPath=cp;
    return;
   }
   if(w<=0||h<=0)return;
@@ -116,6 +132,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
   const tx=(w-zs*rw)/2-zs*cr.left*w,ty=(h-zs*rh)/2-zs*cr.top*h;
   const centered=r!==0||f!=='none',sf=r===90||r===270?Math.min(w/h,h/w):1,cx=w/2,cy=h/2;
   const parts:string[]=[`translate(${tx}px,${ty}px)`,`scale(${zs})`];
+  if(dx||dy)parts.unshift(`translate(${dx.toFixed(1)}px,${dy.toFixed(1)}px)`);
   if(centered){
    parts.push(`translate(${cx}px,${cy}px)`);
    if(r!==0)parts.push(`rotate(${r}deg)`,`scale(${sf})`);
@@ -127,11 +144,11 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
   // Clip the frame box mapped back through the whole chain (keeps zoom overflow out of the letterbox bars).
   const rad=-r*Math.PI/180,cos=Math.cos(rad),sin=Math.sin(rad),fh=f.includes('h')?-1:1,fv=f.includes('v')?-1:1;
   const inv=(qx:number,qy:number):string=>{
-   let x=(qx-tx)/zs,y=(qy-ty)/zs;
+   let x=(qx-dx-tx)/zs,y=(qy-dy-ty)/zs;
    if(centered){x-=cx;y-=cy;if(r!==0){const x2=x*cos-y*sin,y2=x*sin+y*cos;x=x2/sf;y=y2/sf;}if(f!=='none'){x*=fh;y*=fv;}x+=cx;y+=cy;}
    return`${x.toFixed(2)}px ${y.toFixed(2)}px`;
   };
-  const cp=`polygon(${inv(0,0)},${inv(w,0)},${inv(w,h)},${inv(0,h)})`;
+  const cp=wipe?`polygon(${inv(wipe.x0,wipe.y0)},${inv(wipe.x1,wipe.y0)},${inv(wipe.x1,wipe.y1)},${inv(wipe.x0,wipe.y1)})`:`polygon(${inv(0,0)},${inv(w,0)},${inv(w,h)},${inv(0,h)})`;
   if(el.style.clipPath!==cp)el.style.clipPath=cp;
  };
  // Every active slot sits on its clip's source and frame. A paused transport (seek, frame step) always syncs the
@@ -142,7 +159,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
    const el=slotOf(e.range.index).current;if(!el)continue;
    const url=urlOf(e.range.clip.source);
    if(el.dataset.slotClip!==e.range.clip.id){el.dataset.slotClip=e.range.clip.id;if(el.src!==url){el.src=url;el.currentTime=e.sourceTime;}}
-   applyPreviewTransform(el,e.range.clip);
+   applyPreviewTransform(el,e.range.clip,transVisual(e));
    // Speed applies in the preview too; preservesPitch off so the preview sounds like the export (resampled, shifted pitch).
    el.playbackRate=speedOf(e.range.clip)*rateMul;el.preservesPitch=false;
    if(!playing||Math.abs(el.currentTime-e.sourceTime)>0.35)el.currentTime=e.sourceTime;
@@ -150,7 +167,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
   for(const e of blend){
    if(!isImageClip(e.range.clip))continue;
    const el=stageRef.current?.querySelector<HTMLImageElement>(`img[data-img-clip="${e.range.clip.id}"]`);if(!el)continue;
-   applyPreviewTransform(el,e.range.clip);
+   applyPreviewTransform(el,e.range.clip,transVisual(e));
   }
   for(const slot of [slotA,slotB]){
    const el=slot.current;
@@ -297,14 +314,14 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
      {!clips.length?<div className="grid justify-items-center gap-3 text-center text-[13px] text-white" data-testid="video-empty-timeline"><p>Your timeline is empty. Add clips to start editing.</p><Button variant="outline" onClick={()=>void addTimelineClipsFromDialog(item.name)}>Add video clips</Button></div>:playable&&blend.some(e=>needsSourceFile(e.range.clip)||isImageClip(e.range.clip))?[slotA,slotB].map((slot,idx)=>{
       const e=blend.find(x=>!isTitleClip(x.range.clip)&&!isImageClip(x.range.clip)&&(x.range.index%2)===idx);
       return <video key={idx} ref={slot} className="absolute inset-0 h-full w-full object-contain p-2" preload="auto"
-       style={{opacity:e?(main&&e.range.index===main.range.index?e.video:1):0,visibility:e?'visible':'hidden',zIndex:e&&main&&e.range.index===main.range.index?1:0,pointerEvents:'none'}}
+       style={{opacity:e?(main&&e.range.index===main.range.index?(transition!=='dissolve'?1:e.video):1):0,visibility:e?'visible':'hidden',zIndex:e&&main&&e.range.index===main.range.index?1:0,pointerEvents:'none'}}
        onTimeUpdate={onTime(idx)} onEnded={onTime(idx)} onError={()=>setPlayable(false)}
        data-testid={idx===0?'video-player':'video-player-b'} data-clip-id={e?.range.clip.id}/>;
      }):<p className="max-w-[420px] p-4 text-center text-[13px] text-ink-2" data-testid="video-nopreview">{t('video.noPreview',{ext:session?.ext??item.name.split('.').pop()??''})}</p>}
-     {playable&&blend.map(e=>isTitleClip(e.range.clip)?<div key={e.range.clip.id} className="absolute inset-0 flex items-center justify-center p-2" style={{opacity:main&&e.range.index===main.range.index?e.video:1,zIndex:main&&e.range.index===main.range.index?1:0,pointerEvents:'none'}}>
+     {playable&&blend.map(e=>isTitleClip(e.range.clip)?<div key={e.range.clip.id} className="absolute inset-0 flex items-center justify-center p-2" style={{opacity:main&&e.range.index===main.range.index?(transition!=='dissolve'?1:e.video):1,zIndex:main&&e.range.index===main.range.index?1:0,pointerEvents:'none',...transCss(e)}}>
       <TitlePreview clip={e.range.clip} time={e.sourceTime} aspect={(probe?.video?.width??16)/(probe?.video?.height??9)} label={clipDisplayName(e.range.clip,'Title')}/>
      </div>:null)}
-     {playable&&blend.map(e=>isImageClip(e.range.clip)?<img key={e.range.clip.id} src={urlOf(e.range.clip.source)} alt="" className="absolute inset-0 h-full w-full object-contain p-2" style={{opacity:main&&e.range.index===main.range.index?e.video:1,zIndex:main&&e.range.index===main.range.index?1:0,pointerEvents:'none'}} data-testid="video-image-preview" data-img-clip={e.range.clip.id}/>:null)}
+     {playable&&blend.map(e=>isImageClip(e.range.clip)?<img key={e.range.clip.id} src={urlOf(e.range.clip.source)} alt="" className="absolute inset-0 h-full w-full object-contain p-2" style={{opacity:main&&e.range.index===main.range.index?(transition!=='dissolve'?1:e.video):1,zIndex:main&&e.range.index===main.range.index?1:0,pointerEvents:'none'}} data-testid="video-image-preview" data-img-clip={e.range.clip.id}/>:null)}
      {playable&&overlaysAt(session?.overlayClips??[],playhead).map(o=>{
       const selOverlay=o.id===session?.selectedOverlayClipId;
       const beginDrag=(e:React.PointerEvent)=>{

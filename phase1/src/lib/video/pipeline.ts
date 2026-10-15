@@ -2,7 +2,7 @@
 import {ALL_FORMATS,AudioSample,AudioSampleSink,AudioSampleSource,BufferSource,BufferTarget,CanvasSink,CanvasSource,Input,Mp4OutputFormat,Output,QUALITY_HIGH,QUALITY_LOW,QUALITY_MEDIUM,WebMOutputFormat,getFirstEncodableAudioCodec,getFirstEncodableVideoCodec} from 'mediabunny';
 import type {AudioCodec,VideoCodec} from 'mediabunny';
 import {cappedFps,resolveOutputSize,sanitizeExportOptions,type VideoExportOptions,type VideoFormat} from './recipe';
-import {clipFadeGain,clipRanges,cropOf,fadeInOf,fadeOf,fadeOutOf,flipOf,hasCrop,isFreeze,isImageClip,rotationOf,speedOf,timelineDuration,type ClipRange,type ClipRotation,type TimelineClip} from './timeline';
+import {clipFadeGain,clipRanges,cropOf,fadeInOf,fadeOf,fadeOutOf,flipOf,hasCrop,isFreeze,isImageClip,rotationOf,speedOf,timelineDuration,transitionOf,transitionVisual,type ClipRange,type ClipRotation,type TimelineClip} from './timeline';
 import {audioEnvelope,duckGainAt,type AudioClip} from './audioTrack';
 import {WindowMixer} from './mixer';
 import {DEFAULT_TITLE,drawTitleCard,isTitleClip,needsSourceFile,type TitleClip} from './titles';
@@ -382,7 +382,11 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
      const[fa,fb]=await Promise.all([sideFrame(z.a,t),sideFrame(z.b,t)]);
      ctx.globalAlpha=1;ctx.fillStyle='#000';ctx.fillRect(0,0,outW,outH);
      if(fa){ctx.globalAlpha=1;drawClip(fa as CanvasImageSource,ra.clip);}
-     if(fb){ctx.globalAlpha=p;drawClip(fb as CanvasImageSource,rb.clip);}
+     // The outgoing clip's transition style picks the composite: dissolve = alpha, wipe = reveal rect, slide = offset.
+     const vis=transitionVisual(transitionOf(ra.clip),p,outW,outH);
+     if(fb&&vis.kind==='wipe'&&vis.rect){ctx.save();ctx.beginPath();ctx.rect(vis.rect.x,vis.rect.y,vis.rect.w,vis.rect.h);ctx.clip();ctx.globalAlpha=1;drawClip(fb as CanvasImageSource,rb.clip);ctx.restore();}
+     else if(fb&&vis.kind==='slide'){ctx.save();ctx.translate(vis.dx,vis.dy);ctx.globalAlpha=1;drawClip(fb as CanvasImageSource,rb.clip);ctx.restore();}
+     else if(fb){ctx.globalAlpha=p;drawClip(fb as CanvasImageSource,rb.clip);}
      ctx.globalAlpha=1;
      await drawOverlays(t);
      await videoSource.add(t,1/fps);

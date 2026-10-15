@@ -7,7 +7,7 @@ import {clampTitleSeconds,isTitleClip,splitTitleClip} from './titles';
  * Title clips (`kind:'title'`) carry no source: `in_s` stays 0 and `out_s` is the card duration.
  * Image clips (`kind:'image'`) reference a photo file: `in_s` stays 0, `out_s` is how long the still shows.
  */
-export interface TimelineClip{id:string;source:string;in_s:number;out_s:number;gain:number;muted:boolean;crossfade_s?:number;/** Freeze frame: source time (seconds) of the single held frame. Set = the clip is a freeze; it takes the still shape (in_s 0, out_s = display duration), has no audio and no speed. Absent = normal playback. */freeze?:number;/** Audio fade-in of a media clip, in timeline seconds. Absent/0 = none; titles and images carry no audio fades. */fadeIn?:number;/** Audio fade-out of a media clip, in timeline seconds. Absent/0 = none. */fadeOut?:number;/** Mirroring of the clip's picture (media and image clips). Absent = not flipped. */flip?:ClipFlip;/** Rotation of the clip's picture in degrees clockwise (media and image clips). Absent/0 = not rotated. */rotation?:ClipRotation;/** Crop of the clip's fitted frame: fractions cut from each edge, then the remaining region is contain-fitted back into the frame (media and image clips). Absent/all-zero = full picture. */crop?:ClipCrop;/** Playback speed of a media clip (timeline seconds = source seconds / speed). Absent = 1; title cards have no speed. */speed?:number;kind?:'media'|'title'|'image';title?:import('./titles').TitleSpec}
+export interface TimelineClip{id:string;source:string;in_s:number;out_s:number;gain:number;muted:boolean;crossfade_s?:number;/** Freeze frame: source time (seconds) of the single held frame. Set = the clip is a freeze; it takes the still shape (in_s 0, out_s = display duration), has no audio and no speed. Absent = normal playback. */freeze?:number;/** Audio fade-in of a media clip, in timeline seconds. Absent/0 = none; titles and images carry no audio fades. */fadeIn?:number;/** Audio fade-out of a media clip, in timeline seconds. Absent/0 = none. */fadeOut?:number;/** Mirroring of the clip's picture (media and image clips). Absent = not flipped. */flip?:ClipFlip;/** Rotation of the clip's picture in degrees clockwise (media and image clips). Absent/0 = not rotated. */rotation?:ClipRotation;/** Crop of the clip's fitted frame: fractions cut from each edge, then the remaining region is contain-fitted back into the frame (media and image clips). Absent/all-zero = full picture. */crop?:ClipCrop;/** Playback speed of a media clip (timeline seconds = source seconds / speed). Absent = 1; title cards have no speed. */speed?:number;/** Transition style of this clip's crossfade into the next clip (only visible while `crossfade_s` > 0). Absent = dissolve. */transition?:ClipTransition;kind?:'media'|'title'|'image';title?:import('./titles').TitleSpec}
 /** The shortest clip worth keeping; below it splits and trims only produce broken files. */
 export const MIN_CLIP_SECONDS=0.05;
 export const MAX_GAIN=2;
@@ -26,6 +26,26 @@ export const flipOf=(c:TimelineClip):ClipFlip=>CLIP_FLIPS.includes(c.flip as Cli
 export type ClipRotation=0|90|180|270;
 export const CLIP_ROTATIONS:readonly ClipRotation[]=[0,90,180,270];
 export const rotationOf=(c:TimelineClip):ClipRotation=>CLIP_ROTATIONS.includes(c.rotation as ClipRotation)?(c.rotation as ClipRotation):0;
+/** Transition style of a crossfade zone: dissolve (alpha blend), wipe (the incoming clip is revealed from one edge) or slide (the incoming clip moves in from one edge). The direction names the edge where the new picture first appears. */
+export type ClipTransition='dissolve'|'wipe-l'|'wipe-r'|'wipe-t'|'wipe-b'|'slide-l'|'slide-r'|'slide-t'|'slide-b';
+export const CLIP_TRANSITIONS:readonly ClipTransition[]=['dissolve','wipe-l','wipe-r','wipe-t','wipe-b','slide-l','slide-r','slide-t','slide-b'];
+export const transitionOf=(c:TimelineClip):ClipTransition=>CLIP_TRANSITIONS.includes(c.transition as ClipTransition)?(c.transition as ClipTransition):'dissolve';
+/** Geometry of a transition at progress p (0-1) on a w x h frame: dissolve = alpha only; wipe = reveal rect of the incoming clip; slide = its pixel offset. Pure - shared by export and preview. */
+export interface TransitionVisual{kind:'dissolve'|'wipe'|'slide';dx:number;dy:number;rect:{x:number;y:number;w:number;h:number}|null}
+export function transitionVisual(tr:ClipTransition,p:number,w:number,h:number):TransitionVisual{
+ const q=Math.min(1,Math.max(0,p));
+ switch(tr){
+  case'wipe-l':return{kind:'wipe',dx:0,dy:0,rect:{x:0,y:0,w:q*w,h}};
+  case'wipe-r':return{kind:'wipe',dx:0,dy:0,rect:{x:(1-q)*w,y:0,w:q*w,h}};
+  case'wipe-t':return{kind:'wipe',dx:0,dy:0,rect:{x:0,y:0,w,h:q*h}};
+  case'wipe-b':return{kind:'wipe',dx:0,dy:0,rect:{x:0,y:(1-q)*h,w,h:q*h}};
+  case'slide-l':return{kind:'slide',dx:-(1-q)*w,dy:0,rect:null};
+  case'slide-r':return{kind:'slide',dx:(1-q)*w,dy:0,rect:null};
+  case'slide-t':return{kind:'slide',dx:0,dy:-(1-q)*h,rect:null};
+  case'slide-b':return{kind:'slide',dx:0,dy:(1-q)*h,rect:null};
+  default:return{kind:'dissolve',dx:0,dy:0,rect:null};
+ }
+}
 /** Edge fractions cut from a clip's frame; an axis pair may remove at most 90% together. */
 export interface ClipCrop{left:number;top:number;right:number;bottom:number}
 const cropEdge=(v:unknown)=>typeof v==='number'&&Number.isFinite(v)?Math.min(0.9,Math.max(0,v)):0;
@@ -99,16 +119,18 @@ export const fullClip=(source:string,duration:number):TimelineClip=>({id:newClip
 /** A title card clip of a given duration; the timeline treats it like any other clip, the renderers draw the card. */
 /** Clamps every clip into its source duration, rounds to milliseconds and drops degenerate ranges. Fades clamp to both neighbours; the last clip never fades. */
 export function sanitizeClips(clips:TimelineClip[],durations:Record<string,number|undefined>):TimelineClip[]{
+ // Unknown styles and the default dissolve are dropped so the stored clip stays minimal.
+ const norm=(o:TimelineClip):TimelineClip=>{const tr=transitionOf(o);if(tr==='dissolve')delete o.transition;else o.transition=tr;return o;};
  const clean=clips.flatMap(c=>{
   // Clip shape only: the spec itself is sanitized where it is drawn, so a valid spec survives sanitation untouched.
-  if(isTitleClip(c)){const o:TimelineClip={...c,kind:'title' as const,source:'',in_s:0,out_s:clampTitleSeconds(c.out_s),gain:1,muted:false};delete o.fadeIn;delete o.fadeOut;delete o.rotation;delete o.crop;return[o];}
-  if(isImageClip(c)){const o:TimelineClip={...c,kind:'image' as const,in_s:0,out_s:clampTitleSeconds(c.out_s),gain:1,muted:false};delete o.fadeIn;delete o.fadeOut;if(rotationOf(o)===0)delete o.rotation;else o.rotation=rotationOf(o);if(hasCrop(o))o.crop=cropOf(o);else delete o.crop;return[o];}
+  if(isTitleClip(c)){const o:TimelineClip={...c,kind:'title' as const,source:'',in_s:0,out_s:clampTitleSeconds(c.out_s),gain:1,muted:false};delete o.fadeIn;delete o.fadeOut;delete o.rotation;delete o.crop;return[norm(o)];}
+  if(isImageClip(c)){const o:TimelineClip={...c,kind:'image' as const,in_s:0,out_s:clampTitleSeconds(c.out_s),gain:1,muted:false};delete o.fadeIn;delete o.fadeOut;if(rotationOf(o)===0)delete o.rotation;else o.rotation=rotationOf(o);if(hasCrop(o))o.crop=cropOf(o);else delete o.crop;return[norm(o)];}
   if(isFreeze(c)){
    const d=durations[c.source];
    const fr=d===undefined?Math.max(0,c.freeze!):Math.min(Math.max(0,c.freeze!),Math.max(0,d-MIN_CLIP_SECONDS));
    const o:TimelineClip={...c,in_s:0,out_s:clampTitleSeconds(c.in_s===0?c.out_s:c.out_s-c.in_s),gain:Math.min(MAX_GAIN,Math.max(0,typeof c.gain==='number'&&Number.isFinite(c.gain)?c.gain:1)),muted:!!c.muted,flip:flipOf(c)==='none'?undefined:flipOf(c),freeze:Number(fr.toFixed(3))};
    delete o.speed;delete o.fadeIn;delete o.fadeOut;if(rotationOf(o)===0)delete o.rotation;else o.rotation=rotationOf(o);if(hasCrop(o))o.crop=cropOf(o);else delete o.crop;
-   return[o];
+   return[norm(o)];
   }
   const d=durations[c.source];
   if(d===undefined)return[c];
@@ -118,7 +140,7 @@ export function sanitizeClips(clips:TimelineClip[],durations:Record<string,numbe
   const dur=(out_s-in_s)/speedOf(c),fI=Math.min(fadeInOf(c),dur),fO=Math.min(fadeOutOf(c),Math.max(0,dur-fI));
   const o:TimelineClip={...c,in_s:Number(in_s.toFixed(3)),out_s:Number(out_s.toFixed(3)),gain:Math.min(MAX_GAIN,Math.max(0,typeof c.gain==='number'&&Number.isFinite(c.gain)?c.gain:1)),muted:!!c.muted,speed:speedOf(c),flip:flipOf(c)==='none'?undefined:flipOf(c)};
   delete o.fadeIn;delete o.fadeOut;if(rotationOf(o)===0)delete o.rotation;else o.rotation=rotationOf(o);if(hasCrop(o))o.crop=cropOf(o);else delete o.crop;
-  return[{...o,...(fI>0?{fadeIn:Number(fI.toFixed(3))}:{}),...(fO>0?{fadeOut:Number(fO.toFixed(3))}:{})}];
+  return[norm({...o,...(fI>0?{fadeIn:Number(fI.toFixed(3))}:{}),...(fO>0?{fadeOut:Number(fO.toFixed(3))}:{})})];
  });
  return clean.map((c,i)=>{
   const max=i+1<clean.length?Math.min(clipDuration(c),clipDuration(clean[i+1])):0;
@@ -192,5 +214,7 @@ export function setCrossfade(clips:TimelineClip[],id:string,seconds:number):Time
  const fade=Number(Math.min(Math.max(0,Number.isFinite(seconds)?seconds:0),max).toFixed(3));
  return clips.map((c,j)=>j===i?{...c,crossfade_s:fade}:c);
 }
+/** Sets the transition style of a clip's crossfade into the next clip; 'dissolve' clears the field. */
+export const setTransition=(clips:TimelineClip[],id:string,tr:ClipTransition)=>clips.map(c=>{if(c.id!==id)return c;const o={...c};if(tr==='dissolve')delete o.transition;else o.transition=tr;return o;});
 /** Sets a clip's audio fades in timeline seconds; sanitize clamps them into the clip's length. */
 export const setClipFades=(clips:TimelineClip[],id:string,fadeIn:number,fadeOut:number)=>clips.map(c=>c.id===id?{...c,fadeIn,fadeOut}:c);
