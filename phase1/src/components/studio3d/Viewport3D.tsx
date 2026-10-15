@@ -1242,6 +1242,7 @@ export default function Viewport3D(){
   editSymmetrize:(axis,side,merge)=>{stage.editSymmetrize(axis,side,merge);patchEdit();invalidate();},
   editShrinkwrap:(target,offset)=>{stage.editShrinkwrap(target,offset);patchEdit();invalidate();},
    editExtrude:o=>{stage.editExtrude(o);afterEditOp();},
+   editExtrudeIndividual:offset=>{stage.editExtrudeIndividual(offset);patchEdit();invalidate();},
    editInset:a=>{stage.editInset(a);afterEditOp();},
    editBevel:w=>{stage.editBevel(w);afterEditOp();},
    editLoopCut:()=>{stage.editLoopCut();afterEditOp();},

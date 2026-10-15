@@ -61,6 +61,26 @@ export function extrudeFaces(m:MeshData,faces:number[],offset:number):MeshData{
  }
  const out={positions,index};check(out);return out;
 }
+/** Extrudes each selected face along its OWN normal: the face is replaced by its offset copy and every edge gets its own wall, so neighbouring selected faces grow apart instead of bridging. UVs, masks and explicit normals are dropped. */
+export function extrudeFacesIndividual(m:MeshData,faces:number[],offset:number):MeshData{
+ check(m);checkFaces(m,faces);
+ if(!Number.isFinite(offset)||offset===0||Math.abs(offset)>1e6)throw new EditError('The extrude distance must be a non-zero number.');
+ const sel=new Set(faces);
+ const positions=[...m.positions];
+ const index:number[]=[];
+ for(let f=0;f<m.index.length/3;f++){
+  const t=[m.index[f*3],m.index[f*3+1],m.index[f*3+2]];
+  if(!sel.has(f)){index.push(t[0],t[1],t[2]);continue;}
+  const n=faceNormal(m,f);
+  const d=t.map(v=>{const nv=positions.length/3;positions.push(m.positions[v*3]+n[0]*offset,m.positions[v*3+1]+n[1]*offset,m.positions[v*3+2]+n[2]*offset);return nv;});
+  index.push(d[0],d[1],d[2]);
+  for(let e=0;e<3;e++){
+   const A=t[e],B=t[(e+1)%3],A2=d[e],B2=d[(e+1)%3];
+   index.push(A,B,B2, A,B2,A2);
+  }
+ }
+ const out={positions,index};check(out);return out;
+}
 /** Insets each selected face toward its centroid, leaving a ring of quads around it. */
 export function insetFaces(m:MeshData,faces:number[],amount:number):MeshData{
  check(m);checkFaces(m,faces);

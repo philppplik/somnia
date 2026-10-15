@@ -1031,5 +1031,7 @@
  "studio3d.hist.moveEachToCursor_other": "{count} Objekte auf den 3D-Cursor setzen",
  "cmd.studio3d.object.randomizeTransform": "Position, Rotation und Skalierung von 3D-Objekten zufällig verwürfeln (mit Seed)",
  "studio3d.hist.randomizeTransform_one": "Transform von {count} Objekt verwürfeln",
- "studio3d.hist.randomizeTransform_other": "Transform von {count} Objekten verwürfeln"
+ "studio3d.hist.randomizeTransform_other": "Transform von {count} Objekten verwürfeln",
+ "cmd.studio3d.edit.extrudeIndividual": "Jede selektierte Face des bearbeiteten 3D-Mesh entlang ihrer eigenen Normale extrudieren",
+ "studio3d.hist.extrudeIndividual": "Faces einzeln extrudieren"
 }

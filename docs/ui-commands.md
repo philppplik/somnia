@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-953 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+954 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -723,6 +723,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `studio3d.edit.duplicate` | Duplicate selected faces as a detached shell | Edit | studio3d |  |
 | `studio3d.edit.end` | Finish editing | Edit | studio3d |  |
 | `studio3d.edit.extrude` | Extrude selection | Edit | studio3d |  |
+| `studio3d.edit.extrudeIndividual` | Extrude each selected face of the edited 3D mesh along its own normal | Edit | studio3d |  |
 | `studio3d.edit.fatten` | Move selected vertices along their normals | Edit | studio3d |  |
 | `studio3d.edit.fill` | Fill the selected closed edge loop with a centroid triangle fan | Edit | studio3d |  |
 | `studio3d.edit.flip` | Flip the normals of selected faces | Edit | studio3d |  |

@@ -1031,5 +1031,7 @@
  "studio3d.hist.moveEachToCursor_other": "Déplacer {count} objets sur le curseur 3D",
  "cmd.studio3d.object.randomizeTransform": "Randomiser position, rotation et échelle des objets 3D (avec graine)",
  "studio3d.hist.randomizeTransform_one": "Randomiser la transformation de {count} objet",
- "studio3d.hist.randomizeTransform_other": "Randomiser la transformation de {count} objets"
+ "studio3d.hist.randomizeTransform_other": "Randomiser la transformation de {count} objets",
+ "cmd.studio3d.edit.extrudeIndividual": "Extruder chaque face sélectionnée du maillage 3D édité le long de sa propre normale",
+ "studio3d.hist.extrudeIndividual": "Extruder les faces individuellement"
 }

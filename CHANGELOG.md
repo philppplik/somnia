@@ -1,4 +1,5 @@
 # Unreleased: 3D Studio P0
+- 3D Studio: edit mode extrudes each selected face along its own normal.
 - 3D Studio: objects scatter with a seeded random transform jitter.
 - 3D Studio: each selected object snaps its origin onto the 3D cursor.
 - 3D Studio: selected objects move so their combined centre lands on the 3D cursor.

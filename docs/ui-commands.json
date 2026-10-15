@@ -8509,6 +8509,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.edit.extrudeIndividual",
+      "title": "Extrude each selected face of the edited 3D mesh along its own normal",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.edit.fatten",
       "title": "Move selected vertices along their normals",
       "category": "Edit",
