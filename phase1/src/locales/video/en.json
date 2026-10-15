@@ -23,6 +23,8 @@
  "video.volume": "Volume",
  "video.mute": "Mute preview",
  "video.unmute": "Unmute preview",
+ "video.loop": "Loop preview",
+ "video.loopHint": "Repeat playback from the start when the end is reached",
  "video.timeline": "Timeline of {name}",
  "video.trimStart": "Start (s)",
  "video.trimEnd": "End (s)",

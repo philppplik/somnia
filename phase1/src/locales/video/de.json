@@ -23,6 +23,8 @@
  "video.volume": "Lautstärke",
  "video.mute": "Vorschau stummschalten",
  "video.unmute": "Vorschau-Ton an",
+ "video.loop": "Vorschau wiederholen",
+ "video.loopHint": "Wiedergabe am Ende automatisch von vorn starten",
  "video.timeline": "Timeline von {name}",
  "video.trimStart": "Start (s)",
  "video.trimEnd": "Ende (s)",

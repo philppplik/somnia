@@ -23,6 +23,8 @@
  "video.volume": "Volume",
  "video.mute": "Silenciar pré-visualização",
  "video.unmute": "Reativar som da pré-visualização",
+ "video.loop": "Reprodução em loop",
+ "video.loopHint": "Repetir a reprodução do início ao chegar ao fim",
  "video.timeline": "Linha do tempo de {name}",
  "video.trimStart": "Início (s)",
  "video.trimEnd": "Fim (s)",

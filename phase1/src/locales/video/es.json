@@ -23,6 +23,8 @@
  "video.volume": "Volumen",
  "video.mute": "Silenciar vista previa",
  "video.unmute": "Activar sonido de la vista previa",
+ "video.loop": "Bucle de vista previa",
+ "video.loopHint": "Repetir la reproducción desde el principio al llegar al final",
  "video.timeline": "Línea de tiempo de {name}",
  "video.trimStart": "Inicio (s)",
  "video.trimEnd": "Fin (s)",

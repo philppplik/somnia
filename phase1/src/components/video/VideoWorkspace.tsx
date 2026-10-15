@@ -1,5 +1,5 @@
 import {useCallback,useEffect,useRef,useState} from 'react';
-import {ChevronsLeft,ChevronsRight,Download,Pause,Play,Redo2,Scissors,Undo2,Volume2,VolumeX,ZoomIn,ZoomOut} from '../../lib/icons';
+import {ChevronsLeft,ChevronsRight,Download,Pause,Play,Redo2,RotateCcw,Scissors,Undo2,Volume2,VolumeX,ZoomIn,ZoomOut} from '../../lib/icons';
 import {Button} from '../ui/button';
 import {useT} from '../../lib/useT';
 import {executeCommand} from '../../lib/commands';
@@ -10,6 +10,7 @@ import {useTitlePlayback} from './useTitlePlayback';
 import {FilmstripStrip} from './FilmstripStrip';
 import {WaveformStrip} from './WaveformStrip';
 import {blendAt,clipRanges,flipOf,isImageClip,locate,speedOf,timelineDuration} from '../../lib/video/timeline';
+import {shuttleFaster,shuttleSlower} from '../../lib/video/shuttle';
 import {audioClipDuration,audioEnvelope,audioTrackEnd,duckGainAt} from '../../lib/video/audioTrack';
 import {AudioLane} from './AudioLane';
 import {snapPointsFor,zoomInStep,zoomOutStep} from '../../lib/video/zoom';
@@ -26,6 +27,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
  // Two slots, one per clip parity: consecutive clips always land in different elements, so a crossfade can play both at once.
  const slotA=useRef<HTMLVideoElement>(null),slotB=useRef<HTMLVideoElement>(null);
  const [playhead,setPlayhead]=useState(0),[playing,setPlaying]=useState(false),[muted,setMuted]=useState(false),[volume,setVolume]=useState(1);
+ const [loop,setLoop]=useState(false),[rateMul,setRateMul]=useState(1);
  const [playable,setPlayable]=useState(true);
  const [zoom,setZoom]=useState(1);
  const note=session?.exportOutcome?t(session.exportOutcome==='downloaded'?'video.downloaded':'video.review.'+session.exportOutcome):'';
@@ -80,14 +82,14 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
    if(el.dataset.slotClip!==e.range.clip.id){el.dataset.slotClip=e.range.clip.id;if(el.src!==url){el.src=url;el.currentTime=e.sourceTime;}}
    {const f=flipOf(e.range.clip),t=f==='none'?'':`scale(${f.includes('h')?-1:1},${f.includes('v')?-1:1})`;if(el.style.transform!==t)el.style.transform=t;}
    // Speed applies in the preview too; preservesPitch off so the preview sounds like the export (resampled, shifted pitch).
-   el.playbackRate=speedOf(e.range.clip);el.preservesPitch=false;
+   el.playbackRate=speedOf(e.range.clip)*rateMul;el.preservesPitch=false;
    if(!playing||Math.abs(el.currentTime-e.sourceTime)>0.35)el.currentTime=e.sourceTime;
   }
   for(const slot of [slotA,slotB]){
    const el=slot.current;
    if(el&&!blend.some(e=>slotOf(e.range.index)===slot))el.pause();
   }
- },[blend,media,playing]);
+ },[blend,media,playing,rateMul]);
  // Play/pause follows the transport for every slot that is part of the current blend.
  useEffect(()=>{
   for(const e of blend){
@@ -107,8 +109,9 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
  const advance=useCallback((fromIndex:number)=>{
   const next=ranges[fromIndex+1];
   if(next){setPlayhead(next.start+0.001);}
+  else if(loop){setPlayhead(0);}
   else{playingRef.current=false;setPlaying(false);setPlayhead(duration);}
- },[ranges,duration]);
+ },[ranges,duration,loop]);
  const pauseAll=useCallback(()=>{playingRef.current=false;setPlaying(false);slotA.current?.pause();slotB.current?.pause();},[]);
  const toggle=useCallback(()=>{
   if(playing){pauseAll();return;}
@@ -140,6 +143,9 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
   if(mod&&(e.key==='y'||e.key==='Y')){e.preventDefault();redoVideoEdit(item.name);return;}
   if(mod&&(e.key==='s'||e.key==='S')){e.preventDefault();saveVideoProject(item.name);return;}
   if(e.key===' '){e.preventDefault();toggle();}
+  else if(e.key==='k'||e.key==='K'){e.preventDefault();toggle();}
+  else if(e.key==='l'||e.key==='L'){e.preventDefault();if(playing)setRateMul(r=>shuttleFaster({rate:r,playing:true}).rate);else{setRateMul(1);toggle();}}
+  else if(e.key==='j'||e.key==='J'){e.preventDefault();if(playing){const n=shuttleSlower({rate:rateMul,playing:true});setRateMul(n.rate);if(!n.playing)pauseAll();}else step(-1);}
   else if(e.key==='ArrowRight'&&!e.altKey){e.preventDefault();seek(playhead+skip);}
   else if(e.key==='ArrowLeft'&&!e.altKey){e.preventDefault();seek(playhead-skip);}
   else if(e.key==='i'||e.key==='o'){e.preventDefault();const el=mainEl();if(entry)trimTimelineClip(item.name,entry.range.clip.id,e.key==='i'?'in':'out',el?el.currentTime:entry.sourceTime,`trim:${entry.range.clip.id}:${e.key==='i'?'in':'out'}`);}
@@ -156,7 +162,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
  };
  // Title cards and image clips have no <video>; this rAF clock plays through them and advances at the clip end.
  const stillMain=main&&(isTitleClip(main.range.clip)||isImageClip(main.range.clip))?main:null;
- useTitlePlayback({running:playing&&!!stillMain,from:playhead,limit:stillMain?.range.end??0,onTime:setPlayhead,onEnd:()=>{if(stillMain)advance(stillMain.range.index);}});
+ useTitlePlayback({running:playing&&!!stillMain,from:playhead,limit:stillMain?.range.end??0,rate:rateMul,onTime:setPlayhead,onEnd:()=>{if(stillMain)advance(stillMain.range.index);}});
  const filmstrip=getFilmstrip();
  const shortName=(n:string)=>n.replace(/^.*[\\/]/,'').replace(/\.[^.]+$/,'');
  const status=session?.status==='loading'?t('video.loading'):session?.status==='error'?t('video.error',{message:session.error}):'';
@@ -199,6 +205,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
      <span className="flex-1"/>
      <Button size="icon" variant="ghost" aria-label={t(muted?'video.unmute':'video.mute')} aria-pressed={muted} onClick={()=>setMuted(m=>!m)} data-testid="video-mute">{muted?<VolumeX size={16}/>:<Volume2 size={16}/>}</Button>
      <NativeInput type="range" className="w-20 accent-[var(--accent)]" min={0} max={1} step={0.05} value={volume} aria-label={t('video.volume')} onChange={e=>{const n=Number(e.target.value);setVolume(n);}} data-testid="video-volume"/>
+     <Button size="icon" variant="ghost" aria-label={t('video.loop')} aria-pressed={loop} title={t('video.loopHint')} onClick={()=>setLoop(v=>!v)} data-testid="video-loop"><RotateCcw size={16}/></Button>
      <span className="mx-1 h-4 w-px bg-subtle" aria-hidden="true"/>
      <Button size="icon" variant="ghost" aria-label={t('video.zoomOut')} disabled={zoom<=1} onClick={()=>setZoom(z=>zoomOutStep(z))} data-testid="video-zoom-out"><ZoomOut size={15}/></Button>
      <NativeInput type="range" className="w-20 accent-[var(--accent)]" min={1} max={20} step={0.5} value={zoom} aria-label={t('video.zoom')} aria-valuetext={t('video.zoomValue',{zoom:zoom.toFixed(1)})} onChange={e=>setZoom(Math.min(20,Math.max(1,Number(e.target.value))))} data-testid="video-zoom"/>

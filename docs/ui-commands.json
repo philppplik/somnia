@@ -12668,6 +12668,13 @@
       "hasEnabled": true
     },
     {
+      "id": "vector.copyStyle",
+      "title": "Copy vector style",
+      "category": "Edit",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
       "id": "vector.createBlank",
       "title": "New vector document",
       "category": "Project",
@@ -12803,6 +12810,13 @@
     {
       "id": "vector.outlineStroke",
       "title": "Outline vector stroke",
+      "category": "Edit",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
+      "id": "vector.pasteStyle",
+      "title": "Paste vector style",
       "category": "Edit",
       "source": "vector",
       "hasEnabled": true
