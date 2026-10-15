@@ -95,7 +95,7 @@ test('undo staging failure keeps deck and receipt state',async()=>{
 
 import {readFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
-import {readDeckDocument,serializeDeck,parseDeck,singleRunEditBytes} from './deckDocument';
+import {readDeckDocument,serializeDeck,parseDeck,singleRunEditBytes,sameSlideEditBytes} from './deckDocument';
 test('real deck: A to B changes exactly one run; same A and multi-run edits are refused by the engine port',()=>{
   const bytes=new Uint8Array(readFileSync(fileURLToPath(new URL('../../../slides-engine/fixtures/independent.pptx',import.meta.url))));
   const summary={slides:2,widthPt:720,heightPt:405} as never,doc=readDeckDocument(bytes,summary);
@@ -108,4 +108,20 @@ test('real deck: A to B changes exactly one run; same A and multi-run edits are 
   assert.throws(()=>singleRunEditBytes(bytes,summary,parseDeck(serializeDeck(two))),/exactly one/);
   const bad=structuredClone(one);bad.slides[0].texts.pop();
   assert.throws(()=>singleRunEditBytes(bytes,summary,parseDeck(serializeDeck(bad))),/read-only/);
+});
+test('real deck: reviewed multi-run edit is allowed on one slide only, bounded, structure read-only',()=>{
+  const bytes=new Uint8Array(readFileSync(fileURLToPath(new URL('../../../slides-engine/fixtures/independent.pptx',import.meta.url))));
+  const summary={slides:2,widthPt:720,heightPt:405} as never,doc=readDeckDocument(bytes,summary);
+  const two=structuredClone(doc);two.slides[0].texts[0].text='First';two.slides[0].texts[1].text='Second';
+  const out=sameSlideEditBytes(bytes,summary,parseDeck(serializeDeck(two))),after=readDeckDocument(out,summary);
+  assert.equal(after.slides[0].texts[0].text,'First');assert.equal(after.slides[0].texts[1].text,'Second');
+  assert.equal(JSON.stringify(after.slides[1]),JSON.stringify(doc.slides[1]));
+  const one=structuredClone(doc);one.slides[0].texts[0].text='Only one';
+  assert.equal(readDeckDocument(sameSlideEditBytes(bytes,summary,parseDeck(serializeDeck(one))),summary).slides[0].texts[0].text,'Only one');
+  const cross=structuredClone(two);cross.slides[1].texts[0].text='Other slide';
+  assert.throws(()=>sameSlideEditBytes(bytes,summary,parseDeck(serializeDeck(cross))),/one slide/);
+  assert.throws(()=>sameSlideEditBytes(bytes,summary,doc),/no change/);
+  const bad=structuredClone(two);bad.slides[0].texts.pop();
+  assert.throws(()=>sameSlideEditBytes(bytes,summary,parseDeck(serializeDeck(bad))),/read-only/);
+  assert.throws(()=>singleRunEditBytes(bytes,summary,parseDeck(serializeDeck(two))),/exactly one/);
 });

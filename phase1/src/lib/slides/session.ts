@@ -1,6 +1,6 @@
 import {presentationScale} from './presentKeyboard';
 import {reportError} from '../log';
-import {readDeckDocument,serializeDeck,parseDeck,editedDeckBytes,singleRunEditBytes} from './deckDocument';
+import {readDeckDocument,serializeDeck,parseDeck,editedDeckBytes,singleRunEditBytes,sameSlideEditBytes} from './deckDocument';
 import type {SlidesDiagnostics} from './diagnostics';
 import type {TextRun} from './editCopy';
 import type {LayoutInfo,DeckModel,BoundsBox,RunFormat,ShapeBoundsEdit,ArrangeMode,SlideTransition,ShapeStylePatch,TableEdit,ThemeEdit,SlideBackground,FooterEdit,SectionEdit} from './deckPackage';
@@ -209,9 +209,12 @@ function commitStaged(e:Entry,st:Staged,bytes:Uint8Array,history:Partial<SlidesS
 const renderOwner=(e:Entry)=>async()=>{await renderSlide(e,Math.min(Math.max(e.state.index,0),(e.state.summary?.slides??1)-1));if(e.state.error)throw Error(e.state.error);};
 const portOf=(e:Entry)=>({snapshot:()=>snap(e),setBusy:(on:boolean)=>patch(e,{busy:on,...(on?{error:''}:{})}),restoreNative:async(w:Uint8Array)=>{await e.client.open(w);},render:renderOwner(e),
  readback:()=>e.state.working&&e.state.summary?serializeDeck(readDeckDocument(e.state.working,e.state.summary)):null,fail:(m:string)=>patch(e,{error:m},m)});
-export function applyDeckReviewed(name:string,review:ReviewedApply,origin:string):Promise<DeckReceipt>{
+export function applyDeckReviewed(name:string,review:ReviewedApply,origin:string):Promise<DeckReceipt>{return applyReviewedScoped(name,review,origin,singleRunEditBytes);}
+/** Same owner path (one apply, one receipt, one undo step, same stale/busy/closed checks) for a reviewed edit of several runs on ONE slide, at most MAX_SLIDE_REVIEW_RUNS. */
+export function applyDeckReviewedSlide(name:string,review:ReviewedApply,origin:string):Promise<DeckReceipt>{return applyReviewedScoped(name,review,origin,sameSlideEditBytes);}
+function applyReviewedScoped(name:string,review:ReviewedApply,origin:string,build:typeof singleRunEditBytes):Promise<DeckReceipt>{
  const e=sessions.get(name);
- const port:DeckOwnerPort<Staged>|null=e?{...portOf(e),edit:(s,t)=>singleRunEditBytes(s.working!,e.state.summary!,parseDeck(t)),stage:b=>stageBytes(e,b),
+ const port:DeckOwnerPort<Staged>|null=e?{...portOf(e),edit:(s,t)=>build(s.working!,e.state.summary!,parseDeck(t)),stage:b=>stageBytes(e,b),
   commit:(st,before,after,_o)=>{const token=`r${++receiptSeq}`;const undo=bounded([...e.state.undo,before]);const kept=undo.at(-1)===before;const revision=commitStaged(e,st,after,{undo,redo:[]});e.last=kept?{token,before,after}:undefined;return {revision,token,undoable:kept};}}:null;
  if(!port)return Promise.reject(Error('Deck is not open.'));
  return applyReviewed(port,review,origin);
