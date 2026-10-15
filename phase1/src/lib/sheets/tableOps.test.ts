@@ -15,8 +15,14 @@ test('parsePivotCommand',()=>{
  for(const bad of [null,{},{kind:'create'},{kind:'create',rows:'a'},{kind:'create',rows:'a',values:' '},{kind:'create',rows:'a',columns:'a',values:'b'},{kind:'create',rows:'a',values:'b',func:'median'},{kind:'create',rows:'a\u0001',values:'b'},{kind:'create',rows:'a',values:'b',x:1},{kind:'refresh',rows:'a'}])assert.throws(()=>parsePivotCommand(bad),JSON.stringify(bad));
 });
 test('answers are parsed tolerantly',()=>{
- assert.deepEqual(parseTables({tables:[{name:'T',range:'A1:B3',header:true,totals:false,banded:true,style:'TableStyleLight1'},{name:1},null],styles:['TableStyleLight1','x']}),{tables:[{name:'T',range:'A1:B3',header:true,totals:false,banded:true,style:'TableStyleLight1'}],styles:['TableStyleLight1']});
+ assert.deepEqual(parseTables({tables:[{name:'T',range:'A1:B3',header:true,totals:false,banded:true,style:'TableStyleLight1'},{name:1},null],styles:['TableStyleLight1','x']}),{tables:[{name:'T',range:'A1:B3',header:true,totals:false,banded:true,bandedCols:false,firstCol:false,lastCol:false,style:'TableStyleLight1'}],styles:['TableStyleLight1']});
  assert.deepEqual(parseTables({tables:'x',styles:7}),{tables:[],styles:[]});
  assert.deepEqual(parsePivotFields({fields:[{name:'a',numeric:true},{name:2},null]}),[{name:'a',numeric:true}]);assert.deepEqual(parsePivotFields({fields:1}),[]);
  assert.equal(tableBlockProblem(2,1),null);assert.equal(tableBlockProblem(1,3),'small');assert.equal(tableBlockProblem(2_000_000,1),'large');
+});
+
+test('table style options parse like the other switches',()=>{
+ for(const k of ['bandedCols','firstCol','lastCol'] as const)assert.deepEqual(parseTableCommand({kind:k,table:' T ',on:true}),{kind:k,table:'T',on:true});
+ assert.throws(()=>parseTableCommand({kind:'firstCol',table:'T'}));assert.throws(()=>parseTableCommand({kind:'lastCol',table:'T',on:true,x:1}));
+ assert.deepEqual(parseTables({tables:[{name:'T',range:'A1:B3',firstCol:true,lastCol:1}],styles:[]}).tables[0],{name:'T',range:'A1:B3',header:false,totals:false,banded:false,bandedCols:false,firstCol:true,lastCol:false,style:''});
 });

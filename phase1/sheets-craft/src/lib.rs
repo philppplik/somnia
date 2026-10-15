@@ -1364,7 +1364,7 @@ impl HeadlessWorkbook {
             .tables
             .iter()
             .take(MAX_TABLES)
-            .map(|t| json!({"name": t.name, "range": t.range.a1(), "header": t.header_row, "totals": t.totals_row, "banded": t.banded_rows, "style": t.style}))
+            .map(|t| json!({"name": t.name, "range": t.range.a1(), "header": t.header_row, "totals": t.totals_row, "banded": t.banded_rows, "bandedCols": t.banded_cols, "firstCol": t.first_col, "lastCol": t.last_col, "style": t.style}))
             .collect();
         Ok(json!({"tables": tables, "styles": gridcraft_engine::tables::gallery()}).to_string())
     }
@@ -1386,7 +1386,7 @@ impl HeadlessWorkbook {
 
     /// Creates a table from the block, or changes one of this sheet's tables, as ONE history entry. `op_json` is
     /// `{"kind":"create","name"?:..,"style"?:..}` (the first row must hold text column names, so nothing moves),
-    /// `{"kind":"totals","table":..,"on":b}` (refused when the row below the table is not empty), `{"kind":"banded","table":..,"on":b}`,
+    /// `{"kind":"totals","table":..,"on":b}` (refused when the row below the table is not empty), `{"kind":"banded"|"bandedCols"|"firstCol"|"lastCol","table":..,"on":b}`,
     /// `{"kind":"style","table":..,"style":..}`, `{"kind":"rename","table":..,"newName":..}` or `{"kind":"convert","table":..}`
     /// (keeps the look as plain formatting). Protected sheets refused; styles come from the engine's gallery.
     pub fn table_op(&mut self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32, op_json: &str) -> Result<String, String> {
@@ -1493,6 +1493,9 @@ impl HeadlessWorkbook {
                 ("table.totalRow", json!({"table": table, "on": on}))
             }
             "banded" => ("table.bandedRows", json!({"table": table, "on": flag(&op)?})),
+            "bandedCols" => ("table.bandedColumns", json!({"table": table, "on": flag(&op)?})),
+            "firstCol" => ("table.firstColumn", json!({"table": table, "on": flag(&op)?})),
+            "lastCol" => ("table.lastColumn", json!({"table": table, "on": flag(&op)?})),
             "style" => {
                 let st = style_of(&op)?.ok_or("missing table style")?;
                 ("table.style", json!({"table": table, "style": st}))
@@ -6516,6 +6519,26 @@ mod tests {
         assert!(book.find_special(0, 800, 0, 3, 2, "invalidData").unwrap().contains("\"count\":0"), "no rule, nothing invalid");
         assert!(book.find_special(0, gridcraft_engine::core::MAX_ROWS - 1, 0, 5, 1, "blanks").is_err());
         assert!(book.find_special(7, 0, 0, 1, 1, "blanks").is_err(), "unknown sheet");
+    }
+    #[test]
+    fn table_style_options_switch_in_one_undo_step_each() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        book.set_values(0, 1200, 0, r#"[["name","n"],["a","1"],["b","2"]]"#).unwrap();
+        book.table_op(0, 1200, 0, 3, 2, r#"{"kind":"create","name":"Opts"}"#).unwrap();
+        let flag = |b: &HeadlessWorkbook, k: &str| -> bool {
+            let v: serde_json::Value = serde_json::from_str(&b.tables_info(0).unwrap()).unwrap();
+            v["tables"].as_array().unwrap().iter().find(|t| t["name"] == "Opts").unwrap()[k].as_bool().unwrap()
+        };
+        let steps = book.session.doc().unwrap().undo.len();
+        for k in ["bandedCols", "firstCol", "lastCol"] {
+            book.table_op(0, 1200, 0, 1, 1, &format!(r#"{{"kind":"{k}","table":"Opts","on":true}}"#)).unwrap();
+            assert!(flag(&book, k), "{k}");
+        }
+        assert_eq!(book.session.doc().unwrap().undo.len(), steps + 3);
+        book.undo().unwrap();
+        assert!(!flag(&book, "lastCol") && flag(&book, "firstCol"));
+        assert!(book.table_op(0, 1200, 0, 1, 1, r#"{"kind":"firstCol","table":"Opts"}"#).is_err(), "needs on");
+        assert!(book.table_op(0, 1200, 0, 1, 1, r#"{"kind":"firstCol","table":"Nope","on":true}"#).is_err());
     }
     #[test]
     fn validation_rules_are_listed_and_one_can_be_deleted_in_one_undo_step() {

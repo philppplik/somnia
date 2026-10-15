@@ -13,8 +13,8 @@ export interface SheetLayout{sheet:number;defaultColWidth:number;defaultRowHeigh
 export interface RangeResult{sheet:number;row:number;col:number;rows:number;cols:number;cells:RangeCell[]}
 /** Typed formatting operations; the Rust bridge keeps the same closed allowlist and re-validates every field. */
 /** Tables and a small PivotTable. Names come from the sheet's own first row; the Rust bridge re-validates everything. */
-export type TableOp={kind:'create';name?:string;style?:string}|{kind:'totals'|'banded';table:string;on:boolean}|{kind:'style';table:string;style:string}|{kind:'rename';table:string;newName:string}|{kind:'convert';table:string}|{kind:'resize';table:string};
-export interface TableInfo{name:string;range:string;header:boolean;totals:boolean;banded:boolean;style:string}
+export type TableOp={kind:'create';name?:string;style?:string}|{kind:'totals'|'banded'|'bandedCols'|'firstCol'|'lastCol';table:string;on:boolean}|{kind:'style';table:string;style:string}|{kind:'rename';table:string;newName:string}|{kind:'convert';table:string}|{kind:'resize';table:string};
+export interface TableInfo{name:string;range:string;header:boolean;totals:boolean;banded:boolean;bandedCols:boolean;firstCol:boolean;lastCol:boolean;style:string}
 export interface TablesInfo{tables:TableInfo[];styles:string[]}
 export type PivotFunc='sum'|'count'|'average'|'max'|'min';
 export type PivotOp={kind:'create';rows:string;columns?:string;values:string;func?:PivotFunc}|{kind:'refresh'};

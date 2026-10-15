@@ -16,7 +16,7 @@ export function parseTableCommand(input:unknown):TableOp{
  const style=(v:unknown)=>{if(typeof v!=='string'||!STYLE.test(v))throw Error('Unsupported table style.');return v;};
  switch(o.kind){
   case 'create':{only('kind','name','style');const out:TableOp={kind:'create'};if(o.name!==undefined){if(typeof o.name!=='string'||nameProblem(o.name.trim())==='length'||nameProblem(o.name.trim())==='chars')throw Error('Invalid table name.');out.name=o.name.trim();}if(o.style!==undefined)out.style=style(o.style);return out;}
-  case 'totals':case 'banded':only('kind','table','on');if(typeof o.on!=='boolean')throw Error('`on` must be true or false.');return {kind:o.kind,table:table(),on:o.on};
+  case 'totals':case 'banded':case 'bandedCols':case 'firstCol':case 'lastCol':only('kind','table','on');if(typeof o.on!=='boolean')throw Error('`on` must be true or false.');return {kind:o.kind,table:table(),on:o.on};
   case 'style':only('kind','table','style');return {kind:'style',table:table(),style:style(o.style)};
   case 'rename':{only('kind','table','newName');if(typeof o.newName!=='string'||nameProblem(o.newName.trim())!==null)throw Error('Invalid table name.');return {kind:'rename',table:table(),newName:o.newName.trim()};}
   case 'convert':case 'resize':only('kind','table');return {kind:o.kind,table:table()};
@@ -36,7 +36,7 @@ export function parsePivotCommand(input:unknown):PivotOp{
 }
 export function parseTables(raw:{tables:unknown;styles:unknown}):TablesInfo{
  const tables:TableInfo[]=[];
- if(Array.isArray(raw.tables))for(const t of raw.tables.slice(0,MAX_TABLES)){const r=t as Record<string,unknown>|null;if(r&&typeof r.name==='string'&&typeof r.range==='string')tables.push({name:r.name,range:r.range,header:r.header===true,totals:r.totals===true,banded:r.banded===true,style:typeof r.style==='string'?r.style:''});}
+ if(Array.isArray(raw.tables))for(const t of raw.tables.slice(0,MAX_TABLES)){const r=t as Record<string,unknown>|null;if(r&&typeof r.name==='string'&&typeof r.range==='string')tables.push({name:r.name,range:r.range,header:r.header===true,totals:r.totals===true,banded:r.banded===true,bandedCols:r.bandedCols===true,firstCol:r.firstCol===true,lastCol:r.lastCol===true,style:typeof r.style==='string'?r.style:''});}
  return {tables,styles:Array.isArray(raw.styles)?raw.styles.filter((s):s is string=>typeof s==='string'&&STYLE.test(s)).slice(0,100):[]};
 }
 export function parsePivotFields(raw:{fields:unknown}):PivotField[]{

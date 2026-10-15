@@ -311,7 +311,7 @@ function FilterGroup(){
  </div>;
 }
 /** Tables in one grouped menu: make a table from the selection, or change one of this sheet's tables. One undo step each. */
-type TableAction='create'|'totalsOn'|'totalsOff'|'bandedOn'|'bandedOff'|'style'|'rename'|'convert'|'resize';
+type TableAction='go'|'create'|'totalsOn'|'totalsOff'|'bandedOn'|'bandedOff'|'style'|'rename'|'convert'|'resize';
 function TablesGroup(){
  const {t}=useT(),s=useSheetsSelection(),action=useAction();const [act,setAct]=useState<TableAction>('create');const [pick,setPick]=useState('');const [name,setName]=useState('');const [style,setStyle]=useState('TableStyleMedium2');
  const r=s?.range;if(!s||!r)return null;
@@ -322,6 +322,7 @@ function TablesGroup(){
   if(creating)void action.run('sheets.table',{kind:'create',...(name.trim()?{name:name.trim()}:{}),style}).then(x=>{if(x!==null)setName('');});
   else if(chosen&&act==='style')void action.run('sheets.table',{kind:'style',table:chosen.name,style});
   else if(chosen&&act==='rename')void action.run('sheets.table',{kind:'rename',table:chosen.name,newName:name.trim()}).then(x=>{if(x!==null){setName('');setPick(name.trim());}});
+  else if(chosen&&act==='go')void action.run('sheets.navigate',{sheet:s.sheet,address:chosen.range});
   else if(chosen&&act==='convert')void action.run('sheets.table',{kind:'convert',table:chosen.name});
   else if(chosen&&act==='resize')void action.run('sheets.table',{kind:'resize',table:chosen.name});
   else if(chosen)void action.run('sheets.table',{kind:act.startsWith('totals')?'totals':'banded',table:chosen.name,on:act.endsWith('On')});
@@ -329,9 +330,13 @@ function TablesGroup(){
  return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.tb.title')}>
   <span>{t('sheets.tb.title')}</span>
   <label className="flex flex-col gap-1">{t('sheets.tb.existing')}<NativeSelect className={field} value={chosen?.name??''} disabled={action.busy||list.length===0} onChange={e=>setPick(e.currentTarget.value)} data-testid="sheets-tb-pick">{list.length===0&&<option value="">{t('sheets.tb.none')}</option>}{list.map(x=><option key={x.name} value={x.name}>{x.name} {x.range}</option>)}</NativeSelect></label>
+  {chosen&&<div className="flex flex-col gap-1" role="group" aria-label={t('sheets.tb.options')}>
+   <span className="text-ink-3">{t('sheets.tb.options')}</span>
+   {([['bandedCols',chosen.bandedCols],['firstCol',chosen.firstCol],['lastCol',chosen.lastCol]] as const).map(([k,on])=><Checkbox key={k} label={t('sheets.tb.opt.'+k)} checked={on} disabled={action.busy} onChange={e=>void action.run('sheets.table',{kind:k,table:chosen.name,on:e.currentTarget.checked})}/>)}
+  </div>}
   <label className="flex flex-col gap-1">{t('sheets.nm.action')}<NativeSelect className={field} value={act} disabled={action.busy} onChange={e=>setAct(e.currentTarget.value as TableAction)} data-testid="sheets-tb-action">
    <optgroup label={t('sheets.nm.groupSelection')}><option value="create">{t('sheets.tb.create')}</option></optgroup>
-   <optgroup label={t('sheets.tb.groupTable')}><option value="totalsOn">{t('sheets.tb.totalsOn')}</option><option value="totalsOff">{t('sheets.tb.totalsOff')}</option><option value="bandedOn">{t('sheets.tb.bandedOn')}</option><option value="bandedOff">{t('sheets.tb.bandedOff')}</option><option value="style">{t('sheets.tb.style')}</option><option value="rename">{t('sheets.tb.rename')}</option><option value="convert">{t('sheets.tb.convert')}</option><option value="resize">{t('sheets.tb.resize')}</option></optgroup>
+   <optgroup label={t('sheets.tb.groupTable')}><option value="go">{t('sheets.tb.go')}</option><option value="totalsOn">{t('sheets.tb.totalsOn')}</option><option value="totalsOff">{t('sheets.tb.totalsOff')}</option><option value="bandedOn">{t('sheets.tb.bandedOn')}</option><option value="bandedOff">{t('sheets.tb.bandedOff')}</option><option value="style">{t('sheets.tb.style')}</option><option value="rename">{t('sheets.tb.rename')}</option><option value="convert">{t('sheets.tb.convert')}</option><option value="resize">{t('sheets.tb.resize')}</option></optgroup>
   </NativeSelect></label>
   {(creating||act==='style')&&<label className="flex flex-col gap-1">{t('sheets.tb.styleName')}<NativeSelect className={field} value={style} disabled={action.busy} onChange={e=>setStyle(e.currentTarget.value)} data-testid="sheets-tb-style">{(styles.length?styles:[style]).map(x=><option key={x} value={x}>{x.replace('TableStyle','')}</option>)}</NativeSelect></label>}
   {naming&&<label className="flex flex-col gap-1">{creating?t('sheets.tb.nameOptional'):t('sheets.tb.newName')}<NativeInput className={field} value={name} maxLength={64} aria-invalid={nameBad} disabled={action.busy} onChange={e=>setName(e.currentTarget.value)} data-testid="sheets-tb-name"/></label>}
