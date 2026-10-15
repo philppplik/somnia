@@ -1,4 +1,5 @@
 import { escapeAttr } from './xml';
+import { gradientSvg, pruneGradients } from './gradient';
 import { fmt } from './matrix';
 import { serializeContour } from './serialize';
 import { DEFAULT_STYLE, type Style, type VectorDocument, type VectorPath } from './types';
@@ -34,10 +35,16 @@ export function exportSvg(doc: VectorDocument, opts: ExportOptions = {}): string
   const w = fmt(doc.width, 3), h = fmt(doc.height, 3);
   emit(0, `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">`);
 
+  const pruned = pruneGradients(doc);
+  if (pruned.gradients) {
+    emit(1, '<defs>');
+    for (const g of pruned.gradients) for (const l of gradientSvg(g)) emit(2, l);
+    emit(1, '</defs>');
+  }
   // merge compound subpaths into one element, keep paint order of the first subpath
   const elements: { p: VectorPath; d: string }[] = [];
   const byCompound = new Map<string, number>();
-  for (const p of doc.paths) {
+  for (const p of pruned.paths) {
     const d = serializeContour(p.nodes, p.closed);
     if (!d) continue;
     const ci = p.compound !== undefined ? byCompound.get(p.compound) : undefined;

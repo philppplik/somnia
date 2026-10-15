@@ -12795,6 +12795,13 @@
       "hasEnabled": true
     },
     {
+      "id": "vector.setGradient",
+      "title": "Set vector gradient fill",
+      "category": "Edit",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
       "id": "vector.setNodeKind",
       "title": "Set vector node kind",
       "category": "Edit",

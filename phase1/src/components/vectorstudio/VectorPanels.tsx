@@ -6,6 +6,8 @@ import {Button} from '../ui/button';
 import {Menu,MenuTrigger,MenuContent,MenuItem,MenuGroup,MenuGroupLabel,MenuSeparator} from '../ui/menu';
 import {ALIGN_MODES,ALIGN_TARGETS} from '../../lib/vectorstudio/transforms';
 import {BOOL_OPS} from '../../lib/vectorstudio/booleanOps';
+import {GRADIENT_KINDS,angleOf,hexOr} from '../../lib/vectorstudio/gradients';
+import {gradientIdOf} from '../../lib/vectorio';
 import {DASH_PRESETS,dashArrayFor,dashPresetOf} from '../../lib/vectorstudio/strokeStyle';
 import {useT} from '../../lib/useT';
 import {executeCommand} from '../../lib/commands';
@@ -48,9 +50,23 @@ export function VectorTransformSection(){const {t}=useT(),s=useVectorSession(),b
    <Button size="compact" onClick={()=>run('duplicateSelection')}>{t('vector.duplicate')}</Button><Button size="compact" onClick={()=>run('deleteSelection')}>{t('vector.shell.delete')}</Button></div>
  </div>;
 }
+function GradientControls(){
+ const {t}=useT(),s=useVectorSession(),first=s.doc.paths.find(p=>s.selection.includes(p.id));if(!first)return null;
+ const gid=gradientIdOf(first.style?.fill),g=gid?s.doc.gradients?.find(x=>x.id===gid):undefined,kind=g?g.kind:'none';
+ const hex=hexOr;
+ return <div className="grid gap-2" data-testid="vector-gradient">
+  <label className={row}>{t('vector.shell.gradient')}<NativeSelect className={field} value={kind} data-testid="vector-gradient-kind" onChange={e=>run('setGradient',{kind:e.target.value})}>{GRADIENT_KINDS.map(k=><option key={k} value={k}>{t('vector.shell.gradient.kind.'+k)}</option>)}</NativeSelect></label>
+  {g&&<div className="grid grid-cols-3 gap-2">
+   <label className={row}>{t('vector.shell.gradient.start')}<NativeInput className={field} type="color" key={'a'+g.id+g.stops[0].color} defaultValue={hex(g.stops[0].color)} onBlur={e=>{if(e.target.value.toLowerCase()!==hex(g.stops[0].color).toLowerCase())run('setGradient',{startColor:e.target.value});}}/></label>
+   <label className={row}>{t('vector.shell.gradient.end')}<NativeInput className={field} type="color" key={'b'+g.id+g.stops[g.stops.length-1].color} defaultValue={hex(g.stops[g.stops.length-1].color)} onBlur={e=>{if(e.target.value.toLowerCase()!==hex(g.stops[g.stops.length-1].color).toLowerCase())run('setGradient',{endColor:e.target.value});}}/></label>
+   {g.kind==='linear'&&<label className={row}>{t('vector.shell.gradient.angle')}<NativeInput className={field} type="number" min={0} max={360} step={15} key={'c'+g.id} defaultValue={angleOf(g)} onBlur={e=>{const n=Number(e.target.value);if(e.target.value!==''&&Number.isFinite(n)&&n>=0&&n<=360)run('setGradient',{angle:n});else e.target.value=String(angleOf(g));}}/></label>}
+  </div>}
+ </div>;
+}
 export function VectorStyleSection(){const {t}=useT(),s=useVectorSession();const first=s.doc.paths.find(p=>s.selection.includes(p.id));if(!first)return null;const style=first.style??{};
  return <div className="grid gap-2" data-testid="vector-shell-style"><p className="m-0 text-[11px] text-ink-3">{t('vector.shell.styleHint')}</p>
-  {(['fill','stroke'] as const).map(key=><label key={key} className={row}>{t('vector.'+key)}<div className="flex gap-1"><NativeInput className={field} key={key+style[key]} defaultValue={style[key]??(key==='fill'?'#000000':'none')} aria-label={t('vector.'+key)} onBlur={e=>{const v=e.target.value.trim();if(v==='none'||/^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(v))run('setStyle',{patch:{[key]:v}});else e.target.value=style[key]??'none';}} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();}}/><Button size="compact" onClick={()=>run('setStyle',{patch:{[key]:'none'}})}>{t('vector.none')}</Button></div></label>)}
+  {(['fill','stroke'] as const).map(key=><label key={key} className={row}>{t('vector.'+key)}<div className="flex gap-1"><NativeInput className={field} key={key+style[key]} defaultValue={key==='fill'&&gradientIdOf(style.fill)?t('vector.shell.gradient.kind.gradient'):style[key]??(key==='fill'?'#000000':'none')} aria-label={t('vector.'+key)} onBlur={e=>{const v=e.target.value.trim();if(v==='none'||/^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(v))run('setStyle',{patch:{[key]:v}});else e.target.value=style[key]??'none';}} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();}}/><Button size="compact" onClick={()=>run('setStyle',{patch:{[key]:'none'}})}>{t('vector.none')}</Button></div></label>)}
+  <GradientControls/>
   <div className="grid grid-cols-2 gap-2">{(['strokeWidth','opacity'] as const).map(key=><label className={row} key={key}>{t('vector.'+key)}<NativeInput className={field} key={key+style[key]} type="number" min={0} max={key==='opacity'?1:undefined} step={key==='opacity'?0.05:0.5} defaultValue={style[key]??1} onBlur={e=>{const n=Number(e.target.value);if(e.target.value!==''&&Number.isFinite(n)&&n>=0&&(key!=='opacity'||n<=1))run('setStyle',{patch:{[key]:n}});else e.target.value=String(style[key]??1);}}/></label>)}</div>
   {(['lineCap','lineJoin','fillRule'] as const).map(key=><label className={row} key={key}>{t('vector.shell.'+key)}<NativeSelect className={field} value={style[key]??(key==='lineCap'?'butt':key==='lineJoin'?'miter':'nonzero')} onChange={e=>run('setStyle',{patch:{[key]:e.target.value}})}>{(key==='lineCap'?['butt','round','square']:key==='lineJoin'?['miter','round','bevel']:['nonzero','evenodd']).map(v=><option key={v} value={v}>{t('vector.shell.option.'+v)}</option>)}</NativeSelect></label>)}
   <label className={row}>{t('vector.shell.dash')}<NativeSelect className={field} value={dashPresetOf(style.dashArray,style.strokeWidth??1)} onChange={e=>{if(e.target.value!=='custom')run('setStyle',{patch:{dashArray:dashArrayFor(e.target.value as never,style.strokeWidth??1)}});}}>{[...DASH_PRESETS,...(dashPresetOf(style.dashArray,style.strokeWidth??1)==='custom'?['custom' as const]:[])].map(v=><option key={v} value={v}>{t('vector.shell.dash.'+v)}</option>)}</NativeSelect></label>

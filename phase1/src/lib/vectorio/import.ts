@@ -2,6 +2,7 @@ import { arcToCubics, parsePathData, type Segment } from './pathData';
 import { isIdentity, multiply, parseTransform } from './matrix';
 import { normalizePaint } from './color';
 import { inferKind, r3 } from './nodes';
+import { createGradientResolver, isGradientElement, nodesBox } from './gradientImport';
 import { parseXml, XmlError, type XmlElement } from './xml';
 import { DEFAULT_STYLE, IDENTITY, LIMITS, type Diagnostic, type Matrix, type Point, type Style, type VectorDocument, type VectorNode, type VectorPath } from './types';
 
@@ -57,15 +58,19 @@ function declared(el: XmlElement, err: (m: string) => void): Record<string, stri
   return out;
 }
 
-function cascade(parent: Style, d: Record<string, string>, err: (m: string) => void): Style {
+function cascade(parent: Style, d: Record<string, string>, err: (m: string) => void, hasGradient: (id: string) => boolean): Style {
   const s: Style = { ...parent, dashArray: [...parent.dashArray], opacity: 1 };
   for (const key of ['fill', 'stroke'] as const) {
     const raw = d[key];
     if (raw === undefined || raw.trim() === 'inherit') continue;
     const p = normalizePaint(raw);
     if (p === null) err(`unsupported ${key} value "${raw}"`);
-    else if (p.startsWith('url(')) err(`${key} references ${p}: gradients and patterns are not supported`);
-    else s[key] = p;
+    else if (p.startsWith('url(')) {
+      const ref = /^url\(\s*#([^)\s]+)\s*\)/.exec(p)?.[1];
+      if (key === 'stroke') err(`stroke references ${p}: stroke gradients and patterns are not supported`);
+      else if (ref === undefined || !hasGradient(ref)) err(`fill references ${p}: only linear and radial gradients defined in the file are supported`);
+      else s[key] = `url(#${ref})`;
+    } else s[key] = p;
   }
   if (d['stroke-width'] !== undefined) s.strokeWidth = Math.max(0, length(d['stroke-width'], s.strokeWidth));
   s.fillOpacity = opacityOf(d['fill-opacity']) ?? s.fillOpacity;
@@ -210,6 +215,7 @@ export function importSvg(source: string, opts: ImportOptions = {}): ImportResul
   if (rootTf === null) bad(`malformed transform "${root.attrs.transform}"`);
   base = multiply(base, rootTf ?? IDENTITY);
 
+  const grads = createGradientResolver(root, bad, info);
   const paths: VectorPath[] = [];
   let nodeCount = 0, segCount = 0, idc = 0, compoundC = 0;
   const nextId = () => { if (++nodeCount > LIMITS.maxNodes) fail(`more than ${LIMITS.maxNodes} nodes`); return `n${++idc}`; };
@@ -231,7 +237,8 @@ export function importSvg(source: string, opts: ImportOptions = {}): ImportResul
     const name = stripNs(el.name);
     if (IGNORED_NO_RENDER.has(name)) return;
     if (!ALLOWED.has(name)) {
-      if (name === 'defs' && el.children.length === 0) return;
+      if (name === 'defs' && el.children.every(isGradientElement)) return; // gradients are read up front
+      if (isGradientElement(el)) return;
       bad(`<${name}> is not supported`);
       return;
     }
@@ -241,7 +248,7 @@ export function importSvg(source: string, opts: ImportOptions = {}): ImportResul
     const tf = parseTransform(el.attrs.transform);
     if (tf === null) bad(`malformed transform "${el.attrs.transform}"`);
     const world = multiply(m, tf ?? IDENTITY);
-    const style = cascade(parent, d, bad);
+    const style = cascade(parent, d, bad, grads.has);
     const label = el.attrs['inkscape:label'] ?? el.attrs['data-name'] ?? el.attrs.id;
     if (name === 'g' || name === 'svg') {
       if (name === 'svg' && depth > 0) { bad('nested <svg> is not supported'); return; }
@@ -288,6 +295,10 @@ export function importSvg(source: string, opts: ImportOptions = {}): ImportResul
     }
     if (groupOpacity !== 1) info('group opacity was multiplied into each child path (overlapping children may differ)');
     const compound = contours.length > 1 ? `c${++compoundC}` : undefined;
+    if (typeof st.fill === 'string' && st.fill.startsWith('url(#')) {
+      const ref = st.fill.slice(5, -1), resolved = grads.resolve(ref, world, nodesBox(contours));
+      if (resolved === null) st.fill = 'none'; else st.fill = `url(#${resolved})`;
+    }
     const baseName = label;
     for (const c of contours) {
       for (const n of c.nodes) {
@@ -312,5 +323,6 @@ export function importSvg(source: string, opts: ImportOptions = {}): ImportResul
     throw new SvgImportError(`Unsupported SVG: ${diags.filter((x) => x.severity === 'error').map((x) => x.message).join('; ')}`, diags);
   }
   const doc: VectorDocument = { width: r3(width), height: r3(height), paths };
+  if (grads.gradients.length) doc.gradients = grads.gradients;
   return { doc, warnings: diags.filter((x) => x.severity === 'warning') };
 }

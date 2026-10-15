@@ -1,7 +1,7 @@
 import {reportError} from '../log';
 /** Vector Studio session: one open vector document, selection, tool, view and undo history. Framework-agnostic store plus a React hook. */
 import {useSyncExternalStore} from 'react';
-import {exportSvg,importSvg,normalizeDoc,SvgImportError,type Diagnostic,type Point,type Style,type VectorDocument,type VectorPath} from '../vectorio';
+import {exportSvg,importSvg,normalizeDoc,gradientIdOf,SvgImportError,type Diagnostic,type Point,type Style,type VectorDocument,type VectorPath} from '../vectorio';
 import {boxOf,fitPath,translatePath,type Box} from './geometry';
 import {newId} from './shapes';
 import {t} from '../i18n';
@@ -44,6 +44,7 @@ const finite=(...values:number[])=>{if(!values.every(Number.isFinite))throw new 
 /** Validate before touching history or state. Do not normalise away invalid caller input. */
 function validateDocument(doc:VectorDocument){
  finite(doc.width,doc.height);
+ for(const g of doc.gradients??[]){for(const v of Object.values(g)){if(typeof v==='number')finite(v);}for(const s of g.stops)finite(s.offset,s.opacity);}
  for(const p of doc.paths){
   for(const n of p.nodes){finite(n.x,n.y);if(n.in)finite(n.in.x,n.in.y);if(n.out)finite(n.out.x,n.out.y);}
   for(const value of Object.values(p.style??{})){if(typeof value==='number')finite(value);else if(Array.isArray(value))finite(...value);}
@@ -71,7 +72,7 @@ export function duplicateSelection(offset=12){finite(offset);const ids=state.sel
  const copies=remapPaths(selectedPaths(state.doc,ids).map(p=>translatePath(p,offset,offset)),state.doc);
  commit({...state.doc,paths:[...state.doc.paths,...copies]},{selection:copies.map(c=>c.id)});}
 export const moveSelection=(dx:number,dy:number)=>{finite(dx,dy);if(state.selection.length&&(dx||dy))commit(mapPaths(p=>translatePath(p,dx,dy))(state.selection));};
-export function setStyle(patch:Partial<Style>,ids:readonly string[]=state.selection){const chosen=selectionIds(state.doc,ids);if(!chosen.length)return;commit(mapPaths(p=>({...p,style:{...p.style,...patch}}))(chosen));}
+export function setStyle(patch:Partial<Style>,ids:readonly string[]=state.selection){const chosen=selectionIds(state.doc,ids);if(!chosen.length)return;const have=new Set((state.doc.gradients??[]).map(g=>g.id)),gid=gradientIdOf(patch.fill);if(typeof patch.fill==='string'&&patch.fill.startsWith('url(')&&(gid===undefined||!have.has(gid))){patch={...patch};delete patch.fill;if(!Object.keys(patch).length)return;}commit(mapPaths(p=>({...p,style:{...p.style,...patch}}))(chosen));}
 export function renamePath(id:string,name:string){commit(mapPaths(p=>({...p,name}))([id]));}
 export function toggleHidden(id:string){const target=state.doc.paths.find(p=>p.id===id);if(!target)return;const ids=state.doc.paths.filter(p=>p.id===id||(target.compound!==undefined&&p.compound===target.compound)).map(p=>p.id);commit(mapPaths(p=>{const {hidden:_h,...rest}=p;return target.hidden?rest:{...rest,hidden:true as const};})(ids));}
 /** z-order: 'front'|'back'|'forward'|'backward'. */
@@ -117,10 +118,19 @@ export function addNodeNear(pathId:string,pt:Point,maxDistance=8):string|null{
  const id=newId('n');commit(mapPaths(q=>insertNode(q,hit.segment,hit.t,id))([pathId]),{selectedNode:id});return id;}
 /** Replaces the whole document as one undo step (used by SVG import into an open document). */
 export function replaceDocument(doc:VectorDocument,patch:Partial<VectorSession>={}){validateDocument(doc);commit(normalizeDoc(doc),{selection:[],nodePath:null,selectedNode:null,...patch});}
+/** Imported gradients get fresh ids so they cannot collide with (or silently replace) the open document's gradients. */
+function mergeGradients(doc:VectorDocument,imported:VectorDocument,paths:VectorPath[]){
+ if(!imported.gradients?.length)return{paths,gradients:doc.gradients};
+ const used=new Set((doc.gradients??[]).map(g=>g.id)),map=new Map<string,string>();let n=1;
+ const fresh=()=>{while(used.has('vsg'+n))n++;const id='vsg'+n;used.add(id);return id;};
+ const add=imported.gradients.map(g=>{const id=fresh();map.set(g.id,id);return{...g,id};});
+ return{paths:paths.map(p=>{const gid=gradientIdOf(p.style?.fill),to=gid?map.get(gid):undefined;return to?{...p,style:{...p.style,fill:`url(#${to})`}}:p;}),gradients:[...(doc.gradients??[]),...add]};
+}
 /** Imports SVG source into the open document as additional paths. Returns false on error (see session.error). */
 export function importSvgInto(source:string,opts:{strict?:boolean}={}):boolean{
  try{const r=importSvg(source,{strict:opts.strict??true});const add=remapPaths(r.doc.paths,state.doc);
-  commit({...state.doc,paths:[...state.doc.paths,...add]},{selection:add.map(p=>p.id),diagnostics:r.warnings});return true;}
+  const merged=mergeGradients(state.doc,r.doc,add);
+  commit({...state.doc,paths:[...state.doc.paths,...merged.paths],...(merged.gradients?{gradients:merged.gradients}:{})},{selection:add.map(p=>p.id),diagnostics:r.warnings});return true;}
  catch(e){set({error:e instanceof Error?e.message:String(e),diagnostics:e instanceof SvgImportError?e.diagnostics:[]});return false;}}
 export const selectNode=(id:string|null)=>set({selectedNode:id});
 

@@ -1,5 +1,6 @@
 import type { NodeKind, Point, VectorDocument, VectorNode, VectorPath } from './types';
 import { DEFAULT_STYLE } from './types';
+import { pruneGradients } from './gradient';
 
 export const r3 = (n: number): number => { const v = Math.round(n * 1000) / 1000; return Object.is(v, -0) ? 0 : v; };
 
@@ -18,9 +19,10 @@ export function inferKind(x: number, y: number, i?: Point, o?: Point): NodeKind 
 /** Round to the canonical 3 decimals and re-infer node kinds. Export output always equals what this produces. */
 export function normalizeDoc(doc: VectorDocument): VectorDocument {
   const pt = (p?: Point): Point | undefined => (p ? { x: r3(p.x), y: r3(p.y) } : undefined);
-  return {
+  const pruned = pruneGradients(doc);
+  const result: VectorDocument = {
     width: r3(doc.width), height: r3(doc.height),
-    paths: doc.paths.map((p): VectorPath => {
+    paths: pruned.paths.map((p): VectorPath => {
       const out: VectorPath = {
         id: p.id, closed: p.closed,
         nodes: p.nodes.map((n): VectorNode => {
@@ -51,6 +53,8 @@ export function normalizeDoc(doc: VectorDocument): VectorDocument {
       return out;
     }),
   };
+  if (pruned.gradients) result.gradients = pruned.gradients;
+  return result;
 }
 
 /** Does the segment from a to b (a.out, b.in) have curve handles? */

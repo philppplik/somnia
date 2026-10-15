@@ -9,7 +9,7 @@ import {selectNode,moveSelection,addNodeNear,addPath,commit,createBlankVector,de
 import {boxOf,fitPath,hitDocument,pathBox,translatePath,type Box} from '../../lib/vectorstudio/geometry';
 import {buildShape,newId,DEFAULT_SHAPE_STYLE,type ShapeKind} from '../../lib/vectorstudio/shapes';
 import {openSvgDialog} from '../../lib/vectorstudio/open';
-import {PathLayer} from './render';
+import {PathLayer,GradientDefs} from './render';
 import {togglePathSelection} from './tools/operations';
 import {studioContextStore} from '../../lib/shell/studioContext';
 import {getVectorSession,subscribeVector} from '../../lib/vectorstudio/session';
@@ -141,7 +141,7 @@ export function VectorCanvas(){
   <FileTabs/><VectorToolbar onFit={fit}/>
   <div ref={wrap} tabIndex={0} onKeyDown={onKey} onKeyUp={e=>{shiftHeld.current=e.shiftKey;}} onWheel={onWheel} className="relative min-h-0 flex-1 overflow-hidden bg-[color:var(--surface-2,#eef0f4)] outline-none" data-testid="vector-canvas" data-tool={s.tool}>
    <svg ref={ref} className="absolute inset-0 size-full touch-none select-none" style={{cursor:cursorFor(s.tool)}} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={()=>setDrag(null)} onDoubleClick={onDouble} onContextMenu={e=>e.preventDefault()} aria-label={t('vector.canvas')} role="img">
-    <defs><pattern id="vs-checker" width="16" height="16" patternUnits="userSpaceOnUse"><rect width="16" height="16" fill="#fff"/><rect width="8" height="8" fill="#f1f2f5"/><rect x="8" y="8" width="8" height="8" fill="#f1f2f5"/></pattern></defs>
+    <defs><GradientDefs gradients={s.doc.gradients}/><pattern id="vs-checker" width="16" height="16" patternUnits="userSpaceOnUse"><rect width="16" height="16" fill="#fff"/><rect width="8" height="8" fill="#f1f2f5"/><rect x="8" y="8" width="8" height="8" fill="#f1f2f5"/></pattern></defs>
     <g transform={`translate(${s.pan.x} ${s.pan.y}) scale(${s.zoom})`}>
      <rect width={s.doc.width} height={s.doc.height} fill="url(#vs-checker)" stroke="rgba(0,0,0,.18)" strokeWidth={1/s.zoom}/>
      <svg width={s.doc.width} height={s.doc.height} overflow="hidden" data-testid="vector-artboard"><PathLayer paths={paths}/>

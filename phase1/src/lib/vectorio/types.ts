@@ -51,11 +51,26 @@ export interface VectorPath {
   hidden?: true;
 }
 
+export interface GradientStop { offset: number; color: string; opacity: number }
+/**
+ * Extension. Gradients live on the document and are referenced by `style.fill = "url(#id)"`.
+ * Coordinates are always in objectBoundingBox units (0..1 of the painted object's box), so a gradient follows its
+ * object when it moves or scales. Pad spread only; no gradientTransform; fill only (no stroke gradients).
+ */
+export type Gradient = { id: string; stops: GradientStop[] } & (
+  | { kind: 'linear'; x1: number; y1: number; x2: number; y2: number }
+  | { kind: 'radial'; cx: number; cy: number; r: number }
+);
+
 export interface VectorDocument {
   width: number;
   height: number;
   paths: VectorPath[];
+  /** Extension. Absent = no gradients (every file written before gradients existed). */
+  gradients?: Gradient[];
 }
+
+export const GRADIENT_LIMITS = Object.freeze({ maxGradients: 64, maxStops: 16 });
 
 export const DEFAULT_STYLE: Style = Object.freeze({
   fill: '#000000', stroke: 'none', strokeWidth: 1, fillOpacity: 1, strokeOpacity: 1, opacity: 1,

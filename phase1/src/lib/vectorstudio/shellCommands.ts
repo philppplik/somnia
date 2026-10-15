@@ -2,6 +2,7 @@ import {requestVectorExport} from './exportSetup';
 import type {CommandSpec} from '../commandSpec';
 import * as S from './session';
 import {rotateSelection,scaleSelection,selectionBounds,alignSelection,distributeSelection,ALIGN_MODES,ALIGN_TARGETS} from './transforms';
+import {applyGradient,GRADIENT_KINDS,type GradientPatch} from './gradients';
 import {groupSelection,ungroupSelection} from './groups';
 import {applyBoolean,BOOL_OPS} from './booleanOps';
 import {downloadSvg,downloadPng} from './exportFiles';
@@ -22,6 +23,8 @@ export function vectorShellCommandSpecs(active:()=>boolean):CommandSpec<any,unkn
    run:(p:{axis:'horizontal'|'vertical'})=>{const s=S.getVectorSession();S.commit(distributeSelection(s.doc,s.selection,p.axis));}},
   {id:'vector.booleanOp',title:'Combine vector shapes',category:'Edit',level:'ui',enabled:selected,params:{...empty,properties:{op:{type:'string',enum:[...BOOL_OPS]}},required:['op']},
    run:(p:{op:typeof BOOL_OPS[number]})=>{const s=S.getVectorSession(),r=applyBoolean(s.doc,s.selection,p.op);S.commit(r.doc);S.select(r.ids);}},
+  {id:'vector.setGradient',title:'Set vector gradient fill',category:'Edit',level:'ui',enabled:selected,params:{...empty,properties:{kind:{type:'string',enum:[...GRADIENT_KINDS]},angle:{type:'number',minimum:0,maximum:360},startColor:{type:'string',pattern:'^#[0-9a-fA-F]{6}$'},endColor:{type:'string',pattern:'^#[0-9a-fA-F]{6}$'},stops:{type:'array',minItems:2,maxItems:16,items:{type:'object',properties:{offset:{type:'number',minimum:0,maximum:1},color:{type:'string',pattern:'^#[0-9a-fA-F]{6}$'},opacity:{type:'number',minimum:0,maximum:1}},required:['offset','color','opacity'],additionalProperties:false}}}},
+   run:(p:GradientPatch)=>{const s=S.getVectorSession(),next=applyGradient(s.doc,s.selection,p);if(next!==s.doc)S.commit(next);}},
   {id:'vector.group',title:'Group vector selection',category:'Edit',level:'ui',enabled:selected,params:empty,run:()=>{const s=S.getVectorSession(),next=groupSelection(s.doc,s.selection);if(next!==s.doc)S.commit(next);}},
   {id:'vector.ungroup',title:'Ungroup vector selection',category:'Edit',level:'ui',enabled:selected,params:empty,run:()=>{const s=S.getVectorSession(),next=ungroupSelection(s.doc,s.selection);if(next!==s.doc)S.commit(next);}},
   {id:'vector.exportSvg',title:'Export vector SVG',category:'Project',level:'ui',enabled:ready,params:empty,run:()=>downloadSvg(S.getVectorSession().name)},

@@ -34,7 +34,13 @@ const path = object({
   id, closed: { type: 'boolean' }, nodes: { type: 'array', items: node, maxItems: 200 },
   style, layer: text, compound: id, group: id, name: text, hidden: { const: true },
 }, ['id', 'closed', 'nodes']);
-const document = object({ width: size, height: size, paths: { type: 'array', items: path, maxItems: 200 } }, ['width', 'height', 'paths']);
+const stop = object({ offset: { type: 'number', minimum: 0, maximum: 1 }, color: { type: 'string', pattern: '^#[0-9a-fA-F]{6}$' }, opacity: { type: 'number', minimum: 0, maximum: 1 } }, ['offset', 'color', 'opacity']);
+const gradient = object({
+  id: { type: 'string', pattern: '^[A-Za-z][A-Za-z0-9_-]{0,39}$' }, kind: { type: 'string', enum: ['linear', 'radial'] },
+  x1: number, y1: number, x2: number, y2: number, cx: number, cy: number, r: { type: 'number', minimum: 0 },
+  stops: { type: 'array', items: stop, minItems: 1, maxItems: 16 },
+}, ['id', 'kind', 'stops']);
+const document = object({ width: size, height: size, paths: { type: 'array', items: path, maxItems: 200 }, gradients: { type: 'array', items: gradient, maxItems: 64 } }, ['width', 'height', 'paths']);
 const empty = object();
 const target = (pathId: string, nodeId?: string) => {
   const p = S.getVectorSession().doc.paths.find(p => p.id === pathId);
