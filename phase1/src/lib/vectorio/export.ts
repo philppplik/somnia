@@ -3,7 +3,7 @@ import { escapeAttr } from './xml';
 import { gradientSvg, pruneGradients } from './gradient';
 import { fmt } from './matrix';
 import { serializeContour } from './serialize';
-import { DEFAULT_STYLE, type Style, type VectorDocument, type VectorPath } from './types';
+import { BLEND_MODES, DEFAULT_STYLE, type Style, type VectorDocument, type VectorPath } from './types';
 
 export interface ExportOptions { /** '' for a single line. Default two spaces. */ indent?: string }
 
@@ -24,6 +24,8 @@ function styleAttrs(s: Partial<Style> | undefined): string[] {
   if (s.fillRule && s.fillRule !== 'nonzero') add('fill-rule', s.fillRule);
   if (s.fillOpacity !== undefined && s.fillOpacity !== 1) add('fill-opacity', num(s.fillOpacity));
   if (s.opacity !== undefined && s.opacity !== 1) add('opacity', num(s.opacity));
+  // mix-blend-mode is CSS, not an SVG presentation attribute, so it goes into style="" (read back by the importer).
+  if (s.blendMode && s.blendMode !== 'normal' && (BLEND_MODES as readonly string[]).includes(s.blendMode)) a.push(`style="mix-blend-mode:${s.blendMode}"`);
   return a;
 }
 

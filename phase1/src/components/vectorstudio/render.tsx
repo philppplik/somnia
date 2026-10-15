@@ -4,7 +4,7 @@ import {serializeContour,type Gradient,type Style,type VectorPath} from '../../l
 export function styleProps(s:Partial<Style>|undefined){
  return {fill:s?.fill??'#000000',stroke:s?.stroke??'none',strokeWidth:s?.strokeWidth??1,strokeLinecap:s?.lineCap,strokeLinejoin:s?.lineJoin,strokeMiterlimit:s?.miterLimit,
   strokeDasharray:s?.dashArray?.length?s.dashArray.join(' '):undefined,strokeDashoffset:s?.dashOffset||undefined,fillRule:s?.fillRule,
-  fillOpacity:s?.fillOpacity,strokeOpacity:s?.strokeOpacity,opacity:s?.opacity};}
+  fillOpacity:s?.fillOpacity,strokeOpacity:s?.strokeOpacity,opacity:s?.opacity,style:s?.blendMode&&s.blendMode!=='normal'?{mixBlendMode:s.blendMode}:undefined};}
 /** Renders paths in paint order. Subpaths that share `compound` render as one element so holes work. */
 export function PathLayer({paths}:{paths:readonly VectorPath[]}){
  const out:{key:string;d:string;p:VectorPath}[]=[];const byCompound=new Map<string,number>();

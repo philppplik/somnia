@@ -1,7 +1,7 @@
 import type {Style,VectorDocument} from '../vectorio';
 import {selectedPaths} from './selectionClosure';
 /** In-app style buffer ("Copy style" / "Paste style"). Memory only: it never touches the system clipboard. */
-const KEYS=['fill','stroke','strokeWidth','fillOpacity','strokeOpacity','opacity','fillRule','lineCap','lineJoin','miterLimit','dashArray','dashOffset'] as const;
+const KEYS=['fill','stroke','strokeWidth','fillOpacity','strokeOpacity','opacity','fillRule','lineCap','lineJoin','miterLimit','dashArray','dashOffset','blendMode'] as const;
 const MAX_DASH=64;
 let buffer:Partial<Style>|null=null;
 /** Style of the topmost selected painted object, restricted to known keys (clip masks are not painted and are skipped). */

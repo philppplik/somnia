@@ -20,6 +20,9 @@ export interface VectorNode {
   out?: Point;
 }
 
+export const BLEND_MODES = ['normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten', 'color-dodge', 'color-burn', 'hard-light', 'soft-light', 'difference', 'exclusion'] as const;
+export type BlendMode = (typeof BLEND_MODES)[number];
+
 export interface Style {
   fill: string; // 'none' | '#rrggbb' | '#rrggbbaa' | named colour | currentColor
   stroke: string;
@@ -33,6 +36,7 @@ export interface Style {
   miterLimit: number;
   dashArray: number[];
   dashOffset: number;
+  blendMode?: BlendMode; // CSS mix-blend-mode on the object; absent = 'normal'
 }
 
 export interface VectorPath {
@@ -84,7 +88,7 @@ export const GRADIENT_LIMITS = Object.freeze({ maxGradients: 64, maxStops: 16 })
 
 export const DEFAULT_STYLE: Style = Object.freeze({
   fill: '#000000', stroke: 'none', strokeWidth: 1, fillOpacity: 1, strokeOpacity: 1, opacity: 1,
-  fillRule: 'nonzero', lineCap: 'butt', lineJoin: 'miter', miterLimit: 4, dashArray: [], dashOffset: 0,
+  fillRule: 'nonzero', lineCap: 'butt', lineJoin: 'miter', miterLimit: 4, dashArray: [], dashOffset: 0, blendMode: 'normal',
 }) as Style;
 
 export type Matrix = [number, number, number, number, number, number];

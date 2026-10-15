@@ -5,7 +5,7 @@ import { normalizePaint } from './color';
 import { inferKind, r3 } from './nodes';
 import { createGradientResolver, isGradientElement, nodesBox } from './gradientImport';
 import { parseXml, XmlError, type XmlElement } from './xml';
-import { DEFAULT_STYLE, IDENTITY, LIMITS, type Diagnostic, type Matrix, type Point, type Style, type VectorDocument, type VectorNode, type VectorPath } from './types';
+import { BLEND_MODES, DEFAULT_STYLE, IDENTITY, LIMITS, type BlendMode, type Diagnostic, type Matrix, type Point, type Style, type VectorDocument, type VectorNode, type VectorPath } from './types';
 
 
 export interface ImportOptions {
@@ -37,7 +37,7 @@ const opacityOf = (v: string | undefined): number | undefined => {
 };
 const stripNs = (n: string) => (n.startsWith('svg:') ? n.slice(4) : n);
 
-const STYLE_PROPS = ['fill', 'stroke', 'stroke-width', 'fill-opacity', 'stroke-opacity', 'fill-rule', 'stroke-linecap', 'stroke-linejoin', 'stroke-miterlimit', 'stroke-dasharray', 'stroke-dashoffset', 'opacity', 'display', 'visibility'];
+const STYLE_PROPS = ['fill', 'stroke', 'stroke-width', 'fill-opacity', 'stroke-opacity', 'fill-rule', 'stroke-linecap', 'stroke-linejoin', 'stroke-miterlimit', 'stroke-dasharray', 'stroke-dashoffset', 'opacity', 'mix-blend-mode', 'display', 'visibility'];
 /** Editor-group ids are bounded and plain; anything else is ignored so the content just loads ungrouped. */
 const groupIdOf = (v: string | undefined): string | undefined => (v !== undefined && /^[A-Za-z0-9_.:-]{1,64}$/.test(v) ? v : undefined);
 const PLAIN_ATTRS = new Set([...STYLE_PROPS, 'id', 'style', 'transform', 'd', 'x', 'y', 'width', 'height', 'rx', 'ry', 'cx', 'cy', 'r', 'x1', 'y1', 'x2', 'y2', 'points', 'viewBox', 'version', 'preserveAspectRatio', 'xmlns', 'data-name', 'data-vs-group', 'data-vs-group-name', 'data-vs-locked', 'data-vs-guides', 'clip-rule', 'pathLength', 'xml:space', 'baseProfile']);
@@ -78,6 +78,12 @@ function cascade(parent: Style, d: Record<string, string>, err: (m: string) => v
   s.fillOpacity = opacityOf(d['fill-opacity']) ?? s.fillOpacity;
   s.strokeOpacity = opacityOf(d['stroke-opacity']) ?? s.strokeOpacity;
   s.opacity = opacityOf(d.opacity) ?? 1;
+  s.blendMode = 'normal'; // not inherited
+  if (d['mix-blend-mode'] !== undefined) {
+    const v = d['mix-blend-mode'].trim().toLowerCase();
+    if ((BLEND_MODES as readonly string[]).includes(v)) s.blendMode = v as BlendMode;
+    else err(`mix-blend-mode "${d['mix-blend-mode']}" is not supported`);
+  }
   if (d['fill-rule'] === 'evenodd' || d['fill-rule'] === 'nonzero') s.fillRule = d['fill-rule'];
   if (['butt', 'round', 'square'].includes(d['stroke-linecap'])) s.lineCap = d['stroke-linecap'] as Style['lineCap'];
   if (['miter', 'round', 'bevel'].includes(d['stroke-linejoin'])) s.lineJoin = d['stroke-linejoin'] as Style['lineJoin'];
@@ -262,6 +268,7 @@ export function importSvg(source: string, opts: ImportOptions = {}): ImportResul
     if (tf === null) bad(`malformed transform "${el.attrs.transform}"`);
     const world = multiply(m, tf ?? IDENTITY);
     const style = cascade(parent, d, bad, grads.has);
+    if (name === 'g' && style.blendMode !== 'normal') bad('mix-blend-mode on a group is not supported; set it on the shapes');
     const label = el.attrs['inkscape:label'] ?? el.attrs['data-name'] ?? el.attrs.id;
     // clip-path: the element becomes a clipping group (editor group + mask shape); groups do not nest
     let clipEl: XmlElement | undefined;
