@@ -360,8 +360,8 @@
       "rawTextarea": 0,
       "hexTsx": 0,
       "hexCss": 0,
-      "pixelText": 9,
-      "inlineStyle": 10
+      "pixelText": 10,
+      "inlineStyle": 13
     },
     "src/dev": {
       "rawButton": 1,
