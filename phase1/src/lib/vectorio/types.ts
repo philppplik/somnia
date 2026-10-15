@@ -81,6 +81,7 @@ export interface VectorText {
   anchor: 'start' | 'middle' | 'end'; fill: string; // fill is #rrggbb
   rotation?: number; // degrees about (x, y), -360..360, omitted when 0
   opacity?: number; // 0..1, omitted when 1
+  back?: boolean; // painted behind all shapes instead of above them, omitted when false
 }
 
 /** Ruler guides in document units: `x` are vertical lines, `y` horizontal. */

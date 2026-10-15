@@ -69,14 +69,14 @@ export function VectorCanvas(){
  const paths=s.doc.paths.map(preview);
  const texts=(s.doc.texts??[]).map(t=>drag?.kind==='text-move'&&drag.id===t.id?{...t,x:t.x+drag.dx,y:t.y+drag.dy}:t);
  const selText=texts.find(t=>t.id===s.textSel);const selTextBox=selText?textBox(selText):null;
- const hitText=(pt:Point):string|null=>{for(let i=texts.length-1;i>=0;i--){const b=textBox(texts[i]),q=unrotateAround(texts[i],pt);if(q.x>=b.minX-tol&&q.x<=b.maxX+tol&&q.y>=b.minY-tol&&q.y<=b.maxY+tol)return texts[i].id;}return null;};
+ const hitText=(pt:Point,back=false):string|null=>{for(let i=texts.length-1;i>=0;i--){if(!!texts[i].back!==back)continue;const b=textBox(texts[i]),q=unrotateAround(texts[i],pt);if(q.x>=b.minX-tol&&q.x<=b.maxX+tol&&q.y>=b.minY-tol&&q.y<=b.maxY+tol)return texts[i].id;}return null;};
  const selBox=boxOf(selected.map(preview));
 
  const onDown=(e:RPointerEvent<SVGSVGElement>)=>{
   if(e.button===1||e.button===2){setDrag({kind:'pan',sx:e.clientX,sy:e.clientY,pan:s.pan});(e.target as Element).setPointerCapture?.(e.pointerId);return;}
   if(e.button!==0)return;wrap.current?.focus();(e.target as Element).setPointerCapture?.(e.pointerId);
   const pt=toDoc(e);
-  if(s.tool==='text'){const hit=hitText(pt);if(hit){selectText(hit);return;}void executeCommand('vector.addText',{x:Math.round(pt.x*100)/100,y:Math.round(pt.y*100)/100});setTool('select');return;}
+  if(s.tool==='text'){const hit=hitText(pt)??hitText(pt,true);if(hit){selectText(hit);return;}void executeCommand('vector.addText',{x:Math.round(pt.x*100)/100,y:Math.round(pt.y*100)/100});setTool('select');return;}
   if(SHAPE_TOOLS.includes(s.tool)){setDrag({kind:'shape',tool:s.tool as ShapeKind,start:pt,cur:pt});return;}
   if(s.tool==='pen'){
    const first=pen[0];if(first&&pen.length>2&&Math.hypot(first.x-pt.x,first.y-pt.y)<=tol*1.5){finishPen(true);return;}
@@ -93,6 +93,7 @@ export function VectorCanvas(){
   const id=hitDocument(s.doc,pt,tol);
   if(id){const next=e.shiftKey?togglePathSelection(s.doc,s.selection,id,true):s.selection.includes(id)?s.selection:togglePathSelection(s.doc,s.selection,id);select(next);
    if(next.includes(id))setDrag({kind:'move',start:pt,dx:0,dy:0});return;}
+  {const hit=hitText(pt,true);if(hit){selectText(hit);setDrag({kind:'text-move',id:hit,start:pt,dx:0,dy:0});return;}}
   if(!e.shiftKey){select([]);selectText(null);}setDrag({kind:'marquee',start:pt,cur:pt});};
  const onMove=(e:RPointerEvent<SVGSVGElement>)=>{
   const pt=toDoc(e);setHover(pt);if(!drag)return;
@@ -173,7 +174,7 @@ export function VectorCanvas(){
     <defs><GradientDefs gradients={s.doc.gradients}/><pattern id="vs-checker" width="16" height="16" patternUnits="userSpaceOnUse"><rect width="16" height="16" fill="#fff"/><rect width="8" height="8" fill="#f1f2f5"/><rect x="8" y="8" width="8" height="8" fill="#f1f2f5"/></pattern></defs>
     <g transform={`translate(${s.pan.x} ${s.pan.y}) scale(${s.zoom})`}>
      <rect width={s.doc.width} height={s.doc.height} fill="url(#vs-checker)" stroke="rgba(0,0,0,.18)" strokeWidth={1/s.zoom}/>
-     <svg width={s.doc.width} height={s.doc.height} overflow="hidden" data-testid="vector-artboard"><PathLayer paths={paths}/><TextLayer texts={texts}/>
+     <svg width={s.doc.width} height={s.doc.height} overflow="hidden" data-testid="vector-artboard"><TextLayer texts={texts.filter(t=>t.back)}/><PathLayer paths={paths}/><TextLayer texts={texts.filter(t=>!t.back)}/>
       {draft&&<path d={serializeContour(draft.nodes,draft.closed)} fill={draft.closed?'rgba(109,94,245,.25)':'none'} stroke="#2563eb" strokeWidth={1.5/s.zoom}/>}</svg>
      {selected.map(p=>{const pp=preview(p);return <path key={p.id} d={serializeContour(pp.nodes,pp.closed)} fill="none" stroke="#2563eb" strokeWidth={1/s.zoom} pointerEvents="none"/>;})}
      {s.tool==='select'&&selBox&&<g data-testid="vector-selection"><rect x={selBox.minX} y={selBox.minY} width={selBox.maxX-selBox.minX} height={selBox.maxY-selBox.minY} fill="none" stroke="#2563eb" strokeWidth={1/s.zoom} strokeDasharray={`${4/s.zoom} ${3/s.zoom}`} pointerEvents="none"/>

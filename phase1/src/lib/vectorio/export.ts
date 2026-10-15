@@ -96,6 +96,8 @@ export function exportSvg(doc: VectorDocument, opts: ExportOptions = {}): string
     if (p.compound !== undefined) byCompound.set(p.compound, elements.length);
     elements.push({ p, d });
   }
+  const allTexts = normalizeTexts(doc.texts) ?? [];
+  for (const t of allTexts) if (t.back) emit(1, textSvg(t)); // behind every shape
   let openLayer: string | undefined | null = null; // null = none open
   let openGroup: string | undefined;
   const closeGroup = () => { if (openGroup !== undefined) emit(openLayer !== null && openLayer !== undefined ? 2 : 1, '</g>'); openGroup = undefined; };
@@ -120,7 +122,7 @@ export function exportSvg(doc: VectorDocument, opts: ExportOptions = {}): string
     emit((p.layer !== undefined ? 2 : 1) + (p.group !== undefined ? 1 : 0), `<path ${attrs.join(' ')}/>`);
   }
   close();
-  for (const t of normalizeTexts(doc.texts) ?? []) emit(1, textSvg(t));
+  for (const t of allTexts) if (!t.back) emit(1, textSvg(t));
   emit(0, '</svg>');
   return lines.join(nl) + '\n';
 }

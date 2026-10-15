@@ -105,3 +105,15 @@ test('duplicate text: offset copy with new id and selection, one undo step, cap 
  for(let i=1;i<TEXT_LIMITS.maxTexts;i++)S.addText({x:i,y:1});
  assert.throws(()=>S.duplicateText(id),/At most 200/);assert.equal(S.getVectorSession().doc.texts!.length,TEXT_LIMITS.maxTexts);
 });
+test('text stacking: back texts are written before the shapes, read back, and strictly validated',async()=>{
+ const d=normalizeDoc({width:200,height:100,paths:[{...rectPath({x:0,y:0,w:10,h:10}),id:'a'}],texts:[T({id:'f'}),T({id:'b',back:true,text:'Back'})]} as any);
+ const out=exportSvg(d);assert.ok(out.indexOf('data-vs-back')<out.indexOf('<path'));assert.ok(out.indexOf('<path')<out.lastIndexOf('<text'));
+ const back=importSvg(out).doc.texts!;assert.equal(back.find(t=>t.text==='Back')!.back,true);assert.equal(back.find(t=>t.text==='Hello')!.back,undefined);
+ assert.equal(exportSvg(importSvg(out).doc),out);
+ const W=(a:string)=>`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text data-vs-text="1" ${a} x="5" y="5" font-family="Arial" font-size="12" fill="#000">hi</text></svg>`;
+ assert.throws(()=>importSvg(W('data-vs-back="yes"')),SvgImportError);assert.equal(importSvg(W('data-vs-back="1"')).doc.texts![0].back,true);
+ assert.equal(normalizeText({...T(),back:'x' as any})!.back,undefined);
+ const dd=setup();await dd.runCommand('vector.addText',{x:5,y:5,back:true},o);const id=S.getVectorSession().textSel!;
+ await dd.runCommand('vector.setText',{id,patch:{back:false}},o);assert.equal(S.getVectorSession().doc.texts![0].back,undefined);
+ S.undo();assert.equal(S.getVectorSession().doc.texts![0].back,true);
+});
