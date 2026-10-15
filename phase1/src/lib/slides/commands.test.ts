@@ -8,7 +8,7 @@ import {registerSlidesCommands,slidesCommandSpecs,slidesScopedCommand,type Slide
 type State=ReturnType<SlidesCommandDeps['state']>;
 function fakeDeps(over:Partial<State>={}){
   const calls:string[]=[];
-  const deps:SlidesCommandDeps={
+  const deps:SlidesCommandDeps={openExport:()=>{},
     state:()=>({busy:false,working:true,canUndo:true,canRedo:false,slides:3,index:0,presenting:false,...over}),
     present:fromStart=>{calls.push(`present:${fromStart}`);},
     exitPresent:()=>{calls.push('exit');},

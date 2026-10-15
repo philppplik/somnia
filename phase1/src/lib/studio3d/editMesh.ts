@@ -881,7 +881,7 @@ export function extractFaces(m:MeshData,faces:number[]):MeshData{
  if(sel.size===tris)throw new EditError('Separating everything would leave an empty mesh.');
  const remap=new Map<number,number>();
  const positions:number[]=[];
- const uvs=m.uvs?[]:undefined;
+ const uvs:number[]|undefined=m.uvs?[]:undefined;
  const index:number[]=[];
  for(const f of sel)for(let e=0;e<3;e++){
   const v=m.index[f*3+e];
@@ -1349,7 +1349,7 @@ export function dissolveFaces(m:MeshData,faces:number[]):MeshData{
  for(const f of sel)for(let e=0;e<3;e++){const v=m.index[f*3+e];if(!boundarySet.has(v)&&!usedOutside.has(v))drop.add(v);}
  const remap=new Map<number,number>();
  const positions:number[]=[];
- const uvs=m.uvs?[]:undefined;
+ const uvs:number[]|undefined=m.uvs?[]:undefined;
  for(let v=0;v<m.positions.length/3;v++)if(!drop.has(v)){
   remap.set(v,positions.length/3);
   positions.push(m.positions[v*3],m.positions[v*3+1],m.positions[v*3+2]);

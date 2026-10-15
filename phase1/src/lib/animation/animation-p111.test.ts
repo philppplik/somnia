@@ -1,13 +1,13 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {createDocument,findComp,findLayer} from './model';
-import {applyEdits} from './edit';
+import {applyEdits,type Edit} from './edit';
 import {frameToTick} from './time';
 import {AnimationSession,setAnimationSession} from './session';
 import {ReviewedError} from './reviewedCommit';
 const f=(n:number)=>frameToTick(n,{num:30,den:1});
 const base=()=>applyEdits(createDocument(),[{type:'layer.add',kind:'shape',id:'a'},{type:'prop.animate',layer:'a',prop:'position',on:true,t:f(0)},{type:'prop.set',layer:'a',prop:'position',t:f(0),value:[100,100]},{type:'prop.set',layer:'a',prop:'position',t:f(10),value:[200,50]}] as never);
 const open=()=>{const s=new AnimationSession();s.open(base());return s;};
-const req=(s:AnimationSession,value:number[]=[120,90],over:object={})=>({doc:s.document!,layer:'a',prop:'position' as const,t:f(0),expected:[100,100],value,origin:'agent-1',...over});
+const req=(s:AnimationSession,value:[number,number]=[120,90],over:object={})=>({doc:s.document!,layer:'a',prop:'position' as const,t:f(0),expected:[100,100] as [number,number],value,origin:'agent-1',...over});
 const code=(fn:()=>unknown)=>{try{fn();}catch(e){return e instanceof ReviewedError?e.code:'other';}return 'none';};
 test('apply: one history step, readback, receipt; undo restores exactly',()=>{
  const s=open(),d0=s.document!,r=s.applyReviewed(req(s));
@@ -43,12 +43,12 @@ test('listener exceptions after commit do not turn it into a failure',()=>{
  const s=open();s.subscribe(()=>{throw new Error('boom');});
  const r=s.applyReviewed(req(s));
  assert.equal(r.applied,1);assert.ok(r.postCommitErrors>=1);
- assert.deepEqual(findLayer(findComp(s.document!)!,'a')!.transform.position.keys[0].v,[120,90]);
+ assert.deepEqual(findLayer(findComp(s.document!)!!,'a')!.transform.position.keys[0].v,[120,90]);
 });
 test('other keys and eases are preserved',()=>{
- const s=open(),before=findLayer(findComp(s.document!)!,'a')!.transform.position.keys;
+ const s=open(),before=findLayer(findComp(s.document!)!!,'a')!.transform.position.keys;
  s.applyReviewed(req(s));
- const after=findLayer(findComp(s.document!)!,'a')!.transform.position.keys;
+ const after=findLayer(findComp(s.document!)!!,'a')!.transform.position.keys;
  assert.deepEqual(after[1],before[1]);assert.equal(after[0].interp,before[0].interp);assert.deepEqual(after[0].out,before[0].out);
 });
 import {nthKeys} from './keyNth';
@@ -83,9 +83,9 @@ test('keysAround at: only keys exactly on the time',()=>{
 import {valueEdits} from './keyValues';
 test('smooth: moves toward neighbour average, ends use one neighbour, validates amount',()=>{
  const d=applyEdits(base(),[{type:'prop.set',layer:'a',prop:'position',t:f(5),value:[400,0]}] as never),c=findComp(d)!;
- const e=valueEdits(c,[{layer:'a',prop:'position',t:f(5)}],'smooth',100) as {value:number[]}[];
+ const e=valueEdits(c,[{layer:'a',prop:'position',t:f(5)}],'smooth',100) as unknown as {value:number[]}[];
  assert.deepEqual(e[0].value,[150,75]);
- const h=valueEdits(c,[{layer:'a',prop:'position',t:f(5)}],'smooth',50) as {value:number[]}[];
+ const h=valueEdits(c,[{layer:'a',prop:'position',t:f(5)}],'smooth',50) as unknown as {value:number[]}[];
  assert.deepEqual(h[0].value,[275,37.5]);
  assert.throws(()=>valueEdits(c,[{layer:'a',prop:'position',t:f(5)}],'smooth',0));
  assert.throws(()=>valueEdits(c,[{layer:'a',prop:'position',t:f(5)}],'smooth',101));
@@ -119,14 +119,14 @@ test('thin: removes collinear selected keys, keeps ends, outliers and unselected
 import {matchPreviousEdits} from './keyMatch';
 test('match previous: copies predecessor value, skips first key and equal values, no cascade',()=>{
  const c=findComp(base())!,k=(n:number)=>({layer:'a',prop:'position' as const,t:f(n)});
- const e=matchPreviousEdits(c,[k(0),k(10)]) as {t:number;value:number[]}[];
+ const e=matchPreviousEdits(c,[k(0),k(10)]) as unknown as {t:number;value:number[]}[];
  assert.equal(e.length,1);assert.equal(e[0].t,f(10));assert.deepEqual(e[0].value,[100,100]);
  assert.equal(matchPreviousEdits(c,[k(0)]).length,0);
 });
 import {flattenEdits} from './keyFlatten';
 test('flatten: later selected keys take the earliest selected value',()=>{
  const c=findComp(base())!,k=(n:number)=>({layer:'a',prop:'position' as const,t:f(n)});
- const e=flattenEdits(c,[k(10),k(0)]) as {t:number;value:number[]}[];
+ const e=flattenEdits(c,[k(10),k(0)]) as unknown as {t:number;value:number[]}[];
  assert.equal(e.length,1);assert.equal(e[0].t,f(10));assert.deepEqual(e[0].value,[100,100]);
  assert.equal(flattenEdits(c,[k(0)]).length,0);
 });
@@ -134,7 +134,7 @@ import {easeCopyEdits} from './keyEaseCopy';
 test('ease copy: later selected keys take the earliest key ease, matching keys skipped',()=>{
  const d=applyEdits(base(),[{type:'keys.interp',keys:[{layer:'a',prop:'position',t:f(0)}],interp:'bezier',out:[0.3,2],in:[0.5,1]}] as never),c=findComp(d)!;
  const k=(n:number)=>({layer:'a',prop:'position' as const,t:f(n)});
- const e=easeCopyEdits(c,[k(0),k(10)]) as {keys:{t:number}[];out:number[]}[];
+ const e=easeCopyEdits(c,[k(0),k(10)]) as unknown as {keys:{t:number}[];out:number[]}[];
  assert.equal(e.length,1);assert.deepEqual(e[0].keys.map(x=>x.t),[f(10)]);assert.deepEqual([...e[0].out],[0.3,2]);
  assert.equal(easeCopyEdits(c,[k(10)]).length,0);
 });
@@ -142,18 +142,18 @@ import {rampEdits} from './keyRamp';
 test('ramp: interior keys land on the line by time, ends untouched',()=>{
  const d=applyEdits(base(),[{type:'prop.set',layer:'a',prop:'position',t:f(5),value:[0,0]}] as never),c=findComp(d)!;
  const k=(n:number)=>({layer:'a',prop:'position' as const,t:f(n)});
- const e=rampEdits(c,[k(10),k(0),k(5)]) as {t:number;value:number[]}[];
+ const e=rampEdits(c,[k(10),k(0),k(5)]) as unknown as {t:number;value:number[]}[];
  assert.equal(e.length,1);assert.equal(e[0].t,f(5));assert.deepEqual(e[0].value,[150,75]);
  assert.equal(rampEdits(c,[k(0),k(10)]).length,0);
 });
 test('match next: copies successor value, last key has none',()=>{
  const c=findComp(base())!,k=(n:number)=>({layer:'a',prop:'position' as const,t:f(n)});
- const e=matchPreviousEdits(c,[k(0),k(10)],'next') as {t:number;value:number[]}[];
+ const e=matchPreviousEdits(c,[k(0),k(10)],'next') as unknown as {t:number;value:number[]}[];
  assert.equal(e.length,1);assert.equal(e[0].t,f(0));assert.deepEqual(e[0].value,[200,50]);
 });
 test('flatten average: all selected keys take the mean',()=>{
  const c=findComp(base())!,k=(n:number)=>({layer:'a',prop:'position' as const,t:f(n)});
- const e=flattenEdits(c,[k(0),k(10)],'average') as {value:number[]}[];
+ const e=flattenEdits(c,[k(0),k(10)],'average') as unknown as {value:number[]}[];
  assert.equal(e.length,2);assert.deepEqual(e[0].value,[150,75]);assert.deepEqual(e[1].value,[150,75]);
 });
 import {peakKeys} from './keyPeaks';
@@ -172,7 +172,7 @@ import {influenceEdits} from './keyInfluence';
 test('influence: bezier keys get x handles from percent, y kept, others skipped',()=>{
  const d=applyEdits(base(),[{type:'keys.interp',keys:[{layer:'a',prop:'position',t:f(0)}],interp:'bezier',out:[0.3,2],in:[0.5,1]},{type:'keys.interp',keys:[{layer:'a',prop:'position',t:f(10)}],interp:'linear'}] as never),c=findComp(d)!;
  const k=(n:number)=>({layer:'a',prop:'position' as const,t:f(n)});
- const e=influenceEdits(c,[k(0),k(10)],25) as {out:number[];in:number[]}[];
+ const e=influenceEdits(c,[k(0),k(10)],25) as unknown as {out:number[];in:number[]}[];
  assert.equal(e.length,1);assert.deepEqual([...e[0].out],[0.25,2]);assert.deepEqual([...e[0].in],[0.75,1]);
  assert.throws(()=>influenceEdits(c,[k(0)],0));assert.throws(()=>influenceEdits(c,[k(0)],100));
 });
@@ -180,17 +180,17 @@ import {tameEdits} from './keyTame';
 test('tame: clamps handle y into 0..1, skips keys that do not overshoot',()=>{
  const d=applyEdits(base(),[{type:'keys.interp',keys:[{layer:'a',prop:'position',t:f(0)}],interp:'bezier',out:[0.3,2],in:[0.5,-0.5]}] as never),c=findComp(d)!;
  const k=(n:number)=>({layer:'a',prop:'position' as const,t:f(n)});
- const e=tameEdits(c,[k(0),k(10)]) as {out:number[];in:number[]}[];
+ const e=tameEdits(c,[k(0),k(10)]) as unknown as {out:number[];in:number[]}[];
  assert.equal(e.length,1);assert.deepEqual([...e[0].out],[0.3,1]);assert.deepEqual([...e[0].in],[0.5,0]);
 });
 import {echoEdits} from './keyEcho';
 test('echo: copies later or earlier, originals stay, copies outside the comp dropped, validated',()=>{
  const c=findComp(base())!,k=(n:number)=>({layer:'a',prop:'position' as const,t:f(n)});
- const e=echoEdits(c,[k(0),k(10)],5) as {items:{key:{t:number}}[]}[];
+ const e=echoEdits(c,[k(0),k(10)],5) as unknown as {items:{key:{t:number}}[]}[];
  assert.equal(e.length,1);assert.deepEqual(e[0].items.map(i=>i.key.t),[f(5),f(15)]);
- assert.deepEqual((echoEdits(c,[k(0),k(10)],-5) as {items:{key:{t:number}}[]}[])[0].items.map(i=>i.key.t),[f(5)]);
+ assert.deepEqual((echoEdits(c,[k(0),k(10)],-5) as unknown as {items:{key:{t:number}}[]}[])[0].items.map(i=>i.key.t),[f(5)]);
  assert.throws(()=>echoEdits(c,[k(0)],0));assert.throws(()=>echoEdits(c,[k(0)],-5));
- const s=open();s.dispatch(echoEdits(s.document!.compositions[0],[k(0)],5));assert.equal(findLayer(findComp(s.document!)!,'a')!.transform.position.keys.length,3);
+ const s=open();s.dispatch(echoEdits(s.document!.compositions[0],[k(0)],5));assert.equal(findLayer(findComp(s.document!)!!,'a')!.transform.position.keys.length,3);
 });
 import {keyAllEdits} from './keyAll';
 test('key all: only animated properties without a key at the playhead, locked layers skipped',()=>{
@@ -198,7 +198,7 @@ test('key all: only animated properties without a key at the playhead, locked la
  const r=keyAllEdits(c,['a'],f(5));assert.equal(r.edits.length,1);assert.deepEqual(r.refs,[{layer:'a',prop:'position',t:f(5)}]);
  assert.equal(keyAllEdits(c,['a'],f(10)).edits.length,0);assert.equal(keyAllEdits(c,['zz'],f(5)).edits.length,0);
  const s=open();s.dispatch(keyAllEdits(s.document!.compositions[0],['a'],f(5)).edits);
- assert.equal(findLayer(findComp(s.document!)!,'a')!.transform.position.keys.length,3);
+ assert.equal(findLayer(findComp(s.document!)!!,'a')!.transform.position.keys.length,3);
 });
 import {trimKeys} from './keyTrim';
 test('trim: keys outside the work area go, all-outside properties and locked layers are kept',()=>{
@@ -321,16 +321,16 @@ test('duplicate layers: command is one undo step and selects the copy',async()=>
  const {layerDuplicateSpecs}=await import('./layerDuplicateCommands');const spec=layerDuplicateSpecs()[0];
  await (spec.run as (p?:unknown)=>unknown)(undefined);
  assert.equal(s.getState().view.selectedLayer!==null&&s.getState().view.selectedLayer!=='a',true);
- s.undo();assert.deepEqual(findComp(s.document!)!.layers.map(l=>l.id),findComp(before)!.layers.map(l=>l.id));setAnimationSession(null);
+ s.undo();assert.deepEqual(findComp(s.document!)!!.layers.map(l=>l.id),findComp(before)!.layers.map(l=>l.id));setAnimationSession(null);
 });
 test('key and layer commands with optional-only params tolerate a call with no payload',async()=>{
  const {animationCommandSpecs}=await import('./commands');
- const cmds=animationCommandSpecs().filter(c=>/^animation\.(keys|layers?|key)\./.test(c.id)&&!(c.params&&'required' in c.params&&(c.params as {required?:unknown[]}).required?.length));
+ const cmds=animationCommandSpecs().filter(c=>/^animation\.(keys|layers?|key)\./.test(c.id)&&!(c.params&&'required' in c.params&&(c.params as unknown as {required?:unknown[]}).required?.length));
  assert.ok(cmds.length>10);
  for(const c of cmds){
   const s=open();setAnimationSession(s);s.setView({selectedLayer:'a'});
   try{await (c.run as (p?:unknown)=>unknown)(undefined);}
-  catch(e){const x=e as {expected?:boolean;message?:string};if(!x.expected&&e instanceof TypeError)assert.fail(`${c.id}: ${x.message}`);}
+  catch(e){const x=e as unknown as {expected?:boolean;message?:string};if(!x.expected&&e instanceof TypeError)assert.fail(`${c.id}: ${x.message}`);}
  }
  setAnimationSession(null);
 });
@@ -338,16 +338,16 @@ test('key and layer commands with optional-only params tolerate a call with no p
 test('P153 composition duplicate is one undo step and a deep copy',async()=>{
  const {animationCommandSpecs}=await import('./commands');
  const s=open();setAnimationSession(s);const d0=s.document!,n=d0.compositions.length,src=findComp(d0)!;
- const r=animationCommandSpecs().find(c=>c.id==='animation.comp.duplicate')!.run(undefined) as {comp:string};
+ const r=(animationCommandSpecs().find(c=>c.id==='animation.comp.duplicate')!.run as (p?:unknown)=>unknown)(undefined) as unknown as {comp:string};
  const d1=s.document!;assert.equal(d1.compositions.length,n+1);assert.equal(d1.activeComp,r.comp);
  const c=findComp(d1,r.comp)!;assert.equal(c.name,`${src.name} copy`);assert.equal(c.layers.length,src.layers.length);assert.notEqual(c.layers,src.layers);
  s.undo();assert.equal(s.document!.compositions.length,n);
 });
 
 test('P154 composition delete refuses precomp use, one undo step',async()=>{
- const {animationCommandSpecs}=await import('./commands');const run=(id:string,p?:unknown)=>animationCommandSpecs().find(c=>c.id===id)!.run(p);
+ const {animationCommandSpecs}=await import('./commands');const run=(id:string,p?:unknown)=>(animationCommandSpecs().find(c=>c.id===id)!.run as (p?:unknown)=>unknown)(p);
  const s=open();setAnimationSession(s);const first=s.document!.activeComp;
- const r=run('animation.comp.duplicate') as {comp:string};
+ const r=run('animation.comp.duplicate') as unknown as {comp:string};
  s.dispatch({type:'precomp.add',comp:first});
  assert.throws(()=>run('animation.comp.remove',{comp:first}),/used as a layer/);
  const n=s.document!.compositions.length;
@@ -357,11 +357,11 @@ test('P154 composition delete refuses precomp use, one undo step',async()=>{
 
 test('P155 split layers at the playhead: later part above, one undo step, outside is refused',async()=>{
  const {layerSplitSpecs}=await import('./layerSplitCommands');const spec=layerSplitSpecs()[0],run=spec.run as (p?:unknown)=>unknown;
- const s=open();setAnimationSession(s);const c0=findComp(s.document!)!,l0=c0.layers[0];
+ const s=open();setAnimationSession(s);const c0=findComp(s.document!)!!,l0=c0.layers[0];
  s.setView({selectedLayer:l0.id,playhead:l0.inT});assert.throws(()=>run(),/inside a layer/);
  const mid=Math.round((l0.inT+l0.outT)/2/8000)*8000;s.setView({selectedLayer:l0.id,playhead:mid});
  const before=s.document!;run();
- const c1=findComp(s.document!)!;assert.equal(c1.layers.length,c0.layers.length+1);
+ const c1=findComp(s.document!)!!;assert.equal(c1.layers.length,c0.layers.length+1);
  const a=c1.layers.find(l=>l.id===l0.id)!,b=c1.layers[c1.layers.findIndex(l=>l.id===l0.id)-1];
  assert.equal(a.outT,mid);assert.equal(b.inT,mid);assert.equal(b.outT,l0.outT);assert.equal(s.getState().view.selectedLayer,b.id);
  s.undo();assert.equal(s.document,before);setAnimationSession(null);
@@ -383,7 +383,7 @@ test('P158 follow the leader links each layer to the previous one with a delay, 
  const before=s.document!;
  assert.throws(()=>run({layers:[ids[0]]}),/two or more/);
  run({layers:ids.slice(0,2),frames:4});
- const c=findComp(s.document!)!,f=findLayer(c,ids[1])!,m=f.transform.position.modifiers!.find(x=>x.type==='link') as {layer:string;delay?:number};
+ const c=findComp(s.document!)!!,f=findLayer(c,ids[1])!,m=f.transform.position.modifiers!.find(x=>x.type==='link') as unknown as {layer:string;delay?:number};
  assert.equal(m.layer,ids[0]);assert.equal(m.delay,4*8000);assert.equal(findLayer(c,ids[0])!.transform.position.modifiers?.length??0,0);
  assert.throws(()=>run({layers:ids.slice(0,2)}),/already has a link/);
  s.undo();assert.equal(s.document,before);setAnimationSession(null);
@@ -406,7 +406,7 @@ test('P160 sprite sheet export zips the sheet and atlas, refuses oversize',async
  const s=open();setAnimationSession(s);s.dispatch({type:'workarea.set',in:0,out:f(4)} as never);
  let saved:{b:Blob;n:string}|null=null;
  await exportSpriteSheet(2,{pixels:async(_s,w,h)=>new Uint8ClampedArray(w*h*4).fill(200),save:(b,n)=>{saved={b,n};}});
- assert.ok(saved);const z=unzipSync(new Uint8Array(await (saved as unknown as {b:Blob}).b.arrayBuffer()));
+ assert.ok(saved);const z=unzipSync(new Uint8Array(await (saved as unknown as unknown as {b:Blob}).b.arrayBuffer()));
  assert.deepEqual(Object.keys(z).sort(),['atlas.json',Object.keys(z).find(k=>k.endsWith('.png'))!].sort());
  const atlas=JSON.parse(strFromU8(z['atlas.json']));assert.equal(atlas.columns,2);assert.equal(atlas.frames.length,atlas.columns*atlas.rows>=4?atlas.frames.length:-1);assert.ok(atlas.frames.length>=4);
  setAnimationSession(null);
@@ -415,7 +415,7 @@ test('P160 sprite sheet export zips the sheet and atlas, refuses oversize',async
 test('P161 sprite sheet is a render format with its own limits',async()=>{
  const {exportPlan,defaultExportSettings,EXPORT_FORMATS}=await import('./exportSettings');const {SHEET_MAX_FRAMES}=await import('./spriteSheet');
  assert.ok(EXPORT_FORMATS.includes('sheet'));
- const c=findComp(open().document!)!;
+ const c=findComp(open().document!)!!;
  const short={...c,workArea:{in:0,out:8*8000}};
  assert.deepEqual(exportPlan(short,'sheet',defaultExportSettings()).problems,[]);
  const long={...c,workArea:{in:0,out:(SHEET_MAX_FRAMES+10)*8000},duration:(SHEET_MAX_FRAMES+10)*8000};
@@ -441,9 +441,9 @@ test('P163 work area follows the selected layers, one undo step, no-op refused',
  const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'shape',id:'b'});
  s.dispatch({type:'layer.timing',layer:'a',inT:f(2),outT:f(6)});s.dispatch({type:'layer.timing',layer:'b',inT:f(4),outT:f(9)});
  const before=s.document!;
- run({layers:['a','b']});assert.deepEqual(findComp(s.document!)!.workArea,{in:f(2),out:f(9)});
+ run({layers:['a','b']});assert.deepEqual(findComp(s.document!)!!.workArea,{in:f(2),out:f(9)});
  assert.throws(()=>run({layers:['a','b']}),/already spans/);
- run({layers:['a']});assert.deepEqual(findComp(s.document!)!.workArea,{in:f(2),out:f(6)});
+ run({layers:['a']});assert.deepEqual(findComp(s.document!)!!.workArea,{in:f(2),out:f(6)});
  s.undo();s.undo();assert.equal(s.document,before);setAnimationSession(null);
 });
 
@@ -451,7 +451,7 @@ test('P164 sheet columns setting: validated, used by the plan and the export',as
  const {settingsProblems,defaultExportSettings,exportPlan}=await import('./exportSettings');const {exportSpriteSheet,setExportSettings,resetExportSettings}=await import('./exportJob');const {unzipSync,strFromU8}=await import('fflate');
  const d=defaultExportSettings();
  assert.deepEqual(settingsProblems({...d,columns:0}),['columns']);assert.deepEqual(settingsProblems({...d,columns:2.5}),['columns']);assert.deepEqual(settingsProblems({...d,columns:8}),[]);assert.deepEqual(settingsProblems({...d,columns:null}),[]);
- const s=open();setAnimationSession(s);s.dispatch({type:'workarea.set',in:0,out:f(8)} as never);const c=findComp(s.document!)!;
+ const s=open();setAnimationSession(s);s.dispatch({type:'workarea.set',in:0,out:f(8)} as never);const c=findComp(s.document!)!!;
  assert.ok(!exportPlan(c,'sheet',{...d,columns:4}).problems.length);
  setExportSettings({columns:4});let saved:Blob|null=null;
  await exportSpriteSheet(undefined,{pixels:async(_s,w,h)=>new Uint8ClampedArray(w*h*4),save:b=>{saved=b;}});
@@ -465,7 +465,7 @@ test('P165 copy frame renders a PNG and refuses cleanly without a clipboard',asy
  const s=open();setAnimationSession(s);
  let got:{b:Blob;n:string}|null=null;
  await copyCurrentFrame({rasterize:async()=>new Uint8Array([137,80,78,71]),save:(b,n)=>{got={b,n};}});
- assert.ok(got);assert.equal((got as unknown as {b:Blob}).b.type,'image/png');assert.equal(exportState().kind,'copy');assert.equal(exportState().status,'done');resetExport();
+ assert.ok(got);assert.equal((got as unknown as unknown as {b:Blob}).b.type,'image/png');assert.equal(exportState().kind,'copy');assert.equal(exportState().status,'done');resetExport();
  await assert.rejects(()=>copyCurrentFrame({rasterize:async()=>new Uint8Array([1])}),/cannot copy images|clipboard/);
  assert.equal(exportState().status,'error');resetExport();setAnimationSession(null);
 });
@@ -473,7 +473,7 @@ test('P165 copy frame renders a PNG and refuses cleanly without a clipboard',asy
 test('P166 wiggle axis limits the shake to one axis, validated',async()=>{
  const {evaluateMod,validateModifiers}=await import('./modifiers');
  const mk=(axis?:string)=>({type:'vec2',keys:[],value:[10,20],modifiers:[{type:'wiggle',seed:5,amplitude:30,frequency:4,...(axis?{axis}:{})}]} as never);
- const both=evaluateMod(mk(),30000) as number[],x=evaluateMod(mk('x'),30000) as number[],y=evaluateMod(mk('y'),30000) as number[];
+ const both=evaluateMod(mk(),30000) as unknown as number[],x=evaluateMod(mk('x'),30000) as unknown as number[],y=evaluateMod(mk('y'),30000) as unknown as number[];
  assert.notEqual(both[0],10);assert.notEqual(both[1],20);
  assert.deepEqual([x[0],x[1]],[both[0],20]);assert.deepEqual([y[0],y[1]],[10,both[1]]);
  assert.equal(validateModifiers([{type:'wiggle',seed:1,amplitude:1,frequency:1,axis:'z' as never}]).length,1);
@@ -485,7 +485,7 @@ test('P167 reseed gives every wiggle a distinct new seed, one undo step, skips l
  const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'shape',id:'b'});
  const w={type:'wiggle' as const,seed:1,amplitude:5,frequency:2};
  s.dispatch({type:'modifier.add',layer:'a',prop:'position',modifier:w});s.dispatch({type:'modifier.add',layer:'b',prop:'position',modifier:w});s.dispatch({type:'modifier.add',layer:'b',prop:'rotation',modifier:w});
- const seeds=()=>['a','b'].flatMap(id=>['position','rotation'].flatMap(k=>(findLayer(findComp(s.document!)!,id)!.transform[k as 'position'].modifiers??[]).map(m=>(m as {seed:number}).seed)));
+ const seeds=()=>['a','b'].flatMap(id=>['position','rotation'].flatMap(k=>(findLayer(findComp(s.document!)!!,id)!.transform[k as 'position'].modifiers??[]).map(m=>(m as unknown as {seed:number}).seed)));
  const before=s.document!;assert.deepEqual(seeds(),[1,1,1]);
  run({layers:['a','b'],seed:1000});const after=seeds();assert.equal(new Set(after).size,3);assert.ok(after.every(x=>x!==1&&x<=2147483647));
  s.undo();assert.equal(s.document,before);
@@ -499,7 +499,7 @@ test('P171 number layers renames top to bottom, strips copy suffixes, one undo s
  const {layerNumberSpecs,numberBase}=await import('./layerNumberCommands');const run=layerNumberSpecs()[0].run as (p?:unknown)=>unknown;
  assert.equal(numberBase('Star copy 2'),'Star');assert.equal(numberBase('Star 3'),'Star');
  const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'shape',id:'b'});s.dispatch({type:'layer.add',kind:'shape',id:'c'});
- const names=()=>findComp(s.document!)!.layers.map(l=>l.name);const ids=findComp(s.document!)!.layers.map(l=>l.id);
+ const names=()=>findComp(s.document!)!!.layers.map(l=>l.name);const ids=findComp(s.document!)!!.layers.map(l=>l.id);
  const before=s.document!;run({layers:ids,name:'Dot',start:5});assert.deepEqual(names(),ids.map((_,i)=>`Dot ${5+i}`));
  s.undo();assert.equal(s.document,before);
  s.dispatch({type:'layer.update',layer:'b',locked:true});run({layers:ids,name:'Dot'});assert.ok(!names().some((n,i)=>ids[i]==='b'&&n.startsWith('Dot')));
@@ -512,7 +512,7 @@ test('P172 arrange: front/back/up/down/reverse keep the rest, one undo step, no-
  assert.deepEqual(arrangedOrder(o,sel,'up'),['b','a','d','c','e']);assert.deepEqual(arrangedOrder(o,sel,'down'),['a','c','b','e','d']);
  assert.deepEqual(arrangedOrder(o,sel,'reverse'),['a','d','c','b','e']);assert.deepEqual(arrangedOrder(o,new Set(['a']),'up'),o);
  const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'shape',id:'b'});s.dispatch({type:'layer.add',kind:'shape',id:'c'});
- const ids=()=>findComp(s.document!)!.layers.map(l=>l.id);const start=ids(),before=s.document!;
+ const ids=()=>findComp(s.document!)!!.layers.map(l=>l.id);const start=ids(),before=s.document!;
  run({mode:'back',layers:[start[0]]});assert.deepEqual(ids(),[...start.slice(1),start[0]]);s.undo();assert.equal(s.document,before);
  assert.throws(()=>run({mode:'front',layers:[start[0]]}),(e:any)=>e.expected===true);
 });
@@ -520,19 +520,19 @@ test('P172 arrange: front/back/up/down/reverse keep the rest, one undo step, no-
 test('P173 layer flags toggle for many layers, one undo step, locked layers only unlock',async()=>{
  const {layerFlagSpecs}=await import('./layerFlagCommands');const run=layerFlagSpecs()[0].run as (p?:unknown)=>unknown;
  const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'shape',id:'b'});s.dispatch({type:'layer.add',kind:'shape',id:'c'});
- const get=(k:'visible'|'solo'|'locked')=>findComp(s.document!)!.layers.map(l=>l[k]);const ids=findComp(s.document!)!.layers.map(l=>l.id);
+ const get=(k:'visible'|'solo'|'locked')=>findComp(s.document!)!!.layers.map(l=>l[k]);const ids=findComp(s.document!)!!.layers.map(l=>l.id);
  const before=s.document!;run({flag:'solo',layers:ids});assert.deepEqual(get('solo'),[true,true,true]);s.undo();assert.equal(s.document,before);
  run({flag:'visible',layers:ids});assert.deepEqual(get('visible'),[false,false,false]);run({flag:'visible',layers:ids});assert.deepEqual(get('visible'),[true,true,true]);
- run({flag:'locked',layers:[ids[0]]});const r=run({flag:'visible',layers:ids}) as {skippedLocked:number};assert.equal(r.skippedLocked,1);assert.equal(get('visible')[0],true);
+ run({flag:'locked',layers:[ids[0]]});const r=run({flag:'visible',layers:ids}) as unknown as {skippedLocked:number};assert.equal(r.skippedLocked,1);assert.equal(get('visible')[0],true);
  assert.throws(()=>run({flag:'visible',layers:[ids[0]]}),(e:any)=>e.expected===true);
  run({flag:'locked',layers:[ids[0]]});assert.equal(get('locked')[0],false);
 });
 
 test('P174 marker update renames the marker at the playhead or by id, moves it, one undo step',async()=>{
  const {markerUpdateSpecs}=await import('./markerUpdateCommands');const run=markerUpdateSpecs()[0].run as (p?:unknown)=>unknown;
- const s=open();setAnimationSession(s);const c0=findComp(s.document!)!;
+ const s=open();setAnimationSession(s);const c0=findComp(s.document!)!!;
  s.dispatch({type:'markers.set',markers:[{id:'m1',t:c0.start+f(10),label:'one'},{id:'m2',t:c0.start+f(20),label:'two'}]});
- const ms=()=>findComp(s.document!)!.markers!;
+ const ms=()=>findComp(s.document!)!!.markers!;
  s.setView({playhead:c0.start+f(20)});const before=s.document!;
  run({label:'  hit  '});assert.equal(ms()[1].label,'hit');s.undo();assert.equal(s.document,before);
  run({id:'m1',label:'start',t:c0.start+f(25)});assert.deepEqual(ms().map(m=>m.label),['two','start']);
@@ -544,19 +544,19 @@ test('P174 marker update renames the marker at the playhead or by id, moves it, 
 test('P175 markers from layers: one per in point, named after the layer, no duplicates, one undo step',async()=>{
  const {markerFromLayersSpecs}=await import('./markerFromLayersCommands');const run=markerFromLayersSpecs()[0].run as (p?:unknown)=>unknown;
  const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'shape',id:'b'});s.dispatch({type:'layer.add',kind:'shape',id:'c'});
- const c0=findComp(s.document!)!;s.dispatch({type:'layer.timing',layer:'b',inT:c0.start+f(10),outT:c0.start+f(40)});s.dispatch({type:'layer.timing',layer:'c',inT:c0.start+f(10),outT:c0.start+f(40)});
- const ms=()=>findComp(s.document!)!.markers??[];const before=s.document!;
- const r=run({layers:['a','b','c']}) as {added:number};assert.equal(r.added,2);assert.deepEqual(ms().map(m=>m.t),[c0.start,c0.start+f(10)]);
- assert.equal(ms()[1].label,findLayer(findComp(s.document!)!,'c')!.name);s.undo();assert.equal(s.document,before);
+ const c0=findComp(s.document!)!!;s.dispatch({type:'layer.timing',layer:'b',inT:c0.start+f(10),outT:c0.start+f(40)});s.dispatch({type:'layer.timing',layer:'c',inT:c0.start+f(10),outT:c0.start+f(40)});
+ const ms=()=>findComp(s.document!)!!.markers??[];const before=s.document!;
+ const r=run({layers:['a','b','c']}) as unknown as {added:number};assert.equal(r.added,2);assert.deepEqual(ms().map(m=>m.t),[c0.start,c0.start+f(10)]);
+ assert.equal(ms()[1].label,findLayer(findComp(s.document!)!!,'c')!.name);s.undo();assert.equal(s.document,before);
  run({layers:['a','b']});assert.throws(()=>run({layers:['a','b','c']}),(e:any)=>e.expected===true);
 });
 
 test('P176 clear markers: all or inside the work area, one undo step, empty is refused',async()=>{
  const {markerClearSpecs}=await import('./markerClearCommands');const run=markerClearSpecs()[0].run as (p?:unknown)=>unknown;
- const s=open();setAnimationSession(s);const c0=findComp(s.document!)!;const e=(p?:object)=>assert.throws(()=>run(p),(x:any)=>x.expected===true);
+ const s=open();setAnimationSession(s);const c0=findComp(s.document!)!!;const e=(p?:object)=>assert.throws(()=>run(p),(x:any)=>x.expected===true);
  e();s.dispatch({type:'markers.set',markers:[5,15,25,35].map(n=>({id:'m'+n,t:c0.start+f(n),label:'m'+n}))});
  s.dispatch({type:'workarea.set',in:c0.start+f(10),out:c0.start+f(30)});
- const ms=()=>findComp(s.document!)!.markers!.map(m=>m.id);const before=s.document!;
+ const ms=()=>findComp(s.document!)!!.markers!.map(m=>m.id);const before=s.document!;
  run({scope:'workArea'});assert.deepEqual(ms(),['m5','m35']);s.undo();assert.equal(s.document,before);
  run();assert.deepEqual(ms(),[]);e();
 });
@@ -605,7 +605,7 @@ test('P184 align: world anchor points line up, parents respected, distribute is 
  const s=open();setAnimationSession(s);for(const id of ['b','c'])s.dispatch({type:'layer.add',kind:'shape',id});
  const at=s.getState().view.playhead;
  s.dispatch({type:'prop.set',layer:'a',prop:'position',t:at,value:[100,50]});s.dispatch({type:'prop.set',layer:'b',prop:'position',t:at,value:[300,150]});s.dispatch({type:'prop.set',layer:'c',prop:'position',t:at,value:[150,90]});
- const {evaluate}=await import('./interpolate');const pos=(id:string)=>Array.from(evaluate(findLayer(findComp(s.document!)!,id)!.transform.position,at) as number[]);
+ const {evaluate}=await import('./interpolate');const pos=(id:string)=>Array.from(evaluate(findLayer(findComp(s.document!)!!,id)!.transform.position,at) as unknown as number[]);
  const before=s.document!;run({mode:'left',layers:['a','b','c']});assert.deepEqual(['a','b','c'].map(i=>pos(i)[0]),[100,100,100]);assert.deepEqual(pos('b')[1],150);
  s.undo();assert.equal(s.document,before);
  run({mode:'distributeX',layers:['a','b','c']});assert.deepEqual(['a','c','b'].map(i=>pos(i)[0]),[100,200,300]);
@@ -619,7 +619,7 @@ test('P184 align works in composition space through a scaled parent',async()=>{
  const at=s.getState().view.playhead;
  s.dispatch({type:'prop.set',layer:'p',prop:'scale',t:at,value:[200,200]});s.dispatch({type:'layer.parent',layer:'b',parent:'p',keepWorld:false,t:at});
  s.dispatch({type:'prop.set',layer:'b',prop:'position',t:at,value:[300,40]});s.dispatch({type:'prop.set',layer:'c',prop:'position',t:at,value:[250,90]});
- const wx=(id:string)=>{const c=findComp(s.document!)!,l=findLayer(c,id)!;return applyMatrix(worldMatrix(c,l,at),evaluate(l.transform.anchor,at) as [number,number])[0];};
+ const wx=(id:string)=>{const c=findComp(s.document!)!!,l=findLayer(c,id)!;return applyMatrix(worldMatrix(c,l,at),evaluate(l.transform.anchor,at) as [number,number])[0];};
  const bx=wx('b'),cx=wx('c');run({mode:'left',layers:['b','c']});
  assert.ok(Math.abs(wx('b')-Math.min(bx,cx))<0.05&&Math.abs(wx('c')-Math.min(bx,cx))<0.05,`${wx('b')} ${wx('c')} want ${Math.min(bx,cx)}`);
 });
@@ -632,7 +632,7 @@ test('P185 Rig-menu commands are enabled and run on ticked layers even with noth
  const s=open();setAnimationSession(s);s.setView({selectedLayer:null as never});
  for(const sp of specs)assert.equal(sp.enabled(),true,sp.id);
  s.dispatch({type:'layer.add',kind:'shape',id:'b'});
- const r=specs.find(x=>x.id==='animation.layers.flag')!.run({flag:'shy',layers:['a','b']}) as {changed:number};assert.equal(r.changed,2);
+ const r=specs.find(x=>x.id==='animation.layers.flag')!.run({flag:'shy',layers:['a','b']}) as unknown as {changed:number};assert.equal(r.changed,2);
 });
 
 test('P186 custom export file name: replaces the document name in frame, sequence and GIF names, clears with null, stays sanitised',async()=>{
@@ -661,9 +661,9 @@ test('P189 export background colour: replaces the composition colour for this ex
  const {exportCurrentFrame,setExportSettings,resetExportSettings,resetExport}=await import('./exportJob');const {settingsProblems,defaultExportSettings}=await import('./exportSettings');
  const s=open();setAnimationSession(s);resetExport();resetExportSettings();
  const svgs:string[]=[];const rasterize=async(svg:string)=>{svgs.push(svg);return new Uint8Array([1]);};const save=()=>{};
- const orig=findComp(s.document!).background.toLowerCase();assert.notEqual(orig,'#ff00aa');
+ const orig=findComp(s.document!)!.background.toLowerCase();assert.notEqual(orig,'#ff00aa');
  setExportSettings({background:'#FF00AA'});await exportCurrentFrame({rasterize,save});
- assert.ok(svgs[0].toLowerCase().includes('#ff00aa'));assert.equal(findComp(s.document!).background.toLowerCase(),orig);
+ assert.ok(svgs[0]!.toLowerCase().includes('#ff00aa'));assert.equal(findComp(s.document!)!.background.toLowerCase(),orig);
  setExportSettings({background:null});await exportCurrentFrame({rasterize,save});assert.ok(svgs[1].toLowerCase().includes(orig));
  assert.throws(()=>setExportSettings({background:'red'}),(e:any)=>e.code==='unsupported');assert.deepEqual(settingsProblems({...defaultExportSettings(),background:'#abcdef'}),[]);
  resetExportSettings();
@@ -671,7 +671,7 @@ test('P189 export background colour: replaces the composition colour for this ex
 
 test('P190 graph playhead reading: value of the channel at the playhead, speed in speed mode, null outside the window',async()=>{
  const {playheadReading}=await import('./graph');const {evaluate}=await import('./interpolate');
- const s=open();const c=findComp(s.document!);const prop=findLayer(c,'a')!.transform.position;const k=prop.keys;
+ const s=open();const c=findComp(s.document!)!;const prop=findLayer(c,'a')!.transform.position;const k=prop.keys;
  const t=Math.round((k[0].t+k[k.length-1].t)/2);const ev=evaluate(prop,t);
  assert.equal(playheadReading(prop,0,t,0,c.duration,false),typeof ev==='number'?ev:ev[0]);
  assert.equal(playheadReading(prop,1,t,0,c.duration,false),(ev as readonly number[])[1]);
@@ -682,7 +682,7 @@ test('P190 graph playhead reading: value of the channel at the playhead, speed i
 test('P191 layers.reset: neutral rotation/scale/opacity at the playhead, one undo step, skips locked, refuses when already neutral',async()=>{
  const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'shape',id:'b'});s.dispatch({type:'layer.add',kind:'shape',id:'c'});
  const {evaluate}=await import('./interpolate');const {layerResetSpecs}=await import('./layerResetCommands');const run=(p:object)=>(layerResetSpecs()[0].run as (p:unknown)=>any)(p);
- const get=(id:string)=>findLayer(findComp(s.document!)!,id)!;const ev=(id:string,k:'rotation'|'scale'|'opacity')=>evaluate(get(id).transform[k],0);
+ const get=(id:string)=>findLayer(findComp(s.document!)!!,id)!;const ev=(id:string,k:'rotation'|'scale'|'opacity')=>evaluate(get(id).transform[k],0);
  s.dispatch([{type:'prop.set',layer:'b',prop:'rotation',value:45,t:0},{type:'prop.set',layer:'b',prop:'scale',value:[50,60],t:0},{type:'prop.set',layer:'b',prop:'opacity',value:30,t:0},{type:'prop.set',layer:'c',prop:'rotation',value:10,t:0}]);
  s.dispatch({type:'layer.update',layer:'c',locked:true});s.setView({playhead:0});
  const r=run({mode:'all',layers:['b','c']});assert.equal(r.changed,3);assert.equal(r.skippedLocked,1);
@@ -706,13 +706,13 @@ test('P192 first frame number: renumbers sequence files and manifest, validates,
 });
 
 test('P193 layers.trimToWorkArea: cuts in/out to the work area, never extends, skips locked and outside, one undo step',async()=>{
- const s=open();setAnimationSession(s);const c0=findComp(s.document!);const d=c0.duration;
+ const s=open();setAnimationSession(s);const c0=findComp(s.document!)!;const d=c0.duration;
  for(const id of ['b','c','e','f'])s.dispatch({type:'layer.add',kind:'shape',id});
  const T=(id:string,inT:number,outT:number)=>s.dispatch({type:'layer.timing',layer:id,inT,outT});
  const q=Math.round(d/10);T('b',0,d);T('c',q*4,q*6);T('e',0,q);T('f',0,d);s.dispatch({type:'layer.update',layer:'f',locked:true});
  s.dispatch({type:'workarea.set',in:q*2,out:q*8});
  const {layerTrimSpecs}=await import('./layerTrimCommands');const run=(p:object)=>(layerTrimSpecs()[0].run as (p:unknown)=>any)(p);
- const get=(id:string)=>findLayer(findComp(s.document!)!,id)!;
+ const get=(id:string)=>findLayer(findComp(s.document!)!!,id)!;
  const r=run({layers:['b','c','e','f']});assert.equal(r.trimmed,1);assert.equal(r.skipped,2);
  assert.deepEqual([get('b').inT,get('b').outT],[q*2,q*8]);assert.deepEqual([get('c').inT,get('c').outT],[q*4,q*6]);assert.deepEqual([get('e').inT,get('e').outT],[0,q]);assert.deepEqual([get('f').inT,get('f').outT],[0,d]);
  assert.throws(()=>run({layers:['b','c']}),(e:any)=>e.expected===true);
@@ -745,25 +745,25 @@ test('P196 GIF colors: colour table, LZW code size and file size follow the pale
 test('P198 layers.centerAnchor: anchor to the content centre, picture does not move, skips animated/locked, one undo step',async()=>{
  const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'shape',id:'b'});s.dispatch({type:'layer.add',kind:'shape',id:'c'});
  const {layerCenterSpecs}=await import('./layerCenterCommands');const {worldMatrix,applyMatrix}=await import('./scene');const run=(p:object)=>(layerCenterSpecs()[0].run as (p:unknown)=>any)(p);
- const get=(id:string)=>findLayer(findComp(s.document!)!,id)!;const corner=(id:string,x:number,y:number)=>applyMatrix(worldMatrix(findComp(s.document!)!,get(id),0),[x,y]);
+ const get=(id:string)=>findLayer(findComp(s.document!)!!,id)!;const corner=(id:string,x:number,y:number)=>applyMatrix(worldMatrix(findComp(s.document!)!!,get(id),0),[x,y]);
  const w=get('b').source.width!,h=get('b').source.height!;assert.ok(w>0&&h>0);
  s.dispatch([{type:'prop.set',layer:'b',prop:'rotation',value:30,t:0},{type:'prop.set',layer:'b',prop:'scale',value:[150,80],t:0}]);s.dispatch({type:'layer.update',layer:'c',locked:true});s.setView({playhead:0});
  const before=[corner('b',0,0),corner('b',w,h)];
- const r=run({layers:['b','c']});assert.equal(r.centred,1);assert.deepEqual(Array.from(get('b').transform.anchor.value as number[]),[w/2,h/2]);
+ const r=run({layers:['b','c']});assert.equal(r.centred,1);assert.deepEqual(Array.from(get('b').transform.anchor.value as unknown as number[]),[w/2,h/2]);
  const after=[corner('b',0,0),corner('b',w,h)];for(let i=0;i<2;i++)for(let k=0;k<2;k++)assert.ok(Math.abs(before[i][k]-after[i][k])<0.05);
  assert.throws(()=>run({layers:['b']}),(e:any)=>e.expected===true);
- s.undo();assert.deepEqual(Array.from(get('b').transform.anchor.value as number[]),[0,0].map((_,i)=>before.length?(get('b').transform.anchor.value as number[])[i]:0));assert.notDeepEqual(Array.from(get('b').transform.anchor.value as number[]),[w/2,h/2]);
+ s.undo();assert.deepEqual(Array.from(get('b').transform.anchor.value as unknown as number[]),[0,0].map((_,i)=>before.length?(get('b').transform.anchor.value as unknown as number[])[i]:0));assert.notDeepEqual(Array.from(get('b').transform.anchor.value as unknown as number[]),[w/2,h/2]);
 });
 
 test('P199 centerAnchor on an animated position: all keys shift by one offset, picture stays put at every frame, undo is one step',async()=>{
  const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'shape',id:'m'});
  const {layerCenterSpecs}=await import('./layerCenterCommands');const {worldMatrix,applyMatrix}=await import('./scene');const run=(p:object)=>(layerCenterSpecs()[0].run as (p:unknown)=>any)(p);
- const c=()=>findComp(s.document!)!;const get=(id:string)=>findLayer(c(),id)!;const w=get('m').source.width!,h=get('m').source.height!;
+ const c=()=>findComp(s.document!)!!;const get=(id:string)=>findLayer(c(),id)!;const w=get('m').source.width!,h=get('m').source.height!;
  s.dispatch([{type:'prop.set',layer:'m',prop:'rotation',value:40,t:0},{type:'prop.set',layer:'m',prop:'scale',value:[120,70],t:0},{type:'prop.animate',layer:'m',prop:'position',on:true,t:0},{type:'prop.set',layer:'m',prop:'position',value:[600,300],t:frameToTick(20,c().fps)}]);
  const ts=[0,frameToTick(7,c().fps),frameToTick(20,c().fps)];const at=(t:number)=>applyMatrix(worldMatrix(c(),get('m'),t),[w,h]);const before=ts.map(at);
  s.setView({playhead:0});const r=run({layers:['m']});assert.equal(r.centred,1);assert.equal(get('m').transform.position.keys.length,2);
  ts.forEach((t,i)=>{const a=at(t);assert.ok(Math.abs(a[0]-before[i][0])<0.1&&Math.abs(a[1]-before[i][1])<0.1);});
- s.undo();assert.deepEqual(Array.from(get('m').transform.anchor.value as number[]),[0,0]);
+ s.undo();assert.deepEqual(Array.from(get('m').transform.anchor.value as unknown as number[]),[0,0]);
  s.dispatch({type:'prop.animate',layer:'m',prop:'rotation',on:true,t:0});s.dispatch({type:'prop.set',layer:'m',prop:'rotation',value:90,t:frameToTick(20,c().fps)});
  assert.throws(()=>run({layers:['m']}),(e:any)=>e.expected===true);
 });
@@ -771,7 +771,7 @@ test('P199 centerAnchor on an animated position: all keys shift by one offset, p
 test('P201 layers.fade: opacity keys at in/out, one undo step, skips animated/locked/short, validates',async()=>{
  const s=open();setAnimationSession(s);for(const id of ['b','c','e'])s.dispatch({type:'layer.add',kind:'shape',id});
  const {layerFadeSpecs}=await import('./layerFadeCommands');const {evaluate}=await import('./interpolate');const run=(p:object)=>(layerFadeSpecs()[0].run as (p:unknown)=>any)(p);
- const c=()=>findComp(s.document!)!;const get=(id:string)=>findLayer(c(),id)!;const fr=(n:number)=>frameToTick(n,c().fps);
+ const c=()=>findComp(s.document!)!!;const get=(id:string)=>findLayer(c(),id)!;const fr=(n:number)=>frameToTick(n,c().fps);
  s.dispatch({type:'layer.timing',layer:'b',inT:fr(10),outT:fr(100)});s.dispatch([{type:'prop.animate',layer:'c',prop:'opacity',on:true,t:0}]);s.dispatch({type:'layer.update',layer:'e',locked:true});
  s.dispatch({type:'prop.set',layer:'b',prop:'opacity',value:80,t:0});
  const r=run({mode:'both',frames:12,layers:['b','c','e']});assert.equal(r.faded,1);assert.equal(r.skipped,2);
@@ -786,7 +786,7 @@ test('P201 layers.fade: opacity keys at in/out, one undo step, skips animated/lo
 test('P202 layers.fit: uniform scale and centring for contain/cover/width/height, rotation respected, skips parented/animated/locked',async()=>{
  const s=open();setAnimationSession(s);for(const id of ['b','c','e'])s.dispatch({type:'layer.add',kind:'shape',id});
  const {layerFitSpecs}=await import('./layerFitCommands');const {worldMatrix,applyMatrix}=await import('./scene');const run=(p:object)=>(layerFitSpecs()[0].run as (p:unknown)=>any)(p);
- const c=()=>findComp(s.document!)!;const get=(id:string)=>findLayer(c(),id)!;const w=get('b').source.width!,h=get('b').source.height!;
+ const c=()=>findComp(s.document!)!!;const get=(id:string)=>findLayer(c(),id)!;const w=get('b').source.width!,h=get('b').source.height!;
  const box=(id:string)=>{const pts=[[0,0],[w,0],[0,h],[w,h]].map(([x,y])=>applyMatrix(worldMatrix(c(),get(id),0),[x,y]));const xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]);return {x0:Math.min(...xs),x1:Math.max(...xs),y0:Math.min(...ys),y1:Math.max(...ys)};};
  s.setView({playhead:0});s.dispatch({type:'prop.set',layer:'b',prop:'rotation',value:25,t:0});s.dispatch({type:'prop.set',layer:'b',prop:'anchor',value:[10,20],t:0});
  const W=c().width,H=c().height,near=(a:number,b:number)=>Math.abs(a-b)<0.1;
@@ -801,7 +801,7 @@ test('P202 layers.fit: uniform scale and centring for contain/cover/width/height
 
 test('P204 frame format: JPEG/WebP single-frame export re-encodes at the quality, renames, JPEG is opaque, validates',async()=>{
  const {exportCurrentFrame,setExportSettings,resetExportSettings,resetExport,setExportTransparent}=await import('./exportJob');
- const s=open();setAnimationSession(s);resetExport();resetExportSettings();s.setView({playhead:frameToTick(3,findComp(s.document!)!.fps)});
+ const s=open();setAnimationSession(s);resetExport();resetExportSettings();s.setView({playhead:frameToTick(3,findComp(s.document!)!!.fps)});
  const saved:{n:string;type:string;bytes:number[]}[]=[];const save=async(b:Blob,n:string)=>{saved.push({n,type:b.type,bytes:Array.from(new Uint8Array(await b.arrayBuffer()))});};
  const svgs:string[]=[];const rasterize=async(svg:string)=>{svgs.push(svg);return new Uint8Array([137,80]);};const calls:any[]=[];
  const encode=async(png:Uint8Array,f:'jpeg'|'webp',q:number)=>{calls.push([Array.from(png),f,q]);return new Uint8Array([9,9,q]);};
@@ -849,7 +849,7 @@ test('P207 GIF merges identical consecutive frames: summed delay, fewer images, 
 
 test('P208 export plan: sheet size and grid in the readout, padding included, absent for other formats and bad settings',async()=>{
  const {exportPlan,defaultExportSettings}=await import('./exportSettings');
- const s=open();const c=findComp(s.document!)!;const base={...defaultExportSettings(),scale:25};
+ const s=open();const c=findComp(s.document!)!!;const base={...defaultExportSettings(),scale:25};
  const a=exportPlan(c,'sheet',base);assert.ok(a.sheet);assert.equal(a.sheet!.width,a.sheet!.columns*a.width);assert.equal(a.sheet!.height,a.sheet!.rows*a.height);assert.ok(a.sheet!.columns*a.sheet!.rows>=a.frames);
  const b=exportPlan(c,'sheet',{...base,sheetPadding:4,columns:5});assert.equal(b.sheet!.columns,5);assert.equal(b.sheet!.width,5*(a.width+4)+4);assert.equal(b.sheet!.height,b.sheet!.rows*(a.height+4)+4);
  assert.equal(exportPlan(c,'gif',base).sheet,undefined);assert.equal(exportPlan(c,'sheet',{...base,scale:400,columns:1}).sheet,undefined);
@@ -858,17 +858,17 @@ test('P208 export plan: sheet size and grid in the readout, padding included, ab
 
 test('P209 export plan: sprite sheet estimate follows the sheet pixels (padding and empty cells count)',async()=>{
  const {exportPlan,defaultExportSettings,estimateBytes}=await import('./exportSettings');
- const s=open();const c=findComp(s.document!)!;const base={...defaultExportSettings(),scale:25};
+ const s=open();const c=findComp(s.document!)!!;const base={...defaultExportSettings(),scale:25};
  const a=exportPlan(c,'sheet',base),b=exportPlan(c,'sheet',{...base,sheetPadding:16,columns:7});
- assert.equal(a.estimateBytes,estimateBytes('sheet',a.sheet!.width,a.sheet!.height,1));
- assert.ok(b.estimateBytes>a.estimateBytes*0.9);assert.equal(b.estimateBytes,estimateBytes('sheet',b.sheet!.width,b.sheet!.height,1));
+ assert.equal(a.estimateBytes,estimateBytes('sheet',a.sheet!.width,a.sheet!.height,1,30));
+ assert.ok(b.estimateBytes>a.estimateBytes*0.9);assert.equal(b.estimateBytes,estimateBytes('sheet',b.sheet!.width,b.sheet!.height,1,30));
  assert.equal(exportPlan(c,'sequence',base).estimateBytes,estimateBytes('sequence',a.width,a.height,a.frames,a.fps.num/a.fps.den));
 });
 
 test('P210 own export presets: save, apply, replace, delete, limits and persistence',async()=>{
  const u=await import('./exportUserPresets');const {exportPresetSpecs}=await import('./exportPresetCommands');const {setExportSettings,resetExportSettings,exportState,setExportTransparent}=await import('./exportJob');
  const mem=new Map<string,string>();u.setPresetStore({getItem:k=>mem.get(k)??null,setItem:(k,v)=>{mem.set(k,v);}});
- const run=(i:number,p?:unknown)=>exportPresetSpecs()[i].run(p) as unknown;
+ const run=(i:number,p?:unknown)=>(exportPresetSpecs()[i]!.run as (p?:unknown)=>unknown)(p) as unknown;
  resetExportSettings();setExportSettings({scale:50,fps:15,colors:64,dither:true,sheetPadding:4,from:3,to:9,fileName:'keep'});setExportTransparent(true);
  assert.equal(run(0,{name:'  Web  small '}),'web small');assert.equal(u.userExportPresets().length,1);
  const raw=JSON.parse(mem.get('somnia.exportPresets.v1')!);assert.equal(raw[0].name,'Web small');assert.equal(raw[0].settings.from,undefined);assert.equal(raw[0].settings.fileName,undefined);
@@ -889,13 +889,13 @@ test('P211 export motion blur: off drops the shutter, high uses 16 samples, docu
  const {exportCurrentFrame,setExportSettings,resetExportSettings,resetExport}=await import('./exportJob');const {settingsProblems,defaultExportSettings}=await import('./exportSettings');
  const s=open();setAnimationSession(s);resetExport();resetExportSettings();
  const svgs:string[]=[];const rasterize=async(svg:string)=>{svgs.push(svg);return new Uint8Array([1]);};const save=()=>{};
- const ids=findComp(s.document!).layers.map(l=>l.id);s.dispatch({type:'layer.motionBlur',layers:ids,enabled:true});s.setView({playhead:f(1)});
+ const ids=findComp(s.document!)!.layers.map(l=>l.id);s.dispatch({type:'layer.motionBlur',layers:ids,enabled:true});s.setView({playhead:f(1)});
  await exportCurrentFrame({rasterize,save});assert.equal(svgs[0],svgs[0]);const plain=svgs[0].length;
  s.dispatch({type:'comp.shutter',shutter:{angle:180,samples:3}});
  await exportCurrentFrame({rasterize,save});setExportSettings({blur:'off'});await exportCurrentFrame({rasterize,save});setExportSettings({blur:'high'});await exportCurrentFrame({rasterize,save});setExportSettings({blur:null});await exportCurrentFrame({rasterize,save});
  const [,comp3,off,high,again]=svgs.map(x=>x.length);
  assert.ok(comp3>plain);assert.equal(off,plain);assert.ok(high>comp3);assert.equal(again,comp3);
- assert.deepEqual(findComp(s.document!).shutter,{angle:180,samples:3});
+ assert.deepEqual(findComp(s.document!)!.shutter,{angle:180,samples:3});
  assert.throws(()=>setExportSettings({blur:'max' as never}),(e:any)=>e.code==='unsupported');assert.deepEqual(settingsProblems({...defaultExportSettings(),blur:'high'}),[]);assert.deepEqual(settingsProblems({...defaultExportSettings(),blur:null}),[]);
  resetExportSettings();
 });
@@ -904,12 +904,12 @@ test('P212 export selected layers only: hides the others in the output, keeps pa
  const {exportCurrentFrame,setExportSettings,resetExportSettings,resetExport}=await import('./exportJob');const {settingsProblems,defaultExportSettings}=await import('./exportSettings');
  const s=open();setAnimationSession(s);resetExport();resetExportSettings();
  const svgs:string[]=[];const rasterize=async(svg:string)=>{svgs.push(svg);return new Uint8Array([1]);};const save=()=>{};
- s.dispatch({type:'layer.add',kind:'shape',id:'zz'});s.dispatch({type:'layer.add',kind:'shape',id:'yy'});const ids=findComp(s.document!).layers.map(l=>l.id);assert.ok(ids.length>=3);
+ s.dispatch({type:'layer.add',kind:'shape',id:'zz'});s.dispatch({type:'layer.add',kind:'shape',id:'yy'});const ids=findComp(s.document!)!.layers.map(l=>l.id);assert.ok(ids.length>=3);
  s.setView({playhead:f(1),selectedLayer:'zz'});await exportCurrentFrame({rasterize,save});
  setExportSettings({selectedOnly:true});await exportCurrentFrame({rasterize,save});
  assert.ok(svgs[1].length<svgs[0].length);
- s.setView({selectedLayer:null});let code='';try{await exportCurrentFrame({rasterize,save});}catch(e){code=(e as {code:string}).code;}assert.equal(code,'empty');
- assert.ok(findComp(s.document!).layers.every(l=>l.visible));
+ s.setView({selectedLayer:null});let code='';try{await exportCurrentFrame({rasterize,save});}catch(e){code=(e as unknown as {code:string}).code;}assert.equal(code,'empty');
+ assert.ok(findComp(s.document!)!.layers.every(l=>l.visible));
  setExportSettings({selectedOnly:false});svgs.length=0;s.setView({selectedLayer:'zz'});await exportCurrentFrame({rasterize,save});assert.ok(svgs[0].length>0);
  assert.throws(()=>setExportSettings({selectedOnly:'yes' as never}),(e:any)=>e.code==='unsupported');assert.deepEqual(settingsProblems({...defaultExportSettings(),selectedOnly:true}),[]);
  resetExportSettings();
@@ -935,14 +935,14 @@ test('P214 timing sequence: layers chained head to tail with a gap, keys move wi
  const s=open();for(const id of ['b','c','d'])s.dispatch({type:'layer.add',kind:'shape',id});
  s.dispatch({type:'layer.timing',layer:'b',inT:0,outT:f(10)});s.dispatch({type:'layer.timing',layer:'c',inT:0,outT:f(5)});s.dispatch({type:'layer.timing',layer:'d',inT:f(1),outT:f(9)});
  s.dispatch({type:'prop.set',layer:'c',prop:'opacity',t:0,value:0.5});
- const c0=findComp(s.document!);const r=timingPlan(c0,['b','c','d'],'sequence',{playhead:0,frames:2});assert.equal(r.changed,2);assert.equal(r.skipped,0);
- s.dispatch(r.edits);const c1=findComp(s.document!);const L=(id:string)=>c1.layers.find(l=>l.id===id)!;
+ const c0=findComp(s.document!)!;const r=timingPlan(c0,['b','c','d'],'sequence',{playhead:0,frames:2});assert.equal(r.changed,2);assert.equal(r.skipped,0);
+ s.dispatch(r.edits);const c1=findComp(s.document!)!;const L=(id:string)=>c1.layers.find(l=>l.id===id)!;
  assert.equal(L('b').inT,0);assert.equal(L('b').outT,f(10));assert.equal(L('c').inT,f(12));assert.equal(L('c').outT,f(17));assert.equal(L('d').inT,f(19));assert.equal(L('d').outT,f(27));
- s.undo();const c2=findComp(s.document!);assert.equal(c2.layers.find(l=>l.id==='c')!.inT,0);assert.equal(c2.layers.find(l=>l.id==='d')!.inT,f(1));
+ s.undo();const c2=findComp(s.document!)!;assert.equal(c2.layers.find(l=>l.id==='c')!.inT,0);assert.equal(c2.layers.find(l=>l.id==='d')!.inT,f(1));
  const again=timingPlan(c1,['b','c','d'],'sequence',{playhead:0,frames:2});assert.equal(again.edits.length,0);
  const rev=timingPlan(c0,['d','c','b'],'sequence',{playhead:0,frames:0});assert.equal(rev.changed,2);
  s.dispatch({type:'layer.update',layer:'c',locked:true});
- const lk=timingPlan(findComp(s.document!),['b','c','d'],'sequence',{playhead:0,frames:2});assert.equal(lk.skipped,1);
+ const lk=timingPlan(findComp(s.document!)!,['b','c','d'],'sequence',{playhead:0,frames:2});assert.equal(lk.skipped,1);
  const tooFar=timingPlan(c0,['b','c'],'sequence',{playhead:0,frames:600});assert.equal(tooFar.changed,0);assert.equal(tooFar.skipped,1);
 });
 
@@ -961,10 +961,10 @@ test('P216 match first layer: position by world anchor, scale, rotation, opacity
  const s=open();setAnimationSession(s);s.setView({playhead:0});for(const id of ['b','c','d'])s.dispatch({type:'layer.add',kind:'shape',id});
  s.dispatch({type:'prop.set',layer:'b',prop:'position',value:[100,50],t:0});s.dispatch({type:'prop.set',layer:'b',prop:'scale',value:[50,60],t:0});s.dispatch({type:'prop.set',layer:'b',prop:'rotation',value:30,t:0});s.dispatch({type:'prop.set',layer:'b',prop:'opacity',value:40,t:0});
  s.dispatch({type:'layer.update',layer:'d',locked:true});
- const L=(id:string)=>findComp(s.document!).layers.find(l=>l.id===id)!;
+ const L=(id:string)=>findComp(s.document!)!.layers.find(l=>l.id===id)!;
  run({mode:'scale',layers:['b','c','d']});assert.deepEqual(evaluate(L('c').transform.scale,0),[50,60]);assert.deepEqual(evaluate(L('d').transform.scale,0),[100,100]);
  s.undo();assert.deepEqual(evaluate(L('c').transform.scale,0),[100,100]);
- run({mode:'all',layers:['b','c']});const c=findComp(s.document!);const w=(id:string)=>applyMatrix(worldMatrix(c,L(id),0),evaluate(L(id).transform.anchor,0) as [number,number]);
+ run({mode:'all',layers:['b','c']});const c=findComp(s.document!)!;const w=(id:string)=>applyMatrix(worldMatrix(c,L(id),0),evaluate(L(id).transform.anchor,0) as [number,number]);
  assert.ok(Math.abs(w('c')[0]-w('b')[0])<0.02&&Math.abs(w('c')[1]-w('b')[1])<0.02);assert.equal(evaluate(L('c').transform.rotation,0),30);assert.equal(evaluate(L('c').transform.opacity,0),40);
  s.undo();assert.equal(evaluate(L('c').transform.rotation,0),0);
  for(const bad of [{mode:'x',layers:['b','c']},{mode:'all',layers:['b']},{mode:'all',layers:['b','d']}])assert.throws(()=>run(bad),(e:any)=>e.expected===true);
@@ -980,9 +980,9 @@ test('P217 graph box select: keys inside the box in any corner order, edges incl
 
 test('P218 pose library: save by ticked layers, apply at the playhead in one undo step, replace by name, delete, limits, document validation',async()=>{
  const {poseSpecs}=await import('./poseCommands');const {validatePoseLib,MAX_POSES}=await import('./poseModel');const {validateDocument}=await import('./model');const {evaluate}=await import('./interpolate');
- const run=(i:number,p?:unknown)=>poseSpecs()[i].run(p) as unknown;
+ const run=(i:number,p?:unknown)=>(poseSpecs()[i]!.run as (p?:unknown)=>unknown)(p) as unknown;
  const s=open();setAnimationSession(s);s.setView({playhead:0});for(const id of ['b','c'])s.dispatch({type:'layer.add',kind:'shape',id});
- const L=(id:string)=>findComp(s.document!).layers.find(l=>l.id===id)!;
+ const L=(id:string)=>findComp(s.document!)!.layers.find(l=>l.id===id)!;
  s.dispatch({type:'prop.set',layer:'b',prop:'position',value:[10,20],t:0});s.dispatch({type:'prop.set',layer:'b',prop:'rotation',value:15,t:0});s.dispatch({type:'prop.set',layer:'c',prop:'opacity',value:30,t:0});
  assert.equal(run(0,{name:'  Hero  A ',layers:['b','c']}),'hero a');assert.equal(s.document!.poses!.items[0].name,'Hero A');assert.deepEqual(validateDocument(s.document),[]);
  s.dispatch({type:'prop.set',layer:'b',prop:'position',value:[99,99],t:0});s.dispatch({type:'prop.set',layer:'b',prop:'rotation',value:0,t:0});s.dispatch({type:'prop.set',layer:'c',prop:'opacity',value:100,t:0});
@@ -1001,10 +1001,10 @@ test('P218 pose library: save by ticked layers, apply at the playhead in one und
 
 test('P219 pose apply: set keys on static and animated props, blend by amount, validation, one undo step',async()=>{
  const {poseSpecs,blend}=await import('./poseCommands');const {evaluate}=await import('./interpolate');
- const run=(i:number,p?:unknown)=>poseSpecs()[i].run(p) as unknown;
+ const run=(i:number,p?:unknown)=>(poseSpecs()[i]!.run as (p?:unknown)=>unknown)(p) as unknown;
  assert.equal(blend(10,20,50),15);assert.deepEqual(blend([0,100],[100,0],25),[25,75]);assert.equal(blend(5,9,100),9);
  const s=open();setAnimationSession(s);s.setView({playhead:0});s.dispatch({type:'layer.add',kind:'shape',id:'b'});
- const L=()=>findComp(s.document!).layers.find(l=>l.id==='b')!;
+ const L=()=>findComp(s.document!)!.layers.find(l=>l.id==='b')!;
  s.dispatch({type:'prop.set',layer:'b',prop:'position',value:[100,0],t:0});s.dispatch({type:'prop.set',layer:'b',prop:'rotation',value:40,t:0});
  run(0,{name:'A',layers:['b']});
  s.dispatch({type:'prop.set',layer:'b',prop:'position',value:[0,0],t:0});s.dispatch({type:'prop.set',layer:'b',prop:'rotation',value:0,t:0});
@@ -1020,9 +1020,9 @@ test('P219 pose apply: set keys on static and animated props, blend by amount, v
 
 test('P220 pose to pose: keys pose A at the playhead and pose B N frames later with the ease, one undo step, errors',async()=>{
  const {poseSpecs}=await import('./poseCommands');const {evaluate}=await import('./interpolate');
- const run=(i:number,p?:unknown)=>poseSpecs()[i].run(p) as unknown;const T=poseSpecs().findIndex(x=>x.id==='animation.pose.transition');assert.ok(T>0);
+ const run=(i:number,p?:unknown)=>(poseSpecs()[i]!.run as (p?:unknown)=>unknown)(p) as unknown;const T=poseSpecs().findIndex(x=>x.id==='animation.pose.transition');assert.ok(T>0);
  const s=open();setAnimationSession(s);s.setView({playhead:0});s.dispatch({type:'layer.add',kind:'shape',id:'b'});
- const L=()=>findComp(s.document!).layers.find(l=>l.id==='b')!;
+ const L=()=>findComp(s.document!)!.layers.find(l=>l.id==='b')!;
  run(0,{name:'A',layers:['b']});s.dispatch({type:'prop.set',layer:'b',prop:'position',value:[100,0],t:0});s.dispatch({type:'prop.set',layer:'b',prop:'rotation',value:40,t:0});run(0,{name:'B',layers:['b']});
  s.dispatch({type:'prop.set',layer:'b',prop:'position',value:[0,0],t:0});s.dispatch({type:'prop.set',layer:'b',prop:'rotation',value:0,t:0});
  s.setView({playhead:f(5)});const rev=s.document!.revision;
@@ -1039,16 +1039,16 @@ test('P220 pose to pose: keys pose A at the playhead and pose B N frames later w
 test('P222 orient to path: rotation follows the position heading, unwraps, replaces keys, validation, one undo step',async()=>{
  const {layerOrientSpecs,unwrapAngles,headingOf}=await import('./layerOrientCommands');const {evaluate}=await import('./interpolate');
  assert.deepEqual(unwrapAngles([170,-170,-150]),[170,190,210]);assert.equal(headingOf(0,0),null);assert.equal(headingOf(0,5),90);
- const run=(p?:unknown)=>layerOrientSpecs()[0].run(p) as unknown;
+ const run=(p?:unknown)=>(layerOrientSpecs()[0]!.run as (p?:unknown)=>unknown)(p) as unknown;
  const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'shape',id:'b'});
- const L=()=>findComp(s.document!).layers.find(l=>l.id==='b')!;
+ const L=()=>findComp(s.document!)!.layers.find(l=>l.id==='b')!;
  assert.throws(()=>run({layers:['b']}),/animated position/);
  const f=(n:number)=>frameToTick(n,{num:30,den:1});
  s.dispatch({type:'key.add',layer:'b',prop:'position',t:f(0)});s.dispatch({type:'prop.set',layer:'b',prop:'position',value:[0,0],t:f(0)});
  s.dispatch({type:'prop.set',layer:'b',prop:'position',value:[100,0],t:f(10)});s.dispatch({type:'prop.set',layer:'b',prop:'position',value:[100,100],t:f(20)});
  s.dispatch({type:'key.add',layer:'b',prop:'rotation',t:f(5)});s.dispatch({type:'prop.set',layer:'b',prop:'rotation',value:77,t:f(5)});
  const before=s.document;
- const r=run({layers:['b'],step:5}) as {layers:number};assert.equal(r.layers,1);
+ const r=run({layers:['b'],step:5}) as unknown as {layers:number};assert.equal(r.layers,1);
  const rot=L().transform.rotation;assert.ok(rot.keys.length>=4);
  assert.equal(rot.keys.some(k=>k.t===f(5)&&evaluate(rot,f(5))===77),false);
  assert.ok(Math.abs((evaluate(rot,f(2)) as number))<1);assert.ok(Math.abs((evaluate(rot,f(18)) as number)-90)<1);
@@ -1059,42 +1059,42 @@ test('P222 orient to path: rotation follows the position heading, unwraps, repla
 });
 test('P223 bake modifiers: wiggle and loop become keys over the work area, modifiers removed, one undo step, errors',async()=>{
  const {modifierBakeSpecs,bakeTicks}=await import('./modifierBakeCommands');const {evaluateMod}=await import('./modifiers');const {evaluate}=await import('./interpolate');
- const run=(p?:unknown)=>modifierBakeSpecs()[0].run(p) as unknown;
+ const run=(p?:unknown)=>(modifierBakeSpecs()[0]!.run as (p?:unknown)=>unknown)(p) as unknown;
  const s=open();setAnimationSession(s);s.setView({playhead:0});s.dispatch({type:'layer.add',kind:'shape',id:'b'});
- const C=()=>findComp(s.document!),L=()=>C().layers.find(l=>l.id==='b')!;
+ const C=()=>findComp(s.document!)!,L=()=>C().layers.find(l=>l.id==='b')!;
  assert.throws(()=>run({layers:['b']}),/no wiggle/);
  s.dispatch({type:'modifier.add',layer:'b',prop:'position',modifier:{type:'wiggle',amplitude:20,frequency:2,seed:7}} as never);
  const want=bakeTicks(C(),2),before=s.document;
- const ref=want.map(t=>evaluateMod(L().transform.position,t) as number[]);
- const r=run({layers:['b'],step:2}) as {properties:number};assert.ok(r.properties>=1);
+ const ref=want.map(t=>evaluateMod(L().transform.position,t) as unknown as number[]);
+ const r=run({layers:['b'],step:2}) as unknown as {properties:number};assert.ok(r.properties>=1);
  const p=L().transform.position;assert.equal(p.keys.length,want.length);assert.equal((p.modifiers??[]).length,0);
- want.forEach((t,i)=>{const v=evaluate(p,t) as number[];assert.ok(Math.abs(v[0]-ref[i][0])<0.01&&Math.abs(v[1]-ref[i][1])<0.01);});
+ want.forEach((t,i)=>{const v=evaluate(p,t) as unknown as number[];assert.ok(Math.abs(v[0]-ref[i][0])<0.01&&Math.abs(v[1]-ref[i][1])<0.01);});
  s.undo();assert.equal(s.document,before);
  assert.throws(()=>run({layers:['b'],step:0}),/key step/);
  s.dispatch({type:'layer.update',layer:'b',locked:true});assert.throws(()=>run({layers:['b']}),/locked/);
 });
 test('P224 export crop from layers: union over the work area with padding, clamped, unsized layers, errors',async()=>{
  const {exportCropSpecs,layerCrop,workAreaTicks}=await import('./exportCropCommands');const {exportState,resetExportSettings}=await import('./exportJob');
- const run=(p?:unknown)=>exportCropSpecs()[0].run(p) as {x:number;y:number;width:number;height:number};
+ const run=(p?:unknown)=>(exportCropSpecs()[0]!.run as (p?:unknown)=>unknown)(p) as unknown as {x:number;y:number;width:number;height:number};
  const s=open();setAnimationSession(s);s.setView({playhead:0});resetExportSettings();
- s.dispatch({type:'layer.add',kind:'solid',id:'b'});const c=findComp(s.document!);
+ s.dispatch({type:'layer.add',kind:'solid',id:'b'});const c=findComp(s.document!)!;
  const l=c.layers.find(x=>x.id==='b')!;assert.ok(workAreaTicks(c).length>=2);
  s.dispatch({type:'layer.update',layer:'b',source:{...l.source,width:100,height:50}} as never);
  s.dispatch({type:'prop.set',layer:'b',prop:'position',value:[300,200],t:0});s.dispatch({type:'prop.set',layer:'b',prop:'anchor',value:[0,0],t:0});
  const r=run({layers:['b'],padding:10,range:'frame'});assert.deepEqual([r.width,r.height],[120,70]);assert.deepEqual([r.x,r.y],[290,190]);
  assert.deepEqual(exportState().settings.crop,{x:290,y:190,width:120,height:70});
- const c2=findComp(s.document!);const big=layerCrop(c2,['b'],[0],5000);assert.deepEqual(big.crop,{x:0,y:0,width:c2.width,height:c2.height});
+ const c2=findComp(s.document!)!;const big=layerCrop(c2,['b'],[0],5000);assert.deepEqual(big.crop,{x:0,y:0,width:c2.width,height:c2.height});
  assert.throws(()=>run({layers:['b'],padding:-1}),/padding/);assert.throws(()=>run({layers:['b'],range:'x'}),/range/);
  assert.equal(layerCrop(c2,['nope'],[0],0).crop,null);
 });
 test('P225 mirrored poses: apply flips x about canvas or pose centre and negates rotation, transition to a mirrored copy, errors',async()=>{
  const {poseSpecs,mirrorValue,mirrorAxis}=await import('./poseCommands');const {evaluate}=await import('./interpolate');
  assert.deepEqual(mirrorValue('position',[100,50],400),[700,50]);assert.equal(mirrorValue('rotation',25,0),-25);assert.equal(mirrorValue('rotation',0,0),0);assert.deepEqual(mirrorValue('scale',[1,2],9),[1,2]);
- const W=findComp(open().document!).width;const run=(i:number,p?:unknown)=>poseSpecs()[i].run(p) as unknown;
+ const W=findComp(open().document!)!.width;const run=(i:number,p?:unknown)=>(poseSpecs()[i]!.run as (p?:unknown)=>unknown)(p) as unknown;
  const s=open();setAnimationSession(s);s.setView({playhead:0});s.dispatch({type:'layer.add',kind:'shape',id:'b'});
- const L=()=>findComp(s.document!).layers.find(l=>l.id==='b')!;
+ const L=()=>findComp(s.document!)!.layers.find(l=>l.id==='b')!;
  s.dispatch({type:'prop.set',layer:'b',prop:'position',value:[100,50],t:0});s.dispatch({type:'prop.set',layer:'b',prop:'rotation',value:30,t:0});
- run(0,{name:'A',layers:['b']});const pose=s.document!.poses!.items[0];assert.equal(mirrorAxis(findComp(s.document!),pose,'pose'),100);
+ run(0,{name:'A',layers:['b']});const pose=s.document!.poses!.items[0];assert.equal(mirrorAxis(findComp(s.document!)!,pose,'pose'),100);
  run(1,{id:'a',mirror:'canvas'});assert.deepEqual(evaluate(L().transform.position,0),[W-100,50]);assert.equal(evaluate(L().transform.rotation,0),-30);
  s.undo();assert.deepEqual(evaluate(L().transform.position,0),[100,50]);
  run(1,{id:'a',mirror:'pose'});assert.deepEqual(evaluate(L().transform.position,0),[100,50]);assert.equal(evaluate(L().transform.rotation,0),-30);
@@ -1109,12 +1109,12 @@ test('P226 layer array: grid and circle offsets, copies placed, keyed positions 
  const {layerArraySpecs,arrayOffsets}=await import('./layerArrayCommands');const {evaluate}=await import('./interpolate');
  const g=arrayOffsets('grid',5,{columns:2,dx:10,dy:20});assert.deepEqual(g.map(o=>[o.x,o.y]),[[0,0],[10,0],[0,20],[10,20],[0,40]]);
  const ci=arrayOffsets('circle',4,{radius:100,rotate:true});assert.deepEqual([ci[0].x,ci[0].y,ci[0].rot],[0,0,0]);assert.deepEqual([ci[2].x,ci[2].y,ci[2].rot],[0,200,180]);
- const run=(p?:unknown)=>layerArraySpecs()[0].run(p) as unknown;
+ const run=(p?:unknown)=>(layerArraySpecs()[0]!.run as (p?:unknown)=>unknown)(p) as unknown;
  const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'shape',id:'b'});
- const C=()=>findComp(s.document!);const n0=C().layers.length,before=s.document;
+ const C=()=>findComp(s.document!)!;const n0=C().layers.length,before=s.document;
  s.dispatch({type:'prop.set',layer:'b',prop:'position',value:[100,100],t:0});const b1=s.document;
- const r=run({layers:['b'],pattern:'grid',count:4,columns:2,dx:50,dy:60}) as {layers:number};assert.equal(r.layers,3);assert.equal(C().layers.length,n0+3);
- const pos=C().layers.filter(l=>l.name.endsWith('copy')).map(l=>evaluate(l.transform.position,0) as number[]).map(v=>v.join(',')).sort();assert.deepEqual(pos,['100,160','150,100','150,160']);
+ const r=run({layers:['b'],pattern:'grid',count:4,columns:2,dx:50,dy:60}) as unknown as {layers:number};assert.equal(r.layers,3);assert.equal(C().layers.length,n0+3);
+ const pos=C().layers.filter(l=>l.name.endsWith('copy')).map(l=>evaluate(l.transform.position,0) as unknown as number[]).map(v=>v.join(',')).sort();assert.deepEqual(pos,['100,160','150,100','150,160']);
  s.undo();assert.equal(s.document,b1);
  s.dispatch({type:'key.add',layer:'b',prop:'position',t:0});s.dispatch({type:'prop.set',layer:'b',prop:'position',value:[10,10],t:8000*10});
  run({layers:['b'],pattern:'circle',count:3,radius:50});const cp=C().layers.filter(l=>l.name.endsWith('copy'));assert.equal(cp.length,2);assert.ok(cp.every(l=>l.transform.position.keys.length===2));
@@ -1126,7 +1126,7 @@ test('P227 export check: missing image, offscreen, inactive, hidden and audio la
  const {preflight}=await import('./exportPreflight');const {exportCheck}=await import('./exportCheck');const {defaultExportSettings}=await import('./exportSettings');
  const s=open();setAnimationSession(s);
  for(const id of ['r','o','h','au','late'])s.dispatch({type:'layer.add',kind:'shape',id} as never);
- const C=()=>findComp(s.document!);const comp0=C();const range={in:comp0.workArea.in,out:comp0.workArea.out};
+ const C=()=>findComp(s.document!)!;const comp0=C();const range={in:comp0.workArea.in,out:comp0.workArea.out};
  const mk=(id:string,o:object)=>({...C().layers.find(l=>l.id===id)!,...o});
  const layers=[mk('r',{name:'R',kind:'raster',source:{assetId:'nope'}}),mk('o',{name:'O'}),mk('h',{name:'H',visible:false}),mk('au',{name:'AU',kind:'audio'}),mk('late',{name:'Late',inT:range.out+10,outT:range.out+20})] as never[];
  const box=(x:number)=>[{x0:x,y0:0,x1:x+10,y1:10}];
@@ -1141,14 +1141,14 @@ test('P227 export check: missing image, offscreen, inactive, hidden and audio la
 test('P227 export check ignores null layers',async()=>{
  const {preflight}=await import('./exportPreflight');
  const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'null',id:'n'} as never);
- const l=findComp(s.document!).layers.find(x=>x.id==='n')!;const range={in:0,out:100000};
+ const l=findComp(s.document!)!.layers.find(x=>x.id==='n')!;const range={in:0,out:100000};
  assert.equal(preflight({layers:[{...l,visible:false},{...l,inT:1e9,outT:2e9}],assetIds:new Set(),range,frame:{x:0,y:0,width:10,height:10},boxes:()=>[{x0:500,y0:0,x1:510,y1:10}]}).length,0);
 });
 test('P228 close loop: end key gets the start value, equal values skipped, keys past the end skipped, undo, errors',async()=>{
  const {layerLoopSpecs,loopEnd}=await import('./layerLoopCommands');const {evaluate}=await import('./interpolate');
- const run=(p?:unknown)=>layerLoopSpecs()[0].run(p) as {properties:number};
+ const run=(p?:unknown)=>(layerLoopSpecs()[0]!.run as (p?:unknown)=>unknown)(p) as unknown as {properties:number};
  const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'shape',id:'b'});
- const C=()=>findComp(s.document!),L=()=>C().layers.find(l=>l.id==='b')!;const T=8000,t0=C().workArea.in,t1=loopEnd(C());
+ const C=()=>findComp(s.document!)!,L=()=>C().layers.find(l=>l.id==='b')!;const T=8000,t0=C().workArea.in,t1=loopEnd(C());
  assert.throws(()=>run({layers:['b']}),/has keys/);
  s.dispatch({type:'key.add',layer:'b',prop:'position',t:t0});s.dispatch({type:'prop.set',layer:'b',prop:'position',value:[10,20],t:t0});s.dispatch({type:'prop.set',layer:'b',prop:'position',value:[300,20],t:t0+10*T});
  s.dispatch({type:'key.add',layer:'b',prop:'rotation',t:t0});s.dispatch({type:'prop.set',layer:'b',prop:'rotation',value:5,t:t0});
@@ -1161,12 +1161,12 @@ test('P228 close loop: end key gets the start value, equal values skipped, keys 
 });
 test('P229 palette: colours with use counts, replace in fills and strokes in one undo step, locked kept, errors',async()=>{
  const {paletteOf,recolor}=await import('./palette');const {paletteSpecs}=await import('./paletteCommands');
- const run=(p?:unknown)=>paletteSpecs()[0].run(p) as {layers:number};
+ const run=(p?:unknown)=>(paletteSpecs()[0]!.run as (p?:unknown)=>unknown)(p) as unknown as {layers:number};
  const s=open();setAnimationSession(s);
  for(const id of ['p','q','r'])s.dispatch({type:'layer.add',kind:'shape',id} as never);
  for(const [id,c] of [['p','#ff0000'],['q','#FF0000'],['r','#00ff00']])s.dispatch({type:'layer.update',layer:id,source:{color:c}} as never);
  s.dispatch({type:'layer.stroke',layer:'r',stroke:{color:'#ff0000',width:2}} as never);
- const C=()=>findComp(s.document!),L=(id:string)=>C().layers.find(l=>l.id===id)!;
+ const C=()=>findComp(s.document!)!,L=(id:string)=>C().layers.find(l=>l.id===id)!;
  const red=paletteOf(C().layers).find(x=>x.color==='#ff0000')!;assert.equal(red.layers,3);assert.ok(paletteOf(C().layers).length<=12);
  const before=s.document;
  s.dispatch({type:'layer.update',layer:'q',locked:true} as never);
@@ -1181,14 +1181,14 @@ test('P230 squash and stretch: factors keep volume, keys follow speed, base scal
  const {layerSquashSpecs,squashFactors}=await import('./layerSquashCommands');const {evaluate}=await import('./interpolate');
  assert.deepEqual(squashFactors(0,0,60),{x:1,y:1});const f=squashFactors(0,30,100);assert.ok(f.y>1&&f.x<1);assert.ok(Math.abs(f.x*f.y-1)<0.02);
  const g=squashFactors(30,0,100);assert.ok(g.x>1&&g.y<1);const big=squashFactors(0,9999,100);assert.ok(big.y<=Math.sqrt(2)+0.01);
- const run=(p?:unknown)=>layerSquashSpecs()[0].run(p) as {layers:number};
+ const run=(p?:unknown)=>(layerSquashSpecs()[0]!.run as (p?:unknown)=>unknown)(p) as unknown as {layers:number};
  const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'shape',id:'b'});
- const C=()=>findComp(s.document!),L=()=>C().layers.find(l=>l.id==='b')!;const T=8000;
+ const C=()=>findComp(s.document!)!,L=()=>C().layers.find(l=>l.id==='b')!;const T=8000;
  assert.throws(()=>run({layers:['b']}),/animated position/);
  s.dispatch({type:'key.add',layer:'b',prop:'position',t:0});s.dispatch({type:'prop.set',layer:'b',prop:'position',value:[100,0],t:0});s.dispatch({type:'prop.set',layer:'b',prop:'position',value:[100,600],t:10*T});
  s.dispatch({type:'key.add',layer:'b',prop:'scale',t:5*T});s.dispatch({type:'prop.set',layer:'b',prop:'scale',value:[50,50],t:5*T});
  const before=s.document;run({layers:['b'],amount:100,step:2});
- const sc=L().transform.scale;const mid=evaluate(sc,5*T) as number[];assert.ok(mid[1]>mid[0]);assert.ok(sc.keys.length>=5);assert.equal(sc.keys.some(k=>k.t===5*T&&k.v[0]===50&&k.v[1]===50),false);
+ const sc=L().transform.scale;const mid=evaluate(sc,5*T) as unknown as number[];assert.ok(mid[1]>mid[0]);assert.ok(sc.keys.length>=5);assert.equal(sc.keys.some(k=>k.t===5*T&&Array.isArray(k.v)&&k.v[0]===50&&k.v[1]===50),false);
  s.undo();assert.equal(s.document,before);
  assert.throws(()=>run({layers:['b'],amount:0}),/amount/);assert.throws(()=>run({layers:['b'],step:0}),/key step/);
  s.dispatch({type:'layer.update',layer:'b',locked:true});assert.throws(()=>run({layers:['b']}),/locked/);
@@ -1196,9 +1196,9 @@ test('P230 squash and stretch: factors keep volume, keys follow speed, base scal
 test('P231 comp resize with content: fit/fill/center maths, keyed and static layers, children follow, one undo step, errors',async()=>{
  const {compResizeSpecs,resizeScale}=await import('./compResizeCommands');const {evaluate}=await import('./interpolate');
  assert.equal(resizeScale(800,450,1080,1080,'fit'),1.35);assert.equal(resizeScale(800,450,1080,1080,'fill'),2.4);assert.equal(resizeScale(800,450,1080,1080,'center'),1);
- const run=(p?:unknown)=>compResizeSpecs()[0].run(p) as {layers:number;scale:number};
+ const run=(p?:unknown)=>(compResizeSpecs()[0]!.run as (p?:unknown)=>unknown)(p) as unknown as {layers:number;scale:number};
  const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'shape',id:'b'});s.dispatch({type:'layer.add',kind:'shape',id:'c'});
- const C=()=>findComp(s.document!),L=(id:string)=>C().layers.find(l=>l.id===id)!;
+ const C=()=>findComp(s.document!)!,L=(id:string)=>C().layers.find(l=>l.id===id)!;
  const W=C().width,H=C().height;
  s.dispatch({type:'prop.set',layer:'b',prop:'position',value:[W/2+100,H/2],t:0});s.dispatch({type:'prop.set',layer:'b',prop:'scale',value:[100,100],t:0});
  s.dispatch({type:'layer.parent',layer:'c',parent:'b'} as never);
@@ -1214,8 +1214,8 @@ test('P232 polygon and star shape layers: points, valid source, centred, one und
  const {polygonPath}=await import('./polygonModel');const {polygonSpecs}=await import('./polygonCommands');const {validateDocument}=await import('./model');
  const tri=polygonPath(3,false,50);assert.equal(tri.points.length,3);assert.deepEqual(tri.points[0],{x:0.5,y:0});
  const st=polygonPath(5,true,40);assert.equal(st.points.length,10);assert.ok(Math.abs(st.points[1].y-(0.5+0.5*0.4*Math.sin(-Math.PI/2+Math.PI/5)))<1e-3);
- const run=(p?:unknown)=>polygonSpecs()[0].run(p) as {id:string};
- const s=open();setAnimationSession(s);const C=()=>findComp(s.document!),n0=C().layers.length,before=s.document;
+ const run=(p?:unknown)=>(polygonSpecs()[0]!.run as (p?:unknown)=>unknown)(p) as unknown as {id:string};
+ const s=open();setAnimationSession(s);const C=()=>findComp(s.document!)!,n0=C().layers.length,before=s.document;
  const r=run({sides:6,radius:100});const l=C().layers.find(x=>x.id===r.id)!;
  assert.equal(C().layers.length,n0+1);assert.equal(l.source.width,200);assert.equal(l.source.path!.points.length,6);assert.deepEqual(l.transform.position.value,[C().width/2-100,C().height/2-100]);assert.deepEqual(validateDocument(s.document),[]);
  s.undo();assert.equal(s.document,before);
@@ -1224,12 +1224,12 @@ test('P232 polygon and star shape layers: points, valid source, centred, one und
 });
 test('P233 snap keys to markers: nearest marker, max distance, one undo step, errors',async()=>{
  const {keyMarkerSpecs}=await import('./keyMarkerCommands');const run=keyMarkerSpecs()[0].run as (p?:unknown)=>unknown;
- const s=open();setAnimationSession(s);const c0=findComp(s.document!)!;const l=c0.layers[0].id;
+ const s=open();setAnimationSession(s);const c0=findComp(s.document!)!!;const l=c0.layers[0].id;
  assert.throws(()=>run({}),/markers/i);
  s.dispatch({type:'markers.set',markers:[{id:'m1',t:c0.start+f(10),label:'a'},{id:'m2',t:c0.start+f(30),label:'b'}]});
  s.dispatch({type:'key.add',layer:l,prop:'rotation',t:c0.start+f(13)} as never);
  s.dispatch({type:'key.add',layer:l,prop:'rotation',t:c0.start+f(24)} as never);
- const ts=()=>findComp(s.document!)!.layers.find(x=>x.id===l)!.transform.rotation.keys.map(k=>k.t).sort((a,b)=>a-b);
+ const ts=()=>findComp(s.document!)!!.layers.find(x=>x.id===l)!.transform.rotation.keys.map(k=>k.t).sort((a,b)=>a-b);
  const sel=()=>s.selectKeys([{layer:l,prop:'rotation',t:c0.start+f(13)},{layer:l,prop:'rotation',t:c0.start+f(24)}]);
  sel();assert.throws(()=>run({maxFrames:2}),/close to a marker/);
  run({maxFrames:3});assert.deepEqual(ts(),[c0.start+f(10),c0.start+f(24)]);
@@ -1240,10 +1240,10 @@ test('P233 snap keys to markers: nearest marker, max distance, one undo step, er
 
 test('P234 work area to the section between markers at the playhead, one undo step, errors',async()=>{
  const {markerWorkAreaSpecs}=await import('./markerWorkAreaCommands');const run=markerWorkAreaSpecs()[0].run as (p?:unknown)=>unknown;
- const s=open();setAnimationSession(s);const c0=findComp(s.document!)!;
+ const s=open();setAnimationSession(s);const c0=findComp(s.document!)!!;
  assert.throws(()=>run({}),/markers/i);
  s.dispatch({type:'markers.set',markers:[{id:'m1',t:f(10),label:'a'},{id:'m2',t:f(30),label:'b'}]});
- const wa=()=>findComp(s.document!)!.workArea;
+ const wa=()=>findComp(s.document!)!!.workArea;
  s.setView({playhead:f(15)});run({layers:['x']});assert.deepEqual([wa().in,wa().out],[f(10),f(30)]);
  assert.throws(()=>run({}),/already/);
  s.undo();assert.deepEqual([wa().in,wa().out],[c0.workArea.in,c0.workArea.out]);
@@ -1253,8 +1253,8 @@ test('P234 work area to the section between markers at the playhead, one undo st
 
 test('P235 layer time stretch: keys and out point scale about the in point, one undo step, refusals',async()=>{
  const {layerStretchSpecs}=await import('./layerStretchCommands');const run=layerStretchSpecs()[0].run as (p?:unknown)=>unknown;
- const s=open();setAnimationSession(s);const c0=findComp(s.document!)!;const L0=c0.layers.find(l=>l.transform.position.keys.length>1)!;
- const get=()=>findComp(s.document!)!.layers.find(l=>l.id===L0.id)!;
+ const s=open();setAnimationSession(s);const c0=findComp(s.document!)!!;const L0=c0.layers.find(l=>l.transform.position.keys.length>1)!;
+ const get=()=>findComp(s.document!)!!.layers.find(l=>l.id===L0.id)!;
  const k0=L0.transform.position.keys.map(k=>k.t),span=L0.outT-L0.inT;
  run({percent:50,layers:[L0.id]});
  const l1=get();assert.equal(l1.inT,L0.inT);assert.ok(Math.abs((l1.outT-l1.inT)-span/2)<=frameToTick(1,{num:30,den:1}));
@@ -1266,7 +1266,7 @@ test('P235 layer time stretch: keys and out point scale about the in point, one 
 
 test('P236 Lottie export: layers, keys with easing, parenting, flat fills and a list of what is left out',async()=>{
  const {lottieFromComposition}=await import('./lottie');const {exportLottieFile}=await import('./exportSvg');
- const s=open();const c=findComp(s.document!)!;
+ const s=open();const c=findComp(s.document!)!!;
  const r=lottieFromComposition(c),j=JSON.parse(r.json);
  assert.equal(j.v,'5.7.4');assert.equal(j.w,c.width);assert.equal(j.h,c.height);assert.equal(j.fr,30);assert.equal(j.op,Math.round(c.duration*30/240000));
  assert.ok(Array.isArray(j.layers)&&j.layers.length===r.layers&&r.layers>=1);
@@ -1282,8 +1282,8 @@ test('P236 Lottie export: layers, keys with easing, parenting, flat fills and a 
 
 test('P237 auto-key: off by default, static properties get one key at the playhead, one undo step, keyed ones are untouched',async()=>{
  const {setAutoKey,autoKeyOn}=await import('./autoKey');
- const s=open();setAnimationSession(s);const c0=findComp(s.document!)!;
- const L=c0.layers.find(l=>!l.transform.rotation.keys.length&&l.kind!=='audio')!;const get=()=>findComp(s.document!)!.layers.find(l=>l.id===L.id)!.transform.rotation;
+ const s=open();setAnimationSession(s);const c0=findComp(s.document!)!!;
+ const L=c0.layers.find(l=>!l.transform.rotation.keys.length&&l.kind!=='audio')!;const get=()=>findComp(s.document!)!!.layers.find(l=>l.id===L.id)!.transform.rotation;
  const t=c0.start+f(12);
  try{
   assert.equal(autoKeyOn(),false);
@@ -1302,53 +1302,53 @@ test('P237 auto-key: off by default, static properties get one key at the playhe
 
 test('P238 send layers to another composition: copy keeps the original, move removes it, parents follow, misfits are skipped, one undo step',async()=>{
  const {layerSendSpecs}=await import('./layerSendCommands');const run=layerSendSpecs()[0].run as (p?:unknown)=>unknown;
- const s=open();setAnimationSession(s);const src0=findComp(s.document!)!;
+ const s=open();setAnimationSession(s);const src0=findComp(s.document!)!!;
  s.dispatch({type:'comp.add',id:'other',settings:{name:'Other'} as never});
  s.dispatch({type:'comp.select',comp:src0.id} as never);
- const src=findComp(s.document!)!;assert.equal(src.id,src0.id);
+ const src=findComp(s.document!)!!;assert.equal(src.id,src0.id);
  const kids=src.layers.filter(l=>l.kind!=='audio'&&l.kind!=='comp').slice(0,2).map(l=>l.id);
  const other=()=>s.document!.compositions.find(c=>c.id==='other')!;
  const n0=other().layers.length;
- const r=run({comp:'other',layers:kids}) as {sent:number;skipped:number};
+ const r=run({comp:'other',layers:kids}) as unknown as {sent:number;skipped:number};
  assert.equal(r.sent+r.skipped,kids.length);assert.ok(r.sent>0,'at least one layer fits');assert.equal(other().layers.length,n0+r.sent);
- assert.equal(findComp(s.document!)!.layers.length,src.layers.length);
+ assert.equal(findComp(s.document!)!!.layers.length,src.layers.length);
  assert.ok(other().layers.slice(0,r.sent).every(l=>!kids.includes(l.id)));
  s.undo();assert.equal(other().layers.length,n0);
- if(r.sent){const m=run({comp:'other',layers:kids,move:true}) as {sent:number};assert.equal(findComp(s.document!)!.layers.length,src.layers.length-m.sent);s.undo();assert.equal(findComp(s.document!)!.layers.length,src.layers.length);}
+ if(r.sent){const m=run({comp:'other',layers:kids,move:true}) as unknown as {sent:number};assert.equal(findComp(s.document!)!!.layers.length,src.layers.length-m.sent);s.undo();assert.equal(findComp(s.document!)!!.layers.length,src.layers.length);}
  assert.throws(()=>run({comp:src.id,layers:kids}),/different/);assert.throws(()=>run({comp:'nope',layers:kids}),/another/);
 });
 
 test('P240 camera: null at the centre, all unlocked top level layers hang from it, moves key it over the work area, one undo step each',async()=>{
  const {cameraSpecs,findCamera}=await import('./cameraCommands');const [add,move]=cameraSpecs().map(x=>x.run as (p?:unknown)=>unknown);
- const s=open();setAnimationSession(s);const c0=findComp(s.document!)!;
+ const s=open();setAnimationSession(s);const c0=findComp(s.document!)!!;
  assert.throws(()=>move({move:'pushIn'}),/camera first/i);
  const roots=c0.layers.filter(l=>l.parent===null&&!l.locked).map(l=>l.id);
- const r=add({}) as {id:string;attached:number};assert.equal(r.attached,roots.length);
- let c=findComp(s.document!)!;const cam=findCamera(c)!;assert.equal(cam.id,r.id);assert.deepEqual(cam.transform.position.value,[c0.width/2,c0.height/2]);assert.deepEqual(cam.transform.anchor.value,[c0.width/2,c0.height/2]);
+ const r=add({}) as unknown as {id:string;attached:number};assert.equal(r.attached,roots.length);
+ let c=findComp(s.document!)!!;const cam=findCamera(c)!;assert.equal(cam.id,r.id);assert.deepEqual(cam.transform.position.value,[c0.width/2,c0.height/2]);assert.deepEqual(cam.transform.anchor.value,[c0.width/2,c0.height/2]);
  for(const id of roots)assert.equal(c.layers.find(l=>l.id===id)!.parent,cam.id);
  assert.throws(()=>add({}),/already/);
- move({move:'pushIn',amount:30});c=findComp(s.document!)!;const sc=findCamera(c)!.transform.scale.keys;
+ move({move:'pushIn',amount:30});c=findComp(s.document!)!!;const sc=findCamera(c)!.transform.scale.keys;
  assert.deepEqual(sc.map(k=>[k.t,k.v]),[[c.workArea.in,[100,100]],[c.workArea.out,[130,130]]]);
- s.undo();assert.equal(findCamera(findComp(s.document!)!)!.transform.scale.keys.length,0);
- move({move:'panLeft'});assert.equal(findCamera(findComp(s.document!)!)!.transform.position.keys.length,2);
+ s.undo();assert.equal(findCamera(findComp(s.document!)!!)!.transform.scale.keys.length,0);
+ move({move:'panLeft'});assert.equal(findCamera(findComp(s.document!)!!)!.transform.position.keys.length,2);
  assert.throws(()=>move({move:'nope'}),/Unknown/);assert.throws(()=>move({move:'pushIn',amount:500}),/amount/);
- s.undo();s.undo();assert.equal(findCamera(findComp(s.document!)!),undefined);
- assert.equal(findComp(s.document!)!.layers.every(l=>l.parent===c0.layers.find(x=>x.id===l.id)?.parent),true);
+ s.undo();s.undo();assert.equal(findCamera(findComp(s.document!)!!),undefined);
+ assert.equal(findComp(s.document!)!!.layers.every(l=>l.parent===c0.layers.find(x=>x.id===l.id)?.parent),true);
 });
 
 test('P241 camera follow: the followed layer stays put in frame, linear keys, bounded, one undo step',async()=>{
  const {cameraSpecs,findCamera,MAX_FOLLOW_KEYS}=await import('./cameraCommands');const {worldMatrix}=await import('./scene');
  const specs=cameraSpecs(),add=specs[0].run as (p?:unknown)=>unknown,follow=specs[2].run as (p?:unknown)=>unknown;
- const s=open();setAnimationSession(s);let c=findComp(s.document!)!;
- assert.throws(()=>follow({}),/camera first/i);add({});c=findComp(s.document!)!;
+ const s=open();setAnimationSession(s);let c=findComp(s.document!)!!;
+ assert.throws(()=>follow({}),/camera first/i);add({});c=findComp(s.document!)!!;
  const title=c.layers.find(l=>l.id==='a')!;s.dispatch([{type:'key.add',layer:'a',prop:'position',t:f(0)},{type:'key.add',layer:'a',prop:'position',t:f(30)},{type:'prop.set',layer:'a',prop:'position',t:f(30),value:[300,200] as never}]);
  assert.throws(()=>follow({layer:findCamera(c)!.id}),/itself/);
- s.setView({selectedLayer:title.id});const r=follow({}) as {keys:number};assert.ok(r.keys>=2&&r.keys<=MAX_FOLLOW_KEYS);
- c=findComp(s.document!)!;const cam=findCamera(c)!,tl=c.layers.find(l=>l.id===title.id)!;
+ s.setView({selectedLayer:title.id});const r=follow({}) as unknown as {keys:number};assert.ok(r.keys>=2&&r.keys<=MAX_FOLLOW_KEYS);
+ c=findComp(s.document!)!!;const cam=findCamera(c)!,tl=c.layers.find(l=>l.id===title.id)!;
  assert.ok(cam.transform.position.keys.length===r.keys&&cam.transform.position.keys.every(k=>k.interp==='linear'));
- const an=tl.transform.anchor.value as unknown as number[];const pt=(t:number)=>{const m=worldMatrix(c,tl,t);return [m[0]*an[0]+m[2]*an[1]+m[4],m[1]*an[0]+m[3]*an[1]+m[5]];};
+ const an=tl.transform.anchor.value as unknown as unknown as number[];const pt=(t:number)=>{const m=worldMatrix(c,tl,t);return [m[0]*an[0]+m[2]*an[1]+m[4],m[1]*an[0]+m[3]*an[1]+m[5]];};
  const p0=pt(c.workArea.in);for(const t of [c.workArea.out,Math.round(c.workArea.out/2)]){const p=pt(t);assert.ok(Math.abs(p[0]-p0[0])<1.5&&Math.abs(p[1]-p0[1])<1.5,`${t}: ${p} vs ${p0}`);}
- s.undo();assert.equal(findCamera(findComp(s.document!)!)!.transform.position.keys.length,0);
+ s.undo();assert.equal(findCamera(findComp(s.document!)!!)!.transform.position.keys.length,0);
 });
 
 test('P242 camera shake and reset: seeded, bounded, rest at the ends, reset clears keys, one undo step each',async()=>{
@@ -1356,27 +1356,27 @@ test('P242 camera shake and reset: seeded, bounded, rest at the ends, reset clea
  const sp=cameraSpecs(),add=sp[0].run as (p?:unknown)=>unknown,move=sp[1].run as (p?:unknown)=>unknown,shake=sp[3].run as (p?:unknown)=>unknown,reset=sp[4].run as (p?:unknown)=>unknown;
  const s=open();setAnimationSession(s);assert.throws(()=>shake({}),/camera first/i);add({});
  assert.throws(()=>shake({amount:0}),/1 to 100/);
- shake({amount:10});let c=findComp(s.document!)!;let cam=findCamera(c)!;const ks=cam.transform.position.keys;
+ shake({amount:10});let c=findComp(s.document!)!!;let cam=findCamera(c)!;const ks=cam.transform.position.keys;
  assert.ok(ks.length>=3&&ks.length<=MAX_FOLLOW_KEYS+1);assert.deepEqual(ks[0].v,[c.width/2,c.height/2]);assert.deepEqual(ks[ks.length-1].v,[c.width/2,c.height/2]);
- assert.ok(ks.every(k=>Math.abs((k.v as number[])[0]-c.width/2)<=10&&Math.abs((k.v as number[])[1]-c.height/2)<=10));
- const first=JSON.stringify(ks.map(k=>k.v));s.undo();assert.equal(findCamera(findComp(s.document!)!)!.transform.position.keys.length,0);
- shake({amount:10});assert.equal(JSON.stringify(findCamera(findComp(s.document!)!)!.transform.position.keys.map(k=>k.v)),first);
- move({move:'pushIn'});reset({});cam=findCamera(findComp(s.document!)!)!;
+ assert.ok(ks.every(k=>Math.abs((k.v as unknown as number[])[0]-c.width/2)<=10&&Math.abs((k.v as unknown as number[])[1]-c.height/2)<=10));
+ const first=JSON.stringify(ks.map(k=>k.v));s.undo();assert.equal(findCamera(findComp(s.document!)!!)!.transform.position.keys.length,0);
+ shake({amount:10});assert.equal(JSON.stringify(findCamera(findComp(s.document!)!!)!.transform.position.keys.map(k=>k.v)),first);
+ move({move:'pushIn'});reset({});cam=findCamera(findComp(s.document!)!!)!;
  assert.equal(cam.transform.position.keys.length+cam.transform.scale.keys.length,0);assert.deepEqual(cam.transform.scale.value,[100,100]);assert.deepEqual(cam.transform.position.value,[c.width/2,c.height/2]);
  assert.throws(()=>reset({}),/no keys/);
- s.undo();assert.equal(findCamera(findComp(s.document!)!)!.transform.scale.keys.length,2);
+ s.undo();assert.equal(findCamera(findComp(s.document!)!!)!.transform.scale.keys.length,2);
 });
 
 test('P243 layer labels: set, clear, validated, locked-safe, one undo step; old files unchanged',async()=>{
  const {layerLabelSpecs}=await import('./layerLabelCommands');const {validateDocument}=await import('./model');
- const label=layerLabelSpecs()[0].run as (p?:unknown)=>unknown;const s=open();setAnimationSession(s);const c0=findComp(s.document!)!;
+ const label=layerLabelSpecs()[0].run as (p?:unknown)=>unknown;const s=open();setAnimationSession(s);const c0=findComp(s.document!)!!;
  assert.ok(c0.layers.every(l=>l.label===undefined));
  const ids=c0.layers.map(l=>l.id);assert.throws(()=>label({label:'pink',layers:ids}),/Unknown/);
- label({label:'red',layers:ids});let c=findComp(s.document!)!;assert.ok(c.layers.every(l=>l.label==='red'));validateDocument(s.document!);
+ label({label:'red',layers:ids});let c=findComp(s.document!)!!;assert.ok(c.layers.every(l=>l.label==='red'));validateDocument(s.document!);
  assert.throws(()=>label({label:'red',layers:ids}),/already/);
- label({label:'blue',layers:[ids[0]]});c=findComp(s.document!)!;assert.equal(c.layers[0].label,'blue');assert.equal(c.layers[1]?.label??'red','red');
- s.undo();assert.equal(findComp(s.document!)!.layers[0].label,'red');
- label({label:'none',layers:ids});c=findComp(s.document!)!;assert.ok(c.layers.every(l=>!('label' in l)));
+ label({label:'blue',layers:[ids[0]]});c=findComp(s.document!)!!;assert.equal(c.layers[0].label,'blue');assert.equal(c.layers[1]?.label??'red','red');
+ s.undo();assert.equal(findComp(s.document!)!!.layers[0].label,'red');
+ label({label:'none',layers:ids});c=findComp(s.document!)!!;assert.ok(c.layers.every(l=>!('label' in l)));
  assert.throws(()=>s.dispatch([{type:'layer.label',layers:['nope'],label:'red'}]),/./);
 });
 
@@ -1390,12 +1390,12 @@ test('P244 timeline layer filter: words match name, kind and label; empty matche
 
 test('P245 spring modifier: rings out after the last key, continuous, decays, validated, bakeable, one undo step',async()=>{
  const {evaluateMod}=await import('./modifiers');const {validateModifiers}=await import('./modifierModel');
- const s=open();setAnimationSession(s);const c=findComp(s.document!)!;const l=c.layers.find(x=>x.id==='a')!;
+ const s=open();setAnimationSession(s);const c=findComp(s.document!)!!;const l=c.layers.find(x=>x.id==='a')!;
  s.dispatch([{type:'key.add',layer:'a',prop:'opacity',t:f(0)},{type:'key.add',layer:'a',prop:'opacity',t:f(10)},{type:'prop.set',layer:'a',prop:'opacity',t:f(0),value:0},{type:'prop.set',layer:'a',prop:'opacity',t:f(10),value:100}]);
  const m={type:'spring' as const,amplitude:50,frequency:2,damping:4};
  assert.deepEqual(validateModifiers([m]),[]);assert.ok(validateModifiers([{...m,frequency:0}]).length&&validateModifiers([{...m,damping:99}]).length&&validateModifiers([{...m,amplitude:301}]).length);
  s.dispatch([{type:'modifier.add',layer:'a',prop:'opacity',modifier:m}]);
- const p=findComp(s.document!)!.layers.find(x=>x.id==='a')!.transform.opacity;
+ const p=findComp(s.document!)!!.layers.find(x=>x.id==='a')!.transform.opacity;
  assert.equal(evaluateMod(p,f(10)),100);assert.equal(evaluateMod(p,f(5)),evaluateMod({...p,modifiers:undefined},f(5)));
  const tq=f(10)+24000;assert.ok((evaluateMod(p,tq) as number)>100,'overshoots first');
  const late=evaluateMod(p,f(10)+2400000) as number;assert.ok(Math.abs(late-100)<0.05,`settles: ${late}`);
@@ -1409,17 +1409,17 @@ test('P246 unpack precomp: same picture, group null keeps the precomp transform,
  const unpack=precompUnpackSpecs()[0].run as (p?:unknown)=>unknown;
  const d0=applyEdits(base(),[{type:'layer.add',kind:'shape',id:'b'},{type:'layer.parent',layer:'b',parent:'a'},{type:'layer.add',kind:'solid',id:'top'},{type:'layer.add',kind:'solid',id:'low'},{type:'layer.reorder',layer:'low',index:3},{type:'precomp.make',layers:['a','b'],id:'pc',compId:'pcc',name:'Group'},{type:'prop.set',layer:'pc',prop:'position',t:f(0),value:[330,220]},{type:'prop.set',layer:'pc',prop:'rotation',t:f(0),value:12}] as never);
  const s=new AnimationSession();s.open(d0);setAnimationSession(s);
- const parent0=findComp(s.document!)!,child=s.document!.compositions.find(x=>x.id==='pcc')!;
+ const parent0=findComp(s.document!)!!,child=s.document!.compositions.find(x=>x.id==='pcc')!;
  const times=[f(0),f(4),f(10)];
  const before=(id:string,t:number)=>multiplyMatrix(worldMatrix(parent0,parent0.layers.find(l=>l.id==='pc')!,t),worldMatrix(child,child.layers.find(l=>l.id===id)!,t));
  const order0=parent0.layers.map(l=>l.id);
- const r=unpack({layers:['pc']}) as {unpacked:number;layers:number};assert.equal(r.unpacked,1);assert.equal(r.layers,3);
- const after=findComp(s.document!)!;assert.ok(!after.layers.some(l=>l.id==='pc'));
+ const r=unpack({layers:['pc']}) as unknown as {unpacked:number;layers:number};assert.equal(r.unpacked,1);assert.equal(r.layers,3);
+ const after=findComp(s.document!)!!;assert.ok(!after.layers.some(l=>l.id==='pc'));
  for(const id of ['a','b'])for(const t of times){const m1=before(id,t),m2=worldMatrix(after,after.layers.find(l=>l.id===id)!,t);m1.forEach((v,i)=>assert.ok(Math.abs(v-m2[i])<1e-6,`${id}@${t}[${i}] ${v} vs ${m2[i]}`));}
  const idx=(c:typeof after,id:string)=>c.layers.findIndex(l=>l.id===id);
  assert.ok(idx(after,'top')<idx(after,'a')&&idx(after,'b')<idx(after,'low')&&idx(after,'a')<idx(after,'low'),after.layers.map(l=>l.id).join());
  assert.equal(after.layers.length,order0.length-1+3);
- s.undo();assert.equal(findComp(s.document!)!.layers.length,order0.length);assert.ok(findComp(s.document!)!.layers.some(l=>l.id==='pc'));
+ s.undo();assert.equal(findComp(s.document!)!!.layers.length,order0.length);assert.ok(findComp(s.document!)!!.layers.some(l=>l.id==='pc'));
  s.dispatch([{type:'prop.set',layer:'pc',prop:'opacity',t:f(0),value:50}] as never);
  assert.throws(()=>unpack({layers:['pc']}),/opacity/);
  assert.throws(()=>unpack({layers:['top']}),/precomposition layer first/);
@@ -1429,7 +1429,7 @@ test('P246 unpack twice: colliding ids get fresh ids and parents follow',async()
  const {precompUnpackSpecs}=await import('./precompUnpackCommands');const unpack=precompUnpackSpecs()[0].run as (p?:unknown)=>unknown;
  const d0=applyEdits(base(),[{type:'layer.add',kind:'shape',id:'b'},{type:'layer.parent',layer:'b',parent:'a'},{type:'precomp.make',layers:['a','b'],id:'pc',compId:'pcc',name:'G'},{type:'precomp.add',comp:'pcc',id:'pc2'}] as never);
  const s=new AnimationSession();s.open(d0);setAnimationSession(s);
- unpack({layers:['pc']});unpack({layers:['pc2']});const c=findComp(s.document!)!;
+ unpack({layers:['pc']});unpack({layers:['pc2']});const c=findComp(s.document!)!!;
  assert.equal(c.layers.length,6);assert.equal(new Set(c.layers.map(l=>l.id)).size,6);
  const bs=c.layers.filter(l=>l.kind==='shape'&&c.layers.some(x=>x.id===l.parent&&x.kind==='shape'));assert.equal(bs.length,2);assert.notEqual(bs[0].parent,bs[1].parent);
 });
@@ -1441,16 +1441,16 @@ test('P247 aim: the layer points at the target at every sampled time, also under
  assert.throws(()=>aim({layers:['a']}),/target first/);
  assert.throws(()=>aim({layers:['p','a','g']}),/hangs? from/);
  for(const off of [0,90]){
-  const r=aim({layers:['a','p'],offset:off}) as {aimed:number;keys:number};assert.equal(r.aimed,1);assert.ok(r.keys>=2&&r.keys<=120);
-  const c=findComp(s.document!)!,L=c.layers.find(l=>l.id==='p')!,T=c.layers.find(l=>l.id==='a')!;
-  const pt=(l:typeof L,t:number)=>{const m=worldMatrix(c,l,t),an=l.transform.anchor.value as unknown as number[];return [m[0]*an[0]+m[2]*an[1]+m[4],m[1]*an[0]+m[3]*an[1]+m[5]];};
+  const r=aim({layers:['a','p'],offset:off}) as unknown as {aimed:number;keys:number};assert.equal(r.aimed,1);assert.ok(r.keys>=2&&r.keys<=120);
+  const c=findComp(s.document!)!!,L=c.layers.find(l=>l.id==='p')!,T=c.layers.find(l=>l.id==='a')!;
+  const pt=(l:typeof L,t:number)=>{const m=worldMatrix(c,l,t),an=l.transform.anchor.value as unknown as unknown as number[];return [m[0]*an[0]+m[2]*an[1]+m[4],m[1]*an[0]+m[3]*an[1]+m[5]];};
   for(const t of [f(0),f(3),f(7),f(10)]){const m=worldMatrix(c,L,t),p=pt(L,t),q=pt(T,t);
    const want=Math.atan2(q[1]-p[1],q[0]-p[0])*180/Math.PI+off,got=Math.atan2(m[1],m[0])*180/Math.PI;
    const diff=((want-got)%360+540)%360-180;assert.ok(Math.abs(diff)<0.6,`off ${off} t ${t}: ${diff}`);}
   const ks=L.transform.rotation.keys;for(let i=1;i<ks.length;i++)assert.ok(Math.abs((ks[i].v as number)-(ks[i-1].v as number))<180);
-  s.undo();assert.equal(findComp(s.document!)!.layers.find(l=>l.id==='p')!.transform.rotation.keys.length,0);
+  s.undo();assert.equal(findComp(s.document!)!!.layers.find(l=>l.id==='p')!.transform.rotation.keys.length,0);
  }
- assert.deepEqual(aimKeys(findComp(s.document!)!,findComp(s.document!)!.layers.find(l=>l.id==='p')!,findComp(s.document!)!.layers.find(l=>l.id==='a')!,0,f(10),0).length>1,true);
+ assert.deepEqual(aimKeys(findComp(s.document!)!!,findComp(s.document!)!!.layers.find(l=>l.id==='p')!,findComp(s.document!)!!.layers.find(l=>l.id==='a')!,0,f(10),0).length>1,true);
 });
 
 test('P248 orbit: constant radius around the moving target, starts where the layer is, full turns, rotated parent ok, one undo step',async()=>{
@@ -1458,16 +1458,16 @@ test('P248 orbit: constant radius around the moving target, starts where the lay
  const d0=applyEdits(base(),[{type:'layer.add',kind:'solid',id:'g'},{type:'prop.set',layer:'g',prop:'rotation',t:f(0),value:30},{type:'prop.set',layer:'g',prop:'position',t:f(0),value:[50,20]},{type:'layer.add',kind:'solid',id:'p'},{type:'prop.set',layer:'p',prop:'position',t:f(0),value:[400,300]},{type:'layer.parent',layer:'p',parent:'g'}] as never);
  const s=new AnimationSession();s.open(d0);setAnimationSession(s);
  assert.throws(()=>orbit({layers:['a']}),/centre first/);assert.throws(()=>orbit({layers:['a','p'],turns:0}),/Turns/);assert.throws(()=>orbit({layers:['p','a','g']}),/hangs? from/);
- const c0=findComp(s.document!)!;const pt=(c:typeof c0,id:string,t:number)=>{const l=c.layers.find(x=>x.id===id)!,m=worldMatrix(c,l,t),an=l.transform.anchor.value as unknown as number[];return [m[0]*an[0]+m[2]*an[1]+m[4],m[1]*an[0]+m[3]*an[1]+m[5]];};
+ const c0=findComp(s.document!)!!;const pt=(c:typeof c0,id:string,t:number)=>{const l=c.layers.find(x=>x.id===id)!,m=worldMatrix(c,l,t),an=l.transform.anchor.value as unknown as unknown as number[];return [m[0]*an[0]+m[2]*an[1]+m[4],m[1]*an[0]+m[3]*an[1]+m[5]];};
  const p0=pt(c0,'p',f(0)),q0=pt(c0,'a',f(0)),r0=Math.hypot(p0[0]-q0[0],p0[1]-q0[1]);
  for(const turns of [1,-2]){
-  const r=orbit({layers:['a','p'],turns}) as {orbiting:number;keys:number};assert.equal(r.orbiting,1);assert.ok(r.keys>=2&&r.keys<=120);
-  const c=findComp(s.document!)!,end=c.workArea.out;
+  const r=orbit({layers:['a','p'],turns}) as unknown as {orbiting:number;keys:number};assert.equal(r.orbiting,1);assert.ok(r.keys>=2&&r.keys<=120);
+  const c=findComp(s.document!)!!,end=c.workArea.out;
   for(const t of [f(0),f(3),f(7),end]){const p=pt(c,'p',t),q=pt(c,'a',t);assert.ok(Math.abs(Math.hypot(p[0]-q[0],p[1]-q[1])-r0)<r0*0.01+0.5,`radius at ${t}`);}
   const ps=pt(c,'p',f(0));assert.ok(Math.abs(ps[0]-p0[0])<0.6&&Math.abs(ps[1]-p0[1])<0.6,'starts where it is');
   const pe=pt(c,'p',end),qe=pt(c,'a',end),a0=Math.atan2(p0[1]-q0[1],p0[0]-q0[0]),a1=Math.atan2(pe[1]-qe[1],pe[0]-qe[0]);assert.ok(Math.abs(Math.sin(a1-a0))<0.02&&Math.cos(a1-a0)>0.98,'full turns end where they began');
   const mid=pt(c,'p',Math.round(end/ (turns===1?2:4))),qm=pt(c,'a',Math.round(end/(turns===1?2:4)));const am=Math.atan2(mid[1]-qm[1],mid[0]-qm[0]);assert.ok(Math.cos(am-a0)<-0.95,'half way round is opposite');
-  s.undo();assert.equal(findComp(s.document!)!.layers.find(l=>l.id==='p')!.transform.position.keys.length,0);
+  s.undo();assert.equal(findComp(s.document!)!!.layers.find(l=>l.id==='p')!.transform.position.keys.length,0);
  }
 });
 
@@ -1479,14 +1479,14 @@ test('P249 bounce: falls onto the ground, every bounce lower, rests on the floor
  const d0=applyEdits(base(),[{type:'layer.add',kind:'solid',id:'floor'},{type:'prop.set',layer:'floor',prop:'position',t:f(0),value:[300,400]},{type:'layer.add',kind:'solid',id:'g'},{type:'prop.set',layer:'g',prop:'rotation',t:f(0),value:20},{type:'layer.add',kind:'solid',id:'ball'},{type:'prop.set',layer:'ball',prop:'position',t:f(0),value:[-100,-150]},{type:'layer.parent',layer:'ball',parent:'g'}] as never);
  const s=new AnimationSession();s.open(d0);setAnimationSession(s);
  assert.throws(()=>bounce({layers:['ball']}),/ground first/);assert.throws(()=>bounce({layers:['floor','ball'],bounces:0}),/Bounces/);assert.throws(()=>bounce({layers:['ball','floor','g']}),/hangs? from/);
- const c0=findComp(s.document!)!;const pt=(c:typeof c0,id:string,t:number)=>{const l=c.layers.find(x=>x.id===id)!,m=worldMatrix(c,l,t),an=l.transform.anchor.value as unknown as number[];return [m[0]*an[0]+m[2]*an[1]+m[4],m[1]*an[0]+m[3]*an[1]+m[5]];};
+ const c0=findComp(s.document!)!!;const pt=(c:typeof c0,id:string,t:number)=>{const l=c.layers.find(x=>x.id===id)!,m=worldMatrix(c,l,t),an=l.transform.anchor.value as unknown as unknown as number[];return [m[0]*an[0]+m[2]*an[1]+m[4],m[1]*an[0]+m[3]*an[1]+m[5]];};
  const p0=pt(c0,'ball',f(0)),floorY=pt(c0,'floor',f(0))[1];
  assert.throws(()=>bounce({layers:['a','floor']}),/above the ground/);
- const r=bounce({layers:['floor','ball'],bounces:3}) as {dropping:number;keys:number};assert.equal(r.dropping,1);assert.ok(r.keys<=120);
- const c=findComp(s.document!)!;
+ const r=bounce({layers:['floor','ball'],bounces:3}) as unknown as {dropping:number;keys:number};assert.equal(r.dropping,1);assert.ok(r.keys<=120);
+ const c=findComp(s.document!)!!;
  for(const t of [f(0),f(4),f(9),c.workArea.out]){const p=pt(c,'ball',t);assert.ok(Math.abs(p[0]-p0[0])<0.5,'x kept');assert.ok(p[1]<=floorY+0.6,'never below the floor');}
  assert.ok(Math.abs(pt(c,'ball',f(0))[1]-p0[1])<0.6);assert.ok(Math.abs(pt(c,'ball',c.workArea.out)[1]-floorY)<0.6,'rests on the floor');
- s.undo();assert.equal(findComp(s.document!)!.layers.find(l=>l.id==='ball')!.transform.position.keys.length,0);
+ s.undo();assert.equal(findComp(s.document!)!!.layers.find(l=>l.id==='ball')!.transform.position.keys.length,0);
 });
 
 test('P250 travel along a path: start, middle and end sit on the path in world space, orient faces the way, rotated parent, one undo step',async()=>{
@@ -1495,15 +1495,15 @@ test('P250 travel along a path: start, middle and end sit on the path in world s
  const d0=applyEdits(base(),[{type:'layer.add',kind:'shape',id:'pa',over:{source:{shape:'path',color:'#ff0000',width:400,height:100,path:{closed:false,points:[{x:0,y:0},{x:1,y:0},{x:1,y:1}]}}}},{type:'layer.add',kind:'solid',id:'g'},{type:'prop.set',layer:'g',prop:'rotation',t:f(0),value:30},{type:'layer.add',kind:'solid',id:'m'},{type:'layer.parent',layer:'m',parent:'g'}] as never);
  const s=new AnimationSession();s.open(d0);setAnimationSession(s);
  assert.throws(()=>go({layers:['pa']}),/Tick the path/);assert.throws(()=>go({layers:['a','m']}),/path shape/);
- const r=go({layers:['pa','m'],orient:true}) as {travelling:number;keys:number};assert.equal(r.travelling,1);assert.ok(r.keys<=240);
- const c=findComp(s.document!)!,pa=c.layers.find(l=>l.id==='pa')!,m=c.layers.find(l=>l.id==='m')!;
+ const r=go({layers:['pa','m'],orient:true}) as unknown as {travelling:number;keys:number};assert.equal(r.travelling,1);assert.ok(r.keys<=240);
+ const c=findComp(s.document!)!!,pa=c.layers.find(l=>l.id==='pa')!,m=c.layers.find(l=>l.id==='m')!;
  const pw=(x:number,y:number,t:number)=>{const w=worldMatrix(c,pa,t);return [w[0]*x+w[2]*y+w[4],w[1]*x+w[3]*y+w[5]];};
- const an=m.transform.anchor.value as unknown as number[];const at=(t:number)=>{const w=worldMatrix(c,m,t);return [w[0]*an[0]+w[2]*an[1]+w[4],w[1]*an[0]+w[3]*an[1]+w[5]];};
+ const an=m.transform.anchor.value as unknown as unknown as number[];const at=(t:number)=>{const w=worldMatrix(c,m,t);return [w[0]*an[0]+w[2]*an[1]+w[4],w[1]*an[0]+w[3]*an[1]+w[5]];};
  const near=(a:number[],b:number[])=>Math.abs(a[0]-b[0])<0.6&&Math.abs(a[1]-b[1])<0.6;
  const a=c.workArea.in,b=c.workArea.out;assert.ok(near(at(a),pw(0,0,a)),'start');assert.ok(near(at(b),pw(400,100,b)),'end');assert.ok(near(at(a+(b-a)*0.8),pw(400,0,a)),'corner at 80 percent of the length');
  const w1=worldMatrix(c,m,a+(b-a)/4);assert.ok(Math.abs(Math.atan2(w1[1],w1[0]))<0.02,'faces +x on the first leg');
  const w2=worldMatrix(c,m,b-(b-a)/10);assert.ok(Math.abs(Math.atan2(w2[1],w2[0])-Math.PI/2)<0.02,'faces down on the second leg');
- s.undo();assert.equal(findComp(s.document!)!.layers.find(l=>l.id==='m')!.transform.position.keys.length,0);
+ s.undo();assert.equal(findComp(s.document!)!!.layers.find(l=>l.id==='m')!.transform.position.keys.length,0);
 });
 
 test('P251 bounce with squash and stretch: starts at the original scale, squashes wide at contact, stretches tall in the air, undo restores',async()=>{
@@ -1511,11 +1511,11 @@ test('P251 bounce with squash and stretch: starts at the original scale, squashe
  assert.ok(squashFactor(0,0)[0]>1.2&&squashFactor(0,0)[1]<0.8);assert.ok(squashFactor(0.5,1)[1]>1.1&&squashFactor(0.5,1)[0]<1);assert.deepEqual(squashFactor(0.5,0),[1,1]);
  const d0=applyEdits(base(),[{type:'layer.add',kind:'solid',id:'floor'},{type:'prop.set',layer:'floor',prop:'position',t:f(0),value:[300,400]},{type:'layer.add',kind:'solid',id:'ball'},{type:'prop.set',layer:'ball',prop:'position',t:f(0),value:[250,100]}] as never);
  const s=new AnimationSession();s.open(d0);setAnimationSession(s);
- const r=bounce({layers:['floor','ball'],squash:true}) as {keys:number};assert.ok(r.keys>0);
- const k=findComp(s.document!)!.layers.find(l=>l.id==='ball')!.transform.scale.keys.map(x=>x.v as unknown as number[]);
+ const r=bounce({layers:['floor','ball'],squash:true}) as unknown as {keys:number};assert.ok(r.keys>0);
+ const k=findComp(s.document!)!!.layers.find(l=>l.id==='ball')!.transform.scale.keys.map(x=>x.v as unknown as unknown as number[]);
  assert.ok(k.length>20);assert.ok(Math.abs(k[0][0]-100)<=1&&Math.abs(k[0][1]-100)<=1,'first key is the original scale');
  assert.ok(Math.min(...k.map(v=>v[1]))<85,'squashed at contact');assert.ok(Math.max(...k.map(v=>v[1]))>110,'stretched in the air');
- s.undo();assert.equal(findComp(s.document!)!.layers.find(l=>l.id==='ball')!.transform.scale.keys.length,0);
+ s.undo();assert.equal(findComp(s.document!)!!.layers.find(l=>l.id==='ball')!.transform.scale.keys.length,0);
 });
 
 test('P252 parallax: nearer layers move further, rotated parent respected, push scales, layers with keys are skipped, one undo step',async()=>{
@@ -1524,13 +1524,13 @@ test('P252 parallax: nearer layers move further, rotated parent respected, push 
  const d0=applyEdits(base(),[{type:'layer.add',kind:'solid',id:'far'},{type:'layer.add',kind:'solid',id:'mid'},{type:'layer.add',kind:'solid',id:'g'},{type:'prop.set',layer:'g',prop:'rotation',t:f(0),value:40},{type:'layer.add',kind:'solid',id:'near'},{type:'layer.parent',layer:'near',parent:'g'}] as never);
  const s=new AnimationSession();s.open(d0);setAnimationSession(s);
  assert.throws(()=>run({layers:['far','mid']}),/Choose/);assert.throws(()=>run({mode:'left',amount:0,layers:['far','mid']}),/amount/);
- const r=run({mode:'left',amount:10,layers:['far','mid','near','a']}) as {moved:number;skipped:number};assert.equal(r.moved,3);assert.equal(r.skipped,1);
- const c=findComp(s.document!)!,anc=(id:string,t:number)=>{const l=c.layers.find(x=>x.id===id)!,m=worldMatrix(c,l,t),an=l.transform.anchor.value as unknown as number[];return [m[0]*an[0]+m[2]*an[1]+m[4],m[1]*an[0]+m[3]*an[1]+m[5]];};
+ const r=run({mode:'left',amount:10,layers:['far','mid','near','a']}) as unknown as {moved:number;skipped:number};assert.equal(r.moved,3);assert.equal(r.skipped,1);
+ const c=findComp(s.document!)!!,anc=(id:string,t:number)=>{const l=c.layers.find(x=>x.id===id)!,m=worldMatrix(c,l,t),an=l.transform.anchor.value as unknown as unknown as number[];return [m[0]*an[0]+m[2]*an[1]+m[4],m[1]*an[0]+m[3]*an[1]+m[5]];};
  const a=c.workArea.in,b=c.workArea.out,dx=(id:string)=>anc(id,b)[0]-anc(id,a)[0],dy=(id:string)=>anc(id,b)[1]-anc(id,a)[1];
  assert.ok(Math.abs(dx('far')+c.width*0.1*0.25)<0.1&&Math.abs(dx('mid')+c.width*0.1*0.5)<0.1&&Math.abs(dx('near')+c.width*0.1*0.75)<0.1,'world dx 1/4, 2/4, 3/4 of the full drift (the skipped layer keeps its depth slot)');
  assert.ok(Math.abs(dy('near'))<0.1,'no vertical drift');
- s.undo();assert.equal(findComp(s.document!)!.layers.find(l=>l.id==='far')!.transform.position.keys.length,0);
- run({mode:'push',amount:20,layers:['far','mid']});const sc=(id:string)=>findComp(s.document!)!.layers.find(l=>l.id===id)!.transform.scale.keys.map(k=>k.v as unknown as number[]);
+ s.undo();assert.equal(findComp(s.document!)!!.layers.find(l=>l.id==='far')!.transform.position.keys.length,0);
+ run({mode:'push',amount:20,layers:['far','mid']});const sc=(id:string)=>findComp(s.document!)!!.layers.find(l=>l.id===id)!.transform.scale.keys.map(k=>k.v as unknown as unknown as number[]);
  assert.ok(Math.abs(sc('mid')[1][0]/sc('mid')[0][0]-1.2)<0.01&&Math.abs(sc('far')[1][0]/sc('far')[0][0]-1.1)<0.01);
 });
 
@@ -1540,17 +1540,17 @@ test('P253 mirror: positions reflect across the first layer, rotation reverses, 
  const d0=applyEdits(base(),[{type:'layer.add',kind:'solid',id:'axis'},{type:'prop.set',layer:'axis',prop:'position',t:f(0),value:[400,225]},{type:'layer.add',kind:'solid',id:'st'},{type:'prop.set',layer:'st',prop:'position',t:f(0),value:[100,60]},{type:'prop.set',layer:'st',prop:'rotation',t:f(0),value:25},{type:'layer.add',kind:'solid',id:'kid'},{type:'layer.parent',layer:'kid',parent:'st'},{type:'key.spatial',layer:'a',prop:'position',t:f(0),sOut:[30,10]}] as never);
  const s=new AnimationSession();s.open(d0);setAnimationSession(s);
  assert.throws(()=>run({layers:['axis','kid']}),/Choose/);assert.throws(()=>run({axis:'x',layers:['axis','kid']}),/parent/);
- const r=run({axis:'x',layers:['axis','st','a','kid']}) as {mirrored:number;skipped:number};assert.equal(r.mirrored,2);assert.equal(r.skipped,1);
- const c=findComp(s.document!)!,L=(id:string)=>c.layers.find(l=>l.id===id)!;
- assert.deepEqual(L('st').transform.position.value as unknown as number[],[700,60]);assert.equal(L('st').transform.rotation.value as unknown as number,-25);
- const ak=L('a').transform.position.keys;assert.deepEqual(ak[0].v as unknown as number[],[700,100]);assert.deepEqual(ak[1].v as unknown as number[],[600,50]);assert.deepEqual(ak[0].sOut,[-30,10]);
- s.undo();assert.deepEqual(findComp(s.document!)!.layers.find(l=>l.id==='st')!.transform.position.value as unknown as number[],[100,60]);
+ const r=run({axis:'x',layers:['axis','st','a','kid']}) as unknown as {mirrored:number;skipped:number};assert.equal(r.mirrored,2);assert.equal(r.skipped,1);
+ const c=findComp(s.document!)!!,L=(id:string)=>c.layers.find(l=>l.id===id)!;
+ assert.deepEqual(L('st').transform.position.value as unknown as unknown as number[],[700,60]);assert.equal(L('st').transform.rotation.value as unknown as number,-25);
+ const ak=L('a').transform.position.keys;assert.deepEqual(ak[0].v as unknown as unknown as number[],[700,100]);assert.deepEqual(ak[1].v as unknown as unknown as number[],[600,50]);assert.deepEqual(ak[0].sOut,[-30,10]);
+ s.undo();assert.deepEqual(findComp(s.document!)!!.layers.find(l=>l.id==='st')!.transform.position.value as unknown as unknown as number[],[100,60]);
 });
 
 test('P254 export check: fully transparent layers and loop seam (only when a seamless loop is asked for)',async()=>{
  const {exportCheck}=await import('./exportCheck');const {defaultExportSettings}=await import('./exportSettings');
  const d0=applyEdits(base(),[{type:'layer.add',kind:'solid',id:'ghost',over:{name:'Ghost'}},{type:'prop.set',layer:'ghost',prop:'opacity',t:f(0),value:0},{type:'layer.add',kind:'solid',id:'still',over:{name:'Still'}}] as never);
- const s=new AnimationSession();s.open(d0);const c=findComp(s.document!)!;
+ const s=new AnimationSession();s.open(d0);const c=findComp(s.document!)!!;
  const plain=exportCheck(c,[],defaultExportSettings()),by=(l:typeof plain)=>Object.fromEntries(l.map(i=>[i.code,i]));
  assert.deepEqual(by(plain).invisible.layers,['Ghost']);assert.equal(by(plain).invisible.severity,'warn');assert.equal(by(plain).seam,undefined,'no seam note unless a seamless loop is on');
  const loop=by(exportCheck(c,[],{...defaultExportSettings(),loopSeam:true}));
@@ -1563,12 +1563,12 @@ test('P255 burst: copies start on the layer at the playhead, fly out by 60 to 10
  const d0=applyEdits(base(),[{type:'layer.add',kind:'solid',id:'g'},{type:'prop.set',layer:'g',prop:'rotation',t:f(0),value:35},{type:'layer.add',kind:'shape',id:'em'},{type:'layer.parent',layer:'em',parent:'g'},{type:'prop.set',layer:'em',prop:'position',t:f(0),value:[50,20]}] as never);
  const s=new AnimationSession();s.open(d0);setAnimationSession(s);s.setView({playhead:f(30)});
  assert.throws(()=>run({layers:['em','g']}),/exactly one/);assert.throws(()=>run({layers:['em'],count:2}),/copies/);
- const before=findComp(s.document!)!.layers.length;const r=run({layers:['em'],count:10,seconds:1,distance:200}) as {copies:number;from:number;to:number};assert.equal(r.copies,10);
- const c=findComp(s.document!)!;assert.equal(c.layers.length,before+10);
- const em=c.layers.find(l=>l.id==='em')!,anc=(l:typeof em,t:number)=>{const m=worldMatrix(c,l,t),an=l.transform.anchor.value as unknown as number[];return [m[0]*an[0]+m[2]*an[1]+m[4],m[1]*an[0]+m[3]*an[1]+m[5]];};
+ const before=findComp(s.document!)!!.layers.length;const r=run({layers:['em'],count:10,seconds:1,distance:200}) as unknown as {copies:number;from:number;to:number};assert.equal(r.copies,10);
+ const c=findComp(s.document!)!!;assert.equal(c.layers.length,before+10);
+ const em=c.layers.find(l=>l.id==='em')!,anc=(l:typeof em,t:number)=>{const m=worldMatrix(c,l,t),an=l.transform.anchor.value as unknown as unknown as number[];return [m[0]*an[0]+m[2]*an[1]+m[4],m[1]*an[0]+m[3]*an[1]+m[5]];};
  const p0=anc(em,r.from),copies=c.layers.filter(l=>l.id!=='em'&&l.parent==='g'&&l.inT===r.from);assert.equal(copies.length,10);
  for(const k of copies){const a=anc(k,r.from),b=anc(k,r.to),dd=Math.hypot(b[0]-a[0],b[1]-a[1]);assert.ok(Math.hypot(a[0]-p0[0],a[1]-p0[1])<0.5,'starts on the emitter');assert.ok(dd>=60&&dd<=200+120,'flew out (with the small fall at the end)');assert.equal(k.outT,r.to);assert.equal(k.transform.opacity.keys[k.transform.opacity.keys.length-1].v,0);}
- s.undo();assert.equal(findComp(s.document!)!.layers.length,before);
+ s.undo();assert.equal(findComp(s.document!)!!.layers.length,before);
 });
 
 test('P256 scatter: frame mode stays inside the frame, nudge stays within 60 px, shuffle keeps the same set of positions, keyed layers move as a whole, same seed same result, one undo step',async()=>{
@@ -1581,10 +1581,10 @@ test('P256 scatter: frame mode stays inside the frame, nudge stays within 60 px,
  const d0=applyEdits(base(),[{type:'layer.add',kind:'solid',id:'s1'},{type:'prop.set',layer:'s1',prop:'position',t:f(0),value:[100,100]},{type:'layer.add',kind:'solid',id:'s2'},{type:'prop.set',layer:'s2',prop:'position',t:f(0),value:[500,300]},{type:'layer.add',kind:'solid',id:'kid'},{type:'layer.parent',layer:'kid',parent:'s1'}] as never);
  const s=new AnimationSession();s.open(d0);setAnimationSession(s);
  assert.throws(()=>run({layers:['s1','s2']}),/Choose/);assert.throws(()=>run({mode:'shuffle',layers:['s1','kid']}),/two/);
- const r=run({mode:'frame',seed:3,layers:['s1','s2','a','kid']}) as {moved:number;skipped:number};assert.equal(r.moved,3);assert.equal(r.skipped,1);
- const c=findComp(s.document!)!,L=(id:string)=>c.layers.find(l=>l.id===id)!;
- const a=L('a').transform.position.keys;assert.ok(Math.abs((a[1].v as unknown as number[])[0]-(a[0].v as unknown as number[])[0]-100)<0.02&&Math.abs((a[1].v as unknown as number[])[1]-(a[0].v as unknown as number[])[1]+50)<0.02,'keyed layer keeps its motion, only shifted');
- s.undo();assert.deepEqual(findComp(s.document!)!.layers.find(l=>l.id==='s1')!.transform.position.value as unknown as number[],[100,100]);
+ const r=run({mode:'frame',seed:3,layers:['s1','s2','a','kid']}) as unknown as {moved:number;skipped:number};assert.equal(r.moved,3);assert.equal(r.skipped,1);
+ const c=findComp(s.document!)!!,L=(id:string)=>c.layers.find(l=>l.id===id)!;
+ const a=L('a').transform.position.keys;assert.ok(Math.abs((a[1].v as unknown as unknown as number[])[0]-(a[0].v as unknown as unknown as number[])[0]-100)<0.02&&Math.abs((a[1].v as unknown as unknown as number[])[1]-(a[0].v as unknown as unknown as number[])[1]+50)<0.02,'keyed layer keeps its motion, only shifted');
+ s.undo();assert.deepEqual(findComp(s.document!)!!.layers.find(l=>l.id==='s1')!.transform.position.value as unknown as unknown as number[],[100,100]);
 });
 
 test('P258 overshoot: adds a key past the target at 80 percent (and a pull-back at 12), existing key times unchanged, short or still segments skipped, undo restores',async()=>{
@@ -1593,26 +1593,26 @@ test('P258 overshoot: adds a key past the target at 80 percent (and a pull-back 
  const mk=(t:number,v:number|number[])=>({t,v,interp:'bezier',out:[0.25,0.1],in:[0.75,0.9]}) as never;
  assert.equal(segmentKeys(mk(0,0),mk(f(2),10),20,false,fps,false),null,'under 4 frames');assert.equal(segmentKeys(mk(0,5),mk(f(20),5),20,false,fps,false),null,'no change');
  const ks=segmentKeys(mk(0,0),mk(f(20),100),20,true,fps,false)!;assert.equal(ks.length,2);assert.equal(ks[0].v,-10);assert.equal(ks[1].v,120);assert.ok(ks[0].t<ks[1].t&&ks[1].t<f(20));
- assert.equal((segmentKeys(mk(0,[100,100]),mk(f(20),[0,0]),50,false,fps,true)![0].v as number[])[0],0,'scale never goes below 0');
- const s=open();setAnimationSession(s);const before=findComp(s.document!)!.layers.find(l=>l.id==='a')!.transform.position.keys;
+ assert.equal((segmentKeys(mk(0,[100,100]),mk(f(20),[0,0]),50,false,fps,true)![0].v as unknown as number[])[0],0,'scale never goes below 0');
+ const s=open();setAnimationSession(s);const before=findComp(s.document!)!!.layers.find(l=>l.id==='a')!.transform.position.keys;
  assert.throws(()=>run({layers:['a'],amount:3}),/amount/);
- const r=run({layers:['a'],amount:20,anticipate:true}) as {keys:number};
- const after=findComp(s.document!)!.layers.find(l=>l.id==='a')!.transform.position.keys;
+ const r=run({layers:['a'],amount:20,anticipate:true}) as unknown as {keys:number};
+ const after=findComp(s.document!)!!.layers.find(l=>l.id==='a')!.transform.position.keys;
  assert.equal(after.length,before.length+r.keys);assert.deepEqual(after.filter(k=>before.some(b=>b.t===k.t)).map(k=>k.v),before.map(k=>k.v),'original keys untouched');
- const ov=after[after.length-2].v as unknown as number[],end=before[1].v as unknown as number[];assert.ok(ov[0]>end[0],'swings past the end in x (moving right)');
- s.undo();assert.equal(findComp(s.document!)!.layers.find(l=>l.id==='a')!.transform.position.keys.length,before.length);
+ const ov=after[after.length-2].v as unknown as unknown as number[],end=before[1].v as unknown as unknown as number[];assert.ok(ov[0]>end[0],'swings past the end in x (moving right)');
+ s.undo();assert.equal(findComp(s.document!)!!.layers.find(l=>l.id==='a')!.transform.position.keys.length,before.length);
 });
 
 test('P259 glow pulse: adds a glow with high/low/high keys across the work area, reuses an existing glow, one undo step',async()=>{
  const {pulseSpecs,pulseKeys}=await import('./pulseCommands');const run=pulseSpecs()[0].run as (p?:unknown)=>unknown;
  const fps=findComp(base())!.fps,pk=pulseKeys(0,f(60),3,fps);assert.equal(pk.length,7);assert.equal(pk[0].v,1);assert.equal(pk[1].v,0.25);assert.equal(pk[6].v,1);assert.equal(pk[6].t,f(60));
  const s=open();setAnimationSession(s);assert.throws(()=>run({layers:['a'],cycles:0}),/Pulses/);
- const wa=findComp(s.document!)!.workArea;
- const r=run({layers:['a'],cycles:2}) as {glowsAdded:number};assert.equal(r.glowsAdded,1);
- const fx=()=>findComp(s.document!)!.layers.find(l=>l.id==='a')!.effects!;
+ const wa=findComp(s.document!)!!.workArea;
+ const r=run({layers:['a'],cycles:2}) as unknown as {glowsAdded:number};assert.equal(r.glowsAdded,1);
+ const fx=()=>findComp(s.document!)!!.layers.find(l=>l.id==='a')!.effects!;
  assert.equal(fx().length,1);assert.equal(fx()[0].kind,'glow');const ks=fx()[0].animation!.keys;assert.equal(ks.length,5);assert.equal(ks[0].t,wa.in);assert.equal(ks[4].t,wa.out);assert.deepEqual(ks.map(k=>k.v),[1,0.25,1,0.25,1]);
- const r2=run({layers:['a'],cycles:3}) as {glowsAdded:number};assert.equal(r2.glowsAdded,0);assert.equal(fx().length,1);assert.equal(fx()[0].animation!.keys.length,7,'old keys replaced');
- s.undo();assert.equal(fx()[0].animation!.keys.length,5);s.undo();assert.equal(findComp(s.document!)!.layers.find(l=>l.id==='a')!.effects?.length??0,0);
+ const r2=run({layers:['a'],cycles:3}) as unknown as {glowsAdded:number};assert.equal(r2.glowsAdded,0);assert.equal(fx().length,1);assert.equal(fx()[0].animation!.keys.length,7,'old keys replaced');
+ s.undo();assert.equal(fx()[0].animation!.keys.length,5);s.undo();assert.equal(findComp(s.document!)!!.layers.find(l=>l.id==='a')!.effects?.length??0,0);
 });
 
 test('P259b copy effects: clones the stack with fresh ids onto targets, one undo step, refuses a lone layer',async()=>{
@@ -1620,8 +1620,8 @@ test('P259b copy effects: clones the stack with fresh ids onto targets, one undo
  const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'shape',id:'b'});const ls=['x','x','b','a'];
  const {pulseSpecs}=await import('./pulseCommands');(pulseSpecs()[0].run as (p?:unknown)=>unknown)({layers:[ls[3]],cycles:1});
  assert.throws(()=>run({layers:[ls[3]]}),/Tick the source/);
- const fx=(id:string)=>findComp(s.document!)!.layers.find(l=>l.id===id)!.effects??[];
- const r=run({layers:[ls[3],ls[2]]}) as {copiedTo:number};assert.equal(r.copiedTo,1);
+ const fx=(id:string)=>findComp(s.document!)!!.layers.find(l=>l.id===id)!.effects??[];
+ const r=run({layers:[ls[3],ls[2]]}) as unknown as {copiedTo:number};assert.equal(r.copiedTo,1);
  assert.equal(fx(ls[2]).length,fx(ls[3]).length);assert.notEqual(fx(ls[2])[0].id,fx(ls[3])[0].id);
  assert.deepEqual(fx(ls[2]).find(e=>e.kind==='glow')!.animation!.keys.map(k=>k.v),fx(ls[3]).find(e=>e.kind==='glow')!.animation!.keys.map(k=>k.v));
  s.undo();assert.equal(fx(ls[2]).length,0);
@@ -1630,11 +1630,11 @@ test('P259b copy effects: clones the stack with fresh ids onto targets, one undo
 test('P261 soften keys: pulls selected inner keys toward neighbours, keeps track ends, one undo step',async()=>{
  const {softenValue}=await import('./keySoften');const {keySoftenSpecs}=await import('./keySoftenCommands');const run=keySoftenSpecs()[0].run as (p?:unknown)=>unknown;
  assert.equal(softenValue(0,30,0,0.5),20);assert.deepEqual(softenValue([0,0],[30,60],[0,0],1),[10,20]);
- const s=open();setAnimationSession(s);const tr=()=>findComp(s.document!)!.layers.find(l=>l.id==='a')!.transform.opacity;
+ const s=open();setAnimationSession(s);const tr=()=>findComp(s.document!)!!.layers.find(l=>l.id==='a')!.transform.opacity;
  for(const [t,v] of [[0,100],[f(10),0],[f(20),100],[f(30),0],[f(40),100]]){s.dispatch({type:'key.add',layer:'a',prop:'opacity',t} as never);s.dispatch({type:'prop.set',layer:'a',prop:'opacity',t,value:v} as never);}
  const keys=tr().keys;assert.ok(keys.length>=5);
  const mid=keys[2];s.setView({selectedKeys:[{layer:'a',prop:'opacity',t:mid.t}]} as never);
- const before=keys.map(k=>k.v);const r=run({percent:100}) as {keys:number};assert.equal(r.keys,1);
+ const before=keys.map(k=>k.v);const r=run({percent:100}) as unknown as {keys:number};assert.equal(r.keys,1);
  const after=tr().keys.map(k=>k.v);assert.notDeepEqual(after,before);assert.equal(after[0],before[0]);assert.equal(after[4],before[4]);
  s.undo();assert.deepEqual(tr().keys.map(k=>k.v),before);
 });
@@ -1642,10 +1642,10 @@ test('P261 soften keys: pulls selected inner keys toward neighbours, keeps track
 test('P262 crossfade: next layer fades in over the overlap while the previous fades out, one undo step',async()=>{
  const {crossfadeSpecs}=await import('./crossfadeCommands');const run=crossfadeSpecs()[0].run as (p?:unknown)=>unknown;
  const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'shape',id:'b'});
- const L=(id:string)=>findComp(s.document!)!.layers.find(l=>l.id===id)!;
+ const L=(id:string)=>findComp(s.document!)!!.layers.find(l=>l.id===id)!;
  s.dispatch({type:'layer.timing',layer:'a',inT:0,outT:f(30)});s.dispatch({type:'layer.timing',layer:'b',inT:f(30),outT:f(60)});
  assert.throws(()=>run({layers:['a']}),/two layers/);
- const r=run({layers:['b','a'],frames:10}) as {joins:number};assert.equal(r.joins,1);
+ const r=run({layers:['b','a'],frames:10}) as unknown as {joins:number};assert.equal(r.joins,1);
  assert.equal(L('a').outT,f(40));assert.deepEqual(L('a').transform.opacity.keys.map(k=>[k.t,k.v]),[[f(30),100],[f(39),0]]);
  assert.deepEqual(L('b').transform.opacity.keys.map(k=>[k.t,k.v]),[[f(30),0],[f(39),100]]);
  assert.throws(()=>run({layers:['a','b']}),/Nothing to crossfade/);
@@ -1655,12 +1655,12 @@ test('P262 crossfade: next layer fades in over the overlap while the previous fa
 test('P263 on twos: animated props become hold keys every N frames sampled from the old motion, undo restores',async()=>{
  const {stepSpecs,stepTimes}=await import('./stepCommands');const run=stepSpecs()[0].run as (p?:unknown)=>unknown;
  assert.deepEqual(stepTimes(0,10,4),[0,4,8]);
- const s=open();setAnimationSession(s);const c0=findComp(s.document!)!;
- const T=(k:string)=>findComp(s.document!)!.layers.find(l=>l.id==='a')!.transform[k as 'opacity'];
+ const s=open();setAnimationSession(s);const c0=findComp(s.document!)!!;
+ const T=(k:string)=>findComp(s.document!)!!.layers.find(l=>l.id==='a')!.transform[k as 'opacity'];
  for(const [t,v] of [[0,0],[f(30),100]]){s.dispatch({type:'key.add',layer:'a',prop:'opacity',t} as never);s.dispatch({type:'prop.set',layer:'a',prop:'opacity',t,value:v} as never);s.dispatch({type:'key.interp',layer:'a',prop:'opacity',t,interp:'linear'} as never);}
  assert.throws(()=>run({layers:['a'],frames:1}),/2 to/);
  const before=T('opacity').keys.length;assert.equal(before,2);
- const r=run({layers:['a'],frames:3}) as {properties:number;poses:number};assert.ok(r.properties>=1);
+ const r=run({layers:['a'],frames:3}) as unknown as {properties:number;poses:number};assert.ok(r.properties>=1);
  const ks=T('opacity').keys;assert.ok(ks.length>10);assert.ok(ks.every(k=>k.interp==='hold'));
  const step=f(3)-f(0);assert.equal(ks[1].t-ks[0].t,step);assert.equal(ks[0].v,0);
  if(f(30)<=c0.workArea.out){const k=ks.find(x=>x.t===f(30));assert.ok(k);assert.equal(k!.v,100);}
@@ -1672,10 +1672,10 @@ test('P263 on twos: animated props become hold keys every N frames sampled from 
 test('P264 freeze: ticked layers keep their pose from the playhead on, later keys go, undo restores',async()=>{
  const {freezeSpecs}=await import('./freezeCommands');const run=freezeSpecs()[0].run as (p?:unknown)=>unknown;
  const s=open();setAnimationSession(s);
- const T=()=>findComp(s.document!)!.layers.find(l=>l.id==='a')!.transform.opacity;
+ const T=()=>findComp(s.document!)!!.layers.find(l=>l.id==='a')!.transform.opacity;
  for(const [t,v] of [[0,0],[f(30),100],[f(60),0]]){s.dispatch({type:'key.add',layer:'a',prop:'opacity',t} as never);s.dispatch({type:'prop.set',layer:'a',prop:'opacity',t,value:v} as never);s.dispatch({type:'key.interp',layer:'a',prop:'opacity',t,interp:'linear'} as never);}
  s.setView({playhead:f(15)} as never);
- const r=run({layers:['a']}) as {properties:number};assert.ok(r.properties>=1);
+ const r=run({layers:['a']}) as unknown as {properties:number};assert.ok(r.properties>=1);
  const ks=T().keys;assert.deepEqual(ks.map(k=>k.t),[0,f(15)]);assert.equal(ks[1].v,50);assert.equal(ks[1].interp,'hold');
  assert.throws(()=>run({layers:['a']}),/Nothing to freeze/);
  s.undo();assert.equal(T().keys.length,3);
@@ -1684,17 +1684,17 @@ test('P264 freeze: ticked layers keep their pose from the playhead on, later key
 test('P265 trail: delayed fading copies of a moving layer, one undo step, refuses when nothing fits',async()=>{
  const {trailSpecs,ghostFactor}=await import('./trailCommands');const run=trailSpecs()[0].run as (p?:unknown)=>unknown;
  assert.equal(ghostFactor(1,3),0.75);assert.equal(ghostFactor(3,3),0.25);
- const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'shape',id:'b'});const old=new Set(findComp(s.document!)!.layers.map(l=>l.id)),n0=old.size;
+ const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'shape',id:'b'});const old=new Set(findComp(s.document!)!!.layers.map(l=>l.id)),n0=old.size;
  for(const [t,v] of [[0,[0,0]],[f(30),[100,0]]]){s.dispatch({type:'key.add',layer:'a',prop:'position',t} as never);s.dispatch({type:'prop.set',layer:'a',prop:'position',t,value:v} as never);}
  assert.throws(()=>run({layers:['a','b'],count:2}),/exactly one/);
- const r=run({layers:['a'],count:3,gap:2}) as {ghosts:number};assert.equal(r.ghosts,3);
- const c=findComp(s.document!)!;assert.equal(c.layers.length,n0+3);
+ const r=run({layers:['a'],count:3,gap:2}) as unknown as {ghosts:number};assert.equal(r.ghosts,3);
+ const c=findComp(s.document!)!!;assert.equal(c.layers.length,n0+3);
  const a=c.layers.find(l=>l.id==='a')!,ghosts=c.layers.filter(l=>!old.has(l.id));
  assert.equal(ghosts.length,3);assert.ok(ghosts.every(g=>c.layers.indexOf(g)>c.layers.indexOf(a)),'ghosts sit behind the original');
  const d1=ghosts.map(g=>g.transform.position.keys[0].t).sort((x,y)=>x-y);assert.equal(d1[0],f(2)+a.transform.position.keys[0].t);
  assert.deepEqual(ghosts.map(g=>g.transform.opacity.value).sort(),[25,50,75].map(x=>x*(a.transform.opacity.value as number)/100).sort());
- s.undo();assert.equal(findComp(s.document!)!.layers.length,n0);
- const big=run({layers:['a'],count:12,gap:30}) as {ghosts:number;skipped:number};assert.ok(big.skipped>0&&big.ghosts>0&&big.ghosts+big.skipped===12);
+ s.undo();assert.equal(findComp(s.document!)!!.layers.length,n0);
+ const big=run({layers:['a'],count:12,gap:30}) as unknown as {ghosts:number;skipped:number};assert.ok(big.skipped>0&&big.ghosts>0&&big.ghosts+big.skipped===12);
 });
 
 test('P266 export check: flash warning for more than 3 flashes a second, not for a slow blink',async()=>{
@@ -1702,7 +1702,7 @@ test('P266 export check: flash warning for more than 3 flashes a second, not for
  assert.equal(flashes([0,100,0,100,0,100,0,100,0,100,0,100,0,100,0],10),true);assert.equal(flashes([0,0,100,100,100,100,0,0,0,0],10),false);assert.equal(flashes([0,100,0,100],3),false,'too few samples per second to judge');
  const blink=(id:string,name:string,every:number):Edit[]=>{const e:Edit[]=[{type:'layer.add',kind:'solid',id,over:{name}} as never];for(let i=0;i<=60;i+=every){const t=f(i);e.push({type:'key.add',layer:id,prop:'opacity',t} as never,{type:'prop.set',layer:id,prop:'opacity',t,value:(i/every)%2?0:100} as never,{type:'key.interp',layer:id,prop:'opacity',t,interp:'hold'} as never);}return e;};
  const d0=applyEdits(base(),[...blink('fast','Strobe',2),...blink('slow','Pulse',15)] as never);
- const s=new AnimationSession();s.open(d0);const c=findComp(s.document!)!;
+ const s=new AnimationSession();s.open(d0);const c=findComp(s.document!)!!;
  const flash=exportCheck(c,[],defaultExportSettings()).find(i=>i.code==='flash');
  assert.ok(flash&&flash.severity==='warn');assert.ok(flash!.layers.includes('Strobe')&&!flash!.layers.includes('Pulse'));
 });
@@ -1712,13 +1712,13 @@ test('P267 wave: each ticked layer gets the same sine one step later, linear key
  assert.deepEqual(waveTimes(0,10,4),[0,4,8,10]);assert.equal(waveOffset(0,0,100,20),0);assert.ok(Math.abs(waveOffset(0,25,100,20)-20)<1e-9);
  assert.deepEqual(applyWave('bob',[10,20] as never,5),[10,25]);assert.deepEqual(applyWave('breathe',[100,100] as never,10),[110,110]);
  const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'shape',id:'b'});
- const T=(id:string)=>findComp(s.document!)!.layers.find(l=>l.id===id)!.transform.position;
+ const T=(id:string)=>findComp(s.document!)!!.layers.find(l=>l.id===id)!.transform.position;
  assert.throws(()=>run({kind:'nope'}),/Unknown/);assert.throws(()=>run({kind:'bob',amount:0,layers:['a']}),/size/);
- const r=run({kind:'bob',amount:20,periodFrames:40,layers:['b','a']}) as {layers:number;keys:number};assert.equal(r.layers,2);assert.ok(r.keys>=10&&r.keys<=120);
- const wa=findComp(s.document!)!.workArea,kb=T('b').keys,ka=T('a').keys;
+ const r=run({kind:'bob',amount:20,periodFrames:40,layers:['b','a']}) as unknown as {layers:number;keys:number};assert.equal(r.layers,2);assert.ok(r.keys>=10&&r.keys<=120);
+ const wa=findComp(s.document!)!!.workArea,kb=T('b').keys,ka=T('a').keys;
  assert.equal(kb.length,r.keys);assert.equal(kb[kb.length-1].t,wa.out);assert.ok(kb.every(k=>k.interp==='linear'));
- const dy=(ks:typeof kb,i:number,base:number)=>(ks[i].v as number[])[1]-base;
- const b0=(T('b').value as number[])[1];
+ const dy=(ks:typeof kb,i:number,base:number)=>(ks[i].v as unknown as number[])[1]-base;
+ const b0=(T('b').value as unknown as number[])[1];
  assert.ok(Math.abs(dy(kb,0,b0))<0.01,'first layer starts at 0');
  s.undo();assert.equal(T('b').keys.length,0);
  assert.ok(ka.length===r.keys);
@@ -1730,7 +1730,7 @@ test('P268 palette shift: hue rotates, lightness and saturation move, greys stay
  assert.equal(shiftColor('#000000',{lightness:-20}),'#000000');assert.ok(hexToHsl(shiftColor('#336699',{lightness:10}))[2]>hexToHsl('#336699')[2]);assert.equal(shiftColor('#ff0000',{hue:-180}),shiftColor('#ff0000',{hue:180}));
  const d0=applyEdits(base(),[{type:'layer.add',kind:'solid',id:'s1'},{type:'layer.update',layer:'s1',source:{color:'#ff0000'}},{type:'layer.add',kind:'solid',id:'s2'},{type:'layer.update',layer:'s2',source:{color:'#ff0000'}},{type:'layer.update',layer:'s2',locked:true}] as never);
  const s=new AnimationSession();s.open(d0);setAnimationSession(s);
- const col=(id:string)=>findComp(s.document!)!.layers.find(l=>l.id===id)!.source.color;
+ const col=(id:string)=>findComp(s.document!)!!.layers.find(l=>l.id===id)!.source.color;
  assert.throws(()=>run({}),/Pick/);assert.throws(()=>run({hue:200}),/Hue is/);
  run({hue:120});assert.equal(col('s1'),'#00ff00');assert.equal(col('s2'),'#ff0000');
  s.undo();assert.equal(col('s1'),'#ff0000');
@@ -1745,21 +1745,21 @@ test('P269 camera focus: the camera glides so the selected layer is centred and 
  assert.throws(()=>run({layer:'t1'}),/Add a camera/);add();
  s.setView({playhead:f(10),selectedLayer:'t1'} as never);
  assert.throws(()=>run({layer:'t1',frames:0}),/frames/);
- const r=run({layer:'t1',frames:20}) as {to:number;scale:number};assert.ok(r.scale>100);
- const c=findComp(s.document!)!,cam=findCamera(c)!,t=c.layers.find(l=>l.id==='t1')!;
+ const r=run({layer:'t1',frames:20}) as unknown as {to:number;scale:number};assert.ok(r.scale>100);
+ const c=findComp(s.document!)!!,cam=findCamera(c)!,t=c.layers.find(l=>l.id==='t1')!;
  const ctr=(tt:number)=>{const m=worldMatrix(c,t,tt),ps=[[0,0],[100,0],[0,60],[100,60]].map(q=>applyMatrix(m,[q[0],q[1]]));return [(Math.min(...ps.map(p=>p[0]))+Math.max(...ps.map(p=>p[0])))/2,(Math.min(...ps.map(p=>p[1]))+Math.max(...ps.map(p=>p[1])))/2];};
  const e=ctr(r.to),ee=ctr(r.to+f(30));assert.ok(Math.abs(e[0]-c.width/2)<1&&Math.abs(e[1]-c.height/2)<1,'centred at the end');assert.ok(Math.abs(ee[0]-e[0])<1e-6,'holds after');
  assert.equal(cam.transform.scale.keys.length,2);
- s.undo();assert.equal(findCamera(findComp(s.document!)!)!.transform.scale.keys.length,0);
+ s.undo();assert.equal(findCamera(findComp(s.document!)!!)!.transform.scale.keys.length,0);
 });
 
 test('P271 spin: whole turns over the work area, unkeyed layers get two keys, keyed ones are sampled with the turn added, one undo step',async()=>{
  const {spinSpecs,spinTimes}=await import('./spinCommands');const run=spinSpecs()[0].run as (p?:unknown)=>unknown;
  assert.deepEqual(spinTimes(0,10,4),[0,4,8,10]);
  const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'shape',id:'b'});
- const R=(id:string)=>findComp(s.document!)!.layers.find(l=>l.id===id)!.transform.rotation;
+ const R=(id:string)=>findComp(s.document!)!!.layers.find(l=>l.id===id)!.transform.rotation;
  assert.throws(()=>run({turns:0,layers:['b']}),/Turns/);assert.throws(()=>run({turns:21,layers:['b']}),/Turns/);
- const r0=R('b').value as number,wa=findComp(s.document!)!.workArea;
+ const r0=R('b').value as number,wa=findComp(s.document!)!!.workArea;
  run({turns:2,layers:['b']});const k=R('b').keys;assert.equal(k.length,2);assert.equal(k[0].t,wa.in);assert.equal(k[1].t,wa.out);assert.equal(k[0].v,r0);assert.equal(k[1].v,r0+720);assert.equal(k[0].interp,'linear');
  s.undo();assert.equal(R('b').keys.length,0);
  run({turns:-1,ease:true,layers:['b']});assert.equal(R('b').keys[1].v,r0-360);assert.equal(R('b').keys[0].interp,'bezier');
@@ -1770,21 +1770,21 @@ test('P271 spin: whole turns over the work area, unkeyed layers get two keys, ke
 
 test('P272 wipe in opens a mask over the layer start, one undo step',async()=>{
  const {wipeSpecs}=await import('./wipeCommands');const runCommand=(_:string,p:unknown)=>(wipeSpecs()[0].run as (p?:unknown)=>unknown)(p);
- const s=open();setAnimationSession(s);const c0=findComp(s.document!),l0=c0.layers.find(x=>x.id==='a')!;
+ const s=open();setAnimationSession(s);const c0=findComp(s.document!)!,l0=c0.layers.find(x=>x.id==='a')!;
  s.setView({selectedLayer:'a'} as never);
- const r=runCommand('animation.layers.wipe',{mode:'in',dir:'left',frames:10,layers:['a']}) as {layers:number};
+ const r=runCommand('animation.layers.wipe',{mode:'in',dir:'left',frames:10,layers:['a']}) as unknown as {layers:number};
  assert.equal(r.layers,1);
- const l=findComp(s.document!).layers.find(x=>x.id==='a')!,m=l.masks![0];
+ const l=findComp(s.document!)!.layers.find(x=>x.id==='a')!,m=l.masks![0];
  assert.equal(m.anim!.size!.keys.length,2);assert.equal(m.anim!.size!.keys[0].t,l0.inT);assert.equal(m.anim!.size!.keys[1].t,l0.inT+f(10));
  assert.deepEqual(m.anim!.size!.keys[0].v,[1,m.height]);assert.deepEqual(m.anim!.position!.keys[0].v,[-1,0]);
  assert.throws(()=>runCommand('animation.layers.wipe',{layers:['a']}),/already have masks/);
- s.undo();assert.equal(findComp(s.document!).layers.find(x=>x.id==='a')!.masks,undefined);
+ s.undo();assert.equal(findComp(s.document!)!.layers.find(x=>x.id==='a')!.masks,undefined);
 });
 test('P272 wipe out reverses keys, down starts from the top edge below',async()=>{
  const {wipeSpecs}=await import('./wipeCommands');const runCommand=(_:string,p:unknown)=>(wipeSpecs()[0].run as (p?:unknown)=>unknown)(p);
- const s=open();setAnimationSession(s);const l0=findComp(s.document!).layers.find(x=>x.id==='a')!;
+ const s=open();setAnimationSession(s);const l0=findComp(s.document!)!.layers.find(x=>x.id==='a')!;
  runCommand('animation.layers.wipe',{mode:'out',dir:'down',frames:6,layers:['a'],ease:false});
- const m=findComp(s.document!).layers.find(x=>x.id==='a')!.masks![0];
+ const m=findComp(s.document!)!.layers.find(x=>x.id==='a')!.masks![0];
  assert.equal(m.anim!.size!.keys[0].t,l0.outT-f(6));assert.deepEqual(m.anim!.position!.keys[0].v,[0,0]);
  assert.deepEqual(m.anim!.position!.keys[1].v,[0,m.height]);assert.equal(m.anim!.size!.keys[0].interp,'linear');
 });
@@ -1799,9 +1799,9 @@ test('P273 flicker pattern is seeded, starts dim and settles on full',async()=>{
 test('P273 flicker command writes hold opacity keys, skips animated, one undo',async()=>{
  const {flickerSpecs}=await import('./flickerCommands');const run=flickerSpecs()[0].run as (p?:unknown)=>unknown;
  const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'shape',id:'b'});
- const O=(id:string)=>findComp(s.document!)!.layers.find(l=>l.id===id)!.transform.opacity;
+ const O=(id:string)=>findComp(s.document!)!!.layers.find(l=>l.id===id)!.transform.opacity;
  assert.throws(()=>run({frames:1,layers:['b']}),/2 to/);
- const r=run({frames:12,seed:3,layers:['b']}) as {layers:number};assert.equal(r.layers,1);
+ const r=run({frames:12,seed:3,layers:['b']}) as unknown as {layers:number};assert.equal(r.layers,1);
  const k=O('b').keys;assert.ok(k.length>=3);assert.ok(k.every(x=>x.interp==='hold'));
  assert.throws(()=>run({layers:['b']}),/opacity already animated/);
  s.undo();assert.equal(O('b').keys.length,0);
@@ -1817,19 +1817,19 @@ test('P274 shake offsets decay, are seeded and start and end at zero',async()=>{
 test('P274 shake command keys position per frame from the playhead, one undo',async()=>{
  const {shakeSpecs}=await import('./shakeCommands');const run=shakeSpecs()[0].run as (p?:unknown)=>unknown;
  const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'shape',id:'b'});s.setView({playhead:f(10)} as never);
- const P=()=>findComp(s.document!)!.layers.find(l=>l.id==='b')!.transform.position;
+ const P=()=>findComp(s.document!)!!.layers.find(l=>l.id==='b')!.transform.position;
  assert.throws(()=>run({frames:1,layers:['b']}),/2 to/);
  const p0=P().value as readonly number[];
- const r=run({amount:10,frames:8,layers:['b']}) as {layers:number};assert.equal(r.layers,1);
+ const r=run({amount:10,frames:8,layers:['b']}) as unknown as {layers:number};assert.equal(r.layers,1);
  const k=P().keys;assert.equal(k.length,9);assert.equal(k[0].t,f(10));assert.equal(k[8].t,f(18));assert.deepEqual(k[0].v,[...p0]);assert.deepEqual(k[8].v,[...p0]);
  s.undo();assert.equal(P().keys.length,0);
- s.setView({playhead:findComp(s.document!)!.duration-f(2)} as never);assert.throws(()=>run({layers:['b']}),/room/);
+ s.setView({playhead:findComp(s.document!)!!.duration-f(2)} as never);assert.throws(()=>run({layers:['b']}),/room/);
 });
 
 test('P275 export check: shrunk to zero and empty text are warned, normal layers are not',async()=>{
  const {exportCheck}=await import('./exportCheck');const {defaultExportSettings}=await import('./exportSettings');
  const d0=applyEdits(base(),[{type:'layer.add',kind:'solid',id:'z',over:{name:'Gone'}},{type:'prop.set',layer:'z',prop:'scale',value:[0,0]},{type:'layer.add',kind:'text',id:'e',over:{name:'Blank'}},{type:'layer.update',layer:'e',source:{text:'  '}}] as never);
- const s=new AnimationSession();s.open(d0);const c=findComp(s.document!)!;
+ const s=new AnimationSession();s.open(d0);const c=findComp(s.document!)!!;
  const iss=exportCheck(c,[],defaultExportSettings());
  const sh=iss.find(i=>i.code==='shrunk'),em=iss.find(i=>i.code==='empty');
  assert.ok(sh&&sh.severity==='warn'&&sh.layers.includes('Gone')&&sh.layers.length===1);
@@ -1840,8 +1840,8 @@ test('P276 slide: flies in from past the edge, out past it, skips parented and a
  const {slideSpecs,offCanvas}=await import('./slideCommands');const run=slideSpecs()[0].run as (p?:unknown)=>unknown;
  assert.deepEqual(offCanvas([100,50],'left',800,450),[-700,50]);assert.deepEqual(offCanvas([100,50],'down',800,450),[100,500]);
  const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'shape',id:'b'});
- const L=()=>findComp(s.document!)!.layers.find(l=>l.id==='b')!;
- const home=L().transform.position.value as readonly number[],c=findComp(s.document!)!;
+ const L=()=>findComp(s.document!)!!.layers.find(l=>l.id==='b')!;
+ const home=L().transform.position.value as readonly number[],c=findComp(s.document!)!!;
  assert.throws(()=>run({frames:0,layers:['b']}),/1 to/);
  run({mode:'in',dir:'right',frames:10,layers:['b']});let k=L().transform.position.keys;
  assert.equal(k.length,2);assert.equal(k[0].t,L().inT);assert.equal(k[1].t,L().inT+f(10));assert.deepEqual(k[0].v,[home[0]+c.width,home[1]]);assert.deepEqual(k[1].v,[...home]);
@@ -1855,7 +1855,7 @@ test('P277 counter: formats deterministically, replaces {n}, keys count, validat
  const {formatCount,fullText,revealedText}=await import('./effects');const {countSpecs}=await import('./countCommands');const run=countSpecs()[0].run as (p?:unknown)=>unknown;
  assert.equal(formatCount(1234567.891,2,true),'1,234,567.89');assert.equal(formatCount(-0.4,0,false),'0');assert.equal(formatCount(-12.5,1,true),'-12.5');assert.equal(formatCount(999,0,true),'999');
  const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'text',id:'t'});s.dispatch({type:'layer.update',layer:'t',source:{text:'{n}% done'}} as never);
- const L=()=>findComp(s.document!)!.layers.find(l=>l.id==='t')!;
+ const L=()=>findComp(s.document!)!!.layers.find(l=>l.id==='t')!;
  assert.throws(()=>run({layers:['a']}),/text layer/);assert.throws(()=>run({frames:0,layers:['t']}),/1 to/);assert.throws(()=>run({layers:['t'],remove:true}),/no counter/);
  run({from:0,to:100,frames:30,ease:false,layers:['t']});
  assert.equal(fullText(L(),L().inT),'0% done');assert.equal(fullText(L(),L().inT+f(15)),'50% done');assert.equal(fullText(L(),L().inT+f(60)),'100% done');
@@ -1873,7 +1873,7 @@ test('P278 palette shift also moves gradients, colour keys and gradient colour k
   {type:'color.prop',layer:'g',prop:'fill',op:'animate',on:true,t:0},{type:'color.prop',layer:'g',prop:'fill',op:'set',color:'#00ff00',t:T},
   {type:'gradient.color',layer:'g',target:'fill',which:'start',op:'animate',on:true,t:0},{type:'gradient.color',layer:'g',target:'fill',which:'start',op:'set',color:'#ff0000',t:T}] as never);
  const s=new AnimationSession();s.open(d0);setAnimationSession(s);
- const L=()=>findComp(s.document!)!.layers.find(l=>l.id==='g')!;
+ const L=()=>findComp(s.document!)!!.layers.find(l=>l.id==='g')!;
  const before=JSON.stringify(L().colorKeys);
  run({hue:120});
  const l=L();
@@ -1889,8 +1889,8 @@ test('P279 palette: swatches and replace cover gradients and effects, shift move
  const d0=applyEdits(base(),[{type:'layer.add',kind:'shape',id:'g'},{type:'layer.update',layer:'g',source:{color:'#112233',gradient:{start:'#ff0000',end:'#0000ff',angle:0}}},
   {type:'layer.effects',layer:'g',effects:[{id:'e1',kind:'glow',enabled:true,amount:0.5,color:'#ff0000',colorKeys:[{t:0,color:'#ff0000'},{t:f(10),color:'#00ff00'}]}]}] as never);
  const s=new AnimationSession();s.open(d0);setAnimationSession(s);
- const L=()=>findComp(s.document!)!.layers.find(l=>l.id==='g')!;
- const red=paletteOf(findComp(s.document!)!.layers).find(x=>x.color==='#ff0000');assert.ok(red);assert.equal(red!.layers,1);
+ const L=()=>findComp(s.document!)!!.layers.find(l=>l.id==='g')!;
+ const red=paletteOf(findComp(s.document!)!!.layers).find(x=>x.color==='#ff0000');assert.ok(red);assert.equal(red!.layers,1);
  replace({from:'#ff0000',to:'#abcdef'});
  assert.equal(L().source.gradient!.start,'#abcdef');assert.equal(L().effects![0].color,'#abcdef');assert.equal(L().source.gradient!.end,'#0000ff');
  s.undo();assert.equal(L().source.gradient!.start,'#ff0000');assert.equal(L().effects![0].color,'#ff0000');
@@ -1901,7 +1901,7 @@ test('P279 palette: swatches and replace cover gradients and effects, shift move
 test('P281 shifting a layer moves its counter keys and typewriter keys with it',async()=>{
  const {countSpecs}=await import('./countCommands');const {fullText}=await import('./effects');const run=countSpecs()[0].run as (p?:unknown)=>unknown;
  const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'text',id:'t'});s.dispatch({type:'layer.update',layer:'t',source:{text:'{n}'}} as never);
- const L=()=>findComp(s.document!)!.layers.find(l=>l.id==='t')!;
+ const L=()=>findComp(s.document!)!!.layers.find(l=>l.id==='t')!;
  run({from:0,to:100,frames:30,ease:false,layers:['t']});const t0=L().inT;
  s.dispatch({type:'layer.shift',layer:'t',delta:f(10),mode:'slip'} as never);
  assert.equal(L().textCount!.value.keys[0].t,t0+f(10));assert.equal(fullText(L(),t0+f(10)),'0');assert.equal(fullText(L(),t0+f(25)),'50');
@@ -1910,7 +1910,7 @@ test('P281 shifting a layer moves its counter keys and typewriter keys with it',
 test('P282 export check: text under 10 px in the output is warned, scales with the export size',async()=>{
  const {exportCheck}=await import('./exportCheck');const {defaultExportSettings}=await import('./exportSettings');
  const d0=applyEdits(base(),[{type:'layer.add',kind:'text',id:'small',over:{name:'Fine print'}},{type:'layer.update',layer:'small',source:{text:'legal',size:14}},{type:'layer.add',kind:'text',id:'big',over:{name:'Headline'}},{type:'layer.update',layer:'big',source:{text:'hello',size:60}}] as never);
- const s=new AnimationSession();s.open(d0);const c=findComp(s.document!)!;
+ const s=new AnimationSession();s.open(d0);const c=findComp(s.document!)!!;
  const at=(scale:number)=>exportCheck(c,[],{...defaultExportSettings(),scale}).find(i=>i.code==='tiny');
  assert.equal(at(100),undefined);
  const t=at(50);assert.ok(t&&t.severity==='warn'&&t.layers.includes('Fine print')&&!t.layers.includes('Headline'));
@@ -1919,7 +1919,7 @@ test('P282 export check: text under 10 px in the output is warned, scales with t
 test('P284 export check: empty frames at the start or end of the range are reported with their count',async()=>{
  const {exportCheck}=await import('./exportCheck');const {defaultExportSettings}=await import('./exportSettings');
  const d0=applyEdits(base(),[{type:'layer.update',layer:'a',locked:false},{type:'layer.timing',layer:'a',inT:f(20),outT:f(100)}] as never);
- const s=new AnimationSession();s.open(d0);const c=findComp(s.document!)!;
+ const s=new AnimationSession();s.open(d0);const c=findComp(s.document!)!!;
  const iss=exportCheck(c,[],defaultExportSettings());
  const h=iss.find(i=>i.code==='head'),t=iss.find(i=>i.code==='tail');
  assert.ok(h&&h.severity==='info'&&h.layers[0]==='20');assert.ok(t&&t.layers[0]===String(Math.round((c.workArea.out-f(100))/f(1))));
@@ -1939,10 +1939,10 @@ test('P285 reach: the hand lands on the target on every sampled frame, out of re
  const d0=applyEdits(base(),[...mk('up',null,[300,200]),...mk('lo',null,[100,5]),...mk('hand',null,[100,5]),...mk('tg',null,[300,300]),{type:'layer.parent',layer:'lo',parent:'up'},{type:'layer.parent',layer:'hand',parent:'lo'},
   {type:'prop.animate',layer:'tg',prop:'position',on:true,t:0},{type:'prop.set',layer:'tg',prop:'position',t:f(30),value:[420,120]}] as never);
  const s=new AnimationSession();s.open(d0);setAnimationSession(s);
- const c=()=>findComp(s.document!)!;const before=JSON.stringify(s.document);
+ const c=()=>findComp(s.document!)!!;const before=JSON.stringify(s.document);
  assert.throws(()=>run({layers:['up','hand','lo','tg']}),/forearm must hang/);
  run({layers:['up','lo','hand','tg']});
- const at=(id:string,t:number)=>{const l=c().layers.find(x=>x.id===id)!,m=worldMatrix(c(),l,t),a=l.transform.anchor.value as number[];return [m[0]*a[0]+m[2]*a[1]+m[4],m[1]*a[0]+m[3]*a[1]+m[5]];};
+ const at=(id:string,t:number)=>{const l=c().layers.find(x=>x.id===id)!,m=worldMatrix(c(),l,t),a=l.transform.anchor.value as unknown as number[];return [m[0]*a[0]+m[2]*a[1]+m[4],m[1]*a[0]+m[3]*a[1]+m[5]];};
  for(const fr of [0,10,20,30]){const hh=at('hand',f(fr)),tt=at('tg',f(fr));assert.ok(Math.hypot(hh[0]-tt[0],hh[1]-tt[1])<1,`frame ${fr}: ${hh} vs ${tt}`);}
  s.undo();assert.equal(JSON.stringify(s.document),before);
 });
@@ -1952,9 +1952,9 @@ test('P286 draw: staggered trim keys, off reverses, strokeless shapes refused, o
  const mk=(id:string)=>[{type:'layer.add',kind:'shape',id},{type:'layer.stroke',layer:id,stroke:{color:'#ff0000',width:4}}];
  const d0=applyEdits(base(),[...mk('dwa'),...mk('dwb'),{type:'layer.add',kind:'solid',id:'dws'}] as never);
  const s=new AnimationSession();s.open(d0);setAnimationSession(s);const before=JSON.stringify(s.document);
- const L=(id:string)=>findComp(s.document!)!.layers.find(x=>x.id===id)!;
+ const L=(id:string)=>findComp(s.document!)!!.layers.find(x=>x.id===id)!;
  assert.throws(()=>run({layers:['dws']}),/stroke/);
- const r=run({layers:['dwa','dwb','dws'],frames:10,gap:5}) as {layers:number;skipped:number};assert.equal(r.layers,2);assert.equal(r.skipped,1);
+ const r=run({layers:['dwa','dwb','dws'],frames:10,gap:5}) as unknown as {layers:number;skipped:number};assert.equal(r.layers,2);assert.equal(r.skipped,1);
  const ka=L('dwa').stroke!.trim!.keys,kb=L('dwb').stroke!.trim!.keys;
  assert.deepEqual(ka.map(k=>k.v),[0,100]);assert.equal(kb[0].t-ka[0].t,f(5));
  s.undo();assert.equal(JSON.stringify(s.document),before);
@@ -1967,8 +1967,8 @@ test('P287 cascade: delays follow position, centre-out and in mirror, one undo',
  assert.equal(cascadeDelays([[5,5],[5,5]],'right',10),null);
  const mk=(id:string,x:number)=>[{type:'layer.add',kind:'solid',id},{type:'prop.set',layer:id,prop:'position',value:[x,200]}];
  const s=new AnimationSession();s.open(applyEdits(base(),[...mk('cx1',100),...mk('cx2',300),...mk('cx3',500)] as never));setAnimationSession(s);const before=JSON.stringify(s.document);
- const L=(id:string)=>findComp(s.document!)!.layers.find(x=>x.id===id)!;
- const r=run({layers:['cx3','cx1','cx2'],frames:10}) as {trimmed:number};assert.equal(r.trimmed,2);
+ const L=(id:string)=>findComp(s.document!)!!.layers.find(x=>x.id===id)!;
+ const r=run({layers:['cx3','cx1','cx2'],frames:10}) as unknown as {trimmed:number};assert.equal(r.trimmed,2);
  assert.equal(L('cx1').inT,0);assert.equal(L('cx3').inT,f(10));assert.equal(L('cx2').inT,f(5));
  s.undo();assert.equal(JSON.stringify(s.document),before);
  assert.throws(()=>run({layers:['cx1']}),/two/);
@@ -1985,8 +1985,8 @@ test('P289 hue: nine colour keys round the wheel ending on the start colour, gre
  const {hueSteps,hueSpecs}=await import('./hueCommands');const run=hueSpecs()[0].run as (p?:unknown)=>unknown;
  assert.equal(hueSteps(1).length,9);assert.equal(hueSteps(2).at(-1),720);
  const s=new AnimationSession();s.open(applyEdits(base(),[{type:'layer.add',kind:'solid',id:'hz1'},{type:'layer.update',layer:'hz1',source:{color:'#ff0000'}},{type:'layer.add',kind:'solid',id:'hz2'},{type:'layer.update',layer:'hz2',source:{color:'#808080'}}] as never));setAnimationSession(s);
- const L=(id:string)=>findComp(s.document!)!.layers.find(x=>x.id===id)!;const before=JSON.stringify(s.document);
- const r=run({layers:['hz1']}) as {layers:number};assert.equal(r.layers,1);
+ const L=(id:string)=>findComp(s.document!)!!.layers.find(x=>x.id===id)!;const before=JSON.stringify(s.document);
+ const r=run({layers:['hz1']}) as unknown as {layers:number};assert.equal(r.layers,1);
  const k=L('hz1').colorKeys!.fill!;assert.equal(k.length,9);assert.equal(k[0].color,'#ff0000');assert.equal(k[8].color,'#ff0000');assert.equal(k[4].color,'#00ffff');
  assert.throws(()=>run({layers:['hz1']}),/no colour keys/);
  s.undo();assert.equal(JSON.stringify(s.document),before);
@@ -1995,7 +1995,7 @@ test('P290 swing: damped angle starts at the amplitude, crosses zero, ends on th
  const {swingAngles,swingSpecs}=await import('./swingCommands');const run=swingSpecs()[0].run as (p?:unknown)=>unknown;
  const a=swingAngles(48,30,24);assert.equal(a[0],30);assert.ok(a[12]<0&&a[12]>-30);assert.ok(a[24]>0&&a[24]<30*Math.exp(-4*24/48)+0.01);assert.equal(a[48],0);
  const s=new AnimationSession();s.open(applyEdits(base(),[{type:'layer.add',kind:'solid',id:'sw1'},{type:'prop.set',layer:'sw1',prop:'rotation',value:10}] as never));setAnimationSession(s);
- const L=()=>findComp(s.document!)!.layers.find(x=>x.id==='sw1')!;const before=JSON.stringify(s.document);
+ const L=()=>findComp(s.document!)!!.layers.find(x=>x.id==='sw1')!;const before=JSON.stringify(s.document);
  s.setView({playhead:f(10)});run({layers:['sw1'],frames:48,period:24,angle:30});
  const k=L().transform.rotation.keys;assert.equal(k.length,49);assert.equal(k[0].v,40);assert.equal(k[48].v,10);
  s.undo();assert.equal(JSON.stringify(s.document),before);
@@ -2004,8 +2004,8 @@ test('P291 blink: seeded gaps, closed at 10 percent mid blink, keyed scale skipp
  const {blinkFrames,blinkSpecs}=await import('./blinkCommands');const run=blinkSpecs()[0].run as (p?:unknown)=>unknown;
  const a=blinkFrames(150,60,1);assert.deepEqual(a,blinkFrames(150,60,1));assert.ok(a.length>=1&&a.length<=4);assert.ok(a.every((x,i)=>x+4<=150&&(!i||x-a[i-1]>=5)));
  const s=new AnimationSession();s.open(applyEdits(base(),[{type:'layer.add',kind:'solid',id:'bl1'},{type:'prop.set',layer:'bl1',prop:'scale',value:[50,40]},{type:'layer.add',kind:'solid',id:'bl2'},{type:'prop.animate',layer:'bl2',prop:'scale',on:true,t:0}] as never));setAnimationSession(s);
- const L=(id:string)=>findComp(s.document!)!.layers.find(x=>x.id===id)!;const before=JSON.stringify(s.document);
- const r=run({layers:['bl1','bl2'],gap:60}) as {layers:number;skipped:number};assert.equal(r.layers,1);assert.equal(r.skipped,1);
+ const L=(id:string)=>findComp(s.document!)!!.layers.find(x=>x.id===id)!;const before=JSON.stringify(s.document);
+ const r=run({layers:['bl1','bl2'],gap:60}) as unknown as {layers:number;skipped:number};assert.equal(r.layers,1);assert.equal(r.skipped,1);
  const k=L('bl1').transform.scale.keys;assert.equal(k.length,a.length*3);assert.deepEqual(k[1].v,[50,4]);assert.deepEqual(k[2].v,[50,40]);
  s.undo();assert.equal(JSON.stringify(s.document),before);
 });
@@ -2014,7 +2014,7 @@ test('P292 grid: static position and every key snap, grid-aligned layers refused
  assert.equal(snapTo(14,10),10);assert.equal(snapTo(15,10),20);assert.equal(snapTo(-14,10),-10);assert.equal(snapTo(0.4,10),0);
  const s=new AnimationSession();s.open(applyEdits(base(),[{type:'layer.add',kind:'solid',id:'gr1'},{type:'prop.set',layer:'gr1',prop:'position',value:[103,247]},{type:'layer.add',kind:'solid',id:'gr2'},{type:'prop.set',layer:'gr2',prop:'position',value:[100,200]},
   {type:'prop.animate',layer:'gr2',prop:'position',on:true,t:0},{type:'prop.set',layer:'gr2',prop:'position',t:0,value:[101,199]},{type:'prop.animate',layer:'gr2',prop:'position',on:true,t:f(10)},{type:'prop.set',layer:'gr2',prop:'position',t:f(10),value:[333,333]}] as never));setAnimationSession(s);
- const L=(id:string)=>findComp(s.document!)!.layers.find(x=>x.id===id)!;const before=JSON.stringify(s.document);
+ const L=(id:string)=>findComp(s.document!)!!.layers.find(x=>x.id===id)!;const before=JSON.stringify(s.document);
  run({layers:['gr1','gr2']});assert.deepEqual(L('gr1').transform.position.value,[100,250]);assert.deepEqual(L('gr2').transform.position.keys.map(k=>k.v),[[100,200],[330,330]]);
  assert.throws(()=>run({layers:['gr1','gr2']}),/already/);
  s.undo();assert.equal(JSON.stringify(s.document),before);
@@ -2030,7 +2030,7 @@ test('P294 text case and replace: counters keep {n}, case-insensitive replace, a
  assert.equal(changeCase('hello wORLD','title'),'Hello World');assert.equal(changeCase('one. two! three','sentence'),'One. Two! Three');assert.equal(changeCase('{n} views','upper'),'{n} VIEWS');assert.equal(changeCase('straße','upper'),'STRASSE');
  assert.equal(replaceText('Cat cat CAT','cat','dog',false),'dog dog dog');assert.equal(replaceText('Cat cat','cat','dog',true),'Cat dog');
  const s=new AnimationSession();s.open(applyEdits(base(),[{type:'layer.add',kind:'text',id:'tx1'},{type:'layer.update',layer:'tx1',source:{text:'big sale today'}},{type:'layer.add',kind:'text',id:'tx2'},{type:'layer.update',layer:'tx2',source:{text:'Sale ends soon'}}] as never));setAnimationSession(s);
- const T=(id:string)=>findComp(s.document!)!.layers.find(x=>x.id===id)!.source.text;const before=JSON.stringify(s.document);
+ const T=(id:string)=>findComp(s.document!)!!.layers.find(x=>x.id===id)!.source.text;const before=JSON.stringify(s.document);
  cs({mode:'upper',layers:['tx1']});assert.equal(T('tx1'),'BIG SALE TODAY');assert.equal(T('tx2'),'Sale ends soon');s.undo();assert.equal(JSON.stringify(s.document),before);
  s.setView({selectedLayer:null as never});rp({find:'sale',replace:'offer'});assert.equal(T('tx1'),'big offer today');assert.equal(T('tx2'),'offer ends soon');s.undo();assert.equal(JSON.stringify(s.document),before);
  assert.throws(()=>rp({find:'zzz',replace:'a'}),/Nothing changes/);assert.throws(()=>rp({find:'{n}'}),/counter/);
@@ -2039,8 +2039,8 @@ test('P295 look: fill, stroke and fresh-id effects copy onto targets, text keeps
  const {lookSpecs}=await import('./lookCommands');const run=lookSpecs()[0].run as (p?:unknown)=>unknown;
  const mk=(id:string,col:string)=>[{type:'layer.add',kind:'shape',id},{type:'layer.update',layer:id,source:{color:col}}];
  const s=new AnimationSession();s.open(applyEdits(base(),[...mk('lk1','#ff0000'),{type:'layer.stroke',layer:'lk1',stroke:{color:'#00ff00',width:6}},{type:'layer.effects',layer:'lk1',effects:[{id:'fx-a',kind:'blur',enabled:true,amount:4,color:'#000000'}]},...mk('lk2','#0000ff'),...mk('lk3','#111111'),{type:'layer.add',kind:'solid',id:'lk4'}] as never));setAnimationSession(s);
- const L=(id:string)=>findComp(s.document!)!.layers.find(x=>x.id===id)!;const before=JSON.stringify(s.document);
- const r=run({layers:['lk1','lk2','lk3','lk4']}) as {layers:number};assert.equal(r.layers,3);
+ const L=(id:string)=>findComp(s.document!)!!.layers.find(x=>x.id===id)!;const before=JSON.stringify(s.document);
+ const r=run({layers:['lk1','lk2','lk3','lk4']}) as unknown as {layers:number};assert.equal(r.layers,3);
  assert.equal(L('lk2').source.color,'#ff0000');assert.equal(L('lk2').stroke!.width,6);assert.equal(L('lk2').effects!.length,1);assert.notEqual(L('lk2').effects![0].id,'fx-a');assert.notEqual(L('lk2').effects![0].id,L('lk3').effects![0].id);
  assert.equal(L('lk4').source.color,'#ff0000');assert.equal(L('lk4').stroke,undefined);
  assert.throws(()=>run({layers:['lk1','lk2']}),/already/);

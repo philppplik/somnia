@@ -1,4 +1,5 @@
 import {openDocsModel,appendDocsOp,cleanDocsOp,type DocsModel,type DocsOpKind,type DocsOpEntry} from './docsModel';
+export type {DocsOpKind} from './docsModel';
 /**
  * Binds one document's shared op journal to a live DocumentsEngine (concept 3.2, CO4).
  * Convergence rule (same as CO3b): EVERY peer, author included, applies entries only in

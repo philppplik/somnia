@@ -33,8 +33,8 @@ export function SlidesCanvas({embedded=false}:{embedded?:boolean}={}){const s=us
  useEffect(()=>{let off:(()=>void)|null=null;let offS:(()=>void)|null=null;
   const wire=()=>{off?.();off=null;const c=getCollab();
    if(!c){setPeers([]);return;}
-   const sync=()=>setPeers(s.name?peerSlides(c.doc.awareness,s.name):[]);
-   c.doc.awareness.on('change',sync);off=()=>c.doc.awareness.off('change',sync);sync();};
+   const sync=()=>setPeers(s.name?peerSlides(c.awareness,s.name):[]);
+   c.awareness.on('change',sync);off=()=>c.awareness.off('change',sync);sync();};
   wire();offS=onSessionChange(wire);
   return()=>{off?.();offS?.();};},[s.name]);
  const ch=collabHistoryState();useEffect(()=>{const offSpecs=registerSlidesCommands();const offHandoff=registerHandoffCommands();const offScope=registerCommandScope(id=>{const scoped=slidesScopedCommand(id);if(scoped)return scoped;if(id.startsWith('edit.')||id.startsWith('view.')||id.startsWith('split.')||id==='project.save')return {id,title:'Unavailable in read-only Slides preview',category:'View',enabled:()=>false,run:()=>{}};});return()=>{offScope();offSpecs();offHandoff();};},[]);return <main className="center flex min-h-0 flex-col overflow-hidden rounded-[var(--r-panel)] bg-panel" aria-label="Slides Studio">

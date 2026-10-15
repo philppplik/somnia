@@ -13,7 +13,7 @@ const emit=()=>{store.version++;for(const fn of [...store.listeners])fn();};
 export const handoffVersion=()=>store.version;
 export function registerHandoffRoute(studio:string,kind:string,route:HandoffRoute):()=>void{
  const k=key(studio,kind);const list=routes.get(k)??[];list.push(route);routes.set(k,list);
- return()=>{const cur=routes.get(k)??[];const next=cur.filter(r=>r!==route);if(next.length)routes.set(k,next);else routes.delete(k);};
+ return()=>{const cur=routes.get(k)??[];const next=cur.filter((r:HandoffRoute)=>r!==route);if(next.length)routes.set(k,next);else routes.delete(k);};
 }
 export function handoffRoutesFor(studio:string,kind:string):readonly HandoffRoute[]{return routes.get(key(studio,kind))??[];}
 const origins=store.origins;

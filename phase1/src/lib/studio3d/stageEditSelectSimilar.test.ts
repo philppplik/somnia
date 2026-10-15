@@ -33,7 +33,7 @@ test('stage editSelectSimilar: coplanar seeds and duplicated shells select by di
  st.editStart(o.id);
  st.editSelect('face',[4,5]);
  st.editDuplicate();
- st.editSelectAll({op:'none',kind:'face'});
+ st.editSelectAll('none','face');
  st.editSelect('face',[4]);
  st.editSelectSimilar(15);
  assert.deepEqual(st.editSelection().faces,[4,5,12,13]);

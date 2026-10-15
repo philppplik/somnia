@@ -67,7 +67,7 @@ const groups:{key:string;items:RigItem[]}[]=[
  {key:'shake',items:([[6,12],[20,12]] as const).map(([n,f])=>({testid:`animation-rig-shake-${n}`,label:`animation.rig.shake.${n}`,cmd:'animation.layers.shake',min:1,args:{amount:n,frames:f}}))},
  {key:'flicker',items:([12,36] as const).map(n=>({testid:`animation-rig-flicker-${n}`,label:`animation.rig.flicker.${n}`,cmd:'animation.layers.flicker',min:1,args:{frames:n}}))},
  {key:'pulse',items:([2,6] as const).map(n=>({testid:`animation-rig-pulse-${n}`,label:`animation.rig.pulse.${n}`,cmd:'animation.layers.pulseGlow',min:1,args:{cycles:n}}))},
- {key:'bounce',items:([2,3,5] as const).map(n=>({testid:`animation-rig-bounce-${n}`,label:`animation.rig.bounce.${n}`,cmd:'animation.layers.bounce',min:2,args:{bounces:n}})).concat([{testid:'animation-rig-bounce-squash',label:'animation.rig.bounce.squash',cmd:'animation.layers.bounce',min:2,args:{bounces:3,squash:true}}])},
+ {key:'bounce',items:([2,3,5] as const).map((n):RigItem=>({testid:`animation-rig-bounce-${n}`,label:`animation.rig.bounce.${n}`,cmd:'animation.layers.bounce',min:2,args:{bounces:n}})).concat([{testid:'animation-rig-bounce-squash',label:'animation.rig.bounce.squash',cmd:'animation.layers.bounce',min:2,args:{bounces:3,squash:true}}])},
  {key:'label',items:(['red','amber','green','blue','violet','none'] as const).map(m=>({testid:`animation-rig-label-${m}`,label:`animation.rig.label.${m}`,cmd:'animation.layers.label',min:1,args:{label:m}}))},
  {key:'state',items:(['visible','solo','locked','shy'] as const).map(f=>({testid:`animation-rig-flag-${f}`,label:`animation.rig.flag.${f}`,cmd:'animation.layers.flag',min:1,args:{flag:f}}))}];
 /** Menu layout: the small groups are nested so the top level stays at five entries. */

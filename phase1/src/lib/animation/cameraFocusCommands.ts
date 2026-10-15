@@ -31,11 +31,11 @@ export function focusPose(c:Composition,tg:{cx:number;cy:number;w:number;h:numbe
 export const cameraFocusSpecs=():CommandSpec<unknown,unknown>[]=>[{
  id:'animation.camera.focus',title:'Make the camera zoom in on the selected layer',category:'Edit',level:'ui',keywords:['animation','camera','focus','zoom','punch in','spotlight','frame','close up','highlight','emphasis'],
  params:{type:'object',properties:{layer:{type:'string'},frames:{type:'integer',minimum:1,maximum:MAX_FOCUS_FRAMES}},additionalProperties:false},
- enabled:()=>{const s=animationSession(),d=s.document,c=d?findComp(d):undefined,sel=s.view.selectedLayer;return !!c&&!!findCamera(c)&&!!sel&&sel!==findCamera(c)?.id&&c.layers.some(l=>l.id===sel);},
+ enabled:()=>{const s=animationSession(),d=s.document,c=d?findComp(d):undefined,sel=s.getState().view.selectedLayer;return !!c&&!!findCamera(c)&&!!sel&&sel!==findCamera(c)?.id&&c.layers.some(l=>l.id===sel);},
  run:((p:{layer?:string;frames?:number}={})=>{
   const s=animationSession(),d=s.document,c=d?findComp(d):undefined;if(!c)return expected('No composition is open.');
   const cam=findCamera(c);if(!cam)return expected('Add a camera first.');if(cam.locked)return expected('The camera is locked.');
-  const id=p.layer??s.view.selectedLayer,target=c.layers.find(l=>l.id===id);if(!target)return expected('Select the layer the camera should zoom in on.');
+  const id=p.layer??s.getState().view.selectedLayer,target=c.layers.find(l=>l.id===id);if(!target)return expected('Select the layer the camera should zoom in on.');
   if(target.id===cam.id)return expected('The camera cannot focus on itself.');
   const n=p.frames??DEFAULT_FOCUS_FRAMES;if(!Number.isInteger(n)||n<1||n>MAX_FOCUS_FRAMES)return expected(`The move takes 1 to ${MAX_FOCUS_FRAMES} frames.`);
   const a=snapToFrame(s.getState().view.playhead,c.fps),b=a+frameToTick(n,c.fps),end=c.start+c.duration;

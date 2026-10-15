@@ -1,4 +1,5 @@
 import {test} from 'node:test';
+import type {PanelCommandDeps} from './panelCommands';
 import assert from 'node:assert/strict';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {createElement} from 'react';
@@ -12,8 +13,8 @@ import {editRailOverrides,railModel} from '../../store/railActions';
 import {hasRailIcon,registerRailIcons,resolveRailIcon,RAIL_FALLBACK_ICON} from '../shell/railIcons';
 import '../../components/shell/railIconSet';
 import {CATALOGUES,translate} from '../i18n';
-const deps={state:()=>({busy:false,working:true,canUndo:true,canRedo:true,slides:3,index:0,presenting:false}),present:()=>{},exitPresent:()=>{},history:()=>{},saveCopy:()=>{},showSlide:()=>{}};
-const panelDeps={state:()=>({source:'',index:0,busy:false,working:null,runs:[],slideIds:[],layouts:[],model:null,summary:null}),thumbnails:async()=>{},edit:async()=>{},show:async()=>{},select:()=>{},move:async()=>{},duplicate:async()=>{},remove:async()=>{},add:async()=>{},setBounds:async()=>{},setMany:async()=>{},arrange:async()=>{},setTransition:async()=>{},insertTable:async()=>{},table:async()=>{},style:async()=>{},setNotes:async()=>{},group:async()=>{},ungroup:async()=>{},format:async()=>{},addBox:async()=>{},removeBox:async()=>{},insertImage:async()=>{},replaceImage:async()=>{},removeImage:async()=>{},pick:()=>{},picked:()=>null};
+const deps={state:()=>({busy:false,working:true,canUndo:true,canRedo:true,slides:3,index:0,presenting:false}),present:()=>{},exitPresent:()=>{},history:()=>{},saveCopy:()=>{},openExport:()=>{},showSlide:()=>{}};
+const panelDeps={state:()=>({source:'',index:0,busy:false,working:null,runs:[],slideIds:[],layouts:[],model:null,summary:null}),thumbnails:async()=>{},edit:async()=>{},show:async()=>{},select:()=>{},move:async()=>{},duplicate:async()=>{},remove:async()=>{},add:async()=>{},setBounds:async()=>{},setMany:async()=>{},arrange:async()=>{},setTransition:async()=>{},insertTable:async()=>{},table:async()=>{},style:async()=>{},setNotes:async()=>{},group:async()=>{},ungroup:async()=>{},format:async()=>{},addBox:async()=>{},removeBox:async()=>{},insertImage:async()=>{},replaceImage:async()=>{},removeImage:async()=>{},pick:()=>{},picked:()=>null} as unknown as PanelCommandDeps;
 const known=new Set([...slidesCommandSpecs(deps),...slidesPanelCommandSpecs(panelDeps)].map(s=>s.id));
 const shell=slidesStudio.shellV2!;
 const ids=(l:readonly {id:string}[])=>l.map(i=>i.id);

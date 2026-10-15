@@ -8,7 +8,7 @@ test('stage moveCenterTo: combined centre lands on the target, relative offsets 
  const b=st.addPrimitive('cube');
  st.setTransform(b.id,{position:{x:2,y:0.5,z:0}});
  assert.equal(st.moveCenterTo([a.id,b.id],[4,2,-2]),2);
- const pa=a.getWorldPosition(new (a.position.constructor as new()=>{x:number;y:number;z:number})());
+ const pa=a.getWorldPosition(a.position.clone().set(0,0,0));
  assert.deepEqual([a.position.x,a.position.y,a.position.z],[3,2,-2],'a moved by the same delta');
  assert.deepEqual([b.position.x,b.position.y,b.position.z],[5,2,-2],'b kept its +2 x offset');
  void pa;

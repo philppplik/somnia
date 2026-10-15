@@ -1,5 +1,6 @@
 import {useSyncExternalStore} from 'react';
 import type {Command} from './commandRegistry';
+export type {Command} from './commandRegistry';
 
 /**
  * Advanced export center: one grouped dialog over every studio's existing export commands.

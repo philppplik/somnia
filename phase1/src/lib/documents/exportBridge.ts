@@ -1,6 +1,7 @@
 import {useSyncExternalStore} from 'react';
 import {getDocumentsState} from './store';
 import type {ExportExt} from './protocol';
+import type {CorePropsMeta} from '../office/coreProps';
 /**
  * Bridge between the Documents Export hero / commands and the live canvas. The canvas owns the engine,
  * so it registers the one save implementation here (the same flow its toolbar button always used,
@@ -14,6 +15,8 @@ export interface DocumentsExportBridge{
  savePdf():Promise<void>;
  /** Produce and download the document in another format (Markdown, HTML, text, RTF, ODT). Optional so older registrations keep working. */
  saveFormat?():Promise<void>;
+ /** Produce and download the advanced export (chosen name + metadata). Optional so older registrations keep working. */
+ saveAdvanced?(name:string,meta:CorePropsMeta):Promise<void>;
 }
 let bridge:DocumentsExportBridge|null=null;
 export function registerDocumentsExport(next:DocumentsExportBridge):()=>void{

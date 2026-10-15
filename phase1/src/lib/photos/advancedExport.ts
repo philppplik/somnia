@@ -4,7 +4,7 @@ import {injectPngMetadata,injectJpegMetadata,hasExportMetadata} from '../export/
 import {photoExportMetadata,type PhotoAdvancedOptions} from './photosExportSchema';
 /** Renders the developed photo through the AE1 option pipeline. Browser-only: canvas, bitmap and encoders. */
 export interface AdvancedRenderResult{blob:Blob;bytes:number;width:number;height:number;note:string|null}
-export interface PhotoEngineLike{exportPhoto(settings:PhotoSettings,format:'png'|'jpeg'):Promise<{bytes?:Uint8Array}>}
+export interface PhotoEngineLike{exportPhoto(settings:PhotoSettings,format:'png'|'jpeg'):Promise<{bytes?:ArrayBuffer}>}
 let p3Supported:boolean|null=null;
 function supportsDisplayP3():boolean{
  if(p3Supported!==null)return p3Supported;
@@ -25,13 +25,13 @@ export async function renderAdvancedPhotoExport(engine:PhotoEngineLike,snapshot:
   ctx.drawImage(bitmap,0,0,dims.width,dims.height);
   const mime=options.format==='png'?'image/png':options.format==='webp'?'image/webp':'image/jpeg';
   const blob=await new Promise<Blob>((res,rej)=>canvas.toBlob(b=>b?res(b):rej(Error('Could not encode the export.')),mime,options.format==='png'?undefined:options.quality/100));
-  let bytes=new Uint8Array(await blob.arrayBuffer());
+  let bytes:Uint8Array=new Uint8Array(await blob.arrayBuffer());
   const meta=photoExportMetadata(options);
   if(hasExportMetadata(meta)){
    if(options.format==='png')bytes=injectPngMetadata(bytes,meta);
    else if(options.format==='jpeg')bytes=injectJpegMetadata(bytes,meta);
   }
   const note=options.profile==='display-p3'&&!wantP3?'export.note.p3':options.format==='webp'&&hasExportMetadata(meta)?'export.note.webpMeta':null;
-  return{blob:new Blob([bytes],{type:mime}),bytes:bytes.length,width:dims.width,height:dims.height,note};
+  return{blob:new Blob([bytes as Uint8Array<ArrayBuffer>],{type:mime}),bytes:bytes.length,width:dims.width,height:dims.height,note};
  }finally{bitmap.close();}
 }

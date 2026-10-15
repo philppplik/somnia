@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {EXPORT_GROUP_IDS,EXPORT_PRESETS,MAX_RECENT,exportGroups,filterExportGroups,readRecents,recentGroup,recordRecent,runPreset,type Command,type ExportGroup,type ExportPreset} from './exportCenter';
 
-const cmd=(id:string,enabled=true):Command=>({id,title:id,category:'Project',level:'ui',enabled:()=>enabled,run:()=>{}});
+const cmd=(id:string,enabled=true):Command=>({id,title:id,category:'Project',enabled:()=>enabled,run:()=>{}});
 
 /** Minimal localStorage shim per test; the module reads globalThis.localStorage lazily. */
 function withStorage(fn:()=>void){

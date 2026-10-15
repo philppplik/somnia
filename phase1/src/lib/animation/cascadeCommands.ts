@@ -1,7 +1,7 @@
 import type {CommandSpec} from '../commandSpec';
 import {animationSession} from './session';
 import {findComp,findLayer,type Layer,type Vec2} from './model';
-import {EditError} from './edit';
+import {EditError,type Edit} from './edit';
 import {layerSetIds} from './layerSet';
 import {worldMatrix} from './scene';
 import {evaluateMod} from './modifiers';
@@ -34,7 +34,7 @@ export const cascadeSpecs=():CommandSpec<unknown,unknown>[]=>[{
   const pts=ls.map(l=>{const m=worldMatrix(c,l,l.inT),a=evaluateMod(l.transform.anchor,l.inT) as Vec2;return [m[0]*a[0]+m[2]*a[1]+m[4],m[1]*a[0]+m[3]*a[1]+m[5]] as Vec2;});
   const seed=p.seed??1;if(!Number.isInteger(seed)||seed<0||seed>99999)return expected('The seed is a whole number from 0 to 99999.');
   const dl=cascadeDelays(pts,dir,frameToTick(frames,c.fps),seed);if(!dl)return expected('The ticked layers sit at the same spot, so there is no order to follow.');
-  const edits=[];let trimmed=0;
+  const edits:Edit[]=[];let trimmed=0;
   ls.forEach((l,i)=>{if(!dl[i])return;if(l.outT+dl[i]>c.duration){edits.push({type:'layer.timing' as const,layer:l.id,inT:l.inT,outT:c.duration-dl[i]});trimmed++;}edits.push({type:'layer.shift' as const,layer:l.id,delta:dl[i],mode:'slide' as const});});
   try{s.dispatch(edits);}catch(e){if(e instanceof EditError)throw Object.assign(e,{expected:true});throw e;}
   return {layers:ls.length,dir,frames,trimmed};

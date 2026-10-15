@@ -13,7 +13,7 @@ export const MAX_FOLLOW_KEYS=120;
 /** Camera position keys that keep `target` where it is at `a` while it moves: the target's world point is sampled with the camera at rest, and the camera moves against it. Linear keys, at most MAX_FOLLOW_KEYS. */
 export function cameraFollowEdits(c:Composition,cam:Layer,target:Layer,a:number,b:number):Edit[]{
  const cx=c.width/2,cy=c.height/2,r2=(n:number)=>Math.round(n*100)/100;
- const rest:Layer={...cam,parent:null,transform:{...cam.transform,position:prop('vec2',[cx,cy]),scale:prop('vec2',[100,100]),rotation:prop('number',0)}};
+ const rest:Layer={...cam,parent:null,transform:{...cam.transform,position:prop('vec2',[cx,cy]),scale:prop('vec2',[100,100]),rotation:prop('scalar',0)}};
  const rc:Composition={...c,layers:c.layers.map(l=>l.id===cam.id?rest:l)},tl=rc.layers.find(l=>l.id===target.id)??target;
  const pt=(t:number):[number,number]=>{const m=worldMatrix(rc,tl,t),an=tl.transform.anchor.value as unknown as [number,number];return [m[0]*an[0]+m[2]*an[1]+m[4],m[1]*an[0]+m[3]*an[1]+m[5]];};
  const f0=tickToFrame(a,c.fps),f1=tickToFrame(b,c.fps),step=Math.max(1,Math.ceil((f1-f0)/(MAX_FOLLOW_KEYS-1)));
@@ -78,11 +78,11 @@ export const cameraSpecs=():CommandSpec<unknown,unknown>[]=>[{
  }) as (p:unknown)=>unknown},{
  id:'animation.camera.follow',title:'Make the camera follow the selected layer',category:'Edit',level:'ui',keywords:['animation','camera','follow','track','tracking','shot','keep in frame','work area'],
  params:{type:'object',properties:{layer:{type:'string'}},additionalProperties:false},
- enabled:()=>{const s=animationSession(),d=s.document,c=d?findComp(d):undefined,sel=s.view.selectedLayer;return !!c&&!!findCamera(c)&&!!sel&&sel!==findCamera(c)?.id&&c.layers.some(l=>l.id===sel);},
+ enabled:()=>{const s=animationSession(),d=s.document,c=d?findComp(d):undefined,sel=s.getState().view.selectedLayer;return !!c&&!!findCamera(c)&&!!sel&&sel!==findCamera(c)?.id&&c.layers.some(l=>l.id===sel);},
  run:((p:{layer?:string})=>{
   const s=animationSession(),d=s.document,c=d?findComp(d):undefined;if(!c)return expected('No composition is open.');
   const cam=findCamera(c);if(!cam)return expected('Add a camera first.');if(cam.locked)return expected('The camera is locked.');
-  const id=p?.layer??s.view.selectedLayer,target=c.layers.find(l=>l.id===id);if(!target)return expected('Select the layer the camera should follow.');
+  const id=p?.layer??s.getState().view.selectedLayer,target=c.layers.find(l=>l.id===id);if(!target)return expected('Select the layer the camera should follow.');
   if(target.id===cam.id)return expected('The camera cannot follow itself.');
   const a=c.workArea.in,b=c.workArea.out;if(b<=a)return expected('The work area is empty.');
   const edits=cameraFollowEdits(c,cam,target,a,b);

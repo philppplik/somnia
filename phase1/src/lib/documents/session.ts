@@ -120,7 +120,7 @@ export function switchDocument(target:{key:string;url:string;retry?:boolean}|nul
 async function attachDocsCollab(entry:Entry,raw:Uint8Array){
  if(entry.collab||!live(entry))return;
  const c=getCollab();if(!c)return;
- if(buildMismatches(c.doc.awareness).length){if(cur===entry)patchDocuments({notice:'collabBuild'});return;}
+ if(buildMismatches(c.awareness).length){if(cur===entry)patchDocuments({notice:'collabBuild'});return;}
  const e=entry.engine!;
  if(docsModelMeta(openDocsModel(c.doc,entry.key))){
   const ad=await adoptDocsFile(c.doc,entry.key,raw);if(!ad.ok||!live(entry)||entry.collab)return;
@@ -140,10 +140,10 @@ async function attachDocsCollab(entry:Entry,raw:Uint8Array){
 function detachDocsCollab(entry:Entry){
  if(!entry.collab)return;
  entry.engine?.setJournaler(null);entry.collab.destroy();entry.collab=null;
- const c=getCollab();if(c)announceCaret(c.doc.awareness,null,0,0);
+ const c=getCollab();if(c)announceCaret(c.awareness,null,0,0);
 }
 if(typeof window!=='undefined')onSessionChange(()=>{const live_=getCollab();for(const e of entries.values()){if(!live_)detachDocsCollab(e);}});
-if(typeof window!=='undefined')subscribeDocuments(()=>{const c=getCollab();const st=getDocumentsState();if(!c||!cur?.collab)return;const caret=st.caret;if(caret)announceCaret(c.doc.awareness,cur.key,caret.block,caret.head);else announceCaret(c.doc.awareness,null,0,0);});
+if(typeof window!=='undefined')subscribeDocuments(()=>{const c=getCollab();const st=getDocumentsState();if(!c||!cur?.collab)return;const caret=st.caret;if(caret)announceCaret(c.awareness,cur.key,caret.block,caret.head);else announceCaret(c.awareness,null,0,0);});
 /** Hands over an already open engine as the current document, synchronously (tests and callers that open the engine themselves). Null closes the current document. */
 export function attachEngine(e:DocumentsEngine|null,key?:string){
  if(!e){identity=null;void switchDocument(null);return;}

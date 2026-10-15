@@ -34,7 +34,7 @@ export function shrinkwrapMesh(m:MeshData,verts:number[],target:MeshData,editWor
   p.set(m.positions[v*3],m.positions[v*3+1],m.positions[v*3+2]);
   const pw=p.clone().applyMatrix4(eW);
   const pl=pw.clone().applyMatrix4(tWi);
-  const res=bvh.closestPointToPoint(pl,{point:hit,faceIndex:0});
+  const res=bvh.closestPointToPoint(pl,{point:hit,faceIndex:0,distance:0});if(!res)continue;
   const f=res.faceIndex*3;
   const ta=target.index[f]*3,tb=target.index[f+1]*3,tc=target.index[f+2]*3;
   const ux=target.positions[tb]-target.positions[ta],uy=target.positions[tb+1]-target.positions[ta+1],uz=target.positions[tb+2]-target.positions[ta+2];

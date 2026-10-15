@@ -27,7 +27,7 @@ export function PropertyModifiers({layer,comp}:{layer:Layer;comp:Composition}){
     {num(t('animation.modifiers.frequency'),m.frequency,0.01,100,0.1,v=>void set(i,{...m,frequency:v}))}
     {num(t('animation.modifiers.seed'),m.seed,0,2147483647,1,v=>void set(i,{...m,seed:Math.round(v)}))}
     {num(t('animation.modifiers.hold'),tickToFrame(m.hold??0,comp.fps),0,30,1,v=>void set(i,{...m,hold:frameToTick(Math.round(v),comp.fps)}))}</div>}
-    {typeof layer.transform[prop].value!=='number'&&<label className="grid gap-1 text-ink-3">{t('animation.modifiers.axis')}<NativeSelect className={field} value={m.axis??''} aria-label={t('animation.modifiers.axis')} onChange={e=>void set(i,withAxis(m,e.target.value))} data-testid="animation-modifier-axis"><option value="">{t('animation.modifiers.axis.both')}</option><option value="x">X</option><option value="y">Y</option></NativeSelect></label>}
+    {m.type==='wiggle'&&typeof layer.transform[prop].value!=='number'&&<label className="grid gap-1 text-ink-3">{t('animation.modifiers.axis')}<NativeSelect className={field} value={m.axis??''} aria-label={t('animation.modifiers.axis')} onChange={e=>void set(i,withAxis(m,e.target.value))} data-testid="animation-modifier-axis"><option value="">{t('animation.modifiers.axis.both')}</option><option value="x">X</option><option value="y">Y</option></NativeSelect></label>}
    {m.type==='spring'&&<div className="grid grid-cols-3 gap-2">
     {num(t('animation.modifiers.springAmount'),m.amplitude,0,300,5,v=>void set(i,{...m,amplitude:v}))}
     {num(t('animation.modifiers.frequency'),m.frequency,0.1,30,0.5,v=>void set(i,{...m,frequency:v}))}

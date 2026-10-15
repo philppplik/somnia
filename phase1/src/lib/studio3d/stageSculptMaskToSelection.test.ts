@@ -12,9 +12,9 @@ test('stage editMaskToSelection: masked vertices become the vertex selection',()
  m.geometry.setAttribute('somniaMask',new THREE.BufferAttribute(mask,1));
  st.editStart(m.id);
  st.editMaskToSelection();
- assert.deepEqual([...st.editSel.verts].sort((a,b)=>a-b),[0,11,17],'0.4 stays under the default threshold');
+ assert.deepEqual([...(st as unknown as {editSel:{verts:Iterable<number>}}).editSel.verts].sort((a,b)=>a-b),[0,11,17],'0.4 stays under the default threshold');
  st.editMaskToSelection(0.3);
- assert.deepEqual([...st.editSel.verts].sort((a,b)=>a-b),[0,5,11,17],'lower threshold admits 0.4');
+ assert.deepEqual([...(st as unknown as {editSel:{verts:Iterable<number>}}).editSel.verts].sort((a,b)=>a-b),[0,5,11,17],'lower threshold admits 0.4');
 });
 
 test('stage editMaskToSelection: needs a mask and a threshold between 0 and 1',()=>{

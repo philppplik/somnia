@@ -13,7 +13,7 @@ const same=(a:PropValue,b:PropValue)=>typeof a==='number'||typeof b==='number'?a
 export const MAX_TRANSITION_FRAMES=600;
 const round=(n:number)=>Math.round(n*100)/100;
 /** Value `amount` percent of the way from `cur` to `goal`. */
-export const blend=(cur:PropValue,goal:PropValue,amount:number):PropValue=>typeof cur==='number'&&typeof goal==='number'?round(cur+(goal-cur)*amount/100):[round(cur[0]+(goal[0]-cur[0])*amount/100),round(cur[1]+(goal[1]-cur[1])*amount/100)] as PropValue;
+export const blend=(cur:PropValue,goal:PropValue,amount:number):PropValue=>{if(typeof cur==='number'&&typeof goal==='number')return round(cur+(goal-cur)*amount/100);const a=cur as [number,number],b=goal as [number,number];return [round(a[0]+(b[0]-a[0])*amount/100),round(a[1]+(b[1]-a[1])*amount/100)];};
 /** Edits that bring the layers of `pose` to the pose at tick `t` (optionally keyed, optionally blended). `found` counts pose layers that exist, `locked` those that are locked. */
 export type PoseMirror='canvas'|'pose';
 export const POSE_MIRRORS:readonly PoseMirror[]=['canvas','pose'];

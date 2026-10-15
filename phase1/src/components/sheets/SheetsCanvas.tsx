@@ -94,39 +94,39 @@ function Workbook({item}:{item:MediaItem}){
   return()=>{live=false;offRead();offDirty();engine.current=null;session.current=null;setSheetsSelection(null);};},[item.url,item.name]);
  // Sheet info (used range, history flags) after open, sheet switch and every edit.
  // Collab: while a session shares this workbook, edits route through the shared model (concept 3.2).
- const collab=useRef<{binding:SheetsCollabBinding;model:SheetsModel}|null>(null);
+ const collab=useRef<{binding:SheetsCollabBinding;model:SheetsModel;aw:import('y-protocols/awareness').Awareness}|null>(null);
  useEffect(()=>{if(phase.kind!=='ready'||!original.current||!book)return;
   let disposed=false;
   let sync:()=>void=()=>undefined;
-  const finish=(m:SheetsModel)=>{
+  const finish=(m:SheetsModel,aw:import('y-protocols/awareness').Awareness)=>{
    const eng=engine.current;if(!eng||disposed)return;
    const names=sharedSheetList(m);
-   const binding=new SheetsCollabBinding(m.doc,item.name,{engine:eng,sheetIndexOf:id=>names.findIndex(x=>x.id===id)});
+   const binding=new SheetsCollabBinding(m.doc,item.name,{engine:{set:(sh,a,i)=>eng.set(sh,a,i),format:(sh,r,c2,rs,cs,op)=>eng.format(sh,r,c2,rs,cs,op),setValues:(sh,r,c2,v)=>eng.setValues(sh,r,c2,v),clear:(sh,r,c2,rs,cs)=>eng.clear(sh,r,c2,rs,cs),editSheet:(sh,l)=>eng.editSheet(sh,l),sheets:async()=>(await eng.sheets()).sheets.map(x=>x.name)},sheetIndexOf:id=>names.findIndex(x=>x.id===id)});
    for(const sh of names)binding.replay(sh.id);
    binding.syncSheetsNow();
-   collab.current={binding,model:m};
+   collab.current={binding,model:m,aw};
    sync=()=>{
-    if(buildMismatches(m.doc.awareness).length){m.doc.awareness.off('change',sync);collab.current?.binding.destroy();collab.current=null;setPeers([]);setNotice(t('sheets.buildMismatch'));return;}   // a late joiner on another build pauses co-editing
-    setPeers(peerSheetSels(m.doc.awareness,item.name).filter(x=>x.sheet>=0));};
-   m.doc.awareness.on('change',sync);sync();
+    if(buildMismatches(aw).length){aw.off('change',sync);collab.current?.binding.destroy();collab.current=null;setPeers([]);setNotice(t('sheets.buildMismatch'));return;}   // a late joiner on another build pauses co-editing
+    setPeers(peerSheetSels(aw,item.name).filter(x=>x.sheet>=0));};
+   aw.on('change',sync);sync();
    setRev(x=>x+1);};
   const attach=async()=>{
    const c=getCollab();if(!c||disposed||collab.current)return;
-   if(buildMismatches(c.doc.awareness).length){setNotice(t('sheets.buildMismatch'));return;}   // engine determinism rule (concept 7.4)
+   if(buildMismatches(c.awareness).length){setNotice(t('sheets.buildMismatch'));return;}   // engine determinism rule (concept 7.4)
    const bytes=original.current;if(!bytes)return;
    if(sheetsModelMeta(openSheetsModel(c.doc,item.name))){
     const ad=await adoptSheetsFile(c.doc,item.name,bytes);
     if(!ad.ok||disposed)return;
-    finish(ad.model);
+    finish(ad.model,c.awareness);
    }else{
     const m=await shareSheetsFile(c.doc,item.name,bytes,book.sheets.map(x=>x.name));
-    if(!disposed)finish(m);}};
+    if(!disposed)finish(m,c.awareness);}};
   void attach();
-  const off=onSessionChange(()=>{if(!getCollab()){if(collab.current){collab.current.model.doc.awareness.off('change',sync);collab.current.binding.destroy();collab.current=null;}setPeers([]);}else void attach();});
-  return()=>{disposed=true;off();if(collab.current){collab.current.model.doc.awareness.off('change',sync);collab.current.binding.destroy();collab.current=null;}setPeers([]);};},[phase,book,item.name]);
+  const off=onSessionChange(()=>{if(!getCollab()){if(collab.current){collab.current.aw.off('change',sync);collab.current.binding.destroy();collab.current=null;}setPeers([]);}else void attach();});
+  return()=>{disposed=true;off();if(collab.current){collab.current.aw.off('change',sync);collab.current.binding.destroy();collab.current=null;}setPeers([]);};},[phase,book,item.name]);
  const [peers,setPeers]=useState<PeerSheetPresence[]>([]);
  // Presence: publish my selection while collab is live; cleared on sheet switch/unmount by the announce(null) cleanup.
- useEffect(()=>{const a=collab.current?.model.doc.awareness;if(!a)return;
+ useEffect(()=>{const a=collab.current?.aw;if(!a)return;
   const lo={row:Math.min(sel.row,(ext??sel).row),col:Math.min(sel.col,(ext??sel).col)},hi={row:Math.max(sel.row,(ext??sel).row),col:Math.max(sel.col,(ext??sel).col)};
   announceSheetSel(a,item.name,sheet,{r0:lo.row,c0:lo.col,r1:hi.row,c1:hi.col});
   return()=>announceSheetSel(a,null,0,null);},[sel,ext,sheet,rev,item.name]);
@@ -475,7 +475,7 @@ function Workbook({item}:{item:MediaItem}){
   if(draftRef.current!==null)await commit(draftRef.current);
   if(collab.current&&(op.kind==='move'||op.kind==='duplicate'||op.kind==='hide'||op.kind==='unhide'||op.kind==='tabColor')){setNotice(t('sheets.collabSheetOpUnsupported'));return;}   // position-keyed shared cells would detach from their sheet
   try{const r=await engine.current!.editSheet(sheet,op);const fresh=await syncSheets(r.active,op.kind==='add'||op.kind==='duplicate'||op.kind==='delete'||op.kind==='hide'||op.kind==='unhide');
-   if(collab.current&&fresh&&op.kind!=='duplicate'){const idx=op.kind==='add'?r.active:sheet;collab.current.binding.applyLocalSheetOp(idx,op.kind,fresh.sheets[idx]?.name);}
+   if(collab.current&&fresh&&op.kind!=='duplicate'){const idx=op.kind==='add'?r.active:sheet;collab.current.binding.applyLocalSheetOp(idx,op.kind as 'add'|'delete'|'rename',fresh.sheets[idx]?.name);}
    setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
  const history=async(kind:'undo'|'redo')=>{try{
   if(collab.current){if(kind==='undo')collab.current.binding.undo();else collab.current.binding.redo();}

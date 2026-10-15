@@ -49,7 +49,7 @@ export class SheetsCollabBinding{
    const entries:SharedFormatEntry[]=[];
    ev.changes.delta.forEach(part=>{if(part.insert)for(const raw of (part.insert as unknown[]).slice(0,MAX_FORMAT_PER_INSERT)){const e=cleanFormatEntry(raw);if(e)entries.push(e);}});
    if(entries.length)this.enqueueFormats(entries);};
-  const onSheets=(_evs:import('yjs').YEvent<unknown>[],tx:import('yjs').Transaction)=>{
+  const onSheets=(_evs:import('yjs').YEvent<import('yjs').AbstractType<unknown>>[],tx:import('yjs').Transaction)=>{
    if(tx.origin===this.origin||tx.origin==='sheets-model-seed')return;
    this.reconcileSheets();};
   this.model.cells.observe(onCells);

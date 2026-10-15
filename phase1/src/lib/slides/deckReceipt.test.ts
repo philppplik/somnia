@@ -4,13 +4,13 @@ import {applyReviewed,undoReceipt,type DeckOwnerPort,type UndoPort,type DeckSnap
 
 /** A faithful in-memory owner: same commit and history rules as the session, no worker. */
 function owner(opts:{stageFail?:boolean;restoreFail?:boolean;renderFail?:boolean;maxHistory?:number}={}){
-  const o={generation:1,revision:0,busy:false,disposed:false,working:new Uint8Array([1]),undo:[] as Uint8Array[],redo:[] as Uint8Array[],last:undefined as undefined|{token:string;before:Uint8Array;after:Uint8Array},n:0,native:new Uint8Array([1]),errors:[] as string[],beforeCommit:undefined as undefined|(()=>void)};
+  const o={generation:1,revision:0,busy:false,disposed:false,working:new Uint8Array([1]) as Uint8Array,undo:[] as Uint8Array[],redo:[] as Uint8Array[],last:undefined as undefined|{token:string;before:Uint8Array;after:Uint8Array},n:0,native:new Uint8Array([1]) as Uint8Array,errors:[] as string[],beforeCommit:undefined as undefined|(()=>void)};
   const text=()=>`deck:${[...o.working].join(',')}`;
   const snapshot=():DeckSnapshot=>({generation:o.generation,identity:'file:a',revision:o.revision,busy:o.busy,disposed:o.disposed,text:text(),working:o.working});
   const common={snapshot,setBusy:(b:boolean)=>{o.busy=b;},restoreNative:async(w:Uint8Array)=>{if(opts.restoreFail)throw Error('restore failed');o.native=w;},readback:text,fail:(m:string)=>{o.errors.push(m);},render:async()=>{if(opts.renderFail)throw Error('render failed');}};
   const stage=async(b:Uint8Array)=>{if(opts.stageFail)throw Error('open failed');o.native=b;return b;};
   const apply:DeckOwnerPort<Uint8Array>={...common,edit:(_s,t)=>{if(t==='deck:bad')throw Error('Run mismatch');return new Uint8Array(t.replace('deck:','').split(',').filter(Boolean).map(Number));},stage,
-    commit:(st,before,after)=>{o.beforeCommit?.();const h=[...o.undo,before].slice(Math.max(0,[...o.undo,before].length-(opts.maxHistory??10)));const kept=h.at(-1)===before;o.revision++;o.working=after;o.undo=h;o.redo=[];const token='t'+(++o.n);o.last=kept?{token,before,after}:undefined;return {revision:o.revision,token,undoable:kept};}};
+    commit:(_st,before,after)=>{o.beforeCommit?.();const h=[...o.undo,before].slice(Math.max(0,[...o.undo,before].length-(opts.maxHistory??10)));const kept=h.at(-1)===before;o.revision++;o.working=after;o.undo=h;o.redo=[];const token='t'+(++o.n);o.last=kept?{token,before,after}:undefined;return {revision:o.revision,token,undoable:kept};}};
   const undo:UndoPort<Uint8Array>={...common,stage,matches:(t,g)=>{const l=o.last;return l&&l.token===t&&o.generation===g&&o.working===l.after&&o.undo.at(-1)===l.before&&o.redo.length===0?l.before:null;},commitUndo:()=>{const l=o.last!;o.last=undefined;o.revision++;o.working=l.before;o.undo.pop();o.redo.push(l.after);return {revision:o.revision};}};
   return {o,apply,undo};
 }

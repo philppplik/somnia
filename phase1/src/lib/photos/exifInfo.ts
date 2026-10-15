@@ -78,7 +78,7 @@ function parsePng(dv:DataView):PhotoInfo{
  return info;
 }
 /** Reads dimensions and EXIF from raw file bytes; mime decides the container path. Never throws. */
-export function readPhotoInfo(mime:string,buf:ArrayBuffer):PhotoInfo{
+export function readPhotoInfo(_mime:string,buf:ArrayBuffer):PhotoInfo{
  try{
   const dv=new DataView(buf);
   if(dv.byteLength>=4&&dv.getUint16(0)===0xffd8)return parseJpeg(dv);

@@ -285,7 +285,7 @@ test('P82: audio-reactive keys follow loudness, are one edit, bounded and valida
 });
 test('P296 fade works on audio clips: volume keys 0 to full and back inside the clip, keyed volume skipped, one undo',async()=>{
  const m=await import('./layerFadeCommands');const {AnimationSession,setAnimationSession}=await import('./session');
- const run=(Object.values(m).find(x=>typeof x==='function') as ()=>{run:(p?:unknown)=>unknown}[])()[0].run;
+ const run=(Object.values(m).find(x=>typeof x==='function') as unknown as ()=>{run:(p?:unknown)=>unknown}[])()[0].run;
  const s=new AnimationSession();s.open(withAudio());setAnimationSession(s);const before=JSON.stringify(s.document);
  const r=run({mode:'both',frames:6,layers:['aud']}) as {faded:number};assert.equal(r.faded,1);
  const v=layer(s.document!).audio!.volume,fr=frameToTick(1,{num:30,den:1});

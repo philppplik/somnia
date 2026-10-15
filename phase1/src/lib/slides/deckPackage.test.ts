@@ -1068,7 +1068,7 @@ test('smallTextSlides reads explicit run sizes only, bounded input',()=>{
  const z=unzipSync(base),k=Object.keys(z).find(n=>/^ppt\/slides\/slide1\.xml$/.test(n))!;
  let x=strFromU8(z[k]);assert.ok(/<a:r>/.test(x));
  assert.equal(smallTextSlides(base).total,0);
- x=x.replace(/<a:r>(\s*)(<a:rPr[^>]*?)(\/?>)/,(m,a,b,c)=>`<a:r>${a}${b.replace(/\ssz="\d+"/,'')} sz="900"${c}`);
+ x=x.replace(/<a:r>(\s*)(<a:rPr[^>]*?)(\/?>)/,(_m,a,b,c)=>`<a:r>${a}${b.replace(/\ssz="\d+"/,'')} sz="900"${c}`);
  const out=zipSync({...z,[k]:strToU8(x)}),r=smallTextSlides(out);
  assert.equal(r.total,1);assert.equal(r.items[0].slideIndex,0);assert.ok(r.items[0].runs>=1);
  assert.equal(smallTextSlides(out,8).total,0);

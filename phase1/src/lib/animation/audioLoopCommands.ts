@@ -8,10 +8,10 @@ const expected=(m:string):never=>{throw Object.assign(new Error(m),{expected:tru
 export const MAX_LOOP_COPIES=20;
 /** Edits that add the repeats of one clip (placement and length per copy), or null when the clip already reaches the end. The last copy is cut at the composition end. */
 export function loopPlan(c:Composition,layerId:string,ids:readonly string[]):{edits:Edit[];copies:number;capped:boolean}|null{
- const l=c.layers.find(x=>x.id===layerId);if(!l||l.kind!=='audio'||!l.audio||l.outT<1)return null;
+ const l=c.layers.find(x=>x.id===layerId);if(!l||l.kind!=='audio'||!l.audio||l.outT<1)return null;const la=l.audio;
  const len=l.outT;let at=l.offset+len;
  // Repeats made earlier (same file part, placed back to back) count, so running the command twice adds nothing.
- for(;;){const hit=c.layers.find(x=>x.id!==l.id&&x.kind==='audio'&&x.audio&&x.audio.assetId===l.audio.assetId&&x.audio.trimIn===l.audio.trimIn&&x.offset===at&&x.outT<=len);if(!hit)break;at+=len;}const edits:Edit[]=[],made:{id:string;at:number;len:number}[]=[];
+ for(;;){const hit=c.layers.find(x=>x.id!==l.id&&x.kind==='audio'&&x.audio&&x.audio.assetId===la.assetId&&x.audio.trimIn===la.trimIn&&x.offset===at&&x.outT<=len);if(!hit)break;at+=len;}const edits:Edit[]=[],made:{id:string;at:number;len:number}[]=[];
  while(at<c.duration&&made.length<Math.min(MAX_LOOP_COPIES,ids.length)){const n=Math.min(len,c.duration-at);if(n<1)break;made.push({id:ids[made.length],at,len:n});at+=len;}
  if(!made.length)return null;
  for(const m of made)edits.push({type:'layers.duplicate',layers:[layerId],ids:[m.id]});

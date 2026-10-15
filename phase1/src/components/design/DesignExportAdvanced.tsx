@@ -21,7 +21,7 @@ export function DesignExportAdvanced(){
   if(working||!s.document)return;setErrorKey(null);setWorking(true);
   try{
    const o=valuesToDesignOptions(values);
-   downloadArtboardsAdvanced(s.document,o.scope,s.artboardId,exportName(o.name||base()),{title:o.metaTitle,description:o.metaDescription});
+   downloadArtboardsAdvanced(s.document,o.scope,s.artboardId??'',exportName(o.name||base()),{title:o.metaTitle,description:o.metaDescription});
    setDesignExportAdvancedOpen(false);
   }catch(err){setErrorKey('export.error.render');setErrorDetail(err instanceof Error?err.message:String(err));}
   finally{setWorking(false);}

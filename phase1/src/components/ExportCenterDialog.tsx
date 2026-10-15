@@ -37,7 +37,7 @@ export function ExportCenterPanel({onClose,inputRef}:{onClose:()=>void;inputRef?
  const row=(r:ExportRow)=><NativeButton type="button" disabled={!r.enabled}
    data-testid={r.kind==='command'?'export-center-cmd-'+r.command.id:'export-center-preset-'+r.preset.id} data-export-row={r.kind}
    className={rowClass} onKeyDown={onKeys}
-   onClick={()=>{if(r.kind==='command'){recordRecent('command',r.command.id);onClose();void executeCommand(r.command.id);}else{recordRecent('preset',r.preset.id);onClose();void runPreset(r.preset,executeCommand);}}}>
+   onClick={()=>{if(r.kind==='command'){recordRecent('command',r.command.id);onClose();void executeCommand(r.command.id);}else{recordRecent('preset',r.preset.id);onClose();void runPreset(r.preset,(id,payload)=>void executeCommand(id,payload));}}}>
    {r.kind==='command'?<Download size={13} className="shrink-0 text-ink-3" aria-hidden="true"/>:<Bookmark size={13} className="shrink-0 text-ink-3" aria-hidden="true"/>}
    <span className="min-w-0 flex-1 truncate">{r.kind==='command'?r.command.title:label(r.preset.id)}</span>
    {r.kind==='command'&&r.command.shortcut&&<kbd className="shrink-0 text-xs text-ink-3">{formatShortcut(r.command.shortcut)}</kbd>}

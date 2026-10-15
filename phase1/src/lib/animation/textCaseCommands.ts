@@ -23,7 +23,7 @@ const textLayers=(c:NonNullable<ReturnType<typeof findComp>>,ids:string[]|undefi
  const picked=(ids??[]).map(id=>findLayer(c,id)).filter((l):l is Layer=>!!l&&l.kind==='text');
  const ls=picked.length||!fallbackAll?picked:c.layers.filter(l=>l.kind==='text');return ls.filter(l=>!l.locked).slice(0,MAX_TEXT_LAYERS);
 };
-const apply=(c:NonNullable<ReturnType<typeof findComp>>,ls:Layer[],f:(t:string)=>string)=>{
+const apply=(_c:NonNullable<ReturnType<typeof findComp>>,ls:Layer[],f:(t:string)=>string)=>{
  const s=animationSession(),edits:Edit[]=[];
  for(const l of ls){const t=l.source.text??'',n=f(t);if(n!==t){if(!n.trim())return expected(`${l.name} would end up empty.`);if(n.length>MAX_TEXT_LEN)return expected(`${l.name} would be longer than ${MAX_TEXT_LEN} characters.`);edits.push({type:'layer.update',layer:l.id,source:{text:n}} as Edit);}}
  if(!edits.length)return expected('Nothing changes: the text already looks like that.');

@@ -256,7 +256,7 @@ test('heartbeat disabled with heartbeatMs 0 stays connected without any traffic'
 test('a document update over the 2 MiB relay cap arrives chunked; the relay never sees a big frame',async()=>{
  const {server,factory}=memoryServer();const ends:MemoryServerEnd[]=[];const sizes:number[]=[];
  server.onConnection(e=>{ends.push(e);
-  e.transport.connect({onOpen(){},onMessage:b=>{sizes.push(b.length);if(b.length>=2*1024*1024){e.drop(1009,'too big');return;}for(const o of ends)if(o!==e)o.transport.send(b);},onClose(){ends.splice(ends.indexOf(e),1);}});});
+  e.transport.connect({onOpen(){},onMessage:b=>{sizes.push(b.length);if(b.length>=2*1024*1024){e.drop();return;}for(const o of ends)if(o!==e)o.transport.send(b);},onClose(){ends.splice(ends.indexOf(e),1);}});});
  const invite=`ws://memory/room/abcdefgh12345678#key=${(await newLinkKey()).param}`;
  const big='x'.repeat(3*1024*1024)+'tail';
  const a=mkClient(invite,mkSession({'big.txt':big}),{transport:factory,syncTimeoutMs:30});
@@ -267,7 +267,7 @@ test('a document update over the 2 MiB relay cap arrives chunked; the relay neve
  await until(()=>btext()===big,8000);
  assert.equal(btext(),big);
  assert.ok(Math.max(...sizes)<2*1024*1024,'no frame touches the relay cap');
- (a as unknown as {sess:{doc:Y.Doc}}).sess.doc.getMap('files').get('big.txt')!.insert(0,'HEAD-');
+ ((a as unknown as {sess:{doc:Y.Doc}}).sess.doc.getMap('files').get('big.txt') as unknown as Y.Text).insert(0,'HEAD-');
  await until(()=>btext()?.startsWith('HEAD-')??false,8000);
  a.leave();b.leave();
 });

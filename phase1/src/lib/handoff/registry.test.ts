@@ -31,7 +31,7 @@ test('applyTableDiff applies sequentially, waits for idle and stops on failure',
  const d={edits:[{row:0,col:0,text:'a'},{row:1,col:1,text:'b'}],skippedRows:0,skippedCols:0};
  idleAfter=2;assert.deepEqual(await applyTableDiff(ok,d),{applied:2,total:2});
  assert.deepEqual(calls,['0:0:a','1:1:b']);
- const fail:TableEditTarget={busy:()=>false,editCell:async(r,c)=>({ok:r===0,message:'refused'})};
+ const fail:TableEditTarget={busy:()=>false,editCell:async(r,_c)=>({ok:r===0,message:'refused'})};
  const res=await applyTableDiff(fail,d);assert.equal(res.applied,1);assert.equal(res.failed,'refused');
  const stuck:TableEditTarget={busy:()=>true,editCell:async()=>({ok:true})};
  assert.equal((await applyTableDiff(stuck,d,120)).failed,'busy');});

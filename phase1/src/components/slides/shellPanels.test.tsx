@@ -6,6 +6,7 @@ import {EMPTY_STUDIO_CONTEXT} from '../../lib/shell/types';
 import {slidesPanels,slidesInspector} from '../../lib/slides/panelDefinitions';
 import {validateStudioShell} from '../../lib/shell/panels';
 import {slidesCommandSpecs} from '../../lib/slides/commands';
+import type {PanelCommandDeps} from '../../lib/slides/panelCommands';
 import {slidesPanelCommandSpecs} from '../../lib/slides/panelCommands';
 test('all panel hosts render an honest empty state without a deck',()=>{
  for(const Component of [SlidesOverviewPanel,SlidesOutlinePanel,SlidesTextPanel,SlidesDeckPanel,SlidesDiagnosticsPanel]){
@@ -13,6 +14,6 @@ test('all panel hosts render an honest empty state without a deck',()=>{
  }
 });
 test('panel manifest validates every declared command and host',()=>{
- const commands=new Set([...slidesCommandSpecs({state:()=>({busy:false,working:false,canUndo:false,canRedo:false,slides:0,index:0,presenting:false}),present:()=>{},exitPresent:()=>{},history:()=>{},saveCopy:()=>{},showSlide:()=>{}}),...slidesPanelCommandSpecs({state:()=>({source:'',index:0,busy:false,working:null,runs:[],slideIds:[],layouts:[],model:null,summary:null}),thumbnails:async()=>{},edit:async()=>{},show:async()=>{},select:()=>{},move:async()=>{},duplicate:async()=>{},remove:async()=>{},add:async()=>{},setBounds:async()=>{},setMany:async()=>{},arrange:async()=>{},setTransition:async()=>{},insertTable:async()=>{},table:async()=>{},style:async()=>{},setNotes:async()=>{},group:async()=>{},ungroup:async()=>{},format:async()=>{},addBox:async()=>{},removeBox:async()=>{},insertImage:async()=>{},replaceImage:async()=>{},removeImage:async()=>{},pick:()=>{},picked:()=>null})].map(s=>s.id));
+ const commands=new Set([...slidesCommandSpecs({state:()=>({busy:false,working:false,canUndo:false,canRedo:false,slides:0,index:0,presenting:false}),present:()=>{},exitPresent:()=>{},history:()=>{},saveCopy:()=>{},openExport:()=>{},showSlide:()=>{}}),...slidesPanelCommandSpecs({state:()=>({source:'',index:0,busy:false,working:null,runs:[],slideIds:[],layouts:[],model:null,summary:null}),thumbnails:async()=>{},edit:async()=>{},show:async()=>{},select:()=>{},move:async()=>{},duplicate:async()=>{},remove:async()=>{},add:async()=>{},setBounds:async()=>{},setMany:async()=>{},arrange:async()=>{},setTransition:async()=>{},insertTable:async()=>{},table:async()=>{},style:async()=>{},setNotes:async()=>{},group:async()=>{},ungroup:async()=>{},format:async()=>{},addBox:async()=>{},removeBox:async()=>{},insertImage:async()=>{},replaceImage:async()=>{},removeImage:async()=>{},pick:()=>{},picked:()=>null} as unknown as PanelCommandDeps)].map(s=>s.id));
  assert.deepEqual(validateStudioShell('slides',{panels:slidesPanels,inspector:slidesInspector},{commandExists:id=>commands.has(id),hostExists:id=>slidesPanels.some(p=>p.component===id)||slidesInspector.sections.some(s=>s.component===id)}),[]);
 });

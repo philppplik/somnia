@@ -467,7 +467,7 @@ test('section commands check identity, stale names, bounds and duplicates before
  const base=new Uint8Array(readFileSync(fileURLToPath(new URL('../../../slides-engine/fixtures/independent.pptx',import.meta.url))));
  const sid=readDeckModel(base).slides.map(x=>x.id);f.state.slideIds=sid;f.state.working=base;
  await add({source:'blob:deck1',slideId:sid[1],name:'B'});assert.deepEqual(f.calls.at(-1),['section',{kind:'add',slideId:sid[1],name:'B'}]);
- f.state.working=editSections(base,{kind:'add',slideId:sid[1],name:'B'});
+ f.state.working=editSections(base,{kind:'add',slideId:sid[1],name:'B'}) as Uint8Array<ArrayBuffer>;
  const n=f.calls.length;
  await ren({source:'blob:deck1',index:1,expectedName:'B',name:'C'});assert.deepEqual(f.calls.at(-1),['section',{kind:'rename',index:1,name:'C'}]);
  await rem({source:'blob:deck1',index:1,expectedName:'B'});assert.deepEqual(f.calls.at(-1),['section',{kind:'remove',index:1}]);

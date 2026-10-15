@@ -13,7 +13,7 @@ const docs:Y.Doc[]=[];const mk=()=>{const d=new Y.Doc();docs.push(d);return d;};
 test.after(()=>{for(const d of docs)d.destroy();});
 const sync=(a:Y.Doc,b:Y.Doc)=>{Y.applyUpdate(b,Y.encodeStateAsUpdate(a));};
 const flush=()=>new Promise(r=>setTimeout(r,10));
-const setup=(name:string)=>{
+const setup=(_name:string)=>{
  const d=mk();const m=seedSheetsModel(d,'b.xlsx',H);syncSharedSheets(m,['S1'],'seed');
  const engine=new FakeEngine();
  const binding=new SheetsCollabBinding(d,'b.xlsx',{engine,sheetIndexOf:id=>sharedSheetList(m)[0]?.id===id?0:null});

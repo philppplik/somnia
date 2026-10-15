@@ -1,7 +1,7 @@
 import type {CommandSpec} from '../commandSpec';
 import {animationSession} from './session';
 import {findComp,findLayer,EASE_IN,EASE_OUT,type Layer,type Property} from './model';
-import {EditError} from './edit';
+import {EditError,type Edit} from './edit';
 import {layerSetIds} from './layerSet';
 import {frameToTick} from './time';
 /** Draw on / draw off: the stroke trim of each ticked shape runs 0 to 100 (or back), one layer after the other in tick order. */
@@ -29,7 +29,7 @@ export const drawSpecs=():CommandSpec<unknown,unknown>[]=>[{
   const all=ids.map(id=>findLayer(c,id)).filter((l):l is Layer=>!!l);
   const ls=all.filter(l=>!l.locked&&l.kind==='shape'&&!!l.stroke);
   if(!ls.length)return expected('Tick at least one unlocked shape that has a stroke.');
-  const edits=[];let skipped=all.length-ls.length;const run=ls.filter(l=>{const ok=!l.stroke!.trim?.modifiers?.length;if(!ok)skipped++;return ok;});
+  const edits:Edit[]=[];let skipped=all.length-ls.length;const run=ls.filter(l=>{const ok=!l.stroke!.trim?.modifiers?.length;if(!ok)skipped++;return ok;});
   if(!run.length)return expected('The ticked strokes already use a modifier on their trim.');
   run.forEach((l,i)=>{
    const len=l.outT-l.inT,dur=Math.min(frameToTick(frames,c.fps),len),g=frameToTick(gap,c.fps);
