@@ -1244,5 +1244,10 @@
  "animation.rig.mirror.y": "Oben-unten spiegeln",
  "cmd.animation.layers.mirror": "Angekreuzte Ebenen an der ersten angekreuzten Ebene spiegeln",
  "animation.export.check.invisible": "Im ganzen Exportbereich vollständig transparent, daher unsichtbar: {names}",
- "animation.export.check.seam": "Erstes und letztes Bild zeigen nicht dieselbe Pose, die Schleife wird springen: {names}"
+ "animation.export.check.seam": "Erstes und letztes Bild zeigen nicht dieselbe Pose, die Schleife wird springen: {names}",
+ "animation.rig.group.burst": "Burst am Zeitpunkt",
+ "animation.rig.burst.8": "8 Kopien",
+ "animation.rig.burst.16": "16 Kopien",
+ "animation.rig.burst.24": "24 Kopien",
+ "cmd.animation.layers.burst": "Kopien der Ebene vom Abspielkopf aus nach außen schleudern"
 }

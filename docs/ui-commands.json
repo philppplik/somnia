@@ -1959,6 +1959,26 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.layers.burst",
+      "title": "Burst copies of the layer outwards from the playhead",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "burst",
+        "confetti",
+        "copies",
+        "emitter",
+        "explode",
+        "fireworks",
+        "particles",
+        "scatter",
+        "sparks",
+        "splash"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.layers.centerAnchor",
       "title": "Center the anchor point of the selected layers",
       "category": "Edit",

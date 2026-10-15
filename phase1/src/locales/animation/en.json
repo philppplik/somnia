@@ -1244,5 +1244,10 @@
  "animation.rig.mirror.y": "Mirror top to bottom",
  "cmd.animation.layers.mirror": "Mirror the ticked layers across the first ticked layer",
  "animation.export.check.invisible": "Fully transparent for the whole exported range, so they will not show: {names}",
- "animation.export.check.seam": "Not at the same pose on the first and last frame, so the loop will jump: {names}"
+ "animation.export.check.seam": "Not at the same pose on the first and last frame, so the loop will jump: {names}",
+ "animation.rig.group.burst": "Burst at playhead",
+ "animation.rig.burst.8": "8 copies",
+ "animation.rig.burst.16": "16 copies",
+ "animation.rig.burst.24": "24 copies",
+ "cmd.animation.layers.burst": "Burst copies of the layer outwards from the playhead"
 }

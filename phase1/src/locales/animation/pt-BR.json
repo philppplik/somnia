@@ -1244,5 +1244,10 @@
  "animation.rig.mirror.y": "Espelhar cima para baixo",
  "cmd.animation.layers.mirror": "Espelhar as camadas marcadas em relação à primeira camada marcada",
  "animation.export.check.invisible": "Totalmente transparentes em todo o intervalo exportado, não vão aparecer: {names}",
- "animation.export.check.seam": "Não estão na mesma pose no primeiro e no último quadro, o loop vai dar um salto: {names}"
+ "animation.export.check.seam": "Não estão na mesma pose no primeiro e no último quadro, o loop vai dar um salto: {names}",
+ "animation.rig.group.burst": "Explosão no cursor",
+ "animation.rig.burst.8": "8 cópias",
+ "animation.rig.burst.16": "16 cópias",
+ "animation.rig.burst.24": "24 cópias",
+ "cmd.animation.layers.burst": "Lançar cópias da camada para fora a partir do cursor"
 }

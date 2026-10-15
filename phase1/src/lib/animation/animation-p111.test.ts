@@ -1556,3 +1556,17 @@ test('P254 export check: fully transparent layers and loop seam (only when a sea
  const loop=by(exportCheck(c,[],{...defaultExportSettings(),loopSeam:true}));
  assert.ok(loop.seam.layers.length>=1&&!loop.seam.layers.includes('Still')&&!loop.seam.layers.includes('Ghost'),'the moving layer is named, still ones are not');
 });
+
+test('P255 burst: copies start on the layer at the playhead, fly out by 60 to 100 percent of the distance in world space, fade to 0, one undo step, same seed same burst',async()=>{
+ const {burstSpecs,burstPieces}=await import('./burstCommands');const {worldMatrix}=await import('./scene');const run=burstSpecs()[0].run as (p?:unknown)=>unknown;
+ assert.deepEqual(burstPieces(8,3,200),burstPieces(8,3,200));assert.notDeepEqual(burstPieces(8,3,200),burstPieces(8,4,200));
+ const d0=applyEdits(base(),[{type:'layer.add',kind:'solid',id:'g'},{type:'prop.set',layer:'g',prop:'rotation',t:f(0),value:35},{type:'layer.add',kind:'shape',id:'em'},{type:'layer.parent',layer:'em',parent:'g'},{type:'prop.set',layer:'em',prop:'position',t:f(0),value:[50,20]}] as never);
+ const s=new AnimationSession();s.open(d0);setAnimationSession(s);s.setView({playhead:f(30)});
+ assert.throws(()=>run({layers:['em','g']}),/exactly one/);assert.throws(()=>run({layers:['em'],count:2}),/copies/);
+ const before=findComp(s.document!)!.layers.length;const r=run({layers:['em'],count:10,seconds:1,distance:200}) as {copies:number;from:number;to:number};assert.equal(r.copies,10);
+ const c=findComp(s.document!)!;assert.equal(c.layers.length,before+10);
+ const em=c.layers.find(l=>l.id==='em')!,anc=(l:typeof em,t:number)=>{const m=worldMatrix(c,l,t),an=l.transform.anchor.value as unknown as number[];return [m[0]*an[0]+m[2]*an[1]+m[4],m[1]*an[0]+m[3]*an[1]+m[5]];};
+ const p0=anc(em,r.from),copies=c.layers.filter(l=>l.id!=='em'&&l.parent==='g'&&l.inT===r.from);assert.equal(copies.length,10);
+ for(const k of copies){const a=anc(k,r.from),b=anc(k,r.to),dd=Math.hypot(b[0]-a[0],b[1]-a[1]);assert.ok(Math.hypot(a[0]-p0[0],a[1]-p0[1])<0.5,'starts on the emitter');assert.ok(dd>=60&&dd<=200+120,'flew out (with the small fall at the end)');assert.equal(k.outT,r.to);assert.equal(k.transform.opacity.keys[k.transform.opacity.keys.length-1].v,0);}
+ s.undo();assert.equal(findComp(s.document!)!.layers.length,before);
+});

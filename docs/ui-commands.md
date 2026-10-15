@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-957 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+958 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -158,6 +158,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `animation.layers.arrange` | Arrange the stacking order of the selected layers | Edit | animation |  |
 | `animation.layers.array` | Make an array of copies of the layer in a grid or circle | Edit | animation |  |
 | `animation.layers.bounce` | Drop layers onto the first ticked layer and bounce | Edit | animation |  |
+| `animation.layers.burst` | Burst copies of the layer outwards from the playhead | Edit | animation |  |
 | `animation.layers.centerAnchor` | Center the anchor point of the selected layers | Edit | animation |  |
 | `animation.layers.closeLoop` | Close the loop: end values equal the start values | Edit | animation |  |
 | `animation.layers.duplicate` | Duplicate the selected layers | Edit | animation |  |

@@ -1244,5 +1244,10 @@
  "animation.rig.mirror.y": "Refléter haut-bas",
  "cmd.animation.layers.mirror": "Refléter les calques cochés par rapport au premier calque coché",
  "animation.export.check.invisible": "Entièrement transparents sur toute la plage exportée, donc invisibles : {names}",
- "animation.export.check.seam": "Pas dans la même pose à la première et à la dernière image, la boucle va sauter : {names}"
+ "animation.export.check.seam": "Pas dans la même pose à la première et à la dernière image, la boucle va sauter : {names}",
+ "animation.rig.group.burst": "Éclat à la tête de lecture",
+ "animation.rig.burst.8": "8 copies",
+ "animation.rig.burst.16": "16 copies",
+ "animation.rig.burst.24": "24 copies",
+ "cmd.animation.layers.burst": "Projeter des copies du calque vers l’extérieur depuis la tête de lecture"
 }
