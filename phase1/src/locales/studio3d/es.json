@@ -1005,5 +1005,11 @@
  "studio3d.edit.knifeNx": "Normal del plano X",
  "studio3d.edit.knifeNy": "Normal del plano Y",
  "studio3d.edit.knifeNz": "Normal del plano Z",
- "cmd.studio3d.edit.selectPath": "Selecciona la ruta de aristas más corta entre dos vértices de la malla 3D editada"
+ "cmd.studio3d.edit.selectPath": "Selecciona la ruta de aristas más corta entre dos vértices de la malla 3D editada",
+ "studio3d.hist.bend_one": "Curvar {name}",
+ "studio3d.hist.bend_other": "Curvar {count} objetos",
+ "cmd.studio3d.mesh.bend": "Curva una malla 3D lateralmente alrededor del eje perpendicular al eje de deformación",
+ "studio3d.mesh.bend": "Curvar",
+ "studio3d.mesh.bendAxis": "Eje de deformación",
+ "studio3d.mesh.bendAngle": "Ángulo de curvatura en grados"
 }

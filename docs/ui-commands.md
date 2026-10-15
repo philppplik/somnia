@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-888 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+889 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -740,6 +740,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `studio3d.material.preset.save` | Save material preset | Edit | studio3d |  |
 | `studio3d.measure.set` | Toggle the 3D measure tool | Tools | studio3d |  |
 | `studio3d.mesh.applyScale` | Apply the scale of 3D meshes to their geometry | Edit | studio3d |  |
+| `studio3d.mesh.bend` | Bend a 3D mesh sideways around the axis perpendicular to the deform axis | Edit | studio3d |  |
 | `studio3d.mesh.bisect` | Cut a 3D mesh with a plane and keep both halves | Edit | studio3d |  |
 | `studio3d.mesh.boolean` | Combine two 3D meshes with a boolean: union, subtract or intersect | Edit | studio3d |  |
 | `studio3d.mesh.bridge` | Bridge two 3D meshes with a tunnel between their open borders | Edit | studio3d |  |

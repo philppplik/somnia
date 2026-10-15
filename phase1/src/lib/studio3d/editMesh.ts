@@ -2119,6 +2119,34 @@ export function taperMesh(m:MeshData,axis:MirrorAxis,factor:number):MeshData{
  check(out);return out;
 }
 
+/** Bends the mesh around the axis perpendicular to the deform axis: cross-sections follow concentric arcs, so the high end swings sideways by the given angle over the mesh span (arc length preserved, like a simple-deform bend). Sculpt masks scale the effect down to zero. UVs and masks are carried, explicit normals are dropped (rebuilt smooth on the stage). */
+export function bendMesh(m:MeshData,axis:MirrorAxis,degrees:number):MeshData{
+ check(m);
+ if(!Number.isFinite(degrees)||degrees===0||Math.abs(degrees)>360)throw new EditError('The bend angle must be a non-zero number of degrees between -360 and 360.');
+ const ai=axis==='x'?0:axis==='y'?1:2;
+ const u=(ai+1)%3,w=(ai+2)%3;
+ const nv=m.positions.length/3;
+ let mn=Infinity,mx=-Infinity,cu0=Infinity,cu1=-Infinity;
+ for(let v=0;v<nv;v++){
+  const a=m.positions[v*3+ai],p=m.positions[v*3+u];
+  if(a<mn)mn=a;if(a>mx)mx=a;
+  if(p<cu0)cu0=p;if(p>cu1)cu1=p;
+ }
+ const span=mx-mn;
+ if(span<1e-12)throw new EditError('The mesh is flat along the bend axis.');
+ const k=(degrees*Math.PI/180)/span,R=1/k,pu=(cu0+cu1)/2;
+ const positions=[...m.positions];
+ for(let v=0;v<nv;v++){
+  const f=(1-(m.mask?m.mask[v]:0));if(f===0)continue;
+  const da=m.positions[v*3+ai]-mn,x=m.positions[v*3+u]-pu;
+  const th=-k*da*f,r=R+x,c=Math.cos(th),sn=Math.sin(th);
+  positions[v*3+ai]=mn+r*sn*-1;
+  positions[v*3+u]=pu+r*c-R;
+ }
+ const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
+ check(out);return out;
+}
+
 /** Revolves the mesh around an axis through the given center (lathe/spin). Every border edge sweeps a wall of quads across the steps; the original faces cap the start and, for partial turns, the end as well; a full 360 degree turn welds the last ring back onto the first instead of duplicating it. UVs are copied onto every ring, sculpt masks are dropped (topology changes), explicit normals are dropped (rebuilt smooth on the stage). */
 export function spinMesh(m:MeshData,axis:MirrorAxis,degrees:number,steps:number,center:[number,number,number]):MeshData{
  check(m);

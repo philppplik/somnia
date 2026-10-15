@@ -1005,5 +1005,11 @@
  "studio3d.edit.knifeNx": "Normal do plano X",
  "studio3d.edit.knifeNy": "Normal do plano Y",
  "studio3d.edit.knifeNz": "Normal do plano Z",
- "cmd.studio3d.edit.selectPath": "Selecionar o caminho de arestas mais curto entre dois vértices da malha 3D editada"
+ "cmd.studio3d.edit.selectPath": "Selecionar o caminho de arestas mais curto entre dois vértices da malha 3D editada",
+ "studio3d.hist.bend_one": "Curvar {name}",
+ "studio3d.hist.bend_other": "Curvar {count} objetos",
+ "cmd.studio3d.mesh.bend": "Curvar uma malha 3D lateralmente ao redor do eixo perpendicular ao eixo de deformação",
+ "studio3d.mesh.bend": "Curvar",
+ "studio3d.mesh.bendAxis": "Eixo de deformação",
+ "studio3d.mesh.bendAngle": "Ângulo de curvatura em graus"
 }

@@ -1005,5 +1005,11 @@
  "studio3d.edit.knifeNx": "Normale du plan X",
  "studio3d.edit.knifeNy": "Normale du plan Y",
  "studio3d.edit.knifeNz": "Normale du plan Z",
- "cmd.studio3d.edit.selectPath": "Sélectionne le plus court chemin d'arêtes entre deux sommets du maillage 3D édité"
+ "cmd.studio3d.edit.selectPath": "Sélectionne le plus court chemin d'arêtes entre deux sommets du maillage 3D édité",
+ "studio3d.hist.bend_one": "Courber {name}",
+ "studio3d.hist.bend_other": "Courber {count} objets",
+ "cmd.studio3d.mesh.bend": "Courbe un maillage 3D latéralement autour de l'axe perpendiculaire à l'axe de déformation",
+ "studio3d.mesh.bend": "Courber",
+ "studio3d.mesh.bendAxis": "Axe de déformation",
+ "studio3d.mesh.bendAngle": "Angle de courbure en degrés"
 }

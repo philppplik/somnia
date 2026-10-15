@@ -1005,5 +1005,11 @@
  "studio3d.edit.knifeNx": "Plane normal X",
  "studio3d.edit.knifeNy": "Plane normal Y",
  "studio3d.edit.knifeNz": "Plane normal Z",
- "cmd.studio3d.edit.selectPath": "Select the shortest edge path between two vertices of the edited 3D mesh"
+ "cmd.studio3d.edit.selectPath": "Select the shortest edge path between two vertices of the edited 3D mesh",
+ "studio3d.hist.bend_one": "Bend {name}",
+ "studio3d.hist.bend_other": "Bend {count} objects",
+ "cmd.studio3d.mesh.bend": "Bend a 3D mesh sideways around the axis perpendicular to the deform axis",
+ "studio3d.mesh.bend": "Bend",
+ "studio3d.mesh.bendAxis": "Deform axis",
+ "studio3d.mesh.bendAngle": "Bend angle in degrees"
 }

@@ -8790,6 +8790,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.mesh.bend",
+      "title": "Bend a 3D mesh sideways around the axis perpendicular to the deform axis",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.mesh.bisect",
       "title": "Cut a 3D mesh with a plane and keep both halves",
       "category": "Edit",
