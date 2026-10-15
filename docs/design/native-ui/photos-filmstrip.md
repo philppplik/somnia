@@ -629,3 +629,14 @@ touched.
 Coverage: the light/dark gallery leg rates strip-1, copies, pastes
 onto a two-photo selection and checks the badges, then cleans up
 (`test-results/ds-photos-metadata-{light,dark}.png`).
+
+## Label keyboard shortcuts (P120)
+
+6/7/8/9 set the red/yellow/green/blue color label on the
+multi-selection (or the active photo), Lightroom's assignments on
+the digits ratings do not use. Auto-advance applies when it is on,
+like with rating and flag keys. The shortcuts overlay lists the row.
+
+Coverage: the light/dark gallery leg labels a two-photo selection
+with 7 and a single photo with 9, checking the thumb badges
+(`test-results/ds-photos-label-keys-{light,dark}.png`).

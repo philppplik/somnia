@@ -9,6 +9,7 @@ const GROUPS:{titleKey:string;rows:Row[]}[]=[
   {keys:'P',labelKey:'photos.keys.pick'},
   {keys:'X',labelKey:'photos.keys.reject'},
   {keys:'U',labelKey:'photos.keys.unflag'},
+  {keys:'6–9',labelKey:'photos.keys.labels'},
  ]},
  {titleKey:'photos.keys.groupNav',rows:[
   {keys:'← →',labelKey:'photos.keys.prevNext'},

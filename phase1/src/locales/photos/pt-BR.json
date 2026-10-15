@@ -246,5 +246,6 @@
  "photos.metadata.copy": "Copiar metadados",
  "photos.metadata.paste": "Colar metadados",
  "photos.metadata.copied": "Metadados copiados de {name}",
- "photos.metadata.pasted": "Metadados colados em {count} fotos"
+ "photos.metadata.pasted": "Metadados colados em {count} fotos",
+ "photos.keys.labels": "Rótulo de cor (vermelho/amarelo/verde/azul)"
 }

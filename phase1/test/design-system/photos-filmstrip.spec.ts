@@ -53,6 +53,7 @@ test('ratings render in light and dark',async({page})=>{
   await page.goto('/test/design-system/?view=photos-filmstrip');
   await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
   await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively - settle so the active photo is stable
   if(theme==='light')await page.getByTestId('photos-filmstrip-rating-star-5').click(); // persists into the dark leg via localStorage
   await expect(page.getByTestId('photos-filmstrip-rating-badge-strip-1.png')).toHaveText('5');
   await page.waitForTimeout(300);
@@ -404,6 +405,25 @@ test('color labels: batch set, badge, filter, clear (light and dark)',async({pag
   await expect(page.getByTestId('photos-filmstrip-label-strip-1.png')).toHaveCount(0);
  }
 });
+test('label keys: 6-9 set color labels on the selection (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
+  await page.evaluate(async()=>{const m=await import('/src/lib/photos/labels.ts');for(const n of['strip-1.png','strip-2.png','strip-3.png'])m.setLabel(n,null);}); // labels persist via localStorage
+  await page.getByTestId('photos-filmstrip-item-strip-1.png').click();
+  await page.getByTestId('photos-filmstrip-item-strip-2.png').click({modifiers:['ControlOrMeta']}); // two selected
+  await page.keyboard.press('7'); // yellow on the selection
+  await expect(page.getByTestId('photos-filmstrip-label-strip-1.png')).toHaveAttribute('data-label','yellow');
+  await expect(page.getByTestId('photos-filmstrip-label-strip-2.png')).toHaveAttribute('data-label','yellow');
+  await page.screenshot({path:`test-results/ds-photos-label-keys-${theme}.png`,fullPage:true});
+  await page.getByTestId('photos-filmstrip-item-strip-3.png').click(); // collapses the selection, single target
+  await page.keyboard.press('9'); // blue on strip-3
+  await expect(page.getByTestId('photos-filmstrip-label-strip-3.png')).toHaveAttribute('data-label','blue');
+ }
+});
+
 test('library grid: the survey opens the whole filtered view without a selection (light and dark)',async({page})=>{
  for(const theme of['light','dark']){
   await page.goto('/test/design-system/?view=photos-filmstrip');

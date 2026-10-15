@@ -246,5 +246,6 @@
  "photos.metadata.copy": "Copiar metadatos",
  "photos.metadata.paste": "Pegar metadatos",
  "photos.metadata.copied": "Metadatos copiados de {name}",
- "photos.metadata.pasted": "Metadatos pegados en {count} fotos"
+ "photos.metadata.pasted": "Metadatos pegados en {count} fotos",
+ "photos.keys.labels": "Etiqueta de color (rojo/amarillo/verde/azul)"
 }

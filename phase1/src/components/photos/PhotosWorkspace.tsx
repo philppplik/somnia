@@ -11,6 +11,7 @@ import {applyPhotoCrop,cancelPhotoCrop,dirtyPhoto,exportPhotoCopy,historyPhoto,o
 import {autoSource,clampSpot} from '../../lib/photos/healSpots';
 import {setRating} from '../../lib/photos/ratings';
 import {setFlag} from '../../lib/photos/flags';
+import {PHOTO_LABELS,setLabel} from '../../lib/photos/labels';
 import {deriveSpotWhiteBalance} from '../../lib/photos/autoTone';
 import {clampGrad,MAX_GRADS,type GradFilter,clampRad,MAX_RADS,type RadFilter} from '../../lib/photos/localAdjust';
 import {MAX_BRUSH_STROKES,MAX_BRUSH_TOTAL_DABS,brushTotalDabs,type BrushStroke} from '../../lib/photos/brushStrokes';
@@ -191,6 +192,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
    else if(e.key==='p'||e.key==='P'){const t=cullTargets(item.name);for(const n of t)setFlag(n,'pick');maybeAdvance(item.name,t);}
    else if(e.key==='x'||e.key==='X'){const t=cullTargets(item.name);for(const n of t)setFlag(n,'reject');maybeAdvance(item.name,t);}
    else if(e.key==='u'||e.key==='U'){const t=cullTargets(item.name);for(const n of t)setFlag(n,null);maybeAdvance(item.name,t);}
+   else if(/^[6-9]$/.test(e.key)){const t=cullTargets(item.name);const l=PHOTO_LABELS[Number(e.key)-6];for(const n of t)setLabel(n,l);maybeAdvance(item.name,t);} // 6-9: red/yellow/green/blue, like Lightroom
    else if(e.key==='o'||e.key==='O')setGuideStyle(CROP_GUIDE_STYLES[(CROP_GUIDE_STYLES.indexOf(guideStyle)+1)%CROP_GUIDE_STYLES.length]);
    else if(e.key==='z'||e.key==='Z'){if(zoom===null){setZoom(1);setPan([0,0]);}else{setZoom(null);setPan([0,0]);}} // same states as the fit/actual buttons
    else if(e.key==='\\'&&!e.repeat)setCompare(true); // hold to peek at the original, like the compare button

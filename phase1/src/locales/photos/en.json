@@ -246,5 +246,6 @@
  "photos.metadata.copy": "Copy metadata",
  "photos.metadata.paste": "Paste metadata",
  "photos.metadata.copied": "Metadata copied from {name}",
- "photos.metadata.pasted": "Metadata pasted to {count} photos"
+ "photos.metadata.pasted": "Metadata pasted to {count} photos",
+ "photos.keys.labels": "Color label (red/yellow/green/blue)"
 }
