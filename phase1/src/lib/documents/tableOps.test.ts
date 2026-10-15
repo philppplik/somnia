@@ -42,6 +42,8 @@ test('after deleting a table the caret goes to the paragraph now in its place, e
  const p=(index:number,editable=true)=>({index,kind:'para',text:'x',editable}) as never;
  const at={table:2,row:0,cell:0};
  assert.equal(blockAfterTableEdit('delete_table',at,[p(0),p(1),p(2)]),2);
+ assert.equal(blockAfterTableEdit('table_to_text',at,[p(0),p(1),p(2)]),2);
+ assert.equal(wantedCell('sort_asc',{table:1,row:2,cell:1}).row,2);assert.equal(wantedCell('sort_desc',{table:1,row:2,cell:1}).cell,1);
  assert.equal(blockAfterTableEdit('delete_table',at,[p(0),p(1)]),1);
  assert.equal(blockAfterTableEdit('delete_table',at,[p(0,false),p(1,false)]),null);
  assert.equal(blockAfterTableEdit('delete_table',{table:0,row:0,cell:0},[]),null);

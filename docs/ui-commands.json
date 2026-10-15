@@ -5497,6 +5497,28 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.table.sort_asc",
+      "title": "Sort table rows A to Z by this column",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.table.sort_desc",
+      "title": "Sort table rows Z to A by this column",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.table.split_cell",
       "title": "Split merged cell",
       "category": "View",
@@ -5521,6 +5543,17 @@
     {
       "id": "documents.table.style",
       "title": "Style table cells",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.table.table_to_text",
+      "title": "Convert table to text",
       "category": "View",
       "source": "documents",
       "keywords": [

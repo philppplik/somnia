@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-973 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+976 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -448,9 +448,12 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `documents.table.merge_right` | Merge with cell on the right | View | documents |  |
 | `documents.table.row_above` | Insert row above | View | documents |  |
 | `documents.table.row_below` | Insert row below | View | documents |  |
+| `documents.table.sort_asc` | Sort table rows A to Z by this column | View | documents |  |
+| `documents.table.sort_desc` | Sort table rows Z to A by this column | View | documents |  |
 | `documents.table.split_cell` | Split merged cell | View | documents |  |
 | `documents.table.split_down` | Split vertically merged cell | View | documents |  |
 | `documents.table.style` | Style table cells | View | documents |  |
+| `documents.table.table_to_text` | Convert table to text | View | documents |  |
 | `documents.tabs.set` | Set tab stops | View | documents |  |
 | `documents.tabs.show` | Tab stops | View | documents |  |
 | `documents.toc.insert` | Insert table of contents | View | documents |  |

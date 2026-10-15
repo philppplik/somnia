@@ -304,6 +304,9 @@ export function registerDocumentsCommands(){
   add('documents.table.merge_down','Merge with cell below',async()=>{await editTable('merge_down');},inCell),
   add('documents.table.split_down','Split vertically merged cell',async()=>{await editTable('split_down');},inCell),
   add('documents.table.even_cols','Make all columns the same width',async()=>{await editTable('even_cols');},inCell),
+  add('documents.table.sort_asc','Sort table rows A to Z by this column',async()=>{await editTable('sort_asc');},inCell),
+  add('documents.table.sort_desc','Sort table rows Z to A by this column',async()=>{await editTable('sort_desc');},inCell),
+  add('documents.table.table_to_text','Convert table to text',async()=>{await editTable('table_to_text');},inCell),
   add('documents.table.delete_table','Delete table',async()=>{await editTable('delete_table');},inCell),
   add('documents.table.delete_col','Delete column',async()=>{await editTable('delete_col');},inCell),
  ];

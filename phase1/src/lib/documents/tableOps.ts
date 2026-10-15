@@ -18,7 +18,7 @@ export function wantedCell(op:TableOp,at:CellSpot):{row:number;cell:number}{
 }
 /** First paragraph of the cell in table `at.table` nearest to the wanted row and cell (after a delete the wanted cell may be gone). */
 export function blockAfterTableEdit(op:TableOp,at:CellSpot,blocks:readonly DocBlock[]):number|null{
- if(op==='delete_table'){
+ if(op==='delete_table'||op==='table_to_text'){
   // The table is gone: the paragraph that now sits where it was, else the one before it.
   const ok=(i:number)=>blocks.find(b=>b.index===i&&b.kind==='para'&&b.editable)?.index??null;
   return ok(at.table)??ok(at.table-1);

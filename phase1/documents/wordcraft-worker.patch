@@ -52,7 +52,7 @@ new file mode 100644
 index 0000000..5b80b79
 --- /dev/null
 +++ b/crates/somnia-worker/src/lib.rs
-@@ -0,0 +1,6054 @@
+@@ -0,0 +1,6165 @@
 +//! Experimental headless adapter. No DOM, egui, filesystem or UI thread access.
 +use wasm_bindgen::prelude::*;
 +use std::sync::Arc;
@@ -2494,6 +2494,39 @@ index 0000000..5b80b79
 +            self.pages = DocLayout::default();
 +            return Ok(());
 +        }
++        if op == "table_to_text" {
++            // One paragraph per row, cells joined by tabs. Merged cells, objects and nested tables would lose their meaning, so they refuse.
++            let mut paras = Vec::new();
++            for row in &t.rows {
++                if row.cells.iter().any(|x| x.span() != 1 || x.props.vmerge != VMerge::None) {
++                    return Err("a table with merged cells cannot be turned into text".into());
++                }
++                let mut parts = Vec::new();
++                for cell in &row.cells {
++                    let mut texts = Vec::new();
++                    for blk in &cell.blocks {
++                        let Block::Para(p) = &**blk else { return Err("a table with a table inside a cell cannot be turned into text".into()) };
++                        if !p.object_offsets().is_empty() {
++                            return Err("a table with pictures or other objects in its cells cannot be turned into text".into());
++                        }
++                        texts.push(p.plain_text().replace(['\t', '\n', '\r'], " "));
++                    }
++                    parts.push(texts.join(" "));
++                }
++                let line = parts.join("\t");
++                paras.push(wordcraft_doc::para_block(if line.is_empty() {
++                    wordcraft_doc::Paragraph::new()
++                } else {
++                    wordcraft_doc::Paragraph::with_text(&line, wordcraft_doc::props::CharProps::default())
++                }));
++            }
++            if paras.is_empty() {
++                return Err("the table has no rows".into());
++            }
++            self.doc.body.splice(b..b + 1, paras);
++            self.pages = DocLayout::default();
++            return Ok(());
++        }
 +        let mut t2 = t.clone();
 +        let row = t2.rows.get(r).ok_or("no such row")?;
 +        let grid_start: usize = row.cells.iter().take(c).map(|x| x.span()).sum();
@@ -2548,6 +2581,44 @@ index 0000000..5b80b79
 +                    target.props.vmerge = if goes_on { VMerge::Restart } else { VMerge::None };
 +                }
 +                t2.delete_row(r);
++            }
++            "sort_asc" | "sort_desc" => {
++                // Rows below a header row are ordered by the text of the caret's column: numbers first (by value), then text without regard to case. Equal rows keep their order.
++                let cols = t2.rows.first().map_or(0, |x| x.cells.len());
++                if t2.rows.iter().any(|row| row.cells.len() != cols || row.cells.iter().any(|x| x.span() != 1 || x.props.vmerge != VMerge::None)) {
++                    return Err("a table with merged cells cannot be sorted".into());
++                }
++                let skip = usize::from(t2.props.look.header_row || t2.rows[0].props.header);
++                if t2.rows.len() < skip + 2 {
++                    return Err("sorting needs at least two rows below the header".into());
++                }
++                let mut keyed: Vec<(Option<f64>, String, usize)> = t2.rows[skip..]
++                    .iter()
++                    .enumerate()
++                    .map(|(i, row)| {
++                        let text = row.cells[c]
++                            .blocks
++                            .iter()
++                            .filter_map(|blk| if let Block::Para(p) = &**blk { Some(p.plain_text()) } else { None })
++                            .collect::<Vec<_>>()
++                            .join(" ");
++                        let text = text.trim().to_string();
++                        (text.parse::<f64>().ok().filter(|x| x.is_finite()), text.to_lowercase(), i)
++                    })
++                    .collect();
++                keyed.sort_by(|a, b| {
++                    let o = match (a.0, b.0) {
++                        (Some(x), Some(y)) => x.partial_cmp(&y).unwrap_or(std::cmp::Ordering::Equal),
++                        (Some(_), None) => std::cmp::Ordering::Less,
++                        (None, Some(_)) => std::cmp::Ordering::Greater,
++                        (None, None) => a.1.cmp(&b.1),
++                    };
++                    if op == "sort_desc" { o.reverse() } else { o }
++                });
++                let old: Vec<_> = t2.rows.drain(skip..).collect();
++                for (_, _, i) in keyed {
++                    t2.rows.push(old[i].clone());
++                }
 +            }
 +            "even_cols" => {
 +                let n = t2.grid.len();
@@ -4691,6 +4762,46 @@ index 0000000..5b80b79
 +        for bad in [r#"{"rowHeight":{"rule":"exact"}}"#, r#"{"rowHeight":{"rule":"exact","value":0}}"#, r#"{"rowHeight":{"rule":"exact","value":2000}}"#, r#"{"rowHeight":{"rule":"auto","value":5}}"#, r#"{"rowHeight":{"rule":"x"}}"#, r#"{"rowHeight":5}"#, r#"{"allRows":true}"#, r#"{"rowHeight":{"rule":"exact","value":10,"extra":1}}"#] {
 +            assert!(s.do_set_table_layout(blk, bad).is_err(), "{bad}");
 +        }
++    }
++    #[test]
++    fn table_sort_orders_rows_by_column_and_table_to_text_converts() {
++        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
++        s.do_insert_table(0, 4, 2).unwrap();
++        s.do_set_table_layout(CELL_BASE, r#"{"headerRow":true}"#).unwrap();
++        let cells = [["Name", "Qty"], ["b", "10"], ["a", "2"], ["c", "abc"]];
++        for (r, row) in cells.iter().enumerate() {
++            for (c, t) in row.iter().enumerate() {
++                s.do_insert(CELL_BASE + r * 2 + c, 0, t).unwrap();
++            }
++        }
++        let col = |s: &DocSession, c: usize| (0..4).map(|r| s.para_at(CELL_BASE + r * 2 + c).unwrap().text.clone()).collect::<Vec<_>>();
++        s.do_table_edit(CELL_BASE + 1, "sort_asc").unwrap();
++        assert_eq!(col(&s, 1), ["Qty", "2", "10", "abc"], "numbers by value, then text; the header stays");
++        assert_eq!(col(&s, 0), ["Name", "a", "b", "c"], "whole rows move");
++        s.do_table_edit(CELL_BASE + 1, "sort_desc").unwrap();
++        assert_eq!(col(&s, 1), ["Qty", "abc", "10", "2"]);
++        s.do_table_edit(CELL_BASE, "sort_asc").unwrap();
++        assert_eq!(col(&s, 0), ["Name", "a", "b", "c"]);
++        let re = DocSession::from_bytes(&s.save().unwrap()).unwrap();
++        assert_eq!(col(&re, 0), ["Name", "a", "b", "c"], "the order survives a save");
++        let tables = |s: &DocSession| s.doc.body.iter().filter_map(|b| if let Block::Table(_) = &**b { Some(()) } else { None }).count();
++        let (t0, n0) = (tables(&s), s.doc.body.len());
++        s.do_table_edit(CELL_BASE, "table_to_text").unwrap();
++        assert_eq!((tables(&s), s.doc.body.len()), (t0 - 1, n0 - 1 + 4));
++        assert_eq!(s.para_at(0).unwrap().text, "Name\tQty");
++        assert_eq!(s.para_at(2).unwrap().text, "b\t10");
++        assert!(s.paginate() >= 1);
++        // Merged cells refuse both.
++        let mut m = DocSession::from_bytes(FIXTURE).unwrap();
++        m.do_insert_table(0, 3, 2).unwrap();
++        m.do_table_edit(CELL_BASE, "merge_right").unwrap();
++        let before = wordcraft_docx::write(&m.doc).unwrap();
++        assert!(m.do_table_edit(CELL_BASE, "sort_asc").is_err() && m.do_table_edit(CELL_BASE, "table_to_text").is_err());
++        assert_eq!(wordcraft_docx::write(&m.doc).unwrap(), before);
++        assert!(m.do_table_edit(0, "sort_asc").is_err());
++        let mut one = DocSession::from_bytes(FIXTURE).unwrap();
++        one.do_insert_table(0, 2, 2).unwrap();
++        assert!(one.do_table_edit(CELL_BASE, "sort_desc").is_err(), "a header and a single row have nothing to order");
 +    }
 +    #[test]
 +    fn cell_padding_sets_reports_roundtrips_and_validates() {
