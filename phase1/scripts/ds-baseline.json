@@ -271,7 +271,7 @@
       "hexTsx": 4,
       "hexCss": 0,
       "pixelText": 0,
-      "inlineStyle": 6
+      "inlineStyle": 0
     },
     "src/components/sound": {
       "rawButton": 1,
