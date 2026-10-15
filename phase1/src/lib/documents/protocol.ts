@@ -641,12 +641,14 @@ export function hfVariantsProblem(p:unknown):string|null{
 export const TABLE_ALIGNS=['left','center','right'] as const;export type TableAlign=typeof TABLE_ALIGNS[number];
 export const CELL_VALIGNS=['top','center','bottom'] as const;export type CellVAlign=typeof CELL_VALIGNS[number];
 /** Layout of the table under the caret: `headerRow` and `cellValign` describe the caret's row and cell, `keepRows` all rows. */
-export interface TableLayoutState{align:TableAlign|null;widthPct:number|null;headerRow:boolean;keepRows:boolean;cellValign:CellVAlign;caption:string;/** Height rule of the caret's row and its height in points (null for automatic). */rowRule?:RowRule;rowHeight?:number|null;/** Default cell padding of the table and the caret cell's own padding (points), null when not set. */cellPadding?:Padding|null;cellMargins?:Padding|null}
+export interface TableLayoutState{align:TableAlign|null;widthPct:number|null;headerRow:boolean;keepRows:boolean;cellValign:CellVAlign;caption:string;/** Height rule of the caret's row and its height in points (null for automatic). */rowRule?:RowRule;rowHeight?:number|null;/** Default cell padding of the table and the caret cell's own padding (points), null when not set. */cellPadding?:Padding|null;cellMargins?:Padding|null;/** The caret cell's fill as six hex digits, null for none. */cellShading?:string|null}
+export const FILL_SCOPES=['cell','row','column','table'] as const;
+export type FillScope=typeof FILL_SCOPES[number];
 /** Cell padding in points on each side. */
 export interface Padding{top:number;left:number;bottom:number;right:number}
 export const MAX_PADDING_PT=72;
 export const paddingProblem=(v:unknown):boolean=>{if(v===null)return false;if(typeof v!=='object'||Array.isArray(v))return true;const o=v as Record<string,unknown>;const ks=Object.keys(o);return ks.length!==4||!['top','left','bottom','right'].every(k=>typeof o[k]==='number'&&Number.isFinite(o[k])&&(o[k] as number)>=0&&(o[k] as number)<=MAX_PADDING_PT);};
-export interface TableLayoutPatch{cellPadding?:Padding|null;cellMargins?:Padding|null;align?:TableAlign|null;widthPct?:number|null;headerRow?:boolean;keepRows?:boolean;cellValign?:CellVAlign;caption?:string;/** Height of the caret's row, or of every row with `allRows`. */rowHeight?:RowHeightPatch;allRows?:boolean}
+export interface TableLayoutPatch{cellPadding?:Padding|null;cellMargins?:Padding|null;align?:TableAlign|null;widthPct?:number|null;headerRow?:boolean;keepRows?:boolean;cellValign?:CellVAlign;caption?:string;/** Cell fill (`none` or six hex digits) for the caret cell, its row, its column or the whole table. */shading?:{color:string;scope:FillScope};/** Height of the caret's row, or of every row with `allRows`. */rowHeight?:RowHeightPatch;allRows?:boolean}
 export const ROW_RULES=['auto','atLeast','exact'] as const;
 export type RowRule=typeof ROW_RULES[number];
 export type RowHeightPatch={rule:'auto'}|{rule:'atLeast'|'exact';value:number};
@@ -669,6 +671,7 @@ export function tableLayoutProblem(p:unknown):string|null{
    else return 'The row height rule is not valid.';
   }
   else if(k==='cellPadding'||k==='cellMargins'){if(paddingProblem(v))return `Padding is 0 to ${MAX_PADDING_PT} points on each side.`;}
+  else if(k==='shading'){const h=v as Record<string,unknown>|null;if(typeof h!=='object'||h===null||Array.isArray(h)||Object.keys(h).length!==2||!(FILL_SCOPES as readonly unknown[]).includes(h.scope)||!(h.color==='none'||(typeof h.color==='string'&&/^[0-9a-fA-F]{6}$/.test(h.color))))return 'The fill is none or six hex digits, for a cell, row, column or the table.';}
   else if(k==='cellValign'){if(!(CELL_VALIGNS as readonly unknown[]).includes(v))return 'The cell alignment is not valid.';}
   else if(k==='caption'){if(!validHfText(v))return `The alt text is limited to ${MAX_HF_CHARS} characters, without line breaks.`;}
   else return `Unknown option "${k}".`;

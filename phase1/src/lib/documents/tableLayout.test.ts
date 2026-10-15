@@ -37,3 +37,17 @@ test('cell padding: all four sides or none, bounded, only what changed',()=>{
  for(const bad of [{cellPadding:5},{cellPadding:{top:1}},{cellPadding:{top:1,left:1,bottom:1,right:99}},{cellMargins:{top:1,left:1,bottom:1,right:1,x:1}},{cellMargins:[]}])assert.ok(tableLayoutProblem(bad),JSON.stringify(bad));
  assert.equal(tableLayoutProblem({cellPadding:null,cellMargins:{top:0,left:0,bottom:0,right:72}}),null);
 });
+import {FILL_SWATCH} from './tableLayout';
+test('table fill builds a patch only when the colour or scope changed',()=>{
+ const a=layoutFromState({align:null,widthPct:null,headerRow:false,keepRows:false,cellValign:'top',caption:'',cellShading:null});
+ assert.equal(a.fill,'none');assert.equal(buildLayoutPatch(a,a),null);
+ assert.deepEqual(buildLayoutPatch(a,{...a,fill:FILL_SWATCH}),{shading:{color:FILL_SWATCH,scope:'cell'}});
+ assert.deepEqual(buildLayoutPatch(a,{...a,fillScope:'row'}),{shading:{color:'none',scope:'row'}});
+ const b=layoutFromState({...{align:null,widthPct:null,headerRow:false,keepRows:false,cellValign:'top' as const,caption:''},cellShading:'FFCC00'});
+ assert.equal(b.fill,'ffcc00');assert.deepEqual(buildLayoutPatch(b,{...b,fill:'none',fillScope:'table'}),{shading:{color:'none',scope:'table'}});
+ assert.equal(buildLayoutPatch(a,{...a,fill:'red'}),null);assert.equal(buildLayoutPatch(a,{...a,fill:'ff00'}),null);
+});
+test('the fill patch is checked like the worker checks it',()=>{
+ assert.equal(tableLayoutProblem({shading:{color:'none',scope:'table'}}),null);assert.equal(tableLayoutProblem({shading:{color:'AbCdEf',scope:'column'}}),null);
+ for(const bad of ['ff0000',null,{color:'ff0000'},{color:'#ff0000',scope:'cell'},{color:'red',scope:'cell'},{color:'ff0000',scope:'page'},{color:'ff0000',scope:'cell',x:1},[1]])assert.ok(tableLayoutProblem({shading:bad}),JSON.stringify(bad));
+});

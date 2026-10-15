@@ -1,6 +1,6 @@
 import {useEffect,useState} from 'react';
-import {CELL_VALIGNS,MAX_HF_CHARS,ROW_RULES,TABLE_ALIGNS,validHfText,type CellVAlign} from '../../lib/documents/protocol';
-import {buildLayoutPatch,layoutFromState,padFormOk,type PadForm,type TableLayoutForm} from '../../lib/documents/tableLayout';
+import {FILL_SCOPES,CELL_VALIGNS,MAX_HF_CHARS,ROW_RULES,TABLE_ALIGNS,validHfText,type CellVAlign} from '../../lib/documents/protocol';
+import {FILL_SWATCH,buildLayoutPatch,layoutFromState,padFormOk,type PadForm,type TableLayoutForm} from '../../lib/documents/tableLayout';
 import {readTableLayout,setTableLayout} from '../../lib/documents/session';
 import {useT} from '../../lib/useT';
 import {NativeButton,NativeInput,NativeSelect} from '../ui/native-controls';
@@ -40,6 +40,12 @@ export function TableLayoutDialog({onClose}:{onClose:()=>void}){
     {(['pad','cellPad'] as const).map(key=><fieldset key={key} className="grid gap-1 border-0 p-0 text-xs text-ink-2"><legend className="mb-1">{t(key==='pad'?'documents.tl.padTable':'documents.tl.padCell')}</legend>
      <div className="flex gap-2">{SIDES.map((side,i)=><label key={side} className="grid gap-1">{t('documents.tl.pad.'+side)}
       <NativeInput className={padField} inputMode="decimal" maxLength={5} placeholder={t('documents.tl.padDefault')} value={f[key][i]} aria-invalid={!padFormOk(f[key])} onChange={e=>{const n=[...f[key]] as PadForm;n[i]=e.currentTarget.value.trim();setF({...f,[key]:n});}} data-testid={`documents-tl-${key}-${side}`}/></label>)}</div></fieldset>)}
+    <div className="flex items-end gap-2">
+     <label className="flex h-7 items-center gap-2 text-xs text-ink-2"><NativeInput type="checkbox" checked={f.fill!=='none'} onChange={e=>setF({...f,fill:e.currentTarget.checked?FILL_SWATCH:'none'})} data-testid="documents-tl-fill-on"/>{t('documents.tl.fill')}</label>
+     <NativeInput type="color" aria-label={t('documents.tl.fill')} className="h-7 w-10 cursor-pointer rounded-sm border border-subtle bg-transparent p-0" disabled={f.fill==='none'} value={f.fill==='none'?'#'+FILL_SWATCH:'#'+f.fill} onChange={e=>{const v=e.currentTarget.value.replace('#','').toLowerCase();if(/^[0-9a-f]{6}$/.test(v))setF({...f,fill:v});}} data-testid="documents-tl-fill"/>
+     <label className="grid gap-1 text-xs text-ink-2">{t('documents.tl.fillScope')}
+      <NativeSelect className={sel} value={f.fillScope} onChange={e=>{const v=e.currentTarget.value;if((FILL_SCOPES as readonly string[]).includes(v))setF({...f,fillScope:v as TableLayoutForm['fillScope']});}} data-testid="documents-tl-fillscope">
+       {FILL_SCOPES.map(a=><option key={a} value={a}>{t('documents.tl.fillScope.'+a)}</option>)}</NativeSelect></label></div>
     <label className="grid gap-1 text-xs text-ink-2">{t('documents.tl.caption')}
      <NativeInput className="w-72 rounded-lg border border-subtle bg-transparent px-2 py-1.5 text-ink" maxLength={MAX_HF_CHARS} value={f.caption} aria-invalid={!validHfText(f.caption)} onChange={e=>setF({...f,caption:e.currentTarget.value})} data-testid="documents-tl-caption"/></label>
    </>}

@@ -52,7 +52,7 @@ new file mode 100644
 index 0000000..5b80b79
 --- /dev/null
 +++ b/crates/somnia-worker/src/lib.rs
-@@ -0,0 +1,6750 @@
+@@ -0,0 +1,6813 @@
 +//! Experimental headless adapter. No DOM, egui, filesystem or UI thread access.
 +use wasm_bindgen::prelude::*;
 +use std::sync::Arc;
@@ -2365,6 +2365,7 @@ index 0000000..5b80b79
 +            "rowHeight": row.props.height,
 +            "cellPadding": Self::pad_json(t.props.cell_margins),
 +            "cellMargins": Self::pad_json(cell.props.margins),
++            "cellShading": cell.props.shading.map(|c| c.hex()),
 +        })
 +        .to_string())
 +    }
@@ -2388,6 +2389,7 @@ index 0000000..5b80b79
 +        let mut row_height: Option<(HeightRule, Option<f32>)> = None;
 +        let mut all_rows = false;
 +        let (mut pad, mut cmar): (Option<Option<[f32; 4]>>, Option<Option<[f32; 4]>>) = (None, None);
++        let mut shade: Option<(Option<wordcraft_doc::props::Rgb>, &'static str)> = None;
 +        for (k, val) in obj {
 +            match k.as_str() {
 +                "align" => {
@@ -2441,6 +2443,21 @@ index 0000000..5b80b79
 +                "allRows" => all_rows = val.as_bool().ok_or("allRows must be true or false")?,
 +                "cellPadding" => pad = Some(Self::pad_of(val)?),
 +                "cellMargins" => cmar = Some(Self::pad_of(val)?),
++                "shading" => {
++                    let o = val.as_object().ok_or("shading must be an object with color and scope")?;
++                    if o.len() != 2 {
++                        return Err("shading takes only color and scope".into());
++                    }
++                    let color = Self::parse_para_rgb(o.get("color").ok_or("shading needs a color")?).map_err(|_| "the fill is none or RRGGBB".to_string())?;
++                    let scope = match o.get("scope").and_then(|x| x.as_str()) {
++                        Some("cell") => "cell",
++                        Some("row") => "row",
++                        Some("column") => "column",
++                        Some("table") => "table",
++                        _ => return Err("the fill scope is cell, row, column or table".into()),
++                    };
++                    shade = Some((color, scope));
++                }
 +                "caption" => {
 +                    let t = val.as_str().ok_or("caption must be text")?;
 +                    Self::hf_validate(t).map_err(|_| "alt text is limited to 500 characters without line breaks".to_string())?;
@@ -2491,6 +2508,21 @@ index 0000000..5b80b79
 +        }
 +        if let Some(m) = cmar {
 +            t2.rows.get_mut(r).and_then(|row| row.cells.get_mut(c)).ok_or("no such cell")?.props.margins = m;
++        }
++        if let Some((fill, scope)) = shade {
++            let g = t2.grid_col(r, c);
++            let cols: Vec<(usize, usize)> = (0..t2.rows.len())
++                .flat_map(|ri| (0..t2.rows[ri].cells.len()).map(move |ci| (ri, ci)))
++                .filter(|&(ri, ci)| match scope {
++                    "cell" => ri == r && ci == c,
++                    "row" => ri == r,
++                    "column" => t2.cell_at_grid(ri, g) == Some(ci),
++                    _ => true,
++                })
++                .collect();
++            for (ri, ci) in cols {
++                t2.rows[ri].cells[ci].props.shading = fill;
++            }
 +        }
 +        self.doc.body[b] = Arc::new(Block::Table(t2));
 +        self.pages = DocLayout::default();
@@ -5401,6 +5433,37 @@ index 0000000..5b80b79
 +        s.do_set_table_layout(cell, r#"{"align":null,"widthPct":null,"headerRow":false,"keepRows":false,"caption":""}"#).unwrap();
 +        let x = st(&s);
 +        assert_eq!((x["align"].is_null(), x["widthPct"].is_null(), x["headerRow"].as_bool(), x["caption"].as_str()), (true, true, Some(false), Some("")));
++    }
++    #[test]
++    fn table_fill_applies_to_a_cell_row_column_or_table_refuses_bad_input_and_roundtrips() {
++        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
++        let v: serde_json::Value = serde_json::from_str(&s.block_list()).unwrap();
++        let Some(cell) = v.as_array().unwrap().iter().find(|b| b["kind"] == "cell").map(|b| b["index"].as_u64().unwrap() as usize) else { return };
++        let filled = |s: &DocSession| -> usize { s.doc.body.iter().filter_map(|b| if let Block::Table(t) = &**b { Some(t) } else { None }).flat_map(|t| t.rows.iter().flat_map(|r| r.cells.iter())).filter(|c| c.props.shading.is_some()).count() };
++        let cells: usize = s.doc.body.iter().filter_map(|b| if let Block::Table(t) = &**b { Some(t.rows.iter().map(|r| r.cells.len()).sum::<usize>()) } else { None }).sum();
++        let before = wordcraft_docx::write(&s.doc).unwrap();
++        for bad in [r#"{"shading":"ff0000"}"#, r#"{"shading":{"color":"ff0000"}}"#, r#"{"shading":{"color":"red","scope":"cell"}}"#, r#"{"shading":{"color":"ff0000","scope":"page"}}"#, r#"{"shading":{"color":"ff0000","scope":"cell","x":1}}"#, r#"{"shading":{"color":5,"scope":"cell"}}"#] {
++            assert!(s.do_set_table_layout(cell, bad).is_err(), "{bad}");
++        }
++        assert_eq!(wordcraft_docx::write(&s.doc).unwrap(), before, "refusals change nothing");
++        s.do_set_table_layout(cell, r#"{"shading":{"color":"FFCC00","scope":"cell"}}"#).unwrap();
++        assert_eq!(filled(&s), 1);
++        let x: serde_json::Value = serde_json::from_str(&s.do_table_layout_state(cell).unwrap()).unwrap();
++        assert_eq!(x["cellShading"].as_str(), Some("FFCC00"));
++        s.do_set_table_layout(cell, r#"{"shading":{"color":"none","scope":"cell"}}"#).unwrap();
++        assert_eq!(filled(&s), 0);
++        s.do_set_table_layout(cell, r#"{"shading":{"color":"00aa00","scope":"table"}}"#).unwrap();
++        assert_eq!(filled(&s), cells);
++        let re = DocSession::from_bytes(&wordcraft_docx::write(&s.doc).unwrap()).unwrap();
++        assert_eq!(filled(&re), cells, "the fill survives DOCX");
++        s.do_set_table_layout(cell, r#"{"shading":{"color":"none","scope":"table"}}"#).unwrap();
++        s.do_set_table_layout(cell, r#"{"shading":{"color":"0000ff","scope":"row"}}"#).unwrap();
++        let n_row = filled(&s);
++        assert!(n_row >= 1 && n_row <= cells);
++        s.do_set_table_layout(cell, r#"{"shading":{"color":"none","scope":"table"}}"#).unwrap();
++        s.do_set_table_layout(cell, r#"{"shading":{"color":"0000ff","scope":"column"}}"#).unwrap();
++        assert!(filled(&s) >= 1);
++        assert!(s.do_set_table_layout(0, r#"{"shading":{"color":"none","scope":"cell"}}"#).is_err(), "not a cell");
 +    }
 +    #[test]
 +    fn section_breaks_insert_report_roundtrip_and_remove() {
