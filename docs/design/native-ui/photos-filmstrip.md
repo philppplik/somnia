@@ -735,3 +735,18 @@ Coverage: the light/dark gallery leg adds a real byte copy of
 strip-1, seeds the cache and asserts only the pair stays
 (`test-results/ds-photos-smart-dup-{light,dark}.png`); the cache
 unit test covers the v3 entry shape and invalidation.
+
+## File-type smart-filter rule (P129)
+
+The smart filter gains a file-type rule: one select narrows the
+strip and the grid to JPEG, PNG, WebP, PSD or "other" (everything
+else the app imports - WebP aside, GIF/TIFF/BMP and the rest).
+The type comes from the sniffed MIME, no metadata fetch needed.
+No RAW option: the app has no RAW pipeline, so the option would
+never match anything. The rule composes with the other smart
+rules and lives in the same menu block.
+
+Coverage: the light/dark gallery leg adds a real JPEG next to the
+three PNGs and narrows to each side
+(`test-results/ds-photos-smart-type-{light,dark}.png`); a unit
+test covers the MIME mapping.

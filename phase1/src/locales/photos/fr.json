@@ -261,5 +261,12 @@
  "photos.proof.share": "{pct} % hors gamut",
  "photos.smart.camera": "Appareil",
  "photos.smart.anyCamera": "Tous les appareils",
- "photos.smart.dup": "Doublons uniquement"
+ "photos.smart.dup": "Doublons uniquement",
+ "photos.smart.type": "Type de fichier",
+ "photos.smart.anyType": "Tout type",
+ "photos.smart.type.jpeg": "JPEG",
+ "photos.smart.type.png": "PNG",
+ "photos.smart.type.webp": "WebP",
+ "photos.smart.type.psd": "PSD",
+ "photos.smart.type.other": "Autres"
 }

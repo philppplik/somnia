@@ -1217,6 +1217,42 @@ test('statistics: rating, flag and hidden counts over the library (light and dar
  }
 });
 
+test('smart filter type: narrows the strip to the chosen file type (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
+  await page.evaluate(async()=>{
+   const ps=await import('/src/store/panelStateStore.ts');const med=await import('/src/lib/media.ts');
+   ps.panelStateStore.set('photos.smartFilter',{on:false,minRating:0,flag:'',label:'',tag:'',camera:'',dup:false,type:''});
+   if(!med.getMedia().items.some(i=>i.name==='scan.jpg')){ // a real JPEG next to the three PNGs
+    const c=document.createElement('canvas');c.width=64;c.height=48;const x=c.getContext('2d')!;x.fillStyle='rgb(90,120,160)';x.fillRect(0,0,64,48);
+    const blob=await new Promise<Blob>((res,rej)=>c.toBlob(v=>v?res(v):rej(Error('toBlob failed')),'image/jpeg'));
+    await med.addMediaFile(new File([blob],'scan.jpg',{type:'image/jpeg'}),'scan.jpg');
+   }
+  });
+  await expect(page.getByTestId('photos-filmstrip-item-scan.jpg')).toBeVisible();
+  await page.getByTestId('photos-filmstrip-menu').click();
+  await page.getByTestId('photos-filmstrip-smart').click();
+  await page.getByTestId('photos-smart-type').selectOption('jpeg');
+  await expect(page.getByTestId('photos-filmstrip-item-scan.jpg')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-1.png')).toHaveCount(0);
+  await page.getByTestId('photos-smart-type').selectOption('png');
+  await expect(page.getByTestId('photos-filmstrip-item-strip-1.png')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-scan.jpg')).toHaveCount(0);
+  await page.screenshot({path:`test-results/ds-photos-smart-type-${theme}.png`,fullPage:true});
+  await page.getByTestId('photos-smart-type').selectOption(''); // off
+  await page.getByTestId('photos-filmstrip-smart').click();
+  await page.keyboard.press('Escape');
+  await page.evaluate(async()=>{
+   const ps=await import('/src/store/panelStateStore.ts');const med=await import('/src/lib/media.ts');
+   ps.panelStateStore.set('photos.smartFilter',{on:false,minRating:0,flag:'',label:'',tag:'',camera:'',dup:false,type:''});
+   med.closeMediaForced('scan.jpg'); // the next tests expect three photos
+  });
+  await expect(page.getByTestId('photos-filmstrip-item-scan.jpg')).toHaveCount(0);
+ }
+});
 test('menu groups: labeled collapsible sections, expanded by default (light and dark)',async({page})=>{
  for(const theme of['light','dark']){
   await page.goto('/test/design-system/?view=photos-filmstrip');

@@ -261,5 +261,12 @@
  "photos.proof.share": "{pct} % fora da gama",
  "photos.smart.camera": "Câmera",
  "photos.smart.anyCamera": "Todas as câmeras",
- "photos.smart.dup": "Apenas duplicatas"
+ "photos.smart.dup": "Apenas duplicatas",
+ "photos.smart.type": "Tipo de arquivo",
+ "photos.smart.anyType": "Qualquer tipo",
+ "photos.smart.type.jpeg": "JPEG",
+ "photos.smart.type.png": "PNG",
+ "photos.smart.type.webp": "WebP",
+ "photos.smart.type.psd": "PSD",
+ "photos.smart.type.other": "Outros"
 }

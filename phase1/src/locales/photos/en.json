@@ -261,5 +261,12 @@
  "photos.proof.share": "{pct}% out of gamut",
  "photos.smart.camera": "Camera",
  "photos.smart.anyCamera": "Any camera",
- "photos.smart.dup": "Duplicates only"
+ "photos.smart.dup": "Duplicates only",
+ "photos.smart.type": "File type",
+ "photos.smart.anyType": "Any type",
+ "photos.smart.type.jpeg": "JPEG",
+ "photos.smart.type.png": "PNG",
+ "photos.smart.type.webp": "WebP",
+ "photos.smart.type.psd": "PSD",
+ "photos.smart.type.other": "Other"
 }
