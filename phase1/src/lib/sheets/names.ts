@@ -51,3 +51,18 @@ export function resolveNameJump(input:string,names:readonly NameInfo[],sheets:re
  const dest=sheets.find(x=>x.name.toLowerCase()===target.sheet.toLowerCase()&&x.visibility==='Visible');
  return dest?{sheet:dest.index,address:nameSpan(hit.refersTo)??target.address}:null;
 }
+
+/** Ways to narrow the list of names in the panel (a view only, nothing is changed). */
+export const NAME_FILTERS=['all','sheet','workbook','ranges','constants','formulas','broken'] as const;
+export type NameFilter=typeof NAME_FILTERS[number];
+export const MAX_NAME_QUERY=64;
+const isConstant=(r:string)=>/^=\s*(-?[0-9][0-9.,eE+-]*|"[^"]*"|TRUE|FALSE)\s*$/i.test(r);
+/** Names that match the chosen kind and the search text (name, target or note, any case). */
+export function filterNames(list:readonly NameInfo[],filter:NameFilter,query:string,sheetName:string):NameInfo[]{
+ const q=query.trim().slice(0,MAX_NAME_QUERY).toLowerCase();
+ return list.filter(n=>{
+  const broken=n.refersTo.includes('#REF!');
+  const kind=filter==='all'?true:filter==='sheet'?n.scope===sheetName:filter==='workbook'?n.scope==='Workbook':filter==='broken'?broken:filter==='constants'?isConstant(n.refersTo):filter==='ranges'?!broken&&nameTarget(n.refersTo)!==null:!broken&&!isConstant(n.refersTo)&&nameTarget(n.refersTo)===null;
+  return kind&&(q===''||n.name.toLowerCase().includes(q)||n.refersTo.toLowerCase().includes(q)||n.comment.toLowerCase().includes(q));
+ });
+}

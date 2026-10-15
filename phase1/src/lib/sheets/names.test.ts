@@ -1,5 +1,5 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';
-import {nameSpan,resolveNameJump,constantValue,nameProblem,nameTarget,parseNames,parseNamesCommand} from './names';
+import {filterNames,nameSpan,resolveNameJump,constantValue,nameProblem,nameTarget,parseNames,parseNamesCommand} from './names';
 import {customNumFmtCode,DATE_PATTERNS,parseFormatOp} from './formatOps';
 test('nameProblem',()=>{
  for(const ok of ['Prices','_x','tax.rate','Größe','a1b','x'.repeat(64)])assert.equal(nameProblem(ok),null,ok);
@@ -61,4 +61,15 @@ test('rename accepts a valid new name and rejects the rest',()=>{
  assert.deepEqual(parseNamesCommand({kind:'rename',name:'Rate',newName:' Tax '}),{kind:'rename',name:'Rate',scope:'workbook',newName:'Tax'});
  assert.deepEqual(parseNamesCommand({kind:'rename',name:'Rate',scope:'sheet',newName:'Tax'}),{kind:'rename',name:'Rate',scope:'sheet',newName:'Tax'});
  for(const bad of [{kind:'rename',name:'Rate'},{kind:'rename',name:'Rate',newName:'A1'},{kind:'rename',name:'Rate',newName:''},{kind:'rename',name:'',newName:'Tax'},{kind:'rename',name:'Rate',newName:'Tax',x:1},{kind:'rename',name:'Rate',newName:5},{kind:'rename',name:'Rate',scope:'galaxy',newName:'Tax'}])assert.throws(()=>parseNamesCommand(bad),JSON.stringify(bad));
+});
+
+test('filterNames narrows by kind and search text without touching the list',()=>{
+ const l=[{name:'Prices',refersTo:"=Sheet1!$A$1:$A$9",scope:'Workbook',comment:'unit prices'},{name:'Tax',refersTo:'=0.19',scope:'Workbook',comment:''},{name:'Local',refersTo:'=Sheet1!$B$2',scope:'Sheet1',comment:''},{name:'Calc',refersTo:'=SUM(Sheet1!$A$1:$A$3)',scope:'Workbook',comment:''},{name:'Gone',refersTo:'=#REF!',scope:'Workbook',comment:''},{name:'Label',refersTo:'="Q1"',scope:'Sheet2',comment:''}];
+ const f=(k:Parameters<typeof filterNames>[1],q='',s='Sheet1')=>filterNames(l,k,q,s).map(n=>n.name);
+ assert.deepEqual(f('all'),l.map(n=>n.name));
+ assert.deepEqual(f('sheet'),['Local']);assert.deepEqual(f('workbook'),['Prices','Tax','Calc','Gone']);
+ assert.deepEqual(f('ranges'),['Prices','Local']);assert.deepEqual(f('constants'),['Tax','Label']);
+ assert.deepEqual(f('formulas'),['Calc']);assert.deepEqual(f('broken'),['Gone']);
+ assert.deepEqual(f('all',' UNIT '),['Prices']);assert.deepEqual(f('ranges','b$2'),['Local']);assert.deepEqual(f('all','zzz'),[]);
+ assert.equal(l.length,6);
 });

@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1066 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1068 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -1048,6 +1048,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `vector.exportPng` | Export vector PNG | Project | vector |  |
 | `vector.exportSvg` | Export vector SVG | Project | vector |  |
 | `vector.flipSelection` | Flip vector selection | Edit | vector |  |
+| `vector.group` | Group vector selection | Edit | vector |  |
 | `vector.importSvg` | Add SVG to vector page | Insert | vector |  |
 | `vector.inspect` | Inspect vector document | Tools | vector |  |
 | `vector.moveNode` | Move vector node | Edit | vector |  |
@@ -1078,6 +1079,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `vector.tool.star` | Star | View | vector |  |
 | `vector.toSvg` | Read vector SVG | Tools | vector |  |
 | `vector.undo` | Undo vector edit | Edit | vector |  |
+| `vector.ungroup` | Ungroup vector selection | Edit | vector |  |
 | `view.code` | Code view | View | core | `Mod+Alt+3` |
 | `view.design` | Design view | View | core | `Mod+Alt+1` |
 | `view.livePreview` | Toggle live preview | View | core |  |

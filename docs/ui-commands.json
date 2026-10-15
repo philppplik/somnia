@@ -12689,6 +12689,13 @@
       "hasEnabled": true
     },
     {
+      "id": "vector.group",
+      "title": "Group vector selection",
+      "category": "Edit",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
       "id": "vector.importSvg",
       "title": "Add SVG to vector page",
       "category": "Insert",
@@ -12894,6 +12901,13 @@
     {
       "id": "vector.undo",
       "title": "Undo vector edit",
+      "category": "Edit",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
+      "id": "vector.ungroup",
+      "title": "Ungroup vector selection",
       "category": "Edit",
       "source": "vector",
       "hasEnabled": true

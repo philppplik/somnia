@@ -35,7 +35,7 @@ import {viewNameProblem,MAX_VIEW_NAME} from '../../lib/sheets/savedViews';
 import {WHATIF_GROUPS,buildWhatIfOp,whatIfNeeds,type WhatIfAction} from '../../lib/sheets/whatIfOps';
 import {ALLOW_PRESETS,MAX_PASSWORD_CHARS,PROTECT_ALLOW,passwordBad} from '../../lib/sheets/protectOps';
 import type {PivotField,PivotFunc} from '../../lib/sheets/protocol';
-import {resolveNameJump,constantValue,MAX_COMMENT_CHARS,nameProblem,nameSpan,nameTarget} from '../../lib/sheets/names';
+import {filterNames,NAME_FILTERS,MAX_NAME_QUERY,type NameFilter,resolveNameJump,constantValue,MAX_COMMENT_CHARS,nameProblem,nameSpan,nameTarget} from '../../lib/sheets/names';
 import {internalTarget,linkTargetProblem,MAX_LINK_TEXT,MAX_NOTE_CHARS} from '../../lib/sheets/notes';
 import {dedupeBlockProblem,splitBlockProblem,parseWidths,SPLIT_DELIMITERS} from '../../lib/sheets/dataTools';
 import {replaceProblem,MAX_REPLACE_TEXT} from '../../lib/sheets/replaceOps';
@@ -839,9 +839,9 @@ function PasteGroup(){
 /** Named ranges in one grouped menu: define the selection, redefine, go to or delete a name. One undo step each. */
 type NameAction='define'|'defineSheet'|'replace'|'replaceSheet'|'constant'|'constantSheet'|'setConstant'|'comment'|'fromSelection'|'go'|'rename'|'delete';
 function NamesGroup(){
- const {t}=useT(),s=useSheetsSelection(),action=useAction();const [act,setAct]=useState<NameAction>('define');const [pick,setPick]=useState('');const [name,setName]=useState('');const [value,setValue]=useState('');const [note,setNote]=useState('');const [fromTop,setFromTop]=useState(true);const [fromLeft,setFromLeft]=useState(false);const [fromReplace,setFromReplace]=useState(false);
+ const {t}=useT(),s=useSheetsSelection(),action=useAction();const [act,setAct]=useState<NameAction>('define');const [pick,setPick]=useState('');const [nameFilter,setNameFilter]=useState<NameFilter>('all');const [nameQuery,setNameQuery]=useState('');const [name,setName]=useState('');const [value,setValue]=useState('');const [note,setNote]=useState('');const [fromTop,setFromTop]=useState(true);const [fromLeft,setFromLeft]=useState(false);const [fromReplace,setFromReplace]=useState(false);
  if(!s)return null;
- const list=s.names??[],chosen=list.find(n=>n.scope+'|'+n.name===pick)??null,defining=act==='define'||act==='defineSheet'||act==='replace'||act==='replaceSheet'||act==='constant'||act==='constantSheet',needsValue=act==='constant'||act==='constantSheet'||act==='setConstant',valueBad=needsValue&&(value===''||[...value].length>MAX_COMMENT_CHARS||/[\u0000-\u001f\u007f]/.test(value)),noteBad=act==='comment'&&([...note].length>MAX_COMMENT_CHARS||/[\u0000-\u001f\u007f]/.test(note));
+ const list=s.names??[],shownNames=filterNames(list,nameFilter,nameQuery,s.sheetName),chosen=list.find(n=>n.scope+'|'+n.name===pick)??null,defining=act==='define'||act==='defineSheet'||act==='replace'||act==='replaceSheet'||act==='constant'||act==='constantSheet',needsValue=act==='constant'||act==='constantSheet'||act==='setConstant',valueBad=needsValue&&(value===''||[...value].length>MAX_COMMENT_CHARS||/[\u0000-\u001f\u007f]/.test(value)),noteBad=act==='comment'&&([...note].length>MAX_COMMENT_CHARS||/[\u0000-\u001f\u007f]/.test(note));
  const fromSel=act==='fromSelection',fromBad=fromSel&&(!(fromTop&&(s.range?.r1??0)>(s.range?.r0??0))&&!(fromLeft&&(s.range?.c1??0)>(s.range?.c0??0)));
  const own=chosen&&(chosen.scope==='Workbook'||chosen.scope===s.sheetName),target=chosen?nameTarget(chosen.refersTo):null,dest=target?(s.workbook?.sheets??[]).find(x=>x.name.toLowerCase()===target.sheet.toLowerCase()&&x.visibility==='Visible'):undefined;
  const problem=fromSel?null:defining?(nameProblem(name.trim())):act==='rename'?(chosen&&own?nameProblem(name.trim()):'pick'):act==='go'?(target&&dest?null:'target'):(chosen&&own?null:'pick'),blocked=!!problem||valueBad||noteBad;
@@ -858,7 +858,12 @@ function NamesGroup(){
  };
  return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.nm.title')}>
   <span>{t('sheets.nm.title')}</span>
-  <label className="flex flex-col gap-1">{t('sheets.nm.existing')}<NativeSelect className={field} value={pick} disabled={action.busy} onChange={e=>setPick(e.currentTarget.value)} data-testid="sheets-nm-pick"><option value="">{t('sheets.nm.none')}</option>{list.map(n=><option key={n.scope+'|'+n.name} value={n.scope+'|'+n.name}>{n.name} ({n.scope}) {n.refersTo}</option>)}</NativeSelect></label>
+  {list.length>1&&<>
+   <label className="flex flex-col gap-1">{t('sheets.nm.filter')}<NativeSelect className={field} value={nameFilter} disabled={action.busy} onChange={e=>setNameFilter(e.currentTarget.value as NameFilter)} data-testid="sheets-nm-filter">{NAME_FILTERS.map(k=><option key={k} value={k}>{t('sheets.nm.f.'+k)}</option>)}</NativeSelect></label>
+   <label className="flex flex-col gap-1">{t('sheets.nm.search')}<NativeInput className={field} value={nameQuery} maxLength={MAX_NAME_QUERY} disabled={action.busy} onChange={e=>setNameQuery(e.currentTarget.value)} data-testid="sheets-nm-search"/></label>
+   <p className="text-ink-3" data-testid="sheets-nm-shown">{t('sheets.nm.shown',{n:shownNames.length,total:list.length})}</p>
+  </>}
+  <label className="flex flex-col gap-1">{t('sheets.nm.existing')}<NativeSelect className={field} value={pick} disabled={action.busy} onChange={e=>setPick(e.currentTarget.value)} data-testid="sheets-nm-pick"><option value="">{t('sheets.nm.none')}</option>{shownNames.map(n=><option key={n.scope+'|'+n.name} value={n.scope+'|'+n.name}>{n.name} ({n.scope}) {n.refersTo}</option>)}</NativeSelect></label>
   <label className="flex flex-col gap-1">{t('sheets.nm.action')}<NativeSelect className={field} value={act} disabled={action.busy} onChange={e=>setAct(e.currentTarget.value as NameAction)} data-testid="sheets-nm-action">
    <optgroup label={t('sheets.nm.groupSelection')}><option value="define">{t('sheets.nm.define')}</option><option value="defineSheet">{t('sheets.nm.defineSheet')}</option><option value="replace">{t('sheets.nm.replace')}</option><option value="replaceSheet">{t('sheets.nm.replaceSheet')}</option></optgroup>
    <optgroup label={t('sheets.nm.groupConstant')}><option value="constant">{t('sheets.nm.constant')}</option><option value="constantSheet">{t('sheets.nm.constantSheet')}</option><option value="setConstant">{t('sheets.nm.setConstant')}</option><option value="comment">{t('sheets.nm.comment')}</option></optgroup>
