@@ -2,7 +2,7 @@
  * The overlay track: titles and images placed ON TOP of the running video (lower thirds, watermarks), each at an
  * explicit `at` time with its own duration and frame rect. Unlike the gap-free edit list, overlays may overlap;
  * array order is the z-order (later = on top). Pure model - no DOM, no engine. Video overlays (PiP) play a source
- * video inside their rect starting at `in_s`; their audio is never mixed into the export (video-only by design).
+ * video inside their rect starting at `in_s`; the export mixes their source audio at full volume over the visible span.
  */
 import {MIN_CLIP_SECONDS} from './timeline';
 import {clampTitleSeconds,DEFAULT_TITLE,sanitizeTitleSpec,type TitleSpec} from './titles';

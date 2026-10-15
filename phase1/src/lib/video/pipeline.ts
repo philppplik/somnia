@@ -122,7 +122,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
   const caps=await probeCapabilities(outW,outH);
   const videoCodec=format==='webm'?caps.webmVideo:caps.mp4Video;
   if(!videoCodec)throw new Error(format==='webm'?'This platform cannot encode VP9 or VP8 video.':'This platform cannot encode H.264 (AVC) video. Try WebM instead.');
-  const anyAudio=clips.some(c=>needsSourceFile(c)&&!isImageClip(c)&&!isFreeze(c)&&!c.muted&&inputs.get(c.source)!.probe.audio!==null)||audioClips.length>0;
+  const anyAudio=clips.some(c=>needsSourceFile(c)&&!isImageClip(c)&&!isFreeze(c)&&!c.muted&&inputs.get(c.source)!.probe.audio!==null)||audioClips.length>0||overlayClips.some(o=>o.kind==='video'&&inputs.get(o.source)?.probe.audio!=null)
   let audioCodec:string|null=null;
   if(anyAudio){
    audioCodec=format==='webm'?(caps.opus?'opus':null):(caps.aac?'aac':null);
@@ -183,11 +183,13 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
    return true;
   }).sort((a,b)=>a.at-b.at);
   let feedIdx=0;
-  const mixAudioClip=async(ac:AudioClip)=>{
-   const{input}=inputs.get(ac.source)!;
+  // One buffered source range into the mixer: whole-span resample to 48 kHz stereo with a per-second gain curve.
+  // Audio clips pass their fade x duck envelope; PiP video overlays pass a constant 1 (no overlay gain yet).
+  const mixBufferedAudio=async(source:string,in_s:number,out_s:number,at:number,envAt:(localT:number)=>number)=>{
+   const{input}=inputs.get(source)!;
    const aSink=new AudioSampleSink((await input.getAudioTracks())[0]);
    const chunks:Float32Array[]=[];let rate=0,ch=0,count=0;
-   for await(const sample of aSink.samples(ac.in_s,ac.out_s)){
+   for await(const sample of aSink.samples(in_s,out_s)){
     checkCancel();
     rate=sample.sampleRate;ch=sample.numberOfChannels;
     const data=new Float32Array(sample.allocationSize({planeIndex:0,format:'f32'})/4);
@@ -197,18 +199,31 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
    if(!count||!rate||!ch)return;
    const raw=new Float32Array(count);let o=0;
    for(const part of chunks){raw.set(part,o);o+=part.length;}
-   const srcFrames=count/ch,dur=ac.out_s-ac.in_s,len=Math.max(1,Math.round(dur*48_000));
+   const srcFrames=count/ch,dur=out_s-in_s,len=Math.max(1,Math.round(dur*48_000));
    const out=new Float32Array(len*2);
    for(let i=0;i<len;i++){
-    const localT=i/48_000,env=audioEnvelope(ac,localT)*duckGainAt(audioClips,ac,ac.at+localT);
+    const localT=i/48_000,env=envAt(localT);
     const srcPos=localT*rate,f0=Math.min(srcFrames-1,Math.floor(srcPos)),f1=Math.min(srcFrames-1,f0+1),fr=Math.min(1,Math.max(0,srcPos-f0));
     const l=ch===1?raw[f0]*(1-fr)+raw[f1]*fr:raw[f0*ch]*(1-fr)+raw[f1*ch]*fr;
     const r=ch===1?l:raw[f0*ch+1]*(1-fr)+raw[f1*ch+1]*fr;
     out[i*2]=l*env;out[i*2+1]=r*env;
    }
-   mixer!.addChunk(ac.at,out);
+   mixer!.addChunk(at,out);
   };
+  const mixAudioClip=(ac:AudioClip)=>mixBufferedAudio(ac.source,ac.in_s,ac.out_s,ac.at,t2=>audioEnvelope(ac,t2)*duckGainAt(audioClips,ac,ac.at+t2));
   const feedAudioThrough=async(through:number)=>{while(feedIdx<audioFeed.length&&audioFeed[feedIdx].at<through-1e-9)await mixAudioClip(audioFeed[feedIdx++]);};
+
+  // PiP audio: video overlays mix their source audio over the visible span at full volume (see mixBufferedAudio).
+  const overlayFeed=overlayClips.filter(o=>{
+   if(o.kind!=='video')return false;
+   const probe=inputs.get(o.source)?.probe;
+   if(!probe?.audio){audioMutedNote=true;return false;}
+   if(o.at>=total_s){audioTrimmedNote=true;return false;}
+   if(o.at+o.duration>total_s)audioTrimmedNote=true;
+   return true;
+  }).sort((a,b)=>a.at-b.at);
+  let overlayFeedIdx=0;
+  const feedOverlayThrough=async(through:number)=>{while(overlayFeedIdx<overlayFeed.length&&overlayFeed[overlayFeedIdx].at<through-1e-9){const o=overlayFeed[overlayFeedIdx++];await mixBufferedAudio(o.source,o.in_s,o.in_s+o.duration,o.at,()=>1);}};
 
   // One CanvasSink per clip index, shared by the clip's solo zone and its neighbouring fades.
   const videoSinks=new Map<number,CanvasSink>();
@@ -270,7 +285,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
   // skip static frames; the card is blitted into its frame rect at the clip's opacity. Array order is the z-order.
   const overlayCards=new Map<string,{canvas:OffscreenCanvas;ctx:OffscreenCanvasRenderingContext2D;key:string}>();
   // Video overlays (PiP): one CanvasSink per overlay id, sized to its frame rect; frames decode straight onto the
-  // output at the overlay's opacity. Video-only by design - PiP audio is never mixed into the export.
+  // output at the overlay's opacity. Audio feeds the mixer separately (see overlayFeed below).
   const overlaySinks=new Map<string,{sink:CanvasSink;w:number;h:number}>();
   const drawOverlays=async(t:number)=>{
    for(const o of overlaysAt(overlayClips,t)){
@@ -410,9 +425,11 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
     }
    }
    await feedAudioThrough(z.end);
+   await feedOverlayThrough(z.end);
    await writeMixedThrough(z.end);
   }
   await feedAudioThrough(Number.MAX_SAFE_INTEGER);
+  await feedOverlayThrough(Number.MAX_SAFE_INTEGER);
   await writeMixedThrough(Number.MAX_SAFE_INTEGER);
   await output.finalize();
   const buffer=(output.target as BufferTarget).buffer;
