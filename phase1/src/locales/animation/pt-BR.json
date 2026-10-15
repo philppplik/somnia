@@ -1364,5 +1364,8 @@
  "cmd.animation.text.case": "Mudar maiúsculas e minúsculas das camadas de texto marcadas",
  "cmd.animation.text.replace": "Localizar e substituir texto nas camadas de texto marcadas (todas se nenhuma estiver marcada)",
  "animation.rig.look": "Copiar o visual (preenchimento, traço, efeitos)",
- "cmd.animation.layers.look": "Copiar o visual (preenchimento, traço, efeitos) da primeira camada marcada para as outras"
+ "cmd.animation.layers.look": "Copiar o visual (preenchimento, traço, efeitos) da primeira camada marcada para as outras",
+ "animation.audio.fade.in": "Fade in",
+ "animation.audio.fade.out": "Fade out",
+ "animation.audio.fade.both": "Fade in e out"
 }

@@ -283,3 +283,13 @@ test('P82: audio-reactive keys follow loudness, are one edit, bounded and valida
  assert.throws(()=>applyEdit(d,{type:'audio.reactive',layer:'sq',prop:'scale',keys:keys.slice(0,1)}),/2 to/);
  const locked=applyEdit(d,{type:'layer.update',layer:'sq',locked:true});assert.throws(()=>applyEdit(locked,{type:'audio.reactive',layer:'sq',prop:'scale',keys}),/locked/);
 });
+test('P296 fade works on audio clips: volume keys 0 to full and back inside the clip, keyed volume skipped, one undo',async()=>{
+ const m=await import('./layerFadeCommands');const {AnimationSession,setAnimationSession}=await import('./session');
+ const run=(Object.values(m).find(x=>typeof x==='function') as ()=>{run:(p?:unknown)=>unknown}[])()[0].run;
+ const s=new AnimationSession();s.open(withAudio());setAnimationSession(s);const before=JSON.stringify(s.document);
+ const r=run({mode:'both',frames:6,layers:['aud']}) as {faded:number};assert.equal(r.faded,1);
+ const v=layer(s.document!).audio!.volume,fr=frameToTick(1,{num:30,den:1});
+ assert.deepEqual(v.keys.map(k=>k.v),[0,100,100,0]);assert.equal(v.keys[0].t,0);assert.equal(v.keys[1].t,6*fr);assert.equal(v.keys[3].t-v.keys[2].t,6*fr);
+ assert.throws(()=>run({mode:'in',layers:['aud']}),/already|No selected/);
+ s.undo();assert.equal(JSON.stringify(s.document),before);
+});

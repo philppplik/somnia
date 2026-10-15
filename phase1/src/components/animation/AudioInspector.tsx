@@ -63,6 +63,7 @@ export function AudioInspector({layer,comp,at}:{layer:Layer;comp:Composition;at:
    <legend className="text-ink-3">{t('animation.audio.volumeLane')}</legend>
    <N disabled={layer.locked} label={t('animation.audio.volume')} value={value} min={0} max={200} step={1} resetKey={`${layer.id}:${at}:${animated}:${value}`} onCommit={n=>run('animation.audio.volume.set',{layer:layer.id,value:n})}/>
    <label className="flex items-center gap-1 text-ink-3"><NativeInput type="checkbox" className="animation-checkbox" checked={animated} onChange={e=>run('animation.audio.volume.animate',{layer:layer.id,on:e.target.checked})}/>{t('animation.audio.volume.animate')}</label>
+   {!animated&&<div className="flex flex-wrap gap-1">{(['in','out','both'] as const).map(m=><Button key={m} size="tiny" variant="outline" onClick={()=>run('animation.layers.fade',{mode:m,layers:[layer.id]})} data-testid={`animation-audio-fade-${m}`}>{t(`animation.audio.fade.${m}`)}</Button>)}</div>}
    {animated&&<div className="flex flex-wrap gap-1">
     <Button size="tiny" variant="outline" onClick={()=>run('animation.audio.volume.set',{layer:layer.id,value})}>{t('animation.audio.volume.key')}</Button>
     <Button size="tiny" variant="outline" disabled={!onKey} onClick={()=>run('animation.audio.volume.keyRemove',{layer:layer.id})}>{t('animation.audio.volume.removeKey')}</Button></div>}

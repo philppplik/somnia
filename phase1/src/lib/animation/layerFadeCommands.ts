@@ -22,6 +22,15 @@ export const layerFadeSpecs=():CommandSpec<unknown,unknown>[]=>[{
   if(!ls.length)return expected('Select a layer first.');
   const len=frameToTick(frames,c.fps),one=frameToTick(1,c.fps),edits:Edit[]=[];let skipped=0;
   for(const l of ls){
+   if(l!.kind==='audio'&&l!.audio){
+    // Audio fades the clip volume, in composition time, between where the clip starts and ends playing.
+    const a=l!.audio,start=Math.max(0,l!.inT+l!.offset),end=Math.min(c.duration,l!.outT+l!.offset)-one,full=a.volume.value as number;
+    if(l!.locked||a.volume.keys.length||end-start<=one*(p.mode==='both'?2*frames:frames)){skipped++;continue;}
+    edits.push({type:'audio.volume.animate',layer:l!.id,on:true,t:start});
+    if(p.mode!=='out')edits.push({type:'audio.volume.set',layer:l!.id,value:0,t:start},{type:'audio.volume.animate',layer:l!.id,on:true,t:start+len},{type:'audio.volume.set',layer:l!.id,value:full,t:start+len});
+    if(p.mode!=='in')edits.push({type:'audio.volume.animate',layer:l!.id,on:true,t:end-len},{type:'audio.volume.set',layer:l!.id,value:full,t:end-len},{type:'audio.volume.animate',layer:l!.id,on:true,t:end},{type:'audio.volume.set',layer:l!.id,value:0,t:end});
+    continue;
+   }
    const o=l!.transform.opacity;
    if(l!.locked||l!.kind==='audio'||o.keys.length||l!.outT-l!.inT<=one*(p.mode==='both'?2*frames:frames)){skipped++;continue;}
    const full=o.value as number,first=l!.inT,last=l!.outT-one;
@@ -29,7 +38,7 @@ export const layerFadeSpecs=():CommandSpec<unknown,unknown>[]=>[{
    if(p.mode!=='out'){edits.push({type:'prop.set',layer:l!.id,prop:'opacity',value:0,t:first},{type:'prop.set',layer:l!.id,prop:'opacity',value:full,t:first+len});}
    if(p.mode!=='in'){edits.push({type:'prop.set',layer:l!.id,prop:'opacity',value:full,t:last-len},{type:'prop.set',layer:l!.id,prop:'opacity',value:0,t:last});}
   }
-  if(!edits.length)return expected('No selected layer can be faded (locked, audio, opacity already animated, or too short).');
+  if(!edits.length)return expected('No selected layer can be faded (locked, opacity or volume already animated, or too short).');
   try{s.dispatch(edits);}catch(e){if(e instanceof EditError)throw Object.assign(e,{expected:true});throw e;}
   return {faded:ls.length-skipped,skipped};
  }) as (p:unknown)=>unknown}];

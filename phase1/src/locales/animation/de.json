@@ -1364,5 +1364,8 @@
  "cmd.animation.text.case": "Groß-/Kleinschreibung der markierten Textebenen ändern",
  "cmd.animation.text.replace": "Text in den markierten Textebenen suchen und ersetzen (ohne Markierung alle Textebenen)",
  "animation.rig.look": "Look kopieren (Füllung, Kontur, Effekte)",
- "cmd.animation.layers.look": "Look (Füllung, Kontur, Effekte) der ersten markierten Ebene auf die anderen markierten Ebenen kopieren"
+ "cmd.animation.layers.look": "Look (Füllung, Kontur, Effekte) der ersten markierten Ebene auf die anderen markierten Ebenen kopieren",
+ "animation.audio.fade.in": "Einblenden",
+ "animation.audio.fade.out": "Ausblenden",
+ "animation.audio.fade.both": "Ein- und ausblenden"
 }
