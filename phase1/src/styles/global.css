@@ -381,3 +381,9 @@ body{font-size:var(--ui-font-size,13px)}
 .dialog-popup{animation-duration:var(--motion-standard);animation-timing-function:var(--motion-ease)}
 :root[data-motion=full] .dialog-popup{animation:palette-in var(--motion-standard) var(--motion-ease)!important}
 @media(prefers-reduced-motion:reduce){:root[data-motion=full] *,:root[data-motion=full] *:before,:root[data-motion=full] *:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+/* Forced colors: backgrounds are stripped, so state that only a background signals needs an outline. */
+@media(forced-colors:active){.menu-item[data-highlighted],.pricing-toggle button[aria-pressed=true],.export-option[data-checked=true],.cv-chip[data-checked=true]{outline:2px solid Highlight}}
+
+/* Reduced transparency: the dialog scrim bypasses the glass tokens, so drop its blur explicitly. */
+@media(prefers-reduced-transparency:reduce){.dialog-backdrop{backdrop-filter:none;background:rgba(0,0,0,.75)}}
