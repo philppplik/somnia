@@ -142,5 +142,26 @@ for(const [name,v] of Object.entries(themes)){
   if(r<3){warns++;console.log(`WARN ${name} --border-default on ${bk}: ${r.toFixed(2)} (${v['--border-default'].raw} on ${v[bk].raw})`);}
  }
 }
+// bento math/TeX status colors: hardcoded light+dark pairs in bento.css, audited as-is
+const bentoCss=readFileSync(here('../src/styles/bento.css'),'utf8').replace(/\/\*[\s\S]*?\*\//g,'');
+const BENTO=['.math-error','.math-error-block','.math-pill.ok','.math-pill.err','.math-pill.warn','.tex-banner'];
+const bentoPairs={};
+for(const m of bentoCss.matchAll(/([^{}]+)\{([^{}]*)\}/g)){
+ for(const raw of m[1].split(',')){
+  const s=raw.trim();
+  const mode=/^\[data-theme=dark\]/.test(s)?'dark':'light';
+  const base=s.replace(/^\[data-theme=dark\]\s*/,'').trim();
+  if(!BENTO.includes(base))continue;
+  const bg=m[2].match(/(?:^|;)\s*background:\s*(#[0-9a-fA-F]{3,8})\s*(?:;|$)/);
+  const col=m[2].match(/(?:^|;)\s*color:\s*(#[0-9a-fA-F]{3,8})\s*(?:;|$)/);
+  if(bg&&col)bentoPairs[mode+' '+base]={ink:col[1],surface:bg[1]};
+ }
+}
+for(const b of BENTO)for(const mode of ['light','dark']){
+ const p=bentoPairs[mode+' '+b];
+ if(!p){fail(`bento ${mode} ${b}: no solid background+color pair found`);continue;}
+ const r=ratio(hex(p.ink.slice(1)),hex(p.surface.slice(1)));
+ if(r<4.5)fail(`bento ${mode} ${b}: ${r.toFixed(2)} (${p.ink} on ${p.surface})`);
+}
 console.log(`${fails===0?'OK':'FAIL'}: ${fails} contrast failures across ${Object.keys(themes).length} themes${warns?` (+${warns} border warnings)`:''}`);
 if(fails>0)process.exit(1);
