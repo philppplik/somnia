@@ -139,7 +139,7 @@ export async function addAudioTrackClip(root:string,item:{name:string;url:string
  let duration=audioDurations.get(item.name);
  if(duration===undefined){
   const cached=sources.get(item.name);
-  const bytes=cached??await fetch(item.url).then(r=>r.arrayBuffer());
+  const bytes:ArrayBuffer=cached??await fetch(item.url).then(r=>r.arrayBuffer());
   if(!cached)sources.set(item.name,bytes);
   const{engine:e}=getEngine();
   const probe=await e.probe(bytes.slice(0));
