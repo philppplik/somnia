@@ -102,8 +102,9 @@ export function AgentPanel(){
  </aside>;
 }
 function Approval({approval}:{approval:AgentApproval}){
- const [decision,setDecision]=useState<ApprovalDecision|null>(null);
- return <section className="ag-approval" aria-label="File access approval"><strong>{approval.action}</strong><code>{approval.path}</code><p>File contents may contain private information. Grant only the context you want the selected model to receive.</p>{decision?<p role="status">{decision}</p>:<div>{(['accept','accept_for_session','decline','cancel'] as const).map(d=><NativeButton type="button" key={d} onClick={()=>{setDecision(d);approval.resolve(d);}}>{({accept:'Accept once',accept_for_session:'Accept for session',decline:'Decline',cancel:'Cancel'})[d]}</NativeButton>)}</div>}</section>;
+ const {t}=useT();const [decision,setDecision]=useState<ApprovalDecision|null>(null);
+ const labels={accept:t('agent.approval.acceptOnce'),accept_for_session:t('agent.approval.acceptSession'),decline:t('agent.approval.decline'),cancel:t('dialogs.cancel')};
+ return <section className="ag-approval" aria-label={t('agent.approval.aria')}><strong>{approval.action}</strong><code>{approval.path}</code><p>{t('agent.approval.privacy')}</p>{decision?<p role="status">{labels[decision]}</p>:<div>{(['accept','accept_for_session','decline','cancel'] as const).map(d=><NativeButton type="button" key={d} onClick={()=>{setDecision(d);approval.resolve(d);}}>{labels[d]}</NativeButton>)}</div>}</section>;
 }
 function Row({local,item,onAccept,onReject,onRetry,busy,onUndo}:{local:boolean;item:ChatItem;onUndo:(p:AgentProposal)=>void;busy:boolean;onRetry:()=>void;onAccept:(p:AgentProposal,d:Decisions)=>void;onReject:(p:AgentProposal)=>void}){
  switch(item.kind){
