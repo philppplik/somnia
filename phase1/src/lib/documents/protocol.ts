@@ -185,6 +185,7 @@ export type DocumentsRequest=
  |{id:number;kind:'resolveComment';commentId:number;resolved:boolean}
  |{id:number;kind:'deleteComment';commentId:number}
  |{id:number;kind:'insertCoverPage';title:string;subtitle:string;author:string;date:string}
+ |{id:number;kind:'sortParagraphs';first:number;last:number;descending:boolean}
  |{id:number;kind:'paragraphSpacingState'}
  |{id:number;kind:'setParagraphSpacing';value:string}
  |{id:number;kind:'bookmarksState'}
@@ -452,6 +453,7 @@ export const validHfText=(v:unknown):v is string=>typeof v==='string'&&Array.fro
 /** Document-wide paragraph spacing presets (space after and line spacing of every paragraph that sets none itself). */
 export const PARAGRAPH_SPACINGS=['default','none','compact','tight','open','relaxed','double'] as const;
 export type ParagraphSpacing=typeof PARAGRAPH_SPACINGS[number];
+export const MAX_SORT_PARAGRAPHS=500;
 export const MAX_COVER_CHARS=120;
 export interface CoverOptions{title:string;subtitle:string;author:string;date:string}
 /** Why a cover page is refused (a title is needed; every text is plain and at most 120 characters), or null. */

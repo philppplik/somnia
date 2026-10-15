@@ -5348,6 +5348,28 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.paragraphs.sortAsc",
+      "title": "Sort the selected paragraphs A to Z",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.paragraphs.sortDesc",
+      "title": "Sort the selected paragraphs Z to A",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.proofing.addWord",
       "title": "Add a word to the spelling dictionary",
       "category": "View",

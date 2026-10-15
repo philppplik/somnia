@@ -7,7 +7,7 @@ import {setStyleList} from './styles';
 import {unitRange,type SelectUnit} from './selectUnit';
 import {adjacentChange} from './reviewNav';
 import {stylePatchProblem,STYLE_ID_RE,tocProblem,isListKind,listOptionsProblem,type ListStyleId} from './protocol';
-import {imageCropProblem,imageWrapProblem,type ImageWrap,type ImageAlign,tableLayoutProblem,SECTION_BREAKS,hfVariantsProblem,HF_ALIGNS,propertiesProblem,linkProblem,commentProblem,coverProblem,bookmarkProblem,PARAGRAPH_SPACINGS,type ParagraphSpacing,type BookmarkItem,type CommentItem,validHfText,type HeaderFooterState,checkFormatPatch,checkParaPatch,MAX_HF_CHARS,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch,type ImageOp,type PageSetupPatch,type PageSetupState,pageSetupProblem,type TableStyle,type TableStyleScope,tableStyleProblem,MIN_COL_PT,MAX_COL_PT,imageProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGES} from './protocol';
+import {imageCropProblem,imageWrapProblem,type ImageWrap,type ImageAlign,tableLayoutProblem,SECTION_BREAKS,hfVariantsProblem,HF_ALIGNS,propertiesProblem,linkProblem,commentProblem,MAX_SORT_PARAGRAPHS,coverProblem,bookmarkProblem,PARAGRAPH_SPACINGS,type ParagraphSpacing,type BookmarkItem,type CommentItem,validHfText,type HeaderFooterState,checkFormatPatch,checkParaPatch,MAX_HF_CHARS,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch,type ImageOp,type PageSetupPatch,type PageSetupState,pageSetupProblem,type TableStyle,type TableStyleScope,tableStyleProblem,MIN_COL_PT,MAX_COL_PT,imageProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGES} from './protocol';
 import {captureDocumentSelection} from './selectionCapture';
 import {CELL_BASE,caretAfterEdit,applyEdit,diffEdit,inverseOf,UndoStack,type TextEdit,type UndoEntry} from './edit';
 import {findMatches,nextMatchIndex,textStats,validFindQuery,validReplaceText,MAX_FIND_HIGHLIGHTS,MAX_REPLACE_BLOCKS,type FindMatch} from './find';
@@ -1070,6 +1070,16 @@ export const addComment=(text:string)=>run(async()=>{
 const commentStep=(op:(e:DocumentsEngine)=>Promise<import('./protocol').OpenedDocument>)=>run(async()=>{
  const c=getDocumentsState().caret;const spot=c?{block:c.block,off:c.head}:await nearEditable(engine!,0);
  await structural(op,spot,spot);if(!c)patchDocuments({caret:null});
+});
+/** Sorts the selected paragraphs A to Z or Z to A (numbers in order, case ignored); each keeps its formatting. One undo step; the selection stays on the same positions. */
+export const sortParagraphs=(descending:boolean)=>run(async()=>{
+ const n=await paraSpan();if(!n)return;const first=n.s.block,last=n.e.block;
+ if(first>=CELL_BASE||last>=CELL_BASE)throw new Error('Paragraphs inside a table cannot be sorted here.');
+ if(last<=first)throw new Error('Select two or more paragraphs to sort.');
+ if(last-first+1>MAX_SORT_PARAGRAPHS)throw new Error(`Choose at most ${MAX_SORT_PARAGRAPHS} paragraphs.`);
+ const blocks=getDocumentsState().blocks;
+ for(let i=first;i<=last;i++){const b=blocks.find(x=>x.index===i);if(!b||b.kind!=='para'||!b.editable)throw new Error('Only plain paragraphs can be sorted.');}
+ await structural(eng=>eng.sortParagraphs(first,last,descending),n.h,n.h);setSel(n.a,n.h);
 });
 /** Puts a cover page (title, subtitle, author, date) before everything else; the old first paragraph starts page two. One undo step; the caret lands in the title. */
 export const insertCoverPage=(o:import('./protocol').CoverOptions)=>run(async()=>{

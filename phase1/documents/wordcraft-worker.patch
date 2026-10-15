@@ -52,7 +52,7 @@ new file mode 100644
 index 0000000..5b80b79
 --- /dev/null
 +++ b/crates/somnia-worker/src/lib.rs
-@@ -0,0 +1,6595 @@
+@@ -0,0 +1,6696 @@
 +//! Experimental headless adapter. No DOM, egui, filesystem or UI thread access.
 +use wasm_bindgen::prelude::*;
 +use std::sync::Arc;
@@ -77,6 +77,7 @@ index 0000000..5b80b79
 +/// A structural snapshot: the body (blocks are shared, not copied), the header/footer stories, the last section, media, comments, properties, styles and list definitions.
 +type Snap = (wordcraft_doc::Blocks, std::collections::BTreeMap<u32, wordcraft_doc::Part>, wordcraft_doc::SectionProps, std::collections::BTreeMap<String, Arc<Vec<u8>>>, std::collections::BTreeMap<u32, wordcraft_doc::Comment>, wordcraft_doc::CoreProps, wordcraft_doc::StyleSheet, wordcraft_doc::Numbering);
 +const COMMENT_MAX_CHARS: usize = 2000;
++const SORT_MAX_PARAS: usize = 500;
 +const COVER_MAX_CHARS: usize = 120;
 +const BOOKMARK_MAX_NAME: usize = 40;
 +const BOOKMARK_MAX_COUNT: usize = 500;
@@ -4073,6 +4074,71 @@ index 0000000..5b80b79
 +        self.pages = DocLayout::default();
 +        Ok(())
 +    }
++    /// Compares two texts the way people sort lists: digit runs by value ("item 2" before "item 10"), everything else by character.
++    fn natural_cmp(a: &str, b: &str) -> std::cmp::Ordering {
++        use std::cmp::Ordering;
++        use std::iter::Peekable;
++        use std::str::Chars;
++        fn digits(it: &mut Peekable<Chars>) -> String {
++            let mut s = String::new();
++            while let Some(&c) = it.peek() {
++                if !c.is_ascii_digit() {
++                    break;
++                }
++                s.push(c);
++                it.next();
++            }
++            s
++        }
++        let (mut x, mut y) = (a.chars().peekable(), b.chars().peekable());
++        loop {
++            match (x.peek().copied(), y.peek().copied()) {
++                (None, None) => return Ordering::Equal,
++                (None, _) => return Ordering::Less,
++                (_, None) => return Ordering::Greater,
++                (Some(c), Some(d)) if c.is_ascii_digit() && d.is_ascii_digit() => {
++                    let (p, q) = (digits(&mut x), digits(&mut y));
++                    let (p, q) = (p.trim_start_matches('0'), q.trim_start_matches('0'));
++                    let o = p.len().cmp(&q.len()).then_with(|| p.cmp(q));
++                    if o != Ordering::Equal {
++                        return o;
++                    }
++                }
++                (Some(c), Some(d)) => {
++                    if c != d {
++                        return c.cmp(&d);
++                    }
++                    x.next();
++                    y.next();
++                }
++            }
++        }
++    }
++    /// Sorts the top-level paragraphs `first..=last` (2 to 500) by their text, ignoring case, with numbers in order. Each paragraph keeps its own
++    /// formatting. Refuses a range with a table, a section break or an inline object (comment, bookmark, picture) so nothing is lost or moved wrongly.
++    fn do_sort_paragraphs(&mut self, first: usize, last: usize, descending: bool) -> Result<(), String> {
++        if first >= last || last >= self.doc.body.len() || last - first + 1 > SORT_MAX_PARAS {
++            return Err(format!("choose 2 to {SORT_MAX_PARAS} paragraphs to sort"));
++        }
++        let mut keyed: Vec<(String, std::sync::Arc<Block>)> = Vec::new();
++        for i in first..=last {
++            let b = &self.doc.body[i];
++            let Block::Para(p) = &**b else { return Err("only paragraphs can be sorted".into()) };
++            if p.section.is_some() || p.text.contains(OBJ) || !p.objects.is_empty() {
++                return Err("a paragraph with an object or a section break cannot be sorted".into());
++            }
++            keyed.push((p.plain_text().trim().to_lowercase(), b.clone()));
++        }
++        keyed.sort_by(|x, y| {
++            let o = Self::natural_cmp(&x.0, &y.0);
++            if descending { o.reverse() } else { o }
++        });
++        for (k, (_, b)) in keyed.into_iter().enumerate() {
++            self.doc.body[first + k] = b;
++        }
++        self.pages = DocLayout::default();
++        Ok(())
++    }
 +    /// Document-wide paragraph spacing presets (the document defaults every paragraph without its own spacing inherits):
 +    /// (name, space before pt, space after pt, line multiple).
 +    const SPACINGS: [(&'static str, f32, f32, f32); 7] =
@@ -4500,6 +4566,9 @@ index 0000000..5b80b79
 +    }
 +    pub fn insert_cover_page(&mut self, title: &str, subtitle: &str, author: &str, date: &str) -> Result<(), JsValue> {
 +        self.do_insert_cover_page(title, subtitle, author, date).map_err(|e| js_err(&e))
++    }
++    pub fn sort_paragraphs(&mut self, first: usize, last: usize, descending: bool) -> Result<(), JsValue> {
++        self.do_sort_paragraphs(first, last, descending).map_err(|e| js_err(&e))
 +    }
 +    pub fn paragraph_spacing(&self) -> String {
 +        self.do_paragraph_spacing()
@@ -6099,6 +6168,38 @@ index 0000000..5b80b79
 +        s.restore(snap).unwrap();
 +        let w: serde_json::Value = serde_json::from_str(&s.do_properties()).unwrap();
 +        assert_ne!(w["title"], "Quarterly report");
++    }
++    #[test]
++    fn sort_paragraphs_orders_naturally_keeps_formatting_and_refuses_unsafe_ranges() {
++        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
++        s.doc.body.clear();
++        for t in ["item 10", "Banana", "item 2", "apple", "cherry"] {
++            s.doc.body.push(wordcraft_doc::para_block(wordcraft_doc::Paragraph::with_text(t, CharProps::default())));
++        }
++        s.do_set_style(1, 1, "Heading1").unwrap();
++        let snap = s.snapshot();
++        let texts = |s: &DocSession| s.doc.body.iter().map(|b| b.as_para().unwrap().plain_text()).collect::<Vec<_>>();
++        s.do_sort_paragraphs(0, 4, false).unwrap();
++        assert_eq!(texts(&s), ["apple", "Banana", "cherry", "item 2", "item 10"]);
++        let banana = s.doc.body.iter().filter_map(|b| b.as_para()).find(|p| p.plain_text() == "Banana").unwrap();
++        assert_eq!(banana.props.style.as_deref(), Some("Heading1"));
++        s.do_sort_paragraphs(0, 4, true).unwrap();
++        assert_eq!(texts(&s), ["item 10", "item 2", "cherry", "Banana", "apple"]);
++        // A sub-range leaves the rest alone.
++        s.do_sort_paragraphs(2, 4, false).unwrap();
++        assert_eq!(texts(&s), ["item 10", "item 2", "apple", "Banana", "cherry"]);
++        // Refusals change nothing.
++        let before = texts(&s);
++        assert!(s.do_sort_paragraphs(1, 1, false).is_err());
++        assert!(s.do_sort_paragraphs(3, 2, false).is_err());
++        assert!(s.do_sort_paragraphs(0, 5, false).is_err());
++        s.do_add_bookmark(3, 0, 0, "Mark").unwrap();
++        assert!(s.do_sort_paragraphs(0, 4, false).is_err());
++        s.do_delete_bookmark("Mark").unwrap();
++        assert_eq!(texts(&s), before);
++        s.restore(snap).unwrap();
++        assert_eq!(texts(&s), ["item 10", "Banana", "item 2", "apple", "cherry"]);
++        assert_eq!(DocSession::natural_cmp("a007", "a7"), std::cmp::Ordering::Equal);
 +    }
 +    #[test]
 +    fn cover_page_goes_first_breaks_before_the_old_start_and_undoes() {
