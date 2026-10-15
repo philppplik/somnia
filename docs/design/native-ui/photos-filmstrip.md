@@ -426,3 +426,18 @@ flag badges -> remove (hidden, position shrinks) -> restore (stack
 whole again, cover kept)
 (`test-results/ds-photos-smart-none-{light,dark}.png`,
 `ds-photos-stack-cull-{light,dark}.png`).
+
+## Hidden review loop (P106)
+
+Hiding (P105) gets its review path: "Show hidden" in the strip menu
+dims hidden photos back into the strip with an eye-off marker
+(persisted `photos.showHidden`). Clicking a marked thumb activates
+it and "Restore active" brings just it back; "Restore hidden" still
+restores everything. `hidden.ts` gains `unhidePhotos(names)`; the
+strip stays mounted while hidden photos exist so the menu (and with
+it the undo) is always reachable.
+
+Coverage: `hidden.test.ts` covers the partial unhide; the new
+light/dark leg hides one photo, reviews it (dimmed + marker),
+restores it alone, hides two, screenshots the review mode and
+restores all (`test-results/ds-photos-hidden-review-{light,dark}.png`).

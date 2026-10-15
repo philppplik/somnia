@@ -179,5 +179,7 @@
  "photos.smart.anyLabel": "Tout libelle",
  "photos.smart.noLabel": "Sans libellé",
  "photos.smart.tag": "Mot-cle",
- "photos.hidden.restore": "Restaurer les photos masquées ({count})"
+ "photos.hidden.restore": "Restaurer les photos masquées ({count})",
+ "photos.hidden.show": "Afficher les masquées",
+ "photos.hidden.restoreActive": "Restaurer la photo active"
 }

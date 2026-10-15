@@ -1,6 +1,6 @@
 import {useEffect,useRef,useState} from 'react';
 import {Star} from 'lucide-react';
-import {ChevronDown,ChevronRight,Flag,LayoutGrid,SkipForward,Tag,Trash2} from '../../lib/icons';
+import {ChevronDown,ChevronRight,EyeOff,Flag,LayoutGrid,SkipForward,Tag,Trash2} from '../../lib/icons';
 import {useT} from '../../lib/useT';
 import {setActiveMedia,useMedia} from '../../lib/media';
 
@@ -15,7 +15,7 @@ import {setFlag,useFlags} from '../../lib/photos/flags';
 import {PHOTO_LABELS,setLabel,useLabels,type PhotoLabel} from '../../lib/photos/labels';
 import {addTags,allTags,setTags} from '../../lib/photos/tags';
 import {groupForStrip,groupPhotos,setStackCover,ungroupStacks,useStackCovers,useStacks} from '../../lib/photos/stacks';
-import {hidePhotos,unhideAll} from '../../lib/photos/hidden';
+import {hidePhotos,unhideAll,unhidePhotos} from '../../lib/photos/hidden';
 import {detectSeries} from '../../lib/photos/autoStack';
 import {usePanelState} from '../../store/panelStateStore';
 import {Button} from '../ui/button';
@@ -27,8 +27,9 @@ import {useVisiblePhotos,type SmartFilter} from './useVisiblePhotos';
 export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(names:string[])=>void}){
  const {t}=useT();
  const media=useMedia();
- const {ratings,flags,labels,tags,filter,all,total,photos,sort,query,smart,smartOn,hidden}=useVisiblePhotos();
+ const {ratings,flags,labels,tags,filter,all,total,photos,sort,query,smart,smartOn,hidden,showHidden}=useVisiblePhotos();
  const [,setSmart]=usePanelState<SmartFilter>('photos.smartFilter',{on:false,minRating:0,flag:'',label:'',tag:''});
+ const [,setShowHidden]=usePanelState<boolean>('photos.showHidden',false);
  const [,setQuery]=usePanelState<string>('photos.searchQuery','');
  const [sets,setSets]=usePanelState<Record<string,{filter:string;sort:string;query:string;smart?:SmartFilter}>>('photos.filterSets',{});
  const [naming,setNaming]=useState(false);
@@ -79,7 +80,8 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
    else if(e.ctrlKey||e.metaKey){setSel(toggleSelect(sel,p.name));setAnchor(p.name);}
    else{setSel([p.name]);setAnchor(p.name);setApplyNote(null);setActiveMedia(p.name);}
   }} className={`relative h-14 shrink-0 overflow-hidden px-0.5${sel.includes(p.name)&&sel.length>1?' ring-2 ring-[var(--accent)]':''}`} data-selected={sel.includes(p.name)&&sel.length>1||undefined} data-testid={`photos-filmstrip-item-${p.name}`}>
-   <img src={p.url} alt="" className="h-full w-auto max-w-24 rounded-[2px] object-cover"/>
+   <img src={p.url} alt="" className={`h-full w-auto max-w-24 rounded-[2px] object-cover${hidden.includes(p.name)?' opacity-40':''}`}/>
+   {hidden.includes(p.name)&&<span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-[2px] bg-elevated p-0.5 text-ink-3" data-testid={`photos-filmstrip-hidden-badge-${p.name}`}><EyeOff size={12}/></span>}
    {labels[p.name]&&<span className={`photos-label-dot photos-label-${labels[p.name]} absolute top-0.5 right-0.5`} data-testid={`photos-filmstrip-label-${p.name}`} data-label={labels[p.name]}/>}
    {(tags[p.name]?.length??0)>0&&<span className="absolute top-0.5 left-0.5 flex max-w-[70%] items-center gap-0.5 truncate rounded-[2px] bg-elevated px-1 text-ink-3" title={(tags[p.name]??[]).join(', ')} data-testid={`photos-filmstrip-tags-badge-${p.name}`}><Tag size={10}/>{tags[p.name]![0]}{tags[p.name]!.length>1?` +${tags[p.name]!.length-1}`:''}</span>}
    {(ratings[p.name]??0)>0&&<span className="absolute bottom-0.5 right-0.5 flex items-center gap-0.5 rounded-[2px] bg-elevated px-1 text-ink" data-testid={`photos-filmstrip-rating-badge-${p.name}`}><Star size={10} fill="currentColor" className="text-[var(--accent)]"/>{ratings[p.name]}</span>}
@@ -148,7 +150,11 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
       setApplyNote(t('photos.stacks.autoDone',{count:n}));
      }} data-testid="photos-filmstrip-stack-auto">{t('photos.stacks.auto')}</Button>}
     </span>
-    {hidden.length>0&&<Button variant="outline" size="compact" onClick={()=>unhideAll()} data-testid="photos-filmstrip-restore-hidden">{t('photos.hidden.restore',{count:hidden.length})}</Button>}
+    {hidden.length>0&&<span className="flex flex-wrap gap-1">
+     <Button variant="outline" size="compact" aria-pressed={showHidden} onClick={()=>setShowHidden(!showHidden)} data-testid="photos-filmstrip-show-hidden">{t('photos.hidden.show')}</Button>
+     {showHidden&&hidden.includes(active)&&<Button variant="outline" size="compact" onClick={()=>unhidePhotos([active])} data-testid="photos-filmstrip-unhide-active">{t('photos.hidden.restoreActive')}</Button>}
+     <Button variant="outline" size="compact" onClick={()=>unhideAll()} data-testid="photos-filmstrip-restore-hidden">{t('photos.hidden.restore',{count:hidden.length})}</Button>
+    </span>}
    </div>}
   </span>
   <NativeSelect value={filter} aria-label={t('photos.rating.filter')} title={t('photos.rating.filter')} onChange={e=>setMinRating(e.currentTarget.value)} disabled={smartOn} className="h-7 shrink-0" data-testid="photos-filmstrip-rating-filter">

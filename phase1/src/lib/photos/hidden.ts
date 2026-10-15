@@ -16,5 +16,11 @@ export function hidePhotos(names:readonly string[]){
 }
 /** Brings every hidden photo back (the undo path). */
 export function unhideAll(){if(state.length===0)return;state=[];persist();}
+/** Brings specific photos back. */
+export function unhidePhotos(names:readonly string[]){
+ const drop=new Set(names);if(drop.size===0)return;
+ const next=state.filter(n=>!drop.has(n));if(next.length===state.length)return;
+ state=next;persist();
+}
 export const subscribeHidden=(fn:()=>void)=>{subs.add(fn);return()=>{subs.delete(fn);};};
 export const useHidden=()=>useSyncExternalStore(subscribeHidden,hiddenPhotos,hiddenPhotos);

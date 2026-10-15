@@ -720,3 +720,33 @@ test('stack cull: cover picked, rest rejected, removal is hide plus undo (light 
   await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible();
  }
 });
+test('hidden review: show hidden, restore one, restore all (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
+  await page.evaluate(async()=>{const h=await import('/src/lib/photos/hidden.ts');h.unhideAll();h.hidePhotos(['strip-1.png']);}); // hidden photos persist via localStorage
+  await page.getByTestId('photos-filmstrip-menu').click();
+  const showBtn=page.getByTestId('photos-filmstrip-show-hidden');
+  if(await showBtn.getAttribute('aria-pressed')==='true')await showBtn.click(); // persisted panel state: start hidden-only
+  await expect(page.getByTestId('photos-filmstrip-item-strip-1.png')).toHaveCount(0);
+  await expect(page.getByTestId('photos-filmstrip-item-strip-2.png')).toBeVisible();
+  await showBtn.click(); // review mode
+  await expect(page.getByTestId('photos-filmstrip-item-strip-1.png')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-hidden-badge-strip-1.png')).toBeVisible(); // dimmed with marker
+  await page.getByTestId('photos-filmstrip-item-strip-1.png').click(); // activate the hidden one
+  await page.getByTestId('photos-filmstrip-unhide-active').click(); // single restore
+  await expect(page.getByTestId('photos-filmstrip-hidden-badge-strip-1.png')).toHaveCount(0);
+  await expect(page.getByTestId('photos-filmstrip-restore-hidden')).toHaveCount(0); // nothing hidden: controls gone
+  await page.evaluate(async()=>{const h=await import('/src/lib/photos/hidden.ts');h.hidePhotos(['strip-1.png','strip-2.png']);});
+  await expect(page.getByTestId('photos-filmstrip-hidden-badge-strip-1.png')).toBeVisible(); // review mode still on
+  await expect(page.getByTestId('photos-filmstrip-hidden-badge-strip-2.png')).toBeVisible();
+  await page.screenshot({path:`test-results/ds-photos-hidden-review-${theme}.png`,fullPage:true}); // dimmed thumbs with markers, menu open
+  await showBtn.click(); // review mode off again (controls stay: photos are still hidden)
+  await expect(page.getByTestId('photos-filmstrip-item-strip-1.png')).toHaveCount(0);
+  await page.getByTestId('photos-filmstrip-restore-hidden').click(); // all back
+  await expect(page.getByTestId('photos-filmstrip-item-strip-1.png')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-restore-hidden')).toHaveCount(0);
+ }
+});

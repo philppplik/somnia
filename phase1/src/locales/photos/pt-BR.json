@@ -179,5 +179,7 @@
  "photos.smart.anyLabel": "Qualquer rotulo",
  "photos.smart.noLabel": "Sem rótulo",
  "photos.smart.tag": "Tag",
- "photos.hidden.restore": "Restaurar ocultas ({count})"
+ "photos.hidden.restore": "Restaurar ocultas ({count})",
+ "photos.hidden.show": "Mostrar ocultas",
+ "photos.hidden.restoreActive": "Restaurar ativa"
 }

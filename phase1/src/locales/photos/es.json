@@ -179,5 +179,7 @@
  "photos.smart.anyLabel": "Cualquier etiqueta",
  "photos.smart.noLabel": "Sin etiqueta",
  "photos.smart.tag": "Etiqueta",
- "photos.hidden.restore": "Restaurar ocultas ({count})"
+ "photos.hidden.restore": "Restaurar ocultas ({count})",
+ "photos.hidden.show": "Mostrar ocultas",
+ "photos.hidden.restoreActive": "Restaurar activa"
 }

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {hiddenPhotos,hidePhotos,isHidden,unhideAll} from './hidden.ts';
+import {hiddenPhotos,hidePhotos,isHidden,unhideAll,unhidePhotos} from './hidden.ts';
 import {photoNav} from './photoNav.ts';
 const img=(name:string)=>({name,kind:'image',mime:'image/png'});
 test('hide, query and restore all',()=>{
@@ -20,4 +20,12 @@ test('photoNav skips hidden photos and shrinks the total',()=>{
  assert.deepEqual(photoNav(items,'b.png'),{prev:null,next:null,position:0,total:2}); // hidden current: outside the library view
  unhideAll();
  assert.deepEqual(photoNav(items,'b.png'),{prev:'a.png',next:'c.png',position:2,total:3});
+});
+test('unhidePhotos brings specific names back',()=>{
+ unhideAll();
+ hidePhotos(['a.png','b.png','c.png']);
+ unhidePhotos(['b.png','zz.png']); // unknown names are ignored
+ assert.deepEqual(hiddenPhotos(),['a.png','c.png']);
+ unhidePhotos([]);assert.deepEqual(hiddenPhotos(),['a.png','c.png']); // no-op
+ unhideAll();
 });

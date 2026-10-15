@@ -179,5 +179,7 @@
  "photos.smart.anyLabel": "Jedes Label",
  "photos.smart.noLabel": "Ohne Label",
  "photos.smart.tag": "Stichwort",
- "photos.hidden.restore": "Ausgeblendete wiederherstellen ({count})"
+ "photos.hidden.restore": "Ausgeblendete wiederherstellen ({count})",
+ "photos.hidden.show": "Ausgeblendete anzeigen",
+ "photos.hidden.restoreActive": "Aktives wiederherstellen"
 }

@@ -179,5 +179,7 @@
  "photos.smart.anyLabel": "Any label",
  "photos.smart.noLabel": "No label",
  "photos.smart.tag": "Tag",
- "photos.hidden.restore": "Restore hidden ({count})"
+ "photos.hidden.restore": "Restore hidden ({count})",
+ "photos.hidden.show": "Show hidden",
+ "photos.hidden.restoreActive": "Restore active"
 }
