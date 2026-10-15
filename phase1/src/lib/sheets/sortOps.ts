@@ -19,6 +19,16 @@ export function parseListText(text:string):string[]|null{
  if(items.length<1||items.length>MAX_SORT_LIST||items.some(x=>x.length>MAX_SORT_LIST_ITEM||/[\u0000-\u001f\u007f]/.test(x)))return null;
  return new Set(items.map(x=>x.toLowerCase())).size===items.length?items:null;
 }
+export type SortPreset='weekdays'|'weekdaysShort'|'months'|'monthsShort';
+/** Day or month names in the UI language, Monday first, as a custom order; null when the language is not known to Intl. */
+export function presetList(kind:SortPreset,locale:string):string[]|null{
+ try{
+  const weekday=kind==='weekdays'||kind==='weekdaysShort',n=weekday?7:12,style=kind.endsWith('Short')?'short':'long';
+  const fmt=new Intl.DateTimeFormat(locale,weekday?{weekday:style,timeZone:'UTC'}:{month:style,timeZone:'UTC'});
+  const out=Array.from({length:n},(_,i)=>fmt.format(new Date(Date.UTC(2024,weekday?0:i,weekday?1+i:1))).trim());
+  return parseListText(out.join('\n'));
+ }catch{return null;}
+}
 export function parseSortCommand(input:unknown,cols?:number):SortOp{
  if(!input||typeof input!=='object'||Array.isArray(input))throw Error('Sort must be an object.');
  const o=input as Record<string,unknown>,multi=o.keys!==undefined;

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {guessHeader,parseSortCommand,sortBlockProblem,parseListText} from './sortOps';
+import {guessHeader,parseSortCommand,sortBlockProblem,parseListText,presetList} from './sortOps';
 test('sort command accepts only a closed, bounded shape',()=>{
  assert.deepEqual(parseSortCommand({column:1,order:'desc',header:true}),{header:true,keys:[{column:1,order:'desc'}]});
  for(const bad of [null,[],{},{column:-1,order:'asc',header:false},{column:1.5,order:'asc',header:false},{column:16384,order:'asc',header:false},{column:0,order:'up',header:false},{column:0,order:'asc'},{column:0,order:'asc',header:false,x:1},{column:'A',order:'asc',header:false}])assert.throws(()=>parseSortCommand(bad),JSON.stringify(bad));
@@ -28,4 +28,13 @@ test('left to right is a closed option',()=>{
  assert.throws(()=>parseSortCommand({header:true,orientation:'diagonal',keys:[{column:0,order:'asc'}]}));
  assert.throws(()=>parseSortCommand({header:true,orientation:'columns',column:0,order:'asc'}));
  assert.equal(sortBlockProblem(3,2,true),null);assert.equal(sortBlockProblem(1,5,false),'small');
+});
+
+test('day and month presets follow the language, Monday first',()=>{
+ assert.deepEqual(presetList('weekdays','en'),['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']);
+ assert.deepEqual(presetList('weekdaysShort','en')?.slice(0,2),['Mon','Tue']);
+ assert.equal(presetList('months','en')?.length,12);assert.equal(presetList('months','en')?.[0],'January');assert.equal(presetList('months','en')?.[11],'December');
+ assert.equal(presetList('weekdays','de')?.[0],'Montag');assert.equal(presetList('months','de')?.[2],'März');assert.equal(presetList('monthsShort','es')?.length,12);
+ assert.equal(presetList('weekdays','not a locale!'),null);
+ for(const l of ['en','de','es','fr','pt-BR'])for(const k of ['weekdays','weekdaysShort','months','monthsShort'] as const)assert.ok(presetList(k,l),l+k);
 });

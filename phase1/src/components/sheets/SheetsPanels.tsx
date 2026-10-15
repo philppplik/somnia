@@ -11,7 +11,7 @@ import {commandDispatcher} from '../../lib/commandDispatcher';
 import {aggregateFormula,FORMULA_FUNCTIONS,parsePanelRange,rangeAddress,summarizeCells} from '../../lib/sheets/panelModel';
 import {rectCells} from '../../lib/sheets/clipboard';
 import {addressOf,colName,parseAddress,parseSpan} from '../../lib/sheets/format';
-import {sortBlockProblem,parseListText,MAX_SORT_KEYS} from '../../lib/sheets/sortOps';
+import {sortBlockProblem,parseListText,presetList,MAX_SORT_KEYS,type SortPreset} from '../../lib/sheets/sortOps';
 import {parseShiftCommand,shiftBlockProblem,type ShiftKind,parseSpecialResult,SPECIAL_KINDS,type SpecialKind,type SpecialResult} from '../../lib/sheets/specialOps';
 import {addUserWord,checkCells,loadDictionary,readUserWords,replacementProblem,SPELL_LANGS,suggest,type SpellLang,type SpellReport,type WordList} from '../../lib/sheets/spelling';
 import {AUTOFILL_MODES,buildSeriesOp,fillBlockProblem,FILL_DIRECTIONS,SERIES_KINDS,type AutoFillMode,type SeriesKind} from '../../lib/sheets/fillOps';
@@ -276,24 +276,25 @@ export function SheetsLayoutPanel({context}:PanelHostProps){
   <p role="status">{action.notice}</p></Region>;
 }
 /** Sorts the rows of exactly the selected block by up to three columns, each in order or in a custom order. The block is never widened and the header row is an explicit choice. One undo step. */
-type SortKeyState={col:number;order:'asc'|'desc'|'list';list:string};
+type SortKeyState={col:number;order:'asc'|'desc'|'list'|SortPreset;list:string};
+const SORT_PRESETS:readonly SortPreset[]=['weekdays','weekdaysShort','months','monthsShort'];
 function SortGroup(){
- const {t}=useT(),s=useSheetsSelection(),action=useAction();const [levels,setLevels]=useState(1);const [ks,setKs]=useState<SortKeyState[]>([{col:0,order:'asc',list:''},{col:1,order:'asc',list:''},{col:2,order:'asc',list:''}]);const [header,setHeader]=useState(false);const [matchCase,setMatchCase]=useState(false);const [across,setAcross]=useState(false);
+ const {t,locale}=useT(),s=useSheetsSelection(),action=useAction();const [levels,setLevels]=useState(1);const [ks,setKs]=useState<SortKeyState[]>([{col:0,order:'asc',list:''},{col:1,order:'asc',list:''},{col:2,order:'asc',list:''}]);const [header,setHeader]=useState(false);const [matchCase,setMatchCase]=useState(false);const [across,setAcross]=useState(false);
  const r=s?.range;if(!s||!r)return null;
  const rows=r.r1-r.r0+1,cols=r.c1-r.c0+1,lines=across?rows:cols,size=across?sortBlockProblem(cols,rows,header):sortBlockProblem(rows,cols,header),n=Math.min(levels,lines,MAX_SORT_KEYS);
  const options=Array.from({length:Math.min(lines,MAX_SORT_OPTIONS)},(_,i)=>i);
- const used=ks.slice(0,n).map(k=>({...k,col:Math.min(k.col,lines-1)})),lists=used.map(k=>k.order==='list'?parseListText(k.list):null);
- const dup=new Set(used.map(k=>k.col)).size<used.length,badList=used.some((k,i)=>k.order==='list'&&!lists[i]);
+ const used=ks.slice(0,n).map(k=>({...k,col:Math.min(k.col,lines-1)})),lists=used.map(k=>k.order==='list'?parseListText(k.list):(SORT_PRESETS as readonly string[]).includes(k.order)?presetList(k.order as SortPreset,locale):null);
+ const dup=new Set(used.map(k=>k.col)).size<used.length,badList=used.some((k,i)=>k.order!=='asc'&&k.order!=='desc'&&!lists[i]);
  const problem=size?(across?'sheets.sort.needCols':'sheets.sort.need'):dup?'sheets.sort.dup':badList?'sheets.sort.listBad':null;
  const setKey=(i:number,patch:Partial<SortKeyState>)=>setKs(list=>list.map((k,x)=>x===i?{...k,...patch}:k));
- const payload=()=>({header,...(across?{orientation:'columns'}:{}),keys:used.map((k,i)=>({column:k.col,order:k.order==='desc'?'desc':'asc',...(k.order==='list'&&lists[i]?{list:lists[i]}:{})})),...(matchCase?{matchCase:true}:{})});
+ const payload=()=>({header,...(across?{orientation:'columns'}:{}),keys:used.map((k,i)=>({column:k.col,order:k.order==='desc'?'desc':'asc',...(lists[i]?{list:lists[i]}:{})})),...(matchCase?{matchCase:true}:{})});
  return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.sort.title')}>
   <span>{t('sheets.sort.title')}</span>
   <label className="flex flex-col gap-1">{t('sheets.sort.dir')}<NativeSelect className={field} value={across?'cols':'rows'} disabled={action.busy} onChange={e=>setAcross(e.currentTarget.value==='cols')} data-testid="sheets-sort-dir"><option value="rows">{t('sheets.sort.dirRows')}</option><option value="cols">{t('sheets.sort.dirCols')}</option></NativeSelect></label>
   {lines>1&&<label className="flex flex-col gap-1">{t('sheets.sort.levels')}<NativeSelect className={field} value={n} disabled={action.busy} onChange={e=>setLevels(Number(e.currentTarget.value))} data-testid="sheets-sort-levels">{Array.from({length:Math.min(lines,MAX_SORT_KEYS)},(_,i)=><option key={i+1} value={i+1}>{i+1}</option>)}</NativeSelect></label>}
   {used.map((k,i)=><div key={i} className="flex flex-col gap-1" role="group" aria-label={t(i===0?(across?'sheets.sort.row':'sheets.sort.column'):(across?'sheets.sort.thenRow':'sheets.sort.then'))}>
    <label className="flex flex-col gap-1">{t(i===0?(across?'sheets.sort.row':'sheets.sort.column'):(across?'sheets.sort.thenRow':'sheets.sort.then'))}<NativeSelect className={field} value={k.col} disabled={action.busy} onChange={e=>setKey(i,{col:Number(e.currentTarget.value)})} data-testid={i===0?'sheets-sort-column':'sheets-sort-column-'+i}>{options.map(c=><option key={c} value={c}>{across?r.r0+c+1:colName(r.c0+c)}</option>)}</NativeSelect></label>
-   <label className="flex flex-col gap-1">{t('sheets.sort.order')}<NativeSelect className={field} value={k.order} disabled={action.busy} onChange={e=>setKey(i,{order:e.currentTarget.value==='desc'?'desc':e.currentTarget.value==='list'?'list':'asc'})} data-testid={i===0?'sheets-sort-order':'sheets-sort-order-'+i}><option value="asc">{t('sheets.sort.asc')}</option><option value="desc">{t('sheets.sort.desc')}</option><option value="list">{t('sheets.sort.byList')}</option></NativeSelect></label>
+   <label className="flex flex-col gap-1">{t('sheets.sort.order')}<NativeSelect className={field} value={k.order} disabled={action.busy} onChange={e=>setKey(i,{order:e.currentTarget.value==='desc'?'desc':e.currentTarget.value==='list'?'list':(SORT_PRESETS as readonly string[]).includes(e.currentTarget.value)?e.currentTarget.value as SortPreset:'asc'})} data-testid={i===0?'sheets-sort-order':'sheets-sort-order-'+i}><option value="asc">{t('sheets.sort.asc')}</option><option value="desc">{t('sheets.sort.desc')}</option><optgroup label={t('sheets.sort.groupOwn')}><option value="list">{t('sheets.sort.byList')}</option></optgroup><optgroup label={t('sheets.sort.groupNames')}>{SORT_PRESETS.map(p=><option key={p} value={p}>{t('sheets.sort.p.'+p)}</option>)}</optgroup></NativeSelect></label>
    {k.order==='list'&&<label className="flex flex-col gap-1">{t('sheets.sort.list')}<NativeInput className={field} value={k.list} maxLength={400} aria-invalid={!lists[i]} disabled={action.busy} onChange={e=>setKey(i,{list:e.currentTarget.value})} data-testid={'sheets-sort-list-'+i}/></label>}
   </div>)}
   <label className="flex flex-col gap-1">{t(across?'sheets.sort.headerCol':'sheets.sort.header')}<NativeSelect className={field} value={header?'yes':'no'} disabled={action.busy} onChange={e=>setHeader(e.currentTarget.value==='yes')} data-testid="sheets-sort-header"><option value="no">{t(across?'sheets.sort.headerColNo':'sheets.sort.headerNo')}</option><option value="yes">{t(across?'sheets.sort.headerColYes':'sheets.sort.headerYes')}</option></NativeSelect></label>
