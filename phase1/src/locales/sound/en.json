@@ -284,6 +284,7 @@
   "sound.arrange.masterCurve": "Master automation",
   "sound.arrange.liveMeter": "Live level",
   "sound.arrange.curveAdd": "Add point at playhead",
+  "sound.arrange.pointAt": "Time (s)",
   "sound.arrange.destination": "Destination track",
   "cmd.sound.arrange.rename": "Arrange & Mix: Session name",
   "cmd.sound.arrange.track.add": "Arrange & Mix: Add track",

@@ -79,6 +79,13 @@ export const curveDbAt=(c:GainPoint[],at:number)=>{if(!c.length)return 0;if(at<=
 /** The automated pan offset at a frame: constant outside the outermost points, linear between them; added to the static pan and clamped to -1..1 at render time. */
 export const curvePanAt=(c:PanPoint[],at:number)=>{if(!c.length)return 0;if(at<=c[0].at)return c[0].pan;for(let i=1;i<c.length;i++)if(at<=c[i].at){const a=c[i-1],b=c[i];return a.pan+(b.pan-a.pan)*(at-a.at)/(b.at-a.at);}return c[c.length-1].pan;};
 export const gainCurveAt=(clip:ArrangeClip,local:number)=>curveDbAt(clip.gainCurve,local);
+/** Moves one automation point to a new frame (clamped to the curve's span) and keeps the list sorted; rejects landing on an existing point. */
+export function retimeCurvePoint<T extends {at:number}>(points:T[],index:number,at:number,max:number):T[]{
+ if(!Number.isSafeInteger(index)||index<0||index>=points.length)throw Error('No such automation point');
+ const target=Math.max(0,Math.min(max,Math.round(at)));
+ if(points.some((p,i)=>i!==index&&p.at===target))throw Error('A point already exists at that time');
+ return points.map((p,i)=>i===index?{...p,at:target}:p).sort((a,b)=>a.at-b.at);
+}
 /** History owns deep copies; failed mutations never change the document or history. */
 export class ArrangementHistory{
  private current:Arrangement;private past:Arrangement[]=[];private future:Arrangement[]=[];revision=0;

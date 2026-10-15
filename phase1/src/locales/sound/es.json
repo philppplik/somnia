@@ -284,6 +284,7 @@
   "sound.arrange.masterCurve": "Automatización maestra",
   "sound.arrange.liveMeter": "Nivel en vivo",
   "sound.arrange.curveAdd": "Añadir punto en el cursor",
+  "sound.arrange.pointAt": "Instante (s)",
   "sound.arrange.destination": "Pista de destino",
   "cmd.sound.arrange.rename": "Organizar y mezclar: Nombre de sesión",
   "cmd.sound.arrange.track.add": "Organizar y mezclar: Añadir pista",

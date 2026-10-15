@@ -284,6 +284,7 @@
   "sound.arrange.masterCurve": "Automation master",
   "sound.arrange.liveMeter": "Niveau en direct",
   "sound.arrange.curveAdd": "Ajouter un point au curseur",
+  "sound.arrange.pointAt": "Instant (s)",
   "sound.arrange.destination": "Piste de destination",
   "cmd.sound.arrange.rename": "Arrangement et mixage: Nom de session",
   "cmd.sound.arrange.track.add": "Arrangement et mixage: Ajouter une piste",
