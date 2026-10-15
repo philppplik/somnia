@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1048 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1049 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -418,6 +418,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `documents.insert.softHyphen` | Insert optional hyphen | View | documents |  |
 | `documents.insert.textFile` | Insert text from a file | View | documents |  |
 | `documents.insert.time` | Insert the current time | View | documents |  |
+| `documents.insertBlankPage` | Insert a blank page | View | documents |  |
 | `documents.insertPageBreak` | Insert page break | View | documents |  |
 | `documents.language.set` | Set the proofing language of the selected text | View | documents |  |
 | `documents.lineRule.set` | Set line height rule | View | documents |  |

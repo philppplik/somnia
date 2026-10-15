@@ -74,6 +74,7 @@ function CaretInput({left,top}:{left:number;top:number}){
    /* Ctrl (Windows/Linux) or Alt (macOS) moves and deletes by word. */
    const word=mod||e.altKey;
    if((e.key==='ArrowLeft'||e.key==='ArrowRight')&&word){e.preventDefault();void moveCaret(e.key==='ArrowLeft'?'wordLeft':'wordRight',e.shiftKey);return;}
+   if((e.key==='ArrowUp'||e.key==='ArrowDown')&&mod&&!e.altKey){e.preventDefault();void moveCaret(e.key==='ArrowUp'?'paraUp':'paraDown',e.shiftKey);return;}
    if((e.key==='Home'||e.key==='End')&&mod){e.preventDefault();void moveCaret(e.key==='Home'?'docStart':'docEnd',e.shiftKey);return;}
    if((e.key==='PageUp'||e.key==='PageDown')&&!mod&&!e.altKey){e.preventDefault();void moveCaret(e.key==='PageUp'?'pageUp':'pageDown',e.shiftKey);return;}
    if(keys[e.key]&&!mod&&!e.altKey){e.preventDefault();void moveCaret(keys[e.key],e.shiftKey);return;}

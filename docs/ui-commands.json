@@ -5399,6 +5399,17 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.insertBlankPage",
+      "title": "Insert a blank page",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.insertPageBreak",
       "title": "Insert page break",
       "category": "View",

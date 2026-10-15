@@ -2,7 +2,7 @@ import {useEffect,useState} from 'react';
 import {autoCorrectOn,setAutoCorrect} from '../../lib/documents/autocorrect';
 import {executeCommand} from '../../lib/commands';
 import {pickAndCompareText,pickAndInsertText} from '../../lib/documents/insertFromFile';
-import {printCurrent,moveParagraphs,sortParagraphs,readParagraphSpacing,setParagraphSpacing,readBookmarks,setViewMarks,setTrackChanges,copyFormatting,pasteFormatting,setCharSpacing,insertPageBreak,clearFormatting,changeCase,hasTextSelection,setHighlight,setLink,toggleFormat,toggleVertAlign} from '../../lib/documents/session';
+import {insertBlankPage,printCurrent,moveParagraphs,sortParagraphs,readParagraphSpacing,setParagraphSpacing,readBookmarks,setViewMarks,setTrackChanges,copyFormatting,pasteFormatting,setCharSpacing,insertPageBreak,clearFormatting,changeCase,hasTextSelection,setHighlight,setLink,toggleFormat,toggleVertAlign} from '../../lib/documents/session';
 import {PARAGRAPH_SPACINGS,type ParagraphSpacing,HIGHLIGHTS,MAX_LINK_CHARS,linkProblem,type FormatPatch,type FormatState,type HighlightName} from '../../lib/documents/protocol';
 import {CASE_MODES,type CaseMode} from '../../lib/documents/textCase';
 import {setShortcutsOpen} from '../../lib/documents/shortcuts';
@@ -85,6 +85,7 @@ export function TextEffects({format,held,enabled}:{format:FormatState|null;held:
    {id:'sortAsc',label:t('documents.sort.asc'),enabled,run:()=>void sortParagraphs(false)},
    {id:'sortDesc',label:t('documents.sort.desc'),enabled,run:()=>void sortParagraphs(true)}]}/>
   <ActionMenu label={t('documents.menu.insert')} testId="documents-menu-insert" items={[
+   {id:'blankPage',label:t('documents.insert.blankPage'),enabled,run:()=>void insertBlankPage()},
    {id:'break',label:t('documents.para.opt.insertBreak'),enabled,run:()=>void insertPageBreak()},
    {id:'file',label:t('documents.insert.textFile'),enabled,run:()=>void pickAndInsertText()},
    {id:'symbol',label:t('documents.symbol.open'),enabled,run:()=>setInfoDialog('symbol')},

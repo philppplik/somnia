@@ -514,7 +514,7 @@ export const selectAllText=()=>{
  setSel({block:lo,off:0},{block:hi,off:u8(blockText(hi)!)});
 };
 export const clearCaret=()=>patchDocuments({caret:null,caretBox:null,selRects:[],caretLocked:false,imageBlock:null,imageRects:[]});
-export type CaretMove='left'|'right'|'up'|'down'|'home'|'end'|'wordLeft'|'wordRight'|'pageUp'|'pageDown'|'docStart'|'docEnd';
+export type CaretMove='left'|'right'|'up'|'down'|'home'|'end'|'wordLeft'|'wordRight'|'pageUp'|'pageDown'|'docStart'|'docEnd'|'paraUp'|'paraDown';
 const nearbyBlock=(from:number,dir:-1|1)=>{const bs=getDocumentsState().blocks;const b=bs.find(x=>x.index===from+dir);return b&&b.editable&&b.text!==undefined?b:null;};
 /** First editable hit on `page`, scanning from y0 by `step` (page-space points) at most `count` times. */
 async function probe(e:DocumentsEngine,page:number,x:number,y0:number,step:number,count:number){
@@ -532,6 +532,11 @@ export const moveCaret=(kind:CaretMove,extend:boolean)=>run(async()=>{
   const i=utf8ToUtf16Offset(t,h.off);const j=word?wordBoundary(t,i,dir):stepBoundary(t,i,dir);
   if(j!==i){go(h.block,utf16ToUtf8Offset(t,j));return;}
   const nb=nearbyBlock(h.block,dir);if(nb)go(nb.index,dir<0?u8(nb.text!):0);return;
+ }
+ if(kind==='paraUp'||kind==='paraDown'){
+  goalX=null;
+  if(kind==='paraUp'){if(h.off>0){go(h.block,0);return;}const nb=nearbyBlock(h.block,-1);if(nb)go(nb.index,0);return;}
+  const nb=nearbyBlock(h.block,1);if(nb)go(nb.index,0);else go(h.block,u8(t));return;
  }
  if(kind==='docStart'||kind==='docEnd'){
   goalX=null;const bs=getDocumentsState().blocks.filter(b=>b.editable&&b.text!==undefined&&b.index<CELL_BASE);const b=kind==='docStart'?bs[0]:bs[bs.length-1];if(b)go(b.index,kind==='docStart'?0:u8(b.text!));return;
@@ -629,6 +634,15 @@ export const insertPageBreak=()=>run(async()=>{
  if(blockText(n.s.block)===null)throw new Error('This paragraph cannot be edited as text.');
  const b=n.s.block,off=n.s.off;
  await structural(async eng=>{await eng.split(b,off);return eng.formatParagraphs(b+1,b+1,{pageBreakBefore:true});},{block:b,off},{block:b+1,off:0});
+});
+/** Inserts an empty page at the caret: the text after the caret moves two pages on. One undo step. */
+export const insertBlankPage=()=>run(async()=>{
+ const c=getDocumentsState().caret;if(!c)throw new Error('Place the caret where the blank page should go.');
+ const n=norm(c);if(cmp(n.s,n.e)!==0)throw new Error('Place the caret where the blank page should go.');
+ if(n.s.block>=CELL_BASE)throw new Error('A page cannot be inserted inside a table.');
+ if(blockText(n.s.block)===null)throw new Error('This paragraph cannot be edited as text.');
+ const b=n.s.block,off=n.s.off;
+ await structural(async eng=>{await eng.split(b,off);await eng.split(b+1,0);return eng.formatParagraphs(b+1,b+2,{pageBreakBefore:true});},{block:b,off},{block:b+2,off:0});
 });
 export const setLineSpacing=(lineSpacing:number)=>run(()=>applyPara({lineSpacing}));
 export const setSpaceBefore=(spaceBefore:number)=>run(()=>applyPara({spaceBefore}));

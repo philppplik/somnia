@@ -24,7 +24,7 @@ import {pickAndCompareText,pickAndInsertText} from './insertFromFile';
 import {symbolProblem,specialChar,timeText} from './symbols';
 import {getLocale as currentLocale} from '../i18n';
 import {authorProblem,setAuthor} from './author';
-import {insertPageBreak,setParagraphOptions,setProperties,setTabStops} from './session';
+import {insertBlankPage,insertPageBreak,setParagraphOptions,setProperties,setTabStops} from './session';
 import {parsePdfPages,checkParaPatch,PARA_FLAG_KEYS,propertiesProblem,tabsProblem} from './protocol';
 import {addComment,commentSelection,deleteComment,goToComment,readComments,replyComment,resolveComment} from './session';
 import {coverProblem,PARAGRAPH_SPACINGS,type ParagraphSpacing,bookmarkProblem,commentProblem,HIGHLIGHTS,linkProblem,type HighlightName} from './protocol';
@@ -210,6 +210,7 @@ export function registerDocumentsCommands(){
    try{checkParaPatch(o);}catch(err){throw expected(err instanceof Error?err.message:'Invalid options.');}
    await setParagraphOptions(o as import('./protocol').ParaPatch);
   },()=>ready()&&!!getDocumentsState().caret),
+  add('documents.insertBlankPage','Insert a blank page',async()=>{await insertBlankPage();},()=>ready()&&!!getDocumentsState().caret),
   add('documents.insertPageBreak','Insert page break',async()=>{await insertPageBreak();},()=>ready()&&!!getDocumentsState().caret),
   add('documents.properties.show','Document properties',()=>{setInfoDialog('properties');},()=>ready()),
   add('documents.properties.set','Set document properties',async p=>{
