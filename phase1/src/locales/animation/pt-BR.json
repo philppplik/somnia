@@ -1329,5 +1329,9 @@
  "animation.export.check.head": "Nenhuma camada aparece nos primeiros {names} quadros do intervalo. Reduza o intervalo para começar onde a imagem começa.",
  "animation.export.check.tail": "Nenhuma camada aparece nos últimos {names} quadros do intervalo. Reduza o intervalo para terminar onde a imagem termina.",
  "animation.rig.ik": "Alcançar com um braço: marque braço, antebraço, mão e alvo",
- "cmd.animation.layers.ik": "Alcançar a última camada marcada com um braço de três camadas"
+ "cmd.animation.layers.ik": "Alcançar a última camada marcada com um braço de três camadas",
+ "animation.rig.group.draw": "Desenhar",
+ "animation.rig.draw.on": "Desenhar traço",
+ "animation.rig.draw.off": "Apagar traço",
+ "cmd.animation.layers.draw": "Desenhar ou apagar os traços marcados um após o outro"
 }

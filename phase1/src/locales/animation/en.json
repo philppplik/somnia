@@ -1329,5 +1329,9 @@
  "animation.export.check.head": "No layer shows in the first {names} frames of the range. Trim the range to start where the picture does.",
  "animation.export.check.tail": "No layer shows in the last {names} frames of the range. Trim the range to end where the picture does.",
  "animation.rig.ik": "Reach with an arm: tick upper arm, forearm, hand, target",
- "cmd.animation.layers.ik": "Reach the last ticked layer with a three-layer arm"
+ "cmd.animation.layers.ik": "Reach the last ticked layer with a three-layer arm",
+ "animation.rig.group.draw": "Draw",
+ "animation.rig.draw.on": "Draw on",
+ "animation.rig.draw.off": "Draw off",
+ "cmd.animation.layers.draw": "Draw the ticked stroked shapes on or off, one after the other"
 }

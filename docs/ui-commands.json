@@ -2089,6 +2089,24 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.layers.draw",
+      "title": "Draw the ticked stroked shapes on or off, one after the other",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "draw",
+        "draw on",
+        "line",
+        "reveal",
+        "stroke",
+        "trace",
+        "trim",
+        "write"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.layers.duplicate",
       "title": "Duplicate the selected layers",
       "category": "Edit",

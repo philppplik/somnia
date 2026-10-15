@@ -1329,5 +1329,9 @@
  "animation.export.check.head": "In den ersten {names} Bildern des Bereichs ist keine Ebene sichtbar. Den Bereich dort beginnen lassen, wo das Bild beginnt.",
  "animation.export.check.tail": "In den letzten {names} Bildern des Bereichs ist keine Ebene sichtbar. Den Bereich dort enden lassen, wo das Bild endet.",
  "animation.rig.ik": "Greifen: Oberarm, Unterarm, Hand, Ziel ankreuzen",
- "cmd.animation.layers.ik": "Mit einem dreiteiligen Arm die zuletzt markierte Ebene erreichen"
+ "cmd.animation.layers.ik": "Mit einem dreiteiligen Arm die zuletzt markierte Ebene erreichen",
+ "animation.rig.group.draw": "Zeichnen",
+ "animation.rig.draw.on": "Einzeichnen",
+ "animation.rig.draw.off": "Ausblenden per Linie",
+ "cmd.animation.layers.draw": "Markierte Konturformen nacheinander ein- oder auszeichnen"
 }

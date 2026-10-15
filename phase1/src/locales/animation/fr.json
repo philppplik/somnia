@@ -1329,5 +1329,9 @@
  "animation.export.check.head": "Aucun calque n’apparaît dans les {names} premières images de la plage. Raccourcissez la plage pour qu’elle commence avec l’image.",
  "animation.export.check.tail": "Aucun calque n’apparaît dans les {names} dernières images de la plage. Raccourcissez la plage pour qu’elle finisse avec l’image.",
  "animation.rig.ik": "Atteindre avec un bras : cochez bras, avant-bras, main, cible",
- "cmd.animation.layers.ik": "Atteindre le dernier calque coché avec un bras de trois calques"
+ "cmd.animation.layers.ik": "Atteindre le dernier calque coché avec un bras de trois calques",
+ "animation.rig.group.draw": "Tracer",
+ "animation.rig.draw.on": "Tracer le contour",
+ "animation.rig.draw.off": "Effacer le contour",
+ "cmd.animation.layers.draw": "Tracer ou effacer les contours cochés l'un après l'autre"
 }

@@ -1329,5 +1329,9 @@
  "animation.export.check.head": "Ninguna capa se ve en los primeros {names} fotogramas del rango. Recorta el rango para que empiece donde empieza la imagen.",
  "animation.export.check.tail": "Ninguna capa se ve en los últimos {names} fotogramas del rango. Recorta el rango para que acabe donde acaba la imagen.",
  "animation.rig.ik": "Alcanzar con un brazo: marca brazo, antebrazo, mano y objetivo",
- "cmd.animation.layers.ik": "Alcanzar la última capa marcada con un brazo de tres capas"
+ "cmd.animation.layers.ik": "Alcanzar la última capa marcada con un brazo de tres capas",
+ "animation.rig.group.draw": "Dibujar",
+ "animation.rig.draw.on": "Dibujar trazo",
+ "animation.rig.draw.off": "Borrar trazo",
+ "cmd.animation.layers.draw": "Dibujar o borrar los trazos marcados uno tras otro"
 }

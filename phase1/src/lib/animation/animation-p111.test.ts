@@ -1946,3 +1946,17 @@ test('P285 reach: the hand lands on the target on every sampled frame, out of re
  for(const fr of [0,10,20,30]){const hh=at('hand',f(fr)),tt=at('tg',f(fr));assert.ok(Math.hypot(hh[0]-tt[0],hh[1]-tt[1])<1,`frame ${fr}: ${hh} vs ${tt}`);}
  s.undo();assert.equal(JSON.stringify(s.document),before);
 });
+test('P286 draw: staggered trim keys, off reverses, strokeless shapes refused, one undo',async()=>{
+ const {drawStart,drawSpecs}=await import('./drawCommands');const run=drawSpecs()[0].run as (p?:unknown)=>unknown;
+ assert.equal(drawStart(0,3,100,50,1000),0);assert.equal(drawStart(2,3,100,50,1000),200);assert.equal(drawStart(2,3,1000,50,150),100);
+ const mk=(id:string)=>[{type:'layer.add',kind:'shape',id},{type:'layer.stroke',layer:id,stroke:{color:'#ff0000',width:4}}];
+ const d0=applyEdits(base(),[...mk('dwa'),...mk('dwb'),{type:'layer.add',kind:'solid',id:'dws'}] as never);
+ const s=new AnimationSession();s.open(d0);setAnimationSession(s);const before=JSON.stringify(s.document);
+ const L=(id:string)=>findComp(s.document!)!.layers.find(x=>x.id===id)!;
+ assert.throws(()=>run({layers:['dws']}),/stroke/);
+ const r=run({layers:['dwa','dwb','dws'],frames:10,gap:5}) as {layers:number;skipped:number};assert.equal(r.layers,2);assert.equal(r.skipped,1);
+ const ka=L('dwa').stroke!.trim!.keys,kb=L('dwb').stroke!.trim!.keys;
+ assert.deepEqual(ka.map(k=>k.v),[0,100]);assert.equal(kb[0].t-ka[0].t,f(5));
+ s.undo();assert.equal(JSON.stringify(s.document),before);
+ run({layers:['dwa','dwb'],mode:'off',frames:10,gap:5});assert.deepEqual(L('dwa').stroke!.trim!.keys.map(k=>k.v),[100,0]);
+});
