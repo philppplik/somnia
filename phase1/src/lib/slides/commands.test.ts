@@ -22,9 +22,9 @@ function fakeDeps(over:Partial<State>={}){
 test('slides specs carry stable dotted ids, ui level and categories',()=>{
   const {deps}=fakeDeps();
   const specs=slidesCommandSpecs(deps);
-  assert.deepEqual(specs.map(s=>s.id),['slides.present','slides.present.fromStart','slides.present.exit','slides.undo','slides.redo','slides.saveCopy','slides.showSlide']);
+  assert.deepEqual(specs.map(s=>s.id),['slides.present','slides.present.fromStart','slides.present.exit','slides.undo','slides.redo','slides.export.advanced','slides.saveCopy','slides.showSlide']);
   for(const spec of specs)assert.equal(spec.level,'ui',spec.id);
-  assert.deepEqual(specs.map(s=>s.category),['View','View','View','Edit','Edit','Project','View']);
+  assert.deepEqual(specs.map(s=>s.category),['View','View','View','Edit','Edit','Project','Project','View']);
 });
 
 test('slides.showSlide declares a real params schema',()=>{
@@ -100,7 +100,7 @@ test('registerSlidesCommands mirrors the specs into the legacy registry and disp
   const off=registerSlidesCommands();
   try{
     const listed=listCommands().map(c=>c.id);
-    for(const id of ['slides.undo','slides.redo','slides.saveCopy','slides.showSlide'])assert.ok(listed.includes(id),id);
+    for(const id of ['slides.undo','slides.redo','slides.export.advanced','slides.saveCopy','slides.showSlide'])assert.ok(listed.includes(id),id);
     assert.ok(commandDispatcher.has('slides.undo'));
   }finally{off();}
   assert.equal(listCommands().some(c=>c.id==='slides.undo'),false);

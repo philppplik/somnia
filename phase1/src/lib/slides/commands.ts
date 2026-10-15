@@ -21,12 +21,14 @@ import {registerCommandSpec,specToCommand} from '../commandBridge';
 import type {Command} from '../commandRegistry';
 import type {CommandSpec} from '../commandSpec';
 import {getSlidesSessionState,saveSlidesCopy,showSlide,slidesHistory,presentSlides,exitSlidesPresentation} from './session';
+import {setSlidesExportState} from './exportState';
 
 /** What the specs need from the studio. Injected so the specs stay testable without a worker. */
 export interface SlidesCommandDeps {
   state(): {busy:boolean;working:boolean;canUndo:boolean;canRedo:boolean;slides:number;index:number;presenting:boolean};
   history(direction:'undo'|'redo'):void|Promise<void>;
   saveCopy():void|Promise<void>;
+  openExport():void;
   showSlide(index:number):void|Promise<void>;
   present(fromStart:boolean):void|Promise<void>;
   exitPresent():void|Promise<void>;
@@ -57,6 +59,10 @@ export function slidesCommandSpecs(deps:SlidesCommandDeps):CommandSpec[] {
       run:()=>deps.history('redo'),
     },
     {
+      id:'slides.export.advanced',title:'Slides: Advanced export with name and metadata',category:'Project',level:'ui',keywords:['slides','export','advanced','metadata'],
+      enabled:()=>{const s=deps.state();return s.working&&!s.busy;},
+      run:()=>deps.openExport()},
+    {
       id:'slides.saveCopy',title:'Save presentation copy',category:'Project',level:'ui',
       enabled:()=>{const s=deps.state();return s.working&&!s.busy;},
       run:()=>deps.saveCopy(),
@@ -83,6 +89,7 @@ const sessionDeps:SlidesCommandDeps={
   exitPresent:()=>exitSlidesPresentation(),
   history:direction=>slidesHistory(direction),
   saveCopy:()=>saveSlidesCopy(),
+  openExport:()=>setSlidesExportState({open:true}),
   showSlide:index=>showSlide(index),
 };
 

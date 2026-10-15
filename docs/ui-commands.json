@@ -8482,6 +8482,19 @@
       "hasEnabled": true
     },
     {
+      "id": "slides.export.advanced",
+      "title": "Slides: Advanced export with name and metadata",
+      "category": "Project",
+      "source": "slides",
+      "keywords": [
+        "advanced",
+        "export",
+        "metadata",
+        "slides"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "slides.exportPng",
       "title": "Export slides as PNG images",
       "category": "Project",

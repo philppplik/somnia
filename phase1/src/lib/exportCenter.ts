@@ -18,7 +18,7 @@ export const EXPORT_GROUP_IDS:Readonly<Record<string,readonly string[]>>={
  project:['project.export','project.export.md'],
  documents:['documents.export.open','documents.saveCopy','documents.export.pdf','documents.export.copy'],
  sheets:['sheets.saveCopy'],
- slides:['slides.saveCopy'],
+ slides:['slides.export.advanced','slides.saveCopy'],
  design:['design.export.open','design.exportSvg','design.exportAllSvg','design.exportProject'],
  photos:['photos.export.open','photos.export.png','photos.export.jpeg','photos.export.advanced'],
  vector:['vector.export.open','vector.exportSvg','vector.exportPng'],
