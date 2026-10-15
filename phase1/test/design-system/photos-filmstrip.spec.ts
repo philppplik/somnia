@@ -621,3 +621,35 @@ test('stack survey: compare the members and pick the cover (light and dark)',asy
   await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible();
  }
 });
+test('collections: a saved view carries the smart filter (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
+  await page.evaluate(async()=>{const r=await import('/src/lib/photos/ratings.ts');for(const n of['strip-1.png','strip-2.png','strip-3.png'])r.setRating(n,0);}); // ratings persist via localStorage
+  await page.keyboard.press('3'); // strip-1: three stars
+  await page.getByTestId('photos-filmstrip-item-strip-2.png').click();
+  await page.keyboard.press('4'); // strip-2: four stars, strip-3 stays unrated
+  await page.getByTestId('photos-filmstrip-menu').click();
+  const smart=page.getByTestId('photos-filmstrip-smart');
+  if(await smart.getAttribute('aria-pressed')!=='true')await smart.click(); // persisted panel state
+  await page.getByTestId('photos-smart-minrating').selectOption('3');
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toHaveCount(0);
+  await page.getByTestId('photos-filmstrip-collection-save').click();
+  await page.getByTestId('photos-filmstrip-collection-name').fill('Drei hoch');
+  await page.getByTestId('photos-filmstrip-collection-name').press('Enter');
+  await smart.click(); // off: everything comes back
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible();
+  await page.getByTestId('photos-filmstrip-collections').selectOption('Drei hoch'); // apply: the smart filter comes back too
+  await expect(smart).toHaveAttribute('aria-pressed','true');
+  await expect(page.getByTestId('photos-smart-minrating')).toHaveValue('3');
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toHaveCount(0);
+  await expect(page.getByTestId('photos-filmstrip-item-strip-1.png')).toBeVisible();
+  await page.screenshot({path:`test-results/ds-photos-smart-collection-${theme}.png`,fullPage:true});
+  await page.getByTestId('photos-filmstrip-collection-delete').click(); // the full state matches the set
+  await smart.click(); // off again
+  await page.evaluate(async()=>{const r=await import('/src/lib/photos/ratings.ts');for(const n of['strip-1.png','strip-2.png','strip-3.png'])r.setRating(n,0);}); // leave no state behind
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible();
+ }
+});

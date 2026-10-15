@@ -29,7 +29,7 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
  const {ratings,flags,labels,tags,filter,all,photos,sort,query,smart,smartOn}=useVisiblePhotos();
  const [,setSmart]=usePanelState<SmartFilter>('photos.smartFilter',{on:false,minRating:0,flag:'',label:'',tag:''});
  const [,setQuery]=usePanelState<string>('photos.searchQuery','');
- const [sets,setSets]=usePanelState<Record<string,{filter:string;sort:string;query:string}>>('photos.filterSets',{});
+ const [sets,setSets]=usePanelState<Record<string,{filter:string;sort:string;query:string;smart?:SmartFilter}>>('photos.filterSets',{});
  const [naming,setNaming]=useState(false);
  const [menuOpen,setMenuOpen]=useState(false);
  const stacks=useStacks();
@@ -111,7 +111,7 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
     <div className="grid gap-1">
      <NativeSelect value="" aria-label={t('photos.collections')} title={t('photos.collections')} onChange={e=>{
       const fs=sets[e.currentTarget.value];e.currentTarget.value='';
-      if(fs){setMinRating(fs.filter);setSort(fs.sort as FilmstripSort);setQuery(fs.query);}
+      if(fs){setMinRating(fs.filter);setSort(fs.sort as FilmstripSort);setQuery(fs.query);setSmart(fs.smart??{on:false,minRating:0,flag:'',label:'',tag:''});}
      }} className="h-7" data-testid="photos-filmstrip-collections">
       <option value="" disabled>{t('photos.collections')}</option>
       {Object.keys(sets).sort((a,b)=>a.localeCompare(b)).map(n=><option key={n} value={n}>{n}</option>)}
@@ -123,11 +123,11 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
           if(e.key==='Escape'){setNaming(false);return;}
           if(e.key!=='Enter')return;
           const n=e.currentTarget.value.trim();
-          if(n)setSets({...sets,[n]:{filter,sort,query}});
+          if(n)setSets({...sets,[n]:{filter,sort,query,smart}});
           setNaming(false);
          }}/>
        :<Button variant="outline" size="compact" aria-label={t('photos.collections.save')} title={t('photos.collections.save')} onClick={()=>setNaming(true)} data-testid="photos-filmstrip-collection-save">{t('photos.collections.save')}</Button>}
-      {(()=>{const hit=Object.entries(sets).find(([,fs])=>fs.filter===filter&&fs.sort===sort&&fs.query===query);return hit?<Button variant="outline" size="compact" aria-label={t('photos.collections.delete')} title={t('photos.collections.delete')} onClick={()=>{const next={...sets};delete next[hit[0]];setSets(next);}} data-testid="photos-filmstrip-collection-delete">{t('photos.collections.delete')}</Button>:null;})()}
+      {(()=>{const hit=Object.entries(sets).find(([,fs])=>fs.filter===filter&&fs.sort===sort&&fs.query===query&&(fs.smart?.on??false)===smart.on&&Number(fs.smart?.minRating??0)===smart.minRating&&(fs.smart?.flag??'')===smart.flag&&(fs.smart?.label??'')===smart.label&&(fs.smart?.tag??'')===smart.tag);return hit?<Button variant="outline" size="compact" aria-label={t('photos.collections.delete')} title={t('photos.collections.delete')} onClick={()=>{const next={...sets};delete next[hit[0]];setSets(next);}} data-testid="photos-filmstrip-collection-delete">{t('photos.collections.delete')}</Button>:null;})()}
      </span>
     </div>
     <span className="flex flex-wrap gap-1">

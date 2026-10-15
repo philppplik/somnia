@@ -385,3 +385,18 @@ cover leading the collapsed row and the ungroup cleanup;
 fixture series, surveys the members, picks strip-2, makes it the
 cover (count badge moves, old cover back inside) and ungroups again
 (`test-results/ds-photos-stack-survey-{light,dark}.png`).
+
+## Collections carry the smart filter (P104)
+
+A saved view is complete now: collections (P99) persist the smart
+filter (P102) alongside filter, sort and search. Applying a
+collection restores all four smart rules plus the on switch; the
+delete button appears only while the whole state - including every
+smart rule - matches a saved set. Sets saved before P104 have no
+smart entry and apply with the smart filter off.
+
+Coverage: `photos-filmstrip.spec.ts` gains a light/dark leg that
+rates the fixture photos, saves a "three stars and up" view, turns
+the smart filter off (everything visible), applies the collection
+(smart back on with its rule, strip narrowed again) and deletes it
+(`test-results/ds-photos-smart-collection-{light,dark}.png`).
