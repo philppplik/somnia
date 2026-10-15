@@ -13,6 +13,7 @@ import {addMediaFile,closeMedia,findMedia,getMedia,setActiveMedia,subscribeMedia
 import {getCollab,onSessionChange} from '../collab/session';
 import {buildMismatches} from '../collab/buildSync';
 import {shareSlidesFile,adoptSlidesFile} from '../collab/office/officeSession';
+import {buildPngZip,exportScale,exportZipName} from './exportPng';
 import {openSlidesModel,slidesModelMeta,type SlidesOpKind} from '../collab/office/slidesModel';
 import {SlidesCollabBinding} from '../collab/office/slidesBinding';
 import {slidesClientPort} from '../collab/office/slidesPort';
@@ -101,6 +102,24 @@ export async function slidesHistory(direction:'undo'|'redo'){const e=sessions.ge
  if(e.collab){patch(e,{busy:true,error:''});try{if(direction==='undo')await e.collab.undo();else await e.collab.redo();patch(e,{busy:false});}catch(error){patch(e,{busy:false,error:String(error)},error);}return;}
  const stack=e.state[direction],bytes=stack.at(-1);if(!bytes)return;const before=e.state.working;patch(e,{busy:true,error:''});try{await setWorking(e,bytes);patch(e,{[direction]:stack.slice(0,-1),[direction==='undo'?'redo':'undo']:bounded([...e.state[direction==='undo'?'redo':'undo'],before])});}catch(error){patch(e,{busy:false,error:String(error)},error);}}
 export async function saveSlidesCopy(){const e=sessions.get(getMedia().active??'');const bytes=e?.state.working;if(!e||!bytes||e.state.busy)return;patch(e,{busy:true,error:''});try{const {isTauri,invoke}=await import('@tauri-apps/api/core');const suggestedName=e.state.name.replace(/^.*[\\/]/,'').replace(/\.pptx$/i,'')+'-edited.pptx';if(isTauri()){const grant=await invoke<{token:string}|null>('slides_save_pick',{suggestedName});if(!grant){patch(e,{busy:false});return;}await invoke('slides_save_write',new Uint8Array(bytes),{headers:{'x-somnia-token':grant.token}});}else{const url=URL.createObjectURL(new Blob([new Uint8Array(bytes)],{type:'application/vnd.openxmlformats-officedocument.presentationml.presentation'}));const a=document.createElement('a');a.href=url;a.download=suggestedName;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);}patch(e,{dirty:isTauri()?false:e.state.dirty,busy:false});}catch(error){patch(e,{busy:false,error:String(error)},error);}}
+
+/** Renders every slide to a PNG (longer side 1920 px) and saves them as one zip. Edits are blocked while it runs; nothing in the deck changes. */
+export async function exportSlidesPng(){
+  const e=sessions.get(getMedia().active??'');const summary=e?.state.summary;
+  if(!e||!summary||!e.state.working||e.state.busy||e.disposed)return;
+  const revision=e.revision;patch(e,{busy:true,error:''});
+  try{
+    const scale=exportScale(summary.widthPt,summary.heightPt),pngs:Uint8Array[]=[];
+    for(let i=0;i<summary.slides;i++){
+      const png=await e.client.render(i,scale);
+      if(e.disposed||e.revision!==revision)throw Error('The presentation changed during export');
+      pngs.push(png);
+    }
+    const zip=buildPngZip(pngs),url=URL.createObjectURL(new Blob([new Uint8Array(zip)],{type:'application/zip'})),a=document.createElement('a');
+    a.href=url;a.download=exportZipName(e.state.name);a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);
+    patch(e,{busy:false});
+  }catch(error){patch(e,{busy:false,error:String(error)},error);}
+}
 
 /** Metadata-only view for the agent workspace. Never exposes source bytes or image URLs. */
 export const subscribeSlides=(listener:()=>void)=>{listeners.add(listener);return()=>{listeners.delete(listener);};};

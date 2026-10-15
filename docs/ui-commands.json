@@ -8450,6 +8450,23 @@
       "hasEnabled": true
     },
     {
+      "id": "slides.exportPng",
+      "title": "Export slides as PNG images",
+      "category": "Project",
+      "source": "slides",
+      "keywords": [
+        "export",
+        "handout",
+        "image",
+        "pictures",
+        "png",
+        "share",
+        "slides",
+        "zip"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "slides.formatParagraph",
       "title": "Align text and set bullets",
       "category": "Edit",
