@@ -35,6 +35,7 @@ type Drag=
  |{kind:'sel-rotate';center:Point;handle:Point;deg:number}
  |{kind:'pan';sx:number;sy:number;pan:Point}
  |{kind:'pen-handle';cur:Point};
+import {gridDelta,gridVisible,snapPointToGrid} from '../../lib/vectorstudio/grid';
 import {snapMove} from '../../lib/vectorstudio/snap';
 const SHAPE_TOOLS:readonly string[]=['rect','ellipse','line','polygon','star'];
 const CORNERS:readonly [number,number][]=[[0,0],[1,0],[1,1],[0,1]];
@@ -82,7 +83,7 @@ export function VectorCanvas(){
  const onDown=(e:RPointerEvent<SVGSVGElement>)=>{
   if(e.button===1||e.button===2){setDrag({kind:'pan',sx:e.clientX,sy:e.clientY,pan:s.pan});(e.target as Element).setPointerCapture?.(e.pointerId);return;}
   if(e.button!==0)return;wrap.current?.focus();(e.target as Element).setPointerCapture?.(e.pointerId);
-  const pt=toDoc(e);
+  const raw=toDoc(e),pt=s.grid.snap&&(s.tool==='text'||SHAPE_TOOLS.includes(s.tool)||s.tool==='pen')?snapPointToGrid(raw,s.grid.size):raw;
   if(s.tool==='text'){const hit=hitText(pt)??hitText(pt,true);if(hit){selectText(hit);return;}void executeCommand('vector.addText',{x:Math.round(pt.x*100)/100,y:Math.round(pt.y*100)/100});setTool('select');return;}
   if(SHAPE_TOOLS.includes(s.tool)){setDrag({kind:'shape',tool:s.tool as ShapeKind,start:pt,cur:pt});return;}
   if(s.tool==='pen'){
@@ -105,7 +106,7 @@ export function VectorCanvas(){
   {const hit=hitText(pt,true);if(hit){selectText(hit);setDrag({kind:'text-move',id:hit,start:pt,dx:0,dy:0});return;}}
   if(!e.shiftKey){select([]);selectText(null);}setDrag({kind:'marquee',start:pt,cur:pt});};
  const onMove=(e:RPointerEvent<SVGSVGElement>)=>{
-  const pt=toDoc(e);setHover(pt);if(!drag)return;
+  const raw=toDoc(e),pt=s.grid.snap&&(drag?.kind==='shape'||drag?.kind==='pen-handle'||(!drag&&s.tool==='pen'))?snapPointToGrid(raw,s.grid.size):raw;setHover(pt);if(!drag)return;
   if(drag.kind==='pan'){setView(s.zoom,{x:drag.pan.x+e.clientX-drag.sx,y:drag.pan.y+e.clientY-drag.sy});return;}
   if(drag.kind==='sel-rotate'){setDrag({...drag,deg:angleAround(drag.center,drag.handle,pt,e.shiftKey)});return;}
   if(drag.kind==='text-rotate'){const base=(s.doc.texts??[]).find(t=>t.id===drag.id);if(base)setDrag({...drag,rotation:rotationFor({...base,rotation:0},pt,s.zoom,e.shiftKey)});return;}
@@ -115,7 +116,9 @@ export function VectorCanvas(){
    const base=boxOf(selected);
    if(base&&!e.altKey){const others=s.doc.paths.filter(q=>!q.hidden&&!s.selection.includes(q.id)).map(pathBox).filter((b):b is Box=>!!b);
     const r=snapMove(base,rx,ry,[{minX:0,minY:0,maxX:s.doc.width,maxY:s.doc.height},...(s.doc.guides?.x??[]).map(x=>({minX:x,maxX:x,minY:Infinity,maxY:Infinity})),...(s.doc.guides?.y??[]).map(y=>({minY:y,maxY:y,minX:Infinity,maxX:Infinity})),...others],SNAP_PX/s.zoom);
-    setDrag({...drag,dx:snap===false?0:r.dx,dy:snap===true?0:r.dy,guides:r.guides});return;}
+    const gd=s.grid.snap?gridDelta(base,rx,ry,s.grid.size):null;
+    const dx=snap===false?0:gd&&!r.guides.x.length?gd.dx:r.dx,dy=snap===true?0:gd&&!r.guides.y.length?gd.dy:r.dy;
+    setDrag({...drag,dx,dy,guides:r.guides});return;}
    setDrag({...drag,dx:rx,dy:ry,guides:undefined});return;}
   if(drag.kind==='pen-handle'){setDrag({kind:'pen-handle',cur:pt});
    setPen(nodes=>nodes.map((n,i)=>i!==nodes.length-1?n:{...n,kind:'smooth',out:pt,in:{x:n.x*2-pt.x,y:n.y*2-pt.y}}));return;}
@@ -184,9 +187,10 @@ export function VectorCanvas(){
   <FileTabs/><VectorToolbar onFit={fit}/>
   <div ref={wrap} tabIndex={0} onCopy={e=>onCopy(e,false)} onCut={e=>onCopy(e,true)} onPaste={onPaste} onKeyDown={onKey} onKeyUp={e=>{shiftHeld.current=e.shiftKey;}} onWheel={onWheel} className="relative min-h-0 flex-1 overflow-hidden bg-[color:var(--surface-2,#eef0f4)] outline-none" data-testid="vector-canvas" data-tool={s.tool}>
    <svg ref={ref} className="absolute inset-0 size-full touch-none select-none" style={{cursor:cursorFor(s.tool)}} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={()=>setDrag(null)} onDoubleClick={onDouble} onContextMenu={e=>e.preventDefault()} aria-label={t('vector.canvas')} role="img">
-    <defs><GradientDefs gradients={s.doc.gradients}/><pattern id="vs-checker" width="16" height="16" patternUnits="userSpaceOnUse"><rect width="16" height="16" fill="#fff"/><rect width="8" height="8" fill="#f1f2f5"/><rect x="8" y="8" width="8" height="8" fill="#f1f2f5"/></pattern></defs>
+    <defs><GradientDefs gradients={s.doc.gradients}/><pattern id="vs-grid" width={s.grid.size} height={s.grid.size} patternUnits="userSpaceOnUse"><path d={`M ${s.grid.size} 0 L 0 0 0 ${s.grid.size}`} fill="none" stroke="rgba(37,99,235,.28)" strokeWidth={1/s.zoom}/></pattern><pattern id="vs-checker" width="16" height="16" patternUnits="userSpaceOnUse"><rect width="16" height="16" fill="#fff"/><rect width="8" height="8" fill="#f1f2f5"/><rect x="8" y="8" width="8" height="8" fill="#f1f2f5"/></pattern></defs>
     <g transform={`translate(${s.pan.x} ${s.pan.y}) scale(${s.zoom})`}>
      <rect width={s.doc.width} height={s.doc.height} fill="url(#vs-checker)" stroke="rgba(0,0,0,.18)" strokeWidth={1/s.zoom}/>
+     {gridVisible(s.grid,s.zoom)&&<rect data-testid="vector-grid" width={s.doc.width} height={s.doc.height} fill="url(#vs-grid)" pointerEvents="none"/>}
      <svg width={s.doc.width} height={s.doc.height} overflow="hidden" data-testid="vector-artboard"><TextLayer texts={texts.filter(t=>t.back)}/><PathLayer paths={paths}/><TextLayer texts={texts.filter(t=>!t.back)}/>
       {draft&&<path d={serializeContour(draft.nodes,draft.closed)} fill={draft.closed?'rgba(109,94,245,.25)':'none'} stroke="#2563eb" strokeWidth={1.5/s.zoom}/>}</svg>
      {selected.map(p=>{const pp=preview(p);return <path key={p.id} d={serializeContour(pp.nodes,pp.closed)} fill="none" stroke="#2563eb" strokeWidth={1/s.zoom} pointerEvents="none"/>;})}

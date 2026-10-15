@@ -1,3 +1,4 @@
+import {GRID_LIMITS} from './grid';
 import {alignTextToPage} from './textAlign';
 import {SHAPE_LIMITS} from './shapes';
 import {requestVectorExport} from './exportSetup';
@@ -66,6 +67,7 @@ export function vectorShellCommandSpecs(active:()=>boolean):CommandSpec<any,unkn
   {id:'vector.setShapeOptions',title:'Set shape tool options',category:'Edit',level:'ui',enabled:ready,params:{...empty,properties:{sides:{type:'integer',minimum:SHAPE_LIMITS.minSides,maximum:SHAPE_LIMITS.maxSides},points:{type:'integer',minimum:SHAPE_LIMITS.minSides,maximum:SHAPE_LIMITS.maxSides},inner:{type:'number',minimum:SHAPE_LIMITS.minInner,maximum:SHAPE_LIMITS.maxInner},radius:{type:'number',minimum:0,maximum:SHAPE_LIMITS.maxRadius}}},run:(p:Parameters<typeof S.setShapeOptions>[0]={})=>{S.setShapeOptions(p);}},
   {id:'vector.selectText',title:'Select a text object',category:'Edit',level:'ui',enabled:ready,params:{...empty,properties:{id:{type:'string',minLength:1,maxLength:80}},required:['id']},run:(p:{id:string})=>{if(!(S.getVectorSession().doc.texts??[]).some(t=>t.id===p.id))throw new Error('Unknown text: '+p.id);S.selectText(p.id);}},
   {id:'vector.alignText',title:'Align a text object to the page',category:'Edit',level:'ui',enabled:ready,params:{...empty,properties:{id:{type:'string',minLength:1,maxLength:80},mode:{type:'string',enum:[...ALIGN_MODES]}},required:['id','mode']},run:(p:{id:string;mode:AlignMode})=>{const s=S.getVectorSession();S.commit(alignTextToPage(s.doc,p.id,p.mode));}},
+  {id:'vector.setGrid',title:'Set the grid',category:'View',level:'ui',enabled:ready,params:{...empty,properties:{show:{type:'boolean'},snap:{type:'boolean'},size:{type:'number',minimum:GRID_LIMITS.min,maximum:GRID_LIMITS.max}}},run:(p:Parameters<typeof S.setGrid>[0]={})=>{S.setGrid(p);}},
   {id:'vector.deleteText',title:'Delete a text object',category:'Edit',level:'ui',enabled:()=>ready()&&!!S.getVectorSession().textSel,params:{...empty,properties:{id:{type:'string',minLength:1,maxLength:80}},required:['id']},run:(p:{id:string})=>{S.deleteText(p.id);}},
   {id:'vector.clearGuides',title:'Clear all ruler guides',category:'Edit',level:'ui',enabled:ready,params:empty,run:()=>{const s=S.getVectorSession();S.commit(clearGuides(s.doc));}},
   {id:'vector.makeClip',title:'Make clipping mask',category:'Edit',level:'ui',enabled:selected,params:empty,run:()=>{const s=S.getVectorSession();S.commit(makeClip(s.doc,s.selection));}},

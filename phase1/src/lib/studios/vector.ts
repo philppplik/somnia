@@ -22,7 +22,7 @@ export const vectorShell:StudioShellDef={
  ],
  tools:VECTOR_TOOLS.map((tool,i)=>({id:tool,command:'vector.tool.'+tool,icon:toolIcons[i],opensPanel:'tools'})),
  inspector:{emptyKey:'vector.shell.empty',sections:[
-  {id:'page',title:'Page',titleKey:'vector.page',component:'vector.section.page',order:10,when:'services.ready',commands:['vector.resizePage','vector.replaceDocument','vector.moveGuide','vector.clearGuides']},
+  {id:'page',title:'Page',titleKey:'vector.page',component:'vector.section.page',order:10,when:'services.ready',commands:['vector.resizePage','vector.replaceDocument','vector.moveGuide','vector.setGrid','vector.clearGuides']},
   {id:'transform',title:'Transform',titleKey:'vector.shell.transform',component:'vector.section.transform',order:20,when:"selection.kind != 'none'",commands:['vector.setSelectionBounds','vector.rotateSelection','vector.flipSelection','vector.alignSelection','vector.distributeSelection','vector.booleanOp','vector.group','vector.ungroup','vector.joinPaths','vector.reversePath','vector.roundCorners','vector.simplifyPath','vector.makeClip','vector.releaseClip','vector.copyStyle','vector.pasteStyle','vector.offsetPath','vector.outlineStroke','vector.reorder','vector.duplicateSelection','vector.deleteSelection']},
   {id:'style',title:'Style',titleKey:'vector.style',component:'vector.section.style',order:30,when:"selection.kind != 'none'",commands:['vector.setStyle','vector.setGradient','vector.addSwatch','vector.removeSwatch','vector.applySwatch']},
   {id:'shape',title:'Shape options',titleKey:'vector.shell.shape',component:'vector.section.shape',order:33,when:'services.ready',commands:['vector.setShapeOptions']},

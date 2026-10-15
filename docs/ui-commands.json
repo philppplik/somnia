@@ -13038,6 +13038,13 @@
       "hasEnabled": true
     },
     {
+      "id": "vector.setGrid",
+      "title": "Set the grid",
+      "category": "View",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
       "id": "vector.setNodeKind",
       "title": "Set vector node kind",
       "category": "Edit",
