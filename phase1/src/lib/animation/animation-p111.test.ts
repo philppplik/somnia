@@ -1335,3 +1335,18 @@ test('P240 camera: null at the centre, all unlocked top level layers hang from i
  s.undo();s.undo();assert.equal(findCamera(findComp(s.document!)!),undefined);
  assert.equal(findComp(s.document!)!.layers.every(l=>l.parent===c0.layers.find(x=>x.id===l.id)?.parent),true);
 });
+
+test('P241 camera follow: the followed layer stays put in frame, linear keys, bounded, one undo step',async()=>{
+ const {cameraSpecs,findCamera,MAX_FOLLOW_KEYS}=await import('./cameraCommands');const {worldMatrix}=await import('./scene');
+ const specs=cameraSpecs(),add=specs[0].run as (p?:unknown)=>unknown,follow=specs[2].run as (p?:unknown)=>unknown;
+ const s=open();setAnimationSession(s);let c=findComp(s.document!)!;
+ assert.throws(()=>follow({}),/camera first/i);add({});c=findComp(s.document!)!;
+ const title=c.layers.find(l=>l.id==='a')!;s.dispatch([{type:'key.add',layer:'a',prop:'position',t:f(0)},{type:'key.add',layer:'a',prop:'position',t:f(30)},{type:'prop.set',layer:'a',prop:'position',t:f(30),value:[300,200] as never}]);
+ assert.throws(()=>follow({layer:findCamera(c)!.id}),/itself/);
+ s.setView({selectedLayer:title.id});const r=follow({}) as {keys:number};assert.ok(r.keys>=2&&r.keys<=MAX_FOLLOW_KEYS);
+ c=findComp(s.document!)!;const cam=findCamera(c)!,tl=c.layers.find(l=>l.id===title.id)!;
+ assert.ok(cam.transform.position.keys.length===r.keys&&cam.transform.position.keys.every(k=>k.interp==='linear'));
+ const an=tl.transform.anchor.value as unknown as number[];const pt=(t:number)=>{const m=worldMatrix(c,tl,t);return [m[0]*an[0]+m[2]*an[1]+m[4],m[1]*an[0]+m[3]*an[1]+m[5]];};
+ const p0=pt(c.workArea.in);for(const t of [c.workArea.out,Math.round(c.workArea.out/2)]){const p=pt(t);assert.ok(Math.abs(p[0]-p0[0])<1.5&&Math.abs(p[1]-p0[1])<1.5,`${t}: ${p} vs ${p0}`);}
+ s.undo();assert.equal(findCamera(findComp(s.document!)!)!.transform.position.keys.length,0);
+});

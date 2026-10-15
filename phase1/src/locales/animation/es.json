@@ -1187,5 +1187,7 @@
  "animation.camera.panUp": "Panoramica arriba",
  "animation.camera.panDown": "Panoramica abajo",
  "animation.camera.rollLeft": "Girar a la izquierda",
- "animation.camera.rollRight": "Girar a la derecha"
+ "animation.camera.rollRight": "Girar a la derecha",
+ "animation.camera.follow": "Seguir la capa seleccionada",
+ "cmd.animation.camera.follow": "La camara sigue la capa seleccionada"
 }

@@ -2,11 +2,27 @@ import type {CommandSpec} from '../commandSpec';
 import {animationSession} from './session';
 import {findComp,newId,makeTransform,prop,type Composition,type Layer} from './model';
 import {EditError,type Edit} from './edit';
+import {worldMatrix} from './scene';
+import {frameToTick,tickToFrame} from './time';
 /** A camera for the whole scene: a null layer at the composition centre that all other top level layers hang from, plus ready-made camera moves over the work area. Own file so the big command array keeps cheap type inference. */
 const expected=(m:string):never=>{throw Object.assign(new Error(m),{expected:true});};
 export const CAMERA_NAME='Camera',CAMERA_MOVES=['pushIn','pullOut','panLeft','panRight','panUp','panDown','rollLeft','rollRight'] as const;
 export type CameraMove=typeof CAMERA_MOVES[number];
 export const findCamera=(c:Composition):Layer|undefined=>c.layers.find(l=>l.kind==='null'&&l.name===CAMERA_NAME);
+export const MAX_FOLLOW_KEYS=120;
+/** Camera position keys that keep `target` where it is at `a` while it moves: the target's world point is sampled with the camera at rest, and the camera moves against it. Linear keys, at most MAX_FOLLOW_KEYS. */
+export function cameraFollowEdits(c:Composition,cam:Layer,target:Layer,a:number,b:number):Edit[]{
+ const cx=c.width/2,cy=c.height/2,r2=(n:number)=>Math.round(n*100)/100;
+ const rest:Layer={...cam,parent:null,transform:{...cam.transform,position:prop('vec2',[cx,cy]),scale:prop('vec2',[100,100]),rotation:prop('number',0)}};
+ const rc:Composition={...c,layers:c.layers.map(l=>l.id===cam.id?rest:l)},tl=rc.layers.find(l=>l.id===target.id)??target;
+ const pt=(t:number):[number,number]=>{const m=worldMatrix(rc,tl,t),an=tl.transform.anchor.value as unknown as [number,number];return [m[0]*an[0]+m[2]*an[1]+m[4],m[1]*an[0]+m[3]*an[1]+m[5]];};
+ const f0=tickToFrame(a,c.fps),f1=tickToFrame(b,c.fps),step=Math.max(1,Math.ceil((f1-f0)/(MAX_FOLLOW_KEYS-1)));
+ const ts:number[]=[];for(let f=f0;f<f1;f+=step)ts.push(frameToTick(f,c.fps));ts.push(frameToTick(f1,c.fps));
+ const p0=pt(ts[0]),edits:Edit[]=[];
+ for(const k of cam.transform.position.keys)edits.push({type:'key.remove',layer:cam.id,prop:'position',t:k.t});
+ for(const t of ts){const p=pt(t);edits.push({type:'key.add',layer:cam.id,prop:'position',t},{type:'prop.set',layer:cam.id,prop:'position',t,value:[r2(cx-(p[0]-p0[0])),r2(cy-(p[1]-p0[1]))] as never},{type:'key.interp',layer:cam.id,prop:'position',t,interp:'linear'});}
+ return edits;
+}
 export const MIN_CAMERA_AMOUNT=1,MAX_CAMERA_AMOUNT=100;
 /** Edits that move the camera from its rest pose at `a` to the move's end pose at `b`. `amount` is percent (zoom, pan as share of the comp size) or degrees (roll). */
 export function cameraMoveEdits(c:Composition,cam:Layer,move:CameraMove,a:number,b:number,amount:number):Edit[]{
@@ -50,4 +66,17 @@ export const cameraSpecs=():CommandSpec<unknown,unknown>[]=>[{
   const a=c.workArea.in,b=c.workArea.out;if(b<=a)return expected('The work area is empty.');
   try{s.dispatch(cameraMoveEdits(c,cam,p.move,a,b,amount));}catch(e){if(e instanceof EditError)throw Object.assign(e,{expected:true});throw e;}
   s.setView({selectedLayer:cam.id});return {from:a,to:b,amount};
+ }) as (p:unknown)=>unknown},{
+ id:'animation.camera.follow',title:'Make the camera follow the selected layer',category:'Edit',level:'ui',keywords:['animation','camera','follow','track','tracking','shot','keep in frame','work area'],
+ params:{type:'object',properties:{layer:{type:'string'}},additionalProperties:false},
+ enabled:()=>{const s=animationSession(),d=s.document,c=d?findComp(d):undefined,sel=s.view.selectedLayer;return !!c&&!!findCamera(c)&&!!sel&&sel!==findCamera(c)?.id&&c.layers.some(l=>l.id===sel);},
+ run:((p:{layer?:string})=>{
+  const s=animationSession(),d=s.document,c=d?findComp(d):undefined;if(!c)return expected('No composition is open.');
+  const cam=findCamera(c);if(!cam)return expected('Add a camera first.');if(cam.locked)return expected('The camera is locked.');
+  const id=p?.layer??s.view.selectedLayer,target=c.layers.find(l=>l.id===id);if(!target)return expected('Select the layer the camera should follow.');
+  if(target.id===cam.id)return expected('The camera cannot follow itself.');
+  const a=c.workArea.in,b=c.workArea.out;if(b<=a)return expected('The work area is empty.');
+  const edits=cameraFollowEdits(c,cam,target,a,b);
+  try{s.dispatch(edits);}catch(e){if(e instanceof EditError)throw Object.assign(e,{expected:true});throw e;}
+  s.setView({selectedLayer:cam.id});return {target:target.id,keys:edits.filter(e=>e.type==='key.add').length};
  }) as (p:unknown)=>unknown}];

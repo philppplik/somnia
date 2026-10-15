@@ -1187,5 +1187,7 @@
  "animation.camera.panUp": "Schwenk hoch",
  "animation.camera.panDown": "Schwenk runter",
  "animation.camera.rollLeft": "Rollen links",
- "animation.camera.rollRight": "Rollen rechts"
+ "animation.camera.rollRight": "Rollen rechts",
+ "animation.camera.follow": "Ausgewaehlter Ebene folgen",
+ "cmd.animation.camera.follow": "Kamera folgt der ausgewaehlten Ebene"
 }

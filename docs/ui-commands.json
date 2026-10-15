@@ -150,6 +150,23 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.camera.follow",
+      "title": "Make the camera follow the selected layer",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "camera",
+        "follow",
+        "keep in frame",
+        "shot",
+        "track",
+        "tracking",
+        "work area"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.camera.move",
       "title": "Animate the camera over the work area",
       "category": "Edit",
