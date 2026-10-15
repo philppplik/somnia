@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {unzipSync,zipSync,strFromU8,strToU8} from 'fflate';
-import {addShape,SHAPE_PRESETS,formatShapeParagraphs,readParagraphFormat,replaceSkippedSlides,smallTextSlides,countTextMatches,emptySlides,textMatchesBySlide,replaceTextAll,slidesWithoutNotes,duplicateTitles,setPictureDecorative,readPictureDecorative,untitledSlides,missingAltText,MAX_ALT_REPORT,setPictureAlt,readPictureAlt,editSections,setSlideHidden,readHiddenSlides,setFirstSlideNum,readFirstSlideNum,setSlideFooter,setAllSlideFooters,readSlideFooter,setSlideSize,readSlideSize,setAllSlideBackgrounds,backgroundSummary,setSlideBackground,readSlideBackground,editLayoutBox,readLayoutBoxes,editMasterBox,readMaster,editTheme,readTheme,insertTable,editTable,readTable,setShapeStyle,readShapeStyle,setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
+import {changeSlideLayout,slideLayoutPart,addShape,SHAPE_PRESETS,formatShapeParagraphs,readParagraphFormat,replaceSkippedSlides,smallTextSlides,countTextMatches,emptySlides,textMatchesBySlide,replaceTextAll,slidesWithoutNotes,duplicateTitles,setPictureDecorative,readPictureDecorative,untitledSlides,missingAltText,MAX_ALT_REPORT,setPictureAlt,readPictureAlt,editSections,setSlideHidden,readHiddenSlides,setFirstSlideNum,readFirstSlideNum,setSlideFooter,setAllSlideFooters,readSlideFooter,setSlideSize,readSlideSize,setAllSlideBackgrounds,backgroundSummary,setSlideBackground,readSlideBackground,editLayoutBox,readLayoutBoxes,editMasterBox,readMaster,editTheme,readTheme,insertTable,editTable,readTable,setShapeStyle,readShapeStyle,setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
 import {readRuns,makeEditedCopy} from './editCopy';
 import {png,jpeg} from './imageFixtures';
 
@@ -1148,4 +1148,24 @@ test('addShape refuses unknown presets, missing slides, the shape cap and keeps 
   let b=deck(2);const ids=new Set<number>();for(let i=0;i<20;i++)b=addShape(b,256,SHAPE_PRESETS[i%SHAPE_PRESETS.length]);
   for(const s of readDeckModel(b).slides[0].shapes){assert.ok(!ids.has(s.id));ids.add(s.id);}
   const slide=readDeckModel(b).slides[0];for(const s of slide.shapes)if(s.bounds){assert.ok(s.bounds.x+s.bounds.w<=readDeckModel(b).slideSize!.cx);}
+});
+
+test('changeSlideLayout repoints only the slide layout relationship and keeps every shape and text',()=>{
+  const src=deck(2),out=changeSlideLayout(src,256,'ppt/slideLayouts/slideLayout6.xml');
+  assert.equal(slideLayoutPart(out,256),'ppt/slideLayouts/slideLayout6.xml');assert.equal(slideLayoutPart(out,257),'ppt/slideLayouts/slideLayout7.xml');
+  const a=unzipSync(src),b=unzipSync(out);for(const n of Object.keys(a))if(n!=='ppt/slides/_rels/slide1.xml.rels')assert.deepEqual(b[n],a[n],n);
+  assert.deepEqual(readDeckModel(out).runs.map(r=>r.text),readDeckModel(src).runs.map(r=>r.text));
+  assert.equal(changeSlideLayout(src,256,'ppt/slideLayouts/slideLayout7.xml'),src);
+  const back=changeSlideLayout(out,256,'ppt/slideLayouts/slideLayout7.xml');assert.equal(slideLayoutPart(back,256),'ppt/slideLayouts/slideLayout7.xml');
+});
+test('changeSlideLayout refuses when a placeholder would lose its match, unknown layouts and missing slides',()=>{
+  const withBody=newSlideFromLayout(deck(2),'ppt/slideLayouts/slideLayout3.xml',256),id=readDeckModel(withBody).slides[1].id;
+  assert.equal(slideLayoutPart(withBody,id),'ppt/slideLayouts/slideLayout3.xml');
+  assert.throws(()=>changeSlideLayout(withBody,id,'ppt/slideLayouts/slideLayout7.xml'),/no match for 2 placeholders/);
+  assert.throws(()=>changeSlideLayout(withBody,id,'ppt/slideLayouts/slideLayout6.xml'),/no match for 1 placeholder/);
+  const ok=changeSlideLayout(withBody,id,'ppt/slideLayouts/slideLayout11.xml');assert.equal(slideLayoutPart(ok,id),'ppt/slideLayouts/slideLayout11.xml');
+  assert.equal(readDeckModel(ok).slides[1].shapes.length,2);
+  assert.throws(()=>changeSlideLayout(withBody,id,'ppt/slideLayouts/slideLayout99.xml'),/no longer exists/);
+  assert.throws(()=>changeSlideLayout(withBody,id,'../evil.xml'),/no longer exists/);
+  assert.throws(()=>changeSlideLayout(deck(2),999,'ppt/slideLayouts/slideLayout6.xml'),/Slide no longer exists/);
 });

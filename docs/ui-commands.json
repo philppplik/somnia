@@ -8354,6 +8354,20 @@
       "hasEnabled": true
     },
     {
+      "id": "slides.changeLayout",
+      "title": "Change slide layout",
+      "category": "Edit",
+      "source": "slides",
+      "keywords": [
+        "change",
+        "layout",
+        "placeholder",
+        "slide",
+        "switch"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "slides.deleteSlide",
       "title": "Delete slide",
       "category": "Edit",
@@ -8734,7 +8748,7 @@
     },
     {
       "id": "slides.removeTextBox",
-      "title": "Remove text box",
+      "title": "Remove object",
       "category": "Edit",
       "source": "slides",
       "keywords": [

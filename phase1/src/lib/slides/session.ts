@@ -208,6 +208,7 @@ export const ungroupShapeAt=(slideId:number,shapeId:number)=>route('ungroup',()=
 export const paragraphAt=(slideId:number,shapeId:number,format:import('./deckPackage').ParagraphFormat)=>route('paragraph',()=>[slideId,shapeId,format],e=>idAt(e,slideId));
 export const formatShapeAt=(slideId:number,shapeId:number,format:RunFormat)=>route('formatText',()=>[slideId,shapeId,format],e=>idAt(e,slideId));
 export const addTextBoxAt=(slideId:number,label:string)=>route('boxEdit',()=>['add',slideId,label],e=>idAt(e,slideId));
+export const changeSlideLayoutAt=(slideId:number,layoutPart:string)=>route('slideLayout',()=>[slideId,layoutPart],e=>idAt(e,slideId));
 export const addShapeAt=(slideId:number,preset:ShapePreset)=>route('boxEdit',()=>['shape',slideId,preset],e=>idAt(e,slideId));
 export const removeTextBoxAt=(slideId:number,shapeId:number)=>route('boxEdit',()=>['remove',slideId,shapeId],e=>idAt(e,slideId));
 /** Picture payloads are inline bytes: not part of the CO3 journal. */

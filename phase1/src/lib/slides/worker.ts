@@ -2,7 +2,7 @@ import {diagnosePptx} from './diagnostics';
 import {readRuns,makeEditedCopy} from './editCopy';
 /// <reference lib="webworker" />
 import init,{SlidesEngine} from '../../../slides-engine/pkg/somnia_slides.js';
-import {formatShapeParagraphs,replaceTextAll,setPictureAlt,setPictureDecorative,editSections,setSlideHidden,setFirstSlideNum,setSlideFooter,setAllSlideFooters,setSlideSize,setAllSlideBackgrounds,setSlideBackground,editLayoutBox,editMasterBox,editTheme,insertTable,editTable,setShapeStyle,setSlideNotes,groupShapes,ungroupShape,setSlideTransition,arrangeShapes,setShapesBounds,insertPicture,replacePicture,removePicture,formatShapeText,addTextBox,addShape,removeTextBox,readDeckModel,moveSlide,setShapeBounds,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
+import {changeSlideLayout,formatShapeParagraphs,replaceTextAll,setPictureAlt,setPictureDecorative,editSections,setSlideHidden,setFirstSlideNum,setSlideFooter,setAllSlideFooters,setSlideSize,setAllSlideBackgrounds,setSlideBackground,editLayoutBox,editMasterBox,editTheme,insertTable,editTable,setShapeStyle,setSlideNotes,groupShapes,ungroupShape,setSlideTransition,arrangeShapes,setShapesBounds,insertPicture,replacePicture,removePicture,formatShapeText,addTextBox,addShape,removeTextBox,readDeckModel,moveSlide,setShapeBounds,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
 import type {SlidesRequest,SlidesReply} from './protocol';
 let engine:SlidesEngine|undefined;let wasmMemory:WebAssembly.Memory|undefined;
 // Serialize even asynchronous initialization. No user-defined method invocation.
@@ -48,6 +48,7 @@ self.onmessage=({data}:{data:SlidesRequest})=>{queue=queue.then(async()=>{
    case 'boxEdit':result=data.kind==='add'?addTextBox(data.bytes,data.slideId,data.label):data.kind==='shape'?addShape(data.bytes,data.slideId,data.preset):removeTextBox(data.bytes,data.slideId,data.shapeId);break;
    case 'pictureEdit':result=data.kind==='insert'?insertPicture(data.bytes,data.slideId,data.image,data.alt):data.kind==='replace'?replacePicture(data.bytes,data.slideId,data.shapeId,data.image):removePicture(data.bytes,data.slideId,data.shapeId);break;
    case 'slideEdit':result=data.kind==='duplicate'?duplicateSlide(data.bytes,data.slideId):deleteSlide(data.bytes,data.slideId);break;
+   case 'slideLayout':result=changeSlideLayout(data.bytes,data.slideId,data.layoutPart);break;
    case 'newSlide':result=newSlideFromLayout(data.bytes,data.layoutPart,data.afterSlideId);break;
    case 'read':if(!engine)throw new Error('Worker not initialized');result=JSON.parse(engine.read_slide(data.index));break;
    case 'render':if(!engine)throw new Error('Worker not initialized');result=engine.render_png(data.index,data.scale);break;

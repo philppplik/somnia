@@ -19,6 +19,7 @@ export class SlidesClient {
  async model(bytes:Uint8Array){return await this.request({op:'model',bytes}) as DeckModel;}
  async reorder(bytes:Uint8Array,slideId:number,toIndex:number){return await this.request({op:'reorder',bytes,slideId,toIndex}) as Uint8Array;}
  async slideEdit(bytes:Uint8Array,kind:'duplicate'|'delete',slideId:number){return await this.request({op:'slideEdit',bytes,kind,slideId}) as Uint8Array;}
+ async slideLayout(bytes:Uint8Array,slideId:number,layoutPart:string){return await this.request({op:'slideLayout',bytes,slideId,layoutPart}) as Uint8Array;}
  async newSlide(bytes:Uint8Array,layoutPart:string,afterSlideId:number|null){return await this.request({op:'newSlide',bytes,layoutPart,afterSlideId}) as Uint8Array;}
  async shapeBounds(bytes:Uint8Array,slideId:number,shapeId:number,expected:BoundsBox,next:BoundsBox){return await this.request({op:'shapeBounds',bytes,slideId,shapeId,expected,next}) as Uint8Array;}
  async shapesBounds(bytes:Uint8Array,slideId:number,edits:ShapeBoundsEdit[]){return await this.request({op:'shapesBounds',bytes,slideId,edits}) as Uint8Array;}

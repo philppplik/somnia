@@ -428,6 +428,42 @@ export function readLayouts(bytes:Uint8Array):LayoutInfo[]{
   return out;
 }
 
+const layoutPhs=(xml:string)=>[...xml.matchAll(/<p:ph\b([^>]*?)\/?>/g)].map(m=>({type:phKey(attr(m[1],'type')??''),idx:attr(m[1],'idx')??''}));
+/** The layout part a slide uses, or null when it has none or more than one layout relationship. */
+export function slideLayoutPart(bytes:Uint8Array,slideId:number):string|null{
+  const model=readDeckModel(bytes),slide=model.slides.find(s=>s.id===slideId);if(!slide)return null;
+  const zip=openPackage(bytes),l=readRels(zip,slide.part).filter(r=>r.type===RT+'slideLayout'&&!r.external);
+  return l.length===1?resolve(slide.part,l[0].target):null;
+}
+/** Switches one slide to another layout of the same master. Only the slide's layout relationship changes.
+ *  Refused unless every placeholder on the slide has a counterpart (same type and index) in the new layout, so nothing loses its position.
+ *  Placeholders the new layout has but the slide lacks are not added. */
+export function changeSlideLayout(bytes:Uint8Array,slideId:number,layoutPart:string):Uint8Array{
+  const model=readDeckModel(bytes),slide=model.slides.find(s=>s.id===slideId);
+  if(!slide)throw Error('Slide no longer exists');if(slide.problems.length)throw Error('This slide has unsupported structure');
+  const zip=openPackage(bytes),rels=readRels(zip,slide.part),lr=rels.filter(r=>r.type===RT+'slideLayout'&&!r.external);
+  if(lr.length!==1)throw Error('This slide does not have exactly one layout');
+  const cur=resolve(slide.part,lr[0].target);
+  if(!readLayouts(bytes).some(l=>l.part===layoutPart))throw Error('Layout no longer exists');
+  if(layoutPart===cur)return bytes;
+  const masterOf=(part:string)=>{const m=readRels(zip,part).filter(r=>r.type===RT+'slideMaster'&&!r.external);return m.length===1?resolve(part,m[0].target):null;};
+  const mc=masterOf(cur),mn=masterOf(layoutPart);
+  if(!mc||mc!==mn)throw Error('This layout belongs to a different master and would change the theme');
+  const have=layoutPhs(text(zip,layoutPart));
+  const missing=layoutPhs(text(zip,slide.part)).filter(ph=>!have.some(h=>h.type===ph.type&&(h.idx===ph.idx||ph.idx===''||h.idx==='')));
+  if(missing.length)throw Error(`This layout has no match for ${missing.length} placeholder${missing.length===1?'':'s'} on the slide`);
+  const target=relative(slide.part,layoutPart),raw=lr[0].raw,next=raw.replace(/\sTarget="[^"]*"/,` Target="${attrEsc(target)}"`);
+  const relsXml=text(zip,relsName(slide.part));if(!relsXml.includes(raw)||next===raw)throw Error('Slide layout relationship is not in a supported form');
+  const out=repack(zip,{[relsName(slide.part)]:relsXml.replace(raw,next)});
+  const after=readDeckModel(out),as=after.slides.find(s=>s.id===slideId);
+  if(!as||as.problems.length||as.shapes.length!==slide.shapes.length||as.shapes.some((s,i)=>s.id!==slide.shapes[i].id))throw Error('Edited deck failed verification');
+  if(after.runs.length!==model.runs.length||after.runs.some((r,i)=>r.text!==model.runs[i].text||r.key!==model.runs[i].key))throw Error('Edited deck failed verification');
+  if(slideLayoutPart(out,slideId)!==layoutPart)throw Error('Edited deck failed verification');
+  const re=unzipSync(out);
+  for(const name of Object.keys(zip))if(name!==relsName(slide.part)&&(!re[name]||re[name].length!==zip[name].length||re[name].some((v,i)=>v!==zip[name][i])))throw Error('Edited deck changed an unrelated part');
+  return out;
+}
+
 /** Builds a new slide from a supported layout: one empty text placeholder per layout text placeholder. */
 export function newSlideFromLayout(bytes:Uint8Array,layoutPart:string,afterSlideId:number|null):Uint8Array{
   const c=context(bytes);if(c.list.items.length>=MAX_SLIDES)throw Error(`A deck can hold at most ${MAX_SLIDES} slides`);
