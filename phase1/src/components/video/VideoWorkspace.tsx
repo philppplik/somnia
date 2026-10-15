@@ -3,13 +3,15 @@ import {ChevronsLeft,ChevronsRight,Download,Pause,Play,Redo2,Scissors,Undo2,Volu
 import {Button} from '../ui/button';
 import {useT} from '../../lib/useT';
 import {executeCommand} from '../../lib/commands';
-import {addTimelineClipsFromDialog,cancelVideoExport,deleteTimelineClip,getFilmstrip,moveTimelineClip,openVideo,redoVideoEdit,saveVideoProject,selectTimelineClip,splitTimelineAt,toggleTimelineClipMute,trimTimelineClip,undoVideoEdit,useVideoSession,videoCanRedo,videoCanUndo,videoIsDirty,videoIsEdited} from '../../lib/video/session';
+import {addTimelineClipsFromDialog,cancelVideoExport,deleteAudioTrackClip,deleteTimelineClip,getFilmstrip,moveAudioTrackClip,moveTimelineClip,openVideo,redoVideoEdit,resizeAudioTrackClip,saveVideoProject,selectAudioTrackClip,selectTimelineClip,splitTimelineAt,toggleTimelineClipMute,trimTimelineClip,undoVideoEdit,useVideoSession,videoCanRedo,videoCanUndo,videoIsDirty,videoIsEdited} from '../../lib/video/session';
 import {clipDisplayName,isTitleClip,needsSourceFile} from '../../lib/video/titles';
 import {TitlePreview} from './TitlePreview';
 import {useTitlePlayback} from './useTitlePlayback';
 import {FilmstripStrip} from './FilmstripStrip';
 import {WaveformStrip} from './WaveformStrip';
 import {blendAt,clipRanges,locate,speedOf,timelineDuration} from '../../lib/video/timeline';
+import {audioClipDuration,audioEnvelope,audioTrackEnd} from '../../lib/video/audioTrack';
+import {AudioLane} from './AudioLane';
 import {zoomInStep,zoomOutStep} from '../../lib/video/zoom';
 import {formatTime} from '../../lib/video/recipe';
 import {formatBytes,getState,patchState,requestStudio,useAppStore,useMedia,type MediaItem} from './workspace-deps';
@@ -34,7 +36,10 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
  // The Video rail offers Files only, so do not leave the HTML Layers tree open beside video.
  useEffect(()=>{if(studio==='video'&&!['files','search'].includes(getState().leftTab))patchState({leftTab:'files'});},[studio]);
  const clips=session?.clips??[];
+ const audioClips=session?.audioClips??[];
  const duration=timelineDuration(clips);
+ // The track maps onto the longer of video and audio so an audio tail stays visible and reachable.
+ const domain=Math.max(duration,audioTrackEnd(audioClips));
  const ranges=clipRanges(clips);
  const probe=session?.probe??null;
  const fps=probe?.video?.fps&&probe.video.fps>1?probe.video.fps:30;
@@ -45,7 +50,26 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
  // Sources of clips that lost their media tab render as missing and block the export with a clear message.
  const missing=new Set(clips.filter(needsSourceFile).map(c=>c.source).filter((n:string)=>!media.items.some((i:MediaItem)=>i.name===n)));
  const urlOf=(source:string)=>media.items.find((i:MediaItem)=>i.name===source)?.url??item.url;
- const seek=useCallback((s:number)=>{setPlayhead(Math.min(Math.max(0,s),duration||s));},[duration]);
+ const seek=useCallback((s:number)=>{setPlayhead(Math.min(Math.max(0,s),domain||s));},[domain]);
+ // Audio-track preview: one hidden element per audio clip. Envelope gain (fades) follows the playhead; drift over 350 ms is re-synced, same as the video slots.
+ const audioEls=useRef(new Map<string,HTMLAudioElement>());
+ useEffect(()=>{
+  for(const ac of audioClips){
+   const el=audioEls.current.get(ac.id);if(!el)continue;
+   const dur=audioClipDuration(ac),active=playhead>=ac.at&&playhead<ac.at+dur;
+   if(playing&&active){
+    const url=media.items.find((i:MediaItem)=>i.name===ac.source)?.url;
+    if(!url){el.pause();continue;}
+    if(el.dataset.clipSource!==ac.source){el.dataset.clipSource=ac.source;if(el.src!==url)el.src=url;}
+    const expected=ac.in_s+(playhead-ac.at);
+    if(el.paused){el.currentTime=expected;void el.play().catch(()=>{});}
+    else if(Math.abs(el.currentTime-expected)>0.35)el.currentTime=expected;
+    el.muted=muted;
+    el.volume=Math.min(1,Math.max(0,volume*audioEnvelope(ac,playhead-ac.at)));
+   }else if(!el.paused)el.pause();
+  }
+ },[audioClips,playhead,playing,volume,muted,media]);
+ useEffect(()=>{const els=audioEls.current;return()=>els.forEach(el=>el.pause());},[]);
  // Every active slot sits on its clip's source and frame. A paused transport (seek, frame step) always syncs the
  // frame; while playing, only drift over 350 ms is corrected so the element's own clock does the smooth work.
  useEffect(()=>{
@@ -117,6 +141,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
   else if(e.key==='i'||e.key==='o'){e.preventDefault();const el=mainEl();if(entry)trimTimelineClip(item.name,entry.range.clip.id,e.key==='i'?'in':'out',el?el.currentTime:entry.sourceTime,`trim:${entry.range.clip.id}:${e.key==='i'?'in':'out'}`);}
   else if(e.key==='s'||e.key==='S'){e.preventDefault();splitHere();}
   else if((e.key==='Delete'||e.key==='Backspace')&&selected){e.preventDefault();deleteTimelineClip(item.name,selected);}
+  else if((e.key==='Delete'||e.key==='Backspace')&&session?.selectedAudioClipId){e.preventDefault();deleteAudioTrackClip(item.name,session.selectedAudioClipId);}
   else if(e.key==='ArrowRight'&&e.altKey&&selected){e.preventDefault();moveTimelineClip(item.name,selected,1);}
   else if(e.key==='ArrowLeft'&&e.altKey&&selected){e.preventDefault();moveTimelineClip(item.name,selected,-1);}
   else if(e.key==='m'||e.key==='M'){e.preventDefault();const id=selected??entry?.range.clip.id;if(id)toggleTimelineClipMute(item.name,id);}
@@ -179,7 +204,12 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
       onSeek={seek} onSelect={id=>selectTimelineClip(item.name,id)}
       onTrim={(id,edge,at)=>trimTimelineClip(item.name,id,edge,at,`trim:${id}:${edge}`)}
       onMove={(id,by)=>moveTimelineClip(item.name,id,by)}
-      trackHeight={48} zoom={zoom} onZoom={setZoom}
+      trackHeight={48} zoom={zoom} onZoom={setZoom} domain={domain}
+      audioLane={<AudioLane clips={audioClips} selectedId={session?.selectedAudioClipId??null} duration={domain}
+       onSelect={id=>selectAudioTrackClip(item.name,id)}
+       onMoveAt={(id,at)=>moveAudioTrackClip(item.name,id,at,`amove:${id}`)}
+       onResize={(id,edge,t2)=>resizeAudioTrackClip(item.name,id,edge,t2,`atrim:${id}:${edge}`)}
+       label={t('video.audioLane')}/>}
       renderStrip={c=>needsSourceFile(c)&&filmstrip?<>
        <FilmstripStrip controller={filmstrip} source={c.source} in_s={c.in_s} out_s={c.out_s} name={shortName(c.source)}/>
        <WaveformStrip controller={filmstrip} source={c.source} in_s={c.in_s} out_s={c.out_s} gain={c.muted?0:c.gain}/>
@@ -195,6 +225,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
    </div>
    {withPanel&&<aside className="w-[260px] shrink-0 overflow-auto border-l border-subtle" aria-label={t('video.panel')}><VideoControls name={item.name}/></aside>}
   </div>
+  {audioClips.map(ac=><audio key={ac.id} ref={el=>{if(el)audioEls.current.set(ac.id,el);else audioEls.current.delete(ac.id);}} preload="auto" className="hidden" data-testid="audio-preview" data-clip-id={ac.id}/>)}
   {probe?.audio&&<span className="hidden" data-testid="video-audio-info">{t('video.audioInfo',{codec:probe.audio.codec??'?',channels:probe.audio.channels===1?t('video.mono'):probe.audio.channels===2?t('video.stereo'):t('video.channelsN',{count:probe.audio.channels}),rate:probe.audio.rate})}</span>}
   {probe&&!probe.audio&&<span className="hidden" data-testid="video-audio-info">{t('video.noAudio')}</span>}
  </section>;

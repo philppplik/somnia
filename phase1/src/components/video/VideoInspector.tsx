@@ -2,7 +2,8 @@ import {useMemo,useState} from 'react';
 import {Button} from '../ui/button';
 import {useT} from '../../lib/useT';
 import {useMedia} from '../../lib/media';
-import {addTimelineClip,addTimelineClipsFromDialog,cancelVideoExport,deleteTimelineClip,moveTimelineClip,resetTimeline,setTimelineClipCrossfade,setTimelineClipGain,setTimelineClipSpeed,setVideoFormat,selectTimelineClip,toggleTimelineClipMute,trimTimelineClip,useVideoSession} from '../../lib/video/session';
+import {addAudioTrackClip,addTimelineClip,addTimelineClipsFromDialog,cancelVideoExport,deleteAudioTrackClip,deleteTimelineClip,moveAudioTrackClip,moveTimelineClip,resetTimeline,resizeAudioTrackClip,setAudioTrackClipFades,setAudioTrackClipGain,setTimelineClipCrossfade,setTimelineClipGain,setTimelineClipSpeed,setVideoFormat,selectTimelineClip,toggleTimelineClipMute,trimTimelineClip,useVideoSession} from '../../lib/video/session';
+import {audioClipDuration,audioTrackEnd} from '../../lib/video/audioTrack';
 import {clipDuration,clipRanges,fadeOf,MAX_GAIN,speedOf,timelineDuration} from '../../lib/video/timeline';
 import {isTitleClip} from '../../lib/video/titles';
 import {addTitleClip,setTitleLength,updateTitle} from '../../lib/video/titleSession';
@@ -16,7 +17,9 @@ export function VideoControls({name}:{name:string}){
  const {t}=useT();const s=useVideoSession(name);
  const media=useMedia();
  const [addPick,setAddPick]=useState('');
+ const [addAudioPick,setAddAudioPick]=useState('');
  const candidates=useMemo(()=>media.items.filter(i=>i.kind==='video'),[media.items]);
+ const audioCandidates=useMemo(()=>media.items.filter(i=>i.kind==='audio'),[media.items]);
  if(!s)return <p className="p-3 text-xs text-ink-3">{t('video.loading')}</p>;
  const ready=s.status==='ready'||s.status==='exporting';
  const p=s.probe,v=p?.video,a=p?.audio,dur=p?.duration??0;
@@ -26,6 +29,7 @@ export function VideoControls({name}:{name:string}){
  const webmDisabled=!caps||caps.webmVideo===null;
  const channels=a?(a.channels===1?t('video.mono'):a.channels===2?t('video.stereo'):t('video.channelsN',{count:a.channels})):'';
  const selected=s.clips.find(c=>c.id===s.selectedClipId)??null;
+ const selectedAudio=s.audioClips.find(c=>c.id===s.selectedAudioClipId)??null;
  const selectedIndex=selected?s.clips.findIndex(c=>c.id===selected.id):-1;
  return <fieldset disabled={!ready} className="m-0 min-w-0 border-0 p-0" data-testid="video-controls">
   <div className={row} data-testid="video-facts">
@@ -45,6 +49,18 @@ export function VideoControls({name}:{name:string}){
     <Button size="compact" variant="outline" onClick={()=>void addTimelineClipsFromDialog(name)} data-testid="video-add-open">{t('video.addOpen')}</Button>
    </div>
    <p className="m-0 text-ink-3">{t('video.timelineHint')}</p>
+  </div>
+  <div className={row} data-testid="video-audio-track-panel">
+   <span className="text-ink">{t('video.audioTrack')}</span>
+   <span className="text-ink-3" data-testid="video-audio-track-summary">{s.audioClips.length?t('video.audioTrackSummary',{count:s.audioClips.length,duration:audioTrackEnd(s.audioClips).toFixed(2)}):t('video.audioTrackEmpty')}</span>
+   <div className="flex items-center gap-2">
+    <NativeSelect className={field} value={addAudioPick} onChange={e=>setAddAudioPick(e.target.value)} aria-label={t('video.audioAddPick')} data-testid="video-audio-add-pick">
+     <option value="">{t('video.audioAddPick')}</option>
+     {audioCandidates.map(i=><option key={i.name} value={i.name}>{i.name}</option>)}
+    </NativeSelect>
+    <Button size="compact" disabled={!addAudioPick} onClick={()=>{const item=audioCandidates.find(i=>i.name===addAudioPick);if(item)void addAudioTrackClip(name,item);setAddAudioPick('');}} data-testid="video-audio-add">{t('video.audioAdd')}</Button>
+   </div>
+   <p className="m-0 text-ink-3">{t('video.audioTrackHint')}</p>
   </div>
   <TitleAddRow disabled={!ready} onAdd={()=>addTitleClip(name,selectedIndex>=0?clipRanges(s.clips)[selectedIndex].end:Number.MAX_SAFE_INTEGER)}/>
   {selected&&isTitleClip(selected)&&<>
@@ -85,6 +101,26 @@ export function VideoControls({name}:{name:string}){
     <Button size="compact" variant="ghost" disabled={s.clips.length<=1&&media.items.find(i=>i.name===name)?.kind!=='video-project'} onClick={()=>{deleteTimelineClip(name,selected.id);selectTimelineClip(name,null);}} data-testid="video-clip-delete">{t('video.deleteClip')}</Button>
    </div>
    <p className="m-0 text-ink-3">{t('video.clipHint')}</p>
+  </div>}
+  {selectedAudio&&<div className={row} data-testid="video-audio-clip-panel">
+   <span className="text-ink">{t('video.audioClipTitle')}</span>
+   <span className="truncate text-ink-3" data-testid="video-audio-clip-source">{selectedAudio.source}</span>
+   <div className="grid grid-cols-2 gap-2">
+    <label>{t('video.audioAt')}<NativeInput type="number" className={`${field} mt-1`} min={0} step={0.1} value={selectedAudio.at} onChange={e=>moveAudioTrackClip(name,selectedAudio.id,Number(e.target.value),`amove:${selectedAudio.id}`)} data-testid="video-audio-clip-at"/></label>
+    <label>{t('video.gain',{percent:Math.round(selectedAudio.gain*100)})}
+     <NativeInput type="range" className="mt-2 accent-[var(--accent)]" min={0} max={MAX_GAIN} step={0.05} value={selectedAudio.gain} onChange={e=>setAudioTrackClipGain(name,selectedAudio.id,Number(e.target.value),`again:${selectedAudio.id}`)} data-testid="video-audio-clip-gain"/></label>
+   </div>
+   <div className="grid grid-cols-2 gap-2">
+    <label>{t('video.trimStart')}<NativeInput type="number" className={`${field} mt-1`} min={0} step={0.01} value={selectedAudio.in_s} onChange={e=>resizeAudioTrackClip(name,selectedAudio.id,'in',selectedAudio.at+Number(e.target.value)-selectedAudio.in_s,`atrim:${selectedAudio.id}:in`)} data-testid="video-audio-clip-in-input"/></label>
+    <label>{t('video.trimEnd')}<NativeInput type="number" className={`${field} mt-1`} min={0} step={0.01} value={selectedAudio.out_s} onChange={e=>resizeAudioTrackClip(name,selectedAudio.id,'out',selectedAudio.at+Number(e.target.value)-selectedAudio.in_s,`atrim:${selectedAudio.id}:out`)} data-testid="video-audio-clip-out-input"/></label>
+   </div>
+   <div className="grid grid-cols-2 gap-2">
+    <label>{t('video.audioFadeIn')}<NativeInput type="number" className={`${field} mt-1`} min={0} max={audioClipDuration(selectedAudio)} step={0.1} value={selectedAudio.fadeIn} onChange={e=>setAudioTrackClipFades(name,selectedAudio.id,Number(e.target.value),selectedAudio.fadeOut)} data-testid="video-audio-clip-fade-in"/></label>
+    <label>{t('video.audioFadeOut')}<NativeInput type="number" className={`${field} mt-1`} min={0} max={audioClipDuration(selectedAudio)} step={0.1} value={selectedAudio.fadeOut} onChange={e=>setAudioTrackClipFades(name,selectedAudio.id,selectedAudio.fadeIn,Number(e.target.value))} data-testid="video-audio-clip-fade-out"/></label>
+   </div>
+   <div className="flex flex-wrap gap-2">
+    <Button size="compact" variant="ghost" onClick={()=>deleteAudioTrackClip(name,selectedAudio.id)} data-testid="video-audio-clip-delete">{t('video.deleteClip')}</Button>
+   </div>
   </div>}
   <div className={row} data-testid="video-format">
    <span className="text-ink">{t('video.format')}</span>

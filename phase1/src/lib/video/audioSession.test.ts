@@ -94,3 +94,48 @@ test('audio track: a source without an audio track is rejected with an error',as
   assert.match(s.error,/no audio track/i);
  }finally{done();}
 });
+
+test('audio track: selection is exclusive across tracks and survives edits only while the clip does',async()=>{
+ setVideoEngineFactory(()=>fakeAudioEngine());
+ const done=await freshProject('au-select.video-project');
+ try{
+  const {addTitleClip}=await import('./titleSession');
+  const {selectTimelineClip,selectAudioTrackClip}=await import('./session');
+  addTitleClip('au-select.video-project',Number.MAX_SAFE_INTEGER,{text:'t'});
+  const videoId=getVideoSession('au-select.video-project')!.clips[0].id;
+  selectTimelineClip('au-select.video-project',videoId);
+  const audioId=await addAudioTrackClip('au-select.video-project',audioItem('narration.wav'));
+  selectAudioTrackClip('au-select.video-project',audioId!);
+  let s=getVideoSession('au-select.video-project')!;
+  assert.equal(s.selectedAudioClipId,audioId);
+  assert.equal(s.selectedClipId,null,'audio selection clears the video selection');
+  selectTimelineClip('au-select.video-project',videoId);
+  s=getVideoSession('au-select.video-project')!;
+  assert.equal(s.selectedClipId,videoId);
+  assert.equal(s.selectedAudioClipId,null,'video selection clears the audio selection');
+  selectAudioTrackClip('au-select.video-project',audioId!);
+  moveAudioTrackClip('au-select.video-project',audioId!,2);
+  assert.equal(getVideoSession('au-select.video-project')!.selectedAudioClipId,audioId,'an edit keeps the selection');
+  deleteAudioTrackClip('au-select.video-project',audioId!);
+  assert.equal(getVideoSession('au-select.video-project')!.selectedAudioClipId,null,'deleting the clip clears the selection');
+ }finally{done();}
+});
+
+test('audio track: undo restores a deleted clip; selection follows the current state, not history',async()=>{
+ setVideoEngineFactory(()=>fakeAudioEngine());
+ const done=await freshProject('au-undosel.video-project');
+ try{
+  const {selectAudioTrackClip}=await import('./session');
+  const audioId=await addAudioTrackClip('au-undosel.video-project',audioItem('bed.mp3'));
+  selectAudioTrackClip('au-undosel.video-project',audioId!);
+  deleteAudioTrackClip('au-undosel.video-project',audioId!);
+  assert.equal(getVideoSession('au-undosel.video-project')!.audioClips.length,0);
+  assert.equal(getVideoSession('au-undosel.video-project')!.selectedAudioClipId,null,'deleting clears the selection');
+  undoVideoEdit('au-undosel.video-project');
+  const s=getVideoSession('au-undosel.video-project')!;
+  assert.equal(s.audioClips.length,1,'undo brings the clip back');
+  assert.equal(s.selectedAudioClipId,null,'selection is not revived from history (same as video clips)');
+  selectAudioTrackClip('au-undosel.video-project',audioId!);
+  assert.equal(getVideoSession('au-undosel.video-project')!.selectedAudioClipId,audioId,'and can be set again');
+ }finally{done();}
+});

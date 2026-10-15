@@ -4,7 +4,7 @@ import {VideoEngine,type VideoEngineLike} from './engine';
 import {DEFAULT_FORMAT,exportName,type VideoFormat} from './recipe';
 import {fullClip,isNeutralTimeline,moveClip,rippleDelete,sanitizeClips,setClipEdge,setClipSpeed,setCrossfade,splitAt,timelineDuration,type TimelineClip} from './timeline';
 import {emptyVideoHistory,pushHistory,redoHistory,undoHistory,type VideoHistory,type VideoSnapshot} from './history';
-import {audioTrackEnd,fullAudioClip,moveAudioClip,removeAudioClip,sanitizeAudioClips,setAudioClipEdge,setAudioClipFades,setAudioClipGain,type AudioClip} from './audioTrack';
+import {audioTrackEnd,fullAudioClip,moveAudioClip,removeAudioClip,resizeAudioClip,sanitizeAudioClips,setAudioClipEdge,setAudioClipFades,setAudioClipGain,type AudioClip} from './audioTrack';
 import {clipsSignature,parseVideoProject,projectFileName,serializeVideoProject} from './projectFile';
 import {needsSourceFile} from './titles';
 import {FilmstripController} from './filmstrip-controller';
@@ -17,7 +17,8 @@ export type VideoStatus='loading'|'ready'|'error'|'exporting';
 export interface VideoResult{blob:Blob;url:string;report:VideoReport}
 export type VideoExportOutcome='downloaded'|'cancelled'|'unavailable';
 export interface VideoSession{exportOutcome?:VideoExportOutcome;name:string;status:VideoStatus;error:string;probe:VideoProbe|null;capabilities:VideoCapabilities|null;clips:TimelineClip[];/** The free-placed audio track (music/voiceover), mixed over the edit list. */
-audioClips:AudioClip[];selectedClipId:string|null;history:VideoHistory;/** Signature of the clip list at the last save/load; the session is dirty when the current list differs. */
+audioClips:AudioClip[];selectedClipId:string|null;/** Selection on the audio track; selecting one track clears the other. */
+selectedAudioClipId:string|null;history:VideoHistory;/** Signature of the clip list at the last save/load; the session is dirty when the current list differs. */
 savedSig:string;format:VideoFormat;progress:VideoProgress|null;result:VideoResult|null;ext:string}
 const sessions=new Map<string,VideoSession>();
 let filmstrip:FilmstripController|null|undefined;
@@ -65,7 +66,7 @@ export async function openVideo(item:{name:string;url:string}):Promise<void>{
 }
 async function openVideoFresh(item:{name:string;url:string}):Promise<void>{
  stopMediaSync??=subscribeMedia(()=>{const live=new Set(getMedia().items.map(i=>i.name));for(const n of [...sessions.keys()])if(!live.has(n))closeVideo(n);});
- put({name:item.name,status:'loading',error:'',probe:null,capabilities:null,clips:[],audioClips:[],selectedClipId:null,history:emptyVideoHistory(),savedSig:clipsSignature([],[]),format:DEFAULT_FORMAT,progress:null,result:null,ext:fileExtension(item.name)});
+ put({name:item.name,status:'loading',error:'',probe:null,capabilities:null,clips:[],audioClips:[],selectedClipId:null,selectedAudioClipId:null,history:emptyVideoHistory(),savedSig:clipsSignature([],[]),format:DEFAULT_FORMAT,progress:null,result:null,ext:fileExtension(item.name)});
  if(getMedia().items.find(i=>i.name===item.name)?.kind==='video-project'){
   try{
    const text=await fetch(item.url).then(r=>r.text());
@@ -109,7 +110,7 @@ const restoreTimeline=(root:string,step:{history:VideoHistory;snapshot:VideoSnap
  const s=sessions.get(root);if(!s||!step)return;
  const clean=sanitizeClips(step.snapshot.clips,sourceDurations(step.snapshot.clips));
  const cleanAudio=sanitizeAudioClips(step.snapshot.audioClips,audioDurationsOf(step.snapshot.audioClips));
- put({...s,clips:clean,audioClips:cleanAudio,selectedClipId:clean.some(c=>c.id===s.selectedClipId)?s.selectedClipId:null,history:step.history});
+ put({...s,clips:clean,audioClips:cleanAudio,selectedClipId:clean.some(c=>c.id===s.selectedClipId)?s.selectedClipId:null,selectedAudioClipId:cleanAudio.some(c=>c.id===s.selectedAudioClipId)?s.selectedAudioClipId:null,history:step.history});
 };
 const snapshotOf=(s:VideoSession):VideoSnapshot=>({clips:s.clips,audioClips:s.audioClips});
 /** One timeline edit back (video AND audio track). The export result is not revived - re-export after undoing. */
@@ -129,7 +130,7 @@ export function editAudioTrack(root:string,edit:(clips:AudioClip[])=>AudioClip[]
  if(!next)return;
  const clean=sanitizeAudioClips(next,audioDurationsOf(next));
  if(sameAudio(clean,s.audioClips))return;
- put({...s,audioClips:clean,history:pushHistory(s.history,{clips:s.clips,audioClips:s.audioClips},opts?.historyKey??null,Date.now())});
+ put({...s,audioClips:clean,selectedAudioClipId:clean.some(c=>c.id===s.selectedAudioClipId)?s.selectedAudioClipId:null,history:pushHistory(s.history,{clips:s.clips,audioClips:s.audioClips},opts?.historyKey??null,Date.now())});
 }
 /** Adds an audio file's full range to the track at `at` (default: end of the current content). Probes the source on demand. */
 export async function addAudioTrackClip(root:string,item:{name:string;url:string},at?:number):Promise<string|null>{
@@ -149,6 +150,8 @@ export async function addAudioTrackClip(root:string,item:{name:string;url:string
 }
 export const moveAudioTrackClip=(root:string,id:string,at:number,historyKey?:string)=>editAudioTrack(root,clips=>moveAudioClip(clips,id,at),historyKey?{historyKey}:undefined);
 export const trimAudioTrackClip=(root:string,id:string,edge:'in'|'out',at:number,historyKey?:string)=>editAudioTrack(root,clips=>setAudioClipEdge(clips,id,edge,at),historyKey?{historyKey}:undefined);
+/** Drags an audio clip edge to a timeline time (lane interaction; see resizeAudioClip). */
+export const resizeAudioTrackClip=(root:string,id:string,edge:'in'|'out',timelineTime:number,historyKey?:string)=>editAudioTrack(root,clips=>resizeAudioClip(clips,id,edge,timelineTime),historyKey?{historyKey}:undefined);
 export const setAudioTrackClipGain=(root:string,id:string,gain:number,historyKey?:string)=>editAudioTrack(root,clips=>setAudioClipGain(clips,id,gain),historyKey?{historyKey}:undefined);
 export const setAudioTrackClipFades=(root:string,id:string,fadeIn:number,fadeOut:number)=>editAudioTrack(root,clips=>setAudioClipFades(clips,id,fadeIn,fadeOut));
 export const deleteAudioTrackClip=(root:string,id:string)=>editAudioTrack(root,clips=>removeAudioClip(clips,id));
@@ -185,7 +188,9 @@ export function setTimelineClipSpeed(root:string,id:string,speed:number){
 export function toggleTimelineClipMute(root:string,id:string){
  editTimeline(root,clips=>clips.map(c=>c.id===id?{...c,muted:!c.muted}:c));
 }
-export const selectTimelineClip=(root:string,id:string|null)=>patch(root,{selectedClipId:id});
+export const selectTimelineClip=(root:string,id:string|null)=>patch(root,{selectedClipId:id,...(id?{selectedAudioClipId:null}:{})});
+/** Selects an audio-track clip (or clears with null). Selecting a video clip clears this. */
+export const selectAudioTrackClip=(root:string,id:string|null)=>patch(root,{selectedAudioClipId:id,...(id?{selectedClipId:null}:{})});
 /** Back to the original: one full-length clip of the root source, output format kept. */
 export function resetTimeline(root:string){
  const s=sessions.get(root);if(!s)return;
@@ -195,7 +200,7 @@ export function resetTimeline(root:string){
  if(!s.clips.length&&!s.audioClips.length&&!project)return;
  revoke(s.result);
  const changed=s.clips.length>0||s.audioClips.length>0;
- put({...s,clips:next,audioClips:[],selectedClipId:null,result:null,history:changed?pushHistory(s.history,{clips:s.clips,audioClips:s.audioClips},null,Date.now()):s.history});
+ put({...s,clips:next,audioClips:[],selectedClipId:null,selectedAudioClipId:null,result:null,history:changed?pushHistory(s.history,{clips:s.clips,audioClips:s.audioClips},null,Date.now()):s.history});
 }
 export const setVideoFormat=(root:string,format:VideoFormat)=>patch(root,{format});
 /** Runs the export in the worker and keeps the result on the session. Cancel rejects quietly. */

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {audioClipDuration,audioEnvelope,audioTrackEnd,fullAudioClip,moveAudioClip,removeAudioClip,sanitizeAudioClips,setAudioClipEdge,setAudioClipFades,setAudioClipGain,type AudioClip} from './audioTrack';
+import {audioClipDuration,audioEnvelope,audioTrackEnd,fullAudioClip,moveAudioClip,removeAudioClip,resizeAudioClip,sanitizeAudioClips,setAudioClipEdge,setAudioClipFades,setAudioClipGain,type AudioClip} from './audioTrack';
 const clip=(id:string,over:Partial<AudioClip>={}):AudioClip=>({id,source:'song.mp3',in_s:0,out_s:10,at:0,gain:1,fadeIn:0,fadeOut:0,...over});
 
 test('free placement: gaps and overlaps are legal, the track end is the last clip end',()=>{
@@ -44,4 +44,23 @@ test('edits: remove, move clamps at 0, edges hold the minimum, gain and fades se
  assert.equal(setAudioClipEdge(clips,'a','out',0.01)[0].out_s,0.05);
  assert.equal(setAudioClipGain(clips,'a',1.5)[0].gain,1.5);
  assert.deepEqual(setAudioClipFades(clips,'a',1,2)[0].fadeOut,2);
+});
+
+test('resizeAudioClip: in-edge carries the position, out-edge only resizes, both respect the minimum length',()=>{
+ const c:AudioClip={id:'a',source:'m.mp3',in_s:2,out_s:8,at:10,gain:1,fadeIn:0,fadeOut:0};
+ // in-edge dragged 2s right: at follows, content offset stays.
+ const r1=resizeAudioClip([c],'a','in',12);
+ assert.deepEqual([r1[0].at,r1[0].in_s,r1[0].out_s],[12,4,8]);
+ // in-edge dragged left stops where in_s hits 0.
+ const r2=resizeAudioClip([c],'a','in',-5);
+ assert.deepEqual([r2[0].at,r2[0].in_s],[8,0]);
+ // in-edge cannot swallow the clip (min length).
+ const r3=resizeAudioClip([c],'a','in',20);
+ assert.equal(Math.round((r3[0].out_s-r3[0].in_s)*1000),50);
+ // out-edge resizes only.
+ const r4=resizeAudioClip([c],'a','out',13);
+ assert.deepEqual([r4[0].at,r4[0].in_s,r4[0].out_s],[10,2,5]);
+ // out-edge respects the minimum length.
+ const r5=resizeAudioClip([c],'a','out',10);
+ assert.equal(Math.round(r5[0].out_s*1000),Math.round((c.in_s+0.05)*1000));
 });

@@ -65,5 +65,17 @@ export function setAudioClipEdge(clips:AudioClip[],id:string,edge:'in'|'out',at:
   return{...c,in_s:Number(Math.max(0,in_s).toFixed(3)),out_s:Number(Math.max(out_s,c.in_s+MIN_CLIP_SECONDS).toFixed(3))};
  });
 }
+/** Drags one edge to a timeline time: the in-edge carries the position along (the audio content stays where it sounded), the out-edge only resizes. */
+export function resizeAudioClip(clips:AudioClip[],id:string,edge:'in'|'out',timelineTime:number):AudioClip[]{
+ return clips.map(c=>{
+  if(c.id!==id)return c;
+  if(edge==='in'){
+   const minAt=Math.max(0,c.at-c.in_s);// in_s must stay >= 0
+   const at=Math.max(minAt,Math.min(timelineTime,c.at+(c.out_s-c.in_s)-MIN_CLIP_SECONDS));
+   return{...c,at:Number(at.toFixed(3)),in_s:Number((c.in_s+(at-c.at)).toFixed(3))};
+  }
+  return{...c,out_s:Number(Math.max(c.in_s+MIN_CLIP_SECONDS,c.in_s+(timelineTime-c.at)).toFixed(3))};
+ });
+}
 export const setAudioClipGain=(clips:AudioClip[],id:string,gain:number)=>clips.map(c=>c.id===id?{...c,gain}:c);
 export const setAudioClipFades=(clips:AudioClip[],id:string,fadeIn:number,fadeOut:number)=>clips.map(c=>c.id===id?{...c,fadeIn,fadeOut}:c);
