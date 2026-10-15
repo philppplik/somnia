@@ -52,7 +52,7 @@ new file mode 100644
 index 0000000..5b80b79
 --- /dev/null
 +++ b/crates/somnia-worker/src/lib.rs
-@@ -0,0 +1,7260 @@
+@@ -0,0 +1,7309 @@
 +//! Experimental headless adapter. No DOM, egui, filesystem or UI thread access.
 +use wasm_bindgen::prelude::*;
 +use std::sync::Arc;
@@ -128,6 +128,27 @@ index 0000000..5b80b79
 +        v.push(cur);
 +    }
 +    v
++}
++/// How alike two paragraphs are, 0 to 1: the share of their words (with trailing space) that match, counting repeats.
++fn cmp_similarity(a: &str, b: &str) -> f32 {
++    let (ta, tb) = (cmp_tokens(a), cmp_tokens(b));
++    if ta.is_empty() && tb.is_empty() {
++        return 1.0;
++    }
++    let mut left: std::collections::HashMap<&str, usize> = Default::default();
++    for t in &ta {
++        *left.entry(t.as_str()).or_default() += 1;
++    }
++    let mut same = 0usize;
++    for t in &tb {
++        if let Some(c) = left.get_mut(t.as_str()) {
++            if *c > 0 {
++                *c -= 1;
++                same += 1;
++            }
++        }
++    }
++    2.0 * same as f32 / (ta.len() + tb.len()) as f32
 +}
 +const COVER_MAX_CHARS: usize = 120;
 +const BOOKMARK_MAX_NAME: usize = 40;
@@ -2904,7 +2925,7 @@ index 0000000..5b80b79
 +        self.doc.styles = styles;
 +        self.doc.body.splice(first..=last, [Arc::new(Block::Table(table))]);
 +        // A table never ends the body: a paragraph always follows it.
-+        if !matches!(self.doc.body.get(first + 1).map(|x| &**x), Some(Block::Para(_))) {
++        if self.doc.body.get(first + 1).is_none() {
 +            self.doc.body.insert(first + 1, wordcraft_doc::para_block(wordcraft_doc::Paragraph::new()));
 +        }
 +        self.pages = DocLayout::default();
@@ -4467,72 +4488,98 @@ index 0000000..5b80b79
 +            let len = p.len();
 +            let _ = p.format(0, len, &|c| c.del = Some(del));
 +        };
++        // A changed paragraph keeps the paragraph look and the first run's look of the document; its words are compared one by one.
++        let merge = |i: usize, j: usize| -> Result<std::sync::Arc<Block>, String> {
++            let Block::Para(a) = &*old[i].0 else { return Err("only paragraphs can be compared".into()) };
++            let (ta, tb) = (cmp_tokens(&old[i].1), cmp_tokens(&lines[j]));
++            let mut p = Paragraph::new();
++            p.props = a.props.clone();
++            let base = a.runs.first().map(|r| r.props.clone()).unwrap_or_default();
++            let whole = ta.len() > COMPARE_MAX_TOKENS || tb.len() > COMPARE_MAX_TOKENS;
++            let word_ops = if whole { vec![CmpOp::Del, CmpOp::Ins] } else { cmp_ops(&ta, &tb) };
++            let (mut x, mut y) = (0usize, 0usize);
++            for op in word_ops {
++                let at = p.len();
++                let (piece, props) = match (op, whole) {
++                    (CmpOp::Same, _) => (ta[x].clone(), base.clone()),
++                    (CmpOp::Del, false) => (ta[x].clone(), CharProps { del: Some(del), ..base.clone() }),
++                    (CmpOp::Ins, false) => (tb[y].clone(), CharProps { ins: Some(ins), ..base.clone() }),
++                    (CmpOp::Del, true) => (old[i].1.clone(), CharProps { del: Some(del), ..base.clone() }),
++                    (CmpOp::Ins, true) => (lines[j].clone(), CharProps { ins: Some(ins), ..base.clone() }),
++                };
++                match op {
++                    CmpOp::Same => {
++                        x += 1;
++                        y += 1;
++                    }
++                    CmpOp::Del => x += 1,
++                    CmpOp::Ins => y += 1,
++                }
++                p.insert_text(at, &piece, &props).map_err(|e| e.to_string())?;
++            }
++            Ok(wordcraft_doc::para_block(p))
++        };
++        let ins_para = |j: usize| {
++            let mut p = Paragraph::with_text(&lines[j], CharProps::default());
++            let len = p.len();
++            let _ = p.format(0, len, &|c| c.ins = Some(ins));
++            wordcraft_doc::para_block(p)
++        };
++        let del_para = |i: usize| -> Result<std::sync::Arc<Block>, String> {
++            let Block::Para(a) = &*old[i].0 else { return Err("only paragraphs can be compared".into()) };
++            let mut p = a.clone();
++            mark_del(&mut p);
++            Ok(wordcraft_doc::para_block(p))
++        };
 +        let mut out: Vec<std::sync::Arc<Block>> = Vec::new();
 +        let (mut i, mut j, mut k) = (0usize, 0usize, 0usize);
 +        while k < ops.len() {
-+            match ops[k] {
-+                CmpOp::Same => {
-+                    out.push(old[i].0.clone());
-+                    i += 1;
-+                    j += 1;
-+                    k += 1;
-+                }
-+                CmpOp::Del if k + 1 < ops.len() && ops[k + 1] == CmpOp::Ins => {
-+                    let Block::Para(a) = &*old[i].0 else { return Err("only paragraphs can be compared".into()) };
-+                    let (ta, tb) = (cmp_tokens(&old[i].1), cmp_tokens(&lines[j]));
-+                    let mut p = Paragraph::new();
-+                    p.props = a.props.clone();
-+                    let base = a.runs.first().map(|r| r.props.clone()).unwrap_or_default();
-+                    let word_ops = if ta.len() > COMPARE_MAX_TOKENS || tb.len() > COMPARE_MAX_TOKENS {
-+                        let mut v = vec![CmpOp::Del; 1];
-+                        v.push(CmpOp::Ins);
-+                        v
-+                    } else {
-+                        cmp_ops(&ta, &tb)
-+                    };
-+                    let whole = ta.len() > COMPARE_MAX_TOKENS || tb.len() > COMPARE_MAX_TOKENS;
-+                    let (mut x, mut y) = (0usize, 0usize);
-+                    for op in word_ops {
-+                        let at = p.len();
-+                        let (piece, props) = match (op, whole) {
-+                            (CmpOp::Same, _) => (ta[x].clone(), base.clone()),
-+                            (CmpOp::Del, false) => (ta[x].clone(), CharProps { del: Some(del), ..base.clone() }),
-+                            (CmpOp::Ins, false) => (tb[y].clone(), CharProps { ins: Some(ins), ..base.clone() }),
-+                            (CmpOp::Del, true) => (old[i].1.clone(), CharProps { del: Some(del), ..base.clone() }),
-+                            (CmpOp::Ins, true) => (lines[j].clone(), CharProps { ins: Some(ins), ..base.clone() }),
-+                        };
-+                        match op {
-+                            CmpOp::Same => {
-+                                x += 1;
-+                                y += 1;
-+                            }
-+                            CmpOp::Del => x += 1,
-+                            CmpOp::Ins => y += 1,
++            if ops[k] == CmpOp::Same {
++                out.push(old[i].0.clone());
++                i += 1;
++                j += 1;
++                k += 1;
++                continue;
++            }
++            // A run of changes: `nd` document paragraphs went, `ni` text paragraphs came. Each removed paragraph that is much like a following new one
++            // (in order) is shown as one changed paragraph; the rest are plain deletions and insertions. A lone pair is always one changed paragraph.
++            let mut e = k;
++            while e < ops.len() && ops[e] != CmpOp::Same {
++                e += 1;
++            }
++            let nd = ops[k..e].iter().filter(|o| **o == CmpOp::Del).count();
++            let ni = (e - k) - nd;
++            let mut next_ins = 0usize;
++            for d in 0..nd {
++                let pair = if nd == 1 && ni == 1 {
++                    Some(0)
++                } else {
++                    let mut best: Option<(usize, f32)> = None;
++                    for y in next_ins..ni.min(next_ins + 16) {
++                        let sim = cmp_similarity(&old[i + d].1, &lines[j + y]);
++                        if sim >= 0.4 && best.map_or(true, |(_, b)| sim > b) {
++                            best = Some((y, sim));
 +                        }
-+                        p.insert_text(at, &piece, &props).map_err(|e| e.to_string())?;
 +                    }
-+                    out.push(wordcraft_doc::para_block(p));
-+                    i += 1;
-+                    j += 1;
-+                    k += 2;
-+                }
-+                CmpOp::Del => {
-+                    let Block::Para(a) = &*old[i].0 else { return Err("only paragraphs can be compared".into()) };
-+                    let mut p = a.clone();
-+                    mark_del(&mut p);
-+                    out.push(wordcraft_doc::para_block(p));
-+                    i += 1;
-+                    k += 1;
-+                }
-+                CmpOp::Ins => {
-+                    let mut p = Paragraph::with_text(&lines[j], CharProps::default());
-+                    let len = p.len();
-+                    let _ = p.format(0, len, &|c| c.ins = Some(ins));
-+                    out.push(wordcraft_doc::para_block(p));
-+                    j += 1;
-+                    k += 1;
++                    best.map(|(y, _)| y)
++                };
++                match pair {
++                    Some(y) => {
++                        for z in next_ins..y {
++                            out.push(ins_para(j + z));
++                        }
++                        out.push(merge(i + d, j + y)?);
++                        next_ins = y + 1;
++                    }
++                    None => out.push(del_para(i + d)?),
 +                }
 +            }
++            for z in next_ins..ni {
++                out.push(ins_para(j + z));
++            }
++            i += nd;
++            j += ni;
++            k = e;
 +        }
 +        self.doc.body = out;
 +        self.pages = DocLayout::default();
@@ -5601,8 +5648,10 @@ index 0000000..5b80b79
 +        let (t0, n0) = (tables(&s), s.doc.body.len());
 +        s.do_table_edit(CELL_BASE, "table_to_text").unwrap();
 +        assert_eq!((tables(&s), s.doc.body.len()), (t0 - 1, n0 - 1 + 4));
-+        assert_eq!(s.para_at(0).unwrap().text, "Name\tQty");
-+        assert_eq!(s.para_at(2).unwrap().text, "b\t10");
++        // The table was inserted after the title paragraph (block 0), so its rows become paragraphs 1.. in place.
++        assert_eq!(s.para_at(0).unwrap().text, "Somnia Documents - worker proof");
++        assert_eq!(s.para_at(1).unwrap().text, "Name\tQty");
++        assert_eq!(s.para_at(3).unwrap().text, "b\t10");
 +        assert!(s.paginate() >= 1);
 +        // Merged cells refuse both.
 +        let mut m = DocSession::from_bytes(FIXTURE).unwrap();
