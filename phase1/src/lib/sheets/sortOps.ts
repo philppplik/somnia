@@ -12,11 +12,30 @@ export function guessHeader(first:readonly string[],second:readonly string[]):bo
  const num=(v:string)=>v.trim()!==''&&Number.isFinite(Number(v.replace(/,/g,'')));
  return first.some((v,i)=>v.trim()!==''&&!num(v)&&num(second[i]??''))&&!first.some(num);
 }
+export const MAX_SORT_LIST=50,MAX_SORT_LIST_ITEM=64;
+/** Panel text "Low, Medium, High" into a custom order; null when empty, too long, with a control character or a repeated entry. */
+export function parseListText(text:string):string[]|null{
+ const items=text.split(/[,\n]/).map(x=>x.trim()).filter(Boolean);
+ if(items.length<1||items.length>MAX_SORT_LIST||items.some(x=>x.length>MAX_SORT_LIST_ITEM||/[\u0000-\u001f\u007f]/.test(x)))return null;
+ return new Set(items.map(x=>x.toLowerCase())).size===items.length?items:null;
+}
 export function parseSortCommand(input:unknown,cols?:number):SortOp{
  if(!input||typeof input!=='object'||Array.isArray(input))throw Error('Sort must be an object.');
- const o=input as Record<string,unknown>;if(Object.keys(o).some(k=>!['column','order','header'].includes(k)))throw Error('Unknown sort field.');
- if(typeof o.column!=='number'||!Number.isInteger(o.column)||o.column<0||o.column>=16384||(cols!==undefined&&o.column>=cols))throw Error('Invalid sort column.');
- if(o.order!=='asc'&&o.order!=='desc')throw Error('Sort order must be asc or desc.');
+ const o=input as Record<string,unknown>,multi=o.keys!==undefined;
+ if(Object.keys(o).some(k=>!(multi?['keys','header','matchCase']:['column','order','header']).includes(k)))throw Error('Unknown sort field.');
  if(typeof o.header!=='boolean')throw Error('Header must be true or false.');
- return {header:o.header,keys:[{column:o.column,order:o.order}]};
+ const key=(v:unknown)=>{
+  if(!v||typeof v!=='object'||Array.isArray(v))throw Error('Invalid sort key.');
+  const k=v as Record<string,unknown>;if(Object.keys(k).some(x=>!['column','order','list'].includes(x)))throw Error('Unknown sort field.');
+  if(typeof k.column!=='number'||!Number.isInteger(k.column)||k.column<0||k.column>=16384||(cols!==undefined&&k.column>=cols))throw Error('Invalid sort column.');
+  if(k.order!=='asc'&&k.order!=='desc')throw Error('Sort order must be asc or desc.');
+  const out:SortOp['keys'][number]={column:k.column,order:k.order};
+  if(k.list!==undefined){if(!Array.isArray(k.list)||k.list.some(x=>typeof x!=='string'))throw Error('The custom order must be a list of texts.');const l=parseListText(k.list.join('\n'));if(!l||l.length!==k.list.length)throw Error('Invalid custom order.');out.list=l;}
+  return out;
+ };
+ if(!multi)return {header:o.header,keys:[key({column:o.column,order:o.order})]};
+ if(!Array.isArray(o.keys)||o.keys.length<1||o.keys.length>MAX_SORT_KEYS)throw Error('Sort by 1 to 3 columns.');
+ const keys=o.keys.map(key);if(new Set(keys.map(k=>k.column)).size!==keys.length)throw Error('Each column can be used once.');
+ if(o.matchCase!==undefined&&typeof o.matchCase!=='boolean')throw Error('Match case must be true or false.');
+ return {header:o.header,keys,...(o.matchCase===true?{matchCase:true}:{})};
 }

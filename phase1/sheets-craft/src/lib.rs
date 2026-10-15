@@ -1151,7 +1151,7 @@ impl HeadlessWorkbook {
     }
 
     /// Sorts the rows of an explicit block as ONE history entry. `op_json` is
-    /// `{"header":bool,"keys":[{"column":offset,"order":"asc"|"desc"}],"matchCase":bool}` where `column` is the
+    /// `{"header":bool,"keys":[{"column":offset,"order":"asc"|"desc","list":["Low","High"]?}],"matchCase":bool}` where `column` is the
     /// 0-based offset inside the block. The block is never widened: only the cells given are reordered, formulas
     /// keep their relative references, and merged cells or a protected sheet are refused. At most 3 keys and
     /// MAX_SORT_CELLS cells. The target sheet is activated first because the engine sorts the active sheet.
@@ -1179,7 +1179,26 @@ impl HeadlessWorkbook {
                 Some("desc") => true,
                 _ => return Err("order must be asc or desc".into()),
             };
-            keys.push(json!({"column": column, "order": if desc { "desc" } else { "asc" }}));
+            let mut key = json!({"column": column, "order": if desc { "desc" } else { "asc" }});
+            if let Some(raw) = k.get("list") {
+                let items = raw.as_array().ok_or("the custom order must be a list")?;
+                if items.is_empty() || items.len() > 50 {
+                    return Err("A custom order has 1 to 50 entries.".into());
+                }
+                let mut list: Vec<String> = Vec::new();
+                for item in items {
+                    let text = item.as_str().ok_or("custom order entries must be text")?;
+                    if text.is_empty() || text.chars().count() > 64 || text.chars().any(|c| c.is_control()) {
+                        return Err("A custom order entry has 1 to 64 characters.".into());
+                    }
+                    if list.iter().any(|x| x.eq_ignore_ascii_case(text)) {
+                        return Err("A custom order entry is repeated.".into());
+                    }
+                    list.push(text.to_string());
+                }
+                key["customList"] = json!(list);
+            }
+            keys.push(key);
         }
         let range = format!("{}:{}", CellRef::new(row, col).a1(), CellRef::new(row + rows - 1, col + cols - 1).a1());
         self.session.run("sheet.activate", json!({"sheet": sheet}))?;
