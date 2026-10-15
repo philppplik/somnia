@@ -971,7 +971,7 @@ export function moveSelected(m:MeshData,verts:number[],offset:[number,number,num
  const positions=[...m.positions];
  for(let v=0;v<nv;v++){
   const k=pk(v);
-  const base=prop?(fac.get(k)??0):(want.has(k)?1:0);
+  const base=prop&&fac?(fac.get(k)??0):(want.has(k)?1:0);
   if(base===0)continue;
   const f=base*(1-(damp.get(k)??0));if(f===0)continue;
   positions[v*3]+=offset[0]*f;positions[v*3+1]+=offset[1]*f;positions[v*3+2]+=offset[2]*f;
@@ -1082,7 +1082,7 @@ export function shearSelected(m:MeshData,verts:number[],along:'x'|'y'|'z',by:'x'
  const positions=[...m.positions];
  for(let v=0;v<nv;v++){
   const k=pk(v);
-  const base=prop?(fac.get(k)??0):(want.has(k)?1:0);
+  const base=prop&&fac?(fac.get(k)??0):(want.has(k)?1:0);
   if(base===0)continue;
   const f=base*(1-(damp.get(k)??0));if(f===0)continue;
   positions[v*3+ai]+=factor*(m.positions[v*3+bi]-c)*f;
@@ -1114,7 +1114,7 @@ export function scaleSelected(m:MeshData,verts:number[],factors:[number,number,n
  const positions=[...m.positions];
  for(let v=0;v<nv;v++){
   const k=pk(v);
-  const base=prop?(fac.get(k)??0):(want.has(k)?1:0);
+  const base=prop&&fac?(fac.get(k)??0):(want.has(k)?1:0);
   if(base===0)continue;
   const f=base*(1-(damp.get(k)??0));if(f===0)continue;
   const x=m.positions[v*3]-cx,y=m.positions[v*3+1]-cy,z=m.positions[v*3+2]-cz;
@@ -1148,7 +1148,7 @@ export function rotateSelected(m:MeshData,verts:number[],axis:'x'|'y'|'z',degree
  const positions=[...m.positions];
  for(let v=0;v<nv;v++){
   const k=pk(v);
-  const base=prop?(fac.get(k)??0):(want.has(k)?1:0);
+  const base=prop&&fac?(fac.get(k)??0):(want.has(k)?1:0);
   if(base===0)continue;
   const f=base*(1-(damp.get(k)??0));if(f===0)continue;
   const x=m.positions[v*3]-cx,y=m.positions[v*3+1]-cy,z=m.positions[v*3+2]-cz;
