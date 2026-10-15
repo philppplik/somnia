@@ -1,4 +1,5 @@
 import test from 'node:test';
+import type {OverlayClip} from './overlayTrack';
 import assert from 'node:assert/strict';
 import {clipsSignature,parseVideoProject,projectFileName,serializeVideoProject,VIDEO_PROJECT_VERSION} from './projectFile';
 import {newTitleClip} from './titles';
@@ -177,4 +178,21 @@ test('clip crop round-trips; full frame writes no crop field',()=>{
  assert.ok(!JSON.stringify(serializeVideoProject([media('m1')],[],'webm')).includes('crop'),'uncropped clips write no crop field');
  const junk=JSON.stringify({app:'somnia-video',version:2,clips:[{id:'a',kind:'media',source:'x.mp4',in_s:0,out_s:1,crop:{left:5,top:-1,right:'x',bottom:0}}]});
  assert.deepEqual(parseVideoProject(junk).clips[0].crop,{left:0.9,top:0,right:0,bottom:0},'junk edges clamp, not crash');
+});
+
+test('overlay track round-trips; old files load with an empty track',()=>{
+ const ov:OverlayClip={id:'o1',kind:'title',source:'',title:{text:'Lower',size:72,color:'#ffffff',background:'#111827',font:'sans',bold:true,italic:false,align:'center',vAlign:'middle',fadeIn:0,fadeOut:0,bgAlpha:1},at:1.5,duration:3,rect:{x:0.05,y:0.72,w:0.6,h:0.23},opacity:0.9};
+ const parsed=parseVideoProject(serializeVideoProject([media('m1')],[],'webm',undefined,[ov]));
+ assert.equal(parsed.overlayClips.length,1);
+ assert.equal(parsed.overlayClips[0].kind,'title');
+ assert.equal(parsed.overlayClips[0].at,1.5);
+ assert.equal(parsed.overlayClips[0].opacity,0.9);
+ assert.equal(parsed.overlayClips[0].title?.text,'Lower');
+ const legacy=JSON.stringify({app:'somnia-video',version:2,clips:[{id:'a',kind:'media',source:'x.mp4',in_s:0,out_s:1}]});
+ assert.deepEqual(parseVideoProject(legacy).overlayClips,[],'files without overlay load an empty track');
+ const junk=JSON.stringify({app:'somnia-video',version:2,clips:[{id:'a',kind:'media',source:'x.mp4',in_s:0,out_s:1}],overlay:[{id:'b',kind:'image',source:'x.png',at:-1,duration:0,rect:{x:0.9,y:0.9,w:5,h:5},opacity:9},{kind:'weird'},{id:'c',kind:'image',source:'',at:0,duration:1}]});
+ const cleaned=parseVideoProject(junk).overlayClips;
+ assert.equal(cleaned.length,1,'junk kinds and source-less images drop');
+ assert.equal(cleaned[0].at,0);
+ assert.ok(cleaned[0].rect.w<=1&&cleaned[0].opacity<=1);
 });

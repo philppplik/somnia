@@ -12,7 +12,7 @@ export interface VideoProgress{stage:string;ratio:number;processed_s:number}
 export type VideoRequest=
  |{id:number;kind:'probe';bytes:ArrayBuffer}
  |{id:number;kind:'capabilities'}
- |{id:number;kind:'export';sources:Record<string,ArrayBuffer>;clips:TimelineClip[];audioClips:AudioClip[];format:VideoFormat;exportOptions?:VideoExportOptions}
+ |{id:number;kind:'export';sources:Record<string,ArrayBuffer>;clips:TimelineClip[];audioClips:AudioClip[];overlayClips?:import('./overlayTrack').OverlayClip[];format:VideoFormat;exportOptions?:VideoExportOptions}
  |{id:number;kind:'cancel'};
 export type VideoResponse=
  |{id:number;ok:true;kind:'probe';probe:VideoProbe}

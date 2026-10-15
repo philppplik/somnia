@@ -1,10 +1,10 @@
-import {useCallback,useEffect,useRef,useState} from 'react';
+import {useCallback,useEffect,useRef,useState,type CSSProperties} from 'react';
 import {ChevronsLeft,ChevronsRight,Mic,Download,Pause,Play,Redo2,RotateCcw,Scissors,Undo2,Volume2,VolumeX,ZoomIn,ZoomOut} from '../../lib/icons';
 import {Button} from '../ui/button';
 import {useT} from '../../lib/useT';
 import {executeCommand} from '../../lib/commands';
 import {addAudioTrackClip,addImageClip,addTimelineClip,addTimelineClipsFromDialog,cancelVideoExport,deleteAudioTrackClip,deleteTimelineClip,duplicateAudioTrackClip,getFilmstrip,moveAudioTrackClip,moveTimelineClip,openVideo,redoVideoEdit,resizeAudioTrackClip,saveVideoProject,selectAudioTrackClip,selectTimelineClip,splitTimelineAt,toggleTimelineClipMute,trimTimelineClip,undoVideoEdit,useVideoSession,videoCanRedo,videoCanUndo,videoIsDirty,videoIsEdited} from '../../lib/video/session';
-import {clipDisplayName,isTitleClip,needsSourceFile} from '../../lib/video/titles';
+import {clipDisplayName,DEFAULT_TITLE,isTitleClip,needsSourceFile} from '../../lib/video/titles';
 import {TitlePreview} from './TitlePreview';
 import {useTitlePlayback} from './useTitlePlayback';
 import {FilmstripStrip} from './FilmstripStrip';
@@ -16,6 +16,7 @@ import {AudioLane} from './AudioLane';
 import {snapPointsFor,zoomInStep,zoomOutStep} from '../../lib/video/zoom';
 import {formatTime} from '../../lib/video/recipe';
 import {pickVoiceoverMime,voiceoverExtension,voiceoverFileName} from '../../lib/video/voiceover';
+import {overlaysAt} from '../../lib/video/overlayTrack';
 import {addMediaFile,getMedia} from '../../lib/media';
 import {formatBytes,getState,patchState,requestStudio,useAppStore,useMedia,type MediaItem} from './workspace-deps';
 import {VideoTimeline} from './VideoTimeline';
@@ -286,6 +287,14 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
       <TitlePreview clip={e.range.clip} time={e.sourceTime} aspect={(probe?.video?.width??16)/(probe?.video?.height??9)} label={clipDisplayName(e.range.clip,'Title')}/>
      </div>:null)}
      {playable&&blend.map(e=>isImageClip(e.range.clip)?<img key={e.range.clip.id} src={urlOf(e.range.clip.source)} alt="" className="absolute inset-0 h-full w-full object-contain p-2" style={{opacity:main&&e.range.index===main.range.index?e.video:1,zIndex:main&&e.range.index===main.range.index?1:0,pointerEvents:'none'}} data-testid="video-image-preview" data-img-clip={e.range.clip.id}/>:null)}
+     {playable&&overlaysAt(session?.overlayClips??[],playhead).map(o=>{
+      const style:CSSProperties={left:`${o.rect.x*100}%`,top:`${o.rect.y*100}%`,width:`${o.rect.w*100}%`,height:`${o.rect.h*100}%`,opacity:o.opacity,zIndex:2,pointerEvents:'none'};
+      return <div key={o.id} className="absolute flex items-center justify-center" style={style} data-testid="video-overlay-preview" data-overlay-id={o.id}>
+       {o.kind==='title'
+        ?<TitlePreview clip={{id:o.id,kind:'title',source:'',in_s:0,out_s:o.duration,gain:1,muted:false,title:o.title??DEFAULT_TITLE}} time={Math.max(0,playhead-o.at)} aspect={(o.rect.w*(v?.width??16))/(o.rect.h*(v?.height??9))} label={o.title?.text??'Overlay'}/>
+        :<img src={urlOf(o.source)} alt="" className="max-h-full max-w-full object-contain"/>}
+      </div>;
+     })}
     </div>
     <div className="flex items-center gap-3 px-4 pt-2 text-[12px] text-ink-2">
      <Button size="icon" variant="outline" aria-label={t(playing?'video.pause':'video.play')} aria-pressed={playing} disabled={!playable||!clips.length} onClick={toggle} data-testid="video-play">{playing?<Pause size={16}/>:<Play size={16}/>}</Button>

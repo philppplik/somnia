@@ -1,9 +1,10 @@
 /** Undo history for one video project: snapshots of the edit list PLUS the audio track, capped so long sessions stay cheap. Pure model - no session state. */
 import type {TimelineClip} from './timeline';
 import type {AudioClip} from './audioTrack';
+import type {OverlayClip} from './overlayTrack';
 
 /** One undoable state: the video edit list and the audio track together (they export together, so they undo together). */
-export interface VideoSnapshot{clips:TimelineClip[];audioClips:AudioClip[]}
+export interface VideoSnapshot{clips:TimelineClip[];audioClips:AudioClip[];overlayClips?:OverlayClip[]}
 
 /** How many edit steps stay undoable. */
 export const VIDEO_HISTORY_LIMIT=100;

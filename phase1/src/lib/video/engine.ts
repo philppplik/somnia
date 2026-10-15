@@ -7,7 +7,7 @@ export interface VideoResult{bytes:ArrayBuffer;mime:string;report:VideoReport}
 export interface VideoEngineLike{
  probe(bytes:ArrayBuffer):Promise<VideoProbe>;
  capabilities():Promise<VideoCapabilities>;
- export(sources:Record<string,ArrayBuffer>,clips:TimelineClip[],format:VideoFormat,onProgress?:(p:VideoProgress)=>void,audioClips?:AudioClip[],exportOptions?:VideoExportOptions):Promise<VideoResult>;
+ export(sources:Record<string,ArrayBuffer>,clips:TimelineClip[],format:VideoFormat,onProgress?:(p:VideoProgress)=>void,audioClips?:AudioClip[],exportOptions?:VideoExportOptions,overlayClips?:import('./overlayTrack').OverlayClip[]):Promise<VideoResult>;
  cancelExport():void;
  dispose():void;
 }
@@ -47,9 +47,9 @@ export class VideoEngine implements VideoEngineLike{
   if(!r.ok||r.kind!=='capabilities')throw new Error('Unexpected video capabilities response');return r.capabilities;
  }
  /** Takes ownership of the source buffers: the caller's ArrayBuffers are detached by the transfer. */
- async export(sources:Record<string,ArrayBuffer>,clips:TimelineClip[],format:VideoFormat,onProgress?:(p:VideoProgress)=>void,audioClips:AudioClip[]=[],exportOptions?:VideoExportOptions):Promise<VideoResult>{
+ async export(sources:Record<string,ArrayBuffer>,clips:TimelineClip[],format:VideoFormat,onProgress?:(p:VideoProgress)=>void,audioClips:AudioClip[]=[],exportOptions?:VideoExportOptions,overlayClips:import('./overlayTrack').OverlayClip[]=[]):Promise<VideoResult>{
   const id=this.nextId++;this.exportId=id;
-  const r=await this.request({id,kind:'export',sources,clips,audioClips,format,exportOptions},Object.values(sources),3_600_000,onProgress);
+  const r=await this.request({id,kind:'export',sources,clips,audioClips,overlayClips,format,exportOptions},Object.values(sources),3_600_000,onProgress);
   if(!r.ok||r.kind!=='export')throw new Error('Unexpected video export response');
   return{bytes:r.bytes,mime:r.mime,report:r.report};
  }

@@ -8,7 +8,7 @@ scope.onmessage=async({data}:MessageEvent<VideoRequest>)=>{
   if(data.kind==='cancel'){cancelExport();return;}
   if(data.kind==='probe'){send({id:data.id,ok:true,kind:'probe',probe:await probeVideo(data.bytes)});return;}
   if(data.kind==='capabilities'){send({id:data.id,ok:true,kind:'capabilities',capabilities:await probeCapabilities()});return;}
-  const {bytes,mime,report}=await exportTimeline(data.sources,data.clips,data.audioClips??[],data.format,(ratio,processed_s)=>send({id:data.id,ok:true,kind:'progress',stage:'encode',ratio,processed_s}),data.exportOptions);
+  const {bytes,mime,report}=await exportTimeline(data.sources,data.clips,data.audioClips??[],data.overlayClips??[],data.format,(ratio,processed_s)=>send({id:data.id,ok:true,kind:'progress',stage:'encode',ratio,processed_s}),data.exportOptions);
   send({id:data.id,ok:true,kind:'export',bytes,mime,report},[bytes]);
  }catch(error){
   const message=error instanceof Error?error.message:String(error);

@@ -3,6 +3,7 @@
  * Honest scope: the file stores clip REFERENCES by media name, not media bytes. Sources that are not open show as missing.
  * Pure - no DOM, no engine.
  */
+import {newOverlayClipId,overlayTrackEnd,sanitizeOverlay,sanitizeOverlayClips,type OverlayClip} from './overlayTrack';
 import {CLIP_FLIPS,CLIP_ROTATIONS,cropOf,fadeInOf,fadeOutOf,hasCrop,MIN_CLIP_SECONDS,newClipId,rotationOf,sanitizeClips,speedOf,type ClipFlip,type ClipRotation,type TimelineClip} from './timeline';
 import {clampTitleSeconds,isTitleClip,sanitizeTitleSpec,type TitleSpec} from './titles';
 import {sanitizeAudioClips,type AudioClip} from './audioTrack';
@@ -14,30 +15,31 @@ export const VIDEO_PROJECT_VERSION=2;
 /** Versions this build reads: 1 (clips only) and 2 (+ audio track). */
 export const VIDEO_PROJECT_READ_VERSIONS=[1,2];
 
-interface VideoProjectFile{version:number;app:'somnia-video';format?:VideoFormat;scale?:number;quality?:string;fps?:number|null;clips:unknown[];audio?:unknown[]}
+interface VideoProjectFile{version:number;app:'somnia-video';format?:VideoFormat;scale?:number;quality?:string;fps?:number|null;clips:unknown[];audio?:unknown[];overlay?:unknown[]}
 
 /** Stable identity of the edit list for dirty tracking. Ids are included: a split changes them, and that IS an edit. */
-export const clipsSignature=(clips:TimelineClip[],audioClips:AudioClip[]=[])=>JSON.stringify([
+export const clipsSignature=(clips:TimelineClip[],audioClips:AudioClip[]=[],overlayClips:OverlayClip[]=[])=>JSON.stringify([
  clips.map(c=>[c.id,c.source,c.in_s,c.out_s,c.gain,c.muted,c.crossfade_s??0,speedOf(c),c.kind??'media',isTitleClip(c)?c.title:null,c.flip??'none',fadeInOf(c),fadeOutOf(c),c.freeze??null,rotationOf(c),hasCrop(c)?cropOf(c):null]),
  audioClips.map(c=>[c.id,c.source,c.in_s,c.out_s,c.at,c.gain,c.muted,c.duck,c.fadeIn,c.fadeOut]),
+ overlayClips.map(c=>[c.id,c.kind,c.source,c.at,c.duration,c.rect,c.opacity,c.title??null]),
 ]);
 
 /** The project file for one timeline. Deterministic (same timeline → same bytes), so tests and diffs stay readable. */
-export function serializeVideoProject(clips:TimelineClip[],audioClips:AudioClip[],format:VideoFormat,exportOptions:VideoExportOptions=DEFAULT_EXPORT_OPTIONS):string{
+export function serializeVideoProject(clips:TimelineClip[],audioClips:AudioClip[],format:VideoFormat,exportOptions:VideoExportOptions=DEFAULT_EXPORT_OPTIONS,overlayClips:OverlayClip[]=[]):string{
  const file:VideoProjectFile={version:VIDEO_PROJECT_VERSION,app:'somnia-video',format,scale:exportOptions.scale,quality:exportOptions.quality,fps:exportOptions.fps,clips:clips.map(c=>
   isTitleClip(c)
    ?{id:c.id,kind:'title',out_s:c.out_s,crossfade_s:c.crossfade_s??0,title:c.title}
    :c.kind==='image'
    ?{id:c.id,kind:'image',source:c.source,out_s:c.out_s,crossfade_s:c.crossfade_s??0,...(c.flip?{flip:c.flip}:{}),...(rotationOf(c)!==0?{rotation:rotationOf(c)}:{}),...(hasCrop(c)?{crop:cropOf(c)}:{})}
    :{id:c.id,kind:'media',source:c.source,in_s:c.in_s,out_s:c.out_s,gain:c.gain,muted:c.muted,speed:speedOf(c),crossfade_s:c.crossfade_s??0,...(c.flip?{flip:c.flip}:{}),...(fadeInOf(c)>0?{fadeIn:fadeInOf(c)}:{}),...(fadeOutOf(c)>0?{fadeOut:fadeOutOf(c)}:{}),...(typeof c.freeze==='number'?{freeze:c.freeze}:{}),...(rotationOf(c)!==0?{rotation:rotationOf(c)}:{}),...(hasCrop(c)?{crop:cropOf(c)}:{})}),
-  audio:audioClips.map(c=>({id:c.id,source:c.source,in_s:c.in_s,out_s:c.out_s,at:c.at,gain:c.gain,muted:c.muted,duck:c.duck,fadeIn:c.fadeIn,fadeOut:c.fadeOut}))};
+  audio:audioClips.map(c=>({id:c.id,source:c.source,in_s:c.in_s,out_s:c.out_s,at:c.at,gain:c.gain,muted:c.muted,duck:c.duck,fadeIn:c.fadeIn,fadeOut:c.fadeOut})),...(overlayClips.length?{overlay:overlayClips.map(c=>({id:c.id,kind:c.kind,source:c.source,at:c.at,duration:c.duration,rect:c.rect,opacity:c.opacity,...(c.kind==='title'?{title:c.title}:{})}))}:{})};
  return JSON.stringify(file,null,1)+'\n';
 }
 
 const num=(v:unknown,fb=0)=>typeof v==='number'&&Number.isFinite(v)?v:fb;
 
 /** Parses a project file. Throws with a clear message on junk, foreign JSON and unsupported versions; tolerates extra fields. */
-export function parseVideoProject(text:string):{clips:TimelineClip[];audioClips:AudioClip[];format:VideoFormat;exportOptions:VideoExportOptions}{
+export function parseVideoProject(text:string):{clips:TimelineClip[];audioClips:AudioClip[];overlayClips:OverlayClip[];format:VideoFormat;exportOptions:VideoExportOptions}{
  let raw:unknown;
  try{raw=JSON.parse(text);}catch{throw new Error('This is not a JSON file.');}
  const f=raw as Partial<VideoProjectFile>|null;
@@ -64,8 +66,15 @@ export function parseVideoProject(text:string):{clips:TimelineClip[];audioClips:
   if(typeof o.source!=='string'||!o.source)return[];
   return[{id:id(o.id),source:o.source,in_s:num(o.in_s),out_s:num(o.out_s),at:num(o.at),gain:num(o.gain,1),muted:o.muted===true,duck:num(o.duck),fadeIn:num(o.fadeIn),fadeOut:num(o.fadeOut)}];
  });
+ const overlayClips=(Array.isArray(f.overlay)?f.overlay:[]).flatMap((c):OverlayClip[]=>{
+  if(!c||typeof c!=='object')return[];
+  const o=c as Record<string,unknown>;
+  if(o.kind!=='title'&&o.kind!=='image')return[];
+  if(o.kind==='image'&&(typeof o.source!=='string'||!o.source))return[];
+  return[sanitizeOverlay({id:typeof o.id==='string'&&o.id?o.id:newOverlayClipId(),kind:o.kind,source:typeof o.source==='string'?o.source:'',title:o.title as OverlayClip['title'],at:num(o.at),duration:num(o.duration,3),rect:o.rect as OverlayClip['rect'],opacity:num(o.opacity,1)})];
+ });
  // Durations are unknown here (sources may not be open); sanitize still clamps fades and title shapes. Clips re-clamp on the next edit once sources are probed.
- return{clips:sanitizeClips(clips,{}),audioClips:sanitizeAudioClips(audioClips,{}),format:f.format==='mp4'||f.format==='webm'?f.format:DEFAULT_FORMAT,exportOptions:sanitizeExportOptions({scale:typeof f.scale==='number'?f.scale:undefined,quality:f.quality as VideoExportOptions['quality'],fps:typeof f.fps==='number'?f.fps:null})};
+ return{clips:sanitizeClips(clips,{}),audioClips:sanitizeAudioClips(audioClips,{}),overlayClips:sanitizeOverlayClips(overlayClips),format:f.format==='mp4'||f.format==='webm'?f.format:DEFAULT_FORMAT,exportOptions:sanitizeExportOptions({scale:typeof f.scale==='number'?f.scale:undefined,quality:f.quality as VideoExportOptions['quality'],fps:typeof f.fps==='number'?f.fps:null})};
 }
 
 /** The download name for a project's save: keeps `<name>.video-project`, maps a bare video file to `<base>.video-project`. */

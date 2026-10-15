@@ -2,7 +2,7 @@ import {registerCommandSpec} from '../commandBridge';
 import {commandRegistry} from '../commandRegistry';
 import type {CommandSpec,CommandSchema} from '../commandSpec';
 import {getMedia} from '../media';
-import {addAudioTrackClip,addImageClip,addTimelineClip,duplicateTimelineClip,addTimelineClipsFromDialog,deleteAudioTrackClip,duplicateAudioTrackClip,cancelVideoExport,setAudioTrackClipDuck,deleteTimelineClip,exportVideoFile,getVideoSession,moveTimelineClip,setImageClipLength,redoVideoEdit,resetTimeline,moveAudioTrackClip,saveVideoProject,selectTimelineClip,setAudioTrackClipFades,setAudioTrackClipGain,setTimelineClipCrossfade,setTimelineClipFades,setTimelineClipFreeze,setTimelineClipGain,replaceClipSource,setTimelineClipCrop,setTimelineClipFlip,setTimelineClipRotation,setTimelineClipSpeed,setVideoExportOptions,setVideoExportRange,setVideoFormat,splitTimelineAt,toggleAudioTrackClipMute,toggleTimelineClipMute,trimAudioTrackClip,trimTimelineClip,undoVideoEdit,videoIsDirty} from './session';
+import {addAudioTrackClip,addImageClip,addTimelineClip,duplicateTimelineClip,addTimelineClipsFromDialog,deleteAudioTrackClip,duplicateAudioTrackClip,cancelVideoExport,setAudioTrackClipDuck,deleteTimelineClip,exportVideoFile,getVideoSession,moveTimelineClip,setImageClipLength,redoVideoEdit,resetTimeline,moveAudioTrackClip,saveVideoProject,selectTimelineClip,setAudioTrackClipFades,setAudioTrackClipGain,setTimelineClipCrossfade,setTimelineClipFades,setTimelineClipFreeze,setTimelineClipGain,replaceClipSource,addOverlayImage,addOverlayTitle,deleteOverlayClip,moveOverlayClip,selectOverlayClip,setOverlayDuration,setOverlayOpacity,setOverlayRect,updateOverlayTitle,setTimelineClipCrop,setTimelineClipFlip,setTimelineClipRotation,setTimelineClipSpeed,setVideoExportOptions,setVideoExportRange,setVideoFormat,splitTimelineAt,toggleAudioTrackClipMute,toggleTimelineClipMute,trimAudioTrackClip,trimTimelineClip,undoVideoEdit,videoIsDirty} from './session';
 import {addTitleClip,setTitleLength,updateTitle} from './titleSession';
 import {isTitleClip,type TitleSpec} from './titles';
 import {isFreeze,timelineDuration,type ClipRotation} from './timeline';
@@ -14,6 +14,8 @@ const selected=()=>{const s=activeVideoSession();return s?.clips.find(c=>c.id===
 const fail=(message:string):never=>{throw Object.assign(new Error(message),{expected:true});};
 const root=()=>activeVideoSession()?.name??fail('No active video project.');
 const clip=()=>selected()??fail('Select a timeline clip first.');
+const overlayClip=()=>{const s=activeVideoSession();return s?.overlayClips.find(c=>c.id===s.selectedOverlayClipId)??fail('Select an overlay first.');};
+const overlayReady=()=>ready()&&!!activeVideoSession()?.selectedOverlayClipId;
 const object=(properties:Record<string,unknown>,required=Object.keys(properties)):CommandSchema=>({type:'object',properties,required,additionalProperties:false});
 const number=(minimum=0,maximum=86400)=>({type:'number',minimum,maximum});
 const id={type:'string',minLength:1,maxLength:1024};
@@ -68,6 +70,14 @@ export function videoCommandSpecs():CommandSpec<unknown,unknown>[] {
   spec('video.export.rangeClear','Clear export range',()=>setVideoExportRange(root(),null),undefined,()=>ready()&&!!activeVideoSession()!.exportRange,'Project'),
   spec('video.export.scale','Set export resolution scale',(p:{scale:number})=>setVideoExportOptions(root(),{scale:p.scale}),object({scale:{enum:[1,0.5,0.25]}}),ready),
   spec('video.export.quality','Set export encoder quality',(p:{quality:'high'|'medium'|'low'})=>setVideoExportOptions(root(),{quality:p.quality}),object({quality:{enum:['high','medium','low']}}),ready),
+  spec('video.overlay.addTitle','Add a title overlay (lower third)',(p:{at:number})=>addOverlayTitle(root(),p.at),object({at:number(0)}),ready,'Edit'),
+  spec('video.overlay.addImage','Add an image overlay',(p:{name:string;at:number})=>{const item=getMedia().items.find(i=>i.name===p.name&&i.kind==='image');if(!item)fail('That image is not open.');addOverlayImage(root(),item!.name,p.at);},object({name:id,at:number(0)}),ready,'Edit'),
+  spec('video.overlay.delete','Delete selected overlay',()=>{const o=overlayClip();deleteOverlayClip(root(),o.id);},undefined,overlayReady,'Edit'),
+  spec('video.overlay.move','Move selected overlay to a time',(p:{at:number})=>moveOverlayClip(root(),overlayClip().id,p.at),object({at:number(0)}),overlayReady,'Edit'),
+  spec('video.overlay.duration','Set selected overlay duration',(p:{seconds:number})=>setOverlayDuration(root(),overlayClip().id,p.seconds),object({seconds:number(0.05,3600)}),overlayReady,'Edit'),
+  spec('video.overlay.rect','Set selected overlay frame rect (fractions)',(p:{x:number;y:number;w:number;h:number})=>setOverlayRect(root(),overlayClip().id,{x:p.x,y:p.y,w:p.w,h:p.h}),object({x:number(0,1),y:number(0,1),w:number(0.01,1),h:number(0.01,1)}),overlayReady,'Edit'),
+  spec('video.overlay.opacity','Set selected overlay opacity',(p:{opacity:number})=>setOverlayOpacity(root(),overlayClip().id,p.opacity),object({opacity:number(0,1)}),overlayReady,'Edit'),
+  spec('video.overlay.text','Set selected title overlay text',(p:{text:string})=>updateOverlayTitle(root(),overlayClip().id,{text:p.text}),object({text:{type:'string',maxLength:500}}),()=>overlayReady()&&overlayClip().kind==='title','Edit'),
   spec('video.export.fps','Set export frame rate cap (0 keeps the native rate)',(p:{fps:number})=>setVideoExportOptions(root(),{fps:p.fps||null}),object({fps:{enum:[0,24,25,30,50,60]}}),ready),
   spec('video.export.format','Set video export format',(p:{format:'webm'|'mp4'})=>{const caps=activeVideoSession()!.capabilities;if(!(p.format==='webm'?caps?.webmVideo:caps?.mp4Video))fail('This encoder is not available in this browser.');setVideoFormat(root(),p.format);},object({format:{enum:['webm','mp4']}})),
   spec('video.export.start','Export video copy',()=>exportVideoFile(root()),undefined,()=>ready()&&!!activeVideoSession()!.clips.length&&activeVideoSession()!.clips.filter(c=>!isTitleClip(c)).every(c=>getMedia().items.some(i=>i.name===c.source))&&!!(activeVideoSession()!.format==='webm'?activeVideoSession()!.capabilities?.webmVideo:activeVideoSession()!.capabilities?.mp4Video),'Project'),

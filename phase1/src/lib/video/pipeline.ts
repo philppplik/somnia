@@ -5,7 +5,8 @@ import {cappedFps,sanitizeExportOptions,type VideoExportOptions,type VideoFormat
 import {clipFadeGain,clipRanges,cropOf,fadeInOf,fadeOf,fadeOutOf,flipOf,hasCrop,isFreeze,isImageClip,rotationOf,speedOf,timelineDuration,type ClipRange,type ClipRotation,type TimelineClip} from './timeline';
 import {audioEnvelope,duckGainAt,type AudioClip} from './audioTrack';
 import {WindowMixer} from './mixer';
-import {drawTitleCard,isTitleClip,needsSourceFile,type TitleClip} from './titles';
+import {DEFAULT_TITLE,drawTitleCard,isTitleClip,needsSourceFile,type TitleClip} from './titles';
+import {overlaysAt,type OverlayClip} from './overlayTrack';
 import {renderTitleSpan} from './titleExport';
 import type {VideoCapabilities,VideoProbe,VideoReport} from './protocol';
 const inputOf=(bytes:ArrayBuffer)=>new Input({source:new BufferSource(bytes),formats:ALL_FORMATS});
@@ -82,12 +83,12 @@ async function emitZoneAudio(aSink:AudioSampleSink,srcStart:number,srcEnd:number
  * decode both sides on a fixed frame grid and dissolve linearly; audio is crossfaded equal-power. All audio is
  * normalized to 48 kHz stereo before encoding (per-zone gain included), muted clips contribute silence.
  */
-export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:TimelineClip[],audioClips:AudioClip[],format:VideoFormat,onProgress?:(ratio:number,processed_s:number)=>void,exportOptions?:VideoExportOptions):Promise<{bytes:ArrayBuffer;mime:string;report:VideoReport}>{
+export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:TimelineClip[],audioClips:AudioClip[],overlayClips:OverlayClip[],format:VideoFormat,onProgress?:(ratio:number,processed_s:number)=>void,exportOptions?:VideoExportOptions):Promise<{bytes:ArrayBuffer;mime:string;report:VideoReport}>{
  cancelled=false;
  if(!clips.length)throw new Error('The timeline is empty.');
  const steps:string[]=[];
  const inputs=new Map<string,{input:Input;probe:VideoProbe}>();
- const imageNames=new Set(clips.filter(isImageClip).map(c=>c.source));
+ const imageNames=new Set([...clips.filter(isImageClip).map(c=>c.source),...overlayClips.filter(o=>o.kind==='image').map(o=>o.source)]);
  const videoNames=new Set(clips.filter(c=>needsSourceFile(c)&&!isImageClip(c)).map(c=>c.source));
  const names=[...new Set([...videoNames,...audioClips.map(c=>c.source)])];
  // Stills decode straight to bitmaps, contain-fit onto the output canvas size decided below.
@@ -265,6 +266,27 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
   };
   // Image clips bake rotation into their card (see sideFrame); every other clip passes its own rotation.
   const drawClip=(img:CanvasImageSource,c:TimelineClip)=>drawTransform(img,flipOf(c),isImageClip(c)?0:rotationOf(c));
+  // Overlay track (titles/images over the running video): one scratch card per overlay id, keyed redraws skip static
+  // frames; the card is blitted into its frame rect at the clip's opacity. Array order is the z-order.
+  const overlayCards=new Map<string,{canvas:OffscreenCanvas;ctx:OffscreenCanvasRenderingContext2D;key:string}>();
+  const drawOverlays=(t:number)=>{
+   for(const o of overlaysAt(overlayClips,t)){
+    const rw=Math.max(1,Math.round(o.rect.w*outW)),rh=Math.max(1,Math.round(o.rect.h*outH));
+    let card=overlayCards.get(o.id);
+    if(!card||card.canvas.width!==rw||card.canvas.height!==rh){const canvas=new OffscreenCanvas(rw,rh),ctx2=canvas.getContext('2d');if(!ctx2)continue;card={canvas,ctx:ctx2,key:''};overlayCards.set(o.id,card);}
+    if(o.kind==='title'){
+     const local=Math.max(0,t-o.at),key=`t:${local.toFixed(4)}`;
+     if(card.key!==key){card.ctx.clearRect(0,0,rw,rh);drawTitleCard(card.ctx,{id:o.id,kind:'title',source:'',in_s:0,out_s:o.duration,gain:1,muted:false,title:o.title??DEFAULT_TITLE},rw,rh,local);card.key=key;}
+    }else if(card.key!==`i:${o.source}`){
+     const bmp=bitmaps.get(o.source);if(!bmp)continue;
+     card.ctx.clearRect(0,0,rw,rh);
+     const scale=Math.min(rw/bmp.width,rh/bmp.height),w=Math.max(1,Math.round(bmp.width*scale)),h=Math.max(1,Math.round(bmp.height*scale));
+     card.ctx.drawImage(bmp,Math.round((rw-w)/2),Math.round((rh-h)/2),w,h);
+     card.key=`i:${o.source}`;
+    }
+    ctx.globalAlpha=o.opacity;ctx.drawImage(card.canvas,Math.round(o.rect.x*outW),Math.round(o.rect.y*outH));ctx.globalAlpha=1;
+   }
+  };
   // Frame-space crop: the region left after cutting the edge fractions is contain-fitted back into the same frame
   // (black bars keep the output aspect). Cached scratch per clip index; uncropped frames pass through untouched.
   const cropScr=new Map<number,{canvas:OffscreenCanvas;ctx:OffscreenCanvasRenderingContext2D;w:number;h:number}>();
@@ -286,7 +308,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
     if(isTitleClip(c)){
      titlesRendered=true;
      await renderTitleSpan({clip:c,start:z.start,width:outW,height:outH,fps:fpsOf(z.a),ctx,checkCancel,
-      addFrame:(t,d)=>videoSource.add(t,d),
+      addFrame:(t,d)=>{drawOverlays(t);return videoSource.add(t,d);},
       silenceFormat:{channels:2,rate:48_000},
       addSilence:mixer?async chunk=>{mixer.addSilence(chunk.timestamp,chunk.data.length/chunk.channels/chunk.rate);}:undefined,
       onFrame:note});
@@ -304,6 +326,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
       checkCancel();
       const t=z.start+k/fps,f=await sideFrame(z.a,t);
       if(f){ctx.globalAlpha=1;drawClip(f as CanvasImageSource,c);}
+      drawOverlays(t);
       await videoSource.add(t,Math.max(1e-3,Math.min(1/fps,z.end-t)));
       note(t);
      }
@@ -313,6 +336,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
       checkCancel();
       if(base===null)base=frame.timestamp;
       ctx.globalAlpha=1;drawClip(cropFrame(z.a,c,frame.canvas),c);
+      drawOverlays(z.start+(frame.timestamp-base));
       await videoSource.add(z.start+(frame.timestamp-base),frame.duration);
       note(z.start+(frame.timestamp-base));
      }
@@ -333,6 +357,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
      if(fa){ctx.globalAlpha=1;drawClip(fa as CanvasImageSource,ra.clip);}
      if(fb){ctx.globalAlpha=p;drawClip(fb as CanvasImageSource,rb.clip);}
      ctx.globalAlpha=1;
+     drawOverlays(t);
      await videoSource.add(t,1/fps);
      note(t);
     }
