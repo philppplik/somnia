@@ -41,3 +41,35 @@ export function fillDragOp(range:{r0:number;c0:number;r1:number;c1:number},to:{r
  const lane=best[0]==='down'||best[0]==='up'?range.c1-range.c0+1:range.r1-range.r0+1;if(count*lane>MAX_FILL_CELLS)return null;
  return {dir:best[0],count,...withMode(mode)};
 }
+
+export const SERIES_KINDS=['linear','growth','day','weekday','month','year'] as const;
+export type SeriesKind=typeof SERIES_KINDS[number];
+export interface SeriesOp{axis:'down'|'right';kind:'linear'|'growth'|'date';step:number;stop?:number;unit?:'day'|'weekday'|'month'|'year'}
+export type SeriesProblem='small'|'large'|'step'|'stop'|'whole'|'growth';
+/** Series dialog input: one kind choice (linear, growth or a date unit), a step and an optional stop value. */
+export function buildSeriesOp(rows:number,cols:number,kind:SeriesKind,step:number,stop:number|null):SeriesOp|SeriesProblem{
+ if(!Number.isInteger(rows)||!Number.isInteger(cols)||rows<1||cols<1)return 'small';
+ if(rows*cols>MAX_FILL_CELLS)return 'large';
+ const axis=rows>=cols?'down':'right';if((axis==='down'?rows:cols)<2)return 'small';
+ if(!Number.isFinite(step)||step===0||Math.abs(step)>1e12)return 'step';
+ const date=kind!=='linear'&&kind!=='growth';
+ if((kind==='weekday'||kind==='month'||kind==='year')&&!Number.isInteger(step))return 'whole';
+ if(kind==='growth'&&step<0)return 'growth';
+ if(stop!==null&&(!Number.isFinite(stop)||Math.abs(stop)>1e15||date||(kind==='growth'&&step<=1)))return 'stop';
+ return {axis,kind:date?'date':kind,step,...(stop!==null?{stop}:{}),...(date?{unit:kind as 'day'|'weekday'|'month'|'year'}:{})};
+}
+/** Series command input, validated like buildSeriesOp; the Rust bridge checks again, including the first cells. */
+export function parseSeriesCommand(input:unknown):SeriesOp{
+ if(!input||typeof input!=='object'||Array.isArray(input))throw Error('Series must be an object.');
+ const o=input as Record<string,unknown>;if(Object.keys(o).some(k=>!['axis','kind','step','stop','unit'].includes(k)))throw Error('Unknown series field.');
+ if(o.axis!=='down'&&o.axis!=='right')throw Error('Axis must be down or right.');
+ if(o.kind!=='linear'&&o.kind!=='growth'&&o.kind!=='date')throw Error('Kind must be linear, growth or date.');
+ if(typeof o.step!=='number'||!Number.isFinite(o.step)||o.step===0||Math.abs(o.step)>1e12)throw Error('Step must be a number other than 0.');
+ const unit=o.unit;if(unit!==undefined&&(o.kind!=='date'||!['day','weekday','month','year'].includes(unit as string)))throw Error('Unit goes with dates: day, weekday, month or year.');
+ if(o.kind==='date'&&unit===undefined)throw Error('A date series needs a unit.');
+ if((unit==='weekday'||unit==='month'||unit==='year')&&!Number.isInteger(o.step))throw Error('This unit needs a whole step.');
+ if(o.kind==='growth'&&o.step<0)throw Error('The growth factor must be above 0.');
+ let stop:number|undefined;
+ if(o.stop!==undefined){if(typeof o.stop!=='number'||!Number.isFinite(o.stop)||Math.abs(o.stop)>1e15)throw Error('Stop must be a number.');if(o.kind==='date'||(o.kind==='growth'&&o.step<=1))throw Error('A stop value needs a linear series or a growth factor above 1.');stop=o.stop;}
+ return {axis:o.axis,kind:o.kind,step:o.step,...(stop!==undefined?{stop}:{}),...(unit!==undefined?{unit:unit as SeriesOp['unit']}:{})};
+}

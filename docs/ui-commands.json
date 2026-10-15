@@ -7710,6 +7710,14 @@
       "hasEnabled": true
     },
     {
+      "id": "sheets.series",
+      "title": "Fill the selected block with a series (step and stop value)",
+      "category": "Edit",
+      "source": "sheets",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
       "id": "sheets.setCell",
       "title": "Apply cell value or formula",
       "category": "Edit",

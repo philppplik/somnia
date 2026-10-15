@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1028 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1032 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -652,6 +652,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `sheets.review` | Show workbook statistics or run the accessibility check | Edit | sheets |  |
 | `sheets.saveCopy` | Save workbook copy | Project | sheets |  |
 | `sheets.savedView` | Save, show or delete a named view | Edit | sheets |  |
+| `sheets.series` | Fill the selected block with a series (step and stop value) | Edit | sheets |  |
 | `sheets.setCell` | Apply cell value or formula | Edit | sheets |  |
 | `sheets.sheet` | Add, rename, duplicate, move, hide, unhide or color a sheet tab | Edit | sheets |  |
 | `sheets.shortcuts` | Show the spreadsheet keyboard shortcuts | View | sheets |  |

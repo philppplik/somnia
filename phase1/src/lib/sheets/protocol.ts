@@ -184,6 +184,7 @@ export type SheetsRequest=
  |{id:number;op:'deleteName';sheet:number;name:{name:string;scope:'workbook'|'sheet'}}
  |{id:number;op:'editName';sheet:number;name:{kind:'comment'|'constant';name:string;scope:'workbook'|'sheet';text?:string;value?:number|string;replace?:boolean}}
  |{id:number;op:'createNames';sheet:number;row:number;col:number;rows:number;cols:number;name:{top?:boolean;left?:boolean;replace?:boolean}}
+ |{id:number;op:'fillSeries';sheet:number;row:number;col:number;rows:number;cols:number;series:{axis:'down'|'right';kind:'linear'|'growth'|'date';step:number;stop?:number;unit?:'day'|'weekday'|'month'|'year'}}
  |{id:number;op:'autoFill';sheet:number;row:number;col:number;rows:number;cols:number;fill:{dir:'down'|'up'|'right'|'left';count:number;mode?:'copy'|'formats'|'values'}}
  |{id:number;op:'clipCopy';sheet:number;row:number;col:number;rows:number;cols:number;cut?:boolean}
  |{id:number;op:'pasteSpecial';sheet:number;row:number;col:number;rows:number;cols:number;paste:PasteOp}

@@ -12,7 +12,7 @@ import {aggregateFormula,FORMULA_FUNCTIONS,parsePanelRange,rangeAddress,summariz
 import {rectCells} from '../../lib/sheets/clipboard';
 import {addressOf,colName,parseAddress,parseSpan} from '../../lib/sheets/format';
 import {sortBlockProblem} from '../../lib/sheets/sortOps';
-import {AUTOFILL_MODES,fillBlockProblem,FILL_DIRECTIONS,type AutoFillMode} from '../../lib/sheets/fillOps';
+import {AUTOFILL_MODES,buildSeriesOp,fillBlockProblem,FILL_DIRECTIONS,SERIES_KINDS,type AutoFillMode,type SeriesKind} from '../../lib/sheets/fillOps';
 import type {FillDirection,CfStyle,PasteOp} from '../../lib/sheets/protocol';
 import {PIVOT_FUNCS,tableBlockProblem} from '../../lib/sheets/tableOps';
 import {appendHeaderCode,headerProblem,HF_CODES,MAX_HEADER_CHARS,previewHeaderFooter} from '../../lib/sheets/printOps';
@@ -1171,9 +1171,10 @@ function CfRulesGroup(){
 }
 /** Fills the selected block from its first row or column. One undo step; the block is never widened. */
 function FillGroup(){
- const {t}=useT(),s=useSheetsSelection(),action=useAction(),mode=useFillMode();
+ const {t}=useT(),s=useSheetsSelection(),action=useAction(),mode=useFillMode();const [kind,setKind]=useState<SeriesKind>('linear'),[stepText,setStepText]=useState('1'),[stopText,setStopText]=useState('');
  const r=s?.range;if(!s||!r)return null;
  const rows=r.r1-r.r0+1,cols=r.c1-r.c0+1;
+ const num=(x:string)=>Number(x.trim().replace(',','.')),seriesOp=buildSeriesOp(rows,cols,kind,stepText.trim()===''?NaN:num(stepText),stopText.trim()===''?null:num(stopText));
  return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.fill.title')}>
   <span>{t('sheets.fill.title')}</span>
   <div className="flex flex-wrap gap-2">
@@ -1181,6 +1182,13 @@ function FillGroup(){
   </div>
   <label className="flex flex-col gap-1">{t('sheets.fill.mode')}<NativeSelect className={field} value={mode} onChange={e=>setFillMode(e.currentTarget.value as AutoFillMode)} data-testid="sheets-fill-mode">{AUTOFILL_MODES.map(m=><option key={m} value={m}>{t('sheets.fill.mode.'+m)}</option>)}</NativeSelect></label>
   <p className="text-ink-3">{t('sheets.fill.scope',{range:rangeAddress(r)})}</p>
+  <label className="flex flex-col gap-1">{t('sheets.fill.series')}<NativeSelect className={field} value={kind} onChange={e=>setKind(e.currentTarget.value as SeriesKind)} data-testid="sheets-series-kind">{SERIES_KINDS.map(k=><option key={k} value={k}>{t('sheets.fill.series.'+k)}</option>)}</NativeSelect></label>
+  <div className="flex gap-2">
+   <label className="flex min-w-0 flex-1 flex-col gap-1">{t('sheets.fill.step')}<NativeInput className={field} value={stepText} inputMode="decimal" maxLength={16} onChange={e=>setStepText(e.currentTarget.value)} data-testid="sheets-series-step"/></label>
+   <label className="flex min-w-0 flex-1 flex-col gap-1">{t('sheets.fill.stop')}<NativeInput className={field} value={stopText} inputMode="decimal" maxLength={16} placeholder={t('sheets.fill.stopNone')} onChange={e=>setStopText(e.currentTarget.value)} data-testid="sheets-series-stop"/></label>
+  </div>
+  <Button variant="outline" size="compact" disabled={action.busy||typeof seriesOp==='string'} onClick={()=>{if(typeof seriesOp!=='string')void action.run('sheets.series',seriesOp);}} data-testid="sheets-series-apply">{t('sheets.fill.seriesApply')}</Button>
+  {typeof seriesOp==='string'&&<p className="text-ink-3">{t('sheets.fill.problem.'+seriesOp)}</p>}
  </div>;
 }
 export function SheetsLayoutSection({sectionId,context}:InspectorSectionProps){return <SheetsLayoutPanel panelId={sectionId} context={context}/>;}

@@ -2824,6 +2824,78 @@ impl HeadlessWorkbook {
         }
     }
 
+    /// The Series dialog as ONE history entry: fills the selected block from the first number or date of every column (`axis` down) or
+    /// row (`axis` right) with a fixed step. `op_json` is `{"axis":"down"|"right","kind":"linear"|"growth"|"date","step":number,"stop":number?,"unit":"day"|"weekday"|"month"|"year"?}`.
+    /// `unit` only goes with `date` (month, year and weekday need a whole step); `stop` only with `linear` or with `growth` above 1. The first cell of
+    /// every lane must hold a number or a date, the block needs two or more cells along the axis, protected sheets are refused.
+    /// Cells the stop value cuts off stay as they were. Returns `{"range":"A1:A10"}`.
+    pub fn fill_series_op(&mut self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32, op_json: &str) -> Result<String, String> {
+        if rows == 0 || cols == 0 || u64::from(rows) * u64::from(cols) > MAX_FILL_CELLS {
+            return Err("Select a block of at most 1,000,000 cells.".into());
+        }
+        let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "operation must be a JSON object".to_string())?;
+        let obj = op.as_object().ok_or("operation must be a JSON object")?;
+        if obj.keys().any(|k| !matches!(k.as_str(), "axis" | "kind" | "step" | "stop" | "unit")) {
+            return Err("unknown field".into());
+        }
+        let down = match obj.get("axis").and_then(|v| v.as_str()) {
+            Some("down") => true,
+            Some("right") => false,
+            _ => return Err("axis must be down or right".into()),
+        };
+        let kind = match obj.get("kind").and_then(|v| v.as_str()) {
+            Some(k @ ("linear" | "growth" | "date")) => k,
+            _ => return Err("kind must be linear, growth or date".into()),
+        };
+        let step = obj.get("step").and_then(|v| v.as_f64()).filter(|s| s.is_finite() && *s != 0.0 && s.abs() <= 1e12).ok_or("step must be a number other than 0")?;
+        let stop = match obj.get("stop") {
+            None | Some(serde_json::Value::Null) => None,
+            Some(v) => Some(v.as_f64().filter(|s| s.is_finite() && s.abs() <= 1e15).ok_or("stop must be a number")?),
+        };
+        let unit = match obj.get("unit").map(|v| v.as_str()) {
+            None => None,
+            Some(Some(u @ ("day" | "weekday" | "month" | "year"))) if kind == "date" => Some(u),
+            _ => return Err("unit must be day, weekday, month or year, and only goes with dates".into()),
+        };
+        if matches!(unit, Some("weekday" | "month" | "year")) && step.fract() != 0.0 {
+            return Err("This unit needs a whole step.".into());
+        }
+        if kind == "growth" && step < 0.0 {
+            return Err("The growth factor must be above 0.".into());
+        }
+        if stop.is_some() && (kind == "date" || (kind == "growth" && step <= 1.0)) {
+            return Err("A stop value needs a linear series or a growth factor above 1.".into());
+        }
+        if (if down { rows } else { cols }) < 2 {
+            return Err("Select at least two rows or columns for a series.".into());
+        }
+        self.check_block(sheet, row, col, rows, cols, true)?;
+        {
+            let doc = self.session.doc().map_err(|e| e.to_string())?;
+            let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+            let lanes = if down { cols } else { rows };
+            for lane in 0..lanes {
+                let at = if down { CellRef::new(row, col + lane) } else { CellRef::new(row + lane, col) };
+                if sh.value(at).as_f64().is_none() {
+                    return Err("The first cell of every column or row must hold a number or a date.".into());
+                }
+            }
+        }
+        let range = format!("{}:{}", CellRef::new(row, col).a1(), CellRef::new(row + rows - 1, col + cols - 1).a1());
+        let mut params = json!({"range": range, "direction": if down { "columns" } else { "rows" }, "type": kind, "step": step});
+        if let Some(s) = stop {
+            params["stop"] = json!(s);
+        }
+        if let Some(u) = unit {
+            params["dateUnit"] = json!(u);
+        }
+        self.session.run("sheet.activate", json!({"sheet": sheet})).map_err(|e| e.to_string())?;
+        let done = self.session.run("edit.fillSeries", params).map_err(|e| e.to_string());
+        let _ = self.session.take_ui_requests();
+        done?;
+        Ok(json!({"range": range}).to_string())
+    }
+
     /// The fill-handle drag as ONE history entry: continues the pattern of the block for `count` more rows or columns
     /// away from it. `op_json` is `{"dir":"down"|"up"|"right"|"left","count":1..100000,"mode":"series"|"copy"|"formats"|"values"}`;
     /// `mode` defaults to series (copy repeats as is, formats only copies styles, values keeps the target styles).
@@ -6018,6 +6090,35 @@ mod tests {
         assert!(book.auto_fill(0, 500, 0, 0, 1, r#"{"dir":"down","count":1}"#).is_err());
         book.session.run("review.protectSheet", json!({})).unwrap();
         assert!(book.auto_fill(0, 500, 0, 2, 1, r#"{"dir":"down","count":1}"#).unwrap_err().contains("protected"));
+    }
+    #[test]
+    fn fill_series_op_steps_in_one_undo_step_and_refuses_bad_input() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        let steps = |b: &HeadlessWorkbook| b.session.doc().unwrap().undo.len();
+        book.set_values(0, 600, 0, r#"[["10"],[""],[""],[""],[""]]"#).unwrap();
+        let before = steps(&book);
+        book.fill_series_op(0, 600, 0, 5, 1, r#"{"axis":"down","kind":"linear","step":5}"#).unwrap();
+        assert_eq!(steps(&book), before + 1);
+        assert_eq!(text(&book, "A605"), "30");
+        book.set_values(0, 610, 0, r#"[["2","","",""]]"#).unwrap();
+        book.fill_series_op(0, 610, 0, 1, 4, r#"{"axis":"right","kind":"growth","step":3}"#).unwrap();
+        assert_eq!(text(&book, "D611"), "54");
+        book.set_values(0, 620, 0, r#"[["1"],[""],[""],[""],[""],[""],[""]]"#).unwrap();
+        book.fill_series_op(0, 620, 0, 7, 1, r#"{"axis":"down","kind":"linear","step":1,"stop":3}"#).unwrap();
+        assert_eq!(text(&book, "A623"), "3");
+        assert_eq!(text(&book, "A624"), "", "cells past the stop stay empty");
+        book.set_values(0, 630, 0, r#"[["x"],[""]]"#).unwrap();
+        assert!(book.fill_series_op(0, 630, 0, 2, 1, r#"{"axis":"down","kind":"linear","step":1}"#).unwrap_err().contains("number or a date"));
+        for bad in [r#"{}"#, r#"{"axis":"up","kind":"linear","step":1}"#, r#"{"axis":"down","kind":"fancy","step":1}"#, r#"{"axis":"down","kind":"linear","step":0}"#,
+            r#"{"axis":"down","kind":"linear","step":"1"}"#, r#"{"axis":"down","kind":"linear","step":1,"unit":"day"}"#, r#"{"axis":"down","kind":"date","step":1.5,"unit":"month"}"#,
+            r#"{"axis":"down","kind":"growth","step":0.5,"stop":9}"#, r#"{"axis":"down","kind":"growth","step":-2}"#, r#"{"axis":"down","kind":"date","step":1,"stop":5}"#,
+            r#"{"axis":"down","kind":"linear","step":1,"x":1}"#, r#"{"axis":"down","kind":"linear","step":1e13}"#, "[]"] {
+            assert!(book.fill_series_op(0, 600, 0, 5, 1, bad).is_err(), "{bad}");
+        }
+        assert!(book.fill_series_op(0, 600, 0, 1, 1, r#"{"axis":"down","kind":"linear","step":1}"#).is_err(), "one cell is no series");
+        assert!(book.fill_series_op(0, 600, 0, 5, 1, r#"{"axis":"right","kind":"linear","step":1}"#).is_err(), "one column is no series along rows");
+        book.session.run("review.protectSheet", json!({})).unwrap();
+        assert!(book.fill_series_op(0, 600, 0, 5, 1, r#"{"axis":"down","kind":"linear","step":1}"#).unwrap_err().contains("protected"));
     }
     #[test]
     fn view_op_sets_zoom_and_gridlines_with_bounds() {
