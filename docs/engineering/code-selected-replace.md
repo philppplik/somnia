@@ -1,0 +1,11 @@
+# Selected project replacements
+
+The existing project Replace review now has a checkbox for every changed occurrence. Expand a file to inspect its line/column and short before-to-after token preview. All occurrences start selected. Select all / Select none only affect the current review. The full After preview for each file and selected-file count update to match the chosen subset. With none selected, Apply is disabled.
+
+Apply rebuilds the original review and accepts only occurrence IDs from it. Unknown/duplicate IDs and altered reviewed edits are refused. Exact project generation, all original file texts, query, replacement, options and include/exclude scope still have to match. No selected subset relaxes the stale check. Only selected source spans change; excluded occurrences and files stay untouched. Changes use the existing EditorProject transaction and undo path. No file save or disk write is added.
+
+Regex replacements preserve optional capture slots instead of shifting later groups. Numeric groups, named groups, `$$`, `$&`, prefix and suffix tokens follow JavaScript replacement semantics. Literal mode keeps dollar strings literal. No-op matches are omitted. Actual zero-width matches are rejected rather than offered as ambiguous selectable insertions. Existing project search is line-based while replacement is over whole file text; this slice does not change that earlier distinction or add a regex execution timeout.
+
+Review limits are 2,000 changed occurrences, 100 changed files and 512 KiB before/after text. The selected subset also has an independent output-size check, with a safe error/disabled Apply rather than an incomplete preview. Token snippets show at most 120 characters per side; full source is available in the before/after preview. Large or invalid reviews fail closed. This is not a worker-based regex engine or a claim that arbitrary hostile regular expressions are safe.
+
+Focused tests cover exact offsets, repeated occurrences, Unicode, regex capture semantics, omitted no-ops, budgets, duplicate/forged selections and stale source. Browser tests exercise subsets across files, live exact After, unchanged excluded occurrences, real owner undo, none-selected and stale-source refusal in Light/Dark, plus the unchanged prior scope and review browser tests. Native/WASM/packaged desktop verification remains CI-only.
