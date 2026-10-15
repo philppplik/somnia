@@ -36,7 +36,7 @@ export const SUBMENU_RULES:Readonly<Record<MenuId,readonly SubmenuRule[]>>={
  Project:[
   ids('new',['project.newFile','vector.createBlank','design.new']),
   ids('openOther',['project.openMedia','vector.openSvg']),
-  ids('export',['project.export','project.export.md','design.exportProject','design.exportSvg','pdf.saveCopy','sheets.saveCopy','slides.saveCopy']),
+  ids('export',['project.export','project.export.advanced','project.export.md','design.exportProject','design.exportSvg','pdf.saveCopy','sheets.saveCopy','slides.saveCopy']),
   pre('publish',['deploy.open','deploy.publish','deploy.plan','deploy.cancel','deploy.rollback']),
   pre('targets',['deploy.target']),
   pre('server',['deploy.setup','deploy.key','deploy.hostkey','deploy.remote']),

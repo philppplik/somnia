@@ -6521,6 +6521,19 @@
       "hasEnabled": true
     },
     {
+      "id": "project.export.advanced",
+      "title": "Advanced export...",
+      "category": "Project",
+      "source": "core",
+      "keywords": [
+        "all",
+        "download",
+        "export",
+        "studios"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "project.export.md",
       "title": "Export active file as Markdown",
       "category": "Project",

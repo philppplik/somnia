@@ -6,6 +6,7 @@ import {patchState,useAppStore} from '../store/appStore';
 import {downloadMarkdown,downloadProject,downloadText,singleFileHtml} from '../lib/exportProject';
 import {useT} from '../lib/useT';
 import {getSaveHandlers} from '../lib/saveFlow';
+import {setExportCenterOpen} from '../lib/exportCenter';
 import {NativeButton,NativeInput,NativeSelect} from './ui/native-controls';
 type Kind='zip'|'folder'|'single'|'markdown';
 /** Export Project: choose the format and options, then export. A copy only: the open project and its save state do not change. */
@@ -41,5 +42,5 @@ export function ExportDialog(){
    </div>}
    {err&&<p role="alert" className="export-error">{err}</p>}
   </div>
-  <footer className="export-foot"><Button onClick={close} disabled={busy}>{t('dialogs.cancel')}</Button><Button variant="primary" autoFocus onClick={()=>void run()} disabled={busy||!s.coreConnected}>{busy?t('export.exporting'):t('export.export')}</Button></footer>
+  <footer className="export-foot"><NativeButton type="button" className="mr-auto text-xs text-ink-2 underline-offset-2 hover:underline" data-testid="export-advanced-open" onClick={()=>{close();setExportCenterOpen(true);}}>{t('exportCenter.open')}</NativeButton><Button onClick={close} disabled={busy}>{t('dialogs.cancel')}</Button><Button variant="primary" autoFocus onClick={()=>void run()} disabled={busy||!s.coreConnected}>{busy?t('export.exporting'):t('export.export')}</Button></footer>
  </DialogContent></Dialog>;}

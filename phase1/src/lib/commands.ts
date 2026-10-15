@@ -18,6 +18,7 @@ import {getActiveEditor,transformSelection} from './editorBridge';
 import {encodeEntities,decodeEntities} from './entities';
 import {newBlankFile,openFileDialog,openMediaDialog} from './projectActions';
 import {downloadProject,downloadMarkdown} from './exportProject';
+import {setExportCenterOpen} from './exportCenter';
 import {elements,insertElement} from './structureCommands';
 import { applyHistory, getState, patchState, type AppState } from '../store/appStore';
 import { detectFramework } from './frameworks/detect';
@@ -133,6 +134,7 @@ registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'tools.convert',tit
 registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'project.saveAll',title:'Save all files',category:'Project',keywords:['save','all','every','studios'],enabled:()=>canSaveAll(),run:async()=>{ /* History: each document provider owns saving; no added undo entry. */ await saveAllFiles();}});
 registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'project.closeAll',title:'Close all files',category:'Project',keywords:['close','all','every','tabs','studios'],enabled:()=>canCloseAll(),run:()=> /* History: UI/file state only; no document undo entry. */ requestCloseAll()});
 registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'project.export',title:'Export project...',category:'Project',keywords:['zip','folder','single file','download'],enabled:()=>getState().coreConnected,run:()=> /* History: UI/file state only; no document undo entry. */ patchState({exportDialog:true})});
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'project.export.advanced',title:'Advanced export...',category:'Project',keywords:['export','download','studios','all'],run:()=> /* History: UI state only; no document undo entry. */ setExportCenterOpen(true)});
 registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'experimental.fastParse',title:'Experimental: toggle fast parsing',category:'Tools',keywords:['incremental','parse','performance','experimental'],run:()=> /* History: UI/file state only; no document undo entry. */ {const on=!EditorProject.incremental.enabled;EditorProject.incremental.enabled=on;try{localStorage.setItem(FAST_KEY,on?'on':'off');}catch{/* storage unavailable */}patchState({notice:on?'Fast parsing is on (experimental). Unsure cases still use the full parser.':'Fast parsing is off. Every edit uses the full parser.'});}});
 registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'project.openFile',title:'Open file',category:'Project',keywords:['open','file'],run:()=> /* History: UI/file state only; no document undo entry. */ openFileDialog()});
 registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'project.openMedia',title:'Open image or PDF to preview',category:'Project',keywords:['png','jpg','jpeg','pdf','image','preview','media'],run:()=> /* History: UI/file state only; no document undo entry. */ openMediaDialog()});

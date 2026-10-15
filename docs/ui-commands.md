@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-949 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+950 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -550,6 +550,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `problems.toggle` | Toggle problems | Tools | core | `Mod+J` |
 | `project.closeAll` | Close all files | Project | core |  |
 | `project.export` | Export project... | Project | core |  |
+| `project.export.advanced` | Advanced export... | Project | core |  |
 | `project.export.md` | Export active file as Markdown | Project | core |  |
 | `project.newFile` | New blank page | Project | core |  |
 | `project.open` | Open folder | Project | core | `Mod+O` |
