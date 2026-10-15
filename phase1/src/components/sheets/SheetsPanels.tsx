@@ -14,6 +14,7 @@ import {addressOf,colName,parseAddress} from '../../lib/sheets/format';
 import {sortBlockProblem} from '../../lib/sheets/sortOps';
 import {fillBlockProblem,FILL_DIRECTIONS} from '../../lib/sheets/fillOps';
 import type {FillDirection,CfStyle} from '../../lib/sheets/protocol';
+import {dedupeBlockProblem,splitBlockProblem,parseWidths,SPLIT_DELIMITERS} from '../../lib/sheets/dataTools';
 import {replaceProblem,MAX_REPLACE_TEXT} from '../../lib/sheets/replaceOps';
 import {getSheetsPanelController} from '../../lib/sheets/panelController';
 import {VALIDATION_CHOICES,buildValidationOp,MAX_ITEM_CHARS,type ValidationChoice} from '../../lib/sheets/validationOps';
@@ -210,6 +211,8 @@ export function SheetsLayoutPanel({context}:PanelHostProps){
   <HighlightGroup/>
   <ValidationGroup/>
   <ReplaceGroup/>
+  <DedupeGroup/>
+  <SplitGroup/>
   <p role="status">{action.notice}</p></Region>;
 }
 /** Sorts the rows of exactly the selected block by one column. The block is never widened and the header row is an explicit choice. One undo step. */
@@ -246,6 +249,35 @@ function FilterGroup(){
    <Button variant="outline" size="compact" disabled={action.busy} onClick={()=>void action.run('sheets.filter',{kind:'off'})} data-testid="sheets-filter-off">{t('sheets.filter.off')}</Button>
   </div>
   <p className="text-ink-3">{t(block?'sheets.sort.need':'sheets.filter.scope',{range:rangeAddress(r)})}</p>
+ </div>;
+}
+/** Removes rows that repeat an earlier row inside exactly the selected block. One undo step. */
+function DedupeGroup(){
+ const {t}=useT(),s=useSheetsSelection(),action=useAction();const [header,setHeader]=useState(false);const [by,setBy]=useState(-1);
+ const r=s?.range;if(!s||!r)return null;
+ const rows=r.r1-r.r0+1,cols=r.c1-r.c0+1,problem=dedupeBlockProblem(rows,cols,header),pick=by>=0&&by<cols?by:-1,options=Array.from({length:Math.min(cols,MAX_SORT_OPTIONS)},(_,i)=>i);
+ const columns=pick>=0?[pick]:Array.from({length:cols},(_,i)=>i);
+ return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.dd.title')}>
+  <span>{t('sheets.dd.title')}</span>
+  <label className="flex flex-col gap-1">{t('sheets.dd.compare')}<NativeSelect className={field} value={pick} disabled={action.busy} onChange={e=>setBy(Number(e.currentTarget.value))} data-testid="sheets-dd-compare"><option value={-1}>{t('sheets.dd.all')}</option>{options.map(i=><option key={i} value={i}>{colName(r.c0+i)}</option>)}</NativeSelect></label>
+  <label className="flex flex-col gap-1">{t('sheets.sort.header')}<NativeSelect className={field} value={header?'yes':'no'} disabled={action.busy} onChange={e=>setHeader(e.currentTarget.value==='yes')} data-testid="sheets-dd-header"><option value="no">{t('sheets.sort.headerNo')}</option><option value="yes">{t('sheets.sort.headerYes')}</option></NativeSelect></label>
+  <Button variant="outline" size="compact" disabled={action.busy||!!problem} onClick={()=>void action.run('sheets.dedupe',{header,columns}).then(n=>{if(typeof n==='number')action.setNotice(t('sheets.dd.done',{n:String(n)}));})} data-testid="sheets-dd-apply">{t('sheets.dd.apply')}</Button>
+  <p className="text-ink-3">{t(problem?'sheets.dd.need':'sheets.dd.scope',{range:rangeAddress(r)})}</p>
+ </div>;
+}
+/** Splits the text of the selected column into the empty columns to its right. One undo step; nothing is overwritten. */
+function SplitGroup(){
+ const {t}=useT(),s=useSheetsSelection(),action=useAction();const [delim,setDelim]=useState<string>(',');const [merge,setMerge]=useState(false);const [widths,setWidths]=useState('');
+ const r=s?.range;if(!s||!r)return null;
+ const rows=r.r1-r.r0+1,cols=r.c1-r.c0+1,problem=splitBlockProblem(rows,cols),fixed=delim==='fixed',cuts=fixed?parseWidths(widths):null;
+ const names:Record<string,string>={',':'sheets.sp.comma',';':'sheets.sp.semicolon','\t':'sheets.sp.tab',' ':'sheets.sp.space','|':'sheets.sp.pipe',fixed:'sheets.sp.fixed'};
+ return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.sp.title')}>
+  <span>{t('sheets.sp.title')}</span>
+  <label className="flex flex-col gap-1">{t('sheets.sp.by')}<NativeSelect className={field} value={delim} disabled={action.busy} onChange={e=>setDelim(e.currentTarget.value)} data-testid="sheets-sp-by">{[...SPLIT_DELIMITERS,'fixed'].map(d=><option key={d} value={d}>{t(names[d])}</option>)}</NativeSelect></label>
+  {fixed?<label className="flex flex-col gap-1">{t('sheets.sp.widths')}<NativeInput className={field} value={widths} maxLength={80} aria-invalid={!!widths&&!cuts} disabled={action.busy} onChange={e=>setWidths(e.currentTarget.value)} data-testid="sheets-sp-widths"/></label>
+   :<label className="flex flex-col gap-1">{t('sheets.sp.merge')}<NativeSelect className={field} value={merge?'yes':'no'} disabled={action.busy} onChange={e=>setMerge(e.currentTarget.value==='yes')} data-testid="sheets-sp-merge"><option value="no">{t('sheets.rp.no')}</option><option value="yes">{t('sheets.rp.yes')}</option></NativeSelect></label>}
+  <Button variant="outline" size="compact" disabled={action.busy||!!problem||(fixed&&!cuts)} onClick={()=>void action.run('sheets.split',fixed?{kind:'fixed',widths:cuts}:{kind:'delimited',delimiters:[delim],treatConsecutive:merge})} data-testid="sheets-sp-apply">{t('sheets.sp.apply')}</Button>
+  <p className="text-ink-3">{t(problem?'sheets.sp.need':'sheets.sp.scope',{range:rangeAddress(r)})}</p>
  </div>;
 }
 /** Finds and replaces literal text inside exactly the selected block. One undo step; the block is never widened. */

@@ -6231,6 +6231,14 @@
       "hasEnabled": true
     },
     {
+      "id": "sheets.dedupe",
+      "title": "Remove duplicate rows in the selected block",
+      "category": "Edit",
+      "source": "sheets",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
       "id": "sheets.editLines",
       "title": "Insert or delete rows and columns",
       "category": "Edit",
@@ -6355,6 +6363,14 @@
     {
       "id": "sheets.sort",
       "title": "Sort the selected rows by a column",
+      "category": "Edit",
+      "source": "sheets",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
+      "id": "sheets.split",
+      "title": "Split the selected column of text into columns",
       "category": "Edit",
       "source": "sheets",
       "allowInInput": true,

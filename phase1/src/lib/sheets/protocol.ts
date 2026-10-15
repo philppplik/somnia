@@ -50,6 +50,10 @@ export type CfOp={kind:'cell';operator:CfOperator;value:string|number;value2?:st
 export type ValidationOp={kind:'list';items:string[]}|{kind:'listRange';source:string}|{kind:'number';whole:boolean;operator:CfOperator;value:number;value2?:number}|{kind:'length';operator:CfOperator;value:number;value2?:number}|{kind:'clear'};
 /** Find and replace inside the selected block. Literal text, no wildcards. */
 export interface ReplaceOp{what:string;with:string;matchCase:boolean;wholeCell:boolean;inFormulas:boolean}
+/** Remove duplicate rows (compared on block-relative column offsets) and split one column of text. */
+export interface DedupeOp{header:boolean;columns:number[]}
+export type SplitDelimiter=','|';'|'\t'|' '|'|';
+export type SplitOp={kind:'delimited';delimiters:SplitDelimiter[];treatConsecutive:boolean}|{kind:'fixed';widths:number[]};
 export type FillDirection='down'|'right'|'up'|'left';
 export type SheetOp={kind:'add';name?:string}|{kind:'rename';name:string}|{kind:'duplicate'}|{kind:'delete'}|{kind:'move';to:number};
 export type SheetsRequest=
@@ -74,6 +78,8 @@ export type SheetsRequest=
  |{id:number;op:'validationItems';sheet:number;row:number;col:number}
  |{id:number;op:'replace';sheet:number;row:number;col:number;rows:number;cols:number;replace:ReplaceOp}
  |{id:number;op:'findCount';sheet:number;row:number;col:number;rows:number;cols:number;replace:ReplaceOp}
+ |{id:number;op:'dedupe';sheet:number;row:number;col:number;rows:number;cols:number;dedupe:DedupeOp}
+ |{id:number;op:'split';sheet:number;row:number;col:number;rows:number;cols:number;split:SplitOp}
  |{id:number;op:'cf';sheet:number;row:number;col:number;rows:number;cols:number;cf:CfOp}
  |{id:number;op:'fill';sheet:number;row:number;col:number;rows:number;cols:number;dir:FillDirection}
  |{id:number;op:'filter';sheet:number;row:number;col:number;rows:number;cols:number;filter:FilterOp}

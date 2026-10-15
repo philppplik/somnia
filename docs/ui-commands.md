@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-897 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+899 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -531,6 +531,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `search.project` | Search in project | View | core | `Mod+Shift+F` |
 | `settings.open` | Settings | Tools | core | `Mod+,` |
 | `sheets.analyzeRange` | Analyze spreadsheet range | Tools | sheets |  |
+| `sheets.dedupe` | Remove duplicate rows in the selected block | Edit | sheets |  |
 | `sheets.editLines` | Insert or delete rows and columns | Edit | sheets |  |
 | `sheets.fill` | Fill the selected block down, right, up or left | Edit | sheets |  |
 | `sheets.filter` | Filter rows by a column | Edit | sheets |  |
@@ -546,6 +547,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `sheets.setCell` | Apply cell value or formula | Edit | sheets |  |
 | `sheets.sheet` | Add, rename, duplicate, move or delete the current sheet | Edit | sheets |  |
 | `sheets.sort` | Sort the selected rows by a column | Edit | sheets |  |
+| `sheets.split` | Split the selected column of text into columns | Edit | sheets |  |
 | `sheets.undo` | Undo workbook change | Edit | sheets |  |
 | `sheets.validation` | Limit what can be typed into the selected cells | Edit | sheets |  |
 | `shell.rail.hide` | Hide rail icon | View | core |  |

@@ -13,6 +13,8 @@ const MAX_SHEETS: usize = 255;
 const MAX_SORT_CELLS: u64 = 1_000_000;
 const MAX_FILL_CELLS: u64 = 1_000_000;
 const MAX_CF_RULES: usize = 64;
+const MAX_SPLIT_PARTS: usize = 20;
+const SPLIT_DELIMITERS: [char; 5] = [',', ';', '\t', ' ', '|'];
 const MAX_REPLACE_CELLS: usize = 10_000;
 const MAX_VALIDATION_ITEMS: usize = 500;
 const MAX_VALIDATION_ITEMS_SET: usize = 100;
@@ -669,6 +671,129 @@ impl HeadlessWorkbook {
         let range = format!("{}:{}", CellRef::new(row, col).a1(), CellRef::new(row + rows - 1, col + cols - 1).a1());
         self.session.run("sheet.activate", json!({"sheet": sheet}))?;
         self.session.run("data.sort", json!({"range": range, "header": header, "keys": keys, "matchCase": match_case})).map(|v| v.to_string())
+    }
+
+    /// True when any cell of the block holds a formula (the engine moves cells without rewriting their references).
+    fn block_has_formula(&self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32) -> Result<bool, String> {
+        let doc = self.session.doc().map_err(|e| e.to_string())?;
+        let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+        let block = gridcraft_engine::core::RangeRef::new(CellRef::new(row, col), CellRef::new(row + rows - 1, col + cols - 1));
+        Ok(sh.cells.iter_range(block).any(|(_, c)| c.formula.is_some()))
+    }
+
+    /// Removes rows whose chosen columns repeat an earlier row (case-insensitive, the first one stays) as ONE history entry.
+    /// `op_json` is `{"header":bool,"columns":[offsets inside the block]}`; the rows below move up inside the block only.
+    /// Refused: protected sheets, blocks with formulas (their references would not follow the rows), fewer than two data rows.
+    /// Returns `{"removed":n,"remaining":n}`.
+    pub fn remove_duplicates(&mut self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32, op_json: &str) -> Result<String, String> {
+        if rows < 2 || cols == 0 || u64::from(rows) * u64::from(cols) > MAX_SORT_CELLS {
+            return Err("Select at least two rows (at most 1,000,000 cells).".into());
+        }
+        self.check_block(sheet, row, col, rows, cols, true)?;
+        let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "operation must be a JSON object".to_string())?;
+        let header = op.get("header").and_then(|v| v.as_bool()).ok_or("header must be true or false")?;
+        if header && rows < 3 {
+            return Err("Nothing to check below the header row.".into());
+        }
+        let raw = op.get("columns").and_then(|v| v.as_array()).ok_or("columns must be a list")?;
+        if raw.is_empty() || raw.len() > cols as usize {
+            return Err("Pick at least one column to compare.".into());
+        }
+        let mut offsets: Vec<u64> = Vec::new();
+        for c in raw {
+            let o = c.as_u64().filter(|o| *o < u64::from(cols)).ok_or("a column is outside the selection")?;
+            if offsets.contains(&o) {
+                return Err("a column is listed twice".into());
+            }
+            offsets.push(o);
+        }
+        if self.block_has_formula(sheet, row, col, rows, cols)? {
+            return Err("The selection contains formulas. Their references would not follow the moved rows.".into());
+        }
+        let range = format!("{}:{}", CellRef::new(row, col).a1(), CellRef::new(row + rows - 1, col + cols - 1).a1());
+        self.session.run("sheet.activate", json!({"sheet": sheet}))?;
+        self.session.run("data.removeDuplicates", json!({"range": range, "header": header, "columns": offsets})).map(|v| v.to_string())
+    }
+
+    /// Splits the text of ONE column into columns to its right as ONE history entry. `op_json` is
+    /// `{"kind":"delimited","delimiters":[",",";","\t"," ","|"],"treatConsecutive":bool}` or `{"kind":"fixed","widths":[n,..]}`
+    /// (ascending cut positions, at most 19). Results fill the columns right of the source in the same rows (at most 20 parts); the
+    /// area must be empty, so nothing is overwritten. Refused: protected sheets, more than one column, parts that would start with "=".
+    pub fn text_to_columns(&mut self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32, op_json: &str) -> Result<String, String> {
+        if cols != 1 || rows == 0 || rows > 10_000 {
+            return Err("Select one column of at most 10,000 rows.".into());
+        }
+        self.check_block(sheet, row, col, rows, cols, true)?;
+        let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "operation must be a JSON object".to_string())?;
+        let kind = op.get("kind").and_then(|v| v.as_str()).ok_or("missing operation kind")?;
+        let mut args = json!({"range": CellRef::new(row, col).a1() + ":" + &CellRef::new(row + rows - 1, col).a1(), "treatConsecutive": false});
+        let mut delims: Vec<char> = Vec::new();
+        let mut fixed = false;
+        match kind {
+            "delimited" => {
+                let list = op.get("delimiters").and_then(|v| v.as_array()).ok_or("pick at least one delimiter")?;
+                for d in list {
+                    let c = d.as_str().and_then(|t| (t.chars().count() == 1).then(|| t.chars().next())).flatten().filter(|c| SPLIT_DELIMITERS.contains(c)).ok_or("unsupported delimiter")?;
+                    if !delims.contains(&c) {
+                        delims.push(c);
+                    }
+                }
+                if delims.is_empty() {
+                    return Err("Pick at least one delimiter.".into());
+                }
+                args["delimiters"] = json!(delims.iter().map(|c| c.to_string()).collect::<Vec<_>>());
+                args["treatConsecutive"] = json!(op.get("treatConsecutive").and_then(|v| v.as_bool()).ok_or("treatConsecutive must be true or false")?);
+            }
+            "fixed" => {
+                let list = op.get("widths").and_then(|v| v.as_array()).ok_or("widths must be a list")?;
+                let mut cuts: Vec<u64> = Vec::new();
+                for w in list {
+                    let n = w.as_u64().filter(|n| (1..=255).contains(n)).ok_or("a width must be 1 to 255")?;
+                    if cuts.last().is_some_and(|l| *l >= n) {
+                        return Err("widths must be ascending".into());
+                    }
+                    cuts.push(n);
+                }
+                if cuts.is_empty() || cuts.len() > MAX_SPLIT_PARTS - 1 {
+                    return Err(format!("Use 1 to {} cut positions.", MAX_SPLIT_PARTS - 1));
+                }
+                args["fixedWidths"] = json!(cuts);
+                fixed = true;
+            }
+            _ => return Err("unsupported split kind".into()),
+        }
+        let widest = {
+            let doc = self.session.doc().map_err(|e| e.to_string())?;
+            let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+            let mut widest = 1usize;
+            for r in row..row + rows {
+                let text = sh.value(CellRef::new(r, col)).display();
+                if text.starts_with('=') || (fixed && text.contains('=')) || delims.iter().any(|d| text.contains(&format!("{d}="))) {
+                    return Err(format!("{}: a part would start with \"=\" and turn into a formula.", CellRef::new(r, col).a1()));
+                }
+                let parts = if fixed { MAX_SPLIT_PARTS } else { text.chars().filter(|c| delims.contains(c)).count() + 1 };
+                widest = widest.max(parts);
+            }
+            if widest > MAX_SPLIT_PARTS {
+                return Err(format!("A cell would split into more than {MAX_SPLIT_PARTS} parts."));
+            }
+            if fixed {
+                widest = args["fixedWidths"].as_array().map_or(1, |a| a.len() + 1);
+            }
+            if col.checked_add(widest as u32).is_none_or(|v| v > gridcraft_engine::core::MAX_COLS) {
+                return Err("The parts would run past the last column.".into());
+            }
+            let free = gridcraft_engine::core::RangeRef::new(CellRef::new(row, col + 1), CellRef::new(row + rows - 1, col + widest as u32 - 1));
+            if widest > 1 && sh.cells.iter_range(free).next().is_some() {
+                return Err("The columns to the right are not empty. Clear them or insert columns first.".into());
+            }
+            widest
+        };
+        if widest < 2 {
+            return Err("Nothing to split: no cell has a delimiter.".into());
+        }
+        self.session.run("sheet.activate", json!({"sheet": sheet}))?;
+        self.session.run("data.textToColumns", args).map(|v| v.to_string())
     }
 
     /// Cells in the block that a replace would change: `(cell, new input)`. Literal matching (no wildcards), formulas only
@@ -1962,5 +2087,49 @@ mod tests {
         assert_eq!(text(&book, "A82"), "red RED", "nothing changed");
         book.session.run("review.protectSheet", json!({})).unwrap();
         assert!(book.replace_range(0, 80, 0, 3, 2, op).unwrap_err().contains("protected"));
+    }
+    #[test]
+    fn remove_duplicates_and_text_to_columns_are_one_undo_step_and_refuse_unsafe_input() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        book.set_values(0, 90, 0, r#"[["name","n"],["a","1"],["A","2"],["b","3"],["a","4"]]"#).unwrap();
+        let out = book.remove_duplicates(0, 90, 0, 5, 2, r#"{"header":true,"columns":[0]}"#).unwrap();
+        assert!(out.contains("\"removed\":2"));
+        assert_eq!(text(&book, "A92"), "b");
+        assert_eq!(text(&book, "A93"), "");
+        book.undo().unwrap();
+        assert_eq!(text(&book, "A93"), "A");
+        assert!(book.remove_duplicates(0, 90, 0, 5, 2, r#"{"header":true,"columns":[2]}"#).is_err());
+        assert!(book.remove_duplicates(0, 90, 0, 5, 2, r#"{"header":true,"columns":[0,0]}"#).is_err());
+        assert!(book.remove_duplicates(0, 90, 0, 5, 2, r#"{"header":true,"columns":[]}"#).is_err());
+        assert!(book.remove_duplicates(0, 90, 0, 1, 2, r#"{"header":false,"columns":[0]}"#).is_err());
+        book.set_values(0, 100, 0, r#"[["x"],["=1+1"]]"#).unwrap();
+        assert!(book.remove_duplicates(0, 100, 0, 2, 1, r#"{"header":false,"columns":[0]}"#).is_err(), "formulas refused");
+        book.set_values(0, 110, 0, r#"[["a,b,c"],["d,e"],["f"]]"#).unwrap();
+        let split = r#"{"kind":"delimited","delimiters":[","],"treatConsecutive":false}"#;
+        book.text_to_columns(0, 110, 0, 3, 1, split).unwrap();
+        assert_eq!(text(&book, "A111"), "a");
+        assert_eq!(text(&book, "C111"), "c");
+        assert_eq!(text(&book, "B112"), "e");
+        book.undo().unwrap();
+        assert_eq!(text(&book, "A111"), "a,b,c");
+        assert_eq!(text(&book, "B111"), "");
+        book.set_values(0, 110, 1, r#"[["keep"]]"#).unwrap();
+        assert!(book.text_to_columns(0, 110, 0, 3, 1, split).is_err(), "never overwrite");
+        assert_eq!(text(&book, "B111"), "keep");
+        for bad in [
+            "nope",
+            r#"{"kind":"delimited","delimiters":[],"treatConsecutive":false}"#,
+            r#"{"kind":"delimited","delimiters":["x"],"treatConsecutive":false}"#,
+            r#"{"kind":"delimited","delimiters":[","]}"#,
+            r#"{"kind":"fixed","widths":[3,2]}"#,
+            r#"{"kind":"fixed","widths":[]}"#,
+            r#"{"kind":"regex"}"#,
+        ] {
+            assert!(book.text_to_columns(0, 120, 0, 3, 1, bad).is_err(), "{bad}");
+        }
+        assert!(book.text_to_columns(0, 110, 0, 3, 2, split).is_err(), "one column only");
+        book.session.run("review.protectSheet", json!({})).unwrap();
+        assert!(book.remove_duplicates(0, 90, 0, 5, 2, r#"{"header":true,"columns":[0]}"#).unwrap_err().contains("protected"));
+        assert!(book.text_to_columns(0, 120, 0, 3, 1, split).unwrap_err().contains("protected"));
     }
 }

@@ -4,10 +4,11 @@ import {parsePanelRange} from './panelModel';
 import {MAX_CELL_BYTES,type RangeCell} from './protocol';
 import {parseAddress} from './format';
 import {parseFormatOp} from './formatOps';
-import type {ReplaceOp,ValidationOp,CfOp,FillDirection,FilterOp,SortOp,FormatOp,LineAxis,LineEditKind,LineOp,SheetOp} from './protocol';
+import type {DedupeOp,SplitOp,ReplaceOp,ValidationOp,CfOp,FillDirection,FilterOp,SortOp,FormatOp,LineAxis,LineEditKind,LineOp,SheetOp} from './protocol';
 import {parseEditLines,parseFreeze,parseLineCommand} from './lineOps';
 import {parseSheetOp} from './sheetOps';
 import {parseSortCommand} from './sortOps';
+import {parseDedupeCommand,parseSplitCommand,SPLIT_DELIMITERS} from './dataTools';
 import {parseReplaceCommand} from './replaceOps';
 import {parseValidationCommand} from './validationOps';
 import {CF_FLAGS,CF_OPERATORS,CF_SCALES,CF_STYLES,CF_TEXT_MODES,parseCfCommand} from './cfOps';
@@ -40,6 +41,10 @@ export interface SheetsPanelController {
  setValidation(op:ValidationOp):void|Promise<void>;
  /** Replaces text in the selected block (one undo step); resolves to the number of changed cells. */
  replaceText(op:ReplaceOp):number|Promise<number>;
+ /** Removes duplicate rows inside the selected block (one undo step); resolves to the number removed. */
+ removeDuplicates(op:DedupeOp):number|Promise<number>;
+ /** Splits the selected column of text into the empty columns to its right (one undo step). */
+ splitColumn(op:SplitOp):void|Promise<void>;
  /** How many cells a replace in the selected block would change. */
  countMatches(op:ReplaceOp):number|Promise<number>;
 }
@@ -47,7 +52,7 @@ let current:SheetsPanelController|null=null;
 export const getSheetsPanelController=()=>current;
 export function registerSheetsPanelController(controller:SheetsPanelController){current=controller;return()=>{if(current===controller)current=null;};}
 const requireController=()=>{if(!current?.ready())throw Error('No workbook is ready.');return current;};
-export const SHEETS_PANEL_COMMAND_IDS=['sheets.navigate','sheets.setCell','sheets.analyzeRange','sheets.format','sheets.resize','sheets.freeze','sheets.editLines','sheets.sheet','sheets.sort','sheets.filter','sheets.fill','sheets.highlight','sheets.validation','sheets.replace'] as const;
+export const SHEETS_PANEL_COMMAND_IDS=['sheets.navigate','sheets.setCell','sheets.analyzeRange','sheets.format','sheets.resize','sheets.freeze','sheets.editLines','sheets.sheet','sheets.sort','sheets.filter','sheets.fill','sheets.highlight','sheets.validation','sheets.replace','sheets.dedupe','sheets.split'] as const;
 export function sheetsPanelCommandSpecs():CommandSpec[]{
  return [
  {id:'sheets.navigate',title:'Go to spreadsheet cell',category:'View',level:'ui',allowInInput:true,
@@ -92,6 +97,12 @@ export function sheetsPanelCommandSpecs():CommandSpec[]{
  {id:'sheets.replace',title:'Replace text in the selected cells',category:'Edit',level:'ui',allowInInput:true,
   params:{type:'object',properties:{what:{type:'string',minLength:1,maxLength:255},with:{type:'string',maxLength:255},matchCase:{type:'boolean'},wholeCell:{type:'boolean'},inFormulas:{type:'boolean'}},required:['what','with','matchCase','wholeCell','inFormulas'],additionalProperties:false},
   enabled:()=>!!current?.ready(),run:async p=>{await requireController().replaceText(parseReplaceCommand(p));}},
+ {id:'sheets.dedupe',title:'Remove duplicate rows in the selected block',category:'Edit',level:'ui',allowInInput:true,
+  params:{type:'object',properties:{header:{type:'boolean'},columns:{type:'array',items:{type:'integer',minimum:0,maximum:16383},minItems:1,maxItems:16384}},required:['header','columns'],additionalProperties:false},
+  enabled:()=>!!current?.ready(),run:async p=>{await requireController().removeDuplicates(parseDedupeCommand(p));}},
+ {id:'sheets.split',title:'Split the selected column of text into columns',category:'Edit',level:'ui',allowInInput:true,
+  params:{type:'object',properties:{kind:{type:'string',enum:['delimited','fixed']},delimiters:{type:'array',items:{type:'string',enum:[...SPLIT_DELIMITERS]},minItems:1,maxItems:5},treatConsecutive:{type:'boolean'},widths:{type:'array',items:{type:'integer',minimum:1,maximum:255},minItems:1,maxItems:19}},required:['kind'],additionalProperties:false},
+  enabled:()=>!!current?.ready(),run:p=>requireController().splitColumn(parseSplitCommand(p))},
  ];
 }
 export function registerSheetsPanelCommands(){const offs=sheetsPanelCommandSpecs().map(s=>registerCommandSpec(s));return()=>offs.forEach(off=>off());}
