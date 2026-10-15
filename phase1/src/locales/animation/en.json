@@ -1325,5 +1325,7 @@
  "animation.rig.group.count": "Count",
  "cmd.animation.text.count": "Count the ticked text layers from one number to another",
  "animation.rig.group.impact": "Impact and light",
- "animation.export.check.tiny": "Text under 10 px in the exported file, hard to read: {names}"
+ "animation.export.check.tiny": "Text under 10 px in the exported file, hard to read: {names}",
+ "animation.export.check.head": "No layer shows in the first {names} frames of the range. Trim the range to start where the picture does.",
+ "animation.export.check.tail": "No layer shows in the last {names} frames of the range. Trim the range to end where the picture does."
 }

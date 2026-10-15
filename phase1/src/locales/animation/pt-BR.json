@@ -1325,5 +1325,7 @@
  "animation.rig.group.count": "Contador",
  "cmd.animation.text.count": "Fazer as camadas de texto marcadas contarem de um número a outro",
  "animation.rig.group.impact": "Impacto e luz",
- "animation.export.check.tiny": "Texto abaixo de 10 px no arquivo exportado, difícil de ler: {names}"
+ "animation.export.check.tiny": "Texto abaixo de 10 px no arquivo exportado, difícil de ler: {names}",
+ "animation.export.check.head": "Nenhuma camada aparece nos primeiros {names} quadros do intervalo. Reduza o intervalo para começar onde a imagem começa.",
+ "animation.export.check.tail": "Nenhuma camada aparece nos últimos {names} quadros do intervalo. Reduza o intervalo para terminar onde a imagem termina."
 }

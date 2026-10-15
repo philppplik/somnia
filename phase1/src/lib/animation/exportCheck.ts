@@ -10,7 +10,7 @@ const MAX_FLASH_FRAMES=3600;
 export function exportCheck(comp:Composition,assets:readonly InterfaceAsset[],s:ExportSettings,range?:{in:number;out:number}):PreflightIssue[]{
  const r=range??comp.workArea,ticks=workAreaTicks({...comp,workArea:r});
  return preflight({layers:comp.layers,assetIds:new Set(assets.map(a=>a.id)),range:r,frame:s.crop??{x:0,y:0,width:comp.width,height:comp.height},
-  seamless:s.loopSeam===true,
+  seamless:s.loopSeam===true,oneFrame:frameToTick(1,comp.fps),
   frames:l=>{const a=snapToFrame(r.in,comp.fps),one=frameToTick(1,comp.fps),n=Math.min(MAX_FLASH_FRAMES,Math.max(0,Math.floor((r.out-a)/one)));return {opacity:Array.from({length:n},(_,i)=>evaluateMod(l.transform.opacity,a+i*one) as number),perSecond:comp.fps.num/comp.fps.den};},
   scales:l=>ticks.map(t=>Math.min(...(evaluateMod(l.transform.scale,t) as number[]).map(Math.abs))),
   textPx:l=>l.kind==='text'?ticks.map(t=>{const m=worldMatrix(comp,l,t);return (l.source.size??48)*Math.hypot(m[0],m[1])*s.scale/100;}):[],

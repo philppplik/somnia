@@ -1325,5 +1325,7 @@
  "animation.rig.group.count": "Contador",
  "cmd.animation.text.count": "Hacer que las capas de texto marcadas cuenten de un número a otro",
  "animation.rig.group.impact": "Impacto y luz",
- "animation.export.check.tiny": "Texto de menos de 10 px en el archivo exportado, difícil de leer: {names}"
+ "animation.export.check.tiny": "Texto de menos de 10 px en el archivo exportado, difícil de leer: {names}",
+ "animation.export.check.head": "Ninguna capa se ve en los primeros {names} fotogramas del rango. Recorta el rango para que empiece donde empieza la imagen.",
+ "animation.export.check.tail": "Ninguna capa se ve en los últimos {names} fotogramas del rango. Recorta el rango para que acabe donde acaba la imagen."
 }

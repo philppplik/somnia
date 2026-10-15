@@ -1915,3 +1915,15 @@ test('P282 export check: text under 10 px in the output is warned, scales with t
  assert.equal(at(100),undefined);
  const t=at(50);assert.ok(t&&t.severity==='warn'&&t.layers.includes('Fine print')&&!t.layers.includes('Headline'));
 });
+
+test('P284 export check: empty frames at the start or end of the range are reported with their count',async()=>{
+ const {exportCheck}=await import('./exportCheck');const {defaultExportSettings}=await import('./exportSettings');
+ const d0=applyEdits(base(),[{type:'layer.update',layer:'a',locked:false},{type:'layer.timing',layer:'a',inT:f(20),outT:f(100)}] as never);
+ const s=new AnimationSession();s.open(d0);const c=findComp(s.document!)!;
+ const iss=exportCheck(c,[],defaultExportSettings());
+ const h=iss.find(i=>i.code==='head'),t=iss.find(i=>i.code==='tail');
+ assert.ok(h&&h.severity==='info'&&h.layers[0]==='20');assert.ok(t&&t.layers[0]===String(Math.round((c.workArea.out-f(100))/f(1))));
+ const full=applyEdits(d0,[{type:'layer.timing',layer:'a',inT:0,outT:findComp(d0)!.duration}] as never);
+ const s2=new AnimationSession();s2.open(full);const iss2=exportCheck(findComp(s2.document!)!,[],defaultExportSettings());
+ assert.ok(!iss2.some(i=>i.code==='head'||i.code==='tail'));
+});

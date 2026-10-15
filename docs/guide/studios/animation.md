@@ -121,3 +121,4 @@ Back to [Studios](../studios.md).
 - **Colours panel** now lists and replaces gradient colours (fill and stroke, stops included) and effect colours (glow, shadow, tint), and "Shift all colours" moves effect colours and their colour keys too.
 - The Rig > Motion menu now has five groups: around, along, physics and effects, impact and light (pulse, flicker, shake), copies and trails.
 - **Export check** also warns about text that ends up under 10 px in the exported file, taking the layer scale, its parents and the export size into account.
+- **Export check** also says when no layer shows in the first or last six or more frames of the export range, so you can trim it (Work area to layers).
