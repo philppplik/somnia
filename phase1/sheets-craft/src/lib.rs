@@ -3806,11 +3806,11 @@ impl HeadlessWorkbook {
     }
 
     /// Finds cells by what they are, with the engine's Go To Special search, without changing anything. `kind` is one of blanks, constants,
-    /// formulas, text, numbers, errors, comments, conditionalFormats or dataValidation. The block is the search area; a single cell searches the
+    /// formulas, text, numbers, errors, comments, conditionalFormats, dataValidation or invalidData (content that breaks its own validation rule). The block is the search area; a single cell searches the
     /// whole used range of the sheet. Returns `{"count":n,"ranges":["A1:A3","C5"],"truncated":bool}` with at most 500 vertical runs, `count` 0 when
     /// nothing matches. The engine selection is put back afterwards, so nothing is added to the history.
     pub fn find_special(&mut self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32, kind: &str) -> Result<String, String> {
-        if !matches!(kind, "blanks" | "constants" | "formulas" | "text" | "numbers" | "errors" | "comments" | "conditionalFormats" | "dataValidation") {
+        if !matches!(kind, "blanks" | "constants" | "formulas" | "text" | "numbers" | "errors" | "comments" | "conditionalFormats" | "dataValidation" | "invalidData") {
             return Err("unsupported kind of cells".into());
         }
         if rows == 0 || cols == 0 || u64::from(rows) * u64::from(cols) > MAX_FILL_CELLS {
@@ -3818,6 +3818,37 @@ impl HeadlessWorkbook {
         }
         self.check_block(sheet, row, col, rows, cols, false)?;
         self.session.run("sheet.activate", json!({"sheet": sheet})).map_err(|e| e.to_string())?;
+        if kind == "invalidData" {
+            // Cells whose content breaks their own validation rule (the engine's "circle invalid data", a query without history). The grid cannot draw
+            // circles, so the cells come back as runs to jump to. The block limits the search; a single cell searches the whole sheet.
+            use gridcraft_engine::core::CellRef;
+            let listed = self.session.run("data.circleInvalid", json!({})).map_err(|e| e.to_string())?;
+            let whole = rows == 1 && cols == 1;
+            let mut cells: Vec<(u32, u32)> = listed
+                .get("invalid")
+                .and_then(|v| v.as_array())
+                .map(|a| a.iter().filter_map(|x| x.as_str().and_then(CellRef::parse)).map(|c| (c.col, c.row)).collect())
+                .unwrap_or_default();
+            cells.retain(|&(c, r)| whole || (r >= row && r < row + rows && c >= col && c < col + cols));
+            cells.sort_unstable();
+            cells.dedup();
+            let count = cells.len();
+            let mut runs: Vec<String> = Vec::new();
+            let mut i = 0;
+            while i < cells.len() && runs.len() <= MAX_FIND_RANGES {
+                let (c, r0) = cells[i];
+                let mut r1 = r0;
+                while i + 1 < cells.len() && cells[i + 1] == (c, r1 + 1) {
+                    r1 += 1;
+                    i += 1;
+                }
+                runs.push(if r1 == r0 { CellRef::new(r0, c).a1() } else { format!("{}:{}", CellRef::new(r0, c).a1(), CellRef::new(r1, c).a1()) });
+                i += 1;
+            }
+            let truncated = runs.len() > MAX_FIND_RANGES;
+            runs.truncate(MAX_FIND_RANGES);
+            return Ok(json!({"count": count, "ranges": runs, "truncated": truncated}).to_string());
+        }
         let saved = self.session.doc().map_err(|e| e.to_string())?.selection.clone();
         let range = format!("{}:{}", CellRef::new(row, col).a1(), CellRef::new(row + rows - 1, col + cols - 1).a1());
         let found = self
@@ -6369,6 +6400,7 @@ mod tests {
             assert!(book.find_special(0, 800, 0, 3, 2, bad).is_err(), "{bad}");
         }
         assert!(book.find_special(0, 800, 0, 0, 2, "blanks").is_err());
+        assert!(book.find_special(0, 800, 0, 3, 2, "invalidData").unwrap().contains("\"count\":0"), "no rule, nothing invalid");
         assert!(book.find_special(0, gridcraft_engine::core::MAX_ROWS - 1, 0, 5, 1, "blanks").is_err());
         assert!(book.find_special(7, 0, 0, 1, 1, "blanks").is_err(), "unknown sheet");
     }

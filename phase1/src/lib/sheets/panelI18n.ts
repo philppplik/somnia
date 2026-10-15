@@ -274,6 +274,7 @@ const rows:Record<string,readonly string[]>={
  'sheets.gs.k.errors':['Errors','Fehler','Errores','Erreurs','Erros'],
  'sheets.gs.k.comments':['Notes and comments','Notizen und Kommentare','Notas y comentarios','Notes et commentaires','Notas e comentários'],
  'sheets.gs.k.conditionalFormats':['Conditional formatting','Bedingte Formatierung','Formato condicional','Mise en forme conditionnelle','Formatação condicional'],
+ 'sheets.gs.k.invalidData':['Invalid data (breaks its rule)','Ungültige Daten (verletzt die Regel)','Datos no válidos (incumplen su regla)','Données non valides (enfreignent la règle)','Dados inválidos (violam a regra)'],
  'sheets.gs.k.dataValidation':['Data validation','Datenüberprüfung','Validación de datos','Validation des données','Validação de dados'],
  'sheets.gs.find':['Find','Finden','Buscar','Trouver','Encontrar'],
  'sheets.gs.scopeSheet':['One cell selected: searches the whole used part of the sheet.','Eine Zelle markiert: durchsucht den ganzen belegten Teil des Blatts.','Una celda seleccionada: busca en toda la parte usada de la hoja.','Une cellule sélectionnée : recherche dans toute la partie utilisée de la feuille.','Uma célula selecionada: pesquisa toda a parte usada da planilha.'],

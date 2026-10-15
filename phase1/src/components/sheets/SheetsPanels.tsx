@@ -1048,7 +1048,7 @@ function FindSpecialGroup(){
   <span>{t('sheets.gs.title')}</span>
   <label className="flex flex-col gap-1">{t('sheets.gs.kind')}<NativeSelect className={field} value={kind} disabled={action.busy} onChange={e=>setKind(e.currentTarget.value as SpecialKind)} data-testid="sheets-gs-kind">
    <optgroup label={t('sheets.gs.groupContent')}>{(['blanks','constants','formulas','text','numbers','errors'] as const).map(k=><option key={k} value={k}>{t('sheets.gs.k.'+k)}</option>)}</optgroup>
-   <optgroup label={t('sheets.gs.groupRules')}>{(['comments','conditionalFormats','dataValidation'] as const).map(k=><option key={k} value={k}>{t('sheets.gs.k.'+k)}</option>)}</optgroup>
+   <optgroup label={t('sheets.gs.groupRules')}>{(['comments','conditionalFormats','dataValidation','invalidData'] as const).map(k=><option key={k} value={k}>{t('sheets.gs.k.'+k)}</option>)}</optgroup>
   </NativeSelect></label>
   <Button variant="outline" size="compact" disabled={action.busy} onClick={()=>void run()} data-testid="sheets-gs-find">{t('sheets.gs.find')}</Button>
   <p className="text-ink-3">{t(single?'sheets.gs.scopeSheet':'sheets.gs.scopeSelection')}</p>
