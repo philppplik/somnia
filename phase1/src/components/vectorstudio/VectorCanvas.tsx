@@ -1,5 +1,5 @@
 import {VectorExportSetup} from './VectorExportSetup';
-import {useCallback,useEffect,useRef,useState,type PointerEvent as RPointerEvent} from 'react';
+import {useCallback,useEffect,useMemo,useRef,useState,type PointerEvent as RPointerEvent} from 'react';
 import {PenNibIcon} from './icons';
 import {StudioEmptyState} from '../studios/StudioEmptyState';
 import {FileTabs} from '../FileTabs';
@@ -10,7 +10,9 @@ import {selectText,deleteText,duplicateText,updateText,selectNode,moveSelection,
 import {boxOf,fitPath,hitDocument,pathBox,translatePath,type Box} from '../../lib/vectorstudio/geometry';
 import {buildShape,newId,DEFAULT_SHAPE_STYLE,type ShapeKind} from '../../lib/vectorstudio/shapes';
 import {openSvgDialog} from '../../lib/vectorstudio/open';
-import {handleLocal,handlePoint,rotationFor} from '../../lib/vectorstudio/textRotate';
+import {handleLocal,handlePoint,rotationFor,HANDLE_GAP_PX} from '../../lib/vectorstudio/textRotate';
+import {selectionHandle,angleAround,centerOf,turnPoint} from '../../lib/vectorstudio/rotateHandle';
+import {rotateSelection,selectionBounds} from '../../lib/vectorstudio/transforms';
 import {PathLayer,GradientDefs,TextLayer} from './render';
 import {textBox,textTransform,unrotateAround,type VectorText} from '../../lib/vectorio';
 import {togglePathSelection} from './tools/operations';
@@ -30,6 +32,7 @@ type Drag=
  |{kind:'node';path:string;node:string;part:'anchor'|'in'|'out';cur:Point}
  |{kind:'text-move';id:string;start:Point;dx:number;dy:number}
  |{kind:'text-rotate';id:string;rotation:number}
+ |{kind:'sel-rotate';center:Point;handle:Point;deg:number}
  |{kind:'pan';sx:number;sy:number;pan:Point}
  |{kind:'pen-handle';cur:Point};
 import {snapMove} from '../../lib/vectorstudio/snap';
@@ -62,8 +65,10 @@ export function VectorCanvas(){
  const selected=s.doc.paths.filter(p=>s.selection.includes(p.id));
  // Live preview of an in-progress drag; committed as one undo step on pointer up.
  const shiftHeld=useRef(false);
+ const rotatedById=useMemo(()=>{const m=new Map<string,VectorPath>();if(drag?.kind==='sel-rotate'&&drag.deg)for(const p of rotateSelection(s.doc,s.selection,drag.deg,drag.center).paths)m.set(p.id,p);return m;},[drag,s.doc,s.selection]);
  const preview=(p:VectorPath):VectorPath=>{
   if(!drag)return p;
+  if(drag.kind==='sel-rotate')return rotatedById.get(p.id)??p;
   if(drag.kind==='move'&&s.selection.includes(p.id))return translatePath(p,drag.dx,drag.dy);
   if(drag.kind==='scale'&&s.selection.includes(p.id)){const to=scaledBox(drag,shiftHeld.current);return to?fitPath(p,drag.from,to):p;}
   if(drag.kind==='node'&&p.id===drag.path)return {...p,nodes:p.nodes.map(n=>n.id!==drag.node?n:moved(n,drag.part,drag.cur))};
@@ -91,6 +96,7 @@ export function VectorCanvas(){
   // select tool
   if(selText&&Math.hypot(handlePoint(selText,s.zoom).x-pt.x,handlePoint(selText,s.zoom).y-pt.y)<=tol*1.2){setDrag({kind:'text-rotate',id:selText.id,rotation:selText.rotation??0});return;}
   {const hit=hitText(pt);if(hit){selectText(hit);setDrag({kind:'text-move',id:hit,start:pt,dx:0,dy:0});return;}}
+  if(s.selection.length&&!s.textSel){const bnd=selectionBounds(s.doc,s.selection);if(bnd){const h=selectionHandle(bnd,s.zoom);if(Math.hypot(h.x-pt.x,h.y-pt.y)<=tol*1.2){setDrag({kind:'sel-rotate',center:centerOf(bnd),handle:h,deg:0});return;}}}
   const corner=selBox?cornerAt(selBox,pt,tol*1.4):-1;
   if(corner>=0&&selBox){setDrag({kind:'scale',corner,from:selBox,cur:pt});return;}
   const id=hitDocument(s.doc,pt,tol);
@@ -101,6 +107,7 @@ export function VectorCanvas(){
  const onMove=(e:RPointerEvent<SVGSVGElement>)=>{
   const pt=toDoc(e);setHover(pt);if(!drag)return;
   if(drag.kind==='pan'){setView(s.zoom,{x:drag.pan.x+e.clientX-drag.sx,y:drag.pan.y+e.clientY-drag.sy});return;}
+  if(drag.kind==='sel-rotate'){setDrag({...drag,deg:angleAround(drag.center,drag.handle,pt,e.shiftKey)});return;}
   if(drag.kind==='text-rotate'){const base=(s.doc.texts??[]).find(t=>t.id===drag.id);if(base)setDrag({...drag,rotation:rotationFor({...base,rotation:0},pt,s.zoom,e.shiftKey)});return;}
   if(drag.kind==='text-move'){setDrag({...drag,dx:pt.x-drag.start.x,dy:pt.y-drag.start.y});return;}
   if(drag.kind==='move'){const snap=e.shiftKey?Math.abs(pt.x-drag.start.x)>Math.abs(pt.y-drag.start.y):null;
@@ -117,6 +124,7 @@ export function VectorCanvas(){
   const d=drag;setDrag(null);if(!d)return;
   if(d.kind==='text-rotate'){const cur=(s.doc.texts??[]).find(t=>t.id===d.id);if(cur&&d.rotation!==(cur.rotation??0))updateText(d.id,{rotation:d.rotation});}
   else if(d.kind==='text-move'){if(d.dx||d.dy){const cur=(s.doc.texts??[]).find(t=>t.id===d.id);if(cur)updateText(d.id,{x:cur.x+d.dx,y:cur.y+d.dy});}}
+  else if(d.kind==='sel-rotate'){if(d.deg)commit(rotateSelection(s.doc,s.selection,d.deg,d.center));}
   else if(d.kind==='move'&&(d.dx||d.dy)){commit({...s.doc,paths:s.doc.paths.map(p=>s.selection.includes(p.id)?translatePath(p,d.dx,d.dy):p)});}
   else if(d.kind==='scale'){const to=scaledBox(d,shiftHeld.current);if(to)commit({...s.doc,paths:s.doc.paths.map(p=>s.selection.includes(p.id)?fitPath(p,d.from,to):p)});}
   else if(d.kind==='node'){moveNode(d.path,d.node,d.cur,d.part);}
@@ -185,6 +193,7 @@ export function VectorCanvas(){
      {s.tool==='select'&&selBox&&<g data-testid="vector-selection"><rect x={selBox.minX} y={selBox.minY} width={selBox.maxX-selBox.minX} height={selBox.maxY-selBox.minY} fill="none" stroke="#2563eb" strokeWidth={1/s.zoom} strokeDasharray={`${4/s.zoom} ${3/s.zoom}`} pointerEvents="none"/>
       {CORNERS.map(([cx,cy],i)=><rect key={i} data-testid={`vector-handle-${i}`} x={(cx?selBox.maxX:selBox.minX)-4/s.zoom} y={(cy?selBox.maxY:selBox.minY)-4/s.zoom} width={8/s.zoom} height={8/s.zoom} fill="#fff" stroke="#2563eb" strokeWidth={1/s.zoom}/>)}</g>}
      {selTextBox&&<rect data-testid="vector-text-selection" transform={selText?textTransform(selText):undefined} x={selTextBox.minX} y={selTextBox.minY} width={selTextBox.maxX-selTextBox.minX} height={selTextBox.maxY-selTextBox.minY} fill="none" stroke="#2563eb" strokeWidth={1/s.zoom} strokeDasharray={`${4/s.zoom} ${3/s.zoom}`} pointerEvents="none"/>}
+     {selBox&&!selText&&(!drag||drag.kind==='sel-rotate')&&(()=>{const bnd=selectionBounds(s.doc,s.selection);if(!bnd)return null;const c=centerOf(bnd),h0=selectionHandle(bnd,s.zoom),h=drag?.kind==='sel-rotate'?turnPoint(c,h0,drag.deg):h0;return <g pointerEvents="none"><line x1={drag?.kind==='sel-rotate'?c.x:h0.x} y1={drag?.kind==='sel-rotate'?c.y:h0.y+HANDLE_GAP_PX/s.zoom} x2={h.x} y2={h.y} stroke="#2563eb" strokeWidth={1/s.zoom}/><circle data-testid="vector-rotate-handle" cx={h.x} cy={h.y} r={5/s.zoom} fill="#fff" stroke="#2563eb" strokeWidth={1/s.zoom}/></g>;})()}
      {selText&&selTextBox&&<g transform={textTransform(selText)}><line x1={(selTextBox.minX+selTextBox.maxX)/2} y1={selTextBox.minY} x2={handleLocal(selText,s.zoom).x} y2={handleLocal(selText,s.zoom).y} stroke="#2563eb" strokeWidth={1/s.zoom} pointerEvents="none"/><circle data-testid="vector-text-rotate-handle" cx={handleLocal(selText,s.zoom).x} cy={handleLocal(selText,s.zoom).y} r={5/s.zoom} fill="#fff" stroke="#2563eb" strokeWidth={1/s.zoom} pointerEvents="none"/></g>}
      {nodePath&&<NodeOverlay path={nodePath} zoom={s.zoom} active={s.selectedNode}/>}
      {(['x','y'] as const).flatMap(axis=>(s.doc.guides?.[axis]??[]).map(v=><g key={axis+v} data-testid="vector-guide" data-axis={axis}>{!(gd&&gd.axis===axis&&gd.from===v)&&<line x1={axis==='x'?v:-1e5} x2={axis==='x'?v:1e5} y1={axis==='y'?v:-1e5} y2={axis==='y'?v:1e5} className="stroke-accent" strokeWidth={1/s.zoom} pointerEvents="none"/>}
