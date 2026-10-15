@@ -41,6 +41,13 @@ export interface Style {
   arrowStart?: ArrowKind; // arrowheads on open single paths ('none' = absent)
   arrowEnd?: ArrowKind;
   blendMode?: BlendMode; // CSS mix-blend-mode on the object; absent = 'normal'
+  /** Effects (see effects.ts): Gaussian blur and drop shadow of one object, exported as a `<filter data-vs-fx>`. Blur 0 / shadowOpacity 0 = off. */
+  blur?: number;
+  shadowDx?: number;
+  shadowDy?: number;
+  shadowBlur?: number;
+  shadowColor?: string; // '#rrggbb'
+  shadowOpacity?: number;
 }
 
 export interface VectorPath {

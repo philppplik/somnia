@@ -1,5 +1,6 @@
 export * from './types';
 export * from './arrows';
+export * from './effects';
 export * from './swatches';
 export * from './text';
 export { importSvg, SvgImportError, type ImportOptions, type ImportResult } from './import';

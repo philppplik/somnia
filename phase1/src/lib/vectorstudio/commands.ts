@@ -5,7 +5,7 @@
  */
 import { registerCommandSpec } from '../commandBridge';
 import type { CommandSchema, CommandSpec } from '../commandSpec';
-import { BLEND_MODES, ARROW_KINDS } from '../vectorio';
+import { BLEND_MODES, ARROW_KINDS, FX_LIMITS } from '../vectorio';
 import type { Point, Style, VectorDocument, VectorPath } from '../vectorio';
 import * as S from './session';
 import {vectorShellCommandSpecs} from './shellCommands';
@@ -30,6 +30,10 @@ const style = object({
   miterLimit: { type: 'number', minimum: 1 },
   arrowStart: { type: 'string', enum: [...ARROW_KINDS] }, arrowEnd: { type: 'string', enum: [...ARROW_KINDS] },
   blendMode: { type: 'string', enum: [...BLEND_MODES] },
+  blur: { type: 'number', minimum: 0, maximum: FX_LIMITS.blurMax },
+  shadowDx: { type: 'number', minimum: -FX_LIMITS.offsetMax, maximum: FX_LIMITS.offsetMax }, shadowDy: { type: 'number', minimum: -FX_LIMITS.offsetMax, maximum: FX_LIMITS.offsetMax },
+  shadowBlur: { type: 'number', minimum: 0, maximum: FX_LIMITS.shadowBlurMax }, shadowOpacity: { type: 'number', minimum: 0, maximum: 1 },
+  shadowColor: { type: 'string', pattern: '^#[0-9a-fA-F]{6}$' },
   dashArray: { type: 'array', items: { type: 'number', minimum: 0 }, maxItems: 200 }, dashOffset: number,
 });
 const node = object({ id, x: number, y: number, kind: nodeKind, in: point, out: point }, ['id', 'x', 'y', 'kind']);

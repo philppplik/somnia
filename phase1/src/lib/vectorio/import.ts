@@ -8,6 +8,7 @@ import { inferKind, r3 } from './nodes';
 import { createGradientResolver, isGradientElement, nodesBox } from './gradientImport';
 import { parseXml, XmlError, type XmlElement } from './xml';
 import { isArrowKind, type ArrowKind } from './arrows';
+import { FX_KEYS, fxStyle, hasFx, parseFxFilter, type FxSpec } from './effects';
 import { BLEND_MODES, DEFAULT_STYLE, IDENTITY, LIMITS, type BlendMode, type Diagnostic, type Matrix, type Point, type Style, type VectorDocument, type VectorNode, type VectorPath } from './types';
 
 
@@ -40,7 +41,7 @@ const opacityOf = (v: string | undefined): number | undefined => {
 };
 const stripNs = (n: string) => (n.startsWith('svg:') ? n.slice(4) : n);
 
-const STYLE_PROPS = ['fill', 'stroke', 'stroke-width', 'fill-opacity', 'stroke-opacity', 'fill-rule', 'stroke-linecap', 'stroke-linejoin', 'stroke-miterlimit', 'stroke-dasharray', 'stroke-dashoffset', 'opacity', 'mix-blend-mode', 'marker-start', 'marker-end', 'display', 'visibility'];
+const STYLE_PROPS = ['fill', 'stroke', 'stroke-width', 'fill-opacity', 'stroke-opacity', 'fill-rule', 'stroke-linecap', 'stroke-linejoin', 'stroke-miterlimit', 'stroke-dasharray', 'stroke-dashoffset', 'opacity', 'mix-blend-mode', 'filter', 'marker-start', 'marker-end', 'display', 'visibility'];
 /** Editor-group ids are bounded and plain; anything else is ignored so the content just loads ungrouped. */
 const groupIdOf = (v: string | undefined): string | undefined => (v !== undefined && /^[A-Za-z0-9_.:-]{1,64}$/.test(v) ? v : undefined);
 const PLAIN_ATTRS = new Set([...STYLE_PROPS, 'id', 'style', 'transform', 'd', 'x', 'y', 'width', 'height', 'rx', 'ry', 'cx', 'cy', 'r', 'x1', 'y1', 'x2', 'y2', 'points', 'viewBox', 'version', 'preserveAspectRatio', 'xmlns', 'data-name', 'data-vs-group', 'data-vs-group-name', 'data-vs-locked', 'data-vs-guides', 'data-vs-swatches', 'clip-rule', 'pathLength', 'xml:space', 'baseProfile']);
@@ -63,7 +64,7 @@ function declared(el: XmlElement, err: (m: string) => void): Record<string, stri
   return out;
 }
 
-function cascade(parent: Style, d: Record<string, string>, err: (m: string) => void, hasGradient: (id: string) => boolean, arrowOf: (id: string) => ArrowKind | undefined = () => undefined): Style {
+function cascade(parent: Style, d: Record<string, string>, err: (m: string) => void, hasGradient: (id: string) => boolean, arrowOf: (id: string) => ArrowKind | undefined = () => undefined, fxOf: (id: string) => FxSpec | undefined = () => undefined): Style {
   const s: Style = { ...parent, dashArray: [...parent.dashArray], opacity: 1 };
   for (const key of ['fill', 'stroke'] as const) {
     const raw = d[key];
@@ -82,6 +83,13 @@ function cascade(parent: Style, d: Record<string, string>, err: (m: string) => v
   s.strokeOpacity = opacityOf(d['stroke-opacity']) ?? s.strokeOpacity;
   s.opacity = opacityOf(d.opacity) ?? 1;
   s.blendMode = 'normal'; // not inherited
+  for (const k of FX_KEYS) delete s[k]; // effects are not inherited
+  if (d.filter !== undefined && d.filter.trim() !== 'none') {
+    const ref = /^url\(\s*#([^)\s]+)\s*\)$/.exec(d.filter.trim())?.[1];
+    const f = ref === undefined ? undefined : fxOf(ref);
+    if (f === undefined) err(`filter "${d.filter}": only the blur and shadow effects this editor writes are supported`);
+    else Object.assign(s, fxStyle(f));
+  }
   s.arrowStart = 'none'; s.arrowEnd = 'none';
   for (const [prop, key] of [['marker-start', 'arrowStart'], ['marker-end', 'arrowEnd']] as const) {
     const raw = d[prop]?.trim();
@@ -249,6 +257,18 @@ export function importSvg(source: string, opts: ImportOptions = {}): ImportResul
     for (const c of e.children) collectMarkers(c);
   };
   collectMarkers(root);
+  const fxFilters = new Map<string, FxSpec>();
+  const collectFx = (e: XmlElement, n = 0): void => {
+    if (n > LIMITS.maxDepth) return;
+    if (stripNs(e.name) === 'filter') {
+      const r = parseFxFilter({ ...e, name: 'filter', children: e.children.map((c) => ({ ...c, name: stripNs(c.name) })) });
+      if ('error' in r) bad(r.error);
+      else if (e.attrs.id !== undefined && fxFilters.size < 500 && !fxFilters.has(e.attrs.id)) fxFilters.set(e.attrs.id, r.fx);
+      return;
+    }
+    for (const c of e.children) collectFx(c, n + 1);
+  };
+  collectFx(root);
   let clipC = 0;
   const paths: VectorPath[] = [];
   const texts: import('./types').VectorText[] = [];
@@ -263,7 +283,7 @@ export function importSvg(source: string, opts: ImportOptions = {}): ImportResul
       else if (/href$/i.test(a)) bad(`reference attribute "${a}" is not supported`);
       else if (a.startsWith('xmlns') || a === 'xml:space' || PLAIN_ATTRS.has(a) || a.startsWith('inkscape:') || a.startsWith('sodipodi:')) continue;
       else if (a === 'clip-path') continue; // resolved in walk()
-      else if (a === 'mask' || a === 'filter') bad(`attribute "${a}" is not supported`);
+      else if (a === 'mask') bad(`attribute "${a}" is not supported`);
       else if (a === 'class') bad('CSS classes are not supported');
       else info(`attribute "${a}" ignored`);
     }
@@ -282,7 +302,7 @@ export function importSvg(source: string, opts: ImportOptions = {}): ImportResul
       return;
     }
     if (!ALLOWED.has(name)) {
-      if (name === 'defs' && el.children.every((c) => isGradientElement(c) || stripNs(c.name) === 'clipPath' || (stripNs(c.name) === 'marker' && arrowMarkers.has(c.attrs.id ?? '')))) return; // gradients are read up front
+      if (name === 'defs' && el.children.every((c) => isGradientElement(c) || stripNs(c.name) === 'clipPath' || (stripNs(c.name) === 'filter' && fxFilters.has(c.attrs.id ?? '')) || (stripNs(c.name) === 'marker' && arrowMarkers.has(c.attrs.id ?? '')))) return; // gradients are read up front
       if (isGradientElement(el)) return;
       bad(`<${name}> is not supported`);
       return;
@@ -293,8 +313,9 @@ export function importSvg(source: string, opts: ImportOptions = {}): ImportResul
     const tf = parseTransform(el.attrs.transform);
     if (tf === null) bad(`malformed transform "${el.attrs.transform}"`);
     const world = multiply(m, tf ?? IDENTITY);
-    const style = cascade(parent, d, bad, grads.has, (id) => arrowMarkers.get(id));
+    const style = cascade(parent, d, bad, grads.has, (id) => arrowMarkers.get(id), (id) => fxFilters.get(id));
     if ((style.arrowStart !== 'none' || style.arrowEnd !== 'none') && name === 'g') bad('marker-start/marker-end on a group are not supported; set them on the path');
+    if (name === 'g' && hasFx(style)) bad('filter on a group is not supported; set the effect on the shapes');
     if (name === 'g' && style.blendMode !== 'normal') bad('mix-blend-mode on a group is not supported; set it on the shapes');
     const label = el.attrs['inkscape:label'] ?? el.attrs['data-name'] ?? el.attrs.id;
     // clip-path: the element becomes a clipping group (editor group + mask shape); groups do not nest
@@ -368,6 +389,9 @@ export function importSvg(source: string, opts: ImportOptions = {}): ImportResul
     const full: Style = { ...style, strokeWidth: style.strokeWidth * scale, dashArray: style.dashArray.map((n) => n * scale), dashOffset: style.dashOffset * scale, opacity: style.opacity * groupOpacity };
     for (const k of Object.keys(DEFAULT_STYLE) as (keyof Style)[]) {
       if (JSON.stringify(full[k]) !== JSON.stringify(DEFAULT_STYLE[k])) (st as Record<string, unknown>)[k] = full[k];
+    }
+    if (hasFx(style)) { // effect sizes are in the element's user space: bake the transform scale like the stroke width
+      for (const k of FX_KEYS) if (style[k] !== undefined) (st as Record<string, unknown>)[k] = typeof style[k] === 'number' && k !== 'shadowOpacity' ? Math.round((style[k] as number) * scale * 1000) / 1000 : style[k];
     }
     if (groupOpacity !== 1) info('group opacity was multiplied into each child path (overlapping children may differ)');
     const compound = contours.length > 1 ? `c${++compoundC}` : undefined;

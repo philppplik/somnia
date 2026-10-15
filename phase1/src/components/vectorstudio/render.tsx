@@ -1,12 +1,12 @@
 import type {ReactElement} from 'react';
-import {serializeContour,pathArrows,textLines,textTransform,LINE_HEIGHT,type VectorText,type ArrowSpec,type Gradient,type Style,type VectorPath} from '../../lib/vectorio';
+import {serializeContour,pathArrows,textLines,textTransform,LINE_HEIGHT,type VectorText,type ArrowSpec,type Gradient,type Style,type VectorPath,fxSpec,type FxSpec} from '../../lib/vectorio';
 /** SVG attributes for one path style. Absent keys follow SVG defaults (black fill, no stroke), same as the exporter. */
 export function styleProps(s:Partial<Style>|undefined){
  return {fill:s?.fill??'#000000',stroke:s?.stroke??'none',strokeWidth:s?.strokeWidth??1,strokeLinecap:s?.lineCap,strokeLinejoin:s?.lineJoin,strokeMiterlimit:s?.miterLimit,
   strokeDasharray:s?.dashArray?.length?s.dashArray.join(' '):undefined,strokeDashoffset:s?.dashOffset||undefined,fillRule:s?.fillRule,
-  fillOpacity:s?.fillOpacity,strokeOpacity:s?.strokeOpacity,opacity:s?.opacity,style:s?.blendMode&&s.blendMode!=='normal'?{mixBlendMode:s.blendMode}:undefined};}
+  fillOpacity:s?.fillOpacity,strokeOpacity:s?.strokeOpacity,opacity:s?.opacity,filter:fxSpec(s)?`url(#${fxSpec(s)!.id})`:undefined,style:s?.blendMode&&s.blendMode!=='normal'?{mixBlendMode:s.blendMode}:undefined};}
 /** Renders paths in paint order. Subpaths that share `compound` render as one element so holes work. */
-export function PathLayer({paths}:{paths:readonly VectorPath[]}){
+export function PathLayer({paths,page}:{paths:readonly VectorPath[];page?:{width:number;height:number}}){
  const out:{key:string;d:string;p:VectorPath}[]=[];const byCompound=new Map<string,number>();
  for(const p of paths){if(p.hidden)continue;const d=serializeContour(p.nodes,p.closed);if(!d)continue;
   const c=p.compound!==undefined?byCompound.get(p.compound):undefined;if(c!==undefined){out[c].d+=d;continue;}
@@ -26,7 +26,9 @@ export function PathLayer({paths}:{paths:readonly VectorPath[]}){
  }
  flush();
  const arrows=new Map<string,ArrowSpec>();for(const e of out){const a=pathArrows(e.p);for(const s of [a.start,a.end])if(s)arrows.set(s.id,s);}
- return <>{[...arrows.values()].map(a=><marker key={'m:'+a.id} id={a.id} viewBox="0 0 10 10" refX={a.refX} refY={5} markerWidth={4} markerHeight={4} orient="auto-start-reverse">{a.shape==='circle'?<circle cx={5} cy={5} r={4} fill={'#'+a.color}/>:a.filled?<path d={a.d} fill={'#'+a.color}/>:<path d={a.d} fill="none" stroke={'#'+a.color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"/>}</marker>)}{[...masks].map(([g,m])=><clipPath key={'def:'+g} id={cid(g)}><path d={m.d} clipRule={m.evenodd?'evenodd':'nonzero'}/></clipPath>)}{nodes}</>;}
+ const fxs=new Map<string,FxSpec>();for(const e of out){const f=fxSpec(e.p.style);if(f)fxs.set(f.id,f);}
+ const fw=page?.width??1000,fh=page?.height??1000;
+ return <>{[...fxs.values()].map(f=><filter key={'fx:'+f.id} id={f.id} filterUnits="userSpaceOnUse" x={-fw} y={-fh} width={3*fw} height={3*fh} colorInterpolationFilters="sRGB">{f.blur>0&&<feGaussianBlur stdDeviation={f.blur}/>}{f.shadow&&<feDropShadow dx={f.shadow.dx} dy={f.shadow.dy} stdDeviation={f.shadow.blur} floodColor={f.shadow.color} floodOpacity={f.shadow.opacity}/>}</filter>)}{[...arrows.values()].map(a=><marker key={'m:'+a.id} id={a.id} viewBox="0 0 10 10" refX={a.refX} refY={5} markerWidth={4} markerHeight={4} orient="auto-start-reverse">{a.shape==='circle'?<circle cx={5} cy={5} r={4} fill={'#'+a.color}/>:a.filled?<path d={a.d} fill={'#'+a.color}/>:<path d={a.d} fill="none" stroke={'#'+a.color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"/>}</marker>)}{[...masks].map(([g,m])=><clipPath key={'def:'+g} id={cid(g)}><path d={m.d} clipRule={m.evenodd?'evenodd':'nonzero'}/></clipPath>)}{nodes}</>;}
 
 /** Document gradients as SVG paint servers (objectBoundingBox units, pad), so fills `url(#id)` resolve in the editor canvas. */
 export function GradientDefs({gradients}:{gradients?:readonly Gradient[]}){

@@ -5,6 +5,7 @@ import { escapeAttr } from './xml';
 import { gradientSvg, pruneGradients } from './gradient';
 import { fmt } from './matrix';
 import { serializeContour } from './serialize';
+import { fxFilterSvg, fxSpec, type FxSpec } from './effects';
 import { arrowMarkerSvg, pathArrows, type ArrowSpec } from './arrows';
 import { BLEND_MODES, DEFAULT_STYLE, type Style, type VectorDocument, type VectorPath } from './types';
 
@@ -29,6 +30,8 @@ function styleAttrs(s: Partial<Style> | undefined): string[] {
   if (s.opacity !== undefined && s.opacity !== 1) add('opacity', num(s.opacity));
   // mix-blend-mode is CSS, not an SVG presentation attribute, so it goes into style="" (read back by the importer).
   if (s.blendMode && s.blendMode !== 'normal' && (BLEND_MODES as readonly string[]).includes(s.blendMode)) a.push(`style="mix-blend-mode:${s.blendMode}"`);
+  const fx = fxSpec(s);
+  if (fx) a.push(`filter="url(#${fx.id})"`);
   return a;
 }
 
@@ -82,6 +85,13 @@ export function exportSvg(doc: VectorDocument, opts: ExportOptions = {}): string
   if (arrowDefs.size) {
     emit(1, '<defs>');
     for (const a of arrowDefs.values()) for (const l of arrowMarkerSvg(a)) emit(2, l);
+    emit(1, '</defs>');
+  }
+  const fxDefs = new Map<string, FxSpec>();
+  for (const p of pruned.paths) { const f = fxSpec(p.style); if (f && !fxDefs.has(f.id)) fxDefs.set(f.id, f); }
+  if (fxDefs.size) {
+    emit(1, '<defs>');
+    for (const f of fxDefs.values()) for (const l of fxFilterSvg(f, doc.width, doc.height)) emit(2, l);
     emit(1, '</defs>');
   }
   // merge compound subpaths into one element, keep paint order of the first subpath

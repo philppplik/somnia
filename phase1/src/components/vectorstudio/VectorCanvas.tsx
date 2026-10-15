@@ -191,7 +191,7 @@ export function VectorCanvas(){
     <g transform={`translate(${s.pan.x} ${s.pan.y}) scale(${s.zoom})`}>
      <rect width={s.doc.width} height={s.doc.height} fill="url(#vs-checker)" stroke="rgba(0,0,0,.18)" strokeWidth={1/s.zoom}/>
      {gridVisible(s.grid,s.zoom)&&<rect data-testid="vector-grid" width={s.doc.width} height={s.doc.height} fill="url(#vs-grid)" pointerEvents="none"/>}
-     <svg width={s.doc.width} height={s.doc.height} overflow="hidden" data-testid="vector-artboard"><TextLayer texts={texts.filter(t=>t.back)}/><PathLayer paths={paths}/><TextLayer texts={texts.filter(t=>!t.back)}/>
+     <svg width={s.doc.width} height={s.doc.height} overflow="hidden" data-testid="vector-artboard"><TextLayer texts={texts.filter(t=>t.back)}/><PathLayer paths={paths} page={s.doc}/><TextLayer texts={texts.filter(t=>!t.back)}/>
       {draft&&<path d={serializeContour(draft.nodes,draft.closed)} fill={draft.closed?'rgba(109,94,245,.25)':'none'} stroke="#2563eb" strokeWidth={1.5/s.zoom}/>}</svg>
      {selected.map(p=>{const pp=preview(p);return <path key={p.id} d={serializeContour(pp.nodes,pp.closed)} fill="none" stroke="#2563eb" strokeWidth={1/s.zoom} pointerEvents="none"/>;})}
      {s.tool==='select'&&selBox&&<g data-testid="vector-selection"><rect x={selBox.minX} y={selBox.minY} width={selBox.maxX-selBox.minX} height={selBox.maxY-selBox.minY} fill="none" stroke="#2563eb" strokeWidth={1/s.zoom} strokeDasharray={`${4/s.zoom} ${3/s.zoom}`} pointerEvents="none"/>

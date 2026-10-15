@@ -1,7 +1,7 @@
 import {reportError} from '../log';
 /** Vector Studio session: one open vector document, selection, tool, view and undo history. Framework-agnostic store plus a React hook. */
 import {useSyncExternalStore} from 'react';
-import {exportSvg,importSvg,normalizeDoc,normalizeText,TEXT_LIMITS,gradientIdOf,SvgImportError,type Diagnostic,type Point,type Style,type VectorDocument,type VectorPath,type VectorText} from '../vectorio';
+import {exportSvg,importSvg,normalizeDoc,normalizeText,TEXT_LIMITS,gradientIdOf,checkFxPatch,SvgImportError,type Diagnostic,type Point,type Style,type VectorDocument,type VectorPath,type VectorText} from '../vectorio';
 import {boxOf,fitPath,translatePath,type Box} from './geometry';
 import {checkGrid,DEFAULT_GRID,type GridOptions} from './grid';
 import {newId,checkShapeOptions,DEFAULT_SHAPE_OPTIONS,type ShapeOptions} from './shapes';
@@ -81,7 +81,7 @@ export function duplicateSelection(offset=12){finite(offset);const ids=state.sel
  const gmap=new Map<string,string>(),copies=remapPaths(selectedPaths(state.doc,ids).map(p=>translatePath(p,offset,offset)),state.doc,gmap);
  commit({...state.doc,paths:[...state.doc.paths,...copies],...carryNames(state.doc.groupNames,state.doc.groupNames,gmap)},{selection:copies.map(c=>c.id)});}
 export const moveSelection=(dx:number,dy:number)=>{finite(dx,dy);if(state.selection.length&&(dx||dy))commit(mapPaths(p=>translatePath(p,dx,dy))(state.selection));};
-export function setStyle(patch:Partial<Style>,ids:readonly string[]=state.selection){const chosen=selectionIds(state.doc,ids);if(!chosen.length)return;const have=new Set((state.doc.gradients??[]).map(g=>g.id)),gid=gradientIdOf(patch.fill);if(typeof patch.fill==='string'&&patch.fill.startsWith('url(')&&(gid===undefined||!have.has(gid))){patch={...patch};delete patch.fill;if(!Object.keys(patch).length)return;}commit(mapPaths(p=>({...p,style:{...p.style,...patch}}))(chosen));}
+export function setStyle(patch:Partial<Style>,ids:readonly string[]=state.selection){const chosen=selectionIds(state.doc,ids);if(!chosen.length)return;checkFxPatch(patch as Record<string,unknown>);const have=new Set((state.doc.gradients??[]).map(g=>g.id)),gid=gradientIdOf(patch.fill);if(typeof patch.fill==='string'&&patch.fill.startsWith('url(')&&(gid===undefined||!have.has(gid))){patch={...patch};delete patch.fill;if(!Object.keys(patch).length)return;}commit(mapPaths(p=>({...p,style:{...p.style,...patch}}))(chosen));}
 export function renameGroup(group:string,name:string){
  if(!state.doc.paths.some(p=>p.group===group))return;
  const names={...(state.doc.groupNames??{})},n=name.trim().slice(0,80);if(n)names[group]=n;else delete names[group];
