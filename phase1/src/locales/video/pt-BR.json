@@ -126,6 +126,7 @@
  "video.voiceoverRecord": "Gravar locução",
  "video.voiceoverStop": "Parar gravação",
  "video.voiceoverMicError": "Microfone indisponível ou permissão negada.",
+ "video.overlayClipLabel": "Sobreposição {index}: {name}",
  "video.overlayTrack": "Sobreposições",
  "video.overlaySummary": "{count} sobreposições até {duration} s",
  "video.overlayEmpty": "Sem sobreposições",

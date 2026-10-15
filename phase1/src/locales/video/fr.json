@@ -126,6 +126,7 @@
  "video.voiceoverRecord": "Enregistrer une voix off",
  "video.voiceoverStop": "Arrêter l'enregistrement",
  "video.voiceoverMicError": "Microphone indisponible ou autorisation refusée.",
+ "video.overlayClipLabel": "Incrustation {index} : {name}",
  "video.overlayTrack": "Incrustations",
  "video.overlaySummary": "{count} incrustations jusqu'à {duration} s",
  "video.overlayEmpty": "Aucune incrustation",

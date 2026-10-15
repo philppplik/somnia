@@ -181,7 +181,7 @@ export const addOverlayImage=(root:string,source:string,at:number)=>{const c=new
 export const selectOverlayClip=(root:string,id:string|null)=>patch(root,{selectedOverlayClipId:id,...(id?{selectedClipId:null,selectedAudioClipId:null}:{})});
 export const deleteOverlayClip=(root:string,id:string)=>editOverlays(root,clips=>clips.filter(c=>c.id!==id));
 export const moveOverlayClip=(root:string,id:string,at:number,historyKey?:string)=>editOverlays(root,clips=>clips.map(c=>c.id===id?{...c,at:Math.max(0,at)}:c),historyKey?{historyKey}:undefined);
-export const setOverlayDuration=(root:string,id:string,seconds:number)=>editOverlays(root,clips=>clips.map(c=>c.id===id?{...c,duration:seconds}:c));
+export const setOverlayDuration=(root:string,id:string,seconds:number,historyKey?:string)=>editOverlays(root,clips=>clips.map(c=>c.id===id?{...c,duration:seconds}:c),historyKey?{historyKey}:undefined);
 export const setOverlayRect=(root:string,id:string,rect:OverlayRect,historyKey?:string)=>editOverlays(root,clips=>clips.map(c=>c.id===id?{...c,rect:sanitizeRect(rect)}:c),historyKey?{historyKey}:undefined);
 export const setOverlayOpacity=(root:string,id:string,opacity:number,historyKey?:string)=>editOverlays(root,clips=>clips.map(c=>c.id===id?{...c,opacity}:c),historyKey?{historyKey}:undefined);
 /** Patches the text/style spec of a title overlay. */

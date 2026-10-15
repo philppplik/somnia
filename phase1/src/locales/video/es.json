@@ -126,6 +126,7 @@
  "video.voiceoverRecord": "Grabar voz en off",
  "video.voiceoverStop": "Detener grabación",
  "video.voiceoverMicError": "Micrófono no disponible o permiso denegado.",
+ "video.overlayClipLabel": "Superposición {index}: {name}",
  "video.overlayTrack": "Superposiciones",
  "video.overlaySummary": "{count} superposiciones hasta {duration} s",
  "video.overlayEmpty": "Sin superposiciones",

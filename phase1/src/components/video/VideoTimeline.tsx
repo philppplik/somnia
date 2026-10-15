@@ -21,9 +21,11 @@ interface Props{
  domain?:number;
  /** Lane rendered inside the same scroller under the ruler, so it shares zoom, scroll and the time mapping. */
  audioLane?:ReactNode;
+ /** Overlay lane rendered between the video track and the audio lane. */
+ overlayLane?:ReactNode;
 }
 /** Segmented timeline: one block per clip, drag to reorder, edge handles trim the selected clip, the playhead seeks. */
-export function VideoTimeline({clips,selectedId,position,missing,onSeek,onSelect,onTrim,onMove,label,renderStrip,trackHeight,zoom=1,onZoom,domain,audioLane,onDropMedia}:Props){
+export function VideoTimeline({clips,selectedId,position,missing,onSeek,onSelect,onTrim,onMove,label,renderStrip,trackHeight,zoom=1,onZoom,domain,audioLane,overlayLane,onDropMedia}:Props){
  const {t}=useT();
  const track=useRef<HTMLDivElement>(null);
  const scroller=useRef<HTMLDivElement>(null);
@@ -140,6 +142,7 @@ export function VideoTimeline({clips,selectedId,position,missing,onSeek,onSelect
    {ticks.map(s=><span key={s} style={s===0?undefined:s===ticks[ticks.length-1]?undefined:{position:'absolute',left:pct(s),transform:'translateX(-50%)'}}>{Math.round(s/60)}:{String(Math.round(s%60)).padStart(2,'0')}</span>)}
   </div>
  </div>
+ {overlayLane}
  {audioLane}
  </div>;
 }

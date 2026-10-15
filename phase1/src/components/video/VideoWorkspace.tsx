@@ -3,7 +3,7 @@ import {ChevronsLeft,ChevronsRight,Mic,Download,Pause,Play,Redo2,RotateCcw,Sciss
 import {Button} from '../ui/button';
 import {useT} from '../../lib/useT';
 import {executeCommand} from '../../lib/commands';
-import {addAudioTrackClip,addImageClip,addTimelineClip,addTimelineClipsFromDialog,cancelVideoExport,deleteAudioTrackClip,deleteTimelineClip,duplicateAudioTrackClip,getFilmstrip,moveAudioTrackClip,moveTimelineClip,openVideo,redoVideoEdit,resizeAudioTrackClip,saveVideoProject,selectAudioTrackClip,selectTimelineClip,splitTimelineAt,toggleTimelineClipMute,trimTimelineClip,undoVideoEdit,useVideoSession,videoCanRedo,videoCanUndo,videoIsDirty,videoIsEdited} from '../../lib/video/session';
+import {addAudioTrackClip,addImageClip,addTimelineClip,addTimelineClipsFromDialog,cancelVideoExport,deleteAudioTrackClip,deleteTimelineClip,duplicateAudioTrackClip,getFilmstrip,moveAudioTrackClip,moveOverlayClip,moveTimelineClip,openVideo,redoVideoEdit,resizeAudioTrackClip,saveVideoProject,selectAudioTrackClip,selectOverlayClip,setOverlayDuration,setOverlayRect,selectTimelineClip,splitTimelineAt,toggleTimelineClipMute,trimTimelineClip,undoVideoEdit,useVideoSession,videoCanRedo,videoCanUndo,videoIsDirty,videoIsEdited} from '../../lib/video/session';
 import {clipDisplayName,DEFAULT_TITLE,isTitleClip,needsSourceFile} from '../../lib/video/titles';
 import {TitlePreview} from './TitlePreview';
 import {useTitlePlayback} from './useTitlePlayback';
@@ -13,10 +13,11 @@ import {blendAt,clipFadeGain,clipRanges,cropOf,flipOf,isFreeze,isImageClip,locat
 import {shuttleFaster,shuttleSlower} from '../../lib/video/shuttle';
 import {audioClipDuration,audioEnvelope,audioTrackEnd,duckGainAt} from '../../lib/video/audioTrack';
 import {AudioLane} from './AudioLane';
+import {OverlayLane} from './OverlayLane';
 import {snapPointsFor,zoomInStep,zoomOutStep} from '../../lib/video/zoom';
 import {formatTime} from '../../lib/video/recipe';
 import {pickVoiceoverMime,voiceoverExtension,voiceoverFileName} from '../../lib/video/voiceover';
-import {overlaysAt} from '../../lib/video/overlayTrack';
+import {overlaysAt,overlayTrackEnd} from '../../lib/video/overlayTrack';
 import {addMediaFile,getMedia} from '../../lib/media';
 import {formatBytes,getState,patchState,requestStudio,useAppStore,useMedia,type MediaItem} from './workspace-deps';
 import {VideoTimeline} from './VideoTimeline';
@@ -42,9 +43,11 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
  useEffect(()=>{if(studio==='video'&&!['files','search'].includes(getState().leftTab))patchState({leftTab:'files'});},[studio]);
  const clips=session?.clips??[];
  const audioClips=session?.audioClips??[];
+ const overlayClips=session?.overlayClips??[];
  const duration=timelineDuration(clips);
  // The track maps onto the longer of video and audio so an audio tail stays visible and reachable.
- const domain=Math.max(duration,audioTrackEnd(audioClips));
+ const domain=Math.max(duration,audioTrackEnd(audioClips),overlayTrackEnd(overlayClips));
+ const timelineSnapPoints=[...snapPointsFor(clips,[playhead]),domain,...audioClips.flatMap(ac=>[ac.at,ac.at+audioClipDuration(ac)]),...overlayClips.flatMap(oc=>[oc.at,oc.at+oc.duration])];
  const ranges=clipRanges(clips);
  const probe=session?.probe??null;
  const fps=probe?.video?.fps&&probe.video.fps>1?probe.video.fps:30;
@@ -288,11 +291,28 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
      </div>:null)}
      {playable&&blend.map(e=>isImageClip(e.range.clip)?<img key={e.range.clip.id} src={urlOf(e.range.clip.source)} alt="" className="absolute inset-0 h-full w-full object-contain p-2" style={{opacity:main&&e.range.index===main.range.index?e.video:1,zIndex:main&&e.range.index===main.range.index?1:0,pointerEvents:'none'}} data-testid="video-image-preview" data-img-clip={e.range.clip.id}/>:null)}
      {playable&&overlaysAt(session?.overlayClips??[],playhead).map(o=>{
-      const style:CSSProperties={left:`${o.rect.x*100}%`,top:`${o.rect.y*100}%`,width:`${o.rect.w*100}%`,height:`${o.rect.h*100}%`,opacity:o.opacity,zIndex:2,pointerEvents:'none'};
-      return <div key={o.id} className="absolute flex items-center justify-center" style={style} data-testid="video-overlay-preview" data-overlay-id={o.id}>
-       {o.kind==='title'
-        ?<TitlePreview clip={{id:o.id,kind:'title',source:'',in_s:0,out_s:o.duration,gain:1,muted:false,title:o.title??DEFAULT_TITLE}} time={Math.max(0,playhead-o.at)} aspect={(o.rect.w*(v?.width??16))/(o.rect.h*(v?.height??9))} label={o.title?.text??'Overlay'}/>
-        :<img src={urlOf(o.source)} alt="" className="max-h-full max-w-full object-contain"/>}
+      const selOverlay=o.id===session?.selectedOverlayClipId;
+      const beginDrag=(e:React.PointerEvent)=>{
+       e.preventDefault();e.stopPropagation();
+       selectOverlayClip(item.name,o.id);
+       const base={x:o.rect.x,y:o.rect.y},sx=e.clientX,sy=e.clientY;
+       const move=(ev:PointerEvent)=>{
+        const box=stageRef.current?.getBoundingClientRect();
+        if(!box||box.width===0||box.height===0)return;
+        setOverlayRect(item.name,o.id,{...o.rect,x:base.x+(ev.clientX-sx)/box.width,y:base.y+(ev.clientY-sy)/box.height},`orect-drag:${o.id}`);
+       };
+       const up=()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);};
+       window.addEventListener('pointermove',move);window.addEventListener('pointerup',up);
+      };
+      const style:CSSProperties={left:`${o.rect.x*100}%`,top:`${o.rect.y*100}%`,width:`${o.rect.w*100}%`,height:`${o.rect.h*100}%`,opacity:o.opacity,zIndex:2,cursor:'grab',touchAction:'none'};
+      return <div key={o.id} title={o.title?.text||o.source}
+       className={`absolute flex items-center justify-center ${selOverlay?'outline-2 outline-[var(--accent)]':''}`}
+       style={style} onPointerDown={beginDrag} data-testid="video-overlay-preview" data-overlay-id={o.id} data-selected={selOverlay||undefined}>
+       <div className="pointer-events-none flex h-full w-full items-center justify-center">
+        {o.kind==='title'
+         ?<TitlePreview clip={{id:o.id,kind:'title',source:'',in_s:0,out_s:o.duration,gain:1,muted:false,title:o.title??DEFAULT_TITLE}} time={Math.max(0,playhead-o.at)} aspect={(o.rect.w*(v?.width??16))/(o.rect.h*(v?.height??9))} label={o.title?.text??'Overlay'}/>
+         :<img src={urlOf(o.source)} alt="" className="max-h-full max-w-full object-contain"/>}
+       </div>
       </div>;
      })}
     </div>
@@ -322,12 +342,18 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
       onTrim={(id,edge,at)=>trimTimelineClip(item.name,id,edge,at,`trim:${id}:${edge}`)}
       onMove={(id,by)=>moveTimelineClip(item.name,id,by)}
       trackHeight={48} zoom={zoom} onZoom={setZoom} domain={domain}
+      overlayLane={<OverlayLane clips={overlayClips} selectedId={session?.selectedOverlayClipId??null} duration={domain}
+       onSelect={id=>selectOverlayClip(item.name,id)}
+       onMoveAt={(id,at)=>moveOverlayClip(item.name,id,at,`omove:${id}`)}
+       onResize={(id,end)=>setOverlayDuration(item.name,id,Math.max(0.05,end-(overlayClips.find(c=>c.id===id)?.at??0)),`odur:${id}`)}
+       snapPoints={timelineSnapPoints}
+       label={t('video.overlayTrack')}/>}
       audioLane={<AudioLane clips={audioClips} selectedId={session?.selectedAudioClipId??null} duration={domain} controller={filmstrip}
        onSelect={id=>selectAudioTrackClip(item.name,id)}
        onMoveAt={(id,at)=>moveAudioTrackClip(item.name,id,at,`amove:${id}`)}
        onResize={(id,edge,t2)=>resizeAudioTrackClip(item.name,id,edge,t2,`atrim:${id}:${edge}`)}
        onDuplicate={id=>duplicateAudioTrackClip(item.name,id)}
-       snapPoints={[...snapPointsFor(clips,[playhead]),domain,...audioClips.flatMap(ac=>[ac.at,ac.at+audioClipDuration(ac)])]}
+       snapPoints={timelineSnapPoints}
        onDropAudio={(n,t2)=>{const dropped=media.items.find((i:MediaItem)=>i.name===n&&i.kind==='audio');if(dropped)void addAudioTrackClip(item.name,dropped,t2).then(id=>{if(id)selectAudioTrackClip(item.name,id);});}}
        label={t('video.audioLane')}/>}
       onDropMedia={(n,t2)=>{const dropped=media.items.find((i:MediaItem)=>i.name===n);

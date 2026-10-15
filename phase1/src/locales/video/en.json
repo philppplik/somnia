@@ -126,6 +126,7 @@
  "video.voiceoverRecord": "Record voiceover",
  "video.voiceoverStop": "Stop recording",
  "video.voiceoverMicError": "Microphone unavailable or permission denied.",
+ "video.overlayClipLabel": "Overlay {index}: {name}",
  "video.overlayTrack": "Overlays",
  "video.overlaySummary": "{count} overlays until {duration} s",
  "video.overlayEmpty": "No overlays yet",
