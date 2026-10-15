@@ -26,7 +26,7 @@
 .ext-btn:disabled{opacity:.5}
 .ext-btn-primary{background:var(--accent-fill);border-color:transparent;color:var(--action-ink)}
 .ext-btn-primary:hover:not(:disabled){background:var(--accent-fill);filter:brightness(1.08)}
-.ext-btn-danger{background:var(--danger);border-color:transparent;color:#fff}
+.ext-btn-danger{background:var(--danger);border-color:transparent;color:var(--danger-ink,#fff)}
 .ext-btn-danger-quiet{color:var(--danger)}
 .ext-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .ext-chips{display:flex;gap:8px;flex-wrap:wrap}

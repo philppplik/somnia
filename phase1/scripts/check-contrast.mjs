@@ -77,7 +77,7 @@ const TEXT=['--text-primary','--text-secondary','--text-tertiary'];
 const STATUS=['--accent','--warning','--danger'];
 const BG=['--bg-base','--bg-panel','--bg-elevated','--bg-surface','--bg-hover','--canvas-bg','--shell-bg'];
 const PAIRS=[['--status-info-ink','--status-info-surface'],['--status-success-ink','--status-success-surface'],['--status-warning-ink','--status-warning-surface'],['--status-danger-ink','--status-danger-surface']];
-let fails=0;
+let fails=0,warns=0;
 const fail=(msg)=>{fails++;console.log('FAIL '+msg);};
 for(const [name,v] of Object.entries(themes)){
  for(const tk of [...TEXT,...STATUS])for(const bk of BG){
@@ -116,6 +116,25 @@ for(const [name,v] of Object.entries(themes)){
    if(r<4.5)fail(`${name} ${ik} on ${sk}: ${r.toFixed(2)} (${ink.raw} on ${sur.raw})`);
   }
  }
+ // filled danger button: resolved --danger-ink (fallback white) on --danger
+ if(v['--danger']){
+  const ink=v['--danger-ink']||{rgb:[255,255,255],raw:'#fff'};
+  const r=ratio(ink.rgb,v['--danger'].rgb);
+  if(r<4.5)fail(`${name} --danger-ink on --danger: ${r.toFixed(2)} (${ink.raw} on ${v['--danger'].raw})`);
+ }
+ // non-text: focus ring must stand out from every background (WCAG 1.4.11, 3:1)
+ if(v['--focus-ring'])for(const bk of BG){
+  if(!v[bk])continue;
+  const r=ratio(v['--focus-ring'].rgb,v[bk].rgb);
+  if(r<3)fail(`${name} --focus-ring on ${bk}: ${r.toFixed(2)} (${v['--focus-ring'].raw} on ${v[bk].raw})`);
+ }
+ // non-text, advisory only: control borders at 3:1 (WCAG 1.4.11) — dark-mode border
+ // subtlety is a design decision, so these warn without failing the audit
+ for(const bk of ['--bg-base','--bg-panel','--bg-elevated']){
+  if(!v['--border-default']||!v[bk])continue;
+  const r=ratio(v['--border-default'].rgb,v[bk].rgb);
+  if(r<3){warns++;console.log(`WARN ${name} --border-default on ${bk}: ${r.toFixed(2)} (${v['--border-default'].raw} on ${v[bk].raw})`);}
+ }
 }
-console.log(`${fails===0?'OK':'FAIL'}: ${fails} contrast failures across ${Object.keys(themes).length} themes`);
+console.log(`${fails===0?'OK':'FAIL'}: ${fails} contrast failures across ${Object.keys(themes).length} themes${warns?` (+${warns} border warnings)`:''}`);
 if(fails>0)process.exit(1);

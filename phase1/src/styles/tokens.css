@@ -21,7 +21,7 @@
  --z-canvas-selection:2; --z-canvas-tools:5; --z-menu:40; --z-dialog-backdrop:100; --z-dialog:101;
  --status-success-ink:#6ce9a6; --status-success-surface:#073b27;
  --status-warning-ink:#fec84b; --status-warning-surface:#3a2a0a;
- --status-danger-ink:#fda29b; --status-danger-surface:#3a1512;
+ --status-danger-ink:#fda29b; --status-danger-surface:#3a1512; --danger-ink:#4a1512;
  --status-info-ink:var(--accent); --status-info-surface:var(--accent-soft);
  --status-warning:var(--warning); --status-danger:var(--danger);
  --action-ink:var(--accent-ink,#fff); --focus-ring:var(--accent);
@@ -29,7 +29,7 @@
 :root[data-theme=light] {
  --status-success-ink:#067647; --status-success-surface:#ECFDF3;
  --status-warning-ink:#B54708; --status-warning-surface:#FFFAEB;
- --status-danger-ink:#B42318; --status-danger-surface:#FEF3F2;
+ --status-danger-ink:#B42318; --status-danger-surface:#FEF3F2; --danger-ink:#ffffff;
 }
 
 /* Shared chrome motion. Existing saved animation duration remains authoritative. */
