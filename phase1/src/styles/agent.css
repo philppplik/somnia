@@ -152,3 +152,5 @@
 .ag-inp>details,.ag-inp>p{min-width:0;overflow-wrap:anywhere}
 .ag-inp{position:relative;flex:none}
 .ag-chat{padding-bottom:22px}
+
+.ag-prompt-chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;list-style:none;margin:12px 0 0;padding:0}.ag-prompt-chip{font-size:11px;line-height:1.4;padding:5px 9px;border:1px solid var(--border-default);border-radius:12px;background:transparent;color:var(--ag-ink2)}.ag-prompt-chip:hover{color:var(--ag-ink);background:var(--bg-hover)}
