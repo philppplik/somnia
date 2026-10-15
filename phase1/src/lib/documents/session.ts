@@ -1,11 +1,15 @@
 import {scrollToPage} from './scrollPage';
 import {commentAuthor} from './author';
+import {addUserWord,savedUserWords} from './userWords';
+import {capturePaint,paintIsEmpty,type Painted} from './formatPainter';
+import type {ProofIssue,ReviewState,ReviewChange} from './protocol';
 import {setStyleList} from './styles';
 import {stylePatchProblem,STYLE_ID_RE,tocProblem,isListKind,listOptionsProblem,type ListStyleId} from './protocol';
 import {imageCropProblem,imageWrapProblem,type ImageWrap,type ImageAlign,tableLayoutProblem,SECTION_BREAKS,hfVariantsProblem,HF_ALIGNS,propertiesProblem,linkProblem,commentProblem,type CommentItem,validHfText,type HeaderFooterState,checkFormatPatch,checkParaPatch,MAX_HF_CHARS,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch,type ImageOp,type PageSetupPatch,type PageSetupState,pageSetupProblem,type TableStyle,type TableStyleScope,tableStyleProblem,MIN_COL_PT,MAX_COL_PT,imageProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGES} from './protocol';
 import {captureDocumentSelection} from './selectionCapture';
 import {CELL_BASE,caretAfterEdit,applyEdit,diffEdit,inverseOf,UndoStack,type TextEdit,type UndoEntry} from './edit';
 import {findMatches,nextMatchIndex,textStats,validFindQuery,validReplaceText,MAX_FIND_HIGHLIGHTS,MAX_REPLACE_BLOCKS,type FindMatch} from './find';
+import {applyCase,CASE_MODES,wordAround} from './textCase';
 import {listMarkerKind,stepBoundary,utf16ToUtf8Offset,utf8ToUtf16Offset,wordBoundary} from './text';
 import {getDocumentsState,patchDocuments,resetDocuments,subscribeDocuments,INITIAL_VIEW,type Caret,type DocumentsState} from './store';
 import {getCollab,onSessionChange} from '../collab/session';
@@ -23,7 +27,7 @@ export const getEngine=()=>engine;
 const ownerGuard=()=>{const e=engine,g=gen,en=cur;return ()=>{if(!e||engine!==e||gen!==g||cur!==en||e.isDisposed)throw Error('Document owner changed');};};
 const flags=()=>({canUndo:undo.canUndo,canRedo:undo.canRedo});
 /* ---- Per-file sessions: a file keeps its engine, undo history and dirty flag while the studio or tab is switched away. ---- */
-const STASH=['blocks','pages','pageSizes','words','rev','canUndo','canRedo','edited','caret','risks','engineMs','editError','notice'] as const;
+const STASH=['blocks','pages','pageSizes','words','rev','canUndo','canRedo','edited','caret','risks','engineMs','editError','notice','proofing','showHidden','trackChanges'] as const;
 interface Entry{key:string;url:string;engine:DocumentsEngine|null;undo:UndoStack;stash:Partial<DocumentsState>;working:Uint8Array|null;dirty:boolean;used:number;undoReleased:boolean;collab:DocsCollabBinding|null}
 const entries=new Map<string,Entry>();let cur:Entry|null=null;let gen=0;let tick=0;let identity:string|null=null;
 export const MAX_LIVE_SESSIONS=4;

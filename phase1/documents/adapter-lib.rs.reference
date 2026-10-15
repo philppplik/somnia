@@ -216,7 +216,7 @@ impl DocSession {
                 Block::Para(p) => p.section.clone().ok_or("section lost")?,
                 _ => return Err("section lost".into()),
             },
-            None => self.doc.last_section.clone(),
+            None => Box::new(self.doc.last_section.clone()),
         };
         // The part before the break keeps the section's own start and numbering restart; the part after starts as `kind`.
         let mut marker = wordcraft_doc::Paragraph::new();
