@@ -28,6 +28,7 @@ import {ParagraphDialog} from './ParagraphDialog';
 import {InfoDialogs} from './InfoDialogs';
 import {setShortcutsOpen} from '../../lib/documents/shortcuts';
 import {NativeButton,Textarea} from '../ui/native-controls';
+import {PeerSwatch} from '../collab/PeerSwatch';
 const bar='media-bar flex items-center gap-2 border-b border-subtle px-3 py-1.5 text-[12px]';
 const tool='grid h-7 cursor-pointer grid-flow-col items-center gap-1 rounded-sm border-0 bg-transparent px-2 text-[12px] text-ink-2 hover:bg-hover disabled:cursor-default disabled:opacity-50';
 /** Only pages near the viewport are rasterised (IntersectionObserver with margin); the rest release their image. */
@@ -160,7 +161,7 @@ export function DocumentsCanvas(){
   {doc.status==='loading'&&<div role="status" className="grid flex-1 place-items-center text-[12px] text-ink-3">{t('documents.loading')}</div>}
   {doc.status==='error'&&<div role="alert" className="grid flex-1 place-items-center"><div className="grid max-w-md justify-items-center gap-2 text-center"><p className="text-[13px] text-ink" data-testid="documents-error">{doc.error}</p><NativeButton className={tool+' border border-subtle'} onClick={()=>setAttempt(a=>a+1)}>{t('documents.retry')}</NativeButton></div></div>}
   {doc.notice&&<p role="status" className="border-b border-subtle px-3 py-1 text-xs text-ink-3" data-testid="documents-session-notice">{t('documents.session.'+doc.notice)}</p>}
-  {peers.length>0&&<p className="border-b border-subtle px-3 py-1 text-xs" data-testid="documents-peers">{peers.map(p=><span key={p.clientId} data-testid="documents-peer" className="mr-2 rounded-sm px-1" style={{background:p.user.colorLight,color:p.user.color}}>{p.user.name} · ¶{p.block+1}</span>)}</p>}
+  {peers.length>0&&<p className="border-b border-subtle px-3 py-1 text-xs" data-testid="documents-peers">{peers.map(p=><PeerSwatch key={p.clientId} testId="documents-peer" className="mr-2 rounded-sm px-1" bg={p.user.colorLight} color={p.user.color}>{p.user.name} · ¶{p.block+1}</PeerSwatch>)}</p>}
   {doc.caretLocked&&<p role="status" className="border-b border-subtle px-3 py-1 text-[12px] text-ink-3" data-testid="documents-caret-locked">{t('documents.caret.locked')}</p>}
   {doc.status==='ready'&&engine&&<div className="min-h-0 flex-1 overflow-auto bg-hover/40 p-6" data-testid="documents-scroll"><div className="flex flex-col gap-4">
    {doc.pageSizes.map((p,i)=><Page key={i} engine={engine} index={i} width={p.width} height={p.height} zoom={doc.zoom} rev={doc.rev} visible={near.has(i)} onVisible={onVisible}/>)}</div></div>}

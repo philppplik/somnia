@@ -36,6 +36,7 @@ import {openSheetsModel,sheetsModelMeta,sharedSheetList,type SheetsModel} from '
 import {SheetsCollabBinding} from '../../lib/collab/office/sheetsBinding';
 import {announceSheetSel,peerSheetSels,type PeerSheetPresence} from '../../lib/collab/office/sheetsPresence';
 import {setSheetsSelection} from '../../lib/sheets/sheetsStore';
+import {PeerSwatch,PeerSelectionBox} from '../collab/PeerSwatch';
 const HEAD_W=48,HEAD_H=24;
 type Phase={kind:'loading'}|{kind:'error';message:string}|{kind:'ready'};
 export function SheetsCanvas(){
@@ -288,8 +289,8 @@ function Workbook({item}:{item:MediaItem}){
     <div style={{position:'sticky',left:0,zIndex:1,width:HEAD_W,height:0}}>
      {[...new Set([...Array.from({length:geo.freezeRows},(_,i)=>i),...Array.from({length:win.rows},(_,i)=>win.row+i)])].map(r=><div key={'r'+r} role="rowheader" aria-rowindex={r+1} className="border-b border-r border-subtle bg-hover text-center text-[11px] leading-6 text-ink-3" style={{position:'absolute',left:0,top:geo.rowTop(r)+(r<geo.freezeRows?view.top:0),zIndex:r<geo.freezeRows?2:undefined,width:HEAD_W,height:geo.rowHeight(r),display:geo.rowHeight(r)===0?'none':undefined}}>{r+1}</div>)}
      {peers.filter(p=>p.sheet===sheet).map(p=>{const left=HEAD_W+geo.colLeft(p.sel.c0),top=HEAD_H+geo.rowTop(p.sel.r0),w=geo.colLeft(p.sel.c1)+geo.colWidth(p.sel.c1)-geo.colLeft(p.sel.c0),h=geo.rowTop(p.sel.r1)+geo.rowHeight(p.sel.r1)-geo.rowTop(p.sel.r0);
-      return <div key={'peer'+p.clientId} aria-hidden style={{position:'absolute',left,top,width:w,height:h,border:'2px solid '+p.user.color,pointerEvents:'none',zIndex:4}}>
-       <span className="absolute -top-5 left-0 rounded-sm px-1 text-[10px] leading-4 text-white" style={{background:p.user.color}}>{p.user.name}</span></div>;})}
+      return <PeerSelectionBox key={'peer'+p.clientId} left={left} top={top} width={w} height={h} color={p.user.color}>
+       <PeerSwatch className="absolute -top-5 left-0 rounded-sm px-1 text-xs leading-4 text-white" bg={p.user.color}>{p.user.name}</PeerSwatch></PeerSelectionBox>;})}
     </div>
     <div aria-hidden="true" className="border-b border-r border-subtle bg-hover" style={{position:'sticky',left:0,top:0,zIndex:3,width:HEAD_W,height:HEAD_H,marginTop:-HEAD_H}}/>
     {renderCells()}
