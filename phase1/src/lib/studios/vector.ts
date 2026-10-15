@@ -1,7 +1,7 @@
 import {registerStudio,type StudioDef} from './registry';
 import type {StudioShellDef} from '../shell/types';
-export const VECTOR_TOOLS=['select','node','pen','rect','ellipse','line','polygon','star'] as const;
-const toolIcons=['MousePointer2','VectorNode','VectorPen','Square','VectorEllipse','VectorLine','VectorPolygon','VectorStar'];
+export const VECTOR_TOOLS=['select','node','pen','rect','ellipse','line','polygon','star','text'] as const;
+const toolIcons=['MousePointer2','VectorNode','VectorPen','Square','VectorEllipse','VectorLine','VectorPolygon','VectorStar','Type'];
 export const vectorShell:StudioShellDef={
  panels:[
   {id:'files',title:'Files',component:'code.files',side:'left'},
@@ -25,6 +25,7 @@ export const vectorShell:StudioShellDef={
   {id:'page',title:'Page',titleKey:'vector.page',component:'vector.section.page',order:10,when:'services.ready',commands:['vector.resizePage','vector.replaceDocument','vector.moveGuide','vector.clearGuides']},
   {id:'transform',title:'Transform',titleKey:'vector.shell.transform',component:'vector.section.transform',order:20,when:"selection.kind != 'none'",commands:['vector.setSelectionBounds','vector.rotateSelection','vector.flipSelection','vector.alignSelection','vector.distributeSelection','vector.booleanOp','vector.group','vector.ungroup','vector.joinPaths','vector.reversePath','vector.roundCorners','vector.simplifyPath','vector.makeClip','vector.releaseClip','vector.copyStyle','vector.pasteStyle','vector.offsetPath','vector.outlineStroke','vector.reorder','vector.duplicateSelection','vector.deleteSelection']},
   {id:'style',title:'Style',titleKey:'vector.style',component:'vector.section.style',order:30,when:"selection.kind != 'none'",commands:['vector.setStyle','vector.setGradient','vector.addSwatch','vector.removeSwatch','vector.applySwatch']},
+  {id:'text',title:'Text',titleKey:'vector.shell.text',component:'vector.section.text',order:35,when:'services.ready',commands:['vector.addText','vector.setText','vector.deleteText']},
   {id:'nodes',title:'Nodes',titleKey:'vector.tool.node',component:'vector.section.nodes',order:40,when:'services.node',commands:['vector.moveNode','vector.setNodeKind','vector.splitPath','vector.deleteNode','vector.toggleClosed']},
  ]},
  defaultLayout:{leftOpen:true,rightOpen:true,leftWidth:260,rightWidth:300,leftPanels:['layers'],rightPanels:['inspector'],activeLeft:'layers',activeRight:'inspector'},

@@ -1,24 +1,26 @@
 import {reportError} from '../log';
 /** Vector Studio session: one open vector document, selection, tool, view and undo history. Framework-agnostic store plus a React hook. */
 import {useSyncExternalStore} from 'react';
-import {exportSvg,importSvg,normalizeDoc,gradientIdOf,SvgImportError,type Diagnostic,type Point,type Style,type VectorDocument,type VectorPath} from '../vectorio';
+import {exportSvg,importSvg,normalizeDoc,normalizeText,gradientIdOf,SvgImportError,type Diagnostic,type Point,type Style,type VectorDocument,type VectorPath,type VectorText} from '../vectorio';
 import {boxOf,fitPath,translatePath,type Box} from './geometry';
 import {newId} from './shapes';
 import {t} from '../i18n';
 import {selectedPaths} from '../../components/vectorstudio/tools/operations';
-export type VectorTool='select'|'node'|'pen'|'rect'|'ellipse'|'line'|'polygon'|'star';
+export type VectorTool='select'|'node'|'pen'|'rect'|'ellipse'|'line'|'polygon'|'star'|'text';
 export interface VectorSession{
  name:string;doc:VectorDocument;selection:string[];tool:VectorTool;zoom:number;pan:Point;
  dirty:boolean;canUndo:boolean;canRedo:boolean;diagnostics:Diagnostic[];error:string|null;open:boolean;
  /** Path whose nodes are shown in Node mode. */
  nodePath:string|null;selectedNode:string|null;
+ /** Selected text object (texts and paths are never selected together). */
+ textSel:string|null;
 }
 export const PAGE_PRESETS=[
  {id:'icon',label:'Icon 512',width:512,height:512},{id:'square',label:'Square 1080',width:1080,height:1080},
  {id:'a4',label:'A4 (96 dpi)',width:794,height:1123},{id:'hd',label:'HD 1920x1080',width:1920,height:1080},{id:'logo',label:'Logo 1024',width:1024,height:1024}] as const;
 const HISTORY_LIMIT=200;
 let past:VectorDocument[]=[],future:VectorDocument[]=[];
-const fresh=():VectorSession=>({name:'Untitled.svg',doc:{width:1024,height:1024,paths:[]},selection:[],tool:'select',zoom:1,pan:{x:0,y:0},dirty:false,canUndo:false,canRedo:false,diagnostics:[],error:null,open:false,nodePath:null,selectedNode:null});
+const fresh=():VectorSession=>({name:'Untitled.svg',doc:{width:1024,height:1024,paths:[]},selection:[],tool:'select',zoom:1,pan:{x:0,y:0},dirty:false,canUndo:false,canRedo:false,diagnostics:[],error:null,open:false,nodePath:null,selectedNode:null,textSel:null});
 let state:VectorSession=fresh();
 const listeners=new Set<()=>void>();
 const set=(patch:Partial<VectorSession>)=>{if(patch.error)reportError('vector.engine',patch.error,{context:{studio:'vector',file:patch.name??state.name}});state={...state,...patch,canUndo:past.length>0,canRedo:future.length>0};listeners.forEach(l=>l());};
@@ -45,6 +47,7 @@ const finite=(...values:number[])=>{if(!values.every(Number.isFinite))throw new 
 function validateDocument(doc:VectorDocument){
  finite(doc.width,doc.height);
  for(const g of doc.gradients??[]){for(const v of Object.values(g)){if(typeof v==='number')finite(v);}for(const s of g.stops)finite(s.offset,s.opacity);}
+ for(const t of doc.texts??[])finite(t.x,t.y,t.fontSize);
  for(const p of doc.paths){
   for(const n of p.nodes){finite(n.x,n.y);if(n.in)finite(n.in.x,n.in.y);if(n.out)finite(n.out.x,n.out.y);}
   for(const value of Object.values(p.style??{})){if(typeof value==='number')finite(value);else if(Array.isArray(value))finite(...value);}
@@ -58,11 +61,13 @@ export function commit(next:VectorDocument,patch:Partial<VectorSession>={}){
  const nodePath=patch.nodePath===undefined?state.nodePath:patch.nodePath;
  const validNodePath=next.paths.find(p=>p.id===nodePath&&!p.hidden&&!p.locked)?.id??null;
  past.push(state.doc);if(past.length>HISTORY_LIMIT)past.shift();future=[];
- set({...patch,doc:next,dirty:true,error:null,selection,nodePath:validNodePath,selectedNode:validNodePath?(patch.selectedNode===undefined?state.selectedNode:patch.selectedNode):null});}
-export function undo(){const prev=past.pop();if(!prev)return;future.push(state.doc);set({doc:prev,dirty:true,selection:selectionIds(prev,state.selection)});}
-export function redo(){const next=future.pop();if(!next)return;past.push(state.doc);set({doc:next,dirty:true,selection:selectionIds(next,state.selection)});}
+ const textSel=selection.length?null:(next.texts??[]).some(t=>t.id===state.textSel)?state.textSel:null;
+ set({...patch,doc:next,dirty:true,error:null,selection,textSel,nodePath:validNodePath,selectedNode:validNodePath?(patch.selectedNode===undefined?state.selectedNode:patch.selectedNode):null});}
+const liveText=(doc:VectorDocument)=>(doc.texts??[]).some(t=>t.id===state.textSel)?state.textSel:null;
+export function undo(){const prev=past.pop();if(!prev)return;future.push(state.doc);set({doc:prev,dirty:true,selection:selectionIds(prev,state.selection),textSel:liveText(prev)});}
+export function redo(){const next=future.pop();if(!next)return;past.push(state.doc);set({doc:next,dirty:true,selection:selectionIds(next,state.selection),textSel:liveText(next)});}
 export const setTool=(tool:VectorTool)=>set({tool,nodePath:tool==='node'?state.nodePath??state.selection[0]??null:null,selectedNode:null});
-export const select=(ids:string[])=>{const selection=selectionIds(state.doc,ids);set({selection,nodePath:state.tool==='node'?selectedPaths(state.doc,ids).find(p=>ids.includes(p.id))?.id??null:state.nodePath,selectedNode:null});};
+export const select=(ids:string[])=>{const selection=selectionIds(state.doc,ids);set({selection,textSel:selection.length?null:state.textSel,nodePath:state.tool==='node'?selectedPaths(state.doc,ids).find(p=>ids.includes(p.id))?.id??null:state.nodePath,selectedNode:null});};
 export const setView=(zoom:number,pan?:Point)=>{finite(zoom,...(pan?[pan.x,pan.y]:[]));set({zoom:Math.min(32,Math.max(0.05,zoom)),...(pan?{pan}:{})});};
 export const clearError=()=>set({error:null,diagnostics:[]});
 const mapPaths=(f:(p:VectorPath)=>VectorPath)=>(ids:readonly string[])=>({...state.doc,paths:state.doc.paths.map(p=>ids.includes(p.id)?f(p):p)});
@@ -163,3 +168,20 @@ function confirmReplacement():boolean{
 if(typeof window!=='undefined')window.addEventListener('beforeunload',event=>{
  if(!state.open||!state.dirty)return;event.preventDefault();event.returnValue='';
 });
+
+/** Text objects. Each call is one undo step; invalid input throws before history is touched. */
+export const selectText=(id:string|null)=>{if(id!==null&&!(state.doc.texts??[]).some(t=>t.id===id))return;set({textSel:id,...(id!==null?{selection:[],nodePath:null,selectedNode:null}:{})});};
+export function addText(p:{x:number;y:number;text?:string}&Partial<Omit<VectorText,'id'|'text'|'x'|'y'>>):string{
+ finite(p.x,p.y);const id=newId('t');
+ const t=normalizeText({fontFamily:'sans-serif',fontSize:Math.max(12,Math.round(Math.min(state.doc.width,state.doc.height)/20)),...p,id,text:p.text??'Text'});
+ if(!t)throw new RangeError('Text must not be empty');
+ if((state.doc.texts??[]).length>=200)throw new RangeError('At most 200 text objects');
+ commit({...state.doc,texts:[...(state.doc.texts??[]),t]},{selection:[]});set({textSel:id});return id;}
+export function updateText(id:string,patch:Partial<Omit<VectorText,'id'>>){
+ const cur=(state.doc.texts??[]).find(t=>t.id===id);if(!cur)throw new Error('Unknown text: '+id);
+ finite(...[patch.x,patch.y,patch.fontSize].filter((v):v is number=>v!==undefined));
+ const next=normalizeText({...cur,...patch});if(!next)throw new RangeError('Text must not be empty');
+ commit({...state.doc,texts:(state.doc.texts??[]).map(t=>t.id===id?next:t)});}
+export function deleteText(id:string){
+ if(!(state.doc.texts??[]).some(t=>t.id===id))throw new Error('Unknown text: '+id);
+ const rest=(state.doc.texts??[]).filter(t=>t.id!==id),{texts:_t,...doc}=state.doc;commit(rest.length?{...doc,texts:rest}:doc);set({textSel:state.textSel===id?null:state.textSel});}

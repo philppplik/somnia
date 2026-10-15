@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1091 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1095 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -1041,6 +1041,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `vector.addNodeNear` | Add vector node near point | Insert | vector |  |
 | `vector.addPath` | Add vector path | Insert | vector |  |
 | `vector.addSwatch` | Add colour swatch | Edit | vector |  |
+| `vector.addText` | Add text | Edit | vector |  |
 | `vector.alignSelection` | Align vector selection | Edit | vector |  |
 | `vector.applySwatch` | Apply colour swatch | Edit | vector |  |
 | `vector.booleanOp` | Combine vector shapes | Edit | vector |  |
@@ -1050,6 +1051,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `vector.createBlank` | New vector document | Project | vector |  |
 | `vector.deleteNode` | Delete vector node | Edit | vector |  |
 | `vector.deleteSelection` | Delete selected vector paths | Edit | vector |  |
+| `vector.deleteText` | Delete text | Edit | vector |  |
 | `vector.distributeSelection` | Distribute vector selection | Edit | vector |  |
 | `vector.duplicateSelection` | Duplicate selected vector paths | Edit | vector |  |
 | `vector.export.open` | Vector: Export... | Project | vector |  |
@@ -1085,6 +1087,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `vector.setNodeKind` | Set vector node kind | Edit | vector |  |
 | `vector.setSelectionBounds` | Set vector selection bounds | Edit | vector |  |
 | `vector.setStyle` | Set vector path style | Edit | vector |  |
+| `vector.setText` | Edit text | Edit | vector |  |
 | `vector.setTool` | Set vector tool | View | vector |  |
 | `vector.setView` | Set vector view | View | vector |  |
 | `vector.simplifyPath` | Simplify vector path | Edit | vector |  |
@@ -1100,6 +1103,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `vector.tool.rect` | Rectangle | View | vector |  |
 | `vector.tool.select` | Select | View | vector |  |
 | `vector.tool.star` | Star | View | vector |  |
+| `vector.tool.text` | Text | View | vector |  |
 | `vector.toSvg` | Read vector SVG | Tools | vector |  |
 | `vector.undo` | Undo vector edit | Edit | vector |  |
 | `vector.ungroup` | Ungroup vector selection | Edit | vector |  |

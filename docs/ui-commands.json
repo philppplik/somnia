@@ -12656,6 +12656,13 @@
       "hasEnabled": true
     },
     {
+      "id": "vector.addText",
+      "title": "Add text",
+      "category": "Edit",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
       "id": "vector.alignSelection",
       "title": "Align vector selection",
       "category": "Edit",
@@ -12714,6 +12721,13 @@
     {
       "id": "vector.deleteSelection",
       "title": "Delete selected vector paths",
+      "category": "Edit",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
+      "id": "vector.deleteText",
+      "title": "Delete text",
       "category": "Edit",
       "source": "vector",
       "hasEnabled": true
@@ -12964,6 +12978,13 @@
       "hasEnabled": true
     },
     {
+      "id": "vector.setText",
+      "title": "Edit text",
+      "category": "Edit",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
       "id": "vector.setTool",
       "title": "Set vector tool",
       "category": "View",
@@ -13064,6 +13085,13 @@
     {
       "id": "vector.tool.star",
       "title": "Star",
+      "category": "View",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
+      "id": "vector.tool.text",
+      "title": "Text",
       "category": "View",
       "source": "vector",
       "hasEnabled": true

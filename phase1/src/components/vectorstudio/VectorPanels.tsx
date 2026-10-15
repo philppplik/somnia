@@ -21,6 +21,9 @@ import {getVectorSession,useVectorSession} from '../../lib/vectorstudio/session'
 import {boxOf} from '../../lib/vectorstudio/geometry';
 import {VECTOR_TOOLS} from '../../lib/studios/vector';
 import type {PanelHostProps} from '../../lib/shell/types';
+import {Textarea} from '../ui/native-controls';
+import {TEXT_LIMITS,FONT_WEIGHTS,FONT_STYLES,TEXT_ANCHORS} from '../../lib/vectorio';
+import {fontOptions,loadSystemFonts,fontsAvailable,useSystemFonts} from '../../lib/vectorstudio/fonts';
 import {NativeButton,NativeInput,NativeSelect} from '../ui/native-controls';
 const field='h-8 w-full min-w-0 rounded-sm border border-line bg-elevated px-2 text-[12px] text-ink';
 const row='grid gap-1 text-[11px] text-ink-3';
@@ -140,4 +143,22 @@ export function VectorExportPanel(){const {t}=useT(),s=useVectorSession();const 
  <label className={row}>{t('vector.appendSvg')}<NativeInput type="file" accept=".svg,image/svg+xml" disabled={!s.open||busy} className="w-full text-[11px]" onChange={async e=>{const f=e.target.files?.[0];e.target.value='';if(!f)return;setBusy(true);setNote('');try{const before=getVectorSession().doc;const source=await f.text();if(getVectorSession().doc===before)await executeCommand('vector.importSvg',{source});else setNote(t('vector.shell.importChanged'));}catch{setNote(t('vector.shell.importFailed'));}finally{setBusy(false);}}}/></label>
  {note&&<p role="status" className="text-ink-3">{note}</p>}{s.error&&<p role="alert" className="text-danger">{s.error}</p>}{s.diagnostics.length>0&&<ul className="m-0 list-disc pl-4">{s.diagnostics.map((d,i)=><li key={i}>{d.message}</li>)}</ul>}
  {(s.error||s.diagnostics.length>0)&&<Button size="compact" onClick={()=>run('clearError')}>{t('vector.shell.clear')}</Button>}
+ </div>;}
+
+/** Text section: edits the selected text object; the Text tool (T) creates one with a click. */
+export function VectorTextSection(){const {t}=useT(),s=useVectorSession(),f=useSystemFonts();const cur=(s.doc.texts??[]).find(x=>x.id===s.textSel);
+ const set=(patch:object)=>cur&&run('setText',{id:cur.id,patch});
+ if(!cur)return <p className="m-0 text-ink-3" data-testid="vector-shell-text">{t('vector.shell.textHint')}</p>;
+ return <div className="grid gap-2" data-testid="vector-shell-text">
+  <label className={row}>{t('vector.shell.textContent')}<Textarea className={field} key={cur.id+cur.text} rows={3} maxLength={TEXT_LIMITS.maxChars} defaultValue={cur.text} data-testid="vector-text-content" onBlur={e=>{if(e.target.value!==cur.text){if(e.target.value.trim())set({text:e.target.value});else e.target.value=cur.text;}}}/></label>
+  <label className={row}>{t('vector.shell.fontFamily')}<NativeSelect className={field} value={cur.fontFamily} onChange={e=>set({fontFamily:e.target.value})}>{fontOptions(cur.fontFamily,f.system).map(v=><option key={v} value={v}>{v}</option>)}</NativeSelect></label>
+  {fontsAvailable()&&<Button size="compact" disabled={f.status==='loading'||f.status==='done'} onClick={()=>void loadSystemFonts()} data-testid="vector-load-fonts">{t(f.status==='done'?'vector.shell.fontsLoaded':f.status==='denied'?'vector.shell.fontsDenied':'vector.shell.fontsLoad')}</Button>}
+  <div className="grid grid-cols-2 gap-2">
+   <label className={row}>{t('vector.shell.fontSize')}<NativeInput className={field} key={'fs'+cur.fontSize} type="number" min={TEXT_LIMITS.minSize} max={TEXT_LIMITS.maxSize} step={1} defaultValue={cur.fontSize} onBlur={e=>{const n=Number(e.target.value);if(e.target.value!==''&&Number.isFinite(n)&&n>=TEXT_LIMITS.minSize&&n<=TEXT_LIMITS.maxSize)set({fontSize:n});else e.target.value=String(cur.fontSize);}}/></label>
+   <label className={row}>{t('vector.fill')}<NativeInput className={field} key={'tf'+cur.fill} defaultValue={cur.fill} onBlur={e=>{const c=swatchColor(e.target.value);if(c)set({fill:c});else e.target.value=cur.fill;}}/></label>
+   <label className={row}>{t('vector.shell.fontWeight')}<NativeSelect className={field} value={cur.fontWeight} onChange={e=>set({fontWeight:e.target.value})}>{FONT_WEIGHTS.map(v=><option key={v} value={v}>{t('vector.shell.fontWeight.'+v)}</option>)}</NativeSelect></label>
+   <label className={row}>{t('vector.shell.fontStyle')}<NativeSelect className={field} value={cur.fontStyle} onChange={e=>set({fontStyle:e.target.value})}>{FONT_STYLES.map(v=><option key={v} value={v}>{t('vector.shell.fontStyle.'+v)}</option>)}</NativeSelect></label></div>
+  <label className={row}>{t('vector.shell.textAnchor')}<NativeSelect className={field} value={cur.anchor} onChange={e=>set({anchor:e.target.value})}>{TEXT_ANCHORS.map(v=><option key={v} value={v}>{t('vector.shell.textAnchor.'+v)}</option>)}</NativeSelect></label>
+  <p className="m-0 text-ink-3">{t('vector.shell.textLimits')}</p>
+  <Button size="compact" onClick={()=>run('deleteText',{id:cur.id})} data-testid="vector-text-delete">{t('vector.shell.textDelete')}</Button>
  </div>;}

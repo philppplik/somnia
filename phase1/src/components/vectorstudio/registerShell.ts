@@ -3,10 +3,10 @@ import {registerStudioPanels} from '../studios/registerStudioPanels';
 import {registerRailIcons} from '../../lib/shell/railIcons';
 import {Circle,Minus,Download} from '../../lib/icons';
 import {NodeIcon,PenNibIcon,PolygonIcon,StarIcon} from './icons';
-import {VectorLayersPanel,VectorToolsPanel,VectorExportPanel,VectorPageSection,VectorTransformSection,VectorStyleSection,VectorNodeSection} from './VectorPanels';
+import {VectorLayersPanel,VectorToolsPanel,VectorExportPanel,VectorPageSection,VectorTransformSection,VectorStyleSection,VectorTextSection,VectorNodeSection} from './VectorPanels';
 registerRailIcons({VectorNode:NodeIcon,VectorPen:PenNibIcon,VectorEllipse:Circle,VectorLine:Minus,VectorPolygon:PolygonIcon,VectorStar:StarIcon,VectorExport:Download});
 export const disposeVectorShell=registerStudioPanels(vectorStudio,{
  panels:{'vector.layers':VectorLayersPanel,'vector.tools':VectorToolsPanel,'vector.export':VectorExportPanel},
- sections:{'vector.section.page':VectorPageSection,'vector.section.transform':VectorTransformSection,'vector.section.style':VectorStyleSection,'vector.section.nodes':VectorNodeSection},
+ sections:{'vector.section.page':VectorPageSection,'vector.section.transform':VectorTransformSection,'vector.section.style':VectorStyleSection,'vector.section.text':VectorTextSection,'vector.section.nodes':VectorNodeSection},
 });
 if(import.meta.hot)import.meta.hot.dispose(()=>disposeVectorShell());

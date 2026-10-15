@@ -1,4 +1,5 @@
 import { formatGuides, normalizeGuides } from './guides';
+import { textSvg, normalizeTexts } from './text';
 import { formatSwatches, normalizeSwatches } from './swatches';
 import { escapeAttr } from './xml';
 import { gradientSvg, pruneGradients } from './gradient';
@@ -119,6 +120,7 @@ export function exportSvg(doc: VectorDocument, opts: ExportOptions = {}): string
     emit((p.layer !== undefined ? 2 : 1) + (p.group !== undefined ? 1 : 0), `<path ${attrs.join(' ')}/>`);
   }
   close();
+  for (const t of normalizeTexts(doc.texts) ?? []) emit(1, textSvg(t));
   emit(0, '</svg>');
   return lines.join(nl) + '\n';
 }

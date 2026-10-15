@@ -6,11 +6,12 @@ import {FileTabs} from '../FileTabs';
 import {useT} from '../../lib/useT';
 import {executeCommand} from '../../lib/commands';
 import {serializeContour,type Point,type VectorNode,type VectorPath} from '../../lib/vectorio';
-import {selectNode,moveSelection,addNodeNear,addPath,commit,createBlankVector,deleteNode,deleteSelection,duplicateSelection,moveNode,openSvgSource,PAGE_PRESETS,redo,select,setTool,setView,undo,useVectorSession,type VectorTool} from '../../lib/vectorstudio/session';
+import {selectText,deleteText,updateText,selectNode,moveSelection,addNodeNear,addPath,commit,createBlankVector,deleteNode,deleteSelection,duplicateSelection,moveNode,openSvgSource,PAGE_PRESETS,redo,select,setTool,setView,undo,useVectorSession,type VectorTool} from '../../lib/vectorstudio/session';
 import {boxOf,fitPath,hitDocument,pathBox,translatePath,type Box} from '../../lib/vectorstudio/geometry';
 import {buildShape,newId,DEFAULT_SHAPE_STYLE,type ShapeKind} from '../../lib/vectorstudio/shapes';
 import {openSvgDialog} from '../../lib/vectorstudio/open';
-import {PathLayer,GradientDefs} from './render';
+import {PathLayer,GradientDefs,TextLayer} from './render';
+import {textBox,type VectorText} from '../../lib/vectorio';
 import {togglePathSelection} from './tools/operations';
 import {selectionSvg,pasteSvgText} from '../../lib/vectorstudio/clipboard';
 import {studioContextStore} from '../../lib/shell/studioContext';
@@ -26,6 +27,7 @@ type Drag=
  |{kind:'scale';corner:number;from:Box;cur:Point}
  |{kind:'shape';tool:ShapeKind;start:Point;cur:Point}
  |{kind:'node';path:string;node:string;part:'anchor'|'in'|'out';cur:Point}
+ |{kind:'text-move';id:string;start:Point;dx:number;dy:number}
  |{kind:'pan';sx:number;sy:number;pan:Point}
  |{kind:'pen-handle';cur:Point};
 import {snapMove} from '../../lib/vectorstudio/snap';
@@ -65,12 +67,16 @@ export function VectorCanvas(){
   if(drag.kind==='node'&&p.id===drag.path)return {...p,nodes:p.nodes.map(n=>n.id!==drag.node?n:moved(n,drag.part,drag.cur))};
   return p;};
  const paths=s.doc.paths.map(preview);
+ const texts=(s.doc.texts??[]).map(t=>drag?.kind==='text-move'&&drag.id===t.id?{...t,x:t.x+drag.dx,y:t.y+drag.dy}:t);
+ const selText=texts.find(t=>t.id===s.textSel);const selTextBox=selText?textBox(selText):null;
+ const hitText=(pt:Point):string|null=>{for(let i=texts.length-1;i>=0;i--){const b=textBox(texts[i]);if(pt.x>=b.minX-tol&&pt.x<=b.maxX+tol&&pt.y>=b.minY-tol&&pt.y<=b.maxY+tol)return texts[i].id;}return null;};
  const selBox=boxOf(selected.map(preview));
 
  const onDown=(e:RPointerEvent<SVGSVGElement>)=>{
   if(e.button===1||e.button===2){setDrag({kind:'pan',sx:e.clientX,sy:e.clientY,pan:s.pan});(e.target as Element).setPointerCapture?.(e.pointerId);return;}
   if(e.button!==0)return;wrap.current?.focus();(e.target as Element).setPointerCapture?.(e.pointerId);
   const pt=toDoc(e);
+  if(s.tool==='text'){const hit=hitText(pt);if(hit){selectText(hit);return;}void executeCommand('vector.addText',{x:Math.round(pt.x*100)/100,y:Math.round(pt.y*100)/100});setTool('select');return;}
   if(SHAPE_TOOLS.includes(s.tool)){setDrag({kind:'shape',tool:s.tool as ShapeKind,start:pt,cur:pt});return;}
   if(s.tool==='pen'){
    const first=pen[0];if(first&&pen.length>2&&Math.hypot(first.x-pt.x,first.y-pt.y)<=tol*1.5){finishPen(true);return;}
@@ -81,15 +87,17 @@ export function VectorCanvas(){
     const hitN=p.nodes.find(n=>Math.hypot(n.x-pt.x,n.y-pt.y)<=tol);if(hitN){select([p.id]);selectNode(hitN.id);setDrag({kind:'node',path:p.id,node:hitN.id,part:'anchor',cur:pt});return;}}
    const id=hitDocument(s.doc,pt,tol);if(id){select([id]);selectNode(null);}else if(!e.shiftKey)select([]);return;}
   // select tool
+  {const hit=hitText(pt);if(hit){selectText(hit);setDrag({kind:'text-move',id:hit,start:pt,dx:0,dy:0});return;}}
   const corner=selBox?cornerAt(selBox,pt,tol*1.4):-1;
   if(corner>=0&&selBox){setDrag({kind:'scale',corner,from:selBox,cur:pt});return;}
   const id=hitDocument(s.doc,pt,tol);
   if(id){const next=e.shiftKey?togglePathSelection(s.doc,s.selection,id,true):s.selection.includes(id)?s.selection:togglePathSelection(s.doc,s.selection,id);select(next);
    if(next.includes(id))setDrag({kind:'move',start:pt,dx:0,dy:0});return;}
-  if(!e.shiftKey)select([]);setDrag({kind:'marquee',start:pt,cur:pt});};
+  if(!e.shiftKey){select([]);selectText(null);}setDrag({kind:'marquee',start:pt,cur:pt});};
  const onMove=(e:RPointerEvent<SVGSVGElement>)=>{
   const pt=toDoc(e);setHover(pt);if(!drag)return;
   if(drag.kind==='pan'){setView(s.zoom,{x:drag.pan.x+e.clientX-drag.sx,y:drag.pan.y+e.clientY-drag.sy});return;}
+  if(drag.kind==='text-move'){setDrag({...drag,dx:pt.x-drag.start.x,dy:pt.y-drag.start.y});return;}
   if(drag.kind==='move'){const snap=e.shiftKey?Math.abs(pt.x-drag.start.x)>Math.abs(pt.y-drag.start.y):null;
    const rx=snap===false?0:pt.x-drag.start.x,ry=snap===true?0:pt.y-drag.start.y;
    const base=boxOf(selected);
@@ -102,7 +110,8 @@ export function VectorCanvas(){
   setDrag({...drag,cur:pt} as Drag);};
  const onUp=()=>{
   const d=drag;setDrag(null);if(!d)return;
-  if(d.kind==='move'&&(d.dx||d.dy)){commit({...s.doc,paths:s.doc.paths.map(p=>s.selection.includes(p.id)?translatePath(p,d.dx,d.dy):p)});}
+  if(d.kind==='text-move'){if(d.dx||d.dy){const cur=(s.doc.texts??[]).find(t=>t.id===d.id);if(cur)updateText(d.id,{x:cur.x+d.dx,y:cur.y+d.dy});}}
+  else if(d.kind==='move'&&(d.dx||d.dy)){commit({...s.doc,paths:s.doc.paths.map(p=>s.selection.includes(p.id)?translatePath(p,d.dx,d.dy):p)});}
   else if(d.kind==='scale'){const to=scaledBox(d,shiftHeld.current);if(to)commit({...s.doc,paths:s.doc.paths.map(p=>s.selection.includes(p.id)?fitPath(p,d.from,to):p)});}
   else if(d.kind==='node'){moveNode(d.path,d.node,d.cur,d.part);}
   else if(d.kind==='marquee'){const b:Box={minX:Math.min(d.start.x,d.cur.x),minY:Math.min(d.start.y,d.cur.y),maxX:Math.max(d.start.x,d.cur.x),maxY:Math.max(d.start.y,d.cur.y)};
@@ -141,10 +150,10 @@ export function VectorCanvas(){
   if(mod&&e.key.toLowerCase()==='a'){e.preventDefault();select(s.doc.paths.filter(p=>!p.hidden).map(p=>p.id));return;}
   if(e.key==='Enter'&&s.tool==='pen'){e.preventDefault();finishPen(false);return;}
   if(e.key==='Escape'){if(pen.length){setPen([]);}else if(drag)setDrag(null);else select([]);return;}
-  if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();if(s.tool==='node'&&s.nodePath&&s.selectedNode)deleteNode(s.nodePath,s.selectedNode);else deleteSelection();return;}
+  if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();if(s.tool==='node'&&s.nodePath&&s.selectedNode)deleteNode(s.nodePath,s.selectedNode);else if(s.textSel)deleteText(s.textSel);else deleteSelection();return;}
   if(e.key.startsWith('Arrow')&&s.selection.length){e.preventDefault();const k=e.shiftKey?10:1;const dx=e.key==='ArrowLeft'?-k:e.key==='ArrowRight'?k:0,dy=e.key==='ArrowUp'?-k:e.key==='ArrowDown'?k:0;
    moveSelection(dx,dy);return;}
-  if(!mod){const map:Record<string,VectorTool>={v:'select',a:'node',p:'pen',r:'rect',e:'ellipse',l:'line',g:'polygon',s:'star'};const tool=map[e.key.toLowerCase()];if(tool){setTool(tool);}}};
+  if(!mod){const map:Record<string,VectorTool>={v:'select',a:'node',p:'pen',r:'rect',e:'ellipse',l:'line',g:'polygon',s:'star',t:'text'};const tool=map[e.key.toLowerCase()];if(tool){setTool(tool);}}};
 
  if(!s.open)return <main className="center" aria-label={t('vector.title')}><VectorExportSetup/><div className="workspace"><section className="code-pane" aria-label={t('vector.title')}><FileTabs/>
   <StudioEmptyState studio="vector" icon={<PenNibIcon/>} onOpen={()=>void openSvgDialog()} onCreate={()=>{const p=PAGE_PRESETS.find(x=>x.id===presetId)??PAGE_PRESETS[0];createBlankVector(p.width,p.height);}}
@@ -164,11 +173,12 @@ export function VectorCanvas(){
     <defs><GradientDefs gradients={s.doc.gradients}/><pattern id="vs-checker" width="16" height="16" patternUnits="userSpaceOnUse"><rect width="16" height="16" fill="#fff"/><rect width="8" height="8" fill="#f1f2f5"/><rect x="8" y="8" width="8" height="8" fill="#f1f2f5"/></pattern></defs>
     <g transform={`translate(${s.pan.x} ${s.pan.y}) scale(${s.zoom})`}>
      <rect width={s.doc.width} height={s.doc.height} fill="url(#vs-checker)" stroke="rgba(0,0,0,.18)" strokeWidth={1/s.zoom}/>
-     <svg width={s.doc.width} height={s.doc.height} overflow="hidden" data-testid="vector-artboard"><PathLayer paths={paths}/>
+     <svg width={s.doc.width} height={s.doc.height} overflow="hidden" data-testid="vector-artboard"><PathLayer paths={paths}/><TextLayer texts={texts}/>
       {draft&&<path d={serializeContour(draft.nodes,draft.closed)} fill={draft.closed?'rgba(109,94,245,.25)':'none'} stroke="#2563eb" strokeWidth={1.5/s.zoom}/>}</svg>
      {selected.map(p=>{const pp=preview(p);return <path key={p.id} d={serializeContour(pp.nodes,pp.closed)} fill="none" stroke="#2563eb" strokeWidth={1/s.zoom} pointerEvents="none"/>;})}
      {s.tool==='select'&&selBox&&<g data-testid="vector-selection"><rect x={selBox.minX} y={selBox.minY} width={selBox.maxX-selBox.minX} height={selBox.maxY-selBox.minY} fill="none" stroke="#2563eb" strokeWidth={1/s.zoom} strokeDasharray={`${4/s.zoom} ${3/s.zoom}`} pointerEvents="none"/>
       {CORNERS.map(([cx,cy],i)=><rect key={i} data-testid={`vector-handle-${i}`} x={(cx?selBox.maxX:selBox.minX)-4/s.zoom} y={(cy?selBox.maxY:selBox.minY)-4/s.zoom} width={8/s.zoom} height={8/s.zoom} fill="#fff" stroke="#2563eb" strokeWidth={1/s.zoom}/>)}</g>}
+     {selTextBox&&<rect data-testid="vector-text-selection" x={selTextBox.minX} y={selTextBox.minY} width={selTextBox.maxX-selTextBox.minX} height={selTextBox.maxY-selTextBox.minY} fill="none" stroke="#2563eb" strokeWidth={1/s.zoom} strokeDasharray={`${4/s.zoom} ${3/s.zoom}`} pointerEvents="none"/>}
      {nodePath&&<NodeOverlay path={nodePath} zoom={s.zoom} active={s.selectedNode}/>}
      {(['x','y'] as const).flatMap(axis=>(s.doc.guides?.[axis]??[]).map(v=><g key={axis+v} data-testid="vector-guide" data-axis={axis}>{!(gd&&gd.axis===axis&&gd.from===v)&&<line x1={axis==='x'?v:-1e5} x2={axis==='x'?v:1e5} y1={axis==='y'?v:-1e5} y2={axis==='y'?v:1e5} className="stroke-accent" strokeWidth={1/s.zoom} pointerEvents="none"/>}
       {s.tool==='select'&&<line x1={axis==='x'?v:-1e5} x2={axis==='x'?v:1e5} y1={axis==='y'?v:-1e5} y2={axis==='y'?v:1e5} stroke="transparent" strokeWidth={8/s.zoom} pointerEvents="stroke" className={axis==='x'?'cursor-col-resize':'cursor-row-resize'} onPointerDown={e=>startGuide(axis,e,v)} onPointerMove={moveGuideDrag} onPointerUp={endGuide} onPointerCancel={()=>setGd(null)}/>}</g>))}

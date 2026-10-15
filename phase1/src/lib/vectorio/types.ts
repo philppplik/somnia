@@ -74,6 +74,13 @@ export type Gradient = { id: string; stops: GradientStop[] } & (
   | { kind: 'radial'; cx: number; cy: number; r: number }
 );
 
+/** A live text object (extension). Drawn above all paths; keeps the font name, not outlines. Exported as `<text data-vs-text="1">`. */
+export interface VectorText {
+  id: string; x: number; y: number; text: string; // text may hold '\n' line breaks
+  fontFamily: string; fontSize: number; fontWeight: 'normal' | 'bold'; fontStyle: 'normal' | 'italic';
+  anchor: 'start' | 'middle' | 'end'; fill: string; // fill is #rrggbb
+}
+
 /** Ruler guides in document units: `x` are vertical lines, `y` horizontal. */
 export interface Guides { x: number[]; y: number[] }
 export interface VectorDocument {
@@ -88,6 +95,8 @@ export interface VectorDocument {
   guides?: Guides;
   /** Extension. Colour palette (editor aid). Exported as `data-vs-swatches="#rrggbb,..."` on the root `<svg>`. */
   swatches?: string[];
+  /** Extension. Text objects, painted above all paths (no z-order among shapes). */
+  texts?: VectorText[];
 }
 
 export const GRADIENT_LIMITS = Object.freeze({ maxGradients: 64, maxStops: 16 });

@@ -1,5 +1,6 @@
 import { parseGuides } from './guides';
 import { parseSwatches } from './swatches';
+import { parseTextElement, TEXT_LIMITS } from './text';
 import { arcToCubics, parsePathData, type Segment } from './pathData';
 import { isIdentity, multiply, parseTransform } from './matrix';
 import { normalizePaint } from './color';
@@ -250,6 +251,7 @@ export function importSvg(source: string, opts: ImportOptions = {}): ImportResul
   collectMarkers(root);
   let clipC = 0;
   const paths: VectorPath[] = [];
+  const texts: import('./types').VectorText[] = [];
   const groupNames: Record<string, string> = {};
   let nodeCount = 0, segCount = 0, idc = 0, compoundC = 0;
   const nextId = () => { if (++nodeCount > LIMITS.maxNodes) fail(`more than ${LIMITS.maxNodes} nodes`); return `n${++idc}`; };
@@ -272,6 +274,13 @@ export function importSvg(source: string, opts: ImportOptions = {}): ImportResul
     const name = stripNs(el.name);
     if (IGNORED_NO_RENDER.has(name)) return;
     if (name === 'clipPath') return; // read up front, validated where it is used
+    if (name === 'text') {
+      if (depth !== 1) { bad('<text> is only read at the top level of the document (not inside groups)'); return; }
+      if (texts.length >= TEXT_LIMITS.maxTexts) { bad(`more than ${TEXT_LIMITS.maxTexts} text objects`); return; }
+      const t = parseTextElement(el, `t${texts.length + 1}`, bad);
+      if (t) texts.push(t);
+      return;
+    }
     if (!ALLOWED.has(name)) {
       if (name === 'defs' && el.children.every((c) => isGradientElement(c) || stripNs(c.name) === 'clipPath' || (stripNs(c.name) === 'marker' && arrowMarkers.has(c.attrs.id ?? '')))) return; // gradients are read up front
       if (isGradientElement(el)) return;
@@ -403,6 +412,7 @@ export function importSvg(source: string, opts: ImportOptions = {}): ImportResul
     if (g === null) info('malformed data-vs-guides ignored');
     else if (g.x.length + g.y.length) doc.guides = g;
   }
+  if (texts.length) doc.texts = texts;
   const sAttr = stripNs(root.name) === 'svg' ? root.attrs['data-vs-swatches'] : undefined;
   if (sAttr !== undefined) {
     const sw = parseSwatches(sAttr);

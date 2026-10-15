@@ -1,5 +1,5 @@
 import type {ReactElement} from 'react';
-import {serializeContour,pathArrows,type ArrowSpec,type Gradient,type Style,type VectorPath} from '../../lib/vectorio';
+import {serializeContour,pathArrows,textLines,LINE_HEIGHT,type VectorText,type ArrowSpec,type Gradient,type Style,type VectorPath} from '../../lib/vectorio';
 /** SVG attributes for one path style. Absent keys follow SVG defaults (black fill, no stroke), same as the exporter. */
 export function styleProps(s:Partial<Style>|undefined){
  return {fill:s?.fill??'#000000',stroke:s?.stroke??'none',strokeWidth:s?.strokeWidth??1,strokeLinecap:s?.lineCap,strokeLinejoin:s?.lineJoin,strokeMiterlimit:s?.miterLimit,
@@ -34,3 +34,8 @@ export function GradientDefs({gradients}:{gradients?:readonly Gradient[]}){
  return <>{gradients.map(g=>{const stops=g.stops.map((s,i)=><stop key={i} offset={s.offset} stopColor={s.color} stopOpacity={s.opacity}/>);
   return g.kind==='linear'?<linearGradient key={g.id} id={g.id} gradientUnits="objectBoundingBox" x1={g.x1} y1={g.y1} x2={g.x2} y2={g.y2}>{stops}</linearGradient>
    :<radialGradient key={g.id} id={g.id} gradientUnits="objectBoundingBox" cx={g.cx} cy={g.cy} r={g.r}>{stops}</radialGradient>;})}</>;}
+
+/** Text objects, painted above all paths (same markup the exporter writes). */
+export function TextLayer({texts}:{texts:readonly VectorText[]}){
+ return <>{texts.map(t=><text key={t.id} data-text-id={t.id} x={t.x} y={t.y} fontFamily={t.fontFamily} fontSize={t.fontSize} fontWeight={t.fontWeight} fontStyle={t.fontStyle} textAnchor={t.anchor} fill={t.fill} xmlSpace="preserve">
+  {textLines(t).map((l,i)=><tspan key={i} x={t.x} dy={i===0?0:t.fontSize*LINE_HEIGHT}>{l}</tspan>)}</text>)}</>;}

@@ -1,5 +1,5 @@
 import type {VectorDocument,VectorPath} from '../vectorio';
-import {DEFAULT_STYLE} from '../vectorio';
+import {DEFAULT_STYLE,textBox} from '../vectorio';
 import {pathBox,translatePath,type Box} from './geometry';
 import {selectedPaths} from './selectionClosure';
 
@@ -22,7 +22,8 @@ export function exportAreaDoc(doc:VectorDocument,selection:readonly string[],are
  if(!Number.isFinite(padding)||padding<PADDING_LIMITS.min||padding>PADDING_LIMITS.max)throw new RangeError(`padding must be ${PADDING_LIMITS.min}-${PADDING_LIMITS.max}`);
  if(area==='page')return doc;
  const chosen:VectorPath[]=area==='selection'?selectedPaths(doc,selection):doc.paths.filter(p=>!p.hidden);
- if(!chosen.length)throw Error(area==='selection'?'Select at least one object to export':'Nothing visible to export');
+ const texts=area==='content'?doc.texts??[]:[];
+ if(!chosen.length&&!texts.length)throw Error(area==='selection'?'Select at least one object to export':'Nothing visible to export');
  let box:Box|null=null;
  // inside a clipping group only the part within the mask counts; the mask shape itself is not painted
  const masks=new Map<string,Box>();
@@ -34,10 +35,11 @@ export function exportAreaDoc(doc:VectorDocument,selection:readonly string[],are
   let b=visualBox(p);if(!b)continue;
   if(mk){b={minX:Math.max(b.minX,mk.minX),minY:Math.max(b.minY,mk.minY),maxX:Math.min(b.maxX,mk.maxX),maxY:Math.min(b.maxY,mk.maxY)};if(b.maxX<b.minX||b.maxY<b.minY)continue;}
   box=box?{minX:Math.min(box.minX,b.minX),minY:Math.min(box.minY,b.minY),maxX:Math.max(box.maxX,b.maxX),maxY:Math.max(box.maxY,b.maxY)}:b;}
+ for(const t of texts){const b=textBox(t);box=box?{minX:Math.min(box.minX,b.minX),minY:Math.min(box.minY,b.minY),maxX:Math.max(box.maxX,b.maxX),maxY:Math.max(box.maxY,b.maxY)}:b;}
  if(!box)throw Error('Nothing to export');
  const x0=box.minX-padding,y0=box.minY-padding,w=r3(box.maxX-box.minX+2*padding),h=r3(box.maxY-box.minY+2*padding);
  if(w<=0||h<=0)throw Error('The export area is empty');
  if(w>MAX_EXPORT_SIDE||h>MAX_EXPORT_SIDE)throw Error(`Export area is larger than ${MAX_EXPORT_SIDE} units`);
- const {guides:_g,...rest}=doc;
- return {...rest,width:w,height:h,paths:chosen.map(p=>translatePath(p,-x0,-y0))};
+ const {guides:_g,texts:_t,...rest}=doc;
+ return {...rest,width:w,height:h,paths:chosen.map(p=>translatePath(p,-x0,-y0)),...(texts.length?{texts:texts.map(t=>({...t,x:r3(t.x-x0),y:r3(t.y-y0)}))}:{})};
 }

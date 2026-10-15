@@ -11,6 +11,7 @@ import {toggleLock} from './lock';
 import {makeClip,releaseClip} from './clip';
 import {copyStyle,bufferedStyle,hasStyleBuffer} from './styleClip';
 import {moveGuide,clearGuides} from './guideOps';
+import {FONT_WEIGHTS,FONT_STYLES,TEXT_ANCHORS,TEXT_LIMITS} from '../vectorio';
 import {addSwatch,removeSwatch,swatchToApply} from './swatchOps';
 import {groupSelection,ungroupSelection} from './groups';
 import {applyBoolean,BOOL_OPS} from './booleanOps';
@@ -23,7 +24,7 @@ export function vectorShellCommandSpecs(active:()=>boolean):CommandSpec<any,unkn
  const selected=()=>ready()&&S.getVectorSession().selection.length>0;
  return [
   {id:'vector.export.open',title:'Vector: Export...',category:'Project',level:'ui',enabled:ready,params:empty,run:requestVectorExport},
-  ...(['select','node','pen','rect','ellipse','line','polygon','star'] as const).map(tool=>({id:'vector.tool.'+tool,title:'Use vector '+tool+' tool',category:'View' as const,level:'ui' as const,params:empty,enabled:ready,run:()=>S.setTool(tool)})),
+  ...(['select','node','pen','rect','ellipse','line','polygon','star','text'] as const).map(tool=>({id:'vector.tool.'+tool,title:'Use vector '+tool+' tool',category:'View' as const,level:'ui' as const,params:empty,enabled:ready,run:()=>S.setTool(tool)})),
   {id:'vector.rotateSelection',title:'Rotate vector selection',category:'Edit',level:'ui',enabled:selected,params:{...empty,properties:{degrees:{type:'number'}},required:['degrees']},
    run:(p:{degrees:number})=>{const s=S.getVectorSession();if(p.degrees)S.commit(rotateSelection(s.doc,s.selection,p.degrees));}},
   {id:'vector.flipSelection',title:'Flip vector selection',category:'Edit',level:'ui',enabled:selected,params:{...empty,properties:{axis:{type:'string',enum:['horizontal','vertical']}},required:['axis']},
@@ -56,6 +57,9 @@ export function vectorShellCommandSpecs(active:()=>boolean):CommandSpec<any,unkn
   {id:'vector.addSwatch',title:'Add a colour swatch',category:'Edit',level:'ui',enabled:ready,params:{...empty,properties:{color:{type:'string',pattern:'^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$'}},required:['color']},run:(p:{color:string})=>{const s=S.getVectorSession();S.commit(addSwatch(s.doc,p.color));}},
   {id:'vector.removeSwatch',title:'Remove a colour swatch',category:'Edit',level:'ui',enabled:ready,params:{...empty,properties:{color:{type:'string',pattern:'^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$'}},required:['color']},run:(p:{color:string})=>{const s=S.getVectorSession();S.commit(removeSwatch(s.doc,p.color));}},
   {id:'vector.applySwatch',title:'Apply a colour swatch',category:'Edit',level:'ui',enabled:selected,params:{...empty,properties:{color:{type:'string',pattern:'^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$'},target:{type:'string',enum:['fill','stroke']}},required:['color','target']},run:(p:{color:string;target:'fill'|'stroke'})=>{if(p.target!=='fill'&&p.target!=='stroke')throw new RangeError('target must be fill or stroke');const s=S.getVectorSession();S.setStyle({[p.target]:swatchToApply(s.doc,p.color)});}},
+  {id:'vector.addText',title:'Add a text object',category:'Edit',level:'ui',enabled:ready,params:{...empty,properties:{x:{type:'number',minimum:-1e6,maximum:1e6},y:{type:'number',minimum:-1e6,maximum:1e6},...{text:{type:'string',maxLength:TEXT_LIMITS.maxChars},fontFamily:{type:'string',maxLength:TEXT_LIMITS.maxFamily},fontSize:{type:'number',minimum:TEXT_LIMITS.minSize,maximum:TEXT_LIMITS.maxSize},fontWeight:{type:'string',enum:[...FONT_WEIGHTS]},fontStyle:{type:'string',enum:[...FONT_STYLES]},anchor:{type:'string',enum:[...TEXT_ANCHORS]},fill:{type:'string',pattern:'^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$'}}},required:['x','y']},run:(p:Parameters<typeof S.addText>[0])=>{S.addText(p);}},
+  {id:'vector.setText',title:'Edit a text object',category:'Edit',level:'ui',enabled:ready,params:{...empty,properties:{id:{type:'string',minLength:1,maxLength:80},patch:{...empty,properties:{x:{type:'number',minimum:-1e6,maximum:1e6},y:{type:'number',minimum:-1e6,maximum:1e6},...{text:{type:'string',maxLength:TEXT_LIMITS.maxChars},fontFamily:{type:'string',maxLength:TEXT_LIMITS.maxFamily},fontSize:{type:'number',minimum:TEXT_LIMITS.minSize,maximum:TEXT_LIMITS.maxSize},fontWeight:{type:'string',enum:[...FONT_WEIGHTS]},fontStyle:{type:'string',enum:[...FONT_STYLES]},anchor:{type:'string',enum:[...TEXT_ANCHORS]},fill:{type:'string',pattern:'^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$'}}}}},required:['id','patch']},run:(p:{id:string;patch:Parameters<typeof S.updateText>[1]})=>{S.updateText(p.id,p.patch);}},
+  {id:'vector.deleteText',title:'Delete a text object',category:'Edit',level:'ui',enabled:()=>ready()&&!!S.getVectorSession().textSel,params:{...empty,properties:{id:{type:'string',minLength:1,maxLength:80}},required:['id']},run:(p:{id:string})=>{S.deleteText(p.id);}},
   {id:'vector.clearGuides',title:'Clear all ruler guides',category:'Edit',level:'ui',enabled:ready,params:empty,run:()=>{const s=S.getVectorSession();S.commit(clearGuides(s.doc));}},
   {id:'vector.makeClip',title:'Make clipping mask',category:'Edit',level:'ui',enabled:selected,params:empty,run:()=>{const s=S.getVectorSession();S.commit(makeClip(s.doc,s.selection));}},
   {id:'vector.copyStyle',title:'Copy vector style',category:'Edit',level:'ui',enabled:selected,params:empty,run:()=>{const s=S.getVectorSession();copyStyle(s.doc,s.selection);}},
