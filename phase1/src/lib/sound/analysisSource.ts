@@ -1,0 +1,8 @@
+import {emptyRack} from './rack';
+import {validateArrangement,type Arrangement} from './arrangement';
+/** The single-track session behind per-track analysis: only the requested track with its own inserts, level and pan (mute/solo cleared), no master chain, no other tracks. Sources, markers, loop, tail and timing stay intact so validation, duration and the tail match the full render. */
+export function trackAnalysisSession(raw:Arrangement,trackId:string):Arrangement{
+ const s=validateArrangement(raw);const track=s.tracks.find(t=>t.id===trackId);if(!track)throw Error('Track no longer exists');
+ if(!track.clips.length)throw Error('Track has no clips to analyse');
+ return{...s,masterRack:emptyRack(),tracks:[{...track,mute:false,solo:false}]};
+}
