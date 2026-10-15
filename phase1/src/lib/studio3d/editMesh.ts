@@ -929,7 +929,30 @@ export function ripSelected(m:MeshData,faces:number[]):MeshData{
  check(out);return out;
 }
 /** Translates the selected vertices by an offset: position-equal twins move together so split sides never rip, and the strongest mask at a position protects the whole seam. Masks are carried; UVs are carried. */
-export function moveSelected(m:MeshData,verts:number[],offset:[number,number,number]):MeshData{
+/** Proportional-editing falloff: nearby vertices follow edit transforms, shaped from 1 at the selection down to 0 at `radius`. */
+export interface PropFalloff{radius:number;falloff:'smooth'|'linear'|'constant'}
+/** Falloff factor per position key: distance to the nearest selected position, shaped by the falloff curve. Only computed when proportional editing is on. */
+function propFactors(m:MeshData,want:Set<string>,prop:PropFalloff):Map<string,number>{
+ const nv=m.positions.length/3;
+ const pk=(v:number)=>`${Math.round(m.positions[v*3]*1e6)},${Math.round(m.positions[v*3+1]*1e6)},${Math.round(m.positions[v*3+2]*1e6)}`;
+ const sel:[number,number,number][]=[];const seenS=new Set<string>();
+ for(let v=0;v<nv;v++){const k=pk(v);if(!want.has(k)||seenS.has(k))continue;seenS.add(k);sel.push([m.positions[v*3],m.positions[v*3+1],m.positions[v*3+2]]);}
+ const out=new Map<string,number>();const seen=new Set<string>();
+ for(let v=0;v<nv;v++){
+  const k=pk(v);if(seen.has(k))continue;seen.add(k);
+  let d=Infinity;
+  for(const q of sel){const dd=Math.hypot(m.positions[v*3]-q[0],m.positions[v*3+1]-q[1],m.positions[v*3+2]-q[2]);if(dd<d)d=dd;}
+  let f=0;
+  if(d<prop.radius){
+   if(prop.falloff==='constant')f=1;
+   else if(prop.falloff==='linear')f=1-d/prop.radius;
+   else{const t=1-(d/prop.radius)*(d/prop.radius);f=t*t;}
+  }
+  out.set(k,f);
+ }
+ return out;
+}
+export function moveSelected(m:MeshData,verts:number[],offset:[number,number,number],prop?:PropFalloff):MeshData{
  check(m);
  if(!verts.length)throw new EditError('Select vertices to move.');
  if(!offset.every(x=>Number.isFinite(x))||offset.every(x=>Math.abs(x)>1e6)||(offset[0]===0&&offset[1]===0&&offset[2]===0))throw new EditError('The move offset must be a finite, non-zero vector.');
@@ -937,16 +960,20 @@ export function moveSelected(m:MeshData,verts:number[],offset:[number,number,num
  for(const v of verts){if(!Number.isInteger(v)||v<0||v>=nv)throw new EditError(`Vertex ${v} does not exist.`);}
  const pk=(v:number)=>`${Math.round(m.positions[v*3]*1e6)},${Math.round(m.positions[v*3+1]*1e6)},${Math.round(m.positions[v*3+2]*1e6)}`;
  const want=new Set(verts.map(pk));
+ if(prop&&(!Number.isFinite(prop.radius)||prop.radius<=0))throw new EditError('The proportional radius must be a positive number.');
  const damp=new Map<string,number>();
  for(let v=0;v<nv;v++){
-  const k=pk(v);if(!want.has(k))continue;
+  const k=pk(v);if(!want.has(k)&&!prop)continue;
   const mk=m.mask?m.mask[v]:0;
   damp.set(k,Math.min(damp.get(k)??mk,mk));
  }
+ const fac=prop?propFactors(m,want,prop):null;
  const positions=[...m.positions];
  for(let v=0;v<nv;v++){
-  const k=pk(v);if(!want.has(k))continue;
-  const f=1-damp.get(k)!;if(f===0)continue;
+  const k=pk(v);
+  const base=prop?(fac.get(k)??0):(want.has(k)?1:0);
+  if(base===0)continue;
+  const f=base*(1-(damp.get(k)??0));if(f===0)continue;
   positions[v*3]+=offset[0]*f;positions[v*3+1]+=offset[1]*f;positions[v*3+2]+=offset[2]*f;
  }
  const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
@@ -1028,7 +1055,7 @@ export function vertSlideSelected(m:MeshData,verts:number[],edge:[number,number]
  return moveSelected(m,[v],[dx*factor,dy*factor,dz*factor]);
 }
 /** Shears the selected vertices: offsets them along one world axis proportional to their distance from the selection centroid on a second axis. Position-equal twins shear together; the strongest mask at a position dams the whole seam (as a partial shear). Masks are carried; UVs are carried. */
-export function shearSelected(m:MeshData,verts:number[],along:'x'|'y'|'z',by:'x'|'y'|'z',factor:number):MeshData{
+export function shearSelected(m:MeshData,verts:number[],along:'x'|'y'|'z',by:'x'|'y'|'z',factor:number,prop?:PropFalloff):MeshData{
  check(m);
  if(!verts.length)throw new EditError('Select vertices to shear.');
  if(along!=='x'&&along!=='y'&&along!=='z')throw new EditError('The shear axis must be x, y or z.');
@@ -1041,26 +1068,30 @@ export function shearSelected(m:MeshData,verts:number[],along:'x'|'y'|'z',by:'x'
  for(const v of verts){if(!Number.isInteger(v)||v<0||v>=nv)throw new EditError(`Vertex ${v} does not exist.`);}
  const pk=(v:number)=>`${Math.round(m.positions[v*3]*1e6)},${Math.round(m.positions[v*3+1]*1e6)},${Math.round(m.positions[v*3+2]*1e6)}`;
  const want=new Set(verts.map(pk));
+ if(prop&&(!Number.isFinite(prop.radius)||prop.radius<=0))throw new EditError('The proportional radius must be a positive number.');
  let c=0,n=0;const counted=new Set<string>();
  const damp=new Map<string,number>();
  for(let v=0;v<nv;v++){
-  const k=pk(v);if(!want.has(k))continue;
+  const k=pk(v);if(!want.has(k)&&!prop)continue;
   const mk=m.mask?m.mask[v]:0;
   damp.set(k,Math.min(damp.get(k)??mk,mk));
-  if(!counted.has(k)){counted.add(k);c+=m.positions[v*3+bi];n++;}
+  if(want.has(k)&&!counted.has(k)){counted.add(k);c+=m.positions[v*3+bi];n++;}
  }
  c/=n;
+ const fac=prop?propFactors(m,want,prop):null;
  const positions=[...m.positions];
  for(let v=0;v<nv;v++){
-  const k=pk(v);if(!want.has(k))continue;
-  const f=1-damp.get(k)!;if(f===0)continue;
+  const k=pk(v);
+  const base=prop?(fac.get(k)??0):(want.has(k)?1:0);
+  if(base===0)continue;
+  const f=base*(1-(damp.get(k)??0));if(f===0)continue;
   positions[v*3+ai]+=factor*(m.positions[v*3+bi]-c)*f;
  }
  const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
  check(out);return out;
 }
 /** Scales the selected vertices toward or away from the centroid of their distinct positions with per-axis factors: position-equal twins scale together, the strongest mask at a position dams the whole seam (as a partial scale). Masks are carried; UVs are carried. */
-export function scaleSelected(m:MeshData,verts:number[],factors:[number,number,number]):MeshData{
+export function scaleSelected(m:MeshData,verts:number[],factors:[number,number,number],prop?:PropFalloff):MeshData{
  check(m);
  if(!verts.length)throw new EditError('Select vertices to scale.');
  if(!factors.every(x=>Number.isFinite(x))||factors.some(x=>Math.abs(x)>1e6))throw new EditError('The scale factors must be finite numbers.');
@@ -1069,19 +1100,23 @@ export function scaleSelected(m:MeshData,verts:number[],factors:[number,number,n
  for(const v of verts){if(!Number.isInteger(v)||v<0||v>=nv)throw new EditError(`Vertex ${v} does not exist.`);}
  const pk=(v:number)=>`${Math.round(m.positions[v*3]*1e6)},${Math.round(m.positions[v*3+1]*1e6)},${Math.round(m.positions[v*3+2]*1e6)}`;
  const want=new Set(verts.map(pk));
+ if(prop&&(!Number.isFinite(prop.radius)||prop.radius<=0))throw new EditError('The proportional radius must be a positive number.');
  let cx=0,cy=0,cz=0,n=0;const counted=new Set<string>();
  const damp=new Map<string,number>();
  for(let v=0;v<nv;v++){
-  const k=pk(v);if(!want.has(k))continue;
+  const k=pk(v);if(!want.has(k)&&!prop)continue;
   const mk=m.mask?m.mask[v]:0;
   damp.set(k,Math.min(damp.get(k)??mk,mk));
-  if(!counted.has(k)){counted.add(k);cx+=m.positions[v*3];cy+=m.positions[v*3+1];cz+=m.positions[v*3+2];n++;}
+  if(want.has(k)&&!counted.has(k)){counted.add(k);cx+=m.positions[v*3];cy+=m.positions[v*3+1];cz+=m.positions[v*3+2];n++;}
  }
  cx/=n;cy/=n;cz/=n;
+ const fac=prop?propFactors(m,want,prop):null;
  const positions=[...m.positions];
  for(let v=0;v<nv;v++){
-  const k=pk(v);if(!want.has(k))continue;
-  const f=1-damp.get(k)!;if(f===0)continue;
+  const k=pk(v);
+  const base=prop?(fac.get(k)??0):(want.has(k)?1:0);
+  if(base===0)continue;
+  const f=base*(1-(damp.get(k)??0));if(f===0)continue;
   const x=m.positions[v*3]-cx,y=m.positions[v*3+1]-cy,z=m.positions[v*3+2]-cz;
   positions[v*3]+=(x*factors[0]-x)*f;positions[v*3+1]+=(y*factors[1]-y)*f;positions[v*3+2]+=(z*factors[2]-z)*f;
  }
@@ -1089,7 +1124,7 @@ export function scaleSelected(m:MeshData,verts:number[],factors:[number,number,n
  check(out);return out;
 }
 /** Rotates the selected vertices around the centroid of their distinct positions on a world axis: position-equal twins rotate together, the strongest mask at a position dams the whole seam (as a partial rotation toward the full angle). Masks are carried; UVs are carried. */
-export function rotateSelected(m:MeshData,verts:number[],axis:'x'|'y'|'z',degrees:number):MeshData{
+export function rotateSelected(m:MeshData,verts:number[],axis:'x'|'y'|'z',degrees:number,prop?:PropFalloff):MeshData{
  check(m);
  if(!verts.length)throw new EditError('Select vertices to rotate.');
  if(axis!=='x'&&axis!=='y'&&axis!=='z')throw new EditError('The rotation axis must be x, y or z.');
@@ -1098,20 +1133,24 @@ export function rotateSelected(m:MeshData,verts:number[],axis:'x'|'y'|'z',degree
  for(const v of verts){if(!Number.isInteger(v)||v<0||v>=nv)throw new EditError(`Vertex ${v} does not exist.`);}
  const pk=(v:number)=>`${Math.round(m.positions[v*3]*1e6)},${Math.round(m.positions[v*3+1]*1e6)},${Math.round(m.positions[v*3+2]*1e6)}`;
  const want=new Set(verts.map(pk));
+ if(prop&&(!Number.isFinite(prop.radius)||prop.radius<=0))throw new EditError('The proportional radius must be a positive number.');
  let cx=0,cy=0,cz=0,n=0;const counted=new Set<string>();
  const damp=new Map<string,number>();
  for(let v=0;v<nv;v++){
-  const k=pk(v);if(!want.has(k))continue;
+  const k=pk(v);if(!want.has(k)&&!prop)continue;
   const mk=m.mask?m.mask[v]:0;
   damp.set(k,Math.min(damp.get(k)??mk,mk));
-  if(!counted.has(k)){counted.add(k);cx+=m.positions[v*3];cy+=m.positions[v*3+1];cz+=m.positions[v*3+2];n++;}
+  if(want.has(k)&&!counted.has(k)){counted.add(k);cx+=m.positions[v*3];cy+=m.positions[v*3+1];cz+=m.positions[v*3+2];n++;}
  }
  cx/=n;cy/=n;cz/=n;
  const rad=degrees*Math.PI/180,sin=Math.sin(rad),cos=Math.cos(rad);
+ const fac=prop?propFactors(m,want,prop):null;
  const positions=[...m.positions];
  for(let v=0;v<nv;v++){
-  const k=pk(v);if(!want.has(k))continue;
-  const f=1-damp.get(k)!;if(f===0)continue;
+  const k=pk(v);
+  const base=prop?(fac.get(k)??0):(want.has(k)?1:0);
+  if(base===0)continue;
+  const f=base*(1-(damp.get(k)??0));if(f===0)continue;
   const x=m.positions[v*3]-cx,y=m.positions[v*3+1]-cy,z=m.positions[v*3+2]-cz;
   let rx=x,ry=y,rz=z;
   if(axis==='x'){ry=y*cos-z*sin;rz=y*sin+z*cos;}

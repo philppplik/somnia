@@ -321,7 +321,7 @@ function UvFields({id}:{id:number}){
 function EditSculptFields({id}:{id:number}){
  const {t}=useT();const s=useStudio3D();const o=s.selectedInfo;
  const [extrude,setExtrude]=useState(0.5);const [inset,setInset]=useState(0.2);const [bevel,setBevel]=useState(0.1);const [slide,setSlide]=useState(0.5);const [merge,setMerge]=useState(0.01);const [mirrorAxis,setMirrorAxis]=useState<'x'|'y'|'z'>('x');const [segments,setSegments]=useState(1);const [bisect,setBisect]=useState(false);const [fattenAmt,setFattenAmt]=useState(0.1);const [relaxIt,setRelaxIt]=useState(1);const [relaxF,setRelaxF]=useState(0.5);const [sphereF,setSphereF]=useState(1);const [randAmt,setRandAmt]=useState(0.1);const [randSeed,setRandSeed]=useState(1);const [moveX,setMoveX]=useState(0);const [moveY,setMoveY]=useState(0.25);const [moveZ,setMoveZ]=useState(0);const [rotDeg,setRotDeg]=useState(90);const [scaleX,setScaleX]=useState(1);const [scaleY,setScaleY]=useState(1);const [scaleZ,setScaleZ]=useState(1);const [mergeDist,setMergeDist]=useState(0.001);const [bisectAxis,setBisectAxis]=useState<'x'|'y'|'z'>('y');const [bisectOff,setBisectOff]=useState(0);const [bisectFill,setBisectFill]=useState(true);const [shearAlong,setShearAlong]=useState<'x'|'y'|'z'>('x');const [shearBy,setShearBy]=useState<'x'|'y'|'z'>('y');const [shearAmt,setShearAmt]=useState(0.5);const [slideA,setSlideA]=useState(0);const [slideB,setSlideB]=useState(1);const [slideF,setSlideF]=useState(0.5);const [swTarget,setSwTarget]=useState(0);const [swOffset,setSwOffset]=useState(0);const [symAxis,setSymAxis]=useState<'x'|'y'|'z'>('x');
- const ed=s.edit;const on=ed!=null&&ed.id===id;const sc=s.sculpt;
+ const ed=s.edit;const on=ed!=null&&ed.id===id;const sc=s.sculpt;const pr=s.proportional;
  if(!o||o.kind!=='mesh')return null;
  const modeBtn=(m:'vertex'|'edge'|'face')=><Button key={m} variant={ed?.mode===m?'primary':'outline'} aria-pressed={ed?.mode===m} onClick={()=>void executeCommand('studio3d.edit.mode',{mode:m})}>{t('studio3d.edit.mode.'+m)}</Button>;
  return <>
@@ -330,6 +330,12 @@ function EditSculptFields({id}:{id:number}){
    {on&&<>
     <div className="flex flex-wrap gap-1" role="group" aria-label={t('studio3d.edit.modes')}>{modeBtn('vertex')}{modeBtn('edge')}{modeBtn('face')}</div>
     <p className="m-0 text-xs text-ink-3">{t('studio3d.edit.counts',{v:ed.verts,e:ed.edges,f:ed.faces})}</p>
+    <div className="flex flex-wrap items-center gap-1" data-testid="studio3d-edit-proportional">
+     <label className="flex items-center gap-2 text-xs text-ink-2"><NativeInput type="checkbox" checked={pr.on} aria-label={t('studio3d.edit.proportional')} onChange={()=>void executeCommand('studio3d.edit.proportional',{})}/>{t('studio3d.edit.proportional')}</label>
+     {pr.on&&<NumField resetKey={'prop'+pr.radius} label={t('studio3d.edit.proportionalRadius')} value={pr.radius} min={0.01} max={100} step={0.05} onCommit={v=>void executeCommand('studio3d.edit.proportional',{radius:v})}/>}
+     {pr.on&&<NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={pr.falloff} aria-label={t('studio3d.skinning.falloff')} onChange={e=>void executeCommand('studio3d.edit.proportional',{falloff:e.currentTarget.value as 'smooth'|'linear'|'constant'})}>
+      {(['smooth','linear','constant'] as const).map(f=><option key={f} value={f}>{t('studio3d.skinning.falloff.'+f)}</option>)}</NativeSelect>}
+    </div>
     <div className="flex flex-wrap gap-1" role="group" aria-label={t('studio3d.edit.selTools')}>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.selectAll',{op:'all'})}>{t('studio3d.edit.selAll')}</Button>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.selectAll',{op:'none'})}>{t('studio3d.edit.selNone')}</Button>

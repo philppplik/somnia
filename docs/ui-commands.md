@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1102 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1103 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -842,6 +842,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `studio3d.edit.mode` | Edit select mode | Edit | studio3d |  |
 | `studio3d.edit.move` | Move the selected vertices by an offset | Edit | studio3d |  |
 | `studio3d.edit.poke` | Split selected triangles into three at their centroid | Edit | studio3d |  |
+| `studio3d.edit.proportional` | Toggle proportional editing: nearby vertices follow move, rotate, scale and shear with a falloff | Edit | studio3d |  |
 | `studio3d.edit.randomize` | Jitter the selected vertices by a seeded random displacement | Edit | studio3d |  |
 | `studio3d.edit.relax` | Smooth selected vertices towards their neighbours | Edit | studio3d |  |
 | `studio3d.edit.rip` | Rip the selected faces off the rest of the mesh | Edit | studio3d |  |

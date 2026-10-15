@@ -1058,5 +1058,8 @@
  "studio3d.hist.snapToCursor": "Snap selection to cursor",
  "studio3d.edit.snapToCursor": "Snap to cursor",
  "studio3d.edit.snapToCursorOffset": "Snap to cursor, keep shape",
- "cmd.studio3d.edit.selectNonManifold": "Select the vertices touched by edges with more than two faces"
+ "cmd.studio3d.edit.selectNonManifold": "Select the vertices touched by edges with more than two faces",
+ "cmd.studio3d.edit.proportional": "Toggle proportional editing: nearby vertices follow move, rotate, scale and shear with a falloff",
+ "studio3d.edit.proportional": "Proportional editing",
+ "studio3d.edit.proportionalRadius": "Influence radius"
 }

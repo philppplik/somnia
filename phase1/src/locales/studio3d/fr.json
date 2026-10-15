@@ -1058,5 +1058,8 @@
  "studio3d.hist.snapToCursor": "Aligner la sélection sur le curseur",
  "studio3d.edit.snapToCursor": "Au curseur",
  "studio3d.edit.snapToCursorOffset": "Au curseur, garder la forme",
- "cmd.studio3d.edit.selectNonManifold": "Sélectionner les sommets touchant des arêtes de plus de deux faces"
+ "cmd.studio3d.edit.selectNonManifold": "Sélectionner les sommets touchant des arêtes de plus de deux faces",
+ "cmd.studio3d.edit.proportional": "Activer l’édition proportionnelle : les sommets proches suivent déplacement, rotation, échelle et cisaillement avec un déclin",
+ "studio3d.edit.proportional": "Édition proportionnelle",
+ "studio3d.edit.proportionalRadius": "Rayon d’influence"
 }

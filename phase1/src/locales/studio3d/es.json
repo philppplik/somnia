@@ -1058,5 +1058,8 @@
  "studio3d.hist.snapToCursor": "Ajustar selección al cursor",
  "studio3d.edit.snapToCursor": "Al cursor",
  "studio3d.edit.snapToCursorOffset": "Al cursor, conservar forma",
- "cmd.studio3d.edit.selectNonManifold": "Seleccionar los vértices que tocan aristas con más de dos caras"
+ "cmd.studio3d.edit.selectNonManifold": "Seleccionar los vértices que tocan aristas con más de dos caras",
+ "cmd.studio3d.edit.proportional": "Activar la edición proporcional: los vértices cercanos siguen mover, rotar, escalar y sesgar con un decaimiento",
+ "studio3d.edit.proportional": "Edición proporcional",
+ "studio3d.edit.proportionalRadius": "Radio de influencia"
 }

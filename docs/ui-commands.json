@@ -10124,6 +10124,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.edit.proportional",
+      "title": "Toggle proportional editing: nearby vertices follow move, rotate, scale and shear with a falloff",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.edit.randomize",
       "title": "Jitter the selected vertices by a seeded random displacement",
       "category": "Edit",
