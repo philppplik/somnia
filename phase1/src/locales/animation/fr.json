@@ -1294,5 +1294,15 @@
  "animation.rig.spin.2": "Tourner de 2 tours",
  "animation.rig.spin.back": "Tourner d’1 tour en arrière",
  "animation.rig.spin.1.ease": "Tourner d’1 tour, adouci",
- "cmd.animation.layers.spin": "Faire tourner les calques cochés autour de leur ancre"
+ "cmd.animation.layers.spin": "Faire tourner les calques cochés autour de leur ancre",
+ "animation.rig.group.wipe": "Volet",
+ "cmd.animation.layers.wipe": "Faire entrer ou sortir les calques cochés avec un volet",
+ "animation.rig.wipe.in.left": "Volet entrant depuis la gauche",
+ "animation.rig.wipe.in.right": "Volet entrant depuis la droite",
+ "animation.rig.wipe.in.up": "Volet entrant depuis le haut",
+ "animation.rig.wipe.in.down": "Volet entrant depuis le bas",
+ "animation.rig.wipe.out.left": "Volet sortant depuis la gauche",
+ "animation.rig.wipe.out.right": "Volet sortant depuis la droite",
+ "animation.rig.wipe.out.up": "Volet sortant depuis le haut",
+ "animation.rig.wipe.out.down": "Volet sortant depuis le bas"
 }

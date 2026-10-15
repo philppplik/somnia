@@ -111,3 +111,4 @@ Back to [Studios](../studios.md).
 - Shift all colours (Colours section): rotate the hue or change lightness and saturation of every solid fill and stroke in the composition in one step.
 - Camera > Zoom in on selected layer: from the playhead the camera glides (24 frames) until the selected layer is centred and fills about 60 percent of the frame, then holds. Text size is estimated from its characters.
 - Spin (Motion > Around a layer): the ticked layers turn 1 or 2 whole turns (or 1 backwards, or eased) around their anchor over the work area.
+- **Wipe** (Rig > Appearance > Wipe): opens (in) or closes (out) a rect mask across the ticked layers from the left, right, top or bottom. Layers that already have masks are skipped.

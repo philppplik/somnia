@@ -1767,3 +1767,24 @@ test('P271 spin: whole turns over the work area, unkeyed layers get two keys, ke
  for(const [t,v] of [[0,0],[f(60),90]]){s.dispatch({type:'key.add',layer:'b',prop:'rotation',t} as never);s.dispatch({type:'prop.set',layer:'b',prop:'rotation',t,value:v} as never);s.dispatch({type:'key.interp',layer:'b',prop:'rotation',t,interp:'linear'} as never);}
  run({turns:1,layers:['b']});const kk=R('b').keys;assert.ok(kk.length>2);assert.equal(kk[kk.length-1].t,wa.out);assert.ok((kk[kk.length-1].v as number)>=360);
 });
+
+test('P272 wipe in opens a mask over the layer start, one undo step',async()=>{
+ const {wipeSpecs}=await import('./wipeCommands');const runCommand=(_:string,p:unknown)=>(wipeSpecs()[0].run as (p?:unknown)=>unknown)(p);
+ const s=open();setAnimationSession(s);const c0=findComp(s.document!),l0=c0.layers.find(x=>x.id==='a')!;
+ s.setView({selectedLayer:'a'} as never);
+ const r=runCommand('animation.layers.wipe',{mode:'in',dir:'left',frames:10,layers:['a']}) as {layers:number};
+ assert.equal(r.layers,1);
+ const l=findComp(s.document!).layers.find(x=>x.id==='a')!,m=l.masks![0];
+ assert.equal(m.anim!.size!.keys.length,2);assert.equal(m.anim!.size!.keys[0].t,l0.inT);assert.equal(m.anim!.size!.keys[1].t,l0.inT+f(10));
+ assert.deepEqual(m.anim!.size!.keys[0].v,[1,m.height]);assert.deepEqual(m.anim!.position!.keys[0].v,[-1,0]);
+ assert.throws(()=>runCommand('animation.layers.wipe',{layers:['a']}),/already have masks/);
+ s.undo();assert.equal(findComp(s.document!).layers.find(x=>x.id==='a')!.masks,undefined);
+});
+test('P272 wipe out reverses keys, down starts from the top edge below',async()=>{
+ const {wipeSpecs}=await import('./wipeCommands');const runCommand=(_:string,p:unknown)=>(wipeSpecs()[0].run as (p?:unknown)=>unknown)(p);
+ const s=open();setAnimationSession(s);const l0=findComp(s.document!).layers.find(x=>x.id==='a')!;
+ runCommand('animation.layers.wipe',{mode:'out',dir:'down',frames:6,layers:['a'],ease:false});
+ const m=findComp(s.document!).layers.find(x=>x.id==='a')!.masks![0];
+ assert.equal(m.anim!.size!.keys[0].t,l0.outT-f(6));assert.deepEqual(m.anim!.position!.keys[0].v,[0,0]);
+ assert.deepEqual(m.anim!.position!.keys[1].v,[0,m.height]);assert.equal(m.anim!.size!.keys[0].interp,'linear');
+});

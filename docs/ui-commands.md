@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1001 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1002 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -192,6 +192,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `animation.layers.trail` | Add a fading trail of delayed copies behind the layer | Edit | animation |  |
 | `animation.layers.trimToWorkArea` | Trim the selected layers to the work area | Edit | animation |  |
 | `animation.layers.wave` | Run a wave through the ticked layers | Edit | animation |  |
+| `animation.layers.wipe` | Wipe the ticked layers in or out with a mask | Edit | animation |  |
 | `animation.marker.add` | Add timing marker | Edit | animation |  |
 | `animation.marker.clear` | Clear timing markers | Edit | animation |  |
 | `animation.marker.fromLayers` | Add markers at the in points of the selected layers | Edit | animation |  |

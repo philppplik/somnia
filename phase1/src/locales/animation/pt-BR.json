@@ -1294,5 +1294,15 @@
  "animation.rig.spin.2": "Girar 2 voltas",
  "animation.rig.spin.back": "Girar 1 volta ao contrário",
  "animation.rig.spin.1.ease": "Girar 1 volta, suave",
- "cmd.animation.layers.spin": "Girar as camadas marcadas em torno da âncora"
+ "cmd.animation.layers.spin": "Girar as camadas marcadas em torno da âncora",
+ "animation.rig.group.wipe": "Cortina",
+ "cmd.animation.layers.wipe": "Entrar ou sair das camadas marcadas com uma cortina",
+ "animation.rig.wipe.in.left": "Entrada em cortina da esquerda",
+ "animation.rig.wipe.in.right": "Entrada em cortina da direita",
+ "animation.rig.wipe.in.up": "Entrada em cortina de cima",
+ "animation.rig.wipe.in.down": "Entrada em cortina de baixo",
+ "animation.rig.wipe.out.left": "Saída em cortina da esquerda",
+ "animation.rig.wipe.out.right": "Saída em cortina da direita",
+ "animation.rig.wipe.out.up": "Saída em cortina de cima",
+ "animation.rig.wipe.out.down": "Saída em cortina de baixo"
 }

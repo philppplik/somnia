@@ -1294,5 +1294,15 @@
  "animation.rig.spin.2": "Spin 2 turns",
  "animation.rig.spin.back": "Spin 1 turn backwards",
  "animation.rig.spin.1.ease": "Spin 1 turn, eased",
- "cmd.animation.layers.spin": "Spin the ticked layers around their anchor"
+ "cmd.animation.layers.spin": "Spin the ticked layers around their anchor",
+ "animation.rig.group.wipe": "Wipe",
+ "cmd.animation.layers.wipe": "Wipe the ticked layers in or out with a mask",
+ "animation.rig.wipe.in.left": "Wipe in from the left",
+ "animation.rig.wipe.in.right": "Wipe in from the right",
+ "animation.rig.wipe.in.up": "Wipe in from the top",
+ "animation.rig.wipe.in.down": "Wipe in from the bottom",
+ "animation.rig.wipe.out.left": "Wipe out from the left",
+ "animation.rig.wipe.out.right": "Wipe out from the right",
+ "animation.rig.wipe.out.up": "Wipe out from the top",
+ "animation.rig.wipe.out.down": "Wipe out from the bottom"
 }

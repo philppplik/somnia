@@ -1294,5 +1294,15 @@
  "animation.rig.spin.2": "2 Umdrehungen",
  "animation.rig.spin.back": "1 Umdrehung rückwärts",
  "animation.rig.spin.1.ease": "1 Umdrehung, weich",
- "cmd.animation.layers.spin": "Angekreuzte Ebenen um ihren Ankerpunkt drehen"
+ "cmd.animation.layers.spin": "Angekreuzte Ebenen um ihren Ankerpunkt drehen",
+ "animation.rig.group.wipe": "Wischen",
+ "cmd.animation.layers.wipe": "Markierte Ebenen mit einer Maske ein- oder auswischen",
+ "animation.rig.wipe.in.left": "Einwischen von links",
+ "animation.rig.wipe.in.right": "Einwischen von rechts",
+ "animation.rig.wipe.in.up": "Einwischen von oben",
+ "animation.rig.wipe.in.down": "Einwischen von unten",
+ "animation.rig.wipe.out.left": "Auswischen von links",
+ "animation.rig.wipe.out.right": "Auswischen von rechts",
+ "animation.rig.wipe.out.up": "Auswischen von oben",
+ "animation.rig.wipe.out.down": "Auswischen von unten"
 }

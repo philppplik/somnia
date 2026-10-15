@@ -1294,5 +1294,15 @@
  "animation.rig.spin.2": "Girar 2 vueltas",
  "animation.rig.spin.back": "Girar 1 vuelta hacia atrás",
  "animation.rig.spin.1.ease": "Girar 1 vuelta, suave",
- "cmd.animation.layers.spin": "Girar las capas marcadas alrededor de su ancla"
+ "cmd.animation.layers.spin": "Girar las capas marcadas alrededor de su ancla",
+ "animation.rig.group.wipe": "Cortinilla",
+ "cmd.animation.layers.wipe": "Entrar o salir de las capas marcadas con una cortinilla",
+ "animation.rig.wipe.in.left": "Entrar con cortinilla desde la izquierda",
+ "animation.rig.wipe.in.right": "Entrar con cortinilla desde la derecha",
+ "animation.rig.wipe.in.up": "Entrar con cortinilla desde arriba",
+ "animation.rig.wipe.in.down": "Entrar con cortinilla desde abajo",
+ "animation.rig.wipe.out.left": "Salir con cortinilla desde la izquierda",
+ "animation.rig.wipe.out.right": "Salir con cortinilla desde la derecha",
+ "animation.rig.wipe.out.up": "Salir con cortinilla desde arriba",
+ "animation.rig.wipe.out.down": "Salir con cortinilla desde abajo"
 }
