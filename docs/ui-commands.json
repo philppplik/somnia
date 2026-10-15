@@ -3958,6 +3958,17 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.case.set",
+      "title": "Change the case of the selected text",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.charLook.open",
       "title": "Underline and shading",
       "category": "View",

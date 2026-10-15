@@ -12,6 +12,7 @@ import {goToBlock,scrollToPage} from './navigate';
 import {safeCopyName,safeFormatName,safePdfName} from './saveCopy';
 import {EXPORT_EXTS,PROOF_LANGS,type ExportExt} from './protocol';
 import {pickAndImport} from './importFormat';
+import {CASE_MODES,type CaseMode} from './textCase';
 import {commentsOpen,setCommentsOpen} from './comments';
 import {setShortcutsOpen} from './shortcuts';
 import {setParagraphOptionsOpen} from './paragraphOptions';
@@ -22,7 +23,7 @@ import {insertPageBreak,setParagraphOptions,setProperties,setTabStops} from './s
 import {parsePdfPages,checkParaPatch,PARA_FLAG_KEYS,propertiesProblem,tabsProblem} from './protocol';
 import {addComment,commentSelection,deleteComment,goToComment,readComments,replyComment,resolveComment} from './session';
 import {commentProblem,HIGHLIGHTS,linkProblem,type HighlightName} from './protocol';
-import {setCharLook,setCharSpacing,setCharScale,setLineRule,setImageWrap,setImageCrop,setProofing,setShowHidden,addToDictionary,copyFormatting,pasteFormatting,clearFormatting,hasTextSelection,setHighlight,setLink,toggleVertAlign} from './session';
+import {setCharLook,setCharSpacing,setCharScale,setLineRule,setImageWrap,setImageCrop,setProofing,setShowHidden,changeCase,addToDictionary,copyFormatting,pasteFormatting,clearFormatting,hasTextSelection,setHighlight,setLink,toggleVertAlign} from './session';
 import {documentsExportReady,patchDocumentsExportUi,requestDocumentsExportFormat,requestDocumentsExportPdf,requestDocumentsSaveCopy} from './exportBridge';
 /**
  * Documents studio commands. Registered while the Documents canvas is mounted (registerDocumentsCommands),
@@ -112,6 +113,11 @@ export function registerDocumentsCommands(){
    const l=(p as Record<string,unknown>|undefined)?.lang;
    if(l!=='none'&&!(PROOF_LANGS as readonly unknown[]).includes(l))throw expected('Invalid "lang": use none, en-US, en-GB, de-DE, es-ES, fr-FR or pt-BR.');
    await setCharLook({lang:l as 'none'});
+  },()=>ready()&&!!getDocumentsState().caret),
+  add('documents.case.set','Change the case of the selected text',async p=>{
+   const m=(p as Record<string,unknown>|undefined)?.mode;
+   if(typeof m!=='string'||!(CASE_MODES as readonly string[]).includes(m))throw expected('Invalid "mode": use upper, lower, title, sentence or toggle.');
+   await changeCase(m as CaseMode);
   },()=>ready()&&!!getDocumentsState().caret),
   add('documents.hidden.show','Show or hide hidden text',async()=>{await setShowHidden(!getDocumentsState().showHidden);},()=>ready()),
   add('documents.toggleDoubleStrike','Toggle double strikethrough',async()=>{await toggleFormat('doubleStrike');},()=>ready()&&!!getDocumentsState().caret),

@@ -1,6 +1,7 @@
 import {useState} from 'react';
-import {copyFormatting,pasteFormatting,setCharSpacing,insertPageBreak,clearFormatting,hasTextSelection,setHighlight,setLink,toggleFormat,toggleVertAlign} from '../../lib/documents/session';
+import {copyFormatting,pasteFormatting,setCharSpacing,insertPageBreak,clearFormatting,changeCase,hasTextSelection,setHighlight,setLink,toggleFormat,toggleVertAlign} from '../../lib/documents/session';
 import {HIGHLIGHTS,MAX_LINK_CHARS,linkProblem,type FormatPatch,type FormatState,type HighlightName} from '../../lib/documents/protocol';
+import {CASE_MODES,type CaseMode} from '../../lib/documents/textCase';
 import {setShortcutsOpen} from '../../lib/documents/shortcuts';
 import {setInfoDialog} from '../../lib/documents/infoDialog';
 import {setParagraphOptionsOpen} from '../../lib/documents/paragraphOptions';
@@ -42,6 +43,8 @@ export function TextEffects({format,held,enabled}:{format:FormatState|null;held:
    {SPACINGS.map(n=><option key={n} value={String(n)}>{n===0?t('documents.format.spacing.normal'):(n>0?'+':'')+n+' pt'}</option>)}</NativeSelect>
   <NativeButton className={tool+' w-6 border border-subtle'} aria-label={t('documents.format.superscript')} title={t('documents.format.superscript')+' (Ctrl+Shift+=)'} aria-pressed={vert==='superscript'} disabled={!enabled} onClick={()=>void toggleVertAlign('superscript')} data-testid="documents-format-superscript"><span>{'x\u00b2'}</span></NativeButton>
   <NativeButton className={tool+' w-6 border border-subtle'} aria-label={t('documents.format.subscript')} title={t('documents.format.subscript')+' (Ctrl+=)'} aria-pressed={vert==='subscript'} disabled={!enabled} onClick={()=>void toggleVertAlign('subscript')} data-testid="documents-format-subscript"><span>{'x\u2082'}</span></NativeButton>
+  <NativeSelect className={sel+' w-24'} aria-label={t('documents.format.case')} title={t('documents.format.case')} disabled={!enabled} value="" onChange={e=>{const m=e.currentTarget.value;if((CASE_MODES as readonly string[]).includes(m))void changeCase(m as CaseMode);}} data-testid="documents-format-case">
+   <option value="" disabled>{t('documents.format.case')}</option>{CASE_MODES.map(m=><option key={m} value={m}>{t('documents.format.case.'+m)}</option>)}</NativeSelect>
   <NativeSelect className={sel+' w-28'} aria-label={t('documents.format.highlight')} title={t('documents.format.highlight')} disabled={!enabled} value={hl??''} onChange={e=>void setHighlight(e.currentTarget.value as HighlightName)} data-testid="documents-format-highlight">
    {hl===null&&<option value="" disabled>{t('documents.format.highlight')}</option>}{hl==='other'&&<option value="other" disabled>{t('documents.format.other')}</option>}
    {HIGHLIGHTS.map(h=><option key={h} value={h}>{t(h==='none'?'documents.format.hl.none':'documents.format.hl.'+h)}</option>)}</NativeSelect>

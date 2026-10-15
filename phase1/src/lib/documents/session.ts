@@ -889,6 +889,29 @@ export const replaceCurrent=(text:string)=>run(async()=>{
  if(x){patchDocuments({caret:{block:x.block,anchor:x.start,head:x.end}});await syncGeometry();}
  await updateFind();
 });
+/**
+ * Changes the case of the selected text (or the word at a collapsed caret), keeping each character's formatting. One undo step.
+ * Only the characters that actually change are replaced.
+ */
+export const changeCase=(mode:import('./textCase').CaseMode)=>run(async()=>{
+ if(!CASE_MODES.includes(mode))throw new Error('Unknown case.');
+ const c=getDocumentsState().caret;if(!c)return;const n=norm(c);
+ const ts=spanTexts(n.s.block,n.e.block);if(!ts)throw new Error(n.e.block-n.s.block+1>MAX_SPAN_BLOCKS?`Selection is too large for one edit (limit ${MAX_SPAN_BLOCKS} paragraphs).`:'This selection includes a part that cannot be edited as text.');
+ const edits:{block:number;hunks:import('./edit').Hunk[]}[]=[];
+ const collapsed=n.s.block===n.e.block&&n.s.off===n.e.off;
+ for(let k=0;k<ts.length;k++){
+  const t=ts[k];const block=n.s.block+k;
+  let a=k===0?utf8ToUtf16Offset(t,n.s.off):0,b=k===ts.length-1?utf8ToUtf16Offset(t,n.e.off):t.length;
+  if(collapsed){const w=wordAround(t,a);if(!w)throw new Error('Select text to change its case.');a=w.start;b=w.end;}
+  const before=t.slice(a,b);if(!before)continue;
+  const startsSentence=a===0||/[.!?\u2026]\s*$/.test(t.slice(0,a));
+  const after=applyCase(before,mode,startsSentence);
+  const d=diffEdit(block,before,after);if(!d)continue;
+  const base=u8(t.slice(0,a));edits.push({block,hunks:d.hunks.map(h=>({start:h.start+base,end:h.end+base,text:h.text}))});
+ }
+ if(edits.length===0)return;
+ await structural(async eng=>{let d:import('./protocol').OpenedDocument|null=null;for(const x of edits)d=await eng.replace(x);return d!;},{block:c.block,off:c.head},{block:c.block,off:c.head});
+});
 /** Replaces every match (up to 5000) in one undo step and reports how many. */
 export const replaceAll=(text:string):Promise<number>=>{
  let count=0;
