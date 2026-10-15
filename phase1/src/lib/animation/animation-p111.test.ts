@@ -1387,3 +1387,19 @@ test('P244 timeline layer filter: words match name, kind and label; empty matche
  assert.ok(!layerMatches(l,'blue')&&!layerMatches(l,'title blue')&&!layerMatches({...l,label:undefined},'red'));
  assert.ok(layerMatches(l,'x'.repeat(MAX_FILTER_LENGTH+50))===false);
 });
+
+test('P245 spring modifier: rings out after the last key, continuous, decays, validated, bakeable, one undo step',async()=>{
+ const {evaluateMod}=await import('./modifiers');const {validateModifiers}=await import('./modifierModel');
+ const s=open();setAnimationSession(s);const c=findComp(s.document!)!;const l=c.layers.find(x=>x.id==='a')!;
+ s.dispatch([{type:'key.add',layer:'a',prop:'opacity',t:f(0)},{type:'key.add',layer:'a',prop:'opacity',t:f(10)},{type:'prop.set',layer:'a',prop:'opacity',t:f(0),value:0},{type:'prop.set',layer:'a',prop:'opacity',t:f(10),value:100}]);
+ const m={type:'spring' as const,amplitude:50,frequency:2,damping:4};
+ assert.deepEqual(validateModifiers([m]),[]);assert.ok(validateModifiers([{...m,frequency:0}]).length&&validateModifiers([{...m,damping:99}]).length&&validateModifiers([{...m,amplitude:301}]).length);
+ s.dispatch([{type:'modifier.add',layer:'a',prop:'opacity',modifier:m}]);
+ const p=findComp(s.document!)!.layers.find(x=>x.id==='a')!.transform.opacity;
+ assert.equal(evaluateMod(p,f(10)),100);assert.equal(evaluateMod(p,f(5)),evaluateMod({...p,modifiers:undefined},f(5)));
+ const tq=f(10)+24000;assert.ok((evaluateMod(p,tq) as number)>100,'overshoots first');
+ const late=evaluateMod(p,f(10)+2400000) as number;assert.ok(Math.abs(late-100)<0.05,`settles: ${late}`);
+ let peak=0;for(let i=1;i<200;i++)peak=Math.max(peak,Math.abs((evaluateMod(p,f(10)+i*1200) as number)-100));assert.ok(peak<=50.001&&peak>10,`peak ${peak}`);
+ const one=s.document!;s.dispatch([{type:'modifier.remove',layer:'a',prop:'opacity',index:0}]);s.undo();assert.deepEqual(s.document,one);
+ assert.ok(l);
+});

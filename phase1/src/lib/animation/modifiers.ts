@@ -29,6 +29,10 @@ export function evaluateMod(p:Property,t:number,links?:LinkResolver):PropValue{
  if(lk&&links){const src=links(lk.layer,lk.prop,t-(lk.delay??0));
   if(typeof src==='number'&&typeof v==='number')v=src*lk.multiplier+lk.offset;
   else if(Array.isArray(src)&&Array.isArray(v))v=[src[0]*lk.multiplier+lk.offset,src[1]*lk.multiplier+lk.offset];}
+ const sp=(p.modifiers??[]).find((x):x is Extract<Modifier,{type:'spring'}>=>x.type==='spring');
+ if(sp&&p.keys.length>=2&&!(p.modifiers??[]).some(x=>x.type==='loop')){
+  const k=p.keys,last=k[k.length-1];
+  if(t>last.t){const tau=(t-last.t)/TICKS_PER_SECOND,f=sp.amplitude/100*Math.exp(-sp.damping*tau)*Math.sin(2*Math.PI*sp.frequency*tau),d=sub(last.v,k[k.length-2].v);v=add(v,scale(d,f));}}
  const w=(p.modifiers??[]).filter((x):x is Extract<Modifier,{type:'wiggle'}>=>x.type==='wiggle');
  if(!w.length)return v;
  const tn=(m:{hold?:number})=>(m.hold?Math.floor(t/m.hold)*m.hold:t)/TICKS_PER_SECOND;

@@ -1202,5 +1202,9 @@
  "animation.rig.label.violet": "Violet",
  "animation.rig.label.none": "Sans etiquette",
  "cmd.animation.layers.label": "Mettre une etiquette de couleur aux calques choisis",
- "animation.timeline.filter": "Filtrer les calques"
+ "animation.timeline.filter": "Filtrer les calques",
+ "animation.modifiers.spring": "Rebond",
+ "animation.modifiers.addSpring": "Ajouter un rebond",
+ "animation.modifiers.springAmount": "Depassement %",
+ "animation.modifiers.damping": "Amortissement"
 }

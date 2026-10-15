@@ -1202,5 +1202,9 @@
  "animation.rig.label.violet": "Violett",
  "animation.rig.label.none": "Keine Farbe",
  "cmd.animation.layers.label": "Farbmarkierung fuer die gewaehlten Ebenen setzen",
- "animation.timeline.filter": "Ebenen filtern"
+ "animation.timeline.filter": "Ebenen filtern",
+ "animation.modifiers.spring": "Nachschwingen",
+ "animation.modifiers.addSpring": "Nachschwingen +",
+ "animation.modifiers.springAmount": "Ueberschwingen %",
+ "animation.modifiers.damping": "Daempfung"
 }

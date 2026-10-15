@@ -85,3 +85,4 @@ Back to [Studios](../studios.md).
 - Add layer > Camera... > Handheld shake: seeded position shake over the work area (default 8 px, rests at both ends). Reset camera clears the camera's position, scale and rotation keys.
 - Rig and timing > Rig actions > Appearance > Label: tag the ticked layers with a colour (red, amber, green, blue, violet) or clear it. The colour shows on the layer bar in the timeline only; it is never rendered or exported.
 - Timeline toolbar > Filter layers: type words to show only layers whose name, kind or colour label contains them (for example "red" or "text"). The selected layer always stays visible. View only.
+- Modifiers > Add spring: after the last key the property overshoots the final move by Overshoot % and rings out (Frequency in swings per second, Damping as decay per second). Needs two keys. Bake modifiers turns it into keys.

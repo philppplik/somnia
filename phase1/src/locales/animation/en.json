@@ -1202,5 +1202,9 @@
  "animation.rig.label.violet": "Violet",
  "animation.rig.label.none": "No label",
  "cmd.animation.layers.label": "Set a colour label on the selected layers",
- "animation.timeline.filter": "Filter layers"
+ "animation.timeline.filter": "Filter layers",
+ "animation.modifiers.spring": "Spring",
+ "animation.modifiers.addSpring": "Add spring",
+ "animation.modifiers.springAmount": "Overshoot %",
+ "animation.modifiers.damping": "Damping"
 }
