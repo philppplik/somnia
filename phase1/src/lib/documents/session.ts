@@ -2,7 +2,7 @@ import {scrollToPage} from './scrollPage';
 import {commentAuthor} from './author';
 import {setStyleList} from './styles';
 import {stylePatchProblem,STYLE_ID_RE,tocProblem,isListKind,listOptionsProblem,type ListStyleId} from './protocol';
-import {hfVariantsProblem,HF_ALIGNS,propertiesProblem,linkProblem,commentProblem,type CommentItem,validHfText,type HeaderFooterState,checkFormatPatch,checkParaPatch,MAX_HF_CHARS,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch,type ImageOp,type PageSetupPatch,type PageSetupState,pageSetupProblem,type TableStyle,type TableStyleScope,tableStyleProblem,MIN_COL_PT,MAX_COL_PT,imageProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGES} from './protocol';
+import {SECTION_BREAKS,hfVariantsProblem,HF_ALIGNS,propertiesProblem,linkProblem,commentProblem,type CommentItem,validHfText,type HeaderFooterState,checkFormatPatch,checkParaPatch,MAX_HF_CHARS,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch,type ImageOp,type PageSetupPatch,type PageSetupState,pageSetupProblem,type TableStyle,type TableStyleScope,tableStyleProblem,MIN_COL_PT,MAX_COL_PT,imageProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGES} from './protocol';
 import {captureDocumentSelection} from './selectionCapture';
 import {CELL_BASE,caretAfterEdit,applyEdit,diffEdit,inverseOf,UndoStack,type TextEdit,type UndoEntry} from './edit';
 import {findMatches,nextMatchIndex,textStats,validFindQuery,validReplaceText,MAX_FIND_HIGHLIGHTS,MAX_REPLACE_BLOCKS,type FindMatch} from './find';
@@ -711,6 +711,19 @@ export const setHeaderFooter=(patch:{header?:string;footer?:string;pageNumber?:b
  await structural(eng=>eng.setHeaderFooter(patch),spot,spot);
 });
 
+/** Starts a new section after the caret's paragraph (or the table holding the caret). One undo step; the caret stays. */
+export const insertSectionBreak=(kind:import('./protocol').SectionBreakKind)=>run(async()=>{
+ if(!(SECTION_BREAKS as readonly unknown[]).includes(kind))throw new Error('The section break type is not valid.');
+ const c=getDocumentsState().caret;if(!c)throw new Error('Place the caret in the document first.');
+ const spot={block:c.block,off:c.head};
+ await structural(eng=>eng.insertSectionBreak(c.block,kind),spot,spot);
+});
+/** The section break that ends at the caret's paragraph, if it has one. One undo step. */
+export const removeSectionBreak=()=>run(async()=>{
+ const c=getDocumentsState().caret;if(!c)throw new Error('Place the caret in the document first.');
+ const b=getDocumentsState().blocks.find(x=>x.index===c.block);if(!b?.sectionBreak)throw new Error('The caret is not in a section break.');
+ await structural(eng=>eng.removeSectionBreak(c.block),{block:c.block,off:0},async e=>{const bl=await e.blocks();return{block:Math.max(0,Math.min(c.block,bl.length-1)),off:0};});
+});
 export async function readHfVariants():Promise<import('./protocol').HfVariantsState|null>{
  const e=engine;if(!e||getDocumentsState().status!=='ready')return null;const check=ownerGuard();const st=await e.hfVariantsState();check();return st;
 }

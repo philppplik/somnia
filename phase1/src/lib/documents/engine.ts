@@ -85,6 +85,8 @@ export class DocumentsEngine{
  async setPageSetup(setup:import('./protocol').PageSetupPatch):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'setPageSetup',setup}))).document;}
  async headerFooterState():Promise<import('./protocol').HeaderFooterState>{return(await this.call('headerFooter',id=>({id,kind:'headerFooterState'}))).state;}
  async setHeaderFooter(p:{header?:string;footer?:string;pageNumber?:boolean;headerAlign?:import('./protocol').HfAlign;footerAlign?:import('./protocol').HfAlign;pageTotal?:boolean}):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'setHeaderFooter',...p}))).document;}
+ async insertSectionBreak(block:number,sectionKind:string):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'insertSectionBreak',block,sectionKind}))).document;}
+ async removeSectionBreak(block:number):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'removeSectionBreak',block}))).document;}
  async hfVariantsState():Promise<import('./protocol').HfVariantsState>{return(await this.call('hfVariants',id=>({id,kind:'hfVariantsState'}))).state;}
  async setHfVariants(patch:import('./protocol').HfVariantsPatch):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'setHfVariants',patch}))).document;}
  async insertTable(block:number,rows:number,cols:number):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'insertTable',block,rows,cols}))).document;}

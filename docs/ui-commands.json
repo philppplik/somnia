@@ -4450,6 +4450,28 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.sectionBreak.insert",
+      "title": "Insert section break",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.sectionBreak.remove",
+      "title": "Remove section break",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.selectMatch",
       "title": "Select search result",
       "category": "View",

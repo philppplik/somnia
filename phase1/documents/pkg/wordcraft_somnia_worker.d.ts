@@ -58,6 +58,10 @@ export class DocSession {
     header_footer_variants(): string;
     /** Applies {titlePage?, evenOdd?, first?:{header?,footer?,pageNumber?}, even?:{..}} atomically. */
     set_header_footer_variants(patch_json: string): void;
+    /** Starts a new section after `block`: nextPage, continuous, evenPage or oddPage. */
+    insert_section_break(block: number, kind: string): void;
+    /** Removes the section break that ends at paragraph `block`. */
+    remove_section_break(block: number): void;
     set_footer_page_total(total: boolean): void;
     set_header_footer_align(header?: string | null, footer?: string | null): void;
     set_header_footer(header?: string | null, footer?: string | null, page_number?: boolean | null): void;

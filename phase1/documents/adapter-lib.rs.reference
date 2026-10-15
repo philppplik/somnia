@@ -120,7 +120,116 @@ impl DocSession {
     }
     /// Top-level body blocks. A paragraph is `editable` only when it has no inline objects
     /// (images, fields, equations, comment anchors), because their offsets are not text.
+    /// How the section that follows each paragraph that ends a section starts (`nextPage`, `continuous`, ...), by body index.
+    fn section_break_kinds(&self) -> std::collections::HashMap<usize, &'static str> {
+        use wordcraft_doc::section::SectionStart as S;
+        let name = |s: S| match s {
+            S::NextPage => "nextPage",
+            S::Continuous => "continuous",
+            S::EvenPage => "evenPage",
+            S::OddPage => "oddPage",
+            S::NextColumn => "nextColumn",
+        };
+        let mut out = std::collections::HashMap::new();
+        let mut next = self.doc.last_section.start;
+        for (i, b) in self.doc.body.iter().enumerate().rev() {
+            if let Block::Para(p) = &**b {
+                if let Some(sec) = &p.section {
+                    out.insert(i, name(next));
+                    next = sec.start;
+                }
+            }
+        }
+        out
+    }
+    /// Starts a new section after top-level block `block` (or after the table holding a cell paragraph): an empty paragraph that ends
+    /// the section so far is inserted, and the text that follows starts as `kind` (`nextPage`, `continuous`, `evenPage`, `oddPage`).
+    /// The new section keeps the page setup, headers and footers of the one it splits. At most 100 sections.
+    fn do_insert_section_break(&mut self, block: usize, kind: &str) -> Result<(), String> {
+        use wordcraft_doc::section::SectionStart as S;
+        let start = match kind {
+            "nextPage" => S::NextPage,
+            "continuous" => S::Continuous,
+            "evenPage" => S::EvenPage,
+            "oddPage" => S::OddPage,
+            _ => return Err("a section break starts on the next page, continuously, or on an even or odd page".into()),
+        };
+        let top = if block >= CELL_BASE { self.cell_paras().nth(block - CELL_BASE).ok_or_else(|| format!("no cell paragraph {block}"))?[0] } else { block };
+        if top >= self.doc.body.len() {
+            return Err(format!("no block {block}"));
+        }
+        if matches!(&*self.doc.body[top], Block::Para(p) if p.section.is_some()) {
+            return Err("this paragraph already ends a section".into());
+        }
+        let count = self.doc.body.iter().filter(|b| matches!(&***b, Block::Para(p) if p.section.is_some())).count() + 1;
+        if count >= 100 {
+            return Err("a document holds at most 100 sections".into());
+        }
+        if self.doc.body.len() >= 100_000 {
+            return Err("the document has too many blocks".into());
+        }
+        // The section that contains `top` ends at the next paragraph with section properties, or is the last section.
+        let end = (top + 1..self.doc.body.len()).find(|i| matches!(&*self.doc.body[*i], Block::Para(p) if p.section.is_some()));
+        let mut first = match end {
+            Some(i) => match &*self.doc.body[i] {
+                Block::Para(p) => p.section.clone().ok_or("section lost")?,
+                _ => return Err("section lost".into()),
+            },
+            None => self.doc.last_section.clone(),
+        };
+        // The part before the break keeps the section's own start and numbering restart; the part after starts as `kind`.
+        let mut marker = wordcraft_doc::Paragraph::new();
+        let later = |sec: &mut wordcraft_doc::SectionProps| {
+            sec.start = start;
+            sec.page_num_start = None;
+        };
+        match end {
+            Some(i) => {
+                if let Block::Para(p) = Arc::make_mut(&mut self.doc.body[i]) {
+                    if let Some(sec) = p.section.as_mut() {
+                        later(sec);
+                    }
+                }
+            }
+            None => later(&mut self.doc.last_section),
+        }
+        marker.section = Some(first);
+        self.doc.body.insert(top + 1, Arc::new(Block::Para(marker)));
+        self.pages = DocLayout::default();
+        Ok(())
+    }
+    /// Removes the section break that ends at paragraph `block` (top level). The sections on both sides merge and take the properties of the
+    /// later one; the following text starts the way the removed break's section started. An empty break paragraph is deleted.
+    fn do_remove_section_break(&mut self, block: usize) -> Result<(), String> {
+        if block >= CELL_BASE || block >= self.doc.body.len() {
+            return Err(format!("no block {block}"));
+        }
+        let removed = match &*self.doc.body[block] {
+            Block::Para(p) => p.section.clone().ok_or("this paragraph does not end a section")?,
+            _ => return Err("this block is not a paragraph".into()),
+        };
+        let end = (block + 1..self.doc.body.len()).find(|i| matches!(&*self.doc.body[*i], Block::Para(p) if p.section.is_some()));
+        match end {
+            Some(i) => {
+                if let Block::Para(p) = Arc::make_mut(&mut self.doc.body[i]) {
+                    if let Some(sec) = p.section.as_mut() {
+                        sec.start = removed.start;
+                    }
+                }
+            }
+            None => self.doc.last_section.start = removed.start,
+        }
+        let empty = matches!(&*self.doc.body[block], Block::Para(p) if p.text.is_empty() && p.objects.is_empty());
+        if empty && self.doc.body.len() > 1 {
+            self.doc.body.remove(block);
+        } else if let Block::Para(p) = Arc::make_mut(&mut self.doc.body[block]) {
+            p.section = None;
+        }
+        self.pages = DocLayout::default();
+        Ok(())
+    }
     fn block_list(&self) -> String {
+        let breaks = self.section_break_kinds();
         let items: Vec<_> = self
             .doc
             .body
@@ -133,6 +242,9 @@ impl DocSession {
                     // Heading level 0..8 (style or direct outline level); body text (9) is not an outline entry.
                     let outline = rp.outline_level.filter(|l| *l < 9);
                     let mut v = serde_json::json!({"index": i, "kind": "para", "text": if editable { p.text.clone() } else { p.plain_text() }, "editable": editable, "outline": outline});
+                    if let Some(k) = breaks.get(&i) {
+                        v["sectionBreak"] = serde_json::json!(k);
+                    }
                     if let Some((_, w, h, alt)) = image_only(p) {
                         v["image"] = serde_json::json!({"w": w, "h": h, "alt": alt});
                     }
@@ -3225,6 +3337,14 @@ impl DocSession {
     pub fn set_header_footer_variants(&mut self, patch_json: &str) -> Result<(), JsValue> {
         self.do_set_hf_variants(patch_json).map_err(|e| js_err(&e))
     }
+    /// Starts a new section after `block`: `nextPage`, `continuous`, `evenPage` or `oddPage`.
+    pub fn insert_section_break(&mut self, block: usize, kind: &str) -> Result<(), JsValue> {
+        self.do_insert_section_break(block, kind).map_err(|e| js_err(&e))
+    }
+    /// Removes the section break that ends at paragraph `block`.
+    pub fn remove_section_break(&mut self, block: usize) -> Result<(), JsValue> {
+        self.do_remove_section_break(block).map_err(|e| js_err(&e))
+    }
     pub fn set_header_footer(&mut self, header: Option<String>, footer: Option<String>, page_number: Option<bool>) -> Result<(), JsValue> {
         self.do_set_header_footer(header.as_deref(), footer.as_deref(), page_number).map_err(|e| js_err(&e))
     }
@@ -3692,6 +3812,40 @@ mod tests {
         s.do_table_edit(CELL_BASE, "split_down").unwrap();
         assert_eq!(s.cell_paras().count(), n);
         assert!(s.do_table_edit(CELL_BASE, "split_down").is_err());
+    }
+    #[test]
+    fn section_breaks_insert_report_roundtrip_and_remove() {
+        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
+        let kinds = |s: &DocSession| -> Vec<(u64, String)> {
+            let v: serde_json::Value = serde_json::from_str(&s.block_list()).unwrap();
+            v.as_array().unwrap().iter().filter_map(|b| b["sectionBreak"].as_str().map(|k| (b["index"].as_u64().unwrap(), k.to_string()))).collect()
+        };
+        let base = kinds(&s);
+        let n = s.doc.body.len();
+        let before = wordcraft_docx::write(&s.doc).unwrap();
+        assert!(s.do_insert_section_break(0, "weird").is_err());
+        assert!(s.do_insert_section_break(0, "").is_err());
+        assert!(s.do_insert_section_break(n + 5, "nextPage").is_err());
+        assert!(s.do_remove_section_break(0).is_err(), "not a break");
+        assert!(s.do_remove_section_break(n + 5).is_err());
+        assert_eq!(wordcraft_docx::write(&s.doc).unwrap(), before, "refusals change nothing");
+        s.do_insert_section_break(0, "continuous").unwrap();
+        assert_eq!(s.doc.body.len(), n + 1);
+        let k = kinds(&s);
+        assert_eq!(k.len(), base.len() + 1);
+        assert!(k.contains(&(1, "continuous".to_string())), "{k:?}");
+        assert!(s.do_insert_section_break(1, "nextPage").is_err(), "already a break");
+        assert!(s.do_split(1, 0).is_err(), "a break paragraph is not split");
+        let re = DocSession::from_bytes(&wordcraft_docx::write(&s.doc).unwrap()).unwrap();
+        assert_eq!(kinds(&re).len(), k.len(), "breaks survive save and reopen");
+        assert!(s.paginate() >= 1);
+        s.do_insert_section_break(0, "oddPage").unwrap();
+        assert_eq!(kinds(&s).len(), base.len() + 2);
+        s.do_remove_section_break(1).unwrap();
+        s.do_remove_section_break(1).unwrap();
+        assert_eq!(s.doc.body.len(), n);
+        assert_eq!(kinds(&s), base);
+        assert!(s.paginate() >= 1);
     }
     #[test]
     fn page_look_valign_page_numbers_and_border_set_refuse_and_roundtrip() {

@@ -3,6 +3,8 @@ import {useDocuments} from '../../lib/documents/store';
 import {customParagraphStyles,useStyleList} from '../../lib/documents/styles';
 import {TableSizeDialog} from './TableSizeDialog';
 import {HeaderFooterDialog} from './HeaderFooterDialog';
+import {SECTION_BREAKS} from '../../lib/documents/protocol';
+import {insertSectionBreak,removeSectionBreak} from '../../lib/documents/session';
 import {PageLookDialog} from './PageLookDialog';
 import {HeaderFooterVariantsDialog} from './HeaderFooterVariantsDialog';
 import {ImageControls} from './ImageControls';
@@ -78,6 +80,8 @@ export function FormatBar({format,held,para,enabled,inCell=false}:{format:Format
   {hfvOpen&&<HeaderFooterVariantsDialog onClose={()=>setHfvOpen(false)}/>}
   <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>setPageOpen(true)} data-testid="documents-page-open">{t('documents.page.title')}</NativeButton>
   {pageOpen&&<PageSetupDialog onClose={()=>setPageOpen(false)}/>}
+  <NativeSelect className={sel+' w-32'} aria-label={t('documents.sectionBreak.label')} title={t('documents.sectionBreak.label')} disabled={!enabled} value="" onChange={e=>{const v=e.currentTarget.value;e.currentTarget.value='';if(v==='remove')void removeSectionBreak();else if((SECTION_BREAKS as readonly string[]).includes(v))void insertSectionBreak(v as typeof SECTION_BREAKS[number]);}} data-testid="documents-section-break">
+   <option value="" disabled>{t('documents.sectionBreak.label')}</option>{SECTION_BREAKS.map(k=><option key={k} value={k}>{t('documents.sectionBreak.'+k)}</option>)}<option value="remove" disabled={!docState.blocks.find(b=>b.index===docState.caret?.block)?.sectionBreak}>{t('documents.sectionBreak.remove')}</option></NativeSelect>
   <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>setLookOpen(true)} data-testid="documents-look-open">{t('documents.look.open')}</NativeButton>
   {lookOpen&&<PageLookDialog onClose={()=>setLookOpen(false)}/>}
   <NativeButton className={tool+' border border-subtle'} aria-pressed={commentsOpen} onClick={()=>setCommentsOpen(!commentsOpen)} data-testid="documents-comments-toggle">{t('documents.comments.title')}</NativeButton>

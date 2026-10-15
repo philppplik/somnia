@@ -159,6 +159,8 @@ export type DocumentsRequest=
  |{id:number;kind:'deleteComment';commentId:number}
  |{id:number;kind:'headerFooterState'}
  |{id:number;kind:'hfVariantsState'}
+ |{id:number;kind:'insertSectionBreak';block:number;sectionKind:string}
+ |{id:number;kind:'removeSectionBreak';block:number}
  |{id:number;kind:'setHfVariants';patch:HfVariantsPatch}
  |{id:number;kind:'setHeaderFooter';header?:string;footer?:string;pageNumber?:boolean;headerAlign?:HfAlign;footerAlign?:HfAlign;pageTotal?:boolean}
  |{id:number;kind:'insertTable';block:number;rows:number;cols:number}
@@ -333,6 +335,9 @@ export function pageSetupProblem(p:unknown):string|null{
  }
  return null;
 }
+export const SECTION_BREAKS=['nextPage','continuous','evenPage','oddPage'] as const;
+/** nextColumn only appears on files that already have it. */
+export type SectionBreakKind=typeof SECTION_BREAKS[number]|'nextColumn';
 export type HfAlign='left'|'center'|'right';
 export const HF_ALIGNS:readonly HfAlign[]=['left','center','right'];
 export interface HeaderFooterState{header:{text:string;editable:boolean;align?:HfAlign};footer:{text:string;pageNumber:boolean;editable:boolean;align?:HfAlign;/** The page number reads "x / y". */pageTotal?:boolean}}

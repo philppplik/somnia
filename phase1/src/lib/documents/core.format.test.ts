@@ -127,3 +127,14 @@ test('header/footer variants: validated before the engine, one call, state read 
  assert.equal(go({titlePage:true,first:{header:'Cover'}}),true);assert.deepEqual(calls,['{"titlePage":true,"first":{"header":"Cover"}}']);
  const st=(k.handle({id:3,kind:'hfVariantsState'} as never).res as unknown as {state:{titlePage:boolean}}).state;assert.equal(st.titlePage,true);
 });
+test('section breaks: validated before the engine and passed through once',()=>{
+ const calls:string[]=[];
+ const S=class{constructor(_b?:Uint8Array){}free(){}blocks(){return '[]';}paginate(){return 1;}page_info(){return '{"pages":[],"cacheHits":0,"cacheMisses":0}';}text(){return '';}
+  insert_section_break(b:number,k:string){calls.push(`ins ${b} ${k}`);}remove_section_break(b:number){calls.push(`rm ${b}`);}};
+ const k=new DocumentsCore(S as unknown as new(b:Uint8Array)=>DocSessionLike);k.handle({id:1,kind:'open',bytes:new Uint8Array(4)} as never);
+ const go=(r:object)=>{try{return (k.handle({id:2,...r} as never).res as {ok:boolean}).ok;}catch{return false;}};
+ for(const bad of [{kind:'insertSectionBreak',block:0,sectionKind:'weird'},{kind:'insertSectionBreak',block:-1,sectionKind:'nextPage'},{kind:'insertSectionBreak',block:1.5,sectionKind:'nextPage'},{kind:'insertSectionBreak',block:0,sectionKind:'nextColumn'},{kind:'removeSectionBreak',block:2**31}])assert.equal(go(bad),false,JSON.stringify(bad));
+ assert.equal(calls.length,0);
+ assert.equal(go({kind:'insertSectionBreak',block:3,sectionKind:'continuous'}),true);assert.equal(go({kind:'removeSectionBreak',block:4}),true);
+ assert.deepEqual(calls,['ins 3 continuous','rm 4']);
+});
