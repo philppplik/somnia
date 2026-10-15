@@ -64,6 +64,8 @@ export type PivotEditOp={kind:'addField';pivot:string;field:string;area:PivotAre
  |{kind:'valueSettings';pivot:string;index:number;func?:PivotValueFunc;showAs?:'normal'|'percentOfGrandTotal'|'percentOfColumnTotal'|'percentOfRowTotal'|'runningTotal'|'rank';numberFormat?:string|null}
  |{kind:'filter';pivot:string;field:string;selected:string[]|null}|{kind:'sort';pivot:string;field:string;order:'asc'|'desc'|'none'}|{kind:'group';pivot:string;field:string;by:'years'|'quarters'|'months'|'days'|'none'}|{kind:'collapse';pivot:string;field:string;collapse:boolean}
  |{kind:'layout';pivot:string;layout?:'compact'|'outline'|'tabular';grandTotalsRows?:boolean;grandTotalsCols?:boolean;subtotals?:'none'|'top'|'bottom';showHeaders?:boolean;style?:string}|{kind:'changeSource'|'refresh'|'delete';pivot:string};
+export interface CfRuleInfo{index:number;ranges:string[];kind:string;detail:Record<string,string|number|boolean>;stop:boolean}
+export type CfManageOp={kind:'delete'|'moveUp'|'moveDown'|'moveTop'|'moveBottom';index:number};
 export interface PivotReport{name:string;source:string;range:string|null;rows:{field:string;sort?:unknown;group?:unknown;collapsed?:unknown}[];columns:{field:string;sort?:unknown;group?:unknown;collapsed?:unknown}[];values:{field:string;func?:unknown;name?:unknown;showAs?:unknown;numberFormat?:unknown}[];filters:{field:string;selected?:unknown;report?:unknown}[];layout:string;grandTotalsRows:boolean;grandTotalsCols:boolean;subtotals:string;style:string;showHeaders:boolean;fields:{name:string;numeric:boolean;date:boolean;areas:string[]}[];records:number}
 export interface FunctionInfo{name:string;category:string;signature:string;description:string}
 export type LayoutOp={kind:'merge';how:'cells'|'center'|'across'|'unmerge'}|{kind:'rotate';mode:'none'|'up'|'down'|'stacked'}|{kind:'doubleUnderline';on:boolean}|{kind:'justify'|'clearFormats'};
@@ -180,6 +182,8 @@ export type SheetsRequest=
  |{id:number;op:'sparklineOp';sheet:number;row:number;col:number;rows:number;cols:number;sparkline:SparklineOp}
  |{id:number;op:'cellToolOp';sheet:number;row:number;col:number;rows:number;cols:number;tool:CellToolOp}
  |{id:number;op:'functionCatalog'}
+ |{id:number;op:'cfRules';sheet:number}
+ |{id:number;op:'cfManage';sheet:number;manage:CfManageOp}
  |{id:number;op:'pivotInfo';sheet:number}
  |{id:number;op:'pivotEditOp';sheet:number;row:number;col:number;rows:number;cols:number;edit:PivotEditOp}
  |{id:number;op:'dataToolOp';sheet:number;row:number;col:number;rows:number;cols:number;tool:DataToolOp}

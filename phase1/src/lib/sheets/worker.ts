@@ -51,6 +51,8 @@ scope.onmessage=({data}:MessageEvent<SheetsRequest>)=>{queue=queue.then(async()=
    case 'tables':result=JSON.parse(need().tables_info(data.sheet));break;
    case 'cellToolOp':result=JSON.parse(need().cell_tools_op(data.sheet,data.row,data.col,data.rows,data.cols,JSON.stringify(data.tool)));break;
    case 'dataToolOp':result=JSON.parse(need().data_tools_op(data.sheet,data.row,data.col,data.rows,data.cols,JSON.stringify(data.tool)));break;
+   case 'cfRules':result=JSON.parse(need().cf_rules(data.sheet));break;
+   case 'cfManage':result=JSON.parse(need().cf_manage(data.sheet,JSON.stringify(data.manage)));break;
    case 'pivotInfo':result=JSON.parse(need().pivot_info(data.sheet));break;
    case 'pivotEditOp':result=JSON.parse(need().pivot_edit_op(data.sheet,data.row,data.col,data.rows,data.cols,JSON.stringify(data.edit)));break;
    case 'functionCatalog':result=JSON.parse(need().function_catalog());break;

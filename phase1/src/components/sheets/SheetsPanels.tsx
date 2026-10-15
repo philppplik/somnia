@@ -17,6 +17,7 @@ import type {FillDirection,CfStyle} from '../../lib/sheets/protocol';
 import {PIVOT_FUNCS,tableBlockProblem} from '../../lib/sheets/tableOps';
 import {headerProblem,MAX_HEADER_CHARS} from '../../lib/sheets/printOps';
 import {MAX_ZOOM,MIN_ZOOM} from '../../lib/sheets/viewOps';
+import {describeCfRule} from '../../lib/sheets/cfManageOps';
 import {CHART_COLORS,MAX_TITLE_CHARS,sparklineBlockProblem} from '../../lib/sheets/chartOps';
 import {OBJECT_GROUPS,SHAPE_FILLS,SHAPE_LINES,MAX_PICTURE_BYTES,MAX_SHAPE_TEXT,MAX_ALT,buildObjectOp,bytesToBase64,objectIsShape,objectNeedsPick,type ObjectAction} from '../../lib/sheets/objectOps';
 import {layoutBlockProblem,MERGE_HOWS,ROTATE_MODES} from '../../lib/sheets/layoutOps';
@@ -227,6 +228,7 @@ export function SheetsLayoutPanel({context}:PanelHostProps){
   <FilterGroup/>
   <FillGroup/>
   <HighlightGroup/>
+  <CfRulesGroup/>
   <ValidationGroup/>
   <ReplaceGroup/>
   <DedupeGroup/>
@@ -933,6 +935,21 @@ function HighlightGroup(){
    <Button variant="outline" size="compact" disabled={action.busy} onClick={()=>run({kind:'clearAll'})} data-testid="sheets-hl-clear-all">{t('sheets.hl.clearAll')}</Button>
   </div>
   <p className="text-ink-3">{t('sheets.hl.scope',{range:rangeAddress(r)})}</p>
+ </div>;
+}
+/** The highlight rules of this sheet in priority order: move one to the top, up, down or bottom, or delete it. One undo step each. Shown only when the sheet has rules. */
+const CF_MANAGE_ACTIONS=['moveTop','moveUp','moveDown','moveBottom','delete'] as const;
+function CfRulesGroup(){
+ const {t}=useT(),s=useSheetsSelection(),action=useAction();const [pick,setPick]=useState(0);const [act,setAct]=useState<(typeof CF_MANAGE_ACTIONS)[number]>('moveTop');
+ const rules=s?.cfRules??[];if(!s||rules.length===0)return null;
+ const chosen=rules.find(x=>x.index===pick)??rules[0],last=rules.length-1;
+ const blocked=(act==='moveTop'||act==='moveUp')?chosen.index===0:(act==='moveDown'||act==='moveBottom')?chosen.index===last:false;
+ return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.cm.title')}>
+  <span>{t('sheets.cm.title')}</span>
+  <label className="flex flex-col gap-1">{t('sheets.cm.rule')}<NativeSelect className={field} value={chosen.index} disabled={action.busy} onChange={e=>setPick(Number(e.currentTarget.value))} data-testid="sheets-cm-rule">{rules.map(x=><option key={x.index} value={x.index}>{(x.index+1)+'. '+describeCfRule(x,k=>t('sheets.cm.kind.'+k))+(x.stop?' · '+t('sheets.cm.stop'):'')}</option>)}</NativeSelect></label>
+  <label className="flex flex-col gap-1">{t('sheets.cm.action')}<NativeSelect className={field} value={act} disabled={action.busy} onChange={e=>setAct(e.currentTarget.value as (typeof CF_MANAGE_ACTIONS)[number])} data-testid="sheets-cm-action">{CF_MANAGE_ACTIONS.map(a=><option key={a} value={a}>{t('sheets.cm.'+a)}</option>)}</NativeSelect></label>
+  <Button variant="outline" size="compact" disabled={action.busy||blocked} onClick={()=>void action.run('sheets.cfManage',{kind:act,index:chosen.index})} data-testid="sheets-cm-apply">{t('sheets.cm.apply')}</Button>
+  <p className="text-ink-3">{t('sheets.cm.hint',{count:rules.length})}</p>
  </div>;
 }
 /** Fills the selected block from its first row or column. One undo step; the block is never widened. */

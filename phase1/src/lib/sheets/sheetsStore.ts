@@ -1,8 +1,8 @@
 import {useSyncExternalStore} from 'react';
 import type {Rect} from './clipboard';
-import type {PivotReport,FunctionInfo,OutlineInfo,SavedView,ObjectsInfo,ScenarioInfo,ChartInfo,PageInfo,TablesInfo,NameInfo,CellAnnotations,CellStyle,WorkbookInfo,SheetInfo,SheetLayout} from './protocol';
+import type {CfRuleInfo,PivotReport,FunctionInfo,OutlineInfo,SavedView,ObjectsInfo,ScenarioInfo,ChartInfo,PageInfo,TablesInfo,NameInfo,CellAnnotations,CellStyle,WorkbookInfo,SheetInfo,SheetLayout} from './protocol';
 /** Selection shared between the grid canvas and the inspector. Session-only, never persisted. */
-export interface SheetsSelection{editing?:boolean;file:string;sheet:number;sheetName:string;address:string;kind:string;text:string;formula:string|null;dirty:boolean;canUndo:boolean;canRedo:boolean;range?:Rect;workbook?:WorkbookInfo;info?:SheetInfo|null;layout?:SheetLayout|null;style?:CellStyle;revision?:number;listItems?:readonly string[]|null;annotations?:CellAnnotations|null;names?:readonly NameInfo[];scenarios?:readonly ScenarioInfo[];objects?:ObjectsInfo;savedViews?:readonly SavedView[];functions?:readonly FunctionInfo[];pivots?:readonly PivotReport[];outline?:OutlineInfo|null;tables?:TablesInfo|null;page?:PageInfo|null;charts?:ChartInfo[]}
+export interface SheetsSelection{editing?:boolean;file:string;sheet:number;sheetName:string;address:string;kind:string;text:string;formula:string|null;dirty:boolean;canUndo:boolean;canRedo:boolean;range?:Rect;workbook?:WorkbookInfo;info?:SheetInfo|null;layout?:SheetLayout|null;style?:CellStyle;revision?:number;listItems?:readonly string[]|null;annotations?:CellAnnotations|null;names?:readonly NameInfo[];scenarios?:readonly ScenarioInfo[];objects?:ObjectsInfo;savedViews?:readonly SavedView[];functions?:readonly FunctionInfo[];pivots?:readonly PivotReport[];cfRules?:readonly CfRuleInfo[];outline?:OutlineInfo|null;tables?:TablesInfo|null;page?:PageInfo|null;charts?:ChartInfo[]}
 let state:SheetsSelection|null=null;const listeners=new Set<()=>void>();
 export const getSheetsSelection=()=>state;
 export function setSheetsSelection(next:SheetsSelection|null){state=next;listeners.forEach(l=>l());}

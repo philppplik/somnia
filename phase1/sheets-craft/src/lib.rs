@@ -25,6 +25,7 @@ const ICON_SETS: &[&str] = &["3Arrows", "3TrafficLights1", "3Symbols", "3Flags",
 const MAX_SPARKLINES: usize = 500;
 const MAX_SCENE_PRIMS: usize = 20_000;
 const MAX_TITLE_CHARS: usize = 120;
+const MAX_CF_RULES: usize = 200;
 const MAX_WHATIF_REFS: usize = 200;
 const MAX_WHATIF_NAME: usize = 255;
 const MAX_WHATIF_VALUES: usize = 32;
@@ -1943,6 +1944,93 @@ impl HeadlessWorkbook {
             out.push(json!({"row": sp.cell.row, "col": sp.cell.col, "width": w, "height": h, "prims": prims}));
         }
         Ok(json!(out).to_string())
+    }
+
+    /// The highlight rules of a sheet in priority order (read only): `{"rules":[{"index","ranges":["A1:B9"],"kind":"CellIs","detail":{"op","a","b","text","formula","rank",..},"stop":bool}]}`;
+    /// at most 200 rules, detail values are short texts, numbers or flags.
+    pub fn cf_rules(&self, sheet: usize) -> Result<String, String> {
+        let doc = self.session.doc().map_err(|e| e.to_string())?;
+        let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+        let mut out = Vec::new();
+        for (index, cf) in sh.cond_formats.iter().enumerate().take(MAX_CF_RULES) {
+            let value = serde_json::to_value(&cf.rule).unwrap_or(serde_json::Value::Null);
+            let (kind, inner) = match &value {
+                serde_json::Value::Object(m) if m.len() == 1 => {
+                    let (k, v) = m.iter().next().ok_or("empty rule")?;
+                    (k.clone(), v.clone())
+                }
+                serde_json::Value::String(s) => (s.clone(), serde_json::Value::Null),
+                _ => ("Unknown".to_string(), serde_json::Value::Null),
+            };
+            let mut detail = serde_json::Map::new();
+            if let Some(m) = inner.as_object() {
+                for key in ["op", "a", "b", "text", "formula", "rank", "bottom", "percent", "below", "equal", "period", "set", "gradient", "reverse"] {
+                    match m.get(key) {
+                        Some(serde_json::Value::String(t)) => {
+                            detail.insert(key.to_string(), json!(t.chars().take(100).collect::<String>()));
+                        }
+                        Some(v) if v.is_number() || v.is_boolean() => {
+                            detail.insert(key.to_string(), v.clone());
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            out.push(json!({
+                "index": index, "ranges": cf.ranges.iter().take(8).map(|r| r.a1()).collect::<Vec<_>>(),
+                "kind": kind.chars().take(24).collect::<String>(), "detail": detail, "stop": cf.stop_if_true
+            }));
+        }
+        Ok(json!({"rules": out}).to_string())
+    }
+
+    /// Reorders or deletes one highlight rule of the sheet (one undo step). `op_json` is `{"kind":"delete|moveUp|moveDown|moveTop|moveBottom","index":n}`
+    /// where `index` is the rule's position in `cf_rules`. Refused on a protected sheet or for an index that does not exist. Returns `cf_rules`.
+    pub fn cf_manage(&mut self, sheet: usize, op_json: &str) -> Result<String, String> {
+        let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "operation must be a JSON object".to_string())?;
+        let map = op.as_object().ok_or("operation must be a JSON object")?;
+        if map.keys().any(|k| k != "kind" && k != "index") {
+            return Err("unknown rule field".into());
+        }
+        let kind = map.get("kind").and_then(|v| v.as_str()).ok_or("missing kind")?.to_string();
+        let index = map.get("index").and_then(|v| v.as_u64()).filter(|n| *n < MAX_CF_RULES as u64).ok_or("index must be a whole number below 200")? as usize;
+        let count = {
+            let doc = self.session.doc().map_err(|e| e.to_string())?;
+            let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+            if sh.is_protected() {
+                return Err("The sheet is protected. Unprotect it to manage rules.".into());
+            }
+            sh.cond_formats.len()
+        };
+        if index >= count {
+            return Err("no such rule".into());
+        }
+        let steps: Vec<(&str, usize)> = match kind.as_str() {
+            "delete" => vec![("delete", index)],
+            "moveUp" if index > 0 => vec![("moveUp", index)],
+            "moveDown" if index + 1 < count => vec![("moveDown", index)],
+            "moveTop" if index > 0 => (1..=index).rev().map(|i| ("moveUp", i)).collect(),
+            "moveBottom" if index + 1 < count => (index..count - 1).map(|i| ("moveDown", i)).collect(),
+            "moveUp" | "moveTop" => return Err("The rule is already first.".into()),
+            "moveDown" | "moveBottom" => return Err("The rule is already last.".into()),
+            _ => return Err("unsupported rule operation".into()),
+        };
+        self.session.run("sheet.activate", json!({"sheet": sheet}))?;
+        let before = self.session.doc().map_err(|e| e.to_string())?.undo.len();
+        for (command, at) in steps {
+            if let Err(e) = self.session.run("home.manageRules", serde_json::Value::Object(std::iter::once((command.to_string(), json!(at))).collect())) {
+                while self.session.doc().map_err(|e| e.to_string())?.undo.len() > before {
+                    if self.undo().is_err() {
+                        break;
+                    }
+                }
+                return Err(e);
+            }
+        }
+        // Every step was its own snapshot; the first restores the state before the change, so keep only that.
+        let doc = self.session.doc_mut().map_err(|e| e.to_string())?;
+        doc.undo.truncate(before + 1);
+        self.cf_rules(sheet)
     }
 
     /// Creates or changes a chart (one history entry), `op_json` is one of
@@ -4760,6 +4848,33 @@ mod tests {
         book.session.run("review.protectSheet", json!({})).unwrap();
         assert!(book.replace_range(0, 80, 0, 3, 2, op).unwrap_err().contains("protected"));
     }
+    #[test]
+    fn highlight_rules_are_listed_reordered_and_deleted_in_one_undo_step() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        book.set_values(0, 300, 0, r#"[["1"],["5"],["9"]]"#).unwrap();
+        assert!(book.cf_rules(0).unwrap().contains("\"rules\":[]"));
+        book.cf_range(0, 300, 0, 3, 1, r#"{"kind":"cell","operator":"greater","value":4,"style":"yellow"}"#).unwrap();
+        book.cf_range(0, 300, 0, 3, 1, r#"{"kind":"flag","flag":"duplicate","style":"green"}"#).unwrap();
+        book.cf_range(0, 300, 0, 3, 1, r#"{"kind":"text","mode":"contains","text":"x","style":"redText"}"#).unwrap();
+        let list: serde_json::Value = serde_json::from_str(&book.cf_rules(0).unwrap()).unwrap();
+        assert_eq!(list["rules"].as_array().unwrap().len(), 3);
+        assert_eq!(list["rules"][2]["kind"], "CellIs", "the first rule made is now last");
+        let moved: serde_json::Value = serde_json::from_str(&book.cf_manage(0, r#"{"kind":"moveTop","index":2}"#).unwrap()).unwrap();
+        assert_eq!(moved["rules"][0]["kind"], "CellIs");
+        book.undo().unwrap();
+        let back: serde_json::Value = serde_json::from_str(&book.cf_rules(0).unwrap()).unwrap();
+        assert_eq!(back["rules"][2]["kind"], "CellIs", "one undo restores the order");
+        assert!(book.cf_manage(0, r#"{"kind":"moveTop","index":0}"#).is_err());
+        assert!(book.cf_manage(0, r#"{"kind":"moveDown","index":2}"#).is_err());
+        assert!(book.cf_manage(0, r#"{"kind":"delete","index":3}"#).is_err());
+        assert!(book.cf_manage(0, r#"{"kind":"delete","index":0,"extra":1}"#).is_err());
+        assert!(book.cf_manage(0, r#"{"kind":"burn","index":0}"#).is_err());
+        let gone: serde_json::Value = serde_json::from_str(&book.cf_manage(0, r#"{"kind":"delete","index":1}"#).unwrap()).unwrap();
+        assert_eq!(gone["rules"].as_array().unwrap().len(), 2);
+        book.undo().unwrap();
+        assert_eq!(serde_json::from_str::<serde_json::Value>(&book.cf_rules(0).unwrap()).unwrap()["rules"].as_array().unwrap().len(), 3);
+    }
+
     #[test]
     fn charts_and_sparklines_are_created_changed_drawn_and_validated() {
         let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();

@@ -7429,6 +7429,14 @@
       "hasEnabled": true
     },
     {
+      "id": "sheets.cfManage",
+      "title": "Reorder or delete one highlight rule of the sheet",
+      "category": "Edit",
+      "source": "sheets",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
       "id": "sheets.chart",
       "title": "Create or change a chart",
       "category": "Edit",
