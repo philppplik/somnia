@@ -73,7 +73,7 @@
  "video.audioTrackEmpty": "Pas encore de clips audio",
  "video.audioAddPick": "Ajouter un audio de…",
  "video.audioAdd": "Ajouter à la piste audio",
- "video.audioTrackHint": "La musique ou la voix off joue sur la vidéo. Faites glisser un bloc pour le déplacer ; faites glisser les bords du bloc sélectionné pour le raccorder. Gain et fondus sont mixés dans l’export.",
+ "video.audioTrackHint": "La musique ou la voix off joue sur la vidéo. Faites glisser un fichier audio depuis la liste des aperçus vers la piste ; faites glisser un bloc pour le déplacer et les bords du bloc sélectionné pour le raccorder. Gain et fondus sont mixés dans l’export.",
  "video.audioClipTitle": "Clip audio sélectionné",
  "video.audioClipLabel": "Clip audio {index} : {name}",
  "video.audioAt": "Début sur la timeline (s)",

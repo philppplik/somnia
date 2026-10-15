@@ -15,9 +15,11 @@ interface Props{
  controller?:FilmstripController|null;
  /** Times a dragged block or edge snaps to (both tracks' edges, bounds, playhead); ~8 px threshold like the video track. */
  snapPoints?:number[];
+ /** Drop of an audio file dragged from the Files rail (application/x-somnia-media), at the drop time. */
+ onDropAudio?:(name:string,at:number)=>void;
 }
 /** The free-placed audio track under the video timeline: blocks drag horizontally, edge handles resize, fades show as shaded wedges. */
-export function AudioLane({clips,selectedId,duration,onSelect,onMoveAt,onResize,label,controller,snapPoints}:Props){
+export function AudioLane({clips,selectedId,duration,onSelect,onMoveAt,onResize,label,controller,snapPoints,onDropAudio}:Props){
  const {t}=useT();
  const track=useRef<HTMLDivElement>(null);
  const atTime=(clientX:number)=>{
@@ -49,8 +51,14 @@ export function AudioLane({clips,selectedId,duration,onSelect,onMoveAt,onResize,
   const up=()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);};
   window.addEventListener('pointermove',move);window.addEventListener('pointerup',up);
  };
+ const snapAt=(t:number)=>{
+  const box=track.current?.getBoundingClientRect();
+  return snapPoints&&box?snapTime(t,snapPoints,snapThresholdSeconds(8,box.width,duration)):t;
+ };
  return <div ref={track} className="relative h-7 w-full cursor-pointer rounded-sm bg-hover" aria-label={label} data-testid="audio-lane"
-  onPointerDown={e=>{if((e.target as HTMLElement).closest('[data-clip]'))return;onSelect(null);}}>
+  onPointerDown={e=>{if((e.target as HTMLElement).closest('[data-clip]'))return;onSelect(null);}}
+  onDragOver={e=>{if(onDropAudio&&e.dataTransfer.types.includes('application/x-somnia-media')){e.preventDefault();e.dataTransfer.dropEffect='copy';}}}
+  onDrop={e=>{const name=e.dataTransfer.getData('application/x-somnia-media');if(!name||!onDropAudio)return;e.preventDefault();onDropAudio(name,snapAt(atTime(e.clientX)));}}>
   {clips.map((c,i)=>{
    const dur=audioClipDuration(c),selected=c.id===selectedId;
    const fadeInPct=dur>0?Math.min(100,c.fadeIn/dur*100):0,fadeOutPct=dur>0?Math.min(100,c.fadeOut/dur*100):0;

@@ -73,7 +73,7 @@
  "video.audioTrackEmpty": "Noch keine Audioclips",
  "video.audioAddPick": "Audio hinzufügen aus…",
  "video.audioAdd": "Zur Audiospur hinzufügen",
- "video.audioTrackHint": "Musik oder Voiceover läuft über dem Video. Ziehe einen Block zum Verschieben; ziehe die Kanten des gewählten Blocks zum Schneiden. Verstärkung und Blenden werden in den Export gemischt.",
+ "video.audioTrackHint": "Musik oder Voiceover läuft über dem Video. Ziehe eine Audiodatei aus der Vorschauliste in die Spur, ziehe einen Block zum Verschieben; ziehe die Kanten des gewählten Blocks zum Schneiden. Verstärkung und Blenden werden in den Export gemischt.",
  "video.audioClipTitle": "Gewählter Audioclip",
  "video.audioClipLabel": "Audioclip {index}: {name}",
  "video.audioAt": "Start auf der Timeline (s)",

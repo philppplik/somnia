@@ -73,7 +73,7 @@
  "video.audioTrackEmpty": "Ainda não há clipes de áudio",
  "video.audioAddPick": "Adicionar áudio de…",
  "video.audioAdd": "Adicionar à faixa de áudio",
- "video.audioTrackHint": "Música ou narração toca sobre o vídeo. Arraste um bloco para movê-lo; arraste as bordas do bloco selecionado para apará-lo. Ganho e fades entram na exportação.",
+ "video.audioTrackHint": "Música ou narração toca sobre o vídeo. Arraste um arquivo de áudio da lista de pré-visualizações para a faixa; arraste um bloco para movê-lo e as bordas do bloco selecionado para apará-lo. Ganho e fades entram na exportação.",
  "video.audioClipTitle": "Clipe de áudio selecionado",
  "video.audioClipLabel": "Clipe de áudio {index}: {name}",
  "video.audioAt": "Início na linha do tempo (s)",

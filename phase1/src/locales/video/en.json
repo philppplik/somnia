@@ -73,7 +73,7 @@
  "video.audioTrackEmpty": "No audio clips yet",
  "video.audioAddPick": "Add audio from…",
  "video.audioAdd": "Add to audio track",
- "video.audioTrackHint": "Music or voiceover plays over the video. Drag a block to move it; drag the edges of the selected block to trim it. Gain and fades are mixed into the export.",
+ "video.audioTrackHint": "Music or voiceover plays over the video. Drag an audio file from the Previews list into the lane, drag a block to move it; drag the edges of the selected block to trim it. Gain and fades are mixed into the export.",
  "video.audioClipTitle": "Selected audio clip",
  "video.audioClipLabel": "Audio clip {index}: {name}",
  "video.audioAt": "Start on timeline (s)",

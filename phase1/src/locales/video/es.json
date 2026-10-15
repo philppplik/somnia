@@ -73,7 +73,7 @@
  "video.audioTrackEmpty": "Aún no hay clips de audio",
  "video.audioAddPick": "Añadir audio de…",
  "video.audioAdd": "Añadir a la pista de audio",
- "video.audioTrackHint": "La música o la voz suenan sobre el vídeo. Arrastra un bloque para moverlo; arrastra los bordes del bloque seleccionado para recortarlo. La ganancia y los fundidos se mezclan en la exportación.",
+ "video.audioTrackHint": "La música o la voz suenan sobre el vídeo. Arrastra un archivo de audio desde la lista de vistas previas a la pista; arrastra un bloque para moverlo y los bordes del bloque seleccionado para recortarlo. La ganancia y los fundidos se mezclan en la exportación.",
  "video.audioClipTitle": "Clip de audio seleccionado",
  "video.audioClipLabel": "Clip de audio {index}: {name}",
  "video.audioAt": "Inicio en la línea de tiempo (s)",
