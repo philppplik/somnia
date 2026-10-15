@@ -1399,6 +1399,16 @@ export class Stage{
   set(after);
   this.push({label:{key:'studio3d.hist.smoothMask',params:{name:m.name}},undo:()=>set(before),redo:()=>set(after)});
  }
+ /** Selects every vertex of the edited mesh whose sculpt mask passes the threshold. Selection change only, no history step. */
+ editMaskToSelection(threshold:number=0.5){
+  const m=this.editMesh();const g=m.geometry;
+  const attr=g.getAttribute('somniaMask') as THREE.BufferAttribute|undefined;
+  if(!attr)throw new StageError(`${m.name} has no sculpt mask.`);
+  if(!Number.isFinite(threshold)||threshold<0||threshold>1)throw new StageError('The threshold must be between 0 and 1.');
+  const sel=new Set<number>();
+  for(let i=0;i<attr.count;i++)if(attr.getX(i)>threshold)sel.add(i);
+  this.editSel.verts=sel;
+ }
  sculptEnd(){
   const shot=this.sculptShot;this.sculptShot=null;if(!shot)return;
   const m=this.find(shot.id) as THREE.Mesh|undefined;if(!m||!(m as THREE.Mesh).isMesh)return;

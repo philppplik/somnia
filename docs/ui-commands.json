@@ -10607,6 +10607,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.sculpt.maskToSelection",
+      "title": "Select the masked vertices of the edited 3D mesh",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.select",
       "title": "Select a 3D object",
       "category": "Edit",

@@ -1041,5 +1041,6 @@
  "cmd.studio3d.sculpt.maskFromSelection": "Masquer les sommets sélectionnés du maillage 3D édité pour la sculpture",
  "studio3d.hist.maskFromSelection": "Masquer la sélection de {name}",
  "cmd.studio3d.sculpt.maskSmooth": "Flouter le masque de sculpture d'un maillage 3D vers son voisinage",
- "studio3d.hist.smoothMask": "Lisser le masque de {name}"
+ "studio3d.hist.smoothMask": "Lisser le masque de {name}",
+ "cmd.studio3d.sculpt.maskToSelection": "Sélectionner les sommets masqués du maillage 3D édité"
 }
