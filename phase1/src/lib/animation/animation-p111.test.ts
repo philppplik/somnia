@@ -1105,3 +1105,20 @@ test('P225 mirrored poses: apply flips x about canvas or pose centre and negates
  const f=(n:number)=>frameToTick(n,{num:30,den:1});
  assert.deepEqual(evaluate(L().transform.position,f(0)),[100,50]);assert.deepEqual(evaluate(L().transform.position,f(6)),[W-100,50]);assert.equal(evaluate(L().transform.rotation,f(6)),-30);
 });
+test('P226 layer array: grid and circle offsets, copies placed, keyed positions move, one undo step, errors',async()=>{
+ const {layerArraySpecs,arrayOffsets}=await import('./layerArrayCommands');const {evaluate}=await import('./interpolate');
+ const g=arrayOffsets('grid',5,{columns:2,dx:10,dy:20});assert.deepEqual(g.map(o=>[o.x,o.y]),[[0,0],[10,0],[0,20],[10,20],[0,40]]);
+ const ci=arrayOffsets('circle',4,{radius:100,rotate:true});assert.deepEqual([ci[0].x,ci[0].y,ci[0].rot],[0,0,0]);assert.deepEqual([ci[2].x,ci[2].y,ci[2].rot],[0,200,180]);
+ const run=(p?:unknown)=>layerArraySpecs()[0].run(p) as unknown;
+ const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'shape',id:'b'});
+ const C=()=>findComp(s.document!);const n0=C().layers.length,before=s.document;
+ s.dispatch({type:'prop.set',layer:'b',prop:'position',value:[100,100],t:0});const b1=s.document;
+ const r=run({layers:['b'],pattern:'grid',count:4,columns:2,dx:50,dy:60}) as {layers:number};assert.equal(r.layers,3);assert.equal(C().layers.length,n0+3);
+ const pos=C().layers.filter(l=>l.name.endsWith('copy')).map(l=>evaluate(l.transform.position,0) as number[]).map(v=>v.join(',')).sort();assert.deepEqual(pos,['100,160','150,100','150,160']);
+ s.undo();assert.equal(s.document,b1);
+ s.dispatch({type:'key.add',layer:'b',prop:'position',t:0});s.dispatch({type:'prop.set',layer:'b',prop:'position',value:[10,10],t:8000*10});
+ run({layers:['b'],pattern:'circle',count:3,radius:50});const cp=C().layers.filter(l=>l.name.endsWith('copy'));assert.equal(cp.length,2);assert.ok(cp.every(l=>l.transform.position.keys.length===2));
+ assert.throws(()=>run({layers:['b','a'],pattern:'grid',count:3}),/exactly one/);assert.throws(()=>run({layers:['b'],pattern:'grid',count:1}),/2 to/);assert.throws(()=>run({layers:['b'],pattern:'x',count:3}),/pattern/);
+ s.dispatch({type:'layer.update',layer:'b',locked:true});assert.throws(()=>run({layers:['b'],pattern:'grid',count:3}),/locked/);
+ void before;
+});

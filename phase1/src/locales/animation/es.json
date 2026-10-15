@@ -1112,5 +1112,12 @@
  "animation.pose.mirror": "Espejo",
  "animation.pose.mirror.off": "Sin espejo",
  "animation.pose.mirror.canvas": "Espejo en el centro del lienzo",
- "animation.pose.mirror.pose": "Espejo en torno a la pose"
+ "animation.pose.mirror.pose": "Espejo en torno a la pose",
+ "animation.rig.group.array": "Matriz de copias",
+ "animation.rig.array.grid3": "Cuadricula 3 x 3",
+ "animation.rig.array.row5": "Fila de 5",
+ "animation.rig.array.column5": "Columna de 5",
+ "animation.rig.array.circle8": "Circulo de 8",
+ "animation.rig.array.circle12": "Circulo de 12",
+ "cmd.animation.layers.array": "Crear una matriz de copias de la capa en cuadricula o circulo"
 }

@@ -1112,5 +1112,12 @@
  "animation.pose.mirror": "Espelhar",
  "animation.pose.mirror.off": "Sem espelho",
  "animation.pose.mirror.canvas": "Espelhar no centro da tela",
- "animation.pose.mirror.pose": "Espelhar em torno da pose"
+ "animation.pose.mirror.pose": "Espelhar em torno da pose",
+ "animation.rig.group.array": "Matriz de copias",
+ "animation.rig.array.grid3": "Grade 3 x 3",
+ "animation.rig.array.row5": "Linha de 5",
+ "animation.rig.array.column5": "Coluna de 5",
+ "animation.rig.array.circle8": "Circulo de 8",
+ "animation.rig.array.circle12": "Circulo de 12",
+ "cmd.animation.layers.array": "Criar uma matriz de copias da camada em grade ou circulo"
 }

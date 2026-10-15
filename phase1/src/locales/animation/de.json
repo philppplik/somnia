@@ -1112,5 +1112,12 @@
  "animation.pose.mirror": "Spiegeln",
  "animation.pose.mirror.off": "Nicht spiegeln",
  "animation.pose.mirror.canvas": "An der Bildmitte spiegeln",
- "animation.pose.mirror.pose": "An der Pose spiegeln"
+ "animation.pose.mirror.pose": "An der Pose spiegeln",
+ "animation.rig.group.array": "Kopien-Anordnung",
+ "animation.rig.array.grid3": "3 x 3 Raster",
+ "animation.rig.array.row5": "Reihe mit 5",
+ "animation.rig.array.column5": "Spalte mit 5",
+ "animation.rig.array.circle8": "Kreis mit 8",
+ "animation.rig.array.circle12": "Kreis mit 12",
+ "cmd.animation.layers.array": "Kopien der Ebene als Raster oder Kreis anordnen"
 }

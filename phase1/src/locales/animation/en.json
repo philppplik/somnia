@@ -1112,5 +1112,12 @@
  "animation.pose.mirror": "Mirror",
  "animation.pose.mirror.off": "No mirror",
  "animation.pose.mirror.canvas": "Mirror around canvas centre",
- "animation.pose.mirror.pose": "Mirror around the pose"
+ "animation.pose.mirror.pose": "Mirror around the pose",
+ "animation.rig.group.array": "Array of copies",
+ "animation.rig.array.grid3": "3 x 3 grid",
+ "animation.rig.array.row5": "Row of 5",
+ "animation.rig.array.column5": "Column of 5",
+ "animation.rig.array.circle8": "Circle of 8",
+ "animation.rig.array.circle12": "Circle of 12",
+ "cmd.animation.layers.array": "Make an array of copies of the layer in a grid or circle"
 }

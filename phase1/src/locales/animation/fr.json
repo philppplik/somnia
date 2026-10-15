@@ -1112,5 +1112,12 @@
  "animation.pose.mirror": "Miroir",
  "animation.pose.mirror.off": "Sans miroir",
  "animation.pose.mirror.canvas": "Miroir au centre de l'image",
- "animation.pose.mirror.pose": "Miroir autour de la pose"
+ "animation.pose.mirror.pose": "Miroir autour de la pose",
+ "animation.rig.group.array": "Reseau de copies",
+ "animation.rig.array.grid3": "Grille 3 x 3",
+ "animation.rig.array.row5": "Rangee de 5",
+ "animation.rig.array.column5": "Colonne de 5",
+ "animation.rig.array.circle8": "Cercle de 8",
+ "animation.rig.array.circle12": "Cercle de 12",
+ "cmd.animation.layers.array": "Creer un reseau de copies du calque en grille ou en cercle"
 }

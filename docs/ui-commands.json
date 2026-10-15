@@ -1753,6 +1753,28 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.layers.array",
+      "title": "Make an array of copies of the layer in a grid or circle",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "array",
+        "circle",
+        "clone",
+        "column",
+        "copies",
+        "duplicate",
+        "grid",
+        "layer",
+        "pattern",
+        "radial",
+        "repeat",
+        "row"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.layers.centerAnchor",
       "title": "Center the anchor point of the selected layers",
       "category": "Edit",
