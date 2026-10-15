@@ -1196,6 +1196,8 @@
   "agent.approval.acceptOnce": "Einmal akzeptieren",
   "agent.approval.acceptSession": "Für diese Sitzung akzeptieren",
   "agent.approval.decline": "Ablehnen",
+  "agent.approval.actionRead": "Datei in den Modellkontext lesen",
+  "agent.approval.actionWrite": "Basis lesen und Edits vorschlagen",
   "agent.settings": "Einstellungen",
   "agent.attach": "Datei oder Element referenzieren",
   "agent.send": "Senden",

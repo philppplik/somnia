@@ -1196,6 +1196,8 @@
   "agent.approval.acceptOnce": "Accept once",
   "agent.approval.acceptSession": "Accept for session",
   "agent.approval.decline": "Decline",
+  "agent.approval.actionRead": "Read file into model context",
+  "agent.approval.actionWrite": "Read base and propose edits",
   "agent.settings": "Settings",
   "agent.attach": "Reference a file or element",
   "agent.send": "Send",

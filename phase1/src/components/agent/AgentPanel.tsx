@@ -104,7 +104,7 @@ export function AgentPanel(){
 function Approval({approval}:{approval:AgentApproval}){
  const {t}=useT();const [decision,setDecision]=useState<ApprovalDecision|null>(null);
  const labels={accept:t('agent.approval.acceptOnce'),accept_for_session:t('agent.approval.acceptSession'),decline:t('agent.approval.decline'),cancel:t('dialogs.cancel')};
- return <section className="ag-approval" aria-label={t('agent.approval.aria')}><strong>{approval.action}</strong><code>{approval.path}</code><p>{t('agent.approval.privacy')}</p>{decision?<p role="status">{labels[decision]}</p>:<div>{(['accept','accept_for_session','decline','cancel'] as const).map(d=><NativeButton type="button" key={d} onClick={()=>{setDecision(d);approval.resolve(d);}}>{labels[d]}</NativeButton>)}</div>}</section>;
+ return <section className="ag-approval" aria-label={t('agent.approval.aria')}><strong>{t(approval.action==='write'?'agent.approval.actionWrite':'agent.approval.actionRead')}</strong><code>{approval.path}</code><p>{t('agent.approval.privacy')}</p>{decision?<p role="status">{labels[decision]}</p>:<div>{(['accept','accept_for_session','decline','cancel'] as const).map(d=><NativeButton type="button" key={d} onClick={()=>{setDecision(d);approval.resolve(d);}}>{labels[d]}</NativeButton>)}</div>}</section>;
 }
 function Row({local,item,onAccept,onReject,onRetry,busy,onUndo}:{local:boolean;item:ChatItem;onUndo:(p:AgentProposal)=>void;busy:boolean;onRetry:()=>void;onAccept:(p:AgentProposal,d:Decisions)=>void;onReject:(p:AgentProposal)=>void}){
  switch(item.kind){

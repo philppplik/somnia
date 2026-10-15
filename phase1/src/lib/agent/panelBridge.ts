@@ -134,7 +134,7 @@ async function authorize(path:string,action:'read'|'write',signal:AbortSignal){
    }else reject(Error(decision==='cancel'?'Access request cancelled.':'File access declined.'));
   };
   signal.addEventListener('abort',abort,{once:true});
-  send?.({type:'approval',approval:{id:`approval-${++approvalCounter}`,path,action:action==='write'?'Read base and propose edits':'Read file into model context',resolve:finish}});
+  send?.({type:'approval',approval:{id:`approval-${++approvalCounter}`,path,action,resolve:finish}});
   if(signal.aborted)abort();
  });
 }

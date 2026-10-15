@@ -4,7 +4,7 @@ export interface AgentRequest {prompt:string;context:AgentContext}
 export type DiffLine={kind:'add'|'del'|'ctx';text:string};
 export interface AgentProposal {id:string;file:string;lines:DiffLine[];added:number;removed:number;changeSet?:ChangeSet;native?:import('./documentCore').NativeProposal;rangePreview?:{address:string;before:string[];values:string[][];executeAvailable?:boolean;reviewLabel?:string};textEdit?:{label:string;before:string;after:string};sheets?:{address:string;before:string;after:string};photo?:import('./photoStudio').PhotoPreview}
 export type ApprovalDecision='accept'|'accept_for_session'|'decline'|'cancel';
-export interface AgentApproval {id:string;path:string;action:string;resolve:(decision:ApprovalDecision)=>void}
+export interface AgentApproval {id:string;path:string;action:'read'|'write';resolve:(decision:ApprovalDecision)=>void}
 export type AgentEvent =
  | {type:'status';text:string;file?:string}
  | {type:'text-delta';text:string}
