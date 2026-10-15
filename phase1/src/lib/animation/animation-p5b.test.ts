@@ -338,3 +338,13 @@ test('P301 fit duration: composition ends at the last layer (audio placement cou
  assert.equal(c.duration,r.to);assert.ok(c.duration>=2.5*sec&&c.duration<2.5*sec+sec/20,String(c.duration));assert.equal(c.duration,fittedDuration(findComp(JSON.parse(before))!)) ;
  assert.throws(()=>run(),/already/);s.undo();assert.equal(JSON.stringify(s.document),before);
 });
+test('P302 purge unused compositions: keeps the open one and everything it reaches, removes chains, one undo',async()=>{
+ const {compPurgeSpecs,unusedComps}=await import('./compPurgeCommands');const {AnimationSession,setAnimationSession}=await import('./session');
+ const run=compPurgeSpecs()[0].run as (p?:unknown)=>unknown;
+ const s=new AnimationSession();s.open(createDocument());setAnimationSession(s);
+ const base0=s.document!.activeComp;
+ s.dispatch({type:'comp.duplicate',comp:base0,id:'x1'});s.dispatch({type:'comp.duplicate',comp:base0,id:'x2'});s.dispatch({type:'comp.select',comp:base0});
+ assert.deepEqual(unusedComps(s.document!).sort(),['x1','x2']);
+ const before=JSON.stringify(s.document);const r=run() as {removed:number};assert.equal(r.removed,2);assert.equal(s.document!.compositions.length,1);
+ assert.throws(()=>run(),/in use/);s.undo();assert.equal(JSON.stringify(s.document),before);
+});

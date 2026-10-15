@@ -1375,5 +1375,6 @@
  "cmd.animation.audio.normalize": "Normalizar o volume das camadas de áudio para um pico alvo",
  "animation.audio.trimSilence": "Cortar o silêncio no início e no fim",
  "cmd.animation.audio.trimSilence": "Cortar o silêncio no início e no fim das camadas de áudio",
- "cmd.animation.comp.fitDuration": "Ajustar a duração da composição ao fim da última camada"
+ "cmd.animation.comp.fitDuration": "Ajustar a duração da composição ao fim da última camada",
+ "cmd.animation.comp.purgeUnused": "Remover composições que ninguém usa"
 }

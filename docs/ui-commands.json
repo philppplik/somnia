@@ -378,6 +378,24 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.comp.purgeUnused",
+      "title": "Remove compositions that nothing uses",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "clean",
+        "composition",
+        "delete",
+        "file size",
+        "precomp",
+        "purge",
+        "remove",
+        "unused"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.comp.remove",
       "title": "Delete composition",
       "category": "Edit",
