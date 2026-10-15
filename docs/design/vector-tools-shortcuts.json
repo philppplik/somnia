@@ -20,7 +20,7 @@
   },
   "commands": {
     "vector.bool.union":     "Mod+Alt+U",
-    "vector.bool.subtract":  "Mod+Alt+S",
+    "vector.bool.subtract":  "Mod+Alt+D",
     "vector.bool.intersect": "Mod+Alt+I",
     "vector.bool.exclude":   "Mod+Alt+X",
     "vector.joinPaths":      "Mod+Shift+J",
