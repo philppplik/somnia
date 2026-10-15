@@ -2,7 +2,7 @@
 import {ALL_FORMATS,AudioSample,AudioSampleSink,AudioSampleSource,BufferSource,BufferTarget,CanvasSink,CanvasSource,Input,Mp4OutputFormat,Output,QUALITY_HIGH,QUALITY_LOW,QUALITY_MEDIUM,WebMOutputFormat,getFirstEncodableAudioCodec,getFirstEncodableVideoCodec} from 'mediabunny';
 import type {AudioCodec,VideoCodec} from 'mediabunny';
 import {cappedFps,sanitizeExportOptions,type VideoExportOptions,type VideoFormat} from './recipe';
-import {clipFadeGain,clipRanges,fadeInOf,fadeOf,fadeOutOf,flipOf,isFreeze,isImageClip,rotationOf,speedOf,timelineDuration,type ClipRange,type ClipRotation,type TimelineClip} from './timeline';
+import {clipFadeGain,clipRanges,cropOf,fadeInOf,fadeOf,fadeOutOf,flipOf,hasCrop,isFreeze,isImageClip,rotationOf,speedOf,timelineDuration,type ClipRange,type ClipRotation,type TimelineClip} from './timeline';
 import {audioEnvelope,duckGainAt,type AudioClip} from './audioTrack';
 import {WindowMixer} from './mixer';
 import {drawTitleCard,isTitleClip,needsSourceFile,type TitleClip} from './titles';
@@ -239,7 +239,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
       card.ctx.save();card.ctx.translate(outW/2,outH/2);card.ctx.rotate(rot*Math.PI/180);card.ctx.drawImage(bmp,-w/2,-h/2,w,h);card.ctx.restore();
       card.key='img';
      }
-     return card.canvas;
+     return cropFrame(i,c,card.canvas);
     }
     const local=Math.max(0,t-r.start),key=`${local.toFixed(4)}`;
     if(card.key!==key){drawTitleCard(card.ctx,c as TitleClip,outW,outH,local);card.key=key;}
@@ -248,7 +248,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
    const sink=await sinkFor(i);
    const src=isFreeze(c)?c.freeze!:Math.min(c.out_s-1e-3,c.in_s+(t-r.start)*speedOf(c));
    const f=await sink.getCanvas(src);
-   return f?f.canvas:null;
+   return f?cropFrame(i,c,f.canvas):null;
   };
   // Transformed clips (mirror and/or quarter turn) draw through this instead of a bare drawImage. Titles never pass a
   // transform; image cards bake their rotation into the card itself, so they only ever pass a flip here. Quarter turns
@@ -265,6 +265,20 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
   };
   // Image clips bake rotation into their card (see sideFrame); every other clip passes its own rotation.
   const drawClip=(img:CanvasImageSource,c:TimelineClip)=>drawTransform(img,flipOf(c),isImageClip(c)?0:rotationOf(c));
+  // Frame-space crop: the region left after cutting the edge fractions is contain-fitted back into the same frame
+  // (black bars keep the output aspect). Cached scratch per clip index; uncropped frames pass through untouched.
+  const cropScr=new Map<number,{canvas:OffscreenCanvas;ctx:OffscreenCanvasRenderingContext2D;w:number;h:number}>();
+  const cropFrame=(i:number,c:TimelineClip,img:OffscreenCanvas|HTMLCanvasElement):OffscreenCanvas|HTMLCanvasElement=>{
+   if(!hasCrop(c))return img;
+   const sw=img.width,sh=img.height,cr=cropOf(c);
+   const rx=cr.left*sw,ry=cr.top*sh,rw=(1-cr.left-cr.right)*sw,rh=(1-cr.top-cr.bottom)*sh;
+   const ds=Math.min(sw/rw,sh/rh),dw=Math.max(1,Math.round(rw*ds)),dh=Math.max(1,Math.round(rh*ds));
+   let scr=cropScr.get(i);
+   if(!scr||scr.w!==sw||scr.h!==sh){const canvas=new OffscreenCanvas(sw,sh),ctx2=canvas.getContext('2d');if(!ctx2)return img;scr={canvas,ctx:ctx2,w:sw,h:sh};cropScr.set(i,scr);}
+   scr.ctx.fillStyle='#000';scr.ctx.fillRect(0,0,sw,sh);
+   scr.ctx.drawImage(img,rx,ry,rw,rh,Math.round((sw-dw)/2),Math.round((sh-dh)/2),dw,dh);
+   return scr.canvas;
+  };
   for(const z of zones){
    checkCancel();
    if(z.kind==='solo'){
@@ -298,7 +312,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
      for await(const frame of sink.canvases(srcStart,srcEnd)){
       checkCancel();
       if(base===null)base=frame.timestamp;
-      ctx.globalAlpha=1;drawClip(frame.canvas,c);
+      ctx.globalAlpha=1;drawClip(cropFrame(z.a,c,frame.canvas),c);
       await videoSource.add(z.start+(frame.timestamp-base),frame.duration);
       note(z.start+(frame.timestamp-base));
      }

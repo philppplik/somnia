@@ -2,9 +2,9 @@ import {useMemo,useState} from 'react';
 import {Button} from '../ui/button';
 import {useT} from '../../lib/useT';
 import {useMedia} from '../../lib/media';
-import {addAudioTrackClip,addImageClip,addTimelineClip,addTimelineClipsFromDialog,cancelVideoExport,deleteAudioTrackClip,deleteTimelineClip,duplicateAudioTrackClip,moveAudioTrackClip,moveTimelineClip,resetTimeline,resizeAudioTrackClip,setAudioTrackClipDuck,setAudioTrackClipFades,setAudioTrackClipGain,toggleAudioTrackClipMute,setTimelineClipCrossfade,setTimelineClipFades,setTimelineClipFreeze,setTimelineClipGain,setTimelineClipSpeed,setVideoFormat,duplicateTimelineClip,replaceClipSource,selectTimelineClip,setImageClipLength,setTimelineClipFlip,setTimelineClipRotation,setVideoExportOptions,setVideoExportRange,toggleTimelineClipMute,trimTimelineClip,useVideoSession} from '../../lib/video/session';
+import {addAudioTrackClip,addImageClip,addTimelineClip,addTimelineClipsFromDialog,cancelVideoExport,deleteAudioTrackClip,deleteTimelineClip,duplicateAudioTrackClip,moveAudioTrackClip,moveTimelineClip,resetTimeline,resizeAudioTrackClip,setAudioTrackClipDuck,setAudioTrackClipFades,setAudioTrackClipGain,toggleAudioTrackClipMute,setTimelineClipCrossfade,setTimelineClipFades,setTimelineClipFreeze,setTimelineClipGain,setTimelineClipSpeed,setVideoFormat,duplicateTimelineClip,replaceClipSource,selectTimelineClip,setImageClipLength,setTimelineClipCrop,setTimelineClipFlip,setTimelineClipRotation,setVideoExportOptions,setVideoExportRange,toggleTimelineClipMute,trimTimelineClip,useVideoSession} from '../../lib/video/session';
 import {audioClipDuration,audioTrackEnd} from '../../lib/video/audioTrack';
-import {clipDuration,clipRanges,fadeInOf,fadeOf,fadeOutOf,flipOf,rotationOf,isFreeze,IMAGE_DEFAULT_SECONDS,isImageClip,MAX_GAIN,speedOf,timelineDuration,type ClipFlip,type ClipRotation} from '../../lib/video/timeline';
+import {clipDuration,clipRanges,fadeInOf,fadeOf,fadeOutOf,cropOf,flipOf,rotationOf,isFreeze,IMAGE_DEFAULT_SECONDS,isImageClip,MAX_GAIN,speedOf,timelineDuration,type ClipFlip,type ClipRotation} from '../../lib/video/timeline';
 import {isTitleClip} from '../../lib/video/titles';
 import {addTitleClip,setTitleLength,updateTitle} from '../../lib/video/titleSession';
 import {TitleAddRow,TitleInspector} from './TitleInspector';
@@ -110,6 +110,13 @@ export function VideoControls({name}:{name:string}){
      {([0,90,180,270] as const).map(r=><option key={r} value={r}>{t(`video.clipRotate.${r}`)}</option>)}
     </NativeSelect>
    </label>
+   <label className="grid gap-1">{t('video.crop')}
+    <div className="grid grid-cols-2 gap-2">
+     {(['left','top','right','bottom'] as const).map(edge=><label key={edge}>{t(`video.crop.${edge}`)}
+      <NativeInput type="number" className={`${field} mt-1`} min={0} max={90} step={1} value={Math.round(cropOf(selected)[edge]*100)} onChange={e=>{const cr=cropOf(selected);setTimelineClipCrop(name,selected.id,{...cr,[edge]:Math.min(90,Math.max(0,Number(e.target.value)||0))/100});}} data-testid={`video-clip-crop-${edge}`}/>
+     </label>)}
+    </div>
+   </label>
    <div className="flex flex-wrap gap-2">
     <Button size="compact" variant="outline" disabled={selectedIndex<=0} onClick={()=>moveTimelineClip(name,selected.id,-1)} data-testid="video-clip-left">{t('video.moveLeft')}</Button>
     <Button size="compact" variant="outline" disabled={selectedIndex<0||selectedIndex>=s.clips.length-1} onClick={()=>moveTimelineClip(name,selected.id,1)} data-testid="video-clip-right">{t('video.moveRight')}</Button>
@@ -149,6 +156,13 @@ export function VideoControls({name}:{name:string}){
     <NativeSelect className={field} value={String(rotationOf(selected))} onChange={e=>setTimelineClipRotation(name,selected.id,Number(e.target.value) as ClipRotation)} data-testid="video-clip-rotate">
      {([0,90,180,270] as const).map(r=><option key={r} value={r}>{t(`video.clipRotate.${r}`)}</option>)}
     </NativeSelect>
+   </label>
+   <label className="grid gap-1">{t('video.crop')}
+    <div className="grid grid-cols-2 gap-2">
+     {(['left','top','right','bottom'] as const).map(edge=><label key={edge}>{t(`video.crop.${edge}`)}
+      <NativeInput type="number" className={`${field} mt-1`} min={0} max={90} step={1} value={Math.round(cropOf(selected)[edge]*100)} onChange={e=>{const cr=cropOf(selected);setTimelineClipCrop(name,selected.id,{...cr,[edge]:Math.min(90,Math.max(0,Number(e.target.value)||0))/100});}} data-testid={`video-clip-crop-${edge}`}/>
+     </label>)}
+    </div>
    </label>
    <label className="flex items-center gap-2"><NativeInput type="checkbox" className={check} checked={isFreeze(selected)} onChange={()=>setTimelineClipFreeze(name,selected.id,isFreeze(selected)?null:selected.in_s)} data-testid="video-clip-freeze"/>{t('video.freeze')}</label>
    {isFreeze(selected)&&<label>{t('video.freezeAt')}<NativeInput type="number" className={`${field} mt-1`} min={0} step={0.1} value={selected.freeze} onChange={e=>setTimelineClipFreeze(name,selected.id,Number(e.target.value))} data-testid="video-clip-freeze-at"/></label>}

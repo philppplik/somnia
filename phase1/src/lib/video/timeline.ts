@@ -7,7 +7,7 @@ import {clampTitleSeconds,isTitleClip,splitTitleClip} from './titles';
  * Title clips (`kind:'title'`) carry no source: `in_s` stays 0 and `out_s` is the card duration.
  * Image clips (`kind:'image'`) reference a photo file: `in_s` stays 0, `out_s` is how long the still shows.
  */
-export interface TimelineClip{id:string;source:string;in_s:number;out_s:number;gain:number;muted:boolean;crossfade_s?:number;/** Freeze frame: source time (seconds) of the single held frame. Set = the clip is a freeze; it takes the still shape (in_s 0, out_s = display duration), has no audio and no speed. Absent = normal playback. */freeze?:number;/** Audio fade-in of a media clip, in timeline seconds. Absent/0 = none; titles and images carry no audio fades. */fadeIn?:number;/** Audio fade-out of a media clip, in timeline seconds. Absent/0 = none. */fadeOut?:number;/** Mirroring of the clip's picture (media and image clips). Absent = not flipped. */flip?:ClipFlip;/** Rotation of the clip's picture in degrees clockwise (media and image clips). Absent/0 = not rotated. */rotation?:ClipRotation;/** Playback speed of a media clip (timeline seconds = source seconds / speed). Absent = 1; title cards have no speed. */speed?:number;kind?:'media'|'title'|'image';title?:import('./titles').TitleSpec}
+export interface TimelineClip{id:string;source:string;in_s:number;out_s:number;gain:number;muted:boolean;crossfade_s?:number;/** Freeze frame: source time (seconds) of the single held frame. Set = the clip is a freeze; it takes the still shape (in_s 0, out_s = display duration), has no audio and no speed. Absent = normal playback. */freeze?:number;/** Audio fade-in of a media clip, in timeline seconds. Absent/0 = none; titles and images carry no audio fades. */fadeIn?:number;/** Audio fade-out of a media clip, in timeline seconds. Absent/0 = none. */fadeOut?:number;/** Mirroring of the clip's picture (media and image clips). Absent = not flipped. */flip?:ClipFlip;/** Rotation of the clip's picture in degrees clockwise (media and image clips). Absent/0 = not rotated. */rotation?:ClipRotation;/** Crop of the clip's fitted frame: fractions cut from each edge, then the remaining region is contain-fitted back into the frame (media and image clips). Absent/all-zero = full picture. */crop?:ClipCrop;/** Playback speed of a media clip (timeline seconds = source seconds / speed). Absent = 1; title cards have no speed. */speed?:number;kind?:'media'|'title'|'image';title?:import('./titles').TitleSpec}
 /** The shortest clip worth keeping; below it splits and trims only produce broken files. */
 export const MIN_CLIP_SECONDS=0.05;
 export const MAX_GAIN=2;
@@ -26,6 +26,19 @@ export const flipOf=(c:TimelineClip):ClipFlip=>CLIP_FLIPS.includes(c.flip as Cli
 export type ClipRotation=0|90|180|270;
 export const CLIP_ROTATIONS:readonly ClipRotation[]=[0,90,180,270];
 export const rotationOf=(c:TimelineClip):ClipRotation=>CLIP_ROTATIONS.includes(c.rotation as ClipRotation)?(c.rotation as ClipRotation):0;
+/** Edge fractions cut from a clip's frame; an axis pair may remove at most 90% together. */
+export interface ClipCrop{left:number;top:number;right:number;bottom:number}
+const cropEdge=(v:unknown)=>typeof v==='number'&&Number.isFinite(v)?Math.min(0.9,Math.max(0,v)):0;
+/** Normalized crop of a clip: every edge in [0,0.9], axis pairs capped at 0.9 combined. */
+export const cropOf=(c:TimelineClip):ClipCrop=>{
+ const o=c.crop;
+ let left=cropEdge(o?.left),top=cropEdge(o?.top),right=cropEdge(o?.right),bottom=cropEdge(o?.bottom);
+ if(left+right>0.9){const k=0.9/(left+right);left*=k;right*=k;}
+ if(top+bottom>0.9){const k=0.9/(top+bottom);top*=k;bottom*=k;}
+ return{left:Number(left.toFixed(3)),top:Number(top.toFixed(3)),right:Number(right.toFixed(3)),bottom:Number(bottom.toFixed(3))};
+};
+/** True when the clip actually cuts anything. */
+export const hasCrop=(c:TimelineClip)=>{const r=cropOf(c);return r.left>0||r.top>0||r.right>0||r.bottom>0;};
 /** A media clip's playback speed, clamped to the supported range. Title cards always play at 1. */
 export const speedOf=(c:TimelineClip)=>c.kind==='title'||isFreeze(c)?1:Math.min(MAX_SPEED,Math.max(MIN_SPEED,typeof c.speed==='number'&&Number.isFinite(c.speed)?c.speed:1));
 /** Timeline seconds the clip occupies: its source range played at its speed. */
@@ -88,13 +101,13 @@ export const fullClip=(source:string,duration:number):TimelineClip=>({id:newClip
 export function sanitizeClips(clips:TimelineClip[],durations:Record<string,number|undefined>):TimelineClip[]{
  const clean=clips.flatMap(c=>{
   // Clip shape only: the spec itself is sanitized where it is drawn, so a valid spec survives sanitation untouched.
-  if(isTitleClip(c)){const o:TimelineClip={...c,kind:'title' as const,source:'',in_s:0,out_s:clampTitleSeconds(c.out_s),gain:1,muted:false};delete o.fadeIn;delete o.fadeOut;delete o.rotation;return[o];}
-  if(isImageClip(c)){const o:TimelineClip={...c,kind:'image' as const,in_s:0,out_s:clampTitleSeconds(c.out_s),gain:1,muted:false};delete o.fadeIn;delete o.fadeOut;if(rotationOf(o)===0)delete o.rotation;else o.rotation=rotationOf(o);return[o];}
+  if(isTitleClip(c)){const o:TimelineClip={...c,kind:'title' as const,source:'',in_s:0,out_s:clampTitleSeconds(c.out_s),gain:1,muted:false};delete o.fadeIn;delete o.fadeOut;delete o.rotation;delete o.crop;return[o];}
+  if(isImageClip(c)){const o:TimelineClip={...c,kind:'image' as const,in_s:0,out_s:clampTitleSeconds(c.out_s),gain:1,muted:false};delete o.fadeIn;delete o.fadeOut;if(rotationOf(o)===0)delete o.rotation;else o.rotation=rotationOf(o);if(hasCrop(o))o.crop=cropOf(o);else delete o.crop;return[o];}
   if(isFreeze(c)){
    const d=durations[c.source];
    const fr=d===undefined?Math.max(0,c.freeze!):Math.min(Math.max(0,c.freeze!),Math.max(0,d-MIN_CLIP_SECONDS));
    const o:TimelineClip={...c,in_s:0,out_s:clampTitleSeconds(c.in_s===0?c.out_s:c.out_s-c.in_s),gain:Math.min(MAX_GAIN,Math.max(0,typeof c.gain==='number'&&Number.isFinite(c.gain)?c.gain:1)),muted:!!c.muted,flip:flipOf(c)==='none'?undefined:flipOf(c),freeze:Number(fr.toFixed(3))};
-   delete o.speed;delete o.fadeIn;delete o.fadeOut;if(rotationOf(o)===0)delete o.rotation;else o.rotation=rotationOf(o);
+   delete o.speed;delete o.fadeIn;delete o.fadeOut;if(rotationOf(o)===0)delete o.rotation;else o.rotation=rotationOf(o);if(hasCrop(o))o.crop=cropOf(o);else delete o.crop;
    return[o];
   }
   const d=durations[c.source];
@@ -104,7 +117,7 @@ export function sanitizeClips(clips:TimelineClip[],durations:Record<string,numbe
   if(out_s-in_s<MIN_CLIP_SECONDS)return[];
   const dur=(out_s-in_s)/speedOf(c),fI=Math.min(fadeInOf(c),dur),fO=Math.min(fadeOutOf(c),Math.max(0,dur-fI));
   const o:TimelineClip={...c,in_s:Number(in_s.toFixed(3)),out_s:Number(out_s.toFixed(3)),gain:Math.min(MAX_GAIN,Math.max(0,typeof c.gain==='number'&&Number.isFinite(c.gain)?c.gain:1)),muted:!!c.muted,speed:speedOf(c),flip:flipOf(c)==='none'?undefined:flipOf(c)};
-  delete o.fadeIn;delete o.fadeOut;if(rotationOf(o)===0)delete o.rotation;else o.rotation=rotationOf(o);
+  delete o.fadeIn;delete o.fadeOut;if(rotationOf(o)===0)delete o.rotation;else o.rotation=rotationOf(o);if(hasCrop(o))o.crop=cropOf(o);else delete o.crop;
   return[{...o,...(fI>0?{fadeIn:Number(fI.toFixed(3))}:{}),...(fO>0?{fadeOut:Number(fO.toFixed(3))}:{})}];
  });
  return clean.map((c,i)=>{

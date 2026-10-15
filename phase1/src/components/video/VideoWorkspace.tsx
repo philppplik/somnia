@@ -9,7 +9,7 @@ import {TitlePreview} from './TitlePreview';
 import {useTitlePlayback} from './useTitlePlayback';
 import {FilmstripStrip} from './FilmstripStrip';
 import {WaveformStrip} from './WaveformStrip';
-import {blendAt,clipFadeGain,clipRanges,flipOf,isFreeze,isImageClip,locate,rotationOf,speedOf,timelineDuration,type TimelineClip} from '../../lib/video/timeline';
+import {blendAt,clipFadeGain,clipRanges,cropOf,flipOf,isFreeze,isImageClip,locate,rotationOf,speedOf,timelineDuration,type TimelineClip} from '../../lib/video/timeline';
 import {shuttleFaster,shuttleSlower} from '../../lib/video/shuttle';
 import {audioClipDuration,audioEnvelope,audioTrackEnd,duckGainAt} from '../../lib/video/audioTrack';
 import {AudioLane} from './AudioLane';
@@ -73,14 +73,45 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
  },[audioClips,playhead,playing,volume,muted,media]);
  useEffect(()=>{const els=audioEls.current;return()=>els.forEach(el=>el.pause());},[]);
  // Preview transform matching the export: quarter turns shrink the slot to keep the contain fit (the export fits the
- // swapped box instead), mirroring applies inside the rotated frame. Uniform scale commutes with the rotate.
- const previewTransform=(clip:TimelineClip,w:number,h:number):string=>{
-  const f=flipOf(clip),r=rotationOf(clip);
-  if(f==='none'&&r===0)return'';
-  const parts:string[]=[];
-  if(r!==0){const sFit=r===180?1:(w>0&&h>0?Math.min(w/h,h/w):1);parts.push(`rotate(${r}deg)`,`scale(${sFit})`);}
-  if(f!=='none')parts.push(`scale(${f.includes('h')?-1:1},${f.includes('v')?-1:1})`);
-  return parts.join(' ');
+ // swapped box instead), mirroring applies inside the rotated frame. Uniform scale commutes with the rotate. A crop
+ // zooms the remaining region back into the frame (outermost translate+scale, screen space) and clips the overflow
+ // with an inverse-mapped polygon, so the preview shows the same contain-fitted region the export renders.
+ const applyPreviewTransform=(el:HTMLElement,clip:TimelineClip)=>{
+  const f=flipOf(clip),r=rotationOf(clip),w=el.clientWidth,h=el.clientHeight;
+  const cr=cropOf(clip),cropped=cr.left>0||cr.top>0||cr.right>0||cr.bottom>0;
+  if(!cropped){
+   const parts:string[]=[];
+   if(r!==0){const sFit=r===180?1:(w>0&&h>0?Math.min(w/h,h/w):1);parts.push(`rotate(${r}deg)`,`scale(${sFit})`);}
+   if(f!=='none')parts.push(`scale(${f.includes('h')?-1:1},${f.includes('v')?-1:1})`);
+   const t=parts.join(' ');
+   if(el.style.transformOrigin)el.style.transformOrigin='';
+   if(el.style.transform!==t)el.style.transform=t;
+   if(el.style.clipPath)el.style.clipPath='';
+   return;
+  }
+  if(w<=0||h<=0)return;
+  el.style.transformOrigin='0 0';
+  const rw=(1-cr.left-cr.right)*w,rh=(1-cr.top-cr.bottom)*h,zs=Math.min(w/rw,h/rh);
+  const tx=(w-zs*rw)/2-zs*cr.left*w,ty=(h-zs*rh)/2-zs*cr.top*h;
+  const centered=r!==0||f!=='none',sf=r===90||r===270?Math.min(w/h,h/w):1,cx=w/2,cy=h/2;
+  const parts:string[]=[`translate(${tx}px,${ty}px)`,`scale(${zs})`];
+  if(centered){
+   parts.push(`translate(${cx}px,${cy}px)`);
+   if(r!==0)parts.push(`rotate(${r}deg)`,`scale(${sf})`);
+   if(f!=='none')parts.push(`scale(${f.includes('h')?-1:1},${f.includes('v')?-1:1})`);
+   parts.push(`translate(${-cx}px,${-cy}px)`);
+  }
+  const t=parts.join(' ');
+  if(el.style.transform!==t)el.style.transform=t;
+  // Clip the frame box mapped back through the whole chain (keeps zoom overflow out of the letterbox bars).
+  const rad=-r*Math.PI/180,cos=Math.cos(rad),sin=Math.sin(rad),fh=f.includes('h')?-1:1,fv=f.includes('v')?-1:1;
+  const inv=(qx:number,qy:number):string=>{
+   let x=(qx-tx)/zs,y=(qy-ty)/zs;
+   if(centered){x-=cx;y-=cy;if(r!==0){const x2=x*cos-y*sin,y2=x*sin+y*cos;x=x2/sf;y=y2/sf;}if(f!=='none'){x*=fh;y*=fv;}x+=cx;y+=cy;}
+   return`${x.toFixed(2)}px ${y.toFixed(2)}px`;
+  };
+  const cp=`polygon(${inv(0,0)},${inv(w,0)},${inv(w,h)},${inv(0,h)})`;
+  if(el.style.clipPath!==cp)el.style.clipPath=cp;
  };
  // Every active slot sits on its clip's source and frame. A paused transport (seek, frame step) always syncs the
  // frame; while playing, only drift over 350 ms is corrected so the element's own clock does the smooth work.
@@ -90,7 +121,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
    const el=slotOf(e.range.index).current;if(!el)continue;
    const url=urlOf(e.range.clip.source);
    if(el.dataset.slotClip!==e.range.clip.id){el.dataset.slotClip=e.range.clip.id;if(el.src!==url){el.src=url;el.currentTime=e.sourceTime;}}
-   {const t=previewTransform(e.range.clip,el.clientWidth,el.clientHeight);if(el.style.transform!==t)el.style.transform=t;}
+   applyPreviewTransform(el,e.range.clip);
    // Speed applies in the preview too; preservesPitch off so the preview sounds like the export (resampled, shifted pitch).
    el.playbackRate=speedOf(e.range.clip)*rateMul;el.preservesPitch=false;
    if(!playing||Math.abs(el.currentTime-e.sourceTime)>0.35)el.currentTime=e.sourceTime;
@@ -98,7 +129,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
   for(const e of blend){
    if(!isImageClip(e.range.clip))continue;
    const el=stageRef.current?.querySelector<HTMLImageElement>(`img[data-img-clip="${e.range.clip.id}"]`);if(!el)continue;
-   const t=previewTransform(e.range.clip,el.clientWidth,el.clientHeight);if(el.style.transform!==t)el.style.transform=t;
+   applyPreviewTransform(el,e.range.clip);
   }
   for(const slot of [slotA,slotB]){
    const el=slot.current;

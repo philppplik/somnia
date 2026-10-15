@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {sniffVideo,VIDEO_FILE} from './format';
 import {cappedFps,exportName,sanitizeExportOptions} from './recipe';
-import {clipFadeGain,clipRanges,fadeInOf,fadeOutOf,flipOf,rotationOf,fullClip,isFreeze,isNeutralTimeline,locate,moveClip,rippleDelete,sanitizeClips,setClipEdge,setClipFades,setClipSpeed,sliceTimeline,splitAt,timelineDuration,type TimelineClip} from './timeline';
+import {clipFadeGain,clipRanges,cropOf,fadeInOf,fadeOutOf,flipOf,hasCrop,rotationOf,fullClip,isFreeze,isNeutralTimeline,locate,moveClip,rippleDelete,sanitizeClips,setClipEdge,setClipFades,setClipSpeed,sliceTimeline,splitAt,timelineDuration,type TimelineClip} from './timeline';
 import {probeVideo} from './pipeline';
 import {addTimelineClip,closeVideo,deleteTimelineClip,exportVideo,getVideoSession,moveTimelineClip,openVideo,resetTimeline,runVideoExport,setTimelineClipGain,setVideoEngineFactory,setVideoFormat,splitTimelineAt,toggleTimelineClipMute,trimTimelineClip} from './session';
 import type {VideoEngineLike,VideoResult} from './engine';
@@ -291,4 +291,17 @@ test('clip rotation: sanitize keeps right angles and drops junk and zero',()=>{
  assert.equal(rotationOf(mk(180)),180);
  assert.equal(rotationOf(mk(undefined)),0);
  assert.equal(rotationOf(mk(45)),0);
+});
+
+test('clip crop: normalize clamps edges and axis pairs; sanitize keeps or drops it',()=>{
+ assert.deepEqual(cropOf({id:'a',source:'a.mp4',in_s:0,out_s:2,gain:1,muted:false,crop:{left:0.1,top:0,right:0.2,bottom:0}}),{left:0.1,top:0,right:0.2,bottom:0});
+ const over=cropOf({id:'a',source:'a.mp4',in_s:0,out_s:2,gain:1,muted:false,crop:{left:0.8,top:0,right:0.8,bottom:2}});
+ assert.ok(over.left+over.right<=0.9+1e-9,'an axis never removes more than 90%');
+ assert.ok(over.bottom<=0.9);
+ assert.ok(!hasCrop({id:'a',source:'a.mp4',in_s:0,out_s:2,gain:1,muted:false}));
+ assert.ok(hasCrop({id:'a',source:'a.mp4',in_s:0,out_s:2,gain:1,muted:false,crop:{left:0.1,top:0,right:0,bottom:0}}));
+ const mk=(crop:unknown):TimelineClip=>({id:'a',source:'a.mp4',in_s:0,out_s:2,gain:1,muted:false,crop:crop as never});
+ assert.deepEqual(sanitizeClips([mk({left:0.25,top:0,right:0,bottom:0})],{'a.mp4':5})[0].crop,{left:0.25,top:0,right:0,bottom:0});
+ assert.equal(sanitizeClips([mk({left:0,top:0,right:0,bottom:0})],{'a.mp4':5})[0].crop,undefined,'all-zero crop is dropped');
+ assert.equal(sanitizeClips([mk({left:'much'})],{'a.mp4':5})[0].crop,undefined,'junk edges are dropped');
 });

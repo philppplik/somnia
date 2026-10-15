@@ -168,3 +168,13 @@ test('clip rotation round-trips; zero is omitted from the file and junk is dropp
  const junk=JSON.stringify({app:'somnia-video',version:2,clips:[{id:'a',kind:'media',source:'x.mp4',in_s:0,out_s:1,rotation:45}]});
  assert.equal(parseVideoProject(junk).clips[0].rotation,undefined,'only right angles survive parsing');
 });
+
+test('clip crop round-trips; full frame writes no crop field',()=>{
+ const clips:TimelineClip[]=[media('m1',{crop:{left:0.1,top:0.2,right:0.1,bottom:0}}),{id:'img1',kind:'image',source:'photo.png',in_s:0,out_s:5,gain:1,muted:false,crop:{left:0,top:0.5,right:0,bottom:0}}];
+ const parsed=parseVideoProject(serializeVideoProject(clips,[],'webm'));
+ assert.deepEqual(parsed.clips[0].crop,{left:0.1,top:0.2,right:0.1,bottom:0});
+ assert.deepEqual(parsed.clips[1].crop,{left:0,top:0.5,right:0,bottom:0});
+ assert.ok(!JSON.stringify(serializeVideoProject([media('m1')],[],'webm')).includes('crop'),'uncropped clips write no crop field');
+ const junk=JSON.stringify({app:'somnia-video',version:2,clips:[{id:'a',kind:'media',source:'x.mp4',in_s:0,out_s:1,crop:{left:5,top:-1,right:'x',bottom:0}}]});
+ assert.deepEqual(parseVideoProject(junk).clips[0].crop,{left:0.9,top:0,right:0,bottom:0},'junk edges clamp, not crash');
+});
