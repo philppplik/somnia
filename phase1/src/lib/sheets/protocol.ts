@@ -81,7 +81,7 @@ export type NegativeStyle='minus'|'red'|'paren'|'redParen';
 export type ZeroStyle='show'|'dash';
 export type DatePatternId='ymd'|'dmyDot'|'mdy'|'dmy'|'long'|'weekday'|'short'|'monthYear'|'time24'|'time12'|'dateTime';
 /** Defined names: the block is the active selection. `delete` acts on the workbook name, or on the active sheet's own name. */
-export type NameOp={kind:'define';name:string;scope:'workbook'|'sheet';replace?:boolean}|{kind:'delete';name:string;scope:'workbook'|'sheet'}|{kind:'comment';name:string;scope:'workbook'|'sheet';text:string}|{kind:'constant';name:string;scope:'workbook'|'sheet';value:number|string;replace?:boolean};
+export type NameOp={kind:'define';name:string;scope:'workbook'|'sheet';replace?:boolean}|{kind:'delete';name:string;scope:'workbook'|'sheet'}|{kind:'comment';name:string;scope:'workbook'|'sheet';text:string}|{kind:'constant';name:string;scope:'workbook'|'sheet';value:number|string;replace?:boolean}|{kind:'fromSelection';top?:boolean;left?:boolean;replace?:boolean};
 export interface NameInfo{name:string;refersTo:string;scope:string;comment:string}
 export type FormatOp=
  |{kind:'bold'|'italic'|'underline'|'strike';on:boolean}
@@ -182,6 +182,7 @@ export type SheetsRequest=
  |{id:number;op:'defineName';sheet:number;row:number;col:number;rows:number;cols:number;name:{name:string;scope:'workbook'|'sheet';replace?:boolean}}
  |{id:number;op:'deleteName';sheet:number;name:{name:string;scope:'workbook'|'sheet'}}
  |{id:number;op:'editName';sheet:number;name:{kind:'comment'|'constant';name:string;scope:'workbook'|'sheet';text?:string;value?:number|string;replace?:boolean}}
+ |{id:number;op:'createNames';sheet:number;row:number;col:number;rows:number;cols:number;name:{top?:boolean;left?:boolean;replace?:boolean}}
  |{id:number;op:'names'}
  |{id:number;op:'pivotFields';sheet:number;row:number;col:number;rows:number;cols:number}
  |{id:number;op:'pivotCreate';sheet:number;row:number;col:number;rows:number;cols:number;pivot:{rows:string;columns?:string;values:string;func?:PivotFunc}}

@@ -780,16 +780,18 @@ function PivotEditGroup(){
  </div>;
 }
 /** Named ranges in one grouped menu: define the selection, redefine, go to or delete a name. One undo step each. */
-type NameAction='define'|'defineSheet'|'replace'|'replaceSheet'|'constant'|'constantSheet'|'setConstant'|'comment'|'go'|'delete';
+type NameAction='define'|'defineSheet'|'replace'|'replaceSheet'|'constant'|'constantSheet'|'setConstant'|'comment'|'fromSelection'|'go'|'delete';
 function NamesGroup(){
- const {t}=useT(),s=useSheetsSelection(),action=useAction();const [act,setAct]=useState<NameAction>('define');const [pick,setPick]=useState('');const [name,setName]=useState('');const [value,setValue]=useState('');const [note,setNote]=useState('');
+ const {t}=useT(),s=useSheetsSelection(),action=useAction();const [act,setAct]=useState<NameAction>('define');const [pick,setPick]=useState('');const [name,setName]=useState('');const [value,setValue]=useState('');const [note,setNote]=useState('');const [fromTop,setFromTop]=useState(true);const [fromLeft,setFromLeft]=useState(false);const [fromReplace,setFromReplace]=useState(false);
  if(!s)return null;
  const list=s.names??[],chosen=list.find(n=>n.scope+'|'+n.name===pick)??null,defining=act==='define'||act==='defineSheet'||act==='replace'||act==='replaceSheet'||act==='constant'||act==='constantSheet',needsValue=act==='constant'||act==='constantSheet'||act==='setConstant',valueBad=needsValue&&(value===''||[...value].length>MAX_COMMENT_CHARS||/[\u0000-\u001f\u007f]/.test(value)),noteBad=act==='comment'&&([...note].length>MAX_COMMENT_CHARS||/[\u0000-\u001f\u007f]/.test(note));
+ const fromSel=act==='fromSelection',fromBad=fromSel&&(!(fromTop&&(s.range?.r1??0)>(s.range?.r0??0))&&!(fromLeft&&(s.range?.c1??0)>(s.range?.c0??0)));
  const own=chosen&&(chosen.scope==='Workbook'||chosen.scope===s.sheetName),target=chosen?nameTarget(chosen.refersTo):null,dest=target?(s.workbook?.sheets??[]).find(x=>x.name.toLowerCase()===target.sheet.toLowerCase()&&x.visibility==='Visible'):undefined;
- const problem=defining?(nameProblem(name.trim())):act==='go'?(target&&dest?null:'target'):(chosen&&own?null:'pick'),blocked=!!problem||valueBad||noteBad;
+ const problem=fromSel?null:defining?(nameProblem(name.trim())):act==='go'?(target&&dest?null:'target'):(chosen&&own?null:'pick'),blocked=!!problem||valueBad||noteBad;
  const apply=()=>{
   const scopeOf=chosen?(chosen.scope==='Workbook'?'workbook':'sheet'):'workbook';
-  if(act==='constant'||act==='constantSheet')void action.run('sheets.names',{kind:'constant',name:name.trim(),scope:act==='constantSheet'?'sheet':'workbook',value:constantValue(value)}).then(r=>{if(r!==null){setName('');setValue('');}});
+  if(fromSel)void action.run('sheets.names',{kind:'fromSelection',top:fromTop,left:fromLeft,replace:fromReplace});
+  else if(act==='constant'||act==='constantSheet')void action.run('sheets.names',{kind:'constant',name:name.trim(),scope:act==='constantSheet'?'sheet':'workbook',value:constantValue(value)}).then(r=>{if(r!==null){setName('');setValue('');}});
   else if(act==='setConstant'&&chosen)void action.run('sheets.names',{kind:'constant',name:chosen.name,scope:scopeOf,value:constantValue(value),replace:true}).then(r=>{if(r!==null)setValue('');});
   else if(act==='comment'&&chosen)void action.run('sheets.names',{kind:'comment',name:chosen.name,scope:scopeOf,text:note});
   else if(defining)void action.run('sheets.names',{kind:'define',name:name.trim(),scope:act==='defineSheet'||act==='replaceSheet'?'sheet':'workbook',replace:act==='replace'||act==='replaceSheet'}).then(r=>{if(r!==null)setName('');});
@@ -802,14 +804,21 @@ function NamesGroup(){
   <label className="flex flex-col gap-1">{t('sheets.nm.action')}<NativeSelect className={field} value={act} disabled={action.busy} onChange={e=>setAct(e.currentTarget.value as NameAction)} data-testid="sheets-nm-action">
    <optgroup label={t('sheets.nm.groupSelection')}><option value="define">{t('sheets.nm.define')}</option><option value="defineSheet">{t('sheets.nm.defineSheet')}</option><option value="replace">{t('sheets.nm.replace')}</option><option value="replaceSheet">{t('sheets.nm.replaceSheet')}</option></optgroup>
    <optgroup label={t('sheets.nm.groupConstant')}><option value="constant">{t('sheets.nm.constant')}</option><option value="constantSheet">{t('sheets.nm.constantSheet')}</option><option value="setConstant">{t('sheets.nm.setConstant')}</option><option value="comment">{t('sheets.nm.comment')}</option></optgroup>
+   <optgroup label={t('sheets.nm.groupFrom')}><option value="fromSelection">{t('sheets.nm.fromSelection')}</option></optgroup>
    <optgroup label={t('sheets.nm.groupName')}><option value="go">{t('sheets.nm.go')}</option><option value="delete">{t('sheets.nm.delete')}</option></optgroup>
   </NativeSelect></label>
   {defining&&<label className="flex flex-col gap-1">{t('sheets.nm.name')}<NativeInput className={field} value={name} maxLength={64} aria-invalid={name.trim()!==''&&!!problem} disabled={action.busy} onChange={e=>setName(e.currentTarget.value)} data-testid="sheets-nm-name"/></label>}
+  {fromSel&&<>
+   <Checkbox label={t('sheets.nm.fromTop')} checked={fromTop} disabled={action.busy} onChange={e=>setFromTop(e.currentTarget.checked)}/>
+   <Checkbox label={t('sheets.nm.fromLeft')} checked={fromLeft} disabled={action.busy} onChange={e=>setFromLeft(e.currentTarget.checked)}/>
+   <Checkbox label={t('sheets.nm.fromReplace')} checked={fromReplace} disabled={action.busy} onChange={e=>setFromReplace(e.currentTarget.checked)}/>
+   {fromBad&&<p className="text-ink-3">{t('sheets.nm.fromNeed')}</p>}
+  </>}
   {needsValue&&<label className="flex flex-col gap-1">{t('sheets.nm.value')}<NativeInput className={field} value={value} maxLength={MAX_COMMENT_CHARS} aria-invalid={valueBad&&value!==''} disabled={action.busy} onChange={e=>setValue(e.currentTarget.value)} data-testid="sheets-nm-value"/></label>}
   {act==='comment'&&<label className="flex flex-col gap-1">{t('sheets.nm.note')}<NativeInput className={field} value={note} maxLength={MAX_COMMENT_CHARS} aria-invalid={noteBad} disabled={action.busy} onChange={e=>setNote(e.currentTarget.value)} data-testid="sheets-nm-note"/></label>}
-  <Button variant="outline" size="compact" disabled={action.busy||blocked} onClick={apply} data-testid="sheets-nm-apply">{t('sheets.nm.apply')}</Button>
+  <Button variant="outline" size="compact" disabled={action.busy||blocked||fromBad} onClick={apply} data-testid="sheets-nm-apply">{t('sheets.nm.apply')}</Button>
   {chosen&&chosen.comment!==''&&<p className="text-ink-3" data-testid="sheets-nm-comment">{t('sheets.nm.commentNow',{text:chosen.comment})}</p>}
-  <p className="text-ink-3">{t(defining&&s.range&&!needsValue?'sheets.nm.scope':'sheets.nm.scopeName',{range:s.range?rangeAddress(s.range):s.address})}</p>
+  <p className="text-ink-3">{t(fromSel||(defining&&s.range&&!needsValue)?'sheets.nm.scope':'sheets.nm.scopeName',{range:s.range?rangeAddress(s.range):s.address})}</p>
  </div>;
 }
 /** Custom number and date formats in one grouped menu. Built from fields, never from free text; one undo step. */

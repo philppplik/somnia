@@ -2714,6 +2714,116 @@ impl HeadlessWorkbook {
         Ok(json!({"name": name, "refersTo": format!("={refers}")}).to_string())
     }
 
+    /// Creates workbook names from the labels in the top row and/or left column of the block as ONE history entry. `op_json` is
+    /// `{"top":bool,"left":bool,"replace":bool}` (at least one side). A top label names the cells below it in its column, a left label the
+    /// cells to its right in its row. Labels are cleaned to letters, digits, `_` and `.` (a leading digit or a cell-like label gets a `_`);
+    /// empty, too long, cell-like (`R`, `C`, `r1c1`) or repeated labels are skipped and counted. An existing workbook name is only
+    /// replaced with `replace`. Refused: protected workbook structure or sheet, blocks over 1,000,000 cells, more than 500 names.
+    /// Returns `{"created":n,"skipped":m}`.
+    pub fn create_names(&mut self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32, op_json: &str) -> Result<String, String> {
+        if rows == 0 || cols == 0 || u64::from(rows) * u64::from(cols) > MAX_FILL_CELLS {
+            return Err("Select a block of at most 1,000,000 cells.".into());
+        }
+        let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "operation must be a JSON object".to_string())?;
+        let obj = op.as_object().ok_or("operation must be a JSON object")?;
+        if obj.keys().any(|k| !matches!(k.as_str(), "top" | "left" | "replace")) {
+            return Err("unknown field".into());
+        }
+        let flag = |k: &str| -> Result<bool, String> {
+            match obj.get(k) {
+                None => Ok(false),
+                Some(serde_json::Value::Bool(b)) => Ok(*b),
+                _ => Err(format!("{k} must be true or false")),
+            }
+        };
+        let (top, left, replace) = (flag("top")?, flag("left")?, flag("replace")?);
+        if !top && !left {
+            return Err("Choose the top row or the left column.".into());
+        }
+        self.check_block(sheet, row, col, rows, cols, true)?;
+        let abs = |r: u32, c: u32| format!("${}${}", gridcraft_engine::core::col_to_letters(c), r + 1);
+        let mut wanted: Vec<(String, String)> = Vec::new();
+        let mut skipped = 0u32;
+        let existing: Vec<String> = {
+            let doc = self.session.doc().map_err(|e| e.to_string())?;
+            if doc.wb.protected_structure {
+                return Err("The workbook structure is protected.".into());
+            }
+            let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+            let q = gridcraft_engine::formula::quote_sheet(&sh.name);
+            let mut labels: Vec<(String, String)> = Vec::new();
+            if top && rows > 1 {
+                for c in col..col + cols {
+                    labels.push((sh.value(CellRef::new(row, c)).display(), format!("{q}!{}:{}", abs(row + 1, c), abs(row + rows - 1, c))));
+                }
+            }
+            if left && cols > 1 {
+                for r in row + u32::from(top)..row + rows {
+                    labels.push((sh.value(CellRef::new(r, col)).display(), format!("{q}!{}:{}", abs(r, col + 1), abs(r, col + cols - 1))));
+                }
+            }
+            for (label, refers) in labels {
+                let mut name: String = label.trim().chars().map(|c| if c.is_alphanumeric() || c == '.' { c } else { '_' }).collect();
+                if name.is_empty() {
+                    continue;
+                }
+                if name.chars().next().is_some_and(|c| c.is_ascii_digit()) || CellRef::parse(&name).is_some() {
+                    name.insert(0, '_');
+                }
+                if Self::name_problem(&name).is_some() || wanted.iter().any(|(n, _)| n.eq_ignore_ascii_case(&name)) {
+                    skipped += 1;
+                    continue;
+                }
+                wanted.push((name, refers));
+            }
+            doc.wb.names.iter().filter(|n| n.scope.is_none()).map(|n| n.name.clone()).collect()
+        };
+        if wanted.is_empty() {
+            return Err("No usable labels: the top row or left column needs text.".into());
+        }
+        let clash = wanted.iter().filter(|(n, _)| existing.iter().any(|e| e.eq_ignore_ascii_case(n))).count();
+        if clash > 0 && !replace {
+            return Err(format!("{clash} of these names already exist. Replace them or choose other labels."));
+        }
+        let total = {
+            let doc = self.session.doc().map_err(|e| e.to_string())?;
+            doc.wb.names.iter().filter(|n| !n.hidden).count() + wanted.len() - clash
+        };
+        if total > MAX_NAMES {
+            return Err("A workbook holds at most 500 names.".into());
+        }
+        let (before_rev, before_len, snap_wb, snap_sel, snap_redo) = {
+            let doc = self.session.doc().map_err(|e| e.to_string())?;
+            (doc.revision, doc.undo.len(), doc.wb.clone(), doc.selection.clone(), doc.redo.clone())
+        };
+        let outcome: Result<(), String> = (|| {
+            self.session.run("sheet.activate", json!({"sheet": sheet})).map_err(|e| e.to_string())?;
+            for (name, refers) in &wanted {
+                self.session.run("formulas.defineName", json!({"name": name, "refersTo": format!("={refers}"), "scope": "Workbook"})).map_err(|e| e.to_string())?;
+            }
+            Ok(())
+        })();
+        let _ = self.session.take_ui_requests();
+        let doc = self.session.doc_mut().map_err(|e| e.to_string())?;
+        match outcome {
+            Ok(()) => {
+                doc.undo.truncate(before_len + 1);
+                doc.redo.clear();
+                Ok(json!({"created": wanted.len(), "skipped": skipped}).to_string())
+            }
+            Err(e) => {
+                doc.undo.truncate(before_len);
+                doc.wb = snap_wb;
+                doc.selection = snap_sel;
+                doc.revision = before_rev;
+                doc.redo = snap_redo;
+                let wb = doc.wb.clone();
+                doc.calc.rebuild(&wb);
+                Err(e)
+            }
+        }
+    }
+
     /// Edits a defined name as ONE history entry. `op_json` is `{"kind":"comment","name":..,"scope":"workbook"|"sheet","text":..}` (up to
     /// 255 characters, no control characters, empty clears it; the name keeps what it refers to) or `{"kind":"constant","name":..,"scope":..,
     /// "value":number|text,"replace":bool}` (a name that stands for a number or a text, no formula; an existing name of the same scope is
@@ -5679,6 +5789,24 @@ mod tests {
         for bad in [r#"{"kind":"comment","name":"Missing","text":"x"}"#, r#"{"kind":"constant","name":"A1","value":1}"#, r#"{"kind":"constant","name":"Z","value":""}"#, r#"{"kind":"constant","name":"Z","value":true}"#, r#"{"kind":"comment","name":"Block","text":"a\nb"}"#, r#"{"kind":"comment","name":"Block","extra":1}"#, r#"{"kind":"formula","name":"Z"}"#] {
             assert!(book.edit_name(0, bad).is_err(), "{bad}");
         }
+    }
+    #[test]
+    fn create_names_from_labels_is_one_undo_step_and_refuses_clashes() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        let steps = |b: &HeadlessWorkbook| b.session.doc().unwrap().undo.len();
+        book.set_values(0, 300, 0, r#"[["Price","Qty"],["1","2"],["3","4"]]"#).unwrap();
+        let before = steps(&book);
+        let made = book.create_names(0, 300, 0, 3, 2, r#"{"top":true}"#).unwrap();
+        assert!(made.contains("\"created\":2"), "{made}");
+        assert_eq!(steps(&book), before + 1);
+        let listed = book.list_names().unwrap();
+        assert!(listed.contains("Price") && listed.contains("$A$302:$A$303"), "{listed}");
+        assert!(book.create_names(0, 300, 0, 3, 2, r#"{"top":true}"#).is_err(), "clash without replace");
+        assert!(book.create_names(0, 300, 0, 3, 2, r#"{"top":true,"replace":true}"#).is_ok());
+        for bad in [r#"{}"#, r#"{"top":"y"}"#, r#"{"top":true,"x":1}"#, r#"{"left":false}"#] {
+            assert!(book.create_names(0, 300, 0, 3, 2, bad).is_err(), "{bad}");
+        }
+        assert!(book.create_names(0, 300, 0, 0, 2, r#"{"top":true}"#).is_err());
     }
     #[test]
     fn view_op_sets_zoom_and_gridlines_with_bounds() {

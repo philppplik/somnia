@@ -16,6 +16,7 @@ export function nameProblem(name:string):'length'|'chars'|'cell'|null{
 export function parseNamesCommand(input:unknown):NameOp{
  if(!input||typeof input!=='object'||Array.isArray(input))throw Error('Name operation must be an object.');
  const o=input as Record<string,unknown>,only=(...k:string[])=>{if(Object.keys(o).some(x=>!k.includes(x)))throw Error('Unknown name field.');};
+ if(o.kind==='fromSelection'){only('kind','top','left','replace');for(const k of ['top','left','replace'])if(o[k]!==undefined&&typeof o[k]!=='boolean')throw Error('`'+k+'` must be true or false.');if(o.top!==true&&o.left!==true)throw Error('Choose the top row or the left column.');return {kind:'fromSelection',...(o.top===true?{top:true}:{}),...(o.left===true?{left:true}:{}),...(o.replace===true?{replace:true}:{})};}
  if(typeof o.name!=='string')throw Error('A name is needed.');const name=o.name.trim();
  const scope=o.scope===undefined?'workbook':o.scope;if(scope!=='workbook'&&scope!=='sheet')throw Error('Scope must be workbook or sheet.');
  if(o.kind==='define'){only('kind','name','scope','replace');if(nameProblem(name))throw Error('Invalid name.');if(o.replace!==undefined&&typeof o.replace!=='boolean')throw Error('replace must be true or false.');const out:NameOp={kind:'define',name,scope};if(o.replace)out.replace=true;return out;}

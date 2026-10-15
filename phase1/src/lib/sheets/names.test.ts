@@ -34,3 +34,8 @@ test('name comments and constants are bounded',()=>{
  for(const bad of [{kind:'comment',name:'P'},{kind:'comment',name:'P',text:'x'.repeat(256)},{kind:'comment',name:'P',text:'a\nb'},{kind:'comment',name:'P',text:'x',value:1},{kind:'constant',name:'A1',value:1},{kind:'constant',name:'R',value:''},{kind:'constant',name:'R',value:Infinity},{kind:'constant',name:'R',value:NaN},{kind:'constant',name:'R',value:true},{kind:'constant',name:'R',value:'x'.repeat(256)},{kind:'constant',name:'R',value:1,replace:'y'},{kind:'constant',name:'R',value:1,text:'x'}])assert.throws(()=>parseNamesCommand(bad),JSON.stringify(bad));
  assert.equal(constantValue(' 0.07 '),0.07);assert.equal(constantValue('abc'),'abc');assert.equal(constantValue(''),'');assert.equal(constantValue('1e999'),'1e999');
 });
+test('names from the selection need a side and take only flags',()=>{
+ assert.deepEqual(parseNamesCommand({kind:'fromSelection',top:true}),{kind:'fromSelection',top:true});
+ assert.deepEqual(parseNamesCommand({kind:'fromSelection',top:true,left:true,replace:true}),{kind:'fromSelection',top:true,left:true,replace:true});
+ for(const bad of [{kind:'fromSelection'},{kind:'fromSelection',top:false},{kind:'fromSelection',top:'y'},{kind:'fromSelection',top:true,name:'x'},{kind:'fromSelection',left:true,replace:1}])assert.throws(()=>parseNamesCommand(bad),JSON.stringify(bad));
+});
