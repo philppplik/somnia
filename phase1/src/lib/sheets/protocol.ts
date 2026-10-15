@@ -54,7 +54,7 @@ export interface ViewOpResult{zoom:number;gridlines:boolean;headings?:boolean;ze
 export type SavedViewOp={kind:'save'|'show'|'delete';name:string};
 /** Merge, justify, rotate, double underline and clear formats on the selected block (one undo step). */
 /** Built-in cell styles, AutoSum, checkboxes and the format painter (one undo step each, except picking up a format). */
-export type CellToolOp={kind:'style';name:string}|{kind:'autoSum';function:'SUM'|'AVERAGE'|'COUNT'|'MAX'|'MIN'}|{kind:'insertCheckbox'|'toggleCheckbox'|'pickFormat'|'pasteFormat'};
+export type CellToolOp={kind:'style';name:string}|{kind:'newStyle';name:string}|{kind:'autoSum';function:'SUM'|'AVERAGE'|'COUNT'|'MAX'|'MIN'}|{kind:'insertCheckbox'|'toggleCheckbox'|'pickFormat'|'pasteFormat'};
 /** Flash Fill (empty cells only) and Consolidate (never over filled cells); one undo step each. */
 export type DataToolOp={kind:'flashFill'}|{kind:'consolidate';function:'sum'|'count'|'countNums'|'average'|'max'|'min'|'product';sources:string[];topRow:boolean;leftColumn:boolean};
 /** PivotTable editing (one undo step each; a report never overwrites other data). */
@@ -172,6 +172,7 @@ export type SheetsRequest=
  |{id:number;op:'annotate';sheet:number;row:number;col:number;annotate:AnnotateOp}
  |{id:number;op:'annotations';sheet:number;row:number;col:number}
  |{id:number;op:'notesOverview';sheet:number}
+ |{id:number;op:'customStyles'}
  |{id:number;op:'defineName';sheet:number;row:number;col:number;rows:number;cols:number;name:{name:string;scope:'workbook'|'sheet';replace?:boolean}}
  |{id:number;op:'deleteName';sheet:number;name:{name:string;scope:'workbook'|'sheet'}}
  |{id:number;op:'names'}

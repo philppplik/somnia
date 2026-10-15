@@ -3,7 +3,7 @@ import {parseNames} from './names';
 import {parsePivotFields,parseTables} from './tableOps';
 import {parseScenarios} from './whatIfOps';
 import {parseSavedViews} from './savedViews';
-import {parseFunctionCatalog} from './cellToolOps';
+import {parseFunctionCatalog,parseCustomStyles} from './cellToolOps';
 import {parsePivotReports} from './pivotEditOps';
 import {parseCfRules} from './cfManageOps';
 import {parseInvalidCells,parseValidationRule} from './validationOps';
@@ -146,6 +146,7 @@ export class SheetsEngine{
  /** Adds, answers, resolves or removes a note or comment, or sets or removes a link, on one cell (one undo step). */
  annotate(sheet:number,row:number,col:number,annotate:AnnotateOp){return this.result<unknown>({op:'annotate',sheet,row,col,annotate});}
  /** The note and link of one cell (read only). */
+ async customStyles():Promise<string[]>{return parseCustomStyles(await this.result<unknown>({op:'customStyles'}));}
  async notesOverview(sheet:number):Promise<NoteList>{return parseNoteList(await this.result<unknown>({op:'notesOverview',sheet}));}
  async annotations(sheet:number,row:number,col:number):Promise<CellAnnotations>{const r=await this.result<{notes:unknown;links:unknown}>({op:'annotations',sheet,row,col});return parseAnnotations(r);}
  /** Replace text in the block (one undo step); resolves to the number of changed cells. */

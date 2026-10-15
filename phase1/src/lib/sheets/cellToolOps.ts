@@ -7,6 +7,18 @@ export const CELL_STYLE_GROUPS={
  numbers:['Currency','Comma','Percent','Currency [0]','Comma [0]'],
 } as const;
 export const CELL_STYLES:readonly string[]=Object.values(CELL_STYLE_GROUPS).flat();
+export const MAX_STYLE_NAME=60,MAX_CUSTOM_STYLES=50;
+/** A name for a new custom style: trimmed, 1 to 60 characters, no control characters, never a built-in name. */
+export function cleanStyleName(input:unknown):string|null{
+ if(typeof input!=='string')return null;const n=input.trim();
+ if(!n||[...n].length>MAX_STYLE_NAME||/[\u0000-\u001f\u007f]/.test(n))return null;
+ if(CELL_STYLES.some(b=>b.toLowerCase()===n.toLowerCase()))return null;return n;
+}
+export function parseCustomStyles(input:unknown):string[]{
+ if(!input||typeof input!=='object'||!Array.isArray((input as {styles?:unknown}).styles))throw Error('Invalid style list.');
+ const l=(input as {styles:unknown[]}).styles;if(l.length>MAX_CUSTOM_STYLES)throw Error('Too many styles.');
+ return l.map(x=>{if(typeof x!=='string'||!x||[...x].length>MAX_STYLE_NAME)throw Error('Invalid style name.');return x;});
+}
 export const AUTOSUM_FUNCTIONS=['SUM','AVERAGE','COUNT','MAX','MIN'] as const;
 export const SIMPLE_CELL_TOOLS=['insertCheckbox','toggleCheckbox','pickFormat','pasteFormat'] as const;
 export const CELL_TOOL_MAX_CELLS=1_000_000;
@@ -16,7 +28,8 @@ export const MAX_FUNCTION_RESULTS=200;
 export function parseCellToolCommand(input:unknown):CellToolOp{
  if(!input||typeof input!=='object'||Array.isArray(input))throw Error('Cell tool must be an object.');
  const o=input as Record<string,unknown>,only=(...k:string[])=>{if(Object.keys(o).some(x=>!k.includes(x)))throw Error('Unknown cell tool field.');};
- if(o.kind==='style'){only('kind','name');if(typeof o.name!=='string'||!CELL_STYLES.includes(o.name))throw Error('Unknown cell style.');return {kind:'style',name:o.name};}
+ if(o.kind==='style'){only('kind','name');if(typeof o.name!=='string'||!(CELL_STYLES.includes(o.name)||cleanStyleName(o.name)===o.name))throw Error('Unknown cell style.');return {kind:'style',name:o.name};}
+ if(o.kind==='newStyle'){only('kind','name');const n=cleanStyleName(o.name);if(!n)throw Error('Invalid style name.');return {kind:'newStyle',name:n};}
  if(o.kind==='autoSum'){only('kind','function');if(!(AUTOSUM_FUNCTIONS as readonly unknown[]).includes(o.function))throw Error('Unsupported function.');return {kind:'autoSum',function:o.function as typeof AUTOSUM_FUNCTIONS[number]};}
  if((SIMPLE_CELL_TOOLS as readonly unknown[]).includes(o.kind)){only('kind');return {kind:o.kind as typeof SIMPLE_CELL_TOOLS[number]};}
  throw Error('Unsupported cell tool.');
@@ -30,7 +43,7 @@ export function cellToolProblem(op:CellToolOp,rows:number,cols:number):'cells'|'
 /** Value of the tool select: `style:Good`, `sum:SUM` or a plain tool name. */
 export function toolFromChoice(choice:string):CellToolOp|null{
  const [head,...rest]=choice.split(':'),tail=rest.join(':');
- try{return head==='style'?parseCellToolCommand({kind:'style',name:tail}):head==='sum'?parseCellToolCommand({kind:'autoSum',function:tail}):parseCellToolCommand({kind:head});}catch{return null;}
+ try{return head==='style'||head==='custom'?parseCellToolCommand({kind:'style',name:tail}):head==='sum'?parseCellToolCommand({kind:'autoSum',function:tail}):parseCellToolCommand({kind:head});}catch{return null;}
 }
 const str=(v:unknown,n:number)=>typeof v==='string'?v.slice(0,n):'';
 /** The engine's function library: closed shape, bounded text, never trusted blindly. */

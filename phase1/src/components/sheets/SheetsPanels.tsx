@@ -25,7 +25,7 @@ import {Checkbox} from '../ui/checkbox';
 import {PIVOT_AREAS,PIVOT_VALUE_FUNCS,PIVOT_SHOW_AS,PIVOT_NUMBER_FORMATS,PIVOT_LAYOUTS,PIVOT_SUBTOTALS,PIVOT_GROUPS,PIVOT_ORDERS,PIVOT_STYLES,MAX_PIVOT_ITEMS,pivotSourceProblem} from '../../lib/sheets/pivotEditOps';
 import type {PivotArea,PivotValueFunc,PivotEditOp} from '../../lib/sheets/protocol';
 import {CONSOLIDATE_FUNCTIONS,dataToolProblem,parseSourceList} from '../../lib/sheets/dataToolOps';
-import {CELL_STYLE_GROUPS,AUTOSUM_FUNCTIONS,cellToolProblem,toolFromChoice,filterFunctions,functionCategories} from '../../lib/sheets/cellToolOps';
+import {CELL_STYLE_GROUPS,AUTOSUM_FUNCTIONS,cellToolProblem,toolFromChoice,cleanStyleName,filterFunctions,functionCategories} from '../../lib/sheets/cellToolOps';
 import {SUBTOTAL_FUNCS,MAX_SUBTOTAL_ROWS,parseColumnList,type SubtotalFunc} from '../../lib/sheets/outlineOps';
 import {viewNameProblem,MAX_VIEW_NAME} from '../../lib/sheets/savedViews';
 import {WHATIF_GROUPS,buildWhatIfOp,whatIfNeeds,type WhatIfAction} from '../../lib/sheets/whatIfOps';
@@ -452,19 +452,23 @@ function CellLayoutGroup(){
 }
 /** Cell styles, AutoSum, checkboxes and the format painter in one grouped menu. One undo step each. */
 function CellToolsGroup(){
- const {t}=useT(),s=useSheetsSelection(),action=useAction();const [choice,setChoice]=useState('style:Good');
+ const {t}=useT(),s=useSheetsSelection(),action=useAction();const [choice,setChoice]=useState('style:Good');const [styleName,setStyleName]=useState('');
  const r=s?.range;if(!s||!r)return null;
- const op=toolFromChoice(choice),rows=r.r1-r.r0+1,cols=r.c1-r.c0+1,problem=op?cellToolProblem(op,rows,cols):'cells';
+ const saving=choice==='newStyle',savedName=cleanStyleName(styleName),custom=s.customStyles??[];
+ const op=saving?(savedName?{kind:'newStyle' as const,name:savedName}:null):toolFromChoice(choice),rows=r.r1-r.r0+1,cols=r.c1-r.c0+1,problem=op?cellToolProblem(op,rows,cols):'cells';
  return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.ct.title')}>
   <span>{t('sheets.ct.title')}</span>
   <label className="flex flex-col gap-1">{t('sheets.ct.action')}<NativeSelect className={field} value={choice} disabled={action.busy} onChange={e=>setChoice(e.currentTarget.value)} data-testid="sheets-ct-action">
    <optgroup label={t('sheets.ct.groupStyles')}>{Object.values(CELL_STYLE_GROUPS).flat().map(n=><option key={n} value={'style:'+n}>{t('sheets.ct.style.'+n)}</option>)}</optgroup>
+   {custom.length>0&&<optgroup label={t('sheets.ct.groupCustom')}>{custom.map(n=><option key={n} value={'custom:'+n}>{n}</option>)}</optgroup>}
+   <optgroup label={t('sheets.ct.groupSave')}><option value="newStyle">{t('sheets.ct.newStyle')}</option></optgroup>
    <optgroup label={t('sheets.ct.groupSum')}>{AUTOSUM_FUNCTIONS.map(f=><option key={f} value={'sum:'+f}>{t('sheets.ct.sum.'+f)}</option>)}</optgroup>
    <optgroup label={t('sheets.ct.groupCheckbox')}>{(['insertCheckbox','toggleCheckbox'] as const).map(k=><option key={k} value={k}>{t('sheets.ct.'+k)}</option>)}</optgroup>
    <optgroup label={t('sheets.ct.groupPainter')}>{(['pickFormat','pasteFormat'] as const).map(k=><option key={k} value={k}>{t('sheets.ct.'+k)}</option>)}</optgroup>
   </NativeSelect></label>
+  {saving&&<label className="flex flex-col gap-1">{t('sheets.ct.styleName')}<NativeInput className={field} value={styleName} maxLength={60} aria-invalid={!savedName} onChange={e=>setStyleName(e.currentTarget.value)} data-testid="sheets-ct-style-name"/></label>}
   <Button variant="outline" size="compact" disabled={action.busy||!op||!!problem} onClick={()=>void action.run('sheets.cellTools',op)} data-testid="sheets-ct-apply">{t('sheets.ct.apply')}</Button>
-  <p className="text-ink-3">{t(problem==='many'?'sheets.ct.many':'sheets.ct.hint',{range:rangeAddress(r)})}</p>
+  <p className="text-ink-3">{t(problem==='many'?'sheets.ct.many':saving?'sheets.ct.saveHint':'sheets.ct.hint',{range:rangeAddress(r)})}</p>
   {action.notice?<p role="alert">{action.notice}</p>:null}
  </div>;
 }

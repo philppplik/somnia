@@ -87,6 +87,8 @@ const MAX_NAME_CHARS: usize = 64;
 const MAX_AFFIX_CHARS: usize = 12;
 const MAX_LINK_BYTES: usize = 2048;
 const MAX_NOTES_LISTED: usize = 200;
+const MAX_STYLE_NAME: usize = 60;
+const MAX_CUSTOM_STYLES: usize = 50;
 const SPLIT_DELIMITERS: [char; 5] = [',', ';', '\t', ' ', '|'];
 const MAX_REPLACE_CELLS: usize = 10_000;
 const MAX_VALIDATION_ITEMS: usize = 500;
@@ -2828,6 +2830,13 @@ impl HeadlessWorkbook {
         Ok(json!({"notes": notes, "links": links, "truncated": truncated}).to_string())
     }
 
+    /// Names of the custom cell styles saved in this workbook (read only, at most 50): `{"styles":["name"]}`.
+    pub fn custom_cell_styles(&self) -> Result<String, String> {
+        let doc = self.session.doc().map_err(|e| e.to_string())?;
+        let styles: Vec<String> = doc.wb.cell_styles.iter().take(MAX_CUSTOM_STYLES).map(|(n, _)| n.chars().take(MAX_STYLE_NAME).collect()).collect();
+        Ok(json!({"styles": styles}).to_string())
+    }
+
     /// Every note and comment of the sheet in reading order (read only, at most 200): `{"notes":[{"cell","author","text","threaded","resolved","replies":n}],"total":n,"truncated":b}`.
     /// Texts are cut to 300 characters here; the full text is read per cell with `annotations`.
     pub fn notes_overview(&self, sheet: usize) -> Result<String, String> {
@@ -3519,14 +3528,14 @@ impl HeadlessWorkbook {
         let map = op.as_object().ok_or("operation must be a JSON object")?;
         let kind = map.get("kind").and_then(|v| v.as_str()).ok_or("unsupported cell tool")?;
         let known: &[&str] = match kind {
-            "style" => &["kind", "name"],
+            "style" | "newStyle" => &["kind", "name"],
             "autoSum" => &["kind", "function"],
             _ => &["kind"],
         };
         if map.keys().any(|k| !known.contains(&k.as_str())) {
             return Err("unknown cell tool field".into());
         }
-        self.check_block(sheet, row, col, rows, cols, kind != "pickFormat")?;
+        self.check_block(sheet, row, col, rows, cols, kind != "pickFormat" && kind != "newStyle")?;
         let range = format!("{}:{}", CellRef::new(row, col).a1(), CellRef::new(row + rows - 1, col + cols - 1).a1());
         let block = gridcraft_engine::core::RangeRef::new(CellRef::new(row, col), CellRef::new(row + rows - 1, col + cols - 1));
         let (before_rev, before, snap_sel, snap_redo) = {
@@ -3537,8 +3546,29 @@ impl HeadlessWorkbook {
             self.session.run("sheet.activate", json!({"sheet": sheet}))?;
             match kind {
                 "style" => {
-                    let name = map.get("name").and_then(|v| v.as_str()).filter(|n| CELL_STYLE_NAMES.contains(n)).ok_or("unknown cell style")?;
+                    let name = map.get("name").and_then(|v| v.as_str()).ok_or("unknown cell style")?;
+                    let custom = {
+                        let doc = self.session.doc().map_err(|e| e.to_string())?;
+                        doc.wb.cell_styles.iter().any(|(n, _)| n == name)
+                    };
+                    if !CELL_STYLE_NAMES.contains(&name) && !custom {
+                        return Err("unknown cell style".into());
+                    }
                     self.session.run("home.cellStyle", json!({"sheet": sheet, "range": range, "name": name})).map(|v| v.to_string())
+                }
+                "newStyle" => {
+                    let name = map.get("name").and_then(|v| v.as_str()).map(str::trim).filter(|n| !n.is_empty() && n.chars().count() <= MAX_STYLE_NAME && !n.chars().any(char::is_control)).ok_or("Style name: 1 to 60 characters.")?;
+                    if CELL_STYLE_NAMES.iter().any(|b| b.eq_ignore_ascii_case(name)) {
+                        return Err("A built-in style already has this name.".into());
+                    }
+                    {
+                        let doc = self.session.doc().map_err(|e| e.to_string())?;
+                        let exists = doc.wb.cell_styles.iter().any(|(n, _)| n.eq_ignore_ascii_case(name));
+                        if !exists && doc.wb.cell_styles.len() >= MAX_CUSTOM_STYLES {
+                            return Err("At most 50 custom styles.".into());
+                        }
+                    }
+                    self.session.run("home.newCellStyle", json!({"name": name, "fromCell": CellRef::new(row, col).a1()})).map(|v| v.to_string())
                 }
                 "autoSum" => {
                     let func = map.get("function").and_then(|v| v.as_str()).filter(|f| AUTOSUM_FUNCTIONS.contains(f)).ok_or("unsupported function")?;
@@ -4899,6 +4929,33 @@ mod tests {
         }
         book.session.run("review.protectSheet", json!({})).unwrap();
         assert!(book.cf_range(0, 50, 0, 3, 1, op).unwrap_err().contains("protected"));
+    }
+    #[test]
+    fn custom_cell_style_saves_from_first_cell_and_applies_as_one_step() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        assert!(book.custom_cell_styles().unwrap().contains("\"styles\":[]"));
+        let steps = |b: &HeadlessWorkbook| b.session.doc().unwrap().undo.len();
+        let before = steps(&book);
+        book.cell_tools_op(0, 0, 0, 1, 1, r#"{"kind":"newStyle","name":"  Brand "}"#).unwrap();
+        assert_eq!(steps(&book), before + 1);
+        assert!(book.custom_cell_styles().unwrap().contains("\"Brand\""));
+        // Refused: built-in names (any case), blank, over-long, control characters, unknown fields, unknown styles.
+        for bad in [r#"{"kind":"newStyle","name":"good"}"#, r#"{"kind":"newStyle","name":"  "}"#, r#"{"kind":"newStyle","name":"a\u0007b"}"#, r#"{"kind":"newStyle","name":"x","extra":1}"#, r#"{"kind":"style","name":"Nope"}"#] {
+            assert!(book.cell_tools_op(0, 0, 0, 1, 1, bad).is_err(), "{bad}");
+        }
+        assert!(book.cell_tools_op(0, 0, 0, 1, 1, &format!(r#"{{"kind":"newStyle","name":"{}"}}"#, "x".repeat(61))).is_err());
+        assert_eq!(steps(&book), before + 1, "refusals leave no history entry");
+        let bold = |b: &HeadlessWorkbook, r: u32, c: u32| {
+            let doc = b.session.doc().unwrap();
+            let sh = doc.wb.sheet(0).unwrap();
+            doc.wb.styles.get(sh.style_id(CellRef::new(r, c))).font.bold
+        };
+        assert!(!bold(&book, 4, 2));
+        book.cell_tools_op(0, 4, 2, 1, 1, r#"{"kind":"style","name":"Brand"}"#).unwrap();
+        assert!(bold(&book, 4, 2));
+        // Saving the same name again replaces it instead of adding a second one.
+        book.cell_tools_op(0, 4, 2, 1, 1, r#"{"kind":"newStyle","name":"brand"}"#).unwrap();
+        assert_eq!(book.session.doc().unwrap().wb.cell_styles.len(), 1);
     }
     #[test]
     fn notes_overview_lists_every_note_in_reading_order() {
