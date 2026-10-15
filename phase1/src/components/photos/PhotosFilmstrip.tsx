@@ -12,7 +12,7 @@ import {findWbPreset,WB_PRESETS} from '../../lib/photos/wbPresets';
 import {applyLook,BUILT_IN_PRESETS,extractLook,isNeutralLook,parseUserPresets,type Look,type UserPreset} from '../../lib/photos/presets';
 import {commitPhotoSettings,getPhotoSession} from '../../lib/photos/studioSession';
 import {FILMSTRIP_SORTS,type FilmstripSort} from '../../lib/photos/filmstripSort';
-import {ensureCaptureDates,getCaptureEntry} from '../../lib/photos/captureDates';
+import {ensureCaptureDates,exposureLine,getCaptureEntry} from '../../lib/photos/captureDates';
 import {MAX_RATING,useRatings} from '../../lib/photos/ratings';
 import {useFlags} from '../../lib/photos/flags';
 import {PHOTO_LABELS,useLabels,type PhotoLabel} from '../../lib/photos/labels';
@@ -39,7 +39,7 @@ const tipDateFmt=new Intl.DateTimeFormat(undefined,{dateStyle:'medium',timeStyle
 /** Honest thumbnail tooltip: name plus whatever the EXIF cache has resolved - capture date, camera, pixel dimensions. */
 function thumbTooltip(name:string,size:number):string{
  const parts=[name];const e=getCaptureEntry(name,size);
- if(e){if(e.t)parts.push(tipDateFmt.format(e.t));if(e.cam)parts.push(e.cam);if(e.w&&e.h)parts.push(`${e.w} × ${e.h}`);}
+ if(e){if(e.t)parts.push(tipDateFmt.format(e.t));if(e.cam)parts.push(e.cam);const x=exposureLine(e);if(x)parts.push(x);if(e.w&&e.h)parts.push(`${e.w} × ${e.h}`);}
  return parts.join(' · ');
 }
 /** Library filmstrip under the workspace: a thumbnail per developable photo in library order; clicking switches the active photo. */

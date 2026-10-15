@@ -276,5 +276,9 @@
  "photos.smart.orient.landscape": "Querformat",
  "photos.smart.orient.portrait": "Hochformat",
  "photos.smart.orient.square": "Quadrat",
- "photos.keys.selectAll": "Sichtbaren Strip auswählen"
+ "photos.keys.selectAll": "Sichtbaren Strip auswählen",
+ "photos.p.info.camera": "Kamera",
+ "photos.p.info.lens": "Objektiv",
+ "photos.p.info.exposure": "Belichtung",
+ "photos.p.info.date": "Aufnahmedatum"
 }

@@ -1417,6 +1417,25 @@ test('library search: ISO capture date narrows the strip (light and dark)',async
   await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible();
  }
 });
+test('thumbnail tooltip: exposure line from the v4 EXIF cache (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
+  await page.evaluate(async()=>{
+   const cd=await import('/src/lib/photos/captureDates.ts');const med=await import('/src/lib/media.ts');
+   const size=(n:string)=>med.getMedia().items.find(i=>i.name===n)!.size;
+   cd.putCaptureDate('strip-1.png',size('strip-1.png'),null,'Canon EOS R5',240,150,{lens:'RF 35mm F1.8',exp:'1/125',ap:'f/2.8',iso:200,fl:'35 mm'});
+  });
+  const tip=await page.getByTestId('photos-filmstrip-item-strip-1.png').getAttribute('title');
+  expect(tip).toContain('Canon EOS R5');
+  expect(tip).toContain('1/125 · f/2.8 · ISO 200 · 35 mm'); // the exposure scan line
+  expect(tip).toContain('240 × 150');
+  const tip2=await page.getByTestId('photos-filmstrip-item-strip-2.png').getAttribute('title');
+  expect(tip2).not.toContain('ISO'); // no cache entry: nothing invented
+ }
+});
 test('menu groups: labeled collapsible sections, expanded by default (light and dark)',async({page})=>{
  for(const theme of['light','dark']){
   await page.goto('/test/design-system/?view=photos-filmstrip');

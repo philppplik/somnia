@@ -834,3 +834,23 @@ already sits in the toolbar.
 Coverage: the light/dark gallery leg seeds one dated photo and
 narrows by month, by exact day and past the day
 (`test-results/ds-photos-search-date-{light,dark}.png`).
+
+## Full daily EXIF from one cache (P136)
+
+The EXIF cache (now v4, one more lazy reload, no migration)
+keeps the full daily set it already parsed and discarded: lens,
+shutter, aperture, ISO and focal length next to date, camera and
+dimensions. Two surfaces read it: the strip tooltip gains the
+exposure scan line photographers read (1/125 · f/2.8 · ISO 200 ·
+35 mm, parts only), and the Info panel gains camera, lens,
+exposure and capture-date rows - synchronously from the cache,
+absent fields stay absent, nothing is invented. The mapping is
+one pure function shared by the loader and the tests.
+
+Coverage: the cache unit test covers the v4 mapping and the
+exposure line; the light/dark gallery leg seeds a full entry and
+reads the tooltip (`test-results/ds-photos-smart-*` harness,
+attribute assertions); the locale-parity panel test covers the
+four new row labels. The panel rows have no E2E harness (the
+gallery mounts the workspace without the inspector) - wiring is
+covered by the pure mapping and the shared-row rendering.

@@ -276,5 +276,9 @@
  "photos.smart.orient.landscape": "Landscape",
  "photos.smart.orient.portrait": "Portrait",
  "photos.smart.orient.square": "Square",
- "photos.keys.selectAll": "Select the visible strip"
+ "photos.keys.selectAll": "Select the visible strip",
+ "photos.p.info.camera": "Camera",
+ "photos.p.info.lens": "Lens",
+ "photos.p.info.exposure": "Exposure",
+ "photos.p.info.date": "Capture date"
 }

@@ -276,5 +276,9 @@
  "photos.smart.orient.landscape": "Horizontal",
  "photos.smart.orient.portrait": "Vertical",
  "photos.smart.orient.square": "Cuadrada",
- "photos.keys.selectAll": "Seleccionar la tira visible"
+ "photos.keys.selectAll": "Seleccionar la tira visible",
+ "photos.p.info.camera": "Cámara",
+ "photos.p.info.lens": "Objetivo",
+ "photos.p.info.exposure": "Exposición",
+ "photos.p.info.date": "Fecha de captura"
 }

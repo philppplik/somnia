@@ -276,5 +276,9 @@
  "photos.smart.orient.landscape": "Paysage",
  "photos.smart.orient.portrait": "Portrait",
  "photos.smart.orient.square": "Carré",
- "photos.keys.selectAll": "Sélectionner la bande visible"
+ "photos.keys.selectAll": "Sélectionner la bande visible",
+ "photos.p.info.camera": "Appareil",
+ "photos.p.info.lens": "Objectif",
+ "photos.p.info.exposure": "Exposition",
+ "photos.p.info.date": "Date de prise de vue"
 }
