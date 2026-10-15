@@ -1011,5 +1011,6 @@
  "cmd.studio3d.mesh.bend": "Curvar uma malha 3D lateralmente ao redor do eixo perpendicular ao eixo de deformação",
  "studio3d.mesh.bend": "Curvar",
  "studio3d.mesh.bendAxis": "Eixo de deformação",
- "studio3d.mesh.bendAngle": "Ângulo de curvatura em graus"
+ "studio3d.mesh.bendAngle": "Ângulo de curvatura em graus",
+ "cmd.studio3d.edit.selectChecker": "Desselecionar cada n-ésimo elemento selecionado da malha 3D editada, começando no deslocamento"
 }

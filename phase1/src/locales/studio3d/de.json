@@ -1011,5 +1011,6 @@
  "cmd.studio3d.mesh.bend": "Ein 3D-Mesh seitlich um die Achse senkrecht zur Verformungsachse biegen",
  "studio3d.mesh.bend": "Biegen",
  "studio3d.mesh.bendAxis": "Verformungsachse",
- "studio3d.mesh.bendAngle": "Biegewinkel in Grad"
+ "studio3d.mesh.bendAngle": "Biegewinkel in Grad",
+ "cmd.studio3d.edit.selectChecker": "Jedes n-te selektierte Element des bearbeiteten 3D-Meshs abwählen, beginnend beim Offset"
 }

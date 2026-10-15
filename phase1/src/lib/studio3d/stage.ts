@@ -963,6 +963,25 @@ export class Stage{
    }
   }
  }
+ /** Checker-deselects: drops every nth element of the current selection (sorted by id), starting at the offset. Deterministic; selection changes are not undo steps. */
+ editSelectChecker(kind:'vertex'|'edge'|'face',nth:number,offset:number){
+  if(!Number.isInteger(nth)||nth<2||nth>1000)throw new StageError('The checker step must be a whole number of 2 or more.');
+  if(!Number.isInteger(offset)||offset<0||offset>=nth)throw new StageError('The checker offset must be a whole number below the step.');
+  const drop=(i:number)=>((i-offset)%nth)===0;
+  if(kind==='vertex'){
+   if(!this.editSel.verts.size)throw new StageError('Select something first.');
+   const sorted=[...this.editSel.verts].sort((a,b)=>a-b);
+   sorted.forEach((v,i)=>{if(drop(i))this.editSel.verts.delete(v);});
+  }else if(kind==='face'){
+   if(!this.editSel.faces.size)throw new StageError('Select something first.');
+   const sorted=[...this.editSel.faces].sort((a,b)=>a-b);
+   sorted.forEach((v,i)=>{if(drop(i))this.editSel.faces.delete(v);});
+  }else{
+   if(!this.editSel.edges.size)throw new StageError('Select something first.');
+   const sorted=[...this.editSel.edges.entries()].sort((x,y)=>x[1][0]-y[1][0]||x[1][1]-y[1][1]);
+   sorted.forEach(([k],i)=>{if(drop(i))this.editSel.edges.delete(k);});
+  }
+ }
  /** Slices the selected faces with a free plane (point + normal), keeping both sides connected in the same mesh, one undo step. */
  editKnife(px:number,py:number,pz:number,nx:number,ny:number,nz:number){this.editOp({key:'studio3d.hist.editKnife'},m=>knifeMesh(m,px,py,pz,nx,ny,nz,[...this.editSel.faces]));}
  /** Rips the selected edit-mode faces off the rest of the mesh by duplicating the shared vertices, one undo step. The selection stays. */

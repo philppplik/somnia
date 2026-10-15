@@ -8126,6 +8126,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.edit.selectChecker",
+      "title": "Deselect every nth selected element of the edited 3D mesh, starting at the offset",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.edit.selectGrow",
       "title": "Grow or shrink selection",
       "category": "Edit",

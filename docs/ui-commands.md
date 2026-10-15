@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-890 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+891 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -689,6 +689,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `studio3d.edit.select` | Select element | Edit | studio3d |  |
 | `studio3d.edit.selectAll` | Select all, none or inverse | Edit | studio3d |  |
 | `studio3d.edit.selectBoundary` | Select boundary edges or vertices | Edit | studio3d |  |
+| `studio3d.edit.selectChecker` | Deselect every nth selected element of the edited 3D mesh, starting at the offset | Edit | studio3d |  |
 | `studio3d.edit.selectGrow` | Grow or shrink selection | Edit | studio3d |  |
 | `studio3d.edit.selectLinked` | Select everything linked to the selection | Edit | studio3d |  |
 | `studio3d.edit.selectLoop` | Extend the selected edges to their full edge loops | Edit | studio3d |  |

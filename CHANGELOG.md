@@ -1,4 +1,5 @@
 # Unreleased: 3D Studio P0
+- 3D Studio: edit mode checker-deselects every nth selected element (`studio3d.edit.selectChecker`).
 - 3D Studio: bend deforms meshes along concentric arcs around the perpendicular axis (`studio3d.mesh.bend`).
 - 3D Studio: edit mode selects the shortest edge path between two vertices (`studio3d.edit.selectPath`).
 - 3D Studio: edit mode knife slices selected faces with a free plane (point + normal), keeping both sides connected.
