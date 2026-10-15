@@ -186,6 +186,11 @@ export function updateText(id:string,patch:Partial<Omit<VectorText,'id'>>){
  finite(...[patch.x,patch.y,patch.fontSize].filter((v):v is number=>v!==undefined));
  const next=normalizeText({...cur,...patch});if(!next)throw new RangeError('Text must not be empty');
  commit({...state.doc,texts:(state.doc.texts??[]).map(t=>t.id===id?next:t)});}
+/** Copy of one text, offset like a path duplicate, selected afterwards. One undo step; returns the new id. */
+export function duplicateText(id:string,offset=12):string{
+ finite(offset);const cur=(state.doc.texts??[]).find(t=>t.id===id);if(!cur)throw new Error('Unknown text: '+id);
+ if((state.doc.texts??[]).length>=TEXT_LIMITS.maxTexts)throw new RangeError(`At most ${TEXT_LIMITS.maxTexts} text objects`);
+ const nid=newId('t');commit({...state.doc,texts:[...(state.doc.texts??[]),{...cur,id:nid,x:cur.x+offset,y:cur.y+offset}]},{selection:[]});set({textSel:nid});return nid;}
 export function deleteText(id:string){
  if(!(state.doc.texts??[]).some(t=>t.id===id))throw new Error('Unknown text: '+id);
  const rest=(state.doc.texts??[]).filter(t=>t.id!==id),{texts:_t,...doc}=state.doc;commit(rest.length?{...doc,texts:rest}:doc);set({textSel:state.textSel===id?null:state.textSel});}

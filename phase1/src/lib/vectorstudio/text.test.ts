@@ -95,3 +95,13 @@ test('text rotation and opacity: roundtrip, strict parse, bounds and hit frame f
  await assert.rejects(d.runCommand('vector.setText',{id,patch:{rotation:999}},o),CommandDispatchError);
  S.undo();assert.equal(S.getVectorSession().doc.texts![0].rotation,30);
 });
+test('duplicate text: offset copy with new id and selection, one undo step, cap and unknown id refused, agent blocked',async()=>{
+ const d=setup();await assert.rejects(d.runCommand('vector.duplicateText',{id:'x'},{origin:'agent'}),e=>e instanceof CommandDispatchError&&e.code==='forbidden-origin');
+ await d.runCommand('vector.addText',{x:10,y:20,text:'Dup',rotation:15,opacity:0.5},o);const id=S.getVectorSession().textSel!;
+ await d.runCommand('vector.duplicateText',{id},o);const ts=S.getVectorSession().doc.texts!;
+ assert.equal(ts.length,2);assert.notEqual(ts[1].id,id);assert.equal(ts[1].x,22);assert.equal(ts[1].rotation,15);assert.equal(ts[1].opacity,0.5);assert.equal(S.getVectorSession().textSel,ts[1].id);
+ S.undo();assert.equal(S.getVectorSession().doc.texts!.length,1);
+ await assert.rejects(d.runCommand('vector.duplicateText',{id:'nope'},o),/Unknown text/);
+ for(let i=1;i<TEXT_LIMITS.maxTexts;i++)S.addText({x:i,y:1});
+ assert.throws(()=>S.duplicateText(id),/At most 200/);assert.equal(S.getVectorSession().doc.texts!.length,TEXT_LIMITS.maxTexts);
+});

@@ -163,5 +163,6 @@ export function VectorTextSection(){const {t}=useT(),s=useVectorSession(),f=useS
    <label className={row}>{t('vector.shell.textOpacity')}<NativeInput className={field} key={'to'+(cur.opacity??1)} type="number" min={0} max={100} step={5} defaultValue={Math.round((cur.opacity??1)*100)} data-testid="vector-text-opacity" onBlur={e=>{const n=Number(e.target.value);if(e.target.value!==''&&Number.isFinite(n)&&n>=0&&n<=100)set({opacity:n/100});else e.target.value=String(Math.round((cur.opacity??1)*100));}}/></label></div>
   <label className={row}>{t('vector.shell.textAnchor')}<NativeSelect className={field} value={cur.anchor} onChange={e=>set({anchor:e.target.value})}>{TEXT_ANCHORS.map(v=><option key={v} value={v}>{t('vector.shell.textAnchor.'+v)}</option>)}</NativeSelect></label>
   <p className="m-0 text-ink-3">{t('vector.shell.textLimits')}</p>
+  <Button size="compact" onClick={()=>run('duplicateText',{id:cur.id})} data-testid="vector-text-duplicate">{t('vector.shell.textDuplicate')}</Button>
   <Button size="compact" onClick={()=>run('deleteText',{id:cur.id})} data-testid="vector-text-delete">{t('vector.shell.textDelete')}</Button>
  </div>;}

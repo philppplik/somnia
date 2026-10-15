@@ -268,6 +268,8 @@
  "cmd.vector.addText":"Add text",
  "cmd.vector.setText":"Edit text",
  "cmd.vector.deleteText":"Delete text",
+ "cmd.vector.duplicateText":"Duplicate a text object",
+ "vector.shell.textDuplicate":"Duplicate text",
  "cmd.vector.tool.text":"Text",
  "vector.shell.importChanged":"The document changed while reading SVG. Choose the file again.",
  "vector.shell.importFailed":"The SVG file could not be read.",

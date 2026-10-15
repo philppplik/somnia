@@ -6,7 +6,7 @@ import {FileTabs} from '../FileTabs';
 import {useT} from '../../lib/useT';
 import {executeCommand} from '../../lib/commands';
 import {serializeContour,type Point,type VectorNode,type VectorPath} from '../../lib/vectorio';
-import {selectText,deleteText,updateText,selectNode,moveSelection,addNodeNear,addPath,commit,createBlankVector,deleteNode,deleteSelection,duplicateSelection,moveNode,openSvgSource,PAGE_PRESETS,redo,select,setTool,setView,undo,useVectorSession,type VectorTool} from '../../lib/vectorstudio/session';
+import {selectText,deleteText,duplicateText,updateText,selectNode,moveSelection,addNodeNear,addPath,commit,createBlankVector,deleteNode,deleteSelection,duplicateSelection,moveNode,openSvgSource,PAGE_PRESETS,redo,select,setTool,setView,undo,useVectorSession,type VectorTool} from '../../lib/vectorstudio/session';
 import {boxOf,fitPath,hitDocument,pathBox,translatePath,type Box} from '../../lib/vectorstudio/geometry';
 import {buildShape,newId,DEFAULT_SHAPE_STYLE,type ShapeKind} from '../../lib/vectorstudio/shapes';
 import {openSvgDialog} from '../../lib/vectorstudio/open';
@@ -143,7 +143,7 @@ export function VectorCanvas(){
   shiftHeld.current=e.shiftKey;const mod=e.ctrlKey||e.metaKey;const tag=(e.target as HTMLElement).tagName;if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT')return;
   if(mod&&e.key.toLowerCase()==='z'){e.preventDefault();e.shiftKey?redo():undo();return;}
   if(mod&&e.key.toLowerCase()==='y'){e.preventDefault();redo();return;}
-  if(mod&&e.key.toLowerCase()==='d'){e.preventDefault();duplicateSelection();return;}
+  if(mod&&e.key.toLowerCase()==='d'){e.preventDefault();if(!s.selection.length&&s.textSel)duplicateText(s.textSel);else duplicateSelection();return;}
   if(mod&&e.altKey&&(e.code==='KeyC'||e.code==='KeyV')){e.preventDefault();void executeCommand(e.code==='KeyC'?'vector.copyStyle':'vector.pasteStyle');return;}
   if(mod&&e.key==='7'){e.preventDefault();void executeCommand(e.altKey?'vector.releaseClip':'vector.makeClip');return;}
   if(mod&&e.key.toLowerCase()==='g'){e.preventDefault();void executeCommand(e.shiftKey?'vector.ungroup':'vector.group');return;}
