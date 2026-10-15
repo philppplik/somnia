@@ -195,3 +195,19 @@ test('session.splitAtMarkers rejects without markers and without material under 
  await assert.rejects(commandDispatcher.runCommand('sound.arrange.session.splitAtMarkers'),/No clip at any marker/);
  assert.equal(getArrangementState().document.tracks[0].clips.length,1,'rejections are atomic');
 }finally{off();resetArrangement();}});
+
+test('clips.duplicate places a copy right after each selected clip, with name and settings',async()=>{resetArrangement();const off=registerArrangeCommands();try{
+ const source={id:'src',name:'tone.wav',frames:96000,sampleRate:48000,channels:2 as const};
+ editArrangement(s=>{s.sources.push(source);
+  s.tracks.push({...newTrack('t1','A'),clips:[{...newClip('a',source,0),length:2400,name:'Hook',gainDb:-3}]});
+  s.tracks.push({...newTrack('t2','B'),clips:[{...newClip('b',source,4800),length:1200}]});});
+ await commandDispatcher.runCommand('sound.arrange.clips.duplicate',{ids:['a','b']});
+ const doc=getArrangementState().document;
+ assert.deepEqual([...doc.tracks[0].clips].sort((x,y)=>x.start-y.start).map(c=>[c.start,c.length,c.name,c.gainDb]),[[0,2400,'Hook',-3],[2400,2400,'Hook',-3]],'copy inherits everything but the id');
+ assert.deepEqual([...doc.tracks[1].clips].sort((x,y)=>x.start-y.start).map(c=>[c.start,c.length]),[[4800,1200],[6000,1200]]);
+ assert.notEqual(doc.tracks[0].clips[0].id,doc.tracks[0].clips[1].id,'fresh ids');
+ await assert.rejects(commandDispatcher.runCommand('sound.arrange.clips.duplicate',{ids:['a','missing']}));
+ assert.equal(getArrangementState().document.tracks[0].clips.length,2,'rejection is atomic');
+ await commandDispatcher.runCommand('sound.arrange.undo');
+ assert.equal(getArrangementState().document.tracks[0].clips.length,1,'undo restores');
+}finally{off();resetArrangement();}});
