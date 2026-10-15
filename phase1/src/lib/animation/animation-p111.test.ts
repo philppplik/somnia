@@ -1533,3 +1533,16 @@ test('P252 parallax: nearer layers move further, rotated parent respected, push 
  run({mode:'push',amount:20,layers:['far','mid']});const sc=(id:string)=>findComp(s.document!)!.layers.find(l=>l.id===id)!.transform.scale.keys.map(k=>k.v as unknown as number[]);
  assert.ok(Math.abs(sc('mid')[1][0]/sc('mid')[0][0]-1.2)<0.01&&Math.abs(sc('far')[1][0]/sc('far')[0][0]-1.1)<0.01);
 });
+
+test('P253 mirror: positions reflect across the first layer, rotation reverses, tangents flip, parented layers are skipped, one undo step',async()=>{
+ const {mirrorSpecs,reflect}=await import('./mirrorCommands');const run=mirrorSpecs()[0].run as (p?:unknown)=>unknown;
+ assert.deepEqual(reflect([100,50],'x',300),[500,50]);assert.deepEqual(reflect([100,50],'y',20),[100,-10]);
+ const d0=applyEdits(base(),[{type:'layer.add',kind:'solid',id:'axis'},{type:'prop.set',layer:'axis',prop:'position',t:f(0),value:[400,225]},{type:'layer.add',kind:'solid',id:'st'},{type:'prop.set',layer:'st',prop:'position',t:f(0),value:[100,60]},{type:'prop.set',layer:'st',prop:'rotation',t:f(0),value:25},{type:'layer.add',kind:'solid',id:'kid'},{type:'layer.parent',layer:'kid',parent:'st'},{type:'key.spatial',layer:'a',prop:'position',t:f(0),sOut:[30,10]}] as never);
+ const s=new AnimationSession();s.open(d0);setAnimationSession(s);
+ assert.throws(()=>run({layers:['axis','kid']}),/Choose/);assert.throws(()=>run({axis:'x',layers:['axis','kid']}),/parent/);
+ const r=run({axis:'x',layers:['axis','st','a','kid']}) as {mirrored:number;skipped:number};assert.equal(r.mirrored,2);assert.equal(r.skipped,1);
+ const c=findComp(s.document!)!,L=(id:string)=>c.layers.find(l=>l.id===id)!;
+ assert.deepEqual(L('st').transform.position.value as unknown as number[],[700,60]);assert.equal(L('st').transform.rotation.value as unknown as number,-25);
+ const ak=L('a').transform.position.keys;assert.deepEqual(ak[0].v as unknown as number[],[700,100]);assert.deepEqual(ak[1].v as unknown as number[],[600,50]);assert.deepEqual(ak[0].sOut,[-30,10]);
+ s.undo();assert.deepEqual(findComp(s.document!)!.layers.find(l=>l.id==='st')!.transform.position.value as unknown as number[],[100,60]);
+});

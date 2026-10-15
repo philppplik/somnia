@@ -1238,5 +1238,9 @@
  "animation.rig.parallax.up": "Nach oben driften",
  "animation.rig.parallax.down": "Nach unten driften",
  "animation.rig.parallax.push": "Heranfahren",
- "cmd.animation.layers.parallax": "Parallaxe: angekreuzte Ebenen von fern nach nah driften lassen"
+ "cmd.animation.layers.parallax": "Parallaxe: angekreuzte Ebenen von fern nach nah driften lassen",
+ "animation.rig.group.mirror": "Bewegung spiegeln",
+ "animation.rig.mirror.x": "Links-rechts spiegeln",
+ "animation.rig.mirror.y": "Oben-unten spiegeln",
+ "cmd.animation.layers.mirror": "Angekreuzte Ebenen an der ersten angekreuzten Ebene spiegeln"
 }

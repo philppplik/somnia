@@ -1238,5 +1238,9 @@
  "animation.rig.parallax.up": "Drift up",
  "animation.rig.parallax.down": "Drift down",
  "animation.rig.parallax.push": "Push in",
- "cmd.animation.layers.parallax": "Parallax: drift the ticked layers, far to near"
+ "cmd.animation.layers.parallax": "Parallax: drift the ticked layers, far to near",
+ "animation.rig.group.mirror": "Mirror motion",
+ "animation.rig.mirror.x": "Mirror left to right",
+ "animation.rig.mirror.y": "Mirror top to bottom",
+ "cmd.animation.layers.mirror": "Mirror the ticked layers across the first ticked layer"
 }

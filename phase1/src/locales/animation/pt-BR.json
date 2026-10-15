@@ -1238,5 +1238,9 @@
  "animation.rig.parallax.up": "Deslocar para cima",
  "animation.rig.parallax.down": "Deslocar para baixo",
  "animation.rig.parallax.push": "Aproximar",
- "cmd.animation.layers.parallax": "Paralaxe: deslocar as camadas marcadas, do longe ao perto"
+ "cmd.animation.layers.parallax": "Paralaxe: deslocar as camadas marcadas, do longe ao perto",
+ "animation.rig.group.mirror": "Espelhar movimento",
+ "animation.rig.mirror.x": "Espelhar esquerda para direita",
+ "animation.rig.mirror.y": "Espelhar cima para baixo",
+ "cmd.animation.layers.mirror": "Espelhar as camadas marcadas em relação à primeira camada marcada"
 }

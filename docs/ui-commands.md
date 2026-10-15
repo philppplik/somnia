@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-944 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+945 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -167,6 +167,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `animation.layers.followPath` | Travel layers along the first ticked path layer | Edit | animation |  |
 | `animation.layers.label` | Set a colour label on the selected layers | Edit | animation |  |
 | `animation.layers.match` | Match the other layers to the first layer | Edit | animation |  |
+| `animation.layers.mirror` | Mirror the ticked layers across the first ticked layer | Edit | animation |  |
 | `animation.layers.number` | Number the selected layers | Edit | animation |  |
 | `animation.layers.orbit` | Orbit layers around the first ticked layer | Edit | animation |  |
 | `animation.layers.orient` | Rotate the selected layers to face along their motion path | Edit | animation |  |

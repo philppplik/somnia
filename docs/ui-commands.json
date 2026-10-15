@@ -2126,6 +2126,24 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.layers.mirror",
+      "title": "Mirror the ticked layers across the first ticked layer",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "copy",
+        "duplicate",
+        "flip",
+        "left right",
+        "mirror",
+        "opposite",
+        "reflect",
+        "symmetry"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.layers.number",
       "title": "Number the selected layers",
       "category": "Edit",
