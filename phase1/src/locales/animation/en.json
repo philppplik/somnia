@@ -218,7 +218,7 @@
  "animation.shape.path": "Path",
  "animation.shape.points": "Path points (x,y in 0–1)",
  "animation.shape.roundedRect": "Rounded rectangle",
- "animation.shape.star": "Star",
+ "animation.shape.star": "Star, {n} points",
  "animation.shape.polygon": "Polygon",
  "animation.shape.radius": "Corner radius",
  "animation.shape.sides": "Sides / points",
@@ -1144,5 +1144,8 @@
  "animation.comp.resize.center": "Centre content (keep size)",
  "cmd.animation.comp.resize": "Change the composition size and move the layers with it",
  "animation.comp.sizePreset": "Size preset",
- "animation.comp.sizePick": "Pick a size..."
+ "animation.comp.sizePick": "Pick a size...",
+ "animation.shape.more": "More shapes...",
+ "animation.shape.poly": "Polygon, {n} sides",
+ "cmd.animation.shape.polygon": "Add a polygon or star shape layer"
 }

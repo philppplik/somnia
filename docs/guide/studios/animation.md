@@ -73,3 +73,4 @@ Back to [Studios](../studios.md).
 - Colours (left panel): the solid colours the composition uses, with how many layers use each. Pick a new colour in a swatch to replace it in every layer's fill and stroke (one undo step, locked layers keep theirs).
 - Rig > Appearance > Squash and stretch (light, medium, strong): scale keys that stretch a layer along its fastest axis and squash the other, from the speed of its position; a bouncing ball gets cartoon timing in one click.
 - Composition settings: pick a size preset (1920x1080, 1080x1080, 1080x1920 and more) and choose what happens to the layers: keep, fit (scale to stay visible), fill (scale to cover) or centre (keep size). The top-level layers move and scale in one undo step; children follow their parents.
+- Add layer > More shapes: regular polygons (3, 5, 6, 8 sides) and stars (5, 6, 8 points) as editable path layers, centred in the composition. The command takes sides, star, inner radius, radius and colour.

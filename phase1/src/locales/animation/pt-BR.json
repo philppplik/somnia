@@ -218,7 +218,7 @@
  "animation.shape.path": "Path",
  "animation.shape.points": "Path points (x,y in 0–1)",
  "animation.shape.roundedRect": "Rounded rectangle",
- "animation.shape.star": "Star",
+ "animation.shape.star": "Estrela, {n} pontas",
  "animation.shape.polygon": "Polygon",
  "animation.shape.radius": "Corner radius",
  "animation.shape.sides": "Sides / points",
@@ -1144,5 +1144,8 @@
  "animation.comp.resize.center": "Centralizar conteudo (manter o tamanho)",
  "cmd.animation.comp.resize": "Mudar o tamanho da composicao e levar as camadas junto",
  "animation.comp.sizePreset": "Tamanho predefinido",
- "animation.comp.sizePick": "Escolher um tamanho..."
+ "animation.comp.sizePick": "Escolher um tamanho...",
+ "animation.shape.more": "Mais formas...",
+ "animation.shape.poly": "Poligono, {n} lados",
+ "cmd.animation.shape.polygon": "Adicionar uma camada de poligono ou estrela"
 }

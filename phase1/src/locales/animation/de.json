@@ -218,7 +218,7 @@
  "animation.shape.path": "Pfad",
  "animation.shape.points": "Pfadpunkte (x,y in 0–1)",
  "animation.shape.roundedRect": "Abgerundetes Rechteck",
- "animation.shape.star": "Stern",
+ "animation.shape.star": "Stern, {n} Zacken",
  "animation.shape.polygon": "Polygon",
  "animation.shape.radius": "Eckenradius",
  "animation.shape.sides": "Seiten / Spitzen",
@@ -1144,5 +1144,8 @@
  "animation.comp.resize.center": "Inhalt zentrieren (Groesse behalten)",
  "cmd.animation.comp.resize": "Kompositionsgroesse aendern und die Ebenen mitnehmen",
  "animation.comp.sizePreset": "Groessenvorlage",
- "animation.comp.sizePick": "Groesse waehlen..."
+ "animation.comp.sizePick": "Groesse waehlen...",
+ "animation.shape.more": "Weitere Formen...",
+ "animation.shape.poly": "Vieleck, {n} Seiten",
+ "cmd.animation.shape.polygon": "Eine Vieleck- oder Stern-Formebene hinzufuegen"
 }

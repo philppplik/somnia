@@ -1210,3 +1210,15 @@ test('P231 comp resize with content: fit/fill/center maths, keyed and static lay
  assert.throws(()=>run({width:W+100,height:H,mode:'center'}),/already/);assert.throws(()=>run({width:0,height:5,mode:'fit'}),/whole pixels/);assert.throws(()=>run({width:5,height:5,mode:'x'}),/mode/);
  s.dispatch({type:'layer.update',layer:'b',locked:true});assert.throws(()=>run({width:10,height:10,mode:'fit'}),/Unlock/);
 });
+test('P232 polygon and star shape layers: points, valid source, centred, one undo step, errors',async()=>{
+ const {polygonPath}=await import('./polygonModel');const {polygonSpecs}=await import('./polygonCommands');const {validateDocument}=await import('./model');
+ const tri=polygonPath(3,false,50);assert.equal(tri.points.length,3);assert.deepEqual(tri.points[0],{x:0.5,y:0});
+ const st=polygonPath(5,true,40);assert.equal(st.points.length,10);assert.ok(Math.abs(st.points[1].y-(0.5+0.5*0.4*Math.sin(-Math.PI/2+Math.PI/5)))<1e-3);
+ const run=(p?:unknown)=>polygonSpecs()[0].run(p) as {id:string};
+ const s=open();setAnimationSession(s);const C=()=>findComp(s.document!),n0=C().layers.length,before=s.document;
+ const r=run({sides:6,radius:100});const l=C().layers.find(x=>x.id===r.id)!;
+ assert.equal(C().layers.length,n0+1);assert.equal(l.source.width,200);assert.equal(l.source.path!.points.length,6);assert.deepEqual(l.transform.position.value,[C().width/2-100,C().height/2-100]);assert.deepEqual(validateDocument(s.document),[]);
+ s.undo();assert.equal(s.document,before);
+ run({sides:5,star:true,inner:40});assert.equal(C().layers.length,n0+1);assert.equal(C().layers[0].source.path!.points.length,10);
+ assert.throws(()=>run({sides:2}),/sides/);assert.throws(()=>run({sides:5,inner:5}),/inner/);assert.throws(()=>run({sides:5,radius:1}),/radius/);assert.throws(()=>run({sides:5,color:'red'}),/Colour/);
+});

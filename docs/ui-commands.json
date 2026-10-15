@@ -2636,6 +2636,26 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.shape.polygon",
+      "title": "Add a polygon or star shape layer",
+      "category": "Insert",
+      "source": "animation",
+      "keywords": [
+        "add",
+        "animation",
+        "hexagon",
+        "insert",
+        "path",
+        "pentagon",
+        "polygon",
+        "shape",
+        "sides",
+        "star",
+        "triangle"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.stroke.animate",
       "title": "Toggle stroke width or opacity keyframes",
       "category": "Edit",
