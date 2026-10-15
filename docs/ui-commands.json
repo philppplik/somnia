@@ -4140,6 +4140,17 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.image.crop",
+      "title": "Crop picture",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.image.fit",
       "title": "Set picture width",
       "category": "View",

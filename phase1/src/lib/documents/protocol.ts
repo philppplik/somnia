@@ -259,7 +259,12 @@ export const IMAGE_ALIGNS=['left','center','right'] as const;
 export type ImageWrap=typeof IMAGE_WRAPS[number];
 export type ImageAlign=typeof IMAGE_ALIGNS[number];
 export const imageWrapProblem=(wrap:unknown,align:unknown):string|null=>!(IMAGE_WRAPS as readonly unknown[]).includes(wrap)?'Wrap is inline, square, top and bottom, behind or in front.':!(IMAGE_ALIGNS as readonly unknown[]).includes(align)?'Picture alignment is left, center or right.':null;
-export type ImageOp={op:'wrap';wrap:ImageWrap;align:ImageAlign}|{op:'resize';width:number}|{op:'fit';percent:number}|{op:'alt';alt:string}|{op:'remove'};
+/** Crop in percent: left, top, right, bottom (each 0 to 90, each axis at most 90 together). */
+export const imageCropProblem=(c:unknown):string|null=>{
+ if(!Array.isArray(c)||c.length!==4||c.some(v=>typeof v!=='number'||!Number.isFinite(v)||v<0||v>90))return 'Crop each side by 0 to 90 percent.';
+ return (c[0] as number)+(c[2] as number)>90||(c[1] as number)+(c[3] as number)>90?'Crop at most 90 percent per axis.':null;
+};
+export type ImageOp={op:'crop';crop:number[]}|{op:'wrap';wrap:ImageWrap;align:ImageAlign}|{op:'resize';width:number}|{op:'fit';percent:number}|{op:'alt';alt:string}|{op:'remove'};
 /** PNG/JPEG pixel size read from the header only; null for anything else or a damaged header. */
 export function sniffImage(b:Uint8Array):{type:'png'|'jpeg';w:number;h:number}|null{
  const dv=new DataView(b.buffer,b.byteOffset,b.byteLength);

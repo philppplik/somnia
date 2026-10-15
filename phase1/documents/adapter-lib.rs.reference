@@ -280,7 +280,11 @@ impl DocSession {
                     }
                     if let Some((_, w, h, alt)) = image_only(p) {
                         let (wrap, align) = image_wrap_state(p, self.doc.last_section.text_width());
-                        v["image"] = serde_json::json!({"w": w, "h": h, "alt": alt, "wrap": wrap, "align": align});
+                        let crop = match p.objects.first() {
+                            Some(wordcraft_doc::InlineObject::Image { crop, .. }) => crop.map(|c| ((c * 1000.0).round() / 10.0) as f64),
+                            _ => [0.0; 4].map(f64::from),
+                        };
+                        v["image"] = serde_json::json!({"w": w, "h": h, "alt": alt, "wrap": wrap, "align": align, "crop": crop});
                     }
                     v
                 }
@@ -3071,6 +3075,36 @@ impl DocSession {
         self.pages = DocLayout::default();
         Ok(())
     }
+    /// Crops an image paragraph: percent trimmed from the left, top, right and bottom (each 0 to 90, each axis at most
+    /// 90 together). The displayed size follows the visible part so the picture is not stretched.
+    fn do_set_image_crop(&mut self, block: usize, l: f32, t: f32, r: f32, b: f32) -> Result<(), String> {
+        let side = [l, t, r, b];
+        if side.iter().any(|v| !v.is_finite() || !(0.0..=90.0).contains(v)) || l + r > 90.0 || t + b > 90.0 {
+            return Err("crop each side by 0 to 90 percent, at most 90 percent per axis together".into());
+        }
+        let mut p = self.image_para(block)?.clone();
+        let text_w = self.doc.last_section.text_width();
+        let (_, align) = image_wrap_state(&p, text_w);
+        let new = side.map(|v| (v * 10.0).round() / 1000.0);
+        if let Some(wordcraft_doc::InlineObject::Image { w, h, float, crop, .. }) = p.objects.get_mut(0) {
+            let full_w = *w / (1.0 - crop[0] - crop[2]).max(0.05);
+            let full_h = *h / (1.0 - crop[1] - crop[3]).max(0.05);
+            let nw = full_w * (1.0 - new[0] - new[2]);
+            let nh = full_h * (1.0 - new[1] - new[3]);
+            if !nw.is_finite() || !nh.is_finite() || !(IMG_MIN_PT..=IMG_MAX_PT).contains(&nw) || !(IMG_MIN_PT..=IMG_MAX_PT).contains(&nh) {
+                return Err("the cropped picture would be smaller than 10 points or larger than 2000".into());
+            }
+            *w = nw;
+            *h = nh;
+            *crop = new;
+            if float.wrap != wordcraft_doc::para::Wrap::Inline {
+                float.x = float_x(align, text_w, nw);
+            }
+        }
+        self.doc.body[block] = Arc::new(Block::Para(p));
+        self.pages = DocLayout::default();
+        Ok(())
+    }
     fn do_set_image_alt(&mut self, block: usize, alt: &str) -> Result<(), String> {
         Self::hf_validate(alt).map_err(|_| "alt text is limited to 500 characters without line breaks".to_string())?;
         let mut p = self.image_para(block)?.clone();
@@ -3598,6 +3632,10 @@ impl DocSession {
     pub fn set_image_wrap(&mut self, block: usize, wrap: &str, align: &str) -> Result<(), JsValue> {
         self.do_set_image_wrap(block, wrap, align).map_err(|e| js_err(&e))
     }
+    /// Crop in percent from the left, top, right and bottom (each 0 to 90, at most 90 per axis together).
+    pub fn set_image_crop(&mut self, block: usize, left: f32, top: f32, right: f32, bottom: f32) -> Result<(), JsValue> {
+        self.do_set_image_crop(block, left, top, right, bottom).map_err(|e| js_err(&e))
+    }
     pub fn fit_image(&mut self, block: usize, percent: u32) -> Result<(), JsValue> {
         self.do_fit_image(block, percent).map_err(|e| js_err(&e))
     }
@@ -4055,6 +4093,12 @@ mod tests {
         assert_eq!(s.cell_paras().count(), n);
         assert!(s.do_table_edit(CELL_BASE, "split_down").is_err());
     }
+    fn w2_full(s: &DocSession) -> f32 {
+        match &*s.doc.body[1] {
+            Block::Para(p) => image_only(p).map(|i| i.1).unwrap_or(0.0),
+            _ => 0.0,
+        }
+    }
     #[test]
     fn typography_contextual_spacing_line_rule_and_char_scale() {
         let mut s = DocSession::from_bytes(FIXTURE).unwrap();
@@ -4328,6 +4372,21 @@ mod tests {
         .unwrap();
         assert!((w3 - s.doc.last_section.text_width() / 2.0).abs() < 0.01);
         assert!(s.do_fit_image(1, 33).is_err());
+        let (fw, fh) = (w2_full(&s), 0.0f32);
+        let _ = fh;
+        s.do_set_image_crop(1, 10.0, 20.0, 30.0, 0.0).unwrap();
+        let v: serde_json::Value = serde_json::from_str(&s.block_list()).unwrap();
+        assert_eq!(v[1]["image"]["crop"], serde_json::json!([10.0, 20.0, 30.0, 0.0]));
+        let (_, wc, hc, _) = image_only(match &*s.doc.body[1] { Block::Para(p) => p, _ => panic!() }).unwrap();
+        assert!((wc - fw * 0.6).abs() < 0.05, "{wc} of {fw}");
+        assert!(hc > 0.0);
+        s.do_set_image_crop(1, 0.0, 0.0, 0.0, 0.0).unwrap();
+        let (_, wf, _, _) = image_only(match &*s.doc.body[1] { Block::Para(p) => p, _ => panic!() }).unwrap();
+        assert!((wf - fw).abs() < 0.05, "reset restores the size");
+        for bad in [(-1.0, 0.0, 0.0, 0.0), (91.0, 0.0, 0.0, 0.0), (50.0, 0.0, 41.0, 0.0), (0.0, 50.0, 0.0, 41.0), (f32::NAN, 0.0, 0.0, 0.0), (0.0, 0.0, f32::INFINITY, 0.0)] {
+            assert!(s.do_set_image_crop(1, bad.0, bad.1, bad.2, bad.3).is_err(), "{bad:?}");
+        }
+        assert!(s.do_set_image_crop(0, 1.0, 0.0, 0.0, 0.0).is_err(), "text paragraph");
         s.do_set_image_wrap(1, "square", "right").unwrap();
         let v: serde_json::Value = serde_json::from_str(&s.block_list()).unwrap();
         assert_eq!((v[1]["image"]["wrap"].as_str(), v[1]["image"]["align"].as_str()), (Some("square"), Some("right")));

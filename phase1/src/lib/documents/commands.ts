@@ -1,7 +1,7 @@
 import {registerCommand} from '../commandRegistry';
 import {getDocumentsState,patchDocuments,stepZoom} from './store';
 import {setTableLayout,insertSectionBreak,removeSectionBreak,setHfVariants,typeText,redoEdit,setAlign,setParagraphStyle,toggleList,clearList,shiftListLevel,stepFontSize,stepIndent,toggleFormat,undoEdit,editTable,insertTable,setHeaderFooter,insertImage,resizeImageToPercent,setImageAlt,removeImage,setColumnWidth,styleTable,setPageSetup,setFindOpen,setFindQuery,findStep,replaceAll,replaceCurrent} from './session';
-import {checkFormatPatch,MIN_SPACING_PT,MAX_SPACING_PT,MIN_SCALE_PCT,MAX_SCALE_PCT,lineRuleProblem,imageWrapProblem,type ImageWrap,type ImageAlign,type LineRule,stylePatchProblem,STYLE_ID_RE,type StylePatch,tocProblem,type TocOptions,listOptionsProblem,type ListOptionsPatch,pageSetupProblem,LIST_STYLES,type ListStyleId} from './protocol';
+import {checkFormatPatch,MIN_SPACING_PT,MAX_SPACING_PT,MIN_SCALE_PCT,MAX_SCALE_PCT,lineRuleProblem,imageWrapProblem,imageCropProblem,type ImageWrap,type ImageAlign,type LineRule,stylePatchProblem,STYLE_ID_RE,type StylePatch,tocProblem,type TocOptions,listOptionsProblem,type ListOptionsPatch,pageSetupProblem,LIST_STYLES,type ListStyleId} from './protocol';
 import {deleteStyle,saveStyle,setCharStyle,insertToc,updateToc,removeToc,continueNumbering,restartNumbering,setListStyle,setListOptions} from './session';
 import {validFindQuery,validReplaceText} from './find';
 import {findMedia} from '../media';
@@ -20,7 +20,7 @@ import {insertPageBreak,setParagraphOptions,setProperties,setTabStops} from './s
 import {parsePdfPages,checkParaPatch,PARA_FLAG_KEYS,propertiesProblem,tabsProblem} from './protocol';
 import {addComment,commentSelection,deleteComment,goToComment,readComments,replyComment,resolveComment} from './session';
 import {commentProblem,HIGHLIGHTS,linkProblem,type HighlightName} from './protocol';
-import {setCharLook,setCharSpacing,setCharScale,setLineRule,setImageWrap,clearFormatting,hasTextSelection,setHighlight,setLink,toggleVertAlign} from './session';
+import {setCharLook,setCharSpacing,setCharScale,setLineRule,setImageWrap,setImageCrop,clearFormatting,hasTextSelection,setHighlight,setLink,toggleVertAlign} from './session';
 import {documentsExportReady,patchDocumentsExportUi,requestDocumentsExportPdf,requestDocumentsSaveCopy} from './exportBridge';
 /**
  * Documents studio commands. Registered while the Documents canvas is mounted (registerDocumentsCommands),
@@ -242,6 +242,10 @@ export function registerDocumentsCommands(){
   add('documents.image.wrap','Set picture wrap',async p=>{
    const o=(p as Record<string,unknown>|undefined)??{};const bad=imageWrapProblem(o.wrap,o.align??'left');if(bad)throw expected(`${bad} Pass "wrap" and optionally "align".`);
    await setImageWrap(o.wrap as ImageWrap,(o.align??'left') as ImageAlign);
+  },()=>ready()&&getDocumentsState().imageBlock!==null),
+  add('documents.image.crop','Crop picture',async p=>{
+   const o=(p as Record<string,unknown>|undefined)??{};const crop=[o.left,o.top,o.right,o.bottom].map(v=>v===undefined?0:v);const bad=imageCropProblem(crop);if(bad)throw expected(`${bad} Pass "left", "top", "right" and "bottom" in percent.`);
+   await setImageCrop(crop as number[]);
   },()=>ready()&&getDocumentsState().imageBlock!==null),
   add('documents.image.remove','Remove picture',async()=>{await removeImage();},()=>ready()&&getDocumentsState().imageBlock!==null),
   add('documents.table.insert','Insert table',async p=>{await insertTable(int(p,'rows'),int(p,'cols'));},()=>ready()&&!!getDocumentsState().caret),
