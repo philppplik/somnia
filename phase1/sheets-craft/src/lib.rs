@@ -34,6 +34,16 @@ const MAX_VIEW_NAME: usize = 64;
 /// Reviewed range edits: at most this many cells, and this many bytes of old and new text.
 const CELL_STYLE_NAMES: &[&str] = &["Normal", "Good", "Bad", "Neutral", "Calculation", "Check Cell", "Explanatory Text", "Input", "Linked Cell", "Note", "Output", "Warning Text", "Title", "Heading 1", "Heading 2", "Heading 3", "Heading 4", "Total", "Currency", "Comma", "Percent", "Currency [0]", "Comma [0]"];
 const CONSOLIDATE_FUNCTIONS: &[&str] = &["sum", "count", "countNums", "average", "max", "min", "product"];
+const PIVOT_AREAS: &[&str] = &["rows", "columns", "values", "filters"];
+const PIVOT_VALUE_FUNCS: &[&str] = &["sum", "count", "average", "max", "min", "product", "countNumbers", "stdDev", "stdDevP", "var", "varP"];
+const PIVOT_SHOW_AS: &[&str] = &["normal", "percentOfGrandTotal", "percentOfColumnTotal", "percentOfRowTotal", "runningTotal", "rank"];
+const PIVOT_NUMBER_FORMATS: &[&str] = &["#,##0", "#,##0.00", "0%", "0.00%"];
+const PIVOT_LAYOUTS: &[&str] = &["compact", "outline", "tabular"];
+const PIVOT_SUBTOTALS: &[&str] = &["none", "top", "bottom"];
+const PIVOT_GROUPS: &[&str] = &["years", "quarters", "months", "days", "none"];
+const PIVOT_ORDERS: &[&str] = &["asc", "desc", "none"];
+const MAX_PIVOT_REPORTS: usize = 10;
+const MAX_PIVOT_ITEMS: usize = 200;
 const AUTOSUM_FUNCTIONS: &[&str] = &["SUM", "AVERAGE", "COUNT", "MAX", "MIN"];
 const MAX_REVIEWED_RANGE_CELLS: u64 = 1000;
 const MAX_REVIEWED_RANGE_BYTES: usize = 1_000_000;
@@ -1041,6 +1051,200 @@ impl HeadlessWorkbook {
     /// Returns `{"refreshed":n,"errors":[..]}`.
     pub fn pivot_refresh(&mut self) -> Result<String, String> {
         self.session.run("data.refreshAll", json!({})).map(|v| v.to_string()).map_err(|e| e.to_string())
+    }
+
+    /// The PivotTables of a sheet with their layout and the source fields (read only): `{"pivots":[{"name","source","range","rows":[{"field","sort","group","collapsed"}],
+    /// "columns":[..],"values":[{"field","func","name","showAs","numberFormat"}],"filters":[{"field","selected","report"}],"layout","grandTotalsRows","grandTotalsCols",
+    /// "subtotals","style","showHeaders","fields":[{"name","numeric","date","areas"}],"records"}]}`, at most 10 reports and 200 fields each.
+    pub fn pivot_info(&mut self, sheet: usize) -> Result<String, String> {
+        let names: Vec<String> = {
+            let doc = self.session.doc().map_err(|e| e.to_string())?;
+            doc.wb.sheet(sheet).ok_or("unknown sheet")?.pivots.iter().take(MAX_PIVOT_REPORTS).map(|p| p.name.clone()).collect()
+        };
+        if names.is_empty() {
+            return Ok(json!({"pivots": []}).to_string());
+        }
+        self.session.run("sheet.activate", json!({"sheet": sheet}))?;
+        let mut pivots = Vec::new();
+        for name in names {
+            let full = self.session.run("pivot.fields", json!({"pivot": name}))?;
+            let mut keep = serde_json::Map::new();
+            for key in ["name", "source", "range", "rows", "columns", "values", "filters", "layout", "grandTotalsRows", "grandTotalsCols", "subtotals", "style", "showHeaders", "records"] {
+                if let Some(v) = full.get(key) {
+                    keep.insert(key.to_string(), v.clone());
+                }
+            }
+            let fields: Vec<serde_json::Value> = full.get("fields").and_then(|v| v.as_array()).map(|a| a.iter().take(200).map(|f| json!({"name": f["name"], "numeric": f["numeric"], "date": f["date"], "areas": f["areas"]})).collect()).unwrap_or_default();
+            keep.insert("fields".into(), json!(fields));
+            pivots.push(serde_json::Value::Object(keep));
+        }
+        Ok(json!({"pivots": pivots}).to_string())
+    }
+
+    /// Edits a PivotTable of `sheet` through the engine's own commands, ONE undo step each. `op_json` names the report as `pivot` and is one of
+    /// `addField` (field, area rows|columns|values|filters, func?), `removeField` (field, area), `moveField` (field, from, to), `valueSettings` (index, func?, showAs?,
+    /// numberFormat? text from a short list or null), `filter` (field, selected: up to 200 labels or null for all), `sort` (field, order asc|desc|none), `group`
+    /// (field, by years|quarters|months|days|none), `collapse` (field, collapse bool), `layout` (layout?, grandTotalsRows?, grandTotalsCols?, subtotals?, showHeaders?, style?),
+    /// `changeSource` (the block `row`,`col`,`rows`,`cols` becomes the source: header row plus data), `refresh` or `delete`. A report never overwrites other
+    /// data (the engine refuses and everything is restored) and protected sheets are refused.
+    pub fn pivot_edit_op(&mut self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32, op_json: &str) -> Result<String, String> {
+        if rows == 0 || cols == 0 {
+            return Err("Select at least one cell.".into());
+        }
+        let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "operation must be a JSON object".to_string())?;
+        let map = op.as_object().ok_or("operation must be a JSON object")?;
+        let kind = map.get("kind").and_then(|v| v.as_str()).ok_or("unsupported PivotTable operation")?;
+        let known: &[&str] = match kind {
+            "addField" => &["kind", "pivot", "field", "area", "func"],
+            "removeField" => &["kind", "pivot", "field", "area"],
+            "moveField" => &["kind", "pivot", "field", "from", "to"],
+            "valueSettings" => &["kind", "pivot", "index", "func", "showAs", "numberFormat"],
+            "filter" => &["kind", "pivot", "field", "selected"],
+            "sort" => &["kind", "pivot", "field", "order"],
+            "group" => &["kind", "pivot", "field", "by"],
+            "collapse" => &["kind", "pivot", "field", "collapse"],
+            "layout" => &["kind", "pivot", "layout", "grandTotalsRows", "grandTotalsCols", "subtotals", "showHeaders", "style"],
+            "changeSource" | "refresh" | "delete" => &["kind", "pivot"],
+            _ => return Err("unsupported PivotTable operation".into()),
+        };
+        if map.keys().any(|k| !known.contains(&k.as_str())) {
+            return Err("unknown PivotTable field".into());
+        }
+        self.check_block(sheet, row, col, rows, cols, true)?;
+        let text = |k: &str| -> Result<String, String> {
+            map.get(k)
+                .and_then(|v| v.as_str())
+                .filter(|t| !t.is_empty() && t.chars().count() <= 255 && !t.chars().any(|c| c.is_control()))
+                .map(str::to_string)
+                .ok_or_else(|| format!("{k} is missing or invalid"))
+        };
+        let pick = |k: &str, list: &[&str]| -> Result<String, String> {
+            map.get(k).and_then(|v| v.as_str()).filter(|t| list.contains(t)).map(str::to_string).ok_or_else(|| format!("{k} is not supported"))
+        };
+        let flag = |k: &str| -> Result<Option<bool>, String> {
+            match map.get(k) {
+                None => Ok(None),
+                Some(v) => v.as_bool().map(Some).ok_or_else(|| format!("{k} must be true or false")),
+            }
+        };
+        let pivot = text("pivot")?;
+        {
+            let doc = self.session.doc().map_err(|e| e.to_string())?;
+            if !doc.wb.sheet(sheet).ok_or("unknown sheet")?.pivots.iter().any(|p| p.name == pivot) {
+                return Err("There is no such PivotTable on this sheet.".into());
+            }
+        }
+        let (command, mut params) = match kind {
+            "addField" => {
+                let mut p = json!({"field": text("field")?, "area": pick("area", PIVOT_AREAS)?});
+                if map.contains_key("func") {
+                    p["func"] = json!(pick("func", PIVOT_VALUE_FUNCS)?);
+                }
+                ("pivot.addField", p)
+            }
+            "removeField" => ("pivot.removeField", json!({"field": text("field")?, "area": pick("area", PIVOT_AREAS)?})),
+            "moveField" => ("pivot.moveField", json!({"field": text("field")?, "from": pick("from", PIVOT_AREAS)?, "to": pick("to", PIVOT_AREAS)?})),
+            "valueSettings" => {
+                let index = map.get("index").and_then(|v| v.as_u64()).filter(|i| *i < 64).ok_or("index must be a value position")?;
+                let mut p = json!({"index": index});
+                if map.contains_key("func") {
+                    p["func"] = json!(pick("func", PIVOT_VALUE_FUNCS)?);
+                }
+                if map.contains_key("showAs") {
+                    p["showAs"] = json!(pick("showAs", PIVOT_SHOW_AS)?);
+                }
+                match map.get("numberFormat") {
+                    None => {}
+                    Some(serde_json::Value::Null) => p["numberFormat"] = serde_json::Value::Null,
+                    Some(_) => p["numberFormat"] = json!(pick("numberFormat", PIVOT_NUMBER_FORMATS)?),
+                }
+                if p.as_object().is_some_and(|m| m.len() == 1) {
+                    return Err("Change the function, the display or the number format.".into());
+                }
+                ("pivot.valueSettings", p)
+            }
+            "filter" => {
+                let selected = match map.get("selected") {
+                    Some(serde_json::Value::Null) => serde_json::Value::Null,
+                    Some(serde_json::Value::Array(items)) if !items.is_empty() && items.len() <= MAX_PIVOT_ITEMS => {
+                        let labels: Option<Vec<&str>> = items.iter().map(|v| v.as_str().filter(|t| t.chars().count() <= 255 && !t.chars().any(|c| c.is_control()))).collect();
+                        json!(labels.ok_or("an item label is too long or has control characters")?)
+                    }
+                    _ => return Err("selected must be null or 1 to 200 item labels".into()),
+                };
+                ("pivot.filter", json!({"field": text("field")?, "selected": selected}))
+            }
+            "sort" => ("pivot.sort", json!({"field": text("field")?, "order": pick("order", PIVOT_ORDERS)?})),
+            "group" => ("pivot.group", json!({"field": text("field")?, "by": pick("by", PIVOT_GROUPS)?})),
+            "collapse" => ("pivot.collapse", json!({"field": text("field")?, "collapse": flag("collapse")?.ok_or("collapse must be true or false")?})),
+            "layout" => {
+                let mut p = serde_json::Map::new();
+                if map.contains_key("layout") {
+                    p.insert("layout".into(), json!(pick("layout", PIVOT_LAYOUTS)?));
+                }
+                if map.contains_key("subtotals") {
+                    p.insert("subtotals".into(), json!(pick("subtotals", PIVOT_SUBTOTALS)?));
+                }
+                for (key, flag_value) in [("grandTotalsRows", flag("grandTotalsRows")?), ("grandTotalsCols", flag("grandTotalsCols")?), ("showHeaders", flag("showHeaders")?)] {
+                    if let Some(on) = flag_value {
+                        p.insert(key.into(), json!(on));
+                    }
+                }
+                if map.contains_key("style") {
+                    let style = text("style")?;
+                    let tail = style.strip_prefix("PivotStyle").and_then(|r| r.strip_prefix("Light").or_else(|| r.strip_prefix("Medium")).or_else(|| r.strip_prefix("Dark")));
+                    if !tail.is_some_and(|d| (1..=2).contains(&d.len()) && d.chars().all(|c| c.is_ascii_digit())) {
+                        return Err("unsupported PivotTable style".into());
+                    }
+                    p.insert("style".into(), json!(style));
+                }
+                if p.is_empty() {
+                    return Err("Change at least one layout setting.".into());
+                }
+                ("pivot.layout", serde_json::Value::Object(p))
+            }
+            "changeSource" => {
+                if rows < 2 {
+                    return Err("Select a header row and at least one data row.".into());
+                }
+                if u64::from(rows) * u64::from(cols) > MAX_SORT_CELLS {
+                    return Err("Select at most 1,000,000 cells.".into());
+                }
+                ("pivot.changeSource", json!({"source": self.block_source(sheet, row, col, rows, cols)?}))
+            }
+            "refresh" => ("pivot.refresh", json!({})),
+            _ => ("pivot.delete", json!({})),
+        };
+        params["pivot"] = json!(pivot);
+        let (before_rev, before_len, snap_wb, snap_sel, snap_redo) = {
+            let doc = self.session.doc().map_err(|e| e.to_string())?;
+            (doc.revision, doc.undo.len(), doc.wb.clone(), doc.selection.clone(), doc.redo.clone())
+        };
+        let outcome: Result<String, String> = (|| {
+            self.session.run("sheet.activate", json!({"sheet": sheet}))?;
+            self.session.run(command, params).map(|v| v.to_string())
+        })();
+        let _ = self.session.take_ui_requests();
+        let doc = self.session.doc_mut().map_err(|e| e.to_string())?;
+        match outcome {
+            Ok(text) => {
+                if doc.undo.len() > before_len {
+                    doc.undo.truncate(before_len + 1);
+                    doc.redo.clear();
+                }
+                Ok(text)
+            }
+            Err(e) => {
+                doc.undo.truncate(before_len);
+                doc.wb = snap_wb;
+                doc.selection = snap_sel;
+                doc.revision = before_rev;
+                doc.redo = snap_redo;
+                let wb = doc.wb.clone();
+                doc.calc.rebuild(&wb);
+                Err(e.replace(" Do you want to replace it? (Run again with replace: true to overwrite.)", " Move or clear it first."))
+            }
+        }
     }
 
     /// Lists the tables of a sheet and the style names that can be chosen (read only):
@@ -4051,6 +4255,54 @@ mod tests {
         assert!(book.table_op(0, 999, 0, 1, 3, r#"{"kind":"resize","table":"Stock1"}"#).is_err(), "needs a data row");
         assert!(book.table_op(0, 999, 0, 3, 3, r#"{"kind":"resize","table":"Nope"}"#).is_err());
         assert!(book.table_op(0, 999, 0, 3, 3, r#"{"kind":"resize","table":"Stock1","x":1}"#).is_err());
+    }
+
+    #[test]
+    fn pivot_edits_are_single_undo_steps_and_refuse_bad_input() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        for (r, vals) in [(1099, ["Region", "Product", "Units"]), (1100, ["East", "Pen", "5"]), (1101, ["West", "Pen", "7"]), (1102, ["East", "Cup", "3"]), (1103, ["West", "Cup", "9"])] {
+            for (c, v) in vals.iter().enumerate() {
+                book.session.run("cell.set", json!({"sheet": 0, "cell": CellRef::new(r, c as u32).a1(), "input": v})).unwrap();
+            }
+        }
+        let made: serde_json::Value = serde_json::from_str(&book.pivot_create(0, 1099, 0, 5, 3, r#"{"rows":"Region","values":"Units","func":"sum"}"#).unwrap()).unwrap();
+        let report = made["sheet"].as_u64().unwrap() as usize;
+        let info: serde_json::Value = serde_json::from_str(&book.pivot_info(report).unwrap()).unwrap();
+        let name = info["pivots"][0]["name"].as_str().unwrap().to_string();
+        assert!(info["pivots"][0]["fields"].as_array().unwrap().len() >= 3);
+        let steps = |b: &HeadlessWorkbook| b.session.doc().unwrap().undo.len();
+        let edit = |b: &mut HeadlessWorkbook, op: serde_json::Value| b.pivot_edit_op(report, 0, 0, 1, 1, &op.to_string());
+        let before = steps(&book);
+        edit(&mut book, json!({"kind": "addField", "pivot": name, "field": "Product", "area": "columns"})).unwrap();
+        assert_eq!(steps(&book), before + 1);
+        edit(&mut book, json!({"kind": "valueSettings", "pivot": name, "index": 0, "func": "average", "showAs": "percentOfGrandTotal", "numberFormat": "0%"})).unwrap();
+        edit(&mut book, json!({"kind": "layout", "pivot": name, "layout": "tabular", "grandTotalsRows": false, "style": "PivotStyleMedium9"})).unwrap();
+        edit(&mut book, json!({"kind": "sort", "pivot": name, "field": "Region", "order": "desc"})).unwrap();
+        edit(&mut book, json!({"kind": "filter", "pivot": name, "field": "Region", "selected": ["East"]})).unwrap();
+        edit(&mut book, json!({"kind": "filter", "pivot": name, "field": "Region", "selected": null})).unwrap();
+        edit(&mut book, json!({"kind": "moveField", "pivot": name, "field": "Product", "from": "columns", "to": "rows"})).unwrap();
+        assert_eq!(steps(&book), before + 7);
+        let held = steps(&book);
+        for bad in [
+            json!({"kind": "addField", "pivot": name, "field": "Nope", "area": "rows"}),
+            json!({"kind": "addField", "pivot": name, "field": "Product", "area": "sideways"}),
+            json!({"kind": "valueSettings", "pivot": name, "index": 0}),
+            json!({"kind": "valueSettings", "pivot": name, "index": 0, "numberFormat": "[Red]0"}),
+            json!({"kind": "layout", "pivot": name}),
+            json!({"kind": "layout", "pivot": name, "style": "PivotStyleEvil1"}),
+            json!({"kind": "filter", "pivot": name, "field": "Region", "selected": []}),
+            json!({"kind": "sort", "pivot": name, "field": "Region", "order": "random"}),
+            json!({"kind": "refresh", "pivot": "Nobody"}),
+            json!({"kind": "refresh", "pivot": name, "extra": 1}),
+            json!({"kind": "teleport", "pivot": name}),
+        ] {
+            assert!(edit(&mut book, bad.clone()).is_err(), "{bad}");
+        }
+        assert_eq!(steps(&book), held, "refused edits leave no history");
+        assert!(book.pivot_edit_op(report, 0, 0, 0, 1, r#"{"kind":"refresh","pivot":"x"}"#).is_err());
+        edit(&mut book, json!({"kind": "delete", "pivot": name})).unwrap();
+        assert_eq!(steps(&book), held + 1);
+        assert_eq!(serde_json::from_str::<serde_json::Value>(&book.pivot_info(report).unwrap()).unwrap()["pivots"].as_array().unwrap().len(), 0);
     }
 
     #[test]

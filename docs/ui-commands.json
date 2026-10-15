@@ -7586,6 +7586,14 @@
       "hasEnabled": true
     },
     {
+      "id": "sheets.pivotEdit",
+      "title": "Change the fields, values, filters or layout of a PivotTable, or refresh, re-source or delete it",
+      "category": "Edit",
+      "source": "sheets",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
       "id": "sheets.protect",
       "title": "Protect a sheet or lock cells",
       "category": "Edit",

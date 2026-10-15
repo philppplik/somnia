@@ -21,6 +21,8 @@ import {MAX_TITLE_CHARS,sparklineBlockProblem} from '../../lib/sheets/chartOps';
 import {OBJECT_GROUPS,SHAPE_FILLS,SHAPE_LINES,MAX_PICTURE_BYTES,MAX_SHAPE_TEXT,MAX_ALT,buildObjectOp,bytesToBase64,objectIsShape,objectNeedsPick,type ObjectAction} from '../../lib/sheets/objectOps';
 import {layoutBlockProblem,MERGE_HOWS,ROTATE_MODES} from '../../lib/sheets/layoutOps';
 import {Checkbox} from '../ui/checkbox';
+import {PIVOT_AREAS,PIVOT_VALUE_FUNCS,PIVOT_SHOW_AS,PIVOT_NUMBER_FORMATS,PIVOT_LAYOUTS,PIVOT_SUBTOTALS,PIVOT_GROUPS,PIVOT_ORDERS,PIVOT_STYLES,MAX_PIVOT_ITEMS,pivotSourceProblem} from '../../lib/sheets/pivotEditOps';
+import type {PivotArea,PivotValueFunc,PivotEditOp} from '../../lib/sheets/protocol';
 import {CONSOLIDATE_FUNCTIONS,dataToolProblem,parseSourceList} from '../../lib/sheets/dataToolOps';
 import {CELL_STYLE_GROUPS,AUTOSUM_FUNCTIONS,cellToolProblem,toolFromChoice,filterFunctions,functionCategories} from '../../lib/sheets/cellToolOps';
 import {SUBTOTAL_FUNCS,MAX_SUBTOTAL_ROWS,parseColumnList,type SubtotalFunc} from '../../lib/sheets/outlineOps';
@@ -244,6 +246,7 @@ export function SheetsLayoutPanel({context}:PanelHostProps){
   <SavedViewsGroup/>
   <TablesGroup/>
   <PivotGroup/>
+  <PivotEditGroup/>
   <PrintGroup/>
   <CustomFormatGroup/>
   <SplitGroup/>
@@ -668,6 +671,75 @@ function PivotGroup(){
   </>}
   <Button variant="outline" size="compact" disabled={action.busy||!!problem} onClick={()=>void action.run('sheets.pivot',create?{kind:'create',rows,values:vals,func,...(cols?{columns:cols}:{})}:{kind:'refresh'})} data-testid="sheets-pv-apply">{t('sheets.nm.apply')}</Button>
   <p className="text-ink-3">{t(create?(blockOk?'sheets.pv.scope':'sheets.pv.need'):'sheets.pv.scopeRefresh',{range:rangeAddress(r)})}</p>
+ </div>;
+}
+/** Edit an existing PivotTable of this sheet in one grouped menu. One undo step each; a report never overwrites other data. */
+type PivotAct='addField'|'removeField'|'moveField'|'valueFunc'|'valueShowAs'|'valueFormat'|'filterItems'|'filterAll'|'sort'|'group'|'collapse'|'expand'|'layout'|'totals'|'subtotals'|'headers'|'style'|'useSelection'|'refresh'|'delete';
+const PIVOT_ACTS:[string,PivotAct[]][]=[['groupFields',['addField','removeField','moveField']],['groupValues',['valueFunc','valueShowAs','valueFormat']],['groupItems',['filterItems','filterAll','sort','group','collapse','expand']],['groupLayout',['layout','totals','subtotals','headers','style']],['groupReport',['useSelection','refresh','delete']]];
+function PivotEditGroup(){
+ const {t}=useT(),s=useSheetsSelection(),action=useAction();
+ const [pick,setPick]=useState('');const [act,setAct]=useState<PivotAct>('addField');const [fieldPick,setFieldPick]=useState('');const [area,setArea]=useState<PivotArea>('rows');const [to,setTo]=useState<PivotArea>('columns');
+ const [func,setFunc]=useState<PivotValueFunc>('sum');const [showAs,setShowAs]=useState<typeof PIVOT_SHOW_AS[number]>('normal');const [fmt,setFmt]=useState('');const [vi,setVi]=useState(0);
+ const [order,setOrder]=useState<typeof PIVOT_ORDERS[number]>('asc');const [by,setBy]=useState<typeof PIVOT_GROUPS[number]>('years');const [layout,setLayout]=useState<typeof PIVOT_LAYOUTS[number]>('compact');
+ const [totals,setTotals]=useState('both');const [subs,setSubs]=useState<typeof PIVOT_SUBTOTALS[number]>('bottom');const [heads,setHeads]=useState('show');const [style,setStyle]=useState<string>(PIVOT_STYLES[0]);const [items,setItems]=useState('');
+ const r=s?.range,list=s?.pivots??[],p=list.find(x=>x.name===pick)??list[0]??null;
+ if(!s||!r||!p)return null;
+ const names=(xs:{field:string}[])=>xs.map(x=>x.field),axis=[...new Set([...names(p.rows),...names(p.columns),...names(p.filters)])];
+ const fieldActs:PivotAct[]=['filterItems','filterAll','sort','collapse','expand'];
+ const fieldList=act==='addField'?p.fields.map(f=>f.name):act==='removeField'||act==='moveField'?names(p[area]):act==='group'?p.fields.filter(f=>f.date).map(f=>f.name):fieldActs.includes(act)?axis:[];
+ const usesField=act==='addField'||act==='removeField'||act==='moveField'||act==='group'||fieldActs.includes(act),chosen=fieldList.includes(fieldPick)?fieldPick:fieldList[0]??'';
+ const valueActs=act==='valueFunc'||act==='valueShowAs'||act==='valueFormat',idx=Math.min(vi,Math.max(0,p.values.length-1));
+ const itemList=items.split(';').map(x=>x.trim()).filter(Boolean),rows=r.r1-r.r0+1,cols=r.c1-r.c0+1;
+ const build=():PivotEditOp|null=>{
+  const pivot=p.name;
+  switch(act){
+   case 'addField':return chosen?{kind:'addField',pivot,field:chosen,area,...(area==='values'?{func}:{})}:null;
+   case 'removeField':return chosen?{kind:'removeField',pivot,field:chosen,area}:null;
+   case 'moveField':return chosen&&area!==to?{kind:'moveField',pivot,field:chosen,from:area,to}:null;
+   case 'valueFunc':return p.values.length?{kind:'valueSettings',pivot,index:idx,func}:null;
+   case 'valueShowAs':return p.values.length?{kind:'valueSettings',pivot,index:idx,showAs}:null;
+   case 'valueFormat':return p.values.length?{kind:'valueSettings',pivot,index:idx,numberFormat:fmt===''?null:fmt}:null;
+   case 'filterItems':return chosen&&itemList.length>0&&itemList.length<=MAX_PIVOT_ITEMS?{kind:'filter',pivot,field:chosen,selected:itemList}:null;
+   case 'filterAll':return chosen?{kind:'filter',pivot,field:chosen,selected:null}:null;
+   case 'sort':return chosen?{kind:'sort',pivot,field:chosen,order}:null;
+   case 'group':return chosen?{kind:'group',pivot,field:chosen,by}:null;
+   case 'collapse':case 'expand':return chosen?{kind:'collapse',pivot,field:chosen,collapse:act==='collapse'}:null;
+   case 'layout':return {kind:'layout',pivot,layout};
+   case 'totals':return {kind:'layout',pivot,grandTotalsRows:totals==='both'||totals==='rows',grandTotalsCols:totals==='both'||totals==='cols'};
+   case 'subtotals':return {kind:'layout',pivot,subtotals:subs};
+   case 'headers':return {kind:'layout',pivot,showHeaders:heads==='show'};
+   case 'style':return {kind:'layout',pivot,style};
+   case 'useSelection':return pivotSourceProblem(rows,cols)?null:{kind:'changeSource',pivot};
+   default:return {kind:act,pivot};
+  }
+ };
+ const op=build();
+ const sel=<T extends string>(label:string,value:T,set:(v:T)=>void,options:{value:string;text:string}[],id:string)=><label className="flex flex-col gap-1">{label}<NativeSelect className={field} value={value} disabled={action.busy||options.length===0} onChange={e=>set(e.currentTarget.value as T)} data-testid={id}>{options.map(o=><option key={o.value} value={o.value}>{o.text}</option>)}</NativeSelect></label>;
+ const areaOpts=PIVOT_AREAS.map(a=>({value:a,text:t('sheets.pe.area.'+a)}));
+ return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.pe.title')}>
+  <span>{t('sheets.pe.title')}</span>
+  {sel(t('sheets.pe.pivot'),p.name,setPick,list.map(x=>({value:x.name,text:x.name+(x.range?' '+x.range:'')})),'sheets-pe-pivot')}
+  <label className="flex flex-col gap-1">{t('sheets.pe.action')}<NativeSelect className={field} value={act} disabled={action.busy} onChange={e=>setAct(e.currentTarget.value as PivotAct)} data-testid="sheets-pe-action">
+   {PIVOT_ACTS.map(([group,acts])=><optgroup key={group} label={t('sheets.pe.'+group)}>{acts.map(a=><option key={a} value={a}>{t('sheets.pe.'+a)}</option>)}</optgroup>)}
+  </NativeSelect></label>
+  {(act==='addField'||act==='removeField'||act==='moveField')&&sel(t('sheets.pe.area'),area,setArea,areaOpts,'sheets-pe-area')}
+  {act==='moveField'&&sel(t('sheets.pe.to'),to,setTo,areaOpts,'sheets-pe-to')}
+  {usesField&&sel(t('sheets.pe.field'),chosen,setFieldPick,fieldList.map(n=>({value:n,text:n})),'sheets-pe-field')}
+  {valueActs&&sel(t('sheets.pe.value'),String(idx),v=>setVi(Number(v)),p.values.map((v,i)=>({value:String(i),text:v.field})),'sheets-pe-value')}
+  {(act==='valueFunc'||(act==='addField'&&area==='values'))&&sel(t('sheets.pe.func'),func,setFunc,PIVOT_VALUE_FUNCS.map(f=>({value:f,text:t('sheets.pe.f.'+f)})),'sheets-pe-func')}
+  {act==='valueShowAs'&&sel(t('sheets.pe.showAs'),showAs,setShowAs,PIVOT_SHOW_AS.map(f=>({value:f,text:t('sheets.pe.s.'+f)})),'sheets-pe-showas')}
+  {act==='valueFormat'&&sel(t('sheets.pe.format'),fmt,setFmt,[{value:'',text:t('sheets.pe.fmtNone')},...PIVOT_NUMBER_FORMATS.map(f=>({value:f,text:f}))],'sheets-pe-format')}
+  {act==='sort'&&sel(t('sheets.pe.order'),order,setOrder,PIVOT_ORDERS.map(f=>({value:f,text:t('sheets.pe.o.'+f)})),'sheets-pe-order')}
+  {act==='group'&&sel(t('sheets.pe.by'),by,setBy,PIVOT_GROUPS.map(f=>({value:f,text:t('sheets.pe.g.'+f)})),'sheets-pe-by')}
+  {act==='layout'&&sel(t('sheets.pe.layoutKind'),layout,setLayout,PIVOT_LAYOUTS.map(f=>({value:f,text:t('sheets.pe.l.'+f)})),'sheets-pe-layout')}
+  {act==='totals'&&sel(t('sheets.pe.totals'),totals,setTotals,(['both','rows','cols','off'] as const).map(f=>({value:f,text:t('sheets.pe.t.'+f)})),'sheets-pe-totals')}
+  {act==='subtotals'&&sel(t('sheets.pe.subtotals'),subs,setSubs,PIVOT_SUBTOTALS.map(f=>({value:f,text:t('sheets.pe.st.'+f)})),'sheets-pe-subtotals')}
+  {act==='headers'&&sel(t('sheets.pe.headers'),heads,setHeads,(['show','hide'] as const).map(f=>({value:f,text:t('sheets.pe.h.'+f)})),'sheets-pe-headers')}
+  {act==='style'&&sel(t('sheets.pe.style'),style,setStyle,PIVOT_STYLES.map(f=>({value:f,text:f.replace('PivotStyle','')})),'sheets-pe-style')}
+  {act==='filterItems'&&<label className="flex flex-col gap-1">{t('sheets.pe.items')}<NativeInput className={field} value={items} maxLength={2000} disabled={action.busy} onChange={e=>setItems(e.currentTarget.value)} data-testid="sheets-pe-items"/></label>}
+  <Button variant="outline" size="compact" disabled={action.busy||!op} onClick={()=>void action.run('sheets.pivotEdit',op)} data-testid="sheets-pe-apply">{t('sheets.pe.apply')}</Button>
+  <p className="text-ink-3">{t(act==='useSelection'?'sheets.pe.sourceHint':usesField&&fieldList.length===0?'sheets.pe.noField':'sheets.pe.hint',{range:rangeAddress(r)})}</p>
+  {action.notice?<p role="alert">{action.notice}</p>:null}
  </div>;
 }
 /** Named ranges in one grouped menu: define the selection, redefine, go to or delete a name. One undo step each. */

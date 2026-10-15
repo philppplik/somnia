@@ -4,11 +4,12 @@ import {parsePivotFields,parseTables} from './tableOps';
 import {parseScenarios} from './whatIfOps';
 import {parseSavedViews} from './savedViews';
 import {parseFunctionCatalog} from './cellToolOps';
+import {parsePivotReports} from './pivotEditOps';
 import {parseOutlineInfo} from './outlineOps';
 import {parseObjects,pictureDataUrl} from './objectOps';
 import {parseCharts,parseScene,parseSparklines} from './chartOps';
 import {parseExportResult,parsePageInfo} from './printOps';
-import type {ChartInfo,ChartOp,ChartScene,SparklineOp,SparklineScene,ProtectOp,WhatIfOp,LayoutOp,CellToolOp,DataToolOp,FunctionInfo,OutlineInfo,OutlineOp,SavedView,SavedViewOp,ObjectOp,ObjectsInfo,ScenarioInfo,ViewOp,ViewOpResult,PageInfo,PageSetupOp,ExportOp,ExportResult,PivotField,PivotFunc,TableOp,TablesInfo,NameInfo,NameOp,AnnotateOp,CellAnnotations,DedupeOp,SplitOp,ReplaceOp,ValidationOp,CfOp,FillDirection,SheetsEditReceipt,SheetsRangeReceipt,SheetsNativeState,FilterOp,SortOp,SheetOp,FormatOp,LineAxis,LineOp,RangeResult,SheetInfo,SheetLayout,SheetsRequest,SheetsResponse,ViewResult,WorkbookInfo} from './protocol';
+import type {ChartInfo,ChartOp,ChartScene,SparklineOp,SparklineScene,ProtectOp,WhatIfOp,LayoutOp,CellToolOp,DataToolOp,PivotEditOp,PivotReport,FunctionInfo,OutlineInfo,OutlineOp,SavedView,SavedViewOp,ObjectOp,ObjectsInfo,ScenarioInfo,ViewOp,ViewOpResult,PageInfo,PageSetupOp,ExportOp,ExportResult,PivotField,PivotFunc,TableOp,TablesInfo,NameInfo,NameOp,AnnotateOp,CellAnnotations,DedupeOp,SplitOp,ReplaceOp,ValidationOp,CfOp,FillDirection,SheetsEditReceipt,SheetsRangeReceipt,SheetsNativeState,FilterOp,SortOp,SheetOp,FormatOp,LineAxis,LineOp,RangeResult,SheetInfo,SheetLayout,SheetsRequest,SheetsResponse,ViewResult,WorkbookInfo} from './protocol';
 import {MAX_INPUT_BYTES} from './protocol';
 import {parseEditReceipt,parseNativeState,parseRangeReceipt} from './receipt';
 type Req=SheetsRequest extends infer R?R extends {id:number}?Omit<R,'id'>:never:never;
@@ -34,7 +35,7 @@ export class SheetsEngine{
  private request(message:Req,transfer:Transferable[]=[]){
   return new Promise<SheetsResponse>((resolve,reject)=>{
    if(this.disposed){reject(new Error('Spreadsheet engine closed'));return;}
-   const mutating=['open','set','setValues','clear','format','resize','editLines','freeze','sort','filter','fill','cf','validation','replace','dedupe','split','annotate','defineName','deleteName','pivotCreate','pivotRefresh','tableOp','pageSetup','viewOp','protectOp','whatIfOp','layoutOp','cellToolOp','dataToolOp','outlineOp','savedViewOp','pictureOp','objectOp','chartOp','sparklineOp','setReviewed','undoReviewed','setRangeReviewed','undoRangeReviewed','editSheet','undo','redo','close'].includes(message.op);if(mutating){this.mutationEpoch++;this.mutations++;this.notifySelectionRead();}const finish=()=>{if(mutating){this.mutations--;this.mutationEpoch++;this.notifySelectionRead();}};const done=(r:SheetsResponse)=>{finish();resolve(r);},failed=(e:Error)=>{finish();reject(e);};
+   const mutating=['open','set','setValues','clear','format','resize','editLines','freeze','sort','filter','fill','cf','validation','replace','dedupe','split','annotate','defineName','deleteName','pivotCreate','pivotRefresh','tableOp','pageSetup','viewOp','protectOp','whatIfOp','layoutOp','cellToolOp','dataToolOp','pivotEditOp','outlineOp','savedViewOp','pictureOp','objectOp','chartOp','sparklineOp','setReviewed','undoReviewed','setRangeReviewed','undoRangeReviewed','editSheet','undo','redo','close'].includes(message.op);if(mutating){this.mutationEpoch++;this.mutations++;this.notifySelectionRead();}const finish=()=>{if(mutating){this.mutations--;this.mutationEpoch++;this.notifySelectionRead();}};const done=(r:SheetsResponse)=>{finish();resolve(r);},failed=(e:Error)=>{finish();reject(e);};
    const id=this.nextId++;
    const timer=setTimeout(()=>this.dispose(new Error('Spreadsheet engine timed out. Unsaved edits in this workbook were discarded.')),this.timeoutMs);
    this.pending.set(id,{resolve:done,reject:failed,timer});
@@ -95,6 +96,10 @@ export class SheetsEngine{
  cellToolOp(sheet:number,row:number,col:number,rows:number,cols:number,tool:CellToolOp){return this.result<unknown>({op:'cellToolOp',sheet,row,col,rows,cols,tool});}
  /** Flash Fill or Consolidate: one undo step; a rejected promise changed nothing. */
  dataToolOp(sheet:number,row:number,col:number,rows:number,cols:number,tool:DataToolOp){return this.result<unknown>({op:'dataToolOp',sheet,row,col,rows,cols,tool});}
+ /** The PivotTables of a sheet with layout and source fields (read only). */
+ async pivotInfo(sheet:number):Promise<PivotReport[]>{return parsePivotReports(await this.result<unknown>({op:'pivotInfo',sheet}));}
+ /** Edits a PivotTable: one undo step; a rejected promise changed nothing. */
+ pivotEditOp(sheet:number,row:number,col:number,rows:number,cols:number,edit:PivotEditOp){return this.result<unknown>({op:'pivotEditOp',sheet,row,col,rows,cols,edit});}
  /** The built-in function library (read only). */
  async functionCatalog():Promise<FunctionInfo[]>{return parseFunctionCatalog(await this.result<unknown>({op:'functionCatalog'}));}
  layoutOp(sheet:number,row:number,col:number,rows:number,cols:number,layout:LayoutOp){return this.result<unknown>({op:'layoutOp',sheet,row,col,rows,cols,layout});}

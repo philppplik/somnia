@@ -51,6 +51,8 @@ scope.onmessage=({data}:MessageEvent<SheetsRequest>)=>{queue=queue.then(async()=
    case 'tables':result=JSON.parse(need().tables_info(data.sheet));break;
    case 'cellToolOp':result=JSON.parse(need().cell_tools_op(data.sheet,data.row,data.col,data.rows,data.cols,JSON.stringify(data.tool)));break;
    case 'dataToolOp':result=JSON.parse(need().data_tools_op(data.sheet,data.row,data.col,data.rows,data.cols,JSON.stringify(data.tool)));break;
+   case 'pivotInfo':result=JSON.parse(need().pivot_info(data.sheet));break;
+   case 'pivotEditOp':result=JSON.parse(need().pivot_edit_op(data.sheet,data.row,data.col,data.rows,data.cols,JSON.stringify(data.edit)));break;
    case 'functionCatalog':result=JSON.parse(need().function_catalog());break;
    case 'layoutOp':result=JSON.parse(need().layout_op(data.sheet,data.row,data.col,data.rows,data.cols,JSON.stringify(data.layout)));break;
    case 'outline':result=JSON.parse(need().outline_info(data.sheet));break;

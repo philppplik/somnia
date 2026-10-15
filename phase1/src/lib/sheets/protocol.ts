@@ -56,6 +56,14 @@ export type SavedViewOp={kind:'save'|'show'|'delete';name:string};
 export type CellToolOp={kind:'style';name:string}|{kind:'autoSum';function:'SUM'|'AVERAGE'|'COUNT'|'MAX'|'MIN'}|{kind:'insertCheckbox'|'toggleCheckbox'|'pickFormat'|'pasteFormat'};
 /** Flash Fill (empty cells only) and Consolidate (never over filled cells); one undo step each. */
 export type DataToolOp={kind:'flashFill'}|{kind:'consolidate';function:'sum'|'count'|'countNums'|'average'|'max'|'min'|'product';sources:string[];topRow:boolean;leftColumn:boolean};
+/** PivotTable editing (one undo step each; a report never overwrites other data). */
+export type PivotArea='rows'|'columns'|'values'|'filters';
+export type PivotValueFunc='sum'|'count'|'average'|'max'|'min'|'product'|'countNumbers'|'stdDev'|'stdDevP'|'var'|'varP';
+export type PivotEditOp={kind:'addField';pivot:string;field:string;area:PivotArea;func?:PivotValueFunc}|{kind:'removeField';pivot:string;field:string;area:PivotArea}|{kind:'moveField';pivot:string;field:string;from:PivotArea;to:PivotArea}
+ |{kind:'valueSettings';pivot:string;index:number;func?:PivotValueFunc;showAs?:'normal'|'percentOfGrandTotal'|'percentOfColumnTotal'|'percentOfRowTotal'|'runningTotal'|'rank';numberFormat?:string|null}
+ |{kind:'filter';pivot:string;field:string;selected:string[]|null}|{kind:'sort';pivot:string;field:string;order:'asc'|'desc'|'none'}|{kind:'group';pivot:string;field:string;by:'years'|'quarters'|'months'|'days'|'none'}|{kind:'collapse';pivot:string;field:string;collapse:boolean}
+ |{kind:'layout';pivot:string;layout?:'compact'|'outline'|'tabular';grandTotalsRows?:boolean;grandTotalsCols?:boolean;subtotals?:'none'|'top'|'bottom';showHeaders?:boolean;style?:string}|{kind:'changeSource'|'refresh'|'delete';pivot:string};
+export interface PivotReport{name:string;source:string;range:string|null;rows:{field:string;sort?:unknown;group?:unknown;collapsed?:unknown}[];columns:{field:string;sort?:unknown;group?:unknown;collapsed?:unknown}[];values:{field:string;func?:unknown;name?:unknown;showAs?:unknown;numberFormat?:unknown}[];filters:{field:string;selected?:unknown;report?:unknown}[];layout:string;grandTotalsRows:boolean;grandTotalsCols:boolean;subtotals:string;style:string;showHeaders:boolean;fields:{name:string;numeric:boolean;date:boolean;areas:string[]}[];records:number}
 export interface FunctionInfo{name:string;category:string;signature:string;description:string}
 export type LayoutOp={kind:'merge';how:'cells'|'center'|'across'|'unmerge'}|{kind:'rotate';mode:'none'|'up'|'down'|'stacked'}|{kind:'doubleUnderline';on:boolean}|{kind:'justify'|'clearFormats'};
 /** Outline groups and subtotals on the selected lines or block (column offsets are inside the selection). */
@@ -171,6 +179,8 @@ export type SheetsRequest=
  |{id:number;op:'sparklineOp';sheet:number;row:number;col:number;rows:number;cols:number;sparkline:SparklineOp}
  |{id:number;op:'cellToolOp';sheet:number;row:number;col:number;rows:number;cols:number;tool:CellToolOp}
  |{id:number;op:'functionCatalog'}
+ |{id:number;op:'pivotInfo';sheet:number}
+ |{id:number;op:'pivotEditOp';sheet:number;row:number;col:number;rows:number;cols:number;edit:PivotEditOp}
  |{id:number;op:'dataToolOp';sheet:number;row:number;col:number;rows:number;cols:number;tool:DataToolOp}
  |{id:number;op:'layoutOp';sheet:number;row:number;col:number;rows:number;cols:number;layout:LayoutOp}
  |{id:number;op:'outline';sheet:number}

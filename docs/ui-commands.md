@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1020 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1021 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -637,6 +637,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `sheets.pageSetup` | Change the page setup | Edit | sheets |  |
 | `sheets.picture` | Insert a PNG or JPEG picture | Edit | sheets |  |
 | `sheets.pivot` | Build or refresh a PivotTable | Edit | sheets |  |
+| `sheets.pivotEdit` | Change the fields, values, filters or layout of a PivotTable, or refresh, re-source or delete it | Edit | sheets |  |
 | `sheets.protect` | Protect a sheet or lock cells | Edit | sheets |  |
 | `sheets.redo` | Redo workbook change | Edit | sheets |  |
 | `sheets.replace` | Replace text in the selected cells | Edit | sheets |  |
