@@ -706,6 +706,45 @@ test('smart filter camera: narrows the strip to the chosen EXIF camera (light an
  }
 });
 
+test('smart filter duplicates: only photos sharing size and dimensions stay (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
+  await page.evaluate(async()=>{
+   const ps=await import('/src/store/panelStateStore.ts');const cd=await import('/src/lib/photos/captureDates.ts');const med=await import('/src/lib/media.ts');
+   ps.panelStateStore.set('photos.smartFilter',{on:false,minRating:0,flag:'',label:'',tag:'',camera:'',dup:false});
+   const src=med.getMedia().items.find(i=>i.name==='strip-1.png')!;
+   const blob=await(await fetch(src.url)).blob();
+   await med.addMediaFile(new File([blob],'strip-1-copy.png',{type:src.mime}),'strip-1-copy.png'); // true duplicate: same bytes, same size
+   const size=(n:string)=>med.getMedia().items.find(i=>i.name===n)!.size;
+   cd.putCaptureDate('strip-1.png',size('strip-1.png'),null,null,240,150);
+   cd.putCaptureDate('strip-1-copy.png',size('strip-1-copy.png'),null,null,240,150);
+   cd.putCaptureDate('strip-2.png',size('strip-2.png'),null,null,240,150); // same dimensions, different bytes: NOT a duplicate
+   cd.putCaptureDate('strip-3.png',size('strip-3.png'),null,null,320,200);
+  });
+  await expect(page.getByTestId('photos-filmstrip-item-strip-1-copy.png')).toBeVisible();
+  await page.getByTestId('photos-filmstrip-menu').click();
+  await page.getByTestId('photos-filmstrip-smart').click();
+  await page.getByTestId('photos-smart-dup').click();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-1.png')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-1-copy.png')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-2.png')).toHaveCount(0); // dimensions alone are not enough
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toHaveCount(0);
+  await page.screenshot({path:`test-results/ds-photos-smart-dup-${theme}.png`,fullPage:true});
+  await page.getByTestId('photos-smart-dup').click(); // off
+  await page.getByTestId('photos-filmstrip-smart').click();
+  await page.keyboard.press('Escape');
+  await page.evaluate(async()=>{
+   const ps=await import('/src/store/panelStateStore.ts');const med=await import('/src/lib/media.ts');
+   ps.panelStateStore.set('photos.smartFilter',{on:false,minRating:0,flag:'',label:'',tag:'',camera:'',dup:false});
+   med.closeMediaForced('strip-1-copy.png'); // the next leg and the next tests expect three photos
+  });
+  await expect(page.getByTestId('photos-filmstrip-item-strip-1-copy.png')).toHaveCount(0);
+ }
+});
+
 test('stack survey: compare the members and pick the cover (light and dark)',async({page})=>{
  for(const theme of['light','dark']){
   await page.goto('/test/design-system/?view=photos-filmstrip');

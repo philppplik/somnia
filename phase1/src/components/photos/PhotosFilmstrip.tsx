@@ -203,6 +203,7 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
             <option value="">{t('photos.smart.anyCamera')}</option>
             {allCameras().map(c=><option key={c} value={c}>{c}</option>)}
            </NativeSelect>
+           <Button variant="outline" size="compact" aria-pressed={!!smart.dup} onClick={()=>setSmart({...smart,dup:!smart.dup})} data-testid="photos-smart-dup">{t('photos.smart.dup')}</Button>
           </div>}
          </div>
          <div className="grid gap-1">

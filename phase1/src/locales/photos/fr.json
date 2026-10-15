@@ -260,5 +260,6 @@
  "photos.proof.model.newsprint": "Papier journal",
  "photos.proof.share": "{pct} % hors gamut",
  "photos.smart.camera": "Appareil",
- "photos.smart.anyCamera": "Tous les appareils"
+ "photos.smart.anyCamera": "Tous les appareils",
+ "photos.smart.dup": "Doublons uniquement"
 }

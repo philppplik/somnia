@@ -260,5 +260,6 @@
  "photos.proof.model.newsprint": "Newsprint",
  "photos.proof.share": "{pct}% out of gamut",
  "photos.smart.camera": "Camera",
- "photos.smart.anyCamera": "Any camera"
+ "photos.smart.anyCamera": "Any camera",
+ "photos.smart.dup": "Duplicates only"
 }

@@ -260,5 +260,6 @@
  "photos.proof.model.newsprint": "Zeitungsdruck",
  "photos.proof.share": "{pct} % außerhalb des Gamut",
  "photos.smart.camera": "Kamera",
- "photos.smart.anyCamera": "Alle Kameras"
+ "photos.smart.anyCamera": "Alle Kameras",
+ "photos.smart.dup": "Nur Duplikate"
 }

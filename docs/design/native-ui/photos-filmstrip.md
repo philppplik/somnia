@@ -718,3 +718,20 @@ Coverage: the light/dark gallery leg seeds the cache with two
 cameras, narrows to one and back
 (`test-results/ds-photos-smart-camera-{light,dark}.png`); the cache
 unit test covers camera storage and the distinct-camera list.
+
+## Duplicates smart-filter rule (P128)
+
+The smart filter gains a duplicates rule: a photo stays while at
+least one other photo shares its duplicate key - byte size plus
+pixel dimensions from the EXIF cache (now v3, entries carry width
+and height next to date and camera; one more lazy reload, no
+migration). Re-saves at a different size or resolution stay
+visible; photos without a resolved cache entry never match the
+rule (progressive, honest). The rule composes with the other
+smart rules and lives in the same menu block - no new toolbar
+control.
+
+Coverage: the light/dark gallery leg adds a real byte copy of
+strip-1, seeds the cache and asserts only the pair stays
+(`test-results/ds-photos-smart-dup-{light,dark}.png`); the cache
+unit test covers the v3 entry shape and invalidation.

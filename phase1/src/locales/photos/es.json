@@ -260,5 +260,6 @@
  "photos.proof.model.newsprint": "Papel prensa",
  "photos.proof.share": "{pct} % fuera de gama",
  "photos.smart.camera": "Cámara",
- "photos.smart.anyCamera": "Todas las cámaras"
+ "photos.smart.anyCamera": "Todas las cámaras",
+ "photos.smart.dup": "Solo duplicados"
 }
