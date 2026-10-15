@@ -584,8 +584,12 @@ export function hfVariantsProblem(p:unknown):string|null{
 export const TABLE_ALIGNS=['left','center','right'] as const;export type TableAlign=typeof TABLE_ALIGNS[number];
 export const CELL_VALIGNS=['top','center','bottom'] as const;export type CellVAlign=typeof CELL_VALIGNS[number];
 /** Layout of the table under the caret: `headerRow` and `cellValign` describe the caret's row and cell, `keepRows` all rows. */
-export interface TableLayoutState{align:TableAlign|null;widthPct:number|null;headerRow:boolean;keepRows:boolean;cellValign:CellVAlign;caption:string}
-export interface TableLayoutPatch{align?:TableAlign|null;widthPct?:number|null;headerRow?:boolean;keepRows?:boolean;cellValign?:CellVAlign;caption?:string}
+export interface TableLayoutState{align:TableAlign|null;widthPct:number|null;headerRow:boolean;keepRows:boolean;cellValign:CellVAlign;caption:string;/** Height rule of the caret's row and its height in points (null for automatic). */rowRule?:RowRule;rowHeight?:number|null}
+export interface TableLayoutPatch{align?:TableAlign|null;widthPct?:number|null;headerRow?:boolean;keepRows?:boolean;cellValign?:CellVAlign;caption?:string;/** Height of the caret's row, or of every row with `allRows`. */rowHeight?:RowHeightPatch;allRows?:boolean}
+export const ROW_RULES=['auto','atLeast','exact'] as const;
+export type RowRule=typeof ROW_RULES[number];
+export type RowHeightPatch={rule:'auto'}|{rule:'atLeast'|'exact';value:number};
+export const MIN_ROW_HEIGHT_PT=1,MAX_ROW_HEIGHT_PT=1584;
 /** Why a table layout patch is refused, or null. Mirrors the worker. */
 export function tableLayoutProblem(p:unknown):string|null{
  if(typeof p!=='object'||p===null||Array.isArray(p))return 'The table layout is not valid.';
@@ -595,6 +599,14 @@ export function tableLayoutProblem(p:unknown):string|null{
   if(k==='align'){if(v!==null&&!(TABLE_ALIGNS as readonly unknown[]).includes(v))return 'The table alignment is not valid.';}
   else if(k==='widthPct'){if(v!==null&&(typeof v!=='number'||!Number.isFinite(v)||v<10||v>100))return 'A table is 10 to 100 percent wide.';}
   else if(k==='headerRow'||k==='keepRows'){if(typeof v!=='boolean')return `Invalid "${k}".`;}
+  else if(k==='allRows'){if(typeof v!=='boolean'||v===true&&!('rowHeight' in o))return 'allRows only goes with rowHeight.';}
+  else if(k==='rowHeight'){
+   const h=v as Record<string,unknown>|null;
+   if(typeof h!=='object'||h===null||Array.isArray(h)||Object.keys(h).some(x=>x!=='rule'&&x!=='value'))return 'The row height is not valid.';
+   if(h.rule==='auto'){if('value' in h)return 'An automatic row height has no value.';}
+   else if(h.rule==='atLeast'||h.rule==='exact'){if(typeof h.value!=='number'||!Number.isFinite(h.value)||h.value<MIN_ROW_HEIGHT_PT||h.value>MAX_ROW_HEIGHT_PT)return `A row is ${MIN_ROW_HEIGHT_PT} to ${MAX_ROW_HEIGHT_PT} points high.`;}
+   else return 'The row height rule is not valid.';
+  }
   else if(k==='cellValign'){if(!(CELL_VALIGNS as readonly unknown[]).includes(v))return 'The cell alignment is not valid.';}
   else if(k==='caption'){if(!validHfText(v))return `The alt text is limited to ${MAX_HF_CHARS} characters, without line breaks.`;}
   else return `Unknown option "${k}".`;

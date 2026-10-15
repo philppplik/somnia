@@ -52,7 +52,7 @@ new file mode 100644
 index 0000000..5b80b79
 --- /dev/null
 +++ b/crates/somnia-worker/src/lib.rs
-@@ -0,0 +1,5651 @@
+@@ -0,0 +1,5707 @@
 +//! Experimental headless adapter. No DOM, egui, filesystem or UI thread access.
 +use wasm_bindgen::prelude::*;
 +use std::sync::Arc;
@@ -2152,7 +2152,7 @@ index 0000000..5b80b79
 +    }
 +    /// Layout of the table holding cell paragraph `block`: alignment, width, repeated header row (this row), rows kept whole, the cell's vertical alignment and alt text.
 +    fn do_table_layout_state(&self, block: usize) -> Result<String, String> {
-+        use wordcraft_doc::props::VAlign;
++        use wordcraft_doc::props::{HeightRule, VAlign};
 +        let [b, r, c, _] = self.table_spot(block)?;
 +        let Some(Block::Table(t)) = self.doc.body.get(b).map(|x| &**x) else { return Err("not a table".into()) };
 +        let row = t.rows.get(r).ok_or("no such row")?;
@@ -2170,6 +2170,8 @@ index 0000000..5b80b79
 +            "keepRows": t.rows.iter().all(|x| x.props.cant_split),
 +            "cellValign": match cell.props.valign { VAlign::Top => "top", VAlign::Center => "center", VAlign::Bottom => "bottom" },
 +            "caption": t.props.caption.clone().unwrap_or_default(),
++            "rowRule": match row.props.height_rule { HeightRule::Auto => "auto", HeightRule::AtLeast => "atLeast", HeightRule::Exact => "exact" },
++            "rowHeight": row.props.height,
 +        })
 +        .to_string())
 +    }
@@ -2177,7 +2179,7 @@ index 0000000..5b80b79
 +    /// "keepRows"?: bool (no row splits across pages), "cellValign"?: "top"|"center"|"bottom", "caption"?: text up to 500 characters}`.
 +    /// Anything invalid refuses the whole patch.
 +    fn do_set_table_layout(&mut self, block: usize, json: &str) -> Result<(), String> {
-+        use wordcraft_doc::props::VAlign;
++        use wordcraft_doc::props::{HeightRule, VAlign};
 +        if json.len() > 2048 {
 +            return Err("the table layout is too long".into());
 +        }
@@ -2190,6 +2192,8 @@ index 0000000..5b80b79
 +        let mut align: Option<Option<wordcraft_doc::Align>> = None;
 +        let mut width: Option<Option<f32>> = None;
 +        let (mut header, mut keep, mut valign, mut caption) = (None, None, None, None);
++        let mut row_height: Option<(HeightRule, Option<f32>)> = None;
++        let mut all_rows = false;
 +        for (k, val) in obj {
 +            match k.as_str() {
 +                "align" => {
@@ -2223,6 +2227,24 @@ index 0000000..5b80b79
 +                        _ => return Err("cell alignment is top, center or bottom".into()),
 +                    })
 +                }
++                "rowHeight" => {
++                    let o = val.as_object().ok_or("rowHeight must be an object")?;
++                    if o.keys().any(|k| k != "rule" && k != "value") {
++                        return Err("rowHeight takes only rule and value".into());
++                    }
++                    row_height = Some(match o.get("rule").and_then(|x| x.as_str()) {
++                        Some("auto") if !o.contains_key("value") => (HeightRule::Auto, None),
++                        Some(rule @ ("atLeast" | "exact")) => {
++                            let x = o.get("value").and_then(|x| x.as_f64()).ok_or("a row height needs a value in points")? as f32;
++                            if !x.is_finite() || !(1.0..=1584.0).contains(&x) {
++                                return Err("a row is 1 to 1584 points high".into());
++                            }
++                            (if rule == "exact" { HeightRule::Exact } else { HeightRule::AtLeast }, Some((x * 20.0).round() / 20.0))
++                        }
++                        _ => return Err("the row height rule is auto (no value), atLeast or exact".into()),
++                    });
++                }
++                "allRows" => all_rows = val.as_bool().ok_or("allRows must be true or false")?,
 +                "caption" => {
 +                    let t = val.as_str().ok_or("caption must be text")?;
 +                    Self::hf_validate(t).map_err(|_| "alt text is limited to 500 characters without line breaks".to_string())?;
@@ -2231,8 +2253,23 @@ index 0000000..5b80b79
 +                _ => return Err(format!("unknown table layout field {k}")),
 +            }
 +        }
++        if all_rows && row_height.is_none() {
++            return Err("allRows only goes with rowHeight".into());
++        }
 +        let Some(Block::Table(t)) = self.doc.body.get(b).map(|x| &**x) else { return Err("not a table".into()) };
 +        let mut t2 = t.clone();
++        if let Some((rule, h)) = row_height {
++            if all_rows {
++                for row in t2.rows.iter_mut() {
++                    row.props.height_rule = rule;
++                    row.props.height = h;
++                }
++            } else {
++                let row = t2.rows.get_mut(r).ok_or("no such row")?;
++                row.props.height_rule = rule;
++                row.props.height = h;
++            }
++        }
 +        if let Some(a) = align {
 +            t2.props.align = a;
 +        }
@@ -4380,6 +4417,25 @@ index 0000000..5b80b79
 +        assert_eq!((st(&s)["noProof"].as_str(), st(&s)["lang"].as_str()), (Some("off"), Some("none")));
 +        for bad in [r#"{"lang":"xx"}"#, r#"{"lang":"en-us"}"#, r#"{"lang":5}"#, r#"{"lang":""}"#, r#"{"noProof":"yes"}"#] {
 +            assert!(s.do_format(0, 0, 0, 1, bad).is_err(), "{bad}");
++        }
++    }
++    #[test]
++    fn row_height_sets_reports_roundtrips_and_validates() {
++        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
++        s.do_insert_table(0, 2, 2).unwrap();
++        let blk = CELL_BASE;
++        let st = |s: &DocSession| serde_json::from_str::<serde_json::Value>(&s.do_table_layout_state(blk).unwrap()).unwrap();
++        assert_eq!(st(&s)["rowRule"].as_str(), Some("auto"));
++        s.do_set_table_layout(blk, r#"{"rowHeight":{"rule":"exact","value":40}}"#).unwrap();
++        assert_eq!((st(&s)["rowRule"].as_str(), st(&s)["rowHeight"].as_f64()), (Some("exact"), Some(40.0)));
++        let s2 = DocSession::from_bytes(&s.save().unwrap()).unwrap();
++        assert_eq!(st(&s2)["rowRule"].as_str(), Some("exact"));
++        s.do_set_table_layout(blk, r#"{"rowHeight":{"rule":"atLeast","value":20},"allRows":true}"#).unwrap();
++        assert_eq!(st(&s)["rowRule"].as_str(), Some("atLeast"));
++        s.do_set_table_layout(blk, r#"{"rowHeight":{"rule":"auto"}}"#).unwrap();
++        assert_eq!(st(&s)["rowRule"].as_str(), Some("auto"));
++        for bad in [r#"{"rowHeight":{"rule":"exact"}}"#, r#"{"rowHeight":{"rule":"exact","value":0}}"#, r#"{"rowHeight":{"rule":"exact","value":2000}}"#, r#"{"rowHeight":{"rule":"auto","value":5}}"#, r#"{"rowHeight":{"rule":"x"}}"#, r#"{"rowHeight":5}"#, r#"{"allRows":true}"#, r#"{"rowHeight":{"rule":"exact","value":10,"extra":1}}"#] {
++            assert!(s.do_set_table_layout(blk, bad).is_err(), "{bad}");
 +        }
 +    }
 +    #[test]

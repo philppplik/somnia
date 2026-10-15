@@ -1,5 +1,5 @@
 import {useEffect,useState} from 'react';
-import {CELL_VALIGNS,MAX_HF_CHARS,TABLE_ALIGNS,validHfText,type CellVAlign} from '../../lib/documents/protocol';
+import {CELL_VALIGNS,MAX_HF_CHARS,ROW_RULES,TABLE_ALIGNS,validHfText,type CellVAlign} from '../../lib/documents/protocol';
 import {buildLayoutPatch,layoutFromState,type TableLayoutForm} from '../../lib/documents/tableLayout';
 import {readTableLayout,setTableLayout} from '../../lib/documents/session';
 import {useT} from '../../lib/useT';
@@ -28,6 +28,13 @@ export function TableLayoutDialog({onClose}:{onClose:()=>void}){
     <label className="grid gap-1 text-xs text-ink-2">{t('documents.tl.valign')}
      <NativeSelect className={sel} value={f.valign} onChange={e=>{const v=e.currentTarget.value;if((CELL_VALIGNS as readonly string[]).includes(v))setF({...f,valign:v as CellVAlign});}} data-testid="documents-tl-valign">
       {CELL_VALIGNS.map(a=><option key={a} value={a}>{t('documents.look.valign.'+a)}</option>)}</NativeSelect></label>
+    <div className="flex items-end gap-2">
+     <label className="grid gap-1 text-xs text-ink-2">{t('documents.tl.rowRule')}
+      <NativeSelect className={sel} value={f.rowRule} onChange={e=>{const v=e.currentTarget.value;if((ROW_RULES as readonly string[]).includes(v))setF({...f,rowRule:v as TableLayoutForm['rowRule']});}} data-testid="documents-tl-rowrule">
+       {ROW_RULES.map(r=><option key={r} value={r}>{t('documents.tl.rowRule.'+r)}</option>)}</NativeSelect></label>
+     {f.rowRule!=='auto'&&<label className="grid gap-1 text-xs text-ink-2">{t('documents.tl.rowHeight')}
+      <NativeInput className={field} inputMode="decimal" maxLength={7} value={f.rowHeight} aria-invalid={!/^\d{1,4}(\.\d{1,2})?$/.test(f.rowHeight)} onChange={e=>setF({...f,rowHeight:e.currentTarget.value.trim()})} data-testid="documents-tl-rowheight"/></label>}</div>
+    <label className="flex items-center gap-2 text-xs text-ink-2"><NativeInput type="checkbox" checked={f.allRows} onChange={e=>setF({...f,allRows:e.currentTarget.checked})} data-testid="documents-tl-allrows"/>{t('documents.tl.allRows')}</label>
     <label className="grid gap-1 text-xs text-ink-2">{t('documents.tl.caption')}
      <NativeInput className="w-72 rounded-lg border border-subtle bg-transparent px-2 py-1.5 text-ink" maxLength={MAX_HF_CHARS} value={f.caption} aria-invalid={!validHfText(f.caption)} onChange={e=>setF({...f,caption:e.currentTarget.value})} data-testid="documents-tl-caption"/></label>
    </>}

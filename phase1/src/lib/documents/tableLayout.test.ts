@@ -14,3 +14,15 @@ test('tableLayoutProblem mirrors the worker',()=>{
  for(const bad of [null,[],{},{x:1},{align:'justify'},{widthPct:9},{widthPct:'a'},{headerRow:1},{cellValign:'mid'},{caption:5}])assert.ok(tableLayoutProblem(bad),JSON.stringify(bad));
  for(const good of [{align:null},{widthPct:null},{widthPct:100},{caption:''}])assert.equal(tableLayoutProblem(good),null,JSON.stringify(good));
 });
+import {tableLayoutProblem as problem} from './protocol';
+test('row height patches are built and validated',()=>{
+ const base={align:null,widthPct:null,headerRow:false,keepRows:false,cellValign:'top',caption:'',rowRule:'auto',rowHeight:null} as never;
+ const a=layoutFromState(base);assert.equal(buildLayoutPatch(a,a),null);
+ assert.deepEqual(buildLayoutPatch(a,{...a,rowRule:'exact',rowHeight:'40'}),{rowHeight:{rule:'exact',value:40}});
+ assert.deepEqual(buildLayoutPatch(a,{...a,rowRule:'atLeast',rowHeight:'20',allRows:true}),{rowHeight:{rule:'atLeast',value:20},allRows:true});
+ assert.equal(buildLayoutPatch(a,{...a,rowRule:'exact',rowHeight:''}),null);
+ assert.equal(buildLayoutPatch(a,{...a,rowRule:'exact',rowHeight:'0'}),null);
+ assert.deepEqual(buildLayoutPatch(a,{...a,allRows:true}),{rowHeight:{rule:'auto'},allRows:true});
+ for(const bad of [{rowHeight:{rule:'exact'}},{rowHeight:{rule:'exact',value:2000}},{rowHeight:{rule:'auto',value:3}},{rowHeight:5},{rowHeight:null},{rowHeight:{rule:'x'}},{allRows:true},{rowHeight:{rule:'exact',value:10,z:1}}])assert.ok(problem(bad),JSON.stringify(bad));
+ assert.equal(problem({rowHeight:{rule:'exact',value:10},allRows:true}),null);
+});
