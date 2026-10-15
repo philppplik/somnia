@@ -17,13 +17,14 @@ import {VectorToolbar} from './VectorToolbar';
 
 import {NativeSelect} from '../ui/native-controls';
 type Drag=
- |{kind:'move';start:Point;dx:number;dy:number}
+ |{kind:'move';start:Point;dx:number;dy:number;guides?:{x:number[];y:number[]}}
  |{kind:'marquee';start:Point;cur:Point}
  |{kind:'scale';corner:number;from:Box;cur:Point}
  |{kind:'shape';tool:ShapeKind;start:Point;cur:Point}
  |{kind:'node';path:string;node:string;part:'anchor'|'in'|'out';cur:Point}
  |{kind:'pan';sx:number;sy:number;pan:Point}
  |{kind:'pen-handle';cur:Point};
+import {snapMove} from '../../lib/vectorstudio/snap';
 const SHAPE_TOOLS:readonly string[]=['rect','ellipse','line','polygon','star'];
 const CORNERS:readonly [number,number][]=[[0,0],[1,0],[1,1],[0,1]];
 
@@ -84,7 +85,12 @@ export function VectorCanvas(){
   const pt=toDoc(e);setHover(pt);if(!drag)return;
   if(drag.kind==='pan'){setView(s.zoom,{x:drag.pan.x+e.clientX-drag.sx,y:drag.pan.y+e.clientY-drag.sy});return;}
   if(drag.kind==='move'){const snap=e.shiftKey?Math.abs(pt.x-drag.start.x)>Math.abs(pt.y-drag.start.y):null;
-   setDrag({...drag,dx:snap===false?0:pt.x-drag.start.x,dy:snap===true?0:pt.y-drag.start.y});return;}
+   const rx=snap===false?0:pt.x-drag.start.x,ry=snap===true?0:pt.y-drag.start.y;
+   const base=boxOf(selected);
+   if(base&&!e.altKey){const others=s.doc.paths.filter(q=>!q.hidden&&!s.selection.includes(q.id)).map(pathBox).filter((b):b is Box=>!!b);
+    const r=snapMove(base,rx,ry,[{minX:0,minY:0,maxX:s.doc.width,maxY:s.doc.height},...others],SNAP_PX/s.zoom);
+    setDrag({...drag,dx:snap===false?0:r.dx,dy:snap===true?0:r.dy,guides:r.guides});return;}
+   setDrag({...drag,dx:rx,dy:ry,guides:undefined});return;}
   if(drag.kind==='pen-handle'){setDrag({kind:'pen-handle',cur:pt});
    setPen(nodes=>nodes.map((n,i)=>i!==nodes.length-1?n:{...n,kind:'smooth',out:pt,in:{x:n.x*2-pt.x,y:n.y*2-pt.y}}));return;}
   setDrag({...drag,cur:pt} as Drag);};
@@ -144,6 +150,7 @@ export function VectorCanvas(){
      {s.tool==='select'&&selBox&&<g data-testid="vector-selection"><rect x={selBox.minX} y={selBox.minY} width={selBox.maxX-selBox.minX} height={selBox.maxY-selBox.minY} fill="none" stroke="#2563eb" strokeWidth={1/s.zoom} strokeDasharray={`${4/s.zoom} ${3/s.zoom}`} pointerEvents="none"/>
       {CORNERS.map(([cx,cy],i)=><rect key={i} data-testid={`vector-handle-${i}`} x={(cx?selBox.maxX:selBox.minX)-4/s.zoom} y={(cy?selBox.maxY:selBox.minY)-4/s.zoom} width={8/s.zoom} height={8/s.zoom} fill="#fff" stroke="#2563eb" strokeWidth={1/s.zoom}/>)}</g>}
      {nodePath&&<NodeOverlay path={nodePath} zoom={s.zoom} active={s.selectedNode}/>}
+     {drag?.kind==='move'&&drag.guides&&<g data-testid="vector-snap-guides" pointerEvents="none">{drag.guides.x.map(x=><line key={'x'+x} x1={x} x2={x} y1={0} y2={s.doc.height} stroke="#e11d48" strokeWidth={1/s.zoom}/>)}{drag.guides.y.map(y=><line key={'y'+y} y1={y} y2={y} x1={0} x2={s.doc.width} stroke="#e11d48" strokeWidth={1/s.zoom}/>)}</g>}
      {drag?.kind==='marquee'&&<rect x={Math.min(drag.start.x,drag.cur.x)} y={Math.min(drag.start.y,drag.cur.y)} width={Math.abs(drag.cur.x-drag.start.x)} height={Math.abs(drag.cur.y-drag.start.y)} fill="rgba(37,99,235,.08)" stroke="#2563eb" strokeWidth={1/s.zoom} strokeDasharray={`${3/s.zoom}`}/>}
      {penPath&&<g pointerEvents="none"><path d={serializeContour(penPath.nodes,false)} fill="none" stroke="#2563eb" strokeWidth={1.5/s.zoom}/>{pen.map(n=><rect key={n.id} x={n.x-3.5/s.zoom} y={n.y-3.5/s.zoom} width={7/s.zoom} height={7/s.zoom} fill="#fff" stroke="#2563eb" strokeWidth={1/s.zoom}/>)}</g>}
     </g>
@@ -160,6 +167,7 @@ function moved(n:VectorNode,part:'anchor'|'in'|'out',to:Point):VectorNode{
  if(part==='anchor'){const dx=to.x-n.x,dy=to.y-n.y;return {...n,x:to.x,y:to.y,...(n.in?{in:{x:n.in.x+dx,y:n.in.y+dy}}:{}),...(n.out?{out:{x:n.out.x+dx,y:n.out.y+dy}}:{})};}
  return {...n,[part]:to};}
 function cornerAt(b:Box,pt:Point,r:number):number{return CORNERS.findIndex(([cx,cy])=>Math.hypot((cx?b.maxX:b.minX)-pt.x,(cy?b.maxY:b.minY)-pt.y)<=r);}
+const SNAP_PX=6;
 const cursorFor=(t:VectorTool)=>t==='select'?'default':t==='node'?'crosshair':'crosshair';
 function NodeOverlay({path,zoom,active}:{path:VectorPath;zoom:number;active:string|null}){
  const k=1/zoom;
