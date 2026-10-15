@@ -60,7 +60,7 @@ export function CompositionsPanel(_:PanelHostProps){
  if(!doc)return <aside className="grid min-w-0 content-start gap-3 p-3 text-xs" data-testid="animation-compositions-panel">
   <Button size="compact" variant="outline" onClick={()=>run('animation.project.new')} data-testid="animation-new">{t('cmd.animation.project.new')}</Button>
   <Button size="compact" variant="outline" onClick={()=>run('animation.project.recover')}>{t('cmd.animation.project.recover')}</Button>{openSnapshot}{importError&&<StudioStatus tone="error" live="assertive" className="block">{importError}</StudioStatus>}</aside>;
- return <aside className="grid min-h-0 min-w-0 content-start gap-3 p-3 text-xs" data-testid="animation-compositions-panel">
+ return <aside className="grid min-h-0 min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-3 p-3 text-xs" data-testid="animation-compositions-panel">
   <div className="grid gap-1"><Button size="compact" variant="outline" className="h-auto min-w-0 whitespace-normal text-left" onClick={async()=>{try{const saved=await saveAnimationSnapshot();setFileNotice(t(saved?'animation.file.saved':'animation.file.copy'));}catch(e){setImportError((e as Error).message);}}}>{t('animation.file.save')}</Button>
   {openSnapshot}
   {fileNotice&&<StudioStatus className="block text-ink-3">{fileNotice}</StudioStatus>}</div>
@@ -70,7 +70,7 @@ export function CompositionsPanel(_:PanelHostProps){
   <div className="flex flex-wrap gap-1"><Button size="compact" variant="outline" onClick={()=>run('animation.comp.add')}>{t('animation.comp.new')}</Button><Button size="compact" variant="outline" onClick={()=>run('animation.comp.duplicate')} data-testid="animation-comp-duplicate">{t('animation.comp.duplicate')}</Button><Button size="compact" variant="outline" disabled={doc.compositions.length<2} onClick={()=>run('animation.comp.remove')} data-testid="animation-comp-remove">{t('animation.comp.remove')}</Button></div>
   {findComp(doc)&&<GuidesPanel comp={findComp(doc)!}/>}{findComp(doc)&&<OnionPanel/>}{findComp(doc)&&<RigPanel comp={findComp(doc)!}/>}{findComp(doc)&&<PalettePanel comp={findComp(doc)!}/>}
   <h3 className="m-0 mt-2 text-[11px] font-semibold uppercase tracking-wide text-ink-3">{t('animation.layer.addHeading')}</h3>
-  {doc.compositions.length>1&&<div className="flex gap-1" data-testid="animation-precomp">
+  {doc.compositions.length>1&&<div className="flex min-w-0 gap-1" data-testid="animation-precomp">
    <NativeSelect className="h-8 min-w-0 flex-1 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text" aria-label={t('animation.precomp.pick')} value={pre} onChange={e=>setPre(e.target.value)} data-testid="animation-precomp-select">
     <option value="">{t('animation.precomp.none')}</option>{doc.compositions.filter(c=>c.id!==doc.activeComp).map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</NativeSelect>
    <Button size="compact" variant="outline" disabled={!pre} onClick={async()=>{setPreErr('');try{await executeCommand('animation.precomp.add',{comp:pre});setPre('');}catch(e){setPreErr((e as Error).message);}}} data-testid="animation-precomp-add">{t('animation.precomp.add')}</Button></div>}
