@@ -4027,6 +4027,21 @@
       "hasEnabled": true
     },
     {
+      "id": "code.quickOpen",
+      "title": "Quick open project file...",
+      "category": "Tools",
+      "source": "core",
+      "shortcut": "Mod+p",
+      "keywords": [
+        "file",
+        "navigation",
+        "path",
+        "quick"
+      ],
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
       "id": "code.rename.local",
       "title": "Rename local symbol...",
       "category": "Tools",

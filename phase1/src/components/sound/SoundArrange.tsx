@@ -20,7 +20,10 @@ export function SoundArrange(){
  const audio=useRef<HTMLAudioElement>(null),file=useRef<HTMLInputElement>(null),lanes=useRef<HTMLDivElement>(null);const fadeDrag=useRef<{id:string;key:'fadeIn'|'fadeOut';x:number;value:number;width:number;length:number}|null>(null);const drag=useRef<{id:string;x:number;start:number;offset:number;mode:'move'|'slip';laneWidth:number;trackId:string}|null>(null);
  useEffect(()=>{const commands=registerArrangeCommands(),block=blockSoundClipCommands();return()=>{commands();block();};},[]);
  // Space toggles the preview, but never steals the key from form controls or buttons.
- useEffect(()=>{const onKey=(e:KeyboardEvent)=>{if(e.key!==' ')return;const target=e.target as HTMLElement|null;if(target&&target.closest('input,select,textarea,button,[contenteditable="true"]'))return;const a=audio.current;if(!a||!state.url)return;e.preventDefault();if(a.paused)void a.play();else a.pause();};window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey);},[state.url]);
+ useEffect(()=>{const onKey=(e:KeyboardEvent)=>{const target=e.target as HTMLElement|null;if(target&&target.closest('input,select,textarea,button,[contenteditable="true"]'))return;
+  if(e.key===' '){const a=audio.current;if(!a||!state.url)return;e.preventDefault();if(a.paused)void a.play();else a.pause();}
+  else if((e.key==='Delete'||e.key==='Backspace')&&selected){e.preventDefault();void run('clip.delete',{id:selected});setSelected(null);}};
+ window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey);},[state.url,selected]);
  const dirty=serializeArrangement(s)!==state.savedText;
  const end=arrangementEnd(s),span=Math.max(48000*12,Math.min(48000*ARRANGE_LIMITS.seconds,end+48000));
  const beatFrames=Math.round(48000*60/s.bpm),gridFrames=gridMode==='s01'?4800:beatFrames*(gridMode==='bar'?4:1);
