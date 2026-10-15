@@ -7,6 +7,10 @@ import {applyCrossfade,clipRegionPeak,findArrangeClip,normalizeGainDb,splitArran
 const schema=(properties:Record<string,unknown>,required=Object.keys(properties))=>({type:'object',properties,required,additionalProperties:false});
 const str={type:'string'},num={type:'number'},bool={type:'boolean'};
 const id=()=>`arrange-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`;
+let clipClipboard:{clip:ReturnType<typeof findArrangeClip>['clip'];trackId:string}|null=null;
+/** Whether a clip waits on the internal clipboard (one slot, session-wide). */
+export function hasClipClipboard(){return clipClipboard!==null;}
+
 export function registerArrangeCommands(){
  const add=(command:string,run:(p:any)=>unknown,params:Record<string,unknown>=schema({})):CommandSpec<any,unknown>=>({id:`sound.arrange.${command}`,title:t(`sound.arrange.command.${command}`),category:'Tools',level:'ui',params,run,enabled:()=>!getArrangementState().busy});
  const specs=[
@@ -21,6 +25,8 @@ export function registerArrangeCommands(){
  add('clip.split',p=>editArrangement(s=>splitArrangeClip(s,p.id,p.frame,id())),schema({id:str,frame:num})),
  add('clip.duplicate',p=>editArrangement(s=>{const {track,clip}=findArrangeClip(s,p.id);track.clips.push({...clip,id:id(),start:clip.start+clip.length});}),schema({id:str})),
  add('clip.normalize',p=>editArrangement(s=>{const {clip}=findArrangeClip(s,p.id);const source=s.sources.find(src=>src.id===clip.sourceId)!;const peaks=getArrangementState().sourcePeaks[source.id];if(!peaks)throw Error('Source waveform peaks are not available yet');clip.gainDb=normalizeGainDb(clipRegionPeak(peaks,clip.offset,clip.length,Math.floor(source.frames*48000/source.sampleRate)),p.targetDb??0);}),schema({id:str,targetDb:num},['id'])),
+ add('clip.copy',p=>{const {clip,track}=findArrangeClip(getArrangementState().document,p.id);clipClipboard={clip:JSON.parse(JSON.stringify(clip)),trackId:track.id};},schema({id:str})),
+ add('clip.paste',p=>editArrangement(s=>{if(!clipClipboard)throw Error('Clipboard is empty');const track=s.tracks.find(t=>t.id===(p.trackId??clipClipboard!.trackId));if(!track)throw Error('Target track no longer exists');track.clips.push({...JSON.parse(JSON.stringify(clipClipboard!.clip)),id:id(),start:p.frame});}),schema({frame:num,trackId:str},['frame'])),
  add('clip.crossfade',p=>editArrangement(s=>{applyCrossfade(s,p.id);}),schema({id:str})),
  add('clip.delete',p=>editArrangement(s=>{const {track}=findArrangeClip(s,p.id);track.clips=track.clips.filter(c=>c.id!==p.id);}),schema({id:str})),
  add('marker.add',p=>editArrangement(s=>s.markers.push({id:id(),name:p.name,frame:p.frame})),schema({name:str,frame:num})),

@@ -84,3 +84,23 @@ test('slip edits: clip.set offset stays inside the source and rejects overflow a
  await assert.rejects(commandDispatcher.runCommand('sound.arrange.clip.set',{id:'a',offset:7200}),'offset+length beyond the source');
  assert.equal(getArrangementState().document.tracks[0].clips[0].offset,2400,'rejection preserves the offset');
 }finally{off();resetArrangement();}});
+
+test('clip copy/paste lands at the playhead with a fresh id and undo removes the paste',async()=>{resetArrangement();const off=registerArrangeCommands();try{
+ const source={id:'src',name:'tone.wav',frames:96000,sampleRate:48000,channels:2 as const};
+ editArrangement(s=>{s.sources.push(source);s.tracks.push({...newTrack('t1','A'),clips:[{...newClip('a',source,0),length:4800,gainDb:-3}]});});
+ const {hasClipClipboard}=await import('./arrangeCommands');
+ assert.equal(hasClipClipboard(),false);
+ await assert.rejects(commandDispatcher.runCommand('sound.arrange.clip.paste',{frame:9600}),/Clipboard is empty/);
+ await commandDispatcher.runCommand('sound.arrange.clip.copy',{id:'a'});
+ assert.equal(hasClipClipboard(),true);
+ await commandDispatcher.runCommand('sound.arrange.clip.paste',{frame:9600});
+ const clips=getArrangementState().document.tracks[0].clips;
+ assert.equal(clips.length,2);
+ assert.equal(clips[1].start,9600);
+ assert.equal(clips[1].gainDb,-3,'paste keeps the clip settings');
+ assert.notEqual(clips[1].id,'a','paste gets a fresh id');
+ await commandDispatcher.runCommand('sound.arrange.clip.paste',{frame:20000});
+ assert.equal(getArrangementState().document.tracks[0].clips.length,3,'the clipboard survives pasting');
+ await commandDispatcher.runCommand('sound.arrange.undo');
+ assert.equal(getArrangementState().document.tracks[0].clips.length,2,'undo removes the latest paste');
+}finally{off();resetArrangement();}});
