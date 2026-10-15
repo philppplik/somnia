@@ -173,3 +173,25 @@ test('session.cutRange cuts across tracks, rejects stale ranges and undoes fully
  await commandDispatcher.runCommand('sound.arrange.undo');
  assert.deepEqual(getArrangementState().document.tracks.map(t=>t.clips.map(c=>[c.start,c.length])),[[[0,4800]],[[2400,4800]]],'undo restores both tracks');
 }finally{off();resetArrangement();}});
+
+test('session.splitAtMarkers splits every clip at every marker, including several markers in one clip',async()=>{resetArrangement();const off=registerArrangeCommands();try{
+ const source={id:'src',name:'tone.wav',frames:96000,sampleRate:48000,channels:2 as const};
+ editArrangement(s=>{s.sources.push(source);
+  s.tracks.push({...newTrack('t1','A'),clips:[{...newClip('a',source,0),length:9600}]});
+  s.tracks.push({...newTrack('t2','B'),clips:[{...newClip('b',source,4800),length:4800}]});
+  s.markers.push({id:'m2',name:'two',frame:4800},{id:'m1',name:'one',frame:2400},{id:'m3',name:'three',frame:50000});});
+ await commandDispatcher.runCommand('sound.arrange.session.splitAtMarkers');
+ assert.deepEqual([...getArrangementState().document.tracks[0].clips].sort((x,y)=>x.start-y.start).map(c=>[c.start,c.offset,c.length]),[[0,0,2400],[2400,2400,2400],[4800,4800,4800]],'both markers split clip a, offsets follow');
+ assert.deepEqual(getArrangementState().document.tracks[1].clips.map(c=>[c.start,c.length]),[[4800,4800]],'a marker exactly at a clip edge does not split');
+ await commandDispatcher.runCommand('sound.arrange.undo');
+ assert.deepEqual(getArrangementState().document.tracks[0].clips.map(c=>[c.start,c.length]),[[0,9600]],'undo restores');
+}finally{off();resetArrangement();}});
+
+test('session.splitAtMarkers rejects without markers and without material under any marker',async()=>{resetArrangement();const off=registerArrangeCommands();try{
+ const source={id:'src',name:'tone.wav',frames:96000,sampleRate:48000,channels:2 as const};
+ editArrangement(s=>{s.sources.push(source);s.tracks.push({...newTrack('t1','A'),clips:[{...newClip('a',source,0),length:4800}]});});
+ await assert.rejects(commandDispatcher.runCommand('sound.arrange.session.splitAtMarkers'),/No markers/);
+ editArrangement(s=>s.markers.push({id:'m',name:'far',frame:50000}));
+ await assert.rejects(commandDispatcher.runCommand('sound.arrange.session.splitAtMarkers'),/No clip at any marker/);
+ assert.equal(getArrangementState().document.tracks[0].clips.length,1,'rejections are atomic');
+}finally{off();resetArrangement();}});

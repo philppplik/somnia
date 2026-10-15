@@ -39,6 +39,7 @@ export function registerArrangeCommands(){
  add('marker.delete',p=>editArrangement(s=>{s.markers=s.markers.filter(m=>m.id!==p.id);}),schema({id:str})),
  add('loop.set',p=>editArrangement(s=>{s.loop=p.enabled?{start:p.start,end:p.end}:null;}),schema({enabled:bool,start:num,end:num})),
  add('session.setBpm',p=>editArrangement(s=>{s.bpm=Math.round(p.bpm*10)/10;}),schema({bpm:num})),
+ add('session.splitAtMarkers',()=>editArrangement(s=>{if(!s.markers.length)throw Error('No markers');let n=0;for(const m of [...s.markers].sort((a,b)=>a.frame-b.frame))for(const track of s.tracks){const clip=track.clips.find(c=>m.frame>c.start&&m.frame<c.start+c.length);if(clip){splitArrangeClip(s,clip.id,m.frame,id());n++;}}if(!n)throw Error('No clip at any marker');}),schema({})),
  add('session.cutRange',p=>editArrangement(s=>cutSessionRange(s,p.start,p.end,id)),schema({start:num,end:num})),
  add('session.splitAt',p=>editArrangement(s=>{let n=0;for(const track of s.tracks)for(const clip of [...track.clips])if(p.frame>clip.start&&p.frame<clip.start+clip.length){splitArrangeClip(s,clip.id,p.frame,id());n++;}if(!n)throw Error('No clip at the playhead');}),schema({frame:num})),
  add('session.range',p=>setRangeSelection(p.clear?null:{start:p.start,end:p.end}),schema({start:num,end:num,clear:bool},[])),
