@@ -1130,7 +1130,7 @@
  "cmd.animation.layers.closeLoop": "Fermer la boucle : valeurs de fin egales aux valeurs de debut",
  "animation.palette.title": "Couleurs",
  "animation.palette.uses": "Utilisee par {n} calques",
- "animation.palette.hint": "Choisissez une nouvelle couleur pour la remplacer dans tous les calques (fonds et contours). Le nombre indique combien de calques l'utilisent. Les calques verrouilles restent inchanges.",
+ "animation.palette.hint": "Choisissez une nouvelle couleur pour la remplacer dans tous les calques (fonds, degrades, contours et effets). Le nombre indique combien de calques l'utilisent. Les calques verrouilles restent inchanges.",
  "cmd.animation.palette.replace": "Remplacer une couleur dans tous les calques de la composition",
  "animation.rig.group.squash": "Ecrasement et etirement",
  "animation.rig.squash.light": "Leger",

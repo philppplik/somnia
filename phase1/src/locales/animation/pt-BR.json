@@ -1130,7 +1130,7 @@
  "cmd.animation.layers.closeLoop": "Fechar o loop: valores finais iguais aos iniciais",
  "animation.palette.title": "Cores",
  "animation.palette.uses": "Usada em {n} camadas",
- "animation.palette.hint": "Escolha uma nova cor para substitui-la em todas as camadas (preenchimentos e tracos). O numero mostra quantas camadas a usam. Camadas bloqueadas ficam como estao.",
+ "animation.palette.hint": "Escolha uma nova cor para substitui-la em todas as camadas (preenchimentos, gradientes, tracos e efeitos). O numero mostra quantas camadas a usam. Camadas bloqueadas ficam como estao.",
  "cmd.animation.palette.replace": "Substituir uma cor em todas as camadas da composicao",
  "animation.rig.group.squash": "Esmagar e esticar",
  "animation.rig.squash.light": "Leve",
