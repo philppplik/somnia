@@ -47,6 +47,10 @@ scope.onmessage=({data}:MessageEvent<SheetsRequest>)=>{queue=queue.then(async()=
    case 'pivotCreate':result=JSON.parse(need().pivot_create(data.sheet,data.row,data.col,data.rows,data.cols,JSON.stringify(data.pivot)));break;
    case 'pivotRefresh':result=JSON.parse(need().pivot_refresh());break;
    case 'tables':result=JSON.parse(need().tables_info(data.sheet));break;
+   case 'objects':result=JSON.parse(need().objects_info(data.sheet));break;
+   case 'imageData':result=JSON.parse(need().image_data(data.sheet,data.image));break;
+   case 'pictureOp':result=JSON.parse(need().insert_picture(data.sheet,data.row,data.col,data.bytes,data.alt,data.width));break;
+   case 'objectOp':result=JSON.parse(need().object_op(data.sheet,data.row,data.col,JSON.stringify(data.object)));break;
    case 'whatIfOp':result=JSON.parse(need().whatif_op(data.sheet,JSON.stringify(data.whatIf)));break;
    case 'scenarios':result=JSON.parse(need().scenarios_info(data.sheet));break;
    case 'protectOp':result=JSON.parse(need().protect_op(data.sheet,data.row,data.col,data.rows,data.cols,JSON.stringify(data.protect)));break;

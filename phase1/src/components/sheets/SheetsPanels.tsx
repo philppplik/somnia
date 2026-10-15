@@ -18,6 +18,7 @@ import {PIVOT_FUNCS,tableBlockProblem} from '../../lib/sheets/tableOps';
 import {headerProblem,MAX_HEADER_CHARS} from '../../lib/sheets/printOps';
 import {MAX_ZOOM,MIN_ZOOM} from '../../lib/sheets/viewOps';
 import {MAX_TITLE_CHARS,sparklineBlockProblem} from '../../lib/sheets/chartOps';
+import {OBJECT_GROUPS,SHAPE_FILLS,SHAPE_LINES,MAX_PICTURE_BYTES,MAX_SHAPE_TEXT,MAX_ALT,buildObjectOp,bytesToBase64,objectIsShape,objectNeedsPick,type ObjectAction} from '../../lib/sheets/objectOps';
 import {WHATIF_GROUPS,buildWhatIfOp,whatIfNeeds,type WhatIfAction} from '../../lib/sheets/whatIfOps';
 import {ALLOW_PRESETS,MAX_PASSWORD_CHARS,passwordBad} from '../../lib/sheets/protectOps';
 import type {PivotField,PivotFunc} from '../../lib/sheets/protocol';
@@ -227,6 +228,7 @@ export function SheetsLayoutPanel({context}:PanelHostProps){
   <ChartsGroup/>
   <ProtectGroup/>
   <WhatIfGroup/>
+  <ObjectsGroup/>
   <TablesGroup/>
   <PivotGroup/>
   <PrintGroup/>
@@ -392,6 +394,39 @@ function WhatIfGroup(){
   <Button variant="outline" size="compact" disabled={action.busy||!op} onClick={()=>op&&void action.run('sheets.whatif',op)} data-testid="sheets-wi-apply">{t('sheets.wi.apply')}</Button>
   <p className="text-ink-3">{t('sheets.wi.scope.'+(act==='goalSeek'?'goal':act.startsWith('table')?'table':act==='scenarioSummary'||act==='scenarioShow'||act==='scenarioDelete'?'name':'selection'),{range:selection})}</p>
   <p className="text-ink-3">{t('sheets.wi.hint')}</p>
+ </div>;
+}
+/** Pictures and shapes in one grouped menu. A picture is read from a chosen PNG or JPEG file; shapes and object changes are built from fields. One undo step each. */
+function ObjectsGroup(){
+ const {t}=useT(),s=useSheetsSelection(),action=useAction();const [act,setAct]=useState<ObjectAction>('picture');const [file,setFile]=useState<File|null>(null);const [alt,setAlt]=useState('');
+ const [f,setF]=useState({fill:'',line:'',text:'',width:'',height:'',pick:''});const r=s?.range;
+ if(!s||!r)return null;
+ const shape=objectIsShape(act),pick=objectNeedsPick(act),sizing=shape||act==='resize'||act==='picture',at=(row:number,col:number)=>rangeAddress({r0:row,c0:col,r1:row,c1:col});
+ const objects=[...(s.objects?.images??[]).map(i=>({key:'image:'+i.id,label:t('sheets.ob.imageName',{id:i.id,at:at(i.row,i.col)})})),...(s.objects?.shapes??[]).map(i=>({key:'shape:'+i.id,label:t('sheets.ob.shapeName',{id:i.id,at:at(i.row,i.col)})}))];
+ const op=act==='picture'?null:buildObjectOp(act,f),width=f.width.trim()===''?0:Number(f.width.replace(/,/g,'.'));
+ const pictureOk=act==='picture'&&!!file&&file.size>0&&file.size<=MAX_PICTURE_BYTES&&(f.width.trim()===''||(Number.isFinite(width)&&width>=16&&width<=2000));
+ const run=async()=>{
+  if(act!=='picture'){if(op)void action.run('sheets.object',op);return;}
+  if(!file)return;
+  const bytes=new Uint8Array(await file.arrayBuffer());
+  const done=await action.run('sheets.picture',{base64:bytesToBase64(bytes),...(alt.trim()?{alt:alt.trim()}:{}),...(width?{width}:{})});
+  if(done!==null){setFile(null);setAlt('');}
+ };
+ const input=(k:'width'|'height'|'text',label:string,max:number)=><label className="flex flex-col gap-1">{label}<NativeInput className={field} value={f[k]} maxLength={max} disabled={action.busy} onChange={e=>setF(x=>({...x,[k]:e.currentTarget.value}))} data-testid={'sheets-ob-'+k}/></label>;
+ return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.ob.title')}>
+  <span>{t('sheets.ob.title')}</span>
+  <label className="flex flex-col gap-1">{t('sheets.ob.action')}<NativeSelect className={field} value={act} disabled={action.busy} onChange={e=>setAct(e.currentTarget.value as ObjectAction)} data-testid="sheets-ob-action">{OBJECT_GROUPS.map(([g,items])=><optgroup key={g} label={t('sheets.ob.group.'+g)}>{items.map(a=><option key={a} value={a}>{t('sheets.ob.act.'+a)}</option>)}</optgroup>)}</NativeSelect></label>
+  {act==='picture'&&<label className="flex flex-col gap-1">{t('sheets.ob.file')}<NativeInput className={field} type="file" accept="image/png,image/jpeg" disabled={action.busy} onChange={e=>setFile(e.currentTarget.files?.[0]??null)} data-testid="sheets-ob-file"/></label>}
+  {act==='picture'&&file&&file.size>MAX_PICTURE_BYTES&&<p role="alert" className="text-ink-3">{t('sheets.ob.tooBig')}</p>}
+  {act==='picture'&&<label className="flex flex-col gap-1">{t('sheets.ob.alt')}<NativeInput className={field} value={alt} maxLength={MAX_ALT} disabled={action.busy} onChange={e=>setAlt(e.currentTarget.value)} data-testid="sheets-ob-alt"/></label>}
+  {pick&&<label className="flex flex-col gap-1">{t('sheets.ob.pick')}<NativeSelect className={field} value={f.pick} disabled={action.busy} onChange={e=>setF(x=>({...x,pick:e.currentTarget.value}))} data-testid="sheets-ob-pick"><option value="">{t('sheets.ob.pickNone')}</option>{objects.map(o=><option key={o.key} value={o.key}>{o.label}</option>)}</NativeSelect></label>}
+  {shape&&<label className="flex flex-col gap-1">{t('sheets.ob.fill')}<NativeSelect className={field} value={f.fill} disabled={action.busy} onChange={e=>setF(x=>({...x,fill:e.currentTarget.value}))} data-testid="sheets-ob-fill"><option value="">{t('sheets.ob.default')}</option>{SHAPE_FILLS.map(c=><option key={c} value={c}>{t('sheets.ob.color.'+c)}</option>)}</NativeSelect></label>}
+  {shape&&<label className="flex flex-col gap-1">{t('sheets.ob.line')}<NativeSelect className={field} value={f.line} disabled={action.busy} onChange={e=>setF(x=>({...x,line:e.currentTarget.value}))} data-testid="sheets-ob-line"><option value="">{t('sheets.ob.default')}</option>{SHAPE_LINES.map(c=><option key={c} value={c}>{t('sheets.ob.color.'+c)}</option>)}</NativeSelect></label>}
+  {act==='textBox'&&input('text',t('sheets.ob.text'),MAX_SHAPE_TEXT)}
+  {sizing&&input('width',t('sheets.ob.width'),8)}
+  {(shape||act==='resize')&&input('height',t('sheets.ob.height'),8)}
+  <Button variant="outline" size="compact" disabled={action.busy||(act==='picture'?!pictureOk:!op)} onClick={()=>void run()} data-testid="sheets-ob-apply">{t('sheets.ob.apply')}</Button>
+  <p className="text-ink-3">{t(act==='picture'||shape?'sheets.ob.scopeAt':'sheets.ob.scopeObject',{range:rangeAddress({...r,r1:r.r0,c1:r.c0})})}</p>
  </div>;
 }
 /** Zoom (presets or a custom percentage, or fit to the selection) and gridlines in one grouped menu. Zoom is a view setting; gridlines are one undo step. */

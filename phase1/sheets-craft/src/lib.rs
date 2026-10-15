@@ -28,6 +28,27 @@ const MAX_TITLE_CHARS: usize = 120;
 const MAX_WHATIF_REFS: usize = 200;
 const MAX_WHATIF_NAME: usize = 255;
 const MAX_WHATIF_VALUES: usize = 32;
+const MAX_OBJECTS: usize = 200;
+const MAX_PICTURES: usize = 100;
+const MAX_PICTURE_BYTES: usize = 10 * 1024 * 1024;
+const MAX_SHAPE_TEXT: usize = 200;
+const SHAPE_KINDS: &[&str] = &["rectangle", "roundedRectangle", "ellipse", "triangle", "line", "arrow", "textBox"];
+
+/// A shape color preset as the hex the engine takes ("auto" means no color).
+fn shape_color(name: &str, line: bool) -> Option<&'static str> {
+    Some(match name {
+        "blue" => "#4A7BD0",
+        "green" => "#5BA85B",
+        "orange" => "#E8923A",
+        "red" => "#D9534F",
+        "grey" => "#8A8F98",
+        "yellow" if !line => "#F2C94C",
+        "white" if !line => "#FFFFFF",
+        "black" if line => "#1F2328",
+        "none" => "auto",
+        _ => return None,
+    })
+}
 const CHART_TYPES: &[&str] = &["column", "bar", "line", "pie", "doughnut", "area", "scatter", "radar", "histogram", "waterfall", "funnel", "treemap"];
 const CHART_SUBTYPES: &[&str] = &["clustered", "stacked", "stacked100", "markers", "lines"];
 const SPARKLINE_TYPES: &[&str] = &["line", "column", "winLoss"];
@@ -1185,6 +1206,166 @@ impl HeadlessWorkbook {
         let name = self.session.doc().map_err(|e| e.to_string())?.wb.sheet(sheet).ok_or("unknown sheet")?.name.clone();
         let out = self.session.run("data.scenarioManager", json!({"sheet": name})).map_err(|e| e.to_string())?;
         Ok(out.to_string())
+    }
+
+    /// The pictures and shapes of a sheet (read only): `{"images":[{"id","row","col","dx","dy","width","height","mime","alt","bytes"}],
+    /// "shapes":[{"id","kind","row","col","dx","dy","width","height","fill","line","text"}]}`, anchors in points, colors as `#RRGGBB` or null
+    /// (no color), at most 200 of each.
+    pub fn objects_info(&self, sheet: usize) -> Result<String, String> {
+        let doc = self.session.doc().map_err(|e| e.to_string())?;
+        let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+        let hex = |rgb: Option<[u8; 3]>| rgb.map(|rgb| format!("#{:02X}{:02X}{:02X}", rgb[0], rgb[1], rgb[2]));
+        let images: Vec<_> = sh.images.iter().take(MAX_OBJECTS).map(|i| json!({
+            "id": i.id, "row": i.anchor.cell.row, "col": i.anchor.cell.col, "dx": i.anchor.dx, "dy": i.anchor.dy,
+            "width": i.anchor.width, "height": i.anchor.height, "mime": i.mime, "alt": i.alt, "bytes": i.data.len(),
+        })).collect();
+        let shapes: Vec<_> = sh.shapes.iter().take(MAX_OBJECTS).map(|x| json!({
+            "id": x.id, "kind": format!("{:?}", x.kind), "row": x.anchor.cell.row, "col": x.anchor.cell.col, "dx": x.anchor.dx, "dy": x.anchor.dy,
+            "width": x.anchor.width, "height": x.anchor.height, "fill": hex(x.fill.resolve(&doc.wb.theme)), "line": hex(x.line.resolve(&doc.wb.theme)), "text": x.text.chars().take(MAX_SHAPE_TEXT * 4).collect::<String>(),
+        })).collect();
+        Ok(json!({"images": images, "shapes": shapes}).to_string())
+    }
+
+    /// One picture's bytes as `{"mime","base64"}` (read only). Only PNG and JPEG are returned.
+    pub fn image_data(&self, sheet: usize, id: u32) -> Result<String, String> {
+        let doc = self.session.doc().map_err(|e| e.to_string())?;
+        let img = doc.wb.sheet(sheet).ok_or("unknown sheet")?.images.iter().find(|i| i.id == id).ok_or("no such picture")?;
+        let mime = if img.data.starts_with(&[0x89, b'P', b'N', b'G']) {
+            "image/png"
+        } else if img.data.starts_with(&[0xFF, 0xD8]) {
+            "image/jpeg"
+        } else {
+            return Err("This picture format cannot be shown.".into());
+        };
+        Ok(json!({"mime": mime, "base64": gridcraft_engine::io::base64_encode(&img.data)}).to_string())
+    }
+
+    /// Inserts a PNG or JPEG picture at the cell (`row`, `col`) as ONE history entry. At most 10 MB, 20,000 pixels per side, 100 pictures a sheet;
+    /// `width` (16 to 2,000 points, optional) keeps the aspect ratio; `alt` at most 255 characters. Protected sheets refused. Returns `{"image":id}`.
+    pub fn insert_picture(&mut self, sheet: usize, row: u32, col: u32, bytes: &[u8], alt: &str, width: f64) -> Result<String, String> {
+        self.check_block(sheet, row, col, 1, 1, true)?;
+        if bytes.is_empty() || bytes.len() > MAX_PICTURE_BYTES {
+            return Err("A picture must be between 1 byte and 10 MB.".into());
+        }
+        if alt.chars().count() > 255 || alt.chars().any(|c| c.is_control()) {
+            return Err("The description is too long or has control characters.".into());
+        }
+        let mime = if bytes.starts_with(&[0x89, b'P', b'N', b'G']) {
+            "image/png"
+        } else if bytes.starts_with(&[0xFF, 0xD8]) {
+            "image/jpeg"
+        } else {
+            return Err("Only PNG and JPEG pictures can be inserted.".into());
+        };
+        let (w, h) = gridcraft_engine::io::image_size(bytes).filter(|(w, h)| *w >= 1 && *h >= 1 && *w <= 20_000 && *h <= 20_000).ok_or("The picture size could not be read.")?;
+        if self.session.doc().map_err(|e| e.to_string())?.wb.sheet(sheet).ok_or("unknown sheet")?.images.len() >= MAX_PICTURES {
+            return Err(format!("A sheet can hold at most {MAX_PICTURES} pictures."));
+        }
+        let mut params = json!({"base64": gridcraft_engine::io::base64_encode(bytes), "mime": mime, "at": CellRef::new(row, col).a1(), "alt": alt});
+        if width != 0.0 {
+            if !width.is_finite() || !(16.0..=2000.0).contains(&width) {
+                return Err("The width must be 16 to 2,000 points.".into());
+            }
+            params["width"] = json!(width);
+            params["height"] = json!((width * f64::from(h) / f64::from(w)).max(1.0));
+        }
+        self.session.run("sheet.activate", json!({"sheet": sheet})).map_err(|e| e.to_string())?;
+        self.session.run("insert.picture", params).map_err(|e| e.to_string()).map(|v| v.to_string())
+    }
+
+    /// Shapes and object changes (one history entry each), `op_json` is `{"kind":"shape","shape":rectangle|roundedRectangle|ellipse|triangle|line|arrow|textBox,
+    /// "fill"?:preset,"line"?:preset,"width"?,"height"?,"text"?}` (placed at the cell `row`,`col`; 8 to 4,000 points; text at most 200 characters, text boxes only;
+    /// at most 200 shapes), `{"kind":"move","object":"image"|"shape","id","width"?,"height"?,"here"?:true}` (`here` moves it to the cell) or
+    /// `{"kind":"delete","object":"image"|"shape","id"}`. Fill presets blue, green, orange, red, grey, yellow, white, none; line presets blue, green, orange, red, grey, black, none.
+    /// Protected sheets refused. Returns the engine's result object.
+    pub fn object_op(&mut self, sheet: usize, row: u32, col: u32, op_json: &str) -> Result<String, String> {
+        self.check_block(sheet, row, col, 1, 1, true)?;
+        let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "operation must be a JSON object".to_string())?;
+        let map = op.as_object().ok_or("operation must be a JSON object")?;
+        let kind = map.get("kind").and_then(|v| v.as_str()).ok_or("missing kind")?.to_string();
+        let allowed: &[&str] = match kind.as_str() {
+            "shape" => &["kind", "shape", "fill", "line", "width", "height", "text"],
+            "move" => &["kind", "object", "id", "width", "height", "here"],
+            "delete" => &["kind", "object", "id"],
+            _ => return Err("unsupported object operation".into()),
+        };
+        if map.keys().any(|k| !allowed.contains(&k.as_str())) {
+            return Err("unknown object field".into());
+        }
+        let size = |key: &str| -> Result<Option<f64>, String> {
+            match map.get(key) {
+                None => Ok(None),
+                Some(v) => v.as_f64().filter(|n| n.is_finite() && (0.0..=4000.0).contains(n)).map(Some).ok_or_else(|| format!("{key} must be 0 to 4,000 points")),
+            }
+        };
+        let (id, params) = if kind == "shape" {
+            let shape = map.get("shape").and_then(|v| v.as_str()).filter(|n| SHAPE_KINDS.contains(n)).ok_or("unsupported shape")?;
+            let count = self.session.doc().map_err(|e| e.to_string())?.wb.sheet(sheet).ok_or("unknown sheet")?.shapes.len();
+            if count >= MAX_OBJECTS {
+                return Err(format!("A sheet can hold at most {MAX_OBJECTS} shapes."));
+            }
+            let mut params = json!({"kind": shape, "at": CellRef::new(row, col).a1()});
+            for (key, line) in [("fill", false), ("line", true)] {
+                if let Some(v) = map.get(key) {
+                    let name = v.as_str().ok_or("unknown color")?;
+                    let hex = shape_color(name, line).ok_or("unknown color")?;
+                    params[key] = json!(hex);
+                }
+            }
+            for key in ["width", "height"] {
+                if let Some(n) = size(key)? {
+                    let line_height = key == "height" && matches!(shape, "line" | "arrow") && n == 0.0;
+                    if n < 8.0 && !line_height {
+                        return Err(format!("{key} must be at least 8 points"));
+                    }
+                    params[key] = json!(n);
+                }
+            }
+            if let Some(t) = map.get("text") {
+                let t = t.as_str().filter(|t| t.chars().count() <= MAX_SHAPE_TEXT && !t.chars().any(|c| c.is_control() && c != '\n')).ok_or("The text is too long or has control characters.")?;
+                if shape != "textBox" && !t.is_empty() {
+                    return Err("Only text boxes hold text.".into());
+                }
+                params["text"] = json!(t);
+            }
+            ("insert.shape", params)
+        } else {
+            let object = map.get("object").and_then(|v| v.as_str()).filter(|o| *o == "image" || *o == "shape").ok_or("object must be image or shape")?;
+            let oid = map.get("id").and_then(|v| v.as_u64()).filter(|n| *n <= u64::from(u32::MAX)).ok_or("missing object id")?;
+            let exists = {
+                let sh = self.session.doc().map_err(|e| e.to_string())?.wb.sheet(sheet).ok_or("unknown sheet")?;
+                if object == "image" { sh.images.iter().any(|i| u64::from(i.id) == oid) } else { sh.shapes.iter().any(|i| u64::from(i.id) == oid) }
+            };
+            if !exists {
+                return Err("No such object on this sheet.".into());
+            }
+            let mut params = json!({"kind": object, "id": oid});
+            if kind == "move" {
+                for key in ["width", "height"] {
+                    if let Some(n) = size(key)? {
+                        if n < 1.0 && !(key == "height" && n == 0.0) {
+                            return Err(format!("{key} must be at least 1 point"));
+                        }
+                        params[key] = json!(n);
+                    }
+                }
+                if let Some(h) = map.get("here") {
+                    if h.as_bool().ok_or("here must be true or false")? {
+                        params["at"] = json!(CellRef::new(row, col).a1());
+                        params["dx"] = json!(0.0);
+                        params["dy"] = json!(0.0);
+                    }
+                }
+                if params.as_object().is_some_and(|m| m.len() == 2) {
+                    return Err("Nothing to change.".into());
+                }
+                ("object.move", params)
+            } else {
+                ("object.delete", params)
+            }
+        };
+        self.session.run("sheet.activate", json!({"sheet": sheet})).map_err(|e| e.to_string())?;
+        self.session.run(id, params).map_err(|e| e.to_string()).map(|v| v.to_string())
     }
 
     /// The charts of a sheet (read only): `[{"id","kind","title","row","col","dx","dy","width","height","legend","dataLabels","gridlines","style","xTitle","yTitle","series","byRows"}]`
@@ -3059,6 +3240,64 @@ mod tests {
         assert!(book.fill_range(0, 0, 0, 2_000_000, 2, "down").is_err());
         book.session.run("review.protectSheet", json!({})).unwrap();
         assert!(book.fill_range(0, 5, 0, 3, 2, "down").unwrap_err().contains("protected"));
+    }
+    #[test]
+    fn objects_insert_move_and_delete_in_single_undo_steps_and_refuse_bad_input() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        // 1x1 PNG
+        let png: Vec<u8> = vec![0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 0x0D, 0x49, 0x48, 0x44, 0x52, 0, 0, 0, 2, 0, 0, 0, 1, 8, 6, 0, 0, 0, 0, 0, 0, 0];
+        let made = book.insert_picture(0, 400, 1, &png, "dot", 64.0).unwrap();
+        assert!(made.contains("image"), "{made}");
+        let info: serde_json::Value = serde_json::from_str(&book.objects_info(0).unwrap()).unwrap();
+        assert_eq!(info["images"].as_array().unwrap().len(), 1);
+        assert_eq!(info["images"][0]["width"], serde_json::json!(64.0));
+        assert_eq!(info["images"][0]["height"], serde_json::json!(32.0));
+        let id = info["images"][0]["id"].as_u64().unwrap();
+        assert!(book.image_data(0, id as u32).unwrap().contains("image/png"));
+        book.object_op(0, 405, 3, &format!(r#"{{"kind":"move","object":"image","id":{id},"here":true,"width":100}}"#)).unwrap();
+        let moved: serde_json::Value = serde_json::from_str(&book.objects_info(0).unwrap()).unwrap();
+        assert_eq!(moved["images"][0]["row"], 405);
+        assert_eq!(moved["images"][0]["width"], serde_json::json!(100.0));
+        book.undo().unwrap();
+        let back: serde_json::Value = serde_json::from_str(&book.objects_info(0).unwrap()).unwrap();
+        assert_eq!(back["images"][0]["row"], 400);
+        book.object_op(0, 410, 0, r##"{"kind":"shape","shape":"textBox","fill":"yellow","line":"black","text":"Hi","width":120,"height":40}"##).unwrap();
+        book.object_op(0, 412, 0, r#"{"kind":"shape","shape":"line","line":"red","width":80,"height":0}"#).unwrap();
+        let shapes: serde_json::Value = serde_json::from_str(&book.objects_info(0).unwrap()).unwrap();
+        assert_eq!(shapes["shapes"].as_array().unwrap().len(), 2);
+        assert_eq!(shapes["shapes"][0]["fill"], "#F2C94C");
+        let sid = shapes["shapes"][0]["id"].as_u64().unwrap();
+        book.object_op(0, 0, 0, &format!(r#"{{"kind":"delete","object":"shape","id":{sid}}}"#)).unwrap();
+        assert_eq!(serde_json::from_str::<serde_json::Value>(&book.objects_info(0).unwrap()).unwrap()["shapes"].as_array().unwrap().len(), 1);
+        book.undo().unwrap();
+        assert_eq!(serde_json::from_str::<serde_json::Value>(&book.objects_info(0).unwrap()).unwrap()["shapes"].as_array().unwrap().len(), 2);
+        let mut fake = png.clone();
+        fake[1] = 0x51;
+        assert!(book.insert_picture(0, 400, 1, &fake, "", 0.0).is_err(), "not a PNG");
+        assert!(book.insert_picture(0, 400, 1, &[], "", 0.0).is_err());
+        assert!(book.insert_picture(0, 400, 1, &png, "a\nb", 0.0).is_err());
+        assert!(book.insert_picture(0, 400, 1, &png, "", 5.0).is_err());
+        assert!(book.insert_picture(9, 400, 1, &png, "", 0.0).is_err());
+        for bad in [
+            "nope",
+            r#"{"kind":"shape","shape":"star"}"#,
+            r##"{"kind":"shape","shape":"rectangle","fill":"#ff0000"}"##,
+            r#"{"kind":"shape","shape":"rectangle","line":"yellow"}"#,
+            r#"{"kind":"shape","shape":"rectangle","text":"x"}"#,
+            r#"{"kind":"shape","shape":"textBox","width":2}"#,
+            r#"{"kind":"shape","shape":"textBox","width":99999}"#,
+            r#"{"kind":"shape","shape":"rectangle","extra":1}"#,
+            r#"{"kind":"move","object":"chart","id":1,"here":true}"#,
+            r#"{"kind":"move","object":"shape","id":999999,"here":true}"#,
+            r#"{"kind":"move","object":"shape","id":1}"#,
+            r#"{"kind":"delete","object":"image","id":999999}"#,
+            r#"{"kind":"insert"}"#,
+        ] {
+            assert!(book.object_op(0, 0, 0, bad).is_err(), "{bad}");
+        }
+        book.session.run("review.protectSheet", json!({})).unwrap();
+        assert!(book.object_op(0, 0, 0, r#"{"kind":"shape","shape":"ellipse"}"#).unwrap_err().contains("protected"));
+        assert!(book.insert_picture(0, 400, 1, &png, "", 0.0).unwrap_err().contains("protected"));
     }
     #[test]
     fn whatif_op_seeks_goals_keeps_scenarios_and_refuses_bad_input() {

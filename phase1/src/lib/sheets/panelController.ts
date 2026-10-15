@@ -4,7 +4,7 @@ import {parsePanelRange} from './panelModel';
 import {MAX_CELL_BYTES,type RangeCell} from './protocol';
 import {parseAddress} from './format';
 import {parseFormatOp} from './formatOps';
-import type {ChartOp,SparklineOp,ProtectOp,WhatIfOp,ViewOp,PageSetupOp,ExportOp,PivotField,PivotOp,TableOp,NameOp,AnnotateOp,DedupeOp,SplitOp,ReplaceOp,ValidationOp,CfOp,FillDirection,FilterOp,SortOp,FormatOp,LineAxis,LineEditKind,LineOp,SheetOp} from './protocol';
+import type {ChartOp,SparklineOp,ProtectOp,WhatIfOp,ObjectOp,ViewOp,PageSetupOp,ExportOp,PivotField,PivotOp,TableOp,NameOp,AnnotateOp,DedupeOp,SplitOp,ReplaceOp,ValidationOp,CfOp,FillDirection,FilterOp,SortOp,FormatOp,LineAxis,LineEditKind,LineOp,SheetOp} from './protocol';
 import {parseEditLines,parseFreeze,parseLineCommand} from './lineOps';
 import {parseSheetOp} from './sheetOps';
 import {parseSortCommand} from './sortOps';
@@ -12,7 +12,9 @@ import {parseAnnotateCommand} from './notes';
 import {parseNamesCommand} from './names';
 import {parsePivotCommand,parseTableCommand} from './tableOps';
 import {parseProtectCommand} from './protectOps';
+import {SHAPES,SHAPE_FILLS,SHAPE_LINES} from './objectOps';
 import {parseWhatIfCommand} from './whatIfOps';
+import {parseObjectCommand,decodePicture,MAX_PICTURE_BASE64} from './objectOps';
 import {parseChartCommand,parseSparklineCommand} from './chartOps';
 import {parseViewCommand,type ViewCommand} from './viewOps';
 import {parseExportCommand,parsePageSetupCommand} from './printOps';
@@ -64,6 +66,10 @@ export interface SheetsPanelController {
  protectOperation(op:ProtectOp):void|Promise<void>;
  /** Goal seek, scenarios or a data table (one undo step each). */
  whatIfOperation(op:WhatIfOp):void|Promise<void>;
+ /** Adds a shape, or moves, resizes or deletes a picture or shape (one undo step). */
+ objectOperation(op:ObjectOp):void|Promise<void>;
+ /** Inserts a PNG or JPEG picture at the selected cell (one undo step). */
+ insertPicture(picture:{bytes:Uint8Array;alt:string;width:number}):void|Promise<void>;
  /** Sets the zoom, shows or hides gridlines, or zooms to the selection. Zoom is a view setting; gridlines are one undo step. */
  viewOperation(op:ViewCommand):void|Promise<void>;
  /** Changes the page setup of the active sheet (one undo step). */
@@ -84,7 +90,7 @@ let current:SheetsPanelController|null=null;
 export const getSheetsPanelController=()=>current;
 export function registerSheetsPanelController(controller:SheetsPanelController){current=controller;return()=>{if(current===controller)current=null;};}
 const requireController=()=>{if(!current?.ready())throw Error('No workbook is ready.');return current;};
-export const SHEETS_PANEL_COMMAND_IDS=['sheets.navigate','sheets.setCell','sheets.analyzeRange','sheets.format','sheets.resize','sheets.freeze','sheets.editLines','sheets.sheet','sheets.sort','sheets.filter','sheets.fill','sheets.highlight','sheets.validation','sheets.replace','sheets.dedupe','sheets.split','sheets.annotate','sheets.names','sheets.table','sheets.pivot','sheets.pageSetup','sheets.export','sheets.view','sheets.protect','sheets.chart','sheets.sparkline','sheets.whatif'] as const;
+export const SHEETS_PANEL_COMMAND_IDS=['sheets.navigate','sheets.setCell','sheets.analyzeRange','sheets.format','sheets.resize','sheets.freeze','sheets.editLines','sheets.sheet','sheets.sort','sheets.filter','sheets.fill','sheets.highlight','sheets.validation','sheets.replace','sheets.dedupe','sheets.split','sheets.annotate','sheets.names','sheets.table','sheets.pivot','sheets.pageSetup','sheets.export','sheets.view','sheets.protect','sheets.chart','sheets.sparkline','sheets.whatif','sheets.object','sheets.picture'] as const;
 export function sheetsPanelCommandSpecs():CommandSpec[]{
  return [
  {id:'sheets.navigate',title:'Go to spreadsheet cell',category:'View',level:'ui',allowInInput:true,
@@ -156,6 +162,12 @@ export function sheetsPanelCommandSpecs():CommandSpec[]{
  {id:'sheets.whatif',title:'Run goal seek, scenarios or a data table',category:'Edit',level:'ui',allowInInput:true,
   params:{type:'object',properties:{kind:{type:'string',enum:['goalSeek','scenarioAdd','scenarioShow','scenarioDelete','scenarioSummary','dataTable']},set:{type:'string',maxLength:12},to:{type:'number'},changing:{type:'string',maxLength:200},name:{type:'string',minLength:1,maxLength:255},values:{type:'array',items:{type:['string','number','boolean','null'],maxLength:255},maxItems:32},comment:{type:'string',maxLength:255},replace:{type:'boolean'},resultCells:{type:'string',maxLength:200},range:{type:'string',maxLength:30},rowInput:{type:'string',maxLength:12},columnInput:{type:'string',maxLength:12}},required:['kind'],additionalProperties:false},
   enabled:()=>!!current?.ready(),run:p=>requireController().whatIfOperation(parseWhatIfCommand(p))},
+ {id:'sheets.object',title:'Add a shape, or move, resize or delete a picture or shape',category:'Edit',level:'ui',allowInInput:true,
+  params:{type:'object',properties:{kind:{type:'string',enum:['shape','move','delete']},shape:{type:'string',enum:[...SHAPES]},fill:{type:'string',enum:[...SHAPE_FILLS]},line:{type:'string',enum:[...SHAPE_LINES]},width:{type:'number',minimum:0,maximum:4000},height:{type:'number',minimum:0,maximum:4000},text:{type:'string',maxLength:200},object:{type:'string',enum:['image','shape']},id:{type:'integer',minimum:0},here:{type:'boolean'}},required:['kind'],additionalProperties:false},
+  enabled:()=>!!current?.ready(),run:p=>requireController().objectOperation(parseObjectCommand(p))},
+ {id:'sheets.picture',title:'Insert a PNG or JPEG picture',category:'Edit',level:'ui',allowInInput:true,
+  params:{type:'object',properties:{base64:{type:'string',minLength:8,maxLength:MAX_PICTURE_BASE64},alt:{type:'string',maxLength:255},width:{type:'number',minimum:16,maximum:2000}},required:['base64'],additionalProperties:false},
+  enabled:()=>!!current?.ready(),run:p=>requireController().insertPicture(decodePicture(p))},
  {id:'sheets.protect',title:'Protect a sheet or lock cells',category:'Edit',level:'ui',allowInInput:true,
   params:{type:'object',properties:{kind:{type:'string',enum:['protect','unprotect','lock','workbook']},password:{type:'string',maxLength:64},allow:{type:'array',items:{type:'string',enum:['formatCells','formatColumns','formatRows','insertColumns','insertRows','deleteColumns','deleteRows','sort','autofilter']},maxItems:9},locked:{type:'boolean'},on:{type:'boolean'}},required:['kind'],additionalProperties:false},
   enabled:()=>!!current?.ready(),run:p=>requireController().protectOperation(parseProtectCommand(p))},

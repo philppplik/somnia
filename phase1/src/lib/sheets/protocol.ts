@@ -28,6 +28,14 @@ export type ProtectOp={kind:'protect';password?:string;allow?:ProtectPermission[
 /** What-if analysis. References are plain cells of the current sheet; the bridge re-validates. */
 export type WhatIfOp={kind:'goalSeek';set:string;to:number;changing:string}|{kind:'scenarioAdd';name:string;changing:string;values?:(string|number|boolean|null)[];comment?:string;replace?:boolean}|{kind:'scenarioShow';name:string}|{kind:'scenarioDelete';name:string}|{kind:'scenarioSummary';resultCells?:string}|{kind:'dataTable';range:string;rowInput?:string;columnInput?:string};
 export interface ScenarioInfo{name:string;changing:string;comment:string;values:string[]}
+/** Pictures and shapes. Anchors are in points; the bridge re-validates. */
+export type ShapeName='rectangle'|'roundedRectangle'|'ellipse'|'triangle'|'line'|'arrow'|'textBox';
+export type ObjectOp={kind:'shape';shape:ShapeName;fill?:string;line?:string;width?:number;height?:number;text?:string}|{kind:'move';object:'image'|'shape';id:number;width?:number;height?:number;here?:boolean}|{kind:'delete';object:'image'|'shape';id:number};
+export interface PictureOp{base64:string;alt?:string;width?:number}
+interface ObjectBase{id:number;row:number;col:number;dx:number;dy:number;width:number;height:number}
+export interface ImageObject extends ObjectBase{mime:string;alt:string;bytes:number}
+export interface ShapeObject extends ObjectBase{kind:string;fill:string|null;line:string|null;text:string}
+export interface ObjectsInfo{images:ImageObject[];shapes:ShapeObject[]}
 export interface ProtectionInfo{password:boolean;allow:ProtectPermission[]}
 /** Charts and sparklines. The bridge draws them as primitives (parsed and bounded in chartOps.ts); the Rust side re-validates every operation. */
 export type ChartType='column'|'bar'|'line'|'pie'|'doughnut'|'area'|'scatter'|'radar'|'histogram'|'waterfall'|'funnel'|'treemap';
@@ -143,6 +151,10 @@ export type SheetsRequest=
  |{id:number;op:'sparklines';sheet:number}
  |{id:number;op:'chartOp';sheet:number;row:number;col:number;rows:number;cols:number;chart:ChartOp}
  |{id:number;op:'sparklineOp';sheet:number;row:number;col:number;rows:number;cols:number;sparkline:SparklineOp}
+ |{id:number;op:'objects';sheet:number}
+ |{id:number;op:'imageData';sheet:number;image:number}
+ |{id:number;op:'pictureOp';sheet:number;row:number;col:number;bytes:Uint8Array;alt:string;width:number}
+ |{id:number;op:'objectOp';sheet:number;row:number;col:number;object:ObjectOp}
  |{id:number;op:'whatIfOp';sheet:number;whatIf:WhatIfOp}
  |{id:number;op:'scenarios';sheet:number}
  |{id:number;op:'protectOp';sheet:number;row:number;col:number;rows:number;cols:number;protect:ProtectOp}

@@ -2,9 +2,10 @@ import {parseAnnotations} from './notes';
 import {parseNames} from './names';
 import {parsePivotFields,parseTables} from './tableOps';
 import {parseScenarios} from './whatIfOps';
+import {parseObjects,pictureDataUrl} from './objectOps';
 import {parseCharts,parseScene,parseSparklines} from './chartOps';
 import {parseExportResult,parsePageInfo} from './printOps';
-import type {ChartInfo,ChartOp,ChartScene,SparklineOp,SparklineScene,ProtectOp,WhatIfOp,ScenarioInfo,ViewOp,ViewOpResult,PageInfo,PageSetupOp,ExportOp,ExportResult,PivotField,PivotFunc,TableOp,TablesInfo,NameInfo,NameOp,AnnotateOp,CellAnnotations,DedupeOp,SplitOp,ReplaceOp,ValidationOp,CfOp,FillDirection,SheetsEditReceipt,SheetsNativeState,FilterOp,SortOp,SheetOp,FormatOp,LineAxis,LineOp,RangeResult,SheetInfo,SheetLayout,SheetsRequest,SheetsResponse,ViewResult,WorkbookInfo} from './protocol';
+import type {ChartInfo,ChartOp,ChartScene,SparklineOp,SparklineScene,ProtectOp,WhatIfOp,ObjectOp,ObjectsInfo,ScenarioInfo,ViewOp,ViewOpResult,PageInfo,PageSetupOp,ExportOp,ExportResult,PivotField,PivotFunc,TableOp,TablesInfo,NameInfo,NameOp,AnnotateOp,CellAnnotations,DedupeOp,SplitOp,ReplaceOp,ValidationOp,CfOp,FillDirection,SheetsEditReceipt,SheetsNativeState,FilterOp,SortOp,SheetOp,FormatOp,LineAxis,LineOp,RangeResult,SheetInfo,SheetLayout,SheetsRequest,SheetsResponse,ViewResult,WorkbookInfo} from './protocol';
 import {MAX_INPUT_BYTES} from './protocol';
 import {parseEditReceipt,parseNativeState} from './receipt';
 type Req=SheetsRequest extends infer R?R extends {id:number}?Omit<R,'id'>:never:never;
@@ -30,7 +31,7 @@ export class SheetsEngine{
  private request(message:Req,transfer:Transferable[]=[]){
   return new Promise<SheetsResponse>((resolve,reject)=>{
    if(this.disposed){reject(new Error('Spreadsheet engine closed'));return;}
-   const mutating=['open','set','setValues','clear','format','resize','editLines','freeze','sort','filter','fill','cf','validation','replace','dedupe','split','annotate','defineName','deleteName','pivotCreate','pivotRefresh','tableOp','pageSetup','viewOp','protectOp','whatIfOp','chartOp','sparklineOp','setReviewed','undoReviewed','editSheet','undo','redo','close'].includes(message.op);if(mutating){this.mutationEpoch++;this.mutations++;this.notifySelectionRead();}const finish=()=>{if(mutating){this.mutations--;this.mutationEpoch++;this.notifySelectionRead();}};const done=(r:SheetsResponse)=>{finish();resolve(r);},failed=(e:Error)=>{finish();reject(e);};
+   const mutating=['open','set','setValues','clear','format','resize','editLines','freeze','sort','filter','fill','cf','validation','replace','dedupe','split','annotate','defineName','deleteName','pivotCreate','pivotRefresh','tableOp','pageSetup','viewOp','protectOp','whatIfOp','pictureOp','objectOp','chartOp','sparklineOp','setReviewed','undoReviewed','editSheet','undo','redo','close'].includes(message.op);if(mutating){this.mutationEpoch++;this.mutations++;this.notifySelectionRead();}const finish=()=>{if(mutating){this.mutations--;this.mutationEpoch++;this.notifySelectionRead();}};const done=(r:SheetsResponse)=>{finish();resolve(r);},failed=(e:Error)=>{finish();reject(e);};
    const id=this.nextId++;
    const timer=setTimeout(()=>this.dispose(new Error('Spreadsheet engine timed out. Unsaved edits in this workbook were discarded.')),this.timeoutMs);
    this.pending.set(id,{resolve:done,reject:failed,timer});
@@ -85,6 +86,14 @@ export class SheetsEngine{
  async chartOp(sheet:number,row:number,col:number,rows:number,cols:number,chart:ChartOp):Promise<void>{await this.result<unknown>({op:'chartOp',sheet,row,col,rows,cols,chart});}
  /** Adds a sparkline for a selected row or column in the next cell (one undo step). */
  async sparklineOp(sheet:number,row:number,col:number,rows:number,cols:number,sparkline:SparklineOp):Promise<void>{await this.result<unknown>({op:'sparklineOp',sheet,row,col,rows,cols,sparkline});}
+ /** Pictures and shapes of a sheet (read only). */
+ async objects(sheet:number):Promise<ObjectsInfo>{return parseObjects(await this.result<unknown>({op:'objects',sheet}));}
+ /** One picture as a data URL (read only); null when the format cannot be shown. */
+ async imageUrl(sheet:number,image:number):Promise<string|null>{const r=await this.result<{mime?:unknown;base64?:unknown}>({op:'imageData',sheet,image});return typeof r.mime==='string'&&typeof r.base64==='string'?pictureDataUrl(r.mime,r.base64):null;}
+ /** Inserts a PNG or JPEG picture at the cell (one undo step). The bytes are copied; the caller keeps the original. */
+ async pictureOp(sheet:number,row:number,col:number,bytes:Uint8Array,alt:string,width:number):Promise<void>{const copy=bytes.slice();await this.result<unknown>({op:'pictureOp',sheet,row,col,bytes:copy,alt,width});}
+ /** Adds a shape, or moves, resizes or deletes a picture or shape (one undo step). */
+ async objectOp(sheet:number,row:number,col:number,object:ObjectOp):Promise<void>{await this.result<unknown>({op:'objectOp',sheet,row,col,object});}
  /** Goal seek, scenarios or a data table on the sheet (one undo step each); returns the engine's result object. */
  whatIfOp(sheet:number,whatIf:WhatIfOp){return this.result<unknown>({op:'whatIfOp',sheet,whatIf});}
  /** The scenarios stored for a sheet (read only). */

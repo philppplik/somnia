@@ -6750,8 +6750,24 @@
       "hasEnabled": true
     },
     {
+      "id": "sheets.object",
+      "title": "Add a shape, or move, resize or delete a picture or shape",
+      "category": "Edit",
+      "source": "sheets",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
       "id": "sheets.pageSetup",
       "title": "Change the page setup",
+      "category": "Edit",
+      "source": "sheets",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
+      "id": "sheets.picture",
+      "title": "Insert a PNG or JPEG picture",
       "category": "Edit",
       "source": "sheets",
       "allowInInput": true,
