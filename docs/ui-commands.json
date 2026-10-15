@@ -13025,6 +13025,13 @@
       "hasEnabled": true
     },
     {
+      "id": "vector.setShapeOptions",
+      "title": "Set shape tool options",
+      "category": "Edit",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
       "id": "vector.setStyle",
       "title": "Set vector path style",
       "category": "Edit",

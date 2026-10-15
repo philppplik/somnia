@@ -21,6 +21,7 @@ import {getVectorSession,useVectorSession} from '../../lib/vectorstudio/session'
 import {boxOf} from '../../lib/vectorstudio/geometry';
 import {VECTOR_TOOLS} from '../../lib/studios/vector';
 import type {PanelHostProps} from '../../lib/shell/types';
+import {SHAPE_LIMITS} from '../../lib/vectorstudio/shapes';
 import {Textarea} from '../ui/native-controls';
 import {TEXT_LIMITS,FONT_WEIGHTS,FONT_STYLES,TEXT_ANCHORS} from '../../lib/vectorio';
 import {fontOptions,loadSystemFonts,fontsAvailable,useSystemFonts} from '../../lib/vectorstudio/fonts';
@@ -167,3 +168,11 @@ export function VectorTextSection(){const {t}=useT(),s=useVectorSession(),f=useS
   <Button size="compact" onClick={()=>run('duplicateText',{id:cur.id})} data-testid="vector-text-duplicate">{t('vector.shell.textDuplicate')}</Button>
   <Button size="compact" onClick={()=>run('deleteText',{id:cur.id})} data-testid="vector-text-delete">{t('vector.shell.textDelete')}</Button>
  </div>;}
+
+/** Options for the next rectangle, polygon and star (document untouched). */
+export function VectorShapeSection(){const {t}=useT(),s=useVectorSession(),o=s.shapeOpts;
+ const num=(key:'sides'|'points'|'inner'|'radius',lo:number,hi:number,step:number,scale=1)=><label className={row}>{t('vector.shell.shape.'+key)}<NativeInput className={field} key={key+o[key]} type="number" min={lo*scale} max={hi*scale} step={step} defaultValue={Math.round(o[key]*scale*100)/100} data-testid={'vector-shape-'+key} onBlur={e=>{const n=Number(e.target.value)/scale;if(e.target.value!==''&&Number.isFinite(n)&&n>=lo&&n<=hi&&(key==='inner'||key==='radius'||Number.isInteger(n)))run('setShapeOptions',{[key]:n});else e.target.value=String(Math.round(o[key]*scale*100)/100);}}/></label>;
+ return <div className="grid gap-2" data-testid="vector-shell-shape"><div className="grid grid-cols-2 gap-2">
+  {num('sides',SHAPE_LIMITS.minSides,SHAPE_LIMITS.maxSides,1)}{num('points',SHAPE_LIMITS.minSides,SHAPE_LIMITS.maxSides,1)}
+  {num('inner',SHAPE_LIMITS.minInner,SHAPE_LIMITS.maxInner,5,100)}{num('radius',0,SHAPE_LIMITS.maxRadius,1)}</div>
+  <p className="m-0 text-ink-3">{t('vector.shell.shape.hint')}</p></div>;}

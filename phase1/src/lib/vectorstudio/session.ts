@@ -3,7 +3,7 @@ import {reportError} from '../log';
 import {useSyncExternalStore} from 'react';
 import {exportSvg,importSvg,normalizeDoc,normalizeText,TEXT_LIMITS,gradientIdOf,SvgImportError,type Diagnostic,type Point,type Style,type VectorDocument,type VectorPath,type VectorText} from '../vectorio';
 import {boxOf,fitPath,translatePath,type Box} from './geometry';
-import {newId} from './shapes';
+import {newId,checkShapeOptions,DEFAULT_SHAPE_OPTIONS,type ShapeOptions} from './shapes';
 import {t} from '../i18n';
 import {selectedPaths} from '../../components/vectorstudio/tools/operations';
 export type VectorTool='select'|'node'|'pen'|'rect'|'ellipse'|'line'|'polygon'|'star'|'text';
@@ -13,14 +13,14 @@ export interface VectorSession{
  /** Path whose nodes are shown in Node mode. */
  nodePath:string|null;selectedNode:string|null;
  /** Selected text object (texts and paths are never selected together). */
- textSel:string|null;
+ textSel:string|null;shapeOpts:ShapeOptions;
 }
 export const PAGE_PRESETS=[
  {id:'icon',label:'Icon 512',width:512,height:512},{id:'square',label:'Square 1080',width:1080,height:1080},
  {id:'a4',label:'A4 (96 dpi)',width:794,height:1123},{id:'hd',label:'HD 1920x1080',width:1920,height:1080},{id:'logo',label:'Logo 1024',width:1024,height:1024}] as const;
 const HISTORY_LIMIT=200;
 let past:VectorDocument[]=[],future:VectorDocument[]=[];
-const fresh=():VectorSession=>({name:'Untitled.svg',doc:{width:1024,height:1024,paths:[]},selection:[],tool:'select',zoom:1,pan:{x:0,y:0},dirty:false,canUndo:false,canRedo:false,diagnostics:[],error:null,open:false,nodePath:null,selectedNode:null,textSel:null});
+const fresh=():VectorSession=>({name:'Untitled.svg',doc:{width:1024,height:1024,paths:[]},selection:[],tool:'select',zoom:1,pan:{x:0,y:0},dirty:false,canUndo:false,canRedo:false,diagnostics:[],error:null,open:false,nodePath:null,selectedNode:null,textSel:null,shapeOpts:DEFAULT_SHAPE_OPTIONS});
 let state:VectorSession=fresh();
 const listeners=new Set<()=>void>();
 const set=(patch:Partial<VectorSession>)=>{if(patch.error)reportError('vector.engine',patch.error,{context:{studio:'vector',file:patch.name??state.name}});state={...state,...patch,canUndo:past.length>0,canRedo:future.length>0};listeners.forEach(l=>l());};
@@ -68,6 +68,8 @@ export function undo(){const prev=past.pop();if(!prev)return;future.push(state.d
 export function redo(){const next=future.pop();if(!next)return;past.push(state.doc);set({doc:next,dirty:true,selection:selectionIds(next,state.selection),textSel:liveText(next)});}
 export const setTool=(tool:VectorTool)=>set({tool,nodePath:tool==='node'?state.nodePath??state.selection[0]??null:null,selectedNode:null});
 export const select=(ids:string[])=>{const selection=selectionIds(state.doc,ids);set({selection,textSel:selection.length?null:state.textSel,nodePath:state.tool==='node'?selectedPaths(state.doc,ids).find(p=>ids.includes(p.id))?.id??null:state.nodePath,selectedNode:null});};
+/** Options for the next rectangle (corner radius), polygon (sides) and star (points, depth) drawn; not part of the document, no undo step. */
+export const setShapeOptions=(o:Partial<ShapeOptions>)=>set({shapeOpts:{...state.shapeOpts,...checkShapeOptions(o)}});
 export const setView=(zoom:number,pan?:Point)=>{finite(zoom,...(pan?[pan.x,pan.y]:[]));set({zoom:Math.min(32,Math.max(0.05,zoom)),...(pan?{pan}:{})});};
 export const clearError=()=>set({error:null,diagnostics:[]});
 const mapPaths=(f:(p:VectorPath)=>VectorPath)=>(ids:readonly string[])=>({...state.doc,paths:state.doc.paths.map(p=>ids.includes(p.id)?f(p):p)});

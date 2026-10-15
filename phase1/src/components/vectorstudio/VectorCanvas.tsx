@@ -132,7 +132,7 @@ export function VectorCanvas(){
    if(b.maxX-b.minX>2||b.maxY-b.minY>2)select(s.doc.paths.filter(p=>{const pb=pathBox(p);return !p.hidden&&pb&&pb.minX>=b.minX&&pb.maxX<=b.maxX&&pb.minY>=b.minY&&pb.maxY<=b.maxY;}).map(p=>p.id));}
   else if(d.kind==='shape'){const tiny=Math.hypot(d.cur.x-d.start.x,d.cur.y-d.start.y)<3;
    const end=tiny?{x:d.start.x+(d.tool==='line'?120:100),y:d.start.y+(d.tool==='line'?0:100)}:d.cur;
-   const from=d.tool==='line'||!shiftHeld.current?d.start:d.start;addPath(buildShape(d.tool,from,end));setTool('select');}};
+   const from=d.tool==='line'||!shiftHeld.current?d.start:d.start;addPath(buildShape(d.tool,from,end,s.shapeOpts));setTool('select');}};
  const onDouble=(e:RPointerEvent<SVGSVGElement>|React.MouseEvent<SVGSVGElement>)=>{
   const pt=toDoc(e);
   if(s.tool==='pen'){finishPen(false);return;}
@@ -177,7 +177,7 @@ export function VectorCanvas(){
   {s.error&&<p role="alert" className="mx-auto max-w-[460px] p-3 text-[12px] text-danger" data-testid="vector-error">{s.error}</p>}
  </section></div></main>;
 
- const draft=drag?.kind==='shape'?buildShape(drag.tool,drag.start,drag.cur):null;
+ const draft=drag?.kind==='shape'?buildShape(drag.tool,drag.start,drag.cur,s.shapeOpts):null;
  const nodePath=s.tool==='node'?paths.find(p=>p.id===s.nodePath):null;
  const penPath:VectorPath|null=pen.length?{id:'pen-draft',closed:false,nodes:hover&&drag?.kind!=='pen-handle'?[...pen,{id:'pen-ghost',x:hover.x,y:hover.y,kind:'corner'}]:pen,style:{fill:'none',stroke:'#2563eb',strokeWidth:1.5/s.zoom}}:null;
  return <main className="center" aria-label={t('vector.title')}><VectorExportSetup/><div className="workspace"><section className="code-pane" aria-label={t('vector.title')}>

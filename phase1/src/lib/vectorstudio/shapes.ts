@@ -2,6 +2,17 @@
 import type {Point,Style,VectorNode,VectorPath} from '../vectorio';
 /** Bezier circle constant. */
 export const KAPPA=0.5522847498307936;
+/** Options of the shape tools. Bounded so a pasted or scripted value can never build a huge path. */
+export const SHAPE_LIMITS=Object.freeze({minSides:3,maxSides:64,minInner:0.1,maxInner:0.95,maxRadius:1000});
+export interface ShapeOptions{sides:number;points:number;inner:number;radius:number}
+export const DEFAULT_SHAPE_OPTIONS:ShapeOptions=Object.freeze({sides:6,points:5,inner:0.5,radius:0});
+/** Validates a (partial) option set; throws RangeError on anything out of range or not a finite number. */
+export function checkShapeOptions(o:Partial<ShapeOptions>):Partial<ShapeOptions>{
+ const L=SHAPE_LIMITS,out:Partial<ShapeOptions>={};
+ const num=(k:keyof ShapeOptions,lo:number,hi:number,int:boolean)=>{const v=o[k];if(v===undefined)return;
+  if(typeof v!=='number'||!Number.isFinite(v)||v<lo||v>hi||(int&&!Number.isInteger(v)))throw new RangeError(`${k} must be ${int?'an integer ':'a number '}from ${lo} to ${hi}`);out[k]=v;};
+ num('sides',L.minSides,L.maxSides,true);num('points',L.minSides,L.maxSides,true);num('inner',L.minInner,L.maxInner,false);num('radius',0,L.maxRadius,false);return out;}
+const sideCount=(v:number,d:number)=>Number.isFinite(v)?Math.min(SHAPE_LIMITS.maxSides,Math.max(SHAPE_LIMITS.minSides,Math.floor(v))):d;
 export type ShapeKind='rect'|'ellipse'|'line'|'polygon'|'star';
 export const DEFAULT_SHAPE_STYLE:Partial<Style>={fill:'#6d5ef5',stroke:'#1f1b4d',strokeWidth:2};
 let seq=0;
@@ -30,14 +41,14 @@ export function linePath(a:Point,b:Point,style:Partial<Style>={stroke:'#1f1b4d',
  return {id:newId(),closed:false,name:'Line',style,nodes:[node(a.x,a.y),node(b.x,b.y)]};}
 /** Regular polygon inscribed in the box ellipse, first vertex pointing up. */
 export function polygonPath(b:ShapeBox,sides=6,style:Partial<Style>=DEFAULT_SHAPE_STYLE):VectorPath{
- const n=Math.max(3,Math.floor(sides)),cx=b.x+b.w/2,cy=b.y+b.h/2;
+ const n=sideCount(sides,6),cx=b.x+b.w/2,cy=b.y+b.h/2;
  const nodes=Array.from({length:n},(_,i)=>{const a=-Math.PI/2+i*2*Math.PI/n;return node(cx+Math.cos(a)*b.w/2,cy+Math.sin(a)*b.h/2);});
  return {id:newId(),closed:true,name:'Polygon',style,nodes};}
 export function starPath(b:ShapeBox,points=5,inner=0.5,style:Partial<Style>=DEFAULT_SHAPE_STYLE):VectorPath{
- const n=Math.max(3,Math.floor(points)),cx=b.x+b.w/2,cy=b.y+b.h/2,k=Math.min(0.95,Math.max(0.1,inner));
+ const n=sideCount(points,5),cx=b.x+b.w/2,cy=b.y+b.h/2,k=Number.isFinite(inner)?Math.min(0.95,Math.max(0.1,inner)):0.5;
  const nodes=Array.from({length:n*2},(_,i)=>{const a=-Math.PI/2+i*Math.PI/n,f=i%2===0?1:k;return node(cx+Math.cos(a)*b.w/2*f,cy+Math.sin(a)*b.h/2*f);});
  return {id:newId(),closed:true,name:'Star',style,nodes};}
-export function buildShape(kind:ShapeKind,a:Point,b:Point,opts:{radius?:number;sides?:number;points?:number}={}):VectorPath{
+export function buildShape(kind:ShapeKind,a:Point,b:Point,opts:{radius?:number;sides?:number;points?:number;inner?:number}={}):VectorPath{
  const box=normBox(a,b);
  switch(kind){case 'rect':return rectPath(box,opts.radius??0);case 'ellipse':return ellipsePath(box);case 'line':return linePath(a,b);
-  case 'polygon':return polygonPath(box,opts.sides??6);case 'star':return starPath(box,opts.points??5);}}
+  case 'polygon':return polygonPath(box,opts.sides??6);case 'star':return starPath(box,opts.points??5,opts.inner??0.5);}}

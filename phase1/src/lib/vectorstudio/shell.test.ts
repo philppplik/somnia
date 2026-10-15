@@ -17,8 +17,8 @@ test('vector manifest validates hosts, commands, all labels and inspector condit
  const labels=[...vectorShell.panels!,...vectorShell.leftRail!,...vectorShell.rightRail!,...vectorShell.inspector!.sections].flatMap(x=>'labelKey' in x&&x.labelKey?[x.labelKey]:'titleKey' in x&&x.titleKey?[x.titleKey]:[]);
  for(const [tag,d] of Object.entries(VECTOR_CATALOGUES)){for(const k of labels)assert.ok(d[k],tag+':'+k);for(const c of commands)assert.ok(d['cmd.'+c.id],tag+':'+c.id);assert.deepEqual(Object.keys(d).sort(),Object.keys(VECTOR_CATALOGUES.en).sort());}
  const ctx={studio:'vector',selection:{kind:'none',count:0},services:{ready:true}};
- assert.deepEqual(resolveInspectorSections(vectorShell.inspector!.sections,ctx).map(s=>s.id),['page','text']);
- assert.deepEqual(resolveInspectorSections(vectorShell.inspector!.sections,{...ctx,selection:{kind:'one',count:1},services:{ready:true,node:true}}).map(s=>s.id),['page','transform','style','text','nodes']);
+ assert.deepEqual(resolveInspectorSections(vectorShell.inspector!.sections,ctx).map(s=>s.id),['page','shape','text']);
+ assert.deepEqual(resolveInspectorSections(vectorShell.inspector!.sections,{...ctx,selection:{kind:'one',count:1},services:{ready:true,node:true}}).map(s=>s.id),['page','transform','style','shape','text','nodes']);
  assert.deepEqual(effectiveRail(vectorShell.leftRail!,undefined,{ctx}).overflow.map(s=>s.id),['rect','ellipse','line','polygon','star','text']);
  assert.deepEqual(effectiveRail(vectorShell.leftRail!,undefined,{ctx:{...ctx,services:{}}}).visible.map(s=>s.id),['files','layers','tools']);
 });
