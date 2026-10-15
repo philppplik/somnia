@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1137 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1138 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -297,6 +297,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `code.rename.local` | Rename local symbol... | Tools | core | `F2` |
 | `code.snippets` | Code snippets... | Insert | core |  |
 | `code.symbols` | Go to file symbol... | Tools | core | `Mod+Shift+o` |
+| `code.terminal` | Command terminal... | Tools | core |  |
 | `collab.join` | Join shared project... | Tools | core |  |
 | `collab.share` | Share project... | Tools | core |  |
 | `css.open` | CSS variables and classes | View | core |  |

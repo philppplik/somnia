@@ -1,7 +1,7 @@
 import {openTranscriptHub} from './transcript/session';
 import {openLocalReferences} from './localReferencesSession';
 import {openCodeSymbols} from './codeSymbolsSession';
-import {openCodeQuickOpen} from './codeQuickOpenSession';
+import {openCodeQuickOpen} from './codeQuickOpenSession';import {commandTerminal} from './commandTerminal';
 import {openLocalRename} from './localRenameSession';
 import {goToLocalDefinition} from './localDefinitionCommand';
 import {openCodeSnippets} from './codeSnippets';
@@ -206,3 +206,4 @@ registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'code.symbols',titl
 registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'code.quickOpen',title:'Quick open project file...',category:'Tools',shortcut:'Mod+p',allowInInput:true,keywords:['file','path','quick','navigation'],enabled:()=>getState().activeStudio==='code'&&getState().coreConnected,run:()=>{/* History: read-only file navigation. */openCodeQuickOpen();}});
 
 registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'code.references.local',title:'Find local references...',category:'Tools',shortcut:'Shift+F12',allowInInput:true,keywords:['references','usages','local','symbol'],enabled:()=>getState().activeStudio==='code'&&getState().coreConnected,run:()=>{/* History: read-only binding lookup, no mutation. */openLocalReferences();}});
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'code.terminal',title:'Command terminal...',category:'Tools',keywords:['terminal','shell','command'],enabled:()=>getState().activeStudio==='code',run:()=> /* History: UI only. Execution needs the explicit dialog action. */ commandTerminal.open()});

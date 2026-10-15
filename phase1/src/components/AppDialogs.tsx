@@ -1,6 +1,6 @@
 import {LocalReferencesDialog} from './LocalReferencesDialog';
 import {CodeSymbolsDialog} from './CodeSymbolsDialog';
-import {CodeQuickOpenDialog} from './CodeQuickOpenDialog';
+import {CodeQuickOpenDialog} from './CodeQuickOpenDialog';import {CommandTerminalDialog} from './CommandTerminalDialog';
 import {LocalRenameDialog} from './LocalRenameDialog';
 import {CodeSnippetsDialog} from './CodeSnippetsDialog';
 import {NewProjectDialog} from './NewProjectDialog';
@@ -15,4 +15,4 @@ import {ShareDialog} from './ShareDialog';
 import {CloseDialog} from './CloseDialog';
 import {WelcomeDialog} from './WelcomeDialog';
 /** Dialog hosting is independent of status-bar visibility and context. */
-export function AppDialogs(){return <><LocalReferencesDialog/><CodeSymbolsDialog/><CodeQuickOpenDialog/><LocalRenameDialog/><CodeSnippetsDialog/><NewProjectDialog/><DropOverlay/><SaveDialog/><ExportDialog/><ExportCenterDialog/><ConvertDialog/><CloseProjectDialog/><CloseAllDialog/><ShareDialog/><CloseDialog/><WelcomeDialog/></>;}
+export function AppDialogs(){return <><LocalReferencesDialog/><CodeSymbolsDialog/><CodeQuickOpenDialog/><CommandTerminalDialog/><LocalRenameDialog/><CodeSnippetsDialog/><NewProjectDialog/><DropOverlay/><SaveDialog/><ExportDialog/><ExportCenterDialog/><ConvertDialog/><CloseProjectDialog/><CloseAllDialog/><ShareDialog/><CloseDialog/><WelcomeDialog/></>;}
