@@ -1374,5 +1374,6 @@
  "animation.audio.normalize": "Normalise to a 90% peak",
  "cmd.animation.audio.normalize": "Normalise the volume of the audio layers to a target peak",
  "animation.audio.trimSilence": "Trim silence at start and end",
- "cmd.animation.audio.trimSilence": "Trim silence off the start and end of the audio layers"
+ "cmd.animation.audio.trimSilence": "Trim silence off the start and end of the audio layers",
+ "cmd.animation.comp.fitDuration": "Set the composition length to the end of the last layer"
 }

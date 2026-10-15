@@ -1374,5 +1374,6 @@
  "animation.audio.normalize": "Auf 90% Spitze normalisieren",
  "cmd.animation.audio.normalize": "Lautstärke der Audio-Ebenen auf einen Zielpegel normalisieren",
  "animation.audio.trimSilence": "Stille am Anfang und Ende kürzen",
- "cmd.animation.audio.trimSilence": "Stille am Anfang und Ende der Audio-Ebenen abschneiden"
+ "cmd.animation.audio.trimSilence": "Stille am Anfang und Ende der Audio-Ebenen abschneiden",
+ "cmd.animation.comp.fitDuration": "Kompositionslänge auf das Ende der letzten Ebene setzen"
 }

@@ -359,6 +359,25 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.comp.fitDuration",
+      "title": "Set the composition length to the end of the last layer",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "composition",
+        "content",
+        "duration",
+        "end",
+        "fit",
+        "last layer",
+        "length",
+        "shorten",
+        "trim"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.comp.remove",
       "title": "Delete composition",
       "category": "Edit",

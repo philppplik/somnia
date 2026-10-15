@@ -328,3 +328,13 @@ test('P300 trim silence: quiet head and tail are cut, the sound stays in place o
  assert.throws(()=>run({layers:['aud'],padding:0}),/no silence|nothing/i);
  s.undo();assert.equal(JSON.stringify(s.document),before);
 });
+test('P301 fit duration: composition ends at the last layer (audio placement counts), one undo, whole frame',async()=>{
+ const {fitDurationSpecs,contentEnd,fittedDuration}=await import('./fitDurationCommands');const {AnimationSession,setAnimationSession}=await import('./session');
+ const run=fitDurationSpecs()[0].run as (p?:unknown)=>unknown;
+ const s=new AnimationSession();s.open(withAudio(asset(wav(16000,8000,1,i=>Math.sin(i/20)*0.5),3)));setAnimationSession(s);
+ const c0=findComp(s.document!)!;assert.equal(contentEnd(c0),2*sec);
+ s.dispatch({type:'audio.update',layer:'aud',offset:sec/2});assert.equal(contentEnd(findComp(s.document!)!),2.5*sec);
+ const before=JSON.stringify(s.document);const r=run() as {to:number};const c=findComp(s.document!)!;
+ assert.equal(c.duration,r.to);assert.ok(c.duration>=2.5*sec&&c.duration<2.5*sec+sec/20,String(c.duration));assert.equal(c.duration,fittedDuration(findComp(JSON.parse(before))!)) ;
+ assert.throws(()=>run(),/already/);s.undo();assert.equal(JSON.stringify(s.document),before);
+});

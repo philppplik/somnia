@@ -1374,5 +1374,6 @@
  "animation.audio.normalize": "Normaliser à un pic de 90 %",
  "cmd.animation.audio.normalize": "Normaliser le volume des calques audio sur un pic cible",
  "animation.audio.trimSilence": "Couper le silence au début et à la fin",
- "cmd.animation.audio.trimSilence": "Couper le silence au début et à la fin des calques audio"
+ "cmd.animation.audio.trimSilence": "Couper le silence au début et à la fin des calques audio",
+ "cmd.animation.comp.fitDuration": "Ajuster la durée de la composition à la fin du dernier calque"
 }
