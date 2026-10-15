@@ -1242,5 +1242,7 @@
  "animation.rig.group.mirror": "Reflejar movimiento",
  "animation.rig.mirror.x": "Reflejar izquierda a derecha",
  "animation.rig.mirror.y": "Reflejar arriba a abajo",
- "cmd.animation.layers.mirror": "Reflejar las capas marcadas respecto a la primera capa marcada"
+ "cmd.animation.layers.mirror": "Reflejar las capas marcadas respecto a la primera capa marcada",
+ "animation.export.check.invisible": "Totalmente transparentes en todo el rango exportado, no se verán: {names}",
+ "animation.export.check.seam": "No están en la misma pose en el primer y el último fotograma, el bucle dará un salto: {names}"
 }

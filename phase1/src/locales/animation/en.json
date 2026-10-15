@@ -1242,5 +1242,7 @@
  "animation.rig.group.mirror": "Mirror motion",
  "animation.rig.mirror.x": "Mirror left to right",
  "animation.rig.mirror.y": "Mirror top to bottom",
- "cmd.animation.layers.mirror": "Mirror the ticked layers across the first ticked layer"
+ "cmd.animation.layers.mirror": "Mirror the ticked layers across the first ticked layer",
+ "animation.export.check.invisible": "Fully transparent for the whole exported range, so they will not show: {names}",
+ "animation.export.check.seam": "Not at the same pose on the first and last frame, so the loop will jump: {names}"
 }

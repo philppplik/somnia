@@ -1242,5 +1242,7 @@
  "animation.rig.group.mirror": "Bewegung spiegeln",
  "animation.rig.mirror.x": "Links-rechts spiegeln",
  "animation.rig.mirror.y": "Oben-unten spiegeln",
- "cmd.animation.layers.mirror": "Angekreuzte Ebenen an der ersten angekreuzten Ebene spiegeln"
+ "cmd.animation.layers.mirror": "Angekreuzte Ebenen an der ersten angekreuzten Ebene spiegeln",
+ "animation.export.check.invisible": "Im ganzen Exportbereich vollständig transparent, daher unsichtbar: {names}",
+ "animation.export.check.seam": "Erstes und letztes Bild zeigen nicht dieselbe Pose, die Schleife wird springen: {names}"
 }

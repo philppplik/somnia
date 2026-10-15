@@ -1546,3 +1546,13 @@ test('P253 mirror: positions reflect across the first layer, rotation reverses, 
  const ak=L('a').transform.position.keys;assert.deepEqual(ak[0].v as unknown as number[],[700,100]);assert.deepEqual(ak[1].v as unknown as number[],[600,50]);assert.deepEqual(ak[0].sOut,[-30,10]);
  s.undo();assert.deepEqual(findComp(s.document!)!.layers.find(l=>l.id==='st')!.transform.position.value as unknown as number[],[100,60]);
 });
+
+test('P254 export check: fully transparent layers and loop seam (only when a seamless loop is asked for)',async()=>{
+ const {exportCheck}=await import('./exportCheck');const {defaultExportSettings}=await import('./exportSettings');
+ const d0=applyEdits(base(),[{type:'layer.add',kind:'solid',id:'ghost',over:{name:'Ghost'}},{type:'prop.set',layer:'ghost',prop:'opacity',t:f(0),value:0},{type:'layer.add',kind:'solid',id:'still',over:{name:'Still'}}] as never);
+ const s=new AnimationSession();s.open(d0);const c=findComp(s.document!)!;
+ const plain=exportCheck(c,[],defaultExportSettings()),by=(l:typeof plain)=>Object.fromEntries(l.map(i=>[i.code,i]));
+ assert.deepEqual(by(plain).invisible.layers,['Ghost']);assert.equal(by(plain).invisible.severity,'warn');assert.equal(by(plain).seam,undefined,'no seam note unless a seamless loop is on');
+ const loop=by(exportCheck(c,[],{...defaultExportSettings(),loopSeam:true}));
+ assert.ok(loop.seam.layers.length>=1&&!loop.seam.layers.includes('Still')&&!loop.seam.layers.includes('Ghost'),'the moving layer is named, still ones are not');
+});

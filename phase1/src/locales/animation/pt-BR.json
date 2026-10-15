@@ -1242,5 +1242,7 @@
  "animation.rig.group.mirror": "Espelhar movimento",
  "animation.rig.mirror.x": "Espelhar esquerda para direita",
  "animation.rig.mirror.y": "Espelhar cima para baixo",
- "cmd.animation.layers.mirror": "Espelhar as camadas marcadas em relação à primeira camada marcada"
+ "cmd.animation.layers.mirror": "Espelhar as camadas marcadas em relação à primeira camada marcada",
+ "animation.export.check.invisible": "Totalmente transparentes em todo o intervalo exportado, não vão aparecer: {names}",
+ "animation.export.check.seam": "Não estão na mesma pose no primeiro e no último quadro, o loop vai dar um salto: {names}"
 }

@@ -1242,5 +1242,7 @@
  "animation.rig.group.mirror": "Refléter le mouvement",
  "animation.rig.mirror.x": "Refléter gauche-droite",
  "animation.rig.mirror.y": "Refléter haut-bas",
- "cmd.animation.layers.mirror": "Refléter les calques cochés par rapport au premier calque coché"
+ "cmd.animation.layers.mirror": "Refléter les calques cochés par rapport au premier calque coché",
+ "animation.export.check.invisible": "Entièrement transparents sur toute la plage exportée, donc invisibles : {names}",
+ "animation.export.check.seam": "Pas dans la même pose à la première et à la dernière image, la boucle va sauter : {names}"
 }
