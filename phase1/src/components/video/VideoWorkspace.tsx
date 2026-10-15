@@ -3,7 +3,7 @@ import {ChevronsLeft,ChevronsRight,Download,Pause,Play,Redo2,RotateCcw,Scissors,
 import {Button} from '../ui/button';
 import {useT} from '../../lib/useT';
 import {executeCommand} from '../../lib/commands';
-import {addAudioTrackClip,addImageClip,addTimelineClipsFromDialog,cancelVideoExport,deleteAudioTrackClip,deleteTimelineClip,duplicateAudioTrackClip,getFilmstrip,moveAudioTrackClip,moveTimelineClip,openVideo,redoVideoEdit,resizeAudioTrackClip,saveVideoProject,selectAudioTrackClip,selectTimelineClip,splitTimelineAt,toggleTimelineClipMute,trimTimelineClip,undoVideoEdit,useVideoSession,videoCanRedo,videoCanUndo,videoIsDirty,videoIsEdited} from '../../lib/video/session';
+import {addAudioTrackClip,addImageClip,addTimelineClip,addTimelineClipsFromDialog,cancelVideoExport,deleteAudioTrackClip,deleteTimelineClip,duplicateAudioTrackClip,getFilmstrip,moveAudioTrackClip,moveTimelineClip,openVideo,redoVideoEdit,resizeAudioTrackClip,saveVideoProject,selectAudioTrackClip,selectTimelineClip,splitTimelineAt,toggleTimelineClipMute,trimTimelineClip,undoVideoEdit,useVideoSession,videoCanRedo,videoCanUndo,videoIsDirty,videoIsEdited} from '../../lib/video/session';
 import {clipDisplayName,isTitleClip,needsSourceFile} from '../../lib/video/titles';
 import {TitlePreview} from './TitlePreview';
 import {useTitlePlayback} from './useTitlePlayback';

@@ -11,7 +11,7 @@ const setup=()=>{clearStyleBuffer();S.resetVectorSession();S.createBlankVector(2
  S.addPath({...rectPath({x:0,y:0,w:50,h:50}),id:'a',style:{fill:'#ff0000',stroke:'#000000',strokeWidth:3,dashArray:[4,2],opacity:0.5}} as any,false);
  S.addPath({...rectPath({x:60,y:0,w:50,h:50}),id:'b',style:{fill:'#00ff00',stroke:'none',strokeWidth:1}} as any,false);
  const d=new CommandDispatcher();commands.forEach(s=>d.register(s));return d;};
-const st=(id:string)=>S.getVectorSession().doc.paths.find(p=>p.id===id)!.style;
+const st=(id:string)=>S.getVectorSession().doc.paths.find(p=>p.id===id)!.style!;
 test('copy then paste style: one undo step, geometry untouched, agent origin refused, paste disabled until a copy',async()=>{
  const d=setup();S.select(['b']);
  await assert.rejects(d.runCommand('vector.pasteStyle',{},{origin:'test'}));
