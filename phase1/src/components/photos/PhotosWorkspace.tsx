@@ -25,6 +25,7 @@ import {ZOOM_PRESETS,isZoomPresetActive,zoomPresetLabel} from '../../lib/photos/
 import {setActiveMedia,useMedia} from '../../lib/media';
 import {PhotosFilmstrip} from './PhotosFilmstrip';
 import {PhotosSurvey} from './PhotosSurvey';
+import {PhotosShortcutsDialog} from './PhotosShortcutsDialog';
 import {beginPhotoGesture,endPhotoGesture,previewPhotoSettings,commitPhotoSettings} from '../../lib/photos/studioSession';
 import {bandForHue,nearestCurvePoint,targetCurveDelta,targetSliderDelta} from '../../lib/photos/targeting';
 import {sanitizeCurvePoints,type CurveChannel} from '../../lib/photos/curves';
@@ -196,6 +197,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
    else if(e.key==='l'||e.key==='L')setLightsOut(!lightsOut);
    else if(e.key==='[')rotatePhoto(item.name,-1);
    else if(e.key===']')rotatePhoto(item.name,1);
+   else if(e.key==='?')panelStateStore.set('photos.shortcuts',!panelStateStore.get('photos.shortcuts',false));
    else if(e.key==='+'||e.key==='=')zoomTo(scale*1.25);
    else if(e.key==='-'||e.key==='_')zoomTo(scale/1.25);
   };
@@ -529,5 +531,6 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
   </div>
   <PhotosFilmstrip active={item.name} onSurvey={names=>{setSurveyNames(names);setSurvey(true);}}/>
   {survey&&<PhotosSurvey names={surveyNames} live={surveyNames.length===0} items={media.items} onPick={n=>{setSurvey(false);setActiveMedia(n);}} onClose={()=>setSurvey(false)}/>}
+  <PhotosShortcutsDialog/>
  </section>;
 }

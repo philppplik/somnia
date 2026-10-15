@@ -561,3 +561,16 @@ state and the list lives in a ref. View-only.
 Coverage: the light/dark gallery leg sets a fast tempo, starts the
 show, watches the active photo advance twice, then stops and checks
 it stays parked (`test-results/ds-photos-slideshow-{light,dark}.png`).
+
+## Keyboard reference (P115)
+
+"Keyboard shortcuts" in the strip menu - or the ? key anywhere in
+the studio - opens one dialog listing every photos shortcut that is
+actually wired (ratings, flags, navigation, view, crop), grouped.
+The open state lives in panel state `photos.shortcuts`, so the menu
+entry and the key share it; the dialog closes via Escape/backdrop.
+Docs-only surface, no settings touched.
+
+Coverage: the light/dark gallery leg opens from the menu, checks
+representative rows, closes with Escape, re-opens with ? and closes
+with ? again (`test-results/ds-photos-shortcuts-{light,dark}.png`).

@@ -936,3 +936,25 @@ test('slideshow: autoplay advances through the filtered view on the chosen tempo
   await page.evaluate(async()=>{const p=await import('/src/store/panelStateStore.ts');p.panelStateStore.set('photos.slideshow',false);p.panelStateStore.set('photos.slideshowMs',4000);}); // leave no state behind
  }
 });
+
+test('keyboard reference: opens from the menu and the ? key, lists the wired shortcuts (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
+  await page.evaluate(async()=>{const p=await import('/src/store/panelStateStore.ts');p.panelStateStore.set('photos.shortcuts',false);}); // panel state persists via localStorage
+  await page.getByTestId('photos-filmstrip-menu').click();
+  await page.getByTestId('photos-filmstrip-shortcuts').click();
+  await expect(page.getByTestId('photos-shortcuts')).toBeVisible();
+  await expect(page.getByTestId('photos-shortcuts-row-stars')).toContainText('0'); // the wired 0-5 rating row
+  await expect(page.getByTestId('photos-shortcuts-row-lightsOut')).toContainText('L');
+  await page.keyboard.press('Escape'); // dialog closes
+  await expect(page.getByTestId('photos-shortcuts')).toHaveCount(0);
+  await page.keyboard.press('?'); // same overlay via the key
+  await expect(page.getByTestId('photos-shortcuts')).toBeVisible();
+  await page.screenshot({path:`test-results/ds-photos-shortcuts-${theme}.png`,fullPage:true});
+  await page.keyboard.press('?');
+  await expect(page.getByTestId('photos-shortcuts')).toHaveCount(0);
+ }
+});

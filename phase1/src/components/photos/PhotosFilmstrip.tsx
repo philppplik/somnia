@@ -84,6 +84,7 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
  const [splitDir,setSplitDir]=usePanelState<'vertical'|'horizontal'>('photos.splitDir','vertical');
  const [slide,setSlide]=usePanelState<boolean>('photos.slideshow',false);
  const [slideMs,setSlideMs]=usePanelState<number>('photos.slideshowMs',4000);
+ const [,setShortcuts]=usePanelState<boolean>('photos.shortcuts',false);
  const [previous,setPrevious]=usePanelState<string>('photos.previousPhoto',''); // last active photo, for one-click settings paste
  useEffect(()=>{if(active&&active!==lastActiveName){if(lastActiveName)setPrevious(lastActiveName);lastActiveName=active;}},[active,setPrevious]); // module-level: a ref would reset on the workspace remount
  const slidePhotos=useRef(photos);slidePhotos.current=photos;
@@ -271,6 +272,7 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
     <span className="flex flex-wrap gap-1">
      <Button variant="outline" size="compact" aria-pressed={infoOpen} onClick={()=>setInfoOpen(!infoOpen)} data-testid="photos-filmstrip-info-toggle">{t('photos.info.toggle')}</Button>
      <Button variant="outline" size="compact" aria-pressed={slide} onClick={()=>setSlide(!slide)} data-testid="photos-filmstrip-slideshow">{t('photos.slideshow')}</Button>
+     <Button variant="outline" size="compact" onClick={()=>{setMenuOpen(false);setShortcuts(true);}} data-testid="photos-filmstrip-shortcuts">{t('photos.keys.title')}</Button>
      {slide&&<NativeSelect value={String(slideMs)} aria-label={t('photos.slideshow.tempo')} title={t('photos.slideshow.tempo')} onChange={e=>setSlideMs(Number(e.currentTarget.value))} className="h-7" data-testid="photos-filmstrip-slideshow-ms">
       {[2000,4000,8000].map(ms=><option key={ms} value={ms}>{ms/1000} s</option>)}
      </NativeSelect>}
