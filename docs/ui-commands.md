@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1095 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1098 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -360,6 +360,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `design.zoomOut` | Design: Zoom out | View | design |  |
 | `design.zoomReset` | Design: Zoom to 100% | View | design |  |
 | `design.zoomSet` | Design: Set zoom | View | design |  |
+| `docs.open` | Open a studio docs link | Help | core |  |
 | `documents.align.center` | Centre | View | documents |  |
 | `documents.align.justify` | Justify | View | documents |  |
 | `documents.align.left` | Align left | View | documents |  |
@@ -695,6 +696,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `sheets.validationManage` | Delete one data validation rule of the sheet | Edit | sheets |  |
 | `sheets.view` | Zoom, gridlines, headings, zeros and formulas | View | sheets |  |
 | `sheets.whatif` | Run goal seek, scenarios or a data table | Edit | sheets |  |
+| `shell.focus.inspector` | Focus inspector | View | core | `Mod+Alt+W` |
 | `shell.rail.hide` | Hide rail icon | View | core |  |
 | `shell.rail.moveDown` | Move rail icon down | View | core |  |
 | `shell.rail.moveUp` | Move rail icon up | View | core |  |
@@ -791,6 +793,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `studio.design` | Switch to Design Studio | View | core | `Mod+7` |
 | `studio.documents` | Switch to Documents Studio | View | core | `Mod+2` |
 | `studio.interface` | Switch to Interface Studio | View | core |  |
+| `studio.next` | Switch to next studio | View | core | `Mod+Alt+S` |
 | `studio.photos` | Switch to Photos Studio | View | core | `Mod+9` |
 | `studio.sheets` | Switch to Sheets Studio | View | core | `Mod+3` |
 | `studio.slides` | Switch to Slides Studio | View | core | `Mod+4` |

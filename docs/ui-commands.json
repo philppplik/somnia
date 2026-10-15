@@ -4778,6 +4778,19 @@
       "hasEnabled": true
     },
     {
+      "id": "docs.open",
+      "title": "Open a studio docs link",
+      "category": "Help",
+      "source": "core",
+      "keywords": [
+        "docs",
+        "documentation",
+        "help",
+        "link"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.align.center",
       "title": "Centre",
       "category": "View",
@@ -8260,6 +8273,20 @@
       "hasEnabled": true
     },
     {
+      "id": "shell.focus.inspector",
+      "title": "Focus inspector",
+      "category": "View",
+      "source": "core",
+      "shortcut": "Mod+Alt+W",
+      "keywords": [
+        "focus",
+        "inspector",
+        "panel",
+        "properties"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "shell.rail.hide",
       "title": "Hide rail icon",
       "category": "View",
@@ -9478,6 +9505,21 @@
       "title": "Switch to Interface Studio",
       "category": "View",
       "source": "core",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
+      "id": "studio.next",
+      "title": "Switch to next studio",
+      "category": "View",
+      "source": "core",
+      "shortcut": "Mod+Alt+S",
+      "keywords": [
+        "cycle",
+        "next",
+        "studio",
+        "switch"
+      ],
       "allowInInput": true,
       "hasEnabled": true
     },
