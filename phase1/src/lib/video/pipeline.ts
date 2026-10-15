@@ -1,7 +1,7 @@
 /** Worker-side media pipeline: probe, capability scan and multi-clip timeline export on mediabunny + WebCodecs. No UI imports. */
 import {ALL_FORMATS,AudioSample,AudioSampleSink,AudioSampleSource,BufferSource,BufferTarget,CanvasSink,CanvasSource,Input,Mp4OutputFormat,Output,QUALITY_HIGH,QUALITY_LOW,QUALITY_MEDIUM,WebMOutputFormat,getFirstEncodableAudioCodec,getFirstEncodableVideoCodec} from 'mediabunny';
 import type {AudioCodec,VideoCodec} from 'mediabunny';
-import {sanitizeExportOptions,type VideoExportOptions,type VideoFormat} from './recipe';
+import {cappedFps,sanitizeExportOptions,type VideoExportOptions,type VideoFormat} from './recipe';
 import {clipFadeGain,clipRanges,fadeInOf,fadeOf,fadeOutOf,flipOf,isFreeze,isImageClip,speedOf,timelineDuration,type ClipRange,type TimelineClip} from './timeline';
 import {audioEnvelope,duckGainAt,type AudioClip} from './audioTrack';
 import {WindowMixer} from './mixer';
@@ -110,6 +110,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
   const outW=Math.max(2,Math.round(first.width*opts.scale/2)*2),outH=Math.max(2,Math.round(first.height*opts.scale/2)*2);
   const encQuality=opts.quality==='medium'?QUALITY_MEDIUM:opts.quality==='low'?QUALITY_LOW:QUALITY_HIGH;
   if(opts.scale!==1)steps.push(`Resolution scaled to ${outW}×${outH}.`);
+  if(opts.fps)steps.push(`Frame rate capped at ${opts.fps} fps.`);
   if(opts.quality!=='high')steps.push(`Encoder quality: ${opts.quality}.`);
   for(const n of imageNames){
    const bytes=sources[n];
@@ -215,7 +216,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
    if(!s){const{input}=inputs.get(ranges[i].clip.source)!;const track=(await input.getVideoTracks())[0];s=new CanvasSink(track,{width:outW,height:outH,fit:'contain',poolSize:3});videoSinks.set(i,s);}
    return s;
   };
-  const fpsOf=(i:number)=>{const c=ranges[i].clip;if(isTitleClip(c)||isImageClip(c))return first.fps&&first.fps>1?first.fps:30;const f=inputs.get(c.source)!.probe.video!.fps;return f&&f>1?f:30;};
+  const fpsOf=(i:number)=>{const c=ranges[i].clip;if(isTitleClip(c)||isImageClip(c)||isFreeze(c))return cappedFps(first.fps,opts.fps);const f=inputs.get(c.source)!.probe.video!.fps;return cappedFps(f,opts.fps);};
   let titlesRendered=false;
   // One scratch canvas per clip index for the card side of a dissolve; keyed redraws skip static frames.
   const cards=new Map<number,{canvas:OffscreenCanvas;ctx:OffscreenCanvasRenderingContext2D;key:string}>();

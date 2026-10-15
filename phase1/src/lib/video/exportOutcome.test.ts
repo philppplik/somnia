@@ -37,13 +37,13 @@ test('export options default to original/high, clamp to presets and reach the en
  addBlankVideoProject('export-opts.somnia-video');
  const item=getMedia().items.find(i=>i.name===getMedia().active)!;await openVideo(item);addTitleClip(item.name,0);
  try{
-  assert.deepEqual(getVideoSession(item.name)!.exportOptions,{scale:1,quality:'high'},'defaults');
+  assert.deepEqual(getVideoSession(item.name)!.exportOptions,{scale:1,quality:'high',fps:null},'defaults');
   setVideoExportOptions(item.name,{scale:0.5,quality:'medium'});
   setVideoExportOptions(item.name,{scale:0.7,quality:'ultra' as never});
-  assert.deepEqual(getVideoSession(item.name)!.exportOptions,{scale:1,quality:'high'},'junk values fall back field by field');
-  setVideoExportOptions(item.name,{scale:0.25,quality:'low'});
+  assert.deepEqual(getVideoSession(item.name)!.exportOptions,{scale:1,quality:'high',fps:null},'junk values fall back field by field');
+  setVideoExportOptions(item.name,{scale:0.25,quality:'low',fps:null});
   assert.equal(await runVideoExport(item.name),'exported');
-  assert.deepEqual(seen,{scale:0.25,quality:'low'},'the engine receives the chosen options');
+  assert.deepEqual(seen,{scale:0.25,quality:'low',fps:null},'the engine receives the chosen options');
  }finally{closeVideo(item.name);closeMedia(item.name);}
 });
 

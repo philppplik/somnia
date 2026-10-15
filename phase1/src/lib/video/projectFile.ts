@@ -14,7 +14,7 @@ export const VIDEO_PROJECT_VERSION=2;
 /** Versions this build reads: 1 (clips only) and 2 (+ audio track). */
 export const VIDEO_PROJECT_READ_VERSIONS=[1,2];
 
-interface VideoProjectFile{version:number;app:'somnia-video';format?:VideoFormat;scale?:number;quality?:string;clips:unknown[];audio?:unknown[]}
+interface VideoProjectFile{version:number;app:'somnia-video';format?:VideoFormat;scale?:number;quality?:string;fps?:number|null;clips:unknown[];audio?:unknown[]}
 
 /** Stable identity of the edit list for dirty tracking. Ids are included: a split changes them, and that IS an edit. */
 export const clipsSignature=(clips:TimelineClip[],audioClips:AudioClip[]=[])=>JSON.stringify([
@@ -24,7 +24,7 @@ export const clipsSignature=(clips:TimelineClip[],audioClips:AudioClip[]=[])=>JS
 
 /** The project file for one timeline. Deterministic (same timeline → same bytes), so tests and diffs stay readable. */
 export function serializeVideoProject(clips:TimelineClip[],audioClips:AudioClip[],format:VideoFormat,exportOptions:VideoExportOptions=DEFAULT_EXPORT_OPTIONS):string{
- const file:VideoProjectFile={version:VIDEO_PROJECT_VERSION,app:'somnia-video',format,scale:exportOptions.scale,quality:exportOptions.quality,clips:clips.map(c=>
+ const file:VideoProjectFile={version:VIDEO_PROJECT_VERSION,app:'somnia-video',format,scale:exportOptions.scale,quality:exportOptions.quality,fps:exportOptions.fps,clips:clips.map(c=>
   isTitleClip(c)
    ?{id:c.id,kind:'title',out_s:c.out_s,crossfade_s:c.crossfade_s??0,title:c.title}
    :c.kind==='image'
@@ -65,7 +65,7 @@ export function parseVideoProject(text:string):{clips:TimelineClip[];audioClips:
   return[{id:id(o.id),source:o.source,in_s:num(o.in_s),out_s:num(o.out_s),at:num(o.at),gain:num(o.gain,1),muted:o.muted===true,duck:num(o.duck),fadeIn:num(o.fadeIn),fadeOut:num(o.fadeOut)}];
  });
  // Durations are unknown here (sources may not be open); sanitize still clamps fades and title shapes. Clips re-clamp on the next edit once sources are probed.
- return{clips:sanitizeClips(clips,{}),audioClips:sanitizeAudioClips(audioClips,{}),format:f.format==='mp4'||f.format==='webm'?f.format:DEFAULT_FORMAT,exportOptions:sanitizeExportOptions({scale:typeof f.scale==='number'?f.scale:undefined,quality:f.quality as VideoExportOptions['quality']})};
+ return{clips:sanitizeClips(clips,{}),audioClips:sanitizeAudioClips(audioClips,{}),format:f.format==='mp4'||f.format==='webm'?f.format:DEFAULT_FORMAT,exportOptions:sanitizeExportOptions({scale:typeof f.scale==='number'?f.scale:undefined,quality:f.quality as VideoExportOptions['quality'],fps:typeof f.fps==='number'?f.fps:null})};
 }
 
 /** The download name for a project's save: keeps `<name>.video-project`, maps a bare video file to `<base>.video-project`. */

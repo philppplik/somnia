@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {sniffVideo,VIDEO_FILE} from './format';
-import {exportName} from './recipe';
+import {cappedFps,exportName,sanitizeExportOptions} from './recipe';
 import {clipFadeGain,clipRanges,fadeInOf,fadeOutOf,flipOf,fullClip,isFreeze,isNeutralTimeline,locate,moveClip,rippleDelete,sanitizeClips,setClipEdge,setClipFades,setClipSpeed,sliceTimeline,splitAt,timelineDuration,type TimelineClip} from './timeline';
 import {probeVideo} from './pipeline';
 import {addTimelineClip,closeVideo,deleteTimelineClip,exportVideo,getVideoSession,moveTimelineClip,openVideo,resetTimeline,runVideoExport,setTimelineClipGain,setVideoEngineFactory,setVideoFormat,splitTimelineAt,toggleTimelineClipMute,trimTimelineClip} from './session';
@@ -266,4 +266,17 @@ test('timeline: freeze frame shape, sanitize, split, trim and slicing',()=>{
  assert.deepEqual([sliced[0].in_s,sliced[0].out_s,sliced[0].freeze],[0,2,2]);
  // a frozen clip is an edit
  assert.equal(isNeutralTimeline([clean],'a.mp4',10),false);
+});
+
+test('recipe: export fps cap sanitizes and caps without upsampling',()=>{
+ assert.deepEqual(sanitizeExportOptions({fps:30}).fps,30);
+ assert.equal(sanitizeExportOptions({fps:23}).fps,null,'unsupported rates fall back to source');
+ assert.equal(sanitizeExportOptions({fps:null}).fps,null);
+ assert.equal(sanitizeExportOptions(undefined).fps,null,'default keeps the native rate');
+ assert.equal(cappedFps(60,30),30,'cap lowers the rate');
+ assert.equal(cappedFps(24,30),24,'never upsamples');
+ assert.equal(cappedFps(29.97,30),29.97,'fractional native rate survives');
+ assert.equal(cappedFps(null,30),30,'unknown source falls back to the cap');
+ assert.equal(cappedFps(null,null),30,'unknown both falls back to 30');
+ assert.equal(cappedFps(50,null),50,'no cap keeps native');
 });

@@ -207,6 +207,11 @@ export function VideoControls({name}:{name:string}){
       {(['high','medium','low'] as const).map(q=><option key={q} value={q}>{t(`video.exportQuality.${q}`)}</option>)}
      </NativeSelect>
     </label>
+    <label>{t('video.exportFps')}
+     <NativeSelect className={`${field} mt-1`} value={String(s.exportOptions.fps??0)} onChange={e=>setVideoExportOptions(name,{fps:Number(e.target.value)||null})} data-testid="video-export-fps">
+      {[0,24,25,30,50,60].map(f=><option key={f} value={f}>{f===0?t('video.exportFpsSource'):t('video.exportFpsCap',{fps:f})}</option>)}
+     </NativeSelect>
+    </label>
    </div>
    <div className="grid grid-cols-2 gap-2">
     <label>{t('video.exportRangeFrom')}
