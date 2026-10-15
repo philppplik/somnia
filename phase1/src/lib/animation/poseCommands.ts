@@ -1,17 +1,30 @@
 import type {CommandSpec} from '../commandSpec';
 import {animationSession} from './session';
-import {findComp,findLayer,type PropValue} from './model';
+import {findComp,findLayer,type Composition,type PropValue} from './model';
+import {frameToTick,snapToFrame} from './time';
+import {EASE_PRESETS} from './graph';
 import {EditError,type Edit} from './edit';
 import {layerSetIds} from './layerSet';
 import {evaluate} from './interpolate';
-import {snapToFrame} from './time';
 import {MAX_POSES,MAX_POSE_LAYERS,MAX_POSE_NAME,POSE_PROPS,poseId,type PoseLayer,type PoseSet} from './poseModel';
 /** Pose library: the transform (position, scale, rotation, opacity) of several layers at the playhead, saved by name in the document and applied back later. Own file so the big command array keeps cheap type inference. */
 const expected=(m:string):never=>{throw Object.assign(new Error(m),{expected:true});};
 const same=(a:PropValue,b:PropValue)=>typeof a==='number'||typeof b==='number'?a===b:a[0]===b[0]&&a[1]===b[1];
+export const MAX_TRANSITION_FRAMES=600;
 const round=(n:number)=>Math.round(n*100)/100;
 /** Value `amount` percent of the way from `cur` to `goal`. */
 export const blend=(cur:PropValue,goal:PropValue,amount:number):PropValue=>typeof cur==='number'&&typeof goal==='number'?round(cur+(goal-cur)*amount/100):[round(cur[0]+(goal[0]-cur[0])*amount/100),round(cur[1]+(goal[1]-cur[1])*amount/100)] as PropValue;
+/** Edits that bring the layers of `pose` to the pose at tick `t` (optionally keyed, optionally blended). `found` counts pose layers that exist, `locked` those that are locked. */
+export function poseEdits(c:Composition,pose:PoseSet,t:number,keys:boolean,amount:number):{edits:Edit[];found:number;locked:number}{
+ const tk=snapToFrame(t,c.fps),edits:Edit[]=[];let found=0,locked=0;
+ for(const e of pose.layers){const l=findLayer(c,e.layer);if(!l||l.kind==='audio')continue;found++;if(l.locked){locked++;continue;}
+  for(const k of POSE_PROPS){const goal=e[k] as PropValue|undefined;if(goal===undefined)continue;const pr=l.transform[k],cur=evaluate(pr,t);
+   const v=amount===100?goal:blend(cur,goal,amount);const hasKey=pr.keys.some(x=>x.t===tk);
+   if(same(cur,v)&&!(keys&&!hasKey))continue;
+   if(keys&&!pr.keys.length)edits.push({type:'key.add',layer:l.id,prop:k,t});
+   edits.push({type:'prop.set',layer:l.id,prop:k,value:v,t});}}
+ return {edits,found,locked};
+}
 const dispatch=(e:Edit|Edit[])=>{try{animationSession().dispatch(e);}catch(x){if(x instanceof EditError)throw Object.assign(x,{expected:true});throw x;}};
 const idsParam={type:'array',items:{type:'string',minLength:1,maxLength:200},minItems:1,maxItems:MAX_POSE_LAYERS};
 export const poseSpecs=():CommandSpec<unknown,unknown>[]=>[
@@ -36,13 +49,7 @@ export const poseSpecs=():CommandSpec<unknown,unknown>[]=>[
    const s=animationSession(),d=s.document,c=d?findComp(d):undefined;if(!d||!c)return expected('No composition is open.');
    const pose=d.poses?.items.find(x=>x.id===p?.id);if(!pose)return expected('Unknown pose.');
    const amount=p.amount??100;if(!Number.isInteger(amount)||amount<1||amount>100)return expected('The amount must be a whole number from 1 to 100 percent.');
-   const t=s.getState().view.playhead,tk=snapToFrame(t,c.fps),edits:Edit[]=[];let found=0,locked=0;
-   for(const e of pose.layers){const l=findLayer(c,e.layer);if(!l||l.kind==='audio')continue;found++;if(l.locked){locked++;continue;}
-    for(const k of POSE_PROPS){const goal=e[k] as PropValue|undefined;if(goal===undefined)continue;const pr=l.transform[k],cur=evaluate(pr,t);
-     const v=amount===100?goal:blend(cur,goal,amount);const hasKey=pr.keys.some(x=>x.t===tk);
-     if(same(cur,v)&&!(p.keys&&!hasKey))continue;
-     if(p.keys&&!pr.keys.length)edits.push({type:'key.add',layer:l.id,prop:k,t});
-     edits.push({type:'prop.set',layer:l.id,prop:k,value:v,t});}}
+   const t=s.getState().view.playhead,{edits,found,locked}=poseEdits(c,pose,t,!!p.keys,amount);
    if(!found)return expected('None of the pose\u2019s layers exist in this composition any more.');
    if(!edits.length)return expected(locked===found?'The pose\u2019s layers are locked.':'The layers already match this pose.');
    dispatch(edits);return {changed:edits.length,skippedLocked:locked};
@@ -51,4 +58,21 @@ export const poseSpecs=():CommandSpec<unknown,unknown>[]=>[
   params:{type:'object',properties:{id:{type:'string',minLength:1,maxLength:80}},required:['id'],additionalProperties:false},
   enabled:()=>!!animationSession().document?.poses?.items.length,
   run:((p:{id:string})=>{const d=animationSession().document,cur=d?.poses?.items??[];if(!cur.some(x=>x.id===p?.id))return expected('Unknown pose.');dispatch({type:'poses.set',items:cur.filter(x=>x.id!==p.id)});}) as (p:unknown)=>unknown},
+ {id:'animation.pose.transition',title:'Key one pose to another over a number of frames',category:'Edit',level:'ui',keywords:['animation','pose','transition','pose to pose','keys','blend','between','ease'],
+  params:{type:'object',properties:{from:{type:'string',minLength:1,maxLength:80},to:{type:'string',minLength:1,maxLength:80},frames:{type:'integer',minimum:1,maximum:MAX_TRANSITION_FRAMES},ease:{enum:Object.keys(EASE_PRESETS)}},required:['from','to','frames'],additionalProperties:false},
+  enabled:()=>(animationSession().document?.poses?.items.length??0)>0,
+  run:((p:{from:string;to:string;frames:number;ease?:keyof typeof EASE_PRESETS})=>{
+   const s=animationSession(),d=s.document,c=d?findComp(d):undefined;if(!d||!c)return expected('No composition is open.');
+   const items=d.poses?.items??[],a=items.find(x=>x.id===p?.from),b=items.find(x=>x.id===p?.to);if(!a||!b)return expected('Unknown pose.');
+   if(a.id===b.id)return expected('Pick two different poses.');
+   if(!Number.isInteger(p.frames)||p.frames<1||p.frames>MAX_TRANSITION_FRAMES)return expected(`The transition must be 1 to ${MAX_TRANSITION_FRAMES} frames.`);
+   const ease=EASE_PRESETS[p.ease??'ease'];if(!ease)return expected('Unknown ease.');
+   const t0=snapToFrame(s.getState().view.playhead,c.fps),t1=t0+frameToTick(p.frames,c.fps);
+   if(t1>c.start+c.duration)return expected('The end pose would be after the end of the composition.');
+   const ra=poseEdits(c,a,t0,true,100),rb=poseEdits(c,b,t1,true,100);
+   if(!ra.found&&!rb.found)return expected('None of the poses\u2019 layers exist in this composition any more.');
+   if(!ra.edits.length&&!rb.edits.length)return expected('The poses\u2019 layers are locked.');
+   const easeEdits:Edit[]=[];for(const e of ra.edits)if(e.type==='prop.set')easeEdits.push({type:'key.interp',layer:e.layer,prop:e.prop,t:t0,interp:ease.interp,...('out' in ease?{out:ease.out,in:ease.in}:{})});
+   dispatch([...ra.edits,...rb.edits,...easeEdits]);return {keys:ra.edits.length+rb.edits.length,from:t0,to:t1};
+  }) as (p:unknown)=>unknown},
 ];

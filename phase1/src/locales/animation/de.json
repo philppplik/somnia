@@ -1085,5 +1085,11 @@
  "cmd.animation.pose.delete": "Gespeicherte Pose löschen",
  "animation.pose.amount": "Stärke (%)",
  "animation.pose.keys": "Keys setzen",
- "animation.pose.apply": "Pose anwenden"
+ "animation.pose.apply": "Pose anwenden",
+ "animation.pose.transition": "Pose zu Pose ...",
+ "animation.pose.to": "Zur Pose",
+ "animation.pose.frames": "Bilder",
+ "animation.pose.ease": "Easing",
+ "animation.pose.transitionGo": "Pose zu Pose keyen",
+ "cmd.animation.pose.transition": "Eine Pose über mehrere Bilder in eine andere keyen"
 }

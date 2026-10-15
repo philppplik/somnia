@@ -1085,5 +1085,11 @@
  "cmd.animation.pose.delete": "Eliminar una pose guardada",
  "animation.pose.amount": "Cantidad (%)",
  "animation.pose.keys": "Crear claves",
- "animation.pose.apply": "Aplicar pose"
+ "animation.pose.apply": "Aplicar pose",
+ "animation.pose.transition": "De pose a pose...",
+ "animation.pose.to": "A la pose",
+ "animation.pose.frames": "Fotogramas",
+ "animation.pose.ease": "Suavizado",
+ "animation.pose.transitionGo": "Crear claves de pose a pose",
+ "cmd.animation.pose.transition": "Crear claves de una pose a otra en varios fotogramas"
 }

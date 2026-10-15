@@ -1085,5 +1085,11 @@
  "cmd.animation.pose.delete": "Supprimer une pose enregistrée",
  "animation.pose.amount": "Intensité (%)",
  "animation.pose.keys": "Créer des clés",
- "animation.pose.apply": "Appliquer la pose"
+ "animation.pose.apply": "Appliquer la pose",
+ "animation.pose.transition": "De pose à pose...",
+ "animation.pose.to": "Vers la pose",
+ "animation.pose.frames": "Images",
+ "animation.pose.ease": "Interpolation",
+ "animation.pose.transitionGo": "Créer les clés de pose à pose",
+ "cmd.animation.pose.transition": "Créer les clés d’une pose à une autre sur plusieurs images"
 }

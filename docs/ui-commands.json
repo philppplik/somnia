@@ -2244,6 +2244,23 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.pose.transition",
+      "title": "Key one pose to another over a number of frames",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "between",
+        "blend",
+        "ease",
+        "keys",
+        "pose",
+        "pose to pose",
+        "transition"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.precomp.add",
       "title": "Add a composition as a layer",
       "category": "Insert",

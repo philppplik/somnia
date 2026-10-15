@@ -1017,3 +1017,22 @@ test('P219 pose apply: set keys on static and animated props, blend by amount, v
  assert.throws(()=>run(1,{id:'a',keys:true}),(e:any)=>/already match/.test(e.message));
  for(const bad of [0,101,2.5])assert.throws(()=>run(1,{id:'a',amount:bad}),(e:any)=>e.expected===true);
 });
+
+test('P220 pose to pose: keys pose A at the playhead and pose B N frames later with the ease, one undo step, errors',async()=>{
+ const {poseSpecs}=await import('./poseCommands');const {evaluate}=await import('./interpolate');
+ const run=(i:number,p?:unknown)=>poseSpecs()[i].run(p) as unknown;const T=poseSpecs().findIndex(x=>x.id==='animation.pose.transition');assert.ok(T>0);
+ const s=open();setAnimationSession(s);s.setView({playhead:0});s.dispatch({type:'layer.add',kind:'shape',id:'b'});
+ const L=()=>findComp(s.document!).layers.find(l=>l.id==='b')!;
+ run(0,{name:'A',layers:['b']});s.dispatch({type:'prop.set',layer:'b',prop:'position',value:[100,0],t:0});s.dispatch({type:'prop.set',layer:'b',prop:'rotation',value:40,t:0});run(0,{name:'B',layers:['b']});
+ s.dispatch({type:'prop.set',layer:'b',prop:'position',value:[0,0],t:0});s.dispatch({type:'prop.set',layer:'b',prop:'rotation',value:0,t:0});
+ s.setView({playhead:f(5)});const rev=s.document!.revision;
+ run(T,{from:'a',to:'b',frames:10,ease:'linear'});
+ const pk=L().transform.position.keys,rk=L().transform.rotation.keys;
+ assert.equal(pk.length,2);assert.equal(pk[0].t,f(5));assert.deepEqual(pk[0].v,[960,540]);assert.equal(pk[1].t,f(15));assert.deepEqual(pk[1].v,[100,0]);assert.equal(pk[0].interp,'linear');
+ assert.equal(rk.length,2);assert.equal(rk[1].v,40);assert.deepEqual(evaluate(L().transform.position,f(10)),[530,270]);
+ s.undo();assert.equal(L().transform.position.keys.length,0);assert.equal(L().transform.rotation.keys.length,0);
+ run(T,{from:'a',to:'b',frames:10});assert.equal(L().transform.position.keys[0].interp,'bezier');
+ s.undo();
+ for(const bad of [{from:'a',to:'a',frames:5},{from:'a',to:'nope',frames:5},{from:'a',to:'b',frames:0},{from:'a',to:'b',frames:601},{from:'a',to:'b',frames:600},{from:'a',to:'b',frames:5,ease:'nope'}])assert.throws(()=>run(T,bad),(e:any)=>e.expected===true||/must be|ease/i.test(e.message));
+ assert.ok(rev>=0);
+});

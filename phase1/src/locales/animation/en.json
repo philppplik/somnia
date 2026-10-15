@@ -1085,5 +1085,11 @@
  "cmd.animation.pose.delete": "Delete a saved pose",
  "animation.pose.amount": "Amount (%)",
  "animation.pose.keys": "Set keys",
- "animation.pose.apply": "Apply pose"
+ "animation.pose.apply": "Apply pose",
+ "animation.pose.transition": "Pose to pose...",
+ "animation.pose.to": "To pose",
+ "animation.pose.frames": "Frames",
+ "animation.pose.ease": "Ease",
+ "animation.pose.transitionGo": "Key pose to pose",
+ "cmd.animation.pose.transition": "Key one pose to another over a number of frames"
 }
