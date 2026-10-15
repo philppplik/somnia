@@ -17,7 +17,7 @@ import {LocalModelsRuntime} from './localModels';
 import {requiresExactInstalledTaskModel,taskModelChoice} from './taskRouting';
 import {localContextFor} from './settings';
 import {routedProvider,timedProvider} from './providerRouting';
-import {ProviderError} from './errors';
+import {AgentError,LocalTaskPreflightError,ProviderError,toAgentError,describeAgentError} from './errors';
 import {visionApplication,type VisionDestination} from './localVisionApplication';
 import {withAgentStudioContext,resolveAgentToolSet} from './studioContextAdapter';
 import type {AgentStudioContext} from './studioContextAdapter';
@@ -296,7 +296,7 @@ export const realCore:AgentCore={
   if(epoch!==generation){session?.cancel();session=null;sessionSerial++;textTransactions.clear();textProposalIds.clear();sheetsTransactions.clear();sheetsProposalIds.clear();sheetsProposalPaths.clear();sheetsProposalEngines.clear();proposals.clear();permissions.clear();appliedAgentProvenance.clear();documents.clear();transactions.clear();nativeIds.clear();mcpProposalMap.clear();syncMcpProposals();epoch=generation;}
   photoPreviews.clear();policy.revoke();syncDocuments();activeController=controller;
   void (async()=>{
-   if(taskChoice){const runtime=new LocalModelsRuntime();const inventory=await runtime.snapshot();controller.signal.throwIfAborted();if(inventory.inventoryError||inventory.state!=='running'||!requiresExactInstalledTaskModel(taskChoice.model,inventory.models.map(m=>m.id)))throw Error(t('local.task.missing',{model:taskChoice.model}));deliver({type:'provenance',provider:'ollama',model:taskChoice.model});}
+   if(taskChoice){const runtime=new LocalModelsRuntime();const inventory=await runtime.snapshot();controller.signal.throwIfAborted();if(inventory.state!=='running'||inventory.inventoryError)throw new LocalTaskPreflightError(taskChoice.model,'network');if(!requiresExactInstalledTaskModel(taskChoice.model,inventory.models.map(m=>m.id)))throw new LocalTaskPreflightError(taskChoice.model,'model-not-found');deliver({type:'provenance',provider:'ollama',model:taskChoice.model});}
 
    if(request.context.activeMedia){if(Object.hasOwn(currentFiles(),request.context.activeMedia))throw Error('A text buffer and media asset share this path. Close or rename one before using AI.');if(getPhoto(request.context.activeMedia))await preparePhoto(request.context.activeMedia,controller.signal);syncDocuments();}
    controller.signal.throwIfAborted();if(runId!==runGeneration)throw Error('Run was replaced.');
@@ -306,7 +306,7 @@ export const realCore:AgentCore={
     session=new AgentSession({provider:request.context.studio?withAgentStudioContext(withCustomPrompts(canRoute?routedProvider(route!,(id,model)=>createProvider(id,model),identity=>deliver({type:'provenance',...identity})):createProvider(requestProvider,requestModel),runPrompts),{...request.context.studio,documentRef:null,selectionSummary:'No selection',capabilities:[]}):withCustomPrompts(canRoute?routedProvider(route!,(id,model)=>createProvider(id,model),identity=>deliver({type:'provenance',...identity})):createProvider(requestProvider,requestModel),runPrompts),model:requestModel,onEvent:event=>{
      if(sessionEpoch!==epoch||sessionToken!==sessionSerial||controller.signal.aborted)return;
      if(event.type==='text')deliver({type:'text-delta',text:event.text});
-     else if(event.type==='notice')deliver({type:'error',message:event.message,code:event.code,retryable:event.retryable});
+     else if(event.type==='notice')deliver({type:'error',message:event.message,code:event.code,detail:event.detail,retryable:event.retryable});
      else if(event.type==='usage')deliver({type:'usage',...event.usage});
     }});if(previous)session.restore({...previous,projectId:session.projectId,messages:previous.messages.filter(m=>m.role==='user'||m.role==='assistant'&&!m.toolCalls?.length)});await session.prompt(request.prompt);if(session.status==='error')textTransactions.revokePending();if(session.status==='error')for(const id of sheetsProposalIds)if(sheetsTransactions.reject(id)){sheetsProposalIds.delete(id);sheetsProposalPaths.delete(id);sheetsProposalEngines.delete(id);}nativeRunLedger.record(ledgerRun,{phase:session.status==='error'?'failed':'done',history:0,readback:'unverified'});deliver({type:'done'});return;
    }
@@ -338,7 +338,7 @@ export const realCore:AgentCore={
     else if(event.type==='state'&&event.status==='running')deliver({type:'status',text:`Working on ${base.ref.path} · revision ${base.ref.revision}`});
     else if(event.type==='tool'){nativeRunLedger.record(ledgerRun,{phase:event.status==='running'?'tool-running':event.status==='completed'?'tool-completed':'tool-failed',target:base.ref,tool:event.call.name,history:0,readback:'unverified'});deliver({type:'status',text:`${event.call.name}: ${event.status}`});}
     else if(event.type==='usage')deliver({type:'usage',...event.usage});
-    else if(event.type==='notice')deliver({type:'error',message:event.message,code:event.code,retryable:event.retryable});
+    else if(event.type==='notice')deliver({type:'error',message:event.message,code:event.code,detail:event.detail,retryable:event.retryable});
     else if(event.type==='proposals'&&event.proposals.length){
      try{syncDocuments();const p=event.proposals[0];const native=transactions.propose(String(runId),base.ref,p.after);
       const set:ChangeSet={id:`${generation}-${runId}-${event.turnId}`,complete:true,provenance:p.provenance,files:[{path:p.path,kind:'edit',baseText:p.before,proposedText:p.after}]};
@@ -348,7 +348,7 @@ export const realCore:AgentCore={
    }});
    if(previous)session.restore({...previous,projectId:session.projectId,messages:previous.messages.filter(m=>m.role==='user'||m.role==='assistant'&&!m.toolCalls?.length)});
    await session.prompt(request.prompt);if(session.status==='error')textTransactions.revokePending();if(session.status==='error')for(const id of sheetsProposalIds)if(sheetsTransactions.reject(id)){sheetsProposalIds.delete(id);sheetsProposalPaths.delete(id);sheetsProposalEngines.delete(id);}nativeRunLedger.record(ledgerRun,{phase:session.status==='error'?'failed':'done',history:0,readback:'unverified'});deliver({type:'done'});
-  })().catch(e=>{nativeRunLedger.record(ledgerRun,{phase:'failed',history:0,readback:'unverified'});deliver({type:'error',message:e instanceof Error?e.message:String(e)});}).finally(()=>{if(activeController===controller)activeController=null;});
+  })().catch(e=>{nativeRunLedger.record(ledgerRun,{phase:'failed',history:0,readback:'unverified'});if(e instanceof ProviderError||e instanceof AgentError){const failure=toAgentError(e);deliver({type:'error',message:describeAgentError(failure),code:failure.code,detail:failure.detail,retryable:false});}else deliver({type:'error',message:e instanceof Error?e.message:String(e)});}).finally(()=>{if(activeController===controller)activeController=null;});
   return {cancel(){textTransactions.revokePending();for(const id of sheetsProposalIds)if(sheetsTransactions.reject(id)){sheetsProposalIds.delete(id);sheetsProposalPaths.delete(id);}controller.abort();session?.cancel();nativeRunLedger.record(ledgerRun,{phase:'stopped',history:0,readback:'unverified'});stopped=true;}};
  },
  async applyProposal(id,decisions){

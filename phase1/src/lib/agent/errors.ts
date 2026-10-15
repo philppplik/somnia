@@ -26,6 +26,14 @@ export class AgentError extends Error {
     super(message); this.name = 'AgentError';
   }
 }
+/** Host-owned saved task choice, never a provider body or inferred error message. */
+export class LocalTaskPreflightError extends AgentError {
+ readonly model:string;
+ constructor(model:string,detail:'network'|'model-not-found'){
+  super('provider-error',detail,'Saved local task model is unavailable.',false);
+  this.model=typeof model==='string'&&model.length>0&&model.length<=512&&!/[\u0000-\u001f\u007f]/.test(model)?model:'configured local model';
+ }
+}
 /** Maps an HTTP status (plus a coarse, body-derived hint) to the taxonomy. Never stores the body. */
 export function classifyHttp(status: number, hint: { tools?: boolean; routing?: boolean; quota?: boolean } = {}, prefix = 'OpenRouter request failed'): AgentError {
   const m = `${prefix} (HTTP ${status}).`;
@@ -66,6 +74,7 @@ export function toAgentError(error: unknown, ctx: { timedOut?: boolean; aborted?
 /** Honest, user-facing panel text: what happened, whether changes exist, what the user can do. */
 export function describeAgentError(e: AgentError): string {
   const none = 'No changes were applied.';
+  if(e instanceof LocalTaskPreflightError){const model=JSON.stringify(e.model);return e.detail==='model-not-found'?`Saved local task model ${model} is not installed. ${none} No cloud fallback. Review and pull the exact model in Settings > AI > Local Models first (no automatic download).`:`Could not check saved local task model ${model}: local inventory is unavailable. ${none} No cloud fallback. Check that Ollama is running and refresh Local Models in Settings > AI.`;}
   switch (e.detail) {
     case 'tool-unreconciled': return 'Tool permissions changed while work was running. Its output was withheld. A proposal or completed change may still exist. Review the current document and receipts before retrying.';
     case 'user': return `Agent turn stopped. ${none} Provider costs may still occur.`;
