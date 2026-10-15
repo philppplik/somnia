@@ -80,6 +80,8 @@ export interface StudioShellDef{
  inspector?:InspectorDef;
  tools?:readonly ToolDef[];
  statusSlots?:readonly StatusSlotDef[];
+ /** Pure-data docs links (lib/shell/docsLinks.ts). Opened only for https URLs on the shell host allowlist; invalid entries are dropped. */
+ docsLinks?:readonly import('./docsLinks').DocsLinkDef[];
  problems?:string;
  defaultLayout?:StudioLayout;
 }

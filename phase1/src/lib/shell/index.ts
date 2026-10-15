@@ -9,3 +9,4 @@ export * from './problemsProvider';
 export * from './panels';
 export * from './railIcons';
 export * from './studioContext';
+export * from './docsLinks';
