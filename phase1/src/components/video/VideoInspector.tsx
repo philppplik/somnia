@@ -220,6 +220,9 @@ export function VideoControls({name}:{name:string}){
    <span className="text-ink">{t('video.overlayClipTitle')}</span>
    <span className="truncate text-ink-3" data-testid="video-overlay-source">{selectedOverlay.kind==='title'?(selectedOverlay.title?.text??''):selectedOverlay.source}</span>
    {selectedOverlay.kind==='title'&&<label>{t('video.overlayText')}<NativeInput className={`${field} mt-1`} value={selectedOverlay.title?.text??''} onChange={e=>updateOverlayTitle(name,selectedOverlay.id,{text:e.target.value})} data-testid="video-overlay-text"/></label>}
+   {selectedOverlay.kind==='title'&&<label>{t('video.overlayBgAlpha',{percent:Math.round((selectedOverlay.title?.bgAlpha??1)*100)})}
+    <NativeInput type="range" className="accent-[var(--accent)]" min={0} max={1} step={0.05} value={selectedOverlay.title?.bgAlpha??1} onChange={e=>updateOverlayTitle(name,selectedOverlay.id,{bgAlpha:Number(e.target.value)})} data-testid="video-overlay-bg-alpha"/>
+   </label>}
    {selectedOverlay.kind==='video'&&<label>{t('video.trimStart')}<NativeInput type="number" className={`${field} mt-1`} min={0} step={0.1} value={selectedOverlay.in_s} onChange={e=>setOverlayInS(name,selectedOverlay.id,Number(e.target.value),`oins:${selectedOverlay.id}`)} data-testid="video-overlay-in"/></label>}
    <div className="grid grid-cols-2 gap-2">
     <label>{t('video.audioAt')}<NativeInput type="number" className={`${field} mt-1`} min={0} step={0.1} value={selectedOverlay.at} onChange={e=>moveOverlayClip(name,selectedOverlay.id,Number(e.target.value),`omove:${selectedOverlay.id}`)} data-testid="video-overlay-at"/></label>
