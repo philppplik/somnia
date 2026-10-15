@@ -40,8 +40,9 @@ const stripNs = (n: string) => (n.startsWith('svg:') ? n.slice(4) : n);
 const STYLE_PROPS = ['fill', 'stroke', 'stroke-width', 'fill-opacity', 'stroke-opacity', 'fill-rule', 'stroke-linecap', 'stroke-linejoin', 'stroke-miterlimit', 'stroke-dasharray', 'stroke-dashoffset', 'opacity', 'display', 'visibility'];
 /** Editor-group ids are bounded and plain; anything else is ignored so the content just loads ungrouped. */
 const groupIdOf = (v: string | undefined): string | undefined => (v !== undefined && /^[A-Za-z0-9_.:-]{1,64}$/.test(v) ? v : undefined);
-const PLAIN_ATTRS = new Set([...STYLE_PROPS, 'id', 'style', 'transform', 'd', 'x', 'y', 'width', 'height', 'rx', 'ry', 'cx', 'cy', 'r', 'x1', 'y1', 'x2', 'y2', 'points', 'viewBox', 'version', 'preserveAspectRatio', 'xmlns', 'data-name', 'data-vs-group', 'data-vs-group-name', 'data-vs-locked', 'data-vs-guides', 'pathLength', 'xml:space', 'baseProfile']);
+const PLAIN_ATTRS = new Set([...STYLE_PROPS, 'id', 'style', 'transform', 'd', 'x', 'y', 'width', 'height', 'rx', 'ry', 'cx', 'cy', 'r', 'x1', 'y1', 'x2', 'y2', 'points', 'viewBox', 'version', 'preserveAspectRatio', 'xmlns', 'data-name', 'data-vs-group', 'data-vs-group-name', 'data-vs-locked', 'data-vs-guides', 'clip-rule', 'pathLength', 'xml:space', 'baseProfile']);
 const ALLOWED = new Set(['svg', 'g', 'path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon']);
+const CLIP_SHAPES = new Set(['path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon']);
 const IGNORED_NO_RENDER = new Set(['title', 'desc', 'metadata']); // contain no geometry; harmless to drop
 
 function declared(el: XmlElement, err: (m: string) => void): Record<string, string> {
@@ -217,6 +218,14 @@ export function importSvg(source: string, opts: ImportOptions = {}): ImportResul
   base = multiply(base, rootTf ?? IDENTITY);
 
   const grads = createGradientResolver(root, bad, info);
+  const clips = new Map<string, XmlElement>();
+  const collectClips = (e: XmlElement, n = 0): void => {
+    if (n > LIMITS.maxDepth) return;
+    if (stripNs(e.name) === 'clipPath') { if (e.attrs.id !== undefined && clips.size < 500 && !clips.has(e.attrs.id)) clips.set(e.attrs.id, e); return; }
+    for (const c of e.children) collectClips(c, n + 1);
+  };
+  collectClips(root);
+  let clipC = 0;
   const paths: VectorPath[] = [];
   const groupNames: Record<string, string> = {};
   let nodeCount = 0, segCount = 0, idc = 0, compoundC = 0;
@@ -228,7 +237,8 @@ export function importSvg(source: string, opts: ImportOptions = {}): ImportResul
       if (/^on/i.test(a)) bad(`event attribute "${a}" is not allowed`);
       else if (/href$/i.test(a)) bad(`reference attribute "${a}" is not supported`);
       else if (a.startsWith('xmlns') || a === 'xml:space' || PLAIN_ATTRS.has(a) || a.startsWith('inkscape:') || a.startsWith('sodipodi:')) continue;
-      else if (a === 'clip-path' || a === 'mask' || a === 'filter') bad(`attribute "${a}" is not supported`);
+      else if (a === 'clip-path') continue; // resolved in walk()
+      else if (a === 'mask' || a === 'filter') bad(`attribute "${a}" is not supported`);
       else if (a === 'class') bad('CSS classes are not supported');
       else info(`attribute "${a}" ignored`);
     }
@@ -238,8 +248,9 @@ export function importSvg(source: string, opts: ImportOptions = {}): ImportResul
     if (depth > LIMITS.maxDepth) fail(`element depth exceeds ${LIMITS.maxDepth}`);
     const name = stripNs(el.name);
     if (IGNORED_NO_RENDER.has(name)) return;
+    if (name === 'clipPath') return; // read up front, validated where it is used
     if (!ALLOWED.has(name)) {
-      if (name === 'defs' && el.children.every(isGradientElement)) return; // gradients are read up front
+      if (name === 'defs' && el.children.every((c) => isGradientElement(c) || stripNs(c.name) === 'clipPath')) return; // gradients are read up front
       if (isGradientElement(el)) return;
       bad(`<${name}> is not supported`);
       return;
@@ -252,14 +263,41 @@ export function importSvg(source: string, opts: ImportOptions = {}): ImportResul
     const world = multiply(m, tf ?? IDENTITY);
     const style = cascade(parent, d, bad, grads.has);
     const label = el.attrs['inkscape:label'] ?? el.attrs['data-name'] ?? el.attrs.id;
+    // clip-path: the element becomes a clipping group (editor group + mask shape); groups do not nest
+    let clipEl: XmlElement | undefined;
+    const clipAttr = el.attrs['clip-path'];
+    if (clipAttr !== undefined && clipAttr.trim() !== 'none') {
+      const mm = /^url\(\s*#([A-Za-z][\w:.-]*)\s*\)$/.exec(clipAttr.trim());
+      clipEl = mm ? clips.get(mm[1]) : undefined;
+      if (!clipEl) bad(`clip-path "${clipAttr.slice(0, 60)}" does not reference a supported <clipPath>`);
+      else if (group !== undefined || name === 'svg') { bad('clip-path inside a group (or on the root) is not supported: clipping groups do not nest'); clipEl = undefined; }
+    }
+    const clipGroup = clipEl ? `clip${++clipC}` : undefined;
+    const appendClip = (gid: string | undefined): void => {
+      if (!clipEl || gid === undefined) return;
+      const cm = parseTransform(clipEl.attrs.transform);
+      if (cm === null) { bad(`malformed transform "${clipEl.attrs.transform}" on <clipPath>`); return; }
+      if (clipEl.attrs.clipPathUnits !== undefined && clipEl.attrs.clipPathUnits !== 'userSpaceOnUse') { bad('clip-path with clipPathUnits="objectBoundingBox" is not supported'); return; }
+      if (clipEl.attrs['clip-path'] !== undefined) { bad('a <clipPath> that is itself clipped is not supported'); return; }
+      const kids = clipEl.children.filter((c) => !IGNORED_NO_RENDER.has(stripNs(c.name)));
+      if (kids.length !== 1 || !CLIP_SHAPES.has(stripNs(kids[0].name))) { bad('a <clipPath> must contain exactly one shape (path, rect, circle, ellipse, line, polyline or polygon)'); return; }
+      const before = paths.length;
+      walk(kids[0], { ...DEFAULT_STYLE, dashArray: [] }, multiply(world, cm ?? IDENTITY), undefined, depth + 1, false, 1, gid);
+      const made = paths.splice(before);
+      if (!made.length) { bad('the <clipPath> shape has no drawable contour'); return; }
+      const evenodd = kids[0].attrs['clip-rule'] === 'evenodd';
+      for (const p of made) { p.clip = true; p.style = { fill: 'none', stroke: 'none', ...(evenodd ? { fillRule: 'evenodd' as const } : {}) }; }
+      paths.push(...made);
+    };
     if (name === 'g' || name === 'svg') {
       if (name === 'svg' && depth > 0) { bad('nested <svg> is not supported'); return; }
-      const own = name === 'g' ? groupIdOf(el.attrs['data-vs-group']) : undefined;
+      const own = name === 'g' ? (groupIdOf(el.attrs['data-vs-group']) ?? clipGroup) : undefined;
       const gname = own !== undefined ? el.attrs['data-vs-group-name']?.trim().slice(0, 80) : undefined;
       if (own !== undefined && gname && !groupNames[own]) groupNames[own] = gname;
       const lay = layer ?? (depth === 1 && name === 'g' && own === undefined ? label : undefined);
       const inner = { ...style, opacity: 1 };
       for (const c of el.children) walk(c, inner, world, lay, depth + 1, hidden, groupOpacity * style.opacity, own ?? group);
+      appendClip(own);
       return;
     }
     let segments: Segment[] | null = null;
@@ -316,13 +354,14 @@ export function importSvg(source: string, opts: ImportOptions = {}): ImportResul
       if (Object.keys(st).length) p.style = { ...st, dashArray: st.dashArray ? [...st.dashArray] : undefined } as Partial<Style>;
       if (p.style && p.style.dashArray === undefined) delete p.style.dashArray;
       if (layer !== undefined) p.layer = layer;
-      if (group !== undefined) p.group = group;
+      if (clipGroup !== undefined) p.group = clipGroup; else if (group !== undefined) p.group = group;
       if (compound) p.compound = compound;
       if (baseName !== undefined) p.name = baseName;
       if (hidden) p.hidden = true;
       if (locked) p.locked = true;
       paths.push(p);
     }
+    appendClip(clipGroup);
   }
   walk(root, { ...DEFAULT_STYLE, dashArray: [] }, base, undefined, 0, false, 1);
   if (strict && diags.some((x) => x.severity === 'error')) {

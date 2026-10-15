@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1083 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1085 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -1056,6 +1056,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `vector.importSvg` | Add SVG to vector page | Insert | vector |  |
 | `vector.inspect` | Inspect vector document | Tools | vector |  |
 | `vector.joinPaths` | Join vector paths | Edit | vector |  |
+| `vector.makeClip` | Make clipping mask | Edit | vector |  |
 | `vector.moveGuide` | Add, move or remove a ruler guide | Edit | vector |  |
 | `vector.moveNode` | Move vector node | Edit | vector |  |
 | `vector.moveSelection` | Move selected vector paths | Edit | vector |  |
@@ -1063,6 +1064,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `vector.openSvg` | Open vector SVG source | Project | vector |  |
 | `vector.outlineStroke` | Outline vector stroke | Edit | vector |  |
 | `vector.redo` | Redo vector edit | Edit | vector |  |
+| `vector.releaseClip` | Release clipping mask | Edit | vector |  |
 | `vector.renameGroup` | Rename vector group | Edit | vector |  |
 | `vector.renamePath` | Rename vector path | Edit | vector |  |
 | `vector.reorder` | Arrange vector paths | Edit | vector |  |

@@ -24,7 +24,16 @@ export function exportAreaDoc(doc:VectorDocument,selection:readonly string[],are
  const chosen:VectorPath[]=area==='selection'?selectedPaths(doc,selection):doc.paths.filter(p=>!p.hidden);
  if(!chosen.length)throw Error(area==='selection'?'Select at least one object to export':'Nothing visible to export');
  let box:Box|null=null;
- for(const p of chosen){const b=visualBox(p);if(!b)continue;box=box?{minX:Math.min(box.minX,b.minX),minY:Math.min(box.minY,b.minY),maxX:Math.max(box.maxX,b.maxX),maxY:Math.max(box.maxY,b.maxY)}:b;}
+ // inside a clipping group only the part within the mask counts; the mask shape itself is not painted
+ const masks=new Map<string,Box>();
+ for(const p of chosen)if(p.clip&&p.group!==undefined){const b=pathBox(p);if(b){const m=masks.get(p.group);masks.set(p.group,m?{minX:Math.min(m.minX,b.minX),minY:Math.min(m.minY,b.minY),maxX:Math.max(m.maxX,b.maxX),maxY:Math.max(m.maxY,b.maxY)}:b);}}
+ const withContent=new Set(chosen.filter(p=>!p.clip&&p.group!==undefined).map(p=>p.group));
+ for(const p of chosen){
+  const mk=p.group!==undefined&&withContent.has(p.group)?masks.get(p.group):undefined;
+  if(p.clip&&mk)continue;
+  let b=visualBox(p);if(!b)continue;
+  if(mk){b={minX:Math.max(b.minX,mk.minX),minY:Math.max(b.minY,mk.minY),maxX:Math.min(b.maxX,mk.maxX),maxY:Math.min(b.maxY,mk.maxY)};if(b.maxX<b.minX||b.maxY<b.minY)continue;}
+  box=box?{minX:Math.min(box.minX,b.minX),minY:Math.min(box.minY,b.minY),maxX:Math.max(box.maxX,b.maxX),maxY:Math.max(box.maxY,b.maxY)}:b;}
  if(!box)throw Error('Nothing to export');
  const x0=box.minX-padding,y0=box.minY-padding,w=r3(box.maxX-box.minX+2*padding),h=r3(box.maxY-box.minY+2*padding);
  if(w<=0||h<=0)throw Error('The export area is empty');

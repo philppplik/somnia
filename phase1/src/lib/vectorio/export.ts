@@ -43,10 +43,40 @@ export function exportSvg(doc: VectorDocument, opts: ExportOptions = {}): string
     for (const g of pruned.gradients) for (const l of gradientSvg(g)) emit(2, l);
     emit(1, '</defs>');
   }
+  // mask shapes (one object per clipping group) become <clipPath>; the group references it
+  const clipIds = new Map<string, string>();
+  const clipBlocks: string[][] = [];
+  {
+    const byGroup = new Map<string, { ds: string[]; evenodd: boolean }>();
+    const seenC = new Map<string, number>();
+    for (const p of pruned.paths) {
+      if (!p.clip || p.group === undefined) continue;
+      const d = serializeContour(p.nodes, p.closed);
+      if (!d) continue;
+      let e = byGroup.get(p.group);
+      if (!e) { e = { ds: [], evenodd: (p.style?.fillRule ?? 'nonzero') === 'evenodd' }; byGroup.set(p.group, e); }
+      if (p.compound !== undefined && seenC.has(p.compound)) { e.ds[seenC.get(p.compound)!] += d; continue; }
+      if (p.compound !== undefined) seenC.set(p.compound, e.ds.length);
+      e.ds.push(d);
+    }
+    const hasMembers = new Set(pruned.paths.filter((p) => !p.clip && p.group !== undefined).map((p) => p.group));
+    for (const [g, e] of byGroup) {
+      if (!hasMembers.has(g) || e.ds.length !== 1) continue; // a mask without content (or with several objects) is not exported as a mask
+      const id = `vs-clip-${g.replace(/[^A-Za-z0-9_-]/g, '_')}`;
+      clipIds.set(g, id);
+      clipBlocks.push([`<clipPath id="${id}">`, `  <path d="${e.ds[0]}"${e.evenodd ? ' clip-rule="evenodd"' : ''}/>`, '</clipPath>']);
+    }
+  }
+  if (clipBlocks.length) {
+    emit(1, '<defs>');
+    for (const b of clipBlocks) for (const l of b) emit(2, l);
+    emit(1, '</defs>');
+  }
   // merge compound subpaths into one element, keep paint order of the first subpath
   const elements: { p: VectorPath; d: string }[] = [];
   const byCompound = new Map<string, number>();
   for (const p of pruned.paths) {
+    if (p.clip && p.group !== undefined && clipIds.has(p.group)) continue;
     const d = serializeContour(p.nodes, p.closed);
     if (!d) continue;
     const ci = p.compound !== undefined ? byCompound.get(p.compound) : undefined;
@@ -66,7 +96,7 @@ export function exportSvg(doc: VectorDocument, opts: ExportOptions = {}): string
     }
     if (p.group !== openGroup) {
       closeGroup();
-      if (p.group !== undefined) { openGroup = p.group; const gn = doc.groupNames?.[p.group]; emit(p.layer !== undefined ? 2 : 1, `<g data-vs-group="${escapeAttr(p.group)}"${gn ? ` data-vs-group-name="${escapeAttr(gn)}"` : ''}>`); }
+      if (p.group !== undefined) { openGroup = p.group; const gn = doc.groupNames?.[p.group]; emit(p.layer !== undefined ? 2 : 1, `<g data-vs-group="${escapeAttr(p.group)}"${gn ? ` data-vs-group-name="${escapeAttr(gn)}"` : ''}${clipIds.has(p.group) ? ` clip-path="url(#${clipIds.get(p.group)})"` : ''}>`); }
     }
     const attrs = [`d="${d}"`, ...styleAttrs(p.style)];
     if (p.name !== undefined) attrs.unshift(`data-name="${escapeAttr(p.name)}"`);

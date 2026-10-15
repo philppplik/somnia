@@ -51,6 +51,8 @@ export interface VectorPath {
   hidden?: true;
   /** Extension. Locked paths cannot be selected or edited in the editor. Exported as `data-vs-locked="1"`. */
   locked?: true;
+  /** Extension. This path is the mask shape of its `group`: not painted, it clips the other members. Needs `group`; exported as `<clipPath>` + `clip-path` on the group. */
+  clip?: true;
 }
 
 export interface GradientStop { offset: number; color: string; opacity: number }

@@ -135,6 +135,7 @@ export function VectorCanvas(){
   if(mod&&e.key.toLowerCase()==='z'){e.preventDefault();e.shiftKey?redo():undo();return;}
   if(mod&&e.key.toLowerCase()==='y'){e.preventDefault();redo();return;}
   if(mod&&e.key.toLowerCase()==='d'){e.preventDefault();duplicateSelection();return;}
+  if(mod&&e.key==='7'){e.preventDefault();void executeCommand(e.altKey?'vector.releaseClip':'vector.makeClip');return;}
   if(mod&&e.key.toLowerCase()==='g'){e.preventDefault();void executeCommand(e.shiftKey?'vector.ungroup':'vector.group');return;}
   if(mod&&e.key.toLowerCase()==='a'){e.preventDefault();select(s.doc.paths.filter(p=>!p.hidden).map(p=>p.id));return;}
   if(e.key==='Enter'&&s.tool==='pen'){e.preventDefault();finishPen(false);return;}

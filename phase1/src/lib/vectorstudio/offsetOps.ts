@@ -4,6 +4,7 @@ import {objectsOf} from './transforms';
 import {booleanContours,type Pt} from './polyBoolean';
 import {strokePieces,type Run} from './strokeBand';
 import {newId} from './shapes';
+import {refuseClipped} from './clip';
 
 export const OFFSET_LIMITS=Object.freeze({min:0.01,max:500});
 type Obj={ids:string[];paths:VectorPath[]};
@@ -30,6 +31,7 @@ function replace(doc:VectorDocument,index:Map<string,number>,plan:{obj:Obj;made:
 /** Grow (distance > 0) or shrink (< 0) every selected closed shape by `distance` document units, as the union with / difference from a round-joined band around its outline.
  *  Curves are flattened first, so the result is polygonal. Compound shapes (holes) offset together. Refuses open shapes and an empty result. */
 export function offsetSelection(doc:VectorDocument,ids:readonly string[],distance:number):{doc:VectorDocument;ids:string[]}{
+  refuseClipped(doc,ids,'combine or offset it');
   if(!Number.isFinite(distance)||Math.abs(distance)<OFFSET_LIMITS.min||Math.abs(distance)>OFFSET_LIMITS.max)throw new RangeError(`distance must be ${OFFSET_LIMITS.min}-${OFFSET_LIMITS.max} (negative shrinks)`);
   const {objs,index}=objects(doc,ids),plan:{obj:Obj;made:VectorPath[]}[]=[];
   for(const obj of objs){
@@ -46,6 +48,7 @@ export function offsetSelection(doc:VectorDocument,ids:readonly string[],distanc
 /** Turn the stroke of every selected shape into a filled shape (joins, caps and miter limit as drawn). A closed shape that also has a fill keeps its fill as a stroke-less
  *  shape below the outline. Objects without a visible stroke are refused. Curves are flattened, so the outline is polygonal. */
 export function outlineStroke(doc:VectorDocument,ids:readonly string[]):{doc:VectorDocument;ids:string[]}{
+  refuseClipped(doc,ids,'combine or offset it');
   const {objs,index}=objects(doc,ids),plan:{obj:Obj;made:VectorPath[]}[]=[];
   for(const obj of objs){
     const first=obj.paths[0],st=first.style??{},stroke=st.stroke??'none',width=st.strokeWidth??1;

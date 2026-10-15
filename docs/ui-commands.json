@@ -12759,6 +12759,13 @@
       "hasEnabled": true
     },
     {
+      "id": "vector.makeClip",
+      "title": "Make clipping mask",
+      "category": "Edit",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
       "id": "vector.moveGuide",
       "title": "Add, move or remove a ruler guide",
       "category": "Edit",
@@ -12803,6 +12810,13 @@
     {
       "id": "vector.redo",
       "title": "Redo vector edit",
+      "category": "Edit",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
+      "id": "vector.releaseClip",
+      "title": "Release clipping mask",
       "category": "Edit",
       "source": "vector",
       "hasEnabled": true

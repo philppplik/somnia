@@ -37,3 +37,9 @@ test('area: exported SVG of a cropped area reimports to the same geometry, and s
 test('png: background flag is accepted and dimensions follow the area',()=>{
  assert.deepEqual(pngDimensions(212,162,2),{width:424,height:324});assert.equal(typeof renderPng,'function');
 });
+test('area: content of a clipping group is cropped to its mask',async()=>{
+ const {makeClip}=await import('./clip');
+ const a={...rectPath({x:0,y:0,w:300,h:300}),id:'a',style:{fill:'#ff0000',stroke:'none'}},m={...rectPath({x:50,y:60,w:100,h:40}),id:'m',style:{fill:'#00ff00',stroke:'none'}};
+ const d=makeClip({width:500,height:400,paths:[a,m]} as any,['a','m']),o=exportAreaDoc(d,[],'content');
+ assert.deepEqual([o.width,o.height],[100,40]);
+});

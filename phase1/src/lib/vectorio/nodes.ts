@@ -52,6 +52,7 @@ export function normalizeDoc(doc: VectorDocument): VectorDocument {
       if (p.name !== undefined) out.name = p.name;
       if (p.hidden) out.hidden = true;
       if (p.locked) out.locked = true;
+      if (p.clip && p.group !== undefined) out.clip = true;
       return out;
     }),
   };

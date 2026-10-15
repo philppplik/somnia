@@ -3,12 +3,14 @@ import {flatten} from './geometry';
 import {objectsOf} from './transforms';
 import {booleanContours,BOOL_OPS,type BoolOp,type Pt} from './polyBoolean';
 import {newId} from './shapes';
+import {refuseClipped} from './clip';
 export {BOOL_OPS,type BoolOp};
 /** Combines the selected objects into one new compound path.
  *  Objects are the visible selected shapes (a compound counts once), in paint order. Subtract cuts every object above the lowest one out of the lowest one;
  *  the other operations treat all objects alike. The result takes the style of the lowest object for subtract and of the topmost object otherwise,
  *  sits where the lowest selected object was, and is polygonal: curves are flattened first, so it is an approximation. Open shapes are refused. */
 export function applyBoolean(doc:VectorDocument,ids:readonly string[],op:BoolOp):{doc:VectorDocument;ids:string[]}{
+  refuseClipped(doc,ids,'combine or offset it');
   if(!(BOOL_OPS as readonly string[]).includes(op))throw Error('Unknown boolean operation');
   const objs=objectsOf(doc,ids,false);if(!objs||objs.length<2)throw Error('Select at least two shapes to combine them');
   const index=new Map(doc.paths.map((p,i)=>[p.id,i]));

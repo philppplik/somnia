@@ -15,6 +15,7 @@ export function splitPath(doc:VectorDocument,pathId:string,nodeId:string):{doc:V
  const at=doc.paths.findIndex(p=>p.id===pathId);if(at<0)throw new Error('Unknown path');
  const p=doc.paths[at],i=p.nodes.findIndex(n=>n.id===nodeId);if(i<0)throw new Error('Unknown node');
  if(p.compound!==undefined)throw new Error('Compound paths cannot be split');
+ if(p.clip)throw new Error('Release the clipping mask before you split its shape');
  const n=p.nodes.length;
  let pieces:VectorNode[][];
  if(p.closed){
@@ -38,6 +39,7 @@ export function splitPath(doc:VectorDocument,pathId:string,nodeId:string):{doc:V
  *  otherwise a straight segment connects them. The result keeps the lower path's position, style and name. */
 export function joinPaths(doc:VectorDocument,ids:readonly string[]):{doc:VectorDocument;id:string}{
  const sel=selectedPaths(doc,ids);
+ if(sel.some(p=>p.clip))throw new Error('Release the clipping mask before you join its shape');
  if(sel.length!==2)throw new Error('Select exactly two open paths');
  if(sel.some(p=>p.closed||p.compound!==undefined||p.nodes.length<2))throw new Error('Both paths must be open with at least two nodes');
  const [a,b]=sel;
