@@ -34,3 +34,25 @@ test('normalize: the command fails atomically while peaks are missing',async()=>
   assert.equal(getArrangementState().document.tracks[0].clips[0].gainDb,0,'rejection preserves the gain');
  }finally{off();resetArrangement();}
 });
+
+test('normalize selection: per-clip gains, atomic rejection on missing peaks or silence',async()=>{
+ const {emptyArrangement,newClip,newTrack,normalizeSelection}=await import('./arrangement');
+ const s=emptyArrangement();
+ const srcA={id:'a',name:'a.wav',frames:9600,sampleRate:48000,channels:2 as const};
+ const srcB={id:'b',name:'b.wav',frames:9600,sampleRate:48000,channels:2 as const};
+ s.sources.push(srcA,srcB);
+ s.tracks.push({...newTrack('t','T'),clips:[{...newClip('c1',srcA,0),length:4800},{...newClip('c2',srcB,4800),length:4800}]});
+ const peaksA=new Float32Array(200),peaksB=new Float32Array(200);
+ for(let c=0;c<100;c++){peaksA[c*2]=-0.5;peaksA[c*2+1]=0.5;peaksB[c*2]=-0.25;peaksB[c*2+1]=0.25;}
+ normalizeSelection(s,['c1','c2'],{a:peaksA,b:peaksB});
+ assert.equal(s.tracks[0].clips[0].gainDb,6);
+ assert.equal(s.tracks[0].clips[1].gainDb,12);
+ normalizeSelection(s,['c1'],{a:peaksA},-3);
+ assert.equal(s.tracks[0].clips[0].gainDb,3,'custom target');
+ s.tracks[0].clips[0].gainDb=0;s.tracks[0].clips[1].gainDb=0;
+ assert.throws(()=>normalizeSelection(s,['c1','c2'],{a:peaksA}),/peaks/);
+ assert.deepEqual(s.tracks[0].clips.map(c=>c.gainDb),[0,0],'missing peaks reject the whole batch');
+ assert.throws(()=>normalizeSelection(s,['c1','c2'],{a:peaksA,b:new Float32Array(200)}),/silent/);
+ assert.deepEqual(s.tracks[0].clips.map(c=>c.gainDb),[0,0],'a silent clip rejects the whole batch');
+ assert.throws(()=>normalizeSelection(s,[],{a:peaksA}),/No clips selected/);
+});

@@ -111,6 +111,13 @@ export function cutSessionRange(s:Arrangement,start:number,end:number,nextId:()=
  for(const m of s.markers)if(m.frame>=end)m.frame-=cut;
  if(s.loop){if(s.loop.start>=end)s.loop={start:s.loop.start-cut,end:s.loop.end-cut};else if(s.loop.end>start)s.loop=null;}
 }
+/** Per-clip normalize gains for a selection, two-pass: a missing peak or a silent clip rejects the whole batch unchanged. */
+export function normalizeSelection(s:Arrangement,ids:string[],peaks:Record<string,Float32Array>,targetDb=0):void{
+ if(!ids.length||ids.some(v=>typeof v!=='string'))throw Error('No clips selected');
+ const jobs=ids.map(cid=>{const {clip}=findArrangeClip(s,cid);const source=s.sources.find(src=>src.id===clip.sourceId)!;const p=peaks[source.id];if(!p)throw Error('Source waveform peaks are not available yet');return{clip,source,p};});
+ const gains=jobs.map(j=>normalizeGainDb(clipRegionPeak(j.p,j.clip.offset,j.clip.length,Math.floor(j.source.frames*48000/j.source.sampleRate)),targetDb));
+ jobs.forEach((j,i)=>{j.clip.gainDb=gains[i];});
+}
 /** Deletes the given clips and closes their gaps on the same track: every later clip shifts left by the total deleted length that fully precedes it. Markers and the session length stay untouched. */
 export function rippleDeleteClips(s:Arrangement,ids:string[]){
  if(!ids.length||ids.some(v=>typeof v!=='string'))throw Error('No clips selected');
