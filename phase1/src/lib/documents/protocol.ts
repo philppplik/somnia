@@ -191,6 +191,7 @@ export type DocumentsRequest=
  |{id:number;kind:'setHfVariants';patch:HfVariantsPatch}
  |{id:number;kind:'setHeaderFooter';header?:string;footer?:string;pageNumber?:boolean;headerAlign?:HfAlign;footerAlign?:HfAlign;pageTotal?:boolean}
  |{id:number;kind:'insertTable';block:number;rows:number;cols:number}
+ |{id:number;kind:'textToTable';first:number;last:number}
  |{id:number;kind:'save';date?:string;author?:string}
  |{id:number;kind:'exportPdf';options?:PdfOptions;date?:string}
  |{id:number;kind:'exportFormat';ext:ExportExt}
@@ -230,6 +231,8 @@ export const MAX_PDF_BYTES=100*1024*1024;
 export const MIN_SCALE=0.1,MAX_SCALE=2;
 
 /** Row and column operations around the caret's table cell. */
+/** Most paragraphs one text-to-table conversion takes. */
+export const MAX_TEXT_TABLE_ROWS=500;
 export const TABLE_OPS=['row_above','row_below','delete_row','col_left','col_right','delete_col','merge_right','split_cell','merge_down','split_down','even_cols','sort_asc','sort_desc','table_to_text','delete_table'] as const;
 export type TableOp=typeof TABLE_OPS[number];
 

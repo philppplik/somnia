@@ -2713,6 +2713,46 @@ impl DocSession {
         self.pages = DocLayout::default();
         Ok(())
     }
+    /// Turns the plain paragraphs `first..=last` (at most 500) into a table, one row each, cells split at tabs (at most 10 columns).
+    /// Paragraphs with objects or a section break, and anything that is not a body paragraph, refuse.
+    fn do_text_to_table(&mut self, first: usize, last: usize) -> Result<(), String> {
+        if first > last || last >= self.doc.body.len() || last - first + 1 > 500 {
+            return Err("choose 1 to 500 paragraphs in the text".into());
+        }
+        if self.doc.body.len() >= 100_000 {
+            return Err("the document has too many blocks".into());
+        }
+        let mut lines: Vec<Vec<String>> = Vec::new();
+        for i in first..=last {
+            let Block::Para(p) = &*self.doc.body[i] else { return Err("only paragraphs can be turned into a table".into()) };
+            if p.section.is_some() || !p.object_offsets().is_empty() {
+                return Err("a paragraph with an object or a section break cannot be turned into a table".into());
+            }
+            lines.push(p.plain_text().split('\t').map(|x| x.trim().to_string()).collect());
+        }
+        let cols = lines.iter().map(|l| l.len()).max().unwrap_or(1);
+        if cols > 10 {
+            return Err("a table made from text has at most 10 columns".into());
+        }
+        let mut styles = self.doc.styles.clone();
+        Self::ensure_style(&mut styles, "TableGrid")?;
+        let mut table = wordcraft_doc::Table::new(lines.len(), cols, self.doc.last_section.text_width());
+        for (r, line) in lines.iter().enumerate() {
+            for (c, text) in line.iter().enumerate() {
+                if !text.is_empty() {
+                    table.rows[r].cells[c].blocks = vec![wordcraft_doc::para_block(wordcraft_doc::Paragraph::with_text(text, wordcraft_doc::props::CharProps::default()))];
+                }
+            }
+        }
+        self.doc.styles = styles;
+        self.doc.body.splice(first..=last, [Arc::new(Block::Table(table))]);
+        // A table never ends the body: a paragraph always follows it.
+        if !matches!(self.doc.body.get(first + 1).map(|x| &**x), Some(Block::Para(_))) {
+            self.doc.body.insert(first + 1, wordcraft_doc::para_block(wordcraft_doc::Paragraph::new()));
+        }
+        self.pages = DocLayout::default();
+        Ok(())
+    }
     /// The story id a section's default header (`footer == false`) or footer points at, for the first section.
     fn hf_story(&self, footer: bool) -> Option<u32> {
         let (_, sect) = self.doc.sections().into_iter().next()?;
@@ -4052,6 +4092,10 @@ impl DocSession {
     pub fn edit_table(&mut self, block: usize, op: &str) -> Result<(), JsValue> {
         self.do_table_edit(block, op).map_err(|e| js_err(&e))
     }
+    /// Replaces the body paragraphs `first..=last` with a table: one row per paragraph, cells split at tabs.
+    pub fn text_to_table(&mut self, first: usize, last: usize) -> Result<(), JsValue> {
+        self.do_text_to_table(first, last).map_err(|e| js_err(&e))
+    }
     /// Inserts an empty table (`rows` 1-20, `cols` 1-10) after the top-level block holding `block`.
     pub fn insert_table(&mut self, block: usize, rows: usize, cols: usize) -> Result<(), JsValue> {
         self.do_insert_table(block, rows, cols).map_err(|e| js_err(&e))
@@ -4707,6 +4751,29 @@ mod tests {
         for bad in [r#"{"rowHeight":{"rule":"exact"}}"#, r#"{"rowHeight":{"rule":"exact","value":0}}"#, r#"{"rowHeight":{"rule":"exact","value":2000}}"#, r#"{"rowHeight":{"rule":"auto","value":5}}"#, r#"{"rowHeight":{"rule":"x"}}"#, r#"{"rowHeight":5}"#, r#"{"allRows":true}"#, r#"{"rowHeight":{"rule":"exact","value":10,"extra":1}}"#] {
             assert!(s.do_set_table_layout(blk, bad).is_err(), "{bad}");
         }
+    }
+    #[test]
+    fn text_to_table_splits_at_tabs_and_refuses_unsuitable_paragraphs() {
+        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
+        let (o1, o2) = (s.para_at(1).unwrap().text.clone(), s.para_at(2).unwrap().text.clone());
+        let (n0, t0) = (s.doc.body.len(), s.doc.body.iter().filter(|b| matches!(&***b, Block::Table(_))).count());
+        assert!(s.do_text_to_table(2, 1).is_err() && s.do_text_to_table(0, 9999).is_err());
+        assert!(s.do_text_to_table(2, 3).is_err(), "a table block is not text");
+        s.do_insert(0, 0, "a\tb\tc\td\te\tf\tg\th\ti\tj\tk").unwrap();
+        let before = wordcraft_docx::write(&s.doc).unwrap();
+        assert!(s.do_text_to_table(0, 0).is_err(), "eleven columns are too many");
+        assert_eq!(wordcraft_docx::write(&s.doc).unwrap(), before, "a refusal changes nothing");
+        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
+        s.do_insert(1, 0, "x\ty\t").unwrap();
+        s.do_text_to_table(1, 2).unwrap();
+        assert_eq!((s.doc.body.len(), s.doc.body.iter().filter(|b| matches!(&***b, Block::Table(_))).count()), (n0 - 1, t0 + 1));
+        // The new table sits before the fixture's own one: row 0 = x, y, rest of paragraph 1; row 1 = paragraph 2 and two empty cells.
+        let cell = |s: &DocSession, k: usize| s.para_at(CELL_BASE + k).map(|p| p.text.clone());
+        assert_eq!((cell(&s, 0), cell(&s, 1), cell(&s, 2)), (Some("x".into()), Some("y".into()), Some(o1.trim().to_string())));
+        assert_eq!((cell(&s, 3), cell(&s, 4), cell(&s, 5)), (Some(o2.trim().to_string()), Some(String::new()), Some(String::new())));
+        assert!(s.paginate() >= 1);
+        let re = DocSession::from_bytes(&s.save().unwrap()).unwrap();
+        assert_eq!(cell(&re, 0), Some("x".into()));
     }
     #[test]
     fn table_sort_orders_rows_by_column_and_table_to_text_converts() {

@@ -101,6 +101,7 @@ export class DocumentsEngine{
  async setTableLayout(block:number,patch:import('./protocol').TableLayoutPatch):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'setTableLayout',block,patch}))).document;}
  async hfVariantsState():Promise<import('./protocol').HfVariantsState>{return(await this.call('hfVariants',id=>({id,kind:'hfVariantsState'}))).state;}
  async setHfVariants(patch:import('./protocol').HfVariantsPatch):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'setHfVariants',patch}))).document;}
+ async textToTable(first:number,last:number):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'textToTable',first,last}))).document;}
  async insertTable(block:number,rows:number,cols:number):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'insertTable',block,rows,cols}))).document;}
  async editTable(block:number,op:import('./protocol').TableOp):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'tableEdit',block,op}))).document;}
  async snapshot():Promise<number>{return(await this.call('snapshot',id=>({id,kind:'snapshot'}))).snap;}

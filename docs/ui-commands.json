@@ -5431,6 +5431,17 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.table.fromText",
+      "title": "Convert selected text to a table",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.table.insert",
       "title": "Insert table",
       "category": "View",

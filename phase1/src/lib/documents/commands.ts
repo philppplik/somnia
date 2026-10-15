@@ -23,7 +23,7 @@ import {insertPageBreak,setParagraphOptions,setProperties,setTabStops} from './s
 import {parsePdfPages,checkParaPatch,PARA_FLAG_KEYS,propertiesProblem,tabsProblem} from './protocol';
 import {addComment,commentSelection,deleteComment,goToComment,readComments,replyComment,resolveComment} from './session';
 import {commentProblem,HIGHLIGHTS,linkProblem,type HighlightName} from './protocol';
-import {setTrackChanges,resolveChange,resolveAllChanges,changeAtCaret,setCharLook,setCharSpacing,setCharScale,setLineRule,setImageWrap,setImageCrop,setProofing,setShowHidden,changeCase,addToDictionary,copyFormatting,pasteFormatting,clearFormatting,hasTextSelection,setHighlight,setLink,toggleVertAlign} from './session';
+import {textToTable,setTrackChanges,resolveChange,resolveAllChanges,changeAtCaret,setCharLook,setCharSpacing,setCharScale,setLineRule,setImageWrap,setImageCrop,setProofing,setShowHidden,changeCase,addToDictionary,copyFormatting,pasteFormatting,clearFormatting,hasTextSelection,setHighlight,setLink,toggleVertAlign} from './session';
 import {documentsExportReady,patchDocumentsExportUi,requestDocumentsExportFormat,requestDocumentsExportPdf,requestDocumentsSaveCopy} from './exportBridge';
 /**
  * Documents studio commands. Registered while the Documents canvas is mounted (registerDocumentsCommands),
@@ -304,6 +304,7 @@ export function registerDocumentsCommands(){
   add('documents.table.merge_down','Merge with cell below',async()=>{await editTable('merge_down');},inCell),
   add('documents.table.split_down','Split vertically merged cell',async()=>{await editTable('split_down');},inCell),
   add('documents.table.even_cols','Make all columns the same width',async()=>{await editTable('even_cols');},inCell),
+  add('documents.table.fromText','Convert selected text to a table',async()=>{await textToTable();},()=>ready()&&!!getDocumentsState().caret),
   add('documents.table.sort_asc','Sort table rows A to Z by this column',async()=>{await editTable('sort_asc');},inCell),
   add('documents.table.sort_desc','Sort table rows Z to A by this column',async()=>{await editTable('sort_desc');},inCell),
   add('documents.table.table_to_text','Convert table to text',async()=>{await editTable('table_to_text');},inCell),

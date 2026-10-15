@@ -2,7 +2,7 @@ import {scrollToPage} from './scrollPage';
 import {commentAuthor} from './author';
 import {addUserWord,savedUserWords} from './userWords';
 import {capturePaint,paintIsEmpty,type Painted} from './formatPainter';
-import type {ProofIssue,ReviewState,ReviewChange} from './protocol';
+import {MAX_TEXT_TABLE_ROWS,type ProofIssue,type ReviewState,type ReviewChange} from './protocol';
 import {setStyleList} from './styles';
 import {stylePatchProblem,STYLE_ID_RE,tocProblem,isListKind,listOptionsProblem,type ListStyleId} from './protocol';
 import {imageCropProblem,imageWrapProblem,type ImageWrap,type ImageAlign,tableLayoutProblem,SECTION_BREAKS,hfVariantsProblem,HF_ALIGNS,propertiesProblem,linkProblem,commentProblem,type CommentItem,validHfText,type HeaderFooterState,checkFormatPatch,checkParaPatch,MAX_HF_CHARS,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch,type ImageOp,type PageSetupPatch,type PageSetupState,pageSetupProblem,type TableStyle,type TableStyleScope,tableStyleProblem,MIN_COL_PT,MAX_COL_PT,imageProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGES} from './protocol';
@@ -720,6 +720,18 @@ async function doEditTable(op:TableOp){
 export const editTable=(op:TableOp)=>run(()=>doEditTable(op));
 
 /** Insert an empty table (and an empty paragraph after it) below the caret's paragraph, or below the table when the caret is in a cell. One undo step; the caret goes into the first cell. */
+/** Turns the selected paragraphs into a table: one row per paragraph, cells split at tabs. One undo step; the caret goes into the first cell. */
+export const textToTable=()=>run(async()=>{
+ const c=getDocumentsState().caret;if(!c)throw new Error('Select the paragraphs to turn into a table.');goalX=null;
+ const n=norm(c);const first=n.s.block,last=n.e.block;
+ if(first>=CELL_BASE||last>=CELL_BASE)throw new Error('Text inside a table cannot be turned into a table.');
+ if(last-first+1>MAX_TEXT_TABLE_ROWS)throw new Error(`Choose at most ${MAX_TEXT_TABLE_ROWS} paragraphs.`);
+ const blocks=getDocumentsState().blocks;
+ for(let i=first;i<=last;i++){const b=blocks.find(x=>x.index===i);if(!b||b.kind!=='para'||!b.editable||b.text===undefined)throw new Error('Only plain paragraphs can be turned into a table.');}
+ await structural(eng=>eng.textToTable(first,last),{block:c.block,off:c.head},async eng=>{
+  const b=(await eng.blocks()).find(x=>x.kind==='cell'&&x.table===first&&x.row===0&&x.cell===0&&x.editable);if(!b)throw new Error('The new table has no editable cell.');return{block:b.index,off:0};
+ });
+});
 export const insertTable=(rows:number,cols:number)=>run(async()=>{
  if(!Number.isInteger(rows)||!Number.isInteger(cols)||rows<1||rows>MAX_NEW_TABLE_ROWS||cols<1||cols>MAX_NEW_TABLE_COLS)throw new Error(`A new table has 1-${MAX_NEW_TABLE_ROWS} rows and 1-${MAX_NEW_TABLE_COLS} columns.`);
  const c=getDocumentsState().caret;if(!c)throw new Error('Place the caret where the table should go.');goalX=null;
