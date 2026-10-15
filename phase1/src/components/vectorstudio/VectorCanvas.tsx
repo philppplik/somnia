@@ -12,6 +12,7 @@ import {buildShape,newId,DEFAULT_SHAPE_STYLE,type ShapeKind} from '../../lib/vec
 import {openSvgDialog} from '../../lib/vectorstudio/open';
 import {PathLayer,GradientDefs} from './render';
 import {togglePathSelection} from './tools/operations';
+import {selectionSvg,pasteSvgText} from '../../lib/vectorstudio/clipboard';
 import {studioContextStore} from '../../lib/shell/studioContext';
 import {getVectorSession,subscribeVector} from '../../lib/vectorstudio/session';
 import {VectorToolbar} from './VectorToolbar';
@@ -114,6 +115,10 @@ export function VectorCanvas(){
   if(e.ctrlKey||e.metaKey){const r=ref.current!.getBoundingClientRect();const mx=e.clientX-r.left,my=e.clientY-r.top;const z=Math.min(32,Math.max(0.05,s.zoom*Math.exp(-e.deltaY*0.0015)));
    setView(z,{x:mx-(mx-s.pan.x)/s.zoom*z,y:my-(my-s.pan.y)/s.zoom*z});}
   else setView(s.zoom,{x:s.pan.x-e.deltaX,y:s.pan.y-e.deltaY});};
+ const inField=(e:{target:EventTarget})=>{const tag=(e.target as HTMLElement).tagName;return tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT';};
+ /* Clipboard access only through the browser's copy/cut/paste events (a user gesture); nothing reads the clipboard on its own. */
+ const onCopy=(e:React.ClipboardEvent,cut:boolean)=>{if(inField(e))return;const g=getVectorSession(),svg=selectionSvg(g.doc,g.selection);if(!svg)return;e.preventDefault();e.clipboardData.setData('text/plain',svg);if(cut)deleteSelection();};
+ const onPaste=(e:React.ClipboardEvent)=>{if(inField(e))return;const text=e.clipboardData.getData('text/plain');if(text&&pasteSvgText(text))e.preventDefault();};
  const onKey=(e:React.KeyboardEvent)=>{
   shiftHeld.current=e.shiftKey;const mod=e.ctrlKey||e.metaKey;const tag=(e.target as HTMLElement).tagName;if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT')return;
   if(mod&&e.key.toLowerCase()==='z'){e.preventDefault();e.shiftKey?redo():undo();return;}
@@ -141,7 +146,7 @@ export function VectorCanvas(){
  const penPath:VectorPath|null=pen.length?{id:'pen-draft',closed:false,nodes:hover&&drag?.kind!=='pen-handle'?[...pen,{id:'pen-ghost',x:hover.x,y:hover.y,kind:'corner'}]:pen,style:{fill:'none',stroke:'#2563eb',strokeWidth:1.5/s.zoom}}:null;
  return <main className="center" aria-label={t('vector.title')}><VectorExportSetup/><div className="workspace"><section className="code-pane" aria-label={t('vector.title')}>
   <FileTabs/><VectorToolbar onFit={fit}/>
-  <div ref={wrap} tabIndex={0} onKeyDown={onKey} onKeyUp={e=>{shiftHeld.current=e.shiftKey;}} onWheel={onWheel} className="relative min-h-0 flex-1 overflow-hidden bg-[color:var(--surface-2,#eef0f4)] outline-none" data-testid="vector-canvas" data-tool={s.tool}>
+  <div ref={wrap} tabIndex={0} onCopy={e=>onCopy(e,false)} onCut={e=>onCopy(e,true)} onPaste={onPaste} onKeyDown={onKey} onKeyUp={e=>{shiftHeld.current=e.shiftKey;}} onWheel={onWheel} className="relative min-h-0 flex-1 overflow-hidden bg-[color:var(--surface-2,#eef0f4)] outline-none" data-testid="vector-canvas" data-tool={s.tool}>
    <svg ref={ref} className="absolute inset-0 size-full touch-none select-none" style={{cursor:cursorFor(s.tool)}} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={()=>setDrag(null)} onDoubleClick={onDouble} onContextMenu={e=>e.preventDefault()} aria-label={t('vector.canvas')} role="img">
     <defs><GradientDefs gradients={s.doc.gradients}/><pattern id="vs-checker" width="16" height="16" patternUnits="userSpaceOnUse"><rect width="16" height="16" fill="#fff"/><rect width="8" height="8" fill="#f1f2f5"/><rect x="8" y="8" width="8" height="8" fill="#f1f2f5"/></pattern></defs>
     <g transform={`translate(${s.pan.x} ${s.pan.y}) scale(${s.zoom})`}>

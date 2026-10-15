@@ -131,8 +131,8 @@ function mergeGradients(doc:VectorDocument,imported:VectorDocument,paths:VectorP
  return{paths:paths.map(p=>{const gid=gradientIdOf(p.style?.fill),to=gid?map.get(gid):undefined;return to?{...p,style:{...p.style,fill:`url(#${to})`}}:p;}),gradients:[...(doc.gradients??[]),...add]};
 }
 /** Imports SVG source into the open document as additional paths. Returns false on error (see session.error). */
-export function importSvgInto(source:string,opts:{strict?:boolean}={}):boolean{
- try{const r=importSvg(source,{strict:opts.strict??true});const gmap=new Map<string,string>(),add=remapPaths(r.doc.paths,state.doc,gmap);
+export function importSvgInto(source:string,opts:{strict?:boolean;offset?:number}={}):boolean{
+ try{const r=importSvg(source,{strict:opts.strict??true}),off=opts.offset??0;finite(off);const gmap=new Map<string,string>(),add=remapPaths(off?r.doc.paths.map(p=>translatePath(p,off,off)):r.doc.paths,state.doc,gmap);
   const merged=mergeGradients(state.doc,r.doc,add);
   commit({...state.doc,paths:[...state.doc.paths,...merged.paths],...(merged.gradients?{gradients:merged.gradients}:{}),...carryNames(state.doc.groupNames,r.doc.groupNames,gmap)},{selection:add.map(p=>p.id),diagnostics:r.warnings});return true;}
  catch(e){set({error:e instanceof Error?e.message:String(e),diagnostics:e instanceof SvgImportError?e.diagnostics:[]});return false;}}
