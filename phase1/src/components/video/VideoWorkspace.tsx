@@ -9,7 +9,7 @@ import {TitlePreview} from './TitlePreview';
 import {useTitlePlayback} from './useTitlePlayback';
 import {FilmstripStrip} from './FilmstripStrip';
 import {WaveformStrip} from './WaveformStrip';
-import {blendAt,clipFadeGain,clipRanges,cropOf,flipOf,isFreeze,isImageClip,locate,rotationOf,speedOf,timelineDuration,transitionOf,transitionVisual,type BlendEntry,type TimelineClip,type TransitionVisual} from '../../lib/video/timeline';
+import {blendAt,clipFadeGain,clipRanges,cropOf,flipOf,isFreeze,isImageClip,locate,rotationOf,speedOf,timelineDuration,transitionOf,transitionVisual,isReversed,type BlendEntry,type TimelineClip,type TransitionVisual} from '../../lib/video/timeline';
 import {shuttleFaster,shuttleSlower} from '../../lib/video/shuttle';
 import {audioClipDuration,audioEnvelope,audioTrackEnd,duckGainAt} from '../../lib/video/audioTrack';
 import {AudioLane} from './AudioLane';
@@ -162,7 +162,8 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
    applyPreviewTransform(el,e.range.clip,transVisual(e));
    // Speed applies in the preview too; preservesPitch off so the preview sounds like the export (resampled, shifted pitch).
    el.playbackRate=speedOf(e.range.clip)*rateMul;el.preservesPitch=false;
-   if(!playing||Math.abs(el.currentTime-e.sourceTime)>0.35)el.currentTime=e.sourceTime;
+   if(isReversed(e.range.clip)){if(!el.paused)el.pause();el.currentTime=e.sourceTime;}
+   else if(!playing||Math.abs(el.currentTime-e.sourceTime)>0.35)el.currentTime=e.sourceTime;
   }
   for(const e of blend){
    if(!isImageClip(e.range.clip))continue;
@@ -177,7 +178,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
  // Play/pause follows the transport for every slot that is part of the current blend.
  useEffect(()=>{
   for(const e of blend){
-   if(isTitleClip(e.range.clip)||isImageClip(e.range.clip)||isFreeze(e.range.clip))continue;
+   if(isTitleClip(e.range.clip)||isImageClip(e.range.clip)||isFreeze(e.range.clip)||isReversed(e.range.clip))continue;
    const el=slotOf(e.range.index).current;if(!el)continue;
    if(playing){if(el.paused)void el.play().catch(()=>{});}else el.pause();
   }
@@ -188,7 +189,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
    if(isTitleClip(e.range.clip)||isImageClip(e.range.clip))continue;
    const el=slotOf(e.range.index).current;if(!el)continue;
    const c=e.range.clip;
-   el.muted=muted;el.volume=isFreeze(c)?0:Math.min(1,Math.max(0,volume*e.audio*(c.muted?0:c.gain)*clipFadeGain(c,e.range.start,e.range.end,playhead)));
+   el.muted=muted;el.volume=isFreeze(c)||isReversed(c)?0:Math.min(1,Math.max(0,volume*e.audio*(c.muted?0:c.gain)*clipFadeGain(c,e.range.start,e.range.end,playhead)));
   }
  },[blend,volume,muted,playhead]);
  const advance=useCallback((fromIndex:number)=>{
@@ -197,6 +198,18 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
   else if(loop){setPlayhead(0);}
   else{playingRef.current=false;setPlaying(false);setPlayhead(duration);}
  },[ranges,duration,loop]);
+ // Reversed clips never play their element (the export walks the source backwards); a 100 ms timer steps the
+ // playhead instead, and the sync effect seeks the paused element to each reversed frame.
+ useEffect(()=>{
+  if(!playing)return;
+  const e=blend[blend.length-1];
+  if(!e||!isReversed(e.range.clip))return;
+  const iv=setInterval(()=>{
+   if(playhead+0.1>=e.range.end)advance(e.range.index);
+   else setPlayhead(playhead+0.1);
+  },100);
+  return()=>clearInterval(iv);
+ },[playing,blend,playhead,advance]);
  const pauseAll=useCallback(()=>{playingRef.current=false;setPlaying(false);slotA.current?.pause();slotB.current?.pause();},[]);
  // Voiceover: records the microphone while the preview plays, then drops the take on the audio track at the
  // playhead position where recording started. The recorder lives in a ref; only the on/off flag is state.

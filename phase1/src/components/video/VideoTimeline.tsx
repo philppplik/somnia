@@ -1,5 +1,5 @@
 import {useCallback,useEffect,useRef,type ReactNode} from 'react';
-import {clipRanges,fadeOf,speedOf,timelineDuration,type TimelineClip} from '../../lib/video/timeline';
+import {clipRanges,fadeOf,isReversed,speedOf,timelineDuration,type TimelineClip} from '../../lib/video/timeline';
 import {scrollLeftForTime,snapPointsFor,snapThresholdSeconds,snapTime,ZOOM_MAX,ZOOM_MIN} from '../../lib/video/zoom';
 import {clipDisplayName,needsSourceFile} from '../../lib/video/titles';
 import {useT} from '../../lib/useT';
@@ -117,6 +117,7 @@ export function VideoTimeline({clips,selectedId,position,missing,onSeek,onSelect
      <span className={`pointer-events-none absolute inset-x-1 ${renderStrip?'bottom-0.5':'top-1/2 -translate-y-1/2'} truncate text-[10px] ${renderStrip?'text-white [text-shadow:0_0_3px_rgba(0,0,0,.9)]':'text-ink'}`}>
       {clipDisplayName(r.clip,shortName(r.clip.source))}{speedOf(r.clip)!==1?` · ${speedOf(r.clip)}×`:''}{needsSourceFile(r.clip)&&ranges.filter(x=>x.clip.source===r.clip.source).length>1?` · ${ranges.filter(x=>x.clip.source===r.clip.source).findIndex(x=>x.clip.id===r.clip.id)+1}`:''}
       {r.clip.muted&&<VolumeX size={10} className="ml-1 inline-block align-[-1px]" aria-label={t('video.clipMuted')}/>}
+      {isReversed(r.clip)&&<span className="ml-1" aria-label={t('video.clipReversed')} data-testid="video-clip-reversed-badge">◂◂</span>}
       {gone&&<span className="ml-1 text-[var(--danger)]">{t('video.missingSource')}</span>}
      </span>
      {selected&&(['in','out'] as const).map(edge=>{

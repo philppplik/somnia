@@ -2,11 +2,11 @@ import {useMemo,useState} from 'react';
 import {Button} from '../ui/button';
 import {useT} from '../../lib/useT';
 import {useMedia} from '../../lib/media';
-import {addAudioTrackClip,addImageClip,addOverlayImage,addOverlayTitle,addOverlayVideo,importSubtitleText,addTimelineClip,addTimelineClipsFromDialog,cancelVideoExport,deleteAudioTrackClip,deleteTimelineClip,duplicateAudioTrackClip,moveAudioTrackClip,moveTimelineClip,resetTimeline,resizeAudioTrackClip,setAudioTrackClipDuck,setAudioTrackClipFades,setAudioTrackClipGain,toggleAudioTrackClipMute,setTimelineClipCrossfade,setTimelineClipFades,setTimelineClipFreeze,setTimelineClipGain,setTimelineClipSpeed,setVideoFormat,duplicateTimelineClip,replaceClipSource,selectTimelineClip,setImageClipLength,setTimelineClipCrop,setTimelineClipFlip,setTimelineClipRotation,setVideoExportOptions,setVideoExportRange,toggleTimelineClipMute,trimTimelineClip,useVideoSession,deleteOverlayClip,moveOverlayClip,selectOverlayClip,setOverlayDuration,setOverlayGain,setOverlayInS,setOverlayOpacity,setOverlayRect,updateOverlayTitle} from '../../lib/video/session';
+import {addAudioTrackClip,addImageClip,addOverlayImage,addOverlayTitle,addOverlayVideo,importSubtitleText,addTimelineClip,addTimelineClipsFromDialog,cancelVideoExport,deleteAudioTrackClip,deleteTimelineClip,duplicateAudioTrackClip,moveAudioTrackClip,moveTimelineClip,resetTimeline,resizeAudioTrackClip,setAudioTrackClipDuck,setAudioTrackClipFades,setAudioTrackClipGain,toggleAudioTrackClipMute,setTimelineClipCrossfade,setTimelineClipFades,setTimelineClipFreeze,setTimelineClipGain,setTimelineClipSpeed,setVideoFormat,duplicateTimelineClip,replaceClipSource,selectTimelineClip,setImageClipLength,setTimelineClipCrop,setTimelineClipFlip,setTimelineClipReversed,setTimelineClipRotation,setVideoExportOptions,setVideoExportRange,toggleTimelineClipMute,trimTimelineClip,useVideoSession,deleteOverlayClip,moveOverlayClip,selectOverlayClip,setOverlayDuration,setOverlayGain,setOverlayInS,setOverlayOpacity,setOverlayRect,updateOverlayTitle} from '../../lib/video/session';
 import {audioClipDuration,audioTrackEnd} from '../../lib/video/audioTrack';
 import {decodeSubtitleBytes} from '../../lib/video/subtitles';
 import {overlayTrackEnd} from '../../lib/video/overlayTrack';
-import {clipDuration,clipRanges,fadeInOf,fadeOf,fadeOutOf,cropOf,flipOf,rotationOf,isFreeze,IMAGE_DEFAULT_SECONDS,isImageClip,MAX_GAIN,speedOf,timelineDuration,type ClipFlip,type ClipRotation} from '../../lib/video/timeline';
+import {clipDuration,clipRanges,fadeInOf,fadeOf,fadeOutOf,cropOf,flipOf,rotationOf,isFreeze,isReversed,IMAGE_DEFAULT_SECONDS,isImageClip,MAX_GAIN,speedOf,timelineDuration,type ClipFlip,type ClipRotation} from '../../lib/video/timeline';
 import {isTitleClip} from '../../lib/video/titles';
 import {addTitleClip,setTitleLength,updateTitle} from '../../lib/video/titleSession';
 import {TitleAddRow,TitleInspector} from './TitleInspector';
@@ -202,6 +202,8 @@ export function VideoControls({name}:{name:string}){
     </div>
    </label>
    <label className="flex items-center gap-2"><NativeInput type="checkbox" className={check} checked={isFreeze(selected)} onChange={()=>setTimelineClipFreeze(name,selected.id,isFreeze(selected)?null:selected.in_s)} data-testid="video-clip-freeze"/>{t('video.freeze')}</label>
+   {!isFreeze(selected)&&<label className="flex items-center gap-2"><NativeInput type="checkbox" className={check} checked={isReversed(selected)} onChange={()=>setTimelineClipReversed(name,selected.id,!isReversed(selected))} data-testid="video-clip-reverse"/>{t('video.reverse')}</label>}
+   {!isFreeze(selected)&&isReversed(selected)&&<p className="m-0 text-ink-3" data-testid="video-clip-reverse-hint">{t('video.reverseHint')}</p>}
    {isFreeze(selected)&&<label>{t('video.freezeAt')}<NativeInput type="number" className={`${field} mt-1`} min={0} step={0.1} value={selected.freeze} onChange={e=>setTimelineClipFreeze(name,selected.id,Number(e.target.value))} data-testid="video-clip-freeze-at"/></label>}
    <label className="grid gap-1">{t('video.gain',{percent:Math.round(selected.gain*100)})}
     <NativeInput type="range" className="accent-[var(--accent)]" min={0} max={MAX_GAIN} step={0.05} value={selected.gain} onChange={e=>setTimelineClipGain(name,selected.id,Number(e.target.value),`gain:${selected.id}`)} data-testid="video-clip-gain"/>

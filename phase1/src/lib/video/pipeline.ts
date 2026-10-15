@@ -2,7 +2,7 @@
 import {ALL_FORMATS,AudioSample,AudioSampleSink,AudioSampleSource,BufferSource,BufferTarget,CanvasSink,CanvasSource,Input,Mp4OutputFormat,Output,QUALITY_HIGH,QUALITY_LOW,QUALITY_MEDIUM,WebMOutputFormat,getFirstEncodableAudioCodec,getFirstEncodableVideoCodec} from 'mediabunny';
 import type {AudioCodec,VideoCodec} from 'mediabunny';
 import {cappedFps,resolveOutputSize,sanitizeExportOptions,type VideoExportOptions,type VideoFormat} from './recipe';
-import {clipFadeGain,clipRanges,cropOf,fadeInOf,fadeOf,fadeOutOf,flipOf,hasCrop,isFreeze,isImageClip,rotationOf,speedOf,timelineDuration,transitionOf,transitionVisual,type ClipRange,type ClipRotation,type TimelineClip} from './timeline';
+import {clipFadeGain,clipRanges,clipSourceTime,cropOf,fadeInOf,fadeOf,fadeOutOf,flipOf,hasCrop,isFreeze,isImageClip,isReversed,rotationOf,speedOf,timelineDuration,transitionOf,transitionVisual,type ClipRange,type ClipRotation,type TimelineClip} from './timeline';
 import {audioEnvelope,duckGainAt,type AudioClip} from './audioTrack';
 import {WindowMixer} from './mixer';
 import {DEFAULT_TITLE,drawTitleCard,isTitleClip,needsSourceFile,type TitleClip} from './titles';
@@ -236,6 +236,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
   };
   const fpsOf=(i:number)=>{const c=ranges[i].clip;if(isTitleClip(c)||isImageClip(c)||isFreeze(c))return cappedFps(first.fps,opts.fps);const f=inputs.get(c.source)!.probe.video!.fps;return cappedFps(f,opts.fps);};
   let titlesRendered=false;
+  let reversedAudioNoted=false;
   // One scratch canvas per clip index for the card side of a dissolve; keyed redraws skip static frames.
   const cards=new Map<number,{canvas:OffscreenCanvas;ctx:OffscreenCanvasRenderingContext2D;key:string}>();
   const sideFrame=async(i:number,t:number):Promise<OffscreenCanvas|HTMLCanvasElement|ImageBitmap|VideoFrame|null>=>{
@@ -264,7 +265,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
     return card.canvas;
    }
    const sink=await sinkFor(i);
-   const src=isFreeze(c)?c.freeze!:Math.min(c.out_s-1e-3,c.in_s+(t-r.start)*speedOf(c));
+   const src=isFreeze(c)?c.freeze!:Math.min(c.out_s-1e-3,clipSourceTime(c,t-r.start));
    const f=await sink.getCanvas(src);
    return f?cropFrame(i,c,f.canvas):null;
   };
@@ -346,7 +347,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
     const speed=speedOf(c);
     const srcStart=c.in_s+(z.start-r.start)*speed,srcEnd=c.out_s-(r.end-z.end)*speed;
     const sink=rec?await sinkFor(z.a):null;
-    if(speed!==1||isImageClip(c)||isFreeze(c)){
+    if(speed!==1||isImageClip(c)||isFreeze(c)||isReversed(c)){
      // Sped clips render on a fixed output grid (source fps): frames drop or repeat naturally.
      const fps=fpsOf(z.a),n=Math.max(1,Math.ceil((z.end-z.start)*fps));
      for(let k=0;k<n;k++){
@@ -368,10 +369,11 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
       note(z.start+(frame.timestamp-base));
      }
     }
-    if(rec?.probe.audio&&mixer&&!c.muted&&!isFreeze(c)){
+    if(rec?.probe.audio&&mixer&&!c.muted&&!isFreeze(c)&&!isReversed(c)){
      const aTrack=(await rec.input.getAudioTracks())[0];
      await emitZoneAudio(new AudioSampleSink(aTrack),srcStart,srcEnd,z.start,(t)=>c.gain*clipFadeGain(c,r.start,r.end,t),speed,mixer);
     }else if(rec&&rec.probe.audio===null&&audioSource&&z===zones[0])steps.push(`No audio track in ${c.source}.`);
+    if(isReversed(c)&&!c.muted&&rec?.probe.audio&&!reversedAudioNoted){reversedAudioNoted=true;steps.push('Reversed clips export without audio.');}
    }else{
     const ra=ranges[z.a],rb=ranges[z.b],d=z.end-z.start;
     if(isTitleClip(ra.clip)||isTitleClip(rb.clip))titlesRendered=true;
@@ -399,7 +401,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
      let any=false;
      for(const side of[{r:ra,sign:'out' as const},{r:rb,sign:'in' as const}]){
       const c=side.r.clip;
-      if(c.muted||isTitleClip(c)||isImageClip(c)||isFreeze(c))continue;
+      if(c.muted||isTitleClip(c)||isImageClip(c)||isFreeze(c)||isReversed(c))continue;
       const{input,probe}=inputs.get(c.source)!;
       if(!probe.audio)continue;
       const srcStart=c.in_s+(z.start-side.r.start)*speedOf(c),srcEnd=c.in_s+(z.end-side.r.start)*speedOf(c);
