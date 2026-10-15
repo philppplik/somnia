@@ -48,7 +48,7 @@ new file mode 100644
 index 0000000..5b80b79
 --- /dev/null
 +++ b/crates/somnia-worker/src/lib.rs
-@@ -0,0 +1,4745 @@
+@@ -0,0 +1,4848 @@
 +//! Experimental headless adapter. No DOM, egui, filesystem or UI thread access.
 +use wasm_bindgen::prelude::*;
 +use std::sync::Arc;
@@ -2147,13 +2147,16 @@ index 0000000..5b80b79
 +        serde_json::json!({"size": size, "landscape": s.landscape, "width": s.page_w, "height": s.page_h,
 +            "margins": {"top": s.margin_top, "bottom": s.margin_bottom, "left": s.margin_left, "right": s.margin_right},
 +            "columns": {"count": s.columns.count.clamp(1, 45), "space": s.columns.space, "separator": s.columns.separator, "uneven": !s.columns.widths.is_empty()},
++            "valign": match s.valign { wordcraft_doc::props::VAlign::Top => "top", wordcraft_doc::props::VAlign::Center => "center", wordcraft_doc::props::VAlign::Bottom => "bottom" },
++            "pageNumbers": {"start": s.page_num_start, "format": Self::num_format_name(s.page_num_format).filter(|n| *n != "bullet" && *n != "decimalZero").unwrap_or("decimal")},
++            "pageBorder": s.page_borders.as_ref().and_then(|b| b.top).filter(|b| b.style != wordcraft_doc::props::BorderStyle::None).map(|b| serde_json::json!({"style": match b.style { wordcraft_doc::props::BorderStyle::Double => "double", wordcraft_doc::props::BorderStyle::Thick => "thick", wordcraft_doc::props::BorderStyle::Dotted => "dotted", wordcraft_doc::props::BorderStyle::Dashed => "dashed", _ => "single" }, "width": b.width, "color": b.color.map(|c| format!("#{}", c.hex()))})),
 +            "lineNumbers": s.line_numbers.as_ref().map(|l| serde_json::json!({"countBy": l.count_by, "restart": match l.restart { wordcraft_doc::section::LineNumberRestart::Page => "page", wordcraft_doc::section::LineNumberRestart::Section => "section", wordcraft_doc::section::LineNumberRestart::Continuous => "continuous" }}))})
 +        .to_string()
 +    }
 +    /// Sets page size, orientation and margins on every section. JSON keys (all optional): `size` ("a4", "letter", "legal", "a5"),
 +    /// `landscape` (bool) and `margins` ({top,bottom,left,right}, each 0-288 pt). The text area must stay at least 72 pt each way.
 +    fn do_set_page_setup(&mut self, json: &str) -> Result<(), String> {
-+        if json.len() > 512 {
++        if json.len() > 1024 {
 +            return Err("the page setup is too long".into());
 +        }
 +        let v: serde_json::Value = serde_json::from_str(json).map_err(|_| "the page setup is not valid JSON".to_string())?;
@@ -2169,8 +2172,78 @@ index 0000000..5b80b79
 +        let mut cols: Option<(u32, f32, bool)> = None;
 +        // Line numbers: `null` removes them; an object turns them on (count_by 1-100, restart page/section/continuous).
 +        let mut line_numbers: Option<Option<wordcraft_doc::section::LineNumbering>> = None;
++        // Vertical alignment, page numbering and page border (`None` leaves each as it is; the border's inner `None` removes it).
++        let mut valign: Option<wordcraft_doc::props::VAlign> = None;
++        let mut pnum: Option<(Option<u32>, wordcraft_doc::section::NumFormat)> = None;
++        let mut pborder: Option<Option<wordcraft_doc::props::Borders>> = None;
 +        for (k, val) in obj {
 +            match k.as_str() {
++                "valign" => {
++                    valign = Some(match val.as_str() {
++                        Some("top") => wordcraft_doc::props::VAlign::Top,
++                        Some("center") => wordcraft_doc::props::VAlign::Center,
++                        Some("bottom") => wordcraft_doc::props::VAlign::Bottom,
++                        _ => return Err("vertical alignment is top, center or bottom".into()),
++                    })
++                }
++                "pageNumbers" => {
++                    let o = val.as_object().ok_or("pageNumbers must be an object")?;
++                    if o.is_empty() {
++                        return Err("pageNumbers needs a field to change".into());
++                    }
++                    let mut p = (cur.page_num_start, cur.page_num_format);
++                    for (pk, pv) in o {
++                        match pk.as_str() {
++                            "start" => {
++                                p.0 = if pv.is_null() { None } else { Some(pv.as_u64().filter(|n| (1..=9999).contains(n)).ok_or("the first page number is 1 to 9999")? as u32) }
++                            }
++                            "format" => {
++                                p.1 = match pv.as_str() {
++                                    Some(n @ ("decimal" | "upperRoman" | "lowerRoman" | "upperLetter" | "lowerLetter")) => Self::num_format_of(n).ok_or("unknown page number format")?,
++                                    _ => return Err("the page number format is decimal, upperRoman, lowerRoman, upperLetter or lowerLetter".into()),
++                                }
++                            }
++                            _ => return Err(format!("unknown pageNumbers field {pk}")),
++                        }
++                    }
++                    pnum = Some(p);
++                }
++                "pageBorder" => {
++                    use wordcraft_doc::props::{Border, BorderStyle, Borders, Rgb};
++                    if val.is_null() {
++                        pborder = Some(None);
++                        continue;
++                    }
++                    let o = val.as_object().ok_or("pageBorder must be null or an object")?;
++                    let mut b = cur.page_borders.as_ref().and_then(|x| x.top).unwrap_or(Border { style: BorderStyle::Single, width: 1.0, color: None, space: 24.0 });
++                    for (bk, bv) in o {
++                        match bk.as_str() {
++                            "style" => {
++                                b.style = match bv.as_str() {
++                                    Some("single") => BorderStyle::Single,
++                                    Some("double") => BorderStyle::Double,
++                                    Some("thick") => BorderStyle::Thick,
++                                    Some("dotted") => BorderStyle::Dotted,
++                                    Some("dashed") => BorderStyle::Dashed,
++                                    _ => return Err("the border style is single, double, thick, dotted or dashed".into()),
++                                }
++                            }
++                            "width" => {
++                                let x = bv.as_f64().ok_or("the border width must be a number")? as f32;
++                                if !x.is_finite() || !(0.25..=6.0).contains(&x) {
++                                    return Err("the border width is 0.25 to 6 points".into());
++                                }
++                                b.width = x;
++                            }
++                            "color" => b.color = if bv.is_null() { None } else { Some(Rgb::parse(bv.as_str().ok_or("the border colour must be text")?).ok_or("the border colour is #RRGGBB")?) },
++                            _ => return Err(format!("unknown pageBorder field {bk}")),
++                        }
++                    }
++                    if b.style == BorderStyle::None {
++                        return Err("the border style is single, double, thick, dotted or dashed".into());
++                    }
++                    pborder = Some(Some(Borders::box_(b)));
++                }
 +                "lineNumbers" => {
 +                    use wordcraft_doc::section::{LineNumbering, LineNumberRestart};
 +                    if val.is_null() {
@@ -2281,6 +2354,16 @@ index 0000000..5b80b79
 +            }
 +            if let Some(l) = &line_numbers {
 +                s.line_numbers = l.clone();
++            }
++            if let Some(v) = valign {
++                s.valign = v;
++            }
++            if let Some((start, fmt)) = pnum {
++                s.page_num_start = start;
++                s.page_num_format = fmt;
++            }
++            if let Some(b) = &pborder {
++                s.page_borders = *b;
 +            }
 +        };
 +        for blk in self.doc.body.iter_mut() {
@@ -3660,6 +3743,26 @@ index 0000000..5b80b79
 +        s.do_table_edit(CELL_BASE, "split_down").unwrap();
 +        assert_eq!(s.cell_paras().count(), n);
 +        assert!(s.do_table_edit(CELL_BASE, "split_down").is_err());
++    }
++    #[test]
++    fn page_look_valign_page_numbers_and_border_set_refuse_and_roundtrip() {
++        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
++        let st = |s: &DocSession| -> serde_json::Value { serde_json::from_str(&s.do_page_setup_state()).unwrap() };
++        let before = wordcraft_docx::write(&s.doc).unwrap();
++        for bad in [r#"{"valign":"middle"}"#, r#"{"valign":1}"#, r#"{"pageNumbers":{}}"#, r#"{"pageNumbers":{"start":0}}"#, r#"{"pageNumbers":{"start":10000}}"#, r#"{"pageNumbers":{"start":1.5}}"#, r#"{"pageNumbers":{"format":"bullet"}}"#, r#"{"pageNumbers":{"x":1}}"#, r#"{"pageBorder":{"style":"none"}}"#, r#"{"pageBorder":{"width":0}}"#, r#"{"pageBorder":{"width":7}}"#, r#"{"pageBorder":{"color":"red"}}"#, r#"{"pageBorder":{"z":1}}"#, r#"{"pageBorder":3}"#] {
++            assert!(s.do_set_page_setup(bad).is_err(), "{bad}");
++        }
++        assert_eq!(wordcraft_docx::write(&s.doc).unwrap(), before, "refused patches change nothing");
++        s.do_set_page_setup(r##"{"valign":"center","pageNumbers":{"start":5,"format":"lowerRoman"},"pageBorder":{"style":"double","width":2,"color":"#336699"}}"##).unwrap();
++        let v = st(&s);
++        assert_eq!((v["valign"].as_str(), v["pageNumbers"]["start"].as_u64(), v["pageNumbers"]["format"].as_str(), v["pageBorder"]["style"].as_str(), v["pageBorder"]["width"].as_f64(), v["pageBorder"]["color"].as_str()), (Some("center"), Some(5), Some("lowerRoman"), Some("double"), Some(2.0), Some("#336699")));
++        let re = DocSession::from_bytes(&wordcraft_docx::write(&s.doc).unwrap()).unwrap();
++        let r = st(&re);
++        assert_eq!((r["valign"].as_str(), r["pageNumbers"]["start"].as_u64(), r["pageNumbers"]["format"].as_str(), r["pageBorder"]["style"].as_str()), (Some("center"), Some(5), Some("lowerRoman"), Some("double")));
++        assert!(s.paginate() >= 1);
++        s.do_set_page_setup(r#"{"pageNumbers":{"start":null},"pageBorder":null,"valign":"top"}"#).unwrap();
++        let v = st(&s);
++        assert_eq!((v["valign"].as_str(), v["pageNumbers"]["start"].is_null(), v["pageNumbers"]["format"].as_str(), v["pageBorder"].is_null()), (Some("top"), true, Some("lowerRoman"), true));
 +    }
 +    #[test]
 +    fn header_footer_variants_first_page_and_even_pages() {

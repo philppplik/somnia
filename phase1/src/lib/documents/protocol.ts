@@ -265,10 +265,15 @@ export const PAGE_SIZE_IDS=['a4','letter','legal','a5'] as const;
 export type PageSizeId=typeof PAGE_SIZE_IDS[number];
 export interface PageMargins{top:number;bottom:number;left:number;right:number}
 export interface PageColumns{count:number;space:number;separator:boolean}
-export interface PageSetupState{size:PageSizeId|'custom';landscape:boolean;width:number;height:number;margins:PageMargins;columns:PageColumns&{uneven:boolean};/** Line numbering, or null when off. */lineNumbers?:LineNumberState|null}
+export interface PageSetupState{size:PageSizeId|'custom';landscape:boolean;width:number;height:number;margins:PageMargins;columns:PageColumns&{uneven:boolean};/** Line numbering, or null when off. */lineNumbers?:LineNumberState|null;valign?:PageVAlign;pageNumbers?:PageNumbersState;/** Border round every page, or null. */pageBorder?:PageBorderState|null}
+export const PAGE_VALIGNS=['top','center','bottom'] as const;export type PageVAlign=typeof PAGE_VALIGNS[number];
+export const PAGE_NUM_FORMATS=['decimal','upperRoman','lowerRoman','upperLetter','lowerLetter'] as const;export type PageNumFormat=typeof PAGE_NUM_FORMATS[number];
+export const PAGE_BORDER_STYLES=['single','double','thick','dotted','dashed'] as const;export type PageBorderStyle=typeof PAGE_BORDER_STYLES[number];
+export interface PageNumbersState{start:number|null;format:PageNumFormat}
+export interface PageBorderState{style:PageBorderStyle;width:number;color:string|null}
 export const LINE_RESTARTS=['page','section','continuous'] as const;
 export interface LineNumberState{countBy:number;restart:typeof LINE_RESTARTS[number]}
-export interface PageSetupPatch{size?:PageSizeId;landscape?:boolean;margins?:Partial<PageMargins>;columns?:Partial<PageColumns>;/** null turns line numbers off. */lineNumbers?:null|Partial<LineNumberState>}
+export interface PageSetupPatch{size?:PageSizeId;landscape?:boolean;margins?:Partial<PageMargins>;columns?:Partial<PageColumns>;/** null turns line numbers off. */lineNumbers?:null|Partial<LineNumberState>;valign?:PageVAlign;/** start null = continue from 1. */pageNumbers?:Partial<PageNumbersState>;/** null removes the page border. */pageBorder?:null|Partial<PageBorderState>}
 export const MAX_MARGIN_PT=288,MAX_COLUMNS=4,MAX_COLUMN_SPACE_PT=144;
 /** The first problem with a page setup change, or null when the engine will accept the shape (the text-area minimum is the engine's call). */
 export function pageSetupProblem(p:unknown):string|null{
@@ -303,6 +308,25 @@ export function pageSetupProblem(p:unknown):string|null{
     if(lk==='countBy'){if(typeof x!=='number'||!Number.isInteger(x)||x<1||x>100)return 'Line numbers count by 1 to 100.';}
     else if(lk==='restart'){if(!(LINE_RESTARTS as readonly unknown[]).includes(x))return 'The line number restart is not valid.';}
     else return 'The line numbers are not valid.';
+   }
+  }
+  else if(k==='valign'){if(!(PAGE_VALIGNS as readonly unknown[]).includes(v))return 'The vertical alignment is not valid.';}
+  else if(k==='pageNumbers'){
+   if(!v||typeof v!=='object'||Array.isArray(v)||Object.keys(v).length===0)return 'The page numbers are not valid.';
+   for(const [pk,x] of Object.entries(v as Record<string,unknown>)){
+    if(pk==='start'){if(x!==null&&(typeof x!=='number'||!Number.isInteger(x)||x<1||x>9999))return 'The first page number is 1 to 9999.';}
+    else if(pk==='format'){if(!(PAGE_NUM_FORMATS as readonly unknown[]).includes(x))return 'The page number format is not valid.';}
+    else return 'The page numbers are not valid.';
+   }
+  }
+  else if(k==='pageBorder'){
+   if(v===null)continue;
+   if(typeof v!=='object'||Array.isArray(v))return 'The page border is not valid.';
+   for(const [bk,x] of Object.entries(v as Record<string,unknown>)){
+    if(bk==='style'){if(!(PAGE_BORDER_STYLES as readonly unknown[]).includes(x))return 'The border style is not valid.';}
+    else if(bk==='width'){if(typeof x!=='number'||!Number.isFinite(x)||x<0.25||x>6)return 'The border width is 0.25 to 6 points.';}
+    else if(bk==='color'){if(x!==null&&(typeof x!=='string'||!/^#[0-9a-fA-F]{6}$/.test(x)))return 'The border colour is not valid.';}
+    else return 'The page border is not valid.';
    }
   }
   else return 'The page setup is not valid.';

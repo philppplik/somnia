@@ -43,3 +43,20 @@ test('line numbers: toggled, changed and cleared through the patch; bad counts r
  for(const ok of [{lineNumbers:null},{lineNumbers:{countBy:100}},{lineNumbers:{restart:'page'}}])assert.equal(pageSetupProblem(ok),null);
  for(const bad of [{lineNumbers:{}},{lineNumbers:3},{lineNumbers:{countBy:0}},{lineNumbers:{countBy:1.5}},{lineNumbers:{restart:'x'}},{lineNumbers:{z:1}}])assert.notEqual(pageSetupProblem(bad),null,JSON.stringify(bad));
 });
+import {buildLookPatch,lookFromState} from '../../lib/documents/pageLook';
+test('page look: only changed parts, bounded values, border off is null',()=>{
+ const s=lookFromState({...state,valign:'top',pageNumbers:{start:null,format:'decimal'},pageBorder:null});
+ assert.equal(buildLookPatch(s,s),null);
+ assert.deepEqual(buildLookPatch(s,{...s,valign:'center'}),{valign:'center'});
+ assert.deepEqual(buildLookPatch(s,{...s,start:'5',format:'lowerRoman'}),{pageNumbers:{start:5,format:'lowerRoman'}});
+ assert.equal(buildLookPatch(s,{...s,start:'0'}),null);assert.equal(buildLookPatch(s,{...s,start:'12345'}),null);assert.equal(buildLookPatch(s,{...s,start:'x'}),null);
+ assert.deepEqual(buildLookPatch(s,{...s,border:true,width:'2,5',style:'double',color:'#336699'}),{pageBorder:{style:'double',width:2.5,color:'#336699'}});
+ assert.equal(buildLookPatch(s,{...s,border:true,width:'7'}),null);
+ const on=lookFromState({...state,pageBorder:{style:'thick',width:3,color:null}});
+ assert.deepEqual(buildLookPatch(on,{...on,border:false}),{pageBorder:null});
+ assert.deepEqual(buildLookPatch({...s,start:'5'},{...s,start:''}),{pageNumbers:{start:null}});
+});
+test('page setup patches validate valign, page numbers and borders',()=>{
+ for(const bad of [{valign:'mid'},{pageNumbers:{}},{pageNumbers:{start:0}},{pageNumbers:{format:'x'}},{pageBorder:{style:'none'}},{pageBorder:{width:0.1}},{pageBorder:{color:'red'}},{pageBorder:5}])assert.ok(pageSetupProblem(bad),JSON.stringify(bad));
+ for(const good of [{valign:'bottom'},{pageNumbers:{start:null}},{pageBorder:null},{pageBorder:{color:null}}])assert.equal(pageSetupProblem(good),null,JSON.stringify(good));
+});

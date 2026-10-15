@@ -3,6 +3,7 @@ import {useDocuments} from '../../lib/documents/store';
 import {customParagraphStyles,useStyleList} from '../../lib/documents/styles';
 import {TableSizeDialog} from './TableSizeDialog';
 import {HeaderFooterDialog} from './HeaderFooterDialog';
+import {PageLookDialog} from './PageLookDialog';
 import {HeaderFooterVariantsDialog} from './HeaderFooterVariantsDialog';
 import {ImageControls} from './ImageControls';
 import {TableStyleDialog} from './TableStyleDialog';
@@ -32,7 +33,7 @@ export function FormatBar({format,held,para,enabled,inCell=false}:{format:Format
  const commentsOpen=useCommentsOpen();const docState=useDocuments();const styles=useStyleList();const customStyles=customParagraphStyles(styles);
  useEffect(()=>{if(docState.status==='ready')void refreshStyles();},[docState.status,docState.name,docState.rev]);
  const styleKnown=!!para?.style&&((DOC_STYLES as readonly string[]).includes(para.style)||customStyles.some(s=>s.id===para.style));
- const [sizeOpen,setSizeOpen]=useState(false),[hfOpen,setHfOpen]=useState(false),[hfvOpen,setHfvOpen]=useState(false),[colW,setColW]=useState(''),[styleOpen,setStyleOpen]=useState(false),[pageOpen,setPageOpen]=useState(false),[gotoOpen,setGotoOpen]=useState(false);
+ const [sizeOpen,setSizeOpen]=useState(false),[hfOpen,setHfOpen]=useState(false),[hfvOpen,setHfvOpen]=useState(false),[lookOpen,setLookOpen]=useState(false),[colW,setColW]=useState(''),[styleOpen,setStyleOpen]=useState(false),[pageOpen,setPageOpen]=useState(false),[gotoOpen,setGotoOpen]=useState(false);
  const colOk=/^\d+(\.\d+)?$/.test(colW)&&Number(colW)>=MIN_COL_PT&&Number(colW)<=MAX_COL_PT;
  const flag=(p:'bold'|'italic'|'underline')=>held?.[p]??format?.[p]==='on';
  const font=held?.font??format?.font??'';const size=held?.size??format?.size??null;const color=held?.color??format?.color??null;
@@ -77,6 +78,8 @@ export function FormatBar({format,held,para,enabled,inCell=false}:{format:Format
   {hfvOpen&&<HeaderFooterVariantsDialog onClose={()=>setHfvOpen(false)}/>}
   <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>setPageOpen(true)} data-testid="documents-page-open">{t('documents.page.title')}</NativeButton>
   {pageOpen&&<PageSetupDialog onClose={()=>setPageOpen(false)}/>}
+  <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>setLookOpen(true)} data-testid="documents-look-open">{t('documents.look.open')}</NativeButton>
+  {lookOpen&&<PageLookDialog onClose={()=>setLookOpen(false)}/>}
   <NativeButton className={tool+' border border-subtle'} aria-pressed={commentsOpen} onClick={()=>setCommentsOpen(!commentsOpen)} data-testid="documents-comments-toggle">{t('documents.comments.title')}</NativeButton>
   <NativeButton className={tool+' border border-subtle'} onClick={()=>setGotoOpen(true)} data-testid="documents-goto-open">{t('documents.goto.title')}</NativeButton>
   {gotoOpen&&<GoToPageDialog onClose={()=>setGotoOpen(false)}/>}
