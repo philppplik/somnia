@@ -35,7 +35,7 @@ self.onmessage=({data}:{data:SlidesRequest})=>{queue=queue.then(async()=>{
    case 'backgroundAll':result=setAllSlideBackgrounds(data.bytes,data.background);break;
    case 'alt':result=setPictureAlt(data.bytes,data.slideId,data.shapeId,data.alt);break;
    case 'decorative':result=setPictureDecorative(data.bytes,data.slideId,data.shapeId,data.decorative);break;
-   case 'replaceText':result=replaceTextAll(data.bytes,data.find,data.replacement,data.matchCase);break;
+   case 'replaceText':result=replaceTextAll(data.bytes,data.find,data.replacement,data.matchCase,data.notes===true);break;
    case 'section':result=editSections(data.bytes,data.edit);break;
    case 'hide':result=setSlideHidden(data.bytes,data.slideId,data.hidden);break;
    case 'firstNum':result=setFirstSlideNum(data.bytes,data.value);break;

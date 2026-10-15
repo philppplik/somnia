@@ -1082,3 +1082,20 @@ test('replaceSkippedSlides counts unsupported slides, which find and replace lea
   assert.equal(replaceSkippedSlides(deck(2)),0);assert.equal(replaceSkippedSlides(bytes),1);
   assert.ok(textMatchesBySlide(bytes,'Slide',false).every(r=>r.slideIndex===0));
 });
+
+test('replace in notes is optional, matches note body runs only and leaves other parts alone',()=>{
+  const corpus=new Uint8Array(readFileSync(fileURLToPath(new URL('../../../slides-engine/corpus/google-slides-effects-transitions-2026-05-08.pptx',import.meta.url)))),sid=readDeckModel(corpus).slides[0].id;
+  const withNotes=setSlideNotes(corpus,sid,['Say Somnia first','then Somnia again']);
+  const base0=countTextMatches(withNotes,'Somnia',true);
+  assert.equal(countTextMatches(withNotes,'Somnia',true,true),base0+2);
+  assert.deepEqual(textMatchesBySlide(withNotes,'Somnia',true,true).filter(r=>r.slideIndex===0),[{slideIndex:0,count:2}]);
+  if(base0===0)assert.equal(replaceTextAll(withNotes,'Somnia','Acme',true),withNotes);
+  const out=replaceTextAll(withNotes,'Somnia','Acme',true,true);
+  assert.notEqual(out,withNotes);
+  const z=unzipSync(out),np=Object.keys(z).find(n=>/^ppt\/notesSlides\/notesSlide\d+\.xml$/.test(n))!;
+  assert.match(strFromU8(z[np]),/Say Acme first/);assert.match(strFromU8(z[np]),/then Acme again/);
+  assert.equal(countTextMatches(out,'Somnia',true,true),0);
+  assert.deepEqual(readSlideNotes(out,sid),['Say Acme first','then Acme again']);
+  const slide=Object.keys(z).filter(n=>/^ppt\/slides\/slide\d+\.xml$/.test(n)),o=unzipSync(withNotes);
+  for(const n of slide)assert.deepEqual(z[n],o[n]);
+});

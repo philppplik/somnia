@@ -2098,36 +2098,51 @@ function replaceInXml(xml:string,re:RegExp,repl:string|null):{xml:string;count:n
   }));
   return {xml:out,count};
 }
-export function countTextMatches(bytes:Uint8Array,find:string,matchCase:boolean):number{
+/** Speaker-note body paragraphs only (same scope as the notes editor), matched run by run like slide text. */
+function notesPartOf(zip:Record<string,Uint8Array>,slide:SlideModel):string|null{
+  const rel=readRels(zip,slide.part).find(r=>!r.external&&r.type===RT+'notesSlide');if(!rel)return null;
+  let part:string;try{part=resolve(slide.part,rel.target);}catch{return null;}
+  return /^ppt\/notesSlides\/notesSlide\d+\.xml$/.test(part)&&zip[part]?part:null;
+}
+function replaceInNotesXml(xml:string,re:RegExp,repl:string|null):{xml:string;count:number}{
+  let count=0;
+  const out=xml.replace(/<p:sp\b[\s\S]*?<\/p:sp>/g,sp=>{if(!/<p:ph\b[^>]*\stype="body"/.test(sp))return sp;const r=replaceInXml(sp,re,repl);count+=r.count;return r.xml;});
+  return {xml:out,count};
+}
+const noText=(xml:string)=>xml.replace(/(<a:t(?:\s[^>]*)?>)[\s\S]*?(<\/a:t>)/g,'$1$2');
+export function countTextMatches(bytes:Uint8Array,find:string,matchCase:boolean,notes=false):number{
   const issue=findTextIssue(find);if(issue)throw Error(issue);
   const model=readDeckModel(bytes),zip=openPackage(bytes),re=textRe(find,matchCase);let total=0;
-  for(const slide of model.slides){if(slide.problems.length)continue;total+=replaceInXml(text(zip,slide.part),re,null).count;if(total>MAX_REPLACEMENTS)return total;}
+  for(const slide of model.slides){if(slide.problems.length)continue;total+=replaceInXml(text(zip,slide.part),re,null).count;if(notes){const np=notesPartOf(zip,slide);if(np)total+=replaceInNotesXml(text(zip,np),re,null).count;}if(total>MAX_REPLACEMENTS)return total;}
   return total;
 }
 /** Match count per slide (zero-based index), only slides with matches. Slides with unsupported structure are skipped. */
-export function textMatchesBySlide(bytes:Uint8Array,find:string,matchCase:boolean):{slideIndex:number;count:number}[]{
+export function textMatchesBySlide(bytes:Uint8Array,find:string,matchCase:boolean,notes=false):{slideIndex:number;count:number}[]{
   const issue=findTextIssue(find);if(issue)throw Error(issue);
   const model=readDeckModel(bytes),zip=openPackage(bytes),re=textRe(find,matchCase),out:{slideIndex:number;count:number}[]=[];let total=0;
-  model.slides.forEach((slide,slideIndex)=>{if(slide.problems.length||total>MAX_REPLACEMENTS)return;const n=replaceInXml(text(zip,slide.part),re,null).count;if(n){total+=n;out.push({slideIndex,count:n});}});
+  model.slides.forEach((slide,slideIndex)=>{if(slide.problems.length||total>MAX_REPLACEMENTS)return;let n=replaceInXml(text(zip,slide.part),re,null).count;if(notes){const np=notesPartOf(zip,slide);if(np)n+=replaceInNotesXml(text(zip,np),re,null).count;}if(n){total+=n;out.push({slideIndex,count:n});}});
   return out;
 }
 /** Slides that find and replace leaves alone because their structure is unsupported. */
 export function replaceSkippedSlides(bytes:Uint8Array):number{return readDeckModel(bytes).slides.filter(x=>x.problems.length).length;}
-export function replaceTextAll(bytes:Uint8Array,find:string,replacement:string,matchCase:boolean):Uint8Array{
+export function replaceTextAll(bytes:Uint8Array,find:string,replacement:string,matchCase:boolean,notes=false):Uint8Array{
   const issue=findTextIssue(find)||replaceTextIssue(replacement);if(issue)throw Error(issue);
-  const model=readDeckModel(bytes),zip=openPackage(bytes),re=textRe(find,matchCase),changed:Record<string,string>={};let total=0;
+  const model=readDeckModel(bytes),zip=openPackage(bytes),re=textRe(find,matchCase),changed:Record<string,string>={},notesOld:Record<string,string>={};let total=0;
   for(const slide of model.slides){
     if(slide.problems.length)continue;
     const r=replaceInXml(text(zip,slide.part),re,replacement);
     total+=r.count;if(total>MAX_REPLACEMENTS)throw Error(`Replace is limited to ${MAX_REPLACEMENTS} matches at once`);
     if(r.count)changed[slide.part]=r.xml;
+    const np=notes?notesPartOf(zip,slide):null;
+    if(np){const old=text(zip,np),nr=replaceInNotesXml(old,re,replacement);total+=nr.count;if(total>MAX_REPLACEMENTS)throw Error(`Replace is limited to ${MAX_REPLACEMENTS} matches at once`);if(nr.count){changed[np]=nr.xml;notesOld[np]=old;}}
   }
   if(!total)return bytes;
   const out=repack(zip,changed),after=readDeckModel(out);
   const skipped=new Set(model.slides.filter(s=>s.problems.length).map(s=>s.id));
   if(after.slides.length!==model.slides.length||after.runs.length!==model.runs.length||JSON.stringify(after.slides.map(s=>s.shapes))!==JSON.stringify(model.slides.map(s=>s.shapes)))throw Error('Edited deck failed verification');
   for(let i=0;i<model.runs.length;i++){const was=model.runs[i],now=after.runs[i];re.lastIndex=0;const want=skipped.has(was.slideId)?was.text:was.text.replace(re,()=>replacement);if(now.slideId!==was.slideId||now.shapeId!==was.shapeId||now.text!==want)throw Error('Edited deck failed verification');}
-  const rz=unzipSync(out);for(const key of Object.keys(zip))if(!(key in changed)&&(!rz[key]||rz[key].length!==zip[key].length||rz[key].some((v,i)=>v!==zip[key][i])))throw Error('Edited deck changed an unrelated part');
+  const rz=unzipSync(out);for(const [np,old] of Object.entries(notesOld)){if(!rz[np]||noText(strFromU8(rz[np]))!==noText(old))throw Error('Edited notes failed verification');}
+  for(const key of Object.keys(zip))if(!(key in changed)&&(!rz[key]||rz[key].length!==zip[key].length||rz[key].some((v,i)=>v!==zip[key][i])))throw Error('Edited deck changed an unrelated part');
   return out;
 }
 
