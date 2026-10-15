@@ -587,14 +587,14 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `sheets.saveCopy` | Save workbook copy | Project | sheets |  |
 | `sheets.savedView` | Save, show or delete a named view | Edit | sheets |  |
 | `sheets.setCell` | Apply cell value or formula | Edit | sheets |  |
-| `sheets.sheet` | Add, rename, duplicate, move or delete the current sheet | Edit | sheets |  |
+| `sheets.sheet` | Add, rename, duplicate, move, hide, unhide or color a sheet tab | Edit | sheets |  |
 | `sheets.sort` | Sort the selected rows by a column | Edit | sheets |  |
 | `sheets.sparkline` | Add a sparkline | Edit | sheets |  |
 | `sheets.split` | Split the selected column of text into columns | Edit | sheets |  |
 | `sheets.table` | Create or change a table | Edit | sheets |  |
 | `sheets.undo` | Undo workbook change | Edit | sheets |  |
 | `sheets.validation` | Limit what can be typed into the selected cells | Edit | sheets |  |
-| `sheets.view` | Zoom and gridlines | View | sheets |  |
+| `sheets.view` | Zoom, gridlines, headings and zeros | View | sheets |  |
 | `sheets.whatif` | Run goal seek, scenarios or a data table | Edit | sheets |  |
 | `shell.rail.hide` | Hide rail icon | View | core |  |
 | `shell.rail.moveDown` | Move rail icon down | View | core |  |

@@ -327,7 +327,7 @@ impl HeadlessWorkbook {
     pub fn sheets(&self) -> Result<String, String> {
         let doc = self.session.doc().map_err(|e| e.to_string())?;
         Ok(json!({"sheets": doc.wb.sheets.iter().enumerate().map(|(index,s)|
-            json!({"index":index,"name":s.name,"visibility":format!("{:?}",s.visibility)}))
+            json!({"index":index,"name":s.name,"visibility":format!("{:?}",s.visibility),"tabColor":s.tab_color.and_then(|c| c.hex(&doc.wb.theme))}))
             .collect::<Vec<_>>(), "warnings": self.warnings})
         .to_string())
     }
@@ -500,6 +500,8 @@ impl HeadlessWorkbook {
                 let base = wb.styles.get(sh.style_id(at));
                 let fmt = NumberFormat::parse(base.num_fmt.as_str());
                 let shown = format_value(&value, &fmt, wb.date_system);
+                // "Show zeros" off blanks numeric zeros in the display only; the value and its formula are untouched.
+                let shown = if !sh.show_zeros && value.as_f64() == Some(0.0) { Default::default() } else { shown };
                 let mut style_json_value = style_json(base, &wb.theme);
                 if let Some(cf) = cf_cache.as_mut()
                     && let Some(look) = cf.look(wb, sheet, at)
@@ -548,7 +550,7 @@ impl HeadlessWorkbook {
         let rows: Vec<_> = sh.rows.iter().filter(|(r, _)| **r < gridcraft_engine::core::MAX_ROWS)
             .map(|(r, i)| json!({"i": r, "h": px(sh.row_height(*r)), "hidden": i.hidden})).collect();
         Ok(json!({"sheet":sheet,"defaultColWidth":px(sh.default_col_width),"defaultRowHeight":px(sh.default_row_height),
-            "cols":cols,"rows":rows,"showGridlines":sh.show_gridlines,"zoom":sh.zoom,"protection":sh.protection.as_ref().map(|p| json!({"password": p.password_hash.is_some(), "allow": Self::allowed_names(p)})),"workbookLocked":doc.wb.protected_structure,
+            "cols":cols,"rows":rows,"showGridlines":sh.show_gridlines,"showHeadings":sh.show_headings,"showZeros":sh.show_zeros,"zoom":sh.zoom,"protection":sh.protection.as_ref().map(|p| json!({"password": p.password_hash.is_some(), "allow": Self::allowed_names(p)})),"workbookLocked":doc.wb.protected_structure,
             "freeze": sh.freeze.map(|(r, c)| json!({"rows": r.min(20), "cols": c.min(20)})),
             "merges": sh.merges.iter().map(|m| json!({"r0":m.start.row,"c0":m.start.col,"r1":m.end.row,"c1":m.end.col})).collect::<Vec<_>>()}).to_string())
     }
@@ -616,7 +618,8 @@ impl HeadlessWorkbook {
 
     /// Adds, renames, duplicates, moves or deletes a sheet as ONE history entry. `sheet` is the sheet the
     /// operation is about; `op_json` is `{"kind":"add"}` (new sheet after `sheet`, engine-chosen or given `name`),
-    /// `{"kind":"rename","name":..}`, `{"kind":"duplicate"}`, `{"kind":"move","to":index}` or `{"kind":"delete"}`.
+    /// `{"kind":"rename","name":..}`, `{"kind":"duplicate"}`, `{"kind":"move","to":index}`, `{"kind":"delete"}`,
+    /// `{"kind":"hide"}` (the last visible sheet is refused), `{"kind":"unhide","index":n}` (a plainly hidden sheet) or `{"kind":"tabColor","color":"#RRGGBB"|"none"}`.
     /// Names are checked here (1 to 31 characters, no control characters) and again by the engine (duplicates,
     /// forbidden characters). Protected workbook structure refused, at most 255 sheets. Returns the index of the
     /// sheet to show afterwards as `{"active":n}`; formulas, names and charts follow renames and deletes.
@@ -671,6 +674,28 @@ impl HeadlessWorkbook {
                     return Err("A workbook must contain at least one visible sheet.".into());
                 }
                 self.session.run("home.deleteSheet", json!({"sheet": sheet}))?;
+            }
+            "hide" => {
+                if visible <= 1 {
+                    return Err("A workbook must contain at least one visible sheet.".into());
+                }
+                self.session.run("sheet.hide", json!({"sheet": sheet}))?;
+            }
+            "unhide" => {
+                let index = op.get("index").and_then(|v| v.as_u64()).filter(|i| (*i as usize) < count).ok_or("pick a hidden sheet")? as usize;
+                let hidden = self.session.doc().map_err(|e| e.to_string())?.wb.sheet(index).is_some_and(|s| s.visibility == Visibility::Hidden);
+                if !hidden {
+                    return Err("That sheet is not hidden.".into());
+                }
+                self.session.run("sheet.unhide", json!({"sheet": index}))?;
+            }
+            "tabColor" => {
+                let color = op.get("color").and_then(|v| v.as_str()).ok_or("missing tab color")?;
+                let valid = color == "none" || (color.len() == 7 && color.starts_with('#') && color[1..].chars().all(|c| c.is_ascii_hexdigit()));
+                if !valid {
+                    return Err("The tab color must be #RRGGBB or none.".into());
+                }
+                self.session.run("sheet.tabColor", json!({"sheet": sheet, "color": color}))?;
             }
             _ => return Err("unsupported sheet operation".into()),
         }
@@ -1572,12 +1597,18 @@ impl HeadlessWorkbook {
         } else if let Some(g) = map.get("gridlines") {
             let on = g.as_bool().ok_or("gridlines must be true or false")?;
             self.session.run("view.gridlines", json!({"on": on})).map_err(|e| e.to_string())?;
+        } else if let Some(g) = map.get("headings") {
+            let on = g.as_bool().ok_or("headings must be true or false")?;
+            self.session.run("view.headings", json!({"on": on})).map_err(|e| e.to_string())?;
+        } else if let Some(g) = map.get("zeros") {
+            let on = g.as_bool().ok_or("zeros must be true or false")?;
+            self.session.run("view.showZeros", json!({"on": on})).map_err(|e| e.to_string())?;
         } else {
             return Err("unknown view setting".into());
         }
         let doc = self.session.doc().map_err(|e| e.to_string())?;
         let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
-        Ok(json!({"zoom": sh.zoom, "gridlines": sh.show_gridlines}).to_string())
+        Ok(json!({"zoom": sh.zoom, "gridlines": sh.show_gridlines, "headings": sh.show_headings, "zeros": sh.show_zeros}).to_string())
     }
 
     /// The saved views of the workbook (read only): `{"views":[{"name","sheet","selection","zoom"}]}` in name order, at most 50. A saved view remembers the
@@ -3561,6 +3592,37 @@ mod tests {
         assert!(book.outline_op(9, 700, 0, 4, 2, r#"{"kind":"group","axis":"rows"}"#).is_err());
         book.session.run("review.protectSheet", json!({})).unwrap();
         assert!(book.outline_op(0, 701, 0, 2, 1, r#"{"kind":"group","axis":"rows"}"#).unwrap_err().contains("protected"));
+    }
+    #[test]
+    fn sheet_hide_unhide_tab_color_and_view_flags() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        book.edit_sheet(0, r#"{"kind":"add"}"#).unwrap();
+        book.edit_sheet(0, r#"{"kind":"tabColor","color":"#2E7D32"}"#).unwrap();
+        let listed = book.sheets().unwrap();
+        assert!(listed.contains("#2E7D32"), "{listed}");
+        book.edit_sheet(0, r#"{"kind":"tabColor","color":"none"}"#).unwrap();
+        assert!(!book.sheets().unwrap().contains("#2E7D32"));
+        for bad in [r#"{"kind":"tabColor","color":"red"}"#, r#"{"kind":"tabColor","color":"#12345"}"#, r#"{"kind":"tabColor","color":"#GGGGGG"}"#, r#"{"kind":"tabColor"}"#, r#"{"kind":"unhide","index":0}"#, r#"{"kind":"unhide"}"#, r#"{"kind":"unhide","index":99}"#] {
+            assert!(book.edit_sheet(0, bad).is_err(), "{bad}");
+        }
+        let n = sheet_names(&book).len();
+        let r: serde_json::Value = serde_json::from_str(&book.edit_sheet(0, r#"{"kind":"hide"}"#).unwrap()).unwrap();
+        assert_ne!(r["active"], 0, "the hidden sheet is not the active one");
+        assert!(book.sheets().unwrap().contains("Hidden"));
+        for i in 1..n - 1 {
+            book.edit_sheet(i, r#"{"kind":"hide"}"#).unwrap();
+        }
+        assert!(book.edit_sheet(n - 1, r#"{"kind":"hide"}"#).is_err(), "last visible sheet stays");
+        book.edit_sheet(n - 1, r#"{"kind":"unhide","index":0}"#).unwrap();
+        assert!(book.sheets().unwrap().contains("Visible"));
+        let v: serde_json::Value = serde_json::from_str(&book.view_op(0, r#"{"headings":false}"#).unwrap()).unwrap();
+        assert_eq!(v["headings"], false);
+        let v: serde_json::Value = serde_json::from_str(&book.view_op(0, r#"{"zeros":false}"#).unwrap()).unwrap();
+        assert_eq!(v["zeros"], false);
+        let lay: serde_json::Value = serde_json::from_str(&book.layout(0).unwrap()).unwrap();
+        assert_eq!((lay["showHeadings"].as_bool(), lay["showZeros"].as_bool()), (Some(false), Some(false)));
+        assert!(book.view_op(0, r#"{"headings":"no"}"#).is_err());
+        assert!(book.view_op(0, r#"{"headings":true,"zeros":true}"#).is_err());
     }
     #[test]
     fn objects_insert_move_and_delete_in_single_undo_steps_and_refuse_bad_input() {

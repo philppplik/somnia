@@ -3,7 +3,7 @@ import {fitZoom,parseViewCommand,zoomFactor} from './viewOps';
 import {Geometry} from './geometry';
 test('view commands',()=>{
  assert.deepEqual(parseViewCommand({zoom:150}),{zoom:150});assert.deepEqual(parseViewCommand({gridlines:false}),{gridlines:false});assert.deepEqual(parseViewCommand({fit:'selection'}),{fit:'selection'});
- for(const bad of [null,[],{},{zoom:9},{zoom:401},{zoom:99.5},{zoom:'100'},{gridlines:1},{fit:'sheet'},{zoom:100,gridlines:true},{headings:true}])assert.throws(()=>parseViewCommand(bad),JSON.stringify(bad));
+ for(const bad of [null,[],{},{zoom:9},{zoom:401},{zoom:99.5},{zoom:'100'},{gridlines:1},{fit:'sheet'},{zoom:100,gridlines:true},{headings:1},{zeros:'on'},{power:true}])assert.throws(()=>parseViewCommand(bad),JSON.stringify(bad));
 });
 test('zoom factor falls back to 100 percent',()=>{
  assert.equal(zoomFactor(150),1.5);for(const bad of [undefined,null,0,9,401,1.5,'100',NaN])assert.equal(zoomFactor(bad),1);

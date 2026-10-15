@@ -33,7 +33,7 @@ import {VALIDATION_CHOICES,buildValidationOp,MAX_ITEM_CHARS,type ValidationChoic
 import type {CfOperator} from '../../lib/sheets/protocol';
 import {CF_CHOICE_GROUPS,CF_STYLES,buildCfOp,cfChoiceIsVisual,cfChoiceNeeds,MAX_CF_TEXT,type CfChoice} from '../../lib/sheets/cfOps';
 import {FILTER_CONDITIONS,MAX_FILTER_VALUE,filterValueProblem} from '../../lib/sheets/filterOps';
-import {MAX_SHEETS,sheetNameProblem} from '../../lib/sheets/sheetOps';
+import {MAX_SHEETS,sheetNameProblem,TAB_COLORS,safeTabColor} from '../../lib/sheets/sheetOps';
 import type {BorderLineStyle,FilterCondition,RangeCell} from '../../lib/sheets/protocol';
 import {colWidthPx,rowHeightPx,MAX_COL_PX,MAX_ROW_PX,MAX_FREEZE} from '../../lib/sheets/lineOps';
 import {BORDER_PRESETS,BORDER_STYLES,DEFAULT_BORDER_COLOR,H_ALIGNS,V_ALIGNS,CURRENCY_SYMBOLS,DECIMAL_PRESETS,MAX_DECIMALS,NUM_PRESETS,detectNumFmt,DEFAULT_FILL_COLOR,DEFAULT_TEXT_COLOR,FONT_NAMES,FONT_SIZES,MAX_FONT_SIZE,MIN_FONT_SIZE,isHexColor,toggleOp,type ToggleKind,affixProblem,customNumFmtCode,DATE_PATTERNS,MAX_AFFIX,NEGATIVE_STYLES,ZERO_STYLES} from '../../lib/sheets/formatOps';
@@ -231,6 +231,7 @@ export function SheetsLayoutPanel({context}:PanelHostProps){
   <ProtectGroup/>
   <WhatIfGroup/>
   <ObjectsGroup/>
+  <SheetTabGroup/>
   <OutlineGroup/>
   <SavedViewsGroup/>
   <TablesGroup/>
@@ -401,6 +402,27 @@ function WhatIfGroup(){
  </div>;
 }
 /** Pictures and shapes in one grouped menu. A picture is read from a chosen PNG or JPEG file; shapes and object changes are built from fields. One undo step each. */
+/** Sheet tab: hide this sheet, show a hidden one, or set the tab color. One undo step each. */
+type TabAction='hide'|'unhide'|'color'|'noColor';
+function SheetTabGroup(){
+ const {t}=useT(),s=useSheetsSelection(),action=useAction();const [act,setAct]=useState<TabAction>('color');const [pick,setPick]=useState('');const [color,setColor]=useState<string>(TAB_COLORS[4][1]);
+ if(!s)return null;
+ const list=s.workbook?.sheets??[],hidden=list.filter(x=>x.visibility==='Hidden'),visible=list.filter(x=>x.visibility==='Visible').length;
+ const chosen=hidden.find(x=>String(x.index)===pick)??hidden[0]??null,current=safeTabColor(list.find(x=>x.index===s.sheet)?.tabColor);
+ const ok=act==='hide'?visible>1:act==='unhide'?!!chosen:true;
+ const apply=()=>{if(!ok)return;void action.run('sheets.sheet',act==='hide'?{kind:'hide'}:act==='unhide'?{kind:'unhide',index:chosen?.index}:act==='color'?{kind:'tabColor',color}:{kind:'tabColor',color:'none'});};
+ return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.tab.title')}>
+  <span>{t('sheets.tab.title')}</span>
+  <label className="flex flex-col gap-1">{t('sheets.tab.action')}<NativeSelect className={field} value={act} disabled={action.busy} onChange={e=>setAct(e.currentTarget.value as TabAction)} data-testid="sheets-tab-action">
+   <optgroup label={t('sheets.tab.groupVisibility')}><option value="hide">{t('sheets.tab.hide')}</option><option value="unhide">{t('sheets.tab.unhide')}</option></optgroup>
+   <optgroup label={t('sheets.tab.groupColor')}><option value="color">{t('sheets.tab.color')}</option><option value="noColor">{t('sheets.tab.noColor')}</option></optgroup>
+  </NativeSelect></label>
+  {act==='unhide'&&<label className="flex flex-col gap-1">{t('sheets.tab.pick')}<NativeSelect className={field} value={chosen?String(chosen.index):''} disabled={action.busy||hidden.length===0} onChange={e=>setPick(e.currentTarget.value)} data-testid="sheets-tab-pick">{hidden.length===0?<option value="">{t('sheets.tab.none')}</option>:hidden.map(x=><option key={x.index} value={String(x.index)}>{x.name}</option>)}</NativeSelect></label>}
+  {act==='color'&&<label className="flex flex-col gap-1">{t('sheets.tab.palette')}<NativeSelect className={field} value={color} disabled={action.busy} onChange={e=>setColor(e.currentTarget.value)} data-testid="sheets-tab-palette">{TAB_COLORS.map(([k,hex])=><option key={k} value={hex}>{t('sheets.tab.c.'+k)}</option>)}</NativeSelect></label>}
+  <Button variant="outline" size="compact" disabled={action.busy||!ok} onClick={apply} data-testid="sheets-tab-apply">{t('sheets.tab.apply')}</Button>
+  <p className="text-ink-3">{t(current?'sheets.tab.hasColor':'sheets.tab.noColorYet',{sheet:s.sheetName})}</p>
+ </div>;
+}
 /** Outline: group, collapse or expand the selected lines, or insert subtotals under every run of equal values. One undo step each. */
 type OutlineAction='group'|'ungroup'|'hide'|'show'|'subtotal';
 function OutlineGroup(){
@@ -480,7 +502,7 @@ function ObjectsGroup(){
  </div>;
 }
 /** Zoom (presets or a custom percentage, or fit to the selection) and gridlines in one grouped menu. Zoom is a view setting; gridlines are one undo step. */
-type ViewAction='z50'|'z75'|'z100'|'z125'|'z150'|'z200'|'custom'|'fit'|'gridlinesOn'|'gridlinesOff';
+type ViewAction='z50'|'z75'|'z100'|'z125'|'z150'|'z200'|'custom'|'fit'|'gridlinesOn'|'gridlinesOff'|'headingsOn'|'headingsOff'|'zerosOn'|'zerosOff';
 function ViewGroup(){
  const {t}=useT(),s=useSheetsSelection(),action=useAction();const [act,setAct]=useState<ViewAction>('z100');const [custom,setCustom]=useState(100);
  const layout=s?.layout;if(!s||!layout)return null;
@@ -488,6 +510,8 @@ function ViewGroup(){
   if(act==='fit')void action.run('sheets.view',{fit:'selection'});
   else if(act==='custom')void action.run('sheets.view',{zoom:custom});
   else if(act==='gridlinesOn'||act==='gridlinesOff')void action.run('sheets.view',{gridlines:act==='gridlinesOn'});
+  else if(act==='headingsOn'||act==='headingsOff')void action.run('sheets.view',{headings:act==='headingsOn'});
+  else if(act==='zerosOn'||act==='zerosOff')void action.run('sheets.view',{zeros:act==='zerosOn'});
   else void action.run('sheets.view',{zoom:Number(act.slice(1))});
  };
  const opt=(id:ViewAction)=><option key={id} value={id}>{t('sheets.vw.'+id)}</option>;
@@ -495,11 +519,11 @@ function ViewGroup(){
   <span>{t('sheets.vw.title')}</span>
   <label className="flex flex-col gap-1">{t('sheets.vw.action')}<NativeSelect className={field} value={act} disabled={action.busy} onChange={e=>setAct(e.currentTarget.value as ViewAction)} data-testid="sheets-vw-action">
    <optgroup label={t('sheets.vw.groupZoom')}>{(['z50','z75','z100','z125','z150','z200','custom','fit'] as ViewAction[]).map(opt)}</optgroup>
-   <optgroup label={t('sheets.vw.groupShow')}>{(['gridlinesOn','gridlinesOff'] as ViewAction[]).map(opt)}</optgroup>
+   <optgroup label={t('sheets.vw.groupShow')}>{(['gridlinesOn','gridlinesOff','headingsOn','headingsOff','zerosOn','zerosOff'] as ViewAction[]).map(opt)}</optgroup>
   </NativeSelect></label>
   {act==='custom'&&<NumberField label={t('sheets.vw.zoomLabel')} unit="%" value={custom} resetKey="view-zoom" min={MIN_ZOOM} max={MAX_ZOOM} step={5} disabled={action.busy} constraintError={t('sheets.vw.zoomInvalid')} parse={v=>{const n=Number(v.trim());return v.trim()&&Number.isInteger(n)&&n>=MIN_ZOOM&&n<=MAX_ZOOM?{ok:true,value:n}:{ok:false,error:t('sheets.vw.zoomInvalid')};}} onCommit={v=>setCustom(v)}/>}
   <Button variant="outline" size="compact" disabled={action.busy} onClick={apply} data-testid="sheets-vw-apply">{t('sheets.vw.apply')}</Button>
-  <p className="text-ink-3">{t('sheets.vw.current',{zoom:layout.zoom??100,state:t(layout.showGridlines?'sheets.vw.on':'sheets.vw.off')})}</p>
+  <p className="text-ink-3">{t('sheets.vw.current',{zoom:layout.zoom??100,state:t(layout.showGridlines?'sheets.vw.on':'sheets.vw.off')})} {t('sheets.vw.current2',{headings:t(layout.showHeadings===false?'sheets.vw.off':'sheets.vw.on'),zeros:t(layout.showZeros===false?'sheets.vw.off':'sheets.vw.on')})}</p>
  </div>;
 }
 /** Page setup and export in one grouped menu: page, print area and titles, appearance, header and footer, and file export. One undo step per change. */

@@ -6864,7 +6864,7 @@
     },
     {
       "id": "sheets.sheet",
-      "title": "Add, rename, duplicate, move or delete the current sheet",
+      "title": "Add, rename, duplicate, move, hide, unhide or color a sheet tab",
       "category": "Edit",
       "source": "sheets",
       "allowInInput": true,
@@ -6919,7 +6919,7 @@
     },
     {
       "id": "sheets.view",
-      "title": "Zoom and gridlines",
+      "title": "Zoom, gridlines, headings and zeros",
       "category": "View",
       "source": "sheets",
       "allowInInput": true,

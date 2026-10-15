@@ -29,7 +29,8 @@ import {SheetObjectImg,SheetObjectHandle} from './SheetObjectImg';
 import {dropPlacement,type ObjectDrag} from '../../lib/sheets/objectDrag';
 import {fitZoom,type ViewCommand} from '../../lib/sheets/viewOps';
 import {addressOf,cellText,colName,displayValue,editText,isErrorValue,cellAlign} from '../../lib/sheets/format';
-import {MAX_SHEETS} from '../../lib/sheets/sheetOps';
+import {MAX_SHEETS,safeTabColor} from '../../lib/sheets/sheetOps';
+import {SheetTabDot} from './SheetTabDot';
 import {sortBlockProblem} from '../../lib/sheets/sortOps';
 import {fillBlockProblem} from '../../lib/sheets/fillOps';
 import {formatRectOk,toggleOp,type ToggleKind} from '../../lib/sheets/formatOps';
@@ -47,7 +48,7 @@ import {SheetsCollabBinding} from '../../lib/collab/office/sheetsBinding';
 import {announceSheetSel,peerSheetSels,type PeerSheetPresence} from '../../lib/collab/office/sheetsPresence';
 import {setSheetsSelection} from '../../lib/sheets/sheetsStore';
 import {PeerSwatch,PeerSelectionBox} from '../collab/PeerSwatch';
-const HEAD_W=48,HEAD_H=24;
+const HEAD_W0=48,HEAD_H0=24;
 type Phase={kind:'loading'}|{kind:'error';message:string}|{kind:'ready'};
 type AbsBox={left:number;top:number;width:number;height:number};
 const AbsBoxImg=({box,surface,...rest}:{box:AbsBox;surface?:boolean}&React.ImgHTMLAttributes<HTMLImageElement>)=>{
@@ -124,6 +125,7 @@ function Workbook({item}:{item:MediaItem}){
  const totalRows=Math.min(MAX_ROWS,Math.max(100,(info?.rows??0)+50,sel.row+50)),totalCols=Math.min(MAX_COLS,Math.max(26,(info?.cols??0)+6,sel.col+6));
  const geo=useMemo(()=>new Geometry(layout,totalRows,totalCols),[layout,totalRows,totalCols]);
  // Bounded viewport read (values, formats and styles) for the visible window only.
+ const showHead=layout?.showHeadings!==false,HEAD_W=showHead?HEAD_W0:0,HEAD_H=showHead?HEAD_H0:0;
  const win=useMemo(()=>geo.window(view.top,view.left,view.w-HEAD_W,view.h-HEAD_H),[geo,view]);
  useEffect(()=>{if(phase.kind!=='ready'||!engine.current)return;let live=true;const eng=engine.current;const fr=geo.freezeRows,fc=geo.freezeCols;
   // Main window plus the frozen strips, so frozen rows/columns stay painted while scrolling.
@@ -282,7 +284,7 @@ function Workbook({item}:{item:MediaItem}){
    setDirty(true);setNotice(op.kind==='goalSeek'?goalNotice(parseGoalResult(r)):'');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
  const goalNotice=(g:{value:number;converged:boolean}|null)=>g?t(g.converged?'sheets.wi.goalFound':'sheets.wi.goalNear',{value:String(Math.round(g.value*1e6)/1e6)}):'';
  const applyView=async(op:ViewCommand)=>{
-  if('gridlines' in op&&collab.current){setNotice(t('sheets.vw.collab'));return;}
+  if(('gridlines' in op||'headings' in op||'zeros' in op)&&collab.current){setNotice(t('sheets.vw.collab'));return;}
   if(draftRef.current!==null)await commit(draftRef.current);
   try{const req='fit' in op?{zoom:fitZoom(geo.colLeft(range.c1+1)-geo.colLeft(range.c0),geo.rowTop(range.r1+1)-geo.rowTop(range.r0),view.w-HEAD_W,view.h-HEAD_H,geo.zoom)}:op;await engine.current!.viewOp(sheet,req);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
  const applyPageSetup=async(op:PageSetupOp)=>{
@@ -332,8 +334,8 @@ function Workbook({item}:{item:MediaItem}){
   try{await engine.current!.sort(sheet,range.r0,range.c0,rows,cols,op);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
  const applySheet=async(op:SheetOp)=>{
   if(draftRef.current!==null)await commit(draftRef.current);
-  if(collab.current&&(op.kind==='move'||op.kind==='duplicate')){setNotice(t('sheets.collabSheetOpUnsupported'));return;}   // position-keyed shared cells would detach from their sheet
-  try{const r=await engine.current!.editSheet(sheet,op);const fresh=await syncSheets(r.active,op.kind==='add'||op.kind==='duplicate'||op.kind==='delete');
+  if(collab.current&&(op.kind==='move'||op.kind==='duplicate'||op.kind==='hide'||op.kind==='unhide'||op.kind==='tabColor')){setNotice(t('sheets.collabSheetOpUnsupported'));return;}   // position-keyed shared cells would detach from their sheet
+  try{const r=await engine.current!.editSheet(sheet,op);const fresh=await syncSheets(r.active,op.kind==='add'||op.kind==='duplicate'||op.kind==='delete'||op.kind==='hide'||op.kind==='unhide');
    if(collab.current&&fresh&&op.kind!=='duplicate'){const idx=op.kind==='add'?r.active:sheet;collab.current.binding.applyLocalSheetOp(idx,op.kind,fresh.sheets[idx]?.name);}
    setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
  const history=async(kind:'undo'|'redo')=>{try{
@@ -406,23 +408,23 @@ function Workbook({item}:{item:MediaItem}){
    className="relative min-h-0 flex-1 overflow-auto outline-none focus-visible:ring-2 focus-visible:ring-accent" onKeyDown={onGridKey} onCopy={e=>onCopy(e,false)} onCut={e=>onCopy(e,true)} onPaste={onPaste}
    onScroll={e=>{const el=e.currentTarget;setView(v=>({...v,top:el.scrollTop,left:el.scrollLeft}));}}>
    <div style={{width:HEAD_W+geo.width,height:HEAD_H+geo.height,position:'relative'}}>
-    <div style={{position:'sticky',top:0,zIndex:2,height:HEAD_H,width:HEAD_W+geo.width}} aria-hidden="false">
+    <div className={showHead?undefined:'hidden'} style={{position:'sticky',top:0,zIndex:2,height:HEAD_H,width:HEAD_W+geo.width}} aria-hidden="false">
      {[...new Set([...Array.from({length:geo.freezeCols},(_,i)=>i),...Array.from({length:win.cols},(_,i)=>win.col+i)])].map(c=><div key={'h'+c} role="columnheader" aria-colindex={c+1} className="border-b border-r border-subtle bg-hover text-center text-[11px] leading-6 text-ink-3" style={{position:'absolute',left:HEAD_W+geo.colLeft(c)+(c<geo.freezeCols?view.left:0),top:0,zIndex:c<geo.freezeCols?2:undefined,width:geo.colWidth(c),height:HEAD_H,display:geo.colWidth(c)===0?'none':undefined}}>{colName(c)}</div>)}
     </div>
-    <div style={{position:'sticky',left:0,zIndex:1,width:HEAD_W,height:0}}>
+    <div className={showHead?undefined:'hidden'} style={{position:'sticky',left:0,zIndex:1,width:HEAD_W,height:0}}>
      {[...new Set([...Array.from({length:geo.freezeRows},(_,i)=>i),...Array.from({length:win.rows},(_,i)=>win.row+i)])].map(r=><div key={'r'+r} role="rowheader" aria-rowindex={r+1} className="border-b border-r border-subtle bg-hover text-center text-[11px] leading-6 text-ink-3" style={{position:'absolute',left:0,top:geo.rowTop(r)+(r<geo.freezeRows?view.top:0),zIndex:r<geo.freezeRows?2:undefined,width:HEAD_W,height:geo.rowHeight(r),display:geo.rowHeight(r)===0?'none':undefined}}>{r+1}</div>)}
      {peers.filter(p=>p.sheet===sheet).map(p=>{const left=HEAD_W+geo.colLeft(p.sel.c0),top=HEAD_H+geo.rowTop(p.sel.r0),w=geo.colLeft(p.sel.c1)+geo.colWidth(p.sel.c1)-geo.colLeft(p.sel.c0),h=geo.rowTop(p.sel.r1)+geo.rowHeight(p.sel.r1)-geo.rowTop(p.sel.r0);
       return <PeerSelectionBox key={'peer'+p.clientId} left={left} top={top} width={w} height={h} color={p.user.color}>
        <PeerSwatch className="absolute -top-5 left-0 rounded-sm px-1 text-xs leading-4 text-white" bg={p.user.color}>{p.user.name}</PeerSwatch></PeerSelectionBox>;})}
     </div>
-    <div aria-hidden="true" className="border-b border-r border-subtle bg-hover" style={{position:'sticky',left:0,top:0,zIndex:3,width:HEAD_W,height:HEAD_H,marginTop:-HEAD_H}}/>
+    <div aria-hidden="true" className={'border-b border-r border-subtle bg-hover'+(showHead?'':' hidden')} style={{position:'sticky',left:0,top:0,zIndex:3,width:HEAD_W,height:HEAD_H,marginTop:-HEAD_H}}/>
     {renderCells()}
     {renderObjects()}
    </div>
   </div>
   <div role="tablist" aria-label={t('sheets.tabs')} className="flex w-full gap-1 border-t border-subtle px-3 py-1">
    <Button variant="outline" size="icon" aria-label={t('sheets.sheetOps.add')} disabled={names.length>=MAX_SHEETS} onClick={()=>void applySheet({kind:'add'}).catch(()=>undefined)} data-testid="sheets-tab-add">+</Button>
-   {names.filter(s=>s.visibility==='Visible').map(s=><button key={s.index} role="tab" aria-selected={s.index===sheet} className={'h-7 cursor-pointer rounded-sm border-0 bg-transparent px-2 text-[12px] text-ink-2 hover:bg-hover'+(s.index===sheet?' bg-hover font-semibold':'')} onClick={()=>{setSheet(s.index);setSel({row:0,col:0});setExt(null);setDraft(null);scroller.current?.scrollTo(0,0);}}>{s.name}</button>)}
+   {names.filter(s=>s.visibility==='Visible').map(s=><button key={s.index} role="tab" aria-selected={s.index===sheet} className={'h-7 cursor-pointer rounded-sm border-0 bg-transparent px-2 text-[12px] text-ink-2 hover:bg-hover'+(s.index===sheet?' bg-hover font-semibold':'')} onClick={()=>{setSheet(s.index);setSel({row:0,col:0});setExt(null);setDraft(null);scroller.current?.scrollTo(0,0);}}>{safeTabColor(s.tabColor)&&<SheetTabDot color={safeTabColor(s.tabColor)??''} testId={'sheets-tab-color-'+s.index}/>}{s.name}</button>)}
   </div>
  </section>;
 }

@@ -1,6 +1,6 @@
 /** Zoom and gridlines of a sheet: validation of untrusted command input. The Rust bridge re-validates. */
 export const MIN_ZOOM=10,MAX_ZOOM=400,ZOOM_PRESETS=[50,75,100,125,150,200] as const;
-export type ViewCommand={zoom:number}|{gridlines:boolean}|{fit:'selection'};
+export type ViewCommand={zoom:number}|{gridlines:boolean}|{headings:boolean}|{zeros:boolean}|{fit:'selection'};
 /** A usable zoom factor (1 = 100 percent) from whatever the bridge sent. */
 export function zoomFactor(zoom:unknown):number{return typeof zoom==='number'&&Number.isInteger(zoom)&&zoom>=MIN_ZOOM&&zoom<=MAX_ZOOM?zoom/100:1;}
 export function parseViewCommand(input:unknown):ViewCommand{
@@ -9,6 +9,8 @@ export function parseViewCommand(input:unknown):ViewCommand{
  if(keys.length!==1)throw Error('Name exactly one view setting.');
  if('zoom' in o){const z=o.zoom;if(typeof z!=='number'||!Number.isInteger(z)||z<MIN_ZOOM||z>MAX_ZOOM)throw Error(`Zoom must be a whole number from ${MIN_ZOOM} to ${MAX_ZOOM}.`);return {zoom:z};}
  if('gridlines' in o){if(typeof o.gridlines!=='boolean')throw Error('`gridlines` must be true or false.');return {gridlines:o.gridlines};}
+ if('headings' in o){if(typeof o.headings!=='boolean')throw Error('`headings` must be true or false.');return {headings:o.headings};}
+ if('zeros' in o){if(typeof o.zeros!=='boolean')throw Error('`zeros` must be true or false.');return {zeros:o.zeros};}
  if('fit' in o){if(o.fit!=='selection')throw Error('Unsupported fit.');return {fit:'selection'};}
  throw Error('Unknown view setting.');
 }

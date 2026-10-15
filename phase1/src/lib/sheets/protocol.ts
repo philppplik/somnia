@@ -1,6 +1,6 @@
 /** Worker protocol for the Sheets Studio spreadsheet engine (GridCraft headless, isolated WASM). */
 export type CellValue={t:'Empty'}|{t:'Number';v:number}|{t:'Text';v:string}|{t:'Bool';v:boolean}|{t:'Error';v:unknown}|{t:'Array';v?:unknown};
-export interface SheetMeta{index:number;name:string;visibility:string}
+export interface SheetMeta{index:number;name:string;visibility:string;tabColor?:string|null}
 export interface WorkbookInfo{sheets:SheetMeta[];warnings:string[]}
 export interface SheetInfo{sheet:number;rows:number;cols:number;canUndo:boolean;canRedo:boolean}
 export interface RangeCell{address:string;value:CellValue;formula:string|null}
@@ -8,7 +8,7 @@ export interface CellStyle{bold:boolean;italic:boolean;strike:boolean;underline:
 export interface BorderSide{w:number;style:'solid'|'dashed'|'dotted'|'double';color:string}
 export interface ViewCell extends RangeCell{text:string;numeric:boolean;fmtColor:string|null;style:CellStyle;cfBar?:[number,string,boolean]|null;cfIcon?:[string,number]|null}
 export interface ViewResult{sheet:number;row:number;col:number;rows:number;cols:number;cells:ViewCell[]}
-export interface SheetLayout{sheet:number;defaultColWidth:number;defaultRowHeight:number;cols:{i:number;w:number;hidden:boolean}[];rows:{i:number;h:number;hidden:boolean}[];showGridlines:boolean;zoom?:number;protection?:ProtectionInfo|null;workbookLocked?:boolean;freeze:{rows:number;cols:number}|null;merges:{r0:number;c0:number;r1:number;c1:number}[]}
+export interface SheetLayout{sheet:number;defaultColWidth:number;defaultRowHeight:number;cols:{i:number;w:number;hidden:boolean}[];rows:{i:number;h:number;hidden:boolean}[];showGridlines:boolean;showHeadings?:boolean;showZeros?:boolean;zoom?:number;protection?:ProtectionInfo|null;workbookLocked?:boolean;freeze:{rows:number;cols:number}|null;merges:{r0:number;c0:number;r1:number;c1:number}[]}
 export interface RangeResult{sheet:number;row:number;col:number;rows:number;cols:number;cells:RangeCell[]}
 /** Typed formatting operations; the Rust bridge keeps the same closed allowlist and re-validates every field. */
 /** Tables and a small PivotTable. Names come from the sheet's own first row; the Rust bridge re-validates everything. */
@@ -47,8 +47,8 @@ type Rgba=[number,number,number,number];type Stroke={c:Rgba;w:number}|null;
 export type Prim={t:'rect';x:number;y:number;w:number;h:number;fill:Rgba|null;stroke:Stroke;radius:number}|{t:'line';pts:[number,number][];color:Rgba;width:number;dash:boolean}|{t:'polygon';pts:[number,number][];fill:Rgba;stroke:Stroke}|{t:'wedge';cx:number;cy:number;ro:number;ri:number;a0:number;a1:number;fill:Rgba;stroke:Stroke}|{t:'circle';cx:number;cy:number;r:number;fill:Rgba|null;stroke:Stroke}|{t:'text';x:number;y:number;text:string;size:number;color:Rgba;bold:boolean;align:'start'|'middle'|'end';valign:'hanging'|'central'|'auto';rotation:number};
 export interface ChartScene{width:number;height:number;prims:Prim[]}
 export interface SparklineScene extends ChartScene{row:number;col:number}
-export type ViewOp={zoom:number}|{gridlines:boolean};
-export interface ViewOpResult{zoom:number;gridlines:boolean}
+export type ViewOp={zoom:number}|{gridlines:boolean}|{headings:boolean}|{zeros:boolean};
+export interface ViewOpResult{zoom:number;gridlines:boolean;headings?:boolean;zeros?:boolean}
 /** Saved views: the sheet, the selected cell and the zoom under a name. */
 export type SavedViewOp={kind:'save'|'show'|'delete';name:string};
 /** Outline groups and subtotals on the selected lines or block (column offsets are inside the selection). */
@@ -117,7 +117,7 @@ export interface CellNote{author:string;text:string;threaded:boolean;resolved:bo
 export interface CellLink{target:string;tooltip:string|null}
 export interface CellAnnotations{note:CellNote|null;link:CellLink|null}
 export type FillDirection='down'|'right'|'up'|'left';
-export type SheetOp={kind:'add';name?:string}|{kind:'rename';name:string}|{kind:'duplicate'}|{kind:'delete'}|{kind:'move';to:number};
+export type SheetOp={kind:'add';name?:string}|{kind:'rename';name:string}|{kind:'duplicate'}|{kind:'delete'}|{kind:'move';to:number}|{kind:'hide'}|{kind:'unhide';index:number}|{kind:'tabColor';color:string};
 export type SheetsRequest=
  |{id:number;op:'init';wasmUrl:string}
  |{id:number;op:'open';bytes:ArrayBuffer}
