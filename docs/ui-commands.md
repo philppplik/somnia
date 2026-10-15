@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1077 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1078 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -1067,6 +1067,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `vector.resizePage` | Resize vector page | Edit | vector |  |
 | `vector.reversePath` | Reverse vector path direction | Edit | vector |  |
 | `vector.rotateSelection` | Rotate vector selection | Edit | vector |  |
+| `vector.roundCorners` | Round vector corners | Edit | vector |  |
 | `vector.select` | Select vector paths | View | vector |  |
 | `vector.selectNode` | Select vector node | View | vector |  |
 | `vector.setGradient` | Set vector gradient fill | Edit | vector |  |

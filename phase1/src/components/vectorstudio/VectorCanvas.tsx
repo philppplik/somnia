@@ -4,6 +4,7 @@ import {PenNibIcon} from './icons';
 import {StudioEmptyState} from '../studios/StudioEmptyState';
 import {FileTabs} from '../FileTabs';
 import {useT} from '../../lib/useT';
+import {executeCommand} from '../../lib/commands';
 import {serializeContour,type Point,type VectorNode,type VectorPath} from '../../lib/vectorio';
 import {selectNode,moveSelection,addNodeNear,addPath,commit,createBlankVector,deleteNode,deleteSelection,duplicateSelection,moveNode,openSvgSource,PAGE_PRESETS,redo,select,setTool,setView,undo,useVectorSession,type VectorTool} from '../../lib/vectorstudio/session';
 import {boxOf,fitPath,hitDocument,pathBox,translatePath,type Box} from '../../lib/vectorstudio/geometry';
@@ -118,6 +119,7 @@ export function VectorCanvas(){
   if(mod&&e.key.toLowerCase()==='z'){e.preventDefault();e.shiftKey?redo():undo();return;}
   if(mod&&e.key.toLowerCase()==='y'){e.preventDefault();redo();return;}
   if(mod&&e.key.toLowerCase()==='d'){e.preventDefault();duplicateSelection();return;}
+  if(mod&&e.key.toLowerCase()==='g'){e.preventDefault();void executeCommand(e.shiftKey?'vector.ungroup':'vector.group');return;}
   if(mod&&e.key.toLowerCase()==='a'){e.preventDefault();select(s.doc.paths.filter(p=>!p.hidden).map(p=>p.id));return;}
   if(e.key==='Enter'&&s.tool==='pen'){e.preventDefault();finishPen(false);return;}
   if(e.key==='Escape'){if(pen.length){setPen([]);}else if(drag)setDrag(null);else select([]);return;}

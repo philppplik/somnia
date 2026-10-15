@@ -3,6 +3,7 @@ import type {CommandSpec} from '../commandSpec';
 import * as S from './session';
 import {rotateSelection,scaleSelection,selectionBounds,alignSelection,distributeSelection,ALIGN_MODES,ALIGN_TARGETS} from './transforms';
 import {applyGradient,GRADIENT_KINDS,type GradientPatch} from './gradients';
+import {roundCorners,RADIUS_LIMITS} from './roundCorners';
 import {offsetSelection,outlineStroke,OFFSET_LIMITS} from './offsetOps';
 import {splitPath,joinPaths,reverseSelection} from './pathOps';
 import {groupSelection,ungroupSelection} from './groups';
@@ -37,6 +38,8 @@ export function vectorShellCommandSpecs(active:()=>boolean):CommandSpec<any,unkn
    run:(p:{distance:number})=>{const s=S.getVectorSession(),r=offsetSelection(s.doc,s.selection,p.distance);S.commit(r.doc,{selection:r.ids,nodePath:null,selectedNode:null});}},
   {id:'vector.outlineStroke',title:'Outline vector stroke',category:'Edit',level:'ui',enabled:selected,params:empty,
    run:()=>{const s=S.getVectorSession(),r=outlineStroke(s.doc,s.selection);S.commit(r.doc,{selection:r.ids,nodePath:null,selectedNode:null});}},
+  {id:'vector.roundCorners',title:'Round vector corners',category:'Edit',level:'ui',enabled:selected,params:{...empty,properties:{radius:{type:'number',minimum:RADIUS_LIMITS.min,maximum:RADIUS_LIMITS.max},nodeIds:{type:'array',items:{type:'string',minLength:1},uniqueItems:true,maxItems:200}},required:['radius']},
+   run:(p:{radius:number;nodeIds?:string[]})=>{const s=S.getVectorSession(),next=roundCorners(s.doc,s.selection,p.radius,p.nodeIds);S.commit(next,{nodePath:null,selectedNode:null});}},
   {id:'vector.group',title:'Group vector selection',category:'Edit',level:'ui',enabled:selected,params:empty,run:()=>{const s=S.getVectorSession(),next=groupSelection(s.doc,s.selection);if(next!==s.doc)S.commit(next);}},
   {id:'vector.ungroup',title:'Ungroup vector selection',category:'Edit',level:'ui',enabled:ready,params:{...empty,properties:{ids:{type:'array',items:{type:'string',minLength:1},uniqueItems:true,maxItems:200}}},run:(p:{ids?:string[]}={})=>{const s=S.getVectorSession(),next=ungroupSelection(s.doc,p.ids??s.selection);if(next!==s.doc)S.commit(next);}},
   {id:'vector.exportSvg',title:'Export vector SVG',category:'Project',level:'ui',enabled:ready,params:empty,run:()=>downloadSvg(S.getVectorSession().name)},

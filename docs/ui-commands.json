@@ -12828,6 +12828,13 @@
       "hasEnabled": true
     },
     {
+      "id": "vector.roundCorners",
+      "title": "Round vector corners",
+      "category": "Edit",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
       "id": "vector.select",
       "title": "Select vector paths",
       "category": "View",
