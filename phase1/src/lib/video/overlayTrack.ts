@@ -6,6 +6,7 @@
  */
 import {MAX_GAIN,MIN_CLIP_SECONDS} from './timeline';
 import {clampTitleSeconds,DEFAULT_TITLE,sanitizeTitleSpec,type TitleSpec} from './titles';
+import {sanitizeKeys,valueAt,lerpNumber,type Key} from './keyframes';
 
 /** Placement inside the output frame as fractions (0..1); x+w and y+h never exceed 1 after sanitation. */
 export interface OverlayRect{x:number;y:number;w:number;h:number}
@@ -26,6 +27,10 @@ export interface OverlayClip{
  rect:OverlayRect;
  /** 0..1, multiplied over the frame. */
  opacity:number;
+ /** Animated frame rect: keys in overlay-local seconds (0 = appearance). Absent = static rect. */
+ rectKeys?:Key<OverlayRect>[];
+ /** Animated opacity 0..1: keys in overlay-local seconds. Absent = static opacity. */
+ opacityKeys?:Key<number>[];
  /** Video overlays: audio gain 0..MAX_GAIN (0 mutes the PiP sound). Unused by titles and images (always 1). */
  gain:number;
 }
@@ -57,6 +62,10 @@ export const newVideoOverlay=(source:string,at=0,duration=DEFAULT_OVERLAY_SECOND
 /** Normalizes one overlay: title specs sanitized, image overlays never carry one; rect and opacity clamped. */
 export function sanitizeOverlay(c:OverlayClip):OverlayClip{
  const base:OverlayClip={...c,at:Math.max(0,Number.isFinite(c.at)?c.at:0),duration:clampTitleSeconds(c.duration),in_s:Math.max(0,typeof c.in_s==='number'&&Number.isFinite(c.in_s)?c.in_s:0),rect:sanitizeRect(c.rect),opacity:Math.min(1,Math.max(0,typeof c.opacity==='number'&&Number.isFinite(c.opacity)?c.opacity:1)),gain:Math.min(MAX_GAIN,Math.max(0,typeof c.gain==='number'&&Number.isFinite(c.gain)?c.gain:1))};
+ const rectKeys=sanitizeKeys(c.rectKeys,base.duration,v=>v&&typeof v==='object'?sanitizeRect(v as Partial<OverlayRect>):null);
+ const opacityKeys=sanitizeKeys(c.opacityKeys,base.duration,v=>typeof v==='number'&&Number.isFinite(v)?Math.min(1,Math.max(0,v)):null);
+ if(rectKeys&&rectKeys.length>1)base.rectKeys=rectKeys;else delete base.rectKeys;
+ if(opacityKeys&&opacityKeys.length>1)base.opacityKeys=opacityKeys;else delete base.opacityKeys;
  if(base.kind==='title')base.title=sanitizeTitleSpec(base.title??DEFAULT_TITLE);
  else delete base.title;
  return base;
@@ -74,3 +83,8 @@ export const overlayTitleOf=(c:OverlayClip):Required<TitleSpec>|null=>c.kind==='
 
 /** Source second a video overlay shows at timeline second `t`. */
 export const overlaySourceTime=(c:OverlayClip,t:number)=>c.in_s+Math.max(0,t-c.at);
+
+/** The overlay's frame rect at timeline second `t`: animated when rect keys exist, else the static rect. */
+export const overlayRectAt=(c:OverlayClip,t:number)=>valueAt(c.rectKeys,t-c.at,(a,b,p)=>({x:lerpNumber(a.x,b.x,p),y:lerpNumber(a.y,b.y,p),w:lerpNumber(a.w,b.w,p),h:lerpNumber(a.h,b.h,p)}),c.rect);
+/** The overlay's opacity at timeline second `t`: animated when opacity keys exist, else the static value. */
+export const overlayOpacityAt=(c:OverlayClip,t:number)=>valueAt(c.opacityKeys,t-c.at,lerpNumber,c.opacity);

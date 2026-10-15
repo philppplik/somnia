@@ -6,7 +6,7 @@ import {clipFadeGain,clipRanges,clipSourceTime,cropOf,fadeInOf,fadeOf,fadeOutOf,
 import {audioEnvelope,duckGainAt,type AudioClip} from './audioTrack';
 import {WindowMixer} from './mixer';
 import {DEFAULT_TITLE,drawTitleCard,isTitleClip,needsSourceFile,type TitleClip} from './titles';
-import {overlaySourceTime,overlaysAt,type OverlayClip} from './overlayTrack';
+import {overlaySourceTime,overlaysAt,overlayOpacityAt,overlayRectAt,type OverlayClip} from './overlayTrack';
 import {renderTitleSpan} from './titleExport';
 import type {VideoCapabilities,VideoProbe,VideoReport} from './protocol';
 const inputOf=(bytes:ArrayBuffer)=>new Input({source:new BufferSource(bytes),formats:ALL_FORMATS});
@@ -292,12 +292,14 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
   const overlaySinks=new Map<string,{sink:CanvasSink;w:number;h:number}>();
   const drawOverlays=async(t:number)=>{
    for(const o of overlaysAt(overlayClips,t)){
-    const rw=Math.max(1,Math.round(o.rect.w*outW)),rh=Math.max(1,Math.round(o.rect.h*outH));
+    // Keyframed rect/opacity evaluate on the overlay-local clock; static overlays pay nothing.
+    const oRect=overlayRectAt(o,t),oOpacity=overlayOpacityAt(o,t);
+    const rw=Math.max(1,Math.round(oRect.w*outW)),rh=Math.max(1,Math.round(oRect.h*outH));
     if(o.kind==='video'){
      let rec=overlaySinks.get(o.id);
      if(!rec||rec.w!==rw||rec.h!==rh){const{input}=inputs.get(o.source)!;const track=(await input.getVideoTracks())[0];rec={sink:new CanvasSink(track,{width:rw,height:rh,fit:'contain',poolSize:2}),w:rw,h:rh};overlaySinks.set(o.id,rec);}
      const f=await rec.sink.getCanvas(overlaySourceTime(o,t));
-     if(f){ctx.globalAlpha=o.opacity;ctx.drawImage(f.canvas,Math.round(o.rect.x*outW),Math.round(o.rect.y*outH));ctx.globalAlpha=1;}
+     if(f){ctx.globalAlpha=oOpacity;ctx.drawImage(f.canvas,Math.round(oRect.x*outW),Math.round(oRect.y*outH));ctx.globalAlpha=1;}
      continue;
     }
     let card=overlayCards.get(o.id);
@@ -312,7 +314,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
      card.ctx.drawImage(bmp,Math.round((rw-w)/2),Math.round((rh-h)/2),w,h);
      card.key=`i:${o.source}`;
     }
-    ctx.globalAlpha=o.opacity;ctx.drawImage(card.canvas,Math.round(o.rect.x*outW),Math.round(o.rect.y*outH));ctx.globalAlpha=1;
+    ctx.globalAlpha=oOpacity;ctx.drawImage(card.canvas,Math.round(oRect.x*outW),Math.round(oRect.y*outH));ctx.globalAlpha=1;
    }
   };
   // Frame-space crop: the region left after cutting the edge fractions is contain-fitted back into the same frame

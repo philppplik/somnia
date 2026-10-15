@@ -3,7 +3,7 @@ import {ChevronsLeft,ChevronsRight,Mic,Download,Pause,Play,Redo2,RotateCcw,Sciss
 import {Button} from '../ui/button';
 import {useT} from '../../lib/useT';
 import {executeCommand} from '../../lib/commands';
-import {addAudioTrackClip,addImageClip,addTimelineClip,addTimelineClipsFromDialog,cancelVideoExport,deleteAudioTrackClip,deleteTimelineClip,duplicateAudioTrackClip,getFilmstrip,moveAudioTrackClip,moveOverlayClip,moveTimelineClip,openVideo,redoVideoEdit,resizeAudioTrackClip,saveVideoProject,selectAudioTrackClip,selectOverlayClip,setOverlayDuration,setOverlayRect,selectTimelineClip,splitTimelineAt,toggleTimelineClipMute,trimTimelineClip,undoVideoEdit,useVideoSession,videoCanRedo,videoCanUndo,videoIsDirty,videoIsEdited} from '../../lib/video/session';
+import {addAudioTrackClip,addImageClip,addTimelineClip,addTimelineClipsFromDialog,cancelVideoExport,deleteAudioTrackClip,deleteTimelineClip,duplicateAudioTrackClip,getFilmstrip,moveAudioTrackClip,moveOverlayClip,moveTimelineClip,openVideo,redoVideoEdit,resizeAudioTrackClip,saveVideoProject,selectAudioTrackClip,selectOverlayClip,setOverlayDuration,setOverlayRect,setOverlayRectKey,selectTimelineClip,splitTimelineAt,toggleTimelineClipMute,trimTimelineClip,undoVideoEdit,setVideoPlayhead,useVideoPlayhead,useVideoSession,videoCanRedo,videoCanUndo,videoIsDirty,videoIsEdited} from '../../lib/video/session';
 import {clipDisplayName,DEFAULT_TITLE,isTitleClip,needsSourceFile} from '../../lib/video/titles';
 import {TitlePreview} from './TitlePreview';
 import {useTitlePlayback} from './useTitlePlayback';
@@ -17,7 +17,7 @@ import {OverlayLane} from './OverlayLane';
 import {snapPointsFor,zoomInStep,zoomOutStep} from '../../lib/video/zoom';
 import {formatTime} from '../../lib/video/recipe';
 import {pickVoiceoverMime,voiceoverExtension,voiceoverFileName} from '../../lib/video/voiceover';
-import {overlaysAt,overlayTrackEnd,type OverlayClip} from '../../lib/video/overlayTrack';
+import {overlayOpacityAt,overlayRectAt,overlaysAt,overlayTrackEnd,type OverlayClip,type OverlayRect} from '../../lib/video/overlayTrack';
 import {addMediaFile,getMedia} from '../../lib/media';
 import {formatBytes,getState,patchState,requestStudio,useAppStore,useMedia,type MediaItem} from './workspace-deps';
 import {VideoTimeline} from './VideoTimeline';
@@ -84,6 +84,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
  const missing=new Set(clips.filter(needsSourceFile).map(c=>c.source).filter((n:string)=>!media.items.some((i:MediaItem)=>i.name===n)));
  const urlOf=(source:string)=>media.items.find((i:MediaItem)=>i.name===source)?.url??item.url;
  const seek=useCallback((s:number)=>{setPlayhead(Math.min(Math.max(0,s),domain||s));},[domain]);
+ useEffect(()=>{setVideoPlayhead(playhead);},[playhead]);
  // Audio-track preview: one hidden element per audio clip. Envelope gain (fades) follows the playhead; drift over 350 ms is re-synced, same as the video slots.
  const audioEls=useRef(new Map<string,HTMLAudioElement>());
  useEffect(()=>{
@@ -337,14 +338,17 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
      {playable&&blend.map(e=>isImageClip(e.range.clip)?<img key={e.range.clip.id} src={urlOf(e.range.clip.source)} alt="" className="absolute inset-0 h-full w-full object-contain p-2" style={{opacity:main&&e.range.index===main.range.index?(transition!=='dissolve'?1:e.video):1,zIndex:main&&e.range.index===main.range.index?1:0,pointerEvents:'none'}} data-testid="video-image-preview" data-img-clip={e.range.clip.id}/>:null)}
      {playable&&overlaysAt(session?.overlayClips??[],playhead).map(o=>{
       const selOverlay=o.id===session?.selectedOverlayClipId;
+      // Keyframed overlays draw at the animated rect/opacity; drags write a key at the playhead instead of the static rect.
+      const oRect=overlayRectAt(o,playhead),oOpacity=overlayOpacityAt(o,playhead),keyed=!!o.rectKeys?.length;
+      const writeRect=(r:OverlayRect,hk:string)=>{if(keyed)setOverlayRectKey(item.name,o.id,Math.max(0,playhead-o.at),r,hk);else setOverlayRect(item.name,o.id,r,hk);};
       const beginDrag=(e:React.PointerEvent)=>{
        e.preventDefault();e.stopPropagation();
        selectOverlayClip(item.name,o.id);
-       const base={x:o.rect.x,y:o.rect.y},sx=e.clientX,sy=e.clientY;
+       const base={x:oRect.x,y:oRect.y},sx=e.clientX,sy=e.clientY;
        const move=(ev:PointerEvent)=>{
         const box=stageRef.current?.getBoundingClientRect();
         if(!box||box.width===0||box.height===0)return;
-        setOverlayRect(item.name,o.id,{...o.rect,x:base.x+(ev.clientX-sx)/box.width,y:base.y+(ev.clientY-sy)/box.height},`orect-drag:${o.id}`);
+        writeRect({...oRect,x:base.x+(ev.clientX-sx)/box.width,y:base.y+(ev.clientY-sy)/box.height},`orect-drag:${o.id}`);
        };
        const up=()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);};
        window.addEventListener('pointermove',move);window.addEventListener('pointerup',up);
@@ -353,7 +357,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
       // ratio (computed in stage pixels, since the stage is not necessarily square in fraction space).
       const beginResize=(edges:{l?:boolean;r?:boolean;t?:boolean;bb?:boolean})=>(e:React.PointerEvent)=>{
        e.preventDefault();e.stopPropagation();
-       const base={...o.rect},sx=e.clientX,sy=e.clientY,corner=(edges.l||edges.r)&&(edges.t||edges.bb);
+       const base={...oRect},sx=e.clientX,sy=e.clientY,corner=(edges.l||edges.r)&&(edges.t||edges.bb);
        const move=(ev:PointerEvent)=>{
         const box=stageRef.current?.getBoundingClientRect();
         if(!box||box.width===0||box.height===0)return;
@@ -368,12 +372,12 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
         }
         if(w<0.01){if(edges.l)x=base.x+base.w-0.01;w=0.01;}
         if(h<0.01){if(edges.t)y=base.y+base.h-0.01;h=0.01;}
-        setOverlayRect(item.name,o.id,{x,y,w,h},`orect-resize:${o.id}`);
+        writeRect({x,y,w,h},`orect-resize:${o.id}`);
        };
        const up=()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);};
        window.addEventListener('pointermove',move);window.addEventListener('pointerup',up);
       };
-      const style:CSSProperties={left:`${o.rect.x*100}%`,top:`${o.rect.y*100}%`,width:`${o.rect.w*100}%`,height:`${o.rect.h*100}%`,opacity:o.opacity,zIndex:2,cursor:'grab',touchAction:'none'};
+      const style:CSSProperties={left:`${oRect.x*100}%`,top:`${oRect.y*100}%`,width:`${oRect.w*100}%`,height:`${oRect.h*100}%`,opacity:oOpacity,zIndex:2,cursor:'grab',touchAction:'none'};
       return <div key={o.id} title={o.title?.text||o.source}
        className={`absolute flex items-center justify-center ${selOverlay?'outline-2 outline-[var(--accent)]':''}`}
        style={style} onPointerDown={beginDrag} data-testid="video-overlay-preview" data-overlay-id={o.id} data-selected={selOverlay||undefined}>
@@ -398,10 +402,10 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
         style={{...(hd.pos as CSSProperties),cursor:hd.cur}}
         onPointerDown={beginResize(hd.edges)}
         onKeyDown={hd.k==='se'?e=>{const d=e.shiftKey?0.05:0.01;
-         if(e.key==='ArrowLeft'){e.preventDefault();setOverlayRect(item.name,o.id,{...o.rect,w:o.rect.w-d},`orect-resize:${o.id}`);}
-         else if(e.key==='ArrowRight'){e.preventDefault();setOverlayRect(item.name,o.id,{...o.rect,w:o.rect.w+d},`orect-resize:${o.id}`);}
-         else if(e.key==='ArrowUp'){e.preventDefault();setOverlayRect(item.name,o.id,{...o.rect,h:o.rect.h-d},`orect-resize:${o.id}`);}
-         else if(e.key==='ArrowDown'){e.preventDefault();setOverlayRect(item.name,o.id,{...o.rect,h:o.rect.h+d},`orect-resize:${o.id}`);}}:undefined}
+         if(e.key==='ArrowLeft'){e.preventDefault();writeRect({...oRect,w:oRect.w-d},`orect-resize:${o.id}`);}
+         else if(e.key==='ArrowRight'){e.preventDefault();writeRect({...oRect,w:oRect.w+d},`orect-resize:${o.id}`);}
+         else if(e.key==='ArrowUp'){e.preventDefault();writeRect({...oRect,h:oRect.h-d},`orect-resize:${o.id}`);}
+         else if(e.key==='ArrowDown'){e.preventDefault();writeRect({...oRect,h:oRect.h+d},`orect-resize:${o.id}`);}}:undefined}
         data-testid="overlay-resize-handle" data-handle-pos={hd.k}/>)}
       </div>;
      })}

@@ -69,7 +69,7 @@ test('audio track: edits dirty the project and the saved copy round-trips the au
   setAudioTrackClipFades('au-save.video-project',id!,0.5,1);
   assert.ok(videoIsDirty(getVideoSession('au-save.video-project')),'audio edits mark the project dirty');
   const copy=serializeVideoProjectCopy('au-save.video-project')!;
-  assert.match(copy.text,/"version": 2/);
+  assert.match(copy.text,/"version": 3/);
   done();
   const r=await addMediaFile(new Blob([copy.text]),'au-save-2.video-project');
   assert.ok('name' in r,JSON.stringify(r));

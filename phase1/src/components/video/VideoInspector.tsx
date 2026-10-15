@@ -2,10 +2,10 @@ import {useMemo,useState} from 'react';
 import {Button} from '../ui/button';
 import {useT} from '../../lib/useT';
 import {useMedia} from '../../lib/media';
-import {addAudioTrackClip,addImageClip,addOverlayImage,addOverlayTitle,addOverlayVideo,importSubtitleText,addTimelineClip,addTimelineClipsFromDialog,cancelVideoExport,deleteAudioTrackClip,deleteTimelineClip,duplicateAudioTrackClip,moveAudioTrackClip,moveTimelineClip,resetTimeline,resizeAudioTrackClip,setAudioTrackClipDuck,setAudioTrackClipFades,setAudioTrackClipGain,toggleAudioTrackClipMute,setTimelineClipCrossfade,setTimelineClipFades,setTimelineClipFreeze,setTimelineClipGain,setTimelineClipSpeed,setVideoFormat,duplicateTimelineClip,replaceClipSource,selectTimelineClip,setImageClipLength,setTimelineClipCrop,setTimelineClipFlip,setTimelineClipReversed,setTimelineClipRotation,setVideoExportOptions,setVideoExportRange,toggleTimelineClipMute,trimTimelineClip,useVideoSession,deleteOverlayClip,moveOverlayClip,selectOverlayClip,setOverlayDuration,setOverlayGain,setOverlayInS,setOverlayOpacity,setOverlayRect,updateOverlayTitle} from '../../lib/video/session';
+import {addAudioTrackClip,addImageClip,addOverlayImage,addOverlayTitle,addOverlayVideo,importSubtitleText,addTimelineClip,addTimelineClipsFromDialog,cancelVideoExport,deleteAudioTrackClip,deleteTimelineClip,duplicateAudioTrackClip,moveAudioTrackClip,moveTimelineClip,resetTimeline,resizeAudioTrackClip,setAudioTrackClipDuck,setAudioTrackClipFades,setAudioTrackClipGain,toggleAudioTrackClipMute,setTimelineClipCrossfade,setTimelineClipFades,setTimelineClipFreeze,setTimelineClipGain,setTimelineClipSpeed,setVideoFormat,duplicateTimelineClip,replaceClipSource,selectTimelineClip,setImageClipLength,setTimelineClipCrop,setTimelineClipFlip,setTimelineClipReversed,setTimelineClipRotation,setVideoExportOptions,setVideoExportRange,toggleTimelineClipMute,trimTimelineClip,useVideoSession,deleteOverlayClip,moveOverlayClip,selectOverlayClip,setOverlayDuration,setOverlayGain,setOverlayInS,clearOverlayKeys,setOverlayOpacity,setOverlayOpacityKey,setOverlayRect,setOverlayRectKey,useVideoPlayhead,updateOverlayTitle} from '../../lib/video/session';
 import {audioClipDuration,audioTrackEnd} from '../../lib/video/audioTrack';
 import {decodeSubtitleBytes} from '../../lib/video/subtitles';
-import {overlayTrackEnd} from '../../lib/video/overlayTrack';
+import {overlayTrackEnd,overlayOpacityAt,overlayRectAt} from '../../lib/video/overlayTrack';
 import {clipDuration,clipRanges,fadeInOf,fadeOf,fadeOutOf,cropOf,flipOf,rotationOf,isFreeze,isReversed,IMAGE_DEFAULT_SECONDS,isImageClip,MAX_GAIN,speedOf,timelineDuration,type ClipFlip,type ClipRotation} from '../../lib/video/timeline';
 import {isTitleClip} from '../../lib/video/titles';
 import {addTitleClip,setTitleLength,updateTitle} from '../../lib/video/titleSession';
@@ -17,6 +17,7 @@ const field='h-7 w-full rounded-sm border border-subtle bg-transparent px-2 text
 /** Facts, timeline, selected-clip and export settings of the active video project. Playback lives in the workspace. */
 export function VideoControls({name}:{name:string}){
  const {t}=useT();const s=useVideoSession(name);
+ const playhead=useVideoPlayhead();
  const media=useMedia();
  const [addPick,setAddPick]=useState('');
  const [addAudioPick,setAddAudioPick]=useState('');
@@ -243,12 +244,22 @@ export function VideoControls({name}:{name:string}){
    </div>
    <div className="grid grid-cols-2 gap-2">
     {(['x','y','w','h'] as const).map(k=><label key={k}>{t(`video.overlayRect.${k}`)}
-     <NativeInput type="number" className={`${field} mt-1`} min={0} max={100} step={1} value={Math.round(selectedOverlay.rect[k]*100)} onChange={e=>{const val=Math.min(100,Math.max(0,Number(e.target.value)||0))/100;setOverlayRect(name,selectedOverlay.id,{...selectedOverlay.rect,[k]:val},`orect:${selectedOverlay.id}:${k}`);}} data-testid={`video-overlay-rect-${k}`}/>
+     <NativeInput type="number" className={`${field} mt-1`} min={0} max={100} step={1} value={Math.round((selectedOverlay.rectKeys?.length?overlayRectAt(selectedOverlay,playhead):selectedOverlay.rect)[k]*100)} onChange={e=>{const val=Math.min(100,Math.max(0,Number(e.target.value)||0))/100;const next={...overlayRectAt(selectedOverlay,playhead),[k]:val};if(selectedOverlay.rectKeys?.length)setOverlayRectKey(name,selectedOverlay.id,Math.max(0,playhead-selectedOverlay.at),next,`orect:${selectedOverlay.id}:${k}`);else setOverlayRect(name,selectedOverlay.id,next,`orect:${selectedOverlay.id}:${k}`);}} data-testid={`video-overlay-rect-${k}`}/>
     </label>)}
    </div>
-   <label>{t('video.overlayOpacity',{percent:Math.round(selectedOverlay.opacity*100)})}
-    <NativeInput type="range" className="accent-[var(--accent)]" min={0} max={1} step={0.05} value={selectedOverlay.opacity} onChange={e=>setOverlayOpacity(name,selectedOverlay.id,Number(e.target.value),`oopacity:${selectedOverlay.id}`)} data-testid="video-overlay-opacity"/>
+   <div className="flex items-center gap-2">
+    {!selectedOverlay.rectKeys?.length
+     ?<Button size="compact" variant="ghost" onClick={()=>setOverlayRectKey(name,selectedOverlay.id,Math.max(0,playhead-selectedOverlay.at),overlayRectAt(selectedOverlay,playhead))} data-testid="video-overlay-rect-animate">{t('video.overlayAnimateRect')}</Button>
+     :<><span className="text-ink-3" data-testid="video-overlay-rect-keys">{t('video.overlayKeysActive',{count:selectedOverlay.rectKeys.length})}</span><Button size="compact" variant="ghost" onClick={()=>clearOverlayKeys(name,selectedOverlay.id,'rect')} data-testid="video-overlay-rect-keys-clear">{t('video.overlayKeysClear')}</Button></>}
+   </div>
+   <label>{t('video.overlayOpacity',{percent:Math.round((selectedOverlay.opacityKeys?.length?overlayOpacityAt(selectedOverlay,playhead):selectedOverlay.opacity)*100)})}
+    <NativeInput type="range" className="accent-[var(--accent)]" min={0} max={1} step={0.05} value={selectedOverlay.opacityKeys?.length?overlayOpacityAt(selectedOverlay,playhead):selectedOverlay.opacity} onChange={e=>{const v=Number(e.target.value);if(selectedOverlay.opacityKeys?.length)setOverlayOpacityKey(name,selectedOverlay.id,Math.max(0,playhead-selectedOverlay.at),v,`oopacity:${selectedOverlay.id}`);else setOverlayOpacity(name,selectedOverlay.id,v,`oopacity:${selectedOverlay.id}`);}} data-testid="video-overlay-opacity"/>
    </label>
+   <div className="flex items-center gap-2">
+    {!selectedOverlay.opacityKeys?.length
+     ?<Button size="compact" variant="ghost" onClick={()=>setOverlayOpacityKey(name,selectedOverlay.id,Math.max(0,playhead-selectedOverlay.at),selectedOverlay.opacity)} data-testid="video-overlay-opacity-animate">{t('video.overlayAnimateOpacity')}</Button>
+     :<><span className="text-ink-3" data-testid="video-overlay-opacity-keys">{t('video.overlayKeysActive',{count:selectedOverlay.opacityKeys.length})}</span><Button size="compact" variant="ghost" onClick={()=>clearOverlayKeys(name,selectedOverlay.id,'opacity')} data-testid="video-overlay-opacity-keys-clear">{t('video.overlayKeysClear')}</Button></>}
+   </div>
    <Button size="compact" variant="ghost" onClick={()=>deleteOverlayClip(name,selectedOverlay.id)} data-testid="video-overlay-delete">{t('video.deleteClip')}</Button>
   </div>}
   {selectedAudio&&<div className={row} data-testid="video-audio-clip-panel">

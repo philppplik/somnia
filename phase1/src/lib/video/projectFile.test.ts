@@ -31,7 +31,7 @@ test('audio clips round-trip and version 2 is the written format',()=>{
  assert.deepEqual(parsed.audioClips[0],audio[0]);
 });
 
-test('legacy version 1 files load with an empty audio track; version 3+ is rejected',()=>{
+test('legacy version 1 files load with an empty audio track; version 4+ is rejected',()=>{
  const v1=JSON.stringify({app:'somnia-video',version:1,format:'mp4',clips:[{id:'a',kind:'media',source:'x.mp4',in_s:0,out_s:1}]});
  const parsed=parseVideoProject(v1);
  assert.equal(parsed.clips.length,1);
@@ -39,8 +39,10 @@ test('legacy version 1 files load with an empty audio track; version 3+ is rejec
  const v2nomute=JSON.stringify({app:'somnia-video',version:2,clips:[],audio:[{id:'x',source:'m.mp3',in_s:0,out_s:1,at:0,gain:1,fadeIn:0,fadeOut:0}]});
  assert.equal(parseVideoProject(v2nomute).audioClips[0].muted,false,'v2 files written before mute load unmuted');
  assert.equal(parseVideoProject(v2nomute).audioClips[0].duck,0,'v2 files written before duck load with duck 0');
- const v3=JSON.stringify({app:'somnia-video',version:3,clips:[]});
- assert.throws(()=>parseVideoProject(v3),/version 3 is not supported/i);
+ const v3=JSON.stringify({app:'somnia-video',version:3,clips:[],overlay:[{id:'o1',kind:'image',source:'p.png',at:0,duration:2,rect:{x:0,y:0,w:0.5,h:0.5},opacity:1,opacityKeys:[{t:0,v:0},{t:1,v:1}]}]});
+ assert.deepEqual(parseVideoProject(v3).overlayClips[0].opacityKeys,[{t:0,v:0},{t:1,v:1}],'v3 overlay keys parse');
+ const v4=JSON.stringify({app:'somnia-video',version:4,clips:[]});
+ assert.throws(()=>parseVideoProject(v4),/version 4 is not supported/i);
 });
 
 test('audio fields are coerced and junk audio entries are skipped',()=>{

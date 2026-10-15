@@ -64,6 +64,7 @@ export function OverlayLane({clips,selectedId,duration,onSelect,onMoveAt,onResiz
     <span className="pointer-events-none absolute inset-x-1 top-1/2 -translate-y-1/2 truncate text-[10px] text-ink">
      {c.kind==='title'?(c.title?.text||t('video.overlayAddTitle')):shortName(c.source)}
     </span>
+    {[...new Set([...(c.rectKeys??[]),...(c.opacityKeys??[])].map(k=>k.t))].map(kt=><span key={kt} className="pointer-events-none absolute bottom-0 text-[8px] leading-none text-amber-200" style={{left:`${Math.min(100,Math.max(0,kt/c.duration*100))}%`}} data-testid="overlay-key-marker">◆</span>)}
     {selected&&<div data-handle="true" role="slider"
      aria-label={t('video.trimEnd')}
      aria-valuemin={0} aria-valuenow={Math.round((c.at+c.duration)*100)/100} aria-valuetext={`${(c.at+c.duration).toFixed(2)} s`} tabIndex={0}

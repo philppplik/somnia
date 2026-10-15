@@ -8,6 +8,7 @@ import {cropOf,fadeInOf,fadeOutOf,flipOf,hasCrop,rotationOf,CLIP_ROTATIONS,fullC
 import {emptyVideoHistory,pushHistory,redoHistory,undoHistory,type VideoHistory,type VideoSnapshot} from './history';
 import {audioTrackEnd,duplicateAudioClip,fullAudioClip,moveAudioClip,removeAudioClip,resizeAudioClip,sanitizeAudioClips,setAudioClipDuck,setAudioClipEdge,setAudioClipFades,setAudioClipGain,setAudioClipMuted,type AudioClip,sliceAudioClips} from './audioTrack';
 import {clipsSignature,parseVideoProject,projectFileName,serializeVideoProject} from './projectFile';
+import {upsertKey} from './keyframes';
 import {sanitizeTitleSpec,clampTitleSeconds,insertClip,insertIndexAfter,isTitleClip,needsSourceFile} from './titles';
 import {FilmstripController} from './filmstrip-controller';
 import {FilmstripEngine} from './filmstrip-engine';
@@ -196,6 +197,12 @@ export const setOverlayDuration=(root:string,id:string,seconds:number,historyKey
 export const setOverlayRect=(root:string,id:string,rect:OverlayRect,historyKey?:string)=>editOverlays(root,clips=>clips.map(c=>c.id===id?{...c,rect:sanitizeRect(rect)}:c),historyKey?{historyKey}:undefined);
 export const setOverlayGain=(root:string,id:string,gain:number,historyKey?:string)=>editOverlays(root,clips=>clips.map(c=>c.id===id&&c.kind==='video'?{...c,gain}:c),historyKey?{historyKey}:undefined);
 export const setOverlayOpacity=(root:string,id:string,opacity:number,historyKey?:string)=>editOverlays(root,clips=>clips.map(c=>c.id===id?{...c,opacity}:c),historyKey?{historyKey}:undefined);
+/** Sets or replaces a rect key at overlay-local time t (the first key seeds t=0 with the current static rect). */
+export const setOverlayRectKey=(root:string,id:string,t:number,rect:OverlayRect,historyKey?:string)=>editOverlays(root,clips=>clips.map(c=>c.id===id?{...c,rectKeys:upsertKey(c.rectKeys,{t:0,v:c.rect},t,sanitizeRect(rect))}:c),historyKey?{historyKey}:undefined);
+/** Sets or replaces an opacity key at overlay-local time t (the first key seeds t=0 with the current static opacity). */
+export const setOverlayOpacityKey=(root:string,id:string,t:number,opacity:number,historyKey?:string)=>editOverlays(root,clips=>clips.map(c=>c.id===id?{...c,opacityKeys:upsertKey(c.opacityKeys,{t:0,v:c.opacity},t,Math.min(1,Math.max(0,opacity)))}:c),historyKey?{historyKey}:undefined);
+/** Clears one animated property (rect or opacity) back to its static value. */
+export const clearOverlayKeys=(root:string,id:string,prop:'rect'|'opacity')=>editOverlays(root,clips=>clips.map(c=>{if(c.id!==id)return c;const o={...c};if(prop==='rect')delete o.rectKeys;else delete o.opacityKeys;return o;}));
 /** Patches the text/style spec of a title overlay. */
 export const updateOverlayTitle=(root:string,id:string,spec:Partial<import('./titles').TitleSpec>)=>editOverlays(root,clips=>clips.map(c=>c.id===id&&c.kind==='title'?{...c,title:sanitizeTitleSpec({...c.title,...spec})}:c));
 /** Duplicates an audio clip (optionally at a position) and selects the copy. Returns the copy's id. */
@@ -443,3 +450,10 @@ const WORK_MEDIA_KINDS:MediaKind[]=['docx','audio','video','video-project'];
 registerWorkProvider({studio:'media',dirty:dirtyVideoNames,openCount:()=>getMedia().items.filter(i=>WORK_MEDIA_KINDS.includes(i.kind)).length,
  async save(name){const s=getVideoSession(name);return s&&videoIsDirty(s)?saveVideoProject(name):true;},
  discard:()=>[],closeAll:()=>{for(const i of getMedia().items.filter(i=>WORK_MEDIA_KINDS.includes(i.kind)))closeMediaForced(i.name);}});
+
+/** Playhead beacon: the workspace publishes its playhead so inspector sections can place keys at it without prop drilling through the shell. */
+let playheadPos=0;
+const playheadSubs=new Set<()=>void>();
+export const setVideoPlayhead=(seconds:number)=>{if(seconds===playheadPos)return;playheadPos=seconds;playheadSubs.forEach(f=>f());};
+export const getVideoPlayhead=()=>playheadPos;
+export const useVideoPlayhead=()=>useSyncExternalStore(cb=>{playheadSubs.add(cb);return()=>{playheadSubs.delete(cb);};},getVideoPlayhead);
