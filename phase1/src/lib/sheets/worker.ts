@@ -53,7 +53,7 @@ scope.onmessage=({data}:MessageEvent<SheetsRequest>)=>{queue=queue.then(async()=
    case 'annotations':result=JSON.parse(need().annotations(data.sheet,data.row,data.col,1,1));break;
    case 'defineName':result=JSON.parse(need().define_name(data.sheet,data.row,data.col,data.rows,data.cols,JSON.stringify(data.name)));break;
    case 'createNames':result=JSON.parse(need().create_names(data.sheet,data.row,data.col,data.rows,data.cols,JSON.stringify(data.name)));break;
-   case 'clipCopy':result=JSON.parse(need().clip_copy(data.sheet,data.row,data.col,data.rows,data.cols));break;
+   case 'clipCopy':result=JSON.parse(need().clip_copy(data.sheet,data.row,data.col,data.rows,data.cols,data.cut===true));break;
    case 'pasteSpecial':result=JSON.parse(need().paste_special(data.sheet,data.row,data.col,data.rows,data.cols,JSON.stringify(data.paste)));break;
    case 'editName':result=JSON.parse(need().edit_name(data.sheet,JSON.stringify(data.name)));break;
    case 'deleteName':result=JSON.parse(need().delete_name(data.sheet,JSON.stringify(data.name)));break;

@@ -795,7 +795,7 @@ const PASTE_COMBINE=['none','add','subtract','multiply','divide'] as const;
 function PasteGroup(){
  const {t}=useT(),s=useSheetsSelection(),action=useAction();const [what,setWhat]=useState<PasteWhat>('values');const [combine,setCombine]=useState<(typeof PASTE_COMBINE)[number]>('none');const [skip,setSkip]=useState(false);const [flip,setFlip]=useState(false);
  if(!s)return null;
- const calc=['all','formulas','values','valuesAndNumberFormats'].includes(what),clip=s.clip??null;
+ const calc=['all','formulas','values','valuesAndNumberFormats'].includes(what),clip=s.clip??null,cutBad=!!clip?.cut&&(what!=='all'||(calc&&combine!=='none')||skip||flip);
  const opt=(id:PasteWhat)=><option key={id} value={id}>{t('sheets.ps.'+id)}</option>;
  const apply=()=>{void action.run('sheets.paste',{what,...(calc&&combine!=='none'?{operation:combine}:{}),skipBlanks:skip,transpose:flip});};
  return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.ps.title')}>
@@ -808,8 +808,9 @@ function PasteGroup(){
   {calc&&<label className="flex flex-col gap-1">{t('sheets.ps.combine')}<NativeSelect className={field} value={combine} disabled={action.busy} onChange={e=>setCombine(e.currentTarget.value as (typeof PASTE_COMBINE)[number])} data-testid="sheets-ps-combine">{PASTE_COMBINE.map(c=><option key={c} value={c}>{t('sheets.ps.op.'+c)}</option>)}</NativeSelect></label>}
   <Checkbox label={t('sheets.ps.skip')} checked={skip} disabled={action.busy} onChange={e=>setSkip(e.currentTarget.checked)}/>
   <Checkbox label={t('sheets.ps.transpose')} checked={flip} disabled={action.busy} onChange={e=>setFlip(e.currentTarget.checked)}/>
-  <Button variant="outline" size="compact" disabled={action.busy||!clip} onClick={apply} data-testid="sheets-ps-apply">{t('sheets.ps.apply')}</Button>
-  <p className="text-ink-3">{clip?t('sheets.ps.copied',{range:clip.sheetName+'!'+clip.address}):t('sheets.ps.nothing')}</p>
+  <Button variant="outline" size="compact" disabled={action.busy||!clip||cutBad} onClick={apply} data-testid="sheets-ps-apply">{t('sheets.ps.apply')}</Button>
+  <p className="text-ink-3">{clip?t(clip.cut?'sheets.ps.cutDone':'sheets.ps.copied',{range:clip.sheetName+'!'+clip.address}):t('sheets.ps.nothing')}</p>
+  {cutBad&&<p className="text-ink-3">{t('sheets.ps.cutOnly')}</p>}
  </div>;
 }
 /** Named ranges in one grouped menu: define the selection, redefine, go to or delete a name. One undo step each. */

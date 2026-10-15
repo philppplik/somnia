@@ -145,8 +145,8 @@ export class SheetsEngine{
  defineName(sheet:number,row:number,col:number,rows:number,cols:number,name:{name:string;scope:'workbook'|'sheet';replace?:boolean}){return this.result<unknown>({op:'defineName',sheet,row,col,rows,cols,name});}
  /** Names from the labels in the top row and/or left column of the block (one undo step). */
  createNames(sheet:number,row:number,col:number,rows:number,cols:number,name:{top?:boolean;left?:boolean;replace?:boolean}){return this.result<unknown>({op:'createNames',sheet,row,col,rows,cols,name});}
- /** Keeps the block in the engine clipboard (cells, formulas, formats) for paste special. No undo step. */
- clipCopy(sheet:number,row:number,col:number,rows:number,cols:number){return this.result<unknown>({op:'clipCopy',sheet,row,col,rows,cols});}
+ /** Keeps the block in the engine clipboard (cells, formulas, formats) for paste special; with `cut` it moves on paste. No undo step. */
+ clipCopy(sheet:number,row:number,col:number,rows:number,cols:number,cut=false){return this.result<unknown>({op:'clipCopy',sheet,row,col,rows,cols,...(cut?{cut:true}:{})});}
  /** Pastes the engine clipboard into the block (one undo step). */
  pasteSpecial(sheet:number,row:number,col:number,rows:number,cols:number,paste:PasteOp){return this.result<unknown>({op:'pasteSpecial',sheet,row,col,rows,cols,paste});}
  /** Sets a name's comment or turns it into a number or text constant (one undo step). */

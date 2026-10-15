@@ -2825,8 +2825,9 @@ impl HeadlessWorkbook {
     }
 
     /// Keeps the block in the engine's own clipboard (cells with formulas and formats, not the system clipboard) for `paste_special`.
-    /// Changes nothing in the workbook and is no history entry. At most 1,000,000 cells. Returns `{"range":"A1:B3"}`.
-    pub fn clip_copy(&mut self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32) -> Result<String, String> {
+    /// With `cut` the block moves when it is pasted with `what` = all (references on the same sheet follow it; the source is emptied then,
+    /// not now). Changes nothing in the workbook and is no history entry. At most 1,000,000 cells. Returns `{"range":"A1:B3"}`.
+    pub fn clip_copy(&mut self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32, cut: bool) -> Result<String, String> {
         if rows == 0 || cols == 0 || u64::from(rows) * u64::from(cols) > MAX_FILL_CELLS {
             return Err("Select a block of at most 1,000,000 cells.".into());
         }
@@ -2835,7 +2836,7 @@ impl HeadlessWorkbook {
             doc.wb.sheet(sheet).ok_or("unknown sheet")?;
         }
         let range = format!("{}:{}", CellRef::new(row, col).a1(), CellRef::new(row + rows - 1, col + cols - 1).a1());
-        let done = self.session.run("edit.copy", json!({"sheet": sheet, "range": range})).map_err(|e| e.to_string());
+        let done = self.session.run(if cut { "edit.cut" } else { "edit.copy" }, json!({"sheet": sheet, "range": range})).map_err(|e| e.to_string());
         let _ = self.session.take_ui_requests();
         done?;
         Ok(json!({"range": range}).to_string())
@@ -2871,15 +2872,23 @@ impl HeadlessWorkbook {
             }
         };
         let (skip, transpose) = (flag("skipBlanks")?, flag("transpose")?);
-        let (src_rows, src_cols) = {
+        let (src_rows, src_cols, cut_from) = {
             let doc = self.session.doc().map_err(|e| e.to_string())?;
             doc.wb.sheet(sheet).ok_or("unknown sheet")?;
             let clip = self.session.clipboard.as_ref().ok_or("Nothing was copied yet.")?;
             if clip.wb.sheet(clip.sheet).is_none() {
                 return Err("The copied sheet no longer exists.".into());
             }
-            (clip.range.height(), clip.range.width())
+            (clip.range.height(), clip.range.width(), if clip.cut { Some((clip.sheet, clip.range.start.row, clip.range.start.col)) } else { None })
         };
+        // A cut block moves as it is, to one place: no options, no tiling, and the source must be editable too.
+        let (rows, cols) = if cut_from.is_some() { (1, 1) } else { (rows, cols) };
+        if let Some((from_sheet, from_row, from_col)) = cut_from {
+            if what != "all" || operation != "none" || skip || transpose {
+                return Err("Cut cells move as they are. Copy them to use the paste options.".into());
+            }
+            self.check_block(from_sheet, from_row, from_col, src_rows, src_cols, true)?;
+        }
         let (h, w) = if transpose { (src_cols, src_rows) } else { (src_rows, src_cols) };
         let tile = (rows, cols) != (1, 1) && rows % h == 0 && cols % w == 0;
         let (dr, dc) = if tile { (rows, cols) } else { (h, w) };
@@ -5889,7 +5898,7 @@ mod tests {
         assert!(book.paste_special(0, 400, 0, 1, 1, "{}").is_err(), "nothing copied yet");
         book.set_values(0, 400, 0, r#"[["1","2"],["3","=A401+B401"]]"#).unwrap();
         let before = steps(&book);
-        book.clip_copy(0, 400, 0, 2, 2).unwrap();
+        book.clip_copy(0, 400, 0, 2, 2, false).unwrap();
         assert_eq!(steps(&book), before, "copying is no history entry");
         let done = book.paste_special(0, 410, 0, 1, 1, r#"{"what":"all"}"#).unwrap();
         assert!(done.contains("A411:B412"), "{done}");
@@ -5903,7 +5912,22 @@ mod tests {
             assert!(book.paste_special(0, 440, 0, 1, 1, bad).is_err(), "{bad}");
         }
         assert!(book.paste_special(0, 440, 0, 0, 1, "{}").is_err());
-        assert!(book.clip_copy(0, 400, 0, 0, 2).is_err());
+        assert!(book.clip_copy(0, 400, 0, 0, 2, false).is_err());
+        // Cut: nothing happens until the paste, then the block and the references to it move in one undo step.
+        book.set_values(0, 450, 0, r#"[["5","6"],["=A451*2","7"]]"#).unwrap();
+        book.set_values(0, 460, 0, r#"[["=A451+B451"]]"#).unwrap();
+        let before = steps(&book);
+        book.clip_copy(0, 450, 0, 2, 2, true).unwrap();
+        assert_eq!(steps(&book), before, "cutting alone changes nothing");
+        assert!(book.paste_special(0, 470, 0, 1, 1, r#"{"what":"values"}"#).is_err(), "options need a copy");
+        assert!(book.paste_special(0, 470, 0, 1, 1, r#"{"transpose":true}"#).is_err());
+        book.paste_special(0, 470, 0, 5, 5, r#"{"what":"all"}"#).unwrap();
+        assert_eq!(steps(&book), before + 1);
+        let moved = book.range(0, 460, 0, 1, 1).unwrap();
+        assert!(moved.contains("A471"), "the reference follows the block: {moved}");
+        let old = book.range(0, 450, 0, 1, 1).unwrap();
+        assert!(!old.contains("\"5\""), "the source is emptied: {old}");
+        assert!(book.paste_special(0, 480, 0, 1, 1, "{}").is_err(), "a cut pastes once");
     }
     #[test]
     fn view_op_sets_zoom_and_gridlines_with_bounds() {
