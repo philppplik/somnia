@@ -680,6 +680,7 @@ impl HeadlessWorkbook {
         let wb = std::sync::Arc::make_mut(&mut doc.wb);
         wb.cell_styles.retain(|(n, _)| n != TMP);
         if let Some(sh) = wb.sheets.get_mut(sheet) {
+            let sh = std::sync::Arc::make_mut(sh);
             if index < sh.validations.len() {
                 sh.validations.remove(index);
             }
