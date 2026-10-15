@@ -6,7 +6,7 @@ import {getSoundSession,openSound} from './session';
 import {decodeSessionWav,encodeSessionWav,reverseSource} from './sessionWav';
 import {trackAnalysisSession} from './analysisSource';
 import {registerWorkProvider} from '../workDocs';
-import {addMediaFile,getMedia} from '../media';
+import {addMediaFile,getMedia,uniqueMediaName} from '../media';
 import {t} from '../i18n';
 import {registerCloseGuard} from '../closeGuards';
 let history=new ArrangementHistory(emptyArrangement());
@@ -56,7 +56,7 @@ export async function reverseClipToMedia(clipId:string){
  const session=getSoundSession(source.name);if(!session?.original)throw Error('Source audio is not ready');
  const decoded=decodeSessionWav(source.id,await session.original.blob.arrayBuffer());
  const reversed=reverseSource(decoded,source.id);
- const base=source.name.replace(/\.[^.]+$/,'');let name=`${base}-reverse.wav`,n=2;while(getMedia().items.some(m=>m.name===name))name=`${base}-reverse-${n++}.wav`;
+ const name=uniqueMediaName(getMedia().items.map(m=>m.name),`${source.name.replace(/\.[^.]+$/,'')}-reverse.wav`);
  const added=await addMediaFile(new Blob([encodeSessionWav(reversed.channels,reversed.sampleRate)],{type:'audio/wav'}),name,undefined,{activate:false});if('error' in added)throw Error(added.error);
  const item=getMedia().items.find(m=>m.name===added.name&&m.kind==='audio');if(!item)throw Error('Reversed audio was not registered');
  await openSound(item);const next=getSoundSession(added.name);if(!next?.original)throw Error('Reversed audio is not ready');
@@ -65,6 +65,20 @@ export async function reverseClipToMedia(clipId:string){
  const ref:AudioSourceRef={id,name:added.name,frames:report.frames,sampleRate:report.sample_rate,channels:report.channels as 1|2};
  const wav=await next.original.blob.arrayBuffer();if(token!==generation)throw Error('Session changed while reversing');await request({kind:'source',sourceId:id,wav},[wav]);if(token!==generation)throw Error('Session changed while reversing');available.add(id);emit({sourcePeaks:{...state.sourcePeaks,[id]:next.original.peaks}});
  history.change(s=>{s.sources.push(ref);findArrangeClip(s,clipId).clip.sourceId=id;});invalidate();
+}
+/** Bounces the current rendered mix into the media library and appends it as a new track, placed at the bounced range's start. What you heard is what you get: the rendered buffer becomes the media item unchanged. One undoable arrangement edit; the media item stays in the library like any import. */
+export async function bounceRenderToTrack(){
+ if(!blob||state.renderRevision!==history.revision||state.busy)throw Error('Render the current session before bouncing');
+ const token=generation,wav=await blob.arrayBuffer();
+ const name=uniqueMediaName(getMedia().items.map(m=>m.name),`${history.snapshot.name.replace(/[^a-z0-9 _-]/gi,'_')}-bounce.wav`);
+ const added=await addMediaFile(new Blob([wav],{type:'audio/wav'}),name,undefined,{activate:false});if('error' in added)throw Error(added.error);
+ const item=getMedia().items.find(m=>m.name===added.name&&m.kind==='audio');if(!item)throw Error('Bounced audio was not registered');
+ await openSound(item);const session=getSoundSession(added.name);if(!session?.original)throw Error('Bounced audio is not ready');
+ if(token!==generation)throw Error('Session changed while bouncing');
+ const report=session.original.report.output,id=uid();
+ const ref:AudioSourceRef={id,name:added.name,frames:report.frames,sampleRate:report.sample_rate,channels:report.channels as 1|2};
+ const upload=await session.original.blob.arrayBuffer();if(token!==generation)throw Error('Session changed while bouncing');await request({kind:'source',sourceId:id,wav:upload},[upload]);if(token!==generation)throw Error('Session changed while bouncing');available.add(id);emit({sourcePeaks:{...state.sourcePeaks,[id]:session.original.peaks}});
+ history.change(s=>{if(s.tracks.length>=ARRANGE_LIMITS.tracks)throw Error('Track limit');s.sources.push(ref);const track=newTrack(uid(),added.name);track.clips.push(newClip(uid(),ref,state.rangeSelection?.start??0));s.tracks.push(track);});invalidate();
 }
 /** Analyses one rendered track (own inserts/level/pan, no master chain) in the mix worker. Bound to the session revision and the current output range, invalidated by edits like the full-mix report. */
 export async function analyzeTrack(trackId:string){const snapshot=history.snapshot;trackAnalysisSession(snapshot,trackId);const rev=history.revision,token=generation;emit({trackAnalysisBusy:true});try{const result=await request({kind:'analyze',session:snapshot,trackId,...(state.rangeSelection?{range:state.rangeSelection}:{})});if(token!==generation||rev!==history.revision)return;emit({trackAnalysis:{trackId,analysis:result.analysis,revision:rev}});}catch(e){if(token===generation)emit({error:e instanceof Error?e.message:String(e)});}finally{if(token===generation)emit({trackAnalysisBusy:false});}}

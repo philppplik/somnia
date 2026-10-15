@@ -32,3 +32,11 @@ test('closeMedia runs cleanup after approval while the item is still addressable
  assert.equal(getMedia().items.length,0);
  offC();
 });
+
+test('uniqueMediaName never overwrites and numbers collisions',async()=>{
+ const {uniqueMediaName}=await import('./media');
+ assert.equal(uniqueMediaName([],'mix-bounce.wav'),'mix-bounce.wav');
+ assert.equal(uniqueMediaName(['mix-bounce.wav'],'mix-bounce.wav'),'mix-bounce-2.wav');
+ assert.equal(uniqueMediaName(['mix-bounce.wav','mix-bounce-2.wav'],'mix-bounce.wav'),'mix-bounce-3.wav');
+ assert.equal(uniqueMediaName(['a-reverse.wav'],'a-reverse.wav'),'a-reverse-2.wav');
+});

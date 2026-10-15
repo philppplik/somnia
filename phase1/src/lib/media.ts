@@ -69,6 +69,11 @@ export async function prepareMediaFile(file:Blob,rawName:string,key?:string):Pro
   const active=opts.activate===false?(old&&state.active===old.name?null:state.active):name;
   set({items:[...state.items.filter(i=>i!==old),item],active});return{name};}};
 }
+/** First free "<base>.<ext>" / "<base>-2.<ext>" ... media name; never overwrites an existing item. */
+export function uniqueMediaName(existing:string[],fileName:string):string{
+ const m=/^(.*)(\.[^.]+)$/.exec(fileName),base=m?m[1]:fileName,ext=m?m[2]:'';
+ let name=fileName,n=2;while(existing.includes(name))name=`${base}-${n++}${ext}`;return name;
+}
 /** Adds one media file. Returns the stored name, or an error text. A file with the same name is replaced.
  * `key` (folder-relative path, e.g. img/a.png) keeps same-named files in different subfolders apart; without it the file name is the key.
  * `activate:false` registers availability only (folder load, background intake): it never changes the active item and so never routes the Studio. */

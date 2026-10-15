@@ -173,6 +173,8 @@
   "sound.arrange.pasteHint": "Inserta el clip copiado en el cursor",
   "sound.arrange.reverse": "Invertir",
   "sound.arrange.reverseHint": "Invierte el audio fuente (nuevo medio \"<name>-reverse.wav\") y apunta el clip a él",
+  "sound.arrange.bounce": "Bounce",
+  "sound.arrange.bounceHint": "Consolida la mezcla renderizada como nueva pista (nuevo medio \"<session>-bounce.wav\")",
   "sound.arrange.normalize": "Normalizar",
   "sound.arrange.normalizeHint": "Ajusta la ganancia del clip para que el pico llegue a 0 dBFS (desde la forma de onda)",
   "sound.arrange.delete": "Eliminar",

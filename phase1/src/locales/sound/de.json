@@ -173,6 +173,8 @@
   "sound.arrange.pasteHint": "Fügt den kopierten Clip am Playhead ein",
   "sound.arrange.reverse": "Reverse",
   "sound.arrange.reverseHint": "Kehrt das Quell-Audio um (neues Medium \"<name>-reverse.wav\") und verweist den Clip darauf",
+  "sound.arrange.bounce": "Bounce",
+  "sound.arrange.bounceHint": "Legt den gerenderten Mix als neue Spur in der Session ab (neues Medium \"<session>-bounce.wav\")",
   "sound.arrange.normalize": "Normalisieren",
   "sound.arrange.normalizeHint": "Setzt den Clip-Gain so, dass der Peak 0 dBFS erreicht (aus der Wellenform)",
   "sound.arrange.delete": "Löschen",
