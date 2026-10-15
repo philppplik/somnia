@@ -14,6 +14,12 @@ import {usePanelState} from '../../store/panelStateStore';
 import {useHidden} from '../../lib/photos/hidden';
 import {useCollectionMembers} from '../../lib/photos/collections';
 
+/** Every smart-filter field in its off state - the panel default, the collection apply fallback and the view matcher share this list, so a new rule can never drift out of the comparison again. */
+export const SMART_FILTER_DEFAULTS:SmartFilter={on:false,minRating:0,flag:'',label:'',tag:'',camera:'',dup:false,type:'',orient:'',iso:'',fl:'',lens:'',ap:'',exp:''};
+/** A stored or partial smart filter with every missing field at its off default. */
+export const normalizeSmart=(s?:Partial<SmartFilter>|null):SmartFilter=>({...SMART_FILTER_DEFAULTS,...(s??{})});
+/** Two smart filters are the same view only when every rule matches, including the EXIF ones. */
+export const sameSmartFilter=(a?:Partial<SmartFilter>|null,b?:Partial<SmartFilter>|null):boolean=>JSON.stringify(normalizeSmart(a))===JSON.stringify(normalizeSmart(b));
 /** The smart filter's rule set: an on switch plus the AND-combined rules minimum rating, flag, color label and exact keyword tag. */
 export interface SmartFilter{on:boolean;minRating:number;flag:string;label:string;tag:string;camera?:string;dup?:boolean;type?:string;orient?:string;iso?:string;fl?:string;lens?:string;ap?:string;exp?:string}
 /** The filmstrip's visible list: developable photos after the rating/flag/label filter and the chosen sort. Shared by the filmstrip and the live library grid. */
@@ -28,7 +34,7 @@ export function useVisiblePhotos(){
  const [minRating]=usePanelState<number|string>('photos.ratingFilter',0);
  const [sort]=usePanelState<FilmstripSort>('photos.filmstripSort','library');
  const [query]=usePanelState<string>('photos.searchQuery','');
- const [smart]=usePanelState<SmartFilter>('photos.smartFilter',{on:false,minRating:0,flag:'',label:'',tag:''});
+ const [smart]=usePanelState<SmartFilter>('photos.smartFilter',SMART_FILTER_DEFAULTS);
  const [showHidden]=usePanelState<boolean>('photos.showHidden',false);
  const [collection]=usePanelState<string>('photos.collection',''); // manual collection filter: '' = off
  const collectionMembers=useCollectionMembers(collection);

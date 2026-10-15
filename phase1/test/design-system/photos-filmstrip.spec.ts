@@ -1556,6 +1556,35 @@ test('smart filter lens, aperture and shutter: the exposure rules narrow the str
   await page.evaluate(async()=>{const ps=await import('/src/store/panelStateStore.ts');ps.panelStateStore.set('photos.smartFilter',{on:false,minRating:0,flag:'',label:'',tag:'',camera:'',dup:false,type:'',orient:'',iso:'',fl:'',lens:'',ap:'',exp:''});});
  }
 });
+test('collections: views differing only in a newer smart rule stay distinct (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
+  await page.evaluate(async()=>{const ps=await import('/src/store/panelStateStore.ts');ps.panelStateStore.set('photos.filterSets',{});ps.panelStateStore.set('photos.smartFilter',{on:false,minRating:0,flag:'',label:'',tag:'',camera:'',dup:false,type:'',orient:'',iso:'',fl:'',lens:'',ap:'',exp:''});}); // clean slate: panel state persists across the theme loop
+  await page.getByTestId('photos-filmstrip-menu').click();
+  const smart=page.getByTestId('photos-filmstrip-smart');
+  if(await smart.getAttribute('aria-pressed')!=='true')await smart.click(); // persisted panel state
+  await page.getByTestId('photos-filmstrip-collection-save').click(); // first saved: everything off (legacy fields identical to the next one)
+  await page.getByTestId('photos-filmstrip-collection-name').fill('Alles');
+  await page.getByTestId('photos-filmstrip-collection-name').press('Enter');
+  await page.getByTestId('photos-smart-type').selectOption('png'); // second saved: differs only in the file-type rule, no legacy field changes
+  await page.getByTestId('photos-filmstrip-collection-save').click();
+  await page.getByTestId('photos-filmstrip-collection-name').fill('Nur PNG');
+  await page.getByTestId('photos-filmstrip-collection-name').press('Enter');
+  await page.getByTestId('photos-smart-type').selectOption(''); // back off, then apply 'Nur PNG' again
+  await page.getByTestId('photos-filmstrip-collections').selectOption('Nur PNG');
+  await expect(page.getByTestId('photos-smart-type')).toHaveValue('png');
+  await page.getByTestId('photos-filmstrip-collection-delete').click(); // must delete the applied view, not the legacy-equal first one
+  await expect(page.getByTestId('photos-filmstrip-collections').locator('option',{hasText:'Alles'})).toHaveCount(1);
+  await expect(page.getByTestId('photos-filmstrip-collections').locator('option',{hasText:'Nur PNG'})).toHaveCount(0);
+  await page.screenshot({path:`test-results/ds-photos-collection-distinct-${theme}.png`,fullPage:true});
+  await smart.click(); // off
+  await page.keyboard.press('Escape');
+  await page.evaluate(async()=>{const ps=await import('/src/store/panelStateStore.ts');ps.panelStateStore.set('photos.filterSets',{});ps.panelStateStore.set('photos.smartFilter',{on:false,minRating:0,flag:'',label:'',tag:'',camera:'',dup:false,type:'',orient:'',iso:'',fl:'',lens:'',ap:'',exp:''});}); // leave no state behind
+ }
+});
 test('menu groups: labeled collapsible sections, expanded by default (light and dark)',async({page})=>{
  for(const theme of['light','dark']){
   await page.goto('/test/design-system/?view=photos-filmstrip');

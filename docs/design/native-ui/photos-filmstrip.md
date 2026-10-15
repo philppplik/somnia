@@ -914,3 +914,21 @@ Coverage: one light/dark gallery leg seeds two full exposure sets
 and narrows with each rule in turn, options proven cache-driven
 (`test-results/ds-photos-smart-exposure-{light,dark}.png`); unit
 tests pin the photographic sort orders.
+
+## Saved views match on every smart rule (P141)
+
+The saved-view matcher compared only the five legacy smart-filter
+fields, so a view using any newer rule (camera, duplicates, file
+type, orientation or the EXIF set) neither recognized itself nor
+could be deleted safely - worse, two views differing only in a
+newer rule both matched, and the delete button could remove the
+wrong one. The matcher, the panel default and the apply fallback
+now share SMART_FILTER_DEFAULTS: normalizeSmart fills missing
+fields with off defaults, sameSmartFilter compares the whole
+rule set, and a new rule can never drift out of the comparison
+again.
+
+Coverage: a light/dark gallery leg saves two views that differ
+only in the file-type rule (the legacy-equal one saved first),
+applies the second and proves delete removes exactly that one
+(`test-results/ds-photos-collection-distinct-{light,dark}.png`).

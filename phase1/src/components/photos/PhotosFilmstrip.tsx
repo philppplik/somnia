@@ -33,7 +33,7 @@ import {usePanelState} from '../../store/panelStateStore';
 import {Button} from '../ui/button';
 import {NativeInput,NativeSelect} from '../ui/native-controls';
 import {RatingStars} from './RatingStars';
-import {useVisiblePhotos,type SmartFilter} from './useVisiblePhotos';
+import {useVisiblePhotos,type SmartFilter,SMART_FILTER_DEFAULTS,normalizeSmart,sameSmartFilter} from './useVisiblePhotos';
 
 const tipDateFmt=new Intl.DateTimeFormat(undefined,{dateStyle:'medium',timeStyle:'short'});
 /** Honest thumbnail tooltip: name plus whatever the EXIF cache has resolved - capture date, camera, pixel dimensions. */
@@ -47,7 +47,7 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
  const {t}=useT();
  const media=useMedia();
  const {ratings,flags,labels,tags,filter,all,total,photos,sort,query,smart,smartOn,hidden,showHidden}=useVisiblePhotos();
- const [,setSmart]=usePanelState<SmartFilter>('photos.smartFilter',{on:false,minRating:0,flag:'',label:'',tag:''});
+ const [,setSmart]=usePanelState<SmartFilter>('photos.smartFilter',SMART_FILTER_DEFAULTS);
  const [,setShowHidden]=usePanelState<boolean>('photos.showHidden',false);
  const [,setQuery]=usePanelState<string>('photos.searchQuery','');
  const [sets,setSets]=usePanelState<Record<string,{filter:string;sort:string;query:string;smart?:SmartFilter}>>('photos.filterSets',{});
@@ -253,7 +253,7 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
          <div className="grid gap-1">
           <NativeSelect value="" aria-label={t('photos.collections')} title={t('photos.collections')} onChange={e=>{
            const fs=sets[e.currentTarget.value];e.currentTarget.value='';
-           if(fs){setMinRating(fs.filter);setSort(fs.sort as FilmstripSort);setQuery(fs.query);setSmart(fs.smart??{on:false,minRating:0,flag:'',label:'',tag:''});}
+           if(fs){setMinRating(fs.filter);setSort(fs.sort as FilmstripSort);setQuery(fs.query);setSmart(normalizeSmart(fs.smart));} // old saves without the newer rules get their off defaults
           }} className="h-7" data-testid="photos-filmstrip-collections">
            <option value="" disabled>{t('photos.collections')}</option>
            {Object.keys(sets).sort((a,b)=>a.localeCompare(b)).map(n=><option key={n} value={n}>{n}</option>)}
@@ -269,7 +269,7 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
                setNaming(false);
               }}/>
             :<Button variant="outline" size="compact" aria-label={t('photos.collections.save')} title={t('photos.collections.save')} onClick={()=>setNaming(true)} data-testid="photos-filmstrip-collection-save">{t('photos.collections.save')}</Button>}
-           {(()=>{const hit=Object.entries(sets).find(([,fs])=>fs.filter===filter&&fs.sort===sort&&fs.query===query&&(fs.smart?.on??false)===smart.on&&Number(fs.smart?.minRating??0)===smart.minRating&&(fs.smart?.flag??'')===smart.flag&&(fs.smart?.label??'')===smart.label&&(fs.smart?.tag??'')===smart.tag);return hit?<Button variant="outline" size="compact" aria-label={t('photos.collections.delete')} title={t('photos.collections.delete')} onClick={()=>{const next={...sets};delete next[hit[0]];setSets(next);}} data-testid="photos-filmstrip-collection-delete">{t('photos.collections.delete')}</Button>:null;})()}
+           {(()=>{const hit=Object.entries(sets).find(([,fs])=>fs.filter===filter&&fs.sort===sort&&fs.query===query&&sameSmartFilter(fs.smart,smart)) /* every rule must match - a view differing only in an EXIF rule is a different view */;return hit?<Button variant="outline" size="compact" aria-label={t('photos.collections.delete')} title={t('photos.collections.delete')} onClick={()=>{const next={...sets};delete next[hit[0]];setSets(next);}} data-testid="photos-filmstrip-collection-delete">{t('photos.collections.delete')}</Button>:null;})()}
           </span>
          </div>
          {hidden.length>0&&<span className="flex flex-wrap gap-1">
