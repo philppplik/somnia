@@ -275,5 +275,6 @@
  "photos.smart.anyOrient": "Toute orientation",
  "photos.smart.orient.landscape": "Paysage",
  "photos.smart.orient.portrait": "Portrait",
- "photos.smart.orient.square": "Carré"
+ "photos.smart.orient.square": "Carré",
+ "photos.keys.selectAll": "Sélectionner la bande visible"
 }

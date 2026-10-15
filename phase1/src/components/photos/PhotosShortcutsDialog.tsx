@@ -10,6 +10,7 @@ const GROUPS:{titleKey:string;rows:Row[]}[]=[
   {keys:'X',labelKey:'photos.keys.reject'},
   {keys:'U',labelKey:'photos.keys.unflag'},
   {keys:'6–9',labelKey:'photos.keys.labels'},
+  {keys:'Ctrl+A',labelKey:'photos.keys.selectAll'},
   {keys:'Ctrl+Z',labelKey:'photos.keys.undoCull'},
   {keys:'Ctrl+Shift+Z',labelKey:'photos.keys.redoCull'},
  ]},

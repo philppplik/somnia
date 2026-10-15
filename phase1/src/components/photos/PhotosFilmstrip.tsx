@@ -171,6 +171,16 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
   if(names.has(active)){const next=all.find(p=>!names.has(p.name));setActiveMedia(next?next.name:null);}
  };
  useEffect(()=>{ensureCaptureDates(photos);},[photos]); // visible thumbs fetch their EXIF line lazily: date, camera and dimensions fill the tooltip
+ useEffect(()=>{ // Ctrl/Cmd+A selects the visible strip like the select dropdown; editable targets keep native select-all
+  const onKey=(e:KeyboardEvent)=>{
+   if((e.ctrlKey||e.metaKey)&&!e.altKey&&!e.shiftKey&&(e.key==='a'||e.key==='A')){
+    const el=e.target as HTMLElement|null;
+    if(el&&el.closest('input,select,textarea,[contenteditable="true"]'))return;
+    e.preventDefault();setSel(photos.map(p=>p.name));
+   }
+  };
+  window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey);
+ },[photos,setSel]);
  if(total<2&&hidden.length===0)return null; // stays mounted while hidden photos exist: the restore entry lives in the menu
  const thumb=(p:(typeof photos)[number])=><Button key={p.name} variant="outline" size="compact" aria-pressed={p.name===active} aria-label={p.name} onClick={e=>{
    if(e.shiftKey){const names=photos.map(q=>q.name);setSel(rangeSelect(names,anchor,p.name));}

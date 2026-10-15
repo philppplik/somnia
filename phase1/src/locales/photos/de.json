@@ -275,5 +275,6 @@
  "photos.smart.anyOrient": "Jede Ausrichtung",
  "photos.smart.orient.landscape": "Querformat",
  "photos.smart.orient.portrait": "Hochformat",
- "photos.smart.orient.square": "Quadrat"
+ "photos.smart.orient.square": "Quadrat",
+ "photos.keys.selectAll": "Sichtbaren Strip auswählen"
 }

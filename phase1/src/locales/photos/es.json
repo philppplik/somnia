@@ -275,5 +275,6 @@
  "photos.smart.anyOrient": "Cualquier orientación",
  "photos.smart.orient.landscape": "Horizontal",
  "photos.smart.orient.portrait": "Vertical",
- "photos.smart.orient.square": "Cuadrada"
+ "photos.smart.orient.square": "Cuadrada",
+ "photos.keys.selectAll": "Seleccionar la tira visible"
 }

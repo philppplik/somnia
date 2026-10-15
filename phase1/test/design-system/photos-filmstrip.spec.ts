@@ -1333,6 +1333,11 @@ test('smart filter orientation: narrows the strip to portrait or landscape (ligh
   await page.evaluate(async()=>{
    const ps=await import('/src/store/panelStateStore.ts');const cd=await import('/src/lib/photos/captureDates.ts');const med=await import('/src/lib/media.ts');
    ps.panelStateStore.set('photos.smartFilter',{on:false,minRating:0,flag:'',label:'',tag:'',camera:'',dup:false,type:'',orient:''});
+   if(!med.getMedia().items.some(i=>i.name==='square.png')){ // a real square photo: proves the square rule the gallery lacked
+    const c=document.createElement('canvas');c.width=200;c.height=200;const x=c.getContext('2d')!;const d=x.createImageData(200,200);for(let i=0;i<d.data.length;i++)d.data[i]=(i*7)%256;x.putImageData(d,0,0);
+    const blob=await new Promise<Blob>((res,rej)=>c.toBlob(v=>v?res(v):rej(Error('toBlob failed')),'image/png'));
+    await med.addMediaFile(new File([blob],'square.png',{type:'image/png'}),'square.png');
+   }
    if(!med.getMedia().items.some(i=>i.name==='tall.png')){ // a real portrait photo next to the three landscape strips
     const c=document.createElement('canvas');c.width=150;c.height=240;const x=c.getContext('2d')!;const d=x.createImageData(150,240);for(let i=0;i<d.data.length;i++)d.data[i]=(i*11)%256;x.putImageData(d,0,0);
     const blob=await new Promise<Blob>((res,rej)=>c.toBlob(v=>v?res(v):rej(Error('toBlob failed')),'image/png'));
@@ -1341,6 +1346,7 @@ test('smart filter orientation: narrows the strip to portrait or landscape (ligh
    const size=(n:string)=>med.getMedia().items.find(i=>i.name===n)!.size;
    for(const n of['strip-1.png','strip-2.png','strip-3.png'])cd.putCaptureDate(n,size(n),null,null,240,150);
    cd.putCaptureDate('tall.png',size('tall.png'),null,null,150,240);
+   cd.putCaptureDate('square.png',size('square.png'),null,null,200,200);
    med.setActiveMedia('strip-1.png');
   });
   await expect(page.getByTestId('photos-filmstrip-item-tall.png')).toBeVisible();
@@ -1352,6 +1358,10 @@ test('smart filter orientation: narrows the strip to portrait or landscape (ligh
   await page.getByTestId('photos-smart-orient').selectOption('landscape');
   await expect(page.getByTestId('photos-filmstrip-item-strip-1.png')).toBeVisible();
   await expect(page.getByTestId('photos-filmstrip-item-tall.png')).toHaveCount(0);
+  await page.getByTestId('photos-smart-orient').selectOption('square');
+  await expect(page.getByTestId('photos-filmstrip-item-square.png')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-1.png')).toHaveCount(0);
+  await expect(page.getByTestId('photos-filmstrip-item-tall.png')).toHaveCount(0);
   await page.screenshot({path:`test-results/ds-photos-smart-orient-${theme}.png`,fullPage:true});
   await page.getByTestId('photos-smart-orient').selectOption(''); // off
   await page.getByTestId('photos-filmstrip-smart').click();
@@ -1359,9 +1369,27 @@ test('smart filter orientation: narrows the strip to portrait or landscape (ligh
   await page.evaluate(async()=>{
    const ps=await import('/src/store/panelStateStore.ts');const med=await import('/src/lib/media.ts');
    ps.panelStateStore.set('photos.smartFilter',{on:false,minRating:0,flag:'',label:'',tag:'',camera:'',dup:false,type:'',orient:''});
-   med.closeMediaForced('tall.png');med.setActiveMedia('strip-1.png'); // the next tests expect three photos
+   med.closeMediaForced('tall.png');med.closeMediaForced('square.png');med.setActiveMedia('strip-1.png'); // the next tests expect three photos
   });
   await expect(page.getByTestId('photos-filmstrip-item-tall.png')).toHaveCount(0);
+ }
+});
+test('keyboard: Ctrl+A selects the visible strip, editable targets keep native select-all (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
+  await page.evaluate(async()=>{const ps=await import('/src/store/panelStateStore.ts');ps.panelStateStore.set('photos.filmstripSelection',[]);}); // selection persists via localStorage
+  await page.keyboard.press('Control+a'); // body focus: selects the whole visible strip
+  await expect(page.getByTestId('photos-filmstrip-item-strip-1.png')).toHaveAttribute('data-selected','true');
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toHaveAttribute('data-selected','true');
+  await page.screenshot({path:`test-results/ds-photos-ctrl-a-${theme}.png`,fullPage:true});
+  await page.evaluate(async()=>{const ps=await import('/src/store/panelStateStore.ts');ps.panelStateStore.set('photos.filmstripSelection',[]);});
+  await page.getByTestId('photos-filmstrip-search').click();
+  await page.keyboard.press('Control+a'); // inside the search input: native select-all, no strip selection
+  await expect(page.getByTestId('photos-filmstrip-item-strip-1.png')).not.toHaveAttribute('data-selected','true');
+  await page.keyboard.press('Escape');
  }
 });
 test('menu groups: labeled collapsible sections, expanded by default (light and dark)',async({page})=>{

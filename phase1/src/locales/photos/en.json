@@ -275,5 +275,6 @@
  "photos.smart.anyOrient": "Any orientation",
  "photos.smart.orient.landscape": "Landscape",
  "photos.smart.orient.portrait": "Portrait",
- "photos.smart.orient.square": "Square"
+ "photos.smart.orient.square": "Square",
+ "photos.keys.selectAll": "Select the visible strip"
 }

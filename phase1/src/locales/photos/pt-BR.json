@@ -275,5 +275,6 @@
  "photos.smart.anyOrient": "Qualquer orientação",
  "photos.smart.orient.landscape": "Paisagem",
  "photos.smart.orient.portrait": "Retrato",
- "photos.smart.orient.square": "Quadrada"
+ "photos.smart.orient.square": "Quadrada",
+ "photos.keys.selectAll": "Selecionar a faixa visível"
 }

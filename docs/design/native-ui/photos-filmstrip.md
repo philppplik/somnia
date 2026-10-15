@@ -805,3 +805,18 @@ the same menu block.
 Coverage: the light/dark gallery leg adds a real portrait photo
 next to the three landscape strips and narrows to each side
 (`test-results/ds-photos-smart-orient-{light,dark}.png`).
+
+## Ctrl+A select-all + square proof (P134)
+
+Ctrl/Cmd+A selects the whole visible strip - the same set the
+Selection dropdown's "All" offers - so a filtered view becomes a
+batch target in one keystroke (rate, flag, label, hide). Editable
+targets keep their native select-all, guarded like Ctrl+Z. The
+shortcuts dialog lists the key, keeping its "every wired
+shortcut" promise. The orientation leg now also proves the
+square rule with a synthetic 200 x 200 photo, closing the P133
+gap.
+
+Coverage: the light/dark gallery leg selects the strip from body
+focus and proves the search input keeps native select-all
+(`test-results/ds-photos-ctrl-a-{light,dark}.png`).
