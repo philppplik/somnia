@@ -6303,6 +6303,14 @@
       "hasEnabled": true
     },
     {
+      "id": "sheets.annotate",
+      "title": "Add a note, comment or link to the active cell",
+      "category": "Edit",
+      "source": "sheets",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
       "id": "sheets.dedupe",
       "title": "Remove duplicate rows in the selected block",
       "category": "Edit",

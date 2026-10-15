@@ -14,6 +14,7 @@ import {addressOf,colName,parseAddress} from '../../lib/sheets/format';
 import {sortBlockProblem} from '../../lib/sheets/sortOps';
 import {fillBlockProblem,FILL_DIRECTIONS} from '../../lib/sheets/fillOps';
 import type {FillDirection,CfStyle} from '../../lib/sheets/protocol';
+import {internalTarget,linkTargetProblem,MAX_LINK_TEXT,MAX_NOTE_CHARS} from '../../lib/sheets/notes';
 import {dedupeBlockProblem,splitBlockProblem,parseWidths,SPLIT_DELIMITERS} from '../../lib/sheets/dataTools';
 import {replaceProblem,MAX_REPLACE_TEXT} from '../../lib/sheets/replaceOps';
 import {getSheetsPanelController} from '../../lib/sheets/panelController';
@@ -212,6 +213,7 @@ export function SheetsLayoutPanel({context}:PanelHostProps){
   <ValidationGroup/>
   <ReplaceGroup/>
   <DedupeGroup/>
+  <NotesGroup/>
   <SplitGroup/>
   <p role="status">{action.notice}</p></Region>;
 }
@@ -249,6 +251,39 @@ function FilterGroup(){
    <Button variant="outline" size="compact" disabled={action.busy} onClick={()=>void action.run('sheets.filter',{kind:'off'})} data-testid="sheets-filter-off">{t('sheets.filter.off')}</Button>
   </div>
   <p className="text-ink-3">{t(block?'sheets.sort.need':'sheets.filter.scope',{range:rangeAddress(r)})}</p>
+ </div>;
+}
+/** Notes, threaded comments and links on the active cell. One undo step each; links are shown and followed inside the workbook only. */
+function NotesGroup(){
+ const {t}=useT(),s=useSheetsSelection(),action=useAction();const [text,setText]=useState('');const [target,setTarget]=useState('');const [label,setLabel]=useState('');
+ if(!s)return null;
+ const a=s.annotations??null,note=a?.note??null,link=a?.link??null,problem=target.trim()===''?'empty':linkTargetProblem(target.trim()),here=internalTarget(link?.target??''),sheets=s.workbook?.sheets??[];
+ const place=here?sheets.find(x=>x.name.toLowerCase()===here.sheet.toLowerCase()&&x.visibility==='Visible'):undefined;
+ const run=(o:object,clear?:()=>void)=>void action.run('sheets.annotate',o).then(r=>{if(r!==null)clear?.();});
+ return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.nt.title')}>
+  <span>{t('sheets.nt.title')} ({s.address})</span>
+  {note?<div className="flex flex-col gap-1" data-testid="sheets-nt-thread">
+   <p>{note.author?note.author+': ':''}{note.text}</p>
+   {note.replies.map(([who,body],i)=><p key={i} className="text-ink-3">{who?who+': ':''}{body}</p>)}
+   {note.resolved&&<p className="text-ink-3">{t('sheets.nt.resolved')}</p>}
+  </div>:<p className="text-ink-3">{t('sheets.nt.none')}</p>}
+  <label className="flex flex-col gap-1">{t('sheets.nt.text')}<NativeInput className={field} value={text} maxLength={MAX_NOTE_CHARS} disabled={action.busy} onChange={e=>setText(e.currentTarget.value)} data-testid="sheets-nt-text"/></label>
+  <div className="flex flex-wrap gap-2">
+   {!note&&<Button variant="outline" size="compact" disabled={action.busy||text.trim()===''} onClick={()=>run({kind:'note',text},()=>setText(''))} data-testid="sheets-nt-note">{t('sheets.nt.addNote')}</Button>}
+   {!note&&<Button variant="outline" size="compact" disabled={action.busy||text.trim()===''} onClick={()=>run({kind:'comment',text},()=>setText(''))} data-testid="sheets-nt-comment">{t('sheets.nt.addComment')}</Button>}
+   {note&&<Button variant="outline" size="compact" disabled={action.busy||text.trim()===''} onClick={()=>run({kind:'reply',text},()=>setText(''))} data-testid="sheets-nt-reply">{t('sheets.nt.reply')}</Button>}
+   {note&&<Button variant="outline" size="compact" disabled={action.busy} onClick={()=>run({kind:'resolve',resolved:!note.resolved})} data-testid="sheets-nt-resolve">{t(note.resolved?'sheets.nt.reopen':'sheets.nt.resolve')}</Button>}
+   {note&&<Button variant="outline" size="compact" disabled={action.busy} onClick={()=>run({kind:'remove'})} data-testid="sheets-nt-remove">{t('sheets.nt.remove')}</Button>}
+  </div>
+  {link&&<p data-testid="sheets-nt-link">{link.target}</p>}
+  {place&&here&&<Button variant="outline" size="compact" disabled={action.busy} onClick={()=>void action.run('sheets.navigate',{sheet:place.index,address:here.address})} data-testid="sheets-nt-go">{t('sheets.nt.go')}</Button>}
+  <label className="flex flex-col gap-1">{t('sheets.nt.target')}<NativeInput className={field} value={target} maxLength={2048} aria-invalid={target.trim()!==''&&!!problem} disabled={action.busy} onChange={e=>setTarget(e.currentTarget.value)} data-testid="sheets-nt-target"/></label>
+  <label className="flex flex-col gap-1">{t('sheets.nt.label')}<NativeInput className={field} value={label} maxLength={MAX_LINK_TEXT} disabled={action.busy} onChange={e=>setLabel(e.currentTarget.value)} data-testid="sheets-nt-label"/></label>
+  <div className="flex flex-wrap gap-2">
+   <Button variant="outline" size="compact" disabled={action.busy||!!problem} onClick={()=>run(label.trim()?{kind:'link',target:target.trim(),text:label.trim()}:{kind:'link',target:target.trim()},()=>{setTarget('');setLabel('');})} data-testid="sheets-nt-setlink">{t('sheets.nt.setLink')}</Button>
+   {link&&<Button variant="outline" size="compact" disabled={action.busy} onClick={()=>run({kind:'unlink'})} data-testid="sheets-nt-unlink">{t('sheets.nt.unlink')}</Button>}
+  </div>
+  <p className="text-ink-3">{t('sheets.nt.scope',{cell:s.address})}</p>
  </div>;
 }
 /** Removes rows that repeat an earlier row inside exactly the selected block. One undo step. */

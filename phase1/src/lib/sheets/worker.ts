@@ -38,6 +38,8 @@ scope.onmessage=({data}:MessageEvent<SheetsRequest>)=>{queue=queue.then(async()=
    case 'findCount':result=JSON.parse(need().find_count(data.sheet,data.row,data.col,data.rows,data.cols,JSON.stringify(data.replace)));break;
    case 'dedupe':result=JSON.parse(need().remove_duplicates(data.sheet,data.row,data.col,data.rows,data.cols,JSON.stringify(data.dedupe)));break;
    case 'split':result=JSON.parse(need().text_to_columns(data.sheet,data.row,data.col,data.rows,data.cols,JSON.stringify(data.split)));break;
+   case 'annotate':result=JSON.parse(need().annotate_cell(data.sheet,data.row,data.col,JSON.stringify(data.annotate)));break;
+   case 'annotations':result=JSON.parse(need().annotations(data.sheet,data.row,data.col,1,1));break;
    case 'cf':result=JSON.parse(need().cf_range(data.sheet,data.row,data.col,data.rows,data.cols,JSON.stringify(data.cf)));break;
    case 'fill':result=JSON.parse(need().fill_range(data.sheet,data.row,data.col,data.rows,data.cols,data.dir));break;
    case 'filter':result=JSON.parse(need().filter_range(data.sheet,data.row,data.col,data.rows,data.cols,JSON.stringify(data.filter)));break;

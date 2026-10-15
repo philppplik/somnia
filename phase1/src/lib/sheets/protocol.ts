@@ -54,6 +54,11 @@ export interface ReplaceOp{what:string;with:string;matchCase:boolean;wholeCell:b
 export interface DedupeOp{header:boolean;columns:number[]}
 export type SplitDelimiter=','|';'|'\t'|' '|'|';
 export type SplitOp={kind:'delimited';delimiters:SplitDelimiter[];treatConsecutive:boolean}|{kind:'fixed';widths:number[]};
+/** One note, comment or link on the active cell. Text is 1 to 2000 characters; the Rust bridge re-validates everything. */
+export type AnnotateOp={kind:'note'|'comment'|'reply';text:string}|{kind:'resolve';resolved:boolean}|{kind:'remove'}|{kind:'unlink'}|{kind:'link';target:string;text?:string;tooltip?:string};
+export interface CellNote{author:string;text:string;threaded:boolean;resolved:boolean;replies:[string,string][]}
+export interface CellLink{target:string;tooltip:string|null}
+export interface CellAnnotations{note:CellNote|null;link:CellLink|null}
 export type FillDirection='down'|'right'|'up'|'left';
 export type SheetOp={kind:'add';name?:string}|{kind:'rename';name:string}|{kind:'duplicate'}|{kind:'delete'}|{kind:'move';to:number};
 export type SheetsRequest=
@@ -80,6 +85,8 @@ export type SheetsRequest=
  |{id:number;op:'findCount';sheet:number;row:number;col:number;rows:number;cols:number;replace:ReplaceOp}
  |{id:number;op:'dedupe';sheet:number;row:number;col:number;rows:number;cols:number;dedupe:DedupeOp}
  |{id:number;op:'split';sheet:number;row:number;col:number;rows:number;cols:number;split:SplitOp}
+ |{id:number;op:'annotate';sheet:number;row:number;col:number;annotate:AnnotateOp}
+ |{id:number;op:'annotations';sheet:number;row:number;col:number}
  |{id:number;op:'cf';sheet:number;row:number;col:number;rows:number;cols:number;cf:CfOp}
  |{id:number;op:'fill';sheet:number;row:number;col:number;rows:number;cols:number;dir:FillDirection}
  |{id:number;op:'filter';sheet:number;row:number;col:number;rows:number;cols:number;filter:FilterOp}

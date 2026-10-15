@@ -14,6 +14,9 @@ const MAX_SORT_CELLS: u64 = 1_000_000;
 const MAX_FILL_CELLS: u64 = 1_000_000;
 const MAX_CF_RULES: usize = 64;
 const MAX_SPLIT_PARTS: usize = 20;
+const MAX_NOTE_CHARS: usize = 2000;
+const MAX_LINK_BYTES: usize = 2048;
+const MAX_NOTES_LISTED: usize = 200;
 const SPLIT_DELIMITERS: [char; 5] = [',', ';', '\t', ' ', '|'];
 const MAX_REPLACE_CELLS: usize = 10_000;
 const MAX_VALIDATION_ITEMS: usize = 500;
@@ -679,6 +682,152 @@ impl HeadlessWorkbook {
         let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
         let block = gridcraft_engine::core::RangeRef::new(CellRef::new(row, col), CellRef::new(row + rows - 1, col + cols - 1));
         Ok(sh.cells.iter_range(block).any(|(_, c)| c.formula.is_some()))
+    }
+
+    /// Adds, answers, resolves or removes a note or comment, or sets or removes a link, on ONE cell as ONE history entry.
+    /// `op_json` is `{"kind":"note"|"comment","text":..}` (the cell must not have one yet), `{"kind":"reply","text":..}`,
+    /// `{"kind":"resolve","resolved":bool}`, `{"kind":"remove"}`, `{"kind":"link","target":..,"text"?:..,"tooltip"?:..}` or
+    /// `{"kind":"unlink"}`. Text is 1 to 2000 characters without control characters. A link target is an http(s) address, a
+    /// mailto address or a `Sheet!A1` place in this workbook (at most 2048 bytes, no spaces); link text never overwrites a formula.
+    /// Protected sheets are refused. Returns `{"ok":true}`.
+    pub fn annotate_cell(&mut self, sheet: usize, row: u32, col: u32, op_json: &str) -> Result<String, String> {
+        self.check_block(sheet, row, col, 1, 1, true)?;
+        let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "operation must be a JSON object".to_string())?;
+        let kind = op.get("kind").and_then(|v| v.as_str()).ok_or("missing operation kind")?;
+        let at = CellRef::new(row, col);
+        let cell = at.a1();
+        let clean = |key: &str, required: bool, max: usize| -> Result<String, String> {
+            let t = op.get(key).and_then(|v| v.as_str()).unwrap_or("").trim().to_string();
+            if required && t.is_empty() {
+                return Err("Write some text first.".into());
+            }
+            if t.chars().count() > max || t.chars().any(|c| c.is_control() && c != '\n') {
+                return Err("The text is too long or has control characters.".into());
+            }
+            Ok(t)
+        };
+        let (has_note, has_link) = {
+            let doc = self.session.doc().map_err(|e| e.to_string())?;
+            let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+            (sh.comments.contains_key(&at), sh.hyperlinks.contains_key(&at))
+        };
+        match kind {
+            "note" | "comment" => {
+                let t = clean("text", true, MAX_NOTE_CHARS)?;
+                if has_note {
+                    return Err("This cell already has a note or comment. Remove it first.".into());
+                }
+                let id = if kind == "note" { "review.newNote" } else { "review.newComment" };
+                self.session.run(id, json!({"sheet": sheet, "cell": cell, "text": t})).map_err(|e| e.to_string())?;
+            }
+            "reply" => {
+                let t = clean("text", true, MAX_NOTE_CHARS)?;
+                if !has_note {
+                    return Err("There is no comment in this cell.".into());
+                }
+                self.session.run("review.replyComment", json!({"sheet": sheet, "cell": cell, "text": t})).map_err(|e| e.to_string())?;
+            }
+            "resolve" => {
+                if !has_note {
+                    return Err("There is no comment in this cell.".into());
+                }
+                let resolved = op.get("resolved").and_then(|v| v.as_bool()).unwrap_or(true);
+                self.session.run("review.resolveComment", json!({"sheet": sheet, "cell": cell, "resolved": resolved})).map_err(|e| e.to_string())?;
+            }
+            "remove" => {
+                if !has_note {
+                    return Err("There is no comment in this cell.".into());
+                }
+                self.session.run("review.deleteComment", json!({"sheet": sheet, "cell": cell})).map_err(|e| e.to_string())?;
+            }
+            "link" => {
+                let target = op.get("target").and_then(|v| v.as_str()).unwrap_or("").trim().to_string();
+                self.check_link_target(&target)?;
+                let text = clean("text", false, 1000)?;
+                let tip = clean("tooltip", false, 255)?;
+                if !text.is_empty() && self.block_has_formula(sheet, row, col, 1, 1)? {
+                    return Err("The cell holds a formula; link it without new text.".into());
+                }
+                let mut params = json!({"sheet": sheet, "cell": cell, "target": target});
+                if !text.is_empty() {
+                    params["text"] = json!(text);
+                }
+                if !tip.is_empty() {
+                    params["tooltip"] = json!(tip);
+                }
+                self.session.run("insert.link", params).map_err(|e| e.to_string())?;
+            }
+            "unlink" => {
+                if !has_link {
+                    return Err("There is no link in this cell.".into());
+                }
+                self.session.run("insert.link", json!({"sheet": sheet, "cell": cell, "remove": true})).map_err(|e| e.to_string())?;
+            }
+            _ => return Err("unsupported annotation".into()),
+        }
+        Ok(json!({"ok": true}).to_string())
+    }
+
+    /// Only web, mail and in-workbook targets: nothing that runs code or reads a local file.
+    fn check_link_target(&self, target: &str) -> Result<(), String> {
+        if target.is_empty() || target.len() > MAX_LINK_BYTES || target.chars().any(|c| c.is_control() || (c.is_whitespace() && !target.starts_with('\''))) {
+            return Err("The link target is empty, too long or has spaces.".into());
+        }
+        let lower = target.to_ascii_lowercase();
+        if let Some(rest) = lower.strip_prefix("https://").or_else(|| lower.strip_prefix("http://")) {
+            let host = rest.split(['/', '?', '#']).next().unwrap_or("");
+            if host.is_empty() || host.contains('@') {
+                return Err("The web address needs a host and no user name.".into());
+            }
+            return Ok(());
+        }
+        if let Some(rest) = lower.strip_prefix("mailto:") {
+            let who = rest.split('?').next().unwrap_or("");
+            return match who.split_once('@') {
+                Some((a, b)) if !a.is_empty() && b.contains('.') && !b.starts_with('.') => Ok(()),
+                _ => Err("The mail address is not valid.".into()),
+            };
+        }
+        if let Some((name, place)) = target.rsplit_once('!') {
+            let name = name.trim_matches('\'');
+            let place_ok = !place.is_empty() && place.len() <= 24 && place.chars().all(|c| c.is_ascii_alphanumeric() || c == '$' || c == ':');
+            let doc = self.session.doc().map_err(|e| e.to_string())?;
+            if place_ok && doc.wb.sheet_index(name).is_some() {
+                return Ok(());
+            }
+            return Err("The place is not in this workbook.".into());
+        }
+        Err("Use an http(s) address, a mailto address or Sheet!A1.".into())
+    }
+
+    /// Reads the notes, comments and links inside the block (read only, at most 200 of each). Returns
+    /// `{"notes":[{"cell":..,"author":..,"text":..,"threaded":b,"resolved":b,"replies":[[author,text]]}],"links":[{"cell":..,"target":..,"tooltip":..}],"truncated":b}`.
+    pub fn annotations(&self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32) -> Result<String, String> {
+        if rows == 0 || cols == 0 || u64::from(rows) * u64::from(cols) > MAX_FILL_CELLS {
+            return Err("Select a block of at most 1,000,000 cells.".into());
+        }
+        self.check_block(sheet, row, col, rows, cols, false)?;
+        let doc = self.session.doc().map_err(|e| e.to_string())?;
+        let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+        let inside = |c: &CellRef| c.row >= row && c.row < row + rows && c.col >= col && c.col < col + cols;
+        let mut truncated = false;
+        let mut notes = Vec::new();
+        for (c, n) in sh.comments.iter().filter(|(c, _)| inside(c)) {
+            if notes.len() >= MAX_NOTES_LISTED {
+                truncated = true;
+                break;
+            }
+            notes.push(json!({"cell": c.a1(), "author": n.author, "text": n.text, "threaded": n.threaded, "resolved": n.resolved, "replies": n.replies}));
+        }
+        let mut links = Vec::new();
+        for (c, h) in sh.hyperlinks.iter().filter(|(c, _)| inside(c)) {
+            if links.len() >= MAX_NOTES_LISTED {
+                truncated = true;
+                break;
+            }
+            links.push(json!({"cell": c.a1(), "target": h.target, "tooltip": h.tooltip}));
+        }
+        Ok(json!({"notes": notes, "links": links, "truncated": truncated}).to_string())
     }
 
     /// Removes rows whose chosen columns repeat an earlier row (case-insensitive, the first one stays) as ONE history entry.
@@ -2087,6 +2236,46 @@ mod tests {
         assert_eq!(text(&book, "A82"), "red RED", "nothing changed");
         book.session.run("review.protectSheet", json!({})).unwrap();
         assert!(book.replace_range(0, 80, 0, 3, 2, op).unwrap_err().contains("protected"));
+    }
+    #[test]
+    fn notes_and_links_are_one_undo_step_validated_and_refuse_protected_sheets() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        book.set_values(0, 130, 0, r#"[["x","=1+1"]]"#).unwrap();
+        book.annotate_cell(0, 130, 0, r#"{"kind":"comment","text":"check this"}"#).unwrap();
+        book.annotate_cell(0, 130, 0, r#"{"kind":"reply","text":"done"}"#).unwrap();
+        let out = book.annotations(0, 130, 0, 1, 2).unwrap();
+        assert!(out.contains("check this") && out.contains("done"));
+        assert!(book.annotate_cell(0, 130, 0, r#"{"kind":"comment","text":"again"}"#).is_err());
+        book.annotate_cell(0, 130, 0, r#"{"kind":"resolve","resolved":true}"#).unwrap();
+        assert!(book.annotations(0, 130, 0, 1, 1).unwrap().contains("\"resolved\":true"));
+        book.undo().unwrap();
+        assert!(book.annotations(0, 130, 0, 1, 1).unwrap().contains("\"resolved\":false"));
+        book.annotate_cell(0, 130, 0, r#"{"kind":"remove"}"#).unwrap();
+        assert!(book.annotations(0, 130, 0, 1, 1).unwrap().contains("\"notes\":[]"));
+        book.annotate_cell(0, 130, 0, r#"{"kind":"link","target":"https://example.com/a?b=1","tooltip":"site"}"#).unwrap();
+        assert!(book.annotations(0, 130, 0, 1, 1).unwrap().contains("https://example.com"));
+        book.annotate_cell(0, 130, 0, r#"{"kind":"unlink"}"#).unwrap();
+        assert!(book.annotate_cell(0, 130, 0, r#"{"kind":"unlink"}"#).is_err());
+        for bad in [
+            r#"{"kind":"link","target":"javascript:alert(1)"}"#,
+            r#"{"kind":"link","target":"file:///etc/passwd"}"#,
+            r#"{"kind":"link","target":"https://user@evil.example"}"#,
+            r#"{"kind":"link","target":"https://a b.example"}"#,
+            r#"{"kind":"link","target":"My Sheet!A1"}"#,
+            r#"{"kind":"link","target":"mailto:nobody"}"#,
+            r#"{"kind":"link","target":"Nope!A1"}"#,
+            r#"{"kind":"link","target":""}"#,
+            r#"{"kind":"comment","text":"  "}"#,
+            r#"{"kind":"comment","text":"a\u0001"}"#,
+            r#"{"kind":"zzz"}"#,
+            "nope",
+        ] {
+            assert!(book.annotate_cell(0, 130, 0, bad).is_err(), "{bad}");
+        }
+        assert!(book.annotate_cell(0, 130, 1, r#"{"kind":"link","target":"https://example.com","text":"hi"}"#).is_err(), "formula text refused");
+        book.annotate_cell(0, 130, 1, r#"{"kind":"link","target":"https://example.com"}"#).unwrap();
+        book.session.run("review.protectSheet", json!({})).unwrap();
+        assert!(book.annotate_cell(0, 130, 0, r#"{"kind":"comment","text":"x"}"#).unwrap_err().contains("protected"));
     }
     #[test]
     fn remove_duplicates_and_text_to_columns_are_one_undo_step_and_refuse_unsafe_input() {
