@@ -1,6 +1,0 @@
-diff a/phase1/src/lib/sheets/sheetsStore.ts b/phase1/src/lib/sheets/sheetsStore.ts	(rejected hunks)
-@@ -1,3 +1,4 @@
-+import type {AutoFillMode} from './fillOps';
- import type {PageList} from './pageBreaks';
- import type {CellInfo} from './cellInfo';
- import type {ReviewResult} from './reviewInfo';

@@ -4,6 +4,7 @@ import type {NoteList} from './notes';
 import type {TraceInfo,ErrorsInfo,WatchRow} from './audit';
 import type {ReviewResult} from './reviewInfo';
 import type {CellInfo} from './cellInfo';
+import type {AutoFillMode} from './fillOps';
 import type {PageList} from './pageBreaks';
 import type {InvalidCells,ValidationRuleInfo,CfRuleInfo,PivotReport,FunctionInfo,OutlineInfo,SavedView,ObjectsInfo,ScenarioInfo,ChartInfo,PageInfo,TablesInfo,NameInfo,CellAnnotations,CellStyle,WorkbookInfo,SheetInfo,SheetLayout} from './protocol';
 /** Selection shared between the grid canvas and the inspector. Session-only, never persisted. */

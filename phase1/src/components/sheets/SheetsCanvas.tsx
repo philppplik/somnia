@@ -58,7 +58,7 @@ import {buildMismatches} from '../../lib/collab/buildSync';
 import {openSheetsModel,sheetsModelMeta,sharedSheetList,type SheetsModel} from '../../lib/collab/office/sheetsModel';
 import {SheetsCollabBinding} from '../../lib/collab/office/sheetsBinding';
 import {announceSheetSel,peerSheetSels,type PeerSheetPresence} from '../../lib/collab/office/sheetsPresence';
-import {setSheetsSelection} from '../../lib/sheets/sheetsStore';
+import {getFillMode,setSheetsSelection} from '../../lib/sheets/sheetsStore';
 import {PeerSwatch,PeerSelectionBox} from '../collab/PeerSwatch';
 const HEAD_W0=48,HEAD_H0=24;
 type Phase={kind:'loading'}|{kind:'error';message:string}|{kind:'ready'};
