@@ -154,6 +154,7 @@ export interface Studio3DController{
  editSelectRandom(kind:'vertex'|'edge'|'face',ratio:number,seed:number):void;
  editSelectMirror(axis:'x'|'y'|'z',extend:boolean):void;
  editSelectLoop():void;
+ editSelectRing():void;
  editBridgeFaces(twist:number):void;
  editVertSlide(edge:[number,number],factor:number):void;
  editConvexHull():void;
@@ -361,6 +362,7 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add('studio3d.edit.rip','Rip the selected faces of the edited 3D mesh off the rest by duplicating the shared vertices','Edit',()=>need().editRip(),undefined,()=>getStudio3DState().edit!=null),
   add('studio3d.edit.separate','Split the selected faces of the edited 3D mesh out into a new object','Edit',()=>need().editSeparate(),undefined,()=>getStudio3DState().edit!=null),
   add('studio3d.edit.selectLoop','Extend the selected edges of the edited 3D mesh to their full edge loops','Edit',()=>need().editSelectLoop(),undefined,()=>getStudio3DState().edit!=null),
+  add('studio3d.edit.selectRing','Extend the selected edges of the edited 3D mesh to their full edge rings','Edit',()=>need().editSelectRing(),undefined,()=>getStudio3DState().edit!=null),
   add<{twist?:number}>('studio3d.edit.bridgeFaces','Bridge the borders of two selected face groups of the edited 3D mesh with a sewn triangle strip','Edit',p=>need().editBridgeFaces(p?.twist??0),object({twist:{type:'integer',minimum:-64,maximum:64}},[]),()=>getStudio3DState().edit!=null),
   add<{edge?:[number,number];factor?:number}>('studio3d.edit.vertSlide','Slide the selected vertex of the edited 3D mesh along an incident edge by a factor of the edge vector','Edit',p=>need().editVertSlide(p.edge,p?.factor??0.5),object({edge:{type:'array',items:{type:'integer',minimum:0},minItems:2,maxItems:2},factor:{type:'number',minimum:-1,maximum:1}},['edge']),()=>getStudio3DState().edit!=null),
   add('studio3d.edit.convexHull','Replace the edited 3D mesh with the convex hull of its selected vertices','Edit',()=>need().editConvexHull(),undefined,()=>getStudio3DState().edit!=null),

@@ -1,4 +1,5 @@
 # Unreleased: 3D Studio P0
+- 3D Studio: the selected edges grow into their full edge rings.
 - 3D Studio: the sculpt mask becomes the edit-mode vertex selection.
 - 3D Studio: the sculpt mask blurs towards its neighbourhood.
 - 3D Studio: the sculpt mask takes over the current edit-mode vertex selection.

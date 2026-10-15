@@ -1042,5 +1042,6 @@
  "studio3d.hist.maskFromSelection": "Auswahl von {name} maskieren",
  "cmd.studio3d.sculpt.maskSmooth": "Sculpt-Maske eines 3D-Mesh zur Nachbarschaft hin weichzeichnen",
  "studio3d.hist.smoothMask": "Maske von {name} glätten",
- "cmd.studio3d.sculpt.maskToSelection": "Maskierte Vertices des bearbeiteten 3D-Mesh auswählen"
+ "cmd.studio3d.sculpt.maskToSelection": "Maskierte Vertices des bearbeiteten 3D-Mesh auswählen",
+ "cmd.studio3d.edit.selectRing": "Ausgewählte Kanten auf ihre vollständigen Kantenringe erweitern"
 }

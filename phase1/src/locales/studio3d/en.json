@@ -1042,5 +1042,6 @@
  "studio3d.hist.maskFromSelection": "Mask selection of {name}",
  "cmd.studio3d.sculpt.maskSmooth": "Blur the sculpt mask of a 3D mesh towards its neighbourhood",
  "studio3d.hist.smoothMask": "Smooth mask of {name}",
- "cmd.studio3d.sculpt.maskToSelection": "Select the masked vertices of the edited 3D mesh"
+ "cmd.studio3d.sculpt.maskToSelection": "Select the masked vertices of the edited 3D mesh",
+ "cmd.studio3d.edit.selectRing": "Extend the selected edges to their full edge rings"
 }

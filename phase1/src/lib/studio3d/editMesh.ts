@@ -472,6 +472,78 @@ export function edgeLoop(m:MeshData,seeds:[number,number][]):[number,number][]{
  }
  return out;
 }
+/** Extends the selected edges to their full edge rings: walking across each adjacent quad to the opposite edge, position-keyed so rings cross split shells. At triangulated junctions the straightest continuation (most parallel edge) wins; turns and dead ends stop the walk. */
+export function edgeRing(m:MeshData,seeds:[number,number][]):[number,number][]{
+ if(!seeds.length)throw new EditError('Select edges to grow into rings.');
+ const nv=m.positions.length/3;
+ for(const [a,b] of seeds){if(!Number.isInteger(a)||!Number.isInteger(b)||a===b||a<0||b<0||a>=nv||b>=nv)throw new EditError('A selected edge does not exist.');}
+ const pos=m.positions,idx=m.index;
+ const pk=(v:number)=>`${Math.round(pos[v*3]*1e6)}_${Math.round(pos[v*3+1]*1e6)}_${Math.round(pos[v*3+2]*1e6)}`;
+ const ekey=(a:string,b:string)=>a<b?a+'|'+b:b+'|'+a;
+ const coords=new Map<string,[number,number,number]>();
+ for(let v=0;v<nv;v++){const k=pk(v);if(!coords.has(k))coords.set(k,[pos[v*3],pos[v*3+1],pos[v*3+2]]);}
+ const tris:string[][]=[];
+ const edgeTris=new Map<string,string[][]>();
+ for(let f=0;f<idx.length;f+=3){
+  const t=[pk(idx[f]),pk(idx[f+1]),pk(idx[f+2])];
+  tris.push(t);
+  for(let e=0;e<3;e++){
+   const a=t[e],b=t[(e+1)%3],c=t[(e+2)%3];
+   const k=ekey(a,b);
+   if(!edgeTris.has(k))edgeTris.set(k,[]);
+   edgeTris.get(k)!.push([a,b,c]);
+  }
+ }
+ const dirOf=(a:string,b:string):[number,number,number]=>{const A=coords.get(a)!,B=coords.get(b)!;const d=[B[0]-A[0],B[1]-A[1],B[2]-A[2]];const l=Math.hypot(d[0],d[1],d[2])||1;return [d[0]/l,d[1]/l,d[2]/l];};
+ const ringKeys=new Set<string>();
+ const queue:[string,string][]=[];
+ for(const [sa,sb] of seeds){
+  const ka=pk(sa),kb=pk(sb);
+  const k=ekey(ka,kb);
+  if(ringKeys.has(k))continue;
+  ringKeys.add(k);queue.push([ka,kb]);
+ }
+ while(queue.length){
+  const [a,b]=queue.pop()!;
+  const d=dirOf(a,b);
+  const cands=new Map<string,{dot:number,ends:[string,string]}>();
+  for(const t of edgeTris.get(ekey(a,b))??[]){
+   const c=t[2];
+   for(const side of [[a,c],[b,c]] as [string,string][]){
+    for(const t2 of edgeTris.get(ekey(side[0],side[1]))??[]){
+     const apex=t2[2];
+     if(apex===a||apex===b)continue;
+     const ck=ekey(c,apex);
+     if(ringKeys.has(ck))continue;
+     const cd=dirOf(c,apex);
+     const dot=Math.abs(d[0]*cd[0]+d[1]*cd[1]+d[2]*cd[2]);
+     const old=cands.get(ck);
+     if(!old||old.dot<dot)cands.set(ck,{dot,ends:[c,apex]});
+    }
+   }
+  }
+  let best=0.5;const take:string[]=[];
+  for(const [ck,c] of cands){
+   if(c.dot>best+1e-9){best=c.dot;take.length=0;take.push(ck);}
+   else if(Math.abs(c.dot-best)<=1e-9)take.push(ck);
+  }
+  for(const ck of take){
+   if(ringKeys.has(ck))continue;
+   ringKeys.add(ck);
+   queue.push(cands.get(ck)!.ends);
+  }
+ }
+ // Map position-keyed ring edges back to representative index edges (low index first).
+ const seen=new Set<string>();const out:[number,number][]=[];
+ for(let f=0;f<idx.length;f+=3)for(let e=0;e<3;e++){
+  const v0=idx[f+e],v1=idx[f+(e+1)%3];
+  const k=ekey(pk(v0),pk(v1));
+  if(!ringKeys.has(k)||seen.has(k))continue;
+  seen.add(k);
+  out.push(v0<v1?[v0,v1]:[v1,v0]);
+ }
+ return out;
+}
 /** Bridges the border loops of two selected face groups with a sewn triangle strip (bridge edge loops). The selected faces are removed; each group's border loop keeps its original vertices and the loops are sewn with an arc-length zigzag, so unequal loop lengths work. The start vertex and direction are chosen for the shortest strip, twist shifts the start by hand; winding is unified outward across the whole result. UVs survive untouched because no vertex is created; sculpt masks are dropped (topology changes). */
 export function bridgeFacesSelected(m:MeshData,sel:number[],twist:number):MeshData{
  check(m);

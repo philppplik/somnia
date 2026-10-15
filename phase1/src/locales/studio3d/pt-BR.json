@@ -1042,5 +1042,6 @@
  "studio3d.hist.maskFromSelection": "Mascarar seleção de {name}",
  "cmd.studio3d.sculpt.maskSmooth": "Desfocar a máscara de escultura de uma malha 3D em direção à vizinhança",
  "studio3d.hist.smoothMask": "Suavizar máscara de {name}",
- "cmd.studio3d.sculpt.maskToSelection": "Selecionar os vértices mascarados da malha 3D editada"
+ "cmd.studio3d.sculpt.maskToSelection": "Selecionar os vértices mascarados da malha 3D editada",
+ "cmd.studio3d.edit.selectRing": "Estender as arestas selecionadas para seus anéis completos"
 }

@@ -1236,6 +1236,7 @@ export default function Viewport3D(){
    editSelectMirror:(axis,extend)=>{stage.editSelectMirror(axis,extend);patchEdit();invalidate();},
    editSelectFacing:(dir,degrees)=>{stage.editSelectFacing(dir,degrees);patchEdit();invalidate();},
    editSelectLoop:()=>{stage.editSelectLoop();patchEdit();invalidate();},
+   editSelectRing:()=>{stage.editSelectRing();patchEdit();invalidate();},
   editBridgeFaces:(twist)=>{stage.editBridgeFaces(twist);patchEdit();invalidate();},
   editVertSlide:(edge,factor)=>{stage.editVertSlide(edge,factor);patchEdit();invalidate();},
   editConvexHull:()=>{stage.editConvexHull();patchEdit();invalidate();},

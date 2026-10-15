@@ -1042,5 +1042,6 @@
  "studio3d.hist.maskFromSelection": "Enmascarar selección de {name}",
  "cmd.studio3d.sculpt.maskSmooth": "Difuminar la máscara de escultura de una malla 3D hacia su vecindad",
  "studio3d.hist.smoothMask": "Suavizar máscara de {name}",
- "cmd.studio3d.sculpt.maskToSelection": "Seleccionar los vértices enmascarados de la malla 3D editada"
+ "cmd.studio3d.sculpt.maskToSelection": "Seleccionar los vértices enmascarados de la malla 3D editada",
+ "cmd.studio3d.edit.selectRing": "Extender las aristas seleccionadas a sus anillos completos"
 }

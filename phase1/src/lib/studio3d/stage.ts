@@ -12,7 +12,7 @@ import {buildExtras,type ClipMeta,type MetaTrack} from './clipMeta';
 import {groupRefs,keyIndices,copyTrackKeys,shiftTrackKeys,pasteTrackKeys,type KeyRef,type KeyData,type TrackData} from './keyEdit';
 import {convexHullMesh} from './convexHull';
 import {shrinkwrapMesh} from './shrinkwrap';
-import {extrudeFaces,extrudeFacesIndividual,insetFaces,bevelVertices,deleteElements,weldSelected,subdivideFaces,pokeFaces,duplicateFaces,fattenSelected,relaxSelected,flipFaces,dissolveFaces,fillSelected,collapseSelected,toSphereSelected,randomizeSelected,moveSelected,ripSelected,extractFaces,sharpEdges,similarFaces,facingFaces,rotateSelected,scaleSelected,shearSelected,flipEdges,mergeByDistanceSelected,bisectEdit,edgeLoop,bridgeFacesSelected,vertSlideSelected,loopCut,bevelEdges,slideEdges,mirrorCombine,symmetrizeMesh,subdivideLoop,cleanupMesh,flipMesh,outsideMesh,smoothMesh,separateMesh,solidifyMesh,fillHolesMesh,relaxMesh,fattenMesh,bendMesh,bisectMesh,knifeMesh,shortestPath,twistMesh,taperMesh,spinMesh,bridgeMesh,remeshMesh,EditError,MAX_EDIT_VERTICES,MAX_EDIT_TRIANGLES,type MeshData,type CleanupResult,type NormalsOp} from './editMesh';
+import {extrudeFaces,extrudeFacesIndividual,insetFaces,bevelVertices,deleteElements,weldSelected,subdivideFaces,pokeFaces,duplicateFaces,fattenSelected,relaxSelected,flipFaces,dissolveFaces,fillSelected,collapseSelected,toSphereSelected,randomizeSelected,moveSelected,ripSelected,extractFaces,sharpEdges,similarFaces,facingFaces,rotateSelected,scaleSelected,shearSelected,flipEdges,mergeByDistanceSelected,bisectEdit,edgeLoop,edgeRing,bridgeFacesSelected,vertSlideSelected,loopCut,bevelEdges,slideEdges,mirrorCombine,symmetrizeMesh,subdivideLoop,cleanupMesh,flipMesh,outsideMesh,smoothMesh,separateMesh,solidifyMesh,fillHolesMesh,relaxMesh,fattenMesh,bendMesh,bisectMesh,knifeMesh,shortestPath,twistMesh,taperMesh,spinMesh,bridgeMesh,remeshMesh,EditError,MAX_EDIT_VERTICES,MAX_EDIT_TRIANGLES,type MeshData,type CleanupResult,type NormalsOp} from './editMesh';
 import {sculptDab,paintMask,SculptError,type SculptOpts} from './sculpt';
 import {KEY_PATHS,KEY_STRIDE,ClipError,MAX_CLIPS,MAX_KEYS_PER_TRACK,DEFAULT_CLIP_SECONDS,insertKey,removeKey as removeKeyData,findKey,isPlainTrack,trackName,parseTrackName,checkKeyTime,checkDuration,checkClipName,lastKeyTime,type KeyPath} from './clips';
 import {mergeTransform,DEFAULT_TRANSFORM,UvError,type TextureTransform} from './uv';
@@ -882,6 +882,14 @@ export class Stage{
   const m=this.editMesh();
   let edges:[number,number][];
   try{edges=edgeLoop(this.meshDataOf(m),[...this.editSel.edges.values()]);}catch(e){throw e instanceof EditError?new StageError(e.message):e;}
+  this.editSel.edges=new Map();
+  for(const [a,b] of edges)this.editSel.edges.set(`${a}_${b}`,[a,b]);
+ }
+ /** Extends the selected edges to their full edge rings (walking across each adjacent quad to the opposite edge, position-keyed so rings cross split shells; the straightest continuation wins at junctions). Replaces the edge selection; selection changes are not undo steps. */
+ editSelectRing(){
+  const m=this.editMesh();
+  let edges:[number,number][];
+  try{edges=edgeRing(this.meshDataOf(m),[...this.editSel.edges.values()]);}catch(e){throw e instanceof EditError?new StageError(e.message):e;}
   this.editSel.edges=new Map();
   for(const [a,b] of edges)this.editSel.edges.set(`${a}_${b}`,[a,b]);
  }

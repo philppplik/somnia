@@ -1042,5 +1042,6 @@
  "studio3d.hist.maskFromSelection": "Masquer la sélection de {name}",
  "cmd.studio3d.sculpt.maskSmooth": "Flouter le masque de sculpture d'un maillage 3D vers son voisinage",
  "studio3d.hist.smoothMask": "Lisser le masque de {name}",
- "cmd.studio3d.sculpt.maskToSelection": "Sélectionner les sommets masqués du maillage 3D édité"
+ "cmd.studio3d.sculpt.maskToSelection": "Sélectionner les sommets masqués du maillage 3D édité",
+ "cmd.studio3d.edit.selectRing": "Étendre les arêtes sélectionnées à leurs anneaux complets"
 }
