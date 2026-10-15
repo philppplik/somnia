@@ -1,6 +1,7 @@
 import {useRef} from 'react';
 import {audioClipDuration,type AudioClip} from '../../lib/video/audioTrack';
 import type {FilmstripController} from '../../lib/video/filmstrip-controller';
+import {snapThresholdSeconds,snapTime} from '../../lib/video/zoom';
 import {WaveformStrip} from './WaveformStrip';
 import {useT} from '../../lib/useT';
 const shortName=(n:string)=>n.replace(/^.*[\\/]/,'').replace(/\.[^.]+$/,'');
@@ -11,9 +12,11 @@ interface Props{
  label:string;
  /** Filmstrip controller for the waveform layer; null where workers are unavailable (tests, SSR). */
  controller?:FilmstripController|null;
+ /** Times a dragged block or edge snaps to (both tracks' edges, bounds, playhead); ~8 px threshold like the video track. */
+ snapPoints?:number[];
 }
 /** The free-placed audio track under the video timeline: blocks drag horizontally, edge handles resize, fades show as shaded wedges. */
-export function AudioLane({clips,selectedId,duration,onSelect,onMoveAt,onResize,label,controller}:Props){
+export function AudioLane({clips,selectedId,duration,onSelect,onMoveAt,onResize,label,controller,snapPoints}:Props){
  const {t}=useT();
  const track=useRef<HTMLDivElement>(null);
  const atTime=(clientX:number)=>{
@@ -28,7 +31,8 @@ export function AudioLane({clips,selectedId,duration,onSelect,onMoveAt,onResize,
   const base=c.at,startX=e.clientX;
   const move=(ev:PointerEvent)=>{
    const box=track.current?.getBoundingClientRect();if(!box||box.width===0||duration<=0)return;
-   onMoveAt(c.id,Math.max(0,base+(ev.clientX-startX)/box.width*duration));
+   const raw=Math.max(0,base+(ev.clientX-startX)/box.width*duration);
+   onMoveAt(c.id,snapPoints?snapTime(raw,snapPoints,snapThresholdSeconds(8,box.width,duration)):raw);
   };
   const up=()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);};
   window.addEventListener('pointermove',move);window.addEventListener('pointerup',up);
@@ -38,7 +42,8 @@ export function AudioLane({clips,selectedId,duration,onSelect,onMoveAt,onResize,
   const base=edge==='in'?c.at:c.at+audioClipDuration(c),startX=e.clientX;
   const move=(ev:PointerEvent)=>{
    const box=track.current?.getBoundingClientRect();if(!box||box.width===0||duration<=0)return;
-   onResize(c.id,edge,Math.max(0,base+(ev.clientX-startX)/box.width*duration));
+   const raw=Math.max(0,base+(ev.clientX-startX)/box.width*duration);
+   onResize(c.id,edge,snapPoints?snapTime(raw,snapPoints,snapThresholdSeconds(8,box.width,duration)):raw);
   };
   const up=()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);};
   window.addEventListener('pointermove',move);window.addEventListener('pointerup',up);

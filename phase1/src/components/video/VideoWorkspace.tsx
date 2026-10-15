@@ -12,7 +12,7 @@ import {WaveformStrip} from './WaveformStrip';
 import {blendAt,clipRanges,locate,speedOf,timelineDuration} from '../../lib/video/timeline';
 import {audioClipDuration,audioEnvelope,audioTrackEnd} from '../../lib/video/audioTrack';
 import {AudioLane} from './AudioLane';
-import {zoomInStep,zoomOutStep} from '../../lib/video/zoom';
+import {snapPointsFor,zoomInStep,zoomOutStep} from '../../lib/video/zoom';
 import {formatTime} from '../../lib/video/recipe';
 import {formatBytes,getState,patchState,requestStudio,useAppStore,useMedia,type MediaItem} from './workspace-deps';
 import {VideoTimeline} from './VideoTimeline';
@@ -209,6 +209,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
        onSelect={id=>selectAudioTrackClip(item.name,id)}
        onMoveAt={(id,at)=>moveAudioTrackClip(item.name,id,at,`amove:${id}`)}
        onResize={(id,edge,t2)=>resizeAudioTrackClip(item.name,id,edge,t2,`atrim:${id}:${edge}`)}
+       snapPoints={[...snapPointsFor(clips,[playhead]),domain,...audioClips.flatMap(ac=>[ac.at,ac.at+audioClipDuration(ac)])]}
        label={t('video.audioLane')}/>}
       renderStrip={c=>needsSourceFile(c)&&filmstrip?<>
        <FilmstripStrip controller={filmstrip} source={c.source} in_s={c.in_s} out_s={c.out_s} name={shortName(c.source)}/>
