@@ -8,6 +8,7 @@ import {ALIGN_MODES,ALIGN_TARGETS} from '../../lib/vectorstudio/transforms';
 import {BOOL_OPS} from '../../lib/vectorstudio/booleanOps';
 import {layerRows} from '../../lib/vectorstudio/layerRows';
 import {RADIUS_LIMITS} from '../../lib/vectorstudio/roundCorners';
+import {SIMPLIFY_LIMITS} from '../../lib/vectorstudio/simplify';
 import {OFFSET_LIMITS} from '../../lib/vectorstudio/offsetOps';
 import {GRADIENT_KINDS,angleOf,hexOr} from '../../lib/vectorstudio/gradients';
 import {gradientIdOf} from '../../lib/vectorio';
@@ -55,6 +56,7 @@ export function VectorTransformSection(){const {t}=useT(),s=useVectorSession(),b
     <MenuGroup><MenuGroupLabel>{t('vector.shell.distribute')}</MenuGroupLabel>{(['horizontal','vertical'] as const).map(axis=><MenuItem key={axis} onClick={()=>run('distributeSelection',{axis})}>{t('vector.shell.distribute.'+axis)}</MenuItem>)}</MenuGroup></MenuContent></Menu>
   <div className="grid grid-cols-2 gap-1"><Button size="compact" data-testid="vector-join" onClick={()=>run('joinPaths')}>{t('vector.shell.join')}</Button><Button size="compact" data-testid="vector-reverse" onClick={()=>run('reversePath')}>{t('vector.shell.reverse')}</Button></div>
   <RoundControls/>
+  <SimplifyControls/>
   <OffsetControls/>
   <Menu><MenuTrigger render={<Button size="compact" variant="outline" data-testid="vector-combine-menu">{t('vector.shell.combine')}</Button>}/>
    <MenuContent>{BOOL_OPS.map(o=><MenuItem key={o} onClick={()=>run('booleanOp',{op:o})}>{t('vector.shell.combine.'+o)}</MenuItem>)}</MenuContent></Menu>
@@ -62,6 +64,11 @@ export function VectorTransformSection(){const {t}=useT(),s=useVectorSession(),b
   <div className="grid grid-cols-2 gap-1">{(['front','back','forward','backward'] as const).map(mode=><Button key={mode} size="compact" onClick={()=>run('reorder',{mode})}>{t(mode==='front'?'vector.toFront':mode==='back'?'vector.shell.toBack':'vector.'+mode)}</Button>)}
    <Button size="compact" onClick={()=>run('duplicateSelection')}>{t('vector.duplicate')}</Button><Button size="compact" onClick={()=>run('deleteSelection')}>{t('vector.shell.delete')}</Button></div>
  </div>;
+}
+function SimplifyControls(){
+ const {t}=useT();const [amount,setAmount]=useState('1');const n=Number(amount),ok=amount.trim()!==''&&Number.isFinite(n)&&n>=SIMPLIFY_LIMITS.min&&n<=SIMPLIFY_LIMITS.max;
+ return <div className="grid grid-cols-[1fr_auto] items-end gap-1" data-testid="vector-simplify"><label className={row}>{t('vector.shell.tolerance')}<NativeInput className={field} type="number" min={SIMPLIFY_LIMITS.min} step="any" value={amount} aria-invalid={!ok} onChange={e=>setAmount(e.target.value)}/></label>
+  <Button size="compact" disabled={!ok} onClick={()=>run('simplifyPath',{tolerance:n})}>{t('vector.shell.simplify')}</Button></div>;
 }
 function RoundControls(){
  const {t}=useT();const [amount,setAmount]=useState('8');const n=Number(amount),ok=amount.trim()!==''&&Number.isFinite(n)&&n>=RADIUS_LIMITS.min&&n<=RADIUS_LIMITS.max;

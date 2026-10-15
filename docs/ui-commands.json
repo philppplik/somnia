@@ -12891,6 +12891,13 @@
       "hasEnabled": true
     },
     {
+      "id": "vector.simplifyPath",
+      "title": "Simplify vector path",
+      "category": "Edit",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
       "id": "vector.splitPath",
       "title": "Split vector path at node",
       "category": "Edit",
