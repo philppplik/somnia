@@ -450,7 +450,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
       onPointerCancel={()=>{splitDrag.current=false;}}/>
       :<line x1={0} y1={splitX*dispH} x2={dispW} y2={splitX*dispH} stroke="transparent" strokeWidth={14} className="cursor-row-resize" data-testid="photos-split-handle"
       onPointerDown={e=>{e.stopPropagation();(e.target as Element).setPointerCapture(e.pointerId);splitDrag.current=true;}}
-      onPointerMove={e=>{if(splitDrag.current){const p=pointerPos(e);setSplitX(clampSplitX(splitDir==='vertical'?p.x:p.y));}}}
+      onPointerMove={e=>{if(splitDrag.current){const p=pointerPos(e);setSplitX(clampSplitX(p.y));}}}
       onPointerUp={()=>{splitDrag.current=false;}}
       onPointerCancel={()=>{splitDrag.current=false;}}/>}
     </svg>}
