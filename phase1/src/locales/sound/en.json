@@ -150,6 +150,7 @@
   "sound.arrange.addSource": "Add audio to session",
   "sound.arrange.addTrack": "Add track",
   "sound.arrange.snap": "Snap 0.1 s",
+  "sound.arrange.snapHint": "Magnetic to clip edges, markers and the 0.1 s grid",
   "sound.arrange.zoom": "Zoom",
   "sound.arrange.missing": "Missing media. Choose the matching open audio above, then relink:",
   "sound.arrange.relink": "Relink",

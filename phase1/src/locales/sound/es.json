@@ -150,6 +150,7 @@
   "sound.arrange.addSource": "Añadir audio a la sesión",
   "sound.arrange.addTrack": "Añadir pista",
   "sound.arrange.snap": "Ajuste 0,1 s",
+  "sound.arrange.snapHint": "Magnético a bordes de clip, marcadores y rejilla de 0,1 s",
   "sound.arrange.zoom": "Zoom",
   "sound.arrange.missing": "Faltan archivos. Elige arriba el audio abierto correspondiente y vuelve a vincular:",
   "sound.arrange.relink": "Vincular",
