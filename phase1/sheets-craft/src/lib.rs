@@ -4548,7 +4548,7 @@ impl HeadlessWorkbook {
         {
             let doc = self.session.doc_mut().map_err(|e| e.to_string())?;
             let wb = std::sync::Arc::make_mut(&mut doc.wb);
-            let af = wb.sheets.get_mut(sheet).and_then(|sh| sh.autofilter.as_mut()).ok_or("There is no filter on this sheet.")?;
+            let af = wb.sheets.get_mut(sheet).map(std::sync::Arc::make_mut).and_then(|sh| sh.autofilter.as_mut()).ok_or("There is no filter on this sheet.")?;
             let off = c - af.range.start.col;
             af.criteria.retain(|(o, _)| *o != off);
             af.criteria.push((off, if font { gridcraft_engine::model::FilterCriterion::FontColor(color) } else { gridcraft_engine::model::FilterCriterion::FillColor(color) }));
