@@ -211,7 +211,7 @@ export function inspectStudioToolDefinitions(path:string){
 }
 /** User-click preparation only. Pins native identity/revision, uses existing reviewed transaction + undo. */
 export function stageLocalVisionResult(path:string,text:string,destination:VisionDestination,model:string):AgentProposal {
- if(session?.status==='running'||proposals.size||sheetsTransactions.pending)throw Error('Stop generation and finish pending review before staging an image description.');
+ if(session?.status==='running'||proposals.size||sheetsTransactions.pending||sheetsTransactions.busy)throw Error('Stop generation and finish pending review before staging an image description.');
  if(getState().activeStudio!=='code'&&getState().activeStudio!=='design')throw Error('Open the target in Code or Design studio first.');
  if(path!==getState().activeFile)throw Error('Active source changed.');
  epoch=getProjectGeneration();
@@ -276,7 +276,7 @@ export const realCore:AgentCore={
  run(request,onEvent){
   if(request.context.executionMode==='local-native'&&!request.context.localContext)request={...request,context:{...request.context,localContext:{...defaultLocalContext}}};
   const trimmed=request.context.localContext?normalizeLocalContext(request.context.localContext):null;if(trimmed)request={...request,context:trimLocalContext(request.context,trimmed)};
-  if((activeController&&!activeController.signal.aborted)||session?.status==='running'||proposals.size||sheetsTransactions.pending){queueMicrotask(()=>onEvent({type:'error',message:'Stop the active turn or review the pending proposal first.'}));return {cancel(){}};}
+  if((activeController&&!activeController.signal.aborted)||session?.status==='running'||proposals.size||sheetsTransactions.pending||sheetsTransactions.busy){queueMicrotask(()=>onEvent({type:'error',message:'Stop the active turn or review the pending proposal first.'}));return {cancel(){}};}
   const controller=new AbortController();let stopped=false;const runId=++runGeneration;
   const deliver=(e:AgentEvent)=>{if(!stopped&&runId===runGeneration)onEvent(e);};send=deliver;
   const taskChoice=taskModelChoice(config.localRuntime?.taskModels,request.context.task??'chat');const requestProvider=taskChoice?.provider??config.provider;
