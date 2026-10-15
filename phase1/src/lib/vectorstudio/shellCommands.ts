@@ -12,6 +12,8 @@ import {moveGuide,clearGuides} from './guideOps';
 import {groupSelection,ungroupSelection} from './groups';
 import {applyBoolean,BOOL_OPS} from './booleanOps';
 import {downloadSvg,downloadPng} from './exportFiles';
+import {EXPORT_AREAS,PADDING_LIMITS} from './exportArea';
+const areaProps={area:{type:'string',enum:[...EXPORT_AREAS]},padding:{type:'number',minimum:PADDING_LIMITS.min,maximum:PADDING_LIMITS.max}};
 const empty={type:'object',properties:{},additionalProperties:false};
 export function vectorShellCommandSpecs(active:()=>boolean):CommandSpec<any,unknown>[] {
  const ready=()=>active()&&S.getVectorSession().open;
@@ -51,7 +53,7 @@ export function vectorShellCommandSpecs(active:()=>boolean):CommandSpec<any,unkn
   {id:'vector.clearGuides',title:'Clear all ruler guides',category:'Edit',level:'ui',enabled:ready,params:empty,run:()=>{const s=S.getVectorSession();S.commit(clearGuides(s.doc));}},
   {id:'vector.group',title:'Group vector selection',category:'Edit',level:'ui',enabled:selected,params:empty,run:()=>{const s=S.getVectorSession(),next=groupSelection(s.doc,s.selection);if(next!==s.doc)S.commit(next);}},
   {id:'vector.ungroup',title:'Ungroup vector selection',category:'Edit',level:'ui',enabled:ready,params:{...empty,properties:{ids:{type:'array',items:{type:'string',minLength:1},uniqueItems:true,maxItems:200}}},run:(p:{ids?:string[]}={})=>{const s=S.getVectorSession(),next=ungroupSelection(s.doc,p.ids??s.selection);if(next!==s.doc)S.commit(next);}},
-  {id:'vector.exportSvg',title:'Export vector SVG',category:'Project',level:'ui',enabled:ready,params:empty,run:()=>downloadSvg(S.getVectorSession().name)},
-  {id:'vector.exportPng',title:'Export vector PNG',category:'Project',level:'ui',enabled:ready,params:{...empty,properties:{scale:{type:'number',minimum:0.1,maximum:8}}},run:(p:{scale?:number}={})=>{const s=S.getVectorSession();return downloadPng(s.name,s.doc.width,s.doc.height,p.scale??1);}},
+  {id:'vector.exportSvg',title:'Export vector SVG',category:'Project',level:'ui',enabled:ready,params:{...empty,properties:areaProps},run:(p:{area?:'page'|'selection'|'content';padding?:number}={})=>downloadSvg(S.getVectorSession().name,p)},
+  {id:'vector.exportPng',title:'Export vector PNG',category:'Project',level:'ui',enabled:ready,params:{...empty,properties:{...areaProps,scale:{type:'number',minimum:0.1,maximum:8},background:{type:'string',enum:['transparent','white']}}},run:(p:{scale?:number;area?:'page'|'selection'|'content';padding?:number;background?:'transparent'|'white'}={})=>{const s=S.getVectorSession();return downloadPng(s.name,s.doc.width,s.doc.height,p.scale??1,p);}},
  ];
 }

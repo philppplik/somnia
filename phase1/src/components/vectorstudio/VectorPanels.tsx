@@ -8,6 +8,7 @@ import {ALIGN_MODES,ALIGN_TARGETS} from '../../lib/vectorstudio/transforms';
 import {BOOL_OPS} from '../../lib/vectorstudio/booleanOps';
 import {layerRows} from '../../lib/vectorstudio/layerRows';
 import {RADIUS_LIMITS} from '../../lib/vectorstudio/roundCorners';
+import {exportAreaDoc,EXPORT_AREAS,PADDING_LIMITS,type ExportArea} from '../../lib/vectorstudio/exportArea';
 import {SIMPLIFY_LIMITS} from '../../lib/vectorstudio/simplify';
 import {OFFSET_LIMITS} from '../../lib/vectorstudio/offsetOps';
 import {GRADIENT_KINDS,angleOf,hexOr} from '../../lib/vectorstudio/gradients';
@@ -109,14 +110,19 @@ export function VectorNodeSection(){const {t}=useT(),s=useVectorSession(),path=s
  <Button size="compact" onClick={()=>run('toggleClosed',{pathId:path.id})}>{t(path.closed?'vector.shell.openPath':'vector.shell.closePath')}</Button><Button size="compact" data-testid="vector-split" onClick={()=>run('splitPath',{pathId:path.id,nodeId:node.id})}>{t('vector.shell.split')}</Button><Button size="compact" onClick={()=>run('deleteNode',{pathId:path.id,nodeId:node.id})}>{t('vector.shell.delete')}</Button></div>
  </div>;}
 export function VectorExportPanel(){const {t}=useT(),s=useVectorSession();const [scale,setScale]=useState(1),[format,setFormat]=useState('svg'),[busy,setBusy]=useState(false),[note,setNote]=useState('');
- const dimensions=pngDimensions(s.doc.width,s.doc.height,scale);
- const submit=async()=>{setBusy(true);setNote('');try{await commandDispatcher.runCommand(format==='svg'?'vector.exportSvg':'vector.exportPng',format==='png'?{scale}:undefined,{origin:'ui'});}catch(e){setNote(e instanceof Error?e.message:String(e));}finally{setBusy(false);}};
+ const [area,setArea]=useState<ExportArea>('page'),[pad,setPad]=useState('0'),[bg,setBg]=useState<'transparent'|'white'>('transparent');
+ const padN=Number(pad),padOk=pad.trim()!==''&&Number.isFinite(padN)&&padN>=PADDING_LIMITS.min&&padN<=PADDING_LIMITS.max;
+ const areaDoc=(()=>{try{return padOk?exportAreaDoc(s.doc,s.selection,area,padN):null;}catch{return null;}})();
+ const dimensions=areaDoc?pngDimensions(areaDoc.width,areaDoc.height,scale):null;
+ const submit=async()=>{setBusy(true);setNote('');try{await commandDispatcher.runCommand(format==='svg'?'vector.exportSvg':'vector.exportPng',format==='png'?{scale,area,padding:padN,background:bg}:{area,padding:padN},{origin:'ui'});}catch(e){setNote(e instanceof Error?e.message:String(e));}finally{setBusy(false);}};
  return <div className="grid gap-2 p-2 text-[12px]" data-testid="vector-shell-export">
  <p className="m-0 text-ink-3">{t('vector.hero.page')}</p>
  <label className={row}>{t('vector.hero.format')}<NativeSelect className={field} value={format} disabled={busy} onChange={e=>setFormat(e.target.value)}><option value="svg">SVG</option><option value="png">PNG</option></NativeSelect></label>
- {format==='png'&&<><label className={row}>{t('vector.shell.pngScale')}<NativeSelect className={field} value={scale} disabled={busy} onChange={e=>setScale(Number(e.target.value))}>{[1,2,4].map(n=><option key={n} value={n}>{n}x</option>)}</NativeSelect></label>
- <p className="m-0 text-ink-3" data-testid="vector-export-dimensions">{dimensions.width} × {dimensions.height} px</p><p className="m-0 text-ink-3">{t('vector.shell.pngLimit')}</p></>}
- <Button size="compact" disabled={!s.open||busy} onClick={()=>void submit()}>{format==='svg'?t('vector.shell.exportSvg'):t('vector.exportPng')}</Button>
+ <label className={row}>{t('vector.shell.exportArea')}<NativeSelect className={field} value={area} disabled={busy} onChange={e=>setArea(e.target.value as ExportArea)}>{EXPORT_AREAS.map(a=><option key={a} value={a}>{t('vector.shell.area.'+a)}</option>)}</NativeSelect></label>
+ {area!=='page'&&<label className={row}>{t('vector.shell.padding')}<NativeInput className={field} type="number" min={PADDING_LIMITS.min} max={PADDING_LIMITS.max} step="any" value={pad} disabled={busy} aria-invalid={!padOk} onChange={e=>setPad(e.target.value)}/></label>}
+ {format==='png'&&<><label className={row}>{t('vector.shell.pngBackground')}<NativeSelect className={field} value={bg} disabled={busy} onChange={e=>setBg(e.target.value as 'transparent'|'white')}><option value="transparent">{t('vector.shell.bg.transparent')}</option><option value="white">{t('vector.shell.bg.white')}</option></NativeSelect></label><label className={row}>{t('vector.shell.pngScale')}<NativeSelect className={field} value={scale} disabled={busy} onChange={e=>setScale(Number(e.target.value))}>{[1,2,4].map(n=><option key={n} value={n}>{n}x</option>)}</NativeSelect></label>
+ <p className="m-0 text-ink-3" data-testid="vector-export-dimensions">{dimensions?`${dimensions.width} × ${dimensions.height} px`:t('vector.shell.exportEmpty')}</p><p className="m-0 text-ink-3">{t('vector.shell.pngLimit')}</p></>}
+ <Button size="compact" disabled={!s.open||busy||!areaDoc} onClick={()=>void submit()}>{format==='svg'?t('vector.shell.exportSvg'):t('vector.exportPng')}</Button>
  <hr className="w-full border-line"/>
  <label className={row}>{t('vector.appendSvg')}<NativeInput type="file" accept=".svg,image/svg+xml" disabled={!s.open||busy} className="w-full text-[11px]" onChange={async e=>{const f=e.target.files?.[0];e.target.value='';if(!f)return;setBusy(true);setNote('');try{const before=getVectorSession().doc;const source=await f.text();if(getVectorSession().doc===before)await executeCommand('vector.importSvg',{source});else setNote(t('vector.shell.importChanged'));}catch{setNote(t('vector.shell.importFailed'));}finally{setBusy(false);}}}/></label>
  {note&&<p role="status" className="text-ink-3">{note}</p>}{s.error&&<p role="alert" className="text-danger">{s.error}</p>}{s.diagnostics.length>0&&<ul className="m-0 list-disc pl-4">{s.diagnostics.map((d,i)=><li key={i}>{d.message}</li>)}</ul>}
