@@ -6,7 +6,7 @@
 pub mod eval;
 pub mod recalc;
 
-pub use eval::{Area, SPECIAL_FUNCTIONS, is_known_function};
+pub use eval::{Area, PivotDataHook, SPECIAL_FUNCTIONS, is_known_function, set_pivot_data_hook};
 pub use recalc::{Calc, Key, evaluate, now_serial};
 
 #[cfg(test)]
