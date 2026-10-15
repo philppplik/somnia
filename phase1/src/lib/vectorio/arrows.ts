@@ -1,5 +1,6 @@
 import type { Style, VectorPath } from './types';
-export { ARROW_KINDS } from './types';
+import { ARROW_KINDS } from './types';
+export { ARROW_KINDS };
 export type { ArrowKind } from './types';
 import type { ArrowKind } from './types';
 /** Arrowheads are SVG <marker>s the editor writes itself (`data-vs-arrow`); only those are read back, other markers are refused. */

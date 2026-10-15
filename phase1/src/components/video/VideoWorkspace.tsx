@@ -98,12 +98,13 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
    if(playing){if(el.paused)void el.play().catch(()=>{});}else el.pause();
   }
  },[blend,playing]);
- // Preview volume carries the equal-power fade weight so a crossfade is audible, not only visible.
+ // Preview volume matches the export chain: workspace volume x crossfade weight x clip gain/mute x the clip's own audio fades.
  useEffect(()=>{
   for(const e of blend){
    if(isTitleClip(e.range.clip)||isImageClip(e.range.clip))continue;
    const el=slotOf(e.range.index).current;if(!el)continue;
-   el.muted=muted;el.volume=Math.min(1,Math.max(0,volume*e.audio*clipFadeGain(e.range.clip,e.range.start,e.range.end,playhead)));
+   const c=e.range.clip;
+   el.muted=muted;el.volume=Math.min(1,Math.max(0,volume*e.audio*(c.muted?0:c.gain)*clipFadeGain(c,e.range.start,e.range.end,playhead)));
   }
  },[blend,volume,muted,playhead]);
  const advance=useCallback((fromIndex:number)=>{
