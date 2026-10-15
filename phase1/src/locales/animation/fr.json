@@ -1231,5 +1231,12 @@
  "animation.rig.path.move": "Parcourir le tracé",
  "animation.rig.path.face": "Parcourir le tracé en regardant devant",
  "cmd.animation.layers.followPath": "Déplacer les calques le long du tracé du premier calque coché",
- "animation.rig.bounce.squash": "Tomber et rebondir 3 fois, avec écrasement et étirement"
+ "animation.rig.bounce.squash": "Tomber et rebondir 3 fois, avec écrasement et étirement",
+ "animation.rig.group.parallax": "Parallaxe (du loin au proche)",
+ "animation.rig.parallax.left": "Dériver vers la gauche",
+ "animation.rig.parallax.right": "Dériver vers la droite",
+ "animation.rig.parallax.up": "Dériver vers le haut",
+ "animation.rig.parallax.down": "Dériver vers le bas",
+ "animation.rig.parallax.push": "Avancer",
+ "cmd.animation.layers.parallax": "Parallaxe : faire dériver les calques cochés, du loin au proche"
 }

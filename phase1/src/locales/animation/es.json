@@ -1231,5 +1231,12 @@
  "animation.rig.path.move": "Recorrer el trazado",
  "animation.rig.path.face": "Recorrer el trazado mirando al frente",
  "cmd.animation.layers.followPath": "Mover capas por el trazado de la primera capa marcada",
- "animation.rig.bounce.squash": "Caer y rebotar 3 veces, con aplastar y estirar"
+ "animation.rig.bounce.squash": "Caer y rebotar 3 veces, con aplastar y estirar",
+ "animation.rig.group.parallax": "Paralaje (de lejos a cerca)",
+ "animation.rig.parallax.left": "Desplazar a la izquierda",
+ "animation.rig.parallax.right": "Desplazar a la derecha",
+ "animation.rig.parallax.up": "Desplazar hacia arriba",
+ "animation.rig.parallax.down": "Desplazar hacia abajo",
+ "animation.rig.parallax.push": "Acercar",
+ "cmd.animation.layers.parallax": "Paralaje: desplazar las capas marcadas, de lejos a cerca"
 }

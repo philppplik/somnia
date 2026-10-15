@@ -1231,5 +1231,12 @@
  "animation.rig.path.move": "Dem Pfad folgen",
  "animation.rig.path.face": "Dem Pfad folgen und in Fahrtrichtung drehen",
  "cmd.animation.layers.followPath": "Ebenen entlang der ersten angekreuzten Pfad-Ebene bewegen",
- "animation.rig.bounce.squash": "Fallen und 3-mal springen, mit Squash und Stretch"
+ "animation.rig.bounce.squash": "Fallen und 3-mal springen, mit Squash und Stretch",
+ "animation.rig.group.parallax": "Parallaxe (fern bis nah)",
+ "animation.rig.parallax.left": "Nach links driften",
+ "animation.rig.parallax.right": "Nach rechts driften",
+ "animation.rig.parallax.up": "Nach oben driften",
+ "animation.rig.parallax.down": "Nach unten driften",
+ "animation.rig.parallax.push": "Heranfahren",
+ "cmd.animation.layers.parallax": "Parallaxe: angekreuzte Ebenen von fern nach nah driften lassen"
 }

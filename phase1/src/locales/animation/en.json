@@ -1231,5 +1231,12 @@
  "animation.rig.path.move": "Travel along the path",
  "animation.rig.path.face": "Travel along the path and face forward",
  "cmd.animation.layers.followPath": "Travel layers along the first ticked path layer",
- "animation.rig.bounce.squash": "Drop and bounce 3 times, squash and stretch"
+ "animation.rig.bounce.squash": "Drop and bounce 3 times, squash and stretch",
+ "animation.rig.group.parallax": "Parallax (far to near)",
+ "animation.rig.parallax.left": "Drift left",
+ "animation.rig.parallax.right": "Drift right",
+ "animation.rig.parallax.up": "Drift up",
+ "animation.rig.parallax.down": "Drift down",
+ "animation.rig.parallax.push": "Push in",
+ "cmd.animation.layers.parallax": "Parallax: drift the ticked layers, far to near"
 }

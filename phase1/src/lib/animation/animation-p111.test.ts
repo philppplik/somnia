@@ -1517,3 +1517,19 @@ test('P251 bounce with squash and stretch: starts at the original scale, squashe
  assert.ok(Math.min(...k.map(v=>v[1]))<85,'squashed at contact');assert.ok(Math.max(...k.map(v=>v[1]))>110,'stretched in the air');
  s.undo();assert.equal(findComp(s.document!)!.layers.find(l=>l.id==='ball')!.transform.scale.keys.length,0);
 });
+
+test('P252 parallax: nearer layers move further, rotated parent respected, push scales, layers with keys are skipped, one undo step',async()=>{
+ const {parallaxSpecs,depthShare}=await import('./parallaxCommands');const {worldMatrix}=await import('./scene');const run=parallaxSpecs()[0].run as (p?:unknown)=>unknown;
+ assert.equal(depthShare(0,4),0.25);assert.equal(depthShare(3,4),1);
+ const d0=applyEdits(base(),[{type:'layer.add',kind:'solid',id:'far'},{type:'layer.add',kind:'solid',id:'mid'},{type:'layer.add',kind:'solid',id:'g'},{type:'prop.set',layer:'g',prop:'rotation',t:f(0),value:40},{type:'layer.add',kind:'solid',id:'near'},{type:'layer.parent',layer:'near',parent:'g'}] as never);
+ const s=new AnimationSession();s.open(d0);setAnimationSession(s);
+ assert.throws(()=>run({layers:['far','mid']}),/Choose/);assert.throws(()=>run({mode:'left',amount:0,layers:['far','mid']}),/amount/);
+ const r=run({mode:'left',amount:10,layers:['far','mid','near','a']}) as {moved:number;skipped:number};assert.equal(r.moved,3);assert.equal(r.skipped,1);
+ const c=findComp(s.document!)!,anc=(id:string,t:number)=>{const l=c.layers.find(x=>x.id===id)!,m=worldMatrix(c,l,t),an=l.transform.anchor.value as unknown as number[];return [m[0]*an[0]+m[2]*an[1]+m[4],m[1]*an[0]+m[3]*an[1]+m[5]];};
+ const a=c.workArea.in,b=c.workArea.out,dx=(id:string)=>anc(id,b)[0]-anc(id,a)[0],dy=(id:string)=>anc(id,b)[1]-anc(id,a)[1];
+ assert.ok(Math.abs(dx('far')+c.width*0.1*0.25)<0.1&&Math.abs(dx('mid')+c.width*0.1*0.5)<0.1&&Math.abs(dx('near')+c.width*0.1*0.75)<0.1,'world dx 1/4, 2/4, 3/4 of the full drift (the skipped layer keeps its depth slot)');
+ assert.ok(Math.abs(dy('near'))<0.1,'no vertical drift');
+ s.undo();assert.equal(findComp(s.document!)!.layers.find(l=>l.id==='far')!.transform.position.keys.length,0);
+ run({mode:'push',amount:20,layers:['far','mid']});const sc=(id:string)=>findComp(s.document!)!.layers.find(l=>l.id===id)!.transform.scale.keys.map(k=>k.v as unknown as number[]);
+ assert.ok(Math.abs(sc('mid')[1][0]/sc('mid')[0][0]-1.2)<0.01&&Math.abs(sc('far')[1][0]/sc('far')[0][0]-1.1)<0.01);
+});

@@ -2182,6 +2182,25 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.layers.parallax",
+      "title": "Parallax: drift the ticked layers, far to near",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "background",
+        "depth",
+        "dolly",
+        "drift",
+        "layers",
+        "pan",
+        "parallax",
+        "push in",
+        "scroll"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.layers.reset",
       "title": "Reset rotation, scale or opacity of the selected layers",
       "category": "Edit",
