@@ -75,3 +75,4 @@ Back to [Studios](../studios.md).
 - Composition settings: pick a size preset (1920x1080, 1080x1080, 1080x1920 and more) and choose what happens to the layers: keep, fit (scale to stay visible), fill (scale to cover) or centre (keep size). The top-level layers move and scale in one undo step; children follow their parents.
 - Add layer > More shapes: regular polygons (3, 5, 6, 8 sides) and stars (5, 6, 8 points) as editable path layers, centred in the composition. The command takes sides, star, inner radius, radius and colour.
 - Key tools > Time > Snap to markers: moves the selected keys to the nearest composition marker (beat sync); the (6) variant only moves keys within 6 frames.
+- Rig > Layers > Work area to marker section: sets the work area to the stretch between the markers around the playhead (or the comp start/end), so preview loops and exports cover one section.

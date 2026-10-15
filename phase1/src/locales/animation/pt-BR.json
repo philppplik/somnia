@@ -1150,5 +1150,7 @@
  "cmd.animation.shape.polygon": "Adicionar uma camada de poligono ou estrela",
  "animation.keys.snapMarkers": "Ajustar aos marcadores",
  "animation.keys.snapMarkers.hint": "Move cada chave selecionada para o marcador mais proximo (sincronia com a batida). A variante (6) so move chaves a ate 6 quadros.",
- "cmd.animation.keys.snapToMarkers": "Ajustar as chaves selecionadas ao marcador mais proximo"
+ "cmd.animation.keys.snapToMarkers": "Ajustar as chaves selecionadas ao marcador mais proximo",
+ "animation.rig.workareaMarkers": "Area de trabalho para secao de marcadores",
+ "cmd.animation.workarea.toMarkers": "Definir a area de trabalho para a secao entre marcadores no cursor"
 }

@@ -1150,5 +1150,7 @@
  "cmd.animation.shape.polygon": "Ajouter un calque polygone ou etoile",
  "animation.keys.snapMarkers": "Aimanter aux reperes",
  "animation.keys.snapMarkers.hint": "Deplace chaque cle selectionnee vers le repere le plus proche (synchro au rythme). La variante (6) ne deplace que les cles a moins de 6 images.",
- "cmd.animation.keys.snapToMarkers": "Aimanter les cles selectionnees au repere le plus proche"
+ "cmd.animation.keys.snapToMarkers": "Aimanter les cles selectionnees au repere le plus proche",
+ "animation.rig.workareaMarkers": "Zone de travail sur section de reperes",
+ "cmd.animation.workarea.toMarkers": "Regler la zone de travail sur la section entre reperes a la tete de lecture"
 }

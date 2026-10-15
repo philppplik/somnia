@@ -1237,3 +1237,16 @@ test('P233 snap keys to markers: nearest marker, max distance, one undo step, er
  sel();run({});assert.deepEqual(ts(),[c0.start+f(10),c0.start+f(30)]);
  assert.throws(()=>run({}),/already/);
 });
+
+test('P234 work area to the section between markers at the playhead, one undo step, errors',async()=>{
+ const {markerWorkAreaSpecs}=await import('./markerWorkAreaCommands');const run=markerWorkAreaSpecs()[0].run as (p?:unknown)=>unknown;
+ const s=open();setAnimationSession(s);const c0=findComp(s.document!)!;
+ assert.throws(()=>run({}),/markers/i);
+ s.dispatch({type:'markers.set',markers:[{id:'m1',t:f(10),label:'a'},{id:'m2',t:f(30),label:'b'}]});
+ const wa=()=>findComp(s.document!)!.workArea;
+ s.setView({playhead:f(15)});run({layers:['x']});assert.deepEqual([wa().in,wa().out],[f(10),f(30)]);
+ assert.throws(()=>run({}),/already/);
+ s.undo();assert.deepEqual([wa().in,wa().out],[c0.workArea.in,c0.workArea.out]);
+ s.setView({playhead:f(2)});run({});assert.deepEqual([wa().in,wa().out],[0,f(10)]);
+ s.setView({playhead:f(40)});run({});assert.deepEqual([wa().in,wa().out],[f(30),c0.duration]);
+});

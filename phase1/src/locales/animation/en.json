@@ -1150,5 +1150,7 @@
  "cmd.animation.shape.polygon": "Add a polygon or star shape layer",
  "animation.keys.snapMarkers": "Snap to markers",
  "animation.keys.snapMarkers.hint": "Move each selected key to the nearest composition marker (beat sync). The (6) variant only moves keys within 6 frames.",
- "cmd.animation.keys.snapToMarkers": "Snap the selected keys to the nearest marker"
+ "cmd.animation.keys.snapToMarkers": "Snap the selected keys to the nearest marker",
+ "animation.rig.workareaMarkers": "Work area to marker section",
+ "cmd.animation.workarea.toMarkers": "Set the work area to the section between markers at the playhead"
 }

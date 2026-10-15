@@ -2983,6 +2983,24 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.workarea.toMarkers",
+      "title": "Set the work area to the section between markers at the playhead",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "chapter",
+        "export",
+        "loop",
+        "marker",
+        "range",
+        "section",
+        "segment",
+        "work area"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "chat.toggle",
       "title": "Toggle session chat",
       "category": "View",

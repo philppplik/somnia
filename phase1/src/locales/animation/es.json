@@ -1150,5 +1150,7 @@
  "cmd.animation.shape.polygon": "Anadir una capa de poligono o estrella",
  "animation.keys.snapMarkers": "Ajustar a marcadores",
  "animation.keys.snapMarkers.hint": "Mueve cada clave seleccionada al marcador mas cercano (sincronia con el ritmo). La variante (6) solo mueve claves a menos de 6 fotogramas.",
- "cmd.animation.keys.snapToMarkers": "Ajustar las claves seleccionadas al marcador mas cercano"
+ "cmd.animation.keys.snapToMarkers": "Ajustar las claves seleccionadas al marcador mas cercano",
+ "animation.rig.workareaMarkers": "Area de trabajo a seccion de marcadores",
+ "cmd.animation.workarea.toMarkers": "Ajustar el area de trabajo a la seccion entre marcadores en el cabezal"
 }

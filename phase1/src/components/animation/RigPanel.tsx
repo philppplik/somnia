@@ -22,6 +22,7 @@ const groups:{key:string;items:RigItem[]}[]=[
   {testid:'animation-rig-duplicate',label:'animation.rig.duplicate',cmd:'animation.layers.duplicate',min:1},
   {testid:'animation-rig-split',label:'animation.rig.split',cmd:'animation.layers.split',min:1},
   {testid:'animation-rig-workarea',label:'animation.rig.workarea',cmd:'animation.workarea.toLayers',min:1},
+  {testid:'animation-rig-workarea-markers',label:'animation.rig.workareaMarkers',cmd:'animation.workarea.toMarkers',min:0},
   {testid:'animation-rig-center',label:'animation.rig.center',cmd:'animation.layers.centerAnchor',min:1},
   {testid:'animation-rig-trim',label:'animation.rig.trim',cmd:'animation.layers.trimToWorkArea',min:1},
   {testid:'animation-rig-reseed',label:'animation.rig.reseed',cmd:'animation.modifiers.reseed',min:1},
