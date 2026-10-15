@@ -27,7 +27,7 @@ test('clip pan: schema v6 migrates v5 clips with pan 0 and strict v6 requires it
  v5.version=5;delete (v5 as Record<string,unknown>).bpm;
  for(const t of (v5 as {tracks:{clips:Record<string,unknown>[]}[]}).tracks)for(const c of t.clips)delete c.pan;
  const migrated=validateArrangement(v5);
- assert.equal(migrated.version,11);
+ assert.equal(migrated.version,12);
  assert.equal(migrated.tracks[0].clips[0].pan,0,'v5 clips gain a neutral pan');
  const broken=JSON.parse(JSON.stringify(session(0))) as Record<string,unknown>;
  for(const t of (broken as {tracks:{clips:Record<string,unknown>[]}[]}).tracks)for(const c of t.clips)delete c.pan;
