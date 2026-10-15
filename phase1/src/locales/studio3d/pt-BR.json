@@ -995,5 +995,14 @@
  "studio3d.edit.shrinkwrap": "Shrinkwrap",
  "studio3d.hist.editShrinkwrap": "Shrinkwrap",
  "studio3d.edit.shrinkwrapTarget": "ID do objeto alvo",
- "studio3d.edit.shrinkwrapOffset": "Deslocamento de superfície"
+ "studio3d.edit.shrinkwrapOffset": "Deslocamento de superfície",
+ "cmd.studio3d.edit.knife": "Fatiar as faces selecionadas da malha 3D editada com um plano livre, mantendo os dois lados conectados",
+ "studio3d.edit.knife": "Faca",
+ "studio3d.hist.editKnife": "Corte com faca",
+ "studio3d.edit.knifeX": "Ponto do plano X",
+ "studio3d.edit.knifeY": "Ponto do plano Y",
+ "studio3d.edit.knifeZ": "Ponto do plano Z",
+ "studio3d.edit.knifeNx": "Normal do plano X",
+ "studio3d.edit.knifeNy": "Normal do plano Y",
+ "studio3d.edit.knifeNz": "Normal do plano Z"
 }

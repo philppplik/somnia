@@ -7789,6 +7789,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.edit.knife",
+      "title": "Slice the selected faces of the edited 3D mesh with a free plane and keep both sides connected",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.edit.loopCut",
       "title": "Loop cut",
       "category": "Edit",

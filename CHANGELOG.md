@@ -1,4 +1,5 @@
 # Unreleased: 3D Studio P0
+- 3D Studio: edit mode knife slices selected faces with a free plane (point + normal), keeping both sides connected.
 - 3D Studio: edit mode projects selected vertices onto another mesh with a surface offset (`studio3d.edit.shrinkwrap`).
 - 3D Studio: edit mode bakes a mirror symmetry into the edited mesh (`studio3d.edit.symmetrize`).
 - 3D Studio: edit mode replaces the mesh with the convex hull of its selected vertices (`studio3d.edit.convexHull`).

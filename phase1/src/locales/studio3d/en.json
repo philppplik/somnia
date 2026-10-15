@@ -995,5 +995,14 @@
  "studio3d.edit.shrinkwrap": "Shrinkwrap",
  "studio3d.hist.editShrinkwrap": "Shrinkwrap",
  "studio3d.edit.shrinkwrapTarget": "Target object id",
- "studio3d.edit.shrinkwrapOffset": "Surface offset"
+ "studio3d.edit.shrinkwrapOffset": "Surface offset",
+ "cmd.studio3d.edit.knife": "Slice the selected faces of the edited 3D mesh with a free plane and keep both sides connected",
+ "studio3d.edit.knife": "Knife",
+ "studio3d.hist.editKnife": "Knife cut",
+ "studio3d.edit.knifeX": "Plane point X",
+ "studio3d.edit.knifeY": "Plane point Y",
+ "studio3d.edit.knifeZ": "Plane point Z",
+ "studio3d.edit.knifeNx": "Plane normal X",
+ "studio3d.edit.knifeNy": "Plane normal Y",
+ "studio3d.edit.knifeNz": "Plane normal Z"
 }

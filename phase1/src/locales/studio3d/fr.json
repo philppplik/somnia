@@ -995,5 +995,14 @@
  "studio3d.edit.shrinkwrap": "Shrinkwrap",
  "studio3d.hist.editShrinkwrap": "Shrinkwrap",
  "studio3d.edit.shrinkwrapTarget": "ID de l'objet cible",
- "studio3d.edit.shrinkwrapOffset": "Décalage de surface"
+ "studio3d.edit.shrinkwrapOffset": "Décalage de surface",
+ "cmd.studio3d.edit.knife": "Tranche les faces sélectionnées du maillage 3D édité avec un plan libre, les deux côtés restent connectés",
+ "studio3d.edit.knife": "Couteau",
+ "studio3d.hist.editKnife": "Coupe au couteau",
+ "studio3d.edit.knifeX": "Point du plan X",
+ "studio3d.edit.knifeY": "Point du plan Y",
+ "studio3d.edit.knifeZ": "Point du plan Z",
+ "studio3d.edit.knifeNx": "Normale du plan X",
+ "studio3d.edit.knifeNy": "Normale du plan Y",
+ "studio3d.edit.knifeNz": "Normale du plan Z"
 }

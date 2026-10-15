@@ -1978,6 +1978,56 @@ export function bisectMesh(m:MeshData,axis:MirrorAxis,offset:number,fill:boolean
  return{neg:clip(-1),pos:clip(1)};
 }
 
+/** Slices the selected faces with a free plane (point + normal), keeping both sides in the same mesh: crossing faces split along the plane and stay connected through the untouched faces. Unlike the bisect nothing is separated or capped, and the plane is not axis-aligned. UVs interpolate onto the cut, sculpt masks are dropped (topology changes), explicit normals are dropped (rebuilt smooth on the stage). */
+export function knifeMesh(m:MeshData,px:number,py:number,pz:number,nx:number,ny:number,nz:number,faces:number[]):MeshData{
+ check(m);
+ const len=Math.hypot(nx,ny,nz);
+ if(![px,py,pz,nx,ny,nz].every(Number.isFinite)||Math.max(Math.abs(px),Math.abs(py),Math.abs(pz))>1e9||len<1e-12)throw new EditError('The knife plane needs a finite point and a non-zero normal.');
+ nx/=len;ny/=len;nz/=len;
+ const nt=m.index.length/3;
+ if(!faces.length)throw new EditError('Select faces first.');
+ const want=new Set<number>();
+ for(const f of faces){if(!Number.isInteger(f)||f<0||f>=nt)throw new EditError('A selected face is out of range.');want.add(f);}
+ const EPS=1e-9;
+ const dist=(v:number)=>(m.positions[v*3]-px)*nx+(m.positions[v*3+1]-py)*ny+(m.positions[v*3+2]-pz)*nz;
+ const sideOf=(v:number)=>{const d=dist(v);return d>EPS?1:d<-EPS?-1:0;};
+ const positions=m.positions.slice();
+ const uvs=m.uvs?m.uvs.slice():undefined;
+ const cutCache=new Map<string,number>();
+ const cut=(x:number,y:number)=>{
+  const k=x<y?`${x}_${y}`:`${y}_${x}`;let n=cutCache.get(k);
+  if(n!==undefined)return n;
+  const dx=dist(x),dy=dist(y),t=dx/(dx-dy);
+  n=positions.length/3;cutCache.set(k,n);
+  positions.push(
+   m.positions[x*3]+(m.positions[y*3]-m.positions[x*3])*t,
+   m.positions[x*3+1]+(m.positions[y*3+1]-m.positions[x*3+1])*t,
+   m.positions[x*3+2]+(m.positions[y*3+2]-m.positions[x*3+2])*t);
+  if(uvs)uvs.push(m.uvs![x*2]+(m.uvs![y*2]-m.uvs![x*2])*t,m.uvs![x*2+1]+(m.uvs![y*2+1]-m.uvs![x*2+1])*t);
+  return n;
+ };
+ const index:number[]=[];let cuts=0;
+ for(let f=0;f<nt;f++){
+  const t=[m.index[f*3],m.index[f*3+1],m.index[f*3+2]];
+  const s=t.map(sideOf);
+  if(!want.has(f)||s.every(x=>x>=0)||s.every(x=>x<=0)){index.push(t[0],t[1],t[2]);continue;}
+  cuts++;
+  for(const target of [1,-1] as const){
+   const poly:number[]=[];
+   for(let e=0;e<3;e++){
+    const a=t[e],b=t[(e+1)%3],sa=s[e],sb=s[(e+1)%3];
+    if(sa===target||sa===0)poly.push(a);
+    if((sa===target&&sb===-target)||(sa===-target&&sb===target))poly.push(cut(a,b));
+   }
+   if(poly.length===3)index.push(poly[0],poly[1],poly[2]);
+   else if(poly.length===4)index.push(poly[0],poly[1],poly[2],poly[0],poly[2],poly[3]);
+  }
+ }
+ if(!cuts)throw new EditError('The plane does not cut through the selected faces.');
+ const out:MeshData=uvs?{positions,index,uvs}:{positions,index};
+ check(out);return out;
+}
+
 /** Twists the mesh around an axis: every vertex rotates by a share of the total angle proportional to its position along that axis (0 at the low end, the full angle at the high end), around the bounding-box centre line. Sculpt masks scale the rotation down to zero. UVs and masks are carried, explicit normals are dropped (rebuilt smooth on the stage). */
 export function twistMesh(m:MeshData,axis:MirrorAxis,degrees:number):MeshData{
  check(m);

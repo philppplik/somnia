@@ -995,5 +995,14 @@
  "studio3d.edit.shrinkwrap": "Shrinkwrap",
  "studio3d.hist.editShrinkwrap": "Shrinkwrap",
  "studio3d.edit.shrinkwrapTarget": "Ziel-Objekt-ID",
- "studio3d.edit.shrinkwrapOffset": "Oberflaechen-Offset"
+ "studio3d.edit.shrinkwrapOffset": "Oberflaechen-Offset",
+ "cmd.studio3d.edit.knife": "Die selektierten Flächen des bearbeiteten 3D-Meshs mit einer freien Ebene durchschneiden, beide Seiten bleiben verbunden",
+ "studio3d.edit.knife": "Knife",
+ "studio3d.hist.editKnife": "Knife-Schnitt",
+ "studio3d.edit.knifeX": "Ebenenpunkt X",
+ "studio3d.edit.knifeY": "Ebenenpunkt Y",
+ "studio3d.edit.knifeZ": "Ebenenpunkt Z",
+ "studio3d.edit.knifeNx": "Ebenennormale X",
+ "studio3d.edit.knifeNy": "Ebenennormale Y",
+ "studio3d.edit.knifeNz": "Ebenennormale Z"
 }

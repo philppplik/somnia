@@ -995,5 +995,14 @@
  "studio3d.edit.shrinkwrap": "Shrinkwrap",
  "studio3d.hist.editShrinkwrap": "Shrinkwrap",
  "studio3d.edit.shrinkwrapTarget": "ID del objeto destino",
- "studio3d.edit.shrinkwrapOffset": "Desplazamiento de superficie"
+ "studio3d.edit.shrinkwrapOffset": "Desplazamiento de superficie",
+ "cmd.studio3d.edit.knife": "Corta las caras seleccionadas de la malla 3D editada con un plano libre y mantiene ambos lados conectados",
+ "studio3d.edit.knife": "Cuchillo",
+ "studio3d.hist.editKnife": "Corte con cuchillo",
+ "studio3d.edit.knifeX": "Punto del plano X",
+ "studio3d.edit.knifeY": "Punto del plano Y",
+ "studio3d.edit.knifeZ": "Punto del plano Z",
+ "studio3d.edit.knifeNx": "Normal del plano X",
+ "studio3d.edit.knifeNy": "Normal del plano Y",
+ "studio3d.edit.knifeNz": "Normal del plano Z"
 }
