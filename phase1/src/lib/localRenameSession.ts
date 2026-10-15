@@ -1,0 +1,10 @@
+import {useSyncExternalStore} from 'react';import {EditorView} from '@codemirror/view';import {getActiveEditor} from './editorBridge';import {getCodeEditorHost} from './codeEditorHost';import {reviewLocalRename,type LocalRenameReview} from './localRename';
+function capture(){const view=getActiveEditor(),host=getCodeEditorHost(),s=host.read();if(!view?.dom.isConnected||s.activeStudio!=='code'||!s.coreConnected||view.state.readOnly||!view.state.facet(EditorView.editable)||view.state.doc.toString()!==s.files[s.activeFile])return null;return {view,host,file:s.activeFile,raw:view.state.doc.toString(),selection:view.state.selection,generation:host.generation()};}
+type Target=ReturnType<typeof capture>;
+let snapshot:{open:boolean;target:Target}={open:false,target:null};const listeners=new Set<()=>void>();
+export function openLocalRename(){snapshot={open:true,target:capture()};listeners.forEach(f=>f());}
+export function closeLocalRename(){snapshot={open:false,target:null};listeners.forEach(f=>f());}
+export const useLocalRename=()=>useSyncExternalStore(f=>{listeners.add(f);return()=>{listeners.delete(f);};},()=>snapshot);
+function assertTarget(target:Target){if(!target)throw Error('stale');const current=capture();if(!current||current.host!==target.host||current.view!==target.view||current.file!==target.file||current.raw!==target.raw||current.generation!==target.generation||!current.selection.eq(target.selection))throw Error('stale');return target;}
+export function prepareLocalRename(target:Target,name:string){const t=assertTarget(target),selection=t.selection.main;return reviewLocalRename(t.file,t.raw,selection.from,selection.to,name);}
+export function applyLocalRename(target:Target,review:LocalRenameReview,name:string){const t=assertTarget(target);const actual=prepareLocalRename(target,name);if(JSON.stringify(actual)!==JSON.stringify(review))throw Error('stale');t.view.dispatch({changes:{from:0,to:t.raw.length,insert:review.after},userEvent:'input.rename'});if(t.host.read().files[t.file]!==review.after)throw Error('unknown');t.view.focus();}

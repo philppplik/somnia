@@ -4027,6 +4027,15 @@
       "hasEnabled": true
     },
     {
+      "id": "code.rename.local",
+      "title": "Rename local symbol...",
+      "category": "Tools",
+      "source": "core",
+      "shortcut": "F2",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
       "id": "code.snippets",
       "title": "Code snippets...",
       "category": "Insert",
