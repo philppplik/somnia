@@ -10,7 +10,7 @@ import '../../lib/documents/guards';
 import {getCollab,onSessionChange} from '../../lib/collab/session';
 import {peerCarets,type PeerCaret} from '../../lib/collab/office/docsPresence';
 import {CELL_BASE} from '../../lib/documents/edit';
-import {selectUnitAtCaret,clearFormatting,copyLinkAt,toggleVertAlign,setFindOpen,setParagraphStyle,clearCaret,deleteAtCaret,dragTo,editParagraph,getEngine,moveCaret,pasteText,settleDocument,switchDocument,pointerAt,redoEdit,selectAllText,setAlign,shiftListLevel,tabInCell,stepFontSize,stepIndent,toggleFormat,selectedText,splitAtCaret,syncGeometry,typeText,undoEdit} from '../../lib/documents/session';
+import {setLineSpacing,toggleList,insertPageBreak,copyFormatting,pasteFormatting,selectUnitAtCaret,clearFormatting,copyLinkAt,toggleVertAlign,setFindOpen,setParagraphStyle,clearCaret,deleteAtCaret,dragTo,editParagraph,getEngine,moveCaret,pasteText,settleDocument,switchDocument,pointerAt,redoEdit,selectAllText,setAlign,shiftListLevel,tabInCell,stepFontSize,stepIndent,toggleFormat,selectedText,splitAtCaret,syncGeometry,typeText,undoEdit} from '../../lib/documents/session';
 import {specialChar} from '../../lib/documents/symbols';
 import {parsePdfPages,type PdfOptions} from '../../lib/documents/protocol';
 import {saveCopy,savePdf,saveFormat} from '../../lib/documents/saveCopy';
@@ -28,7 +28,8 @@ import {CommentsPanel} from './CommentsPanel';
 import {ShortcutsDialog} from './ShortcutsDialog';
 import {ParagraphDialog} from './ParagraphDialog';
 import {InfoDialogs} from './InfoDialogs';
-import {setShortcutsOpen} from '../../lib/documents/shortcuts';
+import {extraShortcut,setShortcutsOpen} from '../../lib/documents/shortcuts';
+import {setInfoDialog} from '../../lib/documents/infoDialog';
 import {NativeButton,NativeSelect,Textarea} from '../ui/native-controls';
 import {PeerSwatch} from '../collab/PeerSwatch';
 const bar='media-bar flex items-center gap-2 border-b border-subtle px-3 py-1.5 text-[12px]';
@@ -80,6 +81,14 @@ function CaretInput({left,top}:{left:number;top:number}){
    if(mod&&!e.altKey&&!e.shiftKey&&e.key.toLowerCase()==='g'){e.preventDefault();document.querySelector<HTMLElement>('[data-testid="documents-goto-open"]')?.click();return;}
    if(mod&&!e.altKey&&!e.shiftKey&&(e.key.toLowerCase()==='f'||e.key.toLowerCase()==='h')){e.preventDefault();setFindOpen(true);return;}
    if(mod&&e.altKey&&!e.shiftKey&&/^Digit[0-4]$/.test(e.code)){e.preventDefault();void setParagraphStyle((['Normal','Heading1','Heading2','Heading3','Heading4'] as const)[Number(e.code.slice(5))]);return;}
+   const ex=extraShortcut({key:e.key,mod,shift:e.shiftKey,alt:e.altKey});
+   if(ex){e.preventDefault();switch(ex){
+    case 'lineSingle':void setLineSpacing(1);break;case 'lineDouble':void setLineSpacing(2);break;case 'line15':void setLineSpacing(1.5);break;
+    case 'bullets':void toggleList('bullet');break;case 'pageBreak':void insertPageBreak();break;
+    case 'painterCopy':copyFormatting();break;case 'painterPaste':void pasteFormatting();break;
+    case 'allCaps':void toggleFormat('allCaps');break;case 'smallCaps':void toggleFormat('smallCaps');break;
+    case 'normalStyle':void setParagraphStyle('Normal');break;case 'charLook':setInfoDialog('charlook');break;}
+    return;}
    if(e.key==='Enter'){e.preventDefault();void splitAtCaret();return;}
    if(mod&&!e.altKey&&e.key==='/'){e.preventDefault();setShortcutsOpen(true);return;}
    if(mod&&!e.altKey&&!e.shiftKey&&e.key.toLowerCase()==='k'){e.preventDefault();document.querySelector<HTMLElement>('[data-testid="documents-format-link"]')?.click();return;}

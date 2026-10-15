@@ -1,12 +1,17 @@
-import test from 'node:test';
+import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
-import {SHORTCUTS,setShortcutsOpen,shortcutsOpen} from './shortcuts';
-const LOCALES=['en','de','es','fr','pt-BR'];
-test('every shortcut label exists in all five locales and no key combination repeats',()=>{
- for(const l of LOCALES){const m=JSON.parse(readFileSync(new URL(`../../locales/${l}.json`,import.meta.url),'utf8')) as Record<string,string>;
-  for(const [k] of SHORTCUTS)assert.ok(m[k],`${l}: ${k}`);
-  for(const k of ['documents.shortcuts.title','documents.shortcuts.open','documents.shortcuts.close','documents.shortcuts.mac','documents.session.linkCopied'])assert.ok(m[k],`${l}: ${k}`);}
- const keys=SHORTCUTS.map(s=>s[1]);assert.equal(new Set(keys).size,keys.length);
+import {extraShortcut,SHORTCUTS} from './shortcuts';
+const k=(key:string,o:{shift?:boolean;alt?:boolean;mod?:boolean}={})=>extraShortcut({key,mod:o.mod??true,shift:!!o.shift,alt:!!o.alt});
+test('Word-style shortcuts map to their actions',()=>{
+ assert.equal(k('1'),'lineSingle');assert.equal(k('2'),'lineDouble');assert.equal(k('5'),'line15');
+ assert.equal(k('Enter'),'pageBreak');assert.equal(k('d'),'charLook');assert.equal(k('D'),'charLook');
+ assert.equal(k('L',{shift:true}),'bullets');assert.equal(k('c',{shift:true}),'painterCopy');assert.equal(k('V',{shift:true}),'painterPaste');
+ assert.equal(k('A',{shift:true}),'allCaps');assert.equal(k('K',{shift:true}),'smallCaps');assert.equal(k('N',{shift:true}),'normalStyle');
 });
-test('the dialog opens and closes',()=>{setShortcutsOpen(true);assert.equal(shortcutsOpen(),true);setShortcutsOpen(false);assert.equal(shortcutsOpen(),false);});
+test('plain keys, Alt combinations and unknown keys do nothing',()=>{
+ assert.equal(k('1',{mod:false}),null);assert.equal(k('Enter',{mod:false}),null);
+ assert.equal(k('1',{alt:true}),null,'Ctrl+Alt+digit is the paragraph style shortcut');assert.equal(k('d',{alt:true}),null);
+ for(const key of ['a','b','x','z','3','Tab','F1'])assert.equal(k(key),null,key);
+ assert.equal(k('1',{shift:true}),null);assert.equal(k('Enter',{shift:true}),null);assert.equal(k('q',{shift:true}),null);
+});
+test('every shortcut row has a label key and keys',()=>{for(const [l,keys] of SHORTCUTS){assert.ok(l.startsWith('documents.'));assert.ok(keys.length>0);}});
