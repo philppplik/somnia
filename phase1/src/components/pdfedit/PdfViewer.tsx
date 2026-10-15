@@ -124,7 +124,7 @@ export function PdfViewer({data,name,backend=pdfjsBackend,textLayer=false,onErro
   <label>{name} is password protected.<NativeInput name="pw" type="password" autoFocus className="mt-1 block w-64 rounded-sm border border-subtle px-2 py-1" aria-label="PDF password"/></label><NativeButton className={btn} type="submit">Open</NativeButton></form>;
  if(error)return <div role="alert" className="grid flex-1 place-items-center p-6 text-[13px] text-ink-2" data-testid="pdf-error">{error.message}</div>;
  if(!doc)return <div role="status" className="grid flex-1 place-items-center text-[12px] text-ink-3">Loading {name}…</div>;
- return <section className="canvas-stage flex min-h-0 min-w-0 flex-1 flex-col outline-none" style={{width:"100%"}} aria-label={`PDF viewer: ${name}`} tabIndex={0} onKeyDown={onKey}>
+ return <section className="canvas-stage flex min-h-0 min-w-0 flex-1 flex-col" style={{width:"100%"}} aria-label={`PDF viewer: ${name}`} tabIndex={0} onKeyDown={onKey}>
   <div className="media-bar flex flex-wrap items-center gap-1 border-b border-subtle px-3 py-1.5 text-[12px]">
    <span className="truncate" data-testid="media-name">{name}</span><span className="flex-1"/>
    <NativeButton className={btn} aria-label="Previous page" disabled={view.page<=1} onClick={()=>apply(prevPage)}>‹</NativeButton>

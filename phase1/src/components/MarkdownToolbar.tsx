@@ -24,7 +24,7 @@ export function MarkdownToolbar({view}:{view:EditorView|null}){
  const more:Array<[MdCommand|'codeblock-dialog',string]>=[['h1',t('md.cmd.h1')],['h2',t('md.cmd.h2')],['h3',t('md.cmd.h3')],['h4',t('md.cmd.h4')],['h5',t('md.cmd.h5')],['h6',t('md.cmd.h6')],['number',t('md.cmd.number')],['quote',t('md.cmd.quote')],['codeblock-dialog',t('md.cmd.codeblock')],['table',t('md.cmd.table')],['strike',t('md.cmd.strike')]];
  const projectMd=Object.keys(files).filter(f=>/\.(md|markdown|html?)$/i.test(f)).sort();
  const close=()=>{setPending(null);live?.focus();};
- const dlgInput='h-9 w-full rounded-[var(--r-control)] border border-default bg-base px-3 text-[13px] text-ink outline-none focus:border-[var(--accent)]';
+ const dlgInput='h-9 w-full rounded-[var(--r-control)] border border-default bg-base px-3 text-[13px] text-ink focus:border-[var(--accent)]';
  return <div className="md-head flex h-9 shrink-0 items-center gap-0.5 border-b border-subtle px-2" role="toolbar" aria-label={t('md.toolbar')} data-testid="md-toolbar">
   <span className="mr-1 px-1 text-[11px] font-medium text-ink-2">{t('md.label.markdown')}</span>
   {primary.map(({id,label,Icon,run:fn,key})=><Button key={id} size="icon" className="md-tool !size-7 min-w-7" data-testid={`md-${id}`} aria-label={label} title={key?`${label} (${formatShortcut(key)})`:label} onMouseDown={keep} onClick={fn}><Icon size={15}/></Button>)}
