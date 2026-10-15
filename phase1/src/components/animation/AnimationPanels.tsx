@@ -35,6 +35,7 @@ import {layerTemplates} from '../../lib/animation/layerTemplates';
 import {TemplateThumb} from './TemplateThumb';
 import {TEMPLATE_IDS,type TemplateId} from '../../lib/animation/templates';
 import {useAnimationState} from '../../lib/animation/session';
+import {CAMERA_MOVES,findCamera} from '../../lib/animation/cameraCommands';
 import {findComp,findLayer,TRANSFORM_KEYS,type LayerKind,type PropValue,type TransformKey} from '../../lib/animation/model';
 import {evaluate} from '../../lib/animation/interpolate';
 import {ticksToSeconds,timecode} from '../../lib/animation/time';
@@ -53,6 +54,7 @@ const field='h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent p
 const run=(id:string,params?:unknown)=>void executeCommand(id,params);
 const KINDS:LayerKind[]=['solid','text','shape','null'];
 /** Left panel: composition list and layer creation. The timeline owns the layer list, so it is not repeated here. */
+const cameraOf=(d:{compositions:readonly import('../../lib/animation/model').Composition[];activeComp:string})=>{const c=d.compositions.find(x=>x.id===d.activeComp);return c?findCamera(c):undefined;};
 export function CompositionsPanel(_:PanelHostProps){
  const {t}=useT();const s=useAnimationState();const doc=s.doc;const [pre,setPre]=useState('');const [tpl,setTpl]=useState<TemplateId|`saved:${string}`>('lowerThird');const [tplName,setTplName]=useState('');const tplFile=useRef<HTMLInputElement>(null);const [tplErr,setTplErr]=useState('');const saved=layerTemplates(doc);const [preErr,setPreErr]=useState('');const input=useRef<HTMLInputElement>(null);const [importError,setImportError]=useState('');const [importing,setImporting]=useState(false);const [fileNotice,setFileNotice]=useState('');const snapshotInput=useRef<HTMLInputElement>(null);const audioInput=useRef<HTMLInputElement>(null);const audioAbort=useRef<AbortController|null>(null);const [audioJob,setAudioJob]=useState<{done:number;total:number}|null>(null);
  useEffect(()=>{const open=()=>audioInput.current?.click();window.addEventListener(AUDIO_IMPORT_EVENT,open);return()=>{window.removeEventListener(AUDIO_IMPORT_EVENT,open);audioAbort.current?.abort();};},[]);
@@ -93,6 +95,10 @@ export function CompositionsPanel(_:PanelHostProps){
   {preErr&&<StudioStatus tone="error" live="assertive" className="block m-0 text-ink">{preErr}</StudioStatus>}
   <div className="grid grid-cols-2 gap-2">{KINDS.map(k=><Button key={k} size="compact" variant="outline" onClick={()=>run('animation.layer.add',{kind:k})} data-testid={`animation-add-${k}`}>{t(`animation.layer.${k}`)}</Button>)}</div>
   <NativeSelect className="h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink" value="" aria-label={t('animation.shape.more')} onChange={e=>{const [k,n]=e.target.value.split(':');if(k)run('animation.shape.polygon',{sides:Number(n),star:k==='star'});}} data-testid="animation-add-polygon"><option value="">{t('animation.shape.more')}</option>{(['poly:3','poly:5','poly:6','poly:8','star:5','star:6','star:8'] as const).map(v=><option key={v} value={v}>{t(`animation.shape.${v.startsWith('star')?'star':'poly'}`,{n:v.split(':')[1]})}</option>)}</NativeSelect>
+  <NativeSelect className="h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink" value="" aria-label={t('animation.camera.title')} onChange={e=>{const v=e.target.value;if(v==='add')run('animation.camera.add');else if(v)run('animation.camera.move',{move:v});}} disabled={!findComp(doc)} data-testid="animation-camera">
+   <option value="">{t('animation.camera.title')}</option>
+   <option value="add" disabled={!!cameraOf(doc)}>{t('animation.camera.add')}</option>
+   {CAMERA_MOVES.map(m=><option key={m} value={m} disabled={!cameraOf(doc)}>{t(`animation.camera.${m}`)}</option>)}</NativeSelect>
   <NativeInput ref={input} type="file" accept=".png,.jpg,.jpeg,.svg" className="hidden" aria-label={t('animation.asset.import')} onChange={async e=>{const file=e.target.files?.[0];e.target.value='';if(!file)return;const session=animationSession(),document=session.document;setImportError('');setImporting(true);try{const asset=await prepareAnimationAsset(file);if(session.document?.id!==document?.id||session.document?.activeComp!==document?.activeComp)throw Error(t('animation.asset.changed'));session.dispatch({type:'asset.import',asset});session.setView({selectedLayer:findComp(session.document!)!.layers[0].id});}catch(err){setImportError((err as Error).message);}finally{setImporting(false);}}}/>
   <Button size="compact" variant="outline" disabled={importing} onClick={()=>input.current?.click()} data-testid="animation-import-asset">{t('animation.asset.import')}</Button>
   <p className="m-0 text-ink-3">{t('animation.asset.limits')}</p>

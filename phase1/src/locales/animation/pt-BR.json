@@ -1175,5 +1175,17 @@
  "animation.rig.group.send": "Enviar para composicao",
  "animation.rig.send.copy": "Copiar para",
  "animation.rig.send.move": "Mover para",
- "cmd.animation.layers.sendTo": "Copiar ou mover camadas para outra composicao"
+ "cmd.animation.layers.sendTo": "Copiar ou mover camadas para outra composicao",
+ "animation.camera.title": "Camera...",
+ "animation.camera.add": "Adicionar camera (todas as camadas)",
+ "cmd.animation.camera.add": "Adicionar uma camera para a cena inteira",
+ "cmd.animation.camera.move": "Animar a camera na area de trabalho",
+ "animation.camera.pushIn": "Aproximar",
+ "animation.camera.pullOut": "Afastar",
+ "animation.camera.panLeft": "Pan para a esquerda",
+ "animation.camera.panRight": "Pan para a direita",
+ "animation.camera.panUp": "Pan para cima",
+ "animation.camera.panDown": "Pan para baixo",
+ "animation.camera.rollLeft": "Girar para a esquerda",
+ "animation.camera.rollRight": "Girar para a direita"
 }

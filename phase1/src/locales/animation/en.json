@@ -1175,5 +1175,17 @@
  "animation.rig.group.send": "Send to composition",
  "animation.rig.send.copy": "Copy to",
  "animation.rig.send.move": "Move to",
- "cmd.animation.layers.sendTo": "Copy or move layers to another composition"
+ "cmd.animation.layers.sendTo": "Copy or move layers to another composition",
+ "animation.camera.title": "Camera...",
+ "animation.camera.add": "Add camera (all layers)",
+ "cmd.animation.camera.add": "Add a camera for the whole scene",
+ "cmd.animation.camera.move": "Animate the camera over the work area",
+ "animation.camera.pushIn": "Push in",
+ "animation.camera.pullOut": "Pull out",
+ "animation.camera.panLeft": "Pan left",
+ "animation.camera.panRight": "Pan right",
+ "animation.camera.panUp": "Pan up",
+ "animation.camera.panDown": "Pan down",
+ "animation.camera.rollLeft": "Roll left",
+ "animation.camera.rollRight": "Roll right"
 }

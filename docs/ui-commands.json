@@ -131,6 +131,44 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.camera.add",
+      "title": "Add a camera for the whole scene",
+      "category": "Insert",
+      "source": "animation",
+      "keywords": [
+        "all layers",
+        "animation",
+        "camera",
+        "null",
+        "pan",
+        "parent",
+        "push",
+        "rig",
+        "scene",
+        "zoom"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "animation.camera.move",
+      "title": "Animate the camera over the work area",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "camera",
+        "dolly",
+        "move",
+        "pan",
+        "pull out",
+        "push in",
+        "roll",
+        "work area",
+        "zoom"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.color.animate",
       "title": "Toggle fill or stroke colour keyframes",
       "category": "Edit",

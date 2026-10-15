@@ -1175,5 +1175,17 @@
  "animation.rig.group.send": "In Komposition senden",
  "animation.rig.send.copy": "Kopieren nach",
  "animation.rig.send.move": "Verschieben nach",
- "cmd.animation.layers.sendTo": "Ebenen in eine andere Komposition kopieren oder verschieben"
+ "cmd.animation.layers.sendTo": "Ebenen in eine andere Komposition kopieren oder verschieben",
+ "animation.camera.title": "Kamera...",
+ "animation.camera.add": "Kamera hinzufuegen (alle Ebenen)",
+ "cmd.animation.camera.add": "Kamera fuer die ganze Szene hinzufuegen",
+ "cmd.animation.camera.move": "Kamera ueber den Arbeitsbereich animieren",
+ "animation.camera.pushIn": "Heranfahren",
+ "animation.camera.pullOut": "Wegfahren",
+ "animation.camera.panLeft": "Schwenk links",
+ "animation.camera.panRight": "Schwenk rechts",
+ "animation.camera.panUp": "Schwenk hoch",
+ "animation.camera.panDown": "Schwenk runter",
+ "animation.camera.rollLeft": "Rollen links",
+ "animation.camera.rollRight": "Rollen rechts"
 }

@@ -1317,3 +1317,21 @@ test('P238 send layers to another composition: copy keeps the original, move rem
  if(r.sent){const m=run({comp:'other',layers:kids,move:true}) as {sent:number};assert.equal(findComp(s.document!)!.layers.length,src.layers.length-m.sent);s.undo();assert.equal(findComp(s.document!)!.layers.length,src.layers.length);}
  assert.throws(()=>run({comp:src.id,layers:kids}),/different/);assert.throws(()=>run({comp:'nope',layers:kids}),/another/);
 });
+
+test('P240 camera: null at the centre, all unlocked top level layers hang from it, moves key it over the work area, one undo step each',async()=>{
+ const {cameraSpecs,findCamera}=await import('./cameraCommands');const [add,move]=cameraSpecs().map(x=>x.run as (p?:unknown)=>unknown);
+ const s=open();setAnimationSession(s);const c0=findComp(s.document!)!;
+ assert.throws(()=>move({move:'pushIn'}),/camera first/i);
+ const roots=c0.layers.filter(l=>l.parent===null&&!l.locked).map(l=>l.id);
+ const r=add({}) as {id:string;attached:number};assert.equal(r.attached,roots.length);
+ let c=findComp(s.document!)!;const cam=findCamera(c)!;assert.equal(cam.id,r.id);assert.deepEqual(cam.transform.position.value,[c0.width/2,c0.height/2]);assert.deepEqual(cam.transform.anchor.value,[c0.width/2,c0.height/2]);
+ for(const id of roots)assert.equal(c.layers.find(l=>l.id===id)!.parent,cam.id);
+ assert.throws(()=>add({}),/already/);
+ move({move:'pushIn',amount:30});c=findComp(s.document!)!;const sc=findCamera(c)!.transform.scale.keys;
+ assert.deepEqual(sc.map(k=>[k.t,k.v]),[[c.workArea.in,[100,100]],[c.workArea.out,[130,130]]]);
+ s.undo();assert.equal(findCamera(findComp(s.document!)!)!.transform.scale.keys.length,0);
+ move({move:'panLeft'});assert.equal(findCamera(findComp(s.document!)!)!.transform.position.keys.length,2);
+ assert.throws(()=>move({move:'nope'}),/Unknown/);assert.throws(()=>move({move:'pushIn',amount:500}),/amount/);
+ s.undo();s.undo();assert.equal(findCamera(findComp(s.document!)!),undefined);
+ assert.equal(findComp(s.document!)!.layers.every(l=>l.parent===c0.layers.find(x=>x.id===l.id)?.parent),true);
+});
