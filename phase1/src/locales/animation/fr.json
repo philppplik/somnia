@@ -1171,5 +1171,9 @@
  "cmd.animation.export.lottie": "Exporter la composition en JSON Lottie",
  "animation.timeline.autoKey": "Auto-cle",
  "animation.timeline.autoKeyHint": "Auto-cle : quand active, deplacer, mettre a l'echelle ou tourner un calque, ou modifier une valeur, a la tete de lecture enregistre une cle au lieu de changer toute l'animation.",
- "cmd.animation.timeline.autoKey": "Auto-cle : enregistrer les changements a la tete de lecture comme cles"
+ "cmd.animation.timeline.autoKey": "Auto-cle : enregistrer les changements a la tete de lecture comme cles",
+ "animation.rig.group.send": "Envoyer vers une composition",
+ "animation.rig.send.copy": "Copier vers",
+ "animation.rig.send.move": "Deplacer vers",
+ "cmd.animation.layers.sendTo": "Copier ou deplacer des calques vers une autre composition"
 }

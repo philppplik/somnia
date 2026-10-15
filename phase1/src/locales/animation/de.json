@@ -1171,5 +1171,9 @@
  "cmd.animation.export.lottie": "Komposition als Lottie-JSON exportieren",
  "animation.timeline.autoKey": "Auto-Key",
  "animation.timeline.autoKeyHint": "Auto-Key: Wenn aktiv, wird beim Verschieben, Skalieren, Drehen oder Aendern eines Werts am Abspielkopf ein Key aufgenommen statt die ganze Animation zu aendern.",
- "cmd.animation.timeline.autoKey": "Auto-Key: Aenderungen am Abspielkopf als Keys aufnehmen"
+ "cmd.animation.timeline.autoKey": "Auto-Key: Aenderungen am Abspielkopf als Keys aufnehmen",
+ "animation.rig.group.send": "In Komposition senden",
+ "animation.rig.send.copy": "Kopieren nach",
+ "animation.rig.send.move": "Verschieben nach",
+ "cmd.animation.layers.sendTo": "Ebenen in eine andere Komposition kopieren oder verschieben"
 }

@@ -29,6 +29,7 @@ export type Edit=
  |{type:'layer.remove';layer:string}
  |{type:'layer.update';layer:string;name?:string;visible?:boolean;solo?:boolean;locked?:boolean;shy?:boolean;source?:Partial<LayerSource>}
  |{type:'layer.timing';layer:string;inT:number;outT:number}
+ |{type:'layers.import';comp:string;layers:readonly Layer[]}
  |{type:'layer.stretch';layer:string;percent:number}
  |{type:'layer.shift';layer:string;delta:number;mode:'slide'|'slip'}
  |{type:'layer.parent';layer:string;parent:string|null;keepWorld?:boolean;t?:number}
@@ -505,6 +506,16 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
    return setLayer(doc,{...l,name:e.name?.trim()??l.name,visible:e.visible??l.visible,solo:e.solo??l.solo,locked:e.locked??l.locked,...(e.shy!==undefined?{shy:e.shy}:{}),source:{...l.source,...e.source}});}
   case 'layer.timing':{const c=compOf(doc);const l=layerOf(doc,e.layer);if(l.kind==='audio')fail('invalid','Use audio trim and offset for audio layers.');
    if(!Number.isInteger(e.inT)||!Number.isInteger(e.outT)||e.outT<=e.inT||e.inT<0||e.outT>c.duration)fail('invalid','Layer timing must be inside the composition with out after in.');return setLayer(doc,{...l,inT:e.inT,outT:e.outT});}
+  case 'layers.import':{const target=doc.compositions.find(x=>x.id===e.comp);if(!target)return fail('missing','That composition no longer exists.');
+   if(!Array.isArray(e.layers)||!e.layers.length||e.layers.length>50)return fail('invalid','Pick 1 to 50 layers.');
+   const ids=new Set(target.layers.map(l=>l.id));const lo=target.start,hi=target.start+target.duration;
+   for(const l of e.layers){
+    if(ids.has(l.id))return fail('invalid','Duplicate layer id.');ids.add(l.id);
+    if(l.outT>target.duration||l.inT<0||l.outT<=l.inT||layerKeyTimes(l).some(t=>t<lo||t>hi))return fail('invalid','The layer does not fit the length of that composition.');
+    if(l.parent&&!e.layers.some(x=>x.id===l.parent))return fail('invalid','A parent is missing from the layers to import.');
+   }
+   const next={...doc,compositions:doc.compositions.map(x=>x.id===target.id?{...x,layers:[...e.layers,...x.layers]}:x)};
+   const probs=validatePrecomps(next);if(probs.length)return fail('invalid',probs[0].replace(/^[^:]*: /,'').replace(/^./,m=>m.toUpperCase())+'.');return next;}
   case 'layer.stretch':{const c=compOf(doc);const l=layerOf(doc,e.layer);
    if(l.kind==='audio')fail('invalid','Use audio trim and offset for audio layers.');
    if(!Number.isInteger(e.percent)||e.percent<10||e.percent>1000||e.percent===100)fail('invalid','Stretch is a whole percent from 10 to 1000, other than 100.');

@@ -1171,5 +1171,9 @@
  "cmd.animation.export.lottie": "Exportar la composicion como JSON de Lottie",
  "animation.timeline.autoKey": "Auto-clave",
  "animation.timeline.autoKeyHint": "Auto-clave: si esta activo, mover, escalar o rotar una capa, o editar un valor, en el cabezal graba una clave en lugar de cambiar toda la animacion.",
- "cmd.animation.timeline.autoKey": "Auto-clave: grabar los cambios en el cabezal como claves"
+ "cmd.animation.timeline.autoKey": "Auto-clave: grabar los cambios en el cabezal como claves",
+ "animation.rig.group.send": "Enviar a composicion",
+ "animation.rig.send.copy": "Copiar a",
+ "animation.rig.send.move": "Mover a",
+ "cmd.animation.layers.sendTo": "Copiar o mover capas a otra composicion"
 }

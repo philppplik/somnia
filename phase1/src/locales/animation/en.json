@@ -1171,5 +1171,9 @@
  "cmd.animation.export.lottie": "Export the composition as Lottie JSON",
  "animation.timeline.autoKey": "Auto-key",
  "animation.timeline.autoKeyHint": "Auto-key: while on, moving, scaling or rotating a layer, or editing a value, at the playhead records a key instead of changing the whole animation.",
- "cmd.animation.timeline.autoKey": "Auto-key: record changes at the playhead as keys"
+ "cmd.animation.timeline.autoKey": "Auto-key: record changes at the playhead as keys",
+ "animation.rig.group.send": "Send to composition",
+ "animation.rig.send.copy": "Copy to",
+ "animation.rig.send.move": "Move to",
+ "cmd.animation.layers.sendTo": "Copy or move layers to another composition"
 }

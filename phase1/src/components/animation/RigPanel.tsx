@@ -12,7 +12,7 @@ import {poseId} from '../../lib/animation/poseModel';
 import type {Composition} from '../../lib/animation/model';
 /** The commands take at most 50 layers, so "all" stops there. */
 const MAX_PICK=50;
-type RigItem={testid:string;label:string;cmd:string;min:number;args?:object};
+type RigItem={testid:string;label:string;cmd:string;min:number;args?:object;/** Shown instead of the translated label (composition names). */text?:string};
 const groups:{key:string;items:RigItem[]}[]=[
  {key:'hierarchy',items:[
   {testid:'animation-rig-chain',label:'animation.rig.chain',cmd:'animation.rig.chain',min:2},
@@ -50,8 +50,10 @@ export function RigPanel({comp}:{comp:Composition}){
  const ids=ticked.filter(id=>comp.layers.some(l=>l.id===id));
  const toggle=(id:string)=>setTicked(ids.includes(id)?ids.filter(x=>x!==id):[...ids,id]);
  const subGroup=(g:{key:string;items:RigItem[]})=><MenuSubmenu key={g.key}><MenuSubmenuTrigger className="menu-item" data-testid={`animation-rig-group-${g.key}`}>{t(`animation.rig.group.${g.key}`)}<span aria-hidden="true">›</span></MenuSubmenuTrigger>
-     <MenuContent>{g.items.map(it=><MenuItem key={it.testid} disabled={ids.length<it.min} onClick={()=>run(it.cmd,it.args)} data-testid={it.testid}>{t(it.label)}</MenuItem>)}</MenuContent></MenuSubmenu>;
+     <MenuContent>{g.items.map(it=><MenuItem key={it.testid} disabled={ids.length<it.min} onClick={()=>run(it.cmd,it.args)} data-testid={it.testid}>{it.text??t(it.label)}</MenuItem>)}</MenuContent></MenuSubmenu>;
  const run=(cmd:string,args?:object)=>void executeCommand(cmd,{layers:ids,...args});
+ const docComps=useAnimationState().doc?.compositions??[];
+ const sendGroup={key:'send',items:docComps.filter(c=>c.id!==comp.id).slice(0,10).flatMap(c=>[{testid:`animation-rig-send-copy-${c.id}`,label:'animation.rig.send.copy',text:`${t('animation.rig.send.copy')} ${c.name}`,cmd:'animation.layers.sendTo',min:1,args:{comp:c.id}},{testid:`animation-rig-send-move-${c.id}`,label:'animation.rig.send.move',text:`${t('animation.rig.send.move')} ${c.name}`,cmd:'animation.layers.sendTo',min:1,args:{comp:c.id,move:true}}])};
  const playhead=useAnimationState().view.playhead;const [mode,setMode]=useState<TimingMode>('stagger');const [frames,setFrames]=useState('4');const [follow,setFollow]=useState('3');const followOk=follow.trim()!==''&&Number.isInteger(Number(follow))&&Number(follow)>=0&&Number(follow)<=60;
  const fn=Number(frames),usesFrames=FRAME_MODES.includes(mode),framesOk=!usesFrames||(frames.trim()!==''&&Number.isInteger(fn)&&fn>=(SIGNED_MODES.includes(mode)?-MAX_STAGGER_FRAMES:0)&&fn<=MAX_STAGGER_FRAMES);
  const plan=ids.length&&framesOk?timingPlan(comp,ids,mode,{playhead,frames:usesFrames?fn:undefined}):null;
@@ -63,7 +65,7 @@ export function RigPanel({comp}:{comp:Composition}){
   <div className="grid min-w-0 gap-1">
    <Menu><MenuTrigger render={<Button size="compact" variant="outline" className="h-auto min-w-0 whitespace-normal" disabled={ids.length<1} data-testid="animation-rig-menu">{t('animation.rig.menu')}</Button>}/>
     <MenuContent>{tree.map(g=>g.children?<MenuSubmenu key={g.key}><MenuSubmenuTrigger className="menu-item" data-testid={`animation-rig-group-${g.key}`}>{t(`animation.rig.group.${g.key}`)}<span aria-hidden="true">›</span></MenuSubmenuTrigger>
-     <MenuContent>{g.children.map(c=>subGroup(c))}</MenuContent></MenuSubmenu>:subGroup(g as {key:string;items:RigItem[]}))}</MenuContent></Menu>
+     <MenuContent>{[...g.children,...(g.key==='arrange'&&sendGroup.items.length?[sendGroup]:[])].map(c=>subGroup(c))}</MenuContent></MenuSubmenu>:subGroup(g as {key:string;items:RigItem[]}))}</MenuContent></Menu>
    <div className="grid min-w-0 grid-cols-[1fr_4rem] gap-1"><Button size="compact" variant="outline" className="h-auto min-w-0 whitespace-normal text-left" disabled={ids.length<2||!followOk} onClick={()=>void executeCommand('animation.rig.follow',{layers:ids,frames:Number(follow)})} data-testid="animation-rig-follow">{t('animation.rig.follow')}</Button>
     <NativeInput className="h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text" type="number" min={0} max={60} step={1} value={follow} aria-label={t('animation.rig.followFrames')} onChange={e=>setFollow(e.target.value)} data-testid="animation-rig-follow-frames"/></div>
   </div>

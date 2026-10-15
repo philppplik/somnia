@@ -1299,3 +1299,21 @@ test('P237 auto-key: off by default, static properties get one key at the playhe
  }finally{setAutoKey(false);}
  assert.equal(autoKeyOn(),false);
 });
+
+test('P238 send layers to another composition: copy keeps the original, move removes it, parents follow, misfits are skipped, one undo step',async()=>{
+ const {layerSendSpecs}=await import('./layerSendCommands');const run=layerSendSpecs()[0].run as (p?:unknown)=>unknown;
+ const s=open();setAnimationSession(s);const src0=findComp(s.document!)!;
+ s.dispatch({type:'comp.add',id:'other',settings:{name:'Other'} as never});
+ s.dispatch({type:'comp.select',comp:src0.id} as never);
+ const src=findComp(s.document!)!;assert.equal(src.id,src0.id);
+ const kids=src.layers.filter(l=>l.kind!=='audio'&&l.kind!=='comp').slice(0,2).map(l=>l.id);
+ const other=()=>s.document!.compositions.find(c=>c.id==='other')!;
+ const n0=other().layers.length;
+ const r=run({comp:'other',layers:kids}) as {sent:number;skipped:number};
+ assert.equal(r.sent+r.skipped,kids.length);assert.ok(r.sent>0,'at least one layer fits');assert.equal(other().layers.length,n0+r.sent);
+ assert.equal(findComp(s.document!)!.layers.length,src.layers.length);
+ assert.ok(other().layers.slice(0,r.sent).every(l=>!kids.includes(l.id)));
+ s.undo();assert.equal(other().layers.length,n0);
+ if(r.sent){const m=run({comp:'other',layers:kids,move:true}) as {sent:number};assert.equal(findComp(s.document!)!.layers.length,src.layers.length-m.sent);s.undo();assert.equal(findComp(s.document!)!.layers.length,src.layers.length);}
+ assert.throws(()=>run({comp:src.id,layers:kids}),/different/);assert.throws(()=>run({comp:'nope',layers:kids}),/another/);
+});
