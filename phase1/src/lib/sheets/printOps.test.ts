@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {previewHeaderFooter,headerProblem,parseExportCommand,parseExportResult,parsePageInfo,parsePageSetupCommand} from './printOps';
+import {appendHeaderCode,previewHeaderFooter,headerProblem,parseExportCommand,parseExportResult,parsePageInfo,parsePageSetupCommand} from './printOps';
 import {decodeBase64,exportName} from './exportFile';
 test('page setup accepts the closed allowlist',()=>{
  assert.deepEqual(parsePageSetupCommand({orientation:'landscape',paper:'A4',margins:'narrow',scale:80,gridlines:true,header:'&C&P',footer:'Page &P of &N',printArea:' A1:F40 ',titleRows:'1:2',titleCols:'a:b'}),{orientation:'landscape',paper:'A4',margins:'narrow',scale:80,gridlines:true,header:'&C&P',footer:'Page &P of &N',printArea:'A1:F40',titleRows:'1:2',titleCols:'A:B'});
@@ -45,4 +45,8 @@ test('header and footer preview expands the printer codes',()=>{
  assert.deepEqual(previewHeaderFooter('&A - &F && more',cx),['','Q1 - Budget.xlsx & more','']);
  assert.deepEqual(previewHeaderFooter('',cx),['','','']);
  assert.equal(previewHeaderFooter('50% &X',cx),null);assert.equal(previewHeaderFooter('a&',cx),null);assert.equal(previewHeaderFooter('x'.repeat(101),cx),null);
+});
+test('header codes are appended within the limit',()=>{
+ assert.equal(appendHeaderCode('','C'),'&C');assert.equal(appendHeaderCode('Page ','P'),'Page &P');assert.equal(appendHeaderCode('a','&'),'a&&');
+ assert.equal(appendHeaderCode('x'.repeat(99),'P'),null);assert.equal(appendHeaderCode('bad&','P'),null);assert.equal(appendHeaderCode('','Z' as never),null);
 });

@@ -15,7 +15,7 @@ import {sortBlockProblem} from '../../lib/sheets/sortOps';
 import {fillBlockProblem,FILL_DIRECTIONS} from '../../lib/sheets/fillOps';
 import type {FillDirection,CfStyle} from '../../lib/sheets/protocol';
 import {PIVOT_FUNCS,tableBlockProblem} from '../../lib/sheets/tableOps';
-import {headerProblem,MAX_HEADER_CHARS,previewHeaderFooter} from '../../lib/sheets/printOps';
+import {appendHeaderCode,headerProblem,HF_CODES,MAX_HEADER_CHARS,previewHeaderFooter} from '../../lib/sheets/printOps';
 import {MAX_ZOOM,MIN_ZOOM} from '../../lib/sheets/viewOps';
 import {describeCfRule} from '../../lib/sheets/cfManageOps';
 import {CHART_COLORS,MAX_TITLE_CHARS,sparklineBlockProblem} from '../../lib/sheets/chartOps';
@@ -682,6 +682,11 @@ function PrintGroup(){
   </NativeSelect></label>
   {act==='scale'&&<NumberField label={t('sheets.pr.scaleLabel')} unit="%" value={scale} resetKey="print-scale" min={10} max={400} step={5} disabled={action.busy} constraintError={t('sheets.pr.scaleInvalid')} parse={v=>{const n=Number(v.trim());return v.trim()&&Number.isInteger(n)&&n>=10&&n<=400?{ok:true,value:n}:{ok:false,error:t('sheets.pr.scaleInvalid')};}} onCommit={v=>{if(v!==null)setScale(v);}}/>}
   {isText&&<label className="flex flex-col gap-1">{t('sheets.pr.text')}<NativeInput className={field} value={text} maxLength={MAX_HEADER_CHARS} aria-invalid={textBad} disabled={action.busy} onChange={e=>setText(e.currentTarget.value)} data-testid="sheets-pr-text"/></label>}
+  {isText&&<label className="flex flex-col gap-1">{t('sheets.pr.insertCode')}<NativeSelect className={field} value="" disabled={action.busy} onChange={e=>{const code=e.currentTarget.value as typeof HF_CODES[number];const next=code?appendHeaderCode(text,code):null;if(next!==null)setText(next);}} data-testid="sheets-pr-code">
+   <option value="">{t('sheets.pr.insertCodeNone')}</option>
+   <optgroup label={t('sheets.pr.codePlace')}>{(['L','C','R'] as const).map(c=><option key={c} value={c}>{t('sheets.pr.code.'+c)}</option>)}</optgroup>
+   <optgroup label={t('sheets.pr.codeValue')}>{(['P','N','D','T','A','F','&'] as const).map(c=><option key={c} value={c}>{t('sheets.pr.code.'+(c==='&'?'amp':c))}</option>)}</optgroup>
+  </NativeSelect></label>}
   {isText&&<p className="text-ink-3">{t('sheets.pr.hint')}</p>}
   {isText&&!textBad&&text!==''&&hf&&<p className="text-ink-3" data-testid="sheets-pr-preview">{t('sheets.pr.preview',{left:hf[0]||'-',center:hf[1]||'-',right:hf[2]||'-'})}</p>}
   <Button variant="outline" size="compact" disabled={action.busy||textBad||breakBad||breakNone} onClick={apply} data-testid="sheets-pr-apply">{t(exporting?'sheets.pr.applyExport':'sheets.pr.apply')}</Button>

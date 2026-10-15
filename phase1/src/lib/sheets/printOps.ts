@@ -80,3 +80,11 @@ export function previewHeaderFooter(spec:string,cx:HfContext):[string,string,str
  }
  return out;
 }
+
+export const HF_CODES=['L','C','R','P','N','D','T','A','F','&'] as const;
+export type HfCode=typeof HF_CODES[number];
+/** The text with one printer code added at the end; null when it would pass the length limit or the text is not allowed. */
+export function appendHeaderCode(text:string,code:HfCode):string|null{
+ if(!(HF_CODES as readonly string[]).includes(code)||headerProblem(text))return null;
+ const next=text+'&'+code;return headerProblem(next)?null:next;
+}
