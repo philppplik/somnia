@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-938 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+940 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -559,6 +559,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `settings.open` | Settings | Tools | core | `Mod+,` |
 | `sheets.analyzeRange` | Analyze spreadsheet range | Tools | sheets |  |
 | `sheets.annotate` | Add a note, comment or link to the active cell | Edit | sheets |  |
+| `sheets.chart` | Create or change a chart | Edit | sheets |  |
 | `sheets.dedupe` | Remove duplicate rows in the selected block | Edit | sheets |  |
 | `sheets.editLines` | Insert or delete rows and columns | Edit | sheets |  |
 | `sheets.export` | Export as PDF, CSV, TSV or HTML | Edit | sheets |  |
@@ -580,6 +581,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `sheets.setCell` | Apply cell value or formula | Edit | sheets |  |
 | `sheets.sheet` | Add, rename, duplicate, move or delete the current sheet | Edit | sheets |  |
 | `sheets.sort` | Sort the selected rows by a column | Edit | sheets |  |
+| `sheets.sparkline` | Add a sparkline | Edit | sheets |  |
 | `sheets.split` | Split the selected column of text into columns | Edit | sheets |  |
 | `sheets.table` | Create or change a table | Edit | sheets |  |
 | `sheets.undo` | Undo workbook change | Edit | sheets |  |

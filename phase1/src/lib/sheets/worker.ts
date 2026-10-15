@@ -48,6 +48,11 @@ scope.onmessage=({data}:MessageEvent<SheetsRequest>)=>{queue=queue.then(async()=
    case 'pivotRefresh':result=JSON.parse(need().pivot_refresh());break;
    case 'tables':result=JSON.parse(need().tables_info(data.sheet));break;
    case 'protectOp':result=JSON.parse(need().protect_op(data.sheet,data.row,data.col,data.rows,data.cols,JSON.stringify(data.protect)));break;
+   case 'charts':result=JSON.parse(need().charts_info(data.sheet));break;
+   case 'chartScene':result=JSON.parse(need().chart_scene(data.sheet,data.chart));break;
+   case 'sparklines':result=JSON.parse(need().sparklines_info(data.sheet));break;
+   case 'chartOp':result=JSON.parse(need().chart_op(data.sheet,data.row,data.col,data.rows,data.cols,JSON.stringify(data.chart)));break;
+   case 'sparklineOp':result=JSON.parse(need().sparkline_op(data.sheet,data.row,data.col,data.rows,data.cols,JSON.stringify(data.sparkline)));break;
    case 'viewOp':result=JSON.parse(need().view_op(data.sheet,JSON.stringify(data.view)));break;
    case 'pageInfo':result=JSON.parse(need().page_info(data.sheet));break;
    case 'pageSetup':result=JSON.parse(need().page_setup(data.sheet,JSON.stringify(data.page)));break;

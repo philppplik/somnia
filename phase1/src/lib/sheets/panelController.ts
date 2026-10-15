@@ -4,7 +4,7 @@ import {parsePanelRange} from './panelModel';
 import {MAX_CELL_BYTES,type RangeCell} from './protocol';
 import {parseAddress} from './format';
 import {parseFormatOp} from './formatOps';
-import type {ProtectOp,ViewOp,PageSetupOp,ExportOp,PivotField,PivotOp,TableOp,NameOp,AnnotateOp,DedupeOp,SplitOp,ReplaceOp,ValidationOp,CfOp,FillDirection,FilterOp,SortOp,FormatOp,LineAxis,LineEditKind,LineOp,SheetOp} from './protocol';
+import type {ChartOp,SparklineOp,ProtectOp,ViewOp,PageSetupOp,ExportOp,PivotField,PivotOp,TableOp,NameOp,AnnotateOp,DedupeOp,SplitOp,ReplaceOp,ValidationOp,CfOp,FillDirection,FilterOp,SortOp,FormatOp,LineAxis,LineEditKind,LineOp,SheetOp} from './protocol';
 import {parseEditLines,parseFreeze,parseLineCommand} from './lineOps';
 import {parseSheetOp} from './sheetOps';
 import {parseSortCommand} from './sortOps';
@@ -12,6 +12,7 @@ import {parseAnnotateCommand} from './notes';
 import {parseNamesCommand} from './names';
 import {parsePivotCommand,parseTableCommand} from './tableOps';
 import {parseProtectCommand} from './protectOps';
+import {parseChartCommand,parseSparklineCommand} from './chartOps';
 import {parseViewCommand,type ViewCommand} from './viewOps';
 import {parseExportCommand,parsePageSetupCommand} from './printOps';
 import {parseDedupeCommand,parseSplitCommand,SPLIT_DELIMITERS} from './dataTools';
@@ -54,6 +55,10 @@ export interface SheetsPanelController {
  tableOperation(op:TableOp):void|Promise<void>;
  /** Builds a PivotTable from the selection on a new sheet, or refreshes all PivotTables (one undo step). */
  pivotOperation(op:PivotOp):void|Promise<void>;
+ /** Creates a chart from the selection or changes, moves, resizes or deletes one of the sheet's charts (one undo step). */
+ chartOperation(op:ChartOp):void|Promise<void>;
+ /** Adds a sparkline for the selected row or column in the next cell (one undo step). */
+ sparklineOperation(op:SparklineOp):void|Promise<void>;
  /** Protects or unprotects the sheet, locks or unlocks the selected cells, or locks the workbook structure (one undo step). */
  protectOperation(op:ProtectOp):void|Promise<void>;
  /** Sets the zoom, shows or hides gridlines, or zooms to the selection. Zoom is a view setting; gridlines are one undo step. */
@@ -76,7 +81,7 @@ let current:SheetsPanelController|null=null;
 export const getSheetsPanelController=()=>current;
 export function registerSheetsPanelController(controller:SheetsPanelController){current=controller;return()=>{if(current===controller)current=null;};}
 const requireController=()=>{if(!current?.ready())throw Error('No workbook is ready.');return current;};
-export const SHEETS_PANEL_COMMAND_IDS=['sheets.navigate','sheets.setCell','sheets.analyzeRange','sheets.format','sheets.resize','sheets.freeze','sheets.editLines','sheets.sheet','sheets.sort','sheets.filter','sheets.fill','sheets.highlight','sheets.validation','sheets.replace','sheets.dedupe','sheets.split','sheets.annotate','sheets.names','sheets.table','sheets.pivot','sheets.pageSetup','sheets.export','sheets.view','sheets.protect'] as const;
+export const SHEETS_PANEL_COMMAND_IDS=['sheets.navigate','sheets.setCell','sheets.analyzeRange','sheets.format','sheets.resize','sheets.freeze','sheets.editLines','sheets.sheet','sheets.sort','sheets.filter','sheets.fill','sheets.highlight','sheets.validation','sheets.replace','sheets.dedupe','sheets.split','sheets.annotate','sheets.names','sheets.table','sheets.pivot','sheets.pageSetup','sheets.export','sheets.view','sheets.protect','sheets.chart','sheets.sparkline'] as const;
 export function sheetsPanelCommandSpecs():CommandSpec[]{
  return [
  {id:'sheets.navigate',title:'Go to spreadsheet cell',category:'View',level:'ui',allowInInput:true,
@@ -139,6 +144,12 @@ export function sheetsPanelCommandSpecs():CommandSpec[]{
  {id:'sheets.pivot',title:'Build or refresh a PivotTable',category:'Edit',level:'ui',allowInInput:true,
   params:{type:'object',properties:{kind:{type:'string',enum:['create','refresh']},rows:{type:'string',minLength:1,maxLength:255},columns:{type:'string',minLength:1,maxLength:255},values:{type:'string',minLength:1,maxLength:255},func:{type:'string',enum:['sum','count','average','max','min']}},required:['kind'],additionalProperties:false},
   enabled:()=>!!current?.ready(),run:p=>requireController().pivotOperation(parsePivotCommand(p))},
+ {id:'sheets.chart',title:'Create or change a chart',category:'Edit',level:'ui',allowInInput:true,
+  params:{type:'object',properties:{kind:{type:'string',enum:['create','set','switch','delete']},chart:{type:'integer',minimum:0},type:{type:'string',enum:['column','bar','line','pie','doughnut','area','scatter','radar','histogram','waterfall','funnel','treemap']},subtype:{type:'string',enum:['clustered','stacked','stacked100','markers','lines']},title:{type:'string',maxLength:120},xTitle:{type:'string',maxLength:120},yTitle:{type:'string',maxLength:120},legend:{type:'string',enum:['none','bottom','top','left','right']},dataLabels:{type:'boolean'},gridlines:{type:'boolean'},style:{type:'integer',minimum:1,maximum:16},at:{type:'string',maxLength:12},width:{type:'integer',minimum:20,maximum:4000},height:{type:'integer',minimum:20,maximum:4000}},required:['kind'],additionalProperties:false},
+  enabled:()=>!!current?.ready(),run:p=>requireController().chartOperation(parseChartCommand(p))},
+ {id:'sheets.sparkline',title:'Add a sparkline',category:'Edit',level:'ui',allowInInput:true,
+  params:{type:'object',properties:{type:{type:'string',enum:['line','column','winLoss']},markers:{type:'boolean'}},additionalProperties:false},
+  enabled:()=>!!current?.ready(),run:p=>requireController().sparklineOperation(parseSparklineCommand(p))},
  {id:'sheets.protect',title:'Protect a sheet or lock cells',category:'Edit',level:'ui',allowInInput:true,
   params:{type:'object',properties:{kind:{type:'string',enum:['protect','unprotect','lock','workbook']},password:{type:'string',maxLength:64},allow:{type:'array',items:{type:'string',enum:['formatCells','formatColumns','formatRows','insertColumns','insertRows','deleteColumns','deleteRows','sort','autofilter']},maxItems:9},locked:{type:'boolean'},on:{type:'boolean'}},required:['kind'],additionalProperties:false},
   enabled:()=>!!current?.ready(),run:p=>requireController().protectOperation(parseProtectCommand(p))},

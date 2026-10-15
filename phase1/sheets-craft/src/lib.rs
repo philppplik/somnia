@@ -20,6 +20,14 @@ const MAX_TABLES: usize = 200;
 const MAX_EXPORT_BYTES: usize = 40 * 1024 * 1024;
 const MAX_HEADER_CHARS: usize = 100;
 const MAX_PASSWORD_CHARS: usize = 64;
+const MAX_CHARTS: usize = 50;
+const MAX_SPARKLINES: usize = 500;
+const MAX_SCENE_PRIMS: usize = 20_000;
+const MAX_TITLE_CHARS: usize = 120;
+const CHART_TYPES: &[&str] = &["column", "bar", "line", "pie", "doughnut", "area", "scatter", "radar", "histogram", "waterfall", "funnel", "treemap"];
+const CHART_SUBTYPES: &[&str] = &["clustered", "stacked", "stacked100", "markers", "lines"];
+const SPARKLINE_TYPES: &[&str] = &["line", "column", "winLoss"];
+const LEGENDS: &[&str] = &["none", "bottom", "top", "left", "right"];
 const PROTECT_ALLOW: &[&str] = &["formatCells", "formatColumns", "formatRows", "insertColumns", "insertRows", "deleteColumns", "deleteRows", "sort", "autofilter"];
 /// Paper names the page setup offers (the engine knows more).
 const PAPERS: &[&str] = &["Letter", "Legal", "A4", "A3", "A5", "Tabloid", "Executive"];
@@ -1049,6 +1057,155 @@ impl HeadlessWorkbook {
             }
         }
         self.layout(sheet)
+    }
+
+    /// The charts of a sheet (read only): `[{"id","kind","title","row","col","dx","dy","width","height","legend","dataLabels","gridlines","style","xTitle","yTitle","series","byRows"}]`
+    /// with the anchor in pixels; at most 50 charts.
+    pub fn charts_info(&self, sheet: usize) -> Result<String, String> {
+        let doc = self.session.doc().map_err(|e| e.to_string())?;
+        let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+        let list: Vec<_> = sh.charts.iter().take(MAX_CHARTS).map(|c| json!({
+            "id": c.id, "kind": format!("{:?}", c.kind), "title": c.title, "row": c.anchor.cell.row, "col": c.anchor.cell.col,
+            "dx": c.anchor.dx, "dy": c.anchor.dy, "width": c.anchor.width, "height": c.anchor.height, "legend": format!("{:?}", c.legend),
+            "dataLabels": c.data_labels, "gridlines": c.gridlines, "style": c.style, "xTitle": c.x_title, "yTitle": c.y_title,
+            "series": c.series.len(), "byRows": c.by_rows
+        })).collect();
+        Ok(json!(list).to_string())
+    }
+
+    /// The drawing of one chart as primitives (read only): `{"width":w,"height":h,"prims":[..]}` in chart pixels, at most 20,000 primitives.
+    pub fn chart_scene(&self, sheet: usize, id: u32) -> Result<String, String> {
+        let doc = self.session.doc().map_err(|e| e.to_string())?;
+        let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+        let ch = sh.charts.iter().find(|c| c.id == id).ok_or("no such chart")?;
+        let data = gridcraft_chart::resolve(&doc.wb, sheet, ch);
+        let (w, h) = (ch.anchor.width.clamp(20.0, 4000.0), ch.anchor.height.clamp(20.0, 4000.0));
+        let mut prims = gridcraft_chart::render(ch, &data, w, h, &gridcraft_chart::ApproxMeasure);
+        prims.truncate(MAX_SCENE_PRIMS);
+        Ok(json!({"width": w, "height": h, "prims": prims}).to_string())
+    }
+
+    /// The sparklines of a sheet (read only), each drawn to fit its cell: `[{"row","col","width","height","prims":[..]}]`; at most 500.
+    pub fn sparklines_info(&self, sheet: usize) -> Result<String, String> {
+        let doc = self.session.doc().map_err(|e| e.to_string())?;
+        let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+        let px = |pt: f32| (f64::from(pt) * 96.0 / 72.0).round() as f32;
+        let mut out = Vec::new();
+        for sp in sh.sparklines.iter().take(MAX_SPARKLINES) {
+            let vals: Vec<Option<f64>> = match gridcraft_engine::calc::evaluate(&doc.wb, sheet, sp.cell, &sp.source) {
+                gridcraft_engine::core::Value::Array(a) => a.iter().take(10_000).map(gridcraft_engine::core::Value::as_f64).collect(),
+                v => vec![v.as_f64()],
+            };
+            let color = sp.color.resolve(&doc.wb.theme).unwrap_or([0x15, 0x60, 0x82]);
+            let (w, h) = (px(sh.col_width(sp.cell.col)).max(4.0), px(sh.row_height(sp.cell.row)).max(4.0));
+            let mut prims = gridcraft_chart::render_sparkline(sp.kind, &vals, [color[0], color[1], color[2], 255], sp.markers, w, h);
+            prims.truncate(MAX_SCENE_PRIMS);
+            out.push(json!({"row": sp.cell.row, "col": sp.cell.col, "width": w, "height": h, "prims": prims}));
+        }
+        Ok(json!(out).to_string())
+    }
+
+    /// Creates or changes a chart (one history entry), `op_json` is one of
+    /// `{"kind":"create","type":..,"subtype"?:..,"title"?:text}` (data = the block `row`,`col`,`rows`,`cols`; types column, bar, line, pie, doughnut,
+    /// area, scatter, radar, histogram, waterfall, funnel, treemap; subtypes clustered, stacked, stacked100, markers, lines; at most 50 charts),
+    /// `{"kind":"set","chart":id,"type"?,"subtype"?,"title"?,"legend"?:none|bottom|top|left|right,"dataLabels"?,"gridlines"?,"style"?:1..16,"xTitle"?,"yTitle"?,"at"?:A1}`,
+    /// `{"kind":"switch","chart":id}` (rows and columns swap) or `{"kind":"delete","chart":id}`. Titles: at most 120 characters, no control characters.
+    /// Returns `charts_info`.
+    pub fn chart_op(&mut self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32, op_json: &str) -> Result<String, String> {
+        let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "operation must be a JSON object".to_string())?;
+        let map = op.as_object().ok_or("operation must be a JSON object")?;
+        let kind = map.get("kind").and_then(|v| v.as_str()).ok_or("missing kind")?.to_string();
+        let allowed: &[&str] = match kind.as_str() {
+            "create" => &["kind", "type", "subtype", "title"],
+            "set" => &["kind", "chart", "type", "subtype", "title", "legend", "dataLabels", "gridlines", "style", "xTitle", "yTitle", "at", "width", "height"],
+            "switch" | "delete" => &["kind", "chart"],
+            _ => return Err("unsupported chart operation".into()),
+        };
+        if map.keys().any(|k| !allowed.contains(&k.as_str())) {
+            return Err("unknown chart field".into());
+        }
+        let text_ok = |v: &serde_json::Value| v.as_str().is_some_and(|t| t.chars().count() <= MAX_TITLE_CHARS && !t.chars().any(|c| c.is_control()));
+        let mut params = serde_json::Map::new();
+        params.insert("sheet".into(), json!(sheet));
+        for (k, v) in map {
+            let ok = match k.as_str() {
+                "kind" => true,
+                "type" => v.as_str().is_some_and(|t| CHART_TYPES.contains(&t)),
+                "subtype" => v.as_str().is_some_and(|t| CHART_SUBTYPES.contains(&t)),
+                "title" | "xTitle" | "yTitle" => text_ok(v),
+                "legend" => v.as_str().is_some_and(|t| LEGENDS.contains(&t)),
+                "dataLabels" | "gridlines" => v.is_boolean(),
+                "style" => v.as_u64().is_some_and(|n| (1..=16).contains(&n)),
+                "at" => v.as_str().and_then(CellRef::parse).is_some(),
+                "width" | "height" => v.as_u64().is_some_and(|n| (20..=4000).contains(&n)),
+                "chart" => v.as_u64().is_some_and(|n| n <= u64::from(u32::MAX)),
+                _ => false,
+            };
+            if !ok {
+                return Err(format!("{k} has an unsupported value"));
+            }
+            if k != "kind" {
+                params.insert(k.clone(), v.clone());
+            }
+        }
+        let count = self.session.doc().map_err(|e| e.to_string())?.wb.sheet(sheet).ok_or("unknown sheet")?.charts.len();
+        if kind == "create" {
+            self.check_block(sheet, row, col, rows.max(1), cols.max(1), true)?;
+            if rows == 0 || cols == 0 || u64::from(rows) * u64::from(cols) > MAX_FILL_CELLS {
+                return Err("Select a block of data of at most 1,000,000 cells.".into());
+            }
+            if count >= MAX_CHARTS {
+                return Err("This sheet already has 50 charts.".into());
+            }
+            params.insert("range".into(), json!(format!("{}:{}", CellRef::new(row, col).a1(), CellRef::new(row + rows - 1, col + cols - 1).a1())));
+        } else {
+            let id = map.get("chart").and_then(|v| v.as_u64()).ok_or("missing chart")?;
+            let doc = self.session.doc().map_err(|e| e.to_string())?;
+            if doc.wb.sheet(sheet).ok_or("unknown sheet")?.is_protected() {
+                return Err("The sheet is protected. Unprotect it to change charts.".into());
+            }
+            if !doc.wb.sheet(sheet).ok_or("unknown sheet")?.charts.iter().any(|c| u64::from(c.id) == id) {
+                return Err("no such chart".into());
+            }
+        }
+        let command = match kind.as_str() {
+            "create" => "insert.chart",
+            "set" => "chart.set",
+            "switch" => "chart.switchRowColumn",
+            _ => "chart.delete",
+        };
+        self.session.run("sheet.activate", json!({"sheet": sheet})).map_err(|e| e.to_string())?;
+        self.session.run(command, serde_json::Value::Object(params)).map_err(|e| e.to_string())?;
+        self.charts_info(sheet)
+    }
+
+    /// Adds a sparkline for the selected single row or column of numbers (2 to 500 cells) in the cell right after it
+    /// (after the row's last cell, or below the column). `op_json` is `{"type"?:line|column|winLoss,"markers"?:bool}`. One history entry.
+    /// A sparkline already in that cell is replaced. Returns `sparklines_info`.
+    pub fn sparkline_op(&mut self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32, op_json: &str) -> Result<String, String> {
+        let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "operation must be a JSON object".to_string())?;
+        let map = op.as_object().ok_or("operation must be a JSON object")?;
+        if map.keys().any(|k| k != "type" && k != "markers") {
+            return Err("unknown sparkline field".into());
+        }
+        let kind = match map.get("type") {
+            None => "line",
+            Some(v) => v.as_str().filter(|t| SPARKLINE_TYPES.contains(t)).ok_or("unsupported sparkline type")?,
+        };
+        let markers = match map.get("markers") {
+            None => false,
+            Some(v) => v.as_bool().ok_or("markers must be true or false")?,
+        };
+        let points = u64::from(rows) * u64::from(cols);
+        if !((rows == 1 && cols >= 2) || (cols == 1 && rows >= 2)) || points > 500 {
+            return Err("Select one row or one column of 2 to 500 cells.".into());
+        }
+        self.check_block(sheet, row, col, rows + u32::from(cols == 1), cols + u32::from(rows == 1), true)?;
+        let at = if rows == 1 { CellRef::new(row, col + cols) } else { CellRef::new(row + rows, col) };
+        let source = format!("{}:{}", CellRef::new(row, col).a1(), CellRef::new(row + rows - 1, col + cols - 1).a1());
+        self.session.run("sheet.activate", json!({"sheet": sheet})).map_err(|e| e.to_string())?;
+        self.session.run("insert.sparkline", json!({"range": source, "location": at.a1(), "type": kind, "markers": markers})).map_err(|e| e.to_string())?;
+        self.sparklines_info(sheet)
     }
 
     /// Changes how a sheet is shown. `op_json` is `{"zoom":10..400}` (whole percent; a view setting that is not an undo step) or
@@ -2855,6 +3012,43 @@ mod tests {
         assert_eq!(text(&book, "A82"), "red RED", "nothing changed");
         book.session.run("review.protectSheet", json!({})).unwrap();
         assert!(book.replace_range(0, 80, 0, 3, 2, op).unwrap_err().contains("protected"));
+    }
+    #[test]
+    fn charts_and_sparklines_are_created_changed_drawn_and_validated() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        book.set_values(0, 200, 0, r#"[["Month","Sales"],["Jan","10"],["Feb","20"],["Mar","15"]]"#).unwrap();
+        let made = book.chart_op(0, 200, 0, 4, 2, r#"{"kind":"create","type":"line","subtype":"markers","title":"Sales"}"#).unwrap();
+        let list: serde_json::Value = serde_json::from_str(&made).unwrap();
+        assert_eq!(list.as_array().unwrap().len(), 1);
+        let id = list[0]["id"].as_u64().unwrap();
+        assert_eq!(list[0]["title"], "Sales");
+        let scene: serde_json::Value = serde_json::from_str(&book.chart_scene(0, id as u32).unwrap()).unwrap();
+        assert!(!scene["prims"].as_array().unwrap().is_empty());
+        assert!(book.chart_scene(0, 9999).is_err());
+        let set = book.chart_op(0, 0, 0, 1, 1, &format!(r#"{{"kind":"set","chart":{id},"type":"column","legend":"none","dataLabels":true,"style":3,"title":"Q1"}}"#)).unwrap();
+        assert!(set.contains("\"title\":\"Q1\"") && set.contains("\"legend\":\"None\"") && set.contains("\"dataLabels\":true"));
+        book.undo().unwrap();
+        assert!(book.charts_info(0).unwrap().contains("\"title\":\"Sales\""), "one undo restores the chart");
+        book.chart_op(0, 0, 0, 1, 1, &format!(r#"{{"kind":"switch","chart":{id}}}"#)).unwrap();
+        let gone = book.chart_op(0, 0, 0, 1, 1, &format!(r#"{{"kind":"delete","chart":{id}}}"#)).unwrap();
+        assert_eq!(gone, "[]");
+        for bad in ["nope", "[]", "{}", r#"{"kind":"burn"}"#, r#"{"kind":"create","type":"bubble"}"#, r#"{"kind":"create","type":"column","subtype":"x"}"#, r#"{"kind":"create","extra":1}"#,
+                    r#"{"kind":"create","title":"a\u0007"}"#, r#"{"kind":"set"}"#, r#"{"kind":"set","chart":1,"style":17}"#, r#"{"kind":"set","chart":1,"legend":"middle"}"#, r#"{"kind":"set","chart":4294967296}"#, r#"{"kind":"set","chart":1}"#,
+                    r#"{"kind":"delete","chart":1,"x":1}"#, r#"{"kind":"set","chart":1,"at":"nope"}"#, r#"{"kind":"set","chart":1,"width":19}"#, r#"{"kind":"set","chart":1,"height":4001}"#] {
+            assert!(book.chart_op(0, 200, 0, 4, 2, bad).is_err(), "{bad}");
+        }
+        assert!(book.chart_op(0, 200, 0, 0, 0, r#"{"kind":"create"}"#).is_err());
+        assert!(book.chart_op(9, 200, 0, 4, 2, r#"{"kind":"create"}"#).is_err());
+        let sp = book.sparkline_op(0, 201, 1, 3, 1, r#"{"type":"column","markers":true}"#).unwrap();
+        assert!(sp.contains("\"row\":204") && sp.contains("prims"));
+        book.undo().unwrap();
+        assert_eq!(book.sparklines_info(0).unwrap(), "[]");
+        for bad in ["nope", r#"{"type":"pie"}"#, r#"{"markers":"y"}"#, r#"{"x":1}"#] {
+            assert!(book.sparkline_op(0, 201, 1, 3, 1, bad).is_err(), "{bad}");
+        }
+        assert!(book.sparkline_op(0, 201, 1, 1, 1, "{}").is_err(), "one cell is not a series");
+        assert!(book.sparkline_op(0, 201, 0, 3, 2, "{}").is_err(), "a block is not a series");
+        assert!(book.sparkline_op(0, 0, 0, 1, 501, "{}").is_err());
     }
     #[test]
     fn protect_op_protects_unprotects_locks_and_validates() {

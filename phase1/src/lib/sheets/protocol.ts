@@ -26,6 +26,16 @@ export interface PageInfo{orientation:'portrait'|'landscape';paper:string;margin
 export type ProtectPermission='formatCells'|'formatColumns'|'formatRows'|'insertColumns'|'insertRows'|'deleteColumns'|'deleteRows'|'sort'|'autofilter';
 export type ProtectOp={kind:'protect';password?:string;allow?:ProtectPermission[]}|{kind:'unprotect';password?:string}|{kind:'lock';locked:boolean}|{kind:'workbook';on:boolean};
 export interface ProtectionInfo{password:boolean;allow:ProtectPermission[]}
+/** Charts and sparklines. The bridge draws them as primitives (parsed and bounded in chartOps.ts); the Rust side re-validates every operation. */
+export type ChartType='column'|'bar'|'line'|'pie'|'doughnut'|'area'|'scatter'|'radar'|'histogram'|'waterfall'|'funnel'|'treemap';
+export type ChartLegend='none'|'bottom'|'top'|'left'|'right';
+export type ChartOp={kind:'create';type?:ChartType;subtype?:string;title?:string}|{kind:'set';chart:number;type?:ChartType;subtype?:string;title?:string;legend?:ChartLegend;dataLabels?:boolean;gridlines?:boolean;style?:number;xTitle?:string;yTitle?:string;at?:string;width?:number;height?:number}|{kind:'switch'|'delete';chart:number};
+export interface SparklineOp{type?:'line'|'column'|'winLoss';markers?:boolean}
+export interface ChartInfo{id:number;kind:string;title:string|null;row:number;col:number;dx:number;dy:number;width:number;height:number;legend:string;dataLabels:boolean;gridlines:boolean;style:number;series:number}
+type Rgba=[number,number,number,number];type Stroke={c:Rgba;w:number}|null;
+export type Prim={t:'rect';x:number;y:number;w:number;h:number;fill:Rgba|null;stroke:Stroke;radius:number}|{t:'line';pts:[number,number][];color:Rgba;width:number;dash:boolean}|{t:'polygon';pts:[number,number][];fill:Rgba;stroke:Stroke}|{t:'wedge';cx:number;cy:number;ro:number;ri:number;a0:number;a1:number;fill:Rgba;stroke:Stroke}|{t:'circle';cx:number;cy:number;r:number;fill:Rgba|null;stroke:Stroke}|{t:'text';x:number;y:number;text:string;size:number;color:Rgba;bold:boolean;align:'start'|'middle'|'end';valign:'hanging'|'central'|'auto';rotation:number};
+export interface ChartScene{width:number;height:number;prims:Prim[]}
+export interface SparklineScene extends ChartScene{row:number;col:number}
 export type ViewOp={zoom:number}|{gridlines:boolean};
 export interface ViewOpResult{zoom:number;gridlines:boolean}
 export interface ExportOp{format:'pdf'|'csv'|'tsv'|'html';scope:'sheet'|'all'|'selection';fit?:boolean}
@@ -123,6 +133,11 @@ export type SheetsRequest=
  |{id:number;op:'tables';sheet:number}
  |{id:number;op:'tableOp';sheet:number;row:number;col:number;rows:number;cols:number;table:TableOp}
  |{id:number;op:'viewOp';sheet:number;view:ViewOp}
+ |{id:number;op:'charts';sheet:number}
+ |{id:number;op:'chartScene';sheet:number;chart:number}
+ |{id:number;op:'sparklines';sheet:number}
+ |{id:number;op:'chartOp';sheet:number;row:number;col:number;rows:number;cols:number;chart:ChartOp}
+ |{id:number;op:'sparklineOp';sheet:number;row:number;col:number;rows:number;cols:number;sparkline:SparklineOp}
  |{id:number;op:'protectOp';sheet:number;row:number;col:number;rows:number;cols:number;protect:ProtectOp}
  |{id:number;op:'pageInfo';sheet:number}
  |{id:number;op:'pageSetup';sheet:number;page:PageSetupOp}

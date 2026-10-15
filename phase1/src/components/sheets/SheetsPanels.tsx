@@ -17,6 +17,7 @@ import type {FillDirection,CfStyle} from '../../lib/sheets/protocol';
 import {PIVOT_FUNCS,tableBlockProblem} from '../../lib/sheets/tableOps';
 import {headerProblem,MAX_HEADER_CHARS} from '../../lib/sheets/printOps';
 import {MAX_ZOOM,MIN_ZOOM} from '../../lib/sheets/viewOps';
+import {MAX_TITLE_CHARS,sparklineBlockProblem} from '../../lib/sheets/chartOps';
 import {ALLOW_PRESETS,MAX_PASSWORD_CHARS,passwordBad} from '../../lib/sheets/protectOps';
 import type {PivotField,PivotFunc} from '../../lib/sheets/protocol';
 import {nameProblem,nameTarget} from '../../lib/sheets/names';
@@ -222,6 +223,7 @@ export function SheetsLayoutPanel({context}:PanelHostProps){
   <NotesGroup/>
   <NamesGroup/>
   <ViewGroup/>
+  <ChartsGroup/>
   <ProtectGroup/>
   <TablesGroup/>
   <PivotGroup/>
@@ -292,6 +294,50 @@ function TablesGroup(){
   {naming&&<label className="flex flex-col gap-1">{creating?t('sheets.tb.nameOptional'):t('sheets.tb.newName')}<NativeInput className={field} value={name} maxLength={64} aria-invalid={nameBad} disabled={action.busy} onChange={e=>setName(e.currentTarget.value)} data-testid="sheets-tb-name"/></label>}
   <Button variant="outline" size="compact" disabled={action.busy||!!problem} onClick={apply} data-testid="sheets-tb-apply">{t('sheets.nm.apply')}</Button>
   <p className="text-ink-3">{t(creating?'sheets.tb.scope':'sheets.tb.scopeTable',{range:rangeAddress(r)})}</p>
+ </div>;
+}
+/** Charts and sparklines in one grouped menu: make a chart from the selection, change or delete one of this sheet's charts, or add a sparkline. One undo step each. */
+type ChartAction=string;
+const CHART_CREATE:Record<string,{type:string;subtype?:string}>={createColumn:{type:'column'},createColumnStacked:{type:'column',subtype:'stacked'},createBar:{type:'bar'},createLine:{type:'line'},createLineMarkers:{type:'line',subtype:'markers'},createArea:{type:'area'},createPie:{type:'pie'},createDoughnut:{type:'doughnut'},createScatter:{type:'scatter'},createRadar:{type:'radar'}};
+const CHART_TYPE:Record<string,string>={typeColumn:'column',typeBar:'bar',typeLine:'line',typePie:'pie',typeArea:'area'};
+const CHART_SIZE:Record<string,[number,number]>={sizeSmall:[360,216],sizeMedium:[480,288],sizeLarge:[720,432]};
+const CHART_FLAGS:Record<string,Record<string,unknown>>={legendNone:{legend:'none'},legendBottom:{legend:'bottom'},legendRight:{legend:'right'},labelsOn:{dataLabels:true},labelsOff:{dataLabels:false},gridOn:{gridlines:true},gridOff:{gridlines:false}};
+const SPARK_ACTIONS:Record<string,string>={sparkLine:'line',sparkColumn:'column',sparkWinLoss:'winLoss'};
+function ChartsGroup(){
+ const {t}=useT(),s=useSheetsSelection(),action=useAction();const [act,setAct]=useState<ChartAction>('createColumn');const [pick,setPick]=useState(0);const [text,setText]=useState('');const [style,setStyle]=useState(1);
+ const r=s?.range;if(!s||!r)return null;
+ const list=s.charts??[],chosen=list.find(x=>x.id===pick)??list[0]??null;
+ const creating=act in CHART_CREATE,spark=act in SPARK_ACTIONS,titled=act==='title2'||act==='xTitle'||act==='yTitle',styled=act==='style';
+ const rows=r.r1-r.r0+1,cols=r.c1-r.c0+1;
+ const problem=creating?(tableBlockProblem(rows,cols)==='large'||rows*cols<2?'x':null):spark?(sparklineBlockProblem(rows,cols)?'x':null):!chosen||(titled&&text.trim()===''&&act!=='title2')?'x':null;
+ const apply=()=>{
+  if(creating)return void action.run('sheets.chart',{kind:'create',...CHART_CREATE[act]});
+  if(spark)return void action.run('sheets.sparkline',{type:SPARK_ACTIONS[act]});
+  if(!chosen)return;const chart=chosen.id;
+  if(act==='delete')void action.run('sheets.chart',{kind:'delete',chart});
+  else if(act==='switch')void action.run('sheets.chart',{kind:'switch',chart});
+  else if(act in CHART_TYPE)void action.run('sheets.chart',{kind:'set',chart,type:CHART_TYPE[act]});
+  else if(act==='title2')void action.run('sheets.chart',{kind:'set',chart,title:text});
+  else if(act==='xTitle')void action.run('sheets.chart',{kind:'set',chart,xTitle:text});
+  else if(act==='yTitle')void action.run('sheets.chart',{kind:'set',chart,yTitle:text});
+  else if(act==='style')void action.run('sheets.chart',{kind:'set',chart,style});
+  else if(act==='moveHere')void action.run('sheets.chart',{kind:'set',chart,at:rangeAddress({...r,r1:r.r0,c1:r.c0})});
+  else if(act in CHART_SIZE)void action.run('sheets.chart',{kind:'set',chart,width:CHART_SIZE[act][0],height:CHART_SIZE[act][1]});
+  else if(act in CHART_FLAGS)void action.run('sheets.chart',{kind:'set',chart,...CHART_FLAGS[act]});
+ };
+ const opts=(ids:string[])=>ids.map(id=><option key={id} value={id}>{t('sheets.ch.'+id)}</option>);
+ return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.ch.title')}>
+  <span>{t('sheets.ch.title')}</span>
+  <label className="flex flex-col gap-1">{t('sheets.ch.existing')}<NativeSelect className={field} value={chosen?.id??''} disabled={action.busy||list.length===0} onChange={e=>setPick(Number(e.currentTarget.value))} data-testid="sheets-ch-pick">{list.length===0&&<option value="">{t('sheets.ch.none')}</option>}{list.map(x=><option key={x.id} value={x.id}>{x.title||t('sheets.ch.chartName',{id:x.id})}</option>)}</NativeSelect></label>
+  <label className="flex flex-col gap-1">{t('sheets.ch.action')}<NativeSelect className={field} value={act} disabled={action.busy} onChange={e=>setAct(e.currentTarget.value)} data-testid="sheets-ch-action">
+   <optgroup label={t('sheets.ch.groupCreate')}>{opts(Object.keys(CHART_CREATE))}</optgroup>
+   <optgroup label={t('sheets.ch.groupChange')}>{opts([...Object.keys(CHART_TYPE),'switch','title2','xTitle','yTitle',...Object.keys(CHART_FLAGS),'style','moveHere',...Object.keys(CHART_SIZE),'delete'])}</optgroup>
+   <optgroup label={t('sheets.ch.groupSpark')}>{opts(Object.keys(SPARK_ACTIONS))}</optgroup>
+  </NativeSelect></label>
+  {titled&&<label className="flex flex-col gap-1">{t('sheets.ch.text')}<NativeInput className={field} value={text} maxLength={MAX_TITLE_CHARS} disabled={action.busy} onChange={e=>setText(e.currentTarget.value)} data-testid="sheets-ch-text"/></label>}
+  {styled&&<NumberField label={t('sheets.ch.styleLabel')} value={style} resetKey="chart-style" min={1} max={16} step={1} disabled={action.busy} constraintError={t('sheets.ch.styleInvalid')} parse={v=>{const n=Number(v.trim());return v.trim()&&Number.isInteger(n)&&n>=1&&n<=16?{ok:true,value:n}:{ok:false,error:t('sheets.ch.styleInvalid')};}} onCommit={v=>setStyle(v)}/>}
+  <Button variant="outline" size="compact" disabled={action.busy||!!problem} onClick={apply} data-testid="sheets-ch-apply">{t('sheets.ch.apply')}</Button>
+  <p className="text-ink-3">{t(spark?'sheets.ch.scopeSpark':'sheets.ch.scopeCreate',{range:rangeAddress(r)})}</p>
  </div>;
 }
 /** Protection in one grouped menu: lock or unlock the selected cells, protect or unprotect the sheet (optional password, what stays allowed) and lock the sheet structure. One undo step each. */

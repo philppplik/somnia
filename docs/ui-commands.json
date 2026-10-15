@@ -6592,6 +6592,14 @@
       "hasEnabled": true
     },
     {
+      "id": "sheets.chart",
+      "title": "Create or change a chart",
+      "category": "Edit",
+      "source": "sheets",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
       "id": "sheets.dedupe",
       "title": "Remove duplicate rows in the selected block",
       "category": "Edit",
@@ -6764,6 +6772,14 @@
     {
       "id": "sheets.sort",
       "title": "Sort the selected rows by a column",
+      "category": "Edit",
+      "source": "sheets",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
+      "id": "sheets.sparkline",
+      "title": "Add a sparkline",
       "category": "Edit",
       "source": "sheets",
       "allowInInput": true,
