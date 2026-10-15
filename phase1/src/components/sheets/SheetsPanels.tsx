@@ -12,6 +12,7 @@ import {aggregateFormula,FORMULA_FUNCTIONS,parsePanelRange,rangeAddress,summariz
 import {rectCells} from '../../lib/sheets/clipboard';
 import {addressOf,colName,parseAddress,parseSpan} from '../../lib/sheets/format';
 import {sortBlockProblem} from '../../lib/sheets/sortOps';
+import {addUserWord,checkCells,loadDictionary,readUserWords,replacementProblem,suggest,type SpellReport} from '../../lib/sheets/spelling';
 import {AUTOFILL_MODES,buildSeriesOp,fillBlockProblem,FILL_DIRECTIONS,SERIES_KINDS,type AutoFillMode,type SeriesKind} from '../../lib/sheets/fillOps';
 import type {FillDirection,CfStyle,PasteOp} from '../../lib/sheets/protocol';
 import {PIVOT_FUNCS,tableBlockProblem} from '../../lib/sheets/tableOps';
@@ -243,6 +244,7 @@ export function SheetsLayoutPanel({context}:PanelHostProps){
   <AuditGroup/>
   <SymbolGroup/>
   <ReviewInfoGroup/>
+  <SpellingGroup/>
   <CellInfoGroup/>
   <PageBreaksGroup/>
   <PasteGroup/>
@@ -1012,6 +1014,48 @@ function ReviewInfoGroup(){
    <Button variant="outline" size="compact" disabled={action.busy||!chosen} onClick={()=>{if(chosen)void action.run('sheets.navigate',{sheet:chosen.sheet,address:'A1'});}} data-testid="sheets-ri-go">{t('sheets.ri.go')}</Button>
   </>}
   <p className="text-ink-3">{t('sheets.ri.hint')}</p>
+  {action.notice?<p role="alert">{action.notice}</p>:null}
+ </div>;
+}
+/** Spelling of the text cells in the selection or the top-left 10,000 cells, against the shipped English (US) word list. One select for what to do with a found word. A change is one undo step per cell. */
+type SpellAct='change'|'ignore'|'add';
+const SPELL_SHEET='A1:T500';
+const fetchAsset=async(path:string)=>{const r=await fetch(location.origin+path);if(!r.ok)throw Error('asset '+r.status);return r.text();};
+function SpellingGroup(){
+ const {t}=useT(),s=useSheetsSelection(),action=useAction();
+ const [scope,setScope]=useState<'selection'|'sheet'>('selection'),[report,setReport]=useState<SpellReport|null>(null),[pick,setPick]=useState(0),[to,setTo]=useState(''),[act,setAct]=useState<SpellAct>('change');
+ const [dict,setDict]=useState<ReadonlySet<string>|null>(null),[ignore,setIgnore]=useState<ReadonlySet<string>>(new Set()),[user,setUser]=useState<ReadonlySet<string>>(()=>readUserWords());
+ if(!s)return null;
+ const range=scope==='sheet'?SPELL_SHEET:s.range?rangeAddress(s.range):s.address,valid=!!parsePanelRange(range);
+ const issues=report?.issues??[],chosen=issues[pick]??issues[0]??null,options=chosen&&dict?suggest(chosen.word,dict):[];
+ const drop=(word:string,cell?:string)=>{if(!report)return;const next=report.issues.filter(i=>cell?!(i.cell===cell&&i.word===word):i.word.toLowerCase()!==word.toLowerCase());setReport({...report,issues:next,total:Math.max(0,report.total-(report.issues.length-next.length))});setPick(0);setTo('');};
+ const check=async()=>{
+  if(!valid)return;
+  let d=dict;if(!d){try{d=await loadDictionary(fetchAsset);setDict(d);}catch{action.setNotice(t('sheets.spl.noDict'));return;}}
+  const cells=await action.run('sheets.analyzeRange',{range});if(!cells)return;
+  setReport(checkCells(cells as RangeCell[],d,user,ignore));setPick(0);setTo('');
+ };
+ const problem=act==='change'?replacementProblem(to):null;
+ const apply=()=>{
+  if(!chosen)return;
+  if(act==='change'&&!problem)void action.run('sheets.spellChange',{cell:chosen.cell,word:chosen.word,to:to.trim()}).then(r=>{if(r!==null)drop(chosen.word,chosen.cell);});
+  else if(act==='ignore'){setIgnore(new Set([...ignore,chosen.word.toLowerCase()]));drop(chosen.word);}
+  else if(act==='add'){setUser(addUserWord(chosen.word));drop(chosen.word);}
+ };
+ return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.spl.title')}>
+  <span>{t('sheets.spl.title')}</span>
+  <label className="flex flex-col gap-1">{t('sheets.spl.scope')}<NativeSelect className={field} value={scope} disabled={action.busy} onChange={e=>{setScope(e.currentTarget.value as 'selection'|'sheet');setReport(null);}} data-testid="sheets-sp-scope"><option value="selection">{t('sheets.spl.selection')}</option><option value="sheet">{t('sheets.spl.sheet',{range:SPELL_SHEET})}</option></NativeSelect></label>
+  <Button variant="outline" size="compact" disabled={action.busy||!valid} onClick={()=>void check()} data-testid="sheets-sp-check">{t('sheets.spl.check')}</Button>
+  {!valid&&<p className="text-ink-3">{t('sheets.spl.big')}</p>}
+  {report&&<p data-testid="sheets-sp-count">{report.total===0?t('sheets.spl.none',{n:report.scanned}):t('sheets.spl.count',{n:report.total})+(report.total>report.issues.length&&report.issues.length>0?' '+t('sheets.spl.truncated'):'')}</p>}
+  {chosen&&<>
+   <label className="flex flex-col gap-1">{t('sheets.spl.found')}<NativeSelect className={field} value={issues.indexOf(chosen)} disabled={action.busy} onChange={e=>{const n=Number(e.currentTarget.value);setPick(n);setTo('');const c=issues[n];if(c)void action.run('sheets.navigate',{sheet:s.sheet,address:c.cell});}} data-testid="sheets-sp-found">{issues.map((i,n)=><option key={n} value={n}>{i.cell+': '+i.word}</option>)}</NativeSelect></label>
+   <label className="flex flex-col gap-1">{t('sheets.spl.suggest')}<NativeSelect className={field} value="" disabled={action.busy||options.length===0} onChange={e=>setTo(e.currentTarget.value)} data-testid="sheets-sp-suggest"><option value="">{options.length===0?t('sheets.spl.noSuggest'):t('sheets.spl.pickSuggest')}</option>{options.map(o=><option key={o} value={o}>{o}</option>)}</NativeSelect></label>
+   <label className="flex flex-col gap-1">{t('sheets.spl.to')}<NativeInput className={field} value={to} maxLength={64} aria-invalid={to!==''&&!!problem} disabled={action.busy||act!=='change'} onChange={e=>setTo(e.currentTarget.value)} data-testid="sheets-sp-to"/></label>
+   <label className="flex flex-col gap-1">{t('sheets.spl.action')}<NativeSelect className={field} value={act} disabled={action.busy} onChange={e=>setAct(e.currentTarget.value as SpellAct)} data-testid="sheets-sp-action"><option value="change">{t('sheets.spl.a.change')}</option><option value="ignore">{t('sheets.spl.a.ignore')}</option><option value="add">{t('sheets.spl.a.add')}</option></NativeSelect></label>
+   <Button variant="outline" size="compact" disabled={action.busy||(act==='change'&&!!problem)} onClick={apply} data-testid="sheets-sp-apply">{t('sheets.spl.apply')}</Button>
+  </>}
+  <p className="text-ink-3">{t('sheets.spl.hint')}</p>
   {action.notice?<p role="alert">{action.notice}</p>:null}
  </div>;
 }

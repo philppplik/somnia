@@ -8137,6 +8137,14 @@
       "hasEnabled": true
     },
     {
+      "id": "sheets.spellChange",
+      "title": "Correct a misspelled word in one text cell",
+      "category": "Edit",
+      "source": "sheets",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
       "id": "sheets.split",
       "title": "Split the selected column of text into columns",
       "category": "Edit",
