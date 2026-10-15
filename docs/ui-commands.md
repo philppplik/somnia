@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1059 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1060 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -328,6 +328,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `design.deselect` | Design: Clear selection | Edit | design |  |
 | `design.distributeSelection` | Design: Distribute selected layers | Edit | design |  |
 | `design.duplicateSelection` | Design: Duplicate selected layers | Edit | design |  |
+| `design.export.advanced` | Design: Advanced export with name and metadata | Project | design |  |
 | `design.export.open` | Design: Export... | Project | design | `Mod+Shift+E` |
 | `design.exportAllSvg` | Design: Export all artboards as SVG ZIP | Project | design |  |
 | `design.exportProject` | Design: Export project (.somdesign) | Project | design |  |

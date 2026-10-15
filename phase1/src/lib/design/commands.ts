@@ -1,4 +1,4 @@
-import {setDesignExportOpen} from './exportState';
+import {setDesignExportAdvancedOpen,setDesignExportOpen} from './exportState';
 import {downloadArtboards} from './exportArtboards';
 /**
  * Design Studio command specs (engine-hardening plan, step 1.5 / wave B).
@@ -132,6 +132,7 @@ export function registerDesignCommands():()=>void{
  });
 
  add<never,void>({id:'design.export.open',title:'Design: Export...',category:'Project',level:'ui',shortcut:'Mod+Shift+E',enabled:open,run:()=>setDesignExportOpen(true)});
+ add<never,void>({id:'design.export.advanced',title:'Design: Advanced export with name and metadata',category:'Project',level:'ui',keywords:['design','export','advanced','metadata'],enabled:open,run:()=>setDesignExportAdvancedOpen(true)});
  add<never,string|undefined>({id:'design.exportAllSvg',title:'Design: Export all artboards as SVG ZIP',category:'Project',level:'ui',enabled:open,run:()=>{const doc=getDesignState().document;return doc?downloadArtboards(doc):undefined;}});
 
  // history: none (download of the current document; dirty stays honest).
