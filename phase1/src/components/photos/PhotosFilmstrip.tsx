@@ -1,11 +1,12 @@
+let pendingNote:string|null=null; // the workspace remounts on active change (keyed by photo name), so the copy confirmation crosses the remount here
 import {useEffect,useRef,useState} from 'react';
 import {Star} from 'lucide-react';
 import {ChevronDown,ChevronRight,EyeOff,Flag,LayoutGrid,SkipForward,Tag,Trash2} from '../../lib/icons';
 import {useT} from '../../lib/useT';
-import {setActiveMedia,useMedia} from '../../lib/media';
+import {addMediaFile,getMedia,setActiveMedia,useMedia} from '../../lib/media';
 
 import {rangeSelect,toggleSelect} from '../../lib/photos/selection';
-import {syncLookToPhotos} from '../../lib/photos/batchExport';
+import {ensurePhotoReady,syncLookToPhotos} from '../../lib/photos/batchExport';
 import {findWbPreset,WB_PRESETS} from '../../lib/photos/wbPresets';
 import {applyLook,BUILT_IN_PRESETS,extractLook,isNeutralLook,parseUserPresets,type Look,type UserPreset} from '../../lib/photos/presets';
 import {commitPhotoSettings,getPhotoSession} from '../../lib/photos/studioSession';
@@ -16,6 +17,7 @@ import {PHOTO_LABELS,setLabel,useLabels,type PhotoLabel} from '../../lib/photos/
 import {addTags,allTags,setTags} from '../../lib/photos/tags';
 import {groupForStrip,groupPhotos,setStackCover,ungroupStacks,useStackCovers,useStacks} from '../../lib/photos/stacks';
 import {hidePhotos,unhideAll,unhidePhotos} from '../../lib/photos/hidden';
+import {nextCopyName} from '../../lib/photos/virtualCopy';
 import {detectSeries} from '../../lib/photos/autoStack';
 import {usePanelState} from '../../store/panelStateStore';
 import {Button} from '../ui/button';
@@ -44,6 +46,7 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
  const [autoAdvance,setAutoAdvance]=usePanelState<boolean>('photos.autoAdvance',false);
  const [anchor,setAnchor]=usePanelState<string|null>('photos.filmstripAnchor',null);
  const [applyNote,setApplyNote]=useState<string|null>(null);
+ useEffect(()=>{if(pendingNote){setApplyNote(pendingNote);pendingNote=null;}},[]); // pick up a confirmation that crossed the workspace remount
  const [armRemove,setArmRemove]=useState(false);
  const [rawPresets]=usePanelState<unknown>('photos.presets.user',[]);
  const [applying,setApplying]=useState(false);
@@ -66,6 +69,21 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
   await applyLookToSelection(extractLook(activeSession.now));
  };
  const rejected=all.filter(p=>flags[p.name]==='reject');
+ const makeVirtualCopy=async()=>{
+  const item=media.items.find(i=>i.name===active);if(!item)return;
+  const settings=getPhotoSession(active)?.now; // copies start with the source's develop settings
+  try{
+   const blob=await (await fetch(item.url)).blob();
+   const name=nextCopyName(active,t('photos.copy.word'),n=>getMedia().items.some(i=>i.name===n));
+   pendingNote=t('photos.copy.done',{name}); // addMediaFile activates the copy, which remounts the workspace (keyed by photo name); the initializer picks up pendingNote
+   const res=await addMediaFile(blob,name);
+   if('error' in res){pendingNote=null;setApplyNote(t('photos.copy.failed'));return;}
+   const created=getMedia().items.find(i=>i.name===res.name);
+   if(created){await ensurePhotoReady(created);if(settings)commitPhotoSettings(res.name,()=>settings);}
+   setActiveMedia(res.name);
+   setMenuOpen(false);
+  }catch{pendingNote=null;setApplyNote(t('photos.copy.failed'));}
+ };
  const removeRejected=()=>{
   if(!armRemove){setArmRemove(true);return;}
   setArmRemove(false);
@@ -149,6 +167,9 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
       let n=0;for(const series of detectSeries(all.map(p=>p.name)))if(groupPhotos(series))n++;
       setApplyNote(t('photos.stacks.autoDone',{count:n}));
      }} data-testid="photos-filmstrip-stack-auto">{t('photos.stacks.auto')}</Button>}
+    </span>
+    <span className="flex flex-wrap gap-1">
+     <Button variant="outline" size="compact" onClick={()=>{void makeVirtualCopy();}} data-testid="photos-filmstrip-virtual-copy">{t('photos.copy.create')}</Button>
     </span>
     {hidden.length>0&&<span className="flex flex-wrap gap-1">
      <Button variant="outline" size="compact" aria-pressed={showHidden} onClick={()=>setShowHidden(!showHidden)} data-testid="photos-filmstrip-show-hidden">{t('photos.hidden.show')}</Button>

@@ -750,3 +750,26 @@ test('hidden review: show hidden, restore one, restore all (light and dark)',asy
   await expect(page.getByTestId('photos-filmstrip-restore-hidden')).toHaveCount(0);
  }
 });
+test('virtual copy: independent entry that starts with the source settings (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
+  await page.evaluate(async()=>{const r=await import('/src/lib/photos/ratings.ts');for(const n of['strip-1.png','strip-2.png','strip-3.png'])r.setRating(n,0);}); // ratings persist via localStorage
+  await page.keyboard.press('4'); // strip-1: four stars
+  await page.getByTestId('photos-filmstrip-menu').click();
+  await page.getByTestId('photos-filmstrip-virtual-copy').click();
+  await expect(page.getByTestId('photos-filmstrip-apply-note')).toContainText('Copy 1');
+  await expect(page.getByTestId('photos-filmstrip-item-strip-1 (Copy 1).png')).toBeVisible(); // own strip entry
+  await expect(page.getByTestId('photos-name')).toHaveText('strip-1 (Copy 1).png'); // the copy is active
+  await expect(page.getByTestId('photos-position')).toHaveText(/\/ 4/); // library grew
+  await expect(page.getByTestId('photos-filmstrip-rating-badge-strip-1.png')).toHaveText('4'); // source keeps its rating
+  await expect(page.getByTestId('photos-filmstrip-rating-badge-strip-1 (Copy 1).png')).toHaveCount(0); // the copy starts unrated
+  await page.keyboard.press('2'); // rate the copy independently
+  await expect(page.getByTestId('photos-filmstrip-rating-badge-strip-1 (Copy 1).png')).toHaveText('2');
+  await expect(page.getByTestId('photos-filmstrip-rating-badge-strip-1.png')).toHaveText('4'); // source untouched
+  await page.screenshot({path:`test-results/ds-photos-virtual-copy-${theme}.png`,fullPage:true});
+  await page.evaluate(async()=>{const r=await import('/src/lib/photos/ratings.ts');for(const n of['strip-1.png','strip-2.png','strip-3.png','strip-1 (Copy 1).png'])r.setRating(n,0);}); // leave no state behind
+ }
+});

@@ -441,3 +441,21 @@ Coverage: `hidden.test.ts` covers the partial unhide; the new
 light/dark leg hides one photo, reviews it (dimmed + marker),
 restores it alone, hides two, screenshots the review mode and
 restores all (`test-results/ds-photos-hidden-review-{light,dark}.png`).
+
+## Virtual copies (P107)
+
+"Virtual copy" in the strip menu duplicates the active photo as its
+own strip entry '<name> (Kopie N).<ext>' (localized word): same
+bytes, the source's current develop settings (via the settings
+clipboard encode + commit), but its own session, rating, flags,
+labels, tags and stack membership - every per-photo store keys by
+name, so copies are independent for free. The closing paren keeps
+copies out of `detectSeries` burst detection. Originals are never
+touched; removing a copy from the library view uses the P105
+hide/undo path.
+
+Coverage: `virtualCopy.test.ts` covers naming (counter, taken
+names, extensions, localized word); the light/dark gallery leg
+rates the source, creates a copy (own entry, active, library count
+grows, source rating kept, copy unrated), rates the copy
+independently (`test-results/ds-photos-virtual-copy-{light,dark}.png`).

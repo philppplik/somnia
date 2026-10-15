@@ -181,5 +181,9 @@
  "photos.smart.tag": "Stichwort",
  "photos.hidden.restore": "Ausgeblendete wiederherstellen ({count})",
  "photos.hidden.show": "Ausgeblendete anzeigen",
- "photos.hidden.restoreActive": "Aktives wiederherstellen"
+ "photos.hidden.restoreActive": "Aktives wiederherstellen",
+ "photos.copy.word": "Kopie",
+ "photos.copy.create": "Virtuelle Kopie",
+ "photos.copy.done": "Kopie erstellt: {name}",
+ "photos.copy.failed": "Kopie fehlgeschlagen"
 }

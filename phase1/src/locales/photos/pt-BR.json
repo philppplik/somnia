@@ -181,5 +181,9 @@
  "photos.smart.tag": "Tag",
  "photos.hidden.restore": "Restaurar ocultas ({count})",
  "photos.hidden.show": "Mostrar ocultas",
- "photos.hidden.restoreActive": "Restaurar ativa"
+ "photos.hidden.restoreActive": "Restaurar ativa",
+ "photos.copy.word": "Cópia",
+ "photos.copy.create": "Cópia virtual",
+ "photos.copy.done": "Cópia criada: {name}",
+ "photos.copy.failed": "Cópia falhou"
 }

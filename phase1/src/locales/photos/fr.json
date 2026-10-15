@@ -181,5 +181,9 @@
  "photos.smart.tag": "Mot-cle",
  "photos.hidden.restore": "Restaurer les photos masquées ({count})",
  "photos.hidden.show": "Afficher les masquées",
- "photos.hidden.restoreActive": "Restaurer la photo active"
+ "photos.hidden.restoreActive": "Restaurer la photo active",
+ "photos.copy.word": "Copie",
+ "photos.copy.create": "Copie virtuelle",
+ "photos.copy.done": "Copie créée : {name}",
+ "photos.copy.failed": "Copie échouée"
 }
