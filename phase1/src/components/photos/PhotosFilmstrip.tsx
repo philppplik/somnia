@@ -26,6 +26,8 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
  const media=useMedia();
  const {ratings,flags,labels,tags,filter,all,photos,sort,query}=useVisiblePhotos();
  const [,setQuery]=usePanelState<string>('photos.searchQuery','');
+ const [sets,setSets]=usePanelState<Record<string,{filter:string;sort:string;query:string}>>('photos.filterSets',{});
+ const [naming,setNaming]=useState(false);
  const [,setMinRating]=usePanelState<number|string>('photos.ratingFilter',0);
  const [,setSort]=usePanelState<FilmstripSort>('photos.filmstripSort','library');
  const [sel,setSel]=usePanelState<string[]>('photos.filmstripSelection',[]);
@@ -97,6 +99,24 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
    <option value="none">{t('photos.label.none')}</option>
   </NativeSelect>
   <NativeInput type="search" value={query} aria-label={t('photos.search')} title={t('photos.search')} placeholder={t('photos.search')} onChange={e=>setQuery(e.currentTarget.value)} className="h-7 w-28 shrink-0" data-testid="photos-filmstrip-search"/>
+  <NativeSelect value="" aria-label={t('photos.collections')} title={t('photos.collections')} onChange={e=>{
+   const fs=sets[e.currentTarget.value];e.currentTarget.value='';
+   if(fs){setMinRating(fs.filter);setSort(fs.sort as FilmstripSort);setQuery(fs.query);}
+  }} className="h-7 shrink-0" data-testid="photos-filmstrip-collections">
+   <option value="" disabled>{t('photos.collections')}</option>
+   {Object.keys(sets).sort((a,b)=>a.localeCompare(b)).map(n=><option key={n} value={n}>{n}</option>)}
+  </NativeSelect>
+  {naming
+   ?<NativeInput autoFocus type="text" aria-label={t('photos.collections.name')} title={t('photos.collections.name')} placeholder={t('photos.collections.name')} className="h-7 w-28 shrink-0" data-testid="photos-filmstrip-collection-name"
+     onKeyDown={e=>{
+      if(e.key==='Escape'){setNaming(false);return;}
+      if(e.key!=='Enter')return;
+      const n=e.currentTarget.value.trim();
+      if(n)setSets({...sets,[n]:{filter,sort,query}});
+      setNaming(false);
+     }}/>
+   :<Button variant="outline" size="compact" aria-label={t('photos.collections.save')} title={t('photos.collections.save')} onClick={()=>setNaming(true)} data-testid="photos-filmstrip-collection-save">{t('photos.collections.save')}</Button>}
+  {(()=>{const hit=Object.entries(sets).find(([,fs])=>fs.filter===filter&&fs.sort===sort&&fs.query===query);return hit?<Button variant="outline" size="compact" aria-label={t('photos.collections.delete')} title={t('photos.collections.delete')} onClick={()=>{const next={...sets};delete next[hit[0]];setSets(next);}} data-testid="photos-filmstrip-collection-delete">{t('photos.collections.delete')}</Button>:null;})()}
   <NativeInput key={active} type="text" defaultValue={(tags[active]??[]).join(', ')} aria-label={t('photos.tags.label')} title={t('photos.tags.label')} placeholder={t('photos.tags.label')} className="h-7 w-36 shrink-0" data-testid="photos-filmstrip-tags"
    onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();}}
    onBlur={e=>{const v=e.currentTarget.value.split(',');for(const n of selected.length>1?selected.map(p=>p.name):[active]){if(selected.length>1)addTags(n,v);else setTags(n,v);}}}/> {/* batch merges, a single photo replaces */}

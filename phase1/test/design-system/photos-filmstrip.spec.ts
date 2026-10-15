@@ -503,3 +503,25 @@ test('library search: name and tag matches narrow the strip (light and dark)',as
   await page.evaluate(async()=>{const m=await import('/src/lib/photos/tags.ts');m.setTags('strip-2.png',[]);});
  }
 });
+test('collections: save, apply and delete a filter set (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
+  await page.getByTestId('photos-filmstrip-search').fill('');
+  await page.getByTestId('photos-filmstrip-search').fill('strip-1');
+  await page.getByTestId('photos-filmstrip-collection-save').click();
+  await page.getByTestId('photos-filmstrip-collection-name').fill('Nur eins');
+  await page.getByTestId('photos-filmstrip-collection-name').press('Enter');
+  await page.getByTestId('photos-filmstrip-search').fill(''); // state changes away from the set
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible();
+  await page.getByTestId('photos-filmstrip-collections').selectOption('Nur eins'); // apply: search comes back
+  await expect(page.getByTestId('photos-filmstrip-search')).toHaveValue('strip-1');
+  await expect(page.getByTestId('photos-filmstrip-item-strip-2.png')).toHaveCount(0);
+  await page.screenshot({path:`test-results/ds-photos-collections-${theme}.png`,fullPage:true});
+  await page.getByTestId('photos-filmstrip-collection-delete').click(); // visible while the current state matches the set
+  await page.getByTestId('photos-filmstrip-search').fill('');
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible();
+ }
+});

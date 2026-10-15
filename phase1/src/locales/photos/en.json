@@ -158,5 +158,9 @@
  "photos.survey.selected": "{count} selected",
  "photos.survey.toggle": "Select {name}",
  "photos.tags.label": "Tags",
- "photos.search": "Search photos"
+ "photos.search": "Search photos",
+ "photos.collections": "Collections",
+ "photos.collections.save": "Save filter",
+ "photos.collections.name": "Collection name",
+ "photos.collections.delete": "Delete set"
 }

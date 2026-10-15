@@ -300,3 +300,16 @@ everything again. The query persists in the panel state.
 Coverage: `photos-filmstrip.spec.ts` gains a light/dark leg that
 searches a name in caps, then a tag (each hides the other photos),
 and clears back to the full strip.
+
+## Collections (P99)
+
+Saved filter sets: the current filter, sort and search become a named
+collection (persisted in the panel state). A dropdown applies a set -
+all three controls jump back - and while the current state exactly
+matches a saved set, a delete button offers to drop it. Because the
+grid reads the same shared state, applying a collection reshapes the
+grid too.
+
+Coverage: `photos-filmstrip.spec.ts` gains a light/dark leg that
+saves a search as a collection, clears, applies the set (search
+restored, other photos hidden) and deletes it again.

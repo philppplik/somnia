@@ -158,5 +158,9 @@
  "photos.survey.selected": "{count} selectionnees",
  "photos.survey.toggle": "Selectionner {name}",
  "photos.tags.label": "Mots-cles",
- "photos.search": "Rechercher des photos"
+ "photos.search": "Rechercher des photos",
+ "photos.collections": "Collections",
+ "photos.collections.save": "Enregistrer le filtre",
+ "photos.collections.name": "Nom de la collection",
+ "photos.collections.delete": "Supprimer le jeu"
 }
