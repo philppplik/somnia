@@ -47,6 +47,8 @@ scope.onmessage=({data}:MessageEvent<SheetsRequest>)=>{queue=queue.then(async()=
    case 'pivotCreate':result=JSON.parse(need().pivot_create(data.sheet,data.row,data.col,data.rows,data.cols,JSON.stringify(data.pivot)));break;
    case 'pivotRefresh':result=JSON.parse(need().pivot_refresh());break;
    case 'tables':result=JSON.parse(need().tables_info(data.sheet));break;
+   case 'outline':result=JSON.parse(need().outline_info(data.sheet));break;
+   case 'outlineOp':result=JSON.parse(need().outline_op(data.sheet,data.row,data.col,data.rows,data.cols,JSON.stringify(data.outline)));break;
    case 'savedViews':result=JSON.parse(need().saved_views());break;
    case 'savedViewOp':result=JSON.parse(need().saved_view_op(data.sheet,data.row,data.col,JSON.stringify(data.view)));break;
    case 'objects':result=JSON.parse(need().objects_info(data.sheet));break;

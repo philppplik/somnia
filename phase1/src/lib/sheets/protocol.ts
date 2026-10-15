@@ -51,6 +51,10 @@ export type ViewOp={zoom:number}|{gridlines:boolean};
 export interface ViewOpResult{zoom:number;gridlines:boolean}
 /** Saved views: the sheet, the selected cell and the zoom under a name. */
 export type SavedViewOp={kind:'save'|'show'|'delete';name:string};
+/** Outline groups and subtotals on the selected lines or block (column offsets are inside the selection). */
+export type OutlineOp={kind:'group'|'ungroup'|'hide'|'show';axis:'rows'|'cols'}|{kind:'subtotal';groupBy:number;function:'sum'|'count'|'average'|'max'|'min'|'product';columns:number[]};
+export interface OutlineLines{lines:number;deepest:number;hidden:number}
+export interface OutlineInfo{rows:OutlineLines;cols:OutlineLines}
 export interface SavedView{name:string;sheet:number;selection:string;zoom:number}
 export interface ExportOp{format:'pdf'|'csv'|'tsv'|'html';scope:'sheet'|'all'|'selection';fit?:boolean}
 export interface ExportResult{format:ExportOp['format'];base64:string;bytes:number;pages:number|null}
@@ -154,6 +158,8 @@ export type SheetsRequest=
  |{id:number;op:'sparklines';sheet:number}
  |{id:number;op:'chartOp';sheet:number;row:number;col:number;rows:number;cols:number;chart:ChartOp}
  |{id:number;op:'sparklineOp';sheet:number;row:number;col:number;rows:number;cols:number;sparkline:SparklineOp}
+ |{id:number;op:'outline';sheet:number}
+ |{id:number;op:'outlineOp';sheet:number;row:number;col:number;rows:number;cols:number;outline:OutlineOp}
  |{id:number;op:'savedViews'}
  |{id:number;op:'savedViewOp';sheet:number;row:number;col:number;view:SavedViewOp}
  |{id:number;op:'objects';sheet:number}

@@ -6771,6 +6771,14 @@
       "hasEnabled": true
     },
     {
+      "id": "sheets.outline",
+      "title": "Group, collapse or subtotal the selected rows or columns",
+      "category": "Edit",
+      "source": "sheets",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
       "id": "sheets.pageSetup",
       "title": "Change the page setup",
       "category": "Edit",

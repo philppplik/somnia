@@ -31,6 +31,7 @@ const MAX_WHATIF_VALUES: usize = 32;
 const MAX_OBJECTS: usize = 200;
 const MAX_SAVED_VIEWS: usize = 50;
 const MAX_VIEW_NAME: usize = 64;
+const MAX_SUBTOTAL_GROUPS: usize = 100;
 const MAX_PICTURES: usize = 100;
 const MAX_PICTURE_BYTES: usize = 10 * 1024 * 1024;
 const MAX_SHAPE_TEXT: usize = 200;
@@ -1648,6 +1649,135 @@ impl HeadlessWorkbook {
                 self.saved_views()
             }
             _ => Err("unsupported view operation".into()),
+        }
+    }
+
+    /// Outline summary of a sheet (read only): `{"rows":{"lines":n,"deepest":n,"hidden":n},"cols":{..}}` counting lines that
+    /// sit in a group (outline level 1 to 7), the deepest level and how many of those lines are collapsed (hidden).
+    pub fn outline_info(&self, sheet: usize) -> Result<String, String> {
+        let doc = self.session.doc().map_err(|e| e.to_string())?;
+        let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+        let sum = |lines: Vec<(u8, bool)>| {
+            let lines: Vec<(u8, bool)> = lines.into_iter().filter(|(o, _)| *o > 0).collect();
+            json!({"lines": lines.len(), "deepest": lines.iter().map(|(o, _)| *o).max().unwrap_or(0), "hidden": lines.iter().filter(|(_, h)| *h).count()})
+        };
+        let rows = sum(sh.rows.iter().map(|(_, i)| (i.outline, i.hidden)).collect());
+        let cols = sum(sh.cols.iter().map(|(_, i)| (i.outline, i.hidden)).collect());
+        Ok(json!({"rows": rows, "cols": cols}).to_string())
+    }
+
+    /// Groups, ungroups, collapses or expands lines, or inserts subtotals, as ONE history entry. `op_json` is
+    /// `{"kind":"group"|"ungroup"|"hide"|"show","axis":"rows"|"cols"}` for the selected lines (`row`,`col`,`rows`,`cols` is the selection;
+    /// at most 10,000 rows or 200 columns; group levels stop at 7; hide and show act on the whole group around the selection) or
+    /// `{"kind":"subtotal","groupBy":offset,"function":"sum"|"count"|"average"|"max"|"min"|"product","columns":[offsets]}` for a block with a
+    /// header row (at least 3 rows, at most 2,000 rows and 100 groups, 1 to 8 value columns, offsets inside the block). Subtotal inserts a
+    /// SUBTOTAL row under every run of equal values in the group column plus a grand total and groups each run. Protected sheets and merged
+    /// cells inside a subtotal block are refused. The engine acts on the active sheet, so it is activated first.
+    pub fn outline_op(&mut self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32, op_json: &str) -> Result<String, String> {
+        if rows == 0 || cols == 0 {
+            return Err("Select at least one cell.".into());
+        }
+        self.check_block(sheet, row, col, rows, cols, true)?;
+        let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "operation must be a JSON object".to_string())?;
+        let map = op.as_object().ok_or("operation must be a JSON object")?;
+        let kind = map.get("kind").and_then(|v| v.as_str()).ok_or("unsupported outline operation")?;
+        let known: &[&str] = if kind == "subtotal" { &["kind", "groupBy", "function", "columns"] } else { &["kind", "axis"] };
+        if map.keys().any(|k| !known.contains(&k.as_str())) {
+            return Err("unknown outline field".into());
+        }
+        let before = self.session.doc().map_err(|e| e.to_string())?.undo.len();
+        let outcome: Result<String, String> = (|| {
+            self.session.run("sheet.activate", json!({"sheet": sheet}))?;
+            match kind {
+                "group" | "ungroup" | "hide" | "show" => {
+                    let rows_axis = match map.get("axis").and_then(|v| v.as_str()) {
+                        Some("rows") => true,
+                        Some("cols") => false,
+                        _ => return Err("axis must be rows or cols".to_string()),
+                    };
+                    if (rows_axis && rows > 10_000) || (!rows_axis && cols > 200) {
+                        return Err("Too many lines selected (at most 10,000 rows or 200 columns).".into());
+                    }
+                    let name = |c: u32| CellRef::new(0, c).a1().trim_end_matches(char::is_numeric).to_string();
+                    let span = if rows_axis { format!("{}:{}", row + 1, row + rows) } else { format!("{}:{}", name(col), name(col + cols - 1)) };
+                    let id = match kind {
+                        "group" => "data.group",
+                        "ungroup" => "data.ungroup",
+                        "hide" => "data.hideDetail",
+                        _ => "data.showDetail",
+                    };
+                    let params = if rows_axis { json!({"rows": span}) } else { json!({"cols": span}) };
+                    self.session.run(id, params).map(|_| json!({"kind": kind}).to_string())
+                }
+                "subtotal" => {
+                    if rows < 3 || rows > 2000 || cols > 200 {
+                        return Err("Select a header row and at least two data rows (at most 2,000 rows).".into());
+                    }
+                    let off = |v: &serde_json::Value| v.as_u64().filter(|o| *o < u64::from(cols)).map(|o| o as u32);
+                    let group_by = map.get("groupBy").and_then(off).ok_or("groupBy is outside the selection")?;
+                    let func = map.get("function").and_then(|v| v.as_str()).unwrap_or("sum");
+                    if !["sum", "count", "average", "max", "min", "product"].contains(&func) {
+                        return Err("unsupported subtotal function".into());
+                    }
+                    let list = map.get("columns").and_then(|v| v.as_array()).ok_or("columns must be a list")?;
+                    if list.is_empty() || list.len() > 8 {
+                        return Err("Pick 1 to 8 value columns.".into());
+                    }
+                    let mut value_cols = Vec::new();
+                    for v in list {
+                        let o = off(v).ok_or("a value column is outside the selection")?;
+                        if !value_cols.contains(&o) {
+                            value_cols.push(o);
+                        }
+                    }
+                    {
+                        let doc = self.session.doc().map_err(|e| e.to_string())?;
+                        let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+                        let (r0, r1, c0, c1) = (row, row + rows - 1, col, col + cols - 1);
+                        if sh.merges.iter().any(|m| m.start.row <= r1 && m.end.row >= r0 && m.start.col <= c1 && m.end.col >= c0) {
+                            return Err("Merged cells inside the block are not supported. Unmerge them first.".into());
+                        }
+                        let mut runs = 0usize;
+                        let mut prev: Option<String> = None;
+                        for r in row + 1..=r1 {
+                            let cur = sh.value(CellRef::new(r, col + group_by)).display();
+                            if prev.as_ref() != Some(&cur) {
+                                runs += 1;
+                                prev = Some(cur);
+                            }
+                        }
+                        if runs > MAX_SUBTOTAL_GROUPS {
+                            return Err(format!("At most {MAX_SUBTOTAL_GROUPS} groups can get subtotals."));
+                        }
+                    }
+                    let range = format!("{}:{}", CellRef::new(row, col).a1(), CellRef::new(row + rows - 1, col + cols - 1).a1());
+                    let letters = |o: u32| CellRef::new(0, col + o).a1().trim_end_matches(char::is_numeric).to_string();
+                    let columns: Vec<String> = value_cols.iter().map(|o| letters(*o)).collect();
+                    self.session
+                        .run("data.subtotal", json!({"range": range, "groupBy": letters(group_by), "function": func, "columns": columns, "header": true}))
+                        .map(|v| v.to_string())
+                }
+                _ => Err("unsupported outline operation".into()),
+            }
+        })();
+        match outcome {
+            Ok(text) => {
+                // Subtotal runs many commands and each is its own snapshot; the first one restores the state before the whole operation.
+                let doc = self.session.doc_mut().map_err(|e| e.to_string())?;
+                if doc.undo.len() > before {
+                    doc.undo.truncate(before + 1);
+                    doc.redo.clear();
+                }
+                Ok(text)
+            }
+            Err(e) => {
+                while self.session.doc().map_err(|e| e.to_string())?.undo.len() > before {
+                    if self.undo().is_err() {
+                        break;
+                    }
+                }
+                Err(e)
+            }
         }
     }
 
@@ -3386,6 +3516,51 @@ mod tests {
         }
         assert!(book.saved_view_op(0, 0, 0, r#"{"kind":"save","name":"one too many"}"#).is_err());
         book.saved_view_op(0, 0, 0, r#"{"kind":"save","name":"v1"}"#).unwrap();
+    }
+    #[test]
+    fn outline_groups_collapses_and_subtotals_in_one_undo_step_and_refuses_bad_input() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        let rows = [("Team", "Pts"), ("a", "1"), ("a", "2"), ("b", "5")];
+        for (i, (x, y)) in rows.iter().enumerate() {
+            book.session.run("cell.set", json!({"sheet": 0, "cell": format!("A{}", 701 + i), "input": x})).unwrap();
+            book.session.run("cell.set", json!({"sheet": 0, "cell": format!("B{}", 701 + i), "input": y})).unwrap();
+        }
+        let steps = |b: &HeadlessWorkbook| b.session.doc().unwrap().undo.len();
+        let before = steps(&book);
+        book.outline_op(0, 700, 0, 4, 2, r#"{"kind":"subtotal","groupBy":0,"function":"sum","columns":[1]}"#).unwrap();
+        assert_eq!(steps(&book), before + 1, "one history entry");
+        let info: serde_json::Value = serde_json::from_str(&book.outline_info(0).unwrap()).unwrap();
+        assert_eq!(info["rows"]["lines"], 3, "{info}");
+        book.undo().unwrap();
+        let info: serde_json::Value = serde_json::from_str(&book.outline_info(0).unwrap()).unwrap();
+        assert_eq!(info["rows"]["lines"], 0, "{info}");
+        let before = steps(&book);
+        book.outline_op(0, 701, 0, 2, 1, r#"{"kind":"group","axis":"rows"}"#).unwrap();
+        book.outline_op(0, 701, 0, 2, 1, r#"{"kind":"hide","axis":"rows"}"#).unwrap();
+        let info: serde_json::Value = serde_json::from_str(&book.outline_info(0).unwrap()).unwrap();
+        assert_eq!((info["rows"]["lines"].as_u64(), info["rows"]["hidden"].as_u64(), info["rows"]["deepest"].as_u64()), (Some(2), Some(2), Some(1)), "{info}");
+        assert_eq!(steps(&book), before + 2);
+        book.outline_op(0, 701, 0, 2, 1, r#"{"kind":"show","axis":"rows"}"#).unwrap();
+        book.outline_op(0, 701, 0, 2, 1, r#"{"kind":"ungroup","axis":"rows"}"#).unwrap();
+        for bad in [
+            "nope",
+            r#"{"kind":"group"}"#,
+            r#"{"kind":"group","axis":"diagonal"}"#,
+            r#"{"kind":"group","axis":"rows","extra":1}"#,
+            r#"{"kind":"flatten","axis":"rows"}"#,
+            r#"{"kind":"subtotal","groupBy":9,"function":"sum","columns":[1]}"#,
+            r#"{"kind":"subtotal","groupBy":0,"function":"median","columns":[1]}"#,
+            r#"{"kind":"subtotal","groupBy":0,"function":"sum","columns":[]}"#,
+            r#"{"kind":"subtotal","groupBy":0,"function":"sum","columns":[7]}"#,
+        ] {
+            assert!(book.outline_op(0, 700, 0, 4, 2, bad).is_err(), "{bad}");
+        }
+        assert!(book.outline_op(0, 700, 0, 2, 2, r#"{"kind":"subtotal","groupBy":0,"function":"sum","columns":[1]}"#).is_err(), "needs three rows");
+        assert!(book.outline_op(0, 700, 0, 0, 2, r#"{"kind":"group","axis":"rows"}"#).is_err());
+        assert!(book.outline_op(0, 0, 0, 20_000, 1, r#"{"kind":"group","axis":"rows"}"#).is_err());
+        assert!(book.outline_op(9, 700, 0, 4, 2, r#"{"kind":"group","axis":"rows"}"#).is_err());
+        book.session.run("review.protectSheet", json!({})).unwrap();
+        assert!(book.outline_op(0, 701, 0, 2, 1, r#"{"kind":"group","axis":"rows"}"#).unwrap_err().contains("protected"));
     }
     #[test]
     fn objects_insert_move_and_delete_in_single_undo_steps_and_refuse_bad_input() {

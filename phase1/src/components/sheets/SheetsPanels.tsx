@@ -19,6 +19,7 @@ import {headerProblem,MAX_HEADER_CHARS} from '../../lib/sheets/printOps';
 import {MAX_ZOOM,MIN_ZOOM} from '../../lib/sheets/viewOps';
 import {MAX_TITLE_CHARS,sparklineBlockProblem} from '../../lib/sheets/chartOps';
 import {OBJECT_GROUPS,SHAPE_FILLS,SHAPE_LINES,MAX_PICTURE_BYTES,MAX_SHAPE_TEXT,MAX_ALT,buildObjectOp,bytesToBase64,objectIsShape,objectNeedsPick,type ObjectAction} from '../../lib/sheets/objectOps';
+import {SUBTOTAL_FUNCS,MAX_SUBTOTAL_ROWS,parseColumnList,type SubtotalFunc} from '../../lib/sheets/outlineOps';
 import {viewNameProblem,MAX_VIEW_NAME} from '../../lib/sheets/savedViews';
 import {WHATIF_GROUPS,buildWhatIfOp,whatIfNeeds,type WhatIfAction} from '../../lib/sheets/whatIfOps';
 import {ALLOW_PRESETS,MAX_PASSWORD_CHARS,passwordBad} from '../../lib/sheets/protectOps';
@@ -230,6 +231,7 @@ export function SheetsLayoutPanel({context}:PanelHostProps){
   <ProtectGroup/>
   <WhatIfGroup/>
   <ObjectsGroup/>
+  <OutlineGroup/>
   <SavedViewsGroup/>
   <TablesGroup/>
   <PivotGroup/>
@@ -399,6 +401,32 @@ function WhatIfGroup(){
  </div>;
 }
 /** Pictures and shapes in one grouped menu. A picture is read from a chosen PNG or JPEG file; shapes and object changes are built from fields. One undo step each. */
+/** Outline: group, collapse or expand the selected lines, or insert subtotals under every run of equal values. One undo step each. */
+type OutlineAction='group'|'ungroup'|'hide'|'show'|'subtotal';
+function OutlineGroup(){
+ const {t}=useT(),s=useSheetsSelection(),action=useAction();const [act,setAct]=useState<OutlineAction>('group');const [axis,setAxis]=useState<'rows'|'cols'>('rows');const [by,setBy]=useState('');const [fn,setFn]=useState<SubtotalFunc>('sum');const [values,setValues]=useState('');
+ const r=s?.range;if(!s||!r)return null;
+ const sub=act==='subtotal',rows=r.r1-r.r0+1,letters=Array.from({length:Math.min(r.c1-r.c0+1,200)},(_,i)=>colName(r.c0+i));
+ const groupBy=by&&letters.includes(by)?by:letters[0]??'',cols=parseColumnList(values);
+ const inside=!!cols&&cols.every(c=>letters.includes(c)),ok=sub?rows>=3&&rows<=MAX_SUBTOTAL_ROWS&&inside:true;
+ const apply=()=>{if(ok)void action.run('sheets.outline',sub?{kind:'subtotal',groupBy,function:fn,columns:cols}:{kind:act,axis});};
+ const info=s.outline;
+ return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.ol.title')}>
+  <span>{t('sheets.ol.title')}</span>
+  <label className="flex flex-col gap-1">{t('sheets.ol.action')}<NativeSelect className={field} value={act} disabled={action.busy} onChange={e=>setAct(e.currentTarget.value as OutlineAction)} data-testid="sheets-ol-action">
+   <optgroup label={t('sheets.ol.groupLines')}><option value="group">{t('sheets.ol.group')}</option><option value="ungroup">{t('sheets.ol.ungroup')}</option></optgroup>
+   <optgroup label={t('sheets.ol.groupDetail')}><option value="hide">{t('sheets.ol.hide')}</option><option value="show">{t('sheets.ol.show')}</option></optgroup>
+   <optgroup label={t('sheets.ol.groupTotals')}><option value="subtotal">{t('sheets.ol.subtotal')}</option></optgroup>
+  </NativeSelect></label>
+  {!sub&&<label className="flex flex-col gap-1">{t('sheets.ol.axis')}<NativeSelect className={field} value={axis} disabled={action.busy} onChange={e=>setAxis(e.currentTarget.value as 'rows'|'cols')} data-testid="sheets-ol-axis"><option value="rows">{t('sheets.ol.rows')}</option><option value="cols">{t('sheets.ol.cols')}</option></NativeSelect></label>}
+  {sub&&<label className="flex flex-col gap-1">{t('sheets.ol.by')}<NativeSelect className={field} value={groupBy} disabled={action.busy} onChange={e=>setBy(e.currentTarget.value)} data-testid="sheets-ol-by">{letters.map(l=><option key={l} value={l}>{l}</option>)}</NativeSelect></label>}
+  {sub&&<label className="flex flex-col gap-1">{t('sheets.ol.func')}<NativeSelect className={field} value={fn} disabled={action.busy} onChange={e=>setFn(e.currentTarget.value as SubtotalFunc)} data-testid="sheets-ol-func">{SUBTOTAL_FUNCS.map(f=><option key={f} value={f}>{t('sheets.ol.f.'+f)}</option>)}</NativeSelect></label>}
+  {sub&&<label className="flex flex-col gap-1">{t('sheets.ol.values')}<NativeInput className={field} value={values} maxLength={40} aria-invalid={values!==''&&!inside} disabled={action.busy} onChange={e=>setValues(e.currentTarget.value)} data-testid="sheets-ol-values"/></label>}
+  <Button variant="outline" size="compact" disabled={action.busy||!ok} onClick={apply} data-testid="sheets-ol-apply">{t('sheets.ol.apply')}</Button>
+  <p className="text-ink-3">{t(sub?'sheets.ol.subHint':'sheets.ol.hint',{range:rangeAddress(r)})}</p>
+  {info&&(info.rows.lines>0||info.cols.lines>0)&&<p className="text-ink-3" data-testid="sheets-ol-info">{t('sheets.ol.info',{rows:info.rows.lines,cols:info.cols.lines,hidden:info.rows.hidden+info.cols.hidden})}</p>}
+ </div>;
+}
 /** Named views: the sheet, the selected cell and the zoom. Saving and deleting are workbook settings, not undo steps. */
 type ViewsAction='save'|'show'|'delete';
 function SavedViewsGroup(){
