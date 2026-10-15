@@ -60,4 +60,4 @@ export function motionBlurTicks(comp:Composition,layer:Layer,t:number):readonly 
 }
 export function motionBlurSamples(comp:Composition,layer:Layer,t:number):readonly Matrix[]{return motionBlurTicks(comp,layer,t).map(x=>x.matrix);}
 /** Text whose own content (animators, reveal) changes over time, so each blur sample draws it at its own tick. */
-export const contentSampled=(l:Layer)=>l.kind==='text'&&(!!l.animators?.some(a=>a.enabled)||!!l.textReveal?.keys.length);
+export const contentSampled=(l:Layer)=>l.kind==='text'&&(!!l.animators?.some(a=>a.enabled)||!!l.textReveal?.keys.length||!!l.textCount?.value.keys.length);

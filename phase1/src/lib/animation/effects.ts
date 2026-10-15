@@ -1,6 +1,6 @@
 import {evaluate} from './interpolate';
 import {colorAt} from './colorKeys';
-import type {Layer,LayerEffect} from './model';
+import type {Layer,LayerEffect,TextCount} from './model';
 export const EFFECT_KINDS=['blur','tint','shadow','glow','innerShadow','innerGlow'] as const;
 /** Starting values for a new effect of each kind. */
 export function defaultEffect(kind:LayerEffect['kind'],id:string,accent:string):LayerEffect{
@@ -36,8 +36,18 @@ export function effectBounds(layer:Layer,tick=0){
 }
 
 /** Unicode code points, not UTF-16 code units. Typewriter never evaluates scripts or markup. */
+/** Number as text: fixed decimals, optional thousands commas. Deterministic, no locale. */
+export function formatCount(v:number,decimals:number,grouping:boolean):string{
+ const fixed=Math.abs(v).toFixed(decimals),[int,frac]=fixed.split('.'),g=grouping?int.replace(/\B(?=(\d{3})+(?!\d))/g,','):int;
+ return (v<0&&Number(fixed)!==0?'-':'')+g+(frac?'.'+frac:'');
+}
+/** The text before the typewriter cuts it: the layer text, or its counter at `tick`. */
+export function fullText(layer:Layer,tick:number):string{
+ const base=layer.source.text??'',c:TextCount|undefined=layer.textCount;if(!c)return base;
+ const n=formatCount(evaluate(c.value,tick) as number,c.decimals,c.grouping);return base.includes('{n}')?base.split('{n}').join(n):n;
+}
 export function revealedText(layer:Layer,tick:number):string{
- const text=Array.from(layer.source.text??'');const percent=layer.textReveal?Math.max(0,Math.min(100,evaluate(layer.textReveal,tick) as number)):100;
+ const text=Array.from(fullText(layer,tick));const percent=layer.textReveal?Math.max(0,Math.min(100,evaluate(layer.textReveal,tick) as number)):100;
  return text.slice(0,Math.floor(text.length*percent/100+1e-9)).join('');
 }
 

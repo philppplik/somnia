@@ -1318,5 +1318,10 @@
  "animation.rig.slide.out.left": "Sortir par la gauche",
  "animation.rig.slide.out.right": "Sortir par la droite",
  "animation.rig.group.slide": "Entrer ou sortir",
- "cmd.animation.layers.slide": "Faire entrer ou sortir les calques cochés par un bord du canevas"
+ "cmd.animation.layers.slide": "Faire entrer ou sortir les calques cochés par un bord du canevas",
+ "animation.rig.count.100": "Compter de 0 à 100",
+ "animation.rig.count.1000": "Compter de 0 à 10 000",
+ "animation.rig.count.off": "Retirer le compteur",
+ "animation.rig.group.count": "Compteur",
+ "cmd.animation.text.count": "Faire compter les calques de texte cochés d’un nombre à un autre"
 }

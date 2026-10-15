@@ -1318,5 +1318,10 @@
  "animation.rig.slide.out.left": "Nach links ausfliegen",
  "animation.rig.slide.out.right": "Nach rechts ausfliegen",
  "animation.rig.group.slide": "Einfliegen",
- "cmd.animation.layers.slide": "Markierte Ebenen von einem Bildrand einfliegen oder hinaus fliegen lassen"
+ "cmd.animation.layers.slide": "Markierte Ebenen von einem Bildrand einfliegen oder hinaus fliegen lassen",
+ "animation.rig.count.100": "Von 0 auf 100 hochzählen",
+ "animation.rig.count.1000": "Von 0 auf 10.000 hochzählen",
+ "animation.rig.count.off": "Zähler entfernen",
+ "animation.rig.group.count": "Zähler",
+ "cmd.animation.text.count": "Markierte Textebenen von einer Zahl zu einer anderen zählen lassen"
 }

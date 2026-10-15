@@ -3,7 +3,7 @@ import {gradientAt} from '../../lib/animation/gradientAnim';
 import {repeaterCopies,repeaterAt} from '../../lib/animation/repeater';
 import {radialPath,gradientVector,CUT_KEEP,CUT_HOLE} from '../../lib/animation/shapes';
 import {layerPathD,layerFillRule} from '../../lib/animation/pathLayer';
-import {effectPrimitives,effectBounds,revealedText,strokeAttributes,layerColorsAt} from '../../lib/animation/effects';
+import {effectPrimitives,effectBounds,revealedText,fullText,strokeAttributes,layerColorsAt} from '../../lib/animation/effects';
 import type {InterfaceAsset} from '../../lib/interface/schema';
 import {StudioStatus} from '../studios/StudioStatus';
 import {useEffect,useMemo,useRef,useState,type KeyboardEvent} from 'react';
@@ -62,7 +62,7 @@ function Workspace({doc}:{doc:NonNullable<ReturnType<typeof animationSession>['d
  </div>;
 }
 function animatedText(l:Layer,at:number){
- const shown=revealedText(l,at),spans=animatedChars(l,l.source.text??'',at);
+ const shown=revealedText(l,at),spans=animatedChars(l,fullText(l,at),at);
  if(!spans)return shown;
  return spans.slice(0,Array.from(shown).length).map((c,i)=><tspan key={i} dx={c.dx} dy={c.dy} fontSize={(l.source.size??48)*c.scale} fillOpacity={c.opacity} rotate={c.rotate||undefined} fill={c.fill}>{c.ch}</tspan>);
 }

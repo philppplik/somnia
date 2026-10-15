@@ -8,7 +8,7 @@ import {validatePoseLib} from './poseModel';
 import type {InterfaceAsset} from '../interface/schema';
 import {validateAnimationAssets} from './assetsValidation';
 import {MAX_AUDIO_VOLUME,type AudioAsset} from './audioCore';
-import {validPathFx,validateLayerTemplates,type GradientStop,GRADIENT_RANGE,REPEATER_RANGE,validRepeater,STYLE_KINDS,OFFSET_KINDS,MAX_COLOR_KEYS,type ColorKey,type ColorEase,COLOR_EASES,validShutter,type Shutter,validatePrecomps,precompTransform,prop,createComposition,type TextAnimator,type LayerMask,type LayerMatte,type ClipItem,type KeyRef,type Vec2,createLayer,findComp,findLayer,PROP_META,wouldCycle,EASE_IN,EASE_OUT,TRANSFORM_KEYS,validateDocument,type AnimationDocument,type CompSettings,type Composition,type Interp,type LayerLabel,LAYER_LABELS,type Keyframe,type Layer,type LayerKind,type LayerSource,type LayerEffect,validSource,validEffects,type Property,type PropValue,type TransformKey} from './model';
+import {type TextCount,validPathFx,validateLayerTemplates,type GradientStop,GRADIENT_RANGE,REPEATER_RANGE,validRepeater,STYLE_KINDS,OFFSET_KINDS,MAX_COLOR_KEYS,type ColorKey,type ColorEase,COLOR_EASES,validShutter,type Shutter,validatePrecomps,precompTransform,prop,createComposition,type TextAnimator,type LayerMask,type LayerMatte,type ClipItem,type KeyRef,type Vec2,createLayer,findComp,findLayer,PROP_META,wouldCycle,EASE_IN,EASE_OUT,TRANSFORM_KEYS,validateDocument,type AnimationDocument,type CompSettings,type Composition,type Interp,type LayerLabel,LAYER_LABELS,type Keyframe,type Layer,type LayerKind,type LayerSource,type LayerEffect,validSource,validEffects,type Property,type PropValue,type TransformKey} from './model';
 import {setGradientStop} from './shapes';
 import {parseGradientStopLane,parseGradientLane,parseGradientColorLane,type GradientKey,type RepeaterKey,type StyleLaneId} from './keyTypes';
 import {evaluate} from './interpolate';
@@ -78,6 +78,7 @@ export type Edit=
  |{type:'layer.masks';layer:string;masks:readonly LayerMask[]}
  |{type:'layer.matte';layer:string;matte:LayerMatte|null}
  |{type:'layer.reveal';layer:string;property:Property}
+ |{type:'layer.count';layer:string;count:TextCount|undefined}
  |{type:'audio.reactive';layer:string;prop:'scale'|'opacity'|'rotation';keys:readonly {t:number;v:number}[]}
  |{type:'guides.set';guides:readonly import('./guides').Guide[]}
  |{type:'markers.set';markers:readonly import('./model').Marker[]}
@@ -368,6 +369,7 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
   case 'text.animators':{const l=layerOf(doc,e.layer);if(l.kind!=='text')fail('invalid','Text animators require a text layer.');return setLayer(doc,{...l,animators:e.animators.length?e.animators:undefined});}
   case 'layer.masks':{const l=layerOf(doc,e.layer);if(l.kind==='null'||l.kind==='audio')fail('invalid','Masks need a drawable layer.');return setLayer(doc,{...l,masks:e.masks.length?e.masks:undefined});}
   case 'layer.matte':{const l=layerOf(doc,e.layer);return setLayer(doc,{...l,matte:e.matte??undefined});}
+  case 'layer.count':{const l=layerOf(doc,e.layer);if(l.kind!=='text')fail('invalid','A counter needs a text layer.');return setLayer(doc,{...l,textCount:e.count});}
   case 'layer.reveal':{const l=layerOf(doc,e.layer);if(l.kind!=='text')fail('invalid','Typewriter requires a text layer.');return setLayer(doc,{...l,textReveal:e.property});}
   case 'effect.style':{const l=layerOf(doc,e.layer),effect=l.effects?.find(x=>x.id===e.effect)??fail('missing','Effect no longer exists.');
    if(!(STYLE_KINDS as readonly string[]).includes(effect.kind))return fail('invalid','Only shadow and glow styles have these settings.');

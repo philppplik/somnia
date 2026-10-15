@@ -1318,5 +1318,10 @@
  "animation.rig.slide.out.left": "Sair voando para a esquerda",
  "animation.rig.slide.out.right": "Sair voando para a direita",
  "animation.rig.group.slide": "Entrar ou sair voando",
- "cmd.animation.layers.slide": "Fazer as camadas marcadas entrarem ou saírem por uma borda da tela"
+ "cmd.animation.layers.slide": "Fazer as camadas marcadas entrarem ou saírem por uma borda da tela",
+ "animation.rig.count.100": "Contar de 0 a 100",
+ "animation.rig.count.1000": "Contar de 0 a 10.000",
+ "animation.rig.count.off": "Remover o contador",
+ "animation.rig.group.count": "Contador",
+ "cmd.animation.text.count": "Fazer as camadas de texto marcadas contarem de um número a outro"
 }

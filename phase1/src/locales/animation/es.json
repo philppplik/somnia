@@ -1318,5 +1318,10 @@
  "animation.rig.slide.out.left": "Salir volando hacia la izquierda",
  "animation.rig.slide.out.right": "Salir volando hacia la derecha",
  "animation.rig.group.slide": "Entrar o salir volando",
- "cmd.animation.layers.slide": "Hacer entrar o salir las capas marcadas por un borde del lienzo"
+ "cmd.animation.layers.slide": "Hacer entrar o salir las capas marcadas por un borde del lienzo",
+ "animation.rig.count.100": "Contar de 0 a 100",
+ "animation.rig.count.1000": "Contar de 0 a 10.000",
+ "animation.rig.count.off": "Quitar el contador",
+ "animation.rig.group.count": "Contador",
+ "cmd.animation.text.count": "Hacer que las capas de texto marcadas cuenten de un número a otro"
 }

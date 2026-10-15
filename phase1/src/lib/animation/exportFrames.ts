@@ -5,7 +5,7 @@ import {radialPath,gradientDefSvg} from './shapes';
 import {layerPathD,layerFillRule} from './pathLayer';
 import {validateAnimationAssets} from './assetsValidation';
 import {textFontStack,validEffects,validSource,MAX_PRECOMP_DEPTH} from './model';
-import {effectPrimitives,effectBounds,revealedText,strokeAttributes,layerColorsAt} from './effects';
+import {effectPrimitives,effectBounds,revealedText,fullText,strokeAttributes,layerColorsAt} from './effects';
 import type {InterfaceAsset} from '../interface/schema';
 import {Zip,ZipPassThrough,strToU8} from 'fflate';
 import {maskDefs,maskId,matteId,hasMasks} from './masks';
@@ -184,7 +184,7 @@ export function downloadBlob(blob:Blob,fileName:string){
 
 /** Text content of a text layer: plain, or one span per character when animators apply. Shifts and fill-opacity are exact; scale resizes the glyph. */
 function textBody(l:Layer,tick:number,size:string):string{
- const shown=revealedText(l,tick),spans=animatedChars(l,l.source.text??'',tick);
+ const shown=revealedText(l,tick),spans=animatedChars(l,fullText(l,tick),tick);
  if(!spans)return esc(shown);
  const count=Array.from(shown).length;
  return spans.slice(0,count).map(c=>`<tspan dx="${num(c.dx)}" dy="${num(c.dy)}" font-size="${num(Number(size)*c.scale)}" fill-opacity="${num(c.opacity)}"${c.rotate?` rotate="${num(c.rotate)}"`:''}${c.fill?` fill="${c.fill}"`:''}>${esc(c.ch)}</tspan>`).join('');

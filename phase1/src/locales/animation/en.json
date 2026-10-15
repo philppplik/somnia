@@ -1318,5 +1318,10 @@
  "animation.rig.slide.out.left": "Fly out to the left",
  "animation.rig.slide.out.right": "Fly out to the right",
  "animation.rig.group.slide": "Fly in or out",
- "cmd.animation.layers.slide": "Fly the ticked layers in from or out past a canvas edge"
+ "cmd.animation.layers.slide": "Fly the ticked layers in from or out past a canvas edge",
+ "animation.rig.count.100": "Count up from 0 to 100",
+ "animation.rig.count.1000": "Count up from 0 to 10,000",
+ "animation.rig.count.off": "Remove the counter",
+ "animation.rig.group.count": "Count",
+ "cmd.animation.text.count": "Count the ticked text layers from one number to another"
 }

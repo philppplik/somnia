@@ -1850,3 +1850,17 @@ test('P276 slide: flies in from past the edge, out past it, skips parented and a
  run({mode:'out',dir:'up',frames:6,layers:['b'],ease:false});k=L().transform.position.keys;
  assert.equal(k[0].t,L().outT-f(6));assert.deepEqual(k[0].v,[...home]);assert.deepEqual(k[1].v,[home[0],home[1]-c.height]);assert.equal(k[0].interp,'linear');
 });
+
+test('P277 counter: formats deterministically, replaces {n}, keys count, validates, one undo',async()=>{
+ const {formatCount,fullText,revealedText}=await import('./effects');const {countSpecs}=await import('./countCommands');const run=countSpecs()[0].run as (p?:unknown)=>unknown;
+ assert.equal(formatCount(1234567.891,2,true),'1,234,567.89');assert.equal(formatCount(-0.4,0,false),'0');assert.equal(formatCount(-12.5,1,true),'-12.5');assert.equal(formatCount(999,0,true),'999');
+ const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'text',id:'t'});s.dispatch({type:'layer.update',layer:'t',source:{text:'{n}% done'}} as never);
+ const L=()=>findComp(s.document!)!.layers.find(l=>l.id==='t')!;
+ assert.throws(()=>run({layers:['a']}),/text layer/);assert.throws(()=>run({frames:0,layers:['t']}),/1 to/);assert.throws(()=>run({layers:['t'],remove:true}),/no counter/);
+ run({from:0,to:100,frames:30,ease:false,layers:['t']});
+ assert.equal(fullText(L(),L().inT),'0% done');assert.equal(fullText(L(),L().inT+f(15)),'50% done');assert.equal(fullText(L(),L().inT+f(60)),'100% done');
+ assert.equal(revealedText(L(),L().inT+f(30)),'100% done');
+ s.undo();assert.equal(L().textCount,undefined);
+ s.dispatch({type:'layer.update',layer:'t',source:{text:'x'}} as never);run({from:0,to:10,decimals:1,layers:['t']});assert.equal(fullText(L(),L().inT+f(60)),'10.0');
+ run({remove:true,layers:['t']});assert.equal(fullText(L(),0),'x');
+});

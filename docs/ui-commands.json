@@ -3444,6 +3444,26 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.text.count",
+      "title": "Count the ticked text layers from one number to another",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "count",
+        "count up",
+        "counter",
+        "number",
+        "odometer",
+        "percent",
+        "score",
+        "statistic",
+        "tally",
+        "text"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.text.path",
       "title": "Put text on a path, move its start or take it off",
       "category": "Insert",
