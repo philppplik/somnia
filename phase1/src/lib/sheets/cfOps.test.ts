@@ -17,4 +17,8 @@ test('buildCfOp turns panel input into ops and nulls incomplete input',()=>{
  assert.deepEqual(buildCfOp('scaleBlue','','','green',4),{kind:'scale',scale:'whiteBlue'});
  assert.equal(buildCfOp('duplicate','','','green',2_000_000),null);
  for(const c of CF_CHOICES)assert.ok(buildCfOp(c,'5','9','green',4),c);
+ assert.deepEqual(buildCfOp('barGreen','','','green',4),{kind:'bar',color:'green'});
+ assert.deepEqual(buildCfOp('icons4Rating','','','green',4),{kind:'icons',set:'4Rating'});
+ assert.deepEqual(parseCfCommand({kind:'icons',set:'3Arrows',reverse:true}),{kind:'icons',set:'3Arrows',reverse:true});
+ for(const bad of [{kind:'bar',color:'pink'},{kind:'bar',color:'blue',gradient:'x'},{kind:'icons',set:'Bogus'},{kind:'icons',set:'3Arrows',reverse:1},{kind:'icons',set:'3Arrows',extra:1}])assert.throws(()=>parseCfCommand(bad),String(JSON.stringify(bad)));
 });

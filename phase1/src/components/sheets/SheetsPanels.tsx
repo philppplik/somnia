@@ -27,7 +27,7 @@ import {replaceProblem,MAX_REPLACE_TEXT} from '../../lib/sheets/replaceOps';
 import {getSheetsPanelController} from '../../lib/sheets/panelController';
 import {VALIDATION_CHOICES,buildValidationOp,MAX_ITEM_CHARS,type ValidationChoice} from '../../lib/sheets/validationOps';
 import type {CfOperator} from '../../lib/sheets/protocol';
-import {CF_CHOICES,CF_STYLES,buildCfOp,cfChoiceNeeds,MAX_CF_TEXT,type CfChoice} from '../../lib/sheets/cfOps';
+import {CF_CHOICE_GROUPS,CF_STYLES,buildCfOp,cfChoiceIsVisual,cfChoiceNeeds,MAX_CF_TEXT,type CfChoice} from '../../lib/sheets/cfOps';
 import {FILTER_CONDITIONS,MAX_FILTER_VALUE,filterValueProblem} from '../../lib/sheets/filterOps';
 import {MAX_SHEETS,sheetNameProblem} from '../../lib/sheets/sheetOps';
 import type {BorderLineStyle,FilterCondition,RangeCell} from '../../lib/sheets/protocol';
@@ -607,11 +607,11 @@ function ValidationGroup(){
 function HighlightGroup(){
  const {t}=useT(),s=useSheetsSelection(),action=useAction();const [choice,setChoice]=useState<CfChoice>('greater');const [a,setA]=useState('');const [b,setB]=useState('');const [style,setStyle]=useState<CfStyle>('lightRed');
  const r=s?.range;if(!s||!r)return null;
- const cells=(r.r1-r.r0+1)*(r.c1-r.c0+1),need=cfChoiceNeeds(choice),op=buildCfOp(choice,a,b,style,cells),scale=choice.startsWith('scale');
+ const cells=(r.r1-r.r0+1)*(r.c1-r.c0+1),need=cfChoiceNeeds(choice),op=buildCfOp(choice,a,b,style,cells),scale=cfChoiceIsVisual(choice);
  const run=(o:object)=>void action.run('sheets.highlight',o);
  return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.hl.title')}>
   <span>{t('sheets.hl.title')}</span>
-  <label className="flex flex-col gap-1">{t('sheets.hl.rule')}<NativeSelect className={field} value={choice} disabled={action.busy} onChange={e=>setChoice(e.currentTarget.value as CfChoice)} data-testid="sheets-hl-rule">{CF_CHOICES.map(c=><option key={c} value={c}>{t('sheets.hl.rule.'+c)}</option>)}</NativeSelect></label>
+  <label className="flex flex-col gap-1">{t('sheets.hl.rule')}<NativeSelect className={field} value={choice} disabled={action.busy} onChange={e=>setChoice(e.currentTarget.value as CfChoice)} data-testid="sheets-hl-rule">{CF_CHOICE_GROUPS.map(([g,list])=><optgroup key={g} label={t('sheets.hl.group.'+g)}>{list.map(c=><option key={c} value={c}>{t('sheets.hl.rule.'+c)}</option>)}</optgroup>)}</NativeSelect></label>
   {need!=='none'&&<label className="flex flex-col gap-1">{t(need==='rank'?'sheets.hl.count':need==='text'?'sheets.hl.text':'sheets.hl.value')}<NativeInput className={field} value={a} maxLength={MAX_CF_TEXT} disabled={action.busy} onChange={e=>setA(e.currentTarget.value)} data-testid="sheets-hl-value"/></label>}
   {need==='two'&&<label className="flex flex-col gap-1">{t('sheets.hl.value2')}<NativeInput className={field} value={b} maxLength={MAX_CF_TEXT} disabled={action.busy} onChange={e=>setB(e.currentTarget.value)} data-testid="sheets-hl-value2"/></label>}
   {!scale&&<label className="flex flex-col gap-1">{t('sheets.hl.style')}<NativeSelect className={field} value={style} disabled={action.busy} onChange={e=>setStyle(e.currentTarget.value as CfStyle)} data-testid="sheets-hl-style">{CF_STYLES.map(c=><option key={c} value={c}>{t('sheets.hl.style.'+c)}</option>)}</NativeSelect></label>}

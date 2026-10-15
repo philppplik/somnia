@@ -21,6 +21,7 @@ const MAX_EXPORT_BYTES: usize = 40 * 1024 * 1024;
 const MAX_HEADER_CHARS: usize = 100;
 const MAX_PASSWORD_CHARS: usize = 64;
 const MAX_CHARTS: usize = 50;
+const ICON_SETS: &[&str] = &["3Arrows", "3TrafficLights1", "3Symbols", "3Flags", "4Arrows", "4Rating", "5Arrows", "5Rating", "5Quarters"];
 const MAX_SPARKLINES: usize = 500;
 const MAX_SCENE_PRIMS: usize = 20_000;
 const MAX_TITLE_CHARS: usize = 120;
@@ -466,6 +467,7 @@ impl HeadlessWorkbook {
         for r in row..row + rows {
             for c in col..col + cols {
                 let at = CellRef::new(r, c);
+                let (mut cf_bar, mut cf_icon) = (None, None);
                 let value = sh.value(at);
                 let formula = sh.cell(at).and_then(|v| v.formula.as_ref()).map(|f| f.text.clone());
                 let base = wb.styles.get(sh.style_id(at));
@@ -494,12 +496,14 @@ impl HeadlessWorkbook {
                     if let Some(rgb) = look.scale_fill {
                         style_json_value["fill"] = json!(format!("#{:02X}{:02X}{:02X}", rgb[0], rgb[1], rgb[2]));
                     }
+                    cf_bar = look.bar.map(|(frac, rgb, gradient)| json!([frac, format!("#{:02X}{:02X}{:02X}", rgb[0], rgb[1], rgb[2]), gradient]));
+                    cf_icon = look.icon.map(|(set, idx)| json!([set, idx]));
                 }
                 cells.push(json!({
                     "address": at.a1(), "value": value, "formula": formula,
                     "text": shown.text, "numeric": shown.numeric,
                     "fmtColor": shown.color.map(format_color),
-                    "style": style_json_value,
+                    "style": style_json_value, "cfBar": cf_bar, "cfIcon": cf_icon,
                 }));
             }
         }
@@ -1947,6 +1951,28 @@ impl HeadlessWorkbook {
                 }
                 json!({"type": "top10", "rank": rank, "bottom": bottom, "percent": percent, "preset": style_of(&op)?})
             }
+            "bar" => {
+                let color = match op.get("color").and_then(|v| v.as_str()) {
+                    Some("blue") => "#638EC6",
+                    Some("green") => "#63BE7B",
+                    Some("orange") => "#FFB628",
+                    Some("red") => "#F8696B",
+                    _ => return Err("unsupported data bar color".into()),
+                };
+                let gradient = match op.get("gradient") {
+                    None => true,
+                    Some(v) => v.as_bool().ok_or("gradient must be true or false")?,
+                };
+                json!({"type": "dataBar", "color": color, "gradient": gradient})
+            }
+            "icons" => {
+                let set = op.get("set").and_then(|v| v.as_str()).filter(|s| ICON_SETS.contains(s)).ok_or("unsupported icon set")?;
+                let reverse = match op.get("reverse") {
+                    None => false,
+                    Some(v) => v.as_bool().ok_or("reverse must be true or false")?,
+                };
+                json!({"type": "iconSet", "set": set, "reverse": reverse})
+            }
             "scale" => {
                 let colors: [&str; 3] = match op.get("scale").and_then(|v| v.as_str()) {
                     Some("greenYellowRed") => ["#63BE7B", "#FFEB84", "#F8696B"],
@@ -2923,6 +2949,10 @@ mod tests {
         assert_eq!(fill(&book, 52), serde_json::Value::Null);
         book.cf_range(0, 50, 0, 3, 1, op).unwrap();
         book.cf_range(0, 50, 0, 3, 1, r#"{"kind":"scale","scale":"whiteBlue"}"#).unwrap();
+        book.cf_range(0, 50, 0, 3, 1, r#"{"kind":"bar","color":"green","gradient":false}"#).unwrap();
+        book.cf_range(0, 50, 0, 3, 1, r#"{"kind":"icons","set":"4Rating","reverse":true}"#).unwrap();
+        let shown = book.view_range(0, 50, 0, 3, 1).unwrap();
+        assert!(shown.contains("\"cfBar\":[") && shown.contains("\"cfIcon\":[\"4Rating\""), "bars and icons reach the grid");
         book.cf_range(0, 50, 0, 3, 1, r#"{"kind":"clearAll"}"#).unwrap();
         assert_eq!(fill(&book, 52), serde_json::Value::Null);
         assert!(book.cf_range(0, 50, 0, 3, 1, r#"{"kind":"clearAll"}"#).is_err(), "nothing left to clear");
@@ -2937,6 +2967,10 @@ mod tests {
             r#"{"kind":"flag","flag":"expression","style":"green"}"#,
             r#"{"kind":"scale","scale":"rainbow"}"#,
             r#"{"kind":"expression"}"#,
+            r#"{"kind":"bar","color":"pink"}"#,
+            r#"{"kind":"bar","color":"blue","gradient":"x"}"#,
+            r#"{"kind":"icons","set":"Bogus"}"#,
+            r#"{"kind":"icons","set":"3Arrows","reverse":1}"#,
         ] {
             assert!(book.cf_range(0, 50, 0, 3, 1, bad).is_err(), "{bad}");
         }

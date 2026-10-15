@@ -1,5 +1,6 @@
 import {SheetsLiveSelectionReview} from './SheetsLiveSelectionReview';import {reviewLiveSheetSelection} from '../../lib/sheets/liveSelectionReview';import '../../lib/sheets/panelI18n';import {registerSheetsPanelController,type SheetsPanelController} from '../../lib/sheets/panelController';
 import {parsePanelRange,rangeAddress} from '../../lib/sheets/panelModel';
+import {cfLayers,type CfLayer} from '../../lib/sheets/cfVisuals';
 import {parseAddress,MAX_ROWS,MAX_COLS} from '../../lib/sheets/format';
 import {studioContextStore} from '../../lib/shell/studioContext';
 import {reportError} from '../../lib/log';
@@ -290,6 +291,7 @@ function Workbook({item}:{item:MediaItem}){
   if(collab.current){if(kind==='undo')collab.current.binding.undo();else collab.current.binding.redo();}
   else{await (kind==='undo'?engine.current!.undo():engine.current!.redo());await syncSheets();}
   setDirty(true);setRev(r=>r+1);}catch(e){fail(e);}};
+ const cellBackground=(l:CfLayer|null,overlay:boolean):React.CSSProperties=>{const o='linear-gradient(rgba(59,130,246,0.16),rgba(59,130,246,0.16))';if(!l)return overlay?{backgroundImage:o}:{};return overlay?{backgroundImage:o+', '+l.image,backgroundSize:'auto, '+l.size,backgroundPosition:'0 0, '+l.position,backgroundRepeat:'repeat, no-repeat'}:{backgroundImage:l.image,backgroundSize:l.size,backgroundPosition:l.position,backgroundRepeat:'no-repeat'};};
  const side=(b:{w:number;style:string;color:string}|null|undefined)=>b?`${Math.max(1,Math.min(3,Math.round(b.w)))}px ${b.style} ${b.color}`:undefined;
  const renderCells=()=>{
   const fr=geo.freezeRows,fc=geo.freezeCols;const out:React.ReactNode[]=[];const seen=new Set<string>();
@@ -297,13 +299,13 @@ function Workbook({item}:{item:MediaItem}){
   for(const r of rowsList)for(const c of colsList){
    const box=geo.box(r,c);if(!box||box.width===0||box.height===0)continue;
    const a=addressOf(r,c);if(seen.has(a))continue;seen.add(a);const cell=cells.get(a);const selected=r===sel.row&&c===sel.col;const st=cell?.style;
-   const frozenR=r<fr,frozenC=c<fc;const align=cellAlign(st?.h,cell);const bd=st?.borders;
+   const cfl=cfLayers(cell?.cfBar,cell?.cfIcon,geo.zoom);const frozenR=r<fr,frozenC=c<fc;const align=cellAlign(st?.h,cell);const bd=st?.borders;
    const css:React.CSSProperties={position:'absolute',left:HEAD_W+box.left+(frozenC?view.left:0),top:HEAD_H+box.top+(frozenR?view.top:0),width:box.width,height:box.height,textAlign:align,zIndex:frozenR&&frozenC?3:frozenR||frozenC?2:undefined,
     fontFamily:st?.font?`"${st.font}", system-ui, sans-serif`:undefined,fontSize:st?.size?`${Math.round(st.size*96/72*geo.zoom*10)/10}px`:geo.zoom!==1?`${Math.round(12*geo.zoom*10)/10}px`:undefined,
     fontWeight:st?.bold?700:undefined,fontStyle:st?.italic?'italic':undefined,textDecoration:[st?.underline?'underline':'',st?.strike?'line-through':''].filter(Boolean).join(' ')||undefined,
     color:isErrorValue(cell?.value)?undefined:(cell?.fmtColor??st?.color??undefined),backgroundColor:st?.fill??((frozenR||frozenC)?'var(--surface, #fff)':undefined),
-    borderLeft:side(bd?.l),borderRight:side(bd?.r),backgroundImage:multi&&inRect(range,r,c)&&!selected?'linear-gradient(rgba(59,130,246,0.16),rgba(59,130,246,0.16))':undefined,borderTop:side(bd?.t),borderBottom:side(bd?.b),boxSizing:'border-box',
-    whiteSpace:st?.wrap?'pre-wrap':'nowrap',overflow:'hidden',textOverflow:st?.wrap?'clip':'ellipsis',lineHeight:st?.wrap||st?.v==='top'?`${Math.round(16*geo.zoom)}px`:`${Math.max(16,box.height-1)}px`,...(st?.indent?{[align==='right'?'paddingRight':'paddingLeft']:6+st.indent*9}:{})};
+    borderLeft:side(bd?.l),borderRight:side(bd?.r),...cellBackground(cfl,multi&&inRect(range,r,c)&&!selected),borderTop:side(bd?.t),borderBottom:side(bd?.b),boxSizing:'border-box',
+    whiteSpace:st?.wrap?'pre-wrap':'nowrap',overflow:'hidden',textOverflow:st?.wrap?'clip':'ellipsis',lineHeight:st?.wrap||st?.v==='top'?`${Math.round(16*geo.zoom)}px`:`${Math.max(16,box.height-1)}px`,...(cfl?.padLeft&&!st?.indent?{paddingLeft:cfl.padLeft}:{}),...(st?.indent?{[align==='right'?'paddingRight':'paddingLeft']:6+st.indent*9}:{})};
    out.push(<div key={a} role="gridcell" aria-selected={selected||(multi&&inRect(range,r,c))} aria-rowindex={r+1} aria-colindex={c+1} data-address={a} data-frozen={frozenR||frozenC?'true':undefined} data-merged={geo.mergeCovering(r,c)?'true':undefined}
     className={'border-b border-r px-1.5 text-[12px] '+(layout?.showGridlines===false?'border-transparent ':'border-subtle ')+(selected?(st?.fill?'':'bg-hover ')+'outline outline-2 -outline-offset-2 outline-accent':'')+(isErrorValue(cell?.value)?' text-red-600':'')}
     style={css}

@@ -6,7 +6,7 @@ export interface SheetInfo{sheet:number;rows:number;cols:number;canUndo:boolean;
 export interface RangeCell{address:string;value:CellValue;formula:string|null}
 export interface CellStyle{bold:boolean;italic:boolean;strike:boolean;underline:boolean;color:string|null;fill:string|null;h:'left'|'center'|'right'|'general';wrap:boolean;indent?:number;v?:'top'|'middle'|'bottom';fmt:string;font:string;size:number;borders:{l:BorderSide|null;r:BorderSide|null;t:BorderSide|null;b:BorderSide|null}}
 export interface BorderSide{w:number;style:'solid'|'dashed'|'dotted'|'double';color:string}
-export interface ViewCell extends RangeCell{text:string;numeric:boolean;fmtColor:string|null;style:CellStyle}
+export interface ViewCell extends RangeCell{text:string;numeric:boolean;fmtColor:string|null;style:CellStyle;cfBar?:[number,string,boolean]|null;cfIcon?:[string,number]|null}
 export interface ViewResult{sheet:number;row:number;col:number;rows:number;cols:number;cells:ViewCell[]}
 export interface SheetLayout{sheet:number;defaultColWidth:number;defaultRowHeight:number;cols:{i:number;w:number;hidden:boolean}[];rows:{i:number;h:number;hidden:boolean}[];showGridlines:boolean;zoom?:number;protection?:ProtectionInfo|null;workbookLocked?:boolean;freeze:{rows:number;cols:number}|null;merges:{r0:number;c0:number;r1:number;c1:number}[]}
 export interface RangeResult{sheet:number;row:number;col:number;rows:number;cols:number;cells:RangeCell[]}
@@ -79,10 +79,12 @@ export interface SheetsEditReceipt{sheet:number;address:string;beforeRevision:nu
 export type CfStyle='lightRed'|'yellow'|'green'|'redText';
 export type CfScale='greenYellowRed'|'redYellowGreen'|'whiteBlue'|'whiteRed';
 export type CfOperator='greater'|'less'|'equal'|'notEqual'|'greaterOrEqual'|'lessOrEqual'|'between'|'notBetween';
+export type CfBarColor='blue'|'green'|'orange'|'red';
+export type CfIconSet='3Arrows'|'3TrafficLights1'|'3Symbols'|'3Flags'|'4Arrows'|'4Rating'|'5Arrows'|'5Rating'|'5Quarters';
 export type CfFlag='blanks'|'noBlanks'|'errors'|'noErrors'|'duplicate'|'unique'|'aboveAverage'|'belowAverage';
 export type CfTextMode='contains'|'notContains'|'beginsWith'|'endsWith';
 /** Highlight rules: a closed set of shapes, no formulas. */
-export type CfOp={kind:'cell';operator:CfOperator;value:string|number;value2?:string|number;style:CfStyle}|{kind:'text';mode:CfTextMode;text:string;style:CfStyle}|{kind:'flag';flag:CfFlag;style:CfStyle}|{kind:'top';rank:number;bottom:boolean;percent:boolean;style:CfStyle}|{kind:'scale';scale:CfScale}|{kind:'clear'}|{kind:'clearAll'};
+export type CfOp={kind:'cell';operator:CfOperator;value:string|number;value2?:string|number;style:CfStyle}|{kind:'text';mode:CfTextMode;text:string;style:CfStyle}|{kind:'flag';flag:CfFlag;style:CfStyle}|{kind:'top';rank:number;bottom:boolean;percent:boolean;style:CfStyle}|{kind:'scale';scale:CfScale}|{kind:'bar';color:CfBarColor;gradient?:boolean}|{kind:'icons';set:CfIconSet;reverse?:boolean}|{kind:'clear'}|{kind:'clearAll'};
 /** Data validation: a closed set of shapes, no custom formulas. */
 export type ValidationOp={kind:'list';items:string[]}|{kind:'listRange';source:string}|{kind:'number';whole:boolean;operator:CfOperator;value:number;value2?:number}|{kind:'length';operator:CfOperator;value:number;value2?:number}|{kind:'clear'};
 /** Find and replace inside the selected block. Literal text, no wildcards. */
