@@ -188,6 +188,7 @@ export type DocumentsRequest=
  |{id:number;kind:'save';date?:string;author?:string}
  |{id:number;kind:'exportPdf';options?:PdfOptions;date?:string}
  |{id:number;kind:'exportFormat';ext:ExportExt}
+ |{id:number;kind:'importFormat';ext:ExportExt;bytes:ArrayBuffer}
  |{id:number;kind:'close'};
 export type DocumentsResponse=
  |{id:number;ok:true;kind:'ready';initMs:number}

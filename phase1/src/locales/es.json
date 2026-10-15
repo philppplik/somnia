@@ -2546,6 +2546,7 @@
   "documents.export.otherNote": "Escribe el texto y la estructura, como títulos, listas y tablas. No se conservan el diseño de página, los encabezados, los pies ni los comentarios. El documento abierto nunca cambia.",
   "documents.export.saveOther": "Guardar archivo",
   "documents.export.formatInvalid": "Elige Markdown, HTML, texto sin formato, RTF u ODT.",
+  "cmd.documents.import.file": "Abrir un archivo Markdown, HTML, de texto, RTF u ODT como documento",
   "cmd.documents.export.format": "Exportar en otro formato",
   "documents.list.demote": "Bajar de nivel el elemento de lista",
   "documents.find.label": "Buscar y reemplazar",

@@ -2546,6 +2546,7 @@
   "documents.export.otherNote": "Writes text and structure such as headings, lists and tables. Page layout, headers, footers and comments are not kept. The opened document is never changed.",
   "documents.export.saveOther": "Save file",
   "documents.export.formatInvalid": "Choose Markdown, HTML, plain text, RTF or ODT.",
+  "cmd.documents.import.file": "Open a Markdown, HTML, text, RTF or ODT file as a document",
   "cmd.documents.export.format": "Export as another format",
   "documents.list.demote": "Demote list item",
   "documents.find.label": "Find and replace",

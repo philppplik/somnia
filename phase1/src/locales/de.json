@@ -2546,6 +2546,7 @@
   "documents.export.otherNote": "Schreibt Text und Struktur wie Überschriften, Listen und Tabellen. Seitenlayout, Kopf- und Fußzeilen und Kommentare bleiben nicht erhalten. Das geöffnete Dokument wird nie verändert.",
   "documents.export.saveOther": "Datei speichern",
   "documents.export.formatInvalid": "Wähle Markdown, HTML, Nur Text, RTF oder ODT.",
+  "cmd.documents.import.file": "Markdown-, HTML-, Text-, RTF- oder ODT-Datei als Dokument öffnen",
   "cmd.documents.export.format": "In anderem Format exportieren",
   "documents.list.demote": "Listeneintrag tieferstufen",
   "documents.find.label": "Suchen und Ersetzen",

@@ -3313,6 +3313,21 @@ impl DocSession {
         }
         Ok(bytes)
     }
+    /// Reads a Markdown, HTML, plain text, RTF or ODT file and writes it as DOCX bytes the normal open path takes.
+    fn do_import_format(ext: &str, bytes: &[u8]) -> Result<Vec<u8>, String> {
+        if bytes.len() > 16 * 1024 * 1024 {
+            return Err("adapter input limit: 16 MiB".into());
+        }
+        if !["txt", "md", "html", "rtf", "odt"].contains(&ext) {
+            return Err("the import format is txt, md, html, rtf or odt".into());
+        }
+        let doc = wordcraft_formats::import(ext, bytes).ok_or_else(|| "that format is not available".to_string())??;
+        let out = wordcraft_docx::write(&doc).map_err(|e| e.to_string())?;
+        if out.len() > 16 * 1024 * 1024 {
+            return Err("the converted document is larger than 16 MiB".into());
+        }
+        Ok(out)
+    }
     fn do_export_pdf(&self, opts_json: &str) -> Result<Vec<u8>, String> {
         self.do_export_pdf_at(opts_json, "")
     }
@@ -3730,6 +3745,10 @@ impl DocSession {
     /// Crop in percent from the left, top, right and bottom (each 0 to 90, at most 90 per axis together).
     pub fn set_image_crop(&mut self, block: usize, left: f32, top: f32, right: f32, bottom: f32) -> Result<(), JsValue> {
         self.do_set_image_crop(block, left, top, right, bottom).map_err(|e| js_err(&e))
+    }
+    /// Converts a `txt`, `md`, `html`, `rtf` or `odt` file to DOCX bytes (static: no session needed).
+    pub fn import_format(ext: &str, bytes: &[u8]) -> Result<Vec<u8>, JsValue> {
+        Self::do_import_format(ext, bytes).map_err(|e| js_err(&e))
     }
     /// Exports as `txt`, `md`, `html`, `rtf` or `odt`.
     pub fn export_format(&self, ext: &str) -> Result<Vec<u8>, JsValue> {
@@ -4227,6 +4246,20 @@ mod tests {
         }
         // The document itself is untouched.
         assert!(s.text().contains("Exported words"));
+    }
+    #[test]
+    fn import_formats_become_openable_docx_and_bad_input_fails() {
+        let md = b"# Title\n\nSome *body* text.\n";
+        let docx = DocSession::do_import_format("md", md).unwrap();
+        let s = DocSession::from_bytes(&docx).unwrap();
+        assert!(s.text().contains("Title") && s.text().contains("body"));
+        let txt = DocSession::do_import_format("txt", b"plain words").unwrap();
+        assert!(DocSession::from_bytes(&txt).unwrap().text().contains("plain words"));
+        for bad in ["", "docx", "pdf", "MD", "../x"] {
+            assert!(DocSession::do_import_format(bad, md).is_err(), "{bad}");
+        }
+        assert!(DocSession::do_import_format("odt", b"not a zip").is_err());
+        assert!(DocSession::do_import_format("txt", &vec![b'a'; 17 * 1024 * 1024]).is_err());
     }
     #[test]
     fn proofing_lists_issues_with_offsets_and_skips_marked_text() {

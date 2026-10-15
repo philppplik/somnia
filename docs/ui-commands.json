@@ -4364,6 +4364,17 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.import.file",
+      "title": "Open a Markdown, HTML, text, RTF or ODT file as a document",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.indent.decrease",
       "title": "Decrease indent",
       "category": "View",

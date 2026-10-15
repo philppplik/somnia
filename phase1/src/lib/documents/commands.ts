@@ -11,6 +11,7 @@ import {styleList} from './styles';
 import {goToBlock,scrollToPage} from './navigate';
 import {safeCopyName,safeFormatName,safePdfName} from './saveCopy';
 import {EXPORT_EXTS,type ExportExt} from './protocol';
+import {pickAndImport} from './importFormat';
 import {commentsOpen,setCommentsOpen} from './comments';
 import {setShortcutsOpen} from './shortcuts';
 import {setParagraphOptionsOpen} from './paragraphOptions';
@@ -49,6 +50,9 @@ export function registerDocumentsCommands(){
    for(const k of ['markup','tagged'])if(r?.[k]!==undefined&&typeof r[k]!=='boolean')throw expected(`Invalid "${k}".`);
    patchDocumentsExportUi({pdfPages:typeof pg==='string'?pg:'',pdfMarkup:r?.markup===true,pdfTagged:r?.tagged!==false,pdfName:typeof n==='string'&&n.trim()?safePdfName(n,getDocumentsState().name):null});await requestDocumentsExportPdf();
   },()=>documentsExportReady(),'Project',()=>'hero.export.none'),
+  add('documents.import.file','Open a Markdown, HTML, text, RTF or ODT file as a document',async()=>{
+   const r=await pickAndImport();if(r&&'error' in r)throw expected(r.error);
+  }),
   add('documents.export.format','Export as another format',async p=>{
    const r=p as Record<string,unknown>|undefined;const f=r?.format;
    if(typeof f!=='string'||!(EXPORT_EXTS as readonly string[]).includes(f))throw expected('Invalid "format": use md, html, txt, rtf or odt.');

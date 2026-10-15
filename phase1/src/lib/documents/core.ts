@@ -268,6 +268,16 @@ export class DocumentsCore{
     if(!(bytes instanceof Uint8Array)||bytes.length<5||bytes.length>MAX_PDF_BYTES||String.fromCharCode(bytes[0],bytes[1],bytes[2],bytes[3],bytes[4])!=='%PDF-')throw new Error('The PDF could not be written.');
     const buf=ab(bytes);return{res:{id:req.id,ok:true,kind:'saved',bytes:buf,saveMs},transfer:[buf]};
    }
+   if(req.kind==='importFormat'){
+    if(!(EXPORT_EXTS as readonly unknown[]).includes(req.ext))throw new Error('Choose a Markdown, HTML, text, RTF or ODT file.');
+    if(!(req.bytes instanceof ArrayBuffer)||req.bytes.byteLength===0)throw new Error('The file is empty.');
+    if(req.bytes.byteLength>MAX_DOCX_BYTES)throw new Error('The file is larger than 16 MB.');
+    const conv=(this.Session as unknown as {import_format?:(e:string,b:Uint8Array)=>Uint8Array}).import_format;
+    if(!conv)throw new Error('This engine cannot import that format.');
+    const [bytes,saveMs]=this.timed(()=>conv.call(this.Session,req.ext,new Uint8Array(req.bytes)));
+    if(!(bytes instanceof Uint8Array)||bytes.length===0||bytes.length>MAX_DOCX_BYTES)throw new Error('The file could not be converted.');
+    const buf=ab(bytes);return{res:{id:req.id,ok:true,kind:'saved',bytes:buf,saveMs},transfer:[buf]};
+   }
    if(req.kind==='exportFormat'){
     if(!(EXPORT_EXTS as readonly unknown[]).includes(req.ext))throw new Error('Choose Markdown, HTML, plain text, RTF or ODT.');
     const s=this.need();if(!s.export_format)throw new Error('This engine cannot export that format.');
