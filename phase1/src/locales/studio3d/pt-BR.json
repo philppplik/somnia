@@ -1004,5 +1004,6 @@
  "studio3d.edit.knifeZ": "Ponto do plano Z",
  "studio3d.edit.knifeNx": "Normal do plano X",
  "studio3d.edit.knifeNy": "Normal do plano Y",
- "studio3d.edit.knifeNz": "Normal do plano Z"
+ "studio3d.edit.knifeNz": "Normal do plano Z",
+ "cmd.studio3d.edit.selectPath": "Selecionar o caminho de arestas mais curto entre dois vértices da malha 3D editada"
 }

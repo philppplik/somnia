@@ -1004,5 +1004,6 @@
  "studio3d.edit.knifeZ": "Point du plan Z",
  "studio3d.edit.knifeNx": "Normale du plan X",
  "studio3d.edit.knifeNy": "Normale du plan Y",
- "studio3d.edit.knifeNz": "Normale du plan Z"
+ "studio3d.edit.knifeNz": "Normale du plan Z",
+ "cmd.studio3d.edit.selectPath": "Sélectionne le plus court chemin d'arêtes entre deux sommets du maillage 3D édité"
 }

@@ -1230,6 +1230,7 @@ export default function Viewport3D(){
    editMergeByDistance:distance=>{stage.editMergeByDistance(distance);patchEdit();invalidate();},
    editBisect:(axis,offset,fill)=>{stage.editBisect(axis,offset,fill);patchEdit();invalidate();},
    editKnife:(px,py,pz,nx,ny,nz)=>{stage.editKnife(px,py,pz,nx,ny,nz);patchEdit();invalidate();},
+   editSelectPath:(from,to,kind)=>{stage.editSelectPath(from,to,kind);patchEdit();invalidate();},
    editSelectLoop:()=>{stage.editSelectLoop();patchEdit();invalidate();},
   editBridgeFaces:(twist)=>{stage.editBridgeFaces(twist);patchEdit();invalidate();},
   editVertSlide:(edge,factor)=>{stage.editVertSlide(edge,factor);patchEdit();invalidate();},

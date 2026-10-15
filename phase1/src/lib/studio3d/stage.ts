@@ -12,7 +12,7 @@ import {buildExtras,type ClipMeta,type MetaTrack} from './clipMeta';
 import {groupRefs,keyIndices,copyTrackKeys,shiftTrackKeys,pasteTrackKeys,type KeyRef,type KeyData,type TrackData} from './keyEdit';
 import {convexHullMesh} from './convexHull';
 import {shrinkwrapMesh} from './shrinkwrap';
-import {extrudeFaces,insetFaces,bevelVertices,deleteElements,weldSelected,subdivideFaces,pokeFaces,duplicateFaces,fattenSelected,relaxSelected,flipFaces,dissolveFaces,fillSelected,collapseSelected,toSphereSelected,randomizeSelected,moveSelected,ripSelected,extractFaces,sharpEdges,similarFaces,rotateSelected,scaleSelected,shearSelected,flipEdges,mergeByDistanceSelected,bisectEdit,edgeLoop,bridgeFacesSelected,vertSlideSelected,loopCut,bevelEdges,slideEdges,mirrorCombine,symmetrizeMesh,subdivideLoop,cleanupMesh,flipMesh,outsideMesh,smoothMesh,separateMesh,solidifyMesh,fillHolesMesh,relaxMesh,fattenMesh,bisectMesh,knifeMesh,twistMesh,taperMesh,spinMesh,bridgeMesh,remeshMesh,EditError,MAX_EDIT_VERTICES,MAX_EDIT_TRIANGLES,type MeshData,type CleanupResult,type NormalsOp} from './editMesh';
+import {extrudeFaces,insetFaces,bevelVertices,deleteElements,weldSelected,subdivideFaces,pokeFaces,duplicateFaces,fattenSelected,relaxSelected,flipFaces,dissolveFaces,fillSelected,collapseSelected,toSphereSelected,randomizeSelected,moveSelected,ripSelected,extractFaces,sharpEdges,similarFaces,rotateSelected,scaleSelected,shearSelected,flipEdges,mergeByDistanceSelected,bisectEdit,edgeLoop,bridgeFacesSelected,vertSlideSelected,loopCut,bevelEdges,slideEdges,mirrorCombine,symmetrizeMesh,subdivideLoop,cleanupMesh,flipMesh,outsideMesh,smoothMesh,separateMesh,solidifyMesh,fillHolesMesh,relaxMesh,fattenMesh,bisectMesh,knifeMesh,shortestPath,twistMesh,taperMesh,spinMesh,bridgeMesh,remeshMesh,EditError,MAX_EDIT_VERTICES,MAX_EDIT_TRIANGLES,type MeshData,type CleanupResult,type NormalsOp} from './editMesh';
 import {sculptDab,paintMask,SculptError,type SculptOpts} from './sculpt';
 import {KEY_PATHS,KEY_STRIDE,ClipError,MAX_CLIPS,MAX_KEYS_PER_TRACK,DEFAULT_CLIP_SECONDS,insertKey,removeKey as removeKeyData,findKey,isPlainTrack,trackName,parseTrackName,checkKeyTime,checkDuration,checkClipName,lastKeyTime,type KeyPath} from './clips';
 import {mergeTransform,DEFAULT_TRANSFORM,UvError,type TextureTransform} from './uv';
@@ -940,6 +940,29 @@ export class Stage{
  editFlipEdge(){this.editOp({key:'studio3d.hist.editFlipEdge'},m=>flipEdges(m,[...this.editSel.edges.values()]));}
  editMergeByDistance(distance:number){this.editOp({key:'studio3d.hist.editMergeByDistance'},m=>mergeByDistanceSelected(m,[...this.editSel.verts],distance));}
  editBisect(axis:'x'|'y'|'z',offset:number,fill:boolean){this.editOp({key:'studio3d.hist.editBisect'},m=>bisectEdit(m,axis,offset,fill));this.editSel={verts:new Set(),edges:new Map(),faces:new Set()};}
+ /** Selects the shortest edge path between two vertices (Dijkstra by edge length), replacing the vertex or edge selection. Selection changes are not undo steps. */
+ editSelectPath(from:number,to:number,kind:'vertex'|'edge'){
+  const m=this.editMesh();
+  const data=this.meshDataOf(m);
+  let path:string[];
+  try{path=shortestPath(data,from,to);}catch(e){throw e instanceof EditError?new StageError(e.message):e;}
+  const onPath=new Set(path);
+  const pk=(v:number)=>`${Math.round(data.positions[v*3]*1e6)},${Math.round(data.positions[v*3+1]*1e6)},${Math.round(data.positions[v*3+2]*1e6)}`;
+  if(kind==='vertex'){
+   this.editSel.verts=new Set();
+   for(let v=0;v<data.positions.length/3;v++)if(onPath.has(pk(v)))this.editSel.verts.add(v);
+  }else{
+   const hops=new Set<string>();
+   for(let i=0;i+1<path.length;i++)hops.add(`${path[i]}|${path[i+1]}`).add(`${path[i+1]}|${path[i]}`);
+   this.editSel.edges=new Map();
+   for(let f=0;f<data.index.length/3;f++)for(let e=0;e<3;e++){
+    const a=data.index[f*3+e],b=data.index[f*3+(e+1)%3];
+    if(a===b||!hops.has(`${pk(a)}|${pk(b)}`))continue;
+    const lo=Math.min(a,b),hi=Math.max(a,b);
+    this.editSel.edges.set(`${lo}_${hi}`,[lo,hi]);
+   }
+  }
+ }
  /** Slices the selected faces with a free plane (point + normal), keeping both sides connected in the same mesh, one undo step. */
  editKnife(px:number,py:number,pz:number,nx:number,ny:number,nz:number){this.editOp({key:'studio3d.hist.editKnife'},m=>knifeMesh(m,px,py,pz,nx,ny,nz,[...this.editSel.faces]));}
  /** Rips the selected edit-mode faces off the rest of the mesh by duplicating the shared vertices, one undo step. The selection stays. */

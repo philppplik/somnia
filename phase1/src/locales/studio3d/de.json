@@ -1004,5 +1004,6 @@
  "studio3d.edit.knifeZ": "Ebenenpunkt Z",
  "studio3d.edit.knifeNx": "Ebenennormale X",
  "studio3d.edit.knifeNy": "Ebenennormale Y",
- "studio3d.edit.knifeNz": "Ebenennormale Z"
+ "studio3d.edit.knifeNz": "Ebenennormale Z",
+ "cmd.studio3d.edit.selectPath": "Den kürzesten Kantenpfad zwischen zwei Vertices des bearbeiteten 3D-Meshs auswählen"
 }

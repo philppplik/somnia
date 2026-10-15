@@ -147,6 +147,7 @@ export interface Studio3DController{
  editMergeByDistance(distance:number):void;
  editBisect(axis:'x'|'y'|'z',offset:number,fill:boolean):void;
  editKnife(px:number,py:number,pz:number,nx:number,ny:number,nz:number):void;
+ editSelectPath(from:number,to:number,kind:'vertex'|'edge'):void;
  editSelectLoop():void;
  editBridgeFaces(twist:number):void;
  editVertSlide(edge:[number,number],factor:number):void;
@@ -350,6 +351,7 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{target?:number;offset?:number}>('studio3d.edit.shrinkwrap','Project the selected vertices of the edited 3D mesh onto the closest surface of another mesh','Edit',p=>need().editShrinkwrap(p.target,p?.offset??0),object({target:{type:'integer',minimum:0},offset:{type:'number',minimum:-1000000,maximum:1000000}},['target']),()=>getStudio3DState().edit!=null),
   add<{axis?:'x'|'y'|'z';offset?:number;fill?:boolean}>('studio3d.edit.bisect','Cut the edited 3D mesh by an axis plane and keep both halves','Edit',p=>need().editBisect(p?.axis??'y',p?.offset??0,p?.fill??true),object({axis:{enum:['x','y','z']},offset:{type:'number',minimum:-1000000000,maximum:1000000000},fill:{type:'boolean'}},[]),()=>getStudio3DState().edit!=null),
   add<{x?:number;y?:number;z?:number;nx?:number;ny?:number;nz?:number}>('studio3d.edit.knife','Slice the selected faces of the edited 3D mesh with a free plane and keep both sides connected','Edit',p=>need().editKnife(p?.x??0,p?.y??0,p?.z??0,p?.nx??0,p?.ny??1,p?.nz??0),object({x:{type:'number',minimum:-1000000000,maximum:1000000000},y:{type:'number',minimum:-1000000000,maximum:1000000000},z:{type:'number',minimum:-1000000000,maximum:1000000000},nx:{type:'number',minimum:-1000000,maximum:1000000},ny:{type:'number',minimum:-1000000,maximum:1000000},nz:{type:'number',minimum:-1000000,maximum:1000000}},[]),()=>getStudio3DState().edit!=null),
+  add<{from:number;to:number;kind?:'vertex'|'edge'}>('studio3d.edit.selectPath','Select the shortest edge path between two vertices of the edited 3D mesh','Edit',p=>need().editSelectPath(p.from,p.to,p?.kind??'vertex'),object({from:{type:'integer',minimum:0},to:{type:'integer',minimum:0},kind:{enum:['vertex','edge']}},['from','to']),()=>getStudio3DState().edit!=null),
   add<{distance?:number}>('studio3d.edit.mergeByDistance','Weld the selected vertices of the edited 3D mesh that lie within the given distance','Edit',p=>need().editMergeByDistance(p?.distance??0.001),object({distance:{type:'number',exclusiveMinimum:0,maximum:1000000}},[]),()=>getStudio3DState().edit!=null),
   add('studio3d.edit.flipEdge','Rotate each selected edge of the edited 3D mesh shared by two triangles to the other diagonal','Edit',()=>need().editFlipEdge(),undefined,()=>getStudio3DState().edit!=null),
   add<{along?:'x'|'y'|'z';by?:'x'|'y'|'z';factor?:number}>('studio3d.edit.shear','Shear the selected vertices of the edited 3D mesh along one axis by their position on another','Edit',p=>need().editShear(p?.along??'x',p?.by??'y',p?.factor??0.5),object({along:{enum:['x','y','z']},by:{enum:['x','y','z']},factor:{type:'number',minimum:-1000000,maximum:1000000}},[]),()=>getStudio3DState().edit!=null),

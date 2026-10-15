@@ -1978,6 +1978,37 @@ export function bisectMesh(m:MeshData,axis:MirrorAxis,offset:number,fill:boolean
  return{neg:clip(-1),pos:clip(1)};
 }
 
+/** Shortest edge path between two vertices (Dijkstra weighted by edge length), as position keys visited from `from` to `to`. Position-equal UV-seam twins form one node, so paths cross seams the way the joined surface does. Throws when the vertices are equal, out of range, or on separate shells. */
+export function shortestPath(m:MeshData,from:number,to:number):string[]{
+ check(m);
+ const nv=m.positions.length/3;
+ if(!Number.isInteger(from)||from<0||from>=nv||!Number.isInteger(to)||to<0||to>=nv)throw new EditError('A picked vertex does not exist.');
+ const pk=(v:number)=>`${Math.round(m.positions[v*3]*1e6)},${Math.round(m.positions[v*3+1]*1e6)},${Math.round(m.positions[v*3+2]*1e6)}`;
+ const kf=pk(from),kt=pk(to);
+ if(kf===kt)throw new EditError('Pick two different vertices.');
+ const adj=new Map<string,Map<string,number>>();
+ for(let f=0;f<m.index.length/3;f++)for(let e=0;e<3;e++){
+  const a=m.index[f*3+e],b=m.index[f*3+(e+1)%3];
+  const ka=pk(a),kb=pk(b);if(ka===kb)continue;
+  const w=Math.hypot(m.positions[a*3]-m.positions[b*3],m.positions[a*3+1]-m.positions[b*3+1],m.positions[a*3+2]-m.positions[b*3+2]);
+  const n1=adj.get(ka)??adj.set(ka,new Map()).get(ka)!,n2=adj.get(kb)??adj.set(kb,new Map()).get(kb)!;
+  if(w<(n1.get(kb)??Infinity))n1.set(kb,w);
+  if(w<(n2.get(ka)??Infinity))n2.set(ka,w);
+ }
+ const dist=new Map<string,number>([[kf,0]]),prev=new Map<string,string>(),done=new Set<string>();
+ while(true){
+  let u='',best=Infinity;
+  for(const [k,d] of dist)if(!done.has(k)&&d<best){best=d;u=k;}
+  if(!u||u===kt)break;
+  done.add(u);
+  for(const [v,w] of adj.get(u)??[])if(!done.has(v)&&dist.get(u)!+w<(dist.get(v)??Infinity)){dist.set(v,dist.get(u)!+w);prev.set(v,u);}
+ }
+ if(dist.get(kt)===undefined)throw new EditError('No path between the vertices.');
+ const path:string[]=[];
+ for(let k:string|undefined=kt;k;k=prev.get(k))path.push(k);
+ return path.reverse();
+}
+
 /** Slices the selected faces with a free plane (point + normal), keeping both sides in the same mesh: crossing faces split along the plane and stay connected through the untouched faces. Unlike the bisect nothing is separated or capped, and the plane is not axis-aligned. UVs interpolate onto the cut, sculpt masks are dropped (topology changes), explicit normals are dropped (rebuilt smooth on the stage). */
 export function knifeMesh(m:MeshData,px:number,py:number,pz:number,nx:number,ny:number,nz:number,faces:number[]):MeshData{
  check(m);

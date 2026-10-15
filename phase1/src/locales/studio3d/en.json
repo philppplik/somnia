@@ -1004,5 +1004,6 @@
  "studio3d.edit.knifeZ": "Plane point Z",
  "studio3d.edit.knifeNx": "Plane normal X",
  "studio3d.edit.knifeNy": "Plane normal Y",
- "studio3d.edit.knifeNz": "Plane normal Z"
+ "studio3d.edit.knifeNz": "Plane normal Z",
+ "cmd.studio3d.edit.selectPath": "Select the shortest edge path between two vertices of the edited 3D mesh"
 }
