@@ -1367,5 +1367,6 @@
  "cmd.animation.layers.look": "Look (Füllung, Kontur, Effekte) der ersten markierten Ebene auf die anderen markierten Ebenen kopieren",
  "animation.audio.fade.in": "Einblenden",
  "animation.audio.fade.out": "Ausblenden",
- "animation.audio.fade.both": "Ein- und ausblenden"
+ "animation.audio.fade.both": "Ein- und ausblenden",
+ "animation.audio.fade": "Lautstärke-Fade…"
 }

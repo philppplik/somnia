@@ -1367,5 +1367,6 @@
  "cmd.animation.layers.look": "Copiar o visual (preenchimento, traço, efeitos) da primeira camada marcada para as outras",
  "animation.audio.fade.in": "Fade in",
  "animation.audio.fade.out": "Fade out",
- "animation.audio.fade.both": "Fade in e out"
+ "animation.audio.fade.both": "Fade in e out",
+ "animation.audio.fade": "Fade de volume…"
 }

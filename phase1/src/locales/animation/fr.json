@@ -1367,5 +1367,6 @@
  "cmd.animation.layers.look": "Copier l'apparence (remplissage, contour, effets) du premier calque coché vers les autres",
  "animation.audio.fade.in": "Fondu en entrée",
  "animation.audio.fade.out": "Fondu en sortie",
- "animation.audio.fade.both": "Entrée et sortie"
+ "animation.audio.fade.both": "Entrée et sortie",
+ "animation.audio.fade": "Fondu du volume…"
 }

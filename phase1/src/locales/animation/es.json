@@ -1367,5 +1367,6 @@
  "cmd.animation.layers.look": "Copiar el aspecto (relleno, trazo, efectos) de la primera capa marcada a las demás",
  "animation.audio.fade.in": "Fundido de entrada",
  "animation.audio.fade.out": "Fundido de salida",
- "animation.audio.fade.both": "Entrada y salida"
+ "animation.audio.fade.both": "Entrada y salida",
+ "animation.audio.fade": "Fundido de volumen…"
 }

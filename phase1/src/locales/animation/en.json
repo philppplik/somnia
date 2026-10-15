@@ -1367,5 +1367,6 @@
  "cmd.animation.layers.look": "Copy the look (fill, stroke, effects) of the first ticked layer to the other ticked layers",
  "animation.audio.fade.in": "Fade in",
  "animation.audio.fade.out": "Fade out",
- "animation.audio.fade.both": "Fade in and out"
+ "animation.audio.fade.both": "Fade in and out",
+ "animation.audio.fade": "Fade volume…"
 }
