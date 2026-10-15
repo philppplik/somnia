@@ -6183,6 +6183,28 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.zoomFitPage",
+      "title": "Zoom the document to fit a whole page",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.zoomFitWidth",
+      "title": "Zoom the document to the window width",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.zoomIn",
       "title": "Zoom in on the document",
       "category": "View",

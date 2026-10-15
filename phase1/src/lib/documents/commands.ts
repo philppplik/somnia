@@ -18,6 +18,7 @@ import {setShortcutsOpen} from './shortcuts';
 import {setParagraphOptionsOpen} from './paragraphOptions';
 import {setInfoDialog} from './infoDialog';
 import {savedAuthor} from './author';
+import {zoomToFit} from './zoomFit';
 import {pickAndInsertText} from './insertFromFile';
 import {symbolProblem,specialChar,timeText} from './symbols';
 import {getLocale as currentLocale} from '../i18n';
@@ -118,6 +119,8 @@ export function registerDocumentsCommands(){
   add('documents.select.paragraph','Select the paragraph at the caret',()=>{if(!selectUnitAtCaret('paragraph'))throw expected('Put the caret in an editable paragraph.');},()=>ready()&&!!getDocumentsState().caret),
   add('documents.zoomIn','Zoom in on the document',()=>stepZoom(1)),
   add('documents.zoomOut','Zoom out of the document',()=>stepZoom(-1)),
+  add('documents.zoomFitWidth','Zoom the document to the window width',()=>{if(!zoomToFit('width'))throw expected('Open a document first.');},()=>ready()),
+  add('documents.zoomFitPage','Zoom the document to fit a whole page',()=>{if(!zoomToFit('page'))throw expected('Open a document first.');},()=>ready()),
   add('documents.zoomReset','Reset document zoom to 100%',()=>patchDocuments({zoom:1})),
   add('documents.undo','Undo text edit',async()=>{await undoEdit();},()=>getDocumentsState().canUndo),
   add('documents.redo','Redo text edit',async()=>{await redoEdit();},()=>getDocumentsState().canRedo),

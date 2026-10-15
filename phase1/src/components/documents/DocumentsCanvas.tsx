@@ -4,6 +4,7 @@ import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {FileText,Minus,Plus,Undo2,Redo2} from '../../lib/icons';
 import {addMediaFile,findMedia,formatBytes,MEDIA_ACCEPT,useMedia} from '../../lib/media';
 import type {DocumentsEngine} from '../../lib/documents';
+import {zoomToFit} from '../../lib/documents/zoomFit';
 import {getDocumentsState,patchDocuments,resetDocuments,stepZoom,useDocuments} from '../../lib/documents/store';
 import '../../lib/documents/guards';
 import {getCollab,onSessionChange} from '../../lib/collab/session';
@@ -28,7 +29,7 @@ import {ShortcutsDialog} from './ShortcutsDialog';
 import {ParagraphDialog} from './ParagraphDialog';
 import {InfoDialogs} from './InfoDialogs';
 import {setShortcutsOpen} from '../../lib/documents/shortcuts';
-import {NativeButton,Textarea} from '../ui/native-controls';
+import {NativeButton,NativeSelect,Textarea} from '../ui/native-controls';
 import {PeerSwatch} from '../collab/PeerSwatch';
 const bar='media-bar flex items-center gap-2 border-b border-subtle px-3 py-1.5 text-[12px]';
 const tool='grid h-7 cursor-pointer grid-flow-col items-center gap-1 rounded-sm border-0 bg-transparent px-2 text-[12px] text-ink-2 hover:bg-hover disabled:cursor-default disabled:opacity-50';
@@ -154,6 +155,7 @@ export function DocumentsCanvas(){
    <NativeButton className={tool} aria-label={t('documents.undo')} title={t('documents.undo')} disabled={!doc.canUndo} onClick={()=>void undoEdit()} data-testid="documents-undo"><Undo2 size={13}/></NativeButton>
    <NativeButton className={tool} aria-label={t('documents.redo')} title={t('documents.redo')} disabled={!doc.canRedo} onClick={()=>void redoEdit()} data-testid="documents-redo"><Redo2 size={13}/></NativeButton>
    <NativeButton className={tool} aria-label={t('documents.zoomOut')} title={t('documents.zoomOut')} disabled={doc.status!=='ready'} onClick={()=>stepZoom(-1)}><Minus size={13}/></NativeButton>
+   <NativeSelect className="h-7 rounded-sm border border-subtle bg-surface px-1 text-xs text-ink" aria-label={t('documents.zoomFit')} title={t('documents.zoomFit')} disabled={doc.status!=='ready'} value="" onChange={e=>{const m=e.currentTarget.value;e.currentTarget.value='';if(m==='width'||m==='page')zoomToFit(m);}} data-testid="documents-zoom-fit"><option value="" disabled>{t('documents.zoomFit')}</option><option value="width">{t('documents.zoomFitWidth')}</option><option value="page">{t('documents.zoomFitPage')}</option></NativeSelect>
    <span className="w-10 text-center tabular-nums" data-testid="documents-zoom">{Math.round(doc.zoom*100)}%</span>
    <NativeButton className={tool} aria-label={t('documents.zoomIn')} title={t('documents.zoomIn')} disabled={doc.status!=='ready'} onClick={()=>stepZoom(1)}><Plus size={13}/></NativeButton>
    <NativeButton className={tool} disabled={doc.status!=='ready'||doc.saving} onClick={()=>void executeCommand('documents.saveCopy')} data-testid="documents-save-copy">{t('documents.saveCopy')}</NativeButton></div>
