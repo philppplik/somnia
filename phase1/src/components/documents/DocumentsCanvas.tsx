@@ -13,11 +13,13 @@ import {CELL_BASE} from '../../lib/documents/edit';
 import {stepHanging,printCurrent,moveParagraphs,setLineSpacing,toggleList,insertPageBreak,copyFormatting,pasteFormatting,selectUnitAtCaret,clearFormatting,copyLinkAt,toggleVertAlign,setFindOpen,setParagraphStyle,clearCaret,deleteAtCaret,dragTo,editParagraph,getEngine,moveCaret,pasteText,settleDocument,switchDocument,pointerAt,redoEdit,selectAllText,setAlign,shiftListLevel,tabInCell,stepFontSize,stepIndent,toggleFormat,selectedText,splitAtCaret,syncGeometry,typeText,undoEdit} from '../../lib/documents/session';
 import {specialChar} from '../../lib/documents/symbols';
 import {parsePdfPages,type PdfOptions} from '../../lib/documents/protocol';
-import {saveCopy,savePdf,saveFormat} from '../../lib/documents/saveCopy';
+import {saveCopy,saveCopyAdvanced,savePdf,saveFormat} from '../../lib/documents/saveCopy';
+import type {CorePropsMeta} from '../../lib/office/coreProps';
 import {confirmDocumentsSaveCopy,getDocumentsExportUi,patchDocumentsExportUi,registerDocumentsExport,useDocumentsExportUi} from '../../lib/documents/exportBridge';
 import {dialogTrapKeyDown} from '../../lib/focusTrap';
 import {executeCommand} from '../../lib/commands';
 import {DocumentsExportDialog} from './DocumentsExportDialog';
+import {DocumentsExportPopover} from './DocumentsExportPopover';
 import {registerDocumentPanelCommands} from '../../lib/documents/panelCommands';
 import {registerDocumentsCommands} from '../../lib/documents/commands';
 import {studioContextStore} from '../../lib/shell/studioContext';
@@ -158,8 +160,10 @@ export function DocumentsCanvas(){
  const doSaveFormat=async()=>{patchDocuments({saving:true});try{await settleDocument();const e=getEngine();if(!e)throw new Error(t('documents.session.noEngine'));const u=getDocumentsExportUi();if(u.format==='docx'||u.format==='pdf')throw new Error(t('documents.export.formatInvalid'));await saveFormat(e,doc.name,u.format,u.formatName);}catch(err){patchDocuments({editError:err instanceof Error?err.message:String(err)});}finally{patchDocuments({saving:false});patchDocumentsExportUi({formatName:null});}};
  const doSaveFormatRef=useRef(doSaveFormat);doSaveFormatRef.current=doSaveFormat;
  // One save implementation for every entry point (toolbar, hero popup, Project menu, palette).
+ const doSaveAdvanced=async(name:string,meta:CorePropsMeta)=>{patchDocuments({saving:true});try{await settleDocument();const e=getEngine();if(!e)throw new Error(t('documents.session.noEngine'));await saveCopyAdvanced(e,doc.name,name,meta);}catch(err){patchDocuments({status:'error',error:err instanceof Error?err.message:String(err)});}finally{patchDocuments({saving:false});}};
+ const doSaveAdvancedRef=useRef(doSaveAdvanced);doSaveAdvancedRef.current=doSaveAdvanced;
  const doSaveRef=useRef(doSave);doSaveRef.current=doSave;
- useEffect(()=>registerDocumentsExport({save:()=>doSaveRef.current(),savePdf:()=>doSavePdfRef.current(),saveFormat:()=>doSaveFormatRef.current()}),[]);
+ useEffect(()=>registerDocumentsExport({save:()=>doSaveRef.current(),savePdf:()=>doSavePdfRef.current(),saveFormat:()=>doSaveFormatRef.current(),saveAdvanced:(n,m)=>doSaveAdvancedRef.current(n,m)}),[]);
  if(!item)return <section className="canvas-stage flex min-h-0 flex-1" aria-label={t('documents.title')}>
   <StudioEmptyState studio="documents" icon={<FileText/>} onOpen={pick} onCreate={()=>createBlankProject('documents')}/></section>;
  return <section className="canvas-stage flex min-h-0 flex-1 flex-col" aria-label={t('documents.title')}>
@@ -190,7 +194,7 @@ export function DocumentsCanvas(){
    <h2 id="documents-confirm-title" className="text-[14px] font-medium">{t('documents.lossTitle')}</h2><p className="text-[12px] text-ink-2">{t('documents.lossBody')}</p>
    <ul className="list-disc pl-5 text-[12px] text-ink-2" data-testid="documents-loss-list">{doc.risks.map(r=><li key={r}>{t('documents.risk.'+r)}</li>)}</ul>
    <div className="flex justify-end gap-2"><NativeButton className={tool} autoFocus onClick={()=>patchDocumentsExportUi({confirmOpen:false,copyName:null})}>{t('documents.cancel')}</NativeButton><NativeButton className={tool+' border border-subtle'} onClick={()=>void confirmDocumentsSaveCopy()} data-testid="documents-save-anyway">{t('documents.saveAnyway')}</NativeButton></div></div></div>}
-  <DocumentsExportDialog/>
+  <DocumentsExportPopover/><DocumentsExportDialog/>
  </section>;
 }
 export function DocumentsInspector(){

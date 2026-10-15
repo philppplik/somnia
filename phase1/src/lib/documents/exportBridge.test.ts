@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {confirmDocumentsSaveCopy,documentsExportReady,getDocumentsExportUi,patchDocumentsExportUi,registerDocumentsExport,requestDocumentsSaveCopy} from './exportBridge';
+import {confirmDocumentsSaveCopy,documentsExportReady,getDocumentsExportUi,patchDocumentsExportUi,registerDocumentsExport,requestDocumentsSaveAdvanced,requestDocumentsSaveCopy} from './exportBridge';
 import {patchDocuments} from './store';
 
 test('export is ready only with a live bridge, a ready document and no running save',()=>{
@@ -37,4 +37,20 @@ test('a missing bridge or a busy save never throws and never saves',async()=>{
  await requestDocumentsSaveCopy();
  assert.equal(getDocumentsExportUi().confirmOpen,false);
  patchDocuments({status:'idle',saving:false});
+});
+test('advanced export queues name+metadata behind the risk gate and runs them on Save anyway',async()=>{
+ const calls:{name:string;title:string}[]=[];
+ const off=registerDocumentsExport({savePdf:async()=>undefined,save:async()=>{throw Error('plain save must not run for an advanced request');},saveAdvanced:async(name,meta)=>{calls.push({name,title:meta.title});}});
+ patchDocuments({status:'ready',saving:false,risks:['charts']});
+ await requestDocumentsSaveAdvanced('typed-name',{title:'T',author:'',description:''});
+ assert.equal(calls.length,0,'the warning can never be skipped');
+ assert.equal(getDocumentsExportUi().confirmOpen,true);
+ await confirmDocumentsSaveCopy();
+ assert.deepEqual(calls,[{name:'typed-name',title:'T'}]);
+ assert.equal(getDocumentsExportUi().pendingAdvanced,null);
+ patchDocuments({risks:[]});
+ await requestDocumentsSaveAdvanced('direct',{title:'D',author:'',description:''});
+ assert.equal(calls.length,2,'no risks: saves directly');
+ patchDocuments({status:'idle'});
+ off();
 });

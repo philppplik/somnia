@@ -16,7 +16,7 @@ export const useExportCenterOpen=()=>useSyncExternalStore(cb=>{subs.add(cb);retu
 /** Group order is dialog order; command order inside a group is dialog order. */
 export const EXPORT_GROUP_IDS:Readonly<Record<string,readonly string[]>>={
  project:['project.export','project.export.md'],
- documents:['documents.export.open','documents.saveCopy','documents.export.pdf','documents.export.copy'],
+ documents:['documents.export.advanced','documents.export.open','documents.saveCopy','documents.export.pdf','documents.export.copy'],
  sheets:['sheets.export.advanced','sheets.saveCopy'],
  slides:['slides.export.advanced','slides.saveCopy'],
  design:['design.export.open','design.exportSvg','design.exportAllSvg','design.exportProject'],

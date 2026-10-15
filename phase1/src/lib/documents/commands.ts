@@ -45,6 +45,7 @@ export function registerDocumentsCommands(){
   // Export hero (docs/concepts/hero-action-documents.md): real DOCX copy through the shared risk-gated save path.
   add('documents.export.open','Export document',()=>{patchDocumentsExportUi({exportOpen:true});},()=>documentsExportReady(),'Project',()=>'hero.export.none'),
   add('documents.saveCopy','Save a copy of the document',()=>requestDocumentsSaveCopy(),()=>documentsExportReady(),'Project',()=>'hero.export.none'),
+  add('documents.export.advanced','Documents: Advanced export with name and metadata',()=>{patchDocumentsExportUi({advancedOpen:true});},()=>documentsExportReady(),'Project',()=>'hero.export.none'),
   add('documents.export.copy','Save a copy with a file name',async p=>{
    const n=(p as Record<string,unknown>|undefined)?.name;
    if(n!==undefined&&(typeof n!=='string'||n.length>400))throw expected('Invalid "name".');

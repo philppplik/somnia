@@ -4998,6 +4998,17 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.export.advanced",
+      "title": "Advanced export...",
+      "category": "Project",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.export.copy",
       "title": "Save a copy with a file name",
       "category": "Project",

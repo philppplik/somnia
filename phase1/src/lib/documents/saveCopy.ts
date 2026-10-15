@@ -1,4 +1,5 @@
 import type {DocumentsEngine} from './engine';
+import {writeCoreProperties,type CorePropsMeta} from '../office/coreProps';
 import {savedAuthor} from './author';
 import type {ExportExt} from './protocol';
 /** Saves what the engine would write as a NEW file next to the original name. The opened file is never overwritten. */
@@ -67,4 +68,11 @@ export async function saveCopy(engine:DocumentsEngine,name:string,fileName?:stri
  const bytes=await engine.save(new Date().toISOString(),savedAuthor()||undefined);
  const url=URL.createObjectURL(new Blob([bytes as BlobPart],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}));
  const a=document.createElement('a');a.href=url;a.download=fileName?safeCopyName(fileName,name):copyName(name);a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+/** Advanced export (AE1): engine docx plus Dublin Core metadata, downloaded under the dialog-chosen (sanitized) name. */
+export async function saveCopyAdvanced(engine:DocumentsEngine,original:string,fileName:string,meta:CorePropsMeta){
+ const bytes=await engine.save(new Date().toISOString(),savedAuthor()||undefined);
+ const out=writeCoreProperties(bytes,meta);
+ const url=URL.createObjectURL(new Blob([out as BlobPart],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}));
+ const a=document.createElement('a');a.href=url;a.download=safeCopyName(fileName,original);a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }

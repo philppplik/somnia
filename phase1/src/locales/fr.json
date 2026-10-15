@@ -48,6 +48,7 @@
   "cmd.project.newFile": "Nouvelle page vierge",
   "cmd.project.export.md": "Exporter le fichier actif en Markdown",
   "cmd.project.export.advanced": "Exportation avancée...",
+  "cmd.documents.export.advanced": "Exportation avancée...",
   "cmd.sheets.export.advanced": "Exportation avancée...",
   "cmd.slides.export.advanced": "Exportation avancée...",
   "cmd.edit.format": "Appliquer la mise en forme",
