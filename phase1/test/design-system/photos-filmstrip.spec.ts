@@ -1392,6 +1392,31 @@ test('keyboard: Ctrl+A selects the visible strip, editable targets keep native s
   await page.keyboard.press('Escape');
  }
 });
+test('library search: ISO capture date narrows the strip (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
+  await page.evaluate(async()=>{
+   const cd=await import('/src/lib/photos/captureDates.ts');const med=await import('/src/lib/media.ts');
+   const size=(n:string)=>med.getMedia().items.find(i=>i.name===n)!.size;
+   cd.putCaptureDate('strip-2.png',size('strip-2.png'),new Date(2026,5,14,12,0,0).getTime(),null,240,150); // 2026-06-14 local
+  });
+  const search=page.getByTestId('photos-filmstrip-search');
+  await search.fill('');
+  await search.fill('2026-06'); // year-month match
+  await expect(page.getByTestId('photos-filmstrip-item-strip-2.png')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-1.png')).toHaveCount(0); // undated photos never match a date query
+  await search.fill('2026-06-14'); // exact day
+  await expect(page.getByTestId('photos-filmstrip-item-strip-2.png')).toBeVisible();
+  await search.fill('2026-06-15'); // the day after
+  await expect(page.getByTestId('photos-filmstrip-item-strip-2.png')).toHaveCount(0);
+  await page.screenshot({path:`test-results/ds-photos-search-date-${theme}.png`,fullPage:true});
+  await search.fill('');
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible();
+ }
+});
 test('menu groups: labeled collapsible sections, expanded by default (light and dark)',async({page})=>{
  for(const theme of['light','dark']){
   await page.goto('/test/design-system/?view=photos-filmstrip');

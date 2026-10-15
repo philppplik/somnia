@@ -820,3 +820,17 @@ gap.
 Coverage: the light/dark gallery leg selects the strip from body
 focus and proves the search input keeps native select-all
 (`test-results/ds-photos-ctrl-a-{light,dark}.png`).
+
+## Capture date in library search (P135)
+
+The library search matches the capture date in ISO form next to
+name, tags, caption and camera: "2026" finds the year, "2026-06"
+the month, "2026-06-14" the day. Dates come from the EXIF cache
+(local time, like the sort); undated photos never match a date
+query and nothing is fetched eagerly for the query. Everyday
+retrieval - "the June wedding" - needs no new UI, the search box
+already sits in the toolbar.
+
+Coverage: the light/dark gallery leg seeds one dated photo and
+narrows by month, by exact day and past the day
+(`test-results/ds-photos-search-date-{light,dark}.png`).
