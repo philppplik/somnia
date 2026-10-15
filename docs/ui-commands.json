@@ -67,6 +67,26 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.audio.normalize",
+      "title": "Normalise the volume of the audio layers to a target peak",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "audio",
+        "gain",
+        "level",
+        "louder",
+        "loudness",
+        "normalise",
+        "normalize",
+        "peak",
+        "quiet",
+        "volume"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.audio.reactive",
       "title": "Make a layer follow the loudness of the audio clip",
       "category": "Edit",

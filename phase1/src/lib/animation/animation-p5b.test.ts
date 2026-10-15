@@ -305,3 +305,14 @@ test('P298 duck: music dips while the voice plays and returns after, existing ke
  assert.equal(at(0),100);assert.equal(Math.round(at(sec)),20);assert.equal(at(Math.round(sec*1.5)+frameToTick(6,{num:30,den:1})+1),100);
  s.undo();assert.equal(JSON.stringify(s.document),before);
 });
+test('P299 normalize: volume scales so the played peak hits the target, keyed volumes scale as a whole, capped at 200, one undo',async()=>{
+ const {normalizeSpecs,playedPeak}=await import('./normalizeCommands');const {AnimationSession,setAnimationSession}=await import('./session');
+ const run=normalizeSpecs()[0].run as (p?:unknown)=>unknown;
+ assert.equal(playedPeak([0,255,0],3,0,1),0);assert.equal(playedPeak([0,255,0],3,0,3),1);
+ const s=new AnimationSession();s.open(withAudio());setAnimationSession(s);const before=JSON.stringify(s.document);
+ const a=s.document!.audioAssets![0],peak=playedPeak(a.peaks,a.durationTicks,0,layer(s.document!).outT);assert.ok(peak>0.4&&peak<0.6);
+ const r=run({layers:['aud'],target:90}) as {layers:number};assert.equal(r.layers,1);
+ const v=layer(s.document!).audio!.volume.value as number;assert.ok(Math.abs(v-Math.min(200,90/peak))<0.1,String(v));
+ assert.throws(()=>run({layers:['aud'],target:90}),/already/);
+ s.undo();assert.equal(JSON.stringify(s.document),before);
+});

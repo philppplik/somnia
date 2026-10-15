@@ -1368,7 +1368,9 @@
  "animation.audio.fade.in": "Einblenden",
  "animation.audio.fade.out": "Ausblenden",
  "animation.audio.fade.both": "Ein- und ausblenden",
- "animation.audio.fade": "Lautstärke-Fade…",
+ "animation.audio.fade": "Lautstärke-Aktionen…",
  "animation.audio.duck": "Unter anderem Clip absenken…",
- "cmd.animation.audio.duck": "Lautstärke einer Audio-Ebene absenken, solange eine andere Audio-Ebene spielt"
+ "cmd.animation.audio.duck": "Lautstärke einer Audio-Ebene absenken, solange eine andere Audio-Ebene spielt",
+ "animation.audio.normalize": "Auf 90% Spitze normalisieren",
+ "cmd.animation.audio.normalize": "Lautstärke der Audio-Ebenen auf einen Zielpegel normalisieren"
 }
