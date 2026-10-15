@@ -1,4 +1,5 @@
 import {useCallback,useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react';
+import {useMenuFocusReturn} from '../lib/useMenuFocusReturn';
 import {Menu} from '@base-ui/react/menu';
 import {Link2,Columns2,LocateFixed} from 'lucide-react';
 import {Button} from './ui/button';
@@ -79,7 +80,9 @@ export function MarkdownPreview({file,text}:{file:string;text:string}){
   if(!/\.(md|markdown)$/i.test(path)){patchState({notice:t('md.linkUnsupported')});return;}
   if(frag)pendingFragment.current=decodeURIComponent(frag);openFileTab(path);};
  const onContext=(e:React.MouseEvent)=>{const el=(e.target as HTMLElement).closest<HTMLElement>('[data-md]');if(!el)return;const m=/^(\d+)-(\d+)$/.exec(el.dataset.md??'');if(!m)return;e.preventDefault();outline(el);setMenu({x:Math.min(e.clientX,window.innerWidth-200),y:Math.min(e.clientY,window.innerHeight-60),range:[+m[1],+m[2]]});};
- useEffect(()=>{if(!menu)return;const close=()=>setMenu(null);const key=(e:KeyboardEvent)=>{if(e.key==='Escape')close();};window.addEventListener('pointerdown',close);window.addEventListener('keydown',key);return()=>{window.removeEventListener('pointerdown',close);window.removeEventListener('keydown',key);};},[menu]);
+ const menuRef=useRef<HTMLDivElement>(null);
+ useMenuFocusReturn(menu!==null,menuRef);
+ useEffect(()=>{if(!menu)return;menuRef.current?.querySelector<HTMLButtonElement>('button')?.focus();const close=()=>setMenu(null);const key=(e:KeyboardEvent)=>{if(e.key==='Escape')close();};window.addEventListener('pointerdown',close);window.addEventListener('keydown',key);return()=>{window.removeEventListener('pointerdown',close);window.removeEventListener('keydown',key);};},[menu]);
  const html=out?.html??'';const empty=status==='ok'&&!text.trim();
  const layout=useMemo(()=>[['split.vertical',t('md.layout.vertical')],['split.horizontal',t('md.layout.horizontal')],['split.swap',t('md.layout.swap')]] as const,[t]);
  return <section className="md-pane flex min-h-0 flex-1 flex-col" aria-label={t('md.previewLabel')} data-testid="md-pane">
@@ -98,5 +101,5 @@ export function MarkdownPreview({file,text}:{file:string;text:string}){
    {mathNote.pending&&<p className="math-loading-note" role="status">{t('math.loading.note')}</p>}
    {mathNote.failed&&<p className="math-loading-note" role="alert">{t('math.failed')} <button className="math-retry" onClick={()=>void loadMathEngine()}>{t('math.retry')}</button> {t('math.failed.hint')}</p>}
   </div>
-  {menu&&<div className="menu-popup fixed z-[200]" style={{left:menu.x,top:menu.y}} role="menu" onPointerDown={e=>e.stopPropagation()}><button role="menuitem" className="menu-item w-full" data-testid="md-reveal" autoFocus onClick={()=>{const r=menu.range;setMenu(null);reveal(r);}}>{t('md.reveal')}</button></div>}
+  {menu&&<div ref={menuRef} className="menu-popup fixed z-[200]" style={{left:menu.x,top:menu.y}} role="menu" onPointerDown={e=>e.stopPropagation()}><button role="menuitem" className="menu-item w-full" data-testid="md-reveal" onClick={()=>{const r=menu.range;setMenu(null);reveal(r);}}>{t('md.reveal')}</button></div>}
  </section>;}

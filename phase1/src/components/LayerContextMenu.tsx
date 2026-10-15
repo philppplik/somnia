@@ -5,12 +5,14 @@ import {useT} from '../lib/useT';
 import {moveLayer,duplicateLayer,deleteLayer,wrapLayer,unwrapLayer,indentLayer,outdentLayer} from '../lib/structureCommands';
 import {tableAction,type TableAction} from '../lib/tableCommands';
 import {NativeButton} from './ui/native-controls';
+import {useMenuFocusReturn} from '../lib/useMenuFocusReturn';
 /**
  * Right-click menu for the layer tree. A fixed-position menu in the app document (same mechanism as the canvas menu), so a click always runs the
  * action. Items fit the layer tree: inspect, reveal in code, order, duplicate, delete, visibility and lock.
  */
 export function LayerContextMenu({node,children}:{node:EditorNode;children:ReactNode}){
  const {t}=useT();const s=useAppStore(),[pos,setPos]=useState<{x:number;y:number}|null>(null),root=useRef<HTMLDivElement>(null),close=()=>setPos(null);
+ useMenuFocusReturn(pos!==null,root);
  useEffect(()=>{if(!pos)return;root.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus();const key=(e:KeyboardEvent)=>{if(e.key==='Escape')close();};const down=(e:PointerEvent)=>{if(!root.current?.contains(e.target as Node))close();};window.addEventListener('keydown',key);window.addEventListener('pointerdown',down);return()=>{window.removeEventListener('keydown',key);window.removeEventListener('pointerdown',down);};},[pos]);
  const run=(action:()=>void)=>{try{action();}catch(error){patchState({notice:error instanceof Error?error.message:String(error)});}close();};
  const meta=(key:'locked'|'hidden')=>run(()=>{applyOperations([{type:'setMeta',file:s.designFile,nodeId:node.id,[key]:!node[key]}]);});

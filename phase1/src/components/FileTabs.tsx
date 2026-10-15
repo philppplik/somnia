@@ -2,6 +2,7 @@ import {NativeButton} from './ui/native-controls';
 import {slidesIsDirty,useSlidesSession} from '../lib/slides/session';
 import {pdfIsDirty,usePdfEpoch} from '../lib/pdfedit/session';
 import {useEffect,useRef,useState} from 'react';
+import {useMenuFocusReturn} from '../lib/useMenuFocusReturn';
 import {X} from '../lib/icons';
 import {closeFileTab,openFileTab,useAppStore} from '../store/appStore';
 import {cn} from '../lib/cn';
@@ -13,6 +14,7 @@ import {studioForMedia} from '../lib/studios/studioRouting';
 /** Browser-style tabs for open source files. Middle click or the x closes, right click opens a small tab menu. */
 export function FileTabs(){useSlidesSession();usePdfEpoch();const {t}=useT();
  const s=useAppStore(),media=useMedia(),[menu,setMenu]=useState<{file:string;x:number;y:number}|null>(null),ref=useRef<HTMLDivElement>(null);
+ useMenuFocusReturn(menu!==null,ref);
  useEffect(()=>{if(!menu)return;ref.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus();const down=(e:PointerEvent)=>{if(!ref.current?.contains(e.target as Node))setMenu(null);};const key=(e:KeyboardEvent)=>{if(e.key==='Escape')setMenu(null);};window.addEventListener('pointerdown',down);window.addEventListener('keydown',key);return()=>{window.removeEventListener('pointerdown',down);window.removeEventListener('keydown',key);};},[menu]);
  const files=scopedFiles(s.openFiles,s.activeStudio,s.studioByTab),mediaItems=media.items.filter(m=>mediaTabStudio(m.name,s.studioByTab,()=>studioForMedia(m.kind,s.activeStudio))===s.activeStudio);
  const others=(file:string)=>files.filter(f=>f!==file);
