@@ -175,6 +175,8 @@
   "sound.arrange.reverseHint": "Kehrt das Quell-Audio um (neues Medium \"<name>-reverse.wav\") und verweist den Clip darauf",
   "sound.arrange.bounce": "Bounce",
   "sound.arrange.bounceHint": "Legt den gerenderten Mix als neue Spur in der Session ab (neues Medium \"<session>-bounce.wav\")",
+  "sound.arrange.fit": "Einpassen",
+  "sound.arrange.fitHint": "Gesamte Session in den sichtbaren Bereich zoomen",
   "sound.arrange.normalize": "Normalisieren",
   "sound.arrange.normalizeHint": "Setzt den Clip-Gain so, dass der Peak 0 dBFS erreicht (aus der Wellenform)",
   "sound.arrange.delete": "Löschen",

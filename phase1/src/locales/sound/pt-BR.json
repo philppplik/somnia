@@ -175,6 +175,8 @@
   "sound.arrange.reverseHint": "Inverte o áudio fonte (nova mídia \"<name>-reverse.wav\") e aponta o clipe para ela",
   "sound.arrange.bounce": "Bounce",
   "sound.arrange.bounceHint": "Consolida o mix renderizado como nova faixa (nova mídia \"<session>-bounce.wav\")",
+  "sound.arrange.fit": "Ajustar",
+  "sound.arrange.fitHint": "Ajustar o zoom para ver toda a sessão",
   "sound.arrange.normalize": "Normalizar",
   "sound.arrange.normalizeHint": "Ajusta o ganho do clipe para o pico atingir 0 dBFS (pela forma de onda)",
   "sound.arrange.delete": "Excluir",
