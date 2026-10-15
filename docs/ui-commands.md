@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-889 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+890 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -226,6 +226,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `animation.text.preset.apply` | Apply a saved text animator preset | Edit | animation |  |
 | `animation.text.preset.delete` | Delete a saved text animator preset | Edit | animation |  |
 | `animation.text.preset.save` | Save a text animator as a preset | Edit | animation |  |
+| `animation.timeline.autoKey` | Auto-key: record changes at the playhead as keys | Project | animation |  |
 | `animation.timeline.shy` | Hide or show shy layers in the timeline | Project | animation |  |
 | `animation.timeline.snap` | Snap timeline drags to markers, work area and playhead | Project | animation |  |
 | `animation.timeline.tracks` | Collapse, expand or resize timeline tracks | View | animation |  |

@@ -3,6 +3,7 @@ import {applyEdit,applyEdits,type Edit} from './edit';
 import {createDocument,findComp,validateDocument,type AnimationDocument,type KeyRef} from './model';
 import {clearJournal,defaultView,readJournal,writeJournal,type KeyValueStore,type ViewState} from './recovery';
 import {snapToFrame} from './time';
+import {withAutoKey} from './autoKey';
 import {ReviewedError,sameValue,type ReviewedKeyRequest,type ReviewedReceipt} from './reviewedCommit';
 import {findLayer,type PropValue,type TransformKey} from './model';
 export const HISTORY_LIMIT=200;
@@ -104,7 +105,12 @@ export class AnimationSession{
  redo(){if(!this.doc||!this.future.length)return false;this.cancelPreview();this.past.push(this.doc);this.doc=this.future.pop()!;this.checkpoint();this.emit();return true;}
  previewEdits(edits:readonly Edit[]){
   if(!this.doc)throw new Error('No open animation document.');
-  this.previewBase??=this.doc;this.preview=applyEdits(this.previewBase,edits);this.emit();
+  this.previewBase??=this.doc;this.preview=applyEdits(this.previewBase,this.autoKeyed(edits,this.previewBase));this.emit();
+ }
+ /** Edits with auto-key applied (a no-op unless the mode is on): properties without keys are animated first. */
+ autoKeyed(edits:readonly Edit[],doc:AnimationDocument|null=this.doc):readonly Edit[]{
+  const c=doc&&findComp(doc);if(!c)return edits;
+  return withAutoKey(edits,(layer,prop)=>{const l=findLayer(c,layer);return !!l&&!l.transform[prop as TransformKey].keys.length;});
  }
  commitPreview(){
   if(!this.preview||!this.previewBase)return false;

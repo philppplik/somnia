@@ -14,6 +14,7 @@ import {AudioWaveform} from './AudioWaveform';
 import {clickSelect,marqueeSelect,pruneSelection,rectsOverlap,sameKey,shiftSelection} from '../../lib/animation/selection';
 import {frameToTick,snapToFrame,tickToFrame,timecode} from '../../lib/animation/time';
 import {executeCommand} from '../../lib/commands';
+import {useAutoKey} from '../../lib/animation/autoKey';
 import {trackHeightOf,useTrackHeights,reorderIndex,setShyHidden,useShyHidden,edgeScroll,revealTick,snapTargets,snapTick,timeWindow,useTimelineSnap,setTimelineSnap} from '../../lib/animation/timelineView';
 import {KeyRepeat} from './KeyRepeat';
 import {useSetClip} from '../../lib/animation/keySetClip';
@@ -29,7 +30,7 @@ interface Box{x0:number;y0:number;x1:number;y1:number}
 export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Composition;at:number;selected:string|null;canUndo:boolean;canRedo:boolean}){
  const {t}=useT();const state=useAnimationState();const view=state.view; const layerSet=useLayerSet();const setClip=useSetClip();const [stagger,setStagger]=useState(2);const [staggerTiming,setStaggerTiming]=useState(true);
  const rulerRef=useRef<HTMLDivElement>(null);const lanesRef=useRef<HTMLDivElement>(null);
- const win=timeWindow(comp,view.zoom,view.scroll);const pc=(t:number)=>`${(t-win.t0)/win.span*100}%`;const snapOn=useTimelineSnap();const shyOff=useShyHidden();useTrackHeights();const [drop,setDrop]=useState<{over:string;after:boolean}|null>(null);const inWin=(t:number)=>t>=win.t0&&t<=win.t0+win.span;
+ const win=timeWindow(comp,view.zoom,view.scroll);const pc=(t:number)=>`${(t-win.t0)/win.span*100}%`;const snapOn=useTimelineSnap();const autoKey=useAutoKey();const shyOff=useShyHidden();useTrackHeights();const [drop,setDrop]=useState<{over:string;after:boolean}|null>(null);const inWin=(t:number)=>t>=win.t0&&t<=win.t0+win.span;
  /** Left and width in percent of a tick range, clipped to the visible window. */
  const bar=(a:number,b:number)=>{const l=Math.max(0,(a-win.t0)/win.span*100),r=Math.min(100,(b-win.t0)/win.span*100);return {left:`${l}%`,width:`${Math.max(0,r-l)}%`};};const sectionRef=useRef<HTMLElement>(null);
  const frames=Math.max(1,tickToFrame(comp.duration,comp.fps));const frame=tickToFrame(at,comp.fps);
@@ -272,6 +273,7 @@ const marquee=(e:PointerEvent<SVGSVGElement>)=>{
     <Button size="row" aria-label={t('animation.timeline.zoomIn')} disabled={win.zoom>=64} onClick={()=>run('animation.timeline.zoom',{mode:'in'})} data-testid="animation-zoom-in"><ZoomIn/></Button>
     <Button size="tiny" variant="ghost" disabled={win.zoom<=1} onClick={()=>run('animation.timeline.zoom',{mode:'fit'})} data-testid="animation-zoom-fit">{t('animation.timeline.fit')}</Button>
     <Button size="tiny" variant="ghost" onClick={()=>run('animation.timeline.zoom',{mode:'workarea'})} data-testid="animation-zoom-wa">{t('animation.timeline.zoomWorkArea')}</Button>
+    <Button size="tiny" variant={autoKey?'outline':'ghost'} aria-pressed={autoKey} title={t('animation.timeline.autoKeyHint')} onClick={()=>run('animation.timeline.autoKey',{on:!autoKey})} data-testid="animation-autokey">{t('animation.timeline.autoKey')}</Button>
     <Button size="tiny" variant={snapOn?'outline':'ghost'} aria-pressed={snapOn} title={t('animation.timeline.snapHint')} onClick={()=>run('animation.timeline.snap',{on:!snapOn})} data-testid="animation-snap">{t('animation.timeline.snap')}</Button>
     <Button size="tiny" variant="ghost" onClick={()=>run('animation.timeline.tracks',{mode:'collapse'})} data-testid="animation-tracks-collapse"><ChevronsUpDown className="size-3"/>{t('animation.timeline.collapseAll')}</Button>
     <Button size="tiny" variant="ghost" onClick={()=>run('animation.timeline.tracks',{mode:'expand'})} data-testid="animation-tracks-expand">{t('animation.timeline.expandAll')}</Button>

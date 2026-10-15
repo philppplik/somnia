@@ -1168,5 +1168,8 @@
  "animation.export.lottie.gap.effects": "effects, masks, repeaters and path effects",
  "animation.export.lottie.gap.colour": "gradients and colour keys (flat colour used)",
  "animation.export.lottie.gap.motion": "modifiers, stroke trim and dash, per-channel ease",
- "cmd.animation.export.lottie": "Export the composition as Lottie JSON"
+ "cmd.animation.export.lottie": "Export the composition as Lottie JSON",
+ "animation.timeline.autoKey": "Auto-key",
+ "animation.timeline.autoKeyHint": "Auto-key: while on, moving, scaling or rotating a layer, or editing a value, at the playhead records a key instead of changing the whole animation.",
+ "cmd.animation.timeline.autoKey": "Auto-key: record changes at the playhead as keys"
 }

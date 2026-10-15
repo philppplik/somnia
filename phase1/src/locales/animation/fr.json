@@ -1168,5 +1168,8 @@
  "animation.export.lottie.gap.effects": "effets, masques, repeteurs et effets de trace",
  "animation.export.lottie.gap.colour": "degrades et cles de couleur (couleur unie utilisee)",
  "animation.export.lottie.gap.motion": "modificateurs, rognage et tirets du contour, interpolation par canal",
- "cmd.animation.export.lottie": "Exporter la composition en JSON Lottie"
+ "cmd.animation.export.lottie": "Exporter la composition en JSON Lottie",
+ "animation.timeline.autoKey": "Auto-cle",
+ "animation.timeline.autoKeyHint": "Auto-cle : quand active, deplacer, mettre a l'echelle ou tourner un calque, ou modifier une valeur, a la tete de lecture enregistre une cle au lieu de changer toute l'animation.",
+ "cmd.animation.timeline.autoKey": "Auto-cle : enregistrer les changements a la tete de lecture comme cles"
 }

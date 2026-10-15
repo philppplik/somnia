@@ -1,3 +1,4 @@
+import {autoKeyOn,setAutoKey} from './autoKey';
 import {layerStretchSpecs} from './layerStretchCommands';
 import {markerWorkAreaSpecs} from './markerWorkAreaCommands';
 import {keyMarkerSpecs} from './keyMarkerCommands';
@@ -293,7 +294,7 @@ export function animationCommandSpecs():CommandSpec<unknown,unknown>[]{
   spec('animation.mask.toLayer','Turn a path mask into a shape layer',(p:{layer?:string;mask:string})=>{const id=newId('layer');run(maskToLayerEdit(doc(),layerIdOf(p),p.mask,id));animationSession().setView({selectedLayer:id});},object({layer:layerRef,mask:layerRef},['mask'])),
   spec('animation.layer.matte','Set layer track matte',(p:{layer?:string;source:string|null;mode?:'alpha'|'luma';invert?:boolean})=>run(matteEdit(doc(),layerIdOf(p),p.source,p.mode,p.invert)),{type:'object',properties:{layer:layerRef,source:{type:['string','null']},mode:{enum:['alpha','luma']},invert:{type:'boolean'}},required:['source'],additionalProperties:false}),
   spec('animation.layer.reorder','Reorder layer',(p:{layer?:string;index:number})=>run({type:'layer.reorder',layer:layerIdOf(p),index:p.index}),object({layer:layerRef,index:{type:'integer',minimum:0}},['index'])),
-  spec('animation.prop.set','Set property value',(p:{layer?:string;prop:TransformKey;value:PropValue;t?:number})=>run({type:'prop.set',layer:layerIdOf(p),prop:p.prop,value:p.value,t:p.t??playhead()}),object({layer:layerRef,prop:propKey,value,t:tick},['prop','value'])),
+  spec('animation.prop.set','Set property value',(p:{layer?:string;prop:TransformKey;value:PropValue;t?:number})=>run(animationSession().autoKeyed([{type:'prop.set',layer:layerIdOf(p),prop:p.prop,value:p.value,t:p.t??playhead()}])),object({layer:layerRef,prop:propKey,value,t:tick},['prop','value'])),
   spec('animation.prop.animate','Toggle property animation',(p:{layer?:string;prop:TransformKey;on:boolean})=>run({type:'prop.animate',layer:layerIdOf(p),prop:p.prop,on:p.on,t:playhead()}),object({layer:layerRef,prop:propKey,on:{type:'boolean'}},['prop','on'])),
   spec('animation.key.add','Add keyframe at playhead',(p:{layer?:string;prop:TransformKey;t?:number})=>run({type:'key.add',layer:layerIdOf(p),prop:p.prop,t:p.t??playhead()}),object({layer:layerRef,prop:propKey,t:tick},['prop'])),
   spec('animation.key.remove','Remove keyframe',(p:{layer?:string;prop:TransformKey;t?:number})=>run({type:'key.remove',layer:layerIdOf(p),prop:p.prop,t:p.t??playhead()}),object({layer:layerRef,prop:propKey,t:tick},['prop'])),
@@ -331,6 +332,7 @@ export function animationCommandSpecs():CommandSpec<unknown,unknown>[]{
    if(p.mode==='collapse'||p.mode==='expand'){setAllTracks(comp().layers.map(l=>l.id),p.mode);return;}
    const id=layerIdOf(p);setTrackHeight(id,p.mode==='cycle'?nextTrackHeight(trackHeightOf(id)):p.mode);
   },object({mode:{enum:['collapse','expand','cycle','compact','normal','tall']},layer:layerRef},['mode']),open,'View'),
+  spec('animation.timeline.autoKey','Auto-key: record changes at the playhead as keys',(p:{on?:boolean}={})=>{setAutoKey(p.on??!autoKeyOn());return {on:autoKeyOn()};},object({on:{type:'boolean'}},[]),open,'Project'),
   spec('animation.timeline.snap','Snap timeline drags to markers, work area and playhead',(p:{on?:boolean}={})=>{setTimelineSnap(p.on??!(timelineSnapNow()));},object({on:{type:'boolean'}},[]),open,'Project'),
   spec('animation.ease.copy','Copy the easing curve of the selected key',()=>{const ref=selKeys()[selKeys().length-1];guard(()=>copyCurve(findLayer(comp(),ref.layer)?.transform[ref.prop].keys.find(x=>x.t===ref.t)));},undefined,hasSel,'Edit'),
   spec('animation.ease.paste','Paste the copied easing curve onto the selected keys',()=>run(guard(()=>pasteCurveEdit(selKeys()))),undefined,hasSel,'Edit'),

@@ -2890,6 +2890,18 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.timeline.autoKey",
+      "title": "Auto-key: record changes at the playhead as keys",
+      "category": "Project",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.timeline.shy",
       "title": "Hide or show shy layers in the timeline",
       "category": "Project",

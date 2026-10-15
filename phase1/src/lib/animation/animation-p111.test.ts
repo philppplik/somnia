@@ -1279,3 +1279,23 @@ test('P236 Lottie export: layers, keys with easing, parenting, flat fills and a 
  const f=exportLottieFile(c,'My anim');assert.equal(f.fileName,'My_anim.json');assert.ok(f.blob.size>100);
  assert.throws(()=>exportLottieFile({...c,layers:c.layers.filter(l=>l.kind==='text')},'x'),/Lottie/);
 });
+
+test('P237 auto-key: off by default, static properties get one key at the playhead, one undo step, keyed ones are untouched',async()=>{
+ const {setAutoKey,autoKeyOn}=await import('./autoKey');
+ const s=open();setAnimationSession(s);const c0=findComp(s.document!)!;
+ const L=c0.layers.find(l=>!l.transform.rotation.keys.length&&l.kind!=='audio')!;const get=()=>findComp(s.document!)!.layers.find(l=>l.id===L.id)!.transform.rotation;
+ const t=c0.start+f(12);
+ try{
+  assert.equal(autoKeyOn(),false);
+  s.dispatch(s.autoKeyed([{type:'prop.set',layer:L.id,prop:'rotation',value:30,t}]));
+  assert.equal(get().keys.length,0);assert.equal(get().value,30);s.undo();
+  setAutoKey(true);
+  s.previewEdits([{type:'prop.set',layer:L.id,prop:'rotation',t,value:45}]);s.commitPreview();
+  assert.deepEqual(get().keys.map(k=>[k.t,k.v]),[[t,45]]);
+  s.undo();assert.equal(get().keys.length,0);
+  s.dispatch(s.autoKeyed([{type:'prop.set',layer:L.id,prop:'rotation',value:10,t}]));
+  const t2=c0.start+f(20);s.dispatch(s.autoKeyed([{type:'prop.set',layer:L.id,prop:'rotation',value:20,t:t2}]));
+  assert.deepEqual(get().keys.map(k=>[k.t,k.v]),[[t,10],[t2,20]]);
+ }finally{setAutoKey(false);}
+ assert.equal(autoKeyOn(),false);
+});

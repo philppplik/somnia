@@ -1168,5 +1168,8 @@
  "animation.export.lottie.gap.effects": "Effekte, Masken, Repeater und Pfad-Effekte",
  "animation.export.lottie.gap.colour": "Verlaeufe und Farb-Keys (flache Farbe verwendet)",
  "animation.export.lottie.gap.motion": "Modifikatoren, Stroke-Trim und Strichelung, Ease pro Kanal",
- "cmd.animation.export.lottie": "Komposition als Lottie-JSON exportieren"
+ "cmd.animation.export.lottie": "Komposition als Lottie-JSON exportieren",
+ "animation.timeline.autoKey": "Auto-Key",
+ "animation.timeline.autoKeyHint": "Auto-Key: Wenn aktiv, wird beim Verschieben, Skalieren, Drehen oder Aendern eines Werts am Abspielkopf ein Key aufgenommen statt die ganze Animation zu aendern.",
+ "cmd.animation.timeline.autoKey": "Auto-Key: Aenderungen am Abspielkopf als Keys aufnehmen"
 }

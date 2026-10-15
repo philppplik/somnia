@@ -1168,5 +1168,8 @@
  "animation.export.lottie.gap.effects": "efeitos, mascaras, repetidores e efeitos de caminho",
  "animation.export.lottie.gap.colour": "gradientes e chaves de cor (cor plana usada)",
  "animation.export.lottie.gap.motion": "modificadores, corte e tracejado do contorno, suavizacao por canal",
- "cmd.animation.export.lottie": "Exportar a composicao como JSON do Lottie"
+ "cmd.animation.export.lottie": "Exportar a composicao como JSON do Lottie",
+ "animation.timeline.autoKey": "Auto-chave",
+ "animation.timeline.autoKeyHint": "Auto-chave: quando ativo, mover, escalar ou girar uma camada, ou editar um valor, no cursor grava uma chave em vez de mudar a animacao inteira.",
+ "cmd.animation.timeline.autoKey": "Auto-chave: gravar as mudancas no cursor como chaves"
 }
