@@ -9,7 +9,7 @@ import {Button} from '../ui/button';
 import {NumberField} from '../ui/number-field';
 import {Menu,MenuTrigger,MenuContent,MenuItem} from '../ui/menu';
 import {TEXT_COLORS,GRADIENT_PRESETS,OPACITY_STEPS,LINE_WIDTHS,colorKey} from '../../lib/slides/textFormat';
-import {MIN_SIZE_PT,MAX_SIZE_PT,ARRANGE_MODES,TRANSITION_KINDS,TRANSITION_DIRS,TRANSITION_SPEEDS,LINE_DASHES,readSlideTransition,readShapeStyle,boundsEditIssue} from '../../lib/slides/deckPackage';
+import {MIN_SIZE_PT,MAX_SIZE_PT,ARRANGE_MODES,TRANSITION_KINDS,TRANSITION_DIRS,TRANSITION_SPEEDS,LINE_DASHES,readSlideTransition,readShapeStyle,readParagraphFormat,PARA_ALIGNS,PARA_BULLETS,boundsEditIssue} from '../../lib/slides/deckPackage';
 import {ALIGN_MODES} from '../../lib/slides/shapeGeometry';
 import {useValidShape} from './SlidesShapeOverlay';
 
@@ -22,6 +22,8 @@ export function SlidesTextToolbar(){
   const shape=valid?.shape,multi=(valid?.more.length??0)>0,box=!multi&&!!shape&&shape.kind==='text'&&shape.runCount>0,f=shape?.fmt;
   const run=(id:string,params:unknown)=>void commandDispatcher.tryRunCommand(id,params,{origin:'ui'});
   const fmt=(patch:Record<string,unknown>)=>run('slides.formatText',{source:s.source,slideId,shapeId:shape!.id,...patch});
+  const pf=useMemo(()=>{if(!box||!s.working||slideId===undefined||!shape)return null;try{return readParagraphFormat(s.working,slideId,shape.id);}catch{return null;}},[box,s.working,slideId,shape]);
+  const para=(patch:Record<string,unknown>)=>run('slides.formatParagraph',{source:s.source,slideId,shapeId:shape!.id,...patch});
   const pic=!multi&&!!shape&&shape.kind==='picture',file=useRef<HTMLInputElement>(null),mode=useRef<'insert'|'replace'>('insert');
   const tr=useMemo(()=>{if(!s.working||slideId===undefined)return null;try{return readSlideTransition(s.working,slideId);}catch{return null;}},[s.working,slideId]);
   const sel=valid?[valid.shape,...valid.more]:[],styleOk=ready&&sel.length>0&&sel.every(x=>!x.parentId&&(x.kind==='text'||x.kind==='picture'));
@@ -48,6 +50,11 @@ export function SlidesTextToolbar(){
     <Button size="compact" variant={f?.italic?'primary':'outline'} aria-pressed={!!f?.italic} disabled={!ready||!box} onClick={()=>fmt({italic:!f?.italic})}>{t('slides.fmt.italic')}</Button>
     <div className="w-24"><NumberField label={t('slides.fmt.size')} value={f?.sizePt!=null&&Number.isInteger(f.sizePt)?f.sizePt:null} mixed={!!shape&&(f?.sizePt==null||!Number.isInteger(f.sizePt))} resetKey={`${valid?.selection.shapeId}:${s.slideIds.join()}`} min={MIN_SIZE_PT} max={MAX_SIZE_PT} disabled={!ready||!box}
       parse={d=>/^\d{1,3}$/.test(d.trim())&&Number(d)>=MIN_SIZE_PT&&Number(d)<=MAX_SIZE_PT?{ok:true,value:Number(d)}:{ok:false,error:t('slides.fmt.sizeInvalid')}} constraintError={t('slides.fmt.sizeInvalid')} onCommit={v=>fmt({sizePt:v})}/></div>
+    <Menu><MenuTrigger render={<Button size="compact" variant="outline" disabled={!ready||!box}>{t('slides.para')}</Button>}/>
+      <MenuContent>
+        {PARA_ALIGNS.map(a=><MenuItem key={a} onClick={()=>para({align:a})}>{pf?.align===a?'• ':''}{t(`slides.para.align.${a}`)}</MenuItem>)}
+        {PARA_BULLETS.map(b=><MenuItem key={b} onClick={()=>para({bullet:b})}>{pf?.bullet===b?'• ':''}{t(`slides.para.bullet.${b}`)}</MenuItem>)}
+      </MenuContent></Menu>
     <Menu><MenuTrigger render={<Button size="compact" variant="outline" disabled={!ready||!box}>{t('slides.fmt.color')}{colorKey(f?.color??null)?`: ${t(`slides.color.${colorKey(f!.color)}`)}`:''}</Button>}/>
       <MenuContent>{TEXT_COLORS.map(c=><MenuItem key={c.key} onClick={()=>fmt({color:c.hex})}>{t(`slides.color.${c.key}`)}</MenuItem>)}</MenuContent></Menu>
     <Menu><MenuTrigger render={<Button size="compact" variant="outline" disabled={!fillOk||!st}>{t('slides.style.fill')}</Button>}/>

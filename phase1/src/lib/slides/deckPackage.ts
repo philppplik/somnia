@@ -595,6 +595,59 @@ export function formatShapeText(bytes:Uint8Array,slideId:number,shapeId:number,f
   for(const name of Object.keys(zip))if(name!==slide.part&&(!re[name]||re[name].length!==zip[name].length||re[name].some((v,i)=>v!==zip[name][i])))throw Error('Formatted deck changed an unrelated part');
   return out;
 }
+export const PARA_ALIGNS=['l','ctr','r','just'] as const;
+export const PARA_BULLETS=['none','dot','number'] as const;
+export interface ParagraphFormat {align?:typeof PARA_ALIGNS[number];bullet?:typeof PARA_BULLETS[number]}
+const PARA_RE=/<a:p(?:\s[^>]*)?\/>|<a:p(?:\s[^>]*)?>[\s\S]*?<\/a:p>/g;
+const BULLET_XML:Record<'dot'|'number',string>={dot:'<a:buFont typeface="Arial"/><a:buChar char="&#8226;"/>',number:'<a:buFont typeface="+mj-lt"/><a:buAutoNum type="arabicPeriod"/>'};
+const paraAttr=(attrs:string,name:string,val:string)=>{const re=new RegExp(`\\s${name}="[^"]*"`);return re.test(attrs)?attrs.replace(re,` ${name}="${val}"`):`${attrs} ${name}="${val}"`;};
+function paragraphXml(p:string,f:ParagraphFormat):string{
+  if(/\/>$/.test(p)&&!/<\/a:p>$/.test(p))p=p.replace(/\s*\/>$/,'></a:p>');
+  const open=/^<a:p(?:\s[^>]*)?>/.exec(p)![0],rest=p.slice(open.length);
+  const m=/^\s*<a:pPr\b([^>]*?)(\/>|>([\s\S]*?)<\/a:pPr>)/.exec(rest);
+  let attrs=m?m[1].replace(/\/$/,''):'',inner=m&&m[3]?m[3]:'';const tail=m?rest.slice(m[0].length):rest;
+  if(f.align)attrs=paraAttr(attrs,'algn',f.align);
+  if(f.bullet){
+    attrs=paraAttr(paraAttr(attrs,'marL',f.bullet==='none'?'0':'342900'),'indent',f.bullet==='none'?'0':'-342900');
+    inner=inner.replace(/<a:(?:buNone|buAutoNum|buChar|buFont|buFontTx)\b[^>]*\/>/g,'').replace(/<a:buBlip>[\s\S]*?<\/a:buBlip>/g,'');
+    const add=f.bullet==='none'?'<a:buNone/>':BULLET_XML[f.bullet],at=inner.search(/<a:(?:tabLst|defRPr|extLst)\b/);
+    inner=at<0?inner+add:inner.slice(0,at)+add+inner.slice(at);
+  }
+  return open+`<a:pPr${attrs}>${inner}</a:pPr>`+tail;
+}
+/** Reads the shared alignment and bullet style of a text box. A value is null when paragraphs differ or inherit it. */
+export function readParagraphFormat(bytes:Uint8Array,slideId:number,shapeId:number):{align:ParagraphFormat['align']|null;bullet:ParagraphFormat['bullet']|null}{
+  const slide=readDeckModel(bytes).slides.find(x=>x.id===slideId);if(!slide||slide.problems.length)throw Error('Slide is not readable');
+  const zip=openPackage(bytes),xml=text(zip,slide.part),{start,end}=spRange(xml,shapeId),ps=xml.slice(start,end).match(PARA_RE)??[];
+  const one=<T,>(vals:(T|null)[])=>vals.length&&vals.every(v=>v!==null&&v===vals[0])?vals[0]:null;
+  const align=one(ps.map(p=>{const a=/<a:pPr\b[^>]*\salgn="([a-z]+)"/.exec(p)?.[1];return (PARA_ALIGNS as readonly string[]).includes(a??'')?a as typeof PARA_ALIGNS[number]:null;}));
+  const bullet=one(ps.map(p=>/<a:buNone\b/.test(p)?'none':/<a:buAutoNum\b/.test(p)?'number':/<a:buChar\b/.test(p)?'dot':null)) as ParagraphFormat['bullet']|null;
+  return {align,bullet};
+}
+/** Sets alignment and/or bullet style on every paragraph of one text box. Text, run formatting and all other parts stay as they were. */
+export function formatShapeParagraphs(bytes:Uint8Array,slideId:number,shapeId:number,f:ParagraphFormat):Uint8Array{
+  const keys=Object.keys(f);
+  if(!keys.length||keys.some(k=>!['align','bullet'].includes(k)))throw Error('Nothing to format');
+  if(f.align!==undefined&&!(PARA_ALIGNS as readonly string[]).includes(f.align))throw Error('Unknown alignment');
+  if(f.bullet!==undefined&&!(PARA_BULLETS as readonly string[]).includes(f.bullet))throw Error('Unknown bullet style');
+  const model=readDeckModel(bytes),slide=model.slides.find(s=>s.id===slideId);
+  if(!slide)throw Error('Slide no longer exists');if(slide.problems.length)throw Error('This slide has unsupported structure');
+  const shape=slide.shapes.find(s=>s.id===shapeId);if(!shape)throw Error('Shape no longer exists');
+  if(shape.parentId!==null||shape.kind!=='text')throw Error('Only text boxes can be formatted');
+  const zip=openPackage(bytes),xml=text(zip,slide.part),{start,end}=spRange(xml,shapeId),sp=xml.slice(start,end);
+  let n=0;const next=sp.replace(PARA_RE,p=>{n++;return paragraphXml(p,f);});
+  if(!n)throw Error('This text box has no paragraphs');
+  if(next===sp)return bytes;
+  const out=repack(zip,{[slide.part]:xml.slice(0,start)+next+xml.slice(end)});
+  const after=readDeckModel(out),as=after.slides.find(s=>s.id===slideId);
+  if(!as||as.problems.length||as.shapes.length!==slide.shapes.length||as.shapes.some((x,i)=>x.id!==slide.shapes[i].id||JSON.stringify(x.bounds)!==JSON.stringify(slide.shapes[i].bounds)))throw Error('Formatted deck failed verification');
+  if(after.runs.length!==model.runs.length||after.runs.some((r,i)=>r.text!==model.runs[i].text||r.key!==model.runs[i].key))throw Error('Formatted deck failed verification');
+  const got=readParagraphFormat(out,slideId,shapeId);
+  if((f.align!==undefined&&got.align!==f.align)||(f.bullet!==undefined&&got.bullet!==f.bullet))throw Error('Formatted deck failed verification');
+  const re=unzipSync(out);
+  for(const name of Object.keys(zip))if(name!==slide.part&&(!re[name]||re[name].length!==zip[name].length||re[name].some((v,i)=>v!==zip[name][i])))throw Error('Formatted deck changed an unrelated part');
+  return out;
+}
 const esc=(t:string)=>t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 /** The id a new shape on this slide receives. Callers use it to select the new box. */
 export const nextShapeId=(s:{shapes:readonly {id:number}[]})=>s.shapes.reduce((m,x)=>Math.max(m,x.id),1)+1;

@@ -186,6 +186,7 @@ export const editTableAt=(slideId:number,shapeId:number,edit:TableEdit)=>route('
 export const setNotesAt=(slideId:number,lines:string[])=>route('notes',()=>[slideId,lines],e=>idAt(e,slideId));
 export const groupShapesAt=(slideId:number,shapeIds:number[])=>route('group',()=>[slideId,shapeIds],e=>idAt(e,slideId));
 export const ungroupShapeAt=(slideId:number,shapeId:number)=>route('ungroup',()=>[slideId,shapeId],e=>idAt(e,slideId));
+export const paragraphAt=(slideId:number,shapeId:number,format:import('./deckPackage').ParagraphFormat)=>route('paragraph',()=>[slideId,shapeId,format],e=>idAt(e,slideId));
 export const formatShapeAt=(slideId:number,shapeId:number,format:RunFormat)=>route('formatText',()=>[slideId,shapeId,format],e=>idAt(e,slideId));
 export const addTextBoxAt=(slideId:number,label:string)=>route('boxEdit',()=>['add',slideId,label],e=>idAt(e,slideId));
 export const removeTextBoxAt=(slideId:number,shapeId:number)=>route('boxEdit',()=>['remove',slideId,shapeId],e=>idAt(e,slideId));

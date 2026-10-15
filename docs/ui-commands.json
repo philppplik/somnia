@@ -8450,6 +8450,25 @@
       "hasEnabled": true
     },
     {
+      "id": "slides.formatParagraph",
+      "title": "Align text and set bullets",
+      "category": "Edit",
+      "source": "slides",
+      "keywords": [
+        "align",
+        "alignment",
+        "bullet",
+        "center",
+        "justify",
+        "left",
+        "list",
+        "numbered",
+        "paragraph",
+        "right"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "slides.formatText",
       "title": "Format text box text",
       "category": "Edit",

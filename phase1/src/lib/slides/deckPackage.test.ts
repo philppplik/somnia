@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {unzipSync,zipSync,strFromU8,strToU8} from 'fflate';
-import {replaceSkippedSlides,smallTextSlides,countTextMatches,emptySlides,textMatchesBySlide,replaceTextAll,slidesWithoutNotes,duplicateTitles,setPictureDecorative,readPictureDecorative,untitledSlides,missingAltText,MAX_ALT_REPORT,setPictureAlt,readPictureAlt,editSections,setSlideHidden,readHiddenSlides,setFirstSlideNum,readFirstSlideNum,setSlideFooter,setAllSlideFooters,readSlideFooter,setSlideSize,readSlideSize,setAllSlideBackgrounds,backgroundSummary,setSlideBackground,readSlideBackground,editLayoutBox,readLayoutBoxes,editMasterBox,readMaster,editTheme,readTheme,insertTable,editTable,readTable,setShapeStyle,readShapeStyle,setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
+import {formatShapeParagraphs,readParagraphFormat,replaceSkippedSlides,smallTextSlides,countTextMatches,emptySlides,textMatchesBySlide,replaceTextAll,slidesWithoutNotes,duplicateTitles,setPictureDecorative,readPictureDecorative,untitledSlides,missingAltText,MAX_ALT_REPORT,setPictureAlt,readPictureAlt,editSections,setSlideHidden,readHiddenSlides,setFirstSlideNum,readFirstSlideNum,setSlideFooter,setAllSlideFooters,readSlideFooter,setSlideSize,readSlideSize,setAllSlideBackgrounds,backgroundSummary,setSlideBackground,readSlideBackground,editLayoutBox,readLayoutBoxes,editMasterBox,readMaster,editTheme,readTheme,insertTable,editTable,readTable,setShapeStyle,readShapeStyle,setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
 import {readRuns,makeEditedCopy} from './editCopy';
 import {png,jpeg} from './imageFixtures';
 
@@ -1098,4 +1098,35 @@ test('replace in notes is optional, matches note body runs only and leaves other
   assert.deepEqual(readSlideNotes(out,sid),['Say Acme first','then Acme again']);
   const slide=Object.keys(z).filter(n=>/^ppt\/slides\/slide\d+\.xml$/.test(n)),o=unzipSync(withNotes);
   for(const n of slide)assert.deepEqual(z[n],o[n]);
+});
+
+test('formatShapeParagraphs sets alignment and bullets, keeps text and other parts, and fails closed',()=>{
+  const m=readDeckModel(base),slide=m.slides[0],box=slide.shapes.find(x=>x.kind==='text'&&x.parentId===null&&x.runCount>0)!;
+  const out=formatShapeParagraphs(base,slide.id,box.id,{align:'ctr',bullet:'dot'});
+  assert.deepEqual(readParagraphFormat(out,slide.id,box.id),{align:'ctr',bullet:'dot'});
+  assert.deepEqual(readDeckModel(out).runs.map(r=>r.text),m.runs.map(r=>r.text));
+  const z0=unzipSync(base),z1=unzipSync(out);
+  for(const k of Object.keys(z0))if(k!==slide.part)assert.deepEqual(z1[k],z0[k]);
+  const xml=strFromU8(z1[slide.part]);assert.match(xml,/<a:buChar char="&#8226;"\/>/);assert.match(xml,/algn="ctr"/);
+  const num=formatShapeParagraphs(out,slide.id,box.id,{bullet:'number'});
+  assert.deepEqual(readParagraphFormat(num,slide.id,box.id),{align:'ctr',bullet:'number'});
+  assert.ok(!/buChar/.test(strFromU8(unzipSync(num)[slide.part])),'old bullet replaced, not stacked');
+  const none=formatShapeParagraphs(num,slide.id,box.id,{bullet:'none',align:'just'});
+  assert.deepEqual(readParagraphFormat(none,slide.id,box.id),{align:'just',bullet:'none'});
+  assert.equal(formatShapeParagraphs(none,slide.id,box.id,{bullet:'none',align:'just'}),none,'same format: same bytes');
+  assert.deepEqual(readParagraphFormat(base,slide.id,box.id),{align:null,bullet:null});
+  assert.throws(()=>formatShapeParagraphs(base,slide.id,box.id,{}),/Nothing/);
+  assert.throws(()=>formatShapeParagraphs(base,slide.id,box.id,{align:'x' as never}),/alignment/);
+  assert.throws(()=>formatShapeParagraphs(base,slide.id,box.id,{bullet:'x' as never}),/bullet/);
+  assert.throws(()=>formatShapeParagraphs(base,slide.id,box.id,{color:'x'} as never),/Nothing/);
+  assert.throws(()=>formatShapeParagraphs(base,slide.id,99999,{align:'l'}),/no longer exists/);
+  assert.throws(()=>formatShapeParagraphs(base,12345,box.id,{align:'l'}),/no longer exists/);
+});
+test('formatShapeParagraphs keeps an existing pPr, its level and spacing, and orders bullets before tab stops',()=>{
+  const m=readDeckModel(base),slide=m.slides[0],box=slide.shapes.find(x=>x.kind==='text'&&x.parentId===null&&x.runCount>0)!;
+  const z=unzipSync(base);let xml=strFromU8(z[slide.part]);
+  xml=xml.replace(/(<a:p>)(\s*<a:r>)/,'<a:p><a:pPr lvl="1"><a:spcBef><a:spcPts val="600"/></a:spcBef><a:tabLst><a:tab pos="100" algn="l"/></a:tabLst></a:pPr>$2');
+  const src=zipSync({...z,[slide.part]:strToU8(xml)}),out=unzipSync(formatShapeParagraphs(src,slide.id,box.id,{bullet:'dot'}));
+  const p=strFromU8(out[slide.part]);
+  assert.match(p,/<a:pPr lvl="1" marL="342900" indent="-342900"><a:spcBef><a:spcPts val="600"\/><\/a:spcBef><a:buFont typeface="Arial"\/><a:buChar char="&#8226;"\/><a:tabLst>/);
 });

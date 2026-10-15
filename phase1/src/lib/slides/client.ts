@@ -43,6 +43,7 @@ export class SlidesClient {
  async ungroup(bytes:Uint8Array,slideId:number,shapeId:number){return await this.request({op:'ungroup',bytes,slideId,shapeId}) as Uint8Array;}
  async setTransition(bytes:Uint8Array,slideId:number,transition:SlideTransition){return await this.request({op:'transition',bytes,slideId,transition}) as Uint8Array;}
  async arrange(bytes:Uint8Array,slideId:number,shapeIds:number[],mode:ArrangeMode){return await this.request({op:'arrange',bytes,slideId,shapeIds,mode}) as Uint8Array;}
+ async paragraph(bytes:Uint8Array,slideId:number,shapeId:number,format:import('./deckPackage').ParagraphFormat){return await this.request({op:'paragraph',bytes,slideId,shapeId,format}) as Uint8Array;}
  async formatText(bytes:Uint8Array,slideId:number,shapeId:number,format:RunFormat){return await this.request({op:'formatText',bytes,slideId,shapeId,format}) as Uint8Array;}
  async addBox(bytes:Uint8Array,slideId:number,label:string){return await this.request({op:'boxEdit',kind:'add',bytes,slideId,label}) as Uint8Array;}
  async removeBox(bytes:Uint8Array,slideId:number,shapeId:number){return await this.request({op:'boxEdit',kind:'remove',bytes,slideId,shapeId}) as Uint8Array;}

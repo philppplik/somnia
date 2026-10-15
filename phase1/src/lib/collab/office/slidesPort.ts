@@ -21,6 +21,7 @@ export function slidesClientPort(client:SlidesClient):SlidesEnginePort{
    case 'ungroup':return client.ungroup(bytes,a[0] as number,a[1] as number);
    case 'transition':return client.setTransition(bytes,a[0] as number,a[1] as never);
    case 'formatText':return client.formatText(bytes,a[0] as number,a[1] as number,a[2] as never);
+   case 'paragraph':return client.paragraph(bytes,a[0] as number,a[1] as number,a[2] as never);
    case 'boxEdit':return a[0]==='add'?client.addBox(bytes,a[1] as number,a[2] as string):client.removeBox(bytes,a[1] as number,a[2] as number);
    case 'newSlide':return client.newSlide(bytes,a[0] as string,(a[1]??null) as number|null);
    case 'textEdits':return client.copy(bytes,a[0] as never);

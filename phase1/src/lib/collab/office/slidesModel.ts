@@ -35,7 +35,7 @@ export function slidesModelMeta(m:SlidesModel):SlidesSharedMeta|null{
  return{schema,engine,baseHash};
 }
 /** Ops the journal may carry (worker client methods, JSON-serialisable args; no inline picture bytes in CO3). */
-export const SLIDES_OP_KINDS=['slideEdit','reorder','shapeBounds','shapesBounds','arrange','table','style','notes','group','ungroup','transition','formatText','boxEdit','newSlide','textEdits'] as const;
+export const SLIDES_OP_KINDS=['slideEdit','reorder','shapeBounds','shapesBounds','arrange','table','style','notes','group','ungroup','transition','formatText','paragraph','boxEdit','newSlide','textEdits'] as const;
 export type SlidesOpKind=typeof SLIDES_OP_KINDS[number];
 export interface SlidesOpEntry{fn:SlidesOpKind;args:unknown[]}
 const JSON_MAX=64_000;
